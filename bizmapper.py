@@ -417,22 +417,54 @@ def excel_to_json(excel_path: str, output_path: str = None):
 
 
 def main():
-    if len(sys.argv) > 1 and sys.argv[1] == "--test-api":
-        success = test_api_connection()
-        sys.exit(0 if success else 1)
-
     if len(sys.argv) < 2:
-        print("BizMapper v1.0")
-        print("用法: python bizmapper.py <图片路径> [输出目录]")
-        sys.exit(1)
+        print("BizMapper v1.0 - 业务关系提取工具")
+        print("")
+        print("用法:")
+        print("  生成 Excel: python bizmapper.py <图片路径> [输出目录]")
+        print("  Excel转JSON: python bizmapper.py --to-json <Excel路径> [输出目录]")
+        print("")
+        print("示例:")
+        print("  python bizmapper.py sample-diagram.png")
+        print("  python bizmapper.py --to-json output/映射表_20260429.xlsx")
+        return
 
-    image_path = sys.argv[1]
-    if not os.path.exists(image_path):
-        print(f"错误: 文件不存在: {image_path}")
-        sys.exit(1)
+    output_dir = "output"
+    if len(sys.argv) >= 3:
+        output_dir = sys.argv[2]
 
-    result = analyze_image(image_path)
-    print(f"分析结果: {result}")
+    os.makedirs(output_dir, exist_ok=True)
+
+    if sys.argv[1] == "--to-json":
+        # Excel 转 JSON 模式
+        excel_path = sys.argv[2]
+        excel_to_json(excel_path, output_dir)
+    else:
+        # 分析图片生成 Excel 模式
+        image_path = sys.argv[1]
+
+        # 分析
+        data = analyze_image(image_path)
+
+        # 验证
+        errors = validate_data(data)
+        if errors:
+            print("警告 - 数据验证发现以下问题:")
+            for err in errors:
+                print(f"  - {err}")
+            print("")
+
+        # 生成 Excel
+        import datetime
+        date_str = datetime.datetime.now().strftime("%Y%m%d")
+        excel_path = os.path.join(output_dir, f"映射表_{date_str}.xlsx")
+
+        print(f"正在生成 Excel: {excel_path}")
+        generate_excel(data, excel_path)
+        print(f"Excel 已保存至: {excel_path}")
+        print("")
+        print("请审核 Excel 中的映射关系，调整后运行以下命令转换为 JSON:")
+        print(f"  python bizmapper.py --to-json {excel_path}")
 
 
 if __name__ == "__main__":
