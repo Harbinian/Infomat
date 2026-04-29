@@ -351,6 +351,71 @@ def merge_same_cells(ws, col_index, start_row, end_row):
             merge_start = row
 
 
+def excel_to_json(excel_path: str, output_path: str = None):
+    """读取审核后的 Excel，转换为 Infomat JSON"""
+    import pandas as pd
+
+    # 读取 Excel
+    df = pd.read_excel(excel_path, sheet_name='映射表')
+
+    # 构建数据结构
+    capabilities_map = {}  # name -> {name, l3: []}
+    systems_map = {}       # id -> {id, name}
+    connections = []
+
+    sys_index = 1
+    for _, row in df.iterrows():
+        cap_name = row["一级业务能力"]
+        proc_name = row["业务流程"]
+        sys_name = row["应用系统"]
+
+        # 更新 capabilities
+        if cap_name not in capabilities_map:
+            capabilities_map[cap_name] = {"name": cap_name, "l3": []}
+
+        # 添加 l3（业务流程）
+        if proc_name and proc_name not in capabilities_map[cap_name]["l3"]:
+            capabilities_map[cap_name]["l3"].append(proc_name)
+
+        # 处理系统（如果名称为空则跳过）
+        if sys_name and pd.notna(sys_name):
+            # 生成简单的 sysId
+            sys_id = f"s{sys_index}"
+            for existing in systems_map.values():
+                if existing["name"] == sys_name:
+                    sys_id = existing["id"]
+                    break
+            else:
+                systems_map[sys_id] = {"id": sys_id, "name": sys_name}
+                sys_index += 1
+
+            # 添加连线
+            connections.append({
+                "capName": cap_name,
+                "procName": proc_name,
+                "sysId": sys_id
+            })
+
+    # 构建最终结构
+    result = {
+        "capabilities": list(capabilities_map.values()),
+        "systems": list(systems_map.values()),
+        "connections": connections
+    }
+
+    # 保存
+    if output_path is None:
+        import datetime
+        date_str = datetime.datetime.now().strftime("%Y%m%d")
+        output_path = f"output/infomat_data_{date_str}.json"
+
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(result, f, ensure_ascii=False, indent=2)
+
+    print(f"JSON 已保存至: {output_path}")
+    return result
+
+
 def main():
     if len(sys.argv) > 1 and sys.argv[1] == "--test-api":
         success = test_api_connection()
