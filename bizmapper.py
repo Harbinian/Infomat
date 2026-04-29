@@ -108,11 +108,63 @@ def call_minimax_vision(image_path: str, prompt: str) -> dict:
     return {"analysis": result.get("content", "")}
 
 
+def parse_analysis_result(raw_result: dict) -> dict:
+    """解析 API 返回的原始结果"""
+    try:
+        content = raw_result.get("analysis", "")
+
+        # 尝试提取 JSON
+        if isinstance(content, str):
+            # 去掉 markdown 代码块标记
+            content = content.strip()
+            if content.startswith("```json"):
+                content = content[7:]
+            elif content.startswith("```"):
+                content = content[3:]
+            if content.endswith("```"):
+                content = content[:-3]
+
+            return json.loads(content.strip())
+
+        return content
+    except json.JSONDecodeError as e:
+        raise RuntimeError(f"解析失败: {e}\n原始内容: {content[:500]}")
+
+
+def validate_data(data: dict) -> list:
+    """验证解析结果，返回错误列表"""
+    errors = []
+
+    if "capabilities" not in data:
+        errors.append("缺少 capabilities 字段")
+    if "systems" not in data:
+        errors.append("缺少 systems 字段")
+    if "connections" not in data:
+        errors.append("缺少 connections 字段")
+
+    # 验证 connections 中的引用完整性
+    cap_names = {c["name"] for c in data.get("capabilities", [])}
+    all_l3 = set()
+    for c in data.get("capabilities", []):
+        all_l3.update(c.get("l3", []))
+    sys_ids = {s["id"] for s in data.get("systems", [])}
+
+    for i, conn in enumerate(data.get("connections", [])):
+        if conn.get("capName") and conn["capName"] not in cap_names:
+            errors.append(f"连线 {i}: 未找到业务能力 '{conn['capName']}'")
+        if conn.get("procName") and conn["procName"] not in all_l3:
+            errors.append(f"连线 {i}: 未找到业务流程 '{conn['procName']}'")
+        if conn.get("sysId") and conn["sysId"] not in sys_ids:
+            errors.append(f"连线 {i}: 未找到系统 '{conn['sysId']}'")
+
+    return errors
+
+
 def analyze_image(image_path: str) -> dict:
     """分析图片并返回结构化数据"""
     print(f"正在分析图片: {image_path}")
-    result = call_minimax_vision(image_path, ANALYSIS_PROMPT)
-    return result
+    raw_result = call_minimax_vision(image_path, ANALYSIS_PROMPT)
+    return parse_analysis_result(raw_result)
 
 
 def test_api_connection():
