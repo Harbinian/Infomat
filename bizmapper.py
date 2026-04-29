@@ -210,6 +210,147 @@ def test_api_connection():
         return False
 
 
+def generate_excel(data: dict, output_path: str):
+    """生成美化 Excel 映射表"""
+    import pandas as pd
+    from openpyxl import Workbook
+    from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+
+    # 构建关系列表
+    relations = []
+    cap_l3_map = {c["name"]: c.get("l3", []) for c in data.get("capabilities", [])}
+
+    for conn in data.get("connections", []):
+        cap_name = conn.get("capName", "")
+        proc_name = conn.get("procName", "")
+        sys_id = conn.get("sysId", "")
+        sys_name = ""
+
+        # 查找系统名称
+        for s in data.get("systems", []):
+            if s["id"] == sys_id:
+                sys_name = s["name"]
+                break
+
+        # 查找该流程属于哪个一级业务能力
+        l1_cap = ""
+        for cap, l3_list in cap_l3_map.items():
+            if proc_name in l3_list:
+                l1_cap = cap
+                break
+
+        relations.append({
+            "一级业务能力": l1_cap,
+            "业务流程": proc_name,
+            "应用系统": sys_name
+        })
+
+    # 创建 DataFrame
+    df = pd.DataFrame(relations)
+
+    # 写入 Excel（基础）
+    with pd.ExcelWriter(output_path, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='映射表')
+
+    # 美化
+    style_excel(output_path)
+
+    return relations
+
+
+def style_excel(output_path: str):
+    """美化 Excel 文件"""
+    from openpyxl import load_workbook
+
+    wb = load_workbook(output_path)
+    ws = wb.active
+
+    # 表头样式
+    header_fill = PatternFill("solid", fgColor="2E4057")
+    header_font = Font(bold=True, color="FFFFFF", size=11)
+    header_align = Alignment(horizontal="center", vertical="center")
+
+    # 边框
+    thin = Side(style="thin", color="BBBBBB")
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+    # 样式应用到表头
+    for cell in ws[1]:
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = header_align
+        cell.border = border
+
+    # 一级业务能力配色
+    colors = ["D6E4F0", "D5F5E3", "FEF9E7", "FADBD8", "E8DAEF", "D4EFDF"]
+    cap_index = 0
+
+    # 按一级业务能力分组并应用颜色
+    current_cap = None
+    cap_start_row = 2
+
+    for row in range(2, ws.max_row + 1):
+        cap = ws.cell(row=row, column=1).value
+        if cap != current_cap:
+            if current_cap is not None and row > cap_start_row:
+                # 应用颜色到之前的组
+                color = colors[cap_index % len(colors)]
+                for r in range(cap_start_row, row):
+                    for c in range(1, 4):
+                        ws.cell(row=r, column=c).fill = PatternFill("solid", fgColor=color)
+
+                cap_index += 1
+
+            current_cap = cap
+            cap_start_row = row
+
+    # 最后一组
+    if current_cap is not None:
+        color = colors[cap_index % len(colors)]
+        for r in range(cap_start_row, ws.max_row + 1):
+            for c in range(1, 4):
+                ws.cell(row=r, column=c).fill = PatternFill("solid", fgColor=color)
+
+    # 应用边框和对齐到所有数据单元格
+    for row in ws.iter_rows(min_row=2, max_row=ws.max_row):
+        for cell in row:
+            cell.border = border
+            cell.alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
+
+    # 合并一级业务能力中的相同单元格
+    merge_same_cells(ws, 1, 2, ws.max_row)
+
+    # 列宽
+    col_widths = {"A": 22, "B": 28, "C": 22}
+    for col_letter, width in col_widths.items():
+        ws.column_dimensions[col_letter].width = width
+
+    # 行高
+    for row in ws.iter_rows():
+        ws.row_dimensions[row[0].row].height = 20
+
+    ws.row_dimensions[1].height = 24
+    ws.freeze_panes = "A2"
+
+    wb.save(output_path)
+
+
+def merge_same_cells(ws, col_index, start_row, end_row):
+    """合并指定列中连续相同值的单元格"""
+    merge_start = start_row
+    for row in range(start_row + 1, end_row + 2):
+        current = ws.cell(row=row, column=col_index).value
+        prev = ws.cell(row=row - 1, column=col_index).value
+        if current != prev or row == end_row + 2:
+            if row - 1 > merge_start:
+                ws.merge_cells(
+                    start_row=merge_start, start_column=col_index,
+                    end_row=row - 1, end_column=col_index
+                )
+            merge_start = row
+
+
 def main():
     if len(sys.argv) > 1 and sys.argv[1] == "--test-api":
         success = test_api_connection()
