@@ -16,6 +16,37 @@ from pathlib import Path
 MINIMAX_API_HOST = os.getenv("MINIMAX_API_HOST", "https://api.minimaxi.com")
 MINIMAX_API_KEY = os.getenv("MINIMAX_API_KEY")
 
+ANALYSIS_PROMPT = """你是一个业务架构分析专家。请分析这张业务流程图，提取结构化数据。
+
+## 图片结构
+- 列1：业务能力（一级分类）
+- 列2：业务流程（二级分类）
+- 列3：应用系统（IT系统）
+- 连线：直线，连接相邻列
+
+## 输出要求
+请以 JSON 格式输出，包含以下字段：
+
+1. `capabilities`: 业务能力列表
+   - `name`: 一级业务能力名称
+   - `l3`: 该能力下的业务流程列表
+
+2. `systems`: 应用系统列表
+   - `id`: 系统ID（英文或数字，如 s1, system_1）
+   - `name`: 系统名称
+
+3. `connections`: 连线关系列表
+   - `capName`: 业务能力名称
+   - `procName`: 业务流程名称
+   - `sysId`: 应用系统ID
+
+## 注意事项
+- 如果某条连线的应用系统不确定，该字段留空
+- 同一分组的列（1-2-3-2-1结构中的列1+列4属于业务能力）需合并
+- 只提取确定的连线关系，不确定时返回空字符串
+
+请直接输出 JSON，不要有其他内容："""
+
 
 def call_minimax_vision(image_path: str, prompt: str) -> dict:
     """调用 MiniMax Vision API 分析图片
@@ -77,6 +108,13 @@ def call_minimax_vision(image_path: str, prompt: str) -> dict:
     return {"analysis": result.get("content", "")}
 
 
+def analyze_image(image_path: str) -> dict:
+    """分析图片并返回结构化数据"""
+    print(f"正在分析图片: {image_path}")
+    result = call_minimax_vision(image_path, ANALYSIS_PROMPT)
+    return result
+
+
 def test_api_connection():
     """测试 MiniMax API 连接"""
     print("Testing MiniMax API connection...")
@@ -125,8 +163,18 @@ def main():
         success = test_api_connection()
         sys.exit(0 if success else 1)
 
-    print("BizMapper v1.0")
-    print("用法: python bizmapper.py <图片路径> [输出目录]")
+    if len(sys.argv) < 2:
+        print("BizMapper v1.0")
+        print("用法: python bizmapper.py <图片路径> [输出目录]")
+        sys.exit(1)
+
+    image_path = sys.argv[1]
+    if not os.path.exists(image_path):
+        print(f"错误: 文件不存在: {image_path}")
+        sys.exit(1)
+
+    result = analyze_image(image_path)
+    print(f"分析结果: {result}")
 
 
 if __name__ == "__main__":
