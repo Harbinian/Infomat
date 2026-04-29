@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>业务关系网络图</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1a1a2e; color: #eee; overflow: hidden; }
+
+    .toolbar {
+      position: fixed; top: 0; left: 0; right: 0; height: 50px;
+      background: #16213e; border-bottom: 1px solid #0f3460;
+      display: flex; align-items: center; padding: 0 1rem; gap: 1rem; z-index: 100;
+    }
+    .toolbar h1 { font-size: 1.1rem; color: #e94560; }
+
+    .instructions {
+      position: fixed; top: 50px; left: 0; right: 0;
+      background: #0f3460; padding: 10px 1rem; font-size: 0.8rem; color: #aaa;
+      z-index: 90;
+    }
+    .instructions .step { color: #e94560; font-weight: bold; margin-right: 1.5rem; }
+
+    .canvas-container {
+      position: fixed; top: 100px; left: 0; right: 0; bottom: 70px;
+      overflow: auto;
+      background: #1a1a2e;
+    }
+
+    .canvas {
+      position: relative;
+      background-image: radial-gradient(circle, #333 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+
+    .col-header {
+      position: absolute;
+      font-size: 0.75rem; padding: 6px 12px;
+      background: rgba(22,33,62,0.95); border-radius: 6px;
+    }
+
+    .node {
+      position: absolute;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      user-select: none;
+      font-size: 0.85rem;
+      text-align: center;
+      box-shadow: 0 3px 12px rgba(0,0,0,0.4);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .node:hover { transform: scale(1.03); }
+
+    .node-l2 {
+      background: linear-gradient(135deg, #1a3a5c, #0d2137);
+      border: 2px dashed #42a5f5;
+      pointer-events: none;
+      opacity: 0.6;
+    }
+    .node-cap { background: linear-gradient(135deg, #1565c0, #0d47a1); border: 2px solid #42a5f5; }
+    .node-proc { background: linear-gradient(135deg, #6a1b9a, #4a148c); border: 2px solid #ab47bc; }
+    .node-sys { background: linear-gradient(135deg, #e67e22, #d35400); border: 2px solid #f39c12; }
+
+    .node.selected { box-shadow: 0 0 0 3px #ffff00; transform: scale(1.05); }
+
+    .connection-svg {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none; overflow: visible;
+    }
+    .connection-line { stroke: #e94560; stroke-width: 2.5; fill: none; pointer-events: stroke; cursor: pointer; }
+    .connection-label {
+      position: absolute;
+      background: #16213e; padding: 3px 10px; border-radius: 8px;
+      font-size: 0.7rem; color: #eee; border: 1px solid #e94560;
+      white-space: nowrap; transform: translate(-50%, -50%);
+      cursor: pointer; pointer-events: auto;
+    }
+    .connection-line.selected, .connection-label.selected { stroke-width: 4; filter: drop-shadow(0 0 6px #ffff00); }
+
+    .bottom-bar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: #16213e; border-top: 1px solid #0f3460;
+      display: flex; align-items: center; padding: 10px 1rem; gap: 0.5rem;
+      height: 60px;
+    }
+
+    .btn {
+      background: #e94560; color: white; border: none;
+      padding: 8px 16px; border-radius: 6px; cursor: pointer;
+      font-size: 0.85rem; font-weight: 500;
+    }
+    .btn:hover { background: #c73e54; }
+    .btn-secondary { background: #0f3460; }
+    .btn-secondary:hover { background: #1a4a80; }
+
+    .status { font-size: 0.85rem; color: #888; margin-left: 1rem; }
+    .status .highlight { color: #ffff00; }
+
+    .delete-panel {
+      position: fixed; bottom: 70px; left: 50%; transform: translateX(-50%);
+      background: #c0392b; padding: 12px 24px; border-radius: 8px;
+      display: none; align-items: center; gap: 1rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5); z-index: 200;
+    }
+    .delete-panel.show { display: flex; }
+    .delete-panel span { color: white; font-size: 0.9rem; }
+    .btn-del { background: #fff; color: #c0392b; border: none; padding: 6px 14px; border-radius: 5px; cursor: pointer; }
+    .btn-cancel { background: transparent; color: #fff; border: 1px solid #fff; padding: 6px 14px; border-radius: 5px; cursor: pointer; }
+  </style>
+</head>
+<body>
+
+<div class="toolbar">
+  <h1>业务关系网络图</h1>
+</div>
+
+<div class="instructions">
+  <span><span class="step">1.</span> 点击绿色业务能力</span>
+  <span><span class="step">2.</span> 点击紫色L3流程</span>
+  <span><span class="step">3.</span> 点击橙色应用系统</span>
+  <span style="margin-left: 2rem;">已连接: <span id="conn-count" class="highlight">0</span> 条</span>
+  <span style="color:#ff6b6b;">| 点击连线删除</span>
+</div>
+
+<div class="delete-panel" id="delete-panel">
+  <span id="delete-panel-text">确认删除？</span>
+  <button class="btn-del" onclick="confirmDelete()">删除</button>
+  <button class="btn-cancel" onclick="cancelDelete()">取消</button>
+</div>
+
+<div class="canvas-container" id="canvas-container">
+  <div class="canvas" id="canvas">
+    <div class="col-header" id="header-cap" style="left:30px;top:10px;">业务能力</div>
+    <div class="col-header" id="header-proc" style="left:320px;top:10px;color:#ab47bc;">L3流程</div>
+    <div class="col-header" id="header-sys" style="left:600px;top:10px;color:#f39c12;">应用系统</div>
+
+    <svg class="connection-svg" id="svg-connections">
+      <defs>
+        <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#e94560"/>
+        </marker>
+      </defs>
+      <g id="connections"></g>
+    </svg>
+    <div id="nodes-container"></div>
+  </div>
+</div>
+
+<div class="bottom-bar">
+  <button class="btn btn-secondary" onclick="clearAll()">清空连线</button>
+  <button class="btn btn-secondary" onclick="exportData()">导出数据</button>
+  <span class="status">当前: <span id="current-step" class="highlight">点击绿色业务能力节点</span></span>
+</div>
+
+<script>
+const state = {
+  capabilities: [
+    { name: '工艺策划', l3: ['工艺与制造方案策划', '生产线规划与管控', '制造过程风险分析'] },
+    { name: '工艺验证与改进管理', l3: ['工艺技术实施与管控', '工艺优化与总结提升'] },
+    { name: '工艺设计', l3: ['工艺生产过程管控', '工艺文件编制与管控', '制造数据统筹管控', '物料及特制件管控'] }
+  ],
+
+  processes: [
+    '工艺网络计划制定', '制造总方案制定', '装配协调方案制定', '零件制造方案制定',
+    '互换和替换检查控制', '包装运输技术策划', '生产线规划', '产能控制',
+    '架次流程图制定', '产品制造的风险控制', 'PFMEA', '工艺评审', '工艺鉴定',
+    '工艺纪律检查', '工艺仿真', '技术问题处理', '研制工艺工作总结',
+    '制造物料清单（MBOM）编制', 'ERP物料主数据维护', '工时定额编制',
+    '材料和外购件代用', '特制件管控', '关键工序控制', '关重件的控制',
+    'KC控制', '特殊过程控制', '一般生产过程管理', '工艺过程管控',
+    '零组件供应状态表的编制', '装配工艺文件管控', '零件工艺文件管控'
+  ],
+
+  systems: [
+    { id: 's1', name: '三维仿真工具' },
+    { id: 's2', name: '产能管理系统' },
+    { id: 's3', name: 'CPM' },
+    { id: 's4', name: 'CAPP' },
+    { id: 's5', name: 'MES' },
+    { id: 's6', name: '三维工艺' },
+    { id: 's7', name: 'PDM（BOM管理）' },
+    { id: 's8', name: 'SAP' }
+  ],
+
+  connections: [],
+  selectionStep: 'cap',
+  selectedCapName: null,
+  selectedProcName: null,
+  selectedConnIdx: null,
+
+  // Layout settings
+  colX: { cap: 30, proc: 320, sys: 600 },
+  rowHeight: 45,
+  startY: 55,
+  nodeHeight: 36
+};
+
+function init() {
+  render();
+}
+
+function render() {
+  const container = document.getElementById('nodes-container');
+  container.innerHTML = '';
+
+  // Calculate total rows needed
+  let capTotalRows = 0;
+  state.capabilities.forEach(cap => { capTotalRows += 1 + cap.l3.length; });
+
+  const totalRows = Math.max(capTotalRows, state.processes.length, state.systems.length);
+  const canvasHeight = state.startY + totalRows * state.rowHeight + 50;
+
+  const canvas = document.getElementById('canvas');
+  canvas.style.height = canvasHeight + 'px';
+  canvas.style.width = '800px';
+
+  // Render capability nodes
+  let capY = state.startY;
+  state.capabilities.forEach((cap, ci) => {
+    // L2 title (dashed, non-clickable)
+    const l2 = document.createElement('div');
+    l2.className = 'node node-l2';
+    l2.textContent = cap.name;
+    l2.style.left = state.colX.cap + 'px';
+    l2.style.top = capY + 'px';
+    l2.style.minWidth = '140px';
+    container.appendChild(l2);
+    capY += state.rowHeight;
+
+    // L3 children
+    cap.l3.forEach((l3, li) => {
+      const node = document.createElement('div');
+      node.className = 'node node-cap';
+      node.id = 'cap_' + ci + '_' + li;
+      node.textContent = l3;
+      node.style.left = (state.colX.cap + 10) + 'px';
+      node.style.top = capY + 'px';
+      node.style.minWidth = '130px';
+      node.onclick = () => onCapClick(l3);
+      container.appendChild(node);
+      capY += state.rowHeight;
+    });
+    capY += 10; // spacing between groups
+  });
+
+  // Render process nodes (centered in their column)
+  const procY = state.startY + (totalRows - state.processes.length) / 2 * state.rowHeight;
+  state.processes.forEach((proc, i) => {
+    const node = document.createElement('div');
+    node.className = 'node node-proc';
+    node.id = 'proc_' + i;
+    node.textContent = proc;
+    node.style.left = state.colX.proc + 'px';
+    node.style.top = (procY + i * state.rowHeight) + 'px';
+    node.style.minWidth = '120px';
+    node.onclick = () => onProcClick(proc);
+    container.appendChild(node);
+  });
+
+  // Render system nodes (centered in their column)
+  const sysY = state.startY + (totalRows - state.systems.length) / 2 * state.rowHeight;
+  state.systems.forEach((sys, i) => {
+    const node = document.createElement('div');
+    node.className = 'node node-sys';
+    node.id = sys.id;
+    node.textContent = sys.name;
+    node.style.left = state.colX.sys + 'px';
+    node.style.top = (sysY + i * state.rowHeight) + 'px';
+    node.style.minWidth = '140px';
+    node.onclick = () => onSysClick(sys.id);
+    container.appendChild(node);
+  });
+
+  renderConnections();
+}
+
+function onCapClick(name) {
+  state.selectedCapName = name;
+  state.selectionStep = 'proc';
+
+  document.querySelectorAll('.node-cap.selected, .node-proc.selected').forEach(n => n.classList.remove('selected'));
+  document.querySelectorAll('.node-cap').forEach(n => { if (n.textContent === name) n.classList.add('selected'); });
+  updateStepDisplay();
+}
+
+function onProcClick(name) {
+  if (state.selectionStep !== 'proc') return;
+  state.selectedProcName = name;
+  state.selectionStep = 'sys';
+
+  document.querySelectorAll('.node-proc.selected').forEach(n => n.classList.remove('selected'));
+  document.querySelectorAll('.node-proc').forEach(n => { if (n.textContent === name) n.classList.add('selected'); });
+  updateStepDisplay();
+}
+
+function onSysClick(sysId) {
+  if (state.selectionStep !== 'sys') return;
+
+  state.connections.push({
+    capName: state.selectedCapName,
+    procName: state.selectedProcName,
+    sysId: sysId
+  });
+
+  document.querySelectorAll('.node.selected').forEach(n => n.classList.remove('selected'));
+  state.selectionStep = 'cap';
+  state.selectedCapName = null;
+  state.selectedProcName = null;
+
+  renderConnections();
+  document.getElementById('conn-count').textContent = state.connections.length;
+  updateStepDisplay();
+}
+
+function updateStepDisplay() {
+  const stepEl = document.getElementById('current-step');
+  if (state.selectionStep === 'cap') stepEl.textContent = '点击绿色业务能力节点';
+  else if (state.selectionStep === 'proc') stepEl.textContent = `已选: ${state.selectedCapName} → 点击紫色L3流程`;
+  else if (state.selectionStep === 'sys') stepEl.textContent = `已选: ${state.selectedProcName} → 点击橙色应用系统`;
+}
+
+function renderConnections() {
+  const g = document.getElementById('connections');
+  g.innerHTML = '';
+  document.querySelectorAll('.connection-label').forEach(el => el.remove());
+
+  const container = document.getElementById('nodes-container');
+
+  state.connections.forEach((conn, idx) => {
+    let capNode = null;
+    document.querySelectorAll('.node-cap').forEach(n => { if (n.textContent === conn.capName) capNode = n; });
+
+    let procNode = null;
+    state.processes.forEach((p, i) => {
+      if (p === conn.procName) procNode = document.getElementById('proc_' + i);
+    });
+
+    const sysNode = document.getElementById(conn.sysId);
+    if (!capNode || !procNode || !sysNode) return;
+
+    const x1 = capNode.offsetLeft + capNode.offsetWidth;
+    const y1 = capNode.offsetTop + capNode.offsetHeight / 2;
+    const x2 = procNode.offsetLeft;
+    const y2 = procNode.offsetTop + procNode.offsetHeight / 2;
+    const x3 = procNode.offsetLeft + procNode.offsetWidth;
+    const y3 = procNode.offsetTop + procNode.offsetHeight / 2;
+    const x4 = sysNode.offsetLeft;
+    const y4 = sysNode.offsetTop + sysNode.offsetHeight / 2;
+
+    // Cap -> Proc
+    const midX1 = (x1 + x2) / 2;
+    const path1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path1.setAttribute('d', `M ${x1} ${y1} C ${midX1} ${y1}, ${midX1} ${y2}, ${x2} ${y2}`);
+    path1.setAttribute('class', 'connection-line');
+    path1.setAttribute('marker-end', 'url(#arrowhead)');
+    path1.setAttribute('data-conn-idx', idx);
+    path1.style.pointerEvents = 'stroke';
+    path1.onclick = () => selectConnection(idx);
+    g.appendChild(path1);
+
+    // Proc -> Sys
+    const midX2 = (x3 + x4) / 2;
+    const path2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path2.setAttribute('d', `M ${x3} ${y3} C ${midX2} ${y3}, ${midX2} ${y4}, ${x4} ${y4}`);
+    path2.setAttribute('class', 'connection-line');
+    path2.setAttribute('marker-end', 'url(#arrowhead)');
+    path2.setAttribute('data-conn-idx', idx);
+    path2.style.pointerEvents = 'stroke';
+    path2.onclick = () => selectConnection(idx);
+    g.appendChild(path2);
+
+    // Label
+    const label = document.createElement('div');
+    label.className = 'connection-label';
+    label.textContent = conn.procName;
+    label.style.left = midX2 + 'px';
+    label.style.top = (y3 + y4) / 2 + 'px';
+    label.onclick = () => selectConnection(idx);
+    container.appendChild(label);
+  });
+}
+
+function selectConnection(idx) {
+  state.selectedConnIdx = idx;
+  const conn = state.connections[idx];
+  const sysName = state.systems.find(s => s.id === conn.sysId)?.name || '';
+
+  document.getElementById('delete-panel-text').textContent = `${conn.capName} → ${conn.procName} → ${sysName}`;
+  document.getElementById('delete-panel').classList.add('show');
+
+  document.querySelectorAll(`[data-conn-idx="${idx}"]`).forEach(el => el.classList.add('selected'));
+  document.querySelectorAll('.connection-label').forEach(el => {
+    if (el.textContent === conn.procName) el.classList.add('selected');
+  });
+}
+
+function confirmDelete() {
+  if (state.selectedConnIdx !== null) {
+    state.connections.splice(state.selectedConnIdx, 1);
+    state.selectedConnIdx = null;
+    cancelDelete();
+    renderConnections();
+    document.getElementById('conn-count').textContent = state.connections.length;
+  }
+}
+
+function cancelDelete() {
+  state.selectedConnIdx = null;
+  document.getElementById('delete-panel').classList.remove('show');
+  document.querySelectorAll('.connection-line.selected, .connection-label.selected').forEach(el => el.classList.remove('selected'));
+}
+
+function clearAll() {
+  state.connections = [];
+  renderConnections();
+  document.getElementById('conn-count').textContent = '0';
+}
+
+function exportData() {
+  const data = {
+    capabilities: state.capabilities,
+    systems: state.systems,
+    connections: state.connections.map(c => ({
+      capability: c.capName,
+      process: c.procName,
+      system: state.systems.find(s => s.id === c.sysId)?.name
+    }))
+  };
+  console.log(JSON.stringify(data, null, 2));
+  alert(`数据已输出到控制台（F12）\n共 ${state.connections.length} 条连线`);
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') cancelDelete();
+  if (e.key === 'Delete' && state.selectedConnIdx !== null) confirmDelete();
+});
+
+document.getElementById('canvas-container').addEventListener('scroll', () => renderConnections());
+window.addEventListener('resize', () => render());
+
+init();
+</script>
+</body>
+</html>
