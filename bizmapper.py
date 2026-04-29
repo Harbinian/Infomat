@@ -92,7 +92,7 @@ def call_minimax_vision(image_path: str, prompt: str) -> dict:
     req = urllib.request.Request(url, data=data, headers=headers, method="POST")
 
     try:
-        with urllib.request.urlopen(req, timeout=30) as response:
+        with urllib.request.urlopen(req, timeout=120) as response:
             result = json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as e:
         error_body = e.read().decode("utf-8") if e.fp else ""
@@ -192,7 +192,7 @@ def test_api_connection():
         data = json.dumps(payload).encode("utf-8")
         req = urllib.request.Request(url, data=data, headers=headers, method="POST")
 
-        with urllib.request.urlopen(req, timeout=30) as response:
+        with urllib.request.urlopen(req, timeout=120) as response:
             result = json.loads(response.read().decode("utf-8"))
 
         base_resp = result.get("base_resp", {})
@@ -262,6 +262,7 @@ def generate_excel(data: dict, output_path: str):
 def style_excel(output_path: str):
     """美化 Excel 文件"""
     from openpyxl import load_workbook
+    from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
 
     wb = load_workbook(output_path)
     ws = wb.active
@@ -433,15 +434,18 @@ def main():
     if len(sys.argv) >= 3:
         output_dir = sys.argv[2]
 
-    os.makedirs(output_dir, exist_ok=True)
-
     if sys.argv[1] == "--to-json":
         # Excel 转 JSON 模式
         excel_path = sys.argv[2]
-        excel_to_json(excel_path, output_dir)
+        output_dir = sys.argv[3] if len(sys.argv) >= 4 else "output"
+        os.makedirs(output_dir, exist_ok=True)
+        import datetime
+        json_path = os.path.join(output_dir, f"infomat_data_{datetime.datetime.now().strftime('%Y%m%d')}.json")
+        excel_to_json(excel_path, json_path)
     else:
         # 分析图片生成 Excel 模式
         image_path = sys.argv[1]
+        os.makedirs(output_dir, exist_ok=True)
 
         # 分析
         data = analyze_image(image_path)
