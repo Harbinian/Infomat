@@ -358,28 +358,39 @@ def excel_to_json(excel_path: str, output_path: str = None):
 
     # 读取 Excel
     df = pd.read_excel(excel_path, sheet_name='映射表')
+    if "一级业务能力" in df.columns:
+        # openpyxl merged cells are read back as NaN after the first row
+        df["一级业务能力"] = df["一级业务能力"].ffill()
 
     # 构建数据结构
     capabilities_map = {}  # name -> {name, l3: []}
     systems_map = {}       # id -> {id, name}
     connections = []
 
+    def clean_cell(value):
+        if pd.isna(value):
+            return ""
+        return str(value).strip()
+
     sys_index = 1
     for _, row in df.iterrows():
-        cap_name = row["一级业务能力"]
-        proc_name = row["业务流程"]
-        sys_name = row["应用系统"]
+        cap_name = clean_cell(row["一级业务能力"])
+        proc_name = clean_cell(row["业务流程"])
+        sys_name = clean_cell(row["应用系统"])
+
+        if not proc_name:
+            continue
 
         # 更新 capabilities
         if cap_name not in capabilities_map:
             capabilities_map[cap_name] = {"name": cap_name, "l3": []}
 
         # 添加 l3（业务流程）
-        if proc_name and proc_name not in capabilities_map[cap_name]["l3"]:
+        if proc_name not in capabilities_map[cap_name]["l3"]:
             capabilities_map[cap_name]["l3"].append(proc_name)
 
         # 处理系统（如果名称为空则跳过）
-        if sys_name and pd.notna(sys_name):
+        if sys_name:
             # 生成简单的 sysId
             sys_id = f"s{sys_index}"
             for existing in systems_map.values():
@@ -411,40 +422,49 @@ def excel_to_json(excel_path: str, output_path: str = None):
         output_path = f"output/infomat_data_{date_str}.json"
 
     with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(result, f, ensure_ascii=False, indent=2)
+        json.dump(result, f, ensure_ascii=False, indent=2, allow_nan=False)
 
     print(f"JSON 已保存至: {output_path}")
     return result
 
 
-def main():
-    if len(sys.argv) < 2:
-        print("BizMapper v1.0 - 业务关系提取工具")
-        print("")
-        print("用法:")
-        print("  生成 Excel: python bizmapper.py <图片路径> [输出目录]")
-        print("  Excel转JSON: python bizmapper.py --to-json <Excel路径> [输出目录]")
-        print("")
-        print("示例:")
-        print("  python bizmapper.py sample-diagram.png")
-        print("  python bizmapper.py --to-json output/映射表_20260429.xlsx")
-        return
+def print_usage():
+    print("BizMapper v1.0 - 业务关系提取工具")
+    print("")
+    print("用法:")
+    print("  生成 Excel: python bizmapper.py <图片路径> [输出目录]")
+    print("  Excel转JSON: python bizmapper.py --to-json <Excel路径> [输出目录]")
+    print("")
+    print("示例:")
+    print("  python bizmapper.py sample-diagram.png")
+    print("  python bizmapper.py --to-json output/映射表_20260429.xlsx")
+
+
+def main(argv=None):
+    args = sys.argv[1:] if argv is None else argv
+    if not args:
+        print_usage()
+        return 1
 
     output_dir = "output"
-    if len(sys.argv) >= 3:
-        output_dir = sys.argv[2]
+    if len(args) >= 2:
+        output_dir = args[1]
 
-    if sys.argv[1] == "--to-json":
+    if args[0] == "--to-json":
         # Excel 转 JSON 模式
-        excel_path = sys.argv[2]
-        output_dir = sys.argv[3] if len(sys.argv) >= 4 else "output"
+        if len(args) < 2:
+            print_usage()
+            return 1
+
+        excel_path = args[1]
+        output_dir = args[2] if len(args) >= 3 else "output"
         os.makedirs(output_dir, exist_ok=True)
         import datetime
         json_path = os.path.join(output_dir, f"infomat_data_{datetime.datetime.now().strftime('%Y%m%d')}.json")
         excel_to_json(excel_path, json_path)
     else:
         # 分析图片生成 Excel 模式
-        image_path = sys.argv[1]
+        image_path = args[0]
         os.makedirs(output_dir, exist_ok=True)
 
         # 分析
@@ -470,6 +490,8 @@ def main():
         print("请审核 Excel 中的映射关系，调整后运行以下命令转换为 JSON:")
         print(f"  python bizmapper.py --to-json {excel_path}")
 
+    return 0
+
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
