@@ -219,14 +219,14 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
     <a href="#cover">首页</a><a href="#s1">概览</a><a href="#s2">拓扑</a>
     <a href="#s3">集成域</a><a href="#s4">主数据</a><a href="#s5">黄金源</a>
     <a href="#s6">数据中台</a><a href="#s7">适航追溯</a><a href="#s8">接口</a>
-    <a href="#s9">问题</a><a href="#s10">组织</a><a href="#s11">行动计划</a>
+    <a href="#s9">会前行动</a><a href="#s10">组织</a><a href="#s11">行动计划</a>
   </div>
 </nav>
 
 <!-- ══ 封面 ══ -->
 <div id="cover">
   <div class="cv-tag">V2.1 草案 · 仅供内部讨论 · PLM选型截止 2026-05-07</div>
-  <h1>制造企业<span>数字化运营平台</span><br/>核心系统集成说明</h1>
+  <h1><span>数字化运营平台</span><br/>核心系统集成说明</h1>
   <p class="cv-sub">沈阳昌兴复材航空科技有限责任公司<br/>ERP · MES · OA · PLM · PDM · CAPP · WMS · SCIM 全域集成方案</p>
   <div class="cv-meta">
     <div class="cv-box"><div class="cl">文件版本</div><div class="cv">V2.1</div></div>
@@ -508,3 +508,361 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
   <div class="card" style="margin-bottom:16px">
     <h3>编码设计五原则</h3>
     <div class="g2" style="margin-top:8px">
+      <div class="info"><p><strong>唯一性：</strong>每一个物料全公司范围内有且仅有一个编码，跨系统共用。</p></div>
+      <div class="info"><p><strong>稳定性：</strong>编码一经创建，不因物料名称、规格变更而修改；变更须新建物料。</p></div>
+      <div class="info"><p><strong>可读性：</strong>编码结构须兼顾人工识别与系统解析，不使用纯流水码。</p></div>
+      <div class="info"><p><strong>扩展性：</strong>分类位预留扩展空间，避免未来分类调整导致编码体系崩溃。</p></div>
+      <div class="info"><p><strong>系统兼容性：</strong>编码长度与字符集须经各系统确认，确保无截断或乱码风险。</p></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>编码结构（PPT版，13位含连字符）</h3>
+    <div class="enc">
+      <div class="es"><div class="ev">XX</div><div class="el">大类 · 2位</div></div>
+      <div class="esep">-</div>
+      <div class="es"><div class="ev">XXX</div><div class="el">小类 · 3位</div></div>
+      <div class="esep">-</div>
+      <div class="es"><div class="ev">00000</div><div class="el">流水号 · 5位</div></div>
+      <div class="enc-note"><div class="ex">CF-PNL-00001</div><div class="ed">版次 REV 为独立字段，不进入主编码</div></div>
+    </div>
+    <div class="tw"><table>
+      <thead><tr><th>物料编码</th><th>物料名称</th><th>大类</th><th>版次</th><th>备注</th></tr></thead>
+      <tbody>
+        <tr><td><code>CF-PNL-00001</code></td><td>碳纤维后机身上壁板</td><td>碳纤维复合材料件</td><td>A</td><td>主结构件，序列号管理</td></tr>
+        <tr><td><code>CF-SPA-00001</code></td><td>碳纤维主梁（前梁）</td><td>碳纤维复合材料件</td><td>A</td><td>主结构件，序列号管理</td></tr>
+        <tr><td><code>CF-RIB-00003</code></td><td>碳纤维翼肋（第5肋）</td><td>碳纤维复合材料件</td><td>B</td><td>经 ECO-2024-0012 变更</td></tr>
+        <tr><td><code>ME-FIT-00001</code></td><td>钛合金主梁接头</td><td>金属件/机加件</td><td>A</td><td>序列号管理</td></tr>
+        <tr><td><code>PM-CF-00001</code></td><td>T300碳纤维预浸料</td><td>预浸料/基体材料</td><td>—</td><td>批次管理，有效期管控</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <div class="card">
+    <h3>航空复材特殊编码规则</h3>
+    <div class="tw"><table>
+      <thead><tr><th>规则</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td>件号与物料编码分离</td><td>对外交付件号（主机厂格式）与内部物料编码分离，通过映射表关联。禁止直接用主机厂件号作为内部编码。</td></tr>
+        <tr><td>预浸料有效期不进编码</td><td>批次号、生产日期、有效期作为批次属性管理，不体现在物料编码中。</td></tr>
+        <tr><td>工艺规范号单独字段</td><td>固化工艺规范、NDT规范作为物料属性字段，不进编码。</td></tr>
+        <tr><td>构型状态码独立</td><td>适航构型状态（TC/STC适用性）作为独立属性，不进编码。</td></tr>
+        <tr><td>版次 REV 独立字段</td><td>版次不进主编码，作为独立字段管理，支持版本追溯。</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <div class="card">
+    <h3>物料分类码定义（12类，航空复材专用）</h3>
+    <div class="tw"><table>
+      <thead><tr><th>大类码</th><th>名称</th><th>说明</th><th>黄金源</th></tr></thead>
+      <tbody>
+        <tr><td><code>CF</code></td><td>碳纤维复合材料件</td><td>CFRP壁板、梁、肋、框等主结构件</td><td>PLM</td></tr>
+        <tr><td><code>GF</code></td><td>玻璃纤维复合材料件</td><td>GFRP整流罩、非承力结构件</td><td>PLM</td></tr>
+        <tr><td><code>HY</code></td><td>混杂复合材料件</td><td>碳/玻混杂、碳/芳纶混杂件</td><td>PLM</td></tr>
+        <tr><td><code>ME</code></td><td>金属件/机加件</td><td>铝合金、钛合金接头、连接件</td><td>PLM</td></tr>
+        <tr><td><code>AS</code></td><td>装配体/组件</td><td>多零件组成的子装配体</td><td>PLM</td></tr>
+        <tr><td><code>PM</code></td><td>预浸料/基体材料</td><td>碳纤维预浸料、玻纤预浸料、胶膜</td><td>ERP-MM</td></tr>
+        <tr><td><code>RM</code></td><td>辅助材料</td><td>脱模布、透气毡、真空袋膜、密封胶条</td><td>ERP-MM</td></tr>
+        <tr><td><code>AD</code></td><td>胶粘剂/密封剂</td><td>结构胶、密封胶、底漆</td><td>ERP-MM</td></tr>
+        <tr><td><code>FA</code></td><td>标准紧固件</td><td>航空级螺栓、铆钉（AN/NAS/MS标准）</td><td>ERP-MM</td></tr>
+        <tr><td><code>TO</code></td><td>工装模具</td><td>铺层模具、热压罐工装、修边夹具</td><td>MES</td></tr>
+        <tr><td><code>CO</code></td><td>耗材</td><td>砂纸、切割片、清洗剂等</td><td>ERP-MM</td></tr>
+        <tr><td><code>DM</code></td><td>技术文件/数据包</td><td>工程图纸、工艺规范（虚拟物料）</td><td>PLM/PDM</td></tr>
+      </tbody>
+    </table></div>
+    <div class="tw"><table>
+      <thead><tr><th>CF大类小类码</th><th>名称</th><th>典型件</th></tr></thead>
+      <tbody>
+        <tr><td><code>CF-PNL</code></td><td>壁板类</td><td>后机身壁板、翼壁板、夹层壁板</td></tr>
+        <tr><td><code>CF-SPA</code></td><td>梁类</td><td>主梁、副梁、加强梁</td></tr>
+        <tr><td><code>CF-RIB</code></td><td>肋类</td><td>翼肋、框肋</td></tr>
+        <tr><td><code>CF-FRM</code></td><td>框类</td><td>机身框、隔框</td></tr>
+        <tr><td><code>CF-STR</code></td><td>长桁/加强筋</td><td>长桁、加强筋条</td></tr>
+        <tr><td><code>CF-FIT</code></td><td>接头类</td><td>复合材料接头、耳片</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</div>
+
+<!-- ══ 5 黄金源 ══ -->
+<div class="sec" id="s5">
+  <div class="sec-hd"><div class="sec-num">5</div><div><h2>黄金源确认表</h2><div class="sd">字段唯一权威来源 · 其他系统只读不写</div></div></div>
+  <div class="info"><p>黄金源（Golden Source）指某字段或数据的唯一权威来源系统。原则上，黄金源系统负责创建和维护数据，其他系统通过接口同步后只读使用。</p></div>
+  <div class="tw"><table>
+    <thead><tr><th>数据域</th><th>数据项</th><th>黄金源系统</th><th>其他系统角色</th></tr></thead>
+    <tbody>
+      <tr><td>物料主数据</td><td>物料编码、名称、规格</td><td>PLM（设计件）/ ERP-MM（采购件）</td><td>其他系统只读</td></tr>
+      <tr><td>EBOM结构</td><td>铺层顺序、材料规范、固化规范</td><td>PLM</td><td>PDM接收，其他只读</td></tr>
+      <tr><td>MBOM结构</td><td>工序分工、工装、定额</td><td>CAPP</td><td>MES接收，ERP-PP只读</td></tr>
+      <tr><td>工艺规范</td><td>固化曲线、NDT规范</td><td>CAPP/PDM</td><td>MES执行，不可修改</td></tr>
+      <tr><td>供应商信息</td><td>供应商编码、资质、ASL</td><td>ERP-MM</td><td>SCIM同步，只读</td></tr>
+      <tr><td>生产订单</td><td>订单号、计划数量、日期</td><td>ERP-PP</td><td>MES接收，只读</td></tr>
+      <tr><td>工时数据</td><td>实际工时、报工记录</td><td>MES</td><td>ERP-CO接收，只读</td></tr>
+      <tr><td>质量记录</td><td>NDT报告、检验结果</td><td>MES/质量系统</td><td>PDM归档，ERP关联</td></tr>
+      <tr><td>构型状态</td><td>件号、S/N、偏离记录</td><td>PDM</td><td>只读</td></tr>
+      <tr><td>财务凭证</td><td>成本归集、财务核算</td><td>ERP-FI</td><td>只读</td></tr>
+    </tbody>
+  </table></div>
+  <div class="warn"><div class="wt">待专题会决议</div><p>Q5：设计件物料主数据黄金源是 PLM 还是 ERP？Q6：MBOM 黄金源是 CAPP 还是 ERP-PP？这两项会直接影响接口主写方和变更责任边界。</p></div>
+</div>
+
+<!-- ══ 6 数据中台 ══ -->
+<div class="sec" id="s6">
+  <div class="sec-hd"><div class="sec-num">6</div><div><h2>数据中台架构</h2><div class="sd">点对点 vs 集成总线 · Q7 核心决策</div></div></div>
+  <div class="alert"><div class="at">架构层面最关键的决策</div><p>数据中台路线将直接影响所有接口的实现方式和长期维护成本。当前文档将其作为 Q7 决策项，不预设最终方案。</p></div>
+  <div class="dp-grid">
+    <div class="dp-opt">
+      <span class="dp-badge" style="background:#fef3c7;color:#92400e">方案A</span>
+      <h4>点对点集成</h4>
+      <ul>
+        <li>系统间两两直连，短期建设成本较低。</li>
+        <li>8套系统理论接口数量可达 28 条。</li>
+        <li>任一系统升级可能影响多条接口，维护成本高。</li>
+        <li>数据散落各系统，适航追溯链难以统一查询。</li>
+      </ul>
+    </div>
+    <div class="dp-opt rec">
+      <span class="dp-badge" style="background:#dbeafe;color:#1a56db">方案B/C</span>
+      <h4>集成总线 / 数据中台</h4>
+      <ul>
+        <li>统一中间层，业务系统通过标准接口接入。</li>
+        <li>8套系统按接入方式可收敛为 8 条主接口。</li>
+        <li>通过适配器降低系统升级对其他接口的影响。</li>
+        <li>可支撑 MDM、数据质量监控和适航追溯数据湖。</li>
+      </ul>
+    </div>
+  </div>
+  <div class="tw"><table>
+    <thead><tr><th>维度</th><th>方案A：点对点集成</th><th>方案B：数据中台/集成总线</th></tr></thead>
+    <tbody>
+      <tr><td>架构</td><td>系统间两两直连</td><td>统一中间层，所有系统接中台</td></tr>
+      <tr><td>接口数量</td><td>N×(N-1)/2，8系统=28条</td><td>N条，8系统=8条</td></tr>
+      <tr><td>建设成本</td><td>低（短期）</td><td>高（需额外建设）</td></tr>
+      <tr><td>维护成本</td><td>高（任一系统升级影响多条接口）</td><td>低（只改中台适配器）</td></tr>
+      <tr><td>数据一致性</td><td>难保证（各系统各自同步）</td><td>易保证（统一调度）</td></tr>
+      <tr><td>适航追溯</td><td>难（数据散落各系统）</td><td>易（中台统一存储追溯链）</td></tr>
+      <tr><td>适用场景</td><td>系统少、集成简单</td><td>系统多、数据复杂、有追溯要求</td></tr>
+      <tr><td>推荐度</td><td>不推荐（8系统规模）</td><td>推荐</td></tr>
+    </tbody>
+  </table></div>
+  <div class="chain">
+    <div class="chain-title">数据中台在架构中的位置</div>
+    <div class="chain-step"><div class="chain-dot"></div><p><strong>各业务系统层：</strong>PLM、PDM、CAPP、ERP、MES、WMS、SCIM、OA。</p></div>
+    <div class="chain-arr">↓ 统一接口（API / 消息队列）</div>
+    <div class="chain-step"><div class="chain-dot"></div><p><strong>数据中台 / 集成总线：</strong>主数据管理（MDM）、数据同步调度、接口适配器、数据质量监控、适航追溯数据湖。</p></div>
+  </div>
+  <div class="qi"><div class="qn">Q7</div><div class="qb"><h4>是否建设数据中台/集成总线？</h4><p>选项A：点对点，由各实施商自行负责接口；选项B：建设统一集成总线（ESB/消息中间件）；选项C：建设完整数据中台（含MDM主数据管理）。</p><div class="qmeta"><span class="qtag qt-owner">项目管理部 + 总经理</span><span class="qtag qt-dead">2026-05-09</span><span class="qtag qt-open">待决议</span></div></div></div>
+</div>
+
+<!-- ══ 7 适航追溯 ══ -->
+<div class="sec" id="s7">
+  <div class="sec-hd"><div class="sec-num">7</div><div><h2>适航追溯专节</h2><div class="sd">序列号级追溯 · 终身保存 · Q8</div></div></div>
+  <div class="g3">
+    <div class="card"><h3>序列号级追溯</h3><p>每个零件建立独立档案，不以批次追溯替代单件追溯。</p></div>
+    <div class="card"><h3>终身保存</h3><p>质量档案须保存至零件退役，通常 20 年以上。</p></div>
+    <div class="card"><h3>全链路可查</h3><p>从原材料批次、制造工艺、检验记录到交付构型，均需可追溯。</p></div>
+  </div>
+  <div class="chain">
+    <div class="chain-title">追溯链设计（序列号级）</div>
+    <div class="chain-step"><div class="chain-dot"></div><p><strong>原材料批次（预浸料）：</strong>批次号 + 有效期 + 存储记录。</p></div>
+    <div class="chain-arr">↓</div>
+    <div class="chain-step"><div class="chain-dot"></div><p><strong>铺层工序（MES记录）：</strong>铺层顺序 + 操作员 + 时间戳 + 环境温湿度。</p></div>
+    <div class="chain-arr">↓</div>
+    <div class="chain-step"><div class="chain-dot"></div><p><strong>热压罐固化（MES + IoT）：</strong>固化炉编号 + 实际固化曲线（温度/压力/时间）。</p></div>
+    <div class="chain-arr">↓</div>
+    <div class="chain-step"><div class="chain-dot"></div><p><strong>NDT检测（质量系统）：</strong>超声C扫报告 + X射线报告 + 孔隙率结果。</p></div>
+    <div class="chain-arr">↓</div>
+    <div class="chain-step"><div class="chain-dot"></div><p><strong>修边/表面处理（MES）：</strong>工序记录 + 操作员。</p></div>
+    <div class="chain-arr">↓</div>
+    <div class="chain-step"><div class="chain-dot"></div><p><strong>最终检验（质量系统）：</strong>检验报告 + 检验员 + 合格判定。</p></div>
+    <div class="chain-arr">↓</div>
+    <div class="chain-step"><div class="chain-dot"></div><p><strong>交付构型（PDM/SBOM）：</strong>件号 + 序列号 + 构型状态 + 偏离记录。</p></div>
+    <div class="chain-arr">↓</div>
+    <div class="chain-step"><div class="chain-dot"></div><p><strong>主机厂交付：</strong>符合性声明（SoC）+ 首件检验报告（FAI）。</p></div>
+  </div>
+  <div class="tw"><table>
+    <thead><tr><th>追溯节点</th><th>产生系统</th><th>存储系统</th><th>查询入口</th></tr></thead>
+    <tbody>
+      <tr><td>原材料批次</td><td>WMS（入库）</td><td>ERP-MM + 数据中台</td><td>数据中台</td></tr>
+      <tr><td>铺层/固化工艺</td><td>MES + IoT</td><td>MES + 数据中台</td><td>数据中台</td></tr>
+      <tr><td>NDT检测报告</td><td>质量系统</td><td>PDM（受控归档）</td><td>PDM</td></tr>
+      <tr><td>构型状态</td><td>PDM</td><td>PDM</td><td>PDM</td></tr>
+      <tr><td>交付文件</td><td>PDM</td><td>PDM</td><td>PDM</td></tr>
+    </tbody>
+  </table></div>
+  <div class="qi"><div class="qn">Q8</div><div class="qb"><h4>适航追溯数据的存储和查询方案？</h4><p>选项A：分散存储，各系统自管，按需人工汇总；选项B：数据中台统一存储追溯链，提供统一查询接口。</p><div class="qmeta"><span class="qtag qt-owner">质量管理部 + 项目管理部</span><span class="qtag qt-dead">2026-05-09</span><span class="qtag qt-open">待决议</span></div></div></div>
+</div>
+
+<!-- ══ 8 接口设计 ══ -->
+<div class="sec" id="s8">
+  <div class="sec-hd"><div class="sec-num">8</div><div><h2>关键接口设计</h2><div class="sd">4张接口卡 · 字段映射 · 异常处理</div></div></div>
+  <div class="iface">
+    <div class="iface-hd"><span class="iface-id">#1</span><span class="iface-title">PLM → PDM（工程BOM发布）</span><span class="iface-trigger">Engineering Release</span></div>
+    <div class="iface-body">
+      <div class="iface-f"><label>集成目的</label><span>将设计态 EBOM 受控传递给 PDM，作为 MBOM 转换的数据源。</span></div>
+      <div class="iface-f"><label>数据格式</label><span>JSON / XML（待与 PLM 供应商确认）</span></div>
+      <div class="iface-f"><label>核心字段</label><span>物料编码、件号、版次、铺层顺序、材料规范号、固化工艺规范号、NDT检测规范号、虚拟件标记。</span></div>
+    </div>
+    <div class="iface-map"><div class="iface-map-title">字段映射</div><div class="tw"><table><thead><tr><th>PLM字段</th><th>PDM字段</th><th>说明</th></tr></thead><tbody>
+      <tr><td>item_code</td><td>material_code</td><td>物料编码</td></tr>
+      <tr><td>part_number</td><td>part_number</td><td>对外交付件号</td></tr>
+      <tr><td>revision</td><td>rev</td><td>版次（A/B/C）</td></tr>
+      <tr><td>ply_sequence</td><td>ply_stackup</td><td>铺层顺序定义</td></tr>
+      <tr><td>material_spec</td><td>mat_spec_no</td><td>材料规范号</td></tr>
+      <tr><td>cure_spec</td><td>cure_spec_no</td><td>固化工艺规范号</td></tr>
+      <tr><td>ndt_spec</td><td>ndt_spec_no</td><td>NDT检测规范号</td></tr>
+      <tr><td>is_virtual</td><td>virtual_item_flag</td><td>虚拟件标记（0=实物，1=虚拟）</td></tr>
+    </tbody></table></div></div>
+    <div class="warn" style="margin:0 18px 16px"><div class="wt">异常处理</div><p>虚拟件不过渡到 PDM BOM 结构；PLM 发布版本与 PDM 接收版本严格一一对应，不允许覆盖旧版本；接口失败时自动告警并触发人工介入流程。</p></div>
+  </div>
+
+  <div class="iface">
+    <div class="iface-hd"><span class="iface-id">#2</span><span class="iface-title">PDM → CAPP（受控EBOM + MBD传递）</span><span class="iface-trigger">受控发布后</span></div>
+    <div class="iface-body">
+      <div class="iface-f"><label>集成目的</label><span>将受控 EBOM 和 MBD 模型传递给 CAPP，驱动工艺路线设计和工序展开。</span></div>
+      <div class="iface-f"><label>数据格式</label><span>STEP AP242 / JSON（待确认）</span></div>
+      <div class="iface-f"><label>核心字段</label><span>EBOM结构、MBD三维模型（含PMI标注）、材料定义、公差定义。</span></div>
+    </div>
+    <div class="info" style="margin:0 18px 16px"><p>铺层数据（Ply Stack-up）需作为独立属性字段传递，不嵌入 BOM 结构；MBD 模型需包含几何拓扑和 PMI，驱动三维工艺设计。</p></div>
+  </div>
+
+  <div class="iface">
+    <div class="iface-hd"><span class="iface-id">#3</span><span class="iface-title">CAPP → MES（MBOM下发）</span><span class="iface-trigger">MBOM审批通过后</span></div>
+    <div class="iface-body">
+      <div class="iface-f"><label>集成目的</label><span>将制造 BOM 下发给北京虎蜥 MES，驱动车间执行。</span></div>
+      <div class="iface-f"><label>数据格式</label><span>JSON / 数据库视图（待与 MES 供应商确认）</span></div>
+      <div class="iface-f"><label>核心字段</label><span>物料编码、MBOM工序结构（工序号/名称/工艺规范/工装/定额）、固化工艺规范关联。</span></div>
+    </div>
+  </div>
+
+  <div class="iface">
+    <div class="iface-hd"><span class="iface-id">#4</span><span class="iface-title">ERP-PP → MES（生产订单下达）</span><span class="iface-trigger">计划下达时</span></div>
+    <div class="iface-body">
+      <div class="iface-f"><label>集成目的</label><span>将生产订单下达给 MES，驱动排产和执行。</span></div>
+      <div class="iface-f"><label>数据格式</label><span>用友 U8 标准接口</span></div>
+      <div class="iface-f"><label>核心 / 回传字段</label><span>下发：生产订单号、物料编码、计划数量、计划日期、工艺路线；回传：完工数量、实际工时、质检结果。</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 9 会前行动项 ══ -->
+<div class="sec" id="s9">
+  <div class="sec-hd"><div class="sec-num">9</div><div><h2>会前行动项</h2><div class="sd">由问题诊断转化 · 部门预沟通 · 5月9日开会前置条件</div></div></div>
+  <div class="alert"><div class="at">会议判断</div><p>按当前材料，5月9日专题会还不能直接进入“拍板”状态。项目组需要先与工程技术、质量、物资保障、复材车间、财务及各系统供应商完成一轮预沟通，把关键输入带到会上，否则会议会变成现场补资料，Q1–Q8无法形成有效决议。</p></div>
+  <div class="tw"><table>
+    <thead><tr><th>维度</th><th>现状（V2.1）</th><th>缺什么</th><th>风险等级</th></tr></thead>
+    <tbody>
+      <tr><td>拓扑图</td><td>有系统关系图</td><td>没有数据流向的字段级定义</td><td>中</td></tr>
+      <tr><td>接口描述</td><td>有“传递数据”列</td><td>没有接口协议、触发时机、频率</td><td>高</td></tr>
+      <tr><td>主数据</td><td>完全没提</td><td>物料编码规则、组织架构统一方案</td><td>高</td></tr>
+      <tr><td>异常处理</td><td>完全没提</td><td>接口失败怎么办、数据冲突怎么处理</td><td>高</td></tr>
+      <tr><td>版本管理</td><td>完全没提</td><td>EBOM/MBOM版本切换规则</td><td>高</td></tr>
+      <tr><td>实施顺序</td><td>完全没提</td><td>先上哪个、依赖关系是什么</td><td>中</td></tr>
+      <tr><td>中间件方案</td><td>完全没提</td><td>点对点还是总线？谁来做？</td><td>高</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="card">
+    <h3>会前行动总原则</h3>
+    <p>项目组不需要在会前替各部门做最终决策，但必须把“可决策的问题”准备好：每个行动项至少形成一页纸结论，包含现状、待决点、可选方案、推荐倾向、需要5月9日会上拍板的事项。</p>
+  </div>
+
+  <div class="tw"><table>
+    <thead><tr><th>行动项</th><th>对应问题</th><th>牵头</th><th>参与方</th><th>会前必须输出</th><th>建议完成时间</th></tr></thead>
+    <tbody>
+      <tr><td>A1 PLM供应商能力确认</td><td>PLM供应商未定</td><td>项目管理部 + 工程技术部</td><td>PLM候选方、质量管理部、复材车间、用友U8/MES接口代表</td><td>PLM数据模型与接口能力确认表；供应商需补充资料清单；PLM选型对集成方案的风险判断</td><td>2026-05-07 洽谈当天</td></tr>
+      <tr><td>A2 EBOM→MBOM转换规则预沟通</td><td>转换逻辑缺失</td><td>工程技术部 + 复材车间</td><td>CAPP/MES/ERP相关实施方、项目管理部</td><td>虚拟件过滤、替代料、损耗率、工序分工、工装编号、工时定额的转换责任初稿</td><td>2026-05-08</td></tr>
+      <tr><td>A3 ECO变更闭环梳理</td><td>ECO流程断链</td><td>工程技术部</td><td>质量管理部、物资保障部、复材车间、OA、ERP、MES代表</td><td>ECO从PLM发起到OA审批、PDM发布、ERP/MES/WMS处置的跨系统流程草图</td><td>2026-05-08</td></tr>
+      <tr><td>A4 SCIM定位预判</td><td>SCIM自研或采购未定</td><td>物资保障部</td><td>质量管理部、财务部、项目管理部、ERP代表</td><td>供应商协同范围清单：商务、技术、海关/下料、首件检验、不合格品、供应商质量；自研/采购倾向与理由</td><td>2026-05-08</td></tr>
+      <tr><td>A5 数据中台路线预沟通</td><td>点对点 vs 总线未定</td><td>项目管理部</td><td>各系统供应商、工程技术部、质量管理部、物资保障部、复材车间</td><td>点对点、ESB总线、完整数据中台三种路线的成本、周期、责任边界、追溯能力对比</td><td>2026-05-08</td></tr>
+      <tr><td>A6 主数据编码技术确认</td><td>编码规范未技术确认</td><td>工程技术部 + 项目管理部</td><td>用友U8、北京虎蜥MES、PLM候选方、PDM/CAPP相关方</td><td>13位含连字符编码、REV独立字段、字符集、长度、唯一性校验、导入导出限制确认记录</td><td>2026-05-08</td></tr>
+      <tr><td>A7 接口卡补全</td><td>接口协议、触发时机、频率缺失</td><td>项目管理部</td><td>PLM/PDM/CAPP/ERP/MES/WMS/SCIM/OA各接口负责人</td><td>至少补齐4张关键接口卡：方向、触发时机、协议格式、字段、失败重试、人工兜底</td><td>2026-05-08</td></tr>
+      <tr><td>A8 5月9日决策包整理</td><td>会议无法直接拍板</td><td>项目管理部</td><td>各行动项牵头部门</td><td>Q1–Q8决策包：每题一页，列明推荐选项、影响范围、未决风险、会上需拍板内容</td><td>2026-05-08 晚</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="g2">
+    <div class="prob hi"><div class="pbadge hi">5月7日</div><div class="pc"><h4>PLM洽谈必须拿到的输入</h4><p>供应商需明确 EBOM、MBD、ECO、物料版本、接口开放能力、与PDM/CAPP/ERP/MES/OA协同方式，并提供可落地的字段、接口和实施边界材料。</p></div></div>
+    <div class="prob md"><div class="pbadge md">5月8日</div><div class="pc"><h4>部门预沟通必须形成的输入</h4><p>各牵头部门提交一页纸结论，项目组汇总成5月9日决策包。没有结论的事项不建议直接进入会上表决，只能列为待补资料项。</p></div></div>
+  </div>
+</div>
+
+<!-- ══ 10 组织分工 ══ -->
+<div class="sec" id="s10">
+  <div class="sec-hd"><div class="sec-num">10</div><div><h2>组织分工</h2><div class="sd">各部门在集成项目中的职责</div></div></div>
+  <div class="chain">
+    <div class="chain-title">组织架构与集成职责位置</div>
+    <div class="chain-step"><div class="chain-dot"></div><p><strong>总经理：</strong>统筹 Q7 等重大架构决策。</p></div>
+    <div class="chain-step"><div class="chain-dot"></div><p><strong>经营副总线：</strong>财务部、工程技术部、质量管理部、物资保障部等，分别承担 ERP-FI/CO、PLM/EBOM/ECO、质量追溯、采购/WMS/SCIM 相关职责。</p></div>
+    <div class="chain-step"><div class="chain-dot"></div><p><strong>生产副总线：</strong>项目管理部负责 ERP-PS 与集成项目统筹，复材车间负责 MES、MBOM 工序确认与 IoT 采集点，运维安环部参与运行支撑。</p></div>
+  </div>
+  <div class="g3">
+    <div class="org-card"><div class="org-dept">工程技术部</div><ul><li>PLM选型决策与需求输入</li><li>EBOM结构定义</li><li>ECO变更流程设计</li><li>MBD模型规范制定</li><li>参与 Q5 与 PLM选型</li></ul></div>
+    <div class="org-card"><div class="org-dept">质量管理部</div><ul><li>质量数据标准制定</li><li>NDT追溯方案</li><li>适航符合性数据要求</li><li>参与 Q8</li></ul></div>
+    <div class="org-card"><div class="org-dept">物资保障部</div><ul><li>采购域需求输入</li><li>SCIM方案确认（自研/采购）</li><li>WMS需求</li><li>供应商主数据规范</li></ul></div>
+    <div class="org-card"><div class="org-dept">项目管理部</div><ul><li>ERP-PS项目主线需求</li><li>集成项目进度统筹管控</li><li>参与 Q7</li></ul></div>
+    <div class="org-card"><div class="org-dept">复材车间</div><ul><li>MES需求输入与验收</li><li>MBOM工序结构确认</li><li>IoT采集点定义</li><li>参与 Q6</li></ul></div>
+    <div class="org-card"><div class="org-dept">财务部</div><ul><li>ERP-FI/CO需求确认</li><li>成本核算规则定义</li></ul></div>
+  </div>
+</div>
+
+<!-- ══ 11 行动计划 ══ -->
+<div class="sec" id="s11">
+  <div class="sec-hd"><div class="sec-num">11</div><div><h2>行动计划</h2><div class="sd">专题会议程 · Q1–Q8完整决策表</div></div></div>
+  <div class="card"><h3>议程时间表（2026-05-09 专题会）</h3>
+    <div class="sched-item"><div class="sched-time">09:00</div><div class="sched-topic">开场：为什么今天这个会比任何系统上线都重要？</div><div class="sched-dur">15min</div></div>
+    <div class="sched-item"><div class="sched-time">09:15</div><div class="sched-topic">Part 1 航空复材零部件的BOM体系特殊性</div><div class="sched-dur">30min</div></div>
+    <div class="sched-item"><div class="sched-time">09:45</div><div class="sched-topic">Part 2 物料分类体系与编码规范草案讨论</div><div class="sched-dur">40min</div></div>
+    <div class="sched-item"><div class="sched-time">10:25</div><div class="sched-topic">休息</div><div class="sched-dur">10min</div></div>
+    <div class="sched-item"><div class="sched-time">10:35</div><div class="sched-topic">Part 3 主数据黄金源确认与属性分工</div><div class="sched-dur">35min</div></div>
+    <div class="sched-item"><div class="sched-time">11:10</div><div class="sched-topic">Part 4 同步机制与适航追溯要求</div><div class="sched-dur">25min</div></div>
+    <div class="sched-item"><div class="sched-time">11:35</div><div class="sched-topic">Part 5 关键决策 Q1–Q8 逐一表决</div><div class="sched-dur">20min</div></div>
+    <div class="sched-item"><div class="sched-time">11:55</div><div class="sched-topic">行动计划确认 & 责任人分配</div><div class="sched-dur">5min</div></div>
+    <div class="sched-item"><div class="sched-time">12:00</div><div class="sched-topic">散会</div><div class="sched-dur">—</div></div>
+  </div>
+  <div class="tw"><table>
+    <thead><tr><th>编号</th><th>决策问题</th><th>选项</th><th>责任人</th><th>截止日期</th><th>状态</th></tr></thead>
+    <tbody>
+      <tr><td>Q1</td><td>SFG（半成品）是否需要细分为“内部半成品”和“外协半成品”？</td><td>是 / 否</td><td>工程技术部 + 物资保障部</td><td>2026-05-09</td><td>待决议</td></tr>
+      <tr><td>Q2</td><td>预浸料有效期管理是否纳入 WMS 批次属性，还是单独建模块？</td><td>WMS批次属性 / 独立模块</td><td>物资保障部 + 复材车间</td><td>2026-05-09</td><td>待决议</td></tr>
+      <tr><td>Q3</td><td>物料编码结构最终采用哪版？（PPT版：大类+小类+流水）</td><td>确认采用 / 调整</td><td>工程技术部 + 各系统供应商</td><td>2026-05-09</td><td>待决议</td></tr>
+      <tr><td>Q4</td><td>编码是否需要校验位（MOD11算法）？</td><td>需要 / 不需要</td><td>工程技术部 + 各系统供应商</td><td>2026-05-09</td><td>待决议</td></tr>
+      <tr><td>Q5</td><td>设计件物料主数据黄金源是 PLM 还是 ERP？</td><td>PLM / ERP / 双向同步</td><td>工程技术部 + 项目管理部</td><td>2026-05-09</td><td>待决议</td></tr>
+      <tr><td>Q6</td><td>MBOM黄金源是 CAPP 还是 ERP-PP？</td><td>CAPP / ERP-PP</td><td>复材车间 + 工程技术部</td><td>2026-05-09</td><td>待决议</td></tr>
+      <tr><td>Q7</td><td>是否建设数据中台/集成总线？</td><td>点对点 / ESB总线 / 完整数据中台</td><td>项目管理部 + 总经理</td><td>2026-05-09</td><td>待决议</td></tr>
+      <tr><td>Q8</td><td>适航追溯数据的存储和查询方案？</td><td>分散存储 / 数据中台统一追溯链</td><td>质量管理部 + 项目管理部</td><td>2026-05-09</td><td>待决议</td></tr>
+    </tbody>
+  </table></div>
+</div>
+
+<!-- ══ 附录 ══ -->
+<div class="sec" id="appendix">
+  <div class="sec-hd"><div class="sec-num">附</div><div><h2>文档版本说明</h2><div class="sd">来源文档与状态</div></div></div>
+  <div class="tw"><table>
+    <thead><tr><th>文档名称</th><th>版本</th><th>日期</th><th>状态</th></tr></thead>
+    <tbody>
+      <tr><td>系统集成关系说明</td><td>V2.1</td><td>2026-04-30</td><td>正式版</td></tr>
+      <tr><td>物料主数据编码规范草案</td><td>V0.1</td><td>2026-05-01</td><td>草案（编码结构以PPT版为准）</td></tr>
+      <tr><td>接口设计卡模板</td><td>V1.0</td><td>2026-05-01</td><td>模板版</td></tr>
+      <tr><td>系统集成前需要解决的问题</td><td>—</td><td>—</td><td>评审意见</td></tr>
+      <tr><td>组织架构和部门职责</td><td>—</td><td>—</td><td>参考文档</td></tr>
+      <tr><td>系统集成架构专题会PPT</td><td>V0.1</td><td>2026-05-09</td><td>草案</td></tr>
+    </tbody>
+  </table></div>
+</div>
+
+</div>
+
+<footer>沈阳昌兴复材航空科技有限责任公司 · 制造企业数字化运营平台 · 核心系统集成说明 V2.1</footer>
+
+<script>
+function sw(btn,id){
+  document.querySelectorAll('.tb').forEach(function(x){x.classList.remove('on')});
+  document.querySelectorAll('.tp').forEach(function(x){x.classList.remove('on')});
+  btn.classList.add('on');
+  document.getElementById(id).classList.add('on');
+}
+</script>
+</body>
+</html>
