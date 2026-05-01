@@ -45,7 +45,7 @@
     { "id": "s5", "name": "MES" },
     { "id": "s6", "name": "三维工艺" },
     { "id": "s7", "name": "PDM（BOM管理）" },
-    { "id": "s8", "name": "SAP" }
+    { "id": "s8", "name": "用友U8" }
   ],
   "connections": [
     { "capName": "工艺策划", "procName": "工艺网络计划制定", "sysId": "s1" }
@@ -72,7 +72,7 @@ Step 7: 输出 JSON 文件
 
 ### 环境要求
 - Python 3.8+
-- 依赖库：openpyxl、requests、pandas
+- 依赖库：openpyxl、pandas
 - MiniMax API（通过 minimax-coding-plan-mcp 调用）
 
 ### 核心函数
@@ -114,9 +114,8 @@ def save_json(data: dict, output_path: str):
 ## 文件结构
 
 ```
-G:\Infomat\
+E:\CA001\Infomat\
 ├── bizmapper.py          # 主程序
-├── sample-diagram.png    # 示例图片
 ├── docs/
 │   └── superpowers/
 │       └── specs/

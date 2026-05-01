@@ -13,9 +13,8 @@
 ## File Structure
 
 ```
-G:\Infomat\
+E:\CA001\Infomat\
 ├── bizmapper.py              # 主程序（CLI）
-├── sample-diagram.png        # 测试用示例图片
 ├── docs/superpowers/specs/
 │   └── 2026-04-29-bizmapper-design.md
 ├── docs/superpowers/plans/
@@ -530,7 +529,7 @@ def main():
         print("  Excel转JSON: python bizmapper.py --to-json <Excel路径> [输出目录]")
         print("")
         print("示例:")
-        print("  python bizmapper.py sample-diagram.png")
+        print("  python bizmapper.py <您的业务流程图.png>")
         print("  python bizmapper.py --to-json output/映射表_20260429.xlsx")
         return
 
@@ -584,11 +583,11 @@ git commit -m "feat: complete CLI interface"
 ## Task 8: 测试与调试
 
 **Files:**
-- Test: `bizmapper.py`（使用 sample-diagram.png）
+- Test: `bizmapper.py`（使用您的业务流程图图片）
 
 - [ ] **Step 1: 运行测试**
 
-Run: `python bizmapper.py sample-diagram.png output/`
+Run: `python bizmapper.py <您的图片路径.png> output/`
 Expected: 生成 Excel 文件，控制台输出分析结果
 
 - [ ] **Step 2: 如果 API 调用失败，调试并修复**
@@ -609,7 +608,7 @@ git commit -m "feat: complete BizMapper with Excel and JSON output"
 
 ## 验证清单
 
-- [ ] `python bizmapper.py sample-diagram.png output/` 生成 Excel
+- [ ] `python bizmapper.py <图片路径.png> output/` 生成 Excel
 - [ ] Excel 包含四列：一级业务能力、二级业务能力、业务流程、应用系统
 - [ ] 相同一级业务能力行已合并单元格并着色
 - [ ] 表头样式正确（深蓝背景、白色字体）

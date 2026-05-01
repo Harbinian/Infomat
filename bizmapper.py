@@ -436,7 +436,7 @@ def print_usage():
     print("  Excel转JSON: python bizmapper.py --to-json <Excel路径> [输出目录]")
     print("")
     print("示例:")
-    print("  python bizmapper.py sample-diagram.png")
+    print("  python bizmapper.py <您的业务流程图.png>")
     print("  python bizmapper.py --to-json output/映射表_20260429.xlsx")
 
 
