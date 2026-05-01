@@ -15,7 +15,7 @@ E:\CA001\Infomat
 │       ├── plans\
 │       └── specs\
 ├── output\
-│   ├── 映射表_20260429.xlsx.json
+│   ├── 映射表_20260429.xlsx.json.json
 │   └── infomat_data_20260429.json
 └── .planning\
     └── codebase\
@@ -74,7 +74,7 @@ E:\CA001\Infomat
 - **文档**
   - 文档相对完善
   - 设计、路线、业务背景都已沉淀
-  - 但部分文档仍保留旧路径或旧实现描述
+  - 文档路径和描述已统一修正
 
 ## 结构层面的维护信号
 
