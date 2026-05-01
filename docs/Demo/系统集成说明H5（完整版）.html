@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>数字化运营平台集成说明 · 昌兴复材</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --blue:#1a56db;--blue-lt:#e8f0fe;--navy:#0f2a5e;--teal:#0891b2;
+  --amber:#d97706;--red:#dc2626;--green:#16a34a;--purple:#7c3aed;
+  --orange:#ea580c;--pink:#db2777;--emerald:#059669;
+  --gray:#64748b;--bg:#f8fafc;--card:#fff;--border:#e2e8f0;
+  --text:#1e293b;--muted:#475569;
+}
+html{scroll-behavior:smooth}
+body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+code{background:#f1f5f9;padding:1px 5px;border-radius:3px;font-size:12px;font-family:monospace;color:#c2410c}
+a{text-decoration:none}
+
+/* ── NAV ── */
+nav{position:fixed;top:0;left:0;right:0;z-index:999;background:rgba(15,42,94,.97);backdrop-filter:blur(8px);height:50px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;gap:12px}
+.nav-logo{color:#fff;font-size:13px;font-weight:700;white-space:nowrap;flex-shrink:0}
+.nav-links{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+.nav-links::-webkit-scrollbar{display:none}
+.nav-links a{color:rgba(255,255,255,.65);font-size:11px;padding:4px 9px;border-radius:4px;white-space:nowrap;transition:.2s}
+.nav-links a:hover{background:rgba(255,255,255,.15);color:#fff}
+
+/* ── LAYOUT ── */
+.page{max-width:960px;margin:0 auto;padding:70px 20px 60px}
+.sec{margin-bottom:64px}
+
+/* ── COVER ── */
+#cover{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:0 8vw;background:linear-gradient(135deg,#081e4a 0%,#1a56db 55%,#0891b2 100%);position:relative;overflow:hidden}
+#cover::before{content:'';position:absolute;top:-40%;right:-10%;width:600px;height:600px;border-radius:50%;background:rgba(255,255,255,.04);pointer-events:none}
+.cv-tag{display:inline-block;background:rgba(255,255,255,.12);color:#a5c8ff;font-size:11px;padding:3px 12px;border-radius:20px;border:1px solid rgba(255,255,255,.2);margin-bottom:18px;width:fit-content}
+#cover h1{color:#fff;font-size:clamp(22px,3.5vw,40px);line-height:1.35;margin-bottom:10px}
+#cover h1 span{color:#7dd3fc}
+.cv-sub{color:rgba(255,255,255,.65);font-size:14px;line-height:1.9;margin-bottom:28px}
+.cv-meta{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px}
+.cv-box{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);border-radius:8px;padding:10px 16px}
+.cv-box .cl{color:rgba(255,255,255,.45);font-size:10px;margin-bottom:3px}
+.cv-box .cv{color:#fff;font-size:13px;font-weight:600}
+.cv-ptag{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:12px 16px;max-width:600px}
+.cv-ptag .cpl{color:rgba(255,255,255,.4);font-size:10px;margin-bottom:8px}
+.cv-ptag .cpt{display:flex;flex-wrap:wrap;gap:6px}
+.cv-ptag .cpt span{background:rgba(255,255,255,.12);color:rgba(255,255,255,.8);font-size:11px;padding:3px 10px;border-radius:12px}
+.scroll-hint{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,.3);font-size:11px;text-align:center}
+.scroll-hint::after{content:"↓";display:block;animation:bob .9s infinite alternate}
+@keyframes bob{from{transform:translateY(0)}to{transform:translateY(6px)}}
+
+/* ── SEC HEADER ── */
+.sec-hd{display:flex;align-items:flex-start;gap:12px;margin-bottom:24px}
+.sec-num{width:32px;height:32px;border-radius:50%;background:var(--blue);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
+.sec-hd h2{font-size:19px;color:var(--navy);margin-bottom:2px}
+.sec-hd .sd{font-size:12px;color:var(--gray)}
+
+/* ── CARDS ── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.card h3{font-size:14px;color:var(--navy);margin-bottom:8px}
+.card p,.card li{font-size:13px;color:var(--muted);line-height:1.85}
+.card ul{padding-left:16px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.gauto{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+
+/* ── SYS CARDS ── */
+.sc{border-radius:10px;padding:14px 16px;border:1px solid var(--border);border-left:4px solid;background:var(--card)}
+.sc .sn{font-size:15px;font-weight:700;margin-bottom:3px}
+.sc .sv{font-size:11px;color:var(--gray);margin-bottom:5px}
+.sc .sr{font-size:12px;color:var(--muted);line-height:1.7}
+.sc.erp{border-left-color:var(--blue)}.sc.mes{border-left-color:var(--green)}
+.sc.oa{border-left-color:var(--amber)}.sc.plm{border-left-color:var(--purple)}
+.sc.pdm{border-left-color:var(--teal)}.sc.capp{border-left-color:var(--orange)}
+.sc.wms{border-left-color:var(--pink)}.sc.scim{border-left-color:var(--emerald)}
+
+/* ── ALERT / INFO / WARN ── */
+.alert{background:#fef2f2;border:1px solid #fecaca;border-left:4px solid var(--red);border-radius:8px;padding:12px 16px;margin-bottom:14px}
+.alert .at{font-size:13px;font-weight:700;color:var(--red);margin-bottom:5px}
+.alert p,.alert li{font-size:12px;color:#7f1d1d;line-height:1.8}
+.alert ul{padding-left:14px}
+.warn{background:#fffbeb;border:1px solid #fde68a;border-left:4px solid var(--amber);border-radius:8px;padding:12px 16px;margin-bottom:14px}
+.warn .wt{font-size:13px;font-weight:700;color:#92400e;margin-bottom:5px}
+.warn p{font-size:12px;color:#78350f;line-height:1.8}
+.info{background:#eff6ff;border:1px solid #bfdbfe;border-left:4px solid var(--blue);border-radius:8px;padding:12px 16px;margin-bottom:14px}
+.info p{font-size:12px;color:#1e40af;line-height:1.8}
+.success{background:#f0fdf4;border:1px solid #bbf7d0;border-left:4px solid var(--green);border-radius:8px;padding:12px 16px;margin-bottom:14px}
+.success p{font-size:12px;color:#14532d;line-height:1.8}
+
+/* ── TABLE ── */
+.tw{overflow-x:auto;border-radius:10px;border:1px solid var(--border);margin-bottom:14px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:var(--navy);color:#fff;padding:9px 12px;text-align:left;font-weight:600;white-space:nowrap}
+td{padding:8px 12px;border-bottom:1px solid var(--border);color:var(--muted);vertical-align:top;line-height:1.7}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--blue-lt)}
+td strong{color:var(--text)}
+
+/* ── TOPO ── */
+.topo{background:var(--navy);border-radius:12px;padding:20px;overflow-x:auto}
+.topo svg{display:block;margin:0 auto}
+
+/* ── TABS ── */
+.tab-bar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.tb{padding:6px 16px;border-radius:20px;font-size:12px;cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--gray);transition:.2s;user-select:none}
+.tb.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+.tp{display:none}.tp.on{display:block}
+
+/* ── FLOW ── */
+.flow-item{display:flex;align-items:flex-start;gap:14px;padding:12px 0;border-bottom:1px dashed var(--border)}
+.flow-item:last-child{border-bottom:none}
+.fd{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;margin-top:2px}
+.fc h4{font-size:13px;color:var(--navy);margin-bottom:3px}
+.fc p{font-size:12px;color:var(--muted);line-height:1.75}
+.farr{color:var(--gray);font-size:14px;padding:2px 0 2px 42px}
+
+/* ── BOM CARDS ── */
+.bom-card{border-radius:10px;padding:14px 16px;border:1px solid var(--border);background:var(--card)}
+.bom-tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;margin-bottom:7px}
+.bom-card h4{font-size:13px;color:var(--navy);margin-bottom:6px}
+.bom-card li{font-size:12px;color:var(--muted);line-height:1.8}
+.bom-card ul{padding-left:14px}
+
+/* ── ENCODE ── */
+.enc{background:var(--navy);border-radius:10px;padding:16px 20px;display:flex;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.es{text-align:center;padding:8px 16px;border-right:1px solid rgba(255,255,255,.15)}
+.es:last-of-type{border-right:none}
+.ev{font-size:20px;font-weight:700;color:#7dd3fc;font-family:monospace}
+.el{font-size:10px;color:rgba(255,255,255,.4);margin-top:3px}
+.esep{color:rgba(255,255,255,.3);font-size:20px;padding:0 2px;align-self:center}
+.enc-note{margin-left:20px;align-self:center}
+.enc-note .ex{color:#7dd3fc;font-size:13px;font-family:monospace}
+.enc-note .ed{color:rgba(255,255,255,.4);font-size:11px;margin-top:3px}
+
+/* ── CHAIN ── */
+.chain{background:var(--navy);border-radius:10px;padding:18px 22px;margin-bottom:14px}
+.chain-title{color:#7dd3fc;font-size:13px;font-weight:700;margin-bottom:12px}
+.chain-step{display:flex;align-items:flex-start;gap:10px;margin-bottom:8px}
+.chain-dot{width:7px;height:7px;border-radius:50%;background:#7dd3fc;flex-shrink:0;margin-top:5px}
+.chain-step p{font-size:12px;color:rgba(255,255,255,.72);line-height:1.7}
+.chain-step p strong{color:#7dd3fc}
+.chain-arr{color:rgba(255,255,255,.25);font-size:13px;padding:0 0 4px 17px}
+
+/* ── IFACE CARD ── */
+.iface{background:var(--card);border:1px solid var(--border);border-radius:10px;margin-bottom:14px;overflow:hidden}
+.iface-hd{padding:11px 18px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);background:#f8fafc}
+.iface-id{background:var(--blue);color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px}
+.iface-title{font-size:13px;font-weight:600;color:var(--navy);flex:1}
+.iface-trigger{font-size:11px;color:var(--gray);background:var(--blue-lt);padding:2px 8px;border-radius:4px;white-space:nowrap}
+.iface-body{padding:14px 18px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.iface-f label{font-size:10px;color:var(--gray);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.4px}
+.iface-f span{font-size:12px;color:var(--text);line-height:1.7}
+.iface-map{padding:0 18px 14px}
+.iface-map-title{font-size:11px;color:var(--gray);margin-bottom:6px;font-weight:600}
+
+/* ── PROB ── */
+.prob{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:10px;border-left:4px solid;display:flex;gap:12px;align-items:flex-start}
+.prob.hi{border-left-color:var(--red)}.prob.md{border-left-color:var(--amber)}.prob.lo{border-left-color:var(--green)}
+.pbadge{flex-shrink:0;font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px;margin-top:1px;white-space:nowrap}
+.pbadge.hi{background:#fee2e2;color:var(--red)}.pbadge.md{background:#fef3c7;color:var(--amber)}
+.pc h4{font-size:13px;color:var(--navy);margin-bottom:4px}
+.pc p{font-size:12px;color:var(--muted);line-height:1.75}
+.pc pre{background:#f1f5f9;border-radius:6px;padding:10px 12px;font-size:11px;color:var(--text);line-height:1.8;overflow-x:auto;margin-top:8px;font-family:monospace}
+
+/* ── Q ITEMS ── */
+.qi{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:13px 16px;margin-bottom:8px;display:flex;align-items:flex-start;gap:12px}
+.qn{background:var(--navy);color:#fff;font-size:12px;font-weight:700;padding:3px 10px;border-radius:6px;flex-shrink:0;white-space:nowrap}
+.qb{flex:1}
+.qb h4{font-size:13px;color:var(--navy);margin-bottom:4px}
+.qb p{font-size:12px;color:var(--muted);line-height:1.7}
+.qmeta{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+.qtag{font-size:10px;padding:2px 8px;border-radius:4px;font-weight:600}
+.qt-owner{background:#eff6ff;color:var(--blue)}
+.qt-dead{background:#fef3c7;color:var(--amber)}
+.qt-open{background:#fee2e2;color:var(--red)}
+
+/* ── DP COMPARE ── */
+.dp-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+.dp-opt{border-radius:10px;padding:16px;border:2px solid var(--border);background:var(--card)}
+.dp-opt.rec{border-color:var(--blue)}
+.dp-opt h4{font-size:14px;font-weight:700;margin-bottom:8px;color:var(--navy)}
+.dp-opt li{font-size:12px;color:var(--muted);line-height:1.85}
+.dp-opt ul{padding-left:14px}
+.dp-badge{display:inline-block;font-size:10px;padding:2px 8px;border-radius:4px;margin-bottom:8px;font-weight:700}
+
+/* ── SCHED ── */
+.sched-item{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--card);border:1px solid var(--border);border-radius:8px;margin-bottom:6px}
+.sched-time{font-size:12px;font-weight:700;color:var(--blue);width:48px;flex-shrink:0}
+.sched-topic{font-size:13px;color:var(--text);flex:1}
+.sched-dur{font-size:11px;color:var(--gray);background:var(--bg);padding:2px 8px;border-radius:4px;flex-shrink:0}
+
+/* ── ORG ── */
+.org-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+.org-dept{font-size:13px;font-weight:700;color:var(--navy);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.org-card li{font-size:12px;color:var(--muted);line-height:1.8}
+.org-card ul{padding-left:14px}
+
+/* ── FOOTER ── */
+footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;padding:24px 20px;font-size:11px}
+
+/* ── RESPONSIVE ── */
+@media(max-width:680px){
+  nav .nav-links{display:none}
+  .g2,.g3,.g4,.dp-grid,.iface-body{grid-template-columns:1fr}
+  .enc{flex-direction:column}
+  .es{border-right:none;border-bottom:1px solid rgba(255,255,255,.15);width:100%}
+  #cover{padding:0 6vw}
+  .enc-note{margin-left:0;margin-top:12px}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">昌兴复材 · 数字化集成 V2.1</div>
+  <div class="nav-links">
+    <a href="#cover">首页</a><a href="#s1">概览</a><a href="#s2">拓扑</a>
+    <a href="#s3">集成域</a><a href="#s4">主数据</a><a href="#s5">黄金源</a>
+    <a href="#s6">数据中台</a><a href="#s7">适航追溯</a><a href="#s8">接口</a>
+    <a href="#s9">问题</a><a href="#s10">组织</a><a href="#s11">行动计划</a>
+  </div>
+</nav>
+
+<!-- ══ 封面 ══ -->
+<div id="cover">
+  <div class="cv-tag">V2.1 草案 · 仅供内部讨论 · PLM选型截止 2026-05-07</div>
+  <h1>制造企业<span>数字化运营平台</span><br/>核心系统集成说明</h1>
+  <p class="cv-sub">沈阳昌兴复材航空科技有限责任公司<br/>ERP · MES · OA · PLM · PDM · CAPP · WMS · SCIM 全域集成方案</p>
+  <div class="cv-meta">
+    <div class="cv-box"><div class="cl">文件版本</div><div class="cv">V2.1</div></div>
+    <div class="cv-box"><div class="cl">更新日期</div><div class="cv">2026-04-30</div></div>
+    <div class="cv-box"><div class="cl">专题会日期</div><div class="cv">2026-05-09（周六）</div></div>
+    <div class="cv-box"><div class="cl">集成系统数</div><div class="cv">8 套</div></div>
+    <div class="cv-box"><div class="cl">关键决策项</div><div class="cv">Q1 – Q8</div></div>
+  </div>
+  <div class="cv-ptag">
+    <div class="cpl">参与方</div>
+    <div class="cpt">
+      <span>研发</span><span>工艺</span><span>质量</span><span>采购</span><span>项目组</span>
+      <span>用友U8</span><span>北京虎蜥MES</span><span>华天动力OA</span><span>PLM候选方</span>
+    </div>
+  </div>
+  <div class="scroll-hint">向下滚动</div>
+</div>
+
+<div class="page">
+
+<!-- ══ 1 项目概览 ══ -->
+<div class="sec" id="s1">
+  <div class="sec-hd"><div class="sec-num">1</div><div><h2>项目概览</h2><div class="sd">背景目标 · 系统清单 · 今日必须产出</div></div></div>
+
+  <div class="card">
+    <h3>🎯 项目背景与目标</h3>
+    <p>沈阳昌兴复材航空科技有限责任公司作为航空复合材料零部件制造商，推进全域数字化运营平台建设。核心目标：打通研发、制造、采购、质量、财务五大业务域数据流，实现从 EBOM → MBOM → 生产执行 → 成本核算的全链路数字化闭环，并满足航空适航<strong>序列号级追溯</strong>要求。</p>
+  </div>
+
+  <div class="alert">
+    <div class="at">⚠️ 今日专题会必须产出（2026-05-09）——以下四项必须形成决议，否则后续接口设计无法推进</div>
+    <ul>
+      <li>✅ 物料编码规范决议（Q1–Q4）</li>
+      <li>✅ 黄金源确认表（Q5–Q6）</li>
+      <li>✅ 数据中台路线决策（Q7）</li>
+      <li>✅ 适航追溯数据方案（Q8）</li>
+    </ul>
+  </div>
+
+  <div class="gauto">
+    <div class="sc erp"><div class="sn">ERP</div><div class="sv">用友 U8 ✅ 确定</div><div class="sr">企业资源计划核心层<br/>PS · FI · CO · PP · MM · SD</div></div>
+    <div class="sc mes"><div class="sn">MES</div><div class="sv">北京虎蜥 ✅ 确定</div><div class="sr">制造执行层<br/>排产 · 工艺 · 工时 · IoT采集</div></div>
+    <div class="sc oa"><div class="sn">OA</div><div class="sv">华天动力 ✅ 确定</div><div class="sr">流程协同层<br/>ECO审批 · 合同 · 跨域流程</div></div>
+    <div class="sc plm"><div class="sn">PLM</div><div class="sv">⚠️ 暂定（待选型）</div><div class="sr">产品全生命周期管理<br/>EBOM · ECO · MBD</div></div>
+    <div class="sc pdm"><div class="sn">PDM</div><div class="sv">— 待确认</div><div class="sr">BOM管理 & 工艺数据管理<br/>受控发布 · 版本管理</div></div>
+    <div class="sc capp"><div class="sn">CAPP</div><div class="sv">— 待确认</div><div class="sr">工艺设计系统<br/>工艺路线 · 定额 · 三维工艺</div></div>
+    <div class="sc wms"><div class="sn">WMS</div><div class="sv">— 待确认</div><div class="sr">仓储管理系统<br/>出入库 · 库存 · 波次管理</div></div>
+    <div class="sc scim"><div class="sn">SCIM</div><div class="sv">⚠️ 自研or采购待决</div><div class="sr">供应商协同门户<br/>商务 · 技术 · 质量 · 海关</div></div>
+  </div>
+</div>
+
+<!-- ══ 2 拓扑 ══ -->
+<div class="sec" id="s2">
+  <div class="sec-hd"><div class="sec-num">2</div><div><h2>总体集成拓扑</h2><div class="sd">系统间数据流向总览 · 数据中台为横向基础设施层</div></div></div>
+  <div class="topo">
+    <svg width="880" height="520" viewBox="0 0 880 520" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arr-b" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#60a5fa"/></marker>
+        <marker id="arr-g" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#34d399"/></marker>
+        <marker id="arr-p" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#a78bfa"/></marker>
+        <marker id="arr-o" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#fb923c"/></marker>
+        <marker id="arr-t" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#7dd3fc"/></marker>
+        <marker id="arr-pk" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#f472b6"/></marker>
+      </defs>
+
+      <!-- bg -->
+      <rect x="6" y="6" width="868" height="508" rx="12" fill="#0d2550" stroke="#1e3a7a"/>
+
+      <!-- 客户交付平台 -->
+      <rect x="290" y="18" width="300" height="40" rx="7" fill="#1a56db" opacity=".9"/>
+      <text x="440" y="43" text-anchor="middle" fill="white" font-size="13" font-weight="600">客户交付一体化平台 / 项目管理</text>
+
+      <!-- ERP -->
+      <rect x="190" y="84" width="500" height="56" rx="7" fill="#1e40af" opacity=".9"/>
+      <text x="440" y="108" text-anchor="middle" fill="white" font-size="14" font-weight="700">ERP 核心层（用友U8）</text>
+      <text x="440" y="128" text-anchor="middle" fill="#93c5fd" font-size="12">PS · FI · CO · PP · MM · SD</text>
+
+      <!-- 平台→ERP -->
+      <line x1="440" y1="58" x2="440" y2="84" stroke="#60a5fa" stroke-width="2" stroke-dasharray="4,3" marker-end="url(#arr-b)"/>
+
+      <!-- OA -->
+      <rect x="18" y="84" width="148" height="56" rx="7" fill="#92400e" opacity=".9"/>
+      <text x="92" y="108" text-anchor="middle" fill="white" font-size="13" font-weight="700">OA（华天动力）</text>
+      <text x="92" y="126" text-anchor="middle" fill="#fcd34d" font-size="11">流程协同层</text>
+      <line x1="166" y1="112" x2="190" y2="112" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4,3"/>
+
+      <!-- 数据中台 ← 横向基础设施层，居中 -->
+      <rect x="240" y="168" width="400" height="48" rx="8" fill="#0f2a5e" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="5,3"/>
+      <text x="440" y="189" text-anchor="middle" fill="#7dd3fc" font-size="13" font-weight="700">数据中台 / 集成总线</text>
+      <text x="440" y="207" text-anchor="middle" fill="rgba(255,255,255,.45)" font-size="10">MDM · 数据同步调度 · 接口适配器 · 追溯数据湖（Q7 待决策）</text>
+      <!-- ERP↔中台 -->
+      <line x1="440" y1="140" x2="440" y2="168" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arr-b)"/>
+
+      <!-- 研发域 -->
+      <rect x="18" y="252" width="148" height="48" rx="7" fill="#5b21b6" opacity=".9"/>
+      <text x="92" y="272" text-anchor="middle" fill="white" font-size="13" font-weight="700">PLM（暂定）</text>
+      <text x="92" y="289" text-anchor="middle" fill="#c4b5fd" font-size="11">EBOM · ECO · MBD</text>
+
+      <rect x="18" y="328" width="148" height="48" rx="7" fill="#0e7490" opacity=".9"/>
+      <text x="92" y="350" text-anchor="middle" fill="white" font-size="13" font-weight="700">PDM</text>
+      <text x="92" y="366" text-anchor="middle" fill="#a5f3fc" font-size="11">BOM管理 · 受控发布</text>
+
+      <rect x="18" y="404" width="68" height="48" rx="7" fill="#c2410c" opacity=".9"/>
+      <text x="52" y="424" text-anchor="middle" fill="white" font-size="12" font-weight="700">CAPP</text>
+      <text x="52" y="441" text-anchor="middle" fill="#fed7aa" font-size="10">工艺设计</text>
+
+      <!-- 制造域 -->
+      <rect x="356" y="252" width="168" height="48" rx="7" fill="#065f46" opacity=".9"/>
+      <text x="440" y="272" text-anchor="middle" fill="white" font-size="13" font-weight="700">MES（北京虎蜥）</text>
+      <text x="440" y="289" text-anchor="middle" fill="#6ee7b7" font-size="11">排产 · 执行 · IoT采集</text>
+
+      <rect x="356" y="328" width="168" height="48" rx="7" fill="#831843" opacity=".9"/>
+      <text x="440" y="350" text-anchor="middle" fill="white" font-size="13" font-weight="700">WMS</text>
+      <text x="440" y="366" text-anchor="middle" fill="#fbcfe8" font-size="11">仓储 · 出入库 · 库存</text>
+
+      <!-- 采购域 -->
+      <rect x="714" y="252" width="148" height="48" rx="7" fill="#065f46" opacity=".9"/>
+      <text x="788" y="272" text-anchor="middle" fill="white" font-size="13" font-weight="700">SCIM</text>
+      <text x="788" y="289" text-anchor="middle" fill="#6ee7b7" font-size="11">供应商协同门户</text>
+
+      <rect x="714" y="328" width="148" height="48" rx="7" fill="#1e3a5f" opacity=".9"/>
+      <text x="788" y="350" text-anchor="middle" fill="white" font-size="13" font-weight="700">合同管理</text>
+      <text x="788" y="366" text-anchor="middle" fill="#93c5fd" font-size="11">准备 · 签订 · 执行</text>
+
+      <!-- 中台→各域 -->
+      <line x1="300" y1="216" x2="92" y2="252" stroke="#7dd3fc" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arr-t)"/>
+      <line x1="440" y1="216" x2="440" y2="252" stroke="#7dd3fc" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arr-t)"/>
+      <line x1="580" y1="216" x2="788" y2="252" stroke="#7dd3fc" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arr-t)"/>
+
+      <!-- 研发域内部 -->
+      <line x1="92" y1="300" x2="92" y2="328" stroke="#22d3ee" stroke-width="2" marker-end="url(#arr-t)"/>
+      <line x1="52" y1="376" x2="52" y2="404" stroke="#fb923c" stroke-width="2" marker-end="url(#arr-o)"/>
+      <!-- PDM→MES -->
+      <line x1="166" y1="352" x2="356" y2="352" stroke="#22d3ee" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arr-t)"/>
+
+      <!-- 采购域内部 -->
+      <line x1="788" y1="300" x2="788" y2="328" stroke="#60a5fa" stroke-width="2" marker-end="url(#arr-b)"/>
+      <!-- 合同→WMS -->
+      <line x1="714" y1="352" x2="524" y2="352" stroke="#60a5fa" stroke-width="2" marker-end="url(#arr-b)"/>
+      <!-- WMS→MES -->
+      <line x1="440" y1="328" x2="440" y2="300" stroke="#f472b6" stroke-width="2" marker-end="url(#arr-pk)"/>
+
+      <!-- MES回传ERP -->
+      <path d="M524,276 Q620,276 620,200 Q620,140 690,140" stroke="#34d399" stroke-width="1.5" stroke-dasharray="4,3" fill="none" marker-end="url(#arr-g)"/>
+      <text x="590" y="196" fill="#34d399" font-size="10">完工反馈</text>
+
+      <!-- 域标签 -->
+      <text x="92" y="240" text-anchor="middle" fill="rgba(255,255,255,.35)" font-size="10">研发域</text>
+      <text x="440" y="240" text-anchor="middle" fill="rgba(255,255,255,.35)" font-size="10">制造域</text>
+      <text x="788" y="240" text-anchor="middle" fill="rgba(255,255,255,.35)" font-size="10">采购域</text>
+
+      <!-- 图例 -->
+      <line x1="20" y1="490" x2="40" y2="490" stroke="#7dd3fc" stroke-width="1.5" stroke-dasharray="4,3"/>
+      <text x="46" y="494" fill="rgba(255,255,255,.4)" font-size="10">数据中台（待决策）</text>
+      <line x1="180" y1="490" x2="200" y2="490" stroke="#60a5fa" stroke-width="2"/>
+      <text x="206" y="494" fill="rgba(255,255,255,.4)" font-size="10">主数据流</text>
+      <line x1="290" y1="490" x2="310" y2="490" stroke="#34d399" stroke-width="1.5" stroke-dasharray="4,3"/>
+      <text x="316" y="494" fill="rgba(255,255,255,.4)" font-size="10">执行回传</text>
+      <line x1="400" y1="490" x2="420" y2="490" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4,3"/>
+      <text x="426" y="494" fill="rgba(255,255,255,.4)" font-size="10">OA协同流</text>
+    </svg>
+  </div>
+  <div class="info" style="margin-top:12px"><p>数据中台是<strong>横向基础设施层</strong>，不属于任何业务域，是所有域的共享底座。当前方案尚未决策（Q7），拓扑图中以虚线框标注。OA 作为流程协同层横向贯穿所有域。</p></div>
+</div>
+
+<!-- ══ 3 四大集成域 ══ -->
+<div class="sec" id="s3">
+  <div class="sec-hd"><div class="sec-num">3</div><div><h2>四大集成域</h2><div class="sd">研发域 · 采购域 · 制造域 · 质量域</div></div></div>
+  <div class="tab-bar">
+    <button class="tb on" onclick="sw(this,'td1')">🔬 研发域</button>
+    <button class="tb" onclick="sw(this,'td2')">📦 采购域</button>
+    <button class="tb" onclick="sw(this,'td3')">🏭 制造域</button>
+    <button class="tb" onclick="sw(this,'td4')">✅ 质量域</button>
+  </div>
+
+  <!-- 研发域 -->
+  <div id="td1" class="tp on">
+    <div class="card"><h3>研发域集成链：PLM → PDM → CAPP / ERP-PP</h3><p>以 PLM 为数据源头，经 PDM 受控发布后分别驱动 CAPP 工艺设计和 ERP-PP 生产计划。MBD 三维模型携带完整制造信息，直接驱动下游，实现无纸化制造。</p></div>
+    <div class="flow-item"><div class="fd" style="background:#7c3aed">1</div><div class="fc"><h4>PLM — 工程发布（Engineering Release）</h4><p>输出：EBOM结构 · 铺层顺序（Ply Stack-up）· 材料规范号 · 固化工艺规范（Cure Cycle Spec）· NDT检测规范 · 三维MBD模型 · 虚拟件标记</p></div></div>
+    <div class="farr">↓</div>
+    <div class="flow-item"><div class="fd" style="background:#0891b2">2</div><div class="fc"><h4>PDM — 受控BOM管理</h4><p>过滤虚拟件 · 版本锁定 · 受控发布 → 同时推送 CAPP 和 ERP-PP；质量文件归档受控</p></div></div>
+    <div class="farr">↓ 分叉</div>
+    <div class="flow-item"><div class="fd" style="background:#ea580c">3a</div><div class="fc"><h4>CAPP — 工艺路线设计</h4><p>接收 EBOM + MBD → 展开工序（铺层 → 热压罐固化 → 脱模 → 修边 → NDT → 表面处理 → 检验）→ 输出 MBOM + 工时定额 + 工装编号</p></div></div>
+    <div class="flow-item"><div class="fd" style="background:#1a56db">3b</div><div class="fc"><h4>ERP-PP — 生产计划（用友U8）</h4><p>接收 MBOM + 工艺路线 → MRP运算 → 生成生产订单 + 采购需求（器材/零组件）</p></div></div>
+
+    <div style="margin-top:20px;margin-bottom:10px;font-size:13px;font-weight:700;color:var(--navy)">MBD 在集成中的关键作用</div>
+    <div class="tw"><table>
+      <thead><tr><th>传递内容</th><th>接收方</th><th>意义</th></tr></thead>
+      <tbody>
+        <tr><td>含标注的三维模型</td><td>CAPP / 三维工艺</td><td>工艺设计直接读取模型，无需二维图纸</td></tr>
+        <tr><td>材料/公差定义</td><td>CAPP → 计划管控</td><td>驱动下料管理、零件采购规格</td></tr>
+        <tr><td>更改管理</td><td>PDM → EBOM</td><td>设计变更自动触发BOM版本更新</td></tr>
+        <tr><td>设计资源</td><td>PDM归档受控</td><td>确保制造端使用唯一受控版本</td></tr>
+      </tbody>
+    </table></div>
+
+    <div style="margin-top:20px;margin-bottom:10px;font-size:13px;font-weight:700;color:var(--navy)">四态BOM体系（航空复材场景）</div>
+    <div class="g2">
+      <div class="bom-card"><div class="bom-tag" style="background:#ede9fe;color:#7c3aed">EBOM 工程BOM</div><h4>PLM 主导</h4><ul><li>铺层顺序（Ply Sequence）</li><li>纤维方向（Fiber Orientation）</li><li>材料规范号（Material Spec No.）</li><li>固化工艺规范（Cure Cycle Spec）</li><li>含虚拟件（不传ERP）</li></ul></div>
+      <div class="bom-card"><div class="bom-tag" style="background:#dcfce7;color:#16a34a">MBOM 制造BOM</div><h4>CAPP / MES 主导</h4><ul><li>工序分工（铺层→固化→NDT）</li><li>工装编号（模具/热压罐）</li><li>工时定额 · 损耗率</li><li>工艺规范号（PS-CURE-001）</li><li>与工艺路线绑定</li></ul></div>
+      <div class="bom-card"><div class="bom-tag" style="background:#fef3c7;color:#d97706">PBOM 采购BOM</div><h4>ERP-MM 主导</h4><ul><li>预浸料规格（Prepreg Spec）</li><li>批次要求 · 材料有效期（Shelf Life）</li><li>供应商资质（AS9100认证）</li><li>来自批准供应商清单（ASL）</li></ul></div>
+      <div class="bom-card"><div class="bom-tag" style="background:#e0f2fe;color:#0891b2">SBOM 构型BOM</div><h4>PDM / 适航 主导</h4><ul><li>件号（Part Number）· 序列号（S/N）</li><li>适用性（Applicability）</li><li>构型偏离（Deviation/Waiver）</li><li>符合性声明（SoC）· FAI报告</li></ul></div>
+    </div>
+
+    <div style="margin-top:20px;margin-bottom:10px;font-size:13px;font-weight:700;color:var(--navy)">航空复材 vs 普通制造 — BOM核心差异（7维度）</div>
+    <div class="tw"><table>
+      <thead><tr><th>差异点</th><th>普通制造</th><th>航空复材制造</th></tr></thead>
+      <tbody>
+        <tr><td>BOM最小单元</td><td>零件</td><td><strong>铺层（Ply）</strong>，一个蒙皮可能有数十层</td></tr>
+        <tr><td>材料属性</td><td>材料牌号</td><td><strong>预浸料批次号 + 有效期 + 存储条件</strong></td></tr>
+        <tr><td>工艺参数</td><td>工艺路线</td><td><strong>固化曲线（温度/压力/时间）+ 热压罐编号</strong>，必须记录到件</td></tr>
+        <tr><td>质量记录</td><td>检验合格</td><td><strong>NDT报告（超声C扫/X射线）+ 孔隙率检测</strong>，记录到件</td></tr>
+        <tr><td>版本管理</td><td>版次</td><td><strong>构型状态 + ECO/EO变更单 + 偏离/超差记录</strong>，适航局可查</td></tr>
+        <tr><td>追溯要求</td><td>批次追溯</td><td><strong>序列号级追溯</strong>，每个零件独立档案，终身保存</td></tr>
+        <tr><td>有效期管理</td><td>无</td><td><strong>预浸料冷冻存储时间 + 环境暴露时间 + 上机时限</strong>，超期作废</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <!-- 采购域 -->
+  <div id="td2" class="tp">
+    <div class="card"><h3>采购域集成链：ERP-MM → SCIM → 合同 → WMS → MES</h3></div>
+    <div class="flow-item"><div class="fd" style="background:#1a56db">1</div><div class="fc"><h4>ERP-PP（MRP运算）→ ERP-MM</h4><p>生成物料需求 → 触发采购申请 → 生成采购订单（器材采购订单 / 零组件采购订单）</p></div></div>
+    <div class="farr">↓</div>
+    <div class="flow-item"><div class="fd" style="background:#059669">2</div><div class="fc"><h4>SCIM（供应商协同门户）</h4><p>供应商商务管理 · 供应商技术协同 · 海关业务 / 下料管理 · 首件检验 · 不合格品控制 · 供应商质量</p></div></div>
+    <div class="farr">↓</div>
+    <div class="flow-item"><div class="fd" style="background:#0891b2">3</div><div class="fc"><h4>合同管理系统（OA流程驱动）</h4><p>合同准备 → 合同签订 → 合同执行</p></div></div>
+    <div class="farr">↓</div>
+    <div class="flow-item"><div class="fd" style="background:#db2777">4</div><div class="fc"><h4>WMS（仓储管理）</h4><p>到货入库 · 库位管理 · 预浸料有效期管控（冷冻存储时间/环境暴露时间）· 采购/销售/生产管理 · 波次管理 · 调度调拨 · 出入库 · 库存</p></div></div>
+    <div class="farr">↓</div>
+    <div class="flow-item"><div class="fd" style="background:#16a34a">5</div><div class="fc"><h4>MES（北京虎蜥）</h4><p>领料出库 → 物料与工单绑定 → 批次/序列号追溯链建立</p></div></div>
+  </div>
+
+  <!-- 制造域 -->
+  <div id="td3" class="tp">
+    <div class="card"><h3>制造域集成闭环：ERP-PP ⇄ MES ⇄ ERP-CO / FI</h3></div>
+    <div class="flow-item"><div class="fd" style="background:#1a56db">1</div><div class="fc"><h4>ERP-PP 下达生产订单</h4><p>生产订单 + 工艺路线 + MBOM → 推送 MES</p></div></div>
+    <div class="farr">↓</div>
+    <div class="flow-item"><div class="fd" style="background:#16a34a">2</div><div class="fc"><h4>MES 排产与执行</h4><p>排产管理（工装/工具/夹具资源）→ 工艺管理 → 生产执行 → 工时管理 → IoT数据采集 → 现场质量检验</p></div></div>
+    <div class="farr">↓</div>
+    <div class="flow-item"><div class="fd" style="background:#16a34a">3</div><div class="fc"><h4>MES 完工反馈</h4><p>完工报工 + 工时报工 → 回传 ERP-PP（进度更新）</p></div></div>
+    <div class="farr">↓</div>
+    <div class="flow-item"><div class="fd" style="background:#1a56db">4</div><div class="fc"><h4>ERP-CO 成本归集（用友U8）</h4><p>工时 + 物料 + 工装 → 成本核算</p></div></div>
+    <div class="farr">↓</div>
+    <div class="flow-item"><div class="fd" style="background:#1a56db">5</div><div class="fc"><h4>ERP-FI 财务核算（用友U8）</h4><p>凭证生成 · 财务结账</p></div></div>
+  </div>
+
+  <!-- 质量域 -->
+  <div id="td4" class="tp">
+    <div class="card"><h3>质量管理横向集成：研发 → 采购 → 制造 → 交付（贯穿全域）</h3></div>
+    <div class="g4" style="grid-template-columns:repeat(auto-fill,minmax(200px,1fr))">
+      <div class="card"><h3>🔬 研发阶段</h3><ul><li>LCA 品质策划</li><li>文件审批（OA）</li><li>PDM 质量文件受控</li></ul></div>
+      <div class="card"><h3>📦 采购阶段</h3><ul><li>供应商质量管理</li><li>首件检验（FAI）</li><li>不合格品控制</li><li>交付文件管理</li></ul></div>
+      <div class="card"><h3>🏭 制造阶段</h3><ul><li>现场质量检验</li><li>NDT（超声C扫/X射线）</li><li>产品检验 · 数据发放</li><li>工装制造质量</li></ul></div>
+      <div class="card"><h3>✈️ 交付阶段</h3><ul><li>智能质量监控</li><li>质量审核 · 质量改进</li><li>适航符合性证明</li></ul></div>
+    </div>
+    <div class="info"><p>质量数据统一汇聚至 PDM（质量文件受控）← 统一质量数据 → ERP（用友U8），实现跨域质量数据贯通。</p></div>
+  </div>
+</div>
+
+<!-- ══ 4 主数据规范 ══ -->
+<div class="sec" id="s4">
+  <div class="sec-hd"><div class="sec-num">4</div><div><h2>主数据规范</h2><div class="sd">事故链警示 · 编码结构 · 分类码12类（PPT版）</div></div></div>
+
+  <div class="alert">
+    <div class="at">🚨 真实事故链警示（C919后机身前段上壁板 CFRP Fuselage Rear Frame Upper Panel）</div>
+    <p style="margin-bottom:8px">同一个零件，各系统叫法不同：</p>
+    <ul>
+      <li>PLM 叫：<code>PANEL-CFRP-RFFUP-001-A</code>（设计态，含铺层顺序）</li>
+      <li>ERP 叫：<code>1000045231</code>（财务流水号）</li>
+      <li>MES 叫：<code>PART-PANEL-RFFUP-001</code>（车间自命名）</li>
+      <li>质量系统：后机身上壁板 PANEL-CFRP-RFFUP-001-A（质检员手填）</li>
+      <li>OA采购：XX级碳纤维预浸料或CMS-XX-XXX（采购申请描述）</li>
+    </ul>
+    <p style="margin-top:8px">→ 预浸料批次与零件无法关联 → NDT检测记录找不到对应零件 → 固化炉工艺参数与零件脱节 → <strong>适航局审查时整批次零件被要求重新验证</strong></p>
+    <p style="margin-top:6px"><strong>在航空制造，主数据混乱不只是效率问题，是适航符合性问题。</strong></p>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <h3>编码设计五原则</h3>
+    <div class="g2" style="margin-top:8px">

@@ -1,0 +1,35 @@
+{
+  "name": "infomat",
+  "version": "1.0.0",
+  "description": "",
+  "main": "analyze-layout.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "slidev": "slidev slides.md",
+    "slidev:build": "slidev build slides.md -o dist",
+    "slidev:preview": "slidev preview dist",
+    "slidev:open": "slidev --open",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Harbinian/Infomat.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Harbinian/Infomat/issues"
+  },
+  "homepage": "https://github.com/Harbinian/Infomat#readme",
+  "dependencies": {
+    "@slidev/cli": "^52.15.0",
+    "@slidev/theme-default": "^0.25.0",
+    "@slidev/theme-seriph": "^0.25.0",
+    "mermaid": "^11.14.0"
+  }
+}
