@@ -668,6 +668,85 @@
         if (target) target.classList.remove('hidden');
       });
     });
+
+    // TOC functionality
+    const tocOverlay = document.getElementById('toc-overlay');
+    const btnToc = document.getElementById('btn-toc');
+    const btnCloseToc = document.getElementById('btn-close-toc');
+
+    btnToc.addEventListener('click', () => tocOverlay.classList.remove('hidden'));
+    btnCloseToc.addEventListener('click', () => tocOverlay.classList.add('hidden'));
+    tocOverlay.addEventListener('click', (e) => {
+      if (e.target === tocOverlay) tocOverlay.classList.add('hidden');
+    });
+
+    document.querySelectorAll('.toc-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const slideIndex = parseInt(item.dataset.slide);
+        slides[slideIndex].scrollIntoView({ behavior: 'smooth' });
+        tocOverlay.classList.add('hidden');
+      });
+    });
   </script>
+<!-- Table of Contents Overlay -->
+<div id="toc-overlay" class="fixed inset-0 bg-black/80 z-50 hidden">
+  <div class="h-full flex items-center justify-center p-8">
+    <div class="bg-gray-800 rounded-2xl p-6 max-w-3xl w-full max-h-[80vh] overflow-y-auto">
+      <div class="flex justify-between items-center mb-6">
+        <h3 class="text-xl font-bold text-white">目录</h3>
+        <button id="btn-close-toc" class="text-gray-400 hover:text-white">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="grid grid-cols-3 gap-4" id="toc-items">
+        <button class="toc-item bg-gray-700 hover:bg-gray-600 rounded-lg p-4 text-left" data-slide="0">
+          <span class="text-sys-accent font-bold">0</span>
+          <p class="text-white text-sm mt-1">封面</p>
+        </button>
+        <button class="toc-item bg-gray-700 hover:bg-gray-600 rounded-lg p-4 text-left" data-slide="1">
+          <span class="text-sys-erp font-bold">1</span>
+          <p class="text-white text-sm mt-1">ERP系统</p>
+        </button>
+        <button class="toc-item bg-gray-700 hover:bg-gray-600 rounded-lg p-4 text-left" data-slide="2">
+          <span class="text-sys-oa font-bold">2</span>
+          <p class="text-white text-sm mt-1">OA系统</p>
+        </button>
+        <button class="toc-item bg-gray-700 hover:bg-gray-600 rounded-lg p-4 text-left" data-slide="3">
+          <span class="text-sys-plm font-bold">3</span>
+          <p class="text-white text-sm mt-1">PLM系统</p>
+        </button>
+        <button class="toc-item bg-gray-700 hover:bg-gray-600 rounded-lg p-4 text-left" data-slide="4">
+          <span class="text-sys-mes font-bold">4</span>
+          <p class="text-white text-sm mt-1">MES系统</p>
+        </button>
+        <button class="toc-item bg-gray-700 hover:bg-gray-600 rounded-lg p-4 text-left" data-slide="5">
+          <span class="text-gray-400 font-bold">5</span>
+          <p class="text-white text-sm mt-1">集成全景</p>
+        </button>
+        <button class="toc-item bg-gray-700 hover:bg-gray-600 rounded-lg p-4 text-left" data-slide="6">
+          <span class="text-gray-400 font-bold">6</span>
+          <p class="text-white text-sm mt-1">分域讲解</p>
+        </button>
+        <button class="toc-item bg-gray-700 hover:bg-gray-600 rounded-lg p-4 text-left" data-slide="7">
+          <span class="text-gray-400 font-bold">7</span>
+          <p class="text-white text-sm mt-1">编码规范</p>
+        </button>
+        <button class="toc-item bg-gray-700 hover:bg-gray-600 rounded-lg p-4 text-left" data-slide="8">
+          <span class="text-gray-400 font-bold">8</span>
+          <p class="text-white text-sm mt-1">黄金源</p>
+        </button>
+        <button class="toc-item bg-gray-700 hover:bg-gray-600 rounded-lg p-4 text-left" data-slide="9">
+          <span class="text-gray-400 font-bold">9</span>
+          <p class="text-white text-sm mt-1">适航追溯</p>
+        </button>
+        <button class="toc-item bg-gray-700 hover:bg-gray-600 rounded-lg p-4 text-left" data-slide="10">
+          <span class="text-gray-400 font-bold">10</span>
+          <p class="text-white text-sm mt-1">行动项</p>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
