@@ -1,3 +1,34 @@
+# H5 重构实施计划
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** 重建系统集成方案预审会H5演示页面，采用Tailwind CSS，实现全屏幻灯片导航、4套系统详情页、集成拓扑图、分域Tab切换、MDM内容页、行动计划页。
+
+**Architecture:** 单HTML文件，内联Tailwind CSS（CDN）和Vanilla JS。全屏滚动布局（CSS scroll-snap），SVG绘制拓扑图和追溯链，底部固定导航组件。
+
+**Tech Stack:** HTML5, Tailwind CSS (CDN), Vanilla JS, SVG
+
+---
+
+## 文件结构
+
+```
+presentation.html    # 新建H5演示文件（主入口）
+                    # 包含：Tailwind CDN、内联自定义样式、内联JS、所有SVG内容
+```
+
+> 注意：现有 `index.html` 是业务关系网络图，保留不动。新建 `presentation.html` 作为H5演示。
+
+---
+
+## Task 1: 项目基础结构
+
+**Files:**
+- Create: `presentation.html`
+
+- [ ] **Step 1: 创建基础HTML结构**
+
+```html
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -28,7 +59,84 @@
   </style>
 </head>
 <body class="scroll-container" id="scroll-container">
-  <section class="slide flex flex-col items-center justify-center bg-sys-bg">
+  <!-- Slides will be added here -->
+</body>
+</html>
+```
+
+- [ ] **Step 2: 创建底部导航组件**
+
+在 body 末尾添加：
+
+```html
+<!-- Bottom Navigation -->
+<div class="fixed bottom-0 left-0 right-0 h-16 bg-sys-bg border-t border-gray-700 flex items-center justify-between px-6 z-50">
+  <button id="btn-toc" class="text-gray-400 hover:text-white">
+    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+  </button>
+  <div class="flex gap-2" id="progress-dots"></div>
+  <div class="text-gray-500 text-sm" id="page-indicator">1 / 12</div>
+</div>
+```
+
+- [ ] **Step 3: 添加Vanilla JS导航逻辑**
+
+```javascript
+<script>
+const slides = document.querySelectorAll('.slide');
+const container = document.getElementById('scroll-container');
+const dots = document.getElementById('progress-dots');
+const indicator = document.getElementById('page-indicator');
+
+// Create progress dots
+slides.forEach((_, i) => {
+  const dot = document.createElement('button');
+  dot.className = 'w-2 h-2 rounded-full bg-gray-600 hover:bg-sys-accent transition-colors';
+  dot.onclick = () => slides[i].scrollIntoView({ behavior: 'smooth' });
+  dots.appendChild(dot);
+});
+
+// Update active dot on scroll
+container.addEventListener('scroll', () => {
+  const index = Math.round(container.scrollTop / window.innerHeight);
+  document.querySelectorAll('#progress-dots button').forEach((d, i) => {
+    d.classList.toggle('bg-sys-accent', i === index);
+    d.classList.toggle('bg-gray-600', i !== index);
+  });
+  indicator.textContent = `${index + 1} / ${slides.length}`;
+});
+
+// Keyboard navigation
+document.addEventListener('keydown', (e) => {
+  const current = Math.round(container.scrollTop / window.innerHeight);
+  if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+    slides[Math.min(current + 1, slides.length - 1)].scrollIntoView({ behavior: 'smooth' });
+  } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+    slides[Math.max(current - 1, 0)].scrollIntoView({ behavior: 'smooth' });
+  }
+});
+</script>
+```
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add docs/superpowers/plans/2026-05-07-h5-presentation-plan.md
+git add presentation.html
+git commit -m "feat: init H5 presentation structure with Tailwind and navigation"
+```
+
+---
+
+## Task 2: 封面页（第0页）
+
+**Files:**
+- Modify: `presentation.html` - 在 `<div id="scroll-container">` 后添加封面slide
+
+- [ ] **Step 1: 添加封面Slide HTML**
+
+```html
+<section class="slide flex flex-col items-center justify-center bg-sys-bg">
   <div class="text-center">
     <h1 class="text-4xl font-bold text-white mb-4">制造企业数字化运营平台</h1>
     <h2 class="text-2xl text-sys-accent mb-8">系统集成方案预审会</h2>
@@ -46,15 +154,35 @@
     </div>
   </div>
 </section>
+```
 
+- [ ] **Step 2: Commit**
+
+```bash
+git add presentation.html
+git commit -m "feat: add cover slide (slide 0)"
+```
+
+---
+
+## Task 3: 系统全景页（4页，第1-4页）
+
+**Files:**
+- Modify: `presentation.html`
+
+- [ ] **Step 1: 添加ERP系统页**
+
+```html
 <section class="slide flex items-center justify-center p-12 bg-sys-bg">
   <div class="max-w-5xl w-full grid grid-cols-12 gap-8">
+    <!-- Left: System Card -->
     <div class="col-span-4 flex flex-col items-center">
       <div class="bg-gradient-to-br from-sys-erp to-blue-900 rounded-xl p-8 text-center shadow-2xl w-full">
         <h3 class="text-3xl font-bold text-white mb-2">ERP</h3>
         <p class="text-blue-200">用友U8</p>
       </div>
     </div>
+    <!-- Right: Details -->
     <div class="col-span-8">
       <h3 class="text-2xl font-bold text-white mb-2">企业资源计划核心层</h3>
       <p class="text-gray-400 mb-6">管"资源怎么计划、成本怎么核算"</p>
@@ -80,7 +208,11 @@
     </div>
   </div>
 </section>
+```
 
+- [ ] **Step 2: 添加OA系统页**
+
+```html
 <section class="slide flex items-center justify-center p-12 bg-sys-bg">
   <div class="max-w-5xl w-full grid grid-cols-12 gap-8">
     <div class="col-span-4 flex flex-col items-center">
@@ -113,7 +245,11 @@
     </div>
   </div>
 </section>
+```
 
+- [ ] **Step 3: 添加PLM系统页**
+
+```html
 <section class="slide flex items-center justify-center p-12 bg-sys-bg">
   <div class="max-w-5xl w-full grid grid-cols-12 gap-8">
     <div class="col-span-4 flex flex-col items-center">
@@ -148,7 +284,11 @@
     </div>
   </div>
 </section>
+```
 
+- [ ] **Step 4: 添加MES系统页**
+
+```html
 <section class="slide flex items-center justify-center p-12 bg-sys-bg">
   <div class="max-w-5xl w-full grid grid-cols-12 gap-8">
     <div class="col-span-4 flex flex-col items-center">
@@ -181,11 +321,30 @@
     </div>
   </div>
 </section>
+```
 
+- [ ] **Step 5: Commit**
+
+```bash
+git add presentation.html
+git commit -m "feat: add system overview slides (ERP, OA, PLM, MES)"
+```
+
+---
+
+## Task 4: 集成全景页（第5页）
+
+**Files:**
+- Modify: `presentation.html`
+
+- [ ] **Step 1: 添加集成全景SVG拓扑图页**
+
+```html
 <section class="slide flex items-center justify-center p-12 bg-sys-bg">
   <div class="max-w-6xl w-full">
     <h3 class="text-2xl font-bold text-white text-center mb-8">全局集成拓扑图</h3>
     <svg viewBox="0 0 900 500" class="w-full">
+      <!-- Background grid dots -->
       <defs>
         <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
           <circle cx="20" cy="20" r="1" fill="#333"/>
@@ -248,7 +407,25 @@
     <p class="text-center text-gray-500 text-sm mt-4">一期采用直接通信模式，系统间点对点接口</p>
   </div>
 </section>
+```
 
+- [ ] **Step 2: Commit**
+
+```bash
+git add presentation.html
+git commit -m "feat: add integration topology slide (slide 5)"
+```
+
+---
+
+## Task 5: 分域讲解页（第6页）
+
+**Files:**
+- Modify: `presentation.html`
+
+- [ ] **Step 1: 添加分域Tab切换页**
+
+```html
 <section class="slide flex flex-col items-center justify-center p-12 bg-sys-bg">
   <h3 class="text-2xl font-bold text-white mb-8">分域讲解</h3>
 
@@ -391,7 +568,49 @@
     </div>
   </div>
 </section>
+```
 
+- [ ] **Step 2: 添加Tab切换JS逻辑**
+
+在现有script标签中添加：
+
+```javascript
+// Domain tab switching
+document.querySelectorAll('.domain-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    // Update tab styles
+    document.querySelectorAll('.domain-tab').forEach(t => {
+      t.classList.remove('bg-sys-plm', 'text-white');
+      t.classList.add('bg-gray-700', 'text-gray-300');
+    });
+    tab.classList.remove('bg-gray-700', 'text-gray-300');
+    tab.classList.add('bg-sys-plm', 'text-white');
+
+    // Show selected content
+    document.querySelectorAll('.domain-content').forEach(c => c.classList.add('hidden'));
+    const target = document.getElementById('tab-' + tab.dataset.tab);
+    if (target) target.classList.remove('hidden');
+  });
+});
+```
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add presentation.html
+git commit -m "feat: add domain mapping slide with tab switching (slide 6)"
+```
+
+---
+
+## Task 6: MDM主数据治理页（3页，第7-9页）
+
+**Files:**
+- Modify: `presentation.html`
+
+- [ ] **Step 1: 添加编码规范页**
+
+```html
 <section class="slide flex items-center justify-center p-12 bg-sys-bg">
   <div class="max-w-5xl w-full">
     <h3 class="text-2xl font-bold text-white text-center mb-8">MDM主数据治理 - 编码规范</h3>
@@ -437,7 +656,11 @@
     </div>
   </div>
 </section>
+```
 
+- [ ] **Step 2: 添加黄金源确认表页**
+
+```html
 <section class="slide flex items-center justify-center p-12 bg-sys-bg">
   <div class="max-w-5xl w-full">
     <h3 class="text-2xl font-bold text-white text-center mb-8">MDM主数据治理 - 黄金源确认</h3>
@@ -467,20 +690,19 @@
     </div>
   </div>
 </section>
+```
 
+- [ ] **Step 3: 添加适航追溯链页**
+
+```html
 <section class="slide flex items-center justify-center p-12 bg-sys-bg">
   <div class="max-w-4xl w-full">
     <h3 class="text-2xl font-bold text-white text-center mb-8">MDM主数据治理 - 适航追溯链</h3>
     <p class="text-center text-gray-400 mb-6">序列号级追溯链路</p>
 
     <div class="relative">
+      <!-- Traceability chain SVG -->
       <svg viewBox="0 0 400 450" class="w-full max-w-md mx-auto">
-        <defs>
-          <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-            <polygon points="0 0, 8 3, 0 6" fill="#e94560"/>
-          </marker>
-        </defs>
-
         <!-- Node 1 -->
         <rect x="100" y="10" width="200" height="50" rx="8" fill="#16213e" stroke="#e94560" stroke-width="2"/>
         <text x="200" y="30" text-anchor="middle" fill="white" font-size="11">原材料批次</text>
@@ -524,7 +746,25 @@
     </div>
   </div>
 </section>
+```
 
+- [ ] **Step 4: Commit**
+
+```bash
+git add presentation.html
+git commit -m "feat: add MDM slides (encoding, golden source, traceability)"
+```
+
+---
+
+## Task 7: 行动计划页（第10页）
+
+**Files:**
+- Modify: `presentation.html`
+
+- [ ] **Step 1: 添加行动计划页**
+
+```html
 <section class="slide flex items-center justify-center p-12 bg-sys-bg">
   <div class="max-w-5xl w-full">
     <h3 class="text-2xl font-bold text-white text-center mb-8">下一步行动</h3>
@@ -607,87 +847,25 @@
     </div>
   </div>
 </section>
+```
 
-  <!-- Bottom Navigation -->
-  <div class="fixed bottom-0 left-0 right-0 h-16 bg-sys-bg border-t border-gray-700 flex items-center justify-between px-6 z-50">
-    <button id="btn-toc" class="text-gray-400 hover:text-white">
-      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-    </button>
-    <div class="flex gap-2" id="progress-dots"></div>
-    <div class="text-gray-500 text-sm" id="page-indicator">1 / 12</div>
-  </div>
+- [ ] **Step 2: Commit**
 
-  <script>
-    const slides = document.querySelectorAll('.slide');
-    const container = document.getElementById('scroll-container');
-    const dots = document.getElementById('progress-dots');
-    const indicator = document.getElementById('page-indicator');
+```bash
+git add presentation.html
+git commit -m "feat: add action items slide (slide 10)"
+```
 
-    // Create progress dots
-    slides.forEach((_, i) => {
-      const dot = document.createElement('button');
-      dot.className = 'w-2 h-2 rounded-full bg-gray-600 hover:bg-sys-accent transition-colors';
-      dot.onclick = () => slides[i].scrollIntoView({ behavior: 'smooth' });
-      dots.appendChild(dot);
-    });
+---
 
-    // Update active dot on scroll
-    container.addEventListener('scroll', () => {
-      const index = Math.round(container.scrollTop / window.innerHeight);
-      document.querySelectorAll('#progress-dots button').forEach((d, i) => {
-        d.classList.toggle('bg-sys-accent', i === index);
-        d.classList.toggle('bg-gray-600', i !== index);
-      });
-      indicator.textContent = `${index + 1} / ${slides.length}`;
-    });
+## Task 8: TOC目录弹层（可选交互）
 
-    // Keyboard navigation
-    document.addEventListener('keydown', (e) => {
-      const current = Math.round(container.scrollTop / window.innerHeight);
-      if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
-        slides[Math.min(current + 1, slides.length - 1)].scrollIntoView({ behavior: 'smooth' });
-      } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
-        slides[Math.max(current - 1, 0)].scrollIntoView({ behavior: 'smooth' });
-      }
-    });
+**Files:**
+- Modify: `presentation.html`
 
-    // Domain tab switching
-    document.querySelectorAll('.domain-tab').forEach(tab => {
-      tab.addEventListener('click', () => {
-        // Update tab styles
-        document.querySelectorAll('.domain-tab').forEach(t => {
-          t.classList.remove('bg-sys-plm', 'text-white');
-          t.classList.add('bg-gray-700', 'text-gray-300');
-        });
-        tab.classList.remove('bg-gray-700', 'text-gray-300');
-        tab.classList.add('bg-sys-plm', 'text-white');
+- [ ] **Step 1: 添加TOC弹层HTML（在底部导航后添加）**
 
-        // Show selected content
-        document.querySelectorAll('.domain-content').forEach(c => c.classList.add('hidden'));
-        const target = document.getElementById('tab-' + tab.dataset.tab);
-        if (target) target.classList.remove('hidden');
-      });
-    });
-
-    // TOC functionality
-    const tocOverlay = document.getElementById('toc-overlay');
-    const btnToc = document.getElementById('btn-toc');
-    const btnCloseToc = document.getElementById('btn-close-toc');
-
-    btnToc.addEventListener('click', () => tocOverlay.classList.remove('hidden'));
-    btnCloseToc.addEventListener('click', () => tocOverlay.classList.add('hidden'));
-    tocOverlay.addEventListener('click', (e) => {
-      if (e.target === tocOverlay) tocOverlay.classList.add('hidden');
-    });
-
-    document.querySelectorAll('.toc-item').forEach(item => {
-      item.addEventListener('click', () => {
-        const slideIndex = parseInt(item.dataset.slide);
-        slides[slideIndex].scrollIntoView({ behavior: 'smooth' });
-        tocOverlay.classList.add('hidden');
-      });
-    });
-  </script>
+```html
 <!-- Table of Contents Overlay -->
 <div id="toc-overlay" class="fixed inset-0 bg-black/80 z-50 hidden">
   <div class="h-full flex items-center justify-center p-8">
@@ -747,6 +925,71 @@
     </div>
   </div>
 </div>
+```
 
-</body>
-</html>
+- [ ] **Step 2: 添加TOC交互JS逻辑**
+
+```javascript
+// TOC functionality
+const tocOverlay = document.getElementById('toc-overlay');
+const btnToc = document.getElementById('btn-toc');
+const btnCloseToc = document.getElementById('btn-close-toc');
+
+btnToc.addEventListener('click', () => tocOverlay.classList.remove('hidden'));
+btnCloseToc.addEventListener('click', () => tocOverlay.classList.add('hidden'));
+tocOverlay.addEventListener('click', (e) => {
+  if (e.target === tocOverlay) tocOverlay.classList.add('hidden');
+});
+
+document.querySelectorAll('.toc-item').forEach(item => {
+  item.addEventListener('click', () => {
+    const slideIndex = parseInt(item.dataset.slide);
+    slides[slideIndex].scrollIntoView({ behavior: 'smooth' });
+    tocOverlay.classList.add('hidden');
+  });
+});
+```
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add presentation.html
+git commit -m "feat: add table of contents overlay"
+```
+
+---
+
+## Self-Review Checklist
+
+**1. Spec Coverage:**
+- [x] 封面页 - Task 2
+- [x] 系统全景（4页）- Task 3
+- [x] 集成全景拓扑图 - Task 4
+- [x] 分域讲解Tab切换 - Task 5
+- [x] MDM编码规范 - Task 6
+- [x] MDM黄金源确认 - Task 6
+- [x] MDM适航追溯链 - Task 6
+- [x] 行动计划页 - Task 7
+- [x] 导航交互 - Task 1, 8
+
+**2. Placeholder Scan:**
+- 无TBD/TODO
+- 无"类似"引用
+- 所有代码步骤均完整
+
+**3. Type Consistency:**
+- slides使用`class="slide"`
+- 导航使用`id="scroll-container"`
+- Tab切换使用`data-tab`属性
+
+---
+
+**Plan complete and saved to `docs/superpowers/plans/2026-05-07-h5-presentation-plan.md`**
+
+**Two execution options:**
+
+**1. Subagent-Driven (recommended)** - I dispatch a fresh subagent per task, review between tasks, fast iteration
+
+**2. Inline Execution** - Execute tasks in this session using executing-plans, batch execution with checkpoints
+
+**Which approach?**
