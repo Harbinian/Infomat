@@ -515,7 +515,151 @@
       </div>
     </section>
 
-    <!-- Slide 6: Title -->
+    <!-- Slide 6: Domain Explanation -->
+    <section class="slide flex-col" style="background: var(--sys-bg); padding: 40px; display: flex; flex-direction: column; align-items: center;" data-slide="6" data-title="分域讲解">
+      <h3 class="text-2xl font-bold text-white mb-8">分域讲解</h3>
+
+      <!-- Tab Navigation -->
+      <div class="flex gap-1 mb-8" id="domain-tabs">
+        <button class="domain-tab px-6 py-2 font-medium text-white" style="border-radius: 8px 8px 0 0; background: var(--sys-plm);" data-tab="rd">研发域</button>
+        <button class="domain-tab px-6 py-2 font-medium" style="border-radius: 8px 8px 0 0; background: var(--gray-700); color: #d1d5db;" data-tab="procurement">采购域</button>
+        <button class="domain-tab px-6 py-2 font-medium" style="border-radius: 8px 8px 0 0; background: var(--gray-700); color: #d1d5db;" data-tab="manufacturing">制造域</button>
+        <button class="domain-tab px-6 py-2 font-medium" style="border-radius: 8px 8px 0 0; background: var(--gray-700); color: #d1d5db;" data-tab="quality">质量域</button>
+      </div>
+
+      <!-- Tab Content -->
+      <div class="w-full max-w-5xl">
+        <!-- RD Domain -->
+        <div class="domain-content" id="tab-rd">
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; text-align: center;">
+            <div style="background: var(--gray-800); border-radius: 8px; padding: 16px;">
+              <h4 class="font-semibold mb-2" style="color: var(--sys-plm);">业务能力</h4>
+              <div style="font-size: 14px; display: flex; flex-direction: column; gap: 8px;">
+                <div style="color: #fff;">产品定义</div>
+                <div style="color: #fff;">设计变更</div>
+                <div style="color: #fff;">MBOM转换</div>
+                <div style="color: #fff;">生产计划</div>
+              </div>
+            </div>
+            <div style="background: var(--gray-800); border-radius: 8px; padding: 16px;">
+              <h4 class="font-semibold mb-2" style="color: var(--sys-accent);">L3流程</h4>
+              <div style="font-size: 14px; display: flex; flex-direction: column; gap: 8px;">
+                <div style="color: #d1d5db;">工程BOM管理</div>
+                <div style="color: #d1d5db;">设计变更控制</div>
+                <div style="color: #d1d5db;">MBOM转换</div>
+                <div style="color: #d1d5db;">生产计划下达</div>
+              </div>
+            </div>
+            <div style="background: var(--gray-800); border-radius: 8px; padding: 16px;">
+              <h4 class="font-semibold mb-2" style="color: var(--sys-erp);">应用系统</h4>
+              <div style="font-size: 14px; display: flex; flex-direction: column; gap: 8px;">
+                <div style="color: var(--sys-plm);">PLM</div>
+                <div style="color: var(--sys-oa);">OA（ECO审批）</div>
+                <div style="color: #6b7280;">CAPP</div>
+                <div style="color: var(--sys-erp);">ERP-PP</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Procurement Domain -->
+        <div class="domain-content hidden" id="tab-procurement">
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; text-align: center;">
+            <div style="background: var(--gray-800); border-radius: 8px; padding: 16px;">
+              <h4 class="font-semibold mb-2" style="color: var(--sys-plm);">业务能力</h4>
+              <div style="font-size: 14px; display: flex; flex-direction: column; gap: 8px;">
+                <div style="color: #fff;">物资采购</div>
+              </div>
+            </div>
+            <div style="background: var(--gray-800); border-radius: 8px; padding: 16px;">
+              <h4 class="font-semibold mb-2" style="color: var(--sys-accent);">L3流程</h4>
+              <div style="font-size: 14px; display: flex; flex-direction: column; gap: 8px;">
+                <div style="color: #d1d5db;">供应商协同</div>
+                <div style="color: #d1d5db;">合同签订</div>
+                <div style="color: #d1d5db;">采购订单下达</div>
+                <div style="color: #d1d5db;">仓储收货/领料</div>
+              </div>
+            </div>
+            <div style="background: var(--gray-800); border-radius: 8px; padding: 16px;">
+              <h4 class="font-semibold mb-2" style="color: var(--sys-erp);">应用系统</h4>
+              <div style="font-size: 14px; display: flex; flex-direction: column; gap: 8px;">
+                <div style="color: #6b7280;">SCIM</div>
+                <div style="color: var(--sys-oa);">OA + 合同系统</div>
+                <div style="color: var(--sys-erp);">ERP-MM</div>
+                <div style="color: #6b7280;">WMS → MES</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Manufacturing Domain -->
+        <div class="domain-content hidden" id="tab-manufacturing">
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; text-align: center;">
+            <div style="background: var(--gray-800); border-radius: 8px; padding: 16px;">
+              <h4 class="font-semibold mb-2" style="color: var(--sys-plm);">业务能力</h4>
+              <div style="font-size: 14px; display: flex; flex-direction: column; gap: 8px;">
+                <div style="color: #fff;">生产执行</div>
+              </div>
+            </div>
+            <div style="background: var(--gray-800); border-radius: 8px; padding: 16px;">
+              <h4 class="font-semibold mb-2" style="color: var(--sys-accent);">L3流程</h4>
+              <div style="font-size: 14px; display: flex; flex-direction: column; gap: 8px;">
+                <div style="color: #d1d5db;">生产订单下达</div>
+                <div style="color: #d1d5db;">工序报工</div>
+                <div style="color: #d1d5db;">成本归集</div>
+                <div style="color: #d1d5db;">财务核算</div>
+              </div>
+            </div>
+            <div style="background: var(--gray-800); border-radius: 8px; padding: 16px;">
+              <h4 class="font-semibold mb-2" style="color: var(--sys-erp);">应用系统</h4>
+              <div style="font-size: 14px; display: flex; flex-direction: column; gap: 8px;">
+                <div>→ <span style="color: var(--sys-mes);">MES</span></div>
+                <div><span style="color: var(--sys-mes);">MES</span> →</div>
+                <div>→ <span style="color: var(--sys-erp);">ERP-CO</span></div>
+                <div>→ <span style="color: var(--sys-erp);">ERP-FI</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quality Domain -->
+        <div class="domain-content hidden" id="tab-quality">
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; text-align: center;">
+            <div style="background: var(--gray-800); border-radius: 8px; padding: 16px;">
+              <h4 class="font-semibold mb-2" style="color: var(--sys-plm);">研发阶段</h4>
+              <div style="font-size: 14px; color: #d1d5db; display: flex; flex-direction: column; gap: 8px;">
+                <div>LCA品质策划</div>
+                <div>文件审批</div>
+              </div>
+            </div>
+            <div style="background: var(--gray-800); border-radius: 8px; padding: 16px;">
+              <h4 class="font-semibold mb-2" style="color: var(--sys-accent);">采购阶段</h4>
+              <div style="font-size: 14px; color: #d1d5db; display: flex; flex-direction: column; gap: 8px;">
+                <div>供应商质量</div>
+                <div>首件检验</div>
+              </div>
+            </div>
+            <div style="background: var(--gray-800); border-radius: 8px; padding: 16px;">
+              <h4 class="font-semibold mb-2" style="color: var(--sys-mes);">制造阶段</h4>
+              <div style="font-size: 14px; color: #d1d5db; display: flex; flex-direction: column; gap: 8px;">
+                <div>现场质量</div>
+                <div>NDT检测</div>
+              </div>
+            </div>
+            <div style="background: var(--gray-800); border-radius: 8px; padding: 16px;">
+              <h4 class="font-semibold mb-2" style="color: var(--sys-erp);">交付阶段</h4>
+              <div style="font-size: 14px; color: #d1d5db; display: flex; flex-direction: column; gap: 8px;">
+                <div>智能质量监控</div>
+                <div>适航符合性证明</div>
+              </div>
+            </div>
+          </div>
+          <p class="text-center text-gray-500 text-sm mt-4">质量数据统一汇聚至PDM → ERP-CO（质量成本）</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 7: Title -->
     <section class="slide demo-slide-1" data-slide="6" data-title="标题">
       <div class="text-center">
         <h1 class="text-6xl font-bold text-white mb-6">Infomat</h1>
@@ -821,6 +965,24 @@
       } else {
         init();
       }
+
+      // Domain tab switching
+      document.querySelectorAll('.domain-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          // Update tab styles
+          document.querySelectorAll('.domain-tab').forEach(t => {
+            t.style.background = 'var(--gray-700)';
+            t.style.color = '#d1d5db';
+          });
+          tab.style.background = 'var(--sys-plm)';
+          tab.style.color = '#fff';
+
+          // Show selected content
+          document.querySelectorAll('.domain-content').forEach(c => c.classList.add('hidden'));
+          const target = document.getElementById('tab-' + tab.dataset.tab);
+          if (target) target.classList.remove('hidden');
+        });
+      });
     })();
   </script>
 </body>
