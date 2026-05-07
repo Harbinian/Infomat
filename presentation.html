@@ -1024,7 +1024,7 @@
 
   <!-- Bottom Navigation -->
   <nav class="bottom-nav">
-    <button class="nav-btn" id="menuBtn" aria-label="菜单">
+    <button class="nav-btn" id="btn-toc" aria-label="目录">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M3 12h18M3 6h18M3 18h18"/>
       </svg>
@@ -1036,6 +1036,68 @@
       <span id="currentPage">1</span> / <span id="totalPages">12</span>
     </div>
   </nav>
+
+  <!-- Table of Contents Overlay -->
+  <div id="toc-overlay" style="position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: rgba(0,0,0,0.8); z-index: 100; display: none;">
+    <div style="height: 100%; display: flex; align-items: center; justify-content: center; padding: 32px;">
+      <div style="background: var(--gray-800); border-radius: 16px; padding: 24px; max-width: 768px; width: 100%; max-height: 80vh; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+          <h3 style="font-size: 20px; font-weight: 700; color: #fff;">目录</h3>
+          <button id="btn-close-toc" class="nav-btn" style="background: none; border: none; color: #9ca3af; cursor: pointer; padding: 8px;">
+            <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;" id="toc-items">
+          <button class="toc-item" style="background: var(--gray-700); border-radius: 8px; padding: 16px; text-align: left; border: none; cursor: pointer;">
+            <span class="font-bold" style="color: var(--sys-accent);">0</span>
+            <p style="color: #fff; font-size: 14px; margin-top: 4px;">封面</p>
+          </button>
+          <button class="toc-item" style="background: var(--gray-700); border-radius: 8px; padding: 16px; text-align: left; border: none; cursor: pointer;">
+            <span class="font-bold" style="color: var(--sys-erp);">1</span>
+            <p style="color: #fff; font-size: 14px; margin-top: 4px;">ERP系统</p>
+          </button>
+          <button class="toc-item" style="background: var(--gray-700); border-radius: 8px; padding: 16px; text-align: left; border: none; cursor: pointer;">
+            <span class="font-bold" style="color: var(--sys-oa);">2</span>
+            <p style="color: #fff; font-size: 14px; margin-top: 4px;">OA系统</p>
+          </button>
+          <button class="toc-item" style="background: var(--gray-700); border-radius: 8px; padding: 16px; text-align: left; border: none; cursor: pointer;">
+            <span class="font-bold" style="color: var(--sys-plm);">3</span>
+            <p style="color: #fff; font-size: 14px; margin-top: 4px;">PLM系统</p>
+          </button>
+          <button class="toc-item" style="background: var(--gray-700); border-radius: 8px; padding: 16px; text-align: left; border: none; cursor: pointer;">
+            <span class="font-bold" style="color: var(--sys-mes);">4</span>
+            <p style="color: #fff; font-size: 14px; margin-top: 4px;">MES系统</p>
+          </button>
+          <button class="toc-item" style="background: var(--gray-700); border-radius: 8px; padding: 16px; text-align: left; border: none; cursor: pointer;">
+            <span class="font-bold" style="color: #6b7280;">5</span>
+            <p style="color: #fff; font-size: 14px; margin-top: 4px;">集成全景</p>
+          </button>
+          <button class="toc-item" style="background: var(--gray-700); border-radius: 8px; padding: 16px; text-align: left; border: none; cursor: pointer;">
+            <span class="font-bold" style="color: #6b7280;">6</span>
+            <p style="color: #fff; font-size: 14px; margin-top: 4px;">分域讲解</p>
+          </button>
+          <button class="toc-item" style="background: var(--gray-700); border-radius: 8px; padding: 16px; text-align: left; border: none; cursor: pointer;">
+            <span class="font-bold" style="color: #6b7280;">7</span>
+            <p style="color: #fff; font-size: 14px; margin-top: 4px;">编码规范</p>
+          </button>
+          <button class="toc-item" style="background: var(--gray-700); border-radius: 8px; padding: 16px; text-align: left; border: none; cursor: pointer;">
+            <span class="font-bold" style="color: #6b7280;">8</span>
+            <p style="color: #fff; font-size: 14px; margin-top: 4px;">黄金源</p>
+          </button>
+          <button class="toc-item" style="background: var(--gray-700); border-radius: 8px; padding: 16px; text-align: left; border: none; cursor: pointer;">
+            <span class="font-bold" style="color: #6b7280;">9</span>
+            <p style="color: #fff; font-size: 14px; margin-top: 4px;">适航追溯</p>
+          </button>
+          <button class="toc-item" style="background: var(--gray-700); border-radius: 8px; padding: 16px; text-align: left; border: none; cursor: pointer;">
+            <span class="font-bold" style="color: #6b7280;">10</span>
+            <p style="color: #fff; font-size: 14px; margin-top: 4px;">行动项</p>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script>
     (function() {
@@ -1195,6 +1257,29 @@
           document.querySelectorAll('.domain-content').forEach(c => c.classList.add('hidden'));
           const target = document.getElementById('tab-' + tab.dataset.tab);
           if (target) target.classList.remove('hidden');
+        });
+      });
+
+      // TOC functionality
+      const tocOverlay = document.getElementById('toc-overlay');
+      const btnToc = document.getElementById('btn-toc');
+      const btnCloseToc = document.getElementById('btn-close-toc');
+
+      btnToc.addEventListener('click', () => {
+        tocOverlay.style.display = 'flex';
+      });
+      btnCloseToc.addEventListener('click', () => {
+        tocOverlay.style.display = 'none';
+      });
+      tocOverlay.addEventListener('click', (e) => {
+        if (e.target === tocOverlay) tocOverlay.style.display = 'none';
+      });
+
+      document.querySelectorAll('.toc-item').forEach(item => {
+        item.addEventListener('click', () => {
+          const slideIndex = parseInt(item.querySelector('span').textContent);
+          slides[slideIndex].scrollIntoView({ behavior: 'smooth' });
+          tocOverlay.style.display = 'none';
         });
       });
     })();
