@@ -307,8 +307,147 @@
       </div>
     </section>
 
-    <!-- Slide 1: Title -->
-    <section class="slide demo-slide-1" data-slide="1" data-title="标题">
+    <!-- Slide 1: ERP System Overview -->
+    <section class="slide" style="background: var(--sys-bg); padding: 40px;" data-slide="1" data-title="ERP系统">
+      <div class="max-w-5xl w-full" style="display: grid; grid-template-columns: repeat(12, 1fr); gap: 32px; align-items: center;">
+        <div style="grid-column: span 4; text-align: center;">
+          <div style="border-radius: 12px; padding: 32px; background: linear-gradient(135deg, var(--sys-erp), #0d47a1); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);">
+            <h3 style="font-size: 30px; font-weight: 700; color: #fff; margin-bottom: 8px;">ERP</h3>
+            <p style="color: #90caf9;">用友U8</p>
+          </div>
+        </div>
+        <div style="grid-column: span 8;">
+          <h3 style="font-size: 24px; font-weight: 700; color: #fff; margin-bottom: 8px;">企业资源计划核心层</h3>
+          <p style="color: #9ca3af; margin-bottom: 24px;">管"资源怎么计划、成本怎么核算"</p>
+          <div style="margin-bottom: 24px;">
+            <h4 style="font-weight: 600; margin-bottom: 12px; color: var(--sys-erp);">功能模块</h4>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+              <div style="background: var(--gray-800); border-radius: 8px; padding: 12px;"><span style="color: #fff; font-weight: 500;">PS</span><span style="color: #6b7280; font-size: 14px; display: block;">项目主线</span></div>
+              <div style="background: var(--gray-800); border-radius: 8px; padding: 12px;"><span style="color: #fff; font-weight: 500;">FI</span><span style="color: #6b7280; font-size: 14px; display: block;">财务核算</span></div>
+              <div style="background: var(--gray-800); border-radius: 8px; padding: 12px;"><span style="color: #fff; font-weight: 500;">CO</span><span style="color: #6b7280; font-size: 14px; display: block;">成本归集</span></div>
+              <div style="background: var(--gray-800); border-radius: 8px; padding: 12px;"><span style="color: #fff; font-weight: 500;">PP</span><span style="color: #6b7280; font-size: 14px; display: block;">生产计划</span></div>
+              <div style="background: var(--gray-800); border-radius: 8px; padding: 12px;"><span style="color: #fff; font-weight: 500;">MM</span><span style="color: #6b7280; font-size: 14px; display: block;">采购管理</span></div>
+              <div style="background: var(--gray-800); border-radius: 8px; padding: 12px;"><span style="color: #fff; font-weight: 500;">SD</span><span style="color: #6b7280; font-size: 14px; display: block;">销售管理</span></div>
+            </div>
+          </div>
+          <div>
+            <h4 style="font-weight: 600; margin-bottom: 12px; color: var(--sys-erp);">协作关系</h4>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+              <span style="padding: 4px 8px; background: var(--gray-800); border-radius: 4px; font-size: 14px;">⇄ <span style="color: var(--sys-mes);">MES</span> 生产订单、工时回传</span>
+              <span style="padding: 4px 8px; background: var(--gray-800); border-radius: 4px; font-size: 14px;">→ <span style="color: #6b7280;">SCIM</span> 采购订单下达</span>
+              <span style="padding: 4px 8px; background: var(--gray-800); border-radius: 4px; font-size: 14px;">→ <span style="color: var(--sys-oa);">OA</span> 审批流对接</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 2: OA System Overview -->
+    <section class="slide" style="background: var(--sys-bg); padding: 40px;" data-slide="2" data-title="OA系统">
+      <div class="max-w-5xl w-full" style="display: grid; grid-template-columns: repeat(12, 1fr); gap: 32px; align-items: center;">
+        <div style="grid-column: span 4; text-align: center;">
+          <div style="border-radius: 12px; padding: 32px; background: linear-gradient(135deg, var(--sys-oa), #4a148c); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);">
+            <h3 style="font-size: 30px; font-weight: 700; color: #fff; margin-bottom: 8px;">OA</h3>
+            <p style="color: #ce93d8;">华天动力</p>
+          </div>
+        </div>
+        <div style="grid-column: span 8;">
+          <h3 style="font-size: 24px; font-weight: 700; color: #fff; margin-bottom: 8px;">流程协同层</h3>
+          <p style="color: #9ca3af; margin-bottom: 24px;">管"审批怎么流转、协同怎么做"</p>
+          <div style="margin-bottom: 24px;">
+            <h4 style="font-weight: 600; margin-bottom: 12px; color: var(--sys-oa);">核心功能</h4>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <div style="display: flex; align-items: center; gap: 12px;"><span style="color: var(--sys-oa);">■</span><span style="color: #fff;">合同管理</span><span style="color: #6b7280; font-size: 14px;">合同线上审批</span></div>
+              <div style="display: flex; align-items: center; gap: 12px;"><span style="color: var(--sys-oa);">■</span><span style="color: #fff;">项目管理</span><span style="color: #6b7280; font-size: 14px;">立项审批、里程碑节点</span></div>
+              <div style="display: flex; align-items: center; gap: 12px;"><span style="color: var(--sys-oa);">■</span><span style="color: #fff;">采购管理</span><span style="color: #6b7280; font-size: 14px;">采购申请 → 生成订单</span></div>
+              <div style="display: flex; align-items: center; gap: 12px;"><span style="color: var(--sys-oa);">■</span><span style="color: #fff;">公文管理</span><span style="color: #6b7280; font-size: 14px;">ECO变更会签</span></div>
+              <div style="display: flex; align-items: center; gap: 12px;"><span style="color: var(--sys-oa);">■</span><span style="color: #fff;">费控管理</span><span style="color: #6b7280; font-size: 14px;">费用报销 → 财务凭证</span></div>
+            </div>
+          </div>
+          <div>
+            <h4 style="font-weight: 600; margin-bottom: 12px; color: var(--sys-oa);">协作关系</h4>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+              <span style="padding: 4px 8px; background: var(--gray-800); border-radius: 4px; font-size: 14px;">→ <span style="color: var(--sys-erp);">ERP</span> 审批单据同步</span>
+              <span style="padding: 4px 8px; background: var(--gray-800); border-radius: 4px; font-size: 14px;">→ <span style="color: var(--sys-plm);">PLM</span> ECO变更审批</span>
+              <span style="padding: 4px 8px; background: var(--gray-800); border-radius: 4px; font-size: 14px;">→ <span style="color: var(--sys-mes);">MES</span> 工艺变更通知</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 3: PLM System Overview -->
+    <section class="slide" style="background: var(--sys-bg); padding: 40px;" data-slide="3" data-title="PLM系统">
+      <div class="max-w-5xl w-full" style="display: grid; grid-template-columns: repeat(12, 1fr); gap: 32px; align-items: center;">
+        <div style="grid-column: span 4; text-align: center;">
+          <div style="border-radius: 12px; padding: 32px; background: linear-gradient(135deg, var(--sys-plm), #a31545); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);">
+            <h3 style="font-size: 30px; font-weight: 700; color: #fff; margin-bottom: 8px;">PLM</h3>
+            <p style="color: #ffcdd2;">翎瑞鸿翔</p>
+          </div>
+        </div>
+        <div style="grid-column: span 8;">
+          <h3 style="font-size: 24px; font-weight: 700; color: #fff; margin-bottom: 8px;">产品全生命周期管理</h3>
+          <p style="color: #9ca3af; margin-bottom: 8px;">管"产品是什么、怎么定义"</p>
+          <p style="font-size: 14px; margin-bottom: 24px; color: var(--sys-accent);">一期范围：MBOM / ECO / 工程项目管理</p>
+          <div style="margin-bottom: 24px;">
+            <h4 style="font-weight: 600; margin-bottom: 12px; color: var(--sys-plm);">核心功能</h4>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <div style="display: flex; align-items: center; gap: 12px;"><span style="color: var(--sys-plm);">■</span><span style="color: #fff;">需求管理</span><span style="color: #6b7280; font-size: 14px;">研发需求分解</span></div>
+              <div style="display: flex; align-items: center; gap: 12px;"><span style="color: var(--sys-plm);">■</span><span style="color: #fff;">EBOM管理</span><span style="color: #6b7280; font-size: 14px;">工程BOM结构（铺层顺序、材料规范）</span></div>
+              <div style="display: flex; align-items: center; gap: 12px;"><span style="color: var(--sys-plm);">■</span><span style="color: #fff;">ECO变更</span><span style="color: #6b7280; font-size: 14px;">设计变更单（工程变更审批）</span></div>
+              <div style="display: flex; align-items: center; gap: 12px;"><span style="color: var(--sys-plm);">■</span><span style="color: #fff;">MBD模型</span><span style="color: #6b7280; font-size: 14px;">三维模型含PMI标注</span></div>
+              <div style="display: flex; align-items: center; gap: 12px;"><span style="color: var(--sys-plm);">■</span><span style="color: #fff;">文档受控</span><span style="color: #6b7280; font-size: 14px;">设计资源归档</span></div>
+            </div>
+          </div>
+          <div>
+            <h4 style="font-weight: 600; margin-bottom: 12px; color: var(--sys-plm);">协作关系</h4>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+              <span style="padding: 4px 8px; background: var(--gray-800); border-radius: 4px; font-size: 14px;">→ <span style="color: #6b7280;">PDM</span> EBOM受控发布</span>
+              <span style="padding: 4px 8px; background: var(--gray-800); border-radius: 4px; font-size: 14px;">→ <span style="color: var(--sys-oa);">OA</span> ECO变更审批</span>
+              <span style="padding: 4px 8px; background: var(--gray-800); border-radius: 4px; font-size: 14px;">→ <span style="color: #6b7280;">CAPP</span> MBD模型传递</span>
+              <span style="padding: 4px 8px; background: var(--gray-800); border-radius: 4px; font-size: 14px;">→ <span style="color: var(--sys-erp);">ERP-PP</span> MBOM下达</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 4: MES System Overview -->
+    <section class="slide" style="background: var(--sys-bg); padding: 40px;" data-slide="4" data-title="MES系统">
+      <div class="max-w-5xl w-full" style="display: grid; grid-template-columns: repeat(12, 1fr); gap: 32px; align-items: center;">
+        <div style="grid-column: span 4; text-align: center;">
+          <div style="border-radius: 12px; padding: 32px; background: linear-gradient(135deg, var(--sys-mes), #d35400); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);">
+            <h3 style="font-size: 30px; font-weight: 700; color: #fff; margin-bottom: 8px;">MES</h3>
+            <p style="color: #ffe0b2;">北京虎蜥</p>
+          </div>
+        </div>
+        <div style="grid-column: span 8;">
+          <h3 style="font-size: 24px; font-weight: 700; color: #fff; margin-bottom: 8px;">制造执行层</h3>
+          <p style="color: #9ca3af; margin-bottom: 24px;">管"车间怎么执行、过程怎么管控"</p>
+          <div style="margin-bottom: 24px;">
+            <h4 style="font-weight: 600; margin-bottom: 12px; color: var(--sys-mes);">核心功能</h4>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
+              <div style="background: var(--gray-800); border-radius: 8px; padding: 12px;"><span style="color: #fff; font-weight: 500;">排产管理</span><span style="color: #6b7280; font-size: 14px; display: block;">工装/工具/夹具资源</span></div>
+              <div style="background: var(--gray-800); border-radius: 8px; padding: 12px;"><span style="color: #fff; font-weight: 500;">工艺管理</span><span style="color: #6b7280; font-size: 14px; display: block;">工艺规程执行</span></div>
+              <div style="background: var(--gray-800); border-radius: 8px; padding: 12px;"><span style="color: #fff; font-weight: 500;">生产执行</span><span style="color: #6b7280; font-size: 14px; display: block;">工序报工</span></div>
+              <div style="background: var(--gray-800); border-radius: 8px; padding: 12px;"><span style="color: #fff; font-weight: 500;">工时管理</span><span style="color: #6b7280; font-size: 14px; display: block;">实际工时采集</span></div>
+            </div>
+          </div>
+          <div>
+            <h4 style="font-weight: 600; margin-bottom: 12px; color: var(--sys-mes);">协作关系</h4>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+              <span style="padding: 4px 8px; background: var(--gray-800); border-radius: 4px; font-size: 14px;">⇄ <span style="color: var(--sys-erp);">ERP-PP</span> 生产订单下达、完工反馈</span>
+              <span style="padding: 4px 8px; background: var(--gray-800); border-radius: 4px; font-size: 14px;">⇄ <span style="color: var(--sys-erp);">ERP-CO</span> 工时成本回传</span>
+              <span style="padding: 4px 8px; background: var(--gray-800); border-radius: 4px; font-size: 14px;">← <span style="color: #6b7280;">CAPP</span> MBOM、工艺规范接收</span>
+              <span style="padding: 4px 8px; background: var(--gray-800); border-radius: 4px; font-size: 14px;">→ <span style="color: #6b7280;">WMS</span> 领料出库、批次追溯</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 5: Title -->
+    <section class="slide demo-slide-1" data-slide="5" data-title="标题">
       <div class="text-center">
         <h1 class="text-6xl font-bold text-white mb-6">Infomat</h1>
         <p class="text-2xl text-gray-300 mb-8">制造企业数字化运营平台</p>
@@ -372,8 +511,8 @@
       </div>
     </section>
 
-    <!-- Slide 4: Architecture -->
-    <section class="slide demo-slide-2" data-slide="4" data-title="架构">
+    <!-- Slide 8: Architecture -->
+    <section class="slide demo-slide-2" data-slide="8" data-title="架构">
       <div class="slide-content">
         <h2 class="text-4xl font-bold text-white mb-8">集成架构设计</h2>
         <div class="card">
@@ -399,8 +538,8 @@
       </div>
     </section>
 
-    <!-- Slide 5: Key Decisions -->
-    <section class="slide demo-slide-1" data-slide="5" data-title="决策">
+    <!-- Slide 9: Key Decisions -->
+    <section class="slide demo-slide-1" data-slide="9" data-title="决策">
       <div class="slide-content">
         <h2 class="text-4xl font-bold text-white mb-8">关键技术决策</h2>
         <div class="grid gap-4">
@@ -420,8 +559,8 @@
       </div>
     </section>
 
-    <!-- Slide 6: Action Items -->
-    <section class="slide demo-slide-2" data-slide="6" data-title="行动">
+    <!-- Slide 10: Action Items -->
+    <section class="slide demo-slide-2" data-slide="10" data-title="行动">
       <div class="slide-content">
         <h2 class="text-4xl font-bold text-white mb-8">后续行动</h2>
         <div class="grid gap-4">
@@ -445,8 +584,8 @@
       </div>
     </section>
 
-    <!-- Slide 7: Thank You -->
-    <section class="slide demo-slide-1" data-slide="7" data-title="结束">
+    <!-- Slide 11: Thank You -->
+    <section class="slide demo-slide-1" data-slide="11" data-title="结束">
       <div class="text-center">
         <h2 class="text-5xl font-bold text-white mb-6">谢谢</h2>
         <p class="text-xl text-gray-400">沈阳昌兴复材航空科技有限责任公司</p>
@@ -467,7 +606,7 @@
     <div class="progress-dots" id="progressDots"></div>
 
     <div class="page-indicator" id="pageIndicator">
-      <span id="currentPage">1</span> / <span id="totalPages">8</span>
+      <span id="currentPage">1</span> / <span id="totalPages">12</span>
     </div>
   </nav>
 
