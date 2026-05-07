@@ -89,6 +89,9 @@
 
     .rounded-lg { border-radius: 0.5rem; }
     .rounded-xl { border-radius: 0.75rem; }
+    .rounded-full { border-radius: 9999px; }
+
+    .text-sm { font-size: 0.875rem; }
 
     .w-full { width: 100%; }
     .max-w-4xl { max-width: 56rem; }
@@ -258,6 +261,8 @@
       max-width: 1000px;
     }
 
+    .flex-wrap { flex-wrap: wrap; }
+
     /* Demo Slides */
     .demo-slide-1 {
       background: linear-gradient(135deg, var(--sys-bg) 0%, #16213e 100%);
@@ -282,8 +287,28 @@
   <!-- Slides Container -->
   <div class="slides-container" id="slidesContainer">
 
+    <!-- Slide 0: Cover -->
+    <section class="slide flex items-center justify-center" style="background: var(--sys-bg);" data-slide="0" data-title="封面">
+      <div class="text-center">
+        <h1 class="text-4xl font-bold text-white mb-4">制造企业数字化运营平台</h1>
+        <h2 class="text-2xl mb-8" style="color: var(--sys-accent);">系统集成方案预审会</h2>
+        <p class="text-lg mb-2" style="color: #9ca3af;">沈阳昌兴复材航空科技有限责任公司</p>
+        <p class="mb-12" style="color: #6b7280;">2026-05-09</p>
+        <div class="flex flex-wrap justify-center gap-2">
+          <span class="px-3 py-1 rounded-full text-white text-sm" style="background: var(--sys-accent);">ERP</span>
+          <span class="px-3 py-1 rounded-full text-white text-sm" style="background: var(--sys-accent);">OA</span>
+          <span class="px-3 py-1 rounded-full text-white text-sm" style="background: var(--sys-accent);">PLM</span>
+          <span class="px-3 py-1 rounded-full text-white text-sm" style="background: var(--sys-accent);">MES</span>
+          <span class="px-3 py-1 rounded-full text-white text-sm" style="background: var(--gray-700);">PDM</span>
+          <span class="px-3 py-1 rounded-full text-white text-sm" style="background: var(--gray-700);">CAPP</span>
+          <span class="px-3 py-1 rounded-full text-white text-sm" style="background: var(--gray-700);">WMS</span>
+          <span class="px-3 py-1 rounded-full text-white text-sm" style="background: var(--gray-700);">SCIM</span>
+        </div>
+      </div>
+    </section>
+
     <!-- Slide 1: Title -->
-    <section class="slide demo-slide-1" data-slide="1" data-title="封面">
+    <section class="slide demo-slide-1" data-slide="1" data-title="标题">
       <div class="text-center">
         <h1 class="text-6xl font-bold text-white mb-6">Infomat</h1>
         <p class="text-2xl text-gray-300 mb-8">制造企业数字化运营平台</p>
@@ -442,7 +467,7 @@
     <div class="progress-dots" id="progressDots"></div>
 
     <div class="page-indicator" id="pageIndicator">
-      <span id="currentPage">1</span> / <span id="totalPages">7</span>
+      <span id="currentPage">1</span> / <span id="totalPages">8</span>
     </div>
   </nav>
 
