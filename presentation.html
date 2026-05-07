@@ -659,8 +659,138 @@
       </div>
     </section>
 
+    <!-- Slide 7: MDM编码规范页 -->
+    <section class="slide" style="background: var(--sys-bg); padding: 40px;" data-slide="7" data-title="MDM编码规范">
+      <div class="max-w-5xl w-full">
+        <h3 class="text-2xl font-bold text-white text-center mb-8">MDM主数据治理 - 编码规范</h3>
+
+        <!-- Code Structure -->
+        <div class="text-center mb-8">
+          <p class="text-gray-400 mb-4">物料编码结构（13位，含连字符）</p>
+          <div class="inline-flex items-center gap-2 bg-gray-800 rounded-xl px-8 py-4">
+            <span class="text-4xl font-mono font-bold" style="color: var(--sys-erp);">XX</span>
+            <span class="text-4xl text-gray-500">-</span>
+            <span class="text-4xl font-mono font-bold" style="color: var(--sys-oa);">XXX</span>
+            <span class="text-4xl text-gray-500">-</span>
+            <span class="text-4xl font-mono font-bold" style="color: var(--sys-plm);">00000</span>
+          </div>
+          <div class="flex justify-center gap-16 mt-4 text-sm">
+            <span class="text-gray-500">大类(2位)</span>
+            <span class="text-gray-500">小类(3位)</span>
+            <span class="text-gray-500">流水号(5位)</span>
+          </div>
+        </div>
+
+        <!-- Classification Codes Table -->
+        <div class="bg-gray-800 rounded-xl p-6">
+          <h4 class="font-semibold mb-4" style="color: var(--sys-accent);">物料分类码（12类）</h4>
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b" style="border-color: #374151;">
+                <th class="text-left py-2 text-gray-400">分类码</th>
+                <th class="text-left py-2 text-gray-400">名称</th>
+                <th class="text-left py-2 text-gray-400">说明</th>
+                <th class="text-left py-2 text-gray-400">黄金源</th>
+              </tr>
+            </thead>
+            <tbody class="text-gray-300">
+              <tr class="border-b" style="border-color: #374151;"><td class="py-2 font-mono" style="color: var(--sys-plm);">CF</td><td>碳纤维复合材料件</td><td>壁板、梁、肋、框等主结构件</td><td>PLM</td></tr>
+              <tr class="border-b" style="border-color: #374151;"><td class="py-2 font-mono" style="color: var(--sys-plm);">GF</td><td>玻璃纤维复合材料件</td><td>整流罩、非承力结构件</td><td>PLM</td></tr>
+              <tr class="border-b" style="border-color: #374151;"><td class="py-2 font-mono" style="color: var(--sys-plm);">ME</td><td>金属件/机加件</td><td>铝合金、钛合金接头、连接件</td><td>PLM</td></tr>
+              <tr class="border-b" style="border-color: #374151;"><td class="py-2 font-mono text-gray-400">PM</td><td>预浸料/基体材料</td><td>碳纤维预浸料、玻纤预浸料、胶膜</td><td>ERP-MM</td></tr>
+              <tr class="border-b" style="border-color: #374151;"><td class="py-2 font-mono text-gray-400">AS</td><td>装配体/组件</td><td>多零件组成的子装配体</td><td>PLM</td></tr>
+              <tr class="border-b" style="border-color: #374151;"><td class="py-2 font-mono text-gray-400">FA</td><td>标准紧固件</td><td>航空级螺栓、铆钉（AN/NAS/MS标准）</td><td>ERP-MM</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 8: MDM黄金源确认表页 -->
+    <section class="slide" style="background: var(--sys-bg); padding: 40px;" data-slide="8" data-title="MDM黄金源确认">
+      <div class="max-w-5xl w-full">
+        <h3 class="text-2xl font-bold text-white text-center mb-8">MDM主数据治理 - 黄金源确认</h3>
+        <p class="text-center text-gray-400 mb-6">核心原则：一数据一黄金源，其他系统只读</p>
+
+        <div class="bg-gray-800 rounded-xl p-6">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b" style="border-color: #374151;">
+                <th class="text-left py-2 text-gray-400">数据域</th>
+                <th class="text-left py-2 text-gray-400">数据项</th>
+                <th class="text-left py-2 text-gray-400">黄金源</th>
+                <th class="text-left py-2 text-gray-400">备注</th>
+              </tr>
+            </thead>
+            <tbody class="text-gray-300">
+              <tr class="border-b" style="border-color: #374151;"><td class="py-2">物料主数据</td><td>物料编码、名称、规格</td><td style="color: var(--sys-plm);">PLM / ERP-MM</td><td>按物料类型分</td></tr>
+              <tr class="border-b" style="border-color: #374151;"><td class="py-2">EBOM结构</td><td>铺层顺序、材料规范</td><td style="color: var(--sys-plm);">PLM</td><td>-</td></tr>
+              <tr class="border-b" style="border-color: #374151;"><td class="py-2">MBOM结构</td><td>工序分工、工装、定额</td><td class="text-gray-400">CAPP</td><td>待决议</td></tr>
+              <tr class="border-b" style="border-color: #374151;"><td class="py-2">工艺规范</td><td>固化曲线、NDT规范</td><td class="text-gray-400">CAPP/PDM</td><td>-</td></tr>
+              <tr class="border-b" style="border-color: #374151;"><td class="py-2">供应商信息</td><td>供应商编码、ASL</td><td style="color: var(--sys-erp);">ERP-MM</td><td>-</td></tr>
+              <tr class="border-b" style="border-color: #374151;"><td class="py-2">生产订单</td><td>订单号、计划数量</td><td style="color: var(--sys-erp);">ERP-PP</td><td>-</td></tr>
+              <tr class="border-b" style="border-color: #374151;"><td class="py-2">工时数据</td><td>实际工时、报工记录</td><td style="color: var(--sys-mes);">MES</td><td>-</td></tr>
+              <tr class="border-b" style="border-color: #374151;"><td class="py-2">质量记录</td><td>NDT报告、检验结果</td><td style="color: var(--sys-mes);">MES/质量系统</td><td>-</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 9: MDM适航追溯链页 -->
+    <section class="slide" style="background: var(--sys-bg); padding: 40px;" data-slide="9" data-title="MDM适航追溯">
+      <div class="max-w-4xl w-full">
+        <h3 class="text-2xl font-bold text-white text-center mb-8">MDM主数据治理 - 适航追溯链</h3>
+        <p class="text-center text-gray-400 mb-6">序列号级追溯链路</p>
+
+        <div class="relative">
+          <svg viewBox="0 0 400 450" class="w-full" style="max-width: 448px; margin: 0 auto; display: block;">
+            <!-- Node 1 -->
+            <rect x="100" y="10" width="200" height="50" rx="8" fill="#16213e" stroke="#e94560" stroke-width="2"/>
+            <text x="200" y="30" text-anchor="middle" fill="white" font-size="11">原材料批次</text>
+            <text x="200" y="48" text-anchor="middle" fill="#888" font-size="9">预浸料批次号+有效期</text>
+            <path d="M 200 60 L 200 80" stroke="#e94560" stroke-width="2" marker-end="url(#arrow)"/>
+
+            <!-- Node 2 -->
+            <rect x="100" y="80" width="200" height="50" rx="8" fill="#16213e" stroke="#e67e22" stroke-width="2"/>
+            <text x="200" y="100" text-anchor="middle" fill="white" font-size="11">铺层工序</text>
+            <text x="200" y="118" text-anchor="middle" fill="#888" font-size="9">铺层顺序+操作员+温湿度</text>
+            <path d="M 200 130 L 200 150" stroke="#e94560" stroke-width="2" marker-end="url(#arrow)"/>
+
+            <!-- Node 3 -->
+            <rect x="100" y="150" width="200" height="50" rx="8" fill="#16213e" stroke="#e67e22" stroke-width="2"/>
+            <text x="200" y="170" text-anchor="middle" fill="white" font-size="11">热压罐固化</text>
+            <text x="200" y="188" text-anchor="middle" fill="#888" font-size="9">固化曲线（温度/压力/时间）</text>
+            <path d="M 200 200 L 200 220" stroke="#e94560" stroke-width="2" marker-end="url(#arrow)"/>
+
+            <!-- Node 4 -->
+            <rect x="100" y="220" width="200" height="50" rx="8" fill="#16213e" stroke="#ab47bc" stroke-width="2"/>
+            <text x="200" y="240" text-anchor="middle" fill="white" font-size="11">NDT检测</text>
+            <text x="200" y="258" text-anchor="middle" fill="#888" font-size="9">超声C扫+孔隙率</text>
+            <path d="M 200 270 L 200 290" stroke="#e94560" stroke-width="2" marker-end="url(#arrow)"/>
+
+            <!-- Node 5 -->
+            <rect x="100" y="290" width="200" height="50" rx="8" fill="#16213e" stroke="#ab47bc" stroke-width="2"/>
+            <text x="200" y="310" text-anchor="middle" fill="white" font-size="11">最终检验</text>
+            <text x="200" y="328" text-anchor="middle" fill="#888" font-size="9">合格判定+检验员</text>
+            <path d="M 200 340 L 200 360" stroke="#e94560" stroke-width="2" marker-end="url(#arrow)"/>
+
+            <!-- Node 6 -->
+            <rect x="100" y="360" width="200" height="50" rx="8" fill="#16213e" stroke="#42a5f5" stroke-width="2"/>
+            <text x="200" y="380" text-anchor="middle" fill="white" font-size="11">交付构型</text>
+            <text x="200" y="398" text-anchor="middle" fill="#888" font-size="9">件号+序列号+偏离记录</text>
+            <path d="M 200 410 L 200 430" stroke="#e94560" stroke-width="2" marker-end="url(#arrow)"/>
+
+            <!-- Node 7: Final -->
+            <rect x="100" y="430" width="200" height="40" rx="8" fill="#16213e" stroke="#42a5f5" stroke-width="2"/>
+            <text x="200" y="455" text-anchor="middle" fill="white" font-size="11">主机厂交付 SoC+FAI</text>
+          </svg>
+        </div>
+      </div>
+    </section>
+
     <!-- Slide 7: Title -->
-    <section class="slide demo-slide-1" data-slide="6" data-title="标题">
+    <section class="slide demo-slide-1" data-slide="10" data-title="标题">
       <div class="text-center">
         <h1 class="text-6xl font-bold text-white mb-6">Infomat</h1>
         <p class="text-2xl text-gray-300 mb-8">制造企业数字化运营平台</p>
