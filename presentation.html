@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Infomat 系统集成方案</title>
+  <style>
+    :root {
+      --sys-bg: #1a1a2e;
+      --sys-accent: #e94560;
+      --sys-erp: #1565c0;
+      --sys-oa: #6a1b9a;
+      --sys-plm: #c73e54;
+      --sys-mes: #e67e22;
+      --gray-700: #374151;
+      --gray-800: #1f2937;
+      --gray-900: #111827;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: var(--sys-bg);
+      color: #fff;
+      overflow: hidden;
+    }
+
+    /* Scroll Snap Container */
+    .slides-container {
+      height: 100vh;
+      overflow-y: scroll;
+      scroll-snap-type: y mandatory;
+      scroll-behavior: smooth;
+    }
+
+    /* Slide Base */
+    .slide {
+      min-height: 100vh;
+      scroll-snap-align: start;
+      scroll-snap-stop: always;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 80px 60px 120px;
+      position: relative;
+    }
+
+    /* Atomic CSS Classes */
+    .text-white { color: #fff; }
+    .text-gray-300 { color: #d1d5db; }
+    .text-gray-400 { color: #9ca3af; }
+    .text-accent { color: var(--sys-accent); }
+    .bg-gray-800 { background-color: var(--gray-800); }
+    .bg-gray-900 { background-color: var(--gray-900); }
+    .bg-sys-bg { background-color: var(--sys-bg); }
+
+    .text-4xl { font-size: 3rem; line-height: 1.2; }
+    .text-5xl { font-size: 4rem; line-height: 1.2; }
+    .text-6xl { font-size: 5rem; line-height: 1.2; }
+    .text-2xl { font-size: 1.5rem; line-height: 1.3; }
+    .text-xl { font-size: 1.25rem; line-height: 1.4; }
+    .text-lg { font-size: 1.125rem; line-height: 1.5; }
+
+    .font-bold { font-weight: 700; }
+    .font-medium { font-weight: 500; }
+
+    .text-center { text-align: center; }
+    .text-left { text-align: left; }
+
+    .mb-4 { margin-bottom: 1rem; }
+    .mb-6 { margin-bottom: 1.5rem; }
+    .mb-8 { margin-bottom: 2rem; }
+    .mt-4 { margin-top: 1rem; }
+    .mt-6 { margin-top: 1.5rem; }
+
+    .p-4 { padding: 1rem; }
+    .p-6 { padding: 1.5rem; }
+    .p-8 { padding: 2rem; }
+
+    .rounded-lg { border-radius: 0.5rem; }
+    .rounded-xl { border-radius: 0.75rem; }
+
+    .w-full { width: 100%; }
+    .max-w-4xl { max-width: 56rem; }
+    .max-w-5xl { max-width: 64rem; }
+
+    .flex { display: flex; }
+    .flex-col { flex-direction: column; }
+    .items-center { align-items: center; }
+    .justify-center { justify-content: center; }
+    .gap-2 { gap: 0.5rem; }
+    .gap-4 { gap: 1rem; }
+    .gap-6 { gap: 1.5rem; }
+    .gap-8 { gap: 2rem; }
+
+    .grid { display: grid; }
+    .grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+    /* Bottom Navigation */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: var(--gray-900);
+      border-top: 1px solid var(--gray-700);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      z-index: 1000;
+    }
+
+    .nav-btn {
+      background: transparent;
+      border: none;
+      color: #fff;
+      cursor: pointer;
+      padding: 8px;
+      border-radius: 8px;
+      transition: background 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .nav-btn:hover {
+      background: var(--gray-800);
+    }
+
+    .nav-btn svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    .progress-dots {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .progress-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--gray-700);
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border: none;
+    }
+
+    .progress-dot:hover {
+      background: var(--gray-400);
+      transform: scale(1.2);
+    }
+
+    .progress-dot.active {
+      background: var(--sys-accent);
+      width: 24px;
+      border-radius: 5px;
+    }
+
+    .page-indicator {
+      font-size: 14px;
+      color: var(--gray-400);
+      font-variant-numeric: tabular-nums;
+      min-width: 60px;
+      text-align: right;
+    }
+
+    /* Menu Overlay */
+    .menu-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 60px;
+      background: rgba(0, 0, 0, 0.9);
+      z-index: 999;
+      display: none;
+      overflow-y: auto;
+      padding: 20px;
+    }
+
+    .menu-overlay.active {
+      display: block;
+    }
+
+    .menu-list {
+      list-style: none;
+      max-width: 400px;
+      margin: 0 auto;
+    }
+
+    .menu-item {
+      padding: 16px;
+      border-bottom: 1px solid var(--gray-700);
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .menu-item:hover {
+      background: var(--gray-800);
+    }
+
+    .menu-item-num {
+      color: var(--sys-accent);
+      margin-right: 12px;
+      font-weight: 600;
+    }
+
+    /* System Badge */
+    .sys-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .sys-badge-erp { background: var(--sys-erp); }
+    .sys-badge-oa { background: var(--sys-oa); }
+    .sys-badge-plm { background: var(--sys-plm); }
+    .sys-badge-mes { background: var(--sys-mes); }
+
+    /* Card */
+    .card {
+      background: var(--gray-800);
+      border-radius: 12px;
+      padding: 24px;
+      border: 1px solid var(--gray-700);
+    }
+
+    /* Slide Title Area */
+    .slide-header {
+      width: 100%;
+      max-width: 1000px;
+      margin-bottom: 40px;
+      text-align: left;
+    }
+
+    .slide-content {
+      width: 100%;
+      max-width: 1000px;
+    }
+
+    /* Demo Slides */
+    .demo-slide-1 {
+      background: linear-gradient(135deg, var(--sys-bg) 0%, #16213e 100%);
+    }
+
+    .demo-slide-2 {
+      background: linear-gradient(135deg, #16213e 0%, var(--sys-bg) 100%);
+    }
+
+    /* Hidden class for menu close */
+    .hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  <!-- Menu Overlay -->
+  <div class="menu-overlay" id="menuOverlay">
+    <ul class="menu-list" id="menuList"></ul>
+  </div>
+
+  <!-- Slides Container -->
+  <div class="slides-container" id="slidesContainer">
+
+    <!-- Slide 1: Title -->
+    <section class="slide demo-slide-1" data-slide="1" data-title="封面">
+      <div class="text-center">
+        <h1 class="text-6xl font-bold text-white mb-6">Infomat</h1>
+        <p class="text-2xl text-gray-300 mb-8">制造企业数字化运营平台</p>
+        <p class="text-xl text-gray-400">系统集成方案设计</p>
+        <div class="flex gap-4 justify-center mt-8">
+          <span class="sys-badge sys-badge-erp">ERP</span>
+          <span class="sys-badge sys-badge-oa">OA</span>
+          <span class="sys-badge sys-badge-plm">PLM</span>
+          <span class="sys-badge sys-badge-mes">MES</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 2: Agenda -->
+    <section class="slide demo-slide-2" data-slide="2" data-title="议程">
+      <div class="slide-content">
+        <h2 class="text-4xl font-bold text-white mb-8">会议议程</h2>
+        <div class="grid gap-4">
+          <div class="card flex items-center gap-4">
+            <span class="text-accent text-2xl font-bold">01</span>
+            <span class="text-xl text-white">系统集成现状与挑战</span>
+          </div>
+          <div class="card flex items-center gap-4">
+            <span class="text-accent text-2xl font-bold">02</span>
+            <span class="text-xl text-white">集成方案设计思路</span>
+          </div>
+          <div class="card flex items-center gap-4">
+            <span class="text-accent text-2xl font-bold">03</span>
+            <span class="text-xl text-white">关键技术决策点</span>
+          </div>
+          <div class="card flex items-center gap-4">
+            <span class="text-accent text-2xl font-bold">04</span>
+            <span class="text-xl text-white">后续行动计划</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 3: Current State -->
+    <section class="slide demo-slide-1" data-slide="3" data-title="现状">
+      <div class="slide-content">
+        <h2 class="text-4xl font-bold text-white mb-8">系统集成现状</h2>
+        <div class="grid grid-cols-2 gap-6">
+          <div class="card">
+            <h3 class="text-xl text-accent font-bold mb-4">已完成</h3>
+            <ul class="text-gray-300 space-y-2">
+              <li>ERP与MES接口上线</li>
+              <li>OA系统单点登录</li>
+              <li>主数据初步治理</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3 class="text-xl text-accent font-bold mb-4">待解决</h3>
+            <ul class="text-gray-300 space-y-2">
+              <li>PLM与ERP集成</li>
+              <li>CAPP系统定位</li>
+              <li>SCIM系统规划</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 4: Architecture -->
+    <section class="slide demo-slide-2" data-slide="4" data-title="架构">
+      <div class="slide-content">
+        <h2 class="text-4xl font-bold text-white mb-8">集成架构设计</h2>
+        <div class="card">
+          <div class="grid grid-cols-4 gap-4 text-center">
+            <div class="p-4">
+              <div class="sys-badge sys-badge-erp mb-2">ERP</div>
+              <p class="text-gray-400 text-sm">用友U9</p>
+            </div>
+            <div class="p-4">
+              <div class="sys-badge sys-badge-oa mb-2">OA</div>
+              <p class="text-gray-400 text-sm">泛微</p>
+            </div>
+            <div class="p-4">
+              <div class="sys-badge sys-badge-plm mb-2">PLM</div>
+              <p class="text-gray-400 text-sm">翎瑞鸿翔</p>
+            </div>
+            <div class="p-4">
+              <div class="sys-badge sys-badge-mes mb-2">MES</div>
+              <p class="text-gray-400 text-sm">西门子</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 5: Key Decisions -->
+    <section class="slide demo-slide-1" data-slide="5" data-title="决策">
+      <div class="slide-content">
+        <h2 class="text-4xl font-bold text-white mb-8">关键技术决策</h2>
+        <div class="grid gap-4">
+          <div class="card flex items-center gap-4">
+            <span class="sys-badge sys-badge-plm">PLM</span>
+            <span class="text-white">一期范围：MBOM/ECO/工程项目管理</span>
+          </div>
+          <div class="card flex items-center gap-4">
+            <span class="sys-badge sys-badge-erp">ERP</span>
+            <span class="text-white">BOM头问题解决方案</span>
+          </div>
+          <div class="card flex items-center gap-4">
+            <span class="sys-badge sys-badge-mes">MES</span>
+            <span class="text-white">CAPP系统定位确认</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 6: Action Items -->
+    <section class="slide demo-slide-2" data-slide="6" data-title="行动">
+      <div class="slide-content">
+        <h2 class="text-4xl font-bold text-white mb-8">后续行动</h2>
+        <div class="grid gap-4">
+          <div class="card flex items-center gap-4">
+            <span class="text-accent font-bold">A1</span>
+            <span class="text-gray-300">与翎瑞鸿翔确认PLM二期范围</span>
+          </div>
+          <div class="card flex items-center gap-4">
+            <span class="text-accent font-bold">A2</span>
+            <span class="text-gray-300">验证ERP与PLM接口方案</span>
+          </div>
+          <div class="card flex items-center gap-4">
+            <span class="text-accent font-bold">A3</span>
+            <span class="text-gray-300">完成CAPP系统评估</span>
+          </div>
+          <div class="card flex items-center gap-4">
+            <span class="text-accent font-bold">A4</span>
+            <span class="text-gray-300">SCIM系统建设规划</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 7: Thank You -->
+    <section class="slide demo-slide-1" data-slide="7" data-title="结束">
+      <div class="text-center">
+        <h2 class="text-5xl font-bold text-white mb-6">谢谢</h2>
+        <p class="text-xl text-gray-400">沈阳昌兴复材航空科技有限责任公司</p>
+        <p class="text-lg text-gray-500 mt-4">2026年5月</p>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <button class="nav-btn" id="menuBtn" aria-label="菜单">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 12h18M3 6h18M3 18h18"/>
+      </svg>
+    </button>
+
+    <div class="progress-dots" id="progressDots"></div>
+
+    <div class="page-indicator" id="pageIndicator">
+      <span id="currentPage">1</span> / <span id="totalPages">7</span>
+    </div>
+  </nav>
+
+  <script>
+    (function() {
+      const container = document.getElementById('slidesContainer');
+      const progressDots = document.getElementById('progressDots');
+      const menuOverlay = document.getElementById('menuOverlay');
+      const menuList = document.getElementById('menuList');
+      const menuBtn = document.getElementById('menuBtn');
+      const currentPageEl = document.getElementById('currentPage');
+      const totalPagesEl = document.getElementById('totalPages');
+
+      const slides = document.querySelectorAll('.slide');
+      const totalSlides = slides.length;
+      let currentSlide = 0;
+      let isMenuOpen = false;
+
+      // Initialize
+      function init() {
+        totalPagesEl.textContent = totalSlides;
+        createProgressDots();
+        createMenuList();
+        updateCurrentPage();
+
+        // Event Listeners
+        menuBtn.addEventListener('click', toggleMenu);
+        menuOverlay.addEventListener('click', (e) => {
+          if (e.target === menuOverlay) closeMenu();
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', handleKeydown);
+
+        // Scroll detection
+        container.addEventListener('scroll', onScroll);
+      }
+
+      // Create progress dots
+      function createProgressDots() {
+        progressDots.innerHTML = '';
+        for (let i = 0; i < totalSlides; i++) {
+          const dot = document.createElement('button');
+          dot.className = 'progress-dot' + (i === 0 ? ' active' : '');
+          dot.setAttribute('aria-label', `跳转到第${i + 1}页`);
+          dot.addEventListener('click', () => goToSlide(i));
+          progressDots.appendChild(dot);
+        }
+      }
+
+      // Create menu list
+      function createMenuList() {
+        menuList.innerHTML = '';
+        slides.forEach((slide, i) => {
+          const li = document.createElement('li');
+          li.className = 'menu-item';
+          li.innerHTML = `<span class="menu-item-num">${String(i + 1).padStart(2, '0')}</span><span>${slide.dataset.title || 'Slide ' + (i + 1)}</span>`;
+          li.addEventListener('click', () => {
+            goToSlide(i);
+            closeMenu();
+          });
+          menuList.appendChild(li);
+        });
+      }
+
+      // Go to specific slide
+      function goToSlide(index) {
+        if (index < 0 || index >= totalSlides) return;
+        slides[index].scrollIntoView({ behavior: 'smooth' });
+        currentSlide = index;
+        updateCurrentPage();
+        closeMenu();
+      }
+
+      // Update current page indicator
+      function updateCurrentPage() {
+        currentPageEl.textContent = currentSlide + 1;
+        const dots = progressDots.querySelectorAll('.progress-dot');
+        dots.forEach((dot, i) => {
+          dot.classList.toggle('active', i === currentSlide);
+        });
+      }
+
+      // Handle scroll
+      function onScroll() {
+        const scrollTop = container.scrollTop;
+        const slideHeight = window.innerHeight;
+        const newSlide = Math.round(scrollTop / slideHeight);
+        if (newSlide !== currentSlide) {
+          currentSlide = newSlide;
+          updateCurrentPage();
+        }
+      }
+
+      // Handle keyboard
+      function handleKeydown(e) {
+        if (isMenuOpen) {
+          if (e.key === 'Escape') closeMenu();
+          return;
+        }
+        switch (e.key) {
+          case 'ArrowDown':
+          case 'ArrowRight':
+          case 'PageDown':
+          case ' ':
+            e.preventDefault();
+            goToSlide(currentSlide + 1);
+            break;
+          case 'ArrowUp':
+          case 'ArrowLeft':
+          case 'PageUp':
+            e.preventDefault();
+            goToSlide(currentSlide - 1);
+            break;
+          case 'Home':
+            e.preventDefault();
+            goToSlide(0);
+            break;
+          case 'End':
+            e.preventDefault();
+            goToSlide(totalSlides - 1);
+            break;
+          case 'Escape':
+            closeMenu();
+            break;
+        }
+      }
+
+      // Menu toggle
+      function toggleMenu() {
+        isMenuOpen = !isMenuOpen;
+        menuOverlay.classList.toggle('active', isMenuOpen);
+      }
+
+      function closeMenu() {
+        isMenuOpen = false;
+        menuOverlay.classList.remove('active');
+      }
+
+      // Initialize on DOM ready
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+      } else {
+        init();
+      }
+    })();
+  </script>
+</body>
+</html>
