@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>制造企业数字化运营平台 - 系统集成方案预审会</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'sys-bg': '#1a1a2e',
+            'sys-accent': '#e94560',
+            'sys-erp': '#1565c0',
+            'sys-oa': '#6a1b9a',
+            'sys-plm': '#c73e54',
+            'sys-mes': '#e67e22',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { background: #1a1a2e; color: #eee; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    .slide { min-height: 100vh; scroll-snap-align: start; }
+    .scroll-container { scroll-snap-type: y mandatory; overflow-y: scroll; }
+  </style>
+</head>
+<body class="scroll-container" id="scroll-container">
+  <!-- Slides will be added here -->
+
+  <!-- Bottom Navigation -->
+  <div class="fixed bottom-0 left-0 right-0 h-16 bg-sys-bg border-t border-gray-700 flex items-center justify-between px-6 z-50">
+    <button id="btn-toc" class="text-gray-400 hover:text-white">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+    <div class="flex gap-2" id="progress-dots"></div>
+    <div class="text-gray-500 text-sm" id="page-indicator">1 / 12</div>
+  </div>
+
+  <script>
+    const slides = document.querySelectorAll('.slide');
+    const container = document.getElementById('scroll-container');
+    const dots = document.getElementById('progress-dots');
+    const indicator = document.getElementById('page-indicator');
+
+    // Create progress dots
+    slides.forEach((_, i) => {
+      const dot = document.createElement('button');
+      dot.className = 'w-2 h-2 rounded-full bg-gray-600 hover:bg-sys-accent transition-colors';
+      dot.onclick = () => slides[i].scrollIntoView({ behavior: 'smooth' });
+      dots.appendChild(dot);
+    });
+
+    // Update active dot on scroll
+    container.addEventListener('scroll', () => {
+      const index = Math.round(container.scrollTop / window.innerHeight);
+      document.querySelectorAll('#progress-dots button').forEach((d, i) => {
+        d.classList.toggle('bg-sys-accent', i === index);
+        d.classList.toggle('bg-gray-600', i !== index);
+      });
+      indicator.textContent = `${index + 1} / ${slides.length}`;
+    });
+
+    // Keyboard navigation
+    document.addEventListener('keydown', (e) => {
+      const current = Math.round(container.scrollTop / window.innerHeight);
+      if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+        slides[Math.min(current + 1, slides.length - 1)].scrollIntoView({ behavior: 'smooth' });
+      } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+        slides[Math.max(current - 1, 0)].scrollIntoView({ behavior: 'smooth' });
+      }
+    });
+  </script>
+</body>
+</html>
