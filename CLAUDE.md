@@ -4,78 +4,59 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目概述
 
-Infomat 是沈阳昌兴复材航空科技有限责任公司的制造企业数字化运营平台建设项目，重点是：
-1. **系统集成规划**：8套系统（ERP/MES/OA/PLM/PDM/CAPP/WMS/SCIM）的集成方案设计
-2. **业务关系网络图**：三列建图工具（业务能力 → L3流程 → 应用系统）
+Infomat 是一个业务关系映射工具，用于管理和可视化"业务能力 → 业务流程 → 应用系统"三列关系图。核心场景是航空复材制造领域的业务流程梳理和系统集成分析。
 
-**注意**：这是一个以文档为主的项目，核心交付物是会议材料、技术方案和决策文档，而非传统软件。
+## 常用命令
 
-## 组织架构关键原则
+### 前端（主应用）
+直接用浏览器打开 `index.html` 即可运行，无构建步骤。
 
-项目涉及两个职责不同的部门，**不得混淆**：
-
-| 部门 | 职责 | 在集成项目中的角色 |
-|------|------|----------------|
-| **信息化项目组** | 系统集成、数据中台、接口卡、MDM主数据技术方案 | 技术执行牵头方 |
-| **项目管理部** | 研制/批产项目管理、生产计划跟踪、会议行动项落实 | 业务收口、进度统筹 |
-
-**规则**：所有涉及系统集成、数据中台、接口卡、主数据技术方案的牵头职责 → `信息化项目组`；项目管理部仅负责其业务线内的项目管理工作。
-
-组织架构文档：`docs/organization/组织架构和部门职责.md`
-
-## 核心文档结构
-
-```
-docs/
-├── organization/组织架构和部门职责.md    # 公司组织架构和部门职责
-├── system-integration/系统集成关系说明.md # 核心集成关系和技术规范
-├── specifications/                         # 技术规范模板
-│   ├── 接口设计卡模板.md
-│   └── 物料主数据编码规范草案_V0.2.md
-├── meetings/                              # 会议材料
-│   ├── 5月9日集成方案预审会_未决问题与解决方案.md
-│   └── MDM主数据治理解决方案.md
-├── Demo/                                  # 演示和预沟通材料
-│   ├── 会前行动项清单（5月9日专题会）.md
-│   ├── H5说明大纲（修订MD版）.md
-│   └── PLM供应商洽谈大纲（2026-05-07）.md
-└── superpowers/
-    ├── plans/                            # GSD 实施计划
-    └── specs/                            # GSD 设计规格
+### 布局验证脚本
+```bash
+node analyze-layout.js
 ```
 
-## 技术架构
+## 技术栈
 
-**前端应用（轻量工具，非项目核心）**：
-- `index.html` - 业务关系网络图（纯HTML/CSS/JS，无外部依赖）
-- 三列布局：业务能力(L3) | L3流程 | 应用系统
-- 直接在浏览器打开即可运行
+**前端**：单文件 HTML 应用，原生 JavaScript + CSS，无框架、无构建工具、无外部依赖。SVG `path` + `marker` 绘制连线。数据持久化使用 `localStorage`。
 
-**Python脚本**：
-- `bizmapper.py` - 业务映射器（图片 → Excel → JSON）
+**Python 工具**：独立 CLI 脚本（如有），通过 MiniMax Vision API 提取结构化数据。
 
-**布局诊断**：`node analyze-layout.js`
+**Node 辅助**：`analyze-layout.js` 仅用于验证布局参数，不参与生产链路。
 
-## 当前项目状态（2026-05）
+## 代码架构
 
-- **主线**：2026-05-09 系统集成方案预审会
-- **前置动作**：2026-05-07 PLM供应商洽谈已完成（翎瑞鸿翔，一期MBOM/ECO/工程项目管理）、2026-05-08 部门预沟通
-- **关键决策项**：Q1-Q8（P1/P3/M3已解决；Q6 BOM头、CAPP缺位、SCIM定位待跟进）
-- **行动项**：A1-A8 会前行动项，详见 `docs/Demo/会前行动项清单（5月9日专题会）.md`
+### 状态管理
+前端所有状态集中在一个 `state` 对象中：
+```javascript
+state = {
+  capabilities: [{name, l3:[...]}],  // 业务能力 + 三级流程
+  processes: [...],                    // 业务流程列表
+  systems: [{id, name}],              // 应用系统列表
+  connections: [{capName, procName, sysId}],
+  // 交互状态
+  selectionStep, selectedCapName, selectedProcName,
+  selectedConnIdx, lastSaved,
+  // 布局参数
+  colX, rowHeight, startY, nodeHeight
+}
+```
 
-## 内容工作原则
+### 数据流向
+```
+前端 JSON → localStorage / Blob 导入导出
+```
 
-- 不凭空补充供应商能力、接口字段、实施周期；未知内容标注"待供应商确认"
-- PLM相关内容：翎瑞鸿翔已确定一期范围（MBOM/ECO/工程项目管理），其他未覆盖能力以洽谈结论为准
-- Q1-Q8每题应形成一页纸：当前结论、待决问题、可选方案、推荐倾向、影响范围
-- 资料不足时明确建议降级为预审或待补资料项，不强行给结论
+### 目录结构
+- `index.html` — 主应用（所有前端逻辑）
+- `analyze-layout.js` — 布局参数验证脚本
+- `output/` — Excel/JSON 样例输出
+- `docs/` — 业务规范、会议记录、集成关系说明
+- `.planning/codebase/` — 架构/栈/结构扫描文档
+- `docs/superpowers/specs/` — 设计方案文档（如数据持久化设计）
+- `docs/superpowers/plans/` — 实现计划
 
-## 文件命名规范
+## 关键约束
 
-- 中文文档：使用完整中文名（如 `系统集成关系说明.md`）
-- 英文/代码文件：使用英文单词（如 `bizmapper.py`）
-- 日期格式：YYYY-MM-DD（如 `2026-05-06-plan-b-dataplatform-design.md`）
-
-## GSD 工作流
-
-项目使用 GSD（Good System Design）方法论管理， plans 和 specs 目录存放 GSD 阶段文档。修改前先读 `AGENTS.md`。
+- 前端无模块化，所有逻辑在一个 HTML 文件中
+- 无自动化测试

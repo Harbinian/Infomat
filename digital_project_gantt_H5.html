@@ -1,0 +1,559 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>昌兴复材数字化项目实施甘特图（2026.05 - 2026.12）</title>
+  <style>
+    :root {
+      --bg: #06172a;
+      --panel: rgba(8, 27, 49, 0.92);
+      --panel-2: rgba(10, 35, 63, 0.88);
+      --line: rgba(96, 165, 250, 0.62);
+      --line-soft: rgba(59, 130, 246, 0.28);
+      --text: #f8fbff;
+      --muted: #c7d7ee;
+      --red: #ef4444;
+      --month-w: 280px;
+      --group-w: 460px;
+      --task-w: 760px;
+      --row-h: 64px;
+      --header-h: 76px;
+      --months: 8;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", system-ui, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 18% 12%, rgba(37, 99, 235, 0.22), transparent 34%),
+        radial-gradient(circle at 82% 6%, rgba(34, 211, 238, 0.12), transparent 28%),
+        linear-gradient(135deg, #04111f 0%, var(--bg) 52%, #071a31 100%);
+      overflow: auto;
+    }
+
+    .page {
+      width: calc(var(--group-w) + var(--task-w) + var(--month-w) * var(--months) + 120px);
+      min-height: 100vh;
+      padding: 32px 60px 42px;
+    }
+
+    .title-row {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 14px;
+    }
+
+    .title h1 {
+      margin: 0;
+      font-size: 42px;
+      letter-spacing: 1px;
+      line-height: 1.12;
+      text-shadow: 0 0 22px rgba(147, 197, 253, 0.2);
+    }
+
+    .title p {
+      margin: 8px 0 0;
+      font-size: 16px;
+      color: var(--muted);
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      color: #bfdbfe;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+
+    button {
+      border: 1px solid rgba(125, 211, 252, 0.35);
+      background: rgba(14, 116, 144, 0.28);
+      color: #e0f2fe;
+      padding: 8px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    button:hover { background: rgba(14, 116, 144, 0.42); }
+
+    .gantt {
+      position: relative;
+      display: grid;
+      grid-template-columns: var(--group-w) var(--task-w) repeat(var(--months), var(--month-w));
+      grid-template-rows: var(--header-h);
+      grid-auto-rows: var(--row-h);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      overflow: visible;
+      background: rgba(5, 18, 33, 0.72);
+      box-shadow: 0 22px 70px rgba(0,0,0,.36), inset 0 0 36px rgba(59,130,246,.08);
+    }
+
+    .corner,
+    .task-header,
+    .month {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      height: var(--header-h);
+      background: linear-gradient(180deg, rgba(10, 35, 63, 0.98), rgba(8, 27, 49, 0.98));
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    .corner { grid-column: 1; grid-row: 1; padding-left: 28px; border-right: 1px solid var(--line); font-size: 26px; white-space: nowrap; }
+    .task-header { grid-column: 2; grid-row: 1; padding-left: 28px; border-right: 1px solid var(--line); font-size: 26px; white-space: nowrap; }
+
+    .month {
+      justify-content: center;
+      font-size: 30px;
+      color: #f8fbff;
+      border-right: 1px solid var(--line);
+    }
+
+    .month small {
+      display: block;
+      margin-left: 6px;
+      font-size: 13px;
+      color: #93c5fd;
+      font-weight: 600;
+    }
+
+    .row-cell,
+    .task-cell,
+    .time-cell {
+      min-height: var(--row-h);
+      border-bottom: 1px solid rgba(96, 165, 250, 0.16);
+    }
+
+    .row-cell {
+      grid-column: 1;
+      border-right: 1px solid var(--line);
+      background: rgba(8, 27, 49, 0.66);
+    }
+
+    .task-cell {
+      grid-column: 2;
+      border-right: 1px solid var(--line);
+      background: rgba(8, 27, 49, 0.48);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 12px 0 18px;
+      overflow: visible;
+    }
+
+    .time-cell {
+      background-image: linear-gradient(90deg, transparent calc(50% - 1px), rgba(59, 130, 246, .18) 50%, transparent calc(50% + 1px));
+      border-right: 1px solid rgba(96, 165, 250, 0.42);
+    }
+
+    .group-label {
+      grid-column: 1;
+      display: flex;
+      align-items: flex-start;
+      justify-content: flex-start;
+      padding: 18px 28px;
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid rgba(96, 165, 250, .36);
+      background: linear-gradient(135deg, rgba(14, 35, 62, .88), rgba(8, 27, 49, .72));
+      font-size: 38px;
+      font-weight: 900;
+      letter-spacing: 2px;
+      writing-mode: horizontal-tb;
+      text-orientation: mixed;
+      text-shadow: 0 0 18px currentColor;
+      line-height: 1.15;
+      white-space: nowrap;
+      overflow: visible;
+    }
+
+    .task-name {
+      min-width: 0;
+      color: #f8fbff;
+      font-size: 21px;
+      font-weight: 800;
+      white-space: normal;
+      overflow: visible;
+      text-overflow: unset;
+      line-height: 1.15;
+    }
+
+    .task-code {
+      flex: 0 0 auto;
+      color: #93c5fd;
+      font-size: 15px;
+      font-weight: 800;
+      opacity: .95;
+      min-width: 104px;
+    }
+
+    .sub .task-cell { padding-left: 34px; }
+    .sub-lane-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 12px;
+      border: 1px solid rgba(125, 211, 252, .36);
+      border-radius: 999px;
+      color: #bfdbfe;
+      background: rgba(14, 116, 144, .18);
+      font-size: 16px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .bar-layer {
+      position: absolute;
+      left: calc(var(--group-w) + var(--task-w));
+      top: var(--header-h);
+      width: calc(var(--month-w) * var(--months));
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .bar {
+      position: absolute;
+      height: 32px;
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 12px;
+      font-size: 16px;
+      line-height: 1;
+      font-weight: 900;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 8px 18px rgba(0,0,0,.25);
+      white-space: nowrap;
+      overflow: visible;
+    }
+
+    .bar.short { justify-content: flex-start; }
+    .bar .outside {
+      position: absolute;
+      left: calc(100% + 8px);
+      color: #eaf6ff;
+      text-shadow: 0 1px 4px #000;
+      font-weight: 900;
+    }
+
+    .bar.critical {
+      outline: 2px solid #ef4444;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 0 16px rgba(239,68,68,.28);
+    }
+
+    .milestone-line {
+      position: absolute;
+      top: 0;
+      height: 100%;
+      border-left: 3px dashed var(--red);
+      z-index: 12;
+      pointer-events: none;
+    }
+
+    .milestone-label {
+      position: sticky;
+      top: 78px;
+      z-index: 26;
+      transform: translateX(-50%);
+      width: max-content;
+      max-width: 170px;
+      padding: 5px 8px;
+      border: 1px solid #f87171;
+      border-radius: 7px;
+      background: #7f1d1d;
+      color: white;
+      font-size: 12px;
+      font-weight: 900;
+      line-height: 1.2;
+      text-align: center;
+      box-shadow: 0 0 16px rgba(239,68,68,.28);
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 18px;
+      margin-top: 16px;
+      color: #dbeafe;
+      font-size: 13px;
+    }
+
+    .legend-item { display: inline-flex; align-items: center; gap: 7px; }
+    .swatch { width: 24px; height: 13px; border-radius: 4px; box-shadow: inset 0 1px 0 rgba(255,255,255,.24); }
+
+    .note {
+      margin-top: 12px;
+      color: #93c5fd;
+      font-size: 13px;
+    }
+
+    @media print {
+      body { background: #06172a; }
+      .actions, .note { display: none; }
+      .page { transform-origin: top left; padding: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="title-row">
+      <div class="title">
+        <h1>昌兴复材数字化项目实施甘特图（2026.05 - 2026.12）</h1>
+        <p>单一融合甘特图｜MES 明细融合到 MES建设 分组内部｜同一条 2026.05 - 2026.12 时间轴</p>
+      </div>
+      <div class="actions">
+        <button onclick="window.print()">打印 / 导出 PDF</button>
+        <span>建议浏览器缩放 67% - 90% 查看全局</span>
+      </div>
+    </section>
+
+    <section id="gantt" class="gantt"></section>
+
+    <section id="legend" class="legend"></section>
+    <div class="note">说明：短进度条若容纳不下完整文字，自动将文字放到进度条右侧；MES 子泳道为缩进显示，不单独拆分面板。</div>
+  </main>
+
+  <script>
+    const MONTHS = [5, 6, 7, 8, 9, 10, 11, 12];
+    const MONTH_W = 280;
+    const ROW_H = 64;
+    const HEADER_H = 76;
+
+    const colors = {
+      "数据标准": { bar: "#245FEA", text: "#FFFFFF" },
+      "MDM底座": { bar: "#22D3EE", text: "#04121F" },
+      "PLM建设": { bar: "#22C55E", text: "#04121F" },
+      "MES建设": { bar: "#FACC15", text: "#111827" },
+      "MES明细-功能开发": { bar: "#245FEA", text: "#FFFFFF" },
+      "MES明细-需求设计": { bar: "#64748B", text: "#FFFFFF" },
+      "MES明细-数据工作": { bar: "#F97316", text: "#111827" },
+      "MES明细-测试上线": { bar: "#10B981", text: "#04121F" },
+      "联调验收": { bar: "#7C3AED", text: "#FFFFFF" },
+      "接口联调": { bar: "#BE123C", text: "#FFFFFF" },
+      "关键任务": { bar: "#7F1D1D", text: "#FFFFFF" }
+    };
+
+    const rows = [
+      { group: "数据标准", code: "DS-01", task: "组织架构标准制定", type: "数据标准", start: "2026-05-01", end: "2026-05-31" },
+      { group: "数据标准", code: "DS-02", task: "物料编码规则锁定", type: "关键任务", start: "2026-05-01", end: "2026-06-13" },
+
+      { group: "MDM底座", code: "MDM-01", task: "MDM平台搭建", type: "MDM底座", start: "2026-06-01", end: "2026-08-15" },
+      { group: "MDM底座", code: "MDM-02", task: "历史数据清洗迁移", type: "MDM底座", start: "2026-07-01", end: "2026-09-30" },
+
+      { group: "PLM建设", code: "PLM-01", task: "PLM蓝图设计", type: "PLM建设", start: "2026-05-01", end: "2026-06-30" },
+      { group: "PLM建设", code: "PLM-02", task: "PLM系统配置开发", type: "PLM建设", start: "2026-07-01", end: "2026-09-30" },
+      { group: "PLM建设", code: "PLM-03", task: "PLM上线验收", type: "关键任务", start: "2026-10-01", end: "2026-11-01" },
+
+      { group: "MES建设", code: "MES-00", task: "MES蓝图设计", type: "MES建设", start: "2026-06-01", end: "2026-06-30" },
+      { group: "MES建设", code: "MES-00", task: "MES系统配置开发", type: "MES建设", start: "2026-07-01", end: "2026-10-31" },
+      { group: "MES建设", code: "MES-00", task: "MES上线验收", type: "关键任务", start: "2026-10-01", end: "2026-11-30" },
+
+      { group: "MES建设", sub: "子泳道-主数据", code: "MES-MD-01", task: "定标准、需求与设计", type: "MES明细-需求设计", start: "2026-05-01", end: "2026-05-31" },
+      { group: "MES建设", sub: "子泳道-主数据", code: "MES-MD-02", task: "功能模块开发", type: "MES明细-功能开发", start: "2026-06-01", end: "2026-07-31" },
+      { group: "MES建设", sub: "子泳道-主数据", code: "MES-MD-03", task: "存量数据盘点清洗", type: "关键任务", start: "2026-06-01", end: "2026-08-31" },
+      { group: "MES建设", sub: "子泳道-主数据", code: "MES-MD-04", task: "PLM集成需求与设计", type: "MES明细-需求设计", start: "2026-06-01", end: "2026-06-30" },
+      { group: "MES建设", sub: "子泳道-主数据", code: "MES-MD-05", task: "与PLM接口开发", type: "接口联调", start: "2026-07-01", end: "2026-07-31" },
+      { group: "MES建设", sub: "子泳道-主数据", code: "MES-MD-06", task: "与PLM对接联调", type: "接口联调", start: "2026-08-01", end: "2026-08-31" },
+      { group: "MES建设", sub: "子泳道-主数据", code: "MES-MD-07", task: "数据导入与校验", type: "MES明细-数据工作", start: "2026-08-01", end: "2026-08-31" },
+      { group: "MES建设", sub: "子泳道-主数据", code: "MES-MD-08", task: "测试、培训、上线", type: "MES明细-测试上线", start: "2026-09-01", end: "2026-09-30" },
+
+      { group: "MES建设", sub: "子泳道-工艺", code: "MES-PRO-01", task: "需求调研与设计", type: "MES明细-需求设计", start: "2026-05-01", end: "2026-05-31" },
+      { group: "MES建设", sub: "子泳道-工艺", code: "MES-PRO-02", task: "功能模块开发", type: "MES明细-功能开发", start: "2026-06-01", end: "2026-08-31" },
+      { group: "MES建设", sub: "子泳道-工艺", code: "MES-PRO-03", task: "数据准备、梳理、标准化", type: "关键任务", start: "2026-06-01", end: "2026-06-30" },
+      { group: "MES建设", sub: "子泳道-工艺", code: "MES-PRO-04", task: "数据录入", type: "MES明细-数据工作", start: "2026-07-01", end: "2026-08-31" },
+      { group: "MES建设", sub: "子泳道-工艺", code: "MES-PRO-05", task: "审核、确认", type: "接口联调", start: "2026-09-01", end: "2026-09-30" },
+      { group: "MES建设", sub: "子泳道-工艺", code: "MES-PRO-06", task: "ERP集成需求与设计", type: "MES明细-需求设计", start: "2026-06-01", end: "2026-06-30" },
+      { group: "MES建设", sub: "子泳道-工艺", code: "MES-PRO-07", task: "与ERP接口开发", type: "接口联调", start: "2026-07-01", end: "2026-07-31" },
+      { group: "MES建设", sub: "子泳道-工艺", code: "MES-PRO-08", task: "与ERP对接联调", type: "接口联调", start: "2026-08-01", end: "2026-08-31" },
+      { group: "MES建设", sub: "子泳道-工艺", code: "MES-PRO-09", task: "测试、培训、上线", type: "MES明细-测试上线", start: "2026-10-01", end: "2026-10-31" },
+
+      { group: "MES建设", sub: "子泳道-仓储", code: "MES-WH-01", task: "需求调研与设计", type: "MES明细-需求设计", start: "2026-05-01", end: "2026-05-31" },
+      { group: "MES建设", sub: "子泳道-仓储", code: "MES-WH-02", task: "功能模块开发", type: "MES明细-功能开发", start: "2026-06-01", end: "2026-09-30" },
+      { group: "MES建设", sub: "子泳道-仓储", code: "MES-WH-03", task: "库存数据初始化", type: "关键任务", start: "2026-07-01", end: "2026-09-30" },
+      { group: "MES建设", sub: "子泳道-仓储", code: "MES-WH-04", task: "库位规划与编码", type: "MES明细-数据工作", start: "2026-07-01", end: "2026-07-31" },
+      { group: "MES建设", sub: "子泳道-仓储", code: "MES-WH-05", task: "ERP集成需求与设计", type: "MES明细-需求设计", start: "2026-06-01", end: "2026-06-30" },
+      { group: "MES建设", sub: "子泳道-仓储", code: "MES-WH-06", task: "与ERP接口开发", type: "接口联调", start: "2026-07-01", end: "2026-07-31" },
+      { group: "MES建设", sub: "子泳道-仓储", code: "MES-WH-07", task: "与ERP对接联调", type: "接口联调", start: "2026-09-01", end: "2026-09-30" },
+      { group: "MES建设", sub: "子泳道-仓储", code: "MES-WH-08", task: "测试、培训、上线", type: "MES明细-测试上线", start: "2026-10-01", end: "2026-10-31" },
+
+      { group: "联调验收", code: "INT-01", task: "核心接口联调", type: "接口联调", start: "2026-08-15", end: "2026-08-15", milestone: true },
+      { group: "联调验收", code: "INT-02", task: "全链路集成测试", type: "联调验收", start: "2026-09-01", end: "2026-10-31" },
+      { group: "联调验收", code: "INT-03", task: "UAT用户验收", type: "联调验收", start: "2026-11-01", end: "2026-11-30" },
+      { group: "联调验收", code: "INT-04", task: "正式上线", type: "关键任务", start: "2026-11-01", end: "2026-12-01" }
+    ];
+
+    const milestones = [
+      { date: "2026-06-13", label: "2026-06-13\n编码锁定" },
+      { date: "2026-08-15", label: "2026-08-15\n接口联调" },
+      { date: "2026-11-01", label: "2026-11-01\nPLM上线" },
+      { date: "2026-12-01", label: "2026-12-01\n正式上线" }
+    ];
+
+    const groups = ["数据标准", "MDM底座", "PLM建设", "MES建设", "联调验收"];
+    const groupColors = {
+      "数据标准": "#60a5fa",
+      "MDM底座": "#22d3ee",
+      "PLM建设": "#4ade80",
+      "MES建设": "#facc15",
+      "联调验收": "#a78bfa"
+    };
+
+    function dateX(dateText) {
+      const d = new Date(dateText + "T00:00:00");
+      const start = new Date("2026-05-01T00:00:00");
+      const end = new Date("2026-12-31T00:00:00");
+      const day = 24 * 3600 * 1000;
+      const total = (end - start) / day + 1;
+      const current = (d - start) / day;
+      return current / total * MONTH_W * MONTHS.length;
+    }
+
+    function monthStartX(month) {
+      return (month - 5) * MONTH_W;
+    }
+
+    function build() {
+      const gantt = document.getElementById("gantt");
+      gantt.innerHTML = "";
+
+      const corner = document.createElement("div");
+      corner.className = "corner";
+      corner.textContent = "分组 / 子泳道";
+      gantt.appendChild(corner);
+
+      const taskHeader = document.createElement("div");
+      taskHeader.className = "task-header";
+      taskHeader.textContent = "任务";
+      gantt.appendChild(taskHeader);
+
+      MONTHS.forEach((m, index) => {
+        const month = document.createElement("div");
+        month.className = "month";
+        month.style.gridColumn = String(index + 3);
+        month.style.gridRow = "1";
+        month.innerHTML = `${m}月<small>2026</small>`;
+        gantt.appendChild(month);
+      });
+
+      const rowStart = 2;
+      let gridRow = rowStart;
+      const groupStartRows = new Map();
+      const groupEndRows = new Map();
+
+      rows.forEach((row, idx) => {
+        if (!groupStartRows.has(row.group)) groupStartRows.set(row.group, gridRow);
+        groupEndRows.set(row.group, gridRow);
+
+        const task = document.createElement("div");
+        task.className = `task-cell ${row.sub ? "sub" : ""}`;
+        task.style.gridRow = String(gridRow);
+        task.style.gridColumn = "2";
+        const showSub = row.sub && (idx === 0 || rows[idx - 1].sub !== row.sub);
+        task.innerHTML = `${showSub ? `<span class="sub-lane-badge">${row.sub}</span>` : ""}<span class="task-code">${row.code}</span><span class="task-name" title="${row.task}">${idx + 1}. ${row.task}</span>`;
+        gantt.appendChild(task);
+
+        MONTHS.forEach((m, mi) => {
+          const cell = document.createElement("div");
+          cell.className = "time-cell";
+          cell.style.gridRow = String(gridRow);
+          cell.style.gridColumn = String(mi + 3);
+          gantt.appendChild(cell);
+        });
+
+        gridRow += 1;
+      });
+
+      groups.forEach(group => {
+        const label = document.createElement("div");
+        label.className = "group-label";
+        label.style.gridColumn = "1";
+        label.style.gridRow = `${groupStartRows.get(group)} / ${groupEndRows.get(group) + 1}`;
+        label.style.color = groupColors[group];
+        label.textContent = group;
+        gantt.appendChild(label);
+      });
+
+      const barLayer = document.createElement("div");
+      barLayer.className = "bar-layer";
+      barLayer.style.height = `${rows.length * ROW_H}px`;
+      gantt.appendChild(barLayer);
+
+      milestones.forEach(ms => {
+        const x = dateX(ms.date);
+        const line = document.createElement("div");
+        line.className = "milestone-line";
+        line.style.left = `${x}px`;
+        barLayer.appendChild(line);
+
+        const label = document.createElement("div");
+        label.className = "milestone-label";
+        label.style.position = "absolute";
+        label.style.left = `${x}px`;
+        label.style.top = `-64px`;
+        label.innerHTML = ms.label.replace("\n", "<br>");
+        barLayer.appendChild(label);
+      });
+
+      rows.forEach((row, idx) => {
+        const c = colors[row.type];
+        const bar = document.createElement("div");
+        const isCritical = row.type === "关键任务";
+        bar.className = `bar ${isCritical ? "critical" : ""}`;
+        bar.style.background = c.bar;
+        bar.style.color = c.text;
+        bar.style.top = `${idx * ROW_H + 16}px`;
+
+        if (row.milestone) {
+          const x = dateX(row.start);
+          bar.style.left = `${x - 10}px`;
+          bar.style.width = `22px`;
+          bar.style.height = `22px`;
+          bar.style.transform = "rotate(45deg)";
+          bar.style.borderRadius = "4px";
+          bar.innerHTML = `<span class="outside" style="transform: rotate(-45deg); left: 30px; top: 4px;">${row.task}</span>`;
+        } else {
+          const left = dateX(row.start) + 4;
+          const right = dateX(row.end) - 4;
+          const width = Math.max(34, right - left);
+          bar.style.left = `${left}px`;
+          bar.style.width = `${width}px`;
+          const approxTextWidth = row.task.length * 15;
+          if (approxTextWidth > width - 18) {
+            bar.classList.add("short");
+            bar.innerHTML = `<span class="outside">${row.task}</span>`;
+          } else {
+            bar.textContent = row.task;
+          }
+        }
+        barLayer.appendChild(bar);
+      });
+
+      buildLegend();
+    }
+
+    function buildLegend() {
+      const legend = document.getElementById("legend");
+      legend.innerHTML = "";
+      Object.entries(colors).forEach(([name, cfg]) => {
+        const item = document.createElement("span");
+        item.className = "legend-item";
+        item.innerHTML = `<span class="swatch" style="background:${cfg.bar}"></span>${name}`;
+        legend.appendChild(item);
+      });
+    }
+
+    build();
+  </script>
+</body>
+</html>
