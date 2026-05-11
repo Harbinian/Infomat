@@ -7,6 +7,7 @@
     "start": "node server/index.js",
     "init-db": "node scripts/init-db.js",
     "smoke": "node scripts/smoke-test.js",
+    "test:org": "node scripts/test-org-route.js",
     "dev": "nodemon server/index.js"
   },
   "dependencies": {
