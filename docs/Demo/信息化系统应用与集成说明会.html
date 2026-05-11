@@ -14,7 +14,7 @@
   --gray:#64748b;--bg:#f8fafc;--card:#fff;--border:#e2e8f0;
   --text:#1e293b;--muted:#475569;
 }
-html{scroll-behavior:smooth;overflow-x:hidden}
+html{scroll-behavior:smooth;overflow-x:hidden;scroll-padding-top:50px}
 body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);font-size:14px;overflow-x:hidden}
 code{background:#f1f5f9;padding:1px 5px;border-radius:3px;font-size:12px;font-family:monospace;color:#c2410c}
 a{text-decoration:none}
@@ -29,7 +29,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:999;background:rgba(15,42,94,.97
 
 /* ── LAYOUT ── */
 .page{width:100%;max-width:none;margin:0;padding:70px clamp(20px,4vw,72px) 60px}
-.sec{width:100%;max-width:100%;min-width:0;margin-bottom:64px}
+.sec{width:100%;max-width:100%;min-width:0;margin-bottom:64px;scroll-margin-top:50px}
 
 /* ── COVER ── */
 #cover{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:70px 8vw 60px;background:linear-gradient(135deg,#081e4a 0%,#1a56db 55%,#0891b2 100%);position:relative;overflow:hidden}
@@ -88,17 +88,17 @@ nav{position:fixed;top:0;left:0;right:0;z-index:999;background:rgba(15,42,94,.97
 /* ── SYSTEM INTRO / REPORT SECTIONS ── */
 .sys-hero{border-radius:12px;padding:18px 20px;margin-bottom:16px;border:1px solid var(--border);background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.04);position:relative;overflow:hidden}
 .sys-hero:before{content:"";position:absolute;inset:0 0 auto 0;height:4px;background:var(--blue)}
-.sys-hero.plm:before{background:var(--purple)}.sys-hero.mes:before{background:var(--green)}
+.sys-hero.oa:before{background:var(--amber)}.sys-hero.plm:before{background:var(--purple)}.sys-hero.mes:before{background:var(--green)}
 .sys-kicker{font-size:11px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--gray);margin-bottom:5px}
 .sys-hero h3{font-size:20px;color:var(--navy);margin-bottom:6px}.sys-hero p{font-size:13px;color:var(--muted);line-height:1.85}
 .sys-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}.sys-tag{font-size:11px;font-weight:700;border-radius:999px;padding:3px 9px;background:#f1f5f9;color:var(--muted)}
-.sys-tag.plm{background:#ede9fe;color:#6d28d9}.sys-tag.mes{background:#dcfce7;color:#166534}
+.sys-tag.oa{background:#fef3c7;color:#92400e}.sys-tag.plm{background:#ede9fe;color:#6d28d9}.sys-tag.mes{background:#dcfce7;color:#166534}
 .stat-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px}.stat-box{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.04)}
 .stat-box .num{font-size:24px;font-weight:900;color:var(--navy);line-height:1}.stat-box .lbl{font-size:11px;color:var(--gray);margin-top:5px}
 .cap-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px}.cap-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;border-left:4px solid var(--blue)}
-.cap-card.plm{border-left-color:var(--purple)}.cap-card.mes{border-left-color:var(--green)}.cap-card h4{font-size:13px;color:var(--navy);margin-bottom:6px}.cap-card p,.cap-card li{font-size:12px;color:var(--muted);line-height:1.75}.cap-card ul{padding-left:15px}
+.cap-card.oa{border-left-color:var(--amber)}.cap-card.plm{border-left-color:var(--purple)}.cap-card.mes{border-left-color:var(--green)}.cap-card h4{font-size:13px;color:var(--navy);margin-bottom:6px}.cap-card p,.cap-card li{font-size:12px;color:var(--muted);line-height:1.75}.cap-card ul{padding-left:15px}
 .pain-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px}.pain-item{background:#fff7ed;border:1px solid #fed7aa;border-left:4px solid var(--red);border-radius:9px;padding:11px 13px;font-size:12px;color:#7c2d12;line-height:1.7}.pain-item strong{display:block;color:#b91c1c;font-size:12px;margin-bottom:3px}
-.loop-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:14px}.loop-item{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:13px 15px;border-left:4px solid var(--green)}.loop-title{font-size:13px;font-weight:800;color:var(--navy);margin-bottom:6px}.loop-flow{font-size:12px;color:var(--text);line-height:1.7;background:#f8fafc;border-radius:7px;padding:8px 10px;margin-bottom:7px}.loop-key{font-size:11px;color:#166534;font-weight:700}
+.loop-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:14px}.loop-item{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:13px 15px;border-left:4px solid var(--green)}.loop-item.oa{border-left-color:var(--amber)}.loop-title{font-size:13px;font-weight:800;color:var(--navy);margin-bottom:6px}.loop-flow{font-size:12px;color:var(--text);line-height:1.7;background:#f8fafc;border-radius:7px;padding:8px 10px;margin-bottom:7px}.loop-key{font-size:11px;color:#166534;font-weight:700}.loop-item.oa .loop-key{color:#92400e}
 .phase-stack{display:flex;flex-direction:column;gap:12px;margin-bottom:14px}.phase-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;border-left:4px solid var(--green)}.phase-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}.phase-num{width:28px;height:28px;border-radius:50%;background:var(--green);color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center}.phase-title{font-size:14px;font-weight:800;color:var(--navy);flex:1}.phase-period{font-size:11px;font-weight:800;color:#166534;background:#dcfce7;border-radius:999px;padding:3px 9px}.phase-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}.phase-tag{font-size:11px;font-weight:700;color:#166534;background:#dcfce7;border-radius:5px;padding:3px 8px}
 
 
@@ -416,10 +416,10 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
   <div class="nav-links">
     <a href="#cover">首页</a><a href="#s1">会议定位</a><a href="#s2">数字化目标</a><a href="#s3">4套系统</a>
     <a href="#s4">排期</a><a href="#s5">里程碑</a><a href="#s6">卡点</a>
-    <a href="#s7">PLM</a><a href="#s8">MES</a><a href="#s9">其他系统</a>
-    <a href="#s10">事故链</a><a href="#s11">MDM基石</a><a href="#s12">拓扑数据流</a>
-    <a href="#s13">MDM路径</a><a href="#s14">黄金源</a><a href="#s15">接口</a>
-    <a href="#s16">Q成熟度</a><a href="#s17">组织分工</a><a href="#s18">行动清单</a>
+    <a href="#s7">OA</a><a href="#s8">PLM</a><a href="#s9">MES</a><a href="#s10">其他系统</a>
+    <a href="#s11">事故链</a><a href="#s12">MDM基石</a><a href="#s13">拓扑数据流</a>
+    <a href="#s14">MDM路径</a><a href="#s15">黄金源</a><a href="#s16">接口</a>
+    <a href="#s17">Q成熟度</a><a href="#s18">组织分工</a><a href="#s19">行动清单</a>
   </div>
 </nav>
 
@@ -467,11 +467,31 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
 <div class="sec" id="s2">
   <div class="sec-hd"><div class="sec-num">2</div><div><h2>公司数字化目标</h2><div class="sd">打通研发 → 制造 → 采购 → 质量 → 财务的数据闭环</div></div></div>
   <div class="card"><h3>项目背景与目标</h3><p>沈阳昌兴复材航空科技有限责任公司作为航空复合材料零部件制造商，推进全域数字化运营平台建设。核心目标是打通研发、制造、采购、质量、财务五大业务域数据流，实现从 EBOM → MBOM → 生产执行 → 成本核算的全链路数字化闭环，并满足航空适航<strong>零件编号+质量编号追溯</strong>要求。</p></div>
+  <div class="tw" style="margin-top:16px">
+    <table>
+      <thead><tr><th>维度</th><th>行业平均水准</th><th>数字化目标</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td><strong>交付效率</strong></td><td style="color:var(--gray)">订单交付周期 45–60天；计划达成率 75–80%</td><td style="color:var(--green);font-weight:700">交付周期 ≤30天；计划达成率 ≥90%</td><td>复材件交付受适航取证约束，周期压缩空间有限，数字化重点在减少等待和返工</td></tr>
+        <tr><td><strong>生产运营</strong></td><td style="color:var(--gray)">OEE 设备综合效率 55–65%；在制品周转 15–20天</td><td style="color:var(--green);font-weight:700">OEE ≥75%；在制品周转 ≤8天</td><td>复材固化曲线长、换料频次高，OEE提升依赖工艺数字化和设备 IoT</td></tr>
+        <tr><td><strong>质量管控</strong></td><td style="color:var(--gray)">一次合格率 85–90%；返工率 8–12%；追溯覆盖率 ≤60%</td><td style="color:var(--green);font-weight:700">一次合格率 ≥95%；返工率 &lt;3%；追溯覆盖率 ≥98%</td><td>适航审查要求零件编号+质量编号全链路可查，追溯覆盖是硬门槛</td></tr>
+        <tr><td><strong>数据协同</strong></td><td style="color:var(--gray)">主数据错误率 15–20%；跨系统一致率 60–70%；信息孤岛 5–8个</td><td style="color:var(--green);font-weight:700">主数据错误率 &lt;3%；跨系统一致率 ≥95%；信息孤岛基本消除</td><td>复材BOM层级多、ECO变更频，数据不一致会直接传导到工序执行</td></tr>
+        <tr><td><strong>成本控制</strong></td><td style="color:var(--gray)">库存周转 4–6次/年；报工及时率 70–80%；废品率 3–5%</td><td style="color:var(--green);font-weight:700">库存周转 ≥8次/年；报工及时率 ≥95%；废品率 &lt;1.5%</td><td>原材料（碳纤维、预浸料）成本占比高，库存周转和废品率直接影响利润</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="info" style="margin-top:12px"><p>数据来源：离散制造/航空复材行业通用benchmark，供参考。</p></div>
+  <div class="card" style="margin-top:16px"><p>通过数字化建设，打通研发、制造、采购、质量、财务五大业务域数据流，实现从 EBOM → MBOM → 生产执行 → 成本核算的全链路数字化闭环，支撑航空适航零件编号+质量编号全链路追溯。</p></div>
 </div>
 
 <!-- ══ 3 我们有哪4套系统 ══ -->
 <div class="sec" id="s3">
   <div class="sec-hd"><div class="sec-num">3</div><div><h2>我们有哪 4 套系统</h2><div class="sd">一期实施范围 · 每系统一句话定位</div></div></div>
+  <div class="g4" style="margin-bottom:20px">
+    <div class="sc erp"><div class="sn">ERP</div><div class="sv">用友 U8</div><div class="sr">计划/采购/库存/财务/成本账务<br/>PS · FI · CO · PP · MM · SD</div></div>
+    <div class="sc mes"><div class="sn">MES</div><div class="sv">北京虎蜥</div><div class="sr">生产计划/执行/工艺管控/质量闭环/设备IoT/仓储物流/批次追溯</div></div>
+    <div class="sc oa"><div class="sn">OA</div><div class="sv">华天动力</div><div class="sr">行政事务（统一流程/表单/收文发文）、考勤管理、人事组织（角色/权限）、跨系统流程协同、统一待办入口、移动协同</div></div>
+    <div class="sc plm"><div class="sn">PLM</div><div class="sv">翎瑞鸿翔</div><div class="sr">EBOM→MBOM 结构转换、工艺文件管控、ECO 变更闭环、工程项目管理、设计数据唯一黄金源</div></div>
+  </div>
   <div class="gauto">
     <div class="sc erp"><div class="sn">ERP</div><div class="sv">用友 U8 </div><div class="sr">企业资源计划核心层<br/>PS · FI · CO · PP · MM · SD</div></div>
     <div class="sc mes"><div class="sn">MES</div><div class="sv">北京虎蜥 </div><div class="sr">制造执行层<br/>排产 · 工艺 · 工时 · IoT采集</div></div>
@@ -484,6 +504,7 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
     <div class="sc 供应链管理系统"><div class="sn">供应链管理系统</div><div class="sv">⚠️ 自研or采购待决</div><div class="sr">供应商协同门户<br/>商务 · 技术 · 质量 · 海关</div></div>
     -->
   </div>
+  <div class="info" style="margin-bottom:16px"><p><strong>MDM（主数据管理）</strong>作为集成基石，独立于四套系统：统一主数据标准（组织身份、物料、供应商），是所有系统的集成底座，负责黄金源认定和跨系统数据一致性保障。</p></div>
 </div>
 
 <!-- ══ 4 总体排期一览 ══ -->
@@ -520,17 +541,42 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
   <div class="tw"><table><thead><tr><th>卡点</th><th>若今天不处理</th><th>影响里程碑</th><th>会后最迟动作</th></tr></thead><tbody><tr><td>Q3/Q4 编码规范与技术约束</td><td>物料编码无法锁定，字段长度、字符集、唯一性校验无法进入接口设计</td><td>M2 / M3</td><td>5月底前完成各系统供应商技术确认</td></tr><tr><td>Q7 数据中台 / 集成总线路线</td><td>接口建设方式不定，点对点和中台方案无法并行推进</td><td>M3</td><td>5月底前形成路线选择和最小接口规范</td></tr><tr><td>EBOM→MBOM 转换规则</td><td>PLM一期和MES制造执行之间缺少制造结构承接规则</td><td>M4 / M5</td><td>工程技术部 + 复材车间形成转换规则初稿</td></tr><tr><td>Q8 追溯数据归档方案</td><td>全链路验证无法证明适航追溯可查询</td><td>M6</td><td>质量管理部确认追溯数据范围、保存和查询入口</td></tr><tr><td>MES驻厂PM与实施资源</td><td>制造执行闭环进入实施后缺少现场响应能力</td><td>M5</td><td>供应商方案中明确驻厂PM、关键顾问和验收边界</td></tr></tbody></table></div>
 </div>
 
-<!-- ══ 7 PLM 是什么 ══ -->
+<!-- ══ 7 OA 是什么 ══ -->
 <div class="sec" id="s7">
-  <div class="sec-hd"><div class="sec-num">7</div><div><h2>PLM 是什么</h2><div class="sd">设计数据源头 · 图纸 / BOM / 变更 · 翎瑞鸿翔已定</div></div></div>
-  <div class="sys-hero plm"><div class="sys-kicker">PLM 背景铺垫</div><h3>把 PLM 放回本次集成说明的位置</h3><p>Windchill PLM 是面向产品全生命周期的研发数据管理平台，来源资料中覆盖产品数据管理、BOM、变更、项目、协作和系统集成等能力。本次说明采用"能力参考 + 一期范围约束"的口径：翎瑞鸿翔已确认一期上线 <strong>MBOM(PDM)、ECO(ECN)、工程项目管理</strong>；其他能力作为后续详细设计和供应商确认输入，不直接写成最终承诺。</p><div class="sys-tags"><span class="sys-tag plm">设计件黄金源</span><span class="sys-tag plm">EBOM / BOM 管理</span><span class="sys-tag plm">ECO / ECN</span><span class="sys-tag plm">研发项目管理</span><span class="sys-tag plm">PLM内PDM/MBOM能力</span></div></div>
-  <div class="cap-grid"><div class="cap-card plm"><h4>PDM 产品数据管理</h4><ul><li>CAD 集成：支持设计数据签入/签出、模型与工程图关联、属性自动提取。</li><li>BOM 自动生成：从设计模型形成 EBOM，减少人工录入，保持设计与结构一致。</li><li>图文档管理：统一管理图纸、规范、技术文件、模型和交付物。</li><li>版本、基线、权限：记录版本历史，在关键节点形成数据快照，并按角色控制访问。</li></ul></div><div class="cap-card plm"><h4>BOM 管理</h4><ul><li>来源页能力：支持 EBOM → PBOM → MBOM 的多视图结构管理。</li><li>支持 BOM 差异比较、版本管理、有效性范围和批架次/序列号适用性。</li><li>说明会衔接：研发主链中把 PDM/MBOM 作为 PLM 一期能力表达；CAPP 为后续规划，不并入一期承诺。</li></ul></div><div class="cap-card plm"><h4>变更管理</h4><ul><li>ECR：记录变更需求、原因和影响范围。</li><li>ECN：正式通知相关部门，触发审批和实施准备。</li><li>ECO：执行变更并更新受影响的数据对象。</li><li>说明会衔接：ECO 闭环已并入 PLM 洽谈结论，后续重点是变更对象、状态、审批角色和生效范围落账。</li></ul></div><div class="cap-card plm"><h4>项目管理</h4><ul><li>项目模板、WBS 任务分解、责任人与交付时间管理。</li><li>研发交付物可与 PLM 数据对象关联，便于按项目追踪图纸、BOM、文档和变更。</li><li>项目进度、团队任务和人员负荷可视化，支撑工程项目管理一期范围。</li></ul></div><div class="cap-card plm"><h4>协作管理</h4><ul><li>跨部门在线协作、任务分发、流程审批、待办提醒和协作记录留痕。</li><li>支持供应商受控访问的协作模式，但昌兴复材是否启用外部协作边界需另行确认。</li><li>说明会衔接：OA 与 PLM 一期 PDM/MBOM 能力的审批协同，需要明确冻结、生效、退回、会签等状态。</li></ul></div><div class="cap-card plm"><h4>协作与集成</h4><ul><li>来源页列出 ERP、MES、WMS、CRM、PBI、OA 等系统集成方向。</li><li>本次只保留必要衔接：PLM 一期 PDM/MBOM 工程发布、OA ↔ PLM 的变更审批协同、后续 PLM/MES/ERP 数据互通。</li><li>字段映射、接口频率、异常处理和主写方仍以第 15 节接口卡为准。</li></ul></div></div>
-  <div class="warn"><div class="wt">说明会口径约束</div><p>Windchill 的通用产品能力不等于昌兴复材一期交付范围。凡涉及具体接口字段、实施周期、CAD工具适配范围、ERP/MES/WMS双向集成细节，均需在接口卡或供应商技术确认中落账。</p></div>
+  <div class="sec-hd"><div class="sec-num">7</div><div><h2>OA 是什么</h2><div class="sd">协同入口 · 统一待办 / 审批证据 / 入口跳转 · 华天动力</div></div></div>
+  <div class="sys-hero oa"><div class="sys-kicker">OA 背景铺垫</div><h3>OA 是流程协同入口，不只是审批工具</h3><p>华天动力 OA 在本次集成方案中定位为跨系统协同层：承接 ERP、PLM、MES 等系统的待办提醒、消息触达、审批证据和门户入口。如果没有 OA 统一门户，员工每天需要在民机 OA、微信、邮件、线下直接沟通、商网、快表以及 ERP、PLM、MES 之间反复切换，重要通知容易被淹没，待办任务容易被遗漏，业务办理也难以形成统一闭环。具备条件的场景可通过单点登录、待办链接、接口回写和二次开发，实现从 OA 待办中心直接跳转到业务系统办理，避免各系统各自发通知、各自留痕、各自找入口。</p><div class="sys-tags"><span class="sys-tag oa">统一待办中心</span><span class="sys-tag oa">统一身份认证</span><span class="sys-tag oa">跨系统入口跳转</span><span class="sys-tag oa">审批证据归档</span><span class="sys-tag oa">移动协同</span></div></div>
+  <div class="stat-row"><div class="stat-box"><div class="num">8</div><div class="lbl">应用域</div></div><div class="stat-box"><div class="num">4</div><div class="lbl">安全层级</div></div><div class="stat-box"><div class="num">3</div><div class="lbl">防护体系</div></div><div class="stat-box"><div class="num">6</div><div class="lbl">统一中心</div></div><div class="stat-box"><div class="num">3</div><div class="lbl">服务体系</div></div></div>
+  <div class="g2"><div class="card"><h3>建设目标</h3><ul><li>把 ERP、PLM、MES 的审批提醒、任务消息和异常通知集中到 OA 待办中心。</li><li>把民机 OA、微信、邮件、商网、快表和线下沟通中的关键事项逐步纳入统一入口或统一提醒口径。</li><li>通过统一门户和单点登录减少重复登录，条件成熟时直接跳转到业务系统办理。</li><li>把审批意见、会签记录、附件、签章和流转日志沉淀为跨系统可追溯证据。</li><li>以组织、岗位、角色和权限为基础，支撑 MDM、PLM、MES 的人员身份和授权校验。</li><li>审批结果回写业务系统，避免 OA 批了、业务系统未落账的断点。</li></ul></div><div class="card"><h3>复材企业联动重点</h3><ul><li>PLM 的 ECO/ECN、MBOM 发布等审批由 OA 提醒和留痕，生效仍回到 PLM 执行。</li><li>MES 的工艺变更、质量放行、异常处置等流程通过 OA 统一提醒，执行动作回到 MES。</li><li>ERP 的采购、合同、费用、付款等审批可纳入统一入口，结果回写 ERP 形成账务依据。</li><li>特殊工艺、NDT、适航授权等岗位资质，需和 OA 角色、质量确认、MES 派工规则联动。</li></ul></div></div>
+  <div class="sys-hero oa"><div class="sys-kicker">重点展开</div><h3>现状痛点：为什么 OA 不能只做"内部审批"</h3><p>如果 OA 只管自己的表单，员工仍然要在民机 OA、微信、邮件、线下沟通、商网、快表、ERP、PLM、MES 等入口之间反复横跳。痛点需要分成两类看：一类是没有统一门户和统一待办时，员工日常使用会漏看、漏办、难追踪；另一类是开发集成阶段，待办来源、跳转方式、权限映射、结果回写和异常补偿没有设计清楚，会导致系统虽然接上了但闭环跑不稳。</p></div>
+  <div class="sec-hd sub"><div class="sec-num" style="background:var(--amber)">A</div><div><h2>没有统一门户和统一待办造成的痛点</h2><div class="sd">入口分散 · 通知淹没 · 责任不清 · 办理遗漏</div></div></div>
+  <div class="pain-grid"><div class="pain-item"><strong>待办入口分散</strong>民机 OA、微信、邮件、商网、快表、ERP、PLM、MES 各自提醒，员工需要反复登录和人工记忆待办。</div><div class="pain-item"><strong>通知容易淹没</strong>关键通知混在群消息、邮件、口头沟通和系统弹窗中，容易错过审批、变更、异常和放行节点。</div><div class="pain-item"><strong>办理责任不清</strong>线下直接沟通后缺少统一待办和催办记录，责任人、截止时间、是否处理难以跟踪。</div><div class="pain-item"><strong>移动办理不连续</strong>移动端只能看 OA 内部表单，跨系统任务仍需回电脑端处理。</div><div class="pain-item"><strong>审批证据分散</strong>会签意见、附件、签章和业务状态分布在不同系统，事后追溯效率低。</div><div class="pain-item"><strong>消息触达无闭环</strong>提醒发出后缺少已读、催办、超期和结果反馈，流程效率无法量化。</div></div>
+  <div class="sec-hd sub"><div class="sec-num" style="background:var(--amber)">B</div><div><h2>开发集成阶段会出现的痛点</h2><div class="sd">待办来源 · 跳转方式 · 权限映射 · 结果回写 · 异常补偿</div></div></div>
+  <div class="pain-grid"><div class="pain-item"><strong>待办口径不统一</strong>ERP、PLM、MES 对任务编号、标题、状态、优先级、办理人和截止时间的字段定义不同，需先统一待办模型。</div><div class="pain-item"><strong>跳转方式要分级</strong>有些事项只需要提醒，有些可跳转原系统办理，有些需要 OA 审批后回写结果，不能一刀切。</div><div class="pain-item"><strong>审批与落账脱节</strong>OA 审批通过后，如果业务系统未同步状态，仍会产生执行断点。</div><div class="pain-item"><strong>组织权限口径不一</strong>部门、岗位、角色、在职状态不统一，会影响 PLM 发布、MES 派工和 ERP 审批。</div><div class="pain-item"><strong>二次开发边界不清</strong>哪些待办拉取、哪些消息推送、哪些页面跳转、哪些结果回写，若不提前定义会拖慢联调。</div><div class="pain-item"><strong>异常补偿机制不足</strong>接口失败、跳转失效、账号未映射、权限不足时，若没有重试、告警和人工兜底，待办会卡在半路。</div><div class="pain-item"><strong>文件归档不可控</strong>审批附件、受控文件和业务数据缺少统一归档规则，影响适航审计证据链。</div><div class="pain-item"><strong>移动端能力差异</strong>PC 端能跳转办理不代表移动端也能办理，需确认移动端页面、附件、签章和权限能力。</div></div>
+  <div class="sec-hd sub"><div class="sec-num" style="background:var(--amber)">M</div><div><h2>10 类协同能力</h2><div class="sd">门户、流程、表单、权限、文档、组织、移动、集成、报表、服务</div></div></div>
+  <div class="cap-grid"><div class="cap-card oa"><h4>统一门户</h4><p>把民机 OA、微信、邮件、商网、快表和 ERP / PLM / MES 的关键入口聚合起来，支持按角色展示。</p></div><div class="cap-card oa"><h4>统一待办</h4><p>审批、消息、任务集中提醒，条件成熟时通过链接或单点登录跳转到业务系统办理。</p></div><div class="cap-card oa"><h4>智慧流程</h4><p>固定、自由、条件、并发、会签等流程支撑跨部门审批和复杂节点规则。</p></div><div class="cap-card oa"><h4>自定义表单</h4><p>表单、明细、关联查询和自动带入减少重复录入，并为接口字段落账提供结构化基础。</p></div><div class="cap-card oa"><h4>权限安全</h4><p>按权限组、管理员、审批节点和数据范围控制可见、可办、可写、可归档。</p></div><div class="cap-card oa"><h4>文档归档</h4><p>审批附件、流程记录、电子签章和受控文件按规则归档，支撑审计和追溯。</p></div><div class="cap-card oa"><h4>组织角色</h4><p>部门、岗位、人员、角色和权限作为统一身份底座，供其他系统消费或映射。</p></div><div class="cap-card oa"><h4>移动协同</h4><p>移动端、IM、消息提醒和视频会议支撑随时处理跨系统待办和催办。</p></div><div class="cap-card oa"><h4>系统集成</h4><p>统一身份认证、统一消息、统一报表和数据传输，打通信息孤岛。</p></div><div class="cap-card oa"><h4>实施服务</h4><p>调研、流程规划、培训、上线、回访和三五八服务体系保障持续运行。</p></div></div>
+  <div class="sec-hd sub"><div class="sec-num" style="background:var(--amber)">6</div><div><h2>6 大关键业务闭环</h2><div class="sd">提醒在 OA，办理在业务系统，结果要回写</div></div></div>
+  <div class="loop-grid"><div class="loop-item oa"><div class="loop-title">统一待办闭环</div><div class="loop-flow">ERP/PLM/MES 产生任务 → OA 聚合提醒 → 用户查看 → 跳转办理或 OA 审批 → 状态反馈</div><div class="loop-key">避免多系统漏看待办</div></div><div class="loop-item oa"><div class="loop-title">审批证据闭环</div><div class="loop-flow">申请 → 会签 → 审批意见 → 附件/签章 → 归档 → 审计查询</div><div class="loop-key">证据可查、版本可追</div></div><div class="loop-item oa"><div class="loop-title">ECO 协同闭环</div><div class="loop-flow">PLM 发起 ECO → OA 提醒/会签 → PLM 生效 → 影响对象同步 ERP/MES</div><div class="loop-key">OA 不替代 PLM 发布</div></div><div class="loop-item oa"><div class="loop-title">MES 放行闭环</div><div class="loop-flow">MES 提交质量/工艺审批 → OA 提醒 → 责任人处理 → MES 接收结果 → 工序继续或冻结</div><div class="loop-key">审批未通过不得流转</div></div><div class="loop-item oa"><div class="loop-title">组织权限闭环</div><div class="loop-flow">人员入转调离 → OA/MDM 更新 → ERP/PLM/MES 同步 → 权限校验 → 异常回收</div><div class="loop-key">离岗即收权，授权可追溯</div></div><div class="loop-item oa"><div class="loop-title">门户跳转闭环</div><div class="loop-flow">OA 门户展示业务待办 → SSO 校验 → 跳转原系统 → 原系统办理 → 结果回传 OA</div><div class="loop-key">二次开发边界需接口卡确认</div></div></div>
+  <div class="warn"><div class="wt">说明会口径约束</div><p>OA 是协同入口、提醒中心和流程证据层，不替 ERP 做账务、不替 PLM 做版本发布、不替 MES 做现场执行。凡涉及跨系统待办拉取、入口跳转、单点登录、审批结果回写和移动端办理，均需在接口卡中明确触发条件、字段范围、失败补偿和二次开发边界。</p></div>
 </div>
 
-<!-- ══ 8 MES 是什么 ══ -->
+<!-- ══ 8 PLM 是什么 ══ -->
 <div class="sec" id="s8">
-  <div class="sec-hd"><div class="sec-num">8</div><div><h2>MES 是什么</h2><div class="sd">车间执行神经系统 · 排产 / 工艺 / 质量 / 追溯 · 北京虎蜥</div></div></div>
+  <div class="sec-hd"><div class="sec-num">8</div><div><h2>PLM 是什么</h2><div class="sd">设计数据源头 · 图纸 / BOM / 变更 · 翎瑞鸿翔已定</div></div></div>
+  <div class="sys-hero plm"><div class="sys-kicker">PLM 背景铺垫</div><h3>PLM 是研发数据源头，不是图纸仓库</h3><p>翎瑞鸿翔 PLM 一期覆盖 MBOM(PDM)、ECO(ECN)、工程项目管理，是设计件成为制造件的数据起点。本节把来源页能力收敛为一期口径，并展开研发域现状痛点作为后续数据治理和接口设计的业务依据。</p><div class="sys-tags"><span class="sys-tag plm">MBOM(PDM)</span><span class="sys-tag plm">ECO(ECN)</span><span class="sys-tag plm">工程项目管理</span><span class="sys-tag plm">设计件黄金源</span><span class="sys-tag plm">一期范围已定</span></div></div>
+  <div class="stat-row"><div class="stat-box"><div class="num">3</div><div class="lbl">一期功能模块</div></div><div class="stat-box"><div class="num">21</div><div class="lbl">规划月数</div></div><div class="stat-box"><div class="num">3</div><div class="lbl">集成系统</div></div><div class="stat-box"><div class="num">3</div><div class="lbl">核心闭环</div></div><div class="stat-box"><div class="num">3</div><div class="lbl">实施阶段</div></div></div>
+  <div class="g2"><div class="card"><h3>建设目标</h3><ul><li>建立设计件到制造件的EBOM→MBOM结构化转换通道。</li><li>实现ECO变更从发起、审批、生效到全系统同步的闭环管控。</li><li>以工程项目管理支撑工程变更驱动的任务分解与进度跟踪。</li><li>确立设计件为下游ERP、MES系统的唯一黄金源。</li></ul></div><div class="card"><h3>航空复材专项能力</h3><ul><li>EBOM结构与复材铺层、构型状态、REV版本精确关联。</li><li>ECO变更自动影响MBOM工序结构版本。</li><li>设计件图号/版本/构型覆盖适航追溯要求。</li><li>BOM头字段（项目号、配置、构型状态、REV）与下游系统字段映射。</li></ul></div></div>
+  <div class="sys-hero plm"><div class="sys-kicker">重点展开</div><h3>现状痛点：为什么 PLM 不能只做"上线一个模块"</h3><p>研发域当前存在数据源头不清、变更链条断裂、版本不统一等问题，导致下游ERP/MES系统出现"同一个零件五个系统五种叫法"的主数据混乱风险。</p></div>
+  <div class="pain-grid"><div class="pain-item"><strong>EBOM→MBOM转换断层</strong>设计结构与工序结构无法直接对应，人工映射效率低且易出错。</div><div class="pain-item"><strong>BOM头字段不对齐</strong>项目号、配置、构型状态、REV在下游系统中字段名不一致。</div><div class="pain-item"><strong>ECO变更闭环缺失</strong>变更审批靠线下传递，无法自动触发下游系统版本更新。</div><div class="pain-item"><strong>设计版本不统一</strong>设计文件、工艺文件、质量文件版本不同步，存在混用风险。</div><div class="pain-item"><strong>适航追溯困难</strong>设计件→制造件→检验件的全链路追溯依赖人工台账。</div><div class="pain-item"><strong>变更响应滞后</strong>设计变更无法实时同步到车间执行层，造成工艺文件与现场不一致。</div><div class="pain-item"><strong>数据源头分散</strong>图纸、模型、BOM、文档分散管理，缺乏统一出口管控。</div><div class="pain-item"><strong>版本历史不透明</strong>无法快速定位某批次产品对应的设计版本和技术状态。</div></div>
+  <div class="sec-hd sub"><div class="sec-num" style="background:var(--purple)">M</div><div><h2>3 大功能模块</h2><div class="sd">MBOM(PDM) · ECO(ECN) · 工程项目管理</div></div></div>
+  <div class="cap-grid"><div class="cap-card plm"><h4>MBOM(PDM)</h4><p>EBOM接收、结构映射、BOM头字段对齐、版本管理，作为下游ERP/MES的制造数据起点。</p></div><div class="cap-card plm"><h4>ECO(ECN)</h4><p>变更发起、OA审批、ECO发布、版本生效闭环，自动触发受影响系统状态更新。</p></div><div class="cap-card plm"><h4>工程项目管理</h4><p>工程变更驱动的WBS任务分解、责任人与交付时间、进度跟踪，不涉及生产调度。</p></div></div>
+  <div class="sec-hd sub"><div class="sec-num" style="background:var(--purple)">3</div><div><h2>3 大关键业务闭环</h2><div class="sd">上一环节未完成或未生效，不进入下一环节</div></div></div>
+  <div class="loop-grid"><div class="loop-item"><div class="loop-title">设计件发布闭环</div><div class="loop-flow">设计编制 → 审核 → 受控发布 → EBOM输出 → MBOM映射 → 下发</div><div class="loop-key">未受控版本禁止流入下游</div></div><div class="loop-item"><div class="loop-title">ECO变更闭环</div><div class="loop-flow">ECR提出 → ECN评估 → ECO审批（OA）→ 生效 → 受影响对象版本更新 → 下游系统同步</div><div class="loop-key">审批未通过不得生效</div></div><div class="loop-item"><div class="loop-title">适航追溯闭环</div><div class="loop-flow">图号 + 构型状态 + REV覆盖设计件、工艺版本、检验记录、交付状态</div><div class="loop-key">支持全链路追溯查询</div></div></div>
+  <div class="warn"><div class="wt">说明会口径约束</div><p>翎瑞鸿翔的通用 PLM 能力不等于昌兴复材一期交付范围。凡涉及具体接口字段、实施周期、CAD工具适配范围、ERP/MES双向集成细节，均需在接口卡或供应商技术确认中落账。</p></div>
+</div>
+
+<!-- ══ 9 MES 是什么 ══ -->
+<div class="sec" id="s9">
+  <div class="sec-hd"><div class="sec-num">9</div><div><h2>MES 是什么</h2><div class="sd">车间执行神经系统 · 排产 / 工艺 / 质量 / 追溯 · 北京虎蜥</div></div></div>
   <div class="sys-hero mes"><div class="sys-kicker">MES 背景铺垫</div><h3>MES 是制造执行层，不只是一个报工系统</h3><p>来源页将 MES 规划定位为打通 ERP 订单到产品交付的端到端制造执行体系，覆盖订单、工艺、计划、执行、质量、仓储、设备、工装、问题、看板和风险管控。本节保留该框架，并把"现状痛点"展开为较大篇幅，作为后续 ERP-PP ⇄ MES 闭环和接口设计的业务依据。</p><div class="sys-tags"><span class="sys-tag mes">12 大功能模块</span><span class="sys-tag mes">14 项现状痛点</span><span class="sys-tag mes">7 大业务闭环</span><span class="sys-tag mes">三阶段实施</span><span class="sys-tag mes">航空级追溯</span></div></div>
   <div class="stat-row"><div class="stat-box"><div class="num">12</div><div class="lbl">功能模块</div></div><div class="stat-box"><div class="num">21</div><div class="lbl">规划月数</div></div><div class="stat-box"><div class="num">3</div><div class="lbl">集成系统</div></div><div class="stat-box"><div class="num">7</div><div class="lbl">核心闭环</div></div><div class="stat-box"><div class="num">3</div><div class="lbl">实施阶段</div></div></div>
   <div class="g2"><div class="card"><h3>建设目标</h3><ul><li>形成订单、工艺、计划、执行、质量、交付全流程闭环。</li><li>建立以 MBOM 为核心的结构化工艺体系，并强制控制版本。</li><li>实现无纸化生产执行、全过程数据采集、实时监控和精准追溯。</li><li>搭建航空级质量管理体系，推动质量问题从提报到归零闭环。</li><li>实现架次级项目管理与工序级生产执行协同。</li></ul></div><div class="card"><h3>复材专项能力</h3><ul><li>铺层方向、层数、顺序等参数可视化管理。</li><li>固化曲线、温度、时间、压力联动控制。</li><li>工装与复材工序精准绑定。</li><li>预浸料有效期预警，超期禁止领用。</li></ul></div></div>
@@ -542,17 +588,17 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
   <div class="loop-grid"><div class="loop-item"><div class="loop-title">主生产流程闭环</div><div class="loop-flow">ERP订单接收 → 工艺文件准备 → 生产计划排产 → 工序任务派工 → 生产执行 → 质量检验 → 产品交付</div><div class="loop-key">各环节数据互联互通</div></div><div class="loop-item"><div class="loop-title">工艺版本强控闭环</div><div class="loop-flow">工艺编制 → 审核 → 发布 → 下发 → 开工前强制校验 → 版本变更</div><div class="loop-key">非最新有效版本禁止开工</div></div><div class="loop-item"><div class="loop-title">质量问题闭环</div><div class="loop-flow">质量问题提报 → 原因分析 → 措施制定 → 措施执行 → 效果验证 → 问题归零</div><div class="loop-key">未闭环不得销号</div></div><div class="loop-item"><div class="loop-title">全流程追溯闭环</div><div class="loop-flow">图号 + 质量编号覆盖订单、工艺、计划、执行、物料、设备、质量、交付</div><div class="loop-key">支持全链路查询</div></div><div class="loop-item"><div class="loop-title">固化工艺管控闭环</div><div class="loop-flow">固化参数设定 → 设备运行 → 参数采集 → 参数比对 → 结果判定</div><div class="loop-key">参数未达标禁止流转</div></div><div class="loop-item"><div class="loop-title">物料齐套管控闭环</div><div class="loop-flow">物料需求 → 入库 → 齐套检查 → 投产前核对 → 领用</div><div class="loop-key">物料未齐套禁止投产</div></div><div class="loop-item"><div class="loop-title">审批流程闭环</div><div class="loop-flow">申请 → 审核 → 批准 → 执行 → 反馈</div><div class="loop-key">审批未通过禁止操作</div></div></div>
 </div>
 
-<!-- ══ 9 其他系统一览（远景规划） ══ -->
-<div class="sec" id="s9">
-  <div class="sec-hd"><div class="sec-num">9</div><div><h2>其他系统（远景规划）</h2><div class="sd">CAPP / WMS / 供应链管理系统 · 一期后规划项；PDM纳入PLM一期能力</div></div></div>
-  <div class="info"><p>以下系统在拓扑图中以虚线框展示，作为远景规划。一期聚焦4系统：ERP / OA / PLM / MES。</p></div>
-  <div class="cap-grid"><div class="cap-card"><h4>OA（华天动力）</h4><p>管流程审批、组织人员、岗位角色和跨域协同。与 PLM 一期 PDM/MBOM 能力、MES 交审批结果、人员组织和状态流转。</p></div><div class="cap-card"><h4>ERP（用友U8）</h4><p>管计划、采购、库存账、财务和成本。与 MES 交换生产计划、完工、工时、消耗和差异。</p></div></div>
+<!-- ══ 10 其他系统一览（远景规划） ══ -->
+<div class="sec" id="s10">
+  <div class="sec-hd"><div class="sec-num">10</div><div><h2>其他系统（远景规划）</h2><div class="sd">CAPP / WMS / 供应链管理系统 · 一期后规划项；PDM纳入PLM一期能力</div></div></div>
+  <div class="info"><p>以下系统在拓扑图中以虚线框展示，作为远景规划。一期聚焦4系统：ERP / OA / PLM / MES；OA 已前置为协同入口和待办提醒中心，ERP 作为运营与财务落账系统在接口章节展开。</p></div>
+  <div class="cap-grid"><div class="cap-card"><h4>CAPP（后续规划）</h4><p>管工艺设计、工艺路线、定额和制造工艺文件。与 PLM 承接设计数据，与 MES 下发可执行工艺。</p></div><div class="cap-card"><h4>WMS（后续规划）</h4><p>管库位、批次、有效期、出入库和库存实物状态。与 ERP 对账，与 MES 交换投料批次和齐套状态。</p></div><div class="cap-card"><h4>供应链管理系统（后续规划）</h4><p>管供应商协同、采购进度、交付风险和外协状态。与 ERP 采购、WMS 库存、MES 生产需求联动。</p></div></div>
   <div class="warn"><div class="wt">远景规划说明</div><p>PDM/MBOM 纳入翎瑞鸿翔 PLM 一期能力；CAPP · WMS · 供应链管理系统 不在一期范围内，相关系统能力与集成接口作为一期后规划项。拓扑图中以虚线展示作为愿景参考。</p></div>
 </div>
 
-<!-- ══ 10 主数据事故链 ══ -->
-<div class="sec" id="s10">
-  <div class="sec-hd"><div class="sec-num">10</div><div><h2>主数据混乱事故链</h2><div class="sd">同一个零件五个系统五种叫法 · 适航追溯风险</div></div></div>
+<!-- ══ 11 主数据事故链 ══ -->
+<div class="sec" id="s11">
+  <div class="sec-hd"><div class="sec-num">11</div><div><h2>主数据混乱事故链</h2><div class="sd">同一个零件五个系统五种叫法 · 适航追溯风险</div></div></div>
   <div class="accident">
     <div class="accident-title">主数据风险链示例（航空复材场景）</div>
     <div class="accident-sub">以下为风险推演，用于说明同一对象在多系统中缺少统一编码、字段映射和权威源时，如何放大为追溯与交付风险。</div>
@@ -601,9 +647,9 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
   </div>
 </div>
 
-<!-- ══ 11 MDM 是基石，不是可选项 ══ -->
-<div class="sec" id="s11">
-  <div class="sec-hd"><div class="sec-num">11</div><div><h2>MDM 是基石，不是可选项</h2><div class="sd">主数据管理：信息化第一阶段的"重中之重"</div></div></div>
+<!-- ══ 12 MDM 是基石，不是可选项 ══ -->
+<div class="sec" id="s12">
+  <div class="sec-hd"><div class="sec-num">12</div><div><h2>MDM 是基石，不是可选项</h2><div class="sd">主数据管理：信息化第一阶段的"重中之重"</div></div></div>
   <div class="alert"><div class="at">核心结论</div><p>主数据管理不是"锦上添花"，而是整个信息化建设的地基。MDM 工作属于第一阶段（打基础），具有强依赖关系——基础不牢，后续计划、执行与追溯功能将形同虚设，系统价值无法发挥。主数据盘点清洗是整个实施周期中最耗时的环节，涉及上万条数据的核对、去重与补全，需要 5-6 个月才能完成。如果强制上线，主数据问题会在第二、第三阶段以数倍成本集中爆发。</p></div>
 
   <div class="g5s">
@@ -636,9 +682,9 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
   </div>
 </div>
 
-<!-- ══ 12 系统集成拓扑 + 五条数据流 ══ -->
-<div class="sec" id="s12">
-  <div class="sec-hd"><div class="sec-num">12</div><div><h2>系统集成拓扑 + 五条数据流</h2><div class="sd">一张图 + 五条流 · 看清全貌</div></div></div>
+<!-- ══ 13 系统集成拓扑 + 五条数据流 ══ -->
+<div class="sec" id="s13">
+  <div class="sec-hd"><div class="sec-num">13</div><div><h2>系统集成拓扑 + 五条数据流</h2><div class="sd">一张图 + 五条流 · 看清全貌</div></div></div>
   <div class="topo">
     <svg width="880" height="520" viewBox="0 0 880 520" xmlns="http://www.w3.org/2000/svg">
       <defs>
@@ -804,9 +850,9 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
   </div>
 </div>
 
-<!-- ══ 13 MDM 建设路径 ══ -->
-<div class="sec" id="s13">
-  <div class="sec-hd"><div class="sec-num">13</div><div><h2>MDM 建设路径</h2><div class="sd">组织身份先行 · 流程牵引 · 术语统一 · 字段落账 · 黄金源矩阵</div></div></div>
+<!-- ══ 14 MDM 建设路径 ══ -->
+<div class="sec" id="s14">
+  <div class="sec-hd"><div class="sec-num">14</div><div><h2>MDM 建设路径</h2><div class="sd">组织身份先行 · 流程牵引 · 术语统一 · 字段落账 · 黄金源矩阵</div></div></div>
 
   <div class="alert">
     <div class="at">MDM 是系统集成的基石</div>
@@ -991,9 +1037,9 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
   </div>
 </div>
 
-<!-- ══ 14 黄金源说明矩阵 ══ -->
-<div class="sec" id="s14">
-  <div class="sec-hd"><div class="sec-num">14</div><div><h2>黄金源说明矩阵</h2><div class="sd">每类数据谁是权威源 · 谁维护 · 谁消费</div></div></div>
+<!-- ══ 15 黄金源说明矩阵 ══ -->
+<div class="sec" id="s15">
+  <div class="sec-hd"><div class="sec-num">15</div><div><h2>黄金源说明矩阵</h2><div class="sd">每类数据谁是权威源 · 谁维护 · 谁消费</div></div></div>
   <div class="info"><p>黄金源（Golden Source）指某字段或数据的唯一权威来源系统。说明会的目标不是把所有黄金源一次拍死，而是先区分"可原则确认、需供应商确认、需部门预沟通"的数据域，并把每个字段落实到维护部门、审批部门和消费系统。</p></div>
   <div class="tw"><table>
       <thead><tr><th>数据域</th><th>数据项</th><th>说明会建议</th><th>其他系统角色 / 待确认项</th></tr></thead>
@@ -1012,9 +1058,9 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
   <div class="warn"><div class="wt">说明会关注点</div><p>Q5 已解决：PLM为一期设计件物料黄金源；MBOM工序展开暂由人工或临时方案，CAPP后续规划；Q5已解决不代表Q6自动解决，两者是依赖关系而非并列关系。</p></div>
 </div>
 
-<!-- ══ 15 关键接口设计 ══ -->
-<div class="sec" id="s15">
-  <div class="sec-hd"><div class="sec-num">15</div><div><h2>关键接口设计</h2><div class="sd">2张接口卡 · 异常处理 · 主写方 · 人工兜底</div></div></div>
+<!-- ══ 16 关键接口设计 ══ -->
+<div class="sec" id="s16">
+  <div class="sec-hd"><div class="sec-num">16</div><div><h2>关键接口设计</h2><div class="sd">2张接口卡 · 异常处理 · 主写方 · 人工兜底</div></div></div>
   <div class="alert">
     <div class="at">接口设计前置要求</div>
     <p>所有关键接口必须先补齐"主数据依赖"和"术语风险"两栏。没有字段台账、黄金源、同步频率、失败重试和人工兜底的接口，不建议在说明会上作为最终方案确认。</p>
@@ -1059,9 +1105,9 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
   </div>
 </div>
 
-<!-- ══ 16 Q成熟度总览 ══ -->
-<div class="sec" id="s16">
-  <div class="sec-hd"><div class="sec-num">16</div><div><h2>Q1–Q8 成熟度总览</h2><div class="sd">今天可拍 · 需补资料 · 等供应商确认</div></div></div>
+<!-- ══ 17 Q成熟度总览 ══ -->
+<div class="sec" id="s17">
+  <div class="sec-hd"><div class="sec-num">17</div><div><h2>Q1–Q8 成熟度总览</h2><div class="sd">今天可拍 · 需补资料 · 等供应商确认</div></div></div>
   <div class="qmat">
     <div class="qmat-hd">
       <h3>成熟度状态口径</h3>
@@ -1137,9 +1183,9 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
   </div>
 </div>
 
-<!-- ══ 17 组织分工确认 ══ -->
-<div class="sec" id="s17">
-  <div class="sec-hd"><div class="sec-num">17</div><div><h2>组织分工确认</h2><div class="sd">业务确认人 · 数据确认人 · 部门责任边界</div></div></div>
+<!-- ══ 18 组织分工确认 ══ -->
+<div class="sec" id="s18">
+  <div class="sec-hd"><div class="sec-num">18</div><div><h2>组织分工确认</h2><div class="sd">业务确认人 · 数据确认人 · 部门责任边界</div></div></div>
   <div class="chain">
     <div class="chain-title">说明会推进机制</div>
     <div class="chain-step"><div class="chain-dot"></div><p><strong>决策层：</strong>总经理、经营副总、生产副总对跨部门冲突、系统路线和重大投入进行拍板。</p></div>
@@ -1157,9 +1203,9 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
   </div>
 </div>
 
-<!-- ══ 18 会后行动清单 ══ -->
-<div class="sec" id="s18">
-  <div class="sec-hd"><div class="sec-num">18</div><div><h2>会后行动清单</h2><div class="sd">责任人 + 会后输出截止 · 对照里程碑倒排</div></div></div>
+<!-- ══ 19 会后行动清单 ══ -->
+<div class="sec" id="s19">
+  <div class="sec-hd"><div class="sec-num">19</div><div><h2>会后行动清单</h2><div class="sd">责任人 + 会后输出截止 · 对照里程碑倒排</div></div></div>
   <div class="tw"><table>
       <thead><tr><th>编号</th><th>说明问题</th><th>可选方案 / 倾向</th><th>责任人</th><th>会后输出截止</th><th>说明会状态</th><th>备注</th></tr></thead>
     <tbody>
@@ -1190,8 +1236,9 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
       <tr><td>MDM主数据治理解决方案</td><td>V0.1</td><td>2026-05-07</td><td>已融合至MDM基石章节</td></tr>
       <tr><td>组织架构和部门职责</td><td>—</td><td>—</td><td>参考文档</td></tr>
       <tr><td>系统集成架构专题会</td><td>V0.1</td><td>2026-05-14</td><td>说明会材料</td></tr>
-      <tr><td>Windchill PLM 介绍网页</td><td>—</td><td>2026-05-08</td><td>已融合至 §7 PLM 是什么</td></tr>
-      <tr><td>沈阳昌兴 MES 系统规划建议网页</td><td>V1.0</td><td>2026-05-08</td><td>已融合至 §8 MES 是什么</td></tr>
+      <tr><td>华天动力协同办公系统解决方案</td><td>—</td><td>—</td><td>已融合至 §7 OA 是什么</td></tr>
+      <tr><td>Windchill PLM 介绍网页</td><td>—</td><td>2026-05-08</td><td>已融合至 §8 PLM 是什么</td></tr>
+      <tr><td>沈阳昌兴 MES 系统规划建议网页</td><td>V1.0</td><td>2026-05-08</td><td>已融合至 §9 MES 是什么</td></tr>
       <tr><td>汇报版结构大纲 V2（含排期）</td><td>V2</td><td>2026-05-08</td><td>已作为页面主结构</td></tr>
     </tbody>
   </table></div>
