@@ -8,6 +8,7 @@ const BASE_URL = `http://127.0.0.1:${PORT}`;
 
 function resetData() {
   db.exec(`
+    UPDATE departments SET manager_user_id=NULL;
     DELETE FROM approval_history;
     DELETE FROM approval_tasks;
     DELETE FROM field_conflicts;
@@ -73,7 +74,12 @@ function stopServer(server) {
     if (server.exitCode !== null || server.killed) return resolve();
     server.once('exit', resolve);
     server.kill();
-    setTimeout(resolve, 2000);
+    setTimeout(() => {
+      if (server.exitCode === null && !server.killed) {
+        server.kill('SIGKILL');
+      }
+      resolve();
+    }, 2000);
   });
 }
 
@@ -108,6 +114,13 @@ async function main() {
     assert.strictEqual(dept.res.status, 200);
     assert.ok(dept.body.id);
 
+    const duplicateDept = await request('/api/org/departments', {
+      method: 'POST',
+      body: JSON.stringify({ name: '重复信息化部', code: 'IT' })
+    }, cookie);
+    assert.strictEqual(duplicateDept.res.status, 409);
+    assert.strictEqual(duplicateDept.body.error, '编码或工号已存在');
+
     const user = await request('/api/org/users', {
       method: 'POST',
       body: JSON.stringify({
@@ -121,6 +134,12 @@ async function main() {
     }, cookie);
     assert.strictEqual(user.res.status, 200);
     assert.ok(user.body.id);
+
+    const updateDeptManager = await request(`/api/org/departments/${dept.body.id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ name: '信息化部', code: 'IT', manager_user_id: user.body.id })
+    }, cookie);
+    assert.strictEqual(updateDeptManager.res.status, 200);
 
     const users = await request('/api/org/users', {}, cookie);
     assert.strictEqual(users.res.status, 200);
