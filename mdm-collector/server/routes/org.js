@@ -3,28 +3,53 @@ const router = express.Router();
 const db = require('../db');
 const { hashPassword, verifyPassword, requireAuth, requireRole } = require('../auth');
 
+function handleDbError(res, error) {
+  if (error && (error.code === 'SQLITE_CONSTRAINT_UNIQUE' || String(error.message).includes('UNIQUE constraint failed'))) {
+    return res.status(409).json({ error: '编码或工号已存在' });
+  }
+  if (error && (String(error.code).startsWith('SQLITE_CONSTRAINT') || String(error.message).includes('constraint failed'))) {
+    return res.status(400).json({ error: '数据不符合约束' });
+  }
+  console.error(error);
+  return res.status(500).json({ error: '服务器错误' });
+}
+
+function runDbAction(res, action) {
+  try {
+    return action();
+  } catch (error) {
+    return handleDbError(res, error);
+  }
+}
+
 router.get('/departments', requireAuth, (req, res) => {
   const depts = db.prepare('SELECT * FROM departments ORDER BY code').all();
   res.json(depts);
 });
 
 router.post('/departments', requireRole('admin'), (req, res) => {
-  const { name, code, parent_id, manager_user_id } = req.body;
-  const stmt = db.prepare('INSERT INTO departments (name, code, parent_id, manager_user_id) VALUES (?, ?, ?, ?)');
-  const result = stmt.run(name, code, parent_id || null, manager_user_id || null);
-  res.json({ id: result.lastInsertRowid });
+  return runDbAction(res, () => {
+    const { name, code, parent_id, manager_user_id } = req.body;
+    const stmt = db.prepare('INSERT INTO departments (name, code, parent_id, manager_user_id) VALUES (?, ?, ?, ?)');
+    const result = stmt.run(name, code, parent_id || null, manager_user_id || null);
+    res.json({ id: result.lastInsertRowid });
+  });
 });
 
 router.put('/departments/:id', requireRole('admin'), (req, res) => {
-  const { name, code, parent_id, manager_user_id } = req.body;
-  const stmt = db.prepare('UPDATE departments SET name=?, code=?, parent_id=?, manager_user_id=? WHERE id=?');
-  stmt.run(name, code, parent_id || null, manager_user_id || null, req.params.id);
-  res.json({ success: true });
+  return runDbAction(res, () => {
+    const { name, code, parent_id, manager_user_id } = req.body;
+    const stmt = db.prepare('UPDATE departments SET name=?, code=?, parent_id=?, manager_user_id=? WHERE id=?');
+    stmt.run(name, code, parent_id || null, manager_user_id || null, req.params.id);
+    res.json({ success: true });
+  });
 });
 
 router.delete('/departments/:id', requireRole('admin'), (req, res) => {
-  db.prepare('DELETE FROM departments WHERE id=?').run(req.params.id);
-  res.json({ success: true });
+  return runDbAction(res, () => {
+    db.prepare('DELETE FROM departments WHERE id=?').run(req.params.id);
+    res.json({ success: true });
+  });
 });
 
 router.get('/users', requireAuth, (req, res) => {
@@ -38,25 +63,32 @@ router.get('/users', requireAuth, (req, res) => {
 });
 
 router.post('/users', requireRole('admin'), (req, res) => {
-  const { name, employee_no, department_id, post, role, password } = req.body;
-  const hash = hashPassword(password || 'init1234');
-  const stmt = db.prepare('INSERT INTO users (name, employee_no, department_id, post, role, password_hash) VALUES (?, ?, ?, ?, ?, ?)');
-  const result = stmt.run(name, employee_no, department_id || null, post || null, role || 'submitter', hash);
-  res.json({ id: result.lastInsertRowid });
+  return runDbAction(res, () => {
+    const { name, employee_no, department_id, post, role, password } = req.body;
+    const hash = hashPassword(password || 'init1234');
+    const stmt = db.prepare('INSERT INTO users (name, employee_no, department_id, post, role, password_hash) VALUES (?, ?, ?, ?, ?, ?)');
+    const result = stmt.run(name, employee_no, department_id || null, post || null, role || 'submitter', hash);
+    res.json({ id: result.lastInsertRowid });
+  });
 });
 
 router.put('/users/:id', requireRole('admin'), (req, res) => {
-  const { name, department_id, post, role } = req.body;
-  const stmt = db.prepare('UPDATE users SET name=?, department_id=?, post=?, role=? WHERE id=?');
-  stmt.run(name, department_id || null, post || null, role, req.params.id);
-  res.json({ success: true });
+  return runDbAction(res, () => {
+    const { name, department_id, post, role } = req.body;
+    const stmt = db.prepare('UPDATE users SET name=?, department_id=?, post=?, role=? WHERE id=?');
+    stmt.run(name, department_id || null, post || null, role, req.params.id);
+    res.json({ success: true });
+  });
 });
 
 router.post('/users/:id/password', requireRole('admin'), (req, res) => {
-  const { password } = req.body;
-  const hash = hashPassword(password);
-  db.prepare('UPDATE users SET password_hash=? WHERE id=?').run(hash, req.params.id);
-  res.json({ success: true });
+  return runDbAction(res, () => {
+    const { password } = req.body;
+    if (!password) return res.status(400).json({ error: '缺少密码' });
+    const hash = hashPassword(password);
+    db.prepare('UPDATE users SET password_hash=? WHERE id=?').run(hash, req.params.id);
+    res.json({ success: true });
+  });
 });
 
 router.post('/login', (req, res) => {
