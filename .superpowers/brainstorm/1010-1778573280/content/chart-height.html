@@ -1,0 +1,72 @@
+<h2>Dashboard 图表高度</h2>
+<p class="subtitle">当前 300px 固定，1080px 视口下内容区约有一半是空白</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>450px (适度放大)</h3>
+      <p>占视口 ~42%，平衡数据可视与下方内容</p>
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:4px;padding:8px;margin-top:8px;font-family:monospace;font-size:11px;">
+        .chart { height: 450px; }
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>视口比例 50vh (动态)</h3>
+      <p>始终占半个屏幕高度，不管分辨率。图表够大但有滚动</p>
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:4px;padding:8px;margin-top:8px;font-family:monospace;font-size:11px;">
+        .chart { height: calc(50vh - 120px); }
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>图表自适应 + 合并行</h3>
+      <p>增大图表的同时，将 2 列并排改为上下堆叠，每个图表独占一行更宽</p>
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:4px;padding:8px;margin-top:8px;font-family:monospace;font-size:11px;">
+        .chart { height: 420px; }<br>
+        .g2 { grid-template-columns: 1fr; }<br>
+        /* 宽屏下每个图表全宽 */
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mockup" style="margin-top:24px;">
+  <div class="mockup-header">各方案在 1080px 视口中的垂直占比</div>
+  <div class="mockup-body">
+    <div style="display:flex;gap:24px;">
+      <div style="flex:1;border:1px solid #e5e7eb;border-radius:4px;overflow:hidden;font-size:10px;text-align:center;">
+        <div style="background:#1a1a2e;color:#fff;padding:6px;">当前 300px</div>
+        <div style="background:#374151;height:56px;color:#fff;display:flex;align-items:center;justify-content:center;">Topbar</div>
+        <div style="background:#374151;height:44px;color:#9ca3af;display:flex;align-items:center;justify-content:center;">Tabs</div>
+        <div style="background:#fff;height:80px;display:flex;align-items:center;justify-content:center;border-bottom:1px solid #f3f4f6;">4 指标</div>
+        <div style="background:#f3f4f6;height:300px;display:flex;align-items:center;justify-content:center;">图表 300px</div>
+        <div style="background:#fef2f2;height:400px;display:flex;align-items:center;justify-content:center;color:#b91c1c;border:1px dashed #fca5a5;">浪费 ~400px</div>
+      </div>
+      <div style="flex:1;border:1px solid #e5e7eb;border-radius:4px;overflow:hidden;font-size:10px;text-align:center;">
+        <div style="background:#1a1a2e;color:#fff;padding:6px;">A · 450px</div>
+        <div style="background:#374151;height:56px;color:#fff;display:flex;align-items:center;justify-content:center;">Topbar</div>
+        <div style="background:#374151;height:44px;color:#9ca3af;display:flex;align-items:center;justify-content:center;">Tabs</div>
+        <div style="background:#fff;height:80px;display:flex;align-items:center;justify-content:center;border-bottom:1px solid #f3f4f6;">4 指标</div>
+        <div style="background:#f3f4f6;height:450px;display:flex;align-items:center;justify-content:center;">图表 450px</div>
+        <div style="background:#f3f4f6;height:250px;display:flex;align-items:center;justify-content:center;color:#6b7280;">剩余 ~250px</div>
+      </div>
+      <div style="flex:1;border:1px solid #e5e7eb;border-radius:4px;overflow:hidden;font-size:10px;text-align:center;">
+        <div style="background:#1a1a2e;color:#fff;padding:6px;">C · 420px+堆叠</div>
+        <div style="background:#374151;height:56px;color:#fff;display:flex;align-items:center;justify-content:center;">Topbar</div>
+        <div style="background:#374151;height:44px;color:#9ca3af;display:flex;align-items:center;justify-content:center;">Tabs</div>
+        <div style="background:#fff;height:80px;display:flex;align-items:center;justify-content:center;border-bottom:1px solid #f3f4f6;">4 指标</div>
+        <div style="background:#f3f4f6;height:420px;display:flex;align-items:center;justify-content:center;">图表1 420px 全宽</div>
+        <div style="background:#f3f4f6;height:420px;display:flex;align-items:center;justify-content:center;">图表2 420px 全宽</div>
+        <div style="background:#fef2f2;height:80px;display:flex;align-items:center;justify-content:center;color:#b91c1c;border:1px dashed #fca5a5;">需滚动 ↓</div>
+      </div>
+    </div>
+  </div>
+</div>

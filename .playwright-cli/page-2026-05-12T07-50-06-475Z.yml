@@ -1,0 +1,18 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - img "MDM" [ref=e4]
+      - text: MDM Collector
+    - generic [ref=e5]:
+      - generic [ref=e6]: 未登录
+      - button "退出" [ref=e7] [cursor=pointer]
+  - generic [ref=e9]:
+    - heading "登录系统" [level=2] [ref=e10]
+    - generic [ref=e12]:
+      - text: 工号
+      - textbox "工号" [ref=e13]: ADMIN001
+    - generic [ref=e15]:
+      - text: 密码
+      - textbox "密码" [ref=e16]: admin123
+    - button "登录" [ref=e17] [cursor=pointer]
+    - generic [ref=e18]: "测试账号: ADMIN001 / admin123"

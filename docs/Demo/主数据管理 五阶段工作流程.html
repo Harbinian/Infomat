@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>主数据管理 MDM 工作流程 · 昌兴复材</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --blue:#1a56db;--blue-lt:#e8f0fe;--navy:#0f2a5e;--teal:#0891b2;
+  --amber:#d97706;--red:#dc2626;--green:#16a34a;--purple:#7c3aed;
+  --orange:#ea580c;--gray:#64748b;--bg:#f8fafc;--card:#fff;--border:#e2e8f0;
+  --text:#1e293b;--muted:#475569;
+}
+html{scroll-behavior:smooth;overflow-x:hidden;scroll-padding-top:56px}
+body{font-family:"PingFang SC","Microsoft YaHei",Arial,sans-serif;background:var(--bg);color:var(--text);font-size:14px;overflow-x:hidden}
+a{text-decoration:none}
+nav{position:fixed;top:0;left:0;right:0;z-index:999;background:rgba(15,42,94,.97);backdrop-filter:blur(8px);height:50px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;gap:12px}
+.nav-logo{color:#fff;font-size:13px;font-weight:800;white-space:nowrap}
+.nav-links{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}.nav-links::-webkit-scrollbar{display:none}
+.nav-links a{color:rgba(255,255,255,.68);font-size:11px;padding:4px 9px;border-radius:4px;white-space:nowrap;transition:.2s}
+.nav-links a:hover{background:rgba(255,255,255,.15);color:#fff}
+.page{width:100%;padding:70px clamp(20px,4vw,72px) 60px}.sec{margin-bottom:58px;scroll-margin-top:58px}
+#cover{min-height:100vh;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(360px,.95fr);align-items:center;gap:42px;padding:76px clamp(24px,7vw,96px) 54px;background:linear-gradient(135deg,#081e4a 0%,#1a56db 56%,#0891b2 100%);position:relative;overflow:hidden}
+#cover:before{content:"";position:absolute;top:-36%;right:-10%;width:620px;height:620px;border-radius:50%;background:rgba(255,255,255,.045)}
+.cv-tag{display:inline-block;background:rgba(255,255,255,.12);color:#a5c8ff;font-size:11px;padding:4px 12px;border-radius:20px;border:1px solid rgba(255,255,255,.2);margin-bottom:18px;width:fit-content}
+#cover h1{color:#fff;font-size:clamp(25px,3.6vw,44px);line-height:1.33;margin-bottom:12px;letter-spacing:0}
+#cover h1 span{color:#7dd3fc}.cv-sub{color:rgba(255,255,255,.72);font-size:14px;line-height:1.9;margin-bottom:28px;max-width:680px}
+.cv-meta{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:22px}.cv-box{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);border-radius:8px;padding:10px 16px}
+.cv-box .cl{color:rgba(255,255,255,.48);font-size:10px;margin-bottom:3px}.cv-box .cv{color:#fff;font-size:13px;font-weight:700}
+.cv-ptag{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:12px 16px;max-width:640px}
+.cv-ptag .cpl{color:rgba(255,255,255,.46);font-size:10px;margin-bottom:8px}.cv-ptag .cpt{display:flex;flex-wrap:wrap;gap:6px}
+.cv-ptag .cpt span{background:rgba(255,255,255,.12);color:rgba(255,255,255,.86);font-size:11px;padding:3px 10px;border-radius:12px}
+.scroll-hint{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,.35);font-size:11px;text-align:center}.scroll-hint:after{content:"↓";display:block;animation:bob .9s infinite alternate}@keyframes bob{from{transform:translateY(0)}to{transform:translateY(6px)}}
+.hero-art{position:relative;z-index:1;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.18);border-radius:18px;padding:18px;box-shadow:0 22px 60px rgba(2,8,23,.22)}
+.art-cap{position:relative;z-index:1;display:flex;justify-content:space-between;gap:10px;margin-top:12px;font-size:12px;color:#dbeafe}.art-cap strong{color:#fff}
+.sec-hd{display:flex;align-items:flex-start;gap:12px;margin-bottom:22px}.sec-num{width:32px;height:32px;border-radius:50%;background:var(--blue);color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
+.sec-hd h2{font-size:20px;color:var(--navy);margin-bottom:2px}.sec-hd .sd{font-size:12px;color:var(--gray)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.card h3{font-size:14px;color:var(--navy);margin-bottom:9px}.card p,.card li{font-size:13px;color:var(--muted);line-height:1.85}.card ul{padding-left:16px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.badge-row{display:flex;flex-wrap:wrap;gap:7px}.badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:800}
+.badge.plm{background:#ede9fe;color:#6d28d9}.badge.erp{background:#dbeafe;color:#1d4ed8}.badge.mes{background:#dcfce7;color:#166534}.badge.owner{background:#ffedd5;color:#c2410c}
+.badge.std{background:#e8f0fe;color:#1a56db}.badge.clean{background:#fef3c7;color:#92400e}.badge.proc{background:#ede9fe;color:#6d28d9}.badge.integ{background:#dcfce7;color:#166534}.badge.ops{background:#ffe4e6;color:#be123c}
+.flow{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}.flow-step{position:relative;background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px 14px 12px;border-top:4px solid var(--blue);min-height:160px}
+.flow-step:after{content:"→";position:absolute;right:-12px;top:48%;transform:translateY(-50%);color:#94a3b8;font-size:20px;font-weight:900}.flow-step:last-child:after{display:none}
+.flow-step .n{width:26px;height:26px;border-radius:50%;background:var(--blue);color:#fff;font-size:12px;font-weight:900;display:flex;align-items:center;justify-content:center;margin-bottom:8px}.flow-step h3{font-size:13px;color:var(--navy);margin-bottom:6px}.flow-step p{font-size:12px;line-height:1.7;color:var(--muted)}
+.flow-step.green{border-top-color:var(--green)}.flow-step.green .n{background:var(--green)}.flow-step.amber{border-top-color:var(--amber)}.flow-step.amber .n{background:var(--amber)}.flow-step.purple{border-top-color:var(--purple)}.flow-step.purple .n{background:var(--purple)}.flow-step.red{border-top-color:var(--red)}.flow-step.red .n{background:var(--red)}
+.tw{overflow-x:auto;border-radius:10px;border:1px solid var(--border);margin-bottom:14px;background:#fff}table{width:100%;border-collapse:collapse;font-size:12px}th{background:var(--navy);color:#fff;padding:9px 12px;text-align:left;font-weight:700;white-space:nowrap}td{padding:8px 12px;border-bottom:1px solid var(--border);color:var(--muted);vertical-align:top;line-height:1.7}tr:last-child td{border-bottom:none}tr:hover td{background:var(--blue-lt)}td strong{color:var(--text)}
+.warn{background:#fffbeb;border:1px solid #fde68a;border-left:4px solid var(--amber);border-radius:8px;padding:12px 16px;margin-bottom:14px}.warn .wt{font-size:13px;font-weight:800;color:#92400e;margin-bottom:5px}.warn p{font-size:12px;color:#78350f;line-height:1.8}
+.success{background:#f0fdf4;border:1px solid #bbf7d0;border-left:4px solid var(--green);border-radius:8px;padding:12px 16px;margin-bottom:14px}.success p{font-size:12px;color:#14532d;line-height:1.8}
+.info{background:#eff6ff;border:1px solid #bfdbfe;border-left:4px solid var(--blue);border-radius:8px;padding:12px 16px;margin-bottom:14px}.info p{font-size:12px;color:#1e3a8a;line-height:1.8}
+.danger{background:#fef2f2;border:1px solid #fecaca;border-left:4px solid var(--red);border-radius:8px;padding:12px 16px;margin-bottom:14px}.danger .dt{font-size:13px;font-weight:800;color:#991b1b;margin-bottom:5px}.danger p{font-size:12px;color:#7f1d1d;line-height:1.8}
+.status-chain{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.st{background:#fff;border:1px solid var(--border);border-radius:999px;padding:7px 12px;font-size:12px;font-weight:800;color:var(--navy)}.arrow{color:#94a3b8;font-weight:900}
+.dataflow{background:#06172a;border:1px solid #1d4ed8;border-radius:12px;padding:18px;overflow:hidden;box-shadow:0 12px 30px rgba(15,42,94,.18)}
+.dataflow svg{display:block;width:100%;height:auto}.legend{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:12px;color:#dbeafe;font-size:11px}.dot{width:12px;height:12px;border-radius:50%;display:inline-block;margin-right:6px;vertical-align:-2px}
+.cat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.cat-card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center;transition:.2s}.cat-card:hover{box-shadow:0 4px 12px rgba(0,0,0,.08);border-color:var(--blue)}.cat-card .cat-icon{font-size:28px;margin-bottom:6px}.cat-card .cat-name{font-size:13px;font-weight:800;color:var(--navy)}.cat-card .cat-desc{font-size:11px;color:var(--gray);margin-top:4px}
+.resp-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.resp-card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px;border-left:4px solid var(--blue)}.resp-card .r-sys{font-size:13px;font-weight:800;color:var(--navy);margin-bottom:4px}.resp-card .r-dept{font-size:11px;color:var(--amber);font-weight:700;margin-bottom:4px}.resp-card .r-desc{font-size:11px;color:var(--muted);line-height:1.6}
+.foot{color:var(--gray);font-size:11px;text-align:center;padding:20px 0 0;border-top:1px solid var(--border)}
+.summary-box{background:linear-gradient(135deg,#081e4a,#1a56db);border-radius:12px;padding:24px 28px;color:#fff;margin-top:12px}
+.summary-box h3{font-size:16px;margin-bottom:10px;color:#7dd3fc}.summary-box p{font-size:13px;line-height:1.9;color:rgba(255,255,255,.82)}
+.timeline{position:relative;padding-left:24px;border-left:3px solid var(--blue)}.tl-item{position:relative;margin-bottom:16px}.tl-item:before{content:"";position:absolute;left:-31px;top:4px;width:14px;height:14px;border-radius:50%;background:var(--blue);border:3px solid #fff;box-shadow:0 0 0 2px var(--blue)}.tl-item .tl-h{font-size:13px;font-weight:800;color:var(--navy);margin-bottom:3px}.tl-item .tl-p{font-size:12px;color:var(--muted);line-height:1.7}
+@media(max-width:980px){#cover{grid-template-columns:1fr;padding-top:86px}.flow{grid-template-columns:1fr 1fr}.flow-step:after{display:none}.g2,.g3,.g4,.cat-grid,.resp-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:640px){nav{padding:0 12px}.nav-logo{font-size:12px}.page{padding:64px 14px 42px}#cover{padding:78px 16px 48px}.hero-art{padding:12px}.flow{grid-template-columns:1fr}.cat-grid,.resp-grid{grid-template-columns:1fr}.sec-hd h2{font-size:18px}}
+</style>
+</head>
+<body>
+<nav>
+  <div class="nav-logo">MDM 工作流程 · 昌兴复材</div>
+  <div class="nav-links">
+    <a href="#stage1">定标准</a>
+    <a href="#stage2">清存量</a>
+    <a href="#stage3">控过程</a>
+    <a href="#stage4">促集成</a>
+    <a href="#stage5">保运行</a>
+    <a href="#summary">总结</a>
+  </div>
+</nav>
+
+<section id="cover">
+  <div>
+    <div class="cv-tag">MDM · MASTER DATA MANAGEMENT</div>
+    <h1>主数据管理<br/><span>五阶段</span>工作流程</h1>
+    <p class="cv-sub">基于<strong>沈阳昌兴信息化建设规划</strong>，主数据管理（MDM）是系统上线的核心基础工程。涵盖体系定义、存量清洗、流程建设、系统集成及持续运营五个阶段，将线下管理规则转化为系统的"技术法规"。</p>
+    <div class="cv-meta">
+      <div class="cv-box"><div class="cl">涉及系统</div><div class="cv">PLM · ERP · MES</div></div>
+      <div class="cv-box"><div class="cl">数据规模</div><div class="cv">上万条存量数据</div></div>
+      <div class="cv-box"><div class="cl">核心周期</div><div class="cv">5-6 个月（清洗阶段）</div></div>
+      <div class="cv-box"><div class="cl">编码规范</div><div class="cv">≥ 30 位混合编码</div></div>
+    </div>
+    <div class="cv-ptag">
+      <div class="cpl">五个阶段</div>
+      <div class="cpt"><span>定标准</span><span>清存量</span><span>控过程</span><span>促集成</span><span>保运行</span></div>
+    </div>
+  </div>
+  <div class="hero-art" aria-label="MDM 五阶段工作流程示意">
+    <svg viewBox="0 0 640 440" role="img" aria-label="MDM 五阶段流水线">
+      <defs>
+        <linearGradient id="g1" x1="0" x2="1" y1="0" y2="0"><stop offset="0%" stop-color="#1a56db"/><stop offset="100%" stop-color="#0891b2"/></linearGradient>
+        <filter id="sh" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#0f172a" flood-opacity=".2"/></filter>
+        <marker id="ar" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#7dd3fc"/></marker>
+      </defs>
+      <rect x="10" y="10" width="620" height="420" rx="16" fill="none" stroke="rgba(255,255,255,.08)"/>
+      <!-- Stage blocks -->
+      <rect x="24" y="54" width="110" height="130" rx="12" fill="rgba(255,255,255,.1)" stroke="rgba(255,255,255,.2)" filter="url(#sh)"/>
+      <text x="79" y="88" text-anchor="middle" fill="#fff" font-size="16" font-weight="900">定标准</text>
+      <text x="79" y="108" text-anchor="middle" fill="rgba(255,255,255,.6)" font-size="10">体系定义</text>
+      <text x="79" y="124" text-anchor="middle" fill="rgba(255,255,255,.6)" font-size="10">编码规范</text>
+      <text x="79" y="140" text-anchor="middle" fill="rgba(255,255,255,.6)" font-size="10">属性标准</text>
+      <text x="79" y="156" text-anchor="middle" fill="rgba(255,255,255,.6)" font-size="10">职责划分</text>
+
+      <path d="M138 118 L152 118" stroke="#7dd3fc" stroke-width="3" marker-end="url(#ar)"/>
+
+      <rect x="154" y="54" width="110" height="130" rx="12" fill="rgba(255,255,255,.1)" stroke="rgba(255,255,255,.2)" filter="url(#sh)"/>
+      <text x="209" y="88" text-anchor="middle" fill="#fbbf24" font-size="16" font-weight="900">清存量</text>
+      <text x="209" y="108" text-anchor="middle" fill="rgba(255,255,255,.6)" font-size="10">多源盘点</text>
+      <text x="209" y="124" text-anchor="middle" fill="rgba(255,255,255,.6)" font-size="10">人工去重</text>
+      <text x="209" y="140" text-anchor="middle" fill="rgba(255,255,255,.6)" font-size="10">补全属性</text>
+      <text x="209" y="156" text-anchor="middle" fill="rgba(255,255,255,.6)" font-size="10">校验规则</text>
+
+      <path d="M268 118 L282 118" stroke="#7dd3fc" stroke-width="3" marker-end="url(#ar)"/>
+
+      <rect x="284" y="54" width="110" height="130" rx="12" fill="rgba(255,255,255,.1)" stroke="rgba(255,255,255,.2)" filter="url(#sh)"/>
+      <text x="339" y="88" text-anchor="middle" fill="#c084fc" font-size="16" font-weight="900">控过程</text>
+      <text x="339" y="108" text-anchor="middle" fill="rgba(255,255,255,.6)" font-size="10">全生命周期</text>
+      <text x="339" y="124" text-anchor="middle" fill="rgba(255,255,255,.6)" font-size="10">变更审批</text>
+      <text x="339" y="140" text-anchor="middle" fill="rgba(255,255,255,.6)" font-size="10">权限架构</text>
+      <text x="339" y="156" text-anchor="middle" fill="rgba(255,255,255,.6)" font-size="10">闭环管控</text>
+
+      <path d="M398 118 L412 118" stroke="#7dd3fc" stroke-width="3" marker-end="url(#ar)"/>
+
+      <rect x="414" y="54" width="110" height="130" rx="12" fill="rgba(255,255,255,.1)" stroke="rgba(255,255,255,.2)" filter="url(#sh)"/>
+      <text x="469" y="88" text-anchor="middle" fill="#4ade80" font-size="16" font-weight="900">促集成</text>
+      <text x="469" y="108" text-anchor="middle" fill="rgba(255,255,255,.6)" font-size="10">系统打通</text>
+      <text x="469" y="124" text-anchor="middle" fill="rgba(255,255,255,.6)" font-size="10">同源同步</text>
+      <text x="469" y="140" text-anchor="middle" fill="rgba(255,255,255,.6)" font-size="10">映射关系</text>
+      <text x="469" y="156" text-anchor="middle" fill="rgba(255,255,255,.6)" font-size="10">双向实时</text>
+
+      <path d="M528 118 L542 118" stroke="#7dd3fc" stroke-width="3" marker-end="url(#ar)"/>
+
+      <rect x="544" y="54" width="80" height="130" rx="12" fill="rgba(255,255,255,.1)" stroke="rgba(255,255,255,.2)" filter="url(#sh)"/>
+      <text x="584" y="88" text-anchor="middle" fill="#fda4af" font-size="16" font-weight="900">保运行</text>
+      <text x="584" y="108" text-anchor="middle" fill="rgba(255,255,255,.6)" font-size="10">导入校验</text>
+      <text x="584" y="124" text-anchor="middle" fill="rgba(255,255,255,.6)" font-size="10">用户培训</text>
+      <text x="584" y="140" text-anchor="middle" fill="rgba(255,255,255,.6)" font-size="10">动态维护</text>
+      <text x="584" y="156" text-anchor="middle" fill="rgba(255,255,255,.6)" font-size="10">持续清洗</text>
+
+      <!-- Bottom: unified bar -->
+      <rect x="24" y="220" width="600" height="56" rx="12" fill="rgba(255,255,255,.08)" stroke="rgba(255,255,255,.12)"/>
+      <text x="324" y="246" text-anchor="middle" fill="#7dd3fc" font-size="15" font-weight="900">一物一码 · 一处维护 · 多系统一致消费</text>
+      <text x="324" y="266" text-anchor="middle" fill="rgba(255,255,255,.5)" font-size="11">从线下管理规则 → 系统技术法规</text>
+
+      <!-- Risk note -->
+      <rect x="24" y="300" width="600" height="100" rx="12" fill="rgba(220,38,38,.12)" stroke="rgba(220,38,38,.25)"/>
+      <text x="324" y="326" text-anchor="middle" fill="#fca5a5" font-size="13" font-weight="900">⚠ 流程执行不彻底的风险</text>
+      <text x="324" y="350" text-anchor="middle" fill="rgba(255,255,255,.55)" font-size="11">清洗不净 → MRP 运算失真</text>
+      <text x="324" y="370" text-anchor="middle" fill="rgba(255,255,255,.55)" font-size="11">编码规则不统一 → 车间无法报工</text>
+      <text x="324" y="390" text-anchor="middle" fill="rgba(255,255,255,.55)" font-size="11">一物多码 → 物料齐套性检查失效</text>
+    </svg>
+    <div class="art-cap"><strong>MDM 五阶段流水线</strong><span>定标准 → 清存量 → 控过程 → 促集成 → 保运行</span></div>
+  </div>
+  <div class="scroll-hint">向下查看详细流程</div>
+</section>
+
+<main class="page">
+
+  <!-- ========== 阶段一：体系定义与标准制定 ========== -->
+  <section id="stage1" class="sec">
+    <div class="sec-hd"><div class="sec-num">1</div><div><h2>体系定义与标准制定</h2><div class="sd">确立企业全局的"通用语言"和"唯一身份证"规则，从源头杜绝一物多码。</div></div></div>
+
+    <div class="card">
+      <h3>一、主数据分类体系</h3>
+      <p>明确划分以下八大类主数据，每类建立独立的管理标准和属性模板：</p>
+      <div class="cat-grid" style="margin-top:12px">
+        <div class="cat-card"><div class="cat-icon">🔩</div><div class="cat-name">标准件</div><div class="cat-desc">紧固件、轴承等<br/>国标/航标件</div></div>
+        <div class="cat-card"><div class="cat-icon">🧱</div><div class="cat-name">原材料</div><div class="cat-desc">金属/非金属<br/>板材、型材</div></div>
+        <div class="cat-card"><div class="cat-icon">💻</div><div class="cat-name">电子元器件</div><div class="cat-desc">电阻、电容<br/>连接器、线缆</div></div>
+        <div class="cat-card"><div class="cat-icon">⚙️</div><div class="cat-name">零组件</div><div class="cat-desc">自制/外协件<br/>组件、部件</div></div>
+        <div class="cat-card"><div class="cat-icon">🔧</div><div class="cat-name">工艺组件</div><div class="cat-desc">工艺拆分件<br/>虚拟件</div></div>
+        <div class="cat-card"><div class="cat-icon">🏭</div><div class="cat-name">设备</div><div class="cat-desc">生产设备<br/>检测设备</div></div>
+        <div class="cat-card"><div class="cat-icon">🛠️</div><div class="cat-name">工装</div><div class="cat-desc">模具、夹具<br/>型架、样板</div></div>
+        <div class="cat-card"><div class="cat-icon">📐</div><div class="cat-name">工具</div><div class="cat-desc">刀具、量具<br/>辅具</div></div>
+      </div>
+    </div>
+
+    <div class="g2">
+      <div class="card">
+        <h3>二、统一编码规范</h3>
+        <ul>
+          <li>支持<strong>不少于 30 位混合编码</strong>，涵盖大类、中类、小类、流水号及校验位</li>
+          <li>每一物料/零部件分配<strong>唯一编码</strong>，作为跨系统的"身份证号"</li>
+          <li>编码规则需兼顾<strong>可读性、可扩展性和机器解析</strong>要求</li>
+          <li>从源头杜绝"一物多码"和"多物一码"</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>三、标准化属性标准</h3>
+        <ul>
+          <li><strong>必填属性：</strong>每类数据定义不可为空的强制字段</li>
+          <li><strong>可选属性：</strong>视业务场景需要的辅助字段</li>
+          <li>示例 — 材料类必填：标准号、牌号、供应状态、规格、密度</li>
+          <li>示例 — 零组件类必填：图号、名称、版次、材料牌号、重量</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>四、归口管理职责</h3>
+      <p>落实各部门维护责任，确保每类主数据有明确的 Owner：</p>
+      <div class="resp-grid" style="margin-top:10px">
+        <div class="resp-card"><div class="r-sys">物料主数据</div><div class="r-dept">物资保障部 + 工程技术部</div><div class="r-desc">联合维护物料编码、名称、规格、计量单位等核心属性</div></div>
+        <div class="resp-card"><div class="r-sys">设备主数据</div><div class="r-dept">运维安环部</div><div class="r-desc">维护设备台账、技术参数、保养周期、精度指标</div></div>
+        <div class="resp-card"><div class="r-sys">零组件主数据</div><div class="r-dept">工程技术部</div><div class="r-desc">维护图号、名称、版次、材料、工艺路线等工程属性</div></div>
+        <div class="resp-card"><div class="r-sys">工装 / 工具主数据</div><div class="r-dept">工程技术部 + 复材车间</div><div class="r-desc">维护工装图号、工具编号、适用机型、检定周期</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 阶段二：存量数据盘点与清洗 ========== -->
+  <section id="stage2" class="sec">
+    <div class="sec-hd"><div class="sec-num">2</div><div><h2>存量数据盘点与清洗</h2><div class="sd">整个流程中最耗时、工作量最大的环节（通常需 5-6 个月），涉及上万条数据的处理。</div></div></div>
+
+    <div class="warn">
+      <div class="wt">工作量预警</div>
+      <p>存量清洗通常需 <strong>5-6 个月</strong>，涉及 <strong>上万条数据</strong> 的人工核对、去重、纠错和补全。此阶段质量直接决定后续 MRP 运算、车间报工和物料齐套性检查的准确性。</p>
+    </div>
+
+    <div class="flow">
+      <div class="flow-step"><div class="n">1</div><h3>多源数据盘点</h3><p>对现有 ERP 系统数据、纸质单据、个人电脑电子文档及库房实物进行全面盘点。</p></div>
+      <div class="flow-step amber"><div class="n">2</div><h3>人工整理去重</h3><p>组织专业人员对数据进行人工核对，识别并合并重复编码，纠正错误信息。</p></div>
+      <div class="flow-step purple"><div class="n">3</div><h3>属性字段补全</h3><p>根据标准补全缺失的属性字段，确保每条数据信息完整、可追溯。</p></div>
+      <div class="flow-step green"><div class="n">4</div><h3>校验规则建立</h3><p>设定完整性、准确性和唯一性校验逻辑，防止无效或重复数据再次进入系统。</p></div>
+      <div class="flow-step"><div class="n">5</div><h3>清洗成果确认</h3><p>输出清洗后的高质量主数据台账，经业务部门确认后封版。</p></div>
+    </div>
+
+    <div class="g3" style="margin-top:14px">
+      <div class="card">
+        <h3>盘点范围</h3>
+        <ul>
+          <li>现有 ERP 系统中的物料/零部件数据</li>
+          <li>纸质单据（工艺卡、BOM 表、领料单）</li>
+          <li>个人电脑中的 Excel 台账</li>
+          <li>库房实物核对（名称、规格、数量）</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>去重策略</h3>
+        <ul>
+          <li>同图号不同名称 → 提交 Owner 确认</li>
+          <li>同名称不同图号 → 核实是否为同一物料</li>
+          <li>近似编码 → 人工核查是否为重复创建</li>
+          <li>历史遗留"一物多码" → 建立映射关系</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>校验规则类型</h3>
+        <ul>
+          <li><strong>完整性校验：</strong>必填字段非空检查</li>
+          <li><strong>准确性校验：</strong>格式、取值范围检查</li>
+          <li><strong>唯一性校验：</strong>编码不重复、名称+规格不重</li>
+          <li><strong>关联性校验：</strong>图号与材料牌号一致性</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 阶段三：全生命周期管理流程 ========== -->
+  <section id="stage3" class="sec">
+    <div class="sec-hd"><div class="sec-num">3</div><div><h2>全生命周期管理流程建设</h2><div class="sd">将主数据的产生与变更纳入系统化、闭环化的管控体系。</div></div></div>
+
+    <div class="card">
+      <h3>规范化生命周期阶段</h3>
+      <div class="status-chain" style="margin-top:10px;margin-bottom:14px">
+        <span class="st">新增</span><span class="arrow">→</span>
+        <span class="st">审核</span><span class="arrow">→</span>
+        <span class="st">生效</span><span class="arrow">→</span>
+        <span class="st">变更</span><span class="arrow">→</span>
+        <span class="st">停用</span><span class="arrow">→</span>
+        <span class="st">归档</span>
+      </div>
+      <p>每个状态节点对应明确的触发条件、审批人和处理时限，形成端到端的闭环管理。主数据<strong>不允许物理删除</strong>，停用和归档保留完整历史痕迹。</p>
+    </div>
+
+    <div class="g2">
+      <div class="card">
+        <h3>变更审批机制</h3>
+        <ul>
+          <li>任何主数据的<strong>新增、修改、停用</strong>必须经过相关部门线上审批</li>
+          <li>记录<strong>变更原因、变更内容及历史版本</strong>，实现全链路可追溯</li>
+          <li>审批流程支持<strong>多级会签</strong>（如物料变更需仓储 + 技术 + 质量联合会签）</li>
+          <li>变更生效后<strong>自动通知</strong>所有消费系统（ERP、MES、PLM）</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>权限架构配置（4W+1H）</h3>
+        <ul>
+          <li><strong>Who：</strong>谁——操作人身份与角色</li>
+          <li><strong>When：</strong>何时——操作时间窗口</li>
+          <li><strong>Where：</strong>何地——操作终端/网络位置</li>
+          <li><strong>What：</strong>何对象——哪个主数据对象</li>
+          <li><strong>How：</strong>何种权限——增/删/改/查/审批</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="info">
+      <p><strong>设计原则：</strong>主数据修改权限集中在归口管理部门，消费系统（ERP、MES）对主数据只有<strong>只读消费</strong>权限，不允许回写覆盖 MDM 标准值。</p>
+    </div>
+  </section>
+
+  <!-- ========== 阶段四：多系统集成与协同 ========== -->
+  <section id="stage4" class="sec">
+    <div class="sec-hd"><div class="sec-num">4</div><div><h2>多系统集成与协同配置</h2><div class="sd">主数据必须作为"单一数据源"在各系统间流转，确保同源同步。</div></div></div>
+
+    <div class="dataflow">
+      <svg viewBox="0 0 1100 380" role="img" aria-label="MDM 多系统集成拓扑图">
+        <defs>
+          <marker id="ab" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#60a5fa"/></marker>
+          <marker id="ag" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#22c55e"/></marker>
+          <marker id="ap" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#c084fc"/></marker>
+          <filter id="ns" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#000" flood-opacity=".22"/></filter>
+        </defs>
+        <rect x="20" y="20" width="1060" height="340" rx="18" fill="#071a31" stroke="#1e3a8a"/>
+
+        <!-- PLM -->
+        <rect x="50" y="110" width="180" height="140" rx="14" fill="#ede9fe" stroke="#a78bfa" filter="url(#ns)"/>
+        <text x="140" y="152" text-anchor="middle" fill="#4c1d95" font-size="22" font-weight="900">PLM</text>
+        <text x="140" y="180" text-anchor="middle" fill="#5b21b6" font-size="12">产品生命周期管理</text>
+        <text x="140" y="204" text-anchor="middle" fill="#334155" font-size="11">MBOM · ECO · 图文档</text>
+        <text x="140" y="226" text-anchor="middle" fill="#6d28d9" font-size="11" font-weight="700">主数据产生源</text>
+
+        <!-- MDM (center) -->
+        <rect x="430" y="74" width="240" height="212" rx="16" fill="#f8fafc" stroke="#1a56db" stroke-width="3" filter="url(#ns)"/>
+        <text x="550" y="126" text-anchor="middle" fill="#0f2a5e" font-size="24" font-weight="900">MDM</text>
+        <text x="550" y="156" text-anchor="middle" fill="#1d4ed8" font-size="13" font-weight="700">主数据管理平台</text>
+        <text x="550" y="184" text-anchor="middle" fill="#475569" font-size="12">编码 · 属性 · 黄金源</text>
+        <text x="550" y="206" text-anchor="middle" fill="#475569" font-size="12">生命周期 · 审批 · 发布</text>
+        <text x="550" y="232" text-anchor="middle" fill="#475569" font-size="12">变更通知 · 同步调度</text>
+        <text x="550" y="260" text-anchor="middle" fill="#1a56db" font-size="12" font-weight="800">← 单一数据源 →</text>
+
+        <!-- ERP -->
+        <rect x="860" y="78" width="180" height="102" rx="14" fill="#dbeafe" stroke="#60a5fa" filter="url(#ns)"/>
+        <text x="950" y="116" text-anchor="middle" fill="#1d4ed8" font-size="20" font-weight="900">ERP（用友 U8）</text>
+        <text x="950" y="142" text-anchor="middle" fill="#475569" font-size="11">计划 · 采购 · 库存 · 财务</text>
+        <text x="950" y="162" text-anchor="middle" fill="#1d4ed8" font-size="11" font-weight="700">主数据消费方</text>
+
+        <!-- MES -->
+        <rect x="860" y="210" width="180" height="102" rx="14" fill="#dcfce7" stroke="#4ade80" filter="url(#ns)"/>
+        <text x="950" y="248" text-anchor="middle" fill="#166534" font-size="20" font-weight="900">MES（虎蜥）</text>
+        <text x="950" y="274" text-anchor="middle" fill="#475569" font-size="11">派工 · 报工 · 追溯 · 质检</text>
+        <text x="950" y="294" text-anchor="middle" fill="#166534" font-size="11" font-weight="700">主数据消费方</text>
+
+        <!-- Arrows: PLM → MDM -->
+        <path d="M230 160 C300 150 360 148 430 156" fill="none" stroke="#c084fc" stroke-width="4" marker-end="url(#ap)"/>
+        <text x="330" y="132" text-anchor="middle" fill="#d8b4fe" font-size="11">维护确认</text>
+
+        <!-- MDM → ERP -->
+        <path d="M670 138 C740 120 800 118 860 128" fill="none" stroke="#60a5fa" stroke-width="4" marker-end="url(#ab)"/>
+        <text x="765" y="106" text-anchor="middle" fill="#bfdbfe" font-size="11">发布消费（实时/批量）</text>
+
+        <!-- MDM → MES -->
+        <path d="M670 228 C740 256 800 266 860 262" fill="none" stroke="#22c55e" stroke-width="4" marker-end="url(#ag)"/>
+        <text x="765" y="280" text-anchor="middle" fill="#bbf7d0" font-size="11">发布消费（实时/批量）</text>
+
+        <!-- Bidirectional hint -->
+        <path d="M950 180 C950 196 950 202 950 210" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5 4"/>
+        <text x="990" y="200" fill="#94a3b8" font-size="10">库存变动</text>
+        <text x="990" y="212" fill="#94a3b8" font-size="10">反馈 MRP</text>
+      </svg>
+      <div class="legend">
+        <span><i class="dot" style="background:#c084fc"></i>PLM → MDM 维护链路</span>
+        <span><i class="dot" style="background:#60a5fa"></i>MDM → ERP 发布链路</span>
+        <span><i class="dot" style="background:#22c55e"></i>MDM → MES 发布链路</span>
+        <span><i class="dot" style="background:#94a3b8"></i>ERP ↔ MES 库存反馈</span>
+      </div>
+    </div>
+
+    <div class="g3" style="margin-top:14px">
+      <div class="card">
+        <h3>打通集成通道</h3>
+        <p>开发 PLM、ERP、MES 三大系统间的主数据同步接口，实现统一的接口规范和数据格式。</p>
+        <div class="badge-row" style="margin-top:8px">
+          <span class="badge plm">PLM ↔ MDM</span>
+          <span class="badge erp">MDM → ERP</span>
+          <span class="badge mes">MDM → MES</span>
+        </div>
+      </div>
+      <div class="card">
+        <h3>双向实时同步</h3>
+        <p>MES 中的物料主数据与库房库存变动需<strong>实时反馈至 ERP</strong>，支撑其 MRP 运算。主数据变更在 MDM 发布后自动推送至所有消费系统。</p>
+      </div>
+      <div class="card">
+        <h3>新旧编码映射</h3>
+        <p>在处理"一物多码"历史问题时，建立<strong>旧编码与新标准编码的映射关系</strong>，保障历史业务数据的可追溯性，支持按新码或旧码双向查询。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 阶段五：数据导入、验证与持续运营 ========== -->
+  <section id="stage5" class="sec">
+    <div class="sec-hd"><div class="sec-num">5</div><div><h2>数据导入、验证与持续运营</h2><div class="sd">将高质量数据导入生产环境，建立长效维护机制，确保数据质量持续稳定。</div></div></div>
+
+    <div class="g3">
+      <div class="card">
+        <h3>分批导入与验证</h3>
+        <ul>
+          <li>将清洗后的高质量数据<strong>分批次</strong>导入生产环境</li>
+          <li>每批次导入后进行<strong>全链路业务跑通验证</strong></li>
+          <li>验证场景：BOM 展开、MRP 运算、采购下单、车间派工、报工、入库</li>
+          <li>导入异常数据<strong>回滚并记录</strong>，修正后重新导入</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>用户培训</h3>
+        <ul>
+          <li>针对<strong>主数据维护人员</strong>进行标准化录入与变更规范培训</li>
+          <li>培训内容：编码规则、属性填写规范、审批流程操作、常见错误案例</li>
+          <li>建立<strong>操作手册和培训考核</strong>机制</li>
+          <li>消费系统用户培训：如何识别和使用标准主数据</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>动态维护与持续清洗</h3>
+        <ul>
+          <li>建立<strong>定期维护机制</strong>（如月度/季度数据质量巡检）</li>
+          <li>动态更新<strong>主数据台账</strong>，确保账实一致</li>
+          <li>定期清理系统内的<strong>冗余数据</strong>（重复、过期、无效记录）</li>
+          <li>数据质量 KPI 监控：准确率、完整率、及时率</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="success">
+      <p><strong>目标状态：</strong>主数据质量长效稳定，一物一码、一处维护、多系统一致消费。MRP 运算准确、车间报工顺畅、物料齐套性检查可靠。</p>
+    </div>
+
+    <div class="card">
+      <h3>数据质量监控指标</h3>
+      <div class="tw">
+        <table>
+          <thead>
+            <tr><th>指标</th><th>定义</th><th>目标值</th><th>监控频率</th><th>责任人</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>完整率</strong></td><td>必填字段非空的数据占比</td><td>≥ 99%</td><td>月度</td><td>数据管理员</td></tr>
+            <tr><td><strong>准确率</strong></td><td>字段值与实物/标准一致的数据占比</td><td>≥ 98%</td><td>季度</td><td>归口部门</td></tr>
+            <tr><td><strong>唯一率</strong></td><td>无重复编码的数据占比</td><td>100%</td><td>月度</td><td>MDM 管理员</td></tr>
+            <tr><td><strong>及时率</strong></td><td>变更后 24h 内同步至消费系统的占比</td><td>≥ 95%</td><td>实时监控</td><td>IT 运维</td></tr>
+            <tr><td><strong>消费一致率</strong></td><td>ERP/MES 中数据与 MDM 标准一致的占比</td><td>≥ 99%</td><td>月度</td><td>IT 运维</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 总结 ========== -->
+  <section id="summary" class="sec">
+    <div class="sec-hd"><div class="sec-num">◆</div><div><h2>总结</h2><div class="sd">MDM 工作流程的本质与关键成功要素。</div></div></div>
+
+    <div class="summary-box">
+      <h3>MDM 的本质</h3>
+      <p>MDM 工作流程的本质是将昌兴的<strong>线下管理规则转化为系统的"技术法规"</strong>。它不是单纯的数据录入项目，而是企业数字化建设的<strong>基础设施工程</strong>，其质量直接影响所有上层业务系统的运行效果。</p>
+    </div>
+
+    <div class="g2" style="margin-top:14px">
+      <div class="danger">
+        <div class="dt">流程执行不彻底的后果</div>
+        <p>清洗不净 → 二阶段 <strong>MRP 运算失真</strong><br/>编码规则不统一 → <strong>车间无法报工</strong><br/>一物多码 → <strong>物料齐套性检查失效</strong></p>
+      </div>
+      <div class="success">
+        <p><strong>流程执行到位的收益</strong><br/>一物一码，跨系统一致消费<br/>MRP 运算准确，采购计划可信<br/>车间报工顺畅，生产进度实时可见<br/>物料齐套检查可靠，装配计划可执行<br/>质量追溯链路完整，适航审核合规</p>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <h3>五个阶段关系</h3>
+      <div class="flow">
+        <div class="flow-step"><div class="n">1</div><h3>定标准</h3><p>基础中的基础。标准不立，后续工作无从谈起。</p></div>
+        <div class="flow-step amber"><div class="n">2</div><h3>清存量</h3><p>最耗时但最关键的"补课"。存量不净，新系统跑在脏数据上。</p></div>
+        <div class="flow-step purple"><div class="n">3</div><h3>控过程</h3><p>制度化保障。没有流程管控，数据质量无法持续。</p></div>
+        <div class="flow-step green"><div class="n">4</div><h3>促集成</h3><p>价值兑现。主数据只有流转起来，才能真正发挥"单一数据源"作用。</p></div>
+        <div class="flow-step"><div class="n">5</div><h3>保运行</h3><p>长效保障。数据质量管理是持续工程，不是一次性项目。</p></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="foot">主数据管理 MDM 工作流程 · 沈阳昌兴复材信息化建设核心基础工程 · 2026</div>
+</main>
+</body>
+</html>

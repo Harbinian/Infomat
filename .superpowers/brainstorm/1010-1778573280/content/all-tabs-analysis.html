@@ -1,0 +1,116 @@
+<h2>所有 Tab 空间浪费全景</h2>
+<p class="subtitle">7 个 Tab 在 1920×1080 下的空间利用率分析</p>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+  <!-- Dashboard -->
+  <div class="card">
+    <div class="card-body">
+      <h3>📊 统计看板</h3>
+      <p style="font-size:12px;color:#6b7280;">利用率 ⭐⭐ (最低)</p>
+      <ul style="font-size:12px;">
+        <li>4 个指标卡铺满整行，每个仅 3 字</li>
+        <li>2 个图表每个 300px（占视口 28%）</li>
+        <li>图表下方大量空白</li>
+        <li>1200px 容器 → 两侧 360px 空</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Capabilities -->
+  <div class="card">
+    <div class="card-body">
+      <h3>📋 能力与流程申报</h3>
+      <p style="font-size:12px;color:#6b7280;">利用率 ⭐⭐⭐</p>
+      <ul style="font-size:12px;">
+        <li>左 320px 表单：双层堆叠（能力+流程）</li>
+        <li>表单项少（3-4 个/表单），垂直间隙大</li>
+        <li>右表格 6 列：ID (冗余)、层级 (L1/L2)、状态 (小 tag)</li>
+        <li>表格下方可能还有滚动空间</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Submission -->
+  <div class="card">
+    <div class="card-body">
+      <h3>📨 报送管理</h3>
+      <p style="font-size:12px;color:#6b7280;">利用率 ⭐⭐⭐</p>
+      <ul style="font-size:12px;">
+        <li>左 320px：新建映射 + 导入字段（堆叠）</li>
+        <li>右表格 6 列：空间分配不均</li>
+        <li>导入区 notice 大段文字占地</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Todos -->
+  <div class="card">
+    <div class="card-body">
+      <h3>✅ 待办收到</h3>
+      <p style="font-size:12px;color:#6b7280;">利用率 ⭐⭐</p>
+      <ul style="font-size:12px;">
+        <li>全宽表格，8 列但仅 1 行数据</li>
+        <li>工具栏 3 个控件占一整行</li>
+        <li>空状态时整页空白</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Reviews -->
+  <div class="card">
+    <div class="card-body">
+      <h3>📝 评审记录</h3>
+      <p style="font-size:12px;color:#6b7280;">利用率 ⭐⭐</p>
+      <ul style="font-size:12px;">
+        <li>仅工具栏+表格，无侧栏</li>
+        <li>7 列表格，数据行少</li>
+        <li>页面短，下半空白</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Terms -->
+  <div class="card">
+    <div class="card-body">
+      <h3>📖 术语词典</h3>
+      <p style="font-size:12px;color:#6b7280;">利用率 ⭐⭐⭐</p>
+      <ul style="font-size:12px;">
+        <li>Split 布局，同能力申报</li>
+        <li>左表单 5 字段+1 按钮</li>
+        <li>右表 6 列</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Conflicts -->
+  <div class="card">
+    <div class="card-body">
+      <h3>⚡ 冲突管理</h3>
+      <p style="font-size:12px;color:#6b7280;">利用率 ⭐⭐</p>
+      <ul style="font-size:12px;">
+        <li>全宽表格+工具栏</li>
+        <li>8 列，内容少时大面积空白</li>
+        <li>工具栏 search input 仅 200px</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:24px;">
+  <h3>根本原因归结</h3>
+</div>
+
+<div style="display:flex;gap:16px;">
+  <div style="flex:1;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:16px;">
+    <div style="font-weight:600;font-size:14px;color:#b91c1c;margin-bottom:8px;">1. 固定宽度容器</div>
+    <p style="font-size:12px;color:#6b7280;"><code>max-width: 1200px</code> — 不考虑实际屏幕，一刀切。大多数企业屏幕 1920+，内容仅占 62%。</p>
+  </div>
+  <div style="flex:1;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:16px;">
+    <div style="font-weight:600;font-size:14px;color:#b91c1c;margin-bottom:8px;">2. Split 320px 魔数</div>
+    <p style="font-size:12px;color:#6b7280;">左侧固定 320px 对表单太少（输入框被压缩），对表格页右侧又闲置。</p>
+  </div>
+  <div style="flex:1;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:16px;">
+    <div style="font-weight:600;font-size:14px;color:#b91c1c;margin-bottom:8px;">3. 未适配数据密度</div>
+    <p style="font-size:12px;color:#6b7280;">数据少时表格下方大片空白，数据多时又需滚动。图表固定高度不论数据量。</p>
+  </div>
+</div>

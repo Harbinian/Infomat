@@ -1,0 +1,38 @@
+- generic [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]: MDM Collector
+    - generic [ref=e4]:
+      - generic [ref=e5]: 系统管理员 · admin
+      - button "退出" [ref=e6] [cursor=pointer]
+  - generic [ref=e18]:
+    - navigation [ref=e19]:
+      - button "统计看板" [ref=e20] [cursor=pointer]
+      - button "能力与流程申报" [ref=e21] [cursor=pointer]
+      - button "报送管理" [ref=e22] [cursor=pointer]
+      - button "待办收到" [active] [ref=e23] [cursor=pointer]
+      - button "评审记录" [ref=e24] [cursor=pointer]
+      - button "术语词典" [ref=e25] [cursor=pointer]
+      - button "冲突管理" [ref=e26] [cursor=pointer]
+    - generic [ref=e487]:
+      - generic [ref=e488]:
+        - heading "待办收到" [level=2] [ref=e489]
+        - generic [ref=e490]:
+          - combobox [ref=e491]:
+            - option "全部状态" [selected]
+            - option "待处理"
+            - option "已完成"
+          - button "刷新" [ref=e492] [cursor=pointer]
+      - table [ref=e494]:
+        - rowgroup [ref=e495]:
+          - row "ID 来源 接收 类型 内容 截止 状态 操作" [ref=e496]:
+            - columnheader "ID" [ref=e497]
+            - columnheader "来源" [ref=e498]
+            - columnheader "接收" [ref=e499]
+            - columnheader "类型" [ref=e500]
+            - columnheader "内容" [ref=e501]
+            - columnheader "截止" [ref=e502]
+            - columnheader "状态" [ref=e503]
+            - columnheader "操作" [ref=e504]
+        - rowgroup [ref=e505]:
+          - row "暂无数据" [ref=e506]:
+            - cell "暂无数据" [ref=e507]

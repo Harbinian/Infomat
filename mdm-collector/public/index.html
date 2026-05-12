@@ -973,7 +973,11 @@
     function renderOperationPage(params) {
       document.querySelectorAll('.panel').forEach(function(p) { p.classList.remove('on'); });
       $('detailPage').classList.add('on');
-      $('detailContent').innerHTML = '<div class="empty">操作页 (Phase 6 实现)</div>';
+      if (params.type === 'mapping' && params.action === 'reject') {
+        openRejectPage(parseInt(params.id));
+      } else {
+        $('detailContent').innerHTML = '<div class="empty">未知操作</div>';
+      }
     }
 
     // ===== Event bindings =====
@@ -1234,15 +1238,279 @@
       }
     }
 
-    // ===== Phase 6 stubs =====
-    async function handleApprove(mappingId) { showToast('审批功能将在 Phase 6 实现', 'warning'); }
-    async function handlePublish(mappingId) { showToast('发布功能将在 Phase 6 实现', 'warning'); }
-    function openRejectPage(mappingId) { showToast('驳回功能将在 Phase 6 实现', 'warning'); }
-    async function openAssignOwnerDialog(conflictId, conflictType) { showToast('指定责任人功能将在 Phase 6 实现', 'warning'); }
-    async function openFinalDecideDialog(conflictId, conflictType) { showToast('终裁功能将在 Phase 6 实现', 'warning'); }
-    async function openSubmitCoordinationDialog(conflictId, conflictType) { showToast('协调功能将在 Phase 6 实现', 'warning'); }
-    async function handleReopen(conflictId, conflictType) { showToast('重开功能将在 Phase 6 实现', 'warning'); }
-    async function handleArchive(conflictId, conflictType) { showToast('归档功能将在 Phase 6 实现', 'warning'); }
+    // ===== Phase 6: L3/L4 Operations =====
+
+    // --- Mapping approve / reject / publish ---
+
+    async function handleApprove(mappingId) {
+      const mapping = state.activeMapping;
+      if (!mapping) return;
+      const confirmed = await showLightConfirm({
+        title: '确认通过',
+        message: `确认通过流程映射 #${mappingId}？`,
+      });
+      if (!confirmed) return;
+      try {
+        await api(`/api/mappings/${mappingId}/review`, {
+          method: 'POST',
+          body: JSON.stringify({ step: mapping.current_step, action: 'approve', opinion: '' })
+        });
+        showToast('已通过');
+        navigateTo('list', { tab: 'todos' });
+      } catch (e) {
+        showToast(e.message || '操作失败', 'error');
+      }
+    }
+
+    async function handlePublish(mappingId) {
+      const confirmed = await showConfirm({
+        title: '确认发布',
+        message: '发布后不可再变更。确认发布？',
+        confirmLabel: '发布',
+        confirmClass: 'primary',
+      });
+      if (!confirmed) return;
+      try {
+        await api(`/api/mappings/${mappingId}/publish`, { method: 'POST' });
+        showToast('已发布');
+        navigateTo('list', { tab: 'reviews' });
+      } catch (e) {
+        showToast(e.message || '发布失败', 'error');
+      }
+    }
+
+    function openRejectPage(mappingId) {
+      const mapping = state.activeMapping;
+      if (!mapping) return;
+
+      setBreadcrumb([
+        { label: '待办列表', onclick: `navigateTo('list',{tab:'todos'})` },
+        { label: `流程映射 #${mappingId}`, onclick: `renderMappingDetail(${mappingId},'todos')` },
+        { label: '驳回审核' },
+      ]);
+
+      const container = $('detailContent');
+      container.innerHTML = `
+        <h2>驳回审核 — 流程映射 #${mappingId}</h2>
+        <div class="notice" style="border-left-color: var(--error); margin-bottom: 24px;">
+          请至少标记一个字段为驳回，并为每个被标记驳回的字段填写原因。驳回后整单退回草稿，需重走完整审批链。
+        </div>
+        <div class="form-group">
+          <label>整体驳回意见<textarea id="rejectOpinion" placeholder="可选填整体意见"></textarea></label>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead><tr><th style="width: 60px;">标记驳回</th><th>字段中文名</th><th>当前值</th><th>驳回原因</th></tr></thead>
+            <tbody id="rejectFieldRows">
+              ${(mapping.fields || []).map(f => `
+                <tr>
+                  <td><input type="checkbox" class="reject-checkbox" data-field-id="${f.id}" onchange="toggleRejectRow(this)"></td>
+                  <td>${f.field_name_cn || '-'}</td>
+                  <td>${f.note || f.field_type || '-'}</td>
+                  <td><input class="reject-reason-input" data-field-id="${f.id}" placeholder="填写该字段驳回原因" disabled style="width: 100%;"></td>
+                </tr>
+              `).join('') || '<tr><td colspan="4" class="empty">无字段可驳回</td></tr>'}
+            </tbody>
+          </table>
+        </div>
+        <div class="error" id="rejectError" style="color: var(--error); font-size: 13px; margin-top: 16px;"></div>
+        <div class="toolbar" style="margin-top: 24px; justify-content: flex-end;">
+          <button class="btn secondary" onclick="renderMappingDetail(${mappingId},'todos')">取消</button>
+          <button class="btn danger" id="confirmRejectBtn">确认驳回</button>
+        </div>
+      `;
+
+      $('detailPage').classList.add('on');
+      document.querySelectorAll('.panel').forEach(el => el.classList.remove('on'));
+      $('confirmRejectBtn').onclick = () => submitReject(mappingId);
+    }
+
+    function toggleRejectRow(checkbox) {
+      const fieldId = checkbox.dataset.fieldId;
+      const input = document.querySelector(`.reject-reason-input[data-field-id="${fieldId}"]`);
+      if (input) {
+        input.disabled = !checkbox.checked;
+        if (checkbox.checked) { input.focus(); } else { input.value = ''; }
+      }
+    }
+
+    async function submitReject(mappingId) {
+      const rejections = [];
+      document.querySelectorAll('.reject-checkbox:checked').forEach(cb => {
+        const fieldId = parseInt(cb.dataset.fieldId);
+        const reasonEl = document.querySelector(`.reject-reason-input[data-field-id="${fieldId}"]`);
+        rejections.push({ field_entry_id: fieldId, reason: reasonEl?.value || '' });
+      });
+
+      if (rejections.length === 0) {
+        $('rejectError').textContent = '请至少标记一个字段的驳回原因';
+        return;
+      }
+      const emptyReason = rejections.find(r => !r.reason.trim());
+      if (emptyReason) {
+        $('rejectError').textContent = '请填写所有被标记驳回字段的原因';
+        return;
+      }
+
+      $('rejectError').textContent = '';
+      const confirmed = await showConfirm({
+        title: '确认驳回',
+        message: `将驳回 ${rejections.length} 个字段，整单退回草稿。确认驳回？`,
+        confirmLabel: '确认驳回',
+        confirmClass: 'danger',
+      });
+      if (!confirmed) return;
+
+      try {
+        await api(`/api/mappings/${mappingId}/reject`, {
+          method: 'POST',
+          body: JSON.stringify({ opinion: $('rejectOpinion')?.value || '', rejections })
+        });
+        showToast('已驳回');
+        navigateTo('list', { tab: 'todos' });
+      } catch (e) {
+        if (e.details) {
+          $('rejectError').textContent = e.details.map(d => d.message).join('; ');
+        } else {
+          showToast(e.message || '驳回失败', 'error');
+        }
+      }
+    }
+
+    // --- Conflict operations ---
+
+    async function openAssignOwnerDialog(conflictId, conflictType) {
+      try {
+        const users = await api('/api/org/users');
+        const selectHtml = `<select id="assigneeSelect" style="width: 100%; margin-top: 8px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px;">${users.map(u => `<option value="${u.id}">${u.name} (${u.department_id || '-'})</option>`).join('')}</select>`;
+
+        const confirmed = await showConfirm({
+          title: '指定责任人',
+          message: `<div style="font-size: 14px;"><label style="display: flex; flex-direction: column; gap: 8px;">选择责任人${selectHtml}</label></div>`,
+          confirmLabel: '指定',
+          confirmClass: 'primary',
+        });
+        if (!confirmed) return;
+
+        const assigneeId = parseInt(document.getElementById('assigneeSelect')?.value);
+        if (!assigneeId) return;
+
+        await api(`/api/conflicts/${conflictId}/assign?type=${conflictType}`, {
+          method: 'POST',
+          body: JSON.stringify({ assignee_user_id: assigneeId })
+        });
+        showToast('责任人已指定');
+        renderConflictDetail(conflictId, conflictType, 'conflicts');
+      } catch (e) {
+        showToast(e.message || '指定失败', 'error');
+      }
+    }
+
+    async function openSubmitCoordinationDialog(conflictId, conflictType) {
+      const container = $('detailContent');
+      container.innerHTML = `
+        <h2>提交协调结果 — 冲突 #${conflictId}</h2>
+        <div class="form-group">
+          <label>协调结果
+            <select id="coordinationResult" style="margin-top: 8px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px;">
+              <option value="A">采用 A 部门口径</option>
+              <option value="B">采用 B 部门口径</option>
+              <option value="compromise">折中方案</option>
+            </select>
+          </label>
+        </div>
+        <div class="form-group">
+          <label>协调说明<textarea id="coordinationNote" placeholder="说明协调过程和理由"></textarea></label>
+        </div>
+        <div style="margin-top: 24px; display: flex; justify-content: flex-end; gap: 8px;">
+          <button class="btn secondary" onclick="renderConflictDetail(${conflictId},'${conflictType}','conflicts')">取消</button>
+          <button class="btn primary" id="submitCoordBtn">提交</button>
+        </div>
+      `;
+
+      $('detailPage').classList.add('on');
+      document.querySelectorAll('.panel').forEach(el => el.classList.remove('on'));
+      $('submitCoordBtn').onclick = async () => {
+        const result = $('coordinationResult').value;
+        const note = $('coordinationNote').value;
+        try {
+          await api(`/api/conflicts/${conflictId}/coordination?type=${conflictType}`, {
+            method: 'POST',
+            body: JSON.stringify({ result, note })
+          });
+          showToast('协调结果已提交');
+          renderConflictDetail(conflictId, conflictType, 'conflicts');
+        } catch (e) {
+          showToast(e.message || '提交失败', 'error');
+        }
+      };
+    }
+
+    async function openFinalDecideDialog(conflictId, conflictType) {
+      const container = $('detailContent');
+      container.innerHTML = `
+        <h2>终裁 — 冲突 #${conflictId}</h2>
+        <div class="form-group">
+          <label>最终决议<textarea id="finalResolution" placeholder="逐字段给出最终决议"></textarea></label>
+        </div>
+        <div class="form-group">
+          <label>终裁意见<textarea id="finalOpinion" placeholder="可选填终裁意见"></textarea></label>
+        </div>
+        <div style="margin-top: 24px; display: flex; justify-content: flex-end; gap: 8px;">
+          <button class="btn secondary" onclick="renderConflictDetail(${conflictId},'${conflictType}','conflicts')">取消</button>
+          <button class="btn primary" id="finalDecideConfirmBtn">确认终裁</button>
+        </div>
+      `;
+
+      $('detailPage').classList.add('on');
+      document.querySelectorAll('.panel').forEach(el => el.classList.remove('on'));
+      $('finalDecideConfirmBtn').onclick = async () => {
+        try {
+          await api(`/api/conflicts/${conflictId}/final-decide?type=${conflictType}`, {
+            method: 'POST',
+            body: JSON.stringify({ resolution: $('finalResolution').value, opinion: $('finalOpinion').value })
+          });
+          showToast('终裁完成');
+          renderConflictDetail(conflictId, conflictType, 'conflicts');
+        } catch (e) {
+          showToast(e.message || '终裁失败', 'error');
+        }
+      };
+    }
+
+    async function handleReopen(conflictId, conflictType) {
+      const confirmed = await showConfirm({
+        title: '重开冲突',
+        message: '重开后需重新指定责任人。确认重开？',
+        confirmLabel: '重开',
+        confirmClass: 'danger',
+      });
+      if (!confirmed) return;
+      try {
+        await api(`/api/conflicts/${conflictId}/reopen?type=${conflictType}`, { method: 'POST' });
+        showToast('冲突已重开');
+        renderConflictDetail(conflictId, conflictType, 'conflicts');
+      } catch (e) {
+        showToast(e.message || '重开失败', 'error');
+      }
+    }
+
+    async function handleArchive(conflictId, conflictType) {
+      const confirmed = await showConfirm({
+        title: '归档冲突',
+        message: '归档后冲突从默认列表隐藏。确认归档？',
+        confirmLabel: '归档',
+        confirmClass: 'secondary',
+      });
+      if (!confirmed) return;
+      try {
+        await api(`/api/conflicts/${conflictId}/archive?type=${conflictType}`, { method: 'POST' });
+        showToast('已归档');
+        navigateTo('list', { tab: 'conflicts' });
+      } catch (e) {
+        showToast(e.message || '归档失败', 'error');
+      }
+    }
 
     // ===== Init =====
     checkSession();

@@ -49,11 +49,27 @@ router.get('/mapping/:mappingId', requireAuth, (req, res) => {
   res.json(fields);
 });
 
+function validateTerms(fieldName) {
+  if (!fieldName) return null;
+  const terms = db.prepare('SELECT term, forbidden FROM terms').all();
+  for (const t of terms) {
+    if (t.forbidden && fieldName.includes(t.forbidden)) {
+      return `字段名 "${fieldName}" 包含禁用词汇 "${t.forbidden}"，请使用标准术语 "${t.term}"`;
+    }
+  }
+  return null;
+}
+
 router.post('/', requireAuth, (req, res) => {
   return runDbAction(res, () => {
     const { mapping_id, field_name_cn, field_name_en, data_object, field_type, consume_systems, sync_mode, note } = req.body;
     if (!canCreateFieldForMapping(req, mapping_id)) {
       return res.status(403).json({ error: '仅该映射报送人或管理员可创建字段' });
+    }
+
+    const termError = validateTerms(field_name_cn);
+    if (termError) {
+      return res.status(400).json({ error: termError });
     }
 
     const normalizedConsumeSystems = normalizeValue('consume_systems', consume_systems);
@@ -96,6 +112,13 @@ router.put('/:id', requireAuth, (req, res) => {
       allowedFields = SUBMITTER_WRITABLE;
     } else {
       return res.status(403).json({ error: '仅字段报送人、映射 owner 部门、评审人或管理员可修改字段' });
+    }
+    
+    if (req.body.field_name_cn && allowedFields.includes('field_name_cn')) {
+      const termError = validateTerms(req.body.field_name_cn);
+      if (termError) {
+        return res.status(400).json({ error: termError });
+      }
     }
 
     const updateField = db.transaction(() => {

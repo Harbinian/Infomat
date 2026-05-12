@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>PLM项目第一阶段精细化实施方案 · 昌兴复材</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --blue:#1a56db;--blue-lt:#e8f0fe;--navy:#0f2a5e;--teal:#0891b2;
+  --amber:#d97706;--red:#dc2626;--green:#16a34a;--purple:#7c3aed;
+  --orange:#ea580c;--pink:#db2777;--emerald:#059669;
+  --gray:#64748b;--bg:#f8fafc;--card:#fff;--border:#e2e8f0;
+  --text:#1e293b;--muted:#475569;
+}
+html{scroll-behavior:smooth;overflow-x:hidden;scroll-padding-top:50px}
+body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);font-size:14px;overflow-x:hidden}
+a{text-decoration:none}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:999;background:rgba(15,42,94,.97);backdrop-filter:blur(8px);height:50px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;gap:12px}
+.nav-logo{color:#fff;font-size:13px;font-weight:700;white-space:nowrap;flex-shrink:0}
+.nav-links{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+.nav-links::-webkit-scrollbar{display:none}
+.nav-links a{color:rgba(255,255,255,.65);font-size:11px;padding:4px 9px;border-radius:4px;white-space:nowrap;transition:.2s}
+.nav-links a:hover{background:rgba(255,255,255,.15);color:#fff}
+
+/* LAYOUT */
+.page{width:100%;max-width:none;margin:0;padding:70px clamp(20px,4vw,72px) 60px}
+.sec{width:100%;max-width:100%;min-width:0;margin-bottom:64px;scroll-margin-top:50px}
+
+/* COVER */
+#cover{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:70px 8vw 60px;background:linear-gradient(135deg,#081e4a 0%,#7c3aed 55%,#0891b2 100%);position:relative;overflow:hidden}
+#cover::before{content:'';position:absolute;top:-40%;right:-10%;width:600px;height:600px;border-radius:50%;background:rgba(255,255,255,.04);pointer-events:none}
+.cv-tag{display:inline-block;background:rgba(255,255,255,.12);color:#c4b5fd;font-size:11px;padding:3px 12px;border-radius:20px;border:1px solid rgba(255,255,255,.2);margin-bottom:18px;width:fit-content}
+#cover h1{color:#fff;font-size:clamp(22px,3.5vw,40px);line-height:1.35;margin-bottom:10px}
+#cover h1 span{color:#a78bfa}
+.cv-sub{color:rgba(255,255,255,.65);font-size:14px;line-height:1.9;margin-bottom:28px}
+.cv-meta{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px}
+.cv-box{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);border-radius:8px;padding:10px 16px}
+.cv-box .cl{color:rgba(255,255,255,.45);font-size:10px;margin-bottom:3px}
+.cv-box .cv{color:#fff;font-size:13px;font-weight:600}
+.cv-ptag{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:12px 16px;max-width:600px}
+.cv-ptag .cpl{color:rgba(255,255,255,.4);font-size:10px;margin-bottom:8px}
+.cv-ptag .cpt{display:flex;flex-wrap:wrap;gap:6px}
+.cv-ptag .cpt span{background:rgba(255,255,255,.12);color:rgba(255,255,255,.8);font-size:11px;padding:3px 10px;border-radius:12px}
+.scroll-hint{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,.3);font-size:11px;text-align:center}
+.scroll-hint::after{content:"↓";display:block;animation:bob .9s infinite alternate}
+@keyframes bob{from{transform:translateY(0)}to{transform:translateY(6px)}}
+
+/* SEC HEADER */
+.sec-hd{display:flex;align-items:flex-start;gap:12px;margin-bottom:24px}
+.sec-num{width:32px;height:32px;border-radius:50%;background:var(--blue);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
+.sec-hd h2{font-size:19px;color:var(--navy);margin-bottom:2px}
+.sec-hd .sd{font-size:12px;color:var(--gray)}
+
+/* CARDS */
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.card h3{font-size:14px;color:var(--navy);margin-bottom:8px}
+.card p,.card li{font-size:13px;color:var(--muted);line-height:1.85}
+.card ul{padding-left:16px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.g5s{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.imp{font-size:13px;color:#1e3a5f;line-height:1.75;font-weight:500;padding-bottom:8px;border-bottom:1px solid #e2e8f0;margin-bottom:6px}
+
+/* ALERT / INFO / WARN / SUCCESS */
+.alert{background:#fef2f2;border:1px solid #fecaca;border-left:4px solid var(--red);border-radius:8px;padding:12px 16px;margin-bottom:14px}
+.alert .at{font-size:13px;font-weight:700;color:var(--red);margin-bottom:5px}
+.alert p,.alert li{font-size:12px;color:#7f1d1d;line-height:1.8}
+.alert ul{padding-left:14px}
+.warn{background:#fffbeb;border:1px solid #fde68a;border-left:4px solid var(--amber);border-radius:8px;padding:12px 16px;margin-bottom:14px}
+.warn .wt{font-size:13px;font-weight:700;color:#92400e;margin-bottom:5px}
+.warn p{font-size:12px;color:#78350f;line-height:1.8}
+.info{background:#eff6ff;border:1px solid #bfdbfe;border-left:4px solid var(--blue);border-radius:8px;padding:12px 16px;margin-bottom:14px}
+.info p{font-size:12px;color:#1e40af;line-height:1.8}
+.success{background:#f0fdf4;border:1px solid #bbf7d0;border-left:4px solid var(--green);border-radius:8px;padding:12px 16px;margin-bottom:14px}
+.success p{font-size:12px;color:#14532d;line-height:1.8}
+
+/* TABLE */
+.tw{overflow-x:auto;border-radius:10px;border:1px solid var(--border);margin-bottom:14px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:var(--navy);color:#fff;padding:9px 12px;text-align:left;font-weight:600;white-space:nowrap}
+td{padding:8px 12px;border-bottom:1px solid var(--border);color:var(--muted);vertical-align:top;line-height:1.7}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--blue-lt)}
+td strong{color:var(--text)}
+
+/* PHASE CARDS */
+.phase-stack{display:flex;flex-direction:column;gap:12px;margin-bottom:14px}
+.phase-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;border-left:4px solid var(--purple)}
+.phase-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.phase-num{width:28px;height:28px;border-radius:50%;background:var(--purple);color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center}
+.phase-title{font-size:14px;font-weight:800;color:var(--navy);flex:1}
+.phase-period{font-size:11px;font-weight:800;color:#6d28d9;background:#ede9fe;border-radius:999px;padding:3px 9px}
+.phase-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+.phase-tag{font-size:11px;font-weight:700;color:#6d28d9;background:#ede9fe;border-radius:5px;padding:3px 8px}
+
+/* SUMMARY CARDS */
+.summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+.summary-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 18px;border-top:4px solid var(--purple);box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.summary-card h4{font-size:13px;color:var(--navy);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.summary-card p{font-size:12px;color:var(--muted);line-height:1.8}
+.summary-icon{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0}
+
+/* DATA DICT */
+.dd-section{margin-bottom:20px}
+.dd-section h4{font-size:14px;color:var(--navy);margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid var(--purple);display:flex;align-items:center;gap:8px}
+.dd-section h4 .dd-num{width:24px;height:24px;border-radius:50%;background:var(--purple);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.field-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.field-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px 14px;border-left:3px solid var(--teal)}
+.field-card .fn{font-size:12px;font-weight:700;color:var(--navy);margin-bottom:3px}
+.field-card .fd{font-size:11px;color:var(--muted);line-height:1.65}
+.field-card .ft{display:inline-block;font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;margin-top:5px}
+.ft-mes{background:#dcfce7;color:#166534}
+.ft-erp{background:#dbeafe;color:#1d4ed8}
+.ft-quality{background:#fef3c7;color:#92400e}
+.ft-plm{background:#ede9fe;color:#6d28d9}
+
+/* RESOURCE */
+.res-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px}
+.res-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;text-align:center}
+.res-card .rn{font-size:28px;font-weight:900;color:var(--purple);line-height:1}
+.res-card .rl{font-size:12px;color:var(--gray);margin-top:4px}
+.res-card .rd{font-size:11px;color:var(--muted);margin-top:6px;line-height:1.6}
+
+/* FLOW STEPS */
+.flow-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px}
+.flow-step-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;border-top:4px solid var(--green);position:relative}
+.flow-step-card .fs-num{width:28px;height:28px;border-radius:50%;background:var(--green);color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;margin-bottom:10px}
+.flow-step-card h4{font-size:13px;color:var(--navy);margin-bottom:6px}
+.flow-step-card p{font-size:12px;color:var(--muted);line-height:1.75}
+.flow-step-card .fs-check{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;margin-top:8px;background:#fee2e2;color:#b91c1c}
+
+/* FOOTER */
+footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;padding:24px 20px;font-size:11px}
+
+/* ENCODE BAR */
+.enc{background:var(--navy);border-radius:10px;padding:16px 20px;display:flex;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.es{text-align:center;padding:8px 16px;border-right:1px solid rgba(255,255,255,.15)}
+.es:last-of-type{border-right:none}
+.ev{font-size:20px;font-weight:700;color:#a78bfa;font-family:monospace}
+.el{font-size:10px;color:rgba(255,255,255,.4);margin-top:3px}
+.esep{color:rgba(255,255,255,.3);font-size:20px;padding:0 2px;align-self:center}
+.enc-note{margin-left:20px;align-self:center}
+.enc-note .ex{color:#a78bfa;font-size:13px;font-family:monospace}
+.enc-note .ed{color:rgba(255,255,255,.4);font-size:11px;margin-top:3px}
+
+/* RESPONSIVE */
+@media(max-width:980px){
+  .g2,.g3,.g4,.g5s,.summary-grid,.field-grid,.flow-steps,.res-grid{grid-template-columns:1fr}
+  #cover{padding:70px 6vw 60px}
+}
+@media(max-width:680px){
+  nav .nav-links{display:none}
+  .g2,.g3,.g4,.g5s,.summary-grid,.field-grid,.flow-steps,.res-grid{grid-template-columns:1fr}
+  .enc{flex-direction:column}
+  .es{border-right:none;border-bottom:1px solid rgba(255,255,255,.15);width:100%}
+  .enc-note{margin-left:0;margin-top:12px}
+  #cover h1{font-size:20px}
+  .sec-hd h2{font-size:17px}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">PLM精细化实施方案 · 昌兴复材</div>
+  <div class="nav-links">
+    <a href="#cover">首页</a>
+    <a href="#summary">前情总结</a>
+    <a href="#phases">实施路径</a>
+    <a href="#migration">工艺迁移</a>
+    <a href="#datadict">数据字典</a>
+  </div>
+</nav>
+
+<!-- COVER -->
+<div id="cover">
+  <div class="cv-tag">PLM PHASE-I · 精细化实施方案 · 2026-05-11</div>
+  <h1>PLM项目第一阶段<br/><span>精细化实施方案</span></h1>
+  <p class="cv-sub">沈阳昌兴复材航空科技有限责任公司<br/>从"打基础"到"系统集成"——CAD深度集成、多视图BOM转化、工艺规程数字化攻坚</p>
+  <div class="cv-meta">
+    <div class="cv-box"><div class="cl">实施周期</div><div class="cv">T+6 个月</div></div>
+    <div class="cv-box"><div class="cl">PLM供应商</div><div class="cv">翎瑞鸿翔</div></div>
+    <div class="cv-box"><div class="cl">文档版本</div><div class="cv">V1.0</div></div>
+    <div class="cv-box"><div class="cl">核心攻坚</div><div class="cv">1000+ 本规程数字化</div></div>
+  </div>
+  <div class="cv-ptag">
+    <div class="cpl">关键主题</div>
+    <div class="cpt">
+      <span>编码标准化</span><span>CAD深度集成</span><span>EBOM→MBOM</span>
+      <span>复材工艺数字化</span><span>多系统联调</span><span>数据字典</span>
+    </div>
+  </div>
+  <div class="scroll-hint">向下查看方案详情</div>
+</div>
+
+<div class="page">
+
+<!-- ══ 0 前情总结 ══ -->
+<div class="sec" id="summary">
+  <div class="sec-hd"><div class="sec-num">0</div><div><h2>前情总结：从"打基础"到"系统集成"</h2><div class="sd">三大奠基工作回顾 · 为PLM精细化实施铺路</div></div></div>
+
+  <div class="summary-grid">
+    <div class="summary-card">
+      <h4><span class="summary-icon" style="background:#dbeafe;color:#1d4ed8">1</span>MDM主数据奠基</h4>
+      <p>明确主数据作为企业"通用语言"的地位，通过统一编码（不少于30位）和标准化属性（标准号、牌号等），解决"一物多码"历史问题，为后续系统集成扫清障碍。</p>
+    </div>
+    <div class="summary-card">
+      <h4><span class="summary-icon" style="background:#ede9fe;color:#6d28d9">2</span>PLM计划精细化</h4>
+      <p>识别出原甘特图过于粗略的风险，将建设重点转向技术深水区，包括CAD深度集成、多视图BOM转化（EBOM→MBOM）以及复材专项管理。</p>
+    </div>
+    <div class="summary-card">
+      <h4><span class="summary-icon" style="background:#dcfce7;color:#166534">3</span>工艺规程数字化攻坚</h4>
+      <p>锁定"最硬的骨头"——将1000多本非结构化工艺规程转化为结构化"数字指令"，以支撑二阶段MES的精准执行与追溯。</p>
+    </div>
+  </div>
+
+  <div class="info"><p><strong>实施策略：</strong>基于昌兴现状，将PLM实施路径细化为五个关键阶段，侧重于数据源头治理与异构系统集成。以下方案覆盖从标准体系定义到试运行验收的完整周期（T+6个月）。</p></div>
+</div>
+
+<!-- ══ 1 PLM精细化实施路径拆解 ══ -->
+<div class="sec" id="phases">
+  <div class="sec-hd"><div class="sec-num">1</div><div><h2>PLM精细化实施路径拆解（T+6个月）</h2><div class="sd">五阶段递进 · 数据源头治理 → 异构系统集成</div></div></div>
+
+  <div class="phase-stack">
+
+    <!-- Phase 1 -->
+    <div class="phase-card">
+      <div class="phase-head">
+        <div class="phase-num">1</div>
+        <div class="phase-title">标准体系与管理底座定义</div>
+        <div class="phase-period">T+1</div>
+      </div>
+      <div class="g3" style="margin-bottom:10px">
+        <div class="card" style="margin-bottom:0">
+          <h3>编码与属性标准化</h3>
+          <p>确立零部件、图文档及物料的统一编码规则（支持30位以上混合编码），定义材料类主数据的必填属性（如密度、牌号、供应状态）。</p>
+        </div>
+        <div class="card" style="margin-bottom:0">
+          <h3>权限与安全架构</h3>
+          <p>基于"4W+1H"原则配置静态组织权限与动态项目权限，确保复材涉密数据安全。</p>
+        </div>
+        <div class="card" style="margin-bottom:0">
+          <h3>生命周期与工作流配置</h3>
+          <p>定义从"正在工作"到"已发布"的升版逻辑（采用A.1两级管理机制），建立符合CMII标准的闭环变更流程。</p>
+        </div>
+      </div>
+      <div class="phase-tags">
+        <span class="phase-tag">编码规则</span><span class="phase-tag">4W+1H</span><span class="phase-tag">CMII变更流程</span><span class="phase-tag">A.1两级管理</span>
+      </div>
+    </div>
+
+    <!-- Phase 2 -->
+    <div class="phase-card" style="border-left-color:var(--teal)">
+      <div class="phase-head">
+        <div class="phase-num" style="background:var(--teal)">2</div>
+        <div class="phase-title">CAD深度集成与数据自动捕获</div>
+        <div class="phase-period" style="color:#0e7490;background:#cffafe">T+2 ~ T+3</div>
+      </div>
+      <div class="g2" style="margin-bottom:10px">
+        <div class="card" style="margin-bottom:0">
+          <h3>MCAD（CATIA V5）集成</h3>
+          <p>实现从3D数模自动提取物理特征，支持图纸标题栏信息双向同步，并在检入时自动产生/更新EBOM结构。</p>
+        </div>
+        <div class="card" style="margin-bottom:0">
+          <h3>ECAD（CHS）集成</h3>
+          <p>实现电气图样文档的结构化存储与版本控制，确保机电一体化设计的协同。</p>
+        </div>
+      </div>
+      <div class="phase-tags">
+        <span class="phase-tag" style="color:#0e7490;background:#cffafe">CATIA V5</span><span class="phase-tag" style="color:#0e7490;background:#cffafe">3D数模特征提取</span><span class="phase-tag" style="color:#0e7490;background:#cffafe">EBOM自动生成</span><span class="phase-tag" style="color:#0e7490;background:#cffafe">CHS电气集成</span>
+      </div>
+    </div>
+
+    <!-- Phase 3 -->
+    <div class="phase-card" style="border-left-color:var(--orange)">
+      <div class="phase-head">
+        <div class="phase-num" style="background:var(--orange)">3</div>
+        <div class="phase-title">工艺结构化与多视图BOM重构</div>
+        <div class="phase-period" style="color:#c2410c;background:#fff7ed">T+3 ~ T+4</div>
+      </div>
+      <div class="g2" style="margin-bottom:10px">
+        <div class="card" style="margin-bottom:0">
+          <h3>消耗式MBOM重构</h3>
+          <p>配置从EBOM向MBOM转化的逻辑，支持工艺组合件、拆分件以及在制造件上关联工艺指令。</p>
+        </div>
+        <div class="card" style="margin-bottom:0">
+          <h3>复材专项工艺数字化</h3>
+          <p>配置铺层参数管理、固化曲线绑定模块，将非结构化附件转化为可校验的系统字段。</p>
+        </div>
+      </div>
+      <div class="phase-tags">
+        <span class="phase-tag" style="color:#c2410c;background:#fff7ed">EBOM→MBOM</span><span class="phase-tag" style="color:#c2410c;background:#fff7ed">工艺组合件</span><span class="phase-tag" style="color:#c2410c;background:#fff7ed">铺层参数</span><span class="phase-tag" style="color:#c2410c;background:#fff7ed">固化曲线</span>
+      </div>
+    </div>
+
+    <!-- Phase 4 -->
+    <div class="phase-card" style="border-left-color:var(--blue)">
+      <div class="phase-head">
+        <div class="phase-num" style="background:var(--blue)">4</div>
+        <div class="phase-title">多系统"大动脉"联调</div>
+        <div class="phase-period" style="color:#1d4ed8;background:#dbeafe">T+4 ~ T+5</div>
+      </div>
+      <div class="card" style="margin-bottom:10px">
+        <h3>集成开发与全链路闭环测试</h3>
+        <div class="g2">
+          <div>
+            <p style="font-weight:700;color:var(--navy)">PLM → MES</p>
+            <p>推送生效EBOM、ECN及结构化工艺指令。</p>
+          </div>
+          <div>
+            <p style="font-weight:700;color:var(--navy)">PLM ↔ ERP</p>
+            <p>实现物料主数据与MBOM的同步，支撑MRP运算。</p>
+          </div>
+        </div>
+        <p style="margin-top:8px"><strong>全链路闭环测试：</strong>验证"设计更改 → 工艺分析 → 计划调整 → 现场执行"的数据流转完整性。</p>
+      </div>
+      <div class="phase-tags">
+        <span class="phase-tag" style="color:#1d4ed8;background:#dbeafe">PLM→MES</span><span class="phase-tag" style="color:#1d4ed8;background:#dbeafe">PLM↔ERP</span><span class="phase-tag" style="color:#1d4ed8;background:#dbeafe">EBOM推送</span><span class="phase-tag" style="color:#1d4ed8;background:#dbeafe">ECN同步</span><span class="phase-tag" style="color:#1d4ed8;background:#dbeafe">MRP运算</span>
+      </div>
+    </div>
+
+    <!-- Phase 5 -->
+    <div class="phase-card" style="border-left-color:var(--green)">
+      <div class="phase-head">
+        <div class="phase-num" style="background:var(--green)">5</div>
+        <div class="phase-title">试运行与验收上线</div>
+        <div class="phase-period" style="color:#166534;background:#dcfce7">T+5 ~ T+6</div>
+      </div>
+      <div class="g2" style="margin-bottom:10px">
+        <div class="card" style="margin-bottom:0">
+          <h3>典型型号验证</h3>
+          <p>选取一个型号进行全流程跑通，验证数据在多系统间的不失真。</p>
+        </div>
+        <div class="card" style="margin-bottom:0">
+          <h3>存量数据最终校验</h3>
+          <p>完成历史数据的分批迁移与质量审计。</p>
+        </div>
+      </div>
+      <div class="phase-tags">
+        <span class="phase-tag" style="color:#166534;background:#dcfce7">全流程验证</span><span class="phase-tag" style="color:#166534;background:#dcfce7">数据不失真</span><span class="phase-tag" style="color:#166534;background:#dcfce7">历史数据迁移</span><span class="phase-tag" style="color:#166534;background:#dcfce7">质量审计</span>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="warn"><div class="wt">实施风险提示</div><p>五个阶段存在强依赖关系——标准体系未定义则CAD集成无法对齐字段；EBOM结构未稳定则MBOM重构缺乏基准；联调阶段若发现数据源头问题，将连锁影响试运行验收窗口。各阶段Go/No-Go节点必须严格执行。</p></div>
+</div>
+
+<!-- ══ 2 工艺规程结构化迁移专项计划 ══ -->
+<div class="sec" id="migration">
+  <div class="sec-hd"><div class="sec-num">2</div><div><h2>工艺规程结构化迁移专项计划</h2><div class="sd">针对1000+本非结构化规程 · "三步走"迁移策略</div></div></div>
+
+  <div class="alert"><div class="at">攻坚目标</div><p>将1000多本非结构化工艺规程转化为结构化"数字指令"，确保PLM输出的数据能被MES直接读取、校验和执行。这是整个PLM一期项目中工作量最大、专业要求最高的环节。</p></div>
+
+  <!-- Three Steps -->
+  <div class="flow-steps">
+    <div class="flow-step-card">
+      <div class="fs-num">1</div>
+      <h4>定义模板</h4>
+      <p><strong>核心任务：</strong>联合定义复材专用的工序、工步模板。</p>
+      <p style="margin-top:6px"><strong>交付物：</strong>《复材结构化工艺标准模板》</p>
+      <div class="fs-check">关键控制点：必须包含铺层/固化特定字段</div>
+    </div>
+    <div class="flow-step-card" style="border-top-color:var(--blue)">
+      <div class="fs-num" style="background:var(--blue)">2</div>
+      <h4>典型试点</h4>
+      <p><strong>核心任务：</strong>选取1个代表性型号进行全流程拆解。</p>
+      <p style="margin-top:6px"><strong>交付物：</strong>结构化MBOM、数字化指令</p>
+      <div class="fs-check">关键控制点：必须通过MES开工校验测试</div>
+    </div>
+    <div class="flow-step-card" style="border-top-color:var(--purple)">
+      <div class="fs-num" style="background:var(--purple)">3</div>
+      <h4>规模迁移</h4>
+      <p><strong>核心任务：</strong>组织工艺员开展大规模存量规程拆解录入。</p>
+      <p style="margin-top:6px"><strong>交付物：</strong>1000+份结构化数字规程</p>
+      <div class="fs-check">关键控制点：完成率与资源绑定率监控</div>
+    </div>
+  </div>
+
+  <!-- Migration Detail Table -->
+  <div class="tw">
+    <table>
+      <thead><tr><th>步骤</th><th>核心任务</th><th>交付物</th><th>关键控制点</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Step 1: 定义模板</strong></td>
+          <td>联合定义复材专用的工序、工步模板</td>
+          <td>《复材结构化工艺标准模板》</td>
+          <td>必须包含铺层/固化特定字段</td>
+        </tr>
+        <tr>
+          <td><strong>Step 2: 典型试点</strong></td>
+          <td>选取1个代表性型号进行全流程拆解</td>
+          <td>结构化MBOM、数字化指令</td>
+          <td>必须通过MES开工校验测试</td>
+        </tr>
+        <tr>
+          <td><strong>Step 3: 规模迁移</strong></td>
+          <td>组织工艺员开展大规模存量规程拆解录入</td>
+          <td>1000+份结构化数字规程</td>
+          <td>完成率与资源绑定率监控</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Resource Planning -->
+  <div class="card">
+    <h3>资源投入建议</h3>
+    <div class="res-grid">
+      <div class="res-card">
+        <div class="rn">3人</div>
+        <div class="rl">工艺专家组</div>
+        <div class="rd">负责技术要求合规性审定</div>
+      </div>
+      <div class="res-card">
+        <div class="rn">8-10人</div>
+        <div class="rl">数据录入组</div>
+        <div class="rd">负责规程拆解及MBOM绑定<br/>预计工作量 4000 人/小时</div>
+      </div>
+      <div class="res-card">
+        <div class="rn">2人</div>
+        <div class="rl">质量校验组</div>
+        <div class="rd">负责结构化数据的最终发布审核</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="warn"><div class="wt">资源风险</div><p>4000人/小时的工作量换算约为 500 人天。若数据录入组 8-10 人全职投入，预计需要 50-63 个工作日（约 2.5-3 个月）。需提前锁定工艺专家组的排期，避免因技术审定延迟导致录入组停工待审。</p></div>
+</div>
+
+<!-- ══ 3 复材工艺结构化数据字典模板 ══ -->
+<div class="sec" id="datadict">
+  <div class="sec-hd"><div class="sec-num">3</div><div><h2>复材工艺结构化数据字典模板</h2><div class="sd">确保PLM输出的数据能被MES直接读取 · 四类标准字段</div></div></div>
+
+  <div class="info"><p><strong>设计原则：</strong>以下字段字典用于指导PLM系统中工艺数据的结构化定义，确保工艺数据从PLM输出后能被MES直接消费，无需二次解析或人工补全。每个字段应明确其系统归属和消费方。</p></div>
+
+  <!-- 3.1 基础工序信息 -->
+  <div class="dd-section">
+    <h4><span class="dd-num">3.1</span>基础工序信息（通用字段）</h4>
+    <div class="field-grid">
+      <div class="field-card">
+        <div class="fn">工序编码/名称</div>
+        <div class="fd">如"OP10 铺层"。作为跨系统引用工艺步骤的唯一标识。</div>
+        <span class="ft ft-mes">MES消费</span>
+      </div>
+      <div class="field-card">
+        <div class="fn">工种资质要求</div>
+        <div class="fd">用于MES开工时的权限校验，确保只有具备对应资质的人员才能执行该工序。</div>
+        <span class="ft ft-mes">MES校验</span>
+      </div>
+      <div class="field-card">
+        <div class="fn">额定准备/单件工时</div>
+        <div class="fd">MRP运算的核心参数，直接影响生产计划排程和成本核算的准确性。</div>
+        <span class="ft ft-erp">ERP消费</span>
+      </div>
+      <div class="field-card">
+        <div class="fn">关联资源编码</div>
+        <div class="fd">关联设备、工装、工刀量具主数据，确保工艺执行时资源可追溯。</div>
+        <span class="ft ft-mes">MES消费</span>
+      </div>
+      <div class="field-card">
+        <div class="fn">工序类型</div>
+        <div class="fd">区分：普通工序 / 检验工序 / 特殊工序 / 外协工序。</div>
+        <span class="ft ft-plm">PLM维护</span>
+      </div>
+      <div class="field-card">
+        <div class="fn">前后置工序</div>
+        <div class="fd">定义工序间的串行/并行约束关系，用于MES工序流转控制。</div>
+        <span class="ft ft-mes">MES消费</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3.2 铺层专项数据 -->
+  <div class="dd-section">
+    <h4><span class="dd-num">3.2</span>铺层专项数据（结构化字典）</h4>
+    <div class="field-grid">
+      <div class="field-card" style="border-left-color:var(--orange)">
+        <div class="fn">铺层顺序号</div>
+        <div class="fd">材料堆叠的物理次序，从第1层到第N层严格编号。铺层顺序错误将导致力学性能不达标。</div>
+        <span class="ft ft-mes">MES强校验</span>
+      </div>
+      <div class="field-card" style="border-left-color:var(--orange)">
+        <div class="fn">铺层方向</div>
+        <div class="fd">下拉选择：0°、±45°、90° 等。为枚举值，禁止自由文本输入以防止输入错误。</div>
+        <span class="ft ft-mes">MES强校验</span>
+      </div>
+      <div class="field-card" style="border-left-color:var(--orange)">
+        <div class="fn">层数/厚度要求</div>
+        <div class="fd">标准值，用于完工检验时的自动比对。超出公差范围自动触发不合品流程。</div>
+        <span class="ft ft-quality">质检消费</span>
+      </div>
+      <div class="field-card" style="border-left-color:var(--orange)">
+        <div class="fn">激光投影关联</div>
+        <div class="fd">关联对应的投影数据路径，用于铺层定位引导。路径需在PLM中受控管理。</div>
+        <span class="ft ft-mes">MES消费</span>
+      </div>
+      <div class="field-card" style="border-left-color:var(--orange)">
+        <div class="fn">材料规格号</div>
+        <div class="fd">关联预浸料主数据中的材料规范号，确保用料正确。需与ERP-MM中的物料编码对应。</div>
+        <span class="ft ft-erp">ERP关联</span>
+      </div>
+      <div class="field-card" style="border-left-color:var(--orange)">
+        <div class="fn">铺层区域标识</div>
+        <div class="fd">对应零件上的铺层区域编号，用于复杂曲面多区域铺层的分区管理。</div>
+        <span class="ft ft-mes">MES消费</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3.3 固化联动控制数据 -->
+  <div class="dd-section">
+    <h4><span class="dd-num">3.3</span>固化联动控制数据（参数字典）</h4>
+    <div class="field-grid">
+      <div class="field-card" style="border-left-color:var(--red)">
+        <div class="fn">升/降温速率</div>
+        <div class="fd">单位：℃/min。固化过程中温度变化的速率控制，超出范围将影响材料性能。</div>
+        <span class="ft ft-mes">MES实时比对</span>
+      </div>
+      <div class="field-card" style="border-left-color:var(--red)">
+        <div class="fn">保温/保压点</div>
+        <div class="fd">目标温度及允许公差。多个保温平台需分别定义温度值、允许偏差和持续时间。</div>
+        <span class="ft ft-mes">MES实时比对</span>
+      </div>
+      <div class="field-card" style="border-left-color:var(--red)">
+        <div class="fn">真空度/压力阶梯</div>
+        <div class="fd">热压罐控制逻辑——各阶段的真空度要求、正压值及其允许波动范围。</div>
+        <span class="ft ft-mes">MES实时比对</span>
+      </div>
+      <div class="field-card" style="border-left-color:var(--red)">
+        <div class="fn">标准曲线模板</div>
+        <div class="fd">用于MES实时比对与预警。固化过程中实际参数与标准曲线的偏差超过阈值时自动告警。</div>
+        <span class="ft ft-mes">MES预警</span>
+      </div>
+      <div class="field-card" style="border-left-color:var(--red)">
+        <div class="fn">固化设备类型</div>
+        <div class="fd">指定适用的热压罐/烘箱类型，与设备主数据关联。不同类型设备不可混用。</div>
+        <span class="ft ft-mes">MES校验</span>
+      </div>
+      <div class="field-card" style="border-left-color:var(--red)">
+        <div class="fn">最大允许偏差</div>
+        <div class="fd">各参数（温度、压力、真空度、时间）的最大允许偏差值，超过视为工艺异常。</div>
+        <span class="ft ft-quality">质检判定</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3.4 质量检验 Checklist -->
+  <div class="dd-section">
+    <h4><span class="dd-num">3.4</span>质量检验 Checklist（检验一体化）</h4>
+    <div class="field-grid">
+      <div class="field-card" style="border-left-color:var(--green)">
+        <div class="fn">检验特征点</div>
+        <div class="fd">如"外形尺寸"、"表面质量"、"无损检测"、"重量"等。每个特征点对应具体的检验方法和判定标准。</div>
+        <span class="ft ft-quality">质检消费</span>
+      </div>
+      <div class="field-card" style="border-left-color:var(--green)">
+        <div class="fn">标准值/公差</div>
+        <div class="fd">自动判定逻辑——检验值落在公差带内自动判定合格，超出则触发不合格品处理流程。</div>
+        <span class="ft ft-quality">自动判定</span>
+      </div>
+      <div class="field-card" style="border-left-color:var(--green)">
+        <div class="fn">提检类型</div>
+        <div class="fd">下拉选择：自检 / 专检 / 军检。不同类型的检验对应不同的检验人员资质要求和记录规范。</div>
+        <span class="ft ft-mes">MES派工</span>
+      </div>
+      <div class="field-card" style="border-left-color:var(--green)">
+        <div class="fn">检验工具/设备</div>
+        <div class="fd">指定检验用工具（如卡尺、千分尺、CMM、超声检测设备等），与设备主数据关联。</div>
+        <span class="ft ft-mes">MES校验</span>
+      </div>
+      <div class="field-card" style="border-left-color:var(--green)">
+        <div class="fn">检验频次</div>
+        <div class="fd">定义：首件检验 / 过程抽检 / 完工全检。首件检验未通过不得继续生产。</div>
+        <span class="ft ft-quality">质检消费</span>
+      </div>
+      <div class="field-card" style="border-left-color:var(--green)">
+        <div class="fn">不合格品处置</div>
+        <div class="fd">关联不合格品处理流程：返工 / 让步接收 / 报废。每个选项对应不同的审批路径。</div>
+        <span class="ft ft-quality">质检联动</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary -->
+  <div class="card" style="margin-top:20px">
+    <h3>数据字典实施路线图</h3>
+    <div class="tw" style="margin-top:10px">
+      <table>
+        <thead><tr><th>阶段</th><th>任务</th><th>输出</th><th>责任方</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>模板确认</strong></td>
+            <td>工艺专家组确认四类字段的完整性、准确性和MES可消费性</td>
+            <td>《复材结构化工艺标准模板》签审版</td>
+            <td>工艺专家组 (3人)</td>
+          </tr>
+          <tr>
+            <td><strong>系统配置</strong></td>
+            <td>在PLM中配置字段定义、枚举值、校验规则和下拉选项</td>
+            <td>PLM字段配置完成，通过单元测试</td>
+            <td>翎瑞鸿翔实施团队</td>
+          </tr>
+          <tr>
+            <td><strong>试点验证</strong></td>
+            <td>选取典型型号进行结构化数据录入和MES消费验证</td>
+            <td>试点型号全流程验证通过</td>
+            <td>数据录入组 + MES团队</td>
+          </tr>
+          <tr>
+            <td><strong>规模推广</strong></td>
+            <td>1000+份规程按模板批量结构化录入</td>
+            <td>全部规程数字化，通过质量审计</td>
+            <td>数据录入组 (8-10人)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="success"><p><strong>预期收益：</strong>结构化数据字典落地后，MES可直接读取PLM输出的工艺指令进行开工校验、参数比对和自动判定，消除人工解读非结构化规程的歧义和错误，为二阶段MES的精准执行与追溯奠定数据基础。</p></div>
+</div>
+
+</div><!-- /.page -->
+
+<footer>
+  PLM项目第一阶段精细化实施方案 · 沈阳昌兴复材航空科技有限责任公司 · 文档版本 V1.0 · 2026-05-11<br/>
+  本文件为内部实施方案，PLM供应商已定翎瑞鸿翔；MES为北京虎蜥；ERP为用友U8；OA为华天动力
+</footer>
+
+</body>
+</html>

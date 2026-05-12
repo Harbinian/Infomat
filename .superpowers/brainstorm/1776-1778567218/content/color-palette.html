@@ -1,0 +1,103 @@
+<h2>Logo 配色分析 & 方案方向</h2>
+<p class="subtitle">Logo 主色：<code style="background:#fc0000;color:#fff;padding:2px 8px;border-radius:4px;">#fc0000</code> 红色 47.7% + <code style="background:#000;color:#fff;padding:2px 8px;border-radius:4px;">#000000</code> 黑色 32.9% — 大胆高对比的红黑风格</p>
+
+<div class="section">
+  <h3>当前配色 → Logo 驱动配色</h3>
+  <div class="split">
+    <div class="mockup">
+      <div class="mockup-header">当前：灰度单色系</div>
+      <div class="mockup-body">
+        <div style="display:flex;gap:4px;margin-bottom:16px;">
+          <div style="width:40px;height:40px;border-radius:6px;background:#111827;" title="#111827 accent"></div>
+          <div style="width:40px;height:40px;border-radius:6px;background:#374151;" title="#374151 accent hover"></div>
+          <div style="width:40px;height:40px;border-radius:6px;background:#f9fafb;border:1px solid #e5e7eb;" title="#f9fafb surface"></div>
+          <div style="width:40px;height:40px;border-radius:6px;background:#6b7280;" title="#6b7280 text muted"></div>
+        </div>
+        <div class="placeholder">黑色系 accent + 灰白背景 — 专业但缺乏品牌识别度</div>
+      </div>
+    </div>
+    <div class="mockup">
+      <div class="mockup-header">目标：红黑品牌色</div>
+      <div class="mockup-body">
+        <div style="display:flex;gap:4px;margin-bottom:16px;">
+          <div style="width:40px;height:40px;border-radius:6px;background:#fc0000;" title="#fc0000 brand red"></div>
+          <div style="width:40px;height:40px;border-radius:6px;background:#000000;" title="#000000 brand black"></div>
+          <div style="width:40px;height:40px;border-radius:6px;background:#1a1a2e;" title="#1a1a2e deep bg"></div>
+          <div style="width:40px;height:40px;border-radius:6px;background:#ffffff;border:1px solid #e5e7eb;" title="#ffffff white"></div>
+        </div>
+        <div class="placeholder">大红 + 纯黑 — 强烈的品牌冲击力，源自 logo 基因</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>选择配色方向</h3>
+  <p class="subtitle">以下三种方案各有侧重，点击选择你的偏好</p>
+
+  <div class="options">
+    <div class="option" data-choice="red-accent" onclick="toggleSelect(this)">
+      <div class="letter">A</div>
+      <div class="content">
+        <h3>红强调 — 浅底 + 红色点缀</h3>
+        <p>白色背景，红色 (#fc0000) 用于按钮、tab、链接、图表。保留大量留白，红色只作为"动作色"。类似 Stripe / Linear 的克制路线。</p>
+        <div style="display:flex;gap:4px;margin-top:12px;">
+          <div style="width:30px;height:30px;border-radius:4px;background:#ffffff;border:1px solid #ddd;"></div>
+          <div style="width:30px;height:30px;border-radius:4px;background:#111827;"></div>
+          <div style="width:30px;height:30px;border-radius:4px;background:#fc0000;"></div>
+          <div style="width:30px;height:30px;border-radius:4px;background:#f9fafb;border:1px solid #e5e7eb;"></div>
+          <div style="width:30px;height:30px;border-radius:4px;background:#6b7280;"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="option" data-choice="dark-mode" onclick="toggleSelect(this)">
+      <div class="letter">B</div>
+      <div class="content">
+        <h3>深色模式 — 黑底 + 红高亮</h3>
+        <p>深色背景 (#0a0a0a → #1a1a2e)，红色作为强调色点缀。高对比度、科技感强，适合长时间使用的工具类产品。</p>
+        <div style="display:flex;gap:4px;margin-top:12px;">
+          <div style="width:30px;height:30px;border-radius:4px;background:#0a0a0a;border:1px solid #333;"></div>
+          <div style="width:30px;height:30px;border-radius:4px;background:#1a1a2e;border:1px solid #333;"></div>
+          <div style="width:30px;height:30px;border-radius:4px;background:#fc0000;"></div>
+          <div style="width:30px;height:30px;border-radius:4px;background:#ffffff;"></div>
+          <div style="width:30px;height:30px;border-radius:4px;background:#9ca3af;"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="option" data-choice="hybrid" onclick="toggleSelect(this)">
+      <div class="letter">C</div>
+      <div class="content">
+        <h3>混合模式 — 浅底为主 + 深色顶栏 + 红色标识</h3>
+        <p>内容区保持浅色（便于阅读表格和表单），topbar 和导航区域使用深色/黑色，红色只用于品牌标识和关键交互元素。兼顾可读性与品牌识别。</p>
+        <div style="display:flex;gap:4px;margin-top:12px;">
+          <div style="width:30px;height:30px;border-radius:4px;background:#ffffff;border:1px solid #ddd;"></div>
+          <div style="width:30px;height:30px;border-radius:4px;background:#0a0a0a;"></div>
+          <div style="width:30px;height:30px;border-radius:4px;background:#fc0000;"></div>
+          <div style="width:30px;height:30px;border-radius:4px;background:#f9fafb;border:1px solid #e5e7eb;"></div>
+          <div style="width:30px;height:30px;border-radius:4px;background:#374151;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>当前代码中的 CSS 变量（参考）</h3>
+  <pre style="background:#f9fafb;padding:16px;border-radius:8px;font-size:12px;overflow-x:auto;">
+:root {
+  --bg: #ffffff;
+  --surface: #f9fafb;
+  --border: #e5e7eb;
+  --text-main: #111827;
+  --text-muted: #6b7280;
+  --accent: #111827;          ← 将变为 red/red+black 系列
+  --accent-hover: #374151;
+  --focus-ring: rgba(17, 24, 39, 0.1);
+  --error: #dc2626;           ← 与红色品牌色可能有冲突
+  --success: #059669;
+  --warning: #d97706;
+}
+  </pre>
+</div>

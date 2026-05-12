@@ -1,0 +1,168 @@
+- generic [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - img "MDM" [ref=e4]
+      - text: MDM Collector
+    - generic [ref=e5]:
+      - generic [ref=e6]: 系统管理员 · admin
+      - button "退出" [ref=e7] [cursor=pointer]
+  - generic [ref=e19]:
+    - navigation [ref=e20]:
+      - button "统计看板" [ref=e21] [cursor=pointer]
+      - button "能力与流程申报" [ref=e22] [cursor=pointer]
+      - button "报送管理" [active] [ref=e23] [cursor=pointer]
+      - button "待办收到" [ref=e24] [cursor=pointer]
+      - button "评审记录" [ref=e25] [cursor=pointer]
+      - button "术语词典" [ref=e26] [cursor=pointer]
+      - button "冲突管理" [ref=e27] [cursor=pointer]
+    - generic [ref=e200]:
+      - generic [ref=e201]:
+        - heading "新建流程映射" [level=2] [ref=e202]
+        - generic [ref=e204]:
+          - text: 业务流程
+          - combobox "业务流程" [ref=e205]:
+            - option [selected]
+            - option "BOM发布与变更"
+            - option "供应商准入评审"
+            - option "物料领退料"
+            - option "生产计划排程"
+            - option "车间工序报工"
+        - generic [ref=e207]:
+          - text: 所属部门
+          - combobox "所属部门" [ref=e208]:
+            - option "经营发展部" [selected]
+            - option "运维安环部"
+            - option "工程技术部"
+            - option "财务部"
+            - option "行政人事部"
+            - option "项目管理部"
+            - option "复材车间"
+            - option "质量管理部"
+            - option "保密办"
+            - option "物资保障部"
+        - generic [ref=e210]:
+          - text: 说明
+          - textbox "说明" [ref=e211]
+        - generic [ref=e212]:
+          - button "保存草稿" [ref=e213] [cursor=pointer]
+          - link "下载模板" [ref=e214] [cursor=pointer]:
+            - /url: template.xlsx
+          - button "导出台账" [ref=e215] [cursor=pointer]
+        - heading "导入字段台账" [level=2] [ref=e216]
+        - generic [ref=e217]: Excel 导入会写入当前选中的映射；报送人仅写入数据对象和字段说明。
+        - button [ref=e220]
+        - button "执行导入" [ref=e222] [cursor=pointer]
+      - generic [ref=e223]:
+        - generic [ref=e224]:
+          - heading "报送列表" [level=2] [ref=e225]
+          - button "刷新列表" [ref=e226] [cursor=pointer]
+        - table [ref=e228]:
+          - rowgroup [ref=e229]:
+            - row "ID 流程 部门 状态 系统 操作" [ref=e230]:
+              - columnheader "ID" [ref=e231]
+              - columnheader "流程" [ref=e232]
+              - columnheader "部门" [ref=e233]
+              - columnheader "状态" [ref=e234]
+              - columnheader "系统" [ref=e235]
+              - columnheader "操作" [ref=e236]
+          - rowgroup [ref=e237]:
+            - row "6 生产计划排程 物资保障部 已发布 ERP 系统 选中 提交" [ref=e238]:
+              - cell "6" [ref=e239]
+              - cell "生产计划排程" [ref=e240]
+              - cell "物资保障部" [ref=e241]
+              - cell "已发布" [ref=e242]:
+                - generic [ref=e243]: 已发布
+              - cell "ERP 系统" [ref=e244]
+              - cell "选中 提交" [ref=e245]:
+                - button "选中" [ref=e246] [cursor=pointer]
+                - button "提交" [ref=e247] [cursor=pointer]
+            - row "7 车间工序报工 项目管理部 已发布 ERP 系统 选中 提交" [ref=e248]:
+              - cell "7" [ref=e249]
+              - cell "车间工序报工" [ref=e250]
+              - cell "项目管理部" [ref=e251]
+              - cell "已发布" [ref=e252]:
+                - generic [ref=e253]: 已发布
+              - cell "ERP 系统" [ref=e254]
+              - cell "选中 提交" [ref=e255]:
+                - button "选中" [ref=e256] [cursor=pointer]
+                - button "提交" [ref=e257] [cursor=pointer]
+            - row "8 物料领退料 复材车间 已发布 ERP 系统, MES 系统 选中 提交" [ref=e258]:
+              - cell "8" [ref=e259]
+              - cell "物料领退料" [ref=e260]
+              - cell "复材车间" [ref=e261]
+              - cell "已发布" [ref=e262]:
+                - generic [ref=e263]: 已发布
+              - cell "ERP 系统, MES 系统" [ref=e264]
+              - cell "选中 提交" [ref=e265]:
+                - button "选中" [ref=e266] [cursor=pointer]
+                - button "提交" [ref=e267] [cursor=pointer]
+            - row "9 BOM发布与变更 运维安环部 已发布 ERP 系统 选中 提交" [ref=e268]:
+              - cell "9" [ref=e269]
+              - cell "BOM发布与变更" [ref=e270]
+              - cell "运维安环部" [ref=e271]
+              - cell "已发布" [ref=e272]:
+                - generic [ref=e273]: 已发布
+              - cell "ERP 系统" [ref=e274]
+              - cell "选中 提交" [ref=e275]:
+                - button "选中" [ref=e276] [cursor=pointer]
+                - button "提交" [ref=e277] [cursor=pointer]
+            - row "10 供应商准入评审 保密办 已发布 ERP 系统 选中 提交" [ref=e278]:
+              - cell "10" [ref=e279]
+              - cell "供应商准入评审" [ref=e280]
+              - cell "保密办" [ref=e281]
+              - cell "已发布" [ref=e282]:
+                - generic [ref=e283]: 已发布
+              - cell "ERP 系统" [ref=e284]
+              - cell "选中 提交" [ref=e285]:
+                - button "选中" [ref=e286] [cursor=pointer]
+                - button "提交" [ref=e287] [cursor=pointer]
+            - row "1 生产计划排程 工程技术部 已发布 ERP 系统, PLM 系统 选中 提交" [ref=e288]:
+              - cell "1" [ref=e289]
+              - cell "生产计划排程" [ref=e290]
+              - cell "工程技术部" [ref=e291]
+              - cell "已发布" [ref=e292]:
+                - generic [ref=e293]: 已发布
+              - cell "ERP 系统, PLM 系统" [ref=e294]
+              - cell "选中 提交" [ref=e295]:
+                - button "选中" [ref=e296] [cursor=pointer]
+                - button "提交" [ref=e297] [cursor=pointer]
+            - row "2 车间工序报工 质量管理部 已发布 ERP 系统 选中 提交" [ref=e298]:
+              - cell "2" [ref=e299]
+              - cell "车间工序报工" [ref=e300]
+              - cell "质量管理部" [ref=e301]
+              - cell "已发布" [ref=e302]:
+                - generic [ref=e303]: 已发布
+              - cell "ERP 系统" [ref=e304]
+              - cell "选中 提交" [ref=e305]:
+                - button "选中" [ref=e306] [cursor=pointer]
+                - button "提交" [ref=e307] [cursor=pointer]
+            - row "3 物料领退料 行政人事部 已发布 ERP 系统 选中 提交" [ref=e308]:
+              - cell "3" [ref=e309]
+              - cell "物料领退料" [ref=e310]
+              - cell "行政人事部" [ref=e311]
+              - cell "已发布" [ref=e312]:
+                - generic [ref=e313]: 已发布
+              - cell "ERP 系统" [ref=e314]
+              - cell "选中 提交" [ref=e315]:
+                - button "选中" [ref=e316] [cursor=pointer]
+                - button "提交" [ref=e317] [cursor=pointer]
+            - row "4 BOM发布与变更 经营发展部 已发布 ERP 系统, SRM 系统 选中 提交" [ref=e318]:
+              - cell "4" [ref=e319]
+              - cell "BOM发布与变更" [ref=e320]
+              - cell "经营发展部" [ref=e321]
+              - cell "已发布" [ref=e322]:
+                - generic [ref=e323]: 已发布
+              - cell "ERP 系统, SRM 系统" [ref=e324]
+              - cell "选中 提交" [ref=e325]:
+                - button "选中" [ref=e326] [cursor=pointer]
+                - button "提交" [ref=e327] [cursor=pointer]
+            - row "5 供应商准入评审 财务部 已发布 ERP 系统 选中 提交" [ref=e328]:
+              - cell "5" [ref=e329]
+              - cell "供应商准入评审" [ref=e330]
+              - cell "财务部" [ref=e331]
+              - cell "已发布" [ref=e332]:
+                - generic [ref=e333]: 已发布
+              - cell "ERP 系统" [ref=e334]
+              - cell "选中 提交" [ref=e335]:
+                - button "选中" [ref=e336] [cursor=pointer]
+                - button "提交" [ref=e337] [cursor=pointer]

@@ -1,0 +1,61 @@
+<h2>错误色 vs 品牌色的区分</h2>
+<p class="subtitle">当前 error #dc2626 和品牌 logo #fc0000 只差 10% 亮度，放在同一页面容易混淆</p>
+
+<div class="section">
+  <h3>当前冲突（实景模拟）</h3>
+  <div class="mockup">
+    <div class="mockup-header">topbar 浅底 + 品牌红按钮 vs 错误红标签</div>
+    <div class="mockup-body">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+        <span style="font-weight:600;">MDM Collector</span>
+        <button style="background:#fc0000;color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:13px;">品牌按钮</button>
+        <span style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;padding:2px 8px;border-radius:4px;font-size:12px;">错误标签</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span style="font-weight:600;">MDM Collector</span>
+        <button style="background:#111827;color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:13px;">品牌按钮（旧）</button>
+        <span style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;padding:2px 8px;border-radius:4px;font-size:12px;">错误标签</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>选择错误状态色方案</h3>
+
+  <div class="options">
+    <div class="option" data-choice="amber-error" onclick="toggleSelect(this)">
+      <div class="letter">A</div>
+      <div class="content">
+        <h3>琥珀色错误 — #d97706 (沿用 warning 色系)</h3>
+        <p>把 error 和 warning 统一为琥珀/橙色调，与品牌红彻底拉开距离。<br>代价：不符合"红色=错误"的通用认知。</p>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <span style="background:#fffbeb;color:#d97706;border:1px solid #fde68a;padding:2px 8px;border-radius:4px;font-size:12px;">错误标签</span>
+          <span style="background:#fc0000;color:#fff;padding:2px 8px;border-radius:4px;font-size:12px;">品牌红</span>
+        </div>
+      </div>
+    </div>
+    <div class="option" data-choice="keep-red" onclick="toggleSelect(this)">
+      <div class="letter">B</div>
+      <div class="content">
+        <h3>保留红色错误 — 加深 error 红色使其区别于品牌亮红</h3>
+        <p>Error 用更暗的红色 (#991b1b / #b91c1c)，品牌红保持 #fc0000 鲜亮。<br>都是红但亮度差够大，用户能区分。</p>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <span style="background:#fef2f2;color:#b91c1c;border:1px solid #fca5a5;padding:2px 8px;border-radius:4px;font-size:12px;">错误标签</span>
+          <span style="background:#fc0000;color:#fff;padding:2px 8px;border-radius:4px;font-size:12px;">品牌红</span>
+        </div>
+      </div>
+    </div>
+    <div class="option" data-choice="coral-error" onclick="toggleSelect(this)">
+      <div class="letter">C</div>
+      <div class="content">
+        <h3>珊瑚色错误 — 品牌红偏暖方向，错误红偏粉</h3>
+        <p>Error 改为偏粉/品红方向 (#e11d48 rose)，与纯红 #fc0000 形成暖/冷区分。<br>保留"红色系"直觉但色调不同。</p>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <span style="background:#fff1f2;color:#e11d48;border:1px solid #fecdd3;padding:2px 8px;border-radius:4px;font-size:12px;">错误标签</span>
+          <span style="background:#fc0000;color:#fff;padding:2px 8px;border-radius:4px;font-size:12px;">品牌红</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

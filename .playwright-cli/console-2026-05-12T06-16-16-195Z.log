@@ -1,0 +1,20 @@
+[    1816ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) @ http://localhost:3002/:0
+[    1817ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3002/api/org/me:0
+[    1821ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3002/favicon.ico:0
+[   36735ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3002/api/org/login:0
+[  191628ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3002/api/mappings:0
+[  191630ms] Error: 服务器错误
+    at api (http://localhost:3002/:393:26)
+    at async HTMLButtonElement.createMapping (http://localhost:3002/:503:18)
+[  305819ms] [ERROR] Failed to load resource: the server responded with a status of 409 (Conflict) @ http://localhost:3002/api/terminology:0
+[  305818ms] Error: 术语已存在
+    at api (http://localhost:3002/:393:26)
+    at async HTMLButtonElement.saveTerm (http://localhost:3002/:568:7)
+[  365961ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3002/api/conflicts/detect?field_name_cn=:0
+[  365961ms] Error: 服务器错误
+    at api (http://localhost:3002/:393:26)
+    at async HTMLButtonElement.detectConflict (http://localhost:3002/:583:7)
+[  439724ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:3002/api/mappings/6/review:0
+[  439723ms] Error: 当前节点状态不允许审核，或您不是该节点审核人
+    at api (http://localhost:3002/:393:26)
+    at async review (http://localhost:3002/:556:7)

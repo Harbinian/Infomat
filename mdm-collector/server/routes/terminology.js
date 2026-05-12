@@ -36,23 +36,24 @@ router.get('/', requireAuth, (req, res) => {
   res.json(db.prepare(sql).all(...params));
 });
 
-router.post('/', requireRole('admin'), (req, res) => {
+router.post('/', requireAuth, (req, res) => {
   return runDbAction(res, () => {
-    const { term, definition, scope, forbidden } = req.body;
-    const stmt = db.prepare('INSERT INTO terms (term, definition, scope, forbidden, created_by) VALUES (?, ?, ?, ?, ?)');
-    const result = stmt.run(term, definition || null, scope || null, forbidden || null, req.session.userId);
+    const { term, definition, scope, forbidden, process_id } = req.body;
+    const stmt = db.prepare('INSERT INTO terms (term, definition, scope, forbidden, process_id, created_by) VALUES (?, ?, ?, ?, ?, ?)');
+    const result = stmt.run(term, definition || null, scope || null, forbidden || null, process_id || null, req.session.userId);
     res.json({ id: result.lastInsertRowid });
   });
 });
 
-router.put('/:id', requireRole('admin'), (req, res) => {
+router.put('/:id', requireAuth, (req, res) => {
   return runDbAction(res, () => {
-    const { term, definition, scope, forbidden } = req.body;
-    db.prepare('UPDATE terms SET term=?, definition=?, scope=?, forbidden=? WHERE id=?').run(
+    const { term, definition, scope, forbidden, process_id } = req.body;
+    db.prepare('UPDATE terms SET term=?, definition=?, scope=?, forbidden=?, process_id=? WHERE id=?').run(
       term,
       definition || null,
       scope || null,
       forbidden || null,
+      process_id || null,
       req.params.id
     );
     res.json({ success: true });
