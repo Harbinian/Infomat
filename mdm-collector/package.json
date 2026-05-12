@@ -13,6 +13,7 @@
     "test:conflicts": "node scripts/test-conflict-routes.js",
     "test:terms": "node scripts/test-term-version-routes.js",
     "test:export": "node scripts/test-export-route.js",
+    "test:import": "node scripts/test-import-route.js",
     "dev": "nodemon server/index.js"
   },
   "dependencies": {
