@@ -20,37 +20,56 @@ function runDbAction(res, action) {
 }
 
 router.get('/', requireAuth, (req, res) => {
-  const { dept_id, status, type } = req.query;
-  let sql = `SELECT t.*, fd.name as from_dept_name, td.name as to_dept_name
-             FROM todos t
-             LEFT JOIN departments fd ON t.from_dept_id = fd.id
-             LEFT JOIN departments td ON t.to_dept_id = td.id
-             WHERE 1=1`;
-  const params = [];
+  return runDbAction(res, () => {
+    const { dept_id, status, type } = req.query;
+    const userRole = req.session.userRole;
+    const userDeptId = req.session.departmentId;
 
-  if (dept_id) {
-    sql += ' AND t.to_dept_id=?';
-    params.push(dept_id);
-  }
-  if (status) {
-    sql += ' AND t.status=?';
-    params.push(status);
-  }
-  if (type) {
-    sql += ' AND t.type=?';
-    params.push(type);
-  }
+    let sql = `SELECT t.*, fd.name as from_dept_name, td.name as to_dept_name
+               FROM todos t
+               LEFT JOIN departments fd ON t.from_dept_id = fd.id
+               LEFT JOIN departments td ON t.to_dept_id = td.id
+               WHERE 1=1`;
+    const params = [];
 
-  sql += ' ORDER BY t.due_date ASC, t.created_at DESC';
-  res.json(db.prepare(sql).all(...params));
+    if (userRole === 'owner') {
+      sql += ' AND t.to_dept_id = ?';
+      params.push(userDeptId);
+    } else if (userRole === 'reviewer') {
+      sql += ' AND t.type IN ("field_confirm","gold_source","conflict_resolution")';
+    } else if (userRole === 'submitter') {
+      sql += ' AND t.type IN ("general","terminology")';
+    }
+
+    if (dept_id) {
+      sql += ' AND t.to_dept_id = ?';
+      params.push(dept_id);
+    }
+    if (status) {
+      sql += ' AND t.status = ?';
+      params.push(status);
+    }
+    if (type) {
+      sql += ' AND t.type = ?';
+      params.push(type);
+    }
+
+    sql += ` ORDER BY
+      CASE t.urgency WHEN 'high' THEN 3 WHEN 'medium' THEN 2 WHEN 'low' THEN 1 ELSE 2 END DESC,
+      CASE WHEN t.due_date IS NULL THEN 1 ELSE 0 END,
+      t.due_date ASC,
+      t.created_at ASC`;
+
+    res.json(db.prepare(sql).all(...params));
+  });
 });
 
 router.post('/', requireAuth, (req, res) => {
   return runDbAction(res, () => {
-    const { from_dept_id, to_dept_id, type, related_mapping_id, related_field_id, content, due_date } = req.body;
+    const { from_dept_id, to_dept_id, type, related_mapping_id, related_field_id, content, due_date, urgency } = req.body;
     const stmt = db.prepare(`
-      INSERT INTO todos (from_dept_id, to_dept_id, type, related_mapping_id, related_field_id, content, due_date)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO todos (from_dept_id, to_dept_id, type, related_mapping_id, related_field_id, content, due_date, urgency)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `);
     const result = stmt.run(
       from_dept_id || null,
@@ -59,7 +78,8 @@ router.post('/', requireAuth, (req, res) => {
       related_mapping_id || null,
       related_field_id || null,
       content,
-      due_date || null
+      due_date || null,
+      urgency || 'medium'
     );
     res.json({ id: result.lastInsertRowid });
   });
