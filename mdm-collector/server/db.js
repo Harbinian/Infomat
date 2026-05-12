@@ -15,8 +15,30 @@ CREATE TABLE IF NOT EXISTS departments (
   name TEXT NOT NULL,
   code TEXT NOT NULL UNIQUE,
   parent_id INTEGER REFERENCES departments(id),
+  
+  -- MDM: Hierarchy Optimization
+  path TEXT,
+  sort_order INTEGER DEFAULT 0,
+  
+  -- MDM: Stewardship & Type
+  department_type TEXT CHECK(department_type IN ('职能','业务','生产','其他')),
   manager_user_id INTEGER REFERENCES users(id),
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  data_owner_user_id INTEGER REFERENCES users(id),
+  
+  -- MDM: Lineage & Cross-Reference
+  source_system TEXT DEFAULT 'MDM_SYS',
+  external_id TEXT,
+  
+  -- MDM: Lifecycle & Time-Variant (SCD Type 2)
+  status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','inactive','archived')),
+  effective_from DATE DEFAULT CURRENT_DATE,
+  effective_to DATE,
+  
+  -- MDM: Audit Trail
+  created_by INTEGER REFERENCES users(id),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_by INTEGER REFERENCES users(id),
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS users (
@@ -49,7 +71,12 @@ CREATE TABLE IF NOT EXISTS capabilities (
   name TEXT NOT NULL,
   level TEXT NOT NULL CHECK(level IN ('L1','L2','L3')),
   owner_dept_id INTEGER REFERENCES departments(id),
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','approved','rejected')),
+  approval_opinion TEXT,
+  created_by INTEGER REFERENCES users(id),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  approved_by INTEGER REFERENCES users(id),
+  approved_at DATETIME
 );
 
 CREATE TABLE IF NOT EXISTS processes (
@@ -57,7 +84,12 @@ CREATE TABLE IF NOT EXISTS processes (
   name TEXT NOT NULL,
   capability_id INTEGER REFERENCES capabilities(id),
   owner_dept_id INTEGER REFERENCES departments(id),
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','approved','rejected')),
+  approval_opinion TEXT,
+  created_by INTEGER REFERENCES users(id),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  approved_by INTEGER REFERENCES users(id),
+  approved_at DATETIME
 );
 
 CREATE TABLE IF NOT EXISTS mappings (
@@ -152,6 +184,7 @@ CREATE TABLE IF NOT EXISTS terms (
   definition TEXT,
   scope TEXT,
   forbidden TEXT,
+  process_id INTEGER REFERENCES processes(id),
   status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','approved','rejected')),
   created_by INTEGER REFERENCES users(id),
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -197,10 +230,11 @@ CREATE TABLE IF NOT EXISTS todos (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   from_dept_id INTEGER REFERENCES departments(id),
   to_dept_id INTEGER REFERENCES departments(id),
-  type TEXT NOT NULL CHECK(type IN ('field_confirm','gold_source','terminology','general')),
+  type TEXT NOT NULL CHECK(type IN ('field_confirm','gold_source','terminology','general','conflict_resolution')),
   related_mapping_id INTEGER REFERENCES mappings(id) ON DELETE SET NULL,
   related_field_id INTEGER REFERENCES field_entries(id) ON DELETE SET NULL,
   content TEXT NOT NULL,
+  urgency TEXT NOT NULL DEFAULT 'medium' CHECK(urgency IN ('high','medium','low')),
   due_date DATE,
   status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','done','overdue')),
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -228,6 +262,86 @@ CREATE TABLE IF NOT EXISTS version_log (
   operated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   change_set_id INTEGER REFERENCES change_set(id) ON DELETE SET NULL
 );
+
+CREATE TABLE IF NOT EXISTS field_rejection_reasons (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  mapping_id INTEGER NOT NULL REFERENCES mappings(id) ON DELETE CASCADE,
+  field_entry_id INTEGER NOT NULL REFERENCES field_entries(id) ON DELETE CASCADE,
+  rejection_reason TEXT NOT NULL,
+  rejected_by INTEGER REFERENCES users(id),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS conflict_assignments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  conflict_id INTEGER NOT NULL,
+  conflict_type TEXT NOT NULL CHECK(conflict_type IN ('field','term')),
+  assignee_user_id INTEGER REFERENCES users(id),
+  assigned_by INTEGER REFERENCES users(id),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS conflict_coordination_history (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  conflict_id INTEGER NOT NULL,
+  conflict_type TEXT NOT NULL CHECK(conflict_type IN ('field','term')),
+  assignee_user_id INTEGER REFERENCES users(id),
+  result TEXT NOT NULL CHECK(result IN ('A','B','compromise')),
+  note TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 `);
+
+// Migration: update field_conflicts status to support new states
+const fcInfo = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='field_conflicts'").get();
+if (fcInfo && !fcInfo.sql.includes("'archived'")) {
+  db.exec(`
+    CREATE TABLE field_conflicts_new (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      field_entry_a_id INTEGER NOT NULL REFERENCES field_entries(id) ON DELETE CASCADE,
+      field_entry_b_id INTEGER NOT NULL REFERENCES field_entries(id) ON DELETE CASCADE,
+      conflict_field TEXT NOT NULL CHECK(conflict_field IN ('authoritative_system','note','field_type','sync_mode','consume_systems','other')),
+      submitter_a INTEGER REFERENCES users(id),
+      value_a TEXT,
+      submitter_b INTEGER REFERENCES users(id),
+      value_b TEXT,
+      dept_a INTEGER REFERENCES departments(id),
+      dept_b INTEGER REFERENCES departments(id),
+      severity TEXT NOT NULL CHECK(severity IN ('blocking','high','medium','low','warn','error')),
+      status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','coordinating','resolved','rejected','archived')),
+      resolution TEXT,
+      resolved_by INTEGER REFERENCES users(id),
+      resolved_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    INSERT INTO field_conflicts_new SELECT * FROM field_conflicts;
+    DROP TABLE field_conflicts;
+    ALTER TABLE field_conflicts_new RENAME TO field_conflicts;
+  `);
+}
+
+// Same for term_conflicts
+const tcInfo = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='term_conflicts'").get();
+if (tcInfo && !tcInfo.sql.includes("'archived'")) {
+  db.exec(`
+    CREATE TABLE term_conflicts_new (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      term TEXT NOT NULL,
+      dept_a INTEGER REFERENCES departments(id),
+      dept_a_meaning TEXT,
+      dept_b INTEGER REFERENCES departments(id),
+      dept_b_meaning TEXT,
+      severity TEXT NOT NULL CHECK(severity IN ('blocking','high','medium','low','warn','error')),
+      status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','coordinating','resolved','rejected','archived')),
+      resolution TEXT,
+      resolved_by INTEGER REFERENCES users(id),
+      resolved_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    INSERT INTO term_conflicts_new SELECT * FROM term_conflicts;
+    DROP TABLE term_conflicts;
+    ALTER TABLE term_conflicts_new RENAME TO term_conflicts;
+  `);
+}
 
 module.exports = db;
