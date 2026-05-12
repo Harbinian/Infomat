@@ -9,7 +9,13 @@ const BASE_URL = `http://127.0.0.1:${PORT}`;
 
 function resetData() {
   db.exec(`
-    UPDATE departments SET manager_user_id=NULL;
+    UPDATE departments SET manager_user_id=NULL, created_by=NULL, updated_by=NULL, data_owner_user_id=NULL;
+    DELETE FROM version_log;
+    DELETE FROM conflict_coordination_history;
+    DELETE FROM conflict_assignments;
+    DELETE FROM change_set;
+    DELETE FROM field_rejection_reasons;
+    DELETE FROM todos;
     DELETE FROM approval_history;
     DELETE FROM approval_tasks;
     DELETE FROM field_conflicts;
@@ -22,9 +28,8 @@ function resetData() {
     DELETE FROM processes;
     DELETE FROM capabilities;
     DELETE FROM systems;
+    DELETE FROM terms;
     DELETE FROM user_dept_roles;
-    DELETE FROM version_log;
-    DELETE FROM change_set;
     DELETE FROM users;
     DELETE FROM departments;
   `);
@@ -61,6 +66,8 @@ function seedCatalog() {
   const systemId = db.prepare('INSERT INTO systems (name, dept_id) VALUES (?, ?)').run('MDM平台', ownerDeptId).lastInsertRowid;
   const capabilityId = db.prepare('INSERT INTO capabilities (name, level, owner_dept_id) VALUES (?, ?, ?)').run('主数据管理', 'L1', ownerDeptId).lastInsertRowid;
   const processId = db.prepare('INSERT INTO processes (name, capability_id, owner_dept_id) VALUES (?, ?, ?)').run('客户主数据维护', capabilityId, ownerDeptId).lastInsertRowid;
+
+  db.prepare("INSERT INTO terms (term, definition, scope, created_by, status) VALUES (?, ?, ?, ?, 'approved')").run('客户名称', '客户的显示名称', 'CRM,MDM', adminId);
 
   return { submitDeptId, ownerDeptId, crossDeptId, adminId, submitterId, ownerId, crossOwnerId, systemId, capabilityId, processId };
 }

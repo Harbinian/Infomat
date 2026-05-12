@@ -25,8 +25,11 @@ const tables = [
   'term_conflicts',
   'field_conflicts',
   'todos',
+  'change_set',
   'version_log',
-  'change_set'
+  'field_rejection_reasons',
+  'conflict_assignments',
+  'conflict_coordination_history'
 ];
 
 tables.forEach(table => {

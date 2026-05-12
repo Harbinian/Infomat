@@ -8,7 +8,13 @@ const BASE_URL = `http://127.0.0.1:${PORT}`;
 
 function resetData() {
   db.exec(`
-    UPDATE departments SET manager_user_id=NULL;
+    UPDATE departments SET manager_user_id=NULL, created_by=NULL, updated_by=NULL, data_owner_user_id=NULL;
+    DELETE FROM version_log;
+    DELETE FROM conflict_coordination_history;
+    DELETE FROM conflict_assignments;
+    DELETE FROM change_set;
+    DELETE FROM field_rejection_reasons;
+    DELETE FROM todos;
     DELETE FROM approval_history;
     DELETE FROM approval_tasks;
     DELETE FROM field_conflicts;

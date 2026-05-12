@@ -451,7 +451,7 @@
     // ===== Tag rendering =====
     function statusTag(status) {
       const map = { draft:'草稿', submitted:'已提交', dept_reviewed:'部门内审', cross_confirmed:'跨部门确认', fields_confirmed:'字段确认', final_reviewed:'终审', published:'已发布', pending:'待处理', done:'已完成', resolved:'已解决', rejected:'已驳回', approved:'已通过', blocked:'阻断', coordinating:'协调中', archived:'已归档' };
-      const cls = /published|approved|done|resolved/.test(status) ? 'green' : /blocked|rejected|error/.test(status) ? 'red' : /pending|submitted/.test(status) ? 'amber' : '';
+      const cls = /published|approved|done|resolved/.test(status) ? 'green' : /blocked|rejected|error/.test(status) ? 'red' : /pending|submitted|coordinating/.test(status) ? 'amber' : '';
       return '<span class="tag ' + cls + '">' + (map[status] || status || '-') + '</span>';
     }
 
@@ -1511,6 +1511,12 @@
         showToast(e.message || '归档失败', 'error');
       }
     }
+
+    window.addEventListener('popstate', function() {
+      var route = parseHash();
+      state.currentRoute = route;
+      navigateTo(route.view, route);
+    });
 
     // ===== Init =====
     checkSession();
