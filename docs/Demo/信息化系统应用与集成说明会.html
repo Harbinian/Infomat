@@ -135,14 +135,14 @@ td strong{color:var(--text)}
 .gantt-code-embed .gantt-head{padding:18px 22px;border-bottom:1px solid rgba(96,165,250,.32);background:linear-gradient(135deg,#071a31,#08213d)}
 .gantt-code-embed .gantt-head h3{font-size:18px;color:#f8fbff;margin-bottom:5px}
 .gantt-code-embed .gantt-head p{font-size:12px;color:#bfdbfe;line-height:1.7}
-.gantt-scroll{overflow-x:auto;background:radial-gradient(circle at 16% 12%,rgba(37,99,235,.22),transparent 34%),linear-gradient(135deg,#04111f,#06172a 55%,#071a31);padding:14px}
-.gantt-board{position:relative;display:grid;grid-template-columns:180px 300px repeat(8,220px);grid-template-rows:56px;grid-auto-rows:46px;min-width:2240px;border:1px solid rgba(96,165,250,.62);border-radius:10px;overflow:hidden;background:rgba(5,18,33,.72);box-shadow:inset 0 0 28px rgba(59,130,246,.08)}
-.gantt-corner,.gantt-task-header,.gantt-month{height:56px;display:flex;align-items:center;background:linear-gradient(180deg,rgba(10,35,63,.98),rgba(8,27,49,.98));border-bottom:1px solid rgba(96,165,250,.62);font-weight:900;color:#f8fbff;z-index:4}
-.gantt-corner{grid-column:1;padding-left:16px;border-right:1px solid rgba(96,165,250,.62);font-size:15px}
-.gantt-task-header{grid-column:2;padding-left:18px;border-right:1px solid rgba(96,165,250,.62);font-size:15px}
-.gantt-month{justify-content:center;border-right:1px solid rgba(96,165,250,.62);font-size:18px}.gantt-month small{font-size:10px;color:#93c5fd;margin-left:4px}
-.gantt-group-label{grid-column:1;display:flex;align-items:flex-start;padding:14px 14px;border-right:1px solid rgba(96,165,250,.62);border-bottom:1px solid rgba(96,165,250,.28);background:linear-gradient(135deg,rgba(14,35,62,.88),rgba(8,27,49,.72));font-size:22px;font-weight:900;letter-spacing:1px;text-shadow:0 0 12px currentColor}
-.gantt-task-cell{grid-column:2;display:flex;align-items:center;gap:8px;padding:0 10px;border-right:1px solid rgba(96,165,250,.62);border-bottom:1px solid rgba(96,165,250,.16);background:rgba(8,27,49,.48)}
+.gantt-scroll{overflow:auto;max-height:72vh;background:radial-gradient(circle at 16% 12%,rgba(37,99,235,.22),transparent 34%),linear-gradient(135deg,#04111f,#06172a 55%,#071a31);padding:14px}
+.gantt-board{position:relative;display:grid;grid-template-columns:180px 300px repeat(8,220px);grid-template-rows:56px;grid-auto-rows:46px;min-width:2240px;border:1px solid rgba(96,165,250,.62);border-radius:10px;overflow:visible;background:rgba(5,18,33,.72);box-shadow:inset 0 0 28px rgba(59,130,246,.08)}
+.gantt-corner,.gantt-task-header,.gantt-month{height:56px;display:flex;align-items:center;background:linear-gradient(180deg,rgba(10,35,63,.98),rgba(8,27,49,.98));border-bottom:1px solid rgba(96,165,250,.62);font-weight:900;color:#f8fbff;box-shadow:0 4px 10px rgba(0,0,0,.35)}
+.gantt-corner{grid-column:1;padding-left:16px;border-right:1px solid rgba(96,165,250,.62);font-size:15px;position:sticky;top:-14px;left:0;z-index:10}
+.gantt-task-header{grid-column:2;padding-left:18px;border-right:1px solid rgba(96,165,250,.62);font-size:15px;position:sticky;top:-14px;z-index:9}
+.gantt-month{justify-content:center;border-right:1px solid rgba(96,165,250,.62);font-size:18px;position:sticky;top:-14px;z-index:8}.gantt-month small{font-size:10px;color:#93c5fd;margin-left:4px}
+.gantt-group-label{grid-column:1;display:flex;align-items:flex-start;padding:14px 14px;border-right:1px solid rgba(96,165,250,.62);border-bottom:1px solid rgba(96,165,250,.28);background:linear-gradient(135deg,rgba(14,35,62,.88),rgba(8,27,49,.72));font-size:22px;font-weight:900;letter-spacing:1px;text-shadow:0 0 12px currentColor;position:sticky;left:0;z-index:7;box-shadow:4px 0 10px rgba(0,0,0,.3)}
+.gantt-task-cell{grid-column:2;display:flex;align-items:center;gap:8px;padding:0 10px;border-right:1px solid rgba(96,165,250,.62);border-bottom:1px solid rgba(96,165,250,.16);background:rgba(8,27,49,.48);position:sticky;left:180px;z-index:6;box-shadow:6px 0 12px rgba(0,0,0,.35)}
 .gantt-task-cell.sub{padding-left:16px}.gantt-task-code{flex:0 0 82px;color:#93c5fd;font-size:11px;font-weight:900}.gantt-task-name{min-width:0;color:#f8fbff;font-size:13px;font-weight:900;line-height:1.2}
 .gantt-sub-badge{flex:0 0 auto;padding:4px 8px;border:1px solid rgba(125,211,252,.36);border-radius:999px;color:#bfdbfe;background:rgba(14,116,144,.18);font-size:10px;font-weight:900}
 .gantt-time-cell{border-right:1px solid rgba(96,165,250,.35);border-bottom:1px solid rgba(96,165,250,.14);background-image:linear-gradient(90deg,transparent calc(50% - 1px),rgba(59,130,246,.13) 50%,transparent calc(50% + 1px))}
@@ -406,6 +406,106 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
 .sankey-title{text-align:center;font-size:18px;font-weight:700;color:#f8fafc;margin-bottom:4px;letter-spacing:1px}
 .sankey-sub{text-align:center;font-size:12px;color:#64748b;margin-bottom:14px}
 .sankey-chart{width:100%;max-width:100%;min-width:0;height:660px}
+/* ── MILESTONE TIMELINE ── */
+.ms-timeline{position:relative;display:flex;justify-content:space-between;padding:48px 0 24px;margin:0 auto;max-width:1100px}
+.ms-timeline::before{content:'';position:absolute;top:58px;left:8%;right:8%;height:3px;background:linear-gradient(90deg,var(--blue),var(--teal),var(--purple),var(--red));border-radius:2px}
+.ms-node{position:relative;flex:1;text-align:center;z-index:1;padding:0 8px}
+.ms-dot{width:20px;height:20px;border-radius:50%;background:var(--blue);border:3px solid #fff;box-shadow:0 0 0 3px var(--blue);margin:46px auto 14px;position:relative;z-index:2}
+.ms-node.key .ms-dot{background:var(--red);box-shadow:0 0 0 3px var(--red),0 0 18px rgba(220,38,38,.28)}
+.ms-date{font-size:18px;font-weight:900;color:var(--navy);margin-bottom:6px}
+.ms-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px}
+.ms-desc{font-size:12px;color:var(--gray);line-height:1.6}
+@media(max-width:980px){
+  .summary-grid,.flow-steps,.res-grid,.field-grid,.dd-section .field-grid,.cat-grid,.resp-grid,.flow{grid-template-columns:1fr 1fr}
+  .flow-step:after{display:none}
+}
+@media(max-width:640px){
+  .summary-grid,.flow-steps,.res-grid,.field-grid,.cat-grid,.resp-grid,.flow{grid-template-columns:1fr}
+}
+@media(max-width:768px){.ms-timeline{flex-direction:column;padding:24px 0 24px 32px}.ms-timeline::before{top:0;bottom:0;left:28px;right:auto;width:3px;height:auto}.ms-node{text-align:left;padding:0 0 28px 24px}.ms-dot{position:absolute;left:-36px;top:2px;margin:0}}
+
+/* ── MERGED from PLM精细化实施方案 ── */
+.summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+.summary-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 18px;border-top:4px solid var(--purple);box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.summary-card h4{font-size:13px;color:var(--navy);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.summary-card p{font-size:12px;color:var(--muted);line-height:1.8}
+.summary-icon{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0}
+.phase-tag.purple{color:#6d28d9;background:#ede9fe}
+.phase-tag.teal{color:#0e7490;background:#cffafe}
+.phase-tag.orange{color:#c2410c;background:#fff7ed}
+.phase-tag.blue{color:#1d4ed8;background:#dbeafe}
+.phase-tag.green{color:#166534;background:#dcfce7}
+.flow-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px}
+.flow-step-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;border-top:4px solid var(--green);position:relative}
+.flow-step-card .fs-num{width:28px;height:28px;border-radius:50%;background:var(--green);color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;margin-bottom:10px}
+.flow-step-card h4{font-size:13px;color:var(--navy);margin-bottom:6px}
+.flow-step-card p{font-size:12px;color:var(--muted);line-height:1.75}
+.flow-step-card .fs-check{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;margin-top:8px;background:#fee2e2;color:#b91c1c}
+.res-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px}
+.res-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;text-align:center}
+.res-card .rn{font-size:28px;font-weight:900;color:var(--purple);line-height:1}
+.res-card .rl{font-size:12px;color:var(--gray);margin-top:4px}
+.res-card .rd{font-size:11px;color:var(--muted);margin-top:6px;line-height:1.6}
+.dd-section{margin-bottom:20px}
+.dd-section h4{font-size:14px;color:var(--navy);margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid var(--purple);display:flex;align-items:center;gap:8px}
+.dd-section h4 .dd-num{width:24px;height:24px;border-radius:50%;background:var(--purple);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.field-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.field-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px 14px;border-left:3px solid var(--teal)}
+.field-card .fn{font-size:12px;font-weight:700;color:var(--navy);margin-bottom:3px}
+.field-card .fd{font-size:11px;color:var(--muted);line-height:1.65}
+.field-card .ft{display:inline-block;font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;margin-top:5px}
+.ft-mes{background:#dcfce7;color:#166534}
+.ft-erp{background:#dbeafe;color:#1d4ed8}
+.ft-quality{background:#fef3c7;color:#92400e}
+.ft-plm{background:#ede9fe;color:#6d28d9}
+
+/* ── MERGED from 主数据管理五阶段工作流程 ── */
+.cat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.cat-card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center;transition:.2s}
+.cat-card:hover{box-shadow:0 4px 12px rgba(0,0,0,.08);border-color:var(--blue)}
+.cat-card .cat-icon{font-size:28px;margin-bottom:6px}
+.cat-card .cat-name{font-size:13px;font-weight:800;color:var(--navy)}
+.cat-card .cat-desc{font-size:11px;color:var(--gray);margin-top:4px}
+.resp-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.resp-card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px;border-left:4px solid var(--blue)}
+.resp-card .r-sys{font-size:13px;font-weight:800;color:var(--navy);margin-bottom:4px}
+.resp-card .r-dept{font-size:11px;color:var(--amber);font-weight:700;margin-bottom:4px}
+.resp-card .r-desc{font-size:11px;color:var(--muted);line-height:1.6}
+.badge-row{display:flex;flex-wrap:wrap;gap:7px}
+.badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:800}
+.badge.plm{background:#ede9fe;color:#6d28d9}
+.badge.erp{background:#dbeafe;color:#1d4ed8}
+.badge.mes{background:#dcfce7;color:#166534}
+.badge.owner{background:#ffedd5;color:#c2410c}
+.badge.std{background:#e8f0fe;color:#1a56db}
+.badge.clean{background:#fef3c7;color:#92400e}
+.badge.proc{background:#ede9fe;color:#6d28d9}
+.badge.integ{background:#dcfce7;color:#166534}
+.badge.ops{background:#ffe4e6;color:#be123c}
+.flow{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.flow-step{position:relative;background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px 14px 12px;border-top:4px solid var(--blue);min-height:160px}
+.flow-step:after{content:"→";position:absolute;right:-12px;top:48%;transform:translateY(-50%);color:#94a3b8;font-size:20px;font-weight:900}
+.flow-step:last-child:after{display:none}
+.flow-step .n{width:26px;height:26px;border-radius:50%;background:var(--blue);color:#fff;font-size:12px;font-weight:900;display:flex;align-items:center;justify-content:center;margin-bottom:8px}
+.flow-step h3{font-size:13px;color:var(--navy);margin-bottom:6px}
+.flow-step p{font-size:12px;line-height:1.7;color:var(--muted)}
+.flow-step.green{border-top-color:var(--green)}.flow-step.green .n{background:var(--green)}
+.flow-step.amber{border-top-color:var(--amber)}.flow-step.amber .n{background:var(--amber)}
+.flow-step.purple{border-top-color:var(--purple)}.flow-step.purple .n{background:var(--purple)}
+.flow-step.red{border-top-color:var(--red)}.flow-step.red .n{background:var(--red)}
+.status-chain{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.st{background:#fff;border:1px solid var(--border);border-radius:999px;padding:7px 12px;font-size:12px;font-weight:800;color:var(--navy)}
+.arrow{color:#94a3b8;font-weight:900}
+.dataflow{background:#06172a;border:1px solid #1d4ed8;border-radius:12px;padding:18px;overflow:hidden;box-shadow:0 12px 30px rgba(15,42,94,.18)}
+.dataflow svg{display:block;width:100%;height:auto}
+.legend{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:12px;color:#dbeafe;font-size:11px}
+.dot{width:12px;height:12px;border-radius:50%;display:inline-block;margin-right:6px;vertical-align:-2px}
+.summary-box{background:linear-gradient(135deg,#081e4a,#1a56db);border-radius:12px;padding:24px 28px;color:#fff;margin-top:12px}
+.summary-box h3{font-size:16px;margin-bottom:10px;color:#7dd3fc}
+.summary-box p{font-size:13px;line-height:1.9;color:rgba(255,255,255,.82)}
+.danger{background:#fef2f2;border:1px solid #fecaca;border-left:4px solid var(--red);border-radius:8px;padding:12px 16px;margin-bottom:14px}
+.danger .dt{font-size:13px;font-weight:800;color:#991b1b;margin-bottom:5px}
+.danger p{font-size:12px;color:#7f1d1d;line-height:1.8}
 </style>
 </head>
 <body>
@@ -419,7 +519,7 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
     <a href="#s7">OA</a><a href="#s8">PLM</a><a href="#s9">MES</a><a href="#s10">其他系统</a>
     <a href="#s11">事故链</a><a href="#s12">MDM基石</a><a href="#s13">拓扑数据流</a>
     <a href="#s14">MDM路径</a><a href="#s15">黄金源</a><a href="#s16">接口</a>
-    <a href="#s17">Q成熟度</a><a href="#s18">组织分工</a><a href="#s19">行动清单</a>
+    <a href="#s17">Q成熟度</a><a href="#s18">组织分工</a><a href="#s19">行动清单</a><a href="#appendix">附录</a>
   </div>
 </nav>
 
@@ -469,18 +569,18 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
   <div class="card"><h3>项目背景与目标</h3><p>沈阳昌兴复材航空科技有限责任公司作为航空复合材料零部件制造商，推进全域数字化运营平台建设。核心目标是打通研发、制造、采购、质量、财务五大业务域数据流，实现从 EBOM → MBOM → 生产执行 → 成本核算的全链路数字化闭环，并满足航空适航<strong>零件编号+质量编号追溯</strong>要求。</p></div>
   <div class="tw" style="margin-top:16px">
     <table>
-      <thead><tr><th>维度</th><th>行业平均水准</th><th>数字化目标</th><th>说明</th></tr></thead>
+      <thead><tr><th>维度</th><th>数字化提升目标</th><th>说明</th></tr></thead>
       <tbody>
-        <tr><td><strong>交付效率</strong></td><td style="color:var(--gray)">订单交付周期 45–60天；计划达成率 75–80%</td><td style="color:var(--green);font-weight:700">交付周期 ≤30天；计划达成率 ≥90%</td><td>复材件交付受适航取证约束，周期压缩空间有限，数字化重点在减少等待和返工</td></tr>
-        <tr><td><strong>生产运营</strong></td><td style="color:var(--gray)">OEE 设备综合效率 55–65%；在制品周转 15–20天</td><td style="color:var(--green);font-weight:700">OEE ≥75%；在制品周转 ≤8天</td><td>复材固化曲线长、换料频次高，OEE提升依赖工艺数字化和设备 IoT</td></tr>
-        <tr><td><strong>质量管控</strong></td><td style="color:var(--gray)">一次合格率 85–90%；返工率 8–12%；追溯覆盖率 ≤60%</td><td style="color:var(--green);font-weight:700">一次合格率 ≥95%；返工率 &lt;3%；追溯覆盖率 ≥98%</td><td>适航审查要求零件编号+质量编号全链路可查，追溯覆盖是硬门槛</td></tr>
-        <tr><td><strong>数据协同</strong></td><td style="color:var(--gray)">主数据错误率 15–20%；跨系统一致率 60–70%；信息孤岛 5–8个</td><td style="color:var(--green);font-weight:700">主数据错误率 &lt;3%；跨系统一致率 ≥95%；信息孤岛基本消除</td><td>复材BOM层级多、ECO变更频，数据不一致会直接传导到工序执行</td></tr>
-        <tr><td><strong>成本控制</strong></td><td style="color:var(--gray)">库存周转 4–6次/年；报工及时率 70–80%；废品率 3–5%</td><td style="color:var(--green);font-weight:700">库存周转 ≥8次/年；报工及时率 ≥95%；废品率 &lt;1.5%</td><td>原材料（碳纤维、预浸料）成本占比高，库存周转和废品率直接影响利润</td></tr>
+        <tr><td><strong>交付效率</strong></td><td style="color:var(--green);font-weight:700">订单交付周期缩短 ≥43%；计划达成率提升 +13个百分点</td><td>复材件交付受适航取证约束，周期压缩空间有限，数字化重点在减少等待和返工</td></tr>
+        <tr><td><strong>生产运营</strong></td><td style="color:var(--green);font-weight:700">OEE设备综合效率提升 +15个百分点；在制品周转时间压缩 ≥54%</td><td>复材固化曲线长、换料频次高，OEE提升依赖工艺数字化和设备IoT</td></tr>
+        <tr><td><strong>质量管控</strong></td><td style="color:var(--green);font-weight:700">一次合格率提升 +8个百分点；返工率降低 ≥70%；追溯覆盖率提升 +38个百分点</td><td>适航审查要求零件编号+质量编号全链路可查，追溯覆盖是硬门槛</td></tr>
+        <tr><td><strong>数据协同</strong></td><td style="color:var(--green);font-weight:700">主数据错误率降低 ≥83%；跨系统一致率提升 +30个百分点；信息孤岛基本消除</td><td>复材BOM层级多、ECO变更频，数据不一致会直接传导到工序执行</td></tr>
+        <tr><td><strong>成本控制</strong></td><td style="color:var(--green);font-weight:700">库存周转提升 ≥60%；报工及时率提升 +20个百分点；废品率降低 ≥62%</td><td>原材料（碳纤维、预浸料）成本占比高，库存周转和废品率直接影响利润</td></tr>
       </tbody>
     </table>
   </div>
-  <div class="info" style="margin-top:12px"><p>数据来源：离散制造/航空复材行业通用benchmark，供参考。</p></div>
-  <div class="card" style="margin-top:16px"><p>通过数字化建设，打通研发、制造、采购、质量、财务五大业务域数据流，实现从 EBOM → MBOM → 生产执行 → 成本核算的全链路数字化闭环，支撑航空适航零件编号+质量编号全链路追溯。</p></div>
+  <div id="chart-targets" style="height:440px;margin-top:16px;background:#0f172a;border-radius:12px;padding:12px 16px"></div>
+  <div class="info" style="margin-top:12px"><p>数据来源：离散制造/航空复材行业通用benchmark，供参考。提升幅度为基于行业基线的数字化预期改善值。</p></div>
 </div>
 
 <!-- ══ 3 我们有哪4套系统 ══ -->
@@ -501,7 +601,7 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
   <div class="gantt-code-embed">
     <div class="gantt-head">
       <h3>昌兴复材数字化项目实施甘特图（2026.05 - 2026.12）</h3>
-      <p>单一融合甘特图｜MES 明细融合到 MES建设 分组内部｜同一条 2026.05 - 2026.12 时间轴</p>
+      <p>单一融合甘特图｜PLM 与 MES 子泳道融合到各自建设分组内部｜同一条 2026.05 - 2026.12 时间轴</p>
     </div>
     <div class="gantt-scroll">
       <div id="embeddedGantt" class="gantt-board" aria-label="数字化项目实施融合甘特图"></div>
@@ -514,12 +614,33 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
 <!-- ══ 5 关键里程碑 ══ -->
 <div class="sec" id="s5">
   <div class="sec-hd"><div class="sec-num">5</div><div><h2>关键里程碑</h2><div class="sd">每个阶段的 Go / No-Go 判断点</div></div></div>
-  <div class="project-visual">
-    <a href="../../output/digital_project_milestones_8k.png" target="_blank" rel="noopener">
-      <img src="../../output/digital_project_milestones_8k.png" alt="信息化项目关键里程碑图"/>
-    </a>
-    <div class="project-visual-caption"><span><strong>关键里程碑图</strong> · 来源：output/digital_project_milestones_8k.png</span><span>点击查看原图</span></div>
+  <div class="ms-timeline">
+    <div class="ms-node">
+      <div class="ms-dot"></div>
+      <div class="ms-date">2026-06-13</div>
+      <div class="ms-title">编码锁定</div>
+      <div class="ms-desc">物料编码规则锁定，各系统供应商技术确认完成，接口字段定义具备进入设计条件</div>
+    </div>
+    <div class="ms-node">
+      <div class="ms-dot"></div>
+      <div class="ms-date">2026-08-15</div>
+      <div class="ms-title">接口联调</div>
+      <div class="ms-desc">核心接口联调完成，MDM 平台搭建就绪，主数据清洗迁移过半</div>
+    </div>
+    <div class="ms-node key">
+      <div class="ms-dot"></div>
+      <div class="ms-date">2026-11-01</div>
+      <div class="ms-title">PLM 上线</div>
+      <div class="ms-desc">PLM 一期上线验收，需求设计→功能开发→测试上线全子泳道完成</div>
+    </div>
+    <div class="ms-node key">
+      <div class="ms-dot"></div>
+      <div class="ms-date">2026-12-01</div>
+      <div class="ms-title">正式上线</div>
+      <div class="ms-desc">全链路集成测试通过，UAT 用户验收完成，四套系统正式投产</div>
+    </div>
   </div>
+  <div class="project-visual-caption"><span><strong>关键里程碑时间轴</strong> · 来源：甘特图数据同步生成</span><span>4 个 Go / No-Go 判断节点</span></div>
 </div>
 
 <!-- ══ 6 当前卡点说明 ══ -->
@@ -692,14 +813,14 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
       <text x="440" y="43" text-anchor="middle" fill="white" font-size="13" font-weight="600">客户交付一体化平台 / 项目管理</text>
 
       <!-- ERP -->
-      <rect x="190" y="84" width="500" height="56" rx="7" fill="#1e40af" opacity=".9"/>
+      <rect x="190" y="84" width="500" height="56" rx="7" fill="#1e40af" opacity=".9" data-topo="erp"/>
       <text x="440" y="108" text-anchor="middle" fill="white" font-size="14" font-weight="700">ERP 核心层（用友U8）</text>
       <text x="440" y="128" text-anchor="middle" fill="#93c5fd" font-size="12">PS · FI · CO · PP · MM · SD</text>
 
       <!-- 平台→ERP -->
       <line x1="440" y1="58" x2="440" y2="84" stroke="#60a5fa" stroke-width="2" stroke-dasharray="4,3" marker-end="url(#arr-b)"/>
 
-      /* OA */
+      <!-- OA: 流程协同层, 统一待办入口 -->
       <g onclick="openTopoModal('oa')" style="cursor:pointer">
       <rect x="18" y="84" width="148" height="56" rx="7" fill="#92400e" opacity=".9"/>
       <text x="92" y="103" text-anchor="middle" fill="white" font-size="13" font-weight="700">OA（华天动力）</text>
@@ -720,29 +841,29 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
       <text x="92" y="268" text-anchor="middle" fill="#c4b5fd" font-size="10" font-weight="600">PLM（含PDM/MBOM）</text>
 
       <!-- 研发域 -->
-      <rect x="18" y="252" width="148" height="48" rx="7" fill="#5b21b6" opacity=".9"/>
+      <rect x="18" y="252" width="148" height="48" rx="7" fill="#5b21b6" opacity=".9" data-topo="plm"/>
       <text x="92" y="272" text-anchor="middle" fill="white" font-size="13" font-weight="700">PLM（翎瑞鸿翔）</text>
       <text x="92" y="289" text-anchor="middle" fill="#c4b5fd" font-size="11">MBOM·ECO·工程项目管理</text>
 
-      <rect x="18" y="328" width="148" height="48" rx="7" fill="#0e7490" opacity=".9"/>
+      <rect x="18" y="328" width="148" height="48" rx="7" fill="#0e7490" opacity=".9" data-topo="pdm"/>
       <text x="92" y="350" text-anchor="middle" fill="white" font-size="13" font-weight="700">PDM</text>
       <text x="92" y="366" text-anchor="middle" fill="#a5f3fc" font-size="11">BOM管理 · 受控发布</text>
 
-      <rect x="18" y="404" width="68" height="48" rx="7" fill="#c2410c" opacity=".9"/>
+      <rect x="18" y="404" width="68" height="48" rx="7" fill="#c2410c" opacity=".9" data-topo="capp"/>
       <text x="52" y="424" text-anchor="middle" fill="white" font-size="12" font-weight="700">CAPP</text>
       <text x="52" y="441" text-anchor="middle" fill="#fed7aa" font-size="10">工艺设计</text>
 
       <!-- 制造域 -->
-      <rect x="356" y="252" width="168" height="48" rx="7" fill="#065f46" opacity=".9"/>
+      <rect x="356" y="252" width="168" height="48" rx="7" fill="#065f46" opacity=".9" data-topo="mes"/>
       <text x="440" y="272" text-anchor="middle" fill="white" font-size="13" font-weight="700">MES（北京虎蜥）</text>
       <text x="440" y="289" text-anchor="middle" fill="#6ee7b7" font-size="11">排产 · 执行 · IoT采集</text>
 
-      <rect x="356" y="328" width="168" height="48" rx="7" fill="#831843" opacity=".9"/>
+      <rect x="356" y="328" width="168" height="48" rx="7" fill="#831843" opacity=".9" data-topo="wms"/>
       <text x="440" y="350" text-anchor="middle" fill="white" font-size="13" font-weight="700">WMS</text>
       <text x="440" y="366" text-anchor="middle" fill="#fbcfe8" font-size="11">仓储 · 出入库 · 库存</text>
 
       <!-- 采购域 -->
-      <rect x="714" y="252" width="148" height="48" rx="7" fill="#065f46" opacity=".9"/>
+      <rect x="714" y="252" width="148" height="48" rx="7" fill="#065f46" opacity=".9" data-topo="sc"/>
       <text x="788" y="272" text-anchor="middle" fill="white" font-size="13" font-weight="700">供应链管理系统</text>
       <text x="788" y="289" text-anchor="middle" fill="#6ee7b7" font-size="11">供应商协同门户</text>
 
@@ -1267,12 +1388,26 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
     {group:"PLM建设",code:"PLM-01",task:"PLM蓝图设计",type:"PLM建设",start:"2026-05-01",end:"2026-06-30"},
     {group:"PLM建设",code:"PLM-02",task:"PLM系统配置开发",type:"PLM建设",start:"2026-07-01",end:"2026-09-30"},
     {group:"PLM建设",code:"PLM-03",task:"PLM上线验收",type:"关键任务",start:"2026-10-01",end:"2026-11-01"},
+	    {group:"PLM建设",sub:"子泳道-需求与设计",code:"PLM2-01",task:"PLM业务需求调研",type:"PLM建设",start:"2026-05-20",end:"2026-05-31"},
+	    {group:"PLM建设",sub:"子泳道-需求与设计",code:"PLM2-02",task:"PLM蓝图设计",type:"PLM建设",start:"2026-06-01",end:"2026-06-15"},
+	    {group:"PLM建设",sub:"子泳道-需求与设计",code:"PLM2-03",task:"PLM详细设计",type:"关键任务",start:"2026-06-16",end:"2026-06-30"},
+	    {group:"PLM建设",sub:"子泳道-功能开发",code:"PLM2-04",task:"标准功能配置",type:"PLM建设",start:"2026-07-01",end:"2026-07-20"},
+	    {group:"PLM建设",sub:"子泳道-功能开发",code:"PLM2-05",task:"定制功能开发",type:"PLM建设",start:"2026-07-21",end:"2026-09-20"},
+	    {group:"PLM建设",sub:"子泳道-功能开发",code:"PLM2-06",task:"集成接口开发",type:"PLM建设",start:"2026-09-21",end:"2026-09-30"},
+	    {group:"PLM建设",sub:"子泳道-测试上线",code:"PLM2-07",task:"集成接口联合调试",type:"PLM建设",start:"2026-10-01",end:"2026-10-12"},
+	    {group:"PLM建设",sub:"子泳道-测试上线",code:"PLM2-08",task:"历史数据整理与导入（如需）",type:"PLM建设",start:"2026-10-01",end:"2026-10-15"},
+	    {group:"PLM建设",sub:"子泳道-测试上线",code:"PLM2-09",task:"单元测试与用户接受测试",type:"PLM建设",start:"2026-10-16",end:"2026-10-20"},
+	    {group:"PLM建设",sub:"子泳道-测试上线",code:"PLM2-10",task:"压力测试与集成场景测试",type:"PLM建设",start:"2026-10-21",end:"2026-10-22"},
+	    {group:"PLM建设",sub:"子泳道-测试上线",code:"PLM2-11",task:"生产环境部署",type:"关键任务",start:"2026-10-23",end:"2026-10-25"},
+	    {group:"PLM建设",sub:"子泳道-测试上线",code:"PLM2-12",task:"用户使用培训",type:"PLM建设",start:"2026-10-26",end:"2026-10-27"},
+	    {group:"PLM建设",sub:"子泳道-测试上线",code:"PLM2-13",task:"验收与应用支持",type:"关键任务",start:"2026-10-28",end:"2026-11-01"},
+
     {group:"MES建设",code:"MES-00",task:"MES蓝图设计",type:"MES建设",start:"2026-06-01",end:"2026-06-30"},
     {group:"MES建设",code:"MES-00",task:"MES系统配置开发",type:"MES建设",start:"2026-07-01",end:"2026-10-31"},
     {group:"MES建设",code:"MES-00",task:"MES上线验收",type:"关键任务",start:"2026-10-01",end:"2026-11-30"},
     {group:"MES建设",sub:"子泳道-主数据",code:"MES-MD-01",task:"定标准、需求与设计",type:"MES明细-需求设计",start:"2026-05-01",end:"2026-05-31"},
     {group:"MES建设",sub:"子泳道-主数据",code:"MES-MD-02",task:"功能模块开发",type:"MES明细-功能开发",start:"2026-06-01",end:"2026-07-31"},
-    {group:"MES建设",sub:"子泳道-主数据",code:"MES-MD-03",task:"存量数据盘点清洗",type:"关键任务",start:"2026-06-01",end:"2026-08-31"},
+    {group:"MES建设",sub:"子泳道-主数据",code:"MES-MD-03",task:"存量数据盘点清洗（批产件）",type:"关键任务",start:"2026-06-01",end:"2026-08-31"},
     {group:"MES建设",sub:"子泳道-主数据",code:"MES-MD-04",task:"PLM集成需求与设计",type:"MES明细-需求设计",start:"2026-06-01",end:"2026-06-30"},
     {group:"MES建设",sub:"子泳道-主数据",code:"MES-MD-05",task:"与PLM接口开发",type:"接口联调",start:"2026-07-01",end:"2026-07-31"},
     {group:"MES建设",sub:"子泳道-主数据",code:"MES-MD-06",task:"与PLM对接联调",type:"接口联调",start:"2026-08-01",end:"2026-08-31"},
@@ -1343,9 +1478,8 @@ function sw(btn,id){
 (function(){
   var chart=echarts.init(document.getElementById('chart-d4'),'dark');
   var links=[{source:'工程技术部',target:'工艺生产过程管控',value:6},{source:'工程技术部',target:'工艺文件编制与管控',value:2},{source:'工程技术部',target:'生产线规划与管控',value:2},{source:'工程技术部',target:'物料及特制件管控',value:3},{source:'工程技术部',target:'制造数据统筹管控',value:3},{source:'工艺生产过程管控',target:'关键工序控制',value:1},{source:'工艺生产过程管控',target:'关键件的控制',value:1},{source:'工艺生产过程管控',target:'关键特性KC控制',value:1},{source:'工艺生产过程管控',target:'特殊过程控制',value:1},{source:'工艺生产过程管控',target:'一般生产过程管理',value:1},{source:'工艺生产过程管控',target:'工艺过程管控',value:1},{source:'工艺文件编制与管控',target:'制造工艺文件管控',value:1},{source:'工艺文件编制与管控',target:'零件制造工艺文件管控',value:1},{source:'生产线规划与管控',target:'生产线规划',value:1},{source:'生产线规划与管控',target:'产能控制',value:1},{source:'物料及特制件管控',target:'物料主数据维护',value:1},{source:'物料及特制件管控',target:'材料和外购件代用',value:1},{source:'物料及特制件管控',target:'特制件管控',value:1},{source:'制造数据统筹管控',target:'MBOM编制',value:1},{source:'制造数据统筹管控',target:'零组件供应状态表编制',value:1},{source:'制造数据统筹管控',target:'工时定额编制',value:1},{source:'关键工序控制',target:'MES',value:1},{source:'关键件的控制',target:'MES',value:1},{source:'关键特性KC控制',target:'MES',value:1},{source:'特殊过程控制',target:'MES',value:1},{source:'一般生产过程管理',target:'MES',value:1},{source:'工艺过程管控',target:'MES',value:1},{source:'制造工艺文件管控',target:'PLM',value:1},{source:'零件制造工艺文件管控',target:'PLM',value:1},{source:'生产线规划',target:'PLM',value:1},{source:'产能控制',target:'PLM',value:1},{source:'物料主数据维护',target:'MES',value:1},{source:'材料和外购件代用',target:'MES',value:1},{source:'特制件管控',target:'MES',value:1},{source:'MBOM编制',target:'MES',value:1},{source:'零组件供应状态表编制',target:'PLM',value:1},{source:'工时定额编制',target:'PLM+MES',value:1}];
-  var colorMap={'工程技术部':'#3b82f6','工艺生产过程管控':'#22c55e','工艺文件编制与管控':'#06b6d4','生产线规划与管控':'#f59e0b','物料及特制件管控':'#a78bfa','制造数据统筹管控':'#f97316','CAPP+MES':'#22c55e','PLM':'#8b5cf6','ERP+PDM':'#f59e0b','CAPP':'#06b6d4','PLM+MES':'#ec4899'};
+  var colorMap={'工程技术部':'#3b82f6','工艺生产过程管控':'#22c55e','工艺文件编制与管控':'#06b6d4','生产线规划与管控':'#f59e0b','物料及特制件管控':'#a78bfa','制造数据统筹管控':'#f97316','CAPP+MES':'#22c55e','PLM':'#8b5cf6','ERP+PDM':'#f59e0b','CAPP':'#06b6d4','PLM+MES':'#ec4899','MES':'#f59e0b'};
   var nodeSet=new Set();links.forEach(function(l){nodeSet.add(l.source);nodeSet.add(l.target);});
-  var nodes=[].concat.apply([],[...nodeSet].map(function(n){return[{name:n,itemStyle:{color:colorMap[n]||'#64748b'}}]}));
   chart.setOption({backgroundColor:'transparent',tooltip:{trigger:'item',triggerOn:'mousemove',formatter:function(p){return p.dataType==='edge'?p.data.source+' → '+p.data.target:p.name;},backgroundColor:'#1e293b',borderColor:'#334155',textStyle:{color:'#f1f5f9',fontSize:12}},series:[{type:'sankey',left:20,right:130,top:20,bottom:20,data:[].concat.apply([],[...nodeSet].map(function(n){return[{name:n,itemStyle:{color:colorMap[n]||'#64748b'}}]})),links:links,orient:'horizontal',nodeWidth:16,nodeGap:10,draggable:false,layoutIterations:64,label:{position:'right',fontSize:12,color:'#e2e8f0',fontFamily:'PingFang SC,sans-serif'},lineStyle:{color:'gradient',opacity:0.35,curveness:0.5},emphasis:{focus:'adjacency',lineStyle:{opacity:0.85}}}]});
   window.addEventListener('resize',function(){chart.resize();});
 })();
@@ -1374,25 +1508,54 @@ function sw(btn,id){
 (function(){
   var chart=echarts.init(document.getElementById('chart-d2'),'dark');
   var links=[{source:'工程技术部',target:'工装策划与申请',value:6},{source:'工程技术部',target:'工装设计与制造',value:2},{source:'工技+物保+质量',target:'工装使用与维护',value:1},{source:'复材车间',target:'工装使用与维护',value:2},{source:'工技+项目+物保+质量+运维',target:'工装使用与维护',value:1},{source:'复材车间+物保',target:'工装使用与维护',value:1},{source:'工技+物保+运维',target:'工装使用与维护',value:1},{source:'质量管理部',target:'工装验证与优化',value:1},{source:'工程技术部+复材车间',target:'工装验证与优化',value:3},{source:'工装策划与申请',target:'工装工具策划',value:1},{source:'工装策划与申请',target:'工装申请管理',value:1},{source:'工装策划与申请',target:'工具申请',value:1},{source:'工装策划与申请',target:'工装工具策划(PLM)',value:1},{source:'工装策划与申请',target:'工装申请管理(PLM)',value:1},{source:'工装策划与申请',target:'工具申请(PLM)',value:1},{source:'工装设计与制造',target:'工装设计与更改',value:1},{source:'工装设计与制造',target:'专用工具设计与更改',value:1},{source:'工装使用与维护',target:'工艺装备验收',value:1},{source:'工装使用与维护',target:'工艺装备使用',value:1},{source:'工装使用与维护',target:'工具现场管理',value:1},{source:'工装使用与维护',target:'工艺装备返工',value:1},{source:'工装使用与维护',target:'工艺装备维护',value:1},{source:'工装使用与维护',target:'工艺装备定检',value:1},{source:'工装验证与优化',target:'工装验证',value:1},{source:'工装验证与优化',target:'工装优化',value:1},{source:'工装验证与优化',target:'工具验证',value:1},{source:'工装验证与优化',target:'工具试用与选型',value:1},{source:'工装工具策划',target:'PLM',value:1},{source:'工装申请管理',target:'PLM',value:1},{source:'工具申请',target:'PLM',value:1},{source:'工装工具策划(PLM)',target:'PLM',value:1},{source:'工装申请管理(PLM)',target:'PLM',value:1},{source:'工具申请(PLM)',target:'PLM',value:1},{source:'工装设计与更改',target:'PLM',value:1},{source:'专用工具设计与更改',target:'PLM',value:1},{source:'工艺装备验收',target:'PLM',value:1},{source:'工艺装备使用',target:'MES',value:1},{source:'工具现场管理',target:'MES',value:1},{source:'工艺装备返工',target:'MES',value:1},{source:'工艺装备维护',target:'MES',value:1},{source:'工艺装备定检',target:'MES',value:1},{source:'工装验证',target:'MES',value:1},{source:'工装优化',target:'PLM+MES',value:1},{source:'工具验证',target:'MES',value:1},{source:'工具试用与选型',target:'MES',value:1}];
-  var colorMap={'工程技术部':'#3b82f6','工技+物保+质量':'#06b6d4','复材车间':'#22c55e','工技+项目+物保+质量+运维':'#a3e635','复材车间+物保':'#f59e0b','工技+物保+运维':'#f97316','质量管理部':'#ec4899','工程技术部+复材车间':'#8b5cf6','工装策划与申请':'#3b82f6','工装设计与制造':'#06b6d4','工装使用与维护':'#22c55e','工装验证与优化':'#a78bfa','PLM':'#8b5cf6','工装工具管理系统':'#f59e0b'};
+  var colorMap={'工程技术部':'#3b82f6','工技+物保+质量':'#06b6d4','复材车间':'#22c55e','工技+项目+物保+质量+运维':'#a3e635','复材车间+物保':'#f59e0b','工技+物保+运维':'#f97316','质量管理部':'#ec4899','工程技术部+复材车间':'#8b5cf6','工装策划与申请':'#3b82f6','工装设计与制造':'#06b6d4','工装使用与维护':'#22c55e','工装验证与优化':'#a78bfa','PLM':'#8b5cf6','MES':'#f59e0b','PLM+MES':'#ec4899','工装工具管理系统':'#f59e0b'};
   var nodeSet=new Set();links.forEach(function(l){nodeSet.add(l.source);nodeSet.add(l.target);});
   chart.setOption({backgroundColor:'transparent',tooltip:{trigger:'item',triggerOn:'mousemove',formatter:function(p){return p.dataType==='edge'?p.data.source+' → '+p.data.target:p.name;},backgroundColor:'#1e293b',borderColor:'#334155',textStyle:{color:'#f1f5f9',fontSize:12}},series:[{type:'sankey',left:20,right:140,top:20,bottom:60,data:[].concat.apply([],[...nodeSet].map(function(n){return[{name:n,itemStyle:{color:colorMap[n]||'#64748b'}}]})),links:links,orient:'horizontal',nodeWidth:16,nodeGap:6,draggable:false,layoutIterations:64,label:{position:'right',fontSize:11,color:'#e2e8f0',fontFamily:'PingFang SC,sans-serif'},lineStyle:{color:'gradient',opacity:0.3,curveness:0.5},emphasis:{focus:'adjacency',lineStyle:{opacity:0.8}}}]});
   window.addEventListener('resize',function(){chart.resize();});
 })();
-</script>
 
-<!-- TOPO SYSTEM CLICK MODAL -->
-<div class="topo-modal" id="topoModal">
-  <div class="topo-modal-box">
-    <div class="topo-modal-hd">
-      <div class="topo-modal-sys-dot" id="modalSysDot"></div>
-      <div class="topo-modal-title" id="modalSysTitle">系统名称</div>
-      <button class="topo-modal-close" onclick="closeTopoModal()">×</button>
-    </div>
-    <div class="topo-modal-body" id="modalSysBody"></div>
-    <button class="topo-modal-close-btn" onclick="closeTopoModal()">关闭</button>
-  </div>
-</div>
+// 数字化提升目标雷达图
+(function(){
+  var dom=document.getElementById('chart-targets');
+  if(!dom) return;
+  var chart=echarts.init(dom,'dark');
+  var dims=['交付效率','生产运营','质量管控','数据协同','成本控制'];
+  var valsPeak=[43,54,70,83,62];
+  var valsAvg=[28,35,39,57,47];
+  var colors={blue:'#60a5fa',green:'#4ade80'};
+  chart.setOption({
+    backgroundColor:'transparent',
+    title:{text:'五维数字化提升目标',subtext:'{a|● }峰值提升度（各维度最高改善）  {b|● }均值提升度（各维度平均改善）',left:'center',top:6,textStyle:{color:'#f1f5f9',fontSize:17,fontWeight:700},subtextStyle:{color:'#94a3b8',fontSize:12,rich:{a:{color:'#60a5fa',fontSize:13},b:{color:'#4ade80',fontSize:13}}}},
+    tooltip:{trigger:'item',backgroundColor:'#1e293b',borderColor:'#334155',textStyle:{color:'#f1f5f9',fontSize:13}},
+    legend:{bottom:6,textStyle:{color:'#cbd5e1',fontSize:12},data:['峰值提升度','均值提升度'],itemWidth:16,itemHeight:10},
+    radar:{
+      center:['50%','50%'],
+      radius:'62%',
+      indicator:dims.map(function(d){return {name:d,max:100};}),
+      axisName:{color:'#e2e8f0',fontSize:13,fontWeight:600,borderRadius:3,padding:[3,6]},
+      splitArea:{areaStyle:{color:['rgba(30,41,59,0.3)','rgba(30,41,59,0.6)','rgba(30,41,59,0.3)','rgba(30,41,59,0.6)','rgba(30,41,59,0.3)']}},
+      splitLine:{lineStyle:{color:'#475569'}},
+      axisLine:{lineStyle:{color:'#64748b'}}
+    },
+    series:[{
+      type:'radar',
+      name:'峰值提升度',
+      data:[{value:valsPeak,name:'峰值',areaStyle:{color:'rgba(59,130,246,0.22)'},label:{show:true,formatter:function(p){return p.value+'%';},color:'#93c5fd',fontSize:13,fontWeight:600,distance:12}}],
+      symbol:'circle',symbolSize:10,
+      lineStyle:{color:colors.blue,width:3},
+      itemStyle:{color:colors.blue,borderColor:'#0f172a',borderWidth:2}
+    },{
+      type:'radar',
+      name:'均值提升度',
+      data:[{value:valsAvg,name:'均值',areaStyle:{color:'rgba(34,197,94,0.15)'},label:{show:true,formatter:function(p){return p.value+'%';},color:'#86efac',fontSize:13,fontWeight:600,distance:12}}],
+      symbol:'diamond',symbolSize:9,
+      lineStyle:{color:colors.green,width:2.5,type:'dashed',dashOffset:3},
+      itemStyle:{color:colors.green,borderColor:'#0f172a',borderWidth:2}
+    }]
+  });
+  window.addEventListener('resize',function(){chart.resize();});
+})();
+</script>
 
 <script>
 var topoData={
@@ -1496,20 +1659,13 @@ function closeTopoModal(){
 }
 document.addEventListener('keydown',function(e){if(e.key==='Escape')closeTopoModal();});
 
-// TOPO SVG system rect click handlers
+// TOPO SVG system rect click handlers — driven by data-topo attribute
 (function(){
   var svg=document.querySelector('.topo svg');
   if(!svg)return;
-  svg.querySelectorAll('rect').forEach(function(r){
-    var x=parseFloat(r.getAttribute('x')),y=parseFloat(r.getAttribute('y'));
-    var w=parseFloat(r.getAttribute('width')),h=parseFloat(r.getAttribute('height'));
-    if(x===18&&y===84&&w===148&&h===48){r.style.cursor='pointer';r.addEventListener('click',function(){openTopoModal('plm');});}
-    else if(x===18&&y===328&&w===148&&h===48){r.style.cursor='pointer';r.addEventListener('click',function(){openTopoModal('pdm');});}
-    else if(x===18&&y===404&&w===68&&h===48){r.style.cursor='pointer';r.addEventListener('click',function(){openTopoModal('capp');});}
-    else if(x===356&&y===252&&w===168&&h===48){r.style.cursor='pointer';r.addEventListener('click',function(){openTopoModal('mes');});}
-    else if(x===356&&y===328&&w===168&&h===48){r.style.cursor='pointer';r.addEventListener('click',function(){openTopoModal('wms');});}
-    else if(x===714&&y===252&&w===148&&h===48){r.style.cursor='pointer';r.addEventListener('click',function(){openTopoModal('sc');});}
-    else if(x===190&&y===84&&w===500&&h===56){r.style.cursor='pointer';r.addEventListener('click',function(){openTopoModal('erp');});}
+  svg.querySelectorAll('rect[data-topo]').forEach(function(r){
+    r.style.cursor='pointer';
+    r.addEventListener('click',function(){openTopoModal(r.getAttribute('data-topo'));});
   });
 })();
 </script>
