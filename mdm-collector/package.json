@@ -14,6 +14,7 @@
     "test:terms": "node scripts/test-term-version-routes.js",
     "test:export": "node scripts/test-export-route.js",
     "test:import": "node scripts/test-import-route.js",
+    "test:frontend": "node scripts/test-frontend-assets.js",
     "dev": "nodemon server/index.js"
   },
   "dependencies": {
