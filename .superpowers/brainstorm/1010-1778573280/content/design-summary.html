@@ -1,0 +1,133 @@
+<h2>CSS 布局优化 — 设计方案汇总</h2>
+<p class="subtitle">仅 CSS 变更，不动 DOM/JS。30 分钟实施</p>
+
+<div class="section">
+  <h3>变更清单 (4 项)</h3>
+</div>
+
+<table style="width:100%;font-size:13px;border-collapse:collapse;">
+  <thead>
+    <tr style="border-bottom:2px solid #e5e7eb;">
+      <th style="text-align:left;padding:8px;">#</th>
+      <th style="text-align:left;padding:8px;">项</th>
+      <th style="text-align:left;padding:8px;">当前值</th>
+      <th style="text-align:left;padding:8px;">新值</th>
+      <th style="text-align:left;padding:8px;">影响范围</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr style="border-bottom:1px solid #f3f4f6;">
+      <td style="padding:8px;font-weight:600;">1</td>
+      <td style="padding:8px;">容器宽度</td>
+      <td style="padding:8px;"><code>max-width: 1200px</code></td>
+      <td style="padding:8px;background:#ecfdf5;">
+        <code>max-width: 1200px</code> (≤1920)<br>
+        + 超宽屏居中不拉伸
+      </td>
+      <td style="padding:8px;font-size:11px;color:#6b7280;">全局</td>
+    </tr>
+    <tr style="border-bottom:1px solid #f3f4f6;">
+      <td style="padding:8px;font-weight:600;">2</td>
+      <td style="padding:8px;">Split 比例</td>
+      <td style="padding:8px;"><code>320px 1fr</code></td>
+      <td style="padding:8px;background:#ecfdf5;">
+        <code>minmax(360px, 30%)<br>minmax(0, 1fr)</code>
+      </td>
+      <td style="padding:8px;font-size:11px;color:#6b7280;">能力申报<br>报送管理<br>术语词典</td>
+    </tr>
+    <tr style="border-bottom:1px solid #f3f4f6;">
+      <td style="padding:8px;font-weight:600;">3</td>
+      <td style="padding:8px;">图表高度</td>
+      <td style="padding:8px;"><code>height: 300px</code></td>
+      <td style="padding:8px;background:#ecfdf5;">
+        <code>height: 450px</code>
+      </td>
+      <td style="padding:8px;font-size:11px;color:#6b7280;">Dashboard</td>
+    </tr>
+    <tr style="border-bottom:1px solid #f3f4f6;">
+      <td style="padding:8px;font-weight:600;">4</td>
+      <td style="padding:8px;">容器内边距</td>
+      <td style="padding:8px;"><code>padding: 40px 24px 80px</code></td>
+      <td style="padding:8px;background:#ecfdf5;">
+        <code>padding: 32px 32px 80px</code>
+      </td>
+      <td style="padding:8px;font-size:11px;color:#6b7280;">全局</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="mockup" style="margin-top:24px;">
+  <div class="mockup-header">设计效果：Dashboard 1920×1080 改造前后对比</div>
+  <div class="mockup-body">
+    <div style="display:flex;gap:16px;">
+      <div style="flex:1;border:1px solid #fecaca;border-radius:6px;overflow:hidden;">
+        <div style="background:#fef2f2;color:#b91c1c;padding:6px 10px;font-size:11px;font-weight:600;">改造前</div>
+        <div style="padding:8px;">
+          <div style="display:flex;gap:4px;margin-bottom:6px;">
+            <div style="background:#f3f4f6;height:72px;flex:1;border-radius:3px;"></div>
+            <div style="background:#f3f4f6;height:72px;flex:1;border-radius:3px;"></div>
+            <div style="background:#f3f4f6;height:72px;flex:1;border-radius:3px;"></div>
+            <div style="background:#f3f4f6;height:72px;flex:1;border-radius:3px;"></div>
+          </div>
+          <div style="display:flex;gap:4px;">
+            <div style="background:#f3f4f6;height:180px;flex:1;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#6b7280;">300px 图表</div>
+            <div style="background:#f3f4f6;height:180px;flex:1;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#6b7280;">300px 图表</div>
+          </div>
+          <div style="margin-top:6px;height:80px;background:#fff;border:1px dashed #e5e7eb;display:flex;align-items:center;justify-content:center;font-size:10px;color:#9ca3af;">空白区</div>
+        </div>
+      </div>
+      <div style="flex:1;border:1px solid #a7f3d0;border-radius:6px;overflow:hidden;">
+        <div style="background:#ecfdf5;color:#059669;padding:6px 10px;font-size:11px;font-weight:600;">改造后</div>
+        <div style="padding:8px;">
+          <div style="display:flex;gap:6px;margin-bottom:8px;">
+            <div style="background:#f3f4f6;height:72px;flex:1;border-radius:3px;"></div>
+            <div style="background:#f3f4f6;height:72px;flex:1;border-radius:3px;"></div>
+            <div style="background:#f3f4f6;height:72px;flex:1;border-radius:3px;"></div>
+            <div style="background:#f3f4f6;height:72px;flex:1;border-radius:3px;"></div>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <div style="background:#f3f4f6;height:260px;flex:1;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#6b7280;">450px 图表</div>
+            <div style="background:#f3f4f6;height:260px;flex:1;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#6b7280;">450px 图表</div>
+          </div>
+          <div style="margin-top:6px;height:24px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#059669;">适度留白</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mockup" style="margin-top:16px;">
+  <div class="mockup-header">Split 改造：30% 左栏 vs 320px 固定</div>
+  <div class="mockup-body">
+    <div style="display:flex;gap:16px;">
+      <div style="flex:1;border:1px solid #fecaca;border-radius:6px;">
+        <div style="background:#fef2f2;color:#b91c1c;padding:6px 10px;font-size:11px;font-weight:600;">改造前 · 320px</div>
+        <div style="display:flex;gap:6px;padding:8px;">
+          <div style="width:160px;background:#f3f4f6;padding:8px;border-radius:3px;font-size:10px;">
+            表单区 (挤)<br>
+            <div style="background:#fff;height:12px;margin:3px 0;border-radius:2px;"></div>
+            <div style="background:#fff;height:12px;margin:3px 0;border-radius:2px;"></div>
+            <div style="background:#fff;height:12px;margin:3px 0;border-radius:2px;"></div>
+          </div>
+          <div style="flex:1;background:#f3f4f6;padding:8px;border-radius:3px;font-size:10px;display:flex;align-items:center;justify-content:center;">
+            表格 (松)
+          </div>
+        </div>
+      </div>
+      <div style="flex:1;border:1px solid #a7f3d0;border-radius:6px;">
+        <div style="background:#ecfdf5;color:#059669;padding:6px 10px;font-size:11px;font-weight:600;">改造后 · 30%</div>
+        <div style="display:flex;gap:6px;padding:8px;">
+          <div style="width:30%;background:#f3f4f6;padding:8px;border-radius:3px;font-size:10px;">
+            表单区 (合适)<br>
+            <div style="background:#fff;height:12px;margin:3px 0;border-radius:2px;"></div>
+            <div style="background:#fff;height:12px;margin:3px 0;border-radius:2px;"></div>
+            <div style="background:#fff;height:12px;margin:3px 0;border-radius:2px;"></div>
+          </div>
+          <div style="flex:1;background:#f3f4f6;padding:8px;border-radius:3px;font-size:10px;display:flex;align-items:center;justify-content:center;">
+            表格 (正好)
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -44,8 +44,8 @@ router.get('/', requireAuth, (req, res) => {
 router.post('/', requireAuth, (req, res) => {
   return runDbAction(res, () => {
     const { name, capability_id, owner_dept_id } = req.body;
-    const stmt = db.prepare('INSERT INTO processes (name, capability_id, owner_dept_id) VALUES (?, ?, ?)');
-    const result = stmt.run(name, capability_id || null, owner_dept_id || null);
+    const stmt = db.prepare('INSERT INTO processes (name, capability_id, owner_dept_id, created_by) VALUES (?, ?, ?, ?)');
+    const result = stmt.run(name, capability_id || null, owner_dept_id || null, req.session.userId);
     res.json({ id: result.lastInsertRowid });
   });
 });
@@ -59,6 +59,21 @@ router.put('/:id', requireAuth, (req, res) => {
       owner_dept_id || null,
       req.params.id
     );
+    res.json({ success: true });
+  });
+});
+
+router.post('/:id/review', requireAuth, (req, res) => {
+  return runDbAction(res, () => {
+    const { action, opinion } = req.body; // action: 'approve' or 'reject'
+    const status = action === 'approve' ? 'approved' : 'rejected';
+    
+    db.prepare(`
+      UPDATE processes 
+      SET status=?, approval_opinion=?, approved_by=?, approved_at=CURRENT_TIMESTAMP 
+      WHERE id=?
+    `).run(status, opinion || null, req.session.userId, req.params.id);
+    
     res.json({ success: true });
   });
 });

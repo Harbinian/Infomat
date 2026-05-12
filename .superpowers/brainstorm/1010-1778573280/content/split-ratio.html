@@ -1,0 +1,89 @@
+<h2>Split 布局左右比例</h2>
+<p class="subtitle">当前 320px + 1fr (约 26% / 74%)。影响 3 个 Tab：能力申报、报送管理、术语词典</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>30% / 70% (minmax)</h3>
+      <p>左栏比例放大，同时设 min/max 限制防止极端</p>
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:4px;padding:8px;margin-top:8px;font-family:monospace;font-size:11px;">
+        grid-template-columns:<br>
+        minmax(360px, 30%)<br>
+        minmax(0, 1fr)
+      </div>
+      <p style="font-size:11px;color:#6b7280;margin-top:4px;">1600px 容器 → 左栏 480px，右栏 1056px</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>等分 50/50</h3>
+      <p>左右各一半。表单彻底告别拥挤，表格列有节制</p>
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:4px;padding:8px;margin-top:8px;font-family:monospace;font-size:11px;">
+        grid-template-columns:<br>
+        1fr 1fr<br>
+        gap: 48px
+      </div>
+      <p style="font-size:11px;color:#6b7280;margin-top:4px;">1600px 容器 → 左右各 ~776px</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>表单紧凑化 (保持 320px)</h3>
+      <p>不改比例，改为压缩表单内边距、减少字段间距</p>
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:4px;padding:8px;margin-top:8px;font-family:monospace;font-size:11px;">
+        /* 保持 split 不变 */<br>
+        .form-group { margin-bottom: 12px }<br>
+        h2 { margin-bottom: 12px }<br>
+        /* 表单节间距 48→24px */
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="split" style="margin-top:24px;">
+  <div class="mockup">
+    <div class="mockup-header">A · 30/70 (左栏 30%)</div>
+    <div class="mockup-body">
+      <div style="display:flex;gap:12px;min-height:160px;">
+        <div style="width:30%;background:#f3f4f6;border-radius:4px;padding:12px;font-size:11px;">
+          <div style="font-weight:600;margin-bottom:4px;">表单区</div>
+          <div style="background:#fff;border:1px solid #e5e7eb;height:20px;margin-bottom:6px;border-radius:2px;"></div>
+          <div style="background:#fff;border:1px solid #e5e7eb;height:20px;margin-bottom:6px;border-radius:2px;"></div>
+          <div style="background:#fff;border:1px solid #e5e7eb;height:20px;margin-bottom:6px;border-radius:2px;"></div>
+          <div style="background:#fc0000;height:24px;border-radius:3px;width:60%;"></div>
+        </div>
+        <div style="width:70%;background:#f3f4f6;border-radius:4px;padding:12px;font-size:11px;">
+          <div style="font-weight:600;margin-bottom:4px;">表格区</div>
+          <div style="background:#fff;border:1px solid #e5e7eb;height:16px;margin-bottom:4px;border-radius:2px;"></div>
+          <div style="background:#fff;border:1px solid #e5e7eb;height:16px;margin-bottom:4px;border-radius:2px;"></div>
+          <div style="background:#fff;border:1px solid #e5e7eb;height:16px;margin-bottom:4px;border-radius:2px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="mockup">
+    <div class="mockup-header">B · 50/50 (等分)</div>
+    <div class="mockup-body">
+      <div style="display:flex;gap:12px;min-height:160px;">
+        <div style="width:50%;background:#f3f4f6;border-radius:4px;padding:12px;font-size:11px;">
+          <div style="font-weight:600;margin-bottom:4px;">表单区 (宽敞)</div>
+          <div style="background:#fff;border:1px solid #e5e7eb;height:20px;margin-bottom:6px;border-radius:2px;"></div>
+          <div style="background:#fff;border:1px solid #e5e7eb;height:20px;margin-bottom:6px;border-radius:2px;"></div>
+          <div style="background:#fff;border:1px solid #e5e7eb;height:20px;margin-bottom:6px;border-radius:2px;"></div>
+          <div style="background:#fc0000;height:24px;border-radius:3px;width:40%;"></div>
+        </div>
+        <div style="width:50%;background:#f3f4f6;border-radius:4px;padding:12px;font-size:11px;">
+          <div style="font-weight:600;margin-bottom:4px;">表格区</div>
+          <div style="background:#fff;border:1px solid #e5e7eb;height:16px;margin-bottom:4px;border-radius:2px;"></div>
+          <div style="background:#fff;border:1px solid #e5e7eb;height:16px;margin-bottom:4px;border-radius:2px;"></div>
+          <div style="background:#fff;border:1px solid #e5e7eb;height:16px;margin-bottom:4px;border-radius:2px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,67 @@
+<h2>深色顶栏的"黑度"选择</h2>
+<p class="subtitle">明确了：顶部深色 + 内容浅底 + 品牌红点缀。现在确定顶栏到底多黑？</p>
+
+<div class="section">
+  <h3>三档黑度对比</h3>
+
+  <div class="options">
+    <div class="option" data-choice="pure-black" onclick="toggleSelect(this)">
+      <div class="letter">A</div>
+      <div class="content">
+        <h3>纯黑 #000000 — 与 logo 一致的极致黑</h3>
+        <p>完全匹配 logo 黑色，品牌一致性强。对比度最高。长期阅读表格后抬头看 topbar 时视觉冲击较大。</p>
+        <div style="background:#000;padding:12px 16px;border-radius:6px;margin-top:8px;">
+          <span style="color:#fff;font-weight:600;">MDM Collector</span>
+          <span style="color:#9ca3af;margin-left:16px;font-size:12px;">统计看板 · 能力申报 · 报送管理</span>
+          <span style="float:right;color:#fc0000;font-size:12px;font-weight:500;">admin</span>
+        </div>
+      </div>
+    </div>
+    <div class="option" data-choice="near-black" onclick="toggleSelect(this)">
+      <div class="letter">B</div>
+      <div class="content">
+        <h3>近黑 #0a0a0a — 99% 黑，微妙柔和</h3>
+        <p>肉眼几乎看不出与纯黑的区别，但在大面积深色区域下眼睛更舒适。保留黑色气质的同时降低一点攻击性。</p>
+        <div style="background:#0a0a0a;padding:12px 16px;border-radius:6px;margin-top:8px;">
+          <span style="color:#fff;font-weight:600;">MDM Collector</span>
+          <span style="color:#9ca3af;margin-left:16px;font-size:12px;">统计看板 · 能力申报 · 报送管理</span>
+          <span style="float:right;color:#fc0000;font-size:12px;font-weight:500;">admin</span>
+        </div>
+      </div>
+    </div>
+    <div class="option" data-choice="dark-gray" onclick="toggleSelect(this)">
+      <div class="letter">C</div>
+      <div class="content">
+        <h3>深灰 #1a1a2e — 蓝调深灰，更温和</h3>
+        <p>带一点蓝调的深灰，不会和纯黑 logo 形成"两种黑"的对比。适合大面积使用的深色，有点像 GitHub 的暗色 header。</p>
+        <div style="background:#1a1a2e;padding:12px 16px;border-radius:6px;margin-top:8px;">
+          <span style="color:#fff;font-weight:600;">MDM Collector</span>
+          <span style="color:#9ca3af;margin-left:16px;font-size:12px;">统计看板 · 能力申报 · 报送管理</span>
+          <span style="float:right;color:#fc0000;font-size:12px;font-weight:500;">admin</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Tabs 导航条的处理</h3>
+  <p class="subtitle">topbar 深色后，下方的 tab 导航条怎么处理？</p>
+
+  <div class="options">
+    <div class="option" data-choice="tabs-white" onclick="toggleSelect(this)">
+      <div class="letter">D</div>
+      <div class="content">
+        <h3>Tabs 保留白色背景</h3>
+        <p>Topbar 深色 → 下方 tab 白色底。清晰的分层，tab 与内容区融为一体。和当前结构一样，只改了 topbar 颜色。</p>
+      </div>
+    </div>
+    <div class="option" data-choice="tabs-dark" onclick="toggleSelect(this)">
+      <div class="letter">E</div>
+      <div class="content">
+        <h3>Tabs 也变深色（整体深色头部区）</h3>
+        <p>Topbar + Tabs 统一深色，形成一个完整的深色"命令区"。内容区从 tabs 下方开始变白。更有沉浸感但改动更大。</p>
+      </div>
+    </div>
+  </div>
+</div>

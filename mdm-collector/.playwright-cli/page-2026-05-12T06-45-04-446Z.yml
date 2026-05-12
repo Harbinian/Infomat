@@ -1,0 +1,120 @@
+- generic [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]: MDM Collector
+    - generic [ref=e4]:
+      - generic [ref=e5]: 系统管理员 · admin
+      - button "退出" [ref=e6] [cursor=pointer]
+  - generic [ref=e18]:
+    - navigation [ref=e19]:
+      - button "统计看板" [ref=e20] [cursor=pointer]
+      - button "能力与流程申报" [ref=e21] [cursor=pointer]
+      - button "报送管理" [ref=e22] [cursor=pointer]
+      - button "待办收到" [ref=e23] [cursor=pointer]
+      - button "评审记录" [ref=e24] [cursor=pointer]
+      - button "术语词典" [active] [ref=e25] [cursor=pointer]
+      - button "冲突管理" [ref=e26] [cursor=pointer]
+    - generic [ref=e338]:
+      - generic [ref=e339]:
+        - heading "术语维护" [level=2] [ref=e340]
+        - generic [ref=e342]:
+          - text: 术语
+          - textbox "术语" [ref=e343]
+        - generic [ref=e345]:
+          - text: 定义
+          - textbox "定义" [ref=e346]
+        - generic [ref=e348]:
+          - text: 范围
+          - textbox "范围" [ref=e349]
+        - generic [ref=e351]:
+          - text: 禁用表述
+          - textbox "禁用表述" [ref=e352]
+        - generic [ref=e354]:
+          - text: 所属业务流程
+          - combobox "所属业务流程" [ref=e355]:
+            - option [selected]
+            - option "BOM发布与变更"
+            - option "供应商准入评审"
+            - option "物料领退料"
+            - option "生产计划排程"
+            - option "车间工序报工"
+        - button "保存术语" [ref=e357] [cursor=pointer]
+      - generic [ref=e358]:
+        - generic [ref=e359]:
+          - heading "术语词典" [level=2] [ref=e360]
+          - generic [ref=e361]:
+            - combobox [ref=e362]:
+              - option "全部" [selected]
+              - option "待审"
+              - option "已通过"
+              - option "已驳回"
+            - button "刷新" [ref=e363] [cursor=pointer]
+        - table [ref=e365]:
+          - rowgroup [ref=e366]:
+            - row "ID 术语 定义 范围 状态 操作" [ref=e367]:
+              - columnheader "ID" [ref=e368]
+              - columnheader "术语" [ref=e369]
+              - columnheader "定义" [ref=e370]
+              - columnheader "范围" [ref=e371]
+              - columnheader "状态" [ref=e372]
+              - columnheader "操作" [ref=e373]
+          - rowgroup [ref=e374]:
+            - row "6 - - 待处理 通过 驳回" [ref=e375]:
+              - cell "6" [ref=e376]
+              - cell [ref=e377]
+              - cell "-" [ref=e378]
+              - cell "-" [ref=e379]
+              - cell "待处理" [ref=e380]:
+                - generic [ref=e381]: 待处理
+              - cell "通过 驳回" [ref=e382]:
+                - button "通过" [ref=e383] [cursor=pointer]
+                - button "驳回" [ref=e384] [cursor=pointer]
+            - row "5 BOM 物料清单 - 已通过 通过 驳回" [ref=e385]:
+              - cell "5" [ref=e386]
+              - cell "BOM" [ref=e387]
+              - cell "物料清单" [ref=e388]
+              - cell "-" [ref=e389]
+              - cell "已通过" [ref=e390]:
+                - generic [ref=e391]: 已通过
+              - cell "通过 驳回" [ref=e392]:
+                - button "通过" [ref=e393] [cursor=pointer]
+                - button "驳回" [ref=e394] [cursor=pointer]
+            - row "2 供应商 提供物料或服务的外部组织 - 已通过 通过 驳回" [ref=e395]:
+              - cell "2" [ref=e396]
+              - cell "供应商" [ref=e397]
+              - cell "提供物料或服务的外部组织" [ref=e398]
+              - cell "-" [ref=e399]
+              - cell "已通过" [ref=e400]:
+                - generic [ref=e401]: 已通过
+              - cell "通过 驳回" [ref=e402]:
+                - button "通过" [ref=e403] [cursor=pointer]
+                - button "驳回" [ref=e404] [cursor=pointer]
+            - row "3 工序 生产过程中的基本作业单元 - 已通过 通过 驳回" [ref=e405]:
+              - cell "3" [ref=e406]
+              - cell "工序" [ref=e407]
+              - cell "生产过程中的基本作业单元" [ref=e408]
+              - cell "-" [ref=e409]
+              - cell "已通过" [ref=e410]:
+                - generic [ref=e411]: 已通过
+              - cell "通过 驳回" [ref=e412]:
+                - button "通过" [ref=e413] [cursor=pointer]
+                - button "驳回" [ref=e414] [cursor=pointer]
+            - row "1 物料 生产所用的原材料、半成品、成品等 - 已通过 通过 驳回" [ref=e415]:
+              - cell "1" [ref=e416]
+              - cell "物料" [ref=e417]
+              - cell "生产所用的原材料、半成品、成品等" [ref=e418]
+              - cell "-" [ref=e419]
+              - cell "已通过" [ref=e420]:
+                - generic [ref=e421]: 已通过
+              - cell "通过 驳回" [ref=e422]:
+                - button "通过" [ref=e423] [cursor=pointer]
+                - button "驳回" [ref=e424] [cursor=pointer]
+            - row "4 计划 生产任务安排 - 已通过 通过 驳回" [ref=e425]:
+              - cell "4" [ref=e426]
+              - cell "计划" [ref=e427]
+              - cell "生产任务安排" [ref=e428]
+              - cell "-" [ref=e429]
+              - cell "已通过" [ref=e430]:
+                - generic [ref=e431]: 已通过
+              - cell "通过 驳回" [ref=e432]:
+                - button "通过" [ref=e433] [cursor=pointer]
+                - button "驳回" [ref=e434] [cursor=pointer]

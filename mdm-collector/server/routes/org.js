@@ -29,18 +29,67 @@ router.get('/departments', requireAuth, (req, res) => {
 
 router.post('/departments', requireRole('admin'), (req, res) => {
   return runDbAction(res, () => {
-    const { name, code, parent_id, manager_user_id } = req.body;
-    const stmt = db.prepare('INSERT INTO departments (name, code, parent_id, manager_user_id) VALUES (?, ?, ?, ?)');
-    const result = stmt.run(name, code, parent_id || null, manager_user_id || null);
-    res.json({ id: result.lastInsertRowid });
+    const { 
+      name, code, parent_id, department_type, manager_user_id, data_owner_user_id, 
+      source_system, external_id, status, effective_from, effective_to 
+    } = req.body;
+    
+    const stmt = db.prepare(`
+      INSERT INTO departments 
+        (name, code, parent_id, department_type, manager_user_id, data_owner_user_id, source_system, external_id, status, effective_from, effective_to, created_by) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    const result = stmt.run(
+      name, code, parent_id || null, department_type || null, 
+      manager_user_id || null, data_owner_user_id || null, 
+      source_system || 'MDM_SYS', external_id || null, 
+      status || 'active', effective_from || null, effective_to || null,
+      req.session.userId
+    );
+    
+    // Update path
+    const id = result.lastInsertRowid;
+    let path = `/${id}/`;
+    if (parent_id) {
+      const parent = db.prepare('SELECT path FROM departments WHERE id=?').get(parent_id);
+      if (parent && parent.path) {
+        path = `${parent.path}${id}/`;
+      }
+    }
+    db.prepare('UPDATE departments SET path=? WHERE id=?').run(path, id);
+    
+    res.json({ id });
   });
 });
 
 router.put('/departments/:id', requireRole('admin'), (req, res) => {
   return runDbAction(res, () => {
-    const { name, code, parent_id, manager_user_id } = req.body;
-    const stmt = db.prepare('UPDATE departments SET name=?, code=?, parent_id=?, manager_user_id=? WHERE id=?');
-    stmt.run(name, code, parent_id || null, manager_user_id || null, req.params.id);
+    const { 
+      name, code, parent_id, sort_order, department_type, manager_user_id, data_owner_user_id, 
+      source_system, external_id, status, effective_from, effective_to 
+    } = req.body;
+    
+    let path = `/${req.params.id}/`;
+    if (parent_id) {
+      const parent = db.prepare('SELECT path FROM departments WHERE id=?').get(parent_id);
+      if (parent && parent.path) {
+        path = `${parent.path}${req.params.id}/`;
+      }
+    }
+
+    const stmt = db.prepare(`
+      UPDATE departments 
+      SET name=?, code=?, parent_id=?, path=?, sort_order=?, department_type=?, 
+          manager_user_id=?, data_owner_user_id=?, source_system=?, external_id=?, 
+          status=?, effective_from=?, effective_to=?, updated_by=?, updated_at=CURRENT_TIMESTAMP
+      WHERE id=?
+    `);
+    stmt.run(
+      name, code, parent_id || null, path, sort_order || 0, department_type || null, 
+      manager_user_id || null, data_owner_user_id || null, source_system || 'MDM_SYS', 
+      external_id || null, status || 'active', effective_from || null, effective_to || null,
+      req.session.userId, req.params.id
+    );
     res.json({ success: true });
   });
 });

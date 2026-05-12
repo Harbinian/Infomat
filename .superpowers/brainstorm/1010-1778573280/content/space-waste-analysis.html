@@ -1,0 +1,103 @@
+<h2>当前页面空间浪费分析 — Dashboard</h2>
+<p class="subtitle">1920px 屏幕下，内容区仅用 1200px，利用率 62.5%</p>
+
+<div class="section">
+  <h3>问题清单</h3>
+</div>
+
+<div class="mockup">
+  <div class="mockup-header">问题 1：页面最大宽度 1200px，两侧大量留白</div>
+  <div class="mockup-body">
+    <div style="background:#1a1a2e;color:#fff;padding:8px 16px;display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+      <span style="font-weight:600;">MDM Collector</span>
+      <span style="margin-left:auto;font-size:12px;">系统管理员 · admin</span>
+    </div>
+    <div style="background:#1a1a2e;padding:0 16px;margin-bottom:16px;">
+      <div style="display:flex;gap:20px;padding:8px 0;">
+        <span style="color:#fc0000;border-bottom:2px solid #fc0000;padding-bottom:6px;font-size:13px;">统计看板</span>
+        <span style="color:#9ca3af;font-size:13px;">能力与流程</span>
+        <span style="color:#9ca3af;font-size:13px;">报送管理</span>
+      </div>
+    </div>
+    <div style="display:flex;">
+      <!-- Empty left margin -->
+      <div style="width:360px;background:#fef2f2;display:flex;align-items:center;justify-content:center;font-size:11px;color:#b91c1c;min-height:200px;border:1px dashed #fca5a5;text-align:center;">
+        ← 360px 空白<br>左侧边距
+      </div>
+      <!-- Content area -->
+      <div style="flex:1;max-width:1200px;padding:32px 24px;">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:24px;margin-bottom:32px;">
+          <div style="border-bottom:1px solid #e5e7eb;padding-bottom:12px;">
+            <div style="font-size:28px;font-weight:500;">10</div>
+            <div style="font-size:12px;color:#6b7280;">流程映射</div>
+          </div>
+          <div style="border-bottom:1px solid #e5e7eb;padding-bottom:12px;">
+            <div style="font-size:28px;font-weight:500;">20</div>
+            <div style="font-size:12px;color:#6b7280;">字段台账</div>
+          </div>
+          <div style="border-bottom:1px solid #e5e7eb;padding-bottom:12px;">
+            <div style="font-size:28px;font-weight:500;">0</div>
+            <div style="font-size:12px;color:#6b7280;">待处理待办</div>
+          </div>
+          <div style="border-bottom:1px solid #e5e7eb;padding-bottom:12px;">
+            <div style="font-size:28px;font-weight:500;">0</div>
+            <div style="font-size:12px;color:#6b7280;">未解决冲突</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;">
+          <div style="border:1px dashed #d1d5db;padding:16px;text-align:center;color:#6b7280;font-size:12px;">
+            图表区 300px 高度<br>（占比仅 28% 视口）
+          </div>
+          <div style="border:1px dashed #d1d5db;padding:16px;text-align:center;color:#6b7280;font-size:12px;">
+            图表区 300px 高度
+          </div>
+        </div>
+      </div>
+      <!-- Empty right margin -->
+      <div style="width:360px;background:#fef2f2;display:flex;align-items:center;justify-content:center;font-size:11px;color:#b91c1c;min-height:200px;border:1px dashed #fca5a5;text-align:center;">
+        360px 空白<br>右侧边距 →
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mockup" style="margin-top:32px;">
+  <div class="mockup-header">问题 2：Split 布局 — 表单侧 320px 太窄，表格侧浪费剩余空间</div>
+  <div class="mockup-body">
+    <div style="display:flex;gap:20px;">
+      <div style="width:320px;flex-shrink:0;">
+        <div style="border:1px dashed #fca5a5;padding:12px;background:#fef2f2;border-radius:4px;margin-bottom:12px;">
+          <div style="font-size:11px;color:#b91c1c;margin-bottom:4px;">320px 固定 — 拥挤</div>
+          <div style="border:1px solid #d1d5db;border-radius:4px;padding:6px;background:#fff;margin-bottom:8px;">表单输入框（受限）</div>
+          <div style="border:1px solid #d1d5db;border-radius:4px;padding:6px;background:#fff;">下拉选择（受限）</div>
+        </div>
+      </div>
+      <div style="flex:1;border:1px dashed #d1d5db;padding:12px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#6b7280;border-radius:4px;">
+        表格区域 — 空间过剩<br>ID/层级等窄列占据宽屏
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mockup" style="margin-top:32px;">
+  <div class="mockup-header">问题 3：Dashboard 图表仅 300px，大量垂直空间闲置</div>
+  <div class="mockup-body">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;">
+      <div>
+        <div style="font-size:12px;color:#6b7280;margin-bottom:8px;">当前：图表 300px（28% 可视区）</div>
+        <div style="height:300px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#6b7280;">
+          图表区域 300px
+        </div>
+        <div style="height:200px;background:#fef2f2;border:1px dashed #fca5a5;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#b91c1c;margin-top:4px;">
+          空白浪费区 200px
+        </div>
+      </div>
+      <div>
+        <div style="font-size:12px;color:#059669;margin-bottom:8px;">建议：图表 450-500px（42-47% 可视区）</div>
+        <div style="height:500px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#059669;">
+          扩展图表区域 500px
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

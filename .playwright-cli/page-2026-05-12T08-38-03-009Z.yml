@@ -1,0 +1,34 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - img "MDM" [ref=e4]
+      - text: MDM Collector
+    - generic [ref=e5]:
+      - generic [ref=e6]: 系统管理员 · admin
+      - button "退出" [ref=e7] [cursor=pointer]
+  - generic [ref=e9]:
+    - navigation [ref=e10]:
+      - button "统计看板" [ref=e11] [cursor=pointer]
+      - button "能力与流程申报" [ref=e12] [cursor=pointer]
+      - button "报送管理" [ref=e13] [cursor=pointer]
+      - button "待办收到" [ref=e14] [cursor=pointer]
+      - button "评审记录" [ref=e15] [cursor=pointer]
+      - button "术语词典" [ref=e16] [cursor=pointer]
+      - button "冲突管理" [ref=e17] [cursor=pointer]
+    - generic [ref=e18]:
+      - generic [ref=e19]:
+        - generic [ref=e20]:
+          - generic [ref=e21]: "10"
+          - generic [ref=e22]: 流程映射
+        - generic [ref=e23]:
+          - generic [ref=e24]: "20"
+          - generic [ref=e25]: 字段台账
+        - generic [ref=e26]:
+          - generic [ref=e27]: "0"
+          - generic [ref=e28]: 待处理待办
+        - generic [ref=e29]:
+          - generic [ref=e30]: "0"
+          - generic [ref=e31]: 未解决冲突
+      - generic [ref=e32]:
+        - heading "各部门流程数" [level=2] [ref=e34]
+        - heading "审批状态分布" [level=2] [ref=e37]

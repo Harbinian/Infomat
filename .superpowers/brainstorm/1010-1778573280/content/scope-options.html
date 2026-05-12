@@ -1,0 +1,96 @@
+<h2>布局重设计 — 三种范围选项</h2>
+<p class="subtitle">从最小的 CSS 调参到跟随交互 spec 的完整重构</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>仅调 CSS 参数</h3>
+      <p>不改 DOM / JS，只改几个数字</p>
+      <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
+        <span style="background:#ecfdf5;color:#059669;font-size:10px;padding:2px 6px;border-radius:3px;">max-width → 1600px</span>
+        <span style="background:#ecfdf5;color:#059669;font-size:10px;padding:2px 6px;border-radius:3px;">chart 300→450px</span>
+        <span style="background:#ecfdf5;color:#059669;font-size:10px;padding:2px 6px;border-radius:3px;">split 320→400px</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>跟随交互 spec 重构</h3>
+      <p>按已审批的 frontend-interaction spec 实施三层架构 (L1列表→L2详情→L3操作)，新页面自然消除当前布局问题</p>
+      <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
+        <span style="background:#fffbeb;color:#d97706;font-size:10px;padding:2px 6px;border-radius:3px;">需要新 DOM</span>
+        <span style="background:#fffbeb;color:#d97706;font-size:10px;padding:2px 6px;border-radius:3px;">需要 hash 路由</span>
+        <span style="background:#fffbeb;color:#d97706;font-size:10px;padding:2px 6px;border-radius:3px;">工作量较大</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>CSS 先改 + 结构后改</h3>
+      <p>先调 CSS 立即缓解空间浪费（30 分钟），交互 spec 的结构性重构后续再做</p>
+      <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
+        <span style="background:#ecfdf5;color:#059669;font-size:10px;padding:2px 6px;border-radius:3px;">快速见效</span>
+        <span style="background:#fffbeb;color:#d97706;font-size:10px;padding:2px 6px;border-radius:3px;">分步推进</span>
+        <span style="background:#ecfdf5;color:#059669;font-size:10px;padding:2px 6px;border-radius:3px;">低风险</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:24px;">
+  <h3>对比</h3>
+</div>
+
+<table style="width:100%;font-size:12px;border-collapse:collapse;">
+  <thead>
+    <tr style="border-bottom:1px solid #e5e7eb;">
+      <th style="text-align:left;padding:8px;"></th>
+      <th style="text-align:center;padding:8px;">A · CSS 微调</th>
+      <th style="text-align:center;padding:8px;">B · 跟随 Spec</th>
+      <th style="text-align:center;padding:8px;background:#fef2f2;">C · 分步 (推荐)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr style="border-bottom:1px solid #f3f4f6;">
+      <td style="padding:8px;">改动量</td>
+      <td style="text-align:center;padding:8px;">~10 行 CSS</td>
+      <td style="text-align:center;padding:8px;">全量 DOM+CSS+JS</td>
+      <td style="text-align:center;padding:8px;background:#fef2f2;">CSS 先 ~20 行，后续再重构</td>
+    </tr>
+    <tr style="border-bottom:1px solid #f3f4f6;">
+      <td style="padding:8px;">耗时</td>
+      <td style="text-align:center;padding:8px;">30 分钟</td>
+      <td style="text-align:center;padding:8px;">2-3 天</td>
+      <td style="text-align:center;padding:8px;background:#fef2f2;">30min + 后续 2 天</td>
+    </tr>
+    <tr style="border-bottom:1px solid #f3f4f6;">
+      <td style="padding:8px;">解决 1200px 问题</td>
+      <td style="text-align:center;padding:8px;">✅</td>
+      <td style="text-align:center;padding:8px;">✅ (设计即考虑)</td>
+      <td style="text-align:center;padding:8px;background:#fef2f2;">✅ 先解决</td>
+    </tr>
+    <tr style="border-bottom:1px solid #f3f4f6;">
+      <td style="padding:8px;">解决 split 失衡</td>
+      <td style="text-align:center;padding:8px;">⚠️ 部分</td>
+      <td style="text-align:center;padding:8px;">✅ 新架构重排</td>
+      <td style="text-align:center;padding:8px;background:#fef2f2;">⚠️ 先缓解，最终根治</td>
+    </tr>
+    <tr style="border-bottom:1px solid #f3f4f6;">
+      <td style="padding:8px;">解决数据密度问题</td>
+      <td style="text-align:center;padding:8px;">❌</td>
+      <td style="text-align:center;padding:8px;">✅ L1/L2/L3 各有适配</td>
+      <td style="text-align:center;padding:8px;background:#fef2f2;">❌ 先不动，后续解决</td>
+    </tr>
+    <tr style="border-bottom:1px solid #f3f4f6;">
+      <td style="padding:8px;">风险</td>
+      <td style="text-align:center;padding:8px;">几乎为零</td>
+      <td style="text-align:center;padding:8px;">中 (全量改写)</td>
+      <td style="text-align:center;padding:8px;background:#fef2f2;">低</td>
+    </tr>
+  </tbody>
+</table>

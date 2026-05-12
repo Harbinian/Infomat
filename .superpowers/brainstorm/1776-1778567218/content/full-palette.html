@@ -1,0 +1,75 @@
+<h2>完整配色方案 — CSS 变量映射</h2>
+<p class="subtitle">基于你的选择：C 混合模式 + B 暗红错误 + C 蓝调深灰 + E 深色 tabs</p>
+
+<div class="section">
+  <h3>方案 A：保守 — 深头 + 浅身，红只在关键点位</h3>
+  <div class="mockup">
+    <div class="mockup-header">设计系统</div>
+    <div class="mockup-body">
+      <table style="width:100%;font-size:12px;">
+        <tr><th style="text-align:left;padding:8px;">变量</th><th style="text-align:left;padding:8px;">当前</th><th style="text-align:left;padding:8px;">→ 新值</th><th style="text-align:left;padding:8px;">用途</th></tr>
+        <tr><td style="padding:8px;font-family:monospace;">--bg</td><td style="padding:8px;font-family:monospace;">#ffffff</td><td style="padding:8px;font-family:monospace;background:#f0fff0;">#ffffff</td><td style="padding:8px;">不变，内容区白底</td></tr>
+        <tr><td style="padding:8px;font-family:monospace;">--surface</td><td style="padding:8px;font-family:monospace;">#f9fafb</td><td style="padding:8px;font-family:monospace;background:#f0fff0;">#f3f4f6</td><td style="padding:8px;">略深一点以配合深色头部</td></tr>
+        <tr><td style="padding:8px;font-family:monospace;">--border</td><td style="padding:8px;font-family:monospace;">#e5e7eb</td><td style="padding:8px;font-family:monospace;background:#f0fff0;">#e0e0e0</td><td style="padding:8px;">微调，与深色头部过渡更自然</td></tr>
+        <tr style="background:#fff5f5;"><td style="padding:8px;font-family:monospace;">--accent</td><td style="padding:8px;font-family:monospace;">#111827</td><td style="padding:8px;font-family:monospace;background:#fff0f0;font-weight:600;">#fc0000</td><td style="padding:8px;">品牌红，用于按钮/tab指示器</td></tr>
+        <tr><td style="padding:8px;font-family:monospace;">--accent-hover</td><td style="padding:8px;font-family:monospace;">#374151</td><td style="padding:8px;font-family:monospace;background:#f0fff0;">#dc0000</td><td style="padding:8px;">品牌红 hover，深一档</td></tr>
+        <tr><td style="padding:8px;font-family:monospace;">--focus-ring</td><td style="padding:8px;font-family:monospace;">rgba(17,24,39,0.1)</td><td style="padding:8px;font-family:monospace;background:#f0fff0;">rgba(252,0,0,0.15)</td><td style="padding:8px;">红色光晕，统一品牌感</td></tr>
+        <tr><td style="padding:8px;font-family:monospace;">--text-main</td><td style="padding:8px;font-family:monospace;">#111827</td><td style="padding:8px;font-family:monospace;background:#f0fff0;">#1f2937</td><td style="padding:8px;">微调，避免纯黑与 logo 黑"两种黑"</td></tr>
+        <tr style="background:#fff5f5;"><td style="padding:8px;font-family:monospace;">--error</td><td style="padding:8px;font-family:monospace;">#dc2626</td><td style="padding:8px;font-family:monospace;background:#fff0f0;font-weight:600;">#b91c1c</td><td style="padding:8px;">暗红，与品牌亮红区分</td></tr>
+        <tr><td style="padding:8px;font-family:monospace;">--success</td><td style="padding:8px;font-family:monospace;">#059669</td><td style="padding:8px;font-family:monospace;background:#f0fff0;">#059669</td><td style="padding:8px;">不变</td></tr>
+        <tr><td style="padding:8px;font-family:monospace;">--warning</td><td style="padding:8px;font-family:monospace;">#d97706</td><td style="padding:8px;font-family:monospace;background:#f0fff0;">#d97706</td><td style="padding:8px;">不变</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="pros-cons" style="margin-top:20px;">
+    <div class="pros"><h4>Red 标记的关键变化</h4><ul>
+      <li>accent #111827(黑) → #fc0000(红) — 核心转变</li>
+      <li>error #dc2626 → #b91c1c — 更深以区分品牌红</li>
+      <li>focus-ring 跟随红色</li>
+    </ul></div>
+    <div class="cons"><h4>需要关注的 ECharts</h4><ul>
+      <li>柱状图 itemStyle.color 当前 #111827 → 改为 #fc0000</li>
+      <li>饼图 color 数组 5 级灰 → 红 + 深灰渐变</li>
+    </ul></div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>方案 B：更激进 — 红色在更多点位</h3>
+  <p class="subtitle">同样的深色头部 + 浅内容框架，但红色不仅用于按钮，也用于 tab 激活态文字、链接、选中行高亮等。视觉上更"红"，品牌感更强，但可能带来视觉疲劳。</p>
+
+  <div class="mockup">
+    <div class="mockup-header">B 方案差异：红用在 tab 文字 + 链接</div>
+    <div class="mockup-body">
+      <div style="background:#1a1a2e;padding:8px 16px;display:flex;gap:24px;">
+        <span style="color:#fc0000;font-size:13px;font-weight:500;border-bottom:2px solid #fc0000;padding-bottom:8px;">统计看板</span>
+        <span style="color:#9ca3af;font-size:13px;">能力申报</span>
+        <span style="color:#9ca3af;font-size:13px;">报送管理</span>
+      </div>
+      <div style="padding:16px;background:#fff;">
+        <p style="margin:0;">表格中 <a style="color:#fc0000;">可点击链接</a> 也用红色，hover 行带微红背景</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>你选哪个？</h3>
+  <div class="options">
+    <div class="option" data-choice="conservative" onclick="toggleSelect(this)">
+      <div class="letter">A</div>
+      <div class="content">
+        <h3>保守红色 — 仅按钮 + Tab 指示器 + focus ring 用红</h3>
+        <p>Tab 文字保持白色/灰色，链接保持默认色。红色克制地出现在"可点击执行"的位置。</p>
+      </div>
+    </div>
+    <div class="option" data-choice="aggressive" onclick="toggleSelect(this)">
+      <div class="letter">B</div>
+      <div class="content">
+        <h3>品牌强化 — Tab 激活态 + 链接 + hover 行也用红</h3>
+        <p>红色在更多 UI 位置出现，品牌一致性更强，但日常使用可能视觉疲劳。</p>
+      </div>
+    </div>
+  </div>
+</div>

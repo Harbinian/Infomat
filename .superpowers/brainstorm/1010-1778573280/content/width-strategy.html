@@ -1,0 +1,70 @@
+<h2>容器宽度策略</h2>
+<p class="subtitle">当前 max-width: 1200px — 1920px 屏幕浪费 37.5% 空间</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>放大至 1600px</h3>
+      <p>改动最小，兼容性好。1920px 屏占比 83%</p>
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:4px;padding:8px;margin-top:8px;font-family:monospace;font-size:11px;">
+        max-width: 1600px;<br>
+        padding: 40px 32px 80px;
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>响应式断点</h3>
+      <p>按屏幕大小自动适配，更灵活但稍复杂</p>
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:4px;padding:8px;margin-top:8px;font-family:monospace;font-size:11px;">
+        ≥1920px → max-width: 1600px<br>
+        ≥1440px → max-width: 1200px<br>
+        &lt;1440px → 100% (padding 撑开)
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>完全流式 (无 max-width)</h3>
+      <p>内容撑满全屏，仅靠 padding 留边距。最大密度，但超宽屏可能阅读困难</p>
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:4px;padding:8px;margin-top:8px;font-family:monospace;font-size:11px;">
+        /* 移除 max-width */<br>
+        padding: 40px 48px 80px;
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mockup" style="margin-top:24px;">
+  <div class="mockup-header">预览：三种宽度在 1920px 屏上的效果</div>
+  <div class="mockup-body">
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:11px;width:100px;text-align:right;color:#6b7280;">A · 1600px</span>
+        <div style="flex:1;height:24px;background:#f3f4f6;display:flex;align-items:center;">
+          <div style="width:calc(1600/1920*100%);height:100%;background:#374151;border-radius:3px;margin:0 auto;"></div>
+        </div>
+        <span style="font-size:11px;color:#6b7280;">83%</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:11px;width:100px;text-align:right;color:#6b7280;">B · 断点</span>
+        <div style="flex:1;height:24px;background:#f3f4f6;display:flex;align-items:center;">
+          <div style="width:calc(1600/1920*100%);height:100%;background:#374151;border-radius:3px;margin:0 auto;"></div>
+        </div>
+        <span style="font-size:11px;color:#6b7280;">83%（≥1920 时）</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:11px;width:100px;text-align:right;color:#6b7280;">C · 全宽</span>
+        <div style="flex:1;height:24px;background:#f3f4f6;display:flex;align-items:center;">
+          <div style="width:100%;height:100%;background:#374151;border-radius:3px;"></div>
+        </div>
+        <span style="font-size:11px;color:#6b7280;">~95%（padding）</span>
+      </div>
+    </div>
+  </div>
+</div>
