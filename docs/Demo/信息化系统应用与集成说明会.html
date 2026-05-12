@@ -1301,24 +1301,231 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
 
 <!-- ══ 14 MDM 建设路径 ══ -->
 <div class="sec" id="s14">
-  <div class="sec-hd"><div class="sec-num">14</div><div><h2>MDM 建设路径</h2><div class="sd">组织身份先行 · 流程牵引 · 术语统一 · 字段落账 · 黄金源矩阵</div></div></div>
+  <div class="sec-hd"><div class="sec-num">14</div><div><h2>MDM 建设路径</h2><div class="sd">组织身份先行 · 五阶段流程 · 桑基图辅助</div></div></div>
 
   <div class="alert">
     <div class="at">MDM 是系统集成的基石</div>
-    <p>先用业务流程牵引数据盘点，统一术语和字段口径，再确定黄金源、维护部门、审批部门和消费系统。没有这个底座，ERP、MES、OA、PLM 与远景系统（PDM、CAPP、WMS、供应链管理系统）之间的接口会持续出现字段冲突、主写方冲突和追溯断点。</p>
+    <p>先用业务流程牵引数据盘点，统一术语和字段口径，再确定黄金源、维护部门、审批部门和消费系统。以下五阶段来源于 MDM 工作流程专项方案，与组织身份先行、流程牵引的建设路径互补。</p>
   </div>
 
-  <div class="chain">
-    <div class="chain-title">推荐建设路径：组织先行，流程牵引，术语统一，字段落账，主数据沉淀</div>
-    <div class="chain-step"><div class="chain-dot"></div><p><strong>组织与身份主数据先行：</strong>部门、人员、岗位、角色、资质、授权、SSO 先形成统一入口。</p></div>
-    <div class="chain-arr">↓</div>
-    <div class="chain-step"><div class="chain-dot"></div><p><strong>部门提交流程映射：</strong>各部门提交业务能力、L3流程、当前系统、目标系统和涉及数据对象。</p></div>
-    <div class="chain-arr">↓</div>
-    <div class="chain-step"><div class="chain-dot"></div><p><strong>汇总字段台账：</strong>信息化项目组汇总数据对象、字段、单据、编码、状态、维护部门和消费系统。</p></div>
-    <div class="chain-arr">↓</div>
-    <div class="chain-step"><div class="chain-dot"></div><p><strong>开展术语治理：</strong>处理件号/物料号、REV/版次、构型、批次、资质、冻结、退回等高风险词。</p></div>
-    <div class="chain-arr">↓</div>
-    <div class="chain-step"><div class="chain-dot"></div><p><strong>确定黄金源矩阵：</strong>按字段确认唯一权威源、审批权、修改权、只读系统、同步频率和人工兜底。</p></div>
+  <!-- ── MDM 阶段二：存量数据盘点与清洗 ── -->
+  <div class="sec-hd sub" id="mdm-stage2"><div class="sec-num" style="background:var(--green)">2</div><div><h2>阶段二：存量数据盘点与清洗</h2><div class="sd">整个流程中最耗时、工作量最大的环节（通常需 5-6 个月），涉及上万条数据的处理。</div></div></div>
+
+  <div class="warn">
+    <div class="wt">工作量预警</div>
+    <p>存量清洗通常需 <strong>5-6 个月</strong>，涉及 <strong>上万条数据</strong> 的人工核对、去重、纠错和补全。此阶段质量直接决定后续 MRP 运算、车间报工和物料齐套性检查的准确性。</p>
+  </div>
+
+  <div class="flow">
+    <div class="flow-step"><div class="n">1</div><h3>多源数据盘点</h3><p>对现有 ERP 系统数据、纸质单据、个人电脑电子文档及库房实物进行全面盘点。</p></div>
+    <div class="flow-step amber"><div class="n">2</div><h3>人工整理去重</h3><p>组织专业人员对数据进行人工核对，识别并合并重复编码，纠正错误信息。</p></div>
+    <div class="flow-step purple"><div class="n">3</div><h3>属性字段补全</h3><p>根据标准补全缺失的属性字段，确保每条数据信息完整、可追溯。</p></div>
+    <div class="flow-step green"><div class="n">4</div><h3>校验规则建立</h3><p>设定完整性、准确性和唯一性校验逻辑，防止无效或重复数据再次进入系统。</p></div>
+    <div class="flow-step"><div class="n">5</div><h3>清洗成果确认</h3><p>输出清洗后的高质量主数据台账，经业务部门确认后封版。</p></div>
+  </div>
+
+  <div class="g3" style="margin-top:14px">
+    <div class="card">
+      <h3>盘点范围</h3>
+      <ul>
+        <li>现有 ERP 系统中的物料/零部件数据</li>
+        <li>纸质单据（工艺卡、BOM 表、领料单）</li>
+        <li>个人电脑中的 Excel 台账</li>
+        <li>库房实物核对（名称、规格、数量）</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>去重策略</h3>
+      <ul>
+        <li>同图号不同名称 → 提交 Owner 确认</li>
+        <li>同名称不同图号 → 核实是否为同一物料</li>
+        <li>近似编码 → 人工核查是否为重复创建</li>
+        <li>历史遗留"一物多码" → 建立映射关系</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>校验规则类型</h3>
+      <ul>
+        <li><strong>完整性校验：</strong>必填字段非空检查</li>
+        <li><strong>准确性校验：</strong>格式、取值范围检查</li>
+        <li><strong>唯一性校验：</strong>编码不重复、名称+规格不重</li>
+        <li><strong>关联性校验：</strong>图号与材料牌号一致性</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ── MDM 阶段三：全生命周期管理流程 ── -->
+  <div class="sec-hd sub" id="mdm-stage3"><div class="sec-num" style="background:var(--green)">3</div><div><h2>阶段三：全生命周期管理流程建设</h2><div class="sd">将主数据的产生与变更纳入系统化、闭环化的管控体系。</div></div></div>
+
+  <div class="card">
+    <h3>规范化生命周期阶段</h3>
+    <div class="status-chain" style="margin-top:10px;margin-bottom:14px">
+      <span class="st">新增</span><span class="arrow">→</span>
+      <span class="st">审核</span><span class="arrow">→</span>
+      <span class="st">生效</span><span class="arrow">→</span>
+      <span class="st">变更</span><span class="arrow">→</span>
+      <span class="st">停用</span><span class="arrow">→</span>
+      <span class="st">归档</span>
+    </div>
+    <p>每个状态节点对应明确的触发条件、审批人和处理时限，形成端到端的闭环管理。主数据<strong>不允许物理删除</strong>，停用和归档保留完整历史痕迹。</p>
+  </div>
+
+  <div class="g2">
+    <div class="card">
+      <h3>变更审批机制</h3>
+      <ul>
+        <li>任何主数据的<strong>新增、修改、停用</strong>必须经过相关部门线上审批</li>
+        <li>记录<strong>变更原因、变更内容及历史版本</strong>，实现全链路可追溯</li>
+        <li>审批流程支持<strong>多级会签</strong>（如物料变更需仓储 + 技术 + 质量联合会签）</li>
+        <li>变更生效后<strong>自动通知</strong>所有消费系统（ERP、MES、PLM）</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>权限架构配置（4W+1H）</h3>
+      <ul>
+        <li><strong>Who：</strong>谁——操作人身份与角色</li>
+        <li><strong>When：</strong>何时——操作时间窗口</li>
+        <li><strong>Where：</strong>何地——操作终端/网络位置</li>
+        <li><strong>What：</strong>何对象——哪个主数据对象</li>
+        <li><strong>How：</strong>何种权限——增/删/改/查/审批</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="info">
+    <p><strong>设计原则：</strong>主数据修改权限集中在归口管理部门，消费系统（ERP、MES）对主数据只有<strong>只读消费</strong>权限，不允许回写覆盖 MDM 标准值。</p>
+  </div>
+
+  <!-- ── MDM 阶段四：多系统集成与协同 ── -->
+  <div class="sec-hd sub" id="mdm-stage4"><div class="sec-num" style="background:var(--green)">4</div><div><h2>阶段四：多系统集成与协同配置</h2><div class="sd">主数据必须作为"单一数据源"在各系统间流转，确保同源同步。</div></div></div>
+
+  <div class="dataflow">
+    <svg viewBox="0 0 1100 320" role="img" aria-label="MDM 多系统集成拓扑图">
+      <defs>
+        <marker id="mab" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#60a5fa"/></marker>
+        <marker id="mag" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#22c55e"/></marker>
+        <marker id="map" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#c084fc"/></marker>
+      </defs>
+      <rect x="20" y="20" width="1060" height="280" rx="18" fill="#071a31" stroke="#1e3a8a"/>
+      <rect x="50" y="90" width="180" height="130" rx="14" fill="#ede9fe" stroke="#a78bfa"/>
+      <text x="140" y="130" text-anchor="middle" fill="#4c1d95" font-size="20" font-weight="900">PLM</text>
+      <text x="140" y="154" text-anchor="middle" fill="#5b21b6" font-size="11">产品生命周期管理</text>
+      <text x="140" y="174" text-anchor="middle" fill="#334155" font-size="10">MBOM · ECO · 图文档</text>
+      <text x="140" y="194" text-anchor="middle" fill="#6d28d9" font-size="10" font-weight="700">主数据产生源</text>
+      <rect x="430" y="60" width="240" height="190" rx="16" fill="#f8fafc" stroke="#1a56db" stroke-width="3"/>
+      <text x="550" y="108" text-anchor="middle" fill="#0f2a5e" font-size="22" font-weight="900">MDM</text>
+      <text x="550" y="134" text-anchor="middle" fill="#1d4ed8" font-size="12" font-weight="700">主数据管理平台</text>
+      <text x="550" y="158" text-anchor="middle" fill="#475569" font-size="11">编码 · 属性 · 黄金源</text>
+      <text x="550" y="178" text-anchor="middle" fill="#475569" font-size="11">生命周期 · 审批 · 发布</text>
+      <text x="550" y="198" text-anchor="middle" fill="#475569" font-size="11">变更通知 · 同步调度</text>
+      <text x="550" y="224" text-anchor="middle" fill="#1a56db" font-size="11" font-weight="800">← 单一数据源 →</text>
+      <rect x="860" y="62" width="180" height="88" rx="14" fill="#dbeafe" stroke="#60a5fa"/>
+      <text x="950" y="96" text-anchor="middle" fill="#1d4ed8" font-size="18" font-weight="900">ERP（用友 U8）</text>
+      <text x="950" y="120" text-anchor="middle" fill="#475569" font-size="10">计划 · 采购 · 库存 · 财务</text>
+      <text x="950" y="138" text-anchor="middle" fill="#1d4ed8" font-size="10" font-weight="700">主数据消费方</text>
+      <rect x="860" y="176" width="180" height="88" rx="14" fill="#dcfce7" stroke="#4ade80"/>
+      <text x="950" y="210" text-anchor="middle" fill="#166534" font-size="18" font-weight="900">MES（虎蜥）</text>
+      <text x="950" y="234" text-anchor="middle" fill="#475569" font-size="10">派工 · 报工 · 追溯 · 质检</text>
+      <text x="950" y="252" text-anchor="middle" fill="#166534" font-size="10" font-weight="700">主数据消费方</text>
+      <path d="M230 135 C300 125 360 120 430 128" fill="none" stroke="#c084fc" stroke-width="3" marker-end="url(#map)"/>
+      <text x="330" y="110" text-anchor="middle" fill="#d8b4fe" font-size="10">维护确认</text>
+      <path d="M670 120 C740 100 800 98 860 106" fill="none" stroke="#60a5fa" stroke-width="3" marker-end="url(#mab)"/>
+      <text x="765" y="90" text-anchor="middle" fill="#bfdbfe" font-size="10">发布消费</text>
+      <path d="M670 190 C740 215 800 225 860 218" fill="none" stroke="#22c55e" stroke-width="3" marker-end="url(#mag)"/>
+      <text x="765" y="245" text-anchor="middle" fill="#bbf7d0" font-size="10">发布消费</text>
+      <path d="M950 150 C950 162 950 168 950 176" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5 4"/>
+      <text x="985" y="168" fill="#94a3b8" font-size="9">库存变动反馈 MRP</text>
+    </svg>
+    <div class="legend">
+      <span><i class="dot" style="background:#c084fc"></i>PLM → MDM 维护链路</span>
+      <span><i class="dot" style="background:#60a5fa"></i>MDM → ERP 发布链路</span>
+      <span><i class="dot" style="background:#22c55e"></i>MDM → MES 发布链路</span>
+    </div>
+  </div>
+
+  <div class="g3" style="margin-top:14px">
+    <div class="card">
+      <h3>打通集成通道</h3>
+      <p>开发 PLM、ERP、MES 三大系统间的主数据同步接口，实现统一的接口规范和数据格式。</p>
+      <div class="badge-row" style="margin-top:8px">
+        <span class="badge plm">PLM ↔ MDM</span>
+        <span class="badge erp">MDM → ERP</span>
+        <span class="badge mes">MDM → MES</span>
+      </div>
+    </div>
+    <div class="card">
+      <h3>双向实时同步</h3>
+      <p>MES 中的物料主数据与库房库存变动需<strong>实时反馈至 ERP</strong>，支撑其 MRP 运算。主数据变更在 MDM 发布后自动推送至所有消费系统。</p>
+    </div>
+    <div class="card">
+      <h3>新旧编码映射</h3>
+      <p>在处理"一物多码"历史问题时，建立<strong>旧编码与新标准编码的映射关系</strong>，保障历史业务数据的可追溯性，支持按新码或旧码双向查询。</p>
+    </div>
+  </div>
+
+  <!-- ── MDM 阶段五：数据导入验证与持续运营 ── -->
+  <div class="sec-hd sub" id="mdm-stage5"><div class="sec-num" style="background:var(--green)">5</div><div><h2>阶段五：数据导入、验证与持续运营</h2><div class="sd">将高质量数据导入生产环境，建立长效维护机制，确保数据质量持续稳定。</div></div></div>
+
+  <div class="g3">
+    <div class="card">
+      <h3>分批导入与验证</h3>
+      <ul>
+        <li>将清洗后的高质量数据<strong>分批次</strong>导入生产环境</li>
+        <li>每批次导入后进行<strong>全链路业务跑通验证</strong></li>
+        <li>验证场景：BOM 展开、MRP 运算、采购下单、车间派工、报工、入库</li>
+        <li>导入异常数据<strong>回滚并记录</strong>，修正后重新导入</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>用户培训</h3>
+      <ul>
+        <li>针对<strong>主数据维护人员</strong>进行标准化录入与变更规范培训</li>
+        <li>培训内容：编码规则、属性填写规范、审批流程操作、常见错误案例</li>
+        <li>建立<strong>操作手册和培训考核</strong>机制</li>
+        <li>消费系统用户培训：如何识别和使用标准主数据</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>动态维护与持续清洗</h3>
+      <ul>
+        <li>建立<strong>定期维护机制</strong>（如月度/季度数据质量巡检）</li>
+        <li>动态更新<strong>主数据台账</strong>，确保账实一致</li>
+        <li>定期清理系统内的<strong>冗余数据</strong>（重复、过期、无效记录）</li>
+        <li>数据质量 KPI 监控：准确率、完整率、及时率</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>数据质量监控指标</h3>
+    <div class="tw">
+      <table>
+        <thead><tr><th>指标</th><th>定义</th><th>目标值</th><th>监控频率</th><th>责任人</th></tr></thead>
+        <tbody>
+          <tr><td><strong>完整率</strong></td><td>必填字段非空的数据占比</td><td>≥ 99%</td><td>月度</td><td>数据管理员</td></tr>
+          <tr><td><strong>准确率</strong></td><td>字段值与实物/标准一致的数据占比</td><td>≥ 98%</td><td>季度</td><td>归口部门</td></tr>
+          <tr><td><strong>唯一率</strong></td><td>无重复编码的数据占比</td><td>100%</td><td>月度</td><td>MDM 管理员</td></tr>
+          <tr><td><strong>及时率</strong></td><td>变更后 24h 内同步至消费系统的占比</td><td>≥ 95%</td><td>实时监控</td><td>IT 运维</td></tr>
+          <tr><td><strong>消费一致率</strong></td><td>ERP/MES 中数据与 MDM 标准一致的占比</td><td>≥ 99%</td><td>月度</td><td>IT 运维</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── MDM 总结 ── -->
+  <div class="summary-box">
+    <h3>MDM 的本质</h3>
+    <p>MDM 工作流程的本质是将昌兴的<strong>线下管理规则转化为系统的"技术法规"</strong>。它不是单纯的数据录入项目，而是企业数字化建设的<strong>基础设施工程</strong>，其质量直接影响所有上层业务系统的运行效果。</p>
+  </div>
+
+  <div class="g2" style="margin-top:14px">
+    <div class="danger">
+      <div class="dt">流程执行不彻底的后果</div>
+      <p>清洗不净 → 二阶段 <strong>MRP 运算失真</strong><br/>编码规则不统一 → <strong>车间无法报工</strong><br/>一物多码 → <strong>物料齐套性检查失效</strong></p>
+    </div>
+    <div class="success">
+      <p><strong>流程执行到位的收益</strong><br/>一物一码，跨系统一致消费<br/>MRP 运算准确，采购计划可信<br/>车间报工顺畅，生产进度实时可见<br/>物料齐套检查可靠，装配计划可执行<br/>质量追溯链路完整，适航审核合规</p>
+    </div>
   </div>
 
   <!-- D4 工程技术部工艺与制造数据 -->
@@ -1347,142 +1554,6 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
     <div class="sankey-title">工程技术部 — 工装管理</div>
     <div class="sankey-sub">部门 → 业务能力 → 业务流程 → 应用系统</div>
     <div id="chart-d2" class="sankey-chart"></div>
-  </div>
-
-  <div class="g2">
-    <div class="card">
-      <h3>第一层：组织与身份 MDM</h3>
-      <p>优先确认第一层，因为它是审批、权限、派工、质量放行、ECO发布和适航授权的入口。建议 OA/MDM 管部门、人员、岗位、工号、角色、资质和认证结果；业务系统可以保留本地账号或缓存，但不得成为正式权威源。</p>
-    </div>
-    <div class="card">
-      <h3>第二层：业务主数据 MDM</h3>
-      <p>物料、BOM、供应商、客户、工装、设备、质量规范、批次和术语词典，应由部门流程映射和字段台账逐步沉淀，再作为 MDM 平台和接口设计依据。</p>
-    </div>
-  </div>
-
-  <div class="tw"><table>
-        <thead><tr><th>主数据对象</th><th>说明会建议</th><th>会前状态</th></tr></thead>
-    <tbody>
-      <tr><td>部门/人员/岗位</td><td>OA/MDM 作为权威源，其他系统消费或映射</td><td>需确认同步范围、频率和字段</td></tr>
-      <tr><td>角色/资质/授权</td><td>OA流程 + 质量确认，MES派工和质量放行必须校验</td><td>需确认特种工艺、NDT、适航授权归属</td></tr>
-      <tr><td>设计件物料</td><td>翎瑞鸿翔PLM为黄金源；CAPP暂不在一期，MBOM工序展开待人工或临时方案</td><td>PLM已定（A1完成），一期MBOM/ECO/工程项目管理；编码字段仍待A6技术确认</td></tr>
-      <tr><td>原材料/采购件</td><td>倾向 ERP-MM 创建和维护，供应链管理系统 只做协同和资料收集</td><td>待编码、字段长度和供应商边界确认</td></tr>
-      <tr><td>EBOM/MBOM</td><td>EBOM 由翎瑞鸿翔PLM管理；MBOM 一期暂由人工或临时方案，CAPP 后续规划</td><td>BOM头风险点已识别（A2输入）；ECO闭环已完成（A3）</td></tr>
-      <tr><td>批次/有效期</td><td>WMS 管实物批次和冷冻存储，MES 管环境暴露和消耗，ERP 管账务</td><td>待预浸料有效期方案确认</td></tr>
-      <tr><td>术语词典</td><td>信息化项目组统筹，各部门确认，状态分为待确认、评审中、已解决、已驳回</td><td>5月8日前形成 V0.1</td></tr>
-    </tbody>
-  </table></div>
-
-  <div class="card" style="margin-bottom:16px">
-    <h3>物料编码设计五原则</h3>
-    <div class="g2" style="margin-top:8px">
-      <div class="info"><p><strong>唯一性：</strong>每一个物料全公司范围内有且仅有一个编码，跨系统共用。</p></div>
-      <div class="info"><p><strong>稳定性：</strong>编码一经创建，不因物料名称、规格变更而修改；变更须新建物料。</p></div>
-      <div class="info"><p><strong>可读性：</strong>编码结构须兼顾人工识别与系统解析，不使用纯流水码。</p></div>
-      <div class="info"><p><strong>扩展性：</strong>分类位预留扩展空间，避免未来分类调整导致编码体系崩溃。</p></div>
-      <div class="info"><p><strong>系统兼容性：</strong>编码长度与字符集须经各系统确认，确保无截断或乱码风险。</p></div>
-    </div>
-  </div>
-
-  <div class="card">
-    <h3>物料编码结构（20位含连字符，需各系统技术确认）</h3>
-    <div class="enc">
-      <div class="es"><div class="ev">XX</div><div class="el">大类 · 2位</div></div>
-      <div class="esep">-</div>
-      <div class="es"><div class="ev">XXX</div><div class="el">机型/项目号 · 3位</div></div>
-      <div class="esep">-</div>
-      <div class="es"><div class="ev">XXX</div><div class="el">中类 · 3位</div></div>
-      <div class="esep">-</div>
-      <div class="es"><div class="ev">XXX</div><div class="el">小类 · 3位</div></div>
-      <div class="esep">-</div>
-      <div class="es"><div class="ev">00000</div><div class="el">流水号 · 5位</div></div>
-      <div class="enc-note"><div class="ex">CF-S19-RFF-PNL-00001</div><div class="ed">版次 REV 为独立字段，不进入主编码；20位结构仍需供应商确认字段长度与字符集</div></div>
-    </div>
-    <div class="tw"><table>
-      <thead><tr><th>物料编码</th><th>物料名称</th><th>大类</th><th>版次</th><th>备注</th></tr></thead>
-      <tbody>
-        <tr><td><code>CF-S19-RFF-PNL-00001</code></td><td>后机身前段上壁板</td><td>碳纤维复合材料件</td><td>A</td><td>主结构件，序列号管理</td></tr>
-        <tr><td><code>CF-S19-VTP-FSP-00001</code></td><td>垂尾前梁</td><td>碳纤维复合材料件</td><td>A</td><td>主结构件，序列号管理</td></tr>
-        <tr><td><code>CF-S19-RUD-RIB-00003</code></td><td>方向舵肋（第3肋）</td><td>碳纤维复合材料件</td><td>B</td><td>经 ECO-2024-0012 变更</td></tr>
-        <tr><td><code>ME-S2B-VTP-FIT-00001</code></td><td>钛合金主梁接头</td><td>金属件/机加件</td><td>A</td><td>序列号管理</td></tr>
-        <tr><td><code>PM-S23-CMS-CFRP-00001</code></td><td>某型碳纤维预浸料</td><td>预浸料/基体材料</td><td>—</td><td>批次管理，有效期管控</td></tr>
-      </tbody>
-    </table></div>
-  </div>
-
-  <div class="card">
-    <h3>航空复材特殊编码规则</h3>
-    <div class="tw"><table>
-      <thead><tr><th>规则</th><th>说明</th></tr></thead>
-      <tbody>
-        <tr><td>件号与物料编码分离</td><td>对外交付件号（主机厂格式）与内部物料编码分离，通过映射表关联。禁止直接用主机厂件号作为内部编码。</td></tr>
-        <tr><td>预浸料有效期不进编码</td><td>批次号、生产日期、有效期作为批次属性管理，不体现在物料编码中。</td></tr>
-        <tr><td>工艺规范号单独字段</td><td>固化工艺规范、NDT规范作为物料属性字段，不进编码。</td></tr>
-        <tr><td>构型状态码独立</td><td>适航构型状态（TC/STC适用性）作为独立属性，不进编码。</td></tr>
-        <tr><td>版次 REV 独立字段</td><td>版次不进主编码，作为独立字段管理，支持版本追溯。</td></tr>
-      </tbody>
-    </table></div>
-  </div>
-
-  <div class="card">
-    <h3>物料分类码定义</h3>
-    <div class="tw"><table>
-      <thead><tr><th>大类码</th><th>名称</th><th>说明</th><th>黄金源</th></tr></thead>
-      <tbody>
-        <tr><td><code>DM</code></td><td>技术文件/数据包</td><td>工程图纸、工艺规范（虚拟物料）</td><td>PLM一期PDM/MBOM</td></tr>
-        <tr><td><code>CF</code></td><td>碳纤维复合材料件</td><td>CFRP壁板、梁、肋、框等主结构件</td><td>PLM</td></tr>
-        <tr><td><code>GF</code></td><td>玻璃纤维复合材料件</td><td>GFRP整流罩、非承力结构件</td><td>PLM</td></tr>
-        <tr><td><code>HY</code></td><td>混杂复合材料件</td><td>碳/玻混杂、碳/芳纶混杂件</td><td>PLM</td></tr>
-        <tr><td><code>ME</code></td><td>金属件/机加件</td><td>铝合金、钛合金接头、连接件</td><td>PLM</td></tr>
-        <tr><td><code>AS</code></td><td>装配体/组件</td><td>多零件组成的子装配体</td><td>PLM</td></tr>
-        <tr><td><code>PM</code></td><td>预浸料/基体材料</td><td>碳纤维预浸料、玻纤预浸料、胶膜</td><td>ERP-MM</td></tr>
-        <tr><td><code>TO</code></td><td>工艺装备</td><td>铺叠工装、铣切工装、辅助工装</td><td>MES</td></tr>
-        <tr><td><code>RM</code></td><td>辅助材料</td><td>脱模布、透气毡、真空袋膜、密封胶条</td><td>ERP-MM</td></tr>
-        <tr><td><code>AD</code></td><td>胶粘剂/密封剂</td><td>结构胶、密封胶、底漆</td><td>ERP-MM</td></tr>
-        <tr><td><code>FA</code></td><td>标准紧固件</td><td>航空级螺栓、铆钉（AN/NAS/MS标准）</td><td>ERP-MM</td></tr>
-        <tr><td><code>CO</code></td><td>低值易耗品</td><td>砂纸、切割片、清洗剂等</td><td>ERP-MM</td></tr>
-      </tbody>
-    </table></div>
-    <div class="tw"><table>
-      <thead><tr><th>CF大类小类码</th><th>名称</th><th>典型件</th></tr></thead>
-      <tbody>
-        <tr><td><code>CF-PNL</code></td><td>壁板类</td><td>后机身前段上壁板</td></tr>
-        <tr><td><code>CF-FSP</code></td><td>梁类</td><td>垂尾前梁</td></tr>
-        <tr><td><code>CF-RIB</code></td><td>肋类</td><td>方向舵1号肋</td></tr>
-        <tr><td><code>CF-FRM</code></td><td>框类</td><td>后压力框</td></tr>
-        <tr><td><code>CF-STR</code></td><td>长桁/加强筋</td><td>垂尾左壁板#8长桁</td></tr>
-        <tr><td><code>CF-FIT</code></td><td>接头类</td><td>方向舵梁#2接头</td></tr>
-      </tbody>
-    </table></div>
-  </div>
-
-  <div class="card">
-    <h3>字段台账：接口设计前必须补齐</h3>
-    <p>字段台账是 MDM 和接口设计之间的桥。每个接口字段都应能回答：谁创建、谁审批、哪个系统是黄金源、哪些系统只读消费、同步失败后谁处理。</p>
-    <div class="tw"><table>
-      <thead><tr><th>字段台账项</th><th>填写要求</th></tr></thead>
-      <tbody>
-        <tr><td>数据对象</td><td>物料、EBOM、MBOM、供应商、批次、人员、工装、设备、质量规范等。</td></tr>
-        <tr><td>字段口径</td><td>中文字段名、英文字段名、字段类型、枚举值、示例、限制条件。</td></tr>
-        <tr><td>治理责任</td><td>黄金源系统、维护部门、审批部门、数据责任人、流程确认人。</td></tr>
-        <tr><td>集成责任</td><td>消费系统、同步方式、同步频率、失败重试、人工兜底、术语风险。</td></tr>
-      </tbody>
-    </table></div>
-  </div>
-
-  <div class="card">
-    <h3>术语治理优先清单</h3>
-    <div class="tw"><table>
-      <thead><tr><th>术语</th><th>必须统一的问题</th><th>说明会处理</th></tr></thead>
-      <tbody>
-        <tr><td>物料编码 / 件号</td><td>内部唯一编码、主机厂件号、设计件号之间的关系</td><td>件号与内部物料编码分离，通过映射表关联</td></tr>
-        <tr><td>REV / 版次 / 构型</td><td>版次是否进入编码，构型状态和适航状态如何关联</td><td>REV 独立字段，不进入主编码；构型规则待 PLM 确认</td></tr>
-        <tr><td>EBOM / MBOM / PBOM</td><td>谁负责转换，是否包含铺层、虚拟件、工装、定额、替代料</td><td>5月12日前形成转换责任初稿</td></tr>
-        <tr><td>批次 / 有效期</td><td>供应商批次、WMS批次、MES消耗批次是否同源</td><td>建立批次字段映射，预浸料有效期列入 Q2</td></tr>
-        <tr><td>资质 / 授权</td><td>人员资质、检验授权、适航授权、岗位权限的边界</td><td>高风险动作未明确授权则不默认放行</td></tr>
-        <tr><td>冻结 / 退回 / 资料</td><td>需求冻结、BOM冻结、资料冻结、退回补正等含义混用</td><td>纳入术语冲突台账，阻塞项标记为 error</td></tr>
-      </tbody>
-    </table></div>
   </div>
 </div>
 
