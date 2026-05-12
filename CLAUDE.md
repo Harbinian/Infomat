@@ -4,14 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目概述
 
-Infomat 是航空复材制造领域的业务关系映射与主数据管理工具集。当前分支正在建设 MDM 数据收集与评审系统。
+Infomat 是航空复材制造领域的业务关系映射与主数据管理工具集。当前分支正在建设 MDM 平台。
 
 ## 常用命令
 
-### MDM Collector（主项目）
+### MDM 平台（主项目）
 
 ```bash
-cd mdm-collector
+cd mdm-platform
 npm install                # 安装依赖
 npm start                  # 启动服务 (Express, 端口 3000)
 npm run dev                # 开发模式 (nodemon 自动重启)
@@ -40,7 +40,7 @@ node scripts/render_gantt_h5_png.mjs                    # H5 HTML → 8K PNG (he
 
 ## 技术栈
 
-**MDM Collector**：Express.js + better-sqlite3 (SQLite) + 原生 HTML/CSS/JS 前端 (ECharts)。后端 `express-session` 做会话管理，`bcryptjs` 做密码哈希，`exceljs` + `multer` 做 Excel 导入导出。
+**MDM 平台**：Express.js + better-sqlite3 (SQLite) + 原生 HTML/CSS/JS 前端 (ECharts)。后端 `express-session` 做会话管理，`bcryptjs` 做密码哈希，`exceljs` + `multer` 做 Excel 导入导出。
 
 **Gantt 渲染**：Python (Pillow) 从 Markdown 表格生成 8K 甘特图 PNG；Node (Chrome DevTools Protocol) 从 H5 HTML 页面截图导出。
 
@@ -48,10 +48,10 @@ node scripts/render_gantt_h5_png.mjs                    # H5 HTML → 8K PNG (he
 
 ## 代码架构
 
-### MDM Collector (`mdm-collector/`)
+### MDM 平台 (`mdm-platform/`)
 
 ```
-mdm-collector/
+mdm-platform/
 ├── server/
 │   ├── index.js           # Express 入口，动态注册路由
 │   ├── db.js              # SQLite 建表 (20+ 表，SCD Type 2，审计日志)
@@ -74,7 +74,7 @@ mdm-collector/
 │   └── index.html         # 单文件前端 UI (Tab 导航 + ECharts 仪表盘)
 ├── scripts/               # init-db, smoke-test, 各路由测试脚本
 └── data/
-    └── collector.db       # SQLite 数据文件 (运行后生成)
+    └── platform.db       # SQLite 数据文件 (运行后生成)
 ```
 
 **后端模式**：每个路由文件都是相同的模式 — `express.Router()` + `db` + `requireAuth` 中间件 + `handleDbError` 错误处理 wrapper。路由在 `index.js` 通过 `registerRouteIfExists()` 动态注册。
@@ -104,8 +104,8 @@ mappings → todos (跨部门待办)
 
 ## 关键约束
 
-- 前端无模块化，mdm-collector UI 同样是一个 HTML 文件中的原生 JS
+- 前端无模块化，mdm-platform UI 同样是一个 HTML 文件中的原生 JS
 - 无自动化测试框架，测试靠 scripts/ 下的手动调 API 脚本
 - V1 自建用户体系，不接 OA / 统一认证
 - SQLite 是本地文件数据库，不适用于多进程并发部署
-- 根目录 `package.json` 是旧的占位文件；实际项目级依赖在 `mdm-collector/package.json`
+- 根目录 `package.json` 是旧的占位文件；实际项目级依赖在 `mdm-platform/package.json`

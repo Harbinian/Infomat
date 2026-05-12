@@ -22,6 +22,8 @@ a{text-decoration:none}
 /* ── NAV ── */
 nav{position:fixed;top:0;left:0;right:0;z-index:999;background:rgba(15,42,94,.97);backdrop-filter:blur(8px);height:50px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;gap:12px}
 .nav-logo{color:#fff;font-size:13px;font-weight:700;white-space:nowrap;flex-shrink:0}
+.nav-toggle{display:none;align-items:center;justify-content:center;gap:4px;width:38px;height:34px;border-radius:8px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.08);cursor:pointer;flex-shrink:0}
+.nav-toggle span{display:block;width:16px;height:2px;background:rgba(255,255,255,.85);border-radius:2px}
 .nav-links{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
 .nav-links::-webkit-scrollbar{display:none}
 .nav-links a{color:rgba(255,255,255,.65);font-size:11px;padding:4px 9px;border-radius:4px;white-space:nowrap;transition:.2s}
@@ -55,8 +57,8 @@ nav{position:fixed;top:0;left:0;right:0;z-index:999;background:rgba(15,42,94,.97
 .sec>*,.card,.alert,.warn,.info,.success,.chain,.iface,.qmat,.tw,.sankey-wrap{max-width:100%;min-width:0}
 
 /* ── SUB-SECTION (章节内嵌套小节，与主章节视觉一致) ── */
-.sec-hd.sub{position:relative;padding-left:44px}
-.sec-hd.sub .sec-num{position:absolute;left:0;top:2px}
+.sec-hd.sub{position:relative;padding-left:64px}
+.sec-hd.sub .sec-num{position:absolute;left:0;top:2px;width:auto;min-width:32px;padding:0 6px}
 
 /* ── SEC HEADER ── */
 .sec-hd{display:flex;align-items:flex-start;gap:12px;margin-bottom:24px}
@@ -65,14 +67,14 @@ nav{position:fixed;top:0;left:0;right:0;z-index:999;background:rgba(15,42,94,.97
 .sec-hd .sd{font-size:12px;color:var(--gray)}
 
 /* ── CARDS ── */
-.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.04);min-width:0}
 .card h3{font-size:14px;color:var(--navy);margin-bottom:8px}
 .card p,.card li{font-size:13px;color:var(--muted);line-height:1.85}
 .card ul{padding-left:16px}
-.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
-.g5s{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.g5s{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
 .gauto{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
 .imp{font-size:13px;color:#1e3a5f;line-height:1.75;font-weight:500;padding-bottom:8px;border-bottom:1px solid #e2e8f0;margin-bottom:6px}
 
@@ -93,12 +95,12 @@ nav{position:fixed;top:0;left:0;right:0;z-index:999;background:rgba(15,42,94,.97
 .sys-hero h3{font-size:20px;color:var(--navy);margin-bottom:6px}.sys-hero p{font-size:13px;color:var(--muted);line-height:1.85}
 .sys-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}.sys-tag{font-size:11px;font-weight:700;border-radius:999px;padding:3px 9px;background:#f1f5f9;color:var(--muted)}
 .sys-tag.oa{background:#fef3c7;color:#92400e}.sys-tag.plm{background:#ede9fe;color:#6d28d9}.sys-tag.mes{background:#dcfce7;color:#166534}
-.stat-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px}.stat-box{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.stat-row{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:14px}.stat-box{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.04);min-width:0}
 .stat-box .num{font-size:24px;font-weight:900;color:var(--navy);line-height:1}.stat-box .lbl{font-size:11px;color:var(--gray);margin-top:5px}
-.cap-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px}.cap-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;border-left:4px solid var(--blue)}
+.cap-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:14px}.cap-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;border-left:4px solid var(--blue);min-width:0}
 .cap-card.oa{border-left-color:var(--amber)}.cap-card.plm{border-left-color:var(--purple)}.cap-card.mes{border-left-color:var(--green)}.cap-card h4{font-size:13px;color:var(--navy);margin-bottom:6px}.cap-card p,.cap-card li{font-size:12px;color:var(--muted);line-height:1.75}.cap-card ul{padding-left:15px}
-.pain-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px}.pain-item{background:#fff7ed;border:1px solid #fed7aa;border-left:4px solid var(--red);border-radius:9px;padding:11px 13px;font-size:12px;color:#7c2d12;line-height:1.7}.pain-item strong{display:block;color:#b91c1c;font-size:12px;margin-bottom:3px}
-.loop-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:14px}.loop-item{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:13px 15px;border-left:4px solid var(--green)}.loop-item.oa{border-left-color:var(--amber)}.loop-title{font-size:13px;font-weight:800;color:var(--navy);margin-bottom:6px}.loop-flow{font-size:12px;color:var(--text);line-height:1.7;background:#f8fafc;border-radius:7px;padding:8px 10px;margin-bottom:7px}.loop-key{font-size:11px;color:#166534;font-weight:700}.loop-item.oa .loop-key{color:#92400e}
+.pain-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:16px}.pain-item{background:#fff7ed;border:1px solid #fed7aa;border-left:4px solid var(--red);border-radius:9px;padding:11px 13px;font-size:12px;color:#7c2d12;line-height:1.7;min-width:0}.pain-item strong{display:block;color:#b91c1c;font-size:12px;margin-bottom:3px}
+.loop-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:14px}.loop-item{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:13px 15px;border-left:4px solid var(--green);min-width:0}.loop-item.oa{border-left-color:var(--amber)}.loop-title{font-size:13px;font-weight:800;color:var(--navy);margin-bottom:6px}.loop-flow{font-size:12px;color:var(--text);line-height:1.7;background:#f8fafc;border-radius:7px;padding:8px 10px;margin-bottom:7px}.loop-key{font-size:11px;color:#166534;font-weight:700}.loop-item.oa .loop-key{color:#92400e}
 .phase-stack{display:flex;flex-direction:column;gap:12px;margin-bottom:14px}.phase-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;border-left:4px solid var(--green)}.phase-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}.phase-num{width:28px;height:28px;border-radius:50%;background:var(--green);color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center}.phase-title{font-size:14px;font-weight:800;color:var(--navy);flex:1}.phase-period{font-size:11px;font-weight:800;color:#166534;background:#dcfce7;border-radius:999px;padding:3px 9px}.phase-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}.phase-tag{font-size:11px;font-weight:700;color:#166534;background:#dcfce7;border-radius:5px;padding:3px 8px}
 
 
@@ -110,7 +112,8 @@ nav{position:fixed;top:0;left:0;right:0;z-index:999;background:rgba(15,42,94,.97
 .warn{background:#fffbeb;border:1px solid #fde68a;border-left:4px solid var(--amber);border-radius:8px;padding:12px 16px;margin-bottom:14px}
 .warn .wt{font-size:13px;font-weight:700;color:#92400e;margin-bottom:5px}
 .warn p{font-size:12px;color:#78350f;line-height:1.8}
-.info{background:#eff6ff;border:1px solid #bfdbfe;border-left:4px solid var(--blue);border-radius:8px;padding:12px 16px;margin-bottom:14px}
+.info{background:#eff6ff;border:1px solid #bfdbfe;border-left:4px solid var(--blue);border-radius:8px;padding:12px 16px;margin-bottom:14px;min-width:0}
+.info p{margin:0;white-space:normal;overflow-wrap:break-word}
 .info p{font-size:12px;color:#1e40af;line-height:1.8}
 .success{background:#f0fdf4;border:1px solid #bbf7d0;border-left:4px solid var(--green);border-radius:8px;padding:12px 16px;margin-bottom:14px}
 .success p{font-size:12px;color:#14532d;line-height:1.8}
@@ -385,7 +388,10 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
 
 /* ── RESPONSIVE ── */
 @media(max-width:680px){
-  nav .nav-links{display:none}
+  .nav-toggle{display:flex}
+  nav .nav-links{display:none;position:absolute;top:50px;left:0;right:0;flex-direction:column;gap:0;overflow:auto;max-height:calc(100vh - 50px);background:rgba(15,42,94,.985);border-top:1px solid rgba(255,255,255,.14);padding:8px 12px}
+  nav.open .nav-links{display:flex}
+  .nav-links a{font-size:13px;padding:10px 10px;border-radius:8px}
   .g2,.g3,.g4,.g5s,.dp-grid,.iface-body,.stat-row,.cap-grid,.pain-grid,.loop-grid{grid-template-columns:1fr}
   .accident-sys,.accident-detail,.swim-header,.swim-body-row,.qmat-cols,.qmat-row{grid-template-columns:1fr}
   .mdm-map-grid{grid-template-columns:1fr}
@@ -397,7 +403,7 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
   .qmat-status{padding-top:0}
   .enc{flex-direction:column}
   .es{border-right:none;border-bottom:1px solid rgba(255,255,255,.15);width:100%}
-  #cover{padding:0 6vw}
+  #cover{padding:70px 6vw 50px}
   .enc-note{margin-left:0;margin-top:12px}
   .sankey-wrap{padding:16px 12px}
   .sankey-wrap .sankey-chart{height:720px}
@@ -448,11 +454,11 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
 .res-card .rd{font-size:11px;color:var(--muted);margin-top:6px;line-height:1.6}
 .dd-section{margin-bottom:20px}
 .dd-section h4{font-size:14px;color:var(--navy);margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid var(--purple);display:flex;align-items:center;gap:8px}
-.dd-section h4 .dd-num{width:24px;height:24px;border-radius:50%;background:var(--purple);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.field-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.field-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px 14px;border-left:3px solid var(--teal)}
-.field-card .fn{font-size:12px;font-weight:700;color:var(--navy);margin-bottom:3px}
-.field-card .fd{font-size:11px;color:var(--muted);line-height:1.65}
+.dd-section h4 .dd-num{height:24px;min-width:24px;padding:0 8px;border-radius:999px;background:var(--purple);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.field-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.field-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px 14px;border-left:3px solid var(--teal);min-width:0;display:flex;flex-direction:column;align-items:stretch}
+.field-card .fn{font-size:12px;font-weight:700;color:var(--navy);margin-bottom:3px;width:100%}
+.field-card .fd{font-size:11px;color:var(--muted);line-height:1.65;width:100%;white-space:normal;overflow-wrap:break-word;word-break:normal}
 .field-card .ft{display:inline-block;font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;margin-top:5px}
 .ft-mes{background:#dcfce7;color:#166534}
 .ft-erp{background:#dbeafe;color:#1d4ed8}
@@ -460,13 +466,13 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
 .ft-plm{background:#ede9fe;color:#6d28d9}
 
 /* ── MERGED from 主数据管理五阶段工作流程 ── */
-.cat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.cat-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
 .cat-card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center;transition:.2s}
 .cat-card:hover{box-shadow:0 4px 12px rgba(0,0,0,.08);border-color:var(--blue)}
 .cat-card .cat-icon{font-size:28px;margin-bottom:6px}
 .cat-card .cat-name{font-size:13px;font-weight:800;color:var(--navy)}
 .cat-card .cat-desc{font-size:11px;color:var(--gray);margin-top:4px}
-.resp-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.resp-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
 .resp-card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px;border-left:4px solid var(--blue)}
 .resp-card .r-sys{font-size:13px;font-weight:800;color:var(--navy);margin-bottom:4px}
 .resp-card .r-dept{font-size:11px;color:var(--amber);font-weight:700;margin-bottom:4px}
@@ -513,7 +519,8 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
 <!-- NAV -->
 <nav>
 <div class="nav-logo">昌兴复材 · 信息化系统应用与集成说明会</div>
-  <div class="nav-links">
+  <button class="nav-toggle" id="navToggle" type="button" aria-label="目录" aria-controls="navLinks" aria-expanded="false"><span></span><span></span><span></span></button>
+  <div class="nav-links" id="navLinks">
     <a href="#cover">首页</a><a href="#s1">会议定位</a><a href="#s2">数字化目标</a><a href="#s3">4套系统</a>
     <a href="#s4">排期</a><a href="#s5">里程碑</a><a href="#s6">卡点</a>
     <a href="#s7">OA</a><a href="#s8">PLM</a><a href="#s9">MES</a><a href="#s10">其他系统</a>
@@ -531,6 +538,7 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
   <div class="cv-meta">
     <div class="cv-box"><div class="cl">文件版本</div><div class="cv">说明会版</div></div>
     <div class="cv-box"><div class="cl">更新日期</div><div class="cv">2026-05-07</div></div>
+    <div class="cv-box"><div class="cl">会议日期</div><div class="cv">2026-05-14</div></div>
     <div class="cv-box"><div class="cl">会议定位</div><div class="cv">应用说明 + 集成说明</div></div>
     <div class="cv-box"><div class="cl">集成系统数</div><div class="cv">4 套</div></div>
     <div class="cv-box"><div class="cl">关键事项</div><div class="cv">A1 – A8 / Q1 – Q8</div></div>
@@ -548,7 +556,7 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
         <li>本次说明系统应用定位、集成关系和会后推进事项；资料不足的事项不强行形成最终结论。</li>
       <li>Q1–Q8 按成熟度分为"✅已解决 / 条件性决策 / 需补资料 / 待供应商确认"四类。</li>
       <li>会议目标：确认组织职责、数据责任人、MDM建设路径，输出会后补资料清单。</li>
-      <li>PLM已定翎瑞鸿翔；其他系统为远景规划项。</li>
+      <li>一期聚焦 ERP / OA / PLM / MES；除 PDM 并入 PLM 一期能力外，其余系统为远景规划项。</li>
     </ul>
   </div>
   <div class="scroll-hint">向下滚动</div>
@@ -559,7 +567,7 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
 <!-- ══ 1 会议定位 ══ -->
 <div class="sec" id="s1">
   <div class="sec-hd"><div class="sec-num">1</div><div><h2>会议定位</h2><div class="sd">信息化系统应用与集成说明会 · 今天说明什么、确认什么</div></div></div>
-  <div class="alert"><div class="at">2026-05-14 会议定位：信息化系统应用与集成说明会</div><ul><li>本次先说明组织职责、数据责任人、流程确认人和集成推进工作组。</li><li>先说明 MDM 主数据建设路径：组织身份先行，流程牵引，术语统一，字段落账。</li><li>Q1–Q8 按成熟度分为"可形成原则结论、需补资料、需供应商确认"，不强行形成最终结论。</li><li>PLM供应商与ECO闭环已收敛；EBOM→MBOM、SCIM定位、数据中台、编码技术约束和接口卡补齐列入会后推进清单。</li></ul></div>
+  <div class="alert"><div class="at">2026-05-14 会议定位：信息化系统应用与集成说明会</div><ul><li>本次先说明组织职责、数据责任人、流程确认人和集成推进工作组。</li><li>先说明 MDM 主数据建设路径：组织身份先行，流程牵引，术语统一，字段落账。</li><li>Q1–Q8 成熟度统一按四类标记："✅已解决 / 条件性决策 / 需补资料 / 待供应商确认"。其中“可形成原则结论”对应前两类。</li><li>PLM供应商与ECO闭环已收敛；EBOM→MBOM、SCIM定位、数据中台、编码技术约束和接口卡补齐列入会后推进清单。</li></ul></div>
   <div class="g3"><div class="card"><h3>今天确认什么</h3><p>确认集成方案是否具备进入详细设计的输入条件，明确会后补资料项、责任人、输出物和截止日期。</p></div><div class="card"><h3>今天不做什么</h3><p>不把供应商未确认能力、接口字段、实施周期和系统边界写成最终决议。</p></div><div class="card"><h3>输出物</h3><p>组织分工、MDM路径、Q1–Q8成熟度判断、接口卡补齐要求和会后行动清单。</p></div></div>
 </div>
 
@@ -671,24 +679,24 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
 <!-- ══ 8 PLM 是什么 ══ -->
 <div class="sec" id="s8">
   <div class="sec-hd"><div class="sec-num">8</div><div><h2>PLM 是什么</h2><div class="sd">设计数据源头 · 图纸 / BOM / 变更 · 翎瑞鸿翔已定</div></div></div>
-  <div class="sys-hero plm"><div class="sys-kicker">PLM 背景铺垫</div><h3>PLM 是研发数据源头，不是图纸仓库</h3><p>翎瑞鸿翔 PLM 一期覆盖 MBOM(PDM)、ECO(ECN)、工程项目管理，是设计件成为制造件的数据起点。本节把来源页能力收敛为一期口径，并展开研发域现状痛点作为后续数据治理和接口设计的业务依据。</p><div class="sys-tags"><span class="sys-tag plm">MBOM(PDM)</span><span class="sys-tag plm">ECO(ECN)</span><span class="sys-tag plm">工程项目管理</span><span class="sys-tag plm">设计件黄金源</span><span class="sys-tag plm">一期范围已定</span></div></div>
+  <div class="sys-hero plm"><div class="sys-kicker">PLM 背景铺垫</div><h3>PLM 是研发数据源头，不是图纸仓库</h3><p>翎瑞鸿翔 PLM 一期聚焦设计件黄金源、变更闭环与制造数据承接：通过 MBOM（含PDM能力）、ECO（含ECN闭环）与工程项目管理，把设计数据以可控、可追溯、可下发的方式传递到制造域，作为后续数据治理与接口设计的业务依据。</p><div class="sys-tags"><span class="sys-tag plm">MBOM（含PDM）</span><span class="sys-tag plm">ECO（含ECN）</span><span class="sys-tag plm">工程项目管理</span><span class="sys-tag plm">设计件黄金源</span><span class="sys-tag plm">一期范围已定</span></div></div>
   <div class="stat-row"><div class="stat-box"><div class="num">3</div><div class="lbl">一期功能模块</div></div><div class="stat-box"><div class="num">21</div><div class="lbl">规划月数</div></div><div class="stat-box"><div class="num">3</div><div class="lbl">集成系统</div></div><div class="stat-box"><div class="num">3</div><div class="lbl">核心闭环</div></div><div class="stat-box"><div class="num">3</div><div class="lbl">实施阶段</div></div></div>
   <div class="g2"><div class="card"><h3>建设目标</h3><ul><li>建立设计件到制造件的EBOM→MBOM结构化转换通道。</li><li>实现ECO变更从发起、审批、生效到全系统同步的闭环管控。</li><li>以工程项目管理支撑工程变更驱动的任务分解与进度跟踪。</li><li>确立设计件为下游ERP、MES系统的唯一黄金源。</li></ul></div><div class="card"><h3>航空复材专项能力</h3><ul><li>EBOM结构与复材铺层、构型状态、REV版本精确关联。</li><li>ECO变更自动影响MBOM工序结构版本。</li><li>设计件图号/版本/构型覆盖适航追溯要求。</li><li>BOM头字段（项目号、配置、构型状态、REV）与下游系统字段映射。</li></ul></div></div>
   <div class="sys-hero plm"><div class="sys-kicker">重点展开</div><h3>现状痛点：为什么 PLM 不能只做"上线一个模块"</h3><p>研发域当前存在数据源头不清、变更链条断裂、版本不统一等问题，导致下游ERP/MES系统出现"同一个零件五个系统五种叫法"的主数据混乱风险。</p></div>
   <div class="pain-grid"><div class="pain-item"><strong>EBOM→MBOM转换断层</strong>设计结构与工序结构无法直接对应，人工映射效率低且易出错。</div><div class="pain-item"><strong>BOM头字段不对齐</strong>项目号、配置、构型状态、REV在下游系统中字段名不一致。</div><div class="pain-item"><strong>ECO变更闭环缺失</strong>变更审批靠线下传递，无法自动触发下游系统版本更新。</div><div class="pain-item"><strong>设计版本不统一</strong>设计文件、工艺文件、质量文件版本不同步，存在混用风险。</div><div class="pain-item"><strong>适航追溯困难</strong>设计件→制造件→检验件的全链路追溯依赖人工台账。</div><div class="pain-item"><strong>变更响应滞后</strong>设计变更无法实时同步到车间执行层，造成工艺文件与现场不一致。</div><div class="pain-item"><strong>数据源头分散</strong>图纸、模型、BOM、文档分散管理，缺乏统一出口管控。</div><div class="pain-item"><strong>版本历史不透明</strong>无法快速定位某批次产品对应的设计版本和技术状态。</div></div>
-  <div class="sec-hd sub"><div class="sec-num" style="background:var(--purple)">M</div><div><h2>3 大功能模块</h2><div class="sd">MBOM(PDM) · ECO(ECN) · 工程项目管理</div></div></div>
-  <div class="cap-grid"><div class="cap-card plm"><h4>MBOM(PDM)</h4><p>EBOM接收、结构映射、BOM头字段对齐、版本管理，作为下游ERP/MES的制造数据起点。</p></div><div class="cap-card plm"><h4>ECO(ECN)</h4><p>变更发起、OA审批、ECO发布、版本生效闭环，自动触发受影响系统状态更新。</p></div><div class="cap-card plm"><h4>工程项目管理</h4><p>工程变更驱动的WBS任务分解、责任人与交付时间、进度跟踪，不涉及生产调度。</p></div></div>
-  <div class="sec-hd sub"><div class="sec-num" style="background:var(--purple)">3</div><div><h2>3 大关键业务闭环</h2><div class="sd">上一环节未完成或未生效，不进入下一环节</div></div></div>
+  <div class="sec-hd sub"><div class="sec-num" style="background:var(--purple)">8.1</div><div><h2>一期功能模块（3项）</h2><div class="sd">MBOM（含PDM） · ECO（含ECN） · 工程项目管理</div></div></div>
+  <div class="cap-grid"><div class="cap-card plm"><h4>MBOM（含PDM）</h4><p>EBOM接收、结构映射、BOM头字段对齐、版本管理，作为下游ERP/MES的制造数据起点。</p></div><div class="cap-card plm"><h4>ECO（含ECN）</h4><p>变更发起、OA审批、ECO发布、版本生效闭环，自动触发受影响系统状态更新。</p></div><div class="cap-card plm"><h4>工程项目管理</h4><p>工程变更驱动的WBS任务分解、责任人与交付时间、进度跟踪，不涉及生产调度。</p></div></div>
+  <div class="sec-hd sub"><div class="sec-num" style="background:var(--purple)">8.2</div><div><h2>关键业务闭环（3条）</h2><div class="sd">上一环节未完成或未生效，不进入下一环节</div></div></div>
   <div class="loop-grid"><div class="loop-item"><div class="loop-title">设计件发布闭环</div><div class="loop-flow">设计编制 → 审核 → 受控发布 → EBOM输出 → MBOM映射 → 下发</div><div class="loop-key">未受控版本禁止流入下游</div></div><div class="loop-item"><div class="loop-title">ECO变更闭环</div><div class="loop-flow">ECR提出 → ECN评估 → ECO审批（OA）→ 生效 → 受影响对象版本更新 → 下游系统同步</div><div class="loop-key">审批未通过不得生效</div></div><div class="loop-item"><div class="loop-title">适航追溯闭环</div><div class="loop-flow">图号 + 构型状态 + REV覆盖设计件、工艺版本、检验记录、交付状态</div><div class="loop-key">支持全链路追溯查询</div></div></div>
   <div class="warn"><div class="wt">说明会口径约束</div><p>翎瑞鸿翔的通用 PLM 能力不等于昌兴复材一期交付范围。凡涉及具体接口字段、实施周期、CAD工具适配范围、ERP/MES双向集成细节，均需在接口卡或供应商技术确认中落账。</p></div>
 
   <!-- ── PLM 前情总结 ── -->
-  <div class="sec-hd sub" id="plm-summary"><div class="sec-num" style="background:var(--purple)">0</div><div><h2>前情总结：从"打基础"到"系统集成"</h2><div class="sd">三大奠基工作回顾 · 为PLM精细化实施铺路</div></div></div>
+  <div class="sec-hd sub" id="plm-summary"><div class="sec-num" style="background:var(--purple)">8.3</div><div><h2>前情总结：从"打基础"到"系统集成"</h2><div class="sd">三大奠基工作回顾 · 为PLM精细化实施铺路</div></div></div>
 
   <div class="summary-grid">
     <div class="summary-card">
       <h4><span class="summary-icon" style="background:#dbeafe;color:#1d4ed8">1</span>MDM主数据奠基</h4>
-      <p>明确主数据作为企业"通用语言"的地位，通过统一编码（不少于30位）和标准化属性（标准号、牌号等），解决"一物多码"历史问题，为后续系统集成扫清障碍。</p>
+      <p>明确主数据作为企业"通用语言"的地位，通过统一编码（治理目标建议预留至30位含扩展位，落地字段长度以各系统约束为准）和标准化属性（标准号、牌号等），解决"一物多码"历史问题，为后续系统集成扫清障碍。</p>
     </div>
     <div class="summary-card">
       <h4><span class="summary-icon" style="background:#ede9fe;color:#6d28d9">2</span>PLM计划精细化</h4>
@@ -703,7 +711,7 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
   <div class="info"><p><strong>实施策略：</strong>基于昌兴现状，将PLM实施路径细化为五个关键阶段，侧重于数据源头治理与异构系统集成。以下方案覆盖从标准体系定义到试运行验收的完整周期（T+6个月）。</p></div>
 
   <!-- ── PLM 五阶段实施路径 ── -->
-  <div class="sec-hd sub" id="plm-phases"><div class="sec-num" style="background:var(--purple)">1</div><div><h2>PLM精细化实施路径拆解（T+6个月）</h2><div class="sd">五阶段递进 · 数据源头治理 → 异构系统集成</div></div></div>
+  <div class="sec-hd sub" id="plm-phases"><div class="sec-num" style="background:var(--purple)">8.4</div><div><h2>PLM精细化实施路径拆解（T+6个月）</h2><div class="sd">五阶段递进 · 数据源头治理 → 异构系统集成</div></div></div>
 
   <div class="phase-stack">
 
@@ -716,7 +724,7 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
       <div class="g3" style="margin-bottom:10px">
         <div class="card" style="margin-bottom:0">
           <h3>编码与属性标准化</h3>
-          <p>确立零部件、图文档及物料的统一编码规则（支持30位以上混合编码），定义材料类主数据的必填属性（如密度、牌号、供应状态）。</p>
+          <p>确立零部件、图文档及物料的统一编码规则（治理目标建议预留至30位含扩展位，落地字段长度以各系统约束为准），定义材料类主数据的必填属性（如密度、牌号、供应状态）。</p>
         </div>
         <div class="card" style="margin-bottom:0">
           <h3>权限与安全架构</h3>
@@ -825,7 +833,7 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
   <div class="warn"><div class="wt">实施风险提示</div><p>五个阶段存在强依赖关系——标准体系未定义则CAD集成无法对齐字段；EBOM结构未稳定则MBOM重构缺乏基准；联调阶段若发现数据源头问题，将连锁影响试运行验收窗口。各阶段Go/No-Go节点必须严格执行。</p></div>
 
   <!-- ── 工艺规程结构化迁移专项 ── -->
-  <div class="sec-hd sub" id="plm-migration"><div class="sec-num" style="background:var(--purple)">2</div><div><h2>工艺规程结构化迁移专项计划</h2><div class="sd">针对1000+本非结构化规程 · "三步走"迁移策略</div></div></div>
+  <div class="sec-hd sub" id="plm-migration"><div class="sec-num" style="background:var(--purple)">8.5</div><div><h2>工艺规程结构化迁移专项计划</h2><div class="sd">针对1000+本非结构化规程 · "三步走"迁移策略</div></div></div>
 
   <div class="alert"><div class="at">攻坚目标</div><p>将1000多本非结构化工艺规程转化为结构化"数字指令"，确保PLM输出的数据能被MES直接读取、校验和执行。这是整个PLM一期项目中工作量最大、专业要求最高的环节。</p></div>
 
@@ -876,12 +884,12 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
   <div class="warn"><div class="wt">资源风险</div><p>4000人/小时的工作量换算约为 500 人天。若数据录入组 8-10 人全职投入，预计需要 50-63 个工作日（约 2.5-3 个月）。需提前锁定工艺专家组的排期，避免因技术审定延迟导致录入组停工待审。</p></div>
 
   <!-- ── 复材工艺结构化数据字典 ── -->
-  <div class="sec-hd sub" id="plm-datadict"><div class="sec-num" style="background:var(--purple)">3</div><div><h2>复材工艺结构化数据字典模板</h2><div class="sd">确保PLM输出的数据能被MES直接读取 · 四类标准字段</div></div></div>
+  <div class="sec-hd sub" id="plm-datadict"><div class="sec-num" style="background:var(--purple)">8.6</div><div><h2>复材工艺结构化数据字典模板</h2><div class="sd">确保PLM输出的数据能被MES直接读取 · 四类标准字段</div></div></div>
 
   <div class="info"><p><strong>设计原则：</strong>以下字段字典用于指导PLM系统中工艺数据的结构化定义，确保工艺数据从PLM输出后能被MES直接消费，无需二次解析或人工补全。每个字段应明确其系统归属和消费方。</p></div>
 
   <div class="dd-section">
-    <h4><span class="dd-num">3.1</span>基础工序信息（通用字段）</h4>
+    <h4><span class="dd-num">8.6.1</span>基础工序信息（通用字段）</h4>
     <div class="field-grid">
       <div class="field-card"><div class="fn">工序编码/名称</div><div class="fd">如"OP10 铺层"。作为跨系统引用工艺步骤的唯一标识。</div><span class="ft ft-mes">MES消费</span></div>
       <div class="field-card"><div class="fn">工种资质要求</div><div class="fd">用于MES开工时的权限校验，确保只有具备对应资质的人员才能执行该工序。</div><span class="ft ft-mes">MES校验</span></div>
@@ -893,7 +901,7 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
   </div>
 
   <div class="dd-section">
-    <h4><span class="dd-num">3.2</span>铺层专项数据（结构化字典）</h4>
+    <h4><span class="dd-num">8.6.2</span>铺层专项数据（结构化字典）</h4>
     <div class="field-grid">
       <div class="field-card" style="border-left-color:var(--orange)"><div class="fn">铺层顺序号</div><div class="fd">材料堆叠的物理次序，从第1层到第N层严格编号。铺层顺序错误将导致力学性能不达标。</div><span class="ft ft-mes">MES强校验</span></div>
       <div class="field-card" style="border-left-color:var(--orange)"><div class="fn">铺层方向</div><div class="fd">下拉选择：0°、±45°、90° 等。为枚举值，禁止自由文本输入以防止输入错误。</div><span class="ft ft-mes">MES强校验</span></div>
@@ -905,7 +913,7 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
   </div>
 
   <div class="dd-section">
-    <h4><span class="dd-num">3.3</span>固化联动控制数据（参数字典）</h4>
+    <h4><span class="dd-num">8.6.3</span>固化联动控制数据（参数字典）</h4>
     <div class="field-grid">
       <div class="field-card" style="border-left-color:var(--red)"><div class="fn">升/降温速率</div><div class="fd">单位：℃/min。固化过程中温度变化的速率控制，超出范围将影响材料性能。</div><span class="ft ft-mes">MES实时比对</span></div>
       <div class="field-card" style="border-left-color:var(--red)"><div class="fn">保温/保压点</div><div class="fd">目标温度及允许公差。多个保温平台需分别定义温度值、允许偏差和持续时间。</div><span class="ft ft-mes">MES实时比对</span></div>
@@ -917,7 +925,7 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
   </div>
 
   <div class="dd-section">
-    <h4><span class="dd-num">3.4</span>质量检验 Checklist（检验一体化）</h4>
+    <h4><span class="dd-num">8.6.4</span>质量检验 Checklist（检验一体化）</h4>
     <div class="field-grid">
       <div class="field-card" style="border-left-color:var(--green)"><div class="fn">检验特征点</div><div class="fd">如"外形尺寸"、"表面质量"、"无损检测"、"重量"等。每个特征点对应具体的检验方法和判定标准。</div><span class="ft ft-quality">质检消费</span></div>
       <div class="field-card" style="border-left-color:var(--green)"><div class="fn">标准值/公差</div><div class="fd">自动判定逻辑——检验值落在公差带内自动判定合格，超出则触发不合格品处理流程。</div><span class="ft ft-quality">自动判定</span></div>
@@ -1039,7 +1047,7 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
     <div class="card"><h3>今天要确认</h3><p>组织身份权威源、编码规范推进路径、字段台账责任、Q7 数据中台/集成总线路线。</p></div>
   </div>
   <!-- ── MDM 五阶段流水线总览 ── -->
-  <div class="sec-hd sub" id="mdm-pipeline"><div class="sec-num" style="background:var(--green)">◆</div><div><h2>MDM 五阶段工作流程</h2><div class="sd">定标准 → 清存量 → 控过程 → 促集成 → 保运行</div></div></div>
+  <div class="sec-hd sub" id="mdm-pipeline"><div class="sec-num" style="background:var(--green)">12.1</div><div><h2>MDM 五阶段工作流程</h2><div class="sd">定标准 → 清存量 → 控过程 → 促集成 → 保运行</div></div></div>
 
   <div class="dataflow">
     <svg viewBox="0 0 640 200" role="img" aria-label="MDM 五阶段流水线">
@@ -1080,7 +1088,7 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
   </div>
 
   <!-- ── MDM 阶段一：体系定义与标准制定 ── -->
-  <div class="sec-hd sub" id="mdm-stage1"><div class="sec-num" style="background:var(--green)">1</div><div><h2>阶段一：体系定义与标准制定</h2><div class="sd">确立企业全局的"通用语言"和"唯一身份证"规则，从源头杜绝一物多码。</div></div></div>
+  <div class="sec-hd sub" id="mdm-stage1"><div class="sec-num" style="background:var(--green)">12.2</div><div><h2>阶段一：体系定义与标准制定</h2><div class="sd">确立企业全局的"通用语言"和"唯一身份证"规则，从源头杜绝一物多码。</div></div></div>
 
   <div class="card">
     <h3>一、主数据分类体系</h3>
@@ -1101,7 +1109,7 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
     <div class="card">
       <h3>二、统一编码规范</h3>
       <ul>
-        <li>支持<strong>不少于 30 位混合编码</strong>，涵盖大类、中类、小类、流水号及校验位</li>
+        <li>编码治理目标建议<strong>预留至 30 位（含扩展位/校验位）</strong>，落地字段长度以各系统约束为准</li>
         <li>每一物料/零部件分配<strong>唯一编码</strong>，作为跨系统的"身份证号"</li>
         <li>编码规则需兼顾<strong>可读性、可扩展性和机器解析</strong>要求</li>
         <li>从源头杜绝"一物多码"和"多物一码"</li>
@@ -1627,7 +1635,7 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
 
 <!-- ══ 17 Q成熟度总览 ══ -->
 <div class="sec" id="s17">
-  <div class="sec-hd"><div class="sec-num">17</div><div><h2>Q1–Q8 成熟度总览</h2><div class="sd">今天可拍 · 需补资料 · 等供应商确认</div></div></div>
+  <div class="sec-hd"><div class="sec-num">17</div><div><h2>Q1–Q8 成熟度总览</h2><div class="sd">✅已解决 · 条件性决策 · 需补资料 · 待供应商确认</div></div></div>
   <div class="qmat">
     <div class="qmat-hd">
       <h3>成熟度状态口径</h3>
@@ -1692,7 +1700,7 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
       <tbody>
         <tr><td>Q1</td><td>SFG是否拆分尚无统一口径</td><td>是否区分内部/外协半成品</td><td>先按采购、库存、MES消耗场景验证后再定</td><td>典型半成品清单、外协流转样例</td></tr>
         <tr><td>Q2</td><td>预浸料有效期必须纳入批次治理</td><td>WMS批次属性还是单独模块</td><td>倾向 WMS批次属性 + MES环境暴露记录</td><td>字段清单、扫码节点、异常冻结规则</td></tr>
-        <tr><td>Q3</td><td>采用20位含连字符方案作为当前草案</td><td>字段长度、字符集、唯一性校验是否满足</td><td>保留20位结构，REV独立字段</td><td>用友U8、北京虎蜥、翎瑞鸿翔技术确认</td></tr>
+        <tr><td>Q3</td><td>采用20位含连字符方案作为当前草案（REV独立字段）</td><td>字段长度、字符集、唯一性校验是否满足；与MDM编码治理目标（建议预留至30位含扩展位）是否冲突</td><td>先以系统字段约束为准锁定可落地主键长度，保留扩展位/映射机制</td><td>用友U8、北京虎蜥、翎瑞鸿翔技术确认</td></tr>
         <tr><td>Q4</td><td>校验位尚未形成必要性判断</td><td>是否引入MOD11或其他校验机制</td><td>先评估录入、导入导出和人工识别成本</td><td>各系统编码校验能力与限制</td></tr>
         <tr><td>Q5</td><td>已解决：翎瑞鸿翔PLM为一期设计件黄金源</td><td>按原则结论归档，不展开重复讨论</td><td>PLM未上线前用ERP+人工台账过渡</td><td>字段样例、接口方式、版本机制</td></tr>
         <tr><td>Q6</td><td>Q5已解决但Q6仍需独立确认</td><td>MBOM工序展开由谁临时承接</td><td>一期人工或临时方案，CAPP后续规划</td><td>EBOM→MBOM转换责任和BOM头字段表</td></tr>
@@ -1731,7 +1739,7 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
     <tbody>
       <tr><td>Q1</td><td>SFG（半成品）是否需要细分为"内部半成品"和"外协半成品"？</td><td>是 / 否；需结合采购、WMS、MES消耗场景</td><td>工程技术部 + 物资保障部</td><td>2026-05-12</td><td>需补资料</td><td>输出典型业务样例</td></tr>
       <tr><td>Q2</td><td>预浸料有效期管理是否纳入 WMS 批次属性，还是单独建模块？</td><td>倾向 WMS批次属性 + MES环境暴露记录</td><td>物资保障部 + 复材车间</td><td>2026-05-12</td><td>需补字段</td><td>输出批次字段和扫码节点</td></tr>
-      <tr><td>Q3</td><td>物料编码结构最终采用哪版？（大类+项目/机型+中类+小类+流水）</td><td>20位含连字符方案需供应商确认字段长度、字符集和唯一性校验</td><td>工程技术部 + 各系统供应商</td><td>2026-05-15</td><td>待技术确认</td><td>A6主数据编码技术确认</td></tr>
+      <tr><td>Q3</td><td>物料编码结构最终采用哪版？（大类+项目/机型+中类+小类+流水）</td><td>20位含连字符草案（REV独立字段）需供应商确认字段长度、字符集和唯一性校验，并与MDM编码治理目标（建议预留至30位含扩展位）对齐落地策略</td><td>工程技术部 + 各系统供应商</td><td>2026-05-15</td><td>待技术确认</td><td>A6主数据编码技术确认</td></tr>
       <tr><td>Q4</td><td>编码是否需要校验位（MOD11算法）？</td><td>需要 / 不需要；需评估系统录入、导入导出和人工识别成本</td><td>工程技术部 + 各系统供应商</td><td>2026-05-15</td><td>待技术确认</td><td>与Q3一并确认</td></tr>
         <tr><td>Q5</td><td>设计件物料主数据黄金源是 PLM 还是 ERP？</td><td>翎瑞鸿翔PLM（一期）为设计件黄金源；CAPP暂不在一期，MBOM工序展开暂由人工或临时方案</td><td>工程技术部</td><td>2026-05-14</td><td>✅ 已解决</td><td>A1已完成，会上归档</td></tr>
       <tr><td>Q6</td><td>MBOM黄金源是 CAPP 还是 ERP-PP？</td><td>一期由人工或临时方案；CAPP后续规划</td><td>复材车间 + 工程技术部</td><td>2026-05-12</td><td>条件性决策</td><td>⚠ 依赖Q5结论，需独立确认</td></tr>
@@ -2079,6 +2087,34 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape')closeTopoMod
   svg.querySelectorAll('rect[data-topo]').forEach(function(r){
     r.style.cursor='pointer';
     r.addEventListener('click',function(){openTopoModal(r.getAttribute('data-topo'));});
+  });
+})();
+</script>
+<script>
+(function(){
+  var nav=document.querySelector('nav');
+  var btn=document.getElementById('navToggle');
+  if(!nav||!btn) return;
+  function closeMenu(){
+    nav.classList.remove('open');
+    btn.setAttribute('aria-expanded','false');
+  }
+  function toggleMenu(){
+    var open=nav.classList.toggle('open');
+    btn.setAttribute('aria-expanded',open?'true':'false');
+  }
+  btn.addEventListener('click',function(e){
+    e.stopPropagation();
+    toggleMenu();
+  });
+  nav.querySelectorAll('.nav-links a').forEach(function(a){
+    a.addEventListener('click',closeMenu);
+  });
+  document.addEventListener('click',function(e){
+    if(nav.classList.contains('open')&&!nav.contains(e.target)) closeMenu();
+  });
+  window.addEventListener('resize',function(){
+    if(window.innerWidth>680) closeMenu();
   });
 })();
 </script>
