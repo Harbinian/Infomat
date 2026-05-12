@@ -619,10 +619,10 @@
       if (!window.echarts) return;
       const deptCounts = {};
       state.mappings.forEach(row => { deptCounts[row.owner_dept_name || '未归属'] = (deptCounts[row.owner_dept_name || '未归属'] || 0) + 1; });
-      echarts.init($('deptChart')).setOption({ tooltip:{}, xAxis:{type:'category',data:Object.keys(deptCounts), axisLine:{lineStyle:{color:'#e5e7eb'}}, axisLabel:{color:'#6b7280'}}, yAxis:{type:'value', splitLine:{lineStyle:{color:'#f3f4f6'}}, axisLabel:{color:'#6b7280'}}, series:[{type:'bar',data:Object.values(deptCounts),itemStyle:{color:'#111827'}}], grid:{left:36,right:18,top:24,bottom:44} });
+      echarts.init($('deptChart')).setOption({ tooltip:{}, xAxis:{type:'category',data:Object.keys(deptCounts), axisLine:{lineStyle:{color:'#e5e7eb'}}, axisLabel:{color:'#6b7280'}}, yAxis:{type:'value', splitLine:{lineStyle:{color:'#f3f4f6'}}, axisLabel:{color:'#6b7280'}}, series:[{type:'bar',data:Object.values(deptCounts),itemStyle:{color:'#fc0000'}}], grid:{left:36,right:18,top:24,bottom:44} });
       const statuses = {};
       state.mappings.forEach(row => { statuses[row.status] = (statuses[row.status] || 0) + 1; });
-      echarts.init($('statusChart')).setOption({ tooltip:{trigger:'item'}, series:[{type:'pie',radius:['42%','68%'],itemStyle:{borderColor:'#fff',borderWidth:2},data:Object.entries(statuses).map(([name,value]) => ({name,value}))}], color:['#111827', '#4b5563', '#9ca3af', '#d1d5db', '#e5e7eb'] });
+      echarts.init($('statusChart')).setOption({ tooltip:{trigger:'item'}, series:[{type:'pie',radius:['42%','68%'],itemStyle:{borderColor:'#fff',borderWidth:2},data:Object.entries(statuses).map(([name,value]) => ({name,value}))}], color:['#fc0000', '#dc0000', '#374151', '#6b7280', '#9ca3af'] });
     }
 
     $('tabs').addEventListener('click', event => {
