@@ -1223,7 +1223,7 @@ git commit -m "feat(mappings): add mapping CRUD + parallel approval tasks + erro
 - Create: `mdm-collector/server/routes/todos.js`
 - Create: `mdm-collector/server/routes/conflicts.js`
 
-- [ ] **Step 1: 创建 todos.js**
+- [x] **Step 1: 创建 todos.js**
 
 ```javascript
 // mdm-collector/server/routes/todos.js
@@ -1266,7 +1266,7 @@ router.delete('/:id', requireAuth, (req, res) => {
 module.exports = router;
 ```
 
-- [ ] **Step 2: 创建 conflicts.js（P1-4 修复：value 取对应 conflict_field 的实际值）**
+- [x] **Step 2: 创建 conflicts.js（P1-4 修复：value 取对应 conflict_field 的实际值）**
 
 ```javascript
 // mdm-collector/server/routes/conflicts.js
@@ -1434,7 +1434,7 @@ router.post('/term/:id/resolve', requireAuth, (req, res) => {
 module.exports = router;
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add mdm-collector/server/routes/todos.js mdm-collector/server/routes/conflicts.js
