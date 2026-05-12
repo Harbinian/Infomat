@@ -1833,7 +1833,7 @@ git commit -m "feat(import): add Excel field ledger import"
 - Create: `mdm-collector/public/index.html`
 - Create: `mdm-collector/public/template.xlsx`
 
-- [ ] **Step 1: 创建 index.html**
+- [x] **Step 1: 创建 index.html**
 
 > 主体结构：参考 `docs/Demo/信息化系统应用与集成说明会.html` 视觉风格
 > - 6 个 Tab 面板（统计看板 / 报送管理 / 待办收到 / 评审记录 / 术语词典 / 冲突管理）
@@ -1842,11 +1842,11 @@ git commit -m "feat(import): add Excel field ledger import"
 > - fetch 调用后端 API
 > - 冲突检测按钮、审批意见弹窗、Excel 导入按钮、导出按钮
 
-- [ ] **Step 2: 创建 template.xlsx**
+- [x] **Step 2: 创建 template.xlsx**
 
 使用 ExcelJS 生成标准导入模板（表头含填写说明）。
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add mdm-collector/public/index.html mdm-collector/public/template.xlsx
