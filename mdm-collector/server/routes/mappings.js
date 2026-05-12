@@ -206,11 +206,51 @@ router.delete('/:id', requireAuth, (req, res) => {
   });
 });
 
+function findMissingTermsForMapping(mappingId) {
+  const fields = db.prepare('SELECT field_name_cn FROM field_entries WHERE mapping_id=? AND field_name_cn IS NOT NULL').all(mappingId);
+  if (!fields.length) return [];
+  
+  const terms = db.prepare('SELECT term FROM terms').all().map(t => t.term);
+  const missing = new Set();
+  
+  fields.forEach(f => {
+    // Check if the field name is completely covered by any known term
+    const matched = terms.some(t => f.field_name_cn.includes(t) || t.includes(f.field_name_cn));
+    if (!matched) {
+      missing.add(f.field_name_cn);
+    }
+  });
+  
+  return Array.from(missing);
+}
+
 router.post('/:id/submit', requireAuth, (req, res) => {
   return runDbAction(res, () => {
     const mapping = db.prepare('SELECT * FROM mappings WHERE id=? AND submitted_by=?').get(req.params.id, req.session.userId);
     if (!mapping) return res.status(403).json({ error: '无权限或映射不存在' });
     if (mapping.status !== 'draft') return res.status(400).json({ error: '只能提交草稿状态' });
+
+    const missingTerms = findMissingTermsForMapping(req.params.id);
+    if (missingTerms.length > 0) {
+      const admins = db.prepare("SELECT id, department_id FROM users WHERE role='admin'").all();
+      
+      const insertMissingTermTodo = db.transaction(() => {
+        admins.forEach(admin => {
+          db.prepare(`
+            INSERT INTO todos (from_dept_id, to_dept_id, type, related_mapping_id, content)
+            VALUES (?, ?, 'terminology', ?, ?)
+          `).run(
+            mapping.owner_dept_id, 
+            admin.department_id, 
+            req.params.id, 
+            `映射提交被拦截：检测到未知术语 [${missingTerms.join(', ')}]，请在术语维护中补充申报。`
+          );
+        });
+      });
+      
+      insertMissingTermTodo();
+      return res.status(400).json({ error: `提交被拦截：检测到未申报的术语 ${missingTerms.join(', ')}。已自动生成术语申报待办任务。` });
+    }
 
     const insertTasks = db.transaction(() => {
       db.prepare('DELETE FROM approval_tasks WHERE mapping_id=?').run(req.params.id);
@@ -373,6 +413,84 @@ router.post('/:id/publish', requireAuth, (req, res) => {
     if (req.session.userRole !== 'admin') return res.status(403).json({ error: '仅信息化项目组可发布' });
     db.prepare("UPDATE mappings SET status='published', current_step=5, updated_at=datetime('now') WHERE id=?").run(req.params.id);
     res.json({ success: true });
+  });
+});
+
+router.post('/:id/reject', requireAuth, (req, res) => {
+  return runDbAction(res, () => {
+    const { opinion, rejections } = req.body;
+    if (!rejections || !Array.isArray(rejections) || rejections.length === 0) {
+      return res.status(422).json({ error: '请至少标记一个字段的驳回原因', details: [{ field: 'rejections', message: '请至少标记一个字段的驳回原因' }] });
+    }
+
+    const mapping = db.prepare('SELECT * FROM mappings WHERE id=?').get(req.params.id);
+    if (!mapping) return res.status(404).json({ error: '映射不存在' });
+
+    if (!['submitted', 'dept_reviewed', 'cross_confirmed', 'fields_confirmed'].includes(mapping.status)) {
+      return res.status(409).json({ error: '当前状态不允许驳回' });
+    }
+
+    const task = db.prepare(`
+      SELECT id FROM approval_tasks
+      WHERE mapping_id=? AND assignee_user_id=? AND status NOT IN ('approved','rejected')
+      ORDER BY step LIMIT 1
+    `).get(req.params.id, req.session.userId);
+    if (!task) return res.status(400).json({ error: '您不是当前节点的审核人，或该节点已处理' });
+
+    const validIds = new Set(
+      db.prepare('SELECT id FROM field_entries WHERE mapping_id=?').all(req.params.id).map(f => f.id)
+    );
+    for (const r of rejections) {
+      if (!validIds.has(r.field_entry_id)) {
+        return res.status(422).json({ error: `字段 ${r.field_entry_id} 不属于该映射`, details: [{ field: 'rejections', message: `字段 ${r.field_entry_id} 不属于该映射` }] });
+      }
+      if (!r.reason || !r.reason.trim()) {
+        return res.status(422).json({ error: '请填写每个被标记驳回字段的原因', details: [{ field: 'rejections', message: '驳回字段必须填写原因' }] });
+      }
+    }
+
+    const rejectMapping = db.transaction(() => {
+      const reasonStmt = db.prepare(`
+        INSERT INTO field_rejection_reasons (mapping_id, field_entry_id, rejection_reason, rejected_by)
+        VALUES (?, ?, ?, ?)
+      `);
+      for (const r of rejections) {
+        reasonStmt.run(req.params.id, r.field_entry_id, r.reason.trim(), req.session.userId);
+      }
+
+      db.prepare("UPDATE approval_tasks SET status='rejected', opinion=?, operated_by=?, operated_at=datetime('now') WHERE mapping_id=? AND status IN ('pending','in_progress','blocked')").run(
+        opinion || null,
+        req.session.userId,
+        req.params.id
+      );
+
+      db.prepare('INSERT INTO approval_history (mapping_id, step, operator_user_id, action, opinion) VALUES (?, ?, ?, ?, ?)').run(
+        req.params.id,
+        mapping.current_step,
+        req.session.userId,
+        'reject',
+        opinion || null
+      );
+
+      db.prepare("UPDATE mappings SET status='draft', current_step=1, updated_at=datetime('now') WHERE id=?").run(req.params.id);
+    });
+
+    rejectMapping();
+    res.json({ success: true });
+  });
+});
+
+router.get('/:id/rejection-details', requireAuth, (req, res) => {
+  return runDbAction(res, () => {
+    const reasons = db.prepare(`
+      SELECT frr.*, fe.field_name_cn, u.name as rejected_by_name
+      FROM field_rejection_reasons frr
+      JOIN field_entries fe ON frr.field_entry_id = fe.id
+      LEFT JOIN users u ON frr.rejected_by = u.id
+      WHERE frr.mapping_id=?
+      ORDER BY frr.created_at DESC
+    `).all(req.params.id);
+    res.json(reasons);
   });
 });
 
