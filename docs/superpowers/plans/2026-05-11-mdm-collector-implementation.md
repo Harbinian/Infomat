@@ -581,7 +581,7 @@ git commit -m "feat(org): add department and user CRUD routes with auth"
 - Create: `mdm-collector/server/routes/capabilities.js`
 - Create: `mdm-collector/server/routes/processes.js`
 
-- [ ] **Step 1: 创建 systems.js**
+- [x] **Step 1: 创建 systems.js**
 
 ```javascript
 // mdm-collector/server/routes/systems.js
@@ -616,7 +616,7 @@ router.delete('/:id', requireAuth, (req, res) => {
 module.exports = router;
 ```
 
-- [ ] **Step 2: 创建 capabilities.js**
+- [x] **Step 2: 创建 capabilities.js**
 
 ```javascript
 // mdm-collector/server/routes/capabilities.js
@@ -651,7 +651,7 @@ router.put('/:id', requireAuth, (req, res) => {
 module.exports = router;
 ```
 
-- [ ] **Step 3: 创建 processes.js**
+- [x] **Step 3: 创建 processes.js**
 
 ```javascript
 // mdm-collector/server/routes/processes.js
@@ -689,7 +689,7 @@ router.put('/:id', requireAuth, (req, res) => {
 module.exports = router;
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add mdm-collector/server/routes/systems.js mdm-collector/server/routes/capabilities.js mdm-collector/server/routes/processes.js
