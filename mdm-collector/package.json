@@ -12,6 +12,7 @@
     "test:mappings": "node scripts/test-mapping-routes.js",
     "test:conflicts": "node scripts/test-conflict-routes.js",
     "test:terms": "node scripts/test-term-version-routes.js",
+    "test:export": "node scripts/test-export-route.js",
     "dev": "nodemon server/index.js"
   },
   "dependencies": {

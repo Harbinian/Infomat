@@ -1545,7 +1545,7 @@ git commit -m "feat(terms): add terminology dictionary and version history route
 **Files:**
 - Create: `mdm-collector/server/routes/export.js`
 
-- [ ] **Step 1: 创建 export.js**
+- [x] **Step 1: 创建 export.js**
 
 ```javascript
 // mdm-collector/server/routes/export.js
@@ -1691,7 +1691,7 @@ router.get('/excel', requireAuth, async (req, res) => {
 module.exports = router;
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add mdm-collector/server/routes/export.js
