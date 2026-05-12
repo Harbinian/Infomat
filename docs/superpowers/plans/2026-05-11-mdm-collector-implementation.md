@@ -1862,7 +1862,7 @@ git commit -m "feat(frontend): add single-file HTML UI with tab navigation, anim
 - Create: `mdm-collector/scripts/smoke-test.js`
 - Create: `mdm-collector/README.md`
 
-- [ ] **Step 1: 创建 init-db.js**
+- [x] **Step 1: 创建 init-db.js**
 
 ```javascript
 // mdm-collector/scripts/init-db.js
@@ -1881,7 +1881,7 @@ if (!check) {
 }
 ```
 
-- [ ] **Step 2: 创建 smoke-test.js**
+- [x] **Step 2: 创建 smoke-test.js**
 
 ```javascript
 // mdm-collector/scripts/smoke-test.js
@@ -1923,7 +1923,7 @@ assert(fk.foreign_keys === 1, 'SQLite foreign_keys pragma must be enabled');
 console.log('Smoke test passed');
 ```
 
-- [ ] **Step 3: 创建 README.md**
+- [x] **Step 3: 创建 README.md**
 
 ```markdown
 # MDM 数据收集与评审模块
@@ -1959,7 +1959,7 @@ npm start
 - 导入/导出：multer + exceljs
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add mdm-collector/scripts/init-db.js mdm-collector/scripts/smoke-test.js mdm-collector/README.md mdm-collector/package.json
