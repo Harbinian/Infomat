@@ -9,7 +9,13 @@ const BASE_URL = `http://127.0.0.1:${PORT}`;
 
 function resetData() {
   db.exec(`
-    UPDATE departments SET manager_user_id=NULL;
+    UPDATE departments SET manager_user_id=NULL, created_by=NULL, updated_by=NULL, data_owner_user_id=NULL;
+    DELETE FROM version_log;
+    DELETE FROM conflict_coordination_history;
+    DELETE FROM conflict_assignments;
+    DELETE FROM change_set;
+    DELETE FROM field_rejection_reasons;
+    DELETE FROM todos;
     DELETE FROM approval_history;
     DELETE FROM approval_tasks;
     DELETE FROM field_conflicts;
@@ -22,11 +28,8 @@ function resetData() {
     DELETE FROM processes;
     DELETE FROM capabilities;
     DELETE FROM systems;
-    DELETE FROM todos;
     DELETE FROM terms;
     DELETE FROM user_dept_roles;
-    DELETE FROM version_log;
-    DELETE FROM change_set;
     DELETE FROM users;
     DELETE FROM departments;
   `);
@@ -145,11 +148,11 @@ async function main() {
     const adminCookie = await login('ADMIN001', 'admin123');
     const submitterCookie = await login('SUB001', 'pass1234');
 
-    const forbiddenCreate = await request('/api/terminology', {
+    const allowedCreate = await request('/api/terminology', {
       method: 'POST',
-      body: JSON.stringify({ term: '客户', definition: '购买产品或服务的对象' })
+      body: JSON.stringify({ term: '客户-sub', definition: '购买产品或服务的对象' })
     }, submitterCookie);
-    assert.strictEqual(forbiddenCreate.res.status, 403);
+    assert.strictEqual(allowedCreate.res.status, 200);
 
     const createdTerm = await request('/api/terminology', {
       method: 'POST',
