@@ -714,7 +714,7 @@
       var container = $('mySubmissionsList');
       if (!container) return;
       if (mappings.length === 0) {
-        container.innerHTML = '<div class="empty">暂无报送记录</div>';
+        container.innerHTML = '<div class="empty">暂无报送记录，去 <a onclick="navigateTo(\'list\',{tab:\'capabilities\'})">新建报送</a> 开始</div>';
         return;
       }
       container.innerHTML = '<div class="table-container"><table><thead><tr><th>ID</th><th>流程</th><th>部门</th><th>状态</th><th>提交时间</th><th>操作</th></tr></thead><tbody>' + mappings.map(function(row) { return '<tr><td>' + row.id + '</td><td>' + (row.process_name || '-') + '</td><td>' + (row.owner_dept_name || '-') + '</td><td>' + statusTag(row.status) + '</td><td>' + (row.submitted_at || row.created_at || '-') + '</td><td><button class="btn secondary" onclick="navigateTo(\'detail\',{tab:\'mySubmissions\',type:\'mapping\',id:' + row.id + '})">查看</button>' + (row.status === 'draft' ? '<button class="btn primary" style="margin-left:4px;" onclick="submitMapping(' + row.id + ')">提交</button>' : '') + '</td></tr>'; }).join('') + '</tbody></table></div>';
@@ -725,19 +725,61 @@
 
     // ===== Todos =====
     async function loadTodos() {
-      var params = new URLSearchParams();
-      var statusEl = $('todoStatus');
-      var typeEl = $('todoType');
-      if (statusEl && statusEl.value) params.set('status', statusEl.value);
-      if (typeEl && typeEl.value) params.set('type', typeEl.value);
-      var qs = params.toString();
-      state.todos = await api('/api/todos' + (qs ? '?' + qs : ''));
-      $('todoRows').innerHTML = state.todos.map(function(row) { return '<tr><td>' + (row.from_dept_name || '-') + '</td><td>' + (row.to_dept_name || '-') + '</td><td>' + row.type + '</td><td>' + row.content + '</td><td>' + (row.due_date || '-') + '</td><td>' + statusTag(row.status) + '</td><td><button class="btn success" onclick="doneTodo(' + row.id + ')">完成</button></td></tr>'; }).join('') || '<tr><td colspan="7" class="empty">暂无数据</td></tr>';
+      var status = ($('todoStatus') && $('todoStatus').value) || '';
+      var type = ($('todoType') && $('todoType').value) || '';
+      var query = new URLSearchParams();
+      if (status) query.set('status', status);
+      if (type) query.set('type', type);
+      state.todos = await api('/api/todos?' + query.toString());
+      renderTodosList();
     }
 
-    async function doneTodo(id) {
-      await api('/api/todos/' + id + '/done', { method:'POST' });
-      await loadTodos();
+    function renderTodosList() {
+      var container = $('todoRows');
+      if (!container) return;
+
+      if (state.todos.length === 0) {
+        var hints = { submitter: '去 <a href="#/mySubmissions">我的报送</a> 查看提交状态', owner: '暂无待审核事项', reviewer: '暂无待办', admin: '暂无待办' };
+        container.innerHTML = '<tr><td colspan="7" class="empty">暂无待办事项' + (state.user ? ' · ' + (hints[state.user.role] || '') : '') + '</td></tr>';
+        return;
+      }
+
+      var typeLabels = { field_confirm: '字段确认', gold_source: '黄金源确认', terminology: '术语申报', general: '通用', conflict_resolution: '冲突协调' };
+      var urgencyOrder = { high: 0, medium: 1, low: 2 };
+
+      // Sort by urgency desc, then due_date asc (nulls last), then created_at asc
+      state.todos.sort(function(a, b) {
+        var ua = urgencyOrder[a.urgency || 'medium'];
+        var ub = urgencyOrder[b.urgency || 'medium'];
+        if (ua !== ub) return ua - ub;
+        if (!a.due_date && b.due_date) return 1;
+        if (a.due_date && !b.due_date) return -1;
+        if (a.due_date !== b.due_date) return String(a.due_date).localeCompare(String(b.due_date));
+        return String(a.created_at).localeCompare(String(b.created_at));
+      });
+
+      container.innerHTML = state.todos.map(function(row) {
+        var urgencyTag = row.urgency === 'high' ? '<span class="tag red">高</span>' : row.urgency === 'low' ? '<span class="tag">低</span>' : '';
+        return '<tr>' +
+          '<td>' + (row.from_dept_name || '-') + '</td>' +
+          '<td>' + (row.to_dept_name || '-') + '</td>' +
+          '<td>' + urgencyTag + ' ' + (typeLabels[row.type] || row.type) + '</td>' +
+          '<td>' + row.content + '</td>' +
+          '<td>' + (row.due_date || '-') + '</td>' +
+          '<td>' + statusTag(row.status) + '</td>' +
+          '<td>' + (row.status === 'pending' ? '<button class="btn secondary" onclick="handleTodoAction(\'' + row.type + '\', ' + row.id + ', ' + (row.related_mapping_id || 0) + ')">处理</button>' : '') + '</td>' +
+          '</tr>';
+      }).join('');
+    }
+
+    function handleTodoAction(type, todoId, relatedId) {
+      if (type === 'conflict_resolution' && relatedId) {
+        navigateTo('detail', { tab: 'todos', type: 'conflict', id: relatedId });
+      } else if (relatedId) {
+        navigateTo('detail', { tab: 'todos', type: 'mapping', id: relatedId });
+      } else {
+        api('/api/todos/' + todoId + '/done', { method: 'POST' }).then(function() { loadTodos(); showToast('已完成'); });
+      }
     }
 
     // ===== Reviews =====
@@ -784,21 +826,60 @@
 
     // ===== Conflicts =====
     async function loadConflicts() {
-      var params = new URLSearchParams();
-      var severityEl = $('conflictSeverity');
-      var statusEl = $('conflictStatus');
-      if (severityEl && severityEl.value) params.set('severity', severityEl.value);
-      if (statusEl && statusEl.value) params.set('status', statusEl.value);
-      var qs = params.toString();
-      state.conflicts = await api('/api/conflicts' + (qs ? '?' + qs : ''));
-      $('conflictRows').innerHTML = '<div class="table-container"><table><thead><tr><th>ID</th><th>类型</th><th>严重度</th><th>字段/术语</th><th>值A</th><th>值B</th><th>状态</th><th>操作</th></tr></thead><tbody>' + (state.conflicts.map(function(row) { return '<tr><td>' + row.id + '</td><td>' + row.conflict_type + '</td><td>' + statusTag(row.severity) + '</td><td>' + (row.term || row.conflict_field || '-') + '</td><td>' + (row.value_a || row.dept_a_meaning || '-') + '</td><td>' + (row.value_b || row.dept_b_meaning || '-') + '</td><td>' + statusTag(row.status) + '</td><td><button class="btn success" onclick="resolveConflict(\'' + row.conflict_type + '\',' + row.id + ')">解决</button></td></tr>'; }).join('') || '<tr><td colspan="8" class="empty">暂无数据</td></tr>') + '</tbody></table></div>';
+      var severity = ($('conflictSeverity') && $('conflictSeverity').value) || '';
+      var status = ($('conflictStatus') && $('conflictStatus').value) || '';
+      var query = new URLSearchParams();
+      if (severity) query.set('severity', severity);
+      if (status) query.set('status', status);
+      state.conflicts = await api('/api/conflicts?' + query.toString());
+      renderConflictsList();
     }
 
-    async function detectConflict() {
-      var input = $('detectFieldName');
-      if (!input || !input.value.trim()) return alert('请输入字段中文名进行检测');
-      await api('/api/conflicts/detect?field_name_cn=' + encodeURIComponent(input.value), { method:'POST' });
-      await loadConflicts();
+    function renderConflictsList() {
+      var container = $('conflictRows');
+      if (!container) return;
+
+      if (state.conflicts.length === 0) {
+        container.innerHTML = '<div class="empty">暂无冲突</div>';
+        return;
+      }
+
+      // Group by severity
+      var severityOrder = ['blocking', 'error', 'high', 'medium', 'low', 'warn'];
+      var grouped = {};
+      severityOrder.forEach(function(s) { grouped[s] = []; });
+      state.conflicts.forEach(function(c) {
+        var sev = c.severity || 'low';
+        if (grouped[sev]) grouped[sev].push(c);
+        else grouped['low'].push(c);
+      });
+
+      var severityLabels = { blocking: '阻断', error: '严重', high: '高', medium: '中', low: '低', warn: '警告' };
+
+      var html = '';
+      for (var si = 0; si < severityOrder.length; si++) {
+        var sev = severityOrder[si];
+        var items = grouped[sev];
+        if (!items || items.length === 0) continue;
+        html += '<div class="severity-section"><h3 class="sev-header ' + sev + '">' + severityLabels[sev] + ' (' + items.length + ')</h3>';
+        html += '<div class="table-container"><table>' +
+          '<thead><tr><th>ID</th><th>类型</th><th>字段/术语</th><th>部门A</th><th>部门B</th><th>状态</th><th>操作</th></tr></thead>' +
+          '<tbody>' + items.map(function(row) {
+            var conflictType = row.conflict_type || 'field';
+            return '<tr>' +
+              '<td>' + row.id + '</td>' +
+              '<td>' + (conflictType === 'term' ? '术语' : '字段') + '</td>' +
+              '<td>' + (row.term || row.conflict_field || '-') + '</td>' +
+              '<td>' + (row.dept_a_name || row.dept_a || '-') + '</td>' +
+              '<td>' + (row.dept_b_name || row.dept_b || '-') + '</td>' +
+              '<td>' + statusTag(row.status) + '</td>' +
+              '<td><button class="btn secondary" onclick="navigateTo(\'detail\',{tab:\'conflicts\',type:\'' + conflictType + '\',id:' + row.id + '})">查看</button></td>' +
+              '</tr>';
+          }).join('') + '</tbody>' +
+          '</table></div></div>';
+      }
+
+      container.innerHTML = html;
     }
 
     async function resolveConflict(type, id) {
@@ -810,13 +891,27 @@
     // ===== Dashboard =====
     function renderDashboard() {
       var pendingTodos = state.todos.filter(function(row) { return row.status === 'pending'; }).length;
-      var pendingConflicts = state.conflicts.filter(function(row) { return row.status === 'pending'; }).length;
+      var pendingConflicts = state.conflicts.filter(function(row) { return row.status === 'pending' || row.status === 'coordinating'; }).length;
       $('metricMappings').textContent = state.mappings.length;
       $('metricTodos').textContent = pendingTodos;
       $('metricConflicts').textContent = pendingConflicts;
+
       Promise.all(state.mappings.map(function(row) { return api('/api/field-entries/mapping/' + row.id).catch(function() { return []; }); })).then(function(groups) {
         $('metricFields').textContent = groups.flat().length;
       });
+
+      // Quick-action cards per role
+      var role = state.user ? state.user.role : '';
+      var quickActions = '';
+      if (role === 'submitter') {
+        quickActions = '<div class="notice" style="border-left-color: var(--accent);">快捷操作：<a onclick="navigateTo(\'list\',{tab:\'mySubmissions\'})">我的报送</a> · <a onclick="navigateTo(\'list\',{tab:\'todos\'})">待办 (' + pendingTodos + ')</a></div>';
+      } else if (role === 'owner') {
+        quickActions = '<div class="notice" style="border-left-color: var(--accent);">快捷操作：<a onclick="navigateTo(\'list\',{tab:\'todos\'})">待审核 (' + pendingTodos + ')</a></div>';
+      } else if (role === 'reviewer') {
+        quickActions = '<div class="notice" style="border-left-color: var(--accent);">快捷操作：<a onclick="navigateTo(\'list\',{tab:\'conflicts\'})">未解决冲突 (' + pendingConflicts + ')</a> · <a onclick="navigateTo(\'list\',{tab:\'todos\'})">待办 (' + pendingTodos + ')</a></div>';
+      }
+      var actionArea = $('dashboardActions');
+      if (actionArea) actionArea.innerHTML = quickActions;
 
       if (!window.echarts) return;
       var deptCounts = {};
