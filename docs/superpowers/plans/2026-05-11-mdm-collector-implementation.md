@@ -1449,7 +1449,7 @@ git commit -m "feat(conflicts): add todos and conflict management with correct c
 - Create: `mdm-collector/server/routes/terminology.js`
 - Create: `mdm-collector/server/routes/versions.js`
 
-- [ ] **Step 1: 创建 terminology.js**
+- [x] **Step 1: 创建 terminology.js**
 
 ```javascript
 // mdm-collector/server/routes/terminology.js
@@ -1490,7 +1490,7 @@ router.post('/:id/review', requireRole('admin'), (req, res) => {
 module.exports = router;
 ```
 
-- [ ] **Step 2: 创建 versions.js**
+- [x] **Step 2: 创建 versions.js**
 
 ```javascript
 // mdm-collector/server/routes/versions.js
@@ -1531,7 +1531,7 @@ router.get('/field/:id', requireAuth, (req, res) => {
 module.exports = router;
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add mdm-collector/server/routes/terminology.js mdm-collector/server/routes/versions.js
