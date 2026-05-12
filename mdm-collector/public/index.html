@@ -244,6 +244,16 @@
     .severity-section .sev-header.medium { background: #f0fdf4; color: #166534; }
     .severity-section .sev-header.low { background: #eff6ff; color: #1e40af; }
     .severity-section .sev-header.warn { background: #f5f3ff; color: #6d28d9; }
+
+    /* Phase 5: Detail page styles */
+    .diff-row { padding: 10px 16px; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .diff-row:last-child { border-bottom: none; }
+    .diff-row.changed { background: #fef2f2; }
+    .tl-head { font-weight: 500; font-size: 13px; margin-bottom: 4px; }
+    .tl-body { font-size: 13px; color: var(--text-muted); }
+    .tl-item.approve::before { background: var(--success); box-shadow: 0 0 0 2px var(--success); }
+    .tl-item.reject::before { background: var(--error); box-shadow: 0 0 0 2px var(--error); }
+    .detail-meta { display: flex; gap: 16px; font-size: 13px; color: var(--text-muted); flex-wrap: wrap; }
   </style>
 </head>
 <body>
@@ -945,7 +955,19 @@
     function renderDetailPage(params) {
       document.querySelectorAll('.panel').forEach(function(p) { p.classList.remove('on'); });
       $('detailPage').classList.add('on');
-      $('detailContent').innerHTML = '<div class="empty">详情页 (Phase 5 实现)</div>';
+      $('detailContent').innerHTML = '<div class="empty">加载中...</div>';
+
+      if (params.type === 'mapping') {
+        renderMappingDetail(parseInt(params.id), params.tab);
+      } else if (params.type === 'conflict' && params.conflictType) {
+        renderConflictDetail(parseInt(params.id), params.conflictType, params.tab);
+      } else if (params.type === 'conflict') {
+        renderConflictDetail(parseInt(params.id), 'field', params.tab);
+      } else if (params.type === 'field' || params.type === 'term') {
+        renderConflictDetail(parseInt(params.id), params.type, params.tab);
+      } else {
+        $('detailContent').innerHTML = '<div class="empty">未知详情类型</div>';
+      }
     }
 
     function renderOperationPage(params) {
@@ -984,6 +1006,243 @@
       var route = parseHash();
       navigateTo('list', { tab: route.tab || 'dashboard' });
     };
+
+    // ===== Phase 5: Mapping Detail =====
+    async function renderMappingDetail(mappingId, sourceTab) {
+      try {
+        const detail = await api(`/api/mappings/${mappingId}`);
+        state.activeMapping = detail;
+        setBreadcrumb([
+          { label: sourceTab === 'todos' ? '待办列表' : '我的报送', onclick: `navigateTo('list',{tab:'${sourceTab || 'mySubmissions'}'})` },
+          { label: `流程映射 #${detail.id}` },
+        ]);
+
+        const role = state.user?.role;
+        const status = detail.status;
+
+        // Determine available actions
+        let actionHtml = '';
+        if ((role === 'owner' || role === 'reviewer' || role === 'admin') && ['submitted','dept_reviewed','cross_confirmed','fields_confirmed'].includes(status)) {
+          actionHtml = `<button class="btn success" id="detailApprove">通过</button>
+                    <button class="btn danger" id="detailReject">驳回</button>`;
+        }
+        if (role === 'admin' && status === 'final_reviewed') {
+          actionHtml = `<button class="btn primary" id="detailPublish">发布</button>`;
+        }
+
+        let rejectionHistory = [];
+        try { rejectionHistory = await api(`/api/mappings/${mappingId}/rejection-details`); } catch (e) { /* no rejections */ }
+
+        const container = $('detailContent');
+        container.innerHTML = `
+          <div style="margin-bottom: 24px;">
+            <h2 style="margin-bottom: 8px;">流程映射 #${detail.id}</h2>
+            <div class="detail-meta">
+              <span>流程：${detail.process_name || '-'}</span>
+              <span>部门：${detail.owner_dept_name || '-'}</span>
+              <span>步骤：${detail.current_step}/5</span>
+              <span>状态：${statusTag(detail.status)}</span>
+            </div>
+          </div>
+
+          <div class="toolbar"><h2>字段台账</h2>
+            <div class="toolbar-right">
+              <input id="fieldSearch" placeholder="搜索字段中文名" style="width: 200px; height: 32px;">
+            </div>
+          </div>
+          <div class="table-container">
+            <table id="fieldLedgerTable">
+              <thead><tr><th>字段中文名</th><th>字段英文名</th><th>数据对象</th><th>类型</th><th>同步方式</th><th>消费系统</th><th>备注</th></tr></thead>
+              <tbody>${(detail.fields || []).map(f => {
+                const isHighlighted = rejectionHistory.some(r => r.field_entry_id === f.id);
+                return `<tr class="${isHighlighted ? 'field-highlight' : ''}">
+                  <td>${f.field_name_cn || '-'}</td><td>${f.field_name_en || '-'}</td><td>${f.data_object || '-'}</td>
+                  <td>${f.field_type || '-'}</td><td>${f.sync_mode || '-'}</td><td>${f.consume_systems || '-'}</td><td>${f.note || '-'}</td>
+                </tr>`;
+              }).join('') || '<tr><td colspan="7" class="empty">暂无字段</td></tr>'}</tbody>
+            </table>
+          </div>
+
+          ${rejectionHistory.length > 0 ? `
+          <h2 style="margin-top: 32px;">变更对比</h2>
+          <div class="diff-grid">
+            <div class="diff-col"><div class="diff-header">上一版本（被驳回）</div>
+              ${rejectionHistory.map(r => `<div class="diff-row changed"><strong>${r.field_name_cn || '字段#'+r.field_entry_id}</strong>: ${r.rejection_reason} (${r.rejected_by_name || '-'})</div>`).join('')}
+            </div>
+            <div class="diff-col"><div class="diff-header">当前版本</div>
+              ${(detail.fields || []).map(f => `<div class="diff-row">${f.field_name_cn || '-'}: ${f.note || '-'}</div>`).join('')}
+            </div>
+          </div>` : ''}
+
+          <h2 style="margin-top: 32px;">审批记录</h2>
+          <div class="timeline">
+            ${(detail.approvalTasks || []).map(task => `
+              <div class="tl-item ${task.status === 'approved' ? 'approve' : task.status === 'rejected' ? 'reject' : ''}">
+                <div class="tl-head">${task.step_name} — ${statusTag(task.status)}</div>
+                <div class="tl-body">${task.opinion || '无意见'} · ${task.operated_at || task.created_at || '-'}</div>
+              </div>
+            `).join('') || '<div class="empty">暂无审批记录</div>'}
+          </div>
+
+          ${actionHtml ? `<div class="toolbar" style="margin-top: 32px; justify-content: flex-end;">${actionHtml}</div>` : ''}
+        `;
+
+        $('detailPage').classList.add('on');
+        document.querySelectorAll('.panel').forEach(el => el.classList.remove('on'));
+
+        // Bind actions
+        const approveBtn = $('detailApprove');
+        if (approveBtn) approveBtn.onclick = () => handleApprove(mappingId);
+        const rejectBtn = $('detailReject');
+        if (rejectBtn) rejectBtn.onclick = () => openRejectPage(mappingId);
+        const publishBtn = $('detailPublish');
+        if (publishBtn) publishBtn.onclick = () => handlePublish(mappingId);
+
+        // Field search
+        const searchEl = $('fieldSearch');
+        if (searchEl) searchEl.oninput = () => filterFieldTable(detail.fields || [], rejectionHistory);
+      } catch (e) {
+        if (e.status === 404) {
+          $('detailContent').innerHTML = `<div class="empty">记录不存在或无权访问 <button class="btn secondary" onclick="history.back()">返回上一页</button></div>`;
+        } else {
+          showToast(e.message || '加载失败', 'error');
+        }
+      }
+    }
+
+    function filterFieldTable(fields, rejectionHistory) {
+      const search = ($('fieldSearch')?.value || '').toLowerCase();
+      const tbody = document.querySelector('#fieldLedgerTable tbody');
+      if (!tbody) return;
+      const rejectedIds = new Set(rejectionHistory.map(r => r.field_entry_id));
+      const filtered = fields.filter(f => !search || (f.field_name_cn || '').toLowerCase().includes(search));
+      tbody.innerHTML = filtered.map(f => {
+        const isHighlighted = rejectedIds.has(f.id);
+        return `<tr class="${isHighlighted ? 'field-highlight' : ''}">
+          <td>${f.field_name_cn || '-'}</td><td>${f.field_name_en || '-'}</td><td>${f.data_object || '-'}</td>
+          <td>${f.field_type || '-'}</td><td>${f.sync_mode || '-'}</td><td>${f.consume_systems || '-'}</td><td>${f.note || '-'}</td>
+        </tr>`;
+      }).join('') || '<tr><td colspan="7" class="empty">无匹配字段</td></tr>';
+    }
+
+    // ===== Phase 5: Conflict Detail =====
+    async function renderConflictDetail(conflictId, conflictType, sourceTab) {
+      try {
+        const detail = await api(`/api/conflicts/${conflictId}?type=${conflictType}`);
+        state.activeConflict = detail;
+        setBreadcrumb([
+          { label: '冲突管理', onclick: `navigateTo('list',{tab:'conflicts'})` },
+          { label: `冲突 #${conflictId}` },
+        ]);
+
+        const container = $('detailContent');
+        const isReviewer = ['reviewer', 'admin'].includes(state.user?.role);
+        const isCoordinator = detail.currentAssignee?.assignee_user_id === state.user?.id;
+
+        // Side-by-side comparison
+        const comparisonHtml = conflictType === 'term' ? `
+          <div class="diff-grid">
+            <div class="diff-col"><div class="diff-header">部门 A: ${detail.dept_a_name || detail.dept_a || '-'}</div>
+              <div class="diff-row">${detail.dept_a_meaning || '-'}</div></div>
+            <div class="diff-col"><div class="diff-header">部门 B: ${detail.dept_b_name || detail.dept_b || '-'}</div>
+              <div class="diff-row">${detail.dept_b_meaning || '-'}</div></div>
+          </div>` : `
+          <div class="diff-grid">
+            <div class="diff-col"><div class="diff-header">字段值 A (${detail.dept_a_name || '-'})</div>
+              <div class="diff-row">${detail.value_a || '-'}</div></div>
+            <div class="diff-col"><div class="diff-header">字段值 B (${detail.dept_b_name || '-'})</div>
+              <div class="diff-row">${detail.value_b || '-'}</div></div>
+          </div>`;
+
+        // Action buttons
+        let actionHtml = '';
+        if (isReviewer && detail.status === 'pending') {
+          actionHtml += `<button class="btn primary" id="assignOwnerBtn">指定责任人</button>`;
+        }
+        if (isReviewer && detail.status === 'coordinating') {
+          actionHtml += `<button class="btn primary" id="assignOwnerBtn">改派责任人</button>`;
+          actionHtml += `<button class="btn success" id="finalDecideBtn">终裁</button>`;
+        }
+        if (isCoordinator && detail.status === 'coordinating') {
+          actionHtml += `<button class="btn primary" id="submitCoordinationBtn">提交协调结果</button>`;
+        }
+        if (isReviewer && detail.status === 'resolved') {
+          actionHtml += `<button class="btn danger" id="reopenBtn">重开</button>`;
+        }
+        if (state.user?.role === 'admin' && detail.status === 'resolved') {
+          actionHtml += `<button class="btn secondary" id="archiveBtn">归档</button>`;
+        }
+
+        container.innerHTML = `
+          <div style="margin-bottom: 24px;">
+            <h2 style="margin-bottom: 8px;">${conflictType === 'term' ? '术语冲突' : '字段冲突'} #${conflictId}</h2>
+            <div class="detail-meta">
+              <span>严重度：${statusTag(detail.severity)}</span>
+              <span>状态：${statusTag(detail.status)}</span>
+              ${detail.currentAssignee ? `<span>当前责任人：${detail.currentAssignee.assignee_name || '-'}</span>` : ''}
+            </div>
+          </div>
+
+          <h2>双部门定义对比</h2>
+          ${comparisonHtml}
+
+          <h2 style="margin-top: 32px;">协调记录</h2>
+          ${(detail.coordinationHistory || []).length > 0 ? `
+            <div class="timeline">
+              ${detail.coordinationHistory.map(h => `
+                <div class="tl-item">
+                  <div class="tl-head">${h.assignee_name || '-'} 提交协调结果：${h.result === 'A' ? '采用A部门口径' : h.result === 'B' ? '采用B部门口径' : '折中方案'}</div>
+                  <div class="tl-body">${h.note || '无说明'} · ${h.created_at}</div>
+                </div>
+              `).join('')}
+            </div>` : '<div class="empty">暂无协调记录</div>'}
+
+          <h2 style="margin-top: 32px;">责任人变更记录</h2>
+          ${(detail.assignmentHistory || []).length > 0 ? `
+            <div class="timeline">
+              ${detail.assignmentHistory.map(a => `
+                <div class="tl-item">
+                  <div class="tl-head">${a.assigned_by_name || '-'} 指定 ${a.assignee_name || '-'} 为责任人</div>
+                  <div class="tl-body">${a.created_at}</div>
+                </div>
+              `).join('')}
+            </div>` : '<div class="empty">暂无指定记录</div>'}
+
+          ${actionHtml ? `<div class="toolbar" style="margin-top: 32px; justify-content: flex-end;">${actionHtml}</div>` : ''}
+        `;
+
+        $('detailPage').classList.add('on');
+        document.querySelectorAll('.panel').forEach(el => el.classList.remove('on'));
+
+        // Bind actions
+        const assignBtn = $('assignOwnerBtn');
+        if (assignBtn) assignBtn.onclick = () => openAssignOwnerDialog(conflictId, conflictType);
+        const finalDecideBtn = $('finalDecideBtn');
+        if (finalDecideBtn) finalDecideBtn.onclick = () => openFinalDecideDialog(conflictId, conflictType);
+        const submitBtn = $('submitCoordinationBtn');
+        if (submitBtn) submitBtn.onclick = () => openSubmitCoordinationDialog(conflictId, conflictType);
+        const reopenBtn = $('reopenBtn');
+        if (reopenBtn) reopenBtn.onclick = () => handleReopen(conflictId, conflictType);
+        const archiveBtn = $('archiveBtn');
+        if (archiveBtn) archiveBtn.onclick = () => handleArchive(conflictId, conflictType);
+      } catch (e) {
+        if (e.status === 404) {
+          $('detailContent').innerHTML = `<div class="empty">记录不存在或无权访问 <button class="btn secondary" onclick="history.back()">返回上一页</button></div>`;
+        } else {
+          showToast(e.message || '加载失败', 'error');
+        }
+      }
+    }
+
+    // ===== Phase 6 stubs =====
+    async function handleApprove(mappingId) { showToast('审批功能将在 Phase 6 实现', 'warning'); }
+    async function handlePublish(mappingId) { showToast('发布功能将在 Phase 6 实现', 'warning'); }
+    function openRejectPage(mappingId) { showToast('驳回功能将在 Phase 6 实现', 'warning'); }
+    async function openAssignOwnerDialog(conflictId, conflictType) { showToast('指定责任人功能将在 Phase 6 实现', 'warning'); }
+    async function openFinalDecideDialog(conflictId, conflictType) { showToast('终裁功能将在 Phase 6 实现', 'warning'); }
+    async function openSubmitCoordinationDialog(conflictId, conflictType) { showToast('协调功能将在 Phase 6 实现', 'warning'); }
+    async function handleReopen(conflictId, conflictType) { showToast('重开功能将在 Phase 6 实现', 'warning'); }
+    async function handleArchive(conflictId, conflictType) { showToast('归档功能将在 Phase 6 实现', 'warning'); }
 
     // ===== Init =====
     checkSession();
