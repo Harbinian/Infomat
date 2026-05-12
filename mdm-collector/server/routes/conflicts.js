@@ -189,8 +189,8 @@ router.post('/:id/assign', requireAuth, (req, res) => {
       conflict = db.prepare('SELECT * FROM field_conflicts WHERE id=?').get(req.params.id);
     }
     if (!conflict) return res.status(404).json({ error: '冲突不存在' });
-    if (!['pending','coordinating'].includes(conflict.status)) {
-      return res.status(409).json({ error: '只能在待处理或协调中状态指定责任人' });
+    if (conflict.status !== 'pending') {
+      return res.status(409).json({ error: '只能在待处理状态下首次指定责任人；协调中请使用 PUT 改派' });
     }
 
     db.transaction(() => {
@@ -237,10 +237,12 @@ router.put('/:id/assign', requireAuth, (req, res) => {
       return res.status(409).json({ error: '仅协调中状态可改派' });
     }
 
-    db.prepare(`
-      INSERT INTO conflict_assignments (conflict_id, conflict_type, assignee_user_id, assigned_by)
-      VALUES (?, ?, ?, ?)
-    `).run(req.params.id, conflictType, assignee_user_id, req.session.userId);
+    db.transaction(() => {
+      db.prepare(`
+        INSERT INTO conflict_assignments (conflict_id, conflict_type, assignee_user_id, assigned_by)
+        VALUES (?, ?, ?, ?)
+      `).run(req.params.id, conflictType, assignee_user_id, req.session.userId);
+    })();
 
     res.json({ success: true });
   });
