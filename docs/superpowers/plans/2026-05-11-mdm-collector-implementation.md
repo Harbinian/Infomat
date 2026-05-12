@@ -1707,7 +1707,7 @@ git commit -m "feat(export): add Excel export for field ledger + gold source mat
 - Modify: `mdm-collector/server/index.js`
 - Modify: `mdm-collector/package.json`
 
-- [ ] **Step 1: 创建 import.js**
+- [x] **Step 1: 创建 import.js**
 
 ```javascript
 // mdm-collector/server/routes/import.js
@@ -1807,7 +1807,7 @@ router.post('/field-entries', requireAuth, upload.single('file'), async (req, re
 module.exports = router;
 ```
 
-- [ ] **Step 2: 验证导入闭环**
+- [x] **Step 2: 验证导入闭环**
 
 ```bash
 cd mdm-collector
@@ -1818,7 +1818,7 @@ npm start
 # 预期：返回 {"imported": N}，且 /api/field-entries/mapping/:mappingId 能看到导入记录
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add mdm-collector/package.json mdm-collector/server/index.js mdm-collector/server/routes/import.js
