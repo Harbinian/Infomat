@@ -1,0 +1,75 @@
+const express = require('express');
+const router = express.Router();
+const db = require('../db');
+const { requireAuth, requireRole } = require('../auth');
+
+function handleDbError(res, error) {
+  if (error && (error.code === 'SQLITE_CONSTRAINT_UNIQUE' || String(error.message).includes('UNIQUE constraint failed'))) {
+    return res.status(409).json({ error: '术语已存在' });
+  }
+  if (error && (String(error.code).startsWith('SQLITE_CONSTRAINT') || String(error.message).includes('constraint failed'))) {
+    return res.status(400).json({ error: '数据不符合约束' });
+  }
+  console.error(error);
+  return res.status(500).json({ error: '服务器错误' });
+}
+
+function runDbAction(res, action) {
+  try {
+    return action();
+  } catch (error) {
+    return handleDbError(res, error);
+  }
+}
+
+router.get('/', requireAuth, (req, res) => {
+  const { status } = req.query;
+  let sql = 'SELECT * FROM terms';
+  const params = [];
+
+  if (status) {
+    sql += ' WHERE status=?';
+    params.push(status);
+  }
+
+  sql += ' ORDER BY term';
+  res.json(db.prepare(sql).all(...params));
+});
+
+router.post('/', requireRole('admin'), (req, res) => {
+  return runDbAction(res, () => {
+    const { term, definition, scope, forbidden } = req.body;
+    const stmt = db.prepare('INSERT INTO terms (term, definition, scope, forbidden, created_by) VALUES (?, ?, ?, ?, ?)');
+    const result = stmt.run(term, definition || null, scope || null, forbidden || null, req.session.userId);
+    res.json({ id: result.lastInsertRowid });
+  });
+});
+
+router.put('/:id', requireRole('admin'), (req, res) => {
+  return runDbAction(res, () => {
+    const { term, definition, scope, forbidden } = req.body;
+    db.prepare('UPDATE terms SET term=?, definition=?, scope=?, forbidden=? WHERE id=?').run(
+      term,
+      definition || null,
+      scope || null,
+      forbidden || null,
+      req.params.id
+    );
+    res.json({ success: true });
+  });
+});
+
+router.post('/:id/review', requireRole('admin'), (req, res) => {
+  return runDbAction(res, () => {
+    const { action } = req.body;
+    const newStatus = action === 'approve' ? 'approved' : 'rejected';
+    db.prepare("UPDATE terms SET status=?, approved_by=?, approved_at=datetime('now') WHERE id=?").run(
+      newStatus,
+      req.session.userId,
+      req.params.id
+    );
+    res.json({ success: true });
+  });
+});
+
+module.exports = router;

@@ -11,6 +11,7 @@
     "test:catalog": "node scripts/test-catalog-routes.js",
     "test:mappings": "node scripts/test-mapping-routes.js",
     "test:conflicts": "node scripts/test-conflict-routes.js",
+    "test:terms": "node scripts/test-term-version-routes.js",
     "dev": "nodemon server/index.js"
   },
   "dependencies": {
