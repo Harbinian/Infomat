@@ -77,20 +77,22 @@
     .tabs {
       display: flex;
       gap: 24px;
-      border-bottom: 1px solid var(--border);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      background: var(--header-bg);
+      padding: 0 24px;
       margin-bottom: 40px;
     }
     .tab {
-      padding: 0 0 12px 0;
-      color: var(--text-muted);
+      padding: 14px 0 12px 0;
+      color: var(--header-text-muted);
       font-size: 14px;
       font-weight: 500;
       border-bottom: 2px solid transparent;
       margin-bottom: -1px;
       transition: color 0.2s;
     }
-    .tab:hover { color: var(--text-main); }
-    .tab.on { color: var(--text-main); border-bottom-color: var(--accent); }
+    .tab:hover { color: var(--header-text); }
+    .tab.on { color: var(--accent); border-bottom-color: var(--accent); }
     
     /* Panels */
     .panel { display: none; animation: fadeIn 0.3s ease; }
