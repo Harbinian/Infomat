@@ -6,175 +6,386 @@
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
   <title>MDM 数据收集与评审工具</title>
   <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    :root{
-      --navy:#0f2a5e;--blue:#1a56db;--teal:#0891b2;--green:#16a34a;
-      --amber:#d97706;--red:#dc2626;--purple:#7c3aed;--pink:#db2777;
-      --bg:#f8fafc;--card:#fff;--line:#e2e8f0;--text:#1e293b;--muted:#64748b;
+    :root {
+      --bg: #ffffff;
+      --surface: #f3f4f6;
+      --border: #e0e0e0;
+      --text-main: #1f2937;
+      --text-muted: #6b7280;
+      --accent: #fc0000;
+      --accent-hover: #dc0000;
+      --focus-ring: rgba(252, 0, 0, 0.15);
+      --error: #b91c1c;
+      --success: #059669;
+      --warning: #d97706;
+      --header-bg: #1a1a2e;
+      --header-text: #ffffff;
+      --header-text-muted: #9ca3af;
     }
-    body{font-family:"PingFang SC","Microsoft YaHei",Arial,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
-    button,input,select,textarea{font:inherit}
-    button{border:none;cursor:pointer}
-    .topbar{height:54px;background:rgba(15,42,94,.98);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 22px;position:sticky;top:0;z-index:20;box-shadow:0 8px 24px rgba(15,42,94,.15)}
-    .brand{font-weight:800;letter-spacing:.2px}.brand span{color:#7dd3fc}
-    .session{display:flex;align-items:center;gap:8px;font-size:12px;color:#dbeafe}
-    .page{padding:20px clamp(14px,3vw,36px) 34px}
-    .login{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:10px;align-items:end;background:#fff;border:1px solid var(--line);border-radius:8px;padding:14px;margin-bottom:16px;animation:slideUp .28s ease}
-    .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
-    .tab{height:34px;padding:0 14px;border:1px solid var(--line);background:#fff;border-radius:6px;color:var(--muted);font-weight:700;font-size:13px}
-    .tab.on{background:var(--blue);color:#fff;border-color:var(--blue);box-shadow:0 8px 18px rgba(26,86,219,.16)}
-    .panel{display:none;animation:fadeIn .24s ease}.panel.on{display:block}
-    .grid{display:grid;gap:12px}.g2{grid-template-columns:repeat(2,minmax(0,1fr))}.g3{grid-template-columns:repeat(3,minmax(0,1fr))}.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
-    .card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px;box-shadow:0 1px 3px rgba(15,42,94,.04)}
-    .card h2{font-size:16px;color:var(--navy);margin-bottom:10px}.card h3{font-size:13px;color:var(--navy);margin-bottom:8px}
-    .metric{border-left:4px solid var(--blue)}.metric.green{border-left-color:var(--green)}.metric.amber{border-left-color:var(--amber)}.metric.red{border-left-color:var(--red)}
-    .metric .num{font-size:28px;font-weight:900;color:var(--navy);line-height:1}.metric .lbl{font-size:12px;color:var(--muted);margin-top:6px}
-    .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
-    label{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:700;color:var(--muted)}
-    input,select,textarea{width:100%;border:1px solid var(--line);border-radius:6px;background:#fff;padding:8px 9px;color:var(--text);min-height:34px}
-    textarea{min-height:70px;resize:vertical}
-    .btn{height:34px;padding:0 12px;border-radius:6px;background:var(--blue);color:#fff;font-size:12px;font-weight:800}
-    .btn.secondary{background:#eef2ff;color:#1e3a8a}.btn.green{background:var(--green)}.btn.amber{background:var(--amber)}.btn.red{background:var(--red)}
-    .btn:disabled{opacity:.55;cursor:not-allowed}
-    .table-wrap{overflow:auto;border:1px solid var(--line);border-radius:8px;background:#fff}
-    table{width:100%;border-collapse:collapse;font-size:12px}th{background:var(--navy);color:#fff;text-align:left;padding:9px;white-space:nowrap}td{padding:9px;border-top:1px solid var(--line);vertical-align:top}tr:hover td{background:#f8fafc}
-    .tag{display:inline-flex;align-items:center;height:22px;border-radius:999px;padding:0 8px;font-size:11px;font-weight:800;background:#eef2ff;color:#1d4ed8}
-    .tag.green{background:#dcfce7;color:#166534}.tag.amber{background:#fef3c7;color:#92400e}.tag.red{background:#fee2e2;color:#991b1b}.tag.purple{background:#ede9fe;color:#6d28d9}
-    .split{display:grid;grid-template-columns:minmax(280px,380px) 1fr;gap:12px}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-    .notice{padding:10px 12px;border-radius:8px;border:1px solid #bfdbfe;background:#eff6ff;color:#1e40af;font-size:12px;margin-bottom:12px}
-    .empty{padding:18px;color:var(--muted);font-size:12px;text-align:center}
-    .chart{height:260px;width:100%}
-    .modal-mask{position:fixed;inset:0;background:rgba(15,23,42,.5);display:none;align-items:center;justify-content:center;z-index:50;padding:18px}
-    .modal-mask.on{display:flex}.modal{width:min(560px,100%);background:#fff;border-radius:10px;border:1px solid var(--line);box-shadow:0 24px 80px rgba(15,23,42,.28);animation:slideUp .2s ease}
-    .modal-head{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--line)}.modal-head h3{font-size:15px;color:var(--navy)}
-    .modal-body{padding:16px}.close{width:30px;height:30px;border-radius:6px;background:#f1f5f9;color:#475569}
-    .blink{animation:blink 1.2s linear infinite}.pulse{animation:pulse 1.4s ease infinite}
-    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
-    @keyframes slideUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-    @keyframes blink{50%{opacity:.35}}
-    @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(22,163,74,.35)}50%{box-shadow:0 0 0 8px rgba(22,163,74,0)}}
-    @media(max-width:900px){.g2,.g3,.g4,.split,.login,.form-grid{grid-template-columns:1fr}.topbar{height:auto;min-height:54px;gap:8px;flex-wrap:wrap;padding:10px 14px}.page{padding:14px}}
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text-main);
+      font-size: 14px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+    button, input, select, textarea { font: inherit; }
+    button { border: none; background: none; cursor: pointer; }
+    a { color: inherit; text-decoration: none; }
+    
+    /* Layout */
+    .topbar {
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(8px);
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+    .brand { font-weight: 600; font-size: 14px; letter-spacing: -0.01em; }
+    .session { display: flex; align-items: center; gap: 16px; font-size: 13px; color: var(--text-muted); }
+    
+    .page-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 24px 80px;
+    }
+
+    /* Typography */
+    h1 { font-size: 24px; font-weight: 600; margin-bottom: 32px; letter-spacing: -0.02em; }
+    h2 { font-size: 14px; font-weight: 600; margin-bottom: 16px; color: var(--text-main); text-transform: uppercase; letter-spacing: 0.05em; }
+    
+    /* Login */
+    .login {
+      max-width: 320px;
+      margin: 80px auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      animation: fadeIn 0.3s ease;
+    }
+    .login h2 { text-align: center; margin-bottom: 8px; font-size: 20px; text-transform: none; letter-spacing: normal; }
+    
+    /* Navigation */
+    .tabs {
+      display: flex;
+      gap: 24px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 40px;
+    }
+    .tab {
+      padding: 0 0 12px 0;
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 500;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: color 0.2s;
+    }
+    .tab:hover { color: var(--text-main); }
+    .tab.on { color: var(--text-main); border-bottom-color: var(--accent); }
+    
+    /* Panels */
+    .panel { display: none; animation: fadeIn 0.3s ease; }
+    .panel.on { display: block; }
+    
+    /* Components */
+    .grid { display: grid; gap: 32px; }
+    .g2 { grid-template-columns: repeat(2, 1fr); }
+    .g4 { grid-template-columns: repeat(4, 1fr); }
+    .split { display: grid; grid-template-columns: 320px 1fr; gap: 64px; }
+    @media (max-width: 900px) { .split, .g2, .g4 { grid-template-columns: 1fr; gap: 32px; } }
+    
+    .metric { padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+    .metric .num { font-size: 36px; font-weight: 500; color: var(--text-main); line-height: 1; letter-spacing: -0.03em; }
+    .metric .lbl { font-size: 13px; color: var(--text-muted); margin-top: 12px; font-weight: 500; }
+    
+    /* Forms */
+    .form-group { margin-bottom: 20px; }
+    label { display: flex; flex-direction: column; gap: 8px; font-size: 13px; font-weight: 500; color: var(--text-main); }
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg);
+      padding: 8px 12px;
+      color: var(--text-main);
+      font-size: 14px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--focus-ring);
+    }
+    textarea { min-height: 80px; resize: vertical; }
+    
+    /* Buttons */
+    .toolbar { display: flex; gap: 12px; align-items: center; margin-bottom: 20px; flex-wrap: wrap; }
+    .toolbar-right { margin-left: auto; display: flex; gap: 8px; }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      height: 32px; padding: 0 16px;
+      border-radius: 6px;
+      font-size: 13px; font-weight: 500;
+      transition: all 0.2s;
+    }
+    .btn.primary { background: var(--accent); color: #fff; }
+    .btn.primary:hover { background: var(--accent-hover); }
+    .btn.secondary { background: var(--surface); color: var(--text-main); border: 1px solid var(--border); }
+    .btn.secondary:hover { background: #f3f4f6; }
+    .btn.danger { background: #fff; color: var(--error); border: 1px solid var(--border); }
+    .btn.danger:hover { background: #fef2f2; border-color: #fca5a5; }
+    .btn.success { background: #fff; color: var(--success); border: 1px solid var(--border); }
+    .btn.success:hover { background: #ecfdf5; border-color: #6ee7b7; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    
+    /* Tables */
+    .table-container { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
+    th { color: var(--text-muted); font-weight: 500; padding: 12px 16px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    td { padding: 12px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    tr:hover td { background: var(--surface); }
+    
+    /* Tags */
+    .tag {
+      display: inline-flex; align-items: center; height: 22px; padding: 0 8px;
+      border-radius: 4px; font-size: 12px; font-weight: 500;
+      background: var(--surface); color: var(--text-muted); border: 1px solid var(--border);
+    }
+    .tag.green { color: var(--success); border-color: #a7f3d0; background: #ecfdf5; }
+    .tag.amber { color: var(--warning); border-color: #fde68a; background: #fffbeb; }
+    .tag.red { color: var(--error); border-color: #fecaca; background: #fef2f2; }
+    
+    /* Misc */
+    .notice { font-size: 13px; color: var(--text-muted); padding: 12px 16px; background: var(--surface); border-radius: 6px; margin-bottom: 20px; border-left: 3px solid var(--border); }
+    .empty { padding: 48px; color: var(--text-muted); text-align: center; font-size: 13px; }
+    .chart { height: 300px; width: 100%; margin-top: 24px; }
+    
+    /* Modal */
+    .modal-mask {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.3); backdrop-filter: blur(2px);
+      display: none; align-items: center; justify-content: center; z-index: 50;
+    }
+    .modal-mask.on { display: flex; }
+    .modal {
+      width: min(480px, calc(100% - 32px)); background: #fff; border-radius: 12px;
+      box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
+      border: 1px solid var(--border); animation: slideUp 0.2s ease;
+    }
+    .modal-head { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; border-bottom: 1px solid var(--border); }
+    .modal-head h3 { font-size: 16px; font-weight: 600; margin: 0; }
+    .modal-body { padding: 24px; }
+    .close { font-size: 20px; color: var(--text-muted); line-height: 1; }
+    .close:hover { color: var(--text-main); }
+    
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
   </style>
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">MDM <span>数据收集与评审工具</span></div>
+    <div class="brand">MDM Collector</div>
     <div class="session"><span id="sessionText">未登录</span><button class="btn secondary" id="logoutBtn">退出</button></div>
   </header>
 
-  <main class="page">
+  <div class="page-container">
     <section class="login" id="loginBox">
-      <label>工号<input id="employeeNo" value="ADMIN001" autocomplete="username"></label>
-      <label>密码<input id="password" type="password" value="admin123" autocomplete="current-password"></label>
-      <button class="btn" id="loginBtn">登录</button>
-      <div class="notice" id="loginMsg">ADMIN001 / admin123</div>
+      <h2>登录系统</h2>
+      <div class="form-group"><label>工号<input id="employeeNo" value="ADMIN001" autocomplete="username"></label></div>
+      <div class="form-group"><label>密码<input id="password" type="password" value="admin123" autocomplete="current-password"></label></div>
+      <button class="btn primary" id="loginBtn" style="width: 100%; height: 36px; margin-top: 8px;">登录</button>
+      <div class="notice" id="loginMsg" style="text-align: center; margin-top: 16px; background: transparent; border: none;">测试账号: ADMIN001 / admin123</div>
     </section>
 
-    <nav class="tabs" id="tabs">
-      <button class="tab on" data-tab="dashboard">统计看板</button>
-      <button class="tab" data-tab="submission">报送管理</button>
-      <button class="tab" data-tab="todos">待办收到</button>
-      <button class="tab" data-tab="reviews">评审记录</button>
-      <button class="tab" data-tab="terms">术语词典</button>
-      <button class="tab" data-tab="conflicts">冲突管理</button>
-    </nav>
+    <div id="appContent" style="display: none;">
+      <nav class="tabs" id="tabs">
+        <button class="tab on" data-tab="dashboard">统计看板</button>
+        <button class="tab" data-tab="capabilities">能力与流程申报</button>
+        <button class="tab" data-tab="submission">报送管理</button>
+        <button class="tab" data-tab="todos">待办收到</button>
+        <button class="tab" data-tab="reviews">评审记录</button>
+        <button class="tab" data-tab="terms">术语词典</button>
+        <button class="tab" data-tab="conflicts">冲突管理</button>
+      </nav>
 
-    <section class="panel on" id="dashboard">
-      <div class="grid g4">
-        <div class="card metric"><div class="num" id="metricMappings">0</div><div class="lbl">流程映射</div></div>
-        <div class="card metric green"><div class="num" id="metricFields">0</div><div class="lbl">字段台账</div></div>
-        <div class="card metric amber"><div class="num" id="metricTodos">0</div><div class="lbl">待处理待办</div></div>
-        <div class="card metric red"><div class="num" id="metricConflicts">0</div><div class="lbl">未解决冲突</div></div>
-      </div>
-      <div class="grid g2" style="margin-top:12px">
-        <div class="card"><h2>各部门流程数</h2><div class="chart" id="deptChart"></div></div>
-        <div class="card"><h2>审批状态分布</h2><div class="chart" id="statusChart"></div></div>
-      </div>
-    </section>
+      <section class="panel on" id="dashboard">
+        <div class="grid g4">
+          <div class="metric"><div class="num" id="metricMappings">0</div><div class="lbl">流程映射</div></div>
+          <div class="metric"><div class="num" id="metricFields">0</div><div class="lbl">字段台账</div></div>
+          <div class="metric"><div class="num" id="metricTodos">0</div><div class="lbl">待处理待办</div></div>
+          <div class="metric"><div class="num" id="metricConflicts">0</div><div class="lbl">未解决冲突</div></div>
+        </div>
+        <div class="grid g2" style="margin-top: 48px;">
+          <div><h2>各部门流程数</h2><div class="chart" id="deptChart"></div></div>
+          <div><h2>审批状态分布</h2><div class="chart" id="statusChart"></div></div>
+        </div>
+      </section>
 
-    <section class="panel" id="submission">
-      <div class="split">
-        <div class="card">
-          <h2>新建流程映射</h2>
-          <div class="form-grid">
-            <label>业务流程<select id="mappingProcess"></select></label>
-            <label>所属部门<select id="mappingDept"></select></label>
+      <section class="panel" id="capabilities">
+        <div class="split">
+          <div>
+            <h2>申报业务能力</h2>
+            <div class="form-group"><label>能力名称<input id="capName"></label></div>
+            <div class="form-group"><label>能力层级<select id="capLevel"><option value="L1">L1</option><option value="L2">L2</option><option value="L3">L3</option></select></label></div>
+            <div class="form-group"><label>所属部门<select id="capDept"></select></label></div>
+            <div class="toolbar"><button class="btn primary" id="createCapBtn">申报业务能力</button></div>
+            
+            <h2 style="margin-top: 48px;">申报业务流程</h2>
+            <div class="form-group"><label>流程名称<input id="procName"></label></div>
+            <div class="form-group"><label>所属能力<select id="procCap"></select></label></div>
+            <div class="form-group"><label>所属部门<select id="procDept"></select></label></div>
+            <div class="toolbar"><button class="btn primary" id="createProcBtn">申报业务流程</button></div>
           </div>
-          <label style="margin-top:10px">说明<textarea id="mappingDesc"></textarea></label>
-          <div class="toolbar" style="margin-top:10px">
-            <button class="btn green" id="createMappingBtn">保存草稿</button>
-            <a class="btn secondary" href="template.xlsx" download>下载模板</a>
-            <button class="btn amber" id="exportBtn">导出台账</button>
+          <div>
+            <div class="toolbar"><h2>业务能力列表</h2><button class="btn secondary" style="margin-left: auto;" id="refreshCapsBtn">刷新列表</button></div>
+            <div class="table-container">
+              <table>
+                <thead><tr><th>ID</th><th>名称</th><th>层级</th><th>部门</th><th>状态</th><th>操作</th></tr></thead>
+                <tbody id="capRows"></tbody>
+              </table>
+            </div>
+            
+            <div class="toolbar" style="margin-top: 48px;"><h2>业务流程列表</h2><button class="btn secondary" style="margin-left: auto;" id="refreshProcsBtn">刷新列表</button></div>
+            <div class="table-container">
+              <table>
+                <thead><tr><th>ID</th><th>名称</th><th>所属能力</th><th>部门</th><th>状态</th><th>操作</th></tr></thead>
+                <tbody id="procRows"></tbody>
+              </table>
+            </div>
           </div>
-          <div class="notice">Excel 导入会写入当前选中的映射；报送人仅写入数据对象和字段说明。</div>
-          <label>导入字段台账<input type="file" id="importFile" accept=".xlsx"></label>
-          <div class="toolbar" style="margin-top:10px"><button class="btn" id="importBtn">导入字段</button></div>
         </div>
-        <div class="card">
-          <div class="toolbar"><h2 style="margin-right:auto">报送列表</h2><button class="btn secondary" id="refreshMappingsBtn">刷新</button></div>
-          <div class="table-wrap"><table><thead><tr><th>ID</th><th>流程</th><th>部门</th><th>状态</th><th>系统</th><th>操作</th></tr></thead><tbody id="mappingRows"></tbody></table></div>
-        </div>
-      </div>
-    </section>
+      </section>
 
-    <section class="panel" id="todos">
-      <div class="card">
-        <div class="toolbar"><h2 style="margin-right:auto">待办收到</h2><select id="todoStatus"><option value="">全部状态</option><option value="pending">待处理</option><option value="done">已完成</option></select><button class="btn secondary" id="refreshTodosBtn">刷新</button></div>
-        <div class="table-wrap"><table><thead><tr><th>ID</th><th>来源</th><th>接收</th><th>类型</th><th>内容</th><th>截止</th><th>状态</th><th>操作</th></tr></thead><tbody id="todoRows"></tbody></table></div>
-      </div>
-    </section>
-
-    <section class="panel" id="reviews">
-      <div class="card">
-        <div class="toolbar"><h2 style="margin-right:auto">评审记录</h2><button class="btn secondary" id="refreshReviewsBtn">刷新</button></div>
-        <div class="table-wrap"><table><thead><tr><th>映射</th><th>流程</th><th>当前步骤</th><th>任务</th><th>状态</th><th>意见</th><th>操作</th></tr></thead><tbody id="reviewRows"></tbody></table></div>
-      </div>
-    </section>
-
-    <section class="panel" id="terms">
-      <div class="split">
-        <div class="card">
-          <h2>术语维护</h2>
-          <label>术语<input id="termName"></label>
-          <label>定义<textarea id="termDefinition"></textarea></label>
-          <div class="form-grid">
-            <label>范围<input id="termScope"></label>
-            <label>禁用表述<input id="termForbidden"></label>
+      <section class="panel" id="submission">
+        <div class="split">
+          <div>
+            <h2>新建流程映射</h2>
+            <div class="form-group"><label>业务流程<select id="mappingProcess"></select></label></div>
+            <div class="form-group"><label>所属部门<select id="mappingDept"></select></label></div>
+            <div class="form-group"><label>说明<textarea id="mappingDesc"></textarea></label></div>
+            <div class="toolbar">
+              <button class="btn primary" id="createMappingBtn">保存草稿</button>
+              <a class="btn secondary" href="template.xlsx" download>下载模板</a>
+              <button class="btn secondary" id="exportBtn">导出台账</button>
+            </div>
+            
+            <h2 style="margin-top: 48px;">导入字段台账</h2>
+            <div class="notice" style="border-left-color: var(--accent);">Excel 导入会写入当前选中的映射；报送人仅写入数据对象和字段说明。</div>
+            <div class="form-group"><label><input type="file" id="importFile" accept=".xlsx"></label></div>
+            <div class="toolbar"><button class="btn secondary" id="importBtn">执行导入</button></div>
           </div>
-          <div class="toolbar" style="margin-top:10px"><button class="btn green" id="saveTermBtn">保存术语</button></div>
+          <div>
+            <div class="toolbar"><h2>报送列表</h2><button class="btn secondary" style="margin-left: auto;" id="refreshMappingsBtn">刷新列表</button></div>
+            <div class="table-container">
+              <table>
+                <thead><tr><th>ID</th><th>流程</th><th>部门</th><th>状态</th><th>系统</th><th>操作</th></tr></thead>
+                <tbody id="mappingRows"></tbody>
+              </table>
+            </div>
+          </div>
         </div>
-        <div class="card">
-          <div class="toolbar"><h2 style="margin-right:auto">术语词典</h2><select id="termStatus"><option value="">全部</option><option value="pending">待审</option><option value="approved">已通过</option><option value="rejected">已驳回</option></select><button class="btn secondary" id="refreshTermsBtn">刷新</button></div>
-          <div class="table-wrap"><table><thead><tr><th>ID</th><th>术语</th><th>定义</th><th>范围</th><th>状态</th><th>操作</th></tr></thead><tbody id="termRows"></tbody></table></div>
-        </div>
-      </div>
-    </section>
+      </section>
 
-    <section class="panel" id="conflicts">
-      <div class="card">
+      <section class="panel" id="todos">
         <div class="toolbar">
-          <h2 style="margin-right:auto">冲突管理</h2>
-          <input id="detectFieldName" placeholder="字段中文名">
-          <button class="btn amber" id="detectConflictBtn">检测字段冲突</button>
-          <button class="btn secondary" id="refreshConflictsBtn">刷新</button>
+          <h2>待办收到</h2>
+          <div class="toolbar-right">
+            <select id="todoStatus" style="width: 140px; height: 32px; padding: 0 12px;"><option value="">全部状态</option><option value="pending">待处理</option><option value="done">已完成</option></select>
+            <button class="btn secondary" id="refreshTodosBtn">刷新</button>
+          </div>
         </div>
-        <div class="table-wrap"><table><thead><tr><th>ID</th><th>类型</th><th>严重度</th><th>字段/术语</th><th>值A</th><th>值B</th><th>状态</th><th>操作</th></tr></thead><tbody id="conflictRows"></tbody></table></div>
-      </div>
-    </section>
-  </main>
+        <div class="table-container">
+          <table>
+            <thead><tr><th>ID</th><th>来源</th><th>接收</th><th>类型</th><th>内容</th><th>截止</th><th>状态</th><th>操作</th></tr></thead>
+            <tbody id="todoRows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel" id="reviews">
+        <div class="toolbar">
+          <h2>评审记录</h2>
+          <button class="btn secondary" style="margin-left: auto;" id="refreshReviewsBtn">刷新</button>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead><tr><th>映射</th><th>流程</th><th>当前步骤</th><th>任务</th><th>状态</th><th>意见</th><th>操作</th></tr></thead>
+            <tbody id="reviewRows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel" id="terms">
+        <div class="split">
+          <div>
+            <h2>术语维护</h2>
+            <div class="form-group"><label>术语<input id="termName"></label></div>
+            <div class="form-group"><label>定义<textarea id="termDefinition"></textarea></label></div>
+            <div class="form-group"><label>范围<input id="termScope"></label></div>
+            <div class="form-group"><label>禁用表述<input id="termForbidden"></label></div>
+            <div class="form-group"><label>所属业务流程<select id="termProcess"></select></label></div>
+            <div class="toolbar"><button class="btn primary" id="saveTermBtn">保存术语</button></div>
+          </div>
+          <div>
+            <div class="toolbar">
+              <h2>术语词典</h2>
+              <div class="toolbar-right">
+                <select id="termStatus" style="width: 120px; height: 32px; padding: 0 12px;"><option value="">全部</option><option value="pending">待审</option><option value="approved">已通过</option><option value="rejected">已驳回</option></select>
+                <button class="btn secondary" id="refreshTermsBtn">刷新</button>
+              </div>
+            </div>
+            <div class="table-container">
+              <table>
+                <thead><tr><th>ID</th><th>术语</th><th>定义</th><th>范围</th><th>状态</th><th>操作</th></tr></thead>
+                <tbody id="termRows"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" id="conflicts">
+        <div class="toolbar">
+          <h2>冲突管理</h2>
+          <div class="toolbar-right" style="align-items: center;">
+            <input id="detectFieldName" placeholder="字段中文名" style="width: 200px; height: 32px;">
+            <button class="btn secondary" id="detectConflictBtn">检测</button>
+            <button class="btn secondary" id="refreshConflictsBtn">刷新</button>
+          </div>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead><tr><th>ID</th><th>类型</th><th>严重度</th><th>字段/术语</th><th>值A</th><th>值B</th><th>状态</th><th>操作</th></tr></thead>
+            <tbody id="conflictRows"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </div>
 
   <div class="modal-mask" id="opinionModal">
     <div class="modal">
       <div class="modal-head"><h3 id="modalTitle">处理意见</h3><button class="close" id="modalClose">×</button></div>
       <div class="modal-body">
-        <label>意见<textarea id="modalOpinion"></textarea></label>
-        <div class="toolbar" style="margin-top:12px"><button class="btn green" id="modalApprove">通过</button><button class="btn red" id="modalReject">驳回</button></div>
+        <div class="form-group"><label>意见<textarea id="modalOpinion" placeholder="请输入处理意见..."></textarea></label></div>
+        <div class="toolbar" style="margin-top: 24px; margin-bottom: 0; justify-content: flex-end;">
+          <button class="btn danger" id="modalReject">驳回</button>
+          <button class="btn success" id="modalApprove">通过</button>
+        </div>
       </div>
     </div>
   </div>
 
   <script>
-    const state = { user:null, mappings:[], departments:[], processes:[], todos:[], conflicts:[], activeReview:null };
+    const state = { user:null, mappings:[], departments:[], processes:[], capabilities:[], todos:[], conflicts:[], activeReview:null, activeCapReview:null, activeProcReview:null };
     const $ = id => document.getElementById(id);
 
     async function api(path, options = {}) {
@@ -188,7 +399,7 @@
 
     function statusTag(status) {
       const map = { draft:'草稿', submitted:'已提交', dept_reviewed:'部门内审', cross_confirmed:'跨部门确认', fields_confirmed:'字段确认', final_reviewed:'终审', published:'已发布', pending:'待处理', done:'已完成', resolved:'已解决', rejected:'已驳回', approved:'已通过', blocked:'阻断' };
-      const cls = /published|approved|done|resolved/.test(status) ? 'green' : /blocked|rejected|error/.test(status) ? 'red' : /pending|submitted/.test(status) ? 'amber' : 'purple';
+      const cls = /published|approved|done|resolved/.test(status) ? 'green' : /blocked|rejected|error/.test(status) ? 'red' : /pending|submitted/.test(status) ? 'amber' : '';
       return `<span class="tag ${cls}">${map[status] || status || '-'}</span>`;
     }
 
@@ -197,15 +408,16 @@
     }
 
     async function login() {
+      if (!$('employeeNo').value.trim() || !$('password').value) { $('loginMsg').textContent = '请填写工号和密码'; return; }
       try {
         const user = await api('/api/org/login', { method:'POST', body:JSON.stringify({ employee_no:$('employeeNo').value, password:$('password').value }) });
         state.user = user;
         $('sessionText').textContent = `${user.name} · ${user.role}`;
         $('loginBox').style.display = 'none';
+        $('appContent').style.display = 'block';
         await loadAll();
       } catch (error) {
         $('loginMsg').textContent = error.message;
-        $('loginMsg').classList.add('blink');
       }
     }
 
@@ -215,9 +427,11 @@
         state.user = user;
         $('sessionText').textContent = `${user.name} · ${user.role}`;
         $('loginBox').style.display = 'none';
+        $('appContent').style.display = 'block';
         await loadAll();
       } catch {
-        $('loginBox').style.display = 'grid';
+        $('loginBox').style.display = 'flex';
+        $('appContent').style.display = 'none';
       }
     }
 
@@ -228,16 +442,62 @@
 
     async function loadCatalog() {
       state.departments = await api('/api/org/departments');
+      state.capabilities = await api('/api/capabilities');
       state.processes = await api('/api/processes');
+      
       fillSelect($('mappingDept'), state.departments);
+      fillSelect($('capDept'), state.departments);
+      fillSelect($('procDept'), state.departments);
+      
+      fillSelect($('procCap'), state.capabilities, 'name');
       fillSelect($('mappingProcess'), state.processes, 'name');
+      fillSelect($('termProcess'), state.processes, 'name');
+      
+      renderCapsAndProcs();
+    }
+    
+    function renderCapsAndProcs() {
+      $('capRows').innerHTML = state.capabilities.map(row => `<tr>
+        <td>${row.id}</td><td>${row.name}</td><td>${row.level}</td><td>${row.dept_name || '-'}</td><td>${statusTag(row.status)}</td>
+        <td><button class="btn success" onclick="reviewCap(${row.id},'approve')">通过</button> <button class="btn danger" onclick="reviewCap(${row.id},'reject')">驳回</button></td>
+      </tr>`).join('') || `<tr><td colspan="6" class="empty">暂无数据</td></tr>`;
+      
+      $('procRows').innerHTML = state.processes.map(row => `<tr>
+        <td>${row.id}</td><td>${row.name}</td><td>${row.cap_name || '-'}</td><td>${row.dept_name || '-'}</td><td>${statusTag(row.status)}</td>
+        <td><button class="btn success" onclick="reviewProc(${row.id},'approve')">通过</button> <button class="btn danger" onclick="reviewProc(${row.id},'reject')">驳回</button></td>
+      </tr>`).join('') || `<tr><td colspan="6" class="empty">暂无数据</td></tr>`;
+    }
+
+    async function createCapability() {
+      const name = $('capName').value.trim();
+      if (!name) return alert('请输入能力名称');
+      await api('/api/capabilities', { method:'POST', body:JSON.stringify({ name, level:$('capLevel').value, owner_dept_id:Number($('capDept').value) }) });
+      await loadCatalog();
+    }
+    
+    async function createProcess() {
+      const name = $('procName').value.trim();
+      if (!name) return alert('请输入流程名称');
+      if (!$('procCap').value) return alert('请选择所属能力');
+      await api('/api/processes', { method:'POST', body:JSON.stringify({ name, capability_id:Number($('procCap').value), owner_dept_id:Number($('procDept').value) }) });
+      await loadCatalog();
+    }
+    
+    async function reviewCap(id, action) {
+      await api(`/api/capabilities/${id}/review`, { method:'POST', body:JSON.stringify({ action }) });
+      await loadCatalog();
+    }
+    
+    async function reviewProc(id, action) {
+      await api(`/api/processes/${id}/review`, { method:'POST', body:JSON.stringify({ action }) });
+      await loadCatalog();
     }
 
     async function loadMappings() {
       state.mappings = await api('/api/mappings');
       $('mappingRows').innerHTML = state.mappings.map(row => `<tr>
         <td>${row.id}</td><td>${row.process_name || '-'}</td><td>${row.owner_dept_name || '-'}</td><td>${statusTag(row.status)}</td><td>${row.systems || '-'}</td>
-        <td><button class="btn secondary" onclick="selectMapping(${row.id})">选中</button> <button class="btn green" onclick="submitMapping(${row.id})">提交</button></td>
+        <td><button class="btn secondary" onclick="selectMapping(${row.id})">选中</button> <button class="btn success" style="margin-left: 8px;" onclick="submitMapping(${row.id})">提交</button></td>
       </tr>`).join('') || `<tr><td colspan="6" class="empty">暂无数据</td></tr>`;
       renderReviews();
     }
@@ -249,14 +509,21 @@
     }
 
     async function createMapping() {
+      const mp = $('mappingProcess');
+      if (!mp.value || !mp.selectedOptions[0].text.trim()) return alert('请选择业务流程');
       const id = await api('/api/mappings', { method:'POST', body:JSON.stringify({ process_id:Number($('mappingProcess').value), owner_dept_id:Number($('mappingDept').value), description:$('mappingDesc').value, systems:[], related_departments:[] }) });
       window.selectedMappingId = id.id;
       await loadMappings();
     }
 
     async function submitMapping(id) {
-      await api(`/api/mappings/${id}/submit`, { method:'POST' });
-      await loadMappings();
+      try {
+        await api(`/api/mappings/${id}/submit`, { method:'POST' });
+        await loadMappings();
+      } catch (e) {
+        alert(e.message || '提交失败');
+        await loadTodos();
+      }
     }
 
     async function importFields() {
@@ -265,14 +532,18 @@
       const form = new FormData();
       form.append('mapping_id', String(window.selectedMappingId));
       form.append('file', file);
-      const result = await api('/api/import/field-entries', { method:'POST', body:form });
-      alert(`已导入 ${result.imported} 行`);
+      try {
+        const result = await api('/api/import/field-entries', { method:'POST', body:form });
+        alert(`已导入 ${result.imported} 行`);
+      } catch (e) {
+        alert(e.message || '导入失败');
+      }
     }
 
     async function loadTodos() {
       const query = $('todoStatus').value ? `?status=${$('todoStatus').value}` : '';
       state.todos = await api(`/api/todos${query}`);
-      $('todoRows').innerHTML = state.todos.map(row => `<tr><td>${row.id}</td><td>${row.from_dept_name || '-'}</td><td>${row.to_dept_name || '-'}</td><td>${row.type}</td><td>${row.content}</td><td>${row.due_date || '-'}</td><td>${statusTag(row.status)}</td><td><button class="btn green" onclick="doneTodo(${row.id})">完成</button></td></tr>`).join('') || `<tr><td colspan="8" class="empty">暂无数据</td></tr>`;
+      $('todoRows').innerHTML = state.todos.map(row => `<tr><td>${row.id}</td><td>${row.from_dept_name || '-'}</td><td>${row.to_dept_name || '-'}</td><td>${row.type}</td><td>${row.content}</td><td>${row.due_date || '-'}</td><td>${statusTag(row.status)}</td><td><button class="btn success" onclick="doneTodo(${row.id})">完成</button></td></tr>`).join('') || `<tr><td colspan="8" class="empty">暂无数据</td></tr>`;
     }
 
     async function doneTodo(id) {
@@ -283,7 +554,7 @@
     async function renderReviews(detail) {
       const details = detail ? [detail] : await Promise.all(state.mappings.slice(0, 30).map(row => api(`/api/mappings/${row.id}`).catch(() => null)));
       const rows = details.filter(Boolean).flatMap(mapping => (mapping.approvalTasks || []).map(task => ({ mapping, task })));
-      $('reviewRows').innerHTML = rows.map(({ mapping, task }) => `<tr><td>${mapping.id}</td><td>${mapping.process_name || '-'}</td><td>${mapping.current_step}</td><td>${task.step_name}</td><td>${statusTag(task.status)}</td><td>${task.opinion || '-'}</td><td><button class="btn green" onclick="openReview(${mapping.id},${task.step})">处理</button></td></tr>`).join('') || `<tr><td colspan="7" class="empty">暂无数据</td></tr>`;
+      $('reviewRows').innerHTML = rows.map(({ mapping, task }) => `<tr><td>${mapping.id}</td><td>${mapping.process_name || '-'}</td><td>${mapping.current_step}</td><td>${task.step_name}</td><td>${statusTag(task.status)}</td><td>${task.opinion || '-'}</td><td><button class="btn secondary" onclick="openReview(${mapping.id},${task.step})">处理</button></td></tr>`).join('') || `<tr><td colspan="7" class="empty">暂无数据</td></tr>`;
     }
 
     function openReview(mappingId, step) {
@@ -301,11 +572,13 @@
     async function loadTerms() {
       const query = $('termStatus').value ? `?status=${$('termStatus').value}` : '';
       const terms = await api(`/api/terminology${query}`);
-      $('termRows').innerHTML = terms.map(row => `<tr><td>${row.id}</td><td>${row.term}</td><td>${row.definition || '-'}</td><td>${row.scope || '-'}</td><td>${statusTag(row.status)}</td><td><button class="btn green" onclick="reviewTerm(${row.id},'approve')">通过</button> <button class="btn red" onclick="reviewTerm(${row.id},'reject')">驳回</button></td></tr>`).join('') || `<tr><td colspan="6" class="empty">暂无数据</td></tr>`;
+      $('termRows').innerHTML = terms.map(row => `<tr><td>${row.id}</td><td>${row.term}</td><td>${row.definition || '-'}</td><td>${row.scope || '-'}</td><td>${statusTag(row.status)}</td><td><button class="btn success" onclick="reviewTerm(${row.id},'approve')">通过</button> <button class="btn danger" style="margin-left: 8px;" onclick="reviewTerm(${row.id},'reject')">驳回</button></td></tr>`).join('') || `<tr><td colspan="6" class="empty">暂无数据</td></tr>`;
     }
 
     async function saveTerm() {
-      await api('/api/terminology', { method:'POST', body:JSON.stringify({ term:$('termName').value, definition:$('termDefinition').value, scope:$('termScope').value, forbidden:$('termForbidden').value }) });
+      const term = $('termName').value.trim();
+      if (!term) return alert('请输入术语');
+      await api('/api/terminology', { method:'POST', body:JSON.stringify({ term, definition:$('termDefinition').value, scope:$('termScope').value, forbidden:$('termForbidden').value, process_id:Number($('termProcess').value) }) });
       await loadTerms();
     }
 
@@ -316,10 +589,11 @@
 
     async function loadConflicts() {
       state.conflicts = await api('/api/conflicts');
-      $('conflictRows').innerHTML = state.conflicts.map(row => `<tr><td>${row.id}</td><td>${row.conflict_type}</td><td>${statusTag(row.severity)}</td><td>${row.term || row.conflict_field || '-'}</td><td>${row.value_a || row.dept_a_meaning || '-'}</td><td>${row.value_b || row.dept_b_meaning || '-'}</td><td>${statusTag(row.status)}</td><td><button class="btn green" onclick="resolveConflict('${row.conflict_type}',${row.id})">解决</button></td></tr>`).join('') || `<tr><td colspan="8" class="empty">暂无数据</td></tr>`;
+      $('conflictRows').innerHTML = state.conflicts.map(row => `<tr><td>${row.id}</td><td>${row.conflict_type}</td><td>${statusTag(row.severity)}</td><td>${row.term || row.conflict_field || '-'}</td><td>${row.value_a || row.dept_a_meaning || '-'}</td><td>${row.value_b || row.dept_b_meaning || '-'}</td><td>${statusTag(row.status)}</td><td><button class="btn success" onclick="resolveConflict('${row.conflict_type}',${row.id})">解决</button></td></tr>`).join('') || `<tr><td colspan="8" class="empty">暂无数据</td></tr>`;
     }
 
     async function detectConflict() {
+      if (!$('detectFieldName').value.trim()) return alert('请输入字段中文名进行检测');
       await api(`/api/conflicts/detect?field_name_cn=${encodeURIComponent($('detectFieldName').value)}`, { method:'POST' });
       await loadConflicts();
     }
@@ -343,10 +617,10 @@
       if (!window.echarts) return;
       const deptCounts = {};
       state.mappings.forEach(row => { deptCounts[row.owner_dept_name || '未归属'] = (deptCounts[row.owner_dept_name || '未归属'] || 0) + 1; });
-      echarts.init($('deptChart')).setOption({ tooltip:{}, xAxis:{type:'category',data:Object.keys(deptCounts)}, yAxis:{type:'value'}, series:[{type:'bar',data:Object.values(deptCounts),itemStyle:{color:'#0891b2'}}], grid:{left:36,right:18,top:24,bottom:44} });
+      echarts.init($('deptChart')).setOption({ tooltip:{}, xAxis:{type:'category',data:Object.keys(deptCounts), axisLine:{lineStyle:{color:'#e5e7eb'}}, axisLabel:{color:'#6b7280'}}, yAxis:{type:'value', splitLine:{lineStyle:{color:'#f3f4f6'}}, axisLabel:{color:'#6b7280'}}, series:[{type:'bar',data:Object.values(deptCounts),itemStyle:{color:'#111827'}}], grid:{left:36,right:18,top:24,bottom:44} });
       const statuses = {};
       state.mappings.forEach(row => { statuses[row.status] = (statuses[row.status] || 0) + 1; });
-      echarts.init($('statusChart')).setOption({ tooltip:{trigger:'item'}, series:[{type:'pie',radius:['42%','68%'],data:Object.entries(statuses).map(([name,value]) => ({name,value}))}] });
+      echarts.init($('statusChart')).setOption({ tooltip:{trigger:'item'}, series:[{type:'pie',radius:['42%','68%'],itemStyle:{borderColor:'#fff',borderWidth:2},data:Object.entries(statuses).map(([name,value]) => ({name,value}))}], color:['#111827', '#4b5563', '#9ca3af', '#d1d5db', '#e5e7eb'] });
     }
 
     $('tabs').addEventListener('click', event => {
@@ -361,6 +635,10 @@
     $('logoutBtn').onclick = async () => { await api('/api/org/logout', { method:'POST' }).catch(() => null); location.reload(); };
     $('createMappingBtn').onclick = createMapping;
     $('refreshMappingsBtn').onclick = loadMappings;
+    $('createCapBtn').onclick = createCapability;
+    $('createProcBtn').onclick = createProcess;
+    $('refreshCapsBtn').onclick = loadCatalog;
+    $('refreshProcsBtn').onclick = loadCatalog;
     $('importBtn').onclick = importFields;
     $('exportBtn').onclick = () => { location.href = '/api/export/excel'; };
     $('refreshTodosBtn').onclick = loadTodos;
