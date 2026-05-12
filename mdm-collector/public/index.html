@@ -55,7 +55,7 @@
     .page-container {
       max-width: 1200px;
       margin: 0 auto;
-      padding: 40px 24px 80px;
+      padding: 32px 32px 80px;
     }
 
     /* Typography */
@@ -102,8 +102,8 @@
     .grid { display: grid; gap: 32px; }
     .g2 { grid-template-columns: repeat(2, 1fr); }
     .g4 { grid-template-columns: repeat(4, 1fr); }
-    .split { display: grid; grid-template-columns: 320px 1fr; gap: 64px; }
-    @media (max-width: 900px) { .split, .g2, .g4 { grid-template-columns: 1fr; gap: 32px; } }
+    .split { display: grid; grid-template-columns: minmax(360px, 30%) minmax(0, 1fr); gap: 64px; }
+
     
     .metric { padding-bottom: 16px; border-bottom: 1px solid var(--border); }
     .metric .num { font-size: 36px; font-weight: 500; color: var(--text-main); line-height: 1; letter-spacing: -0.03em; }
@@ -169,7 +169,7 @@
     /* Misc */
     .notice { font-size: 13px; color: var(--text-muted); padding: 12px 16px; background: var(--surface); border-radius: 6px; margin-bottom: 20px; border-left: 3px solid var(--border); }
     .empty { padding: 48px; color: var(--text-muted); text-align: center; font-size: 13px; }
-    .chart { height: 300px; width: 100%; margin-top: 24px; }
+    .chart { height: 450px; width: 100%; margin-top: 24px; }
     
     /* Modal */
     .modal-mask {
