@@ -713,7 +713,7 @@ draft → submitted(step1) → dept_reviewed(step2) → cross_confirmed(step3) �
                               draft                blocked                   blocked
 ```
 
-- [ ] **Step 1: 创建 mappings.js（含并行 approval_tasks 和 error 冲突拦截）**
+- [x] **Step 1: 创建 mappings.js（含并行 approval_tasks 和 error 冲突拦截）**
 
 ```javascript
 // mdm-collector/server/routes/mappings.js
@@ -1022,7 +1022,7 @@ router.post('/:id/publish', requireAuth, (req, res) => {
 module.exports = router;
 ```
 
-- [ ] **Step 2: 创建 fieldEntries.js（含列级权限控制）**
+- [x] **Step 2: 创建 fieldEntries.js（含列级权限控制）**
 
 ```javascript
 // mdm-collector/server/routes/fieldEntries.js
@@ -1142,7 +1142,7 @@ router.delete('/:id', requireAuth, (req, res) => {
 module.exports = router;
 ```
 
-- [ ] **Step 3: 创建 fieldIdentities.js**
+- [x] **Step 3: 创建 fieldIdentities.js**
 
 ```javascript
 // mdm-collector/server/routes/fieldIdentities.js
@@ -1208,7 +1208,7 @@ router.post('/:fieldEntryId/confirm', requireAuth, (req, res) => {
 module.exports = router;
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add mdm-collector/server/routes/mappings.js mdm-collector/server/routes/fieldEntries.js mdm-collector/server/routes/fieldIdentities.js
