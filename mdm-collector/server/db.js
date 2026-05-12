@@ -295,53 +295,57 @@ CREATE TABLE IF NOT EXISTS conflict_coordination_history (
 // Migration: update field_conflicts status to support new states
 const fcInfo = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='field_conflicts'").get();
 if (fcInfo && !fcInfo.sql.includes("'archived'")) {
-  db.exec(`
-    CREATE TABLE field_conflicts_new (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      field_entry_a_id INTEGER NOT NULL REFERENCES field_entries(id) ON DELETE CASCADE,
-      field_entry_b_id INTEGER NOT NULL REFERENCES field_entries(id) ON DELETE CASCADE,
-      conflict_field TEXT NOT NULL CHECK(conflict_field IN ('authoritative_system','note','field_type','sync_mode','consume_systems','other')),
-      submitter_a INTEGER REFERENCES users(id),
-      value_a TEXT,
-      submitter_b INTEGER REFERENCES users(id),
-      value_b TEXT,
-      dept_a INTEGER REFERENCES departments(id),
-      dept_b INTEGER REFERENCES departments(id),
-      severity TEXT NOT NULL CHECK(severity IN ('blocking','high','medium','low','warn','error')),
-      status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','coordinating','resolved','rejected','archived')),
-      resolution TEXT,
-      resolved_by INTEGER REFERENCES users(id),
-      resolved_at DATETIME,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-    INSERT INTO field_conflicts_new SELECT * FROM field_conflicts;
-    DROP TABLE field_conflicts;
-    ALTER TABLE field_conflicts_new RENAME TO field_conflicts;
-  `);
+  db.transaction(() => {
+    db.exec(`
+      CREATE TABLE field_conflicts_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        field_entry_a_id INTEGER NOT NULL REFERENCES field_entries(id) ON DELETE CASCADE,
+        field_entry_b_id INTEGER NOT NULL REFERENCES field_entries(id) ON DELETE CASCADE,
+        conflict_field TEXT NOT NULL CHECK(conflict_field IN ('authoritative_system','note','field_type','sync_mode','consume_systems','other')),
+        submitter_a INTEGER REFERENCES users(id),
+        value_a TEXT,
+        submitter_b INTEGER REFERENCES users(id),
+        value_b TEXT,
+        dept_a INTEGER REFERENCES departments(id),
+        dept_b INTEGER REFERENCES departments(id),
+        severity TEXT NOT NULL CHECK(severity IN ('blocking','high','medium','low','warn','error')),
+        status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','coordinating','resolved','rejected','archived')),
+        resolution TEXT,
+        resolved_by INTEGER REFERENCES users(id),
+        resolved_at DATETIME,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+      INSERT INTO field_conflicts_new SELECT * FROM field_conflicts;
+      DROP TABLE field_conflicts;
+      ALTER TABLE field_conflicts_new RENAME TO field_conflicts;
+    `);
+  })();
 }
 
 // Same for term_conflicts
 const tcInfo = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='term_conflicts'").get();
 if (tcInfo && !tcInfo.sql.includes("'archived'")) {
-  db.exec(`
-    CREATE TABLE term_conflicts_new (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      term TEXT NOT NULL,
-      dept_a INTEGER REFERENCES departments(id),
-      dept_a_meaning TEXT,
-      dept_b INTEGER REFERENCES departments(id),
-      dept_b_meaning TEXT,
-      severity TEXT NOT NULL CHECK(severity IN ('blocking','high','medium','low','warn','error')),
-      status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','coordinating','resolved','rejected','archived')),
-      resolution TEXT,
-      resolved_by INTEGER REFERENCES users(id),
-      resolved_at DATETIME,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-    INSERT INTO term_conflicts_new SELECT * FROM term_conflicts;
-    DROP TABLE term_conflicts;
-    ALTER TABLE term_conflicts_new RENAME TO term_conflicts;
-  `);
+  db.transaction(() => {
+    db.exec(`
+      CREATE TABLE term_conflicts_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        term TEXT NOT NULL,
+        dept_a INTEGER REFERENCES departments(id),
+        dept_a_meaning TEXT,
+        dept_b INTEGER REFERENCES departments(id),
+        dept_b_meaning TEXT,
+        severity TEXT NOT NULL CHECK(severity IN ('blocking','high','medium','low','warn','error')),
+        status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','coordinating','resolved','rejected','archived')),
+        resolution TEXT,
+        resolved_by INTEGER REFERENCES users(id),
+        resolved_at DATETIME,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+      INSERT INTO term_conflicts_new SELECT * FROM term_conflicts;
+      DROP TABLE term_conflicts;
+      ALTER TABLE term_conflicts_new RENAME TO term_conflicts;
+    `);
+  })();
 }
 
 module.exports = db;
