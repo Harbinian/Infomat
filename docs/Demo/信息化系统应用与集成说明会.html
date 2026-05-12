@@ -1038,6 +1038,97 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
     <div class="card"><h3>有 MDM 的效果</h3><p>接口有共同语言，字段有权威来源，异常有责任人，追溯链可以跨系统连续查询。</p></div>
     <div class="card"><h3>今天要确认</h3><p>组织身份权威源、编码规范推进路径、字段台账责任、Q7 数据中台/集成总线路线。</p></div>
   </div>
+  <!-- ── MDM 五阶段流水线总览 ── -->
+  <div class="sec-hd sub" id="mdm-pipeline"><div class="sec-num" style="background:var(--green)">◆</div><div><h2>MDM 五阶段工作流程</h2><div class="sd">定标准 → 清存量 → 控过程 → 促集成 → 保运行</div></div></div>
+
+  <div class="dataflow">
+    <svg viewBox="0 0 640 200" role="img" aria-label="MDM 五阶段流水线">
+      <defs>
+        <marker id="mdm-ar" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#7dd3fc"/></marker>
+      </defs>
+      <rect x="10" y="10" width="620" height="180" rx="16" fill="none" stroke="rgba(255,255,255,.08)"/>
+      <rect x="20" y="30" width="110" height="100" rx="12" fill="rgba(255,255,255,.1)" stroke="rgba(255,255,255,.2)"/>
+      <text x="75" y="60" text-anchor="middle" fill="#fff" font-size="16" font-weight="900">定标准</text>
+      <text x="75" y="80" text-anchor="middle" fill="rgba(255,255,255,.6)" font-size="10">体系定义 · 编码规范</text>
+      <text x="75" y="96" text-anchor="middle" fill="rgba(255,255,255,.6)" font-size="10">属性标准 · 职责划分</text>
+      <path d="M134 80 L148 80" stroke="#7dd3fc" stroke-width="3" marker-end="url(#mdm-ar)"/>
+      <rect x="150" y="30" width="110" height="100" rx="12" fill="rgba(255,255,255,.1)" stroke="rgba(255,255,255,.2)"/>
+      <text x="205" y="60" text-anchor="middle" fill="#fbbf24" font-size="16" font-weight="900">清存量</text>
+      <text x="205" y="80" text-anchor="middle" fill="rgba(255,255,255,.6)" font-size="10">多源盘点 · 人工去重</text>
+      <text x="205" y="96" text-anchor="middle" fill="rgba(255,255,255,.6)" font-size="10">补全属性 · 校验规则</text>
+      <path d="M264 80 L278 80" stroke="#7dd3fc" stroke-width="3" marker-end="url(#mdm-ar)"/>
+      <rect x="280" y="30" width="110" height="100" rx="12" fill="rgba(255,255,255,.1)" stroke="rgba(255,255,255,.2)"/>
+      <text x="335" y="60" text-anchor="middle" fill="#c084fc" font-size="16" font-weight="900">控过程</text>
+      <text x="335" y="80" text-anchor="middle" fill="rgba(255,255,255,.6)" font-size="10">全生命周期 · 变更审批</text>
+      <text x="335" y="96" text-anchor="middle" fill="rgba(255,255,255,.6)" font-size="10">权限架构 · 闭环管控</text>
+      <path d="M394 80 L408 80" stroke="#7dd3fc" stroke-width="3" marker-end="url(#mdm-ar)"/>
+      <rect x="410" y="30" width="110" height="100" rx="12" fill="rgba(255,255,255,.1)" stroke="rgba(255,255,255,.2)"/>
+      <text x="465" y="60" text-anchor="middle" fill="#4ade80" font-size="16" font-weight="900">促集成</text>
+      <text x="465" y="80" text-anchor="middle" fill="rgba(255,255,255,.6)" font-size="10">系统打通 · 同源同步</text>
+      <text x="465" y="96" text-anchor="middle" fill="rgba(255,255,255,.6)" font-size="10">映射关系 · 双向实时</text>
+      <path d="M524 80 L538 80" stroke="#7dd3fc" stroke-width="3" marker-end="url(#mdm-ar)"/>
+      <rect x="540" y="30" width="80" height="100" rx="12" fill="rgba(255,255,255,.1)" stroke="rgba(255,255,255,.2)"/>
+      <text x="580" y="60" text-anchor="middle" fill="#fda4af" font-size="16" font-weight="900">保运行</text>
+      <text x="580" y="80" text-anchor="middle" fill="rgba(255,255,255,.6)" font-size="10">导入校验 · 培训</text>
+      <text x="580" y="96" text-anchor="middle" fill="rgba(255,255,255,.6)" font-size="10">动态维护 · 持续清洗</text>
+      <rect x="20" y="145" width="600" height="36" rx="10" fill="rgba(255,255,255,.08)" stroke="rgba(255,255,255,.12)"/>
+      <text x="320" y="167" text-anchor="middle" fill="#7dd3fc" font-size="14" font-weight="900">一物一码 · 一处维护 · 多系统一致消费</text>
+    </svg>
+    <div class="legend">
+      <span>定标准 → 清存量 → 控过程 → 促集成 → 保运行</span>
+    </div>
+  </div>
+
+  <!-- ── MDM 阶段一：体系定义与标准制定 ── -->
+  <div class="sec-hd sub" id="mdm-stage1"><div class="sec-num" style="background:var(--green)">1</div><div><h2>阶段一：体系定义与标准制定</h2><div class="sd">确立企业全局的"通用语言"和"唯一身份证"规则，从源头杜绝一物多码。</div></div></div>
+
+  <div class="card">
+    <h3>一、主数据分类体系</h3>
+    <p>明确划分以下八大类主数据，每类建立独立的管理标准和属性模板：</p>
+    <div class="cat-grid" style="margin-top:12px">
+      <div class="cat-card"><div class="cat-icon">🔩</div><div class="cat-name">标准件</div><div class="cat-desc">紧固件、轴承等<br/>国标/航标件</div></div>
+      <div class="cat-card"><div class="cat-icon">🧱</div><div class="cat-name">原材料</div><div class="cat-desc">金属/非金属<br/>板材、型材</div></div>
+      <div class="cat-card"><div class="cat-icon">💻</div><div class="cat-name">电子元器件</div><div class="cat-desc">电阻、电容<br/>连接器、线缆</div></div>
+      <div class="cat-card"><div class="cat-icon">⚙️</div><div class="cat-name">零组件</div><div class="cat-desc">自制/外协件<br/>组件、部件</div></div>
+      <div class="cat-card"><div class="cat-icon">🔧</div><div class="cat-name">工艺组件</div><div class="cat-desc">工艺拆分件<br/>虚拟件</div></div>
+      <div class="cat-card"><div class="cat-icon">🏭</div><div class="cat-name">设备</div><div class="cat-desc">生产设备<br/>检测设备</div></div>
+      <div class="cat-card"><div class="cat-icon">🛠️</div><div class="cat-name">工装</div><div class="cat-desc">模具、夹具<br/>型架、样板</div></div>
+      <div class="cat-card"><div class="cat-icon">📐</div><div class="cat-name">工具</div><div class="cat-desc">刀具、量具<br/>辅具</div></div>
+    </div>
+  </div>
+
+  <div class="g2">
+    <div class="card">
+      <h3>二、统一编码规范</h3>
+      <ul>
+        <li>支持<strong>不少于 30 位混合编码</strong>，涵盖大类、中类、小类、流水号及校验位</li>
+        <li>每一物料/零部件分配<strong>唯一编码</strong>，作为跨系统的"身份证号"</li>
+        <li>编码规则需兼顾<strong>可读性、可扩展性和机器解析</strong>要求</li>
+        <li>从源头杜绝"一物多码"和"多物一码"</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>三、标准化属性标准</h3>
+      <ul>
+        <li><strong>必填属性：</strong>每类数据定义不可为空的强制字段</li>
+        <li><strong>可选属性：</strong>视业务场景需要的辅助字段</li>
+        <li>示例 — 材料类必填：标准号、牌号、供应状态、规格、密度</li>
+        <li>示例 — 零组件类必填：图号、名称、版次、材料牌号、重量</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>四、归口管理职责</h3>
+    <p>落实各部门维护责任，确保每类主数据有明确的 Owner：</p>
+    <div class="resp-grid" style="margin-top:10px">
+      <div class="resp-card"><div class="r-sys">物料主数据</div><div class="r-dept">物资保障部 + 工程技术部</div><div class="r-desc">联合维护物料编码、名称、规格、计量单位等核心属性</div></div>
+      <div class="resp-card"><div class="r-sys">设备主数据</div><div class="r-dept">运维安环部</div><div class="r-desc">维护设备台账、技术参数、保养周期、精度指标</div></div>
+      <div class="resp-card"><div class="r-sys">零组件主数据</div><div class="r-dept">工程技术部</div><div class="r-desc">维护图号、名称、版次、材料、工艺路线等工程属性</div></div>
+      <div class="resp-card"><div class="r-sys">工装 / 工具主数据</div><div class="r-dept">工程技术部 + 复材车间</div><div class="r-desc">维护工装图号、工具编号、适用机型、检定周期</div></div>
+    </div>
+  </div>
+
 </div>
 
 <!-- ══ 13 系统集成拓扑 + 五条数据流 ══ -->
