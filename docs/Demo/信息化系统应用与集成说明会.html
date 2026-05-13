@@ -512,6 +512,45 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
 .danger{background:#fef2f2;border:1px solid #fecaca;border-left:4px solid var(--red);border-radius:8px;padding:12px 16px;margin-bottom:14px}
 .danger .dt{font-size:13px;font-weight:800;color:#991b1b;margin-bottom:5px}
 .danger p{font-size:12px;color:#7f1d1d;line-height:1.8}
+
+/* ── PART DIVIDER (全屏分隔页) ── */
+.part-divider{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:70px 8vw 60px;position:relative;overflow:hidden;scroll-margin-top:50px}
+.part-divider.p1{background:linear-gradient(135deg,#0a1e40 0%,#1a56db 70%,#3b82f6 100%)}
+.part-divider.p2{background:linear-gradient(135deg,#0a2e3a 0%,#0891b2 70%,#22d3ee 100%)}
+.part-divider.p3{background:linear-gradient(135deg,#0a1f0a 0%,#16a34a 70%,#22c55e 100%)}
+.part-divider.p4{background:linear-gradient(135deg,#3a1f0a 0%,#d97706 70%,#f59e0b 100%)}
+.part-label{font-size:12px;letter-spacing:3px;margin-bottom:14px;text-transform:uppercase}
+.p1 .part-label{color:#93c5fd}.p2 .part-label{color:#a5f3fc}
+.p3 .part-label{color:#86efac}.p4 .part-label{color:#fcd34d}
+.part-title{font-size:clamp(22px,3.5vw,36px);font-weight:800;color:#fff;margin-bottom:10px}
+.part-range{font-size:13px;margin-bottom:6px}
+.p1 .part-range{color:#bfdbfe}.p2 .part-range{color:#cffafe}
+.p3 .part-range{color:#bbf7d0}.p4 .part-range{color:#fde68a}
+.part-rule{width:40px;height:3px;margin:20px 0}
+.p1 .part-rule{background:rgba(255,255,255,.3)}.p2 .part-rule{background:rgba(255,255,255,.3)}
+.p3 .part-rule{background:rgba(255,255,255,.3)}.p4 .part-rule{background:rgba(255,255,255,.3)}
+.part-hook{font-size:15px;line-height:1.8}
+.p1 .part-hook{color:rgba(255,255,255,.8)}.p2 .part-hook{color:rgba(255,255,255,.8)}
+.p3 .part-hook{color:rgba(255,255,255,.8)}.p4 .part-hook{color:rgba(255,255,255,.8)}
+
+/* ── INTRO PAGE (引言页) ── */
+#intro{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:70px 8vw 60px;background:linear-gradient(135deg,#081e4a 0%,#1a56db 55%,#0891b2 100%);position:relative;overflow:hidden;scroll-margin-top:50px}
+#intro::before{content:'';position:absolute;top:-40%;right:-10%;width:600px;height:600px;border-radius:50%;background:rgba(255,255,255,.04);pointer-events:none}
+.intro-hook{font-size:clamp(18px,3vw,24px);font-weight:800;color:#fff;line-height:1.6;text-align:center;margin-bottom:8px}
+.intro-punch{font-size:clamp(24px,4vw,36px);font-weight:900;color:#fde68a;text-align:center;margin-bottom:24px}
+.intro-body{font-size:14px;color:#bfdbfe;line-height:1.9;text-align:center;max-width:580px;margin:0 auto 36px}
+.intro-agenda{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;padding-top:22px;border-top:1px solid rgba(255,255,255,.15);font-size:12px}
+.intro-agenda .ia-step{color:#93c5fd;font-weight:700}
+.intro-agenda .ia-arr{color:rgba(255,255,255,.25);font-size:14px}
+.intro-agenda .ia-step:nth-of-type(3){color:#a5f3fc}
+.intro-agenda .ia-step:nth-of-type(5){color:#86efac}
+.intro-agenda .ia-step:nth-of-type(7){color:#fcd34d}
+
+/* ── NAV PART BADGES ── */
+.nav-badge{display:inline-block;font-size:9px;font-weight:800;padding:2px 5px;border-radius:3px;color:#fff;flex-shrink:0;vertical-align:middle;margin:0 2px}
+.nav-badge.p1{background:#1a56db}.nav-badge.p2{background:#0891b2}
+.nav-badge.p3{background:#16a34a}.nav-badge.p4{background:#d97706}
+.nav-sep{color:rgba(255,255,255,.22);font-size:9px;vertical-align:middle;margin:0 1px;user-select:none}
 </style>
 </head>
 <body>
@@ -521,12 +560,17 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
 <div class="nav-logo">昌兴复材 · 信息化系统应用与集成说明会</div>
   <button class="nav-toggle" id="navToggle" type="button" aria-label="目录" aria-controls="navLinks" aria-expanded="false"><span></span><span></span><span></span></button>
   <div class="nav-links" id="navLinks">
-    <a href="#cover">首页</a><a href="#s1">会议定位</a><a href="#s2">数字化目标</a><a href="#s3">4套系统</a>
-    <a href="#s4">排期</a><a href="#s5">里程碑</a><a href="#s6">卡点</a>
-    <a href="#s7">OA</a><a href="#s8">PLM</a><a href="#s9">MES</a><a href="#s10">其他系统</a>
-    <a href="#s11">事故链</a><a href="#s12">MDM基石</a><a href="#s13">拓扑数据流</a>
-    <a href="#s14">MDM路径</a><a href="#s15">黄金源</a><a href="#s16">接口</a>
-    <a href="#s17">Q成熟度</a><a href="#s18">组织分工</a><a href="#s19">行动清单</a><a href="#appendix">附录</a>
+    <a href="#cover">首页</a><a href="#intro">引言</a>
+    <span class="nav-sep">│</span>
+    <span class="nav-badge p1">P1</span><a href="#s1">会议定位</a><a href="#s2">数字化目标</a><a href="#s3">4套系统</a>
+    <a href="#s4">排期</a><a href="#s5">里程碑</a><a href="#s6">卡点</a><a href="#s7">OA</a>
+    <span class="nav-sep">│</span>
+    <span class="nav-badge p2">P2</span><a href="#s8">PLM</a><a href="#s9">MES</a><a href="#s10">其他系统</a><a href="#s11">事故链</a>
+    <span class="nav-sep">│</span>
+    <span class="nav-badge p3">P3</span><a href="#s12">MDM基石</a><a href="#s13">拓扑数据流</a>
+    <a href="#s14">MDM路径</a><a href="#s15">黄金源</a><a href="#s16">接口</a><a href="#s17">Q成熟度</a>
+    <span class="nav-sep">│</span>
+    <span class="nav-badge p4">P4</span><a href="#s18">组织分工</a><a href="#s19">行动清单</a><a href="#appendix">附录</a>
   </div>
 </nav>
 
@@ -562,7 +606,36 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
   <div class="scroll-hint">向下滚动</div>
 </div>
 
+<!-- ══ 引言页 ══ -->
+<div id="intro">
+  <div style="font-size:40px;margin-bottom:22px;text-align:center">&#x1F50D;</div>
+  <div class="intro-hook">一个零件，五个系统，五种叫法——</div>
+  <div class="intro-punch">追溯链在哪里？</div>
+  <div class="intro-body">航空复材制造的命脉是零件编号 + 质量编号的全链路追溯。<br/>今天这场说明会，我们直面 4 套系统的集成路线、<br/>主数据底座的建设路径，以及会后每个部门的行动清单。</div>
+  <div class="intro-agenda">
+    <span class="ia-step" style="color:#93c5fd">P1 定位与方案</span>
+    <span class="ia-arr">→</span>
+    <span class="ia-step" style="color:#a5f3fc">P2 系统简介</span>
+    <span class="ia-arr">→</span>
+    <span class="ia-step" style="color:#86efac">P3 集成之路</span>
+    <span class="ia-arr">→</span>
+    <span class="ia-step" style="color:#fcd34d">P4 分工行动</span>
+  </div>
+  <div class="scroll-hint">向下滚动</div>
+</div>
+
+
 <div class="page">
+
+<!-- ══ Part 1 分隔页 ══ -->
+<div class="part-divider p1" id="part1">
+  <div class="part-label">P A R T &nbsp;&nbsp; 1</div>
+  <div class="part-title">定位、目标与集成方案</div>
+  <div class="part-range">第 1–7 章</div>
+  <div class="part-rule"></div>
+  <div class="part-hook">先说清楚"我们要做什么"<br/>和"系统之间怎么连"</div>
+  <div class="scroll-hint" style="position:static;margin-top:40px;transform:none">向下滚动</div>
+</div>
 
 <!-- ══ 1 会议定位 ══ -->
 <div class="sec" id="s1">
@@ -674,6 +747,16 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
   <div class="sec-hd sub"><div class="sec-num" style="background:var(--amber)">6</div><div><h2>6 大关键业务闭环</h2><div class="sd">提醒在 OA，办理在业务系统，结果要回写</div></div></div>
   <div class="loop-grid"><div class="loop-item oa"><div class="loop-title">统一待办闭环</div><div class="loop-flow">ERP/PLM/MES 产生任务 → OA 聚合提醒 → 用户查看 → 跳转办理或 OA 审批 → 状态反馈</div><div class="loop-key">避免多系统漏看待办</div></div><div class="loop-item oa"><div class="loop-title">审批证据闭环</div><div class="loop-flow">申请 → 会签 → 审批意见 → 附件/签章 → 归档 → 审计查询</div><div class="loop-key">证据可查、版本可追</div></div><div class="loop-item oa"><div class="loop-title">ECO 协同闭环</div><div class="loop-flow">PLM 发起 ECO → OA 提醒/会签 → PLM 生效 → 影响对象同步 ERP/MES</div><div class="loop-key">OA 不替代 PLM 发布</div></div><div class="loop-item oa"><div class="loop-title">MES 放行闭环</div><div class="loop-flow">MES 提交质量/工艺审批 → OA 提醒 → 责任人处理 → MES 接收结果 → 工序继续或冻结</div><div class="loop-key">审批未通过不得流转</div></div><div class="loop-item oa"><div class="loop-title">组织权限闭环</div><div class="loop-flow">人员入转调离 → OA/MDM 更新 → ERP/PLM/MES 同步 → 权限校验 → 异常回收</div><div class="loop-key">离岗即收权，授权可追溯</div></div><div class="loop-item oa"><div class="loop-title">门户跳转闭环</div><div class="loop-flow">OA 门户展示业务待办 → SSO 校验 → 跳转原系统 → 原系统办理 → 结果回传 OA</div><div class="loop-key">二次开发边界需接口卡确认</div></div></div>
   <div class="warn"><div class="wt">说明会口径约束</div><p>OA 是协同入口、提醒中心和流程证据层，不替 ERP 做账务、不替 PLM 做版本发布、不替 MES 做现场执行。凡涉及跨系统待办拉取、入口跳转、单点登录、审批结果回写和移动端办理，均需在接口卡中明确触发条件、字段范围、失败补偿和二次开发边界。</p></div>
+</div>
+
+<!-- ══ Part 2 分隔页 ══ -->
+<div class="part-divider p2" id="part2">
+  <div class="part-label">P A R T &nbsp;&nbsp; 2</div>
+  <div class="part-title">系统简介</div>
+  <div class="part-range">第 8–11 章</div>
+  <div class="part-rule"></div>
+  <div class="part-hook">逐系统快速过一遍<br/>"每个系统管什么、不做什么"</div>
+  <div class="scroll-hint" style="position:static;margin-top:40px;transform:none">向下滚动</div>
 </div>
 
 <!-- ══ 8 PLM 是什么 ══ -->
@@ -1011,6 +1094,16 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
       </div>
     </div>
   </div>
+</div>
+
+<!-- ══ Part 3 分隔页 ══ -->
+<div class="part-divider p3" id="part3">
+  <div class="part-label">P A R T &nbsp;&nbsp; 3</div>
+  <div class="part-title">集成执行的必经之路</div>
+  <div class="part-range">第 12–17 章</div>
+  <div class="part-rule"></div>
+  <div class="part-hook">从事故链到 MDM 基石，再到接口设计<br/>和 Q1–Q8 成熟度判断</div>
+  <div class="scroll-hint" style="position:static;margin-top:40px;transform:none">向下滚动</div>
 </div>
 
 <!-- ══ 12 MDM 是基石，不是可选项 ══ -->
@@ -1709,6 +1802,16 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
       </tbody>
     </table></div>
   </div>
+</div>
+
+<!-- ══ Part 4 分隔页 ══ -->
+<div class="part-divider p4" id="part4">
+  <div class="part-label">P A R T &nbsp;&nbsp; 4</div>
+  <div class="part-title">组织分工与行动清单</div>
+  <div class="part-range">第 18–19 章</div>
+  <div class="part-rule"></div>
+  <div class="part-hook">落实"谁确认、谁负责"<br/>和会后的每一条待办事项</div>
+  <div class="scroll-hint" style="position:static;margin-top:40px;transform:none">向下滚动</div>
 </div>
 
 <!-- ══ 18 组织分工确认 ══ -->
