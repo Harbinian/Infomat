@@ -21,9 +21,10 @@ function runDbAction(res, action) {
 
 router.get('/', requireAuth, (req, res) => {
   const capabilities = db.prepare(`
-    SELECT c.*, d.name as dept_name
+    SELECT c.*, d.name as dept_name, pc.name as parent_name
     FROM capabilities c
     LEFT JOIN departments d ON c.owner_dept_id = d.id
+    LEFT JOIN capabilities pc ON c.parent_id = pc.id
     ORDER BY c.level, c.name
   `).all();
   res.json(capabilities);
@@ -31,20 +32,21 @@ router.get('/', requireAuth, (req, res) => {
 
 router.post('/', requireAuth, (req, res) => {
   return runDbAction(res, () => {
-    const { name, level, owner_dept_id } = req.body;
-    const stmt = db.prepare('INSERT INTO capabilities (name, level, owner_dept_id, created_by) VALUES (?, ?, ?, ?)');
-    const result = stmt.run(name, level, owner_dept_id || null, req.session.userId);
+    const { name, level, owner_dept_id, parent_id } = req.body;
+    const stmt = db.prepare('INSERT INTO capabilities (name, level, owner_dept_id, parent_id, created_by) VALUES (?, ?, ?, ?, ?)');
+    const result = stmt.run(name, level, owner_dept_id || null, parent_id || null, req.session.userId);
     res.json({ id: result.lastInsertRowid });
   });
 });
 
 router.put('/:id', requireAuth, (req, res) => {
   return runDbAction(res, () => {
-    const { name, level, owner_dept_id } = req.body;
-    db.prepare('UPDATE capabilities SET name=?, level=?, owner_dept_id=? WHERE id=?').run(
+    const { name, level, owner_dept_id, parent_id } = req.body;
+    db.prepare('UPDATE capabilities SET name=?, level=?, owner_dept_id=?, parent_id=? WHERE id=?').run(
       name,
       level,
       owner_dept_id || null,
+      parent_id || null,
       req.params.id
     );
     res.json({ success: true });
