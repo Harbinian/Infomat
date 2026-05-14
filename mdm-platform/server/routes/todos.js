@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const { requireAuth } = require('../auth');
+const { canUseTodo, isAdmin } = require('../access');
 
 function handleDbError(res, error) {
   if (error && (String(error.code).startsWith('SQLITE_CONSTRAINT') || String(error.message).includes('constraint failed'))) {
@@ -66,6 +67,9 @@ router.get('/', requireAuth, (req, res) => {
 
 router.post('/', requireAuth, (req, res) => {
   return runDbAction(res, () => {
+    if (!isAdmin(req)) {
+      return res.status(403).json({ error: '仅管理员可创建待办' });
+    }
     const { from_dept_id, to_dept_id, type, related_mapping_id, related_field_id, content, due_date, urgency } = req.body;
     const stmt = db.prepare(`
       INSERT INTO todos (from_dept_id, to_dept_id, type, related_mapping_id, related_field_id, content, due_date, urgency)
@@ -87,6 +91,9 @@ router.post('/', requireAuth, (req, res) => {
 
 router.post('/:id/done', requireAuth, (req, res) => {
   return runDbAction(res, () => {
+    const todo = db.prepare('SELECT * FROM todos WHERE id=?').get(req.params.id);
+    if (!todo) return res.status(404).json({ error: '待办不存在' });
+    if (!canUseTodo(req, todo)) return res.status(403).json({ error: '无权处理该待办' });
     db.prepare("UPDATE todos SET status='done', done_at=datetime('now') WHERE id=?").run(req.params.id);
     res.json({ success: true });
   });
@@ -94,6 +101,9 @@ router.post('/:id/done', requireAuth, (req, res) => {
 
 router.delete('/:id', requireAuth, (req, res) => {
   return runDbAction(res, () => {
+    const todo = db.prepare('SELECT * FROM todos WHERE id=?').get(req.params.id);
+    if (!todo) return res.status(404).json({ error: '待办不存在' });
+    if (!canUseTodo(req, todo)) return res.status(403).json({ error: '无权删除该待办' });
     db.prepare('DELETE FROM todos WHERE id=?').run(req.params.id);
     res.json({ success: true });
   });

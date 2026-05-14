@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+  <script src="echarts.min.js"></script>
   <title>MDM 平台</title>
   <style>
     :root {
@@ -265,10 +265,10 @@
   <div class="page-container">
     <section class="login" id="loginBox">
       <h2>登录系统</h2>
-      <div class="form-group"><label>工号<input id="employeeNo" value="ADMIN001" autocomplete="username"></label></div>
-      <div class="form-group"><label>密码<input id="password" type="password" value="admin123" autocomplete="current-password"></label></div>
+      <div class="form-group"><label>工号<input id="employeeNo" autocomplete="username"></label></div>
+      <div class="form-group"><label>密码<input id="password" type="password" autocomplete="current-password"></label></div>
       <button class="btn primary" id="loginBtn" style="width: 100%; height: 36px; margin-top: 8px;">登录</button>
-      <div class="notice" id="loginMsg" style="text-align: center; margin-top: 16px; background: transparent; border: none;">测试账号: ADMIN001 / admin123</div>
+      <div class="notice" id="loginMsg" style="text-align: center; margin-top: 16px; background: transparent; border: none;"></div>
     </section>
 
     <div id="appContent" style="display: none;">
@@ -458,6 +458,16 @@
     const state = { user:null, departments:[], capabilities:[], processes:[], mappings:[], todos:[], conflicts:[], terms:[], currentRoute:null, currentView:'dashboard', activeMapping:null, activeConflict:null, pollTimer:null, isEditing:false, activeReview:null, activeCapReview:null, activeProcReview:null };
     const $ = id => document.getElementById(id);
 
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, function(ch) {
+        return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch];
+      });
+    }
+
+    function safeText(value, fallback = '-') {
+      return escapeHtml(value === null || value === undefined || value === '' ? fallback : value);
+    }
+
     // ===== API helper (with 401 handling) =====
     async function api(path, options = {}) {
       const res = await fetch(path, { credentials:'same-origin', headers:{ ...(options.body && !(options.body instanceof FormData) ? {'Content-Type':'application/json'} : {}) }, ...options });
@@ -475,11 +485,11 @@
     function statusTag(status) {
       const map = { draft:'草稿', submitted:'已提交', dept_reviewed:'部门内审', cross_confirmed:'跨部门确认', fields_confirmed:'字段确认', final_reviewed:'终审', published:'已发布', pending:'待处理', done:'已完成', resolved:'已解决', rejected:'已驳回', approved:'已通过', blocked:'阻断', coordinating:'协调中', archived:'已归档' };
       const cls = /published|approved|done|resolved/.test(status) ? 'green' : /blocked|rejected|error/.test(status) ? 'red' : /pending|submitted|coordinating/.test(status) ? 'amber' : '';
-      return '<span class="tag ' + cls + '">' + (map[status] || status || '-') + '</span>';
+      return '<span class="tag ' + cls + '">' + safeText(map[status] || status) + '</span>';
     }
 
     function fillSelect(select, rows, labelKey = 'name') {
-      select.innerHTML = rows.map(row => '<option value="' + row.id + '">' + (row[labelKey] || row.name) + '</option>').join('');
+      select.innerHTML = rows.map(row => '<option value="' + Number(row.id) + '">' + safeText(row[labelKey] || row.name) + '</option>').join('');
     }
 
     // ===== Toast system =====
@@ -488,7 +498,7 @@
       const icons = { success: '✓', error: '✗', warning: '⚠' };
       const toast = document.createElement('div');
       toast.className = 'toast ' + type;
-      toast.innerHTML = '<span>' + (icons[type] || '') + '</span><span>' + message + '</span>';
+      toast.innerHTML = '<span>' + safeText(icons[type] || '') + '</span><span>' + safeText(message, '') + '</span>';
       container.appendChild(toast);
       setTimeout(function() { toast.style.opacity = '0'; toast.style.transition = 'opacity 0.3s'; setTimeout(function() { toast.remove(); }, 300); }, 3000);
     }
@@ -499,8 +509,8 @@
       if (!items || items.length === 0) { bc.style.display = 'none'; return; }
       bc.style.display = 'flex';
       bc.innerHTML = items.map(function(item, i) {
-        if (i === items.length - 1) return '<span>' + item.label + '</span>';
-        return '<a onclick="' + (item.onclick || '') + '">' + item.label + '</a><span class="sep">›</span>';
+        if (i === items.length - 1) return '<span>' + safeText(item.label, '') + '</span>';
+        return '<a onclick="' + (item.onclick || '') + '">' + safeText(item.label, '') + '</a><span class="sep">›</span>';
       }).join('');
     }
 
@@ -566,7 +576,8 @@
       return new Promise(function(resolve) {
         var overlay = $('confirmOverlay');
         $('confirmTitle').textContent = opts.title;
-        $('confirmMessage').innerHTML = opts.message;
+        if (opts.allowHtml) $('confirmMessage').innerHTML = opts.message;
+        else $('confirmMessage').textContent = opts.message || '';
         var btn = $('confirmBtn');
         btn.textContent = opts.confirmLabel || '确认';
         btn.className = 'btn ' + (opts.confirmClass || 'primary');
@@ -667,15 +678,19 @@
 
     function renderCapsAndProcs() {
       $('capRows').innerHTML = state.capabilities.map(function(row) {
-        return '<tr style="cursor:pointer;" onclick="renderCapPreview(' + row.id + ');' +
+        var rowId = Number(row.id);
+        return '<tr style="cursor:pointer;" onclick="renderCapPreview(' + rowId + ');' +
           "var rows=this.parentElement.querySelectorAll('tr');rows.forEach(function(r){r.style.background='';});this.style.background='#fefafa';" +
           '">' +
-          '<td>' + row.id + '</td><td>' + row.name + '</td><td>' + row.level + '</td><td>' + (row.dept_name || '-') + '</td><td>' + statusTag(row.status) + '</td>' +
-          '<td><button class="btn success" onclick="event.stopPropagation();reviewCap(' + row.id + ',\'approve\')">通过</button> ' +
-          '<button class="btn danger" onclick="event.stopPropagation();reviewCap(' + row.id + ',\'reject\')">驳回</button></td></tr>';
+          '<td>' + rowId + '</td><td>' + safeText(row.name) + '</td><td>' + safeText(row.level) + '</td><td>' + safeText(row.dept_name) + '</td><td>' + statusTag(row.status) + '</td>' +
+          '<td><button class="btn success" onclick="event.stopPropagation();reviewCap(' + rowId + ',\'approve\')">通过</button> ' +
+          '<button class="btn danger" onclick="event.stopPropagation();reviewCap(' + rowId + ',\'reject\')">驳回</button></td></tr>';
       }).join('') || '<tr><td colspan="6" class="empty">暂无数据</td></tr>';
 
-      $('procRows').innerHTML = state.processes.map(function(row) { return '<tr><td>' + row.id + '</td><td>' + row.name + '</td><td>' + (row.cap_name || '-') + '</td><td>' + (row.dept_name || '-') + '</td><td>' + statusTag(row.status) + '</td><td><button class="btn secondary" onclick="navigateTo(\'detail\',{tab:\'processes\',type:\'process\',id:' + row.id + '})">详情</button> <button class="btn success" onclick="reviewProc(' + row.id + ',\'approve\')">通过</button> <button class="btn danger" onclick="reviewProc(' + row.id + ',\'reject\')">驳回</button></td></tr>'; }).join('') || '<tr><td colspan="6" class="empty">暂无数据</td></tr>';
+      $('procRows').innerHTML = state.processes.map(function(row) {
+        var rowId = Number(row.id);
+        return '<tr><td>' + rowId + '</td><td>' + safeText(row.name) + '</td><td>' + safeText(row.cap_name) + '</td><td>' + safeText(row.dept_name) + '</td><td>' + statusTag(row.status) + '</td><td><button class="btn secondary" onclick="navigateTo(\'detail\',{tab:\'processes\',type:\'process\',id:' + rowId + '})">详情</button> <button class="btn success" onclick="reviewProc(' + rowId + ',\'approve\')">通过</button> <button class="btn danger" onclick="reviewProc(' + rowId + ',\'reject\')">驳回</button></td></tr>';
+      }).join('') || '<tr><td colspan="6" class="empty">暂无数据</td></tr>';
     }
 
     async function createCapability() {
@@ -760,7 +775,10 @@
         container.innerHTML = '<div class="empty">暂无报送记录，去 <a onclick="navigateTo(\'list\',{tab:\'capabilities\'})">新建报送</a> 开始</div>';
         return;
       }
-      container.innerHTML = '<div class="table-container"><table><thead><tr><th>ID</th><th>流程</th><th>部门</th><th>状态</th><th>提交时间</th><th>操作</th></tr></thead><tbody>' + mappings.map(function(row) { return '<tr><td>' + row.id + '</td><td>' + (row.process_name || '-') + '</td><td>' + (row.owner_dept_name || '-') + '</td><td>' + statusTag(row.status) + '</td><td>' + (row.submitted_at || row.created_at || '-') + '</td><td><button class="btn secondary" onclick="navigateTo(\'detail\',{tab:\'mySubmissions\',type:\'mapping\',id:' + row.id + '})">查看</button>' + (row.status === 'draft' ? '<button class="btn primary" style="margin-left:4px;" onclick="submitMapping(' + row.id + ')">提交</button>' : '') + '</td></tr>'; }).join('') + '</tbody></table></div>';
+      container.innerHTML = '<div class="table-container"><table><thead><tr><th>ID</th><th>流程</th><th>部门</th><th>状态</th><th>提交时间</th><th>操作</th></tr></thead><tbody>' + mappings.map(function(row) {
+        var rowId = Number(row.id);
+        return '<tr><td>' + rowId + '</td><td>' + safeText(row.process_name) + '</td><td>' + safeText(row.owner_dept_name) + '</td><td>' + statusTag(row.status) + '</td><td>' + safeText(row.submitted_at || row.created_at) + '</td><td><button class="btn secondary" onclick="navigateTo(\'detail\',{tab:\'mySubmissions\',type:\'mapping\',id:' + rowId + '})">查看</button>' + (row.status === 'draft' ? '<button class="btn primary" style="margin-left:4px;" onclick="submitMapping(' + rowId + ')">提交</button>' : '') + '</td></tr>';
+      }).join('') + '</tbody></table></div>';
     }
 
     // ===== Load Reviews =====
@@ -802,15 +820,17 @@
       });
 
       container.innerHTML = state.todos.map(function(row) {
+        var rowId = Number(row.id);
+        var relatedId = Number(row.related_mapping_id || 0);
         var urgencyTag = row.urgency === 'high' ? '<span class="tag red">高</span>' : row.urgency === 'low' ? '<span class="tag">低</span>' : '';
         return '<tr>' +
-          '<td>' + (row.from_dept_name || '-') + '</td>' +
-          '<td>' + (row.to_dept_name || '-') + '</td>' +
-          '<td>' + urgencyTag + ' ' + (typeLabels[row.type] || row.type) + '</td>' +
-          '<td>' + row.content + '</td>' +
-          '<td>' + (row.due_date || '-') + '</td>' +
+          '<td>' + safeText(row.from_dept_name) + '</td>' +
+          '<td>' + safeText(row.to_dept_name) + '</td>' +
+          '<td>' + urgencyTag + ' ' + safeText(typeLabels[row.type] || row.type) + '</td>' +
+          '<td>' + safeText(row.content) + '</td>' +
+          '<td>' + safeText(row.due_date) + '</td>' +
           '<td>' + statusTag(row.status) + '</td>' +
-          '<td>' + (row.status === 'pending' ? '<button class="btn secondary" onclick="handleTodoAction(\'' + row.type + '\', ' + row.id + ', ' + (row.related_mapping_id || 0) + ')">处理</button>' : '') + '</td>' +
+          '<td>' + (row.status === 'pending' ? '<button class="btn secondary" onclick="handleTodoAction(\'' + safeText(row.type, '') + '\', ' + rowId + ', ' + relatedId + ')">处理</button>' : '') + '</td>' +
           '</tr>';
       }).join('');
     }
@@ -829,7 +849,9 @@
     async function renderReviews(detail) {
       var details = detail ? [detail] : await Promise.all(state.mappings.slice(0, 30).map(function(row) { return api('/api/mappings/' + row.id).catch(function() { return null; }); }));
       var rows = details.filter(Boolean).flatMap(function(mapping) { return (mapping.approvalTasks || []).map(function(task) { return { mapping: mapping, task: task }; }); });
-      $('reviewRows').innerHTML = rows.map(function(r) { return '<tr><td>' + r.mapping.id + '</td><td>' + (r.mapping.process_name || '-') + '</td><td>' + r.mapping.current_step + '</td><td>' + r.task.step_name + '</td><td>' + statusTag(r.task.status) + '</td><td>' + (r.task.opinion || '-') + '</td><td><button class="btn secondary" onclick="openReview(' + r.mapping.id + ',' + r.task.step + ')">处理</button></td></tr>'; }).join('') || '<tr><td colspan="7" class="empty">暂无数据</td></tr>';
+      $('reviewRows').innerHTML = rows.map(function(r) {
+        return '<tr><td>' + Number(r.mapping.id) + '</td><td>' + safeText(r.mapping.process_name) + '</td><td>' + Number(r.mapping.current_step) + '</td><td>' + safeText(r.task.step_name) + '</td><td>' + statusTag(r.task.status) + '</td><td>' + safeText(r.task.opinion) + '</td><td><button class="btn secondary" onclick="openReview(' + Number(r.mapping.id) + ',' + Number(r.task.step) + ')">处理</button></td></tr>';
+      }).join('') || '<tr><td colspan="7" class="empty">暂无数据</td></tr>';
     }
 
     function openReview(mappingId, step) {
@@ -852,7 +874,10 @@
       var qs = params.toString();
       var terms = await api('/api/terminology' + (qs ? '?' + qs : ''));
       state.terms = terms;
-      $('termRows').innerHTML = terms.map(function(row) { return '<tr><td>' + row.id + '</td><td>' + row.term + '</td><td>' + (row.definition || '-') + '</td><td>' + (row.scope || '-') + '</td><td>' + statusTag(row.status) + '</td><td><button class="btn success" onclick="reviewTerm(' + row.id + ',\'approve\')">通过</button> <button class="btn danger" style="margin-left: 8px;" onclick="reviewTerm(' + row.id + ',\'reject\')">驳回</button></td></tr>'; }).join('') || '<tr><td colspan="6" class="empty">暂无数据</td></tr>';
+      $('termRows').innerHTML = terms.map(function(row) {
+        var rowId = Number(row.id);
+        return '<tr><td>' + rowId + '</td><td>' + safeText(row.term) + '</td><td>' + safeText(row.definition) + '</td><td>' + safeText(row.scope) + '</td><td>' + statusTag(row.status) + '</td><td><button class="btn success" onclick="reviewTerm(' + rowId + ',\'approve\')">通过</button> <button class="btn danger" style="margin-left: 8px;" onclick="reviewTerm(' + rowId + ',\'reject\')">驳回</button></td></tr>';
+      }).join('') || '<tr><td colspan="6" class="empty">暂无数据</td></tr>';
     }
 
     async function saveTerm() {
@@ -909,14 +934,15 @@
           '<thead><tr><th>ID</th><th>类型</th><th>字段/术语</th><th>部门A</th><th>部门B</th><th>状态</th><th>操作</th></tr></thead>' +
           '<tbody>' + items.map(function(row) {
             var conflictType = row.conflict_type || 'field';
+            var rowId = Number(row.id);
             return '<tr>' +
-              '<td>' + row.id + '</td>' +
+              '<td>' + rowId + '</td>' +
               '<td>' + (conflictType === 'term' ? '术语' : '字段') + '</td>' +
-              '<td>' + (row.term || row.conflict_field || '-') + '</td>' +
-              '<td>' + (row.dept_a_name || row.dept_a || '-') + '</td>' +
-              '<td>' + (row.dept_b_name || row.dept_b || '-') + '</td>' +
+              '<td>' + safeText(row.term || row.conflict_field) + '</td>' +
+              '<td>' + safeText(row.dept_a_name || row.dept_a) + '</td>' +
+              '<td>' + safeText(row.dept_b_name || row.dept_b) + '</td>' +
               '<td>' + statusTag(row.status) + '</td>' +
-              '<td><button class="btn secondary" onclick="navigateTo(\'detail\',{tab:\'conflicts\',type:\'' + conflictType + '\',id:' + row.id + '})">查看</button></td>' +
+              '<td><button class="btn secondary" onclick="navigateTo(\'detail\',{tab:\'conflicts\',type:\'' + conflictType + '\',id:' + rowId + '})">查看</button></td>' +
               '</tr>';
           }).join('') + '</tbody>' +
           '</table></div></div>';
@@ -995,20 +1021,30 @@
       return await api('/api/views/sankey?' + params.toString());
     }
 
+    function populateSankeyDeptFilter() {
+      var deptEl = document.getElementById('sankeyDept');
+      if (!deptEl || state.departments.length === 0) return;
+
+      var signature = state.departments.map(function(d) { return d.id + ':' + d.name; }).join('|');
+      if (deptEl.dataset.departmentSignature === signature) return;
+
+      var selected = Array.from(deptEl.selectedOptions || []).map(function(o) { return o.value; });
+      deptEl.innerHTML = state.departments.map(function(d) {
+        var isSelected = selected.indexOf(String(d.id)) !== -1 ? ' selected' : '';
+        return '<option value="' + Number(d.id) + '"' + isSelected + '>' + safeText(d.name) + '</option>';
+      }).join('');
+      deptEl.dataset.departmentSignature = signature;
+    }
+
     async function renderBusinessMap() {
       var chartDom = document.getElementById('sankeyChart');
       if (!chartDom) return;
 
-      // Populate department filter
-      if (document.getElementById('sankeyDept') && state.departments.length > 0) {
-        document.getElementById('sankeyDept').innerHTML = state.departments.map(function(d) {
-          return '<option value="' + d.id + '">' + d.name + '</option>';
-        }).join('');
-      }
+      populateSankeyDeptFilter();
 
       try {
         var data = await loadSankeyData();
-        document.getElementById('sankeyMeta').innerHTML =
+        document.getElementById('sankeyMeta').textContent =
           data.nodes.length + ' 个节点，' + data.links.length + ' 条关系';
 
         if (data.nodes.length === 0) {
@@ -1022,6 +1058,9 @@
         if (existing) existing.dispose();
 
         var chart = echarts.init(chartDom);
+
+        var nodeLabels = {};
+        data.nodes.forEach(function(n) { nodeLabels[n.name] = n.label || n.name; });
 
         // Assign colors per node
         var nodeColors = {};
@@ -1041,12 +1080,12 @@
             triggerOn: 'mousemove',
             formatter: function(p) {
               if (p.dataType === 'edge') {
-                return p.data.source + ' → ' + p.data.target;
+                return nodeLabels[p.data.source] + ' → ' + nodeLabels[p.data.target];
               }
               var node = data.nodes.find(function(n) { return n.name === p.name; });
               if (!node) return p.name;
               var labels = {1:'部门',2:'业务能力',3:'业务流程',4:'应用系统'};
-              return p.name + '<br/><span style="color:#888;font-size:12px;">' + (labels[node.layer] || '') + '</span>';
+              return (node.label || p.name) + '<br/><span style="color:#888;font-size:12px;">' + (labels[node.layer] || '') + '</span>';
             }
           },
           series: [{
@@ -1061,6 +1100,10 @@
             layoutIterations: 64,
             label: {
               position: 'right',
+              formatter: function(params) {
+                var node = data.nodes.find(function(n) { return n.name === params.name; });
+                return node ? (node.label || node.name) : params.name;
+              },
               fontSize: 12,
               color: '#374151',
               fontFamily: 'PingFang SC,sans-serif',
@@ -1087,7 +1130,7 @@
         sankeyResizeHandler = function() { chart.resize(); };
         window.addEventListener('resize', sankeyResizeHandler);
       } catch (e) {
-        chartDom.innerHTML = '<div class="empty">加载失败：' + (e.message || '未知错误') + '</div>';
+        chartDom.innerHTML = '<div class="empty">加载失败：' + safeText(e.message || '未知错误') + '</div>';
       }
     }
 
@@ -1113,34 +1156,36 @@
         // Fetch full sankey data with caching
         if (!sankeyCache) { sankeyCache = await api('/api/views/sankey'); }
         var data = sankeyCache;
-        var capName = cap.name;
 
         // Build parent lookup map once for O(1) ancestry checks
         var capParentMap = {};
         state.capabilities.forEach(function(c) { capParentMap[c.id] = c.parent_id; });
 
-        // Find all descendant capability names (if hierarchy exists)
-        var allCapNames = new Set();
-        allCapNames.add(capName);
+        // Find all descendant capability keys (if hierarchy exists)
+        var selectedCapKeys = new Set();
+        selectedCapKeys.add('capability:' + capId);
         state.capabilities.forEach(function(c) {
           var pid = c.parent_id;
           while (pid) {
-            if (pid === capId) { allCapNames.add(c.name); break; }
+            if (pid === capId) { selectedCapKeys.add('capability:' + c.id); break; }
             pid = capParentMap[pid] || null;
           }
         });
 
-        // Filter links to those involving our capability
-        var relevantNodes = new Set();
+        // Keep selected capability links, then extend one hop from matching processes to systems.
+        var processKeys = new Set();
         data.links.forEach(function(l) {
-          if (allCapNames.has(l.source) || allCapNames.has(l.target)) {
-            relevantNodes.add(l.source);
-            relevantNodes.add(l.target);
+          if (selectedCapKeys.has(l.source) && l.target.indexOf('process:') === 0) {
+            processKeys.add(l.target);
           }
         });
-        // Also include upstream (department) and downstream (system) nodes
         var filteredLinks = data.links.filter(function(l) {
-          return relevantNodes.has(l.source) || relevantNodes.has(l.target);
+          return selectedCapKeys.has(l.source) || selectedCapKeys.has(l.target) || processKeys.has(l.source);
+        });
+        var relevantNodes = new Set();
+        filteredLinks.forEach(function(l) {
+          relevantNodes.add(l.source);
+          relevantNodes.add(l.target);
         });
         var filteredNodes = data.nodes.filter(function(n) {
           return relevantNodes.has(n.name);
@@ -1158,16 +1203,18 @@
         var chart = echarts.init(chartDom);
 
         var nodeColors = {};
+        var nodeLabels = {};
         var layerCounters = {1:0,2:0,3:0,4:0};
         filteredNodes.forEach(function(n) {
           var idx = layerCounters[n.layer]++;
           nodeColors[n.name] = layerColor(n.layer, idx);
+          nodeLabels[n.name] = n.label || n.name;
         });
 
         chart.setOption({
           tooltip: { trigger: 'item', triggerOn: 'mousemove',
             formatter: function(p) {
-              return p.dataType === 'edge' ? p.data.source + ' → ' + p.data.target : p.name;
+              return p.dataType === 'edge' ? nodeLabels[p.data.source] + ' → ' + nodeLabels[p.data.target] : (nodeLabels[p.name] || p.name);
             }
           },
           series: [{
@@ -1183,6 +1230,7 @@
             draggable: false,
             layoutIterations: 32,
             label: { position: 'right', fontSize: 10, color: '#4b5563',
+              formatter: function(params) { return nodeLabels[params.name] || params.name; },
               fontFamily: 'PingFang SC,sans-serif', overflow: 'truncate', width: 100 },
             lineStyle: { color: 'gradient', opacity: 0.3, curveness: 0.5 },
             emphasis: { focus: 'adjacency', lineStyle: { opacity: 0.6 } }
@@ -1300,7 +1348,7 @@
         var systemsHtml = detail.systems.length > 0
           ? '<div class="table-container"><table><thead><tr><th>应用系统</th></tr></thead><tbody>' +
             detail.systems.map(function(s) {
-              return '<tr><td>' + s.name + '</td></tr>';
+              return '<tr><td>' + safeText(s.name) + '</td></tr>';
             }).join('') + '</tbody></table></div>'
           : '<div class="empty">暂无关联系统</div>';
 
@@ -1308,19 +1356,19 @@
         var fieldsHtml = detail.fields.length > 0
           ? '<div class="table-container"><table><thead><tr><th>字段中文名</th><th>字段英文名</th><th>数据对象</th><th>类型</th><th>同步方式</th><th>消费系统</th><th>所属部门</th></tr></thead><tbody>' +
             detail.fields.map(function(f) {
-              return '<tr><td>' + (f.field_name_cn || '-') + '</td><td>' + (f.field_name_en || '-') + '</td>' +
-                '<td>' + (f.data_object || '-') + '</td><td>' + (f.field_type || '-') + '</td>' +
-                '<td>' + (f.sync_mode || '-') + '</td><td>' + (f.consume_systems || '-') + '</td>' +
-                '<td>' + (f.dept_name || '-') + '</td></tr>';
+              return '<tr><td>' + safeText(f.field_name_cn) + '</td><td>' + safeText(f.field_name_en) + '</td>' +
+                '<td>' + safeText(f.data_object) + '</td><td>' + safeText(f.field_type) + '</td>' +
+                '<td>' + safeText(f.sync_mode) + '</td><td>' + safeText(f.consume_systems) + '</td>' +
+                '<td>' + safeText(f.dept_name) + '</td></tr>';
             }).join('') + '</tbody></table></div>'
           : '<div class="empty">暂无字段台账</div>';
 
         container.innerHTML =
           '<div style="margin-bottom: 24px;">' +
-            '<h2 style="margin-bottom: 8px;">' + detail.name + '</h2>' +
+            '<h2 style="margin-bottom: 8px;">' + safeText(detail.name) + '</h2>' +
             '<div class="detail-meta">' +
-              '<span>所属能力：' + (detail.cap_name || '-') + '</span>' +
-              '<span>所属部门：' + (detail.dept_name || '-') + '</span>' +
+              '<span>所属能力：' + safeText(detail.cap_name) + '</span>' +
+              '<span>所属部门：' + safeText(detail.dept_name) + '</span>' +
               '<span>状态：' + statusTag(detail.status) + '</span>' +
             '</div>' +
           '</div>' +
@@ -1378,8 +1426,8 @@
           <div style="margin-bottom: 24px;">
             <h2 style="margin-bottom: 8px;">流程映射 #${detail.id}</h2>
             <div class="detail-meta">
-              <span>流程：${detail.process_name || '-'}</span>
-              <span>部门：${detail.owner_dept_name || '-'}</span>
+              <span>流程：${safeText(detail.process_name)}</span>
+              <span>部门：${safeText(detail.owner_dept_name)}</span>
               <span>步骤：${detail.current_step}/5</span>
               <span>状态：${statusTag(detail.status)}</span>
             </div>
@@ -1396,8 +1444,8 @@
               <tbody>${(detail.fields || []).map(f => {
                 const isHighlighted = rejectionHistory.some(r => r.field_entry_id === f.id);
                 return `<tr class="${isHighlighted ? 'field-highlight' : ''}">
-                  <td>${f.field_name_cn || '-'}</td><td>${f.field_name_en || '-'}</td><td>${f.data_object || '-'}</td>
-                  <td>${f.field_type || '-'}</td><td>${f.sync_mode || '-'}</td><td>${f.consume_systems || '-'}</td><td>${f.note || '-'}</td>
+                  <td>${safeText(f.field_name_cn)}</td><td>${safeText(f.field_name_en)}</td><td>${safeText(f.data_object)}</td>
+                  <td>${safeText(f.field_type)}</td><td>${safeText(f.sync_mode)}</td><td>${safeText(f.consume_systems)}</td><td>${safeText(f.note)}</td>
                 </tr>`;
               }).join('') || '<tr><td colspan="7" class="empty">暂无字段</td></tr>'}</tbody>
             </table>
@@ -1407,10 +1455,10 @@
           <h2 style="margin-top: 32px;">变更对比</h2>
           <div class="diff-grid">
             <div class="diff-col"><div class="diff-header">上一版本（被驳回）</div>
-              ${rejectionHistory.map(r => `<div class="diff-row changed"><strong>${r.field_name_cn || '字段#'+r.field_entry_id}</strong>: ${r.rejection_reason} (${r.rejected_by_name || '-'})</div>`).join('')}
+              ${rejectionHistory.map(r => `<div class="diff-row changed"><strong>${safeText(r.field_name_cn || '字段#'+r.field_entry_id)}</strong>: ${safeText(r.rejection_reason)} (${safeText(r.rejected_by_name)})</div>`).join('')}
             </div>
             <div class="diff-col"><div class="diff-header">当前版本</div>
-              ${(detail.fields || []).map(f => `<div class="diff-row">${f.field_name_cn || '-'}: ${f.note || '-'}</div>`).join('')}
+              ${(detail.fields || []).map(f => `<div class="diff-row">${safeText(f.field_name_cn)}: ${safeText(f.note)}</div>`).join('')}
             </div>
           </div>` : ''}
 
@@ -1418,8 +1466,8 @@
           <div class="timeline">
             ${(detail.approvalTasks || []).map(task => `
               <div class="tl-item ${task.status === 'approved' ? 'approve' : task.status === 'rejected' ? 'reject' : ''}">
-                <div class="tl-head">${task.step_name} — ${statusTag(task.status)}</div>
-                <div class="tl-body">${task.opinion || '无意见'} · ${task.operated_at || task.created_at || '-'}</div>
+                <div class="tl-head">${safeText(task.step_name)} — ${statusTag(task.status)}</div>
+                <div class="tl-body">${safeText(task.opinion, '无意见')} · ${safeText(task.operated_at || task.created_at)}</div>
               </div>
             `).join('') || '<div class="empty">暂无审批记录</div>'}
           </div>
@@ -1459,8 +1507,8 @@
       tbody.innerHTML = filtered.map(f => {
         const isHighlighted = rejectedIds.has(f.id);
         return `<tr class="${isHighlighted ? 'field-highlight' : ''}">
-          <td>${f.field_name_cn || '-'}</td><td>${f.field_name_en || '-'}</td><td>${f.data_object || '-'}</td>
-          <td>${f.field_type || '-'}</td><td>${f.sync_mode || '-'}</td><td>${f.consume_systems || '-'}</td><td>${f.note || '-'}</td>
+          <td>${safeText(f.field_name_cn)}</td><td>${safeText(f.field_name_en)}</td><td>${safeText(f.data_object)}</td>
+          <td>${safeText(f.field_type)}</td><td>${safeText(f.sync_mode)}</td><td>${safeText(f.consume_systems)}</td><td>${safeText(f.note)}</td>
         </tr>`;
       }).join('') || '<tr><td colspan="7" class="empty">无匹配字段</td></tr>';
     }
@@ -1482,16 +1530,16 @@
         // Side-by-side comparison
         const comparisonHtml = conflictType === 'term' ? `
           <div class="diff-grid">
-            <div class="diff-col"><div class="diff-header">部门 A: ${detail.dept_a_name || detail.dept_a || '-'}</div>
-              <div class="diff-row">${detail.dept_a_meaning || '-'}</div></div>
-            <div class="diff-col"><div class="diff-header">部门 B: ${detail.dept_b_name || detail.dept_b || '-'}</div>
-              <div class="diff-row">${detail.dept_b_meaning || '-'}</div></div>
+            <div class="diff-col"><div class="diff-header">部门 A: ${safeText(detail.dept_a_name || detail.dept_a)}</div>
+              <div class="diff-row">${safeText(detail.dept_a_meaning)}</div></div>
+            <div class="diff-col"><div class="diff-header">部门 B: ${safeText(detail.dept_b_name || detail.dept_b)}</div>
+              <div class="diff-row">${safeText(detail.dept_b_meaning)}</div></div>
           </div>` : `
           <div class="diff-grid">
-            <div class="diff-col"><div class="diff-header">字段值 A (${detail.dept_a_name || '-'})</div>
-              <div class="diff-row">${detail.value_a || '-'}</div></div>
-            <div class="diff-col"><div class="diff-header">字段值 B (${detail.dept_b_name || '-'})</div>
-              <div class="diff-row">${detail.value_b || '-'}</div></div>
+            <div class="diff-col"><div class="diff-header">字段值 A (${safeText(detail.dept_a_name)})</div>
+              <div class="diff-row">${safeText(detail.value_a)}</div></div>
+            <div class="diff-col"><div class="diff-header">字段值 B (${safeText(detail.dept_b_name)})</div>
+              <div class="diff-row">${safeText(detail.value_b)}</div></div>
           </div>`;
 
         // Action buttons
@@ -1519,7 +1567,7 @@
             <div class="detail-meta">
               <span>严重度：${statusTag(detail.severity)}</span>
               <span>状态：${statusTag(detail.status)}</span>
-              ${detail.currentAssignee ? `<span>当前责任人：${detail.currentAssignee.assignee_name || '-'}</span>` : ''}
+              ${detail.currentAssignee ? `<span>当前责任人：${safeText(detail.currentAssignee.assignee_name)}</span>` : ''}
             </div>
           </div>
 
@@ -1531,8 +1579,8 @@
             <div class="timeline">
               ${detail.coordinationHistory.map(h => `
                 <div class="tl-item">
-                  <div class="tl-head">${h.assignee_name || '-'} 提交协调结果：${h.result === 'A' ? '采用A部门口径' : h.result === 'B' ? '采用B部门口径' : '折中方案'}</div>
-                  <div class="tl-body">${h.note || '无说明'} · ${h.created_at}</div>
+                  <div class="tl-head">${safeText(h.assignee_name)} 提交协调结果：${h.result === 'A' ? '采用A部门口径' : h.result === 'B' ? '采用B部门口径' : '折中方案'}</div>
+                  <div class="tl-body">${safeText(h.note, '无说明')} · ${safeText(h.created_at)}</div>
                 </div>
               `).join('')}
             </div>` : '<div class="empty">暂无协调记录</div>'}
@@ -1542,8 +1590,8 @@
             <div class="timeline">
               ${detail.assignmentHistory.map(a => `
                 <div class="tl-item">
-                  <div class="tl-head">${a.assigned_by_name || '-'} 指定 ${a.assignee_name || '-'} 为责任人</div>
-                  <div class="tl-body">${a.created_at}</div>
+                  <div class="tl-head">${safeText(a.assigned_by_name)} 指定 ${safeText(a.assignee_name)} 为责任人</div>
+                  <div class="tl-body">${safeText(a.created_at)}</div>
                 </div>
               `).join('')}
             </div>` : '<div class="empty">暂无指定记录</div>'}
@@ -1641,8 +1689,8 @@
               ${(mapping.fields || []).map(f => `
                 <tr>
                   <td><input type="checkbox" class="reject-checkbox" data-field-id="${f.id}" onchange="toggleRejectRow(this)"></td>
-                  <td>${f.field_name_cn || '-'}</td>
-                  <td>${f.note || f.field_type || '-'}</td>
+                  <td>${safeText(f.field_name_cn)}</td>
+                  <td>${safeText(f.note || f.field_type)}</td>
                   <td><input class="reject-reason-input" data-field-id="${f.id}" placeholder="填写该字段驳回原因" disabled style="width: 100%;"></td>
                 </tr>
               `).join('') || '<tr><td colspan="4" class="empty">无字段可驳回</td></tr>'}
@@ -1718,13 +1766,14 @@
     async function openAssignOwnerDialog(conflictId, conflictType) {
       try {
         const users = await api('/api/org/users');
-        const selectHtml = `<select id="assigneeSelect" style="width: 100%; margin-top: 8px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px;">${users.map(u => `<option value="${u.id}">${u.name} (${u.department_id || '-'})</option>`).join('')}</select>`;
+        const selectHtml = `<select id="assigneeSelect" style="width: 100%; margin-top: 8px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px;">${users.map(u => `<option value="${Number(u.id)}">${safeText(u.name)} (${safeText(u.department_id)})</option>`).join('')}</select>`;
 
         const confirmed = await showConfirm({
           title: '指定责任人',
           message: `<div style="font-size: 14px;"><label style="display: flex; flex-direction: column; gap: 8px;">选择责任人${selectHtml}</label></div>`,
           confirmLabel: '指定',
           confirmClass: 'primary',
+          allowHtml: true,
         });
         if (!confirmed) return;
 

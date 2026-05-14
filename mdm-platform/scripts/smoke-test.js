@@ -1,4 +1,5 @@
 const db = require('../server/db');
+const { verifyPassword } = require('../server/auth');
 
 function assert(condition, message) {
   if (!condition) {
@@ -37,8 +38,10 @@ tables.forEach(table => {
   assert(row, `missing table ${table}`);
 });
 
-const admin = db.prepare("SELECT id, role FROM users WHERE employee_no='ADMIN001'").get();
-assert(admin && admin.role === 'admin', 'ADMIN001 admin account missing; run npm run init-db first');
+const defaultAdmin = db.prepare("SELECT password_hash FROM users WHERE employee_no='ADMIN001'").get();
+if (defaultAdmin) {
+  assert(!verifyPassword('admin123', defaultAdmin.password_hash), 'ADMIN001 must not use the historical default password');
+}
 
 const fk = db.prepare('PRAGMA foreign_keys').get();
 assert(fk.foreign_keys === 1, 'SQLite foreign_keys pragma must be enabled');

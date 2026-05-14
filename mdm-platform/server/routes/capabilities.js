@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const { requireAuth } = require('../auth');
+const { requireAuth, requireRole } = require('../auth');
+const { validateAction } = require('../access');
 
 function handleDbError(res, error) {
   if (error && (String(error.code).startsWith('SQLITE_CONSTRAINT') || String(error.message).includes('constraint failed'))) {
@@ -30,7 +31,7 @@ router.get('/', requireAuth, (req, res) => {
   res.json(capabilities);
 });
 
-router.post('/', requireAuth, (req, res) => {
+router.post('/', requireRole('admin'), (req, res) => {
   return runDbAction(res, () => {
     const { name, level, owner_dept_id, parent_id } = req.body;
     const stmt = db.prepare('INSERT INTO capabilities (name, level, owner_dept_id, parent_id, created_by) VALUES (?, ?, ?, ?, ?)');
@@ -39,7 +40,7 @@ router.post('/', requireAuth, (req, res) => {
   });
 });
 
-router.put('/:id', requireAuth, (req, res) => {
+router.put('/:id', requireRole('admin'), (req, res) => {
   return runDbAction(res, () => {
     const { name, level, owner_dept_id, parent_id } = req.body;
     db.prepare('UPDATE capabilities SET name=?, level=?, owner_dept_id=?, parent_id=? WHERE id=?').run(
@@ -53,9 +54,12 @@ router.put('/:id', requireAuth, (req, res) => {
   });
 });
 
-router.post('/:id/review', requireAuth, (req, res) => {
+router.post('/:id/review', requireRole('reviewer', 'admin'), (req, res) => {
   return runDbAction(res, () => {
     const { action, opinion } = req.body; // action: 'approve' or 'reject'
+    if (!validateAction(action)) {
+      return res.status(400).json({ error: '不支持的审核操作' });
+    }
     const status = action === 'approve' ? 'approved' : 'rejected';
     
     db.prepare(`

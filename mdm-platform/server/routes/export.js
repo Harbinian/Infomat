@@ -3,6 +3,7 @@ const router = express.Router();
 const ExcelJS = require('exceljs');
 const db = require('../db');
 const { requireAuth } = require('../auth');
+const { mappingVisibility, isReviewerOrAdmin } = require('../access');
 
 function jsonListText(value) {
   if (!value) return '';
@@ -16,6 +17,7 @@ function jsonListText(value) {
 }
 
 router.get('/excel', requireAuth, async (req, res) => {
+  const visibility = mappingVisibility('m', req);
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'MDM 平台';
   workbook.created = new Date();
@@ -45,9 +47,9 @@ router.get('/excel', requireAuth, async (req, res) => {
     JOIN systems s ON ms.system_id = s.id AND ms.system_role = 'primary'
     LEFT JOIN field_identities fi ON fi.field_entry_id = fe.id
     LEFT JOIN departments d ON fi.maintain_dept_id = d.id
-    WHERE m.status = 'published'
+    WHERE m.status = 'published'${visibility.sql}
     ORDER BY p.name, fe.id
-  `).all();
+  `).all(...visibility.params);
 
   fields.forEach(field => {
     ledger.addRow({
@@ -90,9 +92,9 @@ router.get('/excel', requireAuth, async (req, res) => {
     JOIN systems s ON ms.system_id = s.id
     LEFT JOIN departments d ON fi.maintain_dept_id = d.id
     LEFT JOIN users u ON fi.confirmed_by = u.id
-    WHERE m.status = 'published'
+    WHERE m.status = 'published'${visibility.sql}
     ORDER BY p.name, fe.id
-  `).all();
+  `).all(...visibility.params);
 
   identities.forEach(identity => {
     matrix.addRow({
@@ -120,13 +122,20 @@ router.get('/excel', requireAuth, async (req, res) => {
     { header: '解决方案', key: 'resolution', width: 25 }
   ];
 
+  const termConflictParams = [];
+  let termConflictWhere = '';
+  if (!isReviewerOrAdmin(req)) {
+    termConflictWhere = 'WHERE (tc.dept_a=? OR tc.dept_b=?)';
+    termConflictParams.push(req.session.departmentId || -1, req.session.departmentId || -1);
+  }
   const termConflicts = db.prepare(`
     SELECT tc.*, da.name as dept_a_name, db.name as dept_b_name
     FROM term_conflicts tc
     LEFT JOIN departments da ON tc.dept_a = da.id
     LEFT JOIN departments db ON tc.dept_b = db.id
+    ${termConflictWhere}
     ORDER BY tc.created_at DESC
-  `).all();
+  `).all(...termConflictParams);
 
   termConflicts.forEach(conflict => {
     termConflictSheet.addRow({

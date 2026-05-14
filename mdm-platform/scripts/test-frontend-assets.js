@@ -21,7 +21,7 @@ async function main() {
   ].forEach(label => assert.ok(html.includes(label), `missing tab label ${label}`));
 
   [
-    'https://cdn.jsdelivr.net/npm/echarts',
+    'echarts.min.js',
     '@keyframes fadeIn',
     '@keyframes slideUp',
     '@keyframes blink',
@@ -34,8 +34,20 @@ async function main() {
     '/api/terminology',
     '/api/import/field-entries',
     '/api/export/excel',
+    '/api/views/sankey',
+    'data.nodes.find(function(n) { return n.name === params.name; })',
     'template.xlsx'
   ].forEach(needle => assert.ok(html.includes(needle), `missing frontend hook ${needle}`));
+
+  assert.ok(!html.includes('admin123'), 'login page must not expose a default password');
+  assert.ok(!html.includes('value="ADMIN001"'), 'login page must not prefill the default admin employee number');
+  assert.ok(html.includes('function escapeHtml'), 'frontend should expose a shared HTML escaping helper');
+  assert.ok(html.includes('function safeText'), 'frontend should route service-provided display text through escaping');
+
+  assert.ok(html.includes('function populateSankeyDeptFilter()'), 'business map should populate the department filter through a stable helper');
+  assert.ok(html.includes('deptEl.dataset.departmentSignature'), 'department filter should avoid clearing selected departments on every render');
+  assert.ok(html.includes('formatter: function(params) {'), 'sankey node labels should render display labels while keeping stable node keys');
+  assert.ok(html.includes('nodeLabels[p.data.source]'), 'sankey edge tooltip should show display labels for stable node keys');
 
   assert.ok(fs.existsSync(templatePath), 'public/template.xlsx should exist');
   const workbook = new ExcelJS.Workbook();

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const { requireAuth } = require('../auth');
+const { mappingVisibility } = require('../access');
 
 function handleDbError(res, error) {
   if (error && (String(error.code).startsWith('SQLITE_CONSTRAINT') || String(error.message).includes('constraint failed'))) {
@@ -21,6 +22,7 @@ function runDbAction(res, action) {
 
 router.get('/', requireAuth, (req, res) => {
   const { status, dept_id } = req.query;
+  const visibility = mappingVisibility('m', req);
   let sql = `SELECT m.*, p.name as process_name, c.name as cap_name, d.name as owner_dept_name,
              (SELECT GROUP_CONCAT(s.name, ', ') FROM mapping_systems ms JOIN systems s ON ms.system_id = s.id WHERE ms.mapping_id = m.id) as systems
              FROM mappings m
@@ -28,7 +30,8 @@ router.get('/', requireAuth, (req, res) => {
              LEFT JOIN capabilities c ON p.capability_id = c.id
              JOIN departments d ON m.owner_dept_id = d.id
              WHERE 1=1`;
-  const params = [];
+  const params = [...visibility.params];
+  sql += visibility.sql;
 
   if (status) {
     sql += ' AND m.status=?';
@@ -44,13 +47,14 @@ router.get('/', requireAuth, (req, res) => {
 });
 
 router.get('/:id', requireAuth, (req, res) => {
+  const visibility = mappingVisibility('m', req);
   const mapping = db.prepare(`
     SELECT m.*, p.name as process_name, d.name as owner_dept_name
     FROM mappings m
     JOIN processes p ON m.process_id = p.id
     JOIN departments d ON m.owner_dept_id = d.id
-    WHERE m.id=?
-  `).get(req.params.id);
+    WHERE m.id=?${visibility.sql}
+  `).get(req.params.id, ...visibility.params);
   if (!mapping) return res.status(404).json({ error: '映射不存在' });
 
   const systems = db.prepare(`
@@ -411,6 +415,9 @@ router.post('/:id/review', requireAuth, (req, res) => {
 router.post('/:id/publish', requireAuth, (req, res) => {
   return runDbAction(res, () => {
     if (req.session.userRole !== 'admin') return res.status(403).json({ error: '仅信息化项目组可发布' });
+    const mapping = db.prepare('SELECT status FROM mappings WHERE id=?').get(req.params.id);
+    if (!mapping) return res.status(404).json({ error: '映射不存在' });
+    if (mapping.status !== 'final_reviewed') return res.status(409).json({ error: '仅终审完成后可发布' });
     db.prepare("UPDATE mappings SET status='published', current_step=5, updated_at=datetime('now') WHERE id=?").run(req.params.id);
     res.json({ success: true });
   });
