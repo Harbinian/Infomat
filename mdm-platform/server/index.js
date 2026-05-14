@@ -42,6 +42,7 @@ registerRouteIfExists('/api/terminology', 'terminology');
 registerRouteIfExists('/api/versions', 'versions');
 registerRouteIfExists('/api/import', 'import');
 registerRouteIfExists('/api/export', 'export');
+registerRouteIfExists('/api/views', 'views');
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
