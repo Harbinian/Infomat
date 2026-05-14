@@ -530,6 +530,9 @@
       if (!hash) return { view: 'list', tab: 'dashboard' };
       var parts = hash.split('/');
       if (parts.length === 1) return { view: 'list', tab: parts[0] };
+      if (parts[0] === 'processes' && parts.length >= 3) {
+        return { view: 'detail', tab: 'processes', type: 'process', id: parts[2] };
+      }
       if (parts.length === 3) return { view: 'detail', tab: parts[0], type: parts[1], id: parts[2] };
       if (parts.length === 4) return { view: 'operation', tab: parts[0], type: parts[1], id: parts[2], action: parts[3] };
       return { view: 'list', tab: 'dashboard' };
@@ -672,7 +675,7 @@
           '<button class="btn danger" onclick="event.stopPropagation();reviewCap(' + row.id + ',\'reject\')">驳回</button></td></tr>';
       }).join('') || '<tr><td colspan="6" class="empty">暂无数据</td></tr>';
 
-      $('procRows').innerHTML = state.processes.map(function(row) { return '<tr><td>' + row.id + '</td><td>' + row.name + '</td><td>' + (row.cap_name || '-') + '</td><td>' + (row.dept_name || '-') + '</td><td>' + statusTag(row.status) + '</td><td><button class="btn success" onclick="reviewProc(' + row.id + ',\'approve\')">通过</button> <button class="btn danger" onclick="reviewProc(' + row.id + ',\'reject\')">驳回</button></td></tr>'; }).join('') || '<tr><td colspan="6" class="empty">暂无数据</td></tr>';
+      $('procRows').innerHTML = state.processes.map(function(row) { return '<tr><td>' + row.id + '</td><td>' + row.name + '</td><td>' + (row.cap_name || '-') + '</td><td>' + (row.dept_name || '-') + '</td><td>' + statusTag(row.status) + '</td><td><button class="btn secondary" onclick="navigateTo(\'detail\',{tab:\'processes\',type:\'process\',id:' + row.id + '})">详情</button> <button class="btn success" onclick="reviewProc(' + row.id + ',\'approve\')">通过</button> <button class="btn danger" onclick="reviewProc(' + row.id + ',\'reject\')">驳回</button></td></tr>'; }).join('') || '<tr><td colspan="6" class="empty">暂无数据</td></tr>';
     }
 
     async function createCapability() {
@@ -1217,7 +1220,9 @@
       $('detailPage').classList.add('on');
       $('detailContent').innerHTML = '<div class="empty">加载中...</div>';
 
-      if (params.type === 'mapping') {
+      if (params.type === 'process') {
+        renderProcessDetail(parseInt(params.id));
+      } else if (params.type === 'mapping') {
         renderMappingDetail(parseInt(params.id), params.tab);
       } else if (params.type === 'conflict' && params.conflictType) {
         renderConflictDetail(parseInt(params.id), params.conflictType, params.tab);
