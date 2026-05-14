@@ -951,6 +951,128 @@
       echarts.init($('statusChart')).setOption({ tooltip:{trigger:'item'}, series:[{type:'pie',radius:['42%','68%'],itemStyle:{borderColor:'#fff',borderWidth:2},data:Object.entries(statuses).map(function(e) { return { name: e[0], value: e[1] }; })}], color:['#fc0000', '#dc0000', '#374151', '#6b7280', '#9ca3af'] });
     }
 
+    // ===== Business Map Sankey =====
+
+    // Layer color families (四色原则)
+    var LAYER_COLORS = {
+      1: ['#2563eb','#3b82f6','#60a5fa','#93c5fd','#1d4ed8','#bfdbfe'],
+      2: ['#059669','#10b981','#34d399','#6ee7b7','#047857','#a7f3d0'],
+      3: ['#d97706','#f59e0b','#fbbf24','#fcd34d','#b45309','#fde68a'],
+      4: ['#7c3aed','#8b5cf6','#a78bfa','#c4b5fd','#6d28d9','#e0e7ff']
+    };
+
+    function layerColor(layer, index) {
+      var colors = LAYER_COLORS[layer] || LAYER_COLORS[2];
+      return colors[index % colors.length];
+    }
+
+    async function loadSankeyData() {
+      var deptEl = document.getElementById('sankeyDept');
+      var levelEl = document.getElementById('sankeyLevel');
+      var deptIds = deptEl && deptEl.selectedOptions
+        ? Array.from(deptEl.selectedOptions).map(function(o) { return o.value; })
+        : [];
+      var levels = levelEl ? levelEl.value : 'L1,L2,L3';
+      var params = new URLSearchParams();
+      if (deptIds.length > 0) params.set('dept_ids', deptIds.join(','));
+      params.set('cap_levels', levels);
+      return await api('/api/views/sankey?' + params.toString());
+    }
+
+    async function renderBusinessMap() {
+      var chartDom = document.getElementById('sankeyChart');
+      if (!chartDom) return;
+
+      // Populate department filter
+      if (document.getElementById('sankeyDept') && state.departments.length > 0) {
+        document.getElementById('sankeyDept').innerHTML = state.departments.map(function(d) {
+          return '<option value="' + d.id + '">' + d.name + '</option>';
+        }).join('');
+      }
+
+      try {
+        var data = await loadSankeyData();
+        document.getElementById('sankeyMeta').innerHTML =
+          data.nodes.length + ' 个节点，' + data.links.length + ' 条关系';
+
+        if (data.nodes.length === 0) {
+          chartDom.innerHTML = '<div class="empty">暂无已发布的映射数据，无法生成业务地图</div>';
+          return;
+        }
+
+        if (!window.echarts) { chartDom.innerHTML = '<div class="empty">ECharts 加载失败</div>'; return; }
+
+        var existing = echarts.getInstanceByDom(chartDom);
+        if (existing) existing.dispose();
+
+        var chart = echarts.init(chartDom);
+
+        // Assign colors per node
+        var nodeColors = {};
+        var layerCounters = {1:0,2:0,3:0,4:0};
+        data.nodes.forEach(function(n) {
+          var idx = layerCounters[n.layer]++;
+          nodeColors[n.name] = layerColor(n.layer, idx);
+        });
+
+        var nodes = data.nodes.map(function(n) {
+          return { name: n.name, itemStyle: { color: nodeColors[n.name] } };
+        });
+
+        chart.setOption({
+          tooltip: {
+            trigger: 'item',
+            triggerOn: 'mousemove',
+            formatter: function(p) {
+              if (p.dataType === 'edge') {
+                return p.data.source + ' → ' + p.data.target;
+              }
+              var node = data.nodes.find(function(n) { return n.name === p.name; });
+              if (!node) return p.name;
+              var labels = {1:'部门',2:'业务能力',3:'业务流程',4:'应用系统'};
+              return p.name + '<br/><span style="color:#888;font-size:12px;">' + (labels[node.layer] || '') + '</span>';
+            }
+          },
+          series: [{
+            type: 'sankey',
+            left: 20, right: 160, top: 20, bottom: 20,
+            data: nodes,
+            links: data.links,
+            orient: 'horizontal',
+            nodeWidth: 16,
+            nodeGap: 10,
+            draggable: false,
+            layoutIterations: 64,
+            label: {
+              position: 'right',
+              fontSize: 12,
+              color: '#374151',
+              fontFamily: 'PingFang SC,sans-serif',
+              overflow: 'truncate',
+              width: 140
+            },
+            lineStyle: { color: 'gradient', opacity: 0.3, curveness: 0.5 },
+            emphasis: { focus: 'adjacency', lineStyle: { opacity: 0.7 } }
+          }]
+        });
+
+        // Click handler: navigate to process detail
+        chart.off('click');
+        chart.on('click', function(params) {
+          if (params.dataType === 'node') {
+            var node = data.nodes.find(function(n) { return n.name === params.name; });
+            if (node && node.type === 'process') {
+              navigateTo('detail', { tab: 'businessMap', type: 'process', id: node.id });
+            }
+          }
+        });
+
+        window.addEventListener('resize', function() { chart.resize(); });
+      } catch (e) {
+        chartDom.innerHTML = '<div class="empty">加载失败：' + (e.message || '未知错误') + '</div>';
+      }
+    }
+
     // ===== Main render dispatcher =====
     function renderListPanel(tab) {
       document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('on'); });
@@ -1030,6 +1152,13 @@
       var route = parseHash();
       navigateTo('list', { tab: route.tab || 'dashboard' });
     };
+
+    if (document.getElementById('sankeyDept')) {
+      document.getElementById('sankeyDept').onchange = renderBusinessMap;
+    }
+    if (document.getElementById('sankeyLevel')) {
+      document.getElementById('sankeyLevel').onchange = renderBusinessMap;
+    }
 
     // ===== Phase 5: Mapping Detail =====
     async function renderMappingDetail(mappingId, sourceTab) {
