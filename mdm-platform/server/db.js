@@ -348,4 +348,11 @@ if (tcInfo && !tcInfo.sql.includes("'archived'")) {
   })();
 }
 
+// Migration: add parent_id to capabilities for L1→L2→L3 hierarchy
+const capInfo = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='capabilities'").get();
+if (capInfo && !capInfo.sql.includes('parent_id')) {
+  db.exec('ALTER TABLE capabilities ADD COLUMN parent_id INTEGER REFERENCES capabilities(id)');
+  console.log('Migration: added parent_id to capabilities');
+}
+
 module.exports = db;
