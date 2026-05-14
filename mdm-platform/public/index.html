@@ -1090,6 +1090,8 @@
 
     // ===== Capability Preview Sankey =====
 
+    var sankeyCache = null;
+
     async function renderCapPreview(capId) {
       var wrap = document.getElementById('capPreviewWrap');
       var chartDom = document.getElementById('capPreviewChart');
@@ -1101,20 +1103,27 @@
         var cap = state.capabilities.find(function(c) { return c.id === capId; });
         if (!cap) { wrap.style.display = 'none'; return; }
 
-        // Fetch full sankey data, filter client-side to the capability
-        var data = await api('/api/views/sankey');
+        // Show loading indicator
+        wrap.style.display = 'block';
+        chartDom.innerHTML = '<div class="empty">加载中...</div>';
+
+        // Fetch full sankey data with caching
+        if (!sankeyCache) { sankeyCache = await api('/api/views/sankey'); }
+        var data = sankeyCache;
         var capName = cap.name;
+
+        // Build parent lookup map once for O(1) ancestry checks
+        var capParentMap = {};
+        state.capabilities.forEach(function(c) { capParentMap[c.id] = c.parent_id; });
 
         // Find all descendant capability names (if hierarchy exists)
         var allCapNames = new Set();
         allCapNames.add(capName);
         state.capabilities.forEach(function(c) {
-          // Check if c is a descendant of capId
           var pid = c.parent_id;
           while (pid) {
             if (pid === capId) { allCapNames.add(c.name); break; }
-            var parent = state.capabilities.find(function(p) { return p.id === pid; });
-            pid = parent ? parent.parent_id : null;
+            pid = capParentMap[pid] || null;
           }
         });
 
@@ -1177,6 +1186,7 @@
           }]
         });
       } catch (e) {
+        console.error('capPreview:', e);
         wrap.style.display = 'none';
       }
     }
