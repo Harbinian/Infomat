@@ -760,10 +760,8 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
   <div class="cv-scope">
     <h3>本次会议定位声明</h3>
     <ul>
-      <li>本次说明系统应用定位、集成关系和会后推进事项；资料不足的事项不强行形成最终结论。</li>
-      <li>Q1–Q8 按成熟度分为"已解决 / 条件性决策 / 需补资料 / 待供应商确认"四类。</li>
-      <li>会议目标：确认组织职责、数据责任人、MDM建设路径，输出会后补资料清单。</li>
-      <li>一期聚焦 ERP / OA / PLM / MES；除 PDM 并入 PLM 一期能力外，其余系统为远景规划项。</li>
+      <li>说明系统应用定位、集成关系和会后推进事项；资料不足不强行形成最终结论。</li>
+      <li>一期聚焦 ERP / OA / PLM / MES；Q1–Q8 按成熟度分类标记。详细定位与输出物见第 1 章。</li>
     </ul>
   </div>
   <div class="scroll-hint">向下滚动</div>
@@ -1051,7 +1049,7 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
     </svg>
   </div>
   <div class="info mt-12"><p>数据中台是<strong>横向基础设施层</strong>，不属于任何业务域，是所有域的共享底座。当前方案尚未决策（Q7），拓扑图中以虚线框标注。OA 作为流程协同层横向贯穿所有域。为保证口径严谨，主拓扑仅展示当前文档已确认的主链关系；接口边界和主写方尚未明确的关系，暂不在主图中直连表达。</p></div>
-  <div class="sec-hd" style="margin-top:20px"><div class="sec-num" style="background:var(--teal)">7b</div><div><h2>五条核心数据流说明</h2><div class="sd">节点流向 · 数据对象 · 说明注意事项</div></div></div>
+  <div class="sec-hd" style="margin-top:20px"><div class="sec-num" style="background:var(--teal)">7.1</div><div><h2>五条核心数据流说明</h2><div class="sd">节点流向 · 数据对象 · 说明注意事项</div></div></div>
   <div class="dflow">
     <div class="dflow-hd"><div class="dflow-num">①</div><div class="dflow-title">研发主链</div><span class="dflow-tag" style="background:#e2e8f0;color:#64748b">PDM纳入PLM一期 · CAPP后续规划</span></div>
     <div class="dflow-body">
@@ -1115,17 +1113,17 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
 <!-- ══ 8 OA 是什么 ══ -->
 <div class="sec" id="s8">
   <div class="sec-hd"><div class="sec-num">8</div><div><h2>OA 是什么</h2><div class="sd">协同入口 · 统一待办 / 审批证据 / 入口跳转</div></div></div>
-  <div class="sys-hero oa"><h3>OA 是流程协同入口，不只是审批工具</h3><p>OA 在本次集成方案中定位为跨系统协同层：承接 ERP、PLM、MES 等系统的待办提醒、消息触达、审批证据和门户入口。如果没有 OA 统一门户，员工每天需要在民机 OA、微信、邮件、线下直接沟通、商网、快表以及 ERP、PLM、MES 之间反复切换，重要通知容易被淹没，待办任务容易被遗漏，业务办理也难以形成统一闭环。具备条件的场景可通过单点登录、待办链接、接口回写和二次开发，实现从 OA 待办中心直接跳转到业务系统办理，避免各系统各自发通知、各自留痕、各自找入口。</p><div class="sys-tags"><span class="sys-tag oa">统一待办中心</span><span class="sys-tag oa">统一身份认证</span><span class="sys-tag oa">跨系统入口跳转</span><span class="sys-tag oa">审批证据归档</span><span class="sys-tag oa">移动协同</span></div></div>
   <div class="sys-hero oa"><h3>现状痛点："刚又解决了一个问题，但我是不是又忘了点儿啥？"</h3><p>如果 OA 只管自己的表单，员工仍然要在民机 OA、微信、邮件、线下沟通、商网、快表、ERP、PLM、MES 等入口之间反复横跳。痛点需要分成两类看：一类是没有统一门户和统一待办时，员工日常使用会漏看、漏办、难追踪；另一类是开发集成阶段，待办来源、跳转方式、权限映射、结果回写和异常补偿没有设计清楚，会导致系统虽然接上了但闭环跑不稳。</p></div>
-  <div class="sec-hd sub"><div class="sec-num" style="background:var(--amber)">A</div><div><h2>没有统一门户和统一待办造成的痛点</h2><div class="sd">入口分散 · 通知淹没 · 责任不清 · 办理遗漏</div></div></div>
+  <div class="sys-hero oa"><h3>OA 是流程协同入口，不只是审批工具</h3><p>OA 在本次集成方案中定位为跨系统协同层：承接 ERP、PLM、MES 等系统的待办提醒、消息触达、审批证据和门户入口。具备条件的场景可通过单点登录、待办链接、接口回写和二次开发，实现从 OA 待办中心直接跳转到业务系统办理，避免各系统各自发通知、各自留痕、各自找入口。</p><div class="sys-tags"><span class="sys-tag oa">统一待办中心</span><span class="sys-tag oa">统一身份认证</span><span class="sys-tag oa">跨系统入口跳转</span><span class="sys-tag oa">审批证据归档</span><span class="sys-tag oa">移动协同</span></div></div>
+  <div class="sec-hd sub"><div class="sec-num" style="background:var(--amber)">8.1</div><div><h2>没有统一门户和统一待办造成的痛点</h2><div class="sd">入口分散 · 通知淹没 · 责任不清 · 办理遗漏</div></div></div>
   <div class="pain-grid"><div class="pain-item"><strong>待办入口分散</strong>民机 OA、微信、邮件、商网、快表、ERP、PLM、MES 各自提醒，员工需要反复登录和人工记忆待办。</div><div class="pain-item"><strong>通知容易淹没</strong>关键通知混在群消息、邮件、口头沟通和系统弹窗中，容易错过审批、变更、异常和放行节点。</div><div class="pain-item"><strong>办理责任不清</strong>线下直接沟通后缺少统一待办和催办记录，责任人、截止时间、是否处理难以跟踪。</div><div class="pain-item"><strong>移动办理不连续</strong>移动端只能看 OA 内部表单，跨系统任务仍需回电脑端处理。</div><div class="pain-item"><strong>审批证据分散</strong>会签意见、附件、签章和业务状态分布在不同系统，事后追溯效率低。</div><div class="pain-item"><strong>消息触达无闭环</strong>提醒发出后缺少已读、催办、超期和结果反馈，流程效率无法量化。</div></div>
-  <div class="sec-hd sub"><div class="sec-num" style="background:var(--amber)">B</div><div><h2>开发集成阶段会出现的痛点</h2><div class="sd">待办来源 · 跳转方式 · 权限映射 · 结果回写 · 异常补偿</div></div></div>
+  <div class="sec-hd sub"><div class="sec-num" style="background:var(--amber)">8.2</div><div><h2>开发集成阶段会出现的痛点</h2><div class="sd">待办来源 · 跳转方式 · 权限映射 · 结果回写 · 异常补偿</div></div></div>
   <div class="pain-grid"><div class="pain-item"><strong>待办口径不统一</strong>ERP、PLM、MES 对任务编号、标题、状态、优先级、办理人和截止时间的字段定义不同，需先统一待办模型。</div><div class="pain-item"><strong>跳转方式要分级</strong>有些事项只需要提醒，有些可跳转原系统办理，有些需要 OA 审批后回写结果，不能一刀切。</div><div class="pain-item"><strong>审批与落账脱节</strong>OA 审批通过后，如果业务系统未同步状态，仍会产生执行断点。</div><div class="pain-item"><strong>组织权限口径不一</strong>部门、岗位、角色、在职状态不统一，会影响 PLM 发布、MES 派工和 ERP 审批。</div><div class="pain-item"><strong>二次开发边界不清</strong>哪些待办拉取、哪些消息推送、哪些页面跳转、哪些结果回写，若不提前定义会拖慢联调。</div><div class="pain-item"><strong>异常补偿机制不足</strong>接口失败、跳转失效、账号未映射、权限不足时，若没有重试、告警和人工兜底，待办会卡在半路。</div><div class="pain-item"><strong>文件归档不可控</strong>审批附件、受控文件和业务数据缺少统一归档规则，影响适航审计证据链。</div><div class="pain-item"><strong>移动端能力差异</strong>PC 端能跳转办理不代表移动端也能办理，需确认移动端页面、附件、签章和权限能力。</div></div>
   <div class="stat-row"><div class="stat-box"><div class="num">8</div><div class="lbl">应用域</div></div><div class="stat-box"><div class="num">4</div><div class="lbl">安全层级</div></div><div class="stat-box"><div class="num">3</div><div class="lbl">防护体系</div></div><div class="stat-box"><div class="num">6</div><div class="lbl">统一中心</div></div><div class="stat-box"><div class="num">3</div><div class="lbl">服务体系</div></div></div>
-  <div class="g2"><div class="card"><h3>建设目标</h3><ul><li>把 ERP、PLM、MES 的审批提醒、任务消息和异常通知集中到 OA 待办中心。</li><li>把民机 OA、微信、邮件、商网、快表和线下沟通中的关键事项逐步纳入统一入口或统一提醒口径。</li><li>通过统一门户和单点登录减少重复登录，条件成熟时直接跳转到业务系统办理。</li><li>把审批意见、会签记录、附件、签章和流转日志沉淀为跨系统可追溯证据。</li><li>以组织、岗位、角色和权限为基础，支撑 MDM、PLM、MES 的人员身份和授权校验。</li><li>审批结果回写业务系统，避免 OA 批了、业务系统未落账的断点。</li></ul></div><div class="card"><h3>复材企业联动重点</h3><ul><li>PLM 的 ECO/ECN、MBOM 发布等审批由 OA 提醒和留痕，生效仍回到 PLM 执行。</li><li>MES 的工艺变更、质量放行、异常处置等流程通过 OA 统一提醒，执行动作回到 MES。</li><li>ERP 的采购、合同、费用、付款等审批可纳入统一入口，结果回写 ERP 形成账务依据。</li><li>特殊工艺、NDT、适航授权等岗位资质，需和 OA 角色、质量确认、MES 派工规则联动。</li></ul></div></div>
-  <div class="sec-hd sub"><div class="sec-num" style="background:var(--amber)">M</div><div><h2>10 类协同能力</h2><div class="sd">门户、流程、表单、权限、文档、组织、移动、集成、报表、服务</div></div></div>
+  <div class="g2"><div class="card"><h3>建设目标</h3><ul><li>把各业务系统的审批提醒、任务消息和异常通知集中到 OA 待办中心，把分散的沟通渠道逐步纳入统一提醒口径。</li><li>通过统一门户和单点登录减少重复登录，条件成熟时直接跳转到业务系统办理。</li><li>把审批意见、会签记录、附件、签章和流转日志沉淀为跨系统可追溯证据。</li><li>以组织、岗位、角色和权限为基础，支撑 MDM、PLM、MES 的人员身份和授权校验。</li><li>审批结果回写业务系统，避免 OA 批了、业务系统未落账的断点。</li></ul></div><div class="card"><h3>复材企业联动重点</h3><ul><li>PLM 的 ECO/ECN、MBOM 发布等审批由 OA 提醒和留痕，生效仍回到 PLM 执行。</li><li>MES 的工艺变更、质量放行、异常处置等流程通过 OA 统一提醒，执行动作回到 MES。</li><li>ERP 的采购、合同、费用、付款等审批可纳入统一入口，结果回写 ERP 形成账务依据。</li><li>特殊工艺、NDT、适航授权等岗位资质，需和 OA 角色、质量确认、MES 派工规则联动。</li></ul></div></div>
+  <div class="sec-hd sub"><div class="sec-num" style="background:var(--amber)">8.3</div><div><h2>10 类协同能力</h2><div class="sd">门户、流程、表单、权限、文档、组织、移动、集成、报表、服务</div></div></div>
   <div class="cap-grid"><div class="cap-card oa"><h4>统一门户</h4><p>把民机 OA、微信、邮件、商网、快表和 ERP / PLM / MES 的关键入口聚合起来，支持按角色展示。</p></div><div class="cap-card oa"><h4>统一待办</h4><p>审批、消息、任务集中提醒，条件成熟时通过链接或单点登录跳转到业务系统办理。</p></div><div class="cap-card oa"><h4>智慧流程</h4><p>固定、自由、条件、并发、会签等流程支撑跨部门审批和复杂节点规则。</p></div><div class="cap-card oa"><h4>自定义表单</h4><p>表单、明细、关联查询和自动带入减少重复录入，并为接口字段落账提供结构化基础。</p></div><div class="cap-card oa"><h4>权限安全</h4><p>按权限组、管理员、审批节点和数据范围控制可见、可办、可写、可归档。</p></div><div class="cap-card oa"><h4>文档归档</h4><p>审批附件、流程记录、电子签章和受控文件按规则归档，支撑审计和追溯。</p></div><div class="cap-card oa"><h4>组织角色</h4><p>部门、岗位、人员、角色和权限作为统一身份底座，供其他系统消费或映射。</p></div><div class="cap-card oa"><h4>移动协同</h4><p>移动端、IM、消息提醒和视频会议支撑随时处理跨系统待办和催办。</p></div><div class="cap-card oa"><h4>系统集成</h4><p>统一身份认证、统一消息、统一报表和数据传输，打通信息孤岛。</p></div><div class="cap-card oa"><h4>实施服务</h4><p>调研、流程规划、培训、上线、回访和三五八服务体系保障持续运行。</p></div></div>
-  <div class="sec-hd sub"><div class="sec-num" style="background:var(--amber)">6</div><div><h2>6 大关键业务闭环</h2><div class="sd">提醒在 OA，办理在业务系统，结果要回写</div></div></div>
+  <div class="sec-hd sub"><div class="sec-num" style="background:var(--amber)">8.4</div><div><h2>6 大关键业务闭环</h2><div class="sd">提醒在 OA，办理在业务系统，结果要回写</div></div></div>
   <div class="loop-grid"><div class="loop-item oa"><div class="loop-title">统一待办闭环</div><div class="loop-flow">ERP/PLM/MES 产生任务 → OA 聚合提醒 → 用户查看 → 跳转办理或 OA 审批 → 状态反馈</div><div class="loop-key">避免多系统漏看待办</div></div><div class="loop-item oa"><div class="loop-title">审批证据闭环</div><div class="loop-flow">申请 → 会签 → 审批意见 → 附件/签章 → 归档 → 审计查询</div><div class="loop-key">证据可查、版本可追</div></div><div class="loop-item oa"><div class="loop-title">ECO 协同闭环</div><div class="loop-flow">PLM 发起 ECO → OA 提醒/会签 → PLM 生效 → 影响对象同步 ERP/MES</div><div class="loop-key">OA 不替代 PLM 发布</div></div><div class="loop-item oa"><div class="loop-title">MES 放行闭环</div><div class="loop-flow">MES 提交质量/工艺审批 → OA 提醒 → 责任人处理 → MES 接收结果 → 工序继续或冻结</div><div class="loop-key">审批未通过不得流转</div></div><div class="loop-item oa"><div class="loop-title">组织权限闭环</div><div class="loop-flow">人员入转调离 → OA/MDM 更新 → ERP/PLM/MES 同步 → 权限校验 → 异常回收</div><div class="loop-key">离岗即收权，授权可追溯</div></div><div class="loop-item oa"><div class="loop-title">门户跳转闭环</div><div class="loop-flow">OA 门户展示业务待办 → SSO 校验 → 跳转原系统 → 原系统办理 → 结果回传 OA</div><div class="loop-key">二次开发边界需接口卡确认</div></div></div>
   <div class="warn"><div class="wt">说明会口径约束</div><p>OA 是协同入口、提醒中心和流程证据层，不替 ERP 做账务、不替 PLM 做版本发布、不替 MES 做现场执行。凡涉及跨系统待办拉取、入口跳转、单点登录、审批结果回写和移动端办理，均需在接口卡中明确触发条件、字段范围、失败补偿和二次开发边界。</p></div>
 </div>
@@ -1133,8 +1131,8 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
 <!-- ══ 9 PLM 是什么 ══ -->
 <div class="sec" id="s9">
   <div class="sec-hd"><div class="sec-num">9</div><div><h2>PLM 是什么</h2><div class="sd">设计数据源头 · 图纸 / BOM / 变更</div></div></div>
-  <div class="sys-hero plm"><h3>PLM 是研发数据源头，不是图纸仓库</h3><p>PLM 一期聚焦设计件黄金源、变更闭环与制造数据承接：通过 MBOM（含PDM能力）、ECO（含ECN闭环）与工程项目管理，把设计数据以可控、可追溯、可下发的方式传递到制造域，作为后续数据治理与接口设计的业务依据。</p><div class="sys-tags"><span class="sys-tag plm">MBOM（含PDM）</span><span class="sys-tag plm">ECO（含ECN）</span><span class="sys-tag plm">工程项目管理</span><span class="sys-tag plm">设计件黄金源</span><span class="sys-tag plm">一期范围已定</span></div></div>
   <div class="sys-hero plm"><h3>现状痛点：在干了！但没有自己的系统！腰杆儿不硬！</h3><p>研发域当前存在数据源头不清、变更链条断裂、版本不统一等问题，导致下游ERP/MES系统出现"同一个零件五个系统五种叫法"的主数据混乱风险。</p></div>
+  <div class="sys-hero plm"><h3>PLM 是研发数据源头，不是图纸仓库</h3><p>PLM 一期聚焦设计件黄金源、变更闭环与制造数据承接：通过 MBOM（含PDM能力）、ECO（含ECN闭环）与工程项目管理，把设计数据以可控、可追溯、可下发的方式传递到制造域，作为后续数据治理与接口设计的业务依据。</p><div class="sys-tags"><span class="sys-tag plm">MBOM（含PDM）</span><span class="sys-tag plm">ECO（含ECN）</span><span class="sys-tag plm">工程项目管理</span><span class="sys-tag plm">设计件黄金源</span><span class="sys-tag plm">一期范围已定</span></div></div>
   <div class="pain-grid"><div class="pain-item"><strong>EBOM→MBOM转换断层</strong>设计结构与工序结构无法直接对应，人工映射效率低且易出错。</div><div class="pain-item"><strong>BOM头字段不对齐</strong>项目号、配置、构型状态、REV在下游系统中字段名不一致。</div><div class="pain-item"><strong>ECO变更闭环缺失</strong>变更审批靠线下传递，无法自动触发下游系统版本更新。</div><div class="pain-item"><strong>设计版本不统一</strong>设计文件、工艺文件、质量文件版本不同步，存在混用风险。</div><div class="pain-item"><strong>适航追溯困难</strong>设计件→制造件→检验件的全链路追溯依赖人工台账。</div><div class="pain-item"><strong>变更响应滞后</strong>设计变更无法实时同步到车间执行层，造成工艺文件与现场不一致。</div><div class="pain-item"><strong>数据源头分散</strong>图纸、模型、BOM、文档分散管理，缺乏统一出口管控。</div><div class="pain-item"><strong>版本历史不透明</strong>无法快速定位某批次产品对应的设计版本和技术状态。</div></div>
   <div class="stat-row"><div class="stat-box"><div class="num">3</div><div class="lbl">一期功能模块</div></div><div class="stat-box"><div class="num">6</div><div class="lbl">一期实施月数</div></div><div class="stat-box"><div class="num">3</div><div class="lbl">集成系统</div></div><div class="stat-box"><div class="num">3</div><div class="lbl">核心闭环</div></div><div class="stat-box"><div class="num">5</div><div class="lbl">实施阶段</div></div></div>
   <div class="g2"><div class="card"><h3>建设目标</h3><ul><li>建立设计件到制造件的EBOM→MBOM结构化转换通道。</li><li>实现ECO变更从发起、审批、生效到全系统同步的闭环管控。</li><li>以工程项目管理支撑工程变更驱动的任务分解与进度跟踪。</li><li>确立设计件为下游ERP、MES系统的唯一黄金源。</li></ul></div><div class="card"><h3>航空复材专项能力</h3><ul><li>EBOM结构与复材铺层、构型状态、REV版本精确关联。</li><li>ECO变更自动影响MBOM工序结构版本。</li><li>设计件图号/版本/构型覆盖适航追溯要求。</li><li>BOM头字段（项目号、配置、构型状态、REV）与下游系统字段映射。</li></ul></div></div>
@@ -1315,17 +1313,6 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
     </div>
   </div>
 
-  <div class="tw">
-    <table>
-      <thead><tr><th>步骤</th><th>核心任务</th><th>交付物</th><th>关键控制点</th></tr></thead>
-      <tbody>
-        <tr><td><strong>Step 1: 定义模板</strong></td><td>联合定义复材专用的工序、工步模板</td><td>《复材结构化工艺标准模板》</td><td>必须包含铺层/固化特定字段</td></tr>
-        <tr><td><strong>Step 2: 典型试点</strong></td><td>选取1个代表性型号进行全流程拆解</td><td>结构化MBOM、数字化指令</td><td>必须通过MES开工校验测试</td></tr>
-        <tr><td><strong>Step 3: 规模迁移</strong></td><td>组织工艺员开展大规模存量规程拆解录入</td><td>1000+份结构化数字规程</td><td>完成率与资源绑定率监控</td></tr>
-      </tbody>
-    </table>
-  </div>
-
   <div class="card">
     <h3>资源投入建议</h3>
     <div class="res-grid">
@@ -1397,14 +1384,14 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
 <!-- ══ 10 MES 是什么 ══ -->
 <div class="sec" id="s10">
   <div class="sec-hd"><div class="sec-num">10</div><div><h2>MES 是什么</h2><div class="sd">车间执行神经系统 · 排产 / 工艺 / 质量 / 追溯</div></div></div>
-  <div class="sys-hero mes"><h3>MES 是制造执行层，不只是一个报工系统</h3><p>来源页将 MES 规划定位为打通 ERP 订单到产品交付的端到端制造执行体系，覆盖订单、工艺、计划、执行、质量、仓储、设备、工装、问题、看板和风险管控。本节保留该框架，并把"现状痛点"展开为较大篇幅，作为后续 ERP-PP ⇄ MES 闭环和接口设计的业务依据。</p><div class="sys-tags"><span class="sys-tag mes">12 大功能模块</span><span class="sys-tag mes">14 项现状痛点</span><span class="sys-tag mes">7 大业务闭环</span><span class="sys-tag mes">三阶段实施</span><span class="sys-tag mes">航空级追溯</span></div></div>
   <div class="sys-hero mes"><h3>现状痛点：这个件干到哪儿了？停了我咋不知道？脸都刷透支了！</h3><p>来源页列出 14 项核心痛点，核心问题不是单点效率低，而是生产、工艺、质量、物料、设备和管理决策缺少实时、可信、可追溯的数据闭环。</p></div>
+  <div class="sys-hero mes"><h3>MES 是制造执行层，不只是一个报工系统</h3><p>来源页将 MES 规划定位为打通 ERP 订单到产品交付的端到端制造执行体系，覆盖订单、工艺、计划、执行、质量、仓储、设备、工装、问题、看板和风险管控。本节保留该框架，并把"现状痛点"展开为较大篇幅，作为后续 ERP-PP ⇄ MES 闭环和接口设计的业务依据。</p><div class="sys-tags"><span class="sys-tag mes">12 大功能模块</span><span class="sys-tag mes">14 项现状痛点</span><span class="sys-tag mes">7 大业务闭环</span><span class="sys-tag mes">三阶段实施</span><span class="sys-tag mes">航空级追溯</span></div></div>
   <div class="pain-grid"><div class="pain-item"><strong>生产进度不透明</strong>无法实时掌控计划流转状态，决策依赖人工汇报。</div><div class="pain-item"><strong>资源调度不科学</strong>设备利用率、人员负荷缺乏数据支撑，依靠经验调度。</div><div class="pain-item"><strong>管控模式被动</strong>缺乏事前预警，以"救火式"处理为主。</div><div class="pain-item"><strong>信息失真</strong>数据获取依赖人工询问，缺乏客观实时数据源。</div><div class="pain-item"><strong>非增值工作繁重</strong>大量时间耗费在手工记录、单据传递、寻找物料上。</div><div class="pain-item"><strong>工艺版本控制薄弱</strong>难以确保始终使用最新版图纸，存在质量风险。</div><div class="pain-item"><strong>变更响应滞后</strong>设计工艺变更无法实时下发车间，执行脱节。</div><div class="pain-item"><strong>过程防错缺失</strong>依赖个人经验，易发生工序漏做、参数用错。</div><div class="pain-item"><strong>追溯效率低下</strong>质量追溯需翻查大量纸质文件，耗时且准确性低。</div><div class="pain-item"><strong>质量数据孤立</strong>检验数据未与生产数据联动，无法系统化分析。</div><div class="pain-item"><strong>计划可执行性差</strong>插单急单频繁打乱排程，加大管理难度。</div><div class="pain-item"><strong>在制品管理混乱</strong>在制品数量、位置、状态不明，影响交付周期。</div><div class="pain-item"><strong>决策缺乏数据支撑</strong>无法获取准确及时的生产质量数据，难以科学决策。</div><div class="pain-item"><strong>记录篡改风险</strong>全过程依赖纸质单据，存在记录缺失、篡改风险。</div></div>
   <div class="stat-row"><div class="stat-box"><div class="num">12</div><div class="lbl">功能模块</div></div><div class="stat-box"><div class="num">8</div><div class="lbl">一期排期月数</div></div><div class="stat-box"><div class="num">3</div><div class="lbl">集成系统</div></div><div class="stat-box"><div class="num">7</div><div class="lbl">核心闭环</div></div><div class="stat-box"><div class="num">3</div><div class="lbl">实施阶段</div></div></div>
   <div class="g2"><div class="card"><h3>建设目标</h3><ul><li>形成订单、工艺、计划、执行、质量、交付全流程闭环。</li><li>建立以 MBOM 为核心的结构化工艺体系，并强制控制版本。</li><li>实现无纸化生产执行、全过程数据采集、实时监控和精准追溯。</li><li>搭建航空级质量管理体系，推动质量问题从提报到归零闭环。</li><li>实现架次级项目管理与工序级生产执行协同。</li></ul></div><div class="card"><h3>复材专项能力</h3><ul><li>铺层方向、层数、顺序等参数可视化管理。</li><li>固化曲线、温度、时间、压力联动控制。</li><li>工装与复材工序精准绑定。</li><li>预浸料有效期预警，超期禁止领用。</li></ul></div></div>
-  <div class="sec-hd sub"><div class="sec-num" style="background:var(--green)">M</div><div><h2>12 大功能模块</h2><div class="sd">主数据、工艺、计划、执行、质量、仓储、设备、工装、问题、管控、看板</div></div></div>
+  <div class="sec-hd sub"><div class="sec-num" style="background:var(--green)">10.1</div><div><h2>12 大功能模块</h2><div class="sd">主数据、工艺、计划、执行、质量、仓储、设备、工装、问题、管控、看板</div></div></div>
   <div class="cap-grid"><div class="cap-card mes"><h4>主数据管理</h4><p>统一标准，推动 PLM / ERP / MES 三系统同源。</p></div><div class="cap-card mes"><h4>工艺管理</h4><p>MBOM 构建、复材专项、版本强控和 ECO 变更。</p></div><div class="cap-card mes"><h4>生产计划管理</h4><p>承接 ERP 订单，多架次并行排产。</p></div><div class="cap-card mes"><h4>计划执行管理</h4><p>无纸化车间、扫码开工、三重校验、工序防错。</p></div><div class="cap-card mes"><h4>质量管理</h4><p>航空级质量体系、不合格品闭环、SPC 分析。</p></div><div class="cap-card mes"><h4>仓储管理</h4><p>一物一码、PDA、有效期预警和批次追溯。</p></div><div class="cap-card mes"><h4>设备管理</h4><p>设备台账、保养校准和故障维修闭环。</p></div><div class="cap-card mes"><h4>设备数据采集</h4><p>OPC-UA / MQTT 接入，参数自动采集比对。</p></div><div class="cap-card mes"><h4>工装工具管理</h4><p>领用、归还、校准、定检、维修、报废。</p></div><div class="cap-card mes"><h4>问题管理</h4><p>问题跟踪、分级推送、超时升级和知识库。</p></div><div class="cap-card mes"><h4>生产管控</h4><p>进度监控、状态标识、追溯和超期预警。</p></div><div class="cap-card mes"><h4>监控看板</h4><p>生产效率、在制品、资源和经营数据看板。</p></div></div>
-  <div class="sec-hd sub"><div class="sec-num" style="background:var(--green)">7</div><div><h2>7 大关键业务闭环</h2><div class="sd">上一环节未完成或不合格，不进入下一环节</div></div></div>
+  <div class="sec-hd sub"><div class="sec-num" style="background:var(--green)">10.2</div><div><h2>7 大关键业务闭环</h2><div class="sd">上一环节未完成或不合格，不进入下一环节</div></div></div>
   <div class="loop-grid"><div class="loop-item"><div class="loop-title">主生产流程闭环</div><div class="loop-flow">ERP订单接收 → 工艺文件准备 → 生产计划排产 → 工序任务派工 → 生产执行 → 质量检验 → 产品交付</div><div class="loop-key">各环节数据互联互通</div></div><div class="loop-item"><div class="loop-title">工艺版本强控闭环</div><div class="loop-flow">工艺编制 → 审核 → 发布 → 下发 → 开工前强制校验 → 版本变更</div><div class="loop-key">非最新有效版本禁止开工</div></div><div class="loop-item"><div class="loop-title">质量问题闭环</div><div class="loop-flow">质量问题提报 → 原因分析 → 措施制定 → 措施执行 → 效果验证 → 问题归零</div><div class="loop-key">未闭环不得销号</div></div><div class="loop-item"><div class="loop-title">全流程追溯闭环</div><div class="loop-flow">图号 + 质量编号覆盖订单、工艺、计划、执行、物料、设备、质量、交付</div><div class="loop-key">支持全链路查询</div></div><div class="loop-item"><div class="loop-title">固化工艺管控闭环</div><div class="loop-flow">固化参数设定 → 设备运行 → 参数采集 → 参数比对 → 结果判定</div><div class="loop-key">参数未达标禁止流转</div></div><div class="loop-item"><div class="loop-title">物料齐套管控闭环</div><div class="loop-flow">物料需求 → 入库 → 齐套检查 → 投产前核对 → 领用</div><div class="loop-key">物料未齐套禁止投产</div></div><div class="loop-item"><div class="loop-title">审批流程闭环</div><div class="loop-flow">申请 → 审核 → 批准 → 执行 → 反馈</div><div class="loop-key">审批未通过禁止操作</div></div></div>
   <div class="warn"><div class="wt">说明会口径约束</div><p>MES 负责把车间现场"怎么干、干到哪一步、结果是否合格"记录清楚；它不替代 PLM 管设计源头，不替代 ERP 做经营落账，也不替代 OA 做跨部门审批入口。边界说清楚，后面接口才不会互相抢活。</p></div>
   <div class="bridge-note"><strong>承接 ERP：</strong>MES 解决现场怎么干、干到哪一步；ERP 解决计划怎么下、成本怎么算、账怎么落。也可以理解成厨房后厨和收银账台的关系：后厨要知道每道菜做到哪一步，账台要知道订单、成本和收入最终怎么入账。</div>
@@ -1414,8 +1401,8 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
 <div class="sec" id="s11">
   <div class="sec-hd"><div class="sec-num">11</div><div><h2>ERP 是什么</h2><div class="sd">经营管理落账中枢 · 项目 / 财务 / 成本 / 计划 / 物料 / 销售</div></div></div>
 
-  <div class="sys-hero erp"><h3>ERP 是一期建设的管理核心层，不只是财务记账工具</h3><p>ERP（用友 U8）旨在解决项目成本不透明、账实不一致及跨部门数据孤岛等问题，承担从生产计划下达到财务成本核算的全链路落账职责。六条核心业务线——PS / FI / CO / PP / MM / SD——构成经营管理的完整骨架。</p><div class="sys-tags"><span class="sys-tag erp">6 大核心模块</span><span class="sys-tag erp">项目成本归集</span><span class="sys-tag erp">账实一致性保障</span><span class="sys-tag erp">全链路落账</span><span class="sys-tag erp">三单匹配</span></div></div>
   <div class="sys-hero erp"><h3>现状痛点：功能挺全，但数据叫不准，不敢用</h3><p>如果 ERP 只是把六大模块部署上线而不解决数据源头、跨系统协同和核算口径问题，就会出现：主数据不一致导致 MRP 跑出错误需求、成本归集缺数据无法出报表、账实不符引发审计风险、采购到入库凭证断裂无法完成三单匹配。</p></div>
+  <div class="sys-hero erp"><h3>ERP 是一期建设的管理核心层，不只是财务记账工具</h3><p>ERP（用友 U8）旨在解决项目成本不透明、账实不一致及跨部门数据孤岛等问题，承担从生产计划下达到财务成本核算的全链路落账职责。六条核心业务线——PS / FI / CO / PP / MM / SD——构成经营管理的完整骨架。</p><div class="sys-tags"><span class="sys-tag erp">6 大核心模块</span><span class="sys-tag erp">项目成本归集</span><span class="sys-tag erp">账实一致性保障</span><span class="sys-tag erp">全链路落账</span><span class="sys-tag erp">三单匹配</span></div></div>
   <div class="pain-grid">
     <div class="pain-item"><strong>项目成本不透明</strong>ERP 缺少 MES 工时和 WMS 领料数据，无法按项目/工单归集实际成本，管理报表依赖人工估算。</div>
     <div class="pain-item"><strong>账实不一致</strong>库存账与实物库存存在时间差和数量差，缺乏 WMS 批次数据回传和定期盘点机制。</div>
@@ -1442,7 +1429,7 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
     <li>ECN/ECO 变更经 PLM 生效后，需同步更新 ERP 侧 BOM 版本，避免计划用错版本。</li>
   </ul></div></div>
 
-  <div class="sec-hd sub"><div class="sec-num" style="background:var(--blue)">M</div><div><h2>6 大核心模块</h2><div class="sd">PS · FI · CO · PP · MM · SD</div></div></div>
+  <div class="sec-hd sub"><div class="sec-num" style="background:var(--blue)">11.1</div><div><h2>6 大核心模块</h2><div class="sd">PS · FI · CO · PP · MM · SD</div></div></div>
   <div class="cap-grid">
     <div class="cap-card erp"><h4>PS 项目管理</h4><p>项目结构、预算、进度与结算，支撑项目级成本归集和利润分析。</p></div>
     <div class="cap-card erp"><h4>FI 财务会计</h4><p>总账、应收、应付、资产，形成法定财务报表和审计证据链。</p></div>
@@ -1452,7 +1439,7 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
     <div class="cap-card erp"><h4>SD 销售分销</h4><p>销售订单、发货、开票，触发 PP 生产计划和 FI 收入确认。</p></div>
   </div>
 
-  <div class="sec-hd sub"><div class="sec-num" style="background:var(--blue)">5</div><div><h2>5 步实施路径</h2><div class="sd">标准定义 → 主数据对接 → 计划协同 → 采购联动 → 成本核算</div></div></div>
+  <div class="sec-hd sub"><div class="sec-num" style="background:var(--blue)">11.2</div><div><h2>5 步实施路径</h2><div class="sd">标准定义 → 主数据对接 → 计划协同 → 采购联动 → 成本核算</div></div></div>
   <div class="loop-grid">
     <div class="loop-item">
       <div class="loop-title">第 1 步：标准定义</div>
@@ -1481,7 +1468,7 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
     </div>
   </div>
 
-  <div class="sec-hd sub"><div class="sec-num" style="background:var(--blue)">6</div><div><h2>6 大关键业务闭环</h2><div class="sd">数据不落地，账实可追溯</div></div></div>
+  <div class="sec-hd sub"><div class="sec-num" style="background:var(--blue)">11.3</div><div><h2>6 大关键业务闭环</h2><div class="sd">数据不落地，账实可追溯</div></div></div>
   <div class="loop-grid">
     <div class="loop-item"><div class="loop-title">计划闭环</div><div class="loop-flow">SD 销售订单 → PP-MRP 运算 → 生产订单 → MES 执行 → CO 成本归集</div><div class="loop-key">从订单到成本的完整闭环</div></div>
     <div class="loop-item"><div class="loop-title">采购闭环</div><div class="loop-flow">MM 采购申请 → 采购订单 → 供应商确认 → WMS 收货 → FI 应付凭证</div><div class="loop-key">采购-库存-财务三单匹配</div></div>
@@ -1688,7 +1675,7 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
   </div>
 
   <!-- ── MDM 阶段二：存量数据盘点与清洗 ── -->
-  <div class="sec-hd sub" id="mdm-stage2"><div class="sec-num" style="background:var(--green)">15.2</div><div><h2>阶段二：存量数据盘点与清洗</h2><div class="sd">整个流程中最耗时、工作量最大的环节（通常需 5-6 个月），涉及上万条数据的处理。</div></div></div>
+  <div class="sec-hd sub" id="mdm-stage2"><div class="sec-num" style="background:var(--green)">15.2</div><div><h2>阶段二：存量数据盘点与清洗</h2><div class="sd">整个流程中最耗时、工作量最大的环节，涉及上万条数据的处理。</div></div></div>
 
   <div class="warn">
     <div class="wt">工作量预警</div>
