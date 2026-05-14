@@ -27,7 +27,6 @@ router.get('/sankey', requireAuth, (req, res) => {
     if (capLevels.length < 3) {
       // Need to expand: if user picks L1, include all L2/L3 descendants via parent_id chain
       const allCaps = db.prepare('SELECT id, level, parent_id FROM capabilities').all();
-      const capById = new Map(allCaps.map(c => [c.id, c]));
       const childrenOf = new Map();
       allCaps.forEach(c => {
         if (c.parent_id) {
@@ -67,7 +66,7 @@ router.get('/sankey', requireAuth, (req, res) => {
       JOIN processes p ON p.capability_id = c.id
       JOIN mappings m ON m.process_id = p.id AND m.status = 'published'`;
     const capParams = [];
-    if (capIds) {
+    if (capIds && capIds.length > 0) {
       capSql += ' AND c.id IN (' + capIds.map(() => '?').join(',') + ')';
       capParams.push(...capIds);
     }
@@ -78,7 +77,7 @@ router.get('/sankey', requireAuth, (req, res) => {
       JOIN mappings m ON m.process_id = p.id AND m.status = 'published'
       WHERE 1=1`;
     const procParams = [];
-    if (capIds) {
+    if (capIds && capIds.length > 0) {
       procSql += ' AND p.capability_id IN (' + capIds.map(() => '?').join(',') + ')';
       procParams.push(...capIds);
     }
@@ -90,7 +89,7 @@ router.get('/sankey', requireAuth, (req, res) => {
       JOIN mappings m ON ms.mapping_id = m.id AND m.status = 'published'
       WHERE 1=1`;
     const sysParams = [];
-    if (capIds) {
+    if (capIds && capIds.length > 0) {
       sysSql += ` AND m.process_id IN (
         SELECT p.id FROM processes p WHERE p.capability_id IN (` + capIds.map(() => '?').join(',') + `)
       )`;
@@ -116,49 +115,67 @@ router.get('/sankey', requireAuth, (req, res) => {
     };
 
     // Department → Capability (via process owner_dept)
-    const dcLinks = db.prepare(`
-      SELECT DISTINCT d.name as dept, c.name as cap
+    let dcSql = `SELECT DISTINCT d.name as dept, c.name as cap
       FROM mappings m
       JOIN processes p ON m.process_id = p.id
       JOIN capabilities c ON p.capability_id = c.id
       JOIN departments d ON m.owner_dept_id = d.id
-      WHERE m.status = 'published'
-    `).all();
+      WHERE m.status = 'published'`;
+    const dcParams = [];
+    if (deptIds.length > 0) {
+      dcSql += ' AND d.id IN (' + deptIds.map(() => '?').join(',') + ')';
+      dcParams.push(...deptIds);
+    }
+    const dcLinks = db.prepare(dcSql).all(...dcParams);
     dcLinks.forEach(r => addLink(r.dept, r.cap));
 
     // Department → Capability (via related departments)
-    const dcLinks2 = db.prepare(`
-      SELECT DISTINCT d.name as dept, c.name as cap
+    let dc2Sql = `SELECT DISTINCT d.name as dept, c.name as cap
       FROM mappings m
       JOIN mapping_related_departments mrd ON mrd.mapping_id = m.id
       JOIN departments d ON mrd.department_id = d.id
       JOIN processes p ON m.process_id = p.id
       JOIN capabilities c ON p.capability_id = c.id
-      WHERE m.status = 'published'
-    `).all();
+      WHERE m.status = 'published'`;
+    const dc2Params = [];
+    if (deptIds.length > 0) {
+      dc2Sql += ' AND d.id IN (' + deptIds.map(() => '?').join(',') + ')';
+      dc2Params.push(...deptIds);
+    }
+    const dcLinks2 = db.prepare(dc2Sql).all(...dc2Params);
     dcLinks2.forEach(r => addLink(r.dept, r.cap));
 
     // Capability → Process
-    const cpLinks = db.prepare(`
-      SELECT c.name as cap, p.name as proc, COUNT(DISTINCT m.id) as cnt
+    let cpSql = `SELECT c.name as cap, p.name as proc, COUNT(DISTINCT m.id) as cnt
       FROM mappings m
       JOIN processes p ON m.process_id = p.id
       JOIN capabilities c ON p.capability_id = c.id
-      WHERE m.status = 'published'
-      GROUP BY c.name, p.name
-    `).all();
+      WHERE m.status = 'published'`;
+    const cpParams = [];
+    if (deptIds.length > 0) {
+      cpSql += ` AND (m.owner_dept_id IN (` + deptIds.map(() => '?').join(',') + `)
+        OR m.id IN (SELECT mrd.mapping_id FROM mapping_related_departments mrd WHERE mrd.department_id IN (` + deptIds.map(() => '?').join(',') + `)))`;
+      cpParams.push(...deptIds, ...deptIds);
+    }
+    cpSql += ' GROUP BY c.name, p.name';
+    const cpLinks = db.prepare(cpSql).all(...cpParams);
     cpLinks.forEach(r => { for (let i = 0; i < r.cnt; i++) addLink(r.cap, r.proc); });
 
     // Process → System
-    const psLinks = db.prepare(`
-      SELECT p.name as proc, s.name as sys, COUNT(DISTINCT m.id) as cnt
+    let psSql = `SELECT p.name as proc, s.name as sys, COUNT(DISTINCT m.id) as cnt
       FROM mappings m
       JOIN mapping_systems ms ON ms.mapping_id = m.id
       JOIN systems s ON ms.system_id = s.id
       JOIN processes p ON m.process_id = p.id
-      WHERE m.status = 'published'
-      GROUP BY p.name, s.name
-    `).all();
+      WHERE m.status = 'published'`;
+    const psParams = [];
+    if (deptIds.length > 0) {
+      psSql += ` AND (m.owner_dept_id IN (` + deptIds.map(() => '?').join(',') + `)
+        OR m.id IN (SELECT mrd.mapping_id FROM mapping_related_departments mrd WHERE mrd.department_id IN (` + deptIds.map(() => '?').join(',') + `)))`;
+      psParams.push(...deptIds, ...deptIds);
+    }
+    psSql += ' GROUP BY p.name, s.name';
+    const psLinks = db.prepare(psSql).all(...psParams);
     psLinks.forEach(r => { for (let i = 0; i < r.cnt; i++) addLink(r.proc, r.sys); });
 
     const links = [...linkMap.entries()].map(([key, value]) => {
