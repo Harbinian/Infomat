@@ -1273,7 +1273,8 @@
     $('modalReject').onclick = function() { review('reject'); };
     $('detailBackBtn').onclick = function() {
       var route = parseHash();
-      navigateTo('list', { tab: route.tab || 'dashboard' });
+      var backTab = route.tab === 'processes' ? 'businessMap' : (route.tab || 'dashboard');
+      navigateTo('list', { tab: backTab });
     };
 
     if (document.getElementById('sankeyDept')) {
@@ -1281,6 +1282,69 @@
     }
     if (document.getElementById('sankeyLevel')) {
       document.getElementById('sankeyLevel').onchange = renderBusinessMap;
+    }
+
+    // ===== Process Detail Page =====
+
+    async function renderProcessDetail(processId) {
+      try {
+        var detail = await api('/api/views/processes/' + processId);
+        setBreadcrumb([
+          { label: '业务地图', onclick: "navigateTo('list',{tab:'businessMap'})" },
+          { label: detail.name }
+        ]);
+
+        var container = document.getElementById('detailContent');
+
+        // Build system links list
+        var systemsHtml = detail.systems.length > 0
+          ? '<div class="table-container"><table><thead><tr><th>应用系统</th></tr></thead><tbody>' +
+            detail.systems.map(function(s) {
+              return '<tr><td>' + s.name + '</td></tr>';
+            }).join('') + '</tbody></table></div>'
+          : '<div class="empty">暂无关联系统</div>';
+
+        // Build field ledger summary table
+        var fieldsHtml = detail.fields.length > 0
+          ? '<div class="table-container"><table><thead><tr><th>字段中文名</th><th>字段英文名</th><th>数据对象</th><th>类型</th><th>同步方式</th><th>消费系统</th><th>所属部门</th></tr></thead><tbody>' +
+            detail.fields.map(function(f) {
+              return '<tr><td>' + (f.field_name_cn || '-') + '</td><td>' + (f.field_name_en || '-') + '</td>' +
+                '<td>' + (f.data_object || '-') + '</td><td>' + (f.field_type || '-') + '</td>' +
+                '<td>' + (f.sync_mode || '-') + '</td><td>' + (f.consume_systems || '-') + '</td>' +
+                '<td>' + (f.dept_name || '-') + '</td></tr>';
+            }).join('') + '</tbody></table></div>'
+          : '<div class="empty">暂无字段台账</div>';
+
+        container.innerHTML =
+          '<div style="margin-bottom: 24px;">' +
+            '<h2 style="margin-bottom: 8px;">' + detail.name + '</h2>' +
+            '<div class="detail-meta">' +
+              '<span>所属能力：' + (detail.cap_name || '-') + '</span>' +
+              '<span>所属部门：' + (detail.dept_name || '-') + '</span>' +
+              '<span>状态：' + statusTag(detail.status) + '</span>' +
+            '</div>' +
+          '</div>' +
+
+          '<h2>关联系统</h2>' + systemsHtml +
+
+          '<h2 style="margin-top: 32px;">字段台账汇总</h2>' + fieldsHtml +
+
+          '<h2 style="margin-top: 32px;">上下游关系</h2>' +
+          '<div class="notice" style="border-left-color: var(--warning);">' +
+            '流程间的上游/下游依赖关系将在后续版本中可视化展示。' +
+            '届时可在此查看当前流程的前置输入流程和后置输出流程，支持 DAG 图形式的流程关系绑定。' +
+          '</div>';
+
+        document.getElementById('detailPage').classList.add('on');
+        document.querySelectorAll('.panel').forEach(function(el) { el.classList.remove('on'); });
+      } catch (e) {
+        if (e.status === 404) {
+          document.getElementById('detailContent').innerHTML =
+            '<div class="empty">流程不存在或无权访问 <button class="btn secondary" onclick="history.back()">返回上一页</button></div>';
+        } else {
+          showToast(e.message || '加载失败', 'error');
+        }
+      }
     }
 
     // ===== Phase 5: Mapping Detail =====
