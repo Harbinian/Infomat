@@ -276,6 +276,7 @@
         <button class="tab on" data-tab="dashboard" data-roles="submitter,owner,reviewer,admin">统计看板</button>
         <button class="tab" data-tab="mySubmissions" data-roles="submitter,admin">报送管理</button>
         <button class="tab" data-tab="capabilities" data-roles="admin">能力与流程申报</button>
+        <button class="tab" data-tab="businessMap" data-roles="owner,reviewer,admin">业务地图</button>
         <button class="tab" data-tab="todos" data-roles="submitter,owner,reviewer,admin">待办收到</button>
         <button class="tab" data-tab="reviews" data-roles="submitter,owner,reviewer,admin">评审记录</button>
         <button class="tab" data-tab="terms" data-roles="submitter,owner,reviewer,admin">术语词典</button>
@@ -390,6 +391,24 @@
           </div>
         </div>
         <div id="conflictRows"></div>
+      </section>
+
+      <!-- Business Map (Sankey) -->
+      <section class="panel" id="businessMap">
+        <div class="toolbar">
+          <h2>业务地图</h2>
+          <div class="toolbar-right">
+            <select id="sankeyDept" multiple style="width: 180px; height: 36px; padding: 6px;">
+            </select>
+            <select id="sankeyLevel" style="width: 120px; height: 36px; padding: 0 12px;">
+              <option value="L1,L2,L3">全部能力层级</option>
+              <option value="L1">仅 L1</option>
+              <option value="L1,L2">L1 + L2</option>
+            </select>
+          </div>
+        </div>
+        <div class="notice" id="sankeyMeta" style="margin-bottom: 16px;"></div>
+        <div class="chart" id="sankeyChart" style="height: 600px;"></div>
       </section>
 
       <!-- Detail Page (L2) -->
@@ -949,6 +968,7 @@
         case 'terms': loadTerms(); break;
         case 'conflicts': loadConflicts(); break;
         case 'capabilities': loadCatalog(); break;
+        case 'businessMap': renderBusinessMap(); break;
       }
     }
 
