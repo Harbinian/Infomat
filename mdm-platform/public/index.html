@@ -954,6 +954,8 @@
     // ===== Business Map Sankey =====
 
     // Layer color families (四色原则)
+    var sankeyResizeHandler = null;
+
     var LAYER_COLORS = {
       1: ['#2563eb','#3b82f6','#60a5fa','#93c5fd','#1d4ed8','#bfdbfe'],
       2: ['#059669','#10b981','#34d399','#6ee7b7','#047857','#a7f3d0'],
@@ -1067,7 +1069,9 @@
           }
         });
 
-        window.addEventListener('resize', function() { chart.resize(); });
+        if (sankeyResizeHandler) { window.removeEventListener('resize', sankeyResizeHandler); }
+        sankeyResizeHandler = function() { chart.resize(); };
+        window.addEventListener('resize', sankeyResizeHandler);
       } catch (e) {
         chartDom.innerHTML = '<div class="empty">加载失败：' + (e.message || '未知错误') + '</div>';
       }
