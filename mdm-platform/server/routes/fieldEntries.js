@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const { requireAuth } = require('../auth');
+const { canViewMapping } = require('../access');
 
 const ALL_FIELD_ENTRY_FIELDS = ['field_name_cn', 'field_name_en', 'data_object', 'field_type', 'consume_systems', 'sync_mode', 'note'];
 const SUBMITTER_WRITABLE = ['data_object', 'note'];
@@ -45,6 +46,9 @@ function canEditOwnerColumns(req, field) {
 }
 
 router.get('/mapping/:mappingId', requireAuth, (req, res) => {
+  if (!canViewMapping(req, req.params.mappingId)) {
+    return res.status(403).json({ error: '无权查看该映射字段' });
+  }
   const fields = db.prepare('SELECT * FROM field_entries WHERE mapping_id=? ORDER BY id').all(req.params.mappingId);
   res.json(fields);
 });
@@ -158,6 +162,12 @@ router.put('/:id', requireAuth, (req, res) => {
 
 router.delete('/:id', requireAuth, (req, res) => {
   return runDbAction(res, () => {
+    const field = db.prepare('SELECT * FROM field_entries WHERE id=?').get(req.params.id);
+    if (!field) return res.status(404).json({ error: '字段不存在' });
+    const mapping = db.prepare('SELECT status FROM mappings WHERE id=?').get(field.mapping_id);
+    const canDelete = req.session.userRole === 'admin' ||
+      (req.session.userRole === 'submitter' && field.submitted_by === req.session.userId && mapping && mapping.status === 'draft');
+    if (!canDelete) return res.status(403).json({ error: '仅管理员或草稿字段报送人可删除字段' });
     db.prepare('DELETE FROM field_entries WHERE id=?').run(req.params.id);
     res.json({ success: true });
   });

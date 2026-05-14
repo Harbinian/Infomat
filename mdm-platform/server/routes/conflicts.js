@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const { requireAuth } = require('../auth');
+const { requireAuth, requireRole } = require('../auth');
 
 const FIELD_ENTRY_CONFLICT_FIELDS = ['note', 'field_type', 'sync_mode', 'consume_systems'];
 
@@ -355,13 +355,18 @@ router.post('/:id/archive', requireAuth, (req, res) => {
 });
 
 // Keep existing detect endpoint
-router.post('/detect', requireAuth, (req, res) => {
+router.post('/detect', requireRole('reviewer', 'admin'), (req, res) => {
   return runDbAction(res, () => {
     const { field_name_cn } = req.query;
 
     const detectTerms = db.transaction(() => {
       let inserted = 0;
-      const terms = db.prepare(`SELECT id, term, definition, scope FROM terms WHERE status='approved'`).all();
+      const terms = db.prepare(`
+        SELECT t.id, t.term, t.definition, t.scope, p.owner_dept_id
+        FROM terms t
+        LEFT JOIN processes p ON t.process_id = p.id
+        WHERE t.status='approved'
+      `).all();
 
       for (let i = 0; i < terms.length; i++) {
         for (let j = i + 1; j < terms.length; j++) {
@@ -371,12 +376,15 @@ router.post('/detect', requireAuth, (req, res) => {
           // Detect term conflicts (e.g. similar term names but different scope/definition)
           if (t1.term === t2.term || (t1.term.includes(t2.term) && t1.term.length - t2.term.length < 3)) {
             if (t1.definition !== t2.definition || t1.scope !== t2.scope) {
-              const existing = db.prepare(`SELECT id FROM term_conflicts WHERE term_id=? AND conflict_term_id=? AND status='pending'`).get(t1.id, t2.id);
+              const existing = db.prepare(`
+                SELECT id FROM term_conflicts
+                WHERE term=? AND dept_a_meaning=? AND dept_b_meaning=? AND status='pending'
+              `).get(t1.term, t1.definition || null, t2.definition || null);
               if (!existing) {
                  db.prepare(`
-                   INSERT INTO term_conflicts (term_id, conflict_term_id, dept_a_meaning, dept_b_meaning, severity)
-                   VALUES (?, ?, ?, ?, ?)
-                 `).run(t1.id, t2.id, t1.definition, t2.definition, 'warn');
+                   INSERT INTO term_conflicts (term, dept_a, dept_a_meaning, dept_b, dept_b_meaning, severity)
+                   VALUES (?, ?, ?, ?, ?, ?)
+                 `).run(t1.term, t1.owner_dept_id || null, t1.definition || null, t2.owner_dept_id || null, t2.definition || null, 'warn');
                  inserted += 1;
               }
             }
@@ -435,7 +443,7 @@ router.post('/detect', requireAuth, (req, res) => {
 });
 
 // Keep existing resolve endpoint
-router.post('/:id/resolve', requireAuth, (req, res) => {
+router.post('/:id/resolve', requireRole('reviewer', 'admin'), (req, res) => {
   return runDbAction(res, () => {
     const { resolution, adopted_value } = req.body;
     const conflict = db.prepare('SELECT * FROM field_conflicts WHERE id=?').get(req.params.id);
@@ -492,7 +500,7 @@ router.post('/:id/resolve', requireAuth, (req, res) => {
 });
 
 // Keep existing term resolve endpoint
-router.post('/term/:id/resolve', requireAuth, (req, res) => {
+router.post('/term/:id/resolve', requireRole('reviewer', 'admin'), (req, res) => {
   return runDbAction(res, () => {
     const { resolution } = req.body;
     db.prepare("UPDATE term_conflicts SET status='resolved', resolution=?, resolved_by=?, resolved_at=datetime('now') WHERE id=?").run(

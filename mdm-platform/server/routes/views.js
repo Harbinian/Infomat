@@ -22,6 +22,8 @@ router.get('/sankey', requireAuth, (req, res) => {
     const deptIds = req.query.dept_ids ? req.query.dept_ids.split(',').map(Number).filter(Boolean) : [];
     const capLevels = req.query.cap_levels ? req.query.cap_levels.split(',').map(s => s.trim()) : ['L1','L2','L3'];
 
+    const placeholders = values => values.map(() => '?').join(',');
+
     // --- Collect all capability IDs (including descendants for hierarchy) ---
     let capIds = null;
     if (capLevels.length < 3) {
@@ -48,140 +50,160 @@ router.get('/sankey', requireAuth, (req, res) => {
       capIds = [...expanded];
     }
 
-    // --- Layer 1: Departments ---
-    let deptSql = `SELECT DISTINCT d.id, d.name FROM departments d
-      JOIN mappings m ON (m.owner_dept_id = d.id OR d.id IN (
-        SELECT mrd.department_id FROM mapping_related_departments mrd WHERE mrd.mapping_id = m.id
-      ))
-      WHERE m.status = 'published'`;
-    const deptParams = [];
-    if (deptIds.length > 0) {
-      deptSql += ' AND d.id IN (' + deptIds.map(() => '?').join(',') + ')';
-      deptParams.push(...deptIds);
+    if (capIds && capIds.length === 0) {
+      return res.json({ nodes: [], links: [] });
     }
-    const departments = db.prepare(deptSql).all(...deptParams);
+
+    function addMappingFilters(sql, params) {
+      if (deptIds.length > 0) {
+        sql += ` AND (m.owner_dept_id IN (${placeholders(deptIds)})
+          OR EXISTS (
+            SELECT 1 FROM mapping_related_departments mrd_filter
+            WHERE mrd_filter.mapping_id = m.id AND mrd_filter.department_id IN (${placeholders(deptIds)})
+          ))`;
+        params.push(...deptIds, ...deptIds);
+      }
+      if (capIds) {
+        sql += ` AND p.capability_id IN (${placeholders(capIds)})`;
+        params.push(...capIds);
+      }
+      return sql;
+    }
+
+    function addVisibleDepartmentFilter(sql, params, alias) {
+      if (deptIds.length === 0) return sql;
+      sql += ` AND ${alias}.id IN (${placeholders(deptIds)})`;
+      params.push(...deptIds);
+      return sql;
+    }
+
+    // --- Layer 1: Departments ---
+    const ownerDeptParams = [];
+    let ownerDeptSql = `SELECT DISTINCT d.id, d.name FROM mappings m
+      JOIN processes p ON m.process_id = p.id
+      JOIN departments d ON m.owner_dept_id = d.id
+      WHERE m.status = 'published'`;
+    ownerDeptSql = addMappingFilters(ownerDeptSql, ownerDeptParams);
+    ownerDeptSql = addVisibleDepartmentFilter(ownerDeptSql, ownerDeptParams, 'd');
+
+    const relatedDeptParams = [];
+    let relatedDeptSql = `SELECT DISTINCT d.id, d.name FROM mappings m
+      JOIN processes p ON m.process_id = p.id
+      JOIN mapping_related_departments mrd ON mrd.mapping_id = m.id
+      JOIN departments d ON mrd.department_id = d.id
+      WHERE m.status = 'published'`;
+    relatedDeptSql = addMappingFilters(relatedDeptSql, relatedDeptParams);
+    relatedDeptSql = addVisibleDepartmentFilter(relatedDeptSql, relatedDeptParams, 'd');
+
+    const departments = [
+      ...db.prepare(ownerDeptSql).all(...ownerDeptParams),
+      ...db.prepare(relatedDeptSql).all(...relatedDeptParams)
+    ].filter((dept, index, rows) => rows.findIndex(row => row.id === dept.id) === index);
 
     // --- Layer 2: Capabilities ---
-    let capSql = `SELECT DISTINCT c.id, c.name, c.level FROM capabilities c
-      JOIN processes p ON p.capability_id = c.id
-      JOIN mappings m ON m.process_id = p.id AND m.status = 'published'`;
     const capParams = [];
-    if (capIds && capIds.length > 0) {
-      capSql += ' AND c.id IN (' + capIds.map(() => '?').join(',') + ')';
-      capParams.push(...capIds);
-    }
+    let capSql = `SELECT DISTINCT c.id, c.name, c.level FROM mappings m
+      JOIN processes p ON m.process_id = p.id
+      JOIN capabilities c ON p.capability_id = c.id
+      WHERE m.status = 'published'`;
+    capSql = addMappingFilters(capSql, capParams);
     const capabilities = db.prepare(capSql).all(...capParams);
 
     // --- Layer 3: Processes ---
-    let procSql = `SELECT DISTINCT p.id, p.name FROM processes p
-      JOIN mappings m ON m.process_id = p.id AND m.status = 'published'
-      WHERE 1=1`;
     const procParams = [];
-    if (capIds && capIds.length > 0) {
-      procSql += ' AND p.capability_id IN (' + capIds.map(() => '?').join(',') + ')';
-      procParams.push(...capIds);
-    }
+    let procSql = `SELECT DISTINCT p.id, p.name FROM mappings m
+      JOIN processes p ON m.process_id = p.id
+      WHERE m.status = 'published'`;
+    procSql = addMappingFilters(procSql, procParams);
     const processes = db.prepare(procSql).all(...procParams);
 
     // --- Layer 4: Systems ---
-    let sysSql = `SELECT DISTINCT s.id, s.name FROM systems s
-      JOIN mapping_systems ms ON ms.system_id = s.id
-      JOIN mappings m ON ms.mapping_id = m.id AND m.status = 'published'
-      WHERE 1=1`;
     const sysParams = [];
-    if (capIds && capIds.length > 0) {
-      sysSql += ` AND m.process_id IN (
-        SELECT p.id FROM processes p WHERE p.capability_id IN (` + capIds.map(() => '?').join(',') + `)
-      )`;
-      sysParams.push(...capIds);
-    }
+    let sysSql = `SELECT DISTINCT s.id, s.name FROM mappings m
+      JOIN processes p ON m.process_id = p.id
+      JOIN mapping_systems ms ON ms.mapping_id = m.id
+      JOIN systems s ON ms.system_id = s.id
+      WHERE m.status = 'published'`;
+    sysSql = addMappingFilters(sysSql, sysParams);
     const systems = db.prepare(sysSql).all(...sysParams);
 
     // --- Build nodes with metadata ---
     const nodeMap = new Map();
-    const addNode = (name, layer, type, id, extra = {}) => {
-      if (!nodeMap.has(name)) nodeMap.set(name, { name, layer, type, id, ...extra });
+    const nodeKey = (type, id) => `${type}:${id}`;
+    const addNode = (type, id, label, layer, extra = {}) => {
+      const name = nodeKey(type, id);
+      if (!nodeMap.has(name)) nodeMap.set(name, { name, label, layer, type, id, ...extra });
     };
-    departments.forEach(d => addNode(d.name, 1, 'department', d.id));
-    capabilities.forEach(c => addNode(c.name, 2, 'capability', c.id, { level: c.level }));
-    processes.forEach(p => addNode(p.name, 3, 'process', p.id));
-    systems.forEach(s => addNode(s.name, 4, 'system', s.id));
+    departments.forEach(d => addNode('department', d.id, d.name, 1));
+    capabilities.forEach(c => addNode('capability', c.id, c.name, 2, { level: c.level }));
+    processes.forEach(p => addNode('process', p.id, p.name, 3));
+    systems.forEach(s => addNode('system', s.id, s.name, 4));
 
     // --- Build links with value = published mapping count ---
     const linkMap = new Map();
-    const addLink = (source, target) => {
+    const addLink = (source, target, value = 1) => {
       const key = source + '|||' + target;
-      linkMap.set(key, (linkMap.get(key) || 0) + 1);
+      linkMap.set(key, (linkMap.get(key) || 0) + value);
     };
 
     // Department → Capability (via process owner_dept)
-    let dcSql = `SELECT DISTINCT d.name as dept, c.name as cap
+    const dcParams = [];
+    let dcSql = `SELECT d.id as dept_id, c.id as cap_id, COUNT(DISTINCT m.id) as cnt
       FROM mappings m
       JOIN processes p ON m.process_id = p.id
       JOIN capabilities c ON p.capability_id = c.id
       JOIN departments d ON m.owner_dept_id = d.id
       WHERE m.status = 'published'`;
-    const dcParams = [];
-    if (deptIds.length > 0) {
-      dcSql += ' AND d.id IN (' + deptIds.map(() => '?').join(',') + ')';
-      dcParams.push(...deptIds);
-    }
+    dcSql = addMappingFilters(dcSql, dcParams);
+    dcSql = addVisibleDepartmentFilter(dcSql, dcParams, 'd');
+    dcSql += ' GROUP BY d.id, c.id';
     const dcLinks = db.prepare(dcSql).all(...dcParams);
-    dcLinks.forEach(r => addLink(r.dept, r.cap));
+    dcLinks.forEach(r => addLink(nodeKey('department', r.dept_id), nodeKey('capability', r.cap_id), r.cnt));
 
     // Department → Capability (via related departments)
-    let dc2Sql = `SELECT DISTINCT d.name as dept, c.name as cap
+    const dc2Params = [];
+    let dc2Sql = `SELECT d.id as dept_id, c.id as cap_id, COUNT(DISTINCT m.id) as cnt
       FROM mappings m
       JOIN mapping_related_departments mrd ON mrd.mapping_id = m.id
       JOIN departments d ON mrd.department_id = d.id
       JOIN processes p ON m.process_id = p.id
       JOIN capabilities c ON p.capability_id = c.id
       WHERE m.status = 'published'`;
-    const dc2Params = [];
-    if (deptIds.length > 0) {
-      dc2Sql += ' AND d.id IN (' + deptIds.map(() => '?').join(',') + ')';
-      dc2Params.push(...deptIds);
-    }
+    dc2Sql = addMappingFilters(dc2Sql, dc2Params);
+    dc2Sql = addVisibleDepartmentFilter(dc2Sql, dc2Params, 'd');
+    dc2Sql += ' GROUP BY d.id, c.id';
     const dcLinks2 = db.prepare(dc2Sql).all(...dc2Params);
-    dcLinks2.forEach(r => addLink(r.dept, r.cap));
+    dcLinks2.forEach(r => addLink(nodeKey('department', r.dept_id), nodeKey('capability', r.cap_id), r.cnt));
 
     // Capability → Process
-    let cpSql = `SELECT c.name as cap, p.name as proc, COUNT(DISTINCT m.id) as cnt
+    const cpParams = [];
+    let cpSql = `SELECT c.id as cap_id, p.id as proc_id, COUNT(DISTINCT m.id) as cnt
       FROM mappings m
       JOIN processes p ON m.process_id = p.id
       JOIN capabilities c ON p.capability_id = c.id
       WHERE m.status = 'published'`;
-    const cpParams = [];
-    if (deptIds.length > 0) {
-      cpSql += ` AND (m.owner_dept_id IN (` + deptIds.map(() => '?').join(',') + `)
-        OR m.id IN (SELECT mrd.mapping_id FROM mapping_related_departments mrd WHERE mrd.department_id IN (` + deptIds.map(() => '?').join(',') + `)))`;
-      cpParams.push(...deptIds, ...deptIds);
-    }
-    cpSql += ' GROUP BY c.name, p.name';
+    cpSql = addMappingFilters(cpSql, cpParams);
+    cpSql += ' GROUP BY c.id, p.id';
     const cpLinks = db.prepare(cpSql).all(...cpParams);
-    cpLinks.forEach(r => { for (let i = 0; i < r.cnt; i++) addLink(r.cap, r.proc); });
+    cpLinks.forEach(r => addLink(nodeKey('capability', r.cap_id), nodeKey('process', r.proc_id), r.cnt));
 
     // Process → System
-    let psSql = `SELECT p.name as proc, s.name as sys, COUNT(DISTINCT m.id) as cnt
+    const psParams = [];
+    let psSql = `SELECT p.id as proc_id, s.id as sys_id, COUNT(DISTINCT m.id) as cnt
       FROM mappings m
       JOIN mapping_systems ms ON ms.mapping_id = m.id
       JOIN systems s ON ms.system_id = s.id
       JOIN processes p ON m.process_id = p.id
       WHERE m.status = 'published'`;
-    const psParams = [];
-    if (deptIds.length > 0) {
-      psSql += ` AND (m.owner_dept_id IN (` + deptIds.map(() => '?').join(',') + `)
-        OR m.id IN (SELECT mrd.mapping_id FROM mapping_related_departments mrd WHERE mrd.department_id IN (` + deptIds.map(() => '?').join(',') + `)))`;
-      psParams.push(...deptIds, ...deptIds);
-    }
-    psSql += ' GROUP BY p.name, s.name';
+    psSql = addMappingFilters(psSql, psParams);
+    psSql += ' GROUP BY p.id, s.id';
     const psLinks = db.prepare(psSql).all(...psParams);
-    psLinks.forEach(r => { for (let i = 0; i < r.cnt; i++) addLink(r.proc, r.sys); });
+    psLinks.forEach(r => addLink(nodeKey('process', r.proc_id), nodeKey('system', r.sys_id), r.cnt));
 
     const links = [...linkMap.entries()].map(([key, value]) => {
       const [source, target] = key.split('|||');
       return { source, target, value };
-    });
+    }).filter(link => nodeMap.has(link.source) && nodeMap.has(link.target));
 
     res.json({ nodes: [...nodeMap.values()], links });
   });

@@ -5,6 +5,8 @@
 ```bash
 cd mdm-platform
 npm install
+set MDM_ADMIN_EMPLOYEE_NO=your-admin-no
+set MDM_ADMIN_PASSWORD=your-long-random-password
 npm run init-db
 npm run smoke
 npm start
@@ -12,7 +14,7 @@ npm start
 
 访问 `http://localhost:3000`。
 
-默认管理员：`ADMIN001 / admin123`
+平台不会创建默认管理员。首次初始化前请通过环境变量提供管理员工号和不少于 12 位的初始密码。
 
 ## 功能模块
 
@@ -46,4 +48,5 @@ npm run test:terms
 npm run test:export
 npm run test:import
 npm run test:frontend
+npm run test:security
 ```
