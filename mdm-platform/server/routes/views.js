@@ -187,4 +187,46 @@ router.get('/sankey', requireAuth, (req, res) => {
   });
 });
 
+// GET /api/views/processes/:id
+router.get('/processes/:id', requireAuth, (req, res) => {
+  return runDbAction(res, () => {
+    const process = db.prepare(`
+      SELECT p.*, c.name as cap_name, c.id as cap_id, d.name as dept_name
+      FROM processes p
+      LEFT JOIN capabilities c ON p.capability_id = c.id
+      LEFT JOIN departments d ON p.owner_dept_id = d.id
+      WHERE p.id = ?
+    `).get(req.params.id);
+
+    if (!process) return res.status(404).json({ error: '流程不存在' });
+
+    // Associated systems via published mappings
+    const systems = db.prepare(`
+      SELECT DISTINCT s.id, s.name
+      FROM systems s
+      JOIN mapping_systems ms ON ms.system_id = s.id
+      JOIN mappings m ON ms.mapping_id = m.id
+      WHERE m.process_id = ? AND m.status = 'published'
+      ORDER BY s.name
+    `).all(req.params.id);
+
+    // Field ledger summary: all field_entries across all published mappings for this process
+    const fields = db.prepare(`
+      SELECT fe.field_name_cn, fe.field_name_en, fe.data_object, fe.field_type,
+             fe.sync_mode, fe.consume_systems, fe.note, m.id as mapping_id,
+             d.name as dept_name
+      FROM field_entries fe
+      JOIN mappings m ON fe.mapping_id = m.id
+      LEFT JOIN departments d ON m.owner_dept_id = d.id
+      WHERE m.process_id = ? AND m.status = 'published'
+      ORDER BY fe.field_name_cn
+    `).all(req.params.id);
+
+    // Upstream/downstream placeholder (V2 will expand)
+    const relatedProcesses = [];
+
+    res.json({ ...process, systems, fields, relatedProcesses });
+  });
+});
+
 module.exports = router;
