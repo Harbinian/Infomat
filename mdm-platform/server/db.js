@@ -355,4 +355,91 @@ if (capInfo && !capInfo.sql.includes('parent_id')) {
   console.log('Migration: added parent_id to capabilities');
 }
 
+// ── Module A: Master Data Registry ──
+db.exec(`
+CREATE TABLE IF NOT EXISTS master_data_categories (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE,
+  code TEXT NOT NULL UNIQUE,
+  description TEXT,
+  sort_order INTEGER DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS master_data_attributes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  category_id INTEGER NOT NULL REFERENCES master_data_categories(id) ON DELETE CASCADE,
+  attr_name TEXT NOT NULL,
+  attr_label TEXT NOT NULL,
+  attr_type TEXT NOT NULL CHECK(attr_type IN ('文本','编码','日期','枚举','数字','JSON')),
+  required INTEGER NOT NULL DEFAULT 0,
+  enum_options TEXT,
+  validation_rule TEXT,
+  sort_order INTEGER DEFAULT 0,
+  UNIQUE(category_id, attr_name)
+);
+
+CREATE TABLE IF NOT EXISTS master_data_code_rules (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  category_id INTEGER NOT NULL UNIQUE REFERENCES master_data_categories(id),
+  prefix TEXT NOT NULL DEFAULT '',
+  total_length INTEGER NOT NULL DEFAULT 30,
+  segment_defs TEXT NOT NULL DEFAULT '[]',
+  next_sequence INTEGER NOT NULL DEFAULT 1,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS master_data_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  code TEXT NOT NULL UNIQUE,
+  category_id INTEGER NOT NULL REFERENCES master_data_categories(id),
+  name TEXT NOT NULL,
+  attributes_json TEXT NOT NULL DEFAULT '{}',
+  status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','review','active','changing','discontinued','archived','rejected')),
+  old_code TEXT,
+  source_system TEXT DEFAULT 'MDM_MANUAL',
+  maintain_dept_id INTEGER REFERENCES departments(id),
+  owner_user_id INTEGER REFERENCES users(id),
+  created_by INTEGER REFERENCES users(id),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_by INTEGER REFERENCES users(id),
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS master_data_import_batches (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  file_name TEXT NOT NULL,
+  category_id INTEGER REFERENCES master_data_categories(id),
+  total_rows INTEGER NOT NULL DEFAULT 0,
+  success_rows INTEGER NOT NULL DEFAULT 0,
+  error_rows INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'in_progress' CHECK(status IN ('in_progress','completed','failed')),
+  uploaded_by INTEGER REFERENCES users(id),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS master_data_import_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  batch_id INTEGER NOT NULL REFERENCES master_data_import_batches(id) ON DELETE CASCADE,
+  row_number INTEGER NOT NULL,
+  code TEXT,
+  name TEXT,
+  status TEXT NOT NULL CHECK(status IN ('success','error')),
+  error_reason TEXT,
+  raw_data_json TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 预置 6 大主数据分类
+INSERT OR IGNORE INTO master_data_categories (id, name, code, description, sort_order) VALUES
+(1, '零组件', 'PART', '自制件、外协件、组件、部件', 1),
+(2, '工艺组件', 'PROC_COMP', '工艺拆分件、虚拟件', 2),
+(3, '工装', 'TOOLING', '模具、夹具、型架、样板', 3),
+(4, '原材料', 'MATERIAL', '金属/非金属、板材、型材', 4),
+(5, '设备', 'EQUIPMENT', '生产设备、检测设备', 5),
+(6, '工具', 'TOOL', '刀具、量具、辅具', 6);
+`);
+
+console.log('Module A: Master Data Registry tables ready');
+
 module.exports = db;
