@@ -44,6 +44,7 @@ registerRouteIfExists('/api/import', 'import');
 registerRouteIfExists('/api/export', 'export');
 registerRouteIfExists('/api/views', 'views');
 registerRouteIfExists('/api/master-data', 'masterData');
+registerRouteIfExists('/api/master-data', 'masterDataLifecycle');
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
