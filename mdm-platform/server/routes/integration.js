@@ -38,6 +38,19 @@ router.get('/materials', apiKeyAuth, requireIntegrationPermission('read'), (req,
   } catch (e) { handleDbError(res, e); }
 });
 
+// GET /api/integration/materials/sync-status — 增量同步状态
+router.get('/materials/sync-status', apiKeyAuth, requireIntegrationPermission('read'), (req, res) => {
+  try {
+    const { since } = req.query;
+    const sinceDate = since || new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 19);
+
+    const created = db.prepare('SELECT COUNT(*) as cnt FROM master_data_items WHERE created_at >= ?').get(sinceDate).cnt;
+    const updated = db.prepare('SELECT COUNT(*) as cnt FROM master_data_items WHERE updated_at >= ? AND created_at < ?').get(sinceDate, sinceDate).cnt;
+
+    res.json({ since: sinceDate, created_count: created, updated_count: updated, total_changed: created + updated });
+  } catch (e) { handleDbError(res, e); }
+});
+
 // GET /api/integration/materials/:code — 按编码查询单个物料
 router.get('/materials/:code', apiKeyAuth, requireIntegrationPermission('read'), (req, res) => {
   try {
@@ -52,19 +65,6 @@ router.get('/materials/:code', apiKeyAuth, requireIntegrationPermission('read'),
 
     logSync(req.integrationSystem.name, `GET /materials/${req.params.code}`, {}, 1, 'success', null, req);
     res.json(row);
-  } catch (e) { handleDbError(res, e); }
-});
-
-// GET /api/integration/materials/sync-status — 增量同步状态
-router.get('/materials/sync-status', apiKeyAuth, requireIntegrationPermission('read'), (req, res) => {
-  try {
-    const { since } = req.query;
-    const sinceDate = since || new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 19);
-
-    const created = db.prepare('SELECT COUNT(*) as cnt FROM master_data_items WHERE created_at >= ?').get(sinceDate).cnt;
-    const updated = db.prepare('SELECT COUNT(*) as cnt FROM master_data_items WHERE updated_at >= ? AND created_at < ?').get(sinceDate, sinceDate).cnt;
-
-    res.json({ since: sinceDate, created_count: created, updated_count: updated, total_changed: created + updated });
   } catch (e) { handleDbError(res, e); }
 });
 
