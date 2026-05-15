@@ -75,7 +75,7 @@ EOF
     <div class="sc erp"><div class="sn">ERP</div><div class="sv">用友 U8</div><div class="sr">计划/采购/库存/财务/成本账务<br/>PS · FI · CO · PP · MM · SD</div></div>
     <div class="sc mes"><div class="sn">MES</div><div class="sv">北京虎蜥</div><div class="sr">生产计划/执行/工艺管控/质量闭环/设备IoT/仓储物流/批次追溯</div></div>
     <div class="sc oa"><div class="sn">OA</div><div class="sv">华天动力</div><div class="sr">行政事务（统一流程/表单/收文发文）、考勤管理、人事组织（角色/权限）、跨系统流程协同、统一待办入口、移动协同</div></div>
-    <div class="sc plm"><div class="sn">PLM</div><div class="sv">翎瑞鸿翔</div><div class="sr">EBOM→MBOM 结构转换、工艺文件管控、ECO 变更闭环、工程项目管理、设计数据唯一黄金源</div></div>
+    <div class="sc plm"><div class="sn">PLM</div><div class="sv">PLM供应商</div><div class="sr">EBOM→MBOM 结构转换、工艺路线与规程管理、ECO 变更闭环、工程项目管理、设计数据唯一黄金源</div></div>
   </div>
   <div class="info" style="margin-bottom:16px"><p><strong>MDM（主数据管理）</strong>作为集成基石，独立于四套系统：统一主数据标准（组织身份、物料、供应商），是所有系统的集成底座，负责黄金源认定和跨系统数据一致性保障。</p></div>
 ```

@@ -63,5 +63,5 @@ Add to target nav:
 - MDM encoding: source says "≥30位混合编码" → use source value
 - MDM timeline: source says "5-6 months" → use source value  
 - PLM phases: source has 5 phases with specific T+N timing → use source
-- PLM vendor: both agree on 翎瑞鸿翔 → no conflict
+- PLM vendor: use generic "PLM供应商" wording → no conflict
 - System vendors: target lists all vendors, sources may not → target wins for non-conflicting data
