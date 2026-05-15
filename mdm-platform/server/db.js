@@ -483,4 +483,11 @@ CREATE TABLE IF NOT EXISTS master_data_status_log (
 
 console.log('Module B: Master Data Lifecycle tables ready');
 
+// ── Module C: Permissions field on users ──
+const userInfo = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='users'").get();
+if (userInfo && !userInfo.sql.includes('permissions')) {
+  db.exec("ALTER TABLE users ADD COLUMN permissions TEXT DEFAULT '{}'");
+  console.log('Migration: added permissions to users');
+}
+
 module.exports = db;
