@@ -490,4 +490,42 @@ if (userInfo && !userInfo.sql.includes('permissions')) {
   console.log('Migration: added permissions to users');
 }
 
+// ── Module D: Integration API ──
+db.exec(`
+CREATE TABLE IF NOT EXISTS integration_credentials (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  system_name TEXT NOT NULL UNIQUE,
+  api_key_hash TEXT NOT NULL,
+  permissions_json TEXT NOT NULL DEFAULT '["read"]',
+  enabled INTEGER NOT NULL DEFAULT 1,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  last_used_at DATETIME
+);
+
+CREATE TABLE IF NOT EXISTS integration_sync_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  system_name TEXT NOT NULL,
+  endpoint TEXT NOT NULL,
+  params_json TEXT,
+  records_returned INTEGER,
+  status TEXT NOT NULL CHECK(status IN ('success','error')),
+  error_reason TEXT,
+  ip_address TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS old_new_code_mapping (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  old_code TEXT NOT NULL,
+  new_code TEXT NOT NULL,
+  system_source TEXT,
+  mapped_by INTEGER REFERENCES users(id),
+  note TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(old_code, new_code)
+);
+`);
+
+console.log('Module D: Integration API tables ready');
+
 module.exports = db;
