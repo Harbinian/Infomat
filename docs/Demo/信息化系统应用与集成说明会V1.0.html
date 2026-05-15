@@ -188,7 +188,7 @@ td strong{color:var(--text)}
 .gantt-legend{display:flex;flex-wrap:wrap;gap:8px 14px;padding:10px 14px;border-top:1px solid rgba(96,165,250,.22);color:#dbeafe;font-size:11px;background:#071a31}.gantt-legend-item{display:inline-flex;align-items:center;gap:6px}.gantt-swatch{width:22px;height:12px;border-radius:4px;box-shadow:inset 0 1px 0 rgba(255,255,255,.24)}
 
 /* ── TOPO ── */
-.topo{background:var(--navy);border-radius:12px;padding:20px;overflow-x:auto}
+.topo{background:#0b1f3f;border:1px solid rgba(125,211,252,.18);border-radius:12px;padding:18px;overflow-x:auto}
 
 /* ── TOPO MODAL ── */
 .topo-modal{position:fixed;inset:0;background:rgba(15,23,42,.75);backdrop-filter:blur(4px);z-index:9999;display:none;align-items:center;justify-content:center}
@@ -222,7 +222,7 @@ td strong{color:var(--text)}
 .topo-modal-sys-note{margin-top:12px;padding-top:12px;border-top:1px dashed var(--border);font-size:12px;color:var(--muted)}
 .topo-modal-close-btn{width:100%;padding:11px;background:var(--navy);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;margin-top:16px;transition:.2s}
 .topo-modal-close-btn:hover{background:#1e40af}
-.topo svg{display:block;margin:0 auto}
+.topo svg{display:block;margin:0 auto;width:100%;min-width:980px;height:auto}
 
 /* ── TABS ── */
 .tab-bar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
@@ -791,7 +791,8 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
 <!-- ══ 1 会议定位 ══ -->
 <div class="sec" id="s1">
   <div class="sec-hd"><div class="sec-num">1</div><div><h2>会议定位</h2><div class="sd">信息化系统应用与集成说明会 · 今天说明什么、确认什么</div></div></div>
-  <div class="alert"><div class="at">2026-05-15 会议定位：信息化系统应用与集成说明会</div><ul><li>本次先说明组织职责、数据责任人、流程确认人和集成推进工作组。</li><li>先说明 MDM 主数据建设路径：组织身份先行，流程牵引，术语统一，字段落账。</li><li>Q1–Q8 成熟度统一按四类标记："已解决 / 条件性决策 / 需补资料 / 待供应商确认"。其中“可形成原则结论”对应前两类。</li><li>PLM供应商与ECO闭环已收敛；EBOM→MBOM、SCIM定位、数据中台、编码技术约束和接口卡补齐列入会后推进清单。</li></ul></div>
+  <div class="alert"><div class="at">2026-05-15 会议定位：信息化系统应用与集成说明会</div><ul><li>本次先说明组织职责、数据责任人、
+    流程确认人和集成推进工作组。</li><li>先说明 MDM 主数据建设路径：组织身份先行，流程牵引，术语统一，字段落账。</li><li>Q1–Q8 成熟度统一按四类标记："已解决 / 条件性决策 / 需补资料 / 待供应商确认"。其中“可形成原则结论”对应前两类。</li><li>PLM供应商与ECO闭环已收敛；EBOM→MBOM、数据中台、编码技术约束和接口卡补齐列入会后推进清单。</li></ul></div>
   <div class="g3"><div class="card"><h3>今天确认什么</h3><p>确认集成方案是否具备进入详细设计的输入条件，明确会后补资料项、责任人、输出物和截止日期。</p></div><div class="card"><h3>今天不做什么</h3><p>不把供应商未确认能力、接口字段、实施周期和系统边界写成最终决议。</p></div><div class="card"><h3>输出物</h3><p>组织分工、MDM路径、Q1–Q8成熟度判断、接口卡补齐要求和会后行动清单。</p></div></div>
 </div>
 
@@ -936,132 +937,135 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
   <div class="sec-hd"><div class="sec-num">7</div><div><h2>系统集成拓扑 + 五条数据流</h2><div class="sd">一张图 + 五条流 · 看清全貌</div></div></div>
   <div class="read-guide"><strong>读图方法：</strong>先看上方 ERP、OA、MDM 的公共层，再看下方研发、制造、采购仓储三个业务域；箭头表示数据交接关系。生活里可以类比快递流转：订单、仓库、运输和签收都各有系统，但必须用同一个单号串起来。</div>
   <div class="topo">
-    <svg width="880" height="520" viewBox="0 0 880 520" xmlns="http://www.w3.org/2000/svg">
+    <svg width="1100" height="720" viewBox="0 0 1100 720" role="img" aria-label="系统集成拓扑和五条数据流" xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <marker id="arr-b" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#60a5fa"/></marker>
-        <marker id="arr-g" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#34d399"/></marker>
-        <marker id="arr-p" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#a78bfa"/></marker>
-        <marker id="arr-o" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#fb923c"/></marker>
-        <marker id="arr-t" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#7dd3fc"/></marker>
-        <marker id="arr-pk" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#f472b6"/></marker>
+        <marker id="topo-arrow-blue" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#38bdf8"/></marker>
+        <marker id="topo-arrow-soft" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#94a3b8"/></marker>
+        <filter id="topo-soft-shadow" x="-10%" y="-10%" width="120%" height="120%"><feDropShadow dx="0" dy="5" stdDeviation="6" flood-color="#020617" flood-opacity=".28"/></filter>
       </defs>
 
-      <!-- bg -->
-      <rect x="6" y="6" width="868" height="508" rx="12" fill="#0d2550" stroke="#1e3a7a"/>
+      <rect x="8" y="8" width="1084" height="704" rx="16" fill="#081b36" stroke="#1d4ed8"/>
+      <text x="42" y="36" fill="#e0f2fe" font-size="16" font-weight="800">系统集成拓扑：同一个单号串起订单、仓库、运输、签收</text>
+      <text x="42" y="58" fill="#93c5fd" font-size="11">上半区看系统分层，下半区看五条数据流；虚线框表示 Q7 待决策，不作为最终架构承诺。</text>
 
-      <!-- 客户交付平台 -->
-      <rect x="290" y="18" width="300" height="40" rx="7" fill="#1a56db" opacity=".9"/>
-      <text x="440" y="43" text-anchor="middle" fill="white" font-size="13" font-weight="600">项目管理</text>
+      <!-- 公共层 -->
+      <rect x="42" y="78" width="1016" height="92" rx="14" fill="#0f2a5e" stroke="#31518b"/>
+      <text x="60" y="102" fill="#bfdbfe" font-size="12" font-weight="700">公共经营与协同层</text>
+      <rect x="78" y="116" width="260" height="42" rx="8" fill="#1d4ed8" filter="url(#topo-soft-shadow)" data-topo="erp"/>
+      <text x="208" y="133" text-anchor="middle" fill="#fff" font-size="13" font-weight="800">ERP 核心经营 / 账务层</text>
+      <text x="208" y="149" text-anchor="middle" fill="#bfdbfe" font-size="10">PS · FI · CO · PP · MM · SD</text>
 
-      <!-- ERP -->
-      <rect x="190" y="84" width="500" height="56" rx="7" fill="#1e40af" opacity=".9" data-topo="erp"/>
-      <text x="440" y="108" text-anchor="middle" fill="white" font-size="14" font-weight="700">ERP 核心层（用友U8）</text>
-      <text x="440" y="128" text-anchor="middle" fill="#93c5fd" font-size="11">PS项目 · FI财务 · CO成本 · PP生产 · MM物料 · SD销售</text>
-
-      <!-- 平台→ERP -->
-      <line x1="440" y1="58" x2="440" y2="84" stroke="#60a5fa" stroke-width="2" stroke-dasharray="4,3" marker-end="url(#arr-b)"/>
-
-      <!-- OA: 流程协同层, 统一待办入口 -->
       <g onclick="openTopoModal('oa')" style="cursor:pointer">
-      <rect x="18" y="84" width="148" height="56" rx="7" fill="#92400e" opacity=".9"/>
-      <text x="92" y="103" text-anchor="middle" fill="white" font-size="13" font-weight="700">OA</text>
-      <text x="92" y="119" text-anchor="middle" fill="#fcd34d" font-size="11">流程协同层</text>
-      <text x="92" y="134" text-anchor="middle" fill="#fde68a" font-size="10" font-weight="700">★ 统一待办入口</text>
-      <line x1="166" y1="112" x2="190" y2="112" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4,3"/>
+        <rect x="420" y="116" width="260" height="42" rx="8" fill="#a16207" filter="url(#topo-soft-shadow)"/>
+        <text x="550" y="133" text-anchor="middle" fill="#fff" font-size="13" font-weight="800">OA 流程协同层</text>
+        <text x="550" y="149" text-anchor="middle" fill="#fde68a" font-size="10">审批结果 · 会签记录 · 流程证据</text>
       </g>
 
-      <!-- 数据中台 ← 横向基础设施层，居中 -->
-      <rect x="240" y="168" width="400" height="48" rx="8" fill="#0f2a5e" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="5,3"/>
-      <text x="440" y="189" text-anchor="middle" fill="#7dd3fc" font-size="13" font-weight="700">数据中台 / 集成总线</text>
-      <text x="440" y="207" text-anchor="middle" fill="rgba(255,255,255,.45)" font-size="10">MDM · 数据同步调度 · 接口适配器 · 追溯数据湖（Q7 待决策）</text>
-      <!-- ERP↔中台 -->
-      <line x1="440" y1="140" x2="440" y2="168" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arr-b)"/>
+      <rect x="762" y="116" width="260" height="42" rx="8" fill="#0f766e" filter="url(#topo-soft-shadow)"/>
+      <text x="892" y="133" text-anchor="middle" fill="#fff" font-size="13" font-weight="800">MDM 主数据公共层</text>
+      <text x="892" y="149" text-anchor="middle" fill="#99f6e4" font-size="10">组织 · 物料 · 编码 · 字段口径</text>
 
-      <!-- PLM包含框（虚线） -->
-      <rect x="14" y="250" width="156" height="206" rx="9" fill="transparent" stroke="#8b5cf6" stroke-width="1.5" stroke-dasharray="6,3" opacity=".65"/>
-      <text x="92" y="268" text-anchor="middle" fill="#c4b5fd" font-size="10" font-weight="600">PLM（产品/制造/工艺）</text>
+      <!-- Q7 待决策底座 -->
+      <rect x="150" y="196" width="800" height="70" rx="13" fill="#07172d" stroke="#7dd3fc" stroke-width="1.6" stroke-dasharray="7,5"/>
+      <text x="550" y="221" text-anchor="middle" fill="#7dd3fc" font-size="15" font-weight="800">数据中台 / 集成总线（Q7 待决策）</text>
+      <text x="550" y="243" text-anchor="middle" fill="#cbd5e1" font-size="11">横向基础设施层：MDM · 数据同步调度 · 接口适配 · 监控补偿 · 追溯数据湖</text>
+      <text x="550" y="259" text-anchor="middle" fill="#94a3b8" font-size="10">可作为方向讨论；供应商能力、成本、周期和运维责任确认前，不写成最终承诺。</text>
+      <path d="M208,158 L300,196" stroke="#38bdf8" stroke-width="1.8" fill="none" stroke-dasharray="5,4" marker-end="url(#topo-arrow-blue)"/>
+      <path d="M550,158 L550,196" stroke="#facc15" stroke-width="1.8" fill="none" stroke-dasharray="5,4"/>
+      <path d="M892,158 L800,196" stroke="#7dd3fc" stroke-width="1.8" fill="none" stroke-dasharray="5,4"/>
 
-      <!-- 研发域 -->
-      <rect x="18" y="252" width="148" height="48" rx="7" fill="#5b21b6" opacity=".9" data-topo="plm"/>
-      <text x="92" y="272" text-anchor="middle" fill="white" font-size="13" font-weight="700">PLM</text>
-      <text x="92" y="289" text-anchor="middle" fill="#c4b5fd" font-size="11">MBOM·ECO·工程项目管理</text>
+      <!-- 业务域容器 -->
+      <rect x="42" y="300" width="312" height="168" rx="14" fill="#0c1b34" stroke="#6d28d9"/>
+      <text x="62" y="326" fill="#c4b5fd" font-size="13" font-weight="800">研发域</text>
+      <text x="62" y="344" fill="#94a3b8" font-size="10">产品数据源头 · 受控版本</text>
 
-      <rect x="18" y="328" width="148" height="48" rx="7" fill="#0e7490" opacity=".9" data-topo="pdm"/>
-      <text x="92" y="350" text-anchor="middle" fill="white" font-size="13" font-weight="700">MBOM</text>
-      <text x="92" y="366" text-anchor="middle" fill="#a5f3fc" font-size="11">BOM管理 · 受控发布</text>
+      <rect x="394" y="300" width="312" height="168" rx="14" fill="#0c1b34" stroke="#047857"/>
+      <text x="414" y="326" fill="#86efac" font-size="13" font-weight="800">制造域</text>
+      <text x="414" y="344" fill="#94a3b8" font-size="10">制造执行 · 工艺参数 · 质量放行</text>
 
-      <rect x="18" y="404" width="68" height="48" rx="7" fill="#c2410c" opacity=".9" data-topo="capp"/>
-      <text x="52" y="424" text-anchor="middle" fill="white" font-size="12" font-weight="700">CAPP</text>
-      <text x="52" y="441" text-anchor="middle" fill="#fed7aa" font-size="10">工艺规划</text>
+      <rect x="746" y="300" width="312" height="168" rx="14" fill="#0c1b34" stroke="#ea580c"/>
+      <text x="766" y="326" fill="#fdba74" font-size="13" font-weight="800">采购仓储域</text>
+      <text x="766" y="344" fill="#94a3b8" font-size="10">需求计划 · 采购到货 · 批次库存</text>
 
-      <!-- 制造域 -->
-      <rect x="356" y="252" width="168" height="48" rx="7" fill="#065f46" opacity=".9" data-topo="mes"/>
-      <text x="440" y="272" text-anchor="middle" fill="white" font-size="13" font-weight="700">MES</text>
-      <text x="440" y="289" text-anchor="middle" fill="#6ee7b7" font-size="11">排产 · 执行 · IoT采集</text>
+      <!-- 系统节点 -->
+      <rect x="76" y="365" width="120" height="42" rx="8" fill="#5b21b6" data-topo="plm"/>
+      <text x="136" y="382" text-anchor="middle" fill="#fff" font-size="13" font-weight="800">PLM</text>
+      <text x="136" y="398" text-anchor="middle" fill="#ddd6fe" font-size="10">EBOM · ECO</text>
 
-      <rect x="356" y="328" width="168" height="48" rx="7" fill="#831843" opacity=".9" data-topo="wms"/>
-      <text x="440" y="350" text-anchor="middle" fill="white" font-size="13" font-weight="700">WMS（未来）</text>
-      <text x="440" y="366" text-anchor="middle" fill="#fbcfe8" font-size="11">仓储 · 出入库 · 库存</text>
+      <rect x="217" y="365" width="96" height="42" rx="8" fill="#0e7490" data-topo="pdm"/>
+      <text x="265" y="382" text-anchor="middle" fill="#fff" font-size="13" font-weight="800">MBOM</text>
+      <text x="265" y="398" text-anchor="middle" fill="#cffafe" font-size="10">制造结构</text>
 
-      <!-- 采购域 -->
-      <rect x="714" y="252" width="148" height="48" rx="7" fill="#065f46" opacity=".9" data-topo="sc"/>
-      <text x="788" y="272" text-anchor="middle" fill="white" font-size="13" font-weight="700">供应链管理系统（未来）</text>
-      <text x="788" y="289" text-anchor="middle" fill="#6ee7b7" font-size="11">供应商协同门户</text>
+      <rect x="146" y="418" width="120" height="36" rx="8" fill="#c2410c" data-topo="capp"/>
+      <text x="206" y="441" text-anchor="middle" fill="#fff" font-size="12" font-weight="800">CAPP 工艺规划</text>
 
-      <rect x="714" y="328" width="148" height="48" rx="7" fill="#1e3a5f" opacity=".9"/>
-      <text x="788" y="350" text-anchor="middle" fill="white" font-size="13" font-weight="700">合同管理（未来）</text>
-      <text x="788" y="366" text-anchor="middle" fill="#93c5fd" font-size="11">准备 · 签订 · 执行</text>
+      <rect x="440" y="362" width="220" height="42" rx="8" fill="#047857" data-topo="mes"/>
+      <text x="550" y="379" text-anchor="middle" fill="#fff" font-size="13" font-weight="800">MES</text>
+      <text x="550" y="395" text-anchor="middle" fill="#bbf7d0" font-size="10">排产 · 执行 · 工时 · 消耗</text>
 
-      <!-- 中台→各域 -->
-      <line x1="300" y1="216" x2="92" y2="252" stroke="#7dd3fc" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arr-t)"/>
-      <line x1="440" y1="216" x2="440" y2="252" stroke="#7dd3fc" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arr-t)"/>
-      <line x1="580" y1="216" x2="788" y2="252" stroke="#7dd3fc" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arr-t)"/>
+      <rect x="440" y="416" width="220" height="36" rx="8" fill="#831843"/>
+      <text x="550" y="439" text-anchor="middle" fill="#fff" font-size="12" font-weight="800">质量系统：NDT · 检验 · 放行</text>
 
-      <!-- 研发域内部 -->
-      <!-- PLM 一期覆盖产品数据、MBOM与CAPP -->
+      <rect x="790" y="346" width="224" height="36" rx="8" fill="#1d4ed8"/>
+      <text x="902" y="369" text-anchor="middle" fill="#fff" font-size="12" font-weight="800">ERP-PP / MM / MRP</text>
 
-      <!-- 采购域内部 -->
-      <line x1="788" y1="300" x2="788" y2="328" stroke="#60a5fa" stroke-width="2" marker-end="url(#arr-b)"/>
-      <!-- 合同→WMS -->
-      <line x1="714" y1="352" x2="524" y2="352" stroke="#60a5fa" stroke-width="2" marker-end="url(#arr-b)"/>
-      <!-- WMS→MES -->
-      <line x1="440" y1="328" x2="440" y2="300" stroke="#f472b6" stroke-width="2" marker-end="url(#arr-pk)"/>
+      <rect x="790" y="392" width="224" height="36" rx="8" fill="#065f46" data-topo="sc"/>
+      <text x="902" y="415" text-anchor="middle" fill="#fff" font-size="12" font-weight="800">供应链管理系统（未来）</text>
 
-      <!-- MES回传ERP-PP/CO -->
-      <path d="M524,276 Q750,276 750,112 Q750,84 690,84" stroke="#34d399" stroke-width="1.5" stroke-dasharray="4,3" fill="none" marker-end="url(#arr-g)"/>
-      <text x="620" y="270" fill="#34d399" font-size="10">完工 / 工时回传</text>
-      <text x="752" y="86" fill="#34d399" font-size="9">ERP-PP / CO</text>
+      <rect x="790" y="438" width="224" height="36" rx="8" fill="#831843" data-topo="wms"/>
+      <text x="902" y="461" text-anchor="middle" fill="#fff" font-size="12" font-weight="800">WMS（未来）：批次 · 库存 · 出库</text>
 
-      <!-- 域标签 -->
-      <text x="92" y="240" text-anchor="middle" fill="rgba(255,255,255,.35)" font-size="10">研发域</text>
-      <text x="440" y="240" text-anchor="middle" fill="rgba(255,255,255,.35)" font-size="10">制造域</text>
-      <text x="788" y="240" text-anchor="middle" fill="rgba(255,255,255,.35)" font-size="10">采购域</text>
+      <!-- 基础连接，只显示结构，不承载五条流的所有细节 -->
+      <path d="M196,386 L217,386" stroke="#94a3b8" stroke-width="1.8" marker-end="url(#topo-arrow-soft)"/>
+      <path d="M265,407 L230,418" stroke="#94a3b8" stroke-width="1.8" marker-end="url(#topo-arrow-soft)"/>
+      <path d="M266,436 C330,436 360,383 440,383" stroke="#94a3b8" stroke-width="1.8" fill="none" marker-end="url(#topo-arrow-soft)"/>
+      <path d="M902,382 L902,392" stroke="#94a3b8" stroke-width="1.8" marker-end="url(#topo-arrow-soft)"/>
+      <path d="M902,428 L902,438" stroke="#94a3b8" stroke-width="1.8" marker-end="url(#topo-arrow-soft)"/>
+      <path d="M790,456 C745,456 716,383 660,383" stroke="#94a3b8" stroke-width="1.8" fill="none" marker-end="url(#topo-arrow-soft)"/>
+      <path d="M550,266 L206,300" stroke="#7dd3fc" stroke-width="1.4" stroke-dasharray="5,4"/>
+      <path d="M550,266 L550,300" stroke="#7dd3fc" stroke-width="1.4" stroke-dasharray="5,4"/>
+      <path d="M550,266 L902,300" stroke="#7dd3fc" stroke-width="1.4" stroke-dasharray="5,4"/>
 
-      <!-- 图例 -->
-      <line x1="20" y1="490" x2="40" y2="490" stroke="#7dd3fc" stroke-width="1.5" stroke-dasharray="4,3"/>
-      <text x="46" y="494" fill="rgba(255,255,255,.4)" font-size="10">数据中台（待决策）</text>
-      <line x1="180" y1="490" x2="200" y2="490" stroke="#60a5fa" stroke-width="2"/>
-      <text x="206" y="494" fill="rgba(255,255,255,.4)" font-size="10">主数据流</text>
-      <line x1="290" y1="490" x2="310" y2="490" stroke="#34d399" stroke-width="1.5" stroke-dasharray="4,3"/>
-      <text x="316" y="494" fill="rgba(255,255,255,.4)" font-size="10">执行回传</text>
-      <line x1="400" y1="490" x2="420" y2="490" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4,3"/>
-      <text x="426" y="494" fill="rgba(255,255,255,.4)" font-size="10">OA协同流</text>
+      <!-- 五条数据流线路表 -->
+      <rect x="42" y="500" width="1016" height="184" rx="14" fill="#06172a" stroke="#1e40af"/>
+      <text x="60" y="524" fill="#bfdbfe" font-size="13" font-weight="800">五条核心数据流</text>
+      <text x="165" y="524" fill="#94a3b8" font-size="10">线路表用于读图，不把所有箭头叠到拓扑节点上。</text>
+
+      <rect x="64" y="542" width="86" height="24" rx="12" fill="#2e1065" stroke="#a78bfa"/>
+      <text x="107" y="558" text-anchor="middle" fill="#ddd6fe" font-size="10" font-weight="800">① 研发主链</text>
+      <text x="170" y="558" fill="#e2e8f0" font-size="11">PLM 输出 EBOM/设计件/ECO → MBOM 承接制造结构 → CAPP 承接工艺路线/工序工步/定额/结构化规程 → MES 消费受控版本</text>
+
+      <rect x="64" y="572" width="86" height="24" rx="12" fill="#082f49" stroke="#38bdf8"/>
+      <text x="107" y="588" text-anchor="middle" fill="#bae6fd" font-size="10" font-weight="800">② 计划执行</text>
+      <text x="170" y="588" fill="#e2e8f0" font-size="11">ERP-PP 下达生产订单/计划数量/工艺路线 → MES；MES 回传完工/工时/消耗/差异 → ERP-PP/CO，影响成本核算</text>
+
+      <rect x="64" y="602" width="86" height="24" rx="12" fill="#431407" stroke="#fb923c"/>
+      <text x="107" y="618" text-anchor="middle" fill="#fed7aa" font-size="10" font-weight="800">③ 采购供应链</text>
+      <text x="170" y="618" fill="#e2e8f0" font-size="11">ERP 通过 MRP 形成需求计划 → ERP-MM 形成采购订单/到货信息 → 供应链管理系统与 WMS 支撑协同、批次、库存、出库</text>
+
+      <rect x="64" y="632" width="86" height="24" rx="12" fill="#422006" stroke="#facc15"/>
+      <text x="107" y="648" text-anchor="middle" fill="#fde68a" font-size="10" font-weight="800">④ OA环线</text>
+      <text x="170" y="648" fill="#e2e8f0" font-size="11">OA 传审批结果、会签记录和流程证据给 ERP/PLM/MES；OA 是办事大厅，不替业务系统做落账、发布和执行</text>
+
+      <rect x="64" y="662" width="86" height="24" rx="12" fill="#500724" stroke="#f472b6"/>
+      <text x="107" y="678" text-anchor="middle" fill="#fbcfe8" font-size="10" font-weight="800">⑤ 适航追溯</text>
+      <text x="170" y="678" fill="#e2e8f0" font-size="11">WMS 批次 + MES 工艺参数/固化记录 + 质量系统 NDT 检验/放行 + PLM 受控文件/构型证据 → 长期可查询、可举证</text>
     </svg>
   </div>
-  <div class="info mt-12"><p>数据中台是<strong>横向基础设施层</strong>，不属于任何业务域，是所有域的共享底座。当前方案尚未决策（Q7），拓扑图中以虚线框标注。OA 作为流程协同层横向贯穿所有域。为保证口径严谨，主拓扑仅展示当前文档已确认的主链关系；接口边界和主写方尚未明确的关系，暂不在主图中直连表达。</p></div>
+  <div class="info mt-12"><p>数据中台或集成总线是<strong>横向基础设施层</strong>，不属于任何业务域，是所有域共享的底座。当前方案尚未最终决策（Q7），图中以虚线框表达：可作为方向讨论，但在供应商能力、成本、周期、运维责任没有确认前，不写成最终承诺。OA 作为流程协同层横向贯穿所有域，只沉淀流程证据和协同结果。</p></div>
   <div class="sec-hd" style="margin-top:20px"><div class="sec-num" style="background:var(--teal)">7.1</div><div><h2>五条核心数据流说明</h2><div class="sd">节点流向 · 数据对象 · 说明注意事项</div></div></div>
   <div class="dflow">
-    <div class="dflow-hd"><div class="dflow-num">①</div><div class="dflow-title">研发主链</div><span class="dflow-tag" style="background:#e2e8f0;color:#64748b">PLM一期 · CAPP受控</span></div>
+    <div class="dflow-hd"><div class="dflow-num">①</div><div class="dflow-title">昌兴一号线：研发主链</div><span class="dflow-tag" style="background:#e2e8f0;color:#64748b">PLM一期 · CAPP受控</span></div>
     <div class="dflow-body">
       <span class="dflow-node">PLM</span><span class="dflow-arr">→</span><span class="dflow-data">EBOM / 设计件 / ECO</span><span class="dflow-arr">→</span>
       <span class="dflow-node">MBOM</span><span class="dflow-arr">→</span><span class="dflow-data">受控BOM / 工艺资料</span><span class="dflow-arr">→</span>
-      <span class="dflow-node">CAPP</span><span class="dflow-arr">→</span><span class="dflow-data">工艺路线 / 定额</span><span class="dflow-arr">→</span><span class="dflow-node">MES</span>
+      <span class="dflow-node">CAPP</span><span class="dflow-arr">→</span><span class="dflow-data">工艺路线 / 工序工步 / 定额 / 结构化规程</span><span class="dflow-arr">→</span><span class="dflow-node">MES</span>
     </div>
-    <div class="dflow-note">注意事项：PLM一期覆盖 MBOM、ECO(ECN)、工程项目管理、CAPP（工艺规划）；MES 消费受控版本的制造结构和可执行工艺数据。</div>
+    <div class="dflow-note">注意事项：把设计数据、制造结构和工艺数据放在同一条受控链路里；MES 最终消费受控版本的制造结构和可执行工艺数据。</div>
   </div>
 
   <div class="dflow">
-    <div class="dflow-hd"><div class="dflow-num">②</div><div class="dflow-title">计划执行闭环</div><span class="dflow-tag">双向回传</span></div>
+    <div class="dflow-hd"><div class="dflow-num">②</div><div class="dflow-title">二号线：计划执行闭环</div><span class="dflow-tag">影响成本核算</span></div>
     <div class="dflow-body">
       <span class="dflow-node">ERP-PP</span><span class="dflow-arr">→</span><span class="dflow-data">生产订单 / 计划数量 / 工艺路线</span><span class="dflow-arr">→</span>
       <span class="dflow-node">MES</span><span class="dflow-arr">→</span><span class="dflow-data">完工 / 工时 / 消耗 / 差异</span><span class="dflow-arr">→</span><span class="dflow-node">ERP-PP/CO</span>
@@ -1070,33 +1074,33 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
   </div>
 
   <div class="dflow">
-    <div class="dflow-hd"><div class="dflow-num">③</div><div class="dflow-title">采购供应链</div><span class="dflow-tag" style="background:#e2e8f0;color:#64748b">远景规划</span></div>
+    <div class="dflow-hd"><div class="dflow-num">③</div><div class="dflow-title">三号线：采购供应链</div><span class="dflow-tag" style="background:#e2e8f0;color:#64748b">远景规划</span></div>
     <div class="dflow-body">
       <span class="dflow-node">ERP-PP(MRP)</span><span class="dflow-arr">→</span><span class="dflow-data">需求计划</span><span class="dflow-arr">→</span>
       <span class="dflow-node">ERP-MM</span><span class="dflow-arr">→</span><span class="dflow-data">采购订单 / 到货信息</span><span class="dflow-arr">→</span>
       <span class="dflow-node">供应链管理系统</span><span class="dflow-arr">→</span><span class="dflow-data">供应商协同 / 资料</span><span class="dflow-arr">→</span>
       <span class="dflow-node">WMS</span><span class="dflow-arr">→</span><span class="dflow-data">批次 / 库存 / 出库</span><span class="dflow-arr">→</span><span class="dflow-node">MES</span>
     </div>
-    <div class="dflow-note">注意事项：供应链管理系统 自研或采购尚未确认，不能把供应商协同门户能力写成最终接口承诺；需先由物资保障部确认业务边界。</div>
+    <div class="dflow-note">注意事项：MRP 根据订单、BOM、库存、提前期和损耗率计算买料与生产需求；供应链管理系统自研或采购尚未确认，不能把供应商协同门户能力写成最终接口承诺。</div>
   </div>
 
   <div class="dflow">
-    <div class="dflow-hd"><div class="dflow-num">④</div><div class="dflow-title">OA流程协同链</div><span class="dflow-tag">只传审批结果</span></div>
+    <div class="dflow-hd"><div class="dflow-num">④</div><div class="dflow-title">四号环线：OA流程协同链</div><span class="dflow-tag">办事大厅口径</span></div>
     <div class="dflow-body">
-      <span class="dflow-node">OA</span><span class="dflow-arr">→</span><span class="dflow-data">审批结果 / 会签记录 / 流程证据</span><span class="dflow-arr">→</span><span class="dflow-node">ERP/PLM</span>
+      <span class="dflow-node">OA</span><span class="dflow-arr">→</span><span class="dflow-data">审批结果 / 会签记录 / 流程证据</span><span class="dflow-arr">→</span><span class="dflow-node">ERP / PLM / MES</span>
     </div>
-    <div class="dflow-note">注意事项：OA 是流程协同层，不替 ERP 或 PLM 执行业务动作；业务系统仍需按各自权限、状态和主数据规则完成落账。</div>
+    <div class="dflow-note">注意事项：OA 像办事大厅，业务系统才是具体业务窗口；OA 不替 ERP 做账务，不替 PLM 做版本发布，不替 MES 做现场执行。</div>
   </div>
 
   <div class="dflow">
-    <div class="dflow-hd"><div class="dflow-num">⑤</div><div class="dflow-title">适航追溯链</div><span class="dflow-tag" style="background:#e2e8f0;color:#64748b">远景规划</span></div>
+    <div class="dflow-hd"><div class="dflow-num">⑤</div><div class="dflow-title">五号线：适航追溯链</div><span class="dflow-tag" style="background:#e2e8f0;color:#64748b">长期可举证</span></div>
     <div class="dflow-body">
       <span class="dflow-node">WMS批次</span><span class="dflow-arr">→</span><span class="dflow-data">材料批次 / 有效期</span><span class="dflow-arr">→</span>
       <span class="dflow-node">MES工艺</span><span class="dflow-arr">→</span><span class="dflow-data">工序参数 / 固化记录</span><span class="dflow-arr">→</span>
       <span class="dflow-node">质量系统</span><span class="dflow-arr">→</span><span class="dflow-data">NDT / 检验 / 放行</span><span class="dflow-arr">→</span>
       <span class="dflow-node">PLM归档</span><span class="dflow-arr">→</span><span class="dflow-data">受控文件 / 构型证据</span><span class="dflow-arr">→</span><span class="dflow-node">数据中台</span>
     </div>
-    <div class="dflow-note">注意事项：适航追溯数据需满足长期、可查询、可举证的保存要求；当前方案需在 Q8 中确认统一查询入口和数据归档责任。</div>
+    <div class="dflow-note">注意事项：NDT 是无损检测；适航追溯数据需满足长期可查询、可举证的保存要求，当前仍需在 Q8 中确认统一查询入口和数据归档责任。</div>
   </div>
 </div>
 
@@ -1906,7 +1910,7 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
       <tr><td>组织与人员</td><td>部门、人员、岗位、工号、在职状态</td><td>OA/MDM 作为第一层权威源</td><td>ERP、MES、PLM、WMS 消费或映射；需确认同步字段和频率</td></tr>
       <tr><td>角色与资质</td><td>审批角色、系统角色、特种工艺资质、检验授权</td><td>OA流程 + 质量确认，MDM沉淀</td><td>MES派工、质量放行、ECO发布不得绕过资质校验</td></tr>
       <tr><td>设计件物料</td><td>物料编码、名称、规格、件号、REV</td><td>原则确认 PLM；PLM未上线前 ERP+人工台账协同代管</td><td>待供应商补充字段样例、接口方式和版本能力资料</td></tr>
-      <tr><td>原材料/采购件</td><td>物料编码、规格、供应商、ASL</td><td>倾向 ERP-MM 创建和维护</td><td>供应链管理系统 只做供应商协同和资料收集，边界待确认</td></tr>
+      <tr><td>原材料/采购件</td><td>物料编码、规格、供应商、QSL</td><td>倾向 ERP-MM 创建和维护</td><td>供应链管理系统 只做供应商协同和资料收集，边界待确认</td></tr>
       <tr><td>EBOM结构</td><td>铺层顺序、材料规范、固化规范、虚拟件</td><td>原则确认 PLM 一期能力承接</td><td>需供应商提供字段样例和发布机制</td></tr>
       <tr><td>MBOM结构</td><td>工序分工、工装、定额、损耗率</td><td>PLM一期承接，ERP/MES消费</td><td>EBOM→MBOM转换责任、字段边界和生效规则待确认</td></tr>
       <tr><td>库存与批次</td><td>实物库存、账务库存、预浸料批次、有效期</td><td>一期后WMS为实物库存黄金源，ERP为账务库存黄金源</td><td>一期待人工或WMS替代方案；盘点差异、报废和账务调整需走审批流程</td></tr>
@@ -2066,10 +2070,10 @@ footer{background:var(--navy);color:rgba(255,255,255,.4);text-align:center;paddi
     <div class="org-card"><div class="org-dept">行政人事部 + OA实施方</div><ul><li>组织、人员、岗位、工号权威源</li><li>入转调离流程</li><li>SSO/认证能力确认</li><li>组织同步字段与频率</li></ul></div>
     <div class="org-card"><div class="org-dept">工程技术部</div><ul><li>PLM能力确认与需求输入</li><li>EBOM、MBD、ECO、设计件物料</li><li>版次、构型、生效范围</li><li>参与 Q5</li></ul></div>
     <div class="org-card"><div class="org-dept">质量管理部</div><ul><li>质量规范、NDT、偏离/超差</li><li>检验授权与适航追溯</li><li>质量文件受控归档</li><li>参与 Q8</li></ul></div>
-    <div class="org-card"><div class="org-dept">物资保障部</div><ul><li>采购件、供应商、ASL</li><li>供应链管理系统定位与供应商协同范围</li><li>WMS库存与预浸料有效期</li><li>参与 Q2、A4</li></ul></div>
-    <div class="org-card"><div class="org-dept">信息化项目组</div><ul><li>说明会推进组统筹</li><li>字段台账、术语清单、接口卡版本管理</li><li>Q1-Q8决策包整理</li><li>参与 Q7</li></ul></div>
+    <div class="org-card"><div class="org-dept">物资保障部</div><ul><li>采购件、供应商、QSL</li><li>供应链管理系统定位与供应商协同范围</li><li>WMS库存与预浸料有效期</li><li>参与 Q2、A4</li></ul></div>
     <div class="org-card"><div class="org-dept">复材车间</div><ul><li>MES需求输入与验收</li><li>MBOM工序结构、工装、派工</li><li>批次消耗和现场追溯数据</li><li>参与 Q6</li></ul></div>
     <div class="org-card"><div class="org-dept">财务部</div><ul><li>ERP-FI/CO需求确认</li><li>成本中心、费用、工时、凭证边界</li><li>账务库存与实物库存差异处理</li></ul></div>
+    <div class="org-card"><div class="org-dept">信息化项目组</div><ul><li>说明会推进组统筹</li><li>字段台账、术语清单、接口卡版本管理</li><li>Q1-Q8决策包整理</li><li>参与 Q7</li></ul></div>
   </div>
 </div>
 
