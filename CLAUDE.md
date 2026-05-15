@@ -25,6 +25,8 @@ npm test:terms             # 术语与版本测试
 npm test:export            # 导出测试
 npm test:import            # 导入测试
 npm test:frontend          # 前端静态资源测试
+node scripts/smoke-master-data.js   # 主数据模块冒烟测试 (8 用例)
+node scripts/smoke-integration.js    # 集成接口冒烟测试 (7 用例，含 API Key 鉴权)
 ```
 
 ### Gantt 渲染
@@ -54,9 +56,11 @@ node scripts/render_gantt_h5_png.mjs                    # H5 HTML → 8K PNG (he
 mdm-platform/
 ├── server/
 │   ├── index.js           # Express 入口，动态注册路由
-│   ├── db.js              # SQLite 建表 (20+ 表，SCD Type 2，审计日志)
-│   ├── auth.js            # 会话认证 + 角色鉴权中间件
-│   └── routes/            # 13 个路由模块，每个暴露 RESTful CRUD
+│   ├── db.js              # SQLite 建表 (30+ 表，含 MDM 拓展 12 张新表)
+│   ├── auth.js            # 会话认证 + 角色鉴权 + 数据权限中间件
+│   ├── access.js           # 行级可见性过滤 (mapping + masterData)
+│   ├── integrationAuth.js  # API Key 认证中间件 (外部系统集成)
+│   └── routes/            # 17 个路由模块，每个暴露 RESTful CRUD
 │       ├── org.js         # 部门、用户、岗位
 │       ├── systems.js     # 应用系统清单
 │       ├── capabilities.js # 业务能力 (L1/L2/L3)
@@ -109,3 +113,34 @@ mappings → todos (跨部门待办)
 - V1 自建用户体系，不接 OA / 统一认证
 - SQLite 是本地文件数据库，不适用于多进程并发部署
 - 根目录 `package.json` 是旧的占位文件；实际项目级依赖在 `mdm-platform/package.json`
+
+## MDM 拓展模块 (2026-05-15)
+
+基于信息化系统应用与集成说明会 V1.0 五阶段要求新增：
+
+### 新增路由
+| 路由前缀 | 模块文件 | 功能 |
+|----------|----------|------|
+| `/api/master-data` | `masterData.js` | 主数据 CRUD、自动编码引擎、Excel 批量导入、去重合并 |
+| `/api/master-data` | `masterDataLifecycle.js` | 生命周期状态机 (7 状态)、多级会签审批、变更管理 |
+| `/api/integration` | `integration.js` | 外部系统同步 API、增量同步状态、旧编码映射、一致性校验回调 |
+| `/api/quality` | `quality.js` | 数据质量 KPI 仪表盘 (完整率/唯一率/及时率/一致率)、黄金源确认进度 |
+
+### 新增中间件
+- `integrationAuth.js` — `apiKeyAuth` (API Key 验证) + `requireIntegrationPermission` (读/写权限)
+- `auth.js` 新增 `requireDataPermission(categoryCode, action)` — 数据级 RBAC
+- `access.js` 新增 `masterDataVisibility(alias, req)` — 行级可见性过滤
+
+### 新增数据表 (12 张)
+**模块 A (主数据注册中心):** master_data_categories, master_data_attributes, master_data_code_rules, master_data_items, master_data_import_batches, master_data_import_log
+**模块 B (生命周期):** master_data_change_requests, master_data_change_approvals, master_data_status_log
+**模块 D (集成):** integration_credentials, integration_sync_log, old_new_code_mapping
+
+### 新增前端 Tab
+主数据台账 (`submitter,owner,reviewer,admin`)、主数据审批 (`owner,reviewer,admin`)、数据质量 (`reviewer,admin`)
+
+### 新增冒烟测试
+```bash
+node scripts/smoke-master-data.js   # 8 用例：CRUD、编码生成、去重检测
+node scripts/smoke-integration.js    # 7 用例：API Key 认证、同步、回调、权限隔离
+```
