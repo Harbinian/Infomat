@@ -442,4 +442,45 @@ INSERT OR IGNORE INTO master_data_categories (id, name, code, description, sort_
 
 console.log('Module A: Master Data Registry tables ready');
 
+// ── Module B: Master Data Lifecycle ──
+db.exec(`
+CREATE TABLE IF NOT EXISTS master_data_change_requests (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  item_id INTEGER NOT NULL REFERENCES master_data_items(id) ON DELETE RESTRICT,
+  request_type TEXT NOT NULL CHECK(request_type IN('create','modify','discontinue','archive')),
+  change_summary TEXT NOT NULL,
+  old_values_json TEXT,
+  new_values_json TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','in_review','approved','rejected','cancelled')),
+  requested_by INTEGER REFERENCES users(id),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  resolved_at DATETIME
+);
+
+CREATE TABLE IF NOT EXISTS master_data_change_approvals (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  change_request_id INTEGER NOT NULL REFERENCES master_data_change_requests(id) ON DELETE CASCADE,
+  step_order INTEGER NOT NULL,
+  approver_dept_id INTEGER NOT NULL REFERENCES departments(id),
+  approver_user_id INTEGER REFERENCES users(id),
+  status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','approved','rejected')),
+  opinion TEXT,
+  operated_at DATETIME,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS master_data_status_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  item_id INTEGER NOT NULL REFERENCES master_data_items(id) ON DELETE CASCADE,
+  from_status TEXT,
+  to_status TEXT NOT NULL,
+  change_request_id INTEGER REFERENCES master_data_change_requests(id) ON DELETE SET NULL,
+  operated_by INTEGER REFERENCES users(id),
+  note TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+`);
+
+console.log('Module B: Master Data Lifecycle tables ready');
+
 module.exports = db;
