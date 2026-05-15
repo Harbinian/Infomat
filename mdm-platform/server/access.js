@@ -57,11 +57,29 @@ function canUseTodo(req, todo) {
   return Boolean(todo.to_dept_id && req.session.departmentId && todo.to_dept_id === req.session.departmentId);
 }
 
+function masterDataVisibility(alias, req) {
+  if (isAdmin(req)) return { sql: '', params: [] };
+
+  const table = alias || 'i';
+  const params = [];
+  const clauses = [];
+
+  if (req.session.departmentId) {
+    clauses.push(`${table}.maintain_dept_id=?`);
+    params.push(req.session.departmentId);
+    clauses.push(`${table}.created_by=?`);
+    params.push(req.session.userId);
+  }
+
+  return { sql: ` AND (${clauses.join(' OR ')})`, params };
+}
+
 module.exports = {
   isAdmin,
   isReviewerOrAdmin,
   validateAction,
   mappingVisibility,
   canViewMapping,
-  canUseTodo
+  canUseTodo,
+  masterDataVisibility
 };

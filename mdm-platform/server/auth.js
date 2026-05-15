@@ -47,11 +47,32 @@ function send422(res, errors) {
   return res.status(422).json({ error: '校验失败', details: errors });
 }
 
+function requireDataPermission(categoryCode, action) {
+  return (req, res, next) => {
+    if (!req.session || !req.session.userId) {
+      return res.status(401).json({ error: '未登录' });
+    }
+    if (req.session.userRole === 'admin') return next();
+
+    const db = require('./db');
+    const user = db.prepare('SELECT permissions FROM users WHERE id=?').get(req.session.userId);
+    if (!user) return res.status(401).json({ error: '用户不存在' });
+
+    const permissions = JSON.parse(user.permissions || '{}');
+    const catPerms = permissions[categoryCode];
+    if (!catPerms || !catPerms.includes(action)) {
+      return res.status(403).json({ error: `无 ${categoryCode} 的 ${action} 权限` });
+    }
+    next();
+  };
+}
+
 module.exports = {
   hashPassword,
   verifyPassword,
   requireAuth,
   requireRole,
+  requireDataPermission,
   send401,
   send403,
   send404,
