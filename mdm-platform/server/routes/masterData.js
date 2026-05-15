@@ -19,16 +19,19 @@ function handleDbError(res, error) {
 }
 
 function generateCode(categoryId) {
-  const rule = db.prepare('SELECT * FROM master_data_code_rules WHERE category_id=?').get(categoryId);
-  if (!rule) throw new Error('该分类未配置编码规则');
+  return db.transaction(() => {
+    const rule = db.prepare('SELECT * FROM master_data_code_rules WHERE category_id=?').get(categoryId);
+    if (!rule) throw new Error('该分类未配置编码规则');
 
-  const segments = JSON.parse(rule.segment_defs);
-  const seq = rule.next_sequence;
-  const seqStr = String(seq).padStart(rule.total_length - (rule.prefix.length + segments.reduce((s, seg) => s + (seg.length || 0), 0)), '0');
-  const code = rule.prefix + segments.map(s => s.value || '').join('') + seqStr;
+    const segments = JSON.parse(rule.segment_defs);
+    const seq = rule.next_sequence;
+    const remaining = rule.total_length - (rule.prefix.length + segments.reduce((s, seg) => s + (seg.length || 0), 0));
+    const seqStr = String(seq).padStart(Math.max(0, remaining), '0');
+    const code = rule.prefix + segments.map(s => s.value || '').join('') + seqStr;
 
-  db.prepare('UPDATE master_data_code_rules SET next_sequence = next_sequence + 1 WHERE id=?').run(rule.id);
-  return code;
+    db.prepare('UPDATE master_data_code_rules SET next_sequence = next_sequence + 1 WHERE id=?').run(rule.id);
+    return code;
+  })();
 }
 
 // GET /api/master-data/categories — 列出所有分类
@@ -135,15 +138,19 @@ router.post('/items', requireAuth, (req, res) => {
     const code = generateCode(Number(category_id));
     const attrJson = JSON.stringify(attributes || {});
 
-    const result = db.prepare(`
-      INSERT INTO master_data_items (code, category_id, name, attributes_json, maintain_dept_id, owner_user_id, created_by)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(code, category_id, name, attrJson, maintain_dept_id || null, req.session.userId, req.session.userId);
+    const result = db.transaction(() => {
+      const r = db.prepare(`
+        INSERT INTO master_data_items (code, category_id, name, attributes_json, maintain_dept_id, owner_user_id, created_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run(code, category_id, name, attrJson, maintain_dept_id || null, req.session.userId, req.session.userId);
 
-    db.prepare(`
-      INSERT INTO version_log (entity_type, entity_id, field_name, old_value, new_value, operation, operated_by)
-      VALUES ('master_data_item', ?, 'code', NULL, ?, 'create', ?)
-    `).run(result.lastInsertRowid, code, req.session.userId);
+      db.prepare(`
+        INSERT INTO version_log (entity_type, entity_id, field_name, old_value, new_value, operation, operated_by)
+        VALUES ('master_data_item', ?, 'code', NULL, ?, 'create', ?)
+      `).run(r.lastInsertRowid, code, req.session.userId);
+
+      return r;
+    })();
 
     res.status(201).json({ id: result.lastInsertRowid, code });
   } catch (e) { handleDbError(res, e); }
@@ -186,7 +193,6 @@ router.post('/import', requireAuth, upload.single('file'), async (req, res) => {
       if (cell.value) headerMap[String(cell.value).trim()] = col;
     });
 
-    const requiredAttrs = attributes.filter(a => a.required);
     const batchResult = db.prepare(`
       INSERT INTO master_data_import_batches (file_name, category_id, total_rows, uploaded_by) VALUES (?, ?, ?, ?)
     `).run(req.file.originalname, categoryId, sheet.rowCount - 1, req.session.userId);
@@ -202,7 +208,7 @@ router.post('/import', requireAuth, upload.single('file'), async (req, res) => {
       for (let rowNum = 2; rowNum <= sheet.rowCount; rowNum++) {
         const row = sheet.getRow(rowNum);
         const name = String(row.getCell(headerMap['名称'] || headerMap['name'] || 1).value || '').trim();
-        if (!name) { errorRows++; continue; }
+        if (!name) { insertLog.run(batchId, rowNum, null, '', 'error', '缺少名称', '{}'); errorRows++; continue; }
 
         const attrJson = {};
         const errors = [];
@@ -269,13 +275,13 @@ router.get('/import-batches/:id/log', requireAuth, (req, res) => {
 // GET /api/master-data/duplicates/check — 去重检测
 router.get('/duplicates/check', requireAuth, (req, res) => {
   try {
-    const { category_id, threshold = 0.8 } = req.query;
+    const { category_id } = req.query;
     let sql = `
       SELECT a.id as id_a, a.code as code_a, a.name as name_a,
              b.id as id_b, b.code as code_b, b.name as name_b,
              c.name as category_name
       FROM master_data_items a
-      JOIN master_data_items b ON a.id < b.id
+      JOIN master_data_items b ON a.id < b.id AND a.category_id = b.category_id
       JOIN master_data_categories c ON a.category_id = c.id
       WHERE a.name = b.name
     `;
@@ -297,6 +303,7 @@ router.post('/duplicates/merge', requireAuth, (req, res) => {
     const keepItem = db.prepare('SELECT * FROM master_data_items WHERE id=?').get(keep_id);
     const mergeItem = db.prepare('SELECT * FROM master_data_items WHERE id=?').get(merge_id);
     if (!keepItem || !mergeItem) return res.status(404).json({ error: '条目不存在' });
+    if (keepItem.category_id !== mergeItem.category_id) return res.status(400).json({ error: '不能合并不同分类的条目' });
 
     db.transaction(() => {
       db.prepare("INSERT INTO old_new_code_mapping (old_code, new_code) VALUES (?, ?)").run(mergeItem.code, keepItem.code);
