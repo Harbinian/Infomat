@@ -43,8 +43,14 @@ registerRouteIfExists('/api/versions', 'versions');
 registerRouteIfExists('/api/import', 'import');
 registerRouteIfExists('/api/export', 'export');
 registerRouteIfExists('/api/views', 'views');
-registerRouteIfExists('/api/master-data', 'masterData');
-registerRouteIfExists('/api/master-data', 'masterDataLifecycle');
+registerRouteIfExists('/api/org-units', 'orgUnit');
+registerRouteIfExists('/api/positions', 'position');
+registerRouteIfExists('/api/persons', 'person');
+registerRouteIfExists('/api/product-families', 'productFamily');
+registerRouteIfExists('/api/products', 'product');
+registerRouteIfExists('/api/class-nodes', 'classNode');
+registerRouteIfExists('/api/attributes', 'attribute');
+registerRouteIfExists('/api/external', 'external');
 registerRouteIfExists('/api/integration', 'integration');
 registerRouteIfExists('/api/quality', 'quality');
 

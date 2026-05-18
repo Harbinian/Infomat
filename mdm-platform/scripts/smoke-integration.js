@@ -27,50 +27,49 @@ async function main() {
   function check(name, ok) { if (ok) { pass++; console.log(`  PASS ${name}`); } else { fail++; console.error(`  FAIL ${name}`); } }
 
   // 1. No API key -> 401
-  const noKey = await request('GET', '/api/integration/materials');
-  check('GET /materials without key returns 401', noKey.status === 401);
+  const noKey = await request('GET', '/api/integration/persons');
+  check('GET /integration/persons without key returns 401', noKey.status === 401);
 
-  // 2. Get a session cookie and generate an API key (admin)
+  // 2. Generate API key
   const fs = require('fs');
   const cookie = fs.readFileSync(process.env.TEMP + '/smoke-cookie.txt', 'utf8').trim();
   const genRes = await request('POST', '/api/integration/credentials/generate',
-    { system_name: 'SMOKE_TEST', permissions: ['read', 'write'] },
+    { system_name: 'SMOKE_V2', permissions: ['read', 'write'] },
     { 'Cookie': cookie }
   );
-  check('POST /credentials/generate creates key', genRes.status === 201 && genRes.body.api_key);
-
+  check('POST /credentials/generate', genRes.status === 201 && genRes.body.api_key);
   const apiKey = genRes.body.api_key;
 
-  // 3. Valid API key -> 200
-  const withKey = await request('GET', '/api/integration/materials', null, { 'X-API-Key': apiKey });
-  check('GET /materials with key returns 200', withKey.status === 200 && Array.isArray(withKey.body.rows));
+  // 3. Valid key -> 200
+  const withKey = await request('GET', '/api/integration/persons', null, { 'X-API-Key': apiKey });
+  check('GET /integration/persons with key', withKey.status === 200 && Array.isArray(withKey.body.rows));
 
   // 4. Sync status
-  const syncRes = await request('GET', '/api/integration/materials/sync-status?since=2020-01-01', null, { 'X-API-Key': apiKey });
-  check('GET /materials/sync-status', syncRes.status === 200 && typeof syncRes.body.total_changed === 'number');
+  const syncRes = await request('GET', '/api/integration/sync-status?entity_type=person&since=2020-01-01', null, { 'X-API-Key': apiKey });
+  check('GET /sync-status', syncRes.status === 200 && typeof syncRes.body.total_changed === 'number');
 
-  // 5. Old code mapping -- 404 for unknown code
-  const oldCodeRes = await request('GET', '/api/integration/old-code/ZZZ999', null, { 'X-API-Key': apiKey });
-  check('GET /old-code/ZZZ999 returns 404 for unknown', oldCodeRes.status === 404);
-
-  // 6. Consistency check callback
-  const cbRes = await request('POST', '/api/integration/callback/consistency-check',
-    { checks: [{ code: 'TEST001', field: 'material', md_value: 'TC4', consumer_value: 'TC4', match: true }] },
+  // 5. External identity upsert
+  const extRes = await request('POST', '/api/integration/external-identities',
+    { entity_type: 'Person', entity_id: 1, system_code: 'PLM', external_key: 'PLM-GUID-001' },
     { 'X-API-Key': apiKey }
   );
-  check('POST /callback/consistency-check', cbRes.status === 200 && cbRes.body.mismatches === 0);
+  check('POST /external-identities', extRes.status === 201);
 
-  // 7. Read-only key can't write
-  const roKeyGen = await request('POST', '/api/integration/credentials/generate',
-    { system_name: 'SMOKE_TEST_RO', permissions: ['read'] },
+  // 6. Read-only key can't write
+  const roGen = await request('POST', '/api/integration/credentials/generate',
+    { system_name: 'SMOKE_V2_RO', permissions: ['read'] },
     { 'Cookie': cookie }
   );
-  const roKey = roKeyGen.body.api_key;
-  const roWriteRes = await request('POST', '/api/integration/callback/consistency-check',
-    { checks: [] },
+  const roKey = roGen.body.api_key;
+  const roWrite = await request('POST', '/api/integration/external-identities',
+    { entity_type: 'Person', entity_id: 1, system_code: 'ERP', external_key: 'ERP-001' },
     { 'X-API-Key': roKey }
   );
-  check('Read-only key blocked from write', roWriteRes.status === 403);
+  check('Read-only key blocked from write', roWrite.status === 403);
+
+  // 7. Org units via integration
+  const orgRes = await request('GET', '/api/integration/org-units', null, { 'X-API-Key': apiKey });
+  check('GET /integration/org-units', orgRes.status === 200 && Array.isArray(orgRes.body.rows));
 
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);

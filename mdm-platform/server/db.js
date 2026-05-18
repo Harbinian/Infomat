@@ -355,142 +355,230 @@ if (capInfo && !capInfo.sql.includes('parent_id')) {
   console.log('Migration: added parent_id to capabilities');
 }
 
-// ── Module A: Master Data Registry ──
+// ── MDM v2: Domain-Specific Data Model (per spec 2026-05-18) ──
+
+// Encoding sequence table
 db.exec(`
-CREATE TABLE IF NOT EXISTS master_data_categories (
+CREATE TABLE IF NOT EXISTS code_sequences (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL UNIQUE,
-  code TEXT NOT NULL UNIQUE,
-  description TEXT,
-  sort_order INTEGER DEFAULT 0,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  entity_type TEXT NOT NULL,
+  scope_key TEXT NOT NULL DEFAULT '',
+  next_seq INTEGER NOT NULL DEFAULT 1,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(entity_type, scope_key)
 );
+`);
 
-CREATE TABLE IF NOT EXISTS master_data_attributes (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  category_id INTEGER NOT NULL REFERENCES master_data_categories(id) ON DELETE CASCADE,
-  attr_name TEXT NOT NULL,
-  attr_label TEXT NOT NULL,
-  attr_type TEXT NOT NULL CHECK(attr_type IN ('文本','编码','日期','枚举','数字','JSON')),
-  required INTEGER NOT NULL DEFAULT 0,
-  enum_options TEXT,
-  validation_rule TEXT,
-  sort_order INTEGER DEFAULT 0,
-  UNIQUE(category_id, attr_name)
-);
-
-CREATE TABLE IF NOT EXISTS master_data_code_rules (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  category_id INTEGER NOT NULL UNIQUE REFERENCES master_data_categories(id),
-  prefix TEXT NOT NULL DEFAULT '',
-  total_length INTEGER NOT NULL DEFAULT 30,
-  segment_defs TEXT NOT NULL DEFAULT '[]',
-  next_sequence INTEGER NOT NULL DEFAULT 1,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS master_data_items (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  code TEXT NOT NULL UNIQUE,
-  category_id INTEGER NOT NULL REFERENCES master_data_categories(id),
-  name TEXT NOT NULL,
-  attributes_json TEXT NOT NULL DEFAULT '{}',
-  status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','review','active','changing','discontinued','archived','rejected')),
-  old_code TEXT,
-  source_system TEXT DEFAULT 'MDM_MANUAL',
-  maintain_dept_id INTEGER REFERENCES departments(id),
-  owner_user_id INTEGER REFERENCES users(id),
+// 4.1 org_unit
+db.exec(`
+CREATE TABLE IF NOT EXISTS org_unit (
+  org_unit_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  org_unit_code TEXT NOT NULL UNIQUE,
+  org_unit_name TEXT NOT NULL,
+  org_type TEXT NOT NULL CHECK(org_type IN ('company','department','office','team')),
+  org_mnemonic TEXT NOT NULL UNIQUE,
+  parent_org_unit_id INTEGER REFERENCES org_unit(org_unit_id),
+  manager_person_id INTEGER,
+  status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','active','inactive')),
+  effective_from DATE DEFAULT CURRENT_DATE,
+  effective_to DATE,
   created_by INTEGER REFERENCES users(id),
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_by INTEGER REFERENCES users(id),
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
-
-CREATE TABLE IF NOT EXISTS master_data_import_batches (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  file_name TEXT NOT NULL,
-  category_id INTEGER REFERENCES master_data_categories(id),
-  total_rows INTEGER NOT NULL DEFAULT 0,
-  success_rows INTEGER NOT NULL DEFAULT 0,
-  error_rows INTEGER NOT NULL DEFAULT 0,
-  status TEXT NOT NULL DEFAULT 'in_progress' CHECK(status IN ('in_progress','completed','failed')),
-  uploaded_by INTEGER REFERENCES users(id),
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS master_data_import_log (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  batch_id INTEGER NOT NULL REFERENCES master_data_import_batches(id) ON DELETE CASCADE,
-  row_number INTEGER NOT NULL,
-  code TEXT,
-  name TEXT,
-  status TEXT NOT NULL CHECK(status IN ('success','error')),
-  error_reason TEXT,
-  raw_data_json TEXT,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
--- 预置 6 大主数据分类
-INSERT OR IGNORE INTO master_data_categories (id, name, code, description, sort_order) VALUES
-(1, '零组件', 'PART', '自制件、外协件、组件、部件', 1),
-(2, '工艺组件', 'PROC_COMP', '工艺拆分件、虚拟件', 2),
-(3, '工装', 'TOOLING', '模具、夹具、型架、样板', 3),
-(4, '原材料', 'MATERIAL', '金属/非金属、板材、型材', 4),
-(5, '设备', 'EQUIPMENT', '生产设备、检测设备', 5),
-(6, '工具', 'TOOL', '刀具、量具、辅具', 6);
 `);
 
-console.log('Module A: Master Data Registry tables ready');
-
-// ── Module B: Master Data Lifecycle ──
+// 4.2 position
 db.exec(`
-CREATE TABLE IF NOT EXISTS master_data_change_requests (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  item_id INTEGER NOT NULL REFERENCES master_data_items(id) ON DELETE RESTRICT,
-  request_type TEXT NOT NULL CHECK(request_type IN('create','modify','discontinue','archive')),
-  change_summary TEXT NOT NULL,
-  old_values_json TEXT,
-  new_values_json TEXT NOT NULL,
-  status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','in_review','approved','rejected','cancelled')),
-  requested_by INTEGER REFERENCES users(id),
+CREATE TABLE IF NOT EXISTS position (
+  position_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  position_code TEXT NOT NULL UNIQUE,
+  position_name TEXT NOT NULL,
+  pos_mnemonic TEXT NOT NULL,
+  org_unit_id INTEGER NOT NULL REFERENCES org_unit(org_unit_id),
+  status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','active','inactive')),
+  effective_from DATE DEFAULT CURRENT_DATE,
+  effective_to DATE,
+  created_by INTEGER REFERENCES users(id),
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  resolved_at DATETIME
+  updated_by INTEGER REFERENCES users(id),
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(org_unit_id, pos_mnemonic)
 );
+`);
 
-CREATE TABLE IF NOT EXISTS master_data_change_approvals (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  change_request_id INTEGER NOT NULL REFERENCES master_data_change_requests(id) ON DELETE CASCADE,
-  step_order INTEGER NOT NULL,
-  approver_dept_id INTEGER NOT NULL REFERENCES departments(id),
-  approver_user_id INTEGER REFERENCES users(id),
-  status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','approved','rejected')),
-  opinion TEXT,
-  operated_at DATETIME,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+// 4.3 person
+db.exec(`
+CREATE TABLE IF NOT EXISTS person (
+  person_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  employee_no TEXT NOT NULL UNIQUE,
+  person_name TEXT NOT NULL,
+  mobile TEXT,
+  email TEXT,
+  employment_status TEXT NOT NULL DEFAULT 'active' CHECK(employment_status IN ('active','leave','suspended')),
+  status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','active','inactive')),
+  effective_from DATE DEFAULT CURRENT_DATE,
+  effective_to DATE,
+  created_by INTEGER REFERENCES users(id),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_by INTEGER REFERENCES users(id),
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+`);
 
-CREATE TABLE IF NOT EXISTS master_data_status_log (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  item_id INTEGER NOT NULL REFERENCES master_data_items(id) ON DELETE CASCADE,
-  from_status TEXT,
-  to_status TEXT NOT NULL,
-  change_request_id INTEGER REFERENCES master_data_change_requests(id) ON DELETE SET NULL,
-  operated_by INTEGER REFERENCES users(id),
-  note TEXT,
+// 4.4 person_position_assignment
+db.exec(`
+CREATE TABLE IF NOT EXISTS person_position_assignment (
+  assignment_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  person_id INTEGER NOT NULL REFERENCES person(person_id),
+  position_id INTEGER NOT NULL REFERENCES position(position_id),
+  is_primary INTEGER NOT NULL DEFAULT 0,
+  start_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  end_date DATE,
+  status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','inactive')),
+  created_by INTEGER REFERENCES users(id),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_by INTEGER REFERENCES users(id),
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+`);
+
+// 4.5 product_family
+db.exec(`
+CREATE TABLE IF NOT EXISTS product_family (
+  product_family_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  product_family_code TEXT NOT NULL UNIQUE,
+  model_name TEXT NOT NULL,
+  model_code TEXT NOT NULL,
+  class_major TEXT NOT NULL,
+  product_type TEXT,
+  status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','active','inactive')),
+  created_by INTEGER REFERENCES users(id),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_by INTEGER REFERENCES users(id),
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(model_code, class_major)
+);
+`);
+
+// 4.6 product (versioned)
+db.exec(`
+CREATE TABLE IF NOT EXISTS product (
+  product_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  product_code TEXT NOT NULL UNIQUE,
+  product_family_id INTEGER NOT NULL REFERENCES product_family(product_family_id),
+  revision TEXT,
+  class_mid TEXT,
+  class_minor TEXT,
+  lifecycle_state TEXT NOT NULL DEFAULT 'draft' CHECK(lifecycle_state IN ('draft','released','obsolete')),
+  superseded_by_product_id INTEGER REFERENCES product(product_id),
+  effective_from DATE,
+  effective_to DATE,
+  created_by INTEGER REFERENCES users(id),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_by INTEGER REFERENCES users(id),
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+`);
+
+// 4.7 class_node
+db.exec(`
+CREATE TABLE IF NOT EXISTS class_node (
+  class_node_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  class_code TEXT NOT NULL UNIQUE,
+  class_name TEXT NOT NULL,
+  class_type TEXT NOT NULL CHECK(class_type IN ('product','material','common')),
+  parent_class_node_id INTEGER REFERENCES class_node(class_node_id),
+  status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','inactive')),
+  created_by INTEGER REFERENCES users(id),
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 `);
 
-console.log('Module B: Master Data Lifecycle tables ready');
+// 4.8 entity_class_membership
+db.exec(`
+CREATE TABLE IF NOT EXISTS entity_class_membership (
+  membership_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  entity_type TEXT NOT NULL CHECK(entity_type IN ('product','product_family')),
+  entity_id INTEGER NOT NULL,
+  class_node_id INTEGER NOT NULL REFERENCES class_node(class_node_id),
+  is_primary INTEGER NOT NULL DEFAULT 0,
+  created_by INTEGER REFERENCES users(id),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(entity_type, entity_id, class_node_id)
+);
+`);
 
-// ── Module C: Permissions field on users ──
-const userInfo = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='users'").get();
-if (userInfo && !userInfo.sql.includes('permissions')) {
-  db.exec("ALTER TABLE users ADD COLUMN permissions TEXT DEFAULT '{}'");
-  console.log('Migration: added permissions to users');
-}
+// 4.9 attribute_def
+db.exec(`
+CREATE TABLE IF NOT EXISTS attribute_def (
+  attribute_def_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  attribute_code TEXT NOT NULL UNIQUE,
+  attribute_name TEXT NOT NULL,
+  data_type TEXT NOT NULL CHECK(data_type IN ('string','number','date','boolean','enum','json')),
+  enum_ref TEXT,
+  applies_to TEXT NOT NULL CHECK(applies_to IN ('product','product_family','common')),
+  is_required INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','inactive')),
+  created_by INTEGER REFERENCES users(id),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+`);
 
-// ── Module D: Integration API ──
+// 4.10 attribute_value
+db.exec(`
+CREATE TABLE IF NOT EXISTS attribute_value (
+  attribute_value_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  entity_type TEXT NOT NULL CHECK(entity_type IN ('product','product_family')),
+  entity_id INTEGER NOT NULL,
+  attribute_def_id INTEGER NOT NULL REFERENCES attribute_def(attribute_def_id),
+  value_string TEXT,
+  value_number REAL,
+  value_date TEXT,
+  value_bool INTEGER,
+  value_json TEXT,
+  created_by INTEGER REFERENCES users(id),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_by INTEGER REFERENCES users(id),
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(entity_type, entity_id, attribute_def_id)
+);
+`);
+
+// 4.11 external_system
+db.exec(`
+CREATE TABLE IF NOT EXISTS external_system (
+  system_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  system_code TEXT NOT NULL UNIQUE,
+  system_name TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','inactive')),
+  created_by INTEGER REFERENCES users(id),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+`);
+
+// 4.12 external_identity
+db.exec(`
+CREATE TABLE IF NOT EXISTS external_identity (
+  external_identity_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  entity_type TEXT NOT NULL,
+  entity_id INTEGER NOT NULL,
+  system_code TEXT NOT NULL,
+  external_key TEXT NOT NULL,
+  is_primary INTEGER NOT NULL DEFAULT 0,
+  last_sync_at DATETIME,
+  last_sync_status TEXT CHECK(last_sync_status IN ('ok','failed','pending')),
+  created_by INTEGER REFERENCES users(id),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_by INTEGER REFERENCES users(id),
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(entity_type, entity_id, system_code),
+  UNIQUE(system_code, external_key)
+);
+`);
+
+// Integration: API credentials (simplified, kept for integration API)
 db.exec(`
 CREATE TABLE IF NOT EXISTS integration_credentials (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -501,7 +589,10 @@ CREATE TABLE IF NOT EXISTS integration_credentials (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   last_used_at DATETIME
 );
+`);
 
+// Integration: sync log
+db.exec(`
 CREATE TABLE IF NOT EXISTS integration_sync_log (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   system_name TEXT NOT NULL,
@@ -513,19 +604,21 @@ CREATE TABLE IF NOT EXISTS integration_sync_log (
   ip_address TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
-
-CREATE TABLE IF NOT EXISTS old_new_code_mapping (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  old_code TEXT NOT NULL,
-  new_code TEXT NOT NULL,
-  system_source TEXT,
-  mapped_by INTEGER REFERENCES users(id),
-  note TEXT,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(old_code, new_code)
-);
 `);
 
-console.log('Module D: Integration API tables ready');
+// Migration: add person_id FK to departments
+const depInfo = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='departments'").get();
+if (depInfo && !depInfo.sql.includes('person_id')) {
+  db.exec("ALTER TABLE departments ADD COLUMN person_id INTEGER");
+}
+
+// ── Module C: Permissions field on users ──
+const userInfo = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='users'").get();
+if (userInfo && !userInfo.sql.includes('permissions')) {
+  db.exec("ALTER TABLE users ADD COLUMN permissions TEXT DEFAULT '{}'");
+  console.log('Migration: added permissions to users');
+}
+
+console.log('MDM v2: Domain-specific tables ready (12 tables)');
 
 module.exports = db;
