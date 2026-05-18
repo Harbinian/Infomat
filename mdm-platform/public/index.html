@@ -281,8 +281,9 @@
         <button class="tab" data-tab="reviews" data-roles="submitter,owner,reviewer,admin">评审记录</button>
         <button class="tab" data-tab="terms" data-roles="submitter,owner,reviewer,admin">术语词典</button>
         <button class="tab" data-tab="conflicts" data-roles="reviewer,admin">冲突管理</button>
-        <button class="tab" data-tab="masterData" data-roles="submitter,owner,reviewer,admin">主数据台账</button>
-        <button class="tab" data-tab="masterDataLifecycle" data-roles="owner,reviewer,admin">主数据审批</button>
+        <button class="tab" data-tab="orgUnits" data-roles="submitter,owner,reviewer,admin">组织架构</button>
+        <button class="tab" data-tab="persons" data-roles="submitter,owner,reviewer,admin">人员管理</button>
+        <button class="tab" data-tab="products" data-roles="submitter,owner,reviewer,admin">产品主数据</button>
         <button class="tab" data-tab="quality" data-roles="reviewer,admin">数据质量</button>
       </nav>
 
@@ -418,59 +419,69 @@
         <div class="chart" id="sankeyChart" style="height: 600px;"></div>
       </section>
 
-      <!-- Master Data Panel -->
-      <section class="panel" id="masterData">
+      <!-- Org Units Panel -->
+      <section class="panel" id="orgUnits">
         <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:16px">
-          <select id="mdCategoryFilter" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px">
-            <option value="">全部分类</option>
+          <select id="ouTypeFilter" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px">
+            <option value="">全部类型</option>
+            <option value="company">公司</option>
+            <option value="department">部门</option>
+            <option value="office">办公室</option>
+            <option value="team">班组</option>
           </select>
-          <select id="mdStatusFilter" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px">
-            <option value="">全部状态</option>
-            <option value="draft">新增</option>
-            <option value="review">审核中</option>
-            <option value="active">生效</option>
-            <option value="changing">变更中</option>
-            <option value="discontinued">停用</option>
-            <option value="archived">归档</option>
-          </select>
-          <input id="mdSearch" placeholder="搜索编码或名称..." style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;width:200px">
-          <button class="btn" id="mdSearchBtn">查询</button>
-          <button class="btn secondary" id="mdNewItemBtn">+ 新增条目</button>
-          <button class="btn secondary" id="mdImportBtn">Excel 导入</button>
-          <input type="file" id="mdImportFile" accept=".xlsx" style="display:none">
-        </div>
-        <div style="display:flex;gap:20px;margin-bottom:16px" id="mdStats">
-          <div class="metric"><div class="num" id="mdTotal">0</div><div class="lbl">总条目</div></div>
-          <div class="metric"><div class="num" id="mdActive">0</div><div class="lbl">生效中</div></div>
-          <div class="metric"><div class="num" id="mdDraft">0</div><div class="lbl">待审核</div></div>
-          <div class="metric"><div class="num" id="mdArchived">0</div><div class="lbl">已归档</div></div>
+          <input id="ouSearch" placeholder="搜索编码或名称..." style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;width:200px">
+          <button class="btn" id="ouSearchBtn">查询</button>
+          <button class="btn secondary" id="ouNewBtn">+ 新增组织</button>
         </div>
         <div class="tw"><table><thead><tr>
-          <th>编码</th><th>名称</th><th>分类</th><th>状态</th><th>维护部门</th><th>更新时间</th><th>操作</th>
-        </tr></thead><tbody id="mdTableBody"></tbody></table></div>
-        <div id="mdPagination" style="margin-top:12px;display:flex;gap:8px;align-items:center"></div>
+          <th>编码</th><th>名称</th><th>类型</th><th>简称</th><th>上级组织</th><th>状态</th><th>操作</th>
+        </tr></thead><tbody id="ouTableBody"></tbody></table></div>
       </section>
 
-      <!-- Master Data Lifecycle Panel -->
-      <section class="panel" id="masterDataLifecycle">
-        <h2>变更审批列表</h2>
-        <div class="tw"><table><thead><tr>
-          <th>变更ID</th><th>物料编码</th><th>物料名称</th><th>变更类型</th><th>变更摘要</th><th>申请人</th><th>审批进度</th><th>状态</th><th>操作</th>
-        </tr></thead><tbody id="mdCrTableBody"></tbody></table></div>
-        <div id="mdCrDetail" style="display:none;margin-top:16px;padding:20px;background:var(--surface);border-radius:10px">
-          <h3>审批详情</h3>
-          <div id="mdCrDetailContent"></div>
+      <!-- Persons Panel -->
+      <section class="panel" id="persons">
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:16px">
+          <select id="personStatusFilter" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px">
+            <option value="">全部状态</option>
+            <option value="active">在职</option>
+            <option value="leave">离职</option>
+            <option value="suspended">停职</option>
+          </select>
+          <input id="personSearch" placeholder="搜索工号或姓名..." style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;width:200px">
+          <button class="btn" id="personSearchBtn">查询</button>
+          <button class="btn secondary" id="personNewBtn">+ 新增人员</button>
         </div>
+        <div class="tw"><table><thead><tr>
+          <th>工号</th><th>姓名</th><th>手机</th><th>邮箱</th><th>在职状态</th><th>状态</th><th>操作</th>
+        </tr></thead><tbody id="personTableBody"></tbody></table></div>
+      </section>
+
+      <!-- Products Panel -->
+      <section class="panel" id="products">
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:16px">
+          <input id="prodSearch" placeholder="搜索编码或型号..." style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;width:200px">
+          <button class="btn" id="prodSearchBtn">查询</button>
+          <button class="btn secondary" id="prodPfNewBtn">+ 新增产品族</button>
+          <button class="btn secondary" id="prodNewBtn">+ 新增产品</button>
+        </div>
+        <h2>产品族</h2>
+        <div class="tw" style="margin-bottom:24px"><table><thead><tr>
+          <th>编码</th><th>型号名称</th><th>机型代码</th><th>大类</th><th>产品类型</th><th>状态</th><th>操作</th>
+        </tr></thead><tbody id="pfTableBody"></tbody></table></div>
+        <h2>产品列表</h2>
+        <div class="tw"><table><thead><tr>
+          <th>编码</th><th>产品族</th><th>版次</th><th>中类</th><th>小类</th><th>生命周期</th><th>操作</th>
+        </tr></thead><tbody id="prodTableBody"></tbody></table></div>
       </section>
 
       <!-- Quality Panel -->
       <section class="panel" id="quality">
         <h2>数据质量仪表盘</h2>
         <div class="grid g4" style="margin-bottom:24px">
-          <div class="metric"><div class="num" id="qComplete">-</div><div class="lbl">完整率</div><div class="status" id="qCompleteStatus"></div></div>
-          <div class="metric"><div class="num" id="qUnique">-</div><div class="lbl">唯一率</div><div class="status" id="qUniqueStatus"></div></div>
-          <div class="metric"><div class="num" id="qTimely">-</div><div class="lbl">及时率</div><div class="status" id="qTimelyStatus"></div></div>
-          <div class="metric"><div class="num" id="qConsistent">-</div><div class="lbl">消费一致率</div><div class="status" id="qConsistentStatus"></div></div>
+          <div class="metric"><div class="num" id="qOrgs">-</div><div class="lbl">组织单元</div></div>
+          <div class="metric"><div class="num" id="qPersons">-</div><div class="lbl">人员</div></div>
+          <div class="metric"><div class="num" id="qProducts">-</div><div class="lbl">产品</div></div>
+          <div class="metric"><div class="num" id="qExtIds">-</div><div class="lbl">外部映射</div></div>
         </div>
         <h2 style="margin-top:32px">黄金源确认进度</h2>
         <div id="goldenSourceProgress" style="margin-bottom:16px"></div>
@@ -1322,8 +1333,9 @@
         case 'conflicts': loadConflicts(); break;
         case 'capabilities': loadCatalog(); break;
         case 'businessMap': renderBusinessMap(); break;
-        case 'masterData': loadMdCategories(); loadMasterData(); loadMdStats(); break;
-        case 'masterDataLifecycle': loadChangeRequests(); break;
+        case 'orgUnits': loadOrgUnits(); break;
+        case 'persons': loadPersons(); break;
+        case 'products': loadProductFamilies(); loadProducts(); break;
         case 'quality': loadQualityDashboard(); loadGoldenSourceProgress(); break;
       }
     }
@@ -1968,149 +1980,164 @@
       navigateTo(route.view, route);
     });
 
-    // ── Master Data Tab ──
-    async function loadMdCategories() {
-      const cats = await api('/api/master-data/categories');
-      const sel = document.getElementById('mdCategoryFilter');
-      sel.innerHTML = '<option value="">全部分类</option>' + cats.map(function(c) { return '<option value="' + c.id + '">' + escHtml(c.name) + '</option>'; }).join('');
-    }
-
-    async function loadMasterData(page) {
-      page = page || 1;
-      var catId = document.getElementById('mdCategoryFilter').value;
-      var status = document.getElementById('mdStatusFilter').value;
-      var search = document.getElementById('mdSearch').value;
-      var params = 'page=' + page + '&limit=30';
-      if (catId) params += '&category_id=' + catId;
-      if (status) params += '&status=' + status;
+    // ── Org Units Tab ──
+    async function loadOrgUnits() {
+      var type = document.getElementById('ouTypeFilter').value;
+      var search = document.getElementById('ouSearch').value;
+      var params = 'limit=100';
+      if (type) params += '&org_type=' + type;
       if (search) params += '&search=' + encodeURIComponent(search);
-
-      var data = await api('/api/master-data/items?' + params);
-
-      document.getElementById('mdTableBody').innerHTML = data.rows.map(function(r) {
-        return '<tr><td><code>' + escHtml(r.code) + '</code></td><td>' + escHtml(r.name) + '</td><td>' + escHtml(r.category_name) + '</td><td><span class="badge">' + escHtml(r.status) + '</span></td><td>' + escHtml(r.maintain_dept_name || '-') + '</td><td>' + escHtml(r.updated_at || '-') + '</td><td><a href="#" onclick="viewMdItem(\'' + escHtml(r.code) + '\');return false">详情</a></td></tr>';
+      var data = await api('/api/org-units?' + params);
+      document.getElementById('ouTableBody').innerHTML = (data.rows || []).map(function(r) {
+        return '<tr><td><code>' + escHtml(r.org_unit_code) + '</code></td><td>' + escHtml(r.org_unit_name) + '</td><td>' + escHtml(r.org_type) + '</td><td>' + escHtml(r.org_mnemonic) + '</td><td>' + escHtml(r.parent_name || '-') + '</td><td>' + escHtml(r.status) + '</td><td>' +
+          (r.status === 'draft' ? '<a href="#" onclick="activateOu(\'' + escHtml(r.org_unit_code) + '\');return false">激活</a>' : '') + '</td></tr>';
       }).join('') || '<tr><td colspan="7" style="text-align:center">暂无数据</td></tr>';
-
-      document.getElementById('mdTotal').textContent = data.total;
-      var totalPages = Math.ceil(data.total / data.limit);
-      var html = '';
-      for (var i = 1; i <= totalPages; i++) {
-        html += '<button class="btn ' + (i === page ? '' : 'secondary') + '" onclick="loadMasterData(' + i + ')">' + i + '</button>';
-      }
-      document.getElementById('mdPagination').innerHTML = html;
     }
 
-    async function loadMdStats() {
-      var results = await Promise.all([
-        api('/api/master-data/items?status=active&limit=1'),
-        api('/api/master-data/items?status=draft&limit=1'),
-        api('/api/master-data/items?status=archived&limit=1')
-      ]);
-      document.getElementById('mdActive').textContent = results[0].total;
-      document.getElementById('mdDraft').textContent = results[1].total;
-      document.getElementById('mdArchived').textContent = results[2].total;
+    async function activateOu(code) {
+      try {
+        var res = await api('/api/org-units/' + encodeURIComponent(code) + '/activate', { method: 'POST' });
+        if (res.success) loadOrgUnits();
+        else alert('激活失败：' + (res.error || '未知错误'));
+      } catch (e) { alert('激活失败'); }
     }
 
     document.addEventListener('DOMContentLoaded', function() {
-      var searchBtn = document.getElementById('mdSearchBtn');
-      if (searchBtn) searchBtn.addEventListener('click', function() { loadMasterData(); });
-
-      var newBtn = document.getElementById('mdNewItemBtn');
-      if (newBtn) newBtn.addEventListener('click', async function() {
-        var catId = document.getElementById('mdCategoryFilter').value;
-        if (!catId) { alert('请先选择分类'); return; }
-        var name = prompt('名称：');
-        if (!name) return;
+      var s1 = document.getElementById('ouSearchBtn');
+      if (s1) s1.addEventListener('click', loadOrgUnits);
+      var n1 = document.getElementById('ouNewBtn');
+      if (n1) n1.addEventListener('click', async function() {
+        var name = prompt('组织名称：'); if (!name) return;
+        var type = prompt('组织类型 (company/department/office/team)：', 'department'); if (!type) return;
+        var mnemonic = prompt('组织简称（3-8位大写字母数字）：'); if (!mnemonic) return;
         try {
-          var data = await api('/api/master-data/items', {
-            method: 'POST', body: JSON.stringify({ category_id: Number(catId), name: name, attributes: {} })
-          });
-          if (data.code) { alert('创建成功，编码：' + data.code); loadMasterData(); loadMdStats(); }
-          else alert('创建失败：' + (data.error || '未知错误'));
+          var res = await api('/api/org-units', { method: 'POST', body: JSON.stringify({ org_unit_name: name, org_type: type, org_mnemonic: mnemonic.toUpperCase() }) });
+          if (res.org_unit_code) { alert('创建成功，编码：' + res.org_unit_code); loadOrgUnits(); }
+          else alert('创建失败：' + (res.error || '未知错误'));
         } catch (e) { alert('创建失败'); }
-      });
-
-      var importBtn = document.getElementById('mdImportBtn');
-      if (importBtn) importBtn.addEventListener('click', function() { document.getElementById('mdImportFile').click(); });
-
-      var importFile = document.getElementById('mdImportFile');
-      if (importFile) importFile.addEventListener('change', async function(e) {
-        var file = e.target.files[0];
-        if (!file) return;
-        var catId = document.getElementById('mdCategoryFilter').value;
-        if (!catId) { alert('请先选择分类'); return; }
-        var formData = new FormData();
-        formData.append('file', file);
-        formData.append('category_id', catId);
-        try {
-          var res = await fetch('/api/master-data/import', { method: 'POST', body: formData });
-          var data = await res.json();
-          alert('导入完成：成功 ' + data.success_rows + ' 条，失败 ' + data.error_rows + ' 条');
-          loadMasterData();
-          loadMdStats();
-        } catch (e) { alert('导入失败'); }
-        e.target.value = '';
       });
     });
 
-    async function viewMdItem(code) {
-      var data = await api('/api/master-data/items/' + code);
-      var attrsHtml = '';
-      for (var key in data.attributes) {
-        attrsHtml += '<div style="margin:4px 0"><strong>' + escHtml(key) + ':</strong> ' + escHtml(data.attributes[key]) + '</div>';
-      }
-      alert('编码: ' + data.code + '\n名称: ' + data.name + '\n分类: ' + data.category_name + '\n状态: ' + data.status + '\n属性:\n' + Object.entries(data.attributes || {}).map(function(e) { return '  ' + e[0] + ': ' + e[1]; }).join('\n'));
+    // ── Persons Tab ──
+    async function loadPersons() {
+      var status = document.getElementById('personStatusFilter').value;
+      var search = document.getElementById('personSearch').value;
+      var params = 'limit=100';
+      if (status) params += '&employment_status=' + status;
+      if (search) params += '&search=' + encodeURIComponent(search);
+      var data = await api('/api/persons?' + params);
+      document.getElementById('personTableBody').innerHTML = (data.rows || []).map(function(r) {
+        return '<tr><td><code>' + escHtml(r.employee_no) + '</code></td><td>' + escHtml(r.person_name) + '</td><td>' + escHtml(r.mobile || '-') + '</td><td>' + escHtml(r.email || '-') + '</td><td>' + escHtml(r.employment_status) + '</td><td>' + escHtml(r.status) + '</td><td>' +
+          (r.status === 'draft' ? '<a href="#" onclick="activatePerson(\'' + escHtml(r.employee_no) + '\');return false">激活</a>' : '') + '</td></tr>';
+      }).join('') || '<tr><td colspan="7" style="text-align:center">暂无数据</td></tr>';
     }
 
-    // ── Lifecycle Tab ──
-    async function loadChangeRequests() {
-      var data = await api('/api/master-data/change-requests');
-      document.getElementById('mdCrTableBody').innerHTML = data.map(function(cr) {
-        return '<tr><td>#' + cr.id + '</td><td><code>' + escHtml(cr.item_code) + '</code></td><td>' + escHtml(cr.item_name) + '</td><td>' + escHtml(cr.request_type) + '</td><td>' + escHtml(cr.change_summary) + '</td><td>' + escHtml(cr.requested_by_name || '-') + '</td><td>' + escHtml(cr.approval_statuses || '-') + '</td><td>' + escHtml(cr.status) + '</td><td><a href="#" onclick="viewChangeRequest(' + cr.id + ');return false">详情</a></td></tr>';
-      }).join('') || '<tr><td colspan="9" style="text-align:center">暂无变更申请</td></tr>';
-    }
-
-    async function viewChangeRequest(id) {
-      var cr = await api('/api/master-data/change-requests/' + id);
-      document.getElementById('mdCrDetail').style.display = 'block';
-      var html = '<p><strong>物料：</strong>' + escHtml(cr.item_code) + ' ' + escHtml(cr.item_name) + '</p>';
-      html += '<p><strong>变更类型：</strong>' + escHtml(cr.request_type) + '</p>';
-      html += '<p><strong>摘要：</strong>' + escHtml(cr.change_summary) + '</p>';
-      html += '<p><strong>旧值：</strong>' + escHtml(cr.old_values_json || '') + '</p>';
-      html += '<p><strong>新值：</strong>' + escHtml(cr.new_values_json || '') + '</p>';
-      html += '<p><strong>状态：</strong>' + escHtml(cr.status) + '</p>';
-      html += '<h4 style="margin-top:12px">审批步骤</h4>';
-      html += cr.approvals.map(function(a) {
-        var btns = '';
-        if (a.status === 'pending' && cr.status !== 'rejected') {
-          btns = '<button class="btn" onclick="approveStep(' + cr.id + ',' + a.step_order + ',\'approved\')">通过</button><button class="btn" style="background:var(--error)" onclick="approveStep(' + cr.id + ',' + a.step_order + ',\'rejected\')">退回</button>';
-        }
-        var color = a.status === 'approved' ? 'var(--success)' : (a.status === 'rejected' ? 'var(--error)' : 'var(--text-muted)');
-        return '<div style="padding:8px;margin:4px 0;border:1px solid var(--border);border-radius:6px">步骤' + a.step_order + ': ' + escHtml(a.dept_name) + ' — <span style="color:' + color + '">' + escHtml(a.status) + '</span>' + (a.opinion ? ' — ' + escHtml(a.opinion) : '') + ' ' + btns + '</div>';
-      }).join('');
-      document.getElementById('mdCrDetailContent').innerHTML = html;
-    }
-
-    async function approveStep(crId, stepOrder, action) {
-      var opinion = prompt('审批意见（可选）：') || '';
+    async function activatePerson(no) {
       try {
-        var data = await api('/api/master-data/change-requests/' + crId + '/approve', {
-          method: 'POST', body: JSON.stringify({ step_order: stepOrder, action: action, opinion: opinion })
-        });
-        if (data.success) { alert('审批完成'); viewChangeRequest(crId); loadChangeRequests(); }
-        else alert('审批失败：' + (data.error || '未知错误'));
-      } catch (e) { alert('审批失败'); }
+        var res = await api('/api/persons/' + encodeURIComponent(no) + '/activate', { method: 'POST' });
+        if (res.success) loadPersons();
+        else alert('激活失败：' + (res.error || '未知错误'));
+      } catch (e) { alert('激活失败'); }
     }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      var s2 = document.getElementById('personSearchBtn');
+      if (s2) s2.addEventListener('click', loadPersons);
+      var n2 = document.getElementById('personNewBtn');
+      if (n2) n2.addEventListener('click', async function() {
+        var name = prompt('姓名：'); if (!name) return;
+        var mobile = prompt('手机号（可选）：') || '';
+        var email = prompt('邮箱（可选）：') || '';
+        try {
+          var res = await api('/api/persons', { method: 'POST', body: JSON.stringify({ person_name: name, mobile: mobile || null, email: email || null }) });
+          if (res.employee_no) { alert('创建成功，工号：' + res.employee_no); loadPersons(); }
+          else alert('创建失败：' + (res.error || '未知错误'));
+        } catch (e) { alert('创建失败'); }
+      });
+    });
+
+    // ── Products Tab ──
+    async function loadProductFamilies() {
+      var data = await api('/api/product-families?limit=100');
+      document.getElementById('pfTableBody').innerHTML = (data.rows || []).map(function(r) {
+        return '<tr><td><code>' + escHtml(r.product_family_code) + '</code></td><td>' + escHtml(r.model_name) + '</td><td>' + escHtml(r.model_code) + '</td><td>' + escHtml(r.class_major) + '</td><td>' + escHtml(r.product_type || '-') + '</td><td>' + escHtml(r.status) + '</td><td>' +
+          (r.status === 'draft' ? '<a href="#" onclick="activatePf(\'' + escHtml(r.product_family_code) + '\');return false">激活</a>' : '') + '</td></tr>';
+      }).join('') || '<tr><td colspan="7" style="text-align:center">暂无产品族</td></tr>';
+    }
+
+    async function loadProducts() {
+      var search = document.getElementById('prodSearch').value;
+      var params = 'limit=100';
+      if (search) params += '&search=' + encodeURIComponent(search);
+      var data = await api('/api/products?' + params);
+      document.getElementById('prodTableBody').innerHTML = (data.rows || []).map(function(r) {
+        return '<tr><td><code>' + escHtml(r.product_code) + '</code></td><td>' + escHtml(r.model_name || '-') + '</td><td>' + escHtml(r.revision || '-') + '</td><td>' + escHtml(r.class_mid || '-') + '</td><td>' + escHtml(r.class_minor || '-') + '</td><td><span class="badge">' + escHtml(r.lifecycle_state) + '</span></td><td>' +
+          (r.lifecycle_state === 'draft' ? '<a href="#" onclick="releaseProduct(\'' + escHtml(r.product_code) + '\');return false">发布</a> ' : '') +
+          (r.lifecycle_state === 'released' ? '<a href="#" onclick="obsoleteProduct(\'' + escHtml(r.product_code) + '\');return false">废止</a>' : '') + '</td></tr>';
+      }).join('') || '<tr><td colspan="7" style="text-align:center">暂无产品</td></tr>';
+    }
+
+    async function activatePf(code) {
+      try {
+        var res = await api('/api/product-families/' + encodeURIComponent(code) + '/activate', { method: 'POST' });
+        if (res.success) loadProductFamilies();
+        else alert('激活失败：' + (res.error || '未知错误'));
+      } catch (e) { alert('激活失败'); }
+    }
+
+    async function releaseProduct(code) {
+      try {
+        var res = await api('/api/products/' + encodeURIComponent(code) + '/release', { method: 'POST' });
+        if (res.success) loadProducts();
+        else alert('发布失败：' + (res.error || '未知错误'));
+      } catch (e) { alert('发布失败'); }
+    }
+
+    async function obsoleteProduct(code) {
+      if (!confirm('确认废止该产品？')) return;
+      try {
+        var res = await api('/api/products/' + encodeURIComponent(code) + '/obsolete', { method: 'POST' });
+        if (res.success) loadProducts();
+        else alert('废止失败：' + (res.error || '未知错误'));
+      } catch (e) { alert('废止失败'); }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      var s3 = document.getElementById('prodSearchBtn');
+      if (s3) s3.addEventListener('click', loadProducts);
+      var pfBtn = document.getElementById('prodPfNewBtn');
+      if (pfBtn) pfBtn.addEventListener('click', async function() {
+        var name = prompt('型号名称：'); if (!name) return;
+        var code = prompt('机型代码（3位）：', 'S19'); if (!code) return;
+        var major = prompt('大类码（2位）：', 'CF'); if (!major) return;
+        var type = prompt('产品类型（可选）：') || null;
+        try {
+          var res = await api('/api/product-families', { method: 'POST', body: JSON.stringify({ model_name: name, model_code: code.toUpperCase(), class_major: major.toUpperCase(), product_type: type }) });
+          if (res.product_family_code) { alert('创建成功，编码：' + res.product_family_code); loadProductFamilies(); }
+          else alert('创建失败：' + (res.error || '未知错误'));
+        } catch (e) { alert('创建失败'); }
+      });
+      var prodBtn = document.getElementById('prodNewBtn');
+      if (prodBtn) prodBtn.addEventListener('click', async function() {
+        var pfId = prompt('产品族 ID：'); if (!pfId) return;
+        var rev = prompt('版次：', 'A') || null;
+        var mid = prompt('中类码（3位，可选）：', '000') || '000';
+        var minor = prompt('小类码（3位，可选）：', '000') || '000';
+        try {
+          var res = await api('/api/products', { method: 'POST', body: JSON.stringify({ product_family_id: Number(pfId), revision: rev, class_mid: mid.toUpperCase(), class_minor: minor.toUpperCase() }) });
+          if (res.product_code) { alert('创建成功，编码：' + res.product_code); loadProducts(); }
+          else alert('创建失败：' + (res.error || '未知错误'));
+        } catch (e) { alert('创建失败'); }
+      });
+    });
 
     // ── Quality Tab ──
     async function loadQualityDashboard() {
       var data = await api('/api/quality/dashboard');
-      document.getElementById('qComplete').textContent = data.completeness.pct + '%';
-      document.getElementById('qCompleteStatus').textContent = data.completeness.status === 'pass' ? 'OK' : 'WARN';
-      document.getElementById('qUnique').textContent = data.uniqueness.pct + '%';
-      document.getElementById('qUniqueStatus').textContent = data.uniqueness.status === 'pass' ? 'OK' : 'FAIL';
-      document.getElementById('qTimely').textContent = data.timeliness.pct + '%';
-      document.getElementById('qConsistent').textContent = data.consistency.pct + '%';
+      document.getElementById('qOrgs').textContent = (data.org_person || {}).org_units || 0;
+      document.getElementById('qPersons').textContent = (data.org_person || {}).persons || 0;
+      document.getElementById('qProducts').textContent = (data.product || {}).total || 0;
+      document.getElementById('qExtIds').textContent = (data.integration || {}).external_identities || 0;
     }
 
     async function loadGoldenSourceProgress() {

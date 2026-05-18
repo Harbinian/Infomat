@@ -16,99 +16,117 @@ function logSync(systemName, endpoint, params, recordsReturned, status, errorRea
   `).run(systemName, endpoint, JSON.stringify(params || {}), recordsReturned || 0, status, errorReason || null, req.ip || null);
 }
 
-// GET /api/integration/materials — 查询物料主数据（支持增量同步）
-router.get('/materials', apiKeyAuth, requireIntegrationPermission('read'), (req, res) => {
+// GET /api/integration/org-units
+router.get('/org-units', apiKeyAuth, requireIntegrationPermission('read'), (req, res) => {
   try {
-    const { category_id, since, page = 1, limit = 200 } = req.query;
-    let sql = `SELECT code, category_id, name, attributes_json, status, old_code, updated_at FROM master_data_items WHERE 1=1`;
+    const { code, since, page = 1, limit = 200 } = req.query;
+    let sql = `SELECT org_unit_code, org_unit_name, org_type, org_mnemonic, status, effective_from, effective_to, updated_at FROM org_unit WHERE 1=1`;
     const params = [];
-
-    if (category_id) { sql += ' AND category_id=?'; params.push(category_id); }
+    if (code) { sql += ' AND org_unit_code=?'; params.push(code); }
     if (since) { sql += ' AND updated_at >= ?'; params.push(since); }
-
     const count = db.prepare(sql.replace(/SELECT.*?FROM/, 'SELECT COUNT(*) as cnt FROM')).get(...params).cnt;
     sql += ' ORDER BY updated_at ASC LIMIT ? OFFSET ?';
     params.push(Number(limit), (Number(page) - 1) * Number(limit));
-
     const rows = db.prepare(sql).all(...params);
-    rows.forEach(r => { r.attributes = JSON.parse(r.attributes_json || '{}'); delete r.attributes_json; });
-
-    logSync(req.integrationSystem.name, 'GET /materials', req.query, rows.length, 'success', null, req);
-    res.json({ rows, total: count, page: Number(page), limit: Number(limit) });
+    logSync(req.integrationSystem.name, 'GET /org-units', req.query, rows.length, 'success', null, req);
+    res.json({ rows, total: count });
   } catch (e) { handleDbError(res, e); }
 });
 
-// GET /api/integration/materials/sync-status — 增量同步状态
-router.get('/materials/sync-status', apiKeyAuth, requireIntegrationPermission('read'), (req, res) => {
+// GET /api/integration/persons
+router.get('/persons', apiKeyAuth, requireIntegrationPermission('read'), (req, res) => {
   try {
-    const { since } = req.query;
+    const { employee_no, since, page = 1, limit = 200 } = req.query;
+    let sql = `SELECT employee_no, person_name, mobile, email, employment_status, status, updated_at FROM person WHERE 1=1`;
+    const params = [];
+    if (employee_no) { sql += ' AND employee_no=?'; params.push(employee_no); }
+    if (since) { sql += ' AND updated_at >= ?'; params.push(since); }
+    const count = db.prepare(sql.replace(/SELECT.*?FROM/, 'SELECT COUNT(*) as cnt FROM')).get(...params).cnt;
+    sql += ' ORDER BY updated_at ASC LIMIT ? OFFSET ?';
+    params.push(Number(limit), (Number(page) - 1) * Number(limit));
+    const rows = db.prepare(sql).all(...params);
+    logSync(req.integrationSystem.name, 'GET /persons', req.query, rows.length, 'success', null, req);
+    res.json({ rows, total: count });
+  } catch (e) { handleDbError(res, e); }
+});
+
+// GET /api/integration/products
+router.get('/products', apiKeyAuth, requireIntegrationPermission('read'), (req, res) => {
+  try {
+    const { code, since, page = 1, limit = 200 } = req.query;
+    let sql = `SELECT p.product_code, pf.product_family_code, pf.model_name, p.revision, p.lifecycle_state, p.effective_from, p.effective_to, p.updated_at
+               FROM product p JOIN product_family pf ON p.product_family_id = pf.product_family_id WHERE 1=1`;
+    const params = [];
+    if (code) { sql += ' AND p.product_code=?'; params.push(code); }
+    if (since) { sql += ' AND p.updated_at >= ?'; params.push(since); }
+    const count = db.prepare(sql.replace(/SELECT.*?FROM/, 'SELECT COUNT(*) as cnt FROM')).get(...params).cnt;
+    sql += ' ORDER BY p.updated_at ASC LIMIT ? OFFSET ?';
+    params.push(Number(limit), (Number(page) - 1) * Number(limit));
+    const rows = db.prepare(sql).all(...params);
+    logSync(req.integrationSystem.name, 'GET /products', req.query, rows.length, 'success', null, req);
+    res.json({ rows, total: count });
+  } catch (e) { handleDbError(res, e); }
+});
+
+// GET /api/integration/sync-status
+router.get('/sync-status', apiKeyAuth, requireIntegrationPermission('read'), (req, res) => {
+  try {
+    const { entity_type, since } = req.query;
     const sinceDate = since || new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 19);
-
-    const created = db.prepare('SELECT COUNT(*) as cnt FROM master_data_items WHERE created_at >= ?').get(sinceDate).cnt;
-    const updated = db.prepare('SELECT COUNT(*) as cnt FROM master_data_items WHERE updated_at >= ? AND created_at < ?').get(sinceDate, sinceDate).cnt;
-
-    res.json({ since: sinceDate, created_count: created, updated_count: updated, total_changed: created + updated });
+    const tableMap = { org_unit: 'org_unit', person: 'person', product: 'product', product_family: 'product_family' };
+    const table = tableMap[entity_type] || 'person';
+    const created = db.prepare(`SELECT COUNT(*) as cnt FROM ${table} WHERE created_at >= ?`).get(sinceDate).cnt;
+    const updated = db.prepare(`SELECT COUNT(*) as cnt FROM ${table} WHERE updated_at >= ? AND created_at < ?`).get(sinceDate, sinceDate).cnt;
+    res.json({ entity_type: entity_type || 'person', since: sinceDate, created_count: created, updated_count: updated, total_changed: created + updated });
   } catch (e) { handleDbError(res, e); }
 });
 
-// GET /api/integration/materials/:code — 按编码查询单个物料
-router.get('/materials/:code', apiKeyAuth, requireIntegrationPermission('read'), (req, res) => {
+// GET /api/integration/external-identities
+router.get('/external-identities', apiKeyAuth, requireIntegrationPermission('read'), (req, res) => {
   try {
-    const row = db.prepare(`
-      SELECT code, category_id, name, attributes_json, status, old_code, updated_at
-      FROM master_data_items WHERE code=?
-    `).get(req.params.code);
-    if (!row) return res.status(404).json({ error: '主数据不存在' });
-
-    row.attributes = JSON.parse(row.attributes_json || '{}');
-    delete row.attributes_json;
-
-    logSync(req.integrationSystem.name, `GET /materials/${req.params.code}`, {}, 1, 'success', null, req);
-    res.json(row);
+    const { entity_type, entity_id, system_code } = req.query;
+    let sql = `SELECT ei.*, es.system_name FROM external_identity ei JOIN external_system es ON ei.system_code = es.system_code WHERE 1=1`;
+    const params = [];
+    if (entity_type) { sql += ' AND ei.entity_type=?'; params.push(entity_type); }
+    if (entity_id) { sql += ' AND ei.entity_id=?'; params.push(entity_id); }
+    if (system_code) { sql += ' AND ei.system_code=?'; params.push(system_code); }
+    const rows = db.prepare(sql).all(...params);
+    logSync(req.integrationSystem.name, 'GET /external-identities', req.query, rows.length, 'success', null, req);
+    res.json(rows);
   } catch (e) { handleDbError(res, e); }
 });
 
-// GET /api/integration/old-code/:oldCode — 旧编码映射查询
-router.get('/old-code/:oldCode', apiKeyAuth, requireIntegrationPermission('read'), (req, res) => {
+// POST /api/integration/external-identities
+router.post('/external-identities', apiKeyAuth, requireIntegrationPermission('write'), (req, res) => {
   try {
-    const mapping = db.prepare('SELECT * FROM old_new_code_mapping WHERE old_code=?').get(req.params.oldCode);
-    if (!mapping) return res.status(404).json({ error: '未找到该旧编码的映射' });
-    res.json(mapping);
+    const { entity_type, entity_id, system_code, external_key, is_primary } = req.body;
+    if (!entity_type || !entity_id || !system_code || !external_key) {
+      return res.status(400).json({ error: '缺少必填字段' });
+    }
+    db.prepare(`
+      INSERT INTO external_identity (entity_type, entity_id, system_code, external_key, is_primary, last_sync_at, last_sync_status)
+      VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, 'ok')
+      ON CONFLICT(entity_type, entity_id, system_code) DO UPDATE SET
+        external_key=excluded.external_key, is_primary=excluded.is_primary, last_sync_at=CURRENT_TIMESTAMP, last_sync_status='ok'
+    `).run(entity_type, entity_id, system_code.toUpperCase(), external_key, is_primary ? 1 : 0);
+    logSync(req.integrationSystem.name, 'POST /external-identities', req.body, 1, 'success', null, req);
+    res.status(201).json({ success: true });
   } catch (e) { handleDbError(res, e); }
 });
 
-// POST /api/integration/callback/consistency-check — 消费系统上报一致性校验
+// POST /api/integration/callback/consistency-check
 router.post('/callback/consistency-check', apiKeyAuth, requireIntegrationPermission('write'), (req, res) => {
   try {
     const { system_name, checks } = req.body;
     if (!checks || !Array.isArray(checks)) return res.status(400).json({ error: 'checks 必须为数组' });
-
     const mismatchCount = checks.filter(c => !c.match).length;
-
     logSync(system_name || req.integrationSystem.name, 'POST /callback/consistency-check',
       { total: checks.length, mismatches: mismatchCount }, checks.length, 'success', null, req);
-
     res.json({ received: checks.length, mismatches: mismatchCount });
   } catch (e) { handleDbError(res, e); }
 });
 
-// POST /api/integration/callback/stock-change — MES 库存变动反馈
-router.post('/callback/stock-change', apiKeyAuth, requireIntegrationPermission('write'), (req, res) => {
-  try {
-    const { material_code, change_type, quantity, location } = req.body;
-    if (!material_code || !change_type || quantity == null) {
-      return res.status(400).json({ error: '缺少必填字段 material_code / change_type / quantity' });
-    }
-
-    const item = db.prepare('SELECT id FROM master_data_items WHERE code=?').get(material_code);
-    if (!item) return res.status(404).json({ error: '物料不存在' });
-
-    logSync(req.integrationSystem.name, 'POST /callback/stock-change', { material_code, change_type, quantity }, 1, 'success', null, req);
-    res.json({ success: true, message: '库存变动已记录' });
-  } catch (e) { handleDbError(res, e); }
-});
-
-// POST /api/integration/credentials/generate — 管理系统生成 API Key（Admin only via session）
+// POST /api/integration/credentials/generate
 router.post('/credentials/generate', (req, res, next) => {
   const { requireAuth } = require('../auth');
   requireAuth(req, res, () => {
@@ -119,21 +137,18 @@ router.post('/credentials/generate', (req, res, next) => {
   try {
     const { system_name, permissions } = req.body;
     if (!system_name) return res.status(400).json({ error: '缺少 system_name' });
-
     const rawKey = 'sk-' + require('crypto').randomBytes(24).toString('hex');
     const hash = bcrypt.hashSync(rawKey, 10);
-
     db.prepare(`
       INSERT INTO integration_credentials (system_name, api_key_hash, permissions_json)
       VALUES (?, ?, ?)
       ON CONFLICT(system_name) DO UPDATE SET api_key_hash=excluded.api_key_hash, permissions_json=excluded.permissions_json
     `).run(system_name, hash, JSON.stringify(permissions || ['read']));
-
     res.status(201).json({ system_name, api_key: rawKey });
   } catch (e) { handleDbError(res, e); }
 });
 
-// GET /api/integration/credentials — 列出已注册系统（不返回 Key）
+// GET /api/integration/credentials
 router.get('/credentials', (req, res, next) => {
   const { requireAuth } = require('../auth');
   requireAuth(req, res, () => {

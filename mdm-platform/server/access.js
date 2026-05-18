@@ -14,11 +14,9 @@ function validateAction(action) {
 
 function mappingVisibility(alias, req) {
   if (isReviewerOrAdmin(req)) return { sql: '', params: [] };
-
   const table = alias || 'm';
   const params = [req.session.userId];
   const clauses = [`${table}.submitted_by=?`];
-
   if (req.session.departmentId) {
     clauses.push(`${table}.owner_dept_id=?`);
     params.push(req.session.departmentId);
@@ -41,7 +39,6 @@ function mappingVisibility(alias, req) {
     )`);
     params.push(req.session.userId);
   }
-
   return { sql: ` AND (${clauses.join(' OR ')})`, params };
 }
 
@@ -57,29 +54,4 @@ function canUseTodo(req, todo) {
   return Boolean(todo.to_dept_id && req.session.departmentId && todo.to_dept_id === req.session.departmentId);
 }
 
-function masterDataVisibility(alias, req) {
-  if (isAdmin(req)) return { sql: '', params: [] };
-
-  const table = alias || 'i';
-  const params = [];
-  const clauses = [];
-
-  if (req.session.departmentId) {
-    clauses.push(`${table}.maintain_dept_id=?`);
-    params.push(req.session.departmentId);
-    clauses.push(`${table}.created_by=?`);
-    params.push(req.session.userId);
-  }
-
-  return { sql: ` AND (${clauses.join(' OR ')})`, params };
-}
-
-module.exports = {
-  isAdmin,
-  isReviewerOrAdmin,
-  validateAction,
-  mappingVisibility,
-  canViewMapping,
-  canUseTodo,
-  masterDataVisibility
-};
+module.exports = { isAdmin, isReviewerOrAdmin, validateAction, mappingVisibility, canViewMapping, canUseTodo };
