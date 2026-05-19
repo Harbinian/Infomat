@@ -528,4 +528,90 @@ CREATE TABLE IF NOT EXISTS old_new_code_mapping (
 
 console.log('Module D: Integration API tables ready');
 
+// Migration: conflict management upgrade — add deadline, escalated, resolution_type
+const fcCols = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='field_conflicts'").get();
+if (fcCols && !fcCols.sql.includes('deadline DATE')) {
+  db.exec('ALTER TABLE field_conflicts ADD COLUMN deadline DATE');
+  db.exec('ALTER TABLE field_conflicts ADD COLUMN escalated INTEGER DEFAULT 0');
+  db.exec('ALTER TABLE field_conflicts ADD COLUMN resolution_type TEXT');
+  console.log('Migration: added deadline/escalated/resolution_type to field_conflicts');
+}
+const tcCols = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='term_conflicts'").get();
+if (tcCols && !tcCols.sql.includes('deadline DATE')) {
+  db.exec('ALTER TABLE term_conflicts ADD COLUMN deadline DATE');
+  db.exec('ALTER TABLE term_conflicts ADD COLUMN escalated INTEGER DEFAULT 0');
+  db.exec('ALTER TABLE term_conflicts ADD COLUMN resolution_type TEXT');
+  console.log('Migration: added deadline/escalated/resolution_type to term_conflicts');
+}
+
+// Migration: update field_conflicts CHECK to include silenced/escalated
+const fcSql2 = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='field_conflicts'").get();
+if (fcSql2 && !fcSql2.sql.includes("'silenced'")) {
+  db.transaction(() => {
+    db.exec(`
+      CREATE TABLE field_conflicts_v2 (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        field_entry_a_id INTEGER NOT NULL REFERENCES field_entries(id) ON DELETE CASCADE,
+        field_entry_b_id INTEGER NOT NULL REFERENCES field_entries(id) ON DELETE CASCADE,
+        conflict_field TEXT NOT NULL CHECK(conflict_field IN ('authoritative_system','note','field_type','sync_mode','consume_systems','other')),
+        submitter_a INTEGER REFERENCES users(id),
+        value_a TEXT,
+        submitter_b INTEGER REFERENCES users(id),
+        value_b TEXT,
+        dept_a INTEGER REFERENCES departments(id),
+        dept_b INTEGER REFERENCES departments(id),
+        severity TEXT NOT NULL CHECK(severity IN ('blocking','high','medium','low','warn','error')),
+        status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','silenced','coordinating','escalated','resolved','rejected','archived')),
+        resolution TEXT,
+        resolved_by INTEGER REFERENCES users(id),
+        resolved_at DATETIME,
+        deadline DATE,
+        escalated INTEGER DEFAULT 0,
+        resolution_type TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+      INSERT INTO field_conflicts_v2 SELECT id, field_entry_a_id, field_entry_b_id, conflict_field,
+        submitter_a, value_a, submitter_b, value_b, dept_a, dept_b, severity, status,
+        resolution, resolved_by, resolved_at, deadline, escalated, resolution_type, created_at
+        FROM field_conflicts;
+      DROP TABLE field_conflicts;
+      ALTER TABLE field_conflicts_v2 RENAME TO field_conflicts;
+    `);
+  })();
+  console.log('Migration: added silenced/escalated to field_conflicts CHECK');
+}
+
+// Migration: update term_conflicts CHECK to include silenced/escalated
+const tcSql2 = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='term_conflicts'").get();
+if (tcSql2 && !tcSql2.sql.includes("'silenced'")) {
+  db.transaction(() => {
+    db.exec(`
+      CREATE TABLE term_conflicts_v2 (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        term TEXT NOT NULL,
+        dept_a INTEGER REFERENCES departments(id),
+        dept_a_meaning TEXT,
+        dept_b INTEGER REFERENCES departments(id),
+        dept_b_meaning TEXT,
+        severity TEXT NOT NULL CHECK(severity IN ('blocking','high','medium','low','warn','error')),
+        status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','silenced','coordinating','escalated','resolved','rejected','archived')),
+        resolution TEXT,
+        resolved_by INTEGER REFERENCES users(id),
+        resolved_at DATETIME,
+        deadline DATE,
+        escalated INTEGER DEFAULT 0,
+        resolution_type TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+      INSERT INTO term_conflicts_v2 SELECT id, term, dept_a, dept_a_meaning, dept_b, dept_b_meaning,
+        severity, status, resolution, resolved_by, resolved_at,
+        deadline, escalated, resolution_type, created_at
+        FROM term_conflicts;
+      DROP TABLE term_conflicts;
+      ALTER TABLE term_conflicts_v2 RENAME TO term_conflicts;
+    `);
+  })();
+  console.log('Migration: added silenced/escalated to term_conflicts CHECK');
+}
+
 module.exports = db;
