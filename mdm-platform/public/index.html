@@ -2436,14 +2436,15 @@
           return !q || u.employee_no.toLowerCase().includes(q) || u.name.toLowerCase().includes(q);
         });
         var html = filtered.slice(0, 50).map(function(u) {
-          return '<div onclick="selectUserForRoles(' + u.id + ',\'' + escapeHtml(u.name) + '\')" style="padding:8px;cursor:pointer;border-bottom:1px solid #eee;">' + escapeHtml(u.employee_no) + ' — ' + escapeHtml(u.name) + '</div>';
+          return '<div onclick="selectUserForRoles(' + u.id + ',\'' + escapeHtml(u.name) + '\',\'' + escapeHtml(u.dept_name || '') + '\',\'' + escapeHtml(u.post || '') + '\')" style="padding:8px;cursor:pointer;border-bottom:1px solid #eee;">' + escapeHtml(u.employee_no) + ' — ' + escapeHtml(u.name) + (u.dept_name ? ' <span style="color:#999;font-size:12px;">' + escapeHtml(u.dept_name) + '</span>' : '') + (u.post ? ' <span style="color:#999;font-size:12px;">' + escapeHtml(u.post) + '</span>' : '') + '</div>';
         }).join('');
         document.getElementById('userSearchResults').innerHTML = html || '<p style="padding:8px;color:#999;">无匹配用户</p>';
       });
     }
 
-    function selectUserForRoles(userId, userName) {
-      document.getElementById('userRolesDetail').innerHTML = '<p>当前用户：<strong>' + userName + '</strong></p><div id="userRoleCheckboxes">加载中...</div>';
+    function selectUserForRoles(userId, userName, deptName, post) {
+      var infoHtml = '<p>当前用户：<strong>' + escapeHtml(userName) + '</strong>' + (deptName ? ' <span style="color:#666;font-size:12px;">' + escapeHtml(deptName) + '</span>' : '') + (post ? ' <span style="color:#666;font-size:12px;">' + escapeHtml(post) + '</span>' : '') + '</p><div id="userRoleCheckboxes">加载中...</div>';
+      document.getElementById('userRolesDetail').innerHTML = infoHtml;
 
       Promise.all([
         fetch('/api/roles').then(function(r) { return r.json(); }),
