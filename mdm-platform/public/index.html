@@ -285,6 +285,7 @@
         <button class="tab" data-tab="persons" data-roles="submitter,owner,reviewer,admin">人员管理</button>
         <button class="tab" data-tab="products" data-roles="submitter,owner,reviewer,admin">产品主数据</button>
         <button class="tab" data-tab="quality" data-roles="reviewer,admin">数据质量</button>
+        <button class="tab" data-tab="rbac" data-roles="admin">角色权限</button>
       </nav>
 
       <!-- Dashboard -->
@@ -486,6 +487,21 @@
         <h2 style="margin-top:32px">黄金源确认进度</h2>
         <div id="goldenSourceProgress" style="margin-bottom:16px"></div>
         <div id="goldenSourceChart" class="chart" style="height:300px"></div>
+      </section>
+
+      <!-- RBAC: Role & Permission Management -->
+      <section class="panel" id="rbac">
+        <div style="display:flex;gap:16px;min-height:500px;">
+          <!-- Left sidebar nav -->
+          <div style="width:200px;flex-shrink:0;background:#f8f9fa;border-radius:6px;padding:12px;">
+            <div class="rbac-nav-item active" data-panel="roleList" style="padding:10px;cursor:pointer;border-radius:4px;margin-bottom:4px;font-weight:bold;background:#e3f2fd;">角色列表</div>
+            <div class="rbac-nav-item" data-panel="permMatrix" style="padding:10px;cursor:pointer;border-radius:4px;margin-bottom:4px;">权限矩阵</div>
+            <div class="rbac-nav-item" data-panel="userRoles" style="padding:10px;cursor:pointer;border-radius:4px;margin-bottom:4px;">用户角色分配</div>
+            <div class="rbac-nav-item" data-panel="batchImport" style="padding:10px;cursor:pointer;border-radius:4px;">批量导入</div>
+          </div>
+          <!-- Right content area -->
+          <div style="flex:1;" id="rbacPanel"></div>
+        </div>
       </section>
 
       <!-- Detail Page (L2) -->
@@ -711,6 +727,7 @@
         await loadAll();
         applyRoleVisibility();
         startPolling();
+        checkPasswordStatus();
       } catch (error) {
         $('loginMsg').textContent = error.message || '登录失败';
       }
@@ -1337,6 +1354,7 @@
         case 'persons': loadPersons(); break;
         case 'products': loadProductFamilies(); loadProducts(); break;
         case 'quality': loadQualityDashboard(); loadGoldenSourceProgress(); break;
+        case 'rbac': renderRbacPanel(); break;
       }
     }
 
@@ -2154,8 +2172,343 @@
       return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
+    // ===== RBAC: Role & Permission Management =====
+
+    var rbacPanel = 'roleList';
+    document.querySelectorAll('.rbac-nav-item').forEach(function(item) {
+      item.addEventListener('click', function() {
+        document.querySelectorAll('.rbac-nav-item').forEach(function(n) { n.classList.remove('active'); n.style.background = ''; n.style.fontWeight = ''; });
+        this.classList.add('active');
+        this.style.background = '#e3f2fd';
+        this.style.fontWeight = 'bold';
+        rbacPanel = this.dataset.panel;
+        renderRbacPanel();
+      });
+    });
+
+    function renderRbacPanel() {
+      if (rbacPanel === 'roleList') renderRoleList();
+      else if (rbacPanel === 'permMatrix') renderPermMatrix();
+      else if (rbacPanel === 'userRoles') renderUserRolesPanel();
+      else if (rbacPanel === 'batchImport') renderBatchImport();
+    }
+
+    // --- Role List Panel ---
+    function renderRoleList() {
+      var panel = document.getElementById('rbacPanel');
+      panel.innerHTML = '<h3>角色列表</h3><div id="roleTableContainer">加载中...</div>';
+
+      fetch('/api/roles').then(function(r) { return r.json(); }).then(function(roles) {
+        var html = '<button onclick="showCreateRoleDialog()" style="margin-bottom:12px;padding:6px 16px;background:#1565c0;color:white;border:none;border-radius:4px;cursor:pointer;">+ 新建角色</button>';
+        html += '<table class="data-table" style="width:100%;"><thead><tr><th>角色编码</th><th>名称</th><th>继承自</th><th>权限数</th><th>用户数</th><th>系统</th><th>操作</th></tr></thead><tbody>';
+        roles.forEach(function(r) {
+          html += '<tr>';
+          html += '<td>' + escapeHtml(r.role_code) + '</td>';
+          html += '<td>' + escapeHtml(r.role_name) + '</td>';
+          html += '<td>' + (r.parent_role_name || '-') + '</td>';
+          html += '<td>' + r.perm_count + '</td>';
+          html += '<td>' + r.user_count + '</td>';
+          html += '<td>' + (r.is_system ? '是' : '否') + '</td>';
+          html += '<td>';
+          if (!r.is_system) {
+            html += '<a href="#" onclick="editRole(' + r.role_id + ',\'' + escapeHtml(r.role_name) + '\',\'' + (r.description || '') + '\',' + (r.parent_role_id || 0) + ')">编辑</a> ';
+            html += '<a href="#" onclick="deleteRole(' + r.role_id + ')" style="color:#e53935;">删除</a>';
+          } else {
+            html += '<span style="color:#999;">—</span>';
+          }
+          html += '</td></tr>';
+        });
+        html += '</tbody></table>';
+        document.getElementById('roleTableContainer').innerHTML = html;
+      });
+    }
+
+    function showCreateRoleDialog() {
+      var code = prompt('角色编码（英文，如 dept_auditor）：');
+      if (!code) return;
+      var name = prompt('角色名称：');
+      if (!name) return;
+      var desc = prompt('描述（可选）：');
+      var parentId = prompt('父角色 ID（可选，留空为无）：');
+
+      fetch('/api/roles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role_code: code, role_name: name, description: desc || null, parent_role_id: parentId ? Number(parentId) : null })
+      }).then(function(r) { return r.json(); }).then(function(data) {
+        if (data.error) { alert('创建失败：' + data.error); } else { renderRoleList(); }
+      });
+    }
+
+    function editRole(id, name, desc, parentId) {
+      var newName = prompt('角色名称：', name);
+      if (newName === null) return;
+      var newDesc = prompt('描述：', desc);
+      if (newDesc === null) return;
+      var newParent = prompt('父角色 ID（留空为无）：', parentId || '');
+
+      fetch('/api/roles/' + id, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role_name: newName, description: newDesc || null, parent_role_id: newParent ? Number(newParent) : null })
+      }).then(function(r) { return r.json(); }).then(function(data) {
+        if (data.error) { alert('编辑失败：' + data.error); } else { renderRoleList(); }
+      });
+    }
+
+    function deleteRole(id) {
+      if (!confirm('确定要删除此角色吗？')) return;
+      fetch('/api/roles/' + id, { method: 'DELETE' }).then(function(r) { return r.json(); }).then(function(data) {
+        if (data.error) { alert('删除失败：' + data.error); } else { renderRoleList(); }
+      });
+    }
+
+    // --- Permission Matrix Panel ---
+    function renderPermMatrix() {
+      var panel = document.getElementById('rbacPanel');
+      panel.innerHTML = '<h3>权限矩阵</h3><p>加载角色列表...</p>';
+
+      fetch('/api/roles').then(function(r) { return r.json(); }).then(function(roles) {
+        var roleOptions = roles.map(function(r) { return '<option value="' + r.role_id + '">' + escapeHtml(r.role_code) + ' — ' + escapeHtml(r.role_name) + (r.is_system ? ' (系统)' : '') + '</option>'; }).join('');
+        panel.innerHTML = '<h3>权限矩阵</h3><select id="permMatrixRoleSelect" onchange="loadPermMatrix()" style="padding:6px;margin-bottom:16px;min-width:250px;"><option value="">— 选择角色 —</option>' + roleOptions + '</select><div id="permMatrixContent"></div>';
+      });
+    }
+
+    function loadPermMatrix() {
+      var roleId = document.getElementById('permMatrixRoleSelect').value;
+      if (!roleId) { document.getElementById('permMatrixContent').innerHTML = ''; return; }
+
+      document.getElementById('permMatrixContent').innerHTML = '加载中...';
+      fetch('/api/roles/' + roleId + '/permissions').then(function(r) { return r.json(); }).then(function(data) {
+        if (data.error) { alert(data.error); return; }
+        var matrix = data.matrix;
+        var resources = [...new Set(matrix.map(function(p) { return p.resource; }))];
+        var actions = [...new Set(matrix.map(function(p) { return p.action; }))];
+
+        var html = '<p>当前角色：<strong>' + escapeHtml(data.role.role_name) + '</strong></p>';
+        html += '<table class="data-table" style="font-size:12px;"><thead><tr><th>资源</th>';
+        actions.forEach(function(a) { html += '<th>' + a + '</th>'; });
+        html += '<th>字段限制</th></tr></thead><tbody>';
+
+        var permMap = {};
+        matrix.forEach(function(p) { permMap[p.resource + ':' + p.action] = p; });
+
+        resources.forEach(function(res) {
+          html += '<tr><td><strong>' + res + '</strong></td>';
+          actions.forEach(function(act) {
+            var key = res + ':' + act;
+            var p = permMap[key];
+            var checked = p && p.assigned ? 'checked' : '';
+            var disabled = p && p.inherited ? 'disabled' : '';
+            var style = p && p.inherited ? 'opacity:0.4;' : '';
+            html += '<td style="text-align:center;"><input type="checkbox" ' + checked + ' ' + disabled + ' style="' + style + '" data-res="' + res + '" data-act="' + act + '" data-perm-id="' + (p ? p.perm_id : '') + '"></td>';
+          });
+          html += '<td><input type="text" placeholder="JSON字段限制" style="width:140px;font-size:11px;"></td>';
+          html += '</tr>';
+        });
+        html += '</tbody></table>';
+        html += '<button onclick="savePermMatrix(' + roleId + ')" style="margin-top:12px;padding:6px 16px;background:#2e7d32;color:white;border:none;border-radius:4px;cursor:pointer;">保存权限</button>';
+        document.getElementById('permMatrixContent').innerHTML = html;
+      });
+    }
+
+    function savePermMatrix(roleId) {
+      var checkboxes = document.querySelectorAll('#permMatrixContent input[type=checkbox]:not([disabled])');
+      var permIds = [];
+      checkboxes.forEach(function(cb) {
+        if (cb.checked && cb.dataset.permId) permIds.push(Number(cb.dataset.permId));
+      });
+      fetch('/api/roles/' + roleId + '/permissions', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ perm_ids: permIds })
+      }).then(function(r) { return r.json(); }).then(function(data) {
+        if (data.error) { alert('保存失败：' + data.error); } else { alert('保存成功，共 ' + data.count + ' 条权限'); }
+      });
+    }
+
+    // --- User Roles Panel ---
+    function renderUserRolesPanel() {
+      var panel = document.getElementById('rbacPanel');
+      panel.innerHTML = '<h3>用户角色分配</h3><div style="display:flex;gap:16px;">' +
+        '<div style="width:45%;"><label>搜索用户</label><input type="text" id="userSearchInput" placeholder="工号/姓名..." oninput="searchUsers()" style="width:100%;padding:6px;margin-bottom:8px;border:1px solid #ddd;border-radius:4px;"><div id="userSearchResults" style="max-height:400px;overflow-y:auto;border:1px solid #eee;border-radius:4px;"></div></div>' +
+        '<div style="width:55%;" id="userRolesDetail"><p style="color:#999;">请选择左侧用户</p></div>' +
+        '</div>';
+    }
+
+    function searchUsers() {
+      var q = document.getElementById('userSearchInput').value.toLowerCase();
+      fetch('/api/org/users').then(function(r) { return r.json(); }).then(function(users) {
+        var filtered = users.filter(function(u) {
+          return !q || u.employee_no.toLowerCase().includes(q) || u.name.toLowerCase().includes(q);
+        });
+        var html = filtered.slice(0, 50).map(function(u) {
+          return '<div onclick="selectUserForRoles(' + u.id + ',\'' + escapeHtml(u.name) + '\')" style="padding:8px;cursor:pointer;border-bottom:1px solid #eee;">' + escapeHtml(u.employee_no) + ' — ' + escapeHtml(u.name) + '</div>';
+        }).join('');
+        document.getElementById('userSearchResults').innerHTML = html || '<p style="padding:8px;color:#999;">无匹配用户</p>';
+      });
+    }
+
+    function selectUserForRoles(userId, userName) {
+      document.getElementById('userRolesDetail').innerHTML = '<p>当前用户：<strong>' + userName + '</strong></p><div id="userRoleCheckboxes">加载中...</div>';
+
+      Promise.all([
+        fetch('/api/roles').then(function(r) { return r.json(); }),
+        fetch('/api/org/users/' + userId + '/roles').then(function(r) { return r.json(); })
+      ]).then(function(results) {
+        var allRoles = results[0];
+        var userRoles = results[1];
+        var userRoleIds = new Set(userRoles.map(function(r) { return r.role_id; }));
+
+        var html = '';
+        allRoles.forEach(function(r) {
+          html += '<label style="display:block;margin-bottom:4px;"><input type="checkbox" value="' + r.role_id + '" ' + (userRoleIds.has(r.role_id) ? 'checked' : '') + '> ' + escapeHtml(r.role_code) + ' — ' + escapeHtml(r.role_name) + (r.is_system ? ' (系统)' : '') + '</label>';
+        });
+        html += '<button onclick="saveUserRoles(' + userId + ')" style="margin-top:12px;padding:6px 16px;background:#2e7d32;color:white;border:none;border-radius:4px;cursor:pointer;">保存分配</button>';
+        document.getElementById('userRoleCheckboxes').innerHTML = html;
+      });
+    }
+
+    function saveUserRoles(userId) {
+      var checkboxes = document.querySelectorAll('#userRoleCheckboxes input[type=checkbox]:checked');
+      var roleIds = Array.from(checkboxes).map(function(cb) { return Number(cb.value); });
+      if (roleIds.length === 0) { alert('至少需要分配一个角色'); return; }
+
+      fetch('/api/org/users/' + userId + '/roles', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role_ids: roleIds })
+      }).then(function(r) { return r.json(); }).then(function(data) {
+        if (data.error) { alert('保存失败：' + data.error); } else { alert('角色分配已保存'); }
+      });
+    }
+
+    // --- Batch Import Panel ---
+    function renderBatchImport() {
+      var panel = document.getElementById('rbacPanel');
+      panel.innerHTML = '<h3>批量导入</h3>' +
+        '<div style="margin-bottom:12px;">' +
+          '<select id="importType" style="padding:6px;"><option value="user-roles">用户-角色分配</option><option value="role-permissions">角色-权限定义</option></select> ' +
+          '<button onclick="downloadTemplate()" style="padding:6px 12px;background:#555;color:white;border:none;border-radius:4px;cursor:pointer;">下载模板</button>' +
+        '</div>' +
+        '<div style="border:2px dashed #ccc;border-radius:6px;padding:40px;text-align:center;">' +
+          '<p style="color:#999;">选择文件上传</p>' +
+          '<input type="file" id="importFileInput" accept=".xlsx,.xls,.csv" onchange="handleImportFile()" style="margin-top:12px;">' +
+        '</div>' +
+        '<div id="importResult" style="margin-top:16px;"></div>';
+    }
+
+    function downloadTemplate() {
+      var type = document.getElementById('importType').value;
+      window.open('/api/import-rbac/templates/' + type, '_blank');
+    }
+
+    function handleImportFile() {
+      var file = document.getElementById('importFileInput').files[0];
+      if (!file) return;
+      var type = document.getElementById('importType').value;
+      var formData = new FormData();
+      formData.append('file', file);
+
+      document.getElementById('importResult').innerHTML = '<p>导入中...</p>';
+      fetch('/api/import-rbac/' + type, { method: 'POST', body: formData }).then(function(r) { return r.json(); }).then(function(data) {
+        var html = '<p>总计：' + data.total + ' 行 | 成功：<span style="color:#2e7d32;">' + data.success + '</span> | 失败：<span style="color:#e53935;">' + data.errors.length + '</span></p>';
+        if (data.errors.length > 0) {
+          html += '<table class="data-table" style="margin-top:8px;font-size:12px;"><thead><tr><th>行</th><th>信息</th><th>原因</th></tr></thead><tbody>';
+          data.errors.forEach(function(e) {
+            html += '<tr><td>' + (e.row || '-') + '</td><td>' + escapeHtml(e.employee_no || e.role_code || '') + '</td><td style="color:#e53935;">' + escapeHtml(e.reason) + '</td></tr>';
+          });
+          html += '</tbody></table>';
+        }
+        document.getElementById('importResult').innerHTML = html;
+      });
+    }
+
+    // --- Password Management ---
+    function checkPasswordStatus() {
+      fetch('/api/org/me/password-status').then(function(r) { return r.json(); }).then(function(data) {
+        if (data.is_default_password) {
+          document.getElementById('passwordDialogTitle').textContent = '首次登录，请修改密码';
+          document.getElementById('passwordCancelBtn').style.display = 'none';
+          document.getElementById('passwordDialog').style.display = 'flex';
+        }
+      });
+    }
+
+    function addPasswordChangeButton() {
+      var sessionEl = document.getElementById('sessionText');
+      if (!sessionEl) return;
+      var btn = document.createElement('span');
+      btn.textContent = ' [修改密码]';
+      btn.style.cssText = 'cursor:pointer;color:#4a9eff;margin-left:8px;font-size:13px;';
+      btn.onclick = function() {
+        document.getElementById('passwordDialogTitle').textContent = '修改密码';
+        document.getElementById('passwordCancelBtn').style.display = '';
+        document.getElementById('passwordDialog').style.display = 'flex';
+        document.getElementById('currentPassword').value = '';
+        document.getElementById('newPassword').value = '';
+        document.getElementById('confirmPassword').value = '';
+        document.getElementById('passwordDialogMsg').style.display = 'none';
+      };
+      sessionEl.appendChild(btn);
+    }
+
+    document.getElementById('passwordSubmitBtn').addEventListener('click', function() {
+      var current = document.getElementById('currentPassword').value;
+      var newPw = document.getElementById('newPassword').value;
+      var confirm = document.getElementById('confirmPassword').value;
+
+      if (newPw.length < 6) { showPasswordError('新密码至少6位'); return; }
+      if (newPw !== confirm) { showPasswordError('两次新密码不一致'); return; }
+
+      fetch('/api/org/me/password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ current_password: current, new_password: newPw })
+      }).then(function(r) { return r.json(); }).then(function(data) {
+        if (data.error) { showPasswordError(data.error); return; }
+        document.getElementById('passwordDialog').style.display = 'none';
+        alert('密码修改成功');
+      });
+    });
+
+    document.getElementById('passwordCancelBtn').addEventListener('click', function() {
+      document.getElementById('passwordDialog').style.display = 'none';
+    });
+
+    function showPasswordError(msg) {
+      var el = document.getElementById('passwordDialogMsg');
+      el.textContent = msg;
+      el.style.display = '';
+    }
+
+    addPasswordChangeButton();
+
     // ===== Init =====
     checkSession();
   </script>
+<!-- Password change dialog -->
+  <div id="passwordDialog" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:10000;justify-content:center;align-items:center;">
+    <div style="background:white;padding:24px;border-radius:8px;width:400px;max-width:90vw;">
+      <h3 id="passwordDialogTitle">修改密码</h3>
+      <p id="passwordDialogMsg" style="color:#e53935;margin-bottom:12px;display:none;"></p>
+      <div style="margin-bottom:12px;">
+        <label style="display:block;margin-bottom:4px;">当前密码</label>
+        <input type="password" id="currentPassword" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;">
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="display:block;margin-bottom:4px;">新密码</label>
+        <input type="password" id="newPassword" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;" placeholder="至少6位">
+      </div>
+      <div style="margin-bottom:16px;">
+        <label style="display:block;margin-bottom:4px;">确认新密码</label>
+        <input type="password" id="confirmPassword" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;">
+      </div>
+      <div style="text-align:right;">
+        <button id="passwordCancelBtn" style="padding:8px 16px;margin-right:8px;border:1px solid #ddd;border-radius:4px;background:white;cursor:pointer;">取消</button>
+        <button id="passwordSubmitBtn" style="padding:8px 16px;background:#1565c0;color:white;border:none;border-radius:4px;cursor:pointer;">确认修改</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
