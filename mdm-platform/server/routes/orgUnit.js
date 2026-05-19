@@ -1,0 +1,91 @@
+const express = require('express');
+const router = express.Router();
+const db = require('../db');
+const { requireAuth, requireRole, stripInternalIds } = require('../auth');
+const { generateCode } = require('../codeEngine');
+
+function handleDbError(res, error) {
+  if (error && (String(error.code).startsWith('SQLITE_CONSTRAINT') || String(error.message).includes('constraint failed'))) {
+    return res.status(400).json({ error: '数据不符合约束' });
+  }
+  console.error(error);
+  return res.status(500).json({ error: '服务器错误' });
+}
+
+router.get('/', requireAuth, stripInternalIds, (req, res) => {
+  try {
+    const { org_type, status, search, page = 1, limit = 50 } = req.query;
+    let sql = `SELECT ou.*, p.org_unit_name as parent_name
+               FROM org_unit ou LEFT JOIN org_unit p ON ou.parent_org_unit_id = p.org_unit_id WHERE 1=1`;
+    const params = [];
+    if (org_type) { sql += ' AND ou.org_type=?'; params.push(org_type); }
+    if (status) { sql += ' AND ou.status=?'; params.push(status); }
+    if (search) { sql += ' AND (ou.org_unit_code LIKE ? OR ou.org_unit_name LIKE ?)'; params.push(`%${search}%`, `%${search}%`); }
+    const count = db.prepare(sql.replace(/SELECT.*?FROM/, 'SELECT COUNT(*) as cnt FROM')).get(...params).cnt;
+    sql += ' ORDER BY ou.org_type, ou.org_unit_code LIMIT ? OFFSET ?';
+    params.push(Number(limit), (Number(page) - 1) * Number(limit));
+    const rows = db.prepare(sql).all(...params);
+    res.json({ rows, total: count, page: Number(page), limit: Number(limit) });
+  } catch (e) { handleDbError(res, e); }
+});
+
+router.get('/:code', requireAuth, stripInternalIds, (req, res) => {
+  try {
+    const row = db.prepare(`
+      SELECT ou.*, p.org_unit_name as parent_name, p.org_unit_code as parent_code
+      FROM org_unit ou LEFT JOIN org_unit p ON ou.parent_org_unit_id = p.org_unit_id
+      WHERE ou.org_unit_code=?
+    `).get(req.params.code);
+    if (!row) return res.status(404).json({ error: '组织不存在' });
+    res.json(row);
+  } catch (e) { handleDbError(res, e); }
+});
+
+router.post('/', requireAuth, (req, res) => {
+  try {
+    const { org_unit_name, org_type, org_mnemonic, parent_org_unit_id } = req.body;
+    if (!org_unit_name || !org_type || !org_mnemonic) {
+      return res.status(400).json({ error: '缺少必填字段 org_unit_name/org_type/org_mnemonic' });
+    }
+    const code = generateCode('orgUnit', { org_type, org_mnemonic: org_mnemonic.toUpperCase() });
+    const result = db.prepare(`
+      INSERT INTO org_unit (org_unit_code, org_unit_name, org_type, org_mnemonic, parent_org_unit_id, created_by, updated_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(code, org_unit_name, org_type, org_mnemonic.toUpperCase(), parent_org_unit_id || null, req.session.userId, req.session.userId);
+    res.status(201).json({ org_unit_code: code });
+  } catch (e) { handleDbError(res, e); }
+});
+
+router.post('/:code/activate', requireAuth, requireRole('admin', 'owner'), (req, res) => {
+  try {
+    const existing = db.prepare('SELECT * FROM org_unit WHERE org_unit_code=?').get(req.params.code);
+    if (!existing) return res.status(404).json({ error: '组织不存在' });
+    if (existing.status !== 'draft') return res.status(400).json({ error: '仅 draft 状态可激活' });
+    db.prepare(`
+      UPDATE org_unit SET status='active', effective_from=CURRENT_DATE, updated_by=?, updated_at=CURRENT_TIMESTAMP
+      WHERE org_unit_code=?
+    `).run(req.session.userId, req.params.code);
+    res.json({ success: true, status: 'active' });
+  } catch (e) { handleDbError(res, e); }
+});
+
+router.put('/:code', requireAuth, (req, res) => {
+  try {
+    const { org_unit_name, parent_org_unit_id, manager_person_id, status } = req.body;
+    const existing = db.prepare('SELECT * FROM org_unit WHERE org_unit_code=?').get(req.params.code);
+    if (!existing) return res.status(404).json({ error: '组织不存在' });
+    db.prepare(`
+      UPDATE org_unit SET org_unit_name=?, parent_org_unit_id=?, manager_person_id=?, status=?,
+        updated_by=?, updated_at=CURRENT_TIMESTAMP WHERE org_unit_code=?
+    `).run(
+      org_unit_name || existing.org_unit_name,
+      parent_org_unit_id !== undefined ? parent_org_unit_id : existing.parent_org_unit_id,
+      manager_person_id !== undefined ? manager_person_id : existing.manager_person_id,
+      status || existing.status,
+      req.session.userId, req.params.code
+    );
+    res.json({ success: true });
+  } catch (e) { handleDbError(res, e); }
+});
+
+module.exports = router;
