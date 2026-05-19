@@ -2293,11 +2293,12 @@
 
       fetch('/api/roles').then(function(r) { return r.json(); }).then(function(roles) {
         var html = '<button onclick="showCreateRoleDialog()" style="margin-bottom:12px;padding:6px 16px;background:#1565c0;color:white;border:none;border-radius:4px;cursor:pointer;">+ 新建角色</button>';
-        html += '<table class="data-table" style="width:100%;"><thead><tr><th>角色编码</th><th>名称</th><th>继承自</th><th>权限数</th><th>用户数</th><th>系统</th><th>操作</th></tr></thead><tbody>';
+        html += '<table class="data-table" style="width:100%;"><thead><tr><th>角色编码</th><th>名称</th><th>描述</th><th>继承自</th><th>权限数</th><th>用户数</th><th>系统</th><th>操作</th></tr></thead><tbody>';
         roles.forEach(function(r) {
           html += '<tr>';
           html += '<td>' + escapeHtml(r.role_code) + '</td>';
           html += '<td>' + escapeHtml(r.role_name) + '</td>';
+          html += '<td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escapeHtml(r.description || '') + '">' + (r.description || '-') + '</td>';
           html += '<td>' + (r.parent_role_name || '-') + '</td>';
           html += '<td>' + r.perm_count + '</td>';
           html += '<td>' + r.user_count + '</td>';
@@ -2394,7 +2395,9 @@
             var checked = p && p.assigned ? 'checked' : '';
             var disabled = p && p.inherited ? 'disabled' : '';
             var style = p && p.inherited ? 'opacity:0.4;' : '';
-            html += '<td style="text-align:center;"><input type="checkbox" ' + checked + ' ' + disabled + ' style="' + style + '" data-res="' + res + '" data-act="' + act + '" data-perm-id="' + (p ? p.perm_id : '') + '"></td>';
+            var title = p && p.description ? ' title="' + escapeHtml(p.description) + '"' : '';
+            var effectBadge = p && p.assigned && p.effect === 'deny' ? ' <span style="color:#e53935;font-size:10px;">禁止</span>' : '';
+            html += '<td style="text-align:center;"' + title + '><input type="checkbox" ' + checked + ' ' + disabled + ' style="' + style + '" data-res="' + res + '" data-act="' + act + '" data-perm-id="' + (p ? p.perm_id : '') + '">' + effectBadge + '</td>';
           });
           html += '<td><input type="text" placeholder="JSON字段限制" style="width:140px;font-size:11px;"></td>';
           html += '</tr>';
@@ -2436,7 +2439,7 @@
           return !q || u.employee_no.toLowerCase().includes(q) || u.name.toLowerCase().includes(q);
         });
         var html = filtered.slice(0, 50).map(function(u) {
-          return '<div onclick="selectUserForRoles(' + u.id + ',\'' + escapeHtml(u.name) + '\',\'' + escapeHtml(u.dept_name || '') + '\',\'' + escapeHtml(u.post || '') + '\')" style="padding:8px;cursor:pointer;border-bottom:1px solid #eee;">' + escapeHtml(u.employee_no) + ' — ' + escapeHtml(u.name) + (u.dept_name ? ' <span style="color:#999;font-size:12px;">' + escapeHtml(u.dept_name) + '</span>' : '') + (u.post ? ' <span style="color:#999;font-size:12px;">' + escapeHtml(u.post) + '</span>' : '') + '</div>';
+          return '<div onclick="selectUserForRoles(' + u.id + ',\'' + escapeHtml(u.name) + '\',\'' + escapeHtml(u.dept_name || '') + '\',\'' + escapeHtml(u.post || '') + '\')" style="padding:8px;cursor:pointer;border-bottom:1px solid #eee;">' + escapeHtml(u.employee_no) + ' — ' + escapeHtml(u.name) + (u.dept_name ? ' <span style="color:#999;font-size:12px;">' + escapeHtml(u.dept_name) + '</span>' : '') + (u.post ? ' <span style="color:#999;font-size:12px;">' + escapeHtml(u.post) + '</span>' : '') + (u.role ? ' <span style="color:#1565c0;font-size:12px;">' + escapeHtml(u.role) + '</span>' : '') + '</div>';
         }).join('');
         document.getElementById('userSearchResults').innerHTML = html || '<p style="padding:8px;color:#999;">无匹配用户</p>';
       });

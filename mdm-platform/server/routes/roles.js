@@ -73,8 +73,11 @@ router.get('/:id', ...adminOnly, (req, res) => {
 
     // Get assigned users
     const users = db.prepare(`
-      SELECT u.id, u.name, u.employee_no FROM user_roles ur
-      JOIN users u ON ur.user_id = u.id WHERE ur.role_id=?
+      SELECT u.id, u.name, u.employee_no, u.department_id, u.post, d.name as dept_name
+      FROM user_roles ur
+      JOIN users u ON ur.user_id = u.id
+      LEFT JOIN departments d ON u.department_id = d.id
+      WHERE ur.role_id=?
     `).all(req.params.id);
 
     res.json({ ...role, permissions: [...ownPerms, ...inheritedPerms], users });
