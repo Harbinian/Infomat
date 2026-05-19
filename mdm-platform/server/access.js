@@ -18,7 +18,7 @@ function validateAction(action) {
 }
 
 function mappingVisibility(alias, req) {
-  if (isReviewerOrAdmin(req)) return { sql: '', params: [] };
+  if (isAdmin(req)) return { sql: '', params: [] };
   const table = alias || 'm';
   const params = [req.session.userId];
   const clauses = [`${table}.submitted_by=?`];

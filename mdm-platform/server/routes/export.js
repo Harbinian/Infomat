@@ -3,7 +3,7 @@ const router = express.Router();
 const ExcelJS = require('exceljs');
 const db = require('../db');
 const { requireAuth } = require('../auth');
-const { mappingVisibility, isReviewerOrAdmin } = require('../access');
+const { mappingVisibility, isAdmin } = require('../access');
 
 function jsonListText(value) {
   if (!value) return '';
@@ -124,7 +124,7 @@ router.get('/excel', requireAuth, async (req, res) => {
 
   const termConflictParams = [];
   let termConflictWhere = '';
-  if (!isReviewerOrAdmin(req)) {
+  if (!isAdmin(req)) {
     termConflictWhere = 'WHERE (tc.dept_a=? OR tc.dept_b=?)';
     termConflictParams.push(req.session.departmentId || -1, req.session.departmentId || -1);
   }
