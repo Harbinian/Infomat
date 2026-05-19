@@ -53,6 +53,7 @@ registerRouteIfExists('/api/attributes', 'attribute');
 registerRouteIfExists('/api/external', 'external');
 registerRouteIfExists('/api/integration', 'integration');
 registerRouteIfExists('/api/quality', 'quality');
+registerRouteIfExists('/api/roles', 'roles');
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
