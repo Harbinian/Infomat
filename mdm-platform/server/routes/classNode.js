@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const { requireAuth, stripInternalIds } = require('../auth');
+const { requireAuth, applyFieldConstraints } = require('../auth');
 
 function handleDbError(res, error) {
   if (error && (String(error.code).startsWith('SQLITE_CONSTRAINT') || String(error.message).includes('constraint failed'))) {
@@ -11,7 +11,7 @@ function handleDbError(res, error) {
   return res.status(500).json({ error: '服务器错误' });
 }
 
-router.get('/', requireAuth, stripInternalIds, (req, res) => {
+router.get('/', requireAuth, applyFieldConstraints('class_node'), (req, res) => {
   try {
     const { class_type } = req.query;
     let sql = `SELECT cn.*, p.class_name as parent_name FROM class_node cn LEFT JOIN class_node p ON cn.parent_class_node_id = p.class_node_id WHERE 1=1`;
@@ -22,7 +22,7 @@ router.get('/', requireAuth, stripInternalIds, (req, res) => {
   } catch (e) { handleDbError(res, e); }
 });
 
-router.get('/:code', requireAuth, stripInternalIds, (req, res) => {
+router.get('/:code', requireAuth, applyFieldConstraints('class_node'), (req, res) => {
   try {
     const row = db.prepare(`
       SELECT cn.*, p.class_name as parent_name
@@ -66,7 +66,7 @@ router.put('/:code', requireAuth, (req, res) => {
   } catch (e) { handleDbError(res, e); }
 });
 
-router.get('/:code/members', requireAuth, stripInternalIds, (req, res) => {
+router.get('/:code/members', requireAuth, applyFieldConstraints('class_node'), (req, res) => {
   try {
     const node = db.prepare('SELECT class_node_id FROM class_node WHERE class_code=?').get(req.params.code);
     if (!node) return res.status(404).json({ error: '分类不存在' });

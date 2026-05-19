@@ -17,14 +17,16 @@
     "test:security": "node scripts/test-security-routes.js",
     "test:views": "node scripts/test-views-sankey-filters.js",
     "test:frontend": "node scripts/test-frontend-assets.js",
+    "test:rbac": "node scripts/smoke-rbac.js",
     "dev": "nodemon server/index.js"
   },
   "dependencies": {
-    "express": "^4.18.2",
-    "better-sqlite3": "^12.9.0",
-    "exceljs": "^4.4.0",
-    "express-session": "^1.17.3",
     "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^12.9.0",
+    "csv-parse": "^6.2.1",
+    "exceljs": "^4.4.0",
+    "express": "^4.18.2",
+    "express-session": "^1.17.3",
     "multer": "^2.1.1"
   },
   "devDependencies": {

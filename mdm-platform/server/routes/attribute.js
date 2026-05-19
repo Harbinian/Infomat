@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const { requireAuth, stripInternalIds } = require('../auth');
+const { requireAuth, applyFieldConstraints } = require('../auth');
 
 function handleDbError(res, error) {
   if (error && (String(error.code).startsWith('SQLITE_CONSTRAINT') || String(error.message).includes('constraint failed'))) {
@@ -11,7 +11,7 @@ function handleDbError(res, error) {
   return res.status(500).json({ error: '服务器错误' });
 }
 
-router.get('/defs', requireAuth, stripInternalIds, (req, res) => {
+router.get('/defs', requireAuth, applyFieldConstraints('attribute'), (req, res) => {
   try {
     const { applies_to } = req.query;
     let sql = `SELECT * FROM attribute_def WHERE 1=1`;
@@ -54,7 +54,7 @@ router.put('/defs/:code', requireAuth, (req, res) => {
   } catch (e) { handleDbError(res, e); }
 });
 
-router.get('/values', requireAuth, stripInternalIds, (req, res) => {
+router.get('/values', requireAuth, applyFieldConstraints('attribute'), (req, res) => {
   try {
     const { entity_type, entity_id } = req.query;
     if (!entity_type || !entity_id) return res.status(400).json({ error: '缺少 entity_type/entity_id' });

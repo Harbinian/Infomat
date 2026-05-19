@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const { requireAuth, requireRole, isAdmin } = require('../auth');
+const { requireAuth, requirePermission, isAdmin } = require('../auth');
 
 function handleDbError(res, error) {
   if (error && (String(error.code).startsWith('SQLITE_CONSTRAINT') || String(error.message).includes('constraint failed'))) {
@@ -26,7 +26,7 @@ router.get('/systems', requireAuth, (req, res) => {
   } catch (e) { handleDbError(res, e); }
 });
 
-router.post('/systems', requireAuth, requireRole('admin'), (req, res) => {
+router.post('/systems', requireAuth, requirePermission('admin:access'), (req, res) => {
   try {
     const { system_code, system_name } = req.body;
     if (!system_code || !system_name) return res.status(400).json({ error: '缺少 system_code/system_name' });
@@ -49,7 +49,7 @@ router.get('/identities', requireAuth, (req, res) => {
   } catch (e) { handleDbError(res, e); }
 });
 
-router.post('/identities', requireAuth, requireRole('admin'), (req, res) => {
+router.post('/identities', requireAuth, requirePermission('admin:access'), (req, res) => {
   try {
     const { entity_type, entity_id, system_code, external_key, is_primary } = req.body;
     if (!entity_type || !entity_id || !system_code || !external_key) {

@@ -707,4 +707,114 @@ if (tcSql2 && !tcSql2.sql.includes("'silenced'")) {
   console.log('Migration: added silenced/escalated to term_conflicts CHECK');
 }
 
+// ── RBAC: Role-Based Access Control ──
+
+db.exec(`
+CREATE TABLE IF NOT EXISTS roles (
+  role_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  role_code TEXT NOT NULL UNIQUE,
+  role_name TEXT NOT NULL,
+  description TEXT,
+  parent_role_id INTEGER REFERENCES roles(role_id),
+  is_system INTEGER NOT NULL DEFAULT 0,
+  permissions_json TEXT DEFAULT '{}',
+  created_by INTEGER REFERENCES users(id),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+`);
+
+db.exec(`
+CREATE TABLE IF NOT EXISTS permissions (
+  perm_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  perm_code TEXT NOT NULL UNIQUE,
+  resource TEXT NOT NULL,
+  action TEXT NOT NULL,
+  field_constraints TEXT DEFAULT NULL,
+  description TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+`);
+
+db.exec(`
+CREATE TABLE IF NOT EXISTS role_permissions (
+  role_perm_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  role_id INTEGER NOT NULL REFERENCES roles(role_id) ON DELETE CASCADE,
+  perm_id INTEGER NOT NULL REFERENCES permissions(perm_id) ON DELETE CASCADE,
+  effect TEXT NOT NULL DEFAULT 'allow' CHECK(effect IN ('allow','deny')),
+  UNIQUE(role_id, perm_id)
+);
+`);
+
+db.exec(`
+CREATE TABLE IF NOT EXISTS user_roles (
+  user_role_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  role_id INTEGER NOT NULL REFERENCES roles(role_id) ON DELETE CASCADE,
+  assigned_by INTEGER REFERENCES users(id),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user_id, role_id)
+);
+`);
+
+// RBAC: Seed system roles and permissions on fresh DB
+const roleCount = db.prepare('SELECT COUNT(*) as cnt FROM roles').get();
+if (roleCount.cnt === 0) {
+  db.transaction(() => {
+    const insertRole = db.prepare('INSERT INTO roles (role_code, role_name, description, is_system) VALUES (?, ?, ?, 1)');
+    const insertPerm = db.prepare('INSERT OR IGNORE INTO permissions (perm_code, resource, action, description) VALUES (?, ?, ?, ?)');
+    const link = db.prepare('INSERT OR IGNORE INTO role_permissions (role_id, perm_id) SELECT r.role_id, p.perm_id FROM roles r, permissions p WHERE r.role_code=? AND p.perm_code=?');
+
+    insertRole.run('admin', '管理员', '系统管理员，拥有全部权限');
+    insertRole.run('reviewer', '审核员', '审核业务流程和映射');
+    insertRole.run('owner', '业务负责人', '管理所属部门的业务数据');
+    insertRole.run('submitter', '报送人', '提交业务数据');
+
+    // admin: wildcard
+    insertPerm.run('*:*', '*', '*', '全部权限通配');
+    link.run('admin', '*:*');
+
+    // reviewer permissions
+    const revPerms = [
+      ['review:approve', 'review', 'approve', '审核批准'],
+      ['conflict:manage', 'conflict', 'manage', '冲突管理'],
+      ['conflict:resolve', 'conflict', 'resolve', '冲突解决'],
+      ['dashboard:view', 'dashboard', 'view', '查看统计看板'],
+      ['mapping:read', 'mapping', 'read', '查看业务映射'],
+      ['todos:manage', 'todos', 'manage', '管理待办'],
+    ];
+    revPerms.forEach(([code, res, act, desc]) => {
+      insertPerm.run(code, res, act, desc);
+      link.run('reviewer', code);
+    });
+
+    // owner permissions
+    const ownPerms = [
+      ['mapping:create', 'mapping', 'create', '创建业务映射'],
+      ['mapping:update', 'mapping', 'update', '更新业务映射'],
+      ['mapping:submit', 'mapping', 'submit', '提交业务映射'],
+      ['mapping:read', 'mapping', 'read', '查看业务映射'],
+      ['dashboard:view', 'dashboard', 'view', '查看统计看板'],
+      ['todos:manage', 'todos', 'manage', '管理待办'],
+    ];
+    ownPerms.forEach(([code, res, act, desc]) => {
+      insertPerm.run(code, res, act, desc);
+      link.run('owner', code);
+    });
+
+    // submitter permissions
+    const subPerms = [
+      ['mapping:submit', 'mapping', 'submit', '提交业务映射'],
+      ['mapping:read', 'mapping', 'read', '查看业务映射'],
+      ['dashboard:view', 'dashboard', 'view', '查看统计看板'],
+    ];
+    subPerms.forEach(([code, res, act, desc]) => {
+      insertPerm.run(code, res, act, desc);
+      link.run('submitter', code);
+    });
+  })();
+  console.log('RBAC: System roles and permissions seeded');
+}
+
+console.log('RBAC: Tables ready (roles, permissions, role_permissions, user_roles)');
 module.exports = db;

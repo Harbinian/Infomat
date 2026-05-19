@@ -1,11 +1,16 @@
 const db = require('./db');
+const { getUserEffectivePermissions } = require('./auth');
 
 function isAdmin(req) {
-  return req.session && req.session.userRole === 'admin';
+  if (!req.session || !req.session.userId) return false;
+  const { permSet } = getUserEffectivePermissions(req.session.userId);
+  return permSet.has('admin:access') || permSet.has('*:*');
 }
 
 function isReviewerOrAdmin(req) {
-  return req.session && ['reviewer', 'admin'].includes(req.session.userRole);
+  if (!req.session || !req.session.userId) return false;
+  const { permSet } = getUserEffectivePermissions(req.session.userId);
+  return permSet.has('admin:access') || permSet.has('review:approve') || permSet.has('*:*');
 }
 
 function validateAction(action) {

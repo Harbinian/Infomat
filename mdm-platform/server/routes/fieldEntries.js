@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const { requireAuth } = require('../auth');
+const { requireAuth, getUserEffectivePermissions } = require('../auth');
 const { canViewMapping } = require('../access');
 
 const ALL_FIELD_ENTRY_FIELDS = ['field_name_cn', 'field_name_en', 'data_object', 'field_type', 'consume_systems', 'sync_mode', 'note'];
@@ -32,13 +32,15 @@ function normalizeValue(fieldName, value) {
 }
 
 function canCreateFieldForMapping(req, mappingId) {
-  if (req.session.userRole === 'admin') return true;
+  const { permSet } = getUserEffectivePermissions(req.session.userId);
+  if (permSet.has('admin:access') || permSet.has('*:*')) return true;
   const mapping = db.prepare('SELECT submitted_by FROM mappings WHERE id=?').get(mappingId);
   return mapping && req.session.userRole === 'submitter' && mapping.submitted_by === req.session.userId;
 }
 
 function canEditOwnerColumns(req, field) {
-  if (req.session.userRole === 'admin' || req.session.userRole === 'reviewer') return true;
+  const { permSet } = getUserEffectivePermissions(req.session.userId);
+  if (permSet.has('admin:access') || permSet.has('review:approve') || permSet.has('*:*')) return true;
   if (req.session.userRole !== 'owner') return false;
 
   const mapping = db.prepare('SELECT owner_dept_id FROM mappings WHERE id=?').get(field.mapping_id);
@@ -77,7 +79,9 @@ router.post('/', requireAuth, (req, res) => {
     }
 
     const normalizedConsumeSystems = normalizeValue('consume_systems', consume_systems);
-    const values = req.session.userRole === 'admin'
+    const { permSet: createPermSet } = getUserEffectivePermissions(req.session.userId);
+    const creatorIsAdmin = createPermSet.has('admin:access') || createPermSet.has('*:*');
+    const values = creatorIsAdmin
       ? { field_name_cn, field_name_en, data_object, field_type, consume_systems: normalizedConsumeSystems, sync_mode, note }
       : { field_name_cn: null, field_name_en: null, data_object, field_type: null, consume_systems: null, sync_mode: null, note };
 
@@ -108,7 +112,8 @@ router.put('/:id', requireAuth, (req, res) => {
     if (!field) return res.status(404).json({ error: '字段不存在' });
 
     let allowedFields;
-    if (req.session.userRole === 'admin' || req.session.userRole === 'reviewer') {
+    const { permSet: editPermSet } = getUserEffectivePermissions(req.session.userId);
+    if (editPermSet.has('admin:access') || editPermSet.has('review:approve') || editPermSet.has('*:*')) {
       allowedFields = ALL_FIELD_ENTRY_FIELDS;
     } else if (canEditOwnerColumns(req, field)) {
       allowedFields = OWNER_WRITABLE;
@@ -165,7 +170,8 @@ router.delete('/:id', requireAuth, (req, res) => {
     const field = db.prepare('SELECT * FROM field_entries WHERE id=?').get(req.params.id);
     if (!field) return res.status(404).json({ error: '字段不存在' });
     const mapping = db.prepare('SELECT status FROM mappings WHERE id=?').get(field.mapping_id);
-    const canDelete = req.session.userRole === 'admin' ||
+    const { permSet: delPermSet } = getUserEffectivePermissions(req.session.userId);
+    const canDelete = delPermSet.has('admin:access') || delPermSet.has('*:*') ||
       (req.session.userRole === 'submitter' && field.submitted_by === req.session.userId && mapping && mapping.status === 'draft');
     if (!canDelete) return res.status(403).json({ error: '仅管理员或草稿字段报送人可删除字段' });
     db.prepare('DELETE FROM field_entries WHERE id=?').run(req.params.id);
