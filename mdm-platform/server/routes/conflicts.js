@@ -212,6 +212,72 @@ router.get('/', requireAuth, (req, res) => {
   res.json([...updatedTermRows, ...updatedFieldRows].sort((a, b) => String(b.created_at).localeCompare(String(a.created_at))));
 });
 
+// GET /stats — conflict statistics grouped by status and severity
+router.get('/stats', requireAuth, (req, res) => {
+  return runDbAction(res, () => {
+    const fieldStats = db.prepare(`
+      SELECT status, severity, COUNT(*) as cnt FROM field_conflicts GROUP BY status, severity
+    `).all();
+    const termStats = db.prepare(`
+      SELECT status, severity, COUNT(*) as cnt FROM term_conflicts GROUP BY status, severity
+    `).all();
+
+    // Run escalation check before returning stats
+    const needEscalation = db.prepare(`
+      SELECT * FROM field_conflicts WHERE status = 'coordinating' AND deadline < date('now')
+    `).all();
+    needEscalation.forEach(function(c) { checkAndEscalate(c, 'field'); });
+    const termNeedEscalation = db.prepare(`
+      SELECT * FROM term_conflicts WHERE status = 'coordinating' AND deadline < date('now')
+    `).all();
+    termNeedEscalation.forEach(function(c) { checkAndEscalate(c, 'term'); });
+
+    // Re-query after escalation
+    const finalFieldStats = db.prepare(`
+      SELECT status, severity, COUNT(*) as cnt FROM field_conflicts GROUP BY status, severity
+    `).all();
+    const finalTermStats = db.prepare(`
+      SELECT status, severity, COUNT(*) as cnt FROM term_conflicts GROUP BY status, severity
+    `).all();
+
+    // Aggregate
+    const byStatus = {};
+    [finalFieldStats, finalTermStats].forEach(function(rows) {
+      rows.forEach(function(r) {
+        const key = r.status;
+        if (!byStatus[key]) byStatus[key] = 0;
+        byStatus[key] += r.cnt;
+      });
+    });
+
+    const coordinating = byStatus['coordinating'] || 0;
+    const escalated = byStatus['escalated'] || 0;
+    const silenced = byStatus['silenced'] || 0;
+    const resolved = byStatus['resolved'] || 0;
+
+    // This month resolved
+    const thisMonth = new Date().toISOString().slice(0, 7);
+    const fieldResolvedThisMonth = db.prepare(`
+      SELECT COUNT(*) as cnt FROM field_conflicts
+      WHERE status = 'resolved' AND resolved_at LIKE ?
+    `).get(thisMonth + '%');
+    const termResolvedThisMonth = db.prepare(`
+      SELECT COUNT(*) as cnt FROM term_conflicts
+      WHERE status = 'resolved' AND resolved_at LIKE ?
+    `).get(thisMonth + '%');
+    const resolvedThisMonth = (fieldResolvedThisMonth.cnt || 0) + (termResolvedThisMonth.cnt || 0);
+
+    res.json({
+      coordinating: coordinating,
+      escalated: escalated,
+      silenced: silenced,
+      resolved: resolved,
+      resolvedThisMonth: resolvedThisMonth,
+      byStatus: byStatus
+    });
+  });
+});
+
 // GET /:id — conflict detail with assignments and coordination history
 router.get('/:id', requireAuth, (req, res) => {
   return runDbAction(res, () => {
@@ -238,8 +304,20 @@ router.get('/:id', requireAuth, (req, res) => {
     const wasEscalated = checkAndEscalate(conflict, conflictType);
     if (wasEscalated) {
       // Re-fetch after escalation
-      const table2 = conflictType === 'term' ? 'term_conflicts' : 'field_conflicts';
-      conflict = db.prepare(`SELECT * FROM ${table2} WHERE id = ?`).get(req.params.id);
+      if (conflictType === 'term') {
+        conflict = db.prepare('SELECT * FROM term_conflicts WHERE id = ?').get(req.params.id);
+      } else {
+        conflict = db.prepare(`
+          SELECT fc.*, fe_a.field_name_cn as field_name_a, fe_b.field_name_cn as field_name_b,
+                 da.name as dept_a_name, db.name as dept_b_name
+          FROM field_conflicts fc
+          JOIN field_entries fe_a ON fc.field_entry_a_id = fe_a.id
+          JOIN field_entries fe_b ON fc.field_entry_b_id = fe_b.id
+          LEFT JOIN departments da ON fc.dept_a = da.id
+          LEFT JOIN departments db ON fc.dept_b = db.id
+          WHERE fc.id = ?
+        `).get(req.params.id);
+      }
     }
 
     const currentAssignee = db.prepare(`
@@ -529,72 +607,6 @@ router.post('/:id/archive', requireAuth, (req, res) => {
 
     db.prepare(`UPDATE ${table} SET status='archived' WHERE id=?`).run(req.params.id);
     res.json({ success: true });
-  });
-});
-
-// GET /stats — conflict statistics grouped by status and severity
-router.get('/stats', requireAuth, (req, res) => {
-  return runDbAction(res, () => {
-    const fieldStats = db.prepare(`
-      SELECT status, severity, COUNT(*) as cnt FROM field_conflicts GROUP BY status, severity
-    `).all();
-    const termStats = db.prepare(`
-      SELECT status, severity, COUNT(*) as cnt FROM term_conflicts GROUP BY status, severity
-    `).all();
-
-    // Run escalation check before returning stats
-    const needEscalation = db.prepare(`
-      SELECT * FROM field_conflicts WHERE status = 'coordinating' AND deadline < date('now')
-    `).all();
-    needEscalation.forEach(function(c) { checkAndEscalate(c, 'field'); });
-    const termNeedEscalation = db.prepare(`
-      SELECT * FROM term_conflicts WHERE status = 'coordinating' AND deadline < date('now')
-    `).all();
-    termNeedEscalation.forEach(function(c) { checkAndEscalate(c, 'term'); });
-
-    // Re-query after escalation
-    const finalFieldStats = db.prepare(`
-      SELECT status, severity, COUNT(*) as cnt FROM field_conflicts GROUP BY status, severity
-    `).all();
-    const finalTermStats = db.prepare(`
-      SELECT status, severity, COUNT(*) as cnt FROM term_conflicts GROUP BY status, severity
-    `).all();
-
-    // Aggregate
-    const byStatus = {};
-    [finalFieldStats, finalTermStats].forEach(function(rows) {
-      rows.forEach(function(r) {
-        const key = r.status;
-        if (!byStatus[key]) byStatus[key] = 0;
-        byStatus[key] += r.cnt;
-      });
-    });
-
-    const coordinating = byStatus['coordinating'] || 0;
-    const escalated = byStatus['escalated'] || 0;
-    const silenced = byStatus['silenced'] || 0;
-    const resolved = byStatus['resolved'] || 0;
-
-    // This month resolved
-    const thisMonth = new Date().toISOString().slice(0, 7);
-    const fieldResolvedThisMonth = db.prepare(`
-      SELECT COUNT(*) as cnt FROM field_conflicts
-      WHERE status = 'resolved' AND resolved_at LIKE ?
-    `).get(thisMonth + '%');
-    const termResolvedThisMonth = db.prepare(`
-      SELECT COUNT(*) as cnt FROM term_conflicts
-      WHERE status = 'resolved' AND resolved_at LIKE ?
-    `).get(thisMonth + '%');
-    const resolvedThisMonth = (fieldResolvedThisMonth.cnt || 0) + (termResolvedThisMonth.cnt || 0);
-
-    res.json({
-      coordinating: coordinating,
-      escalated: escalated,
-      silenced: silenced,
-      resolved: resolved,
-      resolvedThisMonth: resolvedThisMonth,
-      byStatus: byStatus
-    });
   });
 });
 
