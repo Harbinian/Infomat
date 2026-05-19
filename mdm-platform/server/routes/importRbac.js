@@ -26,9 +26,9 @@ function cellText(row, headerMap, header) {
   return String(value).trim();
 }
 
-function buildHeaderMap(sheet) {
+function buildHeaderMap(sheet, rowNum) {
   const map = {};
-  sheet.getRow(1).eachCell((cell, colNumber) => {
+  sheet.getRow(rowNum || 1).eachCell((cell, colNumber) => {
     if (cell.value) map[String(cell.value).trim()] = colNumber;
   });
   return map;
@@ -329,9 +329,12 @@ router.post('/full', ...adminGate, upload.single('file'), async (req, res) => {
       await workbook.xlsx.load(req.file.buffer);
       const sheet = workbook.worksheets[0];
       if (!sheet) return res.status(400).json({ error: 'Excel 中没有可读取的工作表' });
-      const headerMap = buildHeaderMap(sheet);
+      // Detect header row: if row 1 starts with '工号' use row 1, else use row 2
+      const row1First = String(sheet.getRow(1).getCell(1).value || '').trim();
+      const headerRowNum = (row1First === '工号') ? 1 : 2;
+      const headerMap = buildHeaderMap(sheet, headerRowNum);
       sheet.eachRow((row, rowNumber) => {
-        if (rowNumber === 1) return;
+        if (rowNumber <= headerRowNum) return;
         const employee_no = cellText(row, headerMap, '工号');
         const role_code = cellText(row, headerMap, '角色编码');
         if (!employee_no && !role_code) return;
@@ -463,7 +466,25 @@ router.post('/full', ...adminGate, upload.single('file'), async (req, res) => {
 router.get('/templates/full', ...adminGate, async (req, res) => {
   try {
     const workbook = new ExcelJS.Workbook();
-    const sheet = workbook.addWorksheet('完整配置');
+    const sheet = workbook.addWorksheet('RBAC配置');
+
+    // Header instruction row
+    sheet.mergeCells('A1:I1');
+    const instructionCell = sheet.getCell('A1');
+    instructionCell.value = '填写说明：有工号的行 → 给用户分配角色；工号为空的行 → 仅定义角色和权限。操作类型：replace=替换全部角色，add=追加角色';
+    instructionCell.font = { size: 10, italic: true, color: { argb: 'FF666666' } };
+    instructionCell.alignment = { wrapText: true };
+    sheet.getRow(1).height = 28;
+
+    // Column headers (row 2)
+    const headerRow = sheet.getRow(2);
+    headerRow.values = ['工号', '姓名', '部门', '角色编码', '角色名称', '父角色编码', '权限码', '效果', '操作类型'];
+    headerRow.font = { bold: true, size: 11 };
+    headerRow.eachCell(cell => {
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0E0E0' } };
+      cell.border = { bottom: { style: 'thin' } };
+    });
+
     sheet.columns = [
       { header: '工号', key: 'employee_no', width: 12 },
       { header: '姓名', key: 'name', width: 10 },
@@ -475,30 +496,28 @@ router.get('/templates/full', ...adminGate, async (req, res) => {
       { header: '效果', key: 'effect', width: 8 },
       { header: '操作类型', key: 'operation', width: 10 }
     ];
-    // Example rows
-    sheet.addRow({ employee_no: 'ADMIN01', name: '管理员', department: '信息中心', role_code: 'admin', role_name: '管理员', parent_role_code: '', perm_code: '*:*', effect: 'allow', operation: 'replace' });
-    sheet.addRow({ employee_no: 'ADMIN01', name: '管理员', department: '信息中心', role_code: 'admin', role_name: '', parent_role_code: '', perm_code: '', effect: '', operation: '' });
-    sheet.addRow({ employee_no: '', name: '', department: '', role_code: 'dept_auditor', role_name: '部门审核员', parent_role_code: 'reviewer', perm_code: 'mapping:approve', effect: 'allow', operation: '' });
-    sheet.addRow({ employee_no: '', name: '', department: '', role_code: 'dept_auditor', role_name: '', parent_role_code: '', perm_code: 'product:read', effect: 'allow', operation: '' });
-    // Data validation for operation column
-    sheet.getRow(2).getCell(9).dataValidation = {
-      type: 'list', allowBlank: true, formulae: ['"replace,add"']
-    };
-    sheet.getRow(3).getCell(9).dataValidation = {
-      type: 'list', allowBlank: true, formulae: ['"replace,add"']
-    };
-    // Data validation for effect column
-    sheet.getRow(2).getCell(8).dataValidation = {
-      type: 'list', allowBlank: true, formulae: ['"allow,deny"']
-    };
-    sheet.getRow(3).getCell(8).dataValidation = {
-      type: 'list', allowBlank: true, formulae: ['"allow,deny"']
-    };
-    sheet.getRow(4).getCell(8).dataValidation = {
-      type: 'list', allowBlank: true, formulae: ['"allow,deny"']
-    };
+
+    // Example rows — clean, non-redundant
+    // Row 3: user assignment only (no perm)
+    const row3 = sheet.addRow({ employee_no: 'EMP001', name: '张三', department: '工程技术部', role_code: 'submitter', role_name: '', parent_role_code: '', perm_code: '', effect: '', operation: 'replace' });
+    // Row 4: role definition with permission (no employee)
+    const row4 = sheet.addRow({ employee_no: '', name: '', department: '', role_code: 'dept_auditor', role_name: '部门审核员', parent_role_code: 'reviewer', perm_code: 'mapping:approve', effect: 'allow', operation: '' });
+    // Row 5: same role, another permission
+    sheet.addRow({ employee_no: '', name: '', department: '', role_code: 'dept_auditor', role_name: '', parent_role_code: '', perm_code: 'product:read', effect: 'deny', operation: '' });
+    // Row 6: another user
+    sheet.addRow({ employee_no: 'EMP002', name: '李四', department: '质量部', role_code: 'reviewer', role_name: '', parent_role_code: '', perm_code: '', effect: '', operation: 'add' });
+
+    // Data validation for operation column (rows 3-100)
+    sheet.getCell('I3').dataValidation = { type: 'list', allowBlank: true, formulae: ['"replace,add"'] };
+    sheet.getCell('H3').dataValidation = { type: 'list', allowBlank: true, formulae: ['"allow,deny"'] };
+
+    // Highlight example rows
+    [row3, row4].forEach(row => {
+      row.eachCell(cell => { cell.font = { color: { argb: 'FF888888' }, italic: true }; });
+    });
+
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', 'attachment; filename="rbac_full_config_template.xlsx"');
+    res.setHeader('Content-Disposition', 'attachment; filename="rbac_config_template.xlsx"');
     await workbook.xlsx.write(res);
     res.end();
   } catch (error) {

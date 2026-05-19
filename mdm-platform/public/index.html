@@ -2484,7 +2484,7 @@
     function renderBatchImport() {
       var panel = document.getElementById('rbacPanel');
       panel.innerHTML = '<h3>批量导入</h3>' +
-        '<p style="color:#666;margin-bottom:8px;">一张表同时配置角色、权限和用户分配。工号和角色编码为空的列输入角色/权限定义。</p>' +
+        '<p style="color:#666;margin-bottom:8px;">有工号=分配用户角色，工号空=定义角色权限。支持同时导入两类数据。</p>' +
         '<div style="margin-bottom:12px;">' +
           '<button onclick="window.open(\'/api/import-rbac/templates/full\',\'_blank\')" style="padding:6px 12px;background:#555;color:white;border:none;border-radius:4px;cursor:pointer;">下载模板</button>' +
         '</div>' +
