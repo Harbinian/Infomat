@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const { requireAuth, requireRole, stripInternalIds } = require('../auth');
+const { requireAuth, requirePermission, applyFieldConstraints } = require('../auth');
 const { generateCode } = require('../codeEngine');
 
 function handleDbError(res, error) {
@@ -12,7 +12,7 @@ function handleDbError(res, error) {
   return res.status(500).json({ error: '服务器错误' });
 }
 
-router.get('/', requireAuth, stripInternalIds, (req, res) => {
+router.get('/', requireAuth, applyFieldConstraints('position'), (req, res) => {
   try {
     const { org_unit_id, status, search, page = 1, limit = 50 } = req.query;
     let sql = `SELECT p.*, ou.org_unit_name, ou.org_unit_code
@@ -28,7 +28,7 @@ router.get('/', requireAuth, stripInternalIds, (req, res) => {
   } catch (e) { handleDbError(res, e); }
 });
 
-router.get('/:code', requireAuth, stripInternalIds, (req, res) => {
+router.get('/:code', requireAuth, applyFieldConstraints('position'), (req, res) => {
   try {
     const row = db.prepare(`
       SELECT p.*, ou.org_unit_name, ou.org_unit_code
@@ -54,7 +54,7 @@ router.post('/', requireAuth, (req, res) => {
   } catch (e) { handleDbError(res, e); }
 });
 
-router.post('/:code/activate', requireAuth, requireRole('admin', 'owner'), (req, res) => {
+router.post('/:code/activate', requireAuth, requirePermission('position:update'), (req, res) => {
   try {
     const existing = db.prepare('SELECT * FROM position WHERE position_code=?').get(req.params.code);
     if (!existing) return res.status(404).json({ error: '岗位不存在' });

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const { requireAuth, requireRole } = require('../auth');
+const { requireAuth, requirePermission } = require('../auth');
 const { validateAction } = require('../access');
 
 function handleDbError(res, error) {
@@ -66,7 +66,7 @@ router.put('/:id', requireAuth, (req, res) => {
   });
 });
 
-router.post('/:id/review', requireRole('admin'), (req, res) => {
+router.post('/:id/review', requirePermission('admin:access'), (req, res) => {
   return runDbAction(res, () => {
     const { action } = req.body;
     if (!validateAction(action)) {
