@@ -33,14 +33,13 @@ function autoAssignBothDepts(conflictId, conflictType, deptA, deptB) {
     LIMIT 1
   `).get(deptB, deptB, deptB);
 
-  const sysUserId = 0; // system-initiated
-
+  // Use null for system-initiated assignments (FK constraint won't match null)
   [assigneeA, assigneeB].forEach(function(assignee) {
     if (assignee) {
       db.prepare(`
         INSERT INTO conflict_assignments (conflict_id, conflict_type, assignee_user_id, assigned_by)
         VALUES (?, ?, ?, ?)
-      `).run(conflictId, conflictType, assignee.id, sysUserId);
+      `).run(conflictId, conflictType, assignee.id, null);
     }
   });
 
