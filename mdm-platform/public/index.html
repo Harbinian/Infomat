@@ -397,7 +397,7 @@
           </div>
         </div>
         <div class="tabs" style="margin-bottom: 16px; border-bottom: 1px solid var(--border);">
-          <button class="tab active" data-ctab="active">待协调</button>
+          <button class="tab on" data-ctab="active">待协调</button>
           <button class="tab" data-ctab="silenced" id="silencedTabLink" style="display:none">静默归档</button>
         </div>
         <div id="conflictListContainer"></div>
@@ -551,6 +551,13 @@
       const map = { draft:'草稿', submitted:'已提交', dept_reviewed:'部门内审', cross_confirmed:'跨部门确认', fields_confirmed:'字段确认', final_reviewed:'终审', published:'已发布', pending:'待处理', done:'已完成', resolved:'已解决', rejected:'已驳回', approved:'已通过', blocked:'阻断', coordinating:'协调中', archived:'已归档' };
       const cls = /published|approved|done|resolved/.test(status) ? 'green' : /blocked|rejected|error/.test(status) ? 'red' : /pending|submitted|coordinating/.test(status) ? 'amber' : '';
       return '<span class="tag ' + cls + '">' + safeText(map[status] || status) + '</span>';
+    }
+
+    function severityTag(sev) {
+      var map = { blocking: '阻断', error: '严重', high: '高', medium: '中', low: '低', warn: '警告' };
+      var label = map[sev] || sev;
+      var cls = (sev === 'blocking' || sev === 'error') ? 'red' : (sev === 'high') ? 'orange' : (sev === 'medium') ? 'blue' : '';
+      return '<span class="tag ' + cls + '">' + label + '</span>';
     }
 
     function fillSelect(select, rows, labelKey = 'name') {
@@ -1003,7 +1010,7 @@
             '<td>' + safeText(row.term || row.conflict_field) + '</td>' +
             '<td>' + safeText(row.dept_a_name || row.dept_a) + '</td>' +
             '<td>' + safeText(row.dept_b_name || row.dept_b) + '</td>' +
-            '<td>' + statusTag(row.severity) + '</td>' +
+            '<td>' + severityTag(row.severity) + '</td>' +
             '<td>' + (statusLabel[row.status] || row.status) + '</td>' +
             '<td>' + (row.deadline ? safeText(row.deadline) : '-') + '</td>' +
             '<td><button class="btn secondary" onclick="navigateTo(\'detail\',{tab:\'conflicts\',type:\'' + conflictType + '\',id:' + rowId + '})">查看</button></td>' +
@@ -1015,9 +1022,9 @@
     }
 
     // ===== Dashboard =====
-    function renderDashboard() {
+    async function renderDashboard() {
       // Preload conflict stats for overview card
-      api('/api/conflicts/stats').then(function(s) { state.conflictStats = s; }).catch(function() {});
+      try { state.conflictStats = await api('/api/conflicts/stats'); } catch (e) {}
       var pendingTodos = state.todos.filter(function(row) { return row.status === 'pending'; }).length;
       var pendingConflicts = state.conflicts.filter(function(row) { return row.status === 'pending' || row.status === 'coordinating'; }).length;
       $('metricMappings').textContent = state.mappings.length;
@@ -1393,8 +1400,8 @@
     var conflictTabLinks = document.querySelectorAll('#conflicts [data-ctab]');
     conflictTabLinks.forEach(function(link) {
       link.addEventListener('click', function() {
-        conflictTabLinks.forEach(function(l) { l.classList.remove('active'); });
-        link.classList.add('active');
+        conflictTabLinks.forEach(function(l) { l.classList.remove('on'); });
+        link.classList.add('on');
         conflictTab = link.dataset.ctab;
         loadConflicts();
       });
