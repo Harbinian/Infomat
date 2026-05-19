@@ -248,16 +248,13 @@ router.get('/:id', requireAuth, (req, res) => {
       ORDER BY cch.created_at DESC LIMIT 1
     `).get(req.params.id, conflictType, req.params.id, conflictType, conflict.dept_b);
 
-    // Check both sides submitted
-    const assignees = db.prepare(`
-      SELECT DISTINCT assignee_user_id FROM conflict_assignments
-      WHERE conflict_id = ? AND conflict_type = ?
+    // Check both sides submitted (verify cross-department participation)
+    const submittedDepts = db.prepare(`
+      SELECT DISTINCT u.department_id FROM conflict_coordination_history cch
+      JOIN users u ON cch.assignee_user_id = u.id
+      WHERE cch.conflict_id = ? AND cch.conflict_type = ?
     `).all(req.params.id, conflictType);
-    const submissions = db.prepare(`
-      SELECT DISTINCT assignee_user_id FROM conflict_coordination_history
-      WHERE conflict_id = ? AND conflict_type = ?
-    `).all(req.params.id, conflictType);
-    const bothSubmitted = assignees.length >= 2 && submissions.length >= 2;
+    const bothSubmitted = submittedDepts.length >= 2;
 
     res.json({
       ...conflict, conflict_type: conflictType,
@@ -598,7 +595,7 @@ router.post('/:id/resolve', requireRole('reviewer', 'admin'), (req, res) => {
           SELECT COUNT(DISTINCT fc.id) as cnt
           FROM field_conflicts fc
           JOIN field_entries fe ON fc.field_entry_a_id = fe.id OR fc.field_entry_b_id = fe.id
-          WHERE fe.mapping_id = ? AND fc.severity = 'error' AND fc.status = 'pending'
+          WHERE fe.mapping_id = ? AND fc.severity = 'error' AND fc.status IN ('pending','coordinating')
         `).get(mapping.mapping_id);
         if (remainingErrors.cnt === 0) {
           db.prepare("UPDATE approval_tasks SET status='in_progress' WHERE mapping_id=? AND status='blocked'").run(mapping.mapping_id);
