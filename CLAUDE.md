@@ -56,12 +56,13 @@ node scripts/render_gantt_h5_png.mjs                    # H5 HTML → 8K PNG (he
 mdm-platform/
 ├── server/
 │   ├── index.js           # Express 入口，动态注册路由
-│   ├── db.js              # SQLite 建表 (30+ 表，含 MDM 拓展 12 张新表)
-│   ├── auth.js            # 会话认证 + 角色鉴权 + 数据权限中间件
-│   ├── access.js           # 行级可见性过滤 (mapping + masterData)
+│   ├── db.js              # SQLite 建表 (V1 核心 + MDM v2 领域 12 表)
+│   ├── auth.js            # 会话认证 + 角色鉴权 + 内部ID安全中间件
+│   ├── access.js           # 行级可见性过滤 (mapping)
 │   ├── integrationAuth.js  # API Key 认证中间件 (外部系统集成)
-│   └── routes/            # 17 个路由模块，每个暴露 RESTful CRUD
-│       ├── org.js         # 部门、用户、岗位
+│   ├── codeEngine.js       # 分段流水编码引擎 (entity_type + scope_key)
+│   └── routes/            # 22 个路由模块
+│       ├── org.js         # 部门、用户、登录
 │       ├── systems.js     # 应用系统清单
 │       ├── capabilities.js # 业务能力 (L1/L2/L3)
 │       ├── processes.js   # 业务流程
@@ -73,7 +74,17 @@ mdm-platform/
 │       ├── todos.js       # 跨部门待办
 │       ├── versions.js    # 版本历史查询
 │       ├── import.js      # Excel 导入
-│       └── export.js      # Excel 导出 (台账/黄金源矩阵/冲突)
+│       ├── export.js      # Excel 导出 (台账/黄金源矩阵/冲突)
+│       ├── orgUnit.js     # MDM 组织单元 CRUD
+│       ├── position.js    # MDM 岗位 CRUD
+│       ├── person.js      # MDM 人员 CRUD + 任岗
+│       ├── productFamily.js # MDM 产品族 CRUD
+│       ├── product.js     # MDM 产品 CRUD + 生命周期
+│       ├── classNode.js   # MDM 分类树 + 实体分类
+│       ├── attribute.js   # MDM 属性定义 + 属性值
+│       ├── external.js    # MDM 外部系统 + 标识映射
+│       ├── integration.js # MDM 集成 API
+│       └── quality.js     # MDM 数据质量仪表盘
 ├── public/
 │   └── index.html         # 单文件前端 UI (Tab 导航 + ECharts 仪表盘)
 ├── scripts/               # init-db, smoke-test, 各路由测试脚本
@@ -114,33 +125,49 @@ mappings → todos (跨部门待办)
 - SQLite 是本地文件数据库，不适用于多进程并发部署
 - 根目录 `package.json` 是旧的占位文件；实际项目级依赖在 `mdm-platform/package.json`
 
-## MDM 拓展模块 (2026-05-15)
+## MDM v2 领域数据模型 (2026-05-18)
 
-基于信息化系统应用与集成说明会 V1.0 五阶段要求新增：
+基于首期 MDM 数据模型设计完全重建，12 张领域专用表替代旧通用 EAV 模式。
 
 ### 新增路由
 | 路由前缀 | 模块文件 | 功能 |
 |----------|----------|------|
-| `/api/master-data` | `masterData.js` | 主数据 CRUD、自动编码引擎、Excel 批量导入、去重合并 |
-| `/api/master-data` | `masterDataLifecycle.js` | 生命周期状态机 (7 状态)、多级会签审批、变更管理 |
-| `/api/integration` | `integration.js` | 外部系统同步 API、增量同步状态、旧编码映射、一致性校验回调 |
-| `/api/quality` | `quality.js` | 数据质量 KPI 仪表盘 (完整率/唯一率/及时率/一致率)、黄金源确认进度 |
-
-### 新增中间件
-- `integrationAuth.js` — `apiKeyAuth` (API Key 验证) + `requireIntegrationPermission` (读/写权限)
-- `auth.js` 新增 `requireDataPermission(categoryCode, action)` — 数据级 RBAC
-- `access.js` 新增 `masterDataVisibility(alias, req)` — 行级可见性过滤
+| `/api/org-units` | `orgUnit.js` | 组织单元 CRUD、激活、树形层级 |
+| `/api/positions` | `position.js` | 岗位 CRUD、编码基于归属组织 |
+| `/api/persons` | `person.js` | 人员 CRUD、任岗关系管理 |
+| `/api/product-families` | `productFamily.js` | 产品族/型号根 CRUD |
+| `/api/products` | `product.js` | 版本化产品 CRUD、发布/废止生命周期 |
+| `/api/class-nodes` | `classNode.js` | 分类树 CRUD、实体分类关联 |
+| `/api/attributes` | `attribute.js` | 属性定义 + 强类型属性值批量 upsert |
+| `/api/external` | `external.js` | 外部系统注册 + 标识映射 (external_key 权限隔离) |
+| `/api/integration` | `integration.js` | 集成 API (API Key 鉴权)、外部标识同步 |
+| `/api/quality` | `quality.js` | 数据质量仪表盘 (组织/人员/产品统计) |
 
 ### 新增数据表 (12 张)
-**模块 A (主数据注册中心):** master_data_categories, master_data_attributes, master_data_code_rules, master_data_items, master_data_import_batches, master_data_import_log
-**模块 B (生命周期):** master_data_change_requests, master_data_change_approvals, master_data_status_log
-**模块 D (集成):** integration_credentials, integration_sync_log, old_new_code_mapping
+**组织/人员域:** org_unit, position, person, person_position_assignment
+**产品域:** product_family, product, class_node, entity_class_membership
+**扩展:** attribute_def, attribute_value
+**集成:** external_system, external_identity
+**辅助:** code_sequences (编码流水)
+
+### 编码引擎
+`server/codeEngine.js` — 按 entity_type + scope_key 分段流水生成编码：
+- OrgUnit: `OU-{type_code}-{mnemonic}-{seq}`
+- Position: `POS-{org_mnemonic}-{pos_mnemonic}-{seq}`
+- Person: `EMP-{seq}`
+- ProductFamily: `PF-{model_code}-{class_major}-{seq}`
+- Product: `PRD-{model_code}-{class_major}-{class_mid}-{class_minor}-{seq}`
+
+### 安全中间件
+- `auth.js` 新增 `stripInternalIds` — 非 admin 用户接口响应自动剥离内部 ID 字段
+- `auth.js` 新增 `isAdmin()` 辅助函数
+- `external_identity.external_key` 仅 admin 和集成账号可见
 
 ### 新增前端 Tab
-主数据台账 (`submitter,owner,reviewer,admin`)、主数据审批 (`owner,reviewer,admin`)、数据质量 (`reviewer,admin`)
+组织架构、人员管理、产品主数据、数据质量
 
-### 新增冒烟测试
+### 冒烟测试
 ```bash
-node scripts/smoke-master-data.js   # 8 用例：CRUD、编码生成、去重检测
-node scripts/smoke-integration.js    # 7 用例：API Key 认证、同步、回调、权限隔离
+node scripts/smoke-master-data.js   # 13 用例：组织/人员/产品 CRUD、编码生成、生命周期
+node scripts/smoke-integration.js    # 7 用例：API Key 认证、外部标识同步、权限隔离
 ```

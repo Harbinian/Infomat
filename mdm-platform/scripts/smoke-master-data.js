@@ -1,5 +1,4 @@
 const http = require('http');
-
 const BASE = 'http://localhost:3000';
 const cookie = require('fs').readFileSync(process.env.TEMP + '/smoke-cookie.txt', 'utf8').trim();
 
@@ -26,51 +25,63 @@ function request(method, path, body) {
 
 async function main() {
   let pass = 0, fail = 0;
-
   function check(name, ok) { if (ok) { pass++; console.log(`  PASS ${name}`); } else { fail++; console.error(`  FAIL ${name}`); } }
 
-  // 1. GET categories
-  const cats = await request('GET', '/api/master-data/categories');
-  check('GET /categories returns array', Array.isArray(cats.body) && cats.body.length === 6);
+  // 1. Create org unit
+  const orgRes = await request('POST', '/api/org-units', { org_unit_name: '工程技术部', org_type: 'department', org_mnemonic: 'ENG' });
+  check('POST /org-units creates org', orgRes.status === 201 && orgRes.body.org_unit_code && orgRes.body.org_unit_code.startsWith('OU-DEPT-ENG'));
+  const orgCode = orgRes.body.org_unit_code;
 
-  // 2. configure code rule for category 1 (PART)
-  const ruleRes = await request('PUT', '/api/master-data/code-rules/1', {
-    prefix: 'CHX', total_length: 30, segment_defs: [{ type: 'category', length: 4, value: 'PART' }]
-  });
-  check('PUT /code-rules/1', ruleRes.body.success);
+  // 2. Activate org unit
+  const actRes = await request('POST', `/api/org-units/${encodeURIComponent(orgCode)}/activate`);
+  check('POST /org-units/:code/activate', actRes.body.success);
 
-  // 3. set attributes for category 1
-  const attrRes = await request('PUT', '/api/master-data/categories/1/attributes', {
-    attributes: [
-      { attr_name: 'drawing_no', attr_label: '图号', attr_type: '文本', required: 1 },
-      { attr_name: 'material', attr_label: '材料牌号', attr_type: '文本', required: 1 },
-      { attr_name: 'weight', attr_label: '重量(kg)', attr_type: '数字', required: 0 }
-    ]
-  });
-  check('PUT /categories/1/attributes', attrRes.body.success);
+  // 3. List org units
+  const listOrgRes = await request('GET', '/api/org-units?status=active');
+  check('GET /org-units lists orgs', Array.isArray(listOrgRes.body.rows) && listOrgRes.body.rows.length >= 1);
 
-  // 4. create an item (auto-generate code)
-  const createRes = await request('POST', '/api/master-data/items', {
-    category_id: 1, name: '机翼前缘肋', attributes: { drawing_no: 'CHX-001-001', material: 'TC4', weight: '2.3' }, maintain_dept_id: 1
-  });
-  check('POST /items creates with auto code', createRes.status === 201 && createRes.body.code && createRes.body.code.startsWith('CHX'));
+  // 4. Get org unit by code
+  const getOrgRes = await request('GET', `/api/org-units/${encodeURIComponent(orgCode)}`);
+  check('GET /org-units/:code', getOrgRes.status === 200 && getOrgRes.body.org_unit_name === '工程技术部');
 
-  // 5. get items list
-  const listRes = await request('GET', '/api/master-data/items?category_id=1');
-  check('GET /items returns rows', Array.isArray(listRes.body.rows) && listRes.body.rows.length >= 1);
+  // 5. Create person
+  const personRes = await request('POST', '/api/persons', { person_name: '张三', mobile: '13800138000', email: 'zhangsan@test.com' });
+  check('POST /persons creates person', personRes.status === 201 && personRes.body.employee_no && personRes.body.employee_no.startsWith('EMP-'));
+  const empNo = personRes.body.employee_no;
 
-  // 6. get single by code
-  const code = createRes.body.code;
-  const getRes = await request('GET', `/api/master-data/items/${code}`);
-  check('GET /items/:code returns attributes', getRes.body.attributes && getRes.body.attributes.drawing_no === 'CHX-001-001');
+  // 6. Activate person
+  const actPersonRes = await request('POST', `/api/persons/${encodeURIComponent(empNo)}/activate`);
+  check('POST /persons/:no/activate', actPersonRes.body.success);
 
-  // 7. update item
-  const updateRes = await request('PUT', `/api/master-data/items/${code}`, { name: '机翼前缘肋(改)', attributes: { drawing_no: 'CHX-001-001', material: 'TC4', weight: '2.5' } });
-  check('PUT /items/:code updates', updateRes.body.success);
+  // 7. Get person
+  const getPersonRes = await request('GET', `/api/persons/${encodeURIComponent(empNo)}`);
+  check('GET /persons/:no', getPersonRes.body.person_name === '张三');
 
-  // 8. duplicate check
-  const dupRes = await request('GET', '/api/master-data/duplicates/check');
-  check('GET /duplicates/check', Array.isArray(dupRes.body.duplicates));
+  // 8. Update person
+  const updRes = await request('PUT', `/api/persons/${encodeURIComponent(empNo)}`, { mobile: '13900139000' });
+  check('PUT /persons/:no updates', updRes.body.success);
+
+  // 9. Create product family
+  const pfRes = await request('POST', '/api/product-families', { model_name: '枭龙S19', model_code: 'S19', class_major: 'CF' });
+  check('POST /product-families creates', pfRes.status === 201 && pfRes.body.product_family_code && pfRes.body.product_family_code.startsWith('PF-S19-CF'));
+  const pfCode = pfRes.body.product_family_code;
+
+  // 10. Activate product family
+  const actPfRes = await request('POST', `/api/product-families/${encodeURIComponent(pfCode)}/activate`);
+  check('POST /product-families/:code/activate', actPfRes.body.success);
+
+  // 11. Create product
+  const prodRes = await request('POST', '/api/products', { product_family_id: 1, revision: 'A', class_mid: 'RFF', class_minor: 'PNL' });
+  check('POST /products creates', prodRes.status === 201 && prodRes.body.product_code && prodRes.body.product_code.startsWith('PRD-S19-CF-RFF-PNL'));
+  const prodCode = prodRes.body.product_code;
+
+  // 12. Release product
+  const relRes = await request('POST', `/api/products/${encodeURIComponent(prodCode)}/release`);
+  check('POST /products/:code/release', relRes.body.success);
+
+  // 13. Quality dashboard
+  const dashRes = await request('GET', '/api/quality/dashboard');
+  check('GET /quality/dashboard', dashRes.status === 200 && typeof dashRes.body.org_person === 'object');
 
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
