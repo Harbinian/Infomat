@@ -17,6 +17,7 @@
     "test:security": "node scripts/test-security-routes.js",
     "test:views": "node scripts/test-views-sankey-filters.js",
     "test:frontend": "node scripts/test-frontend-assets.js",
+    "test:rbac": "node scripts/smoke-rbac.js",
     "dev": "nodemon server/index.js"
   },
   "dependencies": {
