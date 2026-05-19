@@ -96,12 +96,143 @@ function requireDataPermission(categoryCode, action) {
   };
 }
 
+// ── RBAC: Permission Engine ──
+
+function getUserEffectivePermissions(userId) {
+  const db = require('./db');
+
+  // Collect all role IDs for user (direct assignments)
+  const directRoles = db.prepare(`
+    SELECT role_id FROM user_roles WHERE user_id=?
+  `).all(userId).map(r => r.role_id);
+
+  if (directRoles.length === 0) {
+    // Fallback: use users.role to find matching role_code for backward compat
+    const user = db.prepare('SELECT role FROM users WHERE id=?').get(userId);
+    if (user && user.role) {
+      const fallbackRole = db.prepare('SELECT role_id FROM roles WHERE role_code=?').get(user.role);
+      if (fallbackRole) directRoles.push(fallbackRole.role_id);
+    }
+  }
+
+  if (directRoles.length === 0) {
+    return { permSet: new Set(), fieldConstraints: {} };
+  }
+
+  // Recursively collect all ancestor role IDs
+  const allRoleIds = new Set();
+  function collectAncestors(roleId) {
+    if (allRoleIds.has(roleId)) return;
+    allRoleIds.add(roleId);
+    const parent = db.prepare('SELECT parent_role_id FROM roles WHERE role_id=?').get(roleId);
+    if (parent && parent.parent_role_id) collectAncestors(parent.parent_role_id);
+  }
+  directRoles.forEach(collectAncestors);
+
+  // Get all permissions for all roles, with deny overriding allow
+  const placeholders = Array.from(allRoleIds).map(() => '?').join(',');
+  const rows = db.prepare(`
+    SELECT p.perm_code, p.field_constraints, rp.effect
+    FROM role_permissions rp
+    JOIN permissions p ON rp.perm_id = p.perm_id
+    WHERE rp.role_id IN (${placeholders})
+    ORDER BY rp.effect ASC
+  `).all(...Array.from(allRoleIds));
+
+  const permSet = new Set();
+  const fieldConstraints = {};
+
+  for (const row of rows) {
+    if (row.effect === 'deny') {
+      permSet.delete(row.perm_code);
+    } else {
+      permSet.add(row.perm_code);
+      if (row.field_constraints) {
+        try {
+          const fc = JSON.parse(row.field_constraints);
+          fieldConstraints[row.perm_code] = fc;
+        } catch (e) { /* ignore invalid JSON */ }
+      }
+    }
+  }
+
+  return { permSet, fieldConstraints };
+}
+
+function requirePermission(permCode) {
+  return (req, res, next) => {
+    if (!req.session || !req.session.userId) return res.status(401).json({ error: '未登录' });
+    const { permSet, fieldConstraints } = getUserEffectivePermissions(req.session.userId);
+    if (!permSet.has(permCode) && !permSet.has('*:*')) {
+      return res.status(403).json({ error: '权限不足' });
+    }
+    req.effectivePermissions = permSet;
+    req.effectiveFieldConstraints = fieldConstraints;
+    next();
+  };
+}
+
+function applyFieldConstraints(resourceType) {
+  return (req, res, next) => {
+    if (!req.effectivePermissions) return next();
+
+    const constraints = req.effectiveFieldConstraints || {};
+
+    const originalJson = res.json.bind(res);
+    res.json = function (body) {
+      function applyConstraints(obj, resourceConstraints) {
+        if (!obj || typeof obj !== 'object') return obj;
+        if (!resourceConstraints) return obj;
+
+        if (Array.isArray(obj)) return obj.map(item => applyConstraints(item, resourceConstraints));
+
+        const exclude = new Set(resourceConstraints.exclude || []);
+        const readonly = new Set(resourceConstraints.readonly || []);
+        const cleaned = {};
+        const internalPrefixes = ['org_unit_id', 'position_id', 'person_id', 'product_family_id',
+          'product_id', 'class_node_id', 'attribute_def_id', 'attribute_value_id',
+          'external_identity_id', 'membership_id', 'assignment_id', 'password_hash'];
+
+        for (const [key, value] of Object.entries(obj)) {
+          if (internalPrefixes.some(p => key === p || key.endsWith('_id') && internalPrefixes.includes(key))) {
+            cleaned[key] = value;
+            continue;
+          }
+          if (exclude.has(key)) continue;
+          cleaned[key] = applyConstraints(value, resourceConstraints);
+        }
+        return cleaned;
+      }
+
+      // Find constraints that match this resourceType
+      const relevantConstraints = {};
+      for (const [permCode, fc] of Object.entries(constraints)) {
+        if (permCode === '*:*' || permCode.startsWith(resourceType + ':')) {
+          if (fc.exclude) {
+            relevantConstraints.exclude = [...(relevantConstraints.exclude || []), ...fc.exclude];
+          }
+          if (fc.readonly) {
+            relevantConstraints.readonly = [...(relevantConstraints.readonly || []), ...fc.readonly];
+          }
+        }
+      }
+
+      if (Object.keys(relevantConstraints).length === 0) return originalJson(body);
+      return originalJson(applyConstraints(body, relevantConstraints));
+    };
+    next();
+  };
+}
+
 module.exports = {
   hashPassword,
   verifyPassword,
   requireAuth,
   requireRole,
   requireDataPermission,
+  requirePermission,
+  applyFieldConstraints,
+  getUserEffectivePermissions,
   isAdmin,
   stripInternalIds,
   send401,
