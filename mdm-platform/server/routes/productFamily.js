@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const { requireAuth, requireRole, stripInternalIds } = require('../auth');
+const { requireAuth, requirePermission, applyFieldConstraints } = require('../auth');
 const { generateCode } = require('../codeEngine');
 
 function handleDbError(res, error) {
@@ -12,7 +12,7 @@ function handleDbError(res, error) {
   return res.status(500).json({ error: '服务器错误' });
 }
 
-router.get('/', requireAuth, stripInternalIds, (req, res) => {
+router.get('/', requireAuth, applyFieldConstraints('product_family'), (req, res) => {
   try {
     const { status, search, page = 1, limit = 50 } = req.query;
     let sql = `SELECT * FROM product_family WHERE 1=1`;
@@ -26,7 +26,7 @@ router.get('/', requireAuth, stripInternalIds, (req, res) => {
   } catch (e) { handleDbError(res, e); }
 });
 
-router.get('/:code', requireAuth, stripInternalIds, (req, res) => {
+router.get('/:code', requireAuth, applyFieldConstraints('product_family'), (req, res) => {
   try {
     const row = db.prepare('SELECT * FROM product_family WHERE product_family_code=?').get(req.params.code);
     if (!row) return res.status(404).json({ error: '产品族不存在' });
@@ -50,7 +50,7 @@ router.post('/', requireAuth, (req, res) => {
   } catch (e) { handleDbError(res, e); }
 });
 
-router.post('/:code/activate', requireAuth, requireRole('admin', 'owner'), (req, res) => {
+router.post('/:code/activate', requireAuth, requirePermission('product_family:update'), (req, res) => {
   try {
     const r = db.prepare("UPDATE product_family SET status='active', updated_by=?, updated_at=CURRENT_TIMESTAMP WHERE product_family_code=? AND status='draft'")
       .run(req.session.userId, req.params.code);

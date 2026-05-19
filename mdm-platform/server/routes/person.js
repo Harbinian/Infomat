@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const { requireAuth, requireRole, stripInternalIds } = require('../auth');
+const { requireAuth, requirePermission, applyFieldConstraints } = require('../auth');
 const { generateCode } = require('../codeEngine');
 
 function handleDbError(res, error) {
@@ -12,7 +12,7 @@ function handleDbError(res, error) {
   return res.status(500).json({ error: '服务器错误' });
 }
 
-router.get('/', requireAuth, stripInternalIds, (req, res) => {
+router.get('/', requireAuth, applyFieldConstraints('person'), (req, res) => {
   try {
     const { employment_status, status, search, page = 1, limit = 50 } = req.query;
     let sql = `SELECT * FROM person WHERE 1=1`;
@@ -27,7 +27,7 @@ router.get('/', requireAuth, stripInternalIds, (req, res) => {
   } catch (e) { handleDbError(res, e); }
 });
 
-router.get('/:employeeNo', requireAuth, stripInternalIds, (req, res) => {
+router.get('/:employeeNo', requireAuth, applyFieldConstraints('person'), (req, res) => {
   try {
     const row = db.prepare('SELECT * FROM person WHERE employee_no=?').get(req.params.employeeNo);
     if (!row) return res.status(404).json({ error: '人员不存在' });
@@ -56,7 +56,7 @@ router.post('/', requireAuth, (req, res) => {
   } catch (e) { handleDbError(res, e); }
 });
 
-router.post('/:employeeNo/activate', requireAuth, requireRole('admin', 'owner'), (req, res) => {
+router.post('/:employeeNo/activate', requireAuth, requirePermission('person:update'), (req, res) => {
   try {
     const r = db.prepare("UPDATE person SET status='active', effective_from=CURRENT_DATE, updated_by=?, updated_at=CURRENT_TIMESTAMP WHERE employee_no=? AND status='draft'")
       .run(req.session.userId, req.params.employeeNo);
@@ -84,7 +84,7 @@ router.put('/:employeeNo', requireAuth, (req, res) => {
   } catch (e) { handleDbError(res, e); }
 });
 
-router.get('/:employeeNo/assignments', requireAuth, stripInternalIds, (req, res) => {
+router.get('/:employeeNo/assignments', requireAuth, applyFieldConstraints('person'), (req, res) => {
   try {
     const person = db.prepare('SELECT person_id FROM person WHERE employee_no=?').get(req.params.employeeNo);
     if (!person) return res.status(404).json({ error: '人员不存在' });

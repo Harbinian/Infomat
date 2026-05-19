@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const { hashPassword, verifyPassword, requireAuth, requireRole, requirePermission } = require('../auth');
+const { hashPassword, verifyPassword, requireAuth, requirePermission } = require('../auth');
 
 function handleDbError(res, error) {
   if (error && (error.code === 'SQLITE_CONSTRAINT_UNIQUE' || String(error.message).includes('UNIQUE constraint failed'))) {
@@ -27,7 +27,7 @@ router.get('/departments', requireAuth, (req, res) => {
   res.json(depts);
 });
 
-router.post('/departments', requireRole('admin'), (req, res) => {
+router.post('/departments', requirePermission('admin:access'), (req, res) => {
   return runDbAction(res, () => {
     const { 
       name, code, parent_id, department_type, manager_user_id, data_owner_user_id, 
@@ -62,7 +62,7 @@ router.post('/departments', requireRole('admin'), (req, res) => {
   });
 });
 
-router.put('/departments/:id', requireRole('admin'), (req, res) => {
+router.put('/departments/:id', requirePermission('admin:access'), (req, res) => {
   return runDbAction(res, () => {
     const { 
       name, code, parent_id, sort_order, department_type, manager_user_id, data_owner_user_id, 
@@ -94,7 +94,7 @@ router.put('/departments/:id', requireRole('admin'), (req, res) => {
   });
 });
 
-router.delete('/departments/:id', requireRole('admin'), (req, res) => {
+router.delete('/departments/:id', requirePermission('admin:access'), (req, res) => {
   return runDbAction(res, () => {
     db.prepare('DELETE FROM departments WHERE id=?').run(req.params.id);
     res.json({ success: true });
@@ -111,7 +111,7 @@ router.get('/users', requireAuth, (req, res) => {
   res.json(users);
 });
 
-router.post('/users', requireRole('admin'), (req, res) => {
+router.post('/users', requirePermission('admin:access'), (req, res) => {
   return runDbAction(res, () => {
     const { name, employee_no, department_id, post, role, password } = req.body;
     const hash = hashPassword(password || 'init1234');
@@ -121,7 +121,7 @@ router.post('/users', requireRole('admin'), (req, res) => {
   });
 });
 
-router.put('/users/:id', requireRole('admin'), (req, res) => {
+router.put('/users/:id', requirePermission('admin:access'), (req, res) => {
   return runDbAction(res, () => {
     const { name, department_id, post, role } = req.body;
     const stmt = db.prepare('UPDATE users SET name=?, department_id=?, post=?, role=? WHERE id=?');
@@ -130,7 +130,7 @@ router.put('/users/:id', requireRole('admin'), (req, res) => {
   });
 });
 
-router.post('/users/:id/password', requireRole('admin'), (req, res) => {
+router.post('/users/:id/password', requirePermission('admin:access'), (req, res) => {
   return runDbAction(res, () => {
     const { password } = req.body;
     if (!password) return res.status(400).json({ error: '缺少密码' });

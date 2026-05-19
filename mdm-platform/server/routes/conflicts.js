@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const { requireAuth, requireRole } = require('../auth');
+const { requireAuth, requirePermission } = require('../auth');
 
 const FIELD_ENTRY_CONFLICT_FIELDS = ['note', 'field_type', 'sync_mode', 'consume_systems'];
 
@@ -355,7 +355,7 @@ router.post('/:id/archive', requireAuth, (req, res) => {
 });
 
 // Keep existing detect endpoint
-router.post('/detect', requireRole('reviewer', 'admin'), (req, res) => {
+router.post('/detect', requirePermission('conflict:manage'), (req, res) => {
   return runDbAction(res, () => {
     const { field_name_cn } = req.query;
 
@@ -443,7 +443,7 @@ router.post('/detect', requireRole('reviewer', 'admin'), (req, res) => {
 });
 
 // Keep existing resolve endpoint
-router.post('/:id/resolve', requireRole('reviewer', 'admin'), (req, res) => {
+router.post('/:id/resolve', requirePermission('conflict:manage'), (req, res) => {
   return runDbAction(res, () => {
     const { resolution, adopted_value } = req.body;
     const conflict = db.prepare('SELECT * FROM field_conflicts WHERE id=?').get(req.params.id);
@@ -500,7 +500,7 @@ router.post('/:id/resolve', requireRole('reviewer', 'admin'), (req, res) => {
 });
 
 // Keep existing term resolve endpoint
-router.post('/term/:id/resolve', requireRole('reviewer', 'admin'), (req, res) => {
+router.post('/term/:id/resolve', requirePermission('conflict:manage'), (req, res) => {
   return runDbAction(res, () => {
     const { resolution } = req.body;
     db.prepare("UPDATE term_conflicts SET status='resolved', resolution=?, resolved_by=?, resolved_at=datetime('now') WHERE id=?").run(
