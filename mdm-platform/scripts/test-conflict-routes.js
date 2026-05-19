@@ -63,6 +63,23 @@ function seedData() {
     hashPassword('pass1234')
   ).lastInsertRowid;
 
+  // Department owners for auto-assignment
+  const ownerA = db.prepare('INSERT INTO users (name, employee_no, department_id, post, role, password_hash) VALUES (?, ?, ?, ?, ?, ?)').run(
+    '销售数据Owner', 'SALEOW01', deptA, '数据Owner', 'owner', hashPassword('pass1234')
+  ).lastInsertRowid;
+  const ownerB = db.prepare('INSERT INTO users (name, employee_no, department_id, post, role, password_hash) VALUES (?, ?, ?, ?, ?, ?)').run(
+    '财务数据Owner', 'FINOW01', deptB, '数据Owner', 'owner', hashPassword('pass1234')
+  ).lastInsertRowid;
+
+  // Set data_owner for departments
+  db.prepare('UPDATE departments SET data_owner_user_id = ? WHERE id = ?').run(ownerA, deptA);
+  db.prepare('UPDATE departments SET data_owner_user_id = ? WHERE id = ?').run(ownerB, deptB);
+
+  // Reviewer user
+  const reviewer = db.prepare('INSERT INTO users (name, employee_no, department_id, post, role, password_hash) VALUES (?, ?, ?, ?, ?, ?)').run(
+    '审核人', 'REV001', deptA, '质量审核', 'reviewer', hashPassword('pass1234')
+  ).lastInsertRowid;
+
   const capability = db.prepare('INSERT INTO capabilities (name, level, owner_dept_id) VALUES (?, ?, ?)').run('主数据管理', 'L1', deptA).lastInsertRowid;
   const processA = db.prepare('INSERT INTO processes (name, capability_id, owner_dept_id) VALUES (?, ?, ?)').run('客户主数据维护', capability, deptA).lastInsertRowid;
   const processB = db.prepare('INSERT INTO processes (name, capability_id, owner_dept_id) VALUES (?, ?, ?)').run('客户主数据复核', capability, deptB).lastInsertRowid;
@@ -93,11 +110,11 @@ function seedData() {
   db.prepare('INSERT INTO field_identities (field_entry_id, authoritative_system, maintain_dept_id, confirmed) VALUES (?, ?, ?, 1)').run(sameValueFieldB, 'CRM', deptB);
 
   const termConflict = db.prepare(`
-    INSERT INTO term_conflicts (term, dept_a, dept_a_meaning, dept_b, dept_b_meaning, severity)
-    VALUES ('客户', ?, '销售客户', ?, '开票客户', 'warn')
+    INSERT INTO term_conflicts (term, dept_a, dept_a_meaning, dept_b, dept_b_meaning, severity, status)
+    VALUES ('客户', ?, '销售客户', ?, '开票客户', 'warn', 'silenced')
   `).run(deptA, deptB).lastInsertRowid;
 
-  return { deptA, deptB, admin, userA, userB, mappingA, fieldA, fieldB, termConflict };
+  return { deptA, deptB, admin, userA, userB, ownerA, ownerB, reviewer, mappingA, mappingB, fieldA, fieldB, termConflict };
 }
 
 async function waitForServer() {
@@ -201,16 +218,74 @@ async function main() {
     let fieldConflicts = await request('/api/conflicts?type=field', {}, cookie);
     assert.strictEqual(fieldConflicts.body.length, 0);
 
+    // Verify warn-level conflicts (note difference on same field) are silenced
+    const warnFieldA = db.prepare(`
+      INSERT INTO field_entries (mapping_id, field_name_cn, field_name_en, data_object, field_type, consume_systems, sync_mode, note, submitted_by)
+      VALUES (?, '客户等级', 'customer_level', '客户', '文本', ?, '实时', '销售备注A', ?)
+    `).run(seed.mappingA, JSON.stringify(['CRM']), seed.userA).lastInsertRowid;
+    const warnFieldB = db.prepare(`
+      INSERT INTO field_entries (mapping_id, field_name_cn, field_name_en, data_object, field_type, consume_systems, sync_mode, note, submitted_by)
+      VALUES (?, '客户等级', 'customer_level', '客户', '文本', ?, '实时', '销售备注B', ?)
+    `).run(seed.mappingB, JSON.stringify(['CRM']), seed.userB).lastInsertRowid;
+
+    const detectWarn = await request('/api/conflicts/detect?field_name_cn=%E5%AE%A2%E6%88%B7%E7%AD%89%E7%BA%A7', { method: 'POST' }, cookie);
+    assert.strictEqual(detectWarn.res.status, 200);
+
+    // warn should be auto-silenced; admin sees everything, but status should be 'silenced'
+    const allConflicts2 = await request('/api/conflicts', {}, cookie);
+    const warnConflicts = allConflicts2.body.filter(function(c) { return c.conflict_field === 'note'; });
+    assert.ok(warnConflicts.length > 0, 'warn conflict should exist');
+    assert.strictEqual(warnConflicts[0].status, 'silenced', 'warn conflict should be auto-silenced');
+    assert.strictEqual(warnConflicts[0].severity, 'warn', 'should be warn severity');
+
+    // Also visible when explicitly filtering by status=silenced
+    const silencedConflicts = await request('/api/conflicts?status=silenced', {}, cookie);
+    const silencedWarn = silencedConflicts.body.filter(function(c) { return c.conflict_field === 'note'; });
+    assert.ok(silencedWarn.length > 0, 'warn conflicts should appear with status=silenced filter');
+
     const detect = await request('/api/conflicts/detect?field_name_cn=%E5%AE%A2%E6%88%B7%E7%BC%96%E7%A0%81', { method: 'POST' }, cookie);
     assert.strictEqual(detect.res.status, 200);
     assert.strictEqual(detect.body.detected, 1);
 
-    fieldConflicts = await request('/api/conflicts?type=field&severity=error&status=pending', {}, cookie);
+    fieldConflicts = await request('/api/conflicts?type=field&severity=error&status=coordinating', {}, cookie);
     assert.strictEqual(fieldConflicts.res.status, 200);
     assert.strictEqual(fieldConflicts.body.length, 1);
     assert.strictEqual(fieldConflicts.body[0].conflict_field, 'authoritative_system');
     assert.strictEqual(fieldConflicts.body[0].value_a, 'CRM');
     assert.strictEqual(fieldConflicts.body[0].value_b, 'ERP');
+
+    // Verify auto dual-assign
+    const errorConflict = fieldConflicts.body[0];
+    assert.strictEqual(errorConflict.status, 'coordinating', 'error conflict should be coordinating');
+    assert.ok(errorConflict.deadline, 'should have a deadline set');
+
+    const assignments = db.prepare('SELECT * FROM conflict_assignments WHERE conflict_id = ? AND conflict_type = ?').all(errorConflict.id, 'field');
+    assert.strictEqual(assignments.length, 2, 'should have 2 auto-assignments (one per dept)');
+    assert.ok(assignments.some(function(a) { return a.assigned_by === null; }), 'should be system-assigned');
+
+    const assignedTodos = db.prepare("SELECT * FROM todos WHERE type = 'conflict_resolution' AND content LIKE '%冲突协调%'").all();
+    assert.strictEqual(assignedTodos.length, 2, 'should create 2 todos');
+
+    // Test manual escalate - login as reviewer (errorConflict is still coordinating)
+    const revLogin = await request('/api/org/login', {
+      method: 'POST',
+      body: JSON.stringify({ employee_no: 'REV001', password: 'pass1234' })
+    });
+    assert.strictEqual(revLogin.res.status, 200);
+    const revCookie = revLogin.res.headers.get('set-cookie').split(';')[0];
+
+    const escRes = await request('/api/conflicts/' + errorConflict.id + '/escalate?type=field', { method: 'POST' }, revCookie);
+    const escConflict = db.prepare('SELECT * FROM field_conflicts WHERE id = ?').get(errorConflict.id);
+    assert.strictEqual(escConflict.status, 'escalated');
+    assert.strictEqual(escConflict.escalated, 1);
+
+    // Test stats endpoint
+    const stats = await request('/api/conflicts/stats', {}, cookie);
+    assert.strictEqual(stats.res.status, 200);
+    assert.ok(typeof stats.body.coordinating === 'number');
+    assert.ok(typeof stats.body.silenced === 'number');
+    assert.ok(typeof stats.body.escalated === 'number');
+    assert.ok(typeof stats.body.resolvedThisMonth === 'number');
 
     const resolve = await request(`/api/conflicts/${fieldConflicts.body[0].id}/resolve`, {
       method: 'POST',

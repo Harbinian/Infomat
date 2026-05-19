@@ -295,6 +295,7 @@
           <div class="metric"><div class="num" id="metricTodos">0</div><div class="lbl">待处理待办</div></div>
           <div class="metric"><div class="num" id="metricConflicts">0</div><div class="lbl">未解决冲突</div></div>
         </div>
+        <div id="conflictOverview" style="margin-top: 20px; padding: 16px; background: var(--surface); border-radius: 8px; border: 1px solid var(--border);"></div>
         <div id="dashboardActions" style="margin-top: 20px;">
           <a class="btn secondary" href="template.xlsx" download style="display:none;">下载模板</a>
           <a id="exportLink" href="/api/export/excel" style="display:none;">导出台账</a>
@@ -393,12 +394,14 @@
       <section class="panel" id="conflicts">
         <div class="toolbar"><h2>冲突管理</h2>
           <div class="toolbar-right">
-            <select id="conflictSeverity" style="width: 120px; height: 32px; padding: 0 12px;"><option value="">全部严重度</option><option value="blocking">阻断</option><option value="error">严重</option><option value="high">高</option><option value="medium">中</option><option value="low">低</option><option value="warn">警告</option></select>
-            <select id="conflictStatus" style="width: 120px; height: 32px; padding: 0 12px;"><option value="">全部状态</option><option value="pending">待处理</option><option value="coordinating">协调中</option><option value="resolved">已解决</option><option value="archived">已归档</option></select>
             <button class="btn secondary" id="refreshConflictsBtn">刷新</button>
           </div>
         </div>
-        <div id="conflictRows"></div>
+        <div class="tabs" style="margin-bottom: 16px; border-bottom: 1px solid var(--border);">
+          <button class="tab on" data-ctab="active">待协调</button>
+          <button class="tab" data-ctab="silenced" id="silencedTabLink" style="display:none">静默归档</button>
+        </div>
+        <div id="conflictListContainer"></div>
       </section>
 
       <!-- Business Map (Sankey) -->
@@ -559,6 +562,13 @@
       const map = { draft:'草稿', submitted:'已提交', dept_reviewed:'部门内审', cross_confirmed:'跨部门确认', fields_confirmed:'字段确认', final_reviewed:'终审', published:'已发布', pending:'待处理', done:'已完成', resolved:'已解决', rejected:'已驳回', approved:'已通过', blocked:'阻断', coordinating:'协调中', archived:'已归档' };
       const cls = /published|approved|done|resolved/.test(status) ? 'green' : /blocked|rejected|error/.test(status) ? 'red' : /pending|submitted|coordinating/.test(status) ? 'amber' : '';
       return '<span class="tag ' + cls + '">' + safeText(map[status] || status) + '</span>';
+    }
+
+    function severityTag(sev) {
+      var map = { blocking: '阻断', error: '严重', high: '高', medium: '中', low: '低', warn: '警告' };
+      var label = map[sev] || sev;
+      var cls = (sev === 'blocking' || sev === 'error') ? 'red' : (sev === 'high') ? 'orange' : (sev === 'medium') ? 'blue' : '';
+      return '<span class="tag ' + cls + '">' + label + '</span>';
     }
 
     function fillSelect(select, rows, labelKey = 'name') {
@@ -966,77 +976,84 @@
     }
 
     // ===== Conflicts =====
+    var conflictTab = 'active'; // 'active' | 'silenced'
+
     async function loadConflicts() {
-      var severity = ($('conflictSeverity') && $('conflictSeverity').value) || '';
-      var status = ($('conflictStatus') && $('conflictStatus').value) || '';
-      var query = new URLSearchParams();
-      if (severity) query.set('severity', severity);
-      if (status) query.set('status', status);
-      state.conflicts = await api('/api/conflicts?' + query.toString());
+      // Load stats to update tab labels
+      try {
+        state.conflictStats = await api('/api/conflicts/stats');
+      } catch (e) {
+        state.conflictStats = { coordinating: 0, escalated: 0, silenced: 0, resolved: 0, resolvedThisMonth: 0 };
+      }
+
+      // Show/hide silenced tab for admins
+      var slink = $('silencedTabLink');
+      if (slink) slink.style.display = (state.user && state.user.role === 'admin') ? '' : 'none';
+
+      if (conflictTab === 'silenced') {
+        var query = new URLSearchParams();
+        query.set('status', 'silenced');
+        state.conflicts = await api('/api/conflicts?' + query.toString());
+      } else {
+        state.conflicts = await api('/api/conflicts');
+      }
       renderConflictsList();
     }
 
     function renderConflictsList() {
-      var container = $('conflictRows');
+      var container = $('conflictListContainer');
       if (!container) return;
 
       if (state.conflicts.length === 0) {
-        container.innerHTML = '<div class="empty">暂无冲突</div>';
+        container.innerHTML = '<div class="empty">' + (conflictTab === 'silenced' ? '暂无静默冲突' : '暂无待协调冲突') + '</div>';
         return;
       }
 
-      // Group by severity
-      var severityOrder = ['blocking', 'error', 'high', 'medium', 'low', 'warn'];
-      var grouped = {};
-      severityOrder.forEach(function(s) { grouped[s] = []; });
-      state.conflicts.forEach(function(c) {
-        var sev = c.severity || 'low';
-        if (grouped[sev]) grouped[sev].push(c);
-        else grouped['low'].push(c);
-      });
-
-      var severityLabels = { blocking: '阻断', error: '严重', high: '高', medium: '中', low: '低', warn: '警告' };
-
-      var html = '';
-      for (var si = 0; si < severityOrder.length; si++) {
-        var sev = severityOrder[si];
-        var items = grouped[sev];
-        if (!items || items.length === 0) continue;
-        html += '<div class="severity-section"><h3 class="sev-header ' + sev + '">' + severityLabels[sev] + ' (' + items.length + ')</h3>';
-        html += '<div class="table-container"><table>' +
-          '<thead><tr><th>ID</th><th>类型</th><th>字段/术语</th><th>部门A</th><th>部门B</th><th>状态</th><th>操作</th></tr></thead>' +
-          '<tbody>' + items.map(function(row) {
-            var conflictType = row.conflict_type || 'field';
-            var rowId = Number(row.id);
-            return '<tr>' +
-              '<td>' + rowId + '</td>' +
-              '<td>' + (conflictType === 'term' ? '术语' : '字段') + '</td>' +
-              '<td>' + safeText(row.term || row.conflict_field) + '</td>' +
-              '<td>' + safeText(row.dept_a_name || row.dept_a) + '</td>' +
-              '<td>' + safeText(row.dept_b_name || row.dept_b) + '</td>' +
-              '<td>' + statusTag(row.status) + '</td>' +
-              '<td><button class="btn secondary" onclick="navigateTo(\'detail\',{tab:\'conflicts\',type:\'' + conflictType + '\',id:' + rowId + '})">查看</button></td>' +
-              '</tr>';
-          }).join('') + '</tbody>' +
-          '</table></div></div>';
-      }
+      var html = '<div class="table-container"><table>' +
+        '<thead><tr><th>ID</th><th>类型</th><th>冲突内容</th><th>部门A</th><th>部门B</th><th>严重度</th><th>状态</th><th>截止日期</th><th>操作</th></tr></thead>' +
+        '<tbody>' + state.conflicts.map(function(row) {
+          var conflictType = row.conflict_type || 'field';
+          var rowId = Number(row.id);
+          var statusLabel = { pending: '待处理', silenced: '已静默', coordinating: '协调中', escalated: '已升级', resolved: '已解决', rejected: '已驳回', archived: '已归档' };
+          return '<tr>' +
+            '<td>' + rowId + '</td>' +
+            '<td>' + (conflictType === 'term' ? '术语' : '字段') + '</td>' +
+            '<td>' + safeText(row.term || row.conflict_field) + '</td>' +
+            '<td>' + safeText(row.dept_a_name || row.dept_a) + '</td>' +
+            '<td>' + safeText(row.dept_b_name || row.dept_b) + '</td>' +
+            '<td>' + severityTag(row.severity) + '</td>' +
+            '<td>' + (statusLabel[row.status] || row.status) + '</td>' +
+            '<td>' + (row.deadline ? safeText(row.deadline) : '-') + '</td>' +
+            '<td><button class="btn secondary" onclick="navigateTo(\'detail\',{tab:\'conflicts\',type:\'' + conflictType + '\',id:' + rowId + '})">查看</button></td>' +
+            '</tr>';
+        }).join('') + '</tbody>' +
+        '</table></div>';
 
       container.innerHTML = html;
     }
 
-    async function resolveConflict(type, id) {
-      var path = type === 'term' ? '/api/conflicts/term/' + id + '/resolve' : '/api/conflicts/' + id + '/resolve';
-      await api(path, { method:'POST', body:JSON.stringify({ resolution: '已确认统一口径', adopted_value: 'MDM' }) });
-      await loadConflicts();
-    }
-
     // ===== Dashboard =====
-    function renderDashboard() {
+    async function renderDashboard() {
+      // Preload conflict stats for overview card
+      try { state.conflictStats = await api('/api/conflicts/stats'); } catch (e) {}
       var pendingTodos = state.todos.filter(function(row) { return row.status === 'pending'; }).length;
       var pendingConflicts = state.conflicts.filter(function(row) { return row.status === 'pending' || row.status === 'coordinating'; }).length;
       $('metricMappings').textContent = state.mappings.length;
       $('metricTodos').textContent = pendingTodos;
       $('metricConflicts').textContent = pendingConflicts;
+
+      // Conflict overview card
+      var conflictCard = $('conflictOverview');
+      if (conflictCard && state.conflictStats) {
+        var stats = state.conflictStats;
+        conflictCard.innerHTML =
+          '<h3 style="margin-bottom: 12px; font-size: 14px; font-weight: 600;">冲突概览</h3>' +
+          '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 13px;">' +
+            '<div>待协调：<strong>' + (stats.coordinating || 0) + '</strong> 条（已升级：<strong style="color: var(--error);">' + (stats.escalated || 0) + '</strong>）</div>' +
+            '<div>静默：<strong>' + (stats.silenced || 0) + '</strong> 条</div>' +
+            '<div>本月已解决：<strong style="color: var(--success);">' + (stats.resolvedThisMonth || 0) + '</strong> 条</div>' +
+          '</div>';
+      }
 
       Promise.all(state.mappings.map(function(row) { return api('/api/field-entries/mapping/' + row.id).catch(function() { return []; }); })).then(function(groups) {
         $('metricFields').textContent = groups.flat().length;
@@ -1391,8 +1408,17 @@
     if ($('refreshTermsBtn')) $('refreshTermsBtn').onclick = loadTerms;
     if ($('termStatus')) $('termStatus').onchange = loadTerms;
     if ($('refreshConflictsBtn')) $('refreshConflictsBtn').onclick = loadConflicts;
-    if ($('conflictSeverity')) $('conflictSeverity').onchange = loadConflicts;
-    if ($('conflictStatus')) $('conflictStatus').onchange = loadConflicts;
+    // Conflict sub-tab switching
+    var conflictTabLinks = document.querySelectorAll('#conflicts [data-ctab]');
+    conflictTabLinks.forEach(function(link) {
+      link.addEventListener('click', function() {
+        conflictTabLinks.forEach(function(l) { l.classList.remove('on'); });
+        link.classList.add('on');
+        conflictTab = link.dataset.ctab;
+        loadConflicts();
+      });
+    });
+
     $('modalClose').onclick = function() { $('opinionModal').classList.remove('on'); };
     $('modalApprove').onclick = function() { review('approve'); };
     $('modalReject').onclick = function() { review('reject'); };
@@ -1593,110 +1619,160 @@
     // ===== Phase 5: Conflict Detail =====
     async function renderConflictDetail(conflictId, conflictType, sourceTab) {
       try {
-        const detail = await api(`/api/conflicts/${conflictId}?type=${conflictType}`);
+        const detail = await api('/api/conflicts/' + conflictId + '?type=' + conflictType);
         state.activeConflict = detail;
         setBreadcrumb([
-          { label: '冲突管理', onclick: `navigateTo('list',{tab:'conflicts'})` },
-          { label: `冲突 #${conflictId}` },
+          { label: '冲突管理', onclick: 'navigateTo(\'list\',{tab:\'conflicts\'})' },
+          { label: '冲突 #' + conflictId },
         ]);
 
         const container = $('detailContent');
         const isReviewer = ['reviewer', 'admin'].includes(state.user?.role);
-        const isCoordinator = detail.currentAssignee?.assignee_user_id === state.user?.id;
+
+        // Check if current user is an assignee
+        const myAssignment = (detail.assignmentHistory || []).find(function(a) {
+          return a.assignee_user_id === state.user?.id;
+        });
+        const isAssignee = Boolean(myAssignment);
+
+        // Check if I already submitted
+        const mySubmission = (detail.coordinationHistory || []).find(function(h) {
+          return h.assignee_user_id === state.user?.id;
+        });
+        const iSubmitted = Boolean(mySubmission);
 
         // Side-by-side comparison
-        const comparisonHtml = conflictType === 'term' ? `
-          <div class="diff-grid">
-            <div class="diff-col"><div class="diff-header">部门 A: ${safeText(detail.dept_a_name || detail.dept_a)}</div>
-              <div class="diff-row">${safeText(detail.dept_a_meaning)}</div></div>
-            <div class="diff-col"><div class="diff-header">部门 B: ${safeText(detail.dept_b_name || detail.dept_b)}</div>
-              <div class="diff-row">${safeText(detail.dept_b_meaning)}</div></div>
-          </div>` : `
-          <div class="diff-grid">
-            <div class="diff-col"><div class="diff-header">字段值 A (${safeText(detail.dept_a_name)})</div>
-              <div class="diff-row">${safeText(detail.value_a)}</div></div>
-            <div class="diff-col"><div class="diff-header">字段值 B (${safeText(detail.dept_b_name)})</div>
-              <div class="diff-row">${safeText(detail.value_b)}</div></div>
-          </div>`;
+        const sideHtml = conflictType === 'term' ? buildTermComparison(detail) : buildFieldComparison(detail);
+
+        // Timeline
+        const timeline = buildConflictTimeline(detail, conflictType);
 
         // Action buttons
         let actionHtml = '';
-        if (isReviewer && detail.status === 'pending') {
-          actionHtml += `<button class="btn primary" id="assignOwnerBtn">指定责任人</button>`;
+        if (isAssignee && !iSubmitted && detail.status === 'coordinating') {
+          actionHtml += '<button class="btn primary" id="submitPositionBtn">提交立场</button>';
+        }
+        if (isReviewer && detail.bothSubmitted && detail.status === 'coordinating') {
+          actionHtml += '<button class="btn success" id="finalDecideBtn">终裁</button>';
         }
         if (isReviewer && detail.status === 'coordinating') {
-          actionHtml += `<button class="btn primary" id="assignOwnerBtn">改派责任人</button>`;
-          actionHtml += `<button class="btn success" id="finalDecideBtn">终裁</button>`;
-        }
-        if (isCoordinator && detail.status === 'coordinating') {
-          actionHtml += `<button class="btn primary" id="submitCoordinationBtn">提交协调结果</button>`;
+          actionHtml += '<button class="btn secondary" id="escalateNowBtn">提前升级</button>';
         }
         if (isReviewer && detail.status === 'resolved') {
-          actionHtml += `<button class="btn danger" id="reopenBtn">重开</button>`;
+          actionHtml += '<button class="btn danger" id="reopenBtn">重开</button>';
         }
         if (state.user?.role === 'admin' && detail.status === 'resolved') {
-          actionHtml += `<button class="btn secondary" id="archiveBtn">归档</button>`;
+          actionHtml += '<button class="btn secondary" id="archiveBtn">归档</button>';
         }
 
-        container.innerHTML = `
-          <div style="margin-bottom: 24px;">
-            <h2 style="margin-bottom: 8px;">${conflictType === 'term' ? '术语冲突' : '字段冲突'} #${conflictId}</h2>
-            <div class="detail-meta">
-              <span>严重度：${statusTag(detail.severity)}</span>
-              <span>状态：${statusTag(detail.status)}</span>
-              ${detail.currentAssignee ? `<span>当前责任人：${safeText(detail.currentAssignee.assignee_name)}</span>` : ''}
-            </div>
-          </div>
+        var statusLabels = { pending: '待处理', silenced: '已静默', coordinating: '协调中', escalated: '已升级', resolved: '已解决', rejected: '已驳回', archived: '已归档' };
 
-          <h2>双部门定义对比</h2>
-          ${comparisonHtml}
+        container.innerHTML = '<div style="margin-bottom: 24px;">' +
+          '<h2 style="margin-bottom: 8px;">' + (conflictType === 'term' ? '术语冲突' : '字段冲突') + ' #' + conflictId + '</h2>' +
+          '<div class="detail-meta">' +
+            '<span>严重度：' + severityTag(detail.severity) + '</span>' +
+            '<span>状态：' + (statusLabels[detail.status] || detail.status) + '</span>' +
+            (detail.deadline ? '<span>截止日期：' + safeText(detail.deadline) + '</span>' : '') +
+            (detail.escalated ? '<span style="color: var(--error);">已升级</span>' : '') +
+          '</div>' +
+        '</div>' +
 
-          <h2 style="margin-top: 32px;">协调记录</h2>
-          ${(detail.coordinationHistory || []).length > 0 ? `
-            <div class="timeline">
-              ${detail.coordinationHistory.map(h => `
-                <div class="tl-item">
-                  <div class="tl-head">${safeText(h.assignee_name)} 提交协调结果：${h.result === 'A' ? '采用A部门口径' : h.result === 'B' ? '采用B部门口径' : '折中方案'}</div>
-                  <div class="tl-body">${safeText(h.note, '无说明')} · ${safeText(h.created_at)}</div>
-                </div>
-              `).join('')}
-            </div>` : '<div class="empty">暂无协调记录</div>'}
+        '<h2>双部门立场对比</h2>' +
+        sideHtml +
 
-          <h2 style="margin-top: 32px;">责任人变更记录</h2>
-          ${(detail.assignmentHistory || []).length > 0 ? `
-            <div class="timeline">
-              ${detail.assignmentHistory.map(a => `
-                <div class="tl-item">
-                  <div class="tl-head">${safeText(a.assigned_by_name)} 指定 ${safeText(a.assignee_name)} 为责任人</div>
-                  <div class="tl-body">${safeText(a.created_at)}</div>
-                </div>
-              `).join('')}
-            </div>` : '<div class="empty">暂无指定记录</div>'}
+        '<h2 style="margin-top: 32px;">事件时间线</h2>' +
+        timeline +
 
-          ${actionHtml ? `<div class="toolbar" style="margin-top: 32px; justify-content: flex-end;">${actionHtml}</div>` : ''}
-        `;
+        (actionHtml ? '<div class="toolbar" style="margin-top: 32px; justify-content: flex-end;">' + actionHtml + '</div>' : '') +
+        '';
 
         $('detailPage').classList.add('on');
-        document.querySelectorAll('.panel').forEach(el => el.classList.remove('on'));
+        document.querySelectorAll('.panel').forEach(function(el) { el.classList.remove('on'); });
 
         // Bind actions
-        const assignBtn = $('assignOwnerBtn');
-        if (assignBtn) assignBtn.onclick = () => openAssignOwnerDialog(conflictId, conflictType);
-        const finalDecideBtn = $('finalDecideBtn');
-        if (finalDecideBtn) finalDecideBtn.onclick = () => openFinalDecideDialog(conflictId, conflictType);
-        const submitBtn = $('submitCoordinationBtn');
-        if (submitBtn) submitBtn.onclick = () => openSubmitCoordinationDialog(conflictId, conflictType);
-        const reopenBtn = $('reopenBtn');
-        if (reopenBtn) reopenBtn.onclick = () => handleReopen(conflictId, conflictType);
-        const archiveBtn = $('archiveBtn');
-        if (archiveBtn) archiveBtn.onclick = () => handleArchive(conflictId, conflictType);
+        var submitBtn = $('submitPositionBtn');
+        if (submitBtn) submitBtn.onclick = function() { openSubmitCoordinationDialog(conflictId, conflictType); };
+        var finalBtn = $('finalDecideBtn');
+        if (finalBtn) finalBtn.onclick = function() { openFinalDecideDialog(conflictId, conflictType); };
+        var escBtn = $('escalateNowBtn');
+        if (escBtn) escBtn.onclick = function() { handleManualEscalate(conflictId, conflictType); };
+        var reopenBtn = $('reopenBtn');
+        if (reopenBtn) reopenBtn.onclick = function() { handleReopen(conflictId, conflictType); };
+        var archiveBtn = $('archiveBtn');
+        if (archiveBtn) archiveBtn.onclick = function() { handleArchive(conflictId, conflictType); };
       } catch (e) {
         if (e.status === 404) {
-          $('detailContent').innerHTML = `<div class="empty">记录不存在或无权访问 <button class="btn secondary" onclick="history.back()">返回上一页</button></div>`;
+          $('detailContent').innerHTML = '<div class="empty">记录不存在或无权访问 <button class="btn secondary" onclick="history.back()">返回上一页</button></div>';
         } else {
           showToast(e.message || '加载失败', 'error');
         }
       }
+    }
+
+    function buildFieldComparison(detail) {
+      var sideA = detail.sideA;
+      var sideB = detail.sideB;
+      return '<div class="diff-grid">' +
+        '<div class="diff-col"><div class="diff-header">' + safeText(detail.dept_a_name || detail.dept_a) + ' 立场</div>' +
+          '<div class="diff-row"><strong>提交值：</strong>' + safeText(detail.value_a) + '</div>' +
+          (sideA ? '<div class="diff-row"><strong>协调结果：</strong>' + (sideA.result === 'A' ? '坚持本部门口径' : sideA.result === 'B' ? '接受对方口径' : '折中方案') + '</div><div class="diff-row"><strong>论据：</strong>' + safeText(sideA.note, '无') + '</div>' : '<div class="diff-row" style="color: var(--text-muted);">待提交（截止：' + safeText(detail.deadline || '-') + '）</div>') +
+        '</div>' +
+        '<div class="diff-col"><div class="diff-header">' + safeText(detail.dept_b_name || detail.dept_b) + ' 立场</div>' +
+          '<div class="diff-row"><strong>提交值：</strong>' + safeText(detail.value_b) + '</div>' +
+          (sideB ? '<div class="diff-row"><strong>协调结果：</strong>' + (sideB.result === 'A' ? '接受对方口径' : sideB.result === 'B' ? '坚持本部门口径' : '折中方案') + '</div><div class="diff-row"><strong>论据：</strong>' + safeText(sideB.note, '无') + '</div>' : '<div class="diff-row" style="color: var(--text-muted);">待提交（截止：' + safeText(detail.deadline || '-') + '）</div>') +
+        '</div></div>';
+    }
+
+    function buildTermComparison(detail) {
+      var sideA = detail.sideA;
+      var sideB = detail.sideB;
+      return '<div class="diff-grid">' +
+        '<div class="diff-col"><div class="diff-header">' + safeText(detail.dept_a_name || detail.dept_a) + ' 立场</div>' +
+          '<div class="diff-row"><strong>定义：</strong>' + safeText(detail.dept_a_meaning) + '</div>' +
+          (sideA ? '<div class="diff-row"><strong>协调结果：</strong>' + (sideA.result === 'A' ? '坚持本部门定义' : sideA.result === 'B' ? '接受对方定义' : '折中方案') + '</div><div class="diff-row"><strong>论据：</strong>' + safeText(sideA.note, '无') + '</div>' : '<div class="diff-row" style="color: var(--text-muted);">待提交（截止：' + safeText(detail.deadline || '-') + '）</div>') +
+        '</div>' +
+        '<div class="diff-col"><div class="diff-header">' + safeText(detail.dept_b_name || detail.dept_b) + ' 立场</div>' +
+          '<div class="diff-row"><strong>定义：</strong>' + safeText(detail.dept_b_meaning) + '</div>' +
+          (sideB ? '<div class="diff-row"><strong>协调结果：</strong>' + (sideB.result === 'A' ? '接受对方定义' : sideB.result === 'B' ? '坚持本部门定义' : '折中方案') + '</div><div class="diff-row"><strong>论据：</strong>' + safeText(sideB.note, '无') + '</div>' : '<div class="diff-row" style="color: var(--text-muted);">待提交（截止：' + safeText(detail.deadline || '-') + '）</div>') +
+        '</div></div>';
+    }
+
+    function buildConflictTimeline(detail, conflictType) {
+      var events = [];
+
+      // Conflict detected
+      events.push({ time: detail.created_at, text: '检测到冲突（' + (detail.severity === 'error' ? '严重' : '警告') + '级别）', icon: '⚡' });
+
+      // Assignments
+      (detail.assignmentHistory || []).forEach(function(a) {
+        var label = a.assigned_by === 0 ? '系统自动指派 ' + safeText(a.assignee_name) + ' 为协调人' : safeText(a.assigned_by_name) + ' 指定 ' + safeText(a.assignee_name) + ' 为责任人';
+        events.push({ time: a.created_at, text: label, icon: '👤' });
+      });
+
+      // Coordination submissions
+      (detail.coordinationHistory || []).forEach(function(h) {
+        var resultText = h.result === 'A' ? '支持A部门' : h.result === 'B' ? '支持B部门' : '折中方案';
+        events.push({ time: h.created_at, text: safeText(h.assignee_name) + ' 提交立场：' + resultText + (h.note ? ' — ' + h.note : ''), icon: '💬' });
+      });
+
+      // Escalation
+      if (detail.escalated) {
+        events.push({ time: detail.deadline, text: '协调超期，自动升级至 reviewer', icon: '🚨' });
+      }
+
+      // Resolution
+      if (detail.status === 'resolved' && detail.resolved_at) {
+        events.push({ time: detail.resolved_at, text: '已解决：' + safeText(detail.resolution || '无说明'), icon: '✅' });
+      }
+
+      // Sort by time
+      events.sort(function(a, b) { return String(a.time || '').localeCompare(String(b.time || '')); });
+
+      if (events.length === 0) return '<div class="empty">暂无事件</div>';
+
+      return '<div class="timeline">' + events.map(function(e) {
+        return '<div class="tl-item"><div class="tl-head">' + e.icon + ' ' + e.text + '</div><div class="tl-body">' + safeText(e.time) + '</div></div>';
+      }).join('') + '</div>';
     }
 
     // ===== Phase 6: L3/L4 Operations =====
@@ -1971,6 +2047,23 @@
         navigateTo('list', { tab: 'conflicts' });
       } catch (e) {
         showToast(e.message || '归档失败', 'error');
+      }
+    }
+
+    async function handleManualEscalate(conflictId, conflictType) {
+      var confirmed = await showConfirm({
+        title: '确认升级',
+        message: '将冲突提前升级至 reviewer 终裁，无需等待截止日期。确认？',
+        confirmLabel: '升级',
+        confirmClass: 'danger',
+      });
+      if (!confirmed) return;
+      try {
+        await api('/api/conflicts/' + conflictId + '/escalate?type=' + conflictType, { method: 'POST' });
+        showToast('已升级');
+        renderConflictDetail(conflictId, conflictType, 'conflicts');
+      } catch (e) {
+        showToast(e.message || '升级失败', 'error');
       }
     }
 
