@@ -215,13 +215,6 @@ router.get('/', requireAuth, (req, res) => {
 // GET /stats — conflict statistics grouped by status and severity
 router.get('/stats', requireAuth, (req, res) => {
   return runDbAction(res, () => {
-    const fieldStats = db.prepare(`
-      SELECT status, severity, COUNT(*) as cnt FROM field_conflicts GROUP BY status, severity
-    `).all();
-    const termStats = db.prepare(`
-      SELECT status, severity, COUNT(*) as cnt FROM term_conflicts GROUP BY status, severity
-    `).all();
-
     // Run escalation check before returning stats
     const needEscalation = db.prepare(`
       SELECT * FROM field_conflicts WHERE status = 'coordinating' AND deadline < date('now')
@@ -564,6 +557,16 @@ router.post('/:id/escalate', requireAuth, (req, res) => {
     }
 
     db.prepare(`UPDATE ${table} SET status = 'escalated', escalated = 1 WHERE id = ?`).run(req.params.id);
+
+    // Notify all reviewers
+    const reviewers = db.prepare("SELECT id, department_id FROM users WHERE role IN ('reviewer','admin')").all();
+    reviewers.forEach(function(r) {
+      db.prepare(`
+        INSERT INTO todos (from_dept_id, to_dept_id, type, content, urgency)
+        VALUES (NULL, ?, 'conflict_resolution', ?, 'high')
+      `).run(r.department_id, '冲突升级：#' + req.params.id + ' 已由 reviewer 手动升级，请终裁');
+    });
+
     res.json({ success: true });
   });
 });
