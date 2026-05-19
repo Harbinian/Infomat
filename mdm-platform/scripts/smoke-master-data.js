@@ -1,6 +1,27 @@
 const http = require('http');
+const path = require('path');
+const fs = require('fs');
 const BASE = 'http://localhost:3000';
-const cookie = require('fs').readFileSync(process.env.TEMP + '/smoke-cookie.txt', 'utf8').trim();
+const COOKIE_FILE = path.join(__dirname, '..', '.smoke-cookie.txt');
+
+function readCookie() {
+  const raw = fs.readFileSync(COOKIE_FILE, 'utf8');
+  const lines = raw.split(/\r?\n/);
+  let cookie = '';
+  for (const line of lines) {
+    if (line.startsWith('# ') || line.startsWith('#\t') || line === '#HttpOnly_' || !line.trim()) continue;
+    const cleanLine = line.startsWith('#HttpOnly_') ? line.substring(1) : line;
+    const parts = cleanLine.split('\t');
+    if (parts.length >= 7) {
+      if (cookie) cookie += '; ';
+      cookie += parts[5] + '=' + parts[6];
+    }
+  }
+  if (!cookie) throw new Error('No cookie parsed');
+  return cookie;
+}
+
+const cookie = readCookie();
 
 function request(method, path, body) {
   return new Promise((resolve, reject) => {
