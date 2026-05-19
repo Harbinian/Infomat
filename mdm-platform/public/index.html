@@ -2484,31 +2484,25 @@
     function renderBatchImport() {
       var panel = document.getElementById('rbacPanel');
       panel.innerHTML = '<h3>批量导入</h3>' +
+        '<p style="color:#666;margin-bottom:8px;">一张表同时配置角色、权限和用户分配。工号和角色编码为空的列输入角色/权限定义。</p>' +
         '<div style="margin-bottom:12px;">' +
-          '<select id="importType" style="padding:6px;"><option value="user-roles">用户-角色分配</option><option value="role-permissions">角色-权限定义</option></select> ' +
-          '<button onclick="downloadTemplate()" style="padding:6px 12px;background:#555;color:white;border:none;border-radius:4px;cursor:pointer;">下载模板</button>' +
+          '<button onclick="window.open(\'/api/import-rbac/templates/full\',\'_blank\')" style="padding:6px 12px;background:#555;color:white;border:none;border-radius:4px;cursor:pointer;">下载模板</button>' +
         '</div>' +
         '<div style="border:2px dashed #ccc;border-radius:6px;padding:40px;text-align:center;">' +
-          '<p style="color:#999;">选择文件上传</p>' +
+          '<p style="color:#999;">选择文件上传 (.xlsx / .csv)</p>' +
           '<input type="file" id="importFileInput" accept=".xlsx,.xls,.csv" onchange="handleImportFile()" style="margin-top:12px;">' +
         '</div>' +
         '<div id="importResult" style="margin-top:16px;"></div>';
     }
 
-    function downloadTemplate() {
-      var type = document.getElementById('importType').value;
-      window.open('/api/import-rbac/templates/' + type, '_blank');
-    }
-
     function handleImportFile() {
       var file = document.getElementById('importFileInput').files[0];
       if (!file) return;
-      var type = document.getElementById('importType').value;
       var formData = new FormData();
       formData.append('file', file);
 
       document.getElementById('importResult').innerHTML = '<p>导入中...</p>';
-      fetch('/api/import-rbac/' + type, { method: 'POST', body: formData }).then(function(r) { return r.json(); }).then(function(data) {
+      fetch('/api/import-rbac/full', { method: 'POST', body: formData }).then(function(r) { return r.json(); }).then(function(data) {
         var html = '<p>总计：' + data.total + ' 行 | 成功：<span style="color:#2e7d32;">' + data.success + '</span> | 失败：<span style="color:#e53935;">' + data.errors.length + '</span></p>';
         if (data.errors.length > 0) {
           html += '<table class="data-table" style="margin-top:8px;font-size:12px;"><thead><tr><th>行</th><th>信息</th><th>原因</th></tr></thead><tbody>';
