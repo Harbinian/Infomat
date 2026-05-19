@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const { hashPassword, verifyPassword, requireAuth, requireRole } = require('../auth');
+const { hashPassword, verifyPassword, requireAuth, requireRole, requirePermission } = require('../auth');
 
 function handleDbError(res, error) {
   if (error && (error.code === 'SQLITE_CONSTRAINT_UNIQUE' || String(error.message).includes('UNIQUE constraint failed'))) {
@@ -167,6 +167,88 @@ router.get('/me', requireAuth, (req, res) => {
     name: req.session.userName,
     role: req.session.userRole,
     departmentId: req.session.departmentId
+  });
+});
+
+// GET /api/users/:id/roles — get user's assigned roles
+router.get('/users/:id/roles', requireAuth, requirePermission('admin:access'), (req, res) => {
+  return runDbAction(res, () => {
+    const roles = db.prepare(`
+      SELECT r.role_id, r.role_code, r.role_name, r.is_system
+      FROM user_roles ur JOIN roles r ON ur.role_id = r.role_id
+      WHERE ur.user_id=?
+      ORDER BY r.is_system DESC, r.role_code
+    `).all(req.params.id);
+    res.json(roles);
+  });
+});
+
+// PUT /api/users/:id/roles — set user roles (replace all)
+router.put('/users/:id/roles', requireAuth, requirePermission('admin:access'), (req, res) => {
+  return runDbAction(res, () => {
+    const { role_ids } = req.body;
+    if (!Array.isArray(role_ids) || role_ids.length === 0) {
+      return res.status(400).json({ error: '至少需要一个角色' });
+    }
+
+    const user = db.prepare('SELECT * FROM users WHERE id=?').get(req.params.id);
+    if (!user) return res.status(404).json({ error: '用户不存在' });
+
+    db.transaction(() => {
+      db.prepare('DELETE FROM user_roles WHERE user_id=?').run(req.params.id);
+      const insert = db.prepare('INSERT OR IGNORE INTO user_roles (user_id, role_id, assigned_by) VALUES (?, ?, ?)');
+      for (const roleId of role_ids) {
+        insert.run(req.params.id, roleId, req.session.userId);
+      }
+
+      // Update users.role to primary role name for backward compat
+      const primaryRole = db.prepare('SELECT role_code FROM roles WHERE role_id=?').get(role_ids[0]);
+      if (primaryRole) {
+        db.prepare('UPDATE users SET role=? WHERE id=?').run(primaryRole.role_code, req.params.id);
+      }
+    })();
+
+    res.json({ success: true });
+  });
+});
+
+// GET /api/permissions — all permission definitions grouped by resource
+router.get('/permissions', requireAuth, requirePermission('admin:access'), (req, res) => {
+  return runDbAction(res, () => {
+    const perms = db.prepare('SELECT * FROM permissions ORDER BY resource, action').all();
+    const grouped = {};
+    for (const p of perms) {
+      if (!grouped[p.resource]) grouped[p.resource] = [];
+      grouped[p.resource].push(p);
+    }
+    res.json(grouped);
+  });
+});
+
+// GET /api/me/password-status — check if using default password
+router.get('/me/password-status', requireAuth, (req, res) => {
+  return runDbAction(res, () => {
+    const user = db.prepare('SELECT password_hash FROM users WHERE id=?').get(req.session.userId);
+    if (!user) return res.status(404).json({ error: '用户不存在' });
+    const isDefault = verifyPassword('init1234', user.password_hash);
+    res.json({ is_default_password: isDefault });
+  });
+});
+
+// POST /api/me/password — change own password
+router.post('/me/password', requireAuth, (req, res) => {
+  return runDbAction(res, () => {
+    const { current_password, new_password } = req.body;
+    if (!current_password || !new_password) return res.status(400).json({ error: '缺少当前密码或新密码' });
+    if (new_password.length < 6) return res.status(400).json({ error: '新密码至少 6 位' });
+
+    const user = db.prepare('SELECT password_hash FROM users WHERE id=?').get(req.session.userId);
+    if (!user) return res.status(404).json({ error: '用户不存在' });
+    if (!verifyPassword(current_password, user.password_hash)) return res.status(403).json({ error: '当前密码不正确' });
+
+    const hash = hashPassword(new_password);
+    db.prepare('UPDATE users SET password_hash=? WHERE id=?').run(hash, req.session.userId);
+    res.json({ success: true });
   });
 });
 
