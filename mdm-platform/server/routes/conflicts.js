@@ -72,6 +72,29 @@ function handleDbError(res, error) {
   return res.status(500).json({ error: '服务器错误' });
 }
 
+function checkAndEscalate(conflict, conflictType) {
+  if (!conflict || conflict.status !== 'coordinating') return false;
+  if (!conflict.deadline) return false;
+
+  const today = new Date().toISOString().slice(0, 10);
+  if (conflict.deadline >= today) return false;
+
+  // Deadlock: escalate
+  const table = conflictType === 'term' ? 'term_conflicts' : 'field_conflicts';
+  db.prepare(`UPDATE ${table} SET status = 'escalated', escalated = 1 WHERE id = ?`).run(conflict.id);
+
+  // Create escalation todo for all reviewers
+  const reviewers = db.prepare("SELECT id, name, department_id FROM users WHERE role IN ('reviewer','admin')").all();
+  reviewers.forEach(function(r) {
+    db.prepare(`
+      INSERT INTO todos (from_dept_id, to_dept_id, type, content, urgency)
+      VALUES (NULL, ?, 'conflict_resolution', ?, 'high')
+    `).run(r.department_id, '冲突升级：#' + conflict.id + ' 已超时，请 reviewer 终裁');
+  });
+
+  return true;
+}
+
 function runDbAction(res, action) {
   try {
     return action();
@@ -152,7 +175,10 @@ router.get('/', requireAuth, (req, res) => {
     if (userRole !== 'admin' && !status) {
       sql = sql.replace('WHERE 1=1', "WHERE 1=1 AND tc.status NOT IN ('archived','silenced')");
     }
-    return res.json(db.prepare(sql).all(...params));
+    const termRows = db.prepare(sql).all(...params);
+    termRows.forEach(function(c) { checkAndEscalate(c, 'term'); });
+    const updated = db.prepare(sql).all(...params);
+    return res.json(updated);
   }
 
   if (type === 'field') {
@@ -161,7 +187,10 @@ router.get('/', requireAuth, (req, res) => {
     if (userRole !== 'admin' && !status) {
       sql = sql.replace('WHERE 1=1', "WHERE 1=1 AND fc.status NOT IN ('archived','silenced')");
     }
-    return res.json(db.prepare(sql).all(...params));
+    const fieldRows = db.prepare(sql).all(...params);
+    fieldRows.forEach(function(c) { checkAndEscalate(c, 'field'); });
+    const updated = db.prepare(sql).all(...params);
+    return res.json(updated);
   }
 
   const termParams = [];
@@ -176,7 +205,11 @@ router.get('/', requireAuth, (req, res) => {
 
   const termRows = db.prepare(termSql).all(...termParams);
   const fieldRows = db.prepare(fieldSql).all(...fieldParams);
-  res.json([...termRows, ...fieldRows].sort((a, b) => String(b.created_at).localeCompare(String(a.created_at))));
+  termRows.forEach(function(c) { checkAndEscalate(c, 'term'); });
+  fieldRows.forEach(function(c) { checkAndEscalate(c, 'field'); });
+  const updatedTermRows = db.prepare(termSql).all(...termParams);
+  const updatedFieldRows = db.prepare(fieldSql).all(...fieldParams);
+  res.json([...updatedTermRows, ...updatedFieldRows].sort((a, b) => String(b.created_at).localeCompare(String(a.created_at))));
 });
 
 // GET /:id — conflict detail with assignments and coordination history
@@ -201,6 +234,13 @@ router.get('/:id', requireAuth, (req, res) => {
       `).get(req.params.id);
     }
     if (!conflict) return res.status(404).json({ error: '冲突不存在' });
+
+    const wasEscalated = checkAndEscalate(conflict, conflictType);
+    if (wasEscalated) {
+      // Re-fetch after escalation
+      const table2 = conflictType === 'term' ? 'term_conflicts' : 'field_conflicts';
+      conflict = db.prepare(`SELECT * FROM ${table2} WHERE id = ?`).get(req.params.id);
+    }
 
     const currentAssignee = db.prepare(`
       SELECT ca.*, u.name as assignee_name
@@ -378,6 +418,28 @@ router.post('/:id/coordination', requireAuth, (req, res) => {
       VALUES (?, ?, ?, ?, ?)
     `).run(req.params.id, conflictType, req.session.userId, result, note || null);
 
+    // Check if both sides have submitted — auto-advance to reviewer decision queue
+    const assigneeCount = db.prepare(`
+      SELECT COUNT(DISTINCT assignee_user_id) as cnt FROM conflict_assignments
+      WHERE conflict_id = ? AND conflict_type = ?
+    `).get(req.params.id, conflictType);
+
+    const submissionCount = db.prepare(`
+      SELECT COUNT(DISTINCT assignee_user_id) as cnt FROM conflict_coordination_history
+      WHERE conflict_id = ? AND conflict_type = ?
+    `).get(req.params.id, conflictType);
+
+    if (assigneeCount.cnt >= 2 && submissionCount.cnt >= 2) {
+      // Both sides submitted — notify reviewers
+      const reviewers = db.prepare("SELECT id, department_id FROM users WHERE role IN ('reviewer','admin')").all();
+      reviewers.forEach(function(r) {
+        db.prepare(`
+          INSERT INTO todos (from_dept_id, to_dept_id, type, content, urgency)
+          VALUES (NULL, ?, 'conflict_resolution', ?, 'high')
+        `).run(r.department_id, '冲突 #' + req.params.id + ' 双方已提交立场，等待终裁');
+      });
+    }
+
     res.json({ success: true });
   });
 });
@@ -404,6 +466,26 @@ router.post('/:id/final-decide', requireAuth, (req, res) => {
       WHERE id=?
     `).run(resolution || null, req.session.userId, req.params.id);
 
+    res.json({ success: true });
+  });
+});
+
+// POST /:id/escalate — manually escalate to reviewer
+router.post('/:id/escalate', requireAuth, (req, res) => {
+  return runDbAction(res, () => {
+    if (!['reviewer','admin'].includes(req.session.userRole)) {
+      return res.status(403).json({ error: '仅 reviewer 或管理员可手动升级' });
+    }
+    const { type } = req.query;
+    const conflictType = type || 'field';
+    const table = conflictType === 'term' ? 'term_conflicts' : 'field_conflicts';
+    const conflict = db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(req.params.id);
+    if (!conflict) return res.status(404).json({ error: '冲突不存在' });
+    if (conflict.status !== 'coordinating') {
+      return res.status(409).json({ error: '仅协调中的冲突可升级' });
+    }
+
+    db.prepare(`UPDATE ${table} SET status = 'escalated', escalated = 1 WHERE id = ?`).run(req.params.id);
     res.json({ success: true });
   });
 });
@@ -447,6 +529,72 @@ router.post('/:id/archive', requireAuth, (req, res) => {
 
     db.prepare(`UPDATE ${table} SET status='archived' WHERE id=?`).run(req.params.id);
     res.json({ success: true });
+  });
+});
+
+// GET /stats — conflict statistics grouped by status and severity
+router.get('/stats', requireAuth, (req, res) => {
+  return runDbAction(res, () => {
+    const fieldStats = db.prepare(`
+      SELECT status, severity, COUNT(*) as cnt FROM field_conflicts GROUP BY status, severity
+    `).all();
+    const termStats = db.prepare(`
+      SELECT status, severity, COUNT(*) as cnt FROM term_conflicts GROUP BY status, severity
+    `).all();
+
+    // Run escalation check before returning stats
+    const needEscalation = db.prepare(`
+      SELECT * FROM field_conflicts WHERE status = 'coordinating' AND deadline < date('now')
+    `).all();
+    needEscalation.forEach(function(c) { checkAndEscalate(c, 'field'); });
+    const termNeedEscalation = db.prepare(`
+      SELECT * FROM term_conflicts WHERE status = 'coordinating' AND deadline < date('now')
+    `).all();
+    termNeedEscalation.forEach(function(c) { checkAndEscalate(c, 'term'); });
+
+    // Re-query after escalation
+    const finalFieldStats = db.prepare(`
+      SELECT status, severity, COUNT(*) as cnt FROM field_conflicts GROUP BY status, severity
+    `).all();
+    const finalTermStats = db.prepare(`
+      SELECT status, severity, COUNT(*) as cnt FROM term_conflicts GROUP BY status, severity
+    `).all();
+
+    // Aggregate
+    const byStatus = {};
+    [finalFieldStats, finalTermStats].forEach(function(rows) {
+      rows.forEach(function(r) {
+        const key = r.status;
+        if (!byStatus[key]) byStatus[key] = 0;
+        byStatus[key] += r.cnt;
+      });
+    });
+
+    const coordinating = byStatus['coordinating'] || 0;
+    const escalated = byStatus['escalated'] || 0;
+    const silenced = byStatus['silenced'] || 0;
+    const resolved = byStatus['resolved'] || 0;
+
+    // This month resolved
+    const thisMonth = new Date().toISOString().slice(0, 7);
+    const fieldResolvedThisMonth = db.prepare(`
+      SELECT COUNT(*) as cnt FROM field_conflicts
+      WHERE status = 'resolved' AND resolved_at LIKE ?
+    `).get(thisMonth + '%');
+    const termResolvedThisMonth = db.prepare(`
+      SELECT COUNT(*) as cnt FROM term_conflicts
+      WHERE status = 'resolved' AND resolved_at LIKE ?
+    `).get(thisMonth + '%');
+    const resolvedThisMonth = (fieldResolvedThisMonth.cnt || 0) + (termResolvedThisMonth.cnt || 0);
+
+    res.json({
+      coordinating: coordinating,
+      escalated: escalated,
+      silenced: silenced,
+      resolved: resolved,
+      resolvedThisMonth: resolvedThisMonth,
+      byStatus: byStatus
+    });
   });
 });
 
