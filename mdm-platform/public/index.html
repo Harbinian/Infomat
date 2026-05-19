@@ -1658,7 +1658,7 @@
         container.innerHTML = '<div style="margin-bottom: 24px;">' +
           '<h2 style="margin-bottom: 8px;">' + (conflictType === 'term' ? '术语冲突' : '字段冲突') + ' #' + conflictId + '</h2>' +
           '<div class="detail-meta">' +
-            '<span>严重度：' + statusTag(detail.severity) + '</span>' +
+            '<span>严重度：' + severityTag(detail.severity) + '</span>' +
             '<span>状态：' + (statusLabels[detail.status] || detail.status) + '</span>' +
             (detail.deadline ? '<span>截止日期：' + safeText(detail.deadline) + '</span>' : '') +
             (detail.escalated ? '<span style="color: var(--error);">已升级</span>' : '') +

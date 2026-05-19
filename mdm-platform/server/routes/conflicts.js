@@ -586,7 +586,7 @@ router.post('/:id/reopen', requireAuth, (req, res) => {
       return res.status(409).json({ error: '仅已解决状态可重开' });
     }
 
-    db.prepare(`UPDATE ${table} SET status='pending', resolution=NULL, resolved_by=NULL, resolved_at=NULL WHERE id=?`).run(req.params.id);
+    db.prepare(`UPDATE ${table} SET status='pending', resolution=NULL, resolved_by=NULL, resolved_at=NULL, escalated=0 WHERE id=?`).run(req.params.id);
     res.json({ success: true });
   });
 });
