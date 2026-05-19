@@ -205,7 +205,7 @@ async function main() {
     assert.strictEqual(detect.res.status, 200);
     assert.strictEqual(detect.body.detected, 1);
 
-    fieldConflicts = await request('/api/conflicts?type=field&severity=error&status=pending', {}, cookie);
+    fieldConflicts = await request('/api/conflicts?type=field&severity=error&status=coordinating', {}, cookie);
     assert.strictEqual(fieldConflicts.res.status, 200);
     assert.strictEqual(fieldConflicts.body.length, 1);
     assert.strictEqual(fieldConflicts.body[0].conflict_field, 'authoritative_system');

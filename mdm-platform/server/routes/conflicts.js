@@ -5,6 +5,65 @@ const { requireAuth, requireRole } = require('../auth');
 
 const FIELD_ENTRY_CONFLICT_FIELDS = ['note', 'field_type', 'sync_mode', 'consume_systems'];
 
+function addWorkingDays(startDate, days) {
+  const d = new Date(startDate);
+  let added = 0;
+  while (added < days) {
+    d.setDate(d.getDate() + 1);
+    if (d.getDay() !== 0 && d.getDay() !== 6) added++;
+  }
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function autoAssignBothDepts(conflictId, conflictType, deptA, deptB) {
+  const today = new Date().toISOString().slice(0, 10);
+  const deadline = addWorkingDays(today, 3);
+
+  // Find owner for each department: data_owner first, manager fallback
+  const assigneeA = db.prepare(`
+    SELECT id FROM users WHERE department_id = ? AND (id = (SELECT data_owner_user_id FROM departments WHERE id = ?) OR id = (SELECT manager_user_id FROM departments WHERE id = ?))
+    LIMIT 1
+  `).get(deptA, deptA, deptA);
+
+  const assigneeB = db.prepare(`
+    SELECT id FROM users WHERE department_id = ? AND (id = (SELECT data_owner_user_id FROM departments WHERE id = ?) OR id = (SELECT manager_user_id FROM departments WHERE id = ?))
+    LIMIT 1
+  `).get(deptB, deptB, deptB);
+
+  const sysUserId = 0; // system-initiated
+
+  [assigneeA, assigneeB].forEach(function(assignee) {
+    if (assignee) {
+      db.prepare(`
+        INSERT INTO conflict_assignments (conflict_id, conflict_type, assignee_user_id, assigned_by)
+        VALUES (?, ?, ?, ?)
+      `).run(conflictId, conflictType, assignee.id, sysUserId);
+    }
+  });
+
+  // Update deadline on conflict record
+  const table = conflictType === 'term' ? 'term_conflicts' : 'field_conflicts';
+  db.prepare(`UPDATE ${table} SET deadline = ? WHERE id = ?`).run(deadline, conflictId);
+
+  // Create todos for both departments
+  const deptNames = [];
+  [deptA, deptB].forEach(function(did) {
+    const dept = db.prepare('SELECT name FROM departments WHERE id = ?').get(did);
+    if (dept) deptNames.push(dept.name);
+  });
+  const todoContent = '冲突协调：' + deptNames.join(' vs ') + '（截止：' + deadline + '）';
+
+  [deptA, deptB].forEach(function(did) {
+    db.prepare(`
+      INSERT INTO todos (from_dept_id, to_dept_id, type, related_mapping_id, content, urgency)
+      VALUES (NULL, ?, 'conflict_resolution', NULL, ?, 'high')
+    `).run(did, todoContent);
+  });
+}
+
 function handleDbError(res, error) {
   if (error && (String(error.code).startsWith('SQLITE_CONSTRAINT') || String(error.message).includes('constraint failed'))) {
     return res.status(400).json({ error: '数据不符合约束' });
@@ -91,7 +150,7 @@ router.get('/', requireAuth, (req, res) => {
     const params = [];
     let sql = addFilters("SELECT tc.*, 'term' as conflict_type FROM term_conflicts tc", params, severity, status);
     if (userRole !== 'admin' && !status) {
-      sql = sql.replace('WHERE 1=1', "WHERE 1=1 AND tc.status != 'archived'");
+      sql = sql.replace('WHERE 1=1', "WHERE 1=1 AND tc.status NOT IN ('archived','silenced')");
     }
     return res.json(db.prepare(sql).all(...params));
   }
@@ -100,7 +159,7 @@ router.get('/', requireAuth, (req, res) => {
     const params = [];
     let sql = addFilters("SELECT fc.*, 'field' as conflict_type FROM field_conflicts fc", params, severity, status);
     if (userRole !== 'admin' && !status) {
-      sql = sql.replace('WHERE 1=1', "WHERE 1=1 AND fc.status != 'archived'");
+      sql = sql.replace('WHERE 1=1', "WHERE 1=1 AND fc.status NOT IN ('archived','silenced')");
     }
     return res.json(db.prepare(sql).all(...params));
   }
@@ -111,8 +170,8 @@ router.get('/', requireAuth, (req, res) => {
   let fieldSql = addFilters("SELECT fc.*, 'field' as conflict_type FROM field_conflicts fc", fieldParams, severity, status);
 
   if (userRole !== 'admin' && !status) {
-    termSql = termSql.replace('WHERE 1=1', "WHERE 1=1 AND tc.status != 'archived'");
-    fieldSql = fieldSql.replace('WHERE 1=1', "WHERE 1=1 AND fc.status != 'archived'");
+    termSql = termSql.replace('WHERE 1=1', "WHERE 1=1 AND tc.status NOT IN ('archived','silenced')");
+    fieldSql = fieldSql.replace('WHERE 1=1', "WHERE 1=1 AND fc.status NOT IN ('archived','silenced')");
   }
 
   const termRows = db.prepare(termSql).all(...termParams);
@@ -168,7 +227,46 @@ router.get('/:id', requireAuth, (req, res) => {
       ORDER BY ca.created_at DESC
     `).all(req.params.id, conflictType);
 
-    res.json({ ...conflict, conflict_type: conflictType, currentAssignee, coordinationHistory, assignmentHistory });
+    // Get both sides' latest positions for side-by-side comparison
+    const sideAPosition = db.prepare(`
+      SELECT cch.*, u.name as assignee_name
+      FROM conflict_coordination_history cch
+      LEFT JOIN users u ON cch.assignee_user_id = u.id
+      WHERE cch.conflict_id = ? AND cch.conflict_type = ?
+        AND cch.assignee_user_id IN (SELECT assignee_user_id FROM conflict_assignments WHERE conflict_id = ? AND conflict_type = ?)
+      ORDER BY cch.created_at DESC LIMIT 1
+    `).all(req.params.id, conflictType, req.params.id, conflictType);
+
+    // Separate positions by dept
+    const sideA = sideAPosition.find(p => {
+      const user = db.prepare('SELECT department_id FROM users WHERE id = ?').get(p.assignee_user_id);
+      return user && user.department_id === conflict.dept_a;
+    });
+    const sideB = sideAPosition.find(p => {
+      const user = db.prepare('SELECT department_id FROM users WHERE id = ?').get(p.assignee_user_id);
+      return user && user.department_id === conflict.dept_b;
+    });
+
+    // Check both sides submitted
+    const assignees = db.prepare(`
+      SELECT DISTINCT assignee_user_id FROM conflict_assignments
+      WHERE conflict_id = ? AND conflict_type = ?
+    `).all(req.params.id, conflictType);
+    const submissions = db.prepare(`
+      SELECT DISTINCT assignee_user_id FROM conflict_coordination_history
+      WHERE conflict_id = ? AND conflict_type = ?
+    `).all(req.params.id, conflictType);
+    const bothSubmitted = assignees.length >= 2 && submissions.length >= 2;
+
+    res.json({
+      ...conflict, conflict_type: conflictType,
+      currentAssignee, coordinationHistory, assignmentHistory,
+      sideA: sideA || null, sideB: sideB || null,
+      bothSubmitted: Boolean(bothSubmitted),
+      deadline: conflict.deadline || null,
+      escalated: conflict.escalated || 0,
+      resolution_type: conflict.resolution_type || null
+    });
   });
 });
 
@@ -381,10 +479,16 @@ router.post('/detect', requireRole('reviewer', 'admin'), (req, res) => {
                 WHERE term=? AND dept_a_meaning=? AND dept_b_meaning=? AND status='pending'
               `).get(t1.term, t1.definition || null, t2.definition || null);
               if (!existing) {
-                 db.prepare(`
-                   INSERT INTO term_conflicts (term, dept_a, dept_a_meaning, dept_b, dept_b_meaning, severity)
-                   VALUES (?, ?, ?, ?, ?, ?)
-                 `).run(t1.term, t1.owner_dept_id || null, t1.definition || null, t2.owner_dept_id || null, t2.definition || null, 'warn');
+                 const tSeverity = (t1.term === t2.term && t1.definition !== t2.definition) ? 'error' : 'warn';
+                 const tStatus = tSeverity === 'warn' ? 'silenced' : 'coordinating';
+                 const tResType = tSeverity === 'warn' ? 'auto_silenced' : null;
+                 const result = db.prepare(`
+                   INSERT INTO term_conflicts (term, dept_a, dept_a_meaning, dept_b, dept_b_meaning, severity, status, resolution_type)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                 `).run(t1.term, t1.owner_dept_id || null, t1.definition || null, t2.owner_dept_id || null, t2.definition || null, tSeverity, tStatus, tResType);
+                 if (tSeverity === 'error') {
+                   autoAssignBothDepts(result.lastInsertRowid, 'term', t1.owner_dept_id, t2.owner_dept_id);
+                 }
                  inserted += 1;
               }
             }
@@ -417,10 +521,12 @@ router.post('/detect', requireRole('reviewer', 'admin'), (req, res) => {
         if (result.valueA === result.valueB) return;
         if (conflictAlreadyExists(pair.a_id, pair.b_id, result.conflictField)) return;
 
-        db.prepare(`
+        const fcStatus = result.severity === 'warn' ? 'silenced' : 'coordinating';
+        const fcResType = result.severity === 'warn' ? 'auto_silenced' : null;
+        const insertResult = db.prepare(`
           INSERT INTO field_conflicts
-            (field_entry_a_id, field_entry_b_id, conflict_field, submitter_a, value_a, submitter_b, value_b, dept_a, dept_b, severity)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (field_entry_a_id, field_entry_b_id, conflict_field, submitter_a, value_a, submitter_b, value_b, dept_a, dept_b, severity, status, resolution_type)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).run(
           pair.a_id,
           pair.b_id,
@@ -431,8 +537,13 @@ router.post('/detect', requireRole('reviewer', 'admin'), (req, res) => {
           result.valueB,
           pair.da,
           pair.db,
-          result.severity
+          result.severity,
+          fcStatus,
+          fcResType
         );
+        if (result.severity === 'error') {
+          autoAssignBothDepts(insertResult.lastInsertRowid, 'field', pair.da, pair.db);
+        }
         inserted += 1;
       });
       return inserted;
