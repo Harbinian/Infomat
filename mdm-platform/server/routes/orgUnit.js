@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const { requireAuth, requireRole, stripInternalIds } = require('../auth');
+const { requireAuth, requirePermission, applyFieldConstraints } = require('../auth');
 const { generateCode } = require('../codeEngine');
 
 function handleDbError(res, error) {
@@ -12,7 +12,7 @@ function handleDbError(res, error) {
   return res.status(500).json({ error: '服务器错误' });
 }
 
-router.get('/', requireAuth, stripInternalIds, (req, res) => {
+router.get('/', requireAuth, applyFieldConstraints('org_unit'), (req, res) => {
   try {
     const { org_type, status, search, page = 1, limit = 50 } = req.query;
     let sql = `SELECT ou.*, p.org_unit_name as parent_name
@@ -29,7 +29,7 @@ router.get('/', requireAuth, stripInternalIds, (req, res) => {
   } catch (e) { handleDbError(res, e); }
 });
 
-router.get('/:code', requireAuth, stripInternalIds, (req, res) => {
+router.get('/:code', requireAuth, applyFieldConstraints('org_unit'), (req, res) => {
   try {
     const row = db.prepare(`
       SELECT ou.*, p.org_unit_name as parent_name, p.org_unit_code as parent_code
@@ -56,7 +56,7 @@ router.post('/', requireAuth, (req, res) => {
   } catch (e) { handleDbError(res, e); }
 });
 
-router.post('/:code/activate', requireAuth, requireRole('admin', 'owner'), (req, res) => {
+router.post('/:code/activate', requireAuth, requirePermission('org_unit:update'), (req, res) => {
   try {
     const existing = db.prepare('SELECT * FROM org_unit WHERE org_unit_code=?').get(req.params.code);
     if (!existing) return res.status(404).json({ error: '组织不存在' });

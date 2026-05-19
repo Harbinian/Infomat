@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const { requireAuth, requireRole, stripInternalIds } = require('../auth');
+const { requireAuth, requirePermission, applyFieldConstraints } = require('../auth');
 const { generateCode } = require('../codeEngine');
 
 function handleDbError(res, error) {
@@ -12,7 +12,7 @@ function handleDbError(res, error) {
   return res.status(500).json({ error: '服务器错误' });
 }
 
-router.get('/', requireAuth, stripInternalIds, (req, res) => {
+router.get('/', requireAuth, applyFieldConstraints('product'), (req, res) => {
   try {
     const { product_family_id, lifecycle_state, search, page = 1, limit = 50 } = req.query;
     let sql = `SELECT p.*, pf.product_family_code, pf.model_name
@@ -28,7 +28,7 @@ router.get('/', requireAuth, stripInternalIds, (req, res) => {
   } catch (e) { handleDbError(res, e); }
 });
 
-router.get('/:code', requireAuth, stripInternalIds, (req, res) => {
+router.get('/:code', requireAuth, applyFieldConstraints('product'), (req, res) => {
   try {
     const row = db.prepare(`
       SELECT p.*, pf.product_family_code, pf.model_name, pf.model_code,
@@ -60,7 +60,7 @@ router.post('/', requireAuth, (req, res) => {
   } catch (e) { handleDbError(res, e); }
 });
 
-router.post('/:code/release', requireAuth, requireRole('admin', 'owner'), (req, res) => {
+router.post('/:code/release', requireAuth, requirePermission('product:update'), (req, res) => {
   try {
     const product = db.prepare('SELECT * FROM product WHERE product_code=?').get(req.params.code);
     if (!product) return res.status(404).json({ error: '产品不存在' });
@@ -82,7 +82,7 @@ router.post('/:code/release', requireAuth, requireRole('admin', 'owner'), (req, 
   } catch (e) { handleDbError(res, e); }
 });
 
-router.post('/:code/obsolete', requireAuth, requireRole('admin', 'owner'), (req, res) => {
+router.post('/:code/obsolete', requireAuth, requirePermission('product:update'), (req, res) => {
   try {
     const r = db.prepare(`
       UPDATE product SET lifecycle_state='obsolete', effective_to=CURRENT_DATE, updated_by=?, updated_at=CURRENT_TIMESTAMP

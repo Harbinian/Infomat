@@ -3,7 +3,7 @@ const multer = require('multer');
 const ExcelJS = require('exceljs');
 const router = express.Router();
 const db = require('../db');
-const { requireAuth } = require('../auth');
+const { requireAuth, getUserEffectivePermissions } = require('../auth');
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -33,7 +33,9 @@ function buildHeaderMap(sheet) {
 }
 
 function canImportForMapping(req, mappingId) {
-  if (req.session.userRole === 'admin') return true;
+  // Check admin via RBAC
+  const { permSet } = getUserEffectivePermissions(req.session.userId);
+  if (permSet.has('admin:access') || permSet.has('*:*')) return true;
 
   const mapping = db.prepare('SELECT submitted_by FROM mappings WHERE id=?').get(mappingId);
   return mapping && req.session.userRole === 'submitter' && mapping.submitted_by === req.session.userId;
@@ -97,7 +99,8 @@ router.post('/field-entries', requireAuth, handleUpload, async (req, res) => {
       `);
 
       rows.forEach(row => {
-        const ownerColumnsAllowed = req.session.userRole === 'admin';
+        const { permSet: importPermSet } = getUserEffectivePermissions(req.session.userId);
+        const ownerColumnsAllowed = importPermSet.has('admin:access') || importPermSet.has('*:*');
         stmt.run(
           mappingId,
           ownerColumnsAllowed ? normalizeNullable(row.field_name_cn) : null,
