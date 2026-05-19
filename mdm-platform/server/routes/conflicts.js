@@ -97,7 +97,7 @@ function conflictAlreadyExists(aId, bId, conflictField) {
   const existing = db.prepare(`
     SELECT id
     FROM field_conflicts
-    WHERE field_entry_a_id=? AND field_entry_b_id=? AND conflict_field=? AND status='pending'
+    WHERE field_entry_a_id=? AND field_entry_b_id=? AND conflict_field=? AND status IN ('pending','coordinating','silenced')
   `).get(aId, bId, conflictField);
   return Boolean(existing);
 }
@@ -227,25 +227,26 @@ router.get('/:id', requireAuth, (req, res) => {
       ORDER BY ca.created_at DESC
     `).all(req.params.id, conflictType);
 
-    // Get both sides' latest positions for side-by-side comparison
-    const sideAPosition = db.prepare(`
+    // Get latest position from each department's assignee for side-by-side comparison
+    const sideA = db.prepare(`
       SELECT cch.*, u.name as assignee_name
       FROM conflict_coordination_history cch
       LEFT JOIN users u ON cch.assignee_user_id = u.id
       WHERE cch.conflict_id = ? AND cch.conflict_type = ?
         AND cch.assignee_user_id IN (SELECT assignee_user_id FROM conflict_assignments WHERE conflict_id = ? AND conflict_type = ?)
+        AND u.department_id = ?
       ORDER BY cch.created_at DESC LIMIT 1
-    `).all(req.params.id, conflictType, req.params.id, conflictType);
+    `).get(req.params.id, conflictType, req.params.id, conflictType, conflict.dept_a);
 
-    // Separate positions by dept
-    const sideA = sideAPosition.find(p => {
-      const user = db.prepare('SELECT department_id FROM users WHERE id = ?').get(p.assignee_user_id);
-      return user && user.department_id === conflict.dept_a;
-    });
-    const sideB = sideAPosition.find(p => {
-      const user = db.prepare('SELECT department_id FROM users WHERE id = ?').get(p.assignee_user_id);
-      return user && user.department_id === conflict.dept_b;
-    });
+    const sideB = db.prepare(`
+      SELECT cch.*, u.name as assignee_name
+      FROM conflict_coordination_history cch
+      LEFT JOIN users u ON cch.assignee_user_id = u.id
+      WHERE cch.conflict_id = ? AND cch.conflict_type = ?
+        AND cch.assignee_user_id IN (SELECT assignee_user_id FROM conflict_assignments WHERE conflict_id = ? AND conflict_type = ?)
+        AND u.department_id = ?
+      ORDER BY cch.created_at DESC LIMIT 1
+    `).get(req.params.id, conflictType, req.params.id, conflictType, conflict.dept_b);
 
     // Check both sides submitted
     const assignees = db.prepare(`
@@ -476,7 +477,7 @@ router.post('/detect', requireRole('reviewer', 'admin'), (req, res) => {
             if (t1.definition !== t2.definition || t1.scope !== t2.scope) {
               const existing = db.prepare(`
                 SELECT id FROM term_conflicts
-                WHERE term=? AND dept_a_meaning=? AND dept_b_meaning=? AND status='pending'
+                WHERE term=? AND dept_a_meaning=? AND dept_b_meaning=? AND status IN ('pending','coordinating','silenced')
               `).get(t1.term, t1.definition || null, t2.definition || null);
               if (!existing) {
                  const tSeverity = (t1.term === t2.term && t1.definition !== t2.definition) ? 'error' : 'warn';
