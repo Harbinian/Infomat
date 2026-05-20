@@ -18,6 +18,7 @@
     "test:views": "node scripts/test-views-sankey-filters.js",
     "test:frontend": "node scripts/test-frontend-assets.js",
     "test:rbac": "node scripts/smoke-rbac.js",
+    "test:delete": "node scripts/test-delete-routes.js",
     "dev": "nodemon server/index.js"
   },
   "dependencies": {
