@@ -1,0 +1,691 @@
+# 前   言
+
+本制度属于运行类管理制度。
+
+本制度由科技创新部提出并起草。
+
+本制度由科技创新部负责解释。
+
+# 工艺装备使用管理程序
+
+# 1  范围
+
+本文规定了工艺装备(以下简称工装)的接收、使用。
+
+本文件适用于民机生产。
+
+本文件依据GLG1407工装工具管理规则要求制定。
+
+> **English:** This procedure specifies the receiving, usage of process equipment (hereinafter referred to as tooling).
+
+> **English:** This procedure is applicable to commercial aircraft production.
+
+> **English:** This document is formulated in accordance with the GLG1407 tooling management rules.
+
+# 2  规范性引用文件
+
+下列文件对于本文件的应用是必不可少的。凡是注日期或（和）版次的引用文件，仅注日期或（和）版次的版本适用于本文件。凡是不注日期或（和）版次的引用文件，其最新版本（包括所有的修改单）适用于本文件。
+
+## 2 编号
+
+> 位置：第2节
+
+| 编号 | 名称 | 密级 | 文件类别 | 发布时间 |
+| --- | --- | --- | --- | --- |
+| D33200-1 | 波音供应商工装文件 | 公开 | 客户规范 | 无 |
+| GLG1407 | 工装工具管理规则 | 公开 | 管理规则 | 无 |
+| GLC231008 | 质量记录管理程序 | 无 | 管理程序 | 无 |
+
+> **English:** The following documents are essential for the application of this document. For all referenced documents marked with a date or (and) version, only the version marked with a date or (and) version is applicable to this document. For any referenced document without a date or (and) version, the latest version (including all modifications) shall apply to this document.
+
+# 3  表格
+
+## 3.1 规定表格
+
+FM1407-27  工装管理卡片
+
+FM1407-39  工装限用
+
+FM1407-53  周转使用类工艺装备跟踪表
+
+> **English:** FM1407-27  Tooling Management Card
+
+> **English:** FM1407-39  Limitation Usage of Tooling
+
+> **English:** FM1407-53  Turnover Use Tooling Track Table
+
+## 3.2 引用表格
+
+FM1407-06  工艺装备合格证
+
+FM1407-07  工装禁用标签
+
+FM1407-10  试验设备证明书
+
+FM1407-11  工艺装备证明书
+
+FM1407-15  工艺装备备忘录
+
+FM1407-21  标准工装管理卡片
+
+FM1407-31  工艺装备申请单
+
+FM1407-41  工艺装备损坏、丢失问题处理单
+
+FM1407-55  工艺装备返工申请单
+
+FM2310-43  技术单
+
+FM1207-15  温度湿度检查记录表
+
+> **English:** FM1407-06  Tooling Certificate
+
+> **English:** FM1407-07  Tooling Forbiddance
+
+> **English:** FM1407-10  Test Equipment Certification
+
+> **English:** FM1407-11  Certificate for Tooling
+
+> **English:** FM1407-15  Process Equipment Memorandum
+
+> **English:** FM1407-21  Standard Fixture Management Card
+
+> **English:** FM1407-31  Tooling Request Sheet
+
+> **English:** FM1407-41  Disposition of Tooling Damage and Missing
+
+> **English:** FM1407-55  Process Equipment Rework Application Form
+
+> **English:** FM2310-43  Technical Sheet
+
+> **English:** FM1207-15  Temperature and Humidity Inspection Record
+
+# 4  术语和定义
+
+# 无
+
+# 5  机构与职责
+
+## 5.1 科技创新部
+
+科技创新部负责提出标准工装品种表和工作包内厂内使用的工艺装备申请单，负责对工装使用单位的保管、使用工作进行技术监督，负责组织对顾客提供工装进行接收，组织使用单位对工装检验、接收，负责将工装清册（包括更新等）报中国商飞，负责建立并维护各项目的“合格工装清册”，负责提交中国商飞控制工装项目中需要定期检查的工装的工装定期检查计划，负责组织进行标准工装的制造、检验、移交、保管和维护（金属类、非金属类），负责MA700项目标工借用需求的提出，负责组织使用单位开展MA700项目标工接收发运的开封箱，负责设计、更改标准工装图样。
+
+> **English:** The Ministry of Science and Technology Innovation is responsible for proposing a list of standard tooling varieties and application forms for process equipment used in the factory within the work package. It is also responsible for providing technical supervision for the storage and use of tooling by the user units, organizing the receipt of tooling provided by customers, organizing the user units to inspect and receive the tooling, reporting the tooling inventory (including updates, etc.) to COMAC, and establishing and maintaining various the "Qualified Tooling Inventory" of the project is responsible for submitting the tooling periodic inspection plan for the tooling that needs to be inspected regularly in the COMAC Control Tooling Project, organizing the manufacturing, inspection, transfer, storage, and maintenance of standard tooling (metal and non-metal), proposing the borrowing requirements for MA700 project standard tooling, organizing the user units to receive and ship the opened boxes for MA700 project standard tooling, and designing and modifying standard tooling drawings.
+
+## 5.2 项目管理部
+
+项目管理部负责客户信息的对接、客户要求的传递。
+
+> **English:** The project management department is responsible for the coordination of customer information and the transmission of customer requirements.
+
+## 5.3 工装使用单位
+
+工装使用单位负责新制或返工工装交付后的接收、保管和使用；负责标准工装及厂际共用工装的日常使用管理、维护及封存管理；负责生产和检验共用工装检验前校准工作；负责商飞项目标工启用前储运箱外观和铅封状况的检查；负责检查标工并填写开箱记录，负责关箱后的铅封，负责MA700项目标工接收发运时对标工实物及文件的核查。自制工艺装备（简称自制工装）由工装使用单位依据工装质量管理程序自行组织行设计、制造、验收、保管、使用、维护、返修、封存及报废。
+
+> **English:** The unit using the tooling is responsible for receiving, storing, and using newly made or reworked tooling after delivery; Responsible for the daily use, maintenance, and sealing management of standard fixtures and inter factory shared fixtures; Responsible for the calibration of production and inspection shared tooling before inspection; Responsible for inspecting the appearance and lead sealing condition of storage and transportation containers before the standard engineering of the Commercial Aircraft Corporation of China (COMAC) project is put into use; Responsible for inspecting the standard workers and filling out the unpacking record, responsible for the lead seal after closing the box, and responsible for verifying the physical objects and documents of the standard workers when receiving and shipping for the MA700 project. Self made process equipment (referred to as self-made tooling) is designed, manufactured, inspected, stored, used, maintained, repaired, sealed, and scrapped by the tooling user unit in accordance with the tooling quality management procedures.
+
+# 6  要求
+
+## 6.1 合规管理要求
+
+# 无
+
+## 6.2 风险管理要求
+
+# 无
+
+## 6.3 工艺装备使用管理要求
+
+### 6.3.1  工装的接收
+
+#### 6.3.1.1 工装制造单位将验收后的工装实物、工装合格证明（FM1407-10、FM1407-11或FM1407-06），一起送交工装使用单位。
+
+#### 6.3.1.2 工装使用单位在接收工装制造单位移交的新制工装时，按工艺装备申请单FM1407-31核对，并查看移交手续是否齐全。
+
+#### 6.3.1.3 工装使用单位对符合移交手续的新制工装，立即建帐。
+
+#### 6.3.1.4 工装使用单位接收新制工装，按其外廓尺寸大小分别存放库房和生产现场。
+
+#### 6.3.1.5 工装存放在库房时，由使用单位负责并按项目分类、分区摆放。工装存放在自动化设备（立体库）时，数据登记且按项目分类，存放由控制系统自动分配货位。
+
+#### 6.3.1.6 大型、重要工装由使用单位负责，其中的可拆卸零件不能随意摆放，放置在工装旁边存放架上，标出零件标识号进行可视化管理，并落实具体负责人。
+
+#### 6.3.1.7 工装存放期间，保持清洁，工装上不得堆放杂物。金属工装不得直接接触地面，无表面防腐处理的涂敷防锈油，以防锈蚀。非金属材质工装不得涂油，不得接触潮湿物质。工装不得重叠摆放，长期存放保持底面水平和合适的刚性支撑，以防变形。样板立放或吊放在专用架子上，大型样板可用木板垫起立放在墙面或靠架上。
+
+#### 6.3.1.8 使用单位对专用地面设备定置管理，对通用地面设备按机型编号标识管理，防止混淆。
+
+#### 6.3.1.9 工装库房要保持通风干燥，地面不得撒水清扫。
+
+#### 6.3.1.10 根据生产情况，由于项目暂停或其他原因导致一年以上暂不使用的工装需停用封存。工装封存及解封具体要求按工艺装备维护管理程序（GLC14070304）执行。
+
+### 6.3.2 工装的使用
+
+#### 6.3.2.1 工装使用单位对新制工装投入使用前，严格按照GLC140704程序对工装进行验证。
+
+#### 6.3.2.2 首件产品零件经检查不符合产品图纸或装配要求时，使用单位技术室立即进行分析，经确认属于工装问题时，按GLC14070303管理程序进行返工。
+
+#### 6.3.2.3 工装使用单位在使用过程中，正确使用工装，不得用刀具等硬器冲击，确保工装定位基准和其它工作面完好无损。
+
+#### 6.3.2.4 装配工装和试验设备由工装使用单位编写操作说明，工人按操作说明正确操作。
+
+#### 6.3.2.5 生产工人在使用工装时，如发现故障或不正常现象，立即通知检验人员悬挂工装禁用标签(FM1407-07)，并保护好现场。生产控制室通知技术室确认故障状态，需要时，生产控制室会同技术室通知工艺装备室进行技术分析处理，并在工装限用（FM1407-39）上对限制使用说明进行签字确认，如需返工或补制按GLC14070303管理程序执行。
+
+#### 6.3.2.6 由于工人操作不当，造成工装损坏时，工装使用单位保护生产现场，填写工艺装备损坏、丢失问题处理单FM1407-41，报请工艺装备室进行现场实地分析、处理。
+
+#### 6.3.2.7 工装借用和返还时，办理有关手续。
+
+##### 6.3.2.7.1 对于装配类工装，借用时，借用人员认真对工装外观进行检查，确认完好时，在工装管理卡片FM1407-27上填写借用时间并签名。返还时，由借用者和工装保管人员一起对工装外观进行检查，确认完好时，由工装保管员在工装管理卡片FM1407-27上填写返还时间并签名。
+
+##### 6.3.2.7.2 对于零件类工装，工装使用单位应建立工装台账进行管理，台账应包括但不限于以下信息：机型、工装图号、工装名称、数量、接收时间、存放位置、借出时间、借用者姓名、返回状态、返回
+
+时间、保管工等信息。借用工装时，借用人员认真对工装外观进行检查，确认完好时，工装保管人员在工装台账上记录借用者姓名及时间。返还时，由借用者和工装保管人员一起对工装外观进行检查，确认完好时，由工装保管人员在工装台账上填写返还时间及返回状态。
+
+#### 6.3.2.8 有专用箱储存的工装，每次借出时，随实物一起借出。
+
+#### 6.3.2.9 大型工装搬运时，检查吊具和工装吊钩部位是否安全可靠，保证吊运平稳，防止工装滑下摔坏。
+
+#### 6.3.2.10 对有定检要求的工装，按GLC14070305理程序定期检修，在使用时要检查是否在定检周期内。
+
+#### 6.3.2.11 使用工装过程中，对于无法用钢索或链子与工装主体连接的可拆卸件，工装使用单位须将其集中摆放于存放区的工装可拆卸件存放车、架、箱、盒内，保证其摆放平稳，定置摆放，张贴必要标识，防止工装用错。
+
+#### 6.3.2.12 波音项目工装的接收使用涉及其他要求按D33200执行。
+
+### 6.3.3 提供给产品供应商使用的工装管理和控制（适用于波音项目）
+
+对于提供给产品供应商使用的工装，由提供单位编制外供工装目录，目录形式参考附录A，由项目管理部通知客户，对于Ⅰ类工装和Ⅱ类工装应在起运前30天通知，对于Ⅲ类工装应在不迟于起运后3天内通知。
+
+> **English:** For the tooling provided to product suppliers, the providing unit shall prepare an external tooling catalog in the form of Appendix A. The project management department shall notify the customer. For Class I and Class II tooling, notification shall be given 30 days before shipment, and for Class III tooling, notification shall be given no later than 3 days after shipment.
+
+### 6.3.4 自制工装的管理
+
+#### 6.3.4.1 工装使用单位工艺员负责设计自制工装，自制工装图纸经校对、技术副厂长批准后正式发放。自制工装的编号按GLB14070202-05工装数据集管理标准执行。
+
+#### 6.3.4.2 工装使用单位工艺员根据自制工装图纸编制工装制造工艺规程，工装使用单位组织完成自制工装制造。
+
+#### 6.3.4.3 工装使用单位质量工程室检验人员按照GLC14070402工艺装备验收管理程序进行自制工装验收、验证工作。
+
+#### 6.3.4.4 工装使用单位正确使用工装，自行开展自制工装的使用、维护工作。如发现故障或不正常现象立即停止使用。每两年进行一次自制工装磨损、损坏的检查，保证工装的完整性并处于良好状态。如工装磨损、损坏需工艺装备室协助维修时可提出申请，由工艺装备室进行鉴定后，派工进行维修。
+
+#### 6.3.4.5 工装使用单位按照GLC14070303工艺装备返修管理程序开展自制工装返修、封存、报废工作。
+
+#### 6.3.4.6 工装使用单位编制自制工装目录并自行建账进行自制工装管理。
+
+#### 6.3.4.7 原则上，自制工装不用于飞机产品的检验。如用于飞机产品的检验，则按GLC14070305工装定检管理程序执行。
+
+#### 6.3.4.8 将复材零件制造过程中所使用具有定位、检验、控制零件外形的复材盖板纳入自制工装进行管理，使用单位编制汇总目录后上报工艺装备室，工艺装备室将目录更新至工装清册中提交客户。
+
+### 6.3.5  标准工装的管理
+
+#### 6.3.5.1 标准工装的使用
+
+##### 6.3.5.1.1 工装保管单位应指定专人负责标准工装的借用和返回工作，同时确认标准工装在借用和返还时的状态。
+
+##### 6.3.5.1.2 产品的零（组）件生产单位，原则上不得借用标准工装。如因特殊生产需要，使用单位技术厂长可用工艺装备备忘录FM1407-15提出申请，经工艺装备室室主任批准后，可以借用标准工装。
+
+##### 6.3.5.1.3 借用标准工装的单位，要妥善保管、合理使用，不得直接将工装放在地面上。严禁在标准工装上划线、钻孔、锉修、对刀或当钻模使用，避免损伤工装各个部位。
+
+#### 6.3.5.2 标准工装的返工
+
+##### 6.3.5.2.1 标准工装因制造错误或使用过程中造成的损伤需返工时，由技术办公室主管技术员填写工艺装备返工申请单FM1407-55，经工装
+
+保管单位质量技术员和技术办公室室主任签字后，由工艺装备室申请外协返工。
+
+##### 6.3.5.2.2 标准工装因工装图样设计或夹具样板制造错误需返工时，经工装设计室更改标准工装图样后，技术办公室应按更改后的标准工装图样或夹具样板，填写工艺装备返工申请单FM1407-55，由工艺装备室申请外协返工。
+
+##### 6.3.5.2.3 标准工装因产品图样的更改需返工时，由技术办公室发出工艺指示单升版工艺装备申请单，经工装设计室更改标准工装图样后，技术办公室填写工艺装备返工申请单FM1407-55，由工艺装备室申请工装外协返工。
+
+##### 6.3.5.2.4 标准工装因技术协调问题需返工时，由技术办公室发出相应技术单FM2310-43，并填写工艺装备返工申请单FM1407-55，由工艺装备室申请外协返工。
+
+#### 6.3.5.3 标准工装的保管与维护
+
+##### 6.3.5.3.1 小型标准工装存放在架子上，大型标准工装应有专用架车或存放架，不能直接放在地面上。
+
+##### 6.3.5.3.2 标准工装入库时，保管人员应立即建立FM1407-21标准工装管理卡片，并进行外观检查，及时做好油封。
+
+##### 6.3.5.3.3 标准工装借用和返回时，标准工装保管单位的检验人员应到现场进行检查，并做好借用和返回时两次记录（填写FM1407-21）。工装返还时经检验员确定标准工装无损后，保管人员及检验人员在FM
+
+## 1407-21上签字。
+
+##### 6.3.5.3.4 标准工装的日常维护，由保管员负责。为避免锈蚀，应定期检查油封，检查时间不超过半年。
+
+##### 6.3.5.3.5 标准工装如果在使用中损坏，应停止使用，由使用单位填写工艺装备损坏、丢失问题处理单FM1407-41并送工艺装备室，由工艺装备室组织有关单位到现场进行技术分析处理。
+
+##### 6.3.5.3.6 标准工装没有存放库房需在生产现场存放时，生产厂负责规划标工专用存放区域，并显著标识及必要的隔离措施。
+
+#### 6.3.5.4 标准工装的搬运
+
+##### 6.3.5.4.1 标准工装搬运时，应平稳放在运输车上，采用必要的固定束紧措施，确认安全无误后，方可运输。运输中要有专人看管负责。
+
+##### 6.3.5.4.2 起吊标准工装时，要检查起吊机械钢索以及工装吊具、吊点等是否安全可靠，认定安全可靠方可起吊。
+
+##### 6.3.5.4.3 对大型标准工装，应由借用单位借用适用车辆进行运输，保证标工运输的安全可靠。
+
+#### 6.3.5.5 标准工装存放库房的温、湿度要求
+
+##### 6.3.5.5.1 标准工装存放库房的温度应控制在8°C～35°C。
+
+##### 6.3.5.5.2 标准工装存放库房的湿度应保持在75%以下。
+
+##### 6.3.5.5.3 在温度湿度检查记录表FM1207-15上，每天记录一次温、湿度记录。
+
+#### 6.3.5.6 标准工装的校检
+
+##### 6.3.5.6.1 如有客户专用文件或特殊要求，需要按照客户要求开展使用前的标工校验。
+
+##### 6.3.5.6.2 没有特殊要求的，使用前按照工装图纸要求进行标工校检。
+
+# 7  流程
+
+## 7.1 工艺装备使用流程
+
+### 7.1.1 工艺装备使用流程图
+
+### 7.1.2 工艺装备使用流程说明表
+
+（1）接收工装并编制工装台账
+
+## 7.1.2 接收工装并编制工装台账
+
+> 位置：第7.1.2节
+
+| 接收工装并编制工装台账 | 步骤描述 | 接收工装并编制工装台账 | 接收工装并编制工装台账 | 接收工装并编制工装台账 |
+| --- | --- | --- | --- | --- |
+| 接收工装并编制工装台账 | 活动频率 | 5天 | 5天 | 5天 |
+| 接收工装并编制工装台账 | 流程角色 | 工装保管员 | 岗位 | 生产控制室保管工 |
+| 接收工装并编制工装台账 | 输入物 | 工装合格证 | 输出物 | 工装台账 |
+| 接收工装并编制工装台账 | 合规条款 | 无 | 无 | 无 |
+| 接收工装并编制工装台账 | 作业执行标准 | 无 | 无 | 无 |
+| 接收工装并编制工装台账 | 风险及应对措施 | 无 | 无 | 无 |
+
+（2）使用工装
+
+## 7.1.2 使用工装
+
+> 位置：第7.1.2节
+
+| 使用工装 | 步骤描述 | 工装使用单位使用工装 | 工装使用单位使用工装 | 工装使用单位使用工装 |
+| --- | --- | --- | --- | --- |
+| 使用工装 | 活动频率 | 1天 | 1天 | 1天 |
+| 使用工装 | 流程角色 | 工装负责人 | 岗位 | 生产单元铆装钳工；钣金工区钣金工；复材工区铺叠工 |
+| 使用工装 | 输入物 | 工装 | 输出物 | 工装 |
+| 使用工装 | 合规条款 | 无 | 无 | 无 |
+| 使用工装 | 作业执行标准 | 复材工装使用管理标准、商飞项目工装使用标准、生产和检验共用工装用前校准管理标准、MA700项目工装使用标准、商飞项目标准工装的管理标准、MA700项目标工借用管理标准、顾客提供工艺装备管理标准、外协产品供应商用工艺装备管理标准、工艺装备的转移与借用管理标准 | 复材工装使用管理标准、商飞项目工装使用标准、生产和检验共用工装用前校准管理标准、MA700项目工装使用标准、商飞项目标准工装的管理标准、MA700项目标工借用管理标准、顾客提供工艺装备管理标准、外协产品供应商用工艺装备管理标准、工艺装备的转移与借用管理标准 | 复材工装使用管理标准、商飞项目工装使用标准、生产和检验共用工装用前校准管理标准、MA700项目工装使用标准、商飞项目标准工装的管理标准、MA700项目标工借用管理标准、顾客提供工艺装备管理标准、外协产品供应商用工艺装备管理标准、工艺装备的转移与借用管理标准 |
+| 使用工装 | 风险及应对措施 | 无 | 无 | 无 |
+
+> **English:** (1) Receive tooling and prepare tooling ledger
+
+> **English:** (2) Using fixtures
+
+> **English:** 8 Process Role Responsibility Table
+
+> **English:** 9 Process Performance Indicator Table
+
+# 8  流程角色职责表
+
+## 8 角色名称
+
+> 位置：第8节
+
+| 角色名称 | 职责 |
+| --- | --- |
+| 工装保管员 | 接收工装并编制工装台账 |
+| 工装负责人 | 使用工装 |
+
+# 9  流程绩效指标表
+
+# 无
+
+# 10  建立如下管理标准支持本程序
+
+# GLB1407030101 复材工装使用管理标准
+
+# GLB1407030102 商飞项目工装使用标准
+
+# GLB1407030103 生产和检验共用工装用前校准标准
+
+# GLB1407030104 MA700项目工装使用标准
+
+# GLB1407030105 商飞项目标准工装的管理标准
+
+# GLB1407030106 MA700项目标工借用管理标准
+
+# GLB1407030107 顾客提供工艺装备管理标准
+
+GLB1407030108 外协产品供应商用工艺装备管理标准
+
+# GLB1407030109 工艺装备的转移与借用管理标准
+
+# 11  记录控制
+
+> **English:** The filling and maintenance of relevant records shall be carried out in accordance with the requirements of procedure document GLC231008.
+
+## 11.1  相关记录的填写和维护按程序文件GLC231008要求执行。
+
+# 附录A
+
+（规范性）
+
+# 供应商起运工装目录
+
+## 11.1 供应商起运工装目录
+
+Supplier Shipment Catalog
+
+> 位置：第11.1节
+
+| 供应商起运工装目录
+
+Supplier Shipment Catalog | 供应商起运工装目录
+
+Supplier Shipment Catalog | 供应商起运工装目录
+
+Supplier Shipment Catalog | 供应商起运工装目录
+
+Supplier Shipment Catalog | 供应商起运工装目录
+
+Supplier Shipment Catalog | 供应商起运工装目录
+
+Supplier Shipment Catalog |
+| --- | --- | --- | --- | --- | --- |
+| 工装接收单位名称：
+
+Name
+  of Receiving Receiver: |  |  | 目的地：
+
+Destination: |  |  |
+| 计划发运时间：
+
+Scheduled
+  Shipping Time: |  |  | 计划到目的地时间：
+
+Scheduled
+  to The Destination Time: |  |  |
+| 序号
+
+Order
+  Number | 工装图号
+
+Tooling  Number | 工装名称
+
+Tooling
+  Name | 工装类型
+
+Tooling
+  Type | 工装
+
+永久序列号
+
+Tooling
+  Permanent Serial Number | 备注
+
+Remark |
+|  |  |  |  |  |  |
+|  |  |  |  |  |  |
+
+## 11.1
+
+> 位置：第11.1节
+
+|  |  |  |  |  |  |
+| --- | --- | --- | --- | --- | --- |
+|  |  |  |  |  |  |
+|  |  |  |  |  |  |
+|  |  |  |  |  |  |
+| 工装发运单位
+
+Tooling
+  and Shipping Units |  | 工装接收单位
+
+Tooling
+  Receiving Unit |  | 项目经理
+
+Project
+  Manager |  |
+| 质量安全部
+
+Quality
+  & Safety Department |  | 工艺装备室
+
+Tooling  Office |  |  |  |
+
+---
+
+
+## 附录：FM1407-27
+
+FM1407-27 正面
+
+**表单字段：**
+
+- 工装管理卡片
+- 机型 Model
+- 工装名称
+- 数量 Number
+- 飞机图号 Aircraft drawing number
+- 工装图号
+- 接收时间 Reception time
+- 工装附件 Receiving time tooling accessories
+- 存放位置
+- 架 Shelf
+- 层 Storey
+- 号 Name
+- 借出时间
+- 借用者姓名
+- 返回状态
+- 返回时间 Return Time
+- 保管工 Custodian
+- 完整
+- 缺件
+
+FM1407-27 背面
+
+填写说明：
+
+Instructions for Filling：
+
+本表格适用于工装借用、返还及季度检查时使用。
+
+This form is applicable for borrowing, returning, and quarterly inspection of tooling.
+
+（1）工装保管员填写机型。
+
+The tooling keeper fills in the model.
+
+（2）工装保管员填写工装名称。
+
+The tooling keeper fills in the tooling name.
+
+（3）工装保管员填写工装数量。
+
+The tooling keeper fills in the quantity of tooling.
+
+（4）工装保管员填写飞机图号。
+
+The tooling keeper fills in the aircraft drawing number.
+
+（5）工装保管员填写工装图号。
+
+The tooling keeper fills in the tooling drawing number.
+
+（6）工装保管员填写接收时间。
+
+The tooling keeper fills in the receiving time.
+
+（7）工装保管员填写工装附件。
+
+The tooling keeper fills out the tooling attachment.
+
+（8）工装保管员填写工装存放位置。
+
+The tooling keeper fills in the storage location of the tooling.
+
+（9）工装保管员填写工装库房或库位号，若无则写N/A。
+
+The tooling keeper shall fill in the tooling warehouse or location number, and if not, write N/A.
+
+（10）工装保管员填写工装架位号，若无则写N/A。
+
+The tooling keeper shall fill in the tooling rack position number, and if there is none, write N/A.
+
+（11）工装保管员填写工装存放层数号，若无则写N/A。
+
+The tooling keeper shall fill in the number of layers of tooling storage, and if there is none, write N/A.
+
+（12）工装保管员填写工装存放号，若无则写N/A。
+
+The tooling keeper shall fill in the tooling storage number, and if there is none, write N/A.
+
+（13）工装借用人员填写工装借出时间。
+
+The borrowing personnel shall fill in the borrowing time of the tooling.
+
+（14）工装借用人员填写借用者姓名。
+
+The personnel borrowing the tooling should fill in the borrower's name.
+
+（15）工装保管员填写工装返回状态是否完整。
+
+The tooling keeper fills in whether the return status of the tooling is complete.
+
+（16）工装保管员填写工装返回状态是否缺件。
+
+The tooling keeper fills in whether the return status of the tooling is missing.
+
+（17）工装保管员填写工装返回时间。
+
+The tooling keeper shall fill in the return time of the tooling.
+
+（18）工装保管员填写姓名。
+
+Fill in the name of the tooling keeper.
+
+
+## 附录：FM1407-39
+
+FM1407-39A
+
+FM1407-39A
+
+# 工装限用
+
+# Limitation Usage of Tooling
+
+**表单字段：**
+
+- 工装图号：（1）
+
+# 表格大小为105X75MM
+
+Size of Form: 105X75MM
+
+# 该表格为红色
+
+# It is red for this form
+
+填写说明：
+
+Instructions for Filling：
+
+本表格由工装使用单位的工艺人员填写，工装使用单位检验员粘贴。
+
+This form is filled out by the process personnel of the fixture using unit, and pasted by the
+
+inspector of the fixture using unit..
+
+（1）工装使用单位工艺员填写工装图号。
+
+The process personnel of the tooling using unit shall fill in the tooling drawing number.
+
+（2）工装使用单位工艺员填写工装名称。
+
+The technician of the unit using the tooling shall fill in the name of the tooling.
+
+（3）工装使用单位工艺员填写工装的限制使用范围。
+
+The process personnel of the tooling using unit shall fill in the restricted usage range of the
+
+tooling.
+
+（4）工装限用结束后，由使用单位检验人员填写工装限用关闭日期，并去除限用标签。
+
+After the end of the tooling restriction, the inspection personnel of the using unit shall fill in
+
+the closing date of the tooling restriction and remove the restriction label.
+
+（5）工装使用单位工艺员签字并注明日期。
+
+The technician of the tooling user unit shall sign and indicate the date.
+
+（6）工艺装备室技术人员同意工装限用后，签字并注明日期。
+
+After the technical personnel in the process equipment room agree to limit the use of tooling,
+
+they sign and indicate the date.
+
+
+## 附录：FM1407-53
+
+FM 1407-53
+
+**表单字段：**
+
+- 周转使用类工艺装备跟踪表
+- 序号
+- 工装图号
+- 工装名称
+- 系列号
+- 工装位置
+- 派工号
+- 架次号
+- 备注
+- 客户
+- 供应商
+- 使用单位
+
+注：当工装较多时可在表格中插入单元格，将表格加长到A4幅面。
+
+Note: When there is more tooling, you can insert cells into the table to extend the table to A4 size.
+
+填写说明：
+
+Instructions for Filling：
+
+（1）填写序号。
+
+Fill in Serial No.
+
+（2）填写工装图号。
+
+Fill in Tooling No.
+
+（3）填写工装名称。
+
+Fill in Tooling Name.
+
+（4）填写系列号。
+
+Fill in Series No..
+
+（5）填写客户名称。
+
+Fill in Customer Name.
+
+（6）填写供应商名称。
+
+Fill in Tooling Name.
+
+（7）填写使用单位名称。
+
+Fill in Unit of use Name.
+
+（8）填写工装派工号。
+
+Fill in Tooling Dispatch number.
+
+（9）填写工装架次号。
+
+Fill in Tooling Number of flight.
+
+（10）填写备注。
+
+Fill in Note.
