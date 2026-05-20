@@ -500,6 +500,7 @@
             <div class="rbac-nav-item active" data-panel="roleList" style="padding:10px;cursor:pointer;border-radius:4px;margin-bottom:4px;font-weight:bold;background:#e3f2fd;">角色列表</div>
             <div class="rbac-nav-item" data-panel="permMatrix" style="padding:10px;cursor:pointer;border-radius:4px;margin-bottom:4px;">权限矩阵</div>
             <div class="rbac-nav-item" data-panel="userRoles" style="padding:10px;cursor:pointer;border-radius:4px;margin-bottom:4px;">用户角色分配</div>
+            <div class="rbac-nav-item" data-panel="userRolesOverview" style="padding:10px;cursor:pointer;border-radius:4px;margin-bottom:4px;">用户角色一览</div>
             <div class="rbac-nav-item" data-panel="batchImport" style="padding:10px;cursor:pointer;border-radius:4px;">批量导入</div>
           </div>
           <!-- Right content area -->
@@ -558,6 +559,11 @@
 
     function safeText(value, fallback = '-') {
       return escapeHtml(value === null || value === undefined || value === '' ? fallback : value);
+    }
+
+    function hasAdminAccess() {
+      var perms = (state.user && state.user.permissions) || [];
+      return !!(state.user && (state.user.role === 'admin' || perms.indexOf('admin:access') >= 0 || perms.indexOf('*:*') >= 0));
     }
 
     // ===== API helper (with 401 handling) =====
@@ -777,6 +783,7 @@
     }
 
     function renderCapsAndProcs() {
+      var canDelete = hasAdminAccess();
       $('capRows').innerHTML = state.capabilities.map(function(row) {
         var rowId = Number(row.id);
         return '<tr style="cursor:pointer;" onclick="renderCapPreview(' + rowId + ');' +
@@ -784,12 +791,14 @@
           '">' +
           '<td>' + rowId + '</td><td>' + safeText(row.name) + '</td><td>' + safeText(row.level) + '</td><td>' + safeText(row.dept_name) + '</td><td>' + statusTag(row.status) + '</td>' +
           '<td><button class="btn success" onclick="event.stopPropagation();reviewCap(' + rowId + ',\'approve\')">通过</button> ' +
-          '<button class="btn danger" onclick="event.stopPropagation();reviewCap(' + rowId + ',\'reject\')">驳回</button></td></tr>';
+          '<button class="btn danger" onclick="event.stopPropagation();reviewCap(' + rowId + ',\'reject\')">驳回</button>' +
+          (canDelete ? ' <a href="#" onclick="event.stopPropagation();deleteCapability(' + rowId + ');return false" style="color:#e53935;">删除</a>' : '') + '</td></tr>';
       }).join('') || '<tr><td colspan="6" class="empty">暂无数据</td></tr>';
 
       $('procRows').innerHTML = state.processes.map(function(row) {
         var rowId = Number(row.id);
-        return '<tr><td>' + rowId + '</td><td>' + safeText(row.name) + '</td><td>' + safeText(row.cap_name) + '</td><td>' + safeText(row.dept_name) + '</td><td>' + statusTag(row.status) + '</td><td><button class="btn secondary" onclick="navigateTo(\'detail\',{tab:\'processes\',type:\'process\',id:' + rowId + '})">详情</button> <button class="btn success" onclick="reviewProc(' + rowId + ',\'approve\')">通过</button> <button class="btn danger" onclick="reviewProc(' + rowId + ',\'reject\')">驳回</button></td></tr>';
+        return '<tr><td>' + rowId + '</td><td>' + safeText(row.name) + '</td><td>' + safeText(row.cap_name) + '</td><td>' + safeText(row.dept_name) + '</td><td>' + statusTag(row.status) + '</td><td><button class="btn secondary" onclick="navigateTo(\'detail\',{tab:\'processes\',type:\'process\',id:' + rowId + '})">详情</button> <button class="btn success" onclick="reviewProc(' + rowId + ',\'approve\')">通过</button> <button class="btn danger" onclick="reviewProc(' + rowId + ',\'reject\')">驳回</button>' +
+          (canDelete ? ' <a href="#" onclick="deleteProcess(' + rowId + ');return false" style="color:#e53935;">删除</a>' : '') + '</td></tr>';
       }).join('') || '<tr><td colspan="6" class="empty">暂无数据</td></tr>';
     }
 
@@ -816,6 +825,20 @@
     async function reviewProc(id, action) {
       await api('/api/processes/' + id + '/review', { method:'POST', body:JSON.stringify({ action: action }) });
       await loadCatalog();
+    }
+
+    function deleteCapability(id) {
+      if (!confirm('确定删除能力 #' + id + ' 吗？子能力也将被删除，关联流程会保留但不再挂接此能力。')) return;
+      fetch('/api/capabilities/' + id, { method: 'DELETE' }).then(function(r) { return r.json(); }).then(function(d) {
+        if (d.error) { alert('删除失败：' + d.error); } else { loadCatalog(); }
+      });
+    }
+
+    function deleteProcess(id) {
+      if (!confirm('确定删除流程 #' + id + ' 吗？相关映射、字段、审批记录和待办将被删除。')) return;
+      fetch('/api/processes/' + id, { method: 'DELETE' }).then(function(r) { return r.json(); }).then(function(d) {
+        if (d.error) { alert('删除失败：' + d.error); } else { loadCatalog(); }
+      });
     }
 
     async function loadMappings() {
@@ -2283,6 +2306,7 @@
       if (rbacPanel === 'roleList') renderRoleList();
       else if (rbacPanel === 'permMatrix') renderPermMatrix();
       else if (rbacPanel === 'userRoles') renderUserRolesPanel();
+      else if (rbacPanel === 'userRolesOverview') renderUserRolesOverview();
       else if (rbacPanel === 'batchImport') renderBatchImport();
     }
 
@@ -2480,6 +2504,114 @@
       });
     }
 
+    // --- User Roles Overview Panel ---
+    var userRolesOverviewData = [];
+    var userRolesOverviewDeptFilter = '';
+
+    function renderUserRolesOverview() {
+      var panel = document.getElementById('rbacPanel');
+      panel.innerHTML = '<h3>用户角色一览</h3><p>加载中...</p>';
+
+      fetch('/api/org/users/roles-summary').then(function(r) { return r.json(); }).then(function(data) {
+        if (data.error) { panel.innerHTML = '<p style="color:#e53935;">' + data.error + '</p>'; return; }
+        userRolesOverviewData = data;
+
+        var depts = [...new Set(data.map(function(u) { return u.dept_name; }).filter(Boolean))].sort();
+        var deptOptions = '<option value="">全部</option>' + depts.map(function(d) { return '<option value="' + escapeHtml(d) + '">' + escapeHtml(d) + '</option>'; }).join('');
+
+        var html = '<div style="margin-bottom:12px;display:flex;gap:12px;align-items:center;">' +
+          '<label>部门筛选：<select id="overviewDeptFilter" onchange="applyOverviewFilter()" style="padding:4px 8px;border:1px solid #ddd;border-radius:4px;">' + deptOptions + '</select></label>' +
+          '<span style="color:#999;font-size:13px;">共 ' + data.length + ' 人</span>' +
+          '</div>' +
+          '<table class="data-table" style="width:100%;font-size:13px;">' +
+          '<thead><tr><th>工号</th><th>姓名</th><th>部门</th><th>职务</th><th>旧角色</th><th>RBAC 角色</th><th>操作</th></tr></thead>' +
+          '<tbody id="overviewTableBody"></tbody></table>';
+        panel.innerHTML = html;
+        if (userRolesOverviewDeptFilter) {
+          document.getElementById('overviewDeptFilter').value = userRolesOverviewDeptFilter;
+        }
+        renderOverviewTable();
+      });
+    }
+
+    function applyOverviewFilter() {
+      userRolesOverviewDeptFilter = document.getElementById('overviewDeptFilter').value;
+      renderOverviewTable();
+    }
+
+    function renderOverviewTable() {
+      var filtered = userRolesOverviewDeptFilter
+        ? userRolesOverviewData.filter(function(u) { return u.dept_name === userRolesOverviewDeptFilter; })
+        : userRolesOverviewData;
+
+      var html = '';
+      filtered.forEach(function(u) {
+        var codes = u.rbac_role_codes ? u.rbac_role_codes.split(',') : [];
+        html += '<tr>';
+        html += '<td>' + escapeHtml(u.employee_no) + '</td>';
+        html += '<td>' + escapeHtml(u.name) + '</td>';
+        html += '<td>' + escapeHtml(u.dept_name || '-') + '</td>';
+        html += '<td>' + escapeHtml(u.post || '-') + '</td>';
+        html += '<td>' + escapeHtml(u.role) + '</td>';
+        html += '<td><span id="badge-' + u.id + '">' + (u.rbac_role_codes || '<span style="color:#999;">未分配</span>') + '</span></td>';
+        html += '<td><button onclick="editOverviewRoles(' + u.id + ',\'' + escapeHtml(u.name) + '\',\'' + escapeHtml(u.employee_no) + '\',\'' + (u.rbac_role_codes || '') + '\')" style="padding:4px 10px;background:#1565c0;color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;">编辑角色</button></td>';
+        html += '</tr>';
+      });
+      if (filtered.length === 0) {
+        html = '<tr><td colspan="7" style="text-align:center;color:#999;padding:20px;">无匹配数据</td></tr>';
+      }
+      document.getElementById('overviewTableBody').innerHTML = html;
+    }
+
+    function editOverviewRoles(userId, userName, employeeNo, currentCodes) {
+      fetch('/api/roles').then(function(r) { return r.json(); }).then(function(allRoles) {
+        var currentCodesArr = currentCodes ? currentCodes.split(',') : [];
+        var currentRoleIds = [];
+        // match codes to role_ids
+        allRoles.forEach(function(r) {
+          if (currentCodesArr.indexOf(r.role_code) >= 0) currentRoleIds.push(r.role_id);
+        });
+
+        var checkboxesHtml = '';
+        allRoles.forEach(function(r) {
+          checkboxesHtml += '<label style="display:block;margin-bottom:4px;"><input type="checkbox" value="' + r.role_id + '" ' + (currentRoleIds.indexOf(r.role_id) >= 0 ? 'checked' : '') + '> ' + escapeHtml(r.role_code) + ' — ' + escapeHtml(r.role_name) + '</label>';
+        });
+
+        var dialog = document.createElement('div');
+        dialog.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:9999;';
+        dialog.innerHTML = '<div style="background:white;border-radius:8px;padding:24px;min-width:320px;max-width:400px;">' +
+          '<h3 style="margin-bottom:4px;">编辑角色 — ' + escapeHtml(userName) + '</h3>' +
+          '<p style="color:#999;font-size:13px;margin-bottom:16px;">' + escapeHtml(employeeNo) + '</p>' +
+          '<div id="overviewRoleChecks">' + checkboxesHtml + '</div>' +
+          '<div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end;">' +
+            '<button onclick="this.closest(\'[style]\').parentElement.remove()" style="padding:6px 16px;border:1px solid #ddd;border-radius:4px;cursor:pointer;">取消</button>' +
+            '<button id="overviewSaveBtn" style="padding:6px 16px;background:#2e7d32;color:white;border:none;border-radius:4px;cursor:pointer;">保存</button>' +
+          '</div></div>';
+        document.body.appendChild(dialog);
+
+        dialog.querySelector('#overviewSaveBtn').addEventListener('click', function() {
+          var checks = dialog.querySelectorAll('#overviewRoleChecks input[type=checkbox]:checked');
+          var roleIds = Array.from(checks).map(function(cb) { return Number(cb.value); });
+          if (roleIds.length === 0) { alert('至少需要一个角色'); return; }
+          fetch('/api/org/users/' + userId + '/roles', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ role_ids: roleIds })
+          }).then(function(r) { return r.json(); }).then(function(data) {
+            if (data.error) { alert('保存失败：' + data.error); return; }
+            // Refresh from server
+            fetch('/api/org/users/roles-summary').then(function(r) { return r.json(); }).then(function(data2) {
+              userRolesOverviewData = data2;
+              renderOverviewTable();
+            });
+            dialog.remove();
+          });
+        });
+
+        dialog.addEventListener('click', function(e) { if (e.target === dialog) dialog.remove(); });
+      });
+    }
+
     // --- Batch Import Panel ---
     function renderBatchImport() {
       var panel = document.getElementById('rbacPanel');
@@ -2544,7 +2676,9 @@
       sessionEl.appendChild(btn);
     }
 
-    document.getElementById('passwordSubmitBtn').addEventListener('click', function() {
+    var passwordSubmitBtn = document.getElementById('passwordSubmitBtn');
+    if (passwordSubmitBtn) {
+    passwordSubmitBtn.addEventListener('click', function() {
       var current = document.getElementById('currentPassword').value;
       var newPw = document.getElementById('newPassword').value;
       var confirm = document.getElementById('confirmPassword').value;
@@ -2562,10 +2696,14 @@
         alert('密码修改成功');
       });
     });
+    }
 
-    document.getElementById('passwordCancelBtn').addEventListener('click', function() {
+    var passwordCancelBtn = document.getElementById('passwordCancelBtn');
+    if (passwordCancelBtn) {
+    passwordCancelBtn.addEventListener('click', function() {
       document.getElementById('passwordDialog').style.display = 'none';
     });
+    }
 
     function showPasswordError(msg) {
       var el = document.getElementById('passwordDialogMsg');
