@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const { requireAuth, applyFieldConstraints } = require('../auth');
+const { requireAuth, requirePermission, applyFieldConstraints } = require('../auth');
 
 function handleDbError(res, error) {
   if (error && (String(error.code).startsWith('SQLITE_CONSTRAINT') || String(error.message).includes('constraint failed'))) {
@@ -98,11 +98,47 @@ router.post('/memberships', requireAuth, (req, res) => {
   } catch (e) { handleDbError(res, e); }
 });
 
-router.delete('/memberships/:id', requireAuth, (req, res) => {
+router.delete('/memberships/:id', requireAuth, requirePermission('admin:access'), (req, res) => {
   try {
     const r = db.prepare('DELETE FROM entity_class_membership WHERE membership_id=?').run(req.params.id);
     if (r.changes === 0) return res.status(404).json({ error: '关联不存在' });
     res.json({ success: true });
+  } catch (e) { handleDbError(res, e); }
+});
+
+router.delete('/:code', requireAuth, requirePermission('admin:access'), (req, res) => {
+  try {
+    const node = db.prepare('SELECT * FROM class_node WHERE class_code=?').get(req.params.code);
+    if (!node) return res.status(404).json({ error: '分类不存在' });
+
+    const cascaded = {};
+    const descIds = [];
+
+    function collectDescendants(parentId) {
+      const children = db.prepare('SELECT class_node_id FROM class_node WHERE parent_class_node_id=?').all(parentId);
+      for (const child of children) {
+        descIds.push(child.class_node_id);
+        collectDescendants(child.class_node_id);
+      }
+    }
+
+    collectDescendants(node.class_node_id);
+    const idsToDelete = descIds.slice().reverse();
+    let memberships = 0;
+
+    for (const classNodeId of idsToDelete) {
+      memberships += db.prepare('DELETE FROM entity_class_membership WHERE class_node_id=?').run(classNodeId).changes;
+      db.prepare("DELETE FROM external_identity WHERE entity_type='class_node' AND entity_id=?").run(classNodeId);
+      db.prepare('DELETE FROM class_node WHERE class_node_id=?').run(classNodeId);
+    }
+
+    memberships += db.prepare('DELETE FROM entity_class_membership WHERE class_node_id=?').run(node.class_node_id).changes;
+    db.prepare("DELETE FROM external_identity WHERE entity_type='class_node' AND entity_id=?").run(node.class_node_id);
+    db.prepare('DELETE FROM class_node WHERE class_node_id=?').run(node.class_node_id);
+
+    cascaded.children = descIds.length;
+    cascaded.memberships = memberships;
+    res.json({ success: true, cascaded });
   } catch (e) { handleDbError(res, e); }
 });
 
