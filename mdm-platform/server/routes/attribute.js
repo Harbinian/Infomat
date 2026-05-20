@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const { requireAuth, applyFieldConstraints } = require('../auth');
+const { requireAuth, requirePermission, applyFieldConstraints } = require('../auth');
 
 function handleDbError(res, error) {
   if (error && (String(error.code).startsWith('SQLITE_CONSTRAINT') || String(error.message).includes('constraint failed'))) {
@@ -97,6 +97,20 @@ router.put('/values', requireAuth, (req, res) => {
       }
     })();
     res.json({ success: true });
+  } catch (e) { handleDbError(res, e); }
+});
+
+router.delete('/defs/:code', requireAuth, requirePermission('admin:access'), (req, res) => {
+  try {
+    const def = db.prepare('SELECT * FROM attribute_def WHERE attribute_code=?').get(req.params.code);
+    if (!def) return res.status(404).json({ error: '属性定义不存在' });
+
+    const cascaded = {};
+    cascaded.attribute_values = db.prepare('DELETE FROM attribute_value WHERE attribute_def_id=?').run(def.attribute_def_id).changes;
+    db.prepare("DELETE FROM external_identity WHERE entity_type='attribute_def' AND entity_id=?").run(def.attribute_def_id);
+    db.prepare('DELETE FROM attribute_def WHERE attribute_def_id=?').run(def.attribute_def_id);
+
+    res.json({ success: true, cascaded });
   } catch (e) { handleDbError(res, e); }
 });
 
