@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const { requireAuth } = require('../auth');
+const { requireAuth, getUserEffectivePermissions } = require('../auth');
 const { mappingVisibility } = require('../access');
 
 function handleDbError(res, error) {
@@ -18,6 +18,11 @@ function runDbAction(res, action) {
   } catch (error) {
     return handleDbError(res, error);
   }
+}
+
+function hasAdminAccess(userId) {
+  const { permSet } = getUserEffectivePermissions(userId);
+  return permSet.has('admin:access') || permSet.has('*:*');
 }
 
 router.get('/', requireAuth, (req, res) => {
@@ -170,7 +175,7 @@ router.put('/:id', requireAuth, (req, res) => {
     const mapping = db.prepare('SELECT * FROM mappings WHERE id=?').get(req.params.id);
     if (!mapping) return res.status(404).json({ error: '映射不存在' });
     if (mapping.status !== 'draft') return res.status(400).json({ error: '只能修改草稿状态' });
-    if (mapping.submitted_by !== req.session.userId && req.session.userRole !== 'admin') {
+    if (mapping.submitted_by !== req.session.userId && !hasAdminAccess(req.session.userId)) {
       return res.status(403).json({ error: '仅创建人或管理员可修改草稿' });
     }
 
@@ -202,7 +207,7 @@ router.delete('/:id', requireAuth, (req, res) => {
     const mapping = db.prepare('SELECT * FROM mappings WHERE id=?').get(req.params.id);
     if (!mapping) return res.status(404).json({ error: '映射不存在' });
     if (mapping.status !== 'draft') return res.status(400).json({ error: '只能删除草稿状态' });
-    if (mapping.submitted_by !== req.session.userId && req.session.userRole !== 'admin') {
+    if (mapping.submitted_by !== req.session.userId && !hasAdminAccess(req.session.userId)) {
       return res.status(403).json({ error: '仅创建人或管理员可删除草稿' });
     }
     db.prepare('DELETE FROM mappings WHERE id=?').run(req.params.id);
@@ -414,7 +419,7 @@ router.post('/:id/review', requireAuth, (req, res) => {
 
 router.post('/:id/publish', requireAuth, (req, res) => {
   return runDbAction(res, () => {
-    if (req.session.userRole !== 'admin') return res.status(403).json({ error: '仅信息化项目组可发布' });
+    if (!hasAdminAccess(req.session.userId)) return res.status(403).json({ error: '仅信息化项目组可发布' });
     const mapping = db.prepare('SELECT status FROM mappings WHERE id=?').get(req.params.id);
     if (!mapping) return res.status(404).json({ error: '映射不存在' });
     if (mapping.status !== 'final_reviewed') return res.status(409).json({ error: '仅终审完成后可发布' });
