@@ -2124,8 +2124,18 @@
       var data = await api('/api/org-units?' + params);
       document.getElementById('ouTableBody').innerHTML = (data.rows || []).map(function(r) {
         return '<tr><td><code>' + escHtml(r.org_unit_code) + '</code></td><td>' + escHtml(r.org_unit_name) + '</td><td>' + escHtml(r.org_type) + '</td><td>' + escHtml(r.org_mnemonic) + '</td><td>' + escHtml(r.parent_name || '-') + '</td><td>' + escHtml(r.status) + '</td><td>' +
-          (r.status === 'draft' ? '<a href="#" onclick="activateOu(\'' + escHtml(r.org_unit_code) + '\');return false">激活</a>' : '') + '</td></tr>';
+          (r.status === 'draft' ? '<a href="#" onclick="activateOu(\'' + escHtml(r.org_unit_code) + '\');return false">激活</a>' : '') +
+          (hasAdminAccess() ? '<a href="#" onclick="deleteOu(\'' + escHtml(r.org_unit_code) + '\');return false" style="color:#e53935;margin-left:8px;">删除</a>' : '') + '</td></tr>';
       }).join('') || '<tr><td colspan="7" style="text-align:center">暂无数据</td></tr>';
+    }
+
+    async function deleteOu(code) {
+      if (!confirm('确定删除组织 ' + code + ' 吗？下属岗位和任岗记录也将被删除，子组织会挂到上级组织。')) return;
+      try {
+        var res = await api('/api/org-units/' + encodeURIComponent(code), { method: 'DELETE' });
+        if (res.success) { alert('已删除，级联：' + JSON.stringify(res.cascaded)); loadOrgUnits(); }
+        else alert('删除失败：' + (res.error || '未知错误'));
+      } catch (e) { alert('删除失败'); }
     }
 
     async function activateOu(code) {
@@ -2162,8 +2172,18 @@
       var data = await api('/api/persons?' + params);
       document.getElementById('personTableBody').innerHTML = (data.rows || []).map(function(r) {
         return '<tr><td><code>' + escHtml(r.employee_no) + '</code></td><td>' + escHtml(r.person_name) + '</td><td>' + escHtml(r.mobile || '-') + '</td><td>' + escHtml(r.email || '-') + '</td><td>' + escHtml(r.employment_status) + '</td><td>' + escHtml(r.status) + '</td><td>' +
-          (r.status === 'draft' ? '<a href="#" onclick="activatePerson(\'' + escHtml(r.employee_no) + '\');return false">激活</a>' : '') + '</td></tr>';
+          (r.status === 'draft' ? '<a href="#" onclick="activatePerson(\'' + escHtml(r.employee_no) + '\');return false">激活</a>' : '') +
+          (hasAdminAccess() ? '<a href="#" onclick="deletePerson(\'' + escHtml(r.employee_no) + '\');return false" style="color:#e53935;margin-left:8px;">删除</a>' : '') + '</td></tr>';
       }).join('') || '<tr><td colspan="7" style="text-align:center">暂无数据</td></tr>';
+    }
+
+    async function deletePerson(no) {
+      if (!confirm('确定删除人员 ' + no + ' 吗？任岗记录和组织负责人引用将被清理。')) return;
+      try {
+        var res = await api('/api/persons/' + encodeURIComponent(no), { method: 'DELETE' });
+        if (res.success) { alert('已删除，级联：' + JSON.stringify(res.cascaded)); loadPersons(); }
+        else alert('删除失败：' + (res.error || '未知错误'));
+      } catch (e) { alert('删除失败'); }
     }
 
     async function activatePerson(no) {
@@ -2195,8 +2215,18 @@
       var data = await api('/api/product-families?limit=100');
       document.getElementById('pfTableBody').innerHTML = (data.rows || []).map(function(r) {
         return '<tr><td><code>' + escHtml(r.product_family_code) + '</code></td><td>' + escHtml(r.model_name) + '</td><td>' + escHtml(r.model_code) + '</td><td>' + escHtml(r.class_major) + '</td><td>' + escHtml(r.product_type || '-') + '</td><td>' + escHtml(r.status) + '</td><td>' +
-          (r.status === 'draft' ? '<a href="#" onclick="activatePf(\'' + escHtml(r.product_family_code) + '\');return false">激活</a>' : '') + '</td></tr>';
+          (r.status === 'draft' ? '<a href="#" onclick="activatePf(\'' + escHtml(r.product_family_code) + '\');return false">激活</a>' : '') +
+          (hasAdminAccess() ? '<a href="#" onclick="deletePf(\'' + escHtml(r.product_family_code) + '\');return false" style="color:#e53935;margin-left:8px;">删除</a>' : '') + '</td></tr>';
       }).join('') || '<tr><td colspan="7" style="text-align:center">暂无产品族</td></tr>';
+    }
+
+    async function deletePf(code) {
+      if (!confirm('确定删除产品族 ' + code + ' 吗？下属产品、属性值和分类关系将被删除。')) return;
+      try {
+        var res = await api('/api/product-families/' + encodeURIComponent(code), { method: 'DELETE' });
+        if (res.success) { alert('已删除，级联：' + JSON.stringify(res.cascaded)); loadProductFamilies(); loadProducts(); }
+        else alert('删除失败：' + (res.error || '未知错误'));
+      } catch (e) { alert('删除失败'); }
     }
 
     async function loadProducts() {
@@ -2207,8 +2237,18 @@
       document.getElementById('prodTableBody').innerHTML = (data.rows || []).map(function(r) {
         return '<tr><td><code>' + escHtml(r.product_code) + '</code></td><td>' + escHtml(r.model_name || '-') + '</td><td>' + escHtml(r.revision || '-') + '</td><td>' + escHtml(r.class_mid || '-') + '</td><td>' + escHtml(r.class_minor || '-') + '</td><td><span class="badge">' + escHtml(r.lifecycle_state) + '</span></td><td>' +
           (r.lifecycle_state === 'draft' ? '<a href="#" onclick="releaseProduct(\'' + escHtml(r.product_code) + '\');return false">发布</a> ' : '') +
-          (r.lifecycle_state === 'released' ? '<a href="#" onclick="obsoleteProduct(\'' + escHtml(r.product_code) + '\');return false">废止</a>' : '') + '</td></tr>';
+          (r.lifecycle_state === 'released' ? '<a href="#" onclick="obsoleteProduct(\'' + escHtml(r.product_code) + '\');return false">废止</a>' : '') +
+          (hasAdminAccess() ? '<a href="#" onclick="deleteProduct(\'' + escHtml(r.product_code) + '\');return false" style="color:#e53935;margin-left:8px;">删除</a>' : '') + '</td></tr>';
       }).join('') || '<tr><td colspan="7" style="text-align:center">暂无产品</td></tr>';
+    }
+
+    async function deleteProduct(code) {
+      if (!confirm('确定删除产品 ' + code + ' 吗？关联属性值、分类关系和替代引用将被清理。')) return;
+      try {
+        var res = await api('/api/products/' + encodeURIComponent(code), { method: 'DELETE' });
+        if (res.success) { alert('已删除，级联：' + JSON.stringify(res.cascaded)); loadProducts(); }
+        else alert('删除失败：' + (res.error || '未知错误'));
+      } catch (e) { alert('删除失败'); }
     }
 
     async function activatePf(code) {
