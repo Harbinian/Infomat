@@ -82,4 +82,12 @@ router.post('/:id/review', requirePermission('admin:access'), (req, res) => {
   });
 });
 
+router.delete('/:id', requireAuth, requirePermission('admin:access'), (req, res) => {
+  return runDbAction(res, () => {
+    const result = db.prepare('DELETE FROM terms WHERE id=?').run(req.params.id);
+    if (result.changes === 0) return res.status(404).json({ error: '术语不存在' });
+    res.json({ success: true });
+  });
+});
+
 module.exports = router;
