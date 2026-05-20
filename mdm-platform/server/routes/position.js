@@ -79,4 +79,18 @@ router.put('/:code', requireAuth, (req, res) => {
   } catch (e) { handleDbError(res, e); }
 });
 
+router.delete('/:code', requireAuth, requirePermission('admin:access'), (req, res) => {
+  try {
+    const pos = db.prepare('SELECT * FROM position WHERE position_code=?').get(req.params.code);
+    if (!pos) return res.status(404).json({ error: '岗位不存在' });
+
+    const cascaded = {};
+    cascaded.assignments = db.prepare('DELETE FROM person_position_assignment WHERE position_id=?').run(pos.position_id).changes;
+    db.prepare("DELETE FROM external_identity WHERE entity_type='position' AND entity_id=?").run(pos.position_id);
+    db.prepare('DELETE FROM position WHERE position_id=?').run(pos.position_id);
+
+    res.json({ success: true, cascaded });
+  } catch (e) { handleDbError(res, e); }
+});
+
 module.exports = router;
