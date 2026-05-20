@@ -900,8 +900,15 @@
       }
       container.innerHTML = '<div class="table-container"><table><thead><tr><th>ID</th><th>流程</th><th>部门</th><th>状态</th><th>提交时间</th><th>操作</th></tr></thead><tbody>' + mappings.map(function(row) {
         var rowId = Number(row.id);
-        return '<tr><td>' + rowId + '</td><td>' + safeText(row.process_name) + '</td><td>' + safeText(row.owner_dept_name) + '</td><td>' + statusTag(row.status) + '</td><td>' + safeText(row.submitted_at || row.created_at) + '</td><td><button class="btn secondary" onclick="navigateTo(\'detail\',{tab:\'mySubmissions\',type:\'mapping\',id:' + rowId + '})">查看</button>' + (row.status === 'draft' ? '<button class="btn primary" style="margin-left:4px;" onclick="submitMapping(' + rowId + ')">提交</button>' : '') + '</td></tr>';
+        return '<tr><td>' + rowId + '</td><td>' + safeText(row.process_name) + '</td><td>' + safeText(row.owner_dept_name) + '</td><td>' + statusTag(row.status) + '</td><td>' + safeText(row.submitted_at || row.created_at) + '</td><td><button class="btn secondary" onclick="navigateTo(\'detail\',{tab:\'mySubmissions\',type:\'mapping\',id:' + rowId + '})">查看</button>' + (row.status === 'draft' ? '<button class="btn primary" style="margin-left:4px;" onclick="submitMapping(' + rowId + ')">提交</button>' : '') + (hasAdminAccess() && row.status === 'draft' ? ' <a href="#" onclick="deleteMapping(' + rowId + ');return false" style="color:#e53935;margin-left:4px;">删除</a>' : '') + '</td></tr>';
       }).join('') + '</tbody></table></div>';
+    }
+
+    function deleteMapping(id) {
+      if (!confirm('确定删除映射 #' + id + ' 吗？只能删除草稿。')) return;
+      fetch('/api/mappings/' + id, { method: 'DELETE' }).then(function(r) { return r.json(); }).then(function(d) {
+        if (d.error) { alert('删除失败：' + d.error); } else { loadMySubmissions(); }
+      });
     }
 
     // ===== Load Reviews =====
@@ -921,6 +928,7 @@
     function renderTodosList() {
       var container = $('todoRows');
       if (!container) return;
+      var canDelete = hasAdminAccess();
 
       if (state.todos.length === 0) {
         var hints = { submitter: '去 <a href="#/mySubmissions">我的报送</a> 查看提交状态', owner: '暂无待审核事项', reviewer: '暂无待办', admin: '暂无待办' };
@@ -953,7 +961,7 @@
           '<td>' + safeText(row.content) + '</td>' +
           '<td>' + safeText(row.due_date) + '</td>' +
           '<td>' + statusTag(row.status) + '</td>' +
-          '<td>' + (row.status === 'pending' ? '<button class="btn secondary" onclick="handleTodoAction(\'' + safeText(row.type, '') + '\', ' + rowId + ', ' + relatedId + ')">处理</button>' : '') + '</td>' +
+          '<td>' + (row.status === 'pending' ? '<button class="btn secondary" onclick="handleTodoAction(\'' + safeText(row.type, '') + '\', ' + rowId + ', ' + relatedId + ')">处理</button>' : '') + (canDelete ? ' <a href="#" onclick="deleteTodo(' + rowId + ');return false" style="color:#e53935;margin-left:8px;">删除</a>' : '') + '</td>' +
           '</tr>';
       }).join('');
     }
@@ -966,6 +974,13 @@
       } else {
         api('/api/todos/' + todoId + '/done', { method: 'POST' }).then(function() { loadTodos(); showToast('已完成'); });
       }
+    }
+
+    function deleteTodo(id) {
+      if (!confirm('确定删除此待办吗？')) return;
+      fetch('/api/todos/' + id, { method: 'DELETE' }).then(function(r) { return r.json(); }).then(function(d) {
+        if (d.error) { alert('删除失败：' + d.error); } else { loadTodos(); }
+      });
     }
 
     // ===== Reviews =====
@@ -999,7 +1014,7 @@
       state.terms = terms;
       $('termRows').innerHTML = terms.map(function(row) {
         var rowId = Number(row.id);
-        return '<tr><td>' + rowId + '</td><td>' + safeText(row.term) + '</td><td>' + safeText(row.definition) + '</td><td>' + safeText(row.scope) + '</td><td>' + statusTag(row.status) + '</td><td><button class="btn success" onclick="reviewTerm(' + rowId + ',\'approve\')">通过</button> <button class="btn danger" style="margin-left: 8px;" onclick="reviewTerm(' + rowId + ',\'reject\')">驳回</button></td></tr>';
+        return '<tr><td>' + rowId + '</td><td>' + safeText(row.term) + '</td><td>' + safeText(row.definition) + '</td><td>' + safeText(row.scope) + '</td><td>' + statusTag(row.status) + '</td><td><button class="btn success" onclick="reviewTerm(' + rowId + ',\'approve\')">通过</button> <button class="btn danger" style="margin-left: 8px;" onclick="reviewTerm(' + rowId + ',\'reject\')">驳回</button>' + (hasAdminAccess() ? ' <a href="#" onclick="deleteTerm(' + rowId + ');return false" style="color:#e53935;margin-left:8px;">删除</a>' : '') + '</td></tr>';
       }).join('') || '<tr><td colspan="6" class="empty">暂无数据</td></tr>';
     }
 
@@ -1013,6 +1028,13 @@
     async function reviewTerm(id, action) {
       await api('/api/terminology/' + id + '/review', { method:'POST', body:JSON.stringify({ action: action }) });
       await loadTerms();
+    }
+
+    function deleteTerm(id) {
+      if (!confirm('确定删除术语 #' + id + ' 吗？')) return;
+      fetch('/api/terminology/' + id, { method: 'DELETE' }).then(function(r) { return r.json(); }).then(function(d) {
+        if (d.error) { alert('删除失败：' + d.error); } else { loadTerms(); }
+      });
     }
 
     // ===== Conflicts =====
