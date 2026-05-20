@@ -36,6 +36,19 @@ router.post('/systems', requireAuth, requirePermission('admin:access'), (req, re
   } catch (e) { handleDbError(res, e); }
 });
 
+router.delete('/systems/:code', requireAuth, requirePermission('admin:access'), (req, res) => {
+  try {
+    const sys = db.prepare('SELECT * FROM external_system WHERE system_code=?').get(req.params.code.toUpperCase());
+    if (!sys) return res.status(404).json({ error: '外部系统不存在' });
+
+    const cascaded = {};
+    cascaded.identities = db.prepare('DELETE FROM external_identity WHERE system_code=?').run(sys.system_code).changes;
+    db.prepare('DELETE FROM external_system WHERE system_id=?').run(sys.system_id);
+
+    res.json({ success: true, cascaded });
+  } catch (e) { handleDbError(res, e); }
+});
+
 router.get('/identities', requireAuth, (req, res) => {
   try {
     const { entity_type, entity_id, system_code } = req.query;
@@ -62,6 +75,14 @@ router.post('/identities', requireAuth, requirePermission('admin:access'), (req,
         external_key=excluded.external_key, is_primary=excluded.is_primary, last_sync_at=CURRENT_TIMESTAMP, updated_by=excluded.updated_by, updated_at=CURRENT_TIMESTAMP
     `).run(entity_type, entity_id, system_code.toUpperCase(), external_key, is_primary ? 1 : 0, req.session.userId, req.session.userId);
     res.status(201).json({ external_identity_id: result.lastInsertRowid });
+  } catch (e) { handleDbError(res, e); }
+});
+
+router.delete('/identities/:id', requireAuth, requirePermission('admin:access'), (req, res) => {
+  try {
+    const result = db.prepare('DELETE FROM external_identity WHERE external_identity_id=?').run(req.params.id);
+    if (result.changes === 0) return res.status(404).json({ error: '标识映射不存在' });
+    res.json({ success: true });
   } catch (e) { handleDbError(res, e); }
 });
 
