@@ -72,4 +72,39 @@ router.post('/:id/review', requirePermission('review:approve'), (req, res) => {
   });
 });
 
+router.delete('/:id', requireAuth, requirePermission('admin:access'), (req, res) => {
+  return runDbAction(res, () => {
+    const cap = db.prepare('SELECT * FROM capabilities WHERE id=?').get(req.params.id);
+    if (!cap) return res.status(404).json({ error: '能力不存在' });
+
+    const cascaded = {};
+    const descIds = [];
+
+    function collectDescendants(parentId) {
+      const children = db.prepare('SELECT id FROM capabilities WHERE parent_id=?').all(parentId);
+      for (const child of children) {
+        descIds.push(child.id);
+        collectDescendants(child.id);
+      }
+    }
+
+    collectDescendants(cap.id);
+    const allCapIds = [cap.id].concat(descIds);
+    let processLinks = 0;
+
+    for (const capabilityId of allCapIds) {
+      processLinks += db.prepare('UPDATE processes SET capability_id=NULL WHERE capability_id=?').run(capabilityId).changes;
+    }
+
+    for (const capabilityId of descIds.slice().reverse()) {
+      db.prepare('DELETE FROM capabilities WHERE id=?').run(capabilityId);
+    }
+    db.prepare('DELETE FROM capabilities WHERE id=?').run(cap.id);
+
+    cascaded.children = descIds.length;
+    cascaded.process_links_cleared = processLinks;
+    res.json({ success: true, cascaded });
+  });
+});
+
 module.exports = router;
