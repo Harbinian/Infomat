@@ -8,7 +8,7 @@ const BASE_URL = `http://127.0.0.1:${PORT}`;
 
 function resetData() {
   db.exec(`
-    UPDATE departments SET manager_user_id=NULL, created_by=NULL, updated_by=NULL, data_owner_user_id=NULL;
+    UPDATE departments SET manager_user_id=NULL, created_by=NULL, updated_by=NULL, data_owner_user_id=NULL, person_id=NULL;
     DELETE FROM version_log;
     DELETE FROM conflict_coordination_history;
     DELETE FROM conflict_assignments;
@@ -28,6 +28,22 @@ function resetData() {
     DELETE FROM capabilities;
     DELETE FROM systems;
     DELETE FROM user_dept_roles;
+    DELETE FROM external_identity;
+    DELETE FROM external_system;
+    DELETE FROM attribute_value;
+    DELETE FROM attribute_def;
+    DELETE FROM entity_class_membership;
+    DELETE FROM class_node;
+    DELETE FROM product;
+    DELETE FROM product_family;
+    DELETE FROM person_position_assignment;
+    DELETE FROM person;
+    DELETE FROM position;
+    DELETE FROM org_unit;
+    DELETE FROM integration_sync_log;
+    DELETE FROM integration_credentials;
+    DELETE FROM user_roles;
+    DELETE FROM code_sequences;
     DELETE FROM users;
     DELETE FROM departments;
   `);

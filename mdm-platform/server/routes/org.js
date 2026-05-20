@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const { hashPassword, verifyPassword, requireAuth, requirePermission } = require('../auth');
+const { hashPassword, verifyPassword, requireAuth, requirePermission, getUserEffectivePermissions } = require('../auth');
 
 function handleDbError(res, error) {
   if (error && (error.code === 'SQLITE_CONSTRAINT_UNIQUE' || String(error.message).includes('UNIQUE constraint failed'))) {
@@ -111,6 +111,33 @@ router.get('/users', requireAuth, (req, res) => {
   res.json(users);
 });
 
+// GET /api/users/roles-summary — all users with legacy role + RBAC roles
+router.get('/users/roles-summary', requireAuth, requirePermission('admin:access'), (req, res) => {
+  return runDbAction(res, () => {
+    const users = db.prepare(`
+      SELECT u.id, u.name, u.employee_no, u.post, u.role, u.department_id,
+             d.name as dept_name,
+             COALESCE(GROUP_CONCAT(r.role_code), '') as rbac_role_codes,
+             COALESCE(GROUP_CONCAT(r.role_name), '') as rbac_role_names
+      FROM users u
+      LEFT JOIN departments d ON u.department_id = d.id
+      LEFT JOIN user_roles ur ON u.id = ur.user_id
+      LEFT JOIN roles r ON ur.role_id = r.role_id
+      GROUP BY u.id
+      ORDER BY u.employee_no
+    `).all();
+    res.json(users.map(u => ({
+      id: u.id,
+      name: u.name,
+      employee_no: u.employee_no,
+      dept_name: u.dept_name || null,
+      post: u.post,
+      role: u.role,
+      rbac_role_codes: u.rbac_role_codes || ''
+    })));
+  });
+});
+
 router.post('/users', requirePermission('admin:access'), (req, res) => {
   return runDbAction(res, () => {
     const { name, employee_no, department_id, post, role, password } = req.body;
@@ -162,11 +189,13 @@ router.post('/logout', (req, res) => {
 });
 
 router.get('/me', requireAuth, (req, res) => {
+  const { permSet } = getUserEffectivePermissions(req.session.userId);
   res.json({
     id: req.session.userId,
     name: req.session.userName,
     role: req.session.userRole,
-    departmentId: req.session.departmentId
+    departmentId: req.session.departmentId,
+    permissions: Array.from(permSet)
   });
 });
 
