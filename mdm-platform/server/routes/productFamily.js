@@ -72,4 +72,37 @@ router.put('/:code', requireAuth, (req, res) => {
   } catch (e) { handleDbError(res, e); }
 });
 
+router.delete('/:code', requireAuth, requirePermission('admin:access'), (req, res) => {
+  try {
+    const pf = db.prepare('SELECT * FROM product_family WHERE product_family_code=?').get(req.params.code);
+    if (!pf) return res.status(404).json({ error: '产品族不存在' });
+
+    const cascaded = {};
+    const products = db.prepare('SELECT product_id FROM product WHERE product_family_id=?').all(pf.product_family_id);
+    const productIds = products.map(p => p.product_id);
+    let productAttr = 0;
+    let productMemberships = 0;
+    let supersededRefs = 0;
+
+    for (const productId of productIds) {
+      productAttr += db.prepare("DELETE FROM attribute_value WHERE entity_type='product' AND entity_id=?").run(productId).changes;
+      productMemberships += db.prepare("DELETE FROM entity_class_membership WHERE entity_type='product' AND entity_id=?").run(productId).changes;
+      supersededRefs += db.prepare('UPDATE product SET superseded_by_product_id=NULL WHERE superseded_by_product_id=?').run(productId).changes;
+      db.prepare("DELETE FROM external_identity WHERE entity_type='product' AND entity_id=?").run(productId);
+    }
+
+    cascaded.product_attribute_values = productAttr;
+    cascaded.product_memberships = productMemberships;
+    cascaded.superseded_refs = supersededRefs;
+    cascaded.products = db.prepare('DELETE FROM product WHERE product_family_id=?').run(pf.product_family_id).changes;
+    cascaded.family_attribute_values = db.prepare("DELETE FROM attribute_value WHERE entity_type='product_family' AND entity_id=?").run(pf.product_family_id).changes;
+    cascaded.family_memberships = db.prepare("DELETE FROM entity_class_membership WHERE entity_type='product_family' AND entity_id=?").run(pf.product_family_id).changes;
+
+    db.prepare("DELETE FROM external_identity WHERE entity_type='product_family' AND entity_id=?").run(pf.product_family_id);
+    db.prepare('DELETE FROM product_family WHERE product_family_id=?').run(pf.product_family_id);
+
+    res.json({ success: true, cascaded });
+  } catch (e) { handleDbError(res, e); }
+});
+
 module.exports = router;
