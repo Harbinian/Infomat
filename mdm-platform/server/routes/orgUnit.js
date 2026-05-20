@@ -88,4 +88,30 @@ router.put('/:code', requireAuth, (req, res) => {
   } catch (e) { handleDbError(res, e); }
 });
 
+router.delete('/:code', requireAuth, requirePermission('admin:access'), (req, res) => {
+  try {
+    const unit = db.prepare('SELECT * FROM org_unit WHERE org_unit_code=?').get(req.params.code);
+    if (!unit) return res.status(404).json({ error: '组织不存在' });
+
+    const cascaded = {};
+    const positions = db.prepare('SELECT position_id FROM position WHERE org_unit_id=?').all(unit.org_unit_id);
+    let assignments = 0;
+
+    for (const pos of positions) {
+      assignments += db.prepare('DELETE FROM person_position_assignment WHERE position_id=?').run(pos.position_id).changes;
+      db.prepare("DELETE FROM external_identity WHERE entity_type='position' AND entity_id=?").run(pos.position_id);
+    }
+
+    cascaded.assignments = assignments;
+    cascaded.positions = db.prepare('DELETE FROM position WHERE org_unit_id=?').run(unit.org_unit_id).changes;
+
+    db.prepare('UPDATE org_unit SET parent_org_unit_id=? WHERE parent_org_unit_id=?')
+      .run(unit.parent_org_unit_id || null, unit.org_unit_id);
+    db.prepare("DELETE FROM external_identity WHERE entity_type='org_unit' AND entity_id=?").run(unit.org_unit_id);
+    db.prepare('DELETE FROM org_unit WHERE org_unit_id=?').run(unit.org_unit_id);
+
+    res.json({ success: true, cascaded });
+  } catch (e) { handleDbError(res, e); }
+});
+
 module.exports = router;
