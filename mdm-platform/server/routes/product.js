@@ -105,4 +105,20 @@ router.put('/:code', requireAuth, (req, res) => {
   } catch (e) { handleDbError(res, e); }
 });
 
+router.delete('/:code', requireAuth, requirePermission('admin:access'), (req, res) => {
+  try {
+    const prod = db.prepare('SELECT * FROM product WHERE product_code=?').get(req.params.code);
+    if (!prod) return res.status(404).json({ error: '产品不存在' });
+
+    const cascaded = {};
+    cascaded.attribute_values = db.prepare("DELETE FROM attribute_value WHERE entity_type='product' AND entity_id=?").run(prod.product_id).changes;
+    cascaded.memberships = db.prepare("DELETE FROM entity_class_membership WHERE entity_type='product' AND entity_id=?").run(prod.product_id).changes;
+    cascaded.superseded_refs = db.prepare('UPDATE product SET superseded_by_product_id=NULL WHERE superseded_by_product_id=?').run(prod.product_id).changes;
+    db.prepare("DELETE FROM external_identity WHERE entity_type='product' AND entity_id=?").run(prod.product_id);
+    db.prepare('DELETE FROM product WHERE product_id=?').run(prod.product_id);
+
+    res.json({ success: true, cascaded });
+  } catch (e) { handleDbError(res, e); }
+});
+
 module.exports = router;
