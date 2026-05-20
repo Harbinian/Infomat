@@ -134,4 +134,19 @@ router.put('/:employeeNo/assignments/:id/deactivate', requireAuth, (req, res) =>
   } catch (e) { handleDbError(res, e); }
 });
 
+router.delete('/:employeeNo', requireAuth, requirePermission('admin:access'), (req, res) => {
+  try {
+    const person = db.prepare('SELECT * FROM person WHERE employee_no=?').get(req.params.employeeNo);
+    if (!person) return res.status(404).json({ error: '人员不存在' });
+
+    const cascaded = {};
+    cascaded.assignments = db.prepare('DELETE FROM person_position_assignment WHERE person_id=?').run(person.person_id).changes;
+    cascaded.manager_refs = db.prepare('UPDATE org_unit SET manager_person_id=NULL WHERE manager_person_id=?').run(person.person_id).changes;
+    db.prepare("DELETE FROM external_identity WHERE entity_type='person' AND entity_id=?").run(person.person_id);
+    db.prepare('DELETE FROM person WHERE person_id=?').run(person.person_id);
+
+    res.json({ success: true, cascaded });
+  } catch (e) { handleDbError(res, e); }
+});
+
 module.exports = router;
