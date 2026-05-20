@@ -82,4 +82,54 @@ router.post('/:id/review', requirePermission('review:approve'), (req, res) => {
   });
 });
 
+router.delete('/:id', requireAuth, requirePermission('admin:access'), (req, res) => {
+  return runDbAction(res, () => {
+    const proc = db.prepare('SELECT * FROM processes WHERE id=?').get(req.params.id);
+    if (!proc) return res.status(404).json({ error: '流程不存在' });
+
+    const cascaded = {};
+    const mappings = db.prepare('SELECT id FROM mappings WHERE process_id=?').all(proc.id);
+    let fieldConflicts = 0;
+    let fieldIdentities = 0;
+    let fieldRejections = 0;
+    let fieldEntries = 0;
+    let approvalTasks = 0;
+    let approvalHistory = 0;
+    let todos = 0;
+    let relatedDepartments = 0;
+    let mappingSystems = 0;
+
+    for (const mapping of mappings) {
+      fieldConflicts += db.prepare(`
+        DELETE FROM field_conflicts
+        WHERE field_entry_a_id IN (SELECT id FROM field_entries WHERE mapping_id=?)
+           OR field_entry_b_id IN (SELECT id FROM field_entries WHERE mapping_id=?)
+      `).run(mapping.id, mapping.id).changes;
+      fieldIdentities += db.prepare('DELETE FROM field_identities WHERE field_entry_id IN (SELECT id FROM field_entries WHERE mapping_id=?)').run(mapping.id).changes;
+      fieldRejections += db.prepare('DELETE FROM field_rejection_reasons WHERE mapping_id=?').run(mapping.id).changes;
+      fieldEntries += db.prepare('DELETE FROM field_entries WHERE mapping_id=?').run(mapping.id).changes;
+      approvalTasks += db.prepare('DELETE FROM approval_tasks WHERE mapping_id=?').run(mapping.id).changes;
+      approvalHistory += db.prepare('DELETE FROM approval_history WHERE mapping_id=?').run(mapping.id).changes;
+      todos += db.prepare('DELETE FROM todos WHERE related_mapping_id=?').run(mapping.id).changes;
+      relatedDepartments += db.prepare('DELETE FROM mapping_related_departments WHERE mapping_id=?').run(mapping.id).changes;
+      mappingSystems += db.prepare('DELETE FROM mapping_systems WHERE mapping_id=?').run(mapping.id).changes;
+    }
+
+    cascaded.field_conflicts = fieldConflicts;
+    cascaded.field_identities = fieldIdentities;
+    cascaded.field_rejections = fieldRejections;
+    cascaded.field_entries = fieldEntries;
+    cascaded.approval_tasks = approvalTasks;
+    cascaded.approval_history = approvalHistory;
+    cascaded.todos = todos;
+    cascaded.related_departments = relatedDepartments;
+    cascaded.mapping_systems = mappingSystems;
+    cascaded.mappings = db.prepare('DELETE FROM mappings WHERE process_id=?').run(proc.id).changes;
+    cascaded.term_links_cleared = db.prepare('UPDATE terms SET process_id=NULL WHERE process_id=?').run(proc.id).changes;
+
+    db.prepare('DELETE FROM processes WHERE id=?').run(proc.id);
+    res.json({ success: true, cascaded });
+  });
+});
+
 module.exports = router;
