@@ -7,6 +7,12 @@ function isAdmin(req) {
   return permSet.has('admin:access') || permSet.has('*:*');
 }
 
+function hasGlobalView(req) {
+  if (!req.session || !req.session.userId) return false;
+  const { permSet } = getUserEffectivePermissions(req.session.userId);
+  return permSet.has('data:view_all') || permSet.has('admin:access') || permSet.has('*:*');
+}
+
 function isReviewerOrAdmin(req) {
   if (!req.session || !req.session.userId) return false;
   const { permSet } = getUserEffectivePermissions(req.session.userId);
@@ -18,7 +24,7 @@ function validateAction(action) {
 }
 
 function mappingVisibility(alias, req) {
-  if (isAdmin(req)) return { sql: '', params: [] };
+  if (hasGlobalView(req)) return { sql: '', params: [] };
   const table = alias || 'm';
   const params = [req.session.userId];
   const clauses = [`${table}.submitted_by=?`];
@@ -59,4 +65,4 @@ function canUseTodo(req, todo) {
   return Boolean(todo.to_dept_id && req.session.departmentId && todo.to_dept_id === req.session.departmentId);
 }
 
-module.exports = { isAdmin, isReviewerOrAdmin, validateAction, mappingVisibility, canViewMapping, canUseTodo };
+module.exports = { isAdmin, hasGlobalView, isReviewerOrAdmin, validateAction, mappingVisibility, canViewMapping, canUseTodo };

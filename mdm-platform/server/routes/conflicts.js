@@ -1,9 +1,40 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const { requireAuth, requirePermission } = require('../auth');
+const { requireAuth, requirePermission, getUserEffectivePermissions } = require('../auth');
 
 const FIELD_ENTRY_CONFLICT_FIELDS = ['note', 'field_type', 'sync_mode', 'consume_systems'];
+
+function requestHasAnyPermission(req, permissionCodes) {
+  if (!req.session || !req.session.userId) return false;
+  const { permSet } = getUserEffectivePermissions(req.session.userId);
+  return permSet.has('*:*') || permissionCodes.some(code => permSet.has(code));
+}
+
+function userHasAnyPermission(userId, permissionCodes) {
+  const { permSet } = getUserEffectivePermissions(userId);
+  return permSet.has('*:*') || permissionCodes.some(code => permSet.has(code));
+}
+
+function usersWithAnyPermission(permissionCodes) {
+  return db.prepare('SELECT id, name, department_id FROM users').all().filter(user => userHasAnyPermission(user.id, permissionCodes));
+}
+
+function canViewAllConflicts(req) {
+  return requestHasAnyPermission(req, ['data:view_all', 'admin:access']);
+}
+
+function canManageGeneralConflict(req) {
+  return requestHasAnyPermission(req, ['conflict:manage', 'review:approve', 'admin:access']);
+}
+
+function canEscalateConflict(req) {
+  return requestHasAnyPermission(req, ['conflict:escalate', 'conflict:manage', 'review:approve', 'admin:access']);
+}
+
+function canDecideEscalatedConflict(req) {
+  return requestHasAnyPermission(req, ['conflict:final_decide_escalated', 'review:approve', 'admin:access']);
+}
 
 function addWorkingDays(startDate, days) {
   const d = new Date(startDate);
@@ -82,8 +113,8 @@ function checkAndEscalate(conflict, conflictType) {
   const table = conflictType === 'term' ? 'term_conflicts' : 'field_conflicts';
   db.prepare(`UPDATE ${table} SET status = 'escalated', escalated = 1 WHERE id = ?`).run(conflict.id);
 
-  // Create escalation todo for all reviewers
-  const reviewers = db.prepare("SELECT id, name, department_id FROM users WHERE role IN ('reviewer','admin')").all();
+  // Create escalation todo for users allowed to decide escalated conflicts.
+  const reviewers = usersWithAnyPermission(['conflict:final_decide_escalated', 'review:approve', 'admin:access']);
   reviewers.forEach(function(r) {
     db.prepare(`
       INSERT INTO todos (from_dept_id, to_dept_id, type, content, urgency)
@@ -166,12 +197,12 @@ function detectConflictValues(aId, bId) {
 // GET / — list all conflicts, optionally filtered
 router.get('/', requireAuth, (req, res) => {
   const { type, severity, status } = req.query;
-  const userRole = req.session.userRole;
+  const canViewAll = canViewAllConflicts(req);
 
   if (type === 'term') {
     const params = [];
     let sql = addFilters("SELECT tc.*, 'term' as conflict_type FROM term_conflicts tc", params, severity, status);
-    if (userRole !== 'admin' && !status) {
+    if (!canViewAll && !status) {
       sql = sql.replace('WHERE 1=1', "WHERE 1=1 AND tc.status NOT IN ('archived','silenced')");
     }
     const termRows = db.prepare(sql).all(...params);
@@ -183,7 +214,7 @@ router.get('/', requireAuth, (req, res) => {
   if (type === 'field') {
     const params = [];
     let sql = addFilters("SELECT fc.*, 'field' as conflict_type FROM field_conflicts fc", params, severity, status);
-    if (userRole !== 'admin' && !status) {
+    if (!canViewAll && !status) {
       sql = sql.replace('WHERE 1=1', "WHERE 1=1 AND fc.status NOT IN ('archived','silenced')");
     }
     const fieldRows = db.prepare(sql).all(...params);
@@ -197,7 +228,7 @@ router.get('/', requireAuth, (req, res) => {
   let termSql = addFilters("SELECT tc.*, 'term' as conflict_type FROM term_conflicts tc", termParams, severity, status);
   let fieldSql = addFilters("SELECT fc.*, 'field' as conflict_type FROM field_conflicts fc", fieldParams, severity, status);
 
-  if (userRole !== 'admin' && !status) {
+  if (!canViewAll && !status) {
     termSql = termSql.replace('WHERE 1=1', "WHERE 1=1 AND tc.status NOT IN ('archived','silenced')");
     fieldSql = fieldSql.replace('WHERE 1=1', "WHERE 1=1 AND fc.status NOT IN ('archived','silenced')");
   }
@@ -378,11 +409,11 @@ router.get('/:id', requireAuth, (req, res) => {
   });
 });
 
-// POST /:id/assign — assign owner (reviewer only)
+// POST /:id/assign — assign owner
 router.post('/:id/assign', requireAuth, (req, res) => {
   return runDbAction(res, () => {
-    if (!['reviewer','admin'].includes(req.session.userRole)) {
-      return res.status(403).json({ error: '仅 reviewer 可指定责任人' });
+    if (!canManageGeneralConflict(req)) {
+      return res.status(403).json({ error: '无冲突处理权限' });
     }
     const { type } = req.query;
     const conflictType = type || 'field';
@@ -426,11 +457,11 @@ router.post('/:id/assign', requireAuth, (req, res) => {
   });
 });
 
-// PUT /:id/assign — reassign owner (reviewer only, coordinating only)
+// PUT /:id/assign — reassign owner
 router.put('/:id/assign', requireAuth, (req, res) => {
   return runDbAction(res, () => {
-    if (!['reviewer','admin'].includes(req.session.userRole)) {
-      return res.status(403).json({ error: '仅 reviewer 可改派责任人' });
+    if (!canManageGeneralConflict(req)) {
+      return res.status(403).json({ error: '无冲突处理权限' });
     }
     const { type } = req.query;
     const conflictType = type || 'field';
@@ -472,7 +503,7 @@ router.post('/:id/coordination', requireAuth, (req, res) => {
     `).get(req.params.id, conflictType);
 
     if (!currentAssignee) return res.status(400).json({ error: '尚未指定责任人' });
-    if (currentAssignee.assignee_user_id !== req.session.userId && req.session.userRole !== 'admin') {
+    if (currentAssignee.assignee_user_id !== req.session.userId && !requestHasAnyPermission(req, ['admin:access'])) {
       return res.status(403).json({ error: '仅当前责任人可提交协调结果' });
     }
 
@@ -500,8 +531,8 @@ router.post('/:id/coordination', requireAuth, (req, res) => {
     `).get(req.params.id, conflictType);
 
     if (assigneeCount.cnt >= 2 && submissionCount.cnt >= 2) {
-      // Both sides submitted — notify reviewers
-      const reviewers = db.prepare("SELECT id, department_id FROM users WHERE role IN ('reviewer','admin')").all();
+      // Both sides submitted — notify users who can process general conflicts.
+      const reviewers = usersWithAnyPermission(['conflict:manage', 'review:approve', 'admin:access']);
       reviewers.forEach(function(r) {
         db.prepare(`
           INSERT INTO todos (from_dept_id, to_dept_id, type, content, urgency)
@@ -514,12 +545,9 @@ router.post('/:id/coordination', requireAuth, (req, res) => {
   });
 });
 
-// POST /:id/final-decide — reviewer final decision
+// POST /:id/final-decide — final decision for general or escalated conflicts
 router.post('/:id/final-decide', requireAuth, (req, res) => {
   return runDbAction(res, () => {
-    if (!['reviewer','admin'].includes(req.session.userRole)) {
-      return res.status(403).json({ error: '仅 reviewer 可终裁' });
-    }
     const { type } = req.query;
     const conflictType = type || 'field';
     const { resolution, opinion } = req.body;
@@ -527,8 +555,16 @@ router.post('/:id/final-decide', requireAuth, (req, res) => {
     const table = conflictType === 'term' ? 'term_conflicts' : 'field_conflicts';
     const conflict = db.prepare(`SELECT * FROM ${table} WHERE id=?`).get(req.params.id);
     if (!conflict) return res.status(404).json({ error: '冲突不存在' });
-    if (conflict.status !== 'coordinating') {
-      return res.status(409).json({ error: '仅协调中状态可终裁' });
+    if (conflict.status === 'escalated') {
+      if (!canDecideEscalatedConflict(req)) {
+        return res.status(403).json({ error: '无升级冲突处理权限' });
+      }
+    } else if (conflict.status === 'coordinating') {
+      if (!canManageGeneralConflict(req)) {
+        return res.status(403).json({ error: '无一般冲突处理权限' });
+      }
+    } else {
+      return res.status(409).json({ error: '仅协调中或已升级状态可终裁' });
     }
 
     db.prepare(`
@@ -540,11 +576,11 @@ router.post('/:id/final-decide', requireAuth, (req, res) => {
   });
 });
 
-// POST /:id/escalate — manually escalate to reviewer
+// POST /:id/escalate — manually escalate to decision group
 router.post('/:id/escalate', requireAuth, (req, res) => {
   return runDbAction(res, () => {
-    if (!['reviewer','admin'].includes(req.session.userRole)) {
-      return res.status(403).json({ error: '仅 reviewer 或管理员可手动升级' });
+    if (!canEscalateConflict(req)) {
+      return res.status(403).json({ error: '无冲突升级权限' });
     }
     const { type } = req.query;
     const conflictType = type || 'field';
@@ -557,24 +593,24 @@ router.post('/:id/escalate', requireAuth, (req, res) => {
 
     db.prepare(`UPDATE ${table} SET status = 'escalated', escalated = 1 WHERE id = ?`).run(req.params.id);
 
-    // Notify all reviewers
-    const reviewers = db.prepare("SELECT id, department_id FROM users WHERE role IN ('reviewer','admin')").all();
+    // Notify users who can decide escalated conflicts.
+    const reviewers = usersWithAnyPermission(['conflict:final_decide_escalated', 'review:approve', 'admin:access']);
     reviewers.forEach(function(r) {
       db.prepare(`
         INSERT INTO todos (from_dept_id, to_dept_id, type, content, urgency)
         VALUES (NULL, ?, 'conflict_resolution', ?, 'high')
-      `).run(r.department_id, '冲突升级：#' + req.params.id + ' 已由 reviewer 手动升级，请终裁');
+      `).run(r.department_id, '冲突升级：#' + req.params.id + ' 已升级，请决策组终裁');
     });
 
     res.json({ success: true });
   });
 });
 
-// POST /:id/reopen — reopen resolved conflict (reviewer only)
+// POST /:id/reopen — reopen resolved conflict
 router.post('/:id/reopen', requireAuth, (req, res) => {
   return runDbAction(res, () => {
-    if (!['reviewer','admin'].includes(req.session.userRole)) {
-      return res.status(403).json({ error: '仅 reviewer 可重开' });
+    if (!canManageGeneralConflict(req) && !canDecideEscalatedConflict(req)) {
+      return res.status(403).json({ error: '无冲突重开权限' });
     }
     const { type } = req.query;
     const conflictType = type || 'field';
@@ -714,11 +750,18 @@ router.post('/detect', requirePermission('conflict:manage'), (req, res) => {
 });
 
 // Keep existing resolve endpoint
-router.post('/:id/resolve', requirePermission('conflict:manage'), (req, res) => {
+router.post('/:id/resolve', requireAuth, (req, res) => {
   return runDbAction(res, () => {
     const { resolution, adopted_value } = req.body;
     const conflict = db.prepare('SELECT * FROM field_conflicts WHERE id=?').get(req.params.id);
     if (!conflict) return res.status(404).json({ error: '冲突不存在' });
+    if (conflict.status === 'escalated') {
+      if (!canDecideEscalatedConflict(req)) {
+        return res.status(403).json({ error: '无升级冲突处理权限' });
+      }
+    } else if (!canManageGeneralConflict(req)) {
+      return res.status(403).json({ error: '无一般冲突处理权限' });
+    }
 
     const resolve = db.transaction(() => {
       db.prepare("UPDATE field_conflicts SET status='resolved', resolution=?, resolved_by=?, resolved_at=datetime('now') WHERE id=?").run(
@@ -771,9 +814,18 @@ router.post('/:id/resolve', requirePermission('conflict:manage'), (req, res) => 
 });
 
 // Keep existing term resolve endpoint
-router.post('/term/:id/resolve', requirePermission('conflict:manage'), (req, res) => {
+router.post('/term/:id/resolve', requireAuth, (req, res) => {
   return runDbAction(res, () => {
     const { resolution } = req.body;
+    const conflict = db.prepare('SELECT * FROM term_conflicts WHERE id=?').get(req.params.id);
+    if (!conflict) return res.status(404).json({ error: '冲突不存在' });
+    if (conflict.status === 'escalated') {
+      if (!canDecideEscalatedConflict(req)) {
+        return res.status(403).json({ error: '无升级冲突处理权限' });
+      }
+    } else if (!canManageGeneralConflict(req)) {
+      return res.status(403).json({ error: '无一般冲突处理权限' });
+    }
     db.prepare("UPDATE term_conflicts SET status='resolved', resolution=?, resolved_by=?, resolved_at=datetime('now') WHERE id=?").run(
       resolution || null,
       req.session.userId,

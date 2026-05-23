@@ -259,7 +259,7 @@
 <body>
   <header class="topbar">
     <div class="brand"><img src="/logo.png" alt="MDM">MDM 平台</div>
-    <div class="session"><span id="sessionText">未登录</span><button class="btn secondary" id="logoutBtn">退出</button></div>
+    <div class="session"><span id="sessionText"><span id="sessionUserName">未登录</span></span><button class="btn secondary" id="logoutBtn">退出</button></div>
   </header>
 
   <div class="page-container">
@@ -546,6 +546,30 @@
     </div>
   </div>
 
+  <!-- Password change dialog -->
+  <div id="passwordDialog" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:10000;justify-content:center;align-items:center;">
+    <div style="background:white;padding:24px;border-radius:8px;width:400px;max-width:90vw;">
+      <h3 id="passwordDialogTitle">修改密码</h3>
+      <p id="passwordDialogMsg" style="color:#e53935;margin-bottom:12px;display:none;"></p>
+      <div style="margin-bottom:12px;">
+        <label style="display:block;margin-bottom:4px;">当前密码</label>
+        <input type="password" id="currentPassword" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;">
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="display:block;margin-bottom:4px;">新密码</label>
+        <input type="password" id="newPassword" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;" placeholder="至少6位">
+      </div>
+      <div style="margin-bottom:16px;">
+        <label style="display:block;margin-bottom:4px;">确认新密码</label>
+        <input type="password" id="confirmPassword" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;">
+      </div>
+      <div style="text-align:right;">
+        <button id="passwordCancelBtn" style="padding:8px 16px;margin-right:8px;border:1px solid #ddd;border-radius:4px;background:white;cursor:pointer;">取消</button>
+        <button id="passwordSubmitBtn" style="padding:8px 16px;background:#1565c0;color:white;border:none;border-radius:4px;cursor:pointer;">确认修改</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     // ===== State & Utilities =====
     const state = { user:null, departments:[], capabilities:[], processes:[], mappings:[], todos:[], conflicts:[], terms:[], currentRoute:null, currentView:'dashboard', activeMapping:null, activeConflict:null, pollTimer:null, isEditing:false, activeReview:null, activeCapReview:null, activeProcReview:null };
@@ -738,12 +762,13 @@
       try {
         var user = await api('/api/org/login', { method:'POST', body:JSON.stringify({ employee_no:$('employeeNo').value, password:$('password').value }) });
         state.user = user;
-        $('sessionText').textContent = user.name + ' · ' + user.role;
+        $('sessionUserName').textContent = user.name + ' · ' + user.role;
         showApp();
         await loadAll();
         applyRoleVisibility();
         startPolling();
         checkPasswordStatus();
+        addPasswordChangeButton();
       } catch (error) {
         $('loginMsg').textContent = error.message || '登录失败';
       }
@@ -753,11 +778,12 @@
       try {
         var user = await api('/api/org/me');
         state.user = user;
-        $('sessionText').textContent = user.name + ' · ' + user.role;
+        $('sessionUserName').textContent = user.name + ' · ' + user.role;
         showApp();
         await loadAll();
         applyRoleVisibility();
         startPolling();
+        addPasswordChangeButton();
       } catch (e) {
         showLogin();
       }
@@ -2723,7 +2749,9 @@
     function addPasswordChangeButton() {
       var sessionEl = document.getElementById('sessionText');
       if (!sessionEl) return;
+      if (document.getElementById('passwordChangeBtn')) return;
       var btn = document.createElement('span');
+      btn.id = 'passwordChangeBtn';
       btn.textContent = ' [修改密码]';
       btn.style.cssText = 'cursor:pointer;color:#4a9eff;margin-left:8px;font-size:13px;';
       btn.onclick = function() {
@@ -2773,33 +2801,8 @@
       el.style.display = '';
     }
 
-    addPasswordChangeButton();
-
     // ===== Init =====
     checkSession();
   </script>
-<!-- Password change dialog -->
-  <div id="passwordDialog" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:10000;justify-content:center;align-items:center;">
-    <div style="background:white;padding:24px;border-radius:8px;width:400px;max-width:90vw;">
-      <h3 id="passwordDialogTitle">修改密码</h3>
-      <p id="passwordDialogMsg" style="color:#e53935;margin-bottom:12px;display:none;"></p>
-      <div style="margin-bottom:12px;">
-        <label style="display:block;margin-bottom:4px;">当前密码</label>
-        <input type="password" id="currentPassword" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;">
-      </div>
-      <div style="margin-bottom:12px;">
-        <label style="display:block;margin-bottom:4px;">新密码</label>
-        <input type="password" id="newPassword" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;" placeholder="至少6位">
-      </div>
-      <div style="margin-bottom:16px;">
-        <label style="display:block;margin-bottom:4px;">确认新密码</label>
-        <input type="password" id="confirmPassword" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;">
-      </div>
-      <div style="text-align:right;">
-        <button id="passwordCancelBtn" style="padding:8px 16px;margin-right:8px;border:1px solid #ddd;border-radius:4px;background:white;cursor:pointer;">取消</button>
-        <button id="passwordSubmitBtn" style="padding:8px 16px;background:#1565c0;color:white;border:none;border-radius:4px;cursor:pointer;">确认修改</button>
-      </div>
-    </div>
-  </div>
 </body>
 </html>
