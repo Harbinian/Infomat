@@ -6,6 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Infomat 是航空复材制造领域的业务关系映射与主数据管理工具集。
 
+**重要参考文件：**
+- `docs/glossary.md` — 项目术语表，覆盖业务域/主数据域/体系文件域/技术域/供应链协同域 ~180 条术语定义。开发时遇到不熟悉的术语优先查阅此文件。
+
 ## 常用命令
 
 ### MDM 平台（主项目）
@@ -76,7 +79,7 @@ mdm-platform/
 │   └── routes/            # 26 个路由模块
 │       ├── org.js         # 部门、用户、登录
 │       ├── systems.js     # 应用系统清单
-│       ├── capabilities.js # 业务能力 (L1/L2/L3)
+│       ├── capabilities.js # 能力域（L1）/ 业务能力（L2）/ 业务流程（L3）
 │       ├── processes.js   # 业务流程
 │       ├── mappings.js    # 流程→系统映射 + 审批流状态机
 │       ├── fieldEntries.js # 字段台账
@@ -126,7 +129,7 @@ mdm-platform/
 
 ```
 departments → users (组织架构 + 用户)
-capabilities (L1/L2/L3) → processes → mappings → systems (映射链)
+能力域（L1）/ 业务能力（L2）/ 业务流程（L3）→ processes → mappings → 应用系统（S1）（映射链）
 mappings → field_entries → field_identities (字段台账 + 黄金源)
 mappings → approval_tasks → approval_history (审批流)
 terms → term_conflicts (术语管理)

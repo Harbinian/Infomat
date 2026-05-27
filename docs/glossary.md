@@ -19,27 +19,54 @@
 
 | 术语 | 英文/缩写 | 定义 |
 |------|----------|------|
-| 部门 | Department / D1 | 组织架构中的职能部门或生产单元，桑基图第 1 层节点 |
+| 部门（D1） | Department / D1 | 组织架构中的职能部门或生产单元，桑基图第 1 层节点 |
+| 办公室（D2） | Office / D2 | 部门（D1）下的办公室、室、组等二级组织层，仅在资料支持办公室级责任时纳入映射 |
 | 跨部门组合 | Joint Department | 多个部门以 `+` 连接的联合牵头节点，如"工技+物保+质量"，仅在桑基图中表达 |
-| 能力域 | Capability Domain | 按业务域聚合的高阶能力分类，如"工艺生产过程管控""质量执行" |
-| 业务能力 | Business Capability / L2 | capabilities 表中 level=L2 的记录，对 L3 业务流程进行归类聚合 |
-| 业务流程 | Business Process / L3 | 具体可执行的操作流程，如"首件检验""MBOM 编制""工装定检"。capabilities 表中 level=L3 的记录 |
-| 应用系统 | Application System / S1 | 承载业务流程的信息系统，包括 PLM、MES、ERP（用友 U8），桑基图第 4 层 |
-| 映射关系 | Mapping | 部门→能力→流程→系统的四层关联关系，Infomat 平台的核心管理对象。数据表 mappings |
-| 桑基图 | Sankey Diagram | ECharts 渲染的四层流向图，可视化展示部门-能力-流程-系统的映射关系 |
+| 能力域（L1） | Capability Domain / L1 | 按业务域聚合的高阶能力分类，如"工艺生产过程管控""质量执行" |
+| 业务能力（L2） | Business Capability / L2 | capabilities 表中 level=L2 的记录，对业务流程（L3）进行归类聚合 |
+| 业务流程（L3） | Business Process / L3 | 具体可执行的操作流程，如"首件检验""MBOM 编制""工装定检"。capabilities 表中 level=L3 的记录 |
+| 业务行为（A1） | Activity Level 1 / A1 | 业务流程（L3）分解后的原子级业务行为，是部门职责落地的最小可执行单元 |
+| 业务行为（A2） | Activity Level 2 / A2 | 业务行为（A1）下的可选细分层，仅在用户要求更深拆分时启用 |
+| 应用系统（S1） | Application System / S1 | 承载业务流程的信息系统，包括 PLM、MES、ERP（用友 U8），桑基图系统层节点 |
+| 应用模块（S2） | Application Module / S2 | 应用系统（S1）下的模块、菜单或页面，仅在系统资料支持模块级映射时纳入 |
+| 映射关系 | Mapping | 部门（D1）→ 能力域（L1）→ 业务能力（L2）→ 业务流程（L3）→ 应用系统（S1）的关联关系，Infomat 平台的核心管理对象。数据表 mappings |
+| 桑基图 | Sankey Diagram | ECharts 渲染的流向图，可视化展示部门（D1）、能力域（L1）、业务能力（L2）、业务流程（L3）和应用系统（S1）的映射关系 |
 | PLM | Product Lifecycle Management | 产品生命周期管理系统，管理设计数据（EBOM）、工艺文件（CAPP）、工装策划与设计、MBOM 等 |
 | MES | Manufacturing Execution System | 制造执行系统，管理生产过程执行、质量检验、工装使用与维护、设备运维等 |
 | ERP | Enterprise Resource Planning | 本项目特指用友 U8，管理计划排程、采购、库存、财务、成本核算 |
-| MBOM | Manufacturing Bill of Material | 制造物料清单，定义零件制造所需的物料项、工艺路线和工序结构 |
-| EBOM | Engineering Bill of Material | 工程设计物料清单，PLM 侧维护的设计零部件结构，是 MBOM 的源头输入 |
+| MBOM | Manufacturing Bill of Material | 制造物料清单，面向 ERP/MES/计划执行，表达投产、批次、工单、生产数量、制造资源和现场执行关系 |
+| EBOM | Engineering Bill of Material | 工程设计物料清单，PLM 侧维护的设计零部件结构，含设计件、标准件、通用件、借用件的版本和状态，是下游 BOM 的源头 |
+| PBOM | Process Bill of Material | 工艺物料清单，在 EBOM 基础上按工艺路线、工序、装配关系重组，引入工装、辅料、虚拟件、半成品，是 MBOM 的前置基础 |
+| BOP | Bill of Process | 工艺过程清单，表达工艺路线、工序、工步的组织方式。与 PBOM 互补：PBOM 管"装什么"，BOP 管"怎么装" |
+| 数字主线 | Digital Thread | 以 BOM 为骨架，把设计、工艺、制造、交付、服务、运维各阶段的数据状态、版本、配置、有效性串起来的数据贯通思路 |
+| 实作 BOM / 实物 BOM | As-Built BOM | 记录实际装配、替换、代料、偏离、返修、批次、实物状态的 BOM，交付前后形成 |
+| 批次 BOM | Batch BOM | 对某一生产批次/订单/架次的产品配置进行冻结的结构实例，解决"同型号不同批次配置不同"的问题 |
+| SBOM | Service BOM | 服务 BOM，支撑服务保障、预测维修和数字孪生的产品结构视图 |
+| DBOM | Delivery BOM | 交付 BOM，支撑交付验收的产品结构视图 |
+| OBOM | Operations BOM | 运维 BOM，支撑运行维护的产品结构视图 |
 | CAPP | Computer Aided Process Planning | 计算机辅助工艺设计，PLM 系统的子模块，管理工艺路线、工序卡片和工时定额 |
+| 标准件 | Standard Part | 来自标准件库的通用零部件（如螺栓、铆钉），可在多个产品中直接引用 |
+| 通用件 | Common Part | 可在多个产品/项目中复用的零部件，与借用件不同——通用件是主动设计为可复用，借用件是从已有产品结构引用 |
+| 借用件 | Borrowed Part | 从已有产品结构中借用的零部件，特别容易带来版本同步和上下游影响问题，必须有来源关系追踪 |
+| 虚拟件 | Phantom Part | 工艺拆分产生的逻辑组件，用于组织工艺路线和装配关系，不对应实物库存 |
+| 辅料 | Auxiliary Material | 不进入 EBOM 但参与制造过程的消耗性物料（如脱模剂、清洗剂），出现在 PBOM/MBOM 中 |
+| 半成品 | Semi-Finished Product | 制造过程中的中间交付物，在 PBOM/MBOM 中作为独立节点管理 |
+| 工艺件 | Process Part | 仅在工艺/制造阶段使用的对象（如工装、夹具、样板），不出现在 EBOM 中 |
+| 基线 | Baseline | 某一时刻冻结的产品结构快照，用于控制 EBOM/PBOM/MBOM 下发和变更的参照点 |
+| 配置有效性 | Configuration Effectiveness | 定义某个零部件版本在什么条件下适用（时间、批次、架次、订单），是版本控制的关键维度 |
+| 成熟度 | Maturity | 设计/工艺/制造对象的就绪程度标识，如设计中→审批中→冻结→发布，不等同于版本号 |
+| 关键件 | Critical Part | 对产品安全、功能或性能有重大影响的零部件，需重点控制其版本、状态和变更 |
+| 工步 | Work Step | 工序下的最小操作单元，定义具体的加工动作和技术参数 |
+| 工位 | Work Station | 生产现场的作业位置，关联设备、工装和人员，用于组织工序执行 |
+| 架次 | Sortie | 航空制造中的批次/架次概念，同一型号不同架次可能有不同技术状态和配置 |
+| 技术状态 | Technical State / Configuration | 产品在某一时刻的设计、工艺、制造状态的综合快照，通过版本+状态+有效性共同控制 |
+| 数字孪生 | Digital Twin | 物理产品的虚拟映射模型，由实作 BOM 和服务 BOM 驱动，支撑运行维护和预测性维修 |
 | 黄金源 | Golden Source | 某一数据字段的权威来源系统，在 field_identities 表中确认，用于解决跨系统数据一致性问题 |
 | 字段台账 | Field Ledger | 记录各业务流程涉及的数据字段及其来源系统、流转路径的台账，黄金源确认的前置输入 |
 | 字段身份 | Field Identity | 对某一字段的黄金源归属做出的正式确认，存储在 field_identities 表 |
 | 跨部门协同 | Cross-Department Collaboration | 多个部门联合参与同一业务能力的组织模式，桑基图中以组合节点表示 |
 | 审批流 | Approval Flow | 映射关系从 draft 到 published 的七步状态机，每步生成审批任务和审计记录 |
 | 状态机 | State Machine | mappings.status 的状态变迁模型：draft→submitted→dept_reviewed→cross_confirmed→fields_confirmed→final_reviewed→published |
-| A1 业务行为 | Activity Level 1 | 业务流程（L3）分解后的原子级业务行为，是部门职责落地的最小可执行单元 |
 | 工时定额 | Labor Hour Quota | 完成特定零件或工序所需的标准工时，用于生产计划、排程和成本核算 |
 | 术语冲突 | Term Conflict | 同一术语在不同部门/系统中含义不一致，记录在 term_conflicts 表 |
 | 跨部门待办 | Cross-Department Todo | 因映射关系变更或冲突需要相关方处理的任务，记录在 todos 表 |
@@ -101,6 +128,13 @@
 | 编码引擎 | Code Engine | server/codeEngine.js，分段流水编码生成模块，按 entity_type + scope_key 分配流水 |
 | 物料主表 | Material Master | 统一物料主数据表的设计草案（规范 9.6 节），含 material_code、type_code 等 20+ 字段 |
 | 上机常温/低温/金属/胶漆 | Airborne Material Categories | MTR 材料五分类：1=上机常温、2=上机低温、3=上机金属、4=上机胶漆、5=工艺辅料 |
+| 图号 | Drawing Number | 设计图纸的唯一标识，用于关联零部件与设计文件。图号不等于物料编码——前者是文件标识，后者是业务对象标识 |
+| ECR | Engineering Change Request | 工程变更请求，由设计/工艺/制造发起的问题或变更需求，是变更流程的起点 |
+| ECN | Engineering Change Notice | 工程变更通知，经审批确认后下发的正式变更指令，驱动 EBOM/PBOM/MBOM 同步 |
+| 设计件 | Design Part | EBOM 中由设计部门定义的原始零部件，区别于工艺件和标准件 |
+| 过程件 | In-Process Part | 制造过程中产生的中间状态对象（如未完工的装配体），仅在 PBOM/MBOM 中存在 |
+| 设计状态 | Design Status | 零部件在设计阶段的生命周期标记：设计中→审核中→已发布→冻结→作废 |
+| 变更影响分析 | Change Impact Analysis | 判断设计/工艺/制造变更是否影响 EBOM/PBOM/MBOM、已投产批次、库存、在制品和已交付产品的评估流程 |
 
 ---
 
@@ -129,7 +163,7 @@
 | WZ | WuZi | 物资保障部的文件编号中的部门标识码 |
 | FM 表单号 | Form Number | 体系文件中引用的表单模板编号，如 FM1407-50 = 工艺装备申请单 |
 | 体系文件编制表 | Compilation Table | 各部门提交的体系文件清单 Excel（如 运维安环部体系文件编制表.xlsx），是能力映射的输入材料 |
-| 能力映射 | Capability Mapping | 将体系文件中的条款/流程上收为"部门→业务能力→业务流程→应用系统"映射关系的过程 |
+| 能力映射 | Capability Mapping | 将体系文件中的条款/流程上收为"部门（D1）→ 能力域（L1）→ 业务能力（L2）→ 业务流程（L3）→ 应用系统（S1）"映射关系的过程 |
 | 流程牵引、字段落账、主数据沉淀 | Process-Driven, Field-Accounted, MDM-Sedimented | MDM 建设方法论三阶段口径：先理清流程→再明确流转的字段→最后落成主数据编码和管理规则 |
 | 物资保障部 | Material Support Dept | 负责仓储物流、工装工具策划/申请/设计/验收/使用/返工/维护/定检管理的部门 |
 | 运维安环部 | Ops & EHS Dept | 负责动能供应、设备设施规划/保障/运维、安环管理的部门 |
@@ -224,11 +258,17 @@
 | 缩写 | 全称 | 所属域 |
 |------|------|--------|
 | A1 | Activity Level 1 | 业务域 |
+| A2 | Activity Level 2 | 业务域 |
 | CAPP | Computer Aided Process Planning | 业务域 |
 | CSM | Consumable / Supplies | 主数据域 |
 | CTL | Cutting Tool | 主数据域 |
+| BOP | Bill of Process | 业务域 |
 | D1 | Department Level 1 | 业务域 |
+| D2 | Office Level 2 | 业务域 |
+| DBOM | Delivery BOM | 业务域 |
 | EBOM | Engineering Bill of Material | 业务域 |
+| ECN | Engineering Change Notice | 主数据域 |
+| ECR | Engineering Change Request | 主数据域 |
 | EQP | Equipment | 主数据域 |
 | ERP | Enterprise Resource Planning | 业务域 |
 | FST | Fastener / Standard Parts | 主数据域 |
@@ -244,13 +284,17 @@
 | MES | Manufacturing Execution System | 业务域 |
 | MOD11 | Modulus 11 | 主数据域 |
 | MTR | Material (Raw) | 主数据域 |
+| OBOM | Operations BOM | 业务域 |
+| PBOM | Process Bill of Material | 业务域 |
 | PLM | Product Lifecycle Management | 业务域 |
 | PRC | Process Component | 主数据域 |
 | PRT | Part | 主数据域 |
 | QMS | Quality Management System | 体系文件域 |
 | RBAC | Role-Based Access Control | 技术域 |
 | S1 | System Level 1 | 业务域 |
+| S2 | System Module Level 2 | 业务域 |
 | SACC | SAC Supply Chain | 供应链协同域 |
+| SBOM | Service BOM | 业务域 |
 | SCD | Slowly Changing Dimension | 技术域 |
 | SYCX | ShenYang ChangXing（昌兴复材） | 体系文件域 |
 | TLG | Tooling | 主数据域 |
