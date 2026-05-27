@@ -61,6 +61,15 @@ node scripts/render_gantt_h5_png.mjs                    # H5 HTML → 8K PNG (he
 
 `digital_project_gantt_H5.html`、`gantt.html` 等直接在浏览器打开即可使用，无构建步骤。
 
+### 术语表查询
+
+```bash
+node scripts/glossary.mjs <keyword>       # 全文搜索术语
+node scripts/glossary.mjs --domain <1-5>  # 列出某个域的全部术语
+node scripts/glossary.mjs --abbr <ABBR>   # 查缩写全称
+node scripts/glossary.mjs --list           # 列出所有术语
+```
+
 ## 技术栈
 
 **MDM 平台**：Express.js + better-sqlite3 (SQLite) + 原生 HTML/CSS/JS 前端 (ECharts)。后端 `express-session` 做会话管理，`bcryptjs` 做密码哈希，`exceljs` + `multer` + `csv-parse` 做 Excel/CSV 导入导出。
