@@ -1,6 +1,6 @@
 # Infomat 项目术语表
 
-> 版本：V1.2
+> 版本：V1.3
 > 更新日期：2026-05-27
 > 用途：为 AI 辅助开发提供统一的术语参考。按域分章，每章一张三列表。
 
@@ -294,6 +294,74 @@
 
 ---
 
+## 6. 行政人事域
+
+覆盖行政人事部的组织、人员、培训、薪酬、行政后勤相关的术语。
+
+| 术语 | 英文/缩写 | 定义 |
+|------|----------|------|
+| 招聘录用 | Recruitment & Hiring | 行政人事部核心流程：从招聘需求提出、简历筛选、面试评估到录用入职的全过程 |
+| 岗位变动 | Position Change | 员工在组织内岗位调整的管理流程，含晋升、平调、降职，需同步更新人员主数据和权限 |
+| 考勤管理 | Attendance Management | 员工出勤、请假、加班、出差等考勤记录的收集与核算流程 |
+| 离职管理 | Offboarding Management | 员工从提出离职到办结离职手续的全流程，含工作交接、资产归还、权限回收和档案归档 |
+| 劳动合同 | Labor Contract | 用人单位与员工签订的劳动协议，主数据对象：合同编号、类型、期限、签订/终止日期、续签次数 |
+| 岗前培训取证 | Pre-Job Training & Certification | 新员工或岗位变动员工上岗前必须完成的培训和资格证书获取流程，MES 消费证书数据进行工序资质校验 |
+| 技能矩阵 | Skill Matrix | 以岗位为维度，记录每位员工在各项技能上的等级和评价结果的矩阵表，用于能力盘点、培训规划和薪酬激励 |
+| 新员工管培 | New Employee Management Training | 新入职员工的系统化培养计划，含导师-学员结对、轮岗实习、多维考核评分 |
+| 干部管理 | Cadre Management | 领导干部的职务任免、任期管理、年度考核、后备干部储备和培养状态跟踪 |
+| 退休续用 | Retirement Re-Employment | 已达退休年龄人员的续用审批流程，含年度聘用期限、体检结果关联和到期提醒 |
+| 社保公积金 | Social Insurance & Housing Fund | 员工社会保险和住房公积金的缴纳基数核定、月度申报和年度调整 |
+| 会议纪要 | Meeting Minutes | 会议决议和待办事项的正式记录，编号规则为部门编号-年份-日期+顺序字母，归档后不可修改 |
+| 公文管理 | Official Document Management | 公司级和部门级公文的发文、收文、传阅、归档管理，发文字号统一规则，密级管控 |
+| 印章管理 | Seal Management | 公章、合同章、财务章、法人章等印章的刻制、启用、保管、使用登记、停用和销毁的全生命周期管理 |
+| 车辆管理 | Vehicle Management | 公司车辆的台账管理，含使用状态、年检日期、保险到期预警和违章记录关联 |
+| 宿舍管理 | Dormitory Management | 员工宿舍的房间/床位分配、入住/退房登记、押金管理和房源状态维护 |
+| 档案管理 | Archive Management | 员工人事档案和公司档案资料的目录管理，含密级、保管期限、归档/销毁记录 |
+| 办公用品 | Office Supplies | 行政人事部归口的低值易耗品管理，含物品编码、分类、申领审批、采购结算和库存盘点 |
+| 请休假 | Leave & Vacation | 员工各类请假（事假/病假/婚假/产假/年休假等）的申请审批流程，年休假余额计算，病假医疗期累计 |
+| 培训体系 | Training System | 公司培训项目的规划、实施、评估体系，含培训项目编码、课程目录、培训方式（内培/外培/外聘）和培训师管理 |
+| 导师-学员结对 | Mentor-Mentee Pairing | 新员工管培中的一对一辅导关系，含导师/学员工号、培养期限和多维考核评分汇总 |
+
+---
+
+## 7. EHS/运维安环域
+
+覆盖运维安环部的安全生产、职业卫生、消防安全、环境保护、节能双碳和设备设施运维保障相关的术语。
+
+| 术语 | 英文/缩写 | 定义 |
+|------|----------|------|
+| 安全生产 | Safety Production | 运维安环部 L1 能力域：涵盖安全基础责任、风险分级管控、隐患排查治理、危险作业许可、安全应急和事故工伤管理 |
+| 风险分级管控 | Risk Classification & Control | 对安全风险按等级分类并制定对应控制措施的闭环管理，风险源/风险点为主数据，隐患记录为业务记录 |
+| 隐患排查治理 | Hazard Identification & Rectification | 对安全生产隐患的识别、分级、整改、验收闭环流程，隐患问题引用风险点/设备/区域主数据 |
+| 危险作业许可 | Hazardous Work Permit | 对有限空间、高处作业、动火作业等危险作业的审批许可管理，作业类型和控制措施模板应主数据化 |
+| 三违行为 | Three Violations（违章指挥/违章作业/违反劳动纪律） | 安全生产中的三类违规行为，是安全绩效和责任追究的重点管理对象 |
+| 有限空间 | Confined Space | 通风不良、出入口受限的作业空间，进入前需审批、检测和监护，运维安环部重点管控对象 |
+| 职业卫生 | Occupational Health | 运维安环部 L1 能力域：涵盖职业病危害识别申报、防护设施、危害监测、健康监护和职业健康档案管理 |
+| 职业病危害因素 | Occupational Hazard Factor | 可能导致职业病的化学、物理、生物因素，需识别、申报、监测和告知，是职业卫生管理的主数据对象 |
+| 劳动防护用品 | Personal Protective Equipment / PPE | 为从业人员配备的防护用品，含配发标准（按岗位/工种）、用品编码、规格和适用危害因素 |
+| 消防安全 | Fire Safety | 运维安环部 L1 能力域：涵盖消防基础、建设项目消防三同时、火灾隐患排查、消防设施维护和消防应急管理 |
+| 消防三同时 | Fire Safety Three Simultaneities | 建设项目中消防设施与主体工程同时设计、同时施工、同时投入使用和验收的管理要求 |
+| 消防重点部位 | Key Fire Safety Location | 火灾风险较高的区域或设施，需单独建账、定期检查和重点监控，是消防安全主数据对象 |
+| 环境保护 | Environmental Protection | 运维安环部 L1 能力域：涵盖环境因素识别、污染防治、环境监测、环保隐患治理和突发环境事件管理 |
+| 环境因素 | Environmental Aspect | 可能对环境造成影响的组织活动、产品或服务要素，重要环境因素需识别、评价和清单维护 |
+| 污染源 | Pollution Source | 产生废水、废气、噪声、固废等污染物的设施或工序，需编码、监测并关联排口和环境监测点 |
+| 危险废物 | Hazardous Waste | 列入国家危险废物名录的废弃物，需按危废代码分类、暂存、转移联单和合规处置 |
+| 节能双碳 | Energy Conservation & Dual Carbon | 运维安环部 L1 能力域：涵盖能源评审、节能运行控制、碳排放统计分析和能源计量管理 |
+| 能源评审 | Energy Review | 对组织能源使用和消耗的系统性分析，输出主要耗能设备台账和年度节能双碳工作策划 |
+| 碳排放因子 | Carbon Emission Factor | 单位能源或物料消耗对应的二氧化碳排放系数，用于碳排放统计和报告，由 MDM 统一维护 |
+| 能源计量器具 | Energy Measuring Instrument | 用于测量能源消耗的仪表设备，含计量范围、准确度等级和检定/校准有效期，是能源管理主数据对象 |
+| 设备设施运维保障 | Equipment & Facility O&M | 运维安环部 L1 能力域：涵盖设备计划策划、使用巡检、维护保养、维修保障、备件管理和事故/搬迁管理 |
+| TPM | Total Productive Maintenance | 全员生产维护，通过自主维护、计划维护和早期设备管理提高设备综合效率的设备管理方法 |
+| 设备操作证 | Equipment Operation Permit | 操作特定设备所需的资格证书，由运维安环部管理，与人员主数据和岗位资质关联 |
+| EHS体系 | EHS Management System | 环境、职业健康和安全整合管理体系，涵盖法规合规、目标指标、内审、管理评审和持续改进 |
+| 合规性评价 | Compliance Evaluation | 对组织活动是否符合适用法律法规和其他要求的定期评审，适用法规条款应主数据化并版本管理 |
+| 相关方 | Stakeholder / Interested Party | 与组织 EHS 绩效有关或受其影响的外部单位（承包商、供应商、外来人员），需管理 EHS 准入和资质 |
+| 管理评审 | Management Review | 由最高管理者主持的对 EHS 管理体系的定期评审，评审发现和决议作为体系改进输入 |
+| 内审 | Internal Audit | 组织内部对 EHS 管理体系符合性和有效性的系统性检查，内审发现分类和整改闭环 |
+| 危险点 | Hazard Point | 经识别确认的存在特定安全风险的具体位置或设备，是安全生产重点管控对象，需主数据化管理 |
+
+---
+
 ## 附录：缩写速查表
 
 | 缩写 | 全称 | 所属域 |
@@ -310,6 +378,7 @@
 | EBOM | Engineering Bill of Material | 业务域 |
 | ECN | Engineering Change Notice | 主数据域 |
 | ECR | Engineering Change Request | 主数据域 |
+| EHS | Environment, Health, Safety | EHS/运维安环域 |
 | EQP | Equipment | 主数据域 |
 | ERP | Enterprise Resource Planning | 业务域 |
 | FST | Fastener / Standard Parts | 主数据域 |
@@ -330,6 +399,7 @@
 | OBOM | Operations BOM | 业务域 |
 | PBOM | Process Bill of Material | 业务域 |
 | PLM | Product Lifecycle Management | 业务域 |
+| PPE | Personal Protective Equipment | EHS/运维安环域 |
 | PRC | Process Component | 主数据域 |
 | PRT | Part | 主数据域 |
 | QMS | Quality Management System | 体系文件域 |
@@ -342,6 +412,7 @@
 | SYCX | ShenYang ChangXing（昌兴复材） | 体系文件域 |
 | TLG | Tooling | 主数据域 |
 | TLS | Tools | 主数据域 |
+| TPM | Total Productive Maintenance | EHS/运维安环域 |
 | U8 | 用友 U8 ERP | 供应链协同域 |
 | WAL | Write-Ahead Logging | 技术域 |
 
