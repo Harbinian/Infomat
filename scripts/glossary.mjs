@@ -12,7 +12,16 @@ import { fileURLToPath } from 'url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const glossaryPath = join(__dirname, '..', 'docs', 'glossary.md');
 
-const text = readFileSync(glossaryPath, 'utf-8');
+let text;
+try {
+  text = readFileSync(glossaryPath, 'utf-8');
+} catch (err) {
+  if (err.code === 'ENOENT') {
+    console.error(`Glossary file not found: ${glossaryPath}`);
+    process.exit(1);
+  }
+  throw err;
+}
 
 const domainHeaders = {
   1: '## 1. 业务域',
@@ -58,11 +67,11 @@ const args = process.argv.slice(2);
 
 if (args.length === 0 || args.includes('--help') || args.includes('-h')) {
   console.log(`Usage:
-  node scripts/glossary.mjs <keyword>        Full-text search
+  node scripts/glossary.mjs <keyword>        Full-text search terms
   node scripts/glossary.mjs --domain <1-5>   List all terms in a domain
   node scripts/glossary.mjs --domains         List domain names
   node scripts/glossary.mjs --abbr <ABBR>    Lookup abbreviation
-  node scripts/glossary.mjs --list            List all terms`);
+  node scripts/glossary.mjs --list            List all terms across domains`);
   process.exit(0);
 }
 
@@ -87,6 +96,7 @@ if (args[0] === '--domain') {
 }
 
 if (args[0] === '--abbr') {
+  if (!args[1]) { console.error('Usage: node scripts/glossary.mjs --abbr <ABBR>'); process.exit(1); }
   const abbr = args[1].toUpperCase();
   const appendix = extractSection('## 附录：缩写速查表', null);
   const rows = parseAbbrRows(appendix);
