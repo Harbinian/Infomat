@@ -1,6 +1,6 @@
 # Infomat 项目术语表
 
-> 版本：V1.1
+> 版本：V1.2
 > 更新日期：2026-05-27
 > 用途：为 AI 辅助开发提供统一的术语参考。按域分章，每章一张三列表。
 
@@ -73,6 +73,26 @@
 | 版本历史 | Version History | 映射关系、术语等关键实体的变更记录，通过 change_set + version_log 表实现 |
 | 变更集 | Change Set | 一次提交中包含的多个变更的原子集合，用于版本追溯 |
 | 外部标识 | External Identity | 外部系统（PLM/MES/ERP）中的对象编号与本系统的关联映射 |
+| 战略规划与经营指标治理 | Strategic Planning & KPI Governance | 经营发展部 L1 能力域，涵盖发展规划、年度经营指标、部门绩效和月度绩效考核 |
+| 市场开发与客户合同治理 | Market Development & Contract Governance | 经营发展部 L1 能力域，涵盖市场信息收集、报价谈判、合同评审、顾客沟通与满意度 |
+| 订单交付与项目履约治理 | Order Delivery & Project Fulfillment | 经营发展部 L1 能力域，涵盖销售订单评审、项目经营合规、产品交付结算、工作转移和交付后不合格品管理 |
+| 采购与供应商资源治理 | Procurement & Supplier Governance | 经营发展部 L1 能力域，涵盖采购分类周期、供应商开发评价、审核批准、绩效评价、风险再评价和采购实施 |
+| 外包外协与委外检测治理 | Outsourcing & External Testing | 经营发展部 L1 能力域，涵盖外协加工、外包管理、临时/紧急外包和外委检测 |
+| 基建技改与设备验收治理 | Infrastructure & Equipment Acceptance | 经营发展部 L1 能力域，涵盖年度基建技改计划、报修实施、新设备验收和固定资产移交 |
+| 管理体系流程与文化创新治理 | Management System & Innovation | 经营发展部 L1 能力域，涵盖体系文件编制编码、质量沟通、管理创新和企业文化建设 |
+| 合规风险与外部申报治理 | Compliance Risk & External Filing | 经营发展部 L1 能力域，涵盖政策项目申报、内部控制与全面风险管理、项目激励、海关申报和法律证照管理 |
+| 工装需求与设计管理 | Tooling Demand & Design | 物资保障部 L1 能力域，涵盖工装工具策划、工艺装备申请、工装设计与更改管理 |
+| 工装验收与验证管理 | Tooling Acceptance & Verification | 物资保障部 L1 能力域，涵盖新制/返修/定检工装的实物与文件验收、不合格审理处置和投产前产品特性验证 |
+| 工装运行管理 | Tooling Operations | 物资保障部 L1 能力域，涵盖工装接收建账、日常使用、定检定查、返工返修、维护保养、封存与优化改进 |
+| 工具管理 | Tool Management | 物资保障部 L1 能力域，涵盖通用工具和专用工具的申请、采购、验收、库房、使用维护、调拨、维修、报废和量具检定 |
+| 物资库房与备件管理 | Warehouse & Spare Parts | 物资保障部 L1 能力域，涵盖生产物料（含冷库材料）的接收、检验、运转、储存、出入库和设备备件管理 |
+| 体系与信息化支撑 | System & IT Support | 物资保障部 L1 能力域，涵盖工装信息台账、OA 勤哲模块开发维护和部门制度文件版本控制 |
+| 工艺装备品种表 | Tooling Varieties List | 按项目/机型编制的工装品种与数量清单（FM1407-47），是工装策划的核心输出物 |
+| 工装定检目录 | Tooling Periodic Inspection Catalog | 记录每项工装的定检周期、定检类型和技术要求文件编号的管理台账 |
+| 勤哲模块 | QinZhe Module | 昌兴复材内部 OA 平台的轻量开发模块，物资保障部用于工装信息管理和流程自动化 |
+| 定检/定查 | Periodic Inspection/Check | 工装按周期进行的定期检修（定检）和定期检查（定查），定检侧重修复和校准，定查侧重状态确认 |
+| 共用工装校准 | Shared Tooling Calibration | 生产和检验共用工装在使用前的校准管理，确保测量和加工基准一致 |
+| 客供工装 | Customer-Provided Tooling | 由顾客（如商飞、波音）提供的工艺装备，需单独建账管理 |
 
 ---
 
@@ -135,6 +155,27 @@
 | 过程件 | In-Process Part | 制造过程中产生的中间状态对象（如未完工的装配体），仅在 PBOM/MBOM 中存在 |
 | 设计状态 | Design Status | 零部件在设计阶段的生命周期标记：设计中→审核中→已发布→冻结→作废 |
 | 变更影响分析 | Change Impact Analysis | 判断设计/工艺/制造变更是否影响 EBOM/PBOM/MBOM、已投产批次、库存、在制品和已交付产品的评估流程 |
+| 经营指标字典 | KPI Dictionary | 经营发展部主数据对象：指标编码、名称、口径、周期、目标值、权重、责任部门和计算公式的统一字典 |
+| 客户与项目机会 | Customer & Project Opportunity | 经营发展部主数据对象：客户编码、名称、分类、项目机会阶段、联系人、保密等级 |
+| 报价基础 | Quotation Basis | 经营发展部主数据对象：工序、工种、标准工时、积分、定额版本和适用产品/项目的报价参考基准 |
+| 合同订单类型 | Contract & Order Type | 经营发展部主数据对象：合同类型、订单类型、交付单据类型、编号规则、状态和结算条件的字典 |
+| 供应商主数据 | Supplier Master Data | 经营发展部主数据对象：供应商编码、名称、类别、批准范围、批准状态、等级、资质和限制条件。ERP 维护交易主体，MDM 治理编码与状态 |
+| 采购分类 | Procurement Category | 经营发展部主数据对象：采购类别、物料/服务类别、采购周期、请购部门和质量等级的字典 |
+| 外包外协任务包 | Outsourcing Task Package | 经营发展部主数据对象：任务包编号、零件/工装、工序、供应商、计划日期、技术文件和执行/结算状态 |
+| 风险等级 | Risk Level | 经营发展部主数据对象：风险编号、类别、概率、影响、等级、责任部门和应对策略的字典 |
+| 证照资质 | License & Qualification | 经营发展部主数据对象：证照编号、名称、持有人、有效期、保管人、使用范围和预警规则 |
+| 海关申报要素 | Customs Declaration Elements | 经营发展部主数据对象：货物编码、品名、规格、数量单位、危险品标识和关联订单/合同 |
+| 假冒件 | Counterfeit Part | 未经授权或伪造的零部件，采购实施和外购产品验证中需重点识别和预防 |
+| 有条件批准 | Conditional Approval | 供应商批准状态之一：在特定条件下（限定项目、限定期限、限定品类）允许供应商供货 |
+| 外委检测 | External Testing | 将检测任务委托给外部检测机构，需管理检测机构选择、合同签订、样品交接和报告审核 |
+| 工作转移 | Work Transfer | 将已批准的生产工作从一方转移到另一方，需客户批准并衔接首件验证 |
+| 工装状态字典 | Tooling Status Dictionary | 物资保障部主数据对象：在用/封存/限用/禁用/定检到期/返修中/检验中/报废/验证中 九种工装生命周期状态 |
+| 工装类别字典 | Tooling Category Dictionary | 物资保障部主数据对象：I类标准工艺装备/II类生产工艺装备/III类生产工艺装备/样板/试验设备/地面设备 |
+| 工装批次字典 | Tooling Batch Dictionary | 物资保障部主数据对象：00批(研制)/0批(试制)/1批(小批生产)/2批(成批生产)，不同批次对应不同工装系数 |
+| 岗位资格证 | Position Qualification Certificate | 行政人事部主数据对象：证书编码、工种/岗位、证书类型、有效期，MES 消费用于工序资质校验 |
+| 技能项 | Skill Item | 行政人事部主数据对象：技能项编码、名称、所属岗位、技能等级和评价标准，与工序资质和薪酬晋升关联 |
+| 培训师 | Trainer | 行政人事部主数据对象：培训师编码、等级（初级/中级/高级/资深/未聘）、课时津贴和课件津贴标准 |
+| 会议纪要编号 | Meeting Minutes Number | 行政人事部编码规则：部门编号-年份-日期+顺序字母，归档后不可修改 |
 
 ---
 
@@ -272,11 +313,13 @@
 | EQP | Equipment | 主数据域 |
 | ERP | Enterprise Resource Planning | 业务域 |
 | FST | Fastener / Standard Parts | 主数据域 |
+| FM | Form Number | 体系文件域 |
 | GAG | Gauge / Measuring Tool | 主数据域 |
 | GLB | Guideline Level B | 体系文件域 |
 | GLC | Guideline Level C | 体系文件域 |
 | GLG | Guideline Level G | 体系文件域 |
 | GLTX | GuiLi TiXi（管理体系） | 体系文件域 |
+| KPI | Key Performance Indicator | 主数据域 |
 | L1/L2/L3 | Level 1/2/3 | 业务域 |
 | M1/M2/P2/P3/P4 | QMS 模块代码 | 体系文件域 |
 | MBOM | Manufacturing Bill of Material | 业务域 |
