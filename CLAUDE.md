@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Infomat 是航空复材制造领域的业务关系映射与主数据管理工具集。
 
+**术语表同步规则（不可跳过）：任何开发任务如引入了新术语、新缩写或改变了现有术语含义，必须在同一 commit 中更新 `docs/glossary.md`。未更新术语表的任务视为未完成。**
+
 **术语表 (`docs/glossary.md`)：**
 开发时按以下协议使用术语表，确保命名和概念一致：
 
