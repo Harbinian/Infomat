@@ -3,8 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <script defer src="echarts.min.js"></script>
-    <title>财务部 · 部门能力流程系统桑基图</title>
+        <title>财务部 · 部门能力流程系统桑基图</title>
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
       :root {
@@ -276,6 +275,7 @@
 
 </main>
 
+    <script src="echarts.min.js"></script>
     <script>
       // ===== L3 数据（全域总览）=====
       var l3Rows = [
@@ -692,40 +692,33 @@ function openFeedbackCard(a1Id) {
   document.getElementById('feedbackTitle').innerText = a1Id + ' 反馈';
   var body = document.getElementById('feedbackBody');
 
-  // A1 信息摘要
   var html = '<div class="a1-context"><b>' + info.name + '</b><br>';
   html += '执行角色: ' + info.role + ' | 审批: ' + info.approval + ' | 系统: ' + info.system;
   if (info.alert) html += '<br><span style="color:#92400e">核验提醒: ' + info.alert + '</span>';
   html += '</div>';
 
-  // Q1: 整体确认
   html += qBlock(1, '本行业务行为描述是否准确反映了实际业务？', '',
     [['accurate','准确，无需修改'],['minor_issue','基本准确，有小问题'],['inaccurate','不准确，需要重写']],
     fb.row_confirmed);
 
-  // Q2: 执行角色
   html += qBlock(2, '执行角色描述是否正确？', '当前描述: ' + info.role,
     [['correct','正确'],['wrong','不对'],['unsure','不清楚']],
     fb.role_confirmed);
 
-  // Q3: 审批类型
   html += qBlock(3, '审批类型是否正确？', '当前描述: ' + info.approval,
     [['correct','正确'],['wrong','不对'],['unsure','不清楚']],
     fb.approval_confirmed);
 
-  // Q4: 输入输出关系
   html += qBlock(4, '跨部门输入/输出关系是否正确？', '',
     [['correct','正确'],['wrong','不对'],['unsure','不清楚']],
     fb.io_dept_confirmed);
 
-  // Q5: 核验提醒回应（仅当有提醒时）
   if (info.alert) {
     html += qBlock(5, '对于以下核验提醒，你的反馈是？', '提醒: ' + info.alert,
       [['agree','同意，需要细化'],['disagree','不同意，当前描述足够'],['not_applicable','不适用']],
       fb.verification_response);
   }
 
-  // 备注（条件显示）
   var showNotes = fb.row_confirmed === 'minor_issue' || fb.row_confirmed === 'inaccurate'
     || fb.role_confirmed === 'wrong' || fb.approval_confirmed === 'wrong'
     || fb.io_dept_confirmed === 'wrong';
@@ -736,7 +729,6 @@ function openFeedbackCard(a1Id) {
 
   body.innerHTML = html;
 
-  // 绑定选项点击
   body.querySelectorAll('.q-opt').forEach(function(opt) {
     opt.addEventListener('click', function() {
       var parent = opt.parentElement;
@@ -852,7 +844,8 @@ document.getElementById('exportJsonBtn').addEventListener('click', function() {
   URL.revokeObjectURL(url);
 });
 
-// ===== ECharts 补丁：节点颜色 + 点击事件 =====
+// ===== ECharts 补丁（按代码结构自动适配） =====
+
 var _origBuildDomainSankey = buildDomainSankey;
 buildDomainSankey = function(domain) {
   var result = _origBuildDomainSankey(domain);
@@ -870,18 +863,17 @@ myChart.setOption = function(option, notMerge) {
   myChart.off('click');
   myChart.on('click', function(params) {
     if (params.data && params.data.name && params.data.name.startsWith('a1_')) {
-      var a1Id = params.data.name.substring(3);
-      openFeedbackCard(a1Id);
+      openFeedbackCard(params.data.name.substring(3));
     }
   });
 };
 
-// ===== Monkey-patch render to track currentDomain =====
 var _origRender = render;
 render = function(domain) {
   CURRENT_DOMAIN = domain;
   _origRender(domain);
 };
+
 
 </script>
   </body>

@@ -3,8 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <script defer src="echarts.min.js"></script>
-    <title>财务部 · 部门能力流程系统桑基图</title>
+        <title>财务部 · 部门能力流程系统桑基图</title>
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
       :root {
@@ -135,6 +134,7 @@
       <div class="foot">数据来源：财务部业务资料中的6个GLTX-CW程序文件。应用系统（S1）口径限定为OA、MES、PLM、ERP。业务行为（A1）分解基于L3映射文档和源文件全文条款。</div>
     </main>
 
+    <script src="echarts.min.js"></script>
     <script>
       // ===== L3 数据（全域总览）=====
       var l3Rows = [

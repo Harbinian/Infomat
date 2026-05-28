@@ -159,7 +159,72 @@ function FEEDBACK_HTML(dept, total) {
 }
 
 // ===== FEEDBACK_JS =====
-function FEEDBACK_JS(dept, total) {
+function FEEDBACK_JS(dept, total, mode) {
+  // mode: 'v1' = buildDomainSankey+myChart+render (财务部)
+  //       'v2' = buildGraph+chart+renderAll (其余5个部门)
+  var isV1 = mode === 'v1';
+  var nodeKey = isV1 ? "'a1_' + a1Id" : "a1Id";
+  var chartVar = isV1 ? "myChart" : "chart";
+  var renderCall = isV1 ? "render(CURRENT_DOMAIN)" : "renderAll()";
+  var clickDetect = isV1
+    ? "params.data.name.startsWith('a1_')"
+    : "a1Index[params.data.name]";
+  var clickExtract = isV1
+    ? "params.data.name.substring(3)"
+    : "params.data.name";
+
+  var monkeyPatches = isV1 ? `
+var _origBuildDomainSankey = buildDomainSankey;
+buildDomainSankey = function(domain) {
+  var result = _origBuildDomainSankey(domain);
+  result.nodes.forEach(function(n) {
+    if (n.name.startsWith('a1_') && feedbackNodeColors[n.name]) {
+      n.itemStyle = { color: feedbackNodeColors[n.name], borderColor: feedbackNodeColors[n.name] };
+    }
+  });
+  return result;
+};
+
+var _origSetOption = myChart.setOption.bind(myChart);
+myChart.setOption = function(option, notMerge) {
+  _origSetOption(option, notMerge);
+  myChart.off('click');
+  myChart.on('click', function(params) {
+    if (params.data && params.data.name && params.data.name.startsWith('a1_')) {
+      openFeedbackCard(params.data.name.substring(3));
+    }
+  });
+};
+
+var _origRender = render;
+render = function(domain) {
+  CURRENT_DOMAIN = domain;
+  _origRender(domain);
+};
+` : `
+var _origBuildGraph = buildGraph;
+buildGraph = function() {
+  var result = _origBuildGraph();
+  result.nodes.forEach(function(n) {
+    if (feedbackNodeColors[n.name]) {
+      n.itemStyle = { color: feedbackNodeColors[n.name], borderColor: feedbackNodeColors[n.name] };
+    }
+  });
+  return result;
+};
+
+var _origRenderChart = renderChart;
+renderChart = function() {
+  _origRenderChart();
+  chart.off('click');
+  chart.on('click', function(params) {
+    if (params.data && params.data.name && a1Index[params.data.name]) {
+      openFeedbackCard(params.data.name);
+    }
+  });
+};
+`;
+
   return `
 // ===== 反馈状态管理 =====
 var feedbackState = {};
@@ -181,7 +246,7 @@ var feedbackNodeColors = {};
 function syncNodeColors() {
   Object.keys(feedbackState).forEach(function(a1Id) {
     var fb = feedbackState[a1Id];
-    var nodeName = 'a1_' + a1Id;
+    var nodeName = ${nodeKey};
     if (fb.row_confirmed === 'accurate') feedbackNodeColors[nodeName] = '#16a34a';
     else if (fb.row_confirmed === 'minor_issue') feedbackNodeColors[nodeName] = '#f59e0b';
     else if (fb.row_confirmed === 'inaccurate') feedbackNodeColors[nodeName] = '#dc2626';
@@ -199,40 +264,33 @@ function openFeedbackCard(a1Id) {
   document.getElementById('feedbackTitle').innerText = a1Id + ' 反馈';
   var body = document.getElementById('feedbackBody');
 
-  // A1 信息摘要
   var html = '<div class="a1-context"><b>' + info.name + '</b><br>';
   html += '执行角色: ' + info.role + ' | 审批: ' + info.approval + ' | 系统: ' + info.system;
   if (info.alert) html += '<br><span style="color:#92400e">核验提醒: ' + info.alert + '</span>';
   html += '</div>';
 
-  // Q1: 整体确认
   html += qBlock(1, '本行业务行为描述是否准确反映了实际业务？', '',
     [['accurate','准确，无需修改'],['minor_issue','基本准确，有小问题'],['inaccurate','不准确，需要重写']],
     fb.row_confirmed);
 
-  // Q2: 执行角色
   html += qBlock(2, '执行角色描述是否正确？', '当前描述: ' + info.role,
     [['correct','正确'],['wrong','不对'],['unsure','不清楚']],
     fb.role_confirmed);
 
-  // Q3: 审批类型
   html += qBlock(3, '审批类型是否正确？', '当前描述: ' + info.approval,
     [['correct','正确'],['wrong','不对'],['unsure','不清楚']],
     fb.approval_confirmed);
 
-  // Q4: 输入输出关系
   html += qBlock(4, '跨部门输入/输出关系是否正确？', '',
     [['correct','正确'],['wrong','不对'],['unsure','不清楚']],
     fb.io_dept_confirmed);
 
-  // Q5: 核验提醒回应（仅当有提醒时）
   if (info.alert) {
     html += qBlock(5, '对于以下核验提醒，你的反馈是？', '提醒: ' + info.alert,
       [['agree','同意，需要细化'],['disagree','不同意，当前描述足够'],['not_applicable','不适用']],
       fb.verification_response);
   }
 
-  // 备注（条件显示）
   var showNotes = fb.row_confirmed === 'minor_issue' || fb.row_confirmed === 'inaccurate'
     || fb.role_confirmed === 'wrong' || fb.approval_confirmed === 'wrong'
     || fb.io_dept_confirmed === 'wrong';
@@ -243,7 +301,6 @@ function openFeedbackCard(a1Id) {
 
   body.innerHTML = html;
 
-  // 绑定选项点击
   body.querySelectorAll('.q-opt').forEach(function(opt) {
     opt.addEventListener('click', function() {
       var parent = opt.parentElement;
@@ -310,7 +367,7 @@ document.getElementById('feedbackSubmit').addEventListener('click', function() {
   syncNodeColors();
   updateProgress();
   closeFeedbackCard();
-  render(CURRENT_DOMAIN);
+  ${renderCall};
 });
 
 document.getElementById('feedbackClose').addEventListener('click', closeFeedbackCard);
@@ -359,36 +416,8 @@ document.getElementById('exportJsonBtn').addEventListener('click', function() {
   URL.revokeObjectURL(url);
 });
 
-// ===== ECharts 补丁：节点颜色 + 点击事件 =====
-var _origBuildDomainSankey = buildDomainSankey;
-buildDomainSankey = function(domain) {
-  var result = _origBuildDomainSankey(domain);
-  result.nodes.forEach(function(n) {
-    if (n.name.startsWith('a1_') && feedbackNodeColors[n.name]) {
-      n.itemStyle = { color: feedbackNodeColors[n.name], borderColor: feedbackNodeColors[n.name] };
-    }
-  });
-  return result;
-};
-
-var _origSetOption = myChart.setOption.bind(myChart);
-myChart.setOption = function(option, notMerge) {
-  _origSetOption(option, notMerge);
-  myChart.off('click');
-  myChart.on('click', function(params) {
-    if (params.data && params.data.name && params.data.name.startsWith('a1_')) {
-      var a1Id = params.data.name.substring(3);
-      openFeedbackCard(a1Id);
-    }
-  });
-};
-
-// ===== Monkey-patch render to track currentDomain =====
-var _origRender = render;
-render = function(domain) {
-  CURRENT_DOMAIN = domain;
-  _origRender(domain);
-};
+// ===== ECharts 补丁（按代码结构自动适配） =====
+${monkeyPatches}
 `;
 }
 
@@ -397,6 +426,10 @@ render = function(domain) {
 if (html.includes('var feedbackState')) {
   console.log('Feedback form already injected, skipping.');
 } else {
+  // Detect code pattern: v1 = buildDomainSankey (财务部), v2 = buildGraph (其余)
+  var mode = html.includes('function buildDomainSankey') ? 'v1' : 'v2';
+  console.log('  Pattern: ' + mode);
+
   // Injection 1: CSS before </style>
   html = html.replace('</style>', FEEDBACK_CSS + '\n</style>');
 
@@ -404,7 +437,7 @@ if (html.includes('var feedbackState')) {
   html = html.replace('</main>', FEEDBACK_HTML(DEPT, a1Count) + '\n</main>');
 
   // Injection 3: JS before the closing </script> that precedes </body>
-  html = html.replace(/<\/script>(\s*)<\/body>/, FEEDBACK_JS(DEPT, a1Count) + '\n</script>$1</body>');
+  html = html.replace(/<\/script>(\s*)<\/body>/, FEEDBACK_JS(DEPT, a1Count, mode) + '\n</script>$1</body>');
 }
 
 writeFileSync(HTML_FILE, html, 'utf-8');
