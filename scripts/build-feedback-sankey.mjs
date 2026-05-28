@@ -8,7 +8,7 @@ let html = readFileSync(HTML_FILE, 'utf-8');
 
 // Count A1 rows from existing JS data
 const a1Match = html.match(/var a1Rows = \[([\s\S]*?)\];/);
-const a1Count = a1Match ? (a1Match[1].match(/\["[A-Z]+-L3-/g) || []).length : 0;
+const a1Count = a1Match ? (a1Match[1].match(/"[\w-]+-A\d+"/g) || []).length : 0;
 console.log(`${DEPT}: ${a1Count} A1 rows detected`);
 
 // ===== FEEDBACK_CSS =====
