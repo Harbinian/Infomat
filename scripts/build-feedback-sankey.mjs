@@ -393,15 +393,19 @@ render = function(domain) {
 }
 
 // ===== Inject =====
-// Injection 1: CSS before </style>
-html = html.replace('</style>', FEEDBACK_CSS + '\n</style>');
+// Guard: skip if already injected (idempotent)
+if (html.includes('var feedbackState')) {
+  console.log('Feedback form already injected, skipping.');
+} else {
+  // Injection 1: CSS before </style>
+  html = html.replace('</style>', FEEDBACK_CSS + '\n</style>');
 
-// Injection 2: HTML before </main>
-html = html.replace('</main>', FEEDBACK_HTML(DEPT, a1Count) + '\n</main>');
+  // Injection 2: HTML before </main>
+  html = html.replace('</main>', FEEDBACK_HTML(DEPT, a1Count) + '\n</main>');
 
-// Injection 3: JS before the closing </script> that precedes </body>
-// Match the last </script> before </body>
-html = html.replace(/<\/script>(\s*)<\/body>/, FEEDBACK_JS(DEPT, a1Count) + '\n</script>$1</body>');
+  // Injection 3: JS before the closing </script> that precedes </body>
+  html = html.replace(/<\/script>(\s*)<\/body>/, FEEDBACK_JS(DEPT, a1Count) + '\n</script>$1</body>');
+}
 
 writeFileSync(HTML_FILE, html, 'utf-8');
 console.log(`Done: ${HTML_FILE}`);

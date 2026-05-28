@@ -322,7 +322,7 @@
   <h1>桑基图反馈操作说明</h1>
   <p class="sub">部门能力流程系统映射关系 · 在线反馈指南</p>
   <div class="meta">
-    <span><span class="dot"></span> 行政人事部示例</span>
+    <span><span class="dot"></span> 财务部示例</span>
     <span>2026-05-28</span>
     <span>v1.0</span>
   </div>
@@ -364,7 +364,7 @@
     </div>
   </div>
   <div class="step-body">
-    <p>页面包含四个功能区域：顶部的<strong>反馈操作说明</strong>（6 步指引）、<strong>导出按钮</strong>和节点颜色图例、<strong>进度条</strong>（初始显示 0 / 159），以及下方的<strong>全域桑基图</strong>。</p>
+    <p>页面包含四个功能区域：顶部的<strong>反馈操作说明</strong>（6 步指引）、<strong>导出按钮</strong>和节点颜色图例、<strong>进度条</strong>（初始显示 0 / 86），以及下方的<strong>全域桑基图</strong>。</p>
     <img src="../superpowers/specs/sankey-feedback-guide-step01-initial.png" alt="页面初始状态" loading="lazy" />
   </div>
 </section>
@@ -467,7 +467,7 @@
   <div class="step-body">
     <p>提交反馈后两个变化同时发生：</p>
     <ul style="padding-left:19px;font-size:14px;color:#4b5563;display:grid;gap:6px;margin-bottom:14px;">
-      <li><strong>进度条更新</strong>：从 0 / 159 变为 1 / 86，每确认一条递增</li>
+      <li><strong>进度条更新</strong>：从 0 / 86 变为 1 / 86，每确认一条递增</li>
       <li><strong>节点变色</strong>：桑基图中已确认的 A1 节点按反馈结果变色</li>
     </ul>
     <div class="legend-row">
@@ -490,23 +490,23 @@
     </div>
   </div>
   <div class="step-body">
-    <p>全部 A1 确认完成后（或随时），点击顶部<strong>"导出反馈 JSON"</strong>按钮，浏览器自动下载文件 <code>行政人事部-反馈-2026-05-28.json</code>。</p>
+    <p>全部 A1 确认完成后（或随时），点击顶部<strong>"导出反馈 JSON"</strong>按钮，浏览器自动下载文件 <code>财务部-反馈-2026-05-28.json</code>。</p>
     <p>导出文件格式如下：</p>
     <pre class="json-block"><span class="key">{</span>
-  <span class="key">"department"</span>: <span class="str">"行政人事部"</span>,
+  <span class="key">"department"</span>: <span class="str">"财务部"</span>,
   <span class="key">"exported_at"</span>: <span class="str">"2026-05-28T08:12:39Z"</span>,
-  <span class="key">"total"</span>: <span class="num">159</span>,
+  <span class="key">"total"</span>: <span class="num">86</span>,
   <span class="key">"completed"</span>: <span class="num">1</span>,
   <span class="key">"feedback"</span>: <span class="key">[</span>
     <span class="key">{</span>
-      <span class="key">"a1_id"</span>: <span class="str">"0101-A01"</span>,
-      <span class="key">"a1_name"</span>: <span class="str">"(请以实际页面显示为准)"</span>,
+      <span class="key">"a1_id"</span>: <span class="str">"CW-L3-01-A01"</span>,
+      <span class="key">"a1_name"</span>: <span class="str">"接收研发项目完成后的技术方案与BOM单"</span>,
       <span class="key">"row_confirmed"</span>: <span class="str">"minor_issue"</span>,
       <span class="key">"role_confirmed"</span>: <span class="str">"correct"</span>,
       <span class="key">"approval_confirmed"</span>: <span class="str">"correct"</span>,
       <span class="key">"io_dept_confirmed"</span>: <span class="str">"correct"</span>,
       <span class="key">"verification_response"</span>: <span class="str">"agree"</span>,
-      <span class="key">"notes"</span>: <span class="str">"(部门填写修改意见)"</span>
+      <span class="key">"notes"</span>: <span class="str">"执行角色应该是成本主管而非成本会计，建议修改。"</span>
     <span class="key">}</span>
   <span class="key">]</span>
 <span class="key">}</span></pre>
