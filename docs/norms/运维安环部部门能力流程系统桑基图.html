@@ -1,0 +1,5469 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script defer src="../Demo/echarts.min.js"></script>
+    <title>运维安环部 · 部门能力流程系统桑基图</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      :root {
+        --blue: #1a56db;
+        --teal: #0891b2;
+        --bg: #f5f7fb;
+        --ink: #10233f;
+        --muted: #64748b;
+        --border: #d9e2ef;
+      }
+
+      body {
+        font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+        background: var(--bg);
+        color: var(--ink);
+        line-height: 1.55;
+      }
+
+      .page {
+        max-width: 1600px;
+        margin: 0 auto;
+        padding: 30px 38px 46px;
+      }
+
+      .hero {
+        position: relative;
+        margin-bottom: 18px;
+      }
+
+      .hero h1 {
+        font-size: 30px;
+        font-weight: 800;
+        letter-spacing: 0;
+        color: #0b2755;
+      }
+
+      .hero p {
+        font-size: 14px;
+        color: #475569;
+        margin-top: 6px;
+        max-width: 920px;
+      }
+
+      .badge {
+        position: absolute;
+        right: 0;
+        top: 6px;
+        border: 1px solid #cbd5e1;
+        background: #fff;
+        color: #334155;
+        border-radius: 8px;
+        padding: 6px 12px;
+        font-size: 12px;
+      }
+
+      .read-guide {
+        background: #eef6ff;
+        border-left: 4px solid var(--blue);
+        border-radius: 8px;
+        padding: 12px 14px;
+        margin: 14px 0 18px;
+        color: #29415f;
+        font-size: 14px;
+      }
+
+      .stat-row {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 10px;
+        margin-bottom: 18px;
+      }
+
+      .stat-box {
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 14px 16px;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+      }
+
+      .stat-box .num {
+        font-size: 28px;
+        font-weight: 800;
+        color: #0f766e;
+        line-height: 1;
+      }
+
+      .stat-box .lbl {
+        font-size: 13px;
+        color: var(--muted);
+        margin-top: 8px;
+      }
+
+      .modebar {
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 16px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .mode-label {
+        font-size: 13px;
+        color: #475569;
+        margin-right: 4px;
+      }
+
+      .mode-btn {
+        height: 34px;
+        border: 1px solid #cbd5e1;
+        background: #fff;
+        color: #29415f;
+        border-radius: 7px;
+        padding: 0 12px;
+        font-size: 13px;
+        cursor: pointer;
+        transition: 0.16s;
+        white-space: nowrap;
+      }
+
+      .mode-btn:hover {
+        border-color: var(--blue);
+        color: var(--blue);
+      }
+
+      .mode-btn.active {
+        background: var(--blue);
+        border-color: var(--blue);
+        color: #fff;
+        font-weight: 700;
+      }
+
+      .layoutbar {
+        margin-top: -8px;
+      }
+
+      .sankey-wrap {
+        width: 100%;
+        background: #0f172a;
+        border-radius: 12px;
+        padding: 24px 20px;
+        margin-bottom: 18px;
+        overflow: hidden;
+      }
+
+      .sankey-title {
+        text-align: center;
+        font-size: 20px;
+        font-weight: 800;
+        color: #f8fafc;
+        margin-bottom: 4px;
+        letter-spacing: 0;
+      }
+
+      .sankey-sub {
+        text-align: center;
+        font-size: 12px;
+        color: #94a3b8;
+        margin-bottom: 14px;
+      }
+
+      .sankey-chart {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        height: 1120px;
+      }
+
+      .legend-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: center;
+        margin-top: 12px;
+      }
+
+      .legend {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: #cbd5e1;
+        font-size: 12px;
+      }
+
+      .legend i {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 2px;
+      }
+
+      .g2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        margin-bottom: 18px;
+      }
+
+      .note {
+        background: #fff;
+        border: 1px solid var(--border);
+        border-left: 4px solid var(--teal);
+        border-radius: 8px;
+        padding: 14px 16px;
+        color: #334155;
+        font-size: 14px;
+      }
+
+      .note strong {
+        color: #0b2755;
+      }
+
+      .summary-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        margin-bottom: 18px;
+      }
+
+      .panel {
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 16px;
+      }
+
+      .panel h3 {
+        font-size: 16px;
+        margin-bottom: 10px;
+        color: #0b2755;
+      }
+
+      .bar-list {
+        display: grid;
+        gap: 8px;
+      }
+
+      .bar-line {
+        display: grid;
+        grid-template-columns: 190px 1fr 36px;
+        gap: 10px;
+        align-items: center;
+        font-size: 13px;
+        color: #334155;
+      }
+
+      .bar-track {
+        height: 10px;
+        border-radius: 999px;
+        background: #e2e8f0;
+        overflow: hidden;
+      }
+
+      .bar-fill {
+        height: 100%;
+        border-radius: 999px;
+        background: var(--blue);
+      }
+
+      .table-wrap {
+        overflow-x: hidden;
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        margin-bottom: 18px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+      }
+
+      .table-l3 {
+        table-layout: fixed;
+      }
+
+      .table-a1 {
+        table-layout: fixed;
+        min-width: 0;
+      }
+
+      th, td {
+        padding: 7px 6px;
+        border-bottom: 1px solid #e5ebf3;
+        text-align: left;
+        vertical-align: top;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+      }
+
+      th {
+        background: #f1f5f9;
+        color: #334155;
+        font-weight: 700;
+        position: sticky;
+        top: 0;
+        z-index: 1;
+      }
+
+      th.col-seq, td.col-seq {
+        width: 32px;
+        text-align: center;
+      }
+
+      th.col-a1id, td.col-a1id {
+        width: 60px;
+        white-space: normal;
+      }
+
+      th.col-dept, td.col-dept {
+        width: 58px;
+        white-space: nowrap;
+      }
+
+      th.col-domain, td.col-domain {
+        width: 90px;
+      }
+
+      th.col-cap, td.col-cap {
+        width: 82px;
+      }
+
+      th.col-proc, td.col-proc {
+        width: 96px;
+      }
+
+      th.col-a1name, td.col-a1name {
+        width: 128px;
+      }
+
+      th.col-role, td.col-role {
+        width: 78px;
+      }
+
+      th.col-trigger, td.col-trigger {
+        width: 102px;
+      }
+
+      th.col-precond, td.col-precond {
+        width: 90px;
+      }
+
+      th.col-appr, td.col-appr {
+        width: 58px;
+        white-space: nowrap;
+      }
+
+      th.col-accept, td.col-accept {
+        width: 92px;
+      }
+
+      th.col-evidence, td.col-evidence {
+        width: 106px;
+      }
+
+      th.col-evidtype, td.col-evidtype {
+        width: 58px;
+        white-space: nowrap;
+      }
+
+      th.col-system, td.col-system {
+        width: 58px;
+      }
+
+      th.col-alert, td.col-alert {
+        width: 94px;
+      }
+
+      th.col-feedback, td.col-feedback {
+        width: 78px;
+      }
+
+      th.col-adjust, td.col-adjust {
+        width: 54px;
+      }
+
+      th.col-suggestion, td.col-suggestion {
+        width: 78px;
+      }
+
+      tr:last-child td {
+        border-bottom: none;
+      }
+
+      .domain-pill {
+        display: inline-flex;
+        align-items: center;
+        min-height: 24px;
+        padding: 2px 8px;
+        border-radius: 7px;
+        color: #fff;
+        font-size: 12px;
+        white-space: normal;
+      }
+
+      .evidence-tag {
+        display: inline-block;
+        padding: 1px 6px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      .evidence-tag.explicit {
+        background: #dcfce7;
+        color: #166534;
+      }
+
+      .evidence-tag.inferred {
+        background: #fef3c7;
+        color: #92400e;
+      }
+
+      .appr-tag {
+        display: inline-block;
+        padding: 1px 6px;
+        border-radius: 4px;
+        font-size: 11px;
+      }
+
+      .appr-tag.none { background: #e2e8f0; color: #475569; }
+      .appr-tag.single { background: #dbeafe; color: #1e40af; }
+      .appr-tag.multi { background: #fce7f3; color: #9d174d; }
+      .appr-tag.cosign { background: #e0e7ff; color: #3730a3; }
+
+      .warn-tag {
+        display: inline-block;
+        margin: 0 4px 4px 0;
+        padding: 2px 6px;
+        border-radius: 4px;
+        background: #fef3c7;
+        color: #92400e;
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 1.35;
+      }
+
+      .soft-warn-tag {
+        display: inline-block;
+        margin: 0 4px 4px 0;
+        padding: 2px 6px;
+        border-radius: 4px;
+        background: #e0f2fe;
+        color: #075985;
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 1.35;
+      }
+
+      .feedback-cell {
+        color: #64748b;
+        font-size: 11px;
+      }
+
+      .foot {
+        margin-top: 14px;
+        font-size: 12px;
+        color: #64748b;
+      }
+
+      @media (max-width: 900px) {
+        .page {
+          padding: 20px 14px 34px;
+        }
+        .badge {
+          position: static;
+          display: inline-block;
+          margin-top: 10px;
+        }
+        .stat-row {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+        .g2, .summary-grid {
+          grid-template-columns: 1fr;
+        }
+        .sankey-chart {
+          height: 1120px;
+        }
+        .bar-line {
+          grid-template-columns: 160px 1fr 34px;
+        }
+        .table-a1 {
+          min-width: 0;
+        }
+      }
+    
+/* === 反馈系统样式 === */
+.progress-bar-wrap {
+  background: #fff; border: 1px solid var(--border); border-radius: 8px;
+  padding: 12px 16px; margin-bottom: 14px; display: flex; align-items: center; gap: 12px;
+}
+.progress-bar-wrap .label { font-size: 13px; color: #475569; white-space: nowrap; }
+.progress-track { flex: 1; height: 10px; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 999px; background: var(--teal); transition: width 0.3s; width: 0%; }
+.progress-text { font-size: 13px; color: #334155; font-weight: 700; white-space: nowrap; }
+
+.feedback-backdrop {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(15,23,42,0.3); z-index: 999; display: none;
+}
+.feedback-backdrop.show { display: block; }
+
+.feedback-overlay {
+  position: fixed; top: 0; right: 0; bottom: 0; width: 460px; max-width: 100vw;
+  background: #fff; box-shadow: -4px 0 24px rgba(15,23,42,0.15);
+  z-index: 1000; transform: translateX(100%); transition: transform 0.28s ease;
+  display: flex; flex-direction: column;
+}
+.feedback-overlay.open { transform: translateX(0); }
+.feedback-overlay .fb-header {
+  padding: 14px 20px; border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;
+}
+.feedback-overlay .fb-header h3 { font-size: 15px; color: #0b2755; }
+.feedback-overlay .fb-close {
+  width: 32px; height: 32px; border: 1px solid var(--border); background: #fff;
+  border-radius: 6px; cursor: pointer; font-size: 18px; color: #64748b; line-height: 28px; text-align: center;
+}
+.feedback-overlay .fb-close:hover { background: #f1f5f9; }
+.feedback-overlay .fb-body { flex: 1; overflow-y: auto; padding: 20px; }
+.feedback-overlay .fb-footer { padding: 14px 20px; border-top: 1px solid var(--border); flex-shrink: 0; }
+
+.q-block { margin-bottom: 18px; }
+.q-block .q-label { font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 6px; }
+.q-block .q-hint {
+  font-size: 12px; color: #64748b; margin-bottom: 6px;
+  padding: 6px 10px; background: #f8fafc; border-radius: 4px; border-left: 3px solid #e2e8f0;
+}
+.q-options { display: flex; flex-direction: column; gap: 4px; }
+.q-opt {
+  display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+  border: 1px solid var(--border); border-radius: 6px; cursor: pointer;
+  font-size: 13px; color: #334155; transition: 0.15s; user-select: none;
+}
+.q-opt:hover { border-color: var(--blue); background: #eef6ff; }
+.q-opt.selected { border-color: var(--blue); background: #eef6ff; color: #1a56db; font-weight: 700; }
+.q-opt .radio {
+  width: 16px; height: 16px; border-radius: 50%; border: 2px solid #cbd5e1; flex-shrink: 0;
+}
+.q-opt.selected .radio { border-color: var(--blue); background: var(--blue); box-shadow: inset 0 0 0 3px #fff; }
+
+.a1-context {
+  margin-bottom: 16px; padding: 10px 12px; background: #f8fafc; border-radius: 6px;
+  font-size: 12px; color: #475569; line-height: 1.6;
+}
+.a1-context b { color: #0b2755; }
+
+.note-area {
+  width: 100%; min-height: 64px; border: 1px solid var(--border); border-radius: 6px;
+  padding: 8px 12px; font-size: 13px; resize: vertical; font-family: inherit;
+  box-sizing: border-box;
+}
+.note-area:focus { outline: none; border-color: var(--blue); }
+
+.fb-submit {
+  width: 100%; height: 40px; background: var(--blue); color: #fff;
+  border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer;
+}
+.fb-submit:hover { filter: brightness(1.1); }
+
+.export-bar {
+  display: flex; gap: 8px; align-items: center; margin-bottom: 14px; flex-wrap: wrap;
+}
+.export-btn {
+  height: 36px; border: 1px solid var(--teal); background: #fff; color: var(--teal);
+  border-radius: 7px; padding: 0 16px; font-size: 13px; cursor: pointer; font-weight: 700;
+}
+.export-btn:hover { background: #f0fdfa; }
+
+.node-legend { display: flex; gap: 14px; font-size: 12px; color: #64748b; align-items: center; margin-left: 8px; }
+.node-legend .dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; }
+.dot.done { background: #16a34a; }
+.dot.issue { background: #f59e0b; }
+.dot.wrong { background: #dc2626; }
+
+.fb-guide {
+  background: #fff; border: 1px solid var(--border); border-radius: 8px;
+  padding: 16px 20px; margin-bottom: 14px;
+}
+.fb-guide h3 { font-size: 14px; color: #0b2755; margin-bottom: 8px; }
+.fb-guide ol { padding-left: 20px; font-size: 12px; color: #475569; line-height: 1.9; }
+
+@media (max-width: 900px) {
+  .feedback-overlay { width: 100vw; }
+}
+
+
+/* === 反馈系统样式 === */
+.progress-bar-wrap {
+  background: #fff; border: 1px solid var(--border); border-radius: 8px;
+  padding: 12px 16px; margin-bottom: 14px; display: flex; align-items: center; gap: 12px;
+}
+.progress-bar-wrap .label { font-size: 13px; color: #475569; white-space: nowrap; }
+.progress-track { flex: 1; height: 10px; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 999px; background: var(--teal); transition: width 0.3s; width: 0%; }
+.progress-text { font-size: 13px; color: #334155; font-weight: 700; white-space: nowrap; }
+
+.feedback-backdrop {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(15,23,42,0.3); z-index: 999; display: none;
+}
+.feedback-backdrop.show { display: block; }
+
+.feedback-overlay {
+  position: fixed; top: 0; right: 0; bottom: 0; width: 460px; max-width: 100vw;
+  background: #fff; box-shadow: -4px 0 24px rgba(15,23,42,0.15);
+  z-index: 1000; transform: translateX(100%); transition: transform 0.28s ease;
+  display: flex; flex-direction: column;
+}
+.feedback-overlay.open { transform: translateX(0); }
+.feedback-overlay .fb-header {
+  padding: 14px 20px; border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;
+}
+.feedback-overlay .fb-header h3 { font-size: 15px; color: #0b2755; }
+.feedback-overlay .fb-close {
+  width: 32px; height: 32px; border: 1px solid var(--border); background: #fff;
+  border-radius: 6px; cursor: pointer; font-size: 18px; color: #64748b; line-height: 28px; text-align: center;
+}
+.feedback-overlay .fb-close:hover { background: #f1f5f9; }
+.feedback-overlay .fb-body { flex: 1; overflow-y: auto; padding: 20px; }
+.feedback-overlay .fb-footer { padding: 14px 20px; border-top: 1px solid var(--border); flex-shrink: 0; }
+
+.q-block { margin-bottom: 18px; }
+.q-block .q-label { font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 6px; }
+.q-block .q-hint {
+  font-size: 12px; color: #64748b; margin-bottom: 6px;
+  padding: 6px 10px; background: #f8fafc; border-radius: 4px; border-left: 3px solid #e2e8f0;
+}
+.q-options { display: flex; flex-direction: column; gap: 4px; }
+.q-opt {
+  display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+  border: 1px solid var(--border); border-radius: 6px; cursor: pointer;
+  font-size: 13px; color: #334155; transition: 0.15s; user-select: none;
+}
+.q-opt:hover { border-color: var(--blue); background: #eef6ff; }
+.q-opt.selected { border-color: var(--blue); background: #eef6ff; color: #1a56db; font-weight: 700; }
+.q-opt .radio {
+  width: 16px; height: 16px; border-radius: 50%; border: 2px solid #cbd5e1; flex-shrink: 0;
+}
+.q-opt.selected .radio { border-color: var(--blue); background: var(--blue); box-shadow: inset 0 0 0 3px #fff; }
+
+.a1-context {
+  margin-bottom: 16px; padding: 10px 12px; background: #f8fafc; border-radius: 6px;
+  font-size: 12px; color: #475569; line-height: 1.6;
+}
+.a1-context b { color: #0b2755; }
+
+.note-area {
+  width: 100%; min-height: 64px; border: 1px solid var(--border); border-radius: 6px;
+  padding: 8px 12px; font-size: 13px; resize: vertical; font-family: inherit;
+  box-sizing: border-box;
+}
+.note-area:focus { outline: none; border-color: var(--blue); }
+
+.fb-submit {
+  width: 100%; height: 40px; background: var(--blue); color: #fff;
+  border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer;
+}
+.fb-submit:hover { filter: brightness(1.1); }
+
+.export-bar {
+  display: flex; gap: 8px; align-items: center; margin-bottom: 14px; flex-wrap: wrap;
+}
+.export-btn {
+  height: 36px; border: 1px solid var(--teal); background: #fff; color: var(--teal);
+  border-radius: 7px; padding: 0 16px; font-size: 13px; cursor: pointer; font-weight: 700;
+}
+.export-btn:hover { background: #f0fdfa; }
+
+.node-legend { display: flex; gap: 14px; font-size: 12px; color: #64748b; align-items: center; margin-left: 8px; }
+.node-legend .dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; }
+.dot.done { background: #16a34a; }
+.dot.issue { background: #f59e0b; }
+.dot.wrong { background: #dc2626; }
+
+.fb-guide {
+  background: #fff; border: 1px solid var(--border); border-radius: 8px;
+  padding: 16px 20px; margin-bottom: 14px;
+}
+.fb-guide h3 { font-size: 14px; color: #0b2755; margin-bottom: 8px; }
+.fb-guide ol { padding-left: 20px; font-size: 12px; color: #475569; line-height: 1.9; }
+
+@media (max-width: 900px) {
+  .feedback-overlay { width: 100vw; }
+}
+
+
+/* === 反馈系统样式 === */
+.progress-bar-wrap {
+  background: #fff; border: 1px solid var(--border); border-radius: 8px;
+  padding: 12px 16px; margin-bottom: 14px; display: flex; align-items: center; gap: 12px;
+}
+.progress-bar-wrap .label { font-size: 13px; color: #475569; white-space: nowrap; }
+.progress-track { flex: 1; height: 10px; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 999px; background: var(--teal); transition: width 0.3s; width: 0%; }
+.progress-text { font-size: 13px; color: #334155; font-weight: 700; white-space: nowrap; }
+
+.feedback-backdrop {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(15,23,42,0.3); z-index: 999; display: none;
+}
+.feedback-backdrop.show { display: block; }
+
+.feedback-overlay {
+  position: fixed; top: 0; right: 0; bottom: 0; width: 460px; max-width: 100vw;
+  background: #fff; box-shadow: -4px 0 24px rgba(15,23,42,0.15);
+  z-index: 1000; transform: translateX(100%); transition: transform 0.28s ease;
+  display: flex; flex-direction: column;
+}
+.feedback-overlay.open { transform: translateX(0); }
+.feedback-overlay .fb-header {
+  padding: 14px 20px; border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;
+}
+.feedback-overlay .fb-header h3 { font-size: 15px; color: #0b2755; }
+.feedback-overlay .fb-close {
+  width: 32px; height: 32px; border: 1px solid var(--border); background: #fff;
+  border-radius: 6px; cursor: pointer; font-size: 18px; color: #64748b; line-height: 28px; text-align: center;
+}
+.feedback-overlay .fb-close:hover { background: #f1f5f9; }
+.feedback-overlay .fb-body { flex: 1; overflow-y: auto; padding: 20px; }
+.feedback-overlay .fb-footer { padding: 14px 20px; border-top: 1px solid var(--border); flex-shrink: 0; }
+
+.q-block { margin-bottom: 18px; }
+.q-block .q-label { font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 6px; }
+.q-block .q-hint {
+  font-size: 12px; color: #64748b; margin-bottom: 6px;
+  padding: 6px 10px; background: #f8fafc; border-radius: 4px; border-left: 3px solid #e2e8f0;
+}
+.q-options { display: flex; flex-direction: column; gap: 4px; }
+.q-opt {
+  display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+  border: 1px solid var(--border); border-radius: 6px; cursor: pointer;
+  font-size: 13px; color: #334155; transition: 0.15s; user-select: none;
+}
+.q-opt:hover { border-color: var(--blue); background: #eef6ff; }
+.q-opt.selected { border-color: var(--blue); background: #eef6ff; color: #1a56db; font-weight: 700; }
+.q-opt .radio {
+  width: 16px; height: 16px; border-radius: 50%; border: 2px solid #cbd5e1; flex-shrink: 0;
+}
+.q-opt.selected .radio { border-color: var(--blue); background: var(--blue); box-shadow: inset 0 0 0 3px #fff; }
+
+.a1-context {
+  margin-bottom: 16px; padding: 10px 12px; background: #f8fafc; border-radius: 6px;
+  font-size: 12px; color: #475569; line-height: 1.6;
+}
+.a1-context b { color: #0b2755; }
+
+.note-area {
+  width: 100%; min-height: 64px; border: 1px solid var(--border); border-radius: 6px;
+  padding: 8px 12px; font-size: 13px; resize: vertical; font-family: inherit;
+  box-sizing: border-box;
+}
+.note-area:focus { outline: none; border-color: var(--blue); }
+
+.fb-submit {
+  width: 100%; height: 40px; background: var(--blue); color: #fff;
+  border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer;
+}
+.fb-submit:hover { filter: brightness(1.1); }
+
+.export-bar {
+  display: flex; gap: 8px; align-items: center; margin-bottom: 14px; flex-wrap: wrap;
+}
+.export-btn {
+  height: 36px; border: 1px solid var(--teal); background: #fff; color: var(--teal);
+  border-radius: 7px; padding: 0 16px; font-size: 13px; cursor: pointer; font-weight: 700;
+}
+.export-btn:hover { background: #f0fdfa; }
+
+.node-legend { display: flex; gap: 14px; font-size: 12px; color: #64748b; align-items: center; margin-left: 8px; }
+.node-legend .dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; }
+.dot.done { background: #16a34a; }
+.dot.issue { background: #f59e0b; }
+.dot.wrong { background: #dc2626; }
+
+.fb-guide {
+  background: #fff; border: 1px solid var(--border); border-radius: 8px;
+  padding: 16px 20px; margin-bottom: 14px;
+}
+.fb-guide h3 { font-size: 14px; color: #0b2755; margin-bottom: 8px; }
+.fb-guide ol { padding-left: 20px; font-size: 12px; color: #475569; line-height: 1.9; }
+
+@media (max-width: 900px) {
+  .feedback-overlay { width: 100vw; }
+}
+
+</style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero">
+        <h1>运维安环部 · 部门能力流程系统桑基图</h1>
+        <p>部门（D1）→ 能力域（L1）→ 业务能力（L2）→ 业务流程（L3）→ 业务行为（A1）→ 应用系统（S1）。含217条业务行为（A1），覆盖7大能力域33条业务流程（L3）。</p>
+        <div class="badge">部门审核稿 · 待反馈</div>
+      </section>
+
+      <div class="read-guide">
+        <strong>读图方法：</strong>"全域总览"看运维安环部覆盖哪些领域和系统；切换到具体能力域（L1），看 业务能力（L2）→ 业务流程（L3）→ 业务行为（A1）→ 应用系统（S1） 的四层细节。悬停连线可见制度依据和系统设计依据。业务行为（A1）节点显示行为名称和执行角色，业务行为（A1）编号保留在悬停提示和明细表中用于追溯。下方明细表在"全域总览"显示业务流程（L3）行，在能力域视图显示业务行为（A1）行。
+      </div>
+
+            <section class="stat-row">
+        <div class="stat-box"><div class="num">1</div><div class="lbl">部门（D1）</div></div>
+        <div class="stat-box"><div class="num">7</div><div class="lbl">能力域（L1）</div></div>
+        <div class="stat-box"><div class="num">33</div><div class="lbl">业务能力（L2）</div></div>
+        <div class="stat-box"><div class="num">33</div><div class="lbl">业务流程（L3）</div></div>
+        <div class="stat-box"><div class="num">217</div><div class="lbl">业务行为（A1）</div></div>
+        <div class="stat-box"><div class="num">4</div><div class="lbl">应用系统（S1）</div></div>
+      </section>
+
+      <section class="modebar" id="modebar">
+        <span class="mode-label">视图</span>
+      </section>
+
+      <section class="modebar layoutbar" id="layoutbar">
+        <span class="mode-label">布局</span>
+      </section>
+
+      <section class="sankey-wrap">
+        <div class="sankey-title" id="chartTitle">运维安环部全域总览</div>
+        <div class="sankey-sub" id="chartSub">部门（D1）→ 能力域（L1）→ 业务能力（L2）→ 应用系统（S1）</div>
+        <div id="chart" class="sankey-chart"></div>
+        <div class="legend-row" id="legendRow"></div>
+      </section>
+
+      <section class="g2">
+        <div class="note">
+          <strong>应用系统（S1）口径：</strong>只展示OA、MES、PLM、ERP四类面向员工使用的信息化系统；MDM和外部海关平台不作为应用系统（S1）节点。
+        </div>
+        <div class="note">
+          <strong>部门审核口径：</strong>本页用于部门逐条确认业务行为（A1）。证据类型需区分"原文明确-正文"、"原文明确-流程图"、"原文明确-表单"、"上下文推断"或"分析拆分"；执行角色、触发情景、前置条件可由部门补充或修正。验收标准只检查业务流程（L3）最终环节或跨部门交接前的最后环节；跟踪类任务优先由系统待办提醒、到期预警和进度展示承载。
+        </div>
+      </section>
+
+      <section class="summary-grid">
+        <div class="panel">
+          <h3>能力域（L1）规模（业务行为（A1）数）</h3>
+          <div class="bar-list" id="domainBars"></div>
+        </div>
+        <div class="panel">
+          <h3>系统承载分布（A1参与次数）</h3>
+          <div class="bar-list" id="systemBars"></div>
+        </div>
+      </section>
+
+      <section class="table-wrap">
+        <table id="mappingTable">
+          <thead id="tableHead"></thead>
+          <tbody id="mappingBody"></tbody>
+        </table>
+      </section>
+
+      <div class="foot">
+        数据来源：运维安环部业务资料、部门-能力-流程-系统映射关系与业务行为（A1）明细；应用系统（S1）口径限定为OA、MES、PLM、ERP。
+      </div>
+    
+<div class="fb-guide">
+  <h3>反馈操作说明</h3>
+  <ol>
+    <li>切换<b>能力域（L1）视图</b>，进入具体业务域</li>
+    <li>在桑基图中<b>点击业务行为（A1）节点</b>，右侧弹出反馈卡片</li>
+    <li>逐一回答选择题（每题必选），选"有问题"的选项后填写备注</li>
+    <li>点击<b>"确认本条"</b>保存反馈，节点颜色自动更新</li>
+    <li>全部完成后点击<b>"导出反馈 JSON"</b>，下载文件发送给信息化项目组</li>
+    <li>绿色=<b>准确</b>，黄色=<b>有小问题</b>，红色=<b>需重写</b></li>
+  </ol>
+</div>
+
+<div class="export-bar">
+  <button class="export-btn" id="exportJsonBtn">导出反馈 JSON</button>
+  <span class="node-legend">
+    <span><span class="dot done"></span>准确</span>
+    <span><span class="dot issue"></span>有小问题</span>
+    <span><span class="dot wrong"></span>需重写</span>
+  </span>
+</div>
+
+<div class="progress-bar-wrap">
+  <span class="label">反馈进度</span>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <span class="progress-text" id="progressText">0 / 0</span>
+</div>
+
+<div class="feedback-backdrop" id="feedbackBackdrop"></div>
+<div class="feedback-overlay" id="feedbackPanel">
+  <div class="fb-header">
+    <h3 id="feedbackTitle">业务行为反馈</h3>
+    <button class="fb-close" id="feedbackClose">&times;</button>
+  </div>
+  <div class="fb-body" id="feedbackBody"></div>
+  <div class="fb-footer">
+    <button class="fb-submit" id="feedbackSubmit">确认本条</button>
+  </div>
+</div>
+
+
+<div class="fb-guide">
+  <h3>反馈操作说明</h3>
+  <ol>
+    <li>切换<b>能力域（L1）视图</b>，进入具体业务域</li>
+    <li>在桑基图中<b>点击业务行为（A1）节点</b>，右侧弹出反馈卡片</li>
+    <li>逐一回答选择题（每题必选），选"有问题"的选项后填写备注</li>
+    <li>点击<b>"确认本条"</b>保存反馈，节点颜色自动更新</li>
+    <li>全部完成后点击<b>"导出反馈 JSON"</b>，下载文件发送给信息化项目组</li>
+    <li>绿色=<b>准确</b>，黄色=<b>有小问题</b>，红色=<b>需重写</b></li>
+  </ol>
+</div>
+
+<div class="export-bar">
+  <button class="export-btn" id="exportJsonBtn">导出反馈 JSON</button>
+  <span class="node-legend">
+    <span><span class="dot done"></span>准确</span>
+    <span><span class="dot issue"></span>有小问题</span>
+    <span><span class="dot wrong"></span>需重写</span>
+  </span>
+</div>
+
+<div class="progress-bar-wrap">
+  <span class="label">反馈进度</span>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <span class="progress-text" id="progressText">0 / 0</span>
+</div>
+
+<div class="feedback-backdrop" id="feedbackBackdrop"></div>
+<div class="feedback-overlay" id="feedbackPanel">
+  <div class="fb-header">
+    <h3 id="feedbackTitle">业务行为反馈</h3>
+    <button class="fb-close" id="feedbackClose">&times;</button>
+  </div>
+  <div class="fb-body" id="feedbackBody"></div>
+  <div class="fb-footer">
+    <button class="fb-submit" id="feedbackSubmit">确认本条</button>
+  </div>
+</div>
+
+
+<div class="fb-guide">
+  <h3>反馈操作说明</h3>
+  <ol>
+    <li>切换<b>能力域（L1）视图</b>，进入具体业务域</li>
+    <li>在桑基图中<b>点击业务行为（A1）节点</b>，右侧弹出反馈卡片</li>
+    <li>逐一回答选择题（每题必选），选"有问题"的选项后填写备注</li>
+    <li>点击<b>"确认本条"</b>保存反馈，节点颜色自动更新</li>
+    <li>全部完成后点击<b>"导出反馈 JSON"</b>，下载文件发送给信息化项目组</li>
+    <li>绿色=<b>准确</b>，黄色=<b>有小问题</b>，红色=<b>需重写</b></li>
+  </ol>
+</div>
+
+<div class="export-bar">
+  <button class="export-btn" id="exportJsonBtn">导出反馈 JSON</button>
+  <span class="node-legend">
+    <span><span class="dot done"></span>准确</span>
+    <span><span class="dot issue"></span>有小问题</span>
+    <span><span class="dot wrong"></span>需重写</span>
+  </span>
+</div>
+
+<div class="progress-bar-wrap">
+  <span class="label">反馈进度</span>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <span class="progress-text" id="progressText">0 / 217</span>
+</div>
+
+<div class="feedback-backdrop" id="feedbackBackdrop"></div>
+<div class="feedback-overlay" id="feedbackPanel">
+  <div class="fb-header">
+    <h3 id="feedbackTitle">业务行为反馈</h3>
+    <button class="fb-close" id="feedbackClose">&times;</button>
+  </div>
+  <div class="fb-body" id="feedbackBody"></div>
+  <div class="fb-footer">
+    <button class="fb-submit" id="feedbackSubmit">确认本条</button>
+  </div>
+</div>
+
+</main>
+
+    <script>
+      // ===== L3 层数据（全域总览）=====
+      var l3Rows = [
+        {
+                "domain": "安全生产治理",
+                "capability": "安全基础与责任管理",
+                "process": "安全基础、班组安全、安全培训、责任追究",
+                "evidence": "GLC260501-B《安全生产基础管理程序》§6.1、§6.2、§6.3；GLC26050302-B《安全环保责任追究管理程序》§6.2、§6.3、§6.5",
+                "system": "OA",
+                "basis": "按该流程的审批、执行、记录或数据引用特征映射至对应应用系统（S1），具体模块由部门确认"
+        },
+        {
+                "domain": "安全生产治理",
+                "capability": "风险识别与分级管控",
+                "process": "安全风险分级、危险源辨识、危险点管理",
+                "evidence": "GLC260502-B《安全生产风险分级管理程序》§6.1-§6.6；GLC260612-A《危险源辨识及风险和机遇的评价管理程序》§6.1-§6.5；GLC260505-A《危险点安全生产管理程序》§6.1-§6.17",
+                "system": "MES",
+                "basis": "按该流程的审批、执行、记录或数据引用特征映射至对应应用系统（S1），具体模块由部门确认"
+        },
+        {
+                "domain": "安全生产治理",
+                "capability": "隐患排查治理与安全绩效",
+                "process": "安全隐患排查、整改闭环、目标考核、三违管理",
+                "evidence": "GLC260504-D《安全生产隐患排查治理管理程序》§6.1、§6.2、§6.4；GLC260509-B《安全生产“三违”行为管理程序》§6.1、§6.2",
+                "system": "MES",
+                "basis": "按该流程的审批、执行、记录或数据引用特征映射至对应应用系统（S1），具体模块由部门确认"
+        },
+        {
+                "domain": "安全生产治理",
+                "capability": "危险作业许可管理",
+                "process": "危险作业审批、有限空间作业许可",
+                "evidence": "GLC260506-B《危险作业安全生产管理程序》§6.1、§6.2、§6.3、§6.4",
+                "system": "OA",
+                "basis": "按该流程的审批、执行、记录或数据引用特征映射至对应应用系统（S1），具体模块由部门确认"
+        },
+        {
+                "domain": "安全生产治理",
+                "capability": "安全应急与事故工伤管理",
+                "process": "应急管理、事故报告调查、工伤管理",
+                "evidence": "待分配编号《安全生产应急管理程序》§6.1、§6.2、§6.3",
+                "system": "OA",
+                "basis": "按该流程的审批、执行、记录或数据引用特征映射至对应应用系统（S1），具体模块由部门确认"
+        },
+        {
+                "domain": "安全生产治理",
+                "capability": "相关方与安全投入管理",
+                "process": "相关方安全准入、安全生产费用管理",
+                "evidence": "GLC260508-B《相关方安全管理程序》§6.1-§6.5；GLC260507-B《安全生产费用管理程序》§6.1-§6.4",
+                "system": "OA、ERP",
+                "basis": "按该流程的审批、执行、记录或数据引用特征映射至对应应用系统（S1），具体模块由部门确认"
+        },
+        {
+                "domain": "职业健康与职业卫生治理",
+                "capability": "职业病危害识别申报与告知",
+                "process": "职业病危害申报、警示告知、职业卫生操作规程",
+                "evidence": "GLC260602-A《职业病危害项目申报管理程序》§6.1；GLC260601-A《职业病危害警示与告知管理程序》§6.1、§6.2、§6.3",
+                "system": "OA",
+                "basis": "按该流程的审批、执行、记录或数据引用特征映射至对应应用系统（S1），具体模块由部门确认"
+        },
+        {
+                "domain": "职业健康与职业卫生治理",
+                "capability": "职业病防护与劳动防护",
+                "process": "职业病防护设施、劳动防护用品标准与领用",
+                "evidence": "GLC260604-B《职业病防护设施管理程序》§6.1-§6.9；GLC260605-C《劳动防护用品管理程序》§6.1-§6.19",
+                "system": "MES、ERP",
+                "basis": "按该流程的审批、执行、记录或数据引用特征映射至对应应用系统（S1），具体模块由部门确认"
+        },
+        {
+                "domain": "职业健康与职业卫生治理",
+                "capability": "职业危害监测与健康监护",
+                "process": "职业危害检测评价、健康监护、职业健康档案、噪声聋预警",
+                "evidence": "GLC260606-A《职业病危害监测及评价管理程序》§6.1-§6.7；GLC260607-A《职业健康监护管理程序》§6.1、§6.2、§6.3；GLC260609-A《职业健康档案管理程序》§6.1、§6.2；GLC260611-A《职业性噪声聋预警管理程序》§6.1-§6.4",
+                "system": "OA",
+                "basis": "按该流程的审批、执行、记录或数据引用特征映射至对应应用系统（S1），具体模块由部门确认"
+        },
+        {
+                "domain": "职业健康与职业卫生治理",
+                "capability": "职业健康安全体系运行",
+                "process": "职业健康安全目标、培训、风险、应急、监视测量、改进",
+                "evidence": "GLC260613-A《职业健康安全目标指标管理程序》§6.1-§6.6；GLC260614-A《职业健康安全培训教育控制程序》§6.1-§6.3；GLC260615-A《职业健康安全风险管控管理程序》§6.1-§6.4；GLC260616-A《职业健康安全应急准备与响应控制程序》§6.1-§6.6；GLC260617-A《职业健康安全监视与测量控制管理程序》§6.1-§6.4；GLC260618-A《职业健康安全改进管理程序》§6.1、§6.2",
+                "system": "OA",
+                "basis": "按该流程的审批、执行、记录或数据引用特征映射至对应应用系统（S1），具体模块由部门确认"
+        },
+        {
+                "domain": "消防安全治理",
+                "capability": "消防基础与教育考评",
+                "process": "消防培训教育、消防工作考评、消防违章教育",
+                "evidence": "GLC260701-A《消防安全基础管理程序》§6.2、§6.3、§6.5、§6.7",
+                "system": "OA",
+                "basis": "按该流程的审批、执行、记录或数据引用特征映射至对应应用系统（S1），具体模块由部门确认"
+        },
+        {
+                "domain": "消防安全治理",
+                "capability": "建设项目消防三同时",
+                "process": "建设项目安全、职业卫生、消防安全三同时审核",
+                "evidence": "GLC260702-A《建设项目安全生产、职业卫生、消防安全“三同时”管理程序》§6.1、§6.2",
+                "system": "OA、PLM",
+                "basis": "按该流程的审批、执行、记录或数据引用特征映射至对应应用系统（S1），具体模块由部门确认"
+        },
+        {
+                "domain": "消防安全治理",
+                "capability": "火灾隐患排查与整改",
+                "process": "火灾隐患治理、隐患整改、厂级/班组级防火检查",
+                "evidence": "GLC260703-B《消防安全隐患排查与治理管理程序》§6.1、§6.2、§6.5",
+                "system": "MES",
+                "basis": "按该流程的审批、执行、记录或数据引用特征映射至对应应用系统（S1），具体模块由部门确认"
+        },
+        {
+                "domain": "消防安全治理",
+                "capability": "消防设施与重点部位管理",
+                "process": "消防设施维保、消火栓灭火器自查、消防重点部位管理",
+                "evidence": "GLC260703-B《消防安全隐患排查与治理管理程序》§6.3、§6.4；GLC260704-D《消防安全重点部位管理程序》§6.1-§6.14",
+                "system": "MES",
+                "basis": "按该流程的审批、执行、记录或数据引用特征映射至对应应用系统（S1），具体模块由部门确认"
+        },
+        {
+                "domain": "消防安全治理",
+                "capability": "消防应急与火灾事故管理",
+                "process": "应急疏散预案维护、消防演练、火灾事故调查处理",
+                "evidence": "GLC260705-A《消防安全应急管理程序》§6.1、§6.2、§6.3、§6.4",
+                "system": "OA",
+                "basis": "按该流程的审批、执行、记录或数据引用特征映射至对应应用系统（S1），具体模块由部门确认"
+        },
+        {
+                "domain": "环境保护治理",
+                "capability": "环境目标与环境因素管理",
+                "process": "环境目标管理、环境因素识别评价、重要环境因素清单",
+                "evidence": "GLC260801-A《环境目标管理程序》§6.1-§6.6；GLC260809-A《环境因素识别与评价管理程序》§6.1-§6.4",
+                "system": "OA",
+                "basis": "按该流程的审批、执行、记录或数据引用特征映射至对应应用系统（S1），具体模块由部门确认"
+        },
+        {
+                "domain": "环境保护治理",
+                "capability": "污染防治与环境监测",
+                "process": "环境监测、污染源在线监测、危险废物管理",
+                "evidence": "GLC260802-B《环境污染防治与管理程序》§6.1、§6.2、§6.3、§6.4；GLC260815-A《环境监视与测量控制管理程序》§6.1-§6.5",
+                "system": "MES",
+                "basis": "按该流程的审批、执行、记录或数据引用特征映射至对应应用系统（S1），具体模块由部门确认"
+        },
+        {
+                "domain": "环境保护治理",
+                "capability": "环境事件与纠纷管理",
+                "process": "突发环境事件预案、应急处置、环境纠纷管理",
+                "evidence": "GLC260803-A《突发环境事件与纠纷管理程序》§6.1、§6.2、§6.3",
+                "system": "OA",
+                "basis": "按该流程的审批、执行、记录或数据引用特征映射至对应应用系统（S1），具体模块由部门确认"
+        },
+        {
+                "domain": "环境保护治理",
+                "capability": "环保隐患治理",
+                "process": "环保隐患识别、整改、关闭验证",
+                "evidence": "GLC260805-B《环保隐患治理管理程序》§6.1、§6.2、§6.3",
+                "system": "MES",
+                "basis": "按该流程的审批、执行、记录或数据引用特征映射至对应应用系统（S1），具体模块由部门确认"
+        },
+        {
+                "domain": "环境保护治理",
+                "capability": "环境统计与外部报送",
+                "process": "节能环保能源统计、环境统计报表",
+                "evidence": "GLC260804-A《节能环保能源统计管理程序》§6.1",
+                "system": "",
+                "basis": "不强行对应：现有OA、MES、PLM、ERP中没有合适的主承载系统，建议由部门确认是否仅保留线下台账或外部平台"
+        },
+        {
+                "domain": "节能双碳与能源管理",
+                "capability": "能源评审与年度策划",
+                "process": "能源评审、年度节能双碳策划、主要耗能设备台账",
+                "evidence": "GLC261501-A《能源评审与年度节能双碳工作策划程序》§6.1、§6.2、§6.3",
+                "system": "MES",
+                "basis": "按该流程的审批、执行、记录或数据引用特征映射至对应应用系统（S1），具体模块由部门确认"
+        },
+        {
+                "domain": "节能双碳与能源管理",
+                "capability": "节能运行控制",
+                "process": "动力系统节能运行、重点用能工序节能运行、能源消耗监督",
+                "evidence": "GLC261502-A《动力系统节能运行管理程序》§6.1-§6.6；GLC261503-A《重点用能工序节能运行管理程序》§6.1-§6.8；GLC260819-A《能源消耗与能源监督管理程序》§6.1、§6.2、§6.3",
+                "system": "MES",
+                "basis": "按该流程的审批、执行、记录或数据引用特征映射至对应应用系统（S1），具体模块由部门确认"
+        },
+        {
+                "domain": "节能双碳与能源管理",
+                "capability": "节能双碳监督与绩效",
+                "process": "节能双碳监督检查、能源碳排统计分析、能源绩效管理",
+                "evidence": "GLC261504-A《节能双碳监督检查管理程序》§6.1、§6.2；GLC261505-A《能源碳排放统计分析与绩效管理程序》§6.1-§6.5",
+                "system": "MES",
+                "basis": "按该流程的审批、执行、记录或数据引用特征映射至对应应用系统（S1），具体模块由部门确认"
+        },
+        {
+                "domain": "节能双碳与能源管理",
+                "capability": "能源计量与用能设备管理",
+                "process": "能源计量器具管理、淘汰落后用能设备",
+                "evidence": "GLC261510-A《能源计量管理程序》§6.1-§6.4；GLC261506-A《淘汰落后用能管理程序》§6.1-§6.4",
+                "system": "MES",
+                "basis": "按该流程的审批、执行、记录或数据引用特征映射至对应应用系统（S1），具体模块由部门确认"
+        },
+        {
+                "domain": "节能双碳与能源管理",
+                "capability": "能源体系运行",
+                "process": "能源内部审核、能源管理评审、项目节能审查",
+                "evidence": "GLC261507-A《能源内部审核管理程序》§6.1-§6.7；GLC261508-A《能源管理评审管理程序》§6.1-§6.6；GLC261509-B《环境保护“三同时”和节能审查管理程序》§6.1、§6.2",
+                "system": "OA、PLM",
+                "basis": "按该流程的审批、执行、记录或数据引用特征映射至对应应用系统（S1），具体模块由部门确认"
+        },
+        {
+                "domain": "设备设施运维保障",
+                "capability": "设备计划与资产策划",
+                "process": "设备设施计划策划、设备分类、设备台账、投用准备",
+                "evidence": "待分配编号《设备设施计划策划管理程序》§5.1、§6.1、§6.2、§7.1、§7.1.1",
+                "system": "MES",
+                "basis": "按该流程的审批、执行、记录或数据引用特征映射至对应应用系统（S1），具体模块由部门确认"
+        },
+        {
+                "domain": "设备设施运维保障",
+                "capability": "设备使用与现场巡检",
+                "process": "设备设施使用、设备操作证、巡检实施、测量设备管理",
+                "evidence": "待分配编号《设备设施使用管理程序》本地文件为空，条款待补；待分配编号《设备操作证管理标准》§5.1、§5.2；待分配编号《巡检实施管理标准》§5.1-§5.8；待分配编号《激光跟踪仪的测量管理标准》§5.1-§5.5、§7.1、§7.2",
+                "system": "MES",
+                "basis": "按该流程的审批、执行、记录或数据引用特征映射至对应应用系统（S1），具体模块由部门确认"
+        },
+        {
+                "domain": "设备设施运维保障",
+                "capability": "维护保养与维修保障",
+                "process": "设备维护保养、设备维修、保养优化、TPM应用",
+                "evidence": "待分配编号《设备设施维护保养管理程序》§5.1、§5.2、§6.1、§6.3；待分配编号《设备设施维修管理程序》§5.1、§5.2、§6、§7；待分配编号《设备设施保养优化管理程序》§6.1、§6.2、§6.3、§7.1、§7.1.1；待分配编号《设备设施TPM应用管理标准》§5.1-§5.6",
+                "system": "MES",
+                "basis": "按该流程的审批、执行、记录或数据引用特征映射至对应应用系统（S1），具体模块由部门确认"
+        },
+        {
+                "domain": "设备设施运维保障",
+                "capability": "备件与耗材保障",
+                "process": "设备备件需求、备件状态、维修耗材保障",
+                "evidence": "待分配编号《设备设施备件管理程序》§5.1、§5.2、§6.1、§6.2、§7",
+                "system": "ERP",
+                "basis": "按该流程的审批、执行、记录或数据引用特征映射至对应应用系统（S1），具体模块由部门确认"
+        },
+        {
+                "domain": "设备设施运维保障",
+                "capability": "设备异常与变动管理",
+                "process": "设备事故处理、设备设施搬迁",
+                "evidence": "待分配编号《设备设施事故处理管理程序》§5.1、§5.2、§6.1、§6.2、§7.1、§7.1.1；待分配编号《设备设施搬迁管理程序》§5.1、§5.2、§6、§7",
+                "system": "OA、MES",
+                "basis": "按该流程的审批、执行、记录或数据引用特征映射至对应应用系统（S1），具体模块由部门确认"
+        },
+        {
+                "domain": "EHS体系与合规治理",
+                "capability": "法规和其他要求控制",
+                "process": "法规识别、适用性确认、法规清单、合规评价项",
+                "evidence": "GLC260810-B《环境和职业健康安全法律、法规和其他要求控制管理程序》§6.1-§6.4；GLC260816-B《环境和职业健康安全合规性评价管理程序》§6.1-§6.6",
+                "system": "",
+                "basis": "不强行对应：现有OA、MES、PLM、ERP中没有合适的主承载系统，建议由部门确认是否仅保留线下台账或外部平台"
+        },
+        {
+                "domain": "EHS体系与合规治理",
+                "capability": "文件记录与信息交流",
+                "process": "受控文件、记录控制、信息交流与协商",
+                "evidence": "GLC260812-B《环境和职业健康安全文件控制管理程序》§6.1-§6.6；GLC260813-B《环境和职业健康安全记录控制管理程序》§6.1-§6.3；GLC260808-B《环境和职业健康安全信息交流与协商控制管理程序》§6.1-§6.3",
+                "system": "OA",
+                "basis": "按该流程的审批、执行、记录或数据引用特征映射至对应应用系统（S1），具体模块由部门确认"
+        },
+        {
+                "domain": "EHS体系与合规治理",
+                "capability": "目标、审核、评审与改进",
+                "process": "目标指标、内部审核、管理评审、整改改进",
+                "evidence": "GLC260817-B《环境和职业健康安全内部审核管理程序》§6.1-§6.7；GLC260818-B《环境和职业健康安全管理评审管理程序》§6.1-§6.6；GLC260618-A《职业健康安全改进管理程序》§6.1、§6.2",
+                "system": "OA",
+                "basis": "按该流程的审批、执行、记录或数据引用特征映射至对应应用系统（S1），具体模块由部门确认"
+        }
+];
+
+      // ===== 业务行为（A1）层数据（能力域详情视图）=====
+      // 字段: [业务行为（A1）编号, 行为名称, 执行角色, 触发情景, 前置条件, 审批类型, 应用系统（S1）, 制度依据, 证据类型, 能力域（L1）, 业务能力（L2）, 业务流程（L3）]
+      var a1Rows = [
+        [
+                "L3-01-A01",
+                "质量安全部编制下发年度安全生产工作计划并组织标准化自评",
+                "质量安全部安全管理室人员",
+                "每年年初启动安全生产工作计划编制，或上级要求开展标准化自评",
+                "上年度安全生产工作总结已完成",
+                "单人审批（分管领导签发）",
+                "OA",
+                "GLC260501-B《安全生产基础管理程序》§6.1.1、§6.1.4",
+                "原文明确-正文",
+                "安全生产治理",
+                "安全基础与责任管理",
+                "安全基础、班组安全、安全培训、责任追究"
+        ],
+        [
+                "L3-01-A02",
+                "质量安全部梳理更新安全生产法律法规并上传OA系统",
+                "质量安全部安全管理室人员",
+                "国家发布新安全生产法律法规或现有法规重大修订时",
+                "已建立法律法规清单台账",
+                "无审批（直接更新）",
+                "OA",
+                "GLC260501-B《安全生产基础管理程序》§6.1.3",
+                "原文明确-正文",
+                "安全生产治理",
+                "安全基础与责任管理",
+                "安全基础、班组安全、安全培训、责任追究"
+        ],
+        [
+                "L3-01-A03",
+                "各责任单位组织员工三级安全生产培训并填写培训登记表",
+                "各责任单位安全培训负责人（人力资源部组织公司级，各责任单位组...",
+                "新员工入职、转岗员工调动、离岗一年以上员工复工",
+                "培训师资和培训材料已准备",
+                "无审批",
+                "OA",
+                "GLC260501-B《安全生产基础管理程序》§6.2.4-6.2.9",
+                "原文明确-正文",
+                "安全生产治理",
+                "安全基础与责任管理",
+                "安全基础、班组安全、安全培训、责任追究"
+        ],
+        [
+                "L3-01-A04",
+                "质量安全部每月开展视频监控抽查排查\"三违\"行为并通报",
+                "质量安全部安全管理室人员",
+                "每月定期开展或发现典型违章时立即开展",
+                "视频监控系统正常运行，典型\"三违\"行为清单已发布",
+                "单人审批（部门负责人签发通报）",
+                "OA",
+                "GLC260509-B《安全生产\"三违\"行为管理程序》§6.1.5",
+                "原文明确-正文",
+                "安全生产治理",
+                "安全基础与责任管理",
+                "安全基础、班组安全、安全培训、责任追究"
+        ],
+        [
+                "L3-01-A05",
+                "质量安全部调查安全环保事故并填写责任追究审批表启动处置流程",
+                "质量安全部安全管理室人员（调查），分管业务领导/安委会（审批...",
+                "发生安全环保事故（含生产安全事故、火灾、环境事件）后",
+                "事故已报告，事故现场已保护",
+                "多级审批（分管业务领导→安委会/环委会，涉及党纪政纪移送纪检部）",
+                "OA",
+                "GLC26050302-B《安全环保责任追究管理程序》§6.5.1",
+                "原文明确-正文",
+                "安全生产治理",
+                "安全基础与责任管理",
+                "安全基础、班组安全、安全培训、责任追究"
+        ],
+        [
+                "L3-01-A06",
+                "班组负责人填写《班组安全建设手册》并组织每周安全班前会",
+                "班组负责人（班组长）",
+                "班组日常运行中，每周至少一次班前会，遇四新或事故时更新危险源",
+                "班组已建立，班组成员已确定",
+                "无审批",
+                "OA",
+                "GLC260501-B《安全生产基础管理程序》§6.3.1-6.3.18",
+                "原文明确-正文",
+                "安全生产治理",
+                "安全基础与责任管理",
+                "安全基础、班组安全、安全培训、责任追究"
+        ],
+        [
+                "L3-02-A01",
+                "各责任单位组织管理人员、工程技术人员和一线作业人员开展安全风险识别",
+                "各责任单位负责人组织，管理人员/工程技术人员/一线作业人员参...",
+                "每年一次或当新改扩建项目、工艺变更、发生事故后触发",
+                "已按功能分区或岗位作业活动划分评估单元",
+                "无审批",
+                "MES",
+                "GLC260502-B《安全生产风险分级管理程序》§6.2-6.3",
+                "原文明确-正文",
+                "安全生产治理",
+                "风险识别与分级管控",
+                "安全风险分级、危险源辨识、危险点管理"
+        ],
+        [
+                "L3-02-A02",
+                "各责任单位评价安全风险等级并编制《安全风险清单》上报质量安全部",
+                "各责任单位安全管理人员",
+                "风险识别完成后，或风险条件发生变化时",
+                "安全风险已识别，评价准则已明确",
+                "单人审批（单位负责人审批后上报）",
+                "MES",
+                "GLC260502-B《安全生产风险分级管理程序》§6.4-6.5、GLC260612-A《危险源辨...",
+                "原文明确-正文",
+                "安全生产治理",
+                "风险识别与分级管控",
+                "安全风险分级、危险源辨识、危险点管理"
+        ],
+        [
+                "L3-02-A03",
+                "质量安全部汇总各单位安全风险清单并编制公司级《安全风险清单》",
+                "质量安全部安全管理室人员",
+                "各责任单位报送 FM2605-06 后",
+                "各单位安全风险清单已报送齐全",
+                "单人审批（部门负责人审批归档）",
+                "MES",
+                "GLC260502-B《安全生产风险分级管理程序》§6.4.6、GLC260612-A《危险源辨识及...",
+                "原文明确-正文",
+                "安全生产治理",
+                "风险识别与分级管控",
+                "安全风险分级、危险源辨识、危险点管理"
+        ],
+        [
+                "L3-02-A04",
+                "质量安全部辨识甄别危险点并确定 I/II 级危险点等级",
+                "质量安全部安全管理室人员",
+                "新场所投用、工艺变更或现有危险点条件变化时",
+                "双重预防机制建设安全生产风险已确定",
+                "单人审批（需报直属单位审核）",
+                "MES",
+                "GLC260505-A《危险点安全生产管理程序》§6.1-6.5",
+                "原文明确-正文",
+                "安全生产治理",
+                "风险识别与分级管控",
+                "安全风险分级、危险源辨识、危险点管理"
+        ],
+        [
+                "L3-02-A05",
+                "各级责任人员按规定频次对危险点进行安全生产检查并记录",
+                "公司主要负责人/分管领导/单位负责人/班组负责人/作业人员（...",
+                "按规定周期触发（I级：公司主要负责人每半年2次，单位领导每月1次，班组负责人每周...",
+                "危险点已建档，FM2605-07 检查表已编制",
+                "无审批",
+                "MES",
+                "GLC260505-A《危险点安全生产管理程序》§6.7",
+                "原文明确-正文",
+                "安全生产治理",
+                "风险识别与分级管控",
+                "安全风险分级、危险源辨识、危险点管理"
+        ],
+        [
+                "L3-03-A01",
+                "质量安全部每月开展安全生产\"视频\"监督检查并填写检查记录",
+                "质量安全部安全管理室人员",
+                "每月至少一次定期开展",
+                "视频监控系统正常运行",
+                "无审批（发现问题时签发通知单需部门负责人签批）",
+                "MES",
+                "GLC260504-D《安全生产隐患排查治理管理程序》§6.2.3",
+                "原文明确-正文",
+                "安全生产治理",
+                "隐患排查治理与安全绩效",
+                "安全隐患排查、整改闭环、目标考核、三违管理"
+        ],
+        [
+                "L3-03-A02",
+                "各责任单位组织本级隐患排查治理并填写《安全生产隐患问题清单（一本账）》",
+                "各责任单位安全管理人员",
+                "每月至少一次，同时覆盖相关方和异地作业区域",
+                "安全检查表已编制",
+                "无审批（整改闭环需复查签字确认）",
+                "MES",
+                "GLC260504-D《安全生产隐患排查治理管理程序》§6.1.7、§6.2.5",
+                "原文明确-正文",
+                "安全生产治理",
+                "隐患排查治理与安全绩效",
+                "安全隐患排查、整改闭环、目标考核、三违管理"
+        ],
+        [
+                "L3-03-A03",
+                "各责任单位制定隐患治理方案并实施整改，完成后复查验收",
+                "一般/关注类隐患由各责任单位负责人组织；重大/严重类隐患由公...",
+                "隐患整改通知发出后",
+                "隐患已分类定级（一般/关注/严重/重大），治理方案已制定",
+                "重大/严重类需公司主要负责人审批治理方案；重大类需质量安全部组织技术人员验收",
+                "MES",
+                "GLC260504-D《安全生产隐患排查治理管理程序》§6.1.5-6.1.8",
+                "原文明确-正文",
+                "安全生产治理",
+                "隐患排查治理与安全绩效",
+                "安全隐患排查、整改闭环、目标考核、三违管理"
+        ],
+        [
+                "L3-03-A04",
+                "质量安全部运用海因里希法则进行年度安全生产目标管理考核评分",
+                "质量安全部安全管理室人员",
+                "每年11月20日前，对上一年度11月21日至本年度11月20日的安全生产情况进行...",
+                "各责任单位已报送年度安全生产工作总结",
+                "多级审批（考核评分经分管安全生产副总经理审批后发放奖励）",
+                "MES",
+                "GLC260504-D《安全生产隐患排查治理管理程序》§6.4.6-6.4.10",
+                "原文明确-正文",
+                "安全生产治理",
+                "隐患排查治理与安全绩效",
+                "安全隐患排查、整改闭环、目标考核、三违管理"
+        ],
+        [
+                "L3-03-A05",
+                "职能部门按专业分工开展半年一次公司范围内事故隐患排查",
+                "各职能部门和功能支持部门分管人员",
+                "每半年至少一次",
+                "各专业检查标准/检查表已确定",
+                "无审批",
+                "MES",
+                "GLC260504-D《安全生产隐患排查治理管理程序》§6.2.4",
+                "原文明确-正文",
+                "安全生产治理",
+                "隐患排查治理与安全绩效",
+                "安全隐患排查、整改闭环、目标考核、三违管理"
+        ],
+        [
+                "L3-04-A01",
+                "危险作业实施单位填写审批表并提交作业所在现场管理单位确认",
+                "危险作业实施单位作业现场负责人",
+                "实施高处作业、临时动火、临时用电、有限空间、大型吊装等危险作业前",
+                "作业方案已编制，危险因素辨识已完成，安全控制措施已制定",
+                "单人审批（实施单位领导审查）、单人确认（现场管理单位确认）",
+                "OA",
+                "GLC260506-B《危险作业安全生产管理程序》§6.1.14-6.1.15",
+                "原文明确-正文",
+                "安全生产治理",
+                "危险作业许可管理",
+                "危险作业审批、有限空间作业许可"
+        ],
+        [
+                "L3-04-A02",
+                "审批单位按分级原则审批危险作业许可",
+                "质量安全部（高处III/IV级、临时动火、有限空间、临时清洗...",
+                "审批表经实施单位和现场管理单位确认后提交",
+                "审批表已通过实施单位审查和现场单位确认",
+                "单人审批（对应审批单位负责人）",
+                "OA",
+                "GLC260506-B《危险作业安全生产管理程序》§5.1-5.4、§6.1.16-6.1.18",
+                "原文明确-正文",
+                "安全生产治理",
+                "危险作业许可管理",
+                "危险作业审批、有限空间作业许可"
+        ],
+        [
+                "L3-04-A03",
+                "作业现场负责人对作业监护人、作业人员进行安全教育和技术交底",
+                "危险作业现场负责人",
+                "危险作业开始实施前",
+                "作业审批已完成",
+                "无审批",
+                "OA",
+                "GLC260506-B《危险作业安全生产管理程序》§6.1.19",
+                "原文明确-正文",
+                "安全生产治理",
+                "危险作业许可管理",
+                "危险作业审批、有限空间作业许可"
+        ],
+        [
+                "L3-04-A04",
+                "作业监护人全程监护危险作业并记录监护情况",
+                "危险作业监护人员",
+                "危险作业实施全过程",
+                "已接受安全培训并通过考核，具备安全防护和应急救援能力",
+                "无审批",
+                "OA",
+                "GLC260506-B《危险作业安全生产管理程序》§6.1.8、§6.1.21",
+                "原文明确-正文",
+                "安全生产治理",
+                "危险作业许可管理",
+                "危险作业审批、有限空间作业许可"
+        ],
+        [
+                "L3-04-A05",
+                "审批单位和现场管理单位每天对危险作业现场进行监督检查",
+                "审批单位监督检查人员、作业所在现场管理单位巡查人员",
+                "危险作业实施期间每天",
+                "审批表已签发，作业正在进行中",
+                "无审批",
+                "OA",
+                "GLC260506-B《危险作业安全生产管理程序》§6.1.22-6.1.24",
+                "原文明确-正文",
+                "安全生产治理",
+                "危险作业许可管理",
+                "危险作业审批、有限空间作业许可"
+        ],
+        [
+                "L3-04-A06",
+                "各责任单位辨识有限空间并建立《有限空间管理台账》",
+                "各责任单位安全管理人员",
+                "首次辨识或有限空间发生变化时",
+                "已完成场所排查",
+                "无审批",
+                "OA",
+                "GLC260506-B《危险作业安全生产管理程序》§6.3.6",
+                "原文明确-正文",
+                "安全生产治理",
+                "危险作业许可管理",
+                "危险作业审批、有限空间作业许可"
+        ],
+        [
+                "L3-05-A01",
+                "质量安全部组织编制综合应急预案和专项应急预案并聘请专家评审",
+                "质量安全部安全管理室人员",
+                "新建或每三年评审修订，或法律/风险/资源/机构重大变化时",
+                "已完成事故风险评估和应急资源调查",
+                "多级审批（安委会委托分管安全副总经理签署公布，报上级备案）",
+                "OA",
+                "GLC2605《安全生产应急管理程序》§6.1.1-6.1.5",
+                "原文明确-正文",
+                "安全生产治理",
+                "安全应急与事故工伤管理",
+                "应急管理、事故报告调查、工伤管理"
+        ],
+        [
+                "L3-05-A02",
+                "各责任单位编制现场处置方案并组织应急演练",
+                "各生产单位安全管理人员",
+                "每年至少一次综合/专项演练，每半年至少一次现场处置方案演练",
+                "现场处置方案已论证并签发",
+                "无审批",
+                "OA",
+                "GLC2605《安全生产应急管理程序》§6.1.6-6.1.9",
+                "原文明确-正文",
+                "安全生产治理",
+                "安全应急与事故工伤管理",
+                "应急管理、事故报告调查、工伤管理"
+        ],
+        [
+                "L3-05-A03",
+                "事故现场人员逐级报告事故（现场人员→班组长→分管领导→单位负责人→质量安全部→安委会）",
+                "事故现场人员（第一发现人）、各级接报人员（班组长/兼职安全管...",
+                "发生生产安全事故后立即",
+                "无",
+                "无审批",
+                "OA",
+                "GLC2605《安全生产应急管理程序》§6.2.5",
+                "原文明确-正文",
+                "安全生产治理",
+                "安全应急与事故工伤管理",
+                "应急管理、事故报告调查、工伤管理"
+        ],
+        [
+                "L3-05-A04",
+                "安全生产委员会启动应急预案并协调应急救援",
+                "安全生产委员会（主任/副主任），应急指挥部统一指挥",
+                "单位负责人报告事故后，安委会视事故等级启动",
+                "事故已报告，应急预案已制定",
+                "无审批",
+                "OA",
+                "GLC2605《安全生产应急管理程序》§6.1.10-6.1.16、§6.2.10",
+                "原文明确-正文",
+                "安全生产治理",
+                "安全应急与事故工伤管理",
+                "应急管理、事故报告调查、工伤管理"
+        ],
+        [
+                "L3-05-A05",
+                "事故发生单位完成事故调查并填写 FM2605-10 报安委会办公室",
+                "事故发生单位负责人组织调查",
+                "轻微事故发生后5个工作日内",
+                "事故应急响应已结束",
+                "单人审批（安委会办公室和工会核实）",
+                "OA",
+                "GLC2605《安全生产应急管理程序》§6.2.7（注：文件有两个6.2.7，此处引用事故调查相关）",
+                "原文明确-正文",
+                "安全生产治理",
+                "安全应急与事故工伤管理",
+                "应急管理、事故报告调查、工伤管理"
+        ],
+        [
+                "L3-05-A06",
+                "员工所在单位在事故发生后10日内向质量安全部提出工伤认定申请",
+                "员工所在单位人事/安全管理人员",
+                "员工发生符合工伤认定情形的事故伤害或被诊断为职业病后",
+                "事故已发生，员工与公司存在劳动关系",
+                "单人审批（公司30日内统一办理）",
+                "OA",
+                "GLC2605《安全生产应急管理程序》§6.3.4-6.3.9",
+                "原文明确-正文",
+                "安全生产治理",
+                "安全应急与事故工伤管理",
+                "应急管理、事故报告调查、工伤管理"
+        ],
+        [
+                "L3-05-A07",
+                "公司或工伤员工向人社局提出劳动能力鉴定申请",
+                "质量安全部协助，工伤员工或其近亲属申请",
+                "工伤员工经治疗伤情相对稳定后存在残疾影响劳动能力的",
+                "工伤认定决定书已取得",
+                "无审批",
+                "OA",
+                "GLC2605《安全生产应急管理程序》§6.3.10-6.3.11",
+                "原文明确-正文",
+                "安全生产治理",
+                "安全应急与事故工伤管理",
+                "应急管理、事故报告调查、工伤管理"
+        ],
+        [
+                "L3-06-A01",
+                "合同承办部门审核相关方安全资质并签订安全协议",
+                "合同承办部门业务人员",
+                "引入新的I/II级风险相关方时",
+                "相关方已提交资质证明材料",
+                "单人审批（合同承办部门负责人）",
+                "OA、ERP",
+                "GLC260508-B《相关方安全管理程序》§6.2.1-6.2.5",
+                "原文明确-正文",
+                "安全生产治理",
+                "相关方与安全投入管理",
+                "相关方安全准入、安全生产费用管理"
+        ],
+        [
+                "L3-06-A02",
+                "业务实施部门在相关方作业前进行安全告知和技术交底",
+                "业务实施部门现场对接人员",
+                "相关方进场作业前",
+                "安全协议已签订，相关方已完成危险源辨识",
+                "无审批",
+                "OA、ERP",
+                "GLC260508-B《相关方安全管理程序》§6.3",
+                "原文明确-正文",
+                "安全生产治理",
+                "相关方与安全投入管理",
+                "相关方安全准入、安全生产费用管理"
+        ],
+        [
+                "L3-06-A03",
+                "业务实施单位和作业场所管理单位按分级周期对相关方进行安全检查",
+                "业务实施部门检查人员（I级每月至少1次，II级每季度至少1次...",
+                "按规定周期触发",
+                "检查表单已编制",
+                "无审批",
+                "OA、ERP",
+                "GLC260508-B《相关方安全管理程序》§6.4.1",
+                "原文明确-正文",
+                "安全生产治理",
+                "相关方与安全投入管理",
+                "相关方安全准入、安全生产费用管理"
+        ],
+        [
+                "L3-06-A04",
+                "业务实施部门对相关方违章人员实行红黄牌管理",
+                "业务实施部门现场管理人员",
+                "发现相关方人员违章作业时",
+                "相关方人员台账已建立",
+                "单人审批（业务实施部门负责人确认）",
+                "OA、ERP",
+                "GLC260508-B《相关方安全管理程序》§6.5.1",
+                "原文明确-正文",
+                "安全生产治理",
+                "相关方与安全投入管理",
+                "相关方安全准入、安全生产费用管理"
+        ],
+        [
+                "L3-06-A05",
+                "合同承办部门每年对相关方进行安全评估并将结果作为后续合作前置条件",
+                "合同承办部门业务人员（质量安全部和业务实施部门配合提供检查结...",
+                "每年定期评估",
+                "质量安全部监督检查结果和业务实施部门检查记录已汇总",
+                "单人审批（合同承办部门负责人）",
+                "OA、ERP",
+                "GLC260508-B《相关方安全管理程序》§6.6",
+                "原文明确-正文",
+                "安全生产治理",
+                "相关方与安全投入管理",
+                "相关方安全准入、安全生产费用管理"
+        ],
+        [
+                "L3-06-A06",
+                "财务管理部按上年度营业收入超额累退提取年度安全生产费用",
+                "财务管理部会计人员",
+                "每年年初",
+                "上年度营业收入已确认",
+                "多级审批（安委会审定→全面预算管理委员会审议）",
+                "OA、ERP",
+                "GLC260507-B《安全生产费用管理程序》§6.1.1-6.1.4",
+                "原文明确-正文",
+                "安全生产治理",
+                "相关方与安全投入管理",
+                "相关方安全准入、安全生产费用管理"
+        ],
+        [
+                "L3-06-A07",
+                "质量安全部审批安全生产费用使用申请并监督隐患治理费用支出",
+                "质量安全部安全管理室人员（审批），各责任单位（填写FM260...",
+                "隐患整改通知下发后或年度预算内安全项目执行时",
+                "年度安全生产费用预算已批准",
+                "多级审批（质量安全部审批→规划发展部技改→财务管理部核算；超预算需经分管副总审核→预算管理委员会批准）",
+                "OA、ERP",
+                "GLC260507-B《安全生产费用管理程序》§6.2.4-6.2.6",
+                "原文明确-正文",
+                "安全生产治理",
+                "相关方与安全投入管理",
+                "相关方安全准入、安全生产费用管理"
+        ],
+        [
+                "L3-07-A01",
+                "职业卫生管理人员向卫生行政部门进行职业病危害项目申报",
+                "质量安全部职业卫生管理人员",
+                "每年取得职业病危害因素检测/监测数据后，或发生6.1.4条列明的变更情形时",
+                "已完成职业病危害因素检测/日常监测；已收集各单位提供的基本情...",
+                "单人审批（内部审批后报送外部监管机构）",
+                "OA",
+                "GLC260602-A《职业病危害项目申报管理程序》§5.1、§6.1.1、§6.1.2",
+                "原文明确-正文",
+                "职业健康与职业卫生治理",
+                "职业病危害识别申报与告知",
+                "职业病危害申报、警示告知、职业卫生操作规程"
+        ],
+        [
+                "L3-07-A02",
+                "各单位职业卫生管理人员提供申报数据并申请重新申报",
+                "各单位职业卫生管理人员",
+                "发生新建/改建/扩建竣工、技术/工艺/设备/材料变更、工作场所/名称/法人变更、...",
+                "触发情形已发生（如竣工验收完成、工艺变更生效等）",
+                "无审批（数据报送）",
+                "OA",
+                "GLC260602-A《职业病危害项目申报管理程序》§5.2、§6.1.4",
+                "原文明确-正文",
+                "职业健康与职业卫生治理",
+                "职业病危害识别申报与告知",
+                "职业病危害申报、警示告知、职业卫生操作规程"
+        ],
+        [
+                "L3-07-A03",
+                "职业卫生管理人员在作业场所设置职业病危害警示标识与告知卡",
+                "各单位职业卫生管理人员",
+                "存在职业病危害因素的科研生产工作现场启用或设备投产时；每季度至少检查一次",
+                "质量安全部已制定警示标识、告知卡和公告栏标准并制作完成",
+                "无审批（执行设置）",
+                "OA",
+                "GLC260601-A《职业病危害警示与告知管理程序》§5.2、§6.1.1-§6.1.16",
+                "原文明确-正文",
+                "职业健康与职业卫生治理",
+                "职业病危害识别申报与告知",
+                "职业病危害申报、警示告知、职业卫生操作规程"
+        ],
+        [
+                "L3-07-A04",
+                "采购人员要求供应商在职业病危害设备/化学品上设置警示标识和中文警示说明",
+                "规划发展部技术员 / 供应链管理部供应链管理员",
+                "采购可能产生职业病危害的设备或化学品及材料时（签订合同环节）",
+                "采购需求已确认设备/材料涉及职业病危害因素",
+                "无审批（合同条款要求）",
+                "OA",
+                "GLC260601-A《职业病危害警示与告知管理程序》§5.3、§5.4、§6.1.4、§6.1.5",
+                "原文明确-正文",
+                "职业健康与职业卫生治理",
+                "职业病危害识别申报与告知",
+                "职业病危害申报、警示告知、职业卫生操作规程"
+        ],
+        [
+                "L3-07-A05",
+                "人事管理员与接触职业病危害员工签订职业病危害告知书",
+                "党委组织部/人力资源部人事管理员",
+                "新员工入职签订劳动合同或员工岗位变更从事接害作业时",
+                "岗位职业病危害因素已识别确认",
+                "无审批（签署告知）",
+                "OA",
+                "GLC260601-A《职业病危害警示与告知管理程序》§5.5、§6.2.1、§6.2.2",
+                "原文明确-正文",
+                "职业健康与职业卫生治理",
+                "职业病危害识别申报与告知",
+                "职业病危害申报、警示告知、职业卫生操作规程"
+        ],
+        [
+                "L3-07-A06",
+                "各单位职业卫生管理人员编制并更新岗位职业卫生操作规程",
+                "各单位职业卫生管理人员",
+                "岗位存在噪声/振动/粉尘/高温/有毒有害等职业病危害因素时；操作规程变更时",
+                "岗位职业病危害因素种类已确定",
+                "无审批（技术文件编制）",
+                "OA",
+                "GLC260601-A《职业病危害警示与告知管理程序》§5.2、§6.3.1-§6.3.5",
+                "原文明确-正文",
+                "职业健康与职业卫生治理",
+                "职业病危害识别申报与告知",
+                "职业病危害申报、警示告知、职业卫生操作规程"
+        ],
+        [
+                "L3-07-A07",
+                "职业卫生管理人员向员工告知职业健康检查结果与职业禁忌",
+                "质量安全部职业卫生管理人员 / 各单位职业卫生管理人员",
+                "员工职业健康检查完成、转岗、解除劳动合同时",
+                "职业健康检查报告已出具",
+                "无审批（告知确认）",
+                "OA",
+                "GLC260601-A《职业病危害警示与告知管理程序》§5.1、§5.2、§6.2.5、§6.2.6",
+                "原文明确-正文",
+                "职业健康与职业卫生治理",
+                "职业病危害识别申报与告知",
+                "职业病危害申报、警示告知、职业卫生操作规程"
+        ],
+        [
+                "L3-08-A01",
+                "技术员在职业病危害作业场所建设时设置安装职业病防护设施",
+                "规划发展部技术员",
+                "新建/改建/扩建涉及职业病危害因素的作业场所建设项目时",
+                "建设项目已批准立项；职业病危害因素种类和浓度已预评估",
+                "无审批（工程建设实施）",
+                "MES、ERP",
+                "GLC260604-B《职业病防护设施管理程序》§5.2、§6.2、§6.3",
+                "原文明确-正文",
+                "职业健康与职业卫生治理",
+                "职业病防护与劳动防护",
+                "职业病防护设施、劳动防护用品标准与领用"
+        ],
+        [
+                "L3-08-A02",
+                "维修人员对职业病防护设施进行维护保养维修并存档记录",
+                "生产运营部技术员、维修工",
+                "职业病防护设施正常运行巡检中发现异常，或定期维护保养计划到期时",
+                "职业病防护设施台账已建立（FM2606-14）",
+                "无审批（运维执行）",
+                "MES、ERP",
+                "GLC260604-B《职业病防护设施管理程序》§5.3、§6.6、§6.8",
+                "原文明确-正文",
+                "职业健康与职业卫生治理",
+                "职业病防护与劳动防护",
+                "职业病防护设施、劳动防护用品标准与领用"
+        ],
+        [
+                "L3-08-A03",
+                "各单位职业卫生管理人员对在用职业病防护设施进行日常检查维护",
+                "各单位职业卫生管理人员",
+                "日常工作中对防护设施的完好性/有效性/功能性进行检查时",
+                "FM2606-14《职业病防护设施台账》已建立",
+                "无审批（日常检查；停用需审批）",
+                "MES、ERP",
+                "GLC260604-B《职业病防护设施管理程序》§5.4、§6.5、§6.9",
+                "原文明确-正文",
+                "职业健康与职业卫生治理",
+                "职业病防护与劳动防护",
+                "职业病防护设施、劳动防护用品标准与领用"
+        ],
+        [
+                "L3-08-A04",
+                "职业卫生管理人员制定更新劳动防护用品发放标准",
+                "质量安全部职业卫生管理人员",
+                "年度审核或工作场所危险有害因素种类/劳动环境条件发生变化时",
+                "工作场所危险有害因素已识别和检测",
+                "无审批（标准文件更新）",
+                "MES、ERP",
+                "GLC260605-C《劳动防护用品管理程序》§5.1、§6.4",
+                "原文明确-正文",
+                "职业健康与职业卫生治理",
+                "职业病防护与劳动防护",
+                "职业病防护设施、劳动防护用品标准与领用"
+        ],
+        [
+                "L3-08-A05",
+                "各单位职业卫生管理人员按季度申请劳动防护用品",
+                "各单位职业卫生管理人员",
+                "每季度第二个月月底前（或科研生产任务变化时）",
+                "FM2606-03《劳动防护用品使用标准》现行有效",
+                "单人审批（质量安全部审核同意）",
+                "MES、ERP",
+                "GLC260605-C《劳动防护用品管理程序》§5.2、§6.7",
+                "原文明确-正文",
+                "职业健康与职业卫生治理",
+                "职业病防护与劳动防护",
+                "职业病防护设施、劳动防护用品标准与领用"
+        ],
+        [
+                "L3-08-A06",
+                "职业卫生管理人员在集采平台采购劳动防护用品",
+                "质量安全部职业卫生管理人员",
+                "各单位申请计划汇总后按采购周期执行",
+                "各单位FM2606-04申请已审核通过",
+                "多级审批（采购审批流程）",
+                "MES、ERP",
+                "GLC260605-C《劳动防护用品管理程序》§5.1",
+                "原文明确-正文",
+                "职业健康与职业卫生治理",
+                "职业病防护与劳动防护",
+                "职业病防护设施、劳动防护用品标准与领用"
+        ],
+        [
+                "L3-08-A07",
+                "各单位职业卫生管理人员发放劳动防护用品并记录领用",
+                "各单位职业卫生管理人员",
+                "每季度第三个月月底前发放下季度用品",
+                "劳动防护用品已采购入库",
+                "无审批（发放签收）",
+                "MES、ERP",
+                "GLC260605-C《劳动防护用品管理程序》§5.2、§6.8",
+                "原文明确-正文",
+                "职业健康与职业卫生治理",
+                "职业病防护与劳动防护",
+                "职业病防护设施、劳动防护用品标准与领用"
+        ],
+        [
+                "L3-09-A01",
+                "职业卫生管理人员申请并组织职业病危害因素检测与现状评价",
+                "质量安全部职业卫生管理人员",
+                "每年进行职业病危害因素检测和日常监测；每三年进行职业病危害现状评价",
+                "供应链管理部已与具备资质的职业卫生技术服务机构签订合同",
+                "无审批（技术服务委托）",
+                "OA",
+                "GLC260606-A《职业病危害监测及评价管理程序》§5.1、§6.1、§6.2",
+                "原文明确-正文",
+                "职业健康与职业卫生治理",
+                "职业危害监测与健康监护",
+                "职业危害检测评价、健康监护、职业健康档案、噪声聋预警"
+        ],
+        [
+                "L3-09-A02",
+                "供应链管理员与职业卫生技术服务机构签订检测评价合同",
+                "供应链管理部供应链管理员",
+                "质量安全部提出职业病危害检测/监测/评价委托申请时",
+                "质量安全部已完成技术服务机构选型",
+                "多级审批（合同签订流程）",
+                "OA",
+                "GLC260606-A《职业病危害监测及评价管理程序》§5.2、§6.3",
+                "原文明确-正文",
+                "职业健康与职业卫生治理",
+                "职业危害监测与健康监护",
+                "职业危害检测评价、健康监护、职业健康档案、噪声聋预警"
+        ],
+        [
+                "L3-09-A03",
+                "各单位职业卫生管理人员公示检测结果并组织超标整改",
+                "各单位职业卫生管理人员",
+                "职业病危害因素检测/监测结果出具后",
+                "检测报告已出具",
+                "无审批（公示+整改执行）",
+                "OA",
+                "GLC260606-A《职业病危害监测及评价管理程序》§5.3、§6.4、§6.5",
+                "原文明确-正文",
+                "职业健康与职业卫生治理",
+                "职业危害监测与健康监护",
+                "职业危害检测评价、健康监护、职业健康档案、噪声聋预警"
+        ],
+        [
+                "L3-09-A04",
+                "各单位职业卫生管理人员组织接害员工参加职业健康检查",
+                "各单位职业卫生管理人员",
+                "质量安全部统一安排的上岗前/在岗期间/离岗时职业健康检查计划",
+                "已选择省级以上卫生行政部门批准的医疗卫生机构；合同已签订",
+                "无审批（组织执行）",
+                "OA",
+                "GLC260607-A《职业健康监护管理程序》§5.5、§6.1.1、§6.1.2、§6.1.5、§...",
+                "原文明确-正文",
+                "职业健康与职业卫生治理",
+                "职业危害监测与健康监护",
+                "职业危害检测评价、健康监护、职业健康档案、噪声聋预警"
+        ],
+        [
+                "L3-09-A05",
+                "职业卫生管理人员对职业禁忌/职业病员工实施调离与监护",
+                "质量安全部职业卫生管理人员（告知+汇报） / 党委组织部/人...",
+                "职业健康检查发现职业禁忌症、职业病或疑似职业病时",
+                "职业健康检查报告已出具，体检结果已告知员工本人",
+                "多级审批（岗位变动申请+审批）",
+                "OA",
+                "GLC260607-A《职业健康监护管理程序》§5.1、§5.3、§5.5、§6.1.8、§6.1....",
+                "原文明确-正文",
+                "职业健康与职业卫生治理",
+                "职业危害监测与健康监护",
+                "职业危害检测评价、健康监护、职业健康档案、噪声聋预警"
+        ],
+        [
+                "L3-09-A06",
+                "各单位职业卫生管理人员统计审核保健津贴并申请发放",
+                "各单位职业卫生管理人员",
+                "每月工资核算前，员工保健津贴岗位或出勤信息变更时",
+                "保健津贴岗位标准（一级/二级）已确认；员工实际接触职业病危害...",
+                "多级审批（单位统计→质量安全部审批→党委组织部/人力资源部审核出勤天数→财务发放）",
+                "OA",
+                "GLC260607-A《职业健康监护管理程序》§5.5、§6.3.2、§6.3.3",
+                "原文明确-正文",
+                "职业健康与职业卫生治理",
+                "职业危害监测与健康监护",
+                "职业危害检测评价、健康监护、职业健康档案、噪声聋预警"
+        ],
+        [
+                "L3-09-A07",
+                "各单位职业卫生管理人员建立维护本单位职业健康档案",
+                "各单位职业卫生管理人员（档案专/兼职管理人员）",
+                "日常职业健康管理活动产生档案材料时；每三年至少一次全面复核整理",
+                "职业健康档案分类目录（附录1）已明确归档要求",
+                "无审批（日常归档；借阅需审批）",
+                "OA",
+                "GLC260609-A《职业健康档案管理程序》§5.8、§6.1、§6.2.1-§6.2.15",
+                "原文明确-正文",
+                "职业健康与职业卫生治理",
+                "职业危害监测与健康监护",
+                "职业危害检测评价、健康监护、职业健康档案、噪声聋预警"
+        ],
+        [
+                "L3-09-A08",
+                "职业卫生管理人员对接噪人员进行听力计算与噪声聋预警分级",
+                "质量安全部职业卫生管理人员",
+                "获取上岗前/在岗期间接噪人员电测听数据后",
+                "职业健康检查机构已出具电测听数据",
+                "无审批（技术计算）",
+                "OA",
+                "GLC260611-A《职业性噪声聋预警管理程序》§5.1、§6.1、§6.2.1、§6.2.2",
+                "原文明确-正文",
+                "职业健康与职业卫生治理",
+                "职业危害监测与健康监护",
+                "职业危害检测评价、健康监护、职业健康档案、噪声聋预警"
+        ],
+        [
+                "L3-09-A09",
+                "各单位职业卫生管理人员建立预警人员台账并实施分级监护",
+                "各单位职业卫生管理人员",
+                "收到质量安全部预警分级结果后",
+                "听阈计算结果已出具，预警人员名单已筛选",
+                "无审批（台账建立+执行监护；调离需审批）",
+                "OA",
+                "GLC260611-A《职业性噪声聋预警管理程序》§5.2、§6.2.5、§6.3、§6.4",
+                "原文明确-正文",
+                "职业健康与职业卫生治理",
+                "职业危害监测与健康监护",
+                "职业危害检测评价、健康监护、职业健康档案、噪声聋预警"
+        ],
+        [
+                "L3-10-A01",
+                "职业卫生管理人员制定并下达公司级职业健康安全目标指标",
+                "质量安全部职业卫生管理人员",
+                "每年根据上级目标要求、方针及持续改进承诺制定年度目标指标",
+                "已完成风险评估和机遇识别；已考虑法律法规/员工及相关方需求/...",
+                "多级审批（审批通过后受控下发）",
+                "OA",
+                "GLC260613-A《职业健康安全目标指标管理程序》§5.1、§6.1.1-§6.1.3",
+                "原文明确-正文",
+                "职业健康与职业卫生治理",
+                "职业健康安全体系运行",
+                "职业健康安全目标、培训、风险、应急、监视测量、改进"
+        ],
+        [
+                "L3-10-A02",
+                "各单位分解制定本单位二级目标指标并上报",
+                "各单位负责人（牵头） / 各单位职业卫生管理人员（承办）",
+                "收到公司级职业健康安全目标指标管理方案后",
+                "公司级FM2606-09已下发",
+                "单人审批（上报质量安全部）",
+                "OA",
+                "GLC260613-A《职业健康安全目标指标管理程序》§5.2、§6.2、§6.3",
+                "原文明确-正文",
+                "职业健康与职业卫生治理",
+                "职业健康安全体系运行",
+                "职业健康安全目标、培训、风险、应急、监视测量、改进"
+        ],
+        [
+                "L3-10-A03",
+                "质量安全部每年对各责任单位进行安全生产目标管理考核",
+                "质量安全部职业卫生管理人员",
+                "每年11月20日前各单位报送年度工作总结后",
+                "各单位已完成上年度11月21日至本年度11月20日体系运行过...",
+                "多级审批（考核结果审批）",
+                "OA",
+                "GLC260613-A《职业健康安全目标指标管理程序》§6.5.1、§6.5.2",
+                "原文明确-正文",
+                "职业健康与职业卫生治理",
+                "职业健康安全体系运行",
+                "职业健康安全目标、培训、风险、应急、监视测量、改进"
+        ],
+        [
+                "L3-10-A04",
+                "安全员与人事部门组织实施职业健康安全培训",
+                "质量安全部安全员（制定计划） / 党委组织部/人力资源部（组...",
+                "年度培训计划制定、新员工入职、岗位变更、法规要求更新时",
+                "培训需求已识别（含安全培训/职业病防治培训/消防培训三方面）",
+                "无审批（培训执行）",
+                "OA",
+                "GLC260614-A《职业健康安全培训教育控制程序》§5.1、§5.2、§6.1-§6.3",
+                "原文明确-正文",
+                "职业健康与职业卫生治理",
+                "职业健康安全体系运行",
+                "职业健康安全目标、培训、风险、应急、监视测量、改进"
+        ],
+        [
+                "L3-10-A05",
+                "各单位培训员实施本单位内部职业健康安全培训",
+                "各单位培训员",
+                "公司年度培训计划分解至单位级、新员工上岗前三级教育、转岗/复工教育时",
+                "公司级培训计划已明确要求",
+                "无审批（培训执行）",
+                "OA",
+                "GLC260614-A《职业健康安全培训教育控制程序》§5.3",
+                "原文明确-正文",
+                "职业健康与职业卫生治理",
+                "职业健康安全体系运行",
+                "职业健康安全目标、培训、风险、应急、监视测量、改进"
+        ],
+        [
+                "L3-10-A06",
+                "各责任单位进行危险源辨识与职业健康安全风险机遇评价",
+                "各责任单位职业卫生管理人员",
+                "每年至少一次；或内外部因素发生重大变化时",
+                "公司危险源辨识和风险机遇评价方法已确定（LEC法）",
+                "无审批（评价执行）",
+                "OA",
+                "GLC260615-A《职业健康安全风险管控管理程序》§5.2、§6.2-§6.3；GLG2606-...",
+                "原文明确-正文",
+                "职业健康与职业卫生治理",
+                "职业健康安全体系运行",
+                "职业健康安全目标、培训、风险、应急、监视测量、改进"
+        ],
+        [
+                "L3-10-A07",
+                "质量安全部汇总编制公司级风险和机遇评价与应对措施",
+                "质量安全部职业卫生管理人员",
+                "各责任单位上报危险源辨识与风险机遇评价结果后",
+                "各责任单位已完成本单位评价",
+                "多级审批（管理层决策）",
+                "OA",
+                "GLC260615-A《职业健康安全风险管控管理程序》§5.1、§6.1-§6.4",
+                "原文明确-正文",
+                "职业健康与职业卫生治理",
+                "职业健康安全体系运行",
+                "职业健康安全目标、培训、风险、应急、监视测量、改进"
+        ],
+        [
+                "L3-10-A08",
+                "安全生产委员会组织制定职业健康安全应急预案",
+                "安全生产委员会（领导）/ 质量安全部职业健康安全技术人员（承...",
+                "根据风险辨识结果，识别出潜在紧急情况时；每三年至少评审一次",
+                "已完成危险源辨识和风险评价；已识别潜在紧急情况类型（职业中毒...",
+                "多级审批（预案审批）",
+                "OA",
+                "GLC260616-A《职业健康安全应急准备与响应控制程序》§5.2、§6.1、§6.2、§6.3....",
+                "原文明确-正文",
+                "职业健康与职业卫生治理",
+                "职业健康安全体系运行",
+                "职业健康安全目标、培训、风险、应急、监视测量、改进"
+        ],
+        [
+                "L3-10-A09",
+                "各单位组织应急演练并记录评价",
+                "各单位负责人（牵头） / 各单位应急救护组（执行）",
+                "根据年度应急演练计划执行（综合/专项每年至少一次，现场处置方案每半年至少一次）",
+                "应急预案已批准发布；应急物资/设施/通讯已准备到位",
+                "无审批（演练执行）",
+                "OA",
+                "GLC260616-A《职业健康安全应急准备与响应控制程序》§5.3、§6.3.2、§6.4.3",
+                "原文明确-正文",
+                "职业健康与职业卫生治理",
+                "职业健康安全体系运行",
+                "职业健康安全目标、培训、风险、应急、监视测量、改进"
+        ],
+        [
+                "L3-10-A10",
+                "质量安全部组织开展职业健康安全检查与监视测量",
+                "质量安全部职业卫生管理人员（组织） / 各责任单位（执行）",
+                "按年度监督检查计划或区长制/三违检查/危险点检查/消防安全检查等各类专项检查频次...",
+                "监视测量设备已经校准或验证有效",
+                "无审批（检查执行）",
+                "OA",
+                "GLC260617-A《职业健康安全监视与测量控制管理程序》§5.1、§5.2、§6.1-§6.4",
+                "原文明确-正文",
+                "职业健康与职业卫生治理",
+                "职业健康安全体系运行",
+                "职业健康安全目标、培训、风险、应急、监视测量、改进"
+        ],
+        [
+                "L3-10-A11",
+                "各责任单位开展隐患自查与治理并实施纠正改进",
+                "各单位负责人（牵头） / 各单位职业卫生管理人员（承办）",
+                "自查发现事故隐患、内/外审发现不合格、管理评审识别改进机会时",
+                "隐患已识别并分类；整改方案已制定（含措施/责任人/时限/验证...",
+                "多级审批（整改方案审批+闭环验证）",
+                "OA",
+                "GLC260618-A《职业健康安全改进管理程序》§5.1、§5.2、§6.1、§6.2",
+                "原文明确-正文",
+                "职业健康与职业卫生治理",
+                "职业健康安全体系运行",
+                "职业健康安全目标、培训、风险、应急、监视测量、改进"
+        ],
+        [
+                "L3-10-A12",
+                "各责任单位开展持续改进方案制定与实施",
+                "各单位负责人（牵头） / 质量安全部职业卫生管理人员（监督）",
+                "基于绩效分析、管理评审结论及内外部环境变化识别持续改进机会时",
+                "绩效监视测量数据已分析；管理评审已完成",
+                "多级审批（改进方案审批）",
+                "OA",
+                "GLC260618-A《职业健康安全改进管理程序》§6.2.1",
+                "原文明确-正文",
+                "职业健康与职业卫生治理",
+                "职业健康安全体系运行",
+                "职业健康安全目标、培训、风险、应急、监视测量、改进"
+        ],
+        [
+                "L3-11-A01",
+                "消防安全管理人员组织实施公司级全员消防安全培训教育",
+                "质量安全部消防安全管理人员",
+                "年度消防安全工作计划启动；新消防法规/政策发布",
+                "年度消防安全工作计划已获消防安全委员会批准",
+                "无审批",
+                "OA",
+                "GLC260701-A《消防安全基础管理程序》§6.2（频次要求）§6.3.1（内容要求：消防方针政...",
+                "原文明确-正文",
+                "消防安全治理",
+                "消防基础与教育考评",
+                "消防培训教育、消防工作考评、消防违章教育"
+        ],
+        [
+                "L3-11-A02",
+                "各单位安全员组织实施本单位二级全员消防安全培训",
+                "各单位消防安全管理人员（兼职安全员）",
+                "年度培训周期到达；新员工入岗/转岗",
+                "公司级消防培训已部署；单位内部培训计划已制定",
+                "无审批",
+                "OA",
+                "GLC260701-A《消防安全基础管理程序》§5.7(5)（单位组织消防知识技能培训），§6.3....",
+                "原文明确-正文",
+                "消防安全治理",
+                "消防基础与教育考评",
+                "消防培训教育、消防工作考评、消防违章教育"
+        ],
+        [
+                "L3-11-A03",
+                "消防安全管理人员组织开展\"119消防安全宣传月\"活动",
+                "质量安全部消防安全管理人员",
+                "每年11月到达",
+                "年度工作计划已包含宣传月活动",
+                "无审批",
+                "OA",
+                "GLC260701-A《消防安全基础管理程序》§5.6(8)（质量安全部负责组织\"119消防安全宣传...",
+                "原文明确-正文",
+                "消防安全治理",
+                "消防基础与教育考评",
+                "消防培训教育、消防工作考评、消防违章教育"
+        ],
+        [
+                "L3-11-A04",
+                "各单位安全员对消防安全违章人员实施再教育",
+                "各单位消防安全管理人员",
+                "消防安全检查中发现违章人员或不安全行为人员",
+                "消防安全检查已完成并记录违章行为",
+                "无审批",
+                "OA",
+                "GLC260701-A《消防安全基础管理程序》§6.5（各单位对违章人员进行消防安全教育并填写FM2...",
+                "原文明确-正文",
+                "消防安全治理",
+                "消防基础与教育考评",
+                "消防培训教育、消防工作考评、消防违章教育"
+        ],
+        [
+                "L3-11-A05",
+                "消防安全管理人员实施年度消防安全工作考评",
+                "质量安全部消防安全管理人员",
+                "年度考评周期到达（年底）",
+                "全年各单位消防安全检查记录、违章教育记录已汇总",
+                "多级审批（消防安全委员会审批年度评优结果）",
+                "OA",
+                "GLC260701-A《消防安全基础管理程序》§6.7.2（考评内容：严重项和一般项，详见FM260...",
+                "原文明确-正文",
+                "消防安全治理",
+                "消防基础与教育考评",
+                "消防培训教育、消防工作考评、消防违章教育"
+        ],
+        [
+                "L3-11-A06",
+                "消防安全管理人员组织消防监控值班人员培训取证",
+                "质量安全部消防安全管理人员",
+                "新值班人员入职/证书到期需复审",
+                "消防监控室岗位人员已确定",
+                "无审批（内部组织，外部考核发证）",
+                "OA",
+                "GLC260701-A《消防安全基础管理程序》§5.6(9)（质量安全部负责组织消防监控值班人员培训...",
+                "原文明确-正文",
+                "消防安全治理",
+                "消防基础与教育考评",
+                "消防培训教育、消防工作考评、消防违章教育"
+        ],
+        [
+                "L3-12-A01",
+                "建设项目申请人员提出安全生产/职业卫生/消防安全专业要求",
+                "各单位建设项目申请人员",
+                "建设项目立项论证阶段",
+                "建设项目概念已确定",
+                "多级审批（须经质量安全部会签审批）",
+                "OA、PLM",
+                "GLC260702-A《建设项目安全生产、职业卫生、消防安全\"三同时\"管理程序》§5.1（申请人员在...",
+                "原文明确-正文",
+                "消防安全治理",
+                "建设项目消防三同时",
+                "建设项目安全、职业卫生、消防安全三同时审核"
+        ],
+        [
+                "L3-12-A02",
+                "质量安全部技术员研判建设项目是否需要三同时评审并出具专业意见",
+                "质量安全部安全管理室/双碳推进室技术员",
+                "收到建设项目申请（FM2607-08）",
+                "FM2607-08已提交，项目技术条件已明确",
+                "单人审批",
+                "OA、PLM",
+                "GLC260702-A《建设项目安全生产、职业卫生、消防安全\"三同时\"管理程序》§5.3（质量安全部...",
+                "原文明确-正文",
+                "消防安全治理",
+                "建设项目消防三同时",
+                "建设项目安全、职业卫生、消防安全三同时审核"
+        ],
+        [
+                "L3-12-A03",
+                "规划发展部技术员组织安全生产/职业病危害预评价",
+                "规划发展部技改基建室技术员",
+                "确定建设项目需要三同时评估；项目审批手续完成后",
+                "项目申请已审批通过，质量安全部已确认需要评估",
+                "会签（质量安全部组织预评价工作后反馈）",
+                "OA、PLM",
+                "GLC260702-A《建设项目安全生产、职业卫生、消防安全\"三同时\"管理程序》§5.2（规划发展部...",
+                "原文明确-正文",
+                "消防安全治理",
+                "建设项目消防三同时",
+                "建设项目安全、职业卫生、消防安全三同时审核"
+        ],
+        [
+                "L3-12-A04",
+                "规划发展部技术员编制安全生产/职业病危害设施设计专篇",
+                "规划发展部技改基建室技术员",
+                "预评价报告完成后，施工前",
+                "预评价报告已完成并合格",
+                "会签（须经质量安全部审核确认）",
+                "OA、PLM",
+                "GLC260702-A《建设项目安全生产、职业卫生、消防安全\"三同时\"管理程序》§5.2（规划发展部...",
+                "原文明确-正文",
+                "消防安全治理",
+                "建设项目消防三同时",
+                "建设项目安全、职业卫生、消防安全三同时审核"
+        ],
+        [
+                "L3-12-A05",
+                "质量安全部技术员组织安全生产/职业病防护设施验收评价",
+                "质量安全部安全管理室/双碳推进室技术员",
+                "建设项目竣工前",
+                "建设项目主体工程和安全/职业病防护设施施工已完成",
+                "多级审批",
+                "OA、PLM",
+                "GLC260702-A《建设项目安全生产、职业卫生、消防安全\"三同时\"管理程序》§5.3（质量安全部...",
+                "原文明确-正文",
+                "消防安全治理",
+                "建设项目消防三同时",
+                "建设项目安全、职业卫生、消防安全三同时审核"
+        ],
+        [
+                "L3-12-A06",
+                "规划发展部技术员办理消防设计审查备案与竣工验收备案",
+                "规划发展部技改基建室技术员",
+                "申请施工许可/批准开工时；建设项目竣工验收合格后",
+                "消防设计图纸及技术资料已完备；项目已通过内部验收",
+                "外部审批（消防设计审查验收主管部门）",
+                "OA、PLM",
+                "GLC260702-A《建设项目安全生产、职业卫生、消防安全\"三同时\"管理程序》§5.2（规划发展部...",
+                "原文明确-正文",
+                "消防安全治理",
+                "建设项目消防三同时",
+                "建设项目安全、职业卫生、消防安全三同时审核"
+        ],
+        [
+                "L3-13-A01",
+                "消防安全管理人员组织开展月度消防安全专项检查",
+                "质量安全部消防安全管理人员",
+                "每月周期到达；或根据季节性/专项要求触发",
+                "检查标准已制定（含附录C消防器材检查标准、附录D用电设备检查...",
+                "无审批（直接下发通知单）",
+                "MES",
+                "GLC260703-B《消防安全隐患排查与治理管理程序》§5.1（质量安全部组织隐患排查与治理及监督...",
+                "原文明确-正文",
+                "消防安全治理",
+                "火灾隐患排查与整改",
+                "火灾隐患治理、隐患整改、厂级/班组级防火检查"
+        ],
+        [
+                "L3-13-A02",
+                "各单位安全员开展月度消防安全自查并上报月报",
+                "各单位消防安全管理人员",
+                "每月周期到达（当月月底前，节假日需提前）",
+                "责任区域范围已明确",
+                "无审批（上报）",
+                "MES",
+                "GLC260703-B《消防安全隐患排查与治理管理程序》§5.5（各单位负责责任区域内隐患排查），§...",
+                "原文明确-正文",
+                "消防安全治理",
+                "火灾隐患排查与整改",
+                "火灾隐患治理、隐患整改、厂级/班组级防火检查"
+        ],
+        [
+                "L3-13-A03",
+                "各单位安全员开展年度独立场所火灾危险源辨识",
+                "各单位消防安全管理人员",
+                "年度周期到达；或危险源发生变更时",
+                "独立场所范围已划分",
+                "无审批",
+                "MES",
+                "GLC260703-B《消防安全隐患排查与治理管理程序》§6.1.3（每年集中开展独立场所火灾危险源...",
+                "原文明确-正文",
+                "消防安全治理",
+                "火灾隐患排查与整改",
+                "火灾隐患治理、隐患整改、厂级/班组级防火检查"
+        ],
+        [
+                "L3-13-A04",
+                "隐患整改责任单位负责人组织隐患整改与归零",
+                "责任单位消防安全主管领导（一般隐患）/ 党政负责人（重大隐患...",
+                "收到FM2605-13《隐患整改通知单》或专项检查发现问题",
+                "隐患问题已被识别并书面通知",
+                "多级审批（一般隐患：主管领导为第一责任人；重大隐患：党政负责人为第一责任人，组织制定治理方案含目标/方法/经费/时限，上报质量安全部，质量安全部全面督办）",
+                "MES",
+                "GLC260703-B《消防安全隐患排查与治理管理程序》§6.2.1（质量安全部组织隐患治理和归零管...",
+                "原文明确-正文",
+                "消防安全治理",
+                "火灾隐患排查与整改",
+                "火灾隐患治理、隐患整改、厂级/班组级防火检查"
+        ],
+        [
+                "L3-13-A05",
+                "消防控制室设施操作员24小时监视火灾自动报警系统并处置报警信号",
+                "消防控制室设施操作员（须持有国家颁发中级及以上《消防设施操作...",
+                "24小时值班持续运行；报警信号触发",
+                "火灾自动报警系统正常运行；系统竣工图/设备技术资料/操作规程...",
+                "无审批（应急响应）",
+                "MES",
+                "GLC260703-B《消防安全隐患排查与治理管理程序》§6.3.4（24小时值班制，每班≥2人，持...",
+                "原文明确-正文",
+                "消防安全治理",
+                "火灾隐患排查与整改",
+                "火灾隐患治理、隐患整改、厂级/班组级防火检查"
+        ],
+        [
+                "L3-13-A06",
+                "设备所在单位安全员提交消防设备设施维修更换申请并验收确认",
+                "设备设施所在单位安全员（申请）+ 质量安全部消防安全管理人员...",
+                "责任区域内发现消防设备设施故障/破损",
+                "故障或破损已确认",
+                "单人审批（质量安全部消防安全管理人员审批）",
+                "MES",
+                "GLC260703-B《消防安全隐患排查与治理管理程序》§6.3.1（设备设施所在单位安全员填写FM...",
+                "原文明确-正文",
+                "消防安全治理",
+                "火灾隐患排查与整改",
+                "火灾隐患治理、隐患整改、厂级/班组级防火检查"
+        ],
+        [
+                "L3-13-A07",
+                "各单位指定责任人执行消火栓/灭火器月度自查",
+                "各单位指定责任人（按建筑设置部位指定）",
+                "每月周期到达",
+                "消防器材台账和点位图已建立（按编号张贴责任卡标识）；所属部门...",
+                "无审批",
+                "MES",
+                "GLC260703-B《消防安全隐患排查与治理管理程序》§6.4.2（室内消火栓/灭火器按建筑设置部...",
+                "原文明确-正文",
+                "消防安全治理",
+                "火灾隐患排查与整改",
+                "火灾隐患治理、隐患整改、厂级/班组级防火检查"
+        ],
+        [
+                "L3-14-A01",
+                "各单位安全员组织消防安全重点部位年度自评",
+                "各单位消防安全管理人员",
+                "每年1月底前；或火灾危险性发生变化时",
+                "责任区域已划分；消防安全重点部位划分原则（附录A）已掌握",
+                "无审批（上报）",
+                "MES",
+                "GLC260704-D《消防安全重点部位管理程序》§5.4（各单位负责识别责任区域场所是否满足管理要...",
+                "原文明确-正文",
+                "消防安全治理",
+                "消防设施与重点部位管理",
+                "消防设施维保、消火栓灭火器自查、消防重点部位管理"
+        ],
+        [
+                "L3-14-A02",
+                "质量安全部组织成立评审组对重点部位进行综合评审并发布结果",
+                "评审组成员（由工程项目、设备设施管理、安全生产、消防安全等专...",
+                "收到各单位FM2607-23自评结果后（每年1-2月）",
+                "各单位自评已全部完成并上报",
+                "会签（评审组合议评审）",
+                "MES",
+                "GLC260704-D《消防安全重点部位管理程序》§5.1（质量安全部组织评审和结果发布），§6.3...",
+                "原文明确-正文",
+                "消防安全治理",
+                "消防设施与重点部位管理",
+                "消防设施维保、消火栓灭火器自查、消防重点部位管理"
+        ],
+        [
+                "L3-14-A03",
+                "公司/单位各级领导按频次分层开展消防安全重点部位检查",
+                "公司分管消防安全领导/分管业务领导（公司级每季度≥1次）；单...",
+                "按频次周期到达",
+                "消防安全重点部位名录已发布",
+                "无审批",
+                "MES",
+                "GLC260704-D《消防安全重点部位管理程序》§6.7.1（公司级重点部位三级检查频次：公司领导...",
+                "原文明确-正文",
+                "消防安全治理",
+                "消防设施与重点部位管理",
+                "消防设施维保、消火栓灭火器自查、消防重点部位管理"
+        ],
+        [
+                "L3-14-A04",
+                "消防安全管理人员组织重点部位岗位责任人专项培训",
+                "质量安全部消防安全管理人员",
+                "年度培训计划启动；重点部位名录更新后",
+                "重点部位名录已发布",
+                "无审批",
+                "MES",
+                "GLC260704-D《消防安全重点部位管理程序》§6.10（质量安全部每年组织对重点部位岗位责任人...",
+                "原文明确-正文",
+                "消防安全治理",
+                "消防设施与重点部位管理",
+                "消防设施维保、消火栓灭火器自查、消防重点部位管理"
+        ],
+        [
+                "L3-14-A05",
+                "各单位安全员更新重点部位消防安全标志并维护管理档案",
+                "各单位安全员",
+                "重点部位评审结果发布后（新增/消减/升级/降级）",
+                "重点部位评审结果已发布",
+                "无审批",
+                "MES",
+                "GLC260704-D《消防安全重点部位管理程序》§6.8（应在明显位置张贴消防安全标志，发生变化及...",
+                "原文明确-正文",
+                "消防安全治理",
+                "消防设施与重点部位管理",
+                "消防设施维保、消火栓灭火器自查、消防重点部位管理"
+        ],
+        [
+                "L3-14-A06",
+                "综合管理部行政事务室人员监督食堂燃气安全管理",
+                "综合管理部兼职安全管理员 + 综合管理部行政事务室人员",
+                "日常运营持续进行",
+                "外包服务合同已签订",
+                "无审批",
+                "MES",
+                "GLC260704-D《消防安全重点部位管理程序》§5.2（综合管理部兼职安全员负责食堂燃气安全监督...",
+                "原文明确-正文",
+                "消防安全治理",
+                "消防设施与重点部位管理",
+                "消防设施维保、消火栓灭火器自查、消防重点部位管理"
+        ],
+        [
+                "L3-15-A01",
+                "消防安全管理人员制定并维护公司级《突发火灾事故应急预案》",
+                "质量安全部消防安全管理人员",
+                "预案建立/修订周期",
+                "公司组织机构和消防设施信息已收集",
+                "多级审批",
+                "OA",
+                "GLC260705-A《消防安全应急管理程序》§5.1（质量安全部负责组织制定《突发火灾事故应急预案...",
+                "原文明确-正文",
+                "消防安全治理",
+                "消防应急与火灾事故管理",
+                "应急疏散预案维护、消防演练、火灾事故调查处理"
+        ],
+        [
+                "L3-15-A02",
+                "各单位消防安全管理人员按需修订单位级《灭火和应急疏散预案》",
+                "各单位消防安全管理人员",
+                "年度修订周期；组织机构/人员发生变化时",
+                "公司级《突发火灾事故应急预案》已生效",
+                "单人审批（质量安全部审核备案后签发）",
+                "OA",
+                "GLC260705-A《消防安全应急管理程序》§5.2（各单位结合公司预案针对火灾危险源每年按需修订...",
+                "原文明确-正文",
+                "消防安全治理",
+                "消防应急与火灾事故管理",
+                "应急疏散预案维护、消防演练、火灾事故调查处理"
+        ],
+        [
+                "L3-15-A03",
+                "各单位消防安全责任人组织全员预案培训",
+                "各单位消防安全责任人",
+                "预案修订完成/审核生效后；人员调整幅度较大时（集中培训）",
+                "预案已审核生效；义务消防队人员已确定",
+                "无审批",
+                "OA",
+                "GLC260705-A《消防安全应急管理程序》§6.2.1（每年组织全员对预案培训学习，包括预案内容...",
+                "原文明确-正文",
+                "消防安全治理",
+                "消防应急与火灾事故管理",
+                "应急疏散预案维护、消防演练、火灾事故调查处理"
+        ],
+        [
+                "L3-15-A04",
+                "各单位消防安全管理人员组织灭火和应急疏散演练",
+                "各单位消防安全管理人员 + 总指挥/副总指挥（演练评价）",
+                "年度演练计划（每年至少1次）",
+                "预案已培训；演练目标部位已选择（优先选择人员集中/火灾危险性...",
+                "无审批",
+                "OA",
+                "GLC260705-A《消防安全应急管理程序》§6.3.1（每年至少1次演练，生产单位须实战演练，其...",
+                "原文明确-正文",
+                "消防安全治理",
+                "消防应急与火灾事故管理",
+                "应急疏散预案维护、消防演练、火灾事故调查处理"
+        ],
+        [
+                "L3-15-A05",
+                "单位消防安全管理人员启动初起火灾应急处置并上报",
+                "事故责任单位消防安全管理人员（接收报告后启动预案）",
+                "发现火灾事故（发现火灾者第一时间上报）",
+                "单位《灭火和应急疏散预案》已建立",
+                "无审批（应急响应）",
+                "OA",
+                "GLC260705-A《消防安全应急管理程序》§5.3（事故责任单位负责组织初起火灾应急处置），§6...",
+                "原文明确-正文",
+                "消防安全治理",
+                "消防应急与火灾事故管理",
+                "应急疏散预案维护、消防演练、火灾事故调查处理"
+        ],
+        [
+                "L3-15-A06",
+                "消防安全管理人员组织火灾事故调查处理",
+                "质量安全部消防安全管理人员",
+                "应急响应结束后",
+                "火灾已扑灭；现场已保护",
+                "多级审批",
+                "OA",
+                "GLC260705-A《消防安全应急管理程序》§5.1（质量安全部负责组织火灾事故原因分析/责任判定...",
+                "原文明确-正文",
+                "消防安全治理",
+                "消防应急与火灾事故管理",
+                "应急疏散预案维护、消防演练、火灾事故调查处理"
+        ],
+        [
+                "L3-16-A01",
+                "安全管理室/双碳推进室主任组织编制公司环境目标、指标及管理方案",
+                "质量安全部安全管理室/双碳推进室主任",
+                "环境方针首次制定/修订、年度管理评审后（间隔12个月）、重要环境因素变更",
+                "环境方针已发布；各相关单位已明确参与编制人员",
+                "多级审批（安全管理室主任评审→质量安全部部长审核→管理者代表[主管副总经理]批准）",
+                "OA",
+                "GLC260801-A《环境目标管理程序》§6.3.1, §6.3.2, §6.2",
+                "原文明确-正文",
+                "环境保护治理",
+                "环境目标与环境因素管理",
+                "环境目标管理、环境因素识别评价、重要环境因素清单"
+        ],
+        [
+                "L3-16-A02",
+                "环保业务安全员收集汇总各单位环境目标指标方案形成公司总方案",
+                "质量安全部安全管理室/双碳推进室环保业务安全员",
+                "安全管理室主任组织编制环境目标管理方案后",
+                "各单位已完成本单位目标指标方案编制并提交",
+                "无审批（汇总整理，后续由主任评审、部长审核、管代批准）",
+                "OA",
+                "GLC260801-A《环境目标管理程序》§6.3.2",
+                "原文明确-正文",
+                "环境保护治理",
+                "环境目标与环境因素管理",
+                "环境目标管理、环境因素识别评价、重要环境因素清单"
+        ],
+        [
+                "L3-16-A03",
+                "质量安全部部长组织验证目标指标管理方案实施绩效",
+                "质量安全部部长",
+                "管理评审召开前或方案实施完毕后",
+                "管理方案已执行；实施数据可获取",
+                "无审批（验证评估）",
+                "OA",
+                "GLC260801-A《环境目标管理程序》§6.4.1, §6.4.2",
+                "原文明确-正文",
+                "环境保护治理",
+                "环境目标与环境因素管理",
+                "环境目标管理、环境因素识别评价、重要环境因素清单"
+        ],
+        [
+                "L3-16-A04",
+                "环保业务安全员下发环境因素识别工作通知并明确要求",
+                "质量安全部安全管理室环保业务安全员",
+                "年度环境因素识别周期启动",
+                "无特殊前置",
+                "无审批（通知下发）",
+                "OA",
+                "GLC260809-A《环境因素识别与评价管理程序》§6.1.1",
+                "原文明确-正文",
+                "环境保护治理",
+                "环境目标与环境因素管理",
+                "环境目标管理、环境因素识别评价、重要环境因素清单"
+        ],
+        [
+                "L3-16-A05",
+                "各单位责任人组织本单位开展环境因素识别（正常/异常/紧急三状态、过去/现在/将来三时态）",
+                "各单位明确的环境因素识别责任人",
+                "接到质量安全部环境因素识别通知后",
+                "已明确本单位责任人；通知已下发",
+                "单人审批（经单位环保主管领导或单位责任人审核批准后上报）",
+                "OA",
+                "GLC260809-A《环境因素识别与评价管理程序》§6.1.2, §6.1.3, §6.1.4, ...",
+                "原文明确-正文",
+                "环境保护治理",
+                "环境目标与环境因素管理",
+                "环境目标管理、环境因素识别评价、重要环境因素清单"
+        ],
+        [
+                "L3-16-A06",
+                "环保业务安全员汇总各单位评价结果并综合评审确定公司级重要环境因素清单",
+                "质量安全部安全管理室环保业务安全员",
+                "各单位完成环境因素评价并上报后",
+                "各单位FM2608-08和FM2608-09已上报",
+                "单人审批（报管理者代表审批后发布）",
+                "OA",
+                "GLC260809-A《环境因素识别与评价管理程序》§6.4.1",
+                "原文明确-正文",
+                "环境保护治理",
+                "环境目标与环境因素管理",
+                "环境目标管理、环境因素识别评价、重要环境因素清单"
+        ],
+        [
+                "L3-16-A07",
+                "质量安全部组织各相关部门采用多因子打分法对环境因素综合评价",
+                "质量安全部安全管理室（组织者）+各相关部门（参与评价）",
+                "各单位上报环境因素识别结果后",
+                "各单位FM2608-08已提交",
+                "无审批（评价组织）",
+                "OA",
+                "GLC260809-A《环境因素识别与评价管理程序》§6.1.5, §6.2.1-6.2.4",
+                "原文明确-正文",
+                "环境保护治理",
+                "环境目标与环境因素管理",
+                "环境目标管理、环境因素识别评价、重要环境因素清单"
+        ],
+        [
+                "L3-17-A01",
+                "环保业务技术人员制定年度环境监测方案并分解为季/月度监测计划",
+                "质量安全部环保业务技术人员",
+                "每年度环保工作计划启动时",
+                "公司年度环保工作计划已发布；排污许可证要求已明确",
+                "无审批（计划编制）",
+                "MES",
+                "GLC260802-B《环境污染防治与管理程序》§6.1.1, §6.1.2",
+                "原文明确-正文",
+                "环境保护治理",
+                "污染防治与环境监测",
+                "环境监测、污染源在线监测、危险废物管理"
+        ],
+        [
+                "L3-17-A02",
+                "环保业务技术人员组织有资质的环境监测机构开展污染源监测并出具报告",
+                "质量安全部环保业务技术人员",
+                "按监测计划到达采样周期节点",
+                "监测计划已下达；供应链管理部已与监测机构签订技术服务合同；采...",
+                "无审批（委托监测执行）",
+                "MES",
+                "GLC260802-B《环境污染防治与管理程序》§6.1.3, §5.3",
+                "原文明确-正文",
+                "环境保护治理",
+                "污染防治与环境监测",
+                "环境监测、污染源在线监测、危险废物管理"
+        ],
+        [
+                "L3-17-A03",
+                "生产运营部环保员组织在线监测设备比对监测与有效性审核并上报",
+                "生产运营部环保员",
+                "每季度末（28日前）",
+                "在线监测设备正常运行；第三方运维公司已完成运维",
+                "无审批（上报备案）",
+                "MES",
+                "GLC260802-B《环境污染防治与管理程序》§6.2.3",
+                "原文明确-正文",
+                "环境保护治理",
+                "污染防治与环境监测",
+                "环境监测、污染源在线监测、危险废物管理"
+        ],
+        [
+                "L3-17-A04",
+                "产废单位环保员向质量安全部申报危险废物计划处置量并提交内部转移申请",
+                "产废单位环保员",
+                "每季度前/每年十二月底前（计划）；需处置时提前15个工作日（转移申请）",
+                "危险废物已分类收集并临时暂存；危险废物警示标志牌和标签张贴到...",
+                "单人审批（质量安全部审批FM2608-02）",
+                "MES",
+                "GLC260802-B《环境污染防治与管理程序》§6.3.1.3, §6.3.2.1",
+                "原文明确-正文",
+                "环境保护治理",
+                "污染防治与环境监测",
+                "环境监测、污染源在线监测、危险废物管理"
+        ],
+        [
+                "L3-17-A05",
+                "环保业务技术人员组织危险废物外部转运并办理转移联单及处置费用结算",
+                "质量安全部环保业务技术人员",
+                "危险废物贮存达到外运条件时",
+                "FM2608-02已审批；产废单位已完成FM2608-03移...",
+                "无审批（执行外运，费用由财务管理部审核）",
+                "MES",
+                "GLC260802-B《环境污染防治与管理程序》§6.3.3",
+                "原文明确-正文",
+                "环境保护治理",
+                "污染防治与环境监测",
+                "环境监测、污染源在线监测、危险废物管理"
+        ],
+        [
+                "L3-17-A06",
+                "质量安全部开展管理性环境监视与测量——目标方案执行检查、体系运行审核、法律法规符合性评审",
+                "质量安全部安全管理室（目标检查）+质量安全部组织内审员（体系...",
+                "每半年（目标方案执行检查）；每年（体系审核、法律法规符合性评审）",
+                "审核计划已制定；内审员已选定",
+                "无审批（检查与审核输出）",
+                "MES",
+                "GLC260815-A《环境监视与测量控制管理程序》§6.3.1, §6.3.2, §6.3.3",
+                "原文明确-正文",
+                "环境保护治理",
+                "污染防治与环境监测",
+                "环境监测、污染源在线监测、危险废物管理"
+        ],
+        [
+                "L3-18-A01",
+                "安全管理室主任组织成立环境应急预案编制小组并制定编制计划",
+                "质量安全部安全管理室主任",
+                "每三年一次或当影响预案有效性/充分性/适用性的变化发生时",
+                "已确认需要编制/修订预案（如工艺技术变化、应急组织调整、法律...",
+                "无审批（组织成立）",
+                "OA",
+                "GLC260803-A《突发环境事件与纠纷管理程序》§6.1.1",
+                "原文明确-正文",
+                "环境保护治理",
+                "环境事件与纠纷管理",
+                "突发环境事件预案、应急处置、环境纠纷管理"
+        ],
+        [
+                "L3-18-A02",
+                "环境应急预案编制小组开展环境风险评估与应急资源调查",
+                "环境应急预案编制小组（由各单位成员组成）",
+                "编制小组成立后",
+                "编制小组成员已确定；各单位生产工艺、设备设施、原辅料信息已提...",
+                "无审批（评估调查）",
+                "OA",
+                "GLC260803-A《突发环境事件与纠纷管理程序》§6.1.2",
+                "原文明确-正文",
+                "环境保护治理",
+                "环境事件与纠纷管理",
+                "突发环境事件预案、应急处置、环境纠纷管理"
+        ],
+        [
+                "L3-18-A03",
+                "环保业务安全员向环保行政主管部门备案应急预案并组织演练",
+                "质量安全部环保业务安全员",
+                "环境应急预案经主要负责人签署发布后20个工作日内（备案）；每年至少一次（演练）",
+                "预案已通过环保行政主管部门评审；主要负责人已签署发布",
+                "无审批（备案执行）",
+                "OA",
+                "GLC260803-A《突发环境事件与纠纷管理程序》§6.1.3",
+                "原文明确-正文",
+                "环境保护治理",
+                "环境事件与纠纷管理",
+                "突发环境事件预案、应急处置、环境纠纷管理"
+        ],
+        [
+                "L3-18-A04",
+                "事件发现人员上报突发环境事件→应急领导小组确认等级并启动对应应急响应",
+                "事件发现人员（第一发现者）+突发环境事件发生单位应急领导小组",
+                "突发环境事件发生时",
+                "环境应急预案已备案生效",
+                "无审批（应急处置启动）",
+                "OA",
+                "GLC260803-A《突发环境事件与纠纷管理程序》§6.2.1, §6.2.2",
+                "原文明确-正文",
+                "环境保护治理",
+                "环境事件与纠纷管理",
+                "突发环境事件预案、应急处置、环境纠纷管理"
+        ],
+        [
+                "L3-18-A05",
+                "各应急小组赶赴现场开展应急处置——警戒疏散、医疗救护、污染控制、现场监测",
+                "各应急小组（人员由应急预案规定）",
+                "应急响应启动后",
+                "应急响应已启动；各小组已接到通知",
+                "无审批（现场处置）",
+                "OA",
+                "GLC260803-A《突发环境事件与纠纷管理程序》§6.2.3, §6.2.4",
+                "原文明确-正文",
+                "环境保护治理",
+                "环境事件与纠纷管理",
+                "突发环境事件预案、应急处置、环境纠纷管理"
+        ],
+        [
+                "L3-18-A06",
+                "安全管理室主任根据环境纠纷报告确定纠纷等级并上报至沈飞/集团公司/环保部门",
+                "质量安全部安全管理室主任",
+                "接到环境纠纷报告后",
+                "发生环境纠纷单位已提交环境纠纷报告（含第三方诉求、原因、影响...",
+                "无审批（定级上报）",
+                "OA",
+                "GLC260803-A《突发环境事件与纠纷管理程序》§6.3.1, §6.3.2",
+                "原文明确-正文",
+                "环境保护治理",
+                "环境事件与纠纷管理",
+                "突发环境事件预案、应急处置、环境纠纷管理"
+        ],
+        [
+                "L3-18-A07",
+                "质量安全部部长组织调解处理环境纠纷并协调经营发展部提出法律意见",
+                "质量安全部部长（组织调解）+经营发展部（法律意见）",
+                "环境纠纷等级确定后",
+                "纠纷等级已确定；相关方诉求已明确",
+                "多级审批（环境纠纷处理意见→公司节能环保委员会审议）",
+                "OA",
+                "GLC260803-A《突发环境事件与纠纷管理程序》§6.3.3, §6.3.4",
+                "原文明确-正文",
+                "环境保护治理",
+                "环境事件与纠纷管理",
+                "突发环境事件预案、应急处置、环境纠纷管理"
+        ],
+        [
+                "L3-19-A01",
+                "各单位主管环保管理人员组织本单位定期环保自查与隐患排查",
+                "各单位主管环保管理人员",
+                "生产班组每月至少一次；生产单位每月至少一次",
+                "无特殊前置",
+                "无审批（自查）",
+                "MES",
+                "GLC260805-B《环保隐患治理管理程序》§6.1.1.25",
+                "原文明确-正文",
+                "环境保护治理",
+                "环保隐患治理",
+                "环保隐患识别、整改、关闭验证"
+        ],
+        [
+                "L3-19-A02",
+                "环保业务安全员定期监督检查并下发隐患整改通知单（FM2605-13）",
+                "质量安全部环保业务安全员",
+                "质量安全部每季度对各相关单位至少一次监督检查",
+                "检查计划已安排",
+                "无审批（检查下发）",
+                "MES",
+                "GLC260805-B《环保隐患治理管理程序》§6.1.1.25, §6.1.2",
+                "原文明确-正文",
+                "环境保护治理",
+                "环保隐患治理",
+                "环保隐患识别、整改、关闭验证"
+        ],
+        [
+                "L3-19-A03",
+                "受检单位根据隐患通知单分析原因制定措施组织整改并反馈",
+                "受检单位环保问题整改责任人",
+                "收到FM2605-13《隐患整改通知单》后",
+                "问题描述和依据已明确",
+                "无审批（整改执行后反馈）",
+                "MES",
+                "GLC260805-B《环保隐患治理管理程序》§6.1.3, §6.1.4",
+                "原文明确-正文",
+                "环境保护治理",
+                "环保隐患治理",
+                "环保隐患识别、整改、关闭验证"
+        ],
+        [
+                "L3-19-A04",
+                "环保业务安全员现场复查整改情况填写复查意见完成闭环管理",
+                "质量安全部环保业务安全员",
+                "收到受检单位整改反馈后",
+                "整改FM2605-13已反馈；整改照片及证明材料已上传",
+                "无审批（复查验证）",
+                "MES",
+                "GLC260805-B《环保隐患治理管理程序》§6.1.5, §6.1.6",
+                "原文明确-正文",
+                "环境保护治理",
+                "环保隐患治理",
+                "环保隐患识别、整改、关闭验证"
+        ],
+        [
+                "L3-19-A05",
+                "安全管理室主任组织按季度对各单位环保工作进行考核评分并年度评优",
+                "质量安全部安全管理室主任",
+                "每季度末（考核）；每年末（年度达标考核分数汇总与评优）",
+                "各单位环保工作已完成；检查记录和整改闭环记录齐全",
+                "多级审批（安全管理室主任填写→质量安全部部长签字→主管副总经理签字审批→上报经营发展部）",
+                "MES",
+                "GLC260805-B《环保隐患治理管理程序》§6.1.7, §6.2",
+                "原文明确-正文",
+                "环境保护治理",
+                "环保隐患治理",
+                "环保隐患识别、整改、关闭验证"
+        ],
+        [
+                "L3-19-A06",
+                "业务实施部门与相关方签订环保管理协议及告知书并进行现场监督检查",
+                "合同签订部门合同发起人（签协议）+业务实施部门业务主管人员（...",
+                "相关方入厂作业前（签订）；作业期间（监督检查）",
+                "合同签订前/入厂作业前",
+                "无审批（签订与监督执行）",
+                "MES",
+                "GLC260805-B《环保隐患治理管理程序》§6.3",
+                "原文明确-正文",
+                "环境保护治理",
+                "环保隐患治理",
+                "环保隐患识别、整改、关闭验证"
+        ],
+        [
+                "L3-20-A01",
+                "各单位统计人员收集原始数据并核算填写FM2608-06节能环保能源统计表",
+                "各单位环境/能源报表统计人员（专/兼职）",
+                "每月/每季度/每年度统计周期",
+                "本单位已指定专（兼）职统计人员；原始数据可获取（水/电/气/...",
+                "无审批（核算填写）",
+                "",
+                "GLC260804-A《节能环保能源统计管理程序》§6.1.1",
+                "原文明确-正文",
+                "环境保护治理",
+                "环境统计与外部报送",
+                "节能环保能源统计、环境统计报表"
+        ],
+        [
+                "L3-20-A02",
+                "各单位负责人审核本单位统计报表并通过安全管理业务报表附件上传至质量安全部",
+                "各单位负责人（或环保主管领导）",
+                "每月末28日前",
+                "FM2608-06已填写完整；分析报告（附录C模板）已撰写",
+                "单人审批（单位负责人或环保主管领导审批）",
+                "",
+                "GLC260804-A《节能环保能源统计管理程序》§6.1.2",
+                "原文明确-正文",
+                "环境保护治理",
+                "环境统计与外部报送",
+                "节能环保能源统计、环境统计报表"
+        ],
+        [
+                "L3-20-A03",
+                "节能环保业务安全员汇总各单位上报的环境/能源统计原始数据",
+                "质量安全部节能环保业务安全员",
+                "每月末收到各单位报表后",
+                "各单位FM2608-06已上报",
+                "无审批（汇总整理）",
+                "",
+                "GLC260804-A《节能环保能源统计管理程序》§6.1.3",
+                "原文明确-正文",
+                "环境保护治理",
+                "环境统计与外部报送",
+                "节能环保能源统计、环境统计报表"
+        ],
+        [
+                "L3-20-A04",
+                "节能环保业务安全员按集团及政府部门统计方法核算并形成环境/能源统计报表",
+                "质量安全部节能环保业务安全员",
+                "每季度/每年度（汇总完成后）",
+                "各单位原始数据已汇总完成",
+                "无审批（核算形成）",
+                "",
+                "GLC260804-A《节能环保能源统计管理程序》§6.1.4",
+                "原文明确-正文",
+                "环境保护治理",
+                "环境统计与外部报送",
+                "节能环保能源统计、环境统计报表"
+        ],
+        [
+                "L3-20-A05",
+                "安全管理室主任及部长对核算完成的统计报表与分析总结报告进行审核批准",
+                "质量安全部安全管理室主任（初审）+质量安全部部长（终审批准）",
+                "节能环保业务安全员完成核算后",
+                "统计报表与分析总结报告已编制完成",
+                "多级审批（安全管理室主任审核→质量安全部部长批准）",
+                "",
+                "GLC260804-A《节能环保能源统计管理程序》§6.1.5",
+                "原文明确-正文",
+                "环境保护治理",
+                "环境统计与外部报送",
+                "节能环保能源统计、环境统计报表"
+        ],
+        [
+                "L3-20-A06",
+                "节能环保业务安全员按规定上报统计报表并更新环境/能源统计台账",
+                "质量安全部节能环保业务安全员",
+                "报表经部长批准后",
+                "统计报表已通过定密审核（按对外提供资料流程）",
+                "无审批（上报执行，前置定密审核已完成）",
+                "",
+                "GLC260804-A《节能环保能源统计管理程序》§6.1.6, §6.1.7",
+                "原文明确-正文",
+                "环境保护治理",
+                "环境统计与外部报送",
+                "节能环保能源统计、环境统计报表"
+        ],
+        [
+                "L3-21-A01",
+                "质量安全部节能双碳管理人员制定并下发公司级能源绩效参数与能源指标",
+                "质量安全部安全管理室/双碳推进室节能双碳管理人员",
+                "上级单位下达年度能源指标后，每年一季度前",
+                "上级单位年度指标已下达，能源基准年份数据已确定",
+                "无审批",
+                "MES",
+                "GLC261501-A《能源评审与年度节能双碳工作策划程序》§6.1.1",
+                "原文明确-正文",
+                "节能双碳与能源管理",
+                "能源评审与年度策划",
+                "能源评审、年度节能双碳策划、主要耗能设备台账"
+        ],
+        [
+                "L3-21-A02",
+                "质量安全部节能双碳管理人员分解制定部门级能源绩效参数与能源指标",
+                "质量安全部安全管理室/双碳推进室节能双碳管理人员",
+                "公司级能源指标下发后",
+                "公司级能源指标已确定",
+                "无审批",
+                "MES",
+                "GLC261501-A《能源评审与年度节能双碳工作策划程序》§6.1.2",
+                "原文明确-正文",
+                "节能双碳与能源管理",
+                "能源评审与年度策划",
+                "能源评审、年度节能双碳策划、主要耗能设备台账"
+        ],
+        [
+                "L3-21-A03",
+                "用能部门能源评审小组开展部门级能源评审（能耗结构分析+主要能源使用识别+节能机会挖掘）",
+                "生产运营部生产保障室主任及节能双碳专兼职人员；各生产单位节能...",
+                "年度能源评审周期到达（每年一季度前）",
+                "部门级能源指标已初步确定",
+                "无审批",
+                "MES",
+                "GLC261501-A《能源评审与年度节能双碳工作策划程序》§6.2.1-§6.2.7",
+                "原文明确-正文",
+                "节能双碳与能源管理",
+                "能源评审与年度策划",
+                "能源评审、年度节能双碳策划、主要耗能设备台账"
+        ],
+        [
+                "L3-21-A04",
+                "用能部门编制部门年度节能降碳措施计划",
+                "用能部门能源评审小组（各生产单位/生产运营部）",
+                "部门级能源评审完成且节能机会已识别后",
+                "节能机会已分类（管理类/改造类/经济运行类/维护类）、部门能...",
+                "无审批（原文§6.2.8.2仅要求\"编制\"）",
+                "MES",
+                "GLC261501-A《能源评审与年度节能双碳工作策划程序》§6.2.8",
+                "原文明确-正文",
+                "节能双碳与能源管理",
+                "能源评审与年度策划",
+                "能源评审、年度节能双碳策划、主要耗能设备台账"
+        ],
+        [
+                "L3-21-A05",
+                "用能部门能源评审小组编制并提交部门能源评审报告",
+                "用能部门能源评审小组",
+                "部门能源评审及措施计划编制完成后",
+                "部门能源评审已完成、节能降碳措施计划已编制",
+                "无审批（原文§6.2.9\"报质量安全部\"）",
+                "MES",
+                "GLC261501-A《能源评审与年度节能双碳工作策划程序》§6.2.9",
+                "原文明确-正文",
+                "节能双碳与能源管理",
+                "能源评审与年度策划",
+                "能源评审、年度节能双碳策划、主要耗能设备台账"
+        ],
+        [
+                "L3-21-A06",
+                "质量安全部能源评审小组组织开展公司级能源评审并形成评审报告",
+                "质量安全部双碳推进室主任及节能双碳专兼职人员（公司级评审小组...",
+                "每年一季度（例外情况发生时需及时评审）",
+                "各部门能源评审报告已提交",
+                "无审批（评审小组内部活动）",
+                "MES",
+                "GLC261501-A《能源评审与年度节能双碳工作策划程序》§6.3.1-§6.3.4",
+                "原文明确-正文",
+                "节能双碳与能源管理",
+                "能源评审与年度策划",
+                "能源评审、年度节能双碳策划、主要耗能设备台账"
+        ],
+        [
+                "L3-22-A01",
+                "生产运营部节能管理人员策划并编制动力系统经济运行方案",
+                "生产运营部节能双碳管理人员（生产保障室）",
+                "动力系统能源评审发现节能机会后",
+                "典型动能需求已调研（季节/工作时段因素）",
+                "无审批",
+                "MES",
+                "GLC261502-A《动力系统节能运行管理程序》§6.4.1-§6.4.2",
+                "原文明确-正文",
+                "节能双碳与能源管理",
+                "节能运行控制",
+                "动力系统节能运行、重点用能工序节能运行、能源消耗监督"
+        ],
+        [
+                "L3-22-A02",
+                "生产运营部编制动力系统能源数据收集计划并完善运行记录",
+                "生产运营部节能双碳管理人员",
+                "经济运行方案确定后",
+                "需收集的能源数据种类已识别（转换量/用能量/运行参数/绩效类...",
+                "无审批",
+                "MES",
+                "GLC261502-A《动力系统节能运行管理程序》§6.5.2-§6.5.4",
+                "原文明确-正文",
+                "节能双碳与能源管理",
+                "节能运行控制",
+                "动力系统节能运行、重点用能工序节能运行、能源消耗监督"
+        ],
+        [
+                "L3-22-A03",
+                "主要用能单位节能管理人员策划重点用能工序合理排产方案",
+                "主要用能单位（各生产单位）主管节能双碳管理人员",
+                "重点用能工序能源评审发现节能机会后",
+                "节能机会已识别（集中满负荷/连续生产/避峰就谷/合理组织加班...",
+                "无审批",
+                "MES",
+                "GLC261503-A《重点用能工序节能运行管理程序》§6.5-§6.6",
+                "原文明确-正文",
+                "节能双碳与能源管理",
+                "节能运行控制",
+                "动力系统节能运行、重点用能工序节能运行、能源消耗监督"
+        ],
+        [
+                "L3-22-A04",
+                "用能工序责任人执行合理排产方案并按班/天统计能源绩效",
+                "主要用能单位能源使用责任人（操作者/设备责任人）",
+                "日常生产排产操作时",
+                "合理排产方案已确定、数据收集计划已编制",
+                "无审批",
+                "MES",
+                "GLC261503-A《重点用能工序节能运行管理程序》§6.7.3-§6.7.4",
+                "原文明确-正文",
+                "节能双碳与能源管理",
+                "节能运行控制",
+                "动力系统节能运行、重点用能工序节能运行、能源消耗监督"
+        ],
+        [
+                "L3-22-A05",
+                "用能单位能管员定期实施部门级节能自查与能源消耗日常监督",
+                "各用能单位能管员",
+                "部门自查周期到达（每月不少于2次）",
+                "无",
+                "无审批",
+                "MES",
+                "GLC260819-A《能源消耗与能源监督管理程序》§6.2.4",
+                "原文明确-正文",
+                "节能双碳与能源管理",
+                "节能运行控制",
+                "动力系统节能运行、重点用能工序节能运行、能源消耗监督"
+        ],
+        [
+                "L3-23-A01",
+                "质量安全部按月实施公司级节能双碳监督检查",
+                "质量安全部安全管理室/双碳推进室节能双碳管理人员",
+                "每月不少于1次",
+                "无",
+                "无审批",
+                "MES",
+                "GLC261504-A《节能双碳监督检查管理程序》§6.2.3",
+                "原文明确-正文",
+                "节能双碳与能源管理",
+                "节能双碳监督与绩效",
+                "节能双碳监督检查、能源碳排统计分析、能源绩效管理"
+        ],
+        [
+                "L3-23-A02",
+                "用能部门能管员定期实施部门级节能监督检查（含经济运行方案执行评估）",
+                "各用能部门能管员",
+                "部门检查周期（每月不少于2次）",
+                "无",
+                "无审批",
+                "MES",
+                "GLC261504-A《节能双碳监督检查管理程序》§6.2.2",
+                "原文明确-正文",
+                "节能双碳与能源管理",
+                "节能双碳监督与绩效",
+                "节能双碳监督检查、能源碳排统计分析、能源绩效管理"
+        ],
+        [
+                "L3-23-A03",
+                "各单位节能双碳管理员按月统计、核算并上报能源消耗及碳排放数据",
+                "各单位节能双碳管理员",
+                "每月28日前（能耗数据每月25日前由生产保障室提供）",
+                "原始能源消耗记录已收集、碳排放因子已由质量安全部发布",
+                "部门负责人审批后上报",
+                "MES",
+                "GLC261505-A《能源碳排放统计分析与绩效管理程序》§6.1.1-§6.1.2, §6.4.2...",
+                "原文明确-正文",
+                "节能双碳与能源管理",
+                "节能双碳监督与绩效",
+                "节能双碳监督检查、能源碳排统计分析、能源绩效管理"
+        ],
+        [
+                "L3-23-A04",
+                "质量安全部汇总分析公司能源利用情况（含能源绩效与碳排放审核）",
+                "质量安全部安全管理室/双碳推进室",
+                "各单位月度数据上报后",
+                "各单位能源/碳排放数据已上报",
+                "无审批（分析汇总）+ 法定代表人（或授权代表）签字年度温室气体报告",
+                "MES",
+                "GLC261505-A《能源碳排放统计分析与绩效管理程序》§6.3, §6.4.6-§6.4.12",
+                "原文明确-正文",
+                "节能双碳与能源管理",
+                "节能双碳监督与绩效",
+                "节能双碳监督检查、能源碳排统计分析、能源绩效管理"
+        ],
+        [
+                "L3-23-A05",
+                "质量安全部对能源/碳排放瞒报迟报漏报误报进行考核及责任追究",
+                "质量安全部安全管理室/双碳推进室",
+                "发现数据瞒报/迟报/漏报/误报时",
+                "数据质量问题已确认",
+                "无审批（原文明确为\"考核及责任追究\"）",
+                "MES",
+                "GLC261505-A《能源碳排放统计分析与绩效管理程序》§6.5.2",
+                "原文明确-正文",
+                "节能双碳与能源管理",
+                "节能双碳监督与绩效",
+                "节能双碳监督检查、能源碳排统计分析、能源绩效管理"
+        ],
+        [
+                "L3-23-A06",
+                "主要用能单位按月编制并上报节能双碳运行分析报告",
+                "各主要用能单位节能双碳管理员",
+                "每月28日前",
+                "当月能源数据已统计",
+                "单位负责人审批后上报",
+                "MES",
+                "GLC261505-A《能源碳排放统计分析与绩效管理程序》§6.2",
+                "原文明确-正文",
+                "节能双碳与能源管理",
+                "节能双碳监督与绩效",
+                "节能双碳监督检查、能源碳排统计分析、能源绩效管理"
+        ],
+        [
+                "L3-24-A01",
+                "生产运营部生产保障室配备并管理能源一级/二级计量器具",
+                "生产运营部生产保障室",
+                "能源计量器具新建/更换/升级需求发生时",
+                "能源计量网络图已绘制、分类/分级计量要求已明确",
+                "无审批",
+                "MES",
+                "GLC261510-A《能源计量管理程序》§6.2, §6.3.2",
+                "原文明确-正文",
+                "节能双碳与能源管理",
+                "能源计量与用能设备管理",
+                "能源计量器具管理、淘汰落后用能设备"
+        ],
+        [
+                "L3-24-A02",
+                "各用能单位管理三级能源计量器具并动态维护台账",
+                "各用能单位指定的能源计量器具专管人",
+                "日常能源计量管理中",
+                "三级能源计量器具已配备",
+                "无审批",
+                "MES",
+                "GLC261510-A《能源计量管理程序》§6.2.2-§6.2.3",
+                "原文明确-正文",
+                "节能双碳与能源管理",
+                "能源计量与用能设备管理",
+                "能源计量器具管理、淘汰落后用能设备"
+        ],
+        [
+                "L3-24-A03",
+                "生产保障室组织能源计量器具检定/校准（含到期更换计量标识）",
+                "生产运营部生产保障室",
+                "计量器具检定周期到达；新器具入厂时",
+                "检定周期已确定（水/电表每年一次 = FM2609-09；蒸...",
+                "质量安全部理化计量室审查FM2609-09",
+                "MES",
+                "GLC261510-A《能源计量管理程序》§6.3.5-§6.3.6",
+                "原文明确-正文",
+                "节能双碳与能源管理",
+                "能源计量与用能设备管理",
+                "能源计量器具管理、淘汰落后用能设备"
+        ],
+        [
+                "L3-24-A04",
+                "质量安全部组织开展年度能源计量自查与合规性评价",
+                "质量安全部安全管理室/双碳推进室",
+                "每年按上级主管部门要求",
+                "年度检查周期到达",
+                "无审批",
+                "MES",
+                "GLC261510-A《能源计量管理程序》§6.4.1",
+                "原文明确-正文",
+                "节能双碳与能源管理",
+                "能源计量与用能设备管理",
+                "能源计量器具管理、淘汰落后用能设备"
+        ],
+        [
+                "L3-24-A05",
+                "各单位对照淘汰目录全面筛查识别淘汰落后机电设备并制定淘汰计划",
+                "各单位（使用部门）能源/设备管理人员",
+                "国家发布最新淘汰目录后；每年年初",
+                "本单位设备资产台账已建立",
+                "部门责任人审批后报送",
+                "MES",
+                "GLC261506-A《淘汰落后用能管理程序》§6.1.1-§6.1.2",
+                "原文明确-正文",
+                "节能双碳与能源管理",
+                "能源计量与用能设备管理",
+                "能源计量器具管理、淘汰落后用能设备"
+        ],
+        [
+                "L3-24-A06",
+                "各单位按计划淘汰/更新落后机电设备并征集质量安全部节能意见",
+                "各单位设备管理人员",
+                "淘汰计划时间节点到达",
+                "FM2615-03淘汰计划已批准",
+                "质量安全部节能意见会签（新设备能效等级）",
+                "MES",
+                "GLC261506-A《淘汰落后用能管理程序》§6.2.1-§6.2.2",
+                "原文明确-正文",
+                "节能双碳与能源管理",
+                "能源计量与用能设备管理",
+                "能源计量器具管理、淘汰落后用能设备"
+        ],
+        [
+                "L3-24-A07",
+                "质量安全部汇总公司淘汰机电设备计划及总结并报送上级单位",
+                "质量安全部安全管理室/双碳推进室",
+                "每年2月底前（计划）、9月底前（总结）",
+                "各单位FM2615-03已上报",
+                "无审批",
+                "MES",
+                "GLC261506-A《淘汰落后用能管理程序》§6.3.1-§6.3.2",
+                "原文明确-正文",
+                "节能双碳与能源管理",
+                "能源计量与用能设备管理",
+                "能源计量器具管理、淘汰落后用能设备"
+        ],
+        [
+                "L3-25-A01",
+                "质量安全部策划编制年度能源管理体系内部审核方案及审核计划",
+                "质量安全部安全管理室/双碳推进室",
+                "每年一季度",
+                "上年度内外部审核结果及数据分析报告已汇总",
+                "质量安全部部长批准审核方案",
+                "OA",
+                "GLC261507-A《能源内部审核管理程序》§6.1.1-§6.1.3",
+                "原文明确-正文",
+                "节能双碳与能源管理",
+                "能源体系运行",
+                "能源内部审核、能源管理评审、项目节能审查"
+        ],
+        [
+                "L3-25-A02",
+                "内审组长组织现场审核、开具不符合项并主持首末次会议",
+                "能源内审组组长（内审员）",
+                "审核计划确定的审核日期",
+                "审核计划已传达至受审核部门（提前3个工作日）、内审员已分工编...",
+                "无审批（内审组内部活动，不符合项需受审核方签字确认）",
+                "OA",
+                "GLC261507-A《能源内部审核管理程序》§6.3.1-§6.3.6",
+                "原文明确-正文",
+                "节能双碳与能源管理",
+                "能源体系运行",
+                "能源内部审核、能源管理评审、项目节能审查"
+        ],
+        [
+                "L3-25-A03",
+                "受审核部门实施不符合项整改并经内审组长跟踪验证",
+                "受审核部门（责任部门）→ 审核小组组长（验证）",
+                "收到《隐患整改通知单》后；整改完成后",
+                "不符合项已由内审员与受审核方共同确认",
+                "无审批",
+                "OA",
+                "GLC261507-A《能源内部审核管理程序》§6.4-§6.5",
+                "原文明确-正文",
+                "节能双碳与能源管理",
+                "能源体系运行",
+                "能源内部审核、能源管理评审、项目节能审查"
+        ],
+        [
+                "L3-25-A04",
+                "质量安全部策划组织年度能源管理评审会议（含会前运行分析汇总）",
+                "质量安全部安全管理室/双碳推进室",
+                "管理评审前一个月（每年至少1次，间隔不超过12个月）",
+                "内外部审核已完成",
+                "管理者代表审核管理评审计划，总经理批准",
+                "OA",
+                "GLC261508-A《能源管理评审管理程序》§6.1-§6.2",
+                "原文明确-正文",
+                "节能双碳与能源管理",
+                "能源体系运行",
+                "能源内部审核、能源管理评审、项目节能审查"
+        ],
+        [
+                "L3-25-A05",
+                "总经理主持管理评审会议并做出体系适用性/充分性/有效性结论及改进决议",
+                "公司总经理",
+                "管理评审会议召开时",
+                "管理评审报告已分发、运行分析报告已编写（含节能措施计划/目标...",
+                "总经理最终批准",
+                "OA",
+                "GLC261508-A《能源管理评审管理程序》§6.3-§6.4",
+                "原文明确-正文",
+                "节能双碳与能源管理",
+                "能源体系运行",
+                "能源内部审核、能源管理评审、项目节能审查"
+        ],
+        [
+                "L3-25-A06",
+                "质量安全部跟踪验证管理评审改进措施实施效果",
+                "质量安全部安全管理室/双碳推进室",
+                "管理评审改进决议发布后",
+                "责任部门已制定并实施整改方案（经管理者代表批准）",
+                "管理者代表签字确认验证结果",
+                "OA",
+                "GLC261508-A《能源管理评审管理程序》§6.5-§6.6",
+                "原文明确-正文",
+                "节能双碳与能源管理",
+                "能源体系运行",
+                "能源内部审核、能源管理评审、项目节能审查"
+        ],
+        [
+                "L3-25-A07",
+                "规划发展部技术员联合质量安全部组织固定资产投资项目节能审查与竣工环保验收",
+                "规划发展部技术员（牵头）+ 质量安全部环境保护技术人员（环评...",
+                "固定资产投资项目立项备案后/竣工后；建设内容/能效变更时",
+                "项目可行性研究报告已编制、FM2607-08/13已提交",
+                "内部评审会签/多级审批（年消费≥1000吨标准煤或电力≥500万千瓦时项目需报政府节能审查机关）",
+                "PLM",
+                "GLC261509-B《环境保护\"三同时\"和节能审查管理程序》§6.1.1-§6.1.2, §6.2...",
+                "原文明确-正文",
+                "节能双碳与能源管理",
+                "能源体系运行",
+                "能源内部审核、能源管理评审、项目节能审查"
+        ],
+        [
+                "L3-26-A01",
+                "生产保障室技术员编制并提请审核年度设备大中修计划",
+                "生产保障室技术员",
+                "每年12月份，依据各使用单位提交的FM1409-15设备大中(项)修理申报表",
+                "各使用单位已完成设备状态评估并提交修理申报表",
+                "多级审批 (生产保障室主任审核→生产运营部部长批准)",
+                "MES",
+                "设备设施计划策划管理程序 §7.1.2步骤(1)(2)(3), Table 4-6",
+                "原文明确-正文 (流程说明表逐步骤描述)",
+                "设备设施运维保障",
+                "设备计划与资产策划",
+                "设备设施计划策划、设备分类、设备台账、投用准备"
+        ],
+        [
+                "L3-26-A02",
+                "生产保障室技术员编制并提请审核备件采购计划",
+                "生产保障室技术员",
+                "每季度末月15日前，依据年度三级保养计划、备件安全库存、易损件损坏频率及使用单位...",
+                "FM1409-21设备备件需求申请表已提交，FM1409-1...",
+                "多级审批 (生产保障室主任审核→生产运营部部长批准)",
+                "MES",
+                "设备设施计划策划管理程序 §7.1.2步骤(5)(6)(7), Table 8-10",
+                "原文明确-正文 (流程说明表逐步骤描述)",
+                "设备设施运维保障",
+                "设备计划与资产策划",
+                "设备设施计划策划、设备分类、设备台账、投用准备"
+        ],
+        [
+                "L3-26-A03",
+                "生产保障室技术员编制并提请审核设备一般维修(搬迁)计划",
+                "生产保障室技术员",
+                "每年12月份，依据FM1409-20设备设施搬迁申请单和FM1409-14设备临...",
+                "搬迁申请单和临时故障修理单已汇总完毕",
+                "多级审批 (生产保障室主任审核→生产运营部部长批准)",
+                "MES",
+                "设备设施计划策划管理程序 §7.1.2步骤(9)(10)(11), Table 12-14",
+                "原文明确-正文 (流程说明表逐步骤描述)",
+                "设备设施运维保障",
+                "设备计划与资产策划",
+                "设备设施计划策划、设备分类、设备台账、投用准备"
+        ],
+        [
+                "L3-26-A04",
+                "生产保障室技术员编制并提请审核三级保养计划",
+                "生产保障室技术员",
+                "每年12月份，依据设备设施维护保养手册结合设备使用状态",
+                "设备设施维护保养手册为最新版本",
+                "多级审批 (生产保障室主任审核→生产运营部部长批准)",
+                "MES",
+                "设备设施计划策划管理程序 §7.1.2步骤(13)(14)(15), Table 16-18",
+                "原文明确-正文 (流程说明表逐步骤描述)",
+                "设备设施运维保障",
+                "设备计划与资产策划",
+                "设备设施计划策划、设备分类、设备台账、投用准备"
+        ],
+        [
+                "L3-26-A05",
+                "生产保障室技术员编制设备台账并分发已批准的各项计划",
+                "生产保障室技术员",
+                "各类设备计划经审批后需分发给执行单位",
+                "四类计划(大中修、备件采购、维修搬迁、三级保养)均已获批准",
+                "无审批",
+                "MES",
+                "设备设施计划策划管理程序 §11记录控制, Table 7/11/15/19 (分发步骤)",
+                "上下文推断",
+                "设备设施运维保障",
+                "设备计划与资产策划",
+                "设备设施计划策划、设备分类、设备台账、投用准备"
+        ],
+        [
+                "L3-27-A01",
+                "设备使用单位培训员编制考核试题并组织设备操作证首次申办",
+                "设备使用单位培训员",
+                "新设备投用或新操作人员需操作A类/B类设备",
+                "理论考试和实操考核成绩均为90分及以上(§5.1.1, §5...",
+                "多级审批 (生产保障室主任批准试题→生产保障室向使用单位发证)",
+                "MES",
+                "设备操作证管理标准 §5.1.1-§5.1.9",
+                "原文明确-正文 (§5.1.3-§5.1.5逐步骤规定)",
+                "设备设施运维保障",
+                "设备使用与现场巡检",
+                "设备设施使用、设备操作证、巡检实施、测量设备管理"
+        ],
+        [
+                "L3-27-A02",
+                "设备使用单位培训员对A类设备操作证进行定期复审",
+                "设备使用单位培训员",
+                "A类设备操作证每两年复审，复审日期到期前二个月启动",
+                "FM1409-38试题经生产保障室主任批准",
+                "单人审批 (生产保障室主任批准试题)",
+                "MES",
+                "设备操作证管理标准 §5.2.1-§5.2.4",
+                "原文明确-正文 (§5.2.1-§5.2.4)",
+                "设备设施运维保障",
+                "设备使用与现场巡检",
+                "设备设施使用、设备操作证、巡检实施、测量设备管理"
+        ],
+        [
+                "L3-27-A03",
+                "各层级巡检人员按检查单执行一/二/三级巡检",
+                "检验工(一级), 检验员/质量助理(二级), 质量控制室技术...",
+                "按既定档期 — 一级每天/二级每周/三级每月",
+                "各级巡检检查单已编制并每季度审查更新(§5.4)",
+                "无审批 (执行层面)",
+                "MES",
+                "巡检实施管理标准 §5.1-§5.7, Table 1 (巡检频次)",
+                "原文明确-正文 (§5.1-§5.6明确各层级职责与频次)",
+                "设备设施运维保障",
+                "设备使用与现场巡检",
+                "设备设施使用、设备操作证、巡检实施、测量设备管理"
+        ],
+        [
+                "L3-27-A04",
+                "检验员/质量助理处置巡检问题并验证整改闭环",
+                "检验员/质量助理(生产单位质量工程室)",
+                "巡检发现问题(产品不符合/重复性质量问题)",
+                "问题已记录在FM1408-104",
+                "无审批 (执行层面)",
+                "MES",
+                "巡检实施管理标准 §5.8.1-§5.8.2",
+                "原文明确-正文 (§5.8.1引用GLC14080401/GLC230801处置路径, §5.8.2规定5工作日内验证)",
+                "设备设施运维保障",
+                "设备使用与现场巡检",
+                "设备设施使用、设备操作证、巡检实施、测量设备管理"
+        ],
+        [
+                "L3-27-A05",
+                "生产单位编制激光跟踪仪测量计划并提交审批",
+                "生产单位测量计划编制人员",
+                "除工装定检外的产品/工装测量任务",
+                "图纸、数模、技术文件齐备",
+                "单人审批 (按§5.1.5审批通过后投入使用)",
+                "MES",
+                "激光跟踪仪的测量管理标准 §5.1.1-§5.1.5",
+                "原文明确-正文 (§5.1.5明文\"测量计划需经审批通过后再投入使用\")",
+                "设备设施运维保障",
+                "设备使用与现场巡检",
+                "设备设施使用、设备操作证、巡检实施、测量设备管理"
+        ],
+        [
+                "L3-27-A06",
+                "测量操作者执行激光跟踪仪测量(准备→检查→建系→采集→验证)",
+                "测量操作者",
+                "测量计划已审批, 激光跟踪仪在校准有效期内",
+                "设备校准有效(§5.2.1), 测量计划已批准, 测量区域已...",
+                "无审批 (执行层面, 但需检验人员确认 §5.2.3)",
+                "MES",
+                "激光跟踪仪的测量管理标准 §5.2-§5.4 (含现场检查/坐标系建立/比例补偿/系统检查/数据采集...",
+                "原文明确-正文 (§5.4.1-§5.4.7逐步骤关键测量说明)",
+                "设备设施运维保障",
+                "设备使用与现场巡检",
+                "设备设施使用、设备操作证、巡检实施、测量设备管理"
+        ],
+        [
+                "L3-27-A07",
+                "测量操作者/分析人员出具测量报告并经检验员确认",
+                "测量操作者/分析人员",
+                "测量数据采集完成",
+                "测量系统检查合格(§5.4.6), FM1408-27已填写",
+                "单人审批 (检验员确认 §5.2.3)",
+                "MES",
+                "激光跟踪仪的测量管理标准 §5.5, §5.2.3",
+                "原文明确-正文 (§5.5.1-§5.5.5详列报告内容和要求)",
+                "设备设施运维保障",
+                "设备使用与现场巡检",
+                "设备设施使用、设备操作证、巡检实施、测量设备管理"
+        ],
+        [
+                "L3-28-A01",
+                "生产保障室技术员编制一级点检表及二三级保养规程",
+                "生产保障室技术员",
+                "依据设备使用说明书、设备使用状态和维护维修相关规定, 持续完善",
+                "设备使用说明书及维护维修相关规定可获取",
+                "无审批 (编制层面, 后续保养执行时才涉及验收审批 §6.3.3)",
+                "MES",
+                "设备设施维护保养管理程序 §7.1.2步骤(1)(2), Table 6-12",
+                "原文明确-正文 (流程说明表逐步骤描述)",
+                "设备设施运维保障",
+                "维护保养与维修保障",
+                "设备维护保养、设备维修、保养优化、TPM应用"
+        ],
+        [
+                "L3-28-A02",
+                "设备操作者按一级点检表执行班前班后日常维护保养",
+                "设备操作者(生产单元技能工程师等各工区操作人员)",
+                "每班次班前/班中/班后",
+                "FM1409-05一级点检表已编制下发",
+                "无审批 (执行层面, 设备班组长检查§6.3.5, 生产保障室技术员监督)",
+                "MES",
+                "设备设施维护保养管理程序 §4.1(一级保养定义), §6.3.2(班前班中班后要求), §7.1....",
+                "原文明确-正文",
+                "设备设施运维保障",
+                "维护保养与维修保障",
+                "设备维护保养、设备维修、保养优化、TPM应用"
+        ],
+        [
+                "L3-28-A03",
+                "设备维保人员执行二三级保养并提交验收",
+                "设备维保人员",
+                "按年度三级保养计划周期性执行 (§6.3.1/§6.3.4)",
+                "FM1409-07二三级保养规程已编制, 保养计划已下达; ...",
+                "单人审批 (生产保障室技术员验收保养质量和结果, §7.1.2步骤(4); 延期申请须生产保障室主任批准 §6.3.3)",
+                "MES",
+                "设备设施维护保养管理程序 §4.2-§4.3(二级/三级保养定义), §6.3.1-§6.3.6, ...",
+                "原文明确-正文",
+                "设备设施运维保障",
+                "维护保养与维修保障",
+                "设备维护保养、设备维修、保养优化、TPM应用"
+        ],
+        [
+                "L3-28-A04",
+                "设备设施联络员发起故障维修申请, 生产保障室技术员分析故障并制定维修方案",
+                "设备设施联络员 (申请), 生产保障室技术员 (诊断/方案)",
+                "设备设施发生故障",
+                "故障已发生, 设备设施联络员已通知生产保障室",
+                "多级审批 (使用单位主管领导校对→生产保障室主任审核→生产运营部部长审批→主管副总经理批准)",
+                "MES",
+                "设备设施维修管理程序 §7.1.2步骤(1)-(7), Table 6-33",
+                "原文明确-正文 (流程说明表逐步骤详细描述)",
+                "设备设施运维保障",
+                "维护保养与维修保障",
+                "设备维护保养、设备维修、保养优化、TPM应用"
+        ],
+        [
+                "L3-28-A05",
+                "生产保障室技术员制定年度设备大中修计划并组织执行",
+                "生产保障室技术员 (制定), 设备设施联络员 (申报)",
+                "每年10月底前各使用单位提出下一年度大中修申请",
+                "FM1409-15设备大中(项)修理申报表已提交",
+                "多级审批 (室主任审核→部长审批→总经理办公会审议→下发执行; 修后验收经室主任确认→联络员确认→使用单位主管批准)",
+                "MES",
+                "设备设施维修管理程序 §7.1.2步骤(8)-(27), Table 35-117",
+                "原文明确-正文",
+                "设备设施运维保障",
+                "维护保养与维修保障",
+                "设备维护保养、设备维修、保养优化、TPM应用"
+        ],
+        [
+                "L3-28-A06",
+                "生产保障室技术员检查保养结果并更新点检表和保养规程",
+                "生产保障室技术员",
+                "维护保养结果检查发现流程/内容/技术/频次需优化",
+                "完成保养结果检查, 识别影响保养质量的瓶颈",
+                "无审批 (技术优化层面)",
+                "MES",
+                "设备设施保养优化管理程序 §6.3.1-§6.3.8 (8类优化场景), §7.1.2步骤(1)(2...",
+                "原文明确-正文 (§6.3各子条款列举具体优化触发条件和整改措施)",
+                "设备设施运维保障",
+                "维护保养与维修保障",
+                "设备维护保养、设备维修、保养优化、TPM应用"
+        ],
+        [
+                "L3-28-A07",
+                "设备操作者和维保人员按TPM标准执行自主维护并编制管理月报",
+                "设备操作工 (自主维护), 设备维保人员 (二三级点检), ...",
+                "按计划周期: 操作工每天一级点检(§5.4), 维保人员按周期二三级点检(§5....",
+                "FM1409-05点检表已编制, FM1409-07保养规程...",
+                "无审批 (执行层面)",
+                "MES",
+                "设备设施TPM应用管理标准 §5.4-§5.6",
+                "原文明确-正文 (§5.4-§5.6逐条明确各角色行为)",
+                "设备设施运维保障",
+                "维护保养与维修保障",
+                "设备维护保养、设备维修、保养优化、TPM应用"
+        ],
+        [
+                "L3-29-A01",
+                "使用单位联络员编制并审批年度自主维护备件需求申请",
+                "使用单位联络员",
+                "按年度设备自主维护需要提出下一年度备件更换需求",
+                "设备自主维护计划已确定",
+                "多级审批 (使用单位主管领导审批→生产保障室主任审核→生产运营部部长批准)",
+                "ERP",
+                "设备设施备件管理程序 §7.1.2步骤(1)-(5), Table 3-22",
+                "原文明确-正文 (流程说明表逐步骤)",
+                "设备设施运维保障",
+                "备件与耗材保障",
+                "设备备件需求、备件状态、维修耗材保障"
+        ],
+        [
+                "L3-29-A02",
+                "生产保障室技术员按半年度编制季度/临时备件采购计划",
+                "生产保障室技术员",
+                "每年5月和11月制定半年度需求计划, 每季度末月15日前编制下一季度采购计划; ...",
+                "FM1409-21需求申请单已批准, 评估当前设备运行状态及...",
+                "多级审批 (生产保障室主任审核→生产运营部部长批准)",
+                "ERP",
+                "设备设施备件管理程序 §7.1.2步骤(6)-(8), Table 24-35",
+                "原文明确-正文 (§7.1.2步骤(6)明确\"每年5月和11月分别组织制定半年度备件需求计划\")",
+                "设备设施运维保障",
+                "备件与耗材保障",
+                "设备备件需求、备件状态、维修耗材保障"
+        ],
+        [
+                "L3-29-A03",
+                "生产保障室技术员实施电子采购平台/线下备件采购",
+                "生产保障室技术员",
+                "FM1409-22采购计划单已获批准",
+                "审批后的FM1409-22, 年度预算范围内 (依GLC25...",
+                "无审批 (执行层面, 依GLC130208电子平台采购管理程序)",
+                "ERP",
+                "设备设施备件管理程序 §7.1.2步骤(9), Table 37-39; 引用 GLC130208",
+                "原文明确-正文",
+                "设备设施运维保障",
+                "备件与耗材保障",
+                "设备备件需求、备件状态、维修耗材保障"
+        ],
+        [
+                "L3-29-A04",
+                "生产保障室保管工组织备件到货验收并办理入库",
+                "生产保障室保管工 (验收负责人含技术员和维修工)",
+                "备件到货",
+                "采购订单已完成",
+                "无审批 (验收确认层面)",
+                "ERP",
+                "设备设施备件管理程序 §7.1.2步骤(10)(11), Table 41-47",
+                "原文明确-正文 (§7.1.2步骤(10)明确验收核实\"产品名称、型号规格、品牌、备件数量\")",
+                "设备设施运维保障",
+                "备件与耗材保障",
+                "设备备件需求、备件状态、维修耗材保障"
+        ],
+        [
+                "L3-29-A05",
+                "生产保障室保管工按领用单发放备件并更新库存",
+                "生产保障室保管工",
+                "使用单位或维保人员凭FM1409-26领用备件",
+                "FM1409-26经生产保障室技术员签字确认",
+                "单人审批 (生产保障室技术员签字确认方可领取)",
+                "MES",
+                "设备设施备件管理程序 §7.1.2步骤(12)(13), Table 49-55",
+                "原文明确-正文 (§7.1.2步骤(12)\"经生产保障室技术员签字确认后，方能领取备件\")",
+                "设备设施运维保障",
+                "备件与耗材保障",
+                "设备备件需求、备件状态、维修耗材保障"
+        ],
+        [
+                "L3-30-A01",
+                "设备操作人员发现事故后立即停机上报告知, 使用单位主管领导保护现场并上报生产保障室",
+                "设备操作人员 (首报), 事故责任单位主管领导 (现场保护/...",
+                "设备设施发生事故 (由于\"三违\"操作等原因造成损坏/性能降低/停产)",
+                "事故已发生",
+                "无审批 (事故初报阶段)",
+                "OA、MES",
+                "设备设施事故处理管理程序 §7.1.2步骤(1)(2), Table 6-12",
+                "原文明确-正文 (§4.1定义\"三违\"操作引发事故; §7.1.2步骤(2)明确10分钟报告时限)",
+                "设备设施运维保障",
+                "设备异常与变动管理",
+                "设备事故处理、设备设施搬迁"
+        ],
+        [
+                "L3-30-A02",
+                "生产保障室主管领导组织现场事故分析会并判定事故原因与责任",
+                "生产保障室主管领导 (主持), 生产保障室技术工程师 (参与...",
+                "生产保障室接到事故报告后",
+                "事故现场已保护, 口头报告已接收",
+                "无审批 (调查分析层面)",
+                "OA、MES",
+                "设备设施事故处理管理程序 §7.1.2步骤(3), Table 14-16",
+                "原文明确-正文 (§7.1.2步骤(3)详细描述分析会组织方式和与会人员)",
+                "设备设施运维保障",
+                "设备异常与变动管理",
+                "设备事故处理、设备设施搬迁"
+        ],
+        [
+                "L3-30-A03",
+                "事故责任单位填写事故报告并制定整改措施, 生产保障室审查完善",
+                "使用单位联络员 (填写报告/整改措施), 生产保障室技术员 ...",
+                "事故原因已确定",
+                "事故原因及责任判定已完成",
+                "多级审批 (事故报告: 事故责任单位责任人批准; 整改措施: 主管领导审查→生产保障室技术员核查→保障室主任复核→生产运营部部长批准)",
+                "OA、MES",
+                "设备设施事故处理管理程序 §7.1.2步骤(4)-(14), Table 18-64",
+                "原文明确-正文 (§7.1.2步骤(11)明确事故划分标准: 一般/重大/特大 三档)",
+                "设备设施运维保障",
+                "设备异常与变动管理",
+                "设备事故处理、设备设施搬迁"
+        ],
+        [
+                "L3-30-A04",
+                "生产保障室组织事故责任单位进行整改归零并完成逐级审批",
+                "使用单位联络员 (填写归零), 生产保障室技术员 (给归零意...",
+                "事故处理完成后",
+                "FM1409-18设备设施事故处理已获批准",
+                "多级审批 (事故单位责任人核对→生产保障室技术员给意见→保障室主任复核→生产运营部部长审核→主管副总经理批准)",
+                "OA、MES",
+                "设备设施事故处理管理程序 §7.1.2步骤(15)-(20), Table 66-90",
+                "原文明确-正文 (流程说明表逐步骤)",
+                "设备设施运维保障",
+                "设备异常与变动管理",
+                "设备事故处理、设备设施搬迁"
+        ],
+        [
+                "L3-30-A05",
+                "设备设施搬迁申请人编制搬迁申请单并完成必要性审批",
+                "技术室工艺员 (搬迁申请人)",
+                "因工艺流程变更、生产需求变化或公司整体规划变更需搬迁设备",
+                "设备设施搬迁技术条件已编制 (申请单位负责)",
+                "多级审批 (技术室主任审批准确性/必要性→生产保障室技术员制定方案→实施)",
+                "OA、MES",
+                "设备设施搬迁管理程序 §7.1.2步骤(1)(2), Table 6-13",
+                "原文明确-正文 (§4.1明确搬迁定义, §7.1.2步骤(1)明确\"必要性和可行性分析\")",
+                "设备设施运维保障",
+                "设备异常与变动管理",
+                "设备事故处理、设备设施搬迁"
+        ],
+        [
+                "L3-30-A06",
+                "生产保障室技术员实施设备搬迁(拆卸→搬运→安装→指标检测)并组织验收",
+                "生产保障室技术员",
+                "搬迁申请单已获批准且搬迁方案已制定",
+                "设备拆卸前已完成指标参数检测记录并备份数据(§7.1.2步骤...",
+                "单人审批 (搬迁后验收)",
+                "OA、MES",
+                "设备设施搬迁管理程序 §7.1.2步骤(3)(4), Table 15-21",
+                "原文明确-正文 (§7.1.2步骤(3)详细规定拆卸顺序、安装要求、指标重新检测)",
+                "设备设施运维保障",
+                "设备异常与变动管理",
+                "设备事故处理、设备设施搬迁"
+        ],
+        [
+                "L3-31-A01",
+                "质量安全部体系管理员获取并登记适用环境与职业健康安全法律法规及其他要求",
+                "质量安全部体系管理员",
+                "年度法规获取计划启动（每年至少一次）或业务部门在工作中发现新法规",
+                "法律法规获取渠道可用（政府网站/行业组织/出版物/第三方机构...",
+                "无审批",
+                "",
+                "GLC260810-B《环境和职业健康安全法律、法规和其他要求控制管理程序》§6.1（获取）§6.1...",
+                "原文明确-正文",
+                "EHS体系与合规治理",
+                "法规和其他要求控制",
+                "法规识别、适用性确认、法规清单、合规评价项"
+        ],
+        [
+                "L3-31-A02",
+                "质量安全部组织内审员识别法律法规适用性并逐条匹配环境与职业健康安全因素",
+                "内审员（质量安全部组织）",
+                "FM2608-15清单初始生成或公司活动发生重大变更（新产品/新工艺/新设备/重...",
+                "FM2608-15清单已获取并汇总；环境因素/危险源台账可用",
+                "无审批",
+                "",
+                "GLC260810-B §6.2.2.1（识别判断更新）§6.2.2.2（适用评价）§6.2.2.4...",
+                "原文明确-正文",
+                "EHS体系与合规治理",
+                "法规和其他要求控制",
+                "法规识别、适用性确认、法规清单、合规评价项"
+        ],
+        [
+                "L3-31-A03",
+                "管理者代表审批适用法律法规清单并批准发布",
+                "管理者代表",
+                "质量安全部提交经内审员识别评价后的FM2608-15清单",
+                "内审员已完成适用性识别和评价",
+                "单人审批",
+                "",
+                "GLC260810-B §5.3（管理者代表批准职责）§6.2.2.3（批准后发布实施）",
+                "原文明确-正文",
+                "EHS体系与合规治理",
+                "法规和其他要求控制",
+                "法规识别、适用性确认、法规清单、合规评价项"
+        ],
+        [
+                "L3-31-A04",
+                "各部门识别本部门适用的法律法规清单",
+                "各部门体系联络员",
+                "批准版FM2608-15下发至各部门",
+                "FM2608-15清单已由管理者代表批准下发",
+                "无审批",
+                "",
+                "GLC260810-B §5.2（各单位识别本部门清单）§6.2.2.6（各单位按FM2608-15...",
+                "原文明确-正文",
+                "EHS体系与合规治理",
+                "法规和其他要求控制",
+                "法规识别、适用性确认、法规清单、合规评价项"
+        ],
+        [
+                "L3-31-A05",
+                "质量安全部体系管理员定期更新法律法规清单并替换旧版",
+                "质量安全部体系管理员",
+                "新法规发布或距上次评价间隔不超过12个月",
+                "新版本法律法规已收集",
+                "无审批",
+                "",
+                "GLC260810-B §6.3.1（变更：最新版本为现行版本，旧版即时作废）§6.3.2（更新：每...",
+                "原文明确-正文",
+                "EHS体系与合规治理",
+                "法规和其他要求控制",
+                "法规识别、适用性确认、法规清单、合规评价项"
+        ],
+        [
+                "L3-31-A06",
+                "各单位合规评价人员逐条开展合规性评价并撰写评价报告",
+                "各单位合规评价人员",
+                "年度合规性评价计划启动（每年内审前，一般一年一次）",
+                "适用法律法规清单已更新发布在OA网",
+                "无审批（部门自评）",
+                "",
+                "GLC260816-B §6.2.2（逐项对比、填写评价表）§6.2.4（汇总形成报告上报）§6.1...",
+                "原文明确-正文",
+                "EHS体系与合规治理",
+                "法规和其他要求控制",
+                "法规识别、适用性确认、法规清单、合规评价项"
+        ],
+        [
+                "L3-31-A07",
+                "质量安全部汇总各单位合规评价结果并编制总体评审报告上报管理者代表",
+                "质量安全部体系管理员",
+                "各单位合规性评价报告提交完毕",
+                "各单位已完成合规性评价并上报报告",
+                "管理者代表审批 → 上报最高管理者",
+                "",
+                "GLC260816-B §5.2（质量安全部组织实施评审活动并编制报告）§6.2.5（对各单位的评价...",
+                "原文明确-正文",
+                "EHS体系与合规治理",
+                "法规和其他要求控制",
+                "法规识别、适用性确认、法规清单、合规评价项"
+        ],
+        [
+                "L3-32-A01",
+                "质量安全部安全管理室主任组织编制EHS管理体系文件并报批准发布",
+                "质量安全部安全管理室/双碳推进室主任",
+                "管理体系建立或变更需求",
+                "GLB230201-01《制度体系文件的编写标准》可引用",
+                "多级审批（手册：最高管理者批准；程序文件：管理者代表批准；作业指导书：质量安全部批准）",
+                "OA",
+                "GLC260812-B §5.1（最高管理者批准手册）§5.2（管理者代表审核手册、批准程序文件）§...",
+                "原文明确-正文",
+                "EHS体系与合规治理",
+                "文件记录与信息交流",
+                "受控文件、记录控制、信息交流与协商"
+        ],
+        [
+                "L3-32-A02",
+                "质量安全部技术员分发登记体系文件并维护受控文件清单",
+                "质量安全部技术员",
+                "体系文件批准发布或文件更改换版后",
+                "文件已批准",
+                "无审批",
+                "OA",
+                "GLC260812-B §6.1.1（编制FM2608-21）§6.3.1（技术员分发）§6.3.2...",
+                "原文明确-正文",
+                "EHS体系与合规治理",
+                "文件记录与信息交流",
+                "受控文件、记录控制、信息交流与协商"
+        ],
+        [
+                "L3-32-A03",
+                "使用部门提出体系文件更改并按原审批程序完成修订换版",
+                "使用部门文件持有人",
+                "文件内容与实际不符或需修订",
+                "文件已在使用中",
+                "多级审批（按原审批程序进行）",
+                "OA",
+                "GLC260812-B §6.5.1（更改需按原审批程序，填写FM2302-02）§6.5.2（以更...",
+                "原文明确-正文",
+                "EHS体系与合规治理",
+                "文件记录与信息交流",
+                "受控文件、记录控制、信息交流与协商"
+        ],
+        [
+                "L3-32-A04",
+                "质量安全部技术员审查体系文件有效性并组织回收作废文件",
+                "质量安全部技术员",
+                "定期有效性审查或文件换版后",
+                "体系文件已在使用",
+                "主管公司领导批准（销毁时）",
+                "OA",
+                "GLC260812-B §6.4.2（技术员组织有效性审查并监督检查）§6.6.1（保存期满或作废文...",
+                "原文明确-正文",
+                "EHS体系与合规治理",
+                "文件记录与信息交流",
+                "受控文件、记录控制、信息交流与协商"
+        ],
+        [
+                "L3-32-A05",
+                "各部门编制记录表格、填写体系运行记录并分类保管",
+                "各部门记录填写人",
+                "体系活动发生时（审核、检查、培训、监测等）",
+                "记录表格已在质量安全部备案注册",
+                "部门主管领导审核（如需上报）",
+                "OA",
+                "GLC260813-B §5.1（质量安全部备案注册）§5.2（各职能部门编制表格并规定填写要求）§...",
+                "原文明确-正文",
+                "EHS体系与合规治理",
+                "文件记录与信息交流",
+                "受控文件、记录控制、信息交流与协商"
+        ],
+        [
+                "L3-32-A06",
+                "质量安全部体系管理员汇集处置内外部EHS信息并下发体系运行结果",
+                "质量安全部体系管理员",
+                "体系运行产生信息或有上级/外部文件下达",
+                "信息已产生或接收",
+                "管理者代表批准（对外答复类）",
+                "OA",
+                "GLC260808-B §5.1（质量安全部负责内外信息综合管理汇集处置）§6.2.1（内部信息内容...",
+                "原文明确-正文",
+                "EHS体系与合规治理",
+                "文件记录与信息交流",
+                "受控文件、记录控制、信息交流与协商"
+        ],
+        [
+                "L3-32-A07",
+                "各部门业务负责人与外部相关方进行EHS信息交流与协商",
+                "各部门业务负责人",
+                "与供方/客户/社区/政府部门等相关方需要沟通EHS事宜",
+                "沟通需求已明确",
+                "管理者代表批准（投诉答复）；公司领导阅批（上级文件）",
+                "OA",
+                "GLC260808-B §6.3.1（综合管理部将上级文件呈报公司领导阅批）§6.3.3（需呈交上级...",
+                "原文明确-正文",
+                "EHS体系与合规治理",
+                "文件记录与信息交流",
+                "受控文件、记录控制、信息交流与协商"
+        ],
+        [
+                "L3-33-A01",
+                "质量安全部安全管理室安全员策划年度EHS内部审核方案并编制审核计划",
+                "质量安全部安全管理室安全员",
+                "每年一季度",
+                "上年度内/外部审核结果及数据分析报告可用",
+                "质量安全部部长批准（审核方案）；管理者代表批准（审核计划变更时）",
+                "OA",
+                "GLC260817-B §6.1.1（编制审核方案）§6.1.2（质量安全部部长批准）§6.1.3（...",
+                "原文明确-正文",
+                "EHS体系与合规治理",
+                "目标、审核、评审与改进",
+                "目标指标、内部审核、管理评审、整改改进"
+        ],
+        [
+                "L3-33-A02",
+                "内审员依据检查表实施现场审核并开具不符合项",
+                "内审员（审核组长组织）",
+                "审核计划启动",
+                "审核方案已批准、内审组已组建、审核计划已通知受审核部门",
+                "审核组长内部确认",
+                "OA",
+                "GLC260817-B §6.2（审核准备：编写检查单、明确审核方法）§6.3.2（现场审核：收集验...",
+                "原文明确-正文",
+                "EHS体系与合规治理",
+                "目标、审核、评审与改进",
+                "目标指标、内部审核、管理评审、整改改进"
+        ],
+        [
+                "L3-33-A03",
+                "受审核部门负责人分析不符合项根因并组织实施整改",
+                "受审核部门负责人",
+                "收到《隐患整改通知单》",
+                "不符合项已在末次会议确认并签字",
+                "无审批（整改执行）",
+                "OA",
+                "GLC260817-B §6.4（责任部门在规定时间内完成整改并将通知单交审核小组组长）§5.5（受...",
+                "原文明确-正文",
+                "EHS体系与合规治理",
+                "目标、审核、评审与改进",
+                "目标指标、内部审核、管理评审、整改改进"
+        ],
+        [
+                "L3-33-A04",
+                "审核组长跟踪验证整改措施有效性并对无效整改责成重新分析",
+                "审核组组长",
+                "受审核部门提交整改完成的《隐患整改通知单》",
+                "责任部门已完成整改并提交",
+                "无审批",
+                "OA",
+                "GLC260817-B §6.5.1（审核组长对整改措施实施跟踪验证并将验证情况填入通知单交质量安全...",
+                "原文明确-正文",
+                "EHS体系与合规治理",
+                "目标、审核、评审与改进",
+                "目标指标、内部审核、管理评审、整改改进"
+        ],
+        [
+                "L3-33-A05",
+                "质量安全部体系管理员筹备管理评审并收集汇总各部门运行分析报告",
+                "质量安全部体系管理员",
+                "年度管理评审计划启动（评审前一个月策划、前20个工作日通知）",
+                "管理评审计划已由管理者代表审核、总经理批准",
+                "无审批",
+                "OA",
+                "GLC260818-B §6.1.1（质量安全部在管理评审前一个月策划、编制计划）§6.1.2（经管...",
+                "原文明确-正文",
+                "EHS体系与合规治理",
+                "目标、审核、评审与改进",
+                "目标指标、内部审核、管理评审、整改改进"
+        ],
+        [
+                "L3-33-A06",
+                "最高管理者主持管理评审会议并对EHS体系的适用性充分性有效性做出评审结论",
+                "最高管理者（总经理）",
+                "管理评审会议召开",
+                "管理评审输入材料已准备完毕并提前一周发送参会人员",
+                "多级审批（管理者代表审核后提交总经理批准，并发至各部门）",
+                "OA",
+                "GLC260818-B §5.1（最高管理者主持评审并批准报告）§6.3（管理评审实施：最高管理者主...",
+                "原文明确-正文",
+                "EHS体系与合规治理",
+                "目标、审核、评审与改进",
+                "目标指标、内部审核、管理评审、整改改进"
+        ],
+        [
+                "L3-33-A07",
+                "质量安全部体系管理员跟踪验证管理评审整改措施实施效果",
+                "质量安全部体系管理员",
+                "管理评审报告发布后各责任部门开始实施整改",
+                "管理评审报告已发布；责任部门已制定整改方案",
+                "管理者代表签字确认",
+                "OA",
+                "GLC260818-B §6.5.1（各责任部门制定实施整改方案后交质量安全部）§6.5.2（有关职...",
+                "原文明确-正文",
+                "EHS体系与合规治理",
+                "目标、审核、评审与改进",
+                "目标指标、内部审核、管理评审、整改改进"
+        ],
+        [
+                "L3-33-A08",
+                "各单位安全管理人员开展日常隐患排查与体系持续改进",
+                "各单位安全管理人员",
+                "日常检查/内审/管理评审识别出改进机会",
+                "隐患排查或绩效分析已完成",
+                "单位责任人审批改进方案",
+                "OA",
+                "GLC260618-A §6.1.1（各单位按GLC260504和GLC260703要求和频次开展事...",
+                "原文明确-正文",
+                "EHS体系与合规治理",
+                "目标、审核、评审与改进",
+                "目标指标、内部审核、管理评审、整改改进"
+        ]
+];
+
+      // ===== 全局配置 =====
+      var systemBasis = {
+        "OA": "适用于申请审批、通知传阅、绩效任务、会议纪要、沟通记录、合同审签、制度文件流转和闭环留痕。",
+        "MES": "适用于生产订单、外协外包执行状态、现场检验/接收、工时与工序执行数据、设备验收投用及可采集的现场过程数据。",
+        "PLM": "适用于图纸、数模、工艺文件、技术方案、技改项目资料、工程更改和工作转移技术资料协同。",
+        "ERP": "适用于客户、供应商、采购、销售订单、合同、价格、库存、固定资产、结算、应收应付和财务落账。"
+      };
+
+      var domainColors = {
+        "安全生产治理": "#2563eb",
+        "职业健康与职业卫生治理": "#0891b2",
+        "消防安全治理": "#16a34a",
+        "环境保护治理": "#d97706",
+        "节能双碳与能源管理": "#7c3aed",
+        "设备设施运维保障": "#dc2626",
+        "EHS体系与合规治理": "#0f766e"
+};
+
+      var compactDomainLabels = {
+        "安全生产治理": "安全生产治理",
+        "职业健康与职业卫生治理": "职业健康\n职业卫生治理",
+        "消防安全治理": "消防安全治理",
+        "环境保护治理": "环境保护治理",
+        "节能双碳与能源管理": "节能双碳\n能源管理",
+        "设备设施运维保障": "设备设施运维保障",
+        "EHS体系与合规治理": "EHS体系\n合规治理"
+};
+
+      var systemColors = {
+        OA: "#38bdf8",
+        MES: "#8b5cf6",
+        PLM: "#22c55e",
+        ERP: "#fb923c"
+      };
+
+      var active = "全域总览";
+      var chartLayout = "horizontal";
+      var domains = Array.from(new Set(l3Rows.map(function(r) { return r.domain; })));
+      var chart;
+
+      // ===== 工具函数 =====
+      function esc(value) {
+        var entities = {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"};
+        return String(value == null ? "" : value).replace(/[&<>"']/g, function(c) { return entities[c]; });
+      }
+
+      function systemsFor(sysStr) {
+        return String(sysStr || "").split("、").map(function(s) { return s.trim(); }).filter(Boolean);
+      }
+
+      function colorFor(name) {
+        if (name === "运维安环部") return "#3b82f6";
+        if (domainColors[name]) return domainColors[name];
+        if (systemColors[name]) return systemColors[name];
+        return "#64748b";
+      }
+
+      function apprClass(type) {
+        if (type === "无审批") return "none";
+        if (type === "单人审批") return "single";
+        if (type === "多级审批") return "multi";
+        if (type === "会签") return "cosign";
+        return "none";
+      }
+
+      function shortText(value, max) {
+        var text = String(value || "");
+        return text.length > max ? text.slice(0, max - 1) + "…" : text;
+      }
+
+      function isCollectiveRole(role) {
+        var text = String(role || "").trim();
+        if (!text) return true;
+        if (/(专员|主管|经理|负责人|管理员|经办人|工程师|审核人|审批人|填报人)$/.test(text)) return false;
+        return /(部|部门|办公室|中心|小组|委员会|团队)$/.test(text);
+      }
+
+      function roleWarning(a1) {
+        return isCollectiveRole(a1[2]) ? "请部门确认具体岗位/责任人：当前为部门/组织" : "";
+      }
+
+      function isFinalStep(a1) {
+        var proc = a1[11];
+        var rows = a1Rows.filter(function(r) { return r[11] === proc; });
+        return rows.length > 0 && rows[rows.length - 1][0] === a1[0];
+      }
+
+      function isTrackingTask(a1) {
+        return /(跟踪|进度|监测|监督|闭环|催办|提醒|进展|看板|预警)/.test([a1[1], a1[3], a1[11]].join(""));
+      }
+
+      function requiresAcceptance(a1) {
+        return a1[5] === "无审批" && isFinalStep(a1);
+      }
+
+      function acceptanceWarning(a1) {
+        return requiresAcceptance(a1) ? "请部门确认是否需要验收/完成标准" : "";
+      }
+
+      function evidenceWarning(a1) {
+        return a1[8] === "原文明确-正文" ? "请部门确认依据类型：正文/流程图/表单，并核对角色、触发、前置条件" : "";
+      }
+
+      function evidenceClass(type) {
+        return /^原文明确-(正文|流程图|表单)$/.test(String(type || "")) ? "explicit" : "inferred";
+      }
+
+      function auditWarnings(a1) {
+        return [roleWarning(a1), acceptanceWarning(a1), evidenceWarning(a1), trackingNote(a1)].filter(Boolean);
+      }
+
+      function warningHtml(a1) {
+        return auditWarnings(a1).map(function(w) {
+          var strong = w.indexOf("具体岗位") >= 0 || w.indexOf("验收") >= 0;
+          return '<span class="' + (strong ? "warn-tag" : "soft-warn-tag") + '">' + esc(w) + '</span>';
+        }).join("");
+      }
+
+      function acceptanceText(a1) {
+        if (requiresAcceptance(a1)) return "待补：关口验收/完成标准需核验";
+        if (a1[5] === "无审批" && isTrackingTask(a1)) return "不适用：跟踪类过程，由系统待办/进度展示承载";
+        if (a1[5] === "无审批") return "不适用：过程环节";
+        return "审批流控制";
+      }
+
+      function trackingNote(a1) {
+        return isTrackingTask(a1) ? "跟踪类任务：建议由系统待办提醒、到期预警或进度展示承载" : "";
+      }
+
+      function a1DisplayLabel(a1) {
+        var role = roleWarning(a1) ? "待确认：" + a1[2] : a1[2];
+        return shortText(a1[1], 18) + "\n" + shortText(role, 18);
+      }
+
+      function processFill(proc) {
+        var hash = 0;
+        String(proc || "").split("").forEach(function(ch) {
+          hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+        });
+        var hue = hash % 360;
+        return "hsl(" + hue + " 75% 97%)";
+      }
+
+      // ===== 数据过滤 =====
+      function filteredA1() {
+        if (active === "全域总览") return [];
+        return a1Rows.filter(function(r) { return r[9] === active; });
+      }
+
+      function filteredL3() {
+        if (active === "全域总览") return l3Rows;
+        return l3Rows.filter(function(r) { return r.domain === active; });
+      }
+
+      // ===== 构建桑基图 =====
+      function buildGraph() {
+        var nodeMap = new Map();
+        var links = [];
+
+        function addNode(name, options) {
+          if (!nodeMap.has(name)) {
+            var node = { name: name, itemStyle: { color: colorFor(name) } };
+            if (options) {
+              Object.keys(options).forEach(function(k) {
+                if (k === "itemStyle") {
+                  node.itemStyle = Object.assign({}, node.itemStyle, options.itemStyle);
+                } else {
+                  node[k] = options[k];
+                }
+              });
+            }
+            nodeMap.set(name, node);
+          }
+        }
+
+        function addLink(source, target, value, meta) {
+          links.push({ source: source, target: target, value: value || 1, lineStyle: { color: colorFor(source), opacity: 0.42 }, meta: meta });
+        }
+
+        if (active === "全域总览") {
+          addNode("运维安环部");
+          filteredL3().forEach(function(row) {
+            addNode(row.domain);
+            addNode(row.capability);
+            addLink("运维安环部", row.domain, 1, { type: "l3", row: row });
+            addLink(row.domain, row.capability, 1, { type: "l3", row: row });
+            systemsFor(row.system).forEach(function(sys) {
+              addNode(sys);
+              addLink(row.capability, sys, 1, { type: "l3", row: row });
+            });
+          });
+        } else {
+          // 域详情: 业务能力（L2） → 业务流程（L3） → 业务行为（A1） → 应用系统（S1）
+          var fa = filteredA1();
+          var seenProc = {};
+          var seenCap = {};
+
+          fa.forEach(function(a1) {
+            var cap = a1[10], proc = a1[11], a1Id = a1[0], sys = a1[6];
+
+            addNode(cap);
+            addNode(proc);
+            addNode(a1Id, {
+              itemStyle: { color: roleWarning(a1) ? "#dc2626" : "#64748b" },
+              label: { formatter: a1DisplayLabel(a1) }
+            });
+
+            if (!seenCap[cap]) { seenCap[cap] = true; }
+            if (!seenProc[proc]) {
+              seenProc[proc] = true;
+              addLink(cap, proc, 1, { type: "l3", cap: cap, proc: proc });
+            }
+            addLink(proc, a1Id, 1, { type: "a1", a1: a1 });
+
+            systemsFor(sys).forEach(function(s) {
+              addNode(s);
+              addLink(a1Id, s, 1, { type: "a1sys", a1: a1 });
+            });
+          });
+        }
+
+        // 合并重复连线
+        var dedup = new Map();
+        links.forEach(function(l) {
+          var key = l.source + ">>>" + l.target;
+          if (dedup.has(key)) {
+            dedup.get(key).value += l.value;
+          } else {
+            dedup.set(key, l);
+          }
+        });
+
+        return { nodes: Array.from(nodeMap.values()), links: Array.from(dedup.values()) };
+      }
+
+      // ===== 渲染图表 =====
+      function renderChart() {
+        var graph = buildGraph();
+        var isVertical = chartLayout === "vertical";
+        var isGlobal = active === "全域总览";
+
+        document.getElementById("chartTitle").textContent = isGlobal ? "运维安环部全域总览" : active;
+        document.getElementById("chartSub").textContent = isGlobal
+          ? (isVertical ? "部门（D1）↓ 能力域（L1）↓ 业务能力（L2）↓ 应用系统（S1）" : "部门（D1）→ 能力域（L1）→ 业务能力（L2）→ 应用系统（S1）")
+          : (isVertical ? "业务能力（L2）↓ 业务流程（L3）↓ 业务行为（A1）↓ 应用系统（S1）" : "业务能力（L2）→ 业务流程（L3）→ 业务行为（A1）→ 应用系统（S1）");
+
+        if (!chart) { chart = echarts.init(document.getElementById("chart")); }
+
+        chart.setOption({
+          backgroundColor: "#0f172a",
+          animation: false,
+          tooltip: {
+            trigger: "item",
+            triggerOn: "mousemove",
+            confine: true,
+            backgroundColor: "rgba(15,23,42,.96)",
+            borderColor: "#334155",
+            textStyle: { color: "#e5e7eb", fontSize: 12 },
+            formatter: function(params) {
+              if (params.dataType === "edge") {
+                var m = params.data.meta || {};
+                if (m.type === "a1" || m.type === "a1sys") {
+                  var a = m.a1 || [];
+                  return [
+                    "<b>" + esc(a[0]) + " " + esc(a[1]) + "</b>",
+                    "执行角色：" + esc(a[2] || ""),
+                    "触发情景：" + esc(a[3] || ""),
+                    "前置条件：" + esc(a[4] || ""),
+                    "审批类型：" + esc(a[5] || ""),
+                    "验收标准：" + esc(acceptanceText(a)),
+                    "制度依据：" + esc(a[7] || ""),
+                    "证据类型：" + esc(a[8] || ""),
+                    "应用系统：" + esc(a[6] || ""),
+                    auditWarnings(a).length ? "部门确认：" + esc(auditWarnings(a).join("；")) : ""
+                  ].filter(Boolean).join("<br>");
+                }
+                if (m.type === "l3" && m.row) {
+                  return [
+                    "<b>" + esc(params.data.source) + " → " + esc(params.data.target) + "</b>",
+                    "流程：" + esc(m.row.process || ""),
+                    "制度依据：" + esc(m.row.evidence || ""),
+                    "系统依据：" + esc(m.row.basis || "")
+                  ].join("<br>");
+                }
+                return "<b>" + esc(params.data.source) + " → " + esc(params.data.target) + "</b>";
+              }
+              // 节点 tooltip
+              if (systemBasis[params.name]) {
+                return "<b>" + esc(params.name) + "</b><br>" + esc(systemBasis[params.name]);
+              }
+              // 业务行为（A1）节点
+              var a1Match = a1Rows.find(function(r) { return r[0] === params.name; });
+              if (a1Match) {
+                return [
+                  "<b>" + esc(a1Match[0]) + " " + esc(a1Match[1]) + "</b>",
+                  "角色：" + esc(a1Match[2]),
+                  "触发：" + esc(a1Match[3]),
+                  "前置：" + esc(a1Match[4]),
+                  "审批：" + esc(a1Match[5]),
+                  "验收标准：" + esc(acceptanceText(a1Match)),
+                  auditWarnings(a1Match).length ? "部门确认：" + esc(auditWarnings(a1Match).join("；")) : ""
+                ].filter(Boolean).join("<br>");
+              }
+              return "<b>" + esc(params.name) + "</b>";
+            }
+          },
+          series: [{
+            type: "sankey",
+            orient: chartLayout,
+            data: graph.nodes,
+            links: graph.links,
+            left: isVertical ? 54 : 20,
+            right: isVertical ? 54 : 140,
+            top: isVertical ? 34 : 16,
+            bottom: isVertical ? 76 : 24,
+            nodeWidth: 18,
+            nodeGap: isVertical ? 10 : 12,
+            draggable: true,
+            emphasis: { focus: "adjacency" },
+            label: {
+              color: "#e5e7eb",
+              fontSize: isGlobal ? (isVertical ? 11 : 12) : (isVertical ? 10 : 11),
+              overflow: "break",
+              position: isVertical ? "inside" : "right",
+              width: isGlobal ? (isVertical ? 62 : 160) : (isVertical ? 100 : 220),
+              lineHeight: isVertical ? 13 : 14,
+              formatter: function(params) {
+                var name = params.name;
+                // 全域总览竖直模式下 L2 能力用编号
+                if (isGlobal && isVertical && l3Rows.some(function(r) { return r.capability === name; })) {
+                  var idx = l3Rows.findIndex(function(r) { return r.capability === name; });
+                  return String(idx >= 0 ? idx + 1 : "").padStart(2, "0");
+                }
+                // 域详情业务行为（A1）节点显示业务行为 + 执行角色，编号保留在 tooltip 和明细表
+                if (!isGlobal && a1Rows.some(function(r) { return r[0] === name; })) {
+                  var a1 = a1Rows.find(function(r) { return r[0] === name; });
+                  return a1DisplayLabel(a1);
+                }
+                // 竖直紧凑标签
+                if (isVertical && compactDomainLabels[name]) return compactDomainLabels[name];
+                return name;
+              }
+            },
+            lineStyle: { curveness: 0.5, opacity: 0.38 }
+          }]
+        }, true);
+      }
+
+      // ===== 控件 =====
+      function renderControls() {
+        var bar = document.getElementById("modebar");
+        bar.innerHTML = '<span class="mode-label">视图</span>';
+        ["全域总览"].concat(domains).forEach(function(name) {
+          var btn = document.createElement("button");
+          btn.className = "mode-btn" + (name === active ? " active" : "");
+          btn.textContent = name;
+          btn.onclick = function() {
+            active = name;
+            Array.from(bar.querySelectorAll(".mode-btn")).forEach(function(b) { b.classList.toggle("active", b.textContent === name); });
+            renderAll();
+          };
+          bar.appendChild(btn);
+        });
+      }
+
+      function renderLayoutControls() {
+        var bar = document.getElementById("layoutbar");
+        bar.innerHTML = '<span class="mode-label">布局</span>';
+        [{v:"horizontal",l:"从左到右"},{v:"vertical",l:"自上而下"}].forEach(function(lo) {
+          var btn = document.createElement("button");
+          btn.className = "mode-btn" + (lo.v === chartLayout ? " active" : "");
+          btn.textContent = lo.l;
+          btn.onclick = function() {
+            chartLayout = lo.v;
+            Array.from(bar.querySelectorAll(".mode-btn")).forEach(function(b) { b.classList.toggle("active", b.textContent === lo.l); });
+            renderChart();
+          };
+          bar.appendChild(btn);
+        });
+      }
+
+      // ===== 统计 =====
+      function renderBars() {
+        // 域规模（A1数）
+        var domainA1 = {};
+        a1Rows.forEach(function(r) { domainA1[r[9]] = (domainA1[r[9]] || 0) + 1; });
+        var maxD = Math.max.apply(null, Object.values(domainA1));
+        document.getElementById("domainBars").innerHTML = Object.keys(domainA1).map(function(d) {
+          return '<div class="bar-line"><span>' + esc(d) + '</span><div class="bar-track"><div class="bar-fill" style="width:' + Math.round(domainA1[d]/maxD*100) + '%;background:' + colorFor(d) + '"></div></div><strong>' + domainA1[d] + '</strong></div>';
+        }).join("");
+
+        // 系统承载（A1参与次数）
+        var sysCnt = {OA:0,MES:0,PLM:0,ERP:0};
+        a1Rows.forEach(function(r) {
+          systemsFor(r[6]).forEach(function(s) { if (sysCnt[s] != null) sysCnt[s] += 1; });
+        });
+        var maxS = Math.max.apply(null, Object.values(sysCnt));
+        document.getElementById("systemBars").innerHTML = Object.keys(sysCnt).map(function(s) {
+          return '<div class="bar-line"><span>' + esc(s) + '</span><div class="bar-track"><div class="bar-fill" style="width:' + Math.round(sysCnt[s]/maxS*100) + '%;background:' + systemColors[s] + '"></div></div><strong>' + sysCnt[s] + '</strong></div>';
+        }).join("");
+      }
+
+      function renderLegend() {
+        var dLeg = domains.map(function(d) { return '<span class="legend"><i style="background:' + domainColors[d] + '"></i>' + esc(d) + '</span>'; }).join("");
+        var sLeg = Object.keys(systemColors).map(function(s) { return '<span class="legend"><i style="background:' + systemColors[s] + '"></i>' + esc(s) + '</span>'; }).join("");
+        document.getElementById("legendRow").innerHTML = dLeg + sLeg;
+      }
+
+      // ===== 表格 =====
+      function renderTable() {
+        var isGlobal = active === "全域总览";
+        var head = document.getElementById("tableHead");
+        var body = document.getElementById("mappingBody");
+        var tbl = document.getElementById("mappingTable");
+
+        if (isGlobal) {
+          tbl.className = "table-l3";
+          head.innerHTML = '<tr><th class="col-seq">序号</th><th class="col-dept">部门（D1）</th><th class="col-domain">能力域（L1）</th><th class="col-cap">业务能力（L2）</th><th class="col-proc">业务流程（L3）</th><th class="col-evidence">制度依据</th><th class="col-system">应用系统（S1）</th><th class="col-evidence">系统设计依据</th></tr>';
+          body.innerHTML = filteredL3().map(function(row, i) {
+            return '<tr><td class="col-seq">' + (i+1) + '</td><td class="col-dept">运维安环部</td><td class="col-domain"><span class="domain-pill" style="background:' + colorFor(row.domain) + '">' + esc(row.domain) + '</span></td><td class="col-cap">' + esc(row.capability) + '</td><td class="col-proc">' + esc(row.process) + '</td><td class="col-evidence">' + esc(row.evidence) + '</td><td class="col-system">' + esc(row.system) + '</td><td class="col-evidence">' + esc(row.basis) + '</td></tr>';
+          }).join("");
+        } else {
+          tbl.className = "table-a1";
+          head.innerHTML = '<tr><th class="col-seq">序号</th><th class="col-a1id">业务行为（A1）编号</th><th class="col-cap">业务能力（L2）</th><th class="col-proc">业务流程（L3）</th><th class="col-a1name">业务行为（A1）</th><th class="col-role">执行角色</th><th class="col-trigger">触发情景</th><th class="col-precond">前置条件</th><th class="col-appr">审批类型</th><th class="col-accept">验收标准</th><th class="col-evidence">制度依据</th><th class="col-evidtype">证据类型</th><th class="col-system">应用系统（S1）</th><th class="col-alert">请部门确认</th><th class="col-feedback">部门确认意见</th><th class="col-adjust">是否调整</th><th class="col-suggestion">调整建议</th></tr>';
+          body.innerHTML = filteredA1().map(function(a1, i) {
+            var fill = processFill(a1[11]);
+            var roleCell = esc(a1[2]) + (roleWarning(a1) ? '<br><span class="warn-tag">请确认岗位</span>' : '');
+            var acceptanceCell = requiresAcceptance(a1)
+              ? '<span class="warn-tag">请确认关口标准</span><br>是否需要验收/完成标准'
+              : '<span class="soft-warn-tag">' + esc(acceptanceText(a1)) + '</span>';
+            return '<tr style="background:' + fill + '">' +
+              '<td class="col-seq">' + (i+1) + '</td>' +
+              '<td class="col-a1id">' + esc(a1[0]) + '</td>' +
+              '<td class="col-cap">' + esc(a1[10]) + '</td>' +
+              '<td class="col-proc">' + esc(a1[11]) + '</td>' +
+              '<td class="col-a1name">' + esc(a1[1]) + '</td>' +
+              '<td class="col-role">' + roleCell + '</td>' +
+              '<td class="col-trigger">' + esc(a1[3]) + '</td>' +
+              '<td class="col-precond">' + esc(a1[4]) + '</td>' +
+              '<td class="col-appr"><span class="appr-tag ' + apprClass(a1[5]) + '">' + esc(a1[5]) + '</span></td>' +
+              '<td class="col-accept">' + acceptanceCell + '</td>' +
+              '<td class="col-evidence">' + esc(a1[7]) + '</td>' +
+              '<td class="col-evidtype"><span class="evidence-tag ' + evidenceClass(a1[8]) + '">' + esc(a1[8]) + '</span></td>' +
+              '<td class="col-system">' + esc(a1[6]) + '</td>' +
+              '<td class="col-alert">' + (warningHtml(a1) || '<span class="soft-warn-tag">请部门确认无调整</span>') + '</td>' +
+              '<td class="col-feedback feedback-cell">待部门填写</td>' +
+              '<td class="col-adjust feedback-cell">待确认</td>' +
+              '<td class="col-suggestion feedback-cell"></td>' +
+              '</tr>';
+          }).join("");
+        }
+      }
+
+      function renderAll() {
+        renderChart();
+        renderBars();
+        renderLegend();
+        renderTable();
+      }
+
+      window.addEventListener("resize", function() { if (chart) chart.resize(); });
+      window.addEventListener("load", function() {
+        renderControls();
+        renderLayoutControls();
+        renderAll();
+      });
+    
+// ===== 反馈状态管理 =====
+var feedbackState = {};
+var currentA1Id = null;
+var CURRENT_DOMAIN = null;
+var TOTAL = 0;
+
+// ===== 构建 A1 索引（快速查找） =====
+var a1Index = {};
+a1Rows.forEach(function(r) {
+  a1Index[r[0]] = { name: r[1], role: r[2], trigger: r[3], precondition: r[4],
+    approval: r[5], system: r[6], evidence: r[7], evidenceType: r[8],
+    domain: r[9], capability: r[10], process: r[11], alert: r[12] || '' };
+});
+
+// ===== 反馈节点颜色 =====
+var feedbackNodeColors = {};
+
+function syncNodeColors() {
+  Object.keys(feedbackState).forEach(function(a1Id) {
+    var fb = feedbackState[a1Id];
+    var nodeName = 'a1_' + a1Id;
+    if (fb.row_confirmed === 'accurate') feedbackNodeColors[nodeName] = '#16a34a';
+    else if (fb.row_confirmed === 'minor_issue') feedbackNodeColors[nodeName] = '#f59e0b';
+    else if (fb.row_confirmed === 'inaccurate') feedbackNodeColors[nodeName] = '#dc2626';
+  });
+}
+
+// ===== 反馈卡片 =====
+function openFeedbackCard(a1Id) {
+  var info = a1Index[a1Id];
+  if (!info) return;
+
+  currentA1Id = a1Id;
+  var fb = feedbackState[a1Id] || {};
+
+  document.getElementById('feedbackTitle').innerText = a1Id + ' 反馈';
+  var body = document.getElementById('feedbackBody');
+
+  // A1 信息摘要
+  var html = '<div class="a1-context"><b>' + info.name + '</b><br>';
+  html += '执行角色: ' + info.role + ' | 审批: ' + info.approval + ' | 系统: ' + info.system;
+  if (info.alert) html += '<br><span style="color:#92400e">核验提醒: ' + info.alert + '</span>';
+  html += '</div>';
+
+  // Q1: 整体确认
+  html += qBlock(1, '本行业务行为描述是否准确反映了实际业务？', '',
+    [['accurate','准确，无需修改'],['minor_issue','基本准确，有小问题'],['inaccurate','不准确，需要重写']],
+    fb.row_confirmed);
+
+  // Q2: 执行角色
+  html += qBlock(2, '执行角色描述是否正确？', '当前描述: ' + info.role,
+    [['correct','正确'],['wrong','不对'],['unsure','不清楚']],
+    fb.role_confirmed);
+
+  // Q3: 审批类型
+  html += qBlock(3, '审批类型是否正确？', '当前描述: ' + info.approval,
+    [['correct','正确'],['wrong','不对'],['unsure','不清楚']],
+    fb.approval_confirmed);
+
+  // Q4: 输入输出关系
+  html += qBlock(4, '跨部门输入/输出关系是否正确？', '',
+    [['correct','正确'],['wrong','不对'],['unsure','不清楚']],
+    fb.io_dept_confirmed);
+
+  // Q5: 核验提醒回应（仅当有提醒时）
+  if (info.alert) {
+    html += qBlock(5, '对于以下核验提醒，你的反馈是？', '提醒: ' + info.alert,
+      [['agree','同意，需要细化'],['disagree','不同意，当前描述足够'],['not_applicable','不适用']],
+      fb.verification_response);
+  }
+
+  // 备注（条件显示）
+  var showNotes = fb.row_confirmed === 'minor_issue' || fb.row_confirmed === 'inaccurate'
+    || fb.role_confirmed === 'wrong' || fb.approval_confirmed === 'wrong'
+    || fb.io_dept_confirmed === 'wrong';
+  html += '<div class="q-block" id="notesBlock" style="display:' + (showNotes?'block':'none') + '">';
+  html += '<div class="q-label">补充说明（选填）</div>';
+  html += '<textarea class="note-area" id="feedbackNotes" placeholder="如有需要，请在此补充说明...">' + (fb.notes||'') + '</textarea>';
+  html += '</div>';
+
+  body.innerHTML = html;
+
+  // 绑定选项点击
+  body.querySelectorAll('.q-opt').forEach(function(opt) {
+    opt.addEventListener('click', function() {
+      var parent = opt.parentElement;
+      parent.querySelectorAll('.q-opt').forEach(function(o) { o.classList.remove('selected'); });
+      opt.classList.add('selected');
+      updateNotesVisibility();
+    });
+  });
+
+  document.getElementById('feedbackPanel').classList.add('open');
+  document.getElementById('feedbackBackdrop').classList.add('show');
+}
+
+function qBlock(num, question, hint, options, selectedVal) {
+  var h = '<div class="q-block">';
+  h += '<div class="q-label">' + num + '. ' + question + '</div>';
+  if (hint) h += '<div class="q-hint">' + hint + '</div>';
+  h += '<div class="q-options">';
+  options.forEach(function(o) {
+    var sel = o[0] === selectedVal ? ' selected' : '';
+    h += '<div class="q-opt' + sel + '" data-val="' + o[0] + '" data-q="' + num + '">';
+    h += '<span class="radio"></span>' + o[1];
+    h += '</div>';
+  });
+  h += '</div></div>';
+  return h;
+}
+
+function updateNotesVisibility() {
+  var show = false;
+  document.querySelectorAll('.q-opt.selected').forEach(function(o) {
+    var v = o.dataset.val;
+    if (v === 'minor_issue' || v === 'inaccurate' || v === 'wrong') show = true;
+  });
+  var nb = document.getElementById('notesBlock');
+  if (nb) nb.style.display = show ? 'block' : 'none';
+}
+
+function collectFeedback() {
+  var fb = {};
+  document.querySelectorAll('.q-opt.selected').forEach(function(o) {
+    var q = o.dataset.q, v = o.dataset.val;
+    if (q === '1') fb.row_confirmed = v;
+    else if (q === '2') fb.role_confirmed = v;
+    else if (q === '3') fb.approval_confirmed = v;
+    else if (q === '4') fb.io_dept_confirmed = v;
+    else if (q === '5') fb.verification_response = v;
+  });
+  var ta = document.getElementById('feedbackNotes');
+  fb.notes = ta ? ta.value.trim() : '';
+  return fb;
+}
+
+function closeFeedbackCard() {
+  document.getElementById('feedbackPanel').classList.remove('open');
+  document.getElementById('feedbackBackdrop').classList.remove('show');
+  currentA1Id = null;
+}
+
+// ===== 提交 =====
+document.getElementById('feedbackSubmit').addEventListener('click', function() {
+  if (!currentA1Id) return;
+  feedbackState[currentA1Id] = collectFeedback();
+  syncNodeColors();
+  updateProgress();
+  closeFeedbackCard();
+  render(CURRENT_DOMAIN);
+});
+
+document.getElementById('feedbackClose').addEventListener('click', closeFeedbackCard);
+document.getElementById('feedbackBackdrop').addEventListener('click', closeFeedbackCard);
+
+// ===== 进度条 =====
+function updateProgress() {
+  var done = Object.keys(feedbackState).length;
+  var pct = Math.round(done / TOTAL * 100);
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressText').innerText = done + ' / ' + TOTAL;
+}
+
+// ===== 导出 JSON =====
+document.getElementById('exportJsonBtn').addEventListener('click', function() {
+  var result = {
+    department: '运维安环部',
+    exported_at: new Date().toISOString(),
+    total: TOTAL,
+    completed: Object.keys(feedbackState).length,
+    feedback: []
+  };
+  a1Rows.forEach(function(r) {
+    if (feedbackState[r[0]]) {
+      var fb = feedbackState[r[0]];
+      result.feedback.push({
+        a1_id: r[0],
+        a1_name: r[1],
+        row_confirmed: fb.row_confirmed || '',
+        role_confirmed: fb.role_confirmed || '',
+        approval_confirmed: fb.approval_confirmed || '',
+        io_dept_confirmed: fb.io_dept_confirmed || '',
+        verification_response: fb.verification_response || '',
+        notes: fb.notes || ''
+      });
+    }
+  });
+  var blob = new Blob([JSON.stringify(result, null, 2)], {type: 'application/json'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = '运维安环部-反馈-' + new Date().toISOString().slice(0,10) + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+
+// ===== ECharts 补丁：节点颜色 + 点击事件 =====
+var _origBuildDomainSankey = buildDomainSankey;
+buildDomainSankey = function(domain) {
+  var result = _origBuildDomainSankey(domain);
+  result.nodes.forEach(function(n) {
+    if (n.name.startsWith('a1_') && feedbackNodeColors[n.name]) {
+      n.itemStyle = { color: feedbackNodeColors[n.name], borderColor: feedbackNodeColors[n.name] };
+    }
+  });
+  return result;
+};
+
+var _origSetOption = myChart.setOption.bind(myChart);
+myChart.setOption = function(option, notMerge) {
+  _origSetOption(option, notMerge);
+  myChart.off('click');
+  myChart.on('click', function(params) {
+    if (params.data && params.data.name && params.data.name.startsWith('a1_')) {
+      var a1Id = params.data.name.substring(3);
+      openFeedbackCard(a1Id);
+    }
+  });
+};
+
+// ===== Monkey-patch render to track currentDomain =====
+var _origRender = render;
+render = function(domain) {
+  CURRENT_DOMAIN = domain;
+  _origRender(domain);
+};
+
+
+// ===== 反馈状态管理 =====
+var feedbackState = {};
+var currentA1Id = null;
+var CURRENT_DOMAIN = null;
+var TOTAL = 0;
+
+// ===== 构建 A1 索引（快速查找） =====
+var a1Index = {};
+a1Rows.forEach(function(r) {
+  a1Index[r[0]] = { name: r[1], role: r[2], trigger: r[3], precondition: r[4],
+    approval: r[5], system: r[6], evidence: r[7], evidenceType: r[8],
+    domain: r[9], capability: r[10], process: r[11], alert: r[12] || '' };
+});
+
+// ===== 反馈节点颜色 =====
+var feedbackNodeColors = {};
+
+function syncNodeColors() {
+  Object.keys(feedbackState).forEach(function(a1Id) {
+    var fb = feedbackState[a1Id];
+    var nodeName = 'a1_' + a1Id;
+    if (fb.row_confirmed === 'accurate') feedbackNodeColors[nodeName] = '#16a34a';
+    else if (fb.row_confirmed === 'minor_issue') feedbackNodeColors[nodeName] = '#f59e0b';
+    else if (fb.row_confirmed === 'inaccurate') feedbackNodeColors[nodeName] = '#dc2626';
+  });
+}
+
+// ===== 反馈卡片 =====
+function openFeedbackCard(a1Id) {
+  var info = a1Index[a1Id];
+  if (!info) return;
+
+  currentA1Id = a1Id;
+  var fb = feedbackState[a1Id] || {};
+
+  document.getElementById('feedbackTitle').innerText = a1Id + ' 反馈';
+  var body = document.getElementById('feedbackBody');
+
+  // A1 信息摘要
+  var html = '<div class="a1-context"><b>' + info.name + '</b><br>';
+  html += '执行角色: ' + info.role + ' | 审批: ' + info.approval + ' | 系统: ' + info.system;
+  if (info.alert) html += '<br><span style="color:#92400e">核验提醒: ' + info.alert + '</span>';
+  html += '</div>';
+
+  // Q1: 整体确认
+  html += qBlock(1, '本行业务行为描述是否准确反映了实际业务？', '',
+    [['accurate','准确，无需修改'],['minor_issue','基本准确，有小问题'],['inaccurate','不准确，需要重写']],
+    fb.row_confirmed);
+
+  // Q2: 执行角色
+  html += qBlock(2, '执行角色描述是否正确？', '当前描述: ' + info.role,
+    [['correct','正确'],['wrong','不对'],['unsure','不清楚']],
+    fb.role_confirmed);
+
+  // Q3: 审批类型
+  html += qBlock(3, '审批类型是否正确？', '当前描述: ' + info.approval,
+    [['correct','正确'],['wrong','不对'],['unsure','不清楚']],
+    fb.approval_confirmed);
+
+  // Q4: 输入输出关系
+  html += qBlock(4, '跨部门输入/输出关系是否正确？', '',
+    [['correct','正确'],['wrong','不对'],['unsure','不清楚']],
+    fb.io_dept_confirmed);
+
+  // Q5: 核验提醒回应（仅当有提醒时）
+  if (info.alert) {
+    html += qBlock(5, '对于以下核验提醒，你的反馈是？', '提醒: ' + info.alert,
+      [['agree','同意，需要细化'],['disagree','不同意，当前描述足够'],['not_applicable','不适用']],
+      fb.verification_response);
+  }
+
+  // 备注（条件显示）
+  var showNotes = fb.row_confirmed === 'minor_issue' || fb.row_confirmed === 'inaccurate'
+    || fb.role_confirmed === 'wrong' || fb.approval_confirmed === 'wrong'
+    || fb.io_dept_confirmed === 'wrong';
+  html += '<div class="q-block" id="notesBlock" style="display:' + (showNotes?'block':'none') + '">';
+  html += '<div class="q-label">补充说明（选填）</div>';
+  html += '<textarea class="note-area" id="feedbackNotes" placeholder="如有需要，请在此补充说明...">' + (fb.notes||'') + '</textarea>';
+  html += '</div>';
+
+  body.innerHTML = html;
+
+  // 绑定选项点击
+  body.querySelectorAll('.q-opt').forEach(function(opt) {
+    opt.addEventListener('click', function() {
+      var parent = opt.parentElement;
+      parent.querySelectorAll('.q-opt').forEach(function(o) { o.classList.remove('selected'); });
+      opt.classList.add('selected');
+      updateNotesVisibility();
+    });
+  });
+
+  document.getElementById('feedbackPanel').classList.add('open');
+  document.getElementById('feedbackBackdrop').classList.add('show');
+}
+
+function qBlock(num, question, hint, options, selectedVal) {
+  var h = '<div class="q-block">';
+  h += '<div class="q-label">' + num + '. ' + question + '</div>';
+  if (hint) h += '<div class="q-hint">' + hint + '</div>';
+  h += '<div class="q-options">';
+  options.forEach(function(o) {
+    var sel = o[0] === selectedVal ? ' selected' : '';
+    h += '<div class="q-opt' + sel + '" data-val="' + o[0] + '" data-q="' + num + '">';
+    h += '<span class="radio"></span>' + o[1];
+    h += '</div>';
+  });
+  h += '</div></div>';
+  return h;
+}
+
+function updateNotesVisibility() {
+  var show = false;
+  document.querySelectorAll('.q-opt.selected').forEach(function(o) {
+    var v = o.dataset.val;
+    if (v === 'minor_issue' || v === 'inaccurate' || v === 'wrong') show = true;
+  });
+  var nb = document.getElementById('notesBlock');
+  if (nb) nb.style.display = show ? 'block' : 'none';
+}
+
+function collectFeedback() {
+  var fb = {};
+  document.querySelectorAll('.q-opt.selected').forEach(function(o) {
+    var q = o.dataset.q, v = o.dataset.val;
+    if (q === '1') fb.row_confirmed = v;
+    else if (q === '2') fb.role_confirmed = v;
+    else if (q === '3') fb.approval_confirmed = v;
+    else if (q === '4') fb.io_dept_confirmed = v;
+    else if (q === '5') fb.verification_response = v;
+  });
+  var ta = document.getElementById('feedbackNotes');
+  fb.notes = ta ? ta.value.trim() : '';
+  return fb;
+}
+
+function closeFeedbackCard() {
+  document.getElementById('feedbackPanel').classList.remove('open');
+  document.getElementById('feedbackBackdrop').classList.remove('show');
+  currentA1Id = null;
+}
+
+// ===== 提交 =====
+document.getElementById('feedbackSubmit').addEventListener('click', function() {
+  if (!currentA1Id) return;
+  feedbackState[currentA1Id] = collectFeedback();
+  syncNodeColors();
+  updateProgress();
+  closeFeedbackCard();
+  render(CURRENT_DOMAIN);
+});
+
+document.getElementById('feedbackClose').addEventListener('click', closeFeedbackCard);
+document.getElementById('feedbackBackdrop').addEventListener('click', closeFeedbackCard);
+
+// ===== 进度条 =====
+function updateProgress() {
+  var done = Object.keys(feedbackState).length;
+  var pct = Math.round(done / TOTAL * 100);
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressText').innerText = done + ' / ' + TOTAL;
+}
+
+// ===== 导出 JSON =====
+document.getElementById('exportJsonBtn').addEventListener('click', function() {
+  var result = {
+    department: '运维安环部',
+    exported_at: new Date().toISOString(),
+    total: TOTAL,
+    completed: Object.keys(feedbackState).length,
+    feedback: []
+  };
+  a1Rows.forEach(function(r) {
+    if (feedbackState[r[0]]) {
+      var fb = feedbackState[r[0]];
+      result.feedback.push({
+        a1_id: r[0],
+        a1_name: r[1],
+        row_confirmed: fb.row_confirmed || '',
+        role_confirmed: fb.role_confirmed || '',
+        approval_confirmed: fb.approval_confirmed || '',
+        io_dept_confirmed: fb.io_dept_confirmed || '',
+        verification_response: fb.verification_response || '',
+        notes: fb.notes || ''
+      });
+    }
+  });
+  var blob = new Blob([JSON.stringify(result, null, 2)], {type: 'application/json'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = '运维安环部-反馈-' + new Date().toISOString().slice(0,10) + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+
+// ===== ECharts 补丁：节点颜色 + 点击事件 =====
+var _origBuildDomainSankey = buildDomainSankey;
+buildDomainSankey = function(domain) {
+  var result = _origBuildDomainSankey(domain);
+  result.nodes.forEach(function(n) {
+    if (n.name.startsWith('a1_') && feedbackNodeColors[n.name]) {
+      n.itemStyle = { color: feedbackNodeColors[n.name], borderColor: feedbackNodeColors[n.name] };
+    }
+  });
+  return result;
+};
+
+var _origSetOption = myChart.setOption.bind(myChart);
+myChart.setOption = function(option, notMerge) {
+  _origSetOption(option, notMerge);
+  myChart.off('click');
+  myChart.on('click', function(params) {
+    if (params.data && params.data.name && params.data.name.startsWith('a1_')) {
+      var a1Id = params.data.name.substring(3);
+      openFeedbackCard(a1Id);
+    }
+  });
+};
+
+// ===== Monkey-patch render to track currentDomain =====
+var _origRender = render;
+render = function(domain) {
+  CURRENT_DOMAIN = domain;
+  _origRender(domain);
+};
+
+
+// ===== 反馈状态管理 =====
+var feedbackState = {};
+var currentA1Id = null;
+var CURRENT_DOMAIN = null;
+var TOTAL = 217;
+
+// ===== 构建 A1 索引（快速查找） =====
+var a1Index = {};
+a1Rows.forEach(function(r) {
+  a1Index[r[0]] = { name: r[1], role: r[2], trigger: r[3], precondition: r[4],
+    approval: r[5], system: r[6], evidence: r[7], evidenceType: r[8],
+    domain: r[9], capability: r[10], process: r[11], alert: r[12] || '' };
+});
+
+// ===== 反馈节点颜色 =====
+var feedbackNodeColors = {};
+
+function syncNodeColors() {
+  Object.keys(feedbackState).forEach(function(a1Id) {
+    var fb = feedbackState[a1Id];
+    var nodeName = 'a1_' + a1Id;
+    if (fb.row_confirmed === 'accurate') feedbackNodeColors[nodeName] = '#16a34a';
+    else if (fb.row_confirmed === 'minor_issue') feedbackNodeColors[nodeName] = '#f59e0b';
+    else if (fb.row_confirmed === 'inaccurate') feedbackNodeColors[nodeName] = '#dc2626';
+  });
+}
+
+// ===== 反馈卡片 =====
+function openFeedbackCard(a1Id) {
+  var info = a1Index[a1Id];
+  if (!info) return;
+
+  currentA1Id = a1Id;
+  var fb = feedbackState[a1Id] || {};
+
+  document.getElementById('feedbackTitle').innerText = a1Id + ' 反馈';
+  var body = document.getElementById('feedbackBody');
+
+  // A1 信息摘要
+  var html = '<div class="a1-context"><b>' + info.name + '</b><br>';
+  html += '执行角色: ' + info.role + ' | 审批: ' + info.approval + ' | 系统: ' + info.system;
+  if (info.alert) html += '<br><span style="color:#92400e">核验提醒: ' + info.alert + '</span>';
+  html += '</div>';
+
+  // Q1: 整体确认
+  html += qBlock(1, '本行业务行为描述是否准确反映了实际业务？', '',
+    [['accurate','准确，无需修改'],['minor_issue','基本准确，有小问题'],['inaccurate','不准确，需要重写']],
+    fb.row_confirmed);
+
+  // Q2: 执行角色
+  html += qBlock(2, '执行角色描述是否正确？', '当前描述: ' + info.role,
+    [['correct','正确'],['wrong','不对'],['unsure','不清楚']],
+    fb.role_confirmed);
+
+  // Q3: 审批类型
+  html += qBlock(3, '审批类型是否正确？', '当前描述: ' + info.approval,
+    [['correct','正确'],['wrong','不对'],['unsure','不清楚']],
+    fb.approval_confirmed);
+
+  // Q4: 输入输出关系
+  html += qBlock(4, '跨部门输入/输出关系是否正确？', '',
+    [['correct','正确'],['wrong','不对'],['unsure','不清楚']],
+    fb.io_dept_confirmed);
+
+  // Q5: 核验提醒回应（仅当有提醒时）
+  if (info.alert) {
+    html += qBlock(5, '对于以下核验提醒，你的反馈是？', '提醒: ' + info.alert,
+      [['agree','同意，需要细化'],['disagree','不同意，当前描述足够'],['not_applicable','不适用']],
+      fb.verification_response);
+  }
+
+  // 备注（条件显示）
+  var showNotes = fb.row_confirmed === 'minor_issue' || fb.row_confirmed === 'inaccurate'
+    || fb.role_confirmed === 'wrong' || fb.approval_confirmed === 'wrong'
+    || fb.io_dept_confirmed === 'wrong';
+  html += '<div class="q-block" id="notesBlock" style="display:' + (showNotes?'block':'none') + '">';
+  html += '<div class="q-label">补充说明（选填）</div>';
+  html += '<textarea class="note-area" id="feedbackNotes" placeholder="如有需要，请在此补充说明...">' + (fb.notes||'') + '</textarea>';
+  html += '</div>';
+
+  body.innerHTML = html;
+
+  // 绑定选项点击
+  body.querySelectorAll('.q-opt').forEach(function(opt) {
+    opt.addEventListener('click', function() {
+      var parent = opt.parentElement;
+      parent.querySelectorAll('.q-opt').forEach(function(o) { o.classList.remove('selected'); });
+      opt.classList.add('selected');
+      updateNotesVisibility();
+    });
+  });
+
+  document.getElementById('feedbackPanel').classList.add('open');
+  document.getElementById('feedbackBackdrop').classList.add('show');
+}
+
+function qBlock(num, question, hint, options, selectedVal) {
+  var h = '<div class="q-block">';
+  h += '<div class="q-label">' + num + '. ' + question + '</div>';
+  if (hint) h += '<div class="q-hint">' + hint + '</div>';
+  h += '<div class="q-options">';
+  options.forEach(function(o) {
+    var sel = o[0] === selectedVal ? ' selected' : '';
+    h += '<div class="q-opt' + sel + '" data-val="' + o[0] + '" data-q="' + num + '">';
+    h += '<span class="radio"></span>' + o[1];
+    h += '</div>';
+  });
+  h += '</div></div>';
+  return h;
+}
+
+function updateNotesVisibility() {
+  var show = false;
+  document.querySelectorAll('.q-opt.selected').forEach(function(o) {
+    var v = o.dataset.val;
+    if (v === 'minor_issue' || v === 'inaccurate' || v === 'wrong') show = true;
+  });
+  var nb = document.getElementById('notesBlock');
+  if (nb) nb.style.display = show ? 'block' : 'none';
+}
+
+function collectFeedback() {
+  var fb = {};
+  document.querySelectorAll('.q-opt.selected').forEach(function(o) {
+    var q = o.dataset.q, v = o.dataset.val;
+    if (q === '1') fb.row_confirmed = v;
+    else if (q === '2') fb.role_confirmed = v;
+    else if (q === '3') fb.approval_confirmed = v;
+    else if (q === '4') fb.io_dept_confirmed = v;
+    else if (q === '5') fb.verification_response = v;
+  });
+  var ta = document.getElementById('feedbackNotes');
+  fb.notes = ta ? ta.value.trim() : '';
+  return fb;
+}
+
+function closeFeedbackCard() {
+  document.getElementById('feedbackPanel').classList.remove('open');
+  document.getElementById('feedbackBackdrop').classList.remove('show');
+  currentA1Id = null;
+}
+
+// ===== 提交 =====
+document.getElementById('feedbackSubmit').addEventListener('click', function() {
+  if (!currentA1Id) return;
+  feedbackState[currentA1Id] = collectFeedback();
+  syncNodeColors();
+  updateProgress();
+  closeFeedbackCard();
+  render(CURRENT_DOMAIN);
+});
+
+document.getElementById('feedbackClose').addEventListener('click', closeFeedbackCard);
+document.getElementById('feedbackBackdrop').addEventListener('click', closeFeedbackCard);
+
+// ===== 进度条 =====
+function updateProgress() {
+  var done = Object.keys(feedbackState).length;
+  var pct = Math.round(done / TOTAL * 100);
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressText').innerText = done + ' / ' + TOTAL;
+}
+
+// ===== 导出 JSON =====
+document.getElementById('exportJsonBtn').addEventListener('click', function() {
+  var result = {
+    department: '运维安环部',
+    exported_at: new Date().toISOString(),
+    total: TOTAL,
+    completed: Object.keys(feedbackState).length,
+    feedback: []
+  };
+  a1Rows.forEach(function(r) {
+    if (feedbackState[r[0]]) {
+      var fb = feedbackState[r[0]];
+      result.feedback.push({
+        a1_id: r[0],
+        a1_name: r[1],
+        row_confirmed: fb.row_confirmed || '',
+        role_confirmed: fb.role_confirmed || '',
+        approval_confirmed: fb.approval_confirmed || '',
+        io_dept_confirmed: fb.io_dept_confirmed || '',
+        verification_response: fb.verification_response || '',
+        notes: fb.notes || ''
+      });
+    }
+  });
+  var blob = new Blob([JSON.stringify(result, null, 2)], {type: 'application/json'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = '运维安环部-反馈-' + new Date().toISOString().slice(0,10) + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+
+// ===== ECharts 补丁：节点颜色 + 点击事件 =====
+var _origBuildDomainSankey = buildDomainSankey;
+buildDomainSankey = function(domain) {
+  var result = _origBuildDomainSankey(domain);
+  result.nodes.forEach(function(n) {
+    if (n.name.startsWith('a1_') && feedbackNodeColors[n.name]) {
+      n.itemStyle = { color: feedbackNodeColors[n.name], borderColor: feedbackNodeColors[n.name] };
+    }
+  });
+  return result;
+};
+
+var _origSetOption = myChart.setOption.bind(myChart);
+myChart.setOption = function(option, notMerge) {
+  _origSetOption(option, notMerge);
+  myChart.off('click');
+  myChart.on('click', function(params) {
+    if (params.data && params.data.name && params.data.name.startsWith('a1_')) {
+      var a1Id = params.data.name.substring(3);
+      openFeedbackCard(a1Id);
+    }
+  });
+};
+
+// ===== Monkey-patch render to track currentDomain =====
+var _origRender = render;
+render = function(domain) {
+  CURRENT_DOMAIN = domain;
+  _origRender(domain);
+};
+
+</script>
+  </body>
+</html>
+
+
