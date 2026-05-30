@@ -429,10 +429,7 @@ function applyFilters() {
   }
 
   filteredTasks = tasks;
-  // refreshAll components that exist so far
-  if (typeof renderDashboard === 'function') renderDashboard(filteredTasks);
-  if (typeof renderTaskTree === 'function') renderTaskTree(filteredTasks);
-  if (typeof renderGantt === 'function') renderGantt(filteredTasks);
+  if (typeof refreshAll === 'function') refreshAll();
 }
 
 function renderFilterBar(tasks) {
@@ -911,6 +908,90 @@ function setupScrollSync() {
     syncing = false;
   });
 }
+
+// ===== TaskDetail Panel =====
+function showTaskDetail(task) {
+  if (!task) return;
+  const overlay = document.getElementById('detailOverlay');
+  const body = document.getElementById('detailBody');
+  const s = parseDate(task.start);
+  const f = parseDate(task.finish);
+
+  const fields = [
+    { label: 'WBS', value: task.wbs || '-' },
+    { label: '任务名称', value: task.name },
+    { label: '任务类型', value: task.type || '-' },
+    { label: '开始时间', value: formatDate(s) },
+    { label: '完成时间', value: formatDate(f) },
+    { label: '工期', value: task.duration || '-' },
+    { label: '前置任务', value: task.predecessors || '-' },
+    { label: '资源名称', value: task.resources || '-' },
+    { label: '责任部门', value: task.department || '-' },
+    { label: '供应商', value: task.vendor || '-' },
+    { label: '审核人/审批组', value: task.reviewer || '-' },
+    { label: '风险等级', value: task.risk || '中', badge: 'risk' },
+    { label: '里程碑', value: (task.milestone === '是' || task.duration === '0工作日') ? '是' : '否', badge: 'milestone' },
+    { label: '交付物', value: task.deliverable || '-' },
+    { label: '备注', value: task.notes || '-' }
+  ];
+
+  body.innerHTML = fields.map(f => {
+    let valueHtml;
+    if (f.badge === 'risk') {
+      valueHtml = `<span class="value badge risk-${f.value}">${f.value}</span>`;
+    } else if (f.badge === 'milestone' && f.value === '是') {
+      valueHtml = `<span class="value badge tag-milestone">里程碑</span>`;
+    } else {
+      valueHtml = `<span class="value">${f.value}</span>`;
+    }
+    return `<div class="detail-field"><label>${f.label}</label>${valueHtml}</div>`;
+  }).join('');
+
+  overlay.classList.add('open');
+}
+
+function hideTaskDetail() {
+  document.getElementById('detailOverlay').classList.remove('open');
+}
+
+// ===== Milestone List =====
+function renderMilestoneList(tasks) {
+  const milestones = tasks.filter(t => t.milestone === '是' || t.duration === '0工作日');
+  const container = document.getElementById('milestoneList');
+  container.innerHTML = milestones.map(m => {
+    const f = parseDate(m.finish);
+    return `<div class="milestone-item">
+      <span class="ms-date">${formatDate(f)}</span>
+      <span class="ms-name">${m.name}</span>
+    </div>`;
+  }).join('');
+}
+
+// ===== 全局刷新 =====
+function refreshAll() {
+  renderDashboard(filteredTasks);
+  renderTaskTree(filteredTasks);
+  renderGantt(filteredTasks);
+  renderMilestoneList(filteredTasks);
+}
+
+// ===== 初始化 =====
+async function init() {
+  const ok = await loadData();
+  if (!ok) return;
+
+  renderFilterBar(allTasks);
+  refreshAll();
+  setupGanttHover();
+  setupScrollSync();
+
+  document.getElementById('detailClose').addEventListener('click', hideTaskDetail);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') hideTaskDetail();
+  });
+}
+
+init();
 </script>
 
 </body>
