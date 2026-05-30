@@ -429,8 +429,9 @@ function applyFilters() {
   }
 
   filteredTasks = tasks;
-  // refreshAll will be added in a later task; for now just renderDashboard
+  // refreshAll components that exist so far
   if (typeof renderDashboard === 'function') renderDashboard(filteredTasks);
+  if (typeof renderTaskTree === 'function') renderTaskTree(filteredTasks);
 }
 
 function renderFilterBar(tasks) {
@@ -546,6 +547,74 @@ function setView(view) {
 function updateViewButtons() {
   document.querySelectorAll('.view-btns button').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.view === currentView);
+  });
+}
+
+// ===== TaskTree =====
+function renderTaskTree(tasks) {
+  // 从筛选结果中收集可见 WBS（包括祖先）
+  const filteredWbsSet = new Set(tasks.map(t => t.wbs));
+  tasks.forEach(t => {
+    const parts = String(t.wbs).split('.');
+    for (let i = 1; i < parts.length; i++) {
+      filteredWbsSet.add(parts.slice(0, i).join('.'));
+    }
+  });
+
+  // 只渲染在筛选集中存在的根节点
+  const visibleRoots = treeData.roots.filter(r => filteredWbsSet.has(r.wbs));
+
+  const container = document.getElementById('taskTree');
+  let html = '';
+
+  function renderNode(node) {
+    if (!filteredWbsSet.has(node.wbs)) return;
+
+    const level = getWbsLevel(node.wbs);
+    const hasChildren = node.children && node.children.length > 0;
+    const isExpanded = node._expanded;
+    const toggleIcon = hasChildren ? (isExpanded ? '▼' : '▶') : '&nbsp;';
+    const isMilestone = node.milestone === '是' || node.duration === '0工作日';
+    const isHighRisk = node.risk === '高';
+    const selClass = node.wbs === selectedTaskWbs ? ' selected' : '';
+    const indent = Math.max(0, level - 1) * 14;
+
+    html += `<div class="tree-node level-${level}${isMilestone ? ' type-milestone' : ''}${isHighRisk ? ' risk-high' : ''}${selClass}"
+      data-wbs="${node.wbs}" style="padding-left:${indent}px">
+      <span class="toggle-icon" data-action="toggle">${toggleIcon}</span>
+      <span class="col-wbs">${node.wbs}</span>
+      <span class="col-name" title="${node.name}">${node.name}</span>
+    </div>`;
+
+    if (hasChildren && isExpanded) {
+      node.children.forEach(child => renderNode(child));
+    }
+  }
+
+  visibleRoots.forEach(root => renderNode(root));
+  container.innerHTML = html;
+
+  // 绑定事件
+  container.querySelectorAll('.tree-node').forEach(el => {
+    el.addEventListener('click', (e) => {
+      const wbs = el.dataset.wbs;
+      const toggleEl = e.target.closest('[data-action="toggle"]');
+      if (toggleEl) {
+        // 展开/折叠
+        const node = treeData.map[wbs];
+        if (node && node.children && node.children.length > 0) {
+          node._expanded = !node._expanded;
+          renderTaskTree(filteredTasks);
+        }
+      } else {
+        // 选中任务
+        selectedTaskWbs = wbs;
+        renderTaskTree(filteredTasks);
+        // 详情面板和甘特滚动在后续任务中接入
+        if (typeof showTaskDetail === 'function') showTaskDetail(treeData.map[wbs]);
+        if (typeof scrollGanttToTask === 'function') scrollGanttToTask(wbs);
+      }
+    });
   });
 }
 </script>
