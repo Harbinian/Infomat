@@ -361,6 +361,193 @@ function renderDashboard(tasks) {
     </div>`
   ).join('');
 }
+
+// ===== Filters =====
+function getFilterOptions(tasks) {
+  return {
+    mainlines: unique(tasks.map(t => getTopWbs(t.wbs)).filter(Boolean)).sort((a,b) => +a - +b),
+    departments: unique(tasks.map(t => t.department).filter(Boolean)).sort(),
+    vendors: unique(tasks.map(t => t.vendor).filter(Boolean)).sort(),
+    types: unique(tasks.map(t => t.type).filter(Boolean)).sort()
+  };
+}
+
+function applyFilters() {
+  let tasks = [...allTasks];
+
+  // 年份筛选
+  if (currentFilters.year !== 'all') {
+    const yr = parseInt(currentFilters.year);
+    tasks = tasks.filter(t => {
+      const s = parseDate(t.start);
+      const f = parseDate(t.finish);
+      if (!s && !f) return false;
+      return (s && s.getFullYear() === yr) || (f && f.getFullYear() === yr);
+    });
+  }
+
+  // 视图预设
+  if (currentView === 'overview') {
+    tasks = tasks.filter(t => {
+      const lvl = getWbsLevel(t.wbs);
+      return lvl <= 2 || t.milestone === '是' || t.duration === '0工作日';
+    });
+  } else if (currentView === 'milestones') {
+    tasks = tasks.filter(t => t.milestone === '是' || t.duration === '0工作日');
+  } else if (currentView === 'highrisk') {
+    tasks = tasks.filter(t => t.risk === '高');
+  }
+
+  // 主线筛选
+  if (currentFilters.mainline !== 'all') {
+    tasks = tasks.filter(t => getTopWbs(t.wbs) === currentFilters.mainline);
+  }
+  // 部门筛选
+  if (currentFilters.department !== 'all') {
+    tasks = tasks.filter(t => t.department === currentFilters.department);
+  }
+  // 供应商筛选
+  if (currentFilters.vendor !== 'all') {
+    tasks = tasks.filter(t => t.vendor === currentFilters.vendor);
+  }
+  // 风险筛选
+  if (currentFilters.risk !== 'all') {
+    tasks = tasks.filter(t => t.risk === currentFilters.risk);
+  }
+  // 类型筛选
+  if (currentFilters.type !== 'all') {
+    tasks = tasks.filter(t => t.type === currentFilters.type);
+  }
+  // 里程碑筛选
+  if (currentFilters.milestone === 'yes') {
+    tasks = tasks.filter(t => t.milestone === '是' || t.duration === '0工作日');
+  }
+  // 搜索
+  if (currentFilters.search.trim()) {
+    const kw = currentFilters.search.trim().toLowerCase();
+    tasks = tasks.filter(t => t.name.toLowerCase().includes(kw) || t.wbs.includes(kw));
+  }
+
+  filteredTasks = tasks;
+  // refreshAll will be added in a later task; for now just renderDashboard
+  if (typeof renderDashboard === 'function') renderDashboard(filteredTasks);
+}
+
+function renderFilterBar(tasks) {
+  const opts = getFilterOptions(tasks);
+  const html = `
+    <select id="filterYear">
+      <option value="all">全部年份</option>
+      <option value="2026">2026年</option>
+      <option value="2027">2027年</option>
+      <option value="2028">2028年</option>
+    </select>
+    <select id="filterMainline">
+      <option value="all">全部主线</option>
+      ${opts.mainlines.map(m => {
+        const topTask = allTasks.find(t => getTopWbs(t.wbs) === m && getWbsLevel(t.wbs) === 1);
+        const label = topTask ? `${m}-${topTask.name}` : m;
+        return `<option value="${m}">${label}</option>`;
+      }).join('')}
+    </select>
+    <select id="filterDept">
+      <option value="all">全部部门</option>
+      ${opts.departments.map(d => `<option value="${d}">${d}</option>`).join('')}
+    </select>
+    <select id="filterVendor">
+      <option value="all">全部供应商</option>
+      ${opts.vendors.map(v => `<option value="${v}">${v}</option>`).join('')}
+    </select>
+    <select id="filterRisk">
+      <option value="all">全部风险</option>
+      <option value="高">高风险</option>
+      <option value="中">中风险</option>
+      <option value="低">低风险</option>
+    </select>
+    <select id="filterType">
+      <option value="all">全部类型</option>
+      ${opts.types.map(t => `<option value="${t}">${t}</option>`).join('')}
+    </select>
+    <select id="filterMilestone">
+      <option value="all">全部任务</option>
+      <option value="yes">仅里程碑</option>
+    </select>
+    <input type="text" id="filterSearch" placeholder="搜索任务名称/WBS...">
+    <div class="view-btns">
+      <button data-view="all" class="active">全部任务</button>
+      <button data-view="overview">总览视图</button>
+      <button data-view="2026">2026年</button>
+      <button data-view="2027">2027年</button>
+      <button data-view="2028">2028年</button>
+      <button data-view="milestones">里程碑</button>
+      <button data-view="highrisk">高风险</button>
+    </div>
+  `;
+  document.getElementById('filterBar').innerHTML = html;
+  bindFilterEvents();
+}
+
+function bindFilterEvents() {
+  const bindings = [
+    { id: 'filterYear', key: 'year' },
+    { id: 'filterMainline', key: 'mainline' },
+    { id: 'filterDept', key: 'department' },
+    { id: 'filterVendor', key: 'vendor' },
+    { id: 'filterRisk', key: 'risk' },
+    { id: 'filterType', key: 'type' },
+    { id: 'filterMilestone', key: 'milestone' }
+  ];
+  bindings.forEach(({ id, key }) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', () => {
+      currentFilters[key] = el.value;
+      if (key === 'year' && el.value !== 'all') {
+        currentView = el.value;
+      } else if (key === 'year') {
+        currentView = 'all';
+      }
+      updateViewButtons();
+      applyFilters();
+    });
+  });
+
+  const searchEl = document.getElementById('filterSearch');
+  if (searchEl) {
+    searchEl.addEventListener('input', () => {
+      currentFilters.search = searchEl.value;
+      applyFilters();
+    });
+  }
+
+  // 视图按钮
+  document.querySelectorAll('.view-btns button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const view = btn.dataset.view;
+      setView(view);
+    });
+  });
+}
+
+function setView(view) {
+  currentView = view;
+  if (['2026', '2027', '2028'].includes(view)) {
+    currentFilters.year = view;
+    const yearEl = document.getElementById('filterYear');
+    if (yearEl) yearEl.value = view;
+  } else {
+    currentFilters.year = 'all';
+    const yearEl = document.getElementById('filterYear');
+    if (yearEl) yearEl.value = 'all';
+  }
+  updateViewButtons();
+  applyFilters();
+}
+
+function updateViewButtons() {
+  document.querySelectorAll('.view-btns button').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.view === currentView);
+  });
+}
 </script>
 
 </body>
