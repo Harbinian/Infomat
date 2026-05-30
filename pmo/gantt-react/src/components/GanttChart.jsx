@@ -5,13 +5,15 @@ import {
 } from '../utils/dateUtils';
 
 const ROW_HEIGHT = 32;
-const HEADER_HEIGHT = 44;
+const MONTH_HEADER_HEIGHT = 44;
 const BAR_HEIGHT = 20;
 const BAR_Y_OFFSET = (ROW_HEIGHT - BAR_HEIGHT) / 2;
 
 export default function GanttChart({ tasks, treeMap, monthWidth, selectedWbs, onSelect, onZoomChange }) {
   const canvasRef = useRef(null);
   const panelRef = useRef(null);
+  const monthCanvasRef = useRef(null);
+  const monthWrapRef = useRef(null);
   const positionsRef = useRef([]);
   const tooltipRef = useRef(null);
 
@@ -21,7 +23,7 @@ export default function GanttChart({ tasks, treeMap, monthWidth, selectedWbs, on
     const ctx = canvas.getContext('2d');
     const months = getTotalMonths();
     const totalWidth = months * monthWidth + 80;
-    const totalHeight = HEADER_HEIGHT + tasks.length * ROW_HEIGHT + 20;
+    const totalHeight = tasks.length * ROW_HEIGHT + 20;
 
     canvas.width = totalWidth;
     canvas.height = Math.max(totalHeight, 400);
@@ -35,11 +37,78 @@ export default function GanttChart({ tasks, treeMap, monthWidth, selectedWbs, on
     ctx.fillStyle = '#141720';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Month header
-    const labels = getMonthLabels();
-    ctx.fillStyle = '#161822';
-    ctx.fillRect(0, 0, totalWidth, HEADER_HEIGHT);
+    // Grid lines
+    ctx.strokeStyle = '#1a1d2a';
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i <= months; i++) {
+      const x = i * monthWidth;
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, totalHeight);
+      ctx.stroke();
+    }
+    for (let i = 0; i <= tasks.length; i++) {
+      const y = i * ROW_HEIGHT;
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(totalWidth, y);
+      ctx.stroke();
+    }
 
+    // Today line
+    const now = new Date();
+    const todayX = getXForDate(now, monthWidth);
+    if (todayX >= 0 && todayX <= months * monthWidth) {
+      ctx.strokeStyle = '#e74c3c';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([6, 4]);
+      ctx.beginPath();
+      ctx.moveTo(todayX, 0);
+      ctx.lineTo(todayX, totalHeight);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#e74c3c';
+      ctx.font = 'bold 11px -apple-system, "Microsoft YaHei", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('今天', todayX, 14);
+    }
+
+    // Task bars
+    tasks.forEach((task, rowIndex) => {
+      drawTaskBar(ctx, task, rowIndex, monthWidth, positions);
+    });
+
+    positionsRef.current = positions;
+
+    // Render month header on separate canvas
+    renderMonthHeader(months, totalWidth);
+  }, [tasks, monthWidth]);
+
+  // Sync month header horizontal scroll with gantt panel
+  const syncMonthScroll = useCallback(() => {
+    const panel = panelRef.current;
+    const wrap = monthWrapRef.current;
+    if (panel && wrap) wrap.scrollLeft = panel.scrollLeft;
+  }, []);
+
+  useEffect(() => { draw(); syncMonthScroll(); }, [draw, syncMonthScroll]);
+
+  function renderMonthHeader(months, totalWidth) {
+    const mCanvas = monthCanvasRef.current;
+    if (!mCanvas) return;
+    const ctx = mCanvas.getContext('2d');
+    const labels = getMonthLabels();
+
+    mCanvas.width = totalWidth;
+    mCanvas.height = MONTH_HEADER_HEIGHT;
+    mCanvas.style.width = totalWidth + 'px';
+    mCanvas.style.height = MONTH_HEADER_HEIGHT + 'px';
+
+    ctx.clearRect(0, 0, totalWidth, MONTH_HEADER_HEIGHT);
+    ctx.fillStyle = '#161822';
+    ctx.fillRect(0, 0, totalWidth, MONTH_HEADER_HEIGHT);
+
+    // Year row
     let currentYear = '';
     for (let i = 0; i < months; i++) {
       const yr = labels[i].split('-')[0];
@@ -61,6 +130,7 @@ export default function GanttChart({ tasks, treeMap, monthWidth, selectedWbs, on
       }
     }
 
+    // Month row
     for (let i = 0; i < months; i++) {
       const x = i * monthWidth;
       const mon = labels[i].split('-')[1];
@@ -70,58 +140,14 @@ export default function GanttChart({ tasks, treeMap, monthWidth, selectedWbs, on
       ctx.fillText(mon + '月', x + monthWidth / 2, 40);
     }
 
+    // Bottom line
     ctx.strokeStyle = '#2a2d3a';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(0, HEADER_HEIGHT);
-    ctx.lineTo(totalWidth, HEADER_HEIGHT);
+    ctx.moveTo(0, MONTH_HEADER_HEIGHT);
+    ctx.lineTo(totalWidth, MONTH_HEADER_HEIGHT);
     ctx.stroke();
-
-    // Grid lines
-    ctx.strokeStyle = '#1a1d2a';
-    ctx.lineWidth = 0.5;
-    for (let i = 0; i <= months; i++) {
-      const x = i * monthWidth;
-      ctx.beginPath();
-      ctx.moveTo(x, HEADER_HEIGHT);
-      ctx.lineTo(x, totalHeight);
-      ctx.stroke();
-    }
-    for (let i = 0; i <= tasks.length; i++) {
-      const y = HEADER_HEIGHT + i * ROW_HEIGHT;
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(totalWidth, y);
-      ctx.stroke();
-    }
-
-    // Today line
-    const now = new Date();
-    const todayX = getXForDate(now, monthWidth);
-    if (todayX >= 0 && todayX <= months * monthWidth) {
-      ctx.strokeStyle = '#e74c3c';
-      ctx.lineWidth = 1.5;
-      ctx.setLineDash([6, 4]);
-      ctx.beginPath();
-      ctx.moveTo(todayX, HEADER_HEIGHT);
-      ctx.lineTo(todayX, totalHeight);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.fillStyle = '#e74c3c';
-      ctx.font = 'bold 11px -apple-system, "Microsoft YaHei", sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('今天', todayX, HEADER_HEIGHT - 6);
-    }
-
-    // Task bars
-    tasks.forEach((task, rowIndex) => {
-      drawTaskBar(ctx, task, rowIndex, monthWidth, positions);
-    });
-
-    positionsRef.current = positions;
-  }, [tasks, monthWidth]);
-
-  useEffect(() => { draw(); }, [draw]);
+  }
 
   // Hover & click
   useEffect(() => {
@@ -191,22 +217,26 @@ export default function GanttChart({ tasks, treeMap, monthWidth, selectedWbs, on
       } else if (e.shiftKey) {
         e.preventDefault();
         panel.scrollLeft += e.deltaY;
+        const wrap = monthWrapRef.current;
+        if (wrap) wrap.scrollLeft = panel.scrollLeft;
       }
     };
     panel.addEventListener('wheel', onWheel, { passive: false });
     return () => panel.removeEventListener('wheel', onWheel);
   }, [monthWidth, onZoomChange]);
 
-  // Scroll sync: gantt scroll → tree scroll
+  // Scroll sync: gantt scroll → tree scroll + month header horizontal sync
   useEffect(() => {
     const panel = panelRef.current;
     const tree = document.getElementById('taskTreePanel');
+    const wrap = monthWrapRef.current;
     if (!panel || !tree) return;
     let syncing = false;
     const onScroll = () => {
       if (syncing) return;
       syncing = true;
       tree.scrollTop = panel.scrollTop;
+      if (wrap) wrap.scrollLeft = panel.scrollLeft;
       syncing = false;
     };
     panel.addEventListener('scroll', onScroll);
@@ -214,15 +244,22 @@ export default function GanttChart({ tasks, treeMap, monthWidth, selectedWbs, on
   }, []);
 
   return (
-    <div className="gantt-panel" ref={panelRef}>
-      <div className="zoom-controls">
-        <button className="zoom-btn" onClick={() => onZoomChange(monthWidth / 1.3)} title="缩小 (Ctrl+滚轮)">−</button>
-        <span className="zoom-label">{Math.round(monthWidth / 82 * 100)}%</span>
-        <button className="zoom-btn" onClick={() => onZoomChange(monthWidth * 1.3)} title="放大 (Ctrl+滚轮)">+</button>
-        <button className="zoom-btn zoom-reset" onClick={() => onZoomChange(82)} title="重置缩放">↺</button>
+    <div className="gantt-wrapper">
+      <div className="gantt-header-bar">
+        <div className="zoom-controls">
+          <button className="zoom-btn" onClick={() => onZoomChange(monthWidth / 1.3)} title="缩小 (Ctrl+滚轮)">−</button>
+          <span className="zoom-label">{Math.round(monthWidth / 82 * 100)}%</span>
+          <button className="zoom-btn" onClick={() => onZoomChange(monthWidth * 1.3)} title="放大 (Ctrl+滚轮)">+</button>
+          <button className="zoom-btn zoom-reset" onClick={() => onZoomChange(82)} title="重置缩放">↺</button>
+        </div>
+        <div className="month-header-wrap" ref={monthWrapRef}>
+          <canvas ref={monthCanvasRef} />
+        </div>
       </div>
-      <canvas ref={canvasRef} className="gantt-canvas" />
-      <div className="gantt-tooltip" ref={tooltipRef} />
+      <div className="gantt-panel" ref={panelRef}>
+        <canvas ref={canvasRef} className="gantt-canvas" />
+        <div className="gantt-tooltip" ref={tooltipRef} />
+      </div>
     </div>
   );
 }
@@ -230,7 +267,7 @@ export default function GanttChart({ tasks, treeMap, monthWidth, selectedWbs, on
 function drawTaskBar(ctx, task, rowIndex, monthWidth, positions) {
   const startDate = parseDate(task.start);
   const finishDate = parseDate(task.finish);
-  const y = HEADER_HEIGHT + rowIndex * ROW_HEIGHT;
+  const y = rowIndex * ROW_HEIGHT;
 
   const isSummary = task.type === '摘要';
   const isMilestone = task.milestone === '是' || task.duration === '0工作日';
