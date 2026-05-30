@@ -1,6 +1,6 @@
 # 数字化底座项目甘特图
 
-基于 `pmo/信息化项目.csv` 构建的可交互 H5 甘特图看板，用于项目管理、领导汇报和进度跟踪。
+基于 `信息化项目.csv` 构建的可交互 H5 甘特图看板，用于项目管理、领导汇报和进度跟踪。
 
 ## 快速开始
 
@@ -13,7 +13,7 @@
 ### 方式二：本地服务（原始版）
 
 ```bash
-cd digital-gantt-h5
+cd pmo
 python -m http.server 8080
 ```
 
@@ -23,11 +23,11 @@ python -m http.server 8080
 
 ## 更新任务数据
 
-1. 修改 `pmo/信息化项目.csv`（位于项目根目录的 pmo 文件夹）
+1. 修改 `信息化项目.csv`
 2. 重新生成 JSON：
 
 ```bash
-cd digital-gantt-h5
+cd pmo
 node convert.js
 ```
 
@@ -86,9 +86,11 @@ node convert.js
 ## 文件结构
 
 ```
-digital-gantt-h5/
-├── index.html          # 单文件完整应用
-├── tasks.json          # 任务数据（313 条）
-├── convert.js          # CSV → JSON 转换脚本
-└── README.md           # 本文件
+pmo/
+├── index.html                # 单文件完整应用（需要 HTTP 服务）
+├── index-standalone.html     # 内嵌数据版（可直接双击打开）
+├── tasks.json                # 任务数据（313 条）
+├── convert.js                # CSV → JSON 转换脚本
+├── build-standalone.js       # 生成内嵌数据版 HTML
+└── README.md                 # 本文件
 ```
