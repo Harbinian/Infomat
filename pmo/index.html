@@ -10,6 +10,7 @@
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
   background: #0f1119; color: #c8ccd4; overflow: hidden; height: 100vh;
+  display: flex; flex-direction: column;
 }
 
 /* ===== Header ===== */
@@ -42,7 +43,7 @@ body {
 .view-btns button.active { background: #1a3a5c; color: #4A90D9; border-color: #4A90D9; }
 
 /* ===== Main Layout ===== */
-.main-container { display: flex; height: calc(100vh - 230px); position: relative; overflow: hidden; }
+.main-container { display: flex; flex: 1; min-height: 0; position: relative; overflow: hidden; }
 
 /* ===== Task Tree (Left Panel) ===== */
 .task-tree-panel {
@@ -72,18 +73,22 @@ body {
 .tree-node.risk-high .col-wbs { color: #e74c3c; }
 .tree-node.hidden { display: none; }
 
-/* ===== Gantt Panel (Right) ===== */
-.gantt-panel { flex: 1; overflow: auto; position: relative; background: #141720; }
-.gantt-panel::-webkit-scrollbar { width: 8px; height: 8px; }
-.gantt-panel::-webkit-scrollbar-thumb { background: #2a2d3a; border-radius: 4px; }
-.gantt-panel::-webkit-scrollbar-corner { background: #141720; }
-.gantt-canvas { display: block; }
+/* ===== Gantt Wrapper (Right Column) ===== */
+.gantt-wrapper { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+/* ===== Gantt Header Bar (frozen) ===== */
+.gantt-header-bar {
+  flex-shrink: 0; display: flex; align-items: stretch;
+  background: #161822; border-bottom: 1px solid #2a2d3a;
+  overflow: hidden;
+}
+.month-header-wrap { flex: 1; overflow: hidden; }
+.month-header-wrap canvas { display: block; }
 
 /* ===== Zoom Controls ===== */
 .zoom-controls {
-  position: sticky; top: 0; z-index: 3;
-  display: flex; align-items: center; gap: 4px;
-  padding: 6px 10px; background: #161822; border-bottom: 1px solid #2a2d3a;
+  flex-shrink: 0; display: flex; align-items: center; gap: 4px;
+  padding: 6px 10px; background: #161822; border-right: 1px solid #2a2d3a;
 }
 .zoom-btn {
   background: #1c1f2e; color: #c8ccd4; border: 1px solid #2a2d3a;
@@ -94,6 +99,13 @@ body {
 .zoom-btn:hover { background: #2a2d3a; color: #e8eaed; }
 .zoom-reset { font-size: 14px; margin-left: 6px; }
 .zoom-label { font-size: 12px; color: #8b90a0; min-width: 40px; text-align: center; user-select: none; }
+
+/* ===== Gantt Panel (Right scrollable) ===== */
+.gantt-panel { flex: 1; overflow: auto; position: relative; background: #141720; }
+.gantt-panel::-webkit-scrollbar { width: 8px; height: 8px; }
+.gantt-panel::-webkit-scrollbar-thumb { background: #2a2d3a; border-radius: 4px; }
+.gantt-panel::-webkit-scrollbar-corner { background: #141720; }
+.gantt-canvas { display: block; }
 
 /* ===== Task Detail Panel ===== */
 .detail-overlay { display: none; position: fixed; top: 0; right: 0; width: 420px; height: 100vh;
@@ -155,14 +167,21 @@ body {
     </div>
     <div id="taskTree"></div>
   </div>
-  <div class="gantt-panel" id="ganttPanel">
-    <div class="zoom-controls" id="zoomControls">
-      <button class="zoom-btn" id="zoomOut" title="缩小 (Ctrl+滚轮)">−</button>
-      <span class="zoom-label" id="zoomLabel">100%</span>
-      <button class="zoom-btn" id="zoomIn" title="放大 (Ctrl+滚轮)">+</button>
-      <button class="zoom-btn zoom-reset" id="zoomReset" title="重置缩放">↺</button>
+  <div class="gantt-wrapper">
+    <div class="gantt-header-bar">
+      <div class="zoom-controls" id="zoomControls">
+        <button class="zoom-btn" id="zoomOut" title="缩小 (Ctrl+滚轮)">−</button>
+        <span class="zoom-label" id="zoomLabel">100%</span>
+        <button class="zoom-btn" id="zoomIn" title="放大 (Ctrl+滚轮)">+</button>
+        <button class="zoom-btn zoom-reset" id="zoomReset" title="重置缩放">↺</button>
+      </div>
+      <div class="month-header-wrap" id="monthHeaderWrap">
+        <canvas id="monthHeaderCanvas"></canvas>
+      </div>
     </div>
-    <canvas id="ganttCanvas" class="gantt-canvas"></canvas>
+    <div class="gantt-panel" id="ganttPanel">
+      <canvas id="ganttCanvas" class="gantt-canvas"></canvas>
+    </div>
   </div>
 </div>
 
@@ -193,7 +212,8 @@ const MONTH_WIDTH_MIN = 24;     // 最小缩放：约周级
 const MONTH_WIDTH_MAX = 280;    // 最大缩放：约天级
 const MONTH_WIDTH_DEFAULT = 82; // 默认
 const ROW_HEIGHT = 32;     // 每行像素高度
-const HEADER_HEIGHT = 44;  // 顶部月轴高度
+const HEADER_HEIGHT = 0;   // 年/月头已独立渲染到 monthHeaderCanvas，主 Canvas 不需要
+const MONTH_HEADER_HEIGHT = 44; // 独立月轴头 canvas 高度
 const TREE_PANEL_WIDTH = 340;
 
 const WBS_COLORS = {
@@ -651,7 +671,7 @@ function renderGantt(tasks) {
   const ctx = canvas.getContext('2d');
   const months = getTotalMonths();
   const totalWidth = months * MONTH_WIDTH + 80;
-  const totalHeight = HEADER_HEIGHT + tasks.length * ROW_HEIGHT + 20;
+  const totalHeight = tasks.length * ROW_HEIGHT + 20;
 
   canvas.width = totalWidth;
   canvas.height = Math.max(totalHeight, 400);
@@ -665,21 +685,41 @@ function renderGantt(tasks) {
   ctx.fillStyle = '#141720';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  drawMonthHeader(ctx, months, totalWidth);
   drawGridLines(ctx, months, totalWidth, totalHeight, tasks.length);
   drawTodayLine(ctx, totalHeight);
 
   for (let i = 0; i < tasks.length; i++) {
     drawTaskBar(ctx, tasks[i], i);
   }
+
+  // 同步月头 canvas 并渲染
+  renderMonthHeader(months, totalWidth);
+  // 同步月头水平滚动位置
+  syncMonthHeaderScroll();
 }
 
-function drawMonthHeader(ctx, months, totalWidth) {
+function syncMonthHeaderScroll() {
+  const panel = document.getElementById('ganttPanel');
+  const wrap = document.getElementById('monthHeaderWrap');
+  if (panel && wrap) wrap.scrollLeft = panel.scrollLeft;
+}
+
+function renderMonthHeader(months, totalWidth) {
+  const mCanvas = document.getElementById('monthHeaderCanvas');
+  if (!mCanvas) return;
+  const ctx = mCanvas.getContext('2d');
   const labels = getMonthLabels();
 
-  // 表头背景
+  mCanvas.width = totalWidth;
+  mCanvas.height = MONTH_HEADER_HEIGHT;
+  mCanvas.style.width = totalWidth + 'px';
+  mCanvas.style.height = MONTH_HEADER_HEIGHT + 'px';
+
+  ctx.clearRect(0, 0, totalWidth, MONTH_HEADER_HEIGHT);
+
+  // 背景
   ctx.fillStyle = '#161822';
-  ctx.fillRect(0, 0, totalWidth, HEADER_HEIGHT);
+  ctx.fillRect(0, 0, totalWidth, MONTH_HEADER_HEIGHT);
 
   // 年份行
   let currentYear = '';
@@ -706,8 +746,7 @@ function drawMonthHeader(ctx, months, totalWidth) {
   // 月份行
   for (let i = 0; i < months; i++) {
     const x = i * MONTH_WIDTH;
-    const parts = labels[i].split('-');
-    const mon = parts[1];
+    const mon = labels[i].split('-')[1];
     ctx.fillStyle = (i % 2 === 0) ? '#6b7194' : '#4a4d5a';
     ctx.font = '12px -apple-system, "Microsoft YaHei", sans-serif';
     ctx.textAlign = 'center';
@@ -718,8 +757,8 @@ function drawMonthHeader(ctx, months, totalWidth) {
   ctx.strokeStyle = '#2a2d3a';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(0, HEADER_HEIGHT);
-  ctx.lineTo(totalWidth, HEADER_HEIGHT);
+  ctx.moveTo(0, MONTH_HEADER_HEIGHT);
+  ctx.lineTo(totalWidth, MONTH_HEADER_HEIGHT);
   ctx.stroke();
 }
 
@@ -753,7 +792,7 @@ function drawTodayLine(ctx, totalHeight) {
   ctx.lineWidth = 1.5;
   ctx.setLineDash([6, 4]);
   ctx.beginPath();
-  ctx.moveTo(x, HEADER_HEIGHT);
+  ctx.moveTo(x, 0);
   ctx.lineTo(x, totalHeight);
   ctx.stroke();
   ctx.setLineDash([]);
@@ -761,7 +800,7 @@ function drawTodayLine(ctx, totalHeight) {
   ctx.fillStyle = '#e74c3c';
   ctx.font = 'bold 11px -apple-system, "Microsoft YaHei", sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('今天', x, HEADER_HEIGHT - 6);
+  ctx.fillText('今天', x, 14);
 }
 
 function drawTaskBar(ctx, task, rowIndex) {
@@ -920,6 +959,7 @@ function setZoom(level, animate) {
   MONTH_WIDTH = Math.max(MONTH_WIDTH_MIN, Math.min(MONTH_WIDTH_MAX, level));
   updateZoomLabel();
   renderGantt(filteredTasks);
+  syncMonthHeaderScroll();
 }
 
 function zoomIn()  { setZoom(MONTH_WIDTH * 1.3); }
@@ -935,9 +975,10 @@ function updateZoomLabel() {
 function setupScrollSync() {
   const treePanel = document.getElementById('taskTreePanel');
   const ganttPanel = document.getElementById('ganttPanel');
+  const monthWrap = document.getElementById('monthHeaderWrap');
   let syncing = false;
 
-  // 垂直滚动同步
+  // 垂直滚动同步（任务树 ↔ 甘特图）
   treePanel.addEventListener('scroll', () => {
     if (syncing) return;
     syncing = true;
@@ -948,6 +989,8 @@ function setupScrollSync() {
     if (syncing) return;
     syncing = true;
     treePanel.scrollTop = ganttPanel.scrollTop;
+    // 水平滚动同步 → 月头 canvas
+    monthWrap.scrollLeft = ganttPanel.scrollLeft;
     syncing = false;
   });
 
@@ -960,6 +1003,7 @@ function setupScrollSync() {
     } else if (e.shiftKey) {
       e.preventDefault();
       ganttPanel.scrollLeft += e.deltaY;
+      monthWrap.scrollLeft = ganttPanel.scrollLeft;
     }
     // 普通滚轮保持默认垂直滚动，与任务树同步
   }, { passive: false });

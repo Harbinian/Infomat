@@ -65,18 +65,22 @@ body {
 .tree-node.type-milestone .col-name { color: #f4b400; }
 .tree-node.risk-high .col-wbs { color: #e74c3c; }
 
-/* ===== Gantt Panel (Right) ===== */
-.gantt-panel { flex: 1; overflow: auto; position: relative; background: #141720; }
-.gantt-panel::-webkit-scrollbar { width: 8px; height: 8px; }
-.gantt-panel::-webkit-scrollbar-thumb { background: #2a2d3a; border-radius: 4px; }
-.gantt-panel::-webkit-scrollbar-corner { background: #141720; }
-.gantt-canvas { display: block; }
+/* ===== Gantt Wrapper (Right Column) ===== */
+.gantt-wrapper { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+/* ===== Gantt Header Bar (frozen) ===== */
+.gantt-header-bar {
+  flex-shrink: 0; display: flex; align-items: stretch;
+  background: #161822; border-bottom: 1px solid #2a2d3a;
+  overflow: hidden;
+}
+.month-header-wrap { flex: 1; overflow: hidden; }
+.month-header-wrap canvas { display: block; }
 
 /* ===== Zoom Controls ===== */
 .zoom-controls {
-  position: sticky; top: 0; z-index: 3;
-  display: flex; align-items: center; gap: 4px;
-  padding: 6px 10px; background: #161822; border-bottom: 1px solid #2a2d3a;
+  flex-shrink: 0; display: flex; align-items: center; gap: 4px;
+  padding: 6px 10px; background: #161822; border-right: 1px solid #2a2d3a;
 }
 .zoom-btn {
   background: #1c1f2e; color: #c8ccd4; border: 1px solid #2a2d3a;
@@ -86,6 +90,13 @@ body {
 .zoom-btn:hover { background: #2a2d3a; color: #e8eaed; }
 .zoom-reset { font-size: 14px; margin-left: 6px; }
 .zoom-label { font-size: 12px; color: #8b90a0; min-width: 40px; text-align: center; user-select: none; }
+
+/* ===== Gantt Panel (Right scrollable) ===== */
+.gantt-panel { flex: 1; overflow: auto; position: relative; background: #141720; }
+.gantt-panel::-webkit-scrollbar { width: 8px; height: 8px; }
+.gantt-panel::-webkit-scrollbar-thumb { background: #2a2d3a; border-radius: 4px; }
+.gantt-panel::-webkit-scrollbar-corner { background: #141720; }
+.gantt-canvas { display: block; }
 
 /* ===== Task Detail Panel ===== */
 .detail-overlay { display: block; position: fixed; top: 0; right: 0; width: 420px; height: 100vh;
