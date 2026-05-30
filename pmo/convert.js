@@ -1,14 +1,14 @@
 /**
  * convert.js — 信息化项目 CSV → JSON 转换脚本
  *
- * Reads ../pmo/信息化项目.csv and outputs tasks.json (pretty-printed JSON array).
+ * Reads 信息化项目.csv and outputs tasks.json (pretty-printed JSON array).
  * 314 lines (1 header + 313 data rows). Skips empty rows.
  */
 
 const fs = require('fs');
 const path = require('path');
 
-const csvPath = path.resolve(__dirname, '..', 'pmo', '信息化项目.csv');
+const csvPath = path.resolve(__dirname, '信息化项目.csv');
 const jsonPath = path.resolve(__dirname, 'tasks.json');
 
 const raw = fs.readFileSync(csvPath, 'utf-8');
