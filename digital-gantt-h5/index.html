@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -162,6 +162,156 @@ body {
 
 <script>
 console.log('loaded');
+
+// ===== 配置常量 =====
+const PROJECT_START = new Date(2026, 5, 1);  // 2026-06-01
+const PROJECT_END = new Date(2028, 1, 31);    // 2028-01-31
+const MONTH_WIDTH = 82;    // 每月像素宽度
+const ROW_HEIGHT = 32;     // 每行像素高度
+const HEADER_HEIGHT = 44;  // 顶部月轴高度
+const TREE_PANEL_WIDTH = 340;
+
+const WBS_COLORS = {
+  '1': '#4A90D9', '2': '#5C8AD8', '3': '#00BCD4', '4': '#9C27B0', '5': '#607D8B',
+  '6': '#4CAF50', '7': '#E91E63', '8': '#FF9800', '9': '#795548', '10': '#7C4DFF'
+};
+
+function getWbsColor(wbs) {
+  const top = String(wbs).split('.')[0];
+  return WBS_COLORS[top] || '#6b7194';
+}
+
+function getWbsLevel(wbs) {
+  if (!wbs) return 1;
+  return String(wbs).split('.').length;
+}
+
+function getTopWbs(wbs) {
+  return String(wbs).split('.')[0];
+}
+
+// ===== 日期解析 =====
+function parseDate(str) {
+  if (!str || str.trim() === '') return null;
+  str = str.trim();
+  // 2026-06-01
+  let m = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (m) return new Date(+m[1], +m[2] - 1, +m[3]);
+  // 2026/6/1
+  m = str.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
+  if (m) return new Date(+m[1], +m[2] - 1, +m[3]);
+  // 2026年6月1日
+  m = str.match(/^(\d{4})年(\d{1,2})月(\d{1,2})日$/);
+  if (m) return new Date(+m[1], +m[2] - 1, +m[3]);
+  return null;
+}
+
+function formatDate(date) {
+  if (!date) return '日期未设置';
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+// ===== 项目时间轴计算 =====
+function getTotalMonths() {
+  return (PROJECT_END.getFullYear() - PROJECT_START.getFullYear()) * 12
+    + (PROJECT_END.getMonth() - PROJECT_START.getMonth()) + 1;
+}
+
+function getMonthLabels() {
+  const labels = [];
+  let d = new Date(PROJECT_START);
+  const total = getTotalMonths();
+  for (let i = 0; i < total; i++) {
+    labels.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+    d.setMonth(d.getMonth() + 1);
+  }
+  return labels;
+}
+
+function getXForDate(date) {
+  if (!date) return -1;
+  const months = (date.getFullYear() - PROJECT_START.getFullYear()) * 12
+    + (date.getMonth() - PROJECT_START.getMonth());
+  const dayFrac = (date.getDate() - 1) / daysInMonth(date.getFullYear(), date.getMonth());
+  return months * MONTH_WIDTH + dayFrac * MONTH_WIDTH;
+}
+
+function daysInMonth(y, m) {
+  return new Date(y, m + 1, 0).getDate();
+}
+
+// ===== 去重 =====
+function unique(arr) { return [...new Set(arr)]; }
+
+// ===== 任务树构建 =====
+function buildTaskTree(tasks) {
+  const map = {};
+  const roots = [];
+  // 先建索引
+  tasks.forEach(t => { map[t.wbs] = { ...t, children: [], _visible: true, _expanded: true }; });
+  // 建父子关系
+  tasks.forEach(t => {
+    const node = map[t.wbs];
+    const parts = String(t.wbs).split('.');
+    if (parts.length <= 1) {
+      roots.push(node);
+    } else {
+      const parentWbs = parts.slice(0, -1).join('.');
+      const parent = map[parentWbs];
+      if (parent) {
+        parent.children.push(node);
+      } else {
+        roots.push(node); // 孤儿节点挂到根
+      }
+    }
+  });
+  // 三级及以下默认折叠
+  function walk(nodes) {
+    nodes.forEach(n => {
+      if (getWbsLevel(n.wbs) >= 3) n._expanded = false;
+      walk(n.children);
+    });
+  }
+  walk(roots);
+  return { roots, map };
+}
+
+// ===== 数据状态 =====
+let allTasks = [];
+let treeData = null;
+let filteredTasks = [];
+let selectedTaskWbs = null;
+let currentFilters = {
+  year: 'all',
+  mainline: 'all',
+  department: 'all',
+  vendor: 'all',
+  risk: 'all',
+  type: 'all',
+  milestone: 'all',
+  search: ''
+};
+let currentView = 'all';
+
+// ===== 加载数据 =====
+async function loadData() {
+  try {
+    const resp = await fetch('tasks.json');
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    allTasks = await resp.json();
+    treeData = buildTaskTree(allTasks);
+    filteredTasks = [...allTasks];
+    document.getElementById('loading').style.display = 'none';
+    return true;
+  } catch (err) {
+    document.getElementById('loading').textContent = '数据加载失败：' + err.message;
+    console.error('Load error:', err);
+    return false;
+  }
+}
 </script>
 
 </body>
