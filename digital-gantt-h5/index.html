@@ -312,6 +312,55 @@ async function loadData() {
     return false;
   }
 }
+
+// ===== Dashboard =====
+function calcStats(tasks) {
+  const now = new Date();
+  const milestones = tasks.filter(t => t.milestone === '是' || t.duration === '0工作日');
+  const highRisk = tasks.filter(t => t.risk === '高');
+  const inProgress = tasks.filter(t => {
+    const s = parseDate(t.start);
+    const f = parseDate(t.finish);
+    if (!s || !f) return false;
+    return s <= now && f >= now;
+  });
+  const crossYear = tasks.filter(t => {
+    const s = parseDate(t.start);
+    const f = parseDate(t.finish);
+    if (!s || !f) return false;
+    return s.getFullYear() !== f.getFullYear();
+  });
+  const depts = unique(tasks.map(t => t.department).filter(Boolean));
+  const vendors = unique(tasks.map(t => t.vendor).filter(Boolean));
+  return {
+    total: tasks.length,
+    milestones: milestones.length,
+    highRisk: highRisk.length,
+    inProgress: inProgress.length,
+    crossYear: crossYear.length,
+    departments: depts.length,
+    vendors: vendors.length
+  };
+}
+
+function renderDashboard(tasks) {
+  const stats = calcStats(tasks);
+  const cards = [
+    { value: stats.total, label: '总任务数', cls: '' },
+    { value: stats.milestones, label: '里程碑', cls: '' },
+    { value: stats.highRisk, label: '高风险任务', cls: 'highlight' },
+    { value: stats.inProgress, label: '当前进行中', cls: '' },
+    { value: stats.crossYear, label: '已跨年任务', cls: '' },
+    { value: stats.departments, label: '责任部门', cls: '' },
+    { value: stats.vendors, label: '供应商', cls: '' }
+  ];
+  document.getElementById('dashboard').innerHTML = cards.map(c =>
+    `<div class="stat-card ${c.cls}">
+      <div class="stat-value">${c.value}</div>
+      <div class="stat-label">${c.label}</div>
+    </div>`
+  ).join('');
+}
 </script>
 
 </body>
