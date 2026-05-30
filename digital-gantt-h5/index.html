@@ -432,6 +432,7 @@ function applyFilters() {
   // refreshAll components that exist so far
   if (typeof renderDashboard === 'function') renderDashboard(filteredTasks);
   if (typeof renderTaskTree === 'function') renderTaskTree(filteredTasks);
+  if (typeof renderGantt === 'function') renderGantt(filteredTasks);
 }
 
 function renderFilterBar(tasks) {
@@ -615,6 +616,299 @@ function renderTaskTree(tasks) {
         if (typeof scrollGanttToTask === 'function') scrollGanttToTask(wbs);
       }
     });
+  });
+}
+
+// ===== Gantt =====
+let ganttTaskPositions = []; // { wbs, x, y, width, height } for hover detection
+const BAR_HEIGHT = 20;
+const BAR_Y_OFFSET = (ROW_HEIGHT - BAR_HEIGHT) / 2;
+
+function renderGantt(tasks) {
+  const canvas = document.getElementById('ganttCanvas');
+  const ctx = canvas.getContext('2d');
+  const months = getTotalMonths();
+  const totalWidth = months * MONTH_WIDTH + 80;
+  const totalHeight = HEADER_HEIGHT + tasks.length * ROW_HEIGHT + 20;
+
+  canvas.width = totalWidth;
+  canvas.height = Math.max(totalHeight, 400);
+  canvas.style.width = totalWidth + 'px';
+  canvas.style.height = Math.max(totalHeight, 400) + 'px';
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ganttTaskPositions = [];
+
+  // 背景
+  ctx.fillStyle = '#141720';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  drawMonthHeader(ctx, months, totalWidth);
+  drawGridLines(ctx, months, totalWidth, totalHeight, tasks.length);
+  drawTodayLine(ctx, totalHeight);
+
+  for (let i = 0; i < tasks.length; i++) {
+    drawTaskBar(ctx, tasks[i], i);
+  }
+}
+
+function drawMonthHeader(ctx, months, totalWidth) {
+  const labels = getMonthLabels();
+
+  // 表头背景
+  ctx.fillStyle = '#161822';
+  ctx.fillRect(0, 0, totalWidth, HEADER_HEIGHT);
+
+  // 年份行
+  let currentYear = '';
+  for (let i = 0; i < months; i++) {
+    const yr = labels[i].split('-')[0];
+    const x = i * MONTH_WIDTH;
+    if (yr !== currentYear) {
+      currentYear = yr;
+      let span = 0;
+      for (let j = i; j < months; j++) {
+        if (labels[j].split('-')[0] === yr) span++;
+        else break;
+      }
+      const yearWidth = span * MONTH_WIDTH;
+      ctx.fillStyle = '#1c1f2e';
+      ctx.fillRect(x, 0, yearWidth, 22);
+      ctx.fillStyle = '#8b90a0';
+      ctx.font = 'bold 13px -apple-system, "Microsoft YaHei", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(yr + '年', x + yearWidth / 2, 16);
+    }
+  }
+
+  // 月份行
+  for (let i = 0; i < months; i++) {
+    const x = i * MONTH_WIDTH;
+    const parts = labels[i].split('-');
+    const mon = parts[1];
+    ctx.fillStyle = (i % 2 === 0) ? '#6b7194' : '#4a4d5a';
+    ctx.font = '12px -apple-system, "Microsoft YaHei", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(mon + '月', x + MONTH_WIDTH / 2, 40);
+  }
+
+  // 底部线
+  ctx.strokeStyle = '#2a2d3a';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, HEADER_HEIGHT);
+  ctx.lineTo(totalWidth, HEADER_HEIGHT);
+  ctx.stroke();
+}
+
+function drawGridLines(ctx, months, totalWidth, totalHeight, taskCount) {
+  ctx.strokeStyle = '#1a1d2a';
+  ctx.lineWidth = 0.5;
+
+  for (let i = 0; i <= months; i++) {
+    const x = i * MONTH_WIDTH;
+    ctx.beginPath();
+    ctx.moveTo(x, HEADER_HEIGHT);
+    ctx.lineTo(x, totalHeight);
+    ctx.stroke();
+  }
+
+  for (let i = 0; i <= taskCount; i++) {
+    const y = HEADER_HEIGHT + i * ROW_HEIGHT;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(totalWidth, y);
+    ctx.stroke();
+  }
+}
+
+function drawTodayLine(ctx, totalHeight) {
+  const now = new Date();
+  const x = getXForDate(now);
+  if (x < 0 || x > getTotalMonths() * MONTH_WIDTH) return;
+
+  ctx.strokeStyle = '#e74c3c';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([6, 4]);
+  ctx.beginPath();
+  ctx.moveTo(x, HEADER_HEIGHT);
+  ctx.lineTo(x, totalHeight);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.fillStyle = '#e74c3c';
+  ctx.font = 'bold 11px -apple-system, "Microsoft YaHei", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('今天', x, HEADER_HEIGHT - 6);
+}
+
+function drawTaskBar(ctx, task, rowIndex) {
+  const startDate = parseDate(task.start);
+  const finishDate = parseDate(task.finish);
+  const y = HEADER_HEIGHT + rowIndex * ROW_HEIGHT;
+
+  const isSummary = task.type === '摘要';
+  const isMilestone = task.milestone === '是' || task.duration === '0工作日';
+  const isBuffer = task.type === '缓冲';
+  const isHighRisk = task.risk === '高';
+
+  if (!startDate && !finishDate) {
+    ctx.fillStyle = '#4a4d5a';
+    ctx.font = '11px -apple-system, "Microsoft YaHei", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('(日期未设置)', 10, y + ROW_HEIGHT / 2 + 4);
+    return;
+  }
+
+  const startX = startDate ? getXForDate(startDate) : 0;
+  const finishX = finishDate ? getXForDate(finishDate) + MONTH_WIDTH / 30 : startX;
+
+  if (isMilestone && finishDate) {
+    const cx = finishX;
+    const cy = y + ROW_HEIGHT / 2;
+    const size = 7;
+    ctx.fillStyle = '#f4b400';
+    ctx.strokeStyle = '#f4b400';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - size);
+    ctx.lineTo(cx + size, cy);
+    ctx.lineTo(cx, cy + size);
+    ctx.lineTo(cx - size, cy);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ganttTaskPositions.push({ wbs: task.wbs, x: cx - size, y: cy - size, width: size * 2, height: size * 2 });
+    return;
+  }
+
+  const barWidth = Math.max(finishX - startX, 3);
+  const barX = startX;
+  const barY = y + BAR_Y_OFFSET;
+  const color = getWbsColor(task.wbs);
+
+  if (isSummary) {
+    ctx.fillStyle = '#3a3d4a';
+    ctx.fillRect(barX, barY + 2, barWidth, BAR_HEIGHT - 4);
+    ctx.fillStyle = '#6b7194';
+    ctx.beginPath(); ctx.arc(barX, barY + BAR_HEIGHT / 2, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(barX + barWidth, barY + BAR_HEIGHT / 2, 3, 0, Math.PI * 2); ctx.fill();
+  } else {
+    ctx.globalAlpha = 0.85;
+    ctx.fillStyle = color;
+    ctx.fillRect(barX, barY, barWidth, BAR_HEIGHT);
+    ctx.globalAlpha = 1;
+
+    if (isHighRisk) {
+      ctx.strokeStyle = '#e74c3c';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(barX, barY, barWidth, BAR_HEIGHT);
+    }
+
+    if (isBuffer) {
+      ctx.globalAlpha = 0.3;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 0.5;
+      for (let ox = barX; ox < barX + barWidth; ox += 4) {
+        ctx.beginPath();
+        ctx.moveTo(ox, barY);
+        ctx.lineTo(ox + BAR_HEIGHT, barY + BAR_HEIGHT);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    if (barWidth > 40) {
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '11px -apple-system, "Microsoft YaHei", sans-serif';
+      ctx.textAlign = 'left';
+      const displayName = task.name.length > 20 ? task.name.slice(0, 20) + '..' : task.name;
+      ctx.fillText(displayName, barX + 6, barY + BAR_HEIGHT / 2 + 4, barWidth - 12);
+    }
+  }
+
+  ganttTaskPositions.push({ wbs: task.wbs, x: barX, y: barY, width: barWidth, height: BAR_HEIGHT });
+}
+
+function scrollGanttToTask(wbs) {
+  const pos = ganttTaskPositions.find(p => p.wbs === wbs);
+  if (pos) {
+    const panel = document.getElementById('ganttPanel');
+    panel.scrollTo({ top: pos.y - HEADER_HEIGHT - 100, behavior: 'smooth' });
+  }
+}
+
+// ===== Canvas 悬停检测 =====
+function setupGanttHover() {
+  const canvas = document.getElementById('ganttCanvas');
+  const tooltip = document.getElementById('ganttTooltip');
+  const panel = document.getElementById('ganttPanel');
+
+  canvas.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left + panel.scrollLeft;
+    const my = e.clientY - rect.top + panel.scrollTop;
+
+    const hit = ganttTaskPositions.find(p =>
+      mx >= p.x && mx <= p.x + p.width && my >= p.y && my <= p.y + p.height
+    );
+
+    if (hit) {
+      const task = treeData.map[hit.wbs];
+      if (task) {
+        const s = parseDate(task.start);
+        const f = parseDate(task.finish);
+        tooltip.innerHTML = [
+          `<div class="tt-name">${task.name}</div>`,
+          `<div class="tt-row">WBS: <span>${task.wbs}</span></div>`,
+          `<div class="tt-row">时间: <span>${formatDate(s)} — ${formatDate(f)}</span></div>`,
+          `<div class="tt-row">工期: <span>${task.duration || '-'}</span></div>`,
+          `<div class="tt-row">类型: <span>${task.type || '-'}</span></div>`,
+          `<div class="tt-row">部门: <span>${task.department || '-'}</span></div>`,
+          `<div class="tt-row">风险: <span>${task.risk || '-'}</span></div>`
+        ].join('');
+        tooltip.style.display = 'block';
+        tooltip.style.left = (e.clientX + 16) + 'px';
+        tooltip.style.top = (e.clientY + 16) + 'px';
+      }
+    } else {
+      tooltip.style.display = 'none';
+    }
+  });
+
+  canvas.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+
+  canvas.addEventListener('click', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left + panel.scrollLeft;
+    const my = e.clientY - rect.top + panel.scrollTop;
+    const hit = ganttTaskPositions.find(p =>
+      mx >= p.x && mx <= p.x + p.width && my >= p.y && my <= p.y + p.height
+    );
+    if (hit) {
+      selectedTaskWbs = hit.wbs;
+      if (typeof renderTaskTree === 'function') renderTaskTree(filteredTasks);
+      if (typeof showTaskDetail === 'function') showTaskDetail(treeData.map[hit.wbs]);
+    }
+  });
+}
+
+// ===== 滚动同步 =====
+function setupScrollSync() {
+  const treePanel = document.getElementById('taskTreePanel');
+  const ganttPanel = document.getElementById('ganttPanel');
+  let syncing = false;
+  treePanel.addEventListener('scroll', () => {
+    if (syncing) return;
+    syncing = true;
+    ganttPanel.scrollTop = treePanel.scrollTop;
+    syncing = false;
+  });
+  ganttPanel.addEventListener('scroll', () => {
+    if (syncing) return;
+    syncing = true;
+    treePanel.scrollTop = ganttPanel.scrollTop;
+    syncing = false;
   });
 }
 </script>
