@@ -1,0 +1,992 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>数字化底座项目甘特图</title>
+  <style>
+/* ===== Reset & Base ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+  background: #0f1119; color: #c8ccd4; overflow: hidden; height: 100vh;
+}
+
+/* ===== Header ===== */
+.header { background: #161822; padding: 16px 24px; border-bottom: 1px solid #2a2d3a; }
+.header h1 { font-size: 22px; font-weight: 700; color: #e8eaed; letter-spacing: 1px; }
+.header .subtitle { font-size: 13px; color: #6b7194; margin-top: 4px; }
+
+/* ===== Dashboard Cards ===== */
+.dashboard { display: flex; gap: 12px; padding: 12px 24px; background: #141720; border-bottom: 1px solid #2a2d3a; flex-wrap: wrap; }
+.stat-card { background: #1c1f2e; border: 1px solid #2a2d3a; border-radius: 8px; padding: 12px 18px; min-width: 120px; flex: 1; }
+.stat-card .stat-value { font-size: 28px; font-weight: 700; color: #e8eaed; }
+.stat-card .stat-label { font-size: 11px; color: #6b7194; margin-top: 2px; text-transform: uppercase; }
+.stat-card.highlight { border-color: #e74c3c; }
+.stat-card.highlight .stat-value { color: #e74c3c; }
+
+/* ===== Filter Bar ===== */
+.filter-bar { display: flex; gap: 8px; padding: 10px 24px; background: #161822; border-bottom: 1px solid #2a2d3a; flex-wrap: wrap; align-items: center; }
+.filter-bar select, .filter-bar input {
+  background: #1c1f2e; color: #c8ccd4; border: 1px solid #2a2d3a; border-radius: 6px;
+  padding: 6px 10px; font-size: 13px; outline: none;
+}
+.filter-bar select:focus, .filter-bar input:focus { border-color: #4A90D9; }
+.filter-bar input[type="text"] { width: 200px; }
+.view-btns { display: flex; gap: 4px; margin-left: auto; }
+.view-btns button {
+  background: #1c1f2e; color: #8b90a0; border: 1px solid #2a2d3a; border-radius: 6px;
+  padding: 6px 12px; font-size: 12px; cursor: pointer; white-space: nowrap;
+}
+.view-btns button:hover { color: #e8eaed; border-color: #4A90D9; }
+.view-btns button.active { background: #1a3a5c; color: #4A90D9; border-color: #4A90D9; }
+
+/* ===== Main Layout ===== */
+.main-container { display: flex; height: calc(100vh - 230px); position: relative; overflow: hidden; }
+
+/* ===== Task Tree (Left Panel) ===== */
+.task-tree-panel {
+  width: 340px; min-width: 340px; background: #141720; border-right: 1px solid #2a2d3a;
+  overflow-y: auto; overflow-x: hidden; flex-shrink: 0;
+}
+.task-tree-panel::-webkit-scrollbar { width: 6px; }
+.task-tree-panel::-webkit-scrollbar-thumb { background: #2a2d3a; border-radius: 3px; }
+.tree-header {
+  position: sticky; top: 0; z-index: 2; background: #161822; border-bottom: 1px solid #2a2d3a;
+  display: flex; padding: 8px 12px; font-size: 11px; color: #6b7194; font-weight: 600;
+}
+.tree-header .col-wbs { width: 60px; flex-shrink: 0; }
+.tree-header .col-name { flex: 1; }
+.tree-node { display: flex; align-items: center; padding: 0; border-bottom: 1px solid #1a1d2a; cursor: pointer; min-height: 32px; }
+.tree-node:hover { background: #1c1f30; }
+.tree-node.selected { background: #1a3048; border-left: 3px solid #4A90D9; }
+.tree-node .col-wbs { width: 60px; flex-shrink: 0; padding: 4px 6px; font-size: 11px; color: #6b7194; font-family: monospace; }
+.tree-node .col-name { flex: 1; padding: 4px 6px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tree-node .toggle-icon { width: 18px; flex-shrink: 0; text-align: center; font-size: 10px; color: #6b7194; cursor: pointer; user-select: none; }
+.tree-node.level-1 { font-weight: 700; font-size: 13px; background: #181b28; }
+.tree-node.level-1 .col-name { font-size: 13px; }
+.tree-node.level-2 .col-name { font-size: 12px; padding-left: 12px; }
+.tree-node.level-3 .col-name { padding-left: 24px; }
+.tree-node.level-4 .col-name { padding-left: 36px; }
+.tree-node.type-milestone .col-name { color: #f4b400; }
+.tree-node.risk-high .col-wbs { color: #e74c3c; }
+.tree-node.hidden { display: none; }
+
+/* ===== Gantt Panel (Right) ===== */
+.gantt-panel { flex: 1; overflow: auto; position: relative; background: #141720; }
+.gantt-panel::-webkit-scrollbar { width: 8px; height: 8px; }
+.gantt-panel::-webkit-scrollbar-thumb { background: #2a2d3a; border-radius: 4px; }
+.gantt-panel::-webkit-scrollbar-corner { background: #141720; }
+.gantt-canvas { display: block; }
+
+/* ===== Task Detail Panel ===== */
+.detail-overlay { display: none; position: fixed; top: 0; right: 0; width: 420px; height: 100vh;
+  background: #161822; border-left: 1px solid #2a2d3a; z-index: 100; overflow-y: auto;
+  box-shadow: -4px 0 24px rgba(0,0,0,0.5); }
+.detail-overlay.open { display: block; }
+.detail-header { display: flex; justify-content: space-between; align-items: center;
+  padding: 16px 20px; border-bottom: 1px solid #2a2d3a; position: sticky; top: 0;
+  background: #161822; z-index: 1; }
+.detail-header h3 { font-size: 16px; color: #e8eaed; }
+.detail-close { background: none; border: none; color: #6b7194; font-size: 20px; cursor: pointer; }
+.detail-close:hover { color: #e74c3c; }
+.detail-body { padding: 16px 20px; }
+.detail-field { margin-bottom: 14px; }
+.detail-field label { display: block; font-size: 11px; color: #6b7194; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px; }
+.detail-field .value { font-size: 14px; color: #c8ccd4; word-break: break-all; }
+.detail-field .value.badge { display: inline-block; padding: 2px 10px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+.detail-field .value.risk-高 { background: #3d1f1f; color: #e74c3c; }
+.detail-field .value.risk-中 { background: #3d3010; color: #f4b400; }
+.detail-field .value.risk-低 { background: #1a3026; color: #4CAF50; }
+.detail-field .value.tag-milestone { background: #3d3010; color: #f4b400; }
+
+/* ===== Milestone List ===== */
+.milestone-panel { background: #141720; border-top: 1px solid #2a2d3a; padding: 10px 24px; max-height: 150px; overflow-y: auto; }
+.milestone-panel h3 { font-size: 13px; color: #6b7194; margin-bottom: 8px; }
+.milestone-list { display: flex; gap: 12px; flex-wrap: wrap; }
+.milestone-item { font-size: 12px; background: #1c1f2e; border-left: 3px solid #f4b400; padding: 6px 12px; border-radius: 4px; white-space: nowrap; }
+.milestone-item .ms-date { color: #f4b400; font-weight: 600; margin-right: 6px; }
+.milestone-item .ms-name { color: #c8ccd4; }
+
+/* ===== Tooltip ===== */
+.gantt-tooltip { display: none; position: fixed; pointer-events: none; z-index: 200;
+  background: #1c1f2e; border: 1px solid #4A90D9; border-radius: 8px; padding: 12px 16px;
+  max-width: 360px; box-shadow: 0 4px 16px rgba(0,0,0,0.5); }
+.gantt-tooltip .tt-name { font-size: 14px; font-weight: 600; color: #e8eaed; margin-bottom: 6px; }
+.gantt-tooltip .tt-row { font-size: 12px; color: #8b90a0; margin-bottom: 3px; }
+.gantt-tooltip .tt-row span { color: #c8ccd4; }
+
+/* ===== Loading ===== */
+.loading { display: flex; justify-content: center; align-items: center; height: 100vh; font-size: 16px; color: #6b7194; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>数字化底座项目甘特图</h1>
+  <div class="subtitle">2026.06.01 — 2028.01.31 ｜ 数据来源：信息化项目.csv ｜ 草案状态</div>
+</div>
+
+<div class="dashboard" id="dashboard"></div>
+
+<div class="filter-bar" id="filterBar"></div>
+
+<div class="main-container">
+  <div class="task-tree-panel" id="taskTreePanel">
+    <div class="tree-header">
+      <span class="col-wbs">WBS</span>
+      <span class="col-name">任务名称</span>
+    </div>
+    <div id="taskTree"></div>
+  </div>
+  <div class="gantt-panel" id="ganttPanel">
+    <canvas id="ganttCanvas" class="gantt-canvas"></canvas>
+  </div>
+</div>
+
+<div class="milestone-panel" id="milestonePanel">
+  <h3>关键里程碑</h3>
+  <div class="milestone-list" id="milestoneList"></div>
+</div>
+
+<div class="detail-overlay" id="detailOverlay">
+  <div class="detail-header">
+    <h3>任务详情</h3>
+    <button class="detail-close" id="detailClose">&times;</button>
+  </div>
+  <div class="detail-body" id="detailBody"></div>
+</div>
+
+<div class="gantt-tooltip" id="ganttTooltip"></div>
+<div class="loading" id="loading">数据加载中</div>
+
+<script>
+const EMBEDDED_TASKS = [{"id":1,"wbs":"1","name":"项目启动与总体蓝图","type":"摘要","duration":"","start":"2026-06-01","finish":"2026-08-14","predecessors":"","resources":"信息化项目组","department":"信息化项目组","vendor":"","reviewer":"","risk":"中","milestone":"否","deliverable":"","notes":"总体牵头：信息化项目组；重大事项提交项目决策组"},{"id":2,"wbs":"2","name":"招采合同与供应商管理","type":"摘要","duration":"","start":"2026-06-15","finish":"2026-11-20","predecessors":"","resources":"信息化项目组","department":"信息化项目组","vendor":"","reviewer":"","risk":"中","milestone":"否","deliverable":"","notes":"供应商未定项目采用保守招采周期；合同后设置2周进场准备"},{"id":3,"wbs":"3","name":"数据标准与主数据治理","type":"摘要","duration":"","start":"2026-06-08","finish":"2026-10-30","predecessors":"","resources":"信息化项目组","department":"信息化项目组","vendor":"","reviewer":"","risk":"中","milestone":"否","deliverable":"","notes":"MDM先行，支撑PLM/MES/ERP集成"},{"id":4,"wbs":"4","name":"MDM自研平台一期","type":"摘要","duration":"","start":"2026-07-01","finish":"2026-10-30","predecessors":"","resources":"信息化项目组","department":"信息化项目组","vendor":"","reviewer":"","risk":"中","milestone":"否","deliverable":"","notes":"自研，AI辅助编程；10月底一期上线节点不变"},{"id":5,"wbs":"5","name":"基础设施与AI底座","type":"摘要","duration":"","start":"2026-07-01","finish":"2027-01-29","predecessors":"","resources":"信息化项目组","department":"信息化项目组","vendor":"","reviewer":"","risk":"中","milestone":"否","deliverable":"","notes":"基础设施先行，满足MES测试环境前置条件；AI先支撑MDM自研和知识库"},{"id":6,"wbs":"6","name":"PLM基础深化","type":"摘要","duration":"","start":"2026-08-03","finish":"2027-03-31","predecessors":"","resources":"信息化项目组","department":"信息化项目组","vendor":"","reviewer":"","risk":"中","milestone":"否","deliverable":"","notes":"供应商确定前只做内部调研和方案，深化以实际开发集成进度为准"},{"id":7,"wbs":"7","name":"ERP/OA补强","type":"摘要","duration":"","start":"2026-08-03","finish":"2027-04-14","predecessors":"","resources":"信息化项目组","department":"信息化项目组","vendor":"","reviewer":"","risk":"中","milestone":"否","deliverable":"","notes":"现有用友U8；包含MRP、采购计划、生产计划补强"},{"id":8,"wbs":"8","name":"MES建设与QMS低代码平台","type":"摘要","duration":"","start":"2026-09-01","finish":"2027-05-14","predecessors":"","resources":"信息化项目组","department":"信息化项目组","vendor":"","reviewer":"","risk":"中","milestone":"否","deliverable":"","notes":"MES一期开到2027年4月底，QMS纳入MES建设下的子项目"},{"id":9,"wbs":"9","name":"全系统集成联调与现场推广","type":"摘要","duration":"","start":"2027-03-01","finish":"2027-10-29","predecessors":"","resources":"信息化项目组","department":"信息化项目组","vendor":"","reviewer":"","risk":"中","milestone":"否","deliverable":"","notes":"跨系统联调、现场推广、数据治理常态化"},{"id":10,"wbs":"10","name":"AI应用深化、驾驶舱与总体验收","type":"摘要","duration":"","start":"2027-05-03","finish":"2028-01-31","predecessors":"","resources":"信息化项目组","department":"信息化项目组","vendor":"","reviewer":"","risk":"中","milestone":"否","deliverable":"","notes":"2027年深化数字员工、知识库、驾驶舱，2028年1月底总体验收"},{"id":11,"wbs":"1.1","name":"项目启动会准备","type":"启动","duration":"5工作日","start":"2026-06-01","finish":"2026-06-05","predecessors":"","resources":"信息化项目管理工作室","department":"信息化项目组","vendor":"","reviewer":"信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"启动会议程、参会清单","notes":""},{"id":12,"wbs":"1.2","name":"项目启动会召开","type":"里程碑","duration":"0工作日","start":"2026-06-08","finish":"2026-06-08","predecessors":"11","resources":"项目决策组;信息化项目管理工作室","department":"信息化项目组","vendor":"","reviewer":"项目决策组","risk":"中","milestone":"是","deliverable":"项目启动会纪要","notes":""},{"id":13,"wbs":"1.3","name":"项目治理机制建立","type":"管理","duration":"5工作日","start":"2026-06-09","finish":"2026-06-15","predecessors":"12","resources":"信息化项目管理工作室","department":"信息化项目组","vendor":"","reviewer":"信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"周会、月报、风险台账、变更流程","notes":""},{"id":14,"wbs":"1.4","name":"现状调研计划编制","type":"调研","duration":"5工作日","start":"2026-06-16","finish":"2026-06-22","predecessors":"13","resources":"信息化项目管理工作室","department":"信息化项目组","vendor":"","reviewer":"信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"调研计划","notes":""},{"id":15,"wbs":"1.5","name":"业务现状调研-数据与主数据","type":"调研","duration":"8工作日","start":"2026-06-23","finish":"2026-07-02","predecessors":"14","resources":"MDM工作组;数据质量工作组","department":"信息化项目组","vendor":"","reviewer":"信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"调研记录","notes":""},{"id":16,"wbs":"1.6","name":"业务现状调研-PLM","type":"调研","duration":"8工作日","start":"2026-07-03","finish":"2026-07-14","predecessors":"15","resources":"PLM工作组","department":"信息化项目组","vendor":"","reviewer":"信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"调研记录","notes":""},{"id":17,"wbs":"1.7","name":"业务现状调研-MES/QMS","type":"调研","duration":"10工作日","start":"2026-07-15","finish":"2026-07-28","predecessors":"16","resources":"MES工作组","department":"信息化项目组","vendor":"","reviewer":"信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"调研记录","notes":""},{"id":18,"wbs":"1.8","name":"业务现状调研-ERP/OA","type":"调研","duration":"8工作日","start":"2026-07-29","finish":"2026-08-07","predecessors":"17","resources":"ERP·OA工作组","department":"信息化项目组","vendor":"","reviewer":"信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"调研记录","notes":""},{"id":19,"wbs":"1.9","name":"基础设施与网络现状调研","type":"调研","duration":"8工作日","start":"2026-08-10","finish":"2026-08-19","predecessors":"18","resources":"网络工程组;技术架构组","department":"信息化项目组","vendor":"","reviewer":"信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"调研记录","notes":""},{"id":20,"wbs":"1.10","name":"总体蓝图初稿编制","type":"设计","duration":"15工作日","start":"2026-08-20","finish":"2026-09-09","predecessors":"19","resources":"信息化项目管理工作室;技术架构组","department":"信息化项目组","vendor":"","reviewer":"信息化项目管理工作室","risk":"高","milestone":"否","deliverable":"总体蓝图初稿","notes":""},{"id":21,"wbs":"1.11","name":"业务流程梳理与主映射关系整理","type":"设计","duration":"15工作日","start":"2026-09-10","finish":"2026-09-30","predecessors":"20","resources":"PLM工作组;MES工作组;ERP·OA工作组","department":"信息化项目组","vendor":"","reviewer":"信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"部门能力-业务流程-业务行为-应用系统映射","notes":""},{"id":22,"wbs":"1.12","name":"总体系统架构设计","type":"设计","duration":"10工作日","start":"2026-10-01","finish":"2026-10-14","predecessors":"21","resources":"技术架构组","department":"信息化项目组","vendor":"","reviewer":"信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"系统架构方案","notes":""},{"id":23,"wbs":"1.13","name":"总体实施计划评审准备","type":"评审","duration":"5工作日","start":"2026-10-15","finish":"2026-10-21","predecessors":"22","resources":"信息化项目管理工作室","department":"信息化项目组","vendor":"","reviewer":"项目决策组","risk":"中","milestone":"否","deliverable":"评审材料","notes":""},{"id":24,"wbs":"1.14","name":"总体蓝图评审通过","type":"里程碑","duration":"0工作日","start":"2026-10-22","finish":"2026-10-22","predecessors":"23","resources":"项目决策组","department":"信息化项目组","vendor":"","reviewer":"项目决策组","risk":"高","milestone":"是","deliverable":"总体蓝图评审意见","notes":""},{"id":25,"wbs":"2.1.1","name":"基础设施-方案评审材料准备","type":"方案评审","duration":"8工作日","start":"2026-07-01","finish":"2026-07-10","predecessors":"","resources":"信息化项目管理工作室;基础设施供应商","department":"基础设施","vendor":"基础设施供应商","reviewer":"信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"基础设施方案评审材料准备","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":26,"wbs":"2.1.2","name":"基础设施-技术方案与预算评审","type":"评审","duration":"3工作日","start":"2026-07-13","finish":"2026-07-15","predecessors":"25","resources":"信息化项目管理工作室;基础设施供应商","department":"基础设施","vendor":"基础设施供应商","reviewer":"项目决策组","risk":"中","milestone":"否","deliverable":"基础设施技术方案与预算评审","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":27,"wbs":"2.1.3","name":"基础设施-招标/比选文件编制","type":"招采","duration":"8工作日","start":"2026-07-16","finish":"2026-07-27","predecessors":"26","resources":"信息化项目管理工作室;基础设施供应商","department":"基础设施","vendor":"基础设施供应商","reviewer":"信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"基础设施招标/比选文件编制","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":28,"wbs":"2.1.4","name":"基础设施-招标/比选与答疑","type":"招采","duration":"18工作日","start":"2026-07-28","finish":"2026-08-20","predecessors":"27","resources":"信息化项目管理工作室;基础设施供应商","department":"基础设施","vendor":"基础设施供应商","reviewer":"信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"基础设施招标/比选与答疑","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":29,"wbs":"2.1.5","name":"基础设施-评标/选型与商务谈判","type":"招采","duration":"10工作日","start":"2026-08-21","finish":"2026-09-03","predecessors":"28","resources":"信息化项目管理工作室;基础设施供应商","department":"基础设施","vendor":"基础设施供应商","reviewer":"信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"基础设施评标/选型与商务谈判","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":30,"wbs":"2.1.6","name":"基础设施-合同审批与签订","type":"合同","duration":"8工作日","start":"2026-09-04","finish":"2026-09-15","predecessors":"29","resources":"信息化项目管理工作室;基础设施供应商","department":"基础设施","vendor":"基础设施供应商","reviewer":"项目决策组","risk":"中","milestone":"否","deliverable":"基础设施合同审批与签订","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":31,"wbs":"2.1.7","name":"基础设施-供应商进场准备","type":"进场","duration":"10工作日","start":"2026-09-16","finish":"2026-09-29","predecessors":"30","resources":"信息化项目管理工作室;基础设施供应商","department":"基础设施","vendor":"基础设施供应商","reviewer":"信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"基础设施供应商进场准备","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":32,"wbs":"2.1.8","name":"基础设施-供应商正式进场","type":"里程碑","duration":"0工作日","start":"2026-09-30","finish":"2026-09-30","predecessors":"31","resources":"信息化项目管理工作室;基础设施供应商","department":"基础设施","vendor":"基础设施供应商","reviewer":"信息化项目管理工作室","risk":"中","milestone":"是","deliverable":"基础设施供应商正式进场","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":33,"wbs":"2.2.1","name":"AI服务器/本地模型环境-方案评审材料准备","type":"方案评审","duration":"8工作日","start":"2026-07-15","finish":"2026-07-24","predecessors":"","resources":"信息化项目管理工作室;AI服务器供应商","department":"基础设施","vendor":"AI服务器供应商","reviewer":"信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"AI服务器/本地模型环境方案评审材料准备","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":34,"wbs":"2.2.2","name":"AI服务器/本地模型环境-技术方案与预算评审","type":"评审","duration":"3工作日","start":"2026-07-27","finish":"2026-07-29","predecessors":"33","resources":"信息化项目管理工作室;AI服务器供应商","department":"基础设施","vendor":"AI服务器供应商","reviewer":"项目决策组","risk":"中","milestone":"否","deliverable":"AI服务器/本地模型环境技术方案与预算评审","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":35,"wbs":"2.2.3","name":"AI服务器/本地模型环境-招标/比选文件编制","type":"招采","duration":"8工作日","start":"2026-07-30","finish":"2026-08-10","predecessors":"34","resources":"信息化项目管理工作室;AI服务器供应商","department":"基础设施","vendor":"AI服务器供应商","reviewer":"信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"AI服务器/本地模型环境招标/比选文件编制","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":36,"wbs":"2.2.4","name":"AI服务器/本地模型环境-招标/比选与答疑","type":"招采","duration":"18工作日","start":"2026-08-11","finish":"2026-09-03","predecessors":"35","resources":"信息化项目管理工作室;AI服务器供应商","department":"基础设施","vendor":"AI服务器供应商","reviewer":"信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"AI服务器/本地模型环境招标/比选与答疑","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":37,"wbs":"2.2.5","name":"AI服务器/本地模型环境-评标/选型与商务谈判","type":"招采","duration":"10工作日","start":"2026-09-04","finish":"2026-09-17","predecessors":"36","resources":"信息化项目管理工作室;AI服务器供应商","department":"基础设施","vendor":"AI服务器供应商","reviewer":"信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"AI服务器/本地模型环境评标/选型与商务谈判","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":38,"wbs":"2.2.6","name":"AI服务器/本地模型环境-合同审批与签订","type":"合同","duration":"8工作日","start":"2026-09-18","finish":"2026-09-29","predecessors":"37","resources":"信息化项目管理工作室;AI服务器供应商","department":"基础设施","vendor":"AI服务器供应商","reviewer":"项目决策组","risk":"中","milestone":"否","deliverable":"AI服务器/本地模型环境合同审批与签订","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":39,"wbs":"2.2.7","name":"AI服务器/本地模型环境-供应商进场准备","type":"进场","duration":"10工作日","start":"2026-09-30","finish":"2026-10-13","predecessors":"38","resources":"信息化项目管理工作室;AI服务器供应商","department":"基础设施","vendor":"AI服务器供应商","reviewer":"信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"AI服务器/本地模型环境供应商进场准备","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":40,"wbs":"2.2.8","name":"AI服务器/本地模型环境-供应商正式进场","type":"里程碑","duration":"0工作日","start":"2026-10-14","finish":"2026-10-14","predecessors":"39","resources":"信息化项目管理工作室;AI服务器供应商","department":"基础设施","vendor":"AI服务器供应商","reviewer":"信息化项目管理工作室","risk":"中","milestone":"是","deliverable":"AI服务器/本地模型环境供应商正式进场","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":41,"wbs":"2.3.1","name":"虚拟化/瘦终端平台-方案评审材料准备","type":"方案评审","duration":"8工作日","start":"2026-07-15","finish":"2026-07-24","predecessors":"","resources":"信息化项目管理工作室;基础设施供应商","department":"基础设施","vendor":"基础设施供应商","reviewer":"信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"虚拟化/瘦终端平台方案评审材料准备","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":42,"wbs":"2.3.2","name":"虚拟化/瘦终端平台-技术方案与预算评审","type":"评审","duration":"3工作日","start":"2026-07-27","finish":"2026-07-29","predecessors":"41","resources":"信息化项目管理工作室;基础设施供应商","department":"基础设施","vendor":"基础设施供应商","reviewer":"项目决策组","risk":"中","milestone":"否","deliverable":"虚拟化/瘦终端平台技术方案与预算评审","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":43,"wbs":"2.3.3","name":"虚拟化/瘦终端平台-招标/比选文件编制","type":"招采","duration":"8工作日","start":"2026-07-30","finish":"2026-08-10","predecessors":"42","resources":"信息化项目管理工作室;基础设施供应商","department":"基础设施","vendor":"基础设施供应商","reviewer":"信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"虚拟化/瘦终端平台招标/比选文件编制","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":44,"wbs":"2.3.4","name":"虚拟化/瘦终端平台-招标/比选与答疑","type":"招采","duration":"18工作日","start":"2026-08-11","finish":"2026-09-03","predecessors":"43","resources":"信息化项目管理工作室;基础设施供应商","department":"基础设施","vendor":"基础设施供应商","reviewer":"信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"虚拟化/瘦终端平台招标/比选与答疑","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":45,"wbs":"2.3.5","name":"虚拟化/瘦终端平台-评标/选型与商务谈判","type":"招采","duration":"10工作日","start":"2026-09-04","finish":"2026-09-17","predecessors":"44","resources":"信息化项目管理工作室;基础设施供应商","department":"基础设施","vendor":"基础设施供应商","reviewer":"信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"虚拟化/瘦终端平台评标/选型与商务谈判","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":46,"wbs":"2.3.6","name":"虚拟化/瘦终端平台-合同审批与签订","type":"合同","duration":"8工作日","start":"2026-09-18","finish":"2026-09-29","predecessors":"45","resources":"信息化项目管理工作室;基础设施供应商","department":"基础设施","vendor":"基础设施供应商","reviewer":"项目决策组","risk":"中","milestone":"否","deliverable":"虚拟化/瘦终端平台合同审批与签订","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":47,"wbs":"2.3.7","name":"虚拟化/瘦终端平台-供应商进场准备","type":"进场","duration":"10工作日","start":"2026-09-30","finish":"2026-10-13","predecessors":"46","resources":"信息化项目管理工作室;基础设施供应商","department":"基础设施","vendor":"基础设施供应商","reviewer":"信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"虚拟化/瘦终端平台供应商进场准备","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":48,"wbs":"2.3.8","name":"虚拟化/瘦终端平台-供应商正式进场","type":"里程碑","duration":"0工作日","start":"2026-10-14","finish":"2026-10-14","predecessors":"47","resources":"信息化项目管理工作室;基础设施供应商","department":"基础设施","vendor":"基础设施供应商","reviewer":"信息化项目管理工作室","risk":"中","milestone":"是","deliverable":"虚拟化/瘦终端平台供应商正式进场","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":49,"wbs":"2.4.1","name":"PLM深化-方案评审材料准备","type":"方案评审","duration":"8工作日","start":"2026-08-17","finish":"2026-08-26","predecessors":"","resources":"信息化项目管理工作室;PLM供应商","department":"PLM","vendor":"PLM供应商","reviewer":"信息化项目管理工作室","risk":"高","milestone":"否","deliverable":"PLM深化方案评审材料准备","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":50,"wbs":"2.4.2","name":"PLM深化-技术方案与预算评审","type":"评审","duration":"3工作日","start":"2026-08-27","finish":"2026-08-31","predecessors":"49","resources":"信息化项目管理工作室;PLM供应商","department":"PLM","vendor":"PLM供应商","reviewer":"项目决策组","risk":"高","milestone":"否","deliverable":"PLM深化技术方案与预算评审","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":51,"wbs":"2.4.3","name":"PLM深化-招标/比选文件编制","type":"招采","duration":"8工作日","start":"2026-09-01","finish":"2026-09-10","predecessors":"50","resources":"信息化项目管理工作室;PLM供应商","department":"PLM","vendor":"PLM供应商","reviewer":"信息化项目管理工作室","risk":"高","milestone":"否","deliverable":"PLM深化招标/比选文件编制","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":52,"wbs":"2.4.4","name":"PLM深化-招标/比选与答疑","type":"招采","duration":"25工作日","start":"2026-09-11","finish":"2026-10-15","predecessors":"51","resources":"信息化项目管理工作室;PLM供应商","department":"PLM","vendor":"PLM供应商","reviewer":"信息化项目管理工作室","risk":"高","milestone":"否","deliverable":"PLM深化招标/比选与答疑","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":53,"wbs":"2.4.5","name":"PLM深化-评标/选型与商务谈判","type":"招采","duration":"10工作日","start":"2026-10-16","finish":"2026-10-29","predecessors":"52","resources":"信息化项目管理工作室;PLM供应商","department":"PLM","vendor":"PLM供应商","reviewer":"信息化项目管理工作室","risk":"高","milestone":"否","deliverable":"PLM深化评标/选型与商务谈判","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":54,"wbs":"2.4.6","name":"PLM深化-合同审批与签订","type":"合同","duration":"8工作日","start":"2026-10-30","finish":"2026-11-10","predecessors":"53","resources":"信息化项目管理工作室;PLM供应商","department":"PLM","vendor":"PLM供应商","reviewer":"项目决策组","risk":"高","milestone":"否","deliverable":"PLM深化合同审批与签订","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":55,"wbs":"2.4.7","name":"PLM深化-供应商进场准备","type":"进场","duration":"10工作日","start":"2026-11-11","finish":"2026-11-24","predecessors":"54","resources":"信息化项目管理工作室;PLM供应商","department":"PLM","vendor":"PLM供应商","reviewer":"信息化项目管理工作室","risk":"高","milestone":"否","deliverable":"PLM深化供应商进场准备","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":56,"wbs":"2.4.8","name":"PLM深化-供应商正式进场","type":"里程碑","duration":"0工作日","start":"2026-11-25","finish":"2026-11-25","predecessors":"55","resources":"信息化项目管理工作室;PLM供应商","department":"PLM","vendor":"PLM供应商","reviewer":"信息化项目管理工作室","risk":"高","milestone":"是","deliverable":"PLM深化供应商正式进场","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":57,"wbs":"2.5.1","name":"MES/QMS-方案评审材料准备","type":"方案评审","duration":"8工作日","start":"2026-09-01","finish":"2026-09-10","predecessors":"","resources":"信息化项目管理工作室;MES供应商;低代码平台供应商","department":"MES","vendor":"MES供应商;低代码平台供应商","reviewer":"信息化项目管理工作室","risk":"高","milestone":"否","deliverable":"MES/QMS方案评审材料准备","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":58,"wbs":"2.5.2","name":"MES/QMS-技术方案与预算评审","type":"评审","duration":"3工作日","start":"2026-09-11","finish":"2026-09-15","predecessors":"57","resources":"信息化项目管理工作室;MES供应商;低代码平台供应商","department":"MES","vendor":"MES供应商;低代码平台供应商","reviewer":"项目决策组","risk":"高","milestone":"否","deliverable":"MES/QMS技术方案与预算评审","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":59,"wbs":"2.5.3","name":"MES/QMS-招标/比选文件编制","type":"招采","duration":"8工作日","start":"2026-09-16","finish":"2026-09-25","predecessors":"58","resources":"信息化项目管理工作室;MES供应商;低代码平台供应商","department":"MES","vendor":"MES供应商;低代码平台供应商","reviewer":"信息化项目管理工作室","risk":"高","milestone":"否","deliverable":"MES/QMS招标/比选文件编制","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":60,"wbs":"2.5.4","name":"MES/QMS-招标/比选与答疑","type":"招采","duration":"25工作日","start":"2026-09-28","finish":"2026-10-30","predecessors":"59","resources":"信息化项目管理工作室;MES供应商;低代码平台供应商","department":"MES","vendor":"MES供应商;低代码平台供应商","reviewer":"信息化项目管理工作室","risk":"高","milestone":"否","deliverable":"MES/QMS招标/比选与答疑","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":61,"wbs":"2.5.5","name":"MES/QMS-评标/选型与商务谈判","type":"招采","duration":"10工作日","start":"2026-11-02","finish":"2026-11-13","predecessors":"60","resources":"信息化项目管理工作室;MES供应商;低代码平台供应商","department":"MES","vendor":"MES供应商;低代码平台供应商","reviewer":"信息化项目管理工作室","risk":"高","milestone":"否","deliverable":"MES/QMS评标/选型与商务谈判","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":62,"wbs":"2.5.6","name":"MES/QMS-合同审批与签订","type":"合同","duration":"8工作日","start":"2026-11-16","finish":"2026-11-25","predecessors":"61","resources":"信息化项目管理工作室;MES供应商;低代码平台供应商","department":"MES","vendor":"MES供应商;低代码平台供应商","reviewer":"项目决策组","risk":"高","milestone":"否","deliverable":"MES/QMS合同审批与签订","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":63,"wbs":"2.5.7","name":"MES/QMS-供应商进场准备","type":"进场","duration":"10工作日","start":"2026-11-26","finish":"2026-12-09","predecessors":"62","resources":"信息化项目管理工作室;MES供应商;低代码平台供应商","department":"MES","vendor":"MES供应商;低代码平台供应商","reviewer":"信息化项目管理工作室","risk":"高","milestone":"否","deliverable":"MES/QMS供应商进场准备","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":64,"wbs":"2.5.8","name":"MES/QMS-供应商正式进场","type":"里程碑","duration":"0工作日","start":"2026-12-10","finish":"2026-12-10","predecessors":"63","resources":"信息化项目管理工作室;MES供应商;低代码平台供应商","department":"MES","vendor":"MES供应商;低代码平台供应商","reviewer":"信息化项目管理工作室","risk":"高","milestone":"是","deliverable":"MES/QMS供应商正式进场","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":65,"wbs":"2.6.1","name":"设备数据采集硬件/网关-方案评审材料准备","type":"方案评审","duration":"8工作日","start":"2027-05-10","finish":"2027-05-19","predecessors":"","resources":"信息化项目管理工作室;设备采集供应商","department":"MES","vendor":"设备采集供应商","reviewer":"信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"设备数据采集硬件/网关方案评审材料准备","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":66,"wbs":"2.6.2","name":"设备数据采集硬件/网关-技术方案与预算评审","type":"评审","duration":"3工作日","start":"2027-05-20","finish":"2027-05-24","predecessors":"65","resources":"信息化项目管理工作室;设备采集供应商","department":"MES","vendor":"设备采集供应商","reviewer":"项目决策组","risk":"中","milestone":"否","deliverable":"设备数据采集硬件/网关技术方案与预算评审","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":67,"wbs":"2.6.3","name":"设备数据采集硬件/网关-招标/比选文件编制","type":"招采","duration":"8工作日","start":"2027-05-25","finish":"2027-06-03","predecessors":"66","resources":"信息化项目管理工作室;设备采集供应商","department":"MES","vendor":"设备采集供应商","reviewer":"信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"设备数据采集硬件/网关招标/比选文件编制","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":68,"wbs":"2.6.4","name":"设备数据采集硬件/网关-招标/比选与答疑","type":"招采","duration":"25工作日","start":"2027-06-04","finish":"2027-07-08","predecessors":"67","resources":"信息化项目管理工作室;设备采集供应商","department":"MES","vendor":"设备采集供应商","reviewer":"信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"设备数据采集硬件/网关招标/比选与答疑","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":69,"wbs":"2.6.5","name":"设备数据采集硬件/网关-评标/选型与商务谈判","type":"招采","duration":"10工作日","start":"2027-07-09","finish":"2027-07-22","predecessors":"68","resources":"信息化项目管理工作室;设备采集供应商","department":"MES","vendor":"设备采集供应商","reviewer":"信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"设备数据采集硬件/网关评标/选型与商务谈判","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":70,"wbs":"2.6.6","name":"设备数据采集硬件/网关-合同审批与签订","type":"合同","duration":"8工作日","start":"2027-07-23","finish":"2027-08-03","predecessors":"69","resources":"信息化项目管理工作室;设备采集供应商","department":"MES","vendor":"设备采集供应商","reviewer":"项目决策组","risk":"中","milestone":"否","deliverable":"设备数据采集硬件/网关合同审批与签订","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":71,"wbs":"2.6.7","name":"设备数据采集硬件/网关-供应商进场准备","type":"进场","duration":"10工作日","start":"2027-08-04","finish":"2027-08-17","predecessors":"70","resources":"信息化项目管理工作室;设备采集供应商","department":"MES","vendor":"设备采集供应商","reviewer":"信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"设备数据采集硬件/网关供应商进场准备","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":72,"wbs":"2.6.8","name":"设备数据采集硬件/网关-供应商正式进场","type":"里程碑","duration":"0工作日","start":"2027-08-18","finish":"2027-08-18","predecessors":"71","resources":"信息化项目管理工作室;设备采集供应商","department":"MES","vendor":"设备采集供应商","reviewer":"信息化项目管理工作室","risk":"中","milestone":"是","deliverable":"设备数据采集硬件/网关供应商正式进场","notes":"重大评审尽量串行；供应商合同后2周进场准备"},{"id":73,"wbs":"3.1.1","name":"组织/部门/岗位/人员标准-现状盘点","type":"调研","duration":"5工作日","start":"2026-06-08","finish":"2026-06-12","predecessors":"","resources":"MDM工作组;数据质量工作组;各业务工作组","department":"MDM工作组","vendor":"","reviewer":"各部门授权审核员;数据质量工作组","risk":"中","milestone":"否","deliverable":"组织人员标准","notes":"所有资源均按瓶颈处理，关键评审避免重叠"},{"id":74,"wbs":"3.1.2","name":"组织/部门/岗位/人员标准-标准草案编制","type":"设计","duration":"6工作日","start":"2026-06-15","finish":"2026-06-22","predecessors":"73","resources":"MDM工作组;数据质量工作组;各业务工作组","department":"MDM工作组","vendor":"","reviewer":"各部门授权审核员;数据质量工作组","risk":"中","milestone":"否","deliverable":"组织人员标准","notes":"所有资源均按瓶颈处理，关键评审避免重叠"},{"id":75,"wbs":"3.1.3","name":"组织/部门/岗位/人员标准-业务评审","type":"评审","duration":"3工作日","start":"2026-06-23","finish":"2026-06-25","predecessors":"74","resources":"MDM工作组;数据质量工作组;各业务工作组","department":"MDM工作组","vendor":"","reviewer":"各部门授权审核员;数据质量工作组","risk":"中","milestone":"否","deliverable":"组织人员标准","notes":"所有资源均按瓶颈处理，关键评审避免重叠"},{"id":76,"wbs":"3.1.4","name":"组织/部门/岗位/人员标准-修订确认","type":"修订","duration":"4工作日","start":"2026-06-26","finish":"2026-07-01","predecessors":"75","resources":"MDM工作组;数据质量工作组;各业务工作组","department":"MDM工作组","vendor":"","reviewer":"各部门授权审核员;数据质量工作组","risk":"中","milestone":"否","deliverable":"组织人员标准","notes":"所有资源均按瓶颈处理，关键评审避免重叠"},{"id":77,"wbs":"3.2.1","name":"物料分类与物料编码标准-现状盘点","type":"调研","duration":"5工作日","start":"2026-07-02","finish":"2026-07-08","predecessors":"76","resources":"MDM工作组;数据质量工作组;各业务工作组","department":"MDM工作组","vendor":"","reviewer":"各部门授权审核员;数据质量工作组","risk":"高","milestone":"否","deliverable":"物料分类、编码规则、属性模板","notes":"所有资源均按瓶颈处理，关键评审避免重叠"},{"id":78,"wbs":"3.2.2","name":"物料分类与物料编码标准-标准草案编制","type":"设计","duration":"6工作日","start":"2026-07-09","finish":"2026-07-16","predecessors":"77","resources":"MDM工作组;数据质量工作组;各业务工作组","department":"MDM工作组","vendor":"","reviewer":"各部门授权审核员;数据质量工作组","risk":"高","milestone":"否","deliverable":"物料分类、编码规则、属性模板","notes":"所有资源均按瓶颈处理，关键评审避免重叠"},{"id":79,"wbs":"3.2.3","name":"物料分类与物料编码标准-业务评审","type":"评审","duration":"3工作日","start":"2026-07-17","finish":"2026-07-21","predecessors":"78","resources":"MDM工作组;数据质量工作组;各业务工作组","department":"MDM工作组","vendor":"","reviewer":"各部门授权审核员;数据质量工作组","risk":"高","milestone":"否","deliverable":"物料分类、编码规则、属性模板","notes":"所有资源均按瓶颈处理，关键评审避免重叠"},{"id":80,"wbs":"3.2.4","name":"物料分类与物料编码标准-修订确认","type":"修订","duration":"4工作日","start":"2026-07-22","finish":"2026-07-27","predecessors":"79","resources":"MDM工作组;数据质量工作组;各业务工作组","department":"MDM工作组","vendor":"","reviewer":"各部门授权审核员;数据质量工作组","risk":"高","milestone":"否","deliverable":"物料分类、编码规则、属性模板","notes":"所有资源均按瓶颈处理，关键评审避免重叠"},{"id":81,"wbs":"3.3.1","name":"EBOM/PBOM/MBOM数据口径-现状盘点","type":"调研","duration":"5工作日","start":"2026-07-28","finish":"2026-08-03","predecessors":"80","resources":"MDM工作组;数据质量工作组;各业务工作组","department":"MDM工作组","vendor":"","reviewer":"各部门授权审核员;数据质量工作组","risk":"高","milestone":"否","deliverable":"三类BOM口径说明","notes":"所有资源均按瓶颈处理，关键评审避免重叠"},{"id":82,"wbs":"3.3.2","name":"EBOM/PBOM/MBOM数据口径-标准草案编制","type":"设计","duration":"6工作日","start":"2026-08-04","finish":"2026-08-11","predecessors":"81","resources":"MDM工作组;数据质量工作组;各业务工作组","department":"MDM工作组","vendor":"","reviewer":"各部门授权审核员;数据质量工作组","risk":"高","milestone":"否","deliverable":"三类BOM口径说明","notes":"所有资源均按瓶颈处理，关键评审避免重叠"},{"id":83,"wbs":"3.3.3","name":"EBOM/PBOM/MBOM数据口径-业务评审","type":"评审","duration":"3工作日","start":"2026-08-12","finish":"2026-08-14","predecessors":"82","resources":"MDM工作组;数据质量工作组;各业务工作组","department":"MDM工作组","vendor":"","reviewer":"各部门授权审核员;数据质量工作组","risk":"高","milestone":"否","deliverable":"三类BOM口径说明","notes":"所有资源均按瓶颈处理，关键评审避免重叠"},{"id":84,"wbs":"3.3.4","name":"EBOM/PBOM/MBOM数据口径-修订确认","type":"修订","duration":"4工作日","start":"2026-08-17","finish":"2026-08-20","predecessors":"83","resources":"MDM工作组;数据质量工作组;各业务工作组","department":"MDM工作组","vendor":"","reviewer":"各部门授权审核员;数据质量工作组","risk":"高","milestone":"否","deliverable":"三类BOM口径说明","notes":"所有资源均按瓶颈处理，关键评审避免重叠"},{"id":85,"wbs":"3.4.1","name":"工艺资源标准-现状盘点","type":"调研","duration":"5工作日","start":"2026-08-21","finish":"2026-08-27","predecessors":"84","resources":"MDM工作组;数据质量工作组;各业务工作组","department":"MDM工作组","vendor":"","reviewer":"各部门授权审核员;数据质量工作组","risk":"中","milestone":"否","deliverable":"设备、工装、工具、工位标准","notes":"所有资源均按瓶颈处理，关键评审避免重叠"},{"id":86,"wbs":"3.4.2","name":"工艺资源标准-标准草案编制","type":"设计","duration":"6工作日","start":"2026-08-28","finish":"2026-09-04","predecessors":"85","resources":"MDM工作组;数据质量工作组;各业务工作组","department":"MDM工作组","vendor":"","reviewer":"各部门授权审核员;数据质量工作组","risk":"中","milestone":"否","deliverable":"设备、工装、工具、工位标准","notes":"所有资源均按瓶颈处理，关键评审避免重叠"},{"id":87,"wbs":"3.4.3","name":"工艺资源标准-业务评审","type":"评审","duration":"3工作日","start":"2026-09-07","finish":"2026-09-09","predecessors":"86","resources":"MDM工作组;数据质量工作组;各业务工作组","department":"MDM工作组","vendor":"","reviewer":"各部门授权审核员;数据质量工作组","risk":"中","milestone":"否","deliverable":"设备、工装、工具、工位标准","notes":"所有资源均按瓶颈处理，关键评审避免重叠"},{"id":88,"wbs":"3.4.4","name":"工艺资源标准-修订确认","type":"修订","duration":"4工作日","start":"2026-09-10","finish":"2026-09-15","predecessors":"87","resources":"MDM工作组;数据质量工作组;各业务工作组","department":"MDM工作组","vendor":"","reviewer":"各部门授权审核员;数据质量工作组","risk":"中","milestone":"否","deliverable":"设备、工装、工具、工位标准","notes":"所有资源均按瓶颈处理，关键评审避免重叠"},{"id":89,"wbs":"3.5.1","name":"供应商/客户/项目/架次标准-现状盘点","type":"调研","duration":"5工作日","start":"2026-09-16","finish":"2026-09-22","predecessors":"88","resources":"MDM工作组;数据质量工作组;各业务工作组","department":"MDM工作组","vendor":"","reviewer":"各部门授权审核员;数据质量工作组","risk":"中","milestone":"否","deliverable":"供应商客户项目架次模板","notes":"所有资源均按瓶颈处理，关键评审避免重叠"},{"id":90,"wbs":"3.5.2","name":"供应商/客户/项目/架次标准-标准草案编制","type":"设计","duration":"6工作日","start":"2026-09-23","finish":"2026-09-30","predecessors":"89","resources":"MDM工作组;数据质量工作组;各业务工作组","department":"MDM工作组","vendor":"","reviewer":"各部门授权审核员;数据质量工作组","risk":"中","milestone":"否","deliverable":"供应商客户项目架次模板","notes":"所有资源均按瓶颈处理，关键评审避免重叠"},{"id":91,"wbs":"3.5.3","name":"供应商/客户/项目/架次标准-业务评审","type":"评审","duration":"3工作日","start":"2026-10-01","finish":"2026-10-05","predecessors":"90","resources":"MDM工作组;数据质量工作组;各业务工作组","department":"MDM工作组","vendor":"","reviewer":"各部门授权审核员;数据质量工作组","risk":"中","milestone":"否","deliverable":"供应商客户项目架次模板","notes":"所有资源均按瓶颈处理，关键评审避免重叠"},{"id":92,"wbs":"3.5.4","name":"供应商/客户/项目/架次标准-修订确认","type":"修订","duration":"4工作日","start":"2026-10-06","finish":"2026-10-09","predecessors":"91","resources":"MDM工作组;数据质量工作组;各业务工作组","department":"MDM工作组","vendor":"","reviewer":"各部门授权审核员;数据质量工作组","risk":"中","milestone":"否","deliverable":"供应商客户项目架次模板","notes":"所有资源均按瓶颈处理，关键评审避免重叠"},{"id":93,"wbs":"3.6.1","name":"库房/库位/批次/条码规则-现状盘点","type":"调研","duration":"5工作日","start":"2026-10-12","finish":"2026-10-16","predecessors":"92","resources":"MDM工作组;数据质量工作组;各业务工作组","department":"MDM工作组","vendor":"","reviewer":"各部门授权审核员;数据质量工作组","risk":"中","milestone":"否","deliverable":"库房库位批次条码规则","notes":"所有资源均按瓶颈处理，关键评审避免重叠"},{"id":94,"wbs":"3.6.2","name":"库房/库位/批次/条码规则-标准草案编制","type":"设计","duration":"6工作日","start":"2026-10-19","finish":"2026-10-26","predecessors":"93","resources":"MDM工作组;数据质量工作组;各业务工作组","department":"MDM工作组","vendor":"","reviewer":"各部门授权审核员;数据质量工作组","risk":"中","milestone":"否","deliverable":"库房库位批次条码规则","notes":"所有资源均按瓶颈处理，关键评审避免重叠"},{"id":95,"wbs":"3.6.3","name":"库房/库位/批次/条码规则-业务评审","type":"评审","duration":"3工作日","start":"2026-10-27","finish":"2026-10-29","predecessors":"94","resources":"MDM工作组;数据质量工作组;各业务工作组","department":"MDM工作组","vendor":"","reviewer":"各部门授权审核员;数据质量工作组","risk":"中","milestone":"否","deliverable":"库房库位批次条码规则","notes":"所有资源均按瓶颈处理，关键评审避免重叠"},{"id":96,"wbs":"3.6.4","name":"库房/库位/批次/条码规则-修订确认","type":"修订","duration":"4工作日","start":"2026-10-30","finish":"2026-11-04","predecessors":"95","resources":"MDM工作组;数据质量工作组;各业务工作组","department":"MDM工作组","vendor":"","reviewer":"各部门授权审核员;数据质量工作组","risk":"中","milestone":"否","deliverable":"库房库位批次条码规则","notes":"所有资源均按瓶颈处理，关键评审避免重叠"},{"id":97,"wbs":"3.7.1","name":"主数据清洗去重补全-现状盘点","type":"调研","duration":"5工作日","start":"2026-11-05","finish":"2026-11-11","predecessors":"96","resources":"MDM工作组;数据质量工作组;各业务工作组","department":"MDM工作组","vendor":"","reviewer":"各部门授权审核员;数据质量工作组","risk":"中","milestone":"否","deliverable":"数据清洗报告","notes":"所有资源均按瓶颈处理，关键评审避免重叠"},{"id":98,"wbs":"3.7.2","name":"主数据清洗去重补全-标准草案编制","type":"设计","duration":"6工作日","start":"2026-11-12","finish":"2026-11-19","predecessors":"97","resources":"MDM工作组;数据质量工作组;各业务工作组","department":"MDM工作组","vendor":"","reviewer":"各部门授权审核员;数据质量工作组","risk":"中","milestone":"否","deliverable":"数据清洗报告","notes":"所有资源均按瓶颈处理，关键评审避免重叠"},{"id":99,"wbs":"3.7.3","name":"主数据清洗去重补全-业务评审","type":"评审","duration":"3工作日","start":"2026-11-20","finish":"2026-11-24","predecessors":"98","resources":"MDM工作组;数据质量工作组;各业务工作组","department":"MDM工作组","vendor":"","reviewer":"各部门授权审核员;数据质量工作组","risk":"中","milestone":"否","deliverable":"数据清洗报告","notes":"所有资源均按瓶颈处理，关键评审避免重叠"},{"id":100,"wbs":"3.7.4","name":"主数据清洗去重补全-修订确认","type":"修订","duration":"4工作日","start":"2026-11-25","finish":"2026-11-30","predecessors":"99","resources":"MDM工作组;数据质量工作组;各业务工作组","department":"MDM工作组","vendor":"","reviewer":"各部门授权审核员;数据质量工作组","risk":"中","milestone":"否","deliverable":"数据清洗报告","notes":"所有资源均按瓶颈处理，关键评审避免重叠"},{"id":101,"wbs":"3.8.1","name":"数据质量问题清单建立-现状盘点","type":"调研","duration":"5工作日","start":"2026-12-01","finish":"2026-12-07","predecessors":"100","resources":"MDM工作组;数据质量工作组;各业务工作组","department":"MDM工作组","vendor":"","reviewer":"各部门授权审核员;数据质量工作组","risk":"中","milestone":"否","deliverable":"数据质量问题清单","notes":"所有资源均按瓶颈处理，关键评审避免重叠"},{"id":102,"wbs":"3.8.2","name":"数据质量问题清单建立-标准草案编制","type":"设计","duration":"6工作日","start":"2026-12-08","finish":"2026-12-15","predecessors":"101","resources":"MDM工作组;数据质量工作组;各业务工作组","department":"MDM工作组","vendor":"","reviewer":"各部门授权审核员;数据质量工作组","risk":"中","milestone":"否","deliverable":"数据质量问题清单","notes":"所有资源均按瓶颈处理，关键评审避免重叠"},{"id":103,"wbs":"3.8.3","name":"数据质量问题清单建立-业务评审","type":"评审","duration":"3工作日","start":"2026-12-16","finish":"2026-12-18","predecessors":"102","resources":"MDM工作组;数据质量工作组;各业务工作组","department":"MDM工作组","vendor":"","reviewer":"各部门授权审核员;数据质量工作组","risk":"中","milestone":"否","deliverable":"数据质量问题清单","notes":"所有资源均按瓶颈处理，关键评审避免重叠"},{"id":104,"wbs":"3.8.4","name":"数据质量问题清单建立-修订确认","type":"修订","duration":"4工作日","start":"2026-12-21","finish":"2026-12-24","predecessors":"103","resources":"MDM工作组;数据质量工作组;各业务工作组","department":"MDM工作组","vendor":"","reviewer":"各部门授权审核员;数据质量工作组","risk":"中","milestone":"否","deliverable":"数据质量问题清单","notes":"所有资源均按瓶颈处理，关键评审避免重叠"},{"id":105,"wbs":"3.9.1","name":"主数据标准V1.0发布培训-现状盘点","type":"调研","duration":"5工作日","start":"2026-12-25","finish":"2026-12-31","predecessors":"104","resources":"MDM工作组;数据质量工作组;各业务工作组","department":"MDM工作组","vendor":"","reviewer":"各部门授权审核员;数据质量工作组","risk":"中","milestone":"否","deliverable":"发布材料与培训记录","notes":"所有资源均按瓶颈处理，关键评审避免重叠"},{"id":106,"wbs":"3.9.2","name":"主数据标准V1.0发布培训-标准草案编制","type":"设计","duration":"6工作日","start":"2027-01-01","finish":"2027-01-08","predecessors":"105","resources":"MDM工作组;数据质量工作组;各业务工作组","department":"MDM工作组","vendor":"","reviewer":"各部门授权审核员;数据质量工作组","risk":"中","milestone":"否","deliverable":"发布材料与培训记录","notes":"所有资源均按瓶颈处理，关键评审避免重叠"},{"id":107,"wbs":"3.9.3","name":"主数据标准V1.0发布培训-业务评审","type":"评审","duration":"3工作日","start":"2027-01-11","finish":"2027-01-13","predecessors":"106","resources":"MDM工作组;数据质量工作组;各业务工作组","department":"MDM工作组","vendor":"","reviewer":"各部门授权审核员;数据质量工作组","risk":"中","milestone":"否","deliverable":"发布材料与培训记录","notes":"所有资源均按瓶颈处理，关键评审避免重叠"},{"id":108,"wbs":"3.9.4","name":"主数据标准V1.0发布培训-修订确认","type":"修订","duration":"4工作日","start":"2027-01-14","finish":"2027-01-19","predecessors":"107","resources":"MDM工作组;数据质量工作组;各业务工作组","department":"MDM工作组","vendor":"","reviewer":"各部门授权审核员;数据质量工作组","risk":"中","milestone":"否","deliverable":"发布材料与培训记录","notes":"所有资源均按瓶颈处理，关键评审避免重叠"},{"id":109,"wbs":"3.10","name":"数据标准V1.0发布","type":"里程碑","duration":"0工作日","start":"2026-10-30","finish":"2026-10-30","predecessors":"108","resources":"MDM工作组","department":"MDM工作组","vendor":"","reviewer":"项目决策组","risk":"高","milestone":"是","deliverable":"数据标准V1.0","notes":""},{"id":110,"wbs":"4.1","name":"需求范围冻结","type":"需求","duration":"8工作日","start":"2026-07-01","finish":"2026-07-10","predecessors":"","resources":"MDM工作组;技术架构组;AI辅助编程环境","department":"MDM工作组","vendor":"自研","reviewer":"信息化项目管理工作室;数据质量工作组","risk":"高","milestone":"否","deliverable":"MDM需求规格说明书","notes":"当前核心开发资源为1人，按高风险控制；10月底上线节点不变"},{"id":111,"wbs":"4.2","name":"原型设计","type":"设计","duration":"8工作日","start":"2026-07-13","finish":"2026-07-22","predecessors":"110","resources":"MDM工作组;技术架构组;AI辅助编程环境","department":"MDM工作组","vendor":"自研","reviewer":"信息化项目管理工作室;数据质量工作组","risk":"高","milestone":"否","deliverable":"MDM原型","notes":"当前核心开发资源为1人，按高风险控制；10月底上线节点不变"},{"id":112,"wbs":"4.3","name":"技术架构设计","type":"设计","duration":"6工作日","start":"2026-07-23","finish":"2026-07-30","predecessors":"111","resources":"MDM工作组;技术架构组;AI辅助编程环境","department":"MDM工作组","vendor":"自研","reviewer":"信息化项目管理工作室;数据质量工作组","risk":"高","milestone":"否","deliverable":"技术架构方案","notes":"当前核心开发资源为1人，按高风险控制；10月底上线节点不变"},{"id":113,"wbs":"4.4","name":"数据库与主数据模型设计","type":"设计","duration":"8工作日","start":"2026-07-31","finish":"2026-08-11","predecessors":"112","resources":"MDM工作组;技术架构组;AI辅助编程环境","department":"MDM工作组","vendor":"自研","reviewer":"信息化项目管理工作室;数据质量工作组","risk":"高","milestone":"否","deliverable":"主数据模型、元数据模型","notes":"当前核心开发资源为1人，按高风险控制；10月底上线节点不变"},{"id":114,"wbs":"4.5","name":"审批流与权限模型设计","type":"设计","duration":"6工作日","start":"2026-08-12","finish":"2026-08-19","predecessors":"113","resources":"MDM工作组;技术架构组;AI辅助编程环境","department":"MDM工作组","vendor":"自研","reviewer":"信息化项目管理工作室;数据质量工作组","risk":"高","milestone":"否","deliverable":"审批流、角色权限模型","notes":"当前核心开发资源为1人，按高风险控制；10月底上线节点不变"},{"id":115,"wbs":"4.6","name":"版本管理与分发机制设计","type":"设计","duration":"6工作日","start":"2026-08-20","finish":"2026-08-27","predecessors":"114","resources":"MDM工作组;技术架构组;AI辅助编程环境","department":"MDM工作组","vendor":"自研","reviewer":"信息化项目管理工作室;数据质量工作组","risk":"高","milestone":"否","deliverable":"版本与分发设计","notes":"当前核心开发资源为1人，按高风险控制；10月底上线节点不变"},{"id":116,"wbs":"4.7","name":"质量校验规则设计","type":"设计","duration":"6工作日","start":"2026-08-28","finish":"2026-09-04","predecessors":"115","resources":"MDM工作组;技术架构组;AI辅助编程环境","department":"MDM工作组","vendor":"自研","reviewer":"信息化项目管理工作室;数据质量工作组","risk":"高","milestone":"否","deliverable":"质量规则库","notes":"当前核心开发资源为1人，按高风险控制；10月底上线节点不变"},{"id":117,"wbs":"4.8","name":"数据看板指标设计","type":"设计","duration":"5工作日","start":"2026-09-07","finish":"2026-09-11","predecessors":"116","resources":"MDM工作组;技术架构组;AI辅助编程环境","department":"MDM工作组","vendor":"自研","reviewer":"信息化项目管理工作室;数据质量工作组","risk":"高","milestone":"否","deliverable":"看板指标口径","notes":"当前核心开发资源为1人，按高风险控制；10月底上线节点不变"},{"id":118,"wbs":"4.9","name":"开发环境与代码仓库搭建","type":"开发准备","duration":"4工作日","start":"2026-09-14","finish":"2026-09-17","predecessors":"117","resources":"MDM工作组;技术架构组;AI辅助编程环境","department":"MDM工作组","vendor":"自研","reviewer":"信息化项目管理工作室;数据质量工作组","risk":"高","milestone":"否","deliverable":"开发环境、Git仓库","notes":"当前核心开发资源为1人，按高风险控制；10月底上线节点不变"},{"id":119,"wbs":"4.10","name":"核心台账模块开发","type":"开发","duration":"12工作日","start":"2026-09-18","finish":"2026-10-05","predecessors":"118","resources":"MDM工作组;技术架构组;AI辅助编程环境","department":"MDM工作组","vendor":"自研","reviewer":"信息化项目管理工作室;数据质量工作组","risk":"高","milestone":"否","deliverable":"主数据台账","notes":"当前核心开发资源为1人，按高风险控制；10月底上线节点不变"},{"id":120,"wbs":"4.11","name":"审批流模块开发","type":"开发","duration":"10工作日","start":"2026-10-06","finish":"2026-10-19","predecessors":"119","resources":"MDM工作组;技术架构组;AI辅助编程环境","department":"MDM工作组","vendor":"自研","reviewer":"信息化项目管理工作室;数据质量工作组","risk":"高","milestone":"否","deliverable":"审批流","notes":"当前核心开发资源为1人，按高风险控制；10月底上线节点不变"},{"id":121,"wbs":"4.12","name":"版本管理模块开发","type":"开发","duration":"8工作日","start":"2026-10-20","finish":"2026-10-29","predecessors":"120","resources":"MDM工作组;技术架构组;AI辅助编程环境","department":"MDM工作组","vendor":"自研","reviewer":"信息化项目管理工作室;数据质量工作组","risk":"高","milestone":"否","deliverable":"版本管理","notes":"当前核心开发资源为1人，按高风险控制；10月底上线节点不变"},{"id":122,"wbs":"4.13","name":"数据分发接口开发","type":"开发","duration":"10工作日","start":"2026-10-30","finish":"2026-11-12","predecessors":"121","resources":"MDM工作组;技术架构组;AI辅助编程环境","department":"MDM工作组","vendor":"自研","reviewer":"信息化项目管理工作室;数据质量工作组","risk":"高","milestone":"否","deliverable":"分发接口","notes":"当前核心开发资源为1人，按高风险控制；10月底上线节点不变"},{"id":123,"wbs":"4.14","name":"质量校验模块开发","type":"开发","duration":"10工作日","start":"2026-11-13","finish":"2026-11-26","predecessors":"122","resources":"MDM工作组;技术架构组;AI辅助编程环境","department":"MDM工作组","vendor":"自研","reviewer":"信息化项目管理工作室;数据质量工作组","risk":"高","milestone":"否","deliverable":"质量校验","notes":"当前核心开发资源为1人，按高风险控制；10月底上线节点不变"},{"id":124,"wbs":"4.15","name":"数据质量看板开发","type":"开发","duration":"8工作日","start":"2026-11-27","finish":"2026-12-08","predecessors":"123","resources":"MDM工作组;技术架构组;AI辅助编程环境","department":"MDM工作组","vendor":"自研","reviewer":"信息化项目管理工作室;数据质量工作组","risk":"高","milestone":"否","deliverable":"质量看板","notes":"当前核心开发资源为1人，按高风险控制；10月底上线节点不变"},{"id":125,"wbs":"4.16","name":"数据纠正通知机制开发","type":"开发","duration":"6工作日","start":"2026-12-09","finish":"2026-12-16","predecessors":"124","resources":"MDM工作组;技术架构组;AI辅助编程环境","department":"MDM工作组","vendor":"自研","reviewer":"信息化项目管理工作室;数据质量工作组","risk":"高","milestone":"否","deliverable":"纠正通知","notes":"当前核心开发资源为1人，按高风险控制；10月底上线节点不变"},{"id":126,"wbs":"4.17","name":"AI辅助编程规范制定","type":"管理","duration":"4工作日","start":"2026-12-17","finish":"2026-12-22","predecessors":"125","resources":"MDM工作组;技术架构组;AI辅助编程环境","department":"MDM工作组","vendor":"自研","reviewer":"信息化项目管理工作室;数据质量工作组","risk":"高","milestone":"否","deliverable":"AI编程规范","notes":"当前核心开发资源为1人，按高风险控制；10月底上线节点不变"},{"id":127,"wbs":"4.18","name":"单元测试与缺陷修复","type":"测试","duration":"8工作日","start":"2026-12-23","finish":"2027-01-01","predecessors":"126","resources":"MDM工作组;技术架构组;AI辅助编程环境","department":"MDM工作组","vendor":"自研","reviewer":"信息化项目管理工作室;数据质量工作组","risk":"高","milestone":"否","deliverable":"测试记录","notes":"当前核心开发资源为1人，按高风险控制；10月底上线节点不变"},{"id":128,"wbs":"4.19","name":"集成测试","type":"测试","duration":"8工作日","start":"2027-01-04","finish":"2027-01-13","predecessors":"127","resources":"MDM工作组;技术架构组;AI辅助编程环境","department":"MDM工作组","vendor":"自研","reviewer":"信息化项目管理工作室;数据质量工作组","risk":"高","milestone":"否","deliverable":"集成测试报告","notes":"当前核心开发资源为1人，按高风险控制；10月底上线节点不变"},{"id":129,"wbs":"4.20","name":"用户培训与操作手册编制","type":"培训","duration":"5工作日","start":"2027-01-14","finish":"2027-01-20","predecessors":"128","resources":"MDM工作组;技术架构组;AI辅助编程环境","department":"MDM工作组","vendor":"自研","reviewer":"信息化项目管理工作室;数据质量工作组","risk":"高","milestone":"否","deliverable":"操作手册、培训材料","notes":"当前核心开发资源为1人，按高风险控制；10月底上线节点不变"},{"id":130,"wbs":"4.21","name":"试运行准备","type":"上线","duration":"3工作日","start":"2027-01-21","finish":"2027-01-25","predecessors":"129","resources":"MDM工作组;技术架构组;AI辅助编程环境","department":"MDM工作组","vendor":"自研","reviewer":"信息化项目管理工作室;数据质量工作组","risk":"高","milestone":"否","deliverable":"试运行方案","notes":"当前核心开发资源为1人，按高风险控制；10月底上线节点不变"},{"id":131,"wbs":"4.22","name":"MDM平台一期上线","type":"里程碑","duration":"0工作日","start":"2026-10-30","finish":"2026-10-30","predecessors":"130","resources":"MDM工作组;技术架构组;AI辅助编程环境","department":"MDM工作组","vendor":"自研","reviewer":"项目决策组","risk":"高","milestone":"是","deliverable":"上线确认单","notes":"当前核心开发资源为1人，按高风险控制；10月底上线节点不变"},{"id":132,"wbs":"4.23","name":"MDM一期上线试运行报告","type":"验收","duration":"5工作日","start":"2026-11-02","finish":"2026-11-06","predecessors":"131","resources":"MDM工作组;技术架构组;AI辅助编程环境","department":"MDM工作组","vendor":"自研","reviewer":"信息化项目管理工作室;数据质量工作组","risk":"高","milestone":"否","deliverable":"试运行报告","notes":"当前核心开发资源为1人，按高风险控制；10月底上线节点不变"},{"id":133,"wbs":"4.24","name":"MDM一期验收","type":"里程碑","duration":"0工作日","start":"2026-11-09","finish":"2026-11-09","predecessors":"132","resources":"MDM工作组;技术架构组;AI辅助编程环境","department":"MDM工作组","vendor":"自研","reviewer":"项目决策组","risk":"高","milestone":"是","deliverable":"MDM一期验收报告","notes":"当前核心开发资源为1人，按高风险控制；10月底上线节点不变"},{"id":134,"wbs":"5.1.1","name":"服务器与虚拟化平台-到货验收","type":"验收","duration":"3工作日","start":"2026-08-17","finish":"2026-08-19","predecessors":"","resources":"网络工程组;技术架构组;基础设施供应商","department":"基础设施","vendor":"基础设施供应商","reviewer":"网络工程副主任;技术架构副主任","risk":"中","milestone":"否","deliverable":"服务器与虚拟化平台到货验收","notes":"基础设施应早于MES测试环境搭建"},{"id":135,"wbs":"5.1.2","name":"服务器与虚拟化平台-虚拟化部署","type":"部署","duration":"7工作日","start":"2026-08-20","finish":"2026-08-28","predecessors":"134","resources":"网络工程组;技术架构组;基础设施供应商","department":"基础设施","vendor":"基础设施供应商","reviewer":"网络工程副主任;技术架构副主任","risk":"中","milestone":"否","deliverable":"服务器与虚拟化平台虚拟化部署","notes":"基础设施应早于MES测试环境搭建"},{"id":136,"wbs":"5.1.3","name":"服务器与虚拟化平台-资源池配置","type":"部署","duration":"7工作日","start":"2026-08-31","finish":"2026-09-08","predecessors":"135","resources":"网络工程组;技术架构组;基础设施供应商","department":"基础设施","vendor":"基础设施供应商","reviewer":"网络工程副主任;技术架构副主任","risk":"中","milestone":"否","deliverable":"服务器与虚拟化平台资源池配置","notes":"基础设施应早于MES测试环境搭建"},{"id":137,"wbs":"5.1.4","name":"服务器与虚拟化平台-高可用测试","type":"测试","duration":"7工作日","start":"2026-09-09","finish":"2026-09-17","predecessors":"136","resources":"网络工程组;技术架构组;基础设施供应商","department":"基础设施","vendor":"基础设施供应商","reviewer":"网络工程副主任;技术架构副主任","risk":"中","milestone":"否","deliverable":"服务器与虚拟化平台高可用测试","notes":"基础设施应早于MES测试环境搭建"},{"id":138,"wbs":"5.1.5","name":"服务器与虚拟化平台-验收","type":"验收","duration":"3工作日","start":"2026-09-18","finish":"2026-09-22","predecessors":"137","resources":"网络工程组;技术架构组;基础设施供应商","department":"基础设施","vendor":"基础设施供应商","reviewer":"网络工程副主任;技术架构副主任","risk":"中","milestone":"否","deliverable":"服务器与虚拟化平台验收","notes":"基础设施应早于MES测试环境搭建"},{"id":139,"wbs":"5.2.1","name":"存储与备份-存储部署","type":"部署","duration":"7工作日","start":"2026-09-01","finish":"2026-09-09","predecessors":"","resources":"网络工程组;技术架构组;基础设施供应商","department":"基础设施","vendor":"基础设施供应商","reviewer":"网络工程副主任;技术架构副主任","risk":"中","milestone":"否","deliverable":"存储与备份存储部署","notes":"基础设施应早于MES测试环境搭建"},{"id":140,"wbs":"5.2.2","name":"存储与备份-备份方案配置","type":"部署","duration":"7工作日","start":"2026-09-10","finish":"2026-09-18","predecessors":"139","resources":"网络工程组;技术架构组;基础设施供应商","department":"基础设施","vendor":"基础设施供应商","reviewer":"网络工程副主任;技术架构副主任","risk":"中","milestone":"否","deliverable":"存储与备份备份方案配置","notes":"基础设施应早于MES测试环境搭建"},{"id":141,"wbs":"5.2.3","name":"存储与备份-备份策略测试","type":"测试","duration":"7工作日","start":"2026-09-21","finish":"2026-09-29","predecessors":"140","resources":"网络工程组;技术架构组;基础设施供应商","department":"基础设施","vendor":"基础设施供应商","reviewer":"网络工程副主任;技术架构副主任","risk":"中","milestone":"否","deliverable":"存储与备份备份策略测试","notes":"基础设施应早于MES测试环境搭建"},{"id":142,"wbs":"5.2.4","name":"存储与备份-恢复演练","type":"测试","duration":"7工作日","start":"2026-09-30","finish":"2026-10-08","predecessors":"141","resources":"网络工程组;技术架构组;基础设施供应商","department":"基础设施","vendor":"基础设施供应商","reviewer":"网络工程副主任;技术架构副主任","risk":"中","milestone":"否","deliverable":"存储与备份恢复演练","notes":"基础设施应早于MES测试环境搭建"},{"id":143,"wbs":"5.2.5","name":"存储与备份-验收","type":"验收","duration":"3工作日","start":"2026-10-09","finish":"2026-10-13","predecessors":"142","resources":"网络工程组;技术架构组;基础设施供应商","department":"基础设施","vendor":"基础设施供应商","reviewer":"网络工程副主任;技术架构副主任","risk":"中","milestone":"否","deliverable":"存储与备份验收","notes":"基础设施应早于MES测试环境搭建"},{"id":144,"wbs":"5.3.1","name":"网络与安全-网络规划","type":"设计","duration":"7工作日","start":"2026-08-24","finish":"2026-09-01","predecessors":"","resources":"网络工程组;技术架构组;基础设施供应商","department":"基础设施","vendor":"基础设施供应商","reviewer":"网络工程副主任;技术架构副主任","risk":"中","milestone":"否","deliverable":"网络与安全网络规划","notes":"基础设施应早于MES测试环境搭建"},{"id":145,"wbs":"5.3.2","name":"网络与安全-安全策略配置","type":"部署","duration":"7工作日","start":"2026-09-02","finish":"2026-09-10","predecessors":"144","resources":"网络工程组;技术架构组;基础设施供应商","department":"基础设施","vendor":"基础设施供应商","reviewer":"网络工程副主任;技术架构副主任","risk":"中","milestone":"否","deliverable":"网络与安全安全策略配置","notes":"基础设施应早于MES测试环境搭建"},{"id":146,"wbs":"5.3.3","name":"网络与安全-账号权限基线","type":"设计","duration":"7工作日","start":"2026-09-11","finish":"2026-09-21","predecessors":"145","resources":"网络工程组;技术架构组;基础设施供应商","department":"基础设施","vendor":"基础设施供应商","reviewer":"网络工程副主任;技术架构副主任","risk":"中","milestone":"否","deliverable":"网络与安全账号权限基线","notes":"基础设施应早于MES测试环境搭建"},{"id":147,"wbs":"5.3.4","name":"网络与安全-日志审计配置","type":"部署","duration":"7工作日","start":"2026-09-22","finish":"2026-09-30","predecessors":"146","resources":"网络工程组;技术架构组;基础设施供应商","department":"基础设施","vendor":"基础设施供应商","reviewer":"网络工程副主任;技术架构副主任","risk":"中","milestone":"否","deliverable":"网络与安全日志审计配置","notes":"基础设施应早于MES测试环境搭建"},{"id":148,"wbs":"5.3.5","name":"网络与安全-验收","type":"验收","duration":"3工作日","start":"2026-10-01","finish":"2026-10-05","predecessors":"147","resources":"网络工程组;技术架构组;基础设施供应商","department":"基础设施","vendor":"基础设施供应商","reviewer":"网络工程副主任;技术架构副主任","risk":"中","milestone":"否","deliverable":"网络与安全验收","notes":"基础设施应早于MES测试环境搭建"},{"id":149,"wbs":"5.4.1","name":"数据库与中间件-数据库部署","type":"部署","duration":"7工作日","start":"2026-09-15","finish":"2026-09-23","predecessors":"","resources":"网络工程组;技术架构组;基础设施供应商","department":"基础设施","vendor":"基础设施供应商","reviewer":"网络工程副主任;技术架构副主任","risk":"中","milestone":"否","deliverable":"数据库与中间件数据库部署","notes":"基础设施应早于MES测试环境搭建"},{"id":150,"wbs":"5.4.2","name":"数据库与中间件-中间件部署","type":"部署","duration":"7工作日","start":"2026-09-24","finish":"2026-10-02","predecessors":"149","resources":"网络工程组;技术架构组;基础设施供应商","department":"基础设施","vendor":"基础设施供应商","reviewer":"网络工程副主任;技术架构副主任","risk":"中","milestone":"否","deliverable":"数据库与中间件中间件部署","notes":"基础设施应早于MES测试环境搭建"},{"id":151,"wbs":"5.4.3","name":"数据库与中间件-测试环境搭建","type":"部署","duration":"7工作日","start":"2026-10-05","finish":"2026-10-13","predecessors":"150","resources":"网络工程组;技术架构组;基础设施供应商","department":"基础设施","vendor":"基础设施供应商","reviewer":"网络工程副主任;技术架构副主任","risk":"中","milestone":"否","deliverable":"数据库与中间件测试环境搭建","notes":"基础设施应早于MES测试环境搭建"},{"id":152,"wbs":"5.4.4","name":"数据库与中间件-预生产环境搭建","type":"部署","duration":"7工作日","start":"2026-10-14","finish":"2026-10-22","predecessors":"151","resources":"网络工程组;技术架构组;基础设施供应商","department":"基础设施","vendor":"基础设施供应商","reviewer":"网络工程副主任;技术架构副主任","risk":"高","milestone":"否","deliverable":"数据库与中间件预生产环境搭建","notes":"基础设施应早于MES测试环境搭建"},{"id":153,"wbs":"5.4.5","name":"数据库与中间件-生产环境搭建","type":"部署","duration":"7工作日","start":"2026-10-23","finish":"2026-11-02","predecessors":"152","resources":"网络工程组;技术架构组;基础设施供应商","department":"基础设施","vendor":"基础设施供应商","reviewer":"网络工程副主任;技术架构副主任","risk":"高","milestone":"否","deliverable":"数据库与中间件生产环境搭建","notes":"基础设施应早于MES测试环境搭建"},{"id":154,"wbs":"5.5.1","name":"AI服务器与本地模型-硬件到货验收","type":"验收","duration":"3工作日","start":"2026-09-15","finish":"2026-09-17","predecessors":"","resources":"网络工程组;技术架构组;基础设施供应商","department":"基础设施","vendor":"基础设施供应商;AI服务器供应商","reviewer":"网络工程副主任;技术架构副主任","risk":"高","milestone":"否","deliverable":"AI服务器与本地模型硬件到货验收","notes":"基础设施应早于MES测试环境搭建"},{"id":155,"wbs":"5.5.2","name":"AI服务器与本地模型-模型服务部署","type":"部署","duration":"7工作日","start":"2026-09-18","finish":"2026-09-28","predecessors":"154","resources":"网络工程组;技术架构组;基础设施供应商","department":"基础设施","vendor":"基础设施供应商;AI服务器供应商","reviewer":"网络工程副主任;技术架构副主任","risk":"高","milestone":"否","deliverable":"AI服务器与本地模型模型服务部署","notes":"基础设施应早于MES测试环境搭建"},{"id":156,"wbs":"5.5.3","name":"AI服务器与本地模型-代码助手接入","type":"部署","duration":"7工作日","start":"2026-09-29","finish":"2026-10-07","predecessors":"155","resources":"网络工程组;技术架构组;基础设施供应商","department":"基础设施","vendor":"基础设施供应商;AI服务器供应商","reviewer":"网络工程副主任;技术架构副主任","risk":"高","milestone":"否","deliverable":"AI服务器与本地模型代码助手接入","notes":"基础设施应早于MES测试环境搭建"},{"id":157,"wbs":"5.5.4","name":"AI服务器与本地模型-知识库原型","type":"设计","duration":"7工作日","start":"2026-10-08","finish":"2026-10-16","predecessors":"156","resources":"网络工程组;技术架构组;基础设施供应商","department":"基础设施","vendor":"基础设施供应商;AI服务器供应商","reviewer":"网络工程副主任;技术架构副主任","risk":"高","milestone":"否","deliverable":"AI服务器与本地模型知识库原型","notes":"基础设施应早于MES测试环境搭建"},{"id":158,"wbs":"5.5.5","name":"AI服务器与本地模型-MDM辅助开发试点","type":"测试","duration":"7工作日","start":"2026-10-19","finish":"2026-10-27","predecessors":"157","resources":"网络工程组;技术架构组;基础设施供应商","department":"基础设施","vendor":"基础设施供应商;AI服务器供应商","reviewer":"网络工程副主任;技术架构副主任","risk":"高","milestone":"否","deliverable":"AI服务器与本地模型MDM辅助开发试点","notes":"基础设施应早于MES测试环境搭建"},{"id":159,"wbs":"5.5.6","name":"AI服务器与本地模型-试点效果报告","type":"测试","duration":"3工作日","start":"2026-10-28","finish":"2026-10-30","predecessors":"158","resources":"网络工程组;技术架构组;基础设施供应商","department":"基础设施","vendor":"基础设施供应商;AI服务器供应商","reviewer":"网络工程副主任;技术架构副主任","risk":"高","milestone":"否","deliverable":"AI服务器与本地模型试点效果报告","notes":"基础设施应早于MES测试环境搭建"},{"id":160,"wbs":"5.6.1","name":"虚拟桌面/瘦终端平台-平台部署","type":"部署","duration":"7工作日","start":"2026-10-12","finish":"2026-10-20","predecessors":"","resources":"网络工程组;技术架构组;基础设施供应商","department":"基础设施","vendor":"基础设施供应商","reviewer":"网络工程副主任;技术架构副主任","risk":"中","milestone":"否","deliverable":"虚拟桌面/瘦终端平台平台部署","notes":"基础设施应早于MES测试环境搭建"},{"id":161,"wbs":"5.6.2","name":"虚拟桌面/瘦终端平台-镜像模板","type":"设计","duration":"7工作日","start":"2026-10-21","finish":"2026-10-29","predecessors":"160","resources":"网络工程组;技术架构组;基础设施供应商","department":"基础设施","vendor":"基础设施供应商","reviewer":"网络工程副主任;技术架构副主任","risk":"中","milestone":"否","deliverable":"虚拟桌面/瘦终端平台镜像模板","notes":"基础设施应早于MES测试环境搭建"},{"id":162,"wbs":"5.6.3","name":"虚拟桌面/瘦终端平台-账号权限","type":"设计","duration":"7工作日","start":"2026-10-30","finish":"2026-11-09","predecessors":"161","resources":"网络工程组;技术架构组;基础设施供应商","department":"基础设施","vendor":"基础设施供应商","reviewer":"网络工程副主任;技术架构副主任","risk":"中","milestone":"否","deliverable":"虚拟桌面/瘦终端平台账号权限","notes":"基础设施应早于MES测试环境搭建"},{"id":163,"wbs":"5.6.4","name":"虚拟桌面/瘦终端平台-试点接入","type":"部署","duration":"7工作日","start":"2026-11-10","finish":"2026-11-18","predecessors":"162","resources":"网络工程组;技术架构组;基础设施供应商","department":"基础设施","vendor":"基础设施供应商","reviewer":"网络工程副主任;技术架构副主任","risk":"中","milestone":"否","deliverable":"虚拟桌面/瘦终端平台试点接入","notes":"基础设施应早于MES测试环境搭建"},{"id":164,"wbs":"5.6.5","name":"虚拟桌面/瘦终端平台-验收","type":"验收","duration":"3工作日","start":"2026-11-19","finish":"2026-11-23","predecessors":"163","resources":"网络工程组;技术架构组;基础设施供应商","department":"基础设施","vendor":"基础设施供应商","reviewer":"网络工程副主任;技术架构副主任","risk":"中","milestone":"否","deliverable":"虚拟桌面/瘦终端平台验收","notes":"基础设施应早于MES测试环境搭建"},{"id":165,"wbs":"5.7.1","name":"运维监控与日志审计-监控指标设计","type":"设计","duration":"7工作日","start":"2026-11-02","finish":"2026-11-10","predecessors":"","resources":"网络工程组;技术架构组;基础设施供应商","department":"基础设施","vendor":"基础设施供应商","reviewer":"网络工程副主任;技术架构副主任","risk":"中","milestone":"否","deliverable":"运维监控与日志审计监控指标设计","notes":"基础设施应早于MES测试环境搭建"},{"id":166,"wbs":"5.7.2","name":"运维监控与日志审计-监控平台配置","type":"部署","duration":"7工作日","start":"2026-11-11","finish":"2026-11-19","predecessors":"165","resources":"网络工程组;技术架构组;基础设施供应商","department":"基础设施","vendor":"基础设施供应商","reviewer":"网络工程副主任;技术架构副主任","risk":"中","milestone":"否","deliverable":"运维监控与日志审计监控平台配置","notes":"基础设施应早于MES测试环境搭建"},{"id":167,"wbs":"5.7.3","name":"运维监控与日志审计-日志审计联调","type":"设计","duration":"7工作日","start":"2026-11-20","finish":"2026-11-30","predecessors":"166","resources":"网络工程组;技术架构组;基础设施供应商","department":"基础设施","vendor":"基础设施供应商","reviewer":"网络工程副主任;技术架构副主任","risk":"中","milestone":"否","deliverable":"运维监控与日志审计日志审计联调","notes":"基础设施应早于MES测试环境搭建"},{"id":168,"wbs":"5.7.4","name":"运维监控与日志审计-告警演练","type":"测试","duration":"7工作日","start":"2026-12-01","finish":"2026-12-09","predecessors":"167","resources":"网络工程组;技术架构组;基础设施供应商","department":"基础设施","vendor":"基础设施供应商","reviewer":"网络工程副主任;技术架构副主任","risk":"中","milestone":"否","deliverable":"运维监控与日志审计告警演练","notes":"基础设施应早于MES测试环境搭建"},{"id":169,"wbs":"5.7.5","name":"运维监控与日志审计-运维移交","type":"设计","duration":"7工作日","start":"2026-12-10","finish":"2026-12-18","predecessors":"168","resources":"网络工程组;技术架构组;基础设施供应商","department":"基础设施","vendor":"基础设施供应商","reviewer":"网络工程副主任;技术架构副主任","risk":"中","milestone":"否","deliverable":"运维监控与日志审计运维移交","notes":"基础设施应早于MES测试环境搭建"},{"id":170,"wbs":"5.8","name":"基础设施生产环境就绪","type":"里程碑","duration":"0工作日","start":"2027-01-20","finish":"2027-01-20","predecessors":"","resources":"网络工程组;技术架构组","department":"基础设施","vendor":"基础设施供应商","reviewer":"项目决策组","risk":"高","milestone":"是","deliverable":"生产环境就绪确认单","notes":""},{"id":171,"wbs":"6.1","name":"PLM内部调研与问题清单","type":"调研","duration":"10工作日","start":"2026-08-03","finish":"2026-08-14","predecessors":"","resources":"PLM工作组;工程技术部","department":"PLM工作组","vendor":"","reviewer":"PLM工作组组长;信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"PLM问题清单","notes":"供应商未定前只做内部调研和方案"},{"id":172,"wbs":"6.2","name":"图文档管理规范草案","type":"设计","duration":"8工作日","start":"2026-08-17","finish":"2026-08-26","predecessors":"171","resources":"PLM工作组;工程技术部","department":"PLM工作组","vendor":"","reviewer":"PLM工作组组长;信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"图文档管理规范","notes":"供应商未定前只做内部调研和方案"},{"id":173,"wbs":"6.3","name":"EBOM规范草案","type":"设计","duration":"8工作日","start":"2026-08-27","finish":"2026-09-07","predecessors":"172","resources":"PLM工作组;工程技术部","department":"PLM工作组","vendor":"","reviewer":"PLM工作组组长;信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"EBOM规范","notes":"供应商未定前只做内部调研和方案"},{"id":174,"wbs":"6.4","name":"EBOM到MBOM转换规则草案","type":"设计","duration":"10工作日","start":"2026-09-08","finish":"2026-09-21","predecessors":"173","resources":"PLM工作组;工程技术部","department":"PLM工作组","vendor":"","reviewer":"PLM工作组组长;信息化项目管理工作室","risk":"高","milestone":"否","deliverable":"转换规则草案","notes":"供应商未定前只做内部调研和方案"},{"id":175,"wbs":"6.5","name":"工艺文件结构化模板草案","type":"设计","duration":"10工作日","start":"2026-09-22","finish":"2026-10-05","predecessors":"174","resources":"PLM工作组;工程技术部","department":"PLM工作组","vendor":"","reviewer":"PLM工作组组长;信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"结构化模板","notes":"供应商未定前只做内部调研和方案"},{"id":176,"wbs":"6.6","name":"ECN/ECO流程方案草案","type":"设计","duration":"8工作日","start":"2026-10-06","finish":"2026-10-15","predecessors":"175","resources":"PLM工作组;工程技术部","department":"PLM工作组","vendor":"","reviewer":"PLM工作组组长;信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"ECN/ECO方案","notes":"供应商未定前只做内部调研和方案"},{"id":177,"wbs":"6.7","name":"PLM-MDM集成方案草案","type":"设计","duration":"6工作日","start":"2026-10-16","finish":"2026-10-23","predecessors":"176","resources":"PLM工作组;工程技术部","department":"PLM工作组","vendor":"","reviewer":"PLM工作组组长;信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"集成方案","notes":"供应商未定前只做内部调研和方案"},{"id":178,"wbs":"6.8","name":"PLM-MES集成方案草案","type":"设计","duration":"6工作日","start":"2026-10-26","finish":"2026-11-02","predecessors":"177","resources":"PLM工作组;工程技术部","department":"PLM工作组","vendor":"","reviewer":"PLM工作组组长;信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"集成方案","notes":"供应商未定前只做内部调研和方案"},{"id":179,"wbs":"6.9","name":"供应商复核与深化蓝图","type":"设计","duration":"10工作日","start":"2026-12-01","finish":"2026-12-14","predecessors":"","resources":"PLM工作组;PLM供应商","department":"PLM工作组","vendor":"PLM供应商","reviewer":"PLM工作组组长","risk":"高","milestone":"否","deliverable":"PLM深化蓝图","notes":"最好全有，以实际开发和集成进度为准"},{"id":180,"wbs":"6.10","name":"PLM配置/开发方案确认","type":"设计","duration":"8工作日","start":"2026-12-15","finish":"2026-12-24","predecessors":"179","resources":"PLM工作组;PLM供应商","department":"PLM工作组","vendor":"PLM供应商","reviewer":"PLM工作组组长","risk":"高","milestone":"否","deliverable":"配置开发方案","notes":"最好全有，以实际开发和集成进度为准"},{"id":181,"wbs":"6.11","name":"图文档模块配置/开发","type":"开发","duration":"12工作日","start":"2026-12-25","finish":"2027-01-11","predecessors":"180","resources":"PLM工作组;PLM供应商","department":"PLM工作组","vendor":"PLM供应商","reviewer":"PLM工作组组长","risk":"高","milestone":"否","deliverable":"模块配置","notes":"最好全有，以实际开发和集成进度为准"},{"id":182,"wbs":"6.12","name":"EBOM规范化配置/开发","type":"开发","duration":"12工作日","start":"2027-01-12","finish":"2027-01-27","predecessors":"181","resources":"PLM工作组;PLM供应商","department":"PLM工作组","vendor":"PLM供应商","reviewer":"PLM工作组组长","risk":"高","milestone":"否","deliverable":"模块配置","notes":"最好全有，以实际开发和集成进度为准"},{"id":183,"wbs":"6.13","name":"工艺结构化配置/开发","type":"开发","duration":"15工作日","start":"2027-01-28","finish":"2027-02-17","predecessors":"182","resources":"PLM工作组;PLM供应商","department":"PLM工作组","vendor":"PLM供应商","reviewer":"PLM工作组组长","risk":"高","milestone":"否","deliverable":"模块配置","notes":"最好全有，以实际开发和集成进度为准"},{"id":184,"wbs":"6.14","name":"ECN/ECO流程配置/开发","type":"开发","duration":"12工作日","start":"2027-02-18","finish":"2027-03-05","predecessors":"183","resources":"PLM工作组;PLM供应商","department":"PLM工作组","vendor":"PLM供应商","reviewer":"PLM工作组组长","risk":"高","milestone":"否","deliverable":"流程配置","notes":"最好全有，以实际开发和集成进度为准"},{"id":185,"wbs":"6.15","name":"PLM-MDM接口开发联调","type":"开发/联调","duration":"10工作日","start":"2027-03-08","finish":"2027-03-19","predecessors":"184","resources":"PLM工作组;PLM供应商","department":"PLM工作组","vendor":"PLM供应商","reviewer":"PLM工作组组长","risk":"高","milestone":"否","deliverable":"接口联调记录","notes":"最好全有，以实际开发和集成进度为准"},{"id":186,"wbs":"6.16","name":"PLM-MES接口开发联调","type":"开发/联调","duration":"10工作日","start":"2027-03-22","finish":"2027-04-02","predecessors":"185","resources":"PLM工作组;PLM供应商","department":"PLM工作组","vendor":"PLM供应商","reviewer":"PLM工作组组长","risk":"高","milestone":"否","deliverable":"接口联调记录","notes":"最好全有，以实际开发和集成进度为准"},{"id":187,"wbs":"6.17","name":"PLM系统测试","type":"测试","duration":"10工作日","start":"2027-04-05","finish":"2027-04-16","predecessors":"186","resources":"PLM工作组;PLM供应商","department":"PLM工作组","vendor":"PLM供应商","reviewer":"PLM工作组组长","risk":"高","milestone":"否","deliverable":"测试报告","notes":"最好全有，以实际开发和集成进度为准"},{"id":188,"wbs":"6.18","name":"PLM用户培训","type":"培训","duration":"5工作日","start":"2027-04-19","finish":"2027-04-23","predecessors":"187","resources":"PLM工作组;PLM供应商","department":"PLM工作组","vendor":"PLM供应商","reviewer":"PLM工作组组长","risk":"高","milestone":"否","deliverable":"培训记录","notes":"最好全有，以实际开发和集成进度为准"},{"id":189,"wbs":"6.19","name":"PLM基础深化验收准备","type":"验收","duration":"5工作日","start":"2027-04-26","finish":"2027-04-30","predecessors":"188","resources":"PLM工作组;PLM供应商","department":"PLM工作组","vendor":"PLM供应商","reviewer":"工程技术部;项目决策组","risk":"高","milestone":"否","deliverable":"验收材料","notes":"最好全有，以实际开发和集成进度为准"},{"id":190,"wbs":"6.20","name":"PLM基础深化验收","type":"里程碑","duration":"0工作日","start":"2027-03-31","finish":"2027-03-31","predecessors":"189","resources":"PLM工作组;PLM供应商","department":"PLM工作组","vendor":"PLM供应商","reviewer":"工程技术部;项目决策组","risk":"高","milestone":"是","deliverable":"PLM验收报告","notes":"最好全有，以实际开发和集成进度为准"},{"id":191,"wbs":"7.1","name":"ERP/OA现状与差距分析","type":"调研","duration":"10工作日","start":"2026-08-03","finish":"2026-08-14","predecessors":"","resources":"ERP·OA工作组;用友U8实施顾问","department":"ERP·OA工作组","vendor":"用友U8","reviewer":"财务部;信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"差距分析报告","notes":"已有用友U8；2026年不只做接口，还做MRP/采购计划/生产计划补强"},{"id":192,"wbs":"7.2","name":"MRP补强需求规格","type":"需求","duration":"10工作日","start":"2026-08-17","finish":"2026-08-28","predecessors":"191","resources":"ERP·OA工作组;用友U8实施顾问","department":"ERP·OA工作组","vendor":"用友U8","reviewer":"财务部;信息化项目管理工作室","risk":"高","milestone":"否","deliverable":"MRP需求规格","notes":"已有用友U8；2026年不只做接口，还做MRP/采购计划/生产计划补强"},{"id":193,"wbs":"7.3","name":"采购计划补强需求规格","type":"需求","duration":"8工作日","start":"2026-08-31","finish":"2026-09-09","predecessors":"192","resources":"ERP·OA工作组;用友U8实施顾问","department":"ERP·OA工作组","vendor":"用友U8","reviewer":"财务部;信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"采购计划需求规格","notes":"已有用友U8；2026年不只做接口，还做MRP/采购计划/生产计划补强"},{"id":194,"wbs":"7.4","name":"生产计划补强需求规格","type":"需求","duration":"8工作日","start":"2026-09-10","finish":"2026-09-21","predecessors":"193","resources":"ERP·OA工作组;用友U8实施顾问","department":"ERP·OA工作组","vendor":"用友U8","reviewer":"财务部;信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"生产计划需求规格","notes":"已有用友U8；2026年不只做接口，还做MRP/采购计划/生产计划补强"},{"id":195,"wbs":"7.5","name":"OA待办与流程集成需求","type":"需求","duration":"6工作日","start":"2026-09-22","finish":"2026-09-29","predecessors":"194","resources":"ERP·OA工作组;用友U8实施顾问","department":"ERP·OA工作组","vendor":"用友U8","reviewer":"财务部;信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"OA集成需求","notes":"已有用友U8；2026年不只做接口，还做MRP/采购计划/生产计划补强"},{"id":196,"wbs":"7.6","name":"ERP-MDM接口方案","type":"设计","duration":"8工作日","start":"2026-09-30","finish":"2026-10-09","predecessors":"195","resources":"ERP·OA工作组;用友U8实施顾问","department":"ERP·OA工作组","vendor":"用友U8","reviewer":"财务部;信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"接口方案","notes":"已有用友U8；2026年不只做接口，还做MRP/采购计划/生产计划补强"},{"id":197,"wbs":"7.7","name":"ERP-MES接口方案","type":"设计","duration":"8工作日","start":"2026-10-12","finish":"2026-10-21","predecessors":"196","resources":"ERP·OA工作组;用友U8实施顾问","department":"ERP·OA工作组","vendor":"用友U8","reviewer":"财务部;信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"接口方案","notes":"已有用友U8；2026年不只做接口，还做MRP/采购计划/生产计划补强"},{"id":198,"wbs":"7.8","name":"MRP模块配置/开发","type":"开发","duration":"20工作日","start":"2026-10-22","finish":"2026-11-18","predecessors":"197","resources":"ERP·OA工作组;用友U8实施顾问","department":"ERP·OA工作组","vendor":"用友U8","reviewer":"财务部;信息化项目管理工作室","risk":"高","milestone":"否","deliverable":"MRP模块","notes":"已有用友U8；2026年不只做接口，还做MRP/采购计划/生产计划补强"},{"id":199,"wbs":"7.9","name":"采购计划模块配置/开发","type":"开发","duration":"15工作日","start":"2026-11-19","finish":"2026-12-09","predecessors":"198","resources":"ERP·OA工作组;用友U8实施顾问","department":"ERP·OA工作组","vendor":"用友U8","reviewer":"财务部;信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"采购计划模块","notes":"已有用友U8；2026年不只做接口，还做MRP/采购计划/生产计划补强"},{"id":200,"wbs":"7.10","name":"生产计划模块配置/开发","type":"开发","duration":"15工作日","start":"2026-12-10","finish":"2026-12-30","predecessors":"199","resources":"ERP·OA工作组;用友U8实施顾问","department":"ERP·OA工作组","vendor":"用友U8","reviewer":"财务部;信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"生产计划模块","notes":"已有用友U8；2026年不只做接口，还做MRP/采购计划/生产计划补强"},{"id":201,"wbs":"7.11","name":"OA待办接口配置/开发","type":"开发","duration":"10工作日","start":"2026-12-31","finish":"2027-01-13","predecessors":"200","resources":"ERP·OA工作组;用友U8实施顾问","department":"ERP·OA工作组","vendor":"用友U8","reviewer":"财务部;信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"OA接口","notes":"已有用友U8；2026年不只做接口，还做MRP/采购计划/生产计划补强"},{"id":202,"wbs":"7.12","name":"ERP/OA单元测试","type":"测试","duration":"8工作日","start":"2027-01-14","finish":"2027-01-25","predecessors":"201","resources":"ERP·OA工作组;用友U8实施顾问","department":"ERP·OA工作组","vendor":"用友U8","reviewer":"财务部;信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"测试记录","notes":"已有用友U8；2026年不只做接口，还做MRP/采购计划/生产计划补强"},{"id":203,"wbs":"7.13","name":"ERP-MDM联调","type":"联调","duration":"8工作日","start":"2027-01-26","finish":"2027-02-04","predecessors":"202","resources":"ERP·OA工作组;用友U8实施顾问","department":"ERP·OA工作组","vendor":"用友U8","reviewer":"财务部;信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"联调记录","notes":"已有用友U8；2026年不只做接口，还做MRP/采购计划/生产计划补强"},{"id":204,"wbs":"7.14","name":"ERP-MES联调","type":"联调","duration":"10工作日","start":"2027-02-05","finish":"2027-02-18","predecessors":"203","resources":"ERP·OA工作组;用友U8实施顾问","department":"ERP·OA工作组","vendor":"用友U8","reviewer":"财务部;信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"联调记录","notes":"已有用友U8；2026年不只做接口，还做MRP/采购计划/生产计划补强"},{"id":205,"wbs":"7.15","name":"ERP/OA用户培训","type":"培训","duration":"5工作日","start":"2027-02-19","finish":"2027-02-25","predecessors":"204","resources":"ERP·OA工作组;用友U8实施顾问","department":"ERP·OA工作组","vendor":"用友U8","reviewer":"财务部;信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"培训记录","notes":"已有用友U8；2026年不只做接口，还做MRP/采购计划/生产计划补强"},{"id":206,"wbs":"7.16","name":"ERP/OA补强验收","type":"验收","duration":"5工作日","start":"2027-02-26","finish":"2027-03-04","predecessors":"205","resources":"ERP·OA工作组;用友U8实施顾问","department":"ERP·OA工作组","vendor":"用友U8","reviewer":"财务部;信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"验收报告","notes":"已有用友U8；2026年不只做接口，还做MRP/采购计划/生产计划补强"},{"id":207,"wbs":"8.1","name":"MES内部需求清单编制","type":"需求","duration":"12工作日","start":"2026-09-01","finish":"2026-09-16","predecessors":"","resources":"MES工作组;信息化项目管理工作室","department":"MES工作组","vendor":"","reviewer":"MES工作组组长","risk":"高","milestone":"否","deliverable":"MES需求清单","notes":"供应商未定期间内部先做初版蓝图，进场后复核"},{"id":208,"wbs":"8.2","name":"MES内部初版蓝图编制","type":"设计","duration":"15工作日","start":"2026-09-17","finish":"2026-10-07","predecessors":"207","resources":"MES工作组;信息化项目管理工作室","department":"MES工作组","vendor":"","reviewer":"MES工作组组长","risk":"高","milestone":"否","deliverable":"MES初版蓝图","notes":"供应商未定期间内部先做初版蓝图，进场后复核"},{"id":209,"wbs":"8.3","name":"MES蓝图内部评审","type":"评审","duration":"3工作日","start":"2026-10-08","finish":"2026-10-12","predecessors":"208","resources":"MES工作组;信息化项目管理工作室","department":"MES工作组","vendor":"","reviewer":"MES工作组组长","risk":"高","milestone":"否","deliverable":"内部评审意见","notes":"供应商未定期间内部先做初版蓝图，进场后复核"},{"id":210,"wbs":"8.4","name":"MES供应商复核蓝图","type":"设计","duration":"10工作日","start":"2026-10-13","finish":"2026-10-26","predecessors":"209","resources":"MES工作组;信息化项目管理工作室;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组组长","risk":"高","milestone":"否","deliverable":"复核蓝图","notes":"供应商未定期间内部先做初版蓝图，进场后复核"},{"id":211,"wbs":"8.5","name":"MES蓝图评审通过","type":"里程碑","duration":"0工作日","start":"2026-10-30","finish":"2026-10-30","predecessors":"210","resources":"MES工作组;信息化项目管理工作室;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"项目决策组","risk":"高","milestone":"是","deliverable":"MES蓝图评审纪要","notes":"供应商未定期间内部先做初版蓝图，进场后复核"},{"id":212,"wbs":"8.6.1","name":"主数据接收与基础维护-详细需求确认","type":"需求","duration":"5工作日","start":"2026-11-02","finish":"2026-11-06","predecessors":"","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组组长","risk":"中","milestone":"否","deliverable":"主数据接收、基础维护","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":213,"wbs":"8.6.2","name":"主数据接收与基础维护-详细设计","type":"设计","duration":"5工作日","start":"2026-11-09","finish":"2026-11-13","predecessors":"212","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组组长","risk":"中","milestone":"否","deliverable":"主数据接收、基础维护","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":214,"wbs":"8.6.3","name":"主数据接收与基础维护-配置/开发","type":"开发","duration":"12工作日","start":"2026-11-16","finish":"2026-12-01","predecessors":"213","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组组长","risk":"中","milestone":"否","deliverable":"主数据接收、基础维护","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":215,"wbs":"8.6.4","name":"主数据接收与基础维护-单元测试","type":"测试","duration":"5工作日","start":"2026-12-02","finish":"2026-12-08","predecessors":"214","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组;数据质量工作组","risk":"中","milestone":"否","deliverable":"主数据接收、基础维护","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":216,"wbs":"8.6.5","name":"主数据接收与基础维护-缺陷修复","type":"修复","duration":"4工作日","start":"2026-12-09","finish":"2026-12-14","predecessors":"215","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组组长","risk":"中","milestone":"否","deliverable":"主数据接收、基础维护","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":217,"wbs":"8.7.1","name":"工艺管理/轻量MBOM-详细需求确认","type":"需求","duration":"5工作日","start":"2026-11-07","finish":"2026-11-12","predecessors":"","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组组长","risk":"高","milestone":"否","deliverable":"轻量MBOM、工艺资料","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":218,"wbs":"8.7.2","name":"工艺管理/轻量MBOM-详细设计","type":"设计","duration":"5工作日","start":"2026-11-13","finish":"2026-11-19","predecessors":"217","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组组长","risk":"高","milestone":"否","deliverable":"轻量MBOM、工艺资料","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":219,"wbs":"8.7.3","name":"工艺管理/轻量MBOM-配置/开发","type":"开发","duration":"12工作日","start":"2026-11-20","finish":"2026-12-07","predecessors":"218","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组组长","risk":"高","milestone":"否","deliverable":"轻量MBOM、工艺资料","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":220,"wbs":"8.7.4","name":"工艺管理/轻量MBOM-单元测试","type":"测试","duration":"5工作日","start":"2026-12-08","finish":"2026-12-14","predecessors":"219","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组;数据质量工作组","risk":"高","milestone":"否","deliverable":"轻量MBOM、工艺资料","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":221,"wbs":"8.7.5","name":"工艺管理/轻量MBOM-缺陷修复","type":"修复","duration":"4工作日","start":"2026-12-15","finish":"2026-12-18","predecessors":"220","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组组长","risk":"高","milestone":"否","deliverable":"轻量MBOM、工艺资料","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":222,"wbs":"8.8.1","name":"生产计划管理-详细需求确认","type":"需求","duration":"5工作日","start":"2026-11-12","finish":"2026-11-18","predecessors":"","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组组长","risk":"中","milestone":"否","deliverable":"生产计划模块","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":223,"wbs":"8.8.2","name":"生产计划管理-详细设计","type":"设计","duration":"5工作日","start":"2026-11-19","finish":"2026-11-25","predecessors":"222","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组组长","risk":"中","milestone":"否","deliverable":"生产计划模块","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":224,"wbs":"8.8.3","name":"生产计划管理-配置/开发","type":"开发","duration":"12工作日","start":"2026-11-26","finish":"2026-12-11","predecessors":"223","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组组长","risk":"中","milestone":"否","deliverable":"生产计划模块","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":225,"wbs":"8.8.4","name":"生产计划管理-单元测试","type":"测试","duration":"5工作日","start":"2026-12-14","finish":"2026-12-18","predecessors":"224","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组;数据质量工作组","risk":"中","milestone":"否","deliverable":"生产计划模块","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":226,"wbs":"8.8.5","name":"生产计划管理-缺陷修复","type":"修复","duration":"4工作日","start":"2026-12-21","finish":"2026-12-24","predecessors":"225","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组组长","risk":"中","milestone":"否","deliverable":"生产计划模块","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":227,"wbs":"8.9.1","name":"执行报工/工序流转-详细需求确认","type":"需求","duration":"5工作日","start":"2026-11-17","finish":"2026-11-23","predecessors":"","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组组长","risk":"中","milestone":"否","deliverable":"执行报工与流转","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":228,"wbs":"8.9.2","name":"执行报工/工序流转-详细设计","type":"设计","duration":"5工作日","start":"2026-11-24","finish":"2026-11-30","predecessors":"227","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组组长","risk":"中","milestone":"否","deliverable":"执行报工与流转","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":229,"wbs":"8.9.3","name":"执行报工/工序流转-配置/开发","type":"开发","duration":"12工作日","start":"2026-12-01","finish":"2026-12-16","predecessors":"228","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组组长","risk":"中","milestone":"否","deliverable":"执行报工与流转","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":230,"wbs":"8.9.4","name":"执行报工/工序流转-单元测试","type":"测试","duration":"5工作日","start":"2026-12-17","finish":"2026-12-23","predecessors":"229","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组;数据质量工作组","risk":"中","milestone":"否","deliverable":"执行报工与流转","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":231,"wbs":"8.9.5","name":"执行报工/工序流转-缺陷修复","type":"修复","duration":"4工作日","start":"2026-12-24","finish":"2026-12-29","predecessors":"230","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组组长","risk":"中","milestone":"否","deliverable":"执行报工与流转","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":232,"wbs":"8.10.1","name":"仓储管理-详细需求确认","type":"需求","duration":"5工作日","start":"2026-11-22","finish":"2026-11-26","predecessors":"","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组组长","risk":"中","milestone":"否","deliverable":"仓储管理模块","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":233,"wbs":"8.10.2","name":"仓储管理-详细设计","type":"设计","duration":"5工作日","start":"2026-11-27","finish":"2026-12-03","predecessors":"232","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组组长","risk":"中","milestone":"否","deliverable":"仓储管理模块","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":234,"wbs":"8.10.3","name":"仓储管理-配置/开发","type":"开发","duration":"12工作日","start":"2026-12-04","finish":"2026-12-21","predecessors":"233","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组组长","risk":"中","milestone":"否","deliverable":"仓储管理模块","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":235,"wbs":"8.10.4","name":"仓储管理-单元测试","type":"测试","duration":"5工作日","start":"2026-12-22","finish":"2026-12-28","predecessors":"234","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组;数据质量工作组","risk":"中","milestone":"否","deliverable":"仓储管理模块","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":236,"wbs":"8.10.5","name":"仓储管理-缺陷修复","type":"修复","duration":"4工作日","start":"2026-12-29","finish":"2027-01-01","predecessors":"235","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组组长","risk":"中","milestone":"否","deliverable":"仓储管理模块","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":237,"wbs":"8.11.1","name":"工装工具管理-详细需求确认","type":"需求","duration":"5工作日","start":"2026-11-27","finish":"2026-12-03","predecessors":"","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组组长","risk":"中","milestone":"否","deliverable":"工装工具模块","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":238,"wbs":"8.11.2","name":"工装工具管理-详细设计","type":"设计","duration":"5工作日","start":"2026-12-04","finish":"2026-12-10","predecessors":"237","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组组长","risk":"中","milestone":"否","deliverable":"工装工具模块","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":239,"wbs":"8.11.3","name":"工装工具管理-配置/开发","type":"开发","duration":"12工作日","start":"2026-12-11","finish":"2026-12-28","predecessors":"238","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组组长","risk":"中","milestone":"否","deliverable":"工装工具模块","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":240,"wbs":"8.11.4","name":"工装工具管理-单元测试","type":"测试","duration":"5工作日","start":"2026-12-29","finish":"2027-01-04","predecessors":"239","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组;数据质量工作组","risk":"中","milestone":"否","deliverable":"工装工具模块","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":241,"wbs":"8.11.5","name":"工装工具管理-缺陷修复","type":"修复","duration":"4工作日","start":"2027-01-05","finish":"2027-01-08","predecessors":"240","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组组长","risk":"中","milestone":"否","deliverable":"工装工具模块","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":242,"wbs":"8.12.1","name":"质量基础管理-详细需求确认","type":"需求","duration":"5工作日","start":"2026-12-02","finish":"2026-12-08","predecessors":"","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组组长","risk":"中","milestone":"否","deliverable":"质量基础模块","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":243,"wbs":"8.12.2","name":"质量基础管理-详细设计","type":"设计","duration":"5工作日","start":"2026-12-09","finish":"2026-12-15","predecessors":"242","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组组长","risk":"中","milestone":"否","deliverable":"质量基础模块","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":244,"wbs":"8.12.3","name":"质量基础管理-配置/开发","type":"开发","duration":"12工作日","start":"2026-12-16","finish":"2026-12-31","predecessors":"243","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组组长","risk":"中","milestone":"否","deliverable":"质量基础模块","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":245,"wbs":"8.12.4","name":"质量基础管理-单元测试","type":"测试","duration":"5工作日","start":"2027-01-01","finish":"2027-01-07","predecessors":"244","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组;数据质量工作组","risk":"中","milestone":"否","deliverable":"质量基础模块","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":246,"wbs":"8.12.5","name":"质量基础管理-缺陷修复","type":"修复","duration":"4工作日","start":"2027-01-08","finish":"2027-01-13","predecessors":"245","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组组长","risk":"中","milestone":"否","deliverable":"质量基础模块","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":247,"wbs":"8.13.1","name":"生产进度看板-详细需求确认","type":"需求","duration":"5工作日","start":"2026-12-07","finish":"2026-12-11","predecessors":"","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组组长","risk":"中","milestone":"否","deliverable":"进度看板","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":248,"wbs":"8.13.2","name":"生产进度看板-详细设计","type":"设计","duration":"5工作日","start":"2026-12-14","finish":"2026-12-18","predecessors":"247","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组组长","risk":"中","milestone":"否","deliverable":"进度看板","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":249,"wbs":"8.13.3","name":"生产进度看板-配置/开发","type":"开发","duration":"12工作日","start":"2026-12-21","finish":"2027-01-05","predecessors":"248","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组组长","risk":"中","milestone":"否","deliverable":"进度看板","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":250,"wbs":"8.13.4","name":"生产进度看板-单元测试","type":"测试","duration":"5工作日","start":"2027-01-06","finish":"2027-01-12","predecessors":"249","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组;数据质量工作组","risk":"中","milestone":"否","deliverable":"进度看板","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":251,"wbs":"8.13.5","name":"生产进度看板-缺陷修复","type":"修复","duration":"4工作日","start":"2027-01-13","finish":"2027-01-18","predecessors":"250","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组组长","risk":"中","milestone":"否","deliverable":"进度看板","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":252,"wbs":"8.14.1","name":"PLM-MES接口-详细需求确认","type":"需求","duration":"5工作日","start":"2026-12-12","finish":"2026-12-17","predecessors":"","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组组长","risk":"高","milestone":"否","deliverable":"接口","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":253,"wbs":"8.14.2","name":"PLM-MES接口-详细设计","type":"设计","duration":"5工作日","start":"2026-12-18","finish":"2026-12-24","predecessors":"252","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组组长","risk":"高","milestone":"否","deliverable":"接口","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":254,"wbs":"8.14.3","name":"PLM-MES接口-配置/开发","type":"开发","duration":"8工作日","start":"2026-12-25","finish":"2027-01-05","predecessors":"253","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组组长","risk":"高","milestone":"否","deliverable":"接口","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":255,"wbs":"8.14.4","name":"PLM-MES接口-单元测试","type":"测试","duration":"5工作日","start":"2027-01-06","finish":"2027-01-12","predecessors":"254","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组;数据质量工作组","risk":"高","milestone":"否","deliverable":"接口","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":256,"wbs":"8.14.5","name":"PLM-MES接口-缺陷修复","type":"修复","duration":"4工作日","start":"2027-01-13","finish":"2027-01-18","predecessors":"255","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组组长","risk":"高","milestone":"否","deliverable":"接口","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":257,"wbs":"8.15.1","name":"ERP-MES接口-详细需求确认","type":"需求","duration":"5工作日","start":"2026-12-17","finish":"2026-12-23","predecessors":"","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组组长","risk":"高","milestone":"否","deliverable":"接口","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":258,"wbs":"8.15.2","name":"ERP-MES接口-详细设计","type":"设计","duration":"5工作日","start":"2026-12-24","finish":"2026-12-30","predecessors":"257","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组组长","risk":"高","milestone":"否","deliverable":"接口","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":259,"wbs":"8.15.3","name":"ERP-MES接口-配置/开发","type":"开发","duration":"8工作日","start":"2026-12-31","finish":"2027-01-11","predecessors":"258","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组组长","risk":"高","milestone":"否","deliverable":"接口","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":260,"wbs":"8.15.4","name":"ERP-MES接口-单元测试","type":"测试","duration":"5工作日","start":"2027-01-12","finish":"2027-01-18","predecessors":"259","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组;数据质量工作组","risk":"高","milestone":"否","deliverable":"接口","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":261,"wbs":"8.15.5","name":"ERP-MES接口-缺陷修复","type":"修复","duration":"4工作日","start":"2027-01-19","finish":"2027-01-22","predecessors":"260","resources":"MES工作组;MES供应商","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组组长","risk":"高","milestone":"否","deliverable":"接口","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":262,"wbs":"8.16.1","name":"QMS低代码平台-QMS范围确认","type":"需求","duration":"6工作日","start":"2026-12-22","finish":"2026-12-29","predecessors":"","resources":"MES工作组;MES供应商;低代码平台供应商","department":"MES工作组","vendor":"MES供应商;低代码平台供应商","reviewer":"MES工作组组长","risk":"高","milestone":"否","deliverable":"QMS系统","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":263,"wbs":"8.16.2","name":"QMS低代码平台-低代码平台方案设计","type":"设计","duration":"6工作日","start":"2026-12-30","finish":"2027-01-06","predecessors":"262","resources":"MES工作组;MES供应商;低代码平台供应商","department":"MES工作组","vendor":"MES供应商;低代码平台供应商","reviewer":"MES工作组组长","risk":"高","milestone":"否","deliverable":"QMS系统","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":264,"wbs":"8.16.3","name":"QMS低代码平台-质量流程表单配置","type":"开发","duration":"12工作日","start":"2027-01-07","finish":"2027-01-22","predecessors":"263","resources":"MES工作组;MES供应商;低代码平台供应商","department":"MES工作组","vendor":"MES供应商;低代码平台供应商","reviewer":"MES工作组组长","risk":"高","milestone":"否","deliverable":"QMS系统","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":265,"wbs":"8.16.4","name":"QMS低代码平台-质量台账与审批流配置","type":"开发","duration":"10工作日","start":"2027-01-25","finish":"2027-02-05","predecessors":"264","resources":"MES工作组;MES供应商;低代码平台供应商","department":"MES工作组","vendor":"MES供应商;低代码平台供应商","reviewer":"MES工作组组长","risk":"高","milestone":"否","deliverable":"QMS系统","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":266,"wbs":"8.16.5","name":"QMS低代码平台-QMS测试","type":"测试","duration":"6工作日","start":"2027-02-08","finish":"2027-02-15","predecessors":"265","resources":"MES工作组;MES供应商;低代码平台供应商","department":"MES工作组","vendor":"MES供应商;低代码平台供应商","reviewer":"MES工作组;数据质量工作组","risk":"高","milestone":"否","deliverable":"QMS系统","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":267,"wbs":"8.16.6","name":"QMS低代码平台-QMS基础能力验收","type":"验收","duration":"5工作日","start":"2027-02-16","finish":"2027-02-22","predecessors":"266","resources":"MES工作组;MES供应商;低代码平台供应商","department":"MES工作组","vendor":"MES供应商;低代码平台供应商","reviewer":"MES工作组;数据质量工作组","risk":"高","milestone":"否","deliverable":"QMS系统","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":268,"wbs":"8.17.1","name":"MES-QMS接口-详细需求确认","type":"需求","duration":"5工作日","start":"2026-12-27","finish":"2026-12-31","predecessors":"","resources":"MES工作组;MES供应商;低代码平台供应商","department":"MES工作组","vendor":"MES供应商;低代码平台供应商","reviewer":"MES工作组组长","risk":"中","milestone":"否","deliverable":"接口","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":269,"wbs":"8.17.2","name":"MES-QMS接口-详细设计","type":"设计","duration":"5工作日","start":"2027-01-01","finish":"2027-01-07","predecessors":"268","resources":"MES工作组;MES供应商;低代码平台供应商","department":"MES工作组","vendor":"MES供应商;低代码平台供应商","reviewer":"MES工作组组长","risk":"中","milestone":"否","deliverable":"接口","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":270,"wbs":"8.17.3","name":"MES-QMS接口-配置/开发","type":"开发","duration":"8工作日","start":"2027-01-08","finish":"2027-01-19","predecessors":"269","resources":"MES工作组;MES供应商;低代码平台供应商","department":"MES工作组","vendor":"MES供应商;低代码平台供应商","reviewer":"MES工作组组长","risk":"中","milestone":"否","deliverable":"接口","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":271,"wbs":"8.17.4","name":"MES-QMS接口-单元测试","type":"测试","duration":"5工作日","start":"2027-01-20","finish":"2027-01-26","predecessors":"270","resources":"MES工作组;MES供应商;低代码平台供应商","department":"MES工作组","vendor":"MES供应商;低代码平台供应商","reviewer":"MES工作组;数据质量工作组","risk":"中","milestone":"否","deliverable":"接口","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":272,"wbs":"8.17.5","name":"MES-QMS接口-缺陷修复","type":"修复","duration":"4工作日","start":"2027-01-27","finish":"2027-02-01","predecessors":"271","resources":"MES工作组;MES供应商;低代码平台供应商","department":"MES工作组","vendor":"MES供应商;低代码平台供应商","reviewer":"MES工作组组长","risk":"中","milestone":"否","deliverable":"接口","notes":"MES一期范围；QMS作为MES建设下子项目，2027上半年完成基础能力"},{"id":273,"wbs":"8.99.1","name":"MES一期系统集成测试","type":"测试","duration":"15工作日","start":"2027-03-01","finish":"2027-03-19","predecessors":"","resources":"MES工作组;MES供应商;信息化项目管理工作室","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组组长","risk":"高","milestone":"否","deliverable":"系统测试报告","notes":"关键节点前显式设置缓冲"},{"id":274,"wbs":"8.99.2","name":"MES一期用户培训材料编制","type":"培训","duration":"5工作日","start":"2027-03-22","finish":"2027-03-26","predecessors":"273","resources":"MES工作组;MES供应商;信息化项目管理工作室","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组组长","risk":"中","milestone":"否","deliverable":"培训材料","notes":"关键节点前显式设置缓冲"},{"id":275,"wbs":"8.99.3","name":"MES一期关键用户培训","type":"培训","duration":"8工作日","start":"2027-03-29","finish":"2027-04-07","predecessors":"274","resources":"MES工作组;MES供应商;信息化项目管理工作室","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组组长","risk":"中","milestone":"否","deliverable":"培训记录","notes":"关键节点前显式设置缓冲"},{"id":276,"wbs":"8.99.4","name":"MES一期上线前风险缓冲","type":"缓冲","duration":"10工作日","start":"2027-04-08","finish":"2027-04-21","predecessors":"275","resources":"MES工作组;MES供应商;信息化项目管理工作室","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组组长","risk":"高","milestone":"否","deliverable":"缓冲记录","notes":"关键节点前显式设置缓冲"},{"id":277,"wbs":"8.99.5","name":"MES一期试运行开始","type":"里程碑","duration":"0工作日","start":"2027-04-22","finish":"2027-04-22","predecessors":"276","resources":"MES工作组;MES供应商;信息化项目管理工作室","department":"MES工作组","vendor":"MES供应商","reviewer":"项目决策组","risk":"高","milestone":"是","deliverable":"试运行启动单","notes":"关键节点前显式设置缓冲"},{"id":278,"wbs":"8.99.6","name":"MES一期试运行与问题整改","type":"试运行","duration":"15工作日","start":"2027-04-23","finish":"2027-05-13","predecessors":"277","resources":"MES工作组;MES供应商;信息化项目管理工作室","department":"MES工作组","vendor":"MES供应商","reviewer":"MES工作组组长","risk":"高","milestone":"否","deliverable":"试运行报告","notes":"关键节点前显式设置缓冲"},{"id":279,"wbs":"8.99.7","name":"MES一期正式上线","type":"里程碑","duration":"0工作日","start":"2027-04-30","finish":"2027-04-30","predecessors":"278","resources":"MES工作组;MES供应商;信息化项目管理工作室","department":"MES工作组","vendor":"MES供应商","reviewer":"项目决策组","risk":"高","milestone":"是","deliverable":"正式上线报告","notes":"关键节点前显式设置缓冲"},{"id":280,"wbs":"8.99.8","name":"MES一期验收","type":"验收","duration":"5工作日","start":"2027-05-03","finish":"2027-05-07","predecessors":"279","resources":"MES工作组;MES供应商;信息化项目管理工作室","department":"MES工作组","vendor":"MES供应商","reviewer":"项目决策组","risk":"高","milestone":"否","deliverable":"一期验收报告","notes":"关键节点前显式设置缓冲"},{"id":281,"wbs":"9.1","name":"MDM-PLM集成联调","type":"联调","duration":"10工作日","start":"2027-03-01","finish":"2027-03-12","predecessors":"","resources":"信息化项目管理工作室;各工作组;供应商","department":"信息化项目组","vendor":"MDM自研;PLM供应商;MES供应商;用友U8","reviewer":"信息化项目管理工作室","risk":"高","milestone":"否","deliverable":"联调报告","notes":"2027年重点：联调、常态化治理、生产现场推广"},{"id":282,"wbs":"9.2","name":"MDM-ERP集成联调","type":"联调","duration":"10工作日","start":"2027-03-15","finish":"2027-03-26","predecessors":"281","resources":"信息化项目管理工作室;各工作组;供应商","department":"信息化项目组","vendor":"MDM自研;PLM供应商;MES供应商;用友U8","reviewer":"信息化项目管理工作室","risk":"高","milestone":"否","deliverable":"联调报告","notes":"2027年重点：联调、常态化治理、生产现场推广"},{"id":283,"wbs":"9.3","name":"MDM-MES集成联调","type":"联调","duration":"10工作日","start":"2027-03-29","finish":"2027-04-09","predecessors":"282","resources":"信息化项目管理工作室;各工作组;供应商","department":"信息化项目组","vendor":"MDM自研;PLM供应商;MES供应商;用友U8","reviewer":"信息化项目管理工作室","risk":"高","milestone":"否","deliverable":"联调报告","notes":"2027年重点：联调、常态化治理、生产现场推广"},{"id":284,"wbs":"9.4","name":"PLM-MES集成联调","type":"联调","duration":"12工作日","start":"2027-04-12","finish":"2027-04-27","predecessors":"283","resources":"信息化项目管理工作室;各工作组;供应商","department":"信息化项目组","vendor":"MDM自研;PLM供应商;MES供应商;用友U8","reviewer":"信息化项目管理工作室","risk":"高","milestone":"否","deliverable":"联调报告","notes":"2027年重点：联调、常态化治理、生产现场推广"},{"id":285,"wbs":"9.5","name":"ERP-MES集成联调","type":"联调","duration":"12工作日","start":"2027-04-28","finish":"2027-05-13","predecessors":"284","resources":"信息化项目管理工作室;各工作组;供应商","department":"信息化项目组","vendor":"MDM自研;PLM供应商;MES供应商;用友U8","reviewer":"信息化项目管理工作室","risk":"高","milestone":"否","deliverable":"联调报告","notes":"2027年重点：联调、常态化治理、生产现场推广"},{"id":286,"wbs":"9.6","name":"MES-QMS集成联调","type":"联调","duration":"10工作日","start":"2027-05-14","finish":"2027-05-27","predecessors":"285","resources":"信息化项目管理工作室;各工作组;供应商","department":"信息化项目组","vendor":"MDM自研;PLM供应商;MES供应商;用友U8","reviewer":"信息化项目管理工作室","risk":"高","milestone":"否","deliverable":"联调报告","notes":"2027年重点：联调、常态化治理、生产现场推广"},{"id":287,"wbs":"9.7","name":"跨系统业务场景测试-订单到计划","type":"测试","duration":"8工作日","start":"2027-05-28","finish":"2027-06-08","predecessors":"286","resources":"信息化项目管理工作室;各工作组;供应商","department":"信息化项目组","vendor":"MDM自研;PLM供应商;MES供应商;用友U8","reviewer":"信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"场景测试报告","notes":"2027年重点：联调、常态化治理、生产现场推广"},{"id":288,"wbs":"9.8","name":"跨系统业务场景测试-工艺到执行","type":"测试","duration":"8工作日","start":"2027-06-09","finish":"2027-06-18","predecessors":"287","resources":"信息化项目管理工作室;各工作组;供应商","department":"信息化项目组","vendor":"MDM自研;PLM供应商;MES供应商;用友U8","reviewer":"信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"场景测试报告","notes":"2027年重点：联调、常态化治理、生产现场推广"},{"id":289,"wbs":"9.9","name":"跨系统业务场景测试-质量闭环","type":"测试","duration":"8工作日","start":"2027-06-21","finish":"2027-06-30","predecessors":"288","resources":"信息化项目管理工作室;各工作组;供应商","department":"信息化项目组","vendor":"MDM自研;PLM供应商;MES供应商;用友U8","reviewer":"信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"场景测试报告","notes":"2027年重点：联调、常态化治理、生产现场推广"},{"id":290,"wbs":"9.10","name":"跨系统业务场景测试-物料齐套","type":"测试","duration":"8工作日","start":"2027-07-01","finish":"2027-07-12","predecessors":"289","resources":"信息化项目管理工作室;各工作组;供应商","department":"信息化项目组","vendor":"MDM自研;PLM供应商;MES供应商;用友U8","reviewer":"信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"场景测试报告","notes":"2027年重点：联调、常态化治理、生产现场推广"},{"id":291,"wbs":"9.11","name":"全系统集成联调问题整改","type":"整改","duration":"15工作日","start":"2027-07-13","finish":"2027-08-02","predecessors":"290","resources":"信息化项目管理工作室;各工作组;供应商","department":"信息化项目组","vendor":"MDM自研;PLM供应商;MES供应商;用友U8","reviewer":"信息化项目管理工作室","risk":"高","milestone":"否","deliverable":"问题整改清单","notes":"2027年重点：联调、常态化治理、生产现场推广"},{"id":292,"wbs":"9.12","name":"全系统集成联调完成","type":"里程碑","duration":"0工作日","start":"2027-08-03","finish":"2027-08-03","predecessors":"291","resources":"信息化项目管理工作室;各工作组;供应商","department":"信息化项目组","vendor":"MDM自研;PLM供应商;MES供应商;用友U8","reviewer":"数据质量工作组;项目决策组","risk":"高","milestone":"是","deliverable":"联调完成确认单","notes":"2027年重点：联调、常态化治理、生产现场推广"},{"id":293,"wbs":"9.13","name":"生产现场推广方案","type":"推广","duration":"8工作日","start":"2027-08-04","finish":"2027-08-13","predecessors":"292","resources":"信息化项目管理工作室;各工作组;供应商","department":"信息化项目组","vendor":"MDM自研;PLM供应商;MES供应商;用友U8","reviewer":"信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"推广方案","notes":"2027年重点：联调、常态化治理、生产现场推广"},{"id":294,"wbs":"9.14","name":"试点产线推广","type":"推广","duration":"15工作日","start":"2027-08-16","finish":"2027-09-03","predecessors":"293","resources":"信息化项目管理工作室;各工作组;供应商","department":"信息化项目组","vendor":"MDM自研;PLM供应商;MES供应商;用友U8","reviewer":"信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"试点推广报告","notes":"2027年重点：联调、常态化治理、生产现场推广"},{"id":295,"wbs":"9.15","name":"多部门现场培训","type":"培训","duration":"10工作日","start":"2027-09-06","finish":"2027-09-17","predecessors":"294","resources":"信息化项目管理工作室;各工作组;供应商","department":"信息化项目组","vendor":"MDM自研;PLM供应商;MES供应商;用友U8","reviewer":"信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"培训记录","notes":"2027年重点：联调、常态化治理、生产现场推广"},{"id":296,"wbs":"9.16","name":"全面推广与运行跟踪","type":"推广","duration":"25工作日","start":"2027-09-20","finish":"2027-10-22","predecessors":"295","resources":"信息化项目管理工作室;各工作组;供应商","department":"信息化项目组","vendor":"MDM自研;PLM供应商;MES供应商;用友U8","reviewer":"信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"推广跟踪报告","notes":"2027年重点：联调、常态化治理、生产现场推广"},{"id":297,"wbs":"9.17","name":"生产现场全面推广完成","type":"里程碑","duration":"0工作日","start":"2027-10-25","finish":"2027-10-25","predecessors":"296","resources":"信息化项目管理工作室;各工作组;供应商","department":"信息化项目组","vendor":"MDM自研;PLM供应商;MES供应商;用友U8","reviewer":"数据质量工作组;项目决策组","risk":"高","milestone":"是","deliverable":"推广完成确认单","notes":"2027年重点：联调、常态化治理、生产现场推广"},{"id":298,"wbs":"9.18","name":"数据治理常态化机制设计","type":"管理","duration":"10工作日","start":"2027-10-26","finish":"2027-11-08","predecessors":"297","resources":"信息化项目管理工作室;各工作组;供应商","department":"信息化项目组","vendor":"MDM自研;PLM供应商;MES供应商;用友U8","reviewer":"数据质量工作组;项目决策组","risk":"中","milestone":"否","deliverable":"机制文件","notes":"2027年重点：联调、常态化治理、生产现场推广"},{"id":299,"wbs":"9.19","name":"月度数据质量审计机制运行","type":"管理","duration":"20工作日","start":"2027-11-09","finish":"2027-12-06","predecessors":"298","resources":"信息化项目管理工作室;各工作组;供应商","department":"信息化项目组","vendor":"MDM自研;PLM供应商;MES供应商;用友U8","reviewer":"数据质量工作组;项目决策组","risk":"中","milestone":"否","deliverable":"质量审计报告","notes":"2027年重点：联调、常态化治理、生产现场推广"},{"id":300,"wbs":"9.20","name":"数据治理常态化机制验收","type":"里程碑","duration":"0工作日","start":"2027-12-07","finish":"2027-12-07","predecessors":"299","resources":"信息化项目管理工作室;各工作组;供应商","department":"信息化项目组","vendor":"MDM自研;PLM供应商;MES供应商;用友U8","reviewer":"数据质量工作组;项目决策组","risk":"高","milestone":"是","deliverable":"机制验收报告","notes":"2027年重点：联调、常态化治理、生产现场推广"},{"id":301,"wbs":"10.1","name":"项目文档知识库深化","type":"AI应用","duration":"15工作日","start":"2027-05-03","finish":"2027-05-21","predecessors":"","resources":"信息化项目管理工作室;AI服务器供应商;各业务试点部门","department":"信息化项目组","vendor":"AI服务器供应商","reviewer":"信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"项目文档知识库","notes":"2026先支撑MDM自研和知识库，2027深化数字员工"},{"id":302,"wbs":"10.2","name":"代码库问答与审查助手试点","type":"AI应用","duration":"15工作日","start":"2027-05-24","finish":"2027-06-11","predecessors":"301","resources":"信息化项目管理工作室;AI服务器供应商;各业务试点部门","department":"信息化项目组","vendor":"AI服务器供应商","reviewer":"信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"代码库问答助手","notes":"2026先支撑MDM自研和知识库，2027深化数字员工"},{"id":303,"wbs":"10.3","name":"测试用例生成试点","type":"AI应用","duration":"10工作日","start":"2027-06-14","finish":"2027-06-25","predecessors":"302","resources":"信息化项目管理工作室;AI服务器供应商;各业务试点部门","department":"信息化项目组","vendor":"AI服务器供应商","reviewer":"信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"测试用例生成报告","notes":"2026先支撑MDM自研和知识库，2027深化数字员工"},{"id":304,"wbs":"10.4","name":"项目周报/风险台账自动生成试点","type":"AI应用","duration":"10工作日","start":"2027-06-28","finish":"2027-07-09","predecessors":"303","resources":"信息化项目管理工作室;AI服务器供应商;各业务试点部门","department":"信息化项目组","vendor":"AI服务器供应商","reviewer":"信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"周报与风险台账试点","notes":"2026先支撑MDM自研和知识库，2027深化数字员工"},{"id":305,"wbs":"10.5","name":"数字员工场景筛选","type":"AI应用","duration":"8工作日","start":"2027-07-12","finish":"2027-07-21","predecessors":"304","resources":"信息化项目管理工作室;AI服务器供应商;各业务试点部门","department":"信息化项目组","vendor":"AI服务器供应商","reviewer":"信息化项目管理工作室","risk":"高","milestone":"否","deliverable":"场景清单","notes":"2026先支撑MDM自研和知识库，2027深化数字员工"},{"id":306,"wbs":"10.6","name":"数字员工低风险场景原型","type":"AI应用","duration":"20工作日","start":"2027-07-22","finish":"2027-08-18","predecessors":"305","resources":"信息化项目管理工作室;AI服务器供应商;各业务试点部门","department":"信息化项目组","vendor":"AI服务器供应商","reviewer":"信息化项目管理工作室","risk":"高","milestone":"否","deliverable":"原型","notes":"2026先支撑MDM自研和知识库，2027深化数字员工"},{"id":307,"wbs":"10.7","name":"数字员工试点运行","type":"试点","duration":"20工作日","start":"2027-08-19","finish":"2027-09-15","predecessors":"306","resources":"信息化项目管理工作室;AI服务器供应商;各业务试点部门","department":"信息化项目组","vendor":"AI服务器供应商","reviewer":"信息化项目管理工作室","risk":"高","milestone":"否","deliverable":"试点运行报告","notes":"2026先支撑MDM自研和知识库，2027深化数字员工"},{"id":308,"wbs":"10.8","name":"AI应用/数字员工试点完成","type":"里程碑","duration":"0工作日","start":"2027-09-16","finish":"2027-09-16","predecessors":"307","resources":"信息化项目管理工作室;AI服务器供应商;各业务试点部门","department":"信息化项目组","vendor":"AI服务器供应商","reviewer":"项目决策组","risk":"高","milestone":"是","deliverable":"试点完成报告","notes":"2026先支撑MDM自研和知识库，2027深化数字员工"},{"id":309,"wbs":"10.9","name":"驾驶舱指标体系深化","type":"驾驶舱","duration":"10工作日","start":"2027-09-17","finish":"2027-09-30","predecessors":"308","resources":"信息化项目管理工作室;AI服务器供应商;各业务试点部门","department":"信息化项目组","vendor":"AI服务器供应商","reviewer":"信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"指标体系","notes":"2026先支撑MDM自研和知识库，2027深化数字员工"},{"id":310,"wbs":"10.10","name":"驾驶舱数据接入与看板深化","type":"驾驶舱","duration":"20工作日","start":"2027-10-01","finish":"2027-10-28","predecessors":"309","resources":"信息化项目管理工作室;AI服务器供应商;各业务试点部门","department":"信息化项目组","vendor":"AI服务器供应商","reviewer":"信息化项目管理工作室","risk":"中","milestone":"否","deliverable":"驾驶舱看板","notes":"2026先支撑MDM自研和知识库，2027深化数字员工"},{"id":311,"wbs":"10.11","name":"项目总体验收材料准备","type":"验收","duration":"15工作日","start":"2027-10-29","finish":"2027-11-18","predecessors":"310","resources":"信息化项目管理工作室;AI服务器供应商;各业务试点部门","department":"信息化项目组","vendor":"AI服务器供应商","reviewer":"项目决策组","risk":"高","milestone":"否","deliverable":"总体验收材料","notes":"2026先支撑MDM自研和知识库，2027深化数字员工"},{"id":312,"wbs":"10.12","name":"项目总体验收前风险缓冲","type":"缓冲","duration":"10工作日","start":"2027-11-19","finish":"2027-12-02","predecessors":"311","resources":"信息化项目管理工作室;AI服务器供应商;各业务试点部门","department":"信息化项目组","vendor":"AI服务器供应商","reviewer":"信息化项目管理工作室","risk":"高","milestone":"否","deliverable":"缓冲记录","notes":"2026先支撑MDM自研和知识库，2027深化数字员工"},{"id":313,"wbs":"10.13","name":"项目总体验收","type":"里程碑","duration":"0工作日","start":"2028-01-31","finish":"2028-01-31","predecessors":"312","resources":"信息化项目管理工作室;AI服务器供应商;各业务试点部门","department":"信息化项目组","vendor":"AI服务器供应商","reviewer":"项目决策组","risk":"高","milestone":"是","deliverable":"总体验收报告","notes":"2026先支撑MDM自研和知识库，2027深化数字员工"}];
+
+console.log('loaded');
+
+// ===== 配置常量 =====
+const PROJECT_START = new Date(2026, 5, 1);  // 2026-06-01
+const PROJECT_END = new Date(2028, 1, 31);    // 2028-01-31
+const MONTH_WIDTH = 82;    // 每月像素宽度
+const ROW_HEIGHT = 32;     // 每行像素高度
+const HEADER_HEIGHT = 44;  // 顶部月轴高度
+const TREE_PANEL_WIDTH = 340;
+
+const WBS_COLORS = {
+  '1': '#4A90D9', '2': '#5C8AD8', '3': '#00BCD4', '4': '#9C27B0', '5': '#607D8B',
+  '6': '#4CAF50', '7': '#E91E63', '8': '#FF9800', '9': '#795548', '10': '#7C4DFF'
+};
+
+function getWbsColor(wbs) {
+  const top = String(wbs).split('.')[0];
+  return WBS_COLORS[top] || '#6b7194';
+}
+
+function getWbsLevel(wbs) {
+  if (!wbs) return 1;
+  return String(wbs).split('.').length;
+}
+
+function getTopWbs(wbs) {
+  return String(wbs).split('.')[0];
+}
+
+// ===== 日期解析 =====
+function parseDate(str) {
+  if (!str || str.trim() === '') return null;
+  str = str.trim();
+  // 2026-06-01
+  let m = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (m) return new Date(+m[1], +m[2] - 1, +m[3]);
+  // 2026/6/1
+  m = str.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
+  if (m) return new Date(+m[1], +m[2] - 1, +m[3]);
+  // 2026年6月1日
+  m = str.match(/^(\d{4})年(\d{1,2})月(\d{1,2})日$/);
+  if (m) return new Date(+m[1], +m[2] - 1, +m[3]);
+  return null;
+}
+
+function formatDate(date) {
+  if (!date) return '日期未设置';
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+// ===== 项目时间轴计算 =====
+function getTotalMonths() {
+  return (PROJECT_END.getFullYear() - PROJECT_START.getFullYear()) * 12
+    + (PROJECT_END.getMonth() - PROJECT_START.getMonth()) + 1;
+}
+
+function getMonthLabels() {
+  const labels = [];
+  let d = new Date(PROJECT_START);
+  const total = getTotalMonths();
+  for (let i = 0; i < total; i++) {
+    labels.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+    d.setMonth(d.getMonth() + 1);
+  }
+  return labels;
+}
+
+function getXForDate(date) {
+  if (!date) return -1;
+  const months = (date.getFullYear() - PROJECT_START.getFullYear()) * 12
+    + (date.getMonth() - PROJECT_START.getMonth());
+  const dayFrac = (date.getDate() - 1) / daysInMonth(date.getFullYear(), date.getMonth());
+  return months * MONTH_WIDTH + dayFrac * MONTH_WIDTH;
+}
+
+function daysInMonth(y, m) {
+  return new Date(y, m + 1, 0).getDate();
+}
+
+// ===== 去重 =====
+function unique(arr) { return [...new Set(arr)]; }
+
+// ===== 任务树构建 =====
+function buildTaskTree(tasks) {
+  const map = {};
+  const roots = [];
+  // 先建索引
+  tasks.forEach(t => { map[t.wbs] = { ...t, children: [], _visible: true, _expanded: true }; });
+  // 建父子关系
+  tasks.forEach(t => {
+    const node = map[t.wbs];
+    const parts = String(t.wbs).split('.');
+    if (parts.length <= 1) {
+      roots.push(node);
+    } else {
+      const parentWbs = parts.slice(0, -1).join('.');
+      const parent = map[parentWbs];
+      if (parent) {
+        parent.children.push(node);
+      } else {
+        roots.push(node); // 孤儿节点挂到根
+      }
+    }
+  });
+  // 三级及以下默认折叠
+  function walk(nodes) {
+    nodes.forEach(n => {
+      if (getWbsLevel(n.wbs) >= 3) n._expanded = false;
+      walk(n.children);
+    });
+  }
+  walk(roots);
+  return { roots, map };
+}
+
+// ===== 数据状态 =====
+let allTasks = [];
+let treeData = null;
+let filteredTasks = [];
+let selectedTaskWbs = null;
+let currentFilters = {
+  year: 'all',
+  mainline: 'all',
+  department: 'all',
+  vendor: 'all',
+  risk: 'all',
+  type: 'all',
+  milestone: 'all',
+  search: ''
+};
+let currentView = 'all';
+
+// ===== 加载数据 =====
+async function loadData() {
+  allTasks = EMBEDDED_TASKS;
+  treeData = buildTaskTree(allTasks);
+  filteredTasks = [...allTasks];
+  document.getElementById('loading').style.display = 'none';
+  return true;
+}
+
+// ===== Dashboard =====
+function calcStats(tasks) {
+  const now = new Date();
+  const milestones = tasks.filter(t => t.milestone === '是' || t.duration === '0工作日');
+  const highRisk = tasks.filter(t => t.risk === '高');
+  const inProgress = tasks.filter(t => {
+    const s = parseDate(t.start);
+    const f = parseDate(t.finish);
+    if (!s || !f) return false;
+    return s <= now && f >= now;
+  });
+  const crossYear = tasks.filter(t => {
+    const s = parseDate(t.start);
+    const f = parseDate(t.finish);
+    if (!s || !f) return false;
+    return s.getFullYear() !== f.getFullYear();
+  });
+  const depts = unique(tasks.map(t => t.department).filter(Boolean));
+  const vendors = unique(tasks.map(t => t.vendor).filter(Boolean));
+  return {
+    total: tasks.length,
+    milestones: milestones.length,
+    highRisk: highRisk.length,
+    inProgress: inProgress.length,
+    crossYear: crossYear.length,
+    departments: depts.length,
+    vendors: vendors.length
+  };
+}
+
+function renderDashboard(tasks) {
+  const stats = calcStats(tasks);
+  const cards = [
+    { value: stats.total, label: '总任务数', cls: '' },
+    { value: stats.milestones, label: '里程碑', cls: '' },
+    { value: stats.highRisk, label: '高风险任务', cls: 'highlight' },
+    { value: stats.inProgress, label: '当前进行中', cls: '' },
+    { value: stats.crossYear, label: '已跨年任务', cls: '' },
+    { value: stats.departments, label: '责任部门', cls: '' },
+    { value: stats.vendors, label: '供应商', cls: '' }
+  ];
+  document.getElementById('dashboard').innerHTML = cards.map(c =>
+    `<div class="stat-card ${c.cls}">
+      <div class="stat-value">${c.value}</div>
+      <div class="stat-label">${c.label}</div>
+    </div>`
+  ).join('');
+}
+
+// ===== Filters =====
+function getFilterOptions(tasks) {
+  return {
+    mainlines: unique(tasks.map(t => getTopWbs(t.wbs)).filter(Boolean)).sort((a,b) => +a - +b),
+    departments: unique(tasks.map(t => t.department).filter(Boolean)).sort(),
+    vendors: unique(tasks.map(t => t.vendor).filter(Boolean)).sort(),
+    types: unique(tasks.map(t => t.type).filter(Boolean)).sort()
+  };
+}
+
+function applyFilters() {
+  let tasks = [...allTasks];
+
+  // 年份筛选
+  if (currentFilters.year !== 'all') {
+    const yr = parseInt(currentFilters.year);
+    tasks = tasks.filter(t => {
+      const s = parseDate(t.start);
+      const f = parseDate(t.finish);
+      if (!s && !f) return false;
+      return (s && s.getFullYear() === yr) || (f && f.getFullYear() === yr);
+    });
+  }
+
+  // 视图预设
+  if (currentView === 'overview') {
+    tasks = tasks.filter(t => {
+      const lvl = getWbsLevel(t.wbs);
+      return lvl <= 2 || t.milestone === '是' || t.duration === '0工作日';
+    });
+  } else if (currentView === 'milestones') {
+    tasks = tasks.filter(t => t.milestone === '是' || t.duration === '0工作日');
+  } else if (currentView === 'highrisk') {
+    tasks = tasks.filter(t => t.risk === '高');
+  }
+
+  // 主线筛选
+  if (currentFilters.mainline !== 'all') {
+    tasks = tasks.filter(t => getTopWbs(t.wbs) === currentFilters.mainline);
+  }
+  // 部门筛选
+  if (currentFilters.department !== 'all') {
+    tasks = tasks.filter(t => t.department === currentFilters.department);
+  }
+  // 供应商筛选
+  if (currentFilters.vendor !== 'all') {
+    tasks = tasks.filter(t => t.vendor === currentFilters.vendor);
+  }
+  // 风险筛选
+  if (currentFilters.risk !== 'all') {
+    tasks = tasks.filter(t => t.risk === currentFilters.risk);
+  }
+  // 类型筛选
+  if (currentFilters.type !== 'all') {
+    tasks = tasks.filter(t => t.type === currentFilters.type);
+  }
+  // 里程碑筛选
+  if (currentFilters.milestone === 'yes') {
+    tasks = tasks.filter(t => t.milestone === '是' || t.duration === '0工作日');
+  }
+  // 搜索
+  if (currentFilters.search.trim()) {
+    const kw = currentFilters.search.trim().toLowerCase();
+    tasks = tasks.filter(t => t.name.toLowerCase().includes(kw) || t.wbs.includes(kw));
+  }
+
+  filteredTasks = tasks;
+  if (typeof refreshAll === 'function') refreshAll();
+}
+
+function renderFilterBar(tasks) {
+  const opts = getFilterOptions(tasks);
+  const html = `
+    <select id="filterYear">
+      <option value="all">全部年份</option>
+      <option value="2026">2026年</option>
+      <option value="2027">2027年</option>
+      <option value="2028">2028年</option>
+    </select>
+    <select id="filterMainline">
+      <option value="all">全部主线</option>
+      ${opts.mainlines.map(m => {
+        const topTask = allTasks.find(t => getTopWbs(t.wbs) === m && getWbsLevel(t.wbs) === 1);
+        const label = topTask ? `${m}-${topTask.name}` : m;
+        return `<option value="${m}">${label}</option>`;
+      }).join('')}
+    </select>
+    <select id="filterDept">
+      <option value="all">全部部门</option>
+      ${opts.departments.map(d => `<option value="${d}">${d}</option>`).join('')}
+    </select>
+    <select id="filterVendor">
+      <option value="all">全部供应商</option>
+      ${opts.vendors.map(v => `<option value="${v}">${v}</option>`).join('')}
+    </select>
+    <select id="filterRisk">
+      <option value="all">全部风险</option>
+      <option value="高">高风险</option>
+      <option value="中">中风险</option>
+      <option value="低">低风险</option>
+    </select>
+    <select id="filterType">
+      <option value="all">全部类型</option>
+      ${opts.types.map(t => `<option value="${t}">${t}</option>`).join('')}
+    </select>
+    <select id="filterMilestone">
+      <option value="all">全部任务</option>
+      <option value="yes">仅里程碑</option>
+    </select>
+    <input type="text" id="filterSearch" placeholder="搜索任务名称/WBS...">
+    <div class="view-btns">
+      <button data-view="all" class="active">全部任务</button>
+      <button data-view="overview">总览视图</button>
+      <button data-view="2026">2026年</button>
+      <button data-view="2027">2027年</button>
+      <button data-view="2028">2028年</button>
+      <button data-view="milestones">里程碑</button>
+      <button data-view="highrisk">高风险</button>
+    </div>
+  `;
+  document.getElementById('filterBar').innerHTML = html;
+  bindFilterEvents();
+}
+
+function bindFilterEvents() {
+  const bindings = [
+    { id: 'filterYear', key: 'year' },
+    { id: 'filterMainline', key: 'mainline' },
+    { id: 'filterDept', key: 'department' },
+    { id: 'filterVendor', key: 'vendor' },
+    { id: 'filterRisk', key: 'risk' },
+    { id: 'filterType', key: 'type' },
+    { id: 'filterMilestone', key: 'milestone' }
+  ];
+  bindings.forEach(({ id, key }) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', () => {
+      currentFilters[key] = el.value;
+      if (key === 'year' && el.value !== 'all') {
+        currentView = el.value;
+      } else if (key === 'year') {
+        currentView = 'all';
+      }
+      updateViewButtons();
+      applyFilters();
+    });
+  });
+
+  const searchEl = document.getElementById('filterSearch');
+  if (searchEl) {
+    searchEl.addEventListener('input', () => {
+      currentFilters.search = searchEl.value;
+      applyFilters();
+    });
+  }
+
+  // 视图按钮
+  document.querySelectorAll('.view-btns button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const view = btn.dataset.view;
+      setView(view);
+    });
+  });
+}
+
+function setView(view) {
+  currentView = view;
+  if (['2026', '2027', '2028'].includes(view)) {
+    currentFilters.year = view;
+    const yearEl = document.getElementById('filterYear');
+    if (yearEl) yearEl.value = view;
+  } else {
+    currentFilters.year = 'all';
+    const yearEl = document.getElementById('filterYear');
+    if (yearEl) yearEl.value = 'all';
+  }
+  updateViewButtons();
+  applyFilters();
+}
+
+function updateViewButtons() {
+  document.querySelectorAll('.view-btns button').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.view === currentView);
+  });
+}
+
+// ===== TaskTree =====
+function renderTaskTree(tasks) {
+  // 从筛选结果中收集可见 WBS（包括祖先）
+  const filteredWbsSet = new Set(tasks.map(t => t.wbs));
+  tasks.forEach(t => {
+    const parts = String(t.wbs).split('.');
+    for (let i = 1; i < parts.length; i++) {
+      filteredWbsSet.add(parts.slice(0, i).join('.'));
+    }
+  });
+
+  // 只渲染在筛选集中存在的根节点
+  const visibleRoots = treeData.roots.filter(r => filteredWbsSet.has(r.wbs));
+
+  const container = document.getElementById('taskTree');
+  let html = '';
+
+  function renderNode(node) {
+    if (!filteredWbsSet.has(node.wbs)) return;
+
+    const level = getWbsLevel(node.wbs);
+    const hasChildren = node.children && node.children.length > 0;
+    const isExpanded = node._expanded;
+    const toggleIcon = hasChildren ? (isExpanded ? '▼' : '▶') : '&nbsp;';
+    const isMilestone = node.milestone === '是' || node.duration === '0工作日';
+    const isHighRisk = node.risk === '高';
+    const selClass = node.wbs === selectedTaskWbs ? ' selected' : '';
+    const indent = Math.max(0, level - 1) * 14;
+
+    html += `<div class="tree-node level-${level}${isMilestone ? ' type-milestone' : ''}${isHighRisk ? ' risk-high' : ''}${selClass}"
+      data-wbs="${node.wbs}" style="padding-left:${indent}px">
+      <span class="toggle-icon" data-action="toggle">${toggleIcon}</span>
+      <span class="col-wbs">${node.wbs}</span>
+      <span class="col-name" title="${node.name}">${node.name}</span>
+    </div>`;
+
+    if (hasChildren && isExpanded) {
+      node.children.forEach(child => renderNode(child));
+    }
+  }
+
+  visibleRoots.forEach(root => renderNode(root));
+  container.innerHTML = html;
+
+  // 绑定事件
+  container.querySelectorAll('.tree-node').forEach(el => {
+    el.addEventListener('click', (e) => {
+      const wbs = el.dataset.wbs;
+      const toggleEl = e.target.closest('[data-action="toggle"]');
+      if (toggleEl) {
+        // 展开/折叠
+        const node = treeData.map[wbs];
+        if (node && node.children && node.children.length > 0) {
+          node._expanded = !node._expanded;
+          renderTaskTree(filteredTasks);
+        }
+      } else {
+        // 选中任务
+        selectedTaskWbs = wbs;
+        renderTaskTree(filteredTasks);
+        // 详情面板和甘特滚动在后续任务中接入
+        if (typeof showTaskDetail === 'function') showTaskDetail(treeData.map[wbs]);
+        if (typeof scrollGanttToTask === 'function') scrollGanttToTask(wbs);
+      }
+    });
+  });
+}
+
+// ===== Gantt =====
+let ganttTaskPositions = []; // { wbs, x, y, width, height } for hover detection
+const BAR_HEIGHT = 20;
+const BAR_Y_OFFSET = (ROW_HEIGHT - BAR_HEIGHT) / 2;
+
+function renderGantt(tasks) {
+  const canvas = document.getElementById('ganttCanvas');
+  const ctx = canvas.getContext('2d');
+  const months = getTotalMonths();
+  const totalWidth = months * MONTH_WIDTH + 80;
+  const totalHeight = HEADER_HEIGHT + tasks.length * ROW_HEIGHT + 20;
+
+  canvas.width = totalWidth;
+  canvas.height = Math.max(totalHeight, 400);
+  canvas.style.width = totalWidth + 'px';
+  canvas.style.height = Math.max(totalHeight, 400) + 'px';
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ganttTaskPositions = [];
+
+  // 背景
+  ctx.fillStyle = '#141720';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  drawMonthHeader(ctx, months, totalWidth);
+  drawGridLines(ctx, months, totalWidth, totalHeight, tasks.length);
+  drawTodayLine(ctx, totalHeight);
+
+  for (let i = 0; i < tasks.length; i++) {
+    drawTaskBar(ctx, tasks[i], i);
+  }
+}
+
+function drawMonthHeader(ctx, months, totalWidth) {
+  const labels = getMonthLabels();
+
+  // 表头背景
+  ctx.fillStyle = '#161822';
+  ctx.fillRect(0, 0, totalWidth, HEADER_HEIGHT);
+
+  // 年份行
+  let currentYear = '';
+  for (let i = 0; i < months; i++) {
+    const yr = labels[i].split('-')[0];
+    const x = i * MONTH_WIDTH;
+    if (yr !== currentYear) {
+      currentYear = yr;
+      let span = 0;
+      for (let j = i; j < months; j++) {
+        if (labels[j].split('-')[0] === yr) span++;
+        else break;
+      }
+      const yearWidth = span * MONTH_WIDTH;
+      ctx.fillStyle = '#1c1f2e';
+      ctx.fillRect(x, 0, yearWidth, 22);
+      ctx.fillStyle = '#8b90a0';
+      ctx.font = 'bold 13px -apple-system, "Microsoft YaHei", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(yr + '年', x + yearWidth / 2, 16);
+    }
+  }
+
+  // 月份行
+  for (let i = 0; i < months; i++) {
+    const x = i * MONTH_WIDTH;
+    const parts = labels[i].split('-');
+    const mon = parts[1];
+    ctx.fillStyle = (i % 2 === 0) ? '#6b7194' : '#4a4d5a';
+    ctx.font = '12px -apple-system, "Microsoft YaHei", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(mon + '月', x + MONTH_WIDTH / 2, 40);
+  }
+
+  // 底部线
+  ctx.strokeStyle = '#2a2d3a';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, HEADER_HEIGHT);
+  ctx.lineTo(totalWidth, HEADER_HEIGHT);
+  ctx.stroke();
+}
+
+function drawGridLines(ctx, months, totalWidth, totalHeight, taskCount) {
+  ctx.strokeStyle = '#1a1d2a';
+  ctx.lineWidth = 0.5;
+
+  for (let i = 0; i <= months; i++) {
+    const x = i * MONTH_WIDTH;
+    ctx.beginPath();
+    ctx.moveTo(x, HEADER_HEIGHT);
+    ctx.lineTo(x, totalHeight);
+    ctx.stroke();
+  }
+
+  for (let i = 0; i <= taskCount; i++) {
+    const y = HEADER_HEIGHT + i * ROW_HEIGHT;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(totalWidth, y);
+    ctx.stroke();
+  }
+}
+
+function drawTodayLine(ctx, totalHeight) {
+  const now = new Date();
+  const x = getXForDate(now);
+  if (x < 0 || x > getTotalMonths() * MONTH_WIDTH) return;
+
+  ctx.strokeStyle = '#e74c3c';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([6, 4]);
+  ctx.beginPath();
+  ctx.moveTo(x, HEADER_HEIGHT);
+  ctx.lineTo(x, totalHeight);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.fillStyle = '#e74c3c';
+  ctx.font = 'bold 11px -apple-system, "Microsoft YaHei", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('今天', x, HEADER_HEIGHT - 6);
+}
+
+function drawTaskBar(ctx, task, rowIndex) {
+  const startDate = parseDate(task.start);
+  const finishDate = parseDate(task.finish);
+  const y = HEADER_HEIGHT + rowIndex * ROW_HEIGHT;
+
+  const isSummary = task.type === '摘要';
+  const isMilestone = task.milestone === '是' || task.duration === '0工作日';
+  const isBuffer = task.type === '缓冲';
+  const isHighRisk = task.risk === '高';
+
+  if (!startDate && !finishDate) {
+    ctx.fillStyle = '#4a4d5a';
+    ctx.font = '11px -apple-system, "Microsoft YaHei", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('(日期未设置)', 10, y + ROW_HEIGHT / 2 + 4);
+    return;
+  }
+
+  const startX = startDate ? getXForDate(startDate) : 0;
+  const finishX = finishDate ? getXForDate(finishDate) + MONTH_WIDTH / 30 : startX;
+
+  if (isMilestone && finishDate) {
+    const cx = finishX;
+    const cy = y + ROW_HEIGHT / 2;
+    const size = 7;
+    ctx.fillStyle = '#f4b400';
+    ctx.strokeStyle = '#f4b400';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - size);
+    ctx.lineTo(cx + size, cy);
+    ctx.lineTo(cx, cy + size);
+    ctx.lineTo(cx - size, cy);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ganttTaskPositions.push({ wbs: task.wbs, x: cx - size, y: cy - size, width: size * 2, height: size * 2 });
+    return;
+  }
+
+  const barWidth = Math.max(finishX - startX, 3);
+  const barX = startX;
+  const barY = y + BAR_Y_OFFSET;
+  const color = getWbsColor(task.wbs);
+
+  if (isSummary) {
+    ctx.fillStyle = '#3a3d4a';
+    ctx.fillRect(barX, barY + 2, barWidth, BAR_HEIGHT - 4);
+    ctx.fillStyle = '#6b7194';
+    ctx.beginPath(); ctx.arc(barX, barY + BAR_HEIGHT / 2, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(barX + barWidth, barY + BAR_HEIGHT / 2, 3, 0, Math.PI * 2); ctx.fill();
+  } else {
+    ctx.globalAlpha = 0.85;
+    ctx.fillStyle = color;
+    ctx.fillRect(barX, barY, barWidth, BAR_HEIGHT);
+    ctx.globalAlpha = 1;
+
+    if (isHighRisk) {
+      ctx.strokeStyle = '#e74c3c';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(barX, barY, barWidth, BAR_HEIGHT);
+    }
+
+    if (isBuffer) {
+      ctx.globalAlpha = 0.3;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 0.5;
+      for (let ox = barX; ox < barX + barWidth; ox += 4) {
+        ctx.beginPath();
+        ctx.moveTo(ox, barY);
+        ctx.lineTo(ox + BAR_HEIGHT, barY + BAR_HEIGHT);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    if (barWidth > 40) {
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '11px -apple-system, "Microsoft YaHei", sans-serif';
+      ctx.textAlign = 'left';
+      const displayName = task.name.length > 20 ? task.name.slice(0, 20) + '..' : task.name;
+      ctx.fillText(displayName, barX + 6, barY + BAR_HEIGHT / 2 + 4, barWidth - 12);
+    }
+  }
+
+  ganttTaskPositions.push({ wbs: task.wbs, x: barX, y: barY, width: barWidth, height: BAR_HEIGHT });
+}
+
+function scrollGanttToTask(wbs) {
+  const pos = ganttTaskPositions.find(p => p.wbs === wbs);
+  if (pos) {
+    const panel = document.getElementById('ganttPanel');
+    panel.scrollTo({ top: pos.y - HEADER_HEIGHT - 100, behavior: 'smooth' });
+  }
+}
+
+// ===== Canvas 悬停检测 =====
+function setupGanttHover() {
+  const canvas = document.getElementById('ganttCanvas');
+  const tooltip = document.getElementById('ganttTooltip');
+  const panel = document.getElementById('ganttPanel');
+
+  canvas.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left + panel.scrollLeft;
+    const my = e.clientY - rect.top + panel.scrollTop;
+
+    const hit = ganttTaskPositions.find(p =>
+      mx >= p.x && mx <= p.x + p.width && my >= p.y && my <= p.y + p.height
+    );
+
+    if (hit) {
+      const task = treeData.map[hit.wbs];
+      if (task) {
+        const s = parseDate(task.start);
+        const f = parseDate(task.finish);
+        tooltip.innerHTML = [
+          `<div class="tt-name">${task.name}</div>`,
+          `<div class="tt-row">WBS: <span>${task.wbs}</span></div>`,
+          `<div class="tt-row">时间: <span>${formatDate(s)} — ${formatDate(f)}</span></div>`,
+          `<div class="tt-row">工期: <span>${task.duration || '-'}</span></div>`,
+          `<div class="tt-row">类型: <span>${task.type || '-'}</span></div>`,
+          `<div class="tt-row">部门: <span>${task.department || '-'}</span></div>`,
+          `<div class="tt-row">风险: <span>${task.risk || '-'}</span></div>`
+        ].join('');
+        tooltip.style.display = 'block';
+        tooltip.style.left = (e.clientX + 16) + 'px';
+        tooltip.style.top = (e.clientY + 16) + 'px';
+      }
+    } else {
+      tooltip.style.display = 'none';
+    }
+  });
+
+  canvas.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+
+  canvas.addEventListener('click', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left + panel.scrollLeft;
+    const my = e.clientY - rect.top + panel.scrollTop;
+    const hit = ganttTaskPositions.find(p =>
+      mx >= p.x && mx <= p.x + p.width && my >= p.y && my <= p.y + p.height
+    );
+    if (hit) {
+      selectedTaskWbs = hit.wbs;
+      if (typeof renderTaskTree === 'function') renderTaskTree(filteredTasks);
+      if (typeof showTaskDetail === 'function') showTaskDetail(treeData.map[hit.wbs]);
+    }
+  });
+}
+
+// ===== 滚动同步 =====
+function setupScrollSync() {
+  const treePanel = document.getElementById('taskTreePanel');
+  const ganttPanel = document.getElementById('ganttPanel');
+  let syncing = false;
+  treePanel.addEventListener('scroll', () => {
+    if (syncing) return;
+    syncing = true;
+    ganttPanel.scrollTop = treePanel.scrollTop;
+    syncing = false;
+  });
+  ganttPanel.addEventListener('scroll', () => {
+    if (syncing) return;
+    syncing = true;
+    treePanel.scrollTop = ganttPanel.scrollTop;
+    syncing = false;
+  });
+}
+
+// ===== TaskDetail Panel =====
+function showTaskDetail(task) {
+  if (!task) return;
+  const overlay = document.getElementById('detailOverlay');
+  const body = document.getElementById('detailBody');
+  const s = parseDate(task.start);
+  const f = parseDate(task.finish);
+
+  const fields = [
+    { label: 'WBS', value: task.wbs || '-' },
+    { label: '任务名称', value: task.name },
+    { label: '任务类型', value: task.type || '-' },
+    { label: '开始时间', value: formatDate(s) },
+    { label: '完成时间', value: formatDate(f) },
+    { label: '工期', value: task.duration || '-' },
+    { label: '前置任务', value: task.predecessors || '-' },
+    { label: '资源名称', value: task.resources || '-' },
+    { label: '责任部门', value: task.department || '-' },
+    { label: '供应商', value: task.vendor || '-' },
+    { label: '审核人/审批组', value: task.reviewer || '-' },
+    { label: '风险等级', value: task.risk || '中', badge: 'risk' },
+    { label: '里程碑', value: (task.milestone === '是' || task.duration === '0工作日') ? '是' : '否', badge: 'milestone' },
+    { label: '交付物', value: task.deliverable || '-' },
+    { label: '备注', value: task.notes || '-' }
+  ];
+
+  body.innerHTML = fields.map(f => {
+    let valueHtml;
+    if (f.badge === 'risk') {
+      valueHtml = `<span class="value badge risk-${f.value}">${f.value}</span>`;
+    } else if (f.badge === 'milestone' && f.value === '是') {
+      valueHtml = `<span class="value badge tag-milestone">里程碑</span>`;
+    } else {
+      valueHtml = `<span class="value">${f.value}</span>`;
+    }
+    return `<div class="detail-field"><label>${f.label}</label>${valueHtml}</div>`;
+  }).join('');
+
+  overlay.classList.add('open');
+}
+
+function hideTaskDetail() {
+  document.getElementById('detailOverlay').classList.remove('open');
+}
+
+// ===== Milestone List =====
+function renderMilestoneList(tasks) {
+  const milestones = tasks.filter(t => t.milestone === '是' || t.duration === '0工作日');
+  const container = document.getElementById('milestoneList');
+  container.innerHTML = milestones.map(m => {
+    const f = parseDate(m.finish);
+    return `<div class="milestone-item">
+      <span class="ms-date">${formatDate(f)}</span>
+      <span class="ms-name">${m.name}</span>
+    </div>`;
+  }).join('');
+}
+
+// ===== 全局刷新 =====
+function refreshAll() {
+  renderDashboard(filteredTasks);
+  renderTaskTree(filteredTasks);
+  renderGantt(filteredTasks);
+  renderMilestoneList(filteredTasks);
+}
+
+// ===== 初始化 =====
+async function init() {
+  const ok = await loadData();
+  if (!ok) return;
+
+  renderFilterBar(allTasks);
+  refreshAll();
+  setupGanttHover();
+  setupScrollSync();
+
+  document.getElementById('detailClose').addEventListener('click', hideTaskDetail);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') hideTaskDetail();
+  });
+}
+
+init();
+</script>
+
+</body>
+</html>
