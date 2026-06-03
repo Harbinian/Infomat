@@ -8,13 +8,13 @@ const dbPath = process.env.MDM_DB_PATH
   : path.join(defaultDataDir, 'platform.db');
 
 const dbInitLog = (...args) => {
-  if (!process.env.MDM_DB_PATH) console.log(...args);
+  if (process.env.MDM_DB_QUIET !== '1') console.log(...args);
 };
 
 fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 
 const db = new Database(dbPath);
-db.__dbPath = dbPath;
+Object.defineProperty(db, '__dbPath', { value: dbPath });
 
 db.pragma('foreign_keys = ON');
 
