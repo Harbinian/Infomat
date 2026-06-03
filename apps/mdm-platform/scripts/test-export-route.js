@@ -2,7 +2,7 @@ const assert = require('assert');
 const { spawn } = require('child_process');
 const path = require('path');
 const ExcelJS = require('exceljs');
-const { cleanupDb } = require('./testHelpers/isolatedDb');
+const { cleanupDb, stopServer } = require('./testHelpers/isolatedDb');
 const db = require('../server/db');
 const { hashPassword } = require('../server/auth');
 
@@ -106,31 +106,19 @@ async function request(routePath, options = {}, cookie = '') {
   return fetch(`${BASE_URL}${routePath}`, { ...options, headers });
 }
 
-function stopServer(server) {
-  return new Promise(resolve => {
-    if (server.exitCode !== null || server.killed) return resolve();
-    server.once('exit', resolve);
-    server.kill();
-    setTimeout(() => {
-      if (server.exitCode === null && !server.killed) {
-        server.kill('SIGKILL');
-      }
-      resolve();
-    }, 2000);
-  });
-}
-
 async function main() {
-  resetData();
-  seedData();
-
-  const server = spawn(process.execPath, ['server/index.js'], {
-    cwd: path.join(__dirname, '..'),
-    env: { ...process.env, PORT: String(PORT), SESSION_SECRET: 'test-secret' },
-    stdio: ['ignore', 'pipe', 'pipe']
-  });
+  let server;
 
   try {
+    resetData();
+    seedData();
+
+    server = spawn(process.execPath, ['server/index.js'], {
+      cwd: path.join(__dirname, '..'),
+      env: { ...process.env, PORT: String(PORT), SESSION_SECRET: 'test-secret' },
+      stdio: ['ignore', 'pipe', 'pipe']
+    });
+
     await waitForServer();
 
     const protectedExport = await request('/api/export/excel');
@@ -180,9 +168,15 @@ async function main() {
     console.log('Export route integration test passed');
   } finally {
     await stopServer(server);
-    resetData();
-    db.close();
-    cleanupDb();
+    try {
+      resetData();
+    } finally {
+      try {
+        db.close();
+      } finally {
+        cleanupDb();
+      }
+    }
   }
 }
 

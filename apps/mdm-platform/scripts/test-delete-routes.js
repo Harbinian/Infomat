@@ -1,7 +1,7 @@
 const assert = require('assert');
 const { spawn } = require('child_process');
 const path = require('path');
-const { cleanupDb, testDbPath } = require('./testHelpers/isolatedDb');
+const { cleanupDb, stopServer, testDbPath } = require('./testHelpers/isolatedDb');
 
 const PORT = 3219;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
@@ -88,20 +88,6 @@ function waitForServer() {
   });
 }
 
-function stopServer(server) {
-  return new Promise(resolve => {
-    if (server.exitCode !== null || server.killed) return resolve();
-    server.once('exit', resolve);
-    server.kill();
-    setTimeout(() => {
-      if (server.exitCode === null && !server.killed) {
-        server.kill('SIGKILL');
-      }
-      resolve();
-    }, 2000);
-  });
-}
-
 async function request(routePath, options = {}, cookie = '') {
   const headers = {
     'Content-Type': 'application/json',
@@ -124,14 +110,16 @@ async function login(employeeNo, password) {
 }
 
 (async () => {
-  const ids = seed();
-  const server = spawn(process.execPath, ['server/index.js'], {
-    cwd: path.join(__dirname, '..'),
-    env: { ...process.env, PORT: String(PORT), SESSION_SECRET: 'delete-test-secret' },
-    stdio: 'inherit'
-  });
+  let server;
 
   try {
+    const ids = seed();
+    server = spawn(process.execPath, ['server/index.js'], {
+      cwd: path.join(__dirname, '..'),
+      env: { ...process.env, PORT: String(PORT), SESSION_SECRET: 'delete-test-secret' },
+      stdio: 'inherit'
+    });
+
     await waitForServer();
 
     const unauth = await request('/api/products/PROD_DEL', { method: 'DELETE' });
@@ -193,8 +181,11 @@ async function login(employeeNo, password) {
     console.log('Delete route smoke passed');
   } finally {
     await stopServer(server);
-    db.close();
-    cleanupDb();
+    try {
+      db.close();
+    } finally {
+      cleanupDb();
+    }
   }
 })().catch(err => {
   console.error(err);

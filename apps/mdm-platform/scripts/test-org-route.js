@@ -1,6 +1,6 @@
 const assert = require('assert');
 const { spawn } = require('child_process');
-const { cleanupDb } = require('./testHelpers/isolatedDb');
+const { cleanupDb, stopServer } = require('./testHelpers/isolatedDb');
 const db = require('../server/db');
 const { hashPassword } = require('../server/auth');
 
@@ -92,31 +92,19 @@ async function request(path, options = {}, cookie = '') {
   return { res, body };
 }
 
-function stopServer(server) {
-  return new Promise(resolve => {
-    if (server.exitCode !== null || server.killed) return resolve();
-    server.once('exit', resolve);
-    server.kill();
-    setTimeout(() => {
-      if (server.exitCode === null && !server.killed) {
-        server.kill('SIGKILL');
-      }
-      resolve();
-    }, 2000);
-  });
-}
-
 async function main() {
-  resetData();
-  seedAdmin();
-
-  const server = spawn(process.execPath, ['server/index.js'], {
-    cwd: require('path').join(__dirname, '..'),
-    env: { ...process.env, PORT: String(PORT), SESSION_SECRET: 'test-secret' },
-    stdio: ['ignore', 'pipe', 'pipe']
-  });
+  let server;
 
   try {
+    resetData();
+    seedAdmin();
+
+    server = spawn(process.execPath, ['server/index.js'], {
+      cwd: require('path').join(__dirname, '..'),
+      env: { ...process.env, PORT: String(PORT), SESSION_SECRET: 'test-secret' },
+      stdio: ['ignore', 'pipe', 'pipe']
+    });
+
     await waitForServer();
 
     const protectedRes = await request('/api/org/departments');
@@ -179,9 +167,15 @@ async function main() {
     console.log('Org route integration test passed');
   } finally {
     await stopServer(server);
-    resetData();
-    db.close();
-    cleanupDb();
+    try {
+      resetData();
+    } finally {
+      try {
+        db.close();
+      } finally {
+        cleanupDb();
+      }
+    }
   }
 }
 

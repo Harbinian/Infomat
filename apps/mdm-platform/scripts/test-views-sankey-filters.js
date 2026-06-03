@@ -1,7 +1,7 @@
 const assert = require('assert');
 const { spawn } = require('child_process');
 const path = require('path');
-const { cleanupDb } = require('./testHelpers/isolatedDb');
+const { cleanupDb, stopServer } = require('./testHelpers/isolatedDb');
 const db = require('../server/db');
 const { hashPassword } = require('../server/auth');
 
@@ -108,18 +108,6 @@ async function request(routePath, options = {}, cookie = '') {
   return { res, body };
 }
 
-function stopServer(server) {
-  return new Promise(resolve => {
-    if (server.exitCode !== null || server.killed) return resolve();
-    server.once('exit', resolve);
-    server.kill();
-    setTimeout(() => {
-      if (server.exitCode === null && !server.killed) server.kill('SIGKILL');
-      resolve();
-    }, 2000);
-  });
-}
-
 function assertLinksReferenceExistingNodes(view) {
   const nodeKeys = new Set(view.nodes.map(node => node.name));
   for (const link of view.links) {
@@ -129,16 +117,18 @@ function assertLinksReferenceExistingNodes(view) {
 }
 
 async function main() {
-  resetData();
-  const seeded = seedData();
-
-  const server = spawn(process.execPath, ['server/index.js'], {
-    cwd: path.join(__dirname, '..'),
-    env: { ...process.env, PORT: String(PORT), SESSION_SECRET: 'views-test-secret' },
-    stdio: ['ignore', 'pipe', 'pipe']
-  });
+  let server;
 
   try {
+    resetData();
+    const seeded = seedData();
+
+    server = spawn(process.execPath, ['server/index.js'], {
+      cwd: path.join(__dirname, '..'),
+      env: { ...process.env, PORT: String(PORT), SESSION_SECRET: 'views-test-secret' },
+      stdio: ['ignore', 'pipe', 'pipe']
+    });
+
     await waitForServer();
 
     const login = await request('/api/org/login', {
@@ -171,9 +161,15 @@ async function main() {
     console.log('Views sankey filter regression test passed');
   } finally {
     await stopServer(server);
-    resetData();
-    db.close();
-    cleanupDb();
+    try {
+      resetData();
+    } finally {
+      try {
+        db.close();
+      } finally {
+        cleanupDb();
+      }
+    }
   }
 }
 
