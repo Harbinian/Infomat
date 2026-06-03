@@ -12,4 +12,38 @@ function cleanupDb() {
   fs.rmSync(tempDir, { recursive: true, force: true });
 }
 
-module.exports = { testDbPath, cleanupDb };
+function stopServer(child, timeoutMs = 2000) {
+  return new Promise(resolve => {
+    if (!child || child.exitCode !== null || child.signalCode !== null) {
+      resolve();
+      return;
+    }
+
+    let settled = false;
+    let forceTimer;
+    let fallbackTimer;
+
+    function finish() {
+      if (settled) return;
+      settled = true;
+      clearTimeout(forceTimer);
+      clearTimeout(fallbackTimer);
+      child.off('exit', finish);
+      child.off('close', finish);
+      resolve();
+    }
+
+    child.once('exit', finish);
+    child.once('close', finish);
+    child.kill();
+
+    forceTimer = setTimeout(() => {
+      if (child.exitCode === null && child.signalCode === null) {
+        child.kill('SIGKILL');
+      }
+      fallbackTimer = setTimeout(finish, timeoutMs);
+    }, timeoutMs);
+  });
+}
+
+module.exports = { testDbPath, cleanupDb, stopServer };
