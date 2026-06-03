@@ -8,9 +8,19 @@ const testDbPath = path.join(tempDir, 'platform-test.db');
 
 process.env.MDM_DB_PATH = testDbPath;
 
-function cleanupDb() {
-  fs.rmSync(tempDir, { recursive: true, force: true });
+let cleaned = false;
+
+function cleanupDb(options = {}) {
+  if (cleaned) return;
+  try {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+    cleaned = true;
+  } catch (error) {
+    if (!options.ignoreErrors) throw error;
+  }
 }
+
+process.once('exit', () => cleanupDb({ ignoreErrors: true }));
 
 function stopServer(child, timeoutMs = 2000) {
   return new Promise(resolve => {
@@ -41,7 +51,11 @@ function stopServer(child, timeoutMs = 2000) {
       if (child.exitCode === null && child.signalCode === null) {
         child.kill('SIGKILL');
       }
-      fallbackTimer = setTimeout(finish, timeoutMs);
+      // Last-resort cleanup escape hatch: SIGKILL should produce exit/close, but
+      // test cleanup cannot hang forever if a platform-specific child handle stalls.
+      fallbackTimer = setTimeout(() => {
+        finish();
+      }, timeoutMs);
     }, timeoutMs);
   });
 }
