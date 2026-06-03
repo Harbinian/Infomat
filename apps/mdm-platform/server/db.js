@@ -1,11 +1,9 @@
 const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
+const { resolveDbPath } = require('./dbConfig');
 
-const defaultDataDir = path.join(__dirname, '../data');
-const dbPath = process.env.MDM_DB_PATH
-  ? path.resolve(process.env.MDM_DB_PATH)
-  : path.join(defaultDataDir, 'platform.db');
+const dbPath = resolveDbPath();
 
 const dbInitLog = (...args) => {
   if (process.env.MDM_DB_QUIET !== '1') console.log(...args);
