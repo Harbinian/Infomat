@@ -1,14 +1,17 @@
 import { parseDate, formatDate } from '../utils/dateUtils';
 
-export default function MilestoneList({ tasks }) {
-  const milestones = tasks.filter(t => t.milestone === '是' || t.duration === '0工作日');
+export default function MilestoneList({ tasks, show, onClose }) {
+  const milestones = tasks.filter(t => t.isMilestone);
 
   return (
-    <div className="milestone-panel">
-      <h3>关键里程碑 ({milestones.length})</h3>
+    <div className={`milestone-panel${show ? ' open' : ''}`}>
+      <div className="ms-header">
+        <h3>关键里程碑 ({milestones.length})</h3>
+        <button className="ms-close" onClick={onClose} type="button">&times;</button>
+      </div>
       <div className="milestone-list">
-        {milestones.map((m, i) => (
-          <div key={i} className="milestone-item">
+        {milestones.map(m => (
+          <div key={m.id} className="milestone-item">
             <span className="ms-date">{formatDate(parseDate(m.finish))}</span>
             <span className="ms-name">{m.name}</span>
           </div>

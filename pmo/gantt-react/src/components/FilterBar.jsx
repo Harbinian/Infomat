@@ -11,7 +11,8 @@ export default function FilterBar({ tasks, filters, view, onFilterChange, onView
     { key: '2027', label: '2027年' },
     { key: '2028', label: '2028年' },
     { key: 'milestones', label: '里程碑' },
-    { key: 'highrisk', label: '高风险' }
+    { key: 'highrisk', label: '高风险' },
+    { key: 'toggleMilestonePanel', label: '关键里程碑', special: true }
   ];
 
   const update = (key, value) => onFilterChange({ ...filters, [key]: value });
@@ -63,9 +64,25 @@ export default function FilterBar({ tasks, filters, view, onFilterChange, onView
       <input type="text" placeholder="搜索任务名称/WBS..." value={filters.search}
         onChange={e => update('search', e.target.value)} />
 
+      <div className="wbs-depth-btns">
+        <span className="wbs-depth-label">WBS层级</span>
+        {[
+          { key: 'all', label: '全部' },
+          { key: '1', label: '1级' },
+          { key: '2', label: '2级' },
+          { key: '3', label: '3级' },
+        ].map(d => (
+          <button key={d.key}
+            className={`wbs-depth-btn${(filters.wbsDepth || 'all') === d.key ? ' active' : ''}`}
+            onClick={() => update('wbsDepth', d.key)}
+            title={`仅显示 WBS 层级 ≤ ${d.label}`}>{d.label}</button>
+        ))}
+      </div>
+
       <div className="view-btns">
         {views.map(v => (
-          <button key={v.key} className={view === v.key ? 'active' : ''}
+          <button key={v.key}
+            className={`${view === v.key ? 'active' : ''}${v.special ? ' ms-btn' : ''}`}
             onClick={() => onViewChange(v.key)}>{v.label}</button>
         ))}
       </div>
