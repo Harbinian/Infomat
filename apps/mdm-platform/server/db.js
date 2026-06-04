@@ -777,7 +777,7 @@ CREATE TABLE IF NOT EXISTS process_cross_dept_interactions (
   target_dept TEXT,
   a1_code TEXT,
   refs INTEGER DEFAULT 0,
-  risk_level TEXT CHECK(risk_level IN ('high','medium','low')),
+  risk_level TEXT NOT NULL CHECK(risk_level IN ('high','medium','low')),
   confirm_status TEXT NOT NULL DEFAULT 'pending' CHECK(confirm_status IN ('confirmed','pending','needs_review','not_mapped')),
   description TEXT,
   source_report TEXT
@@ -786,18 +786,28 @@ CREATE TABLE IF NOT EXISTS process_cross_dept_interactions (
 CREATE TABLE IF NOT EXISTS process_interaction_chains (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   snapshot_id INTEGER NOT NULL REFERENCES process_governance_snapshots(id) ON DELETE CASCADE,
-  chain_key TEXT NOT NULL,
-  source_dept TEXT,
-  target_dept TEXT,
-  steps_json TEXT NOT NULL,
+  name TEXT NOT NULL,
+  status TEXT NOT NULL CHECK(status IN ('complete','partial','broken')),
   breaks_json TEXT,
-  source_report TEXT,
-  UNIQUE(snapshot_id, chain_key)
+  source_report TEXT
 );
 `);
 
+function tableInfo(tableName) {
+  return db.prepare(`PRAGMA table_info(${tableName})`).all();
+}
+
+function tableExists(tableName) {
+  return Boolean(db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?").get(tableName));
+}
+
 function tableHasColumn(tableName, columnName) {
-  return db.prepare(`PRAGMA table_info(${tableName})`).all().some(column => column.name === columnName);
+  return tableInfo(tableName).some(column => column.name === columnName);
+}
+
+function columnIsNotNull(tableName, columnName) {
+  const column = tableInfo(tableName).find(col => col.name === columnName);
+  return Boolean(column && column.notnull === 1);
 }
 
 if (!tableHasColumn('field_entries', 'process_governance_node_key')) {
@@ -808,6 +818,77 @@ if (!tableHasColumn('field_entries', 'process_governance_node_key')) {
 if (!tableHasColumn('field_entries', 'process_governance_a1_code')) {
   db.exec('ALTER TABLE field_entries ADD COLUMN process_governance_a1_code TEXT');
   dbInitLog('Migration: added process_governance_a1_code to field_entries');
+}
+
+if (tableExists('process_interaction_chains') && (!tableHasColumn('process_interaction_chains', 'name') || !tableHasColumn('process_interaction_chains', 'status'))) {
+  const chainColumns = tableInfo('process_interaction_chains').map(column => column.name);
+  const hasChainColumn = columnName => chainColumns.includes(columnName);
+  const nameExpression = hasChainColumn('name')
+    ? "COALESCE(NULLIF(TRIM(name), ''), " + (hasChainColumn('chain_key') ? "NULLIF(TRIM(chain_key), ''), " : '') + "'interaction-chain-' || id)"
+    : (hasChainColumn('chain_key') ? "COALESCE(NULLIF(TRIM(chain_key), ''), 'interaction-chain-' || id)" : "'interaction-chain-' || id");
+  const statusExpression = hasChainColumn('status')
+    ? "CASE WHEN status IN ('complete','partial','broken') THEN status ELSE 'partial' END"
+    : "'partial'";
+  const breaksExpression = hasChainColumn('breaks_json') ? 'breaks_json' : 'NULL';
+  const sourceReportExpression = hasChainColumn('source_report') ? 'source_report' : 'NULL';
+
+  db.transaction(() => {
+    db.exec(`
+      DROP TABLE IF EXISTS process_interaction_chains_migration;
+      CREATE TABLE process_interaction_chains_migration (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        snapshot_id INTEGER NOT NULL REFERENCES process_governance_snapshots(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        status TEXT NOT NULL CHECK(status IN ('complete','partial','broken')),
+        breaks_json TEXT,
+        source_report TEXT
+      );
+      INSERT INTO process_interaction_chains_migration (id, snapshot_id, name, status, breaks_json, source_report)
+      SELECT id, snapshot_id, ${nameExpression}, ${statusExpression}, ${breaksExpression}, ${sourceReportExpression}
+      FROM process_interaction_chains;
+      DROP TABLE process_interaction_chains;
+      ALTER TABLE process_interaction_chains_migration RENAME TO process_interaction_chains;
+    `);
+  })();
+  dbInitLog('Migration: rebuilt process_interaction_chains to plan schema');
+}
+
+if (tableExists('process_cross_dept_interactions') && !columnIsNotNull('process_cross_dept_interactions', 'risk_level')) {
+  db.transaction(() => {
+    db.exec(`
+      DROP TABLE IF EXISTS process_cross_dept_interactions_migration;
+      CREATE TABLE process_cross_dept_interactions_migration (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        snapshot_id INTEGER NOT NULL REFERENCES process_governance_snapshots(id) ON DELETE CASCADE,
+        source_dept TEXT,
+        target_dept TEXT,
+        a1_code TEXT,
+        refs INTEGER DEFAULT 0,
+        risk_level TEXT NOT NULL CHECK(risk_level IN ('high','medium','low')),
+        confirm_status TEXT NOT NULL DEFAULT 'pending' CHECK(confirm_status IN ('confirmed','pending','needs_review','not_mapped')),
+        description TEXT,
+        source_report TEXT
+      );
+      INSERT INTO process_cross_dept_interactions_migration (
+        id, snapshot_id, source_dept, target_dept, a1_code, refs, risk_level, confirm_status, description, source_report
+      )
+      SELECT
+        id,
+        snapshot_id,
+        source_dept,
+        target_dept,
+        a1_code,
+        refs,
+        CASE WHEN risk_level IN ('high','medium','low') THEN risk_level ELSE 'low' END,
+        CASE WHEN confirm_status IN ('confirmed','pending','needs_review','not_mapped') THEN confirm_status ELSE 'pending' END,
+        description,
+        source_report
+      FROM process_cross_dept_interactions;
+      DROP TABLE process_cross_dept_interactions;
+      ALTER TABLE process_cross_dept_interactions_migration RENAME TO process_cross_dept_interactions;
+    `);
+  })();
+  dbInitLog('Migration: rebuilt process_cross_dept_interactions with required risk_level');
 }
 
 // ── RBAC: Role-Based Access Control ──
