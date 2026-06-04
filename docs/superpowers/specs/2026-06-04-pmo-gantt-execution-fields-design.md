@@ -89,6 +89,8 @@ pmo/信息化项目_Project_H5最终执行版_导入表.xlsx
 
 保留现有 15 个字段（id/wbs/name/type/duration/start/finish/predecessors/resources/department/vendor/reviewer/risk/milestone/deliverable/notes）。追加 17 个新字段：
 
+**资源字段关系**：现有 `resources` 字段保留（向后兼容，转换逻辑沿用 `主责资源 or 资源名称` 兜底），仅在 TaskDetail 新分组中以 3 行展示新的 `resourcesPrimary` / `resourcesCollab` / `resourcesVendor`；其它位置（甘特 tooltip、任务树等）继续使用现有 `resources` 不变。
+
 | 中文字段 | JSON 字段 | 类型 | 来源列 |
 |---|---|---|---|
 | 主责资源 | `resourcesPrimary` | string | 主责资源 |
@@ -178,7 +180,7 @@ if (filters.focusOnly && !task.isH5Focus) return false;
 | 阶段门控制 | 17 | 阶段门控制体系 |
 | H5诊断规则 | 8 | H5诊断规则 |
 | 交付物分级 | 5 | 交付物分级审查 |
-| 周会机制 | 20 | PMO周会机制（双段） |
+| 周会机制 | 7+1+11 | PMO周会机制（双段表头：7 行关注顺序 + 1 空行分隔 + 11 行重点追责事项） |
 | 合同付款 | 8 | 合同与供应商履约控制 |
 | 依赖规则 | 14 | Project依赖规则 |
 | WBS管理 | 11 | 一级WBS管理口径 |
