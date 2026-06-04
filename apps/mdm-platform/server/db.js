@@ -714,6 +714,102 @@ if (tcSql2 && !tcSql2.sql.includes("'silenced'")) {
   dbInitLog('Migration: added silenced/escalated to term_conflicts CHECK');
 }
 
+// ── Process Governance Snapshot Schema ──
+
+db.exec(`
+CREATE TABLE IF NOT EXISTS process_governance_snapshots (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  source_json_path TEXT NOT NULL,
+  source_hash TEXT NOT NULL,
+  generated_at TEXT,
+  imported_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  imported_by INTEGER REFERENCES users(id),
+  stats_json TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','archived')),
+  note TEXT
+);
+
+CREATE TABLE IF NOT EXISTS process_governance_nodes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  snapshot_id INTEGER NOT NULL REFERENCES process_governance_snapshots(id) ON DELETE CASCADE,
+  node_key TEXT NOT NULL,
+  node_type TEXT NOT NULL CHECK(node_type IN ('root','domain','department','l2','l3','a1','system')),
+  name TEXT NOT NULL,
+  domain_name TEXT,
+  dept_name TEXT,
+  parent_key TEXT,
+  source_file TEXT,
+  sort_order INTEGER DEFAULT 0,
+  UNIQUE(snapshot_id, node_key)
+);
+
+CREATE TABLE IF NOT EXISTS process_governance_edges (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  snapshot_id INTEGER NOT NULL REFERENCES process_governance_snapshots(id) ON DELETE CASCADE,
+  source_key TEXT NOT NULL,
+  target_key TEXT NOT NULL,
+  edge_type TEXT NOT NULL CHECK(edge_type IN ('root_domain','domain_dept','dept_l2','l2_l3','l3_a1','l3_system','a1_system')),
+  value REAL NOT NULL DEFAULT 1,
+  source_file TEXT,
+  UNIQUE(snapshot_id, source_key, target_key, edge_type)
+);
+
+CREATE TABLE IF NOT EXISTS process_a1_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  snapshot_id INTEGER NOT NULL REFERENCES process_governance_snapshots(id) ON DELETE CASCADE,
+  a1_code TEXT,
+  dept_name TEXT,
+  l3_name TEXT,
+  behavior TEXT NOT NULL,
+  execution_role TEXT,
+  approval_type TEXT,
+  input_source_dept TEXT,
+  output_target_dept TEXT,
+  suggested_systems TEXT,
+  verification_note TEXT,
+  source_file TEXT
+);
+
+CREATE TABLE IF NOT EXISTS process_cross_dept_interactions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  snapshot_id INTEGER NOT NULL REFERENCES process_governance_snapshots(id) ON DELETE CASCADE,
+  source_dept TEXT,
+  target_dept TEXT,
+  a1_code TEXT,
+  refs INTEGER DEFAULT 0,
+  risk_level TEXT CHECK(risk_level IN ('high','medium','low')),
+  confirm_status TEXT NOT NULL DEFAULT 'pending' CHECK(confirm_status IN ('confirmed','pending','needs_review','not_mapped')),
+  description TEXT,
+  source_report TEXT
+);
+
+CREATE TABLE IF NOT EXISTS process_interaction_chains (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  snapshot_id INTEGER NOT NULL REFERENCES process_governance_snapshots(id) ON DELETE CASCADE,
+  chain_key TEXT NOT NULL,
+  source_dept TEXT,
+  target_dept TEXT,
+  steps_json TEXT NOT NULL,
+  breaks_json TEXT,
+  source_report TEXT,
+  UNIQUE(snapshot_id, chain_key)
+);
+`);
+
+function tableHasColumn(tableName, columnName) {
+  return db.prepare(`PRAGMA table_info(${tableName})`).all().some(column => column.name === columnName);
+}
+
+if (!tableHasColumn('field_entries', 'process_governance_node_key')) {
+  db.exec('ALTER TABLE field_entries ADD COLUMN process_governance_node_key TEXT');
+  dbInitLog('Migration: added process_governance_node_key to field_entries');
+}
+
+if (!tableHasColumn('field_entries', 'process_governance_a1_code')) {
+  db.exec('ALTER TABLE field_entries ADD COLUMN process_governance_a1_code TEXT');
+  dbInitLog('Migration: added process_governance_a1_code to field_entries');
+}
+
 // ── RBAC: Role-Based Access Control ──
 
 db.exec(`
