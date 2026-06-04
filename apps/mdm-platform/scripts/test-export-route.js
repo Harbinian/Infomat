@@ -68,8 +68,8 @@ function seedData() {
 
   const fieldId = db.prepare(`
     INSERT INTO field_entries
-      (mapping_id, field_name_cn, field_name_en, data_object, field_type, consume_systems, sync_mode, note, submitted_by)
-    VALUES (?, '客户编码', 'customer_code', '客户', '文本', ?, '实时', '客户唯一编码', ?)
+      (mapping_id, field_name_cn, field_name_en, data_object, field_type, process_governance_node_key, process_governance_a1_code, consume_systems, sync_mode, note, submitted_by)
+    VALUES (?, '客户编码', 'customer_code', '客户', '文本', '客户主数据维护', 'KH-L3-01-A1-001', ?, '实时', '客户唯一编码', ?)
   `).run(mappingId, JSON.stringify(['CRM', 'ERP']), adminId).lastInsertRowid;
   db.prepare(`
     INSERT INTO field_identities
@@ -154,7 +154,9 @@ async function main() {
     assert.strictEqual(ledger.getRow(2).getCell(2).value, 'MDM平台');
     assert.strictEqual(ledger.getRow(2).getCell(4).value, '客户编码');
     assert.strictEqual(ledger.getRow(2).getCell(7).value, 'MDM平台');
-    assert.strictEqual(ledger.getRow(2).getCell(9).value, 'CRM, ERP');
+    assert.strictEqual(ledger.getRow(2).getCell(9).value, '客户主数据维护');
+    assert.strictEqual(ledger.getRow(2).getCell(10).value, 'KH-L3-01-A1-001');
+    assert.strictEqual(ledger.getRow(2).getCell(11).value, 'CRM, ERP');
 
     assert.strictEqual(matrix.getRow(2).getCell(4).value, 'MDM平台, CRM');
     assert.strictEqual(matrix.getRow(2).getCell(7).value, '是');
