@@ -2,7 +2,7 @@ const assert = require('assert');
 const path = require('path');
 const { cleanupDb } = require('./testHelpers/isolatedDb');
 const db = require('../server/db');
-const { importProcessGovernanceSnapshot } = require('./lib/processGovernanceImport');
+const { importProcessGovernanceSnapshot, parseA1Markdown } = require('./lib/processGovernanceImport');
 
 const fixtureDir = path.join(__dirname, 'fixtures');
 const sourceJsonPath = path.join(fixtureDir, 'process-governance-snapshot.json');
@@ -44,7 +44,43 @@ try {
   const a1 = db.prepare('SELECT * FROM process_a1_items WHERE snapshot_id=? AND a1_code=?').get(snapshotId, 'JY-L3-01-A1-001');
   assert.strictEqual(a1.dept_name, '经营发展部');
   assert.strictEqual(a1.output_target_dept, '工程技术部');
-  assert.strictEqual(a1.suggested_systems, 'OA,ERP');
+  assert.strictEqual(JSON.parse(a1.suggested_systems).join(','), 'OA,ERP');
+
+  assert.strictEqual(db.prepare('SELECT COUNT(*) AS count FROM process_a1_items WHERE snapshot_id=?').get(snapshotId).count, 1);
+
+  const mixedMarkdown = `# 复材车间部门-能力-流程-系统映射关系
+
+## 业务行为（A1）映射（BBM增补）
+
+### FC-L3-03 关键件横向跟踪
+
+| 业务行为（A1）编号 | 业务行为（A1） | 执行角色 | 审批类型 | 输入来源部门 | 输出目标部门 | 应用系统（S1） | 核验提醒 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| FC-L3-03-A01 | 识别关键件并建立跟踪记录 | 生产计划员 | 无审批 | 项目管理部 | 质量管理部 | MES、ERP | 核对关键件清单 |
+
+#### 跨部门交易子表
+
+| 来源部门 | 目标部门 | 交互事项 |
+| --- | --- | --- |
+| 复材车间 | 质量管理部 | 关键件检验 |
+
+##### 业务流程（L3）-0101 销售订单评审和执行管理
+
+| A1编号 | 业务行为 | 执行角色 | 审批类型 | 输入来源部门 | 输出目标部门 | 应用系统 | 核验提醒 |
+|---|---|---|---|---|---|---|---|
+| JY-L3-01-A1-001 | 接收订单并组织评审 | 合同管理员 | 审批 | 项目管理部 | 工程技术部 | OA / ERP | 核对技术条款输入 |
+
+#### 表单台账子表
+
+| 表单名称 | 责任角色 |
+| --- | --- |
+| 订单评审表 | 合同管理员 |
+`;
+  const parsedMixed = parseA1Markdown(mixedMarkdown, path.join(fixtureDir, '复材车间部门-能力-流程-系统映射关系.md'));
+  assert.strictEqual(parsedMixed.length, 2);
+  assert.deepStrictEqual(parsedMixed.map(row => row.l3_name), ['关键件横向跟踪', '销售订单评审和执行管理']);
+  assert.deepStrictEqual(parsedMixed[0].suggested_systems, ['MES', 'ERP']);
+  assert.deepStrictEqual(parsedMixed[1].suggested_systems, ['OA', 'ERP']);
 
   const risk = db.prepare('SELECT * FROM process_cross_dept_interactions WHERE snapshot_id=?').get(snapshotId);
   assert.strictEqual(risk.risk_level, 'high');

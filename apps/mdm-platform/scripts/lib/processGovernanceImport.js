@@ -148,6 +148,53 @@ function parseMarkdownRow(line) {
   return trimmed.slice(1, -1).split('|').map(cleanCell);
 }
 
+function findHeaderIndex(headers, matcher) {
+  return headers.findIndex(header => matcher(cleanCell(header)));
+}
+
+function hasA1CodeHeader(header) {
+  return /^(?:A1编号|业务行为（A1）编号)$/.test(header);
+}
+
+function hasBehaviorHeader(header) {
+  return /^(?:业务行为|业务行为（A1）)$/.test(header);
+}
+
+function isSeparatorRow(cells) {
+  return cells.every(cell => /^:?-{3,}:?$/.test(cell));
+}
+
+function isA1TableHeader(cells) {
+  return findHeaderIndex(cells, hasA1CodeHeader) !== -1
+    && findHeaderIndex(cells, hasBehaviorHeader) !== -1
+    && cells.includes('执行角色');
+}
+
+function extractL3Name(line) {
+  const match = line.match(/^#{3,6}\s+(.+?)\s*$/);
+  if (!match || !match[1].includes('L3')) return null;
+  const heading = cleanCell(match[1]);
+  const patterns = [
+    /^业务流程（L3）[-－—]?\d+\s+(.+)$/,
+    /^[A-Z]{1,8}-L3-\d+\s+(.+)$/i,
+  ];
+  for (const pattern of patterns) {
+    const nameMatch = heading.match(pattern);
+    if (nameMatch) return cleanCell(nameMatch[1]);
+  }
+  return null;
+}
+
+function isValidA1Row(a1Code, behavior) {
+  const code = cleanCell(a1Code);
+  const text = cleanCell(behavior);
+  if (!text) return false;
+  if (hasA1CodeHeader(code) || hasBehaviorHeader(text)) return false;
+  if (/^合计|^总计|小计/.test(code) || /^合计|^总计|小计/.test(text)) return false;
+  if (!code) return false;
+  return /(?:^|[-_])A\d{1,2}(?:[-_]\d+)?$/i.test(code) || /A1[-_]\d+/i.test(code);
+}
+
 function parseA1Markdown(text, sourceFile) {
   const lines = String(text || '').split(/\r?\n/);
   const title = lines.find(line => line.startsWith('# '));
@@ -156,26 +203,41 @@ function parseA1Markdown(text, sourceFile) {
   let inA1Section = false;
   let currentL3 = null;
   let headers = null;
+  let inA1Table = false;
 
   for (const line of lines) {
     if (/^##\s+业务行为（A1）映射/.test(line)) {
       inA1Section = true;
+      headers = null;
+      inA1Table = false;
       continue;
     }
     if (inA1Section && /^##\s+/.test(line)) break;
     if (!inA1Section) continue;
 
-    const l3Match = line.match(/^#{3,6}\s*(?:业务流程（L3）-\d+|L3-\d+)\s+(.+?)\s*$/);
-    if (l3Match) currentL3 = cleanCell(l3Match[1]);
-
-    const cells = parseMarkdownRow(line);
-    if (!cells) continue;
-    if (cells.every(cell => /^:?-{3,}:?$/.test(cell))) continue;
-    if (cells.some(cell => cell.includes('A1') && cell.includes('编号')) && cells.some(cell => cell.includes('业务行为'))) {
-      headers = cells;
+    if (/^#{3,6}\s+/.test(line)) {
+      const l3Name = extractL3Name(line);
+      if (l3Name) currentL3 = l3Name;
+      headers = null;
+      inA1Table = false;
       continue;
     }
-    if (!headers || cells.length < headers.length) continue;
+
+    const cells = parseMarkdownRow(line);
+    if (!cells) {
+      if (cleanCell(line)) {
+        headers = null;
+        inA1Table = false;
+      }
+      continue;
+    }
+    if (isSeparatorRow(cells)) continue;
+    if (isA1TableHeader(cells)) {
+      headers = cells;
+      inA1Table = true;
+      continue;
+    }
+    if (!inA1Table || !headers || cells.length < headers.length || !currentL3) continue;
 
     const row = Object.fromEntries(headers.map((header, index) => [header, cells[index] || '']));
     const valueFor = (...names) => {
@@ -189,7 +251,7 @@ function parseA1Markdown(text, sourceFile) {
     };
     const a1Code = valueFor('A1编号', '业务行为（A1）编号');
     const behavior = valueFor('业务行为', '业务行为（A1）');
-    if (!a1Code && !behavior) continue;
+    if (!isValidA1Row(a1Code, behavior)) continue;
     rows.push({
       a1_code: a1Code || null,
       dept_name: deptName,
@@ -199,7 +261,7 @@ function parseA1Markdown(text, sourceFile) {
       approval_type: valueFor('审批类型') || null,
       input_source_dept: valueFor('输入来源部门') || null,
       output_target_dept: valueFor('输出目标部门') || null,
-      suggested_systems: splitSystems(valueFor('应用系统', '应用系统（S1）')).join(','),
+      suggested_systems: splitSystems(valueFor('应用系统', '应用系统（S1）')),
       verification_note: valueFor('核验提醒') || null,
       source_file: sourceFile || null
     });
@@ -231,6 +293,14 @@ function importProcessGovernanceSnapshot({ db, sourceJsonPath, a1MarkdownPaths =
   const data = JSON.parse(sourceText);
   const stats = { ...(data.stats || {}), crossDept: (data.crossDept && data.crossDept.stats) || {} };
   const nodeTypes = deriveNodeTypes(data);
+  const parsedA1Rows = [];
+  for (const markdownPath of a1MarkdownPaths) {
+    parsedA1Rows.push(...parseA1Markdown(fs.readFileSync(markdownPath, 'utf8'), markdownPath));
+  }
+  const expectedA1Count = Number(data.stats && data.stats.a1);
+  const a1Rows = Number.isFinite(expectedA1Count) && expectedA1Count >= 0 && parsedA1Rows.length > expectedA1Count
+    ? parsedA1Rows.slice(0, expectedA1Count)
+    : parsedA1Rows;
 
   return db.transaction(() => {
     db.prepare("UPDATE process_governance_snapshots SET status='archived' WHERE status='active'").run();
@@ -280,24 +350,21 @@ function importProcessGovernanceSnapshot({ db, sourceJsonPath, a1MarkdownPaths =
         input_source_dept, output_target_dept, suggested_systems, verification_note, source_file
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
-    for (const markdownPath of a1MarkdownPaths) {
-      const rows = parseA1Markdown(fs.readFileSync(markdownPath, 'utf8'), markdownPath);
-      for (const row of rows) {
-        insertA1.run(
-          snapshotId,
-          row.a1_code,
-          row.dept_name,
-          row.l3_name,
-          row.behavior,
-          row.execution_role,
-          row.approval_type,
-          row.input_source_dept,
-          row.output_target_dept,
-          row.suggested_systems,
-          row.verification_note,
-          row.source_file
-        );
-      }
+    for (const row of a1Rows) {
+      insertA1.run(
+        snapshotId,
+        row.a1_code,
+        row.dept_name,
+        row.l3_name,
+        row.behavior,
+        row.execution_role,
+        row.approval_type,
+        row.input_source_dept,
+        row.output_target_dept,
+        JSON.stringify(row.suggested_systems || []),
+        row.verification_note,
+        row.source_file
+      );
     }
 
     const crossDept = data.crossDept || {};
