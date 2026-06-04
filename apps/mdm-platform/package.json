@@ -24,6 +24,9 @@
     "sync:process-org": "node scripts/sync-process-governance-org.js",
     "test:process-schema": "node scripts/test-process-governance-schema.js",
     "test:process-org": "node scripts/test-process-governance-org-sync.js",
+    "import:process-governance": "node scripts/import-process-governance.js",
+    "check:process-governance": "node scripts/check-process-governance.js",
+    "test:process-import": "node scripts/test-process-governance-import.js",
     "dev": "nodemon server/index.js"
   },
   "dependencies": {
