@@ -14,6 +14,11 @@
 - 频繁小提交，每完成一个 task 立即 commit
 - 视觉标记：Flag1 红色边框（`#c0392b` 2px），Flag2 金色菱形（`#d4af37` 12px 居中）
 
+**本轮审查补充约定：**
+- Codex 负责后端/数据层：交付物状态流转、状态覆盖校验、台账筛选排序纯逻辑、统计卡跳转意图契约。
+- Minimax-M3 负责前端/体验层：统计卡单击跳转、表格可排序表头、提交/审核操作入口、视觉指引强化。
+- 前端应消费 `deliverableWorkflow.js` 的纯逻辑结果，不在组件中重复写状态机和跳转规则。
+
 ---
 
 ## 文件结构总览
@@ -1662,6 +1667,177 @@ cd "E:/CA001/Infomat" && git add -A && git commit -m "chore(pmo): end-to-end ver
 
 ---
 
+## Task 19: 补充交付物工作流后端契约（Codex 已实现）
+
+**Files:**
+- Create: `pmo/gantt-react/src/utils/deliverableWorkflow.js`
+- Create: `pmo/scripts/smoke-deliverable-workflow.mjs`
+- Modify: `pmo/gantt-react/src/utils/deliverableUtils.js`
+- Modify: `pmo/gantt-react/public/deliverable-status.json`
+
+- [x] **Step 1: 写交付物后端烟测**
+
+覆盖：
+- `transitionDeliverableStatus`：提交、审核通过、非法退回拦截
+- `validateDeliverableOverrides` / `applyDeliverableOverrides`：状态覆盖文件校验与合并
+- `filterAndSortDeliverables`：台账筛选 + 列排序
+- `createDashboardCardIntents`：统计卡跳转目标
+
+验证命令：
+
+```bash
+cd "E:/CA001/Infomat" && node pmo/scripts/smoke-deliverable-workflow.mjs
+```
+
+Expected: `结果: 交付物流转/筛选排序/统计卡跳转契约全部通过`
+
+- [x] **Step 2: 实现 `deliverableWorkflow.js`**
+
+导出：
+
+```javascript
+DELIVERABLE_STATUSES
+DELIVERABLE_ACTIONS
+canTransitionDeliverableStatus(status, action)
+transitionDeliverableStatus(deliverable, command)
+validateDeliverableOverrides(rawOverrides)
+applyDeliverableOverrides(deliverables, rawOverrides)
+filterAndSortDeliverables(deliverables, filters, sort)
+createDashboardCardIntents({ tasks, deliverables, phaseGates, pmoDate })
+```
+
+状态流转：
+- `未提交 / 编制中 / 退回整改` → `submit` → `已提交`
+- `已提交` → `startReview` → `待评审`
+- `已提交 / 待评审` → `approve` → `通过`
+- `已提交 / 待评审` → `reject` → `退回整改`
+- `通过` → `archive` → `已归档`
+
+- [x] **Step 3: 接入现有状态覆盖加载**
+
+`loadDeliverableStatusOverrides` 改为使用 `validateDeliverableOverrides` 和 `applyDeliverableOverrides`，让 `deliverable-status.json` 支持审核意见、实际提交日期、实际通过日期、审核人和 `workflowHistory`。
+
+- [x] **Step 4: 补充状态覆盖样例**
+
+`public/deliverable-status.json` 保留数组格式，并增加：
+- `reviewer`
+- `reviewOpinion`
+- `workflowHistory`
+
+- [x] **Step 5: 验证**
+
+```bash
+cd "E:/CA001/Infomat" && node pmo/scripts/smoke-deliverable-workflow.mjs
+```
+
+Expected: 退出码 0，输出契约全部通过。
+
+---
+
+## Task 20: 统计卡与台账前端接入（Minimax-M3）
+
+**Files:**
+- Modify: `pmo/gantt-react/src/components/DashboardCards.jsx`
+- Modify: `pmo/gantt-react/src/components/DeliverableLedger.jsx`
+- Modify: `pmo/gantt-react/src/App.jsx`
+- Modify: `pmo/gantt-react/src/App.css`
+
+- [ ] **Step 1: DashboardCards 消费跳转意图**
+
+使用 `createDashboardCardIntents({ tasks, deliverables, phaseGates, pmoDate })` 生成卡片数组。每张卡点击后执行 `target`：
+- `{ page: 'pmo', pmoView: 'overdue' }` → 切到延期交付物
+- `{ page: 'pmo', pmoView: 'phasegates', gateStatus: '风险' }` → 切到阶段门并聚焦风险
+- `{ page: 'pmo', pmoView: 'deliverables', ledgerFilters: { level: 'A' } }` → 切到交付物台账并带入筛选
+- `{ page: 'gantt', view: 'highrisk', taskFilters: { risk: '高' } }` → 切到甘特图高风险任务
+
+- [ ] **Step 2: DeliverableLedger 接入筛选排序工具**
+
+用 `filterAndSortDeliverables(deliverables, filters, sort)` 替代组件内手写筛选。表头支持单击排序，至少覆盖：
+- 计划完成
+- 等级
+- 状态
+- 风险
+- 责任部门
+- 审核人
+- 交付物名称
+- 规范 WBS
+
+- [ ] **Step 3: 增强视觉指引**
+
+统计卡：
+- hover / pressed / focus-visible
+- 右上角箭头或钻取图标
+- 可点击态与普通信息态明确区分
+
+台账表头：
+- 当前排序列显示方向
+- hover 可见
+- 不改变表格行高，避免跳动
+
+状态标识：
+- 未提交灰、已提交/待评审暗金、通过鼠尾草、退回整改赭红、已归档雾蓝
+
+- [ ] **Step 4: 验证**
+
+```bash
+cd "E:/CA001/Infomat/pmo/gantt-react" && npm run build
+```
+
+手动验证：
+- 统计卡点击可切换视图并带入对应筛选
+- 台账筛选和排序可叠加使用
+- 空结果显示正常
+
+---
+
+## Task 21: 交付物提交与审核前端接入（Minimax-M3）
+
+**Files:**
+- Modify: `pmo/gantt-react/src/components/DeliverableDetail.jsx`
+- Modify: `pmo/gantt-react/src/components/DeliverableLedger.jsx`
+- Modify: `pmo/gantt-react/src/App.jsx`
+- Modify: `pmo/gantt-react/src/App.css`
+
+- [ ] **Step 1: 操作入口**
+
+在交付物详情或台账操作列提供：
+- 上传/提交
+- 进入评审
+- 审核通过
+- 退回整改
+- 归档
+
+按钮显示由 `canTransitionDeliverableStatus(status, action)` 控制。
+
+- [ ] **Step 2: 状态变更**
+
+状态变更调用 `transitionDeliverableStatus(deliverable, command)`，并保留：
+- `actor`
+- `note` / `reviewOpinion`
+- `at`
+- `workflowHistory`
+
+纯前端静态模式下，可先写入本地状态覆盖；后续如接入服务端，再把同一结构提交到后端。
+
+- [ ] **Step 3: 审核信息展示**
+
+详情中展示：
+- 当前状态
+- 审核人/审批组
+- 审核意见
+- 实际提交日期
+- 实际通过日期
+- 操作记录
+
+- [ ] **Step 4: 验证**
+
+手动验证合法流转：
+- 未提交 → 已提交 → 待评审 → 通过 → 已归档
+- 已提交 / 待评审 → 退回整改 → 已提交
+- 通过状态下不可退回整改
+
+---
+
 ## 验收对照
 
 完成全部 18 个任务后，逐项检查：
@@ -1675,6 +1851,10 @@ cd "E:/CA001/Infomat" && git add -A && git commit -m "chore(pmo): end-to-end ver
 - [ ] 任务条 Flag1 任务有红色边框，Flag2 任务有金色菱形
 - [ ] 点击任务打开详情，"执行层上下文"分组显示 14 行
 - [ ] PMO 页"参考规则"Tab 含 8 个子页签，每个子页签渲染对应表格
+- [ ] `node pmo/scripts/smoke-deliverable-workflow.mjs` 通过
+- [ ] 统计卡可单击跳转到对应 PMO/Gantt 视图
+- [ ] 交付物台账支持筛选 + 排序叠加
+- [ ] 交付物支持提交、进入评审、审核通过、退回整改、归档
 - [ ] 5 个老文件已删
 - [ ] `docs/glossary.md` 含 7 个新术语
 - [ ] `pmo/CLAUDE.md` / `pmo/README.md` / `pmo/gantt-react/README.md` 真源路径已切换
