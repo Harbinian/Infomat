@@ -1,15 +1,30 @@
 import { useRef, useEffect, useCallback } from 'react';
 import {
   parseDate, formatDate, getWbsColor, getTotalMonths, getMonthLabels,
-  getXForDate, daysInMonth, PROJECT_START
+  getXForDate
 } from '../utils/dateUtils';
 
 const ROW_HEIGHT = 32;
 const MONTH_HEADER_HEIGHT = 44;
 const BAR_HEIGHT = 20;
 const BAR_Y_OFFSET = (ROW_HEIGHT - BAR_HEIGHT) / 2;
+const FONT_STACK = '"Source Han Sans SC", "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif';
+const GANTT_THEME = {
+  panel: '#f7f1e0',
+  panel2: '#fbf6e9',
+  line: 'rgba(58, 46, 31, 0.16)',
+  lineSoft: 'rgba(58, 46, 31, 0.08)',
+  ink: '#2a2014',
+  text: '#3d3023',
+  muted: '#7a6a56',
+  faint: '#b8a88e',
+  focus: '#c97050',
+  gold: '#9a7a30',
+  sage: '#6f7d4e',
+  summary: '#c8b999'
+};
 
-export default function GanttChart({ tasks, treeMap, monthWidth, selectedWbs, onSelect, onZoomChange }) {
+export default function GanttChart({ tasks, monthWidth, onSelect, onZoomChange }) {
   const canvasRef = useRef(null);
   const panelRef = useRef(null);
   const monthCanvasRef = useRef(null);
@@ -17,28 +32,88 @@ export default function GanttChart({ tasks, treeMap, monthWidth, selectedWbs, on
   const positionsRef = useRef([]);
   const tooltipRef = useRef(null);
 
+  const renderMonthHeader = useCallback((months, totalWidth) => {
+    const mCanvas = monthCanvasRef.current;
+    if (!mCanvas) return;
+    const dpr = window.devicePixelRatio || 1;
+    const ctx = mCanvas.getContext('2d');
+    const labels = getMonthLabels();
+
+    mCanvas.width = totalWidth * dpr;
+    mCanvas.height = MONTH_HEADER_HEIGHT * dpr;
+    mCanvas.style.width = totalWidth + 'px';
+    mCanvas.style.height = MONTH_HEADER_HEIGHT + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    ctx.clearRect(0, 0, totalWidth, MONTH_HEADER_HEIGHT);
+    ctx.fillStyle = GANTT_THEME.panel2;
+    ctx.fillRect(0, 0, totalWidth, MONTH_HEADER_HEIGHT);
+
+    // Year row
+    let currentYear = '';
+    for (let i = 0; i < months; i++) {
+      const yr = labels[i].split('-')[0];
+      const x = i * monthWidth;
+      if (yr !== currentYear) {
+        currentYear = yr;
+        let span = 0;
+        for (let j = i; j < months; j++) {
+          if (labels[j].split('-')[0] === yr) span++;
+          else break;
+        }
+        const yearWidth = span * monthWidth;
+        ctx.fillStyle = GANTT_THEME.panel;
+        ctx.fillRect(x, 0, yearWidth, 22);
+        ctx.fillStyle = GANTT_THEME.ink;
+        ctx.font = `bold 13px ${FONT_STACK}`;
+        ctx.textAlign = 'center';
+        ctx.fillText(yr + '年', x + yearWidth / 2, 16);
+      }
+    }
+
+    // Month row
+    for (let i = 0; i < months; i++) {
+      const x = i * monthWidth;
+      const mon = labels[i].split('-')[1];
+      ctx.fillStyle = (i % 2 === 0) ? GANTT_THEME.muted : GANTT_THEME.faint;
+      ctx.font = `12px ${FONT_STACK}`;
+      ctx.textAlign = 'center';
+      ctx.fillText(mon + '月', x + monthWidth / 2, 40);
+    }
+
+    // Bottom line
+    ctx.strokeStyle = GANTT_THEME.line;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, MONTH_HEADER_HEIGHT);
+    ctx.lineTo(totalWidth, MONTH_HEADER_HEIGHT);
+    ctx.stroke();
+  }, [monthWidth]);
+
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    const dpr = window.devicePixelRatio || 1;
     const ctx = canvas.getContext('2d');
     const months = getTotalMonths();
     const totalWidth = months * monthWidth + 80;
-    const totalHeight = tasks.length * ROW_HEIGHT + 20;
+    const totalHeight = Math.max(tasks.length * ROW_HEIGHT + 20, 400);
 
-    canvas.width = totalWidth;
-    canvas.height = Math.max(totalHeight, 400);
+    canvas.width = totalWidth * dpr;
+    canvas.height = totalHeight * dpr;
     canvas.style.width = totalWidth + 'px';
-    canvas.style.height = Math.max(totalHeight, 400) + 'px';
+    canvas.style.height = totalHeight + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     const positions = [];
 
     // Background
-    ctx.fillStyle = '#141720';
+    ctx.fillStyle = GANTT_THEME.panel2;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // Grid lines
-    ctx.strokeStyle = '#1a1d2a';
+    ctx.strokeStyle = GANTT_THEME.lineSoft;
     ctx.lineWidth = 0.5;
     for (let i = 0; i <= months; i++) {
       const x = i * monthWidth;
@@ -59,7 +134,7 @@ export default function GanttChart({ tasks, treeMap, monthWidth, selectedWbs, on
     const now = new Date();
     const todayX = getXForDate(now, monthWidth);
     if (todayX >= 0 && todayX <= months * monthWidth) {
-      ctx.strokeStyle = '#e74c3c';
+      ctx.strokeStyle = GANTT_THEME.focus;
       ctx.lineWidth = 1.5;
       ctx.setLineDash([6, 4]);
       ctx.beginPath();
@@ -67,8 +142,8 @@ export default function GanttChart({ tasks, treeMap, monthWidth, selectedWbs, on
       ctx.lineTo(todayX, totalHeight);
       ctx.stroke();
       ctx.setLineDash([]);
-      ctx.fillStyle = '#e74c3c';
-      ctx.font = 'bold 11px -apple-system, "Microsoft YaHei", sans-serif';
+      ctx.fillStyle = GANTT_THEME.focus;
+      ctx.font = `bold 11px ${FONT_STACK}`;
       ctx.textAlign = 'center';
       ctx.fillText('今天', todayX, 14);
     }
@@ -82,7 +157,7 @@ export default function GanttChart({ tasks, treeMap, monthWidth, selectedWbs, on
 
     // Render month header on separate canvas
     renderMonthHeader(months, totalWidth);
-  }, [tasks, monthWidth]);
+  }, [tasks, monthWidth, renderMonthHeader]);
 
   // Sync month header horizontal scroll with gantt panel
   const syncMonthScroll = useCallback(() => {
@@ -92,62 +167,6 @@ export default function GanttChart({ tasks, treeMap, monthWidth, selectedWbs, on
   }, []);
 
   useEffect(() => { draw(); syncMonthScroll(); }, [draw, syncMonthScroll]);
-
-  function renderMonthHeader(months, totalWidth) {
-    const mCanvas = monthCanvasRef.current;
-    if (!mCanvas) return;
-    const ctx = mCanvas.getContext('2d');
-    const labels = getMonthLabels();
-
-    mCanvas.width = totalWidth;
-    mCanvas.height = MONTH_HEADER_HEIGHT;
-    mCanvas.style.width = totalWidth + 'px';
-    mCanvas.style.height = MONTH_HEADER_HEIGHT + 'px';
-
-    ctx.clearRect(0, 0, totalWidth, MONTH_HEADER_HEIGHT);
-    ctx.fillStyle = '#161822';
-    ctx.fillRect(0, 0, totalWidth, MONTH_HEADER_HEIGHT);
-
-    // Year row
-    let currentYear = '';
-    for (let i = 0; i < months; i++) {
-      const yr = labels[i].split('-')[0];
-      const x = i * monthWidth;
-      if (yr !== currentYear) {
-        currentYear = yr;
-        let span = 0;
-        for (let j = i; j < months; j++) {
-          if (labels[j].split('-')[0] === yr) span++;
-          else break;
-        }
-        const yearWidth = span * monthWidth;
-        ctx.fillStyle = '#1c1f2e';
-        ctx.fillRect(x, 0, yearWidth, 22);
-        ctx.fillStyle = '#8b90a0';
-        ctx.font = 'bold 13px -apple-system, "Microsoft YaHei", sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(yr + '年', x + yearWidth / 2, 16);
-      }
-    }
-
-    // Month row
-    for (let i = 0; i < months; i++) {
-      const x = i * monthWidth;
-      const mon = labels[i].split('-')[1];
-      ctx.fillStyle = (i % 2 === 0) ? '#6b7194' : '#4a4d5a';
-      ctx.font = '12px -apple-system, "Microsoft YaHei", sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(mon + '月', x + monthWidth / 2, 40);
-    }
-
-    // Bottom line
-    ctx.strokeStyle = '#2a2d3a';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(0, MONTH_HEADER_HEIGHT);
-    ctx.lineTo(totalWidth, MONTH_HEADER_HEIGHT);
-    ctx.stroke();
-  }
 
   // Hover & click
   useEffect(() => {
@@ -164,7 +183,7 @@ export default function GanttChart({ tasks, treeMap, monthWidth, selectedWbs, on
         mx >= p.x && mx <= p.x + p.width && my >= p.y && my <= p.y + p.height
       );
       if (hit) {
-        const task = treeMap[hit.wbs];
+        const task = tasks.find(t => t.nodeKey === hit.nodeKey);
         if (task) {
           const s = parseDate(task.start), f = parseDate(task.finish);
           tooltip.innerHTML = [
@@ -192,18 +211,20 @@ export default function GanttChart({ tasks, treeMap, monthWidth, selectedWbs, on
       const hit = positionsRef.current.find(p =>
         mx >= p.x && mx <= p.x + p.width && my >= p.y && my <= p.y + p.height
       );
-      if (hit) onSelect(hit.wbs);
+      onSelect(hit ? hit.nodeKey : null);
     };
 
+    const onMouseLeave = () => { tooltip.style.display = 'none'; };
+
     canvas.addEventListener('mousemove', onMove);
-    canvas.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+    canvas.addEventListener('mouseleave', onMouseLeave);
     canvas.addEventListener('click', onClick);
     return () => {
       canvas.removeEventListener('mousemove', onMove);
-      canvas.removeEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+      canvas.removeEventListener('mouseleave', onMouseLeave);
       canvas.removeEventListener('click', onClick);
     };
-  }, [treeMap, onSelect]);
+  }, [tasks, onSelect]);
 
   // Wheel: Ctrl=zoom, Shift=horizontal scroll
   useEffect(() => {
@@ -216,7 +237,8 @@ export default function GanttChart({ tasks, treeMap, monthWidth, selectedWbs, on
         else onZoomChange(monthWidth / 1.3);
       } else if (e.shiftKey) {
         e.preventDefault();
-        panel.scrollLeft += e.deltaY;
+        const dx = e.deltaX !== 0 ? e.deltaX : e.deltaY;
+        panel.scrollLeft += dx;
         const wrap = monthWrapRef.current;
         if (wrap) wrap.scrollLeft = panel.scrollLeft;
       }
@@ -225,33 +247,37 @@ export default function GanttChart({ tasks, treeMap, monthWidth, selectedWbs, on
     return () => panel.removeEventListener('wheel', onWheel);
   }, [monthWidth, onZoomChange]);
 
-  // Scroll sync: gantt scroll → tree scroll + month header horizontal sync
+  // Scroll sync: gantt panel ↔ task tree (bidirectional) + month header horizontal sync
   useEffect(() => {
     const panel = panelRef.current;
     const tree = document.getElementById('taskTreePanel');
     const wrap = monthWrapRef.current;
     if (!panel || !tree) return;
     let syncing = false;
-    const onScroll = () => {
+    const onPanelScroll = () => {
       if (syncing) return;
       syncing = true;
-      tree.scrollTop = panel.scrollTop;
-      if (wrap) wrap.scrollLeft = panel.scrollLeft;
+      if (tree.scrollTop !== panel.scrollTop) tree.scrollTop = panel.scrollTop;
+      if (wrap && wrap.scrollLeft !== panel.scrollLeft) wrap.scrollLeft = panel.scrollLeft;
       syncing = false;
     };
-    panel.addEventListener('scroll', onScroll);
-    return () => panel.removeEventListener('scroll', onScroll);
+    const onTreeScroll = () => {
+      if (syncing) return;
+      syncing = true;
+      if (panel.scrollTop !== tree.scrollTop) panel.scrollTop = tree.scrollTop;
+      syncing = false;
+    };
+    panel.addEventListener('scroll', onPanelScroll);
+    tree.addEventListener('scroll', onTreeScroll);
+    return () => {
+      panel.removeEventListener('scroll', onPanelScroll);
+      tree.removeEventListener('scroll', onTreeScroll);
+    };
   }, []);
 
   return (
     <div className="gantt-wrapper">
       <div className="gantt-header-bar">
-        <div className="zoom-controls">
-          <button className="zoom-btn" onClick={() => onZoomChange(monthWidth / 1.3)} title="缩小 (Ctrl+滚轮)">−</button>
-          <span className="zoom-label">{Math.round(monthWidth / 82 * 100)}%</span>
-          <button className="zoom-btn" onClick={() => onZoomChange(monthWidth * 1.3)} title="放大 (Ctrl+滚轮)">+</button>
-          <button className="zoom-btn zoom-reset" onClick={() => onZoomChange(82)} title="重置缩放">↺</button>
-        </div>
         <div className="month-header-wrap" ref={monthWrapRef}>
           <canvas ref={monthCanvasRef} />
         </div>
@@ -259,6 +285,12 @@ export default function GanttChart({ tasks, treeMap, monthWidth, selectedWbs, on
       <div className="gantt-panel" ref={panelRef}>
         <canvas ref={canvasRef} className="gantt-canvas" />
         <div className="gantt-tooltip" ref={tooltipRef} />
+      </div>
+      <div className="zoom-controls">
+        <button className="zoom-btn" onClick={() => onZoomChange(monthWidth / 1.3)} title="缩小 (Ctrl+滚轮)">−</button>
+        <span className="zoom-label">{Math.round(monthWidth / 82 * 100)}%</span>
+        <button className="zoom-btn" onClick={() => onZoomChange(monthWidth * 1.3)} title="放大 (Ctrl+滚轮)">+</button>
+        <button className="zoom-btn zoom-reset" onClick={() => onZoomChange(82)} title="重置缩放">↺</button>
       </div>
     </div>
   );
@@ -275,20 +307,24 @@ function drawTaskBar(ctx, task, rowIndex, monthWidth, positions) {
   const isHighRisk = task.risk === '高';
 
   if (!startDate && !finishDate) {
-    ctx.fillStyle = '#4a4d5a';
-    ctx.font = '11px -apple-system, "Microsoft YaHei", sans-serif';
+    ctx.fillStyle = GANTT_THEME.faint;
+    ctx.font = `11px ${FONT_STACK}`;
     ctx.textAlign = 'left';
     ctx.fillText('(日期未设置)', 10, y + ROW_HEIGHT / 2 + 4);
+    positions.push({ nodeKey: task.nodeKey, x: 0, y: y + BAR_Y_OFFSET, width: 300, height: BAR_HEIGHT });
     return;
   }
 
   const startX = startDate ? getXForDate(startDate, monthWidth) : 0;
   const finishX = finishDate ? getXForDate(finishDate, monthWidth) + monthWidth / 30 : startX;
 
+  const labelFont = `11px ${FONT_STACK}`;
+  const labelName = task.name && task.name.length > 28 ? task.name.slice(0, 28) + '..' : (task.name || '');
+
   if (isMilestone && finishDate) {
     const cx = finishX, cy = y + ROW_HEIGHT / 2, size = 7;
-    ctx.fillStyle = '#f4b400';
-    ctx.strokeStyle = '#f4b400';
+    ctx.fillStyle = GANTT_THEME.gold;
+    ctx.strokeStyle = GANTT_THEME.gold;
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.moveTo(cx, cy - size);
@@ -298,7 +334,13 @@ function drawTaskBar(ctx, task, rowIndex, monthWidth, positions) {
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
-    positions.push({ wbs: task.wbs, x: cx - size, y: cy - size, width: size * 2, height: size * 2 });
+    if (labelName) {
+      ctx.fillStyle = GANTT_THEME.text;
+      ctx.font = labelFont;
+      ctx.textAlign = 'left';
+      ctx.fillText(labelName, cx + size + 6, cy + 4);
+    }
+    positions.push({ nodeKey: task.nodeKey, x: cx - size, y: cy - size, width: size * 2, height: size * 2 });
     return;
   }
 
@@ -307,9 +349,9 @@ function drawTaskBar(ctx, task, rowIndex, monthWidth, positions) {
   const color = getWbsColor(task.wbs);
 
   if (isSummary) {
-    ctx.fillStyle = '#3a3d4a';
+    ctx.fillStyle = GANTT_THEME.summary;
     ctx.fillRect(barX, barY + 2, barWidth, BAR_HEIGHT - 4);
-    ctx.fillStyle = '#6b7194';
+    ctx.fillStyle = GANTT_THEME.muted;
     ctx.beginPath(); ctx.arc(barX, barY + BAR_HEIGHT / 2, 3, 0, Math.PI * 2); ctx.fill();
     ctx.beginPath(); ctx.arc(barX + barWidth, barY + BAR_HEIGHT / 2, 3, 0, Math.PI * 2); ctx.fill();
   } else {
@@ -319,13 +361,13 @@ function drawTaskBar(ctx, task, rowIndex, monthWidth, positions) {
     ctx.globalAlpha = 1;
 
     if (isHighRisk) {
-      ctx.strokeStyle = '#e74c3c';
+      ctx.strokeStyle = GANTT_THEME.focus;
       ctx.lineWidth = 1.5;
       ctx.strokeRect(barX, barY, barWidth, BAR_HEIGHT);
     }
     if (isBuffer) {
       ctx.globalAlpha = 0.3;
-      ctx.strokeStyle = '#ffffff';
+      ctx.strokeStyle = GANTT_THEME.panel2;
       ctx.lineWidth = 0.5;
       for (let ox = barX; ox < barX + barWidth; ox += 4) {
         ctx.beginPath();
@@ -335,13 +377,14 @@ function drawTaskBar(ctx, task, rowIndex, monthWidth, positions) {
       }
       ctx.globalAlpha = 1;
     }
-    if (barWidth > 40) {
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '11px -apple-system, "Microsoft YaHei", sans-serif';
-      ctx.textAlign = 'left';
-      const name = task.name.length > 20 ? task.name.slice(0, 20) + '..' : task.name;
-      ctx.fillText(name, barX + 6, barY + BAR_HEIGHT / 2 + 4, barWidth - 12);
-    }
   }
-  positions.push({ wbs: task.wbs, x: barX, y: barY, width: barWidth, height: BAR_HEIGHT });
+
+  if (labelName) {
+    ctx.fillStyle = isSummary ? GANTT_THEME.muted : GANTT_THEME.text;
+    ctx.font = labelFont;
+    ctx.textAlign = 'left';
+    ctx.fillText(labelName, barX + barWidth + 6, barY + BAR_HEIGHT / 2 + 4);
+  }
+
+  positions.push({ nodeKey: task.nodeKey, x: barX, y: barY, width: barWidth, height: BAR_HEIGHT });
 }
