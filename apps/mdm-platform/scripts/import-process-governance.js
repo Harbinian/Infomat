@@ -9,6 +9,7 @@ const normsDir = path.join(repoRoot, 'docs', 'norms');
 const a1MarkdownPaths = fs.existsSync(normsDir)
   ? fs.readdirSync(normsDir)
     .filter(name => name.endsWith('部门-能力-流程-系统映射关系.md'))
+    .sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'))
     .map(name => path.join(normsDir, name))
   : [];
 
