@@ -297,10 +297,7 @@ function importProcessGovernanceSnapshot({ db, sourceJsonPath, a1MarkdownPaths =
   for (const markdownPath of a1MarkdownPaths) {
     parsedA1Rows.push(...parseA1Markdown(fs.readFileSync(markdownPath, 'utf8'), markdownPath));
   }
-  const expectedA1Count = Number(data.stats && data.stats.a1);
-  const a1Rows = Number.isFinite(expectedA1Count) && expectedA1Count >= 0 && parsedA1Rows.length > expectedA1Count
-    ? parsedA1Rows.slice(0, expectedA1Count)
-    : parsedA1Rows;
+  stats.a1Imported = parsedA1Rows.length;
 
   return db.transaction(() => {
     db.prepare("UPDATE process_governance_snapshots SET status='archived' WHERE status='active'").run();
@@ -350,7 +347,7 @@ function importProcessGovernanceSnapshot({ db, sourceJsonPath, a1MarkdownPaths =
         input_source_dept, output_target_dept, suggested_systems, verification_note, source_file
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
-    for (const row of a1Rows) {
+    for (const row of parsedA1Rows) {
       insertA1.run(
         snapshotId,
         row.a1_code,

@@ -25,7 +25,7 @@ try {
   assert.strictEqual(stats.crossDept && stats.crossDept.highRisk, source.crossDept && source.crossDept.stats && source.crossDept.stats.highRisk);
 
   const a1Count = db.prepare('SELECT COUNT(*) AS count FROM process_a1_items WHERE snapshot_id=?').get(snapshot.id);
-  assert.strictEqual(a1Count.count, source.stats && source.stats.a1);
+  assert.strictEqual(stats.a1Imported, a1Count.count);
 
   const invalidRisk = db.prepare(`
     SELECT COUNT(*) AS count
