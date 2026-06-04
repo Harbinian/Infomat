@@ -1,0 +1,3022 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="echarts.min.js"></script>
+  <title>MDM 平台</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --surface: #f3f4f6;
+      --border: #e0e0e0;
+      --text-main: #1f2937;
+      --text-muted: #6b7280;
+      --accent: #fc0000;
+      --accent-hover: #dc0000;
+      --focus-ring: rgba(252, 0, 0, 0.15);
+      --error: #b91c1c;
+      --success: #059669;
+      --warning: #d97706;
+      --header-bg: #1a1a2e;
+      --header-text: #ffffff;
+      --header-text-muted: #9ca3af;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text-main);
+      font-size: 14px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+    button, input, select, textarea { font: inherit; }
+    button { border: none; background: none; cursor: pointer; }
+    a { color: inherit; text-decoration: none; }
+
+    /* Layout */
+    .topbar {
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      background: var(--header-bg);
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 14px; color: var(--header-text); letter-spacing: -0.01em; }
+    .brand img { height: 40px; width: auto; }
+    .session { display: flex; align-items: center; gap: 16px; font-size: 13px; color: var(--header-text-muted); }
+
+    .page-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px 32px 80px;
+    }
+
+    /* Typography */
+    h1 { font-size: 24px; font-weight: 600; margin-bottom: 32px; letter-spacing: -0.02em; }
+    h2 { font-size: 14px; font-weight: 600; margin-bottom: 16px; color: var(--text-main); text-transform: uppercase; letter-spacing: 0.05em; }
+
+    /* Login */
+    .login {
+      max-width: 320px;
+      margin: 80px auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      animation: fadeIn 0.3s ease;
+    }
+    .login h2 { text-align: center; margin-bottom: 8px; font-size: 20px; text-transform: none; letter-spacing: normal; }
+
+    /* Navigation */
+    .tabs {
+      display: flex;
+      gap: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      background: var(--header-bg);
+      padding: 0 24px;
+      margin-bottom: 40px;
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+    .tab {
+      padding: 14px 0 12px 0;
+      color: var(--header-text-muted);
+      font-size: 14px;
+      font-weight: 500;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: color 0.2s;
+      white-space: nowrap;
+      flex: 0 0 auto;
+    }
+    .tab:hover { color: var(--header-text); }
+    .tab.on { color: var(--accent); border-bottom-color: var(--accent); }
+
+    /* Panels */
+    .panel { display: none; animation: fadeIn 0.3s ease; }
+    .panel.on { display: block; }
+
+    /* Components */
+    .grid { display: grid; gap: 32px; }
+    .g2 { grid-template-columns: repeat(2, 1fr); }
+    .g4 { grid-template-columns: repeat(4, 1fr); }
+    .split { display: grid; grid-template-columns: minmax(360px, 30%) minmax(0, 1fr); gap: 64px; }
+
+
+    .metric { padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+    .metric .num { font-size: 36px; font-weight: 500; color: var(--text-main); line-height: 1; letter-spacing: -0.03em; }
+    .metric .lbl { font-size: 13px; color: var(--text-muted); margin-top: 12px; font-weight: 500; }
+
+    /* Forms */
+    .form-group { margin-bottom: 20px; }
+    label { display: flex; flex-direction: column; gap: 8px; font-size: 13px; font-weight: 500; color: var(--text-main); }
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg);
+      padding: 8px 12px;
+      color: var(--text-main);
+      font-size: 14px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--focus-ring);
+    }
+    textarea { min-height: 80px; resize: vertical; }
+
+    /* Buttons */
+    .toolbar { display: flex; gap: 12px; align-items: center; margin-bottom: 20px; flex-wrap: wrap; }
+    .toolbar-right { margin-left: auto; display: flex; gap: 8px; }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      height: 32px; padding: 0 16px;
+      border-radius: 6px;
+      font-size: 13px; font-weight: 500;
+      transition: all 0.2s;
+    }
+    .btn.primary { background: var(--accent); color: #fff; }
+    .btn.primary:hover { background: var(--accent-hover); }
+    .btn.secondary { background: var(--surface); color: var(--text-main); border: 1px solid var(--border); }
+    .btn.secondary:hover { background: #f3f4f6; }
+    .btn.danger { background: #fff; color: var(--error); border: 1px solid var(--border); }
+    .btn.danger:hover { background: #fef2f2; border-color: #fca5a5; }
+    .btn.success { background: #fff; color: var(--success); border: 1px solid var(--border); }
+    .btn.success:hover { background: #ecfdf5; border-color: #6ee7b7; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Tables */
+    .table-container { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
+    th { color: var(--text-muted); font-weight: 500; padding: 12px 16px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    td { padding: 12px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    tr:hover td { background: #fefafa; }
+
+    /* Tags */
+    .tag {
+      display: inline-flex; align-items: center; height: 22px; padding: 0 8px;
+      border-radius: 4px; font-size: 12px; font-weight: 500;
+      background: var(--surface); color: var(--text-muted); border: 1px solid var(--border);
+    }
+    .tag.green { color: var(--success); border-color: #a7f3d0; background: #ecfdf5; }
+    .tag.amber { color: var(--warning); border-color: #fde68a; background: #fffbeb; }
+    .tag.red { color: var(--error); border-color: #fecaca; background: #fef2f2; }
+
+    /* Misc */
+    .notice { font-size: 13px; color: var(--text-muted); padding: 12px 16px; background: var(--surface); border-radius: 6px; margin-bottom: 20px; border-left: 3px solid var(--border); }
+    .empty { padding: 48px; color: var(--text-muted); text-align: center; font-size: 13px; }
+    .chart { height: 450px; width: 100%; margin-top: 24px; }
+    .pg-section { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--border); }
+    .pg-section-hd { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
+    .pg-section-hd h2 { margin-bottom: 0; }
+    .pg-status { white-space: nowrap; }
+
+    /* Modal */
+    .modal-mask {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.3); backdrop-filter: blur(2px);
+      display: none; align-items: center; justify-content: center; z-index: 50;
+    }
+    .modal-mask.on { display: flex; }
+    .modal {
+      width: min(480px, calc(100% - 32px)); background: #fff; border-radius: 12px;
+      box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
+      border: 1px solid var(--border); animation: slideUp 0.2s ease;
+    }
+    .modal-head { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; border-bottom: 1px solid var(--border); }
+    .modal-head h3 { font-size: 16px; font-weight: 600; margin: 0; }
+    .modal-body { padding: 24px; }
+    .close { font-size: 20px; color: var(--text-muted); line-height: 1; }
+    .close:hover { color: var(--text-main); }
+
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+    @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+
+    /* ===== Phase 3 new CSS ===== */
+
+    @keyframes slideIn { from { opacity: 0; transform: translateX(60px); } to { opacity: 1; transform: translateX(0); } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-muted); margin-bottom: 20px; }
+    .breadcrumb a { color: var(--accent); cursor: pointer; }
+    .breadcrumb a:hover { text-decoration: underline; }
+    .breadcrumb .sep { color: var(--text-muted); }
+
+    .toast-container { position: fixed; top: 72px; right: 24px; z-index: 100; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+    .toast { display: flex; align-items: center; gap: 10px; padding: 12px 20px; border-radius: 8px; background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.15); font-size: 13px; animation: slideIn 0.25s ease; pointer-events: auto; border-left: 4px solid var(--border); }
+    .toast.success { border-left-color: var(--success); }
+    .toast.error { border-left-color: var(--error); }
+    .toast.warning { border-left-color: var(--warning); }
+
+    .confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.3); backdrop-filter: blur(2px); z-index: 60; display: none; align-items: center; justify-content: center; }
+    .confirm-overlay.on { display: flex; }
+    .confirm-box { width: min(400px, calc(100% - 32px)); background: #fff; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1); border: 1px solid var(--border); animation: slideUp 0.2s ease; }
+    .confirm-head { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; border-bottom: 1px solid var(--border); font-weight: 600; font-size: 15px; }
+    .confirm-body { padding: 24px; font-size: 14px; line-height: 1.6; color: var(--text-main); }
+    .confirm-foot { display: flex; justify-content: flex-end; gap: 12px; padding: 16px 24px; border-top: 1px solid var(--border); }
+
+    .reject-row { background: #fef2f2; }
+    .field-highlight { border-left: 4px solid var(--accent); padding-left: 12px; }
+
+    .diff-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    .diff-col { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    .diff-col .diff-header { padding: 10px 16px; background: var(--surface); font-weight: 600; font-size: 13px; border-bottom: 1px solid var(--border); }
+
+    .timeline { position: relative; padding-left: 24px; }
+    .timeline::before { content: ''; position: absolute; left: 8px; top: 0; bottom: 0; width: 2px; background: var(--border); }
+    .timeline .tl-item { position: relative; margin-bottom: 20px; padding-left: 16px; }
+    .timeline .tl-item::before { content: ''; position: absolute; left: -20px; top: 4px; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); border: 2px solid #fff; box-shadow: 0 0 0 2px var(--accent); }
+
+    .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.6s linear infinite; }
+
+    .field-error { font-size: 12px; color: var(--error); margin-top: 4px; }
+    input.invalid { border-color: var(--error); }
+
+    .page { display: none; }
+    .page.on { display: block; animation: fadeIn 0.3s ease; }
+
+    .severity-section { margin-bottom: 24px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    .severity-section .sev-header { padding: 10px 16px; font-weight: 600; font-size: 13px; }
+    .severity-section .sev-header.blocking { background: #fef2f2; color: var(--error); }
+    .severity-section .sev-header.error { background: #fff7ed; color: #9a3412; }
+    .severity-section .sev-header.high { background: #fffbeb; color: #92400e; }
+    .severity-section .sev-header.medium { background: #f0fdf4; color: #166534; }
+    .severity-section .sev-header.low { background: #eff6ff; color: #1e40af; }
+    .severity-section .sev-header.warn { background: #f5f3ff; color: #6d28d9; }
+
+    /* Phase 5: Detail page styles */
+    .diff-row { padding: 10px 16px; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .diff-row:last-child { border-bottom: none; }
+    .diff-row.changed { background: #fef2f2; }
+    .tl-head { font-weight: 500; font-size: 13px; margin-bottom: 4px; }
+    .tl-body { font-size: 13px; color: var(--text-muted); }
+    .tl-item.approve::before { background: var(--success); box-shadow: 0 0 0 2px var(--success); }
+    .tl-item.reject::before { background: var(--error); box-shadow: 0 0 0 2px var(--error); }
+    .detail-meta { display: flex; gap: 16px; font-size: 13px; color: var(--text-muted); flex-wrap: wrap; }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><img src="/logo.png" alt="MDM">MDM 平台</div>
+    <div class="session"><span id="sessionText"><span id="sessionUserName">未登录</span></span><button class="btn secondary" id="logoutBtn">退出</button></div>
+  </header>
+
+  <div class="page-container">
+    <section class="login" id="loginBox">
+      <h2>登录系统</h2>
+      <div class="form-group"><label>工号<input id="employeeNo" autocomplete="username"></label></div>
+      <div class="form-group"><label>密码<input id="password" type="password" autocomplete="current-password"></label></div>
+      <button class="btn primary" id="loginBtn" style="width: 100%; height: 36px; margin-top: 8px;">登录</button>
+      <div class="notice" id="loginMsg" style="text-align: center; margin-top: 16px; background: transparent; border: none;"></div>
+    </section>
+
+    <div id="appContent" style="display: none;">
+      <nav class="tabs" id="tabs">
+        <button class="tab on" data-tab="dashboard" data-roles="submitter,owner,reviewer,admin">统计看板</button>
+        <button class="tab" data-tab="mySubmissions" data-roles="submitter,admin">报送管理</button>
+        <button class="tab" data-tab="capabilities" data-roles="admin">能力与流程申报</button>
+        <button class="tab" data-tab="businessMap" data-roles="owner,reviewer,admin">业务地图</button>
+        <button class="tab" data-tab="processGovernance" data-roles="owner,reviewer,admin">流程治理</button>
+        <button class="tab" data-tab="todos" data-roles="submitter,owner,reviewer,admin">待办收到</button>
+        <button class="tab" data-tab="reviews" data-roles="submitter,owner,reviewer,admin">评审记录</button>
+        <button class="tab" data-tab="terms" data-roles="submitter,owner,reviewer,admin">术语词典</button>
+        <button class="tab" data-tab="conflicts" data-roles="reviewer,admin">冲突管理</button>
+        <button class="tab" data-tab="orgUnits" data-roles="submitter,owner,reviewer,admin">组织架构</button>
+        <button class="tab" data-tab="persons" data-roles="submitter,owner,reviewer,admin">人员管理</button>
+        <button class="tab" data-tab="products" data-roles="submitter,owner,reviewer,admin">产品主数据</button>
+        <button class="tab" data-tab="quality" data-roles="reviewer,admin">数据质量</button>
+        <button class="tab" data-tab="rbac" data-roles="admin">角色权限</button>
+      </nav>
+
+      <!-- Dashboard -->
+      <section class="panel on" id="dashboard">
+        <div class="grid g4">
+          <div class="metric"><div class="num" id="metricMappings">0</div><div class="lbl">流程映射</div></div>
+          <div class="metric"><div class="num" id="metricFields">0</div><div class="lbl">字段台账</div></div>
+          <div class="metric"><div class="num" id="metricTodos">0</div><div class="lbl">待处理待办</div></div>
+          <div class="metric"><div class="num" id="metricConflicts">0</div><div class="lbl">未解决冲突</div></div>
+        </div>
+        <div id="conflictOverview" style="margin-top: 20px; padding: 16px; background: var(--surface); border-radius: 8px; border: 1px solid var(--border);"></div>
+        <div id="dashboardActions" style="margin-top: 20px;">
+          <a class="btn secondary" href="template.xlsx" download style="display:none;">下载模板</a>
+          <a id="exportLink" href="/api/export/excel" style="display:none;">导出台账</a>
+        </div>
+        <div class="grid g2" style="margin-top: 48px;">
+          <div><h2>各部门流程数</h2><div class="chart" id="deptChart"></div></div>
+          <div><h2>审批状态分布</h2><div class="chart" id="statusChart"></div></div>
+        </div>
+      </section>
+
+      <!-- My Submissions -->
+      <section class="panel" id="mySubmissions">
+        <div class="toolbar"><h2>报送管理</h2><button class="btn secondary" style="margin-left: auto;" onclick="loadMySubmissions()">刷新</button></div>
+        <div id="mySubmissionsList"></div>
+      </section>
+
+      <!-- Capabilities (admin only) -->
+      <section class="panel" id="capabilities">
+        <div class="split">
+          <div>
+            <h2>申报业务能力</h2>
+            <div class="form-group"><label>能力名称<input id="capName"></label></div>
+            <div class="form-group"><label>能力层级<select id="capLevel"><option value="L1">L1</option><option value="L2">L2</option><option value="L3">L3</option></select></label></div>
+            <div class="form-group"><label>所属部门<select id="capDept"></select></label></div>
+            <div class="toolbar"><button class="btn primary" id="createCapBtn">申报业务能力</button></div>
+            <h2 style="margin-top: 48px;">申报业务流程</h2>
+            <div class="form-group"><label>流程名称<input id="procName"></label></div>
+            <div class="form-group"><label>所属能力<select id="procCap"></select></label></div>
+            <div class="form-group"><label>所属部门<select id="procDept"></select></label></div>
+            <div class="toolbar"><button class="btn primary" id="createProcBtn">申报业务流程</button></div>
+          </div>
+          <div>
+            <div class="toolbar"><h2>业务能力列表</h2><button class="btn secondary" style="margin-left: auto;" id="refreshCapsBtn">刷新列表</button></div>
+            <div class="table-container"><table><thead><tr><th>ID</th><th>名称</th><th>层级</th><th>部门</th><th>状态</th><th>操作</th></tr></thead><tbody id="capRows"></tbody></table></div>
+            <div class="toolbar" style="margin-top: 48px;"><h2>业务流程列表</h2><button class="btn secondary" style="margin-left: auto;" id="refreshProcsBtn">刷新列表</button></div>
+            <div class="table-container"><table><thead><tr><th>ID</th><th>名称</th><th>所属能力</th><th>部门</th><th>状态</th><th>操作</th></tr></thead><tbody id="procRows"></tbody></table></div>
+            <div id="capPreviewWrap" style="margin-top: 24px; display: none;">
+              <h2>关系预览</h2>
+              <div class="chart" id="capPreviewChart" style="height: 300px;"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Todos -->
+      <section class="panel" id="todos">
+        <div class="toolbar"><h2>待办收到</h2>
+          <div class="toolbar-right">
+            <select id="todoType" style="width: 140px; height: 32px; padding: 0 12px;">
+              <option value="">全部类型</option>
+              <option value="field_confirm">报送审核</option>
+              <option value="gold_source">黄金源确认</option>
+              <option value="conflict_resolution">冲突协调</option>
+              <option value="terminology">术语申报</option>
+            </select>
+            <select id="todoStatus" style="width: 120px; height: 32px; padding: 0 12px;">
+              <option value="">全部状态</option><option value="pending">待处理</option><option value="done">已完成</option>
+            </select>
+            <button class="btn secondary" id="refreshTodosBtn">刷新</button>
+          </div>
+        </div>
+        <div class="table-container"><table><thead><tr><th>来源</th><th>接收部门</th><th>类型/紧急</th><th>内容</th><th>截止</th><th>状态</th><th>操作</th></tr></thead><tbody id="todoRows"></tbody></table></div>
+      </section>
+
+      <!-- Reviews -->
+      <section class="panel" id="reviews">
+        <div class="toolbar"><h2>评审记录</h2><button class="btn secondary" style="margin-left: auto;" id="refreshReviewsBtn">刷新</button></div>
+        <div class="table-container"><table><thead><tr><th>映射</th><th>流程</th><th>当前步骤</th><th>任务</th><th>状态</th><th>意见</th><th>操作</th></tr></thead><tbody id="reviewRows"></tbody></table></div>
+      </section>
+
+      <!-- Terms -->
+      <section class="panel" id="terms">
+        <div class="split">
+          <div>
+            <h2>术语维护</h2>
+            <div class="form-group"><label>术语<input id="termName"></label></div>
+            <div class="form-group"><label>定义<textarea id="termDefinition"></textarea></label></div>
+            <div class="form-group"><label>范围<input id="termScope"></label></div>
+            <div class="form-group"><label>禁用表述<input id="termForbidden"></label></div>
+            <div class="form-group"><label>所属业务流程<select id="termProcess"></select></label></div>
+            <div class="toolbar"><button class="btn primary" id="saveTermBtn">保存术语</button></div>
+          </div>
+          <div>
+            <div class="toolbar"><h2>术语词典</h2>
+              <div class="toolbar-right">
+                <select id="termStatus" style="width: 120px; height: 32px; padding: 0 12px;"><option value="">全部</option><option value="pending">待审</option><option value="approved">已通过</option><option value="rejected">已驳回</option></select>
+                <button class="btn secondary" id="refreshTermsBtn">刷新</button>
+              </div>
+            </div>
+            <div class="table-container"><table><thead><tr><th>ID</th><th>术语</th><th>定义</th><th>范围</th><th>状态</th><th>操作</th></tr></thead><tbody id="termRows"></tbody></table></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Conflicts -->
+      <section class="panel" id="conflicts">
+        <div class="toolbar"><h2>冲突管理</h2>
+          <div class="toolbar-right">
+            <button class="btn secondary" id="refreshConflictsBtn">刷新</button>
+          </div>
+        </div>
+        <div class="tabs" style="margin-bottom: 16px; border-bottom: 1px solid var(--border);">
+          <button class="tab on" data-ctab="active">待协调</button>
+          <button class="tab" data-ctab="silenced" id="silencedTabLink" style="display:none">静默归档</button>
+        </div>
+        <div id="conflictListContainer"></div>
+      </section>
+
+      <!-- Business Map (Sankey) -->
+      <section class="panel" id="businessMap">
+        <div class="toolbar">
+          <h2>业务地图</h2>
+          <div class="toolbar-right">
+            <select id="sankeyDept" multiple style="width: 180px; height: 36px; padding: 6px;">
+            </select>
+            <select id="sankeyLevel" style="width: 120px; height: 36px; padding: 0 12px;">
+              <option value="L1,L2,L3">全部能力层级</option>
+              <option value="L1">仅 L1</option>
+              <option value="L1,L2">L1 + L2</option>
+            </select>
+          </div>
+        </div>
+        <div class="notice" id="sankeyMeta" style="margin-bottom: 16px;"></div>
+        <div class="chart" id="sankeyChart" style="height: 600px;"></div>
+      </section>
+
+      <!-- Process Governance -->
+      <section class="panel" id="processGovernancePanel">
+        <div class="toolbar">
+          <h2>流程治理</h2>
+          <div class="toolbar-right">
+            <select id="pgRiskFilter" style="width: 140px; height: 36px; padding: 0 12px;">
+              <option value="">全部风险</option>
+              <option value="high">高风险</option>
+              <option value="medium">中风险</option>
+              <option value="low">低风险</option>
+            </select>
+            <button class="btn secondary" id="refreshProcessGovernanceBtn">刷新</button>
+          </div>
+        </div>
+        <div class="grid g4">
+          <div class="metric"><div class="num" id="pgMetricL3">0</div><div class="lbl">流程数</div></div>
+          <div class="metric"><div class="num" id="pgMetricA1">0</div><div class="lbl">A1 行为</div></div>
+          <div class="metric"><div class="num" id="pgMetricCross">0</div><div class="lbl">跨部门检查</div></div>
+          <div class="metric"><div class="num" id="pgMetricRisk">0</div><div class="lbl">高风险项</div></div>
+        </div>
+        <div class="notice" id="pgSnapshotMeta" style="margin-top: 24px;"></div>
+        <div class="pg-section">
+          <div class="pg-section-hd"><h2>流程地图</h2><span class="pg-status" id="pgMapMeta"></span></div>
+          <div class="chart" id="pgSankeyChart" style="height: 560px;"></div>
+        </div>
+        <div class="pg-section">
+          <div class="pg-section-hd"><h2>A1 明细</h2><span class="pg-status" id="pgA1Meta"></span></div>
+          <div class="table-container">
+            <table>
+              <thead><tr><th>A1编号</th><th>部门</th><th>流程</th><th>业务行为</th><th>输入来源</th><th>输出目标</th><th>建议落位应用</th></tr></thead>
+              <tbody id="pgA1Rows"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="pg-section">
+          <div class="pg-section-hd"><h2>跨部门风险</h2><span class="pg-status" id="pgRiskMeta"></span></div>
+          <div class="table-container">
+            <table>
+              <thead><tr><th>来源</th><th>目标</th><th>A1</th><th>引用</th><th>风险</th><th>状态</th><th>说明</th></tr></thead>
+              <tbody id="pgRiskRows"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Org Units Panel -->
+      <section class="panel" id="orgUnits">
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:16px">
+          <select id="ouTypeFilter" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px">
+            <option value="">全部类型</option>
+            <option value="company">公司</option>
+            <option value="department">部门</option>
+            <option value="office">办公室</option>
+            <option value="team">班组</option>
+          </select>
+          <input id="ouSearch" placeholder="搜索编码或名称..." style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;width:200px">
+          <button class="btn" id="ouSearchBtn">查询</button>
+          <button class="btn secondary" id="ouNewBtn">+ 新增组织</button>
+        </div>
+        <div class="tw"><table><thead><tr>
+          <th>编码</th><th>名称</th><th>类型</th><th>简称</th><th>上级组织</th><th>状态</th><th>操作</th>
+        </tr></thead><tbody id="ouTableBody"></tbody></table></div>
+      </section>
+
+      <!-- Persons Panel -->
+      <section class="panel" id="persons">
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:16px">
+          <select id="personStatusFilter" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px">
+            <option value="">全部状态</option>
+            <option value="active">在职</option>
+            <option value="leave">离职</option>
+            <option value="suspended">停职</option>
+          </select>
+          <input id="personSearch" placeholder="搜索工号或姓名..." style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;width:200px">
+          <button class="btn" id="personSearchBtn">查询</button>
+          <button class="btn secondary" id="personNewBtn">+ 新增人员</button>
+        </div>
+        <div class="tw"><table><thead><tr>
+          <th>工号</th><th>姓名</th><th>手机</th><th>邮箱</th><th>在职状态</th><th>状态</th><th>操作</th>
+        </tr></thead><tbody id="personTableBody"></tbody></table></div>
+      </section>
+
+      <!-- Products Panel -->
+      <section class="panel" id="products">
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:16px">
+          <input id="prodSearch" placeholder="搜索编码或型号..." style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;width:200px">
+          <button class="btn" id="prodSearchBtn">查询</button>
+          <button class="btn secondary" id="prodPfNewBtn">+ 新增产品族</button>
+          <button class="btn secondary" id="prodNewBtn">+ 新增产品</button>
+        </div>
+        <h2>产品族</h2>
+        <div class="tw" style="margin-bottom:24px"><table><thead><tr>
+          <th>编码</th><th>型号名称</th><th>机型代码</th><th>大类</th><th>产品类型</th><th>状态</th><th>操作</th>
+        </tr></thead><tbody id="pfTableBody"></tbody></table></div>
+        <h2>产品列表</h2>
+        <div class="tw"><table><thead><tr>
+          <th>编码</th><th>产品族</th><th>版次</th><th>中类</th><th>小类</th><th>生命周期</th><th>操作</th>
+        </tr></thead><tbody id="prodTableBody"></tbody></table></div>
+      </section>
+
+      <!-- Quality Panel -->
+      <section class="panel" id="quality">
+        <h2>数据质量仪表盘</h2>
+        <div class="grid g4" style="margin-bottom:24px">
+          <div class="metric"><div class="num" id="qOrgs">-</div><div class="lbl">组织单元</div></div>
+          <div class="metric"><div class="num" id="qPersons">-</div><div class="lbl">人员</div></div>
+          <div class="metric"><div class="num" id="qProducts">-</div><div class="lbl">产品</div></div>
+          <div class="metric"><div class="num" id="qExtIds">-</div><div class="lbl">外部映射</div></div>
+        </div>
+        <h2 style="margin-top:32px">黄金源确认进度</h2>
+        <div id="goldenSourceProgress" style="margin-bottom:16px"></div>
+        <div id="goldenSourceChart" class="chart" style="height:300px"></div>
+      </section>
+
+      <!-- RBAC: Role & Permission Management -->
+      <section class="panel" id="rbac">
+        <div style="display:flex;gap:16px;min-height:500px;">
+          <!-- Left sidebar nav -->
+          <div style="width:200px;flex-shrink:0;background:#f8f9fa;border-radius:6px;padding:12px;">
+            <div class="rbac-nav-item active" data-panel="roleList" style="padding:10px;cursor:pointer;border-radius:4px;margin-bottom:4px;font-weight:bold;background:#e3f2fd;">角色列表</div>
+            <div class="rbac-nav-item" data-panel="permMatrix" style="padding:10px;cursor:pointer;border-radius:4px;margin-bottom:4px;">权限矩阵</div>
+            <div class="rbac-nav-item" data-panel="userRoles" style="padding:10px;cursor:pointer;border-radius:4px;margin-bottom:4px;">用户角色分配</div>
+            <div class="rbac-nav-item" data-panel="userRolesOverview" style="padding:10px;cursor:pointer;border-radius:4px;margin-bottom:4px;">用户角色一览</div>
+            <div class="rbac-nav-item" data-panel="batchImport" style="padding:10px;cursor:pointer;border-radius:4px;">批量导入</div>
+          </div>
+          <!-- Right content area -->
+          <div style="flex:1;" id="rbacPanel"></div>
+        </div>
+      </section>
+
+      <!-- Detail Page (L2) -->
+      <div class="page" id="detailPage">
+        <div class="breadcrumb" id="breadcrumb"></div>
+        <button class="btn secondary" id="detailBackBtn" style="margin-bottom: 16px;">&#8592; 返回</button>
+        <div id="detailContent"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Confirmation Dialog -->
+  <div class="confirm-overlay" id="confirmOverlay">
+    <div class="confirm-box">
+      <div class="confirm-head"><span id="confirmTitle">确认</span><button class="close" id="confirmClose">&times;</button></div>
+      <div class="confirm-body" id="confirmMessage"></div>
+      <div class="confirm-foot">
+        <button class="btn secondary" id="confirmCancel">取消</button>
+        <button class="btn" id="confirmBtn">确认</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Opinion Modal -->
+  <div class="modal-mask" id="opinionModal">
+    <div class="modal">
+      <div class="modal-head"><h3 id="modalTitle">处理意见</h3><button class="close" id="modalClose">&times;</button></div>
+      <div class="modal-body">
+        <div class="form-group"><label>意见<textarea id="modalOpinion" placeholder="请输入处理意见..."></textarea></label></div>
+        <div class="toolbar" style="margin-top: 24px; margin-bottom: 0; justify-content: flex-end;">
+          <button class="btn danger" id="modalReject">驳回</button>
+          <button class="btn success" id="modalApprove">通过</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Password change dialog -->
+  <div id="passwordDialog" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:10000;justify-content:center;align-items:center;">
+    <div style="background:white;padding:24px;border-radius:8px;width:400px;max-width:90vw;">
+      <h3 id="passwordDialogTitle">修改密码</h3>
+      <p id="passwordDialogMsg" style="color:#e53935;margin-bottom:12px;display:none;"></p>
+      <div style="margin-bottom:12px;">
+        <label style="display:block;margin-bottom:4px;">当前密码</label>
+        <input type="password" id="currentPassword" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;">
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="display:block;margin-bottom:4px;">新密码</label>
+        <input type="password" id="newPassword" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;" placeholder="至少6位">
+      </div>
+      <div style="margin-bottom:16px;">
+        <label style="display:block;margin-bottom:4px;">确认新密码</label>
+        <input type="password" id="confirmPassword" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;">
+      </div>
+      <div style="text-align:right;">
+        <button id="passwordCancelBtn" style="padding:8px 16px;margin-right:8px;border:1px solid #ddd;border-radius:4px;background:white;cursor:pointer;">取消</button>
+        <button id="passwordSubmitBtn" style="padding:8px 16px;background:#1565c0;color:white;border:none;border-radius:4px;cursor:pointer;">确认修改</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ===== State & Utilities =====
+    const state = { user:null, departments:[], capabilities:[], processes:[], mappings:[], todos:[], conflicts:[], terms:[], currentRoute:null, currentView:'dashboard', activeMapping:null, activeConflict:null, pollTimer:null, isEditing:false, activeReview:null, activeCapReview:null, activeProcReview:null };
+    const $ = id => document.getElementById(id);
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, function(ch) {
+        return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch];
+      });
+    }
+
+    function safeText(value, fallback = '-') {
+      return escapeHtml(value === null || value === undefined || value === '' ? fallback : value);
+    }
+
+    function hasAdminAccess() {
+      var perms = (state.user && state.user.permissions) || [];
+      return !!(state.user && (state.user.role === 'admin' || perms.indexOf('admin:access') >= 0 || perms.indexOf('*:*') >= 0));
+    }
+
+    // ===== API helper (with 401 handling) =====
+    async function api(path, options = {}) {
+      const res = await fetch(path, { credentials:'same-origin', headers:{ ...(options.body && !(options.body instanceof FormData) ? {'Content-Type':'application/json'} : {}) }, ...options });
+      const text = await res.text();
+      let body = {};
+      if (text) { try { body = JSON.parse(text); } catch { body = text; } }
+      if (!res.ok) {
+        if (res.status === 401) { state.user = null; showLogin(); showToast('登录已过期，请重新登录', 'error'); stopPolling(); }
+        throw { status: res.status, message: body.error || 'HTTP ' + res.status, details: body.details };
+      }
+      return body;
+    }
+
+    // ===== Tag rendering =====
+    function statusTag(status) {
+      const map = { draft:'草稿', submitted:'已提交', dept_reviewed:'部门内审', cross_confirmed:'跨部门确认', fields_confirmed:'字段确认', final_reviewed:'终审', published:'已发布', pending:'待处理', done:'已完成', resolved:'已解决', rejected:'已驳回', approved:'已通过', blocked:'阻断', coordinating:'协调中', archived:'已归档' };
+      const cls = /published|approved|done|resolved/.test(status) ? 'green' : /blocked|rejected|error/.test(status) ? 'red' : /pending|submitted|coordinating/.test(status) ? 'amber' : '';
+      return '<span class="tag ' + cls + '">' + safeText(map[status] || status) + '</span>';
+    }
+
+    function severityTag(sev) {
+      var map = { blocking: '阻断', error: '严重', high: '高', medium: '中', low: '低', warn: '警告' };
+      var label = map[sev] || sev;
+      var cls = (sev === 'blocking' || sev === 'error') ? 'red' : (sev === 'high') ? 'orange' : (sev === 'medium') ? 'blue' : '';
+      return '<span class="tag ' + cls + '">' + label + '</span>';
+    }
+
+    function fillSelect(select, rows, labelKey = 'name') {
+      select.innerHTML = rows.map(row => '<option value="' + Number(row.id) + '">' + safeText(row[labelKey] || row.name) + '</option>').join('');
+    }
+
+    // ===== Toast system =====
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toastContainer');
+      const icons = { success: '✓', error: '✗', warning: '⚠' };
+      const toast = document.createElement('div');
+      toast.className = 'toast ' + type;
+      toast.innerHTML = '<span>' + safeText(icons[type] || '') + '</span><span>' + safeText(message, '') + '</span>';
+      container.appendChild(toast);
+      setTimeout(function() { toast.style.opacity = '0'; toast.style.transition = 'opacity 0.3s'; setTimeout(function() { toast.remove(); }, 300); }, 3000);
+    }
+
+    // ===== Breadcrumb =====
+    function setBreadcrumb(items) {
+      const bc = $('breadcrumb');
+      if (!items || items.length === 0) { bc.style.display = 'none'; return; }
+      bc.style.display = 'flex';
+      bc.innerHTML = items.map(function(item, i) {
+        if (i === items.length - 1) return '<span>' + safeText(item.label, '') + '</span>';
+        return '<a onclick="' + (item.onclick || '') + '">' + safeText(item.label, '') + '</a><span class="sep">›</span>';
+      }).join('');
+    }
+
+    // ===== Show/Hide helpers =====
+    function showLogin() { $('loginBox').style.display = 'flex'; $('appContent').style.display = 'none'; }
+    function showApp() { $('loginBox').style.display = 'none'; $('appContent').style.display = 'block'; }
+
+    // ===== Navigation & Hash Router =====
+    function navigateTo(view, params) {
+      if (!params) params = {};
+      if (view === 'list') { location.hash = params.tab || 'dashboard'; }
+      else if (view === 'detail') { location.hash = params.tab + '/' + params.type + '/' + params.id; }
+      else if (view === 'operation') { location.hash = params.tab + '/' + params.type + '/' + params.id + '/' + params.action; }
+      state.currentView = view;
+      renderCurrentView(params);
+    }
+
+    function renderCurrentView(params) {
+      document.querySelectorAll('.panel,.page').forEach(function(el) { el.classList.remove('on'); });
+      if (state.currentView === 'list' || !state.currentView) { renderListPanel(params.tab || 'dashboard'); }
+      else if (state.currentView === 'detail') { renderDetailPage(params); }
+      else if (state.currentView === 'operation') { renderOperationPage(params); }
+    }
+
+    function parseHash() {
+      var hash = location.hash.replace('#/', '').replace('#', '');
+      if (!hash) return { view: 'list', tab: 'dashboard' };
+      var parts = hash.split('/');
+      if (parts.length === 1) return { view: 'list', tab: parts[0] };
+      if (parts[0] === 'processes' && parts.length >= 3) {
+        return { view: 'detail', tab: 'processes', type: 'process', id: parts[2] };
+      }
+      if (parts.length === 3) return { view: 'detail', tab: parts[0], type: parts[1], id: parts[2] };
+      if (parts.length === 4) return { view: 'operation', tab: parts[0], type: parts[1], id: parts[2], action: parts[3] };
+      return { view: 'list', tab: 'dashboard' };
+    }
+
+    window.addEventListener('hashchange', function() {
+      var route = parseHash();
+      state.currentRoute = route;
+      navigateTo(route.view, route);
+    });
+
+    // ===== Role-based nav =====
+    function applyRoleVisibility() {
+      if (!state.user) return;
+      var role = state.user.role;
+      document.querySelectorAll('.tab[data-roles]').forEach(function(tab) {
+        var roles = tab.dataset.roles.split(',');
+        tab.style.display = roles.indexOf(role) !== -1 ? '' : 'none';
+      });
+      var defaultTabs = { submitter: 'mySubmissions', owner: 'todos', reviewer: 'conflicts', admin: 'dashboard' };
+      var defaultTab = defaultTabs[role] || 'dashboard';
+      if (!location.hash || location.hash === '#') {
+        var defaultTabEl = document.querySelector('.tab[data-tab="' + defaultTab + '"]');
+        if (defaultTabEl && defaultTabEl.style.display !== 'none') { location.hash = '#/' + defaultTab; }
+        else { location.hash = '#/dashboard'; }
+      }
+    }
+
+    // ===== Confirmation dialogs =====
+    function showConfirm(opts) {
+      return new Promise(function(resolve) {
+        var overlay = $('confirmOverlay');
+        $('confirmTitle').textContent = opts.title;
+        if (opts.allowHtml) $('confirmMessage').innerHTML = opts.message;
+        else $('confirmMessage').textContent = opts.message || '';
+        var btn = $('confirmBtn');
+        btn.textContent = opts.confirmLabel || '确认';
+        btn.className = 'btn ' + (opts.confirmClass || 'primary');
+        overlay.classList.add('on');
+        var cleanup = function(result) { overlay.classList.remove('on'); overlay.onkeydown = null; resolve(result); };
+        $('confirmBtn').onclick = function() { cleanup(true); if (opts.onConfirm) opts.onConfirm(); };
+        $('confirmCancel').onclick = function() { cleanup(false); if (opts.onCancel) opts.onCancel(); };
+        $('confirmClose').onclick = function() { cleanup(false); if (opts.onCancel) opts.onCancel(); };
+        overlay.onkeydown = function(e) { if (e.key === 'Escape') { cleanup(false); if (opts.onCancel) opts.onCancel(); } };
+        $('confirmBtn').focus();
+      });
+    }
+
+    function showLightConfirm(opts) {
+      return showConfirm({ title: opts.title, message: opts.message || '', confirmLabel: '通过', confirmClass: 'success', onConfirm: opts.onConfirm });
+    }
+
+    // ===== Form validation =====
+    function validateField(el, rules) {
+      var value = el.value.trim();
+      var errorEl = el.parentElement.querySelector('.field-error') || document.createElement('div');
+      if (!errorEl.classList.contains('field-error')) { errorEl.className = 'field-error'; el.parentElement.appendChild(errorEl); }
+      for (var i = 0; i < rules.length; i++) {
+        var rule = rules[i];
+        if (rule.required && !value) { el.classList.add('invalid'); errorEl.textContent = rule.required; return false; }
+        if (rule.pattern && value && !rule.pattern.test(value)) { el.classList.add('invalid'); errorEl.textContent = rule.message; return false; }
+      }
+      el.classList.remove('invalid'); errorEl.textContent = ''; return true;
+    }
+
+    // ===== Polling =====
+    function startPolling() {
+      stopPolling();
+      state.pollTimer = setInterval(function() {
+        if (state.isEditing || state.currentView !== 'list') return;
+        try { loadCurrentListData(); } catch (e) { /* silent */ }
+      }, 60000);
+    }
+    function stopPolling() { if (state.pollTimer) { clearInterval(state.pollTimer); state.pollTimer = null; } }
+    async function loadCurrentListData() {
+      var tab = parseHash().tab;
+      if (tab === 'dashboard' || tab === 'mySubmissions') await loadMappings();
+      if (tab === 'todos') await loadTodos();
+      if (tab === 'conflicts') await loadConflicts();
+      if (tab === 'reviews') await loadReviews();
+      if (tab === 'terms') await loadTerms();
+      renderDashboard();
+    }
+
+    // ===== Auth (login/session) =====
+    async function login() {
+      if (!$('employeeNo').value.trim() || !$('password').value) { $('loginMsg').textContent = '请填写工号和密码'; return; }
+      try {
+        var user = await api('/api/org/login', { method:'POST', body:JSON.stringify({ employee_no:$('employeeNo').value, password:$('password').value }) });
+        state.user = user;
+        $('sessionUserName').textContent = user.name + ' · ' + user.role;
+        showApp();
+        await loadAll();
+        applyRoleVisibility();
+        startPolling();
+        checkPasswordStatus();
+        addPasswordChangeButton();
+      } catch (error) {
+        $('loginMsg').textContent = error.message || '登录失败';
+      }
+    }
+
+    async function checkSession() {
+      try {
+        var user = await api('/api/org/me');
+        state.user = user;
+        $('sessionUserName').textContent = user.name + ' · ' + user.role;
+        showApp();
+        await loadAll();
+        applyRoleVisibility();
+        startPolling();
+        addPasswordChangeButton();
+      } catch (e) {
+        showLogin();
+      }
+    }
+
+    // ===== Data loading =====
+    async function loadAll() {
+      await Promise.all([loadCatalog(), loadMappings(), loadTodos(), loadTerms(), loadConflicts()]);
+      renderDashboard();
+    }
+
+    async function loadCatalog() {
+      state.departments = await api('/api/org/departments');
+      state.capabilities = await api('/api/capabilities');
+      state.processes = await api('/api/processes');
+
+      if ($('capDept')) fillSelect($('capDept'), state.departments);
+      if ($('procDept')) fillSelect($('procDept'), state.departments);
+      if ($('procCap')) fillSelect($('procCap'), state.capabilities, 'name');
+      if ($('termProcess')) fillSelect($('termProcess'), state.processes, 'name');
+
+      renderCapsAndProcs();
+    }
+
+    function renderCapsAndProcs() {
+      var canDelete = hasAdminAccess();
+      $('capRows').innerHTML = state.capabilities.map(function(row) {
+        var rowId = Number(row.id);
+        return '<tr style="cursor:pointer;" onclick="renderCapPreview(' + rowId + ');' +
+          "var rows=this.parentElement.querySelectorAll('tr');rows.forEach(function(r){r.style.background='';});this.style.background='#fefafa';" +
+          '">' +
+          '<td>' + rowId + '</td><td>' + safeText(row.name) + '</td><td>' + safeText(row.level) + '</td><td>' + safeText(row.dept_name) + '</td><td>' + statusTag(row.status) + '</td>' +
+          '<td><button class="btn success" onclick="event.stopPropagation();reviewCap(' + rowId + ',\'approve\')">通过</button> ' +
+          '<button class="btn danger" onclick="event.stopPropagation();reviewCap(' + rowId + ',\'reject\')">驳回</button>' +
+          (canDelete ? ' <a href="#" onclick="event.stopPropagation();deleteCapability(' + rowId + ');return false" style="color:#e53935;">删除</a>' : '') + '</td></tr>';
+      }).join('') || '<tr><td colspan="6" class="empty">暂无数据</td></tr>';
+
+      $('procRows').innerHTML = state.processes.map(function(row) {
+        var rowId = Number(row.id);
+        return '<tr><td>' + rowId + '</td><td>' + safeText(row.name) + '</td><td>' + safeText(row.cap_name) + '</td><td>' + safeText(row.dept_name) + '</td><td>' + statusTag(row.status) + '</td><td><button class="btn secondary" onclick="navigateTo(\'detail\',{tab:\'processes\',type:\'process\',id:' + rowId + '})">详情</button> <button class="btn success" onclick="reviewProc(' + rowId + ',\'approve\')">通过</button> <button class="btn danger" onclick="reviewProc(' + rowId + ',\'reject\')">驳回</button>' +
+          (canDelete ? ' <a href="#" onclick="deleteProcess(' + rowId + ');return false" style="color:#e53935;">删除</a>' : '') + '</td></tr>';
+      }).join('') || '<tr><td colspan="6" class="empty">暂无数据</td></tr>';
+    }
+
+    async function createCapability() {
+      var name = $('capName').value.trim();
+      if (!name) return alert('请输入能力名称');
+      await api('/api/capabilities', { method:'POST', body:JSON.stringify({ name: name, level: $('capLevel').value, owner_dept_id: Number($('capDept').value) }) });
+      await loadCatalog();
+    }
+
+    async function createProcess() {
+      var name = $('procName').value.trim();
+      if (!name) return alert('请输入流程名称');
+      if (!$('procCap').value) return alert('请选择所属能力');
+      await api('/api/processes', { method:'POST', body:JSON.stringify({ name: name, capability_id: Number($('procCap').value), owner_dept_id: Number($('procDept').value) }) });
+      await loadCatalog();
+    }
+
+    async function reviewCap(id, action) {
+      await api('/api/capabilities/' + id + '/review', { method:'POST', body:JSON.stringify({ action: action }) });
+      await loadCatalog();
+    }
+
+    async function reviewProc(id, action) {
+      await api('/api/processes/' + id + '/review', { method:'POST', body:JSON.stringify({ action: action }) });
+      await loadCatalog();
+    }
+
+    function deleteCapability(id) {
+      if (!confirm('确定删除能力 #' + id + ' 吗？子能力也将被删除，关联流程会保留但不再挂接此能力。')) return;
+      fetch('/api/capabilities/' + id, { method: 'DELETE' }).then(function(r) { return r.json(); }).then(function(d) {
+        if (d.error) { alert('删除失败：' + d.error); } else { loadCatalog(); }
+      });
+    }
+
+    function deleteProcess(id) {
+      if (!confirm('确定删除流程 #' + id + ' 吗？相关映射、字段、审批记录和待办将被删除。')) return;
+      fetch('/api/processes/' + id, { method: 'DELETE' }).then(function(r) { return r.json(); }).then(function(d) {
+        if (d.error) { alert('删除失败：' + d.error); } else { loadCatalog(); }
+      });
+    }
+
+    async function loadMappings() {
+      state.mappings = await api('/api/mappings');
+      renderDashboard();
+    }
+
+    async function selectMapping(id) {
+      var detail = await api('/api/mappings/' + id);
+      window.selectedMappingId = id;
+      renderReviews(detail);
+    }
+
+    async function createMapping() {
+      var mp = $('mappingProcess');
+      if (!mp || !mp.value || !mp.selectedOptions[0].text.trim()) return alert('请选择业务流程');
+      var result = await api('/api/mappings', { method:'POST', body:JSON.stringify({ process_id: Number(mp.value), owner_dept_id: Number($('mappingDept') ? $('mappingDept').value : 1), description: ($('mappingDesc') ? $('mappingDesc').value : ''), systems: [], related_departments: [] }) });
+      window.selectedMappingId = result.id;
+      await loadMappings();
+    }
+
+    async function submitMapping(id) {
+      try {
+        await api('/api/mappings/' + id + '/submit', { method:'POST' });
+        await loadMappings();
+      } catch (e) {
+        alert((e && e.message) || '提交失败');
+        await loadTodos();
+      }
+    }
+
+    async function importFields() {
+      var fileInput = $('importFile');
+      if (!fileInput || !window.selectedMappingId || !fileInput.files[0]) return alert('请选择映射和 Excel 文件');
+      var form = new FormData();
+      form.append('mapping_id', String(window.selectedMappingId));
+      form.append('file', fileInput.files[0]);
+      try {
+        var result = await api('/api/import/field-entries', { method:'POST', body: form });
+        alert('已导入 ' + result.imported + ' 行');
+      } catch (e) {
+        alert((e && e.message) || '导入失败');
+      }
+    }
+
+    // ===== My Submissions list (L1) =====
+    async function loadMySubmissions() {
+      await loadMappings();
+      var mappings = state.mappings;
+      if (state.user && state.user.role === 'submitter') {
+        mappings = mappings.filter(function(m) { return m.submitted_by === state.user.id; });
+      }
+      mappings.sort(function(a, b) { return String(b.created_at).localeCompare(String(a.created_at)); });
+      var container = $('mySubmissionsList');
+      if (!container) return;
+      if (mappings.length === 0) {
+        container.innerHTML = '<div class="empty">暂无报送记录，去 <a onclick="navigateTo(\'list\',{tab:\'capabilities\'})">新建报送</a> 开始</div>';
+        return;
+      }
+      container.innerHTML = '<div class="table-container"><table><thead><tr><th>ID</th><th>流程</th><th>部门</th><th>状态</th><th>提交时间</th><th>操作</th></tr></thead><tbody>' + mappings.map(function(row) {
+        var rowId = Number(row.id);
+        return '<tr><td>' + rowId + '</td><td>' + safeText(row.process_name) + '</td><td>' + safeText(row.owner_dept_name) + '</td><td>' + statusTag(row.status) + '</td><td>' + safeText(row.submitted_at || row.created_at) + '</td><td><button class="btn secondary" onclick="navigateTo(\'detail\',{tab:\'mySubmissions\',type:\'mapping\',id:' + rowId + '})">查看</button>' + (row.status === 'draft' ? '<button class="btn primary" style="margin-left:4px;" onclick="submitMapping(' + rowId + ')">提交</button>' : '') + (hasAdminAccess() && row.status === 'draft' ? ' <a href="#" onclick="deleteMapping(' + rowId + ');return false" style="color:#e53935;margin-left:4px;">删除</a>' : '') + '</td></tr>';
+      }).join('') + '</tbody></table></div>';
+    }
+
+    function deleteMapping(id) {
+      if (!confirm('确定删除映射 #' + id + ' 吗？只能删除草稿。')) return;
+      fetch('/api/mappings/' + id, { method: 'DELETE' }).then(function(r) { return r.json(); }).then(function(d) {
+        if (d.error) { alert('删除失败：' + d.error); } else { loadMySubmissions(); }
+      });
+    }
+
+    // ===== Load Reviews =====
+    async function loadReviews() { await loadMappings(); await renderReviews(); }
+
+    // ===== Todos =====
+    async function loadTodos() {
+      var status = ($('todoStatus') && $('todoStatus').value) || '';
+      var type = ($('todoType') && $('todoType').value) || '';
+      var query = new URLSearchParams();
+      if (status) query.set('status', status);
+      if (type) query.set('type', type);
+      state.todos = await api('/api/todos?' + query.toString());
+      renderTodosList();
+    }
+
+    function renderTodosList() {
+      var container = $('todoRows');
+      if (!container) return;
+      var canDelete = hasAdminAccess();
+
+      if (state.todos.length === 0) {
+        var hints = { submitter: '去 <a href="#/mySubmissions">我的报送</a> 查看提交状态', owner: '暂无待审核事项', reviewer: '暂无待办', admin: '暂无待办' };
+        container.innerHTML = '<tr><td colspan="7" class="empty">暂无待办事项' + (state.user ? ' · ' + (hints[state.user.role] || '') : '') + '</td></tr>';
+        return;
+      }
+
+      var typeLabels = { field_confirm: '字段确认', gold_source: '黄金源确认', terminology: '术语申报', general: '通用', conflict_resolution: '冲突协调' };
+      var urgencyOrder = { high: 0, medium: 1, low: 2 };
+
+      // Sort by urgency desc, then due_date asc (nulls last), then created_at asc
+      state.todos.sort(function(a, b) {
+        var ua = urgencyOrder[a.urgency || 'medium'];
+        var ub = urgencyOrder[b.urgency || 'medium'];
+        if (ua !== ub) return ua - ub;
+        if (!a.due_date && b.due_date) return 1;
+        if (a.due_date && !b.due_date) return -1;
+        if (a.due_date !== b.due_date) return String(a.due_date).localeCompare(String(b.due_date));
+        return String(a.created_at).localeCompare(String(b.created_at));
+      });
+
+      container.innerHTML = state.todos.map(function(row) {
+        var rowId = Number(row.id);
+        var relatedId = Number(row.related_mapping_id || 0);
+        var urgencyTag = row.urgency === 'high' ? '<span class="tag red">高</span>' : row.urgency === 'low' ? '<span class="tag">低</span>' : '';
+        return '<tr>' +
+          '<td>' + safeText(row.from_dept_name) + '</td>' +
+          '<td>' + safeText(row.to_dept_name) + '</td>' +
+          '<td>' + urgencyTag + ' ' + safeText(typeLabels[row.type] || row.type) + '</td>' +
+          '<td>' + safeText(row.content) + '</td>' +
+          '<td>' + safeText(row.due_date) + '</td>' +
+          '<td>' + statusTag(row.status) + '</td>' +
+          '<td>' + (row.status === 'pending' ? '<button class="btn secondary" onclick="handleTodoAction(\'' + safeText(row.type, '') + '\', ' + rowId + ', ' + relatedId + ')">处理</button>' : '') + (canDelete ? ' <a href="#" onclick="deleteTodo(' + rowId + ');return false" style="color:#e53935;margin-left:8px;">删除</a>' : '') + '</td>' +
+          '</tr>';
+      }).join('');
+    }
+
+    function handleTodoAction(type, todoId, relatedId) {
+      if (type === 'conflict_resolution' && relatedId) {
+        navigateTo('detail', { tab: 'todos', type: 'conflict', id: relatedId });
+      } else if (relatedId) {
+        navigateTo('detail', { tab: 'todos', type: 'mapping', id: relatedId });
+      } else {
+        api('/api/todos/' + todoId + '/done', { method: 'POST' }).then(function() { loadTodos(); showToast('已完成'); });
+      }
+    }
+
+    function deleteTodo(id) {
+      if (!confirm('确定删除此待办吗？')) return;
+      fetch('/api/todos/' + id, { method: 'DELETE' }).then(function(r) { return r.json(); }).then(function(d) {
+        if (d.error) { alert('删除失败：' + d.error); } else { loadTodos(); }
+      });
+    }
+
+    // ===== Reviews =====
+    async function renderReviews(detail) {
+      var details = detail ? [detail] : await Promise.all(state.mappings.slice(0, 30).map(function(row) { return api('/api/mappings/' + row.id).catch(function() { return null; }); }));
+      var rows = details.filter(Boolean).flatMap(function(mapping) { return (mapping.approvalTasks || []).map(function(task) { return { mapping: mapping, task: task }; }); });
+      $('reviewRows').innerHTML = rows.map(function(r) {
+        return '<tr><td>' + Number(r.mapping.id) + '</td><td>' + safeText(r.mapping.process_name) + '</td><td>' + Number(r.mapping.current_step) + '</td><td>' + safeText(r.task.step_name) + '</td><td>' + statusTag(r.task.status) + '</td><td>' + safeText(r.task.opinion) + '</td><td><button class="btn secondary" onclick="openReview(' + Number(r.mapping.id) + ',' + Number(r.task.step) + ')">处理</button></td></tr>';
+      }).join('') || '<tr><td colspan="7" class="empty">暂无数据</td></tr>';
+    }
+
+    function openReview(mappingId, step) {
+      state.activeReview = { mappingId: mappingId, step: step };
+      $('opinionModal').classList.add('on');
+    }
+
+    async function review(action) {
+      var r = state.activeReview;
+      await api('/api/mappings/' + r.mappingId + '/review', { method:'POST', body:JSON.stringify({ step: r.step, action: action, opinion: $('modalOpinion').value }) });
+      $('opinionModal').classList.remove('on');
+      await loadMappings();
+    }
+
+    // ===== Terms =====
+    async function loadTerms() {
+      var params = new URLSearchParams();
+      var statusEl = $('termStatus');
+      if (statusEl && statusEl.value) params.set('status', statusEl.value);
+      var qs = params.toString();
+      var terms = await api('/api/terminology' + (qs ? '?' + qs : ''));
+      state.terms = terms;
+      $('termRows').innerHTML = terms.map(function(row) {
+        var rowId = Number(row.id);
+        return '<tr><td>' + rowId + '</td><td>' + safeText(row.term) + '</td><td>' + safeText(row.definition) + '</td><td>' + safeText(row.scope) + '</td><td>' + statusTag(row.status) + '</td><td><button class="btn success" onclick="reviewTerm(' + rowId + ',\'approve\')">通过</button> <button class="btn danger" style="margin-left: 8px;" onclick="reviewTerm(' + rowId + ',\'reject\')">驳回</button>' + (hasAdminAccess() ? ' <a href="#" onclick="deleteTerm(' + rowId + ');return false" style="color:#e53935;margin-left:8px;">删除</a>' : '') + '</td></tr>';
+      }).join('') || '<tr><td colspan="6" class="empty">暂无数据</td></tr>';
+    }
+
+    async function saveTerm() {
+      var term = $('termName').value.trim();
+      if (!term) return alert('请输入术语');
+      await api('/api/terminology', { method:'POST', body:JSON.stringify({ term: term, definition: $('termDefinition').value, scope: $('termScope').value, forbidden: $('termForbidden').value, process_id: Number($('termProcess').value) }) });
+      await loadTerms();
+    }
+
+    async function reviewTerm(id, action) {
+      await api('/api/terminology/' + id + '/review', { method:'POST', body:JSON.stringify({ action: action }) });
+      await loadTerms();
+    }
+
+    function deleteTerm(id) {
+      if (!confirm('确定删除术语 #' + id + ' 吗？')) return;
+      fetch('/api/terminology/' + id, { method: 'DELETE' }).then(function(r) { return r.json(); }).then(function(d) {
+        if (d.error) { alert('删除失败：' + d.error); } else { loadTerms(); }
+      });
+    }
+
+    // ===== Conflicts =====
+    var conflictTab = 'active'; // 'active' | 'silenced'
+
+    async function loadConflicts() {
+      // Load stats to update tab labels
+      try {
+        state.conflictStats = await api('/api/conflicts/stats');
+      } catch (e) {
+        state.conflictStats = { coordinating: 0, escalated: 0, silenced: 0, resolved: 0, resolvedThisMonth: 0 };
+      }
+
+      // Show/hide silenced tab for admins
+      var slink = $('silencedTabLink');
+      if (slink) slink.style.display = (state.user && state.user.role === 'admin') ? '' : 'none';
+
+      if (conflictTab === 'silenced') {
+        var query = new URLSearchParams();
+        query.set('status', 'silenced');
+        state.conflicts = await api('/api/conflicts?' + query.toString());
+      } else {
+        state.conflicts = await api('/api/conflicts');
+      }
+      renderConflictsList();
+    }
+
+    function renderConflictsList() {
+      var container = $('conflictListContainer');
+      if (!container) return;
+
+      if (state.conflicts.length === 0) {
+        container.innerHTML = '<div class="empty">' + (conflictTab === 'silenced' ? '暂无静默冲突' : '暂无待协调冲突') + '</div>';
+        return;
+      }
+
+      var html = '<div class="table-container"><table>' +
+        '<thead><tr><th>ID</th><th>类型</th><th>冲突内容</th><th>部门A</th><th>部门B</th><th>严重度</th><th>状态</th><th>截止日期</th><th>操作</th></tr></thead>' +
+        '<tbody>' + state.conflicts.map(function(row) {
+          var conflictType = row.conflict_type || 'field';
+          var rowId = Number(row.id);
+          var statusLabel = { pending: '待处理', silenced: '已静默', coordinating: '协调中', escalated: '已升级', resolved: '已解决', rejected: '已驳回', archived: '已归档' };
+          return '<tr>' +
+            '<td>' + rowId + '</td>' +
+            '<td>' + (conflictType === 'term' ? '术语' : '字段') + '</td>' +
+            '<td>' + safeText(row.term || row.conflict_field) + '</td>' +
+            '<td>' + safeText(row.dept_a_name || row.dept_a) + '</td>' +
+            '<td>' + safeText(row.dept_b_name || row.dept_b) + '</td>' +
+            '<td>' + severityTag(row.severity) + '</td>' +
+            '<td>' + (statusLabel[row.status] || row.status) + '</td>' +
+            '<td>' + (row.deadline ? safeText(row.deadline) : '-') + '</td>' +
+            '<td><button class="btn secondary" onclick="navigateTo(\'detail\',{tab:\'conflicts\',type:\'' + conflictType + '\',id:' + rowId + '})">查看</button></td>' +
+            '</tr>';
+        }).join('') + '</tbody>' +
+        '</table></div>';
+
+      container.innerHTML = html;
+    }
+
+    // ===== Dashboard =====
+    async function renderDashboard() {
+      // Preload conflict stats for overview card
+      try { state.conflictStats = await api('/api/conflicts/stats'); } catch (e) {}
+      var pendingTodos = state.todos.filter(function(row) { return row.status === 'pending'; }).length;
+      var pendingConflicts = state.conflicts.filter(function(row) { return row.status === 'pending' || row.status === 'coordinating'; }).length;
+      $('metricMappings').textContent = state.mappings.length;
+      $('metricTodos').textContent = pendingTodos;
+      $('metricConflicts').textContent = pendingConflicts;
+
+      // Conflict overview card
+      var conflictCard = $('conflictOverview');
+      if (conflictCard && state.conflictStats) {
+        var stats = state.conflictStats;
+        conflictCard.innerHTML =
+          '<h3 style="margin-bottom: 12px; font-size: 14px; font-weight: 600;">冲突概览</h3>' +
+          '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 13px;">' +
+            '<div>待协调：<strong>' + (stats.coordinating || 0) + '</strong> 条（已升级：<strong style="color: var(--error);">' + (stats.escalated || 0) + '</strong>）</div>' +
+            '<div>静默：<strong>' + (stats.silenced || 0) + '</strong> 条</div>' +
+            '<div>本月已解决：<strong style="color: var(--success);">' + (stats.resolvedThisMonth || 0) + '</strong> 条</div>' +
+          '</div>';
+      }
+
+      Promise.all(state.mappings.map(function(row) { return api('/api/field-entries/mapping/' + row.id).catch(function() { return []; }); })).then(function(groups) {
+        $('metricFields').textContent = groups.flat().length;
+      });
+
+      // Quick-action cards per role
+      var role = state.user ? state.user.role : '';
+      var quickActions = '';
+      if (role === 'submitter') {
+        quickActions = '<div class="notice" style="border-left-color: var(--accent);">快捷操作：<a onclick="navigateTo(\'list\',{tab:\'mySubmissions\'})">我的报送</a> · <a onclick="navigateTo(\'list\',{tab:\'todos\'})">待办 (' + pendingTodos + ')</a></div>';
+      } else if (role === 'owner') {
+        quickActions = '<div class="notice" style="border-left-color: var(--accent);">快捷操作：<a onclick="navigateTo(\'list\',{tab:\'todos\'})">待审核 (' + pendingTodos + ')</a></div>';
+      } else if (role === 'reviewer') {
+        quickActions = '<div class="notice" style="border-left-color: var(--accent);">快捷操作：<a onclick="navigateTo(\'list\',{tab:\'conflicts\'})">未解决冲突 (' + pendingConflicts + ')</a> · <a onclick="navigateTo(\'list\',{tab:\'todos\'})">待办 (' + pendingTodos + ')</a></div>';
+      }
+      var actionArea = $('dashboardActions');
+      if (actionArea) actionArea.innerHTML = quickActions;
+
+      if (!window.echarts) return;
+      var deptCounts = {};
+      state.mappings.forEach(function(row) { deptCounts[row.owner_dept_name || '未归属'] = (deptCounts[row.owner_dept_name || '未归属'] || 0) + 1; });
+      echarts.init($('deptChart')).setOption({ tooltip:{}, xAxis:{type:'category',data:Object.keys(deptCounts), axisLine:{lineStyle:{color:'#e5e7eb'}}, axisLabel:{color:'#6b7280'}}, yAxis:{type:'value', splitLine:{lineStyle:{color:'#f3f4f6'}}, axisLabel:{color:'#6b7280'}}, series:[{type:'bar',data:Object.values(deptCounts),itemStyle:{color:'#fc0000'}}], grid:{left:36,right:18,top:24,bottom:44} });
+      var statuses = {};
+      state.mappings.forEach(function(row) { statuses[row.status] = (statuses[row.status] || 0) + 1; });
+      echarts.init($('statusChart')).setOption({ tooltip:{trigger:'item'}, series:[{type:'pie',radius:['42%','68%'],itemStyle:{borderColor:'#fff',borderWidth:2},data:Object.entries(statuses).map(function(e) { return { name: e[0], value: e[1] }; })}], color:['#fc0000', '#dc0000', '#374151', '#6b7280', '#9ca3af'] });
+    }
+
+    // ===== Business Map Sankey =====
+
+    // Layer color families (四色原则)
+    var sankeyResizeHandler = null;
+
+    var LAYER_COLORS = {
+      1: ['#2563eb','#3b82f6','#60a5fa','#93c5fd','#1d4ed8','#bfdbfe'],
+      2: ['#059669','#10b981','#34d399','#6ee7b7','#047857','#a7f3d0'],
+      3: ['#d97706','#f59e0b','#fbbf24','#fcd34d','#b45309','#fde68a'],
+      4: ['#7c3aed','#8b5cf6','#a78bfa','#c4b5fd','#6d28d9','#e0e7ff']
+    };
+
+    function layerColor(layer, index) {
+      var colors = LAYER_COLORS[layer] || LAYER_COLORS[2];
+      return colors[index % colors.length];
+    }
+
+    async function loadSankeyData() {
+      var deptEl = document.getElementById('sankeyDept');
+      var levelEl = document.getElementById('sankeyLevel');
+      var deptIds = deptEl && deptEl.selectedOptions
+        ? Array.from(deptEl.selectedOptions).map(function(o) { return o.value; })
+        : [];
+      var levels = levelEl ? levelEl.value : 'L1,L2,L3';
+      var params = new URLSearchParams();
+      if (deptIds.length > 0) params.set('dept_ids', deptIds.join(','));
+      params.set('cap_levels', levels);
+      return await api('/api/views/sankey?' + params.toString());
+    }
+
+    function populateSankeyDeptFilter() {
+      var deptEl = document.getElementById('sankeyDept');
+      if (!deptEl || state.departments.length === 0) return;
+
+      var signature = state.departments.map(function(d) { return d.id + ':' + d.name; }).join('|');
+      if (deptEl.dataset.departmentSignature === signature) return;
+
+      var selected = Array.from(deptEl.selectedOptions || []).map(function(o) { return o.value; });
+      deptEl.innerHTML = state.departments.map(function(d) {
+        var isSelected = selected.indexOf(String(d.id)) !== -1 ? ' selected' : '';
+        return '<option value="' + Number(d.id) + '"' + isSelected + '>' + safeText(d.name) + '</option>';
+      }).join('');
+      deptEl.dataset.departmentSignature = signature;
+    }
+
+    async function renderBusinessMap() {
+      var chartDom = document.getElementById('sankeyChart');
+      if (!chartDom) return;
+
+      populateSankeyDeptFilter();
+
+      try {
+        var data = await loadSankeyData();
+        document.getElementById('sankeyMeta').textContent =
+          data.nodes.length + ' 个节点，' + data.links.length + ' 条关系';
+
+        if (data.nodes.length === 0) {
+          chartDom.innerHTML = '<div class="empty">暂无已发布的映射数据，无法生成业务地图</div>';
+          return;
+        }
+
+        if (!window.echarts) { chartDom.innerHTML = '<div class="empty">ECharts 加载失败</div>'; return; }
+
+        var existing = echarts.getInstanceByDom(chartDom);
+        if (existing) existing.dispose();
+
+        var chart = echarts.init(chartDom);
+
+        var nodeLabels = {};
+        data.nodes.forEach(function(n) { nodeLabels[n.name] = n.label || n.name; });
+
+        // Assign colors per node
+        var nodeColors = {};
+        var layerCounters = {1:0,2:0,3:0,4:0};
+        data.nodes.forEach(function(n) {
+          var idx = layerCounters[n.layer]++;
+          nodeColors[n.name] = layerColor(n.layer, idx);
+        });
+
+        var nodes = data.nodes.map(function(n) {
+          return { name: n.name, itemStyle: { color: nodeColors[n.name] } };
+        });
+
+        chart.setOption({
+          tooltip: {
+            trigger: 'item',
+            triggerOn: 'mousemove',
+            formatter: function(p) {
+              if (p.dataType === 'edge') {
+                return nodeLabels[p.data.source] + ' → ' + nodeLabels[p.data.target];
+              }
+              var node = data.nodes.find(function(n) { return n.name === p.name; });
+              if (!node) return p.name;
+              var labels = {1:'部门',2:'业务能力',3:'业务流程',4:'应用系统'};
+              return (node.label || p.name) + '<br/><span style="color:#888;font-size:12px;">' + (labels[node.layer] || '') + '</span>';
+            }
+          },
+          series: [{
+            type: 'sankey',
+            left: 20, right: 160, top: 20, bottom: 20,
+            data: nodes,
+            links: data.links,
+            orient: 'horizontal',
+            nodeWidth: 16,
+            nodeGap: 10,
+            draggable: false,
+            layoutIterations: 64,
+            label: {
+              position: 'right',
+              formatter: function(params) {
+                var node = data.nodes.find(function(n) { return n.name === params.name; });
+                return node ? (node.label || node.name) : params.name;
+              },
+              fontSize: 12,
+              color: '#374151',
+              fontFamily: 'PingFang SC,sans-serif',
+              overflow: 'truncate',
+              width: 140
+            },
+            lineStyle: { color: 'gradient', opacity: 0.3, curveness: 0.5 },
+            emphasis: { focus: 'adjacency', lineStyle: { opacity: 0.7 } }
+          }]
+        });
+
+        // Click handler: navigate to process detail
+        chart.off('click');
+        chart.on('click', function(params) {
+          if (params.dataType === 'node') {
+            var node = data.nodes.find(function(n) { return n.name === params.name; });
+            if (node && node.type === 'process') {
+              navigateTo('detail', { tab: 'businessMap', type: 'process', id: node.id });
+            }
+          }
+        });
+
+        if (sankeyResizeHandler) { window.removeEventListener('resize', sankeyResizeHandler); }
+        sankeyResizeHandler = function() { chart.resize(); };
+        window.addEventListener('resize', sankeyResizeHandler);
+      } catch (e) {
+        chartDom.innerHTML = '<div class="empty">加载失败：' + safeText(e.message || '未知错误') + '</div>';
+      }
+    }
+
+    var pgSankeyResizeHandler = null;
+
+    function pgRiskTag(value) {
+      var map = { high: '高', medium: '中', low: '低' };
+      var cls = value === 'high' ? 'red' : value === 'medium' ? 'amber' : 'green';
+      return '<span class="tag ' + cls + '">' + safeText(map[value] || value) + '</span>';
+    }
+
+    function pgConfirmTag(value) {
+      var map = { confirmed: '已确认', pending: '待确认', needs_review: '需复核', not_mapped: '未映射' };
+      var cls = value === 'confirmed' ? 'green' : value === 'not_mapped' ? 'red' : 'amber';
+      return '<span class="tag ' + cls + '">' + safeText(map[value] || value) + '</span>';
+    }
+
+    function pgSystemsText(value) {
+      if (Array.isArray(value)) return value.join(', ');
+      if (!value) return '';
+      try {
+        var parsed = JSON.parse(value);
+        return Array.isArray(parsed) ? parsed.join(', ') : String(value);
+      } catch (error) {
+        return String(value);
+      }
+    }
+
+    function renderProcessGovernanceSankey(data) {
+      var chartDom = document.getElementById('pgSankeyChart');
+      if (!chartDom) return;
+
+      if (!data.nodes || data.nodes.length === 0) {
+        chartDom.innerHTML = '<div class="empty">暂无流程治理快照</div>';
+        return;
+      }
+      if (!window.echarts) {
+        chartDom.innerHTML = '<div class="empty">ECharts 加载失败</div>';
+        return;
+      }
+
+      var existing = echarts.getInstanceByDom(chartDom);
+      if (existing) existing.dispose();
+      var chart = echarts.init(chartDom);
+      var typeColors = {
+        root: '#9f1239',
+        domain: '#b45309',
+        department: '#0f766e',
+        l2: '#2563eb',
+        l3: '#4f46e5',
+        a1: '#7c3aed',
+        system: '#475569'
+      };
+      var nodeLabels = {};
+      data.nodes.forEach(function(node) { nodeLabels[node.name] = node.label || node.name; });
+
+      chart.setOption({
+        tooltip: {
+          trigger: 'item',
+          triggerOn: 'mousemove',
+          formatter: function(params) {
+            if (params.dataType === 'edge') {
+              return safeText(nodeLabels[params.data.source] || params.data.source) + ' → ' + safeText(nodeLabels[params.data.target] || params.data.target);
+            }
+            var node = data.nodes.find(function(item) { return item.name === params.name; });
+            var typeMap = { root: '根节点', domain: '管理域', department: '部门', l2: 'L2 能力', l3: 'L3 流程', a1: 'A1 行为', system: '建议落位应用' };
+            return safeText(nodeLabels[params.name] || params.name) + '<br/><span style="color:#888;font-size:12px;">' + safeText(node ? typeMap[node.node_type] : '') + '</span>';
+          }
+        },
+        series: [{
+          type: 'sankey',
+          left: 20, right: 180, top: 20, bottom: 20,
+          data: data.nodes.map(function(node) {
+            return { name: node.name, itemStyle: { color: typeColors[node.node_type] || '#6b7280' } };
+          }),
+          links: data.links || [],
+          orient: 'horizontal',
+          nodeWidth: 14,
+          nodeGap: 8,
+          draggable: false,
+          layoutIterations: 48,
+          label: {
+            position: 'right',
+            formatter: function(params) { return nodeLabels[params.name] || params.name; },
+            fontSize: 11,
+            color: '#374151',
+            overflow: 'truncate',
+            width: 160
+          },
+          lineStyle: { color: 'gradient', opacity: 0.22, curveness: 0.48 },
+          emphasis: { focus: 'adjacency', lineStyle: { opacity: 0.65 } }
+        }]
+      });
+
+      if (pgSankeyResizeHandler) window.removeEventListener('resize', pgSankeyResizeHandler);
+      pgSankeyResizeHandler = function() { chart.resize(); };
+      window.addEventListener('resize', pgSankeyResizeHandler);
+    }
+
+    async function renderProcessGovernance() {
+      var panel = document.getElementById('processGovernancePanel');
+      if (!panel) return;
+
+      try {
+        var riskValue = document.getElementById('pgRiskFilter') ? document.getElementById('pgRiskFilter').value : '';
+        var riskQuery = riskValue ? '?risk=' + encodeURIComponent(riskValue) : '';
+        var results = await Promise.all([
+          api('/api/process-governance/current'),
+          api('/api/process-governance/sankey'),
+          api('/api/process-governance/a1'),
+          api('/api/process-governance/cross-dept' + riskQuery)
+        ]);
+        var current = results[0];
+        var sankey = results[1];
+        var a1 = results[2];
+        var risks = results[3];
+        var stats = sankey.stats || {};
+        var crossStats = sankey.crossDept && sankey.crossDept.stats ? sankey.crossDept.stats : {};
+
+        document.getElementById('pgMetricL3').textContent = stats.mappings || 0;
+        document.getElementById('pgMetricA1').textContent = stats.a1 || 0;
+        document.getElementById('pgMetricCross').textContent = crossStats.totalChecked || 0;
+        document.getElementById('pgMetricRisk').textContent = crossStats.highRisk || 0;
+
+        var imported = current.stats && current.stats.a1Imported ? current.stats.a1Imported : 0;
+        document.getElementById('pgSnapshotMeta').textContent = current.id
+          ? '当前快照 #' + current.id + '，统计 A1 ' + (stats.a1 || 0) + ' 项，已导入明细 ' + imported + ' 行'
+          : '暂无流程治理快照';
+
+        document.getElementById('pgMapMeta').textContent = (sankey.nodes || []).length + ' 个节点，' + (sankey.links || []).length + ' 条关系';
+        renderProcessGovernanceSankey(sankey);
+
+        var a1Rows = a1.items || [];
+        document.getElementById('pgA1Meta').textContent = '显示前 ' + Math.min(a1Rows.length, 80) + ' 条 / 共 ' + a1Rows.length + ' 条';
+        document.getElementById('pgA1Rows').innerHTML = a1Rows.length
+          ? a1Rows.slice(0, 80).map(function(row) {
+              return '<tr><td>' + safeText(row.a1_code) + '</td><td>' + safeText(row.dept_name) + '</td><td>' + safeText(row.l3_name) + '</td><td>' + safeText(row.behavior) + '</td><td>' + safeText(row.input_source_dept) + '</td><td>' + safeText(row.output_target_dept) + '</td><td>' + safeText(pgSystemsText(row.suggested_systems)) + '</td></tr>';
+            }).join('')
+          : '<tr><td colspan="7" class="empty">暂无 A1 明细</td></tr>';
+
+        var riskRows = risks.items || [];
+        document.getElementById('pgRiskMeta').textContent = riskValue ? '筛选后 ' + riskRows.length + ' 条' : '共 ' + riskRows.length + ' 条';
+        document.getElementById('pgRiskRows').innerHTML = riskRows.length
+          ? riskRows.map(function(row) {
+              return '<tr><td>' + safeText(row.source_dept) + '</td><td>' + safeText(row.target_dept) + '</td><td>' + safeText(row.a1_code) + '</td><td>' + safeText(row.refs) + '</td><td>' + pgRiskTag(row.risk_level) + '</td><td>' + pgConfirmTag(row.confirm_status) + '</td><td>' + safeText(row.description) + '</td></tr>';
+            }).join('')
+          : '<tr><td colspan="7" class="empty">暂无跨部门风险项</td></tr>';
+      } catch (error) {
+        document.getElementById('pgSnapshotMeta').textContent = '流程治理数据暂不可用';
+        document.getElementById('pgMapMeta').textContent = '';
+        document.getElementById('pgSankeyChart').innerHTML = '<div class="empty">流程治理数据暂不可用</div>';
+        document.getElementById('pgA1Rows').innerHTML = '<tr><td colspan="7" class="empty">暂无 A1 明细</td></tr>';
+        document.getElementById('pgRiskRows').innerHTML = '<tr><td colspan="7" class="empty">暂无跨部门风险项</td></tr>';
+      }
+    }
+
+    // ===== Capability Preview Sankey =====
+
+    var sankeyCache = null;
+
+    async function renderCapPreview(capId) {
+      var wrap = document.getElementById('capPreviewWrap');
+      var chartDom = document.getElementById('capPreviewChart');
+      if (!wrap || !chartDom) return;
+
+      if (!capId) { wrap.style.display = 'none'; return; }
+
+      try {
+        var cap = state.capabilities.find(function(c) { return c.id === capId; });
+        if (!cap) { wrap.style.display = 'none'; return; }
+
+        // Show loading indicator
+        wrap.style.display = 'block';
+        chartDom.innerHTML = '<div class="empty">加载中...</div>';
+
+        // Fetch full sankey data with caching
+        if (!sankeyCache) { sankeyCache = await api('/api/views/sankey'); }
+        var data = sankeyCache;
+
+        // Build parent lookup map once for O(1) ancestry checks
+        var capParentMap = {};
+        state.capabilities.forEach(function(c) { capParentMap[c.id] = c.parent_id; });
+
+        // Find all descendant capability keys (if hierarchy exists)
+        var selectedCapKeys = new Set();
+        selectedCapKeys.add('capability:' + capId);
+        state.capabilities.forEach(function(c) {
+          var pid = c.parent_id;
+          while (pid) {
+            if (pid === capId) { selectedCapKeys.add('capability:' + c.id); break; }
+            pid = capParentMap[pid] || null;
+          }
+        });
+
+        // Keep selected capability links, then extend one hop from matching processes to systems.
+        var processKeys = new Set();
+        data.links.forEach(function(l) {
+          if (selectedCapKeys.has(l.source) && l.target.indexOf('process:') === 0) {
+            processKeys.add(l.target);
+          }
+        });
+        var filteredLinks = data.links.filter(function(l) {
+          return selectedCapKeys.has(l.source) || selectedCapKeys.has(l.target) || processKeys.has(l.source);
+        });
+        var relevantNodes = new Set();
+        filteredLinks.forEach(function(l) {
+          relevantNodes.add(l.source);
+          relevantNodes.add(l.target);
+        });
+        var filteredNodes = data.nodes.filter(function(n) {
+          return relevantNodes.has(n.name);
+        });
+
+        if (filteredNodes.length === 0) {
+          wrap.style.display = 'block';
+          chartDom.innerHTML = '<div class="empty">该能力暂无已发布的映射</div>';
+          return;
+        }
+
+        wrap.style.display = 'block';
+        var existing = echarts.getInstanceByDom(chartDom);
+        if (existing) existing.dispose();
+        var chart = echarts.init(chartDom);
+
+        var nodeColors = {};
+        var nodeLabels = {};
+        var layerCounters = {1:0,2:0,3:0,4:0};
+        filteredNodes.forEach(function(n) {
+          var idx = layerCounters[n.layer]++;
+          nodeColors[n.name] = layerColor(n.layer, idx);
+          nodeLabels[n.name] = n.label || n.name;
+        });
+
+        chart.setOption({
+          tooltip: { trigger: 'item', triggerOn: 'mousemove',
+            formatter: function(p) {
+              return p.dataType === 'edge' ? nodeLabels[p.data.source] + ' → ' + nodeLabels[p.data.target] : (nodeLabels[p.name] || p.name);
+            }
+          },
+          series: [{
+            type: 'sankey',
+            left: 10, right: 10, top: 10, bottom: 10,
+            data: filteredNodes.map(function(n) {
+              return { name: n.name, itemStyle: { color: nodeColors[n.name] } };
+            }),
+            links: filteredLinks,
+            orient: 'horizontal',
+            nodeWidth: 12,
+            nodeGap: 6,
+            draggable: false,
+            layoutIterations: 32,
+            label: { position: 'right', fontSize: 10, color: '#4b5563',
+              formatter: function(params) { return nodeLabels[params.name] || params.name; },
+              fontFamily: 'PingFang SC,sans-serif', overflow: 'truncate', width: 100 },
+            lineStyle: { color: 'gradient', opacity: 0.3, curveness: 0.5 },
+            emphasis: { focus: 'adjacency', lineStyle: { opacity: 0.6 } }
+          }]
+        });
+      } catch (e) {
+        console.error('capPreview:', e);
+        wrap.style.display = 'none';
+      }
+    }
+
+    // ===== Main render dispatcher =====
+    function renderListPanel(tab) {
+      document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('on'); });
+      var tabEl = document.querySelector('.tab[data-tab="' + tab + '"]');
+      if (tabEl) tabEl.classList.add('on');
+      document.querySelectorAll('.panel').forEach(function(p) { p.classList.remove('on'); });
+      $('detailPage').classList.remove('on');
+      var panel = tab === 'processGovernance' ? $('processGovernancePanel') : $(tab);
+      if (panel) panel.classList.add('on');
+      switch (tab) {
+        case 'dashboard': renderDashboard(); break;
+        case 'mySubmissions': loadMySubmissions(); break;
+        case 'todos': loadTodos(); break;
+        case 'reviews': loadReviews(); break;
+        case 'terms': loadTerms(); break;
+        case 'conflicts': loadConflicts(); break;
+        case 'capabilities': loadCatalog(); break;
+        case 'businessMap': renderBusinessMap(); break;
+        case 'processGovernance': renderProcessGovernance(); break;
+        case 'orgUnits': loadOrgUnits(); break;
+        case 'persons': loadPersons(); break;
+        case 'products': loadProductFamilies(); loadProducts(); break;
+        case 'quality': loadQualityDashboard(); loadGoldenSourceProgress(); break;
+        case 'rbac': renderRbacPanel(); break;
+      }
+    }
+
+    function renderDetailPage(params) {
+      document.querySelectorAll('.panel').forEach(function(p) { p.classList.remove('on'); });
+      $('detailPage').classList.add('on');
+      $('detailContent').innerHTML = '<div class="empty">加载中...</div>';
+
+      if (params.type === 'process') {
+        renderProcessDetail(parseInt(params.id));
+      } else if (params.type === 'mapping') {
+        renderMappingDetail(parseInt(params.id), params.tab);
+      } else if (params.type === 'conflict' && params.conflictType) {
+        renderConflictDetail(parseInt(params.id), params.conflictType, params.tab);
+      } else if (params.type === 'conflict') {
+        renderConflictDetail(parseInt(params.id), 'field', params.tab);
+      } else if (params.type === 'field' || params.type === 'term') {
+        renderConflictDetail(parseInt(params.id), params.type, params.tab);
+      } else {
+        $('detailContent').innerHTML = '<div class="empty">未知详情类型</div>';
+      }
+    }
+
+    function renderOperationPage(params) {
+      document.querySelectorAll('.panel').forEach(function(p) { p.classList.remove('on'); });
+      $('detailPage').classList.add('on');
+      if (params.type === 'mapping' && params.action === 'reject') {
+        openRejectPage(parseInt(params.id));
+      } else {
+        $('detailContent').innerHTML = '<div class="empty">未知操作</div>';
+      }
+    }
+
+    // ===== Event bindings =====
+    $('tabs').addEventListener('click', function(event) {
+      if (!event.target.matches('.tab')) return;
+      var tab = event.target.dataset.tab;
+      navigateTo('list', { tab: tab });
+    });
+
+    $('loginBtn').onclick = login;
+    $('logoutBtn').onclick = async function() { await api('/api/org/logout', { method:'POST' }).catch(function() { return null; }); stopPolling(); location.reload(); };
+    $('createCapBtn').onclick = createCapability;
+    $('createProcBtn').onclick = createProcess;
+    if ($('refreshCapsBtn')) $('refreshCapsBtn').onclick = loadCatalog;
+    if ($('refreshProcsBtn')) $('refreshProcsBtn').onclick = loadCatalog;
+    if ($('refreshTodosBtn')) $('refreshTodosBtn').onclick = loadTodos;
+    if ($('todoStatus')) $('todoStatus').onchange = loadTodos;
+    if ($('todoType')) $('todoType').onchange = loadTodos;
+    if ($('refreshReviewsBtn')) $('refreshReviewsBtn').onclick = function() { loadReviews(); };
+    if ($('saveTermBtn')) $('saveTermBtn').onclick = saveTerm;
+    if ($('refreshTermsBtn')) $('refreshTermsBtn').onclick = loadTerms;
+    if ($('termStatus')) $('termStatus').onchange = loadTerms;
+    if ($('refreshConflictsBtn')) $('refreshConflictsBtn').onclick = loadConflicts;
+    // Conflict sub-tab switching
+    var conflictTabLinks = document.querySelectorAll('#conflicts [data-ctab]');
+    conflictTabLinks.forEach(function(link) {
+      link.addEventListener('click', function() {
+        conflictTabLinks.forEach(function(l) { l.classList.remove('on'); });
+        link.classList.add('on');
+        conflictTab = link.dataset.ctab;
+        loadConflicts();
+      });
+    });
+
+    $('modalClose').onclick = function() { $('opinionModal').classList.remove('on'); };
+    $('modalApprove').onclick = function() { review('approve'); };
+    $('modalReject').onclick = function() { review('reject'); };
+    $('detailBackBtn').onclick = function() {
+      var route = parseHash();
+      var backTab = route.tab === 'processes' ? 'businessMap' : (route.tab || 'dashboard');
+      navigateTo('list', { tab: backTab });
+    };
+
+    if (document.getElementById('sankeyDept')) {
+      document.getElementById('sankeyDept').onchange = renderBusinessMap;
+    }
+    if (document.getElementById('sankeyLevel')) {
+      document.getElementById('sankeyLevel').onchange = renderBusinessMap;
+    }
+    if (document.getElementById('pgRiskFilter')) {
+      document.getElementById('pgRiskFilter').onchange = renderProcessGovernance;
+    }
+    if (document.getElementById('refreshProcessGovernanceBtn')) {
+      document.getElementById('refreshProcessGovernanceBtn').onclick = renderProcessGovernance;
+    }
+
+    // ===== Process Detail Page =====
+
+    async function renderProcessDetail(processId) {
+      try {
+        var detail = await api('/api/views/processes/' + processId);
+        setBreadcrumb([
+          { label: '业务地图', onclick: "navigateTo('list',{tab:'businessMap'})" },
+          { label: detail.name }
+        ]);
+
+        var container = document.getElementById('detailContent');
+
+        // Build system links list
+        var systemsHtml = detail.systems.length > 0
+          ? '<div class="table-container"><table><thead><tr><th>应用系统</th></tr></thead><tbody>' +
+            detail.systems.map(function(s) {
+              return '<tr><td>' + safeText(s.name) + '</td></tr>';
+            }).join('') + '</tbody></table></div>'
+          : '<div class="empty">暂无应用系统</div>';
+
+        // Build field ledger summary table
+        var fieldsHtml = detail.fields.length > 0
+          ? '<div class="table-container"><table><thead><tr><th>字段中文名</th><th>字段英文名</th><th>数据对象</th><th>类型</th><th>同步方式</th><th>消费系统</th><th>所属部门</th></tr></thead><tbody>' +
+            detail.fields.map(function(f) {
+              return '<tr><td>' + safeText(f.field_name_cn) + '</td><td>' + safeText(f.field_name_en) + '</td>' +
+                '<td>' + safeText(f.data_object) + '</td><td>' + safeText(f.field_type) + '</td>' +
+                '<td>' + safeText(f.sync_mode) + '</td><td>' + safeText(f.consume_systems) + '</td>' +
+                '<td>' + safeText(f.dept_name) + '</td></tr>';
+            }).join('') + '</tbody></table></div>'
+          : '<div class="empty">暂无字段台账</div>';
+
+        container.innerHTML =
+          '<div style="margin-bottom: 24px;">' +
+            '<h2 style="margin-bottom: 8px;">' + safeText(detail.name) + '</h2>' +
+            '<div class="detail-meta">' +
+              '<span>所属能力：' + safeText(detail.cap_name) + '</span>' +
+              '<span>所属部门：' + safeText(detail.dept_name) + '</span>' +
+              '<span>状态：' + statusTag(detail.status) + '</span>' +
+            '</div>' +
+          '</div>' +
+
+          '<h2>应用系统</h2>' + systemsHtml +
+
+          '<h2 style="margin-top: 32px;">字段台账汇总</h2>' + fieldsHtml +
+
+          '<h2 style="margin-top: 32px;">上下游关系</h2>' +
+          '<div class="notice" style="border-left-color: var(--warning);">' +
+            '流程间的上游/下游依赖关系将在后续版本中可视化展示。' +
+            '届时可在此查看当前流程的前置输入流程和后置输出流程，支持 DAG 图形式的流程关系绑定。' +
+          '</div>';
+
+        document.getElementById('detailPage').classList.add('on');
+        document.querySelectorAll('.panel').forEach(function(el) { el.classList.remove('on'); });
+      } catch (e) {
+        if (e.status === 404) {
+          document.getElementById('detailContent').innerHTML =
+            '<div class="empty">流程不存在或无权访问 <button class="btn secondary" onclick="history.back()">返回上一页</button></div>';
+        } else {
+          showToast(e.message || '加载失败', 'error');
+        }
+      }
+    }
+
+    // ===== Phase 5: Mapping Detail =====
+    async function renderMappingDetail(mappingId, sourceTab) {
+      try {
+        const detail = await api(`/api/mappings/${mappingId}`);
+        state.activeMapping = detail;
+        setBreadcrumb([
+          { label: sourceTab === 'todos' ? '待办列表' : '我的报送', onclick: `navigateTo('list',{tab:'${sourceTab || 'mySubmissions'}'})` },
+          { label: `流程映射 #${detail.id}` },
+        ]);
+
+        const role = state.user?.role;
+        const status = detail.status;
+
+        // Determine available actions
+        let actionHtml = '';
+        if ((role === 'owner' || role === 'reviewer' || role === 'admin') && ['submitted','dept_reviewed','cross_confirmed','fields_confirmed'].includes(status)) {
+          actionHtml = `<button class="btn success" id="detailApprove">通过</button>
+                    <button class="btn danger" id="detailReject">驳回</button>`;
+        }
+        if (role === 'admin' && status === 'final_reviewed') {
+          actionHtml = `<button class="btn primary" id="detailPublish">发布</button>`;
+        }
+
+        let rejectionHistory = [];
+        try { rejectionHistory = await api(`/api/mappings/${mappingId}/rejection-details`); } catch (e) { /* no rejections */ }
+
+        const container = $('detailContent');
+        container.innerHTML = `
+          <div style="margin-bottom: 24px;">
+            <h2 style="margin-bottom: 8px;">流程映射 #${detail.id}</h2>
+            <div class="detail-meta">
+              <span>流程：${safeText(detail.process_name)}</span>
+              <span>部门：${safeText(detail.owner_dept_name)}</span>
+              <span>步骤：${detail.current_step}/5</span>
+              <span>状态：${statusTag(detail.status)}</span>
+            </div>
+          </div>
+
+          <div class="toolbar"><h2>字段台账</h2>
+            <div class="toolbar-right">
+              <input id="fieldSearch" placeholder="搜索字段中文名" style="width: 200px; height: 32px;">
+            </div>
+          </div>
+          <div class="table-container">
+            <table id="fieldLedgerTable">
+              <thead><tr><th>字段中文名</th><th>字段英文名</th><th>数据对象</th><th>类型</th><th>同步方式</th><th>消费系统</th><th>备注</th></tr></thead>
+              <tbody>${(detail.fields || []).map(f => {
+                const isHighlighted = rejectionHistory.some(r => r.field_entry_id === f.id);
+                return `<tr class="${isHighlighted ? 'field-highlight' : ''}">
+                  <td>${safeText(f.field_name_cn)}</td><td>${safeText(f.field_name_en)}</td><td>${safeText(f.data_object)}</td>
+                  <td>${safeText(f.field_type)}</td><td>${safeText(f.sync_mode)}</td><td>${safeText(f.consume_systems)}</td><td>${safeText(f.note)}</td>
+                </tr>`;
+              }).join('') || '<tr><td colspan="7" class="empty">暂无字段</td></tr>'}</tbody>
+            </table>
+          </div>
+
+          ${rejectionHistory.length > 0 ? `
+          <h2 style="margin-top: 32px;">变更对比</h2>
+          <div class="diff-grid">
+            <div class="diff-col"><div class="diff-header">上一版本（被驳回）</div>
+              ${rejectionHistory.map(r => `<div class="diff-row changed"><strong>${safeText(r.field_name_cn || '字段#'+r.field_entry_id)}</strong>: ${safeText(r.rejection_reason)} (${safeText(r.rejected_by_name)})</div>`).join('')}
+            </div>
+            <div class="diff-col"><div class="diff-header">当前版本</div>
+              ${(detail.fields || []).map(f => `<div class="diff-row">${safeText(f.field_name_cn)}: ${safeText(f.note)}</div>`).join('')}
+            </div>
+          </div>` : ''}
+
+          <h2 style="margin-top: 32px;">审批记录</h2>
+          <div class="timeline">
+            ${(detail.approvalTasks || []).map(task => `
+              <div class="tl-item ${task.status === 'approved' ? 'approve' : task.status === 'rejected' ? 'reject' : ''}">
+                <div class="tl-head">${safeText(task.step_name)} — ${statusTag(task.status)}</div>
+                <div class="tl-body">${safeText(task.opinion, '无意见')} · ${safeText(task.operated_at || task.created_at)}</div>
+              </div>
+            `).join('') || '<div class="empty">暂无审批记录</div>'}
+          </div>
+
+          ${actionHtml ? `<div class="toolbar" style="margin-top: 32px; justify-content: flex-end;">${actionHtml}</div>` : ''}
+        `;
+
+        $('detailPage').classList.add('on');
+        document.querySelectorAll('.panel').forEach(el => el.classList.remove('on'));
+
+        // Bind actions
+        const approveBtn = $('detailApprove');
+        if (approveBtn) approveBtn.onclick = () => handleApprove(mappingId);
+        const rejectBtn = $('detailReject');
+        if (rejectBtn) rejectBtn.onclick = () => openRejectPage(mappingId);
+        const publishBtn = $('detailPublish');
+        if (publishBtn) publishBtn.onclick = () => handlePublish(mappingId);
+
+        // Field search
+        const searchEl = $('fieldSearch');
+        if (searchEl) searchEl.oninput = () => filterFieldTable(detail.fields || [], rejectionHistory);
+      } catch (e) {
+        if (e.status === 404) {
+          $('detailContent').innerHTML = `<div class="empty">记录不存在或无权访问 <button class="btn secondary" onclick="history.back()">返回上一页</button></div>`;
+        } else {
+          showToast(e.message || '加载失败', 'error');
+        }
+      }
+    }
+
+    function filterFieldTable(fields, rejectionHistory) {
+      const search = ($('fieldSearch')?.value || '').toLowerCase();
+      const tbody = document.querySelector('#fieldLedgerTable tbody');
+      if (!tbody) return;
+      const rejectedIds = new Set(rejectionHistory.map(r => r.field_entry_id));
+      const filtered = fields.filter(f => !search || (f.field_name_cn || '').toLowerCase().includes(search));
+      tbody.innerHTML = filtered.map(f => {
+        const isHighlighted = rejectedIds.has(f.id);
+        return `<tr class="${isHighlighted ? 'field-highlight' : ''}">
+          <td>${safeText(f.field_name_cn)}</td><td>${safeText(f.field_name_en)}</td><td>${safeText(f.data_object)}</td>
+          <td>${safeText(f.field_type)}</td><td>${safeText(f.sync_mode)}</td><td>${safeText(f.consume_systems)}</td><td>${safeText(f.note)}</td>
+        </tr>`;
+      }).join('') || '<tr><td colspan="7" class="empty">无匹配字段</td></tr>';
+    }
+
+    // ===== Phase 5: Conflict Detail =====
+    async function renderConflictDetail(conflictId, conflictType, sourceTab) {
+      try {
+        const detail = await api('/api/conflicts/' + conflictId + '?type=' + conflictType);
+        state.activeConflict = detail;
+        setBreadcrumb([
+          { label: '冲突管理', onclick: 'navigateTo(\'list\',{tab:\'conflicts\'})' },
+          { label: '冲突 #' + conflictId },
+        ]);
+
+        const container = $('detailContent');
+        const isReviewer = ['reviewer', 'admin'].includes(state.user?.role);
+
+        // Check if current user is an assignee
+        const myAssignment = (detail.assignmentHistory || []).find(function(a) {
+          return a.assignee_user_id === state.user?.id;
+        });
+        const isAssignee = Boolean(myAssignment);
+
+        // Check if I already submitted
+        const mySubmission = (detail.coordinationHistory || []).find(function(h) {
+          return h.assignee_user_id === state.user?.id;
+        });
+        const iSubmitted = Boolean(mySubmission);
+
+        // Side-by-side comparison
+        const sideHtml = conflictType === 'term' ? buildTermComparison(detail) : buildFieldComparison(detail);
+
+        // Timeline
+        const timeline = buildConflictTimeline(detail, conflictType);
+
+        // Action buttons
+        let actionHtml = '';
+        if (isAssignee && !iSubmitted && detail.status === 'coordinating') {
+          actionHtml += '<button class="btn primary" id="submitPositionBtn">提交立场</button>';
+        }
+        if (isReviewer && detail.bothSubmitted && detail.status === 'coordinating') {
+          actionHtml += '<button class="btn success" id="finalDecideBtn">终裁</button>';
+        }
+        if (isReviewer && detail.status === 'coordinating') {
+          actionHtml += '<button class="btn secondary" id="escalateNowBtn">提前升级</button>';
+        }
+        if (isReviewer && detail.status === 'resolved') {
+          actionHtml += '<button class="btn danger" id="reopenBtn">重开</button>';
+        }
+        if (state.user?.role === 'admin' && detail.status === 'resolved') {
+          actionHtml += '<button class="btn secondary" id="archiveBtn">归档</button>';
+        }
+
+        var statusLabels = { pending: '待处理', silenced: '已静默', coordinating: '协调中', escalated: '已升级', resolved: '已解决', rejected: '已驳回', archived: '已归档' };
+
+        container.innerHTML = '<div style="margin-bottom: 24px;">' +
+          '<h2 style="margin-bottom: 8px;">' + (conflictType === 'term' ? '术语冲突' : '字段冲突') + ' #' + conflictId + '</h2>' +
+          '<div class="detail-meta">' +
+            '<span>严重度：' + severityTag(detail.severity) + '</span>' +
+            '<span>状态：' + (statusLabels[detail.status] || detail.status) + '</span>' +
+            (detail.deadline ? '<span>截止日期：' + safeText(detail.deadline) + '</span>' : '') +
+            (detail.escalated ? '<span style="color: var(--error);">已升级</span>' : '') +
+          '</div>' +
+        '</div>' +
+
+        '<h2>双部门立场对比</h2>' +
+        sideHtml +
+
+        '<h2 style="margin-top: 32px;">事件时间线</h2>' +
+        timeline +
+
+        (actionHtml ? '<div class="toolbar" style="margin-top: 32px; justify-content: flex-end;">' + actionHtml + '</div>' : '') +
+        '';
+
+        $('detailPage').classList.add('on');
+        document.querySelectorAll('.panel').forEach(function(el) { el.classList.remove('on'); });
+
+        // Bind actions
+        var submitBtn = $('submitPositionBtn');
+        if (submitBtn) submitBtn.onclick = function() { openSubmitCoordinationDialog(conflictId, conflictType); };
+        var finalBtn = $('finalDecideBtn');
+        if (finalBtn) finalBtn.onclick = function() { openFinalDecideDialog(conflictId, conflictType); };
+        var escBtn = $('escalateNowBtn');
+        if (escBtn) escBtn.onclick = function() { handleManualEscalate(conflictId, conflictType); };
+        var reopenBtn = $('reopenBtn');
+        if (reopenBtn) reopenBtn.onclick = function() { handleReopen(conflictId, conflictType); };
+        var archiveBtn = $('archiveBtn');
+        if (archiveBtn) archiveBtn.onclick = function() { handleArchive(conflictId, conflictType); };
+      } catch (e) {
+        if (e.status === 404) {
+          $('detailContent').innerHTML = '<div class="empty">记录不存在或无权访问 <button class="btn secondary" onclick="history.back()">返回上一页</button></div>';
+        } else {
+          showToast(e.message || '加载失败', 'error');
+        }
+      }
+    }
+
+    function buildFieldComparison(detail) {
+      var sideA = detail.sideA;
+      var sideB = detail.sideB;
+      return '<div class="diff-grid">' +
+        '<div class="diff-col"><div class="diff-header">' + safeText(detail.dept_a_name || detail.dept_a) + ' 立场</div>' +
+          '<div class="diff-row"><strong>提交值：</strong>' + safeText(detail.value_a) + '</div>' +
+          (sideA ? '<div class="diff-row"><strong>协调结果：</strong>' + (sideA.result === 'A' ? '坚持本部门口径' : sideA.result === 'B' ? '接受对方口径' : '折中方案') + '</div><div class="diff-row"><strong>论据：</strong>' + safeText(sideA.note, '无') + '</div>' : '<div class="diff-row" style="color: var(--text-muted);">待提交（截止：' + safeText(detail.deadline || '-') + '）</div>') +
+        '</div>' +
+        '<div class="diff-col"><div class="diff-header">' + safeText(detail.dept_b_name || detail.dept_b) + ' 立场</div>' +
+          '<div class="diff-row"><strong>提交值：</strong>' + safeText(detail.value_b) + '</div>' +
+          (sideB ? '<div class="diff-row"><strong>协调结果：</strong>' + (sideB.result === 'A' ? '接受对方口径' : sideB.result === 'B' ? '坚持本部门口径' : '折中方案') + '</div><div class="diff-row"><strong>论据：</strong>' + safeText(sideB.note, '无') + '</div>' : '<div class="diff-row" style="color: var(--text-muted);">待提交（截止：' + safeText(detail.deadline || '-') + '）</div>') +
+        '</div></div>';
+    }
+
+    function buildTermComparison(detail) {
+      var sideA = detail.sideA;
+      var sideB = detail.sideB;
+      return '<div class="diff-grid">' +
+        '<div class="diff-col"><div class="diff-header">' + safeText(detail.dept_a_name || detail.dept_a) + ' 立场</div>' +
+          '<div class="diff-row"><strong>定义：</strong>' + safeText(detail.dept_a_meaning) + '</div>' +
+          (sideA ? '<div class="diff-row"><strong>协调结果：</strong>' + (sideA.result === 'A' ? '坚持本部门定义' : sideA.result === 'B' ? '接受对方定义' : '折中方案') + '</div><div class="diff-row"><strong>论据：</strong>' + safeText(sideA.note, '无') + '</div>' : '<div class="diff-row" style="color: var(--text-muted);">待提交（截止：' + safeText(detail.deadline || '-') + '）</div>') +
+        '</div>' +
+        '<div class="diff-col"><div class="diff-header">' + safeText(detail.dept_b_name || detail.dept_b) + ' 立场</div>' +
+          '<div class="diff-row"><strong>定义：</strong>' + safeText(detail.dept_b_meaning) + '</div>' +
+          (sideB ? '<div class="diff-row"><strong>协调结果：</strong>' + (sideB.result === 'A' ? '接受对方定义' : sideB.result === 'B' ? '坚持本部门定义' : '折中方案') + '</div><div class="diff-row"><strong>论据：</strong>' + safeText(sideB.note, '无') + '</div>' : '<div class="diff-row" style="color: var(--text-muted);">待提交（截止：' + safeText(detail.deadline || '-') + '）</div>') +
+        '</div></div>';
+    }
+
+    function buildConflictTimeline(detail, conflictType) {
+      var events = [];
+
+      // Conflict detected
+      events.push({ time: detail.created_at, text: '检测到冲突（' + (detail.severity === 'error' ? '严重' : '警告') + '级别）', icon: '⚡' });
+
+      // Assignments
+      (detail.assignmentHistory || []).forEach(function(a) {
+        var label = a.assigned_by === 0 ? '系统自动指派 ' + safeText(a.assignee_name) + ' 为协调人' : safeText(a.assigned_by_name) + ' 指定 ' + safeText(a.assignee_name) + ' 为责任人';
+        events.push({ time: a.created_at, text: label, icon: '👤' });
+      });
+
+      // Coordination submissions
+      (detail.coordinationHistory || []).forEach(function(h) {
+        var resultText = h.result === 'A' ? '支持A部门' : h.result === 'B' ? '支持B部门' : '折中方案';
+        events.push({ time: h.created_at, text: safeText(h.assignee_name) + ' 提交立场：' + resultText + (h.note ? ' — ' + h.note : ''), icon: '💬' });
+      });
+
+      // Escalation
+      if (detail.escalated) {
+        events.push({ time: detail.deadline, text: '协调超期，自动升级至 reviewer', icon: '🚨' });
+      }
+
+      // Resolution
+      if (detail.status === 'resolved' && detail.resolved_at) {
+        events.push({ time: detail.resolved_at, text: '已解决：' + safeText(detail.resolution || '无说明'), icon: '✅' });
+      }
+
+      // Sort by time
+      events.sort(function(a, b) { return String(a.time || '').localeCompare(String(b.time || '')); });
+
+      if (events.length === 0) return '<div class="empty">暂无事件</div>';
+
+      return '<div class="timeline">' + events.map(function(e) {
+        return '<div class="tl-item"><div class="tl-head">' + e.icon + ' ' + e.text + '</div><div class="tl-body">' + safeText(e.time) + '</div></div>';
+      }).join('') + '</div>';
+    }
+
+    // ===== Phase 6: L3/L4 Operations =====
+
+    // --- Mapping approve / reject / publish ---
+
+    async function handleApprove(mappingId) {
+      const mapping = state.activeMapping;
+      if (!mapping) return;
+      const confirmed = await showLightConfirm({
+        title: '确认通过',
+        message: `确认通过流程映射 #${mappingId}？`,
+      });
+      if (!confirmed) return;
+      try {
+        await api(`/api/mappings/${mappingId}/review`, {
+          method: 'POST',
+          body: JSON.stringify({ step: mapping.current_step, action: 'approve', opinion: '' })
+        });
+        showToast('已通过');
+        navigateTo('list', { tab: 'todos' });
+      } catch (e) {
+        showToast(e.message || '操作失败', 'error');
+      }
+    }
+
+    async function handlePublish(mappingId) {
+      const confirmed = await showConfirm({
+        title: '确认发布',
+        message: '发布后不可再变更。确认发布？',
+        confirmLabel: '发布',
+        confirmClass: 'primary',
+      });
+      if (!confirmed) return;
+      try {
+        await api(`/api/mappings/${mappingId}/publish`, { method: 'POST' });
+        showToast('已发布');
+        navigateTo('list', { tab: 'reviews' });
+      } catch (e) {
+        showToast(e.message || '发布失败', 'error');
+      }
+    }
+
+    function openRejectPage(mappingId) {
+      const mapping = state.activeMapping;
+      if (!mapping) return;
+
+      setBreadcrumb([
+        { label: '待办列表', onclick: `navigateTo('list',{tab:'todos'})` },
+        { label: `流程映射 #${mappingId}`, onclick: `renderMappingDetail(${mappingId},'todos')` },
+        { label: '驳回审核' },
+      ]);
+
+      const container = $('detailContent');
+      container.innerHTML = `
+        <h2>驳回审核 — 流程映射 #${mappingId}</h2>
+        <div class="notice" style="border-left-color: var(--error); margin-bottom: 24px;">
+          请至少标记一个字段为驳回，并为每个被标记驳回的字段填写原因。驳回后整单退回草稿，需重走完整审批链。
+        </div>
+        <div class="form-group">
+          <label>整体驳回意见<textarea id="rejectOpinion" placeholder="可选填整体意见"></textarea></label>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead><tr><th style="width: 60px;">标记驳回</th><th>字段中文名</th><th>当前值</th><th>驳回原因</th></tr></thead>
+            <tbody id="rejectFieldRows">
+              ${(mapping.fields || []).map(f => `
+                <tr>
+                  <td><input type="checkbox" class="reject-checkbox" data-field-id="${f.id}" onchange="toggleRejectRow(this)"></td>
+                  <td>${safeText(f.field_name_cn)}</td>
+                  <td>${safeText(f.note || f.field_type)}</td>
+                  <td><input class="reject-reason-input" data-field-id="${f.id}" placeholder="填写该字段驳回原因" disabled style="width: 100%;"></td>
+                </tr>
+              `).join('') || '<tr><td colspan="4" class="empty">无字段可驳回</td></tr>'}
+            </tbody>
+          </table>
+        </div>
+        <div class="error" id="rejectError" style="color: var(--error); font-size: 13px; margin-top: 16px;"></div>
+        <div class="toolbar" style="margin-top: 24px; justify-content: flex-end;">
+          <button class="btn secondary" onclick="renderMappingDetail(${mappingId},'todos')">取消</button>
+          <button class="btn danger" id="confirmRejectBtn">确认驳回</button>
+        </div>
+      `;
+
+      $('detailPage').classList.add('on');
+      document.querySelectorAll('.panel').forEach(el => el.classList.remove('on'));
+      $('confirmRejectBtn').onclick = () => submitReject(mappingId);
+    }
+
+    function toggleRejectRow(checkbox) {
+      const fieldId = checkbox.dataset.fieldId;
+      const input = document.querySelector(`.reject-reason-input[data-field-id="${fieldId}"]`);
+      if (input) {
+        input.disabled = !checkbox.checked;
+        if (checkbox.checked) { input.focus(); } else { input.value = ''; }
+      }
+    }
+
+    async function submitReject(mappingId) {
+      const rejections = [];
+      document.querySelectorAll('.reject-checkbox:checked').forEach(cb => {
+        const fieldId = parseInt(cb.dataset.fieldId);
+        const reasonEl = document.querySelector(`.reject-reason-input[data-field-id="${fieldId}"]`);
+        rejections.push({ field_entry_id: fieldId, reason: reasonEl?.value || '' });
+      });
+
+      if (rejections.length === 0) {
+        $('rejectError').textContent = '请至少标记一个字段的驳回原因';
+        return;
+      }
+      const emptyReason = rejections.find(r => !r.reason.trim());
+      if (emptyReason) {
+        $('rejectError').textContent = '请填写所有被标记驳回字段的原因';
+        return;
+      }
+
+      $('rejectError').textContent = '';
+      const confirmed = await showConfirm({
+        title: '确认驳回',
+        message: `将驳回 ${rejections.length} 个字段，整单退回草稿。确认驳回？`,
+        confirmLabel: '确认驳回',
+        confirmClass: 'danger',
+      });
+      if (!confirmed) return;
+
+      try {
+        await api(`/api/mappings/${mappingId}/reject`, {
+          method: 'POST',
+          body: JSON.stringify({ opinion: $('rejectOpinion')?.value || '', rejections })
+        });
+        showToast('已驳回');
+        navigateTo('list', { tab: 'todos' });
+      } catch (e) {
+        if (e.details) {
+          $('rejectError').textContent = e.details.map(d => d.message).join('; ');
+        } else {
+          showToast(e.message || '驳回失败', 'error');
+        }
+      }
+    }
+
+    // --- Conflict operations ---
+
+    async function openAssignOwnerDialog(conflictId, conflictType) {
+      try {
+        const users = await api('/api/org/users');
+        const selectHtml = `<select id="assigneeSelect" style="width: 100%; margin-top: 8px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px;">${users.map(u => `<option value="${Number(u.id)}">${safeText(u.name)} (${safeText(u.department_id)})</option>`).join('')}</select>`;
+
+        const confirmed = await showConfirm({
+          title: '指定责任人',
+          message: `<div style="font-size: 14px;"><label style="display: flex; flex-direction: column; gap: 8px;">选择责任人${selectHtml}</label></div>`,
+          confirmLabel: '指定',
+          confirmClass: 'primary',
+          allowHtml: true,
+        });
+        if (!confirmed) return;
+
+        const assigneeId = parseInt(document.getElementById('assigneeSelect')?.value);
+        if (!assigneeId) return;
+
+        await api(`/api/conflicts/${conflictId}/assign?type=${conflictType}`, {
+          method: 'POST',
+          body: JSON.stringify({ assignee_user_id: assigneeId })
+        });
+        showToast('责任人已指定');
+        renderConflictDetail(conflictId, conflictType, 'conflicts');
+      } catch (e) {
+        showToast(e.message || '指定失败', 'error');
+      }
+    }
+
+    async function openSubmitCoordinationDialog(conflictId, conflictType) {
+      const container = $('detailContent');
+      container.innerHTML = `
+        <h2>提交协调结果 — 冲突 #${conflictId}</h2>
+        <div class="form-group">
+          <label>协调结果
+            <select id="coordinationResult" style="margin-top: 8px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px;">
+              <option value="A">采用 A 部门口径</option>
+              <option value="B">采用 B 部门口径</option>
+              <option value="compromise">折中方案</option>
+            </select>
+          </label>
+        </div>
+        <div class="form-group">
+          <label>协调说明<textarea id="coordinationNote" placeholder="说明协调过程和理由"></textarea></label>
+        </div>
+        <div style="margin-top: 24px; display: flex; justify-content: flex-end; gap: 8px;">
+          <button class="btn secondary" onclick="renderConflictDetail(${conflictId},'${conflictType}','conflicts')">取消</button>
+          <button class="btn primary" id="submitCoordBtn">提交</button>
+        </div>
+      `;
+
+      $('detailPage').classList.add('on');
+      document.querySelectorAll('.panel').forEach(el => el.classList.remove('on'));
+      $('submitCoordBtn').onclick = async () => {
+        const result = $('coordinationResult').value;
+        const note = $('coordinationNote').value;
+        try {
+          await api(`/api/conflicts/${conflictId}/coordination?type=${conflictType}`, {
+            method: 'POST',
+            body: JSON.stringify({ result, note })
+          });
+          showToast('协调结果已提交');
+          renderConflictDetail(conflictId, conflictType, 'conflicts');
+        } catch (e) {
+          showToast(e.message || '提交失败', 'error');
+        }
+      };
+    }
+
+    async function openFinalDecideDialog(conflictId, conflictType) {
+      const container = $('detailContent');
+      container.innerHTML = `
+        <h2>终裁 — 冲突 #${conflictId}</h2>
+        <div class="form-group">
+          <label>最终决议<textarea id="finalResolution" placeholder="逐字段给出最终决议"></textarea></label>
+        </div>
+        <div class="form-group">
+          <label>终裁意见<textarea id="finalOpinion" placeholder="可选填终裁意见"></textarea></label>
+        </div>
+        <div style="margin-top: 24px; display: flex; justify-content: flex-end; gap: 8px;">
+          <button class="btn secondary" onclick="renderConflictDetail(${conflictId},'${conflictType}','conflicts')">取消</button>
+          <button class="btn primary" id="finalDecideConfirmBtn">确认终裁</button>
+        </div>
+      `;
+
+      $('detailPage').classList.add('on');
+      document.querySelectorAll('.panel').forEach(el => el.classList.remove('on'));
+      $('finalDecideConfirmBtn').onclick = async () => {
+        try {
+          await api(`/api/conflicts/${conflictId}/final-decide?type=${conflictType}`, {
+            method: 'POST',
+            body: JSON.stringify({ resolution: $('finalResolution').value, opinion: $('finalOpinion').value })
+          });
+          showToast('终裁完成');
+          renderConflictDetail(conflictId, conflictType, 'conflicts');
+        } catch (e) {
+          showToast(e.message || '终裁失败', 'error');
+        }
+      };
+    }
+
+    async function handleReopen(conflictId, conflictType) {
+      const confirmed = await showConfirm({
+        title: '重开冲突',
+        message: '重开后需重新指定责任人。确认重开？',
+        confirmLabel: '重开',
+        confirmClass: 'danger',
+      });
+      if (!confirmed) return;
+      try {
+        await api(`/api/conflicts/${conflictId}/reopen?type=${conflictType}`, { method: 'POST' });
+        showToast('冲突已重开');
+        renderConflictDetail(conflictId, conflictType, 'conflicts');
+      } catch (e) {
+        showToast(e.message || '重开失败', 'error');
+      }
+    }
+
+    async function handleArchive(conflictId, conflictType) {
+      const confirmed = await showConfirm({
+        title: '归档冲突',
+        message: '归档后冲突从默认列表隐藏。确认归档？',
+        confirmLabel: '归档',
+        confirmClass: 'secondary',
+      });
+      if (!confirmed) return;
+      try {
+        await api(`/api/conflicts/${conflictId}/archive?type=${conflictType}`, { method: 'POST' });
+        showToast('已归档');
+        navigateTo('list', { tab: 'conflicts' });
+      } catch (e) {
+        showToast(e.message || '归档失败', 'error');
+      }
+    }
+
+    async function handleManualEscalate(conflictId, conflictType) {
+      var confirmed = await showConfirm({
+        title: '确认升级',
+        message: '将冲突提前升级至 reviewer 终裁，无需等待截止日期。确认？',
+        confirmLabel: '升级',
+        confirmClass: 'danger',
+      });
+      if (!confirmed) return;
+      try {
+        await api('/api/conflicts/' + conflictId + '/escalate?type=' + conflictType, { method: 'POST' });
+        showToast('已升级');
+        renderConflictDetail(conflictId, conflictType, 'conflicts');
+      } catch (e) {
+        showToast(e.message || '升级失败', 'error');
+      }
+    }
+
+    window.addEventListener('popstate', function() {
+      var route = parseHash();
+      state.currentRoute = route;
+      navigateTo(route.view, route);
+    });
+
+    // ── Org Units Tab ──
+    async function loadOrgUnits() {
+      var type = document.getElementById('ouTypeFilter').value;
+      var search = document.getElementById('ouSearch').value;
+      var params = 'limit=100';
+      if (type) params += '&org_type=' + type;
+      if (search) params += '&search=' + encodeURIComponent(search);
+      var data = await api('/api/org-units?' + params);
+      document.getElementById('ouTableBody').innerHTML = (data.rows || []).map(function(r) {
+        return '<tr><td><code>' + escHtml(r.org_unit_code) + '</code></td><td>' + escHtml(r.org_unit_name) + '</td><td>' + escHtml(r.org_type) + '</td><td>' + escHtml(r.org_mnemonic) + '</td><td>' + escHtml(r.parent_name || '-') + '</td><td>' + escHtml(r.status) + '</td><td>' +
+          (r.status === 'draft' ? '<a href="#" onclick="activateOu(\'' + escHtml(r.org_unit_code) + '\');return false">激活</a>' : '') +
+          (hasAdminAccess() ? '<a href="#" onclick="deleteOu(\'' + escHtml(r.org_unit_code) + '\');return false" style="color:#e53935;margin-left:8px;">删除</a>' : '') + '</td></tr>';
+      }).join('') || '<tr><td colspan="7" style="text-align:center">暂无数据</td></tr>';
+    }
+
+    async function deleteOu(code) {
+      if (!confirm('确定删除组织 ' + code + ' 吗？下属岗位和任岗记录也将被删除，子组织会挂到上级组织。')) return;
+      try {
+        var res = await api('/api/org-units/' + encodeURIComponent(code), { method: 'DELETE' });
+        if (res.success) { alert('已删除，级联：' + JSON.stringify(res.cascaded)); loadOrgUnits(); }
+        else alert('删除失败：' + (res.error || '未知错误'));
+      } catch (e) { alert('删除失败'); }
+    }
+
+    async function activateOu(code) {
+      try {
+        var res = await api('/api/org-units/' + encodeURIComponent(code) + '/activate', { method: 'POST' });
+        if (res.success) loadOrgUnits();
+        else alert('激活失败：' + (res.error || '未知错误'));
+      } catch (e) { alert('激活失败'); }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      var s1 = document.getElementById('ouSearchBtn');
+      if (s1) s1.addEventListener('click', loadOrgUnits);
+      var n1 = document.getElementById('ouNewBtn');
+      if (n1) n1.addEventListener('click', async function() {
+        var name = prompt('组织名称：'); if (!name) return;
+        var type = prompt('组织类型 (company/department/office/team)：', 'department'); if (!type) return;
+        var mnemonic = prompt('组织简称（3-8位大写字母数字）：'); if (!mnemonic) return;
+        try {
+          var res = await api('/api/org-units', { method: 'POST', body: JSON.stringify({ org_unit_name: name, org_type: type, org_mnemonic: mnemonic.toUpperCase() }) });
+          if (res.org_unit_code) { alert('创建成功，编码：' + res.org_unit_code); loadOrgUnits(); }
+          else alert('创建失败：' + (res.error || '未知错误'));
+        } catch (e) { alert('创建失败'); }
+      });
+    });
+
+    // ── Persons Tab ──
+    async function loadPersons() {
+      var status = document.getElementById('personStatusFilter').value;
+      var search = document.getElementById('personSearch').value;
+      var params = 'limit=100';
+      if (status) params += '&employment_status=' + status;
+      if (search) params += '&search=' + encodeURIComponent(search);
+      var data = await api('/api/persons?' + params);
+      document.getElementById('personTableBody').innerHTML = (data.rows || []).map(function(r) {
+        return '<tr><td><code>' + escHtml(r.employee_no) + '</code></td><td>' + escHtml(r.person_name) + '</td><td>' + escHtml(r.mobile || '-') + '</td><td>' + escHtml(r.email || '-') + '</td><td>' + escHtml(r.employment_status) + '</td><td>' + escHtml(r.status) + '</td><td>' +
+          (r.status === 'draft' ? '<a href="#" onclick="activatePerson(\'' + escHtml(r.employee_no) + '\');return false">激活</a>' : '') +
+          (hasAdminAccess() ? '<a href="#" onclick="deletePerson(\'' + escHtml(r.employee_no) + '\');return false" style="color:#e53935;margin-left:8px;">删除</a>' : '') + '</td></tr>';
+      }).join('') || '<tr><td colspan="7" style="text-align:center">暂无数据</td></tr>';
+    }
+
+    async function deletePerson(no) {
+      if (!confirm('确定删除人员 ' + no + ' 吗？任岗记录和组织负责人引用将被清理。')) return;
+      try {
+        var res = await api('/api/persons/' + encodeURIComponent(no), { method: 'DELETE' });
+        if (res.success) { alert('已删除，级联：' + JSON.stringify(res.cascaded)); loadPersons(); }
+        else alert('删除失败：' + (res.error || '未知错误'));
+      } catch (e) { alert('删除失败'); }
+    }
+
+    async function activatePerson(no) {
+      try {
+        var res = await api('/api/persons/' + encodeURIComponent(no) + '/activate', { method: 'POST' });
+        if (res.success) loadPersons();
+        else alert('激活失败：' + (res.error || '未知错误'));
+      } catch (e) { alert('激活失败'); }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      var s2 = document.getElementById('personSearchBtn');
+      if (s2) s2.addEventListener('click', loadPersons);
+      var n2 = document.getElementById('personNewBtn');
+      if (n2) n2.addEventListener('click', async function() {
+        var name = prompt('姓名：'); if (!name) return;
+        var mobile = prompt('手机号（可选）：') || '';
+        var email = prompt('邮箱（可选）：') || '';
+        try {
+          var res = await api('/api/persons', { method: 'POST', body: JSON.stringify({ person_name: name, mobile: mobile || null, email: email || null }) });
+          if (res.employee_no) { alert('创建成功，工号：' + res.employee_no); loadPersons(); }
+          else alert('创建失败：' + (res.error || '未知错误'));
+        } catch (e) { alert('创建失败'); }
+      });
+    });
+
+    // ── Products Tab ──
+    async function loadProductFamilies() {
+      var data = await api('/api/product-families?limit=100');
+      document.getElementById('pfTableBody').innerHTML = (data.rows || []).map(function(r) {
+        return '<tr><td><code>' + escHtml(r.product_family_code) + '</code></td><td>' + escHtml(r.model_name) + '</td><td>' + escHtml(r.model_code) + '</td><td>' + escHtml(r.class_major) + '</td><td>' + escHtml(r.product_type || '-') + '</td><td>' + escHtml(r.status) + '</td><td>' +
+          (r.status === 'draft' ? '<a href="#" onclick="activatePf(\'' + escHtml(r.product_family_code) + '\');return false">激活</a>' : '') +
+          (hasAdminAccess() ? '<a href="#" onclick="deletePf(\'' + escHtml(r.product_family_code) + '\');return false" style="color:#e53935;margin-left:8px;">删除</a>' : '') + '</td></tr>';
+      }).join('') || '<tr><td colspan="7" style="text-align:center">暂无产品族</td></tr>';
+    }
+
+    async function deletePf(code) {
+      if (!confirm('确定删除产品族 ' + code + ' 吗？下属产品、属性值和分类关系将被删除。')) return;
+      try {
+        var res = await api('/api/product-families/' + encodeURIComponent(code), { method: 'DELETE' });
+        if (res.success) { alert('已删除，级联：' + JSON.stringify(res.cascaded)); loadProductFamilies(); loadProducts(); }
+        else alert('删除失败：' + (res.error || '未知错误'));
+      } catch (e) { alert('删除失败'); }
+    }
+
+    async function loadProducts() {
+      var search = document.getElementById('prodSearch').value;
+      var params = 'limit=100';
+      if (search) params += '&search=' + encodeURIComponent(search);
+      var data = await api('/api/products?' + params);
+      document.getElementById('prodTableBody').innerHTML = (data.rows || []).map(function(r) {
+        return '<tr><td><code>' + escHtml(r.product_code) + '</code></td><td>' + escHtml(r.model_name || '-') + '</td><td>' + escHtml(r.revision || '-') + '</td><td>' + escHtml(r.class_mid || '-') + '</td><td>' + escHtml(r.class_minor || '-') + '</td><td><span class="badge">' + escHtml(r.lifecycle_state) + '</span></td><td>' +
+          (r.lifecycle_state === 'draft' ? '<a href="#" onclick="releaseProduct(\'' + escHtml(r.product_code) + '\');return false">发布</a> ' : '') +
+          (r.lifecycle_state === 'released' ? '<a href="#" onclick="obsoleteProduct(\'' + escHtml(r.product_code) + '\');return false">废止</a>' : '') +
+          (hasAdminAccess() ? '<a href="#" onclick="deleteProduct(\'' + escHtml(r.product_code) + '\');return false" style="color:#e53935;margin-left:8px;">删除</a>' : '') + '</td></tr>';
+      }).join('') || '<tr><td colspan="7" style="text-align:center">暂无产品</td></tr>';
+    }
+
+    async function deleteProduct(code) {
+      if (!confirm('确定删除产品 ' + code + ' 吗？关联属性值、分类关系和替代引用将被清理。')) return;
+      try {
+        var res = await api('/api/products/' + encodeURIComponent(code), { method: 'DELETE' });
+        if (res.success) { alert('已删除，级联：' + JSON.stringify(res.cascaded)); loadProducts(); }
+        else alert('删除失败：' + (res.error || '未知错误'));
+      } catch (e) { alert('删除失败'); }
+    }
+
+    async function activatePf(code) {
+      try {
+        var res = await api('/api/product-families/' + encodeURIComponent(code) + '/activate', { method: 'POST' });
+        if (res.success) loadProductFamilies();
+        else alert('激活失败：' + (res.error || '未知错误'));
+      } catch (e) { alert('激活失败'); }
+    }
+
+    async function releaseProduct(code) {
+      try {
+        var res = await api('/api/products/' + encodeURIComponent(code) + '/release', { method: 'POST' });
+        if (res.success) loadProducts();
+        else alert('发布失败：' + (res.error || '未知错误'));
+      } catch (e) { alert('发布失败'); }
+    }
+
+    async function obsoleteProduct(code) {
+      if (!confirm('确认废止该产品？')) return;
+      try {
+        var res = await api('/api/products/' + encodeURIComponent(code) + '/obsolete', { method: 'POST' });
+        if (res.success) loadProducts();
+        else alert('废止失败：' + (res.error || '未知错误'));
+      } catch (e) { alert('废止失败'); }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      var s3 = document.getElementById('prodSearchBtn');
+      if (s3) s3.addEventListener('click', loadProducts);
+      var pfBtn = document.getElementById('prodPfNewBtn');
+      if (pfBtn) pfBtn.addEventListener('click', async function() {
+        var name = prompt('型号名称：'); if (!name) return;
+        var code = prompt('机型代码（3位）：', 'S19'); if (!code) return;
+        var major = prompt('大类码（2位）：', 'CF'); if (!major) return;
+        var type = prompt('产品类型（可选）：') || null;
+        try {
+          var res = await api('/api/product-families', { method: 'POST', body: JSON.stringify({ model_name: name, model_code: code.toUpperCase(), class_major: major.toUpperCase(), product_type: type }) });
+          if (res.product_family_code) { alert('创建成功，编码：' + res.product_family_code); loadProductFamilies(); }
+          else alert('创建失败：' + (res.error || '未知错误'));
+        } catch (e) { alert('创建失败'); }
+      });
+      var prodBtn = document.getElementById('prodNewBtn');
+      if (prodBtn) prodBtn.addEventListener('click', async function() {
+        var pfId = prompt('产品族 ID：'); if (!pfId) return;
+        var rev = prompt('版次：', 'A') || null;
+        var mid = prompt('中类码（3位，可选）：', '000') || '000';
+        var minor = prompt('小类码（3位，可选）：', '000') || '000';
+        try {
+          var res = await api('/api/products', { method: 'POST', body: JSON.stringify({ product_family_id: Number(pfId), revision: rev, class_mid: mid.toUpperCase(), class_minor: minor.toUpperCase() }) });
+          if (res.product_code) { alert('创建成功，编码：' + res.product_code); loadProducts(); }
+          else alert('创建失败：' + (res.error || '未知错误'));
+        } catch (e) { alert('创建失败'); }
+      });
+    });
+
+    // ── Quality Tab ──
+    async function loadQualityDashboard() {
+      var data = await api('/api/quality/dashboard');
+      document.getElementById('qOrgs').textContent = (data.org_person || {}).org_units || 0;
+      document.getElementById('qPersons').textContent = (data.org_person || {}).persons || 0;
+      document.getElementById('qProducts').textContent = (data.product || {}).total || 0;
+      document.getElementById('qExtIds').textContent = (data.integration || {}).external_identities || 0;
+    }
+
+    async function loadGoldenSourceProgress() {
+      var data = await api('/api/quality/field-identities/progress');
+      var html = '<p>总体进度：' + data.overall.confirmed + '/' + data.overall.total + ' 已确认 (' + data.overall.pct + '%)</p>';
+      html += data.by_domain.map(function(d) {
+        return '<div style="display:flex;gap:8px;align-items:center;margin:4px 0"><span style="min-width:120px">' + escHtml(d.domain || '未分类') + '</span><div style="flex:1;height:8px;background:var(--border);border-radius:4px"><div style="width:' + d.pct + '%;height:8px;background:var(--accent);border-radius:4px"></div></div><span>' + d.confirmed + '/' + d.total + '</span></div>';
+      }).join('');
+      document.getElementById('goldenSourceProgress').innerHTML = html;
+    }
+
+    function escHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // ===== RBAC: Role & Permission Management =====
+
+    var rbacPanel = 'roleList';
+    document.querySelectorAll('.rbac-nav-item').forEach(function(item) {
+      item.addEventListener('click', function() {
+        document.querySelectorAll('.rbac-nav-item').forEach(function(n) { n.classList.remove('active'); n.style.background = ''; n.style.fontWeight = ''; });
+        this.classList.add('active');
+        this.style.background = '#e3f2fd';
+        this.style.fontWeight = 'bold';
+        rbacPanel = this.dataset.panel;
+        renderRbacPanel();
+      });
+    });
+
+    function renderRbacPanel() {
+      if (rbacPanel === 'roleList') renderRoleList();
+      else if (rbacPanel === 'permMatrix') renderPermMatrix();
+      else if (rbacPanel === 'userRoles') renderUserRolesPanel();
+      else if (rbacPanel === 'userRolesOverview') renderUserRolesOverview();
+      else if (rbacPanel === 'batchImport') renderBatchImport();
+    }
+
+    // --- Role List Panel ---
+    function renderRoleList() {
+      var panel = document.getElementById('rbacPanel');
+      panel.innerHTML = '<h3>角色列表</h3><div id="roleTableContainer">加载中...</div>';
+
+      fetch('/api/roles').then(function(r) { return r.json(); }).then(function(roles) {
+        var html = '<button onclick="showCreateRoleDialog()" style="margin-bottom:12px;padding:6px 16px;background:#1565c0;color:white;border:none;border-radius:4px;cursor:pointer;">+ 新建角色</button>';
+        html += '<table class="data-table" style="width:100%;"><thead><tr><th>角色编码</th><th>名称</th><th>描述</th><th>继承自</th><th>权限数</th><th>用户数</th><th>系统</th><th>操作</th></tr></thead><tbody>';
+        roles.forEach(function(r) {
+          html += '<tr>';
+          html += '<td>' + escapeHtml(r.role_code) + '</td>';
+          html += '<td>' + escapeHtml(r.role_name) + '</td>';
+          html += '<td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escapeHtml(r.description || '') + '">' + (r.description || '-') + '</td>';
+          html += '<td>' + (r.parent_role_name || '-') + '</td>';
+          html += '<td>' + r.perm_count + '</td>';
+          html += '<td>' + r.user_count + '</td>';
+          html += '<td>' + (r.is_system ? '是' : '否') + '</td>';
+          html += '<td>';
+          if (!r.is_system) {
+            html += '<a href="#" onclick="editRole(' + r.role_id + ',\'' + escapeHtml(r.role_name) + '\',\'' + (r.description || '') + '\',' + (r.parent_role_id || 0) + ')">编辑</a> ';
+            html += '<a href="#" onclick="deleteRole(' + r.role_id + ')" style="color:#e53935;">删除</a>';
+          } else {
+            html += '<span style="color:#999;">—</span>';
+          }
+          html += '</td></tr>';
+        });
+        html += '</tbody></table>';
+        document.getElementById('roleTableContainer').innerHTML = html;
+      });
+    }
+
+    function showCreateRoleDialog() {
+      var code = prompt('角色编码（英文，如 dept_auditor）：');
+      if (!code) return;
+      var name = prompt('角色名称：');
+      if (!name) return;
+      var desc = prompt('描述（可选）：');
+      var parentId = prompt('父角色 ID（可选，留空为无）：');
+
+      fetch('/api/roles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role_code: code, role_name: name, description: desc || null, parent_role_id: parentId ? Number(parentId) : null })
+      }).then(function(r) { return r.json(); }).then(function(data) {
+        if (data.error) { alert('创建失败：' + data.error); } else { renderRoleList(); }
+      });
+    }
+
+    function editRole(id, name, desc, parentId) {
+      var newName = prompt('角色名称：', name);
+      if (newName === null) return;
+      var newDesc = prompt('描述：', desc);
+      if (newDesc === null) return;
+      var newParent = prompt('父角色 ID（留空为无）：', parentId || '');
+
+      fetch('/api/roles/' + id, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role_name: newName, description: newDesc || null, parent_role_id: newParent ? Number(newParent) : null })
+      }).then(function(r) { return r.json(); }).then(function(data) {
+        if (data.error) { alert('编辑失败：' + data.error); } else { renderRoleList(); }
+      });
+    }
+
+    function deleteRole(id) {
+      if (!confirm('确定要删除此角色吗？')) return;
+      fetch('/api/roles/' + id, { method: 'DELETE' }).then(function(r) { return r.json(); }).then(function(data) {
+        if (data.error) { alert('删除失败：' + data.error); } else { renderRoleList(); }
+      });
+    }
+
+    // --- Permission Matrix Panel ---
+    function renderPermMatrix() {
+      var panel = document.getElementById('rbacPanel');
+      panel.innerHTML = '<h3>权限矩阵</h3><p>加载角色列表...</p>';
+
+      fetch('/api/roles').then(function(r) { return r.json(); }).then(function(roles) {
+        var roleOptions = roles.map(function(r) { return '<option value="' + r.role_id + '">' + escapeHtml(r.role_code) + ' — ' + escapeHtml(r.role_name) + (r.is_system ? ' (系统)' : '') + '</option>'; }).join('');
+        panel.innerHTML = '<h3>权限矩阵</h3><select id="permMatrixRoleSelect" onchange="loadPermMatrix()" style="padding:6px;margin-bottom:16px;min-width:250px;"><option value="">— 选择角色 —</option>' + roleOptions + '</select><div id="permMatrixContent"></div>';
+      });
+    }
+
+    function loadPermMatrix() {
+      var roleId = document.getElementById('permMatrixRoleSelect').value;
+      if (!roleId) { document.getElementById('permMatrixContent').innerHTML = ''; return; }
+
+      document.getElementById('permMatrixContent').innerHTML = '加载中...';
+      fetch('/api/roles/' + roleId + '/permissions').then(function(r) { return r.json(); }).then(function(data) {
+        if (data.error) { alert(data.error); return; }
+        var matrix = data.matrix;
+        var resources = [...new Set(matrix.map(function(p) { return p.resource; }))];
+        var actions = [...new Set(matrix.map(function(p) { return p.action; }))];
+
+        var html = '<p>当前角色：<strong>' + escapeHtml(data.role.role_name) + '</strong></p>';
+        html += '<table class="data-table" style="font-size:12px;"><thead><tr><th>资源</th>';
+        actions.forEach(function(a) { html += '<th>' + a + '</th>'; });
+        html += '<th>字段限制</th></tr></thead><tbody>';
+
+        var permMap = {};
+        matrix.forEach(function(p) { permMap[p.resource + ':' + p.action] = p; });
+
+        resources.forEach(function(res) {
+          html += '<tr><td><strong>' + res + '</strong></td>';
+          actions.forEach(function(act) {
+            var key = res + ':' + act;
+            var p = permMap[key];
+            var checked = p && p.assigned ? 'checked' : '';
+            var disabled = p && p.inherited ? 'disabled' : '';
+            var style = p && p.inherited ? 'opacity:0.4;' : '';
+            var title = p && p.description ? ' title="' + escapeHtml(p.description) + '"' : '';
+            var effectBadge = p && p.assigned && p.effect === 'deny' ? ' <span style="color:#e53935;font-size:10px;">禁止</span>' : '';
+            html += '<td style="text-align:center;"' + title + '><input type="checkbox" ' + checked + ' ' + disabled + ' style="' + style + '" data-res="' + res + '" data-act="' + act + '" data-perm-id="' + (p ? p.perm_id : '') + '">' + effectBadge + '</td>';
+          });
+          html += '<td><input type="text" placeholder="JSON字段限制" style="width:140px;font-size:11px;"></td>';
+          html += '</tr>';
+        });
+        html += '</tbody></table>';
+        html += '<button onclick="savePermMatrix(' + roleId + ')" style="margin-top:12px;padding:6px 16px;background:#2e7d32;color:white;border:none;border-radius:4px;cursor:pointer;">保存权限</button>';
+        document.getElementById('permMatrixContent').innerHTML = html;
+      });
+    }
+
+    function savePermMatrix(roleId) {
+      var checkboxes = document.querySelectorAll('#permMatrixContent input[type=checkbox]:not([disabled])');
+      var permIds = [];
+      checkboxes.forEach(function(cb) {
+        if (cb.checked && cb.dataset.permId) permIds.push(Number(cb.dataset.permId));
+      });
+      fetch('/api/roles/' + roleId + '/permissions', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ perm_ids: permIds })
+      }).then(function(r) { return r.json(); }).then(function(data) {
+        if (data.error) { alert('保存失败：' + data.error); } else { alert('保存成功，共 ' + data.count + ' 条权限'); }
+      });
+    }
+
+    // --- User Roles Panel ---
+    function renderUserRolesPanel() {
+      var panel = document.getElementById('rbacPanel');
+      panel.innerHTML = '<h3>用户角色分配</h3><div style="display:flex;gap:16px;">' +
+        '<div style="width:45%;"><label>搜索用户</label><input type="text" id="userSearchInput" placeholder="工号/姓名..." oninput="searchUsers()" style="width:100%;padding:6px;margin-bottom:8px;border:1px solid #ddd;border-radius:4px;"><div id="userSearchResults" style="max-height:400px;overflow-y:auto;border:1px solid #eee;border-radius:4px;"></div></div>' +
+        '<div style="width:55%;" id="userRolesDetail"><p style="color:#999;">请选择左侧用户</p></div>' +
+        '</div>';
+    }
+
+    function searchUsers() {
+      var q = document.getElementById('userSearchInput').value.toLowerCase();
+      fetch('/api/org/users').then(function(r) { return r.json(); }).then(function(users) {
+        var filtered = users.filter(function(u) {
+          return !q || u.employee_no.toLowerCase().includes(q) || u.name.toLowerCase().includes(q);
+        });
+        var html = filtered.slice(0, 50).map(function(u) {
+          return '<div onclick="selectUserForRoles(' + u.id + ',\'' + escapeHtml(u.name) + '\',\'' + escapeHtml(u.dept_name || '') + '\',\'' + escapeHtml(u.post || '') + '\')" style="padding:8px;cursor:pointer;border-bottom:1px solid #eee;">' + escapeHtml(u.employee_no) + ' — ' + escapeHtml(u.name) + (u.dept_name ? ' <span style="color:#999;font-size:12px;">' + escapeHtml(u.dept_name) + '</span>' : '') + (u.post ? ' <span style="color:#999;font-size:12px;">' + escapeHtml(u.post) + '</span>' : '') + (u.role ? ' <span style="color:#1565c0;font-size:12px;">' + escapeHtml(u.role) + '</span>' : '') + '</div>';
+        }).join('');
+        document.getElementById('userSearchResults').innerHTML = html || '<p style="padding:8px;color:#999;">无匹配用户</p>';
+      });
+    }
+
+    function selectUserForRoles(userId, userName, deptName, post) {
+      var infoHtml = '<p>当前用户：<strong>' + escapeHtml(userName) + '</strong>' + (deptName ? ' <span style="color:#666;font-size:12px;">' + escapeHtml(deptName) + '</span>' : '') + (post ? ' <span style="color:#666;font-size:12px;">' + escapeHtml(post) + '</span>' : '') + '</p><div id="userRoleCheckboxes">加载中...</div>';
+      document.getElementById('userRolesDetail').innerHTML = infoHtml;
+
+      Promise.all([
+        fetch('/api/roles').then(function(r) { return r.json(); }),
+        fetch('/api/org/users/' + userId + '/roles').then(function(r) { return r.json(); })
+      ]).then(function(results) {
+        var allRoles = results[0];
+        var userRoles = results[1];
+        var userRoleIds = new Set(userRoles.map(function(r) { return r.role_id; }));
+
+        var html = '';
+        allRoles.forEach(function(r) {
+          html += '<label style="display:block;margin-bottom:4px;"><input type="checkbox" value="' + r.role_id + '" ' + (userRoleIds.has(r.role_id) ? 'checked' : '') + '> ' + escapeHtml(r.role_code) + ' — ' + escapeHtml(r.role_name) + (r.is_system ? ' (系统)' : '') + '</label>';
+        });
+        html += '<button onclick="saveUserRoles(' + userId + ')" style="margin-top:12px;padding:6px 16px;background:#2e7d32;color:white;border:none;border-radius:4px;cursor:pointer;">保存分配</button>';
+        document.getElementById('userRoleCheckboxes').innerHTML = html;
+      });
+    }
+
+    function saveUserRoles(userId) {
+      var checkboxes = document.querySelectorAll('#userRoleCheckboxes input[type=checkbox]:checked');
+      var roleIds = Array.from(checkboxes).map(function(cb) { return Number(cb.value); });
+      if (roleIds.length === 0) { alert('至少需要分配一个角色'); return; }
+
+      fetch('/api/org/users/' + userId + '/roles', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role_ids: roleIds })
+      }).then(function(r) { return r.json(); }).then(function(data) {
+        if (data.error) { alert('保存失败：' + data.error); } else { alert('角色分配已保存'); }
+      });
+    }
+
+    // --- User Roles Overview Panel ---
+    var userRolesOverviewData = [];
+    var userRolesOverviewDeptFilter = '';
+
+    function renderUserRolesOverview() {
+      var panel = document.getElementById('rbacPanel');
+      panel.innerHTML = '<h3>用户角色一览</h3><p>加载中...</p>';
+
+      fetch('/api/org/users/roles-summary').then(function(r) { return r.json(); }).then(function(data) {
+        if (data.error) { panel.innerHTML = '<p style="color:#e53935;">' + data.error + '</p>'; return; }
+        userRolesOverviewData = data;
+
+        var depts = [...new Set(data.map(function(u) { return u.dept_name; }).filter(Boolean))].sort();
+        var deptOptions = '<option value="">全部</option>' + depts.map(function(d) { return '<option value="' + escapeHtml(d) + '">' + escapeHtml(d) + '</option>'; }).join('');
+
+        var html = '<div style="margin-bottom:12px;display:flex;gap:12px;align-items:center;">' +
+          '<label>部门筛选：<select id="overviewDeptFilter" onchange="applyOverviewFilter()" style="padding:4px 8px;border:1px solid #ddd;border-radius:4px;">' + deptOptions + '</select></label>' +
+          '<span style="color:#999;font-size:13px;">共 ' + data.length + ' 人</span>' +
+          '</div>' +
+          '<table class="data-table" style="width:100%;font-size:13px;">' +
+          '<thead><tr><th>工号</th><th>姓名</th><th>部门</th><th>职务</th><th>旧角色</th><th>RBAC 角色</th><th>操作</th></tr></thead>' +
+          '<tbody id="overviewTableBody"></tbody></table>';
+        panel.innerHTML = html;
+        if (userRolesOverviewDeptFilter) {
+          document.getElementById('overviewDeptFilter').value = userRolesOverviewDeptFilter;
+        }
+        renderOverviewTable();
+      });
+    }
+
+    function applyOverviewFilter() {
+      userRolesOverviewDeptFilter = document.getElementById('overviewDeptFilter').value;
+      renderOverviewTable();
+    }
+
+    function renderOverviewTable() {
+      var filtered = userRolesOverviewDeptFilter
+        ? userRolesOverviewData.filter(function(u) { return u.dept_name === userRolesOverviewDeptFilter; })
+        : userRolesOverviewData;
+
+      var html = '';
+      filtered.forEach(function(u) {
+        var codes = u.rbac_role_codes ? u.rbac_role_codes.split(',') : [];
+        html += '<tr>';
+        html += '<td>' + escapeHtml(u.employee_no) + '</td>';
+        html += '<td>' + escapeHtml(u.name) + '</td>';
+        html += '<td>' + escapeHtml(u.dept_name || '-') + '</td>';
+        html += '<td>' + escapeHtml(u.post || '-') + '</td>';
+        html += '<td>' + escapeHtml(u.role) + '</td>';
+        html += '<td><span id="badge-' + u.id + '">' + (u.rbac_role_codes || '<span style="color:#999;">未分配</span>') + '</span></td>';
+        html += '<td><button onclick="editOverviewRoles(' + u.id + ',\'' + escapeHtml(u.name) + '\',\'' + escapeHtml(u.employee_no) + '\',\'' + (u.rbac_role_codes || '') + '\')" style="padding:4px 10px;background:#1565c0;color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;">编辑角色</button></td>';
+        html += '</tr>';
+      });
+      if (filtered.length === 0) {
+        html = '<tr><td colspan="7" style="text-align:center;color:#999;padding:20px;">无匹配数据</td></tr>';
+      }
+      document.getElementById('overviewTableBody').innerHTML = html;
+    }
+
+    function editOverviewRoles(userId, userName, employeeNo, currentCodes) {
+      fetch('/api/roles').then(function(r) { return r.json(); }).then(function(allRoles) {
+        var currentCodesArr = currentCodes ? currentCodes.split(',') : [];
+        var currentRoleIds = [];
+        // match codes to role_ids
+        allRoles.forEach(function(r) {
+          if (currentCodesArr.indexOf(r.role_code) >= 0) currentRoleIds.push(r.role_id);
+        });
+
+        var checkboxesHtml = '';
+        allRoles.forEach(function(r) {
+          checkboxesHtml += '<label style="display:block;margin-bottom:4px;"><input type="checkbox" value="' + r.role_id + '" ' + (currentRoleIds.indexOf(r.role_id) >= 0 ? 'checked' : '') + '> ' + escapeHtml(r.role_code) + ' — ' + escapeHtml(r.role_name) + '</label>';
+        });
+
+        var dialog = document.createElement('div');
+        dialog.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:9999;';
+        dialog.innerHTML = '<div style="background:white;border-radius:8px;padding:24px;min-width:320px;max-width:400px;">' +
+          '<h3 style="margin-bottom:4px;">编辑角色 — ' + escapeHtml(userName) + '</h3>' +
+          '<p style="color:#999;font-size:13px;margin-bottom:16px;">' + escapeHtml(employeeNo) + '</p>' +
+          '<div id="overviewRoleChecks">' + checkboxesHtml + '</div>' +
+          '<div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end;">' +
+            '<button onclick="this.closest(\'[style]\').parentElement.remove()" style="padding:6px 16px;border:1px solid #ddd;border-radius:4px;cursor:pointer;">取消</button>' +
+            '<button id="overviewSaveBtn" style="padding:6px 16px;background:#2e7d32;color:white;border:none;border-radius:4px;cursor:pointer;">保存</button>' +
+          '</div></div>';
+        document.body.appendChild(dialog);
+
+        dialog.querySelector('#overviewSaveBtn').addEventListener('click', function() {
+          var checks = dialog.querySelectorAll('#overviewRoleChecks input[type=checkbox]:checked');
+          var roleIds = Array.from(checks).map(function(cb) { return Number(cb.value); });
+          if (roleIds.length === 0) { alert('至少需要一个角色'); return; }
+          fetch('/api/org/users/' + userId + '/roles', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ role_ids: roleIds })
+          }).then(function(r) { return r.json(); }).then(function(data) {
+            if (data.error) { alert('保存失败：' + data.error); return; }
+            // Refresh from server
+            fetch('/api/org/users/roles-summary').then(function(r) { return r.json(); }).then(function(data2) {
+              userRolesOverviewData = data2;
+              renderOverviewTable();
+            });
+            dialog.remove();
+          });
+        });
+
+        dialog.addEventListener('click', function(e) { if (e.target === dialog) dialog.remove(); });
+      });
+    }
+
+    // --- Batch Import Panel ---
+    function renderBatchImport() {
+      var panel = document.getElementById('rbacPanel');
+      panel.innerHTML = '<h3>批量导入</h3>' +
+        '<p style="color:#666;margin-bottom:8px;">有工号=分配用户角色，工号空=定义角色权限。支持同时导入两类数据。</p>' +
+        '<div style="margin-bottom:12px;">' +
+          '<button onclick="window.open(\'/api/import-rbac/templates/full\',\'_blank\')" style="padding:6px 12px;background:#555;color:white;border:none;border-radius:4px;cursor:pointer;">下载模板</button>' +
+        '</div>' +
+        '<div style="border:2px dashed #ccc;border-radius:6px;padding:40px;text-align:center;">' +
+          '<p style="color:#999;">选择文件上传 (.xlsx / .csv)</p>' +
+          '<input type="file" id="importFileInput" accept=".xlsx,.xls,.csv" onchange="handleImportFile()" style="margin-top:12px;">' +
+        '</div>' +
+        '<div id="importResult" style="margin-top:16px;"></div>';
+    }
+
+    function handleImportFile() {
+      var file = document.getElementById('importFileInput').files[0];
+      if (!file) return;
+      var formData = new FormData();
+      formData.append('file', file);
+
+      document.getElementById('importResult').innerHTML = '<p>导入中...</p>';
+      fetch('/api/import-rbac/full', { method: 'POST', body: formData }).then(function(r) { return r.json(); }).then(function(data) {
+        var html = '<p>总计：' + data.total + ' 行 | 成功：<span style="color:#2e7d32;">' + data.success + '</span> | 失败：<span style="color:#e53935;">' + data.errors.length + '</span></p>';
+        if (data.errors.length > 0) {
+          html += '<table class="data-table" style="margin-top:8px;font-size:12px;"><thead><tr><th>行</th><th>信息</th><th>原因</th></tr></thead><tbody>';
+          data.errors.forEach(function(e) {
+            html += '<tr><td>' + (e.row || '-') + '</td><td>' + escapeHtml(e.employee_no || e.role_code || '') + '</td><td style="color:#e53935;">' + escapeHtml(e.reason) + '</td></tr>';
+          });
+          html += '</tbody></table>';
+        }
+        document.getElementById('importResult').innerHTML = html;
+      });
+    }
+
+    // --- Password Management ---
+    function checkPasswordStatus() {
+      fetch('/api/org/me/password-status').then(function(r) { return r.json(); }).then(function(data) {
+        if (data.is_default_password) {
+          document.getElementById('passwordDialogTitle').textContent = '首次登录，请修改密码';
+          document.getElementById('passwordCancelBtn').style.display = 'none';
+          document.getElementById('passwordDialog').style.display = 'flex';
+        }
+      });
+    }
+
+    function addPasswordChangeButton() {
+      var sessionEl = document.getElementById('sessionText');
+      if (!sessionEl) return;
+      if (document.getElementById('passwordChangeBtn')) return;
+      var btn = document.createElement('span');
+      btn.id = 'passwordChangeBtn';
+      btn.textContent = ' [修改密码]';
+      btn.style.cssText = 'cursor:pointer;color:#4a9eff;margin-left:8px;font-size:13px;';
+      btn.onclick = function() {
+        document.getElementById('passwordDialogTitle').textContent = '修改密码';
+        document.getElementById('passwordCancelBtn').style.display = '';
+        document.getElementById('passwordDialog').style.display = 'flex';
+        document.getElementById('currentPassword').value = '';
+        document.getElementById('newPassword').value = '';
+        document.getElementById('confirmPassword').value = '';
+        document.getElementById('passwordDialogMsg').style.display = 'none';
+      };
+      sessionEl.appendChild(btn);
+    }
+
+    var passwordSubmitBtn = document.getElementById('passwordSubmitBtn');
+    if (passwordSubmitBtn) {
+    passwordSubmitBtn.addEventListener('click', function() {
+      var current = document.getElementById('currentPassword').value;
+      var newPw = document.getElementById('newPassword').value;
+      var confirm = document.getElementById('confirmPassword').value;
+
+      if (newPw.length < 6) { showPasswordError('新密码至少6位'); return; }
+      if (newPw !== confirm) { showPasswordError('两次新密码不一致'); return; }
+
+      fetch('/api/org/me/password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ current_password: current, new_password: newPw })
+      }).then(function(r) { return r.json(); }).then(function(data) {
+        if (data.error) { showPasswordError(data.error); return; }
+        document.getElementById('passwordDialog').style.display = 'none';
+        alert('密码修改成功');
+      });
+    });
+    }
+
+    var passwordCancelBtn = document.getElementById('passwordCancelBtn');
+    if (passwordCancelBtn) {
+    passwordCancelBtn.addEventListener('click', function() {
+      document.getElementById('passwordDialog').style.display = 'none';
+    });
+    }
+
+    function showPasswordError(msg) {
+      var el = document.getElementById('passwordDialogMsg');
+      el.textContent = msg;
+      el.style.display = '';
+    }
+
+    // ===== Init =====
+    checkSession();
+  </script>
+</body>
+</html>

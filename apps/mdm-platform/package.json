@@ -28,6 +28,7 @@
     "check:process-governance": "node scripts/check-process-governance.js",
     "test:process-import": "node scripts/test-process-governance-import.js",
     "test:process-api": "node scripts/test-process-governance-api.js",
+    "test:process-frontend": "node scripts/test-process-governance-frontend.js",
     "dev": "nodemon server/index.js"
   },
   "dependencies": {
