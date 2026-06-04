@@ -21,6 +21,8 @@
     "test:rbac": "node scripts/smoke-rbac.js",
     "test:delete": "node scripts/test-delete-routes.js",
     "test:db-path": "node scripts/test-db-path-isolation.js",
+    "sync:process-org": "node scripts/sync-process-governance-org.js",
+    "test:process-org": "node scripts/test-process-governance-org-sync.js",
     "dev": "nodemon server/index.js"
   },
   "dependencies": {
