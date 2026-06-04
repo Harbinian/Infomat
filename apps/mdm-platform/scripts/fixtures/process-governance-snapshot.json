@@ -1,0 +1,56 @@
+{
+  "nodes": [
+    { "name": "昌兴复材" },
+    { "name": "经营域" },
+    { "name": "经营发展部" },
+    { "name": "合同管理" },
+    { "name": "销售订单评审和执行管理" },
+    { "name": "接收订单并组织评审" },
+    { "name": "OA" },
+    { "name": "ERP" }
+  ],
+  "links": [
+    { "source": "昌兴复材", "target": "经营域", "value": 1 },
+    { "source": "经营域", "target": "经营发展部", "value": 1 },
+    { "source": "经营发展部", "target": "合同管理", "value": 1 },
+    { "source": "合同管理", "target": "销售订单评审和执行管理", "value": 1 },
+    { "source": "销售订单评审和执行管理", "target": "接收订单并组织评审", "value": 1 },
+    { "source": "接收订单并组织评审", "target": "OA", "value": 1 },
+    { "source": "销售订单评审和执行管理", "target": "ERP", "value": 1 }
+  ],
+  "systems": ["ERP", "OA"],
+  "stats": {
+    "mappings": 1,
+    "a1": 1,
+    "departmentsWithData": 1,
+    "departmentsEmpty": 8
+  },
+  "crossDept": {
+    "stats": {
+      "totalChecked": 1,
+      "confirmed": 0,
+      "pendingConfirm": 1,
+      "highRisk": 1,
+      "mediumRisk": 0
+    },
+    "risks": [
+      {
+        "source": "经营发展部",
+        "target": "工程技术部",
+        "a1": "JY-L3-01-A1-001",
+        "refs": 1,
+        "risk": "high",
+        "status": "未映射-无文档",
+        "desc": "订单评审需要技术条款输入，目标侧流程待补全。"
+      }
+    ],
+    "interactionChains": [
+      {
+        "name": "订单评审链",
+        "status": "partial",
+        "breaks": ["工程技术部: 技术条款评审节点待补全"]
+      }
+    ],
+    "source": "docs/norms/流程治理/跨部门完整性检查报告.md"
+  }
+}
