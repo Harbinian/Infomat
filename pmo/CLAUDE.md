@@ -1,0 +1,71 @@
+# CLAUDE.md — PMO 数字化底座
+
+`pmo/` 目录包含昌兴复材项目管理办公室（PMO）数字化底座，含两个独立模块。
+
+## 目录结构
+
+```
+pmo/
+├── CLAUDE.md                          # 本文件 — PMO 总览
+├── README.md                          # 甘特图说明
+├── procedure-management/              # 模块 A：流程地图驾驶舱
+│   ├── CLAUDE.md                      #   驾驶舱开发指南
+│   ├── dashboard.html                 #   主驾驶舱 (单文件 HTML)
+│   ├── screenshots/                   #   屏幕截图
+│   └── screenshot.png                 #   驾驶舱截图
+├── gantt-react/                       # 模块 B：甘特图应用 (React + Vite)
+│   ├── README.md                      #   甘特图开发指南
+│   ├── src/                           #   源码
+│   └── package.json                   #   依赖与脚本
+├── tasks.json                         # 甘特图任务数据 (353 条, 由 XLSX 生成)
+├── 信息化项目_Project_H5可用.xlsx        # 甘特图数据文件 (XLSX 真源)
+├── 信息化项目.csv                      # XLSX 转换中间产物（不要手改）
+├── 信息化项目_资源池简化版_V2_管理版.csv  # WBS 管理版
+├── 信息化项目_资源池简化版_V2_执行版.csv  # WBS 执行版
+├── convert_xlsx.py                    # XLSX → tasks.json 转换脚本
+├── build-standalone.js                # 生成内嵌数据版 HTML
+├── report_no_pred_tasks.py            # 无前置任务报告脚本
+├── PMO项目计划管控体系_Project导入表_V1_UTF8_BOM.csv  # Project 导入规范表
+├── PMO项目计划管控体系建设方案_V1.md
+├── Project导入规范.md                  # Project 导入字段映射与规程
+└── WBS评审记录_V1.md                   # WBS 评审记录
+```
+
+## 模块 A：流程地图驾驶舱
+
+**单文件 HTML 应用**，桑基图驱动的业务能力→流程→系统映射驾驶舱。
+
+- **启动**：直接双击 `procedure-management/dashboard.html`（file:// 协议），或 `cd procedure-management && python -m http.server 8080`
+- **依赖**：`../../echarts.min.js`（项目根目录，相对 dashboard.html 的路径）
+- **数据**：内嵌 JSON（`#sankey-data` 和 `#cross-dept-data`），无需外部数据文件
+
+## 模块 B：甘特图应用
+
+**React + Vite 单页应用**，基于 Canvas 2D 的 WBS 甘特图看板。
+
+- **启动**：`cd gantt-react && npm run dev` → `http://localhost:5173/`
+- **构建**：`cd gantt-react && npm run build`
+- **数据流**：`信息化项目_Project_H5可用.xlsx` → `convert_xlsx.py` → `tasks.json` → 甘特图渲染
+
+## 数据更新流程
+
+### 甘特图数据更新
+
+1. 修改 `信息化项目_Project_H5可用.xlsx`
+2. 运行 `python convert_xlsx.py` 重新生成 `tasks.json`
+3. 刷新浏览器
+
+### 驾驶舱数据更新
+
+1. 运行桑基图数据生成脚本（如 `scripts/parse-sankey-data.mjs`）
+2. 将输出的 JSON 替换 `procedure-management/dashboard.html` 中 `#sankey-data` 脚本标签内容
+3. 更新顶部 `.pill` 中的数据快照日期
+
+## 技术栈
+
+| 模块 | 技术 |
+|------|------|
+| 流程地图驾驶舱 | 原生 HTML/CSS/JS + ECharts 5.x |
+| 甘特图 | React 19 + Vite 8 + Canvas 2D API |
+
+两个模块均为纯静态前端，无后端服务依赖。
