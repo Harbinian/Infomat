@@ -1,15 +1,15 @@
 const fs = require('fs');
 const path = require('path');
 
-const db = require('../server/db');
-const { hashPassword } = require('../server/auth');
-
 if (process.env.ALLOW_PROJECT_USER_SETUP !== 'true') {
   console.error('setup-mdm-project-users.js uses project-roster scope. Set ALLOW_PROJECT_USER_SETUP=true to run it intentionally.');
   process.exit(1);
 }
 
-const REPO_ROOT = path.resolve(__dirname, '..', '..');
+const db = require('../server/db');
+const { hashPassword } = require('../server/auth');
+
+const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
 const ROSTER_PATH = path.join(REPO_ROOT, 'docs', 'organization', '花名册.md');
 const DEFAULT_PASSWORD = 'init1234';
 

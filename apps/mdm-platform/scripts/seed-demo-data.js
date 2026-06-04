@@ -5,13 +5,13 @@
  * Idempotent — skips records that already exist.
  * Run: node scripts/seed-demo-data.js
  */
-const db = require('../server/db');
-const { hashPassword } = require('../server/auth');
-
 if (process.env.ALLOW_DEMO_SEED !== 'true') {
   console.error('seed-demo-data.js is demo-only. Set ALLOW_DEMO_SEED=true to run it intentionally.');
   process.exit(1);
 }
+
+const db = require('../server/db');
+const { hashPassword } = require('../server/auth');
 
 function demoHash() { return hashPassword('demo12345678'); }
 

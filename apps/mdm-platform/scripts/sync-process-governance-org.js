@@ -12,19 +12,30 @@ const PROCESS_GOVERNANCE_DEPARTMENTS = [
 
 function syncProcessGovernanceOrg(options = {}) {
   const database = options.db || require('../server/db');
-  const expectedNames = PROCESS_GOVERNANCE_DEPARTMENTS.map(department => department.name);
 
-  const findByName = database.prepare('SELECT id FROM departments WHERE name = ?');
+  const findByCode = database.prepare('SELECT id FROM departments WHERE code = ?');
+  const findByName = database.prepare('SELECT id FROM departments WHERE name = ? ORDER BY id LIMIT 1');
   const updateDepartment = database.prepare(`
     UPDATE departments
-    SET code = ?,
+    SET name = ?,
+        code = ?,
         department_type = ?,
         sort_order = ?,
         status = 'active',
-        source_system = 'PROCESS_GOVERNANCE',
-        external_id = ?,
+        source_system = CASE
+          WHEN (external_id IS NULL OR external_id = '')
+           AND (source_system IS NULL OR source_system = '' OR source_system = 'MDM_SYS')
+          THEN 'PROCESS_GOVERNANCE'
+          ELSE source_system
+        END,
+        external_id = CASE
+          WHEN (external_id IS NULL OR external_id = '')
+           AND (source_system IS NULL OR source_system = '' OR source_system = 'MDM_SYS')
+          THEN ?
+          ELSE external_id
+        END,
         updated_at = datetime('now')
-    WHERE name = ?
+    WHERE id = ?
   `);
   const insertDepartment = database.prepare(`
     INSERT INTO departments (
@@ -37,37 +48,41 @@ function syncProcessGovernanceOrg(options = {}) {
       external_id
     ) VALUES (?, ?, ?, ?, 'active', 'PROCESS_GOVERNANCE', ?)
   `);
-  const archiveOtherActiveDepartments = database.prepare(`
-    UPDATE departments
-    SET status = 'archived',
-        updated_at = datetime('now')
-    WHERE status = 'active'
-      AND name NOT IN (${expectedNames.map(() => '?').join(', ')})
-  `);
 
   const sync = database.transaction(() => {
+    const canonicalIds = [];
+
     for (const department of PROCESS_GOVERNANCE_DEPARTMENTS) {
-      const existing = findByName.get(department.name);
+      const existing = findByCode.get(department.code) || findByName.get(department.name);
       if (existing) {
         updateDepartment.run(
-          department.code,
-          department.type,
-          department.sort,
-          department.domain,
-          department.name
-        );
-      } else {
-        insertDepartment.run(
           department.name,
           department.code,
           department.type,
           department.sort,
-          department.domain
+          department.code,
+          existing.id
         );
+        canonicalIds.push(existing.id);
+      } else {
+        const result = insertDepartment.run(
+          department.name,
+          department.code,
+          department.type,
+          department.sort,
+          department.code
+        );
+        canonicalIds.push(Number(result.lastInsertRowid));
       }
     }
 
-    archiveOtherActiveDepartments.run(...expectedNames);
+    database.prepare(`
+      UPDATE departments
+      SET status = 'archived',
+          updated_at = datetime('now')
+      WHERE status = 'active'
+        AND id NOT IN (${canonicalIds.map(() => '?').join(', ')})
+    `).run(...canonicalIds);
   });
 
   sync();
