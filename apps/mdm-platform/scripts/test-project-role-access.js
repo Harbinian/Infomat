@@ -1,10 +1,12 @@
 const http = require('http');
+const path = require('path');
 const { spawn } = require('child_process');
 const { cleanupDb, stopServer } = require('./testHelpers/isolatedDb');
 
 const db = require('../server/db');
 const { hashPassword } = require('../server/auth');
 
+const APP_ROOT = path.join(__dirname, '..');
 const PORT = 3107;
 const BASE = `http://localhost:${PORT}`;
 const PASSWORD = 'pass1234';
@@ -214,7 +216,7 @@ async function main() {
   try {
     const ids = seedData();
     child = spawn(process.execPath, ['server/index.js'], {
-      cwd: process.cwd(),
+      cwd: APP_ROOT,
       env: { ...process.env, PORT: String(PORT) },
       stdio: 'ignore'
     });
