@@ -15,6 +15,7 @@
     "test:export": "node scripts/test-export-route.js",
     "test:import": "node scripts/test-import-route.js",
     "test:security": "node scripts/test-security-routes.js",
+    "test:project-roles": "node scripts/test-project-role-access.js",
     "test:views": "node scripts/test-views-sankey-filters.js",
     "test:frontend": "node scripts/test-frontend-assets.js",
     "test:rbac": "node scripts/smoke-rbac.js",
