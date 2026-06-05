@@ -885,7 +885,7 @@ async function renderProcessDetail(processId) {
         detail.systems.map(function(s) {
           return '<tr><td>' + s.name + '</td></tr>';
         }).join('') + '</tbody></table></div>'
-      : '<div class="empty">暂无关联系统</div>';
+      : '<div class="empty">暂无应用系统</div>';
 
     // Build field ledger summary table
     var fieldsHtml = detail.fields.length > 0
@@ -908,7 +908,7 @@ async function renderProcessDetail(processId) {
         '</div>' +
       '</div>' +
 
-      '<h2>关联系统</h2>' + systemsHtml +
+      '<h2>应用系统</h2>' + systemsHtml +
 
       '<h2 style="margin-top: 32px;">字段台账汇总</h2>' + fieldsHtml +
 
@@ -1119,7 +1119,7 @@ cd mdm-platform && npm start
 - [ ] 筛选部门下拉，确认图动态更新
 - [ ] 切换能力层级（L1 / L1+L2 / 全部），确认图动态更新
 - [ ] 点击一个流程节点，确认跳转到流程详情页
-- [ ] 流程详情页确认：基本信息、关联系统表格、字段台账汇总表格、上下游关系占位
+- [ ] 流程详情页确认：基本信息、应用系统表格、字段台账汇总表格、上下游关系占位
 - [ ] 面包屑"业务地图"可点击返回
 - [ ] 切换到"能力与流程申报"Tab，点能力行，确认底部出现桑基预览
 - [ ] 点审批按钮不触发预览（stopPropagation 生效）

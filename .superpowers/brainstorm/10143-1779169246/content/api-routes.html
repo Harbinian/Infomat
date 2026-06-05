@@ -1,0 +1,45 @@
+<h2>API 路由设计</h2>
+<p class="subtitle">新增 /api/roles 和 /api/permissions 两个路由模块，扩展 /api/org/users 路由</p>
+
+<h3>角色管理 CRUD</h3>
+<table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:24px;">
+  <tr style="background:#2a2a4e"><th style="padding:8px;text-align:left">方法</th><th style="padding:8px;text-align:left">路径</th><th style="padding:8px;text-align:left">说明</th><th style="padding:8px;text-align:left">权限</th></tr>
+  <tr><td style="padding:8px"><code>GET</code></td><td style="padding:8px"><code>/api/roles</code></td><td style="padding:8px">角色列表（含继承链和权限数）</td><td style="padding:8px">admin</td></tr>
+  <tr><td style="padding:8px"><code>GET</code></td><td style="padding:8px"><code>/api/roles/:id</code></td><td style="padding:8px">角色详情 + 完整权限树 + 已分配用户</td><td style="padding:8px">admin</td></tr>
+  <tr><td style="padding:8px"><code>POST</code></td><td style="padding:8px"><code>/api/roles</code></td><td style="padding:8px">创建自定义角色</td><td style="padding:8px">admin</td></tr>
+  <tr><td style="padding:8px"><code>PUT</code></td><td style="padding:8px"><code>/api/roles/:id</code></td><td style="padding:8px">编辑角色（名称/描述/父角色）</td><td style="padding:8px">admin</td></tr>
+  <tr><td style="padding:8px"><code>DELETE</code></td><td style="padding:8px"><code>/api/roles/:id</code></td><td style="padding:8px">删除角色（系统角色拒绝）</td><td style="padding:8px">admin</td></tr>
+</table>
+
+<h3>权限分配</h3>
+<table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:24px;">
+  <tr style="background:#2a2a4e"><th style="padding:8px;text-align:left">方法</th><th style="padding:8px;text-align:left">路径</th><th style="padding:8px;text-align:left">说明</th><th style="padding:8px;text-align:left">权限</th></tr>
+  <tr><td style="padding:8px"><code>GET</code></td><td style="padding:8px"><code>/api/permissions</code></td><td style="padding:8px">全部权限定义列表（按资源分组）</td><td style="padding:8px">admin</td></tr>
+  <tr><td style="padding:8px"><code>GET</code></td><td style="padding:8px"><code>/api/roles/:id/permissions</code></td><td style="padding:8px">某角色的权限矩阵</td><td style="padding:8px">admin</td></tr>
+  <tr><td style="padding:8px"><code>PUT</code></td><td style="padding:8px"><code>/api/roles/:id/permissions</code></td><td style="padding:8px">批量更新角色权限（整表替换）</td><td style="padding:8px">admin</td></tr>
+</table>
+
+<h3>用户角色分配（扩展现有 /api/org/users）</h3>
+<table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:24px;">
+  <tr style="background:#2a2a4e"><th style="padding:8px;text-align:left">方法</th><th style="padding:8px;text-align:left">路径</th><th style="padding:8px;text-align:left">说明</th><th style="padding:8px;text-align:left">权限</th></tr>
+  <tr><td style="padding:8px"><code>GET</code></td><td style="padding:8px"><code>/api/users/:id/roles</code></td><td style="padding:8px">查看用户角色列表</td><td style="padding:8px">admin</td></tr>
+  <tr><td style="padding:8px"><code>PUT</code></td><td style="padding:8px"><code>/api/users/:id/roles</code></td><td style="padding:8px">设置用户角色（替换全部）</td><td style="padding:8px">admin</td></tr>
+</table>
+
+<h3>批量导入</h3>
+<table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:24px;">
+  <tr style="background:#2a2a4e"><th style="padding:8px;text-align:left">方法</th><th style="padding:8px;text-align:left">路径</th><th style="padding:8px;text-align:left">说明</th><th style="padding:8px;text-align:left">权限</th></tr>
+  <tr><td style="padding:8px"><code>POST</code></td><td style="padding:8px"><code>/api/import/user-roles</code></td><td style="padding:8px">上传用户-角色分配 Excel/CSV</td><td style="padding:8px">admin</td></tr>
+  <tr><td style="padding:8px"><code>POST</code></td><td style="padding:8px"><code>/api/import/role-permissions</code></td><td style="padding:8px">上传角色-权限定义 Excel/CSV</td><td style="padding:8px">admin</td></tr>
+  <tr><td style="padding:8px"><code>GET</code></td><td style="padding:8px"><code>/api/import/templates/:type</code></td><td style="padding:8px">下载导入模板（user-roles / role-permissions）</td><td style="padding:8px">admin</td></tr>
+</table>
+
+<h3>设计要点</h3>
+<div class="section">
+  <ul>
+    <li><strong>权限更新用整表替换</strong>：<code>PUT /roles/:id/permissions</code> 传入完整权限 ID 数组，后端在事务中先删后插，简单可靠</li>
+    <li><strong>导入返回详细报告</strong>：<code>{"total":100, "success":95, "errors":[{"row":3,"reason":"..."}]}</code></li>
+    <li><strong>角色删除保护</strong>：系统角色和有用户分配的角色不能删除，返回具体原因</li>
+    <li><strong>复用现有 multer + exceljs</strong>：批量导入复用现有文件上传和 Excel 解析基础设施</li>
+  </ul>
+</div>

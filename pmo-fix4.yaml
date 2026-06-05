@@ -1,0 +1,78 @@
+- generic [ref=e2]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - heading "数字化底座 PMO 项目管控看板" [level=1] [ref=e3535]
+      - generic [ref=e7]: 2026-06-01 - 2028-01-31 ｜ 交付物 308 项
+    - generic [ref=e8]:
+      - button "甘特图" [ref=e9] [cursor=pointer]
+      - button "PMO看板" [ref=e10] [cursor=pointer]
+  - generic [ref=e3536]:
+    - generic [ref=e3537]:
+      - generic [ref=e3538]: WBS 数据质量：通过
+      - generic [ref=e3539]: 0重复WBS | 0孤儿节点 | 353任务 | 1个已确认父级里程碑
+    - generic [ref=e3540]:
+      - button "总任务数 353" [ref=e3541] [cursor=pointer]:
+        - generic [ref=e3542]: "353"
+        - generic [ref=e3543]: 总任务数
+        - generic [ref=e3544]: ›
+      - button "普通任务 220" [ref=e3545] [cursor=pointer]:
+        - generic [ref=e3546]: "220"
+        - generic [ref=e3547]: 普通任务
+        - generic [ref=e3548]: ›
+      - button "摘要任务 49" [ref=e3549] [cursor=pointer]:
+        - generic [ref=e3550]: "49"
+        - generic [ref=e3551]: 摘要任务
+        - generic [ref=e3552]: ›
+      - button "里程碑 87" [ref=e3553] [cursor=pointer]:
+        - generic [ref=e3554]: "87"
+        - generic [ref=e3555]: 里程碑
+        - generic [ref=e3556]: ›
+      - button "高风险任务 129" [ref=e3557] [cursor=pointer]:
+        - generic [ref=e3558]: "129"
+        - generic [ref=e3559]: 高风险任务
+        - generic [ref=e3560]: ›
+      - button "交付物总数 308" [ref=e3561] [cursor=pointer]:
+        - generic [ref=e3562]: "308"
+        - generic [ref=e3563]: 交付物总数
+        - generic [ref=e3564]: ›
+      - button "A类交付物 91" [ref=e3565] [cursor=pointer]:
+        - generic [ref=e3566]: "91"
+        - generic [ref=e3567]: A类交付物
+        - generic [ref=e3568]: ›
+      - button "B类交付物 192" [ref=e3569] [cursor=pointer]:
+        - generic [ref=e3570]: "192"
+        - generic [ref=e3571]: B类交付物
+        - generic [ref=e3572]: ›
+      - button "延期交付物 1" [ref=e3573] [cursor=pointer]:
+        - generic [ref=e3574]: "1"
+        - generic [ref=e3575]: 延期交付物
+        - generic [ref=e3576]: ›
+      - button "阶段门风险 0" [active] [ref=e3577] [cursor=pointer]:
+        - generic [ref=e3578]: "0"
+        - generic [ref=e3579]: 阶段门风险
+        - generic [ref=e3580]: ›
+      - button "高风险交付物 129" [ref=e3581] [cursor=pointer]:
+        - generic [ref=e3582]: "129"
+        - generic [ref=e3583]: 高风险交付物
+        - generic [ref=e3584]: ›
+    - generic [ref=e3585]:
+      - generic [ref=e3586]: PMO观察日期
+      - generic [ref=e3587]: 2026-06-05
+      - button "今天" [ref=e3588] [cursor=pointer]
+      - button "项目开始" [ref=e3589] [cursor=pointer]
+      - textbox [ref=e3590]: 2026-06-05
+    - generic [ref=e3591]:
+      - button "PMO周会" [ref=e3592] [cursor=pointer]
+      - button "交付物台账" [ref=e3593] [cursor=pointer]
+      - button "阶段门" [ref=e3594] [cursor=pointer]
+      - button "本周交付物" [ref=e3595] [cursor=pointer]
+      - button "延期交付物" [ref=e3596] [cursor=pointer]
+    - generic [ref=e4473]:
+      - generic [ref=e4474]:
+        - generic [ref=e4475]: 阶段门管控视图
+        - generic [ref=e4476]:
+          - text: 0/8 审批通过 |
+          - generic [ref=e4477]: 0 个风险
+          - text: "|"
+          - generic [ref=e4478]: "筛选: 风险 (0)"
+      - generic [ref=e4479]: 无 风险 状态的阶段门

@@ -1,0 +1,345 @@
+﻿<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>复材车间 · 部门能力流程系统桑基图</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}:root{--blue:#1a56db;--teal:#0891b2;--bg:#f5f7fb;--ink:#10233f;--muted:#64748b;--border:#d9e2ef}
+body{font-family:"Microsoft YaHei","PingFang SC",Arial,sans-serif;background:var(--bg);color:var(--ink);line-height:1.55}
+.page{max-width:1600px;margin:0 auto;padding:30px 38px 46px}
+.hero{position:relative;margin-bottom:14px}.hero h1{font-size:30px;font-weight:800;color:#0b2755}.hero p{font-size:14px;color:#475569;margin-top:6px;max-width:920px}
+.badge{position:absolute;right:0;top:6px;border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;padding:6px 12px;font-size:12px}
+.declaration{background:#fff7ed;border:2px solid #f97316;border-left:5px solid #f97316;border-radius:8px;padding:14px 18px;margin:10px 0 14px;color:#7c2d12;font-size:13px}.declaration strong{color:#c2410c}.declaration ul{margin:6px 0 0 16px}.declaration li{margin-bottom:3px}
+.read-guide{background:#eef6ff;border-left:4px solid var(--blue);border-radius:8px;padding:12px 14px;margin:14px 0 18px;color:#29415f;font-size:14px}
+.stat-row{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-bottom:18px}
+.stat-box{background:#fff;border:1px solid var(--border);border-radius:8px;padding:14px 16px;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+.stat-box .num{font-size:28px;font-weight:800;color:#0f766e;line-height:1}.stat-box .lbl{font-size:13px;color:var(--muted);margin-top:8px}.stat-box.warn .num{color:#f97316}
+.modebar{background:#fff;border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:16px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.mode-label{font-size:13px;color:#475569;margin-right:4px}
+.mode-btn{height:34px;border:1px solid #cbd5e1;background:#fff;color:#29415f;border-radius:7px;padding:0 12px;font-size:13px;cursor:pointer;transition:.16s;white-space:nowrap}
+.mode-btn:hover{border-color:var(--blue);color:var(--blue)}.mode-btn.active{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:700}
+.sankey-wrap{width:100%;background:#0f172a;border-radius:12px;padding:24px 20px;margin-bottom:18px;overflow:hidden}
+.sankey-title{text-align:center;font-size:20px;font-weight:800;color:#f8fafc;margin-bottom:4px}.sankey-sub{text-align:center;font-size:12px;color:#94a3b8;margin-bottom:14px}
+.sankey-chart{width:100%;max-width:100%;min-width:0;height:1120px}
+.legend-row{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:12px}.legend{display:inline-flex;align-items:center;gap:6px;color:#cbd5e1;font-size:12px}.legend i{display:inline-block;width:10px;height:10px;border-radius:2px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px}
+.note{background:#fff;border:1px solid var(--border);border-left:4px solid var(--teal);border-radius:8px;padding:14px 16px;color:#334155;font-size:14px}.note strong{color:#0b2755}
+.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px}
+.panel{background:#fff;border:1px solid var(--border);border-radius:8px;padding:16px}.panel h3{font-size:16px;margin-bottom:10px;color:#0b2755}
+.bar-list{display:grid;gap:8px}
+.bar-line{display:grid;grid-template-columns:190px 1fr 36px;gap:10px;align-items:center;font-size:13px;color:#334155}
+.bar-track{height:10px;border-radius:999px;background:#e2e8f0;overflow:hidden}.bar-fill{height:100%;border-radius:999px;background:var(--blue)}
+.table-wrap{overflow-x:hidden;background:#fff;border:1px solid var(--border);border-radius:8px;margin-bottom:18px}
+table{width:100%;border-collapse:collapse;font-size:12px}.table-l3{table-layout:fixed}.table-a1{table-layout:fixed;min-width:0}
+th,td{padding:7px 6px;border-bottom:1px solid #e5ebf3;text-align:left;vertical-align:top;word-break:break-word;overflow-wrap:anywhere}
+th{background:#f1f5f9;color:#334155;font-weight:700;position:sticky;top:0;z-index:1}
+th.col-seq,td.col-seq{width:32px;text-align:center}th.col-a1id,td.col-a1id{width:60px;white-space:normal}
+th.col-dept,td.col-dept{width:58px}th.col-domain,td.col-domain{width:80px}th.col-cap,td.col-cap{width:82px}th.col-proc,td.col-proc{width:90px}
+th.col-a1name,td.col-a1name{width:118px}th.col-role,td.col-role{width:72px}th.col-trigger,td.col-trigger{width:95px}
+th.col-precond,td.col-precond{width:85px}th.col-appr,td.col-appr{width:55px;white-space:nowrap}th.col-accept,td.col-accept{width:88px}
+th.col-evidence,td.col-evidence{width:100px}th.col-evidtype,td.col-evidtype{width:88px;white-space:normal}th.col-system,td.col-system{width:55px}
+th.col-alert,td.col-alert{width:90px}th.col-feedback,td.col-feedback{width:72px}th.col-adjust,td.col-adjust{width:50px}th.col-suggestion,td.col-suggestion{width:72px}
+tr:last-child td{border-bottom:none}
+.domain-pill{display:inline-flex;align-items:center;min-height:24px;padding:2px 8px;border-radius:7px;color:#fff;font-size:12px;white-space:normal}
+.evidence-tag{display:inline-block;padding:1px 6px;border-radius:4px;font-size:11px;font-weight:700;white-space:nowrap}
+.evidence-tag.explicit{background:#dcfce7;color:#166534}.evidence-tag.inferred{background:#fef3c7;color:#92400e}
+.appr-tag{display:inline-block;padding:1px 6px;border-radius:4px;font-size:11px}.appr-tag.none{background:#e2e8f0;color:#475569}
+.warn-tag{display:inline-block;margin:0 4px 4px 0;padding:2px 6px;border-radius:4px;background:#fef3c7;color:#92400e;font-size:11px;font-weight:700;line-height:1.35}
+.soft-warn-tag{display:inline-block;margin:0 4px 4px 0;padding:2px 6px;border-radius:4px;background:#e0f2fe;color:#075985;font-size:11px;font-weight:700;line-height:1.35}
+.feedback-cell{color:#64748b;font-size:11px}.foot{margin-top:14px;font-size:12px;color:#64748b}
+/* feedback */
+.progress-bar-wrap{background:#fff;border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:12px}
+.progress-bar-wrap .label{font-size:13px;color:#475569;white-space:nowrap}.progress-track{flex:1;height:10px;border-radius:999px;background:#e2e8f0;overflow:hidden}
+.progress-fill{height:100%;border-radius:999px;background:var(--teal);transition:width .3s;width:0%}.progress-text{font-size:13px;color:#334155;font-weight:700;white-space:nowrap}
+.feedback-backdrop{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(15,23,42,.3);z-index:999;display:none}.feedback-backdrop.show{display:block}
+.feedback-overlay{position:fixed;top:0;right:0;bottom:0;width:460px;max-width:100vw;background:#fff;box-shadow:-4px 0 24px rgba(15,23,42,.15);z-index:1000;transform:translateX(100%);transition:transform .28s ease;display:flex;flex-direction:column}
+.feedback-overlay.open{transform:translateX(0)}.feedback-overlay .fb-header{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+.feedback-overlay .fb-header h3{font-size:15px;color:#0b2755}.feedback-overlay .fb-close{width:32px;height:32px;border:1px solid var(--border);background:#fff;border-radius:6px;cursor:pointer;font-size:18px;color:#64748b;line-height:28px;text-align:center}
+.feedback-overlay .fb-close:hover{background:#f1f5f9}.feedback-overlay .fb-body{flex:1;overflow-y:auto;padding:20px}.feedback-overlay .fb-footer{padding:14px 20px;border-top:1px solid var(--border);flex-shrink:0}
+.q-block{margin-bottom:18px}.q-block .q-label{font-size:13px;font-weight:700;color:#334155;margin-bottom:6px}
+.q-block .q-hint{font-size:12px;color:#64748b;margin-bottom:6px;padding:6px 10px;background:#f8fafc;border-radius:4px;border-left:3px solid #e2e8f0}
+.q-options{display:flex;flex-direction:column;gap:4px}.q-opt{display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:13px;color:#334155;transition:.15s;user-select:none}
+.q-opt:hover{border-color:var(--blue);background:#eef6ff}.q-opt.selected{border-color:var(--blue);background:#eef6ff;color:#1a56db;font-weight:700}
+.q-opt .radio{width:16px;height:16px;border-radius:50%;border:2px solid #cbd5e1;flex-shrink:0}.q-opt.selected .radio{border-color:var(--blue);background:var(--blue);box-shadow:inset 0 0 0 3px #fff}
+.a1-context{margin-bottom:16px;padding:10px 12px;background:#f8fafc;border-radius:6px;font-size:12px;color:#475569;line-height:1.6}.a1-context b{color:#0b2755}
+.note-area{width:100%;min-height:64px;border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:13px;resize:vertical;font-family:inherit;box-sizing:border-box}.note-area:focus{outline:none;border-color:var(--blue)}
+.fb-submit{width:100%;height:40px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer}.fb-submit:hover{filter:brightness(1.1)}
+.export-bar{display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap}.export-btn{height:36px;border:1px solid var(--teal);background:#fff;color:var(--teal);border-radius:7px;padding:0 16px;font-size:13px;cursor:pointer;font-weight:700}.export-btn:hover{background:#f0fdfa}
+.node-legend{display:flex;gap:14px;font-size:12px;color:#64748b;align-items:center;margin-left:8px}.node-legend .dot{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px}.dot.done{background:#16a34a}.dot.issue{background:#f59e0b}.dot.wrong{background:#dc2626}
+.fb-guide{background:#fff;border:1px solid var(--border);border-radius:8px;padding:16px 20px;margin-bottom:14px}.fb-guide h3{font-size:14px;color:#0b2755;margin-bottom:8px}.fb-guide ol{padding-left:20px;font-size:12px;color:#475569;line-height:1.9}
+.source-card{background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:12px 14px;margin-bottom:14px;font-size:13px;color:#334155;line-height:1.7}.source-card .src-label{font-size:11px;color:#64748b;font-weight:700;margin-bottom:4px}
+@media(max-width:900px){.page{padding:20px 14px 34px}.badge{position:static;display:inline-block;margin-top:10px}.stat-row{grid-template-columns:repeat(3,minmax(0,1fr))}.g2,.summary-grid{grid-template-columns:1fr}.sankey-chart{height:1120px}.bar-line{grid-template-columns:160px 1fr 34px}.table-a1{min-width:0}.feedback-overlay{width:100vw}}
+</style></head><body><main class="page">
+<section class="hero"><h1>复材车间 · 部门能力流程系统桑基图</h1><p>部门（D1）→ 能力域（L1）→ 业务能力（L2）→ 业务流程（L3）→ 业务行为（A1）→ 应用系统（S1）。含29条业务行为（A1），覆盖1个能力域6条业务流程（L3）。</p><div class="badge">部门审核稿 · 待反馈</div></section>
+
+<div class="declaration"><strong>郑重声明：制度文件来源与归属说明</strong><ul><li>本页所依据的3份核心制度文件在提交归档时存放于<b>项目管理部</b>文件夹，但文件内容实质为<b>复材车间</b>的生产执行与制造管理职能。</li><li>具体依据：内部排罐管理程序明确由班组排产、物料核查、工装状态确认等车间现场执行活动组成；横向工序管理方案以生产部交付组为执行主体；随炉件移交规定以班组为出罐通知和交接的执行方。</li><li>上述文档的职能归属判断标准为<b>"谁执行、谁所有"</b>，而非"谁提交归档"。</li><li>通用行政程序（生产部快递管理程序、车辆使用申请管理规定、专用物资出门申请管理规定）不纳入本图能力映射。</li></ul></div>
+
+<div class="read-guide"><strong>读图方法：</strong>"全域总览"看复材车间覆盖哪些领域和系统；切换到"生产执行管控"看 业务能力（L2）→ 业务流程（L3）→ 业务行为（A1）→ 应用系统（S1） 的四层细节。悬停连线可见制度依据和系统设计依据。业务行为（A1）节点显示行为名称和执行角色。下方明细表在"全域总览"显示业务流程（L3）行，在能力域视图显示业务行为（A1）行。</div>
+
+<section class="stat-row"><div class="stat-box"><div class="num">1</div><div class="lbl">部门（D1）</div></div><div class="stat-box"><div class="num">1</div><div class="lbl">能力域（L1）</div></div><div class="stat-box"><div class="num">3</div><div class="lbl">业务能力（L2）</div></div><div class="stat-box"><div class="num">6</div><div class="lbl">业务流程（L3）</div></div><div class="stat-box"><div class="num">29</div><div class="lbl">业务行为（A1）</div></div><div class="stat-box"><div class="num">2</div><div class="lbl">应用系统（S1）</div></div></section>
+
+<section class="modebar" id="modebar"><span class="mode-label">视图</span></section>
+
+<section class="sankey-wrap"><div class="sankey-title" id="chartTitle">复材车间全域总览</div><div class="sankey-sub" id="chartSub">部门（D1）→ 能力域（L1）→ 业务能力（L2）→ 应用系统（S1）</div><div id="chart" class="sankey-chart"></div><div class="legend-row" id="legendRow"></div></section>
+
+<section class="g2"><div class="note"><strong>应用系统（S1）口径：</strong>只展示OA、MES、PLM、ERP四类面向员工使用的信息化系统；MDM不作为应用系统（S1）节点。</div><div class="note"><strong>部门审核口径：</strong>本页用于部门逐条确认业务行为（A1）。证据类型需区分"原文明确-正文"、"上下文推断"等；执行角色、触发情景、前置条件可由部门补充或修正。验收标准只检查业务流程（L3）最终环节或跨部门交接前的最后环节；跟踪类任务优先由系统待办提醒、到期预警和进度展示承载。</div></section>
+
+<section class="summary-grid"><div class="panel"><h3>能力域（L1）规模（业务行为（A1）数）</h3><div class="bar-list" id="domainBars"></div></div><div class="panel"><h3>系统承载分布（A1参与次数）</h3><div class="bar-list" id="systemBars"></div></div></section>
+
+<section class="table-wrap"><table id="mappingTable"><thead id="tableHead"></thead><tbody id="mappingBody"></tbody></table></section>
+
+<div class="foot">数据来源：复材车间业务资料中3份制度文件；应用系统（S1）口径限定为OA、MES、PLM、ERP。业务行为（A1）分解基于业务流程（L3）映射文档和源文档全文。</div>
+
+<div class="fb-guide"><h3>反馈操作说明</h3><ol><li>切换到<b>生产执行管控</b>视图</li><li>在桑基图中<b>点击业务行为（A1）节点</b>，右侧弹出反馈卡片</li><li>逐一回答选择题，选"有问题"填写备注</li><li>点击<b>"确认本条"</b>保存反馈，节点颜色自动更新</li><li>全部完成后点击<b>"导出反馈 JSON"</b>下载文件</li><li>绿色=<b>准确</b>，黄色=<b>有小问题</b>，红色=<b>需重写</b></li></ol></div>
+
+<div class="export-bar"><button class="export-btn" id="exportJsonBtn">导出反馈 JSON</button><button class="export-btn" id="importJsonBtn">导入反馈 JSON</button><button class="export-btn" id="clearFeedbackBtn">清空本地反馈</button><input type="file" id="importFileInput" accept=".json" style="display:none"><span class="node-legend"><span><span class="dot done"></span>准确</span><span><span class="dot issue"></span>有小问题</span><span><span class="dot wrong"></span>需重写</span></span></div>
+
+<div class="progress-bar-wrap"><span class="label">反馈进度</span><div class="progress-track"><div class="progress-fill" id="progressFill"></div></div><span class="progress-text" id="progressText">0 / 29</span></div>
+
+<div class="feedback-backdrop" id="feedbackBackdrop"></div>
+<div class="feedback-overlay" id="feedbackPanel"><div class="fb-header"><h3 id="feedbackTitle">业务行为反馈</h3><button class="fb-close" id="feedbackClose">&times;</button></div><div class="fb-body" id="feedbackBody"></div><div class="fb-footer"><button class="fb-submit" id="feedbackSubmit">确认本条</button></div></div>
+</main>
+
+<script src="echarts.min.js">
+</script>
+<script>
+// ===== L3 层数据（全域总览）=====
+var l3Rows = [
+  {"domain":"生产执行管控","capability":"班组排产管理","process":"罐前计划编制","evidence":"内部排罐管理程序 §4-§5","system":"MES、OA","basis":"MES排产+开工条件核查；OA跨部门物料/工装/文件确认与升级通报"},
+  {"domain":"生产执行管控","capability":"班组排产管理","process":"排罐执行与跟踪调整","evidence":"内部排罐管理程序 §6","system":"MES","basis":"MES进度跟踪、差异监控、并罐方案记录"},
+  {"domain":"生产执行管控","capability":"在制品工序管理","process":"关键件横向跟踪","evidence":"生产部横向工序管理方案","system":"MES、OA","basis":"MES工序状态+问题采集；OA问题分配与跟踪闭环"},
+  {"domain":"生产执行管控","capability":"在制品工序管理","process":"工序问题闭环与考核","evidence":"生产部横向工序管理方案","system":"OA","basis":"OA问题分配至职能部门、跟踪考核、状态更新"},
+  {"domain":"生产执行管控","capability":"随炉件与理化检测管理","process":"随炉件出罐通知与交接","evidence":"随炉件移交及理化结果反馈管理规定 §三.1-§三.3","system":"OA","basis":"OA移交群信息管理、交接记录"},
+  {"domain":"生产执行管控","capability":"随炉件与理化检测管理","process":"理化结果跟踪反馈","evidence":"随炉件移交及理化结果反馈管理规定 §三.4-§四","system":"OA","basis":"OA结果反馈流转、逾期预警、补救方案记录"}
+];
+
+// ===== 业务行为（A1）层数据 =====
+// [A1编号, 行为名称, 执行角色, 触发情景, 前置条件, 审批类型, 应用系统, 制度依据, 证据类型, 执行角色依据, 触发情景依据, 前置条件依据, 能力域(L1), 业务能力(L2), 业务流程(L3)]
+var a1Rows = [
+  ["FC-L3-01-A01","核查开工行动项（人机料法环）并识别开工风险","复材车间项目助理","新的投产需求下达","月度投产计划已发布","无审批","MES","内部排罐管理程序 §4.1","原文明确-正文","内部排罐管理程序 §4.1","内部排罐管理程序 §4.1","内部排罐管理程序 §4.1","生产执行管控","班组排产管理","罐前计划编制"],
+  ["FC-L3-01-A02","核算排罐标准工时并评估产能利用率","复材车间项目助理","开工风险识别完成后","固化时间、投影仪使用时间、出入罐准备时间等参数已齐备","无审批","MES","内部排罐管理程序 §4.2","原文明确-正文","内部排罐管理程序 §4.2","内部排罐管理程序 §4.2","内部排罐管理程序 §4.2","生产执行管控","班组排产管理","罐前计划编制"],
+  ["FC-L3-01-A03","与物资保障部核对物料库存是否满足投产需求","复材车间项目助理","排罐前物料核查周期","物料计算模板已维护","无审批","OA","内部排罐管理程序 §5.1","原文明确-正文","内部排罐管理程序 §5.1","内部排罐管理程序 §5.1","内部排罐管理程序 §5.1","生产执行管控","班组排产管理","罐前计划编制"],
+  ["FC-L3-01-A04","与物资保障部沟通确认工装状态满足投产要求","复材车间项目助理","排罐前工装状态核查","经营发展部订单已下达","无审批","OA","内部排罐管理程序 §5.2","原文明确-正文","内部排罐管理程序 §5.2","内部排罐管理程序 §5.2","内部排罐管理程序 §5.2","生产执行管控","班组排产管理","罐前计划编制"],
+  ["FC-L3-01-A05","核查开工前工艺文件准备情况","复材车间项目助理","工装状态确认完成后","排罐需求已明确","无审批","OA","内部排罐管理程序 §5.3","原文明确-正文","内部排罐管理程序 §5.3","内部排罐管理程序 §5.3","内部排罐管理程序 §5.3","生产执行管控","班组排产管理","罐前计划编制"],
+  ["FC-L3-01-A06","确定生产任务优先级并编制罐前计划","复材车间项目助理","人机料法环核查全部完成后","开工条件全部确认","无审批","MES","内部排罐管理程序 §4.1","上下文推断","内部排罐管理程序 §4.1","内部排罐管理程序 §4.1","内部排罐管理程序 §4.1","生产执行管控","班组排产管理","罐前计划编制"],
+  ["FC-L3-02-A01","跟踪已排入罐前计划的零件投产进度","复材车间项目助理","罐前计划下发后","罐前计划已编制完成","无审批","MES","内部排罐管理程序 §6.1","原文明确-正文","内部排罐管理程序 §6.1","内部排罐管理程序 §6.1","内部排罐管理程序 §6.1","生产执行管控","班组排产管理","排罐执行与跟踪调整"],
+  ["FC-L3-02-A02","发现排罐差异并迅速调整排产","复材车间项目助理","罐前计划执行出现偏差","投产跟踪发现差异","无审批","MES","内部排罐管理程序 §6.1","原文明确-正文","内部排罐管理程序 §6.1","内部排罐管理程序 §6.1","内部排罐管理程序 §6.1","生产执行管控","班组排产管理","排罐执行与跟踪调整"],
+  ["FC-L3-02-A03","每周四更新罐前计划","复材车间项目助理","每周四","本周罐前计划执行数据已收集","无审批","MES","内部排罐管理程序 §6.2","原文明确-正文","内部排罐管理程序 §6.2","内部排罐管理程序 §6.2","内部排罐管理程序 §6.2","生产执行管控","班组排产管理","排罐执行与跟踪调整"],
+  ["FC-L3-02-A04","按固化程序合理并罐以控制成本","复材车间项目助理","编制或更新排罐计划时","各零件固化程序已确认","无审批","MES","内部排罐管理程序 §4.3","上下文推断","内部排罐管理程序 §4.3","内部排罐管理程序 §4.3","内部排罐管理程序 §4.3","生产执行管控","班组排产管理","排罐执行与跟踪调整"],
+  ["FC-L3-03-A01","参加班组早会核对当日关键件任务布置情况","复材车间工序项目助理","每工作日班组早会","关键件计划已下发至各班组","无审批","OA","生产部横向工序管理方案","原文明确-正文","生产部横向工序管理方案","生产部横向工序管理方案","生产部横向工序管理方案","生产执行管控","在制品工序管理","关键件横向跟踪"],
+  ["FC-L3-03-A02","收集班组反馈的关键件无法完成的问题","复材车间工序项目助理","班组早会进行中","关键件当日任务已布置","无审批","MES","生产部横向工序管理方案","原文明确-正文","生产部横向工序管理方案","生产部横向工序管理方案","生产部横向工序管理方案","生产执行管控","在制品工序管理","关键件横向跟踪"],
+  ["FC-L3-03-A03","汇总问题至关键件问题跟踪表并分配至主管项目助理","复材车间工序项目助理","早会后问题已收集","问题已记录","无审批","OA","生产部横向工序管理方案","原文明确-正文","生产部横向工序管理方案","生产部横向工序管理方案","生产部横向工序管理方案","生产执行管控","在制品工序管理","关键件横向跟踪"],
+  ["FC-L3-03-A04","班组提前识别现场关键件滞留问题并填写反馈表","复材车间班组","班组发现关键件滞留","关键件在生产现场出现滞留","无审批","OA","生产部横向工序管理方案","上下文推断","生产部横向工序管理方案","生产部横向工序管理方案","生产部横向工序管理方案","生产执行管控","在制品工序管理","关键件横向跟踪"],
+  ["FC-L3-03-A05","生产部组长统一汇总问题数据并分配至各职能部门跟踪考核","复材车间生产部组长","反馈表递交后","各班组已递交反馈表","无审批","OA","生产部横向工序管理方案","原文明确-正文","生产部横向工序管理方案","生产部横向工序管理方案","生产部横向工序管理方案","生产执行管控","在制品工序管理","关键件横向跟踪"],
+  ["FC-L3-04-A01","主管项目助理跟踪解决问题并反馈进度","复材车间主管项目助理","问题分配至主管项目助理后","问题已明确分配","无审批","OA","生产部横向工序管理方案","原文明确-正文","生产部横向工序管理方案","生产部横向工序管理方案","生产部横向工序管理方案","生产执行管控","在制品工序管理","工序问题闭环与考核"],
+  ["FC-L3-04-A02","将问题解决结果反馈至工序项目助理","复材车间主管项目助理","问题解决后","问题已解决或有明确处置结论","无审批","OA","生产部横向工序管理方案","原文明确-正文","生产部横向工序管理方案","生产部横向工序管理方案","生产部横向工序管理方案","生产执行管控","在制品工序管理","工序问题闭环与考核"],
+  ["FC-L3-04-A03","工序项目助理将汇总结果反馈至相关班组","复材车间工序项目助理","收到主管项目助理反馈后","问题解决结果已汇总","无审批","OA","生产部横向工序管理方案","原文明确-正文","生产部横向工序管理方案","生产部横向工序管理方案","生产部横向工序管理方案","生产执行管控","在制品工序管理","工序问题闭环与考核"],
+  ["FC-L3-04-A04","每两周更新关键件计划状态","复材车间工序项目助理","每两周","工序问题已闭环","无审批","MES","生产部横向工序管理方案","原文明确-正文","生产部横向工序管理方案","生产部横向工序管理方案","生产部横向工序管理方案","生产执行管控","在制品工序管理","工序问题闭环与考核"],
+  ["FC-L3-05-A01","班组在内部群发布随炉件出罐信息","复材车间班组对接人","随炉件随产品出罐后","热压罐工序完成、随炉件已出罐","无审批","OA","随炉件移交及理化结果反馈管理规定 §三.1","原文明确-正文","随炉件移交及理化结果反馈管理规定 §三.1","随炉件移交及理化结果反馈管理规定 §三.1","随炉件移交及理化结果反馈管理规定 §三.1","生产执行管控","随炉件与理化检测管理","随炉件出罐通知与交接"],
+  ["FC-L3-05-A02","转发出罐信息至\"公司-航达随炉件移交群\"","复材车间班组对接人","内部群发布出罐信息后","内部群已发布出罐信息","无审批","OA","随炉件移交及理化结果反馈管理规定 §三.1-§三.2","原文明确-正文","随炉件移交及理化结果反馈管理规定 §三.1-§三.2","随炉件移交及理化结果反馈管理规定 §三.1-§三.2","随炉件移交及理化结果反馈管理规定 §三.1-§三.2","生产执行管控","随炉件与理化检测管理","随炉件出罐通知与交接"],
+  ["FC-L3-05-A03","航达24小时内反馈领取计划","航达移交专职人员","移交群收到通知后","移交群已发通知","无审批","—","随炉件移交及理化结果反馈管理规定 §三.3","原文明确-正文","随炉件移交及理化结果反馈管理规定 §三.3","随炉件移交及理化结果反馈管理规定 §三.3","随炉件移交及理化结果反馈管理规定 §三.3","生产执行管控","随炉件与理化检测管理","随炉件出罐通知与交接"],
+  ["FC-L3-05-A04","双方办理书面交接手续并签字确认","复材车间班组对接人","航达人员到达领取时","航达已反馈领取计划","无审批","OA","随炉件移交及理化结果反馈管理规定 §三.3","原文明确-正文","随炉件移交及理化结果反馈管理规定 §三.3","随炉件移交及理化结果反馈管理规定 §三.3","随炉件移交及理化结果反馈管理规定 §三.3","生产执行管控","随炉件与理化检测管理","随炉件出罐通知与交接"],
+  ["FC-L3-05-A05","班组在移交群同步\"已领取\"信息","复材车间班组对接人","交接签收完成后","移交单已签字","无审批","OA","随炉件移交及理化结果反馈管理规定 §三.3","原文明确-正文","随炉件移交及理化结果反馈管理规定 §三.3","随炉件移交及理化结果反馈管理规定 §三.3","随炉件移交及理化结果反馈管理规定 §三.3","生产执行管控","随炉件与理化检测管理","随炉件出罐通知与交接"],
+  ["FC-L3-06-A01","理化团队14天内出具检测结果","理化检测负责人（航达）","随炉件交接完成","随炉件已移交至航达","无审批","—","随炉件移交及理化结果反馈管理规定 §三.4","原文明确-正文","随炉件移交及理化结果反馈管理规定 §三.4","随炉件移交及理化结果反馈管理规定 §三.4","随炉件移交及理化结果反馈管理规定 §三.4","生产执行管控","随炉件与理化检测管理","理化结果跟踪反馈"],
+  ["FC-L3-06-A02","到期前1天在移交群预告结果出具时间","理化检测负责人（航达）","检测到期前1天","检测已进行中","无审批","—","随炉件移交及理化结果反馈管理规定 §三.4","原文明确-正文","随炉件移交及理化结果反馈管理规定 §三.4","随炉件移交及理化结果反馈管理规定 §三.4","随炉件移交及理化结果反馈管理规定 §三.4","生产执行管控","随炉件与理化检测管理","理化结果跟踪反馈"],
+  ["FC-L3-06-A03","结果生成后立即同步至移交群并抄送相关方","理化检测负责人（航达）","检测结果生成","检测已完成","无审批","—","随炉件移交及理化结果反馈管理规定 §三.4","原文明确-正文","随炉件移交及理化结果反馈管理规定 §三.4","随炉件移交及理化结果反馈管理规定 §三.4","随炉件移交及理化结果反馈管理规定 §三.4","生产执行管控","随炉件与理化检测管理","理化结果跟踪反馈"],
+  ["FC-L3-06-A04","逾期未完成时提前2天说明并制定补救方案","理化检测负责人（航达）","检测将要逾期","距离14天时限不足2天","无审批","—","随炉件移交及理化结果反馈管理规定 §四.3","原文明确-正文","随炉件移交及理化结果反馈管理规定 §四.3","随炉件移交及理化结果反馈管理规定 §四.3","随炉件移交及理化结果反馈管理规定 §四.3","生产执行管控","随炉件与理化检测管理","理化结果跟踪反馈"],
+  ["FC-L3-06-A05","各环节责任人每日查看移交群信息确保闭环","复材车间班组对接人","每日","随炉件处于移交-检测-反馈流程中","无审批","OA","随炉件移交及理化结果反馈管理规定 §四.4","上下文推断","随炉件移交及理化结果反馈管理规定 §四.4","随炉件移交及理化结果反馈管理规定 §四.4","随炉件移交及理化结果反馈管理规定 §四.4","生产执行管控","随炉件与理化检测管理","理化结果跟踪反馈"]
+];
+
+// ===== 统一引擎 =====
+var domains = ["生产执行管控"];
+var domainColors = {"生产执行管控":"#0891b2"};
+var nodeColor = {D1:"#1a56db",L1:"#0891b2",L2:"#0d9488",L3:"#6366f1",S1:"#f59e0b",A1:"#8b5cf6"};
+
+function shortText(value,max){var text=String(value||"");return text.length>max?text.slice(0,max-1)+"…":text;}
+function isCollectiveRole(role){var text=String(role||"").trim();if(!text)return true;if(/(专员|主管|经理|负责人|管理员|经办人|工程师|审核人|审批人|填报人|对接人|组长)$/.test(text))return false;return /(部|部门|办公室|中心|小组|委员会|团队|班组|车间)$/.test(text);}
+function roleWarning(a1){return isCollectiveRole(a1[2])?"请部门确认具体岗位/责任人：当前为部门/组织":"";}
+function isFinalStep(a1){var proc=a1[14];var rows=a1Rows.filter(function(r){return r[14]===proc;});return rows.length>0&&rows[rows.length-1][0]===a1[0];}
+function isTrackingTask(a1){return /(跟踪|进度|监测|监督|闭环|催办|提醒)/.test(a1[1]);}
+function auditWarnings(a1){var w=[];var rw=roleWarning(a1);if(rw)w.push(rw);return w;}
+function acceptanceText(a1){
+  if(a1[5]!=="无审批")return isFinalStep(a1)?"验收标准=审批通过":"不适用-有审批";
+  if(isFinalStep(a1))return"请部门确认是否需要验收/完成标准";
+  return isTrackingTask(a1)?"不适用-跟踪类":"不适用-过程环节";
+}
+function evidenceClass(evi){return evi==="上下文推断"||evi==="分析拆分"?"inferred":"explicit";}
+function trackingNote(a1){return isTrackingTask(a1)?'<span class="soft-warn-tag">跟踪类</span>':'';}
+function a1DisplayLabel(a1){var role=roleWarning(a1)?"待确认："+a1[2]:a1[2];return shortText(a1[1],18)+"\n"+shortText(role,18);}
+
+var a1Index = {};
+for(var i=0;i<a1Rows.length;i++){var r=a1Rows[i];a1Index[r[0]]={name:r[1],role:r[2],trigger:r[3],precond:r[4],appr:r[5],system:r[6],evidence:r[7],eviType:r[8],roleEvidence:r[9]||r[7],triggerEvidence:r[10]||r[7],preconditionEvidence:r[11]||r[7],domain:r[12],capability:r[13],process:r[14],sourceText:'依据制度文件 '+((r[7]||'未标注')+'（'+(r[8]||'')+'），该条款明确由「'+(r[2]||'')+'」执行「'+(r[1]||'')+'」，触发情景为「'+(r[3]||'')+'」，前置条件为「'+(r[4]||'')+'」。审批类型：'+(r[5]||'')+'，系统支撑：'+(r[6]||'')+'。')};}
+
+// ===== 反馈系统 =====
+var STORAGE_KEY = 'sankey_fb_v2_复材车间_'+a1Rows.length;
+var feedbackState = {};
+try{var raw=localStorage.getItem(STORAGE_KEY);if(raw)feedbackState=JSON.parse(raw);}catch(e){}
+function isComplete(fb){return!!fb.row_confirmed;}
+function persistState(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(feedbackState));}catch(e){}}
+function updateProgress(){var done=0;for(var k in feedbackState){if(isComplete(feedbackState[k]))done++;}
+  document.getElementById('progressFill').style.width=(done/a1Rows.length*100)+'%';
+  document.getElementById('progressText').textContent=done+' / '+a1Rows.length;}
+function getNodeColor(a1id){var fb=feedbackState[a1id];if(!fb||!isComplete(fb))return null;var q=fb.q1;if(q==='accurate')return'#16a34a';if(q==='minor')return'#f59e0b';return'#dc2626';}
+
+document.getElementById('exportJsonBtn').addEventListener('click',function(){
+  var exp={data_version:'复材车间_2026-06-01',source_page:'复材车间部门能力流程系统桑基图.html',schema_version:'sankey_fb_v2',feedbacks:{}};
+  for(var k in feedbackState){var fb=feedbackState[k];if(isComplete(fb)){
+    exp.feedbacks[k]={a1_id:k,a1_name:a1Index[k]?a1Index[k].name:'',a1_role:a1Index[k]?a1Index[k].role:'',
+    domain:a1Index[k]?a1Index[k].domain:'',capability:a1Index[k]?a1Index[k].capability:'',process:a1Index[k]?a1Index[k].process:'',
+    system:a1Index[k]?a1Index[k].system:'',evidence:a1Index[k]?a1Index[k].evidence:'',evidenceType:a1Index[k]?a1Index[k].eviType:'',
+    row_confirmed:fb.row_confirmed,q1:fb.q1,q2:fb.q2,q3:fb.q3,q4:fb.q4,q1_note:fb.q1_note||'',q2_note:fb.q2_note||'',q3_note:fb.q3_note||'',q4_note:fb.q4_note||''};}}
+  var blob=new Blob([JSON.stringify(exp,null,2)],{type:'application/json'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='复材车间_业务行为反馈_'+new Date().toISOString().slice(0,10)+'.json';a.click();
+});
+document.getElementById('importJsonBtn').addEventListener('click',function(){document.getElementById('importFileInput').click();});
+document.getElementById('importFileInput').addEventListener('change',function(e){
+  var file=e.target.files[0];if(!file)return;var reader=new FileReader();
+  reader.onload=function(ev){try{var d=JSON.parse(ev.target.result);if(d.feedbacks){for(var k in d.feedbacks){feedbackState[k]=d.feedbacks[k];}}persistState();updateProgress();renderSankey(activeMode);renderTable(activeMode);}catch(ex){alert('导入失败：'+ex.message);}};reader.readAsText(file);
+});
+document.getElementById('clearFeedbackBtn').addEventListener('click',function(){
+  if(!confirm('建议先导出备份。确认清空？'))return;if(!confirm('再次确认：清空所有本地反馈？'))return;
+  feedbackState={};persistState();updateProgress();renderSankey(activeMode);renderTable(activeMode);
+});
+
+var activeA1Id=null,activeMode='all';
+
+function openFeedback(a1id){
+  activeA1Id=a1id;var fb=feedbackState[a1id]||{};var ai=a1Index[a1id];if(!ai)return;
+  document.getElementById('feedbackTitle').innerHTML=(isComplete(fb)?'<span style="color:#16a34a">已完成</span>':'<span style="color:#dc2626">未完成</span>')+' · 业务行为反馈';
+  var h='<div class="a1-context"><b>业务行为（A1）编号：</b>'+a1id+'<br><b>业务行为（A1）：</b>'+ai.name+'<br><b>执行角色：</b>'+ai.role+'<br><b>触发情景：</b>'+ai.trigger+'<br><b>前置条件：</b>'+ai.precond+'<br><b>审批类型：</b>'+ai.appr+'<br><b>应用系统（S1）：</b>'+ai.system+'</div>';
+  h+='<div class="source-card"><div class="src-label">原文正文</div>'+ai.sourceText+'</div>';
+  h+='<div class="source-card"><div class="src-label">原文出处</div><b>制度依据：</b>'+ai.evidence+'<br><b>执行角色依据：</b>'+ai.roleEvidence+'<br><b>触发情景依据：</b>'+ai.triggerEvidence+'<br><b>前置条件依据：</b>'+ai.preconditionEvidence+'<br><b>证据类型：</b>'+ai.eviType+'</div>';
+  var qs=[
+    {id:'q1',label:'业务行为（A1）信息是否准确？',opts:['准确','有小问题','需重写']},
+    {id:'q2',label:'执行角色是否正确？',opts:['正确','不正确','不确定']},
+    {id:'q3',label:'审批类型是否正确？',opts:['正确','不正确','不确定']},
+    {id:'q4',label:'跨部门输入/输出关系是否正确？',opts:['正确','不对','不清楚']}
+  ];
+  for(var i=0;i<qs.length;i++){
+    var q=qs[i],sel=fb[q.id]||'';h+='<div class="q-block"><div class="q-label">'+(i+1)+'. '+q.label+'</div>';
+    h+='<div class="q-options">';
+    for(var j=0;j<q.opts.length;j++){h+='<div class="q-opt'+(sel===q.opts[j]?' selected':'')+'" data-q="'+q.id+'" data-v="'+q.opts[j]+'"><span class="radio"></span>'+q.opts[j]+'</div>';}
+    h+='</div>';
+    if(sel==='有小问题'||sel==='需重写'||sel==='不正确'||sel==='不对'||sel==='不清楚'){h+='<textarea class="note-area" data-q="'+q.id+'_note" placeholder="请填写备注…" style="margin-top:6px">'+(fb[q.id+'_note']||'')+'</textarea>';}
+    h+='</div>';
+  }
+  document.getElementById('feedbackBody').innerHTML=h;
+  document.getElementById('feedbackBackdrop').classList.add('show');document.getElementById('feedbackPanel').classList.add('open');
+
+  var opts=document.querySelectorAll('.q-opt');for(var k=0;k<opts.length;k++){opts[k].onclick=function(){
+    var qid=this.dataset.q;this.parentElement.querySelectorAll('.q-opt').forEach(function(o){o.classList.remove('selected');});this.classList.add('selected');
+  };}
+
+  document.getElementById('feedbackSubmit').onclick=function(){
+    var fb=feedbackState[a1id]||{};
+    fb.row_confirmed=true;
+    var qids=['q1','q2','q3','q4'];
+    for(var ii=0;ii<qids.length;ii++){
+      var qid=qids[ii];var sel=document.querySelector('.q-opt.selected[data-q="'+qid+'"]');
+      fb[qid]=sel?sel.dataset.v:'';var note=document.querySelector('textarea[data-q="'+qid+'_note"]');
+      if(note)fb[qid+'_note']=note.value;
+    }
+    feedbackState[a1id]=fb;persistState();updateProgress();renderSankey(activeMode);renderTable(activeMode);
+    document.getElementById('feedbackBackdrop').classList.remove('show');document.getElementById('feedbackPanel').classList.remove('open');
+  };
+}
+document.getElementById('feedbackClose').addEventListener('click',function(){document.getElementById('feedbackBackdrop').classList.remove('show');document.getElementById('feedbackPanel').classList.remove('open');});
+document.getElementById('feedbackBackdrop').addEventListener('click',function(){document.getElementById('feedbackBackdrop').classList.remove('show');document.getElementById('feedbackPanel').classList.remove('open');});
+updateProgress();
+
+// ===== 桑基图 =====
+var myChart=null;
+function renderSankey(mode){
+  var nodes=[],links=[],nodesIdx={},idx=0;
+  function addNode(name,type,a1id){var key=name;if(nodesIdx[key]===undefined){nodesIdx[key]=idx;nodes.push({name:name,itemStyle:{color:nodeColor[type]||'#64748b'},_type:type,_meta:{id:a1id||name}});idx++;}return nodesIdx[key];}
+  if(mode==='all'){
+    addNode("复材车间","D1");
+    for(var i=0;i<l3Rows.length;i++){var r=l3Rows[i];addNode(r.domain,"L1");addNode(r.capability,"L2");if(r.system){var ss=r.system.split("、");for(var j=0;j<ss.length;j++)addNode(ss[j],"S1");}}
+    links.push({source:addNode("复材车间","D1"),target:addNode("生产执行管控","L1"),value:6});
+    var capMap={};for(var i=0;i<l3Rows.length;i++){var k=l3Rows[i].capability;capMap[k]=(capMap[k]||0)+1;}
+    for(var c in capMap)links.push({source:addNode("生产执行管控","L1"),target:addNode(c,"L2"),value:capMap[c]});
+    var sysMap={};for(var i=0;i<l3Rows.length;i++){var r=l3Rows[i];if(r.system){var ss=r.system.split("、");for(var j=0;j<ss.length;j++){var sk=r.capability+"|"+ss[j];sysMap[sk]=(sysMap[sk]||0)+1;}}}
+    for(var sk in sysMap){var p=sk.split("|");links.push({source:addNode(p[0],"L2"),target:addNode(p[1],"S1"),value:sysMap[sk]});}
+    document.getElementById('chartTitle').textContent='复材车间全域总览';
+    document.getElementById('chartSub').textContent='部门（D1）→ 能力域（L1）→ 业务能力（L2）→ 应用系统（S1）';
+    document.getElementById('legendRow').innerHTML='<span class="legend"><i style="background:#1a56db"></i>部门（D1）</span><span class="legend"><i style="background:#0891b2"></i>能力域（L1）</span><span class="legend"><i style="background:#0d9488"></i>业务能力（L2）</span><span class="legend"><i style="background:#f59e0b"></i>应用系统（S1）</span>';
+  }else{
+    var domainA1s=[];for(var i=0;i<a1Rows.length;i++){if(a1Rows[i][12]===mode)domainA1s.push(a1Rows[i]);}
+    var capMap={},procMap={},sysMap={};
+    for(var i=0;i<domainA1s.length;i++){var r=domainA1s[i];capMap[r[13]]=(capMap[r[13]]||0)+1;procMap[r[14]]=(procMap[r[14]]||0)+1;if(r[6]&&r[6]!=="—"){var ss=r[6].split("、");for(var j=0;j<ss.length;j++)sysMap[ss[j]]=(sysMap[ss[j]]||0)+1;}}
+    for(var c in capMap)addNode(c,"L2");
+    for(var p in procMap)addNode(p,"L3");
+    for(var i=0;i<domainA1s.length;i++){var r=domainA1s[i];var lbl=a1DisplayLabel(r);addNode(lbl,"A1",r[0]);}
+    for(var s in sysMap)addNode(s,"S1");
+    for(var c in capMap){for(var p in procMap){var cnt=0;for(var i=0;i<domainA1s.length;i++){if(domainA1s[i][13]===c&&domainA1s[i][14]===p)cnt++;}if(cnt>0)links.push({source:addNode(c,"L2"),target:addNode(p,"L3"),value:cnt});}}
+for(var i=0;i<domainA1s.length;i++){var r=domainA1s[i];var lbl=a1DisplayLabel(r);links.push({source:addNode(r[14],"L3"),target:addNode(lbl,"A1",r[0]),value:1});}
+    for(var i=0;i<domainA1s.length;i++){var r=domainA1s[i];var lbl=a1DisplayLabel(r);if(r[6]&&r[6]!=="—"){var ss=r[6].split("、");for(var j=0;j<ss.length;j++)links.push({source:addNode(lbl,"A1"),target:addNode(ss[j],"S1"),value:1});}}
+    document.getElementById('chartTitle').textContent=mode+' · 能力域详情';
+    document.getElementById('chartSub').textContent='业务能力（L2）→ 业务流程（L3）→ 业务行为（A1）→ 应用系统（S1）';
+    document.getElementById('legendRow').innerHTML='<span class="legend"><i style="background:#0d9488"></i>业务能力（L2）</span><span class="legend"><i style="background:#6366f1"></i>业务流程（L3）</span><span class="legend"><i style="background:#8b5cf6"></i>业务行为（A1）</span><span class="legend"><i style="background:#f59e0b"></i>应用系统（S1）</span>';
+  }
+  // override A1 node colors by feedback
+  if(mode!=='all'){
+    for(var i=0;i<nodes.length;i++){
+      if(nodes[i]._type==='A1'){
+        var a1id=nodes[i]._meta.id;var c=getNodeColor(a1id);if(c)nodes[i].itemStyle.color=c;
+      }
+    }
+  }
+  if(!myChart){myChart=echarts.init(document.getElementById('chart'));}
+  myChart.setOption({
+    tooltip:{trigger:'item',triggerOn:'mousemove',formatter:function(p){if(p.dataType==='edge')return p.data.source+' → '+p.data.target;return p.name;}},
+    series:[{type:'sankey',layout:'none',layoutIterations:0,emphasis:{focus:'adjacency'},nodeAlign:'left',data:nodes,links:links,label:{fontSize:12,color:'#e2e8f0',fontWeight:500},lineStyle:{color:'gradient',curveness:.5,opacity:.25}}]
+  });
+}
+function attachFeedbackHandlers(myChart){
+  if(!myChart)return;myChart.off('click');
+  myChart.on('click',function(params){if(params.dataType==='node'&&params.data._type==='A1'){openFeedback(params.data._meta.id);}});
+}
+
+// ===== 模式栏 =====
+var activeMode='all';
+(function buildModebar(){
+  var mb=document.getElementById('modebar');var all=document.createElement('button');all.className='mode-btn active';all.textContent='全域总览';all.onclick=function(){setMode('all');};mb.appendChild(all);
+  for(var i=0;i<domains.length;i++){var btn=document.createElement('button');btn.className='mode-btn';btn.textContent=domains[i];btn.onclick=(function(d){return function(){setMode(d);};})(domains[i]);mb.appendChild(btn);}
+})();
+function setMode(mode){activeMode=mode;var btns=document.querySelectorAll('.mode-btn');for(var i=0;i<btns.length;i++)btns[i].classList.remove('active');event.target.classList.add('active');renderSankey(mode);renderTable(mode);}
+
+// ===== 明细表 =====
+function renderTable(mode){
+  var head=document.getElementById('tableHead'),body=document.getElementById('mappingBody');
+  if(mode==='all'){
+    head.innerHTML='<tr><th class="col-seq">序号</th><th class="col-domain">能力域（L1）</th><th class="col-cap">业务能力（L2）</th><th class="col-proc">业务流程（L3）</th><th class="col-evidence">制度依据</th><th class="col-system">应用系统（S1）</th><th class="col-accept">系统设计依据</th></tr>';
+    var h='';for(var i=0;i<l3Rows.length;i++){var r=l3Rows[i];h+='<tr><td class="col-seq">'+(i+1)+'</td><td>'+r.domain+'</td><td>'+r.capability+'</td><td>'+r.proc+'</td><td class="col-evidence">'+r.evidence+'</td><td>'+r.system+'</td><td>'+r.basis+'</td></tr>';}body.innerHTML=h;
+  }else{
+    head.innerHTML='<tr><th class="col-seq">序号</th><th class="col-a1id">业务行为（A1）编号</th><th class="col-cap">业务能力（L2）</th><th class="col-proc">业务流程（L3）</th><th class="col-a1name">业务行为（A1）</th><th class="col-role">执行角色</th><th class="col-trigger">触发情景</th><th class="col-precond">前置条件</th><th class="col-appr">审批类型</th><th class="col-accept">验收标准</th><th class="col-evidence">制度依据</th><th class="col-evidtype">证据类型</th><th class="col-system">应用系统（S1）</th><th class="col-alert">核验提醒</th><th class="col-feedback">部门确认意见</th><th class="col-adjust">是否调整</th><th class="col-suggestion">调整建议</th></tr>';
+    var rows=[];for(var i=0;i<a1Rows.length;i++){if(a1Rows[i][12]===mode)rows.push(a1Rows[i]);}
+    var h='';var seq=0,lastProc='';
+    var accMap={"FC-L3-01-A06":"罐前计划编制完成并下发至各班组","FC-L3-02-A03":"罐前计划每周四更新完成并下发","FC-L3-03-A05":"待补","FC-L3-04-A03":"问题结果已反馈班组，闭环记录完整","FC-L3-04-A04":"关键件计划状态每两周更新完成","FC-L3-05-A04":"移交单双方签字确认","FC-L3-05-A05":"交接完成后1h内已在移交群同步确认","FC-L3-06-A01":"14天内出具理化检测结果","FC-L3-06-A03":"结果已同步至移交群并抄送相关方","FC-L3-06-A05":"所有随炉件移交-检测-反馈的群内信息已闭环，无遗漏"};
+    var alertMap={"FC-L3-01-A03":"原文指定了具体对接人（黄吉），需确认当前是否仍为该岗位","FC-L3-01-A06":"","FC-L3-02-A03":"","FC-L3-03-A04":"\"班组\"为集体角色，需确认具体执行人","FC-L3-03-A05":"原文指定了具体人员（毛亮），需确认当前是否仍为该岗位","FC-L3-04-A03":"","FC-L3-04-A04":"","FC-L3-05-A04":"","FC-L3-05-A05":"","FC-L3-06-A01":"外部实体行为，复材车间需跟踪监督","FC-L3-06-A05":""};
+    for(var i=0;i<rows.length;i++){var r=rows[i];seq++;var a1id=r[0];var bg=lastProc!==r[14]?'background:#f8fafc':'';lastProc=r[14];
+      var acc=accMap[a1id]||"不适用-过程环节";var alert=alertMap[a1id]||"";
+      var fb=feedbackState[a1id];var confirm=fb?fb.row_confirmed?'已确认':'' : '';
+      var adjust=fb?fb.q1==='accurate'?'无需调整':fb.q1==='minor'?'需要调整':fb.q1==='需重写'?'需要调整':'' : '';
+      var suggest=fb?fb.q1_note||'' : '';
+      var isFinal=/最终环节/.test(alert)||alert.indexOf('验收标准')>=0||acc.indexOf('待补')>=0||acc.indexOf('完成')>=0||acc.indexOf('出具')>=0||acc.indexOf('同步')>=0||acc.indexOf('闭环')>=0;
+      var acc=isFinal?(accMap[a1id]||'请部门确认是否需要验收/完成标准'):acc;
+      var warn='';if(!!roleWarning(r))warn='<span class="warn-tag">角色待确认：'+r[2]+'</span>';
+      if(alert)warn+=warn?'<br>':'';
+      h+='<tr style="'+bg+'"><td class="col-seq">'+seq+'</td><td class="col-a1id">'+a1id+'</td><td>'+r[13]+'</td><td>'+r[14]+'</td><td>'+r[1]+warn+trackingNote(r)+'</td><td>'+r[2]+'</td><td>'+r[3]+'</td><td>'+r[4]+'</td><td><span class="appr-tag none">'+r[5]+'</span></td><td>'+acc+'</td><td>'+r[7]+'</td><td><span class="evidence-tag '+evidenceClass(r[8])+'">'+r[8]+'</span></td><td>'+r[6]+'</td><td>'+''+'</td><td class="feedback-cell">'+confirm+'</td><td>'+adjust+'</td><td>'+suggest+'</td></tr>';
+    }body.innerHTML=h;
+  }
+}
+
+// ===== 柱状图 =====
+(function renderBars(){
+  var domMap={};for(var i=0;i<a1Rows.length;i++){var d=a1Rows[i][12];domMap[d]=(domMap[d]||0)+1;}
+  var dh='';for(var d in domMap){dh+='<div class="bar-line"><span>'+d+'</span><div class="bar-track"><div class="bar-fill" style="width:'+(domMap[d]/a1Rows.length*100)+'%"></div></div><span>'+domMap[d]+'</span></div>';}
+  document.getElementById('domainBars').innerHTML=dh;
+  var sysMap={};for(var i=0;i<a1Rows.length;i++){var s=a1Rows[i][6];if(s&&s!=="—"){var ss=s.split("、");for(var j=0;j<ss.length;j++)sysMap[ss[j]]=(sysMap[ss[j]]||0)+1;}}
+  var maxSys=0;for(var s in sysMap)maxSys=Math.max(maxSys,sysMap[s]);var sh='';for(var s in sysMap){sh+='<div class="bar-line"><span>'+s+'</span><div class="bar-track"><div class="bar-fill" style="width:'+(sysMap[s]/maxSys*100)+'%"></div></div><span>'+sysMap[s]+'</span></div>';}
+  document.getElementById('systemBars').innerHTML=sh;
+})();
+
+// ===== 初始渲染 =====
+renderSankey('all');renderTable('all');
+setTimeout(function(){attachFeedbackHandlers(myChart);},200);
+window.addEventListener('resize',function(){if(myChart)myChart.resize();});
+</script></body></html>

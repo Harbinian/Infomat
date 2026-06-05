@@ -1,0 +1,1478 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script defer src="echarts.min.js"></script>
+    <title>质量管理部 · 部门能力流程系统桑基图</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      :root {
+        --blue: #1a56db; --teal: #0891b2; --bg: #f5f7fb;
+        --ink: #10233f; --muted: #64748b; --border: #d9e2ef;
+      }
+      body {
+        font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+        background: var(--bg); color: var(--ink); line-height: 1.55;
+      }
+      .page { max-width: 1600px; margin: 0 auto; padding: 30px 38px 46px; }
+      .hero { position: relative; margin-bottom: 18px; }
+      .hero h1 { font-size: 30px; font-weight: 800; letter-spacing: 0; color: #0b2755; }
+      .hero p { font-size: 14px; color: #475569; margin-top: 6px; max-width: 920px; }
+      .badge {
+        position: absolute; right: 0; top: 6px; border: 1px solid #cbd5e1;
+        background: #fff; color: #334155; border-radius: 8px; padding: 6px 12px; font-size: 12px;
+      }
+      .read-guide {
+        background: #eef6ff; border-left: 4px solid var(--blue); border-radius: 8px;
+        padding: 12px 14px; margin: 14px 0 18px; color: #29415f; font-size: 14px;
+      }
+      .stat-row {
+        display: grid; grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 10px; margin-bottom: 18px;
+      }
+      .stat-box {
+        background: #fff; border: 1px solid var(--border); border-radius: 8px;
+        padding: 14px 16px; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+      }
+      .stat-box .num { font-size: 28px; font-weight: 800; color: #0f766e; line-height: 1; }
+      .stat-box .lbl { font-size: 13px; color: var(--muted); margin-top: 8px; }
+      .modebar {
+        background: #fff; border: 1px solid var(--border); border-radius: 8px;
+        padding: 12px; margin-bottom: 16px; display: flex; flex-wrap: wrap;
+        gap: 8px; align-items: center;
+      }
+      .mode-label { font-size: 13px; color: #475569; margin-right: 4px; }
+      .mode-btn {
+        height: 34px; border: 1px solid #cbd5e1; background: #fff; color: #29415f;
+        border-radius: 7px; padding: 0 12px; font-size: 13px; cursor: pointer;
+        transition: 0.16s; white-space: nowrap;
+      }
+      .mode-btn:hover { border-color: var(--blue); color: var(--blue); }
+      .mode-btn.active { background: var(--blue); border-color: var(--blue); color: #fff; font-weight: 700; }
+      .sankey-wrap {
+        width: 100%; background: #0f172a; border-radius: 12px;
+        padding: 24px 20px; margin-bottom: 18px; overflow: hidden;
+      }
+      .sankey-title { text-align: center; font-size: 20px; font-weight: 800; color: #f8fafc; margin-bottom: 4px; }
+      .sankey-sub { text-align: center; font-size: 12px; color: #94a3b8; margin-bottom: 14px; }
+      .sankey-chart { width: 100%; max-width: 100%; min-width: 0; height: 1120px; }
+      .legend-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 12px; }
+      .legend { display: inline-flex; align-items: center; gap: 6px; color: #cbd5e1; font-size: 12px; }
+      .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
+      .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; }
+      .note {
+        background: #fff; border: 1px solid var(--border); border-left: 4px solid var(--teal);
+        border-radius: 8px; padding: 14px 16px; color: #334155; font-size: 14px;
+      }
+      .note strong { color: #0b2755; }
+      .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; }
+      .panel { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+      .panel h3 { font-size: 16px; margin-bottom: 10px; color: #0b2755; }
+      .bar-list { display: grid; gap: 8px; }
+      .bar-line {
+        display: grid; grid-template-columns: 190px 1fr 36px;
+        gap: 10px; align-items: center; font-size: 13px; color: #334155;
+      }
+      .bar-track { height: 10px; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
+      .bar-fill { height: 100%; border-radius: 999px; background: var(--blue); }
+      .table-wrap {
+        overflow-x: hidden; background: #fff; border: 1px solid var(--border);
+        border-radius: 8px; margin-bottom: 18px;
+      }
+      table { width: 100%; border-collapse: collapse; font-size: 12px; }
+      .table-l3 { table-layout: fixed; }
+      .table-a1 { table-layout: fixed; min-width: 0; }
+      th, td {
+        padding: 7px 6px; border-bottom: 1px solid #e5ebf3;
+        text-align: left; vertical-align: top; word-break: break-word; overflow-wrap: anywhere;
+      }
+      th { background: #f1f5f9; color: #334155; font-weight: 700; position: sticky; top: 0; z-index: 1; }
+      th.col-seq, td.col-seq { width: 32px; text-align: center; }
+      th.col-a1id, td.col-a1id { width: 60px; white-space: normal; }
+      th.col-dept, td.col-dept { width: 58px; white-space: nowrap; }
+      th.col-domain, td.col-domain { width: 90px; }
+      th.col-cap, td.col-cap { width: 82px; }
+      th.col-proc, td.col-proc { width: 96px; }
+      th.col-a1name, td.col-a1name { width: 128px; }
+      th.col-role, td.col-role { width: 78px; }
+      th.col-trigger, td.col-trigger { width: 102px; }
+      th.col-precond, td.col-precond { width: 90px; }
+      th.col-appr, td.col-appr { width: 58px; white-space: nowrap; }
+      th.col-accept, td.col-accept { width: 92px; }
+      th.col-evidence, td.col-evidence { width: 106px; }
+      th.col-evidtype, td.col-evidtype { width: 100px; white-space: normal; }
+      th.col-system, td.col-system { width: 58px; }
+      th.col-alert, td.col-alert { width: 94px; }
+      th.col-feedback, td.col-feedback { width: 78px; }
+      th.col-adjust, td.col-adjust { width: 54px; }
+      th.col-suggestion, td.col-suggestion { width: 78px; }
+      tr:last-child td { border-bottom: none; }
+      .domain-pill {
+        display: inline-flex; align-items: center; min-height: 24px;
+        padding: 2px 8px; border-radius: 7px; color: #fff; font-size: 12px; white-space: normal;
+      }
+      .evidence-tag { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+      .evidence-tag.explicit { background: #dcfce7; color: #166534; }
+      .evidence-tag.inferred { background: #fef3c7; color: #92400e; }
+      .appr-tag { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 11px; }
+      .appr-tag.none { background: #e2e8f0; color: #475569; }
+      .appr-tag.single { background: #dbeafe; color: #1e40af; }
+      .appr-tag.multi { background: #fce7f3; color: #9d174d; }
+      .appr-tag.cosign { background: #e0e7ff; color: #3730a3; }
+      .warn-tag {
+        display: inline-block; margin: 0 4px 4px 0; padding: 2px 6px;
+        border-radius: 4px; background: #fef3c7; color: #92400e;
+        font-size: 11px; font-weight: 700; line-height: 1.35;
+      }
+      .soft-warn-tag {
+        display: inline-block; margin: 0 4px 4px 0; padding: 2px 6px;
+        border-radius: 4px; background: #e0f2fe; color: #075985;
+        font-size: 11px; font-weight: 700; line-height: 1.35;
+      }
+      .feedback-cell { color: #64748b; font-size: 11px; }
+      .foot { margin-top: 14px; font-size: 12px; color: #64748b; }
+      .progress-bar-wrap {
+        background: #fff; border: 1px solid var(--border); border-radius: 8px;
+        padding: 12px 16px; margin-bottom: 14px; display: flex; align-items: center; gap: 12px;
+      }
+      .progress-bar-wrap .label { font-size: 13px; color: #475569; white-space: nowrap; }
+      .progress-track { flex: 1; height: 10px; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
+      .progress-fill { height: 100%; border-radius: 999px; background: var(--teal); transition: width 0.3s; width: 0%; }
+      .progress-text { font-size: 13px; color: #334155; font-weight: 700; white-space: nowrap; }
+      .feedback-backdrop {
+        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(15,23,42,0.3); z-index: 999; display: none;
+      }
+      .feedback-backdrop.show { display: block; }
+      .feedback-overlay {
+        position: fixed; top: 0; right: 0; bottom: 0; width: 460px; max-width: 100vw;
+        background: #fff; box-shadow: -4px 0 24px rgba(15,23,42,0.15);
+        z-index: 1000; transform: translateX(100%); transition: transform 0.28s ease;
+        display: flex; flex-direction: column;
+      }
+      .feedback-overlay.open { transform: translateX(0); }
+      .feedback-overlay .fb-header {
+        padding: 14px 20px; border-bottom: 1px solid var(--border);
+        display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;
+      }
+      .feedback-overlay .fb-header h3 { font-size: 15px; color: #0b2755; }
+      .feedback-overlay .fb-close {
+        width: 32px; height: 32px; border: 1px solid var(--border); background: #fff;
+        border-radius: 6px; cursor: pointer; font-size: 18px; color: #64748b; line-height: 28px; text-align: center;
+      }
+      .feedback-overlay .fb-close:hover { background: #f1f5f9; }
+      .feedback-overlay .fb-body { flex: 1; overflow-y: auto; padding: 20px; }
+      .feedback-overlay .fb-footer { padding: 14px 20px; border-top: 1px solid var(--border); flex-shrink: 0; }
+      .q-block { margin-bottom: 18px; }
+      .q-block .q-label { font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 6px; }
+      .q-block .q-hint { font-size: 12px; color: #64748b; margin-bottom: 6px; padding: 6px 10px; background: #f8fafc; border-radius: 4px; border-left: 3px solid #e2e8f0; }
+      .q-options { display: flex; flex-direction: column; gap: 4px; }
+      .q-opt {
+        display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+        border: 1px solid var(--border); border-radius: 6px; cursor: pointer;
+        font-size: 13px; color: #334155; transition: 0.15s; user-select: none;
+      }
+      .q-opt:hover { border-color: var(--blue); background: #eef6ff; }
+      .q-opt.selected { border-color: var(--blue); background: #eef6ff; color: #1a56db; font-weight: 700; }
+      .q-opt .radio { width: 16px; height: 16px; border-radius: 50%; border: 2px solid #cbd5e1; flex-shrink: 0; }
+      .q-opt.selected .radio { border-color: var(--blue); background: var(--blue); box-shadow: inset 0 0 0 3px #fff; }
+      .a1-context { margin-bottom: 16px; padding: 10px 12px; background: #f8fafc; border-radius: 6px; font-size: 12px; color: #475569; line-height: 1.6; }
+      .a1-context b { color: #0b2755; }
+      .note-area {
+        width: 100%; min-height: 64px; border: 1px solid var(--border); border-radius: 6px;
+        padding: 8px 12px; font-size: 13px; resize: vertical; font-family: inherit; box-sizing: border-box;
+      }
+      .note-area:focus { outline: none; border-color: var(--blue); }
+      .fb-submit { width: 100%; height: 40px; background: var(--blue); color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; }
+      .fb-submit:hover { filter: brightness(1.1); }
+      .export-bar { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+      .export-btn {
+        height: 36px; border: 1px solid var(--teal); background: #fff; color: var(--teal);
+        border-radius: 7px; padding: 0 16px; font-size: 13px; cursor: pointer; font-weight: 700;
+      }
+      .export-btn:hover { background: #f0fdfa; }
+      .node-legend { display: flex; gap: 14px; font-size: 12px; color: #64748b; align-items: center; margin-left: 8px; }
+      .node-legend .dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; }
+      .dot.done { background: #16a34a; } .dot.issue { background: #f59e0b; } .dot.wrong { background: #dc2626; }
+      .fb-guide { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; margin-bottom: 14px; }
+      .fb-guide h3 { font-size: 14px; color: #0b2755; margin-bottom: 8px; }
+      .fb-guide ol { padding-left: 20px; font-size: 12px; color: #475569; line-height: 1.9; }
+      @media (max-width: 900px) {
+        .page { padding: 20px 14px 34px; }
+        .badge { position: static; display: inline-block; margin-top: 10px; }
+        .stat-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .g2, .summary-grid { grid-template-columns: 1fr; }
+        .sankey-chart { height: 1120px; }
+        .bar-line { grid-template-columns: 160px 1fr 34px; }
+        .table-a1 { min-width: 0; }
+        .feedback-overlay { width: 100vw; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero">
+        <h1>质量管理部 · 部门能力流程系统桑基图</h1>
+        <p>部门（D1）→ 能力域（L1）→ 业务能力（L2）→ 业务流程（L3）→ 业务行为（A1）→ 应用系统（S1）。含362条业务行为（A1），覆盖6大能力域24项业务能力24条业务流程（L3）。</p>
+        <div class="badge">部门审核稿 · 待反馈</div>
+      </section>
+      <div class="read-guide">
+        <strong>读图方法：</strong>"全域总览"看质量管理部覆盖哪些领域和系统；切换到具体能力域（L1），看 业务能力（L2）→ 业务流程（L3）→ 业务行为（A1）→ 应用系统（S1） 的四层细节。悬停连线可见制度依据和系统设计依据。业务行为（A1）节点显示行为名称和执行角色，业务行为（A1）编号保留在悬停提示和明细表中用于追溯。下方明细表在"全域总览"显示业务流程（L3）行，在能力域视图显示业务行为（A1）行。
+      </div>
+      <section class="stat-row" id="stats">
+        <div class="stat-box"><div class="num">1</div><div class="lbl">部门（D1）</div></div>
+        <div class="stat-box"><div class="num">6</div><div class="lbl">能力域（L1）</div></div>
+        <div class="stat-box"><div class="num">24</div><div class="lbl">业务能力（L2）</div></div>
+        <div class="stat-box"><div class="num">24</div><div class="lbl">业务流程（L3）</div></div>
+        <div class="stat-box"><div class="num">362</div><div class="lbl">业务行为（A1）</div></div>
+        <div class="stat-box"><div class="num">4</div><div class="lbl">应用系统（S1）</div></div>
+        <div class="stat-box"><div class="num">24</div><div class="lbl">映射记录</div></div>
+      </section>
+      <section class="modebar" id="modebar"><span class="mode-label">视图</span></section>
+      <section class="sankey-wrap">
+        <div class="sankey-title" id="chartTitle">质量管理部全域总览</div>
+        <div class="sankey-sub" id="chartSub">部门（D1）→ 能力域（L1）→ 业务能力（L2）→ 应用系统（S1）</div>
+        <div id="chart" class="sankey-chart"></div>
+        <div class="legend-row" id="legendRow"></div>
+      </section>
+      <section class="g2">
+        <div class="note"><strong>应用系统（S1）口径：</strong>只展示OA、MES、PLM、ERP四类面向员工使用的信息化系统；MDM和外部海关平台不作为应用系统（S1）节点。</div>
+        <div class="note"><strong>部门审核口径：</strong>本页用于部门逐条确认业务行为（A1）。证据类型需区分"原文明确-正文"、"原文明确-流程图"、"原文明确-表单"、"上下文推断"或"分析拆分"；执行角色、触发情景、前置条件可由部门补充或修正。验收标准只检查业务流程（L3）最终环节或跨部门交接前的最后环节；跟踪类任务优先由系统待办提醒、到期预警和进度展示承载。</div>
+      </section>
+      <section class="summary-grid">
+        <div class="panel"><h3>能力域（L1）规模（业务行为（A1）数）</h3><div class="bar-list" id="domainBars"></div></div>
+        <div class="panel"><h3>系统承载分布（A1参与次数）</h3><div class="bar-list" id="systemBars"></div></div>
+      </section>
+      <section class="table-wrap">
+        <table id="mappingTable"><thead id="tableHead"></thead><tbody id="mappingBody"></tbody></table>
+      </section>
+      <div class="foot">数据来源：昌兴程序 SYCXQMS 系列 29 份程序文件（M2/P5/S1/S3）+ 民机程序 20 份项目标准；应用系统（S1）口径限定为OA、MES、PLM、ERP。业务行为（A1）分解基于体系文件条款逐条提取。</div>
+      <div class="fb-guide">
+        <h3>反馈操作说明</h3>
+        <ol>
+          <li>切换<b>能力域（L1）视图</b>，进入具体业务域</li>
+          <li>在桑基图中<b>点击业务行为（A1）节点</b>，右侧弹出反馈卡片</li>
+          <li>逐一回答选择题（每题必选），选"有问题"的选项后填写备注</li>
+          <li>点击<b>"确认本条"</b>保存反馈，节点颜色自动更新</li>
+          <li>全部完成后点击<b>"导出反馈 JSON"</b>，下载文件发送给信息化项目组</li>
+          <li>绿色=<b>准确</b>，黄色=<b>有小问题</b>，红色=<b>需重写</b></li>
+        </ol>
+      </div>
+      <div class="export-bar">
+        <button class="export-btn" id="exportJsonBtn">导出反馈 JSON</button>
+        <button class="export-btn" id="importJsonBtn">导入反馈 JSON</button>
+        <button class="export-btn" id="clearFeedbackBtn">清空本地反馈</button>
+        <input type="file" id="importFileInput" accept=".json" style="display:none">
+        <span class="node-legend"><span><span class="dot done"></span>准确</span><span><span class="dot issue"></span>有小问题</span><span><span class="dot wrong"></span>需重写</span></span>
+      </div>
+      <div class="progress-bar-wrap">
+        <span class="label">反馈进度</span>
+        <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+        <span class="progress-text" id="progressText">0 / 362</span>
+      </div>
+      <div class="feedback-backdrop" id="feedbackBackdrop"></div>
+      <div class="feedback-overlay" id="feedbackPanel">
+        <div class="fb-header"><h3 id="feedbackTitle">业务行为反馈</h3><button class="fb-close" id="feedbackClose">&times;</button></div>
+        <div class="fb-body" id="feedbackBody"></div>
+        <div class="fb-footer"><button class="fb-submit" id="feedbackSubmit">确认本条</button></div>
+      </div>
+    </main>
+    <script>var l3Rows = [
+  {"domain":"质量体系审核与改进","capability":"内部审核管理","process":"内部审核策划、审核员资质认定与维护、审核准备与实施、审核报告编制与审批、整改跟踪验证","evidence":"SYCXQMS-M2-02/A《内部审核管理程序》§5.1-§5.6","system":"OA","basis":"OA：适用于审核计划编制审批、审核通知发放、审核检查单流转、审核报告会签归档和整改项跟踪闭环。审核员资质数据库可在PLM中维护。"},
+  {"domain":"质量体系审核与改进","capability":"外部审核管理","process":"外部审核通知接收与确认、审核准备与自查、首次/末次会议组织、审核陪同与记录、审核发现通报与整改跟踪、外部审核数据库维护","evidence":"SYCXQMS-M2-03/A《外部审核管理程序》§5.1-§5.5","system":"OA","basis":"OA：适用于外部审核通知分发、自查安排、会议通知、审核通报下发和整改跟踪闭环。整改证据提交给二/三方前的内部流转和审批在OA中完成。"},
+  {"domain":"质量体系审核与改进","capability":"管理评审","process":"管理评审策划与通知、各部门运行分析报告收集汇总、公司级运行分析报告编制、管理评审会议组织与记录、评审报告编制审批、改进机会跟踪","evidence":"SYCXQMS-M2-04/A《管理评审程序》§5.1-§5.5","system":"OA","basis":"OA：适用于评审通知发放、运行分析报告收集、会议签到、评审报告会签审批和改进项跟踪流转。运行分析报告为跨部门协同产物，OA承载各环节的责任留痕。"},
+  {"domain":"质量体系审核与改进","capability":"纠正措施管理","process":"内部纠正措施发起与跟踪、外部（二/三方）纠正措施答复、供应商纠正措施管理、举一反三核查、持续有效性验证、纠正措施数据库维护","evidence":"SYCXQMS-M2-05/A《纠正措施管理程序》§5.1-§5.12","system":"OA","basis":"OA：适用于纠正措施报告下发、责任部门答复、审批流转、限期提醒和数据库维护。外部纠正措施答复前的内部审核和签批在OA中完成。"},
+  {"domain":"质量体系审核与改进","capability":"质量问题归零管理","process":"归零问题识别与通知下发、技术归零（定位准确、机理清楚、故障复现、措施有效、举一反三）、管理归零（过程清楚、责任明确、措施落实、严肃处理、完善规章）、归零报告编写与评审、归零措施跟踪验证与关闭","evidence":"SYCXQMS-M2-06/A《质量问题归零管理程序》§5.1-§5.12","system":"OA、PLM","basis":"OA：适用于归零通知单下发、归零报告会签审批、归零评审会议组织、归零措施验证跟踪。PLM：归零涉及的技术文件修订（标准、工艺、设计文件等）和案例库归档依托PLM进行技术状态管理。"},
+  {"domain":"质量体系审核与改进","capability":"质量信息收集分析与评价","process":"质量信息需求确定与收集、产品质量信息统计分析（废品损失、外部拒收、总检故障等）、体系运行信息分析（过程绩效、内审不合格项、纠正措施等）、顾客满意度与供应商绩效信息分析、质量经济性分析、数据分析报告编制与改进识别","evidence":"SYCXQMS-M2-07/A《质量信息的收集、分析和评价程序》§5.1-§5.11","system":"OA、ERP","basis":"OA：适用于质量信息汇总报告流转和异常通报。ERP：质量成本（废品损失、外部故障成本）核算依托ERP财务模块，质量成本预算和实际对比在ERP中完成。"},
+  {"domain":"质量体系审核与改进","capability":"持续改进管理","process":"改进机会识别与范围目标确定、年度质量改进计划制定与跟踪、项目实物质量改进计划管理、改进活动实施与有效性验证、改进工具应用（质量改进计划、精品工程、质量攻关、QC小组、拉条挂账）","evidence":"SYCXQMS-M2-08/A《持续改进控制程序》§5.1-§5.7","system":"OA","basis":"OA：适用于改进计划编制审批、改进活动执行跟踪、改进效果验证记录和跨部门协同。持续改进活动涉及多部门协作，需要OA承载任务分派与闭环留痕。"},
+  {"domain":"产品检验与符合性","capability":"产品检验管理","process":"工序检验（接收检验、工序间检验、终检）、操作者自检互检与专检、检验验收条件确认、关键工序检验控制、特种工序随炉件/试片验收、项目特定检验要求（商飞重要检验、MA700授权检验）、不合格品衔接处理","evidence":"SYCXQMS-P5-07/A《产品检验管理程序》§5.1-§5.7","system":"MES、PLM","basis":"MES：适用于工序检验执行、检验结果现场记录、自检互检专检数据采集、不合格品现场标识与隔离。PLM：适用于检验规程、制造记录、检验结果归档和技术文件引用。"},
+  {"domain":"产品检验与符合性","capability":"首件检验管理","process":"首件检验需求识别与通知、首件检验计划编制、首件三检（自检、互检、专检）实施、首件检验报告（FAIR）填写与审核、特性气球图标注与验证、首件检验变更触发与重新实施","evidence":"SYCXQMS-P5-01/A《首件检验管理程序》§5.1-§5.9","system":"PLM、MES","basis":"PLM：适用于首件检验计划编制、FAIR文件生成与归档、特性气球图管理、图纸/DPD数据引用和工程更改触发FAI。MES：适用于现场首件检验执行、检验数据采集和首件状态标识。"},
+  {"domain":"产品检验与符合性","capability":"检验方案策划管理","process":"检验方案策划与编制、检验顺序确定、设计特性提取与验证方法选择、测量设备和工装确定、检验方案审批与分发","evidence":"SYCXQMS-P5-03/A《产品检验方案的策划程序》§5.1-§5.5","system":"PLM","basis":"PLM：适用于检验方案文件编制、与产品设计数据关联、方案审批与版本控制。检验方案与首件检验计划、产品检验规程在PLM中形成完整的技术文件链条。"},
+  {"domain":"产品检验与符合性","capability":"顾客/项目符合性检验管理","process":"顾客检验准备与陪同、商飞项目制造符合性检验、MA700项目制造符合性检验、顾客检验发现问题跟踪整改","evidence":"SYCXQMS-P5-04/A《顾客检验管理程序》§5.1-§5.4；SYCXQMS-P5-05/A《商飞项目制造符合性检验程序》§5.1-§5.7；SYCXQMS-P5-13/A《MA700项目制造符合性检验程序》§5.1-§5.6","system":"MES、OA","basis":"MES：适用于现场符合性检验数据采集、检验状态标识和顾客检验点（QAR点）管理。OA：适用于顾客检验问题记录、整改跟踪和内部通报流转。"},
+  {"domain":"产品检验与符合性","capability":"无损检测管理","process":"超声检测实施与控制、射线检测实施与控制、无损检测人员资格鉴定与能力评估（Ⅰ/Ⅱ/Ⅲ级）、无损检测设备校准与维护、检测技术文件编制与审批、检测材料验收与管理","evidence":"SYCXQMS-P5-09/A《复合材料无损检测管理程序》§5.1-§5.9","system":"PLM、MES","basis":"PLM：适用于无损检测技术单/工艺规程编制审批、检测报告归档、人员资质记录维护和检测文件版本控制。MES：适用于现场检测数据采集、设备校准状态监控和检测结果记录。"},
+  {"domain":"产品检验与符合性","capability":"数字化测量管理","process":"数字化测量程序编制与验证、数控测量机检测实施、检测结果报告生成与签字归档、测量不合格品衔接处理","evidence":"SYCXQMS-P5-08/A《数字化测量管理程序》§5.1-§5.6","system":"PLM、MES","basis":"PLM：适用于数字化测量程序文件管理、检测结果报告归档和测量数据版本控制。MES：适用于数控测量机现场检测数据采集和测量状态监控。"},
+  {"domain":"不合格品控制","capability":"不合格品审理与处置","process":"不合格品识别与标识（挂签/粘签）、不合格品隔离（MRCC）、预检(PI)标记与处置关闭、不合格品分类（严重/轻度）、不合格品审理组织（委员会/常设机构/审理小组）运行、不合格品处置方式确定（返工/返修/报废/让步/降级/返回供方）、不合格品审理单逐级审理与审批","evidence":"SYCXQMS-P5-10/A《不合格品控制管理程序》§5.1-§5.9","system":"MES、OA、PLM","basis":"MES：适用于不合格品现场标识记录、隔离状态跟踪、预检标记和MRCC管理。OA：适用于不合格品审理单流转审批、各级审理委员会会签和处置结果通知。PLM：适用于不合格品审理记录归档、返工/返修工艺文件编制和制造记录关联。"},
+  {"domain":"不合格品控制","capability":"不合格品审理人员授权管理","process":"审理人员资格确认与培训考核、总经理授权签发、授权登记表与授权书管理、授权名单维护与发布、审理人员变更通知与重新授权","evidence":"SYCXQMS-P5-14/A《不合格品审理人员的授权管理程序》§5.1-§5.5","system":"OA","basis":"OA：适用于授权申请、培训记录审查、授权审批和授权名单发布流转。授权人员信息可在PLM中作为人员资质数据归档。"},
+  {"domain":"不合格品控制","capability":"质量逃逸管理","process":"质量逃逸事件识别与报告、逃逸原因调查与分析、纠正措施制定与跟踪、顾客通知与沟通","evidence":"SYCXQMS-P5-06/A《质量逃逸管理程序》§5.1-§5.6","system":"OA、MES","basis":"OA：适用于质量逃逸事件报告流转、原因调查协同、纠正措施跟踪和顾客沟通记录。MES：适用于逃逸相关产品追溯、检验记录核查和现场状态确认。"},
+  {"domain":"不合格品控制","capability":"多余物控制管理","process":"多余物预防措施执行、多余物检测与排查、多余物记录与处置、多余物控制效果验证","evidence":"SYCXQMS-P5-11/A《多余物控制管理程序》§5.1-§5.5","system":"MES","basis":"MES：适用于现场多余物检测记录、排查任务派发和处置状态跟踪。多余物控制属于现场执行类活动，MES作为现场管理平台承载检查记录和闭环验证。"},
+  {"domain":"不合格品控制","capability":"产品紧急放行管理","process":"紧急放行申请与风险评估、紧急放行审批、放行产品标识与追溯记录、放行后跟踪验证与关闭","evidence":"SYCXQMS-P5-12/A《产品紧急放行管理程序》§5.1-§5.5","system":"OA、MES","basis":"OA：适用于紧急放行申请审批、风险评估会签和放行后跟踪任务流转。MES：适用于放行产品现场标识、追溯记录和后续工序状态跟踪。"},
+  {"domain":"交付文件管理","capability":"交付文件准备管理","process":"顾客交付文件要求确认、各项目交付文件工作标准编制、交付文件填写与汇总、交付文件审查与盖章、交付文件复印归档与装箱移交","evidence":"SYCXQMS-P5-02/A《交付文件的准备管理要求》§5.1-§5.6","system":"PLM、OA","basis":"PLM：适用于交付文件模板管理、合格证及测量数据文件生成、制造记录关联和归档。OA：适用于交付文件清单流转、审查签批和装箱移交确认。"},
+  {"domain":"交付文件管理","capability":"项目交付文件管理（商飞/波音/MA700/A220）","process":"各项目交付文件专项编制、项目特殊要求（如商飞QAR点文件、波音SER/SQIS文件、MA700西飞民机文件、A220空客文件）的满足与提交","evidence":"SYCXQMS-P5-15/A《商飞项目交付文件管理程序》§5.1-§5.5；SYCXQMS-P5-16/A《波音项目交付文件管理程序》§5.1-§5.5；SYCXQMS-P5-17/A《MA700项目交付文件管理程序》§5.1-§5.5；SYCXQMS-P5-18/A《A220项目交付文件管理程序》§5.1-§5.5","system":"PLM","basis":"PLM：适用于各项目交付文件模板管理、文件编制与版本控制、顾客格式适配和归档。不同项目的交付文件格式和提交要求差异较大，PLM提供模板化和版本化管理能力。"},
+  {"domain":"质量记录管理","capability":"质量记录全过程管理","process":"质量记录分类与编号、记录表格格式与版次控制、记录填写规范与更改（杠改）、产品质量记录归档与索引、管理质量记录归档、记录保存期限管理（可追溯产品质量记录≥10年/其他8年/管理记录6年）、记录借阅与归还、记录销毁审批与执行","evidence":"SYCXQMS-S1-06/A《质量记录管理程序》§5.1-§5.9","system":"PLM、OA","basis":"PLM：适用于产品质量档案（制造记录、检验记录、交付记录）的系统化归档、索引检索和长期保存。OA：适用于记录借阅申请审批、记录销毁审批流转和台账管理。质量记录是最核心的合规证据，PLM作为产品技术数据管理平台更适合长期归档与追溯。"},
+  {"domain":"计量管理","capability":"测量设备管理","process":"测量设备需求提出与选型审查、测量设备购置与验收、入厂校准、测量设备台账建立与维护、周期校准与状态标识（A/B/C分类管理）、测量设备使用与维护、不合格测量设备处置（禁用/降级/报废）、测量设备封存与启封","evidence":"SYCXQMS-S3-01/A《测量设备管理程序》§5.1-§5.12","system":"ERP、PLM、MES","basis":"ERP：适用于测量设备采购申请、固定资产登记、供应商管理和付款。PLM：适用于测量设备台账维护、校准记录归档、校准周期计划和设备状态管理。MES：适用于现场测量设备校准状态查询、使用前校准记录和量具用前校验数据采集。"},
+  {"domain":"计量管理","capability":"测量软件管理","process":"测量软件标识（名称/版本号）、测量软件操作指南编制、软件访问权限与密码保护、软件异常处理与处置单登记、测量软件验收与验证（三坐标测量机/激光跟踪仪等）、人工件管理与使用、软件拷贝件/安装包保管","evidence":"SYCXQMS-S3-02/A《测量软件的管理程序》§5.1-§5.9","system":"PLM","basis":"PLM：适用于测量软件版本管理、验证报告归档、操作指南文件管理。测量软件与测量设备配套使用，其验证记录和版本信息作为技术文件在PLM中管理。"},
+  {"domain":"计量管理","capability":"计量确认与溯源管理","process":"计量确认与量值溯源、测量设备计量标识管理（A/B/C分类标识）、委托计量/测量管理（内部委托和外部委托）、测量设备抽检与可靠性监控、计量器具台账与数据库维护、不合格测量设备对以往测量结果的影响评估","evidence":"SYCXQMS-S3-03/A《计量管理程序》§5.1-§5.8","system":"PLM、ERP","basis":"PLM：适用于计量确认记录归档、量值溯源链记录、计量器具台账维护和抽检计划管理。ERP：适用于外部计量机构委托服务的供应商管理和费用结算。"}
+];
+
+var a1Rows = [
+  ["ZL-L3-01-A01","编制年度内部审核计划","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-02/A §5.1","原文明确-正文","SYCXQMS-M2-02/A §5.1","SYCXQMS-M2-02/A §5.1","SYCXQMS-M2-02/A §5.1","质量体系审核与改进","内部审核管理","内部审核策划与实施"],
+  ["ZL-L3-01-A02","审核年度内部审核计划","管理者代表","","","单人审批","OA","SYCXQMS-M2-02/A §5.1","原文明确-正文","SYCXQMS-M2-02/A §5.1","SYCXQMS-M2-02/A §5.1","SYCXQMS-M2-02/A §5.1","质量体系审核与改进","内部审核管理","内部审核策划与实施"],
+  ["ZL-L3-01-A03","批准年度内部审核计划","总经理","","","单人审批","OA","SYCXQMS-M2-02/A §5.1","原文明确-正文","SYCXQMS-M2-02/A §5.1","SYCXQMS-M2-02/A §5.1","SYCXQMS-M2-02/A §5.1","质量体系审核与改进","内部审核管理","内部审核策划与实施"],
+  ["ZL-L3-01-A04","识别临时审核触发条件","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-02/A §5.1.7","原文明确-正文","SYCXQMS-M2-02/A §5.1.7","SYCXQMS-M2-02/A §5.1.7","SYCXQMS-M2-02/A §5.1.7","质量体系审核与改进","内部审核管理","内部审核策划与实施"],
+  ["ZL-L3-01-A05","分发年度内部审核计划至相关部门","质量安环部检验员","","","无审批","OA","上下文推断","上下文推断","上下文推断","上下文推断","上下文推断","质量体系审核与改进","内部审核管理","内部审核策划与实施"],
+  ["ZL-L3-02-A01","审核员资质条件审查","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-02/A §5.2","原文明确-正文","SYCXQMS-M2-02/A §5.2","SYCXQMS-M2-02/A §5.2","SYCXQMS-M2-02/A §5.2","质量体系审核与改进","内部审核管理","审核员资质认定与维护"],
+  ["ZL-L3-02-A02","建立与维护内审员资质数据库","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-02/A §5.2","原文明确-正文","SYCXQMS-M2-02/A §5.2","SYCXQMS-M2-02/A §5.2","SYCXQMS-M2-02/A §5.2","质量体系审核与改进","内部审核管理","审核员资质认定与维护"],
+  ["ZL-L3-02-A03","审核员资质到期监控与续证","质量安环部检验员","","","无审批","OA","上下文推断","上下文推断","上下文推断","上下文推断","上下文推断","质量体系审核与改进","内部审核管理","审核员资质认定与维护"],
+  ["ZL-L3-02-A04","编制审核员年度培训计划","质量安环部检验员","","","单人审批","OA","SYCXQMS-M2-02/A §5.2","上下文推断","SYCXQMS-M2-02/A §5.2","SYCXQMS-M2-02/A §5.2","SYCXQMS-M2-02/A §5.2","质量体系审核与改进","内部审核管理","审核员资质认定与维护"],
+  ["ZL-L3-02-A05","审核员能力评估与考核","管理者代表","","","无审批","OA","SYCXQMS-M2-02/A §5.2","上下文推断","SYCXQMS-M2-02/A §5.2","SYCXQMS-M2-02/A §5.2","SYCXQMS-M2-02/A §5.2","质量体系审核与改进","内部审核管理","审核员资质认定与维护"],
+  ["ZL-L3-03-A01","任命审核组长","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-02/A §5.3","原文明确-正文","SYCXQMS-M2-02/A §5.3","SYCXQMS-M2-02/A §5.3","SYCXQMS-M2-02/A §5.3","质量体系审核与改进","内部审核管理","审核准备与现场审核"],
+  ["ZL-L3-03-A02","确定审核组成员","审核组长","","","无审批","OA","SYCXQMS-M2-02/A §5.3","原文明确-正文","SYCXQMS-M2-02/A §5.3","SYCXQMS-M2-02/A §5.3","SYCXQMS-M2-02/A §5.3","质量体系审核与改进","内部审核管理","审核准备与现场审核"],
+  ["ZL-L3-03-A03","编制审核实施计划","审核组长","","","无审批","OA","SYCXQMS-M2-02/A §5.3","原文明确-正文","SYCXQMS-M2-02/A §5.3","SYCXQMS-M2-02/A §5.3","SYCXQMS-M2-02/A §5.3","质量体系审核与改进","内部审核管理","审核准备与现场审核"],
+  ["ZL-L3-03-A04","编写审核检查单","审核组成员","","","无审批","OA","SYCXQMS-M2-02/A §5.3","原文明确-正文","SYCXQMS-M2-02/A §5.3","SYCXQMS-M2-02/A §5.3","SYCXQMS-M2-02/A §5.3","质量体系审核与改进","内部审核管理","审核准备与现场审核"],
+  ["ZL-L3-03-A05","召开首次会议","审核组长","","","无审批","OA","SYCXQMS-M2-02/A §5.4","原文明确-正文","SYCXQMS-M2-02/A §5.4","SYCXQMS-M2-02/A §5.4","SYCXQMS-M2-02/A §5.4","质量体系审核与改进","内部审核管理","审核准备与现场审核"],
+  ["ZL-L3-03-A06","执行现场审核","审核组成员","","","无审批","OA","SYCXQMS-M2-02/A §5.4","原文明确-正文","SYCXQMS-M2-02/A §5.4","SYCXQMS-M2-02/A §5.4","SYCXQMS-M2-02/A §5.4","质量体系审核与改进","内部审核管理","审核准备与现场审核"],
+  ["ZL-L3-03-A07","审核组内部沟通","审核组长","","","无审批","OA","SYCXQMS-M2-02/A §5.4","原文明确-正文","SYCXQMS-M2-02/A §5.4","SYCXQMS-M2-02/A §5.4","SYCXQMS-M2-02/A §5.4","质量体系审核与改进","内部审核管理","审核准备与现场审核"],
+  ["ZL-L3-03-A08","召开末次会议并报告审核发现","审核组长","","","无审批","OA","SYCXQMS-M2-02/A §5.4","原文明确-正文","SYCXQMS-M2-02/A §5.4","SYCXQMS-M2-02/A §5.4","SYCXQMS-M2-02/A §5.4","质量体系审核与改进","内部审核管理","审核准备与现场审核"],
+  ["ZL-L3-04-A01","编写内部审核报告","审核组长","","","无审批","OA","SYCXQMS-M2-02/A §5.5","原文明确-表单","SYCXQMS-M2-02/A §5.5","SYCXQMS-M2-02/A §5.5","SYCXQMS-M2-02/A §5.5","质量体系审核与改进","内部审核管理","审核报告编制审批"],
+  ["ZL-L3-04-A02","审核内部审核报告","管理者代表","","","单人审批","OA","SYCXQMS-M2-02/A §5.5","原文明确-正文","SYCXQMS-M2-02/A §5.5","SYCXQMS-M2-02/A §5.5","SYCXQMS-M2-02/A §5.5","质量体系审核与改进","内部审核管理","审核报告编制审批"],
+  ["ZL-L3-04-A03","批准内部审核报告","总经理","","","单人审批","OA","SYCXQMS-M2-02/A §5.5","上下文推断","SYCXQMS-M2-02/A §5.5","SYCXQMS-M2-02/A §5.5","SYCXQMS-M2-02/A §5.5","质量体系审核与改进","内部审核管理","审核报告编制审批"],
+  ["ZL-L3-04-A04","分发内部审核报告至所有责任部门","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-02/A §5.5","原文明确-正文","SYCXQMS-M2-02/A §5.5","SYCXQMS-M2-02/A §5.5","SYCXQMS-M2-02/A §5.5","质量体系审核与改进","内部审核管理","审核报告编制审批"],
+  ["ZL-L3-05-A01","制定纠正措施计划","责任部门负责人","","","无审批","OA","SYCXQMS-M2-02/A §5.6","原文明确-正文","SYCXQMS-M2-02/A §5.6","SYCXQMS-M2-02/A §5.6","SYCXQMS-M2-02/A §5.6","质量体系审核与改进","内部审核管理","整改跟踪验证"],
+  ["ZL-L3-05-A02","验证纠正措施实施","审核员","","","无审批","OA","SYCXQMS-M2-02/A §5.6","原文明确-正文","SYCXQMS-M2-02/A §5.6","SYCXQMS-M2-02/A §5.6","SYCXQMS-M2-02/A §5.6","质量体系审核与改进","内部审核管理","整改跟踪验证"],
+  ["ZL-L3-05-A03","跟踪纠正措施至关闭","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-02/A §5.6","原文明确-正文","SYCXQMS-M2-02/A §5.6","SYCXQMS-M2-02/A §5.6","SYCXQMS-M2-02/A §5.6","质量体系审核与改进","内部审核管理","整改跟踪验证"],
+  ["ZL-L3-05-A04","更新内部审核整改台账","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-02/A §5.6","上下文推断","SYCXQMS-M2-02/A §5.6","SYCXQMS-M2-02/A §5.6","SYCXQMS-M2-02/A §5.6","质量体系审核与改进","内部审核管理","整改跟踪验证"],
+  ["ZL-L3-06-A01","接收二/三方审核通知并确认审核范围、依据和日程","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-03/A §5.1","原文明确-正文","SYCXQMS-M2-03/A §5.1","SYCXQMS-M2-03/A §5.1","SYCXQMS-M2-03/A §5.1","质量体系审核与改进","外部审核管理","外部审核通知接收与确认"],
+  ["ZL-L3-06-A02","向管理者代表汇报外部审核安排","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-03/A §5.1","上下文推断","SYCXQMS-M2-03/A §5.1","SYCXQMS-M2-03/A §5.1","SYCXQMS-M2-03/A §5.1","质量体系审核与改进","外部审核管理","外部审核通知接收与确认"],
+  ["ZL-L3-06-A03","向相关责任部门分发审核通知及要求","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-03/A §5.1","上下文推断","SYCXQMS-M2-03/A §5.1","SYCXQMS-M2-03/A §5.1","SYCXQMS-M2-03/A §5.1","质量体系审核与改进","外部审核管理","外部审核通知接收与确认"],
+  ["ZL-L3-06-A04","录入外部审核信息至审核数据库","质量安环部文档管理员","","","无审批","PLM","SYCXQMS-M2-03/A §5.1","上下文推断","SYCXQMS-M2-03/A §5.1","SYCXQMS-M2-03/A §5.1","SYCXQMS-M2-03/A §5.1","质量体系审核与改进","外部审核管理","外部审核通知接收与确认"],
+  ["ZL-L3-07-A01","组织各部门按审核准则开展自查","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-03/A §5.2","原文明确-正文","SYCXQMS-M2-03/A §5.2","SYCXQMS-M2-03/A §5.2","SYCXQMS-M2-03/A §5.2","质量体系审核与改进","外部审核管理","审核准备与自查"],
+  ["ZL-L3-07-A02","汇总各部门自查结果并识别差距","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-03/A §5.2","上下文推断","SYCXQMS-M2-03/A §5.2","SYCXQMS-M2-03/A §5.2","SYCXQMS-M2-03/A §5.2","质量体系审核与改进","外部审核管理","审核准备与自查"],
+  ["ZL-L3-07-A03","协调各部门补充缺失的审核证据","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-03/A §5.2","上下文推断","SYCXQMS-M2-03/A §5.2","SYCXQMS-M2-03/A §5.2","SYCXQMS-M2-03/A §5.2","质量体系审核与改进","外部审核管理","审核准备与自查"],
+  ["ZL-L3-07-A04","组织首次会议通知与准备工作","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-03/A §5.3","原文明确-正文","SYCXQMS-M2-03/A §5.3","SYCXQMS-M2-03/A §5.3","SYCXQMS-M2-03/A §5.3","质量体系审核与改进","外部审核管理","审核准备与自查"],
+  ["ZL-L3-08-A01","指定审核陪同人员并明确陪同职责","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-03/A §5.3","上下文推断","SYCXQMS-M2-03/A §5.3","SYCXQMS-M2-03/A §5.3","SYCXQMS-M2-03/A §5.3","质量体系审核与改进","外部审核管理","审核陪同与记录"],
+  ["ZL-L3-08-A02","陪同审核组进行现场审核并记录审核发现","审核陪同人员","","","无审批","OA","SYCXQMS-M2-03/A §5.3","原文明确-正文","SYCXQMS-M2-03/A §5.3","SYCXQMS-M2-03/A §5.3","SYCXQMS-M2-03/A §5.3","质量体系审核与改进","外部审核管理","审核陪同与记录"],
+  ["ZL-L3-08-A03","协调审核过程中所需文件、记录、人员的即时获取","审核陪同人员","","","无审批","OA","SYCXQMS-M2-03/A §5.3","上下文推断","SYCXQMS-M2-03/A §5.3","SYCXQMS-M2-03/A §5.3","SYCXQMS-M2-03/A §5.3","质量体系审核与改进","外部审核管理","审核陪同与记录"],
+  ["ZL-L3-08-A04","组织末次会议并确认审核结论","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-03/A §5.3","原文明确-正文","SYCXQMS-M2-03/A §5.3","SYCXQMS-M2-03/A §5.3","SYCXQMS-M2-03/A §5.3","质量体系审核与改进","外部审核管理","审核陪同与记录"],
+  ["ZL-L3-08-A05","编写审核陪同总结报告","审核陪同人员","","","无审批","OA","SYCXQMS-M2-03/A §5.3","上下文推断","SYCXQMS-M2-03/A §5.3","SYCXQMS-M2-03/A §5.3","SYCXQMS-M2-03/A §5.3","质量体系审核与改进","外部审核管理","审核陪同与记录"],
+  ["ZL-L3-09-A01","编写审核发现通报并下发至责任部门","质量安环部检验员","","","单人审批","OA","SYCXQMS-M2-03/A §5.4","原文明确-正文","SYCXQMS-M2-03/A §5.4","SYCXQMS-M2-03/A §5.4","SYCXQMS-M2-03/A §5.4","质量体系审核与改进","外部审核管理","审核发现通报与整改跟踪"],
+  ["ZL-L3-09-A02","督促责任部门在规定期限内提交纠正措施","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-03/A §5.4","原文明确-正文","SYCXQMS-M2-03/A §5.4","SYCXQMS-M2-03/A §5.4","SYCXQMS-M2-03/A §5.4","质量体系审核与改进","外部审核管理","审核发现通报与整改跟踪"],
+  ["ZL-L3-09-A03","审核责任部门提交的纠正措施证据","审核员","","","无审批","OA","SYCXQMS-M2-03/A §5.5","原文明确-正文","SYCXQMS-M2-03/A §5.5","SYCXQMS-M2-03/A §5.5","SYCXQMS-M2-03/A §5.5","质量体系审核与改进","外部审核管理","审核发现通报与整改跟踪"],
+  ["ZL-L3-09-A04","向二/三方提交整改证据并跟踪确认","质量安环部检验员","","","单人审批","OA","SYCXQMS-M2-03/A §5.5","原文明确-正文","SYCXQMS-M2-03/A §5.5","SYCXQMS-M2-03/A §5.5","SYCXQMS-M2-03/A §5.5","质量体系审核与改进","外部审核管理","审核发现通报与整改跟踪"],
+  ["ZL-L3-09-A05","更新外部审核数据库并归档审核全流程记录","质量安环部文档管理员","","","无审批","PLM","SYCXQMS-M2-03/A §5.5","上下文推断","SYCXQMS-M2-03/A §5.5","SYCXQMS-M2-03/A §5.5","SYCXQMS-M2-03/A §5.5","质量体系审核与改进","外部审核管理","审核发现通报与整改跟踪"],
+  ["ZL-L3-10-A01","编制管理评审计划（含评审目的、范围、输入要求、时间安排）","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-04/A §5.1","原文明确-正文","SYCXQMS-M2-04/A §5.1","SYCXQMS-M2-04/A §5.1","SYCXQMS-M2-04/A §5.1","质量体系审核与改进","管理评审","管理评审策划与通知"],
+  ["ZL-L3-10-A02","审核管理评审计划","管理者代表","","","单人审批","OA","SYCXQMS-M2-04/A §5.1","原文明确-正文","SYCXQMS-M2-04/A §5.1","SYCXQMS-M2-04/A §5.1","SYCXQMS-M2-04/A §5.1","质量体系审核与改进","管理评审","管理评审策划与通知"],
+  ["ZL-L3-10-A03","批准管理评审计划","总经理","","","单人审批","OA","SYCXQMS-M2-04/A §5.1","原文明确-正文","SYCXQMS-M2-04/A §5.1","SYCXQMS-M2-04/A §5.1","SYCXQMS-M2-04/A §5.1","质量体系审核与改进","管理评审","管理评审策划与通知"],
+  ["ZL-L3-10-A04","向各部门发布管理评审通知及输入要求","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-04/A §5.1","原文明确-正文","SYCXQMS-M2-04/A §5.1","SYCXQMS-M2-04/A §5.1","SYCXQMS-M2-04/A §5.1","质量体系审核与改进","管理评审","管理评审策划与通知"],
+  ["ZL-L3-11-A01","督促各部门按时提交运行分析报告","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-04/A §5.2","原文明确-正文","SYCXQMS-M2-04/A §5.2","SYCXQMS-M2-04/A §5.2","SYCXQMS-M2-04/A §5.2","质量体系审核与改进","管理评审","运行分析报告收集与编制"],
+  ["ZL-L3-11-A02","收集并审核各部门运行分析报告的完整性和符合性","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-04/A §5.2","原文明确-正文","SYCXQMS-M2-04/A §5.2","SYCXQMS-M2-04/A §5.2","SYCXQMS-M2-04/A §5.2","质量体系审核与改进","管理评审","运行分析报告收集与编制"],
+  ["ZL-L3-11-A03","汇总各部门报告数据编制公司级运行分析报告","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-04/A §5.2","原文明确-正文","SYCXQMS-M2-04/A §5.2","SYCXQMS-M2-04/A §5.2","SYCXQMS-M2-04/A §5.2","质量体系审核与改进","管理评审","运行分析报告收集与编制"],
+  ["ZL-L3-11-A04","审核公司级运行分析报告","管理者代表","","","单人审批","OA","SYCXQMS-M2-04/A §5.2","原文明确-正文","SYCXQMS-M2-04/A §5.2","SYCXQMS-M2-04/A §5.2","SYCXQMS-M2-04/A §5.2","质量体系审核与改进","管理评审","运行分析报告收集与编制"],
+  ["ZL-L3-12-A01","发送管理评审会议通知（含议程、时间、地点）","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-04/A §5.3","原文明确-正文","SYCXQMS-M2-04/A §5.3","SYCXQMS-M2-04/A §5.3","SYCXQMS-M2-04/A §5.3","质量体系审核与改进","管理评审","管理评审会议组织与记录"],
+  ["ZL-L3-12-A02","准备会议材料并确保各输入项已齐备","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-04/A §5.3","原文明确-正文","SYCXQMS-M2-04/A §5.3","SYCXQMS-M2-04/A §5.3","SYCXQMS-M2-04/A §5.3","质量体系审核与改进","管理评审","管理评审会议组织与记录"],
+  ["ZL-L3-12-A03","主持会议签到并记录会议过程","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-04/A §5.3","原文明确-正文","SYCXQMS-M2-04/A §5.3","SYCXQMS-M2-04/A §5.3","SYCXQMS-M2-04/A §5.3","质量体系审核与改进","管理评审","管理评审会议组织与记录"],
+  ["ZL-L3-12-A04","整理会议记录并经总经理确认","质量安环部检验员","","","单人审批","OA","SYCXQMS-M2-04/A §5.3","上下文推断","SYCXQMS-M2-04/A §5.3","SYCXQMS-M2-04/A §5.3","SYCXQMS-M2-04/A §5.3","质量体系审核与改进","管理评审","管理评审会议组织与记录"],
+  ["ZL-L3-13-A01","编制管理评审报告（含评审结论、改进决定、资源需求）","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-04/A §5.4","原文明确-正文","SYCXQMS-M2-04/A §5.4","SYCXQMS-M2-04/A §5.4","SYCXQMS-M2-04/A §5.4","质量体系审核与改进","管理评审","评审报告编制审批"],
+  ["ZL-L3-13-A02","审核管理评审报告","管理者代表","","","单人审批","OA","SYCXQMS-M2-04/A §5.4","原文明确-正文","SYCXQMS-M2-04/A §5.4","SYCXQMS-M2-04/A §5.4","SYCXQMS-M2-04/A §5.4","质量体系审核与改进","管理评审","评审报告编制审批"],
+  ["ZL-L3-13-A03","批准管理评审报告","总经理","","","单人审批","OA","SYCXQMS-M2-04/A §5.5","原文明确-正文","SYCXQMS-M2-04/A §5.5","SYCXQMS-M2-04/A §5.5","SYCXQMS-M2-04/A §5.5","质量体系审核与改进","管理评审","评审报告编制审批"],
+  ["ZL-L3-13-A04","分发管理评审报告至各部门","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-04/A §5.5","原文明确-正文","SYCXQMS-M2-04/A §5.5","SYCXQMS-M2-04/A §5.5","SYCXQMS-M2-04/A §5.5","质量体系审核与改进","管理评审","评审报告编制审批"],
+  ["ZL-L3-13-A05","将管理评审改进机会纳入持续改进台账","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-04/A §5.5","上下文推断","SYCXQMS-M2-04/A §5.5","SYCXQMS-M2-04/A §5.5","SYCXQMS-M2-04/A §5.5","质量体系审核与改进","管理评审","评审报告编制审批"],
+  ["ZL-L3-13-A06","跟踪改进措施执行进度并定期向管理者代表汇报","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-04/A §5.5","上下文推断","SYCXQMS-M2-04/A §5.5","SYCXQMS-M2-04/A §5.5","SYCXQMS-M2-04/A §5.5","质量体系审核与改进","管理评审","评审报告编制审批"],
+  ["ZL-L3-14-A01","识别不符合项并判定是否需要启动纠正措施","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-05/A §5.1","原文明确-正文","SYCXQMS-M2-05/A §5.1","SYCXQMS-M2-05/A §5.1","SYCXQMS-M2-05/A §5.1","质量体系审核与改进","纠正措施管理","纠正措施发起与跟踪"],
+  ["ZL-L3-14-A02","填写纠正措施报告并下发至责任部门","质量安环部检验员","","","单人审批","OA","SYCXQMS-M2-05/A §5.2","原文明确-正文","SYCXQMS-M2-05/A §5.2","SYCXQMS-M2-05/A §5.2","SYCXQMS-M2-05/A §5.2","质量体系审核与改进","纠正措施管理","纠正措施发起与跟踪"],
+  ["ZL-L3-14-A03","分析根本原因并制定纠正措施方案","责任部门负责人","","","无审批","OA","SYCXQMS-M2-05/A §5.3","原文明确-正文","SYCXQMS-M2-05/A §5.3","SYCXQMS-M2-05/A §5.3","SYCXQMS-M2-05/A §5.3","质量体系审核与改进","纠正措施管理","纠正措施发起与跟踪"],
+  ["ZL-L3-14-A04","审核责任部门提交的纠正措施方案","质量安环部检验员","","","单人审批","OA","SYCXQMS-M2-05/A §5.4","原文明确-正文","SYCXQMS-M2-05/A §5.4","SYCXQMS-M2-05/A §5.4","SYCXQMS-M2-05/A §5.4","质量体系审核与改进","纠正措施管理","纠正措施发起与跟踪"],
+  ["ZL-L3-14-A05","跟踪纠正措施执行进度并提醒即将到期事项","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-05/A §5.5","原文明确-正文","SYCXQMS-M2-05/A §5.5","SYCXQMS-M2-05/A §5.5","SYCXQMS-M2-05/A §5.5","质量体系审核与改进","纠正措施管理","纠正措施发起与跟踪"],
+  ["ZL-L3-15-A01","向供应商发出纠正措施要求通知","质量安环部检验员","","","单人审批","OA","SYCXQMS-M2-05/A §5.6","原文明确-正文","SYCXQMS-M2-05/A §5.6","SYCXQMS-M2-05/A §5.6","SYCXQMS-M2-05/A §5.6","质量体系审核与改进","纠正措施管理","供应商纠正措施管理"],
+  ["ZL-L3-15-A02","接收并审核供应商提交的纠正措施报告","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-05/A §5.7","原文明确-正文","SYCXQMS-M2-05/A §5.7","SYCXQMS-M2-05/A §5.7","SYCXQMS-M2-05/A §5.7","质量体系审核与改进","纠正措施管理","供应商纠正措施管理"],
+  ["ZL-L3-15-A03","验证供应商纠正措施的实施效果","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-05/A §5.8","原文明确-正文","SYCXQMS-M2-05/A §5.8","SYCXQMS-M2-05/A §5.8","SYCXQMS-M2-05/A §5.8","质量体系审核与改进","纠正措施管理","供应商纠正措施管理"],
+  ["ZL-L3-15-A04","更新供应商纠正措施台账","质量安环部文档管理员","","","无审批","OA","SYCXQMS-M2-05/A §5.8","上下文推断","SYCXQMS-M2-05/A §5.8","SYCXQMS-M2-05/A §5.8","SYCXQMS-M2-05/A §5.8","质量体系审核与改进","纠正措施管理","供应商纠正措施管理"],
+  ["ZL-L3-16-A01","分析不符合项的系统性影响范围","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-05/A §5.9","原文明确-正文","SYCXQMS-M2-05/A §5.9","SYCXQMS-M2-05/A §5.9","SYCXQMS-M2-05/A §5.9","质量体系审核与改进","纠正措施管理","举一反三核查"],
+  ["ZL-L3-16-A02","确定举一反三核查范围和对象","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-05/A §5.9","原文明确-正文","SYCXQMS-M2-05/A §5.9","SYCXQMS-M2-05/A §5.9","SYCXQMS-M2-05/A §5.9","质量体系审核与改进","纠正措施管理","举一反三核查"],
+  ["ZL-L3-16-A03","组织相关部门开展举一反三自查","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-05/A §5.9","原文明确-正文","SYCXQMS-M2-05/A §5.9","SYCXQMS-M2-05/A §5.9","SYCXQMS-M2-05/A §5.9","质量体系审核与改进","纠正措施管理","举一反三核查"],
+  ["ZL-L3-16-A04","汇总举一反三核查结果并对新发现不符合项启动纠正措施","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-05/A §5.10","原文明确-正文","SYCXQMS-M2-05/A §5.10","SYCXQMS-M2-05/A §5.10","SYCXQMS-M2-05/A §5.10","质量体系审核与改进","纠正措施管理","举一反三核查"],
+  ["ZL-L3-17-A01","按计划对已关闭纠正措施实施有效性验证","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-05/A §5.11","原文明确-正文","SYCXQMS-M2-05/A §5.11","SYCXQMS-M2-05/A §5.11","SYCXQMS-M2-05/A §5.11","质量体系审核与改进","纠正措施管理","纠正措施有效性验证"],
+  ["ZL-L3-17-A02","记录验证结果并判定纠正措施持续有效或需重新启动","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-05/A §5.11","原文明确-正文","SYCXQMS-M2-05/A §5.11","SYCXQMS-M2-05/A §5.11","SYCXQMS-M2-05/A §5.11","质量体系审核与改进","纠正措施管理","纠正措施有效性验证"],
+  ["ZL-L3-17-A03","对无效纠正措施重新启动纠正措施流程","质量安环部检验员","","","单人审批","OA","SYCXQMS-M2-05/A §5.12","原文明确-正文","SYCXQMS-M2-05/A §5.12","SYCXQMS-M2-05/A §5.12","SYCXQMS-M2-05/A §5.12","质量体系审核与改进","纠正措施管理","纠正措施有效性验证"],
+  ["ZL-L3-17-A04","维护纠正措施数据库确保信息完整","质量安环部文档管理员","","","无审批","OA","SYCXQMS-M2-05/A §5.12","上下文推断","SYCXQMS-M2-05/A §5.12","SYCXQMS-M2-05/A §5.12","SYCXQMS-M2-05/A §5.12","质量体系审核与改进","纠正措施管理","纠正措施有效性验证"],
+  ["ZL-L3-17-A05","定期统计分析纠正措施数据并形成季度报告","质量安环部检验员","","","单人审批","OA","SYCXQMS-M2-05/A §5.12","上下文推断","SYCXQMS-M2-05/A §5.12","SYCXQMS-M2-05/A §5.12","SYCXQMS-M2-05/A §5.12","质量体系审核与改进","纠正措施管理","纠正措施有效性验证"],
+  ["ZL-L3-18-A01","识别需归零的质量问题（重大质量事故/重复性故障/批次性问题）","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-06/A §5.1","原文明确-正文","SYCXQMS-M2-06/A §5.1","SYCXQMS-M2-06/A §5.1","SYCXQMS-M2-06/A §5.1","质量体系审核与改进","质量问题归零管理","归零问题识别与通知"],
+  ["ZL-L3-18-A02","编制归零通知单并明确归零类型（技术归零/管理归零/双归零）","质量安环部检验员","","","单人审批","OA","SYCXQMS-M2-06/A §5.2","原文明确-正文","SYCXQMS-M2-06/A §5.2","SYCXQMS-M2-06/A §5.2","SYCXQMS-M2-06/A §5.2","质量体系审核与改进","质量问题归零管理","归零问题识别与通知"],
+  ["ZL-L3-18-A03","下发归零通知单至责任部门并明确归零时限","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-06/A §5.3","原文明确-正文","SYCXQMS-M2-06/A §5.3","SYCXQMS-M2-06/A §5.3","SYCXQMS-M2-06/A §5.3","质量体系审核与改进","质量问题归零管理","归零问题识别与通知"],
+  ["ZL-L3-18-A04","指定归零评审组组长及成员","质量安环部检验员","","","单人审批","OA","SYCXQMS-M2-06/A §5.3","上下文推断","SYCXQMS-M2-06/A §5.3","SYCXQMS-M2-06/A §5.3","SYCXQMS-M2-06/A §5.3","质量体系审核与改进","质量问题归零管理","归零问题识别与通知"],
+  ["ZL-L3-18-A05","录入归零问题信息至归零数据库","质量安环部文档管理员","","","无审批","PLM","SYCXQMS-M2-06/A §5.3","上下文推断","SYCXQMS-M2-06/A §5.3","SYCXQMS-M2-06/A §5.3","SYCXQMS-M2-06/A §5.3","质量体系审核与改进","质量问题归零管理","归零问题识别与通知"],
+  ["ZL-L3-19-A01","开展故障定位分析并确认故障部位和失效模式","工程技术部技术员","","","无审批","PLM","SYCXQMS-M2-06/A §5.4","原文明确-正文","SYCXQMS-M2-06/A §5.4","SYCXQMS-M2-06/A §5.4","SYCXQMS-M2-06/A §5.4","质量体系审核与改进","质量问题归零管理","技术归零与报告编制"],
+  ["ZL-L3-19-A02","分析故障机理并确认根本原因","工程技术部技术员","","","无审批","PLM","SYCXQMS-M2-06/A §5.5","原文明确-正文","SYCXQMS-M2-06/A §5.5","SYCXQMS-M2-06/A §5.5","SYCXQMS-M2-06/A §5.5","质量体系审核与改进","质量问题归零管理","技术归零与报告编制"],
+  ["ZL-L3-19-A03","通过试验或仿真复现故障","工程技术部技术员","","","无审批","PLM","SYCXQMS-M2-06/A §5.6","原文明确-正文","SYCXQMS-M2-06/A §5.6","SYCXQMS-M2-06/A §5.6","SYCXQMS-M2-06/A §5.6","质量体系审核与改进","质量问题归零管理","技术归零与报告编制"],
+  ["ZL-L3-19-A04","制定纠正措施并验证措施有效性","工程技术部技术员","","","无审批","PLM","SYCXQMS-M2-06/A §5.7","原文明确-正文","SYCXQMS-M2-06/A §5.7","SYCXQMS-M2-06/A §5.7","SYCXQMS-M2-06/A §5.7","质量体系审核与改进","质量问题归零管理","技术归零与报告编制"],
+  ["ZL-L3-19-A05","编制技术归零报告并提交归零评审组审查","工程技术部技术员","","","单人审批","OA","SYCXQMS-M2-06/A §5.8","原文明确-正文","SYCXQMS-M2-06/A §5.8","SYCXQMS-M2-06/A §5.8","SYCXQMS-M2-06/A §5.8","质量体系审核与改进","质量问题归零管理","技术归零与报告编制"],
+  ["ZL-L3-20-A01","调查问题发生的管理过程并梳理全流程","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-06/A §5.9","原文明确-正文","SYCXQMS-M2-06/A §5.9","SYCXQMS-M2-06/A §5.9","SYCXQMS-M2-06/A §5.9","质量体系审核与改进","质量问题归零管理","管理归零与报告编制"],
+  ["ZL-L3-20-A02","明确管理责任归属","质量安环部检验员","","","会签","OA","SYCXQMS-M2-06/A §5.10","原文明确-正文","SYCXQMS-M2-06/A §5.10","SYCXQMS-M2-06/A §5.10","SYCXQMS-M2-06/A §5.10","质量体系审核与改进","质量问题归零管理","管理归零与报告编制"],
+  ["ZL-L3-20-A03","制定管理改进措施（含流程优化和规章修订）","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-06/A §5.11","原文明确-正文","SYCXQMS-M2-06/A §5.11","SYCXQMS-M2-06/A §5.11","SYCXQMS-M2-06/A §5.11","质量体系审核与改进","质量问题归零管理","管理归零与报告编制"],
+  ["ZL-L3-20-A04","对责任人员进行绩效考核处理","管理者代表","","","单人审批","OA","SYCXQMS-M2-06/A §5.11","原文明确-正文","SYCXQMS-M2-06/A §5.11","SYCXQMS-M2-06/A §5.11","SYCXQMS-M2-06/A §5.11","质量体系审核与改进","质量问题归零管理","管理归零与报告编制"],
+  ["ZL-L3-20-A05","编制管理归零报告并提交归零评审组审查","质量安环部检验员","","","单人审批","OA","SYCXQMS-M2-06/A §5.12","原文明确-正文","SYCXQMS-M2-06/A §5.12","SYCXQMS-M2-06/A §5.12","SYCXQMS-M2-06/A §5.12","质量体系审核与改进","质量问题归零管理","管理归零与报告编制"],
+  ["ZL-L3-21-A01","跟踪技管归零措施的落实执行","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-06/A §5.12","原文明确-正文","SYCXQMS-M2-06/A §5.12","SYCXQMS-M2-06/A §5.12","SYCXQMS-M2-06/A §5.12","质量体系审核与改进","质量问题归零管理","归零措施跟踪验证与关闭"],
+  ["ZL-L3-21-A02","组织归零措施实施后的效果验证","归零评审组","","","无审批","OA","SYCXQMS-M2-06/A §5.12","原文明确-正文","SYCXQMS-M2-06/A §5.12","SYCXQMS-M2-06/A §5.12","SYCXQMS-M2-06/A §5.12","质量体系审核与改进","质量问题归零管理","归零措施跟踪验证与关闭"],
+  ["ZL-L3-21-A03","编写归零总结报告并申请关闭","质量安环部检验员","","","单人审批","OA","SYCXQMS-M2-06/A §5.12","原文明确-正文","SYCXQMS-M2-06/A §5.12","SYCXQMS-M2-06/A §5.12","SYCXQMS-M2-06/A §5.12","质量体系审核与改进","质量问题归零管理","归零措施跟踪验证与关闭"],
+  ["ZL-L3-21-A04","批准归零关闭","管理者代表","","","单人审批","OA","SYCXQMS-M2-06/A §5.12","上下文推断","SYCXQMS-M2-06/A §5.12","SYCXQMS-M2-06/A §5.12","SYCXQMS-M2-06/A §5.12","质量体系审核与改进","质量问题归零管理","归零措施跟踪验证与关闭"],
+  ["ZL-L3-21-A05","将归零案例和技术文件修订归档至案例库","质量安环部文档管理员","","","无审批","PLM","SYCXQMS-M2-06/A §5.12","上下文推断","SYCXQMS-M2-06/A §5.12","SYCXQMS-M2-06/A §5.12","SYCXQMS-M2-06/A §5.12","质量体系审核与改进","质量问题归零管理","归零措施跟踪验证与关闭"],
+  ["ZL-L3-22-A01","确定各层级质量信息需求和收集频次","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-07/A §5.1","原文明确-正文","SYCXQMS-M2-07/A §5.1","SYCXQMS-M2-07/A §5.1","SYCXQMS-M2-07/A §5.1","质量体系审核与改进","质量信息收集分析与评价","质量信息需求确定与收集"],
+  ["ZL-L3-22-A02","建立质量信息收集渠道和数据来源清单","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-07/A §5.2","原文明确-正文","SYCXQMS-M2-07/A §5.2","SYCXQMS-M2-07/A §5.2","SYCXQMS-M2-07/A §5.2","质量体系审核与改进","质量信息收集分析与评价","质量信息需求确定与收集"],
+  ["ZL-L3-22-A03","按周期收集各部门质量信息数据","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-07/A §5.3","原文明确-正文","SYCXQMS-M2-07/A §5.3","SYCXQMS-M2-07/A §5.3","SYCXQMS-M2-07/A §5.3","质量体系审核与改进","质量信息收集分析与评价","质量信息需求确定与收集"],
+  ["ZL-L3-22-A04","审核收集数据的完整性和准确性","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-07/A §5.3","上下文推断","SYCXQMS-M2-07/A §5.3","SYCXQMS-M2-07/A §5.3","SYCXQMS-M2-07/A §5.3","质量体系审核与改进","质量信息收集分析与评价","质量信息需求确定与收集"],
+  ["ZL-L3-23-A01","统计分析废品损失数据（按产品/工序/原因分类）","质量安环部检验员","","","无审批","OA、ERP","SYCXQMS-M2-07/A §5.4","原文明确-正文","SYCXQMS-M2-07/A §5.4","SYCXQMS-M2-07/A §5.4","SYCXQMS-M2-07/A §5.4","质量体系审核与改进","质量信息收集分析与评价","产品质量信息统计分析"],
+  ["ZL-L3-23-A02","统计分析外部拒收数据（按顾客/产品/缺陷类型分类）","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-07/A §5.5","原文明确-正文","SYCXQMS-M2-07/A §5.5","SYCXQMS-M2-07/A §5.5","SYCXQMS-M2-07/A §5.5","质量体系审核与改进","质量信息收集分析与评价","产品质量信息统计分析"],
+  ["ZL-L3-23-A03","统计分析总检故障数据（按工序/缺陷类型/检出阶段分类）","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-07/A §5.6","原文明确-正文","SYCXQMS-M2-07/A §5.6","SYCXQMS-M2-07/A §5.6","SYCXQMS-M2-07/A §5.6","质量体系审核与改进","质量信息收集分析与评价","产品质量信息统计分析"],
+  ["ZL-L3-23-A04","编制产品质量信息分析报告","质量安环部检验员","","","单人审批","OA","SYCXQMS-M2-07/A §5.7","原文明确-正文","SYCXQMS-M2-07/A §5.7","SYCXQMS-M2-07/A §5.7","SYCXQMS-M2-07/A §5.7","质量体系审核与改进","质量信息收集分析与评价","产品质量信息统计分析"],
+  ["ZL-L3-23-A05","识别质量趋势和异常信号并通报相关部门","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-07/A §5.7","上下文推断","SYCXQMS-M2-07/A §5.7","SYCXQMS-M2-07/A §5.7","SYCXQMS-M2-07/A §5.7","质量体系审核与改进","质量信息收集分析与评价","产品质量信息统计分析"],
+  ["ZL-L3-24-A01","统计分析过程绩效指标（一次合格率、准时交付率等）","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-07/A §5.8","原文明确-正文","SYCXQMS-M2-07/A §5.8","SYCXQMS-M2-07/A §5.8","SYCXQMS-M2-07/A §5.8","质量体系审核与改进","质量信息收集分析与评价","体系运行信息分析"],
+  ["ZL-L3-24-A02","统计分析内审不合格项分布和趋势","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-07/A §5.9","原文明确-正文","SYCXQMS-M2-07/A §5.9","SYCXQMS-M2-07/A §5.9","SYCXQMS-M2-07/A §5.9","质量体系审核与改进","质量信息收集分析与评价","体系运行信息分析"],
+  ["ZL-L3-24-A03","统计分析纠正措施执行率和有效性","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-07/A §5.10","原文明确-正文","SYCXQMS-M2-07/A §5.10","SYCXQMS-M2-07/A §5.10","SYCXQMS-M2-07/A §5.10","质量体系审核与改进","质量信息收集分析与评价","体系运行信息分析"],
+  ["ZL-L3-24-A04","统计分析顾客满意度和供应商绩效信息","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-07/A §5.11","原文明确-正文","SYCXQMS-M2-07/A §5.11","SYCXQMS-M2-07/A §5.11","SYCXQMS-M2-07/A §5.11","质量体系审核与改进","质量信息收集分析与评价","体系运行信息分析"],
+  ["ZL-L3-24-A05","编制体系运行信息分析报告","质量安环部检验员","","","单人审批","OA","SYCXQMS-M2-07/A §5.11","上下文推断","SYCXQMS-M2-07/A §5.11","SYCXQMS-M2-07/A §5.11","SYCXQMS-M2-07/A §5.11","质量体系审核与改进","质量信息收集分析与评价","体系运行信息分析"],
+  ["ZL-L3-25-A01","汇总质量成本数据并进行质量经济性分析","质量安环部检验员","","","无审批","ERP","SYCXQMS-M2-07/A §5.11","原文明确-正文","SYCXQMS-M2-07/A §5.11","SYCXQMS-M2-07/A §5.11","SYCXQMS-M2-07/A §5.11","质量体系审核与改进","质量信息收集分析与评价","数据分析报告编制与改进识别"],
+  ["ZL-L3-25-A02","编制质量信息综合分析报告（含产品质量、体系运行、经济性分析）","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-07/A §5.11","原文明确-正文","SYCXQMS-M2-07/A §5.11","SYCXQMS-M2-07/A §5.11","SYCXQMS-M2-07/A §5.11","质量体系审核与改进","质量信息收集分析与评价","数据分析报告编制与改进识别"],
+  ["ZL-L3-25-A03","审核综合分析报告并提交管理评审","管理者代表","","","单人审批","OA","SYCXQMS-M2-07/A §5.11","原文明确-正文","SYCXQMS-M2-07/A §5.11","SYCXQMS-M2-07/A §5.11","SYCXQMS-M2-07/A §5.11","质量体系审核与改进","质量信息收集分析与评价","数据分析报告编制与改进识别"],
+  ["ZL-L3-25-A04","识别改进机会并录入改进台账","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-07/A §5.11","上下文推断","SYCXQMS-M2-07/A §5.11","SYCXQMS-M2-07/A §5.11","SYCXQMS-M2-07/A §5.11","质量体系审核与改进","质量信息收集分析与评价","数据分析报告编制与改进识别"],
+  ["ZL-L3-25-A05","定期发布质量通报","质量安环部检验员","","","单人审批","OA","SYCXQMS-M2-07/A §5.11","上下文推断","SYCXQMS-M2-07/A §5.11","SYCXQMS-M2-07/A §5.11","SYCXQMS-M2-07/A §5.11","质量体系审核与改进","质量信息收集分析与评价","数据分析报告编制与改进识别"],
+  ["ZL-L3-26-A01","汇总分析各渠道改进机会（内审、管理评审、数据分析、顾客反馈、员工建议）","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-08/A §5.1","原文明确-正文","SYCXQMS-M2-08/A §5.1","SYCXQMS-M2-08/A §5.1","SYCXQMS-M2-08/A §5.1","质量体系审核与改进","持续改进管理","改进机会识别与目标确定"],
+  ["ZL-L3-26-A02","评估改进机会的优先级和可行性","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-08/A §5.2","原文明确-正文","SYCXQMS-M2-08/A §5.2","SYCXQMS-M2-08/A §5.2","SYCXQMS-M2-08/A §5.2","质量体系审核与改进","持续改进管理","改进机会识别与目标确定"],
+  ["ZL-L3-26-A03","确定改进项目的范围和目标","质量安环部检验员","","","会签","OA","SYCXQMS-M2-08/A §5.2","原文明确-正文","SYCXQMS-M2-08/A §5.2","SYCXQMS-M2-08/A §5.2","SYCXQMS-M2-08/A §5.2","质量体系审核与改进","持续改进管理","改进机会识别与目标确定"],
+  ["ZL-L3-26-A04","选择适用的改进工具（质量改进计划/精品工程/质量攻关/QC小组/拉条挂账）","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-08/A §5.3","原文明确-正文","SYCXQMS-M2-08/A §5.3","SYCXQMS-M2-08/A §5.3","SYCXQMS-M2-08/A §5.3","质量体系审核与改进","持续改进管理","改进机会识别与目标确定"],
+  ["ZL-L3-27-A01","编制年度质量改进计划（含改进项目清单、里程碑、责任部门）","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-08/A §5.4","原文明确-正文","SYCXQMS-M2-08/A §5.4","SYCXQMS-M2-08/A §5.4","SYCXQMS-M2-08/A §5.4","质量体系审核与改进","持续改进管理","年度改进计划制定与跟踪"],
+  ["ZL-L3-27-A02","审核年度质量改进计划","管理者代表","","","单人审批","OA","SYCXQMS-M2-08/A §5.4","原文明确-正文","SYCXQMS-M2-08/A §5.4","SYCXQMS-M2-08/A §5.4","SYCXQMS-M2-08/A §5.4","质量体系审核与改进","持续改进管理","年度改进计划制定与跟踪"],
+  ["ZL-L3-27-A03","批准年度质量改进计划","总经理","","","单人审批","OA","SYCXQMS-M2-08/A §5.4","原文明确-正文","SYCXQMS-M2-08/A §5.4","SYCXQMS-M2-08/A §5.4","SYCXQMS-M2-08/A §5.4","质量体系审核与改进","持续改进管理","年度改进计划制定与跟踪"],
+  ["ZL-L3-27-A04","跟踪改进计划执行进度并更新状态","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-08/A §5.5","原文明确-正文","SYCXQMS-M2-08/A §5.5","SYCXQMS-M2-08/A §5.5","SYCXQMS-M2-08/A §5.5","质量体系审核与改进","持续改进管理","年度改进计划制定与跟踪"],
+  ["ZL-L3-27-A05","协调改进过程中跨部门资源需求","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-08/A §5.5","上下文推断","SYCXQMS-M2-08/A §5.5","SYCXQMS-M2-08/A §5.5","SYCXQMS-M2-08/A §5.5","质量体系审核与改进","持续改进管理","年度改进计划制定与跟踪"],
+  ["ZL-L3-28-A01","指导改进小组按计划实施改进活动","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-08/A §5.6","原文明确-正文","SYCXQMS-M2-08/A §5.6","SYCXQMS-M2-08/A §5.6","SYCXQMS-M2-08/A §5.6","质量体系审核与改进","持续改进管理","改进活动实施与有效性验证"],
+  ["ZL-L3-28-A02","组织改进成果的中期检查和阶段评审","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-08/A §5.6","原文明确-正文","SYCXQMS-M2-08/A §5.6","SYCXQMS-M2-08/A §5.6","SYCXQMS-M2-08/A §5.6","质量体系审核与改进","持续改进管理","改进活动实施与有效性验证"],
+  ["ZL-L3-28-A03","组织改进成果的最终评审和效果确认","管理者代表","","","会签","OA","SYCXQMS-M2-08/A §5.7","原文明确-正文","SYCXQMS-M2-08/A §5.7","SYCXQMS-M2-08/A §5.7","SYCXQMS-M2-08/A §5.7","质量体系审核与改进","持续改进管理","改进活动实施与有效性验证"],
+  ["ZL-L3-28-A04","将验证有效的改进措施固化到体系文件中","质量安环部检验员","","","单人审批","PLM","SYCXQMS-M2-08/A §5.7","原文明确-正文","SYCXQMS-M2-08/A §5.7","SYCXQMS-M2-08/A §5.7","SYCXQMS-M2-08/A §5.7","质量体系审核与改进","持续改进管理","改进活动实施与有效性验证"],
+  ["ZL-L3-28-A05","更新改进台账并编制改进活动总结报告","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-08/A §5.7","上下文推断","SYCXQMS-M2-08/A §5.7","SYCXQMS-M2-08/A §5.7","SYCXQMS-M2-08/A §5.7","质量体系审核与改进","持续改进管理","改进活动实施与有效性验证"],
+  ["ZL-L3-28-A06","组织改进成果发表和经验分享","质量安环部检验员","","","无审批","OA","SYCXQMS-M2-08/A §5.7","上下文推断","SYCXQMS-M2-08/A §5.7","SYCXQMS-M2-08/A §5.7","SYCXQMS-M2-08/A §5.7","质量体系审核与改进","持续改进管理","改进活动实施与有效性验证"],
+  ["ZL-L3-29-A01","确认检验验收条件（工艺文件齐备、设备校准有效、人员资格有效）","质量安环部检验员","","","无审批","MES","SYCXQMS-P5-07/A §5.1","原文明确-正文","SYCXQMS-P5-07/A §5.1","SYCXQMS-P5-07/A §5.1","SYCXQMS-P5-07/A §5.1","产品检验与符合性","产品检验管理","工序检验与专检实施"],
+  ["ZL-L3-29-A02","执行自检并记录结果","操作者","","","无审批","MES","SYCXQMS-P5-07/A §5.2","原文明确-正文","SYCXQMS-P5-07/A §5.2","SYCXQMS-P5-07/A §5.2","SYCXQMS-P5-07/A §5.2","产品检验与符合性","产品检验管理","工序检验与专检实施"],
+  ["ZL-L3-29-A03","执行互检并记录结果","同工序其他操作者","","","无审批","MES","SYCXQMS-P5-07/A §5.2","原文明确-正文","SYCXQMS-P5-07/A §5.2","SYCXQMS-P5-07/A §5.2","SYCXQMS-P5-07/A §5.2","产品检验与符合性","产品检验管理","工序检验与专检实施"],
+  ["ZL-L3-29-A04","执行专检并判定检验结论","质量安环部检验员","","","无审批","MES","SYCXQMS-P5-07/A §5.3","原文明确-正文","SYCXQMS-P5-07/A §5.3","SYCXQMS-P5-07/A §5.3","SYCXQMS-P5-07/A §5.3","产品检验与符合性","产品检验管理","工序检验与专检实施"],
+  ["ZL-L3-29-A05","对不合格品执行标识、隔离并与不合格品控制衔接","质量安环部检验员","","","无审批","MES","SYCXQMS-P5-07/A §5.7","原文明确-正文","SYCXQMS-P5-07/A §5.7","SYCXQMS-P5-07/A §5.7","SYCXQMS-P5-07/A §5.7","产品检验与符合性","产品检验管理","工序检验与专检实施"],
+  ["ZL-L3-30-A01","识别关键工序并确认检验控制要求","质量安环部检验员","","","无审批","PLM","SYCXQMS-P5-07/A §5.4","原文明确-正文","SYCXQMS-P5-07/A §5.4","SYCXQMS-P5-07/A §5.4","SYCXQMS-P5-07/A §5.4","产品检验与符合性","产品检验管理","关键工序与特种工序检验控制"],
+  ["ZL-L3-30-A02","执行关键工序100%检验并记录","质量安环部检验员","","","无审批","MES","SYCXQMS-P5-07/A §5.4","原文明确-正文","SYCXQMS-P5-07/A §5.4","SYCXQMS-P5-07/A §5.4","SYCXQMS-P5-07/A §5.4","产品检验与符合性","产品检验管理","关键工序与特种工序检验控制"],
+  ["ZL-L3-30-A03","确认特种工序随炉件/试片验收要求","质量安环部检验员","","","无审批","PLM","SYCXQMS-P5-07/A §5.5","原文明确-正文","SYCXQMS-P5-07/A §5.5","SYCXQMS-P5-07/A §5.5","SYCXQMS-P5-07/A §5.5","产品检验与符合性","产品检验管理","关键工序与特种工序检验控制"],
+  ["ZL-L3-30-A04","检验随炉件/试片性能并判定符合性","理化计量室计量员","","","无审批","PLM","SYCXQMS-P5-07/A §5.5","原文明确-正文","SYCXQMS-P5-07/A §5.5","SYCXQMS-P5-07/A §5.5","SYCXQMS-P5-07/A §5.5","产品检验与符合性","产品检验管理","关键工序与特种工序检验控制"],
+  ["ZL-L3-31-A01","识别项目特定检验要求（商飞重要检验点、MA700授权检验等）","质量安环部检验员","","","无审批","PLM","SYCXQMS-P5-07/A §5.6","原文明确-正文","SYCXQMS-P5-07/A §5.6","SYCXQMS-P5-07/A §5.6","SYCXQMS-P5-07/A §5.6","产品检验与符合性","产品检验管理","项目特定检验要求执行"],
+  ["ZL-L3-31-A02","按项目特定检验规程执行检验","质量安环部检验员","","","无审批","MES","SYCXQMS-P5-07/A §5.6","原文明确-正文","SYCXQMS-P5-07/A §5.6","SYCXQMS-P5-07/A §5.6","SYCXQMS-P5-07/A §5.6","产品检验与符合性","产品检验管理","项目特定检验要求执行"],
+  ["ZL-L3-31-A03","在项目特定检验点通知顾客/授权代表到场确认","质量安环部检验员","","","无审批","OA","SYCXQMS-P5-07/A §5.6","上下文推断","SYCXQMS-P5-07/A §5.6","SYCXQMS-P5-07/A §5.6","SYCXQMS-P5-07/A §5.6","产品检验与符合性","产品检验管理","项目特定检验要求执行"],
+  ["ZL-L3-32-A01","识别首件检验触发条件（新产品/新工装/工程更改/产线搬迁/停产恢复）","质量安环部检验员","","","无审批","PLM","SYCXQMS-P5-01/A §5.1","原文明确-正文","SYCXQMS-P5-01/A §5.1","SYCXQMS-P5-01/A §5.1","SYCXQMS-P5-01/A §5.1","产品检验与符合性","首件检验管理","首件检验计划与三检实施"],
+  ["ZL-L3-32-A02","编制首件检验计划（含检验范围、特性清单、方法、资源）","质量安环部技术员","","","无审批","PLM","SYCXQMS-P5-01/A §5.2","原文明确-正文","SYCXQMS-P5-01/A §5.2","SYCXQMS-P5-01/A §5.2","SYCXQMS-P5-01/A §5.2","产品检验与符合性","首件检验管理","首件检验计划与三检实施"],
+  ["ZL-L3-32-A03","审核首件检验计划","质量安环部检验员","","","单人审批","PLM","SYCXQMS-P5-01/A §5.3","原文明确-正文","SYCXQMS-P5-01/A §5.3","SYCXQMS-P5-01/A §5.3","SYCXQMS-P5-01/A §5.3","产品检验与符合性","首件检验管理","首件检验计划与三检实施"],
+  ["ZL-L3-32-A04","执行首件三检（自检、互检、专检）","操作者、检验员","","","无审批","MES","SYCXQMS-P5-01/A §5.4","原文明确-正文","SYCXQMS-P5-01/A §5.4","SYCXQMS-P5-01/A §5.4","SYCXQMS-P5-01/A §5.4","产品检验与符合性","首件检验管理","首件检验计划与三检实施"],
+  ["ZL-L3-33-A01","填写首件检验报告（FAIR）并标注特性气球图","质量安环部检验员","","","无审批","PLM","SYCXQMS-P5-01/A §5.5","原文明确-正文","SYCXQMS-P5-01/A §5.5","SYCXQMS-P5-01/A §5.5","SYCXQMS-P5-01/A §5.5","产品检验与符合性","首件检验管理","FAIR编制与审核归档"],
+  ["ZL-L3-33-A02","审核FAIR的完整性和准确性","质量安环部技术员","","","单人审批","PLM","SYCXQMS-P5-01/A §5.6","原文明确-正文","SYCXQMS-P5-01/A §5.6","SYCXQMS-P5-01/A §5.6","SYCXQMS-P5-01/A §5.6","产品检验与符合性","首件检验管理","FAIR编制与审核归档"],
+  ["ZL-L3-33-A03","批准FAIR并归档至制造记录","质量安环部检验员","","","单人审批","PLM","SYCXQMS-P5-01/A §5.7","原文明确-正文","SYCXQMS-P5-01/A §5.7","SYCXQMS-P5-01/A §5.7","SYCXQMS-P5-01/A §5.7","产品检验与符合性","首件检验管理","FAIR编制与审核归档"],
+  ["ZL-L3-33-A04","当工程更改触发FAI变更时重新执行首件检验流程","质量安环部检验员","","","无审批","PLM","SYCXQMS-P5-01/A §5.9","原文明确-正文","SYCXQMS-P5-01/A §5.9","SYCXQMS-P5-01/A §5.9","SYCXQMS-P5-01/A §5.9","产品检验与符合性","首件检验管理","FAIR编制与审核归档"],
+  ["ZL-L3-34-A01","提取产品设计特性并确定需检验的特性项目","质量安环部技术员","","","无审批","PLM","SYCXQMS-P5-03/A §5.1","原文明确-正文","SYCXQMS-P5-03/A §5.1","SYCXQMS-P5-03/A §5.1","SYCXQMS-P5-03/A §5.1","产品检验与符合性","检验方案策划管理","检验方案策划与编制"],
+  ["ZL-L3-34-A02","确定检验顺序和验证方法（目视/量具/检测设备/试验）","质量安环部技术员","","","无审批","PLM","SYCXQMS-P5-03/A §5.2","原文明确-正文","SYCXQMS-P5-03/A §5.2","SYCXQMS-P5-03/A §5.2","SYCXQMS-P5-03/A §5.2","产品检验与符合性","检验方案策划管理","检验方案策划与编制"],
+  ["ZL-L3-34-A03","确定所需测量设备和工装清单","质量安环部技术员","","","无审批","PLM","SYCXQMS-P5-03/A §5.3","原文明确-正文","SYCXQMS-P5-03/A §5.3","SYCXQMS-P5-03/A §5.3","SYCXQMS-P5-03/A §5.3","产品检验与符合性","检验方案策划管理","检验方案策划与编制"],
+  ["ZL-L3-34-A04","编制完整的检验方案文件","质量安环部技术员","","","无审批","PLM","SYCXQMS-P5-03/A §5.4","原文明确-正文","SYCXQMS-P5-03/A §5.4","SYCXQMS-P5-03/A §5.4","SYCXQMS-P5-03/A §5.4","产品检验与符合性","检验方案策划管理","检验方案策划与编制"],
+  ["ZL-L3-35-A01","审核检验方案的技术合理性","质量安环部检验员","","","单人审批","PLM","SYCXQMS-P5-03/A §5.5","原文明确-正文","SYCXQMS-P5-03/A §5.5","SYCXQMS-P5-03/A §5.5","SYCXQMS-P5-03/A §5.5","产品检验与符合性","检验方案策划管理","检验方案审批与分发"],
+  ["ZL-L3-35-A02","批准检验方案并受控发布","质量安环部技术员","","","单人审批","PLM","SYCXQMS-P5-03/A §5.5","原文明确-正文","SYCXQMS-P5-03/A §5.5","SYCXQMS-P5-03/A §5.5","SYCXQMS-P5-03/A §5.5","产品检验与符合性","检验方案策划管理","检验方案审批与分发"],
+  ["ZL-L3-35-A03","分发检验方案至生产单元和检验执行岗位","质量安环部文档管理员","","","无审批","PLM","SYCXQMS-P5-03/A §5.5","上下文推断","SYCXQMS-P5-03/A §5.5","SYCXQMS-P5-03/A §5.5","SYCXQMS-P5-03/A §5.5","产品检验与符合性","检验方案策划管理","检验方案审批与分发"],
+  ["ZL-L3-36-A01","确认顾客检验计划和检验点（QAR点）","质量安环部检验员","","","无审批","OA","SYCXQMS-P5-04/A §5.1","原文明确-正文","SYCXQMS-P5-04/A §5.1","SYCXQMS-P5-04/A §5.1","SYCXQMS-P5-04/A §5.1","产品检验与符合性","顾客/项目符合性检验管理","顾客检验准备与陪同"],
+  ["ZL-L3-36-A02","准备顾客检验所需的制造记录和检验证据","质量安环部文档管理员","","","无审批","PLM","SYCXQMS-P5-04/A §5.2","原文明确-正文","SYCXQMS-P5-04/A §5.2","SYCXQMS-P5-04/A §5.2","SYCXQMS-P5-04/A §5.2","产品检验与符合性","顾客/项目符合性检验管理","顾客检验准备与陪同"],
+  ["ZL-L3-36-A03","陪同顾客执行现场符合性检验","质量安环部检验员","","","无审批","OA","SYCXQMS-P5-04/A §5.3","原文明确-正文","SYCXQMS-P5-04/A §5.3","SYCXQMS-P5-04/A §5.3","SYCXQMS-P5-04/A §5.3","产品检验与符合性","顾客/项目符合性检验管理","顾客检验准备与陪同"],
+  ["ZL-L3-36-A04","记录并跟踪顾客检验发现的不符合项","质量安环部检验员","","","无审批","OA","SYCXQMS-P5-04/A §5.4","原文明确-正文","SYCXQMS-P5-04/A §5.4","SYCXQMS-P5-04/A §5.4","SYCXQMS-P5-04/A §5.4","产品检验与符合性","顾客/项目符合性检验管理","顾客检验准备与陪同"],
+  ["ZL-L3-37-A01","按项目程序执行制造符合性检验（商飞/MA700）","质量安环部检验员","","","无审批","MES","SYCXQMS-P5-05/A §5.1-5.7; SYCXQMS-P5-13/A §5.1-5.6","原文明确-正文","SYCXQMS-P5-05/A §5.1-5.7; SYCXQMS-P5-13/A §5.1-5.6","SYCXQMS-P5-05/A §5.1-5.7; SYCXQMS-P5-13/A §5.1-5.6","SYCXQMS-P5-05/A §5.1-5.7; SYCXQMS-P5-13/A §5.1-5.6","产品检验与符合性","顾客/项目符合性检验管理","项目制造符合性检验执行"],
+  ["ZL-L3-37-A02","在项目指定检验点采集并记录检验数据","质量安环部检验员","","","无审批","MES","SYCXQMS-P5-05/A §5.4; SYCXQMS-P5-13/A §5.4","原文明确-正文","SYCXQMS-P5-05/A §5.4; SYCXQMS-P5-13/A §5.4","SYCXQMS-P5-05/A §5.4; SYCXQMS-P5-13/A §5.4","SYCXQMS-P5-05/A §5.4; SYCXQMS-P5-13/A §5.4","产品检验与符合性","顾客/项目符合性检验管理","项目制造符合性检验执行"],
+  ["ZL-L3-37-A03","向项目管理部和顾客通报检验结论","质量安环部检验员","","","无审批","OA","SYCXQMS-P5-05/A §5.7; SYCXQMS-P5-13/A §5.6","上下文推断","SYCXQMS-P5-05/A §5.7; SYCXQMS-P5-13/A §5.6","SYCXQMS-P5-05/A §5.7; SYCXQMS-P5-13/A §5.6","SYCXQMS-P5-05/A §5.7; SYCXQMS-P5-13/A §5.6","产品检验与符合性","顾客/项目符合性检验管理","项目制造符合性检验执行"],
+  ["ZL-L3-38-A01","编制无损检测技术单/工艺规程","NDT Ⅲ级人员","","","无审批","PLM","SYCXQMS-P5-09/A §5.1","原文明确-正文","SYCXQMS-P5-09/A §5.1","SYCXQMS-P5-09/A §5.1","SYCXQMS-P5-09/A §5.1","产品检验与符合性","无损检测管理","检测技术文件编制与审批"],
+  ["ZL-L3-38-A02","审核无损检测技术文件的符合性","NDT Ⅲ级人员","","","单人审批","PLM","SYCXQMS-P5-09/A §5.2","原文明确-正文","SYCXQMS-P5-09/A §5.2","SYCXQMS-P5-09/A §5.2","SYCXQMS-P5-09/A §5.2","产品检验与符合性","无损检测管理","检测技术文件编制与审批"],
+  ["ZL-L3-38-A03","管理无损检测技术文件的版本和分发","质量安环部文档管理员","","","无审批","PLM","SYCXQMS-P5-09/A §5.3","上下文推断","SYCXQMS-P5-09/A §5.3","SYCXQMS-P5-09/A §5.3","SYCXQMS-P5-09/A §5.3","产品检验与符合性","无损检测管理","检测技术文件编制与审批"],
+  ["ZL-L3-39-A01","确认检测设备已校准且在有效期内","NDT Ⅰ/Ⅱ级操作人员","","","无审批","MES","SYCXQMS-P5-09/A §5.4","原文明确-正文","SYCXQMS-P5-09/A §5.4","SYCXQMS-P5-09/A §5.4","SYCXQMS-P5-09/A §5.4","产品检验与符合性","无损检测管理","无损检测实施与结果报告"],
+  ["ZL-L3-39-A02","执行超声检测/射线检测并按规程记录数据","NDT Ⅰ/Ⅱ级操作人员","","","无审批","MES","SYCXQMS-P5-09/A §5.5","原文明确-正文","SYCXQMS-P5-09/A §5.5","SYCXQMS-P5-09/A §5.5","SYCXQMS-P5-09/A §5.5","产品检验与符合性","无损检测管理","无损检测实施与结果报告"],
+  ["ZL-L3-39-A03","编写无损检测结果报告","NDT Ⅱ级人员","","","无审批","PLM","SYCXQMS-P5-09/A §5.6","原文明确-正文","SYCXQMS-P5-09/A §5.6","SYCXQMS-P5-09/A §5.6","SYCXQMS-P5-09/A §5.6","产品检验与符合性","无损检测管理","无损检测实施与结果报告"],
+  ["ZL-L3-39-A04","审核并签署无损检测报告","NDT Ⅲ级人员","","","单人审批","PLM","SYCXQMS-P5-09/A §5.7","原文明确-正文","SYCXQMS-P5-09/A §5.7","SYCXQMS-P5-09/A §5.7","SYCXQMS-P5-09/A §5.7","产品检验与符合性","无损检测管理","无损检测实施与结果报告"],
+  ["ZL-L3-40-A01","组织NDT人员资格鉴定和能力评估（Ⅰ/Ⅱ/Ⅲ级）","质量安环部检验员","","","单人审批","PLM","SYCXQMS-P5-09/A §5.8","原文明确-正文","SYCXQMS-P5-09/A §5.8","SYCXQMS-P5-09/A §5.8","SYCXQMS-P5-09/A §5.8","产品检验与符合性","无损检测管理","检测人员资格鉴定与设备校准"],
+  ["ZL-L3-40-A02","执行无损检测设备周期校准和维护","理化计量室计量员","","","无审批","PLM","SYCXQMS-P5-09/A §5.9","原文明确-正文","SYCXQMS-P5-09/A §5.9","SYCXQMS-P5-09/A §5.9","SYCXQMS-P5-09/A §5.9","产品检验与符合性","无损检测管理","检测人员资格鉴定与设备校准"],
+  ["ZL-L3-40-A03","管理检测材料（耦合剂、胶片、渗透剂等）的验收和存储","质量安环部检验员","","","无审批","PLM","SYCXQMS-P5-09/A §5.9","原文明确-正文","SYCXQMS-P5-09/A §5.9","SYCXQMS-P5-09/A §5.9","SYCXQMS-P5-09/A §5.9","产品检验与符合性","无损检测管理","检测人员资格鉴定与设备校准"],
+  ["ZL-L3-41-A01","根据产品数模编制数字化测量程序","质量安环部技术员","","","无审批","PLM","SYCXQMS-P5-08/A §5.1","原文明确-正文","SYCXQMS-P5-08/A §5.1","SYCXQMS-P5-08/A §5.1","SYCXQMS-P5-08/A §5.1","产品检验与符合性","数字化测量管理","数字化测量程序编制与验证"],
+  ["ZL-L3-41-A02","验证测量程序的正确性和可靠性","质量安环部技术员","","","无审批","PLM","SYCXQMS-P5-08/A §5.2","原文明确-正文","SYCXQMS-P5-08/A §5.2","SYCXQMS-P5-08/A §5.2","SYCXQMS-P5-08/A §5.2","产品检验与符合性","数字化测量管理","数字化测量程序编制与验证"],
+  ["ZL-L3-41-A03","审核批准数字化测量程序","质量安环部检验员","","","单人审批","PLM","SYCXQMS-P5-08/A §5.3","原文明确-正文","SYCXQMS-P5-08/A §5.3","SYCXQMS-P5-08/A §5.3","SYCXQMS-P5-08/A §5.3","产品检验与符合性","数字化测量管理","数字化测量程序编制与验证"],
+  ["ZL-L3-42-A01","执行数控测量机检测并采集测量数据","质量安环部检验员","","","无审批","MES","SYCXQMS-P5-08/A §5.4","原文明确-正文","SYCXQMS-P5-08/A §5.4","SYCXQMS-P5-08/A §5.4","SYCXQMS-P5-08/A §5.4","产品检验与符合性","数字化测量管理","数控测量检测实施与报告归档"],
+  ["ZL-L3-42-A02","生成检测结果报告并签字确认","质量安环部检验员","","","无审批","PLM","SYCXQMS-P5-08/A §5.5","原文明确-正文","SYCXQMS-P5-08/A §5.5","SYCXQMS-P5-08/A §5.5","SYCXQMS-P5-08/A §5.5","产品检验与符合性","数字化测量管理","数控测量检测实施与报告归档"],
+  ["ZL-L3-42-A03","归档检测结果报告并与制造记录关联","质量安环部文档管理员","","","无审批","PLM","SYCXQMS-P5-08/A §5.6","原文明确-正文","SYCXQMS-P5-08/A §5.6","SYCXQMS-P5-08/A §5.6","SYCXQMS-P5-08/A §5.6","产品检验与符合性","数字化测量管理","数控测量检测实施与报告归档"],
+  ["ZL-L3-42-A04","对测量不合格品衔接不合格品控制流程","质量安环部检验员","","","无审批","MES","SYCXQMS-P5-08/A §5.6","上下文推断","SYCXQMS-P5-08/A §5.6","SYCXQMS-P5-08/A §5.6","SYCXQMS-P5-08/A §5.6","产品检验与符合性","数字化测量管理","数控测量检测实施与报告归档"],
+  ["ZL-L3-43-A01","发现不符合产品时立即挂签或粘签标识","质量安环部检验员","","","无审批","MES","SYCXQMS-P5-10/A §5.1","原文明确-正文","SYCXQMS-P5-10/A §5.1","SYCXQMS-P5-10/A §5.1","SYCXQMS-P5-10/A §5.1","不合格品控制","不合格品审理与处置","不合格品识别与标识"],
+  ["ZL-L3-43-A02","描述不合格事实并记录不合格信息（数量、批次、缺陷类型、发生工序）","质量安环部检验员","","","无审批","MES","SYCXQMS-P5-10/A §5.2","原文明确-正文","SYCXQMS-P5-10/A §5.2","SYCXQMS-P5-10/A §5.2","SYCXQMS-P5-10/A §5.2","不合格品控制","不合格品审理与处置","不合格品识别与标识"],
+  ["ZL-L3-44-A01","将不合格品移至MRCC隔离区并登记","生产部门操作者","","","无审批","MES","SYCXQMS-P5-10/A §5.3","原文明确-正文","SYCXQMS-P5-10/A §5.3","SYCXQMS-P5-10/A §5.3","SYCXQMS-P5-10/A §5.3","不合格品控制","不合格品审理与处置","不合格品隔离与预检"],
+  ["ZL-L3-44-A02","执行预检（PI）标记并记录预检结论","质量安环部检验员","","","无审批","MES","SYCXQMS-P5-10/A §5.3","原文明确-正文","SYCXQMS-P5-10/A §5.3","SYCXQMS-P5-10/A §5.3","SYCXQMS-P5-10/A §5.3","不合格品控制","不合格品审理与处置","不合格品隔离与预检"],
+  ["ZL-L3-44-A03","对预检合格品解除MRCC隔离并恢复流转","质量安环部检验员","","","无审批","MES","SYCXQMS-P5-10/A §5.3","上下文推断","SYCXQMS-P5-10/A §5.3","SYCXQMS-P5-10/A §5.3","SYCXQMS-P5-10/A §5.3","不合格品控制","不合格品审理与处置","不合格品隔离与预检"],
+  ["ZL-L3-45-A01","判定不合格品严重程度（严重/轻度）","质量安环部检验员","","","无审批","MES","SYCXQMS-P5-10/A §5.4","原文明确-正文","SYCXQMS-P5-10/A §5.4","SYCXQMS-P5-10/A §5.4","SYCXQMS-P5-10/A §5.4","不合格品控制","不合格品审理与处置","不合格品分类与审理"],
+  ["ZL-L3-45-A02","确定适用的审理组织层级（委员会/常设机构/审理小组）","质量安环部检验员","","","无审批","OA","SYCXQMS-P5-10/A §5.5","原文明确-正文","SYCXQMS-P5-10/A §5.5","SYCXQMS-P5-10/A §5.5","SYCXQMS-P5-10/A §5.5","不合格品控制","不合格品审理与处置","不合格品分类与审理"],
+  ["ZL-L3-45-A03","发起不合格品审理单并提交审理组织","质量安环部检验员","","","无审批","OA","SYCXQMS-P5-10/A §5.6","原文明确-正文","SYCXQMS-P5-10/A §5.6","SYCXQMS-P5-10/A §5.6","SYCXQMS-P5-10/A §5.6","不合格品控制","不合格品审理与处置","不合格品分类与审理"],
+  ["ZL-L3-45-A04","审理组织逐级审理并确定处置方式（返工/返修/报废/让步/降级/返回供方）","审理组织成员","","","会签","OA","SYCXQMS-P5-10/A §5.7","原文明确-正文","SYCXQMS-P5-10/A §5.7","SYCXQMS-P5-10/A §5.7","SYCXQMS-P5-10/A §5.7","不合格品控制","不合格品审理与处置","不合格品分类与审理"],
+  ["ZL-L3-46-A01","执行返工并重新提交检验","生产部门操作者","","","无审批","MES","SYCXQMS-P5-10/A §5.8","原文明确-正文","SYCXQMS-P5-10/A §5.8","SYCXQMS-P5-10/A §5.8","SYCXQMS-P5-10/A §5.8","不合格品控制","不合格品审理与处置","不合格品处置执行与关闭"],
+  ["ZL-L3-46-A02","执行返修并编制返修工艺文件","工程技术部技术员","","","无审批","PLM","SYCXQMS-P5-10/A §5.8","原文明确-正文","SYCXQMS-P5-10/A §5.8","SYCXQMS-P5-10/A §5.8","SYCXQMS-P5-10/A §5.8","不合格品控制","不合格品审理与处置","不合格品处置执行与关闭"],
+  ["ZL-L3-46-A03","执行报废并登记报废台账","质量安环部检验员","","","无审批","PLM","SYCXQMS-P5-10/A §5.9","原文明确-正文","SYCXQMS-P5-10/A §5.9","SYCXQMS-P5-10/A §5.9","SYCXQMS-P5-10/A §5.9","不合格品控制","不合格品审理与处置","不合格品处置执行与关闭"],
+  ["ZL-L3-46-A04","验证处置后产品的符合性并关闭审理单","质量安环部检验员","","","无审批","OA","SYCXQMS-P5-10/A §5.9","原文明确-正文","SYCXQMS-P5-10/A §5.9","SYCXQMS-P5-10/A §5.9","SYCXQMS-P5-10/A §5.9","不合格品控制","不合格品审理与处置","不合格品处置执行与关闭"],
+  ["ZL-L3-47-A01","审查审理人员资格条件（技术职称、工作经验、培训记录）","质量安环部检验员","","","无审批","OA","SYCXQMS-P5-14/A §5.1","原文明确-正文","SYCXQMS-P5-14/A §5.1","SYCXQMS-P5-14/A §5.1","SYCXQMS-P5-14/A §5.1","不合格品控制","不合格品审理人员授权管理","审理人员资格认定与授权"],
+  ["ZL-L3-47-A02","组织审理人员培训考核","质量安环部检验员","","","无审批","OA","SYCXQMS-P5-14/A §5.2","原文明确-正文","SYCXQMS-P5-14/A §5.2","SYCXQMS-P5-14/A §5.2","SYCXQMS-P5-14/A §5.2","不合格品控制","不合格品审理人员授权管理","审理人员资格认定与授权"],
+  ["ZL-L3-47-A03","提请总经理签发审理人员授权书","质量安环部检验员","","","单人审批","OA","SYCXQMS-P5-14/A §5.3","原文明确-正文","SYCXQMS-P5-14/A §5.3","SYCXQMS-P5-14/A §5.3","SYCXQMS-P5-14/A §5.3","不合格品控制","不合格品审理人员授权管理","审理人员资格认定与授权"],
+  ["ZL-L3-47-A04","录入授权人员信息至授权数据库","质量安环部文档管理员","","","无审批","PLM","SYCXQMS-P5-14/A §5.4","上下文推断","SYCXQMS-P5-14/A §5.4","SYCXQMS-P5-14/A §5.4","SYCXQMS-P5-14/A §5.4","不合格品控制","不合格品审理人员授权管理","审理人员资格认定与授权"],
+  ["ZL-L3-48-A01","发布并维护最新授权人员名单","质量安环部检验员","","","无审批","OA","SYCXQMS-P5-14/A §5.4","原文明确-正文","SYCXQMS-P5-14/A §5.4","SYCXQMS-P5-14/A §5.4","SYCXQMS-P5-14/A §5.4","不合格品控制","不合格品审理人员授权管理","授权名单维护与变更管理"],
+  ["ZL-L3-48-A02","受理审理人员变更申请（新增/撤销/权限调整）","质量安环部检验员","","","单人审批","OA","SYCXQMS-P5-14/A §5.5","原文明确-正文","SYCXQMS-P5-14/A §5.5","SYCXQMS-P5-14/A §5.5","SYCXQMS-P5-14/A §5.5","不合格品控制","不合格品审理人员授权管理","授权名单维护与变更管理"],
+  ["ZL-L3-48-A03","通知相关部门审理人员变更信息","质量安环部文档管理员","","","无审批","OA","SYCXQMS-P5-14/A §5.5","上下文推断","SYCXQMS-P5-14/A §5.5","SYCXQMS-P5-14/A §5.5","SYCXQMS-P5-14/A §5.5","不合格品控制","不合格品审理人员授权管理","授权名单维护与变更管理"],
+  ["ZL-L3-49-A01","识别质量逃逸事件（不合格品流出至顾客或下游工序）","质量安环部检验员","","","无审批","OA","SYCXQMS-P5-06/A §5.1","原文明确-正文","SYCXQMS-P5-06/A §5.1","SYCXQMS-P5-06/A §5.1","SYCXQMS-P5-06/A §5.1","不合格品控制","质量逃逸管理","逃逸事件识别与调查"],
+  ["ZL-L3-49-A02","编制质量逃逸事件报告","质量安环部检验员","","","单人审批","OA","SYCXQMS-P5-06/A §5.2","原文明确-正文","SYCXQMS-P5-06/A §5.2","SYCXQMS-P5-06/A §5.2","SYCXQMS-P5-06/A §5.2","不合格品控制","质量逃逸管理","逃逸事件识别与调查"],
+  ["ZL-L3-49-A03","组织逃逸原因调查（追溯逃逸路径、识别控制薄弱点）","质量安环部检验员","","","无审批","OA","SYCXQMS-P5-06/A §5.3","原文明确-正文","SYCXQMS-P5-06/A §5.3","SYCXQMS-P5-06/A §5.3","SYCXQMS-P5-06/A §5.3","不合格品控制","质量逃逸管理","逃逸事件识别与调查"],
+  ["ZL-L3-49-A04","在MES中追溯逃逸产品的全部检验和生产记录","质量安环部检验员","","","无审批","MES","SYCXQMS-P5-06/A §5.3","上下文推断","SYCXQMS-P5-06/A §5.3","SYCXQMS-P5-06/A §5.3","SYCXQMS-P5-06/A §5.3","不合格品控制","质量逃逸管理","逃逸事件识别与调查"],
+  ["ZL-L3-50-A01","制定并实施逃逸纠正措施","质量安环部检验员","","","单人审批","OA","SYCXQMS-P5-06/A §5.4","原文明确-正文","SYCXQMS-P5-06/A §5.4","SYCXQMS-P5-06/A §5.4","SYCXQMS-P5-06/A §5.4","不合格品控制","质量逃逸管理","纠正措施与顾客沟通"],
+  ["ZL-L3-50-A02","验证纠正措施有效性","质量安环部检验员","","","无审批","OA","SYCXQMS-P5-06/A §5.5","原文明确-正文","SYCXQMS-P5-06/A §5.5","SYCXQMS-P5-06/A §5.5","SYCXQMS-P5-06/A §5.5","不合格品控制","质量逃逸管理","纠正措施与顾客沟通"],
+  ["ZL-L3-50-A03","向顾客通报逃逸事件及处理结果（如需）","质量安环部检验员","","","单人审批","OA","SYCXQMS-P5-06/A §5.6","原文明确-正文","SYCXQMS-P5-06/A §5.6","SYCXQMS-P5-06/A §5.6","SYCXQMS-P5-06/A §5.6","不合格品控制","质量逃逸管理","纠正措施与顾客沟通"],
+  ["ZL-L3-50-A04","将逃逸案例纳入质量数据库作为教训共享","质量安环部文档管理员","","","无审批","PLM","SYCXQMS-P5-06/A §5.6","上下文推断","SYCXQMS-P5-06/A §5.6","SYCXQMS-P5-06/A §5.6","SYCXQMS-P5-06/A §5.6","不合格品控制","质量逃逸管理","纠正措施与顾客沟通"],
+  ["ZL-L3-51-A01","执行多余物预防措施（清点工具/控制异物进入/清洁工作区域）","生产部门操作者","","","无审批","MES","SYCXQMS-P5-11/A §5.1","原文明确-正文","SYCXQMS-P5-11/A §5.1","SYCXQMS-P5-11/A §5.1","SYCXQMS-P5-11/A §5.1","不合格品控制","多余物控制管理","多余物预防与检测排查"],
+  ["ZL-L3-51-A02","执行多余物检测（目视检查/内窥镜检查/摇晃检查）","质量安环部检验员","","","无审批","MES","SYCXQMS-P5-11/A §5.2","原文明确-正文","SYCXQMS-P5-11/A §5.2","SYCXQMS-P5-11/A §5.2","SYCXQMS-P5-11/A §5.2","不合格品控制","多余物控制管理","多余物预防与检测排查"],
+  ["ZL-L3-51-A03","记录多余物检测结果并判定","质量安环部检验员","","","无审批","MES","SYCXQMS-P5-11/A §5.3","原文明确-正文","SYCXQMS-P5-11/A §5.3","SYCXQMS-P5-11/A §5.3","SYCXQMS-P5-11/A §5.3","不合格品控制","多余物控制管理","多余物预防与检测排查"],
+  ["ZL-L3-52-A01","发现多余物时清除并登记多余物来源和类型","质量安环部检验员","","","无审批","MES","SYCXQMS-P5-11/A §5.4","原文明确-正文","SYCXQMS-P5-11/A §5.4","SYCXQMS-P5-11/A §5.4","SYCXQMS-P5-11/A §5.4","不合格品控制","多余物控制管理","多余物记录处置与效果验证"],
+  ["ZL-L3-52-A02","对多余物频发部位启动专项排查和改进","质量安环部检验员","","","单人审批","OA","SYCXQMS-P5-11/A §5.5","原文明确-正文","SYCXQMS-P5-11/A §5.5","SYCXQMS-P5-11/A §5.5","SYCXQMS-P5-11/A §5.5","不合格品控制","多余物控制管理","多余物记录处置与效果验证"],
+  ["ZL-L3-52-A03","验证多余物控制措施的有效性并更新控制计划","质量安环部检验员","","","无审批","MES","SYCXQMS-P5-11/A §5.5","上下文推断","SYCXQMS-P5-11/A §5.5","SYCXQMS-P5-11/A §5.5","SYCXQMS-P5-11/A §5.5","不合格品控制","多余物控制管理","多余物记录处置与效果验证"],
+  ["ZL-L3-53-A01","提出紧急放行申请并说明理由和风险","生产部门负责人","","","无审批","OA","SYCXQMS-P5-12/A §5.1","原文明确-正文","SYCXQMS-P5-12/A §5.1","SYCXQMS-P5-12/A §5.1","SYCXQMS-P5-12/A §5.1","不合格品控制","产品紧急放行管理","紧急放行申请与风险评估"],
+  ["ZL-L3-53-A02","评估紧急放行风险（对后续工序/产品性能/顾客交付的影响）","质量安环部检验员","","","无审批","OA","SYCXQMS-P5-12/A §5.2","原文明确-正文","SYCXQMS-P5-12/A §5.2","SYCXQMS-P5-12/A §5.2","SYCXQMS-P5-12/A §5.2","不合格品控制","产品紧急放行管理","紧急放行申请与风险评估"],
+  ["ZL-L3-53-A03","确定放行后的跟踪验证要求","质量安环部检验员","","","无审批","OA","SYCXQMS-P5-12/A §5.3","原文明确-正文","SYCXQMS-P5-12/A §5.3","SYCXQMS-P5-12/A §5.3","SYCXQMS-P5-12/A §5.3","不合格品控制","产品紧急放行管理","紧急放行申请与风险评估"],
+  ["ZL-L3-54-A01","审批紧急放行申请","质量安环部负责人","","","单人审批","OA","SYCXQMS-P5-12/A §5.4","原文明确-正文","SYCXQMS-P5-12/A §5.4","SYCXQMS-P5-12/A §5.4","SYCXQMS-P5-12/A §5.4","不合格品控制","产品紧急放行管理","放行审批与跟踪验证"],
+  ["ZL-L3-54-A02","对放行产品进行特殊标识并建立追溯记录","质量安环部检验员","","","无审批","MES","SYCXQMS-P5-12/A §5.4","原文明确-正文","SYCXQMS-P5-12/A §5.4","SYCXQMS-P5-12/A §5.4","SYCXQMS-P5-12/A §5.4","不合格品控制","产品紧急放行管理","放行审批与跟踪验证"],
+  ["ZL-L3-54-A03","跟踪放行产品后续工序状态并获取最终检验结果","质量安环部检验员","","","无审批","MES","SYCXQMS-P5-12/A §5.5","原文明确-正文","SYCXQMS-P5-12/A §5.5","SYCXQMS-P5-12/A §5.5","SYCXQMS-P5-12/A §5.5","不合格品控制","产品紧急放行管理","放行审批与跟踪验证"],
+  ["ZL-L3-54-A04","放行后跟踪验证完成并关闭放行记录","质量安环部检验员","","","无审批","OA","SYCXQMS-P5-12/A §5.5","原文明确-正文","SYCXQMS-P5-12/A §5.5","SYCXQMS-P5-12/A §5.5","SYCXQMS-P5-12/A §5.5","不合格品控制","产品紧急放行管理","放行审批与跟踪验证"],
+  ["ZL-L3-55-A01","接收项目管理部传递的顾客交付文件要求","质量安环部文档管理员","","","无审批","OA","SYCXQMS-P5-02/A §5.1.1","上下文推断","SYCXQMS-P5-02/A §5.1.1","SYCXQMS-P5-02/A §5.1.1","SYCXQMS-P5-02/A §5.1.1","交付文件管理","交付文件准备管理","顾客交付文件要求确认"],
+  ["ZL-L3-55-A02","解读顾客交付文件要求并识别与现有文件的差异","质量安环部技术员","","","无审批","PLM","SYCXQMS-P5-02/A §5.1.1","上下文推断","SYCXQMS-P5-02/A §5.1.1","SYCXQMS-P5-02/A §5.1.1","SYCXQMS-P5-02/A §5.1.1","交付文件管理","交付文件准备管理","顾客交付文件要求确认"],
+  ["ZL-L3-55-A03","组织项目相关部门会签确认交付文件要求分工","质量安环部技术员","","","会签","OA","SYCXQMS-P5-02/A §5.1.2","上下文推断","SYCXQMS-P5-02/A §5.1.2","SYCXQMS-P5-02/A §5.1.2","SYCXQMS-P5-02/A §5.1.2","交付文件管理","交付文件准备管理","顾客交付文件要求确认"],
+  ["ZL-L3-56-A01","编制各项目交付文件工作标准（含填写说明）","质量安环部技术员","","","无审批","PLM","SYCXQMS-P5-02/A §5.1.2","原文明确-正文","SYCXQMS-P5-02/A §5.1.2","SYCXQMS-P5-02/A §5.1.2","SYCXQMS-P5-02/A §5.1.2","交付文件管理","交付文件准备管理","各项目交付文件工作标准编制"],
+  ["ZL-L3-56-A02","明确各交付文件的负责单位与归档要求","质量安环部技术员","","","无审批","PLM","SYCXQMS-P5-02/A §5.1.2","原文明确-正文","SYCXQMS-P5-02/A §5.1.2","SYCXQMS-P5-02/A §5.1.2","SYCXQMS-P5-02/A §5.1.2","交付文件管理","交付文件准备管理","各项目交付文件工作标准编制"],
+  ["ZL-L3-56-A03","明确交付文件的复印份数和提交时限要求","质量安环部技术员","","","无审批","PLM","SYCXQMS-P5-02/A §5.1.2","原文明确-正文","SYCXQMS-P5-02/A §5.1.2","SYCXQMS-P5-02/A §5.1.2","SYCXQMS-P5-02/A §5.1.2","交付文件管理","交付文件准备管理","各项目交付文件工作标准编制"],
+  ["ZL-L3-56-A04","组织内部评审并发布各项目交付文件工作标准","质量安环部技术员","","","单人审批","OA","SYCXQMS-P5-02/A §5.1.2","上下文推断","SYCXQMS-P5-02/A §5.1.2","SYCXQMS-P5-02/A §5.1.2","SYCXQMS-P5-02/A §5.1.2","交付文件管理","交付文件准备管理","各项目交付文件工作标准编制"],
+  ["ZL-L3-57-A01","完成产品合格证及测量数据填写","产品交付单位检验员","","","无审批","PLM","SYCXQMS-P5-02/A §5.1.3","原文明确-正文","SYCXQMS-P5-02/A §5.1.3","SYCXQMS-P5-02/A §5.1.3","SYCXQMS-P5-02/A §5.1.3","交付文件管理","交付文件准备管理","交付文件填写与汇总"],
+  ["ZL-L3-57-A02","编制并传递有效工程图纸目录","工程技术部技术员","","","无审批","PLM","SYCXQMS-P5-02/A §5.1.3","原文明确-正文","SYCXQMS-P5-02/A §5.1.3","SYCXQMS-P5-02/A §5.1.3","SYCXQMS-P5-02/A §5.1.3","交付文件管理","交付文件准备管理","交付文件填写与汇总"],
+  ["ZL-L3-57-A03","编制并传递装箱单、发票、ECS文件、订单号等文件","项目管理部项目专员","","","无审批","OA","SYCXQMS-P5-02/A §5.1.3","原文明确-正文","SYCXQMS-P5-02/A §5.1.3","SYCXQMS-P5-02/A §5.1.3","SYCXQMS-P5-02/A §5.1.3","交付文件管理","交付文件准备管理","交付文件填写与汇总"],
+  ["ZL-L3-57-A04","汇总各部门填写的交付文件并核对完整性","质量安环部文档管理员","","","无审批","PLM","SYCXQMS-P5-02/A §5.1.3","原文明确-正文","SYCXQMS-P5-02/A §5.1.3","SYCXQMS-P5-02/A §5.1.3","SYCXQMS-P5-02/A §5.1.3","交付文件管理","交付文件准备管理","交付文件填写与汇总"],
+  ["ZL-L3-57-A05","对缺项、不符合项通知责任部门限期补交或修正","质量安环部文档管理员","","","无审批","OA","SYCXQMS-P5-02/A §5.1.3","上下文推断","SYCXQMS-P5-02/A §5.1.3","SYCXQMS-P5-02/A §5.1.3","SYCXQMS-P5-02/A §5.1.3","交付文件管理","交付文件准备管理","交付文件填写与汇总"],
+  ["ZL-L3-58-A01","逐项审查交付文件内容符合性（对照工作标准）","质量安环部检验员","","","无审批","PLM","SYCXQMS-P5-02/A §5.1.3","原文明确-正文","SYCXQMS-P5-02/A §5.1.3","SYCXQMS-P5-02/A §5.1.3","SYCXQMS-P5-02/A §5.1.3","交付文件管理","交付文件准备管理","交付文件审查与盖章"],
+  ["ZL-L3-58-A02","对审查发现的不符合项退回责任部门整改","质量安环部检验员","","","无审批","OA","SYCXQMS-P5-02/A §5.1.3","上下文推断","SYCXQMS-P5-02/A §5.1.3","SYCXQMS-P5-02/A §5.1.3","SYCXQMS-P5-02/A §5.1.3","交付文件管理","交付文件准备管理","交付文件审查与盖章"],
+  ["ZL-L3-58-A03","在审查合格的交付文件合格证上加盖印章","质量安环部检验员","","","无审批","—","SYCXQMS-P5-02/A §5.1.3","原文明确-正文","SYCXQMS-P5-02/A §5.1.3","SYCXQMS-P5-02/A §5.1.3","SYCXQMS-P5-02/A §5.1.3","交付文件管理","交付文件准备管理","交付文件审查与盖章"],
+  ["ZL-L3-58-A04","登记交付文件审查台账（审查日期、文件清单、审查结果、盖章记录）","质量安环部文档管理员","","","无审批","PLM","SYCXQMS-P5-02/A §5.1.3","上下文推断","SYCXQMS-P5-02/A §5.1.3","SYCXQMS-P5-02/A §5.1.3","SYCXQMS-P5-02/A §5.1.3","交付文件管理","交付文件准备管理","交付文件审查与盖章"],
+  ["ZL-L3-59-A01","复制交付文件（至少一份随产品发运）","质量安环部文档管理员","","","无审批","—","SYCXQMS-P5-02/A §5.1.3","原文明确-正文","SYCXQMS-P5-02/A §5.1.3","SYCXQMS-P5-02/A §5.1.3","SYCXQMS-P5-02/A §5.1.3","交付文件管理","交付文件准备管理","交付文件复印归档与装箱移交"],
+  ["ZL-L3-59-A02","将交付文件原件随制造记录归档","质量安环部文档管理员","","","无审批","PLM","SYCXQMS-P5-02/A §5.1.3","原文明确-正文","SYCXQMS-P5-02/A §5.1.3","SYCXQMS-P5-02/A §5.1.3","SYCXQMS-P5-02/A §5.1.3","交付文件管理","交付文件准备管理","交付文件复印归档与装箱移交"],
+  ["ZL-L3-59-A03","将交付文件复印件装箱并编制装箱清单","质量安环部文档管理员","","","无审批","OA","SYCXQMS-P5-02/A §5.1.3","上下文推断","SYCXQMS-P5-02/A §5.1.3","SYCXQMS-P5-02/A §5.1.3","SYCXQMS-P5-02/A §5.1.3","交付文件管理","交付文件准备管理","交付文件复印归档与装箱移交"],
+  ["ZL-L3-59-A04","与产品交付单位办理装箱移交签收","质量安环部文档管理员","","","无审批","OA","SYCXQMS-P5-02/A §5.1.3","上下文推断","SYCXQMS-P5-02/A §5.1.3","SYCXQMS-P5-02/A §5.1.3","SYCXQMS-P5-02/A §5.1.3","交付文件管理","交付文件准备管理","交付文件复印归档与装箱移交"],
+  ["ZL-L3-60-A01","识别项目特定交付文件标准（商飞P5-15/波音P5-16/MA700 P5-17/A220 P5-18）","质量安环部技术员","","","无审批","PLM","SYCXQMS-P5-15/A~P5-18/A §5.1","上下文推断","SYCXQMS-P5-15/A~P5-18/A §5.1","SYCXQMS-P5-15/A~P5-18/A §5.1","SYCXQMS-P5-15/A~P5-18/A §5.1","交付文件管理","项目交付文件管理（商飞/波音/MA700/A220）","各项目交付文件专项编制"],
+  ["ZL-L3-60-A02","按项目特定模板编制交付文件（如商飞QAR点文件、波音SER/SQIS文件）","质量安环部技术员","","","无审批","PLM","SYCXQMS-P5-15/A~P5-18/A §5.2","原文明确-正文","SYCXQMS-P5-15/A~P5-18/A §5.2","SYCXQMS-P5-15/A~P5-18/A §5.2","SYCXQMS-P5-15/A~P5-18/A §5.2","交付文件管理","项目交付文件管理（商飞/波音/MA700/A220）","各项目交付文件专项编制"],
+  ["ZL-L3-60-A03","核对项目交付文件与顾客标准的符合性","质量安环部检验员","","","无审批","PLM","SYCXQMS-P5-15/A~P5-18/A §5.4","上下文推断","SYCXQMS-P5-15/A~P5-18/A §5.4","SYCXQMS-P5-15/A~P5-18/A §5.4","SYCXQMS-P5-15/A~P5-18/A §5.4","交付文件管理","项目交付文件管理（商飞/波音/MA700/A220）","各项目交付文件专项编制"],
+  ["ZL-L3-60-A04","协调项目相关部门补充项目特定交付数据","质量安环部技术员","","","无审批","OA","SYCXQMS-P5-15/A~P5-18/A","上下文推断","SYCXQMS-P5-15/A~P5-18/A","SYCXQMS-P5-15/A~P5-18/A","SYCXQMS-P5-15/A~P5-18/A","交付文件管理","项目交付文件管理（商飞/波音/MA700/A220）","各项目交付文件专项编制"],
+  ["ZL-L3-61-A01","解读并落实顾客特殊提交要求（格式/语言/电子或纸质/提交渠道）","质量安环部技术员","","","无审批","PLM","SYCXQMS-P5-15/A~P5-18/A §5.5","原文明确-正文","SYCXQMS-P5-15/A~P5-18/A §5.5","SYCXQMS-P5-15/A~P5-18/A §5.5","SYCXQMS-P5-15/A~P5-18/A §5.5","交付文件管理","项目交付文件管理（商飞/波音/MA700/A220）","项目特殊要求的满足与提交"],
+  ["ZL-L3-61-A02","按项目指定渠道提交交付文件（如商飞供应商门户、波音Supplier Portal等）","质量安环部文档管理员","","","无审批","OA","SYCXQMS-P5-15/A~P5-18/A §5.5","上下文推断","SYCXQMS-P5-15/A~P5-18/A §5.5","SYCXQMS-P5-15/A~P5-18/A §5.5","SYCXQMS-P5-15/A~P5-18/A §5.5","交付文件管理","项目交付文件管理（商飞/波音/MA700/A220）","项目特殊要求的满足与提交"],
+  ["ZL-L3-61-A03","跟踪顾客反馈并对退回文件进行修正和重新提交","质量安环部技术员","","","无审批","PLM、OA","SYCXQMS-P5-15/A~P5-18/A","上下文推断","SYCXQMS-P5-15/A~P5-18/A","SYCXQMS-P5-15/A~P5-18/A","SYCXQMS-P5-15/A~P5-18/A","交付文件管理","项目交付文件管理（商飞/波音/MA700/A220）","项目特殊要求的满足与提交"],
+  ["ZL-L3-61-A04","记录各项目交付文件的提交时间、版本和顾客确认状态","质量安环部文档管理员","","","无审批","PLM","SYCXQMS-P5-15/A~P5-18/A","上下文推断","SYCXQMS-P5-15/A~P5-18/A","SYCXQMS-P5-15/A~P5-18/A","SYCXQMS-P5-15/A~P5-18/A","交付文件管理","项目交付文件管理（商飞/波音/MA700/A220）","项目特殊要求的满足与提交"],
+  ["ZL-L3-62-A01","识别质量记录归属类别（产品质量记录/管理质量记录）","质量安环部文档管理员","","","无审批","PLM","SYCXQMS-S1-06/A §5.1","原文明确-正文","SYCXQMS-S1-06/A §5.1","SYCXQMS-S1-06/A §5.1","SYCXQMS-S1-06/A §5.1","质量记录管理","质量记录全过程管理","质量记录分类与编号"],
+  ["ZL-L3-62-A02","对产品质量记录按子类进一步分类（设计开发记录/产品制造记录/产品监视测量记录）","质量安环部文档管理员","","","无审批","PLM","SYCXQMS-S1-06/A §5.1.2","原文明确-正文","SYCXQMS-S1-06/A §5.1.2","SYCXQMS-S1-06/A §5.1.2","SYCXQMS-S1-06/A §5.1.2","质量记录管理","质量记录全过程管理","质量记录分类与编号"],
+  ["ZL-L3-62-A03","按编号规则为质量记录分配唯一编号","质量安环部文档管理员","","","无审批","PLM","SYCXQMS-S1-06/A §5.2","原文明确-正文","SYCXQMS-S1-06/A §5.2","SYCXQMS-S1-06/A §5.2","SYCXQMS-S1-06/A §5.2","质量记录管理","质量记录全过程管理","质量记录分类与编号"],
+  ["ZL-L3-63-A01","设计或审核记录表格格式确保满足标准化要求","质量安环部技术员","","","单人审批","OA","SYCXQMS-S1-06/A §5.2","原文明确-正文","SYCXQMS-S1-06/A §5.2","SYCXQMS-S1-06/A §5.2","SYCXQMS-S1-06/A §5.2","质量记录管理","质量记录全过程管理","记录表格格式与版次控制"],
+  ["ZL-L3-63-A02","对记录表格实施版次控制并管理升版过渡期（旧版允许使用6个月）","质量安环部文档管理员","","","无审批","PLM、OA","SYCXQMS-S1-06/A §5.2","原文明确-正文","SYCXQMS-S1-06/A §5.2","SYCXQMS-S1-06/A §5.2","SYCXQMS-S1-06/A §5.2","质量记录管理","质量记录全过程管理","记录表格格式与版次控制"],
+  ["ZL-L3-63-A03","维护记录表格版本清单和版次变更历史","质量安环部文档管理员","","","无审批","PLM","SYCXQMS-S1-06/A §5.2","上下文推断","SYCXQMS-S1-06/A §5.2","SYCXQMS-S1-06/A §5.2","SYCXQMS-S1-06/A §5.2","质量记录管理","质量记录全过程管理","记录表格格式与版次控制"],
+  ["ZL-L3-64-A01","使用耐久黑色墨水或黑色圆珠笔填写记录","所有记录填写人员","","","无审批","—","SYCXQMS-S1-06/A §5.2","原文明确-正文","SYCXQMS-S1-06/A §5.2","SYCXQMS-S1-06/A §5.2","SYCXQMS-S1-06/A §5.2","质量记录管理","质量记录全过程管理","记录填写规范与更改（杠改）"],
+  ["ZL-L3-64-A02","对纸质记录错误执行杠改（原信息仍可读）并签字盖章加注日期","所有记录填写人员","","","无审批","—","SYCXQMS-S1-06/A §5.3","原文明确-正文","SYCXQMS-S1-06/A §5.3","SYCXQMS-S1-06/A §5.3","SYCXQMS-S1-06/A §5.3","质量记录管理","质量记录全过程管理","记录填写规范与更改（杠改）"],
+  ["ZL-L3-64-A03","对产品质量档案勘误：填写FM-S1-06-03说明错误和修正内容并履行审批","质量安环部技术员","","","会签","OA","SYCXQMS-S1-06/A §5.3","原文明确-正文","SYCXQMS-S1-06/A §5.3","SYCXQMS-S1-06/A §5.3","SYCXQMS-S1-06/A §5.3","质量记录管理","质量记录全过程管理","记录填写规范与更改（杠改）"],
+  ["ZL-L3-64-A04","对漏盖印章情况按S2-05《检验印章管理程序》补盖","质量安环部检验员","","","单人审批","OA","SYCXQMS-S1-06/A §5.3","原文明确-正文","SYCXQMS-S1-06/A §5.3","SYCXQMS-S1-06/A §5.3","SYCXQMS-S1-06/A §5.3","质量记录管理","质量记录全过程管理","记录填写规范与更改（杠改）"],
+  ["ZL-L3-65-A01","验收产品质量档案（与产品验收同时进行，按投产或装配计划索引核对逐页审查）","质量安环部检验员","","","无审批","PLM","SYCXQMS-S1-06/A §5.4","原文明确-正文","SYCXQMS-S1-06/A §5.4","SYCXQMS-S1-06/A §5.4","SYCXQMS-S1-06/A §5.4","质量记录管理","质量记录全过程管理","产品质量记录归档与索引"],
+  ["ZL-L3-65-A02","对验收不合格的档案退回责任部门补充或修正","质量安环部检验员","","","无审批","OA","SYCXQMS-S1-06/A §5.4","上下文推断","SYCXQMS-S1-06/A §5.4","SYCXQMS-S1-06/A §5.4","SYCXQMS-S1-06/A §5.4","质量记录管理","质量记录全过程管理","产品质量记录归档与索引"],
+  ["ZL-L3-65-A03","按项目/批架次分类编号归档产品质量记录","质量安环部文档管理员","","","无审批","PLM","SYCXQMS-S1-06/A §5.4","原文明确-正文","SYCXQMS-S1-06/A §5.4","SYCXQMS-S1-06/A §5.4","SYCXQMS-S1-06/A §5.4","质量记录管理","质量记录全过程管理","产品质量记录归档与索引"],
+  ["ZL-L3-65-A04","建立产品质量记录归档索引目录","质量安环部文档管理员","","","无审批","PLM","SYCXQMS-S1-06/A §5.4","原文明确-正文","SYCXQMS-S1-06/A §5.4","SYCXQMS-S1-06/A §5.4","SYCXQMS-S1-06/A §5.4","质量记录管理","质量记录全过程管理","产品质量记录归档与索引"],
+  ["ZL-L3-65-A05","确保档案贮存环境适宜（防损伤、变质、丢失）","质量安环部文档管理员","","","无审批","—","SYCXQMS-S1-06/A §5.4","原文明确-正文","SYCXQMS-S1-06/A §5.4","SYCXQMS-S1-06/A §5.4","SYCXQMS-S1-06/A §5.4","质量记录管理","质量记录全过程管理","产品质量记录归档与索引"],
+  ["ZL-L3-66-A01","收集各部门提交的管理质量记录（会议纪要/培训记录/审核报告/管理评审材料等）","质量安环部文档管理员","","","无审批","OA","SYCXQMS-S1-06/A §5.1, §5.4","上下文推断","SYCXQMS-S1-06/A §5.1, §5.4","SYCXQMS-S1-06/A §5.1, §5.4","SYCXQMS-S1-06/A §5.1, §5.4","质量记录管理","质量记录全过程管理","管理质量记录归档"],
+  ["ZL-L3-66-A02","按类别和编号规则对管理质量记录进行分类编号归档","质量安环部文档管理员","","","无审批","PLM","SYCXQMS-S1-06/A §5.4","上下文推断","SYCXQMS-S1-06/A §5.4","SYCXQMS-S1-06/A §5.4","SYCXQMS-S1-06/A §5.4","质量记录管理","质量记录全过程管理","管理质量记录归档"],
+  ["ZL-L3-66-A03","建立管理质量记录归档台账（记录名称/编号/归档日期/保管期限/存放位置）","质量安环部文档管理员","","","无审批","PLM","SYCXQMS-S1-06/A §5.4","原文明确-正文","SYCXQMS-S1-06/A §5.4","SYCXQMS-S1-06/A §5.4","SYCXQMS-S1-06/A §5.4","质量记录管理","质量记录全过程管理","管理质量记录归档"],
+  ["ZL-L3-67-A01","为每类记录标注保存期限（可追溯产品质量记录>=10年/其他产品质量记录8年/管理质量记录6年）","质量安环部文档管理员","","","无审批","PLM","SYCXQMS-S1-06/A §5.4","原文明确-正文","SYCXQMS-S1-06/A §5.4","SYCXQMS-S1-06/A §5.4","SYCXQMS-S1-06/A §5.4","质量记录管理","质量记录全过程管理","记录保存期限管理"],
+  ["ZL-L3-67-A02","对可追溯产品质量记录从产品发运日期起计算10年保存期","质量安环部文档管理员","","","无审批","PLM","SYCXQMS-S1-06/A §5.4","原文明确-正文","SYCXQMS-S1-06/A §5.4","SYCXQMS-S1-06/A §5.4","SYCXQMS-S1-06/A §5.4","质量记录管理","质量记录全过程管理","记录保存期限管理"],
+  ["ZL-L3-67-A03","对非硬拷贝记录（电子媒体/缩微胶片）实施防篡改防丢失措施","质量安环部文档管理员","","","无审批","PLM","SYCXQMS-S1-06/A §5.4","原文明确-正文","SYCXQMS-S1-06/A §5.4","SYCXQMS-S1-06/A §5.4","SYCXQMS-S1-06/A §5.4","质量记录管理","质量记录全过程管理","记录保存期限管理"],
+  ["ZL-L3-67-A04","定期检查到期记录并生成到期提醒清单","质量安环部文档管理员","","","无审批","PLM","SYCXQMS-S1-06/A §5.4","上下文推断","SYCXQMS-S1-06/A §5.4","SYCXQMS-S1-06/A §5.4","SYCXQMS-S1-06/A §5.4","质量记录管理","质量记录全过程管理","记录保存期限管理"],
+  ["ZL-L3-68-A01","受理借阅申请并办理借阅手续","质量安环部文档管理员","","","单人审批","OA","SYCXQMS-S1-06/A §5.5","原文明确-正文","SYCXQMS-S1-06/A §5.5","SYCXQMS-S1-06/A §5.5","SYCXQMS-S1-06/A §5.5","质量记录管理","质量记录全过程管理","记录借阅与归还"],
+  ["ZL-L3-68-A02","对带离保管区域借阅设定2个工作日内归还时限","质量安环部文档管理员","","","无审批","OA","SYCXQMS-S1-06/A §5.5","原文明确-正文","SYCXQMS-S1-06/A §5.5","SYCXQMS-S1-06/A §5.5","SYCXQMS-S1-06/A §5.5","质量记录管理","质量记录全过程管理","记录借阅与归还"],
+  ["ZL-L3-68-A03","归还时当面查对（无涂改/损坏/缺页/丢失）并存放原位","质量安环部文档管理员","","","无审批","OA","SYCXQMS-S1-06/A §5.5","原文明确-正文","SYCXQMS-S1-06/A §5.5","SYCXQMS-S1-06/A §5.5","SYCXQMS-S1-06/A §5.5","质量记录管理","质量记录全过程管理","记录借阅与归还"],
+  ["ZL-L3-68-A04","对合同期内顾客评审查阅需求提供记录查阅权限","质量安环部文档管理员","","","单人审批","OA","SYCXQMS-S1-06/A §5.5","原文明确-正文","SYCXQMS-S1-06/A §5.5","SYCXQMS-S1-06/A §5.5","SYCXQMS-S1-06/A §5.5","质量记录管理","质量记录全过程管理","记录借阅与归还"],
+  ["ZL-L3-69-A01","根据到期记录清单填写FM-S1-06-01《记录销毁单》","质量安环部文档管理员","","","无审批","OA","SYCXQMS-S1-06/A §5.9","原文明确-正文","SYCXQMS-S1-06/A §5.9","SYCXQMS-S1-06/A §5.9","SYCXQMS-S1-06/A §5.9","质量记录管理","质量记录全过程管理","记录销毁审批与执行"],
+  ["ZL-L3-69-A02","提交记录销毁单履行审批","质量安环部文档管理员","","","会签","OA","SYCXQMS-S1-06/A §5.9","原文明确-正文","SYCXQMS-S1-06/A §5.9","SYCXQMS-S1-06/A §5.9","SYCXQMS-S1-06/A §5.9","质量记录管理","质量记录全过程管理","记录销毁审批与执行"],
+  ["ZL-L3-69-A03","执行销毁操作（确保记录不可恢复）","质量安环部文档管理员","","","无审批","—","SYCXQMS-S1-06/A §5.9","原文明确-正文","SYCXQMS-S1-06/A §5.9","SYCXQMS-S1-06/A §5.9","SYCXQMS-S1-06/A §5.9","质量记录管理","质量记录全过程管理","记录销毁审批与执行"],
+  ["ZL-L3-69-A04","将销毁单归档保存","质量安环部文档管理员","","","无审批","PLM","SYCXQMS-S1-06/A §5.9","原文明确-正文","SYCXQMS-S1-06/A §5.9","SYCXQMS-S1-06/A §5.9","SYCXQMS-S1-06/A §5.9","质量记录管理","质量记录全过程管理","记录销毁审批与执行"],
+  ["ZL-L3-69-A05","从台账中删除已销毁记录索引并保留销毁单作为替代追踪记录","质量安环部文档管理员","","","无审批","PLM","SYCXQMS-S1-06/A §5.9","上下文推断","SYCXQMS-S1-06/A §5.9","SYCXQMS-S1-06/A §5.9","SYCXQMS-S1-06/A §5.9","质量记录管理","质量记录全过程管理","记录销毁审批与执行"],
+  ["ZL-L3-70-A01","接收使用单位提出的测量设备购置/更新/制造需求","质量安环部技术员","","","无审批","OA","SYCXQMS-S3-01/A §5.2","上下文推断","SYCXQMS-S3-01/A §5.2","SYCXQMS-S3-01/A §5.2","SYCXQMS-S3-01/A §5.2","计量管理","测量设备管理","测量设备需求提出与选型审查"],
+  ["ZL-L3-70-A02","分析被测对象质量特性并匹配测量设备选用原则（测量特性/技术特性/经济特性）","质量安环部技术员","","","无审批","PLM","SYCXQMS-S3-01/A §5.2","原文明确-正文","SYCXQMS-S3-01/A §5.2","SYCXQMS-S3-01/A §5.2","SYCXQMS-S3-01/A §5.2","计量管理","测量设备管理","测量设备需求提出与选型审查"],
+  ["ZL-L3-70-A03","验证测量设备最大允许误差<=被测量特性允许误差的1/4","质量安环部技术员","","","无审批","PLM","SYCXQMS-S3-01/A §5.2","原文明确-正文","SYCXQMS-S3-01/A §5.2","SYCXQMS-S3-01/A §5.2","SYCXQMS-S3-01/A §5.2","计量管理","测量设备管理","测量设备需求提出与选型审查"],
+  ["ZL-L3-70-A04","出具选型审查意见并反馈至需求提出单位和采购实施部门","质量安环部技术员","","","无审批","OA","SYCXQMS-S3-01/A §5.2","上下文推断","SYCXQMS-S3-01/A §5.2","SYCXQMS-S3-01/A §5.2","SYCXQMS-S3-01/A §5.2","计量管理","测量设备管理","测量设备需求提出与选型审查"],
+  ["ZL-L3-71-A01","参与购置技术协议审查（适用性/测量特性/溯源性）","质量安环部技术员","","","会签","OA","SYCXQMS-S3-01/A §5.3","原文明确-正文","SYCXQMS-S3-01/A §5.3","SYCXQMS-S3-01/A §5.3","SYCXQMS-S3-01/A §5.3","计量管理","测量设备管理","测量设备购置与验收"],
+  ["ZL-L3-71-A02","参与测量设备到货开箱验收（核对装箱单/校准合格证/说明书）","质量安环部技术员","","","会签","ERP","SYCXQMS-S3-01/A §5.4","原文明确-正文","SYCXQMS-S3-01/A §5.4","SYCXQMS-S3-01/A §5.4","SYCXQMS-S3-01/A §5.4","计量管理","测量设备管理","测量设备购置与验收"],
+  ["ZL-L3-71-A03","核对到货设备与订货要求的符合性","质量安环部技术员","","","无审批","ERP","SYCXQMS-S3-01/A §5.4","原文明确-正文","SYCXQMS-S3-01/A §5.4","SYCXQMS-S3-01/A §5.4","SYCXQMS-S3-01/A §5.4","计量管理","测量设备管理","测量设备购置与验收"],
+  ["ZL-L3-71-A04","保存验收文件（装箱单/校准合格证/说明书/验收单）","质量安环部文档管理员","","","无审批","PLM","SYCXQMS-S3-01/A §5.4","原文明确-正文","SYCXQMS-S3-01/A §5.4","SYCXQMS-S3-01/A §5.4","SYCXQMS-S3-01/A §5.4","计量管理","测量设备管理","测量设备购置与验收"],
+  ["ZL-L3-72-A01","对所有新购测量设备实施入厂校准","理化计量室计量员","","","无审批","PLM","SYCXQMS-S3-01/A §5.5","原文明确-正文","SYCXQMS-S3-01/A §5.5","SYCXQMS-S3-01/A §5.5","SYCXQMS-S3-01/A §5.5","计量管理","测量设备管理","入厂校准"],
+  ["ZL-L3-72-A02","判定入厂校准结果：合格->入库，不合格->退货或调换","理化计量室计量员","","","无审批","ERP","SYCXQMS-S3-01/A §5.5","原文明确-正文","SYCXQMS-S3-01/A §5.5","SYCXQMS-S3-01/A §5.5","SYCXQMS-S3-01/A §5.5","计量管理","测量设备管理","入厂校准"],
+  ["ZL-L3-72-A03","审核供应商提供的三方校准机构校准记录作为入厂校准依据","理化计量室计量员","","","无审批","PLM","SYCXQMS-S3-01/A §5.5","原文明确-正文","SYCXQMS-S3-01/A §5.5","SYCXQMS-S3-01/A §5.5","SYCXQMS-S3-01/A §5.5","计量管理","测量设备管理","入厂校准"],
+  ["ZL-L3-73-A01","为每台测量设备建立台账记录（设备型号/唯一标识/位置/校准方法/频率/可接受准则）","理化计量室计量员","","","无审批","PLM","SYCXQMS-S3-03/A §5.4","原文明确-正文","SYCXQMS-S3-03/A §5.4","SYCXQMS-S3-03/A §5.4","SYCXQMS-S3-03/A §5.4","计量管理","测量设备管理","测量设备台账建立维护"],
+  ["ZL-L3-73-A02","为每台测量设备分配唯一编号","理化计量室计量员","","","无审批","PLM","SYCXQMS-S3-03/A §5.5","原文明确-正文","SYCXQMS-S3-03/A §5.5","SYCXQMS-S3-03/A §5.5","SYCXQMS-S3-03/A §5.5","计量管理","测量设备管理","测量设备台账建立维护"],
+  ["ZL-L3-73-A03","维护更新台账信息（设备状态变化/校准结果/位置变更/维修记录）","理化计量室计量员","","","无审批","PLM","SYCXQMS-S3-03/A §5.4","上下文推断","SYCXQMS-S3-03/A §5.4","SYCXQMS-S3-03/A §5.4","SYCXQMS-S3-03/A §5.4","计量管理","测量设备管理","测量设备台账建立维护"],
+  ["ZL-L3-74-A01","制定并发布年度/月度周期校准计划","理化计量室计量员","","","单人审批","OA、PLM","SYCXQMS-S3-01/A §5.4; SYCXQMS-S3-03/A §5.5","上下文推断","SYCXQMS-S3-01/A §5.4; SYCXQMS-S3-03/A §5.5","SYCXQMS-S3-01/A §5.4; SYCXQMS-S3-03/A §5.5","SYCXQMS-S3-01/A §5.4; SYCXQMS-S3-03/A §5.5","计量管理","测量设备管理","周期校准与状态标识（A/B/C分类）"],
+  ["ZL-L3-74-A02","按校准计划执行周期校准并记录结果","理化计量室计量员","","","无审批","PLM","SYCXQMS-S3-01/A §5.4; SYCXQMS-S3-03/A §5.5","原文明确-正文","SYCXQMS-S3-01/A §5.4; SYCXQMS-S3-03/A §5.5","SYCXQMS-S3-01/A §5.4; SYCXQMS-S3-03/A §5.5","SYCXQMS-S3-01/A §5.4; SYCXQMS-S3-03/A §5.5","计量管理","测量设备管理","周期校准与状态标识（A/B/C分类）"],
+  ["ZL-L3-74-A03","实行A/B/C分类管理并粘贴对应计量标识（不干胶标识含ABC符号）","理化计量室计量员","","","无审批","—","SYCXQMS-S3-03/A §5.5","原文明确-正文","SYCXQMS-S3-03/A §5.5","SYCXQMS-S3-03/A §5.5","SYCXQMS-S3-03/A §5.5","计量管理","测量设备管理","周期校准与状态标识（A/B/C分类）"],
+  ["ZL-L3-74-A04","对校准合格设备更新状态标识为\"合格\"并标注下次校准日期","理化计量室计量员","","","无审批","PLM","SYCXQMS-S3-01/A §5.1","原文明确-正文","SYCXQMS-S3-01/A §5.1","SYCXQMS-S3-01/A §5.1","SYCXQMS-S3-01/A §5.1","计量管理","测量设备管理","周期校准与状态标识（A/B/C分类）"],
+  ["ZL-L3-74-A05","对校准不合格设备标注\"禁用\"或\"限用\"标识","理化计量室计量员","","","无审批","PLM","SYCXQMS-S3-01/A §5.1","上下文推断","SYCXQMS-S3-01/A §5.1","SYCXQMS-S3-01/A §5.1","SYCXQMS-S3-01/A §5.1","计量管理","测量设备管理","周期校准与状态标识（A/B/C分类）"],
+  ["ZL-L3-75-A01","使用前确认测量设备校准状态有效且在有效期内","使用单位操作人员","","","无审批","MES","SYCXQMS-S3-01/A §5.1","原文明确-正文","SYCXQMS-S3-01/A §5.1","SYCXQMS-S3-01/A §5.1","SYCXQMS-S3-01/A §5.1","计量管理","测量设备管理","使用与维护"],
+  ["ZL-L3-75-A02","防止测量设备受到可能使测量结果失效的调整","使用单位操作人员","","","无审批","—","SYCXQMS-S3-01/A §5.1","原文明确-正文","SYCXQMS-S3-01/A §5.1","SYCXQMS-S3-01/A §5.1","SYCXQMS-S3-01/A §5.1","计量管理","测量设备管理","使用与维护"],
+  ["ZL-L3-75-A03","在搬运和维护储存期间防止测量设备损坏和失效","使用单位操作人员","","","无审批","—","SYCXQMS-S3-01/A §5.1","原文明确-正文","SYCXQMS-S3-01/A §5.1","SYCXQMS-S3-01/A §5.1","SYCXQMS-S3-01/A §5.1","计量管理","测量设备管理","使用与维护"],
+  ["ZL-L3-75-A04","存放测量设备符合定置管理要求","使用单位操作人员","","","无审批","—","SYCXQMS-S3-01/A §5.6","原文明确-正文","SYCXQMS-S3-01/A §5.6","SYCXQMS-S3-01/A §5.6","SYCXQMS-S3-01/A §5.6","计量管理","测量设备管理","使用与维护"],
+  ["ZL-L3-75-A05","记录测量设备使用日志（使用日期/使用人/被测对象/使用前后状态）","使用单位操作人员","","","无审批","MES","SYCXQMS-S3-01/A §5.1","上下文推断","SYCXQMS-S3-01/A §5.1","SYCXQMS-S3-01/A §5.1","SYCXQMS-S3-01/A §5.1","计量管理","测量设备管理","使用与维护"],
+  ["ZL-L3-76-A01","发现测量设备不符合预期用途时立即标识\"禁用\"并隔离","质量安环部检验员","","","无审批","MES","SYCXQMS-S3-01/A §5.6","原文明确-正文","SYCXQMS-S3-01/A §5.6","SYCXQMS-S3-01/A §5.6","SYCXQMS-S3-01/A §5.6","计量管理","测量设备管理","不合格测量设备处置（禁用/降级/报废）"],
+  ["ZL-L3-76-A02","评估不合格设备是否可降级使用或需报废","质量安环部技术员","","","会签","OA","SYCXQMS-S3-01/A §5.6; SYCXQMS-S3-03/A §5.6","上下文推断","SYCXQMS-S3-01/A §5.6; SYCXQMS-S3-03/A §5.6","SYCXQMS-S3-01/A §5.6; SYCXQMS-S3-03/A §5.6","SYCXQMS-S3-01/A §5.6; SYCXQMS-S3-03/A §5.6","计量管理","测量设备管理","不合格测量设备处置（禁用/降级/报废）"],
+  ["ZL-L3-76-A03","执行降级处置（重新确定精度等级和适用范围，更新台账和标识）","理化计量室计量员","","","无审批","PLM","SYCXQMS-S3-01/A §5.6","上下文推断","SYCXQMS-S3-01/A §5.6","SYCXQMS-S3-01/A §5.6","SYCXQMS-S3-01/A §5.6","计量管理","测量设备管理","不合格测量设备处置（禁用/降级/报废）"],
+  ["ZL-L3-76-A04","执行报废处置（更新台账状态、办理固定资产报废手续）","理化计量室计量员","","","无审批","ERP、PLM","SYCXQMS-S3-01/A §5.6","上下文推断","SYCXQMS-S3-01/A §5.6","SYCXQMS-S3-01/A §5.6","SYCXQMS-S3-01/A §5.6","计量管理","测量设备管理","不合格测量设备处置（禁用/降级/报废）"],
+  ["ZL-L3-77-A01","受理测量设备封存申请并审核封存必要性","质量安环部技术员","","","单人审批","OA","SYCXQMS-S3-01/A §5.6","上下文推断","SYCXQMS-S3-01/A §5.6","SYCXQMS-S3-01/A §5.6","SYCXQMS-S3-01/A §5.6","计量管理","测量设备管理","封存与启封"],
+  ["ZL-L3-77-A02","执行封存：粘贴封存标识、单独存放、暂停校准周期","理化计量室计量员","","","无审批","PLM","SYCXQMS-S3-01/A §5.6","原文明确-正文","SYCXQMS-S3-01/A §5.6","SYCXQMS-S3-01/A §5.6","SYCXQMS-S3-01/A §5.6","计量管理","测量设备管理","封存与启封"],
+  ["ZL-L3-77-A03","受理启封申请并安排启封前校准","理化计量室计量员","","","单人审批","OA","SYCXQMS-S3-01/A §5.6","上下文推断","SYCXQMS-S3-01/A §5.6","SYCXQMS-S3-01/A §5.6","SYCXQMS-S3-01/A §5.6","计量管理","测量设备管理","封存与启封"],
+  ["ZL-L3-77-A04","启封后恢复校准周期并更新台账状态","理化计量室计量员","","","无审批","PLM","SYCXQMS-S3-01/A §5.6","上下文推断","SYCXQMS-S3-01/A §5.6","SYCXQMS-S3-01/A §5.6","SYCXQMS-S3-01/A §5.6","计量管理","测量设备管理","封存与启封"],
+  ["ZL-L3-78-A01","为测量软件赋予名称和版本号","质量安环部技术员","","","无审批","PLM","SYCXQMS-S3-02/A §5.1","原文明确-正文","SYCXQMS-S3-02/A §5.1","SYCXQMS-S3-02/A §5.1","SYCXQMS-S3-02/A §5.1","计量管理","测量软件管理","测量软件标识（名称/版本号）"],
+  ["ZL-L3-78-A02","对无名称版本号的测量软件按规则命名：\"测量设备名称+型号+编号+测量软件\"，首次A版","质量安环部技术员","","","无审批","PLM","SYCXQMS-S3-02/A §5.1","原文明确-正文","SYCXQMS-S3-02/A §5.1","SYCXQMS-S3-02/A §5.1","SYCXQMS-S3-02/A §5.1","计量管理","测量软件管理","测量软件标识（名称/版本号）"],
+  ["ZL-L3-78-A03","测量软件升版时按ABCD序列递增版本号","质量安环部技术员","","","无审批","PLM","SYCXQMS-S3-02/A §5.1","原文明确-正文","SYCXQMS-S3-02/A §5.1","SYCXQMS-S3-02/A §5.1","SYCXQMS-S3-02/A §5.1","计量管理","测量软件管理","测量软件标识（名称/版本号）"],
+  ["ZL-L3-79-A01","针对势必瑞/波音/IAI/商飞项目测量软件编制操作指南","操作人员","","","单人审批","PLM","SYCXQMS-S3-02/A §5.2","原文明确-正文","SYCXQMS-S3-02/A §5.2","SYCXQMS-S3-02/A §5.2","SYCXQMS-S3-02/A §5.2","计量管理","测量软件管理","操作指南编制"],
+  ["ZL-L3-79-A02","对非上述项目的测量软件按需编制操作指南","操作人员","","","无审批","PLM","SYCXQMS-S3-02/A §5.2","上下文推断","SYCXQMS-S3-02/A §5.2","SYCXQMS-S3-02/A §5.2","SYCXQMS-S3-02/A §5.2","计量管理","测量软件管理","操作指南编制"],
+  ["ZL-L3-80-A01","为测量软件设置操作密码防止非授权使用和更改","操作人员","","","无审批","—","SYCXQMS-S3-02/A §5.3","原文明确-正文","SYCXQMS-S3-02/A §5.3","SYCXQMS-S3-02/A §5.3","SYCXQMS-S3-02/A §5.3","计量管理","测量软件管理","访问权限与密码保护"],
+  ["ZL-L3-80-A02","禁止非操作人员使用测量软件","操作人员","","","无审批","—","SYCXQMS-S3-02/A §5.3","原文明确-正文","SYCXQMS-S3-02/A §5.3","SYCXQMS-S3-02/A §5.3","SYCXQMS-S3-02/A §5.3","计量管理","测量软件管理","访问权限与密码保护"],
+  ["ZL-L3-80-A03","定期更换密码并记录密码变更历史","操作人员","","","无审批","—","SYCXQMS-S3-02/A §5.3","上下文推断","SYCXQMS-S3-02/A §5.3","SYCXQMS-S3-02/A §5.3","SYCXQMS-S3-02/A §5.3","计量管理","测量软件管理","访问权限与密码保护"],
+  ["ZL-L3-81-A01","操作人员发现软件功能异常时不得自行处理，立即反馈质量安环部技术员","操作人员","","","无审批","OA","SYCXQMS-S3-02/A §5.6","原文明确-正文","SYCXQMS-S3-02/A §5.6","SYCXQMS-S3-02/A §5.6","SYCXQMS-S3-02/A §5.6","计量管理","测量软件管理","异常处理与处置单登记"],
+  ["ZL-L3-81-A02","接收异常反馈并登记FM-S3-01-01《测量设备处置单》（注明问题/解决措施/解决时间）","质量安环部技术员","","","无审批","PLM","SYCXQMS-S3-02/A §5.6","原文明确-正文","SYCXQMS-S3-02/A §5.6","SYCXQMS-S3-02/A §5.6","SYCXQMS-S3-02/A §5.6","计量管理","测量软件管理","异常处理与处置单登记"],
+  ["ZL-L3-81-A03","对配套测量设备按S3-01《测量设备管理程序》进行处置","质量安环部技术员","","","会签","OA","SYCXQMS-S3-02/A §5.6","原文明确-正文","SYCXQMS-S3-02/A §5.6","SYCXQMS-S3-02/A §5.6","SYCXQMS-S3-02/A §5.6","计量管理","测量软件管理","异常处理与处置单登记"],
+  ["ZL-L3-82-A01","审核供应商提供的软件验证合格证明（依据ASME B89.4.10）","质量安环部技术员","","","无审批","PLM","SYCXQMS-S3-02/A §5.7","原文明确-正文","SYCXQMS-S3-02/A §5.7","SYCXQMS-S3-02/A §5.7","SYCXQMS-S3-02/A §5.7","计量管理","测量软件管理","测量软件验收与验证（三坐标测量机/激光跟踪仪等）"],
+  ["ZL-L3-82-A02","对带坐标测量功能且无供应商验证证明的软件进行软件验证并出具验证报告","质量安环部技术员","","","无审批","PLM","SYCXQMS-S3-02/A §5.7","原文明确-正文","SYCXQMS-S3-02/A §5.7","SYCXQMS-S3-02/A §5.7","SYCXQMS-S3-02/A §5.7","计量管理","测量软件管理","测量软件验收与验证（三坐标测量机/激光跟踪仪等）"],
+  ["ZL-L3-82-A03","对三坐标测量机执行人工件对比测量验证（+/-0.003\"）","质量安环部技术员","","","无审批","PLM","SYCXQMS-S3-02/A §5.8","原文明确-正文","SYCXQMS-S3-02/A §5.8","SYCXQMS-S3-02/A §5.8","SYCXQMS-S3-02/A §5.8","计量管理","测量软件管理","测量软件验收与验证（三坐标测量机/激光跟踪仪等）"],
+  ["ZL-L3-82-A04","对激光跟踪仪执行多步骤验证（双面检查/IFM检查/ADM检查/标尺对比/工装测量/基准建立/ADM模式距离测量/型面偏差趋势）","质量安环部技术员","","","无审批","PLM","SYCXQMS-S3-02/A §5.8","原文明确-正文","SYCXQMS-S3-02/A §5.8","SYCXQMS-S3-02/A §5.8","SYCXQMS-S3-02/A §5.8","计量管理","测量软件管理","测量软件验收与验证（三坐标测量机/激光跟踪仪等）"],
+  ["ZL-L3-82-A05","对无坐标功能的测量软件，使用前校准需考虑软件功能","质量安环部技术员","","","无审批","PLM","SYCXQMS-S3-02/A §5.7","原文明确-正文","SYCXQMS-S3-02/A §5.7","SYCXQMS-S3-02/A §5.7","SYCXQMS-S3-02/A §5.7","计量管理","测量软件管理","测量软件验收与验证（三坐标测量机/激光跟踪仪等）"],
+  ["ZL-L3-82-A06","验证合格且配套设备验收合格后粘贴合格标识","质量安环部技术员","","","无审批","—","SYCXQMS-S3-02/A §5.7","原文明确-正文","SYCXQMS-S3-02/A §5.7","SYCXQMS-S3-02/A §5.7","SYCXQMS-S3-02/A §5.7","计量管理","测量软件管理","测量软件验收与验证（三坐标测量机/激光跟踪仪等）"],
+  ["ZL-L3-83-A01","确认人工件在1年鉴定有效期内","质量安环部技术员","","","无审批","PLM","SYCXQMS-S3-02/A §5.9","原文明确-正文","SYCXQMS-S3-02/A §5.9","SYCXQMS-S3-02/A §5.9","SYCXQMS-S3-02/A §5.9","计量管理","测量软件管理","人工件管理与使用"],
+  ["ZL-L3-83-A02","每次使用前确认人工件完好并记录","质量安环部技术员","","","无审批","PLM","SYCXQMS-S3-02/A §5.9","原文明确-正文","SYCXQMS-S3-02/A §5.9","SYCXQMS-S3-02/A §5.9","SYCXQMS-S3-02/A §5.9","计量管理","测量软件管理","人工件管理与使用"],
+  ["ZL-L3-83-A03","管理人工件鉴定周期并提前安排重新鉴定","质量安环部技术员","","","无审批","PLM","SYCXQMS-S3-02/A §5.9","上下文推断","SYCXQMS-S3-02/A §5.9","SYCXQMS-S3-02/A §5.9","SYCXQMS-S3-02/A §5.9","计量管理","测量软件管理","人工件管理与使用"],
+  ["ZL-L3-84-A01","对波音/势必瑞/IAI/商飞项目非嵌入式测量软件保存拷贝件/安装包","质量安环部文档管理员","","","无审批","PLM","SYCXQMS-S3-02/A §5.4","原文明确-正文","SYCXQMS-S3-02/A §5.4","SYCXQMS-S3-02/A §5.4","SYCXQMS-S3-02/A §5.4","计量管理","测量软件管理","软件拷贝件/安装包保管"],
+  ["ZL-L3-84-A02","建立软件拷贝件/安装包保管清单（软件名称/版本号/存储位置/保管日期）","质量安环部文档管理员","","","无审批","PLM","SYCXQMS-S3-02/A §5.4","上下文推断","SYCXQMS-S3-02/A §5.4","SYCXQMS-S3-02/A §5.4","SYCXQMS-S3-02/A §5.4","计量管理","测量软件管理","软件拷贝件/安装包保管"],
+  ["ZL-L3-84-A03","定期检查拷贝件/安装包的可读性和完整性","质量安环部文档管理员","","","无审批","—","SYCXQMS-S3-02/A §5.4","上下文推断","SYCXQMS-S3-02/A §5.4","SYCXQMS-S3-02/A §5.4","SYCXQMS-S3-02/A §5.4","计量管理","测量软件管理","软件拷贝件/安装包保管"],
+  ["ZL-L3-85-A01","对照溯源到国际/国家标准的测量标准进行计量确认","理化计量室计量员","","","无审批","PLM","SYCXQMS-S3-03/A §5.5","原文明确-正文","SYCXQMS-S3-03/A §5.5","SYCXQMS-S3-03/A §5.5","SYCXQMS-S3-03/A §5.5","计量管理","计量确认与溯源管理","计量确认与量值溯源"],
+  ["ZL-L3-85-A02","建立并维护量值溯源链记录（设备->测量标准->国际/国家标准）","理化计量室计量员","","","无审批","PLM","SYCXQMS-S3-03/A §5.5","上下文推断","SYCXQMS-S3-03/A §5.5","SYCXQMS-S3-03/A §5.5","SYCXQMS-S3-03/A §5.5","计量管理","计量确认与溯源管理","计量确认与量值溯源"],
+  ["ZL-L3-85-A03","保护测量设备防止可能使计量确认结果失效的调整、损坏或退化","理化计量室计量员","","","无审批","—","SYCXQMS-S3-03/A §5.5","原文明确-正文","SYCXQMS-S3-03/A §5.5","SYCXQMS-S3-03/A §5.5","SYCXQMS-S3-03/A §5.5","计量管理","计量确认与溯源管理","计量确认与量值溯源"],
+  ["ZL-L3-86-A01","确定每台测量设备的A/B/C分类并粘贴对应标识","理化计量室计量员","","","无审批","—","SYCXQMS-S3-03/A §5.5","原文明确-正文","SYCXQMS-S3-03/A §5.5","SYCXQMS-S3-03/A §5.5","SYCXQMS-S3-03/A §5.5","计量管理","计量确认与溯源管理","测量设备计量标识管理（A/B/C分类标识）"],
+  ["ZL-L3-86-A02","在台账中同步维护每台设备的ABC分类和标识状态","理化计量室计量员","","","无审批","PLM","SYCXQMS-S3-03/A §5.5","上下文推断","SYCXQMS-S3-03/A §5.5","SYCXQMS-S3-03/A §5.5","SYCXQMS-S3-03/A §5.5","计量管理","计量确认与溯源管理","测量设备计量标识管理（A/B/C分类标识）"],
+  ["ZL-L3-86-A03","制定不同分类设备的校准周期标准（A类频率最高/C类频率最低）","质量安环部技术员","","","单人审批","PLM","SYCXQMS-S3-03/A §5.5","上下文推断","SYCXQMS-S3-03/A §5.5","SYCXQMS-S3-03/A §5.5","SYCXQMS-S3-03/A §5.5","计量管理","计量确认与溯源管理","测量设备计量标识管理（A/B/C分类标识）"],
+  ["ZL-L3-87-A01","受理内部委托测量申请（相关单位委托理化计量室测量）","理化计量室计量员","","","无审批","OA","SYCXQMS-S3-03/A §5.7","原文明确-正文","SYCXQMS-S3-03/A §5.7","SYCXQMS-S3-03/A §5.7","SYCXQMS-S3-03/A §5.7","计量管理","计量确认与溯源管理","委托计量/测量管理（内部和外部委托）"],
+  ["ZL-L3-87-A02","按相应检测/试验方法执行委托测量并记录结果","理化计量室计量员","","","无审批","PLM","SYCXQMS-S3-03/A §5.7","原文明确-正文","SYCXQMS-S3-03/A §5.7","SYCXQMS-S3-03/A §5.7","SYCXQMS-S3-03/A §5.7","计量管理","计量确认与溯源管理","委托计量/测量管理（内部和外部委托）"],
+  ["ZL-L3-87-A03","当理化计量室不具备能力时，评估并使用其他满足要求的设备或委托外部机构","理化计量室计量员","","","会签","OA、ERP","SYCXQMS-S3-03/A §5.7","原文明确-正文","SYCXQMS-S3-03/A §5.7","SYCXQMS-S3-03/A §5.7","SYCXQMS-S3-03/A §5.7","计量管理","计量确认与溯源管理","委托计量/测量管理（内部和外部委托）"],
+  ["ZL-L3-87-A04","外部委托计量须经政府计量行政管理部门批准或具相应资格的机构","理化计量室计量员","","","单人审批","OA","SYCXQMS-S3-03/A §5.5","原文明确-正文","SYCXQMS-S3-03/A §5.5","SYCXQMS-S3-03/A §5.5","SYCXQMS-S3-03/A §5.5","计量管理","计量确认与溯源管理","委托计量/测量管理（内部和外部委托）"],
+  ["ZL-L3-87-A05","接收并审核外部委托计量的校准/测量报告","理化计量室计量员","","","无审批","PLM","SYCXQMS-S3-03/A §5.5","上下文推断","SYCXQMS-S3-03/A §5.5","SYCXQMS-S3-03/A §5.5","SYCXQMS-S3-03/A §5.5","计量管理","计量确认与溯源管理","委托计量/测量管理（内部和外部委托）"],
+  ["ZL-L3-88-A01","分析上月统计指标并制定当月抽检品种和数量计划","理化计量室计量员","","","无审批","PLM","SYCXQMS-S3-03/A §5.5","原文明确-正文","SYCXQMS-S3-03/A §5.5","SYCXQMS-S3-03/A §5.5","SYCXQMS-S3-03/A §5.5","计量管理","计量确认与溯源管理","测量设备抽检与可靠性监控"],
+  ["ZL-L3-88-A02","按抽检计划执行抽检并记录结果","理化计量室计量员","","","无审批","PLM","SYCXQMS-S3-03/A §5.5","上下文推断","SYCXQMS-S3-03/A §5.5","SYCXQMS-S3-03/A §5.5","SYCXQMS-S3-03/A §5.5","计量管理","计量确认与溯源管理","测量设备抽检与可靠性监控"],
+  ["ZL-L3-88-A03","分析抽检结果并评估计量确认系统可靠性，必要时调整校准周期","理化计量室计量员","","","单人审批","PLM","SYCXQMS-S3-03/A §5.5","原文明确-正文","SYCXQMS-S3-03/A §5.5","SYCXQMS-S3-03/A §5.5","SYCXQMS-S3-03/A §5.5","计量管理","计量确认与溯源管理","测量设备抽检与可靠性监控"],
+  ["ZL-L3-89-A01","建立并维护在用测量设备信息数据库（覆盖从需求到报废处置的全生命周期）","理化计量室计量员","","","无审批","PLM","SYCXQMS-S3-03/A §5.4","原文明确-正文","SYCXQMS-S3-03/A §5.4","SYCXQMS-S3-03/A §5.4","SYCXQMS-S3-03/A §5.4","计量管理","计量确认与溯源管理","计量器具台账与数据库维护"],
+  ["ZL-L3-89-A02","维护数据库字段（设备型号/唯一标识/位置/校准方法/频率/可接受准则）","理化计量室计量员","","","无审批","PLM","SYCXQMS-S3-03/A §5.4","原文明确-正文","SYCXQMS-S3-03/A §5.4","SYCXQMS-S3-03/A §5.4","SYCXQMS-S3-03/A §5.4","计量管理","计量确认与溯源管理","计量器具台账与数据库维护"],
+  ["ZL-L3-89-A03","定期核对台账与实物确保账物相符","理化计量室计量员","","","无审批","PLM","SYCXQMS-S3-03/A §5.4","上下文推断","SYCXQMS-S3-03/A §5.4","SYCXQMS-S3-03/A §5.4","SYCXQMS-S3-03/A §5.4","计量管理","计量确认与溯源管理","计量器具台账与数据库维护"],
+  ["ZL-L3-90-A01","当发现测量设备不符合预期用途时，启动对以往测量结果有效性的评估","质量安环部技术员","","","无审批","OA","SYCXQMS-S3-03/A §5.6","原文明确-正文","SYCXQMS-S3-03/A §5.6","SYCXQMS-S3-03/A §5.6","SYCXQMS-S3-03/A §5.6","计量管理","计量确认与溯源管理","不合格测量设备对以往测量结果的影响评估"],
+  ["ZL-L3-90-A02","追溯该设备自上次校准合格以来所有使用记录和测量对象","质量安环部技术员","","","无审批","MES、PLM","SYCXQMS-S3-03/A §5.6","上下文推断","SYCXQMS-S3-03/A §5.6","SYCXQMS-S3-03/A §5.6","SYCXQMS-S3-03/A §5.6","计量管理","计量确认与溯源管理","不合格测量设备对以往测量结果的影响评估"],
+  ["ZL-L3-90-A03","评估对产品质量和检验结论的影响程度","质量安环部技术员","","","会签","OA","SYCXQMS-S3-03/A §5.6","原文明确-正文","SYCXQMS-S3-03/A §5.6","SYCXQMS-S3-03/A §5.6","SYCXQMS-S3-03/A §5.6","计量管理","计量确认与溯源管理","不合格测量设备对以往测量结果的影响评估"],
+  ["ZL-L3-90-A04","当确认以往测量结果可能受到影响时，采取适当措施（如重新测量/通知顾客/产品召回评估）","质量安环部技术员","","","会签","OA","SYCXQMS-S3-03/A §5.6","原文明确-正文","SYCXQMS-S3-03/A §5.6","SYCXQMS-S3-03/A §5.6","SYCXQMS-S3-03/A §5.6","计量管理","计量确认与溯源管理","不合格测量设备对以往测量结果的影响评估"],
+  ["ZL-L3-90-A05","将影响评估全过程记录归档","质量安环部文档管理员","","","无审批","PLM","SYCXQMS-S3-03/A §5.6","原文明确-正文","SYCXQMS-S3-03/A §5.6","SYCXQMS-S3-03/A §5.6","SYCXQMS-S3-03/A §5.6","计量管理","计量确认与溯源管理","不合格测量设备对以往测量结果的影响评估"]
+];
+
+      // ===== 系统说明 =====
+      var systemBasis = {
+        "OA": "适用于审核审批流转、通知发放、报告会签、会议组织、整改跟踪和闭环留痕。",
+        "MES": "适用于现场检验执行、检验数据采集、不合格品标识隔离、状态跟踪和校准状态查询。",
+        "PLM": "适用于技术文件管理、检验规程、质量档案归档、设备台账、检测报告和版本控制。",
+        "ERP": "适用于质量成本核算、测量设备采购、固定资产登记、供应商管理和费用结算。"
+      };
+
+      // ===== 颜色 =====
+      var domainColors = {
+        "质量体系审核与改进": "#0d9488",
+        "产品检验与符合性": "#6366f1",
+        "不合格品控制": "#d946ef",
+        "交付文件管理": "#f59e0b",
+        "质量记录管理": "#14b8a6",
+        "计量管理": "#8b5cf6"
+      };
+
+      var systemColors = {
+        OA: "#38bdf8",
+        MES: "#8b5cf6",
+        PLM: "#22c55e",
+        ERP: "#fb923c"
+      };
+
+      var active = "全域总览";
+      var domains = Array.from(new Set(l3Rows.map(function(r) { return r.domain; })));
+      var chart;
+
+      // ===== 工具函数 =====
+      function esc(value) {
+        var entities = {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"};
+        return String(value == null ? "" : value).replace(/[&<>"']/g, function(c) { return entities[c]; });
+      }
+
+      function systemsFor(sysStr) {
+        return String(sysStr || "").split("、").map(function(s) { return s.trim(); }).filter(Boolean);
+      }
+
+      function colorFor(name) {
+        if (name === "质量管理部") return "#3b82f6";
+        if (domainColors[name]) return domainColors[name];
+        if (systemColors[name]) return systemColors[name];
+        return "#64748b";
+      }
+
+      function apprClass(type) {
+        if (type === "无审批") return "none";
+        if (type === "单人审批") return "single";
+        if (type === "多级审批") return "multi";
+        if (type === "会签") return "cosign";
+        return "none";
+      }
+
+      function shortText(value, max) {
+        var text = String(value || "");
+        return text.length > max ? text.slice(0, max - 1) + "…" : text;
+      }
+
+      function isCollectiveRole(role) {
+        var text = String(role || "").trim();
+        if (!text) return true;
+        if (/(专员|主管|经理|负责人|管理员|经办人|工程师|审核人|审批人|填报人|操作者|检验员|技术员|审核组长|审核组成员|审核陪同人员|NDT|理化计量室计量员|总经理|管理者代表|责任部门负责人)$/.test(text)) return false;
+        return /(部|部门|办公室|中心|小组|委员会|团队|评审组)$/.test(text);
+      }
+
+      function roleWarning(a1) {
+        return isCollectiveRole(a1[2]) ? "请部门确认具体岗位/责任人：当前为部门/组织" : "";
+      }
+
+      function isFinalStep(a1) {
+        var proc = a1[14];
+        var rows = a1Rows.filter(function(r) { return r[14] === proc; });
+        return rows.length > 0 && rows[rows.length - 1][0] === a1[0];
+      }
+
+      function isTrackingTask(a1) {
+        return /(跟踪|进度|监测|监督|闭环|催办|提醒|进展|看板|预警)/.test([a1[1], a1[3], a1[14]].join(""));
+      }
+
+      function requiresAcceptance(a1) {
+        return a1[5] === "无审批" && isFinalStep(a1);
+      }
+
+      function acceptanceWarning(a1) {
+        return requiresAcceptance(a1) ? "请部门确认是否需要验收/完成标准" : "";
+      }
+
+      function evidenceWarning(a1) {
+        return a1[8] === "原文明确-正文" ? "请部门确认依据类型：正文/流程图/表单，并核对角色、触发、前置条件" : "";
+      }
+
+      function evidenceClass(type) {
+        return /^原文明确-(正文|流程图|表单)$/.test(String(type || "")) ? "explicit" : "inferred";
+      }
+
+      function auditWarnings(a1) {
+        return [roleWarning(a1), acceptanceWarning(a1), evidenceWarning(a1), trackingNote(a1)].filter(Boolean);
+      }
+
+      function warningHtml(a1) {
+        return auditWarnings(a1).map(function(w) {
+          var strong = w.indexOf("具体岗位") >= 0 || w.indexOf("验收") >= 0;
+          return '<span class="' + (strong ? "warn-tag" : "soft-warn-tag") + '">' + esc(w) + '</span>';
+        }).join("");
+      }
+
+      function acceptanceText(a1) {
+        if (requiresAcceptance(a1)) return "待补：关口验收/完成标准需核验";
+        if (a1[5] === "无审批" && isTrackingTask(a1)) return "不适用：跟踪类过程，由系统待办/进度展示承载";
+        if (a1[5] === "无审批") return "不适用：过程环节";
+        return "审批流控制";
+      }
+
+      function trackingNote(a1) {
+        return isTrackingTask(a1) ? "跟踪类任务：建议由系统待办提醒、到期预警或进度展示承载" : "";
+      }
+
+      function a1DisplayLabel(a1) {
+        var role = roleWarning(a1) ? "待确认：" + a1[2] : a1[2];
+        return shortText(a1[1], 18) + "\n" + shortText(role, 18);
+      }
+
+      function processFill(proc) {
+        var hash = 0;
+        String(proc || "").split("").forEach(function(ch) {
+          hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+        });
+        var hue = hash % 360;
+        return "hsl(" + hue + " 75% 97%)";
+      }
+
+      // ===== 数据过滤 =====
+      function filteredA1() {
+        if (active === "全域总览") return [];
+        return a1Rows.filter(function(r) { return r[12] === active; });
+      }
+
+      function filteredL3() {
+        if (active === "全域总览") return l3Rows;
+        return l3Rows.filter(function(r) { return r.domain === active; });
+      }
+
+      // ===== 构建桑基图 =====
+      function buildGraph() {
+        var nodeMap = new Map();
+        var links = [];
+
+        function addNode(name, options) {
+          if (!nodeMap.has(name)) {
+            var node = { name: name, itemStyle: { color: colorFor(name) } };
+            if (options) {
+              Object.keys(options).forEach(function(k) {
+                if (k === "itemStyle") {
+                  node.itemStyle = Object.assign({}, node.itemStyle, options.itemStyle);
+                } else {
+                  node[k] = options[k];
+                }
+              });
+            }
+            nodeMap.set(name, node);
+          }
+        }
+
+        function addLink(source, target, value, meta) {
+          links.push({ source: source, target: target, value: value || 1, lineStyle: { color: colorFor(source), opacity: 0.42 }, meta: meta });
+        }
+
+        if (active === "全域总览") {
+          addNode("质量管理部");
+          filteredL3().forEach(function(row) {
+            addNode(row.domain);
+            addNode(row.capability);
+            addLink("质量管理部", row.domain, 1, { type: "l3", row: row });
+            addLink(row.domain, row.capability, 1, { type: "l3", row: row });
+            systemsFor(row.system).forEach(function(sys) {
+              addNode(sys);
+              addLink(row.capability, sys, 1, { type: "l3", row: row });
+            });
+          });
+        } else {
+          // 域详情: 业务能力（L2） → 业务流程（L3） → 业务行为（A1） → 应用系统（S1）
+          var fa = filteredA1();
+          var seenProc = {};
+          var seenCap = {};
+
+          fa.forEach(function(a1) {
+            var cap = a1[13], proc = a1[14], a1Id = a1[0], sys = a1[6];
+
+            addNode(cap);
+            addNode(proc);
+            addNode(a1Id, {
+              itemStyle: { color: roleWarning(a1) ? "#dc2626" : "#64748b" },
+              label: { formatter: a1DisplayLabel(a1) }
+            });
+
+            if (!seenCap[cap]) { seenCap[cap] = true; }
+            if (!seenProc[proc]) {
+              seenProc[proc] = true;
+              addLink(cap, proc, 1, { type: "l3", cap: cap, proc: proc });
+            }
+            addLink(proc, a1Id, 1, { type: "a1", a1: a1 });
+
+            systemsFor(sys).forEach(function(s) {
+              addNode(s);
+              addLink(a1Id, s, 1, { type: "a1sys", a1: a1 });
+            });
+          });
+        }
+
+        // 合并重复连线
+        var dedup = new Map();
+        links.forEach(function(l) {
+          var key = l.source + ">>>" + l.target;
+          if (dedup.has(key)) {
+            dedup.get(key).value += l.value;
+          } else {
+            dedup.set(key, l);
+          }
+        });
+
+        return { nodes: Array.from(nodeMap.values()), links: Array.from(dedup.values()) };
+      }
+
+      // ===== 渲染图表 =====
+      function renderChart() {
+        var graph = buildGraph();
+        var isGlobal = active === "全域总览";
+        var nodeCount = graph.nodes.length;
+        var chartHeight = isGlobal ? 1120 : Math.max(1120, nodeCount * 32);
+        document.getElementById("chart").style.height = chartHeight + "px";
+
+        document.getElementById("chartTitle").textContent = isGlobal ? "质量管理部全域总览" : active;
+        document.getElementById("chartSub").textContent = isGlobal
+          ? "部门（D1）→ 能力域（L1）→ 业务能力（L2）→ 应用系统（S1）"
+          : "业务能力（L2）→ 业务流程（L3）→ 业务行为（A1）→ 应用系统（S1）";
+
+        if (!chart) { chart = echarts.init(document.getElementById("chart")); }
+
+        chart.setOption({
+          backgroundColor: "#0f172a",
+          animation: false,
+          tooltip: {
+            trigger: "item",
+            triggerOn: "mousemove",
+            confine: true,
+            backgroundColor: "rgba(15,23,42,.96)",
+            borderColor: "#334155",
+            textStyle: { color: "#e5e7eb", fontSize: 12 },
+            formatter: function(params) {
+              if (params.dataType === "edge") {
+                var m = params.data.meta || {};
+                if (m.type === "a1" || m.type === "a1sys") {
+                  var a = m.a1 || [];
+                  return [
+                    "<b>" + esc(a[0]) + " " + esc(a[1]) + "</b>",
+                    "执行角色：" + esc(a[2] || ""),
+                    "触发情景：" + esc(a[3] || ""),
+                    "前置条件：" + esc(a[4] || ""),
+                    "审批类型：" + esc(a[5] || ""),
+                    "验收标准：" + esc(acceptanceText(a)),
+                    "制度依据：" + esc(a[7] || ""),
+                    "证据类型：" + esc(a[8] || ""),
+                    "应用系统：" + esc(a[6] || ""),
+                    "<b>原文出处：</b>",
+                    "  执行角色依据：" + esc(a[9] || a[7] || ""),
+                    "  触发情景依据：" + esc(a[10] || a[7] || ""),
+                    "  前置条件依据：" + esc(a[11] || a[7] || ""),
+                    auditWarnings(a).length ? "部门确认：" + esc(auditWarnings(a).join("；")) : ""
+                  ].filter(Boolean).join("<br>");
+                }
+                if (m.type === "l3" && m.row) {
+                  return [
+                    "<b>" + esc(params.data.source) + " → " + esc(params.data.target) + "</b>",
+                    "流程：" + esc(m.row.process || ""),
+                    "制度依据：" + esc(m.row.evidence || ""),
+                    "系统依据：" + esc(m.row.basis || "")
+                  ].join("<br>");
+                }
+                return "<b>" + esc(params.data.source) + " → " + esc(params.data.target) + "</b>";
+              }
+              // 节点 tooltip
+              if (systemBasis[params.name]) {
+                return "<b>" + esc(params.name) + "</b><br>" + esc(systemBasis[params.name]);
+              }
+              // 业务行为（A1）节点
+              var a1Match = a1Rows.find(function(r) { return r[0] === params.name; });
+              if (a1Match) {
+                return [
+                  "<b>" + esc(a1Match[0]) + " " + esc(a1Match[1]) + "</b>",
+                  "角色：" + esc(a1Match[2]),
+                  "触发：" + esc(a1Match[3]),
+                  "前置：" + esc(a1Match[4]),
+                  "审批：" + esc(a1Match[5]),
+                  "验收标准：" + esc(acceptanceText(a1Match)),
+                  "制度依据：" + esc(a1Match[7] || ""),
+                  "证据类型：" + esc(a1Match[8] || ""),
+                  "<b>原文出处：</b>",
+                  "  执行角色依据：" + esc(a1Match[9] || a1Match[7] || ""),
+                  "  触发情景依据：" + esc(a1Match[10] || a1Match[7] || ""),
+                  "  前置条件依据：" + esc(a1Match[11] || a1Match[7] || ""),
+                  auditWarnings(a1Match).length ? "部门确认：" + esc(auditWarnings(a1Match).join("；")) : ""
+                ].filter(Boolean).join("<br>");
+              }
+              return "<b>" + esc(params.name) + "</b>";
+            }
+          },
+          series: [{
+            type: "sankey",
+            orient: "horizontal",
+            data: graph.nodes,
+            links: graph.links,
+            left: isGlobal ? 20 : 20,
+            right: isGlobal ? 140 : 220,
+            top: 16,
+            bottom: 24,
+            nodeWidth: 18,
+            nodeGap: isGlobal ? 12 : 20,
+            draggable: true,
+            emphasis: { focus: "adjacency" },
+            label: {
+              color: "#e5e7eb",
+              fontSize: isGlobal ? 12 : 11,
+              overflow: "break",
+              position: "right",
+              width: isGlobal ? 160 : 260,
+              lineHeight: isGlobal ? 14 : 16,
+              formatter: function(params) {
+                var name = params.name;
+                if (!isGlobal && a1Rows.some(function(r) { return r[0] === name; })) {
+                  var a1 = a1Rows.find(function(r) { return r[0] === name; });
+                  return a1DisplayLabel(a1);
+                }
+                return name;
+              }
+            },
+            lineStyle: { curveness: 0.5, opacity: 0.38 }
+          }]
+        }, true);
+
+        if (!isGlobal) { chart.resize(); }
+      }
+
+      // ===== 控件 =====
+      function renderControls() {
+        var bar = document.getElementById("modebar");
+        bar.innerHTML = '<span class="mode-label">视图</span>';
+        ["全域总览"].concat(domains).forEach(function(name) {
+          var btn = document.createElement("button");
+          btn.className = "mode-btn" + (name === active ? " active" : "");
+          btn.textContent = name;
+          btn.onclick = function() {
+            active = name;
+            Array.from(bar.querySelectorAll(".mode-btn")).forEach(function(b) { b.classList.toggle("active", b.textContent === name); });
+            renderAll();
+          };
+          bar.appendChild(btn);
+        });
+      }
+
+      // ===== 统计 =====
+      function renderStats() {
+        var isGlobal = active === "全域总览";
+        if (isGlobal) {
+          document.getElementById("stats").innerHTML =
+            '<div class="stat-box"><div class="num">1</div><div class="lbl">部门（D1）</div></div>' +
+            '<div class="stat-box"><div class="num">6</div><div class="lbl">能力域（L1）</div></div>' +
+            '<div class="stat-box"><div class="num">24</div><div class="lbl">业务能力（L2）</div></div>' +
+            '<div class="stat-box"><div class="num">24</div><div class="lbl">业务流程（L3）</div></div>' +
+            '<div class="stat-box"><div class="num">362</div><div class="lbl">业务行为（A1）</div></div>' +
+            '<div class="stat-box"><div class="num">4</div><div class="lbl">应用系统（S1）</div></div>' +
+            '<div class="stat-box"><div class="num">24</div><div class="lbl">映射记录</div></div>';
+        } else {
+          var fa = filteredA1();
+          var capSet = {}; fa.forEach(function(r) { capSet[r[13]] = true; });
+          var procSet = {}; fa.forEach(function(r) { procSet[r[14]] = true; });
+          var sysSet = {}; fa.forEach(function(r) { systemsFor(r[6]).forEach(function(s) { sysSet[s] = true; }); });
+          document.getElementById("stats").innerHTML =
+            '<div class="stat-box"><div class="num">1</div><div class="lbl">部门（D1）</div></div>' +
+            '<div class="stat-box"><div class="num">1</div><div class="lbl">能力域（L1）</div></div>' +
+            '<div class="stat-box"><div class="num">' + Object.keys(capSet).length + '</div><div class="lbl">业务能力（L2）</div></div>' +
+            '<div class="stat-box"><div class="num">' + Object.keys(procSet).length + '</div><div class="lbl">业务流程（L3）</div></div>' +
+            '<div class="stat-box"><div class="num">' + fa.length + '</div><div class="lbl">业务行为（A1）</div></div>' +
+            '<div class="stat-box"><div class="num">' + Object.keys(sysSet).length + '</div><div class="lbl">应用系统（S1）</div></div>' +
+            '<div class="stat-box"><div class="num">' + fa.length + '</div><div class="lbl">映射记录</div></div>';
+        }
+      }
+
+      function renderBars() {
+        // 域规模（A1数）
+        var domainA1 = {};
+        a1Rows.forEach(function(r) { domainA1[r[12]] = (domainA1[r[12]] || 0) + 1; });
+        var maxD = Math.max.apply(null, Object.values(domainA1));
+        document.getElementById("domainBars").innerHTML = Object.keys(domainA1).map(function(d) {
+          return '<div class="bar-line"><span>' + esc(d) + '</span><div class="bar-track"><div class="bar-fill" style="width:' + Math.round(domainA1[d]/maxD*100) + '%;background:' + colorFor(d) + '"></div></div><strong>' + domainA1[d] + '</strong></div>';
+        }).join("");
+
+        // 系统承载（A1参与次数）
+        var sysCnt = {OA:0,MES:0,PLM:0,ERP:0};
+        a1Rows.forEach(function(r) {
+          systemsFor(r[6]).forEach(function(s) { if (sysCnt[s] != null) sysCnt[s] += 1; });
+        });
+        var maxS = Math.max.apply(null, Object.values(sysCnt));
+        document.getElementById("systemBars").innerHTML = Object.keys(sysCnt).map(function(s) {
+          return '<div class="bar-line"><span>' + esc(s) + '</span><div class="bar-track"><div class="bar-fill" style="width:' + Math.round(sysCnt[s]/maxS*100) + '%;background:' + systemColors[s] + '"></div></div><strong>' + sysCnt[s] + '</strong></div>';
+        }).join("");
+      }
+
+      function renderLegend() {
+        var dLeg = domains.map(function(d) { return '<span class="legend"><i style="background:' + domainColors[d] + '"></i>' + esc(d) + '</span>'; }).join("");
+        var sLeg = Object.keys(systemColors).map(function(s) { return '<span class="legend"><i style="background:' + systemColors[s] + '"></i>' + esc(s) + '</span>'; }).join("");
+        document.getElementById("legendRow").innerHTML = dLeg + sLeg;
+      }
+
+      // ===== 表格 =====
+      function renderTable() {
+        var isGlobal = active === "全域总览";
+        var head = document.getElementById("tableHead");
+        var body = document.getElementById("mappingBody");
+        var tbl = document.getElementById("mappingTable");
+
+        if (isGlobal) {
+          tbl.className = "table-l3";
+          head.innerHTML = '<tr><th class="col-seq">序号</th><th class="col-dept">部门（D1）</th><th class="col-domain">能力域（L1）</th><th class="col-cap">业务能力（L2）</th><th class="col-proc">业务流程（L3）</th><th class="col-evidence">制度依据</th><th class="col-system">应用系统（S1）</th><th class="col-evidence">系统设计依据</th></tr>';
+          body.innerHTML = filteredL3().map(function(row, i) {
+            return '<tr><td class="col-seq">' + (i+1) + '</td><td class="col-dept">质量管理部</td><td class="col-domain"><span class="domain-pill" style="background:' + colorFor(row.domain) + '">' + esc(row.domain) + '</span></td><td class="col-cap">' + esc(row.capability) + '</td><td class="col-proc">' + esc(row.process) + '</td><td class="col-evidence">' + esc(row.evidence) + '</td><td class="col-system">' + esc(row.system) + '</td><td class="col-evidence">' + esc(row.basis) + '</td></tr>';
+          }).join("");
+        } else {
+          tbl.className = "table-a1";
+          head.innerHTML = '<tr><th class="col-seq">序号</th><th class="col-a1id">业务行为（A1）编号</th><th class="col-cap">业务能力（L2）</th><th class="col-proc">业务流程（L3）</th><th class="col-a1name">业务行为（A1）</th><th class="col-role">执行角色</th><th class="col-trigger">触发情景</th><th class="col-precond">前置条件</th><th class="col-appr">审批类型</th><th class="col-accept">验收标准</th><th class="col-evidence">制度依据</th><th class="col-evidtype">证据类型</th><th class="col-system">应用系统（S1）</th><th class="col-alert">请部门确认</th><th class="col-feedback">部门确认意见</th><th class="col-adjust">是否调整</th><th class="col-suggestion">调整建议</th></tr>';
+          body.innerHTML = filteredA1().map(function(a1, i) {
+            var fill = processFill(a1[14]);
+            var roleCell = esc(a1[2]) + (roleWarning(a1) ? '<br><span class="warn-tag">请确认岗位</span>' : '');
+            var acceptanceCell = requiresAcceptance(a1)
+              ? '<span class="warn-tag">请确认关口标准</span><br>是否需要验收/完成标准'
+              : '<span class="soft-warn-tag">' + esc(acceptanceText(a1)) + '</span>';
+            return '<tr style="background:' + fill + '">' +
+              '<td class="col-seq">' + (i+1) + '</td>' +
+              '<td class="col-a1id">' + esc(a1[0]) + '</td>' +
+              '<td class="col-cap">' + esc(a1[13]) + '</td>' +
+              '<td class="col-proc">' + esc(a1[14]) + '</td>' +
+              '<td class="col-a1name">' + esc(a1[1]) + '</td>' +
+              '<td class="col-role">' + roleCell + '</td>' +
+              '<td class="col-trigger">' + esc(a1[3]) + '</td>' +
+              '<td class="col-precond">' + esc(a1[4]) + '</td>' +
+              '<td class="col-appr"><span class="appr-tag ' + apprClass(a1[5]) + '">' + esc(a1[5]) + '</span></td>' +
+              '<td class="col-accept">' + acceptanceCell + '</td>' +
+              '<td class="col-evidence">' + esc(a1[7]) + '</td>' +
+              '<td class="col-evidtype"><span class="evidence-tag ' + evidenceClass(a1[8]) + '">' + esc(a1[8]) + '</span></td>' +
+              '<td class="col-system">' + esc(a1[6]) + '</td>' +
+              '<td class="col-alert">' + (warningHtml(a1) || '<span class="soft-warn-tag">请部门确认无调整</span>') + '</td>' +
+              '<td class="col-feedback feedback-cell">待部门填写</td>' +
+              '<td class="col-adjust feedback-cell">待确认</td>' +
+              '<td class="col-suggestion feedback-cell"></td>' +
+              '</tr>';
+          }).join("");
+        }
+      }
+
+      function renderAll() {
+        renderStats();
+        renderChart();
+        renderBars();
+        renderLegend();
+        renderTable();
+      }
+
+      window.addEventListener("resize", function() { if (chart) chart.resize(); });
+      window.addEventListener("load", function() {
+        renderControls();
+        renderAll();
+      });
+
+
+// ===== 反馈状态管理 =====
+var STORAGE_PREFIX = 'sankey_fb_v2_';
+var SCHEMA_VERSION = '1.0';
+var DEPT_NAME = (document.title || '').split(' · ')[0].trim();
+var TOTAL = a1Rows.length;
+
+function feedbackStorageKey() {
+  return STORAGE_PREFIX + DEPT_NAME + '_' + TOTAL;
+}
+
+var feedbackState = {};
+(function loadFeedback() {
+  try {
+    var raw = localStorage.getItem(feedbackStorageKey());
+    if (raw) feedbackState = JSON.parse(raw);
+  } catch(e) { feedbackState = {}; }
+})();
+
+function persistFeedback() {
+  try { localStorage.setItem(feedbackStorageKey(), JSON.stringify(feedbackState)); } catch(e) {}
+}
+
+var currentA1Id = null;
+
+var a1Index = {};
+a1Rows.forEach(function(r) {
+  var roleEv = r[9] || r[7] || '';
+  var trigEv = r[10] || r[7] || '';
+  var preEv = r[11] || r[7] || '';
+  var src = '依据制度文件 ' + (r[7] || '未标注') + '（' + (r[8] || '') + '），' +
+    '该条款明确由「' + (r[2] || '') + '」执行，「' + (r[1] || '') + '」，' +
+    '触发情景为「' + (r[3] || '') + '」，前置条件为「' + (r[4] || '') + '」。' +
+    '审批类型：' + (r[5] || '') + '，系统支撑：' + (r[6] || '') + '。';
+  a1Index[r[0]] = { name: r[1], role: r[2], trigger: r[3], precondition: r[4],
+    approval: r[5], system: r[6], evidence: r[7], evidenceType: r[8],
+    roleEvidence: roleEv, triggerEvidence: trigEv, preconditionEvidence: preEv,
+    domain: r[12], capability: r[13], process: r[14], alert: r[15] || '',
+    sourceText: src };
+});
+
+var feedbackNodeColors = {};
+
+function isComplete(fb) {
+  return !!(fb && fb.row_confirmed);
+}
+
+function syncNodeColors() {
+  feedbackNodeColors = {};
+  Object.keys(feedbackState).forEach(function(a1Id) {
+    var fb = feedbackState[a1Id];
+    if (!isComplete(fb)) return;
+    var nodeName = a1Id;
+    if (fb.row_confirmed === 'accurate') feedbackNodeColors[nodeName] = '#16a34a';
+    else if (fb.row_confirmed === 'minor_issue') feedbackNodeColors[nodeName] = '#f59e0b';
+    else if (fb.row_confirmed === 'inaccurate') feedbackNodeColors[nodeName] = '#dc2626';
+  });
+}
+
+function openFeedbackCard(a1Id) {
+  var info = a1Index[a1Id];
+  if (!info) return;
+
+  currentA1Id = a1Id;
+  var fb = feedbackState[a1Id] || {};
+  var done = isComplete(fb);
+
+  document.getElementById('feedbackTitle').innerHTML = a1Id + ' 反馈 <span style="font-size:12px;color:' + (done ? '#16a34a' : '#dc2626') + ';font-weight:400">' + (done ? '已完成' : '未完成') + '</span>';
+  var body = document.getElementById('feedbackBody');
+
+  var html = '<div class="a1-context"><b>' + info.name + '</b><br>';
+  html += '执行角色: ' + info.role + ' | 审批: ' + info.approval + ' | 系统: ' + info.system;
+  if (info.alert) html += '<br><span style="color:#92400e">核验提醒: ' + info.alert + '</span>';
+  html += '</div>';
+
+  html += '<div class="a1-context" style="background:#f0fdf4;border-left:3px solid #16a34a;margin-top:10px;">';
+  html += '<b style="color:#166534">原文出处</b><br>';
+  html += '<div style="margin:8px 0;padding:10px 12px;background:#fff;border-radius:6px;font-size:13px;line-height:1.8;color:#1e293b;border:1px solid #bbf7d0;">';
+  html += '<b style="color:#166534;font-size:12px">&#x1F4C4; 原文正文</b><br>';
+  html += esc(info.sourceText || '');
+  html += '</div>';
+  html += '<b>制度依据：</b>' + esc(info.evidence || '') + '<br>';
+  html += '<b>证据类型：</b>' + esc(info.evidenceType || '') + '<br>';
+  html += '<b>执行角色依据：</b>' + esc(info.roleEvidence || info.evidence || '') + '<br>';
+  html += '<b>触发情景依据：</b>' + esc(info.triggerEvidence || info.evidence || '') + '<br>';
+  html += '<b>前置条件依据：</b>' + esc(info.preconditionEvidence || info.evidence || '') + '<br>';
+  html += '<b>触发情景：</b>' + esc(info.trigger || '') + '<br>';
+  html += '<b>前置条件：</b>' + esc(info.precondition || '') + '';
+  html += '</div>';
+
+  html += qBlock(1, '本行业务行为描述是否准确反映了实际业务？', '',
+    [['accurate','准确，无需修改'],['minor_issue','基本准确，有小问题'],['inaccurate','不准确，需要重写']],
+    fb.row_confirmed);
+
+  html += qBlock(2, '执行角色描述是否正确？', '当前描述: ' + info.role,
+    [['correct','正确'],['wrong','不对'],['unsure','不清楚']],
+    fb.role_confirmed);
+
+  html += qBlock(3, '审批类型是否正确？', '当前描述: ' + info.approval,
+    [['correct','正确'],['wrong','不对'],['unsure','不清楚']],
+    fb.approval_confirmed);
+
+  html += qBlock(4, '跨部门输入/输出关系是否正确？', '',
+    [['correct','正确'],['wrong','不对'],['unsure','不清楚']],
+    fb.io_dept_confirmed);
+
+  if (info.alert) {
+    html += qBlock(5, '对于以下核验提醒，你的反馈是？', '提醒: ' + info.alert,
+      [['agree','同意，需要细化'],['disagree','不同意，当前描述足够'],['not_applicable','不适用']],
+      fb.verification_response);
+  }
+
+  var showNotes = fb.row_confirmed === 'minor_issue' || fb.row_confirmed === 'inaccurate'
+    || fb.role_confirmed === 'wrong' || fb.approval_confirmed === 'wrong'
+    || fb.io_dept_confirmed === 'wrong';
+  html += '<div class="q-block" id="notesBlock" style="display:' + (showNotes?'block':'none') + '">';
+  html += '<div class="q-label">补充说明（选填）</div>';
+  html += '<textarea class="note-area" id="feedbackNotes" placeholder="如有需要，请在此补充说明...">' + (fb.notes||'') + '</textarea>';
+  html += '</div>';
+
+  body.innerHTML = html;
+
+  body.querySelectorAll('.q-opt').forEach(function(opt) {
+    opt.addEventListener('click', function() {
+      var parent = opt.parentElement;
+      parent.querySelectorAll('.q-opt').forEach(function(o) { o.classList.remove('selected'); });
+      opt.classList.add('selected');
+      updateNotesVisibility();
+    });
+  });
+
+  document.getElementById('feedbackPanel').classList.add('open');
+  document.getElementById('feedbackBackdrop').classList.add('show');
+}
+
+function qBlock(num, question, hint, options, selectedVal) {
+  var h = '<div class="q-block">';
+  h += '<div class="q-label">' + num + '. ' + question + '</div>';
+  if (hint) h += '<div class="q-hint">' + hint + '</div>';
+  h += '<div class="q-options">';
+  options.forEach(function(o) {
+    var sel = o[0] === selectedVal ? ' selected' : '';
+    h += '<div class="q-opt' + sel + '" data-val="' + o[0] + '" data-q="' + num + '">';
+    h += '<span class="radio"></span>' + o[1];
+    h += '</div>';
+  });
+  h += '</div></div>';
+  return h;
+}
+
+function updateNotesVisibility() {
+  var show = false;
+  document.querySelectorAll('.q-opt.selected').forEach(function(o) {
+    var v = o.dataset.val;
+    if (v === 'minor_issue' || v === 'inaccurate' || v === 'wrong') show = true;
+  });
+  var nb = document.getElementById('notesBlock');
+  if (nb) nb.style.display = show ? 'block' : 'none';
+}
+
+function collectFeedback() {
+  var fb = {};
+  document.querySelectorAll('.q-opt.selected').forEach(function(o) {
+    var q = o.dataset.q, v = o.dataset.val;
+    if (q === '1') fb.row_confirmed = v;
+    else if (q === '2') fb.role_confirmed = v;
+    else if (q === '3') fb.approval_confirmed = v;
+    else if (q === '4') fb.io_dept_confirmed = v;
+    else if (q === '5') fb.verification_response = v;
+  });
+  var ta = document.getElementById('feedbackNotes');
+  fb.notes = ta ? ta.value.trim() : '';
+  return fb;
+}
+
+function closeFeedbackCard() {
+  document.getElementById('feedbackPanel').classList.remove('open');
+  document.getElementById('feedbackBackdrop').classList.remove('show');
+  currentA1Id = null;
+}
+
+document.getElementById('feedbackSubmit').addEventListener('click', function() {
+  if (!currentA1Id) return;
+  feedbackState[currentA1Id] = collectFeedback();
+  persistFeedback();
+  syncNodeColors();
+  updateProgress();
+  closeFeedbackCard();
+  renderAll();
+});
+
+document.getElementById('feedbackClose').addEventListener('click', closeFeedbackCard);
+document.getElementById('feedbackBackdrop').addEventListener('click', closeFeedbackCard);
+
+function updateProgress() {
+  var done = 0;
+  Object.keys(feedbackState).forEach(function(id) {
+    if (isComplete(feedbackState[id])) done++;
+  });
+  var pct = TOTAL > 0 ? Math.round(done / TOTAL * 100) : 0;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressText').innerText = done + ' / ' + TOTAL;
+}
+
+document.getElementById('exportJsonBtn').addEventListener('click', function() {
+  var done = 0;
+  Object.keys(feedbackState).forEach(function(id) {
+    if (isComplete(feedbackState[id])) done++;
+  });
+  var result = {
+    department: DEPT_NAME,
+    exported_at: new Date().toISOString(),
+    data_version: DEPT_NAME + '_' + TOTAL + '_' + new Date().toISOString().slice(0,10),
+    source_page: (function() { var p = window.location.pathname; return p.substring(p.lastIndexOf('/') + 1); })(),
+    schema_version: SCHEMA_VERSION,
+    total: TOTAL,
+    completed: done,
+    feedback: []
+  };
+  a1Rows.forEach(function(r) {
+    if (feedbackState[r[0]]) {
+      var fb = feedbackState[r[0]];
+      result.feedback.push({
+        a1_id: r[0],
+        a1_name: r[1],
+        row_confirmed: fb.row_confirmed || '',
+        role_confirmed: fb.role_confirmed || '',
+        approval_confirmed: fb.approval_confirmed || '',
+        io_dept_confirmed: fb.io_dept_confirmed || '',
+        verification_response: fb.verification_response || '',
+        notes: fb.notes || '',
+        domain: a1Index[r[0]].domain,
+        capability: a1Index[r[0]].capability,
+        process: a1Index[r[0]].process,
+        system: a1Index[r[0]].system,
+        evidence: a1Index[r[0]].evidence,
+        evidenceType: a1Index[r[0]].evidenceType
+      });
+    }
+  });
+  var blob = new Blob([JSON.stringify(result, null, 2)], {type: 'application/json'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = DEPT_NAME + '-桑基图反馈-' + new Date().toISOString().slice(0,10) + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('importJsonBtn').addEventListener('click', function() {
+  document.getElementById('importFileInput').click();
+});
+
+document.getElementById('importFileInput').addEventListener('change', function(e) {
+  var file = e.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      var data = JSON.parse(ev.target.result);
+      if (!data.feedback || !Array.isArray(data.feedback)) { alert('文件格式不正确，缺少 feedback 数组'); return; }
+      var count = 0;
+      data.feedback.forEach(function(fb) {
+        if (fb.a1_id && a1Index[fb.a1_id]) {
+          feedbackState[fb.a1_id] = {
+            row_confirmed: fb.row_confirmed || '',
+            role_confirmed: fb.role_confirmed || '',
+            approval_confirmed: fb.approval_confirmed || '',
+            io_dept_confirmed: fb.io_dept_confirmed || '',
+            verification_response: fb.verification_response || '',
+            notes: fb.notes || ''
+          };
+          count++;
+        }
+      });
+      persistFeedback();
+      syncNodeColors();
+      updateProgress();
+      renderAll();
+    } catch(err) { alert('文件解析失败: ' + err.message); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+document.getElementById('clearFeedbackBtn').addEventListener('click', function() {
+  if (!confirm('确定要清空本地反馈吗？此操作不可恢复。建议先导出备份。')) return;
+  if (!confirm('再次确认：清空所有已填写的反馈数据？')) return;
+  feedbackState = {};
+  try { localStorage.removeItem(feedbackStorageKey()); } catch(e) {}
+  syncNodeColors();
+  updateProgress();
+  renderAll();
+});
+
+function attachFeedbackHandlers(chart) {
+  if (!chart) return;
+  chart.off('click');
+  chart.on('click', function(params) {
+    if (params.data && params.data.name && a1Index[params.data.name]) {
+      openFeedbackCard(params.data.name);
+    }
+  });
+}
+
+var _origBuildGraph = buildGraph;
+buildGraph = function() {
+  var result = _origBuildGraph();
+  result.nodes.forEach(function(n) {
+    if (feedbackNodeColors[n.name]) {
+      n.itemStyle = { color: feedbackNodeColors[n.name], borderColor: feedbackNodeColors[n.name] };
+    }
+  });
+  return result;
+};
+
+var _origRenderChart = renderChart;
+renderChart = function() {
+  _origRenderChart();
+  attachFeedbackHandlers(chart);
+};
+
+(function initFeedback() {
+  syncNodeColors();
+  updateProgress();
+  attachFeedbackHandlers(chart);
+})();
+
+    </script>
+  </body>
+</html>

@@ -1,0 +1,174 @@
+{
+  "version": "2026-06-02",
+  "name": "DCM/BBM 双合同质检规则",
+  "paths": {
+    "normsDir": "docs/norms",
+    "pmoDashboard": "pmo/procedure-management/dashboard.html",
+    "canonicalOrganizationSource": "docs/organization/组织架构与部门职责.md",
+    "fallbackOrganizationSources": [
+      "docs/organization/组织架构和部门职责.md"
+    ],
+    "rootEcharts": "echarts.min.js",
+    "disallowedNormsEcharts": "docs/norms/echarts.min.js"
+  },
+  "departments": {
+    "工程技术部": "总经理直辖域",
+    "质量管理部": "总经理直辖域",
+    "财务部": "总经理直辖域",
+    "行政人事部": "经营域",
+    "经营发展部": "经营域",
+    "物资保障部": "经营域",
+    "项目管理部": "生产域",
+    "复材一车间": "生产域",
+    "复材二车间": "生产域",
+    "运维安环部": "生产域"
+  },
+  "terminology": {
+    "D1": "部门（D1）",
+    "D2": "办公室（D2）",
+    "L1": "能力域（L1）",
+    "L2": "业务能力（L2）",
+    "L3": "业务流程（L3）",
+    "A1": "业务行为（A1）",
+    "A2": "业务行为（A2）",
+    "S1": "应用系统（S1）",
+    "S2": "应用模块（S2）"
+  },
+  "systems": {
+    "allowedS1": [
+      "OA",
+      "MES",
+      "PLM",
+      "ERP"
+    ],
+    "blankTokens": [
+      "",
+      "-",
+      "—",
+      "–",
+      "无",
+      "不适用",
+      "NA",
+      "N/A"
+    ],
+    "forbiddenS1": [
+      "MDM"
+    ],
+    "splitPatternNote": "应用系统（S1）多值统一用顿号、中文逗号或英文逗号分隔。"
+  },
+  "deliverables": {
+    "canonicalSuffixes": [
+      "部门-能力-流程-系统映射关系.md",
+      "能力层与MDM建设要求.md",
+      "部门能力流程系统桑基图.html"
+    ],
+    "forbiddenNamePatterns": [
+      "A1业务行为映射关系",
+      "业务行为映射关系",
+      "部门能力流程行为系统桑基图",
+      "业务能力系统图",
+      "行为系统桑基图"
+    ]
+  },
+  "dcm": {
+    "mainTableRequiredHeaders": [
+      "部门（D1）",
+      "能力域（L1）",
+      "业务能力（L2）",
+      "业务流程（L3）",
+      "制度依据（文件号/条款）",
+      "应用系统（S1）",
+      "系统设计依据"
+    ],
+    "evidenceShouldContain": [
+      "§",
+      "待分配编号",
+      "文件为空",
+      "文件未提供"
+    ],
+    "changeRecordHeading": "## 变更记录"
+  },
+  "bbm": {
+    "sectionHeadingPatterns": [
+      "## 业务行为（A1）映射（BBM增补）",
+      "## 业务行为（A1）映射（BBM完整版）",
+      "## 业务行为（A1）映射"
+    ],
+    "coreRequiredHeaders": [
+      "业务行为（A1）编号",
+      "业务行为（A1）",
+      "执行角色",
+      "触发情景",
+      "前置条件",
+      "审批类型",
+      "应用系统（S1）",
+      "制度依据",
+      "证据类型",
+      "验收标准",
+      "核验提醒",
+      "部门确认意见",
+      "是否调整",
+      "调整建议"
+    ],
+    "optionalHeaders": [
+      "执行角色依据",
+      "触发情景依据",
+      "前置条件依据",
+      "数据输入",
+      "数据输出",
+      "输入来源部门",
+      "输出目标部门",
+      "应用模块（S2）",
+      "验收标准依据",
+      "备注"
+    ],
+    "approvalTypes": [
+      "无审批",
+      "单人审批",
+      "多级审批",
+      "会签"
+    ],
+    "evidenceTypes": [
+      "原文明确-正文",
+      "原文明确-流程图",
+      "原文明确-表单",
+      "上下文推断",
+      "分析拆分"
+    ],
+    "collectiveRolePatterns": [
+      "部$",
+      "部门$",
+      "办公室$",
+      "中心$",
+      "小组$",
+      "委员会$",
+      "团队$",
+      "车间$",
+      "公司$"
+    ],
+    "crossDepartmentMarker": "【跨部门"
+  },
+  "html": {
+    "requiredEchartsSrc": "../echarts.min.js",
+    "forbiddenShorthandPatterns": [
+      "业务能力\\(L2\\)",
+      "业务流程\\(L3\\)",
+      "业务行为\\(A1\\)",
+      "应用系统\\(S1\\)"
+    ]
+  },
+  "companyData": {
+    "suspiciousSystemSinkPatterns": [
+      "§",
+      "GLTX",
+      "SYCX",
+      "原文明确",
+      "上下文推断",
+      "分析拆分",
+      "不强行对应",
+      "ERP中没有",
+      "建议由部门确认",
+      "^[-—–]+$"
+    ]
+  }
+}

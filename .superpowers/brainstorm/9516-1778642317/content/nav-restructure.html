@@ -1,0 +1,65 @@
+<h2>顶部导航：保持扁平 vs 按 Part 分组</h2>
+<p class="subtitle">当前 18 个链接一行排列，加了 Part 后是否需要层次感？</p>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">方案 A：保持扁平 + Part 徽标</div>
+    <div class="mockup-body" style="padding:0">
+      <div style="background:rgba(15,42,94,.97);padding:12px 16px;color:#fff">
+        <div style="font-size:11px;font-weight:700;margin-bottom:8px;color:rgba(255,255,255,.7)">昌兴复材 · 信息化系统应用与集成说明会</div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;font-size:10px">
+          <a style="color:rgba(255,255,255,.55);padding:3px 6px">首页</a>
+          <span style="color:rgba(255,255,255,.2)">│</span>
+          <span style="background:#1a56db;color:#fff;padding:2px 5px;border-radius:3px;font-size:9px">P1</span><a style="color:rgba(255,255,255,.65);padding:3px 6px">会议定位</a><a style="color:rgba(255,255,255,.65);padding:3px 6px">目标</a><a style="color:rgba(255,255,255,.65);padding:3px 6px">系统</a><a style="color:rgba(255,255,255,.65);padding:3px 6px">排期</a><a style="color:rgba(255,255,255,.65);padding:3px 6px">里程碑</a><a style="color:rgba(255,255,255,.65);padding:3px 6px">抓手</a><a style="color:rgba(255,255,255,.65);padding:3px 6px">拓扑</a>
+          <span style="color:rgba(255,255,255,.2)">│</span>
+          <span style="background:#0891b2;color:#fff;padding:2px 5px;border-radius:3px;font-size:9px">P2</span><a style="color:rgba(255,255,255,.65);padding:3px 6px">OA</a><a style="color:rgba(255,255,255,.65);padding:3px 6px">PLM</a><a style="color:rgba(255,255,255,.65);padding:3px 6px">MES</a><a style="color:rgba(255,255,255,.65);padding:3px 6px">其他</a>
+          <span style="color:rgba(255,255,255,.2)">│</span>
+          <span style="background:#16a34a;color:#fff;padding:2px 5px;border-radius:3px;font-size:9px">P3</span><a style="color:rgba(255,255,255,.65);padding:3px 6px">事故链</a><a style="color:rgba(255,255,255,.65);padding:3px 6px">MDM</a><a style="color:rgba(255,255,255,.65);padding:3px 6px">黄金源</a><a style="color:rgba(255,255,255,.65);padding:3px 6px">接口</a><a style="color:rgba(255,255,255,.65);padding:3px 6px">成熟度</a>
+          <span style="color:rgba(255,255,255,.2)">│</span>
+          <span style="background:#d97706;color:#fff;padding:2px 5px;border-radius:3px;font-size:9px">P4</span><a style="color:rgba(255,255,255,.65);padding:3px 6px">分工</a><a style="color:rgba(255,255,255,.65);padding:3px 6px">行动</a>
+        </div>
+      </div>
+      <div style="padding:14px;font-size:12px;color:#64748b">
+        ✅ 改动最小 — 在每个 Part 段前插入 P1/P2/P3/P4 小徽标<br>
+        ✅ 不改变跳转逻辑 &nbsp; ⚠️ 层次感较弱
+      </div>
+    </div>
+  </div>
+  <div class="mockup">
+    <div class="mockup-header">方案 B：两层导航（Part 主入口 + 子章节下拉）</div>
+    <div class="mockup-body" style="padding:0">
+      <div style="background:rgba(15,42,94,.97);padding:12px 16px;color:#fff">
+        <div style="font-size:11px;font-weight:700;margin-bottom:8px;color:rgba(255,255,255,.7)">昌兴复材 · 信息化系统应用与集成说明会</div>
+        <div style="display:flex;gap:6px;font-size:11px">
+          <a style="color:rgba(255,255,255,.55);padding:3px 6px">首页</a>
+          <a style="color:#93c5fd;padding:4px 8px;border:1px solid rgba(26,86,219,.5);border-radius:4px;font-weight:700">Part 1 定位与方案 ▾</a>
+          <a style="color:#a5f3fc;padding:4px 8px;border:1px solid rgba(8,145,178,.5);border-radius:4px;font-weight:700">Part 2 系统简介 ▾</a>
+          <a style="color:#86efac;padding:4px 8px;border:1px solid rgba(22,163,74,.5);border-radius:4px;font-weight:700">Part 3 集成之路 ▾</a>
+          <a style="color:#fcd34d;padding:4px 8px;border:1px solid rgba(217,119,6,.5);border-radius:4px;font-weight:700">Part 4 分工行动 ▾</a>
+          <a style="color:rgba(255,255,255,.55);padding:3px 6px">附录</a>
+        </div>
+      </div>
+      <div style="padding:14px;font-size:12px;color:#64748b">
+        ✅ 层次清晰，听众随时知道在哪个 Part &nbsp; ✅ 导航更短更整洁<br>
+        ⚠️ 需要前端 JS 实现 hover/click 展开子章节 &nbsp; ⚠️ 移动端适配复杂
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="flat-badge" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>保持扁平 + Part 徽标（推荐）</h3>
+      <p>在现有 18 链接中插入 P1–P4 小色块作为视觉分隔，不动交互逻辑。</p>
+    </div>
+  </div>
+  <div class="option" data-choice="two-level" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>两层导航</h3>
+      <p>5 个 Part 入口 + hover/click 展开子章节。更整洁但需要新交互代码。</p>
+    </div>
+  </div>
+</div>

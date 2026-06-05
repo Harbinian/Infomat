@@ -377,7 +377,7 @@ code{background:#f1f5f9;padding:1px 5px;border-radius:3px;font-size:12px;font-fa
 
   <div class="card">
     <h3>功能概述</h3>
-    <p>以桑基图（Sankey）形式可视化展示 <strong>部门 → 业务能力 → 业务流程 → 应用系统</strong> 之间的完整关系链路，支持交互式筛选和钻取分析。</p>
+    <p>以桑基图（Sankey）形式可视化展示 <strong>部门（D1）→ 能力域（L1）→ 业务能力（L2）→ 业务流程（L3）→ 应用系统（S1）</strong> 之间的完整关系链路，支持交互式筛选和钻取分析。</p>
   </div>
 
   <div class="ss-wrap">
@@ -405,7 +405,7 @@ code{background:#f1f5f9;padding:1px 5px;border-radius:3px;font-size:12px;font-fa
 
   <div class="card">
     <h3>服务管理</h3>
-    <pre><code>cd mdm-platform
+    <pre><code>cd apps/mdm-platform
 npm install              # 安装依赖
 npm start                # 启动服务（Express，端口 3000）
 npm run dev              # 开发模式（nodemon 自动重启）
@@ -431,7 +431,7 @@ npm test:frontend     # 前端静态资源测试</code></pre>
   <div class="card">
     <h3>数据操作</h3>
     <pre><code># 数据库文件位置
-mdm-platform/data/platform.db
+apps/mdm-platform/data/platform.db
 
 # 使用 sqlite3 命令行直接查询
 sqlite3 data/platform.db "SELECT * FROM users;"

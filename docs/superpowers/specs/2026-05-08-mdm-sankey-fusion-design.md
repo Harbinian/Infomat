@@ -40,7 +40,7 @@
 <!-- D4 工程技术部 -->
 <div class="sankey-wrap" id="sankey-d4">
   <div class="sankey-title">工程技术部工艺与制造数据</div>
-  <div class="sankey-sub">部门 → 业务能力 → 业务流程 → 应用系统</div>
+  <div class="sankey-sub">部门（D1）→ 能力域（L1）→ 业务能力（L2）→ 业务流程（L3）→ 应用系统（S1）</div>
   <div id="chart-d4" style="width:100%;height:680px"></div>
 </div>
 

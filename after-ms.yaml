@@ -1,0 +1,111 @@
+- generic [ref=e2]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - heading "数字化底座项目甘特图" [level=1] [ref=e15841]
+      - generic [ref=e7]: 2026-06-01 - 2028-01-31 ｜ 交付物 308 项
+    - generic [ref=e8]:
+      - button "甘特图" [ref=e9] [cursor=pointer]
+      - button "PMO看板" [ref=e10] [cursor=pointer]
+  - generic [ref=e15842]:
+    - combobox [ref=e15843]:
+      - option "全部年份" [selected]
+      - option "2026年"
+      - option "2027年"
+      - option "2028年"
+    - combobox [ref=e15844]:
+      - option "全部主线" [selected]
+      - option "1-项目启动与总体蓝图"
+      - option "2-招采合同与供应商管理"
+      - option "3-数据标准与主数据治理"
+      - option "4-MDM自研平台一期"
+      - option "5-基础设施与AI底座"
+      - option "6-PLM基础深化"
+      - option "7-ERP/OA补强"
+      - option "8-MES建设与QMS低代码平台"
+      - option "9-全系统集成联调与现场推广"
+      - option "10-AI应用深化、驾驶舱与总体验收"
+    - combobox [ref=e15845]:
+      - option "全部部门" [selected]
+      - option "ERP·OA工作组"
+      - option "MDM工作组"
+      - option "MES工作组"
+      - option "PLM工作组"
+      - option "信息化项目组"
+      - option "基础设施工作组"
+    - combobox [ref=e15846]:
+      - option "全部供应商" [selected]
+      - option "AI服务器供应商"
+      - option "MDM自研;PLM供应商;MES供应商;用友U8"
+      - option "MES供应商"
+      - option "MES供应商;低代码平台供应商"
+      - option "PLM供应商"
+      - option "基础设施供应商"
+      - option "基础设施供应商;AI服务器供应商"
+      - option "用友U8"
+      - option "自研"
+      - option "设备采集供应商"
+    - combobox [ref=e15847]:
+      - option "全部风险" [selected]
+      - option "高风险"
+      - option "中风险"
+      - option "低风险"
+    - combobox [ref=e15848]:
+      - option "全部类型" [selected]
+      - option "AI应用"
+      - option "上线"
+      - option "修复"
+      - option "修订"
+      - option "合同"
+      - option "启动"
+      - option "培训"
+      - option "开发"
+      - option "开发/联调"
+      - option "开发准备"
+      - option "招采"
+      - option "推广"
+      - option "摘要"
+      - option "整改"
+      - option "方案评审"
+      - option "测试"
+      - option "管理"
+      - option "缓冲"
+      - option "联调"
+      - option "设计"
+      - option "评审"
+      - option "试点"
+      - option "试运行"
+      - option "调研"
+      - option "进场"
+      - option "部署"
+      - option "里程碑"
+      - option "需求"
+      - option "驾驶舱"
+      - option "验收"
+    - combobox [ref=e15849]:
+      - option "全部任务"
+      - option "仅里程碑" [selected]
+    - textbox "搜索任务名称/WBS..." [ref=e15850]
+    - generic [ref=e15851]:
+      - generic [ref=e15852]: WBS层级
+      - button "全部" [ref=e15853] [cursor=pointer]
+      - button "1级" [ref=e15854] [cursor=pointer]
+      - button "2级" [ref=e15855] [cursor=pointer]
+      - button "3级" [ref=e15856] [cursor=pointer]
+    - generic [ref=e15857]:
+      - button "全部任务" [ref=e15858] [cursor=pointer]
+      - button "总览视图" [ref=e15859] [cursor=pointer]
+      - button "2026年" [ref=e15860] [cursor=pointer]
+      - button "2027年" [ref=e15861] [cursor=pointer]
+      - button "2028年" [ref=e15862] [cursor=pointer]
+      - button "里程碑" [ref=e15863] [cursor=pointer]
+      - button "高风险" [ref=e15864] [cursor=pointer]
+      - button "关键里程碑" [ref=e15865] [cursor=pointer]
+  - generic [ref=e15866]:
+    - generic [ref=e15868]:
+      - generic [ref=e15869]: WBS
+      - generic [ref=e15870]: 任务名称
+    - generic [ref=e15877]:
+      - button "−" [ref=e15878] [cursor=pointer]
+      - generic [ref=e15879]: 100%
+      - button "+" [ref=e15880] [cursor=pointer]
+      - button "↺" [ref=e15881] [cursor=pointer]

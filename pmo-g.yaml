@@ -1,0 +1,96 @@
+- generic [ref=e2]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - heading "数字化底座 PMO 项目管控看板" [level=1] [ref=e1817]
+      - generic [ref=e7]: 2026-06-01 - 2028-01-31 ｜ 交付物 308 项
+    - generic [ref=e8]:
+      - button "甘特图" [ref=e9] [cursor=pointer]
+      - button "PMO看板" [ref=e10] [cursor=pointer]
+  - generic [ref=e1818]:
+    - generic [ref=e1819]:
+      - generic [ref=e1820]: WBS 数据质量：通过
+      - generic [ref=e1821]: 0重复WBS | 0孤儿节点 | 353任务 | 1个已确认父级里程碑
+    - generic [ref=e1822]:
+      - button "总任务数 353" [ref=e1823] [cursor=pointer]:
+        - generic [ref=e1824]: "353"
+        - generic [ref=e1825]: 总任务数
+        - generic [ref=e1826]: ›
+      - button "普通任务 220" [ref=e1827] [cursor=pointer]:
+        - generic [ref=e1828]: "220"
+        - generic [ref=e1829]: 普通任务
+        - generic [ref=e1830]: ›
+      - button "摘要任务 49" [ref=e1831] [cursor=pointer]:
+        - generic [ref=e1832]: "49"
+        - generic [ref=e1833]: 摘要任务
+        - generic [ref=e1834]: ›
+      - button "里程碑 87" [ref=e1835] [cursor=pointer]:
+        - generic [ref=e1836]: "87"
+        - generic [ref=e1837]: 里程碑
+        - generic [ref=e1838]: ›
+      - button "高风险任务 129" [ref=e1839] [cursor=pointer]:
+        - generic [ref=e1840]: "129"
+        - generic [ref=e1841]: 高风险任务
+        - generic [ref=e1842]: ›
+      - button "交付物总数 308" [ref=e1843] [cursor=pointer]:
+        - generic [ref=e1844]: "308"
+        - generic [ref=e1845]: 交付物总数
+        - generic [ref=e1846]: ›
+      - button "A类交付物 91" [ref=e1847] [cursor=pointer]:
+        - generic [ref=e1848]: "91"
+        - generic [ref=e1849]: A类交付物
+        - generic [ref=e1850]: ›
+      - button "B类交付物 192" [ref=e1851] [cursor=pointer]:
+        - generic [ref=e1852]: "192"
+        - generic [ref=e1853]: B类交付物
+        - generic [ref=e1854]: ›
+      - button "延期交付物 1" [active] [ref=e1855] [cursor=pointer]:
+        - generic [ref=e1856]: "1"
+        - generic [ref=e1857]: 延期交付物
+        - generic [ref=e1858]: ›
+      - button "阶段门风险 0" [ref=e1859] [cursor=pointer]:
+        - generic [ref=e1860]: "0"
+        - generic [ref=e1861]: 阶段门风险
+        - generic [ref=e1862]: ›
+      - button "高风险交付物 129" [ref=e1863] [cursor=pointer]:
+        - generic [ref=e1864]: "129"
+        - generic [ref=e1865]: 高风险交付物
+        - generic [ref=e1866]: ›
+    - generic [ref=e1867]:
+      - generic [ref=e1868]: PMO观察日期
+      - generic [ref=e1869]: 2026-06-05
+      - button "今天" [ref=e1870] [cursor=pointer]
+      - button "项目开始" [ref=e1871] [cursor=pointer]
+      - textbox [ref=e1872]: 2026-06-05
+    - generic [ref=e1873]:
+      - button "PMO周会" [ref=e1874] [cursor=pointer]
+      - button "交付物台账" [ref=e1875] [cursor=pointer]
+      - button "阶段门" [ref=e1876] [cursor=pointer]
+      - button "本周交付物" [ref=e1877] [cursor=pointer]
+      - button "延期交付物" [ref=e1878] [cursor=pointer]
+    - generic [ref=e11283]:
+      - heading "延期交付物 (1)" [level=3] [ref=e11285]
+      - table [ref=e11287]:
+        - rowgroup [ref=e11288]:
+          - row "延期天数 计划完成 交付物名称 等级 责任部门 审核人 关联任务 风险 建议动作" [ref=e11289]:
+            - columnheader "延期天数" [ref=e11290]
+            - columnheader "计划完成" [ref=e11291]
+            - columnheader "交付物名称" [ref=e11292]
+            - columnheader "等级" [ref=e11293]
+            - columnheader "责任部门" [ref=e11294]
+            - columnheader "审核人" [ref=e11295]
+            - columnheader "关联任务" [ref=e11296]
+            - columnheader "风险" [ref=e11297]
+            - columnheader "建议动作" [ref=e11298]
+        - rowgroup [ref=e11299]:
+          - row "0天 2026-06-05 启动会议程、参会清单 C 信息化项目组 PMO 项目启动会准备 中 阶段内补齐归档" [ref=e11300] [cursor=pointer]:
+            - cell "0天" [ref=e11301]:
+              - generic [ref=e11302]: 0天
+            - cell "2026-06-05" [ref=e11303]
+            - cell "启动会议程、参会清单" [ref=e11304]
+            - cell "C" [ref=e11305]:
+              - generic [ref=e11306]: C
+            - cell "信息化项目组" [ref=e11307]
+            - cell "PMO" [ref=e11308]
+            - cell "项目启动会准备" [ref=e11309]
+            - cell "中" [ref=e11310]
+            - cell "阶段内补齐归档" [ref=e11311]

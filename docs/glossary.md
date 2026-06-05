@@ -224,7 +224,7 @@
 |------|----------|------|
 | Express.js | Express | Node.js Web 框架，MDM 平台后端基于此构建，端口 3000 |
 | better-sqlite3 | better-sqlite3 | Node.js SQLite 驱动，同步 API，支持 WAL 模式和外键约束 |
-| SQLite | SQLite | 本地文件数据库，存储路径 mdm-platform/data/platform.db。单文件，不适合多进程并发 |
+| SQLite | SQLite | 本地文件数据库，存储路径 apps/mdm-platform/data/platform.db。单文件，不适合多进程并发 |
 | WAL | Write-Ahead Logging | SQLite 写入模式，允许并发读，提升频繁读写场景下的性能 |
 | SCD Type 2 | Slowly Changing Dimension Type 2 | 缓慢变化维度的时间变体策略，通过 effective_from/effective_to 保留历史版本 |
 | RBAC | Role-Based Access Control | 基于角色的权限控制系统，4 张表：roles → role_permissions ← permissions + user_roles |

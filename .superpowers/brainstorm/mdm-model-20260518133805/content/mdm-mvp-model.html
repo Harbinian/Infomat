@@ -1,0 +1,209 @@
+<h2>首期 MDM 数据模型（MVP）草案</h2>
+<p class="subtitle">范围：组织/人员（岗位为核心） + 产品主数据（PLM口径，版本=新记录） + 外部系统映射</p>
+
+<div class="section">
+  <h3>1）组织 / 人员域（岗位为核心）</h3>
+  <div class="mockup">
+    <div class="mockup-header">核心实体与关系</div>
+    <div class="mockup-body">
+      <div class="split">
+        <div class="mockup">
+          <div class="mockup-header">OrgUnit（组织单元）</div>
+          <div class="mockup-body">
+            <div class="label">关键字段</div>
+            <ul>
+              <li>org_unit_id（内部ID）</li>
+              <li>org_unit_code（可读编码，MDM生成）</li>
+              <li>org_unit_name</li>
+              <li>org_type（类型：集团/公司/工厂/部门/班组…）</li>
+              <li>parent_org_unit_id（可配置层级树）</li>
+              <li>manager_person_id（负责人，可空）</li>
+              <li>status / effective_from / effective_to</li>
+            </ul>
+          </div>
+        </div>
+        <div class="mockup">
+          <div class="mockup-header">Position（岗位）</div>
+          <div class="mockup-body">
+            <div class="label">关键字段</div>
+            <ul>
+              <li>position_id（内部ID）</li>
+              <li>position_code（可读编码，MDM生成）</li>
+              <li>position_name</li>
+              <li>org_unit_id（归属组织）</li>
+              <li>status / effective_from / effective_to</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="split">
+        <div class="mockup">
+          <div class="mockup-header">Person（人员）</div>
+          <div class="mockup-body">
+            <div class="label">关键字段</div>
+            <ul>
+              <li>person_id（内部ID）</li>
+              <li>employee_no（工号，MDM生成；后续可对接HR）</li>
+              <li>person_name</li>
+              <li>mobile / email（可选）</li>
+              <li>employment_status（在职/离职等）</li>
+              <li>status / effective_from / effective_to</li>
+            </ul>
+          </div>
+        </div>
+        <div class="mockup">
+          <div class="mockup-header">PersonPositionAssignment（任岗关系）</div>
+          <div class="mockup-body">
+            <div class="label">关系</div>
+            <ul>
+              <li>person_id → Person</li>
+              <li>position_id → Position</li>
+              <li>is_primary（是否主岗，约束：同一人最多1个主岗）</li>
+              <li>start_date / end_date</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>为什么这样建（贴合你们当前约束）</h4>
+          <ul>
+            <li>不依赖矩阵组织/项目制，也能表达“人-岗位-部门”主链路</li>
+            <li>为后续角色/资质/授权预留挂载点（先不强上）</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>后续扩展方向</h4>
+          <ul>
+            <li>当需要班组/项目制时：在 Assignment 上扩展维度或新增 ProjectAssignment</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>2）产品主数据（PLM口径，版本=新记录）</h3>
+  <div class="mockup">
+    <div class="mockup-header">核心实体与关系</div>
+    <div class="mockup-body">
+      <div class="split">
+        <div class="mockup">
+          <div class="mockup-header">ProductFamily（产品族/型号根）</div>
+          <div class="mockup-body">
+            <div class="label">作用</div>
+            <ul>
+              <li>承载“同一型号/产品”的稳定标识</li>
+              <li>让多个版本（A/B/C 或 Rev1/Rev2）可归一查询</li>
+            </ul>
+            <div class="label">关键字段</div>
+            <ul>
+              <li>product_family_id（内部ID）</li>
+              <li>product_family_code（可读编码，MDM生成）</li>
+              <li>model_name / product_type / status</li>
+            </ul>
+          </div>
+        </div>
+        <div class="mockup">
+          <div class="mockup-header">Product（版本化产品记录）</div>
+          <div class="mockup-body">
+            <div class="label">关键字段</div>
+            <ul>
+              <li>product_id（内部ID）</li>
+              <li>product_code（可读编码，可与件号分离）</li>
+              <li>product_family_id（所属型号根）</li>
+              <li>revision（版次/修订号字段；不强制进入编码）</li>
+              <li>lifecycle_state（草稿/受控发布/废止）</li>
+              <li>superseded_by_product_id（新版本指针，可选）</li>
+              <li>effective_from / effective_to</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="split">
+        <div class="mockup">
+          <div class="mockup-header">BOMHeader / BOMLine（可选：若MDM暂不管BOM可先不做）</div>
+          <div class="mockup-body">
+            <ul>
+              <li>BOMHeader：bom_id，owner_product_id（对应某个 Product 版本）</li>
+              <li>BOMLine：parent_bom_id，child_product_id / child_material_id，qty，uom</li>
+            </ul>
+          </div>
+        </div>
+        <div class="mockup">
+          <div class="mockup-header">Classification / Attribute（建议做“可配置属性”）</div>
+          <div class="mockup-body">
+            <ul>
+              <li>ClassNode：分类树（与物料编码大类/中类/小类可对齐）</li>
+              <li>AttributeDef / AttributeValue：让技术属性不靠加字段发版</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>为什么需要 ProductFamily</h4>
+          <ul>
+            <li>你选择“版本=新记录”，如果没有 Family，版本一多就难以聚合统计与集成</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>与现有编码规范的关系</h4>
+          <ul>
+            <li>物料编码规范草案建议“REV独立字段、不进主编码”</li>
+            <li>即使你们以“新记录”表示新版本，编码是否变更仍可按规范由流程决定</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>3）跨系统映射（PLM / ERP / 数仓）</h3>
+  <div class="mockup">
+    <div class="mockup-header">ExternalIdentity（统一外部ID映射表）</div>
+    <div class="mockup-body">
+      <ul>
+        <li>entity_type（OrgUnit/Position/Person/Product/Material…）</li>
+        <li>entity_id（内部ID）</li>
+        <li>system_code（PLM/ERP/DW）</li>
+        <li>external_key（对方主键/编码）</li>
+        <li>is_primary（该系统主标识）</li>
+        <li>last_sync_at / last_sync_status</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>请你确认 3 个点（点选 + 回一句话即可）</h3>
+  <div class="options" data-multiselect>
+    <div class="option" data-choice="confirm_1" onclick="toggleSelect(this)">
+      <div class="letter">1</div>
+      <div class="content">
+        <h3>人员工号由 MDM 生成（后续对接HR再做映射）</h3>
+        <p>如果你们已有工号规则也可以替换</p>
+      </div>
+    </div>
+    <div class="option" data-choice="confirm_2" onclick="toggleSelect(this)">
+      <div class="letter">2</div>
+      <div class="content">
+        <h3>产品版本用 ProductFamily + Product(版本记录) 表达</h3>
+        <p>满足“版本=新记录”同时保留聚合查询能力</p>
+      </div>
+    </div>
+    <div class="option" data-choice="confirm_3" onclick="toggleSelect(this)">
+      <div class="letter">3</div>
+      <div class="content">
+        <h3>属性扩展用 AttributeDef/AttributeValue（不靠加字段发版）</h3>
+        <p>首期可先做在 Product 上</p>
+      </div>
+    </div>
+  </div>
+</div>

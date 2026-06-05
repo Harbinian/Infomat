@@ -1,0 +1,7 @@
+interface:
+  display_name: "Department Capability Mapping"
+  short_description: "部门能力、流程、系统映射与可视化"
+  brand_color: "#1A56DB"
+  default_prompt: "Use $department-capability-mapping to turn a department's procedures, standards, forms, and ledgers into capability-process-system mappings and MDM requirements."
+policy:
+  allow_implicit_invocation: true

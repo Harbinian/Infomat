@@ -1,0 +1,127 @@
+<h2>前端 UI 设计 — 角色权限管理 Tab</h2>
+<p class="subtitle">新增"角色权限"Tab（仅 admin 可见），包含四个子面板</p>
+
+<h3>整体布局</h3>
+<div class="mockup">
+  <div class="mockup-header">Tab 内左右分栏</div>
+  <div class="mockup-body">
+    <div style="display:flex;gap:16px;min-height:400px;">
+      <div style="width:260px;background:#1a1a2e;border-radius:4px;padding:12px;">
+        <div class="label" style="margin-bottom:8px;">子导航</div>
+        <div style="padding:8px;background:#2a5a8a;border-radius:3px;margin-bottom:4px;color:white;font-size:13px;">角色列表</div>
+        <div style="padding:8px;border-radius:3px;margin-bottom:4px;font-size:13px;color:#888;">权限矩阵</div>
+        <div style="padding:8px;border-radius:3px;margin-bottom:4px;font-size:13px;color:#888;">用户角色分配</div>
+        <div style="padding:8px;border-radius:3px;margin-bottom:4px;font-size:13px;color:#888;">批量导入</div>
+      </div>
+      <div style="flex:1;background:#1a1a2e;border-radius:4px;padding:16px;">
+        <div class="label">主内容区 — 根据左侧选择切换</div>
+        <div class="placeholder" style="margin-top:16px;">角色列表 / 权限矩阵 / 用户分配 / 导入界面</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h3>面板一：角色列表</h3>
+<div class="mockup">
+  <div class="mockup-header">角色管理界面</div>
+  <div class="mockup-body">
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <button class="mock-button" style="background:#2a8a5a;">+ 新建角色</button>
+      <input class="mock-input" placeholder="搜索角色..." style="width:200px;">
+    </div>
+    <table style="width:100%;font-size:12px;border-collapse:collapse;">
+      <tr style="background:#2a2a4e;"><th style="padding:6px;text-align:left;">角色编码</th><th style="padding:6px;text-align:left;">名称</th><th style="padding:6px;text-align:left;">继承自</th><th style="padding:6px;text-align:left;">权限数</th><th style="padding:6px;text-align:left;">用户数</th><th style="padding:6px;text-align:left;">系统</th><th style="padding:6px;">操作</th></tr>
+      <tr><td style="padding:6px;">admin</td><td style="padding:6px;">管理员</td><td style="padding:6px;">-</td><td style="padding:6px;">全部</td><td style="padding:6px;">2</td><td style="padding:6px;">是</td><td style="padding:6px;"><span style="color:#666;">-</span></td></tr>
+      <tr style="background:#1a1a2e;"><td style="padding:6px;">dept_auditor</td><td style="padding:6px;">部门审核员</td><td style="padding:6px;">reviewer</td><td style="padding:6px;">8</td><td style="padding:6px;">5</td><td style="padding:6px;">否</td><td style="padding:6px;color:#4a9eff;">编辑 删除</td></tr>
+    </table>
+  </div>
+</div>
+
+<h3>面板二：权限矩阵</h3>
+<div class="mockup">
+  <div class="mockup-header">选中角色后的权限矩阵（checkbox 网格）</div>
+  <div class="mockup-body">
+    <div style="margin-bottom:8px;font-size:13px;">
+      当前角色：<strong>部门审核员</strong>
+      <span style="margin-left:16px;color:#888;">继承自 reviewer 的权限以灰色显示，不可取消</span>
+    </div>
+    <table style="width:100%;font-size:12px;border-collapse:collapse;">
+      <tr style="background:#2a2a4e;">
+        <th style="padding:6px;text-align:left;">资源</th>
+        <th style="padding:6px;">查看</th><th style="padding:6px;">创建</th><th style="padding:6px;">编辑</th><th style="padding:6px;">删除</th><th style="padding:6px;">审批</th><th style="padding:6px;">字段限制</th>
+      </tr>
+      <tr><td style="padding:6px;">product</td>
+        <td style="padding:6px;text-align:center;"><input type="checkbox" checked disabled style="opacity:0.4;"></td>
+        <td style="padding:6px;text-align:center;"><input type="checkbox"></td>
+        <td style="padding:6px;text-align:center;"><input type="checkbox" checked></td>
+        <td style="padding:6px;text-align:center;"><input type="checkbox"></td>
+        <td style="padding:6px;text-align:center;"><input type="checkbox" checked></td>
+        <td style="padding:6px;"><code style="font-size:11px;">{"exclude":["cost"]}</code></td>
+      </tr>
+      <tr style="background:#1a1a2e;"><td style="padding:6px;">person</td>
+        <td style="padding:6px;text-align:center;"><input type="checkbox" checked></td>
+        <td style="padding:6px;text-align:center;"><input type="checkbox"></td>
+        <td style="padding:6px;text-align:center;"><input type="checkbox" checked></td>
+        <td style="padding:6px;text-align:center;"><input type="checkbox"></td>
+        <td style="padding:6px;text-align:center;"><input type="checkbox"></td>
+        <td style="padding:6px;"><code style="font-size:11px;">{"exclude":["mobile","email"]}</code></td>
+      </tr>
+    </table>
+    <button class="mock-button" style="margin-top:12px;background:#2a8a5a;">保存权限</button>
+  </div>
+</div>
+
+<h3>面板三：用户角色分配</h3>
+<div class="mockup">
+  <div class="mockup-header">为用户分配角色</div>
+  <div class="mockup-body">
+    <div style="display:flex;gap:16px;">
+      <div style="width:50%;">
+        <div class="label" style="margin-bottom:8px;">选择用户</div>
+        <input class="mock-input" placeholder="搜索工号/姓名..." style="width:100%;margin-bottom:8px;">
+        <div style="border:1px solid #333;border-radius:3px;max-height:200px;overflow-y:auto;font-size:12px;">
+          <div style="padding:6px;border-bottom:1px solid #222;background:#2a5a8a;">张三 · EMP001 · 技术部</div>
+          <div style="padding:6px;border-bottom:1px solid #222;">李四 · EMP002 · 质量部</div>
+          <div style="padding:6px;border-bottom:1px solid #222;">王五 · EMP003 · 生产部</div>
+        </div>
+      </div>
+      <div style="width:50%;">
+        <div class="label" style="margin-bottom:8px;">分配角色</div>
+        <div style="font-size:12px;margin-bottom:8px;">当前用户：<strong>张三</strong></div>
+        <div style="font-size:12px;">
+          <label style="display:block;margin-bottom:4px;"><input type="checkbox" checked> admin（默认）</label>
+          <label style="display:block;margin-bottom:4px;"><input type="checkbox"> dept_auditor</label>
+          <label style="display:block;margin-bottom:4px;"><input type="checkbox"> data_viewer</label>
+        </div>
+        <button class="mock-button" style="margin-top:12px;background:#2a8a5a;">保存分配</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h3>面板四：批量导入</h3>
+<div class="mockup">
+  <div class="mockup-header">批量导入界面</div>
+  <div class="mockup-body">
+    <div style="margin-bottom:12px;font-size:13px;">
+      <span style="margin-right:24px;">导入类型：
+        <select style="background:#1a1a2e;color:white;border:1px solid #444;padding:4px 8px;">
+          <option>用户-角色分配</option>
+          <option>角色-权限定义</option>
+        </select>
+      </span>
+      <a href="#" style="color:#4a9eff;">下载模板</a>
+    </div>
+    <div style="border:2px dashed #444;border-radius:4px;padding:40px;text-align:center;">
+      <p style="color:#888;">拖拽文件到此处，或点击选择</p>
+      <p style="color:#666;font-size:12px;">支持 .xlsx .xls .csv 格式</p>
+      <input type="file" style="display:none;">
+      <button class="mock-button">选择文件</button>
+    </div>
+    <div style="margin-top:12px;font-size:12px;">
+      <strong>最近导入记录：</strong>
+      <div style="margin-top:4px;color:#888;">2026-05-18 14:30 — user_roles_20260518.xlsx — 成功 45/50</div>
+      <div style="color:#888;">2026-05-17 09:15 — role_perms_v2.xlsx — 成功 120/120</div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,1869 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>昌兴复材 · 流程地图驾驶舱</title>
+<style>
+  :root {
+    --bg: #efe7d5;
+    --bg-deep: #e6dcc1;
+    --panel: #f7f1e0;
+    --panel-2: #fbf6e9;
+    --line: rgba(58, 46, 31, 0.16);
+    --line-soft: rgba(58, 46, 31, 0.08);
+    --ink: #2a2014;
+    --text: #3d3023;
+    --muted: #7a6a56;
+    --faint: #b8a88e;
+    --c-biz: #b25638;
+    --c-prod: #6f7d4e;
+    --c-direct: #4a6b7e;
+    --c-sys: #9a7a30;
+    --c-miss: #9a8e7c;
+    --focus: #c97050;
+    --shadow: 0 8px 28px rgba(58, 46, 31, 0.10);
+    --shadow-sm: 0 4px 12px rgba(58, 46, 31, 0.06);
+  }
+  * { box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+  body {
+    background:
+      radial-gradient(1200px 800px at 20% 0%, #f6efde 0%, transparent 60%),
+      radial-gradient(1000px 700px at 100% 100%, #e9dfc3 0%, transparent 55%),
+      var(--bg);
+    color: var(--text);
+    font-family: "Source Han Serif SC", "Noto Serif CJK SC", "Songti SC", "Microsoft YaHei", "PingFang SC", "Segoe UI", serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  body, button, input, select { font-family: "Source Han Sans SC", "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif; }
+
+  .app {
+    width: 100vw; height: 100vh;
+    display: grid;
+    grid-template-columns: 240px 1fr 300px;
+    grid-template-rows: 60px 1fr 40px;
+    grid-template-areas:
+      "top top top"
+      "left main right"
+      "foot foot foot";
+  }
+
+  /* ===== 顶部 ===== */
+  .top {
+    grid-area: top;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 22px;
+    border-bottom: 1px solid var(--line);
+    background: linear-gradient(180deg, rgba(247, 241, 224, 0.92), rgba(247, 241, 224, 0.78));
+    backdrop-filter: blur(8px);
+  }
+  .top .brand { display: flex; align-items: baseline; gap: 14px; min-width: 0; }
+  .top h1 { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: 0.5px; color: var(--ink); white-space: nowrap; }
+  .top h1 .sep { color: var(--muted); font-weight: 400; margin: 0 2px; }
+  .top h1 .sub { color: var(--muted); font-weight: 500; }
+  .top .caption { font-size: 12px; color: var(--muted); margin: 0; white-space: nowrap; }
+  .top .meta { display: flex; align-items: center; gap: 14px; font-size: 12px; color: var(--muted); }
+
+  .mode-switch {
+    display: inline-flex;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 3px;
+  }
+  .mode-switch button {
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    font: inherit; font-size: 12.5px;
+    padding: 5px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 0.12s ease;
+  }
+  .mode-switch button.on {
+    background: var(--ink);
+    color: #f7f1e0;
+  }
+  .mode-switch button:hover:not(.on) { color: var(--ink); }
+
+  .top .pill {
+    padding: 4px 10px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--panel-2);
+  }
+  .top .pill .dot {
+    display: inline-block; width: 6px; height: 6px;
+    border-radius: 50%; background: #6f7d4e;
+    margin-right: 6px; vertical-align: middle;
+  }
+
+  /* ===== 左侧栏 ===== */
+  .left {
+    grid-area: left;
+    border-right: 1px solid var(--line);
+    background: linear-gradient(180deg, var(--panel) 0%, var(--panel-2) 100%);
+    padding: 16px 14px;
+    overflow-y: auto;
+  }
+  .group { margin-bottom: 18px; }
+  .group h3 {
+    margin: 0 0 8px;
+    font-size: 11px; font-weight: 700; color: var(--muted);
+    letter-spacing: 1.5px; text-transform: uppercase;
+  }
+  .legend-list { font-size: 11.5px; line-height: 1.8; color: var(--muted); }
+  .legend-list code {
+    font-family: inherit; font-size: 11px; font-weight: 600;
+    color: var(--ink); background: var(--panel-2);
+    padding: 1px 6px; border-radius: 3px; margin-right: 4px;
+  }
+  .seg {
+    display: flex; flex-wrap: wrap; gap: 5px;
+  }
+  .seg button, .seg select {
+    border: 1px solid var(--line);
+    background: var(--panel-2);
+    color: var(--text);
+    font: inherit; font-size: 12px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.12s ease;
+  }
+  .seg button.on, .seg select.on {
+    background: var(--ink); color: #f7f1e0; border-color: var(--ink);
+  }
+  .seg button:hover:not(.on) { border-color: var(--muted); }
+  .seg .swatch {
+    display: inline-block; width: 8px; height: 8px; border-radius: 2px;
+    margin-right: 4px; vertical-align: middle;
+  }
+  .seg .stack { display: flex; flex-direction: column; gap: 5px; width: 100%; }
+  .seg .stack select { width: 100%; padding: 7px 8px; }
+
+  .reset-btn {
+    width: 100%;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--muted);
+    font: inherit; font-size: 12px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.12s ease;
+  }
+  .reset-btn:hover { border-color: var(--ink); color: var(--ink); }
+
+  .left .scope {
+    font-size: 12px;
+    color: var(--text);
+    background: var(--panel-2);
+    border-left: 2px solid var(--c-biz);
+    border-radius: 4px;
+    padding: 8px 10px;
+    line-height: 1.55;
+  }
+  .left .scope b { color: var(--ink); }
+
+  /* ===== 主区 ===== */
+  .main {
+    grid-area: main;
+    padding: 16px;
+    overflow-y: auto;
+  }
+  .row { margin-bottom: 16px; }
+  .row-title {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .row-title h2 {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink);
+    letter-spacing: 0.5px;
+  }
+  .row-title .hint { font-size: 11.5px; color: var(--muted); }
+
+  /* KPI 卡片 */
+  .kpis {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  .kpi {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 14px 14px 12px;
+    box-shadow: var(--shadow-sm);
+    position: relative;
+    overflow: hidden;
+  }
+  .kpi::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: var(--bar, var(--c-biz));
+  }
+  .kpi .label {
+    font-size: 11.5px; color: var(--muted);
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+  .kpi .value {
+    font-size: 28px; font-weight: 700; color: var(--ink);
+    line-height: 1.1;
+    font-family: "Source Han Serif SC", "Noto Serif CJK SC", serif;
+  }
+  .kpi .value .unit {
+    font-size: 13px; color: var(--muted); font-weight: 500;
+    margin-left: 2px;
+  }
+  .kpi .sub {
+    font-size: 11.5px; color: var(--muted); margin-top: 4px;
+  }
+  .kpi .sub b { color: var(--ink); font-weight: 600; }
+  .kpi .sub.warn { color: var(--focus); }
+  .kpi .sub.ok { color: #6f7d4e; }
+
+  /* 图表 */
+  .charts {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr 1.4fr;
+    gap: 12px;
+  }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px 14px;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: column;
+  }
+  .card-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin-bottom: 6px;
+  }
+  .card-head h3 {
+    margin: 0;
+    font-size: 13px; font-weight: 700; color: var(--ink);
+  }
+  .card-head .sub { font-size: 11px; color: var(--muted); }
+  .chart-body { flex: 1; min-height: 180px; position: relative; }
+  .chart-body > div { width: 100%; height: 100%; min-height: 180px; }
+
+  /* 表格 */
+  .tables {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 12px;
+  }
+  /* 部门名单元格:不换行 */
+  .dept-cell .name { white-space: nowrap; }
+  /* 表格行可点击 */
+  table tbody tr { cursor: pointer; }
+  table tbody tr.empty-dept { cursor: default; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+  }
+  table th {
+    text-align: left;
+    font-weight: 600;
+    color: var(--muted);
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel-2);
+    font-size: 11.5px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    position: sticky; top: 0;
+  }
+  table td {
+    padding: 7px 10px;
+    border-bottom: 1px dashed var(--line-soft);
+    color: var(--text);
+  }
+  table tr:hover td { background: rgba(178, 86, 56, 0.04); }
+  table tr.empty-dept td { color: var(--muted); }
+  .dept-cell { display: flex; align-items: center; gap: 6px; }
+  .dept-cell .dot {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  }
+  .num-cell { text-align: right; font-variant-numeric: tabular-nums; }
+  .badge {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 10.5px;
+    font-weight: 500;
+  }
+  .badge.ok { background: rgba(111, 125, 78, 0.16); color: #5a6840; }
+  .badge.miss { background: rgba(154, 142, 124, 0.18); color: #6e6555; }
+  .badge.high { background: rgba(201, 112, 80, 0.18); color: #b25638; font-weight: 600; }
+  .badge.medium { background: rgba(154, 122, 48, 0.16); color: #7a5e25; font-weight: 600; }
+  .badge.low { background: rgba(74, 107, 126, 0.12); color: #3a5a6e; }
+  .table-scroll { max-height: 260px; overflow: auto; }
+  .table-scroll-lg { max-height: 400px; overflow: auto; }
+
+  /* 跨部门衔接风险表 */
+  #tableCross { table-layout: auto; min-width: 100%; width: max-content; }
+  #tableCross th, #tableCross td { white-space: nowrap; padding-left: 12px; padding-right: 12px; }
+  #tableCross th:first-child, #tableCross td:first-child { position: sticky; left: 0; background: var(--panel); z-index: 1; }
+  #tableCross th:first-child { min-width: 120px; }
+  #tableCross .risk-desc { max-width: 280px; white-space: normal; font-size: 12px; line-height: 1.5; }
+  #tableCross .dept-link { color: var(--c-biz); font-weight: 500; }
+  #tableCross .dept-link-miss { color: var(--c-miss); }
+
+  /* KPI 风险色 */
+  .kpi-risk-high { --bar: var(--focus); }
+  .kpi-risk-high .value { color: var(--focus); }
+  .kpi-risk-medium { --bar: #9a7a30; }
+  .kpi-risk-medium .value { color: #9a7a30; }
+  /* 部门工作负载表 / 待补全表:列宽自适应,部门名不换行 */
+  #tableDept, #tableMiss {
+    table-layout: auto;
+    min-width: 100%;
+    width: max-content;
+  }
+  #tableDept th, #tableDept td,
+  #tableMiss th, #tableMiss td {
+    white-space: nowrap;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  #tableDept th:first-child, #tableDept td:first-child,
+  #tableMiss th:first-child, #tableMiss td:first-child {
+    position: sticky;
+    left: 0;
+    background: var(--panel);
+    z-index: 1;
+  }
+  #tableDept th:first-child, #tableMiss th:first-child {
+    min-width: 110px;
+  }
+
+  /* 右侧栏 */
+  .right {
+    grid-area: right;
+    border-left: 1px solid var(--line);
+    background: var(--panel);
+    padding: 16px 16px 12px;
+    overflow-y: auto;
+  }
+  .right h2 {
+    margin: 0 0 10px;
+    font-size: 12px; font-weight: 700; color: var(--muted);
+    letter-spacing: 1.5px; text-transform: uppercase;
+  }
+  .insight {
+    background: var(--panel-2);
+    border: 1px solid var(--line-soft);
+    border-left: 3px solid var(--accent, var(--c-biz));
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    font-size: 12.5px;
+    color: var(--text);
+    line-height: 1.55;
+  }
+  .insight b { color: var(--ink); font-weight: 700; }
+  .insight .em { color: var(--accent, var(--c-biz)); font-weight: 600; }
+  .insight ul { margin: 4px 0 0; padding-left: 18px; }
+  .insight li { padding: 2px 0; }
+  .insight.warn { --accent: var(--focus); }
+  .insight.ok { --accent: #6f7d4e; }
+  .insight.info { --accent: #4a6b7e; }
+
+  /* 底部 */
+  .foot {
+    grid-area: foot;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 22px;
+    border-top: 1px solid var(--line);
+    background: linear-gradient(0deg, rgba(247, 241, 224, 0.92), rgba(247, 241, 224, 0.78));
+    font-size: 12px; color: var(--muted);
+  }
+  .foot .stats { display: flex; align-items: center; gap: 18px; }
+  .foot .stats b { color: var(--ink); font-weight: 600; }
+  .foot .stats .sep { color: var(--faint); }
+  .foot .perf { display: flex; align-items: center; gap: 12px; }
+  .foot .perf .ok { color: #6f7d4e; }
+  .foot .scope-info b { color: var(--ink); }
+
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+  ::-webkit-scrollbar-track { background: transparent; }
+
+  /* ===== 模态 ===== */
+  .modal {
+    position: fixed; inset: 0;
+    display: none;
+    z-index: 50;
+  }
+  .modal[aria-hidden="false"] { display: block; }
+  .modal-mask {
+    position: absolute; inset: 0;
+    background: rgba(42, 32, 20, 0.45);
+    backdrop-filter: blur(2px);
+    animation: fadeIn 0.15s ease;
+  }
+  .modal-panel {
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    width: min(960px, 92vw);
+    max-height: 88vh;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    box-shadow: 0 30px 60px rgba(0,0,0,0.25);
+    display: flex; flex-direction: column;
+    animation: popIn 0.18s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes popIn { from { opacity: 0; transform: translate(-50%, -46%) scale(0.97); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+  .modal-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel-2);
+    border-radius: 10px 10px 0 0;
+  }
+  .modal-head h2 {
+    margin: 0;
+    font-size: 16px; font-weight: 700;
+    color: var(--ink);
+    font-family: "Source Han Serif SC", "Noto Serif CJK SC", serif;
+  }
+  .modal-head .caption { font-size: 12px; color: var(--muted); margin: 4px 0 0; }
+  .modal-close {
+    background: transparent; border: 0;
+    font-size: 24px; line-height: 1;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 4px 10px;
+    border-radius: 6px;
+    transition: all 0.12s ease;
+  }
+  .modal-close:hover { background: var(--line-soft); color: var(--ink); }
+  .modal-body {
+    padding: 18px 20px;
+    overflow-y: auto;
+  }
+  .modal-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .modal-stat {
+    background: var(--panel-2);
+    border: 1px solid var(--line-soft);
+    border-radius: 6px;
+    padding: 10px 12px;
+  }
+  .modal-stat .l { font-size: 11px; color: var(--muted); margin-bottom: 2px; }
+  .modal-stat .v { font-size: 18px; font-weight: 700; color: var(--ink); font-family: "Source Han Serif SC", "Noto Serif CJK SC", serif; }
+  .modal-section { margin-top: 18px; }
+  .modal-section h3 {
+    font-size: 12px; font-weight: 700; color: var(--muted);
+    letter-spacing: 1px;
+    margin: 0 0 8px;
+  }
+  .modal-flow {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+  .modal-flow .col-head {
+    font-size: 11px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 1px;
+    padding: 4px 8px;
+    background: var(--panel-2);
+    border-radius: 4px;
+  }
+  .modal-flow .col { display: flex; flex-direction: column; gap: 4px; }
+  .modal-flow .pill {
+    padding: 6px 10px;
+    border-radius: 5px;
+    background: var(--panel-2);
+    border: 1px solid var(--line-soft);
+    font-size: 12px;
+    color: var(--text);
+  }
+  .modal-flow .pill.sys {
+    background: rgba(154, 122, 48, 0.10);
+    color: #7a5e25;
+    border-color: rgba(154, 122, 48, 0.25);
+  }
+  .modal-flow .pill.sys-other {
+    background: rgba(122, 106, 86, 0.10);
+    color: #5d4f3d;
+  }
+  .modal-flow .pill.empty { color: var(--muted); font-style: italic; }
+  .modal-search {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--panel-2);
+    color: var(--text);
+    font: inherit; font-size: 12px;
+    margin-bottom: 8px;
+  }
+  .modal-search:focus { outline: none; border-color: var(--ink); }
+
+  /* ===== 邻接矩阵 ===== */
+  .matrix-wrap {
+    max-height: 420px;
+    overflow: auto;
+    border: 1px solid var(--line-soft);
+    border-radius: 6px;
+    background: var(--panel-2);
+  }
+  table.matrix {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11.5px;
+    font-variant-numeric: tabular-nums;
+  }
+  table.matrix th {
+    position: sticky; top: 0; z-index: 2;
+    background: var(--panel-2);
+    text-align: center;
+    font-weight: 600;
+    color: var(--muted);
+    padding: 7px 4px 5px;
+    font-size: 11px;
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+  table.matrix th.proc-col { text-align: left; padding-left: 10px; min-width: 200px; position: sticky; left: 0; z-index: 3; }
+  table.matrix th.sys-col { min-width: 62px; }
+  table.matrix th.sys-other { color: var(--c-miss); }
+  table.matrix th.reach-col { min-width: 80px; }
+  table.matrix td {
+    padding: 5px 4px;
+    text-align: center;
+    border-bottom: 1px dashed var(--line-soft);
+  }
+  table.matrix td.proc-cell {
+    text-align: left;
+    padding-left: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 240px;
+    color: var(--text);
+    background: var(--panel-2);
+    position: sticky; left: 0; z-index: 1;
+    border-right: 1px solid var(--line-soft);
+  }
+  table.matrix td.cell { padding: 5px 4px; }
+  table.matrix td.empty-cell { color: var(--faint); }
+  table.matrix td.reach-cell { font-weight: 600; color: var(--ink); }
+  table.matrix tfoot td {
+    background: var(--panel-2);
+    font-weight: 600;
+    color: var(--ink);
+    border-top: 2px solid var(--line);
+    font-size: 11px;
+  }
+  table.matrix tfoot td.proc-cell { font-weight: 700; }
+  .matrix-wrap .dot {
+    display: inline-block;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    position: relative;
+    vertical-align: middle;
+    line-height: 16px;
+  }
+  .matrix-wrap .dot.filled {
+    background: var(--c, var(--ink));
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+  }
+  .matrix-wrap .dot.empty {
+    border: 1.5px solid var(--faint);
+    color: var(--faint);
+    font-size: 12px;
+    line-height: 13px;
+    background: transparent;
+    text-align: center;
+  }
+  .matrix-hint {
+    font-size: 11px; color: var(--faint); font-weight: 400; margin-left: 6px;
+  }
+  .ext-tag {
+    display: inline-block;
+    font-size: 9px; font-weight: 600;
+    color: var(--c-miss);
+    border: 1px solid var(--c-miss);
+    border-radius: 3px;
+    padding: 0 4px;
+    margin-left: 2px;
+    vertical-align: middle;
+    line-height: 13px;
+    letter-spacing: 0.5px;
+  }
+  .matrix-wrap .dot sup {
+    font-size: 9px;
+    line-height: 1;
+    position: absolute;
+    top: -2px; right: -3px;
+    background: #fff;
+    color: var(--ink);
+    border-radius: 50%;
+    width: 11px; height: 11px;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid var(--line);
+  }
+  table.matrix tr:hover td.cell,
+  table.matrix tr:hover td.reach-cell {
+    background: rgba(178, 86, 56, 0.05);
+  }
+  table.matrix tfoot tr:hover td { background: var(--panel-2); }
+  .matrix-legend {
+    display: flex; align-items: center; gap: 14px;
+    margin-top: 8px;
+    font-size: 11px; color: var(--muted);
+    flex-wrap: wrap;
+  }
+  .matrix-legend .swatch {
+    display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+    margin-right: 4px; vertical-align: middle;
+  }
+  .modal-foot {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--line);
+    font-size: 11.5px;
+    color: var(--muted);
+    display: flex; justify-content: space-between;
+  }
+</style>
+</head>
+<body>
+<script type="application/json" id="cross-dept-data">
+{"stats":{"totalChecked":168,"confirmed":158,"pendingConfirm":6,"highRisk":1,"mediumRisk":0},"risks":[{"source":"全部已映射部门","target":"工程技术部","a1":"—","refs":34,"risk":"high","desc":"所有指向工程技术部的A1在目标侧无对应流程，跨部门交互链在此节点断裂。影响经营发展部的合同评审/报价/技术条款审查流程、项目管理部的项目启动/计划/开工评审流程、财务部的成本核算输入、质量管理部的归零管理/交付文件流程","status":"未映射-无文档"},{"source":"经营发展部等4部门","target":"复材车间","a1":"—","refs":24,"risk":"low","desc":"复材车间已完成部门映射，原24条跨部门引用需按现有流程逐条核对目标侧是否已有对应 业务流程（L3）/业务行为（A1）。","status":"已映射-待复核"},{"source":"运维安环部","a1":"YW-L3-18-A07","target":"经营发展部","refs":1,"risk":"low","desc":"环境纠纷中协调经营发展部提出法律意见——经营发展部映射中未见明确的法务支持流程","status":"已映射-待确认"},{"source":"运维安环部","a1":"YW-L3-19-A05","target":"经营发展部","refs":1,"risk":"low","desc":"环保工作考核评分上报——经营发展部未见环保考核接收流程","status":"已映射-待确认"},{"source":"经营发展部","a1":"JY-L3-32-A03","target":"行政人事部","refs":1,"risk":"low","desc":"输入来源为行政人事部但内容未明确","status":"已映射-待确认"},{"source":"财务部","a1":"CW-L3-13-A01","target":"行政人事部","refs":1,"risk":"low","desc":"无形资产会计核算引用行政人事部——行政人事部未见知识产权/专利管理流程","status":"已映射-待确认"},{"source":"项目管理部","a1":"XM-L3-01-A03","target":"行政人事部","refs":1,"risk":"low","desc":"A1行仅标注\"备案\"，未说明具体内容","status":"已映射-待确认"},{"source":"运维安环部","a1":"YW-L3-06-A07","target":"项目管理部","refs":1,"risk":"low","desc":"技改项目审批——项目管理部未见固定资产技改相关流程","status":"已映射-待确认"}],"interactionChains":[{"name":"客户订单→交付链","breaks":["工程技术部: BOM/工艺节点断裂,无映射文档"],"status":"partial"},{"name":"成本管控链","breaks":["工程技术部: BOM/技术方案输入缺失,财务部无法完整核算"],"status":"partial"},{"name":"工装全生命周期链","breaks":["沈飞民机科技创新部为外部实体,昌兴侧物资保障部执行层已覆盖"],"status":"ok"}],"source":"docs/norms/流程治理/跨部门完整性检查报告.md"}
+</script>
+<script type="application/json" id="sankey-data">
+{"nodes":[{"name":"昌兴复材"},{"name":"经营域"},{"name":"总经理直辖域"},{"name":"生产域"},{"name":"经营发展部"},{"name":"行政人事部"},{"name":"物资保障部"},{"name":"财务部"},{"name":"工程技术部"},{"name":"质量管理部"},{"name":"项目管理部"},{"name":"复材车间"},{"name":"运维安环部"},{"name":"班组排产管理"},{"name":"在制品工序管理"},{"name":"随炉件与理化检测管理"},{"name":"工装工具策划管理"},{"name":"工艺装备申请管理"},{"name":"工装设计与更改管理"},{"name":"工装验收管理"},{"name":"工装验证管理"},{"name":"工装使用管理"},{"name":"工装定检管理"},{"name":"工艺装备返工管理"},{"name":"工艺装备维护管理"},{"name":"工装优化管理"},{"name":"工具申请与采购管理"},{"name":"工具现场管理"},{"name":"工具验证与选型管理"},{"name":"物料接收运转储存管理"},{"name":"冷库材料出入库管理"},{"name":"设备备件管理"},{"name":"工装信息管理"},{"name":"勤哲模块开发管理"},{"name":"部门文件版本管理"},{"name":"发展规划制定调整管理"},{"name":"年度经营指标制定分解管理"},{"name":"年度部门绩效考核管理"},{"name":"月度绩效考核管理"},{"name":"市场开发初步接触与方案确认"},{"name":"报价、商务谈判与定价管理"},{"name":"工时积分定额管理"},{"name":"项目合同评审执行管理"},{"name":"顾客沟通与满意度管理"},{"name":"销售订单评审和执行管理"},{"name":"项目经营合规管理"},{"name":"产品交付与结算回款管理"},{"name":"工作转移管理"},{"name":"交付后的不合格管理"},{"name":"采购分类与采购周期管理"},{"name":"供应商开发与评价管理"},{"name":"供应商审核批准与物料清册管理"},{"name":"供应商绩效评价管理"},{"name":"供应商风险与再评价管理"},{"name":"采购实施与外购产品验证管理"},{"name":"外协加工需求、价格与合同管理"},{"name":"外协加工执行、检验与结算管理"},{"name":"外包申请与过程控制"},{"name":"外包生产资料与物料工装发放"},{"name":"临时与紧急外包管理"},{"name":"外委检测管理"},{"name":"年度基建技改计划管理"},{"name":"基建技改报修与实施管理"},{"name":"新设备验收管理"},{"name":"新设备资料归档与固定资产移交"},{"name":"管理体系程序文件编制管理"},{"name":"管理体系程序文件编码管理"},{"name":"质量体系沟通管理"},{"name":"管理创新管理"},{"name":"企业文化建设与宣传管理"},{"name":"政策研究与项目申报管理"},{"name":"内部控制与全面风险管理"},{"name":"项目激励管理"},{"name":"海关业务申报管理"},{"name":"法律事务与证照管理"},{"name":"人力资源规划管理"},{"name":"员工招聘录用管理"},{"name":"退休人员续用管理"},{"name":"劳动合同管理"},{"name":"岗位变动管理"},{"name":"考勤与请休假管理"},{"name":"员工离职管理"},{"name":"岗前培训与取证管理"},{"name":"培训体系管理"},{"name":"岗位说明书编制管理"},{"name":"技能矩阵与评价管理"},{"name":"新员工管培管理"},{"name":"社会保险与公积金管理"},{"name":"领导干部选拔任用管理"},{"name":"领导干部管理"},{"name":"会议管理"},{"name":"车辆管理"},{"name":"办公用品管理"},{"name":"新闻宣传管理"},{"name":"公文管理"},{"name":"印章管理"},{"name":"外来人员接待管理"},{"name":"档案资料管理"},{"name":"宿舍管理"},{"name":"技术资料管理"},{"name":"成本核算管理"},{"name":"成本测算管理"},{"name":"固定资产管理"},{"name":"无形资产管理"},{"name":"银行账户与存款管理"},{"name":"现金与票据管理"},{"name":"资金计划与备用金管理"},{"name":"差旅费管理"},{"name":"财务报销与付款管理"},{"name":"内部审核管理"},{"name":"外部审核管理"},{"name":"管理评审"},{"name":"纠正措施管理"},{"name":"质量问题归零管理"},{"name":"质量信息收集分析与评价"},{"name":"持续改进管理"},{"name":"产品检验管理"},{"name":"首件检验管理"},{"name":"检验方案策划管理"},{"name":"顾客/项目符合性检验管理"},{"name":"无损检测管理"},{"name":"数字化测量管理"},{"name":"不合格品审理与处置"},{"name":"不合格品审理人员授权管理"},{"name":"质量逃逸管理"},{"name":"多余物控制管理"},{"name":"产品紧急放行管理"},{"name":"交付文件准备管理"},{"name":"项目交付文件管理（商飞/波音/MA700/A220）"},{"name":"质量记录全过程管理"},{"name":"测量设备管理"},{"name":"测量软件管理"},{"name":"计量确认与溯源管理"},{"name":"安全基础与责任管理"},{"name":"风险识别与分级管控"},{"name":"隐患排查治理与安全绩效"},{"name":"危险作业许可管理"},{"name":"安全应急与事故工伤管理"},{"name":"相关方与安全投入管理"},{"name":"职业病危害识别申报与告知"},{"name":"职业病防护与劳动防护"},{"name":"职业危害监测与健康监护"},{"name":"职业健康安全体系运行"},{"name":"消防基础与教育考评"},{"name":"建设项目消防三同时"},{"name":"火灾隐患排查与整改"},{"name":"消防设施与重点部位管理"},{"name":"消防应急与火灾事故管理"},{"name":"环境目标与环境因素管理"},{"name":"污染防治与环境监测"},{"name":"环境事件与纠纷管理"},{"name":"环保隐患治理"},{"name":"环境统计与外部报送"},{"name":"能源评审与年度策划"},{"name":"节能运行控制"},{"name":"节能双碳监督与绩效"},{"name":"能源计量与用能设备管理"},{"name":"能源体系运行"},{"name":"设备计划与资产策划"},{"name":"设备使用与现场巡检"},{"name":"维护保养与维修保障"},{"name":"备件与耗材保障"},{"name":"设备异常与变动管理"},{"name":"法规和其他要求控制"},{"name":"文件记录与信息交流"},{"name":"目标、审核、评审与改进"},{"name":"项目启动策划"},{"name":"研制项目策划"},{"name":"年度一层计划管理"},{"name":"月度二层计划管理"},{"name":"三层作业计划管理"},{"name":"临时计划管理"},{"name":"开工评审管理"},{"name":"排罐计划管理"},{"name":"表面计划排产管理"},{"name":"零件生产计划管理"},{"name":"项目进度监控"},{"name":"生产计划考核"},{"name":"产品包装管理"},{"name":"产品包装实施"},{"name":"产品发运与交付"},{"name":"交付横向管理"},{"name":"原材料质量管理"},{"name":"产品质量管理"},{"name":"材料代用管理"},{"name":"随炉件管理"},{"name":"项目成本管理"},{"name":"项目存货计划管理"},{"name":"项目存货入库与存储管理"},{"name":"项目存货领用与盘点管理"},{"name":"项目存货处置管理"},{"name":"风险识别与评估"},{"name":"风险应对与监控"},{"name":"风险记录与复盘"},{"name":"工装方案管理"},{"name":"工装进度管理"},{"name":"工装采购与制造协同"},{"name":"工装质量管理"},{"name":"工装挂账回款管理"},{"name":"工装台账与系统维护"},{"name":"工装风险管控"},{"name":"工装现场与物流管理"},{"name":"物资出门管理"},{"name":"车辆使用管理"},{"name":"快递管理"},{"name":"罐前计划编制：按项目订单和交付紧急度确定投产优先顺序，核查人机料法环开工条件，核算标准工时（排罐固化时间+投影仪时间+出入罐准备时间），编制罐前排产计划"},{"name":"排罐执行与跟踪调整：每周四更新罐前计划，各项目助理跟踪投产进度，识别差异后迅速调整排产；根据固化程序合理并罐以控制成本"},{"name":"关键件横向跟踪：工序项目助理参加班组早会，核对关键件任务布置，收集班组反馈的问题并汇总至关键件问题跟踪表，分配至主管项目助理跟踪解决"},{"name":"工序问题闭环与考核：工序项目助理轮岗制（每两周换一次工序），生产部组长汇总问题数据并分配至各职能部门跟踪考核，关键件计划每两周更新状态"},{"name":"随炉件出罐通知与交接：班组在内部群发布出罐信息后转发至\"公司-航达随炉件移交群\"，航达24小时内反馈领取计划，双方办理书面交接手续并签字确认"},{"name":"理化结果跟踪反馈：理化检测须14天内出具结果，到期前1天预告，结果生成后同步至移交群并抄送相关方；逾期需提前2天说明并制定补救方案"},{"name":"工装工具品种表编制、评审、审批与发布"},{"name":"工装定检目录编制、定检计划编制与发布"},{"name":"工艺装备申请单编制、技术方案审核、设计审核、管理审核与批准"},{"name":"样板/数据集申请单编制与审批"},{"name":"工装设计（含产品包装设计、专用工具设计、样板数据集设计）、工装数据校对、审核、标审、审查与批准"},{"name":"工装数据更改（先行更改G/J类处理、换版更改、版次升级）与工装数据发放"},{"name":"工装设计评审（PDR/CDR/FDR三个阶段或五阶段评审）"},{"name":"工装使用说明书编制、评审、培训与备案"},{"name":"工装交检组织、工装实物与交付文件验收、合格证明盖章"},{"name":"不合格工装标识、审理、处置意见、整改与关闭"},{"name":"工装投产验证（II类三架份/III类一架份）、验证清单编制与合格证验证标识"},{"name":"工装接收、建账、存放与保管"},{"name":"工装日常使用、使用前检查、故障反馈与限用标识"},{"name":"客供工装接收、保管、借用、维护、使用、定检、资产管理与归还"},{"name":"工装转移计划编制、借用申请与审批、周转使用跟踪"},{"name":"复材工装使用管理"},{"name":"商飞项目工装使用管理"},{"name":"生产和检验共用工装用前校准管理"},{"name":"产品外包供应商用工艺装备管理"},{"name":"工装定期检查（定检）实施：备忘录管理、定检申请、定检/检修记录、召回通知"},{"name":"工装定期检查（定查）实施：III类工装损坏、磨损、完整性检查"},{"name":"定检技术要求编发与定检周期申请"},{"name":"工装返修/返工申请、方案评审、派工执行与交检"},{"name":"工装损坏丢失问题处理：问题记录、技术/经济责任鉴定与裁决"},{"name":"工装维护保养计划编制、二级维护保养（TPM）、维护点检与使用情况检查"},{"name":"工装封存管理：长期停用工装封存、封存挂签与封存目录维护"},{"name":"工装可拆卸件管理：可拆卸件目录编制、拆卸后放置固定与复装防错"},{"name":"工装产能优化：产能需求分析、工装测算、品种表更新与工装需求提出"},{"name":"工装结构方案优化：安全隐患整改、工装结构改进与方案升版"},{"name":"通用工具申请审签、专用工具申请审签、工具采购跟踪与到货"},{"name":"工具盘点与采购付款跟踪"},{"name":"新工具接收验收、库房管理与工具调拨"},{"name":"工具使用、维护保养与控制"},{"name":"工具维修管理（刃具修磨、风电动工具维修、其他工具维修）"},{"name":"工具报废管理：报废鉴定、丢失处理与赔偿、报废工具管理"},{"name":"量具检定与维修管理"},{"name":"工具验证要求、标准、流程与方法执行"},{"name":"新工具试用申请、试用报告审签与小批量使用反馈"},{"name":"物料接收、检验、运转、储存与台账管理"},{"name":"冷库材料入库验收、出库领用、温度监控与库存盘点"},{"name":"设备备件计划、采购申请、入库验收、领用与安全库存管理"},{"name":"工装信息台账维护、工装数据电子化管理与信息查询"},{"name":"OA勤哲模块需求分析、开发实施、测试上线与运维管理"},{"name":"部门级制度文件版本控制、分发、升版与作废管理"},{"name":"发展规划制定、调整、评审、发布与宣贯跟踪"},{"name":"年度经营指标制定、分解、下发与调整"},{"name":"组织绩效指标制定、实施、核算、审定、通报与应用"},{"name":"月度绩效评分、重点任务跟踪、行动项调整与结果核算"},{"name":"市场信息收集、客户初步接触、技术/商务方案组织与合作意向确认"},{"name":"询价输入、报价识别、成本/技术支持、报价单制作、谈判与最终定价"},{"name":"工时积分定额标准维护、工时定额统计分析与报价基础引用"},{"name":"合同起草、相关部门审查、财务/法律审查、领导审批、签订与归档"},{"name":"顾客需求、抱怨、质量通知、工程咨询/质疑、访问评审与满意度调查改进"},{"name":"批产、科研外部、临时/自揽、返工/报废补制、自制/内部订单评审与下发"},{"name":"合同执行、任务订单下达、履约过程问题跟踪、变更处理与合规归档"},{"name":"交付单据编制流转、交付报表、对账补收货、结算回款计划与差异核对"},{"name":"工作转移申请、供应商承接风险评估、转移计划、客户批准与首件验证衔接"},{"name":"交付后不合格品接收记录、分析论证、处置建议、返工返修监督与趋势改进"},{"name":"采购/外包产品分类、请购时间、采购周期、请购部门和采购管控要求维护"},{"name":"供应商开发需求、寻源、潜在供应商信息维护、拟开发供应商确定、开发计划与评价"},{"name":"供应商批准、有条件批准、取消批准、适用项目确定、合格供应商目录建立维护与清册更新"},{"name":"交付进度、交付质量、服务水平数据收集、季度/年度绩效综合评价、公布与沟通"},{"name":"供应商风险事项收集、风险识别分析、风险等级评估、应对措施、定期/临时再评价"},{"name":"采购计划、特批供货、采购/外包合同、外购产品验收、假冒件预防与处置"},{"name":"外协需求发起审批、目标价制定、供应商报价、合同/报价单上传审批"},{"name":"零件/工装外协加工、接收检验、不合格扣款、对账、结算与付款申请"},{"name":"外包申请、首检确定、供应商生产计划编制传递、计划执行调整与周例会跟踪"},{"name":"供应商技术文件发放、原材料领用发放、工装样板借用、制造记录和电子账更新"},{"name":"临时外包采购申请、供应商选择、合同签订、采购订单下达、紧急外包供应商报价与分工报告"},{"name":"外委检测需求、检测机构选择评价、合同签订、样品交接、检测报告审核验收与异常监督"},{"name":"年度技改计划制定、临时性技改项目管理、基建技改计划流程确认"},{"name":"基建技改/维修申报、现场勘察、费用评估、全周期计划、计划调整与实施跟踪"},{"name":"设备预验收、开箱验收、终验收、特种设备补充验收、遗留问题处理与风险保留"},{"name":"设备合格证、出厂检验报告、说明书、图纸、软件程序、维修手册、备件清单、培训资料归档与固定资产移交"},{"name":"程序文件内容编制、格式要求、更改、传阅、记录控制与关联表单管理"},{"name":"程序文件编码、关联表单编码、部门编码备案、版本变更与唯一性维护"},{"name":"内部沟通、外部沟通、质量管理会议、异常报告、板报培训信息与顾客/供应商沟通衔接"},{"name":"管理创新提案、评审决策、立项实施、验收评估与固化推广"},{"name":"企业文化建设、宣传策划、内容发布、文化活动组织与记录归档"},{"name":"政策信息收集解读、可行性论证、申报材料组织、正式提交、项目跟进验收与成果归档"},{"name":"风险评估通知、风险辨识分析、重大风险排序、风险应对方案、季度检查与评分"},{"name":"自揽项目奖励、前期中标奖励、后期实施奖励、计提基数确认与发放审批"},{"name":"钉钉申报、钉钉审批、海关申报、货物信息核对、卡口登记和司机须知传递"},{"name":"法律事务、合同审查、法律风险防范、证照保管、使用登记与安全控制"},{"name":"人力资源需求、供给预测与净需求确定"},{"name":"人力资源规划方案制定、审批与发布"},{"name":"招聘需求评估与招聘计划制定"},{"name":"招聘渠道选择、信息发布与简历筛选"},{"name":"面试甄选、背景调查与录用决策"},{"name":"入职办理、试用期管理与转正考核"},{"name":"退休人员续用申请、审批、聘用与日常管理"},{"name":"劳动合同订立、续订、变更、终止与解除"},{"name":"岗位变动申请、审批、工作交接与考核期管理"},{"name":"考勤打卡、迟到早退旷工管理与异常处置"},{"name":"请休假申请、审批、材料备案与销假管理"},{"name":"主动离职与被动离职审批、手续办理与解除劳动合同"},{"name":"岗位资格培训、理论与实操考核、上岗证颁发"},{"name":"岗位资格证有效期管理、延期评价、补发与换证"},{"name":"培训需求分析与年度培训计划制定"},{"name":"培训实施、签到、效果评估与培训档案管理"},{"name":"外派培训申请、服务期约定、费用报销与转训管理"},{"name":"岗位说明书编写规范、审核、编码与换版管理"},{"name":"岗位技能分析、技能评估、等级认证与上岗证颁发"},{"name":"技能应用激励与技能管理持续改进"},{"name":"新员工导师结对、定向培养与综合考核评估"},{"name":"社保公积金参保登记、缴费基数核定与月度申报"},{"name":"社保待遇申领、关系转移与公积金提取管理"},{"name":"领导干部任职资格审核、选拔、报批与聘任"},{"name":"储备干部选拔培养与梯队建设管理"},{"name":"领导干部年度考核、奖惩与退出管理"},{"name":"公司级会议组织、审批与纪要管理"},{"name":"部门级会议纪要编制、签发、分发、跟踪与归档"},{"name":"车辆调度、用车审批、出车记录与违章事故处理"},{"name":"办公用品与低值易耗品季度申领、采购、盘点与预算管理"},{"name":"微信公众号稿件策划、撰写、审核与发布"},{"name":"公文格式规范、制发、收发与归档管理"},{"name":"印章保管、用印审批与使用登记"},{"name":"外来人员预约、审批与接待全程管理"},{"name":"档案归档范围、归档要求、整理、移交与保管"},{"name":"档案借阅利用、鉴定销毁与监督检查"},{"name":"宿舍入住、调房、退房与日常安全管理"},{"name":"技术资料接收、复制发放、借阅与有效性维护"},{"name":"技术资料更改换版、作废销毁与补发管理"},{"name":"生产成本定额管理与指标分解"},{"name":"生产成本事中控制"},{"name":"产品成本核算基础管理"},{"name":"月度产品成本核算与成本结转"},{"name":"成本费用核算分析"},{"name":"小时费率测算编制与维护"},{"name":"产品全成本测算"},{"name":"固定资产编码与标签管理"},{"name":"固定资产调拨管理"},{"name":"固定资产盘点管理"},{"name":"固定资产处置管理"},{"name":"固定资产保险管理"},{"name":"无形资产全生命周期管理"},{"name":"银行账户开立、变更与撤销管理"},{"name":"银行存款与网上银行管理"},{"name":"现金收付与库存管理"},{"name":"票据收取、开具与背书管理"},{"name":"月度资金计划编制与执行管理"},{"name":"备用金借支与核销管理"},{"name":"出差申请与审批管理"},{"name":"差旅费用报销管理"},{"name":"报销与付款审批管理"},{"name":"打车费报销专项管理"},{"name":"内部审核策划、审核员资质认定与维护、审核准备与实施、审核报告编制与审批、整改跟踪验证"},{"name":"外部审核通知接收与确认、审核准备与自查、首次/末次会议组织、审核陪同与记录、审核发现通报与整改跟踪、外部审核数据库维护"},{"name":"管理评审策划与通知、各部门运行分析报告收集汇总、公司级运行分析报告编制、管理评审会议组织与记录、评审报告编制审批、改进机会跟踪"},{"name":"内部纠正措施发起与跟踪、外部（二/三方）纠正措施答复、供应商纠正措施管理、举一反三核查、持续有效性验证、纠正措施数据库维护"},{"name":"归零问题识别与通知下发、技术归零（定位准确、机理清楚、故障复现、措施有效、举一反三）、管理归零（过程清楚、责任明确、措施落实、严肃处理、完善规章）、归零报告编写与评审、归零措施跟踪验证与关闭"},{"name":"质量信息需求确定与收集、产品质量信息统计分析（废品损失、外部拒收、总检故障等）、体系运行信息分析（过程绩效、内审不合格项、纠正措施等）、顾客满意度与供应商绩效信息分析、质量经济性分析、数据分析报告编制与改进识别"},{"name":"改进机会识别与范围目标确定、年度质量改进计划制定与跟踪、项目实物质量改进计划管理、改进活动实施与有效性验证、改进工具应用（质量改进计划、精品工程、质量攻关、QC小组、拉条挂账）"},{"name":"工序检验（接收检验、工序间检验、终检）、操作者自检互检与专检、检验验收条件确认、关键工序检验控制、特种工序随炉件/试片验收、项目特定检验要求（商飞重要检验、MA700授权检验）、不合格品衔接处理"},{"name":"首件检验需求识别与通知、首件检验计划编制、首件三检（自检、互检、专检）实施、首件检验报告（FAIR）填写与审核、特性气球图标注与验证、首件检验变更触发与重新实施"},{"name":"检验方案策划与编制、检验顺序确定、设计特性提取与验证方法选择、测量设备和工装确定、检验方案审批与分发"},{"name":"顾客检验准备与陪同、商飞项目制造符合性检验、MA700项目制造符合性检验、顾客检验发现问题跟踪整改"},{"name":"超声检测实施与控制、射线检测实施与控制、无损检测人员资格鉴定与能力评估（Ⅰ/Ⅱ/Ⅲ级）、无损检测设备校准与维护、检测技术文件编制与审批、检测材料验收与管理"},{"name":"数字化测量程序编制与验证、数控测量机检测实施、检测结果报告生成与签字归档、测量不合格品衔接处理"},{"name":"不合格品识别与标识（挂签/粘签）、不合格品隔离（MRCC）、预检(PI)标记与处置关闭、不合格品分类（严重/轻度）、不合格品审理组织（委员会/常设机构/审理小组）运行、不合格品处置方式确定（返工/返修/报废/让步/降级/返回供方）、不合格品审理单逐级审理与审批"},{"name":"审理人员资格确认与培训考核、总经理授权签发、授权登记表与授权书管理、授权名单维护与发布、审理人员变更通知与重新授权"},{"name":"质量逃逸事件识别与报告、逃逸原因调查与分析、纠正措施制定与跟踪、顾客通知与沟通"},{"name":"多余物预防措施执行、多余物检测与排查、多余物记录与处置、多余物控制效果验证"},{"name":"紧急放行申请与风险评估、紧急放行审批、放行产品标识与追溯记录、放行后跟踪验证与关闭"},{"name":"顾客交付文件要求确认、各项目交付文件工作标准编制、交付文件填写与汇总、交付文件审查与盖章、交付文件复印归档与装箱移交"},{"name":"各项目交付文件专项编制、项目特殊要求（如商飞QAR点文件、波音SER/SQIS文件、MA700西飞民机文件、A220空客文件）的满足与提交"},{"name":"质量记录分类与编号、记录表格格式与版次控制、记录填写规范与更改（杠改）、产品质量记录归档与索引、管理质量记录归档、记录保存期限管理（可追溯产品质量记录≥10年/其他8年/管理记录6年）、记录借阅与归还、记录销毁审批与执行"},{"name":"测量设备需求提出与选型审查、测量设备购置与验收、入厂校准、测量设备台账建立与维护、周期校准与状态标识（A/B/C分类管理）、测量设备使用与维护、不合格测量设备处置（禁用/降级/报废）、测量设备封存与启封"},{"name":"测量软件标识（名称/版本号）、测量软件操作指南编制、软件访问权限与密码保护、软件异常处理与处置单登记、测量软件验收与验证（三坐标测量机/激光跟踪仪等）、人工件管理与使用、软件拷贝件/安装包保管"},{"name":"计量确认与量值溯源、测量设备计量标识管理（A/B/C分类标识）、委托计量/测量管理（内部委托和外部委托）、测量设备抽检与可靠性监控、计量器具台账与数据库维护、不合格测量设备对以往测量结果的影响评估"},{"name":"安全基础、班组安全、安全培训、责任追究"},{"name":"安全风险分级、危险源辨识、危险点管理"},{"name":"安全隐患排查、整改闭环、目标考核、三违管理"},{"name":"危险作业审批、有限空间作业许可"},{"name":"应急管理、事故报告调查、工伤管理"},{"name":"相关方安全准入、安全生产费用管理"},{"name":"职业病危害申报、警示告知、职业卫生操作规程"},{"name":"职业病防护设施、劳动防护用品标准与领用"},{"name":"职业危害检测评价、健康监护、职业健康档案、噪声聋预警"},{"name":"职业健康安全目标、培训、风险、应急、监视测量、改进"},{"name":"消防培训教育、消防工作考评、消防违章教育"},{"name":"建设项目安全、职业卫生、消防安全三同时审核"},{"name":"火灾隐患治理、隐患整改、厂级/班组级防火检查"},{"name":"消防设施维保、消火栓灭火器自查、消防重点部位管理"},{"name":"应急疏散预案维护、消防演练、火灾事故调查处理"},{"name":"环境目标管理、环境因素识别评价、重要环境因素清单"},{"name":"环境监测、污染源在线监测、危险废物管理"},{"name":"突发环境事件预案、应急处置、环境纠纷管理"},{"name":"环保隐患识别、整改、关闭验证"},{"name":"节能环保能源统计、环境统计报表"},{"name":"能源评审、年度节能双碳策划、主要耗能设备台账"},{"name":"动力系统节能运行、重点用能工序节能运行、能源消耗监督"},{"name":"节能双碳监督检查、能源碳排统计分析、能源绩效管理"},{"name":"能源计量器具管理、淘汰落后用能设备"},{"name":"能源内部审核、能源管理评审、项目节能审查"},{"name":"设备设施计划策划、设备分类、设备台账、投用准备"},{"name":"设备设施使用、设备操作证、巡检实施、测量设备管理"},{"name":"设备维护保养、设备维修、保养优化、TPM应用"},{"name":"设备备件需求、备件状态、维修耗材保障"},{"name":"设备事故处理、设备设施搬迁"},{"name":"法规识别、适用性确认、法规清单、合规评价项"},{"name":"受控文件、记录控制、信息交流与协商"},{"name":"目标指标、内部审核、管理评审、整改改进"},{"name":"项目工作范围与工作结构定义、项目矩阵团队组建"},{"name":"项目启动令编制、评审、批准与发布"},{"name":"项目阶段划分与阶段评审"},{"name":"研制团队组建、项目方案评审与开工风险评估"},{"name":"研制项目主阶段计划编制与阶段转批评审"},{"name":"年度一层计划编制、平衡产能与下达宣贯"},{"name":"月度二层计划编制、物料风险识别、产能平衡与工区反馈调整"},{"name":"日计划与三日滚动计划编制、班组任务分解与调整审批"},{"name":"临时生产计划编制、订单确认与紧急开工组织"},{"name":"开工评审计划编制、首次会组织、进展跟踪与恢复计划制定"},{"name":"罐前计划编制、物料/工装/文件开工条件核查与排罐跟踪调整"},{"name":"表面处理需求计划编制、更新与临时调整"},{"name":"零件投产策略编制、生产计划生成、变更与执行跟踪"},{"name":"里程碑节点设置与过程指标管理、进度跟踪与偏离干预"},{"name":"生产计划完成率统计、班组考核评分与计划调整"},{"name":"包装设计需求传递、包装技术条件与设计数据集管理、包装物制造与验收"},{"name":"包装工艺准备、包装实施与质量检验"},{"name":"产品吊装、运输交接、出厂前检查与交付确认"},{"name":"关键件工序跨班组问题收集、分配跟踪与反馈闭环"},{"name":"原材料领用验收异常上报、使用过程问题判定与处理"},{"name":"过程检验质量监控、零件质量问题叫停与多方判定处理"},{"name":"材料代用申请、技术判定、审批与制造计划更改"},{"name":"紧急放行单填写、会签、审批、限制条件设定、关闭与 PI 清理"},{"name":"随炉件出罐通知、移交领取确认、理化结果按时反馈"},{"name":"目标成本测算（BOM基线、材料/劳务成本）、成本编制与核算对比"},{"name":"存货需求计划编制、采购计划制定与供应商管理"},{"name":"到货初检、质量检验、入库办理、仓储环境管理与库存监控预警"},{"name":"领用申请与审批、先进先出发放、日常/定期盘点与差异处理"},{"name":"报废申请与审批、呆滞存货处理方案评审与执行"},{"name":"项目全周期风险识别（技术/生产/进度/质量/成本/安全/外部）、定性与定量评估、风险等级划分"},{"name":"应对策略制定（规避/降低/转移/接受）、预案编制、日常监控与预警响应"},{"name":"风险档案建立、项目结束后复盘总结与流程优化"},{"name":"工装技术条件编制与评审、工装设计方案联合评审"},{"name":"主进度计划编制与发布、阶段计划分解备案、作业计划编制与跟踪"},{"name":"加工模式选择（子公司外协/总部外协/总部自制）、供应商筛选与合同签订、物料缓冲期管理"},{"name":"质量联合小组全过程管控、制造与检验标准执行、交检文件提前提交与验收、质量问题整改闭环"},{"name":"验收移交后专票提交、ERP 挂账手续办理、回款进度跟踪"},{"name":"申请台账/合同台账/挂账回款台账建立与 BI 系统信息录入"},{"name":"项目启动前风险识别清单、高/中/低风险分级管理、自有成本业务供应商风险审核"},{"name":"工装拉运出门证办理、外协单位现场作业安全监督与协调"},{"name":"专用物资出门申请填写、单位负责人审核、主管部门审批、保安查验"},{"name":"车辆使用申请、业务主管审批、车辆调度与运输执行"},{"name":"快递发出当天钉钉申请提交、逐级审批与信息记录"},{"name":"启动规划编制并确定编制范围与计划"},{"name":"OA"},{"name":"开展内外部调研分析与跨部门研讨"},{"name":"拟定发展规划草案"},{"name":"组织内部评审并修订规划草案"},{"name":"报批发展规划至公司领导及总部"},{"name":"发布并宣贯发展规划"},{"name":"起草发展规划调整报告"},{"name":"制定年度经营指标初版"},{"name":"组织审核年度经营指标"},{"name":"上报总部董事会批准经营指标"},{"name":"组织各部门分解经营指标"},{"name":"组织分解评审会确认分解指标"},{"name":"编制并下发年度经营指标任务清单"},{"name":"受理经营指标调整申请"},{"name":"起草组织绩效考核方案"},{"name":"组织各部门核对确认考核指标"},{"name":"报批组织绩效考核方案"},{"name":"组织各部门季度交叉评分"},{"name":"考核重点任务及行动项完成情况"},{"name":"汇总核算各部门绩效得分"},{"name":"组织绩效结果审定"},{"name":"发布绩效结果并应用"},{"name":"组织月度绩效考核评分"},{"name":"跟踪重点任务及行动项进展"},{"name":"受理行动项调整申请"},{"name":"汇总核算月度绩效结果"},{"name":"通报月度绩效结果"},{"name":"收集整理市场与客户信息"},{"name":"开展客户初步接触与需求沟通"},{"name":"组织技术方案可行性评估"},{"name":"PLM"},{"name":"组织商务方案编制与会签"},{"name":"确认合作意向并内部报备"},{"name":"接收并识别客户询价需求"},{"name":"组织成本核算与技术方案支持"},{"name":"ERP"},{"name":"制作报价单"},{"name":"开展商务谈判"},{"name":"确定最终定价并内部审批"},{"name":"掌握各车间工种与岗位劳动力使用情况"},{"name":"MES"},{"name":"制定/修订工序工时积分定额标准"},{"name":"收集整理各工序工时执行数据"},{"name":"分析工时定额合理性并优化调整"},{"name":"提供工时定额数据作为报价基础"},{"name":"起草项目合同文本"},{"name":"发起合同相关部门审查"},{"name":"提交财务/法律审查"},{"name":"报批领导审批合同"},{"name":"签订合同并归档"},{"name":"接收登记顾客往来信息"},{"name":"分发顾客问题至责任部门并跟踪回复"},{"name":"组织项目顾客访问评审"},{"name":"处理工程咨询/质疑"},{"name":"组织顾客满意度调查"},{"name":"汇总分析满意度结果并制定改进措施"},{"name":"接收销售订单需求并分类识别"},{"name":"组织订单评审"},{"name":"汇总评审意见并判定可执行性"},{"name":"下发销售订单至生产系统"},{"name":"跟踪订单执行状态与异常反馈"},{"name":"下达合同任务订单"},{"name":"跟踪履约过程问题"},{"name":"发起合同变更处理"},{"name":"协调变更实施"},{"name":"整理合同履约合规归档"},{"name":"编制产品交付单据"},{"name":"制作交付报表与客户对账"},{"name":"处理补收货差异核对"},{"name":"制定结算回款计划"},{"name":"跟踪回款执行与差异处理"},{"name":"识别工作转移需求并发起申请"},{"name":"组织供应商承接风险评估"},{"name":"编制工作转移计划"},{"name":"提交客户批准工作转移"},{"name":"衔接首件验证"},{"name":"接收记录交付后不合格品信息"},{"name":"组织分析论证不合格原因"},{"name":"提出处置建议并组织评审"},{"name":"监督返工返修执行"},{"name":"开展不合格趋势分析与改进"},{"name":"建立维护采购产品分类体系"},{"name":"设定请购时间与采购周期标准"},{"name":"明确请购部门与管控要求"},{"name":"受理采购周期例外审批"},{"name":"受理供应商开发需求申请"},{"name":"开展供应商寻源与信息收集"},{"name":"维护潜在供应商信息库"},{"name":"确定拟开发供应商"},{"name":"编制供应商开发计划"},{"name":"组织供应商评价"},{"name":"组织供应商自评与审核"},{"name":"确定供应商批准状态"},{"name":"确定供应商适用项目范围"},{"name":"建立维护合格供应商目录"},{"name":"维护更新供应商物料清册"},{"name":"处理供应商取消批准"},{"name":"收集供应商交付进度数据"},{"name":"收集供应商交付质量数据"},{"name":"收集供应商服务水平数据"},{"name":"编制供应商绩效综合评价"},{"name":"公布绩效结果并与供应商沟通"},{"name":"跟踪纠正预防措施闭环"},{"name":"收集供应商风险事项"},{"name":"识别分析供应商风险"},{"name":"评估风险等级并登记"},{"name":"制定实施风险应对措施"},{"name":"组织供应商定期/临时再评价"},{"name":"编制采购计划"},{"name":"处理特批供货申请"},{"name":"签订采购/外包合同"},{"name":"组织外购产品到货验收"},{"name":"开展假冒件预防与处置"},{"name":"发起外协加工需求申请"},{"name":"制定零件/工装目标价"},{"name":"收集供应商报价并比价"},{"name":"上传审批外协合同/报价单"},{"name":"下达外协加工委托"},{"name":"组织外协零件/工装接收检验"},{"name":"处理不合格品扣款"},{"name":"核对零件/工装对账单"},{"name":"办理结算与付款申请"},{"name":"发起外包申请与评审"},{"name":"确定首件检验要求"},{"name":"编制传递供应商生产计划"},{"name":"跟踪计划执行与调整"},{"name":"组织周例会跟踪外包进度"},{"name":"发放供应商技术文件"},{"name":"办理原材料领用发放"},{"name":"管理工装样板借用"},{"name":"更新外包制造记录与电子账"},{"name":"发起临时外包采购申请"},{"name":"选择临时外包供应商"},{"name":"签订临时外包合同并下达采购订单"},{"name":"发起紧急外包申请"},{"name":"收集紧急外包供应商报价"},{"name":"编制紧急外包分工报告"},{"name":"下达紧急外包订单并跟踪"},{"name":"识别外委检测需求"},{"name":"选择评价检测机构"},{"name":"签订外委检测合同"},{"name":"办理样品交接"},{"name":"审核验收检测报告"},{"name":"监督检测异常与改进"},{"name":"收集各部门技改需求"},{"name":"编制年度技改计划草案"},{"name":"组织年度技改计划评审与报批"},{"name":"受理临时性技改项目申请"},{"name":"确认基建技改计划流程"},{"name":"受理基建技改/维修申报"},{"name":"组织现场勘察"},{"name":"开展费用评估"},{"name":"编制全周期实施计划"},{"name":"跟踪实施与计划调整"},{"name":"组织设备预验收（出厂前）"},{"name":"组织设备开箱验收"},{"name":"组织设备终验收"},{"name":"组织特种设备补充验收"},{"name":"处理遗留问题与风险保留"},{"name":"收集整理新设备技术资料"},{"name":"归档设备培训资料"},{"name":"办理固定资产移交"},{"name":"建立设备运维档案"},{"name":"编制管理体系程序文件内容"},{"name":"执行程序文件格式标准化"},{"name":"组织文件审签与会签"},{"name":"办理文件更改与升版"},{"name":"管理文件传阅与记录控制"},{"name":"管理关联表单"},{"name":"为新编程序文件分配编码"},{"name":"为关联表单分配编码"},{"name":"办理部门编码备案"},{"name":"处理版本变更与唯一性维护"},{"name":"组织内部沟通与信息传递"},{"name":"管理外部沟通与信息收发"},{"name":"组织召开质量管理会议"},{"name":"受理异常报告并跟踪处理"},{"name":"发布板报培训信息"},{"name":"衔接顾客/供应商沟通渠道"},{"name":"征集受理管理创新提案"},{"name":"组织创新提案评审决策"},{"name":"立项并推动创新项目实施"},{"name":"组织创新项目验收评估"},{"name":"固化创新成果并推广"},{"name":"制定企业文化建设方案"},{"name":"策划宣传内容与形式"},{"name":"发布企业宣传内容"},{"name":"组织文化活动"},{"name":"归档文化活动记录"},{"name":"收集解读行业政策信息"},{"name":"开展项目申报可行性论证"},{"name":"组织申报材料编制"},{"name":"正式提交申报材料"},{"name":"跟进项目进展并组织验收"},{"name":"归档项目成果与资料"},{"name":"发布风险评估通知"},{"name":"组织各部门风险辨识与分析"},{"name":"排序确定重大风险"},{"name":"制定风险应对方案"},{"name":"开展季度风险监测检查与评分"},{"name":"确认计提基数与奖励类型"},{"name":"计算自揽项目前期中标奖励"},{"name":"计算后期实施奖励"},{"name":"提交奖励发放审批"},{"name":"发起钉钉内部申报"},{"name":"完成钉钉内部审批"},{"name":"办理海关正式申报"},{"name":"核对货物信息并反馈"},{"name":"办理卡口登记与司机须知传递"},{"name":"处理法律事务与风险防范"},{"name":"开展合同法律审查"},{"name":"保管公司证照原件"},{"name":"受理证照使用登记"},{"name":"实施证照安全控制"},{"name":"组织编制项目工作说明书"},{"name":"建立工作分解结构（WBS）"},{"name":"组建项目矩阵团队"},{"name":"编制项目启动令"},{"name":"组织项目启动会并批准启动令"},{"name":"发布项目启动文件"},{"name":"划分项目生命周期阶段"},{"name":"组织阶段评审会议"},{"name":"确定项目管理者并组建研制团队"},{"name":"开展项目开工评审及风险评估"},{"name":"组织编制并评审项目方案"},{"name":"编制项目主阶段计划"},{"name":"跟踪研制项目 II/III 层计划进度"},{"name":"组织研制阶段转批评审"},{"name":"编制年度一层计划"},{"name":"汇总并平衡年度产能"},{"name":"召开生产会下达一层计划"},{"name":"升版一层计划（任务变更时）"},{"name":"更新罐前计划与编制月度二层计划"},{"name":"识别物料风险并补充原材料"},{"name":"汇总二层计划并平衡产能"},{"name":"工区评估反馈与不可执行项调整"},{"name":"编制三层日计划与三日滚动计划"},{"name":"批准三层计划"},{"name":"申请并审批三层计划调整"},{"name":"编制罐前计划并调配人机资源"},{"name":"接收临时需求并确认紧急程度"},{"name":"组织开工准备并确认工艺信息"},{"name":"纳入或升版本月计划"},{"name":"编制初版开工评审计划"},{"name":"召开开工评审首次会"},{"name":"签字下发开工评审计划"},{"name":"跟踪开工评审进展并协调恢复"},{"name":"核查物料开工条件"},{"name":"核查工装状态"},{"name":"编制并更新罐前计划"},{"name":"填写表面处理需求计划"},{"name":"处理漏排错排与临时紧急任务"},{"name":"编制零件投产策略"},{"name":"生成零件生产计划"},{"name":"评估变更影响并调整计划"},{"name":"跟踪零件生产及交付情况"},{"name":"设置研制项目里程碑节点"},{"name":"设置批产项目过程指标"},{"name":"收集进度汇报并识别问题风险"},{"name":"组织月度例会通报计划执行情况"},{"name":"现场跟产与实时问题协调"},{"name":"统计班组生产计划完成率"},{"name":"对生产班组进行打分考核"},{"name":"编制并审批计划调整报告"},{"name":"传递包装需求并组织启动包装设计"},{"name":"传递客户审批（如需）"},{"name":"组织包装物制造与验收"},{"name":"通知包装时间并组织包装实施"},{"name":"执行产品包装与连接"},{"name":"完成包装质量检验与记录留存"},{"name":"吊装产品至运输车辆"},{"name":"组织运输交接"},{"name":"执行出厂前检查"},{"name":"参加班组早会收集关键件问题"},{"name":"分配问题至主管项目助理跟踪解决"},{"name":"反馈问题解决结果至班组"},{"name":"上报原材料领用验收异常"},{"name":"上报车间使用过程材料问题"},{"name":"过程检验监控并叫停问题项目"},{"name":"组织多方判定与零件处理"},{"name":"编制材料代用申请单"},{"name":"技术判定与审批代用方案"},{"name":"更改制造计划并按代料状态组织生产"},{"name":"填写并提交产品紧急放行单"},{"name":"会签、审核与批准紧急放行"},{"name":"粘贴标识、传递放行单并建账跟踪"},{"name":"关闭紧急放行并清理 PI"},{"name":"发布随炉件出罐信息"},{"name":"领取随炉件并办理交接手续"},{"name":"出具理化结果并反馈"},{"name":"提供产品BOM基线"},{"name":"提供成本测算基础数据"},{"name":"编制项目目标成本"},{"name":"核算项目成本并与目标对比"},{"name":"编制存货需求计划"},{"name":"制定采购计划"},{"name":"选择供应商并签订采购合同"},{"name":"到货初检与登记"},{"name":"质量检验并出具报告"},{"name":"办理入库与库存标识"},{"name":"库存监控与预警"},{"name":"填写并审批领料单"},{"name":"审核并按先进先出原则发料"},{"name":"执行盘点与差异处理"},{"name":"申请存货报废"},{"name":"处理呆滞存货"},{"name":"建立项目风险档案"},{"name":"组织项目风险复盘总结"},{"name":"编制工装技术条件"},{"name":"组织工装技术条件联合评审"},{"name":"组织工装设计方案联合评审"},{"name":"编制工装主进度计划"},{"name":"分解部门阶段计划并备案"},{"name":"编制作业计划并跟踪执行"},{"name":"提交专票及移交单"},{"name":"办理 ERP 挂账及跟踪回款"},{"name":"办理自有成本业务付款"},{"name":"建立工装业务台账"},{"name":"维护 BI 系统信息"},{"name":"办理工装出门证"},{"name":"监督外协单位现场作业安全"},{"name":"填写专用物资出门申请单"},{"name":"审核物资出门必要性"},{"name":"主管部门审批与保安查验"},{"name":"填写车辆使用申请单"},{"name":"审批用车申请"},{"name":"调度车辆并执行运输"},{"name":"发出快递并提交钉钉申请"},{"name":"逐级审批快递申请"},{"name":"[空]工程技术部"}],"links":[{"source":"昌兴复材","target":"经营域","value":1},{"source":"昌兴复材","target":"总经理直辖域","value":1},{"source":"昌兴复材","target":"生产域","value":1},{"source":"经营域","target":"经营发展部","value":1},{"source":"经营域","target":"行政人事部","value":1},{"source":"经营域","target":"物资保障部","value":1},{"source":"总经理直辖域","target":"财务部","value":1},{"source":"总经理直辖域","target":"工程技术部","value":1},{"source":"总经理直辖域","target":"质量管理部","value":1},{"source":"生产域","target":"项目管理部","value":1},{"source":"生产域","target":"复材车间","value":1},{"source":"生产域","target":"运维安环部","value":1},{"source":"复材车间","target":"班组排产管理","value":2},{"source":"复材车间","target":"在制品工序管理","value":2},{"source":"复材车间","target":"随炉件与理化检测管理","value":2},{"source":"物资保障部","target":"工装工具策划管理","value":2},{"source":"物资保障部","target":"工艺装备申请管理","value":2},{"source":"物资保障部","target":"工装设计与更改管理","value":4},{"source":"物资保障部","target":"工装验收管理","value":2},{"source":"物资保障部","target":"工装验证管理","value":1},{"source":"物资保障部","target":"工装使用管理","value":8},{"source":"物资保障部","target":"工装定检管理","value":3},{"source":"物资保障部","target":"工艺装备返工管理","value":2},{"source":"物资保障部","target":"工艺装备维护管理","value":3},{"source":"物资保障部","target":"工装优化管理","value":2},{"source":"物资保障部","target":"工具申请与采购管理","value":2},{"source":"物资保障部","target":"工具现场管理","value":5},{"source":"物资保障部","target":"工具验证与选型管理","value":2},{"source":"物资保障部","target":"物料接收运转储存管理","value":1},{"source":"物资保障部","target":"冷库材料出入库管理","value":1},{"source":"物资保障部","target":"设备备件管理","value":1},{"source":"物资保障部","target":"工装信息管理","value":1},{"source":"物资保障部","target":"勤哲模块开发管理","value":1},{"source":"物资保障部","target":"部门文件版本管理","value":1},{"source":"经营发展部","target":"发展规划制定调整管理","value":1},{"source":"经营发展部","target":"年度经营指标制定分解管理","value":1},{"source":"经营发展部","target":"年度部门绩效考核管理","value":1},{"source":"经营发展部","target":"月度绩效考核管理","value":1},{"source":"经营发展部","target":"市场开发初步接触与方案确认","value":1},{"source":"经营发展部","target":"报价、商务谈判与定价管理","value":1},{"source":"经营发展部","target":"工时积分定额管理","value":1},{"source":"经营发展部","target":"项目合同评审执行管理","value":1},{"source":"经营发展部","target":"顾客沟通与满意度管理","value":1},{"source":"经营发展部","target":"销售订单评审和执行管理","value":1},{"source":"经营发展部","target":"项目经营合规管理","value":1},{"source":"经营发展部","target":"产品交付与结算回款管理","value":1},{"source":"经营发展部","target":"工作转移管理","value":1},{"source":"经营发展部","target":"交付后的不合格管理","value":1},{"source":"经营发展部","target":"采购分类与采购周期管理","value":1},{"source":"经营发展部","target":"供应商开发与评价管理","value":1},{"source":"经营发展部","target":"供应商审核批准与物料清册管理","value":1},{"source":"经营发展部","target":"供应商绩效评价管理","value":1},{"source":"经营发展部","target":"供应商风险与再评价管理","value":1},{"source":"经营发展部","target":"采购实施与外购产品验证管理","value":1},{"source":"经营发展部","target":"外协加工需求、价格与合同管理","value":1},{"source":"经营发展部","target":"外协加工执行、检验与结算管理","value":1},{"source":"经营发展部","target":"外包申请与过程控制","value":1},{"source":"经营发展部","target":"外包生产资料与物料工装发放","value":1},{"source":"经营发展部","target":"临时与紧急外包管理","value":1},{"source":"经营发展部","target":"外委检测管理","value":1},{"source":"经营发展部","target":"年度基建技改计划管理","value":1},{"source":"经营发展部","target":"基建技改报修与实施管理","value":1},{"source":"经营发展部","target":"新设备验收管理","value":1},{"source":"经营发展部","target":"新设备资料归档与固定资产移交","value":1},{"source":"经营发展部","target":"管理体系程序文件编制管理","value":1},{"source":"经营发展部","target":"管理体系程序文件编码管理","value":1},{"source":"经营发展部","target":"质量体系沟通管理","value":1},{"source":"经营发展部","target":"管理创新管理","value":1},{"source":"经营发展部","target":"企业文化建设与宣传管理","value":1},{"source":"经营发展部","target":"政策研究与项目申报管理","value":1},{"source":"经营发展部","target":"内部控制与全面风险管理","value":1},{"source":"经营发展部","target":"项目激励管理","value":1},{"source":"经营发展部","target":"海关业务申报管理","value":1},{"source":"经营发展部","target":"法律事务与证照管理","value":1},{"source":"行政人事部","target":"人力资源规划管理","value":2},{"source":"行政人事部","target":"员工招聘录用管理","value":4},{"source":"行政人事部","target":"退休人员续用管理","value":1},{"source":"行政人事部","target":"劳动合同管理","value":1},{"source":"行政人事部","target":"岗位变动管理","value":1},{"source":"行政人事部","target":"考勤与请休假管理","value":2},{"source":"行政人事部","target":"员工离职管理","value":1},{"source":"行政人事部","target":"岗前培训与取证管理","value":2},{"source":"行政人事部","target":"培训体系管理","value":3},{"source":"行政人事部","target":"岗位说明书编制管理","value":1},{"source":"行政人事部","target":"技能矩阵与评价管理","value":2},{"source":"行政人事部","target":"新员工管培管理","value":1},{"source":"行政人事部","target":"社会保险与公积金管理","value":2},{"source":"行政人事部","target":"领导干部选拔任用管理","value":1},{"source":"行政人事部","target":"领导干部管理","value":2},{"source":"行政人事部","target":"会议管理","value":2},{"source":"行政人事部","target":"车辆管理","value":1},{"source":"行政人事部","target":"办公用品管理","value":1},{"source":"行政人事部","target":"新闻宣传管理","value":1},{"source":"行政人事部","target":"公文管理","value":1},{"source":"行政人事部","target":"印章管理","value":1},{"source":"行政人事部","target":"外来人员接待管理","value":1},{"source":"行政人事部","target":"档案资料管理","value":2},{"source":"行政人事部","target":"宿舍管理","value":1},{"source":"行政人事部","target":"技术资料管理","value":2},{"source":"财务部","target":"成本核算管理","value":5},{"source":"财务部","target":"成本测算管理","value":2},{"source":"财务部","target":"固定资产管理","value":5},{"source":"财务部","target":"无形资产管理","value":1},{"source":"财务部","target":"银行账户与存款管理","value":2},{"source":"财务部","target":"现金与票据管理","value":2},{"source":"财务部","target":"资金计划与备用金管理","value":2},{"source":"财务部","target":"差旅费管理","value":2},{"source":"财务部","target":"财务报销与付款管理","value":2},{"source":"质量管理部","target":"内部审核管理","value":1},{"source":"质量管理部","target":"外部审核管理","value":1},{"source":"质量管理部","target":"管理评审","value":1},{"source":"质量管理部","target":"纠正措施管理","value":1},{"source":"质量管理部","target":"质量问题归零管理","value":1},{"source":"质量管理部","target":"质量信息收集分析与评价","value":1},{"source":"质量管理部","target":"持续改进管理","value":1},{"source":"质量管理部","target":"产品检验管理","value":1},{"source":"质量管理部","target":"首件检验管理","value":1},{"source":"质量管理部","target":"检验方案策划管理","value":1},{"source":"质量管理部","target":"顾客/项目符合性检验管理","value":1},{"source":"质量管理部","target":"无损检测管理","value":1},{"source":"质量管理部","target":"数字化测量管理","value":1},{"source":"质量管理部","target":"不合格品审理与处置","value":1},{"source":"质量管理部","target":"不合格品审理人员授权管理","value":1},{"source":"质量管理部","target":"质量逃逸管理","value":1},{"source":"质量管理部","target":"多余物控制管理","value":1},{"source":"质量管理部","target":"产品紧急放行管理","value":1},{"source":"质量管理部","target":"交付文件准备管理","value":1},{"source":"质量管理部","target":"项目交付文件管理（商飞/波音/MA700/A220）","value":1},{"source":"质量管理部","target":"质量记录全过程管理","value":1},{"source":"质量管理部","target":"测量设备管理","value":1},{"source":"质量管理部","target":"测量软件管理","value":1},{"source":"质量管理部","target":"计量确认与溯源管理","value":1},{"source":"运维安环部","target":"安全基础与责任管理","value":1},{"source":"运维安环部","target":"风险识别与分级管控","value":1},{"source":"运维安环部","target":"隐患排查治理与安全绩效","value":1},{"source":"运维安环部","target":"危险作业许可管理","value":1},{"source":"运维安环部","target":"安全应急与事故工伤管理","value":1},{"source":"运维安环部","target":"相关方与安全投入管理","value":1},{"source":"运维安环部","target":"职业病危害识别申报与告知","value":1},{"source":"运维安环部","target":"职业病防护与劳动防护","value":1},{"source":"运维安环部","target":"职业危害监测与健康监护","value":1},{"source":"运维安环部","target":"职业健康安全体系运行","value":1},{"source":"运维安环部","target":"消防基础与教育考评","value":1},{"source":"运维安环部","target":"建设项目消防三同时","value":1},{"source":"运维安环部","target":"火灾隐患排查与整改","value":1},{"source":"运维安环部","target":"消防设施与重点部位管理","value":1},{"source":"运维安环部","target":"消防应急与火灾事故管理","value":1},{"source":"运维安环部","target":"环境目标与环境因素管理","value":1},{"source":"运维安环部","target":"污染防治与环境监测","value":1},{"source":"运维安环部","target":"环境事件与纠纷管理","value":1},{"source":"运维安环部","target":"环保隐患治理","value":1},{"source":"运维安环部","target":"环境统计与外部报送","value":1},{"source":"运维安环部","target":"能源评审与年度策划","value":1},{"source":"运维安环部","target":"节能运行控制","value":1},{"source":"运维安环部","target":"节能双碳监督与绩效","value":1},{"source":"运维安环部","target":"能源计量与用能设备管理","value":1},{"source":"运维安环部","target":"能源体系运行","value":1},{"source":"运维安环部","target":"设备计划与资产策划","value":1},{"source":"运维安环部","target":"设备使用与现场巡检","value":1},{"source":"运维安环部","target":"维护保养与维修保障","value":1},{"source":"运维安环部","target":"备件与耗材保障","value":1},{"source":"运维安环部","target":"设备异常与变动管理","value":1},{"source":"运维安环部","target":"法规和其他要求控制","value":1},{"source":"运维安环部","target":"文件记录与信息交流","value":1},{"source":"运维安环部","target":"目标、审核、评审与改进","value":1},{"source":"项目管理部","target":"项目启动策划","value":3},{"source":"项目管理部","target":"研制项目策划","value":2},{"source":"项目管理部","target":"年度一层计划管理","value":1},{"source":"项目管理部","target":"月度二层计划管理","value":1},{"source":"项目管理部","target":"三层作业计划管理","value":1},{"source":"项目管理部","target":"临时计划管理","value":1},{"source":"项目管理部","target":"开工评审管理","value":1},{"source":"项目管理部","target":"排罐计划管理","value":1},{"source":"项目管理部","target":"表面计划排产管理","value":1},{"source":"项目管理部","target":"零件生产计划管理","value":1},{"source":"项目管理部","target":"项目进度监控","value":1},{"source":"项目管理部","target":"生产计划考核","value":1},{"source":"项目管理部","target":"产品包装管理","value":1},{"source":"项目管理部","target":"产品包装实施","value":1},{"source":"项目管理部","target":"产品发运与交付","value":1},{"source":"项目管理部","target":"交付横向管理","value":1},{"source":"项目管理部","target":"原材料质量管理","value":1},{"source":"项目管理部","target":"产品质量管理","value":1},{"source":"项目管理部","target":"材料代用管理","value":1},{"source":"项目管理部","target":"产品紧急放行管理","value":1},{"source":"项目管理部","target":"随炉件管理","value":1},{"source":"项目管理部","target":"项目成本管理","value":1},{"source":"项目管理部","target":"项目存货计划管理","value":1},{"source":"项目管理部","target":"项目存货入库与存储管理","value":1},{"source":"项目管理部","target":"项目存货领用与盘点管理","value":1},{"source":"项目管理部","target":"项目存货处置管理","value":1},{"source":"项目管理部","target":"风险识别与评估","value":1},{"source":"项目管理部","target":"风险应对与监控","value":1},{"source":"项目管理部","target":"风险记录与复盘","value":1},{"source":"项目管理部","target":"工装方案管理","value":1},{"source":"项目管理部","target":"工装进度管理","value":1},{"source":"项目管理部","target":"工装采购与制造协同","value":1},{"source":"项目管理部","target":"工装质量管理","value":1},{"source":"项目管理部","target":"工装挂账回款管理","value":1},{"source":"项目管理部","target":"工装台账与系统维护","value":1},{"source":"项目管理部","target":"工装风险管控","value":1},{"source":"项目管理部","target":"工装现场与物流管理","value":1},{"source":"项目管理部","target":"物资出门管理","value":1},{"source":"项目管理部","target":"车辆使用管理","value":1},{"source":"项目管理部","target":"快递管理","value":1},{"source":"班组排产管理","target":"罐前计划编制：按项目订单和交付紧急度确定投产优先顺序，核查人机料法环开工条件，核算标准工时（排罐固化时间+投影仪时间+出入罐准备时间），编制罐前排产计划","value":1},{"source":"班组排产管理","target":"排罐执行与跟踪调整：每周四更新罐前计划，各项目助理跟踪投产进度，识别差异后迅速调整排产；根据固化程序合理并罐以控制成本","value":1},{"source":"在制品工序管理","target":"关键件横向跟踪：工序项目助理参加班组早会，核对关键件任务布置，收集班组反馈的问题并汇总至关键件问题跟踪表，分配至主管项目助理跟踪解决","value":1},{"source":"在制品工序管理","target":"工序问题闭环与考核：工序项目助理轮岗制（每两周换一次工序），生产部组长汇总问题数据并分配至各职能部门跟踪考核，关键件计划每两周更新状态","value":1},{"source":"随炉件与理化检测管理","target":"随炉件出罐通知与交接：班组在内部群发布出罐信息后转发至\"公司-航达随炉件移交群\"，航达24小时内反馈领取计划，双方办理书面交接手续并签字确认","value":1},{"source":"随炉件与理化检测管理","target":"理化结果跟踪反馈：理化检测须14天内出具结果，到期前1天预告，结果生成后同步至移交群并抄送相关方；逾期需提前2天说明并制定补救方案","value":1},{"source":"工装工具策划管理","target":"工装工具品种表编制、评审、审批与发布","value":1},{"source":"工装工具策划管理","target":"工装定检目录编制、定检计划编制与发布","value":1},{"source":"工艺装备申请管理","target":"工艺装备申请单编制、技术方案审核、设计审核、管理审核与批准","value":1},{"source":"工艺装备申请管理","target":"样板/数据集申请单编制与审批","value":1},{"source":"工装设计与更改管理","target":"工装设计（含产品包装设计、专用工具设计、样板数据集设计）、工装数据校对、审核、标审、审查与批准","value":1},{"source":"工装设计与更改管理","target":"工装数据更改（先行更改G/J类处理、换版更改、版次升级）与工装数据发放","value":1},{"source":"工装设计与更改管理","target":"工装设计评审（PDR/CDR/FDR三个阶段或五阶段评审）","value":1},{"source":"工装设计与更改管理","target":"工装使用说明书编制、评审、培训与备案","value":1},{"source":"工装验收管理","target":"工装交检组织、工装实物与交付文件验收、合格证明盖章","value":1},{"source":"工装验收管理","target":"不合格工装标识、审理、处置意见、整改与关闭","value":1},{"source":"工装验证管理","target":"工装投产验证（II类三架份/III类一架份）、验证清单编制与合格证验证标识","value":1},{"source":"工装使用管理","target":"工装接收、建账、存放与保管","value":1},{"source":"工装使用管理","target":"工装日常使用、使用前检查、故障反馈与限用标识","value":1},{"source":"工装使用管理","target":"客供工装接收、保管、借用、维护、使用、定检、资产管理与归还","value":1},{"source":"工装使用管理","target":"工装转移计划编制、借用申请与审批、周转使用跟踪","value":1},{"source":"工装使用管理","target":"复材工装使用管理","value":1},{"source":"工装使用管理","target":"商飞项目工装使用管理","value":1},{"source":"工装使用管理","target":"生产和检验共用工装用前校准管理","value":1},{"source":"工装使用管理","target":"产品外包供应商用工艺装备管理","value":1},{"source":"工装定检管理","target":"工装定期检查（定检）实施：备忘录管理、定检申请、定检/检修记录、召回通知","value":1},{"source":"工装定检管理","target":"工装定期检查（定查）实施：III类工装损坏、磨损、完整性检查","value":1},{"source":"工装定检管理","target":"定检技术要求编发与定检周期申请","value":1},{"source":"工艺装备返工管理","target":"工装返修/返工申请、方案评审、派工执行与交检","value":1},{"source":"工艺装备返工管理","target":"工装损坏丢失问题处理：问题记录、技术/经济责任鉴定与裁决","value":1},{"source":"工艺装备维护管理","target":"工装维护保养计划编制、二级维护保养（TPM）、维护点检与使用情况检查","value":1},{"source":"工艺装备维护管理","target":"工装封存管理：长期停用工装封存、封存挂签与封存目录维护","value":1},{"source":"工艺装备维护管理","target":"工装可拆卸件管理：可拆卸件目录编制、拆卸后放置固定与复装防错","value":1},{"source":"工装优化管理","target":"工装产能优化：产能需求分析、工装测算、品种表更新与工装需求提出","value":1},{"source":"工装优化管理","target":"工装结构方案优化：安全隐患整改、工装结构改进与方案升版","value":1},{"source":"工具申请与采购管理","target":"通用工具申请审签、专用工具申请审签、工具采购跟踪与到货","value":1},{"source":"工具申请与采购管理","target":"工具盘点与采购付款跟踪","value":1},{"source":"工具现场管理","target":"新工具接收验收、库房管理与工具调拨","value":1},{"source":"工具现场管理","target":"工具使用、维护保养与控制","value":1},{"source":"工具现场管理","target":"工具维修管理（刃具修磨、风电动工具维修、其他工具维修）","value":1},{"source":"工具现场管理","target":"工具报废管理：报废鉴定、丢失处理与赔偿、报废工具管理","value":1},{"source":"工具现场管理","target":"量具检定与维修管理","value":1},{"source":"工具验证与选型管理","target":"工具验证要求、标准、流程与方法执行","value":1},{"source":"工具验证与选型管理","target":"新工具试用申请、试用报告审签与小批量使用反馈","value":1},{"source":"物料接收运转储存管理","target":"物料接收、检验、运转、储存与台账管理","value":1},{"source":"冷库材料出入库管理","target":"冷库材料入库验收、出库领用、温度监控与库存盘点","value":1},{"source":"设备备件管理","target":"设备备件计划、采购申请、入库验收、领用与安全库存管理","value":1},{"source":"工装信息管理","target":"工装信息台账维护、工装数据电子化管理与信息查询","value":1},{"source":"勤哲模块开发管理","target":"OA勤哲模块需求分析、开发实施、测试上线与运维管理","value":1},{"source":"部门文件版本管理","target":"部门级制度文件版本控制、分发、升版与作废管理","value":1},{"source":"发展规划制定调整管理","target":"发展规划制定、调整、评审、发布与宣贯跟踪","value":1},{"source":"年度经营指标制定分解管理","target":"年度经营指标制定、分解、下发与调整","value":1},{"source":"年度部门绩效考核管理","target":"组织绩效指标制定、实施、核算、审定、通报与应用","value":1},{"source":"月度绩效考核管理","target":"月度绩效评分、重点任务跟踪、行动项调整与结果核算","value":1},{"source":"市场开发初步接触与方案确认","target":"市场信息收集、客户初步接触、技术/商务方案组织与合作意向确认","value":1},{"source":"报价、商务谈判与定价管理","target":"询价输入、报价识别、成本/技术支持、报价单制作、谈判与最终定价","value":1},{"source":"工时积分定额管理","target":"工时积分定额标准维护、工时定额统计分析与报价基础引用","value":1},{"source":"项目合同评审执行管理","target":"合同起草、相关部门审查、财务/法律审查、领导审批、签订与归档","value":1},{"source":"顾客沟通与满意度管理","target":"顾客需求、抱怨、质量通知、工程咨询/质疑、访问评审与满意度调查改进","value":1},{"source":"销售订单评审和执行管理","target":"批产、科研外部、临时/自揽、返工/报废补制、自制/内部订单评审与下发","value":1},{"source":"项目经营合规管理","target":"合同执行、任务订单下达、履约过程问题跟踪、变更处理与合规归档","value":1},{"source":"产品交付与结算回款管理","target":"交付单据编制流转、交付报表、对账补收货、结算回款计划与差异核对","value":1},{"source":"工作转移管理","target":"工作转移申请、供应商承接风险评估、转移计划、客户批准与首件验证衔接","value":1},{"source":"交付后的不合格管理","target":"交付后不合格品接收记录、分析论证、处置建议、返工返修监督与趋势改进","value":1},{"source":"采购分类与采购周期管理","target":"采购/外包产品分类、请购时间、采购周期、请购部门和采购管控要求维护","value":1},{"source":"供应商开发与评价管理","target":"供应商开发需求、寻源、潜在供应商信息维护、拟开发供应商确定、开发计划与评价","value":1},{"source":"供应商审核批准与物料清册管理","target":"供应商批准、有条件批准、取消批准、适用项目确定、合格供应商目录建立维护与清册更新","value":1},{"source":"供应商绩效评价管理","target":"交付进度、交付质量、服务水平数据收集、季度/年度绩效综合评价、公布与沟通","value":1},{"source":"供应商风险与再评价管理","target":"供应商风险事项收集、风险识别分析、风险等级评估、应对措施、定期/临时再评价","value":1},{"source":"采购实施与外购产品验证管理","target":"采购计划、特批供货、采购/外包合同、外购产品验收、假冒件预防与处置","value":1},{"source":"外协加工需求、价格与合同管理","target":"外协需求发起审批、目标价制定、供应商报价、合同/报价单上传审批","value":1},{"source":"外协加工执行、检验与结算管理","target":"零件/工装外协加工、接收检验、不合格扣款、对账、结算与付款申请","value":1},{"source":"外包申请与过程控制","target":"外包申请、首检确定、供应商生产计划编制传递、计划执行调整与周例会跟踪","value":1},{"source":"外包生产资料与物料工装发放","target":"供应商技术文件发放、原材料领用发放、工装样板借用、制造记录和电子账更新","value":1},{"source":"临时与紧急外包管理","target":"临时外包采购申请、供应商选择、合同签订、采购订单下达、紧急外包供应商报价与分工报告","value":1},{"source":"外委检测管理","target":"外委检测需求、检测机构选择评价、合同签订、样品交接、检测报告审核验收与异常监督","value":1},{"source":"年度基建技改计划管理","target":"年度技改计划制定、临时性技改项目管理、基建技改计划流程确认","value":1},{"source":"基建技改报修与实施管理","target":"基建技改/维修申报、现场勘察、费用评估、全周期计划、计划调整与实施跟踪","value":1},{"source":"新设备验收管理","target":"设备预验收、开箱验收、终验收、特种设备补充验收、遗留问题处理与风险保留","value":1},{"source":"新设备资料归档与固定资产移交","target":"设备合格证、出厂检验报告、说明书、图纸、软件程序、维修手册、备件清单、培训资料归档与固定资产移交","value":1},{"source":"管理体系程序文件编制管理","target":"程序文件内容编制、格式要求、更改、传阅、记录控制与关联表单管理","value":1},{"source":"管理体系程序文件编码管理","target":"程序文件编码、关联表单编码、部门编码备案、版本变更与唯一性维护","value":1},{"source":"质量体系沟通管理","target":"内部沟通、外部沟通、质量管理会议、异常报告、板报培训信息与顾客/供应商沟通衔接","value":1},{"source":"管理创新管理","target":"管理创新提案、评审决策、立项实施、验收评估与固化推广","value":1},{"source":"企业文化建设与宣传管理","target":"企业文化建设、宣传策划、内容发布、文化活动组织与记录归档","value":1},{"source":"政策研究与项目申报管理","target":"政策信息收集解读、可行性论证、申报材料组织、正式提交、项目跟进验收与成果归档","value":1},{"source":"内部控制与全面风险管理","target":"风险评估通知、风险辨识分析、重大风险排序、风险应对方案、季度检查与评分","value":1},{"source":"项目激励管理","target":"自揽项目奖励、前期中标奖励、后期实施奖励、计提基数确认与发放审批","value":1},{"source":"海关业务申报管理","target":"钉钉申报、钉钉审批、海关申报、货物信息核对、卡口登记和司机须知传递","value":1},{"source":"法律事务与证照管理","target":"法律事务、合同审查、法律风险防范、证照保管、使用登记与安全控制","value":1},{"source":"人力资源规划管理","target":"人力资源需求、供给预测与净需求确定","value":1},{"source":"人力资源规划管理","target":"人力资源规划方案制定、审批与发布","value":1},{"source":"员工招聘录用管理","target":"招聘需求评估与招聘计划制定","value":1},{"source":"员工招聘录用管理","target":"招聘渠道选择、信息发布与简历筛选","value":1},{"source":"员工招聘录用管理","target":"面试甄选、背景调查与录用决策","value":1},{"source":"员工招聘录用管理","target":"入职办理、试用期管理与转正考核","value":1},{"source":"退休人员续用管理","target":"退休人员续用申请、审批、聘用与日常管理","value":1},{"source":"劳动合同管理","target":"劳动合同订立、续订、变更、终止与解除","value":1},{"source":"岗位变动管理","target":"岗位变动申请、审批、工作交接与考核期管理","value":1},{"source":"考勤与请休假管理","target":"考勤打卡、迟到早退旷工管理与异常处置","value":1},{"source":"考勤与请休假管理","target":"请休假申请、审批、材料备案与销假管理","value":1},{"source":"员工离职管理","target":"主动离职与被动离职审批、手续办理与解除劳动合同","value":1},{"source":"岗前培训与取证管理","target":"岗位资格培训、理论与实操考核、上岗证颁发","value":1},{"source":"岗前培训与取证管理","target":"岗位资格证有效期管理、延期评价、补发与换证","value":1},{"source":"培训体系管理","target":"培训需求分析与年度培训计划制定","value":1},{"source":"培训体系管理","target":"培训实施、签到、效果评估与培训档案管理","value":1},{"source":"培训体系管理","target":"外派培训申请、服务期约定、费用报销与转训管理","value":1},{"source":"岗位说明书编制管理","target":"岗位说明书编写规范、审核、编码与换版管理","value":1},{"source":"技能矩阵与评价管理","target":"岗位技能分析、技能评估、等级认证与上岗证颁发","value":1},{"source":"技能矩阵与评价管理","target":"技能应用激励与技能管理持续改进","value":1},{"source":"新员工管培管理","target":"新员工导师结对、定向培养与综合考核评估","value":1},{"source":"社会保险与公积金管理","target":"社保公积金参保登记、缴费基数核定与月度申报","value":1},{"source":"社会保险与公积金管理","target":"社保待遇申领、关系转移与公积金提取管理","value":1},{"source":"领导干部选拔任用管理","target":"领导干部任职资格审核、选拔、报批与聘任","value":1},{"source":"领导干部管理","target":"储备干部选拔培养与梯队建设管理","value":1},{"source":"领导干部管理","target":"领导干部年度考核、奖惩与退出管理","value":1},{"source":"会议管理","target":"公司级会议组织、审批与纪要管理","value":1},{"source":"会议管理","target":"部门级会议纪要编制、签发、分发、跟踪与归档","value":1},{"source":"车辆管理","target":"车辆调度、用车审批、出车记录与违章事故处理","value":1},{"source":"办公用品管理","target":"办公用品与低值易耗品季度申领、采购、盘点与预算管理","value":1},{"source":"新闻宣传管理","target":"微信公众号稿件策划、撰写、审核与发布","value":1},{"source":"公文管理","target":"公文格式规范、制发、收发与归档管理","value":1},{"source":"印章管理","target":"印章保管、用印审批与使用登记","value":1},{"source":"外来人员接待管理","target":"外来人员预约、审批与接待全程管理","value":1},{"source":"档案资料管理","target":"档案归档范围、归档要求、整理、移交与保管","value":1},{"source":"档案资料管理","target":"档案借阅利用、鉴定销毁与监督检查","value":1},{"source":"宿舍管理","target":"宿舍入住、调房、退房与日常安全管理","value":1},{"source":"技术资料管理","target":"技术资料接收、复制发放、借阅与有效性维护","value":1},{"source":"技术资料管理","target":"技术资料更改换版、作废销毁与补发管理","value":1},{"source":"成本核算管理","target":"生产成本定额管理与指标分解","value":1},{"source":"成本核算管理","target":"生产成本事中控制","value":1},{"source":"成本核算管理","target":"产品成本核算基础管理","value":1},{"source":"成本核算管理","target":"月度产品成本核算与成本结转","value":1},{"source":"成本核算管理","target":"成本费用核算分析","value":1},{"source":"成本测算管理","target":"小时费率测算编制与维护","value":1},{"source":"成本测算管理","target":"产品全成本测算","value":1},{"source":"固定资产管理","target":"固定资产编码与标签管理","value":1},{"source":"固定资产管理","target":"固定资产调拨管理","value":1},{"source":"固定资产管理","target":"固定资产盘点管理","value":1},{"source":"固定资产管理","target":"固定资产处置管理","value":1},{"source":"固定资产管理","target":"固定资产保险管理","value":1},{"source":"无形资产管理","target":"无形资产全生命周期管理","value":1},{"source":"银行账户与存款管理","target":"银行账户开立、变更与撤销管理","value":1},{"source":"银行账户与存款管理","target":"银行存款与网上银行管理","value":1},{"source":"现金与票据管理","target":"现金收付与库存管理","value":1},{"source":"现金与票据管理","target":"票据收取、开具与背书管理","value":1},{"source":"资金计划与备用金管理","target":"月度资金计划编制与执行管理","value":1},{"source":"资金计划与备用金管理","target":"备用金借支与核销管理","value":1},{"source":"差旅费管理","target":"出差申请与审批管理","value":1},{"source":"差旅费管理","target":"差旅费用报销管理","value":1},{"source":"财务报销与付款管理","target":"报销与付款审批管理","value":1},{"source":"财务报销与付款管理","target":"打车费报销专项管理","value":1},{"source":"内部审核管理","target":"内部审核策划、审核员资质认定与维护、审核准备与实施、审核报告编制与审批、整改跟踪验证","value":1},{"source":"外部审核管理","target":"外部审核通知接收与确认、审核准备与自查、首次/末次会议组织、审核陪同与记录、审核发现通报与整改跟踪、外部审核数据库维护","value":1},{"source":"管理评审","target":"管理评审策划与通知、各部门运行分析报告收集汇总、公司级运行分析报告编制、管理评审会议组织与记录、评审报告编制审批、改进机会跟踪","value":1},{"source":"纠正措施管理","target":"内部纠正措施发起与跟踪、外部（二/三方）纠正措施答复、供应商纠正措施管理、举一反三核查、持续有效性验证、纠正措施数据库维护","value":1},{"source":"质量问题归零管理","target":"归零问题识别与通知下发、技术归零（定位准确、机理清楚、故障复现、措施有效、举一反三）、管理归零（过程清楚、责任明确、措施落实、严肃处理、完善规章）、归零报告编写与评审、归零措施跟踪验证与关闭","value":1},{"source":"质量信息收集分析与评价","target":"质量信息需求确定与收集、产品质量信息统计分析（废品损失、外部拒收、总检故障等）、体系运行信息分析（过程绩效、内审不合格项、纠正措施等）、顾客满意度与供应商绩效信息分析、质量经济性分析、数据分析报告编制与改进识别","value":1},{"source":"持续改进管理","target":"改进机会识别与范围目标确定、年度质量改进计划制定与跟踪、项目实物质量改进计划管理、改进活动实施与有效性验证、改进工具应用（质量改进计划、精品工程、质量攻关、QC小组、拉条挂账）","value":1},{"source":"产品检验管理","target":"工序检验（接收检验、工序间检验、终检）、操作者自检互检与专检、检验验收条件确认、关键工序检验控制、特种工序随炉件/试片验收、项目特定检验要求（商飞重要检验、MA700授权检验）、不合格品衔接处理","value":1},{"source":"首件检验管理","target":"首件检验需求识别与通知、首件检验计划编制、首件三检（自检、互检、专检）实施、首件检验报告（FAIR）填写与审核、特性气球图标注与验证、首件检验变更触发与重新实施","value":1},{"source":"检验方案策划管理","target":"检验方案策划与编制、检验顺序确定、设计特性提取与验证方法选择、测量设备和工装确定、检验方案审批与分发","value":1},{"source":"顾客/项目符合性检验管理","target":"顾客检验准备与陪同、商飞项目制造符合性检验、MA700项目制造符合性检验、顾客检验发现问题跟踪整改","value":1},{"source":"无损检测管理","target":"超声检测实施与控制、射线检测实施与控制、无损检测人员资格鉴定与能力评估（Ⅰ/Ⅱ/Ⅲ级）、无损检测设备校准与维护、检测技术文件编制与审批、检测材料验收与管理","value":1},{"source":"数字化测量管理","target":"数字化测量程序编制与验证、数控测量机检测实施、检测结果报告生成与签字归档、测量不合格品衔接处理","value":1},{"source":"不合格品审理与处置","target":"不合格品识别与标识（挂签/粘签）、不合格品隔离（MRCC）、预检(PI)标记与处置关闭、不合格品分类（严重/轻度）、不合格品审理组织（委员会/常设机构/审理小组）运行、不合格品处置方式确定（返工/返修/报废/让步/降级/返回供方）、不合格品审理单逐级审理与审批","value":1},{"source":"不合格品审理人员授权管理","target":"审理人员资格确认与培训考核、总经理授权签发、授权登记表与授权书管理、授权名单维护与发布、审理人员变更通知与重新授权","value":1},{"source":"质量逃逸管理","target":"质量逃逸事件识别与报告、逃逸原因调查与分析、纠正措施制定与跟踪、顾客通知与沟通","value":1},{"source":"多余物控制管理","target":"多余物预防措施执行、多余物检测与排查、多余物记录与处置、多余物控制效果验证","value":1},{"source":"产品紧急放行管理","target":"紧急放行申请与风险评估、紧急放行审批、放行产品标识与追溯记录、放行后跟踪验证与关闭","value":1},{"source":"交付文件准备管理","target":"顾客交付文件要求确认、各项目交付文件工作标准编制、交付文件填写与汇总、交付文件审查与盖章、交付文件复印归档与装箱移交","value":1},{"source":"项目交付文件管理（商飞/波音/MA700/A220）","target":"各项目交付文件专项编制、项目特殊要求（如商飞QAR点文件、波音SER/SQIS文件、MA700西飞民机文件、A220空客文件）的满足与提交","value":1},{"source":"质量记录全过程管理","target":"质量记录分类与编号、记录表格格式与版次控制、记录填写规范与更改（杠改）、产品质量记录归档与索引、管理质量记录归档、记录保存期限管理（可追溯产品质量记录≥10年/其他8年/管理记录6年）、记录借阅与归还、记录销毁审批与执行","value":1},{"source":"测量设备管理","target":"测量设备需求提出与选型审查、测量设备购置与验收、入厂校准、测量设备台账建立与维护、周期校准与状态标识（A/B/C分类管理）、测量设备使用与维护、不合格测量设备处置（禁用/降级/报废）、测量设备封存与启封","value":1},{"source":"测量软件管理","target":"测量软件标识（名称/版本号）、测量软件操作指南编制、软件访问权限与密码保护、软件异常处理与处置单登记、测量软件验收与验证（三坐标测量机/激光跟踪仪等）、人工件管理与使用、软件拷贝件/安装包保管","value":1},{"source":"计量确认与溯源管理","target":"计量确认与量值溯源、测量设备计量标识管理（A/B/C分类标识）、委托计量/测量管理（内部委托和外部委托）、测量设备抽检与可靠性监控、计量器具台账与数据库维护、不合格测量设备对以往测量结果的影响评估","value":1},{"source":"安全基础与责任管理","target":"安全基础、班组安全、安全培训、责任追究","value":1},{"source":"风险识别与分级管控","target":"安全风险分级、危险源辨识、危险点管理","value":1},{"source":"隐患排查治理与安全绩效","target":"安全隐患排查、整改闭环、目标考核、三违管理","value":1},{"source":"危险作业许可管理","target":"危险作业审批、有限空间作业许可","value":1},{"source":"安全应急与事故工伤管理","target":"应急管理、事故报告调查、工伤管理","value":1},{"source":"相关方与安全投入管理","target":"相关方安全准入、安全生产费用管理","value":1},{"source":"职业病危害识别申报与告知","target":"职业病危害申报、警示告知、职业卫生操作规程","value":1},{"source":"职业病防护与劳动防护","target":"职业病防护设施、劳动防护用品标准与领用","value":1},{"source":"职业危害监测与健康监护","target":"职业危害检测评价、健康监护、职业健康档案、噪声聋预警","value":1},{"source":"职业健康安全体系运行","target":"职业健康安全目标、培训、风险、应急、监视测量、改进","value":1},{"source":"消防基础与教育考评","target":"消防培训教育、消防工作考评、消防违章教育","value":1},{"source":"建设项目消防三同时","target":"建设项目安全、职业卫生、消防安全三同时审核","value":1},{"source":"火灾隐患排查与整改","target":"火灾隐患治理、隐患整改、厂级/班组级防火检查","value":1},{"source":"消防设施与重点部位管理","target":"消防设施维保、消火栓灭火器自查、消防重点部位管理","value":1},{"source":"消防应急与火灾事故管理","target":"应急疏散预案维护、消防演练、火灾事故调查处理","value":1},{"source":"环境目标与环境因素管理","target":"环境目标管理、环境因素识别评价、重要环境因素清单","value":1},{"source":"污染防治与环境监测","target":"环境监测、污染源在线监测、危险废物管理","value":1},{"source":"环境事件与纠纷管理","target":"突发环境事件预案、应急处置、环境纠纷管理","value":1},{"source":"环保隐患治理","target":"环保隐患识别、整改、关闭验证","value":1},{"source":"环境统计与外部报送","target":"节能环保能源统计、环境统计报表","value":1},{"source":"能源评审与年度策划","target":"能源评审、年度节能双碳策划、主要耗能设备台账","value":1},{"source":"节能运行控制","target":"动力系统节能运行、重点用能工序节能运行、能源消耗监督","value":1},{"source":"节能双碳监督与绩效","target":"节能双碳监督检查、能源碳排统计分析、能源绩效管理","value":1},{"source":"能源计量与用能设备管理","target":"能源计量器具管理、淘汰落后用能设备","value":1},{"source":"能源体系运行","target":"能源内部审核、能源管理评审、项目节能审查","value":1},{"source":"设备计划与资产策划","target":"设备设施计划策划、设备分类、设备台账、投用准备","value":1},{"source":"设备使用与现场巡检","target":"设备设施使用、设备操作证、巡检实施、测量设备管理","value":1},{"source":"维护保养与维修保障","target":"设备维护保养、设备维修、保养优化、TPM应用","value":1},{"source":"备件与耗材保障","target":"设备备件需求、备件状态、维修耗材保障","value":1},{"source":"设备异常与变动管理","target":"设备事故处理、设备设施搬迁","value":1},{"source":"法规和其他要求控制","target":"法规识别、适用性确认、法规清单、合规评价项","value":1},{"source":"文件记录与信息交流","target":"受控文件、记录控制、信息交流与协商","value":1},{"source":"目标、审核、评审与改进","target":"目标指标、内部审核、管理评审、整改改进","value":1},{"source":"项目启动策划","target":"项目工作范围与工作结构定义、项目矩阵团队组建","value":1},{"source":"项目启动策划","target":"项目启动令编制、评审、批准与发布","value":1},{"source":"项目启动策划","target":"项目阶段划分与阶段评审","value":1},{"source":"研制项目策划","target":"研制团队组建、项目方案评审与开工风险评估","value":1},{"source":"研制项目策划","target":"研制项目主阶段计划编制与阶段转批评审","value":1},{"source":"年度一层计划管理","target":"年度一层计划编制、平衡产能与下达宣贯","value":1},{"source":"月度二层计划管理","target":"月度二层计划编制、物料风险识别、产能平衡与工区反馈调整","value":1},{"source":"三层作业计划管理","target":"日计划与三日滚动计划编制、班组任务分解与调整审批","value":1},{"source":"临时计划管理","target":"临时生产计划编制、订单确认与紧急开工组织","value":1},{"source":"开工评审管理","target":"开工评审计划编制、首次会组织、进展跟踪与恢复计划制定","value":1},{"source":"排罐计划管理","target":"罐前计划编制、物料/工装/文件开工条件核查与排罐跟踪调整","value":1},{"source":"表面计划排产管理","target":"表面处理需求计划编制、更新与临时调整","value":1},{"source":"零件生产计划管理","target":"零件投产策略编制、生产计划生成、变更与执行跟踪","value":1},{"source":"项目进度监控","target":"里程碑节点设置与过程指标管理、进度跟踪与偏离干预","value":1},{"source":"生产计划考核","target":"生产计划完成率统计、班组考核评分与计划调整","value":1},{"source":"产品包装管理","target":"包装设计需求传递、包装技术条件与设计数据集管理、包装物制造与验收","value":1},{"source":"产品包装实施","target":"包装工艺准备、包装实施与质量检验","value":1},{"source":"产品发运与交付","target":"产品吊装、运输交接、出厂前检查与交付确认","value":1},{"source":"交付横向管理","target":"关键件工序跨班组问题收集、分配跟踪与反馈闭环","value":1},{"source":"原材料质量管理","target":"原材料领用验收异常上报、使用过程问题判定与处理","value":1},{"source":"产品质量管理","target":"过程检验质量监控、零件质量问题叫停与多方判定处理","value":1},{"source":"材料代用管理","target":"材料代用申请、技术判定、审批与制造计划更改","value":1},{"source":"产品紧急放行管理","target":"紧急放行单填写、会签、审批、限制条件设定、关闭与 PI 清理","value":1},{"source":"随炉件管理","target":"随炉件出罐通知、移交领取确认、理化结果按时反馈","value":1},{"source":"项目成本管理","target":"目标成本测算（BOM基线、材料/劳务成本）、成本编制与核算对比","value":1},{"source":"项目存货计划管理","target":"存货需求计划编制、采购计划制定与供应商管理","value":1},{"source":"项目存货入库与存储管理","target":"到货初检、质量检验、入库办理、仓储环境管理与库存监控预警","value":1},{"source":"项目存货领用与盘点管理","target":"领用申请与审批、先进先出发放、日常/定期盘点与差异处理","value":1},{"source":"项目存货处置管理","target":"报废申请与审批、呆滞存货处理方案评审与执行","value":1},{"source":"风险识别与评估","target":"项目全周期风险识别（技术/生产/进度/质量/成本/安全/外部）、定性与定量评估、风险等级划分","value":1},{"source":"风险应对与监控","target":"应对策略制定（规避/降低/转移/接受）、预案编制、日常监控与预警响应","value":1},{"source":"风险记录与复盘","target":"风险档案建立、项目结束后复盘总结与流程优化","value":1},{"source":"工装方案管理","target":"工装技术条件编制与评审、工装设计方案联合评审","value":1},{"source":"工装进度管理","target":"主进度计划编制与发布、阶段计划分解备案、作业计划编制与跟踪","value":1},{"source":"工装采购与制造协同","target":"加工模式选择（子公司外协/总部外协/总部自制）、供应商筛选与合同签订、物料缓冲期管理","value":1},{"source":"工装质量管理","target":"质量联合小组全过程管控、制造与检验标准执行、交检文件提前提交与验收、质量问题整改闭环","value":1},{"source":"工装挂账回款管理","target":"验收移交后专票提交、ERP 挂账手续办理、回款进度跟踪","value":1},{"source":"工装台账与系统维护","target":"申请台账/合同台账/挂账回款台账建立与 BI 系统信息录入","value":1},{"source":"工装风险管控","target":"项目启动前风险识别清单、高/中/低风险分级管理、自有成本业务供应商风险审核","value":1},{"source":"工装现场与物流管理","target":"工装拉运出门证办理、外协单位现场作业安全监督与协调","value":1},{"source":"物资出门管理","target":"专用物资出门申请填写、单位负责人审核、主管部门审批、保安查验","value":1},{"source":"车辆使用管理","target":"车辆使用申请、业务主管审批、车辆调度与运输执行","value":1},{"source":"快递管理","target":"快递发出当天钉钉申请提交、逐级审批与信息记录","value":1},{"source":"发展规划制定、调整、评审、发布与宣贯跟踪","target":"启动规划编制并确定编制范围与计划","value":1},{"source":"启动规划编制并确定编制范围与计划","target":"OA","value":1},{"source":"发展规划制定、调整、评审、发布与宣贯跟踪","target":"开展内外部调研分析与跨部门研讨","value":1},{"source":"开展内外部调研分析与跨部门研讨","target":"OA","value":1},{"source":"发展规划制定、调整、评审、发布与宣贯跟踪","target":"拟定发展规划草案","value":1},{"source":"拟定发展规划草案","target":"OA","value":1},{"source":"发展规划制定、调整、评审、发布与宣贯跟踪","target":"组织内部评审并修订规划草案","value":1},{"source":"组织内部评审并修订规划草案","target":"OA","value":1},{"source":"发展规划制定、调整、评审、发布与宣贯跟踪","target":"报批发展规划至公司领导及总部","value":1},{"source":"报批发展规划至公司领导及总部","target":"OA","value":1},{"source":"发展规划制定、调整、评审、发布与宣贯跟踪","target":"发布并宣贯发展规划","value":1},{"source":"发布并宣贯发展规划","target":"OA","value":1},{"source":"发展规划制定、调整、评审、发布与宣贯跟踪","target":"起草发展规划调整报告","value":1},{"source":"起草发展规划调整报告","target":"OA","value":1},{"source":"年度经营指标制定、分解、下发与调整","target":"制定年度经营指标初版","value":1},{"source":"制定年度经营指标初版","target":"OA","value":1},{"source":"年度经营指标制定、分解、下发与调整","target":"组织审核年度经营指标","value":1},{"source":"组织审核年度经营指标","target":"OA","value":1},{"source":"年度经营指标制定、分解、下发与调整","target":"上报总部董事会批准经营指标","value":1},{"source":"上报总部董事会批准经营指标","target":"OA","value":1},{"source":"年度经营指标制定、分解、下发与调整","target":"组织各部门分解经营指标","value":1},{"source":"组织各部门分解经营指标","target":"OA","value":1},{"source":"年度经营指标制定、分解、下发与调整","target":"组织分解评审会确认分解指标","value":1},{"source":"组织分解评审会确认分解指标","target":"OA","value":1},{"source":"年度经营指标制定、分解、下发与调整","target":"编制并下发年度经营指标任务清单","value":1},{"source":"编制并下发年度经营指标任务清单","target":"OA","value":1},{"source":"年度经营指标制定、分解、下发与调整","target":"受理经营指标调整申请","value":1},{"source":"受理经营指标调整申请","target":"OA","value":1},{"source":"组织绩效指标制定、实施、核算、审定、通报与应用","target":"起草组织绩效考核方案","value":1},{"source":"起草组织绩效考核方案","target":"OA","value":1},{"source":"组织绩效指标制定、实施、核算、审定、通报与应用","target":"组织各部门核对确认考核指标","value":1},{"source":"组织各部门核对确认考核指标","target":"OA","value":1},{"source":"组织绩效指标制定、实施、核算、审定、通报与应用","target":"报批组织绩效考核方案","value":1},{"source":"报批组织绩效考核方案","target":"OA","value":1},{"source":"组织绩效指标制定、实施、核算、审定、通报与应用","target":"组织各部门季度交叉评分","value":1},{"source":"组织各部门季度交叉评分","target":"OA","value":1},{"source":"组织绩效指标制定、实施、核算、审定、通报与应用","target":"考核重点任务及行动项完成情况","value":1},{"source":"考核重点任务及行动项完成情况","target":"OA","value":1},{"source":"组织绩效指标制定、实施、核算、审定、通报与应用","target":"汇总核算各部门绩效得分","value":1},{"source":"汇总核算各部门绩效得分","target":"OA","value":1},{"source":"组织绩效指标制定、实施、核算、审定、通报与应用","target":"组织绩效结果审定","value":1},{"source":"组织绩效结果审定","target":"OA","value":1},{"source":"组织绩效指标制定、实施、核算、审定、通报与应用","target":"发布绩效结果并应用","value":1},{"source":"发布绩效结果并应用","target":"OA","value":1},{"source":"月度绩效评分、重点任务跟踪、行动项调整与结果核算","target":"组织月度绩效考核评分","value":1},{"source":"组织月度绩效考核评分","target":"OA","value":1},{"source":"月度绩效评分、重点任务跟踪、行动项调整与结果核算","target":"跟踪重点任务及行动项进展","value":1},{"source":"跟踪重点任务及行动项进展","target":"OA","value":1},{"source":"月度绩效评分、重点任务跟踪、行动项调整与结果核算","target":"受理行动项调整申请","value":1},{"source":"受理行动项调整申请","target":"OA","value":1},{"source":"月度绩效评分、重点任务跟踪、行动项调整与结果核算","target":"汇总核算月度绩效结果","value":1},{"source":"汇总核算月度绩效结果","target":"OA","value":1},{"source":"月度绩效评分、重点任务跟踪、行动项调整与结果核算","target":"通报月度绩效结果","value":1},{"source":"通报月度绩效结果","target":"OA","value":1},{"source":"市场信息收集、客户初步接触、技术/商务方案组织与合作意向确认","target":"收集整理市场与客户信息","value":1},{"source":"收集整理市场与客户信息","target":"OA","value":1},{"source":"市场信息收集、客户初步接触、技术/商务方案组织与合作意向确认","target":"开展客户初步接触与需求沟通","value":1},{"source":"开展客户初步接触与需求沟通","target":"OA","value":1},{"source":"市场信息收集、客户初步接触、技术/商务方案组织与合作意向确认","target":"组织技术方案可行性评估","value":1},{"source":"组织技术方案可行性评估","target":"OA","value":1},{"source":"组织技术方案可行性评估","target":"PLM","value":1},{"source":"市场信息收集、客户初步接触、技术/商务方案组织与合作意向确认","target":"组织商务方案编制与会签","value":1},{"source":"组织商务方案编制与会签","target":"OA","value":1},{"source":"市场信息收集、客户初步接触、技术/商务方案组织与合作意向确认","target":"确认合作意向并内部报备","value":1},{"source":"确认合作意向并内部报备","target":"OA","value":1},{"source":"询价输入、报价识别、成本/技术支持、报价单制作、谈判与最终定价","target":"接收并识别客户询价需求","value":1},{"source":"接收并识别客户询价需求","target":"OA","value":1},{"source":"询价输入、报价识别、成本/技术支持、报价单制作、谈判与最终定价","target":"组织成本核算与技术方案支持","value":1},{"source":"组织成本核算与技术方案支持","target":"PLM","value":1},{"source":"组织成本核算与技术方案支持","target":"ERP","value":1},{"source":"询价输入、报价识别、成本/技术支持、报价单制作、谈判与最终定价","target":"制作报价单","value":1},{"source":"制作报价单","target":"ERP","value":1},{"source":"制作报价单","target":"OA","value":1},{"source":"询价输入、报价识别、成本/技术支持、报价单制作、谈判与最终定价","target":"开展商务谈判","value":1},{"source":"开展商务谈判","target":"OA","value":1},{"source":"询价输入、报价识别、成本/技术支持、报价单制作、谈判与最终定价","target":"确定最终定价并内部审批","value":1},{"source":"确定最终定价并内部审批","target":"OA","value":1},{"source":"确定最终定价并内部审批","target":"ERP","value":1},{"source":"工时积分定额标准维护、工时定额统计分析与报价基础引用","target":"掌握各车间工种与岗位劳动力使用情况","value":1},{"source":"掌握各车间工种与岗位劳动力使用情况","target":"MES","value":1},{"source":"工时积分定额标准维护、工时定额统计分析与报价基础引用","target":"制定/修订工序工时积分定额标准","value":1},{"source":"制定/修订工序工时积分定额标准","target":"MES","value":1},{"source":"制定/修订工序工时积分定额标准","target":"ERP","value":1},{"source":"工时积分定额标准维护、工时定额统计分析与报价基础引用","target":"收集整理各工序工时执行数据","value":1},{"source":"收集整理各工序工时执行数据","target":"MES","value":1},{"source":"工时积分定额标准维护、工时定额统计分析与报价基础引用","target":"分析工时定额合理性并优化调整","value":1},{"source":"分析工时定额合理性并优化调整","target":"MES","value":1},{"source":"分析工时定额合理性并优化调整","target":"ERP","value":1},{"source":"工时积分定额标准维护、工时定额统计分析与报价基础引用","target":"提供工时定额数据作为报价基础","value":1},{"source":"提供工时定额数据作为报价基础","target":"ERP","value":1},{"source":"合同起草、相关部门审查、财务/法律审查、领导审批、签订与归档","target":"起草项目合同文本","value":1},{"source":"起草项目合同文本","target":"OA","value":1},{"source":"合同起草、相关部门审查、财务/法律审查、领导审批、签订与归档","target":"发起合同相关部门审查","value":1},{"source":"发起合同相关部门审查","target":"OA","value":1},{"source":"合同起草、相关部门审查、财务/法律审查、领导审批、签订与归档","target":"提交财务/法律审查","value":1},{"source":"提交财务/法律审查","target":"OA","value":1},{"source":"合同起草、相关部门审查、财务/法律审查、领导审批、签订与归档","target":"报批领导审批合同","value":1},{"source":"报批领导审批合同","target":"OA","value":1},{"source":"合同起草、相关部门审查、财务/法律审查、领导审批、签订与归档","target":"签订合同并归档","value":1},{"source":"签订合同并归档","target":"OA","value":1},{"source":"签订合同并归档","target":"ERP","value":1},{"source":"顾客需求、抱怨、质量通知、工程咨询/质疑、访问评审与满意度调查改进","target":"接收登记顾客往来信息","value":1},{"source":"接收登记顾客往来信息","target":"OA","value":1},{"source":"顾客需求、抱怨、质量通知、工程咨询/质疑、访问评审与满意度调查改进","target":"分发顾客问题至责任部门并跟踪回复","value":1},{"source":"分发顾客问题至责任部门并跟踪回复","target":"OA","value":1},{"source":"顾客需求、抱怨、质量通知、工程咨询/质疑、访问评审与满意度调查改进","target":"组织项目顾客访问评审","value":1},{"source":"组织项目顾客访问评审","target":"OA","value":1},{"source":"顾客需求、抱怨、质量通知、工程咨询/质疑、访问评审与满意度调查改进","target":"处理工程咨询/质疑","value":1},{"source":"处理工程咨询/质疑","target":"OA","value":1},{"source":"处理工程咨询/质疑","target":"PLM","value":1},{"source":"顾客需求、抱怨、质量通知、工程咨询/质疑、访问评审与满意度调查改进","target":"组织顾客满意度调查","value":1},{"source":"组织顾客满意度调查","target":"OA","value":1},{"source":"顾客需求、抱怨、质量通知、工程咨询/质疑、访问评审与满意度调查改进","target":"汇总分析满意度结果并制定改进措施","value":1},{"source":"汇总分析满意度结果并制定改进措施","target":"OA","value":1},{"source":"批产、科研外部、临时/自揽、返工/报废补制、自制/内部订单评审与下发","target":"接收销售订单需求并分类识别","value":1},{"source":"接收销售订单需求并分类识别","target":"OA","value":1},{"source":"接收销售订单需求并分类识别","target":"ERP","value":1},{"source":"批产、科研外部、临时/自揽、返工/报废补制、自制/内部订单评审与下发","target":"组织订单评审","value":1},{"source":"组织订单评审","target":"OA","value":1},{"source":"批产、科研外部、临时/自揽、返工/报废补制、自制/内部订单评审与下发","target":"汇总评审意见并判定可执行性","value":1},{"source":"汇总评审意见并判定可执行性","target":"OA","value":1},{"source":"批产、科研外部、临时/自揽、返工/报废补制、自制/内部订单评审与下发","target":"下发销售订单至生产系统","value":1},{"source":"下发销售订单至生产系统","target":"ERP","value":1},{"source":"下发销售订单至生产系统","target":"MES","value":1},{"source":"下发销售订单至生产系统","target":"OA","value":1},{"source":"批产、科研外部、临时/自揽、返工/报废补制、自制/内部订单评审与下发","target":"跟踪订单执行状态与异常反馈","value":1},{"source":"跟踪订单执行状态与异常反馈","target":"MES","value":1},{"source":"跟踪订单执行状态与异常反馈","target":"ERP","value":1},{"source":"合同执行、任务订单下达、履约过程问题跟踪、变更处理与合规归档","target":"下达合同任务订单","value":1},{"source":"下达合同任务订单","target":"ERP","value":1},{"source":"下达合同任务订单","target":"OA","value":1},{"source":"合同执行、任务订单下达、履约过程问题跟踪、变更处理与合规归档","target":"跟踪履约过程问题","value":1},{"source":"跟踪履约过程问题","target":"OA","value":1},{"source":"跟踪履约过程问题","target":"ERP","value":1},{"source":"合同执行、任务订单下达、履约过程问题跟踪、变更处理与合规归档","target":"发起合同变更处理","value":1},{"source":"发起合同变更处理","target":"OA","value":1},{"source":"发起合同变更处理","target":"ERP","value":1},{"source":"发起合同变更处理","target":"PLM","value":1},{"source":"合同执行、任务订单下达、履约过程问题跟踪、变更处理与合规归档","target":"协调变更实施","value":1},{"source":"协调变更实施","target":"OA","value":1},{"source":"协调变更实施","target":"ERP","value":1},{"source":"协调变更实施","target":"PLM","value":1},{"source":"合同执行、任务订单下达、履约过程问题跟踪、变更处理与合规归档","target":"整理合同履约合规归档","value":1},{"source":"整理合同履约合规归档","target":"OA","value":1},{"source":"交付单据编制流转、交付报表、对账补收货、结算回款计划与差异核对","target":"编制产品交付单据","value":1},{"source":"编制产品交付单据","target":"MES","value":1},{"source":"编制产品交付单据","target":"ERP","value":1},{"source":"交付单据编制流转、交付报表、对账补收货、结算回款计划与差异核对","target":"制作交付报表与客户对账","value":1},{"source":"制作交付报表与客户对账","target":"ERP","value":1},{"source":"交付单据编制流转、交付报表、对账补收货、结算回款计划与差异核对","target":"处理补收货差异核对","value":1},{"source":"处理补收货差异核对","target":"OA","value":1},{"source":"处理补收货差异核对","target":"ERP","value":1},{"source":"交付单据编制流转、交付报表、对账补收货、结算回款计划与差异核对","target":"制定结算回款计划","value":1},{"source":"制定结算回款计划","target":"ERP","value":1},{"source":"交付单据编制流转、交付报表、对账补收货、结算回款计划与差异核对","target":"跟踪回款执行与差异处理","value":1},{"source":"跟踪回款执行与差异处理","target":"ERP","value":1},{"source":"跟踪回款执行与差异处理","target":"OA","value":1},{"source":"工作转移申请、供应商承接风险评估、转移计划、客户批准与首件验证衔接","target":"识别工作转移需求并发起申请","value":1},{"source":"识别工作转移需求并发起申请","target":"OA","value":1},{"source":"工作转移申请、供应商承接风险评估、转移计划、客户批准与首件验证衔接","target":"组织供应商承接风险评估","value":1},{"source":"组织供应商承接风险评估","target":"OA","value":1},{"source":"组织供应商承接风险评估","target":"PLM","value":1},{"source":"工作转移申请、供应商承接风险评估、转移计划、客户批准与首件验证衔接","target":"编制工作转移计划","value":1},{"source":"编制工作转移计划","target":"OA","value":1},{"source":"编制工作转移计划","target":"PLM","value":1},{"source":"工作转移申请、供应商承接风险评估、转移计划、客户批准与首件验证衔接","target":"提交客户批准工作转移","value":1},{"source":"提交客户批准工作转移","target":"OA","value":1},{"source":"工作转移申请、供应商承接风险评估、转移计划、客户批准与首件验证衔接","target":"衔接首件验证","value":1},{"source":"衔接首件验证","target":"MES","value":1},{"source":"衔接首件验证","target":"PLM","value":1},{"source":"交付后不合格品接收记录、分析论证、处置建议、返工返修监督与趋势改进","target":"接收记录交付后不合格品信息","value":1},{"source":"接收记录交付后不合格品信息","target":"OA","value":1},{"source":"交付后不合格品接收记录、分析论证、处置建议、返工返修监督与趋势改进","target":"组织分析论证不合格原因","value":1},{"source":"组织分析论证不合格原因","target":"OA","value":1},{"source":"组织分析论证不合格原因","target":"MES","value":1},{"source":"交付后不合格品接收记录、分析论证、处置建议、返工返修监督与趋势改进","target":"提出处置建议并组织评审","value":1},{"source":"提出处置建议并组织评审","target":"OA","value":1},{"source":"交付后不合格品接收记录、分析论证、处置建议、返工返修监督与趋势改进","target":"监督返工返修执行","value":1},{"source":"监督返工返修执行","target":"MES","value":1},{"source":"交付后不合格品接收记录、分析论证、处置建议、返工返修监督与趋势改进","target":"开展不合格趋势分析与改进","value":1},{"source":"开展不合格趋势分析与改进","target":"OA","value":1},{"source":"开展不合格趋势分析与改进","target":"MES","value":1},{"source":"采购/外包产品分类、请购时间、采购周期、请购部门和采购管控要求维护","target":"建立维护采购产品分类体系","value":1},{"source":"建立维护采购产品分类体系","target":"ERP","value":1},{"source":"采购/外包产品分类、请购时间、采购周期、请购部门和采购管控要求维护","target":"设定请购时间与采购周期标准","value":1},{"source":"设定请购时间与采购周期标准","target":"ERP","value":1},{"source":"采购/外包产品分类、请购时间、采购周期、请购部门和采购管控要求维护","target":"明确请购部门与管控要求","value":1},{"source":"明确请购部门与管控要求","target":"OA","value":1},{"source":"采购/外包产品分类、请购时间、采购周期、请购部门和采购管控要求维护","target":"受理采购周期例外审批","value":1},{"source":"受理采购周期例外审批","target":"OA","value":1},{"source":"供应商开发需求、寻源、潜在供应商信息维护、拟开发供应商确定、开发计划与评价","target":"受理供应商开发需求申请","value":1},{"source":"受理供应商开发需求申请","target":"OA","value":1},{"source":"供应商开发需求、寻源、潜在供应商信息维护、拟开发供应商确定、开发计划与评价","target":"开展供应商寻源与信息收集","value":1},{"source":"开展供应商寻源与信息收集","target":"OA","value":1},{"source":"供应商开发需求、寻源、潜在供应商信息维护、拟开发供应商确定、开发计划与评价","target":"维护潜在供应商信息库","value":1},{"source":"维护潜在供应商信息库","target":"ERP","value":1},{"source":"维护潜在供应商信息库","target":"OA","value":1},{"source":"供应商开发需求、寻源、潜在供应商信息维护、拟开发供应商确定、开发计划与评价","target":"确定拟开发供应商","value":1},{"source":"确定拟开发供应商","target":"OA","value":1},{"source":"确定拟开发供应商","target":"ERP","value":1},{"source":"供应商开发需求、寻源、潜在供应商信息维护、拟开发供应商确定、开发计划与评价","target":"编制供应商开发计划","value":1},{"source":"编制供应商开发计划","target":"OA","value":1},{"source":"供应商开发需求、寻源、潜在供应商信息维护、拟开发供应商确定、开发计划与评价","target":"组织供应商评价","value":1},{"source":"组织供应商评价","target":"OA","value":1},{"source":"供应商批准、有条件批准、取消批准、适用项目确定、合格供应商目录建立维护与清册更新","target":"组织供应商自评与审核","value":1},{"source":"组织供应商自评与审核","target":"OA","value":1},{"source":"供应商批准、有条件批准、取消批准、适用项目确定、合格供应商目录建立维护与清册更新","target":"确定供应商批准状态","value":1},{"source":"确定供应商批准状态","target":"OA","value":1},{"source":"确定供应商批准状态","target":"ERP","value":1},{"source":"供应商批准、有条件批准、取消批准、适用项目确定、合格供应商目录建立维护与清册更新","target":"确定供应商适用项目范围","value":1},{"source":"确定供应商适用项目范围","target":"ERP","value":1},{"source":"供应商批准、有条件批准、取消批准、适用项目确定、合格供应商目录建立维护与清册更新","target":"建立维护合格供应商目录","value":1},{"source":"建立维护合格供应商目录","target":"ERP","value":1},{"source":"建立维护合格供应商目录","target":"OA","value":1},{"source":"供应商批准、有条件批准、取消批准、适用项目确定、合格供应商目录建立维护与清册更新","target":"维护更新供应商物料清册","value":1},{"source":"维护更新供应商物料清册","target":"ERP","value":1},{"source":"供应商批准、有条件批准、取消批准、适用项目确定、合格供应商目录建立维护与清册更新","target":"处理供应商取消批准","value":1},{"source":"处理供应商取消批准","target":"OA","value":1},{"source":"处理供应商取消批准","target":"ERP","value":1},{"source":"交付进度、交付质量、服务水平数据收集、季度/年度绩效综合评价、公布与沟通","target":"收集供应商交付进度数据","value":1},{"source":"收集供应商交付进度数据","target":"ERP","value":1},{"source":"交付进度、交付质量、服务水平数据收集、季度/年度绩效综合评价、公布与沟通","target":"收集供应商交付质量数据","value":1},{"source":"收集供应商交付质量数据","target":"ERP","value":1},{"source":"交付进度、交付质量、服务水平数据收集、季度/年度绩效综合评价、公布与沟通","target":"收集供应商服务水平数据","value":1},{"source":"收集供应商服务水平数据","target":"OA","value":1},{"source":"交付进度、交付质量、服务水平数据收集、季度/年度绩效综合评价、公布与沟通","target":"编制供应商绩效综合评价","value":1},{"source":"编制供应商绩效综合评价","target":"OA","value":1},{"source":"编制供应商绩效综合评价","target":"ERP","value":1},{"source":"交付进度、交付质量、服务水平数据收集、季度/年度绩效综合评价、公布与沟通","target":"公布绩效结果并与供应商沟通","value":1},{"source":"公布绩效结果并与供应商沟通","target":"OA","value":1},{"source":"交付进度、交付质量、服务水平数据收集、季度/年度绩效综合评价、公布与沟通","target":"跟踪纠正预防措施闭环","value":1},{"source":"跟踪纠正预防措施闭环","target":"OA","value":1},{"source":"供应商风险事项收集、风险识别分析、风险等级评估、应对措施、定期/临时再评价","target":"收集供应商风险事项","value":1},{"source":"收集供应商风险事项","target":"OA","value":1},{"source":"供应商风险事项收集、风险识别分析、风险等级评估、应对措施、定期/临时再评价","target":"识别分析供应商风险","value":1},{"source":"识别分析供应商风险","target":"OA","value":1},{"source":"供应商风险事项收集、风险识别分析、风险等级评估、应对措施、定期/临时再评价","target":"评估风险等级并登记","value":1},{"source":"评估风险等级并登记","target":"OA","value":1},{"source":"评估风险等级并登记","target":"ERP","value":1},{"source":"供应商风险事项收集、风险识别分析、风险等级评估、应对措施、定期/临时再评价","target":"制定实施风险应对措施","value":1},{"source":"制定实施风险应对措施","target":"OA","value":1},{"source":"供应商风险事项收集、风险识别分析、风险等级评估、应对措施、定期/临时再评价","target":"组织供应商定期/临时再评价","value":1},{"source":"组织供应商定期/临时再评价","target":"OA","value":1},{"source":"组织供应商定期/临时再评价","target":"ERP","value":1},{"source":"采购计划、特批供货、采购/外包合同、外购产品验收、假冒件预防与处置","target":"编制采购计划","value":1},{"source":"编制采购计划","target":"ERP","value":1},{"source":"采购计划、特批供货、采购/外包合同、外购产品验收、假冒件预防与处置","target":"处理特批供货申请","value":1},{"source":"处理特批供货申请","target":"OA","value":1},{"source":"采购计划、特批供货、采购/外包合同、外购产品验收、假冒件预防与处置","target":"签订采购/外包合同","value":1},{"source":"签订采购/外包合同","target":"OA","value":1},{"source":"签订采购/外包合同","target":"ERP","value":1},{"source":"采购计划、特批供货、采购/外包合同、外购产品验收、假冒件预防与处置","target":"组织外购产品到货验收","value":1},{"source":"组织外购产品到货验收","target":"MES","value":1},{"source":"组织外购产品到货验收","target":"ERP","value":1},{"source":"采购计划、特批供货、采购/外包合同、外购产品验收、假冒件预防与处置","target":"开展假冒件预防与处置","value":1},{"source":"开展假冒件预防与处置","target":"OA","value":1},{"source":"外协需求发起审批、目标价制定、供应商报价、合同/报价单上传审批","target":"发起外协加工需求申请","value":1},{"source":"发起外协加工需求申请","target":"OA","value":1},{"source":"外协需求发起审批、目标价制定、供应商报价、合同/报价单上传审批","target":"制定零件/工装目标价","value":1},{"source":"制定零件/工装目标价","target":"ERP","value":1},{"source":"外协需求发起审批、目标价制定、供应商报价、合同/报价单上传审批","target":"收集供应商报价并比价","value":1},{"source":"收集供应商报价并比价","target":"OA","value":1},{"source":"收集供应商报价并比价","target":"ERP","value":1},{"source":"外协需求发起审批、目标价制定、供应商报价、合同/报价单上传审批","target":"上传审批外协合同/报价单","value":1},{"source":"上传审批外协合同/报价单","target":"OA","value":1},{"source":"上传审批外协合同/报价单","target":"ERP","value":1},{"source":"零件/工装外协加工、接收检验、不合格扣款、对账、结算与付款申请","target":"下达外协加工委托","value":1},{"source":"下达外协加工委托","target":"MES","value":1},{"source":"下达外协加工委托","target":"ERP","value":1},{"source":"零件/工装外协加工、接收检验、不合格扣款、对账、结算与付款申请","target":"组织外协零件/工装接收检验","value":1},{"source":"组织外协零件/工装接收检验","target":"MES","value":1},{"source":"零件/工装外协加工、接收检验、不合格扣款、对账、结算与付款申请","target":"处理不合格品扣款","value":1},{"source":"处理不合格品扣款","target":"OA","value":1},{"source":"处理不合格品扣款","target":"ERP","value":1},{"source":"零件/工装外协加工、接收检验、不合格扣款、对账、结算与付款申请","target":"核对零件/工装对账单","value":1},{"source":"核对零件/工装对账单","target":"ERP","value":1},{"source":"零件/工装外协加工、接收检验、不合格扣款、对账、结算与付款申请","target":"办理结算与付款申请","value":1},{"source":"办理结算与付款申请","target":"ERP","value":1},{"source":"办理结算与付款申请","target":"OA","value":1},{"source":"外包申请、首检确定、供应商生产计划编制传递、计划执行调整与周例会跟踪","target":"发起外包申请与评审","value":1},{"source":"发起外包申请与评审","target":"OA","value":1},{"source":"外包申请、首检确定、供应商生产计划编制传递、计划执行调整与周例会跟踪","target":"确定首件检验要求","value":1},{"source":"确定首件检验要求","target":"MES","value":1},{"source":"外包申请、首检确定、供应商生产计划编制传递、计划执行调整与周例会跟踪","target":"编制传递供应商生产计划","value":1},{"source":"编制传递供应商生产计划","target":"MES","value":1},{"source":"编制传递供应商生产计划","target":"ERP","value":1},{"source":"外包申请、首检确定、供应商生产计划编制传递、计划执行调整与周例会跟踪","target":"跟踪计划执行与调整","value":1},{"source":"跟踪计划执行与调整","target":"MES","value":1},{"source":"外包申请、首检确定、供应商生产计划编制传递、计划执行调整与周例会跟踪","target":"组织周例会跟踪外包进度","value":1},{"source":"组织周例会跟踪外包进度","target":"OA","value":1},{"source":"供应商技术文件发放、原材料领用发放、工装样板借用、制造记录和电子账更新","target":"发放供应商技术文件","value":1},{"source":"发放供应商技术文件","target":"PLM","value":1},{"source":"供应商技术文件发放、原材料领用发放、工装样板借用、制造记录和电子账更新","target":"办理原材料领用发放","value":1},{"source":"办理原材料领用发放","target":"ERP","value":1},{"source":"供应商技术文件发放、原材料领用发放、工装样板借用、制造记录和电子账更新","target":"管理工装样板借用","value":1},{"source":"管理工装样板借用","target":"ERP","value":1},{"source":"管理工装样板借用","target":"MES","value":1},{"source":"供应商技术文件发放、原材料领用发放、工装样板借用、制造记录和电子账更新","target":"更新外包制造记录与电子账","value":1},{"source":"更新外包制造记录与电子账","target":"MES","value":1},{"source":"更新外包制造记录与电子账","target":"ERP","value":1},{"source":"临时外包采购申请、供应商选择、合同签订、采购订单下达、紧急外包供应商报价与分工报告","target":"发起临时外包采购申请","value":1},{"source":"发起临时外包采购申请","target":"OA","value":1},{"source":"临时外包采购申请、供应商选择、合同签订、采购订单下达、紧急外包供应商报价与分工报告","target":"选择临时外包供应商","value":1},{"source":"选择临时外包供应商","target":"ERP","value":1},{"source":"临时外包采购申请、供应商选择、合同签订、采购订单下达、紧急外包供应商报价与分工报告","target":"签订临时外包合同并下达采购订单","value":1},{"source":"签订临时外包合同并下达采购订单","target":"ERP","value":1},{"source":"签订临时外包合同并下达采购订单","target":"OA","value":1},{"source":"临时外包采购申请、供应商选择、合同签订、采购订单下达、紧急外包供应商报价与分工报告","target":"发起紧急外包申请","value":1},{"source":"发起紧急外包申请","target":"OA","value":1},{"source":"临时外包采购申请、供应商选择、合同签订、采购订单下达、紧急外包供应商报价与分工报告","target":"收集紧急外包供应商报价","value":1},{"source":"收集紧急外包供应商报价","target":"OA","value":1},{"source":"临时外包采购申请、供应商选择、合同签订、采购订单下达、紧急外包供应商报价与分工报告","target":"编制紧急外包分工报告","value":1},{"source":"编制紧急外包分工报告","target":"OA","value":1},{"source":"临时外包采购申请、供应商选择、合同签订、采购订单下达、紧急外包供应商报价与分工报告","target":"下达紧急外包订单并跟踪","value":1},{"source":"下达紧急外包订单并跟踪","target":"ERP","value":1},{"source":"下达紧急外包订单并跟踪","target":"MES","value":1},{"source":"外委检测需求、检测机构选择评价、合同签订、样品交接、检测报告审核验收与异常监督","target":"识别外委检测需求","value":1},{"source":"识别外委检测需求","target":"OA","value":1},{"source":"外委检测需求、检测机构选择评价、合同签订、样品交接、检测报告审核验收与异常监督","target":"选择评价检测机构","value":1},{"source":"选择评价检测机构","target":"OA","value":1},{"source":"外委检测需求、检测机构选择评价、合同签订、样品交接、检测报告审核验收与异常监督","target":"签订外委检测合同","value":1},{"source":"签订外委检测合同","target":"OA","value":1},{"source":"签订外委检测合同","target":"ERP","value":1},{"source":"外委检测需求、检测机构选择评价、合同签订、样品交接、检测报告审核验收与异常监督","target":"办理样品交接","value":1},{"source":"办理样品交接","target":"OA","value":1},{"source":"外委检测需求、检测机构选择评价、合同签订、样品交接、检测报告审核验收与异常监督","target":"审核验收检测报告","value":1},{"source":"审核验收检测报告","target":"OA","value":1},{"source":"外委检测需求、检测机构选择评价、合同签订、样品交接、检测报告审核验收与异常监督","target":"监督检测异常与改进","value":1},{"source":"监督检测异常与改进","target":"OA","value":1},{"source":"年度技改计划制定、临时性技改项目管理、基建技改计划流程确认","target":"收集各部门技改需求","value":1},{"source":"收集各部门技改需求","target":"OA","value":1},{"source":"年度技改计划制定、临时性技改项目管理、基建技改计划流程确认","target":"编制年度技改计划草案","value":1},{"source":"编制年度技改计划草案","target":"OA","value":1},{"source":"编制年度技改计划草案","target":"PLM","value":1},{"source":"年度技改计划制定、临时性技改项目管理、基建技改计划流程确认","target":"组织年度技改计划评审与报批","value":1},{"source":"组织年度技改计划评审与报批","target":"OA","value":1},{"source":"年度技改计划制定、临时性技改项目管理、基建技改计划流程确认","target":"受理临时性技改项目申请","value":1},{"source":"受理临时性技改项目申请","target":"OA","value":1},{"source":"年度技改计划制定、临时性技改项目管理、基建技改计划流程确认","target":"确认基建技改计划流程","value":1},{"source":"确认基建技改计划流程","target":"OA","value":1},{"source":"基建技改/维修申报、现场勘察、费用评估、全周期计划、计划调整与实施跟踪","target":"受理基建技改/维修申报","value":1},{"source":"受理基建技改/维修申报","target":"OA","value":1},{"source":"基建技改/维修申报、现场勘察、费用评估、全周期计划、计划调整与实施跟踪","target":"组织现场勘察","value":1},{"source":"组织现场勘察","target":"OA","value":1},{"source":"基建技改/维修申报、现场勘察、费用评估、全周期计划、计划调整与实施跟踪","target":"开展费用评估","value":1},{"source":"开展费用评估","target":"ERP","value":1},{"source":"基建技改/维修申报、现场勘察、费用评估、全周期计划、计划调整与实施跟踪","target":"编制全周期实施计划","value":1},{"source":"编制全周期实施计划","target":"OA","value":1},{"source":"编制全周期实施计划","target":"PLM","value":1},{"source":"基建技改/维修申报、现场勘察、费用评估、全周期计划、计划调整与实施跟踪","target":"跟踪实施与计划调整","value":1},{"source":"跟踪实施与计划调整","target":"OA","value":1},{"source":"设备预验收、开箱验收、终验收、特种设备补充验收、遗留问题处理与风险保留","target":"组织设备预验收（出厂前）","value":1},{"source":"组织设备预验收（出厂前）","target":"OA","value":1},{"source":"设备预验收、开箱验收、终验收、特种设备补充验收、遗留问题处理与风险保留","target":"组织设备开箱验收","value":1},{"source":"组织设备开箱验收","target":"MES","value":1},{"source":"设备预验收、开箱验收、终验收、特种设备补充验收、遗留问题处理与风险保留","target":"组织设备终验收","value":1},{"source":"组织设备终验收","target":"OA","value":1},{"source":"组织设备终验收","target":"MES","value":1},{"source":"设备预验收、开箱验收、终验收、特种设备补充验收、遗留问题处理与风险保留","target":"组织特种设备补充验收","value":1},{"source":"组织特种设备补充验收","target":"OA","value":1},{"source":"设备预验收、开箱验收、终验收、特种设备补充验收、遗留问题处理与风险保留","target":"处理遗留问题与风险保留","value":1},{"source":"处理遗留问题与风险保留","target":"OA","value":1},{"source":"设备合格证、出厂检验报告、说明书、图纸、软件程序、维修手册、备件清单、培训资料归档与固定资产移交","target":"收集整理新设备技术资料","value":1},{"source":"收集整理新设备技术资料","target":"PLM","value":1},{"source":"设备合格证、出厂检验报告、说明书、图纸、软件程序、维修手册、备件清单、培训资料归档与固定资产移交","target":"归档设备培训资料","value":1},{"source":"归档设备培训资料","target":"OA","value":1},{"source":"设备合格证、出厂检验报告、说明书、图纸、软件程序、维修手册、备件清单、培训资料归档与固定资产移交","target":"办理固定资产移交","value":1},{"source":"办理固定资产移交","target":"ERP","value":1},{"source":"设备合格证、出厂检验报告、说明书、图纸、软件程序、维修手册、备件清单、培训资料归档与固定资产移交","target":"建立设备运维档案","value":1},{"source":"建立设备运维档案","target":"MES","value":1},{"source":"建立设备运维档案","target":"ERP","value":1},{"source":"程序文件内容编制、格式要求、更改、传阅、记录控制与关联表单管理","target":"编制管理体系程序文件内容","value":1},{"source":"编制管理体系程序文件内容","target":"OA","value":1},{"source":"程序文件内容编制、格式要求、更改、传阅、记录控制与关联表单管理","target":"执行程序文件格式标准化","value":1},{"source":"执行程序文件格式标准化","target":"OA","value":1},{"source":"程序文件内容编制、格式要求、更改、传阅、记录控制与关联表单管理","target":"组织文件审签与会签","value":1},{"source":"组织文件审签与会签","target":"OA","value":1},{"source":"程序文件内容编制、格式要求、更改、传阅、记录控制与关联表单管理","target":"办理文件更改与升版","value":1},{"source":"办理文件更改与升版","target":"OA","value":1},{"source":"程序文件内容编制、格式要求、更改、传阅、记录控制与关联表单管理","target":"管理文件传阅与记录控制","value":1},{"source":"管理文件传阅与记录控制","target":"OA","value":1},{"source":"程序文件内容编制、格式要求、更改、传阅、记录控制与关联表单管理","target":"管理关联表单","value":1},{"source":"管理关联表单","target":"OA","value":1},{"source":"程序文件编码、关联表单编码、部门编码备案、版本变更与唯一性维护","target":"为新编程序文件分配编码","value":1},{"source":"为新编程序文件分配编码","target":"OA","value":1},{"source":"程序文件编码、关联表单编码、部门编码备案、版本变更与唯一性维护","target":"为关联表单分配编码","value":1},{"source":"为关联表单分配编码","target":"OA","value":1},{"source":"程序文件编码、关联表单编码、部门编码备案、版本变更与唯一性维护","target":"办理部门编码备案","value":1},{"source":"办理部门编码备案","target":"OA","value":1},{"source":"程序文件编码、关联表单编码、部门编码备案、版本变更与唯一性维护","target":"处理版本变更与唯一性维护","value":1},{"source":"处理版本变更与唯一性维护","target":"OA","value":1},{"source":"内部沟通、外部沟通、质量管理会议、异常报告、板报培训信息与顾客/供应商沟通衔接","target":"组织内部沟通与信息传递","value":1},{"source":"组织内部沟通与信息传递","target":"OA","value":1},{"source":"内部沟通、外部沟通、质量管理会议、异常报告、板报培训信息与顾客/供应商沟通衔接","target":"管理外部沟通与信息收发","value":1},{"source":"管理外部沟通与信息收发","target":"OA","value":1},{"source":"内部沟通、外部沟通、质量管理会议、异常报告、板报培训信息与顾客/供应商沟通衔接","target":"组织召开质量管理会议","value":1},{"source":"组织召开质量管理会议","target":"OA","value":1},{"source":"内部沟通、外部沟通、质量管理会议、异常报告、板报培训信息与顾客/供应商沟通衔接","target":"受理异常报告并跟踪处理","value":1},{"source":"受理异常报告并跟踪处理","target":"OA","value":1},{"source":"内部沟通、外部沟通、质量管理会议、异常报告、板报培训信息与顾客/供应商沟通衔接","target":"发布板报培训信息","value":1},{"source":"发布板报培训信息","target":"OA","value":1},{"source":"内部沟通、外部沟通、质量管理会议、异常报告、板报培训信息与顾客/供应商沟通衔接","target":"衔接顾客/供应商沟通渠道","value":1},{"source":"衔接顾客/供应商沟通渠道","target":"OA","value":1},{"source":"管理创新提案、评审决策、立项实施、验收评估与固化推广","target":"征集受理管理创新提案","value":1},{"source":"征集受理管理创新提案","target":"OA","value":1},{"source":"管理创新提案、评审决策、立项实施、验收评估与固化推广","target":"组织创新提案评审决策","value":1},{"source":"组织创新提案评审决策","target":"OA","value":1},{"source":"管理创新提案、评审决策、立项实施、验收评估与固化推广","target":"立项并推动创新项目实施","value":1},{"source":"立项并推动创新项目实施","target":"OA","value":1},{"source":"管理创新提案、评审决策、立项实施、验收评估与固化推广","target":"组织创新项目验收评估","value":1},{"source":"组织创新项目验收评估","target":"OA","value":1},{"source":"管理创新提案、评审决策、立项实施、验收评估与固化推广","target":"固化创新成果并推广","value":1},{"source":"固化创新成果并推广","target":"OA","value":1},{"source":"企业文化建设、宣传策划、内容发布、文化活动组织与记录归档","target":"制定企业文化建设方案","value":1},{"source":"制定企业文化建设方案","target":"OA","value":1},{"source":"企业文化建设、宣传策划、内容发布、文化活动组织与记录归档","target":"策划宣传内容与形式","value":1},{"source":"策划宣传内容与形式","target":"OA","value":1},{"source":"企业文化建设、宣传策划、内容发布、文化活动组织与记录归档","target":"发布企业宣传内容","value":1},{"source":"发布企业宣传内容","target":"OA","value":1},{"source":"企业文化建设、宣传策划、内容发布、文化活动组织与记录归档","target":"组织文化活动","value":1},{"source":"组织文化活动","target":"OA","value":1},{"source":"企业文化建设、宣传策划、内容发布、文化活动组织与记录归档","target":"归档文化活动记录","value":1},{"source":"归档文化活动记录","target":"OA","value":1},{"source":"政策信息收集解读、可行性论证、申报材料组织、正式提交、项目跟进验收与成果归档","target":"收集解读行业政策信息","value":1},{"source":"收集解读行业政策信息","target":"OA","value":1},{"source":"政策信息收集解读、可行性论证、申报材料组织、正式提交、项目跟进验收与成果归档","target":"开展项目申报可行性论证","value":1},{"source":"开展项目申报可行性论证","target":"OA","value":1},{"source":"政策信息收集解读、可行性论证、申报材料组织、正式提交、项目跟进验收与成果归档","target":"组织申报材料编制","value":1},{"source":"组织申报材料编制","target":"OA","value":1},{"source":"政策信息收集解读、可行性论证、申报材料组织、正式提交、项目跟进验收与成果归档","target":"正式提交申报材料","value":1},{"source":"正式提交申报材料","target":"OA","value":1},{"source":"政策信息收集解读、可行性论证、申报材料组织、正式提交、项目跟进验收与成果归档","target":"跟进项目进展并组织验收","value":1},{"source":"跟进项目进展并组织验收","target":"OA","value":1},{"source":"政策信息收集解读、可行性论证、申报材料组织、正式提交、项目跟进验收与成果归档","target":"归档项目成果与资料","value":1},{"source":"归档项目成果与资料","target":"OA","value":1},{"source":"风险评估通知、风险辨识分析、重大风险排序、风险应对方案、季度检查与评分","target":"发布风险评估通知","value":1},{"source":"发布风险评估通知","target":"OA","value":1},{"source":"风险评估通知、风险辨识分析、重大风险排序、风险应对方案、季度检查与评分","target":"组织各部门风险辨识与分析","value":1},{"source":"组织各部门风险辨识与分析","target":"OA","value":1},{"source":"风险评估通知、风险辨识分析、重大风险排序、风险应对方案、季度检查与评分","target":"排序确定重大风险","value":1},{"source":"排序确定重大风险","target":"OA","value":1},{"source":"风险评估通知、风险辨识分析、重大风险排序、风险应对方案、季度检查与评分","target":"制定风险应对方案","value":1},{"source":"制定风险应对方案","target":"OA","value":1},{"source":"风险评估通知、风险辨识分析、重大风险排序、风险应对方案、季度检查与评分","target":"开展季度风险监测检查与评分","value":1},{"source":"开展季度风险监测检查与评分","target":"OA","value":1},{"source":"自揽项目奖励、前期中标奖励、后期实施奖励、计提基数确认与发放审批","target":"确认计提基数与奖励类型","value":1},{"source":"确认计提基数与奖励类型","target":"ERP","value":1},{"source":"自揽项目奖励、前期中标奖励、后期实施奖励、计提基数确认与发放审批","target":"计算自揽项目前期中标奖励","value":1},{"source":"计算自揽项目前期中标奖励","target":"OA","value":1},{"source":"自揽项目奖励、前期中标奖励、后期实施奖励、计提基数确认与发放审批","target":"计算后期实施奖励","value":1},{"source":"计算后期实施奖励","target":"OA","value":1},{"source":"自揽项目奖励、前期中标奖励、后期实施奖励、计提基数确认与发放审批","target":"提交奖励发放审批","value":1},{"source":"提交奖励发放审批","target":"OA","value":1},{"source":"提交奖励发放审批","target":"ERP","value":1},{"source":"钉钉申报、钉钉审批、海关申报、货物信息核对、卡口登记和司机须知传递","target":"发起钉钉内部申报","value":1},{"source":"发起钉钉内部申报","target":"OA","value":1},{"source":"钉钉申报、钉钉审批、海关申报、货物信息核对、卡口登记和司机须知传递","target":"完成钉钉内部审批","value":1},{"source":"完成钉钉内部审批","target":"OA","value":1},{"source":"钉钉申报、钉钉审批、海关申报、货物信息核对、卡口登记和司机须知传递","target":"办理海关正式申报","value":1},{"source":"办理海关正式申报","target":"OA","value":1},{"source":"钉钉申报、钉钉审批、海关申报、货物信息核对、卡口登记和司机须知传递","target":"核对货物信息并反馈","value":1},{"source":"核对货物信息并反馈","target":"ERP","value":1},{"source":"钉钉申报、钉钉审批、海关申报、货物信息核对、卡口登记和司机须知传递","target":"办理卡口登记与司机须知传递","value":1},{"source":"办理卡口登记与司机须知传递","target":"OA","value":1},{"source":"法律事务、合同审查、法律风险防范、证照保管、使用登记与安全控制","target":"处理法律事务与风险防范","value":1},{"source":"处理法律事务与风险防范","target":"OA","value":1},{"source":"法律事务、合同审查、法律风险防范、证照保管、使用登记与安全控制","target":"开展合同法律审查","value":1},{"source":"开展合同法律审查","target":"OA","value":1},{"source":"法律事务、合同审查、法律风险防范、证照保管、使用登记与安全控制","target":"保管公司证照原件","value":1},{"source":"保管公司证照原件","target":"OA","value":1},{"source":"法律事务、合同审查、法律风险防范、证照保管、使用登记与安全控制","target":"受理证照使用登记","value":1},{"source":"受理证照使用登记","target":"OA","value":1},{"source":"法律事务、合同审查、法律风险防范、证照保管、使用登记与安全控制","target":"实施证照安全控制","value":1},{"source":"实施证照安全控制","target":"OA","value":1},{"source":"项目工作范围与工作结构定义、项目矩阵团队组建","target":"组织编制项目工作说明书","value":1},{"source":"组织编制项目工作说明书","target":"OA","value":1},{"source":"项目工作范围与工作结构定义、项目矩阵团队组建","target":"建立工作分解结构（WBS）","value":1},{"source":"建立工作分解结构（WBS）","target":"OA","value":1},{"source":"项目工作范围与工作结构定义、项目矩阵团队组建","target":"组建项目矩阵团队","value":1},{"source":"组建项目矩阵团队","target":"OA","value":1},{"source":"项目启动令编制、评审、批准与发布","target":"编制项目启动令","value":1},{"source":"编制项目启动令","target":"OA","value":1},{"source":"项目启动令编制、评审、批准与发布","target":"组织项目启动会并批准启动令","value":1},{"source":"组织项目启动会并批准启动令","target":"OA","value":1},{"source":"项目启动令编制、评审、批准与发布","target":"发布项目启动文件","value":1},{"source":"发布项目启动文件","target":"OA","value":1},{"source":"项目阶段划分与阶段评审","target":"划分项目生命周期阶段","value":1},{"source":"划分项目生命周期阶段","target":"OA","value":1},{"source":"项目阶段划分与阶段评审","target":"组织阶段评审会议","value":1},{"source":"组织阶段评审会议","target":"OA","value":1},{"source":"研制团队组建、项目方案评审与开工风险评估","target":"确定项目管理者并组建研制团队","value":1},{"source":"确定项目管理者并组建研制团队","target":"OA","value":1},{"source":"研制团队组建、项目方案评审与开工风险评估","target":"开展项目开工评审及风险评估","value":1},{"source":"开展项目开工评审及风险评估","target":"OA","value":1},{"source":"研制团队组建、项目方案评审与开工风险评估","target":"组织编制并评审项目方案","value":1},{"source":"组织编制并评审项目方案","target":"OA","value":1},{"source":"研制项目主阶段计划编制与阶段转批评审","target":"编制项目主阶段计划","value":1},{"source":"编制项目主阶段计划","target":"OA","value":1},{"source":"研制项目主阶段计划编制与阶段转批评审","target":"跟踪研制项目 II/III 层计划进度","value":1},{"source":"跟踪研制项目 II/III 层计划进度","target":"MES","value":1},{"source":"跟踪研制项目 II/III 层计划进度","target":"OA","value":1},{"source":"研制项目主阶段计划编制与阶段转批评审","target":"组织研制阶段转批评审","value":1},{"source":"组织研制阶段转批评审","target":"OA","value":1},{"source":"年度一层计划编制、平衡产能与下达宣贯","target":"编制年度一层计划","value":1},{"source":"编制年度一层计划","target":"OA","value":1},{"source":"年度一层计划编制、平衡产能与下达宣贯","target":"汇总并平衡年度产能","value":1},{"source":"汇总并平衡年度产能","target":"OA","value":1},{"source":"年度一层计划编制、平衡产能与下达宣贯","target":"召开生产会下达一层计划","value":1},{"source":"召开生产会下达一层计划","target":"OA","value":1},{"source":"年度一层计划编制、平衡产能与下达宣贯","target":"升版一层计划（任务变更时）","value":1},{"source":"升版一层计划（任务变更时）","target":"OA","value":1},{"source":"月度二层计划编制、物料风险识别、产能平衡与工区反馈调整","target":"更新罐前计划与编制月度二层计划","value":1},{"source":"更新罐前计划与编制月度二层计划","target":"MES","value":1},{"source":"更新罐前计划与编制月度二层计划","target":"OA","value":1},{"source":"月度二层计划编制、物料风险识别、产能平衡与工区反馈调整","target":"识别物料风险并补充原材料","value":1},{"source":"识别物料风险并补充原材料","target":"ERP","value":1},{"source":"识别物料风险并补充原材料","target":"OA","value":1},{"source":"月度二层计划编制、物料风险识别、产能平衡与工区反馈调整","target":"汇总二层计划并平衡产能","value":1},{"source":"汇总二层计划并平衡产能","target":"OA","value":1},{"source":"月度二层计划编制、物料风险识别、产能平衡与工区反馈调整","target":"工区评估反馈与不可执行项调整","value":1},{"source":"工区评估反馈与不可执行项调整","target":"OA","value":1},{"source":"日计划与三日滚动计划编制、班组任务分解与调整审批","target":"编制三层日计划与三日滚动计划","value":1},{"source":"编制三层日计划与三日滚动计划","target":"MES","value":1},{"source":"日计划与三日滚动计划编制、班组任务分解与调整审批","target":"批准三层计划","value":1},{"source":"批准三层计划","target":"MES","value":1},{"source":"日计划与三日滚动计划编制、班组任务分解与调整审批","target":"申请并审批三层计划调整","value":1},{"source":"申请并审批三层计划调整","target":"MES","value":1},{"source":"日计划与三日滚动计划编制、班组任务分解与调整审批","target":"编制罐前计划并调配人机资源","value":1},{"source":"编制罐前计划并调配人机资源","target":"MES","value":1},{"source":"临时生产计划编制、订单确认与紧急开工组织","target":"接收临时需求并确认紧急程度","value":1},{"source":"接收临时需求并确认紧急程度","target":"OA","value":1},{"source":"临时生产计划编制、订单确认与紧急开工组织","target":"组织开工准备并确认工艺信息","value":1},{"source":"组织开工准备并确认工艺信息","target":"OA","value":1},{"source":"临时生产计划编制、订单确认与紧急开工组织","target":"纳入或升版本月计划","value":1},{"source":"纳入或升版本月计划","target":"OA","value":1},{"source":"纳入或升版本月计划","target":"MES","value":1},{"source":"开工评审计划编制、首次会组织、进展跟踪与恢复计划制定","target":"编制初版开工评审计划","value":1},{"source":"编制初版开工评审计划","target":"OA","value":1},{"source":"开工评审计划编制、首次会组织、进展跟踪与恢复计划制定","target":"召开开工评审首次会","value":1},{"source":"召开开工评审首次会","target":"OA","value":1},{"source":"开工评审计划编制、首次会组织、进展跟踪与恢复计划制定","target":"签字下发开工评审计划","value":1},{"source":"签字下发开工评审计划","target":"OA","value":1},{"source":"开工评审计划编制、首次会组织、进展跟踪与恢复计划制定","target":"跟踪开工评审进展并协调恢复","value":1},{"source":"跟踪开工评审进展并协调恢复","target":"OA","value":1},{"source":"罐前计划编制、物料/工装/文件开工条件核查与排罐跟踪调整","target":"核查物料开工条件","value":1},{"source":"核查物料开工条件","target":"MES","value":1},{"source":"核查物料开工条件","target":"ERP","value":1},{"source":"罐前计划编制、物料/工装/文件开工条件核查与排罐跟踪调整","target":"核查工装状态","value":1},{"source":"核查工装状态","target":"OA","value":1},{"source":"罐前计划编制、物料/工装/文件开工条件核查与排罐跟踪调整","target":"编制并更新罐前计划","value":1},{"source":"编制并更新罐前计划","target":"MES","value":1},{"source":"表面处理需求计划编制、更新与临时调整","target":"填写表面处理需求计划","value":1},{"source":"填写表面处理需求计划","target":"MES","value":1},{"source":"表面处理需求计划编制、更新与临时调整","target":"处理漏排错排与临时紧急任务","value":1},{"source":"处理漏排错排与临时紧急任务","target":"OA","value":1},{"source":"零件投产策略编制、生产计划生成、变更与执行跟踪","target":"编制零件投产策略","value":1},{"source":"编制零件投产策略","target":"OA","value":1},{"source":"零件投产策略编制、生产计划生成、变更与执行跟踪","target":"生成零件生产计划","value":1},{"source":"生成零件生产计划","target":"ERP","value":1},{"source":"生成零件生产计划","target":"MES","value":1},{"source":"零件投产策略编制、生产计划生成、变更与执行跟踪","target":"评估变更影响并调整计划","value":1},{"source":"评估变更影响并调整计划","target":"OA","value":1},{"source":"评估变更影响并调整计划","target":"ERP","value":1},{"source":"零件投产策略编制、生产计划生成、变更与执行跟踪","target":"跟踪零件生产及交付情况","value":1},{"source":"跟踪零件生产及交付情况","target":"MES","value":1},{"source":"里程碑节点设置与过程指标管理、进度跟踪与偏离干预","target":"设置研制项目里程碑节点","value":1},{"source":"设置研制项目里程碑节点","target":"OA","value":1},{"source":"里程碑节点设置与过程指标管理、进度跟踪与偏离干预","target":"设置批产项目过程指标","value":1},{"source":"设置批产项目过程指标","target":"OA","value":1},{"source":"里程碑节点设置与过程指标管理、进度跟踪与偏离干预","target":"收集进度汇报并识别问题风险","value":1},{"source":"收集进度汇报并识别问题风险","target":"MES","value":1},{"source":"收集进度汇报并识别问题风险","target":"OA","value":1},{"source":"里程碑节点设置与过程指标管理、进度跟踪与偏离干预","target":"组织月度例会通报计划执行情况","value":1},{"source":"组织月度例会通报计划执行情况","target":"OA","value":1},{"source":"里程碑节点设置与过程指标管理、进度跟踪与偏离干预","target":"现场跟产与实时问题协调","value":1},{"source":"现场跟产与实时问题协调","target":"MES","value":1},{"source":"现场跟产与实时问题协调","target":"OA","value":1},{"source":"生产计划完成率统计、班组考核评分与计划调整","target":"统计班组生产计划完成率","value":1},{"source":"统计班组生产计划完成率","target":"OA","value":1},{"source":"生产计划完成率统计、班组考核评分与计划调整","target":"对生产班组进行打分考核","value":1},{"source":"对生产班组进行打分考核","target":"OA","value":1},{"source":"生产计划完成率统计、班组考核评分与计划调整","target":"编制并审批计划调整报告","value":1},{"source":"编制并审批计划调整报告","target":"OA","value":1},{"source":"包装设计需求传递、包装技术条件与设计数据集管理、包装物制造与验收","target":"传递包装需求并组织启动包装设计","value":1},{"source":"传递包装需求并组织启动包装设计","target":"OA","value":1},{"source":"包装设计需求传递、包装技术条件与设计数据集管理、包装物制造与验收","target":"传递客户审批（如需）","value":1},{"source":"传递客户审批（如需）","target":"OA","value":1},{"source":"包装设计需求传递、包装技术条件与设计数据集管理、包装物制造与验收","target":"组织包装物制造与验收","value":1},{"source":"组织包装物制造与验收","target":"MES","value":1},{"source":"组织包装物制造与验收","target":"ERP","value":1},{"source":"包装工艺准备、包装实施与质量检验","target":"通知包装时间并组织包装实施","value":1},{"source":"通知包装时间并组织包装实施","target":"OA","value":1},{"source":"包装工艺准备、包装实施与质量检验","target":"执行产品包装与连接","value":1},{"source":"执行产品包装与连接","target":"MES","value":1},{"source":"包装工艺准备、包装实施与质量检验","target":"完成包装质量检验与记录留存","value":1},{"source":"完成包装质量检验与记录留存","target":"MES","value":1},{"source":"产品吊装、运输交接、出厂前检查与交付确认","target":"吊装产品至运输车辆","value":1},{"source":"吊装产品至运输车辆","target":"MES","value":1},{"source":"产品吊装、运输交接、出厂前检查与交付确认","target":"组织运输交接","value":1},{"source":"组织运输交接","target":"ERP","value":1},{"source":"组织运输交接","target":"OA","value":1},{"source":"产品吊装、运输交接、出厂前检查与交付确认","target":"执行出厂前检查","value":1},{"source":"执行出厂前检查","target":"OA","value":1},{"source":"关键件工序跨班组问题收集、分配跟踪与反馈闭环","target":"参加班组早会收集关键件问题","value":1},{"source":"参加班组早会收集关键件问题","target":"OA","value":1},{"source":"关键件工序跨班组问题收集、分配跟踪与反馈闭环","target":"分配问题至主管项目助理跟踪解决","value":1},{"source":"分配问题至主管项目助理跟踪解决","target":"OA","value":1},{"source":"关键件工序跨班组问题收集、分配跟踪与反馈闭环","target":"反馈问题解决结果至班组","value":1},{"source":"反馈问题解决结果至班组","target":"OA","value":1},{"source":"原材料领用验收异常上报、使用过程问题判定与处理","target":"上报原材料领用验收异常","value":1},{"source":"上报原材料领用验收异常","target":"OA","value":1},{"source":"原材料领用验收异常上报、使用过程问题判定与处理","target":"上报车间使用过程材料问题","value":1},{"source":"上报车间使用过程材料问题","target":"OA","value":1},{"source":"过程检验质量监控、零件质量问题叫停与多方判定处理","target":"过程检验监控并叫停问题项目","value":1},{"source":"过程检验监控并叫停问题项目","target":"MES","value":1},{"source":"过程检验质量监控、零件质量问题叫停与多方判定处理","target":"组织多方判定与零件处理","value":1},{"source":"组织多方判定与零件处理","target":"OA","value":1},{"source":"材料代用申请、技术判定、审批与制造计划更改","target":"编制材料代用申请单","value":1},{"source":"编制材料代用申请单","target":"OA","value":1},{"source":"材料代用申请、技术判定、审批与制造计划更改","target":"技术判定与审批代用方案","value":1},{"source":"技术判定与审批代用方案","target":"OA","value":1},{"source":"材料代用申请、技术判定、审批与制造计划更改","target":"更改制造计划并按代料状态组织生产","value":1},{"source":"更改制造计划并按代料状态组织生产","target":"PLM","value":1},{"source":"紧急放行单填写、会签、审批、限制条件设定、关闭与 PI 清理","target":"填写并提交产品紧急放行单","value":1},{"source":"填写并提交产品紧急放行单","target":"OA","value":1},{"source":"紧急放行单填写、会签、审批、限制条件设定、关闭与 PI 清理","target":"会签、审核与批准紧急放行","value":1},{"source":"会签、审核与批准紧急放行","target":"OA","value":1},{"source":"紧急放行单填写、会签、审批、限制条件设定、关闭与 PI 清理","target":"粘贴标识、传递放行单并建账跟踪","value":1},{"source":"粘贴标识、传递放行单并建账跟踪","target":"OA","value":1},{"source":"紧急放行单填写、会签、审批、限制条件设定、关闭与 PI 清理","target":"关闭紧急放行并清理 PI","value":1},{"source":"关闭紧急放行并清理 PI","target":"OA","value":1},{"source":"随炉件出罐通知、移交领取确认、理化结果按时反馈","target":"发布随炉件出罐信息","value":1},{"source":"随炉件出罐通知、移交领取确认、理化结果按时反馈","target":"领取随炉件并办理交接手续","value":1},{"source":"随炉件出罐通知、移交领取确认、理化结果按时反馈","target":"出具理化结果并反馈","value":1},{"source":"目标成本测算（BOM基线、材料/劳务成本）、成本编制与核算对比","target":"提供产品BOM基线","value":1},{"source":"提供产品BOM基线","target":"PLM","value":1},{"source":"目标成本测算（BOM基线、材料/劳务成本）、成本编制与核算对比","target":"提供成本测算基础数据","value":1},{"source":"提供成本测算基础数据","target":"ERP","value":1},{"source":"目标成本测算（BOM基线、材料/劳务成本）、成本编制与核算对比","target":"编制项目目标成本","value":1},{"source":"编制项目目标成本","target":"ERP","value":1},{"source":"目标成本测算（BOM基线、材料/劳务成本）、成本编制与核算对比","target":"核算项目成本并与目标对比","value":1},{"source":"核算项目成本并与目标对比","target":"ERP","value":1},{"source":"存货需求计划编制、采购计划制定与供应商管理","target":"编制存货需求计划","value":1},{"source":"编制存货需求计划","target":"ERP","value":1},{"source":"存货需求计划编制、采购计划制定与供应商管理","target":"制定采购计划","value":1},{"source":"制定采购计划","target":"ERP","value":1},{"source":"存货需求计划编制、采购计划制定与供应商管理","target":"选择供应商并签订采购合同","value":1},{"source":"选择供应商并签订采购合同","target":"ERP","value":1},{"source":"选择供应商并签订采购合同","target":"OA","value":1},{"source":"到货初检、质量检验、入库办理、仓储环境管理与库存监控预警","target":"到货初检与登记","value":1},{"source":"到货初检与登记","target":"ERP","value":1},{"source":"到货初检、质量检验、入库办理、仓储环境管理与库存监控预警","target":"质量检验并出具报告","value":1},{"source":"质量检验并出具报告","target":"MES","value":1},{"source":"到货初检、质量检验、入库办理、仓储环境管理与库存监控预警","target":"办理入库与库存标识","value":1},{"source":"办理入库与库存标识","target":"ERP","value":1},{"source":"到货初检、质量检验、入库办理、仓储环境管理与库存监控预警","target":"库存监控与预警","value":1},{"source":"库存监控与预警","target":"ERP","value":1},{"source":"库存监控与预警","target":"MES","value":1},{"source":"领用申请与审批、先进先出发放、日常/定期盘点与差异处理","target":"填写并审批领料单","value":1},{"source":"填写并审批领料单","target":"OA","value":1},{"source":"领用申请与审批、先进先出发放、日常/定期盘点与差异处理","target":"审核并按先进先出原则发料","value":1},{"source":"审核并按先进先出原则发料","target":"ERP","value":1},{"source":"领用申请与审批、先进先出发放、日常/定期盘点与差异处理","target":"执行盘点与差异处理","value":1},{"source":"执行盘点与差异处理","target":"ERP","value":1},{"source":"执行盘点与差异处理","target":"OA","value":1},{"source":"报废申请与审批、呆滞存货处理方案评审与执行","target":"申请存货报废","value":1},{"source":"申请存货报废","target":"OA","value":1},{"source":"报废申请与审批、呆滞存货处理方案评审与执行","target":"处理呆滞存货","value":1},{"source":"处理呆滞存货","target":"OA","value":1},{"source":"风险档案建立、项目结束后复盘总结与流程优化","target":"建立项目风险档案","value":1},{"source":"建立项目风险档案","target":"OA","value":1},{"source":"风险档案建立、项目结束后复盘总结与流程优化","target":"组织项目风险复盘总结","value":1},{"source":"组织项目风险复盘总结","target":"OA","value":1},{"source":"工装技术条件编制与评审、工装设计方案联合评审","target":"编制工装技术条件","value":1},{"source":"编制工装技术条件","target":"PLM","value":1},{"source":"工装技术条件编制与评审、工装设计方案联合评审","target":"组织工装技术条件联合评审","value":1},{"source":"组织工装技术条件联合评审","target":"OA","value":1},{"source":"工装技术条件编制与评审、工装设计方案联合评审","target":"组织工装设计方案联合评审","value":1},{"source":"组织工装设计方案联合评审","target":"PLM","value":1},{"source":"组织工装设计方案联合评审","target":"OA","value":1},{"source":"主进度计划编制与发布、阶段计划分解备案、作业计划编制与跟踪","target":"编制工装主进度计划","value":1},{"source":"编制工装主进度计划","target":"OA","value":1},{"source":"主进度计划编制与发布、阶段计划分解备案、作业计划编制与跟踪","target":"分解部门阶段计划并备案","value":1},{"source":"分解部门阶段计划并备案","target":"OA","value":1},{"source":"主进度计划编制与发布、阶段计划分解备案、作业计划编制与跟踪","target":"编制作业计划并跟踪执行","value":1},{"source":"编制作业计划并跟踪执行","target":"MES","value":1},{"source":"验收移交后专票提交、ERP 挂账手续办理、回款进度跟踪","target":"提交专票及移交单","value":1},{"source":"提交专票及移交单","target":"ERP","value":1},{"source":"验收移交后专票提交、ERP 挂账手续办理、回款进度跟踪","target":"办理 ERP 挂账及跟踪回款","value":1},{"source":"办理 ERP 挂账及跟踪回款","target":"ERP","value":1},{"source":"验收移交后专票提交、ERP 挂账手续办理、回款进度跟踪","target":"办理自有成本业务付款","value":1},{"source":"办理自有成本业务付款","target":"ERP","value":1},{"source":"申请台账/合同台账/挂账回款台账建立与 BI 系统信息录入","target":"建立工装业务台账","value":1},{"source":"申请台账/合同台账/挂账回款台账建立与 BI 系统信息录入","target":"维护 BI 系统信息","value":1},{"source":"工装拉运出门证办理、外协单位现场作业安全监督与协调","target":"办理工装出门证","value":1},{"source":"办理工装出门证","target":"OA","value":1},{"source":"工装拉运出门证办理、外协单位现场作业安全监督与协调","target":"监督外协单位现场作业安全","value":1},{"source":"监督外协单位现场作业安全","target":"MES","value":1},{"source":"监督外协单位现场作业安全","target":"OA","value":1},{"source":"专用物资出门申请填写、单位负责人审核、主管部门审批、保安查验","target":"填写专用物资出门申请单","value":1},{"source":"填写专用物资出门申请单","target":"OA","value":1},{"source":"专用物资出门申请填写、单位负责人审核、主管部门审批、保安查验","target":"审核物资出门必要性","value":1},{"source":"审核物资出门必要性","target":"OA","value":1},{"source":"专用物资出门申请填写、单位负责人审核、主管部门审批、保安查验","target":"主管部门审批与保安查验","value":1},{"source":"主管部门审批与保安查验","target":"OA","value":1},{"source":"车辆使用申请、业务主管审批、车辆调度与运输执行","target":"填写车辆使用申请单","value":1},{"source":"填写车辆使用申请单","target":"OA","value":1},{"source":"车辆使用申请、业务主管审批、车辆调度与运输执行","target":"审批用车申请","value":1},{"source":"审批用车申请","target":"OA","value":1},{"source":"车辆使用申请、业务主管审批、车辆调度与运输执行","target":"调度车辆并执行运输","value":1},{"source":"调度车辆并执行运输","target":"OA","value":1},{"source":"快递发出当天钉钉申请提交、逐级审批与信息记录","target":"发出快递并提交钉钉申请","value":1},{"source":"发出快递并提交钉钉申请","target":"OA","value":1},{"source":"快递发出当天钉钉申请提交、逐级审批与信息记录","target":"逐级审批快递申请","value":1},{"source":"逐级审批快递申请","target":"OA","value":1},{"source":"罐前计划编制：按项目订单和交付紧急度确定投产优先顺序，核查人机料法环开工条件，核算标准工时（排罐固化时间+投影仪时间+出入罐准备时间），编制罐前排产计划","target":"MES","value":1},{"source":"罐前计划编制：按项目订单和交付紧急度确定投产优先顺序，核查人机料法环开工条件，核算标准工时（排罐固化时间+投影仪时间+出入罐准备时间），编制罐前排产计划","target":"OA","value":1},{"source":"排罐执行与跟踪调整：每周四更新罐前计划，各项目助理跟踪投产进度，识别差异后迅速调整排产；根据固化程序合理并罐以控制成本","target":"MES","value":1},{"source":"关键件横向跟踪：工序项目助理参加班组早会，核对关键件任务布置，收集班组反馈的问题并汇总至关键件问题跟踪表，分配至主管项目助理跟踪解决","target":"MES","value":1},{"source":"关键件横向跟踪：工序项目助理参加班组早会，核对关键件任务布置，收集班组反馈的问题并汇总至关键件问题跟踪表，分配至主管项目助理跟踪解决","target":"OA","value":1},{"source":"工序问题闭环与考核：工序项目助理轮岗制（每两周换一次工序），生产部组长汇总问题数据并分配至各职能部门跟踪考核，关键件计划每两周更新状态","target":"OA","value":1},{"source":"随炉件出罐通知与交接：班组在内部群发布出罐信息后转发至\"公司-航达随炉件移交群\"，航达24小时内反馈领取计划，双方办理书面交接手续并签字确认","target":"OA","value":1},{"source":"理化结果跟踪反馈：理化检测须14天内出具结果，到期前1天预告，结果生成后同步至移交群并抄送相关方；逾期需提前2天说明并制定补救方案","target":"OA","value":1},{"source":"工装工具品种表编制、评审、审批与发布","target":"PLM","value":1},{"source":"工装工具品种表编制、评审、审批与发布","target":"ERP","value":1},{"source":"工装定检目录编制、定检计划编制与发布","target":"MES","value":1},{"source":"工装定检目录编制、定检计划编制与发布","target":"OA","value":1},{"source":"工艺装备申请单编制、技术方案审核、设计审核、管理审核与批准","target":"OA","value":1},{"source":"工艺装备申请单编制、技术方案审核、设计审核、管理审核与批准","target":"PLM","value":1},{"source":"样板/数据集申请单编制与审批","target":"OA","value":1},{"source":"样板/数据集申请单编制与审批","target":"PLM","value":1},{"source":"工装设计（含产品包装设计、专用工具设计、样板数据集设计）、工装数据校对、审核、标审、审查与批准","target":"PLM","value":1},{"source":"工装数据更改（先行更改G/J类处理、换版更改、版次升级）与工装数据发放","target":"PLM","value":1},{"source":"工装数据更改（先行更改G/J类处理、换版更改、版次升级）与工装数据发放","target":"OA","value":1},{"source":"工装设计评审（PDR/CDR/FDR三个阶段或五阶段评审）","target":"PLM","value":1},{"source":"工装设计评审（PDR/CDR/FDR三个阶段或五阶段评审）","target":"OA","value":1},{"source":"工装使用说明书编制、评审、培训与备案","target":"PLM","value":1},{"source":"工装使用说明书编制、评审、培训与备案","target":"OA","value":1},{"source":"工装交检组织、工装实物与交付文件验收、合格证明盖章","target":"MES","value":1},{"source":"工装交检组织、工装实物与交付文件验收、合格证明盖章","target":"OA","value":1},{"source":"不合格工装标识、审理、处置意见、整改与关闭","target":"MES","value":1},{"source":"不合格工装标识、审理、处置意见、整改与关闭","target":"OA","value":1},{"source":"工装投产验证（II类三架份/III类一架份）、验证清单编制与合格证验证标识","target":"MES","value":1},{"source":"工装接收、建账、存放与保管","target":"MES","value":1},{"source":"工装接收、建账、存放与保管","target":"ERP","value":1},{"source":"工装日常使用、使用前检查、故障反馈与限用标识","target":"MES","value":1},{"source":"客供工装接收、保管、借用、维护、使用、定检、资产管理与归还","target":"MES","value":1},{"source":"客供工装接收、保管、借用、维护、使用、定检、资产管理与归还","target":"ERP","value":1},{"source":"工装转移计划编制、借用申请与审批、周转使用跟踪","target":"OA","value":1},{"source":"工装转移计划编制、借用申请与审批、周转使用跟踪","target":"MES","value":1},{"source":"复材工装使用管理","target":"MES","value":1},{"source":"商飞项目工装使用管理","target":"MES","value":1},{"source":"商飞项目工装使用管理","target":"OA","value":1},{"source":"生产和检验共用工装用前校准管理","target":"MES","value":1},{"source":"产品外包供应商用工艺装备管理","target":"MES","value":1},{"source":"产品外包供应商用工艺装备管理","target":"OA","value":1},{"source":"工装定期检查（定检）实施：备忘录管理、定检申请、定检/检修记录、召回通知","target":"MES","value":1},{"source":"工装定期检查（定检）实施：备忘录管理、定检申请、定检/检修记录、召回通知","target":"PLM","value":1},{"source":"工装定期检查（定查）实施：III类工装损坏、磨损、完整性检查","target":"MES","value":1},{"source":"定检技术要求编发与定检周期申请","target":"PLM","value":1},{"source":"定检技术要求编发与定检周期申请","target":"OA","value":1},{"source":"工装返修/返工申请、方案评审、派工执行与交检","target":"MES","value":1},{"source":"工装返修/返工申请、方案评审、派工执行与交检","target":"PLM","value":1},{"source":"工装损坏丢失问题处理：问题记录、技术/经济责任鉴定与裁决","target":"OA","value":1},{"source":"工装损坏丢失问题处理：问题记录、技术/经济责任鉴定与裁决","target":"MES","value":1},{"source":"工装维护保养计划编制、二级维护保养（TPM）、维护点检与使用情况检查","target":"MES","value":1},{"source":"工装封存管理：长期停用工装封存、封存挂签与封存目录维护","target":"MES","value":1},{"source":"工装封存管理：长期停用工装封存、封存挂签与封存目录维护","target":"ERP","value":1},{"source":"工装可拆卸件管理：可拆卸件目录编制、拆卸后放置固定与复装防错","target":"PLM","value":1},{"source":"工装可拆卸件管理：可拆卸件目录编制、拆卸后放置固定与复装防错","target":"MES","value":1},{"source":"工装产能优化：产能需求分析、工装测算、品种表更新与工装需求提出","target":"PLM","value":1},{"source":"工装产能优化：产能需求分析、工装测算、品种表更新与工装需求提出","target":"ERP","value":1},{"source":"工装结构方案优化：安全隐患整改、工装结构改进与方案升版","target":"PLM","value":1},{"source":"工装结构方案优化：安全隐患整改、工装结构改进与方案升版","target":"MES","value":1},{"source":"通用工具申请审签、专用工具申请审签、工具采购跟踪与到货","target":"OA","value":1},{"source":"通用工具申请审签、专用工具申请审签、工具采购跟踪与到货","target":"ERP","value":1},{"source":"工具盘点与采购付款跟踪","target":"ERP","value":1},{"source":"新工具接收验收、库房管理与工具调拨","target":"MES","value":1},{"source":"新工具接收验收、库房管理与工具调拨","target":"ERP","value":1},{"source":"工具使用、维护保养与控制","target":"MES","value":1},{"source":"工具维修管理（刃具修磨、风电动工具维修、其他工具维修）","target":"MES","value":1},{"source":"工具报废管理：报废鉴定、丢失处理与赔偿、报废工具管理","target":"OA","value":1},{"source":"工具报废管理：报废鉴定、丢失处理与赔偿、报废工具管理","target":"ERP","value":1},{"source":"量具检定与维修管理","target":"MES","value":1},{"source":"工具验证要求、标准、流程与方法执行","target":"MES","value":1},{"source":"新工具试用申请、试用报告审签与小批量使用反馈","target":"OA","value":1},{"source":"新工具试用申请、试用报告审签与小批量使用反馈","target":"MES","value":1},{"source":"物料接收、检验、运转、储存与台账管理","target":"MES","value":1},{"source":"物料接收、检验、运转、储存与台账管理","target":"ERP","value":1},{"source":"冷库材料入库验收、出库领用、温度监控与库存盘点","target":"MES","value":1},{"source":"冷库材料入库验收、出库领用、温度监控与库存盘点","target":"ERP","value":1},{"source":"设备备件计划、采购申请、入库验收、领用与安全库存管理","target":"MES","value":1},{"source":"设备备件计划、采购申请、入库验收、领用与安全库存管理","target":"ERP","value":1},{"source":"工装信息台账维护、工装数据电子化管理与信息查询","target":"PLM","value":1},{"source":"工装信息台账维护、工装数据电子化管理与信息查询","target":"MES","value":1},{"source":"OA勤哲模块需求分析、开发实施、测试上线与运维管理","target":"OA","value":1},{"source":"部门级制度文件版本控制、分发、升版与作废管理","target":"OA","value":1},{"source":"人力资源需求、供给预测与净需求确定","target":"OA","value":1},{"source":"人力资源规划方案制定、审批与发布","target":"OA","value":1},{"source":"招聘需求评估与招聘计划制定","target":"OA","value":1},{"source":"招聘渠道选择、信息发布与简历筛选","target":"OA","value":1},{"source":"面试甄选、背景调查与录用决策","target":"OA","value":1},{"source":"入职办理、试用期管理与转正考核","target":"OA","value":1},{"source":"退休人员续用申请、审批、聘用与日常管理","target":"OA","value":1},{"source":"劳动合同订立、续订、变更、终止与解除","target":"OA","value":1},{"source":"岗位变动申请、审批、工作交接与考核期管理","target":"OA","value":1},{"source":"考勤打卡、迟到早退旷工管理与异常处置","target":"OA","value":1},{"source":"请休假申请、审批、材料备案与销假管理","target":"OA","value":1},{"source":"主动离职与被动离职审批、手续办理与解除劳动合同","target":"OA","value":1},{"source":"岗位资格培训、理论与实操考核、上岗证颁发","target":"MES","value":1},{"source":"岗位资格证有效期管理、延期评价、补发与换证","target":"OA","value":1},{"source":"岗位资格证有效期管理、延期评价、补发与换证","target":"MES","value":1},{"source":"培训需求分析与年度培训计划制定","target":"OA","value":1},{"source":"培训实施、签到、效果评估与培训档案管理","target":"OA","value":1},{"source":"外派培训申请、服务期约定、费用报销与转训管理","target":"OA","value":1},{"source":"岗位说明书编写规范、审核、编码与换版管理","target":"OA","value":1},{"source":"岗位技能分析、技能评估、等级认证与上岗证颁发","target":"MES","value":1},{"source":"技能应用激励与技能管理持续改进","target":"OA","value":1},{"source":"新员工导师结对、定向培养与综合考核评估","target":"OA","value":1},{"source":"社保公积金参保登记、缴费基数核定与月度申报","target":"ERP","value":1},{"source":"社保待遇申领、关系转移与公积金提取管理","target":"OA","value":1},{"source":"社保待遇申领、关系转移与公积金提取管理","target":"ERP","value":1},{"source":"领导干部任职资格审核、选拔、报批与聘任","target":"OA","value":1},{"source":"储备干部选拔培养与梯队建设管理","target":"OA","value":1},{"source":"领导干部年度考核、奖惩与退出管理","target":"OA","value":1},{"source":"公司级会议组织、审批与纪要管理","target":"OA","value":1},{"source":"部门级会议纪要编制、签发、分发、跟踪与归档","target":"OA","value":1},{"source":"车辆调度、用车审批、出车记录与违章事故处理","target":"OA","value":1},{"source":"办公用品与低值易耗品季度申领、采购、盘点与预算管理","target":"OA","value":1},{"source":"办公用品与低值易耗品季度申领、采购、盘点与预算管理","target":"ERP","value":1},{"source":"微信公众号稿件策划、撰写、审核与发布","target":"OA","value":1},{"source":"公文格式规范、制发、收发与归档管理","target":"OA","value":1},{"source":"印章保管、用印审批与使用登记","target":"OA","value":1},{"source":"外来人员预约、审批与接待全程管理","target":"OA","value":1},{"source":"档案归档范围、归档要求、整理、移交与保管","target":"OA","value":1},{"source":"档案借阅利用、鉴定销毁与监督检查","target":"OA","value":1},{"source":"宿舍入住、调房、退房与日常安全管理","target":"OA","value":1},{"source":"技术资料接收、复制发放、借阅与有效性维护","target":"PLM","value":1},{"source":"技术资料接收、复制发放、借阅与有效性维护","target":"OA","value":1},{"source":"技术资料更改换版、作废销毁与补发管理","target":"PLM","value":1},{"source":"技术资料更改换版、作废销毁与补发管理","target":"OA","value":1},{"source":"生产成本定额管理与指标分解","target":"ERP","value":1},{"source":"生产成本定额管理与指标分解","target":"OA","value":1},{"source":"生产成本事中控制","target":"ERP","value":1},{"source":"生产成本事中控制","target":"MES","value":1},{"source":"产品成本核算基础管理","target":"ERP","value":1},{"source":"产品成本核算基础管理","target":"MES","value":1},{"source":"月度产品成本核算与成本结转","target":"ERP","value":1},{"source":"成本费用核算分析","target":"ERP","value":1},{"source":"小时费率测算编制与维护","target":"ERP","value":1},{"source":"小时费率测算编制与维护","target":"OA","value":1},{"source":"产品全成本测算","target":"ERP","value":1},{"source":"固定资产编码与标签管理","target":"ERP","value":1},{"source":"固定资产编码与标签管理","target":"OA","value":1},{"source":"固定资产调拨管理","target":"OA","value":1},{"source":"固定资产调拨管理","target":"ERP","value":1},{"source":"固定资产盘点管理","target":"OA","value":1},{"source":"固定资产盘点管理","target":"ERP","value":1},{"source":"固定资产处置管理","target":"OA","value":1},{"source":"固定资产处置管理","target":"ERP","value":1},{"source":"固定资产保险管理","target":"OA","value":1},{"source":"无形资产全生命周期管理","target":"OA","value":1},{"source":"无形资产全生命周期管理","target":"ERP","value":1},{"source":"银行账户开立、变更与撤销管理","target":"OA","value":1},{"source":"银行账户开立、变更与撤销管理","target":"ERP","value":1},{"source":"银行存款与网上银行管理","target":"ERP","value":1},{"source":"现金收付与库存管理","target":"ERP","value":1},{"source":"票据收取、开具与背书管理","target":"ERP","value":1},{"source":"票据收取、开具与背书管理","target":"OA","value":1},{"source":"月度资金计划编制与执行管理","target":"OA","value":1},{"source":"月度资金计划编制与执行管理","target":"ERP","value":1},{"source":"备用金借支与核销管理","target":"OA","value":1},{"source":"备用金借支与核销管理","target":"ERP","value":1},{"source":"出差申请与审批管理","target":"OA","value":1},{"source":"差旅费用报销管理","target":"OA","value":1},{"source":"差旅费用报销管理","target":"ERP","value":1},{"source":"报销与付款审批管理","target":"OA","value":1},{"source":"报销与付款审批管理","target":"ERP","value":1},{"source":"打车费报销专项管理","target":"OA","value":1},{"source":"内部审核策划、审核员资质认定与维护、审核准备与实施、审核报告编制与审批、整改跟踪验证","target":"OA","value":1},{"source":"外部审核通知接收与确认、审核准备与自查、首次/末次会议组织、审核陪同与记录、审核发现通报与整改跟踪、外部审核数据库维护","target":"OA","value":1},{"source":"管理评审策划与通知、各部门运行分析报告收集汇总、公司级运行分析报告编制、管理评审会议组织与记录、评审报告编制审批、改进机会跟踪","target":"OA","value":1},{"source":"内部纠正措施发起与跟踪、外部（二/三方）纠正措施答复、供应商纠正措施管理、举一反三核查、持续有效性验证、纠正措施数据库维护","target":"OA","value":1},{"source":"归零问题识别与通知下发、技术归零（定位准确、机理清楚、故障复现、措施有效、举一反三）、管理归零（过程清楚、责任明确、措施落实、严肃处理、完善规章）、归零报告编写与评审、归零措施跟踪验证与关闭","target":"OA","value":1},{"source":"归零问题识别与通知下发、技术归零（定位准确、机理清楚、故障复现、措施有效、举一反三）、管理归零（过程清楚、责任明确、措施落实、严肃处理、完善规章）、归零报告编写与评审、归零措施跟踪验证与关闭","target":"PLM","value":1},{"source":"质量信息需求确定与收集、产品质量信息统计分析（废品损失、外部拒收、总检故障等）、体系运行信息分析（过程绩效、内审不合格项、纠正措施等）、顾客满意度与供应商绩效信息分析、质量经济性分析、数据分析报告编制与改进识别","target":"OA","value":1},{"source":"质量信息需求确定与收集、产品质量信息统计分析（废品损失、外部拒收、总检故障等）、体系运行信息分析（过程绩效、内审不合格项、纠正措施等）、顾客满意度与供应商绩效信息分析、质量经济性分析、数据分析报告编制与改进识别","target":"ERP","value":1},{"source":"改进机会识别与范围目标确定、年度质量改进计划制定与跟踪、项目实物质量改进计划管理、改进活动实施与有效性验证、改进工具应用（质量改进计划、精品工程、质量攻关、QC小组、拉条挂账）","target":"OA","value":1},{"source":"工序检验（接收检验、工序间检验、终检）、操作者自检互检与专检、检验验收条件确认、关键工序检验控制、特种工序随炉件/试片验收、项目特定检验要求（商飞重要检验、MA700授权检验）、不合格品衔接处理","target":"MES","value":1},{"source":"工序检验（接收检验、工序间检验、终检）、操作者自检互检与专检、检验验收条件确认、关键工序检验控制、特种工序随炉件/试片验收、项目特定检验要求（商飞重要检验、MA700授权检验）、不合格品衔接处理","target":"PLM","value":1},{"source":"首件检验需求识别与通知、首件检验计划编制、首件三检（自检、互检、专检）实施、首件检验报告（FAIR）填写与审核、特性气球图标注与验证、首件检验变更触发与重新实施","target":"PLM","value":1},{"source":"首件检验需求识别与通知、首件检验计划编制、首件三检（自检、互检、专检）实施、首件检验报告（FAIR）填写与审核、特性气球图标注与验证、首件检验变更触发与重新实施","target":"MES","value":1},{"source":"检验方案策划与编制、检验顺序确定、设计特性提取与验证方法选择、测量设备和工装确定、检验方案审批与分发","target":"PLM","value":1},{"source":"顾客检验准备与陪同、商飞项目制造符合性检验、MA700项目制造符合性检验、顾客检验发现问题跟踪整改","target":"MES","value":1},{"source":"顾客检验准备与陪同、商飞项目制造符合性检验、MA700项目制造符合性检验、顾客检验发现问题跟踪整改","target":"OA","value":1},{"source":"超声检测实施与控制、射线检测实施与控制、无损检测人员资格鉴定与能力评估（Ⅰ/Ⅱ/Ⅲ级）、无损检测设备校准与维护、检测技术文件编制与审批、检测材料验收与管理","target":"PLM","value":1},{"source":"超声检测实施与控制、射线检测实施与控制、无损检测人员资格鉴定与能力评估（Ⅰ/Ⅱ/Ⅲ级）、无损检测设备校准与维护、检测技术文件编制与审批、检测材料验收与管理","target":"MES","value":1},{"source":"数字化测量程序编制与验证、数控测量机检测实施、检测结果报告生成与签字归档、测量不合格品衔接处理","target":"PLM","value":1},{"source":"数字化测量程序编制与验证、数控测量机检测实施、检测结果报告生成与签字归档、测量不合格品衔接处理","target":"MES","value":1},{"source":"不合格品识别与标识（挂签/粘签）、不合格品隔离（MRCC）、预检(PI)标记与处置关闭、不合格品分类（严重/轻度）、不合格品审理组织（委员会/常设机构/审理小组）运行、不合格品处置方式确定（返工/返修/报废/让步/降级/返回供方）、不合格品审理单逐级审理与审批","target":"MES","value":1},{"source":"不合格品识别与标识（挂签/粘签）、不合格品隔离（MRCC）、预检(PI)标记与处置关闭、不合格品分类（严重/轻度）、不合格品审理组织（委员会/常设机构/审理小组）运行、不合格品处置方式确定（返工/返修/报废/让步/降级/返回供方）、不合格品审理单逐级审理与审批","target":"OA","value":1},{"source":"不合格品识别与标识（挂签/粘签）、不合格品隔离（MRCC）、预检(PI)标记与处置关闭、不合格品分类（严重/轻度）、不合格品审理组织（委员会/常设机构/审理小组）运行、不合格品处置方式确定（返工/返修/报废/让步/降级/返回供方）、不合格品审理单逐级审理与审批","target":"PLM","value":1},{"source":"审理人员资格确认与培训考核、总经理授权签发、授权登记表与授权书管理、授权名单维护与发布、审理人员变更通知与重新授权","target":"OA","value":1},{"source":"质量逃逸事件识别与报告、逃逸原因调查与分析、纠正措施制定与跟踪、顾客通知与沟通","target":"OA","value":1},{"source":"质量逃逸事件识别与报告、逃逸原因调查与分析、纠正措施制定与跟踪、顾客通知与沟通","target":"MES","value":1},{"source":"多余物预防措施执行、多余物检测与排查、多余物记录与处置、多余物控制效果验证","target":"MES","value":1},{"source":"紧急放行申请与风险评估、紧急放行审批、放行产品标识与追溯记录、放行后跟踪验证与关闭","target":"OA","value":1},{"source":"紧急放行申请与风险评估、紧急放行审批、放行产品标识与追溯记录、放行后跟踪验证与关闭","target":"MES","value":1},{"source":"顾客交付文件要求确认、各项目交付文件工作标准编制、交付文件填写与汇总、交付文件审查与盖章、交付文件复印归档与装箱移交","target":"PLM","value":1},{"source":"顾客交付文件要求确认、各项目交付文件工作标准编制、交付文件填写与汇总、交付文件审查与盖章、交付文件复印归档与装箱移交","target":"OA","value":1},{"source":"各项目交付文件专项编制、项目特殊要求（如商飞QAR点文件、波音SER/SQIS文件、MA700西飞民机文件、A220空客文件）的满足与提交","target":"PLM","value":1},{"source":"质量记录分类与编号、记录表格格式与版次控制、记录填写规范与更改（杠改）、产品质量记录归档与索引、管理质量记录归档、记录保存期限管理（可追溯产品质量记录≥10年/其他8年/管理记录6年）、记录借阅与归还、记录销毁审批与执行","target":"PLM","value":1},{"source":"质量记录分类与编号、记录表格格式与版次控制、记录填写规范与更改（杠改）、产品质量记录归档与索引、管理质量记录归档、记录保存期限管理（可追溯产品质量记录≥10年/其他8年/管理记录6年）、记录借阅与归还、记录销毁审批与执行","target":"OA","value":1},{"source":"测量设备需求提出与选型审查、测量设备购置与验收、入厂校准、测量设备台账建立与维护、周期校准与状态标识（A/B/C分类管理）、测量设备使用与维护、不合格测量设备处置（禁用/降级/报废）、测量设备封存与启封","target":"ERP","value":1},{"source":"测量设备需求提出与选型审查、测量设备购置与验收、入厂校准、测量设备台账建立与维护、周期校准与状态标识（A/B/C分类管理）、测量设备使用与维护、不合格测量设备处置（禁用/降级/报废）、测量设备封存与启封","target":"PLM","value":1},{"source":"测量设备需求提出与选型审查、测量设备购置与验收、入厂校准、测量设备台账建立与维护、周期校准与状态标识（A/B/C分类管理）、测量设备使用与维护、不合格测量设备处置（禁用/降级/报废）、测量设备封存与启封","target":"MES","value":1},{"source":"测量软件标识（名称/版本号）、测量软件操作指南编制、软件访问权限与密码保护、软件异常处理与处置单登记、测量软件验收与验证（三坐标测量机/激光跟踪仪等）、人工件管理与使用、软件拷贝件/安装包保管","target":"PLM","value":1},{"source":"计量确认与量值溯源、测量设备计量标识管理（A/B/C分类标识）、委托计量/测量管理（内部委托和外部委托）、测量设备抽检与可靠性监控、计量器具台账与数据库维护、不合格测量设备对以往测量结果的影响评估","target":"PLM","value":1},{"source":"计量确认与量值溯源、测量设备计量标识管理（A/B/C分类标识）、委托计量/测量管理（内部委托和外部委托）、测量设备抽检与可靠性监控、计量器具台账与数据库维护、不合格测量设备对以往测量结果的影响评估","target":"ERP","value":1},{"source":"安全基础、班组安全、安全培训、责任追究","target":"OA","value":1},{"source":"安全风险分级、危险源辨识、危险点管理","target":"MES","value":1},{"source":"安全隐患排查、整改闭环、目标考核、三违管理","target":"MES","value":1},{"source":"危险作业审批、有限空间作业许可","target":"OA","value":1},{"source":"应急管理、事故报告调查、工伤管理","target":"OA","value":1},{"source":"相关方安全准入、安全生产费用管理","target":"OA","value":1},{"source":"相关方安全准入、安全生产费用管理","target":"ERP","value":1},{"source":"职业病危害申报、警示告知、职业卫生操作规程","target":"OA","value":1},{"source":"职业病防护设施、劳动防护用品标准与领用","target":"MES","value":1},{"source":"职业病防护设施、劳动防护用品标准与领用","target":"ERP","value":1},{"source":"职业危害检测评价、健康监护、职业健康档案、噪声聋预警","target":"OA","value":1},{"source":"职业健康安全目标、培训、风险、应急、监视测量、改进","target":"OA","value":1},{"source":"消防培训教育、消防工作考评、消防违章教育","target":"OA","value":1},{"source":"建设项目安全、职业卫生、消防安全三同时审核","target":"OA","value":1},{"source":"建设项目安全、职业卫生、消防安全三同时审核","target":"PLM","value":1},{"source":"火灾隐患治理、隐患整改、厂级/班组级防火检查","target":"MES","value":1},{"source":"消防设施维保、消火栓灭火器自查、消防重点部位管理","target":"MES","value":1},{"source":"应急疏散预案维护、消防演练、火灾事故调查处理","target":"OA","value":1},{"source":"环境目标管理、环境因素识别评价、重要环境因素清单","target":"OA","value":1},{"source":"环境监测、污染源在线监测、危险废物管理","target":"MES","value":1},{"source":"突发环境事件预案、应急处置、环境纠纷管理","target":"OA","value":1},{"source":"环保隐患识别、整改、关闭验证","target":"MES","value":1},{"source":"能源评审、年度节能双碳策划、主要耗能设备台账","target":"MES","value":1},{"source":"动力系统节能运行、重点用能工序节能运行、能源消耗监督","target":"MES","value":1},{"source":"节能双碳监督检查、能源碳排统计分析、能源绩效管理","target":"MES","value":1},{"source":"能源计量器具管理、淘汰落后用能设备","target":"MES","value":1},{"source":"能源内部审核、能源管理评审、项目节能审查","target":"OA","value":1},{"source":"能源内部审核、能源管理评审、项目节能审查","target":"PLM","value":1},{"source":"设备设施计划策划、设备分类、设备台账、投用准备","target":"MES","value":1},{"source":"设备设施使用、设备操作证、巡检实施、测量设备管理","target":"MES","value":1},{"source":"设备维护保养、设备维修、保养优化、TPM应用","target":"MES","value":1},{"source":"设备备件需求、备件状态、维修耗材保障","target":"ERP","value":1},{"source":"设备事故处理、设备设施搬迁","target":"OA","value":1},{"source":"设备事故处理、设备设施搬迁","target":"MES","value":1},{"source":"受控文件、记录控制、信息交流与协商","target":"OA","value":1},{"source":"目标指标、内部审核、管理评审、整改改进","target":"OA","value":1},{"source":"项目全周期风险识别（技术/生产/进度/质量/成本/安全/外部）、定性与定量评估、风险等级划分","target":"OA","value":1},{"source":"应对策略制定（规避/降低/转移/接受）、预案编制、日常监控与预警响应","target":"OA","value":1},{"source":"加工模式选择（子公司外协/总部外协/总部自制）、供应商筛选与合同签订、物料缓冲期管理","target":"ERP","value":1},{"source":"加工模式选择（子公司外协/总部外协/总部自制）、供应商筛选与合同签订、物料缓冲期管理","target":"OA","value":1},{"source":"质量联合小组全过程管控、制造与检验标准执行、交检文件提前提交与验收、质量问题整改闭环","target":"MES","value":1},{"source":"质量联合小组全过程管控、制造与检验标准执行、交检文件提前提交与验收、质量问题整改闭环","target":"OA","value":1},{"source":"项目启动前风险识别清单、高/中/低风险分级管理、自有成本业务供应商风险审核","target":"OA","value":1},{"source":"工程技术部","target":"[空]工程技术部","value":0.001}],"systems":["ERP","MES","OA","PLM"],"stats":{"mappings":252,"a1":425,"departmentsWithData":8,"departmentsEmpty":1},"crossDept":{"stats":{"totalChecked":168,"confirmed":158,"pendingConfirm":6,"highRisk":1,"mediumRisk":0},"risks":[{"source":"全部已映射部门","target":"工程技术部","a1":"—","refs":34,"risk":"high","desc":"所有指向工程技术部的A1在目标侧无对应流程，跨部门交互链在此节点断裂。影响经营发展部的合同评审/报价/技术条款审查流程、项目管理部的项目启动/计划/开工评审流程、财务部的成本核算输入、质量管理部的归零管理/交付文件流程","status":"未映射-无文档"},{"source":"经营发展部等4部门","target":"复材车间","a1":"—","refs":24,"risk":"low","desc":"复材车间已完成部门映射，原24条跨部门引用需按现有流程逐条核对目标侧是否已有对应 业务流程（L3）/业务行为（A1）。","status":"已映射-待复核"},{"source":"运维安环部","a1":"YW-L3-18-A07","target":"经营发展部","refs":1,"risk":"low","desc":"环境纠纷中协调经营发展部提出法律意见——经营发展部映射中未见明确的法务支持流程","status":"已映射-待确认"},{"source":"运维安环部","a1":"YW-L3-19-A05","target":"经营发展部","refs":1,"risk":"low","desc":"环保工作考核评分上报——经营发展部未见环保考核接收流程","status":"已映射-待确认"},{"source":"经营发展部","a1":"JY-L3-32-A03","target":"行政人事部","refs":1,"risk":"low","desc":"输入来源为行政人事部但内容未明确","status":"已映射-待确认"},{"source":"财务部","a1":"CW-L3-13-A01","target":"行政人事部","refs":1,"risk":"low","desc":"无形资产会计核算引用行政人事部——行政人事部未见知识产权/专利管理流程","status":"已映射-待确认"},{"source":"项目管理部","a1":"XM-L3-01-A03","target":"行政人事部","refs":1,"risk":"low","desc":"A1行仅标注\"备案\"，未说明具体内容","status":"已映射-待确认"},{"source":"运维安环部","a1":"YW-L3-06-A07","target":"项目管理部","refs":1,"risk":"low","desc":"技改项目审批——项目管理部未见固定资产技改相关流程","status":"已映射-待确认"}],"interactionChains":[{"name":"客户订单→交付链","breaks":["工程技术部: BOM/工艺节点断裂,无映射文档"],"status":"partial"},{"name":"成本管控链","breaks":["工程技术部: BOM/技术方案输入缺失,财务部无法完整核算"],"status":"partial"},{"name":"工装全生命周期链","breaks":["沈飞民机科技创新部为外部实体,昌兴侧物资保障部执行层已覆盖"],"status":"ok"}],"source":"docs/norms/流程治理/跨部门完整性检查报告.md"}}
+</script>
+
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <h1>昌兴复材<span class="sep">·</span><span class="sub">流程地图驾驶舱</span></h1>
+      <p class="caption">全公司 · 直辖部门 · 经营域 · 生产域</p>
+    </div>
+    <div class="meta">
+      <div class="mode-switch" id="modeSwitch">
+        <button class="on" data-val="all">全公司</button>
+        <button data-val="总经理直辖域">直辖部门</button>
+        <button data-val="经营域">经营域</button>
+        <button data-val="生产域">生产域</button>
+      </div>
+      <span class="pill"><span class="dot"></span>数据快照 2026-05-28</span>
+    </div>
+  </header>
+
+  <aside class="left">
+    <div class="group">
+      <h3>视图模式</h3>
+      <div class="seg" id="modeSeg">
+        <button class="on" data-val="all">全公司</button>
+        <button data-val="domain">单域</button>
+      </div>
+    </div>
+
+    <div class="group" id="domainGroup" style="display:none;">
+      <h3>选择域</h3>
+      <div class="seg">
+        <button data-val="经营域"><span class="swatch" style="background:var(--c-biz)"></span>经营域</button>
+        <button data-val="生产域"><span class="swatch" style="background:var(--c-prod)"></span>生产域</button>
+        <button data-val="总经理直辖域"><span class="swatch" style="background:var(--c-direct)"></span>直辖部门</button>
+      </div>
+    </div>
+
+    <div class="group">
+      <h3>数据范围</h3>
+      <p class="scope" id="scopeText">当前:<b>全公司</b> · 全部 9 部门 / 3 域 / 4 应用</p>
+    </div>
+
+    <div class="group">
+      <h3>操作</h3>
+      <button class="reset-btn" id="resetBtn">重置筛选</button>
+    </div>
+
+    <div class="group">
+      <h3>阅读说明</h3>
+      <div class="legend-list">
+        <div><code>已梳理</code><span>部门存在能触达某类应用系统的流程链路</span></div>
+        <div><code>待补全</code><span>当前无任何路径触达应用</span></div>
+        <div><code>建议落位</code><span>直接以该类应用为目标节点的承载关系数</span></div>
+        <div><code>衔接风险</code><span>A部门流程指向B部门，但B部门无对应接收流程</span></div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="row">
+      <div class="kpis">
+        <div class="kpi" style="--bar: var(--muted)">
+          <div class="label">涉及部门数</div>
+          <div class="value"><span id="kpiDepts">—</span><span class="unit">/ 9</span></div>
+          <div class="sub" id="kpiDeptsSub">—</div>
+        </div>
+        <div class="kpi" style="--bar: var(--c-biz)">
+          <div class="label">部门覆盖度</div>
+          <div class="value"><span id="kpiCoverage">—</span><span class="unit">%</span></div>
+          <div class="sub" id="kpiCoverageSub">—</div>
+        </div>
+        <div class="kpi" style="--bar: var(--focus)">
+          <div class="label">待补全部门</div>
+          <div class="value"><span id="kpiEmpty">—</span><span class="unit" id="kpiEmptyUnit">个</span></div>
+          <div class="sub warn" id="kpiEmptySub">—</div>
+        </div>
+        <div class="kpi" style="--bar: var(--c-prod)">
+          <div class="label">顶层流程</div>
+          <div class="value"><span id="kpiTopProc">—</span><span class="unit">个</span></div>
+          <div class="sub" id="kpiTopProcSub">—</div>
+        </div>
+        <div class="kpi" style="--bar: #4a6b7e">
+          <div class="label">承载关系</div>
+          <div class="value"><span id="kpiMappings">—</span><span class="unit">条</span></div>
+          <div class="sub" id="kpiMappingsSub">—</div>
+        </div>
+        <div class="kpi" style="--bar: #9a7a30">
+          <div class="label">跨域协作流</div>
+          <div class="value"><span id="kpiCross">—</span><span class="unit">条</span></div>
+          <div class="sub" id="kpiCrossSub">—</div>
+        </div>
+        <div class="kpi" style="--bar: #4a6b7e">
+          <div class="label">跨部门引用检查</div>
+          <div class="value"><span id="kpiCrossRefs">168</span><span class="unit">条</span></div>
+          <div class="sub" id="kpiCrossRefsSub">已确认 <b>158</b> 条</div>
+        </div>
+        <div class="kpi kpi-risk-medium">
+          <div class="label">待确认衔接</div>
+          <div class="value"><span id="kpiPending">6</span><span class="unit">条</span></div>
+          <div class="sub" id="kpiPendingSub">跨 4 个部门</div>
+        </div>
+        <div class="kpi kpi-risk-high">
+          <div class="label">衔接高风险</div>
+          <div class="value"><span id="kpiHighRisk">1</span><span class="unit">项</span></div>
+          <div class="sub warn" id="kpiHighRiskSub">工程技术部</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="charts">
+        <div class="card">
+          <div class="card-head">
+            <h3>部门梳理覆盖度</h3>
+            <span class="sub" id="chartDonutSub">—</span>
+          </div>
+          <div class="chart-body"><div id="chartDonut"></div></div>
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <h3>建议落位的流程数</h3>
+            <span class="sub">按应用类型</span>
+          </div>
+          <div class="chart-body"><div id="chartSystem"></div></div>
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <h3>部门工作负载</h3>
+            <span class="sub">入度(被承载) · 出度(承载到)</span>
+          </div>
+          <div class="chart-body"><div id="chartDept"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="tables">
+        <div class="card">
+          <div class="card-head">
+            <h3>部门工作负载</h3>
+            <span class="sub">按承载关系数排序</span>
+          </div>
+          <div class="table-scroll">
+            <table id="tableDept">
+              <thead>
+                <tr>
+                  <th>部门</th>
+                  <th>域</th>
+                  <th class="num-cell">承载流程</th>
+                  <th class="num-cell">触达应用</th>
+                  <th>应用清单</th>
+                  <th>状态</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <h3>待补全业务资料</h3>
+            <span class="sub" id="tableMissSub">—</span>
+          </div>
+          <div class="table-scroll">
+            <table id="tableMiss">
+              <thead>
+                <tr>
+                  <th>部门</th>
+                  <th>域</th>
+                  <th>状态</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="card" style="grid-column:1/-1">
+        <div class="card-head">
+          <h3>跨部门衔接风险</h3>
+          <div class="seg risk-seg">
+            <button class="on" data-risk="all">全部</button>
+            <button data-risk="high">🔴 高</button>
+            <button data-risk="medium">🟡 中</button>
+            <button data-risk="low">🟢 低</button>
+          </div>
+          <span class="sub" id="tableCrossSub">—</span>
+        </div>
+        <div class="table-scroll-lg">
+          <table id="tableCross">
+            <thead>
+              <tr>
+                <th>来源部门</th>
+                <th>→ 目标部门</th>
+                <th>A1编号</th>
+                <th class="num-cell">引用数</th>
+                <th>风险</th>
+                <th>问题描述</th>
+              </tr>
+            </thead>
+            <tbody id="crossBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <aside class="right">
+    <h2>关键发现</h2>
+    <div id="insights"></div>
+  </aside>
+
+  <!-- 部门详情模态 -->
+  <div class="modal" id="deptModal" aria-hidden="true">
+    <div class="modal-mask"></div>
+    <div class="modal-panel" role="dialog" aria-modal="true">
+      <div class="modal-head">
+        <div>
+          <h2 id="modalTitle">部门详情</h2>
+          <p class="caption" id="modalSub">—</p>
+        </div>
+        <button class="modal-close" id="modalClose" aria-label="关闭">×</button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+    </div>
+  </div>
+
+  <footer class="foot">
+    <div class="stats">
+      <span class="scope-info">当前范围:<b id="footScope">全公司</b></span>
+      <span class="sep">·</span>
+      <span>节点 <b id="sNodes">—</b></span>
+      <span class="sep">·</span>
+      <span>关系 <b id="sLinks">—</b></span>
+      <span class="sep">·</span>
+      <span>承载映射 <b id="sMappings">—</b></span>
+    </div>
+    <div class="perf">
+      <span class="ok">● 渲染就绪</span>
+      <span>耗时 <b id="sRender">—</b> ms</span>
+    </div>
+  </footer>
+</div>
+
+<script src="../../echarts.min.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  const COLOR = {
+    root:    '#2a2014',
+    biz:     '#b25638',
+    prod:    '#6f7d4e',
+    direct:  '#4a6b7e',
+    sys:     '#9a7a30',
+    miss:    '#9a8e7c',
+    process: '#8a7558',
+  };
+  const DOMAIN_COLOR = {
+    '经营域': COLOR.biz,
+    '生产域': COLOR.prod,
+    '总经理直辖域': COLOR.direct,
+  };
+  // 系统色: 4 主 + 其他(灰色,表示外部/未明确)
+  const COLOR_BY_SYS = {
+    'OA': '#b25638',         // 赭红(经营域色)
+    'MES': '#6f7d4e',        // 鼠尾草(生产域色)
+    'ERP': '#4a6b7e',        // 雾蓝(直辖域色)
+    'PLM': '#9a7a30',        // 暗金
+  };
+  // "其他"系统显示标签(短名)
+  const OTHER_SHORT = {
+    '应用系统': '应用',
+    'ERP中没有合适的主承载系统': 'ERP无承载',
+  };
+  const DEPTS_ALL = [
+    '经营发展部', '行政人事部', '物资保障部', '财务部',
+    '工程技术部', '质量管理部',
+    '项目管理部', '复材车间', '运维安环部',
+  ];
+  const DEPT_DOMAIN = {
+    '经营发展部': '经营域', '行政人事部': '经营域', '物资保障部': '经营域',
+    '财务部':     '总经理直辖域',
+    '工程技术部': '总经理直辖域', '质量管理部': '总经理直辖域',
+    '项目管理部': '生产域', '复材车间': '生产域', '运维安环部': '生产域',
+  };
+  // 应用类型(主应用)
+  const SYSTEMS = ['OA', 'MES', 'ERP', 'PLM'];
+  // 其它系统(不进 Top 排行)
+  const SYSTEMS_OTHER = new Set(['应用系统', 'ERP中没有合适的主承载系统']);
+  const ROOT = '昌兴复材';
+
+  // 状态
+  const state = {
+    raw: null,
+    nodesByName: new Map(),
+    links: [],
+    stats: {},
+    filter: { mode: 'all', domain: null },  // mode: 'all' | 'domain'
+    isEmptyDept: new Set(),
+    charts: {},
+  };
+
+  // 工具
+  const $ = (s) => document.querySelector(s);
+  const $$ = (s) => Array.from(document.querySelectorAll(s));
+  const escapeHtml = (s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  function hexToRgba(hex, a) {
+    const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    if (!m) return `rgba(58,46,31,${a})`;
+    return `rgba(${parseInt(m[1],16)},${parseInt(m[2],16)},${parseInt(m[3],16)},${a})`;
+  }
+
+  function classify(name) {
+    if (name === ROOT) return { type: 'root', domain: null };
+    if (DOMAIN_COLOR[name]) return { type: 'domain', domain: name };
+    if (DEPT_DOMAIN[name]) return { type: 'dept', domain: DEPT_DOMAIN[name] };
+    if (SYSTEMS.includes(name) || SYSTEMS_OTHER.has(name)) return { type: 'system', domain: null };
+    return { type: 'process', domain: null };
+  }
+
+  // 计算"未提供"的部门(BFS 不可达任一 system)
+  function computeEmptyDepts() {
+    const adj = new Map();
+    for (const l of state.links) {
+      if (!adj.has(l.source)) adj.set(l.source, []);
+      adj.get(l.source).push(l.target);
+    }
+    const empty = new Set();
+    const sysNames = new Set([...SYSTEMS, ...SYSTEMS_OTHER]);
+    for (const d of DEPTS_ALL) {
+      if (!adj.has(d)) { empty.add(d); continue; }
+      const seen = new Set([d]);
+      const q = [d];
+      let found = false;
+      while (q.length) {
+        const cur = q.shift();
+        if (sysNames.has(cur)) { found = true; break; }
+        for (const x of (adj.get(cur) || [])) {
+          if (!seen.has(x)) { seen.add(x); q.push(x); }
+        }
+      }
+      if (!found) empty.add(d);
+    }
+    return empty;
+  }
+
+  // 给 process 回填 domain(BFS 沿 process 链传播)
+  function backfillProcessDomain() {
+    const procChildren = new Map();
+    for (const l of state.links) {
+      const a = state.nodesByName.get(l.source);
+      const b = state.nodesByName.get(l.target);
+      if (a && a.type === 'process' && b && b.type === 'process') {
+        if (!procChildren.has(l.source)) procChildren.set(l.source, []);
+        procChildren.get(l.source).push(l.target);
+      }
+    }
+    const visited = new Set();
+    for (const d of DEPTS_ALL) {
+      const dom = DEPT_DOMAIN[d];
+      const queue = [d];
+      while (queue.length) {
+        const cur = queue.shift();
+        if (visited.has(cur)) continue;
+        visited.add(cur);
+        const info = state.nodesByName.get(cur);
+        if (info) info.domain = dom;
+        for (const child of (procChildren.get(cur) || [])) {
+          if (!visited.has(child)) queue.push(child);
+        }
+        // 域 → process 也算
+        if (cur === d) {
+          for (const l of state.links) {
+            if (l.source === d) {
+              const t = state.nodesByName.get(l.target);
+              if (t && t.type === 'process' && !visited.has(l.target)) queue.push(l.target);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // 应用筛选,返回新的 links 列表(可达性传播)
+  function applyFilter() {
+    if (state.filter.mode === 'all') return state.links;
+    const domain = state.filter.domain;
+    if (!domain) return state.links;
+    // 邻接表 + 反向邻接表
+    const adj = new Map(), radj = new Map();
+    for (const l of state.links) {
+      if (!adj.has(l.source)) adj.set(l.source, []);
+      adj.get(l.source).push(l);
+      if (!radj.has(l.target)) radj.set(l.target, []);
+      radj.get(l.target).push(l);
+    }
+    // 从域内部门出发,前向 BFS 收集可达节点;反向 BFS 收集上游节点
+    const seedDepts = new Set(DEPTS_ALL.filter(d => DEPT_DOMAIN[d] === domain));
+    const reachable = new Set([...seedDepts, domain, ROOT]);
+    const rq = [...seedDepts];
+    while (rq.length) {
+      const cur = rq.shift();
+      for (const l of (adj.get(cur) || [])) {
+        if (!reachable.has(l.target)) { reachable.add(l.target); rq.push(l.target); }
+      }
+    }
+    const upstream = new Set([...seedDepts, domain, ROOT]);
+    const uq = [...seedDepts];
+    while (uq.length) {
+      const cur = uq.shift();
+      for (const l of (radj.get(cur) || [])) {
+        if (!upstream.has(l.source)) { upstream.add(l.source); uq.push(l.source); }
+      }
+    }
+    const keep = new Set([...reachable, ...upstream]);
+    return state.links.filter(l => keep.has(l.source) && keep.has(l.target));
+  }
+
+  // 计算所有指标
+  function computeMetrics() {
+    const links = applyFilter();
+    // 范围
+    const inScope = nodesInLinks(links);
+    const deptsInScope = DEPTS_ALL.filter(d => inScope.has(d) && (state.filter.mode === 'all' || DEPT_DOMAIN[d] === state.filter.domain));
+    const emptyInScope = deptsInScope.filter(d => state.isEmptyDept.has(d));
+
+    // 1. 覆盖度
+    const covered = deptsInScope.length - emptyInScope.length;
+    const coverage = deptsInScope.length > 0 ? Math.round(covered / deptsInScope.length * 100) : 0;
+
+    // 2. 顶层流程:部门直接发出的 process 数(每个被部门连接的 process 节点算一个)
+    //    子流程:这些 process 链上后续的 process 节点
+    const inFromDept = new Set();
+    const inFromDeptEdges = new Map(); // process -> dept
+    for (const l of links) {
+      const a = state.nodesByName.get(l.source);
+      const b = state.nodesByName.get(l.target);
+      if (a && a.type === 'dept' && b && b.type === 'process') {
+        inFromDept.add(l.target);
+        inFromDeptEdges.set(l.target, a);
+      }
+    }
+    // 通过 process→process 链向下游传播,把所有可达 process 收集起来
+    const allProcsInChain = new Set(inFromDept);
+    const procChildren = new Map();
+    for (const l of links) {
+      const a = state.nodesByName.get(l.source);
+      const b = state.nodesByName.get(l.target);
+      if (a && a.type === 'process' && b && b.type === 'process') {
+        if (!procChildren.has(l.source)) procChildren.set(l.source, []);
+        procChildren.get(l.source).push(l.target);
+      }
+    }
+    for (const p of inFromDept) {
+      const q = [p];
+      while (q.length) {
+        const cur = q.shift();
+        for (const child of (procChildren.get(cur) || [])) {
+          if (!allProcsInChain.has(child)) {
+            allProcsInChain.add(child);
+            q.push(child);
+          }
+        }
+      }
+    }
+    const topProcs = inFromDept.size;
+    const subProcs = allProcsInChain.size - topProcs;
+
+    // 3. 承载关系:用数据自带的 stats(部门级映射数,154-156 量级)
+    const mappings = state.stats && state.stats.mappings
+      ? state.stats.mappings
+      : links.filter(l => {
+          const a = state.nodesByName.get(l.source);
+          const b = state.nodesByName.get(l.target);
+          return a && b && (a.type === 'dept' || a.type === 'process')
+            && (b.type === 'system' || SYSTEMS_OTHER.has(b.name));
+        }).length;
+
+    // 4. 跨域协作流:source/target 跨域
+    let crossDomain = 0;
+    for (const l of links) {
+      const a = state.nodesByName.get(l.source);
+      const b = state.nodesByName.get(l.target);
+      if (!a || !b) continue;
+      const ad = a.domain || (a.type === 'dept' ? DEPT_DOMAIN[a.name] : null);
+      const bd = b.domain || (b.type === 'dept' ? DEPT_DOMAIN[b.name] : null);
+      if (ad && bd && ad !== bd) crossDomain++;
+    }
+
+    // 5. 系统落位:system 入度(以 system 为 target 的边)
+    const sysLoad = {};
+    for (const sys of SYSTEMS) sysLoad[sys] = 0;
+    for (const l of links) {
+      if (SYSTEMS.includes(l.target)) {
+        sysLoad[l.target] = (sysLoad[l.target] || 0) + 1;
+      }
+    }
+    const sysLoadArr = SYSTEMS.map(s => ({ name: s, value: sysLoad[s] })).sort((a, b) => b.value - a.value);
+
+    // 6. 部门工作负载
+    // 触达应用:BFS 从部门出发,收集可达的所有 system
+    const sysNames = new Set([...SYSTEMS, ...SYSTEMS_OTHER]);
+    const deptLoad = deptsInScope.map(d => {
+      let inD = 0, outD = 0, procs = 0;
+      const syss = new Set();
+      for (const l of links) {
+        if (l.target === d) inD++;
+        if (l.source === d) outD++;
+        if (l.source === d && state.nodesByName.get(l.target)?.type === 'process') procs++;
+      }
+      // BFS 找可达系统
+      const adj = new Map();
+      for (const l of links) {
+        if (!adj.has(l.source)) adj.set(l.source, []);
+        adj.get(l.source).push(l.target);
+      }
+      const seen = new Set([d]);
+      const q = [d];
+      while (q.length) {
+        const cur = q.shift();
+        if (sysNames.has(cur)) syss.add(cur);
+        for (const nxt of (adj.get(cur) || [])) {
+          if (!seen.has(nxt)) { seen.add(nxt); q.push(nxt); }
+        }
+      }
+      return { name: d, inD, outD, procs, syss: [...syss], domain: DEPT_DOMAIN[d], empty: state.isEmptyDept.has(d) };
+    });
+    deptLoad.sort((a, b) => (b.procs + b.syss.length * 2) - (a.procs + a.syss.length * 2));
+
+    // 7. 域分布
+    const byDomain = {};
+    for (const d of DEPTS_ALL) {
+      const dom = DEPT_DOMAIN[d];
+      if (!byDomain[dom]) byDomain[dom] = { total: 0, empty: 0, covered: 0, sysLoad: {}, procCount: 0 };
+      byDomain[dom].total++;
+      if (state.isEmptyDept.has(d)) byDomain[dom].empty++;
+      else byDomain[dom].covered++;
+    }
+    for (const domName of Object.keys(byDomain)) {
+      for (const sys of SYSTEMS) byDomain[domName].sysLoad[sys] = 0;
+    }
+    for (const l of links) {
+      const a = state.nodesByName.get(l.source);
+      const b = state.nodesByName.get(l.target);
+      if (a && a.type === 'dept' && SYSTEMS.includes(l.target)) {
+        const domName = DEPT_DOMAIN[a.name];
+        if (byDomain[domName]) byDomain[domName].sysLoad[l.target] = (byDomain[domName].sysLoad[l.target] || 0) + 1;
+      }
+    }
+
+    return {
+      deptsInScope, emptyInScope, covered, coverage,
+      topProcs, subProcs,
+      mappings, crossDomain,
+      sysLoadArr, deptLoad, byDomain,
+      totalLinks: links.length, totalNodes: inScope.size,
+    };
+  }
+
+  function nodesInLinks(links) {
+    const s = new Set();
+    for (const l of links) { s.add(l.source); s.add(l.target); }
+    return s;
+  }
+
+  // ===== 渲染 =====
+  function renderKPIs(m) {
+    $('#kpiCoverage').textContent = m.coverage;
+    $('#kpiCoverageSub').innerHTML = `<b>${m.covered}</b> / ${m.deptsInScope.length} 部门已梳理`;
+    $('#kpiCoverageSub').className = 'sub ' + (m.coverage >= 60 ? 'ok' : (m.coverage <= 30 ? 'warn' : ''));
+
+    $('#kpiTopProc').textContent = m.topProcs;
+    $('#kpiTopProcSub').innerHTML = `另含 <b>${m.subProcs}</b> 个子流程`;
+
+    $('#kpiEmpty').textContent = m.emptyInScope.length;
+    $('#kpiEmptyUnit').textContent = m.deptsInScope.length > 0 ? ` / ${m.deptsInScope.length}` : '个';
+    $('#kpiEmptySub').textContent = m.emptyInScope.length === 0 ? '全部已梳理' : '需补全业务资料';
+
+    $('#kpiMappings').textContent = m.mappings;
+    $('#kpiMappingsSub').innerHTML = `共 <b>${m.totalLinks}</b> 条关系`;
+
+    $('#kpiCross').textContent = m.crossDomain;
+    $('#kpiCrossSub').innerHTML = m.crossDomain > 0
+      ? `占关系 <b>${Math.round(m.crossDomain / Math.max(m.totalLinks, 1) * 100)}%</b>`
+      : '当前数据无跨域流';
+
+    $('#kpiDepts').textContent = m.deptsInScope.length;
+    $('#kpiDeptsSub').innerHTML = `<b>${m.deptsInScope.length}</b> 已纳入 / 9 总`;
+  }
+
+  function renderCharts(m) {
+    // 1. 部门覆盖 donut
+    state.charts.donut.setOption({
+      tooltip: { trigger: 'item', formatter: (p) => `${p.name}<br><b>${p.value}</b> 部门 (${p.percent}%)` },
+      series: [{
+        type: 'pie',
+        radius: ['58%', '78%'],
+        avoidLabelOverlap: false,
+        itemStyle: { borderColor: '#fbf6e9', borderWidth: 2 },
+        label: { show: false },
+        labelLine: { show: false },
+        data: [
+          { name: '已梳理', value: m.covered, itemStyle: { color: COLOR.prod } },
+          { name: '待补全', value: m.emptyInScope.length, itemStyle: { color: COLOR.miss } },
+        ],
+      }],
+      graphic: [{
+        type: 'text',
+        left: 'center', top: '42%',
+        style: { text: `${m.coverage}%`, fontSize: 26, fontWeight: 700, fill: '#2a2014', fontFamily: '"Source Han Serif SC", serif' }
+      }, {
+        type: 'text',
+        left: 'center', top: '58%',
+        style: { text: `${m.covered} / ${m.deptsInScope.length}`, fontSize: 11, fill: '#7a6a56' }
+      }],
+    });
+    $('#chartDonutSub').textContent = `已梳理 ${m.covered} · 待补全 ${m.emptyInScope.length}`;
+
+    // 2. 建议落位横 bar
+    const sysData = m.sysLoadArr;
+    state.charts.system.setOption({
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: (p) => `<b>${p[0].name}</b><br>建议落位 <b>${p[0].value}</b> 个流程` },
+      grid: { left: 50, right: 30, top: 8, bottom: 22 },
+      xAxis: { type: 'value', axisLine: { show: false }, axisTick: { show: false }, splitLine: { lineStyle: { color: 'rgba(58,46,31,0.06)' } }, axisLabel: { color: '#7a6a56' } },
+      yAxis: { type: 'category', data: sysData.map(s => s.name), axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: '#2a2014', fontWeight: 600 } },
+      series: [{
+        type: 'bar',
+        data: sysData.map(s => ({
+          value: s.value,
+          itemStyle: { color: COLOR.sys, borderRadius: [0, 3, 3, 0] },
+        })),
+        barMaxWidth: 28,
+        label: { show: true, position: 'right', color: '#2a2014', fontWeight: 600, formatter: '{c}' },
+      }],
+    });
+
+    // 3. 部门工作负载 — 入度/出度分组柱状图 + 触达应用数(线,双 X 轴)
+    const dl = m.deptLoad.filter(d => !d.empty).slice(0, 10);
+    const maxSys = Math.max(6, ...dl.map(d => d.syss.length));
+    state.charts.dept.setOption({
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: (params) => {
+        const lines = params.map(p => `${p.marker} ${p.seriesName}: <b>${p.value}</b>`).join('<br>');
+        const d = dl[params[0].dataIndex];
+        return `<b>${params[0].axisValue}</b><br>${lines}<br>触达应用: <b>${d?.syss?.join(', ') || '—'}</b>`;
+      } },
+      legend: { data: ['入度', '出度', '触达应用数'], bottom: 0, textStyle: { color: '#7a6a56', fontSize: 11 } },
+      grid: { left: 96, right: 44, top: 12, bottom: 36, containLabel: false },
+      xAxis: [
+        { type: 'value', splitLine: { lineStyle: { color: 'rgba(58,46,31,0.06)' } }, axisLabel: { color: '#7a6a56' } },
+        { type: 'value', position: 'top', min: 0, max: maxSys, splitLine: { show: false }, axisLabel: { color: '#7a6a56', fontSize: 10 }, interval: 1 },
+      ],
+      yAxis: {
+        type: 'category',
+        data: dl.map(d => d.name),
+        axisLabel: { color: '#2a2014', fontSize: 11.5, margin: 8 }
+      },
+      series: [
+        { name: '入度', type: 'bar', data: dl.map(d => d.inD), barMaxWidth: 12, barGap: '20%', itemStyle: { color: hexToRgba(COLOR.direct, 0.8), borderRadius: [0, 3, 3, 0] } },
+        { name: '出度', type: 'bar', data: dl.map(d => d.outD), barMaxWidth: 12, itemStyle: { color: hexToRgba(COLOR.biz, 0.85), borderRadius: [0, 3, 3, 0] } },
+        { name: '触达应用数', type: 'line', xAxisIndex: 1, data: dl.map(d => d.syss.length), smooth: false, symbol: 'circle', symbolSize: 8, itemStyle: { color: COLOR.sys }, lineStyle: { color: COLOR.sys, width: 2 } },
+      ],
+    });
+  }
+
+  function renderTables(m) {
+    // 部门工作负载表
+    const tbody = $('#tableDept tbody');
+    tbody.innerHTML = m.deptLoad.map(d => {
+      const color = DOMAIN_COLOR[d.domain] || COLOR.miss;
+      const status = d.empty
+        ? '<span class="badge miss">待补全</span>'
+        : (d.procs > 0 ? '<span class="badge ok">已梳理</span>' : '<span class="badge miss">未触达</span>');
+      const syssHtml = d.syss.length
+        ? d.syss.map(s => `<span class="badge" style="background:rgba(154,122,48,0.14);color:#7a5e25;margin-right:2px">${s}</span>`).join('')
+        : '<span style="color:var(--faint)">—</span>';
+      return `<tr class="${d.empty ? 'empty-dept' : ''}" data-dept="${escapeHtml(d.name)}">
+        <td><div class="dept-cell"><span class="dot" style="background:${color}"></span><span class="name">${escapeHtml(d.name)}</span></div></td>
+        <td>${escapeHtml(d.domain || '—')}</td>
+        <td class="num-cell">${d.procs}</td>
+        <td class="num-cell">${d.syss.length || '—'}</td>
+        <td>${syssHtml}</td>
+        <td>${status}</td>
+      </tr>`;
+    }).join('');
+
+    // 待补全表
+    const mtbody = $('#tableMiss tbody');
+    if (m.emptyInScope.length === 0) {
+      mtbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:20px;">当前范围无待补全部门</td></tr>';
+    } else {
+      mtbody.innerHTML = m.emptyInScope.map(d => {
+        const color = DOMAIN_COLOR[DEPT_DOMAIN[d]] || COLOR.miss;
+        return `<tr>
+          <td><div class="dept-cell"><span class="dot" style="background:${color}"></span>${escapeHtml(d)}</div></td>
+          <td>${escapeHtml(DEPT_DOMAIN[d])}</td>
+          <td><span class="badge miss">待补全</span></td>
+        </tr>`;
+      }).join('');
+    }
+    $('#tableMissSub').textContent = m.emptyInScope.length === 0 ? '无' : `${m.emptyInScope.length} 个部门`;
+  }
+
+  function renderInsights(m) {
+    const list = [];
+    // 1. 覆盖度
+    if (m.coverage >= 80) {
+      list.push({ type: 'ok', text: `梳理覆盖度 <b>${m.coverage}%</b>,<b>${m.covered}/${m.deptsInScope.length}</b> 部门已完成,推进良好。` });
+    } else if (m.coverage <= 30) {
+      list.push({ type: 'warn', text: `梳理覆盖度仅 <b>${m.coverage}%</b>,<b>${m.emptyInScope.length}</b> 个部门待补全。` });
+    } else {
+      list.push({ type: 'info', text: `梳理覆盖度 <b>${m.coverage}%</b>(<b>${m.covered}/${m.deptsInScope.length}</b>),仍有 <b>${m.emptyInScope.length}</b> 个部门待补全。` });
+    }
+    // 2. 域维度(全公司模式)
+    if (state.filter.mode === 'all') {
+      const doms = Object.entries(m.byDomain);
+      const slowest = doms.sort((a, b) => (a[1].covered / a[1].total) - (b[1].covered / b[1].total))[0];
+      if (slowest && slowest[1].covered < slowest[1].total) {
+        list.push({ type: 'warn', text: `<b>${slowest[0]}</b> 推进滞后: <b>${slowest[1].covered}/${slowest[1].total}</b> 已梳理。` });
+      }
+    }
+    // 3. 流程落位建议(用户指定:不评价系统,只说数量)
+    const sysStr = m.sysLoadArr.map(s => `<b>${s.value}</b> → ${s.name}`).join(' · ');
+    list.push({ type: 'info', text: `建议落位的流程数量:<br>${sysStr}` });
+    // 4. 顶层流程 / 承载关系
+    if (m.topProcs > 0) {
+      list.push({ type: '', text: `识别出 <b>${m.topProcs}</b> 个顶层流程 + <b>${m.subProcs}</b> 个子流程,涉及 <b>${m.mappings}</b> 条承载关系。` });
+    }
+    // 5. 跨域协作
+    if (m.crossDomain > 0 && m.totalLinks > 0) {
+      const pct = Math.round(m.crossDomain / m.totalLinks * 100);
+      list.push({ type: 'info', text: `跨域协作流 <b>${m.crossDomain}</b> 条,占总关系 <b>${pct}%</b>。` });
+    }
+    // 6. Top 工作负载部门
+    const topDept = m.deptLoad.find(d => !d.empty);
+    if (topDept && (topDept.procs + topDept.syss.length) > 0) {
+      const syss = topDept.syss.length ? `,触达 <b>${topDept.syss.length}</b> 类应用(${topDept.syss.join('/')})` : '';
+      list.push({ type: '', text: `<b>${topDept.name}</b> 承载流程最多,直接承载 <b>${topDept.procs}</b> 个流程${syss}。` });
+    }
+    // 7. 待补全清单(单域模式)
+    if (state.filter.mode === 'domain' && m.emptyInScope.length > 0) {
+      list.push({ type: 'warn', text: `当前域 <b>${m.emptyInScope.length}</b> 个待补全部门:<br>${m.emptyInScope.map(d => '· ' + escapeHtml(d)).join('<br>')}` });
+    }
+    // 8. 跨部门衔接(来自流程治理报告)
+    if (crossDeptData) {
+      const cd = crossDeptData.stats;
+      const engRisk = crossDeptData.risks.find(r => r.target === '工程技术部');
+      const compositeReview = crossDeptData.risks.find(r => r.target === '复材车间');
+      list.push({ type: '', text: `—— <b>跨部门衔接</b> ——` });
+      list.push({ type: 'warn', text: `🔴 <b>工程技术部</b> 缺失映射文档,导致 <b>${engRisk ? engRisk.refs : '—'}</b> 条跨部门引用无法闭环。` });
+      list.push({ type: 'info', text: `🟢 <b>复材车间</b> 已映射,仍有 <b>${compositeReview ? compositeReview.refs : '—'}</b> 条历史引用待复核闭环。` });
+      list.push({ type: '', text: `已检查 <b>${cd.totalChecked}</b> 条内部跨部门引用,<b>${cd.confirmed}</b> 条确认有对应覆盖,<b>${cd.pendingConfirm}</b> 条待人工确认。` });
+      // 交互链断裂
+      const chains = crossDeptData.interactionChains || [];
+      const broken = chains.filter(c => c.status === 'partial');
+      if (broken.length > 0) {
+        list.push({ type: 'warn', text: `交互链断裂: ${broken.map(c => `<b>${c.name}</b>(${c.breaks.join('; ')})`).join('<br>')}` });
+      }
+    }
+    // 渲染
+    $('#insights').innerHTML = list.map(x => `<div class="insight ${x.type}">${x.text}</div>`).join('');
+  }
+
+  function renderScope() {
+    let label;
+    if (state.filter.mode === 'all') {
+      label = `全公司 · ${DEPTS_ALL.length} 部门 / ${new Set(Object.values(DEPT_DOMAIN)).size} 域`;
+    } else {
+      const d = state.filter.domain || '—';
+      const depts = DEPTS_ALL.filter(x => DEPT_DOMAIN[x] === d);
+      label = `单域 · ${d} (${depts.length} 部门)`;
+    }
+    $('#scopeText').innerHTML = `当前:<b>${escapeHtml(label)}</b>`;
+    $('#footScope').textContent = label;
+  }
+
+  // ===== 部门详情模态 =====
+  // "其他"系统: 来自 SYSTEMS_OTHER 常量(数据节点无 type 字段,用名字硬匹配)
+  function discoverOtherSystems() {
+    return [...SYSTEMS_OTHER];
+  }
+
+  // 找某个部门承载的所有 top process 及每个 process 触达的所有系统(包含边数)
+  // 返回: { topProcs: [{ process, targets: { sys: count } }], allSysLoad: { sys: count } }
+  function collectDeptDetails(deptName) {
+    const adj = new Map();
+    for (const l of state.links) {
+      if (!adj.has(l.source)) adj.set(l.source, []);
+      adj.get(l.source).push(l);
+    }
+    // 系统集: 4 主 + 兜底"其他"(数据节点无 type 字段,只能按名字匹配)
+    const allSys = new Set([...SYSTEMS, ...SYSTEMS_OTHER]);
+    // top processes: dept 直接连的 process
+    const topProcs = [];
+    for (const l of state.links) {
+      if (l.source !== deptName) continue;
+      const t = state.nodesByName.get(l.target);
+      if (t && t.type === 'process') topProcs.push(l.target);
+    }
+    // 对每个 top process,BFS 找可达系统 + 累加边数
+    const result = topProcs.map(p => {
+      const targets = {};
+      const seen = new Set([p]);
+      const q = [p];
+      while (q.length) {
+        const cur = q.shift();
+        for (const e of (adj.get(cur) || [])) {
+          if (allSys.has(e.target)) {
+            targets[e.target] = (targets[e.target] || 0) + 1;
+          } else {
+            if (!seen.has(e.target)) { seen.add(e.target); q.push(e.target); }
+          }
+        }
+      }
+      return { process: p, targets };
+    });
+    // 整部门系统承载数
+    const sysLoad = {};
+    for (const s of allSys) sysLoad[s] = 0;
+    for (const x of result) {
+      for (const [s, c] of Object.entries(x.targets)) {
+        sysLoad[s] = (sysLoad[s] || 0) + c;
+      }
+    }
+    return { topProcs: result, sysLoad, mainSys: [...SYSTEMS], otherSys: discoverOtherSystems() };
+  }
+
+  function openDeptModal(deptName) {
+    const m = computeMetrics();
+    const d = m.deptLoad.find(x => x.name === deptName);
+    if (!d) return;
+    const details = collectDeptDetails(deptName);
+    const isEmpty = d.empty;
+
+    $('#modalTitle').textContent = deptName;
+    const color = DOMAIN_COLOR[d.domain] || COLOR.miss;
+    $('#modalSub').innerHTML = `<span class="dept-cell"><span class="dot" style="background:${color}"></span>${escapeHtml(d.domain || '—')}</span> · ${details.topProcs.length} 个顶层流程 · 触达 ${d.syss.length} 类应用`;
+
+    const body = $('#modalBody');
+    // 4 主系统列 + 该部门实际触达的其他(外部)系统列(没触达就不显示)
+    const usedOther = details.otherSys.filter(s => (details.sysLoad[s] || 0) > 0);
+    const allCols = [...details.mainSys, ...usedOther];
+    const isExternal = sys => details.otherSys.includes(sys);
+    const shortLabel = sys => OTHER_SHORT[sys] || sys;
+
+    body.innerHTML = `
+      <div class="modal-stats">
+        <div class="modal-stat"><div class="l">顶层流程</div><div class="v">${details.topProcs.length}</div></div>
+        <div class="modal-stat"><div class="l">触达应用</div><div class="v">${d.syss.length || '—'}</div></div>
+        <div class="modal-stat"><div class="l">承载关系</div><div class="v">${d.inD + d.outD}</div></div>
+        <div class="modal-stat"><div class="l">状态</div><div class="v" style="font-size:13px;">${isEmpty ? '<span class="badge miss">待补全</span>' : '<span class="badge ok">已梳理</span>'}</div></div>
+      </div>
+
+      <div class="modal-section">
+        <h3>流程 · 系统 落位矩阵 <span class="matrix-hint">（纵看 = 这系统被哪些流程承载 / 横看 = 这流程触达哪些系统）</span></h3>
+        <input type="text" class="modal-search" id="modalSearch" placeholder="按流程名筛选…" />
+        <div class="matrix-wrap">
+          <table class="matrix">
+            <thead>
+              <tr>
+                <th class="proc-col">流程</th>
+                ${allCols.map(s => {
+                  const color = isExternal(s) ? COLOR.miss : (COLOR_BY_SYS[s] || COLOR.miss);
+                  const ext = isExternal(s) ? ' <span class="ext-tag">外部</span>' : '';
+                  const fullTitle = isExternal(s) ? `${s} · 外部系统（需借助政府/事业单位/企业客户）` : s;
+                  return `<th class="sys-col ${isExternal(s) ? 'sys-other' : ''}" style="--c:${color}" title="${escapeHtml(fullTitle)}">${escapeHtml(shortLabel(s))}${ext}</th>`;
+                }).join('')}
+                <th class="reach-col">触达<br/>系统数</th>
+              </tr>
+            </thead>
+            <tbody id="matrixBody"></tbody>
+            <tfoot>
+              <tr>
+                <td class="proc-cell">承载数 ↓</td>
+                ${allCols.map(s => {
+                  const c = details.sysLoad[s] || 0;
+                  const color = isExternal(s) ? COLOR.miss : (COLOR_BY_SYS[s] || COLOR.miss);
+                  return `<td class="cell" style="--c:${color}"><b>${c}</b></td>`;
+                }).join('')}
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        <div class="matrix-legend">
+          <span><span class="swatch" style="background:${COLOR_BY_SYS.OA}"></span>OA · 经营协作</span>
+          <span><span class="swatch" style="background:${COLOR_BY_SYS.MES}"></span>MES · 制造执行</span>
+          <span><span class="swatch" style="background:${COLOR_BY_SYS.ERP}"></span>ERP · 资源计划</span>
+          <span><span class="swatch" style="background:${COLOR_BY_SYS.PLM}"></span>PLM · 产品生命周期</span>
+          ${details.otherSys.length ? `<span><span class="swatch" style="background:${COLOR.miss}"></span>外部系统 · 政府/事业单位/企业客户</span>` : ''}
+          <span style="margin-left:auto; color:var(--faint)">○ = 未触达　● = 触达　角标 = 边缘数</span>
+        </div>
+      </div>
+
+      <div class="modal-foot">
+        <span>数据快照 2026-05-30 · 触达链路：BFS 反向追溯</span>
+        <span>点击背景 / Esc 关闭</span>
+      </div>
+    `;
+
+    // 渲染矩阵
+    function renderMatrix(filter) {
+      const filtered = details.topProcs.filter(x => !filter || x.process.toLowerCase().includes(filter.toLowerCase()));
+      // 排序：触达系统数 desc，再按流程名
+      filtered.sort((a, b) => {
+        const ac = Object.keys(a.targets).length, bc = Object.keys(b.targets).length;
+        if (bc !== ac) return bc - ac;
+        return a.process.localeCompare(b.process);
+      });
+      const body = $('#matrixBody');
+      if (!filtered.length) {
+        body.innerHTML = `<tr><td class="proc-cell" style="text-align:center;color:var(--muted)">无匹配流程</td><td colspan="${allCols.length + 1}"></td></tr>`;
+        return;
+      }
+      body.innerHTML = filtered.map(x => {
+        const cells = allCols.map(s => {
+          const count = x.targets[s] || 0;
+          if (count > 0) {
+            const color = isExternal(s) ? COLOR.miss : (COLOR_BY_SYS[s] || COLOR.miss);
+            const badge = count > 1 ? `<sup>${count}</sup>` : '';
+            return `<td class="cell" style="--c:${color}" title="${escapeHtml(s)} · ${count} 条边"><span class="dot filled">${badge}</span></td>`;
+          }
+          return `<td class="cell empty-cell"><span class="dot empty">○</span></td>`;
+        }).join('');
+        const reach = Object.keys(x.targets).length;
+        return `<tr><td class="proc-cell" title="${escapeHtml(x.process)}">${escapeHtml(x.process)}</td>${cells}<td class="reach-cell">${reach}</td></tr>`;
+      }).join('');
+    }
+    renderMatrix('');
+    $('#modalSearch').addEventListener('input', (e) => renderMatrix(e.target.value));
+
+    $('#deptModal').setAttribute('aria-hidden', 'false');
+  }
+
+  function closeDeptModal() {
+    $('#deptModal').setAttribute('aria-hidden', 'true');
+  }
+
+  function openEmptyHint(deptName) {
+    const d = DEPT_DOMAIN[deptName] || '—';
+    $('#modalTitle').textContent = deptName + ' · 待补全';
+    $('#modalSub').innerHTML = `<span class="dept-cell"><span class="dot" style="background:${DOMAIN_COLOR[d] || COLOR.miss}"></span>${escapeHtml(d)}</span> · 该部门尚无流程资料`;
+    $('#modalBody').innerHTML = `
+      <div class="modal-section">
+        <p style="font-size:13px;line-height:1.7;color:var(--text);margin:0 0 10px;">
+          <b>${escapeHtml(deptName)}</b> 当前未在 <code>docs/norms/</code> 目录提交流程资料。
+        </p>
+        <p style="font-size:12.5px;line-height:1.7;color:var(--muted);margin:0 0 8px;">建议补全路径:</p>
+        <ol style="font-size:12.5px;line-height:1.8;color:var(--text);padding-left:20px;margin:0;">
+          <li>在 <code>docs/norms/</code> 下创建 <code>${escapeHtml(deptName)}部门-能力-流程-系统映射关系.md</code></li>
+          <li>按"<b>部门 | 能力域 | 业务能力 | 业务流程 | ... | 应用系统</b>"表头填写映射表</li>
+          <li>运行 <code>node scripts/parse-sankey-data.mjs</code> 重生数据</li>
+          <li>刷新本页,数据将自动更新</li>
+        </ol>
+      </div>
+      <div class="modal-foot">
+        <span>数据快照 2026-05-28</span>
+        <span>点击背景 / Esc 关闭</span>
+      </div>
+    `;
+    $('#deptModal').setAttribute('aria-hidden', 'false');
+  }
+
+  function render() {
+    if (!state.raw) return;
+    const t0 = performance.now();
+    const m = computeMetrics();
+    renderKPIs(m);
+    renderCharts(m);
+    renderTables(m);
+    renderCrossDeptTable();
+    renderInsights(m);
+    renderScope();
+    const t1 = performance.now();
+    $('#sRender').textContent = Math.round(t1 - t0);
+    $('#sNodes').textContent = m.totalNodes;
+    $('#sLinks').textContent = m.totalLinks;
+    if (state.stats && state.stats.mappings) {
+      $('#sMappings').textContent = state.stats.mappings;
+    }
+  }
+
+  // ===== 跨部门衔接数据 =====
+  let crossDeptData = null;
+  const crossFilter = { risk: 'all' };
+
+  function loadCrossDeptData() {
+    try {
+      crossDeptData = JSON.parse(document.getElementById('cross-dept-data').textContent);
+      return true;
+    } catch (e) {
+      console.error('跨部门数据加载失败', e);
+      return false;
+    }
+  }
+
+  function renderCrossDeptTable() {
+    if (!crossDeptData) return;
+    const items = crossDeptData.risks.filter(r => crossFilter.risk === 'all' || r.risk === crossFilter.risk);
+    const riskLabel = { high: '🔴 高', medium: '🟡 中', low: '🟢 低' };
+    const riskBadge = { high: 'badge high', medium: 'badge medium', low: 'badge low' };
+    const tbody = $('#crossBody');
+    if (items.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px;">当前筛选无匹配项</td></tr>';
+    } else {
+      tbody.innerHTML = items.map(r => {
+        const targetCls = r.status.includes('未映射') ? 'dept-link-miss' : 'dept-link';
+        return `<tr>
+          <td>${escapeHtml(r.source)}</td>
+          <td><span class="${targetCls}">${escapeHtml(r.target)}</span></td>
+          <td>${escapeHtml(r.a1)}</td>
+          <td class="num-cell">${r.refs}</td>
+          <td><span class="${riskBadge[r.risk]}">${riskLabel[r.risk]}</span></td>
+          <td class="risk-desc">${escapeHtml(r.desc)}</td>
+        </tr>`;
+      }).join('');
+    }
+    $('#tableCrossSub').textContent = crossFilter.risk === 'all'
+      ? `共 ${crossDeptData.risks.length} 项 (${crossDeptData.stats.highRisk}高/${crossDeptData.stats.mediumRisk}中/${crossDeptData.stats.pendingConfirm}低)`
+      : `${items.length} 项`;
+  }
+
+  // ===== 数据加载 =====
+  async function loadData() {
+    try {
+      // 数据已内嵌在 #sankey-data 脚本标签,避免 CORS / 离线打开空白
+      const data = JSON.parse(document.getElementById('sankey-data').textContent);
+      state.raw = data;
+      state.stats = data.stats || {};
+      if (data.crossDept) {
+        crossDeptData = data.crossDept;
+      } else {
+        loadCrossDeptData();
+      }
+      const seen = new Set();
+      for (const n of data.nodes) {
+        if (seen.has(n.name)) continue;
+        seen.add(n.name);
+        const c = classify(n.name);
+        state.nodesByName.set(n.name, c);
+      }
+      state.links = data.links;
+      backfillProcessDomain();
+      state.isEmptyDept = computeEmptyDepts();
+      $('#sNodes').textContent = state.nodesByName.size;
+      $('#sLinks').textContent = state.links.length;
+      if (data.stats) {
+        $('#sMappings').textContent = data.stats.mappings;
+      }
+      return true;
+    } catch (e) {
+      console.error('数据加载失败', e);
+      $('#insights').innerHTML = `<div class="insight warn">数据加载失败:${escapeHtml(String(e))}。<br>请运行 <code>node scripts/parse-sankey-data.mjs</code> 重新生成内嵌数据。</div>`;
+      return false;
+    }
+  }
+
+  // ===== 初始化图表 =====
+  function initCharts() {
+    if (typeof echarts === 'undefined') {
+      $('#insights').innerHTML = '<div class="insight warn">ECharts 未加载,请确认 <code>../../echarts.min.js</code> 存在。</div>';
+      return false;
+    }
+    state.charts.donut = echarts.init($('#chartDonut'), null, { renderer: 'canvas' });
+    state.charts.system = echarts.init($('#chartSystem'), null, { renderer: 'canvas' });
+    state.charts.dept = echarts.init($('#chartDept'), null, { renderer: 'canvas' });
+    window.addEventListener('resize', () => {
+      for (const c of Object.values(state.charts)) c.resize();
+    });
+    return true;
+  }
+
+  // ===== UI 绑定 =====
+  function bindUI() {
+    // 表格行点击 → 模态
+    document.addEventListener('click', (e) => {
+      const tr = e.target.closest('tr[data-dept]');
+      if (tr) {
+        const name = tr.getAttribute('data-dept');
+        if (!tr.classList.contains('empty-dept')) openDeptModal(name);
+        else {
+          // 待补全部门:弹个简化提示
+          openEmptyHint(name);
+        }
+      }
+    });
+    // 模态关闭
+    $('#modalClose').addEventListener('click', closeDeptModal);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeDeptModal();
+    });
+    document.querySelector('#deptModal .modal-mask').addEventListener('click', closeDeptModal);
+
+    // 顶部模式切换
+    $$('#modeSwitch button').forEach(b => b.addEventListener('click', () => {
+      $$('#modeSwitch button').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+      const v = b.dataset.val;
+      if (v === 'all') {
+        state.filter.mode = 'all';
+        state.filter.domain = null;
+        $('#domainGroup').style.display = 'none';
+        // 同步左侧
+        $$('#modeSeg button').forEach(x => {
+          x.classList.toggle('on', x.dataset.val === 'all');
+        });
+      } else {
+        state.filter.mode = 'domain';
+        state.filter.domain = v;
+        $('#domainGroup').style.display = '';
+        // 同步左侧
+        $$('#modeSeg button').forEach(x => {
+          x.classList.toggle('on', x.dataset.val === 'domain');
+        });
+        // 同步域选择
+        $$('#domainGroup button').forEach(x => {
+          x.classList.toggle('on', x.dataset.val === v);
+        });
+      }
+      render();
+    }));
+    // 左侧模式
+    $$('#modeSeg button').forEach(b => b.addEventListener('click', () => {
+      const v = b.dataset.val;
+      if (v === 'all') {
+        // 触发顶部"全公司"
+        const top = $$('#modeSwitch button').find(x => x.dataset.val === 'all');
+        if (top) top.click();
+      } else {
+        // 切到单域时,默认选第一个域
+        const first = $$('#domainGroup button')[0];
+        if (first) first.click();
+        else {
+          state.filter.mode = 'domain';
+          state.filter.domain = DEPTS_ALL.length > 0 ? DEPT_DOMAIN[DEPTS_ALL[0]] : null;
+          $('#domainGroup').style.display = '';
+          $$('#modeSeg button').forEach(x => x.classList.toggle('on', x.dataset.val === 'domain'));
+          render();
+        }
+      }
+    }));
+    // 左侧域选择
+    $$('#domainGroup button').forEach(b => b.addEventListener('click', () => {
+      $$('#domainGroup button').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+      state.filter.mode = 'domain';
+      state.filter.domain = b.dataset.val;
+      // 同步顶部
+      $$('#modeSwitch button').forEach(x => {
+        x.classList.toggle('on', x.dataset.val === b.dataset.val);
+      });
+      $$('#modeSeg button').forEach(x => {
+        x.classList.toggle('on', x.dataset.val === 'domain');
+      });
+      $('#domainGroup').style.display = '';
+      render();
+    }));
+    // 跨部门风险筛选
+    const riskBtns = document.querySelectorAll('.risk-seg button[data-risk]');
+    riskBtns.forEach(b => b.addEventListener('click', () => {
+      riskBtns.forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+      crossFilter.risk = b.dataset.risk;
+      renderCrossDeptTable();
+    }));
+
+    // 重置
+    $('#resetBtn').addEventListener('click', () => {
+      const top = $$('#modeSwitch button').find(x => x.dataset.val === 'all');
+      if (top) top.click();
+      // 同时重置风险筛选
+      crossFilter.risk = 'all';
+      riskBtns.forEach(x => x.classList.toggle('on', x.dataset.risk === 'all'));
+      renderCrossDeptTable();
+    });
+  }
+
+  async function main() {
+    if (!initCharts()) return;
+    bindUI();
+    const ok = await loadData();
+    if (!ok) return;
+    // URL 参数: ?domain=经营域|生产域|总经理直属域
+    const params = new URLSearchParams(location.search);
+    const dom = params.get('domain');
+    if (dom && ['经营域', '生产域', '总经理直辖域'].includes(dom)) {
+      // 直接设置状态(不等 click 事件)
+      state.filter.mode = 'domain';
+      state.filter.domain = dom;
+      // 同步 UI 高亮
+      $$('#modeSwitch button').forEach(x => x.classList.toggle('on', x.dataset.val === dom));
+      $$('#modeSeg button').forEach(x => x.classList.toggle('on', x.dataset.val === 'domain'));
+      $$('#domainGroup button').forEach(x => x.classList.toggle('on', x.dataset.val === dom));
+      $('#domainGroup').style.display = '';
+    }
+    render();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', main);
+  } else {
+    main();
+  }
+})();
+</script>
+</body>
+</html>

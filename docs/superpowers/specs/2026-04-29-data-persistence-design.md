@@ -23,7 +23,7 @@
   connections: [...],           // 连线数组
   selectionStep: 'cap',         // 当前步骤: 'cap' | 'proc' | 'sys'
   selectedCapName: null,        // 已选业务能力名称
-  selectedProcName: null,       // 已选L3流程名称
+  selectedProcName: null,       // 已选业务流程（L3）名称
   lastModified: timestamp       // 最后修改时间
 }
 ```
