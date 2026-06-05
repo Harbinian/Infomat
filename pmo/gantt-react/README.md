@@ -39,23 +39,31 @@ npm run preview
 
 运行完成后应看到 `Wrote 434 tasks from 信息化项目_计划管控真源.md`。如任务数发生变化，先确认 MD 真源是否确实增删任务。
 
-## 交付物状态维护
+## 交付物文件系统(dev 模式)
 
-通过 `public/deliverable-status.json` 覆盖交付物状态：
+`pmo/deliverables/DLV-XXX-*.md` 是交付物状态正本。frontmatter 包含状态、责任、审批历史和凭证信息,正文末尾有系统维护的 `## 变更记录` 表。`public/deliverable-status.json` 仅作为无正本文件时的过渡兜底。
 
-```json
-[
-  {
-    "deliverableId": "DLV-001",
-    "status": "待评审",
-    "actualSubmitDate": "2026-06-20",
-    "actualPassDate": "",
-    "ownerNote": "已提交初稿，等待 PMO 评审"
-  }
-]
+### 6 个 HTTP 端点
+
+| 方法 | 路径 |
+|---|---|
+| GET | `/api/pmo/deliverables` |
+| GET | `/api/pmo/deliverables/:id` |
+| GET | `/api/pmo/deliverables/:id/raw` |
+| PUT | `/api/pmo/deliverables/:id`(支持 `If-Match` mtime 校验) |
+| POST | `/api/pmo/deliverables/:id/transition` |
+| POST | `/api/pmo/deliverables/:id/upload`(支持 .md / .docx / .xlsx) |
+
+启动时扫描所有 `DLV-XXX-*.md`,解析失败、字段缺失或同 DLV 多份时只在 console.warn 提示并跳过,不阻塞 dev server。
+
+### 测试
+
+```bash
+npm run test:frontmatter
+npm run test:writeback
+npm run test:plugin
+npm run test:hmr
 ```
-
-如果不维护该文件，交付物状态默认为 `未提交`。
 
 ## Console 口径
 

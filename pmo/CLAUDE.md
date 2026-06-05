@@ -51,6 +51,16 @@ pmo/
 - **服务清单**：`pmo-source-manifest.json` 同步写入 `gantt-react/public/pmo-source-manifest.json`，记录计划管控、WBS结构、工作平衡、工作开展原则四类 MD 入口
 - **当前数据**：434 条任务，45 个字段
 
+### 模块 B 扩展:动态凭证消费 (2026-06-05+)
+
+`pmo/deliverables/DLV-XXX-*.md` 是交付物状态正本。5173 dev 模式通过 Vite 插件 `pmoDeliverablesPlugin` 扫目录、暴露 6 个 `/api/pmo/deliverables*` 端点、用 Vite 内置 watcher 发 HMR。前端优先读取正本文件,服务端 `applyTransitionToFile` 跑状态机并写回 .md frontmatter + body 变更记录表。
+
+- 真源:`pmo/deliverables/DLV-XXX-*.md`(frontmatter + body)
+- 归档:`pmo/deliverables/_history/DLV-XXX/<ts>-<kind>-<suffix>`
+- dev-only:`apply: 'serve'`,生产构建降级到 WBS 字段/旧覆盖层
+- 兜底:API 正本 → `deliverable-status.json` → `tasks.json` 默认 DLV 字段
+- 测试:`npm run test:frontmatter` / `test:writeback` / `test:plugin` / `test:hmr`
+
 ## 数据更新流程
 
 ### 甘特图数据更新
@@ -79,4 +89,4 @@ pmo/
 | 流程地图驾驶舱 | 原生 HTML/CSS/JS + ECharts 5.x |
 | 甘特图 | React 19 + Vite 8 + Canvas 2D API |
 
-两个模块均为纯静态前端，无后端服务依赖。
+两个模块生产产物均为纯静态前端。`gantt-react` 在 dev 模式额外启用 Vite 文件系统插件,用于本地 PMO 正本文件读写。

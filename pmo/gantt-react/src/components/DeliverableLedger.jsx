@@ -222,6 +222,7 @@ export default function DeliverableLedger({
                           上传
                           <input
                             type="file"
+                            accept=".md,.markdown,.docx,.xlsx"
                             onChange={event => handleUpload(event, deliverable)}
                             aria-label={`上传${deliverable.deliverableName}凭证`}
                           />

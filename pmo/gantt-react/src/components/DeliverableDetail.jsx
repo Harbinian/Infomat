@@ -1,10 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { formatDate, parseDate } from '../utils/dateUtils';
 import {
   DELIVERABLE_ACTIONS,
   canTransitionDeliverableStatus,
-  transitionDeliverableStatus,
 } from '../utils/deliverableWorkflow';
+
+const loadCanonicalDeliverable = import.meta.env.DEV
+  ? async id => {
+    const { getDeliverable } = await import('../utils/deliverableFsApi.js');
+    return getDeliverable(id);
+  }
+  : async () => {
+    throw new Error('生产构建不读取本地正本文件');
+  };
 
 const LEVEL_COLORS = { A: '#B88919', B: '#6E879F', C: '#6F8A6A', D: '#9A8F7A' };
 const STATUS_COLORS = {
@@ -49,12 +58,14 @@ function defaultActor() {
   }
 }
 
-export default function DeliverableDetail({ deliverable, phaseGates, onClose, onTransition }) {
+export default function DeliverableDetail({ deliverable, phaseGates, onClose, onTransition, onDownloadDeliverable }) {
   const panelRef = useRef(null);
   const lastDeliverableKey = useRef(null);
   const [pendingAction, setPendingAction] = useState(null);
   const [note, setNote] = useState('');
   const [actor, setActor] = useState(defaultActor);
+  const [activeTab, setActiveTab] = useState('info');
+  const [canonicalState, setCanonicalState] = useState({ id: '', mtime: 0, data: null, error: '' });
 
   const currentKey = deliverable ? `${deliverable.deliverableId}::${deliverable.deliverableStatus || ''}` : null;
   if (currentKey !== lastDeliverableKey.current) {
@@ -75,6 +86,23 @@ export default function DeliverableDetail({ deliverable, phaseGates, onClose, on
     return () => document.removeEventListener('pointerdown', handlePointerDown, true);
   }, [onClose]);
 
+  useEffect(() => {
+    let cancelled = false;
+    if (!deliverable?.deliverableId) return () => { cancelled = true; };
+    loadCanonicalDeliverable(deliverable.deliverableId)
+      .then(data => {
+        if (!cancelled) {
+          setCanonicalState({ id: deliverable.deliverableId, mtime: deliverable.canonicalMtime || 0, data, error: '' });
+        }
+      })
+      .catch(error => {
+        if (!cancelled) {
+          setCanonicalState({ id: deliverable.deliverableId, mtime: deliverable.canonicalMtime || 0, data: null, error: error.message || '未读取到正本文件' });
+        }
+      });
+    return () => { cancelled = true; };
+  }, [deliverable?.deliverableId, deliverable?.canonicalMtime]);
+
   if (!deliverable) return null;
 
   const status = deliverable.deliverableStatus || '未提交';
@@ -94,22 +122,12 @@ export default function DeliverableDetail({ deliverable, phaseGates, onClose, on
 
   const runTransition = (actionKey, reviewNote, actorName) => {
     if (!onTransition) return;
-    try {
-      const updated = transitionDeliverableStatus(deliverable, {
-        action: actionKey,
-        actor: actorName,
-        note: reviewNote,
-        at: new Date().toISOString(),
-      });
-      onTransition(updated, {
-        action: actionKey,
-        actor: actorName,
-        note: reviewNote,
-        at: new Date().toISOString(),
-      });
-    } catch (error) {
-      window.alert(error.message || '状态变更失败');
-    }
+    onTransition(deliverable, {
+      action: actionKey,
+      actor: actorName,
+      note: reviewNote,
+      at: new Date().toISOString(),
+    });
   };
 
   const handleConfirmNote = () => {
@@ -148,6 +166,10 @@ export default function DeliverableDetail({ deliverable, phaseGates, onClose, on
   ];
 
   const history = Array.isArray(deliverable.workflowHistory) ? deliverable.workflowHistory : [];
+  const canonical = canonicalState.id === deliverable.deliverableId && canonicalState.mtime === (deliverable.canonicalMtime || 0)
+    ? canonicalState.data
+    : null;
+  const canonicalError = canonicalState.id === deliverable.deliverableId ? canonicalState.error : '';
 
   return (
     <div className="detail-overlay open" ref={panelRef}>
@@ -156,86 +178,114 @@ export default function DeliverableDetail({ deliverable, phaseGates, onClose, on
         <button className="detail-close" onClick={onClose} type="button">&times;</button>
       </div>
       <div className="detail-body">
-        {fields.map(field => (
-          <div key={field.label} className="detail-field">
-            <label>{field.label}</label>
-            {field.badge === 'level'
-              ? <span className="value badge" style={{ background: `${LEVEL_COLORS[field.value]}22`, color: LEVEL_COLORS[field.value], border: `1px solid ${LEVEL_COLORS[field.value]}` }}>{field.value}类</span>
-              : field.badge === 'risk'
-                ? <span className={`value badge risk-${field.value}`}>{field.value}</span>
-                : field.badge === 'status'
-                  ? <span className="value badge" style={{ background: `${STATUS_COLORS[field.value] || '#9A8F7A'}22`, color: STATUS_COLORS[field.value] || '#9A8F7A' }}>{field.value}</span>
-                  : <span className="value">{field.value}</span>
-            }
-          </div>
-        ))}
+        <div className="detail-tabs">
+          <button type="button" className={activeTab === 'info' ? 'active' : ''} onClick={() => setActiveTab('info')}>基本信息</button>
+          <button type="button" className={activeTab === 'file' ? 'active' : ''} onClick={() => setActiveTab('file')}>正本文件</button>
+        </div>
 
-        {availableActions.length > 0 && (
-          <div className="detail-field detail-actions">
-            <label>状态操作</label>
-            <div className="action-buttons">
-              {availableActions.map(action => (
-                <button
-                  key={action.actionKey}
-                  type="button"
-                  className={`action-btn tone-${action.tone}`}
-                  onClick={() => handleActionClick(action.actionKey)}
-                >
-                  {action.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {pendingAction && (
-          <div className="detail-field detail-note">
-            <label>{ACTION_BUTTON_META[pendingAction]?.label}意见</label>
-            <div className="note-input-row">
-              <input
-                type="text"
-                placeholder="操作人"
-                value={actor}
-                onChange={event => setActor(event.target.value)}
-                className="note-actor"
-                aria-label="操作人"
-              />
-              <textarea
-                placeholder="请输入审核/退回意见"
-                value={note}
-                onChange={event => setNote(event.target.value)}
-                className="note-textarea"
-                rows={3}
-                aria-label="审核意见"
-              />
-              <div className="note-buttons">
-                <button type="button" className="action-btn tone-success" onClick={handleConfirmNote}>确认</button>
-                <button type="button" className="action-btn tone-neutral" onClick={handleCancelNote}>取消</button>
+        {activeTab === 'info' && (
+          <>
+            {fields.map(field => (
+              <div key={field.label} className="detail-field">
+                <label>{field.label}</label>
+                {field.badge === 'level'
+                  ? <span className="value badge" style={{ background: `${LEVEL_COLORS[field.value]}22`, color: LEVEL_COLORS[field.value], border: `1px solid ${LEVEL_COLORS[field.value]}` }}>{field.value}类</span>
+                  : field.badge === 'risk'
+                    ? <span className={`value badge risk-${field.value}`}>{field.value}</span>
+                    : field.badge === 'status'
+                      ? <span className="value badge" style={{ background: `${STATUS_COLORS[field.value] || '#9A8F7A'}22`, color: STATUS_COLORS[field.value] || '#9A8F7A' }}>{field.value}</span>
+                      : <span className="value">{field.value}</span>
+                }
               </div>
+            ))}
+
+            {availableActions.length > 0 && (
+              <div className="detail-field detail-actions">
+                <label>状态操作</label>
+                <div className="action-buttons">
+                  {availableActions.map(action => (
+                    <button
+                      key={action.actionKey}
+                      type="button"
+                      className={`action-btn tone-${action.tone}`}
+                      onClick={() => handleActionClick(action.actionKey)}
+                    >
+                      {action.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {pendingAction && (
+              <div className="detail-field detail-note">
+                <label>{ACTION_BUTTON_META[pendingAction]?.label}意见</label>
+                <div className="note-input-row">
+                  <input
+                    type="text"
+                    placeholder="操作人"
+                    value={actor}
+                    onChange={event => setActor(event.target.value)}
+                    className="note-actor"
+                    aria-label="操作人"
+                  />
+                  <textarea
+                    placeholder="请输入审核/退回意见"
+                    value={note}
+                    onChange={event => setNote(event.target.value)}
+                    className="note-textarea"
+                    rows={3}
+                    aria-label="审核意见"
+                  />
+                  <div className="note-buttons">
+                    <button type="button" className="action-btn tone-success" onClick={handleConfirmNote}>确认</button>
+                    <button type="button" className="action-btn tone-neutral" onClick={handleCancelNote}>取消</button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {history.length > 0 && (
+              <div className="detail-field detail-history">
+                <label>操作记录</label>
+                <ul className="workflow-history">
+                  {history.map((item, idx) => (
+                    <li key={`${item.at}-${idx}`} className={`history-item history-${item.action}`}>
+                      <span className="history-action">{item.label || item.action}</span>
+                      <span className="history-flow">{item.from} → {item.to}</span>
+                      <span className="history-meta">{item.actor || '-'} · {formatEvidenceTime(item.at)}</span>
+                      {item.note && <span className="history-note">{item.note}</span>}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {deliverable.notes && (
+              <div className="detail-field">
+                <label>备注</label>
+                <span className="value">{deliverable.notes}</span>
+              </div>
+            )}
+          </>
+        )}
+
+        {activeTab === 'file' && (
+          <div className="canonical-file">
+            <div className="canonical-toolbar">
+              <div>
+                <div className="canonical-name">{canonical?.fileName || deliverable.canonicalFileName || `${deliverable.deliverableId}.md`}</div>
+                <div className="canonical-meta">{canonical?.mtime ? `mtime ${Math.round(canonical.mtime)}` : 'dev 正本文件'}</div>
+              </div>
+              <button type="button" className="action-btn tone-neutral" onClick={() => onDownloadDeliverable?.(deliverable)}>下载正本</button>
             </div>
-          </div>
-        )}
-
-        {history.length > 0 && (
-          <div className="detail-field detail-history">
-            <label>操作记录</label>
-            <ul className="workflow-history">
-              {history.map((item, idx) => (
-                <li key={`${item.at}-${idx}`} className={`history-item history-${item.action}`}>
-                  <span className="history-action">{item.label || item.action}</span>
-                  <span className="history-flow">{item.from} → {item.to}</span>
-                  <span className="history-meta">{item.actor || '-'} · {formatEvidenceTime(item.at)}</span>
-                  {item.note && <span className="history-note">{item.note}</span>}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {deliverable.notes && (
-          <div className="detail-field">
-            <label>备注</label>
-            <span className="value">{deliverable.notes}</span>
+            {canonical?.body ? (
+              <div className="canonical-markdown">
+                <ReactMarkdown>{canonical.body}</ReactMarkdown>
+              </div>
+            ) : (
+              <div className="canonical-empty">{canonicalError || '正在读取正本文件'}</div>
+            )}
           </div>
         )}
       </div>

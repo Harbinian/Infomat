@@ -25,6 +25,35 @@ const GATE_DELIVERABLE_NAMES = [
 ];
 
 const MAINLINE_WBS_PREFIXES = ['3', '4', '5', '6', '7', '8', '9', '10'];
+const loadFsApi = import.meta.env?.DEV ? () => import('./deliverableFsApi.js') : null;
+
+function mergeDeliverableWithFrontmatter(deliverable, record) {
+  const anf = record?.frontmatter || {};
+  return {
+    ...deliverable,
+    deliverableId: anf.deliverableId || deliverable.deliverableId,
+    deliverableName: anf.title || deliverable.deliverableName,
+    deliverableType: anf.deliverableType || deliverable.deliverableType,
+    deliverableLevel: anf.deliverableLevel || deliverable.deliverableLevel,
+    department: anf.department || deliverable.department,
+    owner: anf.owner || deliverable.owner || '',
+    reviewer: anf.reviewer || deliverable.reviewer,
+    plannedFinish: anf.plannedFinish || deliverable.plannedFinish,
+    taskRisk: anf.risk || deliverable.taskRisk,
+    deliverableStatus: anf.status || deliverable.deliverableStatus,
+    _actualSubmitDate: anf.actualSubmitDate || deliverable._actualSubmitDate || '',
+    _actualPassDate: anf.actualPassDate || deliverable._actualPassDate || '',
+    _actualArchiveDate: anf.actualArchiveDate || deliverable._actualArchiveDate || '',
+    reviewOpinion: anf.reviewOpinion || deliverable.reviewOpinion || '',
+    _ownerNote: anf.ownerNote || deliverable._ownerNote || '',
+    evidence: anf.evidence || deliverable.evidence || null,
+    workflowHistory: Array.isArray(anf.workflowHistory) ? anf.workflowHistory : (deliverable.workflowHistory || []),
+    canonicalFileName: record.fileName || '',
+    canonicalMtime: record.mtime || 0,
+    canonicalBody: record.body || '',
+    notes: anf.ownerNote || anf.reviewOpinion || deliverable.notes || '',
+  };
+}
 
 export function classifyDeliverableType(task) {
   const text = `${task.name || ''}${task.deliverable || ''}${task.type || ''}`;
@@ -131,6 +160,27 @@ export function calcDeliverableStats(deliverables, tasks, referenceDate = new Da
 }
 
 export async function loadDeliverableStatusOverrides(deliverables) {
+  if (loadFsApi) {
+    try {
+      const { listDeliverables } = await loadFsApi();
+      const records = await listDeliverables();
+      const recordMap = new Map((records || []).map(record => [record.deliverableId, record]));
+      const updated = deliverables.map(deliverable => {
+        const record = recordMap.get(deliverable.deliverableId);
+        return record ? mergeDeliverableWithFrontmatter(deliverable, record) : deliverable;
+      });
+      const changed = updated.filter(item => recordMap.has(item.deliverableId));
+      if (changed.length) {
+        console.log(`%c✓ 加载交付物正本文件：${changed.length} 项`, 'color:#27ae60;');
+      } else {
+        console.log('%cℹ 未读取到交付物正本文件，继续使用旧覆盖层/默认字段', 'color:#8b90a0;');
+      }
+      return updated;
+    } catch (error) {
+      console.warn('加载交付物正本文件失败，尝试旧覆盖层:', error.message);
+    }
+  }
+
   try {
     const response = await fetch('deliverable-status.json');
     if (!response.ok) {
