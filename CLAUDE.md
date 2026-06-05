@@ -31,7 +31,7 @@ Infomat 是航空复材制造领域的业务关系映射与主数据管理工具
 ### MDM 平台（主项目）
 
 ```bash
-cd mdm-platform
+cd apps/mdm-platform
 npm install                # 安装依赖
 npm start                  # 启动服务 (Express, 端口 3000)
 npm run dev                # 开发模式 (nodemon 自动重启)
@@ -91,10 +91,10 @@ node scripts/glossary.mjs --list           # 列出所有术语
 
 ## 代码架构
 
-### MDM 平台 (`mdm-platform/`)
+### MDM 平台 (`apps/mdm-platform/`)
 
 ```
-mdm-platform/
+apps/mdm-platform/
 ├── server/
 │   ├── index.js           # Express 入口，动态注册路由
 │   ├── db.js              # SQLite 建表 + 内联迁移 + RBAC 种子数据
@@ -248,7 +248,7 @@ user_roles → users
 - RBAC 构建在自建用户体系之上，旧 `requireRole` 和 `users.role` 字段仍存在用于向后兼容
 - SQLite 是本地文件数据库，不适用于多进程并发部署
 - 数据库迁移通过 `db.js` 中的条件 DDL（`ALTER TABLE IF NOT EXISTS` 模式）内联处理，无独立迁移工具
-- 根目录 `package.json` 是旧的占位文件；实际项目级依赖在 `mdm-platform/package.json`
+- 根目录 `package.json` 是旧的占位文件；实际项目级依赖在 `apps/mdm-platform/package.json`
 - `external_identity.external_key` 仅 admin 和集成账号可见
 
 ## 提交前术语表自检

@@ -1,0 +1,51 @@
+<h2>数据模型设计 — 新增 5 张表</h2>
+<p class="subtitle">混合型 RBAC：核心权限走关系表，字段级约束走 JSON 扩展</p>
+
+<div class="mockup">
+  <div class="mockup-header">ER 关系概览</div>
+  <div class="mockup-body">
+    <pre style="font-size:13px;line-height:1.6;padding:16px;background:#1a1a2e;color:#e0e0e0;border-radius:4px;margin:0;">
+<b>roles</b>                     <b>role_permissions</b>          <b>permissions</b>
+┌─────────────────┐     ┌─────────────────────┐     ┌──────────────────────┐
+│ role_id (PK)    │──┐  │ role_perm_id (PK)   │     │ perm_id (PK)         │
+│ role_code (UNQ) │  │  │ role_id (FK) ───────┼────>│ perm_code (UNQ)      │
+│ role_name       │  └─>│ perm_id (FK)        │     │ resource (资源类型)  │
+│ description     │     │ effect (allow/deny) │     │ action (CRUD/特殊)   │
+│ parent_role_id  │     └─────────────────────┘     │ field_constraints JSON│
+│ is_system (1/0) │                                  │ description           │
+│ permissions_json│                                  └──────────────────────┘
+│ created_at      │
+└─────────────────┘     <b>user_roles</b>
+      │                 ┌─────────────────┐
+      └───────────────>│ user_role_id    │
+                        │ user_id (FK)    │      保留但简化：
+                        │ role_id (FK)    │      users.role → 默认角色引用
+                        │ assigned_by     │      users.permissions → 废弃，迁至 user_roles
+                        │ created_at      │      user_dept_roles → 废弃，角色内处理
+                        └─────────────────┘
+    </pre>
+  </div>
+</div>
+
+<h3>关键设计决策</h3>
+
+<div class="section">
+  <h4>1. 角色继承 (parent_role_id 自引用)</h4>
+  <p>角色可继承父角色的所有权限，形成层级。例如："数据审核员" 继承 "数据查看员" 的全部权限，再追加审核操作权限。权限检查时向上递归。</p>
+</div>
+
+<div class="section">
+  <h4>2. 权限表结构</h4>
+  <table style="width:100%;border-collapse:collapse;font-size:13px;">
+    <tr style="background:#2a2a4e"><th style="padding:8px;text-align:left">字段</th><th style="padding:8px;text-align:left">说明</th><th style="padding:8px;text-align:left">示例</th></tr>
+    <tr><td style="padding:8px">perm_code</td><td style="padding:8px">唯一权限标识</td><td style="padding:8px"><code>product:read</code></td></tr>
+    <tr><td style="padding:8px">resource</td><td style="padding:8px">资源类型</td><td style="padding:8px">product, org_unit, person, system...</td></tr>
+    <tr><td style="padding:8px">action</td><td style="padding:8px">操作类型</td><td style="padding:8px">read, create, update, delete, approve</td></tr>
+    <tr><td style="padding:8px">field_constraints</td><td style="padding:8px">JSON: 字段级控制</td><td style="padding:8px"><code>{"exclude":["mobile","email"],"readonly":["salary"]}</code></td></tr>
+  </table>
+</div>
+
+<div class="section">
+  <h4>3. 预置系统角色</h4>
+  <p><code>is_system=1</code> 的角色不可删除，对应现有四种角色：admin, reviewer, owner, submitter。管理员可在其基础上创建自定义角色。</p>
+</div>

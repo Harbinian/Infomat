@@ -5,10 +5,15 @@ function formatEvidenceTime(value) {
   return date.toLocaleString('zh-CN', { hour12: false });
 }
 
-export default function PhaseGateView({ phaseGates }) {
+export default function PhaseGateView({ phaseGates, gateStatusFilter }) {
   if (!phaseGates || phaseGates.length === 0) {
     return <div className="empty-view">暂无阶段门数据</div>;
   }
+
+  const visibleGates = gateStatusFilter && gateStatusFilter !== 'all'
+    ? phaseGates.filter(gate => gate.status === gateStatusFilter)
+    : phaseGates;
+  const isFiltered = gateStatusFilter && gateStatusFilter !== 'all';
 
   return (
     <div className="phasegate-view">
@@ -18,10 +23,19 @@ export default function PhaseGateView({ phaseGates }) {
           {phaseGates.filter(gate => gate.status === '通过').length}/{phaseGates.length} 审批通过
           {' | '}
           <span className="risk-text">{phaseGates.filter(gate => gate.status === '风险').length} 个风险</span>
+          {isFiltered && (
+            <>
+              {' | '}
+              <span className="filter-tag">筛选: {gateStatusFilter} ({visibleGates.length})</span>
+            </>
+          )}
         </span>
       </div>
-      <div className="phasegate-grid">
-        {phaseGates.map(gate => (
+      {visibleGates.length === 0 ? (
+        <div className="empty-view">无 {gateStatusFilter} 状态的阶段门</div>
+      ) : (
+        <div className="phasegate-grid">
+          {visibleGates.map(gate => (
           <div
             key={gate.gateId}
             className={`gate-card gate-status-${gate.status}`}
@@ -99,7 +113,8 @@ export default function PhaseGateView({ phaseGates }) {
             )}
           </div>
         ))}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

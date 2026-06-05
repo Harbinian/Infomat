@@ -1,0 +1,7 @@
+interface:
+  display_name: "Business Behavior Mapping"
+  short_description: "业务行为（A1）、审批流、H5桑基图更新"
+  brand_color: "#0F766E"
+  default_prompt: "Use $business-behavior-mapping to decompose completed 业务流程（L3） mappings into 业务行为（A1）, approval flows, cross-department transactions, system interaction records, and post-BBM H5/HTML Sankey updates."
+policy:
+  allow_implicit_invocation: true

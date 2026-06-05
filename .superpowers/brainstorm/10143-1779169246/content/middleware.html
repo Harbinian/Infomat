@@ -1,0 +1,81 @@
+<h2>中间件重设计</h2>
+<p class="subtitle">用统一的 RBAC 中间件替换现有的 requireRole / requireDataPermission</p>
+
+<h3>旧 → 新 对照</h3>
+<table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:24px;">
+  <tr style="background:#2a2a4e"><th style="padding:8px;text-align:left">现有</th><th style="padding:8px;text-align:left">替换为</th><th style="padding:8px;text-align:left">说明</th></tr>
+  <tr>
+    <td style="padding:8px"><code>requireRole('admin')</code></td>
+    <td style="padding:8px"><code>requirePermission('admin:access')</code></td>
+    <td style="padding:8px">路由级权限检查，基于权限码而非硬编码角色名</td>
+  </tr>
+  <tr>
+    <td style="padding:8px"><code>requireDataPermission('catalog', 'read')</code></td>
+    <td style="padding:8px"><code>requirePermission('catalog:read')</code></td>
+    <td style="padding:8px">数据操作权限，统一为 perm_code 格式</td>
+  </tr>
+  <tr>
+    <td style="padding:8px"><code>requireAuth</code></td>
+    <td style="padding:8px"><code>requireAuth</code>（不变）</td>
+    <td style="padding:8px">认证检查不变，只验证登录态</td>
+  </tr>
+  <tr>
+    <td style="padding:8px"><code>stripInternalIds</code></td>
+    <td style="padding:8px"><code>applyFieldConstraints</code></td>
+    <td style="padding:8px">按角色权限中的 field_constraints 动态过滤响应字段</td>
+  </tr>
+</table>
+
+<h3>新中间件签名</h3>
+<div class="mockup">
+  <div class="mockup-header">auth.js 新增导出</div>
+  <div class="mockup-body">
+    <pre style="font-size:13px;line-height:1.5;padding:16px;background:#1a1a2e;color:#e0e0e0;border-radius:4px;margin:0;">
+// 权限检查（替换 requireRole + requireDataPermission）
+function requirePermission(permCode) {
+  return (req, res, next) => {
+    if (!req.session.userId) return send401(res);
+
+    // 1. 查用户所有角色 → 合并权限列表（含继承）
+    const perms = getUserEffectivePermissions(req.session.userId);
+
+    // 2. 检查是否拥有所需权限
+    if (!perms.has(permCode)) return send403(res, '权限不足');
+
+    // 3. 将有效权限挂载到 req，供后续使用
+    req.effectivePermissions = perms;
+    next();
+  };
+}
+
+// 字段级过滤（替换 stripInternalIds）
+function applyFieldConstraints(resourceType) {
+  return (req, res, next) => {
+    const originalJson = res.json.bind(res);
+    res.json = function(body) {
+      const constraints = getFieldConstraints(
+        req.effectivePermissions, resourceType
+      );
+      return originalJson(applyConstraints(body, constraints));
+    };
+    next();
+  };
+}</pre>
+  </div>
+</div>
+
+<h3>路由文件改动策略</h3>
+<div class="section">
+  <p>22 个路由文件，每个文件中将 <code>requireRole('admin')</code> 替换为对应的 <code>requirePermission('xxx:yyy')</code>。</p>
+  <p><strong>改动量估算</strong>：每个路由文件约 3-8 处 requireRole 调用，整体约 100-150 处替换。全部机械替换，逻辑不变。</p>
+</div>
+
+<h3>预置权限码（对应现有四个角色）</h3>
+<table style="width:100%;border-collapse:collapse;font-size:13px;">
+  <tr style="background:#2a2a4e"><th style="padding:8px">系统角色</th><th style="padding:8px">预置权限码</th></tr>
+  <tr><td style="padding:8px">admin</td><td style="padding:8px"><code>admin:access</code> <code>*:*</code>（通配，所有权限）</td></tr>
+  <tr><td style="padding:8px">reviewer</td><td style="padding:8px"><code>review:approve</code> <code>conflict:manage</code> <code>dashboard:view</code> ...</td></tr>
+  <tr><td style="padding:8px">owner</td><td style="padding:8px"><code>mapping:create</code> <code>mapping:update</code> <code>dashboard:view</code> ...</td></tr>
+  <tr><td style="padding:8px">submitter</td><td style="padding:8px"><code>mapping:submit</code> <code>dashboard:view</code> ...</td></tr>
+</table>
+</div>

@@ -1,0 +1,153 @@
+<style>
+  .theme-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin-top: 24px; }
+  .theme-card { border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden; background: #fff; cursor: pointer; transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease; }
+  .theme-card:hover { transform: translateY(-2px); box-shadow: 0 14px 28px rgba(15, 23, 42, .12); }
+  .theme-card.selected { border-color: #fc0000; box-shadow: 0 0 0 3px rgba(252,0,0,.12); }
+  .mini-app { background: #f7f8fb; min-height: 320px; }
+  .mini-head { height: 34px; background: #1a1a2e; display: flex; align-items: center; padding: 0 14px; color: #fff; font-size: 11px; justify-content: space-between; }
+  .mini-logo { display: flex; align-items: center; gap: 7px; font-weight: 700; }
+  .mini-mark { width: 14px; height: 14px; background: #fc0000; border-radius: 3px; }
+  .mini-tabs { height: 30px; background: #1a1a2e; display: flex; align-items: end; gap: 14px; padding: 0 14px; }
+  .mini-tab { color: #9ca3af; font-size: 10px; padding-bottom: 8px; border-bottom: 2px solid transparent; }
+  .mini-tab.on { color: #fc0000; border-color: #fc0000; }
+  .mini-body { padding: 16px; }
+  .mini-metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px; }
+  .mini-metric { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 8px; min-height: 56px; }
+  .mini-num { font-size: 20px; font-weight: 800; color: #111827; line-height: 1; }
+  .mini-lbl { margin-top: 6px; color: #6b7280; font-size: 9px; }
+  .mini-main { display: grid; grid-template-columns: 1.2fr .8fr; gap: 12px; }
+  .mini-panel { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px; }
+  .mini-title { font-size: 10px; color: #374151; font-weight: 800; margin-bottom: 10px; }
+  .bars { display: grid; gap: 8px; }
+  .bar-row { display: grid; grid-template-columns: 44px 1fr 18px; gap: 7px; align-items: center; font-size: 9px; color: #6b7280; }
+  .bar-track { height: 10px; background: #f3f4f6; border-radius: 999px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 999px; }
+  .donut { width: 92px; height: 92px; border-radius: 50%; margin: 4px auto 10px; position: relative; }
+  .donut:after { content: ""; position: absolute; inset: 22px; background: #fff; border-radius: 50%; }
+  .legend { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 8px; font-size: 8.5px; color: #6b7280; }
+  .dot { width: 7px; height: 7px; display: inline-block; border-radius: 50%; margin-right: 4px; }
+  .dept-strip { display: flex; gap: 5px; margin: 10px 0 0; }
+  .dept-chip { flex: 1; height: 5px; border-radius: 999px; }
+  .card-copy { padding: 14px; }
+  .card-copy h3 { margin: 0 0 6px; font-size: 15px; }
+  .card-copy p { color: #6b7280; font-size: 12px; line-height: 1.55; margin: 0; }
+  .dept-blue { background: #2563eb; }
+  .dept-green { background: #059669; }
+  .dept-amber { background: #d97706; }
+  .dept-cyan { background: #0891b2; }
+  .dept-violet { background: #7c3aed; }
+  .dept-red { background: #fc0000; }
+  .muted-fill { background: #d1d5db; }
+  @media (max-width: 980px) { .theme-grid { grid-template-columns: 1fr; } }
+</style>
+
+<h2>MDMplatform 部门主题色：dashboard 方向选择</h2>
+<p class="subtitle">重点看“各部门流程数”和 dashboard 信息层级。品牌红黑已经存在，这次是在其上增加部门色，不让整个界面变成彩虹摊。</p>
+
+<div class="theme-grid">
+  <div class="theme-card" data-choice="A-light-accent" onclick="toggleSelect(this)">
+    <div class="mini-app">
+      <div class="mini-head"><div class="mini-logo"><span class="mini-mark"></span>MDM 平台</div><span>ADMIN001</span></div>
+      <div class="mini-tabs"><span class="mini-tab on">统计看板</span><span class="mini-tab">报送</span><span class="mini-tab">冲突</span></div>
+      <div class="mini-body">
+        <div class="mini-metrics">
+          <div class="mini-metric"><div class="mini-num">28</div><div class="mini-lbl">流程映射</div></div>
+          <div class="mini-metric"><div class="mini-num">96</div><div class="mini-lbl">字段台账</div></div>
+          <div class="mini-metric"><div class="mini-num">7</div><div class="mini-lbl">待办</div></div>
+          <div class="mini-metric"><div class="mini-num">3</div><div class="mini-lbl">冲突</div></div>
+        </div>
+        <div class="mini-main">
+          <div class="mini-panel">
+            <div class="mini-title">各部门流程数</div>
+            <div class="bars">
+              <div class="bar-row"><span>技术部</span><div class="bar-track"><div class="bar-fill dept-blue" style="width:88%"></div></div><b>8</b></div>
+              <div class="bar-row"><span>生产部</span><div class="bar-track"><div class="bar-fill dept-green" style="width:72%"></div></div><b>6</b></div>
+              <div class="bar-row"><span>质量部</span><div class="bar-track"><div class="bar-fill dept-amber" style="width:58%"></div></div><b>5</b></div>
+              <div class="bar-row"><span>供应链</span><div class="bar-track"><div class="bar-fill dept-cyan" style="width:42%"></div></div><b>4</b></div>
+            </div>
+          </div>
+          <div class="mini-panel">
+            <div class="mini-title">审批状态分布</div>
+            <div class="donut" style="background: conic-gradient(#fc0000 0 32%, #6b7280 32% 56%, #9ca3af 56% 78%, #d1d5db 78% 100%);"></div>
+            <div class="legend"><span><i class="dot dept-red"></i>已提交</span><span><i class="dot muted-fill"></i>草稿</span><span><i class="dot" style="background:#6b7280"></i>终审</span><span><i class="dot" style="background:#9ca3af"></i>发布</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-copy">
+      <h3>A. 轻量点缀</h3>
+      <p>部门色只用于柱状图、少量标签和左边框。最稳，改动小，但部门身份感偏弱。</p>
+    </div>
+  </div>
+
+  <div class="theme-card" data-choice="B-department-led" onclick="toggleSelect(this)">
+    <div class="mini-app">
+      <div class="mini-head"><div class="mini-logo"><span class="mini-mark"></span>MDM 平台</div><span>ADMIN001</span></div>
+      <div class="mini-tabs"><span class="mini-tab on">统计看板</span><span class="mini-tab">报送</span><span class="mini-tab">冲突</span></div>
+      <div class="mini-body">
+        <div class="dept-strip"><span class="dept-chip dept-blue"></span><span class="dept-chip dept-green"></span><span class="dept-chip dept-amber"></span><span class="dept-chip dept-cyan"></span><span class="dept-chip dept-violet"></span></div>
+        <div class="mini-metrics" style="margin-top:12px">
+          <div class="mini-metric" style="border-top:3px solid #2563eb"><div class="mini-num" style="color:#2563eb">28</div><div class="mini-lbl">流程映射</div></div>
+          <div class="mini-metric" style="border-top:3px solid #059669"><div class="mini-num" style="color:#059669">96</div><div class="mini-lbl">字段台账</div></div>
+          <div class="mini-metric" style="border-top:3px solid #d97706"><div class="mini-num" style="color:#d97706">7</div><div class="mini-lbl">待办</div></div>
+          <div class="mini-metric" style="border-top:3px solid #7c3aed"><div class="mini-num" style="color:#7c3aed">3</div><div class="mini-lbl">冲突</div></div>
+        </div>
+        <div class="mini-main">
+          <div class="mini-panel">
+            <div class="mini-title">各部门流程数</div>
+            <div class="bars">
+              <div class="bar-row"><span>技术部</span><div class="bar-track"><div class="bar-fill dept-blue" style="width:88%"></div></div><b>8</b></div>
+              <div class="bar-row"><span>生产部</span><div class="bar-track"><div class="bar-fill dept-green" style="width:72%"></div></div><b>6</b></div>
+              <div class="bar-row"><span>质量部</span><div class="bar-track"><div class="bar-fill dept-amber" style="width:58%"></div></div><b>5</b></div>
+              <div class="bar-row"><span>供应链</span><div class="bar-track"><div class="bar-fill dept-cyan" style="width:42%"></div></div><b>4</b></div>
+            </div>
+          </div>
+          <div class="mini-panel">
+            <div class="mini-title">部门占比</div>
+            <div class="donut" style="background: conic-gradient(#2563eb 0 31%, #059669 31% 55%, #d97706 55% 74%, #0891b2 74% 88%, #7c3aed 88% 100%);"></div>
+            <div class="legend"><span><i class="dot dept-blue"></i>技术</span><span><i class="dot dept-green"></i>生产</span><span><i class="dot dept-amber"></i>质量</span><span><i class="dot dept-cyan"></i>供应</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-copy">
+      <h3>B. 部门色主导</h3>
+      <p>dashboard 全面按部门着色，识别最快。适合展示型汇报，但日常工作界面会更吵。</p>
+    </div>
+  </div>
+
+  <div class="theme-card" data-choice="C-balanced" onclick="toggleSelect(this)">
+    <div class="mini-app">
+      <div class="mini-head"><div class="mini-logo"><span class="mini-mark"></span>MDM 平台</div><span>ADMIN001</span></div>
+      <div class="mini-tabs"><span class="mini-tab on">统计看板</span><span class="mini-tab">报送</span><span class="mini-tab">冲突</span></div>
+      <div class="mini-body">
+        <div class="mini-metrics">
+          <div class="mini-metric"><div class="mini-num">28</div><div class="mini-lbl">流程映射</div></div>
+          <div class="mini-metric"><div class="mini-num">96</div><div class="mini-lbl">字段台账</div></div>
+          <div class="mini-metric"><div class="mini-num" style="color:#fc0000">7</div><div class="mini-lbl">待办</div></div>
+          <div class="mini-metric"><div class="mini-num" style="color:#b91c1c">3</div><div class="mini-lbl">冲突</div></div>
+        </div>
+        <div class="mini-main">
+          <div class="mini-panel">
+            <div class="mini-title">各部门流程数</div>
+            <div class="bars">
+              <div class="bar-row"><span><i class="dot dept-blue"></i>技术部</span><div class="bar-track"><div class="bar-fill dept-blue" style="width:88%"></div></div><b>8</b></div>
+              <div class="bar-row"><span><i class="dot dept-green"></i>生产部</span><div class="bar-track"><div class="bar-fill dept-green" style="width:72%"></div></div><b>6</b></div>
+              <div class="bar-row"><span><i class="dot dept-amber"></i>质量部</span><div class="bar-track"><div class="bar-fill dept-amber" style="width:58%"></div></div><b>5</b></div>
+              <div class="bar-row"><span><i class="dot dept-cyan"></i>供应链</span><div class="bar-track"><div class="bar-fill dept-cyan" style="width:42%"></div></div><b>4</b></div>
+            </div>
+          </div>
+          <div class="mini-panel">
+            <div class="mini-title">审批状态分布</div>
+            <div class="donut" style="background: conic-gradient(#fc0000 0 32%, #374151 32% 56%, #6b7280 56% 78%, #d1d5db 78% 100%);"></div>
+            <div class="legend"><span><i class="dot dept-red"></i>已提交</span><span><i class="dot" style="background:#374151"></i>内审</span><span><i class="dot" style="background:#6b7280"></i>终审</span><span><i class="dot muted-fill"></i>发布</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-copy">
+      <h3>C. 品牌红黑 + 部门色平衡</h3>
+      <p>品牌色继续管导航、操作和状态；部门色专管“部门维度”的图表、徽标、行标识。推荐。</p>
+    </div>
+  </div>
+</div>

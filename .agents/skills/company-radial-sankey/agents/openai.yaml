@@ -1,0 +1,6 @@
+interface:
+  display_name: "Company Radial Sankey"
+  short_description: "公司级圆形辐射业务图重建、交互、无资料标记与验收规范"
+  default_prompt: "Use $company-radial-sankey when rebuilding or improving docs/company-sankey.html as a local radial business map with separated sectors, no-data markers, zoom, search, and overlap-free labels."
+policy:
+  allow_implicit_invocation: true

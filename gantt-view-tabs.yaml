@@ -1,0 +1,1270 @@
+- generic [ref=e2]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - heading "数字化底座项目甘特图" [level=1] [ref=e2755]
+      - generic [ref=e7]: 2026-06-01 - 2028-01-31 ｜ 交付物 308 项
+    - generic [ref=e8]:
+      - button "甘特图" [active] [ref=e9] [cursor=pointer]
+      - button "PMO看板" [ref=e10] [cursor=pointer]
+  - generic [ref=e2756]:
+    - combobox [ref=e2757]:
+      - option "全部年份" [selected]
+      - option "2026年"
+      - option "2027年"
+      - option "2028年"
+    - combobox [ref=e2758]:
+      - option "全部主线" [selected]
+      - option "1-项目启动与总体蓝图"
+      - option "2-招采合同与供应商管理"
+      - option "3-数据标准与主数据治理"
+      - option "4-MDM自研平台一期"
+      - option "5-基础设施与AI底座"
+      - option "6-PLM基础深化"
+      - option "7-ERP/OA补强"
+      - option "8-MES建设与QMS低代码平台"
+      - option "9-全系统集成联调与现场推广"
+      - option "10-AI应用深化、驾驶舱与总体验收"
+    - combobox [ref=e2759]:
+      - option "全部部门" [selected]
+      - option "ERP·OA工作组"
+      - option "MDM工作组"
+      - option "MES工作组"
+      - option "PLM工作组"
+      - option "信息化项目组"
+      - option "基础设施工作组"
+    - combobox [ref=e2760]:
+      - option "全部供应商" [selected]
+      - option "AI服务器供应商"
+      - option "MDM自研;PLM供应商;MES供应商;用友U8"
+      - option "MES供应商"
+      - option "MES供应商;低代码平台供应商"
+      - option "PLM供应商"
+      - option "基础设施供应商"
+      - option "基础设施供应商;AI服务器供应商"
+      - option "用友U8"
+      - option "自研"
+      - option "设备采集供应商"
+    - combobox [ref=e2761]:
+      - option "全部风险" [selected]
+      - option "高风险"
+      - option "中风险"
+      - option "低风险"
+    - combobox [ref=e2762]:
+      - option "全部类型" [selected]
+      - option "AI应用"
+      - option "上线"
+      - option "修复"
+      - option "修订"
+      - option "合同"
+      - option "启动"
+      - option "培训"
+      - option "开发"
+      - option "开发/联调"
+      - option "开发准备"
+      - option "招采"
+      - option "推广"
+      - option "摘要"
+      - option "整改"
+      - option "方案评审"
+      - option "测试"
+      - option "管理"
+      - option "缓冲"
+      - option "联调"
+      - option "设计"
+      - option "评审"
+      - option "试点"
+      - option "试运行"
+      - option "调研"
+      - option "进场"
+      - option "部署"
+      - option "里程碑"
+      - option "需求"
+      - option "驾驶舱"
+      - option "验收"
+    - combobox [ref=e2763]:
+      - option "全部任务" [selected]
+      - option "仅里程碑"
+    - textbox "搜索任务名称/WBS..." [ref=e2764]
+    - generic [ref=e2765]:
+      - generic [ref=e2766]: WBS层级
+      - button "全部" [ref=e2767] [cursor=pointer]
+      - button "1级" [ref=e2768] [cursor=pointer]
+      - button "2级" [ref=e2769] [cursor=pointer]
+      - button "3级" [ref=e2770] [cursor=pointer]
+    - generic [ref=e2771]:
+      - button "全部任务" [ref=e2772] [cursor=pointer]
+      - button "总览视图" [ref=e2773] [cursor=pointer]
+      - button "2026年" [ref=e2774] [cursor=pointer]
+      - button "2027年" [ref=e2775] [cursor=pointer]
+      - button "2028年" [ref=e2776] [cursor=pointer]
+      - button "里程碑" [ref=e2777] [cursor=pointer]
+      - button "高风险" [ref=e2778] [cursor=pointer]
+      - button "关键里程碑" [ref=e2779] [cursor=pointer]
+  - generic [ref=e2780]:
+    - generic [ref=e2781]:
+      - generic [ref=e2782]:
+        - generic [ref=e2783]: WBS
+        - generic [ref=e2784]: 任务名称
+      - generic [ref=e2785]:
+        - generic [ref=e2786]:
+          - generic [ref=e2787] [cursor=pointer]:
+            - generic [ref=e2788]: ▼
+            - generic [ref=e2789]: "1"
+            - generic "项目启动与总体蓝图" [ref=e2790]
+          - generic [ref=e2792] [cursor=pointer]:
+            - generic [ref=e2794]: "1.1"
+            - generic "项目启动会准备" [ref=e2795]
+          - generic [ref=e2797] [cursor=pointer]:
+            - generic [ref=e2799]: "1.2"
+            - generic "项目启动会召开" [ref=e2800]
+          - generic [ref=e2802] [cursor=pointer]:
+            - generic [ref=e2804]: "1.3"
+            - generic "项目治理机制建立" [ref=e2805]
+          - generic [ref=e2807] [cursor=pointer]:
+            - generic [ref=e2809]: "1.4"
+            - generic "现状调研计划编制" [ref=e2810]
+          - generic [ref=e2812] [cursor=pointer]:
+            - generic [ref=e2814]: "1.5"
+            - generic "业务现状调研-数据与主数据" [ref=e2815]
+          - generic [ref=e2817] [cursor=pointer]:
+            - generic [ref=e2819]: "1.6"
+            - generic "业务现状调研-PLM" [ref=e2820]
+          - generic [ref=e2822] [cursor=pointer]:
+            - generic [ref=e2824]: "1.7"
+            - generic "业务现状调研-MES/QMS" [ref=e2825]
+          - generic [ref=e2827] [cursor=pointer]:
+            - generic [ref=e2829]: "1.8"
+            - generic "业务现状调研-ERP/OA" [ref=e2830]
+          - generic [ref=e2832] [cursor=pointer]:
+            - generic [ref=e2834]: "1.9"
+            - generic "基础设施与网络现状调研" [ref=e2835]
+          - generic [ref=e2837] [cursor=pointer]:
+            - generic [ref=e2839]: "1.10"
+            - generic "总体蓝图初稿编制" [ref=e2840]
+          - generic [ref=e2842] [cursor=pointer]:
+            - generic [ref=e2844]: "1.11"
+            - generic "业务流程梳理与主映射关系整理" [ref=e2845]
+          - generic [ref=e2847] [cursor=pointer]:
+            - generic [ref=e2849]: "1.12"
+            - generic "总体系统架构设计" [ref=e2850]
+          - generic [ref=e2852] [cursor=pointer]:
+            - generic [ref=e2854]: "1.13"
+            - generic "总体实施计划评审准备" [ref=e2855]
+          - generic [ref=e2857] [cursor=pointer]:
+            - generic [ref=e2859]: "1.14"
+            - generic "总体蓝图评审通过" [ref=e2860]
+        - generic [ref=e2861]:
+          - generic [ref=e2862] [cursor=pointer]:
+            - generic [ref=e2863]: ▼
+            - generic [ref=e2864]: "2"
+            - generic "招采合同与供应商管理" [ref=e2865]
+          - generic [ref=e2866]:
+            - generic [ref=e2867] [cursor=pointer]:
+              - generic [ref=e2868]: ▼
+              - generic [ref=e2869]: "2.1"
+              - generic "基础设施" [ref=e2870]
+            - generic [ref=e2872] [cursor=pointer]:
+              - generic [ref=e2874]: 2.1.1
+              - generic "基础设施-方案评审材料准备" [ref=e2875]
+            - generic [ref=e2877] [cursor=pointer]:
+              - generic [ref=e2879]: 2.1.2
+              - generic "基础设施-技术方案与预算评审" [ref=e2880]
+            - generic [ref=e2882] [cursor=pointer]:
+              - generic [ref=e2884]: 2.1.3
+              - generic "基础设施-招标/比选文件编制" [ref=e2885]
+            - generic [ref=e2887] [cursor=pointer]:
+              - generic [ref=e2889]: 2.1.4
+              - generic "基础设施-招标/比选与答疑" [ref=e2890]
+            - generic [ref=e2892] [cursor=pointer]:
+              - generic [ref=e2894]: 2.1.5
+              - generic "基础设施-评标/选型与商务谈判" [ref=e2895]
+            - generic [ref=e2897] [cursor=pointer]:
+              - generic [ref=e2899]: 2.1.6
+              - generic "基础设施-合同审批与签订" [ref=e2900]
+            - generic [ref=e2902] [cursor=pointer]:
+              - generic [ref=e2904]: 2.1.7
+              - generic "基础设施-供应商进场准备" [ref=e2905]
+            - generic [ref=e2907] [cursor=pointer]:
+              - generic [ref=e2909]: 2.1.8
+              - generic "基础设施-供应商正式进场" [ref=e2910]
+          - generic [ref=e2911]:
+            - generic [ref=e2912] [cursor=pointer]:
+              - generic [ref=e2913]: ▼
+              - generic [ref=e2914]: "2.2"
+              - generic "AI服务器/本地模型环境" [ref=e2915]
+            - generic [ref=e2917] [cursor=pointer]:
+              - generic [ref=e2919]: 2.2.1
+              - generic "AI服务器/本地模型环境-方案评审材料准备" [ref=e2920]
+            - generic [ref=e2922] [cursor=pointer]:
+              - generic [ref=e2924]: 2.2.2
+              - generic "AI服务器/本地模型环境-技术方案与预算评审" [ref=e2925]
+            - generic [ref=e2927] [cursor=pointer]:
+              - generic [ref=e2929]: 2.2.3
+              - generic "AI服务器/本地模型环境-招标/比选文件编制" [ref=e2930]
+            - generic [ref=e2932] [cursor=pointer]:
+              - generic [ref=e2934]: 2.2.4
+              - generic "AI服务器/本地模型环境-招标/比选与答疑" [ref=e2935]
+            - generic [ref=e2937] [cursor=pointer]:
+              - generic [ref=e2939]: 2.2.5
+              - generic "AI服务器/本地模型环境-评标/选型与商务谈判" [ref=e2940]
+            - generic [ref=e2942] [cursor=pointer]:
+              - generic [ref=e2944]: 2.2.6
+              - generic "AI服务器/本地模型环境-合同审批与签订" [ref=e2945]
+            - generic [ref=e2947] [cursor=pointer]:
+              - generic [ref=e2949]: 2.2.7
+              - generic "AI服务器/本地模型环境-供应商进场准备" [ref=e2950]
+            - generic [ref=e2952] [cursor=pointer]:
+              - generic [ref=e2954]: 2.2.8
+              - generic "AI服务器/本地模型环境-供应商正式进场" [ref=e2955]
+          - generic [ref=e2956]:
+            - generic [ref=e2957] [cursor=pointer]:
+              - generic [ref=e2958]: ▼
+              - generic [ref=e2959]: "2.3"
+              - generic "虚拟化/瘦终端平台" [ref=e2960]
+            - generic [ref=e2962] [cursor=pointer]:
+              - generic [ref=e2964]: 2.3.1
+              - generic "虚拟化/瘦终端平台-方案评审材料准备" [ref=e2965]
+            - generic [ref=e2967] [cursor=pointer]:
+              - generic [ref=e2969]: 2.3.2
+              - generic "虚拟化/瘦终端平台-技术方案与预算评审" [ref=e2970]
+            - generic [ref=e2972] [cursor=pointer]:
+              - generic [ref=e2974]: 2.3.3
+              - generic "虚拟化/瘦终端平台-招标/比选文件编制" [ref=e2975]
+            - generic [ref=e2977] [cursor=pointer]:
+              - generic [ref=e2979]: 2.3.4
+              - generic "虚拟化/瘦终端平台-招标/比选与答疑" [ref=e2980]
+            - generic [ref=e2982] [cursor=pointer]:
+              - generic [ref=e2984]: 2.3.5
+              - generic "虚拟化/瘦终端平台-评标/选型与商务谈判" [ref=e2985]
+            - generic [ref=e2987] [cursor=pointer]:
+              - generic [ref=e2989]: 2.3.6
+              - generic "虚拟化/瘦终端平台-合同审批与签订" [ref=e2990]
+            - generic [ref=e2992] [cursor=pointer]:
+              - generic [ref=e2994]: 2.3.7
+              - generic "虚拟化/瘦终端平台-供应商进场准备" [ref=e2995]
+            - generic [ref=e2997] [cursor=pointer]:
+              - generic [ref=e2999]: 2.3.8
+              - generic "虚拟化/瘦终端平台-供应商正式进场" [ref=e3000]
+          - generic [ref=e3001]:
+            - generic [ref=e3002] [cursor=pointer]:
+              - generic [ref=e3003]: ▼
+              - generic [ref=e3004]: "2.4"
+              - generic "PLM深化" [ref=e3005]
+            - generic [ref=e3007] [cursor=pointer]:
+              - generic [ref=e3009]: 2.4.1
+              - generic "PLM深化-方案评审材料准备" [ref=e3010]
+            - generic [ref=e3012] [cursor=pointer]:
+              - generic [ref=e3014]: 2.4.2
+              - generic "PLM深化-技术方案与预算评审" [ref=e3015]
+            - generic [ref=e3017] [cursor=pointer]:
+              - generic [ref=e3019]: 2.4.3
+              - generic "PLM深化-招标/比选文件编制" [ref=e3020]
+            - generic [ref=e3022] [cursor=pointer]:
+              - generic [ref=e3024]: 2.4.4
+              - generic "PLM深化-招标/比选与答疑" [ref=e3025]
+            - generic [ref=e3027] [cursor=pointer]:
+              - generic [ref=e3029]: 2.4.5
+              - generic "PLM深化-评标/选型与商务谈判" [ref=e3030]
+            - generic [ref=e3032] [cursor=pointer]:
+              - generic [ref=e3034]: 2.4.6
+              - generic "PLM深化-合同审批与签订" [ref=e3035]
+            - generic [ref=e3037] [cursor=pointer]:
+              - generic [ref=e3039]: 2.4.7
+              - generic "PLM深化-供应商进场准备" [ref=e3040]
+            - generic [ref=e3042] [cursor=pointer]:
+              - generic [ref=e3044]: 2.4.8
+              - generic "PLM深化-供应商正式进场" [ref=e3045]
+          - generic [ref=e3046]:
+            - generic [ref=e3047] [cursor=pointer]:
+              - generic [ref=e3048]: ▼
+              - generic [ref=e3049]: "2.5"
+              - generic "MES/QMS" [ref=e3050]
+            - generic [ref=e3052] [cursor=pointer]:
+              - generic [ref=e3054]: 2.5.1
+              - generic "MES/QMS-方案评审材料准备" [ref=e3055]
+            - generic [ref=e3057] [cursor=pointer]:
+              - generic [ref=e3059]: 2.5.2
+              - generic "MES/QMS-技术方案与预算评审" [ref=e3060]
+            - generic [ref=e3062] [cursor=pointer]:
+              - generic [ref=e3064]: 2.5.3
+              - generic "MES/QMS-招标/比选文件编制" [ref=e3065]
+            - generic [ref=e3067] [cursor=pointer]:
+              - generic [ref=e3069]: 2.5.4
+              - generic "MES/QMS-招标/比选与答疑" [ref=e3070]
+            - generic [ref=e3072] [cursor=pointer]:
+              - generic [ref=e3074]: 2.5.5
+              - generic "MES/QMS-评标/选型与商务谈判" [ref=e3075]
+            - generic [ref=e3077] [cursor=pointer]:
+              - generic [ref=e3079]: 2.5.6
+              - generic "MES/QMS-合同审批与签订" [ref=e3080]
+            - generic [ref=e3082] [cursor=pointer]:
+              - generic [ref=e3084]: 2.5.7
+              - generic "MES/QMS-供应商进场准备" [ref=e3085]
+            - generic [ref=e3087] [cursor=pointer]:
+              - generic [ref=e3089]: 2.5.8
+              - generic "MES/QMS-供应商正式进场" [ref=e3090]
+          - generic [ref=e3091]:
+            - generic [ref=e3092] [cursor=pointer]:
+              - generic [ref=e3093]: ▼
+              - generic [ref=e3094]: "2.6"
+              - generic "设备数据采集硬件/网关" [ref=e3095]
+            - generic [ref=e3097] [cursor=pointer]:
+              - generic [ref=e3099]: 2.6.1
+              - generic "设备数据采集硬件/网关-方案评审材料准备" [ref=e3100]
+            - generic [ref=e3102] [cursor=pointer]:
+              - generic [ref=e3104]: 2.6.2
+              - generic "设备数据采集硬件/网关-技术方案与预算评审" [ref=e3105]
+            - generic [ref=e3107] [cursor=pointer]:
+              - generic [ref=e3109]: 2.6.3
+              - generic "设备数据采集硬件/网关-招标/比选文件编制" [ref=e3110]
+            - generic [ref=e3112] [cursor=pointer]:
+              - generic [ref=e3114]: 2.6.4
+              - generic "设备数据采集硬件/网关-招标/比选与答疑" [ref=e3115]
+            - generic [ref=e3117] [cursor=pointer]:
+              - generic [ref=e3119]: 2.6.5
+              - generic "设备数据采集硬件/网关-评标/选型与商务谈判" [ref=e3120]
+            - generic [ref=e3122] [cursor=pointer]:
+              - generic [ref=e3124]: 2.6.6
+              - generic "设备数据采集硬件/网关-合同审批与签订" [ref=e3125]
+            - generic [ref=e3127] [cursor=pointer]:
+              - generic [ref=e3129]: 2.6.7
+              - generic "设备数据采集硬件/网关-供应商进场准备" [ref=e3130]
+            - generic [ref=e3132] [cursor=pointer]:
+              - generic [ref=e3134]: 2.6.8
+              - generic "设备数据采集硬件/网关-供应商正式进场" [ref=e3135]
+        - generic [ref=e3136]:
+          - generic [ref=e3137] [cursor=pointer]:
+            - generic [ref=e3138]: ▼
+            - generic [ref=e3139]: "3"
+            - generic "数据标准与主数据治理" [ref=e3140]
+          - generic [ref=e3141]:
+            - generic [ref=e3142] [cursor=pointer]:
+              - generic [ref=e3143]: ▼
+              - generic [ref=e3144]: "3.1"
+              - generic "组织/部门/岗位/人员标准" [ref=e3145]
+            - generic [ref=e3147] [cursor=pointer]:
+              - generic [ref=e3149]: 3.1.1
+              - generic "组织/部门/岗位/人员标准-现状盘点" [ref=e3150]
+            - generic [ref=e3152] [cursor=pointer]:
+              - generic [ref=e3154]: 3.1.2
+              - generic "组织/部门/岗位/人员标准-标准草案编制" [ref=e3155]
+            - generic [ref=e3157] [cursor=pointer]:
+              - generic [ref=e3159]: 3.1.3
+              - generic "组织/部门/岗位/人员标准-业务评审" [ref=e3160]
+            - generic [ref=e3162] [cursor=pointer]:
+              - generic [ref=e3164]: 3.1.4
+              - generic "组织/部门/岗位/人员标准-修订确认" [ref=e3165]
+          - generic [ref=e3166]:
+            - generic [ref=e3167] [cursor=pointer]:
+              - generic [ref=e3168]: ▼
+              - generic [ref=e3169]: "3.2"
+              - generic "物料分类与物料编码标准" [ref=e3170]
+            - generic [ref=e3172] [cursor=pointer]:
+              - generic [ref=e3174]: 3.2.1
+              - generic "物料分类与物料编码标准-现状盘点" [ref=e3175]
+            - generic [ref=e3177] [cursor=pointer]:
+              - generic [ref=e3179]: 3.2.2
+              - generic "物料分类与物料编码标准-标准草案编制" [ref=e3180]
+            - generic [ref=e3182] [cursor=pointer]:
+              - generic [ref=e3184]: 3.2.3
+              - generic "物料分类与物料编码标准-业务评审" [ref=e3185]
+            - generic [ref=e3187] [cursor=pointer]:
+              - generic [ref=e3189]: 3.2.4
+              - generic "物料分类与物料编码标准-修订确认" [ref=e3190]
+          - generic [ref=e3191]:
+            - generic [ref=e3192] [cursor=pointer]:
+              - generic [ref=e3193]: ▼
+              - generic [ref=e3194]: "3.3"
+              - generic "EBOM/PBOM/MBOM数据口径" [ref=e3195]
+            - generic [ref=e3197] [cursor=pointer]:
+              - generic [ref=e3199]: 3.3.1
+              - generic "EBOM/PBOM/MBOM数据口径-现状盘点" [ref=e3200]
+            - generic [ref=e3202] [cursor=pointer]:
+              - generic [ref=e3204]: 3.3.2
+              - generic "EBOM/PBOM/MBOM数据口径-标准草案编制" [ref=e3205]
+            - generic [ref=e3207] [cursor=pointer]:
+              - generic [ref=e3209]: 3.3.3
+              - generic "EBOM/PBOM/MBOM数据口径-业务评审" [ref=e3210]
+            - generic [ref=e3212] [cursor=pointer]:
+              - generic [ref=e3214]: 3.3.4
+              - generic "EBOM/PBOM/MBOM数据口径-修订确认" [ref=e3215]
+          - generic [ref=e3216]:
+            - generic [ref=e3217] [cursor=pointer]:
+              - generic [ref=e3218]: ▼
+              - generic [ref=e3219]: "3.4"
+              - generic "工艺资源标准" [ref=e3220]
+            - generic [ref=e3222] [cursor=pointer]:
+              - generic [ref=e3224]: 3.4.1
+              - generic "工艺资源标准-现状盘点" [ref=e3225]
+            - generic [ref=e3227] [cursor=pointer]:
+              - generic [ref=e3229]: 3.4.2
+              - generic "工艺资源标准-标准草案编制" [ref=e3230]
+            - generic [ref=e3232] [cursor=pointer]:
+              - generic [ref=e3234]: 3.4.3
+              - generic "工艺资源标准-业务评审" [ref=e3235]
+            - generic [ref=e3237] [cursor=pointer]:
+              - generic [ref=e3239]: 3.4.4
+              - generic "工艺资源标准-修订确认" [ref=e3240]
+          - generic [ref=e3241]:
+            - generic [ref=e3242] [cursor=pointer]:
+              - generic [ref=e3243]: ▼
+              - generic [ref=e3244]: "3.5"
+              - generic "供应商/客户/项目/架次标准" [ref=e3245]
+            - generic [ref=e3247] [cursor=pointer]:
+              - generic [ref=e3249]: 3.5.1
+              - generic "供应商/客户/项目/架次标准-现状盘点" [ref=e3250]
+            - generic [ref=e3252] [cursor=pointer]:
+              - generic [ref=e3254]: 3.5.2
+              - generic "供应商/客户/项目/架次标准-标准草案编制" [ref=e3255]
+            - generic [ref=e3257] [cursor=pointer]:
+              - generic [ref=e3259]: 3.5.3
+              - generic "供应商/客户/项目/架次标准-业务评审" [ref=e3260]
+            - generic [ref=e3262] [cursor=pointer]:
+              - generic [ref=e3264]: 3.5.4
+              - generic "供应商/客户/项目/架次标准-修订确认" [ref=e3265]
+          - generic [ref=e3266]:
+            - generic [ref=e3267] [cursor=pointer]:
+              - generic [ref=e3268]: ▼
+              - generic [ref=e3269]: "3.6"
+              - generic "库房/库位/批次/条码规则" [ref=e3270]
+            - generic [ref=e3272] [cursor=pointer]:
+              - generic [ref=e3274]: 3.6.1
+              - generic "库房/库位/批次/条码规则-现状盘点" [ref=e3275]
+            - generic [ref=e3277] [cursor=pointer]:
+              - generic [ref=e3279]: 3.6.2
+              - generic "库房/库位/批次/条码规则-标准草案编制" [ref=e3280]
+            - generic [ref=e3282] [cursor=pointer]:
+              - generic [ref=e3284]: 3.6.3
+              - generic "库房/库位/批次/条码规则-业务评审" [ref=e3285]
+            - generic [ref=e3287] [cursor=pointer]:
+              - generic [ref=e3289]: 3.6.4
+              - generic "库房/库位/批次/条码规则-修订确认" [ref=e3290]
+          - generic [ref=e3291]:
+            - generic [ref=e3292] [cursor=pointer]:
+              - generic [ref=e3293]: ▼
+              - generic [ref=e3294]: "3.7"
+              - generic "主数据清洗去重补全" [ref=e3295]
+            - generic [ref=e3297] [cursor=pointer]:
+              - generic [ref=e3299]: 3.7.1
+              - generic "主数据清洗去重补全-现状盘点" [ref=e3300]
+            - generic [ref=e3302] [cursor=pointer]:
+              - generic [ref=e3304]: 3.7.2
+              - generic "主数据清洗去重补全-标准草案编制" [ref=e3305]
+            - generic [ref=e3307] [cursor=pointer]:
+              - generic [ref=e3309]: 3.7.3
+              - generic "主数据清洗去重补全-业务评审" [ref=e3310]
+            - generic [ref=e3312] [cursor=pointer]:
+              - generic [ref=e3314]: 3.7.4
+              - generic "主数据清洗去重补全-修订确认" [ref=e3315]
+          - generic [ref=e3316]:
+            - generic [ref=e3317] [cursor=pointer]:
+              - generic [ref=e3318]: ▼
+              - generic [ref=e3319]: "3.8"
+              - generic "数据质量问题清单建立" [ref=e3320]
+            - generic [ref=e3322] [cursor=pointer]:
+              - generic [ref=e3324]: 3.8.1
+              - generic "数据质量问题清单建立-现状盘点" [ref=e3325]
+            - generic [ref=e3327] [cursor=pointer]:
+              - generic [ref=e3329]: 3.8.2
+              - generic "数据质量问题清单建立-标准草案编制" [ref=e3330]
+            - generic [ref=e3332] [cursor=pointer]:
+              - generic [ref=e3334]: 3.8.3
+              - generic "数据质量问题清单建立-业务评审" [ref=e3335]
+            - generic [ref=e3337] [cursor=pointer]:
+              - generic [ref=e3339]: 3.8.4
+              - generic "数据质量问题清单建立-修订确认" [ref=e3340]
+          - generic [ref=e3341]:
+            - generic [ref=e3342] [cursor=pointer]:
+              - generic [ref=e3343]: ▼
+              - generic [ref=e3344]: "3.9"
+              - generic "主数据标准V1.0发布培训" [ref=e3345]
+            - generic [ref=e3347] [cursor=pointer]:
+              - generic [ref=e3349]: 3.9.1
+              - generic "主数据标准V1.0发布培训-现状盘点" [ref=e3350]
+            - generic [ref=e3352] [cursor=pointer]:
+              - generic [ref=e3354]: 3.9.2
+              - generic "主数据标准V1.0发布培训-标准草案编制" [ref=e3355]
+            - generic [ref=e3357] [cursor=pointer]:
+              - generic [ref=e3359]: 3.9.3
+              - generic "主数据标准V1.0发布培训-业务评审" [ref=e3360]
+            - generic [ref=e3362] [cursor=pointer]:
+              - generic [ref=e3364]: 3.9.4
+              - generic "主数据标准V1.0发布培训-修订确认" [ref=e3365]
+          - generic [ref=e3367] [cursor=pointer]:
+            - generic [ref=e3369]: "3.10"
+            - generic "数据标准V1.0发布" [ref=e3370]
+        - generic [ref=e3371]:
+          - generic [ref=e3372] [cursor=pointer]:
+            - generic [ref=e3373]: ▼
+            - generic [ref=e3374]: "4"
+            - generic "MDM自研平台一期" [ref=e3375]
+          - generic [ref=e3377] [cursor=pointer]:
+            - generic [ref=e3379]: "4.1"
+            - generic "需求范围冻结" [ref=e3380]
+          - generic [ref=e3382] [cursor=pointer]:
+            - generic [ref=e3384]: "4.2"
+            - generic "原型设计" [ref=e3385]
+          - generic [ref=e3387] [cursor=pointer]:
+            - generic [ref=e3389]: "4.3"
+            - generic "技术架构设计" [ref=e3390]
+          - generic [ref=e3392] [cursor=pointer]:
+            - generic [ref=e3394]: "4.4"
+            - generic "数据库与主数据模型设计" [ref=e3395]
+          - generic [ref=e3397] [cursor=pointer]:
+            - generic [ref=e3399]: "4.5"
+            - generic "审批流与权限模型设计" [ref=e3400]
+          - generic [ref=e3402] [cursor=pointer]:
+            - generic [ref=e3404]: "4.6"
+            - generic "版本管理与分发机制设计" [ref=e3405]
+          - generic [ref=e3407] [cursor=pointer]:
+            - generic [ref=e3409]: "4.7"
+            - generic "质量校验规则设计" [ref=e3410]
+          - generic [ref=e3412] [cursor=pointer]:
+            - generic [ref=e3414]: "4.8"
+            - generic "数据看板指标设计" [ref=e3415]
+          - generic [ref=e3417] [cursor=pointer]:
+            - generic [ref=e3419]: "4.9"
+            - generic "开发环境与代码仓库搭建" [ref=e3420]
+          - generic [ref=e3422] [cursor=pointer]:
+            - generic [ref=e3424]: "4.10"
+            - generic "核心台账模块开发" [ref=e3425]
+          - generic [ref=e3427] [cursor=pointer]:
+            - generic [ref=e3429]: "4.11"
+            - generic "审批流模块开发" [ref=e3430]
+          - generic [ref=e3432] [cursor=pointer]:
+            - generic [ref=e3434]: "4.12"
+            - generic "版本管理模块开发" [ref=e3435]
+          - generic [ref=e3437] [cursor=pointer]:
+            - generic [ref=e3439]: "4.13"
+            - generic "数据分发接口开发" [ref=e3440]
+          - generic [ref=e3442] [cursor=pointer]:
+            - generic [ref=e3444]: "4.14"
+            - generic "质量校验模块开发" [ref=e3445]
+          - generic [ref=e3447] [cursor=pointer]:
+            - generic [ref=e3449]: "4.15"
+            - generic "数据质量看板开发" [ref=e3450]
+          - generic [ref=e3452] [cursor=pointer]:
+            - generic [ref=e3454]: "4.16"
+            - generic "数据纠正通知机制开发" [ref=e3455]
+          - generic [ref=e3457] [cursor=pointer]:
+            - generic [ref=e3459]: "4.17"
+            - generic "AI辅助编程规范制定" [ref=e3460]
+          - generic [ref=e3462] [cursor=pointer]:
+            - generic [ref=e3464]: "4.18"
+            - generic "单元测试与缺陷修复" [ref=e3465]
+          - generic [ref=e3467] [cursor=pointer]:
+            - generic [ref=e3469]: "4.19"
+            - generic "集成测试" [ref=e3470]
+          - generic [ref=e3472] [cursor=pointer]:
+            - generic [ref=e3474]: "4.20"
+            - generic "用户培训与操作手册编制" [ref=e3475]
+          - generic [ref=e3477] [cursor=pointer]:
+            - generic [ref=e3479]: "4.21"
+            - generic "试运行准备" [ref=e3480]
+          - generic [ref=e3482] [cursor=pointer]:
+            - generic [ref=e3484]: "4.22"
+            - generic "MDM平台一期上线" [ref=e3485]
+          - generic [ref=e3487] [cursor=pointer]:
+            - generic [ref=e3489]: "4.23"
+            - generic "MDM一期上线试运行报告" [ref=e3490]
+          - generic [ref=e3492] [cursor=pointer]:
+            - generic [ref=e3494]: "4.24"
+            - generic "MDM一期验收" [ref=e3495]
+        - generic [ref=e3496]:
+          - generic [ref=e3497] [cursor=pointer]:
+            - generic [ref=e3498]: ▼
+            - generic [ref=e3499]: "5"
+            - generic "基础设施与AI底座" [ref=e3500]
+          - generic [ref=e3501]:
+            - generic [ref=e3502] [cursor=pointer]:
+              - generic [ref=e3503]: ▼
+              - generic [ref=e3504]: "5.1"
+              - generic "服务器与虚拟化平台" [ref=e3505]
+            - generic [ref=e3507] [cursor=pointer]:
+              - generic [ref=e3509]: 5.1.1
+              - generic "服务器与虚拟化平台-到货验收" [ref=e3510]
+            - generic [ref=e3512] [cursor=pointer]:
+              - generic [ref=e3514]: 5.1.2
+              - generic "服务器与虚拟化平台-虚拟化部署" [ref=e3515]
+            - generic [ref=e3517] [cursor=pointer]:
+              - generic [ref=e3519]: 5.1.3
+              - generic "服务器与虚拟化平台-资源池配置" [ref=e3520]
+            - generic [ref=e3522] [cursor=pointer]:
+              - generic [ref=e3524]: 5.1.4
+              - generic "服务器与虚拟化平台-高可用测试" [ref=e3525]
+            - generic [ref=e3527] [cursor=pointer]:
+              - generic [ref=e3529]: 5.1.5
+              - generic "服务器与虚拟化平台-验收" [ref=e3530]
+          - generic [ref=e3531]:
+            - generic [ref=e3532] [cursor=pointer]:
+              - generic [ref=e3533]: ▼
+              - generic [ref=e3534]: "5.2"
+              - generic "存储与备份" [ref=e3535]
+            - generic [ref=e3537] [cursor=pointer]:
+              - generic [ref=e3539]: 5.2.1
+              - generic "存储与备份-存储部署" [ref=e3540]
+            - generic [ref=e3542] [cursor=pointer]:
+              - generic [ref=e3544]: 5.2.2
+              - generic "存储与备份-备份方案配置" [ref=e3545]
+            - generic [ref=e3547] [cursor=pointer]:
+              - generic [ref=e3549]: 5.2.3
+              - generic "存储与备份-备份策略测试" [ref=e3550]
+            - generic [ref=e3552] [cursor=pointer]:
+              - generic [ref=e3554]: 5.2.4
+              - generic "存储与备份-恢复演练" [ref=e3555]
+            - generic [ref=e3557] [cursor=pointer]:
+              - generic [ref=e3559]: 5.2.5
+              - generic "存储与备份-验收" [ref=e3560]
+          - generic [ref=e3561]:
+            - generic [ref=e3562] [cursor=pointer]:
+              - generic [ref=e3563]: ▼
+              - generic [ref=e3564]: "5.3"
+              - generic "网络与安全" [ref=e3565]
+            - generic [ref=e3567] [cursor=pointer]:
+              - generic [ref=e3569]: 5.3.1
+              - generic "网络与安全-网络规划" [ref=e3570]
+            - generic [ref=e3572] [cursor=pointer]:
+              - generic [ref=e3574]: 5.3.2
+              - generic "网络与安全-安全策略配置" [ref=e3575]
+            - generic [ref=e3577] [cursor=pointer]:
+              - generic [ref=e3579]: 5.3.3
+              - generic "网络与安全-账号权限基线" [ref=e3580]
+            - generic [ref=e3582] [cursor=pointer]:
+              - generic [ref=e3584]: 5.3.4
+              - generic "网络与安全-日志审计配置" [ref=e3585]
+            - generic [ref=e3587] [cursor=pointer]:
+              - generic [ref=e3589]: 5.3.5
+              - generic "网络与安全-验收" [ref=e3590]
+          - generic [ref=e3591]:
+            - generic [ref=e3592] [cursor=pointer]:
+              - generic [ref=e3593]: ▼
+              - generic [ref=e3594]: "5.4"
+              - generic "数据库与中间件" [ref=e3595]
+            - generic [ref=e3597] [cursor=pointer]:
+              - generic [ref=e3599]: 5.4.1
+              - generic "数据库与中间件-数据库部署" [ref=e3600]
+            - generic [ref=e3602] [cursor=pointer]:
+              - generic [ref=e3604]: 5.4.2
+              - generic "数据库与中间件-中间件部署" [ref=e3605]
+            - generic [ref=e3607] [cursor=pointer]:
+              - generic [ref=e3609]: 5.4.3
+              - generic "数据库与中间件-测试环境搭建" [ref=e3610]
+            - generic [ref=e3612] [cursor=pointer]:
+              - generic [ref=e3614]: 5.4.4
+              - generic "数据库与中间件-预生产环境搭建" [ref=e3615]
+            - generic [ref=e3617] [cursor=pointer]:
+              - generic [ref=e3619]: 5.4.5
+              - generic "数据库与中间件-生产环境搭建" [ref=e3620]
+          - generic [ref=e3621]:
+            - generic [ref=e3622] [cursor=pointer]:
+              - generic [ref=e3623]: ▼
+              - generic [ref=e3624]: "5.5"
+              - generic "AI服务器与本地模型" [ref=e3625]
+            - generic [ref=e3627] [cursor=pointer]:
+              - generic [ref=e3629]: 5.5.1
+              - generic "AI服务器与本地模型-硬件到货验收" [ref=e3630]
+            - generic [ref=e3632] [cursor=pointer]:
+              - generic [ref=e3634]: 5.5.2
+              - generic "AI服务器与本地模型-模型服务部署" [ref=e3635]
+            - generic [ref=e3637] [cursor=pointer]:
+              - generic [ref=e3639]: 5.5.3
+              - generic "AI服务器与本地模型-代码助手接入" [ref=e3640]
+            - generic [ref=e3642] [cursor=pointer]:
+              - generic [ref=e3644]: 5.5.4
+              - generic "AI服务器与本地模型-知识库原型" [ref=e3645]
+            - generic [ref=e3647] [cursor=pointer]:
+              - generic [ref=e3649]: 5.5.5
+              - generic "AI服务器与本地模型-MDM辅助开发试点" [ref=e3650]
+            - generic [ref=e3652] [cursor=pointer]:
+              - generic [ref=e3654]: 5.5.6
+              - generic "AI服务器与本地模型-试点效果报告" [ref=e3655]
+          - generic [ref=e3656]:
+            - generic [ref=e3657] [cursor=pointer]:
+              - generic [ref=e3658]: ▼
+              - generic [ref=e3659]: "5.6"
+              - generic "虚拟桌面/瘦终端平台" [ref=e3660]
+            - generic [ref=e3662] [cursor=pointer]:
+              - generic [ref=e3664]: 5.6.1
+              - generic "虚拟桌面/瘦终端平台-平台部署" [ref=e3665]
+            - generic [ref=e3667] [cursor=pointer]:
+              - generic [ref=e3669]: 5.6.2
+              - generic "虚拟桌面/瘦终端平台-镜像模板" [ref=e3670]
+            - generic [ref=e3672] [cursor=pointer]:
+              - generic [ref=e3674]: 5.6.3
+              - generic "虚拟桌面/瘦终端平台-账号权限" [ref=e3675]
+            - generic [ref=e3677] [cursor=pointer]:
+              - generic [ref=e3679]: 5.6.4
+              - generic "虚拟桌面/瘦终端平台-试点接入" [ref=e3680]
+            - generic [ref=e3682] [cursor=pointer]:
+              - generic [ref=e3684]: 5.6.5
+              - generic "虚拟桌面/瘦终端平台-验收" [ref=e3685]
+          - generic [ref=e3686]:
+            - generic [ref=e3687] [cursor=pointer]:
+              - generic [ref=e3688]: ▼
+              - generic [ref=e3689]: "5.7"
+              - generic "运维监控与日志审计" [ref=e3690]
+            - generic [ref=e3692] [cursor=pointer]:
+              - generic [ref=e3694]: 5.7.1
+              - generic "运维监控与日志审计-监控指标设计" [ref=e3695]
+            - generic [ref=e3697] [cursor=pointer]:
+              - generic [ref=e3699]: 5.7.2
+              - generic "运维监控与日志审计-监控平台配置" [ref=e3700]
+            - generic [ref=e3702] [cursor=pointer]:
+              - generic [ref=e3704]: 5.7.3
+              - generic "运维监控与日志审计-日志审计联调" [ref=e3705]
+            - generic [ref=e3707] [cursor=pointer]:
+              - generic [ref=e3709]: 5.7.4
+              - generic "运维监控与日志审计-告警演练" [ref=e3710]
+            - generic [ref=e3712] [cursor=pointer]:
+              - generic [ref=e3714]: 5.7.5
+              - generic "运维监控与日志审计-运维移交" [ref=e3715]
+          - generic [ref=e3717] [cursor=pointer]:
+            - generic [ref=e3719]: "5.8"
+            - generic "基础设施生产环境就绪" [ref=e3720]
+        - generic [ref=e3721]:
+          - generic [ref=e3722] [cursor=pointer]:
+            - generic [ref=e3723]: ▼
+            - generic [ref=e3724]: "6"
+            - generic "PLM基础深化" [ref=e3725]
+          - generic [ref=e3727] [cursor=pointer]:
+            - generic [ref=e3729]: "6.1"
+            - generic "PLM内部调研与问题清单" [ref=e3730]
+          - generic [ref=e3732] [cursor=pointer]:
+            - generic [ref=e3734]: "6.2"
+            - generic "图文档管理规范草案" [ref=e3735]
+          - generic [ref=e3737] [cursor=pointer]:
+            - generic [ref=e3739]: "6.3"
+            - generic "EBOM规范草案" [ref=e3740]
+          - generic [ref=e3742] [cursor=pointer]:
+            - generic [ref=e3744]: "6.4"
+            - generic "EBOM到MBOM转换规则草案" [ref=e3745]
+          - generic [ref=e3747] [cursor=pointer]:
+            - generic [ref=e3749]: "6.5"
+            - generic "工艺文件结构化模板草案" [ref=e3750]
+          - generic [ref=e3752] [cursor=pointer]:
+            - generic [ref=e3754]: "6.6"
+            - generic "ECN/ECO流程方案草案" [ref=e3755]
+          - generic [ref=e3757] [cursor=pointer]:
+            - generic [ref=e3759]: "6.7"
+            - generic "PLM-MDM集成方案草案" [ref=e3760]
+          - generic [ref=e3762] [cursor=pointer]:
+            - generic [ref=e3764]: "6.8"
+            - generic "PLM-MES集成方案草案" [ref=e3765]
+          - generic [ref=e3767] [cursor=pointer]:
+            - generic [ref=e3769]: "6.9"
+            - generic "供应商复核与深化蓝图" [ref=e3770]
+          - generic [ref=e3772] [cursor=pointer]:
+            - generic [ref=e3774]: "6.10"
+            - generic "PLM配置/开发方案确认" [ref=e3775]
+          - generic [ref=e3777] [cursor=pointer]:
+            - generic [ref=e3779]: "6.11"
+            - generic "图文档模块配置/开发" [ref=e3780]
+          - generic [ref=e3782] [cursor=pointer]:
+            - generic [ref=e3784]: "6.12"
+            - generic "EBOM规范化配置/开发" [ref=e3785]
+          - generic [ref=e3787] [cursor=pointer]:
+            - generic [ref=e3789]: "6.13"
+            - generic "工艺结构化配置/开发" [ref=e3790]
+          - generic [ref=e3792] [cursor=pointer]:
+            - generic [ref=e3794]: "6.14"
+            - generic "ECN/ECO流程配置/开发" [ref=e3795]
+          - generic [ref=e3797] [cursor=pointer]:
+            - generic [ref=e3799]: "6.15"
+            - generic "PLM-MDM接口开发联调" [ref=e3800]
+          - generic [ref=e3802] [cursor=pointer]:
+            - generic [ref=e3804]: "6.16"
+            - generic "PLM-MES接口开发联调" [ref=e3805]
+          - generic [ref=e3807] [cursor=pointer]:
+            - generic [ref=e3809]: "6.17"
+            - generic "PLM系统测试" [ref=e3810]
+          - generic [ref=e3811]:
+            - generic [ref=e3812] [cursor=pointer]:
+              - generic [ref=e3813]: ▼
+              - generic [ref=e3814]: "6.18"
+              - generic "PLM用户培训" [ref=e3815]
+            - generic [ref=e3817] [cursor=pointer]:
+              - generic [ref=e3819]: 6.18.1
+              - generic "PLM正式上线" [ref=e3820]
+          - generic [ref=e3822] [cursor=pointer]:
+            - generic [ref=e3824]: "6.19"
+            - generic "PLM基础深化验收准备" [ref=e3825]
+          - generic [ref=e3827] [cursor=pointer]:
+            - generic [ref=e3829]: "6.20"
+            - generic "PLM基础深化验收" [ref=e3830]
+        - generic [ref=e3831]:
+          - generic [ref=e3832] [cursor=pointer]:
+            - generic [ref=e3833]: ▼
+            - generic [ref=e3834]: "7"
+            - generic "ERP/OA补强" [ref=e3835]
+          - generic [ref=e3837] [cursor=pointer]:
+            - generic [ref=e3839]: "7.1"
+            - generic "ERP/OA现状与差距分析" [ref=e3840]
+          - generic [ref=e3842] [cursor=pointer]:
+            - generic [ref=e3844]: "7.2"
+            - generic "MRP补强需求规格" [ref=e3845]
+          - generic [ref=e3847] [cursor=pointer]:
+            - generic [ref=e3849]: "7.3"
+            - generic "采购计划补强需求规格" [ref=e3850]
+          - generic [ref=e3852] [cursor=pointer]:
+            - generic [ref=e3854]: "7.4"
+            - generic "生产计划补强需求规格" [ref=e3855]
+          - generic [ref=e3856]:
+            - generic [ref=e3857] [cursor=pointer]:
+              - generic [ref=e3858]: ▼
+              - generic [ref=e3859]: "7.5"
+              - generic "OA待办与流程集成需求" [ref=e3860]
+            - generic [ref=e3862] [cursor=pointer]:
+              - generic [ref=e3864]: 7.5.1
+              - generic "ERP/OA需求冻结" [ref=e3865]
+          - generic [ref=e3867] [cursor=pointer]:
+            - generic [ref=e3869]: "7.6"
+            - generic "ERP-MDM接口方案" [ref=e3870]
+          - generic [ref=e3871]:
+            - generic [ref=e3872] [cursor=pointer]:
+              - generic [ref=e3873]: ▼
+              - generic [ref=e3874]: "7.7"
+              - generic "ERP-MES接口方案" [ref=e3875]
+            - generic [ref=e3877] [cursor=pointer]:
+              - generic [ref=e3879]: 7.7.1
+              - generic "ERP/OA接口方案评审通过" [ref=e3880]
+          - generic [ref=e3882] [cursor=pointer]:
+            - generic [ref=e3884]: "7.8"
+            - generic "MRP模块配置/开发" [ref=e3885]
+          - generic [ref=e3887] [cursor=pointer]:
+            - generic [ref=e3889]: "7.9"
+            - generic "采购计划模块配置/开发" [ref=e3890]
+          - generic [ref=e3892] [cursor=pointer]:
+            - generic [ref=e3894]: "7.10"
+            - generic "生产计划模块配置/开发" [ref=e3895]
+          - generic [ref=e3897] [cursor=pointer]:
+            - generic [ref=e3899]: "7.11"
+            - generic "OA待办接口配置/开发" [ref=e3900]
+          - generic [ref=e3902] [cursor=pointer]:
+            - generic [ref=e3904]: "7.12"
+            - generic "ERP/OA单元测试" [ref=e3905]
+          - generic [ref=e3907] [cursor=pointer]:
+            - generic [ref=e3909]: "7.13"
+            - generic "ERP-MDM联调" [ref=e3910]
+          - generic [ref=e3911]:
+            - generic [ref=e3912] [cursor=pointer]:
+              - generic [ref=e3913]: ▼
+              - generic [ref=e3914]: "7.14"
+              - generic "ERP-MES联调" [ref=e3915]
+            - generic [ref=e3917] [cursor=pointer]:
+              - generic [ref=e3919]: 7.14.1
+              - generic "ERP/OA集成测试完成" [ref=e3920]
+          - generic [ref=e3922] [cursor=pointer]:
+            - generic [ref=e3924]: "7.15"
+            - generic "ERP/OA用户培训" [ref=e3925]
+          - generic [ref=e3927] [cursor=pointer]:
+            - generic [ref=e3929]: "7.16"
+            - generic "ERP/OA补强验收" [ref=e3930]
+          - generic [ref=e3932] [cursor=pointer]:
+            - generic [ref=e3934]: "7.17"
+            - generic "ERP/OA正式上线" [ref=e3935]
+        - generic [ref=e3936]:
+          - generic [ref=e3937] [cursor=pointer]:
+            - generic [ref=e3938]: ▼
+            - generic [ref=e3939]: "8"
+            - generic "MES建设与QMS低代码平台" [ref=e3940]
+          - generic [ref=e3942] [cursor=pointer]:
+            - generic [ref=e3944]: "8.1"
+            - generic "MES内部需求清单编制" [ref=e3945]
+          - generic [ref=e3947] [cursor=pointer]:
+            - generic [ref=e3949]: "8.2"
+            - generic "MES内部初版蓝图编制" [ref=e3950]
+          - generic [ref=e3952] [cursor=pointer]:
+            - generic [ref=e3954]: "8.3"
+            - generic "MES蓝图内部评审" [ref=e3955]
+          - generic [ref=e3957] [cursor=pointer]:
+            - generic [ref=e3959]: "8.4"
+            - generic "MES供应商复核蓝图" [ref=e3960]
+          - generic [ref=e3962] [cursor=pointer]:
+            - generic [ref=e3964]: "8.5"
+            - generic "MES蓝图评审通过" [ref=e3965]
+          - generic [ref=e3966]:
+            - generic [ref=e3967] [cursor=pointer]:
+              - generic [ref=e3968]: ▼
+              - generic [ref=e3969]: "8.6"
+              - generic "主数据接收与基础维护" [ref=e3970]
+            - generic [ref=e3972] [cursor=pointer]:
+              - generic [ref=e3974]: 8.6.1
+              - generic "主数据接收与基础维护-详细需求确认" [ref=e3975]
+            - generic [ref=e3977] [cursor=pointer]:
+              - generic [ref=e3979]: 8.6.2
+              - generic "主数据接收与基础维护-详细设计" [ref=e3980]
+            - generic [ref=e3982] [cursor=pointer]:
+              - generic [ref=e3984]: 8.6.3
+              - generic "主数据接收与基础维护-配置/开发" [ref=e3985]
+            - generic [ref=e3987] [cursor=pointer]:
+              - generic [ref=e3989]: 8.6.4
+              - generic "主数据接收与基础维护-单元测试" [ref=e3990]
+            - generic [ref=e3992] [cursor=pointer]:
+              - generic [ref=e3994]: 8.6.5
+              - generic "主数据接收与基础维护-缺陷修复" [ref=e3995]
+          - generic [ref=e3996]:
+            - generic [ref=e3997] [cursor=pointer]:
+              - generic [ref=e3998]: ▼
+              - generic [ref=e3999]: "8.7"
+              - generic "工艺管理/轻量MBOM" [ref=e4000]
+            - generic [ref=e4002] [cursor=pointer]:
+              - generic [ref=e4004]: 8.7.1
+              - generic "工艺管理/轻量MBOM-详细需求确认" [ref=e4005]
+            - generic [ref=e4007] [cursor=pointer]:
+              - generic [ref=e4009]: 8.7.2
+              - generic "工艺管理/轻量MBOM-详细设计" [ref=e4010]
+            - generic [ref=e4012] [cursor=pointer]:
+              - generic [ref=e4014]: 8.7.3
+              - generic "工艺管理/轻量MBOM-配置/开发" [ref=e4015]
+            - generic [ref=e4017] [cursor=pointer]:
+              - generic [ref=e4019]: 8.7.4
+              - generic "工艺管理/轻量MBOM-单元测试" [ref=e4020]
+            - generic [ref=e4022] [cursor=pointer]:
+              - generic [ref=e4024]: 8.7.5
+              - generic "工艺管理/轻量MBOM-缺陷修复" [ref=e4025]
+          - generic [ref=e4026]:
+            - generic [ref=e4027] [cursor=pointer]:
+              - generic [ref=e4028]: ▼
+              - generic [ref=e4029]: "8.8"
+              - generic "生产计划管理" [ref=e4030]
+            - generic [ref=e4032] [cursor=pointer]:
+              - generic [ref=e4034]: 8.8.1
+              - generic "生产计划管理-详细需求确认" [ref=e4035]
+            - generic [ref=e4037] [cursor=pointer]:
+              - generic [ref=e4039]: 8.8.2
+              - generic "生产计划管理-详细设计" [ref=e4040]
+            - generic [ref=e4042] [cursor=pointer]:
+              - generic [ref=e4044]: 8.8.3
+              - generic "生产计划管理-配置/开发" [ref=e4045]
+            - generic [ref=e4047] [cursor=pointer]:
+              - generic [ref=e4049]: 8.8.4
+              - generic "生产计划管理-单元测试" [ref=e4050]
+            - generic [ref=e4052] [cursor=pointer]:
+              - generic [ref=e4054]: 8.8.5
+              - generic "生产计划管理-缺陷修复" [ref=e4055]
+          - generic [ref=e4056]:
+            - generic [ref=e4057] [cursor=pointer]:
+              - generic [ref=e4058]: ▼
+              - generic [ref=e4059]: "8.9"
+              - generic "执行报工/工序流转" [ref=e4060]
+            - generic [ref=e4062] [cursor=pointer]:
+              - generic [ref=e4064]: 8.9.1
+              - generic "执行报工/工序流转-详细需求确认" [ref=e4065]
+            - generic [ref=e4067] [cursor=pointer]:
+              - generic [ref=e4069]: 8.9.2
+              - generic "执行报工/工序流转-详细设计" [ref=e4070]
+            - generic [ref=e4072] [cursor=pointer]:
+              - generic [ref=e4074]: 8.9.3
+              - generic "执行报工/工序流转-配置/开发" [ref=e4075]
+            - generic [ref=e4077] [cursor=pointer]:
+              - generic [ref=e4079]: 8.9.4
+              - generic "执行报工/工序流转-单元测试" [ref=e4080]
+            - generic [ref=e4082] [cursor=pointer]:
+              - generic [ref=e4084]: 8.9.5
+              - generic "执行报工/工序流转-缺陷修复" [ref=e4085]
+          - generic [ref=e4086]:
+            - generic [ref=e4087] [cursor=pointer]:
+              - generic [ref=e4088]: ▼
+              - generic [ref=e4089]: "8.10"
+              - generic "仓储管理" [ref=e4090]
+            - generic [ref=e4092] [cursor=pointer]:
+              - generic [ref=e4094]: 8.10.1
+              - generic "仓储管理-详细需求确认" [ref=e4095]
+            - generic [ref=e4097] [cursor=pointer]:
+              - generic [ref=e4099]: 8.10.2
+              - generic "仓储管理-详细设计" [ref=e4100]
+            - generic [ref=e4102] [cursor=pointer]:
+              - generic [ref=e4104]: 8.10.3
+              - generic "仓储管理-配置/开发" [ref=e4105]
+            - generic [ref=e4107] [cursor=pointer]:
+              - generic [ref=e4109]: 8.10.4
+              - generic "仓储管理-单元测试" [ref=e4110]
+            - generic [ref=e4112] [cursor=pointer]:
+              - generic [ref=e4114]: 8.10.5
+              - generic "仓储管理-缺陷修复" [ref=e4115]
+          - generic [ref=e4116]:
+            - generic [ref=e4117] [cursor=pointer]:
+              - generic [ref=e4118]: ▼
+              - generic [ref=e4119]: "8.11"
+              - generic "工装工具管理" [ref=e4120]
+            - generic [ref=e4122] [cursor=pointer]:
+              - generic [ref=e4124]: 8.11.1
+              - generic "工装工具管理-详细需求确认" [ref=e4125]
+            - generic [ref=e4127] [cursor=pointer]:
+              - generic [ref=e4129]: 8.11.2
+              - generic "工装工具管理-详细设计" [ref=e4130]
+            - generic [ref=e4132] [cursor=pointer]:
+              - generic [ref=e4134]: 8.11.3
+              - generic "工装工具管理-配置/开发" [ref=e4135]
+            - generic [ref=e4137] [cursor=pointer]:
+              - generic [ref=e4139]: 8.11.4
+              - generic "工装工具管理-单元测试" [ref=e4140]
+            - generic [ref=e4142] [cursor=pointer]:
+              - generic [ref=e4144]: 8.11.5
+              - generic "工装工具管理-缺陷修复" [ref=e4145]
+          - generic [ref=e4146]:
+            - generic [ref=e4147] [cursor=pointer]:
+              - generic [ref=e4148]: ▼
+              - generic [ref=e4149]: "8.12"
+              - generic "质量基础管理" [ref=e4150]
+            - generic [ref=e4152] [cursor=pointer]:
+              - generic [ref=e4154]: 8.12.1
+              - generic "质量基础管理-详细需求确认" [ref=e4155]
+            - generic [ref=e4157] [cursor=pointer]:
+              - generic [ref=e4159]: 8.12.2
+              - generic "质量基础管理-详细设计" [ref=e4160]
+            - generic [ref=e4162] [cursor=pointer]:
+              - generic [ref=e4164]: 8.12.3
+              - generic "质量基础管理-配置/开发" [ref=e4165]
+            - generic [ref=e4167] [cursor=pointer]:
+              - generic [ref=e4169]: 8.12.4
+              - generic "质量基础管理-单元测试" [ref=e4170]
+            - generic [ref=e4172] [cursor=pointer]:
+              - generic [ref=e4174]: 8.12.5
+              - generic "质量基础管理-缺陷修复" [ref=e4175]
+          - generic [ref=e4176]:
+            - generic [ref=e4177] [cursor=pointer]:
+              - generic [ref=e4178]: ▼
+              - generic [ref=e4179]: "8.13"
+              - generic "生产进度看板" [ref=e4180]
+            - generic [ref=e4182] [cursor=pointer]:
+              - generic [ref=e4184]: 8.13.1
+              - generic "生产进度看板-详细需求确认" [ref=e4185]
+            - generic [ref=e4187] [cursor=pointer]:
+              - generic [ref=e4189]: 8.13.2
+              - generic "生产进度看板-详细设计" [ref=e4190]
+            - generic [ref=e4192] [cursor=pointer]:
+              - generic [ref=e4194]: 8.13.3
+              - generic "生产进度看板-配置/开发" [ref=e4195]
+            - generic [ref=e4197] [cursor=pointer]:
+              - generic [ref=e4199]: 8.13.4
+              - generic "生产进度看板-单元测试" [ref=e4200]
+            - generic [ref=e4202] [cursor=pointer]:
+              - generic [ref=e4204]: 8.13.5
+              - generic "生产进度看板-缺陷修复" [ref=e4205]
+          - generic [ref=e4206]:
+            - generic [ref=e4207] [cursor=pointer]:
+              - generic [ref=e4208]: ▼
+              - generic [ref=e4209]: "8.14"
+              - generic "PLM" [ref=e4210]
+            - generic [ref=e4212] [cursor=pointer]:
+              - generic [ref=e4214]: 8.14.1
+              - generic "PLM-MES接口-详细需求确认" [ref=e4215]
+            - generic [ref=e4217] [cursor=pointer]:
+              - generic [ref=e4219]: 8.14.2
+              - generic "PLM-MES接口-详细设计" [ref=e4220]
+            - generic [ref=e4222] [cursor=pointer]:
+              - generic [ref=e4224]: 8.14.3
+              - generic "PLM-MES接口-配置/开发" [ref=e4225]
+            - generic [ref=e4227] [cursor=pointer]:
+              - generic [ref=e4229]: 8.14.4
+              - generic "PLM-MES接口-单元测试" [ref=e4230]
+            - generic [ref=e4232] [cursor=pointer]:
+              - generic [ref=e4234]: 8.14.5
+              - generic "PLM-MES接口-缺陷修复" [ref=e4235]
+          - generic [ref=e4236]:
+            - generic [ref=e4237] [cursor=pointer]:
+              - generic [ref=e4238]: ▼
+              - generic [ref=e4239]: "8.15"
+              - generic "ERP" [ref=e4240]
+            - generic [ref=e4242] [cursor=pointer]:
+              - generic [ref=e4244]: 8.15.1
+              - generic "ERP-MES接口-详细需求确认" [ref=e4245]
+            - generic [ref=e4247] [cursor=pointer]:
+              - generic [ref=e4249]: 8.15.2
+              - generic "ERP-MES接口-详细设计" [ref=e4250]
+            - generic [ref=e4252] [cursor=pointer]:
+              - generic [ref=e4254]: 8.15.3
+              - generic "ERP-MES接口-配置/开发" [ref=e4255]
+            - generic [ref=e4257] [cursor=pointer]:
+              - generic [ref=e4259]: 8.15.4
+              - generic "ERP-MES接口-单元测试" [ref=e4260]
+            - generic [ref=e4262] [cursor=pointer]:
+              - generic [ref=e4264]: 8.15.5
+              - generic "ERP-MES接口-缺陷修复" [ref=e4265]
+          - generic [ref=e4266]:
+            - generic [ref=e4267] [cursor=pointer]:
+              - generic [ref=e4268]: ▼
+              - generic [ref=e4269]: "8.16"
+              - generic "QMS低代码平台" [ref=e4270]
+            - generic [ref=e4272] [cursor=pointer]:
+              - generic [ref=e4274]: 8.16.1
+              - generic "QMS低代码平台-QMS范围确认" [ref=e4275]
+            - generic [ref=e4277] [cursor=pointer]:
+              - generic [ref=e4279]: 8.16.2
+              - generic "QMS低代码平台-低代码平台方案设计" [ref=e4280]
+            - generic [ref=e4282] [cursor=pointer]:
+              - generic [ref=e4284]: 8.16.3
+              - generic "QMS低代码平台-质量流程表单配置" [ref=e4285]
+            - generic [ref=e4287] [cursor=pointer]:
+              - generic [ref=e4289]: 8.16.4
+              - generic "QMS低代码平台-质量台账与审批流配置" [ref=e4290]
+            - generic [ref=e4292] [cursor=pointer]:
+              - generic [ref=e4294]: 8.16.5
+              - generic "QMS低代码平台-QMS测试" [ref=e4295]
+            - generic [ref=e4297] [cursor=pointer]:
+              - generic [ref=e4299]: 8.16.6
+              - generic "QMS低代码平台-QMS基础能力验收" [ref=e4300]
+          - generic [ref=e4301]:
+            - generic [ref=e4302] [cursor=pointer]:
+              - generic [ref=e4303]: ▼
+              - generic [ref=e4304]: "8.17"
+              - generic "MES" [ref=e4305]
+            - generic [ref=e4307] [cursor=pointer]:
+              - generic [ref=e4309]: 8.17.1
+              - generic "MES-QMS接口-详细需求确认" [ref=e4310]
+            - generic [ref=e4312] [cursor=pointer]:
+              - generic [ref=e4314]: 8.17.2
+              - generic "MES-QMS接口-详细设计" [ref=e4315]
+            - generic [ref=e4317] [cursor=pointer]:
+              - generic [ref=e4319]: 8.17.3
+              - generic "MES-QMS接口-配置/开发" [ref=e4320]
+            - generic [ref=e4322] [cursor=pointer]:
+              - generic [ref=e4324]: 8.17.4
+              - generic "MES-QMS接口-单元测试" [ref=e4325]
+            - generic [ref=e4327] [cursor=pointer]:
+              - generic [ref=e4329]: 8.17.5
+              - generic "MES-QMS接口-缺陷修复" [ref=e4330]
+          - generic [ref=e4331]:
+            - generic [ref=e4332] [cursor=pointer]:
+              - generic [ref=e4333]: ▼
+              - generic [ref=e4334]: "8.99"
+              - generic "MES一期系统集成测试" [ref=e4335]
+            - generic [ref=e4337] [cursor=pointer]:
+              - generic [ref=e4339]: 8.99.1
+              - generic "MES一期系统集成测试" [ref=e4340]
+            - generic [ref=e4342] [cursor=pointer]:
+              - generic [ref=e4344]: 8.99.2
+              - generic "MES一期用户培训材料编制" [ref=e4345]
+            - generic [ref=e4347] [cursor=pointer]:
+              - generic [ref=e4349]: 8.99.3
+              - generic "MES一期关键用户培训" [ref=e4350]
+            - generic [ref=e4352] [cursor=pointer]:
+              - generic [ref=e4354]: 8.99.4
+              - generic "MES一期上线前风险缓冲" [ref=e4355]
+            - generic [ref=e4357] [cursor=pointer]:
+              - generic [ref=e4359]: 8.99.5
+              - generic "MES一期试运行开始" [ref=e4360]
+            - generic [ref=e4362] [cursor=pointer]:
+              - generic [ref=e4364]: 8.99.6
+              - generic "MES一期试运行与问题整改" [ref=e4365]
+            - generic [ref=e4367] [cursor=pointer]:
+              - generic [ref=e4369]: 8.99.7
+              - generic "MES一期正式上线" [ref=e4370]
+            - generic [ref=e4372] [cursor=pointer]:
+              - generic [ref=e4374]: 8.99.8
+              - generic "MES一期验收" [ref=e4375]
+        - generic [ref=e4376]:
+          - generic [ref=e4377] [cursor=pointer]:
+            - generic [ref=e4378]: ▼
+            - generic [ref=e4379]: "9"
+            - generic "全系统集成联调与现场推广" [ref=e4380]
+          - generic [ref=e4382] [cursor=pointer]:
+            - generic [ref=e4384]: "9.1"
+            - generic "MDM-PLM集成联调" [ref=e4385]
+          - generic [ref=e4387] [cursor=pointer]:
+            - generic [ref=e4389]: "9.2"
+            - generic "MDM-ERP集成联调" [ref=e4390]
+          - generic [ref=e4392] [cursor=pointer]:
+            - generic [ref=e4394]: "9.3"
+            - generic "MDM-MES集成联调" [ref=e4395]
+          - generic [ref=e4397] [cursor=pointer]:
+            - generic [ref=e4399]: "9.4"
+            - generic "PLM-MES集成联调" [ref=e4400]
+          - generic [ref=e4402] [cursor=pointer]:
+            - generic [ref=e4404]: "9.5"
+            - generic "ERP-MES集成联调" [ref=e4405]
+          - generic [ref=e4407] [cursor=pointer]:
+            - generic [ref=e4409]: "9.6"
+            - generic "MES-QMS集成联调" [ref=e4410]
+          - generic [ref=e4412] [cursor=pointer]:
+            - generic [ref=e4414]: "9.7"
+            - generic "跨系统业务场景测试-订单到计划" [ref=e4415]
+          - generic [ref=e4417] [cursor=pointer]:
+            - generic [ref=e4419]: "9.8"
+            - generic "跨系统业务场景测试-工艺到执行" [ref=e4420]
+          - generic [ref=e4422] [cursor=pointer]:
+            - generic [ref=e4424]: "9.9"
+            - generic "跨系统业务场景测试-质量闭环" [ref=e4425]
+          - generic [ref=e4427] [cursor=pointer]:
+            - generic [ref=e4429]: "9.10"
+            - generic "跨系统业务场景测试-物料齐套" [ref=e4430]
+          - generic [ref=e4432] [cursor=pointer]:
+            - generic [ref=e4434]: "9.11"
+            - generic "全系统集成联调问题整改" [ref=e4435]
+          - generic [ref=e4437] [cursor=pointer]:
+            - generic [ref=e4439]: "9.12"
+            - generic "全系统集成联调完成" [ref=e4440]
+          - generic [ref=e4442] [cursor=pointer]:
+            - generic [ref=e4444]: "9.13"
+            - generic "生产现场推广方案" [ref=e4445]
+          - generic [ref=e4447] [cursor=pointer]:
+            - generic [ref=e4449]: "9.14"
+            - generic "试点产线推广" [ref=e4450]
+          - generic [ref=e4452] [cursor=pointer]:
+            - generic [ref=e4454]: "9.15"
+            - generic "多部门现场培训" [ref=e4455]
+          - generic [ref=e4457] [cursor=pointer]:
+            - generic [ref=e4459]: "9.16"
+            - generic "全面推广与运行跟踪" [ref=e4460]
+          - generic [ref=e4462] [cursor=pointer]:
+            - generic [ref=e4464]: "9.17"
+            - generic "生产现场全面推广完成" [ref=e4465]
+          - generic [ref=e4467] [cursor=pointer]:
+            - generic [ref=e4469]: "9.18"
+            - generic "数据治理常态化机制设计" [ref=e4470]
+          - generic [ref=e4472] [cursor=pointer]:
+            - generic [ref=e4474]: "9.19"
+            - generic "月度数据质量审计机制运行" [ref=e4475]
+          - generic [ref=e4477] [cursor=pointer]:
+            - generic [ref=e4479]: "9.20"
+            - generic "数据治理常态化机制验收" [ref=e4480]
+        - generic [ref=e4481]:
+          - generic [ref=e4482] [cursor=pointer]:
+            - generic [ref=e4483]: ▼
+            - generic [ref=e4484]: "10"
+            - generic "AI应用深化、驾驶舱与总体验收" [ref=e4485]
+          - generic [ref=e4487] [cursor=pointer]:
+            - generic [ref=e4489]: "10.1"
+            - generic "项目文档知识库深化" [ref=e4490]
+          - generic [ref=e4492] [cursor=pointer]:
+            - generic [ref=e4494]: "10.2"
+            - generic "代码库问答与审查助手试点" [ref=e4495]
+          - generic [ref=e4497] [cursor=pointer]:
+            - generic [ref=e4499]: "10.3"
+            - generic "测试用例生成试点" [ref=e4500]
+          - generic [ref=e4502] [cursor=pointer]:
+            - generic [ref=e4504]: "10.4"
+            - generic "项目周报/风险台账自动生成试点" [ref=e4505]
+          - generic [ref=e4507] [cursor=pointer]:
+            - generic [ref=e4509]: "10.5"
+            - generic "数字员工场景筛选" [ref=e4510]
+          - generic [ref=e4512] [cursor=pointer]:
+            - generic [ref=e4514]: "10.6"
+            - generic "数字员工低风险场景原型" [ref=e4515]
+          - generic [ref=e4517] [cursor=pointer]:
+            - generic [ref=e4519]: "10.7"
+            - generic "数字员工试点运行" [ref=e4520]
+          - generic [ref=e4522] [cursor=pointer]:
+            - generic [ref=e4524]: "10.8"
+            - generic "AI应用/数字员工试点完成" [ref=e4525]
+          - generic [ref=e4527] [cursor=pointer]:
+            - generic [ref=e4529]: "10.9"
+            - generic "驾驶舱指标体系深化" [ref=e4530]
+          - generic [ref=e4532] [cursor=pointer]:
+            - generic [ref=e4534]: "10.10"
+            - generic "驾驶舱数据接入与看板深化" [ref=e4535]
+          - generic [ref=e4537] [cursor=pointer]:
+            - generic [ref=e4539]: "10.11"
+            - generic "项目总体验收材料准备" [ref=e4540]
+          - generic [ref=e4542] [cursor=pointer]:
+            - generic [ref=e4544]: "10.12"
+            - generic "项目总体验收前风险缓冲" [ref=e4545]
+          - generic [ref=e4547] [cursor=pointer]:
+            - generic [ref=e4549]: "10.13"
+            - generic "项目总体验收" [ref=e4550]
+    - generic [ref=e4557]:
+      - button "−" [ref=e4558] [cursor=pointer]
+      - generic [ref=e4559]: 100%
+      - button "+" [ref=e4560] [cursor=pointer]
+      - button "↺" [ref=e4561] [cursor=pointer]

@@ -1,1 +1,31 @@
 node_modules/
+.DS_Store
+Thumbs.db
+
+# Generated artifacts (do not commit)
+artifacts/
+output/
+.review_output/
+.playwright-cli/
+tmp/
+temp/
+.claude/worktrees/
+
+# Logs
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Node
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# SQLite / local state
+*.db
+*.db-shm
+*.db-wal
+.smoke-cookie.txt

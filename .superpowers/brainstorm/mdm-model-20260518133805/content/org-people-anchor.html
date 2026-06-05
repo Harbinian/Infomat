@@ -1,0 +1,121 @@
+<h2>组织/人员域：先确定“主干关系”</h2>
+<p class="subtitle">这是首期数据模型的骨架选择，会直接影响后续流程、权限与集成复杂度</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>岗位为核心（推荐用于 Transaction Hub）</h3>
+      <div class="mockup">
+        <div class="mockup-header">关系示意</div>
+        <div class="mockup-body">
+          <div class="section">
+            <div class="label">OrgUnit</div>
+            <div class="placeholder">组织单元（部门/工厂/公司）</div>
+          </div>
+          <div class="section">
+            <div class="label">Position</div>
+            <div class="placeholder">岗位（隶属某 OrgUnit）</div>
+          </div>
+          <div class="section">
+            <div class="label">Person</div>
+            <div class="placeholder">人员（通过任职 Assignment 关联 Position）</div>
+          </div>
+          <div class="pros-cons">
+            <div class="pros">
+              <h4>优点</h4>
+              <ul>
+                <li>岗位与编制、权限、成本归集更自然</li>
+                <li>支持一人多岗/代岗/兼职</li>
+              </ul>
+            </div>
+            <div class="cons">
+              <h4>代价</h4>
+              <ul>
+                <li>模型对象更多，建设略复杂</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>部门为核心（最快落地）</h3>
+      <div class="mockup">
+        <div class="mockup-header">关系示意</div>
+        <div class="mockup-body">
+          <div class="section">
+            <div class="label">OrgUnit</div>
+            <div class="placeholder">组织单元（部门/工厂/公司）</div>
+          </div>
+          <div class="section">
+            <div class="label">Person</div>
+            <div class="placeholder">人员（直接挂到 OrgUnit）</div>
+          </div>
+          <div class="pros-cons">
+            <div class="pros">
+              <h4>优点</h4>
+              <ul>
+                <li>对象少，上线快</li>
+              </ul>
+            </div>
+            <div class="cons">
+              <h4>风险</h4>
+              <ul>
+                <li>一人多部门/矩阵组织难处理</li>
+                <li>后续补岗位常要大改</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>任职关系为核心（最灵活）</h3>
+      <div class="mockup">
+        <div class="mockup-header">关系示意</div>
+        <div class="mockup-body">
+          <div class="section">
+            <div class="label">OrgUnit</div>
+            <div class="placeholder">组织单元</div>
+          </div>
+          <div class="section">
+            <div class="label">Person</div>
+            <div class="placeholder">人员</div>
+          </div>
+          <div class="section">
+            <div class="label">Assignment</div>
+            <div class="placeholder">任职/归属关系（可同时关联 OrgUnit 与 Position）</div>
+          </div>
+          <div class="pros-cons">
+            <div class="pros">
+              <h4>优点</h4>
+              <ul>
+                <li>矩阵组织/项目制表达最强</li>
+              </ul>
+            </div>
+            <div class="cons">
+              <h4>代价</h4>
+              <ul>
+                <li>数据治理与查询更复杂</li>
+                <li>对流程与权限设计要求更高</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <p class="subtitle">请在页面里点击 A/B/C 选一个，然后在聊天里补一句：你们是否存在矩阵组织（一个人多个部门/项目线）？</p>
+</div>

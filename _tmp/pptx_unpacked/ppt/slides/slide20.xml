@@ -1,0 +1,1123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld>
+    <p:spTree>
+      <p:nvGrpSpPr>
+        <p:cNvPr id="1" name=""/>
+        <p:cNvGrpSpPr/>
+        <p:nvPr/>
+      </p:nvGrpSpPr>
+      <p:grpSpPr>
+        <a:xfrm>
+          <a:off x="0" y="0"/>
+          <a:ext cx="0" cy="0"/>
+          <a:chOff x="0" y="0"/>
+          <a:chExt cx="0" cy="0"/>
+        </a:xfrm>
+      </p:grpSpPr>
+      <p:sp>
+        <p:nvSpPr>
+          <p:cNvPr id="16" name="标题 15"/>
+          <p:cNvSpPr>
+            <a:spLocks noGrp="1"/>
+          </p:cNvSpPr>
+          <p:nvPr>
+            <p:ph type="title"/>
+            <p:custDataLst>
+              <p:tags r:id="rId2"/>
+            </p:custDataLst>
+          </p:nvPr>
+        </p:nvSpPr>
+        <p:spPr/>
+        <p:txBody>
+          <a:bodyPr vert="horz" lIns="91440" tIns="45720" rIns="91440" bIns="45720" rtlCol="0" anchor="ctr">
+            <a:normAutofit/>
+          </a:bodyPr>
+          <a:lstStyle/>
+          <a:p>
+            <a:pPr lvl="0" algn="l">
+              <a:buClrTx/>
+              <a:buSzTx/>
+              <a:buFontTx/>
+            </a:pPr>
+            <a:r>
+              <a:rPr lang="zh-CN" altLang="en-US">
+                <a:sym typeface="+mn-ea"/>
+              </a:rPr>
+              <a:t>数据标注对民机有什么用</a:t>
+            </a:r>
+            <a:r>
+              <a:rPr lang="en-US" altLang="zh-CN">
+                <a:sym typeface="+mn-ea"/>
+              </a:rPr>
+              <a:t>——</a:t>
+            </a:r>
+            <a:r>
+              <a:rPr lang="zh-CN" altLang="en-US" dirty="0">
+                <a:latin typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                <a:ea typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                <a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+                <a:sym typeface="+mn-ea"/>
+              </a:rPr>
+              <a:t>对于在建系统的落地执行要求</a:t>
+            </a:r>
+            <a:endParaRPr lang="en-US" altLang="zh-CN">
+              <a:sym typeface="+mn-ea"/>
+            </a:endParaRPr>
+          </a:p>
+        </p:txBody>
+      </p:sp>
+      <p:sp>
+        <p:nvSpPr>
+          <p:cNvPr id="58" name="Rectangle 19"/>
+          <p:cNvSpPr/>
+          <p:nvPr/>
+        </p:nvSpPr>
+        <p:spPr bwMode="auto">
+          <a:xfrm>
+            <a:off x="1231284" y="834887"/>
+            <a:ext cx="9510510" cy="755539"/>
+          </a:xfrm>
+          <a:prstGeom prst="rect">
+            <a:avLst/>
+          </a:prstGeom>
+          <a:noFill/>
+          <a:ln w="15875">
+            <a:noFill/>
+            <a:round/>
+            <a:tailEnd type="triangle" w="med" len="med"/>
+          </a:ln>
+        </p:spPr>
+        <p:txBody>
+          <a:bodyPr lIns="0" tIns="0" rIns="0" bIns="0" rtlCol="0" anchor="ctr"/>
+          <a:lstStyle/>
+          <a:p>
+            <a:pPr marL="71755" defTabSz="429895" fontAlgn="base">
+              <a:spcBef>
+                <a:spcPct val="0"/>
+              </a:spcBef>
+              <a:spcAft>
+                <a:spcPct val="0"/>
+              </a:spcAft>
+            </a:pPr>
+            <a:r>
+              <a:rPr lang="zh-CN" altLang="en-US" sz="1410" dirty="0">
+                <a:solidFill>
+                  <a:srgbClr val="002060"/>
+                </a:solidFill>
+                <a:latin typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                <a:ea typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                <a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+              </a:rPr>
+              <a:t>在建系统应充分考虑数据标准，按照数据标准的定义和要求对已经形成的文档和开发的系统进行梳理，确定改造内容，评估改造工作量，将正在建设的系统文档、数据库设计、应用逻辑、界面等修正为遵循数据标准</a:t>
+            </a:r>
+            <a:endParaRPr lang="en-US" sz="1410" dirty="0">
+              <a:solidFill>
+                <a:srgbClr val="002060"/>
+              </a:solidFill>
+              <a:latin typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+              <a:ea typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+              <a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+            </a:endParaRPr>
+          </a:p>
+        </p:txBody>
+      </p:sp>
+      <p:grpSp>
+        <p:nvGrpSpPr>
+          <p:cNvPr id="2" name="组合 1"/>
+          <p:cNvGrpSpPr/>
+          <p:nvPr/>
+        </p:nvGrpSpPr>
+        <p:grpSpPr>
+          <a:xfrm>
+            <a:off x="695325" y="1732915"/>
+            <a:ext cx="10800715" cy="4808855"/>
+            <a:chOff x="1789" y="2729"/>
+            <a:chExt cx="15126" cy="7008"/>
+          </a:xfrm>
+        </p:grpSpPr>
+        <p:sp>
+          <p:nvSpPr>
+            <p:cNvPr id="52" name="AutoShape 4"/>
+            <p:cNvSpPr>
+              <a:spLocks noChangeArrowheads="1"/>
+            </p:cNvSpPr>
+            <p:nvPr/>
+          </p:nvSpPr>
+          <p:spPr bwMode="auto">
+            <a:xfrm>
+              <a:off x="1789" y="2729"/>
+              <a:ext cx="3939" cy="750"/>
+            </a:xfrm>
+            <a:prstGeom prst="chevron">
+              <a:avLst/>
+            </a:prstGeom>
+            <a:solidFill>
+              <a:srgbClr val="00338D"/>
+            </a:solidFill>
+            <a:ln w="12700">
+              <a:solidFill>
+                <a:srgbClr val="FFFFFF"/>
+              </a:solidFill>
+              <a:miter lim="800000"/>
+            </a:ln>
+            <a:effectLst/>
+          </p:spPr>
+          <p:txBody>
+            <a:bodyPr wrap="none" anchor="ctr"/>
+            <a:lstStyle/>
+            <a:p>
+              <a:pPr algn="ctr" defTabSz="806450" fontAlgn="base">
+                <a:spcBef>
+                  <a:spcPct val="0"/>
+                </a:spcBef>
+                <a:spcAft>
+                  <a:spcPct val="0"/>
+                </a:spcAft>
+                <a:defRPr/>
+              </a:pPr>
+              <a:r>
+                <a:rPr lang="zh-CN" altLang="en-US" sz="1410" b="1" kern="0" dirty="0">
+                  <a:solidFill>
+                    <a:srgbClr val="FFFFFF"/>
+                  </a:solidFill>
+                  <a:latin typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:ea typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+                </a:rPr>
+                <a:t>需求分析</a:t>
+              </a:r>
+            </a:p>
+          </p:txBody>
+        </p:sp>
+        <p:sp>
+          <p:nvSpPr>
+            <p:cNvPr id="53" name="Rectangle 5"/>
+            <p:cNvSpPr>
+              <a:spLocks noChangeArrowheads="1"/>
+            </p:cNvSpPr>
+            <p:nvPr/>
+          </p:nvSpPr>
+          <p:spPr bwMode="auto">
+            <a:xfrm>
+              <a:off x="1789" y="3639"/>
+              <a:ext cx="3479" cy="6099"/>
+            </a:xfrm>
+            <a:prstGeom prst="rect">
+              <a:avLst/>
+            </a:prstGeom>
+            <a:solidFill>
+              <a:srgbClr val="FFFFFF"/>
+            </a:solidFill>
+            <a:ln w="19050" cap="rnd">
+              <a:solidFill>
+                <a:sysClr val="window" lastClr="FFFFFF">
+                  <a:lumMod val="50000"/>
+                </a:sysClr>
+              </a:solidFill>
+              <a:miter lim="800000"/>
+            </a:ln>
+            <a:effectLst/>
+          </p:spPr>
+          <p:txBody>
+            <a:bodyPr anchor="t"/>
+            <a:lstStyle/>
+            <a:p>
+              <a:pPr marL="171450" marR="0" lvl="0" indent="-171450" defTabSz="806450" eaLnBrk="1" fontAlgn="base" latinLnBrk="0" hangingPunct="1">
+                <a:lnSpc>
+                  <a:spcPct val="100000"/>
+                </a:lnSpc>
+                <a:spcBef>
+                  <a:spcPts val="530"/>
+                </a:spcBef>
+                <a:spcAft>
+                  <a:spcPct val="0"/>
+                </a:spcAft>
+                <a:buClr>
+                  <a:srgbClr val="091D5B"/>
+                </a:buClr>
+                <a:buSzTx/>
+                <a:buFont typeface="Wingdings" panose="05000000000000000000" pitchFamily="2" charset="2"/>
+                <a:buChar char="§"/>
+                <a:defRPr/>
+              </a:pPr>
+              <a:r>
+                <a:rPr kumimoji="0" lang="en-US" altLang="zh-CN" sz="1200" b="0" i="0" u="none" strike="noStrike" kern="0" cap="none" spc="0" normalizeH="0" baseline="0" noProof="0" dirty="0">
+                  <a:ln>
+                    <a:noFill/>
+                  </a:ln>
+                  <a:solidFill>
+                    <a:srgbClr val="000000"/>
+                  </a:solidFill>
+                  <a:effectLst/>
+                  <a:uLnTx/>
+                  <a:uFillTx/>
+                  <a:latin typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:ea typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+                </a:rPr>
+                <a:t>IT</a:t>
+              </a:r>
+              <a:r>
+                <a:rPr kumimoji="0" lang="zh-CN" altLang="en-US" sz="1200" b="0" i="0" u="none" strike="noStrike" kern="0" cap="none" spc="0" normalizeH="0" baseline="0" noProof="0" dirty="0">
+                  <a:ln>
+                    <a:noFill/>
+                  </a:ln>
+                  <a:solidFill>
+                    <a:srgbClr val="000000"/>
+                  </a:solidFill>
+                  <a:effectLst/>
+                  <a:uLnTx/>
+                  <a:uFillTx/>
+                  <a:latin typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:ea typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+                </a:rPr>
+                <a:t>责任部门、各相关业务部门与第三方</a:t>
+              </a:r>
+              <a:r>
+                <a:rPr kumimoji="0" lang="en-US" altLang="zh-CN" sz="1200" b="0" i="0" u="none" strike="noStrike" kern="0" cap="none" spc="0" normalizeH="0" baseline="0" noProof="0" dirty="0">
+                  <a:ln>
+                    <a:noFill/>
+                  </a:ln>
+                  <a:solidFill>
+                    <a:srgbClr val="000000"/>
+                  </a:solidFill>
+                  <a:effectLst/>
+                  <a:uLnTx/>
+                  <a:uFillTx/>
+                  <a:latin typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:ea typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+                </a:rPr>
+                <a:t>IT</a:t>
+              </a:r>
+              <a:r>
+                <a:rPr kumimoji="0" lang="zh-CN" altLang="en-US" sz="1200" b="0" i="0" u="none" strike="noStrike" kern="0" cap="none" spc="0" normalizeH="0" baseline="0" noProof="0" dirty="0">
+                  <a:ln>
+                    <a:noFill/>
+                  </a:ln>
+                  <a:solidFill>
+                    <a:srgbClr val="000000"/>
+                  </a:solidFill>
+                  <a:effectLst/>
+                  <a:uLnTx/>
+                  <a:uFillTx/>
+                  <a:latin typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:ea typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+                </a:rPr>
+                <a:t>项目组共同分析已形成的业务需求，确定数据标准落地范围与落地方案；</a:t>
+              </a:r>
+              <a:endParaRPr kumimoji="0" lang="en-US" altLang="zh-CN" sz="1200" b="0" i="0" u="none" strike="noStrike" kern="0" cap="none" spc="0" normalizeH="0" baseline="0" noProof="0" dirty="0">
+                <a:ln>
+                  <a:noFill/>
+                </a:ln>
+                <a:solidFill>
+                  <a:srgbClr val="000000"/>
+                </a:solidFill>
+                <a:effectLst/>
+                <a:uLnTx/>
+                <a:uFillTx/>
+                <a:latin typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                <a:ea typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                <a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+              </a:endParaRPr>
+            </a:p>
+            <a:p>
+              <a:pPr marL="171450" marR="0" lvl="0" indent="-171450" defTabSz="806450" eaLnBrk="1" fontAlgn="base" latinLnBrk="0" hangingPunct="1">
+                <a:lnSpc>
+                  <a:spcPct val="100000"/>
+                </a:lnSpc>
+                <a:spcBef>
+                  <a:spcPts val="530"/>
+                </a:spcBef>
+                <a:spcAft>
+                  <a:spcPct val="0"/>
+                </a:spcAft>
+                <a:buClr>
+                  <a:srgbClr val="091D5B"/>
+                </a:buClr>
+                <a:buSzTx/>
+                <a:buFont typeface="Wingdings" panose="05000000000000000000" pitchFamily="2" charset="2"/>
+                <a:buChar char="§"/>
+                <a:defRPr/>
+              </a:pPr>
+              <a:r>
+                <a:rPr kumimoji="0" lang="zh-CN" altLang="en-US" sz="1200" b="0" i="0" u="none" strike="noStrike" kern="0" cap="none" spc="0" normalizeH="0" baseline="0" noProof="0" dirty="0">
+                  <a:ln>
+                    <a:noFill/>
+                  </a:ln>
+                  <a:solidFill>
+                    <a:srgbClr val="000000"/>
+                  </a:solidFill>
+                  <a:effectLst/>
+                  <a:uLnTx/>
+                  <a:uFillTx/>
+                  <a:latin typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:ea typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+                </a:rPr>
+                <a:t>需求分析人员结合数据标准内容，对已产生的需求分析文档进行差异分析，遵循数据标准结合业务实际进行修订；</a:t>
+              </a:r>
+            </a:p>
+            <a:p>
+              <a:pPr marL="171450" marR="0" lvl="0" indent="-171450" defTabSz="806450" eaLnBrk="1" fontAlgn="base" latinLnBrk="0" hangingPunct="1">
+                <a:lnSpc>
+                  <a:spcPct val="100000"/>
+                </a:lnSpc>
+                <a:spcBef>
+                  <a:spcPts val="530"/>
+                </a:spcBef>
+                <a:spcAft>
+                  <a:spcPct val="0"/>
+                </a:spcAft>
+                <a:buClr>
+                  <a:srgbClr val="091D5B"/>
+                </a:buClr>
+                <a:buSzTx/>
+                <a:buFont typeface="Wingdings" panose="05000000000000000000" pitchFamily="2" charset="2"/>
+                <a:buChar char="§"/>
+                <a:defRPr/>
+              </a:pPr>
+              <a:r>
+                <a:rPr kumimoji="0" lang="zh-CN" altLang="en-US" sz="1200" b="0" i="0" u="none" strike="noStrike" kern="0" cap="none" spc="0" normalizeH="0" baseline="0" noProof="0" dirty="0">
+                  <a:ln>
+                    <a:noFill/>
+                  </a:ln>
+                  <a:solidFill>
+                    <a:srgbClr val="000000"/>
+                  </a:solidFill>
+                  <a:effectLst/>
+                  <a:uLnTx/>
+                  <a:uFillTx/>
+                  <a:latin typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:ea typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+                </a:rPr>
+                <a:t>对尚未开展分析的业务需求内容，需求分析人员则需根据业务实际情况，在业务流程和数据输入、输出环节遵循数据标准的定义，制定详细业务需求文档；</a:t>
+              </a:r>
+            </a:p>
+            <a:p>
+              <a:pPr marL="171450" marR="0" lvl="0" indent="-171450" defTabSz="806450" eaLnBrk="1" fontAlgn="base" latinLnBrk="0" hangingPunct="1">
+                <a:lnSpc>
+                  <a:spcPct val="100000"/>
+                </a:lnSpc>
+                <a:spcBef>
+                  <a:spcPts val="530"/>
+                </a:spcBef>
+                <a:spcAft>
+                  <a:spcPct val="0"/>
+                </a:spcAft>
+                <a:buClr>
+                  <a:srgbClr val="091D5B"/>
+                </a:buClr>
+                <a:buSzTx/>
+                <a:buFont typeface="Wingdings" panose="05000000000000000000" pitchFamily="2" charset="2"/>
+                <a:buChar char="§"/>
+                <a:defRPr/>
+              </a:pPr>
+              <a:r>
+                <a:rPr kumimoji="0" lang="en-US" altLang="zh-CN" sz="1200" b="0" i="0" u="none" strike="noStrike" kern="0" cap="none" spc="0" normalizeH="0" baseline="0" noProof="0" dirty="0">
+                  <a:ln>
+                    <a:noFill/>
+                  </a:ln>
+                  <a:solidFill>
+                    <a:srgbClr val="000000"/>
+                  </a:solidFill>
+                  <a:effectLst/>
+                  <a:uLnTx/>
+                  <a:uFillTx/>
+                  <a:latin typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:ea typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+                </a:rPr>
+                <a:t>IT</a:t>
+              </a:r>
+              <a:r>
+                <a:rPr kumimoji="0" lang="zh-CN" altLang="en-US" sz="1200" b="0" i="0" u="none" strike="noStrike" kern="0" cap="none" spc="0" normalizeH="0" baseline="0" noProof="0" dirty="0">
+                  <a:ln>
+                    <a:noFill/>
+                  </a:ln>
+                  <a:solidFill>
+                    <a:srgbClr val="000000"/>
+                  </a:solidFill>
+                  <a:effectLst/>
+                  <a:uLnTx/>
+                  <a:uFillTx/>
+                  <a:latin typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:ea typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+                </a:rPr>
+                <a:t>责任部门部对业务需求文档进行检查，对涉及数据标准的内容进行跟踪检查，给出评审建议，提出修改建议</a:t>
+              </a:r>
+              <a:r>
+                <a:rPr lang="zh-CN" altLang="en-US" sz="1200" kern="0" dirty="0">
+                  <a:solidFill>
+                    <a:srgbClr val="000000"/>
+                  </a:solidFill>
+                  <a:latin typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:ea typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+                </a:rPr>
+                <a:t>。</a:t>
+              </a:r>
+              <a:endParaRPr kumimoji="0" lang="zh-CN" altLang="en-US" sz="1200" b="0" i="0" u="none" strike="noStrike" kern="0" cap="none" spc="0" normalizeH="0" baseline="0" noProof="0" dirty="0">
+                <a:ln>
+                  <a:noFill/>
+                </a:ln>
+                <a:solidFill>
+                  <a:srgbClr val="000000"/>
+                </a:solidFill>
+                <a:effectLst/>
+                <a:uLnTx/>
+                <a:uFillTx/>
+                <a:latin typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                <a:ea typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                <a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+              </a:endParaRPr>
+            </a:p>
+          </p:txBody>
+        </p:sp>
+        <p:sp>
+          <p:nvSpPr>
+            <p:cNvPr id="54" name="AutoShape 4"/>
+            <p:cNvSpPr>
+              <a:spLocks noChangeArrowheads="1"/>
+            </p:cNvSpPr>
+            <p:nvPr/>
+          </p:nvSpPr>
+          <p:spPr bwMode="auto">
+            <a:xfrm>
+              <a:off x="5520" y="2729"/>
+              <a:ext cx="4405" cy="750"/>
+            </a:xfrm>
+            <a:prstGeom prst="chevron">
+              <a:avLst/>
+            </a:prstGeom>
+            <a:solidFill>
+              <a:srgbClr val="00338D"/>
+            </a:solidFill>
+            <a:ln w="12700">
+              <a:solidFill>
+                <a:srgbClr val="FFFFFF"/>
+              </a:solidFill>
+              <a:miter lim="800000"/>
+            </a:ln>
+            <a:effectLst/>
+          </p:spPr>
+          <p:txBody>
+            <a:bodyPr wrap="none" anchor="ctr"/>
+            <a:lstStyle/>
+            <a:p>
+              <a:pPr algn="ctr" defTabSz="806450" fontAlgn="base">
+                <a:spcBef>
+                  <a:spcPct val="0"/>
+                </a:spcBef>
+                <a:spcAft>
+                  <a:spcPct val="0"/>
+                </a:spcAft>
+                <a:defRPr/>
+              </a:pPr>
+              <a:r>
+                <a:rPr lang="zh-CN" altLang="en-US" sz="1410" b="1" kern="0" dirty="0">
+                  <a:solidFill>
+                    <a:srgbClr val="FFFFFF"/>
+                  </a:solidFill>
+                  <a:latin typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:ea typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+                </a:rPr>
+                <a:t>系统设计</a:t>
+              </a:r>
+            </a:p>
+          </p:txBody>
+        </p:sp>
+        <p:sp>
+          <p:nvSpPr>
+            <p:cNvPr id="55" name="AutoShape 4"/>
+            <p:cNvSpPr>
+              <a:spLocks noChangeArrowheads="1"/>
+            </p:cNvSpPr>
+            <p:nvPr/>
+          </p:nvSpPr>
+          <p:spPr bwMode="auto">
+            <a:xfrm>
+              <a:off x="9685" y="2729"/>
+              <a:ext cx="3971" cy="750"/>
+            </a:xfrm>
+            <a:prstGeom prst="chevron">
+              <a:avLst/>
+            </a:prstGeom>
+            <a:solidFill>
+              <a:srgbClr val="00338D"/>
+            </a:solidFill>
+            <a:ln w="12700">
+              <a:solidFill>
+                <a:srgbClr val="FFFFFF"/>
+              </a:solidFill>
+              <a:miter lim="800000"/>
+            </a:ln>
+            <a:effectLst/>
+          </p:spPr>
+          <p:txBody>
+            <a:bodyPr wrap="none" anchor="ctr"/>
+            <a:lstStyle/>
+            <a:p>
+              <a:pPr algn="ctr" defTabSz="806450" fontAlgn="base">
+                <a:spcBef>
+                  <a:spcPct val="0"/>
+                </a:spcBef>
+                <a:spcAft>
+                  <a:spcPct val="0"/>
+                </a:spcAft>
+                <a:defRPr/>
+              </a:pPr>
+              <a:r>
+                <a:rPr lang="zh-CN" altLang="en-US" sz="1410" b="1" kern="0" dirty="0">
+                  <a:solidFill>
+                    <a:srgbClr val="FFFFFF"/>
+                  </a:solidFill>
+                  <a:latin typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:ea typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+                </a:rPr>
+                <a:t>开发</a:t>
+              </a:r>
+              <a:r>
+                <a:rPr lang="en-US" altLang="zh-CN" sz="1410" b="1" kern="0" dirty="0">
+                  <a:solidFill>
+                    <a:srgbClr val="FFFFFF"/>
+                  </a:solidFill>
+                  <a:latin typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:ea typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+                </a:rPr>
+                <a:t>/</a:t>
+              </a:r>
+              <a:r>
+                <a:rPr lang="zh-CN" altLang="en-US" sz="1410" b="1" kern="0" dirty="0">
+                  <a:solidFill>
+                    <a:srgbClr val="FFFFFF"/>
+                  </a:solidFill>
+                  <a:latin typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:ea typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+                </a:rPr>
+                <a:t>测试</a:t>
+              </a:r>
+            </a:p>
+          </p:txBody>
+        </p:sp>
+        <p:sp>
+          <p:nvSpPr>
+            <p:cNvPr id="56" name="AutoShape 4"/>
+            <p:cNvSpPr>
+              <a:spLocks noChangeArrowheads="1"/>
+            </p:cNvSpPr>
+            <p:nvPr/>
+          </p:nvSpPr>
+          <p:spPr bwMode="auto">
+            <a:xfrm>
+              <a:off x="13365" y="2729"/>
+              <a:ext cx="3551" cy="750"/>
+            </a:xfrm>
+            <a:prstGeom prst="chevron">
+              <a:avLst/>
+            </a:prstGeom>
+            <a:solidFill>
+              <a:srgbClr val="00338D"/>
+            </a:solidFill>
+            <a:ln w="12700">
+              <a:solidFill>
+                <a:srgbClr val="FFFFFF"/>
+              </a:solidFill>
+              <a:miter lim="800000"/>
+            </a:ln>
+            <a:effectLst/>
+          </p:spPr>
+          <p:txBody>
+            <a:bodyPr wrap="none" anchor="ctr"/>
+            <a:lstStyle/>
+            <a:p>
+              <a:pPr algn="ctr" defTabSz="806450" fontAlgn="base">
+                <a:spcBef>
+                  <a:spcPct val="0"/>
+                </a:spcBef>
+                <a:spcAft>
+                  <a:spcPct val="0"/>
+                </a:spcAft>
+                <a:defRPr/>
+              </a:pPr>
+              <a:r>
+                <a:rPr lang="zh-CN" altLang="en-US" sz="1410" b="1" kern="0" dirty="0">
+                  <a:solidFill>
+                    <a:srgbClr val="FFFFFF"/>
+                  </a:solidFill>
+                  <a:latin typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:ea typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+                </a:rPr>
+                <a:t>验收</a:t>
+              </a:r>
+              <a:r>
+                <a:rPr lang="en-US" altLang="zh-CN" sz="1410" b="1" kern="0" dirty="0">
+                  <a:solidFill>
+                    <a:srgbClr val="FFFFFF"/>
+                  </a:solidFill>
+                  <a:latin typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:ea typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+                </a:rPr>
+                <a:t>/</a:t>
+              </a:r>
+              <a:r>
+                <a:rPr lang="zh-CN" altLang="en-US" sz="1410" b="1" kern="0" dirty="0">
+                  <a:solidFill>
+                    <a:srgbClr val="FFFFFF"/>
+                  </a:solidFill>
+                  <a:latin typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:ea typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+                </a:rPr>
+                <a:t>试运行</a:t>
+              </a:r>
+            </a:p>
+          </p:txBody>
+        </p:sp>
+        <p:sp>
+          <p:nvSpPr>
+            <p:cNvPr id="57" name="Rectangle 5"/>
+            <p:cNvSpPr>
+              <a:spLocks noChangeArrowheads="1"/>
+            </p:cNvSpPr>
+            <p:nvPr/>
+          </p:nvSpPr>
+          <p:spPr bwMode="auto">
+            <a:xfrm>
+              <a:off x="13437" y="3639"/>
+              <a:ext cx="3479" cy="6099"/>
+            </a:xfrm>
+            <a:prstGeom prst="rect">
+              <a:avLst/>
+            </a:prstGeom>
+            <a:solidFill>
+              <a:srgbClr val="FFFFFF"/>
+            </a:solidFill>
+            <a:ln w="19050" cap="rnd">
+              <a:solidFill>
+                <a:sysClr val="window" lastClr="FFFFFF">
+                  <a:lumMod val="50000"/>
+                </a:sysClr>
+              </a:solidFill>
+              <a:miter lim="800000"/>
+            </a:ln>
+            <a:effectLst/>
+          </p:spPr>
+          <p:txBody>
+            <a:bodyPr anchor="t"/>
+            <a:lstStyle/>
+            <a:p>
+              <a:pPr marL="171450" marR="0" lvl="0" indent="-171450" defTabSz="806450" eaLnBrk="1" fontAlgn="base" latinLnBrk="0" hangingPunct="1">
+                <a:lnSpc>
+                  <a:spcPct val="100000"/>
+                </a:lnSpc>
+                <a:spcBef>
+                  <a:spcPts val="530"/>
+                </a:spcBef>
+                <a:spcAft>
+                  <a:spcPct val="0"/>
+                </a:spcAft>
+                <a:buClr>
+                  <a:srgbClr val="091D5B"/>
+                </a:buClr>
+                <a:buSzTx/>
+                <a:buFont typeface="Wingdings" panose="05000000000000000000" pitchFamily="2" charset="2"/>
+                <a:buChar char="§"/>
+                <a:defRPr/>
+              </a:pPr>
+              <a:r>
+                <a:rPr kumimoji="0" lang="zh-CN" altLang="en-US" sz="1200" b="0" i="0" u="none" strike="noStrike" kern="0" cap="none" spc="0" normalizeH="0" baseline="0" noProof="0" dirty="0">
+                  <a:ln>
+                    <a:noFill/>
+                  </a:ln>
+                  <a:solidFill>
+                    <a:srgbClr val="000000"/>
+                  </a:solidFill>
+                  <a:effectLst/>
+                  <a:uLnTx/>
+                  <a:uFillTx/>
+                  <a:latin typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:ea typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+                </a:rPr>
+                <a:t>参考新建系统的相关要求</a:t>
+              </a:r>
+            </a:p>
+          </p:txBody>
+        </p:sp>
+        <p:sp>
+          <p:nvSpPr>
+            <p:cNvPr id="59" name="Rectangle 5"/>
+            <p:cNvSpPr>
+              <a:spLocks noChangeArrowheads="1"/>
+            </p:cNvSpPr>
+            <p:nvPr/>
+          </p:nvSpPr>
+          <p:spPr bwMode="auto">
+            <a:xfrm>
+              <a:off x="5520" y="3639"/>
+              <a:ext cx="3952" cy="6099"/>
+            </a:xfrm>
+            <a:prstGeom prst="rect">
+              <a:avLst/>
+            </a:prstGeom>
+            <a:solidFill>
+              <a:srgbClr val="FFFFFF"/>
+            </a:solidFill>
+            <a:ln w="19050" cap="rnd">
+              <a:solidFill>
+                <a:sysClr val="window" lastClr="FFFFFF">
+                  <a:lumMod val="50000"/>
+                </a:sysClr>
+              </a:solidFill>
+              <a:miter lim="800000"/>
+            </a:ln>
+            <a:effectLst/>
+          </p:spPr>
+          <p:txBody>
+            <a:bodyPr anchor="t"/>
+            <a:lstStyle/>
+            <a:p>
+              <a:pPr marL="171450" marR="0" lvl="0" indent="-171450" defTabSz="806450" eaLnBrk="1" fontAlgn="base" latinLnBrk="0" hangingPunct="1">
+                <a:lnSpc>
+                  <a:spcPct val="100000"/>
+                </a:lnSpc>
+                <a:spcBef>
+                  <a:spcPts val="530"/>
+                </a:spcBef>
+                <a:spcAft>
+                  <a:spcPct val="0"/>
+                </a:spcAft>
+                <a:buClr>
+                  <a:srgbClr val="091D5B"/>
+                </a:buClr>
+                <a:buSzTx/>
+                <a:buFont typeface="Wingdings" panose="05000000000000000000" pitchFamily="2" charset="2"/>
+                <a:buChar char="§"/>
+                <a:defRPr/>
+              </a:pPr>
+              <a:r>
+                <a:rPr kumimoji="0" lang="zh-CN" altLang="en-US" sz="1200" b="0" i="0" u="none" strike="noStrike" kern="0" cap="none" spc="0" normalizeH="0" baseline="0" noProof="0" dirty="0">
+                  <a:ln>
+                    <a:noFill/>
+                  </a:ln>
+                  <a:solidFill>
+                    <a:srgbClr val="000000"/>
+                  </a:solidFill>
+                  <a:effectLst/>
+                  <a:uLnTx/>
+                  <a:uFillTx/>
+                  <a:latin typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:ea typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+                </a:rPr>
+                <a:t>数据管理部门、</a:t>
+              </a:r>
+              <a:r>
+                <a:rPr kumimoji="0" lang="en-US" altLang="zh-CN" sz="1200" b="0" i="0" u="none" strike="noStrike" kern="0" cap="none" spc="0" normalizeH="0" baseline="0" noProof="0" dirty="0">
+                  <a:ln>
+                    <a:noFill/>
+                  </a:ln>
+                  <a:solidFill>
+                    <a:srgbClr val="000000"/>
+                  </a:solidFill>
+                  <a:effectLst/>
+                  <a:uLnTx/>
+                  <a:uFillTx/>
+                  <a:latin typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:ea typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+                </a:rPr>
+                <a:t>IT</a:t>
+              </a:r>
+              <a:r>
+                <a:rPr kumimoji="0" lang="zh-CN" altLang="en-US" sz="1200" b="0" i="0" u="none" strike="noStrike" kern="0" cap="none" spc="0" normalizeH="0" baseline="0" noProof="0" dirty="0">
+                  <a:ln>
+                    <a:noFill/>
+                  </a:ln>
+                  <a:solidFill>
+                    <a:srgbClr val="000000"/>
+                  </a:solidFill>
+                  <a:effectLst/>
+                  <a:uLnTx/>
+                  <a:uFillTx/>
+                  <a:latin typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:ea typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+                </a:rPr>
+                <a:t>责任部门、各相关业务部门协助需求分析人员基于已编写的业务需求，明确数据标准落地范围、完成差异及影响性分析，制定落地解决方案，并对业务需求书进行调整，重新提交系统设计人员；</a:t>
+              </a:r>
+            </a:p>
+            <a:p>
+              <a:pPr marL="171450" marR="0" lvl="0" indent="-171450" defTabSz="806450" eaLnBrk="1" fontAlgn="base" latinLnBrk="0" hangingPunct="1">
+                <a:lnSpc>
+                  <a:spcPct val="100000"/>
+                </a:lnSpc>
+                <a:spcBef>
+                  <a:spcPts val="530"/>
+                </a:spcBef>
+                <a:spcAft>
+                  <a:spcPct val="0"/>
+                </a:spcAft>
+                <a:buClr>
+                  <a:srgbClr val="091D5B"/>
+                </a:buClr>
+                <a:buSzTx/>
+                <a:buFont typeface="Wingdings" panose="05000000000000000000" pitchFamily="2" charset="2"/>
+                <a:buChar char="§"/>
+                <a:defRPr/>
+              </a:pPr>
+              <a:r>
+                <a:rPr kumimoji="0" lang="zh-CN" altLang="en-US" sz="1200" b="0" i="0" u="none" strike="noStrike" kern="0" cap="none" spc="0" normalizeH="0" baseline="0" noProof="0" dirty="0">
+                  <a:ln>
+                    <a:noFill/>
+                  </a:ln>
+                  <a:solidFill>
+                    <a:srgbClr val="000000"/>
+                  </a:solidFill>
+                  <a:effectLst/>
+                  <a:uLnTx/>
+                  <a:uFillTx/>
+                  <a:latin typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:ea typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+                </a:rPr>
+                <a:t>系统设计人员对已经完成设计，且由于数据标准落地产生了需求变动的部分，重新按照修订后的业务需求进行修改；对于还未进行的设计，则严格按照新的遵循数据标准落地要求的业务需求书进行系统设计，并在系统设计文档中注明数据标准的遵循情况；</a:t>
+              </a:r>
+            </a:p>
+            <a:p>
+              <a:pPr marL="171450" marR="0" lvl="0" indent="-171450" defTabSz="806450" eaLnBrk="1" fontAlgn="base" latinLnBrk="0" hangingPunct="1">
+                <a:lnSpc>
+                  <a:spcPct val="100000"/>
+                </a:lnSpc>
+                <a:spcBef>
+                  <a:spcPts val="530"/>
+                </a:spcBef>
+                <a:spcAft>
+                  <a:spcPct val="0"/>
+                </a:spcAft>
+                <a:buClr>
+                  <a:srgbClr val="091D5B"/>
+                </a:buClr>
+                <a:buSzTx/>
+                <a:buFont typeface="Wingdings" panose="05000000000000000000" pitchFamily="2" charset="2"/>
+                <a:buChar char="§"/>
+                <a:defRPr/>
+              </a:pPr>
+              <a:r>
+                <a:rPr kumimoji="0" lang="zh-CN" altLang="en-US" sz="1200" b="0" i="0" u="none" strike="noStrike" kern="0" cap="none" spc="0" normalizeH="0" baseline="0" noProof="0" dirty="0">
+                  <a:ln>
+                    <a:noFill/>
+                  </a:ln>
+                  <a:solidFill>
+                    <a:srgbClr val="000000"/>
+                  </a:solidFill>
+                  <a:effectLst/>
+                  <a:uLnTx/>
+                  <a:uFillTx/>
+                  <a:latin typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:ea typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+                </a:rPr>
+                <a:t>数据管理部门、IT责任部门对系统设计文档进行检查，对涉及的数据标准遵循情况进行核对，给出评审建议，提出修改建议。</a:t>
+              </a:r>
+            </a:p>
+          </p:txBody>
+        </p:sp>
+        <p:sp>
+          <p:nvSpPr>
+            <p:cNvPr id="60" name="Rectangle 5"/>
+            <p:cNvSpPr>
+              <a:spLocks noChangeArrowheads="1"/>
+            </p:cNvSpPr>
+            <p:nvPr/>
+          </p:nvSpPr>
+          <p:spPr bwMode="auto">
+            <a:xfrm>
+              <a:off x="9685" y="3639"/>
+              <a:ext cx="3479" cy="6099"/>
+            </a:xfrm>
+            <a:prstGeom prst="rect">
+              <a:avLst/>
+            </a:prstGeom>
+            <a:solidFill>
+              <a:srgbClr val="FFFFFF"/>
+            </a:solidFill>
+            <a:ln w="19050" cap="rnd">
+              <a:solidFill>
+                <a:sysClr val="window" lastClr="FFFFFF">
+                  <a:lumMod val="50000"/>
+                </a:sysClr>
+              </a:solidFill>
+              <a:miter lim="800000"/>
+            </a:ln>
+            <a:effectLst/>
+          </p:spPr>
+          <p:txBody>
+            <a:bodyPr anchor="t"/>
+            <a:lstStyle/>
+            <a:p>
+              <a:pPr marL="171450" marR="0" lvl="0" indent="-171450" defTabSz="806450" eaLnBrk="1" fontAlgn="base" latinLnBrk="0" hangingPunct="1">
+                <a:lnSpc>
+                  <a:spcPct val="100000"/>
+                </a:lnSpc>
+                <a:spcBef>
+                  <a:spcPts val="530"/>
+                </a:spcBef>
+                <a:spcAft>
+                  <a:spcPct val="0"/>
+                </a:spcAft>
+                <a:buClr>
+                  <a:srgbClr val="091D5B"/>
+                </a:buClr>
+                <a:buSzTx/>
+                <a:buFont typeface="Wingdings" panose="05000000000000000000" pitchFamily="2" charset="2"/>
+                <a:buChar char="§"/>
+                <a:defRPr/>
+              </a:pPr>
+              <a:r>
+                <a:rPr kumimoji="0" lang="zh-CN" altLang="en-US" sz="1200" b="0" i="0" u="none" strike="noStrike" kern="0" cap="none" spc="0" normalizeH="0" baseline="0" noProof="0" dirty="0">
+                  <a:ln>
+                    <a:noFill/>
+                  </a:ln>
+                  <a:solidFill>
+                    <a:srgbClr val="000000"/>
+                  </a:solidFill>
+                  <a:effectLst/>
+                  <a:uLnTx/>
+                  <a:uFillTx/>
+                  <a:latin typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:ea typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+                </a:rPr>
+                <a:t>此阶段进行数据标准落地对系统的正式上线会造成一定影响，需在该阶段进行综合衡量，结合业务需求的紧迫度合理制定数据标准落地的时间安排；</a:t>
+              </a:r>
+            </a:p>
+            <a:p>
+              <a:pPr marL="171450" marR="0" lvl="0" indent="-171450" defTabSz="806450" eaLnBrk="1" fontAlgn="base" latinLnBrk="0" hangingPunct="1">
+                <a:lnSpc>
+                  <a:spcPct val="100000"/>
+                </a:lnSpc>
+                <a:spcBef>
+                  <a:spcPts val="530"/>
+                </a:spcBef>
+                <a:spcAft>
+                  <a:spcPct val="0"/>
+                </a:spcAft>
+                <a:buClr>
+                  <a:srgbClr val="091D5B"/>
+                </a:buClr>
+                <a:buSzTx/>
+                <a:buFont typeface="Wingdings" panose="05000000000000000000" pitchFamily="2" charset="2"/>
+                <a:buChar char="§"/>
+                <a:defRPr/>
+              </a:pPr>
+              <a:r>
+                <a:rPr kumimoji="0" lang="zh-CN" altLang="en-US" sz="1200" b="0" i="0" u="none" strike="noStrike" kern="0" cap="none" spc="0" normalizeH="0" baseline="0" noProof="0" dirty="0">
+                  <a:ln>
+                    <a:noFill/>
+                  </a:ln>
+                  <a:solidFill>
+                    <a:srgbClr val="000000"/>
+                  </a:solidFill>
+                  <a:effectLst/>
+                  <a:uLnTx/>
+                  <a:uFillTx/>
+                  <a:latin typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:ea typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+                </a:rPr>
+                <a:t>为减少数据标准落地对系统上线的影响，可以先从系统接口的标准化入手，结合后续的系统改造，逐步推进；</a:t>
+              </a:r>
+            </a:p>
+            <a:p>
+              <a:pPr marL="171450" marR="0" lvl="0" indent="-171450" defTabSz="806450" eaLnBrk="1" fontAlgn="base" latinLnBrk="0" hangingPunct="1">
+                <a:lnSpc>
+                  <a:spcPct val="100000"/>
+                </a:lnSpc>
+                <a:spcBef>
+                  <a:spcPts val="530"/>
+                </a:spcBef>
+                <a:spcAft>
+                  <a:spcPct val="0"/>
+                </a:spcAft>
+                <a:buClr>
+                  <a:srgbClr val="091D5B"/>
+                </a:buClr>
+                <a:buSzTx/>
+                <a:buFont typeface="Wingdings" panose="05000000000000000000" pitchFamily="2" charset="2"/>
+                <a:buChar char="§"/>
+                <a:defRPr/>
+              </a:pPr>
+              <a:r>
+                <a:rPr kumimoji="0" lang="zh-CN" altLang="en-US" sz="1200" b="0" i="0" u="none" strike="noStrike" kern="0" cap="none" spc="0" normalizeH="0" baseline="0" noProof="0" dirty="0">
+                  <a:ln>
+                    <a:noFill/>
+                  </a:ln>
+                  <a:solidFill>
+                    <a:srgbClr val="000000"/>
+                  </a:solidFill>
+                  <a:effectLst/>
+                  <a:uLnTx/>
+                  <a:uFillTx/>
+                  <a:latin typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:ea typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+                </a:rPr>
+                <a:t>数据管理部门、IT责任部门与系统开发组共同确定数据标准的落地策略、落地范围以及落地计划，由数据管理部门、IT责任部门监督执行</a:t>
+              </a:r>
+              <a:r>
+                <a:rPr kumimoji="0" lang="en-US" altLang="zh-CN" sz="1200" b="0" i="0" u="none" strike="noStrike" kern="0" cap="none" spc="0" normalizeH="0" baseline="0" noProof="0" dirty="0">
+                  <a:ln>
+                    <a:noFill/>
+                  </a:ln>
+                  <a:solidFill>
+                    <a:srgbClr val="000000"/>
+                  </a:solidFill>
+                  <a:effectLst/>
+                  <a:uLnTx/>
+                  <a:uFillTx/>
+                  <a:latin typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:ea typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                  <a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+                </a:rPr>
+                <a:t>.</a:t>
+              </a:r>
+              <a:endParaRPr kumimoji="0" lang="zh-CN" altLang="en-US" sz="1200" b="0" i="0" u="none" strike="noStrike" kern="0" cap="none" spc="0" normalizeH="0" baseline="0" noProof="0" dirty="0">
+                <a:ln>
+                  <a:noFill/>
+                </a:ln>
+                <a:solidFill>
+                  <a:srgbClr val="000000"/>
+                </a:solidFill>
+                <a:effectLst/>
+                <a:uLnTx/>
+                <a:uFillTx/>
+                <a:latin typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                <a:ea typeface="微软雅黑" panose="020B0503020204020204" pitchFamily="34" charset="-122"/>
+                <a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+              </a:endParaRPr>
+            </a:p>
+          </p:txBody>
+        </p:sp>
+      </p:grpSp>
+    </p:spTree>
+    <p:custDataLst>
+      <p:tags r:id="rId1"/>
+    </p:custDataLst>
+  </p:cSld>
+  <p:clrMapOvr>
+    <a:masterClrMapping/>
+  </p:clrMapOvr>
+</p:sld>

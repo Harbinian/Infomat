@@ -1,0 +1,40 @@
+<h2>三种 RBAC 架构方案对比</h2>
+<p class="subtitle">为 MDM 平台选择角色权限系统的数据模型方案</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>轻量 JSON RBAC</h3>
+      <p>新建 roles 表 + user_roles 关联表，权限以 JSON 字段存储在 roles 表中。字段级权限通过 JSON path 表达。</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>优点</h4><ul><li>表结构简单（3-4 张新表）</li><li>与现有 users.permissions JSON 模式一致</li><li>实现快，改动范围小</li></ul></div>
+        <div class="cons"><h4>缺点</h4><ul><li>JSON 权限不可被 SQL 查询</li><li>字段级权限表达冗长</li><li>权限校验需在应用层逐条判断</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>全关系型 RBAC</h3>
+      <p>权限作为独立表行存在：permissions (resource, action, fields)。所有权限关系通过关联表建模。</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>优点</h4><ul><li>权限可 SQL 查询和分析</li><li>类型安全，结构清晰</li><li>字段级权限天然支持</li></ul></div>
+        <div class="cons"><h4>缺点</h4><ul><li>新增 6-7 张表</li><li>初始数据量大（需预置大量权限行）</li><li>查询需要多表 JOIN</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>混合型 RBAC <span class="label">推荐</span></h3>
+      <p>核心 CRUD 权限走关系表（可查询），字段级约束和扩展规则用 JSON 补充（灵活）。</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>优点</h4><ul><li>常用权限可查询，扩展权限灵活</li><li>中等复杂度（5 张新表）</li><li>兼顾性能与灵活性</li></ul></div>
+        <div class="cons"><h4>缺点</h4><ul><li>中间件需要两层判断逻辑</li><li>权限定义分散在两处</li></ul></div>
+      </div>
+    </div>
+  </div>
+</div>

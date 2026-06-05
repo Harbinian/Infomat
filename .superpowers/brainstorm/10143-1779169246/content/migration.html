@@ -1,0 +1,66 @@
+<h2>迁移策略</h2>
+<p class="subtitle">将现有的 4 角色 + JSON permissions 平滑迁移到新 RBAC 系统</p>
+
+<h3>迁移步骤</h3>
+
+<div style="counter-reset:step;font-size:13px;line-height:1.8;">
+  <div style="margin-bottom:16px;padding:12px;background:#1a1a2e;border-radius:4px;border-left:3px solid #2a8a5a;">
+    <strong>Step 1：建表 + 预置数据</strong><br>
+    运行 init-db 脚本，创建 5 张新表，插入 4 个系统角色和对应权限码。此步骤通过 db.js 的 CREATE TABLE IF NOT EXISTS 自动完成，幂等安全。
+  </div>
+  <div style="margin-bottom:16px;padding:12px;background:#1a1a2e;border-radius:4px;border-left:3px solid #2a8a5a;">
+    <strong>Step 2：迁移现有用户</strong><br>
+    执行迁移脚本，读取每个 users 行的 role 和 permissions 字段：
+    <ul style="margin-top:4px;">
+      <li><code>users.role</code> → 在 <code>user_roles</code> 中创建对应记录</li>
+      <li><code>users.permissions</code> (JSON) → 解析后匹配预置权限码，若找不到对应则创建新的 permission 行</li>
+    </ul>
+  </div>
+  <div style="margin-bottom:16px;padding:12px;background:#1a1a2e;border-radius:4px;border-left:3px solid #2a8a5a;">
+    <strong>Step 3：替换中间件</strong><br>
+    全局替换 22 个路由文件中的 <code>requireRole</code> → <code>requirePermission</code>，<code>requireDataPermission</code> → <code>requirePermission</code>。
+    运行冒烟测试验证所有路由行为一致。
+  </div>
+  <div style="margin-bottom:16px;padding:12px;background:#1a1a2e;border-radius:4px;border-left:3px solid #2a8a5a;">
+    <strong>Step 4：废弃旧字段</strong><br>
+    保留 <code>users.role</code> 列（不删，避免破坏性变更），但标记为废弃。后续新增/编辑用户时不再写入此字段。<code>users.permissions</code> 同理。
+  </div>
+</div>
+
+<h3>迁移脚本</h3>
+<div class="mockup">
+  <div class="mockup-header">scripts/migrate-to-rbac.js</div>
+  <div class="mockup-body">
+    <pre style="font-size:12px;line-height:1.5;padding:16px;background:#1a1a2e;color:#e0e0e0;border-radius:4px;margin:0;">
+// 伪代码概要
+const users = db.prepare('SELECT * FROM users').all();
+const roleMap = { admin:'admin', reviewer:'reviewer', owner:'owner', submitter:'submitter' };
+
+for (const user of users) {
+  // 1. 角色映射
+  const roleCode = roleMap[user.role] || 'submitter';
+  db.prepare('INSERT OR IGNORE INTO user_roles (user_id, role_id) SELECT ?, role_id FROM roles WHERE role_code=?')
+    .run(user.id, roleCode);
+
+  // 2. 权限迁移
+  if (user.permissions && user.permissions !== '{}') {
+    const perms = JSON.parse(user.permissions);
+    for (const [category, actions] of Object.entries(perms)) {
+      for (const action of actions) {
+        const code = `${category}:${action}`;
+        // 确保权限定义存在，再关联到角色
+        db.prepare('INSERT OR IGNORE INTO permissions (perm_code, resource, action) VALUES (?, ?, ?)')
+          .run(code, category, action);
+        db.prepare(`INSERT OR IGNORE INTO role_permissions (role_id, perm_id)
+          SELECT r.role_id, p.perm_id FROM roles r, permissions p
+          WHERE r.role_code=? AND p.perm_code=?`).run(roleCode, code);
+      }
+    }
+  }
+}</pre>
+  </div>
+</div>
+
+<h3>回滚策略</h3>
+<p style="font-size:13px;">迁移前自动备份 <code>platform.db</code> → <code>platform.db.backup-YYYYMMDD</code>。<br>
+在新系统上运行全部冒烟测试（smoke-master-data.js + smoke-integration.js）确认通过后删除备份。</p>
