@@ -203,7 +203,7 @@ transitionDeliverableStatus(dlv, command, {writeback:true})
   ├─ PUT 写回(走 mtime If-Match 校验)
   │  ├─ 409 → 抛 WRITE_CONFLICT,UI 让用户选择覆盖或重读
   │  └─ 200 → 继续
-  ├─ 若 action ∈ {approve, archive} → 复制 .md 到 _history/DLV-XXX/<ISO ts>-snapshot-<from>-to-<to>.md
+  ├─ 若 action ∈ {approve, archive} → 复制 .md 到 _history/DLV-XXX/<ISO ts>-snapshot-<from>_to_<to>.md
   └─ 广播 pmo:deliverables-changed {id, kind:'change'}
 ```
 
@@ -216,7 +216,7 @@ POST /api/pmo/deliverables/:id/upload (multipart, file)
   │   ├─ .docx → mammoth.extractRawText → 简单按 # 提标题
   │   ├─ .xlsx → xlsx 读第一个 sheet → markdown 表
   │   └─ 其他  → 400 UPLOAD_UNSUPPORTED_EXT
-  ├─ 原文件落 _history/DLV-XXX/<ts>-原-<原文件名>
+  ├─ 原文件落 _history/DLV-XXX/<ts>-upload-<原文件名>.<ext>
   ├─ 转码文本拼 body,frontmatter 增 evidence.{fileName,fileSize,fileType,uploadedAt,source:'上传转码'}
   ├─ 写 deliverables/DLV-XXX-*.md
   └─ 广播 pmo:deliverables-changed {id, kind:'change'}
@@ -346,7 +346,11 @@ Vite 内置 watcher 自带 100ms debounce,不再加防抖。
 - 兜底链全工作:删 `pmoDeliverablesPlugin` 后 dev server 仍能跑(只退到 WBS 字段)
 - HMR 5s 兜底:WS 断连时每 5s 轮询全量,断连恢复后回退 HMR
 - _history 子目录:不递归扫描,文件名以 `DLV-` 开头的归档文件在 _history 也不被扫
-- 模板/快照/上传归档文件命名:`<ISO ts>-<kind>-<原名>.md` (kind ∈ template/snapshot/upload)
+- _history 归档文件命名规则(均为 `<ISO ts>` = `YYYY-MM-DDTHH-mm-ss-sssZ`):
+  - 模板:`<ts>-template.md`
+  - 快照:`<ts>-snapshot-<from>_to_<to>.md`
+  - 上传原文件:`<ts>-upload-<原文件名>.<原 ext>`(不进 .md 转换时也保留)
+- chokidar 事件与 HMR `kind` 字段一一对应:文件系统 `add` → payload kind=add;`change` → kind=change;`unlink` → kind=unlink;_history/ 下任何事件被插件吞掉,不向外广播
 - chokidar:复用 Vite 内置 `server.watcher`,不引第三方依赖
 - 文件大小:服务端 25MB 上限,前端预检
 
