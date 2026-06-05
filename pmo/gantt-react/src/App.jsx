@@ -18,6 +18,7 @@ import { buildTaskTree, applyFilters, normalizeTasks, analyzeTasks, computeProje
 import { normalizeDeliverables, loadDeliverableStatusOverrides } from './utils/deliverableUtils.js';
 import { buildPhaseGates } from './utils/phaseGateUtils.js';
 import { transitionDeliverableStatus } from './utils/deliverableWorkflow.js';
+import { useDeliverableFsEvents } from './hooks/useDeliverableFs.js';
 import './App.css';
 
 const DEFAULT_FILTERS = { year: 'all', mainline: 'all', department: 'all', vendor: 'all', risk: 'all', type: 'all', milestone: 'all', search: '', wbsDepth: 'all', taskKind: 'all' };
@@ -53,6 +54,15 @@ function saveStoredEvidence(evidenceMap) {
     // Storage quota or browser privacy mode should not block the dashboard.
   }
 }
+
+const loadDeliverableFsApi = import.meta.env.DEV
+  ? () => import('./utils/deliverableFsApi.js')
+  : async () => {
+    const error = new Error('dev-only deliverable fs api unavailable');
+    error.code = 'HTTP_ERROR';
+    error.status = 404;
+    throw error;
+  };
 
 function openEvidenceDatabase() {
   return new Promise((resolve, reject) => {
@@ -130,6 +140,32 @@ export default function App() {
   const [taskFilters, setTaskFilters] = useState({});
   const [localTransitions, setLocalTransitions] = useState({});
 
+  const loadProjectData = useCallback(async ({ showLoading = false } = {}) => {
+    if (showLoading) setLoading(true);
+    try {
+      const response = await fetch('tasks.json');
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      setRawTasks(data);
+      const normalized = normalizeTasks(data);
+      computeProjectRange(normalized);
+      analyzeTasks(data);
+      setAllTasks(normalized);
+      let normalizedDeliverables = normalizeDeliverables(normalized);
+      normalizedDeliverables = await loadDeliverableStatusOverrides(normalizedDeliverables);
+      setDeliverables(normalizedDeliverables);
+      const starts = normalized.map(t => parseDate(t.start)).filter(Boolean);
+      if (starts.length) {
+        setProjectStart(new Date(Math.min(...starts.map(d => d.getTime()))));
+      }
+      setError(null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     const onHashChange = () => setPage(getInitialPage());
     window.addEventListener('hashchange', onHashChange);
@@ -141,25 +177,15 @@ export default function App() {
   }, [page]);
 
   useEffect(() => {
-    fetch('tasks.json')
-      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
-      .then(async data => {
-        setRawTasks(data);
-        const normalized = normalizeTasks(data);
-        computeProjectRange(normalized);
-        analyzeTasks(data);
-        setAllTasks(normalized);
-        let normalizedDeliverables = normalizeDeliverables(normalized);
-        normalizedDeliverables = await loadDeliverableStatusOverrides(normalizedDeliverables);
-        setDeliverables(normalizedDeliverables);
-        const starts = normalized.map(t => parseDate(t.start)).filter(Boolean);
-        if (starts.length) {
-          setProjectStart(new Date(Math.min(...starts.map(d => d.getTime()))));
-        }
-        setLoading(false);
-      })
-      .catch(err => { setError(err.message); setLoading(false); });
-  }, []);
+    const timer = window.setTimeout(() => {
+      loadProjectData({ showLoading: false });
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [loadProjectData]);
+
+  useDeliverableFsEvents(() => {
+    loadProjectData({ showLoading: false });
+  });
 
   const deliverablesWithEvidence = useMemo(() => deliverables.map(deliverable => {
     const evidence = evidenceMap[deliverable.deliverableId];
@@ -183,6 +209,11 @@ export default function App() {
     return built;
   }, [allTasks, expandedOverrides]);
   const phaseGates = useMemo(() => buildPhaseGates(deliverablesWithEvidence, pmoDate), [deliverablesWithEvidence, pmoDate]);
+
+  const selectedDisplayDeliverable = useMemo(() => {
+    if (!selectedDeliverable?.deliverableId) return null;
+    return deliverablesWithEvidence.find(item => item.deliverableId === selectedDeliverable.deliverableId) || selectedDeliverable;
+  }, [deliverablesWithEvidence, selectedDeliverable]);
 
   const filteredTasks = useMemo(() => {
     if (!allTasks.length) return [];
@@ -250,6 +281,25 @@ export default function App() {
   const handleSelectDeliverable = useCallback((deliverable) => { setSelectedDeliverable(deliverable); }, []);
   const handleUploadDeliverable = useCallback(async (deliverable, file) => {
     if (!deliverable || !file) return;
+    try {
+      const { uploadDeliverableEvidence } = await loadDeliverableFsApi();
+      await uploadDeliverableEvidence(deliverable.deliverableId, file, { deliverable });
+      setEvidenceMap(prev => {
+        if (!prev[deliverable.deliverableId]) return prev;
+        const next = { ...prev };
+        delete next[deliverable.deliverableId];
+        saveStoredEvidence(next);
+        return next;
+      });
+      await loadProjectData({ showLoading: false });
+      return;
+    } catch (error) {
+      if (!['HTTP_ERROR', 'NOT_FOUND'].includes(error.code) && error.status !== 404) {
+        window.alert(error.message || '上传凭证失败');
+        return;
+      }
+    }
+
     const evidence = {
       fileName: file.name,
       fileSize: file.size,
@@ -273,10 +323,27 @@ export default function App() {
       saveStoredEvidence(next);
       return next;
     });
-  }, []);
+  }, [loadProjectData]);
 
   const handleDownloadDeliverable = useCallback(async (deliverable) => {
     if (!deliverable?.deliverableId) return;
+    try {
+      const { getDeliverableRaw } = await loadDeliverableFsApi();
+      const raw = await getDeliverableRaw(deliverable.deliverableId);
+      const blob = new Blob([raw], { type: 'text/markdown;charset=utf-8' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = deliverable.canonicalFileName || `${deliverable.deliverableId}-${deliverable.deliverableName || '正本'}.md`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => window.URL.revokeObjectURL(url), 0);
+      return;
+    } catch {
+      // Dev plugin unavailable: fall back to old browser-local evidence storage.
+    }
+
     try {
       const record = await readEvidenceFile(deliverable.deliverableId);
       if (!record?.file) {
@@ -334,15 +401,22 @@ export default function App() {
 
   const handleDeliverableTransition = useCallback((deliverable, command) => {
     if (!deliverable?.deliverableId || !command?.action) return;
-    let next;
-    try {
-      next = transitionDeliverableStatus(deliverable, command);
-    } catch (error) {
-      window.alert(error.message || '状态变更失败');
-      return;
-    }
-    setLocalTransitions(prev => ({ ...prev, [deliverable.deliverableId]: next }));
-  }, []);
+    loadDeliverableFsApi()
+      .then(({ transitionDeliverable }) => transitionDeliverable(deliverable.deliverableId, command, { ifMatch: deliverable.canonicalMtime }))
+      .then(() => loadProjectData({ showLoading: false }))
+      .catch(error => {
+        if (!['HTTP_ERROR', 'NOT_FOUND'].includes(error.code) && error.status !== 404) {
+          window.alert(error.message || '状态变更失败');
+          return;
+        }
+        try {
+          const next = transitionDeliverableStatus(deliverable, command);
+          setLocalTransitions(prev => ({ ...prev, [deliverable.deliverableId]: next }));
+        } catch (fallbackError) {
+          window.alert(fallbackError.message || '状态变更失败');
+        }
+      });
+  }, [loadProjectData]);
 
   const subtitle = useMemo(() => {
     if (!allTasks.length) return '';
@@ -439,13 +513,13 @@ export default function App() {
           <PMODatePicker pmoDate={pmoDate} onDateChange={setPmoDate} projectStart={projectStart} />
           <div className="pmo-view-tabs">
             {PMO_VIEW_LABELS.map(item => (
-              <button key={item.key} className={pmoView === item.key ? 'active' : ''} onClick={() => { setPmoView(item.key); if (item.key !== 'phasegates') setLedgerFilters(prev => { if (!prev.gateStatus) return prev; const { gateStatus, ...rest } = prev; return rest; }); }} type="button">
+              <button key={item.key} className={pmoView === item.key ? 'active' : ''} onClick={() => { setPmoView(item.key); if (item.key !== 'phasegates') setLedgerFilters(prev => { if (!prev.gateStatus) return prev; const next = { ...prev }; delete next.gateStatus; return next; }); }} type="button">
                 {item.label}
               </button>
             ))}
           </div>
           {renderPMOContent()}
-          {selectedDeliverable && <DeliverableDetail deliverable={selectedDeliverable} phaseGates={phaseGates} onClose={() => setSelectedDeliverable(null)} onTransition={handleDeliverableTransition} />}
+          {selectedDisplayDeliverable && <DeliverableDetail deliverable={selectedDisplayDeliverable} phaseGates={phaseGates} onClose={() => setSelectedDeliverable(null)} onTransition={handleDeliverableTransition} onDownloadDeliverable={handleDownloadDeliverable} />}
         </div>
       )}
     </>

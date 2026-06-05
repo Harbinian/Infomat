@@ -93,6 +93,9 @@
 | 定检/定查 | Periodic Inspection/Check | 工装按周期进行的定期检修（定检）和定期检查（定查），定检侧重修复和校准，定查侧重状态确认 |
 | 共用工装校准 | Shared Tooling Calibration | 生产和检验共用工装在使用前的校准管理，确保测量和加工基准一致 |
 | 客供工装 | Customer-Provided Tooling | 由顾客（如商飞、波音）提供的工艺装备，需单独建账管理 |
+| 项目决策组 | Project Steering Group | 昌兴复材数字化底座项目的最高决策机构，由公司决策层和 PMO 主管组成，对项目启动、治理授权、阶段门放行、跨部门责任边界、启动令签发等重大事项进行裁决（DLV-001 至 DLV-004 共同使用） |
+| 项目启动令 | Project Launch Order | 项目启动会表决通过后由项目决策组签发的正式授权文件，标志项目从筹备期进入启动执行期，DLV-001 表决项 V-08 的输出物 |
+| 责任池 | Responsibility Pool | 启动期与调研期对历史问题暴露的治理保护机制：历史流程、数据、跨部门边界、表单台账和历史不符合项先入池记录、分级、确认责任边界并制定治理动作；除拖期、交付物未交、材料质量过于低劣三类例外外不追责，DLV-002/DLV-003 治理原则 3 的核心机制 |
 
 ---
 
@@ -419,6 +422,16 @@
 ---
 
 ## 术语新增流程
+
+### 交付物域扩展(2026-06-05)
+
+| 术语 | 英文 | 释义 |
+|---|---|---|
+| 交付物凭证 | deliverable evidence | 标识交付物已提交或已存档的载体,本设计中为 `pmo/deliverables/DLV-XXX-*.md` 文件及其上传来源 |
+| 交付物正本 | deliverable canonical | 交付物状态正本,本设计后由 .md frontmatter 承载状态、责任、审批历史和凭证信息 |
+| frontmatter 状态机 | frontmatter state machine | 交付物状态机由服务端写回包装后,将状态变更落到 .md frontmatter 与正文变更记录表 |
+| 原子写 | atomic write | 写文件先写 `<file>.tmp` 再 rename,避免中途失败留下半写内容 |
+| HMR 增量同步 | HMR delta sync | 文件 watcher 监听到正本变化后,通过 Vite custom event 广播 `pmo:deliverables-changed`,前端刷新相关交付物状态 |
 
 当开发过程中产生新术语需要纳入术语表时，按以下步骤操作：
 

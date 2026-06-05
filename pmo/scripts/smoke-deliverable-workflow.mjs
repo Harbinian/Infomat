@@ -35,7 +35,7 @@ assert.equal(submitted.workflowHistory.length, 1);
 assert.equal(submitted.workflowHistory[0].action, 'submit');
 
 const approved = transitionDeliverableStatus(
-  { ...submitted, deliverableStatus: '待评审' },
+  { ...submitted, deliverableStatus: '待评审', evidence: { fileName: 'DLV-001-总体蓝图.md' } },
   {
     action: 'approve',
     actor: 'PMO',

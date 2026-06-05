@@ -44,7 +44,7 @@ useDeliverableFs.init()
 
 文件系统事件
    ├─ 文件 watcher (Vite server.watcher.add(deliverablesPath))
-   │   add/change/unlink → server.ws.send({type:'pmo:deliverables-changed', data:{id, kind}})
+  │   add/change/unlink → server.ws.send({type:'custom', event:'pmo:deliverables-changed', data:{id, kind}})
    └─ 前端 listener 增量刷新缓存,React 重渲
 ```
 
@@ -69,7 +69,10 @@ useDeliverableFs.init()
 - `pmo/gantt-react/src/utils/deliverableUtils.js` — `loadDeliverableStatusOverrides` 改走 `useDeliverableFs` 链路
 - `pmo/gantt-react/src/components/DeliverableDetail.jsx` — 新增"正本文件"tab,`下载正本` 按钮
 - `pmo/gantt-react/src/App.jsx` — 初始化时调用 `useDeliverableFs.init()`,在 `loadDeliverableStatusOverrides` 之后
-- `pmo/deliverables/DLV-001-启动会议程和参会清单.md` — 改写为新 frontmatter + body 结构(原"七、变更记录"改名 `## 变更记录`,列重排为 `版本/状态/动作/责任人/时间/备注`)
+- `pmo/deliverables/DLV-001-启动会议程和参会清单.md` — 改写为新 frontmatter + body 结构(原"十、变更记录"改名 `## 变更记录`,列重排为 `版本/状态/动作/责任人/时间/备注`)
+- `pmo/deliverables/DLV-002-项目启动会纪要.md` — 补充新 frontmatter + body 结构,保留原正文主体
+- `pmo/deliverables/DLV-003-项目治理与调研机制管理办法.md` — 补充新 frontmatter + body 结构,保留原正文主体
+- `pmo/deliverables/DLV-004-项目决策组预审文档.md` — 补充新 frontmatter + body 结构,保留原正文主体
 - `pmo/gantt-react/public/deliverable-status.json` — 删除 DLV-001 那条记录(由 .md 提供),保留其他 DLV 作过渡
 
 **删除**
@@ -135,7 +138,7 @@ workflowHistory:                              # 必填,数组
 
 - `## 变更记录` 表由系统维护,每次状态变更追加一行
 - 人手编辑只改正文,不碰这个表;若表被删,下次写回时用 `workflowHistory` 重建
-- 现有 DLV-001 的"七、变更记录"表改造时:7 列(`版本/日期/修订人/修订说明`) → 6 列(`版本/状态/动作/责任人/时间/备注`),V0.1~V1.0 四行通过历史 events 重建
+- 现有 DLV 正本文档的原"变更记录"表改造时:旧列(`版本/日期/修订人/修订说明`) → 新列(`版本/状态/动作/责任人/时间/备注`),历史版本信息保留为正文版本记录或迁入 `workflowHistory` 的初始登记事件
 
 ## 模块边界
 
@@ -268,7 +271,7 @@ server.watcher.on('add'|'change'|'unlink', (path) => {
   const m = /DLV-(\d{3})-/.exec(path);
   if (!m) return;
   const id = `DLV-${m[1]}`;
-  server.ws.send({ type: 'pmo:deliverables-changed', data: { id, kind: eventName } });
+server.ws.send({ type: 'custom', event: 'pmo:deliverables-changed', data: { id, kind: eventName } });
 });
 ```
 
@@ -364,9 +367,9 @@ Vite 内置 watcher 自带 100ms debounce,不再加防抖。
 
 ## 验收标准
 
-- [ ] `pmo/deliverables/DLV-001-启动会议程和参会清单.md` 改造为新 frontmatter + body 格式
+- [ ] `pmo/deliverables/DLV-001`~`DLV-004` 四份现有正本文档改造为新 frontmatter + body 格式,正文主体不被重写
 - [ ] `pmo/gantt-react/public/deliverable-status.json` 删 DLV-001 那条记录
-- [ ] 5 个 `npm test:*` 全过(frontmatter / writeback / plugin / hmr)
+- [ ] 4 个 `npm test:*` 全过(frontmatter / writeback / plugin / hmr)
 - [ ] 浏览器 E2E 7 步全过(playwright-cli 手动跑)
 - [ ] `npm run build` 产物 grep 不到 `pmoDeliverablesPlugin` / `deliverable-status` 端点代码
 - [ ] 临时把 `pmoDeliverablesPlugin` 注释掉,dev server 仍能跑(走兜底 4)
@@ -374,3 +377,12 @@ Vite 内置 watcher 自带 100ms debounce,不再加防抖。
 - [ ] `docs/glossary.md` 新增 5 个术语
 - [ ] `pmo/CLAUDE.md` / `pmo/gantt-react/README.md` 更新到位
 - [ ] `pmo/信息化项目_计划管控真源.md` 增"凭证文件归属"段
+
+## E2E 实测记录(2026-06-05)
+
+- 浏览器打开 `http://127.0.0.1:5174/#/pmo`,PMO 首页渲染正常,交付物总数为 386。
+- 交付物台账中 DLV-001~DLV-004 均读取到 .md 正本字段:DLV-001=待评审,DLV-002=编制中,DLV-003=编制中,DLV-004=已提交。
+- DLV-001 详情页“正本文件”tab 可读取 `DLV-001-启动会议程和参会清单.md`,Markdown H1 与 `## 变更记录` 均可见。
+- 生产构建产物已 grep,未发现 dev-only 插件/API 字符串。
+- 无插件 Vite 临时配置下首页可返回 HTML 200;API 路径返回 HTML 回退,前端封装已按非 JSON API 处理并走兜底。
+- `_history/DLV-001/` 已补 docx 上传样本与 snapshot 样本;plugin/HMR smoke 已确认 `_history` 被忽略。

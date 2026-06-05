@@ -12,6 +12,20 @@
 
 ---
 
+## 执行前审查修订(2026-06-05)
+
+本计划按当前仓库实际状态执行,以下修订优先于后文原始任务中的局部示例:
+
+- 当前运行环境为 Windows / PowerShell,后文中的 `cat`、`cp`、`rm`、`grep`、`kill`、后台 `&` 等类 Unix 示例仅作为意图说明;执行时改用 PowerShell、Node 脚本或现有 npm 脚本。
+- 当前 `pmo/deliverables/` 已存在 `DLV-001`、`DLV-002`、`DLV-003`、`DLV-004` 四份正本文档,不再只迁移 `DLV-001`。执行时为所有现存 `DLV-XXX-*.md` 补充 frontmatter,保留原正文主体,把原“变更记录”表迁移为系统维护的 `## 变更记录` 表。
+- `pmo/deliverables/DLV-004-项目决策组预审文档.md` 是当前工作区已有未跟踪文件,视为用户材料,执行时只做 schema 化包装,不重写正文业务内容。
+- 后文每个 Task 的 `git commit` 步骤不在本次执行中逐条运行;本次保留工作区改动供最终审查,只有用户明确要求提交时再统一提交。
+- 子代理执行在当前工具权限下未获明确授权,本次按 inline execution 执行,但保留“实现 → 自查 → 验证”的关卡。
+- 验收中的 npm 测试为 4 个:`test:frontmatter`、`test:writeback`、`test:plugin`、`test:hmr`;浏览器 E2E 与构建 grep 作为单独验收项。
+- HMR 广播按 Vite custom event 实现:`server.ws.send({ type: 'custom', event: 'pmo:deliverables-changed', data })`;后文原始任务中 `type: 'pmo:deliverables-changed'` 的写法视为旧草案。
+
+---
+
 ## 文件结构
 
 | 操作 | 文件 | 职责 |
@@ -32,8 +46,11 @@
 | 修改 | `pmo/gantt-react/src/utils/deliverableUtils.js` | `loadDeliverableStatusOverrides` 改走 fs 路径 |
 | 修改 | `pmo/gantt-react/src/components/DeliverableDetail.jsx` | 新增"正本文件"tab + "下载正本"按钮 |
 | 修改 | `pmo/gantt-react/src/App.jsx` | 初始化 `useDeliverableFs`,状态变更调 `fsApi.transition` HTTP 端点 |
-| 修改 | `pmo/deliverables/DLV-001-启动会议程和参会清单.md` | 改造为新 frontmatter + body 结构 |
-| 修改 | `pmo/gantt-react/public/deliverable-status.json` | 删 DLV-001 那条 |
+| 修改 | `pmo/deliverables/DLV-001-启动会议程和参会清单.md` | 改造为新 frontmatter + body 结构,保留正文 |
+| 修改 | `pmo/deliverables/DLV-002-项目启动会纪要.md` | 改造为新 frontmatter + body 结构,保留正文 |
+| 修改 | `pmo/deliverables/DLV-003-项目治理与调研机制管理办法.md` | 改造为新 frontmatter + body 结构,保留正文 |
+| 修改 | `pmo/deliverables/DLV-004-项目决策组预审文档.md` | 改造为新 frontmatter + body 结构,保留正文 |
+| 修改 | `pmo/gantt-react/public/deliverable-status.json` | 删除已由 .md 正本提供状态的 DLV-001 过渡覆盖 |
 | 修改 | `pmo/CLAUDE.md` | 模块 B 加 1 段"动态凭证消费" |
 | 修改 | `pmo/gantt-react/README.md` | 加端点 + schema + 测试命令 |
 | 修改 | `docs/glossary.md` | 新增 5 个术语 |
@@ -1087,7 +1104,7 @@ git commit -m "feat(pmo): deliverable plugin UPLOAD endpoint with docx/xlsx/md c
         if (!m) return;
         const id = `DLV-${m[1]}`;
         refreshCache();
-        server.ws.send({ type: 'pmo:deliverables-changed', data: { id, kind, file: path.basename(filePath) } });
+        server.ws.send({ type: 'custom', event: 'pmo:deliverables-changed', data: { id, kind, file: path.basename(filePath) } });
       };
       server.watcher.on('add', handler('add'));
       server.watcher.on('change', handler('change'));
@@ -2422,7 +2439,7 @@ git commit -m "chore(pmo): deliverables fs final cleanups" || echo "nothing to c
 
 ## 验收 checklist(对应 spec 末段)
 
-- [ ] DLV-001 改造为新 frontmatter + body(Task 17)
+- [ ] DLV-001~DLV-004 改造为新 frontmatter + body(Task 17 的当前仓库扩展)
 - [ ] deliverable-status.json 删 DLV-001 条目(Task 18)
 - [ ] 4 个 `npm test:*` 全过(Task 21)
 - [ ] 浏览器 E2E 7 步全过(Task 23)
@@ -2430,3 +2447,15 @@ git commit -m "chore(pmo): deliverables fs final cleanups" || echo "nothing to c
 - [ ] 临时注释掉插件 dev server 仍能跑(Task 25)
 - [ ] 文档 4 处更新到位(Task 22)
 - [ ] 原 smoke 仍绿(Task 26)
+
+---
+
+## 执行记录(2026-06-05)
+
+- 已在 `codex/pmo-deliverables-fs` 分支按执行前修订完成实现。
+- 已迁移 `DLV-001`~`DLV-004` 四份现有正本文件,保留正文主体,把原人工版本表改为“历史版本说明”,新增系统维护的 `## 变更记录` 表。
+- 已运行并通过:`npm run test:frontmatter`、`npm run test:writeback`、`npm run test:plugin`、`npm run test:hmr`、`npm run lint`、`npm run build`、`node pmo/scripts/smoke-deliverable-workflow.mjs`。
+- 已验证生产产物 grep 不含 `pmoDeliverablesPlugin`、`pmo-deliverables`、`/api/pmo/deliverables`、`deliverableFsApi`。
+- 已用浏览器打开 `http://127.0.0.1:5174/#/pmo`,确认 PMO 首页渲染、交付物台账显示 386 项、DLV-001~DLV-004 状态来自 .md 正本、DLV-001 详情“正本文件”可渲染 Markdown 正文与变更记录。
+- 已用临时无插件 Vite 配置验证首页仍返回 HTML 200;无插件 API 路径返回 HTML 回退,前端 API 封装已识别该情况并退回旧覆盖层/WBS 默认字段。
+- 已补齐 `_history/DLV-001/` 的 docx 上传样本与 snapshot 样本,并复跑 plugin/HMR smoke 确认 `_history` 不被扫描或广播。

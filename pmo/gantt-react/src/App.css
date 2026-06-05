@@ -359,6 +359,23 @@ button { transition: all 0.12s ease; }
 .detail-close { background: transparent; border: 0; color: var(--muted); font-size: 24px; cursor: pointer; padding: 2px 8px; border-radius: 6px; line-height: 1; }
 .detail-close:hover { background: var(--line-soft); color: var(--ink); }
 .detail-body { padding: 16px 20px; }
+.detail-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 8px;
+}
+.detail-tabs button {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel-2);
+  color: var(--muted);
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.detail-tabs button.active { background: var(--ink); color: var(--panel); border-color: var(--ink); }
 .detail-field { margin-bottom: 14px; }
 .detail-field label {
   display: block;
@@ -832,6 +849,57 @@ tr.dlv-high-risk { border-left: 3px solid var(--focus); }
 }
 .note-textarea { min-height: 64px; }
 .note-buttons { display: flex; gap: 8px; }
+
+.canonical-file { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.canonical-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.canonical-name {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+  word-break: break-word;
+}
+.canonical-meta { color: var(--muted); font-size: 11px; margin-top: 2px; }
+.canonical-markdown {
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.65;
+  word-break: break-word;
+}
+.canonical-markdown h1 { font-size: 17px; color: var(--ink); margin: 0 0 10px; }
+.canonical-markdown h2 { font-size: 14px; color: var(--ink); margin: 16px 0 8px; }
+.canonical-markdown p { margin: 8px 0; }
+.canonical-markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8px 0 12px;
+  font-size: 12px;
+}
+.canonical-markdown th,
+.canonical-markdown td {
+  border: 1px solid var(--line);
+  padding: 5px 6px;
+  text-align: left;
+  vertical-align: top;
+}
+.canonical-markdown th { color: var(--muted); background: var(--panel-2); }
+.canonical-empty {
+  color: var(--muted);
+  font-size: 13px;
+  padding: 18px 0;
+}
+.deliverable-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.deliverable-actions input { display: none; }
 
 /* ===== 操作记录 ===== */
 .detail-field.detail-history { margin-top: 12px; }
