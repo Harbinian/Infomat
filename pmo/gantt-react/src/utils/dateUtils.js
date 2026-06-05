@@ -127,6 +127,7 @@ export function isMilestoneTask(task) {
 
 // ===== 数据诊断 =====
 export function analyzeTasks(tasks) {
+  if (!import.meta.env.DEV) return;
   console.group('%c📊 甘特图数据诊断报告', 'font-weight:bold;font-size:14px;');
 
   const wbsMap = {};
@@ -245,6 +246,27 @@ export function buildTaskTree(tasks) {
   return { roots, map };
 }
 
+// 根据 WBS 收起/展开状态过滤任务 — 让甘特图进度条与左侧任务树联动
+export function filterTasksByExpansion(tasks, treeMap) {
+  if (!tasks || !tasks.length) return tasks || [];
+  if (!treeMap) return tasks;
+  const nodeByWbs = new Map();
+  Object.values(treeMap).forEach(node => {
+    if (node.wbs) nodeByWbs.set(String(node.wbs), node);
+    if (node.normalizedWbs) nodeByWbs.set(String(node.normalizedWbs), node);
+  });
+  return tasks.filter(task => {
+    let parentWbs = task.parentWbs;
+    while (parentWbs) {
+      const parent = nodeByWbs.get(String(parentWbs));
+      if (!parent) break;
+      if (parent._expanded === false) return false;
+      parentWbs = parent.parentWbs;
+    }
+    return true;
+  });
+}
+
 // ===== 筛选 =====
 export function applyFilters(allTasks, filters, view) {
   let tasks = [...allTasks];
@@ -269,6 +291,8 @@ export function applyFilters(allTasks, filters, view) {
   if (filters.vendor !== 'all') tasks = tasks.filter(t => t.vendor === filters.vendor);
   if (filters.risk !== 'all') tasks = tasks.filter(t => t.risk === filters.risk);
   if (filters.type !== 'all') tasks = tasks.filter(t => t.type === filters.type);
+  if (filters.taskKind === 'normal') tasks = tasks.filter(t => !t.isSummary && !t.isMilestone);
+  else if (filters.taskKind === 'summary') tasks = tasks.filter(t => t.isSummary);
   if (filters.milestone === 'yes') tasks = tasks.filter(t => t.isMilestone);
   if (filters.search.trim()) { const kw = filters.search.trim().toLowerCase(); tasks = tasks.filter(t => t.name.toLowerCase().includes(kw) || t.wbs.includes(kw)); }
   return tasks;

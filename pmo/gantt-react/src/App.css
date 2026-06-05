@@ -249,7 +249,9 @@ button { transition: all 0.12s ease; }
   top: 0;
   z-index: 2;
   display: flex;
-  padding: 8px 12px;
+  align-items: flex-end;
+  height: 44px;
+  padding: 0 12px 8px;
   background: var(--panel-2);
   border-bottom: 1px solid var(--line);
   color: var(--muted);
@@ -479,7 +481,8 @@ button { transition: all 0.12s ease; }
 .thisweek-view,
 .overdue-view,
 .phasegate-view,
-.pmo-weekly-view {
+.pmo-weekly-view,
+.task-ledger-view {
   flex: 1;
   min-height: 0;
   overflow: hidden;
@@ -488,7 +491,8 @@ button { transition: all 0.12s ease; }
 }
 .deliverable-view,
 .thisweek-view,
-.overdue-view { display: flex; flex-direction: column; }
+.overdue-view,
+.task-ledger-view { display: flex; flex-direction: column; }
 .phasegate-view,
 .pmo-weekly-view { overflow: auto; padding: 16px 22px; }
 .dlv-filter-bar {
@@ -630,6 +634,21 @@ tr.dlv-high-risk { border-left: 3px solid var(--focus); }
 }
 .week-header h3 { font-size: 15px; color: var(--ink); margin: 0; }
 .week-count { font-size: 12px; color: var(--muted); }
+.task-ledger-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.filter-tag {
+  padding: 1px 8px;
+  border: 1px solid rgba(154, 122, 48, 0.32);
+  border-radius: 3px;
+  background: rgba(154, 122, 48, 0.08);
+  color: #7a5e25;
+  font-size: 12px;
+}
 .empty-view {
   flex: 1;
   display: flex;

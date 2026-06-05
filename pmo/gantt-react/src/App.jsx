@@ -13,18 +13,20 @@ import ThisWeekDeliverables from './components/ThisWeekDeliverables';
 import OverdueDeliverables from './components/OverdueDeliverables';
 import PMOWeeklyView from './components/PMOWeeklyView';
 import DeliverableDetail from './components/DeliverableDetail';
-import { buildTaskTree, applyFilters, normalizeTasks, analyzeTasks, computeProjectRange, formatDate, parseDate } from './utils/dateUtils';
+import TaskLedger from './components/TaskLedger';
+import { buildTaskTree, applyFilters, normalizeTasks, analyzeTasks, computeProjectRange, formatDate, parseDate, filterTasksByExpansion } from './utils/dateUtils';
 import { normalizeDeliverables, loadDeliverableStatusOverrides } from './utils/deliverableUtils.js';
 import { buildPhaseGates } from './utils/phaseGateUtils.js';
 import { transitionDeliverableStatus } from './utils/deliverableWorkflow.js';
 import './App.css';
 
-const DEFAULT_FILTERS = { year: 'all', mainline: 'all', department: 'all', vendor: 'all', risk: 'all', type: 'all', milestone: 'all', search: '', wbsDepth: 'all' };
+const DEFAULT_FILTERS = { year: 'all', mainline: 'all', department: 'all', vendor: 'all', risk: 'all', type: 'all', milestone: 'all', search: '', wbsDepth: 'all', taskKind: 'all' };
 const EVIDENCE_STORAGE_KEY = 'pmo-deliverable-evidence-v1';
 const EVIDENCE_DB_NAME = 'pmo-deliverable-evidence-db';
 const EVIDENCE_STORE_NAME = 'evidenceFiles';
 const PMO_VIEW_LABELS = [
   { key: 'pmo', label: 'PMO周会' },
+  { key: 'tasks', label: '任务清单' },
   { key: 'deliverables', label: '交付物台账' },
   { key: 'phasegates', label: '阶段门' },
   { key: 'thisweek', label: '本周交付物' },
@@ -125,6 +127,7 @@ export default function App() {
   const [evidenceMap, setEvidenceMap] = useState(loadStoredEvidence);
   const [ledgerFilters, setLedgerFilters] = useState({});
   const [ledgerSort, setLedgerSort] = useState({ key: 'plannedFinish', direction: 'asc' });
+  const [taskFilters, setTaskFilters] = useState({});
   const [localTransitions, setLocalTransitions] = useState({});
 
   useEffect(() => {
@@ -185,6 +188,11 @@ export default function App() {
     if (!allTasks.length) return [];
     return applyFilters(allTasks, filters, view);
   }, [allTasks, filters, view]);
+
+  const displayTasks = useMemo(
+    () => filterTasksByExpansion(filteredTasks, treeData.map),
+    [filteredTasks, treeData]
+  );
 
   const tasksWithDeliverableInfo = useMemo(() => {
     const byTaskId = {};
@@ -297,15 +305,22 @@ export default function App() {
       } else {
         handleViewChange('all');
       }
-      if (target.taskFilters) {
-        setFilters(prev => ({ ...prev, ...target.taskFilters, year: 'all' }));
-      }
+      setFilters(prev => {
+        const taskFilters = target.taskFilters || {};
+        const next = { ...prev, ...taskFilters, year: 'all' };
+        if (taskFilters.taskKind == null) next.taskKind = 'all';
+        if (taskFilters.milestone == null) next.milestone = 'all';
+        if (taskFilters.risk == null) next.risk = 'all';
+        return next;
+      });
       return;
     }
     if (target.page === 'pmo') {
       handlePageChange('pmo');
       if (target.pmoView) setPmoView(target.pmoView);
       if (target.ledgerFilters) setLedgerFilters(target.ledgerFilters);
+      if (target.gateStatus) setLedgerFilters(prev => ({ ...prev, gateStatus: target.gateStatus }));
+      if (target.taskFilters) setTaskFilters(target.taskFilters);
     }
   }, [handlePageChange, handleViewChange]);
 
@@ -356,6 +371,8 @@ export default function App() {
 
   const renderPMOContent = () => {
     switch (pmoView) {
+      case 'tasks':
+        return <TaskLedger tasks={allTasks} filters={taskFilters} />;
       case 'deliverables':
         return <DeliverableLedger
           deliverables={deliverablesWithEvidence}
@@ -368,7 +385,7 @@ export default function App() {
           onDownloadDeliverable={handleDownloadDeliverable}
         />;
       case 'phasegates':
-        return <PhaseGateView phaseGates={phaseGates} />;
+        return <PhaseGateView phaseGates={phaseGates} gateStatusFilter={ledgerFilters.gateStatus} />;
       case 'thisweek':
         return <ThisWeekDeliverables deliverables={deliverablesWithEvidence} pmoDate={pmoDate} onSelectDeliverable={handleSelectDeliverable} />;
       case 'overdue':
@@ -405,7 +422,7 @@ export default function App() {
               wbsDepth={filters.wbsDepth}
               selectedNodeKey={selectedNodeKey} onSelect={handleSelect} onToggle={handleToggle} />
 
-            <GanttChart tasks={filteredTasks} treeMap={treeData.map}
+            <GanttChart tasks={displayTasks} treeMap={treeData.map}
               monthWidth={monthWidth} selectedNodeKey={selectedNodeKey}
               onSelect={handleSelect} onZoomChange={handleZoom} />
           </div>
@@ -422,7 +439,7 @@ export default function App() {
           <PMODatePicker pmoDate={pmoDate} onDateChange={setPmoDate} projectStart={projectStart} />
           <div className="pmo-view-tabs">
             {PMO_VIEW_LABELS.map(item => (
-              <button key={item.key} className={pmoView === item.key ? 'active' : ''} onClick={() => setPmoView(item.key)} type="button">
+              <button key={item.key} className={pmoView === item.key ? 'active' : ''} onClick={() => { setPmoView(item.key); if (item.key !== 'phasegates') setLedgerFilters(prev => { if (!prev.gateStatus) return prev; const { gateStatus, ...rest } = prev; return rest; }); }} type="button">
                 {item.label}
               </button>
             ))}
