@@ -103,6 +103,11 @@ export function transitionDeliverableStatus(deliverable, command) {
     throw new Error(`不允许从“${from}”执行“${actionDef.label}”`);
   }
 
+  const EVIDENCE_REQUIRED_ACTIONS = ['startReview', 'approve', 'archive'];
+  if (EVIDENCE_REQUIRED_ACTIONS.includes(command.action) && !deliverable.evidence) {
+    throw new Error(`执行“${actionDef.label}”前需先上传凭证`);
+  }
+
   const at = formatIsoInstant(command.at);
   const note = command.note || '';
   const historyItem = {
@@ -288,11 +293,11 @@ export function createDashboardCardIntents({ tasks = [], deliverables = [], phas
   const gateRisks = phaseGates.filter(gate => gate.status === '风险');
 
   return [
-    { key: 'totalTasks', value: tasks.length, label: '总任务数', target: { page: 'gantt', taskFilters: {} } },
-    { key: 'normalTasks', value: normalTasks.length, label: '普通任务', target: { page: 'gantt', taskFilters: { type: 'normal' } } },
-    { key: 'summaryTasks', value: summaryTasks.length, label: '摘要任务', target: { page: 'gantt', taskFilters: { type: 'summary' } } },
-    { key: 'milestones', value: milestones.length, label: '里程碑', target: { page: 'gantt', view: 'milestones', taskFilters: { milestone: 'yes' } } },
-    { key: 'highRiskTasks', value: highRiskTasks.length, label: '高风险任务', target: { page: 'gantt', view: 'highrisk', taskFilters: { risk: '高' } }, highlight: true },
+    { key: 'totalTasks', value: tasks.length, label: '总任务数', target: { page: 'pmo', pmoView: 'tasks', taskFilters: {} } },
+    { key: 'normalTasks', value: normalTasks.length, label: '普通任务', target: { page: 'pmo', pmoView: 'tasks', taskFilters: { taskKind: 'normal' } } },
+    { key: 'summaryTasks', value: summaryTasks.length, label: '摘要任务', target: { page: 'pmo', pmoView: 'tasks', taskFilters: { taskKind: 'summary' } } },
+    { key: 'milestones', value: milestones.length, label: '里程碑', target: { page: 'pmo', pmoView: 'tasks', taskFilters: { milestone: 'yes' } } },
+    { key: 'highRiskTasks', value: highRiskTasks.length, label: '高风险任务', target: { page: 'pmo', pmoView: 'tasks', taskFilters: { risk: '高' } }, highlight: true },
     { key: 'deliverableTotal', value: deliverables.length, label: '交付物总数', target: { page: 'pmo', pmoView: 'deliverables', ledgerFilters: {} } },
     { key: 'aLevelDeliverables', value: aLevel.length, label: 'A类交付物', target: { page: 'pmo', pmoView: 'deliverables', ledgerFilters: { level: 'A' } }, cls: 'stat-a' },
     { key: 'bLevelDeliverables', value: bLevel.length, label: 'B类交付物', target: { page: 'pmo', pmoView: 'deliverables', ledgerFilters: { level: 'B' } }, cls: 'stat-b' },
