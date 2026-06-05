@@ -16,6 +16,7 @@ import DeliverableDetail from './components/DeliverableDetail';
 import { buildTaskTree, applyFilters, normalizeTasks, analyzeTasks, computeProjectRange, formatDate, parseDate } from './utils/dateUtils';
 import { normalizeDeliverables, loadDeliverableStatusOverrides } from './utils/deliverableUtils.js';
 import { buildPhaseGates } from './utils/phaseGateUtils.js';
+import { transitionDeliverableStatus } from './utils/deliverableWorkflow.js';
 import './App.css';
 
 const DEFAULT_FILTERS = { year: 'all', mainline: 'all', department: 'all', vendor: 'all', risk: 'all', type: 'all', milestone: 'all', search: '', wbsDepth: 'all' };
@@ -122,6 +123,9 @@ export default function App() {
   const [projectStart, setProjectStart] = useState(null);
   const [expandedOverrides, setExpandedOverrides] = useState({});
   const [evidenceMap, setEvidenceMap] = useState(loadStoredEvidence);
+  const [ledgerFilters, setLedgerFilters] = useState({});
+  const [ledgerSort, setLedgerSort] = useState({ key: 'plannedFinish', direction: 'asc' });
+  const [localTransitions, setLocalTransitions] = useState({});
 
   useEffect(() => {
     const onHashChange = () => setPage(getInitialPage());
@@ -156,15 +160,17 @@ export default function App() {
 
   const deliverablesWithEvidence = useMemo(() => deliverables.map(deliverable => {
     const evidence = evidenceMap[deliverable.deliverableId];
-    if (!evidence) return deliverable;
+    const transition = localTransitions[deliverable.deliverableId];
+    const merged = transition ? { ...deliverable, ...transition } : deliverable;
+    if (!evidence) return merged;
     return {
-      ...deliverable,
+      ...merged,
       evidence,
-      deliverableStatus: deliverable.deliverableStatus === '未提交' ? '已提交' : deliverable.deliverableStatus,
-      _actualSubmitDate: deliverable._actualSubmitDate || evidence.uploadedAt.slice(0, 10),
-      notes: deliverable.notes || `已本地登记凭证：${evidence.fileName}`,
+      deliverableStatus: merged.deliverableStatus === '未提交' ? '已提交' : merged.deliverableStatus,
+      _actualSubmitDate: merged._actualSubmitDate || evidence.uploadedAt.slice(0, 10),
+      notes: merged.notes || `已本地登记凭证：${evidence.fileName}`,
     };
-  }), [deliverables, evidenceMap]);
+  }), [deliverables, evidenceMap, localTransitions]);
 
   const treeData = useMemo(() => {
     const built = buildTaskTree(allTasks);
@@ -282,6 +288,47 @@ export default function App() {
     }
   }, []);
 
+  const handleDashboardCardNavigate = useCallback((target) => {
+    if (!target) return;
+    if (target.page === 'gantt') {
+      handlePageChange('gantt');
+      if (target.view) {
+        handleViewChange(target.view);
+      } else {
+        handleViewChange('all');
+      }
+      if (target.taskFilters) {
+        setFilters(prev => ({ ...prev, ...target.taskFilters, year: 'all' }));
+      }
+      return;
+    }
+    if (target.page === 'pmo') {
+      handlePageChange('pmo');
+      if (target.pmoView) setPmoView(target.pmoView);
+      if (target.ledgerFilters) setLedgerFilters(target.ledgerFilters);
+    }
+  }, [handlePageChange, handleViewChange]);
+
+  const handleLedgerFilterChange = useCallback((next) => {
+    setLedgerFilters(next);
+  }, []);
+
+  const handleLedgerSortChange = useCallback((next) => {
+    setLedgerSort(next);
+  }, []);
+
+  const handleDeliverableTransition = useCallback((deliverable, command) => {
+    if (!deliverable?.deliverableId || !command?.action) return;
+    let next;
+    try {
+      next = transitionDeliverableStatus(deliverable, command);
+    } catch (error) {
+      window.alert(error.message || '状态变更失败');
+      return;
+    }
+    setLocalTransitions(prev => ({ ...prev, [deliverable.deliverableId]: next }));
+  }, []);
+
   const subtitle = useMemo(() => {
     if (!allTasks.length) return '';
     const realTasks = allTasks.filter(t => !t.notes || !t.notes.includes('[自动生成的虚拟父节点]'));
@@ -310,7 +357,16 @@ export default function App() {
   const renderPMOContent = () => {
     switch (pmoView) {
       case 'deliverables':
-        return <DeliverableLedger deliverables={deliverablesWithEvidence} onSelectDeliverable={handleSelectDeliverable} onUploadDeliverable={handleUploadDeliverable} onDownloadDeliverable={handleDownloadDeliverable} />;
+        return <DeliverableLedger
+          deliverables={deliverablesWithEvidence}
+          filters={ledgerFilters}
+          sort={ledgerSort}
+          onFilterChange={handleLedgerFilterChange}
+          onSortChange={handleLedgerSortChange}
+          onSelectDeliverable={handleSelectDeliverable}
+          onUploadDeliverable={handleUploadDeliverable}
+          onDownloadDeliverable={handleDownloadDeliverable}
+        />;
       case 'phasegates':
         return <PhaseGateView phaseGates={phaseGates} />;
       case 'thisweek':
@@ -362,7 +418,7 @@ export default function App() {
       ) : (
         <div className="pmo-page">
           <WBSQualityBanner rawTasks={rawTasks} />
-          <DashboardCards tasks={allTasks} deliverables={deliverablesWithEvidence} phaseGates={phaseGates} pmoDate={pmoDate} />
+          <DashboardCards tasks={allTasks} deliverables={deliverablesWithEvidence} phaseGates={phaseGates} pmoDate={pmoDate} onCardClick={handleDashboardCardNavigate} />
           <PMODatePicker pmoDate={pmoDate} onDateChange={setPmoDate} projectStart={projectStart} />
           <div className="pmo-view-tabs">
             {PMO_VIEW_LABELS.map(item => (
@@ -372,7 +428,7 @@ export default function App() {
             ))}
           </div>
           {renderPMOContent()}
-          {selectedDeliverable && <DeliverableDetail deliverable={selectedDeliverable} phaseGates={phaseGates} onClose={() => setSelectedDeliverable(null)} />}
+          {selectedDeliverable && <DeliverableDetail deliverable={selectedDeliverable} phaseGates={phaseGates} onClose={() => setSelectedDeliverable(null)} onTransition={handleDeliverableTransition} />}
         </div>
       )}
     </>
