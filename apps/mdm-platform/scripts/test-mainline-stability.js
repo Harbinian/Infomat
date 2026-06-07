@@ -1,0 +1,241 @@
+const assert = require('assert');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const { spawn, spawnSync } = require('child_process');
+
+const appRoot = path.join(__dirname, '..');
+const PORT = 3231;
+const BASE_URL = `http://127.0.0.1:${PORT}`;
+
+function runNpmScript(scriptName) {
+  console.log(`\n[mainline] npm run ${scriptName}`);
+  const command = process.env.npm_execpath ? process.execPath : (process.platform === 'win32' ? 'npm.cmd' : 'npm');
+  const args = process.env.npm_execpath ? [process.env.npm_execpath, 'run', scriptName] : ['run', scriptName];
+  const result = spawnSync(command, args, {
+    cwd: appRoot,
+    env: { ...process.env, MDM_DB_QUIET: process.env.MDM_DB_QUIET || '1' },
+    stdio: 'inherit'
+  });
+  if (result.error) {
+    throw result.error;
+  }
+  assert.strictEqual(result.status, 0, `${scriptName} failed`);
+}
+
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function waitForServer(child) {
+  const deadline = Date.now() + 10000;
+  while (Date.now() < deadline) {
+    if (child.exitCode !== null) {
+      throw new Error(`server exited early with code ${child.exitCode}`);
+    }
+    try {
+      const res = await fetch(`${BASE_URL}/api/health`);
+      if (res.ok) return;
+    } catch (error) {
+      // Keep polling until the server is ready or the deadline is reached.
+    }
+    await wait(200);
+  }
+  throw new Error('server did not start');
+}
+
+function cookieFrom(response) {
+  const cookie = response.headers.get('set-cookie');
+  assert.ok(cookie, 'login response should include a cookie');
+  return cookie.split(';')[0];
+}
+
+async function request(routePath, options = {}, cookie = '') {
+  const headers = {
+    ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+    ...(cookie ? { Cookie: cookie } : {})
+  };
+  const res = await fetch(`${BASE_URL}${routePath}`, { ...options, headers });
+  const body = await res.json().catch(async () => ({ raw: await res.text() }));
+  return { res, body };
+}
+
+async function stopServer(child) {
+  if (!child || child.exitCode !== null || child.signalCode !== null) return;
+  child.kill();
+  const deadline = Date.now() + 3000;
+  while (Date.now() < deadline) {
+    if (child.exitCode !== null || child.signalCode !== null) return;
+    await wait(100);
+  }
+  child.kill('SIGKILL');
+}
+
+async function runMasterDataObjectSmoke() {
+  console.log('\n[mainline] master data object isolated smoke');
+
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdm-mainline-master-'));
+  const dbPath = path.join(tempDir, 'platform-test.db');
+  let server;
+
+  try {
+    process.env.MDM_DB_PATH = dbPath;
+    process.env.MDM_DB_QUIET = '1';
+
+    const db = require('../server/db');
+    const { hashPassword } = require('../server/auth');
+    const deptId = db.prepare(`
+      INSERT INTO departments (name, code, status)
+      VALUES (?, ?, ?)
+    `).run('信息化部', 'IT', 'active').lastInsertRowid;
+    db.prepare(`
+      INSERT INTO users (name, employee_no, department_id, post, role, password_hash)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run('系统管理员', 'ADMIN001', deptId, '系统管理员', 'admin', hashPassword('admin12345'));
+    db.close();
+
+    server = spawn(process.execPath, ['server/index.js'], {
+      cwd: appRoot,
+      env: {
+        ...process.env,
+        MDM_DB_PATH: dbPath,
+        MDM_DB_QUIET: '1',
+        PORT: String(PORT),
+        SESSION_SECRET: 'mainline-master-data-test'
+      },
+      stdio: ['ignore', 'pipe', 'pipe']
+    });
+
+    await waitForServer(server);
+
+    const login = await request('/api/org/login', {
+      method: 'POST',
+      body: JSON.stringify({ employee_no: 'ADMIN001', password: 'admin12345' })
+    });
+    assert.strictEqual(login.res.status, 200, JSON.stringify(login.body));
+    const cookie = cookieFrom(login.res);
+
+    const org = await request('/api/org-units', {
+      method: 'POST',
+      body: JSON.stringify({
+        org_unit_name: '工程技术部',
+        org_type: 'department',
+        org_mnemonic: 'ENG'
+      })
+    }, cookie);
+    assert.strictEqual(org.res.status, 201, JSON.stringify(org.body));
+    assert.ok(org.body.org_unit_code.startsWith('OU-DEPT-ENG'));
+
+    const orgActivate = await request(`/api/org-units/${encodeURIComponent(org.body.org_unit_code)}/activate`, {
+      method: 'POST'
+    }, cookie);
+    assert.strictEqual(orgActivate.res.status, 200, JSON.stringify(orgActivate.body));
+
+    const person = await request('/api/persons', {
+      method: 'POST',
+      body: JSON.stringify({
+        person_name: '张三',
+        mobile: '13800138000',
+        email: 'zhangsan@example.com'
+      })
+    }, cookie);
+    assert.strictEqual(person.res.status, 201, JSON.stringify(person.body));
+    assert.ok(person.body.employee_no.startsWith('EMP-'));
+
+    const personActivate = await request(`/api/persons/${encodeURIComponent(person.body.employee_no)}/activate`, {
+      method: 'POST'
+    }, cookie);
+    assert.strictEqual(personActivate.res.status, 200, JSON.stringify(personActivate.body));
+
+    const family = await request('/api/product-families', {
+      method: 'POST',
+      body: JSON.stringify({
+        model_name: 'C919复材件',
+        model_code: 'C91',
+        class_major: 'CF'
+      })
+    }, cookie);
+    assert.strictEqual(family.res.status, 201, JSON.stringify(family.body));
+
+    const familyDetail = await request(`/api/product-families/${encodeURIComponent(family.body.product_family_code)}`, {}, cookie);
+    assert.strictEqual(familyDetail.res.status, 200, JSON.stringify(familyDetail.body));
+    assert.ok(familyDetail.body.product_family_id);
+
+    const familyActivate = await request(`/api/product-families/${encodeURIComponent(family.body.product_family_code)}/activate`, {
+      method: 'POST'
+    }, cookie);
+    assert.strictEqual(familyActivate.res.status, 200, JSON.stringify(familyActivate.body));
+
+    const product = await request('/api/products', {
+      method: 'POST',
+      body: JSON.stringify({
+        product_family_id: familyDetail.body.product_family_id,
+        revision: 'A',
+        class_mid: 'RFF',
+        class_minor: 'PNL'
+      })
+    }, cookie);
+    assert.strictEqual(product.res.status, 201, JSON.stringify(product.body));
+
+    const release = await request(`/api/products/${encodeURIComponent(product.body.product_code)}/release`, {
+      method: 'POST'
+    }, cookie);
+    assert.strictEqual(release.res.status, 200, JSON.stringify(release.body));
+
+    const productDetail = await request(`/api/products/${encodeURIComponent(product.body.product_code)}`, {}, cookie);
+    assert.strictEqual(productDetail.res.status, 200, JSON.stringify(productDetail.body));
+    assert.strictEqual(productDetail.body.lifecycle_state, 'released');
+
+    const attrDef = await request('/api/attributes/defs', {
+      method: 'POST',
+      body: JSON.stringify({
+        attribute_code: 'material_spec',
+        attribute_name: '材料规范',
+        data_type: 'string',
+        applies_to: 'product',
+        is_required: true
+      })
+    }, cookie);
+    assert.strictEqual(attrDef.res.status, 201, JSON.stringify(attrDef.body));
+
+    const attrValue = await request('/api/attributes/values', {
+      method: 'PUT',
+      body: JSON.stringify({
+        entity_type: 'product',
+        entity_id: productDetail.body.product_id,
+        values: { material_spec: 'CMS-CP-307' }
+      })
+    }, cookie);
+    assert.strictEqual(attrValue.res.status, 200, JSON.stringify(attrValue.body));
+
+    const attrValues = await request(`/api/attributes/values?entity_type=product&entity_id=${productDetail.body.product_id}`, {}, cookie);
+    assert.strictEqual(attrValues.res.status, 200, JSON.stringify(attrValues.body));
+    assert.strictEqual(attrValues.body[0].value_string, 'CMS-CP-307');
+
+    const quality = await request('/api/quality/dashboard', {}, cookie);
+    assert.strictEqual(quality.res.status, 200, JSON.stringify(quality.body));
+    assert.strictEqual(quality.body.org_person.org_units, 1);
+    assert.strictEqual(quality.body.org_person.persons, 1);
+    assert.strictEqual(quality.body.product.families, 1);
+    assert.strictEqual(quality.body.product.released, 1);
+
+    console.log('[mainline] master data object isolated smoke passed');
+  } finally {
+    await stopServer(server);
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+}
+
+async function main() {
+  runNpmScript('test:process-governance');
+  runNpmScript('test:import');
+  runNpmScript('test:export');
+  runNpmScript('test:project-roles');
+  await runMasterDataObjectSmoke();
+  console.log('\n[mainline] stability check passed');
+}
+
+main().catch(error => {
+  console.error(error);
+  process.exit(1);
+});
