@@ -49,6 +49,7 @@ npm run test:export
 npm run test:import
 npm run test:frontend
 npm run test:security
+npm run test:mainline
 ```
 
 ## MDM 一期升级命令
@@ -56,6 +57,7 @@ npm run test:security
 流程治理升级链路：
 
 ```bash
+npm run test:mainline
 npm run test:db-path
 npm run test:process-governance
 npm run sync:process-org
@@ -67,6 +69,7 @@ npm run check:process-governance
 
 - 默认数据库仍为 `apps/mdm-platform/data/platform.db`。
 - 测试必须通过 `MDM_DB_PATH` 使用隔离 SQLite 文件。
+- `npm run test:mainline` 用于验证“流程治理 -> 字段台账 -> 主数据对象 -> 权限 -> 导入导出”主线，详见 `docs/plans/流程治理字段台账主线稳定性检查.md`。
 - 不直接运行会删除共享数据库的旧式测试逻辑。
 - `seed-demo-data.js` 和 `setup-mdm-project-users.js` 需要显式环境变量才可运行。
 
