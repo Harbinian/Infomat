@@ -259,6 +259,7 @@
 | 审批历史 | Approval History | approval_history 表，审批流的完整审计轨迹，记录每一步的操作人、操作时间和操作结果 |
 | 冲突检测 | Conflict Detection | field_conflicts 和 term_conflicts 表，比对不同部门的字段定义/术语定义，标记差异 |
 | 导入导出 | Import/Export | import.js（Excel 批量导入业务数据）、importRbac.js（RBAC 批量导入）、export.js（台账/矩阵/冲突导出） |
+| 主线体检 | Mainline Stability Check | `npm run test:mainline` 执行的稳定性检查，验证流程治理、字段台账、主数据对象、权限和导入导出链路是否保持可运行 |
 
 ---
 
