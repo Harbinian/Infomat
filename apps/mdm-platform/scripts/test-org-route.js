@@ -118,6 +118,17 @@ async function main() {
     const cookie = login.res.headers.get('set-cookie').split(';')[0];
     assert.strictEqual(login.body.role, 'admin');
 
+    const manualOrgUnit = await request('/api/org-units', {
+      method: 'POST',
+      body: JSON.stringify({
+        org_unit_name: '手工新增组织',
+        org_type: 'department',
+        org_mnemonic: 'MANUAL'
+      })
+    }, cookie);
+    assert.strictEqual(manualOrgUnit.res.status, 403);
+    assert.ok(String(manualOrgUnit.body.error || '').includes('组织架构真源'));
+
     const dept = await request('/api/org/departments', {
       method: 'POST',
       body: JSON.stringify({ name: '信息化部', code: 'IT' })
@@ -146,6 +157,76 @@ async function main() {
     assert.strictEqual(user.res.status, 200);
     assert.ok(user.body.id);
 
+    const roles = await request('/api/roles', {}, cookie);
+    assert.strictEqual(roles.res.status, 200);
+    const roleIdByCode = new Map(roles.body.map(row => [row.role_code, row.role_id]));
+    assert.ok(roleIdByCode.has('owner'), 'owner role should exist');
+    assert.ok(roleIdByCode.has('reviewer'), 'reviewer role should exist');
+    assert.ok(roleIdByCode.has('business_contact'), 'business_contact project role should exist');
+    assert.ok(roleIdByCode.has('data_quality'), 'data_quality project role should exist');
+
+    const intakeUser = await request('/api/org/users', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: '李四',
+        employee_no: 'U002',
+        department_id: dept.body.id,
+        post: '业务对接人',
+        role: 'owner',
+        role_ids: [roleIdByCode.get('owner'), roleIdByCode.get('business_contact')]
+      })
+    }, cookie);
+    assert.strictEqual(intakeUser.res.status, 200);
+    assert.ok(intakeUser.body.id);
+
+    const intakeRoles = await request(`/api/org/users/${intakeUser.body.id}/roles`, {}, cookie);
+    assert.strictEqual(intakeRoles.res.status, 200);
+    assert.deepStrictEqual(
+      intakeRoles.body.map(row => row.role_code).sort(),
+      ['business_contact', 'owner'].sort()
+    );
+
+    const duplicateUser = await request('/api/org/users', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: '重复李四',
+        employee_no: 'U002',
+        department_id: dept.body.id,
+        post: '重复',
+        role: 'submitter'
+      })
+    }, cookie);
+    assert.strictEqual(duplicateUser.res.status, 409);
+    assert.strictEqual(duplicateUser.body.error, '编码或工号已存在');
+
+    const projectOnlyRoles = await request(`/api/org/users/${intakeUser.body.id}/roles`, {
+      method: 'PUT',
+      body: JSON.stringify({ role_ids: [roleIdByCode.get('business_contact')] })
+    }, cookie);
+    assert.strictEqual(projectOnlyRoles.res.status, 200);
+
+    const projectOnlyUser = db.prepare('SELECT role FROM users WHERE id=?').get(intakeUser.body.id);
+    assert.strictEqual(projectOnlyUser.role, 'owner');
+
+    const updateIntakeUser = await request(`/api/org/users/${intakeUser.body.id}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        name: '李四改',
+        department_id: dept.body.id,
+        post: '数据质量员',
+        role: 'reviewer',
+        role_ids: [roleIdByCode.get('reviewer'), roleIdByCode.get('data_quality')]
+      })
+    }, cookie);
+    assert.strictEqual(updateIntakeUser.res.status, 200);
+
+    const updatedRoles = await request(`/api/org/users/${intakeUser.body.id}/roles`, {}, cookie);
+    assert.strictEqual(updatedRoles.res.status, 200);
+    assert.deepStrictEqual(
+      updatedRoles.body.map(row => row.role_code).sort(),
+      ['data_quality', 'reviewer'].sort()
+    );
+
     const updateDeptManager = await request(`/api/org/departments/${dept.body.id}`, {
       method: 'PUT',
       body: JSON.stringify({ name: '信息化部', code: 'IT', manager_user_id: user.body.id })
@@ -155,7 +236,16 @@ async function main() {
     const users = await request('/api/org/users', {}, cookie);
     assert.strictEqual(users.res.status, 200);
     assert.ok(users.body.some(row => row.employee_no === 'U001' && row.dept_name === '信息化部'));
+    assert.ok(users.body.some(row => row.employee_no === 'U002' && row.role === 'reviewer'));
     assert.ok(users.body.every(row => row.password_hash === undefined));
+
+    const summary = await request('/api/org/users/roles-summary', {}, cookie);
+    assert.strictEqual(summary.res.status, 200);
+    const intakeSummary = summary.body.find(row => row.employee_no === 'U002');
+    assert.ok(intakeSummary);
+    assert.strictEqual(intakeSummary.role, 'reviewer');
+    assert.ok(String(intakeSummary.rbac_role_codes || '').includes('data_quality'));
+    assert.ok(String(intakeSummary.rbac_role_names || '').includes('数据质量员'));
 
     const me = await request('/api/org/me', {}, cookie);
     assert.strictEqual(me.res.status, 200);

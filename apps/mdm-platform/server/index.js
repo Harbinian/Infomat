@@ -44,6 +44,8 @@ registerRouteIfExists('/api/import', 'import');
 registerRouteIfExists('/api/export', 'export');
 registerRouteIfExists('/api/views', 'views');
 registerRouteIfExists('/api/process-governance', 'processGovernance');
+registerRouteIfExists('/api/role-workbench', 'roleWorkbench');
+registerRouteIfExists('/api/page-workflows', 'pageWorkflows');
 registerRouteIfExists('/api/org-units', 'orgUnit');
 registerRouteIfExists('/api/positions', 'position');
 registerRouteIfExists('/api/persons', 'person');

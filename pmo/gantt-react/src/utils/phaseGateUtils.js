@@ -47,9 +47,9 @@ const GATE_DEFINITIONS = [
   },
   {
     gateId: 'GATE-06',
-    gateName: 'QMS低代码平台基础能力完成',
-    requiredDeliverables: ['QMS原型', '质量流程配置', '问题闭环配置', '测试报告', '培训材料'],
-    blockingRule: '不通过不得与 MES 质量闭环联动'
+    gateName: '流程导向低代码平台基础能力完成',
+    requiredDeliverables: ['首批场景范围确认', '平台方案设计', '流程表单配置', '业务台账与审批流配置', '平台基础能力测试', '培训材料'],
+    blockingRule: '不通过不得与 MES 等流程业务场景联动'
   },
   {
     gateId: 'GATE-07',

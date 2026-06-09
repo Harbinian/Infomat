@@ -1,7 +1,7 @@
 interface:
-  display_name: "Business Behavior Mapping"
-  short_description: "业务行为（A1）、审批流、H5桑基图更新"
+  display_name: "BBM Alias"
+  short_description: "已合并到 process-evidence-mapping"
   brand_color: "#0F766E"
-  default_prompt: "Use $business-behavior-mapping to decompose completed 业务流程（L3） mappings into 业务行为（A1）, approval flows, cross-department transactions, system interaction records, and post-BBM H5/HTML Sankey updates."
+  default_prompt: "Use $process-evidence-mapping instead. Treat this skill only as a compatibility alias for old BBM/A1 prompts."
 policy:
   allow_implicit_invocation: true

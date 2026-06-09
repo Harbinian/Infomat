@@ -1,0 +1,7 @@
+interface:
+  display_name: "流程证据映射"
+  short_description: "制度原文到 DCM/BBM/流程图/表单的端到端映射"
+  brand_color: "#7A3418"
+  default_prompt: "使用 $process-evidence-mapping，把制度原文、流程图、表单、台账和映射关系统一纳入一条 DCM/BBM 证据链，并执行严格完整性检查。"
+policy:
+  allow_implicit_invocation: true

@@ -8,6 +8,7 @@ if (process.env.ALLOW_PROJECT_USER_SETUP !== 'true') {
 
 const db = require('../server/db');
 const { hashPassword } = require('../server/auth');
+const { PROJECT_ROLE_DEFINITIONS } = require('../server/roleDefinitions');
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
 const ROSTER_PATH = path.join(REPO_ROOT, 'docs', 'organization', '花名册.md');
@@ -52,35 +53,6 @@ const SUPPLEMENTAL_PERSONNEL = {
     category: '职员'
   }
 };
-
-const PROJECT_ROLE_DEFINITIONS = [
-  {
-    roleCode: 'decision_group',
-    roleName: '项目决策组',
-    description: '查看全部信息，并处理升级后的冲突',
-    permissions: [
-      ['data:view_all', 'data', 'view_all', '查看全部信息'],
-      ['dashboard:view', 'dashboard', 'view', '查看统计看板'],
-      ['mapping:read', 'mapping', 'read', '查看业务映射'],
-      ['conflict:final_decide_escalated', 'conflict', 'final_decide_escalated', '处理升级后的冲突'],
-      ['todos:manage', 'todos', 'manage', '管理待办']
-    ]
-  },
-  {
-    roleCode: 'it_lead',
-    roleName: '信息化负责人',
-    description: '查看全部信息，处理一般冲突，并升级冲突',
-    permissions: [
-      ['data:view_all', 'data', 'view_all', '查看全部信息'],
-      ['dashboard:view', 'dashboard', 'view', '查看统计看板'],
-      ['mapping:read', 'mapping', 'read', '查看业务映射'],
-      ['conflict:manage', 'conflict', 'manage', '处理一般冲突'],
-      ['conflict:resolve', 'conflict', 'resolve', '冲突解决'],
-      ['conflict:escalate', 'conflict', 'escalate', '升级冲突'],
-      ['todos:manage', 'todos', 'manage', '管理待办']
-    ]
-  }
-];
 
 const PARTICIPANTS = [
   { name: '马成文', department: '公司领导', projectRole: '信息化项目组组长/决策组' },
@@ -167,9 +139,9 @@ function inferRbacRoles(projectRole) {
   const roles = new Set();
   if (projectRole.includes('决策组')) roles.add('decision_group');
   if (projectRole.includes('信息化负责人')) roles.add('it_lead');
-  if (projectRole.includes('项目组长')) roles.add('owner');
-  if (projectRole.includes('业务对接人')) roles.add('owner');
-  if (projectRole.includes('数据质量员')) roles.add('reviewer');
+  if (projectRole.includes('项目组长')) roles.add('project_lead');
+  if (projectRole.includes('业务对接人')) roles.add('business_contact');
+  if (projectRole.includes('数据质量员')) roles.add('data_quality');
   if (roles.size === 0) roles.add('submitter');
   return Array.from(roles);
 }
