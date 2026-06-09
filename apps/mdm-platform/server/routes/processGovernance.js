@@ -51,6 +51,27 @@ function emptySankey() {
   };
 }
 
+function emptyQualitySummary() {
+  return { BLOCK: 0, WARN: 0, INFO: 0 };
+}
+
+function qualitySummary(snapshotId) {
+  const summary = emptyQualitySummary();
+  if (!snapshotId) return summary;
+  const rows = db.prepare(`
+    SELECT severity, COUNT(*) AS count
+    FROM process_governance_quality_findings
+    WHERE snapshot_id=?
+    GROUP BY severity
+  `).all(snapshotId);
+  rows.forEach(row => {
+    if (Object.prototype.hasOwnProperty.call(summary, row.severity)) {
+      summary[row.severity] = row.count;
+    }
+  });
+  return summary;
+}
+
 router.get('/snapshots', requireAuth, (req, res) => {
   return runDbAction(res, () => {
     const snapshots = db.prepare(`
@@ -74,7 +95,8 @@ router.get('/current', requireAuth, (req, res) => {
       imported_at: snapshot.imported_at,
       status: snapshot.status,
       note: snapshot.note,
-      stats: snapshotStats(snapshot)
+      stats: snapshotStats(snapshot),
+      qualitySummary: qualitySummary(snapshot.id)
     });
   });
 });
@@ -205,6 +227,44 @@ router.get('/cross-dept', requireAuth, (req, res) => {
 
     sql += " ORDER BY CASE risk_level WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END, id";
     res.json({ items: db.prepare(sql).all(...params) });
+  });
+});
+
+router.get('/quality', requireAuth, (req, res) => {
+  return runDbAction(res, () => {
+    const snapshot = activeSnapshot();
+    if (!snapshot) return res.json({ summary: emptyQualitySummary(), items: [] });
+
+    const params = [snapshot.id];
+    let sql = `
+      SELECT id, severity, area, source_file, source_line, message, suggestion, dept_name, imported_at
+      FROM process_governance_quality_findings
+      WHERE snapshot_id=?
+    `;
+
+    const severity = String(req.query.severity || '').toUpperCase();
+    if (['BLOCK', 'WARN', 'INFO'].includes(severity)) {
+      sql += ' AND severity=?';
+      params.push(severity);
+    }
+    if (req.query.area) {
+      sql += ' AND area=?';
+      params.push(String(req.query.area));
+    }
+    if (req.query.dept) {
+      sql += ' AND dept_name=?';
+      params.push(String(req.query.dept));
+    }
+
+    sql += `
+      ORDER BY CASE severity WHEN 'BLOCK' THEN 0 WHEN 'WARN' THEN 1 ELSE 2 END,
+               area, source_file, COALESCE(source_line, 0), id
+    `;
+
+    res.json({
+      summary: qualitySummary(snapshot.id),
+      items: db.prepare(sql).all(...params)
+    });
   });
 });
 

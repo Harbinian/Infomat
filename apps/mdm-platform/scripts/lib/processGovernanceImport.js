@@ -287,7 +287,58 @@ function normalizeChainStatus(value) {
   return ['complete', 'partial', 'broken'].includes(value) ? value : 'partial';
 }
 
-function importProcessGovernanceSnapshot({ db, sourceJsonPath, a1MarkdownPaths = [], importedBy = null, note = null }) {
+function normalizeSeverity(value) {
+  const severity = cleanCell(value).toUpperCase();
+  return ['BLOCK', 'WARN', 'INFO'].includes(severity) ? severity : 'INFO';
+}
+
+function deriveFindingDeptName(sourceFile) {
+  const normalized = String(sourceFile || '').replace(/\\/g, '/');
+  const base = path.basename(normalized);
+  const canonical = base.match(/^(.+?)部门-能力-流程-系统映射关系\.md$/);
+  if (canonical) return canonical[1];
+  const normsMatch = normalized.match(/docs\/norms\/(.+?)部门(?:-|能力|$)/);
+  return normsMatch ? normsMatch[1] : null;
+}
+
+function normalizeQualityFinding(finding) {
+  const sourceFile = cleanCell(finding.source_file || finding.file || '');
+  const sourceLine = Number(finding.source_line || finding.line || 0) || null;
+  const message = cleanCell(finding.message || '');
+  const suggestion = cleanCell(finding.suggestion || '');
+  const severity = normalizeSeverity(finding.severity);
+  const area = cleanCell(finding.area || 'GENERAL') || 'GENERAL';
+  const deptName = cleanCell(finding.dept_name || '') || deriveFindingDeptName(sourceFile);
+  const keySource = [
+    severity,
+    area,
+    sourceFile,
+    sourceLine || '',
+    message,
+    suggestion,
+  ].join('|');
+
+  return {
+    severity,
+    area,
+    source_file: sourceFile || 'unknown',
+    source_line: sourceLine,
+    message: message || '未命名质量问题',
+    suggestion: suggestion || null,
+    dept_name: deptName || null,
+    finding_key: crypto.createHash('sha256').update(keySource).digest('hex'),
+  };
+}
+
+function summarizeQualityFindings(findings) {
+  const summary = { BLOCK: 0, WARN: 0, INFO: 0 };
+  for (const finding of findings) {
+    summary[finding.severity] += 1;
+  }
+  return summary;
+}
+
+function importProcessGovernanceSnapshot({ db, sourceJsonPath, a1MarkdownPaths = [], qualityFindings = [], importedBy = null, note = null }) {
   const sourceText = fs.readFileSync(sourceJsonPath, 'utf8');
   const sourceHash = crypto.createHash('sha256').update(sourceText).digest('hex');
   const data = JSON.parse(sourceText);
@@ -298,6 +349,8 @@ function importProcessGovernanceSnapshot({ db, sourceJsonPath, a1MarkdownPaths =
     parsedA1Rows.push(...parseA1Markdown(fs.readFileSync(markdownPath, 'utf8'), markdownPath));
   }
   stats.a1Imported = parsedA1Rows.length;
+  const normalizedQualityFindings = qualityFindings.map(normalizeQualityFinding);
+  stats.quality = summarizeQualityFindings(normalizedQualityFindings);
 
   return db.transaction(() => {
     db.prepare("UPDATE process_governance_snapshots SET status='archived' WHERE status='active'").run();
@@ -399,6 +452,25 @@ function importProcessGovernanceSnapshot({ db, sourceJsonPath, a1MarkdownPaths =
       );
     }
 
+    const insertQualityFinding = db.prepare(`
+      INSERT OR IGNORE INTO process_governance_quality_findings (
+        snapshot_id, severity, area, source_file, source_line, message, suggestion, dept_name, finding_key
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    for (const finding of normalizedQualityFindings) {
+      insertQualityFinding.run(
+        snapshotId,
+        finding.severity,
+        finding.area,
+        finding.source_file,
+        finding.source_line,
+        finding.message,
+        finding.suggestion,
+        finding.dept_name,
+        finding.finding_key
+      );
+    }
+
     return snapshotId;
   })();
 }
@@ -407,4 +479,5 @@ module.exports = {
   importProcessGovernanceSnapshot,
   parseA1Markdown,
   deriveNodeTypes,
+  normalizeQualityFinding,
 };

@@ -1,6 +1,7 @@
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
+const { syncOrganizationStructure } = require('./sync-organization-structure');
 const BASE = 'http://localhost:3000';
 const COOKIE_FILE = path.join(__dirname, '..', '.smoke-cookie.txt');
 
@@ -48,59 +49,57 @@ async function main() {
   let pass = 0, fail = 0;
   function check(name, ok) { if (ok) { pass++; console.log(`  PASS ${name}`); } else { fail++; console.error(`  FAIL ${name}`); } }
 
-  // 1. Create org unit
-  const orgRes = await request('POST', '/api/org-units', { org_unit_name: '工程技术部', org_type: 'department', org_mnemonic: 'ENG' });
-  check('POST /org-units creates org', orgRes.status === 201 && orgRes.body.org_unit_code && orgRes.body.org_unit_code.startsWith('OU-DEPT-ENG'));
-  const orgCode = orgRes.body.org_unit_code;
+  syncOrganizationStructure();
 
-  // 2. Activate org unit
-  const actRes = await request('POST', `/api/org-units/${encodeURIComponent(orgCode)}/activate`);
-  check('POST /org-units/:code/activate', actRes.body.success);
+  // 1. Manual org-unit creation is disabled
+  const orgRes = await request('POST', '/api/org-units', { org_unit_name: '手工测试组织', org_type: 'department', org_mnemonic: 'MANUAL' });
+  check('POST /org-units rejects manual org creation', orgRes.status === 403);
+  const orgCode = 'OU-DEP-ENG';
 
-  // 3. List org units
+  // 2. List synchronized org units
   const listOrgRes = await request('GET', '/api/org-units?status=active');
   check('GET /org-units lists orgs', Array.isArray(listOrgRes.body.rows) && listOrgRes.body.rows.length >= 1);
 
-  // 4. Get org unit by code
+  // 3. Get synchronized org unit by code
   const getOrgRes = await request('GET', `/api/org-units/${encodeURIComponent(orgCode)}`);
   check('GET /org-units/:code', getOrgRes.status === 200 && getOrgRes.body.org_unit_name === '工程技术部');
 
-  // 5. Create person
+  // 4. Create person
   const personRes = await request('POST', '/api/persons', { person_name: '张三', mobile: '13800138000', email: 'zhangsan@test.com' });
   check('POST /persons creates person', personRes.status === 201 && personRes.body.employee_no && personRes.body.employee_no.startsWith('EMP-'));
   const empNo = personRes.body.employee_no;
 
-  // 6. Activate person
+  // 5. Activate person
   const actPersonRes = await request('POST', `/api/persons/${encodeURIComponent(empNo)}/activate`);
   check('POST /persons/:no/activate', actPersonRes.body.success);
 
-  // 7. Get person
+  // 6. Get person
   const getPersonRes = await request('GET', `/api/persons/${encodeURIComponent(empNo)}`);
   check('GET /persons/:no', getPersonRes.body.person_name === '张三');
 
-  // 8. Update person
+  // 7. Update person
   const updRes = await request('PUT', `/api/persons/${encodeURIComponent(empNo)}`, { mobile: '13900139000' });
   check('PUT /persons/:no updates', updRes.body.success);
 
-  // 9. Create product family
+  // 8. Create product family
   const pfRes = await request('POST', '/api/product-families', { model_name: '枭龙S19', model_code: 'S19', class_major: 'CF' });
   check('POST /product-families creates', pfRes.status === 201 && pfRes.body.product_family_code && pfRes.body.product_family_code.startsWith('PF-S19-CF'));
   const pfCode = pfRes.body.product_family_code;
 
-  // 10. Activate product family
+  // 9. Activate product family
   const actPfRes = await request('POST', `/api/product-families/${encodeURIComponent(pfCode)}/activate`);
   check('POST /product-families/:code/activate', actPfRes.body.success);
 
-  // 11. Create product
+  // 10. Create product
   const prodRes = await request('POST', '/api/products', { product_family_id: 1, revision: 'A', class_mid: 'RFF', class_minor: 'PNL' });
   check('POST /products creates', prodRes.status === 201 && prodRes.body.product_code && prodRes.body.product_code.startsWith('PRD-S19-CF-RFF-PNL'));
   const prodCode = prodRes.body.product_code;
 
-  // 12. Release product
+  // 11. Release product
   const relRes = await request('POST', `/api/products/${encodeURIComponent(prodCode)}/release`);
   check('POST /products/:code/release', relRes.body.success);
 
-  // 13. Quality dashboard
+  // 12. Quality dashboard
   const dashRes = await request('GET', '/api/quality/dashboard');
   check('GET /quality/dashboard', dashRes.status === 200 && typeof dashRes.body.org_person === 'object');
 

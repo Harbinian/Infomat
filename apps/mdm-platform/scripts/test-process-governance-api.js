@@ -21,6 +21,24 @@ importProcessGovernanceSnapshot({
   db,
   sourceJsonPath: path.join(__dirname, 'fixtures', 'process-governance-snapshot.json'),
   a1MarkdownPaths: [path.join(__dirname, 'fixtures', 'process-governance-a1.md')],
+  qualityFindings: [
+    {
+      severity: 'BLOCK',
+      area: 'ORG',
+      file: 'docs/organization/组织架构和部门职责.md',
+      line: 1,
+      message: '组织真源路径需要统一',
+      suggestion: '规则文件统一引用当前组织真源。'
+    },
+    {
+      severity: 'WARN',
+      area: 'BBM',
+      file: 'docs/norms/经营发展部部门-能力-流程-系统映射关系.md',
+      line: 42,
+      message: '经营发展部 A1 待补充核验提醒',
+      suggestion: '回源补充核验提醒。'
+    }
+  ],
   importedBy: null,
   note: 'api fixture'
 });
@@ -86,6 +104,7 @@ async function main() {
     const current = await request('/api/process-governance/current', {}, cookie);
     assert.strictEqual(current.res.status, 200);
     assert.strictEqual(current.body.stats.mappings, 1);
+    assert.deepStrictEqual(current.body.qualitySummary, { BLOCK: 1, WARN: 1, INFO: 0 });
 
     const snapshots = await request('/api/process-governance/snapshots', {}, cookie);
     assert.strictEqual(snapshots.res.status, 200);
@@ -114,6 +133,22 @@ async function main() {
     const chains = await request('/api/process-governance/chains', {}, cookie);
     assert.strictEqual(chains.res.status, 200);
     assert.deepStrictEqual(chains.body.items[0].breaks, ['工程技术部: 技术条款评审节点待补全']);
+
+    const quality = await request('/api/process-governance/quality', {}, cookie);
+    assert.strictEqual(quality.res.status, 200);
+    assert.deepStrictEqual(quality.body.summary, { BLOCK: 1, WARN: 1, INFO: 0 });
+    assert.strictEqual(quality.body.items.length, 2);
+    assert.strictEqual(quality.body.items[0].source_file.includes('docs/'), true);
+
+    const warnQuality = await request('/api/process-governance/quality?severity=WARN', {}, cookie);
+    assert.strictEqual(warnQuality.res.status, 200);
+    assert.strictEqual(warnQuality.body.items.length, 1);
+    assert.strictEqual(warnQuality.body.items[0].severity, 'WARN');
+
+    const deptQuality = await request('/api/process-governance/quality?dept=经营发展部', {}, cookie);
+    assert.strictEqual(deptQuality.res.status, 200);
+    assert.strictEqual(deptQuality.body.items.length, 1);
+    assert.strictEqual(deptQuality.body.items[0].dept_name, '经营发展部');
 
     console.log('Process governance API test passed');
   } catch (error) {

@@ -22,6 +22,71 @@ function runDbAction(res, action) {
   }
 }
 
+function getUserRoleCodes(userId, legacyRole) {
+  const roles = db.prepare(`
+    SELECT r.role_code as code, r.role_name as name
+    FROM user_roles ur
+    JOIN roles r ON ur.role_id = r.role_id
+    WHERE ur.user_id=?
+    ORDER BY r.is_system DESC, r.role_code
+  `).all(userId);
+
+  if (legacyRole && !roles.some(role => role.code === legacyRole)) {
+    const legacy = db.prepare('SELECT role_code as code, role_name as name FROM roles WHERE role_code=?').get(legacyRole);
+    if (legacy) roles.unshift(legacy);
+  }
+
+  return roles;
+}
+
+const BASIC_ROLE_CODES = new Set(['submitter', 'owner', 'reviewer', 'admin']);
+
+function normalizeRoleIds(roleIds) {
+  if (!Array.isArray(roleIds)) return [];
+  return [...new Set(roleIds.map(id => Number(id)).filter(id => Number.isInteger(id) && id > 0))];
+}
+
+function getRolesByIds(roleIds) {
+  const ids = normalizeRoleIds(roleIds);
+  if (ids.length === 0) return [];
+  const placeholders = ids.map(() => '?').join(',');
+  return db.prepare(`
+    SELECT role_id, role_code, role_name
+    FROM roles
+    WHERE role_id IN (${placeholders})
+    ORDER BY is_system DESC, role_code
+  `).all(...ids);
+}
+
+function getRoleIdByCode(roleCode) {
+  if (!roleCode) return null;
+  const role = db.prepare('SELECT role_id FROM roles WHERE role_code=?').get(roleCode);
+  return role ? role.role_id : null;
+}
+
+function chooseCompatibleRole(requestedRole, roleIds, fallbackRole) {
+  if (BASIC_ROLE_CODES.has(requestedRole)) return requestedRole;
+
+  const roles = getRolesByIds(roleIds);
+  const basicRole = roles.find(role => BASIC_ROLE_CODES.has(role.role_code));
+  if (basicRole) return basicRole.role_code;
+
+  if (BASIC_ROLE_CODES.has(fallbackRole)) return fallbackRole;
+  return 'submitter';
+}
+
+function syncUserRoles(userId, roleIds, compatibleRole, assignedBy) {
+  const ids = new Set(normalizeRoleIds(roleIds));
+  const compatibleRoleId = getRoleIdByCode(compatibleRole);
+  if (compatibleRoleId) ids.add(compatibleRoleId);
+
+  if (ids.size === 0) return;
+
+  db.prepare('DELETE FROM user_roles WHERE user_id=?').run(userId);
+  const insert = db.prepare('INSERT OR IGNORE INTO user_roles (user_id, role_id, assigned_by) VALUES (?, ?, ?)');
+  for (const roleId of ids) insert.run(userId, roleId, assignedBy || null);
+}
+
 router.get('/departments', requireAuth, (req, res) => {
   const depts = db.prepare('SELECT * FROM departments ORDER BY code').all();
   res.json(depts);
@@ -115,7 +180,7 @@ router.get('/users', requireAuth, (req, res) => {
 router.get('/users/roles-summary', requireAuth, requirePermission('admin:access'), (req, res) => {
   return runDbAction(res, () => {
     const users = db.prepare(`
-      SELECT u.id, u.name, u.employee_no, u.post, u.role, u.department_id,
+      SELECT u.id, u.name, u.employee_no, u.post, u.role, u.department_id, u.created_at,
              d.name as dept_name,
              COALESCE(GROUP_CONCAT(r.role_code), '') as rbac_role_codes,
              COALESCE(GROUP_CONCAT(r.role_name), '') as rbac_role_names
@@ -130,29 +195,45 @@ router.get('/users/roles-summary', requireAuth, requirePermission('admin:access'
       id: u.id,
       name: u.name,
       employee_no: u.employee_no,
+      department_id: u.department_id,
       dept_name: u.dept_name || null,
       post: u.post,
       role: u.role,
-      rbac_role_codes: u.rbac_role_codes || ''
+      created_at: u.created_at,
+      rbac_role_codes: u.rbac_role_codes || '',
+      rbac_role_names: u.rbac_role_names || ''
     })));
   });
 });
 
 router.post('/users', requirePermission('admin:access'), (req, res) => {
   return runDbAction(res, () => {
-    const { name, employee_no, department_id, post, role, password } = req.body;
+    const { name, employee_no, department_id, post, role, password, role_ids } = req.body;
+    if (!name || !employee_no) return res.status(400).json({ error: '姓名和工号为必填' });
+    const compatibleRole = chooseCompatibleRole(role, role_ids, 'submitter');
     const hash = hashPassword(password || 'init1234');
     const stmt = db.prepare('INSERT INTO users (name, employee_no, department_id, post, role, password_hash) VALUES (?, ?, ?, ?, ?, ?)');
-    const result = stmt.run(name, employee_no, department_id || null, post || null, role || 'submitter', hash);
+    const result = db.transaction(() => {
+      const created = stmt.run(name, employee_no, department_id || null, post || null, compatibleRole, hash);
+      syncUserRoles(created.lastInsertRowid, role_ids, compatibleRole, req.session.userId);
+      return created;
+    })();
     res.json({ id: result.lastInsertRowid });
   });
 });
 
 router.put('/users/:id', requirePermission('admin:access'), (req, res) => {
   return runDbAction(res, () => {
-    const { name, department_id, post, role } = req.body;
+    const existing = db.prepare('SELECT * FROM users WHERE id=?').get(req.params.id);
+    if (!existing) return res.status(404).json({ error: '用户不存在' });
+
+    const { name, department_id, post, role, role_ids } = req.body;
+    const compatibleRole = chooseCompatibleRole(role, role_ids, existing.role);
     const stmt = db.prepare('UPDATE users SET name=?, department_id=?, post=?, role=? WHERE id=?');
-    stmt.run(name, department_id || null, post || null, role, req.params.id);
+    db.transaction(() => {
+      stmt.run(name || existing.name, department_id || null, post || null, compatibleRole, req.params.id);
+      if (Array.isArray(role_ids)) syncUserRoles(req.params.id, role_ids, compatibleRole, req.session.userId);
+    })();
     res.json({ success: true });
   });
 });
@@ -190,11 +271,18 @@ router.post('/logout', (req, res) => {
 
 router.get('/me', requireAuth, (req, res) => {
   const { permSet } = getUserEffectivePermissions(req.session.userId);
+  const rbacRoles = getUserRoleCodes(req.session.userId, req.session.userRole);
+  const department = req.session.departmentId
+    ? db.prepare('SELECT name FROM departments WHERE id=?').get(req.session.departmentId)
+    : null;
   res.json({
     id: req.session.userId,
     name: req.session.userName,
     role: req.session.userRole,
     departmentId: req.session.departmentId,
+    departmentName: department && department.name || null,
+    rbacRoles,
+    roleCodes: rbacRoles.map(role => role.code),
     permissions: Array.from(permSet)
   });
 });
@@ -224,17 +312,9 @@ router.put('/users/:id/roles', requireAuth, requirePermission('admin:access'), (
     if (!user) return res.status(404).json({ error: '用户不存在' });
 
     db.transaction(() => {
-      db.prepare('DELETE FROM user_roles WHERE user_id=?').run(req.params.id);
-      const insert = db.prepare('INSERT OR IGNORE INTO user_roles (user_id, role_id, assigned_by) VALUES (?, ?, ?)');
-      for (const roleId of role_ids) {
-        insert.run(req.params.id, roleId, req.session.userId);
-      }
-
-      // Update users.role to primary role name for backward compat
-      const primaryRole = db.prepare('SELECT role_code FROM roles WHERE role_id=?').get(role_ids[0]);
-      if (primaryRole) {
-        db.prepare('UPDATE users SET role=? WHERE id=?').run(primaryRole.role_code, req.params.id);
-      }
+      const compatibleRole = chooseCompatibleRole(null, role_ids, user.role);
+      syncUserRoles(req.params.id, role_ids, compatibleRole, req.session.userId);
+      db.prepare('UPDATE users SET role=? WHERE id=?').run(compatibleRole, req.params.id);
     })();
 
     res.json({ success: true });
