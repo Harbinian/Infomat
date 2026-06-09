@@ -285,7 +285,7 @@ function checkDeliverables(findings, contract, root) {
             join(normsDir, name),
             1,
             `发现部门名不在组织合同中的标准形态文件: ${name}`,
-            '确认是否应归并到合同中的部门名称，例如复材一车间或复材二车间。',
+            '按 docs/organization/组织架构和部门职责.md 的部门名称归并后再纳入三件套。',
           );
         }
       }
@@ -320,19 +320,11 @@ function checkDeliverables(findings, contract, root) {
 
   const rootEcharts = join(root, contract.paths.rootEcharts);
   if (!existsSync(rootEcharts)) {
-    addFinding(findings, 'BLOCK', 'ASSET', rootEcharts, 1, '根目录 echarts.min.js 不存在', '正式 HTML 需要引用 ../echarts.min.js。');
+    addFinding(findings, 'BLOCK', 'ASSET', rootEcharts, 1, '项目根 echarts.min.js 不存在', 'PMO 驾驶舱需要引用项目根静态资产。');
   }
-  const duplicate = join(root, contract.paths.disallowedNormsEcharts);
-  if (existsSync(duplicate)) {
-    addFinding(
-      findings,
-      'WARN',
-      'ASSET',
-      duplicate,
-      1,
-      'docs/norms 下存在重复 echarts.min.js',
-      '按当前约定，静态资产应放项目根目录，部门 HTML 引用 ../echarts.min.js。',
-    );
+  const normsEcharts = join(root, contract.paths.normsEcharts ?? join(contract.paths.normsDir, 'echarts.min.js'));
+  if (!existsSync(normsEcharts)) {
+    addFinding(findings, 'BLOCK', 'ASSET', normsEcharts, 1, 'docs/norms/echarts.min.js 不存在', '部门桑基图 HTML 应统一引用同目录 echarts.min.js。');
   }
 }
 
@@ -516,7 +508,7 @@ function checkHtml(findings, contract, root, dept) {
       htmlPath,
       1,
       `${dept} 桑基图 HTML 未引用 ${contract.html.requiredEchartsSrc}`,
-      '正式部门 HTML 应统一引用根目录 ECharts。',
+      '部门 HTML 应统一引用 docs/norms 同目录 ECharts。',
     );
   }
 

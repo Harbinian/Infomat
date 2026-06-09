@@ -2,6 +2,7 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 const { resolveDbPath } = require('./dbConfig');
+const { ensureProjectRoles } = require('./roleDefinitions');
 
 const dbPath = resolveDbPath();
 
@@ -791,6 +792,21 @@ CREATE TABLE IF NOT EXISTS process_interaction_chains (
   breaks_json TEXT,
   source_report TEXT
 );
+
+CREATE TABLE IF NOT EXISTS process_governance_quality_findings (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  snapshot_id INTEGER NOT NULL REFERENCES process_governance_snapshots(id) ON DELETE CASCADE,
+  severity TEXT NOT NULL CHECK(severity IN ('BLOCK','WARN','INFO')),
+  area TEXT NOT NULL,
+  source_file TEXT NOT NULL,
+  source_line INTEGER,
+  message TEXT NOT NULL,
+  suggestion TEXT,
+  dept_name TEXT,
+  finding_key TEXT NOT NULL,
+  imported_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(snapshot_id, finding_key)
+);
 `);
 
 function tableInfo(tableName) {
@@ -1000,5 +1016,6 @@ if (roleCount.cnt === 0) {
   dbInitLog('RBAC: System roles and permissions seeded');
 }
 
+ensureProjectRoles(db);
 dbInitLog('RBAC: Tables ready (roles, permissions, role_permissions, user_roles)');
 module.exports = db;

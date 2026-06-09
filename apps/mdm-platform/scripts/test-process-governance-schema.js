@@ -73,6 +73,7 @@ try {
     'process_a1_items',
     'process_cross_dept_interactions',
     'process_interaction_chains',
+    'process_governance_quality_findings',
   ].forEach(tableName => {
     const row = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?").get(tableName);
     assert.ok(row, `${tableName} should exist`);
@@ -87,6 +88,8 @@ try {
   assert.ok(tableColumns('process_interaction_chains').includes('breaks_json'));
   assert.ok(tableColumns('process_interaction_chains').includes('name'));
   assert.ok(tableColumns('process_interaction_chains').includes('status'));
+  assert.ok(tableColumns('process_governance_quality_findings').includes('finding_key'));
+  assert.ok(tableColumns('process_governance_quality_findings').includes('dept_name'));
   assert.ok(!tableColumns('process_interaction_chains').includes('chain_key'));
   assert.ok(!tableColumns('process_interaction_chains').includes('steps_json'));
   assert.ok(tableColumns('field_entries').includes('process_governance_node_key'));
@@ -114,6 +117,14 @@ try {
     db.prepare(`
       INSERT INTO process_interaction_chains (snapshot_id, name, status)
       VALUES (1, 'invalid chain', 'unknown')
+    `).run();
+  });
+
+  assert.throws(() => {
+    db.prepare(`
+      INSERT INTO process_governance_quality_findings
+        (snapshot_id, severity, area, source_file, message, finding_key)
+      VALUES (1, 'CRITICAL', 'ORG', 'docs/organization/组织架构和部门职责.md', 'invalid severity', 'bad-severity')
     `).run();
   });
 

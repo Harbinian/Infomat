@@ -102,7 +102,7 @@
       th.col-accept, td.col-accept { width: 92px; }
       th.col-evidence, td.col-evidence { width: 106px; }
       th.col-evidtype, td.col-evidtype { width: 100px; white-space: normal; }
-      th.col-system, td.col-system { width: 58px; }
+      th.col-system, td.col-system { width: 72px; }
       th.col-alert, td.col-alert { width: 94px; }
       th.col-feedback, td.col-feedback { width: 78px; }
       th.col-adjust, td.col-adjust { width: 54px; }
@@ -130,6 +130,11 @@
         border-radius: 4px; background: #e0f2fe; color: #075985;
         font-size: 11px; font-weight: 700; line-height: 1.35;
       }
+      .carrier-note {
+        display: block; margin-top: 4px; color: #475569;
+        font-size: 11px; line-height: 1.35;
+      }
+      .carrier-note b { color: #92400e; }
       .feedback-cell { color: #64748b; font-size: 11px; }
       .foot { margin-top: 14px; font-size: 12px; color: #64748b; }
       .progress-bar-wrap {
@@ -670,6 +675,26 @@ var a1Rows = [
   ["ZL-L3-90-A05","将影响评估全过程记录归档","质量安环部文档管理员","","","无审批","PLM","SYCXQMS-S3-03/A §5.6","原文明确-正文","SYCXQMS-S3-03/A §5.6","SYCXQMS-S3-03/A §5.6","SYCXQMS-S3-03/A §5.6","计量管理","计量确认与溯源管理","不合格测量设备对以往测量结果的影响评估"]
 ];
 
+      var carrierRows = [
+        {id:"ZL-L3-58-A03", carrier:"交付文件合格证、印章使用记录/盖章留痕", destination:"随交付文件归档/产品发运资料", reason:"盖章是物理印章控制动作，系统可记录但不能替代实物放行印章。", confirm:"确认印章使用台账和电子扫描归档"},
+        {id:"ZL-L3-59-A01", carrier:"交付文件复印件、装箱/发运随附文件、归档清单", destination:"产品发运/质量记录归档", reason:"复制和随货交付是纸质资料动作，不是系统事务本身。", confirm:"确认复印件份数、扫描件和归档责任"},
+        {id:"ZL-L3-64-A01", carrier:"纸质质量记录、填写工具规范", destination:"质量记录归档", reason:"该动作约束纸质记录填写方式，不适合直接落到应用系统。", confirm:"确认是否需要电子记录模板"},
+        {id:"ZL-L3-64-A02", carrier:"纸质记录杠改痕迹、签字/盖章/日期", destination:"质量记录归档", reason:"杠改、签字、盖章是纸质记录纠错控制，应保留物理留痕。", confirm:"确认电子化后是否保留等效修改留痕"},
+        {id:"ZL-L3-65-A05", carrier:"档案库房环境检查记录、温湿度/防护记录", destination:"质量档案", reason:"贮存环境是现场防护控制，不是单一系统事务。", confirm:"确认环境检查频次和记录表"},
+        {id:"ZL-L3-69-A03", carrier:"记录销毁审批单、销毁清单、销毁见证记录", destination:"质量记录销毁归档", reason:"销毁是实物/文件处置动作，系统只能保存审批和见证证据。", confirm:"确认销毁审批和见证留痕"},
+        {id:"ZL-L3-74-A03", carrier:"计量标识、不干胶标签、测量设备台账", destination:"测量设备实物/台账", reason:"粘贴标识是实物控制动作，应与台账同步但不等同于系统处理。", confirm:"确认标签编码和台账同步字段"},
+        {id:"ZL-L3-75-A02", carrier:"测量设备状态标识、防调整措施、使用记录", destination:"使用单位/计量台账", reason:"防调整属于现场实物防护和管理控制。", confirm:"确认防调整措施和异常记录入口"},
+        {id:"ZL-L3-75-A03", carrier:"搬运维护记录、储存检查记录、设备状态标识", destination:"使用单位/计量台账", reason:"搬运、维护、储存是现场实物管理动作。", confirm:"确认搬运维护记录是否进入台账"},
+        {id:"ZL-L3-75-A04", carrier:"定置管理标识、存放位置记录、现场检查记录", destination:"使用现场/计量台账", reason:"定置管理是现场布置和检查控制，不是系统事务。", confirm:"确认定置检查表和责任人"},
+        {id:"ZL-L3-80-A01", carrier:"测量软件权限设置记录、操作密码管理记录", destination:"测量软件使用现场/软件管理档案", reason:"密码设置是软件本体权限控制，当前不属于 OA/MES/PLM/ERP 流程事务。", confirm:"确认密码管理载体和权限审批"},
+        {id:"ZL-L3-80-A02", carrier:"授权用户清单、软件使用记录", destination:"测量软件管理档案", reason:"禁止性控制依赖授权清单和现场执行，不直接对应系统流转。", confirm:"确认授权名单维护方式"},
+        {id:"ZL-L3-80-A03", carrier:"密码变更记录、权限维护记录", destination:"测量软件管理档案", reason:"密码轮换是权限维护控制，应以变更记录闭环。", confirm:"确认变更周期和留痕责任"},
+        {id:"ZL-L3-82-A06", carrier:"合格标识、测量软件验证记录、配套设备验收记录", destination:"测量软件/设备档案", reason:"粘贴合格标识是实物/介质标识控制动作。", confirm:"确认标识字段和电子档案关联"},
+        {id:"ZL-L3-84-A03", carrier:"拷贝件/安装包检查记录、介质清单、完整性校验记录", destination:"软件安装包保管档案", reason:"介质完整性检查是保管控制，应记录检查结果和异常处理。", confirm:"确认校验方法和检查频次"},
+        {id:"ZL-L3-85-A03", carrier:"测量设备防护记录、状态标识、计量确认记录", destination:"计量确认档案/使用现场", reason:"设备防护是现场控制动作，应以状态标识和确认记录闭环。", confirm:"确认损坏/退化异常上报入口"},
+        {id:"ZL-L3-86-A01", carrier:"A/B/C分类标识、设备台账、标识粘贴记录", destination:"测量设备实物/计量台账", reason:"分类标识粘贴是实物控制动作，需与台账同步但不应替代为系统事务。", confirm:"确认分类规则、标签编码和台账同步字段"}
+      ];
+
       // ===== 系统说明 =====
       var systemBasis = {
         "OA": "适用于审核审批流转、通知发放、报告会签、会议组织、整改跟踪和闭环留痕。",
@@ -705,8 +730,50 @@ var a1Rows = [
         return String(value == null ? "" : value).replace(/[&<>"']/g, function(c) { return entities[c]; });
       }
 
+      function isBlankSystemValue(value) {
+        var text = String(value || "").trim();
+        return !text || text === "—" || text === "-" || text === "无" || text === "暂不对应";
+      }
+
       function systemsFor(sysStr) {
-        return String(sysStr || "").split("、").map(function(s) { return s.trim(); }).filter(Boolean);
+        return String(sysStr || "").split("、").map(function(s) { return s.trim(); }).filter(function(s) { return s && !isBlankSystemValue(s); });
+      }
+
+      function carrierFor(a1Id) {
+        return carrierRows.find(function(row) { return row.id === a1Id; });
+      }
+
+      function carrierWarning(a1) {
+        return carrierFor(a1[0]) ? "暂不对应系统：已登记记录载体，需确认处理入口" : "";
+      }
+
+      function carrierTooltipLines(a1) {
+        var carrier = carrierFor(a1[0]);
+        if (!carrier) return [];
+        return [
+          "记录载体：" + esc(carrier.carrier),
+          "去向：" + esc(carrier.destination),
+          "不适配理由：" + esc(carrier.reason),
+          "后续确认：" + esc(carrier.confirm)
+        ];
+      }
+
+      function systemTextFor(a1) {
+        var systems = systemsFor(a1[6]);
+        var carrier = carrierFor(a1[0]);
+        if (systems.length) return systems.join("、");
+        if (carrier) return "暂不对应系统（记录载体：" + carrier.carrier + "）";
+        return String(a1[6] || "");
+      }
+
+      function systemCellHtml(a1) {
+        var systems = systemsFor(a1[6]);
+        var carrier = carrierFor(a1[0]);
+        if (systems.length) return esc(systems.join("、"));
+        if (!carrier) return '<span class="warn-tag">待确认</span>';
+        return '<span class="warn-tag">暂不对应</span>' +
+          '<span class="carrier-note"><b>载体：</b>' + esc(carrier.carrier) + '</span>' +
+          '<span class="carrier-note"><b>确认：</b>' + esc(carrier.confirm) + '</span>';
       }
 
       function colorFor(name) {
@@ -767,7 +834,7 @@ var a1Rows = [
       }
 
       function auditWarnings(a1) {
-        return [roleWarning(a1), acceptanceWarning(a1), evidenceWarning(a1), trackingNote(a1)].filter(Boolean);
+        return [roleWarning(a1), acceptanceWarning(a1), evidenceWarning(a1), trackingNote(a1), carrierWarning(a1)].filter(Boolean);
       }
 
       function warningHtml(a1) {
@@ -933,7 +1000,8 @@ var a1Rows = [
                     "验收标准：" + esc(acceptanceText(a)),
                     "制度依据：" + esc(a[7] || ""),
                     "证据类型：" + esc(a[8] || ""),
-                    "应用系统：" + esc(a[6] || ""),
+                    "应用系统：" + esc(systemTextFor(a)),
+                    carrierTooltipLines(a).join("<br>"),
                     "<b>原文出处：</b>",
                     "  执行角色依据：" + esc(a[9] || a[7] || ""),
                     "  触发情景依据：" + esc(a[10] || a[7] || ""),
@@ -967,6 +1035,8 @@ var a1Rows = [
                   "验收标准：" + esc(acceptanceText(a1Match)),
                   "制度依据：" + esc(a1Match[7] || ""),
                   "证据类型：" + esc(a1Match[8] || ""),
+                  "应用系统：" + esc(systemTextFor(a1Match)),
+                  carrierTooltipLines(a1Match).join("<br>"),
                   "<b>原文出处：</b>",
                   "  执行角色依据：" + esc(a1Match[9] || a1Match[7] || ""),
                   "  触发情景依据：" + esc(a1Match[10] || a1Match[7] || ""),
@@ -1119,7 +1189,7 @@ var a1Rows = [
               '<td class="col-accept">' + acceptanceCell + '</td>' +
               '<td class="col-evidence">' + esc(a1[7]) + '</td>' +
               '<td class="col-evidtype"><span class="evidence-tag ' + evidenceClass(a1[8]) + '">' + esc(a1[8]) + '</span></td>' +
-              '<td class="col-system">' + esc(a1[6]) + '</td>' +
+              '<td class="col-system">' + systemCellHtml(a1) + '</td>' +
               '<td class="col-alert">' + (warningHtml(a1) || '<span class="soft-warn-tag">请部门确认无调整</span>') + '</td>' +
               '<td class="col-feedback feedback-cell">待部门填写</td>' +
               '<td class="col-adjust feedback-cell">待确认</td>' +
@@ -1176,11 +1246,11 @@ a1Rows.forEach(function(r) {
   var src = '依据制度文件 ' + (r[7] || '未标注') + '（' + (r[8] || '') + '），' +
     '该条款明确由「' + (r[2] || '') + '」执行，「' + (r[1] || '') + '」，' +
     '触发情景为「' + (r[3] || '') + '」，前置条件为「' + (r[4] || '') + '」。' +
-    '审批类型：' + (r[5] || '') + '，系统支撑：' + (r[6] || '') + '。';
+    '审批类型：' + (r[5] || '') + '，系统支撑：' + systemTextFor(r) + '。';
   a1Index[r[0]] = { name: r[1], role: r[2], trigger: r[3], precondition: r[4],
-    approval: r[5], system: r[6], evidence: r[7], evidenceType: r[8],
+    approval: r[5], system: systemTextFor(r), evidence: r[7], evidenceType: r[8],
     roleEvidence: roleEv, triggerEvidence: trigEv, preconditionEvidence: preEv,
-    domain: r[12], capability: r[13], process: r[14], alert: r[15] || '',
+    domain: r[12], capability: r[13], process: r[14], alert: [r[15] || '', carrierWarning(r)].filter(Boolean).join('；'),
     sourceText: src };
 });
 
@@ -1213,9 +1283,11 @@ function openFeedbackCard(a1Id) {
   document.getElementById('feedbackTitle').innerHTML = a1Id + ' 反馈 <span style="font-size:12px;color:' + (done ? '#16a34a' : '#dc2626') + ';font-weight:400">' + (done ? '已完成' : '未完成') + '</span>';
   var body = document.getElementById('feedbackBody');
 
-  var html = '<div class="a1-context"><b>' + info.name + '</b><br>';
-  html += '执行角色: ' + info.role + ' | 审批: ' + info.approval + ' | 系统: ' + info.system;
-  if (info.alert) html += '<br><span style="color:#92400e">核验提醒: ' + info.alert + '</span>';
+  var cardCarrier = carrierFor(a1Id);
+  var html = '<div class="a1-context"><b>' + esc(info.name) + '</b><br>';
+  html += '执行角色: ' + esc(info.role) + ' | 审批: ' + esc(info.approval) + ' | 系统: ' + esc(info.system);
+  if (cardCarrier) html += '<br><b>记录载体:</b> ' + esc(cardCarrier.carrier) + '<br><b>后续确认:</b> ' + esc(cardCarrier.confirm);
+  if (info.alert) html += '<br><span style="color:#92400e">核验提醒: ' + esc(info.alert) + '</span>';
   html += '</div>';
 
   html += '<div class="a1-context" style="background:#f0fdf4;border-left:3px solid #16a34a;margin-top:10px;">';

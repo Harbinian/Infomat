@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { spawnSync } = require('child_process');
 const db = require('../server/db');
 const { importProcessGovernanceSnapshot } = require('./lib/processGovernanceImport');
 
@@ -13,11 +14,29 @@ const a1MarkdownPaths = fs.existsSync(normsDir)
     .map(name => path.join(normsDir, name))
   : [];
 
+function loadQualityFindings() {
+  const checkerPath = path.join(repoRoot, 'scripts', 'check-dcm-bbm.mjs');
+  if (!fs.existsSync(checkerPath)) return [];
+
+  const result = spawnSync(process.execPath, [checkerPath, '--no-fail', '--json'], {
+    cwd: repoRoot,
+    encoding: 'utf8'
+  });
+  if (result.error) throw result.error;
+  if (result.status !== 0) {
+    throw new Error(`check-dcm-bbm failed: ${result.stderr || result.stdout}`);
+  }
+
+  const parsed = JSON.parse(result.stdout || '{}');
+  return Array.isArray(parsed.findings) ? parsed.findings : [];
+}
+
 try {
   const snapshotId = importProcessGovernanceSnapshot({
     db,
     sourceJsonPath,
     a1MarkdownPaths,
+    qualityFindings: loadQualityFindings(),
     note: 'Imported from PMO process governance snapshot'
   });
   console.log(JSON.stringify({ importedSnapshotId: snapshotId }));

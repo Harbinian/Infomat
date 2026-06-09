@@ -1,15 +1,13 @@
 {
-  "version": "2026-06-02",
+  "version": "2026-06-09",
   "name": "DCM/BBM 双合同质检规则",
   "paths": {
     "normsDir": "docs/norms",
     "pmoDashboard": "pmo/procedure-management/dashboard.html",
-    "canonicalOrganizationSource": "docs/organization/组织架构与部门职责.md",
-    "fallbackOrganizationSources": [
-      "docs/organization/组织架构和部门职责.md"
-    ],
+    "canonicalOrganizationSource": "docs/organization/组织架构和部门职责.md",
+    "fallbackOrganizationSources": [],
     "rootEcharts": "echarts.min.js",
-    "disallowedNormsEcharts": "docs/norms/echarts.min.js"
+    "normsEcharts": "docs/norms/echarts.min.js"
   },
   "departments": {
     "工程技术部": "总经理直辖域",
@@ -19,8 +17,7 @@
     "经营发展部": "经营域",
     "物资保障部": "经营域",
     "项目管理部": "生产域",
-    "复材一车间": "生产域",
-    "复材二车间": "生产域",
+    "复材车间": "生产域",
     "运维安环部": "生产域"
   },
   "terminology": {
@@ -149,7 +146,7 @@
     "crossDepartmentMarker": "【跨部门"
   },
   "html": {
-    "requiredEchartsSrc": "../echarts.min.js",
+    "requiredEchartsSrc": "echarts.min.js",
     "forbiddenShorthandPatterns": [
       "业务能力\\(L2\\)",
       "业务流程\\(L3\\)",

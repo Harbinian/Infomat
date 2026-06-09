@@ -7,25 +7,36 @@
   <title>MDM 平台</title>
   <style>
     :root {
-      --bg: #ffffff;
-      --surface: #f3f4f6;
-      --border: #e0e0e0;
-      --text-main: #1f2937;
-      --text-muted: #6b7280;
-      --accent: #fc0000;
-      --accent-hover: #dc0000;
-      --focus-ring: rgba(252, 0, 0, 0.15);
+      --bg: #efe7d5;
+      --bg-deep: #e6dcc1;
+      --surface: #f7f1e0;
+      --surface-2: #fbf6e9;
+      --border: rgba(58, 46, 31, 0.16);
+      --border-soft: rgba(58, 46, 31, 0.08);
+      --text-main: #2a2014;
+      --text-muted: #7a6a56;
+      --accent: #b25638;
+      --accent-hover: #8f3f2c;
+      --sage: #6f7d4e;
+      --mist: #4a6b7e;
+      --gold: #9a7a30;
+      --focus-ring: rgba(178, 86, 56, 0.18);
       --error: #b91c1c;
       --success: #059669;
       --warning: #d97706;
-      --header-bg: #1a1a2e;
-      --header-text: #ffffff;
-      --header-text-muted: #9ca3af;
+      --header-bg: rgba(247, 241, 224, 0.92);
+      --header-text: #2a2014;
+      --header-text-muted: #7a6a56;
+      --shadow-sm: 0 4px 12px rgba(58, 46, 31, 0.06);
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; min-height: 100%; }
     body {
       font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background: var(--bg);
+      background:
+        radial-gradient(1200px 800px at 20% 0%, #f6efde 0%, transparent 60%),
+        radial-gradient(1000px 700px at 100% 100%, #e9dfc3 0%, transparent 55%),
+        var(--bg);
       color: var(--text-main);
       font-size: 14px;
       line-height: 1.5;
@@ -42,8 +53,9 @@
       align-items: center;
       justify-content: space-between;
       padding: 0 24px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-      background: var(--header-bg);
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(247, 241, 224, 0.94), rgba(247, 241, 224, 0.78));
+      backdrop-filter: blur(8px);
       position: sticky;
       top: 0;
       z-index: 20;
@@ -53,9 +65,10 @@
     .session { display: flex; align-items: center; gap: 16px; font-size: 13px; color: var(--header-text-muted); }
 
     .page-container {
-      max-width: 1200px;
+      max-width: none;
       margin: 0 auto;
-      padding: 32px 32px 80px;
+      padding: 0;
+      min-height: calc(100vh - 56px);
     }
 
     /* Typography */
@@ -77,10 +90,10 @@
     .tabs {
       display: flex;
       gap: 16px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-      background: var(--header-bg);
+      border-bottom: 1px solid var(--border);
+      background: rgba(247, 241, 224, 0.72);
       padding: 0 24px;
-      margin-bottom: 40px;
+      margin-bottom: 0;
       overflow-x: auto;
       overflow-y: hidden;
     }
@@ -99,7 +112,7 @@
     .tab.on { color: var(--accent); border-bottom-color: var(--accent); }
 
     /* Panels */
-    .panel { display: none; animation: fadeIn 0.3s ease; }
+    .panel { display: none; animation: fadeIn 0.3s ease; padding: 32px 32px 80px; max-width: 1200px; margin: 0 auto; }
     .panel.on { display: block; }
 
     /* Components */
@@ -170,14 +183,293 @@
     .tag.amber { color: var(--warning); border-color: #fde68a; background: #fffbeb; }
     .tag.red { color: var(--error); border-color: #fecaca; background: #fef2f2; }
 
+    .rbac-shell { display: flex; gap: 16px; min-height: 500px; }
+    .rbac-side { width: 200px; flex-shrink: 0; background: #f8f9fa; border-radius: 6px; padding: 12px; }
+    .rbac-nav-item {
+      padding: 10px; cursor: pointer; border-radius: 4px; margin-bottom: 4px;
+      color: var(--text-main); font-size: 13px;
+    }
+    .rbac-nav-item.active { background: #e3f2fd; font-weight: 700; }
+    .user-management-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
+    .user-management-head h3 { margin: 0 0 4px; font-size: 18px; }
+    .user-management-head p { margin: 0; color: var(--text-muted); font-size: 13px; }
+    .user-management-filters { display: grid; grid-template-columns: minmax(180px, 1.4fr) minmax(140px, 1fr) auto; gap: 10px; align-items: end; margin-bottom: 14px; }
+    .user-management-form {
+      display: grid; gap: 14px; margin-bottom: 16px; padding: 14px;
+      border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2);
+    }
+    .user-management-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; }
+    .user-role-groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    .role-check-list { display: grid; gap: 6px; padding: 10px 12px; border: 1px solid var(--border-soft); border-radius: 6px; background: #fffaf5; }
+    .role-check-list label { display: grid; grid-template-columns: 16px minmax(0, 1fr); align-items: start; gap: 8px; font-size: 12px; font-weight: 500; }
+    .role-check-list input { width: auto; margin-top: 2px; }
+    .role-badges { display: flex; flex-wrap: wrap; gap: 4px; }
+    .user-management-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
     /* Misc */
     .notice { font-size: 13px; color: var(--text-muted); padding: 12px 16px; background: var(--surface); border-radius: 6px; margin-bottom: 20px; border-left: 3px solid var(--border); }
     .empty { padding: 48px; color: var(--text-muted); text-align: center; font-size: 13px; }
     .chart { height: 450px; width: 100%; margin-top: 24px; }
+    .role-guide-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 20px; }
+    .role-guide-header h2 { margin-bottom: 8px; }
+    .role-guide-header p { color: var(--text-muted); font-size: 13px; max-width: 760px; }
+    .role-guide-current { border-left-color: var(--accent); }
+    .role-guide-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+    .role-guide-card {
+      border: 1px solid var(--border); border-radius: 8px; padding: 18px 20px;
+      background: #fff; transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .role-guide-card.current { border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus-ring); }
+    .role-guide-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+    .role-guide-title h3 { font-size: 16px; font-weight: 600; margin: 0; }
+    .role-guide-card ul { margin: 0; padding-left: 18px; color: var(--text-main); }
+    .role-guide-card li { margin: 8px 0; }
+    .role-guide-card strong { font-weight: 600; }
+    .role-guide-flow { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 13px; }
+    .role-workbench {
+      max-width: none; margin: 0; padding: 0;
+      min-height: calc(100vh - 103px);
+      height: calc(100vh - 103px);
+      overflow: hidden;
+    }
+    .role-workbench.on {
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr) 340px;
+      grid-template-rows: 68px minmax(0, 1fr);
+      grid-template-areas:
+        "wbtop wbtop wbtop"
+        "wbleft wbmain wbright";
+    }
+    .role-workbench-top {
+      grid-area: wbtop;
+      display: flex; align-items: center; justify-content: space-between; gap: 18px;
+      padding: 0 22px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(251, 246, 233, 0.78);
+    }
+    .role-workbench-title { min-width: 0; }
+    .role-workbench-title h1 { margin: 0; font-size: 17px; letter-spacing: 0; }
+    .role-workbench-title p { margin: 3px 0 0; font-size: 12px; color: var(--text-muted); }
+    .role-workbench-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; color: var(--text-muted); font-size: 12px; justify-content: flex-end; }
+    .wb-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 9px; border: 1px solid var(--border);
+      background: var(--surface-2); border-radius: 999px; white-space: nowrap;
+    }
+    .wb-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--sage); display: inline-block; }
+    .role-workbench-left {
+      grid-area: wbleft;
+      border-right: 1px solid var(--border);
+      background: linear-gradient(180deg, var(--surface) 0%, var(--surface-2) 100%);
+      padding: 16px 14px;
+      overflow-y: auto;
+    }
+    .role-workbench-main {
+      grid-area: wbmain;
+      padding: 16px;
+      overflow-y: auto;
+    }
+    .role-workbench-right {
+      grid-area: wbright;
+      border-left: 1px solid var(--border);
+      background: var(--surface);
+      padding: 16px 14px;
+      overflow-y: auto;
+    }
+    .wb-group { margin-bottom: 16px; }
+    .wb-group h3 {
+      margin: 0 0 8px;
+      font-size: 11px; font-weight: 700; color: var(--text-muted);
+      letter-spacing: 1.4px; text-transform: uppercase;
+    }
+    .wb-next-list, .wb-work-list, .wb-guide-list { display: grid; gap: 8px; }
+    .wb-action, .wb-role, .wb-work-item, .wb-guide-card {
+      border: 1px solid var(--border-soft);
+      border-left: 3px solid var(--accent);
+      background: var(--surface-2);
+      border-radius: 6px;
+      padding: 9px 10px;
+      box-shadow: var(--shadow-sm);
+    }
+    .wb-action-title, .wb-work-title { color: var(--text-main); font-weight: 700; font-size: 13px; line-height: 1.45; }
+    .wb-action-meta, .wb-work-meta, .wb-guide-card p { color: var(--text-muted); font-size: 12px; line-height: 1.55; margin-top: 4px; }
+    .wb-role { border-left-color: var(--mist); box-shadow: none; cursor: pointer; }
+    .wb-role.owned { border-left-color: var(--sage); background: #fffaf1; }
+    .wb-role.dim { opacity: 0.68; }
+    .wb-role-name { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--text-main); font-weight: 700; font-size: 13px; }
+    .wb-role-flow { margin-top: 6px; color: var(--text-muted); font-size: 11.5px; line-height: 1.55; }
+    .wb-mode {
+      display: inline-flex; border: 1px solid var(--border); border-radius: 999px;
+      background: var(--surface-2); padding: 3px; gap: 2px;
+    }
+    .wb-mode button {
+      border: 0; border-radius: 999px; padding: 5px 13px;
+      color: var(--text-muted); font-size: 12px;
+    }
+    .wb-mode button.on { color: #f7f1e0; background: var(--text-main); }
+    .wb-sankey-card {
+      min-height: 520px;
+      border: 1px solid var(--border);
+      background: rgba(247, 241, 224, 0.74);
+      border-radius: 8px;
+      box-shadow: var(--shadow-sm);
+      padding: 14px;
+    }
+    .wb-sankey-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 8px; }
+    .wb-sankey-head h2 { margin: 0; color: var(--text-main); letter-spacing: 0; text-transform: none; font-size: 14px; }
+    .wb-sankey-head p { margin: 4px 0 0; font-size: 12px; color: var(--text-muted); }
+    #roleWorkbenchSankey { height: 470px; width: 100%; }
+    .wb-detail-title { font-size: 14px; font-weight: 700; color: var(--text-main); margin-bottom: 6px; }
+    .wb-detail-body { color: var(--text-muted); font-size: 12px; line-height: 1.65; }
+    .wb-guide-card h4 { margin: 0 0 6px; font-size: 13px; color: var(--text-main); }
+    .wb-guide-card dl { display: grid; gap: 5px; margin: 0; }
+    .wb-guide-card dt { color: var(--text-main); font-weight: 700; font-size: 11.5px; }
+    .wb-guide-card dd { color: var(--text-muted); font-size: 12px; line-height: 1.55; margin: 0; }
+    .wb-empty { color: var(--text-muted); font-size: 12px; line-height: 1.6; padding: 12px; border: 1px dashed var(--border); border-radius: 6px; background: rgba(251,246,233,0.62); }
+    .wb-link-btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-height: 28px; padding: 0 10px; margin-top: 8px;
+      border: 1px solid var(--border); border-radius: 6px;
+      color: var(--text-main); background: transparent; font-size: 12px;
+    }
+    .wb-link-btn:hover { border-color: var(--text-main); }
     .pg-section { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--border); }
     .pg-section-hd { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
     .pg-section-hd h2 { margin-bottom: 0; }
     .pg-status { white-space: nowrap; }
+    .pg-scope {
+      display: flex; align-items: flex-start; gap: 12px; flex-wrap: wrap;
+      margin: 12px 0 16px; padding: 12px 14px;
+      background: #fffaf5; border: 1px solid #eadfd4; border-radius: 8px;
+    }
+    .pg-scope-label {
+      min-height: 28px; display: inline-flex; align-items: center;
+      color: var(--text-muted); font-size: 12px; font-weight: 600;
+    }
+    .pg-dept-tags { display: flex; flex-wrap: wrap; gap: 8px; flex: 1; min-width: 220px; }
+    .pg-dept-tag {
+      appearance: none; border: 1px solid #e1d5c8; background: #fff; color: var(--text-main);
+      min-height: 28px; padding: 0 10px; border-radius: 6px; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 6px; font-size: 12px; line-height: 1;
+      transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    }
+    .pg-dept-tag:hover { background: #fff7ed; border-color: #d7b98f; }
+    .pg-dept-tag.on { background: #7f1d1d; border-color: #7f1d1d; color: #fff; }
+    .pg-dept-tag .pg-dot {
+      width: 7px; height: 7px; border-radius: 50%; flex: 0 0 auto;
+      background: var(--pg-dot, #9ca3af);
+    }
+    .pg-dept-tag.on .pg-dot { background: #fff; }
+    .pg-dept-tag .pg-count { color: var(--text-muted); font-size: 11px; }
+    .pg-dept-tag.on .pg-count { color: rgba(255,255,255,0.78); }
+
+    .workflow-panel {
+      max-width: none;
+      margin: 0;
+      padding: 0;
+      min-height: calc(100vh - 103px);
+    }
+    .workflow-shell {
+      min-height: calc(100vh - 103px);
+      display: grid;
+      grid-template-columns: 260px minmax(0, 1fr);
+      grid-template-rows: 68px minmax(0, 1fr);
+      grid-template-areas:
+        "wftop wftop"
+        "wfside wfmain";
+      background: rgba(239, 231, 213, 0.42);
+    }
+    .workflow-top {
+      grid-area: wftop;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 0 22px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(251, 246, 233, 0.82);
+    }
+    .workflow-title { min-width: 0; }
+    .workflow-title h1 { margin: 0; font-size: 17px; letter-spacing: 0; }
+    .workflow-title p { margin: 3px 0 0; color: var(--text-muted); font-size: 12px; }
+    .workflow-meta { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
+    .workflow-sidebar {
+      grid-area: wfside;
+      border-right: 1px solid var(--border);
+      background: linear-gradient(180deg, var(--surface) 0%, var(--surface-2) 100%);
+      padding: 16px 14px;
+      overflow-y: auto;
+    }
+    .workflow-main {
+      grid-area: wfmain;
+      min-width: 0;
+      padding: 18px 20px 72px;
+      overflow: auto;
+    }
+    .workflow-body {
+      max-width: 1240px;
+      margin: 0 auto;
+    }
+    .workflow-group { margin-bottom: 16px; }
+    .workflow-group h3 {
+      margin: 0 0 8px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+    }
+    .workflow-list { display: grid; gap: 8px; }
+    .workflow-action, .workflow-step, .workflow-context, .workflow-detail-action {
+      border: 1px solid var(--border-soft);
+      border-left: 3px solid var(--accent);
+      background: var(--surface-2);
+      border-radius: 6px;
+      padding: 9px 10px;
+      box-shadow: var(--shadow-sm);
+      color: var(--text-main);
+      font-size: 12px;
+    }
+    .workflow-action-title, .workflow-step-title { font-weight: 700; line-height: 1.45; }
+    .workflow-action-meta, .workflow-context p { color: var(--text-muted); font-size: 12px; line-height: 1.55; margin-top: 4px; }
+    .workflow-step { display: flex; align-items: flex-start; gap: 8px; border-left-color: var(--mist); box-shadow: none; }
+    .workflow-step-dot {
+      width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex: 0 0 auto;
+      background: var(--border);
+    }
+    .workflow-step.done .workflow-step-dot { background: var(--gold); }
+    .workflow-step.current .workflow-step-dot { background: var(--accent); box-shadow: 0 0 0 3px var(--focus-ring); }
+    .workflow-step.next { opacity: 0.72; }
+    .workflow-detail-action { border-left-color: var(--sage); box-shadow: none; }
+    .entity-form {
+      display: grid;
+      gap: 18px;
+      max-width: 880px;
+    }
+    .entity-form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    .entity-form-grid .wide { grid-column: 1 / -1; }
+    .entity-form-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+    }
+    @media (max-width: 900px) {
+      .workflow-shell { display: block; }
+      .workflow-top, .workflow-sidebar, .workflow-main { display: block; border: 0; }
+      .workflow-top { padding: 14px 16px; }
+      .workflow-main { padding: 16px; }
+      .entity-form-grid { grid-template-columns: 1fr; }
+      .rbac-shell { display: block; }
+      .rbac-side { width: 100%; margin-bottom: 16px; }
+      .user-management-head { display: block; }
+      .user-management-filters, .user-management-grid, .user-role-groups { grid-template-columns: 1fr; }
+    }
 
     /* Modal */
     .modal-mask {
@@ -195,6 +487,16 @@
     .modal-body { padding: 24px; }
     .close { font-size: 20px; color: var(--text-muted); line-height: 1; }
     .close:hover { color: var(--text-main); }
+
+    @media (max-width: 800px) {
+      .role-guide-header { flex-direction: column; gap: 12px; }
+      .role-guide-grid { grid-template-columns: 1fr; }
+      .role-workbench { height: auto; overflow: visible; }
+      .role-workbench.on { display: block; }
+      .role-workbench-top, .role-workbench-left, .role-workbench-main, .role-workbench-right { display: block; border: 0; }
+      .role-workbench-top { padding: 14px 16px; }
+      #roleWorkbenchSankey { height: 360px; }
+    }
 
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     @keyframes slideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
@@ -281,7 +583,9 @@
 
     <div id="appContent" style="display: none;">
       <nav class="tabs" id="tabs">
-        <button class="tab on" data-tab="dashboard" data-roles="submitter,owner,reviewer,admin">统计看板</button>
+        <button class="tab on" data-tab="roleWorkbench" data-roles="submitter,owner,reviewer,admin">角色工作台</button>
+        <button class="tab" data-tab="dashboard" data-roles="submitter,owner,reviewer,admin">统计看板</button>
+        <button class="tab" data-tab="roleGuide" data-roles="submitter,owner,reviewer,admin">角色使用说明</button>
         <button class="tab" data-tab="mySubmissions" data-roles="submitter,admin">报送管理</button>
         <button class="tab" data-tab="capabilities" data-roles="admin">能力与流程申报</button>
         <button class="tab" data-tab="businessMap" data-roles="owner,reviewer,admin">业务地图</button>
@@ -297,8 +601,88 @@
         <button class="tab" data-tab="rbac" data-roles="admin">角色权限</button>
       </nav>
 
+      <!-- Role Workbench -->
+      <section class="panel role-workbench" id="roleWorkbench">
+        <div class="role-workbench-top">
+          <div class="role-workbench-title">
+            <h1>MDM 角色工作台</h1>
+            <p id="roleWorkbenchSubtitle">按角色看到下一步动作，并理解它关联到哪些业务能力、流程和 A1。</p>
+          </div>
+          <div class="role-workbench-meta">
+            <span class="wb-pill"><span class="wb-dot"></span><span id="roleWorkbenchIdentity">当前身份：—</span></span>
+            <span class="wb-pill" id="roleWorkbenchDepartment">当前部门：—</span>
+            <span class="wb-pill" id="roleWorkbenchPriority">今天优先处理：—</span>
+            <div class="wb-mode" id="roleWorkbenchMode" aria-label="角色工作台视角">
+              <button type="button" class="on" data-mode="todo">待办优先</button>
+              <button type="button" data-mode="all">全量职责</button>
+            </div>
+          </div>
+        </div>
+
+        <aside class="role-workbench-left">
+          <div class="wb-group">
+            <h3>我现在该做什么</h3>
+            <div class="wb-next-list" id="roleWorkbenchNextActions">
+              <div class="wb-empty">正在读取当前角色的下一步动作...</div>
+            </div>
+          </div>
+          <div class="wb-group">
+            <h3>项目工作角色</h3>
+            <div class="wb-work-list" id="roleWorkbenchProjectRoles"></div>
+          </div>
+          <div class="wb-group">
+            <h3>基础权限角色</h3>
+            <div class="wb-work-list" id="roleWorkbenchBasicRoles"></div>
+          </div>
+        </aside>
+
+        <main class="role-workbench-main">
+          <div class="wb-sankey-card">
+            <div class="wb-sankey-head">
+              <div>
+                <h2>角色 → 业务能力 → L3流程 → A1业务行为 → 处理入口</h2>
+                <p id="roleWorkbenchSankeyMeta">点击节点可在右侧查看事项和样例。</p>
+              </div>
+              <button class="wb-link-btn" type="button" onclick="renderRoleWorkbench()">刷新</button>
+            </div>
+            <div id="roleWorkbenchSankey"></div>
+          </div>
+        </main>
+
+        <aside class="role-workbench-right">
+          <div class="wb-group">
+            <h3>当前节点</h3>
+            <div id="roleWorkbenchNodeDetail">
+              <div class="wb-detail-title">先处理左侧第一项</div>
+              <div class="wb-detail-body">点击桑基节点后，这里会显示关联事项、典型样例和可进入的处理入口。</div>
+            </div>
+          </div>
+          <div class="wb-group">
+            <h3>当前事项</h3>
+            <div class="wb-work-list" id="roleWorkbenchItems"></div>
+          </div>
+          <div class="wb-group">
+            <h3>使用说明样例</h3>
+            <div class="wb-guide-list" id="roleWorkbenchGuide">
+              <div class="wb-guide-card">
+                <h4>业务对接人</h4>
+                <p>业务对接人收到字段确认待办后，先打开 A1 业务行为，确认字段是否确实在该流程中产生或消费。</p>
+              </div>
+              <div class="wb-guide-card">
+                <h4>数据质量员</h4>
+                <p>数据质量员发现同一字段存在不同黄金源候选时，先查看字段台账和消费系统，再发起冲突协调。</p>
+              </div>
+              <div class="wb-guide-card">
+                <h4>项目组长</h4>
+                <p>项目组长看到本部门有跨部门衔接风险时，先进入流程治理详情，确认输入来源和输出目标是否缺接收流程。</p>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </section>
+
       <!-- Dashboard -->
-      <section class="panel on" id="dashboard">
+      <section class="panel" id="dashboard">
         <div class="grid g4">
           <div class="metric"><div class="num" id="metricMappings">0</div><div class="lbl">流程映射</div></div>
           <div class="metric"><div class="num" id="metricFields">0</div><div class="lbl">字段台账</div></div>
@@ -313,6 +697,28 @@
         <div class="grid g2" style="margin-top: 48px;">
           <div><h2>各部门流程数</h2><div class="chart" id="deptChart"></div></div>
           <div><h2>审批状态分布</h2><div class="chart" id="statusChart"></div></div>
+        </div>
+      </section>
+
+      <!-- Role Guide -->
+      <section class="panel" id="roleGuide">
+        <div class="role-guide-header">
+          <div>
+            <h2>角色使用说明</h2>
+            <p>每个角色都包含角色目标、第一步入口、典型样例、常见误区和完成标准。当前账号拥有的角色会自动高亮。</p>
+          </div>
+        </div>
+        <div class="notice role-guide-current" id="roleGuideCurrent">正在识别当前角色...</div>
+        <div class="role-guide-grid" id="roleGuideGrid">
+          <article class="role-guide-card">
+            <div class="role-guide-title"><h3>样例参考</h3><span class="tag">example</span></div>
+            <ul>
+              <li><strong>典型样例：</strong>业务对接人收到字段确认待办后，先打开 A1 业务行为，确认字段是否确实在该流程中产生或消费。</li>
+              <li><strong>典型样例：</strong>数据质量员发现同一字段存在不同黄金源候选时，先查看字段台账和消费系统，再发起冲突协调。</li>
+              <li><strong>典型样例：</strong>项目组长看到本部门有跨部门衔接风险时，先进入流程治理详情，确认输入来源和输出目标是否缺接收流程。</li>
+            </ul>
+            <div class="role-guide-flow">进入角色工作台后，左侧“我现在该做什么”会给出 1 到 3 个下一步动作。</div>
+          </article>
         </div>
       </section>
 
@@ -449,12 +855,23 @@
         <div class="grid g4">
           <div class="metric"><div class="num" id="pgMetricL3">0</div><div class="lbl">流程数</div></div>
           <div class="metric"><div class="num" id="pgMetricA1">0</div><div class="lbl">A1 行为</div></div>
-          <div class="metric"><div class="num" id="pgMetricCross">0</div><div class="lbl">跨部门检查</div></div>
+          <div class="metric"><div class="num" id="pgMetricCross">0</div><div class="lbl">跨部门风险</div></div>
           <div class="metric"><div class="num" id="pgMetricRisk">0</div><div class="lbl">高风险项</div></div>
         </div>
         <div class="notice" id="pgSnapshotMeta" style="margin-top: 24px;"></div>
+        <div class="notice" id="pgSourceMeta" style="margin-top: 12px;">组织真源：docs/organization/组织架构和部门职责.md；流程真源：docs/norms/{部门}部门-能力-流程-系统映射关系.md</div>
+        <div class="grid g4" style="margin-top: 16px;">
+          <div class="metric"><div class="num" id="pgMetricQualityBlock">0</div><div class="lbl">BLOCK</div></div>
+          <div class="metric"><div class="num" id="pgMetricQualityWarn">0</div><div class="lbl">WARN</div></div>
+          <div class="metric"><div class="num" id="pgMetricQualityInfo">0</div><div class="lbl">INFO</div></div>
+          <div class="metric"><div class="num" id="pgMetricQualityShown">0</div><div class="lbl">质量项</div></div>
+        </div>
         <div class="pg-section">
           <div class="pg-section-hd"><h2>流程地图</h2><span class="pg-status" id="pgMapMeta"></span></div>
+          <div class="pg-scope" aria-label="流程治理部门筛选">
+            <span class="pg-scope-label">部门标签</span>
+            <div class="pg-dept-tags" id="pgDeptFilters"></div>
+          </div>
           <div class="chart" id="pgSankeyChart" style="height: 560px;"></div>
         </div>
         <div class="pg-section">
@@ -475,6 +892,36 @@
             </table>
           </div>
         </div>
+        <div class="pg-section" id="pgQualitySection">
+          <div class="pg-section-hd">
+            <h2>质量问题</h2><span class="pg-status" id="pgQualityMeta"></span>
+          </div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+            <select id="pgQualitySeverityFilter" style="width: 140px; height: 36px; padding: 0 12px;">
+              <option value="">全部严重度</option>
+              <option value="BLOCK">BLOCK</option>
+              <option value="WARN">WARN</option>
+              <option value="INFO">INFO</option>
+            </select>
+            <select id="pgQualityAreaFilter" style="width: 160px; height: 36px; padding: 0 12px;">
+              <option value="">全部领域</option>
+              <option value="ORG">ORG</option>
+              <option value="DCM">DCM</option>
+              <option value="BBM">BBM</option>
+              <option value="CROSS">CROSS</option>
+              <option value="HTML">HTML</option>
+              <option value="COMPANY_DATA">COMPANY_DATA</option>
+              <option value="DELIVERABLE">DELIVERABLE</option>
+              <option value="ASSET">ASSET</option>
+            </select>
+          </div>
+          <div class="table-container">
+            <table>
+              <thead><tr><th>严重度</th><th>领域</th><th>部门</th><th>来源</th><th>行号</th><th>说明</th><th>整改建议</th></tr></thead>
+              <tbody id="pgQualityRows"></tbody>
+            </table>
+          </div>
+        </div>
       </section>
 
       <!-- Org Units Panel -->
@@ -489,8 +936,8 @@
           </select>
           <input id="ouSearch" placeholder="搜索编码或名称..." style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;width:200px">
           <button class="btn" id="ouSearchBtn">查询</button>
-          <button class="btn secondary" id="ouNewBtn">+ 新增组织</button>
         </div>
+        <div class="notice" style="margin-bottom:16px">组织架构来自 docs/organization/组织架构和部门职责.md，由同步脚本生成，不支持手动新增。</div>
         <div class="tw"><table><thead><tr>
           <th>编码</th><th>名称</th><th>类型</th><th>简称</th><th>上级组织</th><th>状态</th><th>操作</th>
         </tr></thead><tbody id="ouTableBody"></tbody></table></div>
@@ -548,16 +995,15 @@
 
       <!-- RBAC: Role & Permission Management -->
       <section class="panel" id="rbac">
-        <div style="display:flex;gap:16px;min-height:500px;">
-          <!-- Left sidebar nav -->
-          <div style="width:200px;flex-shrink:0;background:#f8f9fa;border-radius:6px;padding:12px;">
-            <div class="rbac-nav-item active" data-panel="roleList" style="padding:10px;cursor:pointer;border-radius:4px;margin-bottom:4px;font-weight:bold;background:#e3f2fd;">角色列表</div>
-            <div class="rbac-nav-item" data-panel="permMatrix" style="padding:10px;cursor:pointer;border-radius:4px;margin-bottom:4px;">权限矩阵</div>
-            <div class="rbac-nav-item" data-panel="userRoles" style="padding:10px;cursor:pointer;border-radius:4px;margin-bottom:4px;">用户角色分配</div>
-            <div class="rbac-nav-item" data-panel="userRolesOverview" style="padding:10px;cursor:pointer;border-radius:4px;margin-bottom:4px;">用户角色一览</div>
-            <div class="rbac-nav-item" data-panel="batchImport" style="padding:10px;cursor:pointer;border-radius:4px;">批量导入</div>
+        <div class="rbac-shell">
+          <div class="rbac-side">
+            <div class="rbac-nav-item active" data-panel="userManagement">用户管理</div>
+            <div class="rbac-nav-item" data-panel="roleList">角色列表</div>
+            <div class="rbac-nav-item" data-panel="permMatrix">权限矩阵</div>
+            <div class="rbac-nav-item" data-panel="userRoles">用户角色分配</div>
+            <div class="rbac-nav-item" data-panel="userRolesOverview">用户角色一览</div>
+            <div class="rbac-nav-item" data-panel="batchImport">批量导入</div>
           </div>
-          <!-- Right content area -->
           <div style="flex:1;" id="rbacPanel"></div>
         </div>
       </section>
@@ -626,7 +1072,7 @@
 
   <script>
     // ===== State & Utilities =====
-    const state = { user:null, departments:[], capabilities:[], processes:[], mappings:[], todos:[], conflicts:[], terms:[], currentRoute:null, currentView:'dashboard', activeMapping:null, activeConflict:null, pollTimer:null, isEditing:false, activeReview:null, activeCapReview:null, activeProcReview:null };
+    const state = { user:null, departments:[], capabilities:[], processes:[], mappings:[], todos:[], conflicts:[], terms:[], currentRoute:null, currentView:'roleWorkbench', activeMapping:null, activeConflict:null, pollTimer:null, isEditing:false, activeReview:null, activeCapReview:null, activeProcReview:null, pgSelectedDept:'', pageWorkflow:null, pageWorkflowRequestId:0, roleWorkbench:{ mode:'todo', data:null, selectedNode:null } };
     const $ = id => document.getElementById(id);
 
     function escapeHtml(value) {
@@ -704,37 +1150,57 @@
     // ===== Navigation & Hash Router =====
     function navigateTo(view, params) {
       if (!params) params = {};
-      if (view === 'list') { location.hash = params.tab || 'dashboard'; }
-      else if (view === 'detail') { location.hash = params.tab + '/' + params.type + '/' + params.id; }
-      else if (view === 'operation') { location.hash = params.tab + '/' + params.type + '/' + params.id + '/' + params.action; }
+      if (view === 'list') { location.hash = '#/' + (params.tab || 'dashboard'); }
+      else if (view === 'detail') { location.hash = '#/' + params.tab + '/' + params.type + '/' + params.id; }
+      else if (view === 'form') {
+        location.hash = '#/' + params.tab + '/' + params.type + '/' + (params.id || 'new') + ((params.action && params.id !== 'new') ? '/' + params.action : '');
+      }
+      else if (view === 'operation') { location.hash = '#/' + params.tab + '/' + params.type + '/' + params.id + '/' + params.action; }
       state.currentView = view;
       renderCurrentView(params);
     }
 
     function renderCurrentView(params) {
+      state.pageWorkflowRequestId += 1;
       document.querySelectorAll('.panel,.page').forEach(function(el) { el.classList.remove('on'); });
       if (state.currentView === 'list' || !state.currentView) { renderListPanel(params.tab || 'dashboard'); }
       else if (state.currentView === 'detail') { renderDetailPage(params); }
+      else if (state.currentView === 'form') { renderFormPage(params); }
       else if (state.currentView === 'operation') { renderOperationPage(params); }
     }
 
     function parseHash() {
       var hash = location.hash.replace('#/', '').replace('#', '');
-      if (!hash) return { view: 'list', tab: 'dashboard' };
+      var query = {};
+      var queryIndex = hash.indexOf('?');
+      if (queryIndex >= 0) {
+        var queryString = hash.slice(queryIndex + 1);
+        hash = hash.slice(0, queryIndex);
+        new URLSearchParams(queryString).forEach(function(value, key) {
+          query[key] = value;
+        });
+      }
+      if (!hash) return { view: 'list', tab: 'roleWorkbench' };
       var parts = hash.split('/');
-      if (parts.length === 1) return { view: 'list', tab: parts[0] };
+      if (parts.length === 1) return { view: 'list', tab: parts[0], query: query, qualityView: query.view, finding: query.finding };
       if (parts[0] === 'processes' && parts.length >= 3) {
         return { view: 'detail', tab: 'processes', type: 'process', id: parts[2] };
       }
+      if (parts.length === 3 && parts[2] === 'new') return { view: 'form', tab: parts[0], type: parts[1], id: 'new', action: 'new' };
+      if (parts.length === 4 && parts[3] === 'edit') return { view: 'form', tab: parts[0], type: parts[1], id: parts[2], action: 'edit' };
       if (parts.length === 3) return { view: 'detail', tab: parts[0], type: parts[1], id: parts[2] };
       if (parts.length === 4) return { view: 'operation', tab: parts[0], type: parts[1], id: parts[2], action: parts[3] };
       return { view: 'list', tab: 'dashboard' };
     }
 
-    window.addEventListener('hashchange', function() {
+    function renderRouteFromHash() {
       var route = parseHash();
       state.currentRoute = route;
       navigateTo(route.view, route);
+    }
+
+    window.addEventListener('hashchange', function() {
+      renderRouteFromHash();
     });
 
     // ===== Role-based nav =====
@@ -745,12 +1211,355 @@
         var roles = tab.dataset.roles.split(',');
         tab.style.display = roles.indexOf(role) !== -1 ? '' : 'none';
       });
-      var defaultTabs = { submitter: 'mySubmissions', owner: 'todos', reviewer: 'conflicts', admin: 'dashboard' };
+      var defaultTabs = { submitter: 'roleWorkbench', owner: 'roleWorkbench', reviewer: 'roleWorkbench', admin: 'roleWorkbench' };
       var defaultTab = defaultTabs[role] || 'dashboard';
       if (!location.hash || location.hash === '#') {
         var defaultTabEl = document.querySelector('.tab[data-tab="' + defaultTab + '"]');
         if (defaultTabEl && defaultTabEl.style.display !== 'none') { location.hash = '#/' + defaultTab; }
         else { location.hash = '#/dashboard'; }
+      }
+    }
+
+    function roleCodesOfCurrentUser() {
+      var codes = [];
+      if (state.user && Array.isArray(state.user.roleCodes)) codes = codes.concat(state.user.roleCodes);
+      if (state.user && state.user.role && codes.indexOf(state.user.role) < 0) codes.push(state.user.role);
+      return codes;
+    }
+
+    function renderRoleGuideCard(role) {
+      return '<article class="role-guide-card' + (role.owned ? ' current' : '') + '" data-role-guide-card="' + safeText(role.code) + '">' +
+        '<div class="role-guide-title"><h3>' + safeText(role.name) + '</h3><span class="tag">' + safeText(role.code) + '</span></div>' +
+        '<ul>' +
+          '<li><strong>角色目标：</strong>' + safeText(role.goal) + '</li>' +
+          '<li><strong>第一步入口：</strong>' + safeText(role.firstEntry && role.firstEntry.label) + '</li>' +
+          '<li><strong>典型样例：</strong>' + safeText(role.sample) + '</li>' +
+          '<li><strong>常见误区：</strong>' + safeText(role.pitfall) + '</li>' +
+          '<li><strong>完成标准：</strong>' + safeText(role.doneCriteria) + '</li>' +
+        '</ul>' +
+        '<div class="role-guide-flow">建议顺序：' + safeText((role.workflow || []).join(' → ')) + '</div>' +
+      '</article>';
+    }
+
+    function renderRoleWorkbenchGuide(data) {
+      var wrap = $('roleWorkbenchGuide');
+      if (!wrap) return;
+      var roles = (data.roles || []).filter(function(role) { return role.owned; });
+      if (!roles.length) roles = (data.roles || []).slice(0, 3);
+      wrap.innerHTML = roles.slice(0, 4).map(function(role) {
+        return '<div class="wb-guide-card" data-role-guide-card="' + safeText(role.code) + '">' +
+          '<h4>' + safeText(role.name) + '</h4>' +
+          '<dl>' +
+            '<dt>角色目标</dt><dd>' + safeText(role.goal) + '</dd>' +
+            '<dt>第一步入口</dt><dd>' + safeText(role.firstEntry && role.firstEntry.label) + '</dd>' +
+            '<dt>典型样例</dt><dd>' + safeText(role.sample) + '</dd>' +
+            '<dt>常见误区</dt><dd>' + safeText(role.pitfall) + '</dd>' +
+            '<dt>完成标准</dt><dd>' + safeText(role.doneCriteria) + '</dd>' +
+          '</dl>' +
+        '</div>';
+      }).join('');
+    }
+
+    async function renderRoleGuide() {
+      try {
+        var data = state.roleWorkbench.data || await api('/api/role-workbench?mode=all');
+        var codes = roleCodesOfCurrentUser();
+        var currentEl = $('roleGuideCurrent');
+        if (currentEl) {
+          var ownedNames = (data.roles || []).filter(function(role) { return role.owned; }).map(function(role) { return role.name; });
+          currentEl.textContent = ownedNames.length
+            ? '当前账号角色：' + ownedNames.join(' / ') + '。请优先查看已高亮的说明卡片。'
+            : '当前账号角色：' + codes.join(' / ') + '。请联系管理员检查项目角色配置。';
+        }
+        var grid = $('roleGuideGrid');
+        if (grid) grid.innerHTML = (data.roles || []).map(renderRoleGuideCard).join('');
+      } catch (error) {
+        var fallback = $('roleGuideCurrent');
+        if (fallback) fallback.textContent = error.message || '角色说明加载失败';
+      }
+    }
+
+    function openWorkbenchTarget(target) {
+      if (!target) return;
+      if (target.charAt(0) === '#') location.hash = target;
+      else location.hash = '#/' + target.replace(/^#?\//, '');
+    }
+
+    function panelForTab(tab) {
+      return tab === 'processGovernance' ? $('processGovernancePanel') : $(tab);
+    }
+
+    function ensureWorkflowShell(container) {
+      if (!container || container.id === 'roleWorkbench') return null;
+      var existing = container.querySelector(':scope > .workflow-shell');
+      if (existing) return existing;
+      container.classList.add('workflow-panel');
+      var wrap = document.createElement('div');
+      wrap.innerHTML =
+        '<div class="workflow-shell">' +
+          '<div class="workflow-top">' +
+            '<div class="workflow-title"><h1 data-workflow-title>页面工作流</h1><p data-workflow-subtitle>正在读取本页引导...</p></div>' +
+            '<div class="workflow-meta">' +
+              '<span class="wb-pill"><span class="wb-dot"></span><span data-workflow-identity>当前身份：—</span></span>' +
+              '<span class="wb-pill" data-workflow-department>当前部门：—</span>' +
+              '<span class="wb-pill" data-workflow-priority>今天优先处理：—</span>' +
+            '</div>' +
+          '</div>' +
+          '<aside class="workflow-sidebar">' +
+            '<div class="workflow-group"><h3>我现在该做什么</h3><div class="workflow-list" data-workflow-actions><div class="wb-empty">正在读取下一步动作...</div></div></div>' +
+            '<div class="workflow-group"><h3>本页工作流</h3><div class="workflow-list" data-workflow-steps></div></div>' +
+            '<div class="workflow-group"><h3>当前说明</h3><div class="workflow-context" data-workflow-context><p>选择一条记录或进入详情后，这里会显示样例和完成标准。</p></div></div>' +
+            '<div class="workflow-group"><h3>处理入口</h3><div class="workflow-list" data-workflow-detail-actions><div class="wb-empty">暂无额外入口。</div></div></div>' +
+          '</aside>' +
+          '<main class="workflow-main"><div class="workflow-body"></div></main>' +
+        '</div>';
+      var shell = wrap.firstElementChild;
+      var body = shell.querySelector('.workflow-body');
+      while (container.firstChild) body.appendChild(container.firstChild);
+      container.appendChild(shell);
+      return shell;
+    }
+
+    function workflowTargetButton(target, label) {
+      if (!target) return '';
+      return '<button type="button" class="wb-link-btn" data-wb-target="' + safeText(target) + '">' + safeText(label || '进入') + '</button>';
+    }
+
+    async function loadPageWorkflow(tab, route) {
+      if (!tab || tab === 'roleWorkbench') return null;
+      var requestId = state.pageWorkflowRequestId;
+      route = route || { view: 'list', tab: tab };
+      var view = route.view === 'form' ? 'form' : (route.view === 'detail' || route.view === 'operation' ? 'detail' : 'list');
+      var params = new URLSearchParams();
+      params.set('tab', tab);
+      params.set('view', view);
+      params.set('mode', (state.roleWorkbench && state.roleWorkbench.mode) || 'todo');
+      if (route.type) params.set('entityType', route.type);
+      if (route.id !== undefined && route.id !== null) params.set('entityId', String(route.id));
+      try {
+        var config = await api('/api/page-workflows?' + params.toString());
+        if (requestId !== state.pageWorkflowRequestId) return null;
+        state.pageWorkflow = config;
+        renderWorkflowShell(config);
+        return config;
+      } catch (error) {
+        if (requestId !== state.pageWorkflowRequestId) return null;
+        var container = view === 'list' ? panelForTab(tab) : $('detailPage');
+        var shell = ensureWorkflowShell(container);
+        if (shell) {
+          var actions = shell.querySelector('[data-workflow-actions]');
+          if (actions) actions.innerHTML = '<div class="wb-empty">' + safeText(error.message || '页面工作流加载失败') + '</div>';
+        }
+        return null;
+      }
+    }
+
+    function renderWorkflowShell(config, bodyHtml) {
+      if (!config || config.tab === 'roleWorkbench') return null;
+      var container = config.view === 'list' ? panelForTab(config.tab) : $('detailPage');
+      var shell = ensureWorkflowShell(container);
+      if (!shell) return null;
+      if (bodyHtml !== undefined) {
+        shell.querySelector('.workflow-body').innerHTML = bodyHtml;
+      }
+      var page = config.page || {};
+      var user = config.user || {};
+      var roleNames = [];
+      if (state.roleWorkbench && state.roleWorkbench.data && Array.isArray(state.roleWorkbench.data.roles)) {
+        roleNames = state.roleWorkbench.data.roles.filter(function(role) { return role.owned; }).map(function(role) { return role.name; });
+      }
+      shell.querySelector('[data-workflow-title]').textContent = page.title || '页面工作流';
+      shell.querySelector('[data-workflow-subtitle]').textContent = page.subtitle || '按工作流处理当前页面事项。';
+      shell.querySelector('[data-workflow-identity]').textContent = '当前身份：' + (roleNames.join(' / ') || user.role || '未识别');
+      shell.querySelector('[data-workflow-department]').textContent = '当前部门：' + (user.departmentName || '未绑定');
+      shell.querySelector('[data-workflow-priority]').textContent = '今天优先处理：' + ((config.summary && config.summary.priorityCount) || 0) + ' 项';
+
+      var actions = config.nextActions || [];
+      shell.querySelector('[data-workflow-actions]').innerHTML = actions.length ? actions.map(function(action, index) {
+        return '<div class="workflow-action">' +
+          '<div class="workflow-action-title">' + (index + 1) + '. ' + safeText(action.title) + '</div>' +
+          '<div class="workflow-action-meta">样例：' + safeText(action.sample) + '</div>' +
+          workflowTargetButton(action.target, action.actionLabel || '进入处理') +
+        '</div>';
+      }).join('') : '<div class="wb-empty">当前没有待办，请按本页工作流继续。</div>';
+
+      var steps = config.workflow || [];
+      shell.querySelector('[data-workflow-steps]').innerHTML = steps.map(function(step) {
+        return '<div class="workflow-step ' + safeText(step.status || 'next') + '">' +
+          '<span class="workflow-step-dot"></span><div><div class="workflow-step-title">' + safeText(step.label) + '</div></div>' +
+        '</div>';
+      }).join('') || '<div class="wb-empty">暂无工作流步骤。</div>';
+
+      var context = config.context || {};
+      shell.querySelector('[data-workflow-context]').innerHTML =
+        '<p><strong>典型样例：</strong>' + safeText(context.sample) + '</p>' +
+        '<p><strong>常见误区：</strong>' + safeText(context.pitfall) + '</p>' +
+        '<p><strong>完成标准：</strong>' + safeText(context.doneCriteria) + '</p>';
+
+      var detailActions = config.detailActions || [];
+      shell.querySelector('[data-workflow-detail-actions]').innerHTML = detailActions.length ? detailActions.map(function(action) {
+        return '<div class="workflow-detail-action">' +
+          '<div class="workflow-action-title">' + safeText(action.label) + '</div>' +
+          workflowTargetButton(action.target, action.label) +
+        '</div>';
+      }).join('') : '<div class="wb-empty">暂无额外入口。</div>';
+      return shell;
+    }
+
+    function renderWorkbenchNextActions(actions) {
+      var wrap = $('roleWorkbenchNextActions');
+      if (!wrap) return;
+      if (!actions || !actions.length) {
+        wrap.innerHTML = '<div class="wb-empty">当前没有待办，请查看角色使用说明确认下一步。</div>';
+        return;
+      }
+      wrap.innerHTML = actions.map(function(action, index) {
+        return '<div class="wb-action">' +
+          '<div class="wb-action-title">' + (index + 1) + '. ' + safeText(action.title) + '</div>' +
+          '<div class="wb-action-meta">样例：' + safeText(action.sample) + '</div>' +
+          '<button type="button" class="wb-link-btn" data-wb-target="' + safeText(action.target) + '">' + safeText(action.actionLabel || '进入处理') + '</button>' +
+        '</div>';
+      }).join('');
+    }
+
+    function renderWorkbenchRoles(data) {
+      function roleHtml(role) {
+        return '<div class="wb-role ' + (role.owned ? 'owned' : 'dim') + '" data-role-code="' + safeText(role.code) + '">' +
+          '<div class="wb-role-name"><span>' + safeText(role.name) + '</span><span class="tag">' + (role.owned ? '我的角色' : '说明') + '</span></div>' +
+          '<div class="wb-role-flow">' + safeText((role.workflow || []).join(' → ')) + '</div>' +
+        '</div>';
+      }
+      var project = (data.roles || []).filter(function(role) { return role.group === 'project'; });
+      var basic = (data.roles || []).filter(function(role) { return role.group === 'basic'; });
+      if ($('roleWorkbenchProjectRoles')) $('roleWorkbenchProjectRoles').innerHTML = project.map(roleHtml).join('');
+      if ($('roleWorkbenchBasicRoles')) $('roleWorkbenchBasicRoles').innerHTML = basic.map(roleHtml).join('');
+    }
+
+    function renderWorkbenchItems(items) {
+      var wrap = $('roleWorkbenchItems');
+      if (!wrap) return;
+      if (!items || !items.length) {
+        wrap.innerHTML = '<div class="wb-empty">暂无待处理事项。</div>';
+        return;
+      }
+      wrap.innerHTML = items.slice(0, 8).map(function(item) {
+        return '<div class="wb-work-item">' +
+          '<div class="wb-work-title">' + safeText(item.title) + '</div>' +
+          '<div class="wb-work-meta">样例：' + safeText(item.sample) + '</div>' +
+          '<button type="button" class="wb-link-btn" data-wb-target="' + safeText(item.target) + '">' + safeText(item.actionLabel || '进入') + '</button>' +
+        '</div>';
+      }).join('');
+    }
+
+    function renderRoleWorkbenchNodeDetail(node, data) {
+      var detail = $('roleWorkbenchNodeDetail');
+      if (!detail) return;
+      if (!node) {
+        detail.innerHTML = '<div class="wb-detail-title">先处理左侧第一项</div><div class="wb-detail-body">点击桑基节点后，这里会显示关联事项、典型样例和可进入的处理入口。</div>';
+        return;
+      }
+      var relatedItems = (data.workItems || []).filter(function(item) {
+        return node.target && item.target === node.target;
+      });
+      detail.innerHTML = '<div class="wb-detail-title">' + safeText(node.label) + '</div>' +
+        '<div class="wb-detail-body">节点类型：' + safeText(node.type) + (node.sample ? '<br>样例：' + safeText(node.sample) : '') + '</div>' +
+        (node.target ? '<button type="button" class="wb-link-btn" data-wb-target="' + safeText(node.target) + '">进入处理入口</button>' : '') +
+        (relatedItems.length ? '<div class="wb-detail-body" style="margin-top:8px;">关联事项：' + safeText(relatedItems.map(function(item) { return item.title; }).join('；')) + '</div>' : '');
+    }
+
+    function renderRoleWorkbenchSankey(data) {
+      var chartDom = $('roleWorkbenchSankey');
+      if (!chartDom) return;
+      if (!window.echarts) {
+        chartDom.innerHTML = '<div class="wb-empty">ECharts 未加载，暂时无法显示角色桑基图。</div>';
+        return;
+      }
+      var colors = { role: '#2a2014', capability: '#b25638', l3: '#6f7d4e', a1: '#4a6b7e', entry: '#9a7a30' };
+      var nodes = (data.sankey && data.sankey.nodes || []).map(function(node) {
+        return {
+          name: node.id || node.name,
+          value: node.label,
+          itemStyle: { color: colors[node.type] || '#9a8e7c' },
+          label: { color: '#3d3023' },
+          _node: node
+        };
+      });
+      var links = (data.sankey && data.sankey.links || []).map(function(link) {
+        return { source: link.source, target: link.target, value: link.value || 1 };
+      });
+      if ($('roleWorkbenchSankeyMeta')) {
+        $('roleWorkbenchSankeyMeta').textContent = nodes.length + ' 个节点，' + links.length + ' 条关系。点击节点可查看事项和样例。';
+      }
+      if (!nodes.length || links.length === 0) {
+        var existingChart = echarts.getInstanceByDom(chartDom);
+        if (existingChart) existingChart.dispose();
+        chartDom.innerHTML = '<div class="wb-empty">暂无职责链路数据。请先处理左侧事项，或切换到“全量职责”查看角色说明。</div>';
+        return;
+      }
+      var labelById = {};
+      (data.sankey && data.sankey.nodes || []).forEach(function(node) { labelById[node.id || node.name] = node.label; });
+      var staleChart = echarts.getInstanceByDom(chartDom);
+      if (staleChart) staleChart.dispose();
+      chartDom.innerHTML = '';
+      var chart = echarts.init(chartDom);
+      chart.setOption({
+        tooltip: {
+          trigger: 'item',
+          formatter: function(params) {
+            if (params.dataType === 'edge') return safeText(labelById[params.data.source] || params.data.source) + ' → ' + safeText(labelById[params.data.target] || params.data.target);
+            return safeText(params.data.value || params.name);
+          }
+        },
+        series: [{
+          type: 'sankey',
+          data: nodes,
+          links: links,
+          orient: 'horizontal',
+          nodeWidth: 14,
+          nodeGap: 8,
+          draggable: false,
+          layoutIterations: 48,
+          label: {
+            position: 'right',
+            formatter: function(params) { return labelById[params.name] || params.name; },
+            color: '#3d3023',
+            fontSize: 11,
+            overflow: 'truncate',
+            width: 130
+          },
+          lineStyle: { color: 'gradient', opacity: 0.34, curveness: 0.48 },
+          emphasis: { focus: 'adjacency', lineStyle: { opacity: 0.62 } }
+        }]
+      });
+      chart.off('click');
+      chart.on('click', function(params) {
+        if (!params.data || !params.data._node) return;
+        state.roleWorkbench.selectedNode = params.data._node;
+        renderRoleWorkbenchNodeDetail(params.data._node, data);
+      });
+    }
+
+    async function renderRoleWorkbench() {
+      try {
+        var mode = state.roleWorkbench.mode || 'todo';
+        var data = await api('/api/role-workbench?mode=' + encodeURIComponent(mode));
+        state.roleWorkbench.data = data;
+        state.roleWorkbench.selectedNode = null;
+        var ownedNames = (data.roles || []).filter(function(role) { return role.owned; }).map(function(role) { return role.name; });
+        if ($('roleWorkbenchIdentity')) $('roleWorkbenchIdentity').textContent = '当前身份：' + (ownedNames.join(' / ') || (state.user && state.user.role) || '未识别');
+        if ($('roleWorkbenchDepartment')) $('roleWorkbenchDepartment').textContent = '当前部门：' + ((data.user && data.user.departmentName) || (state.user && state.user.departmentName) || '未绑定');
+        if ($('roleWorkbenchPriority')) $('roleWorkbenchPriority').textContent = '今天优先处理：' + ((data.summary && data.summary.priorityCount) || 0) + ' 项';
+        document.querySelectorAll('#roleWorkbenchMode [data-mode]').forEach(function(btn) {
+          btn.classList.toggle('on', btn.dataset.mode === mode);
+        });
+        renderWorkbenchNextActions(data.nextActions || []);
+        renderWorkbenchRoles(data);
+        renderWorkbenchItems(data.workItems || []);
+        renderRoleWorkbenchGuide(data);
+        renderRoleWorkbenchNodeDetail(null, data);
+        renderRoleWorkbenchSankey(data);
+      } catch (error) {
+        if ($('roleWorkbenchNextActions')) $('roleWorkbenchNextActions').innerHTML = '<div class="wb-empty">' + safeText(error.message || '角色工作台加载失败') + '</div>';
       }
     }
 
@@ -811,18 +1620,33 @@
     }
 
     // ===== Auth (login/session) =====
+    async function loadAllSafely() {
+      try {
+        await loadAll();
+      } catch (error) {
+        showToast(error.message || '基础数据加载失败，请刷新后重试', 'error');
+      }
+    }
+
+    async function activateAuthenticatedApp(user, options) {
+      options = options || {};
+      state.user = user;
+      $('sessionUserName').textContent = user.name + ' · ' + user.role;
+      showApp();
+      applyRoleVisibility();
+      renderRouteFromHash();
+      await loadAllSafely();
+      renderRouteFromHash();
+      startPolling();
+      if (options.checkPassword) checkPasswordStatus();
+      addPasswordChangeButton();
+    }
+
     async function login() {
       if (!$('employeeNo').value.trim() || !$('password').value) { $('loginMsg').textContent = '请填写工号和密码'; return; }
       try {
         var user = await api('/api/org/login', { method:'POST', body:JSON.stringify({ employee_no:$('employeeNo').value, password:$('password').value }) });
-        state.user = user;
-        $('sessionUserName').textContent = user.name + ' · ' + user.role;
-        showApp();
-        await loadAll();
-        applyRoleVisibility();
-        startPolling();
-        checkPasswordStatus();
-        addPasswordChangeButton();
+        await activateAuthenticatedApp(user, { checkPassword: true });
       } catch (error) {
         $('loginMsg').textContent = error.message || '登录失败';
       }
@@ -831,13 +1655,7 @@
     async function checkSession() {
       try {
         var user = await api('/api/org/me');
-        state.user = user;
-        $('sessionUserName').textContent = user.name + ' · ' + user.role;
-        showApp();
-        await loadAll();
-        applyRoleVisibility();
-        startPolling();
-        addPasswordChangeButton();
+        await activateAuthenticatedApp(user);
       } catch (e) {
         showLogin();
       }
@@ -1380,6 +2198,11 @@
       return '<span class="tag ' + cls + '">' + safeText(map[value] || value) + '</span>';
     }
 
+    function pgSeverityTag(value) {
+      var cls = value === 'BLOCK' ? 'red' : value === 'WARN' ? 'amber' : 'green';
+      return '<span class="tag ' + cls + '">' + safeText(value || 'INFO') + '</span>';
+    }
+
     function pgSystemsText(value) {
       if (Array.isArray(value)) return value.join(', ');
       if (!value) return '';
@@ -1389,6 +2212,144 @@
       } catch (error) {
         return String(value);
       }
+    }
+
+    var PG_DOMAIN_COLORS = {
+      '经营域': '#9a7a30',
+      '生产域': '#4a6b7e',
+      '总经理直辖域': '#9f4d3a'
+    };
+
+    function getProcessGovernanceDepartments(data) {
+      return (data.nodes || [])
+        .filter(function(node) { return node.node_type === 'department'; })
+        .map(function(node) {
+          return {
+            name: node.dept_name || node.label || node.name,
+            key: node.name,
+            domain: node.domain_name || ''
+          };
+        });
+    }
+
+    function renderProcessGovernanceDeptTags(departments, a1Items) {
+      var container = document.getElementById('pgDeptFilters');
+      if (!container) return;
+
+      var names = departments.map(function(dept) { return dept.name; });
+      if (state.pgSelectedDept && names.indexOf(state.pgSelectedDept) < 0) {
+        state.pgSelectedDept = '';
+      }
+
+      var counts = {};
+      departments.forEach(function(dept) {
+        counts[dept.name] = (a1Items || []).filter(function(row) {
+          return processGovernanceA1MatchesDept(row, dept.name);
+        }).length;
+      });
+
+      var allClass = state.pgSelectedDept ? '' : ' on';
+      var buttons = [
+        '<button type="button" class="pg-dept-tag' + allClass + '" data-pg-dept="">' +
+          '<span class="pg-dot"></span><span>全公司</span><span class="pg-count">' + departments.length + ' 部门</span>' +
+        '</button>'
+      ];
+
+      departments.forEach(function(dept) {
+        var selected = state.pgSelectedDept === dept.name ? ' on' : '';
+        var color = PG_DOMAIN_COLORS[dept.domain] || '#9ca3af';
+        buttons.push(
+          '<button type="button" class="pg-dept-tag' + selected + '" data-pg-dept="' + escapeHtml(dept.name) + '" style="--pg-dot:' + color + '">' +
+            '<span class="pg-dot"></span><span>' + safeText(dept.name) + '</span><span class="pg-count">' + (counts[dept.name] || 0) + '</span>' +
+          '</button>'
+        );
+      });
+
+      container.innerHTML = buttons.join('');
+    }
+
+    function addGraphWalk(seed, adjacency, keep) {
+      var queue = [seed];
+      while (queue.length) {
+        var current = queue.shift();
+        (adjacency[current] || []).forEach(function(next) {
+          if (keep.has(next)) return;
+          keep.add(next);
+          queue.push(next);
+        });
+      }
+    }
+
+    function filterProcessGovernanceSankeyByDept(data, deptName) {
+      if (!deptName) return data;
+
+      var nodes = data.nodes || [];
+      var links = data.links || [];
+      var nodeByName = {};
+      nodes.forEach(function(node) { nodeByName[node.name] = node; });
+      if (!nodeByName[deptName]) return { ...data, nodes: [], links: [] };
+
+      var forward = {};
+      var backward = {};
+      links.forEach(function(link) {
+        if (!forward[link.source]) forward[link.source] = [];
+        if (!backward[link.target]) backward[link.target] = [];
+        forward[link.source].push(link.target);
+        backward[link.target].push(link.source);
+      });
+
+      var keep = new Set([deptName]);
+      addGraphWalk(deptName, forward, keep);
+      addGraphWalk(deptName, backward, keep);
+      nodes.forEach(function(node) {
+        if (node.dept_name === deptName) keep.add(node.name);
+      });
+
+      return {
+        ...data,
+        nodes: nodes.filter(function(node) { return keep.has(node.name); }),
+        links: links.filter(function(link) { return keep.has(link.source) && keep.has(link.target); })
+      };
+    }
+
+    function processGovernanceA1MatchesDept(row, deptName) {
+      if (!deptName) return true;
+      return row.dept_name === deptName ||
+        String(row.input_source_dept || '').includes(deptName) ||
+        String(row.output_target_dept || '').includes(deptName);
+    }
+
+    function processGovernanceRiskMatchesDept(row, deptName) {
+      if (!deptName) return true;
+      return String(row.source_dept || '').includes(deptName) || String(row.target_dept || '').includes(deptName);
+    }
+
+    function renderProcessGovernanceQuality(quality, selectedDept, highlightedFindingId) {
+      var rowsEl = document.getElementById('pgQualityRows');
+      if (!rowsEl) return;
+      var items = quality.items || [];
+      var summary = quality.summary || {};
+      document.getElementById('pgMetricQualityBlock').textContent = summary.BLOCK || 0;
+      document.getElementById('pgMetricQualityWarn').textContent = summary.WARN || 0;
+      document.getElementById('pgMetricQualityInfo').textContent = summary.INFO || 0;
+      document.getElementById('pgMetricQualityShown').textContent = items.length;
+      document.getElementById('pgQualityMeta').textContent = (selectedDept ? selectedDept + ' · ' : '') + '显示 ' + items.length + ' 条';
+
+      rowsEl.innerHTML = items.length
+        ? items.map(function(row) {
+            var isHighlighted = highlightedFindingId && String(row.id) === String(highlightedFindingId);
+            var location = row.source_file || '';
+            return '<tr' + (isHighlighted ? ' style="background:#fff7ed"' : '') + ' data-quality-finding="' + safeText(row.id) + '">' +
+              '<td>' + pgSeverityTag(row.severity) + '</td>' +
+              '<td>' + safeText(row.area) + '</td>' +
+              '<td>' + safeText(row.dept_name || '全局') + '</td>' +
+              '<td>' + safeText(location) + '</td>' +
+              '<td>' + safeText(row.source_line || '') + '</td>' +
+              '<td>' + safeText(row.message) + '</td>' +
+              '<td>' + safeText(row.suggestion || '') + '</td>' +
+            '</tr>';
+          }).join('')
+        : '<tr><td colspan="7" class="empty">暂无质量问题</td></tr>';
     }
 
     function renderProcessGovernanceSankey(data) {
@@ -1469,53 +2430,79 @@
       try {
         var riskValue = document.getElementById('pgRiskFilter') ? document.getElementById('pgRiskFilter').value : '';
         var riskQuery = riskValue ? '?risk=' + encodeURIComponent(riskValue) : '';
+        var qualityParams = new URLSearchParams();
+        var qualitySeverity = document.getElementById('pgQualitySeverityFilter') ? document.getElementById('pgQualitySeverityFilter').value : '';
+        var qualityArea = document.getElementById('pgQualityAreaFilter') ? document.getElementById('pgQualityAreaFilter').value : '';
+        if (qualitySeverity) qualityParams.set('severity', qualitySeverity);
+        if (qualityArea) qualityParams.set('area', qualityArea);
+        if (state.pgSelectedDept) qualityParams.set('dept', state.pgSelectedDept);
+        var qualityQuery = qualityParams.toString() ? '?' + qualityParams.toString() : '';
         var results = await Promise.all([
           api('/api/process-governance/current'),
           api('/api/process-governance/sankey'),
           api('/api/process-governance/a1'),
-          api('/api/process-governance/cross-dept' + riskQuery)
+          api('/api/process-governance/cross-dept' + riskQuery),
+          api('/api/process-governance/quality' + qualityQuery)
         ]);
         var current = results[0];
         var sankey = results[1];
         var a1 = results[2];
         var risks = results[3];
+        var quality = results[4];
         var stats = sankey.stats || {};
-        var crossStats = sankey.crossDept && sankey.crossDept.stats ? sankey.crossDept.stats : {};
+        var departments = getProcessGovernanceDepartments(sankey);
+        var a1Items = a1.items || [];
+        var riskItems = risks.items || [];
+        renderProcessGovernanceDeptTags(departments, a1Items);
 
-        document.getElementById('pgMetricL3').textContent = stats.mappings || 0;
-        document.getElementById('pgMetricA1').textContent = stats.a1 || 0;
-        document.getElementById('pgMetricCross').textContent = crossStats.totalChecked || 0;
-        document.getElementById('pgMetricRisk').textContent = crossStats.highRisk || 0;
+        var selectedDept = state.pgSelectedDept;
+        var filteredSankey = filterProcessGovernanceSankeyByDept(sankey, selectedDept);
+        var a1Rows = a1Items.filter(function(row) { return processGovernanceA1MatchesDept(row, selectedDept); });
+        var riskRows = riskItems.filter(function(row) { return processGovernanceRiskMatchesDept(row, selectedDept); });
+        var selectedL3Count = new Set(a1Rows.map(function(row) { return row.l3_name; }).filter(Boolean)).size;
+        var selectedHighRiskCount = riskRows.filter(function(row) { return row.risk_level === 'high'; }).length;
+
+        document.getElementById('pgMetricL3').textContent = selectedL3Count;
+        document.getElementById('pgMetricA1').textContent = a1Rows.length;
+        document.getElementById('pgMetricCross').textContent = riskRows.length;
+        document.getElementById('pgMetricRisk').textContent = selectedHighRiskCount;
+        var currentQualitySummary = current.qualitySummary || {};
+        document.getElementById('pgMetricQualityBlock').textContent = currentQualitySummary.BLOCK || 0;
+        document.getElementById('pgMetricQualityWarn').textContent = currentQualitySummary.WARN || 0;
+        document.getElementById('pgMetricQualityInfo').textContent = currentQualitySummary.INFO || 0;
 
         var imported = current.stats && current.stats.a1Imported ? current.stats.a1Imported : 0;
         document.getElementById('pgSnapshotMeta').textContent = current.id
-          ? '当前快照 #' + current.id + '，统计 A1 ' + (stats.a1 || 0) + ' 项，已导入明细 ' + imported + ' 行'
+          ? '当前快照 #' + current.id + '，快照统计 A1 ' + (stats.a1 || 0) + ' 项，已导入明细 ' + imported + ' 行' + (selectedDept ? '，当前部门：' + selectedDept : '')
           : '暂无流程治理快照';
+        document.getElementById('pgSourceMeta').textContent = '组织真源：docs/organization/组织架构和部门职责.md；流程真源：docs/norms/{部门}部门-能力-流程-系统映射关系.md';
 
-        document.getElementById('pgMapMeta').textContent = (sankey.nodes || []).length + ' 个节点，' + (sankey.links || []).length + ' 条关系';
-        renderProcessGovernanceSankey(sankey);
+        document.getElementById('pgMapMeta').textContent = (selectedDept ? selectedDept + ' · ' : '') + (filteredSankey.nodes || []).length + ' 个节点，' + (filteredSankey.links || []).length + ' 条关系';
+        renderProcessGovernanceSankey(filteredSankey);
 
-        var a1Rows = a1.items || [];
-        document.getElementById('pgA1Meta').textContent = '显示前 ' + Math.min(a1Rows.length, 80) + ' 条 / 共 ' + a1Rows.length + ' 条';
+        document.getElementById('pgA1Meta').textContent = (selectedDept ? selectedDept + ' · ' : '') + '显示前 ' + Math.min(a1Rows.length, 80) + ' 条 / 共 ' + a1Rows.length + ' 条';
         document.getElementById('pgA1Rows').innerHTML = a1Rows.length
           ? a1Rows.slice(0, 80).map(function(row) {
               return '<tr><td>' + safeText(row.a1_code) + '</td><td>' + safeText(row.dept_name) + '</td><td>' + safeText(row.l3_name) + '</td><td>' + safeText(row.behavior) + '</td><td>' + safeText(row.input_source_dept) + '</td><td>' + safeText(row.output_target_dept) + '</td><td>' + safeText(pgSystemsText(row.suggested_systems)) + '</td></tr>';
             }).join('')
           : '<tr><td colspan="7" class="empty">暂无 A1 明细</td></tr>';
 
-        var riskRows = risks.items || [];
-        document.getElementById('pgRiskMeta').textContent = riskValue ? '筛选后 ' + riskRows.length + ' 条' : '共 ' + riskRows.length + ' 条';
+        document.getElementById('pgRiskMeta').textContent = (riskValue || selectedDept) ? '筛选后 ' + riskRows.length + ' 条' : '共 ' + riskRows.length + ' 条';
         document.getElementById('pgRiskRows').innerHTML = riskRows.length
           ? riskRows.map(function(row) {
               return '<tr><td>' + safeText(row.source_dept) + '</td><td>' + safeText(row.target_dept) + '</td><td>' + safeText(row.a1_code) + '</td><td>' + safeText(row.refs) + '</td><td>' + pgRiskTag(row.risk_level) + '</td><td>' + pgConfirmTag(row.confirm_status) + '</td><td>' + safeText(row.description) + '</td></tr>';
             }).join('')
           : '<tr><td colspan="7" class="empty">暂无跨部门风险项</td></tr>';
+
+        var route = parseHash();
+        renderProcessGovernanceQuality(quality, selectedDept, route.finding);
       } catch (error) {
         document.getElementById('pgSnapshotMeta').textContent = '流程治理数据暂不可用';
         document.getElementById('pgMapMeta').textContent = '';
         document.getElementById('pgSankeyChart').innerHTML = '<div class="empty">流程治理数据暂不可用</div>';
         document.getElementById('pgA1Rows').innerHTML = '<tr><td colspan="7" class="empty">暂无 A1 明细</td></tr>';
         document.getElementById('pgRiskRows').innerHTML = '<tr><td colspan="7" class="empty">暂无跨部门风险项</td></tr>';
+        document.getElementById('pgQualityRows').innerHTML = '<tr><td colspan="7" class="empty">暂无质量问题</td></tr>';
       }
     }
 
@@ -1636,8 +2623,14 @@
       $('detailPage').classList.remove('on');
       var panel = tab === 'processGovernance' ? $('processGovernancePanel') : $(tab);
       if (panel) panel.classList.add('on');
+      if (tab !== 'roleWorkbench' && panel) {
+        ensureWorkflowShell(panel);
+        loadPageWorkflow(tab, { view: 'list', tab: tab });
+      }
       switch (tab) {
+        case 'roleWorkbench': renderRoleWorkbench(); break;
         case 'dashboard': renderDashboard(); break;
+        case 'roleGuide': renderRoleGuide(); break;
         case 'mySubmissions': loadMySubmissions(); break;
         case 'todos': loadTodos(); break;
         case 'reviews': loadReviews(); break;
@@ -1657,6 +2650,8 @@
     function renderDetailPage(params) {
       document.querySelectorAll('.panel').forEach(function(p) { p.classList.remove('on'); });
       $('detailPage').classList.add('on');
+      ensureWorkflowShell($('detailPage'));
+      loadPageWorkflow(params.tab || 'dashboard', params);
       $('detailContent').innerHTML = '<div class="empty">加载中...</div>';
 
       if (params.type === 'process') {
@@ -1669,18 +2664,236 @@
         renderConflictDetail(parseInt(params.id), 'field', params.tab);
       } else if (params.type === 'field' || params.type === 'term') {
         renderConflictDetail(parseInt(params.id), params.type, params.tab);
+      } else if (['orgUnit', 'person', 'productFamily', 'product', 'role'].indexOf(params.type) >= 0) {
+        renderEntityForm(params.type, params.id, 'view', params.tab);
       } else {
         $('detailContent').innerHTML = '<div class="empty">未知详情类型</div>';
       }
     }
 
+    function renderFormPage(params) {
+      document.querySelectorAll('.panel').forEach(function(p) { p.classList.remove('on'); });
+      $('detailPage').classList.add('on');
+      ensureWorkflowShell($('detailPage'));
+      loadPageWorkflow(params.tab || 'dashboard', params);
+      $('detailContent').innerHTML = '<div class="empty">加载中...</div>';
+      renderEntityForm(params.type, params.id || 'new', params.action || 'edit', params.tab);
+    }
+
     function renderOperationPage(params) {
       document.querySelectorAll('.panel').forEach(function(p) { p.classList.remove('on'); });
       $('detailPage').classList.add('on');
+      ensureWorkflowShell($('detailPage'));
+      loadPageWorkflow(params.tab || 'dashboard', params);
       if (params.type === 'mapping' && params.action === 'reject') {
         openRejectPage(parseInt(params.id));
       } else {
         $('detailContent').innerHTML = '<div class="empty">未知操作</div>';
+      }
+    }
+
+    const ENTITY_FORM_CONFIGS = {
+      orgUnit: {
+        tab: 'orgUnits',
+        label: '组织',
+        listLabel: '组织架构',
+        readOnly: true,
+        read: function(id) { return '/api/org-units/' + encodeURIComponent(id); },
+        create: '/api/org-units',
+        update: function(id) { return '/api/org-units/' + encodeURIComponent(id); },
+        createFields: [
+          { name: 'org_unit_name', label: '组织名称', required: true },
+          { name: 'org_type', label: '组织类型', type: 'select', required: true, options: [['company','公司'], ['department','部门'], ['office','办公室'], ['team','班组']] },
+          { name: 'org_mnemonic', label: '组织简称', required: true },
+          { name: 'parent_org_unit_id', label: '上级组织ID', type: 'number' }
+        ],
+        editFields: [
+          { name: 'org_unit_name', label: '组织名称', required: true },
+          { name: 'parent_org_unit_id', label: '上级组织ID', type: 'number' },
+          { name: 'manager_person_id', label: '负责人ID', type: 'number' },
+          { name: 'status', label: '状态', type: 'select', options: [['draft','草稿'], ['active','启用'], ['inactive','停用']] }
+        ],
+        resultId: 'org_unit_code'
+      },
+      person: {
+        tab: 'persons',
+        label: '人员',
+        listLabel: '人员管理',
+        read: function(id) { return '/api/persons/' + encodeURIComponent(id); },
+        create: '/api/persons',
+        update: function(id) { return '/api/persons/' + encodeURIComponent(id); },
+        createFields: [
+          { name: 'person_name', label: '姓名', required: true },
+          { name: 'mobile', label: '手机号' },
+          { name: 'email', label: '邮箱' },
+          { name: 'employment_status', label: '在职状态', type: 'select', options: [['active','在职'], ['leave','离职'], ['suspended','停职']] }
+        ],
+        editFields: [
+          { name: 'person_name', label: '姓名', required: true },
+          { name: 'mobile', label: '手机号' },
+          { name: 'email', label: '邮箱' },
+          { name: 'employment_status', label: '在职状态', type: 'select', options: [['active','在职'], ['leave','离职'], ['suspended','停职']] }
+        ],
+        resultId: 'employee_no'
+      },
+      productFamily: {
+        tab: 'products',
+        label: '产品族',
+        listLabel: '产品主数据',
+        read: function(id) { return '/api/product-families/' + encodeURIComponent(id); },
+        create: '/api/product-families',
+        update: function(id) { return '/api/product-families/' + encodeURIComponent(id); },
+        createFields: [
+          { name: 'model_name', label: '型号名称', required: true },
+          { name: 'model_code', label: '机型代码', required: true },
+          { name: 'class_major', label: '大类码', required: true },
+          { name: 'product_type', label: '产品类型' }
+        ],
+        editFields: [
+          { name: 'model_name', label: '型号名称', required: true },
+          { name: 'product_type', label: '产品类型' },
+          { name: 'status', label: '状态', type: 'select', options: [['draft','草稿'], ['active','启用'], ['inactive','停用']] }
+        ],
+        resultId: 'product_family_code'
+      },
+      product: {
+        tab: 'products',
+        label: '产品',
+        listLabel: '产品主数据',
+        read: function(id) { return '/api/products/' + encodeURIComponent(id); },
+        create: '/api/products',
+        update: function(id) { return '/api/products/' + encodeURIComponent(id); },
+        createFields: [
+          { name: 'product_family_id', label: '产品族ID', type: 'number', required: true },
+          { name: 'revision', label: '版次' },
+          { name: 'class_mid', label: '中类码' },
+          { name: 'class_minor', label: '小类码' }
+        ],
+        editFields: [
+          { name: 'revision', label: '版次' }
+        ],
+        resultId: 'product_code'
+      },
+      role: {
+        tab: 'rbac',
+        label: '角色',
+        listLabel: '角色权限',
+        read: function(id) { return '/api/roles/' + encodeURIComponent(id); },
+        create: '/api/roles',
+        update: function(id) { return '/api/roles/' + encodeURIComponent(id); },
+        createFields: [
+          { name: 'role_code', label: '角色编码', required: true },
+          { name: 'role_name', label: '角色名称', required: true },
+          { name: 'description', label: '描述', wide: true },
+          { name: 'parent_role_id', label: '父角色ID', type: 'number' }
+        ],
+        editFields: [
+          { name: 'role_name', label: '角色名称', required: true },
+          { name: 'description', label: '描述', wide: true },
+          { name: 'parent_role_id', label: '父角色ID', type: 'number' }
+        ],
+        resultId: 'role_id'
+      }
+    };
+
+    function entityFields(config, mode, isNew) {
+      return isNew ? config.createFields : (config.editFields || config.createFields);
+    }
+
+    function renderEntityInput(field, value, disabled) {
+      var id = 'entity_' + field.name;
+      var required = field.required ? ' required' : '';
+      var disabledAttr = disabled ? ' disabled' : '';
+      var wide = field.wide ? ' wide' : '';
+      if (field.type === 'select') {
+        var options = (field.options || []).map(function(opt) {
+          var selected = String(value || '') === String(opt[0]) ? ' selected' : '';
+          return '<option value="' + safeText(opt[0]) + '"' + selected + '>' + safeText(opt[1]) + '</option>';
+        }).join('');
+        return '<div class="form-group' + wide + '"><label>' + safeText(field.label) + '<select id="' + id + '" data-entity-field="' + safeText(field.name) + '"' + required + disabledAttr + '>' + options + '</select></label></div>';
+      }
+      var type = field.type === 'number' ? 'number' : 'text';
+      return '<div class="form-group' + wide + '"><label>' + safeText(field.label) + '<input id="' + id + '" type="' + type + '" value="' + safeText(value, '') + '" data-entity-field="' + safeText(field.name) + '"' + required + disabledAttr + '></label></div>';
+    }
+
+    async function renderEntityForm(type, id, mode) {
+      var sourceTab = arguments.length > 3 ? arguments[3] : null;
+      var config = ENTITY_FORM_CONFIGS[type];
+      if (!config) {
+        $('detailContent').innerHTML = '<div class="empty">未知表单类型</div>';
+        return;
+      }
+      var isNew = id === 'new' || mode === 'new';
+      var isView = mode === 'view';
+      if (config.readOnly && !isView) {
+        $('detailContent').innerHTML = '<div class="empty">组织架构来自 docs/organization/组织架构和部门职责.md，由同步脚本生成，不支持手动新增或编辑。</div>';
+        return;
+      }
+      var row = {};
+      try {
+        if (!isNew) row = await api(config.read(id));
+      } catch (error) {
+        $('detailContent').innerHTML = '<div class="empty">' + safeText(error.message || '记录不存在或无权访问') + '</div>';
+        return;
+      }
+      var listTab = sourceTab || config.tab;
+      setBreadcrumb([
+        { label: config.listLabel, onclick: "navigateTo('list',{tab:'" + listTab + "'})" },
+        { label: (isNew ? '新增' : (isView ? '查看' : '编辑')) + config.label }
+      ]);
+      var fields = entityFields(config, mode, isNew);
+      var title = (isNew ? '新增' : (isView ? '查看' : '编辑')) + config.label;
+      var codeText = isNew ? '' : '<span>当前编码：' + safeText(id) + '</span>';
+      $('detailContent').innerHTML =
+        '<div class="entity-form">' +
+          '<div><h2>' + safeText(title) + '</h2><div class="detail-meta">' + codeText + '<span>来源：' + safeText(config.listLabel) + '</span></div></div>' +
+          '<div class="entity-form-grid">' + fields.map(function(field) { return renderEntityInput(field, row[field.name], isView); }).join('') + '</div>' +
+          '<div class="notice">' + (config.readOnly ? '组织架构来自 docs/organization/组织架构和部门职责.md，由同步脚本生成，不支持手动新增或编辑。' : '按左侧工作流填写并保存。保存后回到列表，可继续执行激活、发布、权限分配等状态动作。') + '</div>' +
+          '<div class="entity-form-actions">' +
+            '<button type="button" class="btn secondary" id="entityCancelBtn">返回列表</button>' +
+            (isView ? (config.readOnly ? '' : '<button type="button" class="btn primary" id="entityEditBtn">编辑</button>') : '<button type="button" class="btn primary" id="entitySaveBtn">保存草稿</button>') +
+          '</div>' +
+        '</div>';
+      $('entityCancelBtn').onclick = function() { navigateTo('list', { tab: listTab }); };
+      var editBtn = $('entityEditBtn');
+      if (editBtn) editBtn.onclick = function() { navigateTo('form', { tab: listTab, type: type, id: id, action: 'edit' }); };
+      var saveBtn = $('entitySaveBtn');
+      if (saveBtn) saveBtn.onclick = function() { saveEntityForm(type, id, mode, listTab); };
+    }
+
+    function collectEntityPayload(config, mode, isNew) {
+      var fields = entityFields(config, mode, isNew);
+      var payload = {};
+      for (var i = 0; i < fields.length; i++) {
+        var field = fields[i];
+        var el = $('entity_' + field.name);
+        if (!el) continue;
+        var raw = String(el.value || '').trim();
+        if (field.required && !raw) {
+          showToast('请填写' + field.label, 'error');
+          el.focus();
+          return null;
+        }
+        if (field.type === 'number') payload[field.name] = raw ? Number(raw) : null;
+        else payload[field.name] = raw || null;
+      }
+      return payload;
+    }
+
+    async function saveEntityForm(type, id, mode, listTab) {
+      var config = ENTITY_FORM_CONFIGS[type];
+      var isNew = id === 'new' || mode === 'new';
+      var payload = collectEntityPayload(config, mode, isNew);
+      if (!payload) return;
+      try {
+        var result = await api(isNew ? config.create : config.update(id), {
+          method: isNew ? 'POST' : 'PUT',
+          body: JSON.stringify(payload)
+        });
+        showToast(isNew && result && result[config.resultId] ? '已保存，编码：' + result[config.resultId] : '已保存');
+        navigateTo('list', { tab: listTab || config.tab });
+      } catch (error) {
+        showToast(error.message || '保存失败', 'error');
       }
     }
 
@@ -1689,6 +2902,20 @@
       if (!event.target.matches('.tab')) return;
       var tab = event.target.dataset.tab;
       navigateTo('list', { tab: tab });
+    });
+    document.addEventListener('click', function(event) {
+      var targetButton = event.target.closest('[data-wb-target]');
+      if (targetButton) {
+        event.preventDefault();
+        openWorkbenchTarget(targetButton.dataset.wbTarget);
+        return;
+      }
+      var modeButton = event.target.closest('#roleWorkbenchMode [data-mode]');
+      if (modeButton) {
+        event.preventDefault();
+        state.roleWorkbench.mode = modeButton.dataset.mode || 'todo';
+        renderRoleWorkbench();
+      }
     });
 
     $('loginBtn').onclick = login;
@@ -1733,6 +2960,21 @@
     }
     if (document.getElementById('pgRiskFilter')) {
       document.getElementById('pgRiskFilter').onchange = renderProcessGovernance;
+    }
+    if (document.getElementById('pgQualitySeverityFilter')) {
+      document.getElementById('pgQualitySeverityFilter').onchange = renderProcessGovernance;
+    }
+    if (document.getElementById('pgQualityAreaFilter')) {
+      document.getElementById('pgQualityAreaFilter').onchange = renderProcessGovernance;
+    }
+    if (document.getElementById('pgDeptFilters')) {
+      document.getElementById('pgDeptFilters').addEventListener('click', function(event) {
+        var button = event.target.closest('[data-pg-dept]');
+        if (!button) return;
+        event.preventDefault();
+        state.pgSelectedDept = button.dataset.pgDept || '';
+        renderProcessGovernance();
+      });
     }
     if (document.getElementById('refreshProcessGovernanceBtn')) {
       document.getElementById('refreshProcessGovernanceBtn').onclick = renderProcessGovernance;
@@ -2386,8 +3628,8 @@
       var data = await api('/api/org-units?' + params);
       document.getElementById('ouTableBody').innerHTML = (data.rows || []).map(function(r) {
         return '<tr><td><code>' + escHtml(r.org_unit_code) + '</code></td><td>' + escHtml(r.org_unit_name) + '</td><td>' + escHtml(r.org_type) + '</td><td>' + escHtml(r.org_mnemonic) + '</td><td>' + escHtml(r.parent_name || '-') + '</td><td>' + escHtml(r.status) + '</td><td>' +
-          (r.status === 'draft' ? '<a href="#" onclick="activateOu(\'' + escHtml(r.org_unit_code) + '\');return false">激活</a>' : '') +
-          (hasAdminAccess() ? '<a href="#" onclick="deleteOu(\'' + escHtml(r.org_unit_code) + '\');return false" style="color:#e53935;margin-left:8px;">删除</a>' : '') + '</td></tr>';
+          '<a href="#" onclick="navigateTo(\'detail\',{tab:\'orgUnits\',type:\'orgUnit\',id:\'' + escHtml(r.org_unit_code) + '\'});return false">详情</a>' +
+          '</td></tr>';
       }).join('') || '<tr><td colspan="7" style="text-align:center">暂无数据</td></tr>';
     }
 
@@ -2411,17 +3653,6 @@
     document.addEventListener('DOMContentLoaded', function() {
       var s1 = document.getElementById('ouSearchBtn');
       if (s1) s1.addEventListener('click', loadOrgUnits);
-      var n1 = document.getElementById('ouNewBtn');
-      if (n1) n1.addEventListener('click', async function() {
-        var name = prompt('组织名称：'); if (!name) return;
-        var type = prompt('组织类型 (company/department/office/team)：', 'department'); if (!type) return;
-        var mnemonic = prompt('组织简称（3-8位大写字母数字）：'); if (!mnemonic) return;
-        try {
-          var res = await api('/api/org-units', { method: 'POST', body: JSON.stringify({ org_unit_name: name, org_type: type, org_mnemonic: mnemonic.toUpperCase() }) });
-          if (res.org_unit_code) { alert('创建成功，编码：' + res.org_unit_code); loadOrgUnits(); }
-          else alert('创建失败：' + (res.error || '未知错误'));
-        } catch (e) { alert('创建失败'); }
-      });
     });
 
     // ── Persons Tab ──
@@ -2434,7 +3665,9 @@
       var data = await api('/api/persons?' + params);
       document.getElementById('personTableBody').innerHTML = (data.rows || []).map(function(r) {
         return '<tr><td><code>' + escHtml(r.employee_no) + '</code></td><td>' + escHtml(r.person_name) + '</td><td>' + escHtml(r.mobile || '-') + '</td><td>' + escHtml(r.email || '-') + '</td><td>' + escHtml(r.employment_status) + '</td><td>' + escHtml(r.status) + '</td><td>' +
-          (r.status === 'draft' ? '<a href="#" onclick="activatePerson(\'' + escHtml(r.employee_no) + '\');return false">激活</a>' : '') +
+          '<a href="#" onclick="navigateTo(\'detail\',{tab:\'persons\',type:\'person\',id:\'' + escHtml(r.employee_no) + '\'});return false">详情</a>' +
+          '<a href="#" onclick="navigateTo(\'form\',{tab:\'persons\',type:\'person\',id:\'' + escHtml(r.employee_no) + '\',action:\'edit\'});return false" style="margin-left:8px;">编辑</a>' +
+          (r.status === 'draft' ? '<a href="#" onclick="activatePerson(\'' + escHtml(r.employee_no) + '\');return false" style="margin-left:8px;">激活</a>' : '') +
           (hasAdminAccess() ? '<a href="#" onclick="deletePerson(\'' + escHtml(r.employee_no) + '\');return false" style="color:#e53935;margin-left:8px;">删除</a>' : '') + '</td></tr>';
       }).join('') || '<tr><td colspan="7" style="text-align:center">暂无数据</td></tr>';
     }
@@ -2460,15 +3693,8 @@
       var s2 = document.getElementById('personSearchBtn');
       if (s2) s2.addEventListener('click', loadPersons);
       var n2 = document.getElementById('personNewBtn');
-      if (n2) n2.addEventListener('click', async function() {
-        var name = prompt('姓名：'); if (!name) return;
-        var mobile = prompt('手机号（可选）：') || '';
-        var email = prompt('邮箱（可选）：') || '';
-        try {
-          var res = await api('/api/persons', { method: 'POST', body: JSON.stringify({ person_name: name, mobile: mobile || null, email: email || null }) });
-          if (res.employee_no) { alert('创建成功，工号：' + res.employee_no); loadPersons(); }
-          else alert('创建失败：' + (res.error || '未知错误'));
-        } catch (e) { alert('创建失败'); }
+      if (n2) n2.addEventListener('click', function() {
+        navigateTo('form', { tab: 'persons', type: 'person', id: 'new', action: 'new' });
       });
     });
 
@@ -2477,7 +3703,9 @@
       var data = await api('/api/product-families?limit=100');
       document.getElementById('pfTableBody').innerHTML = (data.rows || []).map(function(r) {
         return '<tr><td><code>' + escHtml(r.product_family_code) + '</code></td><td>' + escHtml(r.model_name) + '</td><td>' + escHtml(r.model_code) + '</td><td>' + escHtml(r.class_major) + '</td><td>' + escHtml(r.product_type || '-') + '</td><td>' + escHtml(r.status) + '</td><td>' +
-          (r.status === 'draft' ? '<a href="#" onclick="activatePf(\'' + escHtml(r.product_family_code) + '\');return false">激活</a>' : '') +
+          '<a href="#" onclick="navigateTo(\'detail\',{tab:\'products\',type:\'productFamily\',id:\'' + escHtml(r.product_family_code) + '\'});return false">详情</a>' +
+          '<a href="#" onclick="navigateTo(\'form\',{tab:\'products\',type:\'productFamily\',id:\'' + escHtml(r.product_family_code) + '\',action:\'edit\'});return false" style="margin-left:8px;">编辑</a>' +
+          (r.status === 'draft' ? '<a href="#" onclick="activatePf(\'' + escHtml(r.product_family_code) + '\');return false" style="margin-left:8px;">激活</a>' : '') +
           (hasAdminAccess() ? '<a href="#" onclick="deletePf(\'' + escHtml(r.product_family_code) + '\');return false" style="color:#e53935;margin-left:8px;">删除</a>' : '') + '</td></tr>';
       }).join('') || '<tr><td colspan="7" style="text-align:center">暂无产品族</td></tr>';
     }
@@ -2498,8 +3726,10 @@
       var data = await api('/api/products?' + params);
       document.getElementById('prodTableBody').innerHTML = (data.rows || []).map(function(r) {
         return '<tr><td><code>' + escHtml(r.product_code) + '</code></td><td>' + escHtml(r.model_name || '-') + '</td><td>' + escHtml(r.revision || '-') + '</td><td>' + escHtml(r.class_mid || '-') + '</td><td>' + escHtml(r.class_minor || '-') + '</td><td><span class="badge">' + escHtml(r.lifecycle_state) + '</span></td><td>' +
-          (r.lifecycle_state === 'draft' ? '<a href="#" onclick="releaseProduct(\'' + escHtml(r.product_code) + '\');return false">发布</a> ' : '') +
-          (r.lifecycle_state === 'released' ? '<a href="#" onclick="obsoleteProduct(\'' + escHtml(r.product_code) + '\');return false">废止</a>' : '') +
+          '<a href="#" onclick="navigateTo(\'detail\',{tab:\'products\',type:\'product\',id:\'' + escHtml(r.product_code) + '\'});return false">详情</a>' +
+          '<a href="#" onclick="navigateTo(\'form\',{tab:\'products\',type:\'product\',id:\'' + escHtml(r.product_code) + '\',action:\'edit\'});return false" style="margin-left:8px;">编辑</a>' +
+          (r.lifecycle_state === 'draft' ? '<a href="#" onclick="releaseProduct(\'' + escHtml(r.product_code) + '\');return false" style="margin-left:8px;">发布</a> ' : '') +
+          (r.lifecycle_state === 'released' ? '<a href="#" onclick="obsoleteProduct(\'' + escHtml(r.product_code) + '\');return false" style="margin-left:8px;">废止</a>' : '') +
           (hasAdminAccess() ? '<a href="#" onclick="deleteProduct(\'' + escHtml(r.product_code) + '\');return false" style="color:#e53935;margin-left:8px;">删除</a>' : '') + '</td></tr>';
       }).join('') || '<tr><td colspan="7" style="text-align:center">暂无产品</td></tr>';
     }
@@ -2542,28 +3772,12 @@
       var s3 = document.getElementById('prodSearchBtn');
       if (s3) s3.addEventListener('click', loadProducts);
       var pfBtn = document.getElementById('prodPfNewBtn');
-      if (pfBtn) pfBtn.addEventListener('click', async function() {
-        var name = prompt('型号名称：'); if (!name) return;
-        var code = prompt('机型代码（3位）：', 'S19'); if (!code) return;
-        var major = prompt('大类码（2位）：', 'CF'); if (!major) return;
-        var type = prompt('产品类型（可选）：') || null;
-        try {
-          var res = await api('/api/product-families', { method: 'POST', body: JSON.stringify({ model_name: name, model_code: code.toUpperCase(), class_major: major.toUpperCase(), product_type: type }) });
-          if (res.product_family_code) { alert('创建成功，编码：' + res.product_family_code); loadProductFamilies(); }
-          else alert('创建失败：' + (res.error || '未知错误'));
-        } catch (e) { alert('创建失败'); }
+      if (pfBtn) pfBtn.addEventListener('click', function() {
+        navigateTo('form', { tab: 'products', type: 'productFamily', id: 'new', action: 'new' });
       });
       var prodBtn = document.getElementById('prodNewBtn');
-      if (prodBtn) prodBtn.addEventListener('click', async function() {
-        var pfId = prompt('产品族 ID：'); if (!pfId) return;
-        var rev = prompt('版次：', 'A') || null;
-        var mid = prompt('中类码（3位，可选）：', '000') || '000';
-        var minor = prompt('小类码（3位，可选）：', '000') || '000';
-        try {
-          var res = await api('/api/products', { method: 'POST', body: JSON.stringify({ product_family_id: Number(pfId), revision: rev, class_mid: mid.toUpperCase(), class_minor: minor.toUpperCase() }) });
-          if (res.product_code) { alert('创建成功，编码：' + res.product_code); loadProducts(); }
-          else alert('创建失败：' + (res.error || '未知错误'));
-        } catch (e) { alert('创建失败'); }
+      if (prodBtn) prodBtn.addEventListener('click', function() {
+        navigateTo('form', { tab: 'products', type: 'product', id: 'new', action: 'new' });
       });
     });
 
@@ -2592,24 +3806,260 @@
 
     // ===== RBAC: Role & Permission Management =====
 
-    var rbacPanel = 'roleList';
+    var rbacPanel = 'userManagement';
+    var userManagementData = [];
+    var userManagementRoles = [];
+    var userManagementDepartments = [];
+    var userManagementDeptFilter = '';
+    var userManagementSearch = '';
+    var userManagementEditingId = null;
+    var USER_BASIC_ROLE_CODES = ['submitter', 'owner', 'reviewer', 'admin'];
+
     document.querySelectorAll('.rbac-nav-item').forEach(function(item) {
       item.addEventListener('click', function() {
-        document.querySelectorAll('.rbac-nav-item').forEach(function(n) { n.classList.remove('active'); n.style.background = ''; n.style.fontWeight = ''; });
+        document.querySelectorAll('.rbac-nav-item').forEach(function(n) { n.classList.remove('active'); });
         this.classList.add('active');
-        this.style.background = '#e3f2fd';
-        this.style.fontWeight = 'bold';
         rbacPanel = this.dataset.panel;
         renderRbacPanel();
       });
     });
 
     function renderRbacPanel() {
-      if (rbacPanel === 'roleList') renderRoleList();
+      if (rbacPanel === 'userManagement') renderUserManagement();
+      else if (rbacPanel === 'roleList') renderRoleList();
       else if (rbacPanel === 'permMatrix') renderPermMatrix();
       else if (rbacPanel === 'userRoles') renderUserRolesPanel();
       else if (rbacPanel === 'userRolesOverview') renderUserRolesOverview();
       else if (rbacPanel === 'batchImport') renderBatchImport();
+    }
+
+    function roleCodesFromSummary(user) {
+      return String(user.rbac_role_codes || '').split(',').map(function(code) { return code.trim(); }).filter(Boolean);
+    }
+
+    function isBasicRoleCode(code) {
+      return USER_BASIC_ROLE_CODES.indexOf(code) >= 0;
+    }
+
+    function userRoleStatus(user) {
+      var codes = roleCodesFromSummary(user);
+      if (codes.length === 0) return '<span class="tag red">待补角色</span>';
+      if (!codes.some(function(code) { return !isBasicRoleCode(code); })) return '<span class="tag amber">待补项目角色</span>';
+      return '<span class="tag green">已配置</span>';
+    }
+
+    function roleBadges(codesText, namesText) {
+      var codes = Array.isArray(codesText) ? codesText : String(codesText || '').split(',').map(function(code) { return code.trim(); }).filter(Boolean);
+      var names = Array.isArray(namesText) ? namesText : String(namesText || '').split(',').map(function(name) { return name.trim(); });
+      if (!codes.length) return '<span class="tag red">未分配</span>';
+      return '<div class="role-badges">' + codes.map(function(code, index) {
+        return '<span class="tag">' + safeText(names[index] || code) + '</span>';
+      }).join('') + '</div>';
+    }
+
+    async function loadUserManagementSources() {
+      var results = await Promise.all([
+        api('/api/org/users/roles-summary'),
+        api('/api/roles'),
+        api('/api/org/departments')
+      ]);
+      userManagementData = results[0];
+      userManagementRoles = results[1];
+      userManagementDepartments = results[2];
+    }
+
+    async function renderUserManagement() {
+      var panel = document.getElementById('rbacPanel');
+      panel.innerHTML = '<div id="rbacUserManagement"><div class="user-management-head"><div><h3>用户管理</h3><p>账号入库、角色分配和初始密码维护。</p></div></div><div class="empty">加载中...</div></div>';
+      try {
+        await loadUserManagementSources();
+        userManagementEditingId = null;
+        renderUserManagementShell();
+      } catch (error) {
+        panel.innerHTML = '<div id="rbacUserManagement"><div class="empty">' + safeText(error.message || '用户管理加载失败') + '</div></div>';
+      }
+    }
+
+    function renderUserManagementShell() {
+      var panel = document.getElementById('rbacPanel');
+      var depts = [...new Set(userManagementData.map(function(user) { return user.dept_name; }).filter(Boolean))].sort();
+      var deptOptions = '<option value="">全部部门</option>' + depts.map(function(name) {
+        return '<option value="' + safeText(name) + '"' + (userManagementDeptFilter === name ? ' selected' : '') + '>' + safeText(name) + '</option>';
+      }).join('');
+
+      panel.innerHTML =
+        '<div id="rbacUserManagement">' +
+          '<div class="user-management-head">' +
+            '<div><h3>用户管理</h3><p>账号入库、角色分配和初始密码维护。初始密码为 init1234，首次登录需修改。</p></div>' +
+            '<button class="btn primary" onclick="showUserEditor(\'new\')">新增账号</button>' +
+          '</div>' +
+          '<div class="user-management-filters">' +
+            '<label>搜索<input id="userManagementSearch" value="' + safeText(userManagementSearch, '') + '" placeholder="工号 / 姓名 / 岗位" oninput="applyUserManagementFilters()"></label>' +
+            '<label>部门<select id="userManagementDeptFilter" onchange="applyUserManagementFilters()">' + deptOptions + '</select></label>' +
+            '<button class="btn secondary" onclick="refreshUserManagement()">刷新</button>' +
+          '</div>' +
+          '<div id="userManagementEditor"></div>' +
+          '<div class="table-container"><table class="data-table">' +
+            '<thead><tr><th>工号</th><th>姓名</th><th>部门</th><th>岗位</th><th>基础角色</th><th>项目工作角色</th><th>状态</th><th>创建时间</th><th>操作</th></tr></thead>' +
+            '<tbody id="userManagementTableBody"></tbody>' +
+          '</table></div>' +
+        '</div>';
+      renderUserManagementTable();
+    }
+
+    function refreshUserManagement() {
+      renderUserManagement();
+    }
+
+    function applyUserManagementFilters() {
+      userManagementSearch = String(document.getElementById('userManagementSearch')?.value || '').trim().toLowerCase();
+      userManagementDeptFilter = document.getElementById('userManagementDeptFilter')?.value || '';
+      renderUserManagementTable();
+    }
+
+    function renderUserManagementTable() {
+      var body = document.getElementById('userManagementTableBody');
+      if (!body) return;
+      var filtered = userManagementData.filter(function(user) {
+        var text = [user.employee_no, user.name, user.post, user.dept_name, user.rbac_role_codes, user.rbac_role_names].join(' ').toLowerCase();
+        var matchSearch = !userManagementSearch || text.indexOf(userManagementSearch) >= 0;
+        var matchDept = !userManagementDeptFilter || user.dept_name === userManagementDeptFilter;
+        return matchSearch && matchDept;
+      });
+
+      if (!filtered.length) {
+        body.innerHTML = '<tr><td colspan="9" class="empty">暂无匹配用户</td></tr>';
+        return;
+      }
+
+      body.innerHTML = filtered.map(function(user) {
+        var codes = roleCodesFromSummary(user);
+        var names = String(user.rbac_role_names || '').split(',').map(function(name) { return name.trim(); });
+        var projectPairs = codes.map(function(code, index) {
+          return { code: code, name: names[index] || code };
+        }).filter(function(role) { return !isBasicRoleCode(role.code); });
+        return '<tr>' +
+          '<td>' + safeText(user.employee_no) + '</td>' +
+          '<td>' + safeText(user.name) + '</td>' +
+          '<td>' + safeText(user.dept_name || '未绑定') + '</td>' +
+          '<td>' + safeText(user.post || '-') + '</td>' +
+          '<td>' + safeText(user.role) + '</td>' +
+          '<td>' + roleBadges(projectPairs.map(function(role) { return role.code; }), projectPairs.map(function(role) { return role.name; })) + '</td>' +
+          '<td>' + userRoleStatus(user) + '</td>' +
+          '<td>' + safeText(user.created_at || '-') + '</td>' +
+          '<td><div class="user-management-actions">' +
+            '<button class="btn secondary" onclick="showUserEditor(\'edit\',' + Number(user.id) + ')">编辑</button>' +
+            '<button class="btn secondary" onclick="resetUserDefaultPassword(' + Number(user.id) + ')">重置密码</button>' +
+          '</div></td>' +
+        '</tr>';
+      }).join('');
+    }
+
+    function showUserEditor(mode, userId) {
+      userManagementEditingId = mode === 'edit' ? Number(userId) : null;
+      var user = userManagementEditingId ? userManagementData.find(function(row) { return Number(row.id) === userManagementEditingId; }) : null;
+      var currentCodes = user ? roleCodesFromSummary(user) : ['submitter'];
+      var basicRoles = userManagementRoles.filter(function(role) { return isBasicRoleCode(role.role_code); });
+      var projectRoles = userManagementRoles.filter(function(role) { return !isBasicRoleCode(role.role_code); });
+      var selectedBasic = (user && isBasicRoleCode(user.role)) ? user.role : (currentCodes.find(isBasicRoleCode) || 'submitter');
+      var deptOptions = '<option value="">未绑定</option>' + userManagementDepartments.map(function(dept) {
+        var selected = user && Number(user.department_id) === Number(dept.id) ? ' selected' : '';
+        return '<option value="' + Number(dept.id) + '"' + selected + '>' + safeText(dept.name) + '</option>';
+      }).join('');
+      var basicOptions = basicRoles.map(function(role) {
+        var selected = role.role_code === selectedBasic ? ' selected' : '';
+        return '<option value="' + safeText(role.role_code) + '" data-role-id="' + Number(role.role_id) + '"' + selected + '>' + safeText(role.role_name) + ' · ' + safeText(role.role_code) + '</option>';
+      }).join('');
+      var projectChecks = projectRoles.map(function(role) {
+        var checked = currentCodes.indexOf(role.role_code) >= 0 ? ' checked' : '';
+        return '<label><input type="checkbox" data-project-role-id="' + Number(role.role_id) + '"' + checked + '><span>' + safeText(role.role_name) + ' <span class="tag">' + safeText(role.role_code) + '</span></span></label>';
+      }).join('') || '<div class="empty" style="padding:12px;">暂无项目工作角色</div>';
+
+      document.getElementById('userManagementEditor').innerHTML =
+        '<div class="user-management-form">' +
+          '<div><h3>' + (user ? '编辑账号' : '账号入库') + '</h3><p class="notice">新增账号默认初始密码为 init1234，用户首次登录后会被提示修改。</p></div>' +
+          '<div class="user-management-grid">' +
+            '<label>工号<input id="userEditorEmployeeNo" value="' + safeText(user && user.employee_no, '') + '" ' + (user ? 'disabled' : '') + '></label>' +
+            '<label>姓名<input id="userEditorName" value="' + safeText(user && user.name, '') + '"></label>' +
+            '<label>部门<select id="userEditorDepartment">' + deptOptions + '</select></label>' +
+            '<label>岗位<input id="userEditorPost" value="' + safeText(user && user.post, '') + '"></label>' +
+          '</div>' +
+          '<div class="user-role-groups">' +
+            '<label>基础权限角色<select id="userEditorBasicRole">' + basicOptions + '</select></label>' +
+            '<div><label>项目工作角色</label><div class="role-check-list" id="userEditorProjectRoles">' + projectChecks + '</div></div>' +
+          '</div>' +
+          '<div class="entity-form-actions">' +
+            '<button class="btn secondary" onclick="cancelUserEditor()">取消</button>' +
+            '<button class="btn primary" onclick="saveUserFromManagement()">保存账号</button>' +
+          '</div>' +
+        '</div>';
+    }
+
+    function cancelUserEditor() {
+      userManagementEditingId = null;
+      var editor = document.getElementById('userManagementEditor');
+      if (editor) editor.innerHTML = '';
+    }
+
+    async function saveUserFromManagement() {
+      var name = String(document.getElementById('userEditorName')?.value || '').trim();
+      var employeeNo = String(document.getElementById('userEditorEmployeeNo')?.value || '').trim();
+      var deptValue = document.getElementById('userEditorDepartment')?.value || '';
+      var post = String(document.getElementById('userEditorPost')?.value || '').trim();
+      var basicSelect = document.getElementById('userEditorBasicRole');
+      var basicRole = basicSelect?.value || 'submitter';
+      var selectedOption = basicSelect && basicSelect.options[basicSelect.selectedIndex];
+      var roleIds = [];
+      if (selectedOption && selectedOption.dataset.roleId) roleIds.push(Number(selectedOption.dataset.roleId));
+      document.querySelectorAll('#userEditorProjectRoles input[type=checkbox]:checked').forEach(function(input) {
+        roleIds.push(Number(input.dataset.projectRoleId));
+      });
+
+      if (!employeeNo) { showToast('请填写工号', 'error'); return; }
+      if (!name) { showToast('请填写姓名', 'error'); return; }
+      if (!roleIds.length) { showToast('至少需要一个基础权限角色', 'error'); return; }
+
+      var payload = {
+        name: name,
+        department_id: deptValue ? Number(deptValue) : null,
+        post: post || null,
+        role: basicRole,
+        role_ids: roleIds
+      };
+      if (!userManagementEditingId) payload.employee_no = employeeNo;
+
+      try {
+        await api(userManagementEditingId ? '/api/org/users/' + userManagementEditingId : '/api/org/users', {
+          method: userManagementEditingId ? 'PUT' : 'POST',
+          body: JSON.stringify(payload)
+        });
+        showToast(userManagementEditingId ? '账号已保存' : '账号已入库，初始密码为 init1234');
+        userManagementEditingId = null;
+        await loadUserManagementSources();
+        renderUserManagementShell();
+      } catch (error) {
+        showToast(error.message || '账号保存失败', 'error');
+      }
+    }
+
+    async function resetUserDefaultPassword(userId) {
+      var user = userManagementData.find(function(row) { return Number(row.id) === Number(userId); });
+      var confirmed = await showConfirm({
+        title: '重置密码',
+        message: '将 ' + (user ? user.name : '该用户') + ' 的密码重置为 init1234，并要求首次登录后修改。',
+        confirmLabel: '重置',
+        confirmClass: 'danger'
+      });
+      if (!confirmed) return;
+      try {
+        await api('/api/org/users/' + Number(userId) + '/password', {
+          method: 'POST',
+          body: JSON.stringify({ password: 'init1234' })
+        });
+        showToast('密码已重置为 init1234');
+      } catch (error) {
+        showToast(error.message || '密码重置失败', 'error');
+      }
     }
 
     // --- Role List Panel ---
@@ -2618,7 +4068,7 @@
       panel.innerHTML = '<h3>角色列表</h3><div id="roleTableContainer">加载中...</div>';
 
       fetch('/api/roles').then(function(r) { return r.json(); }).then(function(roles) {
-        var html = '<button onclick="showCreateRoleDialog()" style="margin-bottom:12px;padding:6px 16px;background:#1565c0;color:white;border:none;border-radius:4px;cursor:pointer;">+ 新建角色</button>';
+        var html = '<button class="btn primary" onclick="showCreateRoleDialog()" style="margin-bottom:12px;">新建角色</button>';
         html += '<table class="data-table" style="width:100%;"><thead><tr><th>角色编码</th><th>名称</th><th>描述</th><th>继承自</th><th>权限数</th><th>用户数</th><th>系统</th><th>操作</th></tr></thead><tbody>';
         roles.forEach(function(r) {
           html += '<tr>';
@@ -2631,7 +4081,8 @@
           html += '<td>' + (r.is_system ? '是' : '否') + '</td>';
           html += '<td>';
           if (!r.is_system) {
-            html += '<a href="#" onclick="editRole(' + r.role_id + ',\'' + escapeHtml(r.role_name) + '\',\'' + (r.description || '') + '\',' + (r.parent_role_id || 0) + ')">编辑</a> ';
+            html += '<a href="#" onclick="navigateTo(\'detail\',{tab:\'rbac\',type:\'role\',id:' + r.role_id + '});return false">详情</a> ';
+            html += '<a href="#" onclick="editRole(' + r.role_id + ');return false" style="margin-left:8px;">编辑</a> ';
             html += '<a href="#" onclick="deleteRole(' + r.role_id + ')" style="color:#e53935;">删除</a>';
           } else {
             html += '<span style="color:#999;">—</span>';
@@ -2644,36 +4095,11 @@
     }
 
     function showCreateRoleDialog() {
-      var code = prompt('角色编码（英文，如 dept_auditor）：');
-      if (!code) return;
-      var name = prompt('角色名称：');
-      if (!name) return;
-      var desc = prompt('描述（可选）：');
-      var parentId = prompt('父角色 ID（可选，留空为无）：');
-
-      fetch('/api/roles', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role_code: code, role_name: name, description: desc || null, parent_role_id: parentId ? Number(parentId) : null })
-      }).then(function(r) { return r.json(); }).then(function(data) {
-        if (data.error) { alert('创建失败：' + data.error); } else { renderRoleList(); }
-      });
+      navigateTo('form', { tab: 'rbac', type: 'role', id: 'new', action: 'new' });
     }
 
-    function editRole(id, name, desc, parentId) {
-      var newName = prompt('角色名称：', name);
-      if (newName === null) return;
-      var newDesc = prompt('描述：', desc);
-      if (newDesc === null) return;
-      var newParent = prompt('父角色 ID（留空为无）：', parentId || '');
-
-      fetch('/api/roles/' + id, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role_name: newName, description: newDesc || null, parent_role_id: newParent ? Number(newParent) : null })
-      }).then(function(r) { return r.json(); }).then(function(data) {
-        if (data.error) { alert('编辑失败：' + data.error); } else { renderRoleList(); }
-      });
+    function editRole(id) {
+      navigateTo('form', { tab: 'rbac', type: 'role', id: id, action: 'edit' });
     }
 
     function deleteRole(id) {
@@ -2918,7 +4344,7 @@
     function renderBatchImport() {
       var panel = document.getElementById('rbacPanel');
       panel.innerHTML = '<h3>批量导入</h3>' +
-        '<p style="color:#666;margin-bottom:8px;">有工号=分配用户角色，工号空=定义角色权限。支持同时导入两类数据。</p>' +
+        '<p style="color:#666;margin-bottom:8px;">当前批量导入仅给已存在用户分配角色，不创建新用户；工号空的行用于定义角色权限。</p>' +
         '<div style="margin-bottom:12px;">' +
           '<button onclick="window.open(\'/api/import-rbac/templates/full\',\'_blank\')" style="padding:6px 12px;background:#555;color:white;border:none;border-radius:4px;cursor:pointer;">下载模板</button>' +
         '</div>' +

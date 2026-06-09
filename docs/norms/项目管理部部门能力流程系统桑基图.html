@@ -171,7 +171,7 @@
       }
 
       th.col-system, td.col-system {
-        width: 58px;
+        width: 72px;
       }
 
       th.col-alert, td.col-alert {
@@ -198,6 +198,17 @@
         color: #64748b;
         font-size: 11px;
       }
+      .warn-tag, .soft-warn-tag {
+        display: inline-block; margin: 0 4px 4px 0; padding: 2px 6px;
+        border-radius: 4px; font-size: 11px; font-weight: 700; line-height: 1.35;
+      }
+      .warn-tag { background: #fef3c7; color: #92400e; }
+      .soft-warn-tag { background: #e0f2fe; color: #075985; }
+      .carrier-note {
+        display: block; margin-top: 4px; color: #475569;
+        font-size: 11px; line-height: 1.35;
+      }
+      .carrier-note b { color: #92400e; }
       .domain-pill {
         display: inline-block; color: #fff; font-size: 11px; border-radius: 4px;
         padding: 2px 6px; white-space: nowrap;
@@ -599,6 +610,14 @@ var a1Rows = [
   ["XM-L3-43-A01","发出快递并提交钉钉申请","发件人","快递发出当天","快递已发出","无审批","OA","生产部快递管理程序 §4","原文明确-正文","综合行政保障","快递管理","0803","不适用-过程环节","","—","直接领导（审批）"],
   ["XM-L3-43-A02","逐级审批快递申请","直接领导→部门副总→办理人","发件人提交申请后","快递申请已提交","多级审批","OA","生产部快递管理程序 §4.3","原文明确-正文","综合行政保障","快递管理","0803","不适用-审批环节","逾期未提交需说明原因由部门负责人确认后补报","—","人事部（抄送）"]
 ];
+
+      var carrierRows = [
+        {id:"XM-L3-24-A01", carrier:"微信群出罐通知、出罐时间/数量/规格信息", destination:"航达移交人员", reason:"当前通过微信群人工管理，不属于 OA/MES/PLM/ERP 的直接事务；后续可评估纳入 MES 试验任务管理。", confirm:"确认是否建立 MES 试验任务或统一通知台账"},
+        {id:"XM-L3-24-A02", carrier:"随炉件移交单、签收记录、微信群领取确认", destination:"航达/公司班组", reason:"交接以外部领取和纸面签收为主，内部系统只适合沉淀交接凭证和状态。", confirm:"确认交接单归档和24小时领取反馈责任"},
+        {id:"XM-L3-24-A03", carrier:"理化检测报告、微信群反馈记录、逾期说明/补救方案", destination:"公司相关方", reason:"检测结果由外部或对接团队形成，反馈链路当前未进入内部四类系统。", confirm:"确认报告归档、逾期预警和内部跟踪入口"},
+        {id:"XM-L3-38-A01", carrier:"工装申请台账、合同管理台账、供应商管理台账、挂账回款管理台账、BI记录", destination:"项目管理/经营发展/工艺接口", reason:"当前由 BI 和业务台账维护，BI 不属于本轮 OA/MES/PLM/ERP 四类 S1；后续可评估并入 ERP 或项目管理模块。", confirm:"确认 BI 是否作为过渡记录载体、后续是否并入 ERP 或项目管理模块"},
+        {id:"XM-L3-38-A02", carrier:"BI系统信息、业务台账、变更记录", destination:"经营发展部市场专员（工装）/项目管理接口", reason:"BI 属于现状记录载体，不在本轮四类 S1 范围内；不能直接写成 OA/MES/PLM/ERP。", confirm:"确认 BI 字段、更新频次、责任人和与 ERP 的后续衔接"}
+      ];
 // ===== 颜色配置 =====
       var domainColors = {
         "项目策划与启动管理": "#3b82f6",
@@ -628,8 +647,50 @@ var a1Rows = [
         return String(value == null ? "" : value).replace(/[&<>"']/g, function(c) { return entities[c]; });
       }
 
+      function isBlankSystemValue(value) {
+        var text = String(value || "").trim();
+        return !text || text === "—" || text === "-" || text === "无" || text === "暂不对应";
+      }
+
       function systemsFor(sysStr) {
-        return String(sysStr || "").split("、").map(function(s) { return s.trim(); }).filter(Boolean);
+        return String(sysStr || "").split("、").map(function(s) { return s.trim(); }).filter(function(s) { return s && !isBlankSystemValue(s); });
+      }
+
+      function carrierFor(a1Id) {
+        return carrierRows.find(function(row) { return row.id === a1Id; });
+      }
+
+      function carrierWarning(a1) {
+        return carrierFor(a1[0]) ? "暂不对应系统：已登记记录载体，需确认处理入口" : "";
+      }
+
+      function carrierTooltipLines(a1) {
+        var carrier = carrierFor(a1[0]);
+        if (!carrier) return [];
+        return [
+          "记录载体：" + esc(carrier.carrier),
+          "去向：" + esc(carrier.destination),
+          "不适配理由：" + esc(carrier.reason),
+          "后续确认：" + esc(carrier.confirm)
+        ];
+      }
+
+      function systemTextFor(a1) {
+        var systems = systemsFor(a1[6]);
+        var carrier = carrierFor(a1[0]);
+        if (systems.length) return systems.join("、");
+        if (carrier) return "暂不对应系统（记录载体：" + carrier.carrier + "）";
+        return String(a1[6] || "");
+      }
+
+      function systemCellHtml(a1) {
+        var systems = systemsFor(a1[6]);
+        var carrier = carrierFor(a1[0]);
+        if (systems.length) return esc(systems.join("、"));
+        if (!carrier) return '<span class="warn-tag">待确认</span>';
+        return '<span class="warn-tag">暂不对应</span>' +
+          '<span class="carrier-note"><b>载体：</b>' + esc(carrier.carrier) + '</span>' +
+          '<span class="carrier-note"><b>确认：</b>' + esc(carrier.confirm) + '</span>';
       }
 
       function colorFor(name) {
@@ -715,7 +776,7 @@ var a1Rows = [
       }
 
       function auditWarnings(a1) {
-        return [roleWarning(a1), acceptanceWarning(a1), evidenceWarning(a1), trackingNote(a1)].filter(Boolean);
+        return [roleWarning(a1), acceptanceWarning(a1), evidenceWarning(a1), trackingNote(a1), carrierWarning(a1)].filter(Boolean);
       }
 
       function warningHtml(a1) {
@@ -872,7 +933,8 @@ var a1Rows = [
                     "审批类型：" + esc(a[5] || ""),
                     "制度依据：" + esc(a[7] || ""),
                     "证据类型：" + esc(a[8] || ""),
-                    "应用系统：" + esc(a[6] || ""),
+                    "应用系统：" + esc(systemTextFor(a)),
+                    carrierTooltipLines(a).join("<br>"),
                     "<b>原文出处：</b>",
                     "  执行角色依据：" + esc(a[7] || ""),
                     "  触发情景依据：" + esc(a[7] || ""),
@@ -910,6 +972,8 @@ var a1Rows = [
                   "验收标准：" + esc(acceptanceText(a1Match)),
                   "制度依据：" + esc(a1Match[7] || ""),
                   "证据类型：" + esc(a1Match[8] || ""),
+                  "应用系统：" + esc(systemTextFor(a1Match)),
+                  carrierTooltipLines(a1Match).join("<br>"),
                   "<b>原文出处：</b>",
                   "  执行角色依据：" + esc(a1Match[7] || ""),
                   "  触发情景依据：" + esc(a1Match[7] || ""),
@@ -1075,8 +1139,8 @@ var a1Rows = [
               '<td class="col-accept">' + esc(acceptanceText(a1)) + '</td>' +
               '<td class="col-evidence">' + esc(a1[7]) + '</td>' +
               '<td class="col-evidtype">' + esc(a1[8]) + '</td>' +
-              '<td class="col-system">' + esc(a1[6]) + '</td>' +
-              '<td class="col-alert">' + esc(a1[13]) + '</td>' +
+              '<td class="col-system">' + systemCellHtml(a1) + '</td>' +
+              '<td class="col-alert">' + ((a1[13] ? esc(a1[13]) + '<br>' : '') + (warningHtml(a1) || '<span class="soft-warn-tag">请部门确认无调整</span>')) + '</td>' +
               '<td class="col-feedback feedback-cell">待部门填写</td>' +
               '<td class="col-adjust feedback-cell">待确认</td>' +
               '<td class="col-suggestion feedback-cell"></td>' +
@@ -1131,11 +1195,11 @@ a1Rows.forEach(function(r) {
   var src = '依据制度文件 ' + (r[7] || '未标注') + '（' + (r[8] || '') + '），' +
     '该条款明确由「' + (r[2] || '') + '」执行「' + (r[1] || '') + '」，' +
     '触发情景为「' + (r[3] || '') + '」，前置条件为「' + (r[4] || '') + '」。' +
-    '审批类型：' + (r[5] || '') + '，系统支撑：' + (r[6] || '') + '。';
+    '审批类型：' + (r[5] || '') + '，系统支撑：' + systemTextFor(r) + '。';
   a1Index[r[0]] = { name: r[1], role: r[2], trigger: r[3], precondition: r[4],
-    approval: r[5], system: r[6], evidence: r[7], evidenceType: r[8],
+    approval: r[5], system: systemTextFor(r), evidence: r[7], evidenceType: r[8],
     roleEvidence: r[7] || '', triggerEvidence: r[7] || '', preconditionEvidence: r[7] || '',
-    domain: r[9], capability: r[10], process: l3NameMap[r[11]] || r[11], alert: r[12] || '',
+    domain: r[9], capability: r[10], process: l3NameMap[r[11]] || r[11], alert: [r[12] || '', r[13] || '', carrierWarning(r)].filter(Boolean).join('；'),
     sourceText: src };
 });
 
@@ -1168,9 +1232,11 @@ function openFeedbackCard(a1Id) {
   document.getElementById('feedbackTitle').innerHTML = a1Id + ' 反馈 <span style="font-size:12px;color:' + (done ? '#16a34a' : '#dc2626') + ';font-weight:400">' + (done ? '已完成' : '未完成') + '</span>';
   var body = document.getElementById('feedbackBody');
 
-  var html = '<div class="a1-context"><b>' + info.name + '</b><br>';
-  html += '执行角色: ' + info.role + ' | 审批: ' + info.approval + ' | 系统: ' + info.system;
-  if (info.alert) html += '<br><span style="color:#92400e">核验提醒: ' + info.alert + '</span>';
+  var cardCarrier = carrierFor(a1Id);
+  var html = '<div class="a1-context"><b>' + esc(info.name) + '</b><br>';
+  html += '执行角色: ' + esc(info.role) + ' | 审批: ' + esc(info.approval) + ' | 系统: ' + esc(info.system);
+  if (cardCarrier) html += '<br><b>记录载体:</b> ' + esc(cardCarrier.carrier) + '<br><b>后续确认:</b> ' + esc(cardCarrier.confirm);
+  if (info.alert) html += '<br><span style="color:#92400e">核验提醒: ' + esc(info.alert) + '</span>';
   html += '</div>';
 
   html += '<div class="a1-context" style="background:#f0fdf4;border-left:3px solid #16a34a;margin-top:10px;">';
