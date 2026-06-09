@@ -34,7 +34,7 @@ th.col-seq,td.col-seq{width:32px;text-align:center}th.col-a1id,td.col-a1id{width
 th.col-dept,td.col-dept{width:58px}th.col-domain,td.col-domain{width:80px}th.col-cap,td.col-cap{width:82px}th.col-proc,td.col-proc{width:90px}
 th.col-a1name,td.col-a1name{width:118px}th.col-role,td.col-role{width:72px}th.col-trigger,td.col-trigger{width:95px}
 th.col-precond,td.col-precond{width:85px}th.col-appr,td.col-appr{width:55px;white-space:nowrap}th.col-accept,td.col-accept{width:88px}
-th.col-evidence,td.col-evidence{width:100px}th.col-evidtype,td.col-evidtype{width:88px;white-space:normal}th.col-system,td.col-system{width:55px}
+th.col-evidence,td.col-evidence{width:100px}th.col-evidtype,td.col-evidtype{width:88px;white-space:normal}th.col-system,td.col-system{width:72px}
 th.col-alert,td.col-alert{width:90px}th.col-feedback,td.col-feedback{width:72px}th.col-adjust,td.col-adjust{width:50px}th.col-suggestion,td.col-suggestion{width:72px}
 tr:last-child td{border-bottom:none}
 .domain-pill{display:inline-flex;align-items:center;min-height:24px;padding:2px 8px;border-radius:7px;color:#fff;font-size:12px;white-space:normal}
@@ -43,6 +43,7 @@ tr:last-child td{border-bottom:none}
 .appr-tag{display:inline-block;padding:1px 6px;border-radius:4px;font-size:11px}.appr-tag.none{background:#e2e8f0;color:#475569}
 .warn-tag{display:inline-block;margin:0 4px 4px 0;padding:2px 6px;border-radius:4px;background:#fef3c7;color:#92400e;font-size:11px;font-weight:700;line-height:1.35}
 .soft-warn-tag{display:inline-block;margin:0 4px 4px 0;padding:2px 6px;border-radius:4px;background:#e0f2fe;color:#075985;font-size:11px;font-weight:700;line-height:1.35}
+.carrier-note{display:block;margin-top:4px;color:#475569;font-size:11px;line-height:1.35}.carrier-note b{color:#92400e}
 .feedback-cell{color:#64748b;font-size:11px}.foot{margin-top:14px;font-size:12px;color:#64748b}
 /* feedback */
 .progress-bar-wrap{background:#fff;border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:12px}
@@ -111,7 +112,7 @@ var l3Rows = [
 ];
 
 // ===== 业务行为（A1）层数据 =====
-// [A1编号, 行为名称, 执行角色, 触发情景, 前置条件, 审批类型, 应用系统, 制度依据, 证据类型, 执行角色依据, 触发情景依据, 前置条件依据, 能力域(L1), 业务能力(L2), 业务流程(L3)]
+// [A1编号, 行为名称, 执行角色, 触发情景, 前置条件, 审批类型, 应用系统, 制度依据, 证据类型, 执行角色依据, 触发情景依据, 前置条件依据, 能力域（L1）, 业务能力（L2）, 业务流程（L3）]
 var a1Rows = [
   ["FC-L3-01-A01","核查开工行动项（人机料法环）并识别开工风险","复材车间项目助理","新的投产需求下达","月度投产计划已发布","无审批","MES","内部排罐管理程序 §4.1","原文明确-正文","内部排罐管理程序 §4.1","内部排罐管理程序 §4.1","内部排罐管理程序 §4.1","生产执行管控","班组排产管理","罐前计划编制"],
   ["FC-L3-01-A02","核算排罐标准工时并评估产能利用率","复材车间项目助理","开工风险识别完成后","固化时间、投影仪使用时间、出入罐准备时间等参数已齐备","无审批","MES","内部排罐管理程序 §4.2","原文明确-正文","内部排罐管理程序 §4.2","内部排罐管理程序 §4.2","内部排罐管理程序 §4.2","生产执行管控","班组排产管理","罐前计划编制"],
@@ -144,17 +145,35 @@ var a1Rows = [
   ["FC-L3-06-A05","各环节责任人每日查看移交群信息确保闭环","复材车间班组对接人","每日","随炉件处于移交-检测-反馈流程中","无审批","OA","随炉件移交及理化结果反馈管理规定 §四.4","上下文推断","随炉件移交及理化结果反馈管理规定 §四.4","随炉件移交及理化结果反馈管理规定 §四.4","随炉件移交及理化结果反馈管理规定 §四.4","生产执行管控","随炉件与理化检测管理","理化结果跟踪反馈"]
 ];
 
+var carrierRows=[
+  {id:"FC-L3-05-A03",carrier:"公司-航达随炉件移交群、出罐通知、领取计划反馈记录",destination:"航达公司（外部）/复材车间班组对接人",reason:"动作由外部航达反馈，公司内部四类系统不能直接承接外部执行动作。",confirm:"确认移交群记录归档方式、逾期升级机制和内部跟踪责任人"},
+  {id:"FC-L3-06-A01",carrier:"随炉件移交单、理化检测报告、移交群反馈记录",destination:"航达公司（外部）/质量管理部或项目相关方",reason:"检测结果由外部理化团队形成，内部系统只适合接收、归档和跟踪。",confirm:"确认14天时限预警、检测报告归档和内部接收人"},
+  {id:"FC-L3-06-A02",carrier:"移交群到期预告消息、检测进度记录",destination:"复材车间班组对接人/相关方",reason:"到期预告是外部检测进度消息，暂不是内部系统事务。",confirm:"确认预告消息是否需沉淀为台账或系统提醒"},
+  {id:"FC-L3-06-A03",carrier:"理化检测结果、移交群同步记录、抄送记录",destination:"公司相关方/项目质量接口",reason:"结果由外部生成并通过群消息同步，内部系统应承接接收和归档，不应替代外部生成动作。",confirm:"确认结果归档载体、抄送范围和接收确认方式"},
+  {id:"FC-L3-06-A04",carrier:"逾期说明、补救方案、移交群记录",destination:"复材车间/相关责任人",reason:"逾期说明和补救方案由外部检测责任方发起，内部系统只适合跟踪闭环。",confirm:"确认逾期升级、补救方案审批和闭环验收方式"}
+];
+
 // ===== 统一引擎 =====
 var domains = ["生产执行管控"];
 var domainColors = {"生产执行管控":"#0891b2"};
 var nodeColor = {D1:"#1a56db",L1:"#0891b2",L2:"#0d9488",L3:"#6366f1",S1:"#f59e0b",A1:"#8b5cf6"};
 
+function esc(value){var entities={"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"};return String(value==null?"":value).replace(/[&<>"']/g,function(c){return entities[c];});}
+function isBlankSystemValue(value){var text=String(value||"").trim();return !text||text==="—"||text==="-"||text==="无"||text==="暂不对应";}
+function systemsFor(sysStr){return String(sysStr||"").split("、").map(function(s){return s.trim();}).filter(function(s){return s&&!isBlankSystemValue(s);});}
+function carrierFor(a1id){for(var i=0;i<carrierRows.length;i++){if(carrierRows[i].id===a1id)return carrierRows[i];}return null;}
+function carrierWarning(a1){return carrierFor(a1[0])?"暂不对应系统：已登记记录载体，需确认处理入口":"";}
+function carrierTooltipLines(a1){var c=carrierFor(a1[0]);if(!c)return[];return["记录载体："+esc(c.carrier),"去向："+esc(c.destination),"不适配理由："+esc(c.reason),"后续确认："+esc(c.confirm)];}
+function systemTextFor(a1){var ss=systemsFor(a1[6]);var c=carrierFor(a1[0]);if(ss.length)return ss.join("、");if(c)return"暂不对应系统（记录载体："+c.carrier+"）";return String(a1[6]||"");}
+function systemCellHtml(a1){var ss=systemsFor(a1[6]);var c=carrierFor(a1[0]);if(ss.length)return esc(ss.join("、"));if(!c)return'<span class="warn-tag">待确认</span>';return'<span class="warn-tag">暂不对应</span><span class="carrier-note"><b>载体：</b>'+esc(c.carrier)+'</span><span class="carrier-note"><b>确认：</b>'+esc(c.confirm)+'</span>';}
 function shortText(value,max){var text=String(value||"");return text.length>max?text.slice(0,max-1)+"…":text;}
 function isCollectiveRole(role){var text=String(role||"").trim();if(!text)return true;if(/(专员|主管|经理|负责人|管理员|经办人|工程师|审核人|审批人|填报人|对接人|组长)$/.test(text))return false;return /(部|部门|办公室|中心|小组|委员会|团队|班组|车间)$/.test(text);}
 function roleWarning(a1){return isCollectiveRole(a1[2])?"请部门确认具体岗位/责任人：当前为部门/组织":"";}
 function isFinalStep(a1){var proc=a1[14];var rows=a1Rows.filter(function(r){return r[14]===proc;});return rows.length>0&&rows[rows.length-1][0]===a1[0];}
 function isTrackingTask(a1){return /(跟踪|进度|监测|监督|闭环|催办|提醒)/.test(a1[1]);}
-function auditWarnings(a1){var w=[];var rw=roleWarning(a1);if(rw)w.push(rw);return w;}
+function auditWarnings(a1){var w=[];var rw=roleWarning(a1);if(rw)w.push(rw);var cw=carrierWarning(a1);if(cw)w.push(cw);return w;}
+function warningHtml(a1){return auditWarnings(a1).map(function(w){var strong=w.indexOf("具体岗位")>=0||w.indexOf("暂不对应系统")>=0;return'<span class="'+(strong?"warn-tag":"soft-warn-tag")+'">'+esc(w)+'</span>';}).join("");}
+function alertCellHtml(a1,baseAlert){var parts=[];if(baseAlert)parts.push(esc(baseAlert));var warn=warningHtml(a1);if(warn)parts.push(warn);if(!parts.length)parts.push('<span class="soft-warn-tag">请部门确认无调整</span>');return parts.join("<br>");}
 function acceptanceText(a1){
   if(a1[5]!=="无审批")return isFinalStep(a1)?"验收标准=审批通过":"不适用-有审批";
   if(isFinalStep(a1))return"请部门确认是否需要验收/完成标准";
@@ -165,7 +184,7 @@ function trackingNote(a1){return isTrackingTask(a1)?'<span class="soft-warn-tag"
 function a1DisplayLabel(a1){var role=roleWarning(a1)?"待确认："+a1[2]:a1[2];return shortText(a1[1],18)+"\n"+shortText(role,18);}
 
 var a1Index = {};
-for(var i=0;i<a1Rows.length;i++){var r=a1Rows[i];a1Index[r[0]]={name:r[1],role:r[2],trigger:r[3],precond:r[4],appr:r[5],system:r[6],evidence:r[7],eviType:r[8],roleEvidence:r[9]||r[7],triggerEvidence:r[10]||r[7],preconditionEvidence:r[11]||r[7],domain:r[12],capability:r[13],process:r[14],sourceText:'依据制度文件 '+((r[7]||'未标注')+'（'+(r[8]||'')+'），该条款明确由「'+(r[2]||'')+'」执行「'+(r[1]||'')+'」，触发情景为「'+(r[3]||'')+'」，前置条件为「'+(r[4]||'')+'」。审批类型：'+(r[5]||'')+'，系统支撑：'+(r[6]||'')+'。')};}
+for(var i=0;i<a1Rows.length;i++){var r=a1Rows[i];a1Index[r[0]]={name:r[1],role:r[2],trigger:r[3],precond:r[4],appr:r[5],system:systemTextFor(r),evidence:r[7],eviType:r[8],roleEvidence:r[9]||r[7],triggerEvidence:r[10]||r[7],preconditionEvidence:r[11]||r[7],domain:r[12],capability:r[13],process:r[14],sourceText:'依据制度文件 '+((r[7]||'未标注')+'（'+(r[8]||'')+'），该条款明确由「'+(r[2]||'')+'」执行「'+(r[1]||'')+'」，触发情景为「'+(r[3]||'')+'」，前置条件为「'+(r[4]||'')+'」。审批类型：'+(r[5]||'')+'，系统支撑：'+systemTextFor(r)+'。')};}
 
 // ===== 反馈系统 =====
 var STORAGE_KEY = 'sankey_fb_v2_复材车间_'+a1Rows.length;
@@ -203,7 +222,10 @@ var activeA1Id=null,activeMode='all';
 function openFeedback(a1id){
   activeA1Id=a1id;var fb=feedbackState[a1id]||{};var ai=a1Index[a1id];if(!ai)return;
   document.getElementById('feedbackTitle').innerHTML=(isComplete(fb)?'<span style="color:#16a34a">已完成</span>':'<span style="color:#dc2626">未完成</span>')+' · 业务行为反馈';
-  var h='<div class="a1-context"><b>业务行为（A1）编号：</b>'+a1id+'<br><b>业务行为（A1）：</b>'+ai.name+'<br><b>执行角色：</b>'+ai.role+'<br><b>触发情景：</b>'+ai.trigger+'<br><b>前置条件：</b>'+ai.precond+'<br><b>审批类型：</b>'+ai.appr+'<br><b>应用系统（S1）：</b>'+ai.system+'</div>';
+  var c=carrierFor(a1id);
+  var h='<div class="a1-context"><b>业务行为（A1）编号：</b>'+esc(a1id)+'<br><b>业务行为（A1）：</b>'+esc(ai.name)+'<br><b>执行角色：</b>'+esc(ai.role)+'<br><b>触发情景：</b>'+esc(ai.trigger)+'<br><b>前置条件：</b>'+esc(ai.precond)+'<br><b>审批类型：</b>'+esc(ai.appr)+'<br><b>应用系统（S1）：</b>'+esc(ai.system);
+  if(c){h+='<br><b>记录载体：</b>'+esc(c.carrier)+'<br><b>后续确认：</b>'+esc(c.confirm);}
+  h+='</div>';
   h+='<div class="source-card"><div class="src-label">原文正文</div>'+ai.sourceText+'</div>';
   h+='<div class="source-card"><div class="src-label">原文出处</div><b>制度依据：</b>'+ai.evidence+'<br><b>执行角色依据：</b>'+ai.roleEvidence+'<br><b>触发情景依据：</b>'+ai.triggerEvidence+'<br><b>前置条件依据：</b>'+ai.preconditionEvidence+'<br><b>证据类型：</b>'+ai.eviType+'</div>';
   var qs=[
@@ -251,11 +273,11 @@ function renderSankey(mode){
   function addNode(name,type,a1id){var key=name;if(nodesIdx[key]===undefined){nodesIdx[key]=idx;nodes.push({name:name,itemStyle:{color:nodeColor[type]||'#64748b'},_type:type,_meta:{id:a1id||name}});idx++;}return nodesIdx[key];}
   if(mode==='all'){
     addNode("复材车间","D1");
-    for(var i=0;i<l3Rows.length;i++){var r=l3Rows[i];addNode(r.domain,"L1");addNode(r.capability,"L2");if(r.system){var ss=r.system.split("、");for(var j=0;j<ss.length;j++)addNode(ss[j],"S1");}}
+    for(var i=0;i<l3Rows.length;i++){var r=l3Rows[i];addNode(r.domain,"L1");addNode(r.capability,"L2");var ss=systemsFor(r.system);for(var j=0;j<ss.length;j++)addNode(ss[j],"S1");}
     links.push({source:addNode("复材车间","D1"),target:addNode("生产执行管控","L1"),value:6});
     var capMap={};for(var i=0;i<l3Rows.length;i++){var k=l3Rows[i].capability;capMap[k]=(capMap[k]||0)+1;}
     for(var c in capMap)links.push({source:addNode("生产执行管控","L1"),target:addNode(c,"L2"),value:capMap[c]});
-    var sysMap={};for(var i=0;i<l3Rows.length;i++){var r=l3Rows[i];if(r.system){var ss=r.system.split("、");for(var j=0;j<ss.length;j++){var sk=r.capability+"|"+ss[j];sysMap[sk]=(sysMap[sk]||0)+1;}}}
+    var sysMap={};for(var i=0;i<l3Rows.length;i++){var r=l3Rows[i];var ss=systemsFor(r.system);for(var j=0;j<ss.length;j++){var sk=r.capability+"|"+ss[j];sysMap[sk]=(sysMap[sk]||0)+1;}}
     for(var sk in sysMap){var p=sk.split("|");links.push({source:addNode(p[0],"L2"),target:addNode(p[1],"S1"),value:sysMap[sk]});}
     document.getElementById('chartTitle').textContent='复材车间全域总览';
     document.getElementById('chartSub').textContent='部门（D1）→ 能力域（L1）→ 业务能力（L2）→ 应用系统（S1）';
@@ -263,14 +285,14 @@ function renderSankey(mode){
   }else{
     var domainA1s=[];for(var i=0;i<a1Rows.length;i++){if(a1Rows[i][12]===mode)domainA1s.push(a1Rows[i]);}
     var capMap={},procMap={},sysMap={};
-    for(var i=0;i<domainA1s.length;i++){var r=domainA1s[i];capMap[r[13]]=(capMap[r[13]]||0)+1;procMap[r[14]]=(procMap[r[14]]||0)+1;if(r[6]&&r[6]!=="—"){var ss=r[6].split("、");for(var j=0;j<ss.length;j++)sysMap[ss[j]]=(sysMap[ss[j]]||0)+1;}}
+    for(var i=0;i<domainA1s.length;i++){var r=domainA1s[i];capMap[r[13]]=(capMap[r[13]]||0)+1;procMap[r[14]]=(procMap[r[14]]||0)+1;var ss=systemsFor(r[6]);for(var j=0;j<ss.length;j++)sysMap[ss[j]]=(sysMap[ss[j]]||0)+1;}
     for(var c in capMap)addNode(c,"L2");
     for(var p in procMap)addNode(p,"L3");
     for(var i=0;i<domainA1s.length;i++){var r=domainA1s[i];var lbl=a1DisplayLabel(r);addNode(lbl,"A1",r[0]);}
     for(var s in sysMap)addNode(s,"S1");
     for(var c in capMap){for(var p in procMap){var cnt=0;for(var i=0;i<domainA1s.length;i++){if(domainA1s[i][13]===c&&domainA1s[i][14]===p)cnt++;}if(cnt>0)links.push({source:addNode(c,"L2"),target:addNode(p,"L3"),value:cnt});}}
 for(var i=0;i<domainA1s.length;i++){var r=domainA1s[i];var lbl=a1DisplayLabel(r);links.push({source:addNode(r[14],"L3"),target:addNode(lbl,"A1",r[0]),value:1});}
-    for(var i=0;i<domainA1s.length;i++){var r=domainA1s[i];var lbl=a1DisplayLabel(r);if(r[6]&&r[6]!=="—"){var ss=r[6].split("、");for(var j=0;j<ss.length;j++)links.push({source:addNode(lbl,"A1"),target:addNode(ss[j],"S1"),value:1});}}
+    for(var i=0;i<domainA1s.length;i++){var r=domainA1s[i];var lbl=a1DisplayLabel(r);var ss=systemsFor(r[6]);for(var j=0;j<ss.length;j++)links.push({source:addNode(lbl,"A1"),target:addNode(ss[j],"S1"),value:1});}
     document.getElementById('chartTitle').textContent=mode+' · 能力域详情';
     document.getElementById('chartSub').textContent='业务能力（L2）→ 业务流程（L3）→ 业务行为（A1）→ 应用系统（S1）';
     document.getElementById('legendRow').innerHTML='<span class="legend"><i style="background:#0d9488"></i>业务能力（L2）</span><span class="legend"><i style="background:#6366f1"></i>业务流程（L3）</span><span class="legend"><i style="background:#8b5cf6"></i>业务行为（A1）</span><span class="legend"><i style="background:#f59e0b"></i>应用系统（S1）</span>';
@@ -285,7 +307,7 @@ for(var i=0;i<domainA1s.length;i++){var r=domainA1s[i];var lbl=a1DisplayLabel(r)
   }
   if(!myChart){myChart=echarts.init(document.getElementById('chart'));}
   myChart.setOption({
-    tooltip:{trigger:'item',triggerOn:'mousemove',formatter:function(p){if(p.dataType==='edge')return p.data.source+' → '+p.data.target;return p.name;}},
+    tooltip:{trigger:'item',triggerOn:'mousemove',formatter:function(p){if(p.dataType==='edge')return esc(p.data.source)+' → '+esc(p.data.target);if(p.data&&p.data._type==='A1'){var a=null;for(var i=0;i<a1Rows.length;i++){if(a1Rows[i][0]===p.data._meta.id){a=a1Rows[i];break;}}if(a){return["<b>"+esc(a[0])+" "+esc(a[1])+"</b>","执行角色："+esc(a[2]||""),"触发情景："+esc(a[3]||""),"前置条件："+esc(a[4]||""),"审批类型："+esc(a[5]||""),"制度依据："+esc(a[7]||""),"证据类型："+esc(a[8]||""),"应用系统："+esc(systemTextFor(a)),carrierTooltipLines(a).join("<br>")].filter(Boolean).join("<br>");}}return esc(p.name);}},
     series:[{type:'sankey',layout:'none',layoutIterations:0,emphasis:{focus:'adjacency'},nodeAlign:'left',data:nodes,links:links,label:{fontSize:12,color:'#e2e8f0',fontWeight:500},lineStyle:{color:'gradient',curveness:.5,opacity:.25}}]
   });
 }
@@ -323,7 +345,7 @@ function renderTable(mode){
       var acc=isFinal?(accMap[a1id]||'请部门确认是否需要验收/完成标准'):acc;
       var warn='';if(!!roleWarning(r))warn='<span class="warn-tag">角色待确认：'+r[2]+'</span>';
       if(alert)warn+=warn?'<br>':'';
-      h+='<tr style="'+bg+'"><td class="col-seq">'+seq+'</td><td class="col-a1id">'+a1id+'</td><td>'+r[13]+'</td><td>'+r[14]+'</td><td>'+r[1]+warn+trackingNote(r)+'</td><td>'+r[2]+'</td><td>'+r[3]+'</td><td>'+r[4]+'</td><td><span class="appr-tag none">'+r[5]+'</span></td><td>'+acc+'</td><td>'+r[7]+'</td><td><span class="evidence-tag '+evidenceClass(r[8])+'">'+r[8]+'</span></td><td>'+r[6]+'</td><td>'+''+'</td><td class="feedback-cell">'+confirm+'</td><td>'+adjust+'</td><td>'+suggest+'</td></tr>';
+      h+='<tr style="'+bg+'"><td class="col-seq">'+seq+'</td><td class="col-a1id">'+esc(a1id)+'</td><td>'+esc(r[13])+'</td><td>'+esc(r[14])+'</td><td>'+esc(r[1])+warn+trackingNote(r)+'</td><td>'+esc(r[2])+'</td><td>'+esc(r[3])+'</td><td>'+esc(r[4])+'</td><td><span class="appr-tag none">'+esc(r[5])+'</span></td><td>'+esc(acc)+'</td><td>'+esc(r[7])+'</td><td><span class="evidence-tag '+evidenceClass(r[8])+'">'+esc(r[8])+'</span></td><td>'+systemCellHtml(r)+'</td><td>'+alertCellHtml(r,alert)+'</td><td class="feedback-cell">'+esc(confirm)+'</td><td>'+esc(adjust)+'</td><td>'+esc(suggest)+'</td></tr>';
     }body.innerHTML=h;
   }
 }
@@ -333,7 +355,7 @@ function renderTable(mode){
   var domMap={};for(var i=0;i<a1Rows.length;i++){var d=a1Rows[i][12];domMap[d]=(domMap[d]||0)+1;}
   var dh='';for(var d in domMap){dh+='<div class="bar-line"><span>'+d+'</span><div class="bar-track"><div class="bar-fill" style="width:'+(domMap[d]/a1Rows.length*100)+'%"></div></div><span>'+domMap[d]+'</span></div>';}
   document.getElementById('domainBars').innerHTML=dh;
-  var sysMap={};for(var i=0;i<a1Rows.length;i++){var s=a1Rows[i][6];if(s&&s!=="—"){var ss=s.split("、");for(var j=0;j<ss.length;j++)sysMap[ss[j]]=(sysMap[ss[j]]||0)+1;}}
+  var sysMap={};for(var i=0;i<a1Rows.length;i++){var ss=systemsFor(a1Rows[i][6]);for(var j=0;j<ss.length;j++)sysMap[ss[j]]=(sysMap[ss[j]]||0)+1;}
   var maxSys=0;for(var s in sysMap)maxSys=Math.max(maxSys,sysMap[s]);var sh='';for(var s in sysMap){sh+='<div class="bar-line"><span>'+s+'</span><div class="bar-track"><div class="bar-fill" style="width:'+(sysMap[s]/maxSys*100)+'%"></div></div><span>'+sysMap[s]+'</span></div>';}
   document.getElementById('systemBars').innerHTML=sh;
 })();

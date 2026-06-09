@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const { requireAuth, requirePermission, applyFieldConstraints } = require('../auth');
-const { generateCode } = require('../codeEngine');
 
 function handleDbError(res, error) {
   if (error && (String(error.code).startsWith('SQLITE_CONSTRAINT') || String(error.message).includes('constraint failed'))) {
@@ -42,18 +41,7 @@ router.get('/:code', requireAuth, applyFieldConstraints('org_unit'), (req, res) 
 });
 
 router.post('/', requireAuth, (req, res) => {
-  try {
-    const { org_unit_name, org_type, org_mnemonic, parent_org_unit_id } = req.body;
-    if (!org_unit_name || !org_type || !org_mnemonic) {
-      return res.status(400).json({ error: '缺少必填字段 org_unit_name/org_type/org_mnemonic' });
-    }
-    const code = generateCode('orgUnit', { org_type, org_mnemonic: org_mnemonic.toUpperCase() });
-    const result = db.prepare(`
-      INSERT INTO org_unit (org_unit_code, org_unit_name, org_type, org_mnemonic, parent_org_unit_id, created_by, updated_by)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(code, org_unit_name, org_type, org_mnemonic.toUpperCase(), parent_org_unit_id || null, req.session.userId, req.session.userId);
-    res.status(201).json({ org_unit_code: code });
-  } catch (e) { handleDbError(res, e); }
+  res.status(403).json({ error: '组织架构由组织架构真源同步生成，不能手动新增' });
 });
 
 router.post('/:code/activate', requireAuth, requirePermission('org_unit:update'), (req, res) => {

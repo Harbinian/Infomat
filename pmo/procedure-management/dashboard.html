@@ -1842,7 +1842,7 @@
     bindUI();
     const ok = await loadData();
     if (!ok) return;
-    // URL 参数: ?domain=经营域|生产域|总经理直属域
+    // URL 参数: ?domain=经营域|生产域|总经理直辖域
     const params = new URLSearchParams(location.search);
     const dom = params.get('domain');
     if (dom && ['经营域', '生产域', '总经理直辖域'].includes(dom)) {

@@ -372,7 +372,7 @@
       }
 
       th.col-system, td.col-system {
-        width: 58px;
+        width: 92px;
       }
 
       th.col-alert, td.col-alert {
@@ -461,6 +461,131 @@
         line-height: 1.35;
       }
 
+      .carrier-note {
+        display: block;
+        margin-top: 4px;
+        color: #475569;
+        font-size: 11px;
+        line-height: 1.45;
+      }
+
+      .carrier-note b {
+        color: #334155;
+      }
+
+      .status-tag {
+        display: inline-block;
+        padding: 2px 7px;
+        border-radius: 5px;
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 1.35;
+        white-space: nowrap;
+      }
+
+      .status-tag.block {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+
+      .status-tag.warn {
+        background: #fef3c7;
+        color: #92400e;
+      }
+
+      .status-tag.info {
+        background: #e0f2fe;
+        color: #075985;
+      }
+
+      .status-tag.ok {
+        background: #dcfce7;
+        color: #166534;
+      }
+
+      .audit-wrap {
+        display: none;
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 18px;
+        margin-bottom: 18px;
+      }
+
+      .audit-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 18px;
+        align-items: flex-start;
+        margin-bottom: 14px;
+      }
+
+      .audit-head h2 {
+        font-size: 20px;
+        color: #0b2755;
+        margin-bottom: 4px;
+      }
+
+      .audit-head p {
+        max-width: 880px;
+        color: #475569;
+        font-size: 13px;
+      }
+
+      .audit-badge {
+        border: 1px solid #fecaca;
+        background: #fff1f2;
+        color: #991b1b;
+        border-radius: 7px;
+        padding: 6px 10px;
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      .audit-cards {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .audit-card {
+        min-height: 96px;
+        border: 1px solid #e2e8f0;
+        border-left: 4px solid #94a3b8;
+        border-radius: 8px;
+        padding: 12px;
+        background: #f8fafc;
+      }
+
+      .audit-card.block { border-left-color: #dc2626; }
+      .audit-card.warn { border-left-color: #d97706; }
+      .audit-card.info { border-left-color: #0891b2; }
+      .audit-card.ok { border-left-color: #16a34a; }
+
+      .audit-card .num {
+        font-size: 26px;
+        font-weight: 800;
+        color: #0f766e;
+        line-height: 1;
+      }
+
+      .audit-card.block .num { color: #dc2626; }
+      .audit-card.warn .num { color: #d97706; }
+
+      .audit-card .label {
+        margin-top: 8px;
+        font-size: 13px;
+        font-weight: 700;
+        color: #334155;
+      }
+
+      .audit-card .desc {
+        margin-top: 4px;
+        color: #64748b;
+        font-size: 12px;
+      }
+
       .feedback-cell {
         color: #64748b;
         font-size: 11px;
@@ -486,6 +611,16 @@
         }
         .g2, .summary-grid {
           grid-template-columns: 1fr;
+        }
+        .audit-head {
+          display: block;
+        }
+        .audit-badge {
+          display: inline-block;
+          margin-top: 10px;
+        }
+        .audit-cards {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
         }
         .sankey-chart {
           height: 1120px;
@@ -610,6 +745,7 @@
 
       <div class="read-guide">
         <strong>读图方法：</strong>"全域总览"看运维安环部覆盖哪些领域和系统；切换到具体能力域（L1），看 业务能力（L2）→ 业务流程（L3）→ 业务行为（A1）→ 应用系统（S1） 的四层细节。悬停连线可见制度依据和系统设计依据。业务行为（A1）节点显示行为名称和执行角色，业务行为（A1）编号保留在悬停提示和明细表中用于追溯。下方明细表在"全域总览"显示业务流程（L3）行，在能力域视图显示业务行为（A1）行。
+        选择"证据链审计"可查看制度原文、流程图、流程说明表、表单台账到当前映射的缺口和整改动作；S1留空的业务行为在明细表中展示处理载体和后续确认事项。
       </div>
 
             <section class="stat-row">
@@ -625,16 +761,27 @@
         <span class="mode-label">视图</span>
       </section>
 
-      <section class="sankey-wrap">
+      <section class="sankey-wrap" id="sankeyWrap">
         <div class="sankey-title" id="chartTitle">运维安环部全域总览</div>
         <div class="sankey-sub" id="chartSub">部门（D1）→ 能力域（L1）→ 业务能力（L2）→ 应用系统（S1）</div>
         <div id="chart" class="sankey-chart"></div>
         <div class="legend-row" id="legendRow"></div>
       </section>
 
+      <section class="audit-wrap" id="auditWrap">
+        <div class="audit-head">
+          <div>
+            <h2>证据链审计</h2>
+            <p>这里不是业务桑基图，而是流程证据完整性看板。它用于检查制度原文、流程模型、流程说明表、表单台账和当前映射之间是否闭环，并给出优先整改动作。</p>
+          </div>
+          <span class="audit-badge">不可作为最终交付 · 需整改</span>
+        </div>
+        <div class="audit-cards" id="auditCards"></div>
+      </section>
+
       <section class="g2">
         <div class="note">
-          <strong>应用系统（S1）口径：</strong>只展示OA、MES、PLM、ERP四类面向员工使用的信息化系统；MDM和外部海关平台不作为应用系统（S1）节点。
+          <strong>应用系统（S1）口径：</strong>只展示OA、MES、PLM、ERP四类面向员工使用的信息化系统；MDM和外部监管/集团报送平台不作为应用系统（S1）节点。S1留空时，页面以"暂不对应"标识，并展示记录载体、去向和待确认事项。
         </div>
         <div class="note">
           <strong>部门审核口径：</strong>本页用于部门逐条确认业务行为（A1）。证据类型需区分"原文明确-正文"、"原文明确-流程图"、"原文明确-表单"、"上下文推断"或"分析拆分"；执行角色、触发情景、前置条件可由部门补充或修正。验收标准只检查业务流程（L3）最终环节或跨部门交接前的最后环节；跟踪类任务优先由系统待办提醒、到期预警和进度展示承载。
@@ -643,11 +790,11 @@
 
       <section class="summary-grid">
         <div class="panel">
-          <h3>能力域（L1）规模（业务行为（A1）数）</h3>
+          <h3 id="leftPanelTitle">能力域（L1）规模（业务行为（A1）数）</h3>
           <div class="bar-list" id="domainBars"></div>
         </div>
         <div class="panel">
-          <h3>系统承载分布（A1参与次数）</h3>
+          <h3 id="rightPanelTitle">系统承载分布（A1参与次数）</h3>
           <div class="bar-list" id="systemBars"></div>
         </div>
       </section>
@@ -4020,6 +4167,185 @@
 ];
 
       // ===== 全局配置 =====
+      var AUDIT_MODE = "证据链审计";
+
+      var auditRows = [
+        {
+          area: "源文件分类",
+          current: "374个资料文件，其中10个为脚本或抽取文本候选",
+          status: "warn",
+          issue: "缺少逐文件源清单，未标注纳入、排除、待复核和处理理由",
+          impact: "无法证明每个制度原文、附件、流程图和表单都被检查",
+          action: "建立源文件清单，记录文件号、版次、类型、哈希、表格数、图示数和处理状态"
+        },
+        {
+          area: "流程模型",
+          current: "95个.vsd流程模型",
+          status: "block",
+          issue: "未发现独立流程图Markdown提取物",
+          impact: "泳道、决策点、流转节点和审批节点难以追溯到A1",
+          action: "按L3生成流程图Markdown，列出角色、节点、决策、表单和支持的A1"
+        },
+        {
+          area: "流程说明表",
+          current: "78个流程说明Excel",
+          status: "block",
+          issue: "输入、输出、工作标准未进入A1依据字段",
+          impact: "数据输入、数据输出、触发依据、前置依据和验收依据不可审计",
+          action: "从流程说明表补充A1的输入、输出、依据和工作标准"
+        },
+        {
+          area: "表单台账",
+          current: "约89个表单、台账、清单候选",
+          status: "block",
+          issue: "未形成表单/台账子表",
+          impact: "审批字段、签字节点、状态字段和台账字段无法映射到A1或系统字段候选",
+          action: "建立表单台账子表，关联L3、A1、填报角色、流转方向和字段候选"
+        },
+        {
+          area: "A1字段完整性",
+          current: "217条A1，33个分段表",
+          status: "block",
+          issue: "A1表头只有12列，缺少12个核心字段",
+          impact: "执行角色依据、触发依据、前置依据、输入输出、跨部门和验收依据无法沉淀",
+          action: "扩展为24列A1主记录字段，再按源证据补齐"
+        },
+        {
+          area: "空S1处理载体",
+          current: "13条A1已完成试点登记",
+          status: "ok",
+          issue: "L3-20和L3-31不强制落 OA、MES、PLM、ERP",
+          impact: "空S1不再被简单视为漏填，可逐条审查记录载体、去向和待确认事项",
+          action: "部门确认后，再决定是否保持空S1、补充OA审批入口或建立统一填报/法规库"
+        },
+        {
+          area: "证据类型",
+          current: "25条A1证据类型含括号说明或混合表述",
+          status: "warn",
+          issue: "证据类型未严格使用固定枚举",
+          impact: "脚本和页面难以区分正文、流程图、表单、推断和分析拆分",
+          action: "证据类型只保留固定枚举，说明移入依据字段或备注"
+        },
+        {
+          area: "验收标准",
+          current: "51条A1验收标准为空或待补",
+          status: "warn",
+          issue: "部分无审批关口缺少完成标准或不适用理由",
+          impact: "流程闭环、跨部门交接和系统待办规则难以落地",
+          action: "仅对L3最终环节或跨部门交接前最后环节补验收标准，其余说明不适用理由"
+        }
+      ];
+
+      var auditSourceBars = [
+        { label: "制度正文", count: 169, color: "#2563eb" },
+        { label: "流程模型", count: 95, color: "#dc2626" },
+        { label: "流程说明表", count: 78, color: "#d97706" },
+        { label: "表单台账", count: 89, color: "#7c3aed" },
+        { label: "脚本/抽取文本候选", count: 10, color: "#64748b" }
+      ];
+
+      var auditGapBars = [
+        { label: "流程图待抽取", count: 95, color: "#dc2626" },
+        { label: "表单台账待归纳", count: 89, color: "#7c3aed" },
+        { label: "验收标准待确认", count: 51, color: "#d97706" },
+        { label: "A1表头待扩展", count: 33, color: "#991b1b" },
+        { label: "证据类型待规范", count: 25, color: "#92400e" }
+      ];
+
+      var carrierRows = [
+        {
+          id: "YW-L3-20-A01",
+          carrier: "FM2608-06节能环保能源统计表、原始计量/检测/账单资料、部门统计台账",
+          destination: "内部汇总后按要求报集团或政府统计渠道",
+          reason: "原始数据来源分散，当前未证明由 OA、MES、PLM、ERP 统一采集或核算",
+          confirm: "确认原始数据来源、固定填报模板和外部报送平台"
+        },
+        {
+          id: "YW-L3-20-A02",
+          carrier: "FM2608-06、分析报告、单位负责人审核记录、附件上传记录",
+          destination: "质量安全部",
+          reason: "制度描述为报表附件上传和负责人审核，未明确内部四类系统作为主流程",
+          confirm: "确认附件上传渠道是否为 OA、共享目录或其他报送入口"
+        },
+        {
+          id: "YW-L3-20-A03",
+          carrier: "各单位报表、汇总表、环境/能源统计台账",
+          destination: "质量安全部内部汇总",
+          reason: "汇总整理依赖多来源报表，未证明有统一系统承接",
+          confirm: "确认是否需要建立统一填报入口"
+        },
+        {
+          id: "YW-L3-20-A04",
+          carrier: "统计核算底稿、环境/能源统计报表、计算方法依据",
+          destination: "部门审核和外部报送准备",
+          reason: "核算方法来源于集团和政府口径，当前更像报表编制与核算底稿",
+          confirm: "确认核算公式是否应沉淀为系统字段或模板"
+        },
+        {
+          id: "YW-L3-20-A05",
+          carrier: "统计报表、分析总结报告、审核批准记录",
+          destination: "质量安全部安全管理室主任和部长",
+          reason: "可以通过 OA 审批，但制度未明确线上审批路径，先不强行落 S1",
+          confirm: "确认是否走 OA 审批或线下签批"
+        },
+        {
+          id: "YW-L3-20-A06",
+          carrier: "统计报表、定密审核记录、外部平台回执、环境/能源统计台账",
+          destination: "集团或政府外部平台/报送渠道",
+          reason: "核心动作是外部报送和台账更新，外部平台不能作为公司 S1",
+          confirm: "确认具体外部平台、回执字段和台账维护责任"
+        },
+        {
+          id: "YW-L3-31-A01",
+          carrier: "法律法规来源清单、法规文本/链接、获取记录",
+          destination: "质量安全部法规清单",
+          reason: "外部法规来源获取不是内部四类系统事务",
+          confirm: "确认是否需要法规库或 OA 附件归档"
+        },
+        {
+          id: "YW-L3-31-A02",
+          carrier: "适用性评价表、EHS因素匹配记录、内审员判断依据",
+          destination: "法规清单和合规评价项",
+          reason: "专业判断不能由系统自动替代，系统只能留痕",
+          confirm: "确认评价模板和复核角色"
+        },
+        {
+          id: "YW-L3-31-A03",
+          carrier: "适用法律法规清单、管理者代表批准记录、发布记录",
+          destination: "各部门",
+          reason: "可能走 OA 签批，但制度未明确线上流程",
+          confirm: "确认批准发布是否经 OA"
+        },
+        {
+          id: "YW-L3-31-A04",
+          carrier: "部门适用法规清单、部门体系联络员识别记录",
+          destination: "本部门管理台账或质量安全部汇总（待确认）",
+          reason: "各部门自识别，制度未证明统一系统提交",
+          confirm: "确认是否要统一上报及上报入口"
+        },
+        {
+          id: "YW-L3-31-A05",
+          carrier: "法规更新记录、作废/现行版本清单、替换记录",
+          destination: "现行法规清单",
+          reason: "版本维护对象是法规清单和文本，不是生产、财务或技术流程",
+          confirm: "确认法规版本库维护方式"
+        },
+        {
+          id: "YW-L3-31-A06",
+          carrier: "合规性评价表、评价报告、整改需求记录",
+          destination: "质量安全部和管理者代表",
+          reason: "合规评价是周期性专业评价和报告编制，不宜直接等同 OA、MES、PLM、ERP 流程",
+          confirm: "确认评价报告审批和归档方式"
+        },
+        {
+          id: "YW-L3-31-A07",
+          carrier: "各单位合规评价报告、总体评审报告、上报记录",
+          destination: "管理者代表和最高管理者",
+          reason: "汇总报告和管理评审材料可归档，主流程是否走 OA 待确认",
+          confirm: "确认总体报告审批、归档和后续整改跟踪入口"
+        }
+      ];
+
       var systemBasis = {
         "OA": "适用于申请审批、通知传阅、绩效任务、会议纪要、沟通记录、合同审签、制度文件流转和闭环留痕。",
         "MES": "适用于生产订单、外协外包执行状态、现场检验/接收、工时与工序执行数据、设备验收投用及可采集的现场过程数据。",
@@ -4056,6 +4382,38 @@
 
       function systemsFor(sysStr) {
         return String(sysStr || "").split("、").map(function(s) { return s.trim(); }).filter(Boolean);
+      }
+
+      function carrierFor(a1Id) {
+        return carrierRows.find(function(row) { return row.id === a1Id; });
+      }
+
+      function carrierWarning(a1) {
+        var carrier = carrierFor(a1[0]);
+        return carrier ? "暂不对应系统：已登记记录载体，需确认处理入口" : "";
+      }
+
+      function carrierTooltipLines(a1) {
+        var carrier = carrierFor(a1[0]);
+        if (!carrier) return [];
+        return [
+          "<b>空S1处理载体：</b>",
+          "  记录载体：" + esc(carrier.carrier),
+          "  去向：" + esc(carrier.destination),
+          "  不适配理由：" + esc(carrier.reason),
+          "  后续确认：" + esc(carrier.confirm)
+        ];
+      }
+
+      function systemCellHtml(a1) {
+        var systems = systemsFor(a1[6]);
+        var carrier = carrierFor(a1[0]);
+        if (systems.length) return esc(a1[6]);
+        if (!carrier) return '<span class="status-tag warn">待确认</span>';
+        return '<span class="status-tag warn">暂不对应</span>' +
+          '<span class="carrier-note"><b>载体：</b>' + esc(carrier.carrier) + '</span>' +
+          '<span class="carrier-note"><b>去向：</b>' + esc(carrier.destination) + '</span>' +
+          '<span class="carrier-note"><b>原因：</b>' + esc(carrier.reason) + '</span>';
       }
 
       function colorFor(name) {
@@ -4116,7 +4474,7 @@
       }
 
       function auditWarnings(a1) {
-        return [roleWarning(a1), acceptanceWarning(a1), evidenceWarning(a1), trackingNote(a1)].filter(Boolean);
+        return [roleWarning(a1), acceptanceWarning(a1), evidenceWarning(a1), trackingNote(a1), carrierWarning(a1)].filter(Boolean);
       }
 
       function warningHtml(a1) {
@@ -4188,14 +4546,14 @@
         }
 
         if (active === "全域总览") {
-          addNode("运维安环部");
+          addNode("运维安环部", { depth: 0 });
           filteredL3().forEach(function(row) {
-            addNode(row.domain);
-            addNode(row.capability);
+            addNode(row.domain, { depth: 1 });
+            addNode(row.capability, { depth: 2 });
             addLink("运维安环部", row.domain, 1, { type: "l3", row: row });
             addLink(row.domain, row.capability, 1, { type: "l3", row: row });
             systemsFor(row.system).forEach(function(sys) {
-              addNode(sys);
+              addNode(sys, { depth: 3 });
               addLink(row.capability, sys, 1, { type: "l3", row: row });
             });
           });
@@ -4208,9 +4566,10 @@
           fa.forEach(function(a1) {
             var cap = a1[10], proc = a1[11], a1Id = a1[0], sys = a1[6];
 
-            addNode(cap);
-            addNode(proc);
+            addNode(cap, { depth: 0 });
+            addNode(proc, { depth: 1 });
             addNode(a1Id, {
+              depth: 2,
               itemStyle: { color: roleWarning(a1) ? "#dc2626" : "#64748b" },
               label: { formatter: a1DisplayLabel(a1) }
             });
@@ -4223,7 +4582,7 @@
             addLink(proc, a1Id, 1, { type: "a1", a1: a1 });
 
             systemsFor(sys).forEach(function(s) {
-              addNode(s);
+              addNode(s, { depth: 3 });
               addLink(a1Id, s, 1, { type: "a1sys", a1: a1 });
             });
           });
@@ -4243,17 +4602,52 @@
         return { nodes: Array.from(nodeMap.values()), links: Array.from(dedup.values()) };
       }
 
+      function renderAuditBoard() {
+        var blockCount = auditRows.filter(function(row) { return row.status === "block"; }).length;
+        var warnCount = auditRows.filter(function(row) { return row.status === "warn"; }).length;
+        var sourceTotal = 374;
+        var cards = [
+          { label: "资料文件", value: sourceTotal, desc: "需逐文件分类为纳入、排除或待复核", status: "info" },
+          { label: "阻断项", value: blockCount, desc: "流程图、流程说明表、表单台账和A1字段未闭环", status: "block" },
+          { label: "待确认项", value: warnCount, desc: "证据类型和验收标准需部门或项目组确认", status: "warn" },
+          { label: "空S1试点", value: carrierRows.length, desc: "已登记处理载体、去向和不适配理由", status: "ok" },
+          { label: "优先动作", value: 4, desc: "源清单、流程图、表单台账、A1字段扩展", status: "ok" }
+        ];
+        document.getElementById("auditCards").innerHTML = cards.map(function(card) {
+          return '<div class="audit-card ' + esc(card.status) + '">' +
+            '<div class="num">' + esc(card.value) + '</div>' +
+            '<div class="label">' + esc(card.label) + '</div>' +
+            '<div class="desc">' + esc(card.desc) + '</div>' +
+            '</div>';
+        }).join("");
+      }
+
       // ===== 渲染图表 =====
       function renderChart() {
-        var graph = buildGraph();
         var isGlobal = active === "全域总览";
+        var isAudit = active === AUDIT_MODE;
+
+        if (isAudit) {
+          document.getElementById("sankeyWrap").style.display = "none";
+          document.getElementById("auditWrap").style.display = "block";
+          if (chart) { chart.clear(); }
+          renderAuditBoard();
+          return;
+        }
+
+        document.getElementById("sankeyWrap").style.display = "block";
+        document.getElementById("auditWrap").style.display = "none";
+        var graph = buildGraph();
 
         document.getElementById("chartTitle").textContent = isGlobal ? "运维安环部全域总览" : active;
         document.getElementById("chartSub").textContent = isGlobal
           ? "部门（D1）→ 能力域（L1）→ 业务能力（L2）→ 应用系统（S1）"
           : "业务能力（L2）→ 业务流程（L3）→ 业务行为（A1）→ 应用系统（S1）";
 
+        document.getElementById("chart").style.height = "1120px";
+
         if (!chart) { chart = echarts.init(document.getElementById("chart")); }
+        chart.resize();
 
         chart.setOption({
           backgroundColor: "#0f172a",
@@ -4279,7 +4673,8 @@
                     "验收标准：" + esc(acceptanceText(a)),
                     "制度依据：" + esc(a[7] || ""),
                     "证据类型：" + esc(a[8] || ""),
-                    "应用系统：" + esc(a[6] || ""),
+                    "应用系统：" + esc(a[6] || (carrierFor(a[0]) ? "暂不对应" : "")),
+                    carrierTooltipLines(a).join("<br>"),
                     "<b>原文出处：</b>",
                     "  执行角色依据：" + esc(a[7] || ""),
                     "  触发情景依据：" + esc(a[7] || ""),
@@ -4313,6 +4708,8 @@
                   "验收标准：" + esc(acceptanceText(a1Match)),
                   "制度依据：" + esc(a1Match[7] || ""),
                   "证据类型：" + esc(a1Match[8] || ""),
+                  "应用系统：" + esc(a1Match[6] || (carrierFor(a1Match[0]) ? "暂不对应" : "")),
+                  carrierTooltipLines(a1Match).join("<br>"),
                   "<b>原文出处：</b>",
                   "  执行角色依据：" + esc(a1Match[7] || ""),
                   "  触发情景依据：" + esc(a1Match[7] || ""),
@@ -4361,12 +4758,16 @@
       function renderControls() {
         var bar = document.getElementById("modebar");
         bar.innerHTML = '<span class="mode-label">视图</span>';
-        ["全域总览"].concat(domains).forEach(function(name) {
+        ["全域总览", AUDIT_MODE].concat(domains).forEach(function(name) {
           var btn = document.createElement("button");
           btn.className = "mode-btn" + (name === active ? " active" : "");
           btn.textContent = name;
           btn.onclick = function() {
             active = name;
+            if (window.history && window.history.replaceState) {
+              var baseUrl = window.location.href.split("#")[0];
+              window.history.replaceState(null, "", name === "全域总览" ? baseUrl : baseUrl + "#" + encodeURIComponent(name));
+            }
             Array.from(bar.querySelectorAll(".mode-btn")).forEach(function(b) { b.classList.toggle("active", b.textContent === name); });
             renderAll();
           };
@@ -4375,6 +4776,25 @@
       }
       // ===== 统计 =====
       function renderBars() {
+        if (active === AUDIT_MODE) {
+          document.getElementById("leftPanelTitle").textContent = "资料证据分布";
+          document.getElementById("rightPanelTitle").textContent = "整改缺口规模";
+
+          var maxSource = Math.max.apply(null, auditSourceBars.map(function(r) { return r.count; }));
+          document.getElementById("domainBars").innerHTML = auditSourceBars.map(function(r) {
+            return '<div class="bar-line"><span>' + esc(r.label) + '</span><div class="bar-track"><div class="bar-fill" style="width:' + Math.round(r.count/maxSource*100) + '%;background:' + r.color + '"></div></div><strong>' + r.count + '</strong></div>';
+          }).join("");
+
+          var maxGap = Math.max.apply(null, auditGapBars.map(function(r) { return r.count; }));
+          document.getElementById("systemBars").innerHTML = auditGapBars.map(function(r) {
+            return '<div class="bar-line"><span>' + esc(r.label) + '</span><div class="bar-track"><div class="bar-fill" style="width:' + Math.round(r.count/maxGap*100) + '%;background:' + r.color + '"></div></div><strong>' + r.count + '</strong></div>';
+          }).join("");
+          return;
+        }
+
+        document.getElementById("leftPanelTitle").textContent = "能力域（L1）规模（业务行为（A1）数）";
+        document.getElementById("rightPanelTitle").textContent = "系统承载分布（A1参与次数）";
+
         // 域规模（A1数）
         var domainA1 = {};
         a1Rows.forEach(function(r) { domainA1[r[9]] = (domainA1[r[9]] || 0) + 1; });
@@ -4395,6 +4815,15 @@
       }
 
       function renderLegend() {
+        if (active === AUDIT_MODE) {
+          document.getElementById("legendRow").innerHTML = [
+            '<span class="legend"><i style="background:#3b82f6"></i>资料来源</span>',
+            '<span class="legend"><i style="background:#dc2626"></i>阻断项</span>',
+            '<span class="legend"><i style="background:#f59e0b"></i>待确认项</span>',
+            '<span class="legend"><i style="background:#16a34a"></i>整改动作</span>'
+          ].join("");
+          return;
+        }
         var dLeg = domains.map(function(d) { return '<span class="legend"><i style="background:' + domainColors[d] + '"></i>' + esc(d) + '</span>'; }).join("");
         var sLeg = Object.keys(systemColors).map(function(s) { return '<span class="legend"><i style="background:' + systemColors[s] + '"></i>' + esc(s) + '</span>'; }).join("");
         document.getElementById("legendRow").innerHTML = dLeg + sLeg;
@@ -4403,11 +4832,25 @@
       // ===== 表格 =====
       function renderTable() {
         var isGlobal = active === "全域总览";
+        var isAudit = active === AUDIT_MODE;
         var head = document.getElementById("tableHead");
         var body = document.getElementById("mappingBody");
         var tbl = document.getElementById("mappingTable");
 
-        if (isGlobal) {
+        if (isAudit) {
+          tbl.className = "table-audit";
+          head.innerHTML = '<tr><th>审计项</th><th>当前状态</th><th>判定</th><th>发现</th><th>影响</th><th>整改动作</th></tr>';
+          body.innerHTML = auditRows.map(function(row) {
+            return '<tr>' +
+              '<td><strong>' + esc(row.area) + '</strong></td>' +
+              '<td>' + esc(row.current) + '</td>' +
+              '<td><span class="status-tag ' + esc(row.status) + '">' + (row.status === "block" ? "阻断" : row.status === "warn" ? "待确认" : row.status === "ok" ? "已覆盖" : "提示") + '</span></td>' +
+              '<td>' + esc(row.issue) + '</td>' +
+              '<td>' + esc(row.impact) + '</td>' +
+              '<td>' + esc(row.action) + '</td>' +
+              '</tr>';
+          }).join("");
+        } else if (isGlobal) {
           tbl.className = "table-l3";
           head.innerHTML = '<tr><th class="col-seq">序号</th><th class="col-dept">部门（D1）</th><th class="col-domain">能力域（L1）</th><th class="col-cap">业务能力（L2）</th><th class="col-proc">业务流程（L3）</th><th class="col-evidence">制度依据</th><th class="col-system">应用系统（S1）</th><th class="col-evidence">系统设计依据</th></tr>';
           body.innerHTML = filteredL3().map(function(row, i) {
@@ -4418,10 +4861,15 @@
           head.innerHTML = '<tr><th class="col-seq">序号</th><th class="col-a1id">业务行为（A1）编号</th><th class="col-cap">业务能力（L2）</th><th class="col-proc">业务流程（L3）</th><th class="col-a1name">业务行为（A1）</th><th class="col-role">执行角色</th><th class="col-trigger">触发情景</th><th class="col-precond">前置条件</th><th class="col-appr">审批类型</th><th class="col-accept">验收标准</th><th class="col-evidence">制度依据</th><th class="col-evidtype">证据类型</th><th class="col-system">应用系统（S1）</th><th class="col-alert">请部门确认</th><th class="col-feedback">部门确认意见</th><th class="col-adjust">是否调整</th><th class="col-suggestion">调整建议</th></tr>';
           body.innerHTML = filteredA1().map(function(a1, i) {
             var fill = processFill(a1[11]);
+            var carrier = carrierFor(a1[0]);
             var roleCell = esc(a1[2]) + (roleWarning(a1) ? '<br><span class="warn-tag">请确认岗位</span>' : '');
             var acceptanceCell = requiresAcceptance(a1)
               ? '<span class="warn-tag">请确认关口标准</span><br>是否需要验收/完成标准'
               : '<span class="soft-warn-tag">' + esc(acceptanceText(a1)) + '</span>';
+            var alertCell = warningHtml(a1);
+            if (carrier) {
+              alertCell += '<span class="carrier-note"><b>后续确认：</b>' + esc(carrier.confirm) + '</span>';
+            }
             return '<tr style="background:' + fill + '">' +
               '<td class="col-seq">' + (i+1) + '</td>' +
               '<td class="col-a1id">' + esc(a1[0]) + '</td>' +
@@ -4435,8 +4883,8 @@
               '<td class="col-accept">' + acceptanceCell + '</td>' +
               '<td class="col-evidence">' + esc(a1[7]) + '</td>' +
               '<td class="col-evidtype"><span class="evidence-tag ' + evidenceClass(a1[8]) + '">' + esc(a1[8]) + '</span></td>' +
-              '<td class="col-system">' + esc(a1[6]) + '</td>' +
-              '<td class="col-alert">' + (warningHtml(a1) || '<span class="soft-warn-tag">请部门确认无调整</span>') + '</td>' +
+              '<td class="col-system">' + systemCellHtml(a1) + '</td>' +
+              '<td class="col-alert">' + (alertCell || '<span class="soft-warn-tag">请部门确认无调整</span>') + '</td>' +
               '<td class="col-feedback feedback-cell">待部门填写</td>' +
               '<td class="col-adjust feedback-cell">待确认</td>' +
               '<td class="col-suggestion feedback-cell"></td>' +
@@ -4454,6 +4902,10 @@
 
       window.addEventListener("resize", function() { if (chart) chart.resize(); });
       window.addEventListener("load", function() {
+        var hashMode = decodeURIComponent((window.location.hash || "").replace(/^#/, ""));
+        if (hashMode === AUDIT_MODE || domains.indexOf(hashMode) >= 0 || hashMode === "全域总览") {
+          active = hashMode || "全域总览";
+        }
         renderControls();
         renderAll();
       });
@@ -4485,14 +4937,17 @@ var currentA1Id = null;
 
 var a1Index = {};
 a1Rows.forEach(function(r) {
+  var carrier = carrierFor(r[0]);
+  var systemText = r[6] || (carrier ? '暂不对应；记录载体：' + carrier.carrier + '；去向：' + carrier.destination : '');
+  var alertText = carrier ? '后续确认：' + carrier.confirm : (r[12] || '');
   var src = '依据制度文件 ' + (r[7] || '未标注') + '（' + (r[8] || '') + '），' +
     '该条款明确由「' + (r[2] || '') + '」执行「' + (r[1] || '') + '」，' +
     '触发情景为「' + (r[3] || '') + '」，前置条件为「' + (r[4] || '') + '」。' +
-    '审批类型：' + (r[5] || '') + '，系统支撑：' + (r[6] || '') + '。';
+    '审批类型：' + (r[5] || '') + '，系统支撑：' + (systemText || '') + '。';
   a1Index[r[0]] = { name: r[1], role: r[2], trigger: r[3], precondition: r[4],
-    approval: r[5], system: r[6], evidence: r[7], evidenceType: r[8],
+    approval: r[5], system: systemText, evidence: r[7], evidenceType: r[8],
     roleEvidence: r[7] || '', triggerEvidence: r[7] || '', preconditionEvidence: r[7] || '',
-    domain: r[9], capability: r[10], process: r[11], alert: r[12] || '',
+    domain: r[9], capability: r[10], process: r[11], alert: alertText,
     sourceText: src };
 });
 
@@ -4525,9 +4980,9 @@ function openFeedbackCard(a1Id) {
   document.getElementById('feedbackTitle').innerHTML = a1Id + ' 反馈 <span style="font-size:12px;color:' + (done ? '#16a34a' : '#dc2626') + ';font-weight:400">' + (done ? '已完成' : '未完成') + '</span>';
   var body = document.getElementById('feedbackBody');
 
-  var html = '<div class="a1-context"><b>' + info.name + '</b><br>';
-  html += '执行角色: ' + info.role + ' | 审批: ' + info.approval + ' | 系统: ' + info.system;
-  if (info.alert) html += '<br><span style="color:#92400e">核验提醒: ' + info.alert + '</span>';
+  var html = '<div class="a1-context"><b>' + esc(info.name) + '</b><br>';
+  html += '执行角色: ' + esc(info.role) + ' | 审批: ' + esc(info.approval) + ' | 系统: ' + esc(info.system);
+  if (info.alert) html += '<br><span style="color:#92400e">核验提醒: ' + esc(info.alert) + '</span>';
   html += '</div>';
 
   html += '<div class="a1-context" style="background:#f0fdf4;border-left:3px solid #16a34a;margin-top:10px;">';
@@ -4592,13 +5047,13 @@ function openFeedbackCard(a1Id) {
 
 function qBlock(num, question, hint, options, selectedVal) {
   var h = '<div class="q-block">';
-  h += '<div class="q-label">' + num + '. ' + question + '</div>';
-  if (hint) h += '<div class="q-hint">' + hint + '</div>';
+  h += '<div class="q-label">' + num + '. ' + esc(question) + '</div>';
+  if (hint) h += '<div class="q-hint">' + esc(hint) + '</div>';
   h += '<div class="q-options">';
   options.forEach(function(o) {
     var sel = o[0] === selectedVal ? ' selected' : '';
-    h += '<div class="q-opt' + sel + '" data-val="' + o[0] + '" data-q="' + num + '">';
-    h += '<span class="radio"></span>' + o[1];
+    h += '<div class="q-opt' + sel + '" data-val="' + esc(o[0]) + '" data-q="' + num + '">';
+    h += '<span class="radio"></span>' + esc(o[1]);
     h += '</div>';
   });
   h += '</div></div>';
@@ -4753,6 +5208,7 @@ document.getElementById('clearFeedbackBtn').addEventListener('click', function()
 });
 
 function attachFeedbackHandlers(chart) {
+  if (!chart) return;
   chart.off('click');
   chart.on('click', function(params) {
     if (params.data && params.data.name && a1Index[params.data.name]) {

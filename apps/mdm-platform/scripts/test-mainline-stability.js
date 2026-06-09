@@ -3,6 +3,11 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { spawn, spawnSync } = require('child_process');
+const {
+  LEADERSHIP_OFFICE_ASSIGNMENTS,
+  ORGANIZATION_STRUCTURE_UNITS,
+  syncOrganizationStructure
+} = require('./sync-organization-structure');
 
 const appRoot = path.join(__dirname, '..');
 const PORT = 3231;
@@ -92,6 +97,7 @@ async function runMasterDataObjectSmoke() {
       INSERT INTO users (name, employee_no, department_id, post, role, password_hash)
       VALUES (?, ?, ?, ?, ?, ?)
     `).run('系统管理员', 'ADMIN001', deptId, '系统管理员', 'admin', hashPassword('admin12345'));
+    syncOrganizationStructure({ db });
     db.close();
 
     server = spawn(process.execPath, ['server/index.js'], {
@@ -115,21 +121,19 @@ async function runMasterDataObjectSmoke() {
     assert.strictEqual(login.res.status, 200, JSON.stringify(login.body));
     const cookie = cookieFrom(login.res);
 
-    const org = await request('/api/org-units', {
+    const manualOrg = await request('/api/org-units', {
       method: 'POST',
       body: JSON.stringify({
-        org_unit_name: '工程技术部',
+        org_unit_name: '手工测试组织',
         org_type: 'department',
-        org_mnemonic: 'ENG'
+        org_mnemonic: 'MANUAL'
       })
     }, cookie);
-    assert.strictEqual(org.res.status, 201, JSON.stringify(org.body));
-    assert.ok(org.body.org_unit_code.startsWith('OU-DEPT-ENG'));
+    assert.strictEqual(manualOrg.res.status, 403, JSON.stringify(manualOrg.body));
 
-    const orgActivate = await request(`/api/org-units/${encodeURIComponent(org.body.org_unit_code)}/activate`, {
-      method: 'POST'
-    }, cookie);
-    assert.strictEqual(orgActivate.res.status, 200, JSON.stringify(orgActivate.body));
+    const orgList = await request('/api/org-units?status=active&search=%E5%B7%A5%E7%A8%8B%E6%8A%80%E6%9C%AF%E9%83%A8', {}, cookie);
+    assert.strictEqual(orgList.res.status, 200, JSON.stringify(orgList.body));
+    assert.ok(orgList.body.rows.some(row => row.org_unit_code === 'OU-DEP-ENG'));
 
     const person = await request('/api/persons', {
       method: 'POST',
@@ -214,8 +218,10 @@ async function runMasterDataObjectSmoke() {
 
     const quality = await request('/api/quality/dashboard', {}, cookie);
     assert.strictEqual(quality.res.status, 200, JSON.stringify(quality.body));
-    assert.strictEqual(quality.body.org_person.org_units, 1);
-    assert.strictEqual(quality.body.org_person.persons, 1);
+    assert.strictEqual(quality.body.org_person.org_units, ORGANIZATION_STRUCTURE_UNITS.length);
+    assert.strictEqual(quality.body.org_person.positions, LEADERSHIP_OFFICE_ASSIGNMENTS.length);
+    assert.strictEqual(quality.body.org_person.persons, LEADERSHIP_OFFICE_ASSIGNMENTS.length + 1);
+    assert.strictEqual(quality.body.org_person.active_assignments, LEADERSHIP_OFFICE_ASSIGNMENTS.length);
     assert.strictEqual(quality.body.product.families, 1);
     assert.strictEqual(quality.body.product.released, 1);
 

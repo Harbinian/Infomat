@@ -12,13 +12,15 @@ async function main() {
   const html = fs.readFileSync(indexPath, 'utf8');
 
   [
+    '角色工作台',
     '统计看板',
     '报送管理',
     '待办收到',
     '评审记录',
     '术语词典',
     '冲突管理',
-    '流程治理'
+    '流程治理',
+    '角色使用说明'
   ].forEach(label => assert.ok(html.includes(label), `missing tab label ${label}`));
 
   [
@@ -39,7 +41,53 @@ async function main() {
     '/api/process-governance/sankey',
     '/api/process-governance/a1',
     '/api/process-governance/cross-dept',
+    '/api/role-workbench',
+    '/api/page-workflows',
+    'data-tab="roleWorkbench"',
+    'id="roleWorkbench"',
+    'function renderRoleWorkbench()',
+    'function renderRoleWorkbenchSankey(data)',
+    'function renderRoleWorkbenchGuide',
+    'id="roleWorkbenchMode"',
+    'id="roleWorkbenchNextActions"',
+    'id="roleWorkbenchSankey"',
+    '我现在该做什么',
+    '项目工作角色',
+    '基础权限角色',
+    '角色目标',
+    '第一步入口',
+    '典型样例',
+    '常见误区',
+    '完成标准',
+    '用户管理',
+    '账号入库',
+    'id="rbacUserManagement"',
+    'function renderUserManagement()',
+    'function showUserEditor',
+    'function saveUserFromManagement',
+    'function resetUserDefaultPassword',
+    '基础权限角色',
+    '项目工作角色',
+    '初始密码为 init1234',
+    '当前批量导入仅给已存在用户分配角色',
+    '组织架构来自',
+    '组织架构和部门职责.md',
+    '不支持手动新增',
+    '业务对接人收到字段确认待办后',
+    '数据质量员发现同一字段存在不同黄金源候选时',
+    '项目组长看到本部门有跨部门衔接风险时',
     'function renderProcessGovernance()',
+    'function renderRoleGuide()',
+    'function renderRoleGuideCard(role)',
+    'function loadPageWorkflow(tab, route)',
+    'function renderWorkflowShell(config, bodyHtml)',
+    'function renderEntityForm(type, id, mode)',
+    'class="workflow-shell"',
+    'class="workflow-sidebar"',
+    '我现在该做什么',
+    '本页工作流',
+    "role.group === 'project'",
+    "role.group === 'basic'",
     'data.nodes.find(function(n) { return n.name === params.name; })',
     'template.xlsx'
   ].forEach(needle => assert.ok(html.includes(needle), `missing frontend hook ${needle}`));
@@ -48,6 +96,34 @@ async function main() {
   assert.ok(!html.includes('value="ADMIN001"'), 'login page must not prefill the default admin employee number');
   assert.ok(html.includes('function escapeHtml'), 'frontend should expose a shared HTML escaping helper');
   assert.ok(html.includes('function safeText'), 'frontend should route service-provided display text through escaping');
+  assert.ok(!html.includes('系统最忙'), 'frontend copy should avoid evaluative system wording');
+  assert.ok(!html.includes('承载最多'), 'frontend copy should avoid evaluative system wording');
+  assert.ok(!html.includes('主用系统'), 'frontend copy should avoid evaluative system wording');
+  assert.ok(!html.includes('prompt('), 'maintenance create/edit flows should use routed forms instead of native prompts');
+  assert.ok(!html.includes('id="ouNewBtn"'), 'organization structure should not expose a manual create button');
+  assert.ok(!html.includes('+ 新增组织'), 'organization structure should not show manual create copy');
+  assert.ok(!html.includes("type:'orgUnit',id:'new'"), 'organization structure should not route to a manual create form');
+  assert.ok(!html.includes('class="panel role-workbench on"'), 'role workbench must not be the static default panel because hash routes should decide the first visible page');
+  assert.ok(html.includes('async function activateAuthenticatedApp'), 'authenticated startup should use a shared route-first boot helper');
+  const startupSnippetStart = html.indexOf('async function activateAuthenticatedApp');
+  const startupSnippet = html.slice(startupSnippetStart, startupSnippetStart + 1200);
+  assert.ok(
+    startupSnippet.indexOf('renderRouteFromHash();') !== -1 &&
+    startupSnippet.indexOf('await loadAllSafely();') !== -1 &&
+    startupSnippet.indexOf('renderRouteFromHash();') < startupSnippet.indexOf('await loadAllSafely();'),
+    'authenticated startup should render the current hash route before loading broad dashboard data'
+  );
+  assert.ok(html.includes('function loadAllSafely'), 'broad data loading should not block hash-route rendering');
+  assert.ok(html.includes('links.length === 0'), 'role workbench sankey should handle empty-link data without drawing a broken chart');
+  assert.ok(html.includes('暂无职责链路数据'), 'role workbench sankey should show a clear empty state when no links exist');
+  assert.ok(
+    html.includes("location.hash = '#/' + (params.tab || 'dashboard');"),
+    'list navigation should use hash routes with #/ to avoid browser anchor auto-scroll'
+  );
+  assert.ok(
+    !html.includes("location.hash = params.tab || 'dashboard';"),
+    'list navigation must not use bare hash ids because they trigger anchor auto-scroll'
+  );
 
   assert.ok(html.includes('function populateSankeyDeptFilter()'), 'business map should populate the department filter through a stable helper');
   assert.ok(html.includes('deptEl.dataset.departmentSignature'), 'department filter should avoid clearing selected departments on every render');

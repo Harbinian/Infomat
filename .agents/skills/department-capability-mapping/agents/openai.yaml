@@ -1,7 +1,7 @@
 interface:
-  display_name: "Department Capability Mapping"
-  short_description: "部门能力、流程、系统映射与可视化"
+  display_name: "DCM Alias"
+  short_description: "已合并到 process-evidence-mapping"
   brand_color: "#1A56DB"
-  default_prompt: "Use $department-capability-mapping to turn a department's procedures, standards, forms, and ledgers into capability-process-system mappings and MDM requirements."
+  default_prompt: "Use $process-evidence-mapping instead. Treat this skill only as a compatibility alias for old DCM prompts."
 policy:
   allow_implicit_invocation: true
