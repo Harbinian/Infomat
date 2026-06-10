@@ -45,6 +45,7 @@
 | 第 4 层 | `apps/mdm-platform/scripts/` 缺少应用内脚本职责说明 | 已确认 | 第四批小片已补 README |
 | 第 4 层 | `docs/` 根目录资料与子目录职责不清 | 已确认 | 第四批小片已补导航 README，不迁移文件 |
 | 第 4 层 | `docs/contracts/` 缺少校验合同目录说明 | 已确认 | 第四批小片已补 README |
+| 第 4 层 | `docs/integration/` 缺少集成方案目录说明 | 已确认 | 第四批小片已补 README |
 | 第 4 层 | `docs/norms/` 缺少面向人的真源目录说明 | 已确认 | 第四批小片已补 README，不移动 norms 文件 |
 | 第 4 层 | `docs/reports/` 缺少审计报告目录说明 | 已确认 | 第四批小片已补 README，不迁移报告 |
 | 第 4 层 | 重复静态资产、日志、数据库备份、缓存入库 | 已确认 | 运行产物已处理；重复资产已补迁移提案 |
@@ -110,6 +111,7 @@
 - 第四批继续补脚本边界：新增 `scripts/README.md`，按主线入口、审计质量脚本、局部或历史工具说明输入、输出和写文件副作用；不移动脚本。
 - 第四批继续补 MDM 应用内脚本边界：新增 `apps/mdm-platform/scripts/README.md`，分类测试、安全审计、初始化维护和流程治理承接脚本，并标注数据库副作用。
 - 第四批继续补校验合同目录说明：新增 `docs/contracts/README.md`，说明 `dcm-bbm-contract.json` 是脚本合同，不替代组织或流程真源。
+- 第四批继续补集成方案目录说明：新增 `docs/integration/README.md`，说明接口模板、集成关系、MDM 治理方案和选型评分材料只作方案参考，不替代流程落位或系统选型结论。
 - 第四批继续做运行产物收口：补充 `.bak` 和点分隔数据库备份忽略规则，并将已跟踪的 `apps/mdm-platform/data/platform.db.after-admin-reset-20260609-152533.bak`、`scripts/__pycache__/generate_digital_project_gantt_8k.cpython-313.pyc` 从版本管理中移出；本地文件不删除。
 - 重复静态资产仍只记录为后续治理项：`echarts.min.js` 多副本和 `pmo/tasks.json` 双副本本轮不迁移，避免误伤 PMO、MDM 和 norms 的静态页面引用约定。
 - 第四批继续补资料目录边界：新增 `docs/README.md`，说明 `docs/` 真源入口、子目录职责、根目录历史散放文件口径和修改自检；不移动资料文件。
