@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 const root = resolve(import.meta.dirname, '..');
 const data = JSON.parse(readFileSync(resolve(root, 'docs', 'company-sankey-data.json'), 'utf8'));
 const pkg = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8'));
+const dashboardCheckSource = readFileSync(resolve(root, 'scripts', 'check-dashboard-data.mjs'), 'utf8');
 
 assert.ok(Array.isArray(data.nodes), 'company snapshot should keep nodes');
 assert.ok(Array.isArray(data.links), 'company snapshot should keep links');
@@ -51,6 +52,14 @@ assert.strictEqual(
 assert.ok(
   existsSync(resolve(root, 'scripts', 'sync-process-governance-mainline.mjs')),
   'sync-process-governance-mainline.mjs should exist'
+);
+assert.ok(
+  dashboardCheckSource.includes('跨部门完整性检查报告.md'),
+  'dashboard data check should derive crossDept expectations from the cross-department report'
+);
+assert.ok(
+  !/crossDept\.stats\.(totalChecked|pendingConfirm|highRisk) expected \d+/.test(dashboardCheckSource),
+  'dashboard data check must not freeze crossDept metrics as hard-coded historical numbers'
 );
 
 console.log('Process governance mainline contract test passed');
