@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const { apiKeyAuth, requireIntegrationPermission } = require('../integrationAuth');
+const { requireAuth, isAdmin } = require('../auth');
 const bcrypt = require('bcryptjs');
 
 function handleDbError(res, error) {
@@ -128,9 +129,8 @@ router.post('/callback/consistency-check', apiKeyAuth, requireIntegrationPermiss
 
 // POST /api/integration/credentials/generate
 router.post('/credentials/generate', (req, res, next) => {
-  const { requireAuth } = require('../auth');
   requireAuth(req, res, () => {
-    if (req.session.userRole !== 'admin') return res.status(403).json({ error: '仅管理员可管理 API Key' });
+    if (!isAdmin(req)) return res.status(403).json({ error: '仅管理员可管理 API Key' });
     next();
   });
 }, (req, res) => {
@@ -150,9 +150,8 @@ router.post('/credentials/generate', (req, res, next) => {
 
 // GET /api/integration/credentials
 router.get('/credentials', (req, res, next) => {
-  const { requireAuth } = require('../auth');
   requireAuth(req, res, () => {
-    if (req.session.userRole !== 'admin') return res.status(403).json({ error: '仅管理员' });
+    if (!isAdmin(req)) return res.status(403).json({ error: '仅管理员' });
     next();
   });
 }, (req, res) => {

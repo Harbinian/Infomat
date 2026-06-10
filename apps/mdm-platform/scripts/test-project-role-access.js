@@ -217,7 +217,7 @@ async function main() {
     const ids = seedData();
     child = spawn(process.execPath, ['server/index.js'], {
       cwd: APP_ROOT,
-      env: { ...process.env, PORT: String(PORT) },
+      env: { ...process.env, PORT: String(PORT), SESSION_SECRET: 'project-role-access-test' },
       stdio: 'ignore'
     });
 

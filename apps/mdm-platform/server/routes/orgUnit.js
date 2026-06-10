@@ -40,7 +40,7 @@ router.get('/:code', requireAuth, applyFieldConstraints('org_unit'), (req, res) 
   } catch (e) { handleDbError(res, e); }
 });
 
-router.post('/', requireAuth, (req, res) => {
+router.post('/', requireAuth, requirePermission('org_unit:create'), (req, res) => {
   res.status(403).json({ error: '组织架构由组织架构真源同步生成，不能手动新增' });
 });
 
@@ -57,7 +57,7 @@ router.post('/:code/activate', requireAuth, requirePermission('org_unit:update')
   } catch (e) { handleDbError(res, e); }
 });
 
-router.put('/:code', requireAuth, (req, res) => {
+router.put('/:code', requireAuth, requirePermission('org_unit:update'), (req, res) => {
   try {
     const { org_unit_name, parent_org_unit_id, manager_person_id, status } = req.body;
     const existing = db.prepare('SELECT * FROM org_unit WHERE org_unit_code=?').get(req.params.code);

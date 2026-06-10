@@ -125,7 +125,7 @@ router.get('/:employeeNo', requireAuth, applyFieldConstraints('person'), (req, r
   } catch (e) { handleDbError(res, e); }
 });
 
-router.post('/', requireAuth, (req, res) => {
+router.post('/', requireAuth, requirePermission('person:create'), (req, res) => {
   try {
     const { person_name, mobile, email, employment_status, position_id, org_unit_id } = req.body;
     if (!person_name) return res.status(400).json({ error: '缺少必填字段 person_name' });
@@ -157,7 +157,7 @@ router.post('/:employeeNo/activate', requireAuth, requirePermission('person:upda
   } catch (e) { handleDbError(res, e); }
 });
 
-router.put('/:employeeNo', requireAuth, (req, res) => {
+router.put('/:employeeNo', requireAuth, requirePermission('person:update'), (req, res) => {
   try {
     const { person_name, mobile, email, employment_status, position_id, org_unit_id } = req.body;
     const existing = db.prepare('SELECT * FROM person WHERE employee_no=?').get(req.params.employeeNo);
@@ -202,7 +202,7 @@ router.get('/:employeeNo/assignments', requireAuth, applyFieldConstraints('perso
   } catch (e) { handleDbError(res, e); }
 });
 
-router.post('/:employeeNo/assignments', requireAuth, (req, res) => {
+router.post('/:employeeNo/assignments', requireAuth, requirePermission('person:update'), (req, res) => {
   try {
     const { position_id, is_primary } = req.body;
     if (!position_id) return res.status(400).json({ error: '缺少 position_id' });
@@ -223,7 +223,7 @@ router.post('/:employeeNo/assignments', requireAuth, (req, res) => {
   } catch (e) { handleDbError(res, e); }
 });
 
-router.put('/:employeeNo/assignments/:id/deactivate', requireAuth, (req, res) => {
+router.put('/:employeeNo/assignments/:id/deactivate', requireAuth, requirePermission('person:update'), (req, res) => {
   try {
     const person = db.prepare('SELECT person_id FROM person WHERE employee_no=?').get(req.params.employeeNo);
     if (!person) return res.status(404).json({ error: '人员不存在' });

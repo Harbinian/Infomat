@@ -630,7 +630,7 @@ router.post('/:id/reopen', requireAuth, (req, res) => {
 // POST /:id/archive — archive resolved conflict (admin only)
 router.post('/:id/archive', requireAuth, (req, res) => {
   return runDbAction(res, () => {
-    if (req.session.userRole !== 'admin') {
+    if (!requestHasAnyPermission(req, ['admin:access'])) {
       return res.status(403).json({ error: '仅管理员可归档' });
     }
     const { type } = req.query;

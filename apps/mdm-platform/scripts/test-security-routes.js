@@ -9,6 +9,12 @@ const { hashPassword } = require('../server/auth');
 const PORT = 3199;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 
+function envWithoutSessionSecret(extra = {}) {
+  const env = { ...process.env, ...extra };
+  delete env.SESSION_SECRET;
+  return env;
+}
+
 function resetData() {
   db.exec(`
     UPDATE departments SET manager_user_id=NULL, created_by=NULL, updated_by=NULL, data_owner_user_id=NULL;
@@ -24,6 +30,18 @@ function resetData() {
     DELETE FROM term_conflicts;
     DELETE FROM field_identities;
     DELETE FROM field_entries;
+    DELETE FROM attribute_value;
+    DELETE FROM entity_class_membership;
+    DELETE FROM external_identity;
+    DELETE FROM product;
+    DELETE FROM product_family;
+    DELETE FROM person_position_assignment;
+    DELETE FROM person;
+    DELETE FROM position;
+    DELETE FROM org_unit;
+    DELETE FROM class_node;
+    DELETE FROM attribute_def;
+    DELETE FROM code_sequences;
     DELETE FROM mapping_related_departments;
     DELETE FROM mapping_systems;
     DELETE FROM mappings;
@@ -56,6 +74,14 @@ function seedData() {
   const submitterA = insertUser('销售报送人', 'SALE001', deptA, 'submitter');
   const submitterB = insertUser('财务报送人', 'FIN001', deptB, 'submitter');
   const ownerB = insertUser('财务负责人', 'OWNFIN', deptB, 'owner');
+  const rbacAdmin = insertUser('RBAC管理员', 'RBACADM', deptA, 'submitter');
+  const adminRole = db.prepare("SELECT role_id FROM roles WHERE role_code='admin'").get();
+  assert.ok(adminRole, 'admin RBAC role should exist');
+  db.prepare('INSERT OR IGNORE INTO user_roles (user_id, role_id, assigned_by) VALUES (?, ?, ?)').run(rbacAdmin, adminRole.role_id, admin);
+  const orgUnitId = db.prepare(`
+    INSERT INTO org_unit (org_unit_code, org_unit_name, org_type, org_mnemonic, created_by, updated_by)
+    VALUES ('SALE-ORG', '销售组织', 'department', 'SALEORG', ?, ?)
+  `).run(admin, admin).lastInsertRowid;
 
   const systemA = db.prepare('INSERT INTO systems (name, dept_id) VALUES (?, ?)').run('CRM', deptA).lastInsertRowid;
   const systemB = db.prepare('INSERT INTO systems (name, dept_id) VALUES (?, ?)').run('ERP', deptB).lastInsertRowid;
@@ -95,7 +121,7 @@ function seedData() {
   db.prepare("INSERT INTO terms (term, definition, scope, created_by, status) VALUES ('客户', '客户定义', '集团', ?, 'approved')").run(admin);
   db.prepare("INSERT INTO terms (term, definition, scope, created_by, status) VALUES ('客户号', '客户编号', '系统', ?, 'approved')").run(admin);
 
-  return { capA, processA, mappingA, mappingB, todoB, conflict, termConflict, submitterA };
+  return { capA, processA, mappingA, mappingB, todoB, conflict, termConflict, submitterA, orgUnitId, orgUnitCode: 'SALE-ORG' };
 }
 
 async function waitForServer() {
@@ -143,10 +169,248 @@ async function login(employeeNo) {
   return result.res.headers.get('set-cookie').split(';')[0];
 }
 
+function columnIndexByHeader(worksheet, headerText) {
+  const headerRow = worksheet.getRow(1);
+  for (let column = 1; column <= headerRow.cellCount; column += 1) {
+    if (headerRow.getCell(column).value === headerText) return column;
+  }
+  throw new Error(`missing worksheet header: ${headerText}`);
+}
+
+async function assertForbidden(label, routePath, options, cookie) {
+  const result = await request(routePath, options, cookie);
+  assert.strictEqual(result.res.status, 403, label);
+  return result;
+}
+
+async function assertServerRequiresSessionSecret() {
+  const child = spawn(process.execPath, ['server/index.js'], {
+    cwd: path.join(__dirname, '..'),
+    env: envWithoutSessionSecret({ PORT: '3299', NODE_ENV: 'production' }),
+    stdio: ['ignore', 'ignore', 'pipe']
+  });
+
+  let stderr = '';
+  child.stderr.on('data', chunk => {
+    stderr += chunk.toString('utf8');
+  });
+
+  const exitCode = await new Promise(resolve => {
+    const timer = setTimeout(() => {
+      child.kill();
+      resolve(null);
+    }, 1500);
+    child.on('exit', code => {
+      clearTimeout(timer);
+      resolve(code);
+    });
+  });
+
+  assert.notStrictEqual(exitCode, null, '生产模式缺少 SESSION_SECRET 时服务不应继续运行');
+  assert.notStrictEqual(exitCode, 0, '生产模式缺少 SESSION_SECRET 时服务应失败退出');
+  assert.ok(stderr.includes('SESSION_SECRET'), '失败信息应提示 SESSION_SECRET');
+}
+
+async function assertUserDirectoryGuards(adminCookie, submitterCookie) {
+  const submitterUsers = await request('/api/org/users', {}, submitterCookie);
+  assert.strictEqual(submitterUsers.res.status, 403, '普通用户不能查看全员用户目录');
+
+  const adminUsers = await request('/api/org/users', {}, adminCookie);
+  assert.strictEqual(adminUsers.res.status, 200, '管理员仍可查看用户目录');
+  assert.ok(adminUsers.body.some(row => row.employee_no === 'SALE001'));
+  assert.ok(adminUsers.body.every(row => row.password_hash === undefined));
+}
+
+async function assertRbacAdminUsesAdminPermission(seed, rbacAdminCookie) {
+  db.prepare(`
+    UPDATE field_conflicts
+    SET status='resolved', resolution='已处理', resolved_at=datetime('now')
+    WHERE id=?
+  `).run(seed.conflict);
+
+  const archived = await request(`/api/conflicts/${seed.conflict}/archive`, { method: 'POST' }, rbacAdminCookie);
+  assert.strictEqual(archived.res.status, 200, '拥有 admin RBAC 角色的用户应具备管理员归档权限');
+
+  const row = db.prepare('SELECT status FROM field_conflicts WHERE id=?').get(seed.conflict);
+  assert.strictEqual(row.status, 'archived');
+}
+
+async function assertFieldConstraintsAreApplied(submitterCookie) {
+  const submitterRole = db.prepare("SELECT role_id FROM roles WHERE role_code='submitter'").get();
+  assert.ok(submitterRole, 'submitter role should exist');
+
+  db.prepare(`
+    INSERT OR IGNORE INTO permissions (perm_code, resource, action, field_constraints, description)
+    VALUES ('product_family:read', 'product_family', 'read', ?, '产品族字段约束测试')
+  `).run(JSON.stringify({ exclude: ['product_type'], readonly: ['model_name'] }));
+  db.prepare(`
+    UPDATE permissions
+    SET field_constraints=?
+    WHERE perm_code='product_family:read'
+  `).run(JSON.stringify({ exclude: ['product_type'], readonly: ['model_name'] }));
+  db.prepare(`
+    INSERT OR IGNORE INTO role_permissions (role_id, perm_id)
+    SELECT ?, perm_id FROM permissions WHERE perm_code='product_family:read'
+  `).run(submitterRole.role_id);
+
+  const constrained = await request('/api/product-families', {}, submitterCookie);
+  assert.strictEqual(constrained.res.status, 200);
+  assert.ok(constrained.body.rows.length > 0, 'product family fixture should exist before field constraint assertion');
+  const row = constrained.body.rows[0];
+  assert.strictEqual(Object.prototype.hasOwnProperty.call(row, 'product_type'), false, 'exclude 字段应被剥离');
+  assert.ok(Array.isArray(row._readonly_fields), 'readonly 字段应在响应中标记');
+  assert.ok(row._readonly_fields.includes('model_name'), 'model_name 应标记为 readonly');
+}
+
+async function assertMasterDataWriteGuards(seed, adminCookie, submitterCookie) {
+  const submitterOrgCreate = await request('/api/org-units', {
+    method: 'POST',
+    body: JSON.stringify({ org_unit_name: '越权组织', org_type: 'department', org_mnemonic: 'BADORG' })
+  }, submitterCookie);
+  assert.strictEqual(submitterOrgCreate.res.status, 403);
+
+  const adminOrgUpdate = await request(`/api/org-units/${seed.orgUnitCode}`, {
+    method: 'PUT',
+    body: JSON.stringify({ org_unit_name: '销售组织维护' })
+  }, adminCookie);
+  assert.strictEqual(adminOrgUpdate.res.status, 200);
+
+  await assertForbidden('普通用户不能更新组织单元', `/api/org-units/${seed.orgUnitCode}`, {
+    method: 'PUT',
+    body: JSON.stringify({ org_unit_name: '越权组织维护' })
+  }, submitterCookie);
+
+  await assertForbidden('普通用户不能新增岗位', '/api/positions', {
+    method: 'POST',
+    body: JSON.stringify({ position_name: '越权岗位', pos_mnemonic: 'BADPOS', org_unit_id: seed.orgUnitId })
+  }, submitterCookie);
+
+  const adminPosition = await request('/api/positions', {
+    method: 'POST',
+    body: JSON.stringify({ position_name: '安全测试岗位', pos_mnemonic: 'SAFE', org_unit_id: seed.orgUnitId })
+  }, adminCookie);
+  assert.strictEqual(adminPosition.res.status, 201);
+  const positionRow = db.prepare('SELECT position_id FROM position WHERE position_code=?').get(adminPosition.body.position_code);
+
+  await assertForbidden('普通用户不能更新岗位', `/api/positions/${adminPosition.body.position_code}`, {
+    method: 'PUT',
+    body: JSON.stringify({ position_name: '越权岗位维护' })
+  }, submitterCookie);
+
+  await assertForbidden('普通用户不能新增人员', '/api/persons', {
+    method: 'POST',
+    body: JSON.stringify({ person_name: '越权人员' })
+  }, submitterCookie);
+
+  const adminPerson = await request('/api/persons', {
+    method: 'POST',
+    body: JSON.stringify({ person_name: '安全测试人员', position_id: positionRow.position_id, org_unit_id: seed.orgUnitId })
+  }, adminCookie);
+  assert.strictEqual(adminPerson.res.status, 201);
+
+  await assertForbidden('普通用户不能更新人员', `/api/persons/${adminPerson.body.employee_no}`, {
+    method: 'PUT',
+    body: JSON.stringify({ person_name: '越权人员维护' })
+  }, submitterCookie);
+
+  await assertForbidden('普通用户不能挂接人员岗位', `/api/persons/${adminPerson.body.employee_no}/assignments`, {
+    method: 'POST',
+    body: JSON.stringify({ position_id: positionRow.position_id, is_primary: false })
+  }, submitterCookie);
+
+  await assertForbidden('普通用户不能新增产品族', '/api/product-families', {
+    method: 'POST',
+    body: JSON.stringify({ model_name: '越权产品族', model_code: 'BADPF', class_major: 'A' })
+  }, submitterCookie);
+
+  const adminFamily = await request('/api/product-families', {
+    method: 'POST',
+    body: JSON.stringify({ model_name: '安全测试产品族', model_code: 'SAFEFAM', class_major: 'A' })
+  }, adminCookie);
+  assert.strictEqual(adminFamily.res.status, 201);
+  const familyRow = db.prepare('SELECT product_family_id FROM product_family WHERE product_family_code=?').get(adminFamily.body.product_family_code);
+
+  await assertForbidden('普通用户不能更新产品族', `/api/product-families/${adminFamily.body.product_family_code}`, {
+    method: 'PUT',
+    body: JSON.stringify({ model_name: '越权产品族维护' })
+  }, submitterCookie);
+
+  await assertForbidden('普通用户不能新增产品', '/api/products', {
+    method: 'POST',
+    body: JSON.stringify({ product_family_id: familyRow.product_family_id, revision: 'A' })
+  }, submitterCookie);
+
+  const adminProduct = await request('/api/products', {
+    method: 'POST',
+    body: JSON.stringify({ product_family_id: familyRow.product_family_id, revision: 'A' })
+  }, adminCookie);
+  assert.strictEqual(adminProduct.res.status, 201);
+
+  await assertForbidden('普通用户不能更新产品', `/api/products/${adminProduct.body.product_code}`, {
+    method: 'PUT',
+    body: JSON.stringify({ revision: 'B' })
+  }, submitterCookie);
+
+  await assertForbidden('普通用户不能新增分类节点', '/api/class-nodes', {
+    method: 'POST',
+    body: JSON.stringify({ class_code: 'BADCLASS', class_name: '越权分类', class_type: 'product' })
+  }, submitterCookie);
+
+  const adminClass = await request('/api/class-nodes', {
+    method: 'POST',
+    body: JSON.stringify({ class_code: 'SAFECLASS', class_name: '安全测试分类', class_type: 'product' })
+  }, adminCookie);
+  assert.strictEqual(adminClass.res.status, 201);
+
+  await assertForbidden('普通用户不能更新分类节点', '/api/class-nodes/SAFECLASS', {
+    method: 'PUT',
+    body: JSON.stringify({ class_name: '越权分类维护' })
+  }, submitterCookie);
+
+  await assertForbidden('普通用户不能挂接分类成员', '/api/class-nodes/memberships', {
+    method: 'POST',
+    body: JSON.stringify({
+      entity_type: 'product_family',
+      entity_id: familyRow.product_family_id,
+      class_node_id: adminClass.body.class_node_id,
+      is_primary: true
+    })
+  }, submitterCookie);
+
+  await assertForbidden('普通用户不能新增属性定义', '/api/attributes/defs', {
+    method: 'POST',
+    body: JSON.stringify({ attribute_code: 'BAD_ATTR', attribute_name: '越权属性', data_type: 'string', applies_to: 'product_family' })
+  }, submitterCookie);
+
+  const adminAttribute = await request('/api/attributes/defs', {
+    method: 'POST',
+    body: JSON.stringify({ attribute_code: 'SAFE_ATTR', attribute_name: '安全属性', data_type: 'string', applies_to: 'product_family' })
+  }, adminCookie);
+  assert.strictEqual(adminAttribute.res.status, 201);
+
+  await assertForbidden('普通用户不能更新属性定义', '/api/attributes/defs/SAFE_ATTR', {
+    method: 'PUT',
+    body: JSON.stringify({ attribute_name: '越权属性维护' })
+  }, submitterCookie);
+
+  await assertForbidden('普通用户不能写入属性值', '/api/attributes/values', {
+    method: 'PUT',
+    body: JSON.stringify({ entity_type: 'product_family', entity_id: familyRow.product_family_id, values: { SAFE_ATTR: 'red' } })
+  }, submitterCookie);
+
+  const adminAttributeValue = await request('/api/attributes/values', {
+    method: 'PUT',
+    body: JSON.stringify({ entity_type: 'product_family', entity_id: familyRow.product_family_id, values: { SAFE_ATTR: 'blue' } })
+  }, adminCookie);
+  assert.strictEqual(adminAttributeValue.res.status, 200);
+}
+
 async function main() {
   let server;
 
   try {
+    await assertServerRequiresSessionSecret();
+
     resetData();
     const seed = seedData();
 
@@ -162,12 +426,17 @@ async function main() {
     const reviewerCookie = await login('REV001');
     const submitterCookie = await login('SALE001');
     const ownerBCookie = await login('OWNFIN');
+    const rbacAdminCookie = await login('RBACADM');
 
     const createSystem = await request('/api/systems', {
       method: 'POST',
       body: JSON.stringify({ name: '越权系统', dept_id: null })
     }, submitterCookie);
     assert.strictEqual(createSystem.res.status, 403);
+
+    await assertMasterDataWriteGuards(seed, adminCookie, submitterCookie);
+    await assertUserDirectoryGuards(adminCookie, submitterCookie);
+    await assertFieldConstraintsAreApplied(submitterCookie);
 
     const capBadAction = await request(`/api/capabilities/${seed.capA}/review`, {
       method: 'POST',
@@ -208,8 +477,9 @@ async function main() {
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(exportResult.buffer);
     const values = [];
+    const noteColumn = columnIndexByHeader(workbook.getWorksheet('字段台账'), '字段说明');
     workbook.getWorksheet('字段台账').eachRow((row, rowNumber) => {
-      if (rowNumber > 1) values.push(row.getCell(11).value);
+      if (rowNumber > 1) values.push(row.getCell(noteColumn).value);
     });
     assert.deepStrictEqual(values, ['销售字段']);
 
@@ -233,6 +503,8 @@ async function main() {
       body: JSON.stringify({ resolution: '普通用户越权解决' })
     }, submitterCookie);
     assert.strictEqual(oldTermResolve.res.status, 403);
+
+    await assertRbacAdminUsesAdminPermission(seed, rbacAdminCookie);
 
     const detect = await request('/api/conflicts/detect', { method: 'POST' }, reviewerCookie);
     assert.strictEqual(detect.res.status, 200);

@@ -48,7 +48,9 @@ function send422(res, errors) {
 }
 
 function isAdmin(req) {
-  return req.session && req.session.userRole === 'admin';
+  if (!req.session || !req.session.userId) return false;
+  const { permSet } = getUserEffectivePermissions(req.session.userId);
+  return permSet.has('admin:access') || permSet.has('*:*');
 }
 
 const INTERNAL_ID_FIELDS = [
@@ -81,7 +83,7 @@ function requireDataPermission(categoryCode, action) {
     if (!req.session || !req.session.userId) {
       return res.status(401).json({ error: '未登录' });
     }
-    if (req.session.userRole === 'admin') return next();
+    if (isAdmin(req)) return next();
 
     const db = require('./db');
     const user = db.prepare('SELECT permissions FROM users WHERE id=?').get(req.session.userId);
@@ -174,6 +176,11 @@ function requirePermission(permCode) {
 
 function applyFieldConstraints(resourceType) {
   return (req, res, next) => {
+    if (!req.effectivePermissions && req.session && req.session.userId) {
+      const { permSet, fieldConstraints } = getUserEffectivePermissions(req.session.userId);
+      req.effectivePermissions = permSet;
+      req.effectiveFieldConstraints = fieldConstraints;
+    }
     if (!req.effectivePermissions) return next();
 
     const constraints = req.effectiveFieldConstraints || {};
@@ -189,6 +196,7 @@ function applyFieldConstraints(resourceType) {
         const exclude = new Set(resourceConstraints.exclude || []);
         const readonly = new Set(resourceConstraints.readonly || []);
         const cleaned = {};
+        const readonlyFields = [];
         const internalPrefixes = ['org_unit_id', 'position_id', 'person_id', 'product_family_id',
           'product_id', 'class_node_id', 'attribute_def_id', 'attribute_value_id',
           'external_identity_id', 'membership_id', 'assignment_id', 'password_hash'];
@@ -199,8 +207,10 @@ function applyFieldConstraints(resourceType) {
             continue;
           }
           if (exclude.has(key)) continue;
+          if (readonly.has(key)) readonlyFields.push(key);
           cleaned[key] = applyConstraints(value, resourceConstraints);
         }
+        if (readonlyFields.length > 0) cleaned._readonly_fields = readonlyFields;
         return cleaned;
       }
 

@@ -160,7 +160,7 @@ router.put('/:id', requireAuth, (req, res) => {
   return runDbAction(res, () => {
     const existing = db.prepare('SELECT * FROM terms WHERE id=?').get(req.params.id);
     if (!existing) return res.status(404).json({ error: '术语不存在' });
-    if (req.session.userRole !== 'admin' && (existing.created_by !== req.session.userId || existing.status !== 'pending')) {
+    if (!isAdmin(req) && (existing.created_by !== req.session.userId || existing.status !== 'pending')) {
       return res.status(403).json({ error: '仅创建人可修改待审术语，或由管理员维护术语' });
     }
     const { term, definition, scope, forbidden, process_id } = req.body;

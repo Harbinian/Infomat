@@ -35,7 +35,7 @@ router.get('/:code', requireAuth, applyFieldConstraints('class_node'), (req, res
   } catch (e) { handleDbError(res, e); }
 });
 
-router.post('/', requireAuth, (req, res) => {
+router.post('/', requireAuth, requirePermission('class_node:create'), (req, res) => {
   try {
     const { class_code, class_name, class_type, parent_class_node_id } = req.body;
     if (!class_code || !class_name || !class_type) {
@@ -49,7 +49,7 @@ router.post('/', requireAuth, (req, res) => {
   } catch (e) { handleDbError(res, e); }
 });
 
-router.put('/:code', requireAuth, (req, res) => {
+router.put('/:code', requireAuth, requirePermission('class_node:update'), (req, res) => {
   try {
     const { class_name, parent_class_node_id, status } = req.body;
     const existing = db.prepare('SELECT * FROM class_node WHERE class_code=?').get(req.params.code);
@@ -78,7 +78,7 @@ router.get('/:code/members', requireAuth, applyFieldConstraints('class_node'), (
   } catch (e) { handleDbError(res, e); }
 });
 
-router.post('/memberships', requireAuth, (req, res) => {
+router.post('/memberships', requireAuth, requirePermission('class_node:update'), (req, res) => {
   try {
     const { entity_type, entity_id, class_node_id, is_primary } = req.body;
     if (!entity_type || !entity_id || !class_node_id) {

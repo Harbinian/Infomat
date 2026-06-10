@@ -1,0 +1,78 @@
+# Infomat 全库整改分流报告
+
+> 日期：2026-06-10
+> 范围：本报告只归并和分流本轮全库审查发现，不作为流程真源、PMO 真源或 MDM 配置真源。
+> 执行策略：分批推进。第一批完成第 0 层核验分流和第 1 层验证体系止血；第二批先处理 MDM 安全边界中可明确测试的最小切片。
+
+## 1. 实测基线
+
+| 检查项 | 命令 | 当前结论 |
+|---|---|---|
+| 根目录流程治理主线合约 | `npm run test:process-governance-mainline` | 已通过 |
+| MDM 主线稳定性 | `cd apps/mdm-platform && npm run test:mainline` | 已通过 |
+| MDM 安全专项 | `cd apps/mdm-platform && npm run test:security` | 已覆盖基础主数据越权、用户目录权限、字段约束、session secret 和 RBAC 管理员判断红线 |
+
+口径修正：
+
+- MINIMAX 关于根目录缺少 `sync:process-governance` 和 `scripts/sync-process-governance-mainline.mjs` 的结论已过时；当前 `package.json` 已有该脚本入口，目标脚本也存在。
+- Trae 关于 `test:security` 红线和基础主数据写接口覆盖盲区的结论已确认；安全测试原先会在 Excel 断言处提前失败，后续越权断言跑不到。
+- Deepseek 对前端单文件、测试框架、脚本膨胀等问题的判断保留为长期架构债，不进入第一批修复。
+
+## 2. 问题分流
+
+| 层级 | 主题 | 状态 | 第一批处理 |
+|---|---|---|---|
+| 第 1 层 | 安全测试固定列位断言脆弱 | 已确认 | 已纳入 |
+| 第 1 层 | 普通登录用户可写基础主数据 | 已确认 | 已纳入 |
+| 第 2 层 | 旧 `users.role` 与 RBAC 管理员判断并存 | 已确认 | 第二批小片已处理管理员判断 |
+| 第 2 层 | 默认口令 `init1234` 制度化 | 已确认 | 延后 |
+| 第 2 层 | `SESSION_SECRET` 固定回退 | 已确认 | 第二批小片已处理 |
+| 第 2 层 | `/api/org/users` 员工目录暴露面过宽 | 已确认 | 第二批小片已处理 |
+| 第 2 层 | `applyFieldConstraints` readonly 未执行 | 已确认 | 第二批小片已处理 |
+| 第 3 层 | 工程技术部流程映射交付物缺失 | 已确认风险 | 延后 |
+| 第 3 层 | `crossDept` 从报告 Markdown 派生 | 已确认风险 | 延后 |
+| 第 3 层 | `综合管理部` 等历史/幽灵部门口径 | 待复核 | 延后 |
+| 第 4 层 | README / PMO 文档引用不存在入口或截图 | 待复核 | 延后 |
+| 第 4 层 | 重复静态资产、日志、数据库备份、缓存入库 | 待复核 | 延后 |
+| 第 5 层 | 前端单文件、测试 helper 重复、大脚本膨胀 | 已归类 | 延后 |
+| 第 5 层 | 编码流水号并发、审批状态机、冲突检测性能 | 待复核 | 延后 |
+
+## 3. 第一批实际边界
+
+第一批只收紧 MDM 基础主数据写接口：
+
+- 人员：新增、更新、任岗挂接、任岗停用。
+- 产品：新增、更新。
+- 产品族：新增、更新。
+- 岗位：新增、更新。
+- 组织单元：新增入口仍禁止手工创建，更新增加权限校验。
+- 分类节点：新增、更新、成员挂接。
+- 属性：定义新增、定义更新、属性值写入。
+
+第一批不处理：
+
+- `todos`、`conflicts`、`processGovernance` 等业务流写接口。
+- 工程技术部映射补全。
+- PMO 驾驶舱、`docs/norms` 真源内容和大目录迁移。
+- 前端单文件拆分、安全头、限流、session store。
+
+## 4. 工作区状态提示
+
+执行前工作区已有多处未提交修改和未跟踪文件，涉及 `.agents/`、`apps/mdm-platform/public/`、流程治理导入与测试、`docs/company-sankey-data.json`、`docs/norms/`、`package.json`、`pmo/procedure-management/dashboard.html`、`scripts/parse-sankey-data.mjs` 等。
+
+本轮只应归因于以下新增或修改：
+
+- 新增本报告。
+- 修正 `apps/mdm-platform/scripts/test-security-routes.js` 的 Excel 表头定位和基础主数据写入权限红线。
+- 给基础主数据写接口增加最小 RBAC 权限校验。
+- 追加第二批安全红线：生产模式缺少 `SESSION_SECRET` 不得启动、普通用户不能读取全员用户目录、字段约束需剥离 `exclude` 并标记 `readonly`。
+- 第二批对应最小实现：`/api/org/users` 增加管理员权限，`applyFieldConstraints` 在普通 GET 响应中加载有效字段约束并输出 `_readonly_fields`，`server/index.js` 不再使用隐式固定 session secret。
+- 追加 RBAC 管理员红线：旧角色不是 `admin`、但具备 RBAC `admin` 角色的用户应能执行管理员归档动作。
+- 第二批继续收敛管理员判断：`auth.isAdmin`、旧数据权限管理员旁路、冲突归档、术语维护和集成凭据管理改用 RBAC 管理员口径。
+
+## 5. 后续建议顺序
+
+1. 第二批剩余 MDM 安全边界：默认口令、业务角色过滤口径、字段级写入保护、用户目录的业务替代接口。
+2. 第三批处理流程真源完整性：工程技术部、跨部门风险来源、历史部门别名。
+3. 第四批处理仓库边界：先修导航和 README，再对大体积资料与重复资产写迁移提案。
+4. 第五批处理架构债：前端拆分、测试框架、大脚本拆分和性能问题。
