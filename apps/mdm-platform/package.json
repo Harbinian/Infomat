@@ -32,10 +32,11 @@
     "check:process-governance": "node scripts/check-process-governance.js",
     "test:process-import": "node scripts/test-process-governance-import.js",
     "test:process-quality-import": "node scripts/test-process-governance-quality-import.js",
+    "test:process-mapping-workspace": "node scripts/test-process-mapping-workspace-import.js",
     "test:process-api": "node scripts/test-process-governance-api.js",
     "test:process-frontend": "node scripts/test-process-governance-frontend.js",
     "test:process-field-links": "node scripts/test-process-governance-field-links.js",
-    "test:process-governance": "node scripts/test-db-path-isolation.js && node scripts/test-process-governance-org-sync.js && node scripts/test-process-governance-schema.js && node scripts/test-process-governance-import.js && node scripts/test-process-governance-quality-import.js && node scripts/test-process-governance-api.js && node scripts/test-process-governance-frontend.js && node scripts/test-process-governance-field-links.js",
+    "test:process-governance": "node scripts/test-db-path-isolation.js && node scripts/test-process-governance-org-sync.js && node scripts/test-process-governance-schema.js && node scripts/test-process-governance-import.js && node scripts/test-process-governance-quality-import.js && node scripts/test-process-mapping-workspace-import.js && node scripts/test-process-governance-api.js && node scripts/test-process-governance-frontend.js && node scripts/test-process-governance-field-links.js",
     "test:mainline": "node scripts/test-organization-structure-sync.js && node scripts/test-role-workbench-api.js && node scripts/test-mainline-stability.js",
     "dev": "nodemon server/index.js"
   },
