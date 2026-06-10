@@ -39,7 +39,7 @@
 | 第 3 层 | `综合管理部` 等历史/幽灵部门口径 | 待复核 | 延后 |
 | 第 4 层 | README / PMO 文档引用不存在入口或截图 | 已确认 | 第四批小片已处理失效导航 |
 | 第 4 层 | `scripts/` 缺少脚本职责和副作用说明 | 已确认 | 第四批小片已补 README |
-| 第 4 层 | 重复静态资产、日志、数据库备份、缓存入库 | 待复核 | 延后 |
+| 第 4 层 | 重复静态资产、日志、数据库备份、缓存入库 | 已确认 | 小片处理运行产物；重复资产延后 |
 | 第 5 层 | 前端单文件、测试 helper 重复、大脚本膨胀 | 已归类 | 延后 |
 | 第 5 层 | 编码流水号并发、审批状态机、冲突检测性能 | 待复核 | 延后 |
 
@@ -94,6 +94,8 @@
 - 第三批先做只读校验收敛：`check-dashboard-data.mjs` 从 `跨部门完整性检查报告.md` 解析统计值，并与 `docs/company-sankey-data.json.crossDept`、PMO 内嵌 `#cross-dept-data` 比对；不改流程真源和生成快照。
 - 第四批先做导航止血：修正根 README、PMO README、PMO CLAUDE 和流程驾驶舱 CLAUDE 中不存在的甘特入口、截图、旧文档和手工 JSON 替换说明；不移动静态资产或大体积资料。
 - 第四批继续补脚本边界：新增 `scripts/README.md`，按主线入口、审计质量脚本、局部或历史工具说明输入、输出和写文件副作用；不移动脚本。
+- 第四批继续做运行产物收口：补充 `.bak` 和点分隔数据库备份忽略规则，并将已跟踪的 `apps/mdm-platform/data/platform.db.after-admin-reset-20260609-152533.bak`、`scripts/__pycache__/generate_digital_project_gantt_8k.cpython-313.pyc` 从版本管理中移出；本地文件不删除。
+- 重复静态资产仍只记录为后续治理项：`echarts.min.js` 多副本和 `pmo/tasks.json` 双副本本轮不迁移，避免误伤 PMO、MDM 和 norms 的静态页面引用约定。
 
 ## 5. 后续建议顺序
 

@@ -1,4 +1,6 @@
 node_modules/
 data/*.db
 data/*.db-*
+data/*.db.*
+data/*.bak
 *.log
