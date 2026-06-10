@@ -19,6 +19,22 @@ function isReviewerOrAdmin(req) {
   return permSet.has('admin:access') || permSet.has('review:approve') || permSet.has('*:*');
 }
 
+function getEffectiveRoleCodes(req) {
+  const codes = new Set();
+  if (!req.session || !req.session.userId) return codes;
+  if (req.session.userRole) codes.add(req.session.userRole);
+  const rows = db.prepare(`
+    SELECT r.role_code
+    FROM user_roles ur
+    JOIN roles r ON ur.role_id = r.role_id
+    WHERE ur.user_id=?
+  `).all(req.session.userId);
+  for (const row of rows) {
+    if (row.role_code) codes.add(row.role_code);
+  }
+  return codes;
+}
+
 function validateAction(action) {
   return ['approve', 'reject'].includes(action);
 }
@@ -65,4 +81,4 @@ function canUseTodo(req, todo) {
   return Boolean(todo.to_dept_id && req.session.departmentId && todo.to_dept_id === req.session.departmentId);
 }
 
-module.exports = { isAdmin, hasGlobalView, isReviewerOrAdmin, validateAction, mappingVisibility, canViewMapping, canUseTodo };
+module.exports = { isAdmin, hasGlobalView, isReviewerOrAdmin, getEffectiveRoleCodes, validateAction, mappingVisibility, canViewMapping, canUseTodo };
