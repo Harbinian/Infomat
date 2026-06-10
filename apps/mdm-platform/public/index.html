@@ -4200,8 +4200,8 @@
 
     async function openAssignOwnerDialog(conflictId, conflictType) {
       try {
-        const users = await api('/api/org/users');
-        const selectHtml = `<select id="assigneeSelect" style="width: 100%; margin-top: 8px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px;">${users.map(u => `<option value="${Number(u.id)}">${safeText(u.name)} (${safeText(u.department_id)})</option>`).join('')}</select>`;
+        const users = await api('/api/org/users/assignable');
+        const selectHtml = `<select id="assigneeSelect" style="width: 100%; margin-top: 8px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px;">${users.map(u => `<option value="${Number(u.id)}">${safeText(u.name)}${u.dept_name ? '（' + safeText(u.dept_name) + '）' : ''}</option>`).join('')}</select>`;
 
         const confirmed = await showConfirm({
           title: '指定责任人',

@@ -136,6 +136,10 @@ async function main() {
   assert.ok(html.includes('function loadAllSafely'), 'broad data loading should not block hash-route rendering');
   assert.ok(html.includes('links.length === 0'), 'role workbench sankey should handle empty-link data without drawing a broken chart');
   assert.ok(html.includes('暂无职责链路数据'), 'role workbench sankey should show a clear empty state when no links exist');
+  const assignDialogStart = html.indexOf('async function openAssignOwnerDialog');
+  const assignDialogSnippet = html.slice(assignDialogStart, assignDialogStart + 1000);
+  assert.ok(assignDialogSnippet.includes("/api/org/users/assignable"), 'conflict assignment should use the minimal assignable user directory');
+  assert.ok(!assignDialogSnippet.includes("/api/org/users'"), 'conflict assignment must not read the admin-only full user directory');
   assert.ok(
     html.includes("location.hash = '#/' + (params.tab || 'dashboard');"),
     'list navigation should use hash routes with #/ to avoid browser anchor auto-scroll'
