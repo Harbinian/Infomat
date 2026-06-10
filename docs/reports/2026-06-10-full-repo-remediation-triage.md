@@ -57,6 +57,7 @@
 | 第 4 层 | `docs/reports/` 缺少审计报告目录说明 | 已确认 | 第四批小片已补 README，不迁移报告 |
 | 第 4 层 | `docs/外部参考/`、`docs/training/`、`docs/Demo/`、`docs/screenshots/`、`docs/U8SoftHelp/` 缺少参考资产目录说明 | 已确认 | 第四批小片已补 README，不移动大文件 |
 | 第 4 层 | `pmo/archive/`、`pmo/deliverables/`、`pmo/procedure-management/`、`pmo/scripts/` 缺少子目录说明 | 已确认 | 第四批小片已补 README，不改 PMO 真源 |
+| 第 4 层 | 废弃 `claude-to-im` skill 仍残留在锁文件 | 已确认 | 已删除本地失效入口并移除 `skills-lock.json` 记录 |
 | 第 4 层 | 重复静态资产、日志、数据库备份、缓存入库 | 已确认 | 运行产物已处理；重复资产已补迁移提案 |
 | 第 5 层 | 前端单文件、测试 helper 重复、大脚本膨胀 | 已归类 | 延后 |
 | 第 5 层 | 审批第 5 步状态返回 `undefined` | 过时/未复现 | 当前 `mappingStatusAfterStep(5)` 返回 `final_reviewed`，`test:mappings` 覆盖终审发布 |
@@ -129,6 +130,7 @@
 - 第四批继续补计划目录说明：新增 `docs/plans/README.md`，说明计划和检查记录只解释阶段性安排，不能覆盖当前边界文件、真源和脚本入口。
 - 第四批继续补参考资产目录说明：新增 `docs/外部参考/README.md`、`docs/training/README.md`、`docs/Demo/README.md`、`docs/screenshots/README.md`、`docs/U8SoftHelp/README.md`，说明外部参考、培训、演示、截图和 U8 帮助文件都不替代当前真源；同步修正 `docs/Demo/CLAUDE.md` 中的实际主文件名。
 - 第四批继续补 PMO 子目录说明：新增 `pmo/archive/README.md`、`pmo/deliverables/README.md`、`pmo/procedure-management/README.md`、`pmo/scripts/README.md`，区分历史快照、交付物、流程地图驾驶舱和 PMO 局部 smoke 脚本；不改 PMO 真源、JSON 或驾驶舱 HTML。
+- 第四批继续清理废弃 AI 协作入口：根据用户确认，删除本地未跟踪的 `.claude/skills/claude-to-im` 失效入口，并从 `skills-lock.json` 移除 `claude-to-im` 记录；历史审计报告不回写。
 - 第四批继续做运行产物收口：补充 `.bak` 和点分隔数据库备份忽略规则，并将已跟踪的 `apps/mdm-platform/data/platform.db.after-admin-reset-20260609-152533.bak`、`scripts/__pycache__/generate_digital_project_gantt_8k.cpython-313.pyc` 从版本管理中移出；本地文件不删除。
 - 重复静态资产仍只记录为后续治理项：`echarts.min.js` 多副本和 `pmo/tasks.json` 双副本本轮不迁移，避免误伤 PMO、MDM 和 norms 的静态页面引用约定。
 - 第四批继续补资料目录边界：新增 `docs/README.md`，说明 `docs/` 真源入口、子目录职责、根目录历史散放文件口径和修改自检；不移动资料文件。
