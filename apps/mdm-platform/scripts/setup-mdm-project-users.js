@@ -8,11 +8,11 @@ if (process.env.ALLOW_PROJECT_USER_SETUP !== 'true') {
 
 const db = require('../server/db');
 const { hashPassword } = require('../server/auth');
+const { resolveInitialPassword } = require('../server/passwordPolicy');
 const { PROJECT_ROLE_DEFINITIONS } = require('../server/roleDefinitions');
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
 const ROSTER_PATH = path.join(REPO_ROOT, 'docs', 'organization', '花名册.md');
-const DEFAULT_PASSWORD = 'init1234';
 
 const DEPARTMENT_ALIASES = {
   '经营管理部': '经营发展部',
@@ -211,7 +211,7 @@ function ensureProjectRoles(assignedBy) {
   }
 }
 
-function upsertUser(participant, rosterRecord, departmentId, passwordHash) {
+function upsertUser(participant, rosterRecord, departmentId, passwordHash, mustChangePassword) {
   const role = inferLegacyRole(participant.projectRole);
   const existing = db.prepare('SELECT id FROM users WHERE employee_no=?').get(rosterRecord.employeeNo);
 
@@ -225,15 +225,16 @@ function upsertUser(participant, rosterRecord, departmentId, passwordHash) {
   }
 
   const id = db.prepare(`
-    INSERT INTO users (name, employee_no, department_id, post, role, password_hash)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT INTO users (name, employee_no, department_id, post, role, password_hash, must_change_password)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
   `).run(
     rosterRecord.name,
     rosterRecord.employeeNo,
     departmentId,
     rosterRecord.post || null,
     role,
-    passwordHash
+    passwordHash,
+    mustChangePassword
   ).lastInsertRowid;
 
   return { id, action: 'created', role };
@@ -292,7 +293,12 @@ function main() {
   ensureRoleCodes();
 
   const roster = parseRoster(fs.readFileSync(ROSTER_PATH, 'utf8'));
-  const passwordHash = hashPassword(DEFAULT_PASSWORD);
+  const passwordSetup = resolveInitialPassword(process.env.MDM_INITIAL_USER_PASSWORD);
+  if (passwordSetup.error) {
+    console.error(passwordSetup.error);
+    process.exit(1);
+  }
+  const passwordHash = hashPassword(passwordSetup.password);
   const admin = db.prepare("SELECT id FROM users WHERE role='admin' ORDER BY id LIMIT 1").get();
   const assignedBy = admin ? admin.id : null;
 
@@ -312,7 +318,7 @@ function main() {
 
       const normalizedDepartment = normalizeDepartment(participant.department);
       const departmentId = ensureDepartment(normalizedDepartment);
-      const { id, action, role } = upsertUser(participant, rosterRecord, departmentId, passwordHash);
+      const { id, action, role } = upsertUser(participant, rosterRecord, departmentId, passwordHash, passwordSetup.mustChangePassword);
       const rbacRoles = inferRbacRoles(participant.projectRole);
       assignRbacRoles(id, rbacRoles, assignedBy);
 
@@ -340,7 +346,9 @@ function main() {
 
   console.log(`MDM项目账号设置完成: 新增 ${created}, 更新 ${updated}, 合计 ${results.length}`);
   console.table(results);
-  console.log(`统一初始密码: ${DEFAULT_PASSWORD}`);
+  if (created > 0) {
+    console.log(`本次新增账号统一初始密码: ${passwordSetup.password}`);
+  }
 }
 
 main();

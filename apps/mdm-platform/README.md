@@ -55,10 +55,13 @@ npm run test:conflicts
 npm run test:terms
 npm run test:export
 npm run test:import
+npm run test:user-password-scripts
 npm run test:frontend
 npm run test:security
 npm run test:mainline
 ```
+
+`npm run test:security` 已包含批量用户脚本口令红线：项目账号脚本和 Excel 用户导入脚本不得硬编码固定初始密码，新建账号必须标记首次登录改密。
 
 ## MDM 一期升级命令
 
