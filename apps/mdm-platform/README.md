@@ -8,6 +8,19 @@
 
 这份手册按角色、页面、流程和当前限制说明现有能力，比下面的模块清单更适合开发者走读和演示。
 
+## 边界和入口
+
+`apps/mdm-platform/` 只负责 MDM 平台应用本身：Express 路由、SQLite 数据、单文件前端、应用内脚本和平台使用说明。
+
+不在本目录维护流程原始真源、PMO 驾驶舱或仓库级数据转换脚本：
+
+- 流程真源：`docs/norms/{部门}部门-能力-流程-系统映射关系.md`
+- 组织真源：`docs/organization/组织架构和部门职责.md`
+- PMO 展示：`pmo/procedure-management/dashboard.html`
+- 仓库级脚本：根目录 `scripts/`
+
+开发 MDM 代码前先读 [AGENTS.md](AGENTS.md)。执行、调整或新增应用内脚本前先读 [scripts/README.md](scripts/README.md)。
+
 ## 快速启动
 
 ```bash
