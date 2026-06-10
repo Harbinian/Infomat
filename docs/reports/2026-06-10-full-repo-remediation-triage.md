@@ -10,7 +10,7 @@
 |---|---|---|
 | 根目录流程治理主线合约 | `npm run test:process-governance-mainline` | 已通过 |
 | MDM 主线稳定性 | `cd apps/mdm-platform && npm run test:mainline` | 已通过 |
-| MDM 安全专项 | `cd apps/mdm-platform && npm run test:security` | 已覆盖基础主数据越权、用户目录权限、最小候选人接口、字段约束读写、session secret 和 RBAC 管理员判断红线 |
+| MDM 安全专项 | `cd apps/mdm-platform && npm run test:security` | 已覆盖基础主数据越权、用户目录权限、最小候选人接口、字段约束读写、session secret、写接口盘点和 RBAC 管理员判断红线 |
 
 口径修正：
 
@@ -24,6 +24,7 @@
 |---|---|---|---|
 | 第 1 层 | 安全测试固定列位断言脆弱 | 已确认 | 已纳入 |
 | 第 1 层 | 普通登录用户可写基础主数据 | 已确认 | 已纳入 |
+| 第 1 层 | `requireAuth` 写接口缺少系统盘点 | 已确认 | 已补只读审计脚本并接入安全专项 |
 | 第 2 层 | 旧 `users.role` 与 RBAC 管理员判断并存 | 已确认 | 第二批小片已处理管理员判断 |
 | 第 2 层 | 默认口令 `init1234` 制度化 | 已确认 | 第二批小片已处理平台用户管理和批量脚本 |
 | 第 2 层 | `SESSION_SECRET` 固定回退 | 已确认 | 第二批小片已处理 |
@@ -73,6 +74,7 @@
 - 新增本报告。
 - 修正 `apps/mdm-platform/scripts/test-security-routes.js` 的 Excel 表头定位和基础主数据写入权限红线。
 - 给基础主数据写接口增加最小 RBAC 权限校验。
+- 追加写接口盘点红线：新增 `apps/mdm-platform/scripts/audit-route-write-permissions.js` 和 `test-route-write-audit.js`，将写路由分类为权限中间件保护、集成 Key 保护、业务内检查、已知后续项、自助/登录类和未分类；当前未分类为 0，`POST /api/mappings` 草稿创建保留为后续项。
 - 追加第二批安全红线：生产模式缺少 `SESSION_SECRET` 不得启动、普通用户不能读取全员用户目录、字段约束需剥离 `exclude` 并标记 `readonly`。
 - 第二批对应最小实现：`/api/org/users` 增加管理员权限，`applyFieldConstraints` 在普通 GET 响应中加载有效字段约束并输出 `_readonly_fields`，`server/index.js` 不再使用隐式固定 session secret。
 - 追加 RBAC 管理员红线：旧角色不是 `admin`、但具备 RBAC `admin` 角色的用户应能执行管理员归档动作。
