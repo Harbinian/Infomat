@@ -1,4 +1,5 @@
 const express = require('express');
+const crypto = require('crypto');
 const router = express.Router();
 const db = require('../db');
 const { hashPassword, verifyPassword, requireAuth, requirePermission, getUserEffectivePermissions } = require('../auth');
@@ -91,6 +92,38 @@ function requestHasAnyPermission(req, permissionCodes) {
   if (!req.session || !req.session.userId) return false;
   const { permSet } = getUserEffectivePermissions(req.session.userId);
   return permSet.has('*:*') || permissionCodes.some(code => permSet.has(code));
+}
+
+const FIXED_DEFAULT_PASSWORD = 'init1234';
+
+function isFixedDefaultPassword(password) {
+  return String(password || '') === FIXED_DEFAULT_PASSWORD;
+}
+
+function generateInitialPassword() {
+  return `tmp-${crypto.randomBytes(9).toString('hex')}`;
+}
+
+function resolveCreatePassword(password) {
+  if (password) {
+    if (isFixedDefaultPassword(password)) {
+      return { error: '不能使用固定默认口令' };
+    }
+    return { password, mustChangePassword: 0 };
+  }
+  const initialPassword = generateInitialPassword();
+  return { password: initialPassword, initialPassword, mustChangePassword: 1 };
+}
+
+function resolveResetPassword(password) {
+  if (password) {
+    if (isFixedDefaultPassword(password)) {
+      return { error: '不能使用固定默认口令' };
+    }
+    return { password, mustChangePassword: 1 };
+  }
+  const initialPassword = generateInitialPassword();
+  return { password: initialPassword, initialPassword, mustChangePassword: 1 };
 }
 
 router.get('/departments', requireAuth, (req, res) => {
@@ -238,14 +271,18 @@ router.post('/users', requirePermission('admin:access'), (req, res) => {
     const { name, employee_no, department_id, post, role, password, role_ids } = req.body;
     if (!name || !employee_no) return res.status(400).json({ error: '姓名和工号为必填' });
     const compatibleRole = chooseCompatibleRole(role, role_ids, 'submitter');
-    const hash = hashPassword(password || 'init1234');
-    const stmt = db.prepare('INSERT INTO users (name, employee_no, department_id, post, role, password_hash) VALUES (?, ?, ?, ?, ?, ?)');
+    const passwordSetup = resolveCreatePassword(password);
+    if (passwordSetup.error) return res.status(400).json({ error: passwordSetup.error });
+    const hash = hashPassword(passwordSetup.password);
+    const stmt = db.prepare('INSERT INTO users (name, employee_no, department_id, post, role, password_hash, must_change_password) VALUES (?, ?, ?, ?, ?, ?, ?)');
     const result = db.transaction(() => {
-      const created = stmt.run(name, employee_no, department_id || null, post || null, compatibleRole, hash);
+      const created = stmt.run(name, employee_no, department_id || null, post || null, compatibleRole, hash, passwordSetup.mustChangePassword);
       syncUserRoles(created.lastInsertRowid, role_ids, compatibleRole, req.session.userId);
       return created;
     })();
-    res.json({ id: result.lastInsertRowid });
+    const body = { id: result.lastInsertRowid };
+    if (passwordSetup.initialPassword) body.initial_password = passwordSetup.initialPassword;
+    res.json(body);
   });
 });
 
@@ -268,10 +305,15 @@ router.put('/users/:id', requirePermission('admin:access'), (req, res) => {
 router.post('/users/:id/password', requirePermission('admin:access'), (req, res) => {
   return runDbAction(res, () => {
     const { password } = req.body;
-    if (!password) return res.status(400).json({ error: '缺少密码' });
-    const hash = hashPassword(password);
-    db.prepare('UPDATE users SET password_hash=? WHERE id=?').run(hash, req.params.id);
-    res.json({ success: true });
+    const existing = db.prepare('SELECT id FROM users WHERE id=?').get(req.params.id);
+    if (!existing) return res.status(404).json({ error: '用户不存在' });
+    const passwordSetup = resolveResetPassword(password);
+    if (passwordSetup.error) return res.status(400).json({ error: passwordSetup.error });
+    const hash = hashPassword(passwordSetup.password);
+    db.prepare('UPDATE users SET password_hash=?, must_change_password=? WHERE id=?').run(hash, passwordSetup.mustChangePassword, req.params.id);
+    const body = { success: true };
+    if (passwordSetup.initialPassword) body.initial_password = passwordSetup.initialPassword;
+    res.json(body);
   });
 });
 
@@ -364,9 +406,9 @@ router.get('/permissions', requireAuth, requirePermission('admin:access'), (req,
 // GET /api/me/password-status — check if using default password
 router.get('/me/password-status', requireAuth, (req, res) => {
   return runDbAction(res, () => {
-    const user = db.prepare('SELECT password_hash FROM users WHERE id=?').get(req.session.userId);
+    const user = db.prepare('SELECT password_hash, must_change_password FROM users WHERE id=?').get(req.session.userId);
     if (!user) return res.status(404).json({ error: '用户不存在' });
-    const isDefault = verifyPassword('init1234', user.password_hash);
+    const isDefault = Boolean(user.must_change_password) || verifyPassword(FIXED_DEFAULT_PASSWORD, user.password_hash);
     res.json({ is_default_password: isDefault });
   });
 });
@@ -382,8 +424,10 @@ router.post('/me/password', requireAuth, (req, res) => {
     if (!user) return res.status(404).json({ error: '用户不存在' });
     if (!verifyPassword(current_password, user.password_hash)) return res.status(403).json({ error: '当前密码不正确' });
 
+    if (isFixedDefaultPassword(new_password)) return res.status(400).json({ error: '不能使用固定默认口令' });
+
     const hash = hashPassword(new_password);
-    db.prepare('UPDATE users SET password_hash=? WHERE id=?').run(hash, req.session.userId);
+    db.prepare('UPDATE users SET password_hash=?, must_change_password=0 WHERE id=?').run(hash, req.session.userId);
     res.json({ success: true });
   });
 });

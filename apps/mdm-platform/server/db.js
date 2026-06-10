@@ -71,6 +71,7 @@ CREATE TABLE IF NOT EXISTS users (
   post TEXT,
   role TEXT NOT NULL DEFAULT 'submitter' CHECK(role IN ('submitter','owner','reviewer','admin')),
   password_hash TEXT NOT NULL,
+  must_change_password INTEGER NOT NULL DEFAULT 0,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -665,6 +666,12 @@ const userInfo = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AN
 if (userInfo && !userInfo.sql.includes('permissions')) {
   db.exec("ALTER TABLE users ADD COLUMN permissions TEXT DEFAULT '{}'");
   dbInitLog('Migration: added permissions to users');
+}
+
+const userColumns = db.prepare("PRAGMA table_info(users)").all().map(row => row.name);
+if (!userColumns.includes('must_change_password')) {
+  db.exec('ALTER TABLE users ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 0');
+  dbInitLog('Migration: added must_change_password to users');
 }
 
 dbInitLog('MDM v2: Domain-specific tables ready (12 tables)');
