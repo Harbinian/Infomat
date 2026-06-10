@@ -35,6 +35,7 @@
 | 第 2 层 | 字段台账编辑仍按旧基础角色判断 | 已确认 | 第二批小片已处理 `fieldEntries` owner/submitter 判断 |
 | 第 2 层 | 黄金源维护仍按旧基础角色判断 | 已确认 | 第二批小片已处理 `fieldIdentities` owner 判断 |
 | 第 2 层 | 字段台账导入仍按旧基础角色判断 | 已确认 | 第二批小片已处理 `import` submitter 判断 |
+| 第 2 层 | 流程映射草稿创建仍为登录即可 | 已确认 | 第二批小片已收紧为报送人或管理员 |
 | 第 3 层 | 工程技术部流程映射交付物缺失 | 已确认风险 | 第三批小片已补缺口审计 |
 | 第 3 层 | `crossDept` 从报告 Markdown 派生 | 已确认风险 | 第三批小片已处理校验不固化数字 |
 | 第 3 层 | `综合管理部` 等历史/幽灵部门口径 | 已确认口径残留 | 第三批小片已补缺口审计 |
@@ -94,6 +95,7 @@
 - 第二批继续统一角色口径：`fieldIdentities` 的 owner 判断改为 RBAC + 旧基础角色并集。
 - 追加导入多角色红线：旧基础角色不是报送人、但 RBAC 具备 submitter 且本人是映射提交人时，应能导入字段台账。
 - 第二批继续统一角色口径：`import` 字段台账导入的 submitter 判断改为 RBAC + 旧基础角色并集。
+- 追加流程映射草稿创建红线：评审人等非报送人账号不能创建映射草稿，报送人和管理员仍可创建；`POST /api/mappings` 已增加报送人/管理员检查，并从写接口审计的后续项移入业务内保护。
 - 复核 Deepseek 审批状态机结论：当前 `apps/mdm-platform/server/routes/mappings.js` 已包含第 5 步状态映射，`npm run test:mappings` 可跑完整终审发布路径，该单点标记为过时/未复现；不做代码改动。
 - 追加第三批校验红线：`check-dashboard-data.mjs` 不得把 `crossDept` 统计固化为 `168/6/1` 等历史数字。
 - 第三批先做只读校验收敛：`check-dashboard-data.mjs` 从 `跨部门完整性检查报告.md` 解析统计值，并与 `docs/company-sankey-data.json.crossDept`、PMO 内嵌 `#cross-dept-data` 比对；不改流程真源和生成快照。

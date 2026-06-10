@@ -151,7 +151,7 @@ function seedData() {
   db.prepare("INSERT INTO terms (term, definition, scope, created_by, status) VALUES ('客户', '客户定义', '集团', ?, 'approved')").run(admin);
   db.prepare("INSERT INTO terms (term, definition, scope, created_by, status) VALUES ('客户号', '客户编号', '系统', ?, 'approved')").run(admin);
 
-  return { capA, processA, mappingA, mappingB, fieldB, todoB, conflict, termConflict, submitterA, orgUnitId, orgUnitCode: 'SALE-ORG' };
+  return { deptA, deptB, capA, processA, processB, mappingA, mappingB, fieldB, todoB, conflict, termConflict, submitterA, orgUnitId, orgUnitCode: 'SALE-ORG' };
 }
 
 async function waitForServer() {
@@ -565,6 +565,38 @@ async function assertMasterDataWriteGuards(seed, adminCookie, submitterCookie) {
   assert.strictEqual(adminAttributeValue.res.status, 200);
 }
 
+async function assertMappingDraftCreateGuards(seed, adminCookie, reviewerCookie, submitterCookie) {
+  const reviewerCreate = await request('/api/mappings', {
+    method: 'POST',
+    body: JSON.stringify({
+      process_id: seed.processA,
+      description: '评审人越权创建草稿',
+      owner_dept_id: seed.deptA
+    })
+  }, reviewerCookie);
+  assert.strictEqual(reviewerCreate.res.status, 403, '非报送人或管理员不能创建映射草稿');
+
+  const submitterCreate = await request('/api/mappings', {
+    method: 'POST',
+    body: JSON.stringify({
+      process_id: seed.processA,
+      description: '报送人创建草稿',
+      owner_dept_id: seed.deptA
+    })
+  }, submitterCookie);
+  assert.strictEqual(submitterCreate.res.status, 200, '报送人应能创建映射草稿');
+
+  const adminCreate = await request('/api/mappings', {
+    method: 'POST',
+    body: JSON.stringify({
+      process_id: seed.processB,
+      description: '管理员创建草稿',
+      owner_dept_id: seed.deptB
+    })
+  }, adminCookie);
+  assert.strictEqual(adminCreate.res.status, 200, '管理员应能创建映射草稿');
+}
+
 async function main() {
   let server;
 
@@ -597,6 +629,7 @@ async function main() {
     assert.strictEqual(createSystem.res.status, 403);
 
     await assertMasterDataWriteGuards(seed, adminCookie, submitterCookie);
+    await assertMappingDraftCreateGuards(seed, adminCookie, reviewerCookie, submitterCookie);
     await assertUserDirectoryGuards(adminCookie, reviewerCookie, submitterCookie);
     await assertDefaultPasswordGuards(adminCookie);
     await assertFieldConstraintsAreApplied(submitterCookie);
