@@ -338,6 +338,472 @@ function summarizeQualityFindings(findings) {
   return summary;
 }
 
+function defaultPriorityForSeverity(severity) {
+  return severity === 'BLOCK' ? 'high' : 'medium';
+}
+
+function departmentIdForName(db, deptName) {
+  if (!deptName) return null;
+  const dept = db.prepare('SELECT id FROM departments WHERE name=?').get(deptName);
+  return dept ? dept.id : null;
+}
+
+function addQualityCaseEvent(db, caseId, eventType, actorUserId, note, payload = null) {
+  db.prepare(`
+    INSERT INTO process_governance_quality_case_events (case_id, event_type, actor_user_id, note, payload_json)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(caseId, eventType, actorUserId || null, note || null, payload ? JSON.stringify(payload) : null);
+}
+
+function stableKey(prefix, parts) {
+  return `${prefix}:${crypto.createHash('sha256').update(parts.map(part => cleanCell(part)).join('|')).digest('hex')}`;
+}
+
+function syncQualityCases(db, snapshotId, findings, importedBy) {
+  const governanceFindings = findings.filter(finding => finding.severity === 'BLOCK' || finding.severity === 'WARN');
+  const currentKeys = new Set(governanceFindings.map(finding => finding.finding_key));
+
+  const insertCase = db.prepare(`
+    INSERT INTO process_governance_quality_cases (
+      finding_key, first_snapshot_id, latest_snapshot_id, latest_finding_id, severity, area, source_file,
+      source_line, message, suggestion, dept_name, status, priority, owner_dept_id
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', ?, ?)
+  `);
+  const updateCaseSeen = db.prepare(`
+    UPDATE process_governance_quality_cases
+    SET latest_snapshot_id=?,
+        latest_finding_id=?,
+        severity=?,
+        area=?,
+        source_file=?,
+        source_line=?,
+        message=?,
+        suggestion=?,
+        dept_name=?,
+        owner_dept_id=COALESCE(owner_dept_id, ?),
+        priority=CASE WHEN priority IS NULL OR priority='' THEN ? ELSE priority END,
+        updated_at=CURRENT_TIMESTAMP
+    WHERE id=?
+  `);
+  const reopenCase = db.prepare(`
+    UPDATE process_governance_quality_cases
+    SET status='reopened',
+        reopened_count=reopened_count + 1,
+        closed_by=NULL,
+        closed_at=NULL,
+        closure_note=NULL,
+        updated_at=CURRENT_TIMESTAMP
+    WHERE id=?
+  `);
+  const linkFinding = db.prepare('UPDATE process_governance_quality_findings SET case_id=? WHERE id=?');
+  const findRawFinding = db.prepare(`
+    SELECT id
+    FROM process_governance_quality_findings
+    WHERE snapshot_id=? AND finding_key=?
+  `);
+  const findCase = db.prepare('SELECT * FROM process_governance_quality_cases WHERE finding_key=?');
+
+  for (const finding of governanceFindings) {
+    const rawFinding = findRawFinding.get(snapshotId, finding.finding_key);
+    const latestFindingId = rawFinding ? rawFinding.id : null;
+    const ownerDeptId = departmentIdForName(db, finding.dept_name);
+    const priority = defaultPriorityForSeverity(finding.severity);
+    let qualityCase = findCase.get(finding.finding_key);
+
+    if (!qualityCase) {
+      const result = insertCase.run(
+        finding.finding_key,
+        snapshotId,
+        snapshotId,
+        latestFindingId,
+        finding.severity,
+        finding.area,
+        finding.source_file,
+        finding.source_line,
+        finding.message,
+        finding.suggestion,
+        finding.dept_name,
+        priority,
+        ownerDeptId
+      );
+      qualityCase = { id: result.lastInsertRowid, status: 'open' };
+      addQualityCaseEvent(db, qualityCase.id, 'import_created', importedBy, '质检导入创建治理问题单', {
+        snapshot_id: snapshotId,
+        finding_id: latestFindingId,
+        severity: finding.severity
+      });
+    } else {
+      updateCaseSeen.run(
+        snapshotId,
+        latestFindingId,
+        finding.severity,
+        finding.area,
+        finding.source_file,
+        finding.source_line,
+        finding.message,
+        finding.suggestion,
+        finding.dept_name,
+        ownerDeptId,
+        priority,
+        qualityCase.id
+      );
+      addQualityCaseEvent(db, qualityCase.id, 'import_seen', importedBy, '质检导入再次发现该问题', {
+        snapshot_id: snapshotId,
+        finding_id: latestFindingId,
+        previous_status: qualityCase.status
+      });
+      if (qualityCase.status === 'closed' || qualityCase.status === 'source_resolved') {
+        reopenCase.run(qualityCase.id);
+        addQualityCaseEvent(db, qualityCase.id, 'reopened', importedBy, '问题在最新质检中再次出现，自动重开', {
+          snapshot_id: snapshotId,
+          finding_id: latestFindingId,
+          previous_status: qualityCase.status
+        });
+      }
+    }
+
+    if (latestFindingId) linkFinding.run(qualityCase.id, latestFindingId);
+  }
+
+  const openCases = db.prepare(`
+    SELECT id, finding_key, status
+    FROM process_governance_quality_cases
+    WHERE status NOT IN ('closed','source_resolved')
+  `).all();
+  const markSourceResolved = db.prepare(`
+    UPDATE process_governance_quality_cases
+    SET status='source_resolved',
+        latest_snapshot_id=?,
+        latest_finding_id=NULL,
+        updated_at=CURRENT_TIMESTAMP
+    WHERE id=?
+  `);
+  for (const qualityCase of openCases) {
+    if (currentKeys.has(qualityCase.finding_key)) continue;
+    markSourceResolved.run(snapshotId, qualityCase.id);
+    addQualityCaseEvent(db, qualityCase.id, 'source_resolved', importedBy, '最新质检未再发现该问题，等待治理确认关闭', {
+      snapshot_id: snapshotId,
+      previous_status: qualityCase.status
+    });
+  }
+}
+
+function mappingRecordKey(recordType, row) {
+  if (recordType === 'l3') return stableKey('l3', [row.dept_name, row.l3_name]);
+  return stableKey('a1', [row.dept_name, row.l3_name, row.a1_code]);
+}
+
+function mappingTodoKey(todoType, row) {
+  if (todoType === 'cross_dept') {
+    return stableKey('maptodo', [todoType, row.source_dept, row.target_dept, row.a1_code]);
+  }
+  return stableKey('maptodo', [todoType, row.dept_name, row.l3_name, row.a1_code]);
+}
+
+function addMappingTodoEvent(db, todoId, eventType, actorUserId, note, payload = null) {
+  db.prepare(`
+    INSERT INTO process_mapping_todo_events (todo_id, event_type, actor_user_id, note, payload_json)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(todoId, eventType, actorUserId || null, note || null, payload ? JSON.stringify(payload) : null);
+}
+
+function sourceSystemsJson(row) {
+  return JSON.stringify(row.suggested_systems || []);
+}
+
+function syncMappingRecord(db, snapshotId, record, importedBy, currentKeys) {
+  const key = mappingRecordKey(record.record_type, record);
+  currentKeys.add(key);
+  const existing = db.prepare('SELECT * FROM process_mapping_records WHERE mapping_key=?').get(key);
+  if (!existing) {
+    const result = db.prepare(`
+      INSERT INTO process_mapping_records (
+        mapping_key, record_type, first_snapshot_id, latest_snapshot_id, parent_record_id, latest_a1_item_id,
+        dept_name, domain_name, l2_name, l3_name, a1_code, behavior, execution_role, approval_type,
+        input_source_dept, output_target_dept, suggested_systems, verification_note, source_file, status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')
+    `).run(
+      key,
+      record.record_type,
+      snapshotId,
+      snapshotId,
+      record.parent_record_id || null,
+      record.latest_a1_item_id || null,
+      record.dept_name || null,
+      record.domain_name || null,
+      record.l2_name || null,
+      record.l3_name,
+      record.a1_code || null,
+      record.behavior || null,
+      record.execution_role || null,
+      record.approval_type || null,
+      record.input_source_dept || null,
+      record.output_target_dept || null,
+      record.record_type === 'a1' ? sourceSystemsJson(record) : null,
+      record.verification_note || null,
+      record.source_file || null
+    );
+    return result.lastInsertRowid;
+  }
+
+  db.prepare(`
+    UPDATE process_mapping_records
+    SET latest_snapshot_id=?,
+        parent_record_id=?,
+        latest_a1_item_id=?,
+        dept_name=?,
+        domain_name=?,
+        l2_name=?,
+        l3_name=?,
+        a1_code=?,
+        behavior=?,
+        execution_role=?,
+        approval_type=?,
+        input_source_dept=?,
+        output_target_dept=?,
+        suggested_systems=?,
+        verification_note=?,
+        source_file=?,
+        status=CASE WHEN status='source_missing' THEN 'active' ELSE status END,
+        updated_at=CURRENT_TIMESTAMP
+    WHERE id=?
+  `).run(
+    snapshotId,
+    record.parent_record_id || null,
+    record.latest_a1_item_id || null,
+    record.dept_name || null,
+    record.domain_name || null,
+    record.l2_name || null,
+    record.l3_name,
+    record.a1_code || null,
+    record.behavior || null,
+    record.execution_role || null,
+    record.approval_type || null,
+    record.input_source_dept || null,
+    record.output_target_dept || null,
+    record.record_type === 'a1' ? sourceSystemsJson(record) : null,
+    record.verification_note || null,
+    record.source_file || null,
+    existing.id
+  );
+  return existing.id;
+}
+
+function syncMappingTodo(db, snapshotId, todo, importedBy, currentKeys) {
+  const key = mappingTodoKey(todo.todo_type, todo);
+  currentKeys.add(key);
+  const existing = db.prepare('SELECT * FROM process_mapping_todos WHERE todo_key=?').get(key);
+  const priority = todo.priority || 'medium';
+  if (!existing) {
+    const result = db.prepare(`
+      INSERT INTO process_mapping_todos (
+        todo_key, mapping_record_id, todo_type, first_snapshot_id, latest_snapshot_id, dept_name,
+        target_dept_name, l3_name, a1_code, source_file, source_line, message, suggestion, status,
+        priority, owner_dept_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', ?, ?)
+    `).run(
+      key,
+      todo.mapping_record_id || null,
+      todo.todo_type,
+      snapshotId,
+      snapshotId,
+      todo.dept_name || todo.source_dept || null,
+      todo.target_dept_name || todo.target_dept || null,
+      todo.l3_name || null,
+      todo.a1_code || null,
+      todo.source_file || null,
+      todo.source_line || null,
+      todo.message,
+      todo.suggestion || null,
+      priority,
+      departmentIdForName(db, todo.dept_name || todo.source_dept)
+    );
+    addMappingTodoEvent(db, result.lastInsertRowid, 'import_created', importedBy, '导入创建流程映射待办', {
+      snapshot_id: snapshotId,
+      todo_type: todo.todo_type
+    });
+    return;
+  }
+
+  db.prepare(`
+    UPDATE process_mapping_todos
+    SET mapping_record_id=?,
+        latest_snapshot_id=?,
+        dept_name=?,
+        target_dept_name=?,
+        l3_name=?,
+        a1_code=?,
+        source_file=?,
+        source_line=?,
+        message=?,
+        suggestion=?,
+        priority=CASE WHEN priority IS NULL OR priority='' THEN ? ELSE priority END,
+        owner_dept_id=COALESCE(owner_dept_id, ?),
+        updated_at=CURRENT_TIMESTAMP
+    WHERE id=?
+  `).run(
+    todo.mapping_record_id || null,
+    snapshotId,
+    todo.dept_name || todo.source_dept || null,
+    todo.target_dept_name || todo.target_dept || null,
+    todo.l3_name || null,
+    todo.a1_code || null,
+    todo.source_file || null,
+    todo.source_line || null,
+    todo.message,
+    todo.suggestion || null,
+    priority,
+    departmentIdForName(db, todo.dept_name || todo.source_dept),
+    existing.id
+  );
+  addMappingTodoEvent(db, existing.id, 'import_seen', importedBy, '导入再次发现该流程映射待办', {
+    snapshot_id: snapshotId,
+    previous_status: existing.status
+  });
+
+  if (existing.status === 'closed' || existing.status === 'source_resolved') {
+    db.prepare(`
+      UPDATE process_mapping_todos
+      SET status='reopened',
+          reopened_count=reopened_count + 1,
+          closed_by=NULL,
+          closed_at=NULL,
+          closure_note=NULL,
+          updated_at=CURRENT_TIMESTAMP
+      WHERE id=?
+    `).run(existing.id);
+    addMappingTodoEvent(db, existing.id, 'reopened', importedBy, '来源提醒在最新导入中再次出现，自动重开', {
+      snapshot_id: snapshotId,
+      previous_status: existing.status
+    });
+  }
+}
+
+function syncMissingMappingState(db, snapshotId, recordKeys, todoKeys, importedBy) {
+  const staleRecords = db.prepare(`
+    SELECT id, mapping_key, status
+    FROM process_mapping_records
+    WHERE status='active'
+  `).all();
+  for (const record of staleRecords) {
+    if (recordKeys.has(record.mapping_key)) continue;
+    db.prepare(`
+      UPDATE process_mapping_records
+      SET status='source_missing', latest_snapshot_id=?, updated_at=CURRENT_TIMESTAMP
+      WHERE id=?
+    `).run(snapshotId, record.id);
+  }
+
+  const staleTodos = db.prepare(`
+    SELECT id, todo_key, status
+    FROM process_mapping_todos
+    WHERE status NOT IN ('closed','source_resolved','accepted')
+  `).all();
+  for (const todo of staleTodos) {
+    if (todoKeys.has(todo.todo_key)) continue;
+    db.prepare(`
+      UPDATE process_mapping_todos
+      SET status='source_resolved', latest_snapshot_id=?, updated_at=CURRENT_TIMESTAMP
+      WHERE id=?
+    `).run(snapshotId, todo.id);
+    addMappingTodoEvent(db, todo.id, 'source_resolved', importedBy, '最新导入未再发现该流程映射待办，等待确认关闭', {
+      snapshot_id: snapshotId,
+      previous_status: todo.status
+    });
+  }
+}
+
+function syncMappingWorkspace(db, snapshotId, parsedA1Rows, crossDept, importedBy) {
+  const currentRecordKeys = new Set();
+  const currentTodoKeys = new Set();
+  const l3InfoRows = db.prepare(`
+    SELECT l3.node_key, l3.name AS l3_name, l3.domain_name, l3.dept_name, l2.name AS l2_name
+    FROM process_governance_nodes l3
+    LEFT JOIN process_governance_nodes l2
+      ON l2.snapshot_id=l3.snapshot_id AND l2.node_key=l3.parent_key
+    WHERE l3.snapshot_id=? AND l3.node_type='l3'
+  `).all(snapshotId);
+  const l3InfoByName = new Map(l3InfoRows.map(row => [`${row.dept_name || ''}|${row.l3_name}`, row]));
+  const l3RecordIds = new Map();
+
+  for (const row of l3InfoRows) {
+    const recordId = syncMappingRecord(db, snapshotId, {
+      record_type: 'l3',
+      dept_name: row.dept_name,
+      domain_name: row.domain_name,
+      l2_name: row.l2_name,
+      l3_name: row.l3_name
+    }, importedBy, currentRecordKeys);
+    l3RecordIds.set(`${row.dept_name || ''}|${row.l3_name}`, recordId);
+  }
+
+  const latestA1Item = db.prepare(`
+    SELECT id
+    FROM process_a1_items
+    WHERE snapshot_id=? AND a1_code=?
+    ORDER BY id DESC
+    LIMIT 1
+  `);
+
+  for (const row of parsedA1Rows) {
+    const l3Key = `${row.dept_name || ''}|${row.l3_name}`;
+    let l3RecordId = l3RecordIds.get(l3Key);
+    if (!l3RecordId) {
+      const l3Info = l3InfoByName.get(l3Key) || {};
+      l3RecordId = syncMappingRecord(db, snapshotId, {
+        record_type: 'l3',
+        dept_name: row.dept_name,
+        domain_name: l3Info.domain_name || null,
+        l2_name: l3Info.l2_name || null,
+        l3_name: row.l3_name
+      }, importedBy, currentRecordKeys);
+      l3RecordIds.set(l3Key, l3RecordId);
+    }
+
+    const a1Item = latestA1Item.get(snapshotId, row.a1_code);
+    const a1RecordId = syncMappingRecord(db, snapshotId, {
+      ...row,
+      record_type: 'a1',
+      parent_record_id: l3RecordId,
+      latest_a1_item_id: a1Item && a1Item.id || null
+    }, importedBy, currentRecordKeys);
+
+    if (row.verification_note) {
+      syncMappingTodo(db, snapshotId, {
+        todo_type: 'verification',
+        mapping_record_id: a1RecordId,
+        dept_name: row.dept_name,
+        l3_name: row.l3_name,
+        a1_code: row.a1_code,
+        source_file: row.source_file,
+        message: `核验提醒：${row.verification_note}`,
+        suggestion: '回源确认 A1 核验提醒，整改后重新导入 MDM。'
+      }, importedBy, currentTodoKeys);
+    }
+  }
+
+  const crossDeptSource = crossDept || {};
+  for (const risk of asArray(crossDeptSource.risks)) {
+    const confirmStatus = normalizeConfirmStatus(risk.status);
+    if (confirmStatus === 'confirmed') continue;
+    const sourceDept = risk.source || risk.source_dept || null;
+    const targetDept = risk.target || risk.target_dept || null;
+    const a1Code = risk.a1 || risk.a1_code || null;
+    syncMappingTodo(db, snapshotId, {
+      todo_type: 'cross_dept',
+      source_dept: sourceDept,
+      target_dept: targetDept,
+      a1_code: a1Code,
+      source_file: crossDeptSource.source || null,
+      message: risk.desc || risk.description || `${sourceDept || '来源部门'} 到 ${targetDept || '目标部门'} 的跨部门衔接待确认`,
+      suggestion: '回源确认跨部门输入输出是否已有接收流程，整改后重新导入 MDM。',
+      priority: normalizeRiskLevel(risk.risk) === 'high' ? 'high' : 'medium'
+    }, importedBy, currentTodoKeys);
+  }
+
+  syncMissingMappingState(db, snapshotId, currentRecordKeys, currentTodoKeys, importedBy);
+}
+
 function importProcessGovernanceSnapshot({ db, sourceJsonPath, a1MarkdownPaths = [], qualityFindings = [], importedBy = null, note = null }) {
   const sourceText = fs.readFileSync(sourceJsonPath, 'utf8');
   const sourceHash = crypto.createHash('sha256').update(sourceText).digest('hex');
@@ -470,6 +936,9 @@ function importProcessGovernanceSnapshot({ db, sourceJsonPath, a1MarkdownPaths =
         finding.finding_key
       );
     }
+
+    syncQualityCases(db, snapshotId, normalizedQualityFindings, importedBy);
+    syncMappingWorkspace(db, snapshotId, parsedA1Rows, crossDept, importedBy);
 
     return snapshotId;
   })();

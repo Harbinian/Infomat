@@ -24,6 +24,14 @@ const qualityFindings = [
     line: 42,
     message: 'A1 行需要补充核验提醒',
     suggestion: '回到经营发展部映射文档补充核验提醒。'
+  },
+  {
+    severity: 'INFO',
+    area: 'DELIVERABLE',
+    file: 'docs/norms/_quality-report.md',
+    line: 8,
+    message: '仅提示项不进入闭环问题单',
+    suggestion: '用于页面参考。'
   }
 ];
 
@@ -43,11 +51,25 @@ try {
     ORDER BY severity, area
   `).all(snapshotId);
 
-  assert.strictEqual(rows.length, 2, 'duplicate quality findings should be ignored within one snapshot');
-  assert.deepStrictEqual(rows.map(row => row.severity).sort(), ['BLOCK', 'WARN']);
+  assert.strictEqual(rows.length, 3, 'duplicate quality findings should be ignored within one snapshot');
+  assert.deepStrictEqual(rows.map(row => row.severity).sort(), ['BLOCK', 'INFO', 'WARN']);
   assert.strictEqual(rows.find(row => row.area === 'BBM').dept_name, '经营发展部');
   assert.strictEqual(rows.find(row => row.area === 'ORG').dept_name, null);
   assert.ok(rows.every(row => row.finding_key && row.finding_key.length >= 16), 'finding keys should be stable hashes');
+
+  const firstCases = db.prepare(`
+    SELECT id, finding_key, latest_snapshot_id, latest_finding_id, severity, area, source_file, source_line,
+           message, suggestion, dept_name, status, priority, reopened_count
+    FROM process_governance_quality_cases
+    ORDER BY severity
+  `).all();
+  assert.strictEqual(firstCases.length, 2, 'BLOCK/WARN should create stable governance cases; INFO should stay reference-only');
+  assert.deepStrictEqual(firstCases.map(row => row.severity).sort(), ['BLOCK', 'WARN']);
+  assert.ok(firstCases.every(row => row.latest_snapshot_id === snapshotId), 'cases should bind to the active snapshot that imported them');
+  assert.ok(firstCases.every(row => row.latest_finding_id), 'cases should keep the latest raw finding id');
+  assert.ok(firstCases.every(row => row.status === 'open'), 'new cases should start open');
+  assert.strictEqual(firstCases.find(row => row.severity === 'BLOCK').priority, 'high');
+  assert.strictEqual(firstCases.find(row => row.severity === 'WARN').priority, 'medium');
 
   const secondSnapshotId = importProcessGovernanceSnapshot({
     db,
@@ -60,7 +82,7 @@ try {
   assert.notStrictEqual(secondSnapshotId, snapshotId);
   assert.strictEqual(
     db.prepare('SELECT COUNT(*) AS count FROM process_governance_quality_findings WHERE snapshot_id=?').get(snapshotId).count,
-    2,
+    3,
     'archived snapshots should keep their own imported findings'
   );
   assert.strictEqual(
@@ -68,6 +90,51 @@ try {
     1,
     'each active snapshot should receive its own quality findings'
   );
+
+  const casesAfterSecondImport = db.prepare(`
+    SELECT severity, latest_snapshot_id, status, reopened_count
+    FROM process_governance_quality_cases
+    ORDER BY severity
+  `).all();
+  assert.strictEqual(casesAfterSecondImport.length, 2, 're-import should update existing cases instead of creating duplicates');
+  assert.strictEqual(casesAfterSecondImport.find(row => row.severity === 'WARN').latest_snapshot_id, secondSnapshotId);
+  assert.strictEqual(casesAfterSecondImport.find(row => row.severity === 'WARN').status, 'open');
+  assert.strictEqual(casesAfterSecondImport.find(row => row.severity === 'BLOCK').status, 'source_resolved');
+
+  const warnCase = db.prepare("SELECT id FROM process_governance_quality_cases WHERE severity='WARN'").get();
+  db.prepare(`
+    UPDATE process_governance_quality_cases
+    SET status='closed', closed_at=CURRENT_TIMESTAMP, closure_note='测试关闭'
+    WHERE id=?
+  `).run(warnCase.id);
+
+  const thirdSnapshotId = importProcessGovernanceSnapshot({
+    db,
+    sourceJsonPath,
+    a1MarkdownPaths: [a1MarkdownPath],
+    qualityFindings: [qualityFindings[1]],
+    note: 'third quality import test'
+  });
+  const reopenedWarnCase = db.prepare(`
+    SELECT latest_snapshot_id, status, reopened_count, closed_at, closure_note
+    FROM process_governance_quality_cases
+    WHERE id=?
+  `).get(warnCase.id);
+  assert.strictEqual(reopenedWarnCase.latest_snapshot_id, thirdSnapshotId);
+  assert.strictEqual(reopenedWarnCase.status, 'reopened', 'closed cases should reopen when the same finding appears again');
+  assert.strictEqual(reopenedWarnCase.reopened_count, 1);
+  assert.strictEqual(reopenedWarnCase.closed_at, null);
+  assert.strictEqual(reopenedWarnCase.closure_note, null);
+
+  const eventTypes = db.prepare(`
+    SELECT event_type
+    FROM process_governance_quality_case_events
+    WHERE case_id=?
+    ORDER BY id
+  `).all(warnCase.id).map(row => row.event_type);
+  assert.ok(eventTypes.includes('import_created'), 'case history should include initial import');
+  assert.ok(eventTypes.includes('import_seen'), 'case history should include repeated import');
+  assert.ok(eventTypes.includes('reopened'), 'case history should include automatic reopen');
 
   console.log('Process governance quality import test passed');
 } finally {

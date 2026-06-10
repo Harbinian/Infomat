@@ -10,6 +10,7 @@ const TODO_TYPE_LABELS = {
   terminology: '术语补充',
   conflict_resolution: '冲突协调',
   process_quality: '流程治理质量问题',
+  process_mapping_todo: '流程映射待办',
   general: '一般待办'
 };
 
@@ -18,7 +19,8 @@ const TODO_TARGETS = {
   gold_source: '#/todos',
   terminology: '#/terms',
   conflict_resolution: '#/conflicts',
-  process_quality: '#/processGovernance?view=quality',
+  process_quality: '#/processGovernance?view=qualityCases',
+  process_mapping_todo: '#/processGovernance?view=mappingTodos',
   general: '#/todos'
 };
 
@@ -196,44 +198,99 @@ function loadTodos(req, canViewAll) {
 }
 
 function loadProcessQualityFindings(req, canViewAll) {
-  const snapshot = activeSnapshot();
-  if (!snapshot) return [];
-
   const department = req.session.departmentId
     ? db.prepare('SELECT name FROM departments WHERE id=?').get(req.session.departmentId)
     : null;
 
-  const params = [snapshot.id];
+  const params = [];
   let sql = `
-    SELECT id, severity, area, source_file, source_line, message, suggestion, dept_name
-    FROM process_governance_quality_findings
-    WHERE snapshot_id=? AND severity IN ('BLOCK','WARN')
+    SELECT c.id, c.severity, c.area, c.source_file, c.source_line, c.message, c.suggestion,
+           c.dept_name, c.status, c.priority, c.due_date, c.owner_dept_id, d.name AS owner_dept_name
+    FROM process_governance_quality_cases c
+    LEFT JOIN departments d ON d.id = c.owner_dept_id
+    WHERE c.severity IN ('BLOCK','WARN') AND c.status NOT IN ('closed','source_resolved')
   `;
 
   if (!canViewAll) {
-    sql += ' AND (dept_name=? OR dept_name IS NULL)';
-    params.push(department && department.name || '__none__');
+    sql += ' AND (c.dept_name=? OR c.owner_dept_id=? OR c.dept_name IS NULL)';
+    params.push(department && department.name || '__none__', req.session.departmentId || -1);
   }
 
   sql += `
-    ORDER BY CASE severity WHEN 'BLOCK' THEN 0 ELSE 1 END,
-             dept_name IS NULL, dept_name, area, source_file, COALESCE(source_line, 0), id
+    ORDER BY CASE c.status WHEN 'reopened' THEN 0 WHEN 'open' THEN 1 WHEN 'assigned' THEN 2 WHEN 'rectifying' THEN 3 ELSE 4 END,
+             CASE c.severity WHEN 'BLOCK' THEN 0 ELSE 1 END,
+             c.due_date IS NULL, c.due_date,
+             c.dept_name IS NULL, c.dept_name, c.area, c.id
     LIMIT 20
   `;
 
   return db.prepare(sql).all(...params).map(row => ({
-    id: `process-quality:${row.id}`,
+    id: `process-quality-case:${row.id}`,
     type: 'process_quality',
     title: `${row.severity}：${row.message}`,
     roleHint: 'data_quality',
-    urgency: row.severity === 'BLOCK' ? 'high' : 'medium',
-    target: `#/processGovernance?view=quality&finding=${row.id}`,
-    actionLabel: '查看质量问题',
-    sample: row.suggestion || '先回到来源文件确认问题，再重新运行流程治理解析和导入。',
+    urgency: row.priority === 'high' || row.severity === 'BLOCK' ? 'high' : 'medium',
+    dueDate: row.due_date || null,
+    target: `#/processGovernance?view=qualityCases&case=${row.id}`,
+    actionLabel: '查看治理问题单',
+    sample: row.suggestion || '先回到来源文件确认问题，完成整改后重新运行流程治理解析和导入。',
     source: row.source_file,
     targetDept: row.dept_name || null,
     area: row.area,
-    sourceLine: row.source_line
+    sourceLine: row.source_line,
+    status: row.status,
+    ownerDept: row.owner_dept_name || null
+  }));
+}
+
+function roleHintForMappingTodo(row) {
+  if (row.todo_type === 'verification' || row.todo_type === 'evidence' || row.todo_type === 'adjustment') return 'business_contact';
+  if (row.todo_type === 'cross_dept' || row.todo_type === 'dept_confirm') return 'project_lead';
+  return 'business_contact';
+}
+
+function loadProcessMappingTodos(req, canViewAll) {
+  const department = req.session.departmentId
+    ? db.prepare('SELECT name FROM departments WHERE id=?').get(req.session.departmentId)
+    : null;
+
+  const params = [];
+  let sql = `
+    SELECT t.*, d.name AS owner_dept_name
+    FROM process_mapping_todos t
+    LEFT JOIN departments d ON d.id = t.owner_dept_id
+    WHERE t.status NOT IN ('closed','source_resolved','accepted')
+  `;
+
+  if (!canViewAll) {
+    sql += ' AND (t.dept_name=? OR t.target_dept_name=? OR t.owner_dept_id=? OR t.dept_name IS NULL)';
+    params.push(department && department.name || '__none__', department && department.name || '__none__', req.session.departmentId || -1);
+  }
+
+  sql += `
+    ORDER BY CASE t.status WHEN 'reopened' THEN 0 WHEN 'open' THEN 1 WHEN 'assigned' THEN 2 WHEN 'rectifying' THEN 3 ELSE 4 END,
+             CASE t.priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END,
+             t.due_date IS NULL, t.due_date, t.dept_name, t.id
+    LIMIT 20
+  `;
+
+  return db.prepare(sql).all(...params).map(row => ({
+    id: `process-mapping-todo:${row.id}`,
+    type: 'process_mapping_todo',
+    title: `${TODO_TYPE_LABELS.process_mapping_todo}：${row.message}`,
+    roleHint: roleHintForMappingTodo(row),
+    urgency: row.priority === 'high' ? 'high' : 'medium',
+    dueDate: row.due_date || null,
+    target: `#/processGovernance?view=mappingTodos&todo=${row.id}`,
+    actionLabel: '查看映射待办',
+    sample: row.suggestion || '先核对来源映射关系，回源整改后重新导入。',
+    a1Code: row.a1_code || null,
+    source: row.source_file || '流程映射工作库',
+    targetDept: row.target_dept_name || row.dept_name || null,
+    area: row.todo_type,
+    sourceLine: row.source_line,
+    status: row.status,
+    ownerDept: row.owner_dept_name || null
   }));
 }
 
@@ -243,6 +300,7 @@ function roleHintForTodo(type) {
   if (type === 'conflict_resolution') return 'data_quality';
   if (type === 'terminology') return 'business_contact';
   if (type === 'process_quality') return 'data_quality';
+  if (type === 'process_mapping_todo') return 'business_contact';
   return 'project_lead';
 }
 
@@ -251,7 +309,8 @@ function sampleForTodo(type) {
   if (type === 'gold_source') return '先查看字段台账和消费系统，再确认维护部门和权威系统候选。';
   if (type === 'conflict_resolution') return '先查看双方字段说明和消费场景，再提交协调意见。';
   if (type === 'terminology') return '先确认术语适用范围，再补充定义和禁用说法。';
-  if (type === 'process_quality') return '先打开流程治理质量视图，定位来源文件和整改建议。';
+  if (type === 'process_quality') return '先打开流程治理闭环视图，定位来源文件、整改建议和当前责任人。';
+  if (type === 'process_mapping_todo') return '先打开流程映射待办，确认 L3/A1 和来源文件，再决定是否回源整改。';
   return '先确认事项来源、责任部门和截止时间，再记录处理结论。';
 }
 
@@ -416,15 +475,16 @@ router.get('/', requireAuth, (req, res) => {
     const { roles, roleGroups } = buildRoleGroups(roleCodes);
     const ownedRoles = roles.filter(role => role.owned);
     const { permSet } = getUserEffectivePermissions(req.session.userId);
-    const canViewAll = permSet.has('data:view_all') || permSet.has('*:*') || roleCodes.includes('admin');
+    const canViewAll = permSet.has('data:view_all') || permSet.has('*:*') || roleCodes.includes('admin') || roleCodes.includes('data_quality') || roleCodes.includes('it_lead');
     const canDecideEscalated = permSet.has('conflict:final_decide_escalated') || permSet.has('*:*') || roleCodes.includes('admin');
     const department = req.session.departmentId
       ? db.prepare('SELECT name FROM departments WHERE id=?').get(req.session.departmentId)
       : null;
     const todos = loadTodos(req, canViewAll);
     const qualityFindings = loadProcessQualityFindings(req, canViewAll);
+    const mappingTodos = loadProcessMappingTodos(req, canViewAll);
     const escalated = loadEscalatedConflicts(canDecideEscalated);
-    const workItems = mode === 'todo' ? [...escalated, ...qualityFindings, ...todos] : [...escalated, ...qualityFindings, ...todos];
+    const workItems = mode === 'todo' ? [...escalated, ...qualityFindings, ...mappingTodos, ...todos] : [...escalated, ...qualityFindings, ...mappingTodos, ...todos];
     const contexts = loadProcessContexts(mode, workItems);
     const activeRoles = ownedRoles.length ? ownedRoles : roles.filter(role => role.code === req.session.userRole);
     const nextActions = buildNextActions(workItems, activeRoles);
