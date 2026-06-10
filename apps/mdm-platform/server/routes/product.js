@@ -43,7 +43,7 @@ router.get('/:code', requireAuth, applyFieldConstraints('product'), (req, res) =
   } catch (e) { handleDbError(res, e); }
 });
 
-router.post('/', requireAuth, (req, res) => {
+router.post('/', requireAuth, requirePermission('product:create'), (req, res) => {
   try {
     const { product_family_id, revision, class_mid, class_minor } = req.body;
     if (!product_family_id) return res.status(400).json({ error: '缺少必填字段 product_family_id' });
@@ -93,7 +93,7 @@ router.post('/:code/obsolete', requireAuth, requirePermission('product:update'),
   } catch (e) { handleDbError(res, e); }
 });
 
-router.put('/:code', requireAuth, (req, res) => {
+router.put('/:code', requireAuth, requirePermission('product:update'), (req, res) => {
   try {
     const { revision } = req.body;
     const existing = db.prepare('SELECT * FROM product WHERE product_code=?').get(req.params.code);

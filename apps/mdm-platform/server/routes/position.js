@@ -39,7 +39,7 @@ router.get('/:code', requireAuth, applyFieldConstraints('position'), (req, res) 
   } catch (e) { handleDbError(res, e); }
 });
 
-router.post('/', requireAuth, (req, res) => {
+router.post('/', requireAuth, requirePermission('position:create'), (req, res) => {
   try {
     const { position_name, pos_mnemonic, org_unit_id } = req.body;
     if (!position_name || !pos_mnemonic || !org_unit_id) {
@@ -67,7 +67,7 @@ router.post('/:code/activate', requireAuth, requirePermission('position:update')
   } catch (e) { handleDbError(res, e); }
 });
 
-router.put('/:code', requireAuth, (req, res) => {
+router.put('/:code', requireAuth, requirePermission('position:update'), (req, res) => {
   try {
     const { position_name, status } = req.body;
     const existing = db.prepare('SELECT * FROM position WHERE position_code=?').get(req.params.code);

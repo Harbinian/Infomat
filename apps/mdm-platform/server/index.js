@@ -3,9 +3,15 @@ const session = require('express-session');
 const path = require('path');
 const fs = require('fs');
 
+function resolveSessionSecret(env) {
+  if (env.SESSION_SECRET) return env.SESSION_SECRET;
+  if (env.ALLOW_INSECURE_SESSION_SECRET === '1') return 'mdm-platform-dev-secret-change-me';
+  throw new Error('SESSION_SECRET is required; set ALLOW_INSECURE_SESSION_SECRET=1 only for local development');
+}
+
 const app = express();
 const PORT = process.env.PORT || 3000;
-const SESSION_SECRET = process.env.SESSION_SECRET || 'mdm-platform-dev-secret-change-me';
+const SESSION_SECRET = resolveSessionSecret(process.env);
 
 app.use(express.static(path.join(__dirname, '../public')));
 app.use(express.json());

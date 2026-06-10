@@ -232,7 +232,7 @@ async function main() {
     seedData();
     child = spawn(process.execPath, ['server/index.js'], {
       cwd: APP_ROOT,
-      env: { ...process.env, PORT: String(PORT) },
+      env: { ...process.env, PORT: String(PORT), SESSION_SECRET: 'role-workbench-api-test' },
       stdio: 'ignore'
     });
 

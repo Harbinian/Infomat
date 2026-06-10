@@ -166,7 +166,7 @@ router.delete('/departments/:id', requirePermission('admin:access'), (req, res) 
   });
 });
 
-router.get('/users', requireAuth, (req, res) => {
+router.get('/users', requireAuth, requirePermission('admin:access'), (req, res) => {
   const users = db.prepare(`
     SELECT u.id, u.name, u.employee_no, u.department_id, u.post, u.role, u.created_at, d.name as dept_name
     FROM users u

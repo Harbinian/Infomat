@@ -35,7 +35,7 @@ router.get('/:code', requireAuth, applyFieldConstraints('product_family'), (req,
   } catch (e) { handleDbError(res, e); }
 });
 
-router.post('/', requireAuth, (req, res) => {
+router.post('/', requireAuth, requirePermission('product_family:create'), (req, res) => {
   try {
     const { model_name, model_code, class_major, product_type } = req.body;
     if (!model_name || !model_code || !class_major) {
@@ -59,7 +59,7 @@ router.post('/:code/activate', requireAuth, requirePermission('product_family:up
   } catch (e) { handleDbError(res, e); }
 });
 
-router.put('/:code', requireAuth, (req, res) => {
+router.put('/:code', requireAuth, requirePermission('product_family:update'), (req, res) => {
   try {
     const { model_name, product_type, status } = req.body;
     const existing = db.prepare('SELECT * FROM product_family WHERE product_family_code=?').get(req.params.code);

@@ -22,7 +22,7 @@ router.get('/defs', requireAuth, applyFieldConstraints('attribute'), (req, res) 
   } catch (e) { handleDbError(res, e); }
 });
 
-router.post('/defs', requireAuth, (req, res) => {
+router.post('/defs', requireAuth, requirePermission('attribute:create'), (req, res) => {
   try {
     const { attribute_code, attribute_name, data_type, enum_ref, applies_to, is_required } = req.body;
     if (!attribute_code || !attribute_name || !data_type || !applies_to) {
@@ -36,7 +36,7 @@ router.post('/defs', requireAuth, (req, res) => {
   } catch (e) { handleDbError(res, e); }
 });
 
-router.put('/defs/:code', requireAuth, (req, res) => {
+router.put('/defs/:code', requireAuth, requirePermission('attribute:update'), (req, res) => {
   try {
     const { attribute_name, enum_ref, is_required, status } = req.body;
     const existing = db.prepare('SELECT * FROM attribute_def WHERE attribute_code=?').get(req.params.code);
@@ -69,7 +69,7 @@ router.get('/values', requireAuth, applyFieldConstraints('attribute'), (req, res
   } catch (e) { handleDbError(res, e); }
 });
 
-router.put('/values', requireAuth, (req, res) => {
+router.put('/values', requireAuth, requirePermission('attribute:update'), (req, res) => {
   try {
     const { entity_type, entity_id, values } = req.body;
     if (!entity_type || !entity_id || !values) {
