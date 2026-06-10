@@ -10,9 +10,7 @@ pmo/
 ├── README.md                          # 甘特图说明
 ├── procedure-management/              # 模块 A：流程地图驾驶舱
 │   ├── CLAUDE.md                      #   驾驶舱开发指南
-│   ├── dashboard.html                 #   主驾驶舱 (单文件 HTML)
-│   ├── screenshots/                   #   屏幕截图
-│   └── screenshot.png                 #   驾驶舱截图
+│   └── dashboard.html                 #   主驾驶舱 (单文件 HTML)
 ├── gantt-react/                       # 模块 B：甘特图应用 (React + Vite)
 │   ├── README.md                      #   甘特图开发指南
 │   ├── src/                           #   源码
@@ -24,7 +22,7 @@ pmo/
 ├── 信息化项目_工作平衡.md               # 人员分配、例会把关机制和高压窗口
 ├── 信息化项目_工作开展原则.md           # PMO 推进原则、协同边界和闭环规则
 ├── 信息化项目_Project_H5最终执行版_导入表.xlsx # 历史导入/备份口径
-├── 信息化项目.csv                      # MD 转换中间产物（不要手改）
+├── 信息化项目.csv                      # 转换脚本运行后的排查用中间产物（不要手改）
 ├── convert_xlsx.py                    # MD 真源 → tasks.json / 服务清单转换脚本
 ├── build-standalone.js                # 生成内嵌数据版 HTML
 ├── report_no_pred_tasks.py            # 无前置任务报告脚本
@@ -78,9 +76,9 @@ pmo/
 
 ### 驾驶舱数据更新
 
-1. 运行桑基图数据生成脚本（如 `scripts/parse-sankey-data.mjs`）
-2. 将输出的 JSON 替换 `procedure-management/dashboard.html` 中 `#sankey-data` 脚本标签内容
-3. 更新顶部 `.pill` 中的数据快照日期
+1. 修改 `docs/norms/{部门}部门-能力-流程-系统映射关系.md` 或跨部门完整性报告。
+2. 在仓库根目录运行 `node scripts/parse-sankey-data.mjs`。
+3. 脚本会直接更新 `procedure-management/dashboard.html` 内嵌的 `#sankey-data` 和 `#cross-dept-data`。
 
 ## 技术栈
 

@@ -10,8 +10,6 @@
 |------|------|
 | `dashboard.html` | 主驾驶舱 — 单文件 HTML，内联 CSS/JS + ECharts，无构建步骤 |
 | `CLAUDE.md` | 本文件 |
-| `screenshots/` | 屏幕截图 (17 张) |
-| `screenshot.png` | 驾驶舱截图 |
 
 ## 启动方式
 
@@ -33,7 +31,7 @@ python -m http.server 8080
 驾驶舱从两个内嵌 JSON 数据源读取：
 
 1. **`#sankey-data`** — 流程→系统桑基图数据（节点 + 链接 + 统计），由 `scripts/parse-sankey-data.mjs` 直接注入
-2. **`#cross-dept-data`** — 跨部门衔接风险数据，来自 `../../docs/norms/流程治理/跨部门完整性检查报告.md` 的手动提取
+2. **`#cross-dept-data`** — 跨部门衔接风险数据，由 `scripts/parse-sankey-data.mjs` 从 `../../docs/norms/流程治理/跨部门完整性检查报告.md` 解析并注入
 
 两个数据均以 `<script type="application/json" id="...">` 内嵌在 HTML 中，避免 CORS / 离线打开问题。
 
@@ -56,16 +54,14 @@ python -m http.server 8080
 
 ### 更新桑基图数据
 
-1. 运行 `node scripts/parse-sankey-data.mjs`，自动注入 `#sankey-data` 并更新 dashboard.html
-2. 更新顶部 `.pill` 中的数据快照日期
+1. 在仓库根目录运行 `node scripts/parse-sankey-data.mjs`。
+2. 脚本会自动注入 `#sankey-data` / `#cross-dept-data` 并更新 dashboard.html。
 
 ### 更新跨部门衔接数据
 
-1. 当 `docs/norms/流程治理/跨部门完整性检查报告.md` 有更新时：
-   - 更新 `#cross-dept-data` 中的 `stats` 对象
-   - 更新 `risks` 数组（按报告 §二 和 §四 的内容）
-   - 更新 `interactionChains` 数组
-2. 如果新增/关闭风险项，同步更新 KPI 卡片的静态值
+1. 更新 `docs/norms/流程治理/跨部门完整性检查报告.md`。
+2. 在仓库根目录运行 `node scripts/parse-sankey-data.mjs`，由脚本重新生成并注入 `#cross-dept-data`。
+3. 运行 `node scripts/check-dashboard-data.mjs`，确认驾驶舱内嵌数据与报告派生统计一致。
 
 ## 页面结构
 

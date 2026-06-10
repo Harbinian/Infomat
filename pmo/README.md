@@ -65,7 +65,7 @@ python convert_xlsx.py
 |------|------|
 | `pmo/tasks.json` | PMO 根目录备份数据 |
 | `pmo/gantt-react/public/tasks.json` | React 应用实际读取的数据 |
-| `pmo/信息化项目.csv` | 便于排查的中间 CSV |
+| `pmo/信息化项目.csv` | 运行转换脚本后的排查用中间 CSV，不作为当前真源维护入口 |
 | `pmo/pmo-source-manifest.json` | PMO 真源清单 |
 | `pmo/gantt-react/public/pmo-source-manifest.json` | React 服务可读取的真源清单 |
 
@@ -94,7 +94,7 @@ pmo/
 ├── README.md
 ├── procedure-management/
 │   ├── dashboard.html
-│   └── screenshots/
+│   └── CLAUDE.md
 ├── gantt-react/
 │   ├── README.md
 │   ├── public/tasks.json
@@ -108,7 +108,6 @@ pmo/
 ├── pmo-gantt-known-issues.md
 ├── PMO项目计划管控体系建设方案_V1.md
 ├── WBS评审记录_V1.md
-├── 信息化项目_ERP扩容_OA采购补充版_完整说明.md
 ├── 信息化项目_计划管控真源.md
 ├── 信息化项目_WBS结构真源.md
 ├── 信息化项目_工作平衡.md

@@ -27,7 +27,7 @@ Infomat 是航空复材制造领域的信息化资料与工具仓库，包含：
   - `pmo/procedure-management/dashboard.html`：桑基图数据内嵌于 `<script id="sankey-data">`，由 `scripts/parse-sankey-data.mjs` 直接注入
 - `pmo/`：项目管理工作室
   - `pmo/procedure-management/dashboard.html`：**流程地图驾驶舱**（单文件可双击打开，数据已内嵌于 `<script id="sankey-data">`）
-  - `pmo/index.html` / `pmo/index-standalone.html`：项目甘特图
+  - `pmo/gantt-react/`：React 甘特图 / PMO 看板（开发模式 `npm run dev`）
 - `scripts/`：仓库级脚本（与具体 app 无关）
   - `scripts/parse-sankey-data.mjs`：从 `docs/norms/` 生成桑基图 JSON
 - `.planning/`：架构/结构/集成规划与扫描记录
