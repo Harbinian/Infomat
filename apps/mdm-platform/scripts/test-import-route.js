@@ -64,6 +64,17 @@ function seedData() {
     'submitter',
     hashPassword('pass1234')
   );
+  const rbacSubmitterId = db.prepare('INSERT INTO users (name, employee_no, department_id, post, role, password_hash) VALUES (?, ?, ?, ?, ?, ?)').run(
+    'RBAC报送人',
+    'RBACSUB',
+    deptId,
+    '专员',
+    'owner',
+    hashPassword('pass1234')
+  ).lastInsertRowid;
+  const submitterRole = db.prepare("SELECT role_id FROM roles WHERE role_code='submitter'").get();
+  assert.ok(submitterRole, 'submitter RBAC role should exist');
+  db.prepare('INSERT OR IGNORE INTO user_roles (user_id, role_id, assigned_by) VALUES (?, ?, ?)').run(rbacSubmitterId, submitterRole.role_id, adminId);
 
   const capabilityId = db.prepare('INSERT INTO capabilities (name, level, owner_dept_id) VALUES (?, ?, ?)').run('主数据管理', 'L1', deptId).lastInsertRowid;
   const processId = db.prepare('INSERT INTO processes (name, capability_id, owner_dept_id) VALUES (?, ?, ?)').run('供应商主数据维护', capabilityId, deptId).lastInsertRowid;
@@ -71,8 +82,12 @@ function seedData() {
     INSERT INTO mappings (process_id, owner_dept_id, status, submitted_by, current_step)
     VALUES (?, ?, 'draft', ?, 1)
   `).run(processId, deptId, submitterId).lastInsertRowid;
+  const rbacMappingId = db.prepare(`
+    INSERT INTO mappings (process_id, owner_dept_id, status, submitted_by, current_step)
+    VALUES (?, ?, 'draft', ?, 1)
+  `).run(processId, deptId, rbacSubmitterId).lastInsertRowid;
 
-  return { adminId, submitterId, mappingId };
+  return { adminId, submitterId, rbacSubmitterId, mappingId, rbacMappingId };
 }
 
 async function workbookBuffer(rows, headers = ['数据对象', '字段说明', '中文字段名', '英文字段名', '字段类型', '消费系统', '同步方式']) {
@@ -147,6 +162,7 @@ async function main() {
 
     const adminCookie = await login('ADMIN001', 'admin123');
     const submitterCookie = await login('SUB001', 'pass1234');
+    const rbacSubmitterCookie = await login('RBACSUB', 'pass1234');
     const otherCookie = await login('OTHER001', 'pass1234');
 
     const adminBuffer = await workbookBuffer([
@@ -182,6 +198,18 @@ async function main() {
     assert.strictEqual(fields[1].consume_systems, null);
     assert.strictEqual(fields[1].sync_mode, null);
     assert.strictEqual(fields[1].submitted_by, seed.submitterId);
+
+    const rbacSubmitterBuffer = await workbookBuffer([
+      ['供应商', 'RBAC 报送字段说明', '供应商状态', 'supplier_status', '文本', 'ERP', '实时']
+    ]);
+    const rbacSubmitterImport = await uploadWorkbook(seed.rbacMappingId, rbacSubmitterBuffer, rbacSubmitterCookie);
+    assert.strictEqual(rbacSubmitterImport.res.status, 200, '拥有 submitter RBAC 角色的映射提交人应能导入字段台账');
+    assert.strictEqual(rbacSubmitterImport.body.imported, 1);
+    const rbacFields = db.prepare('SELECT * FROM field_entries WHERE mapping_id=? ORDER BY id').all(seed.rbacMappingId);
+    assert.strictEqual(rbacFields.length, 1);
+    assert.strictEqual(rbacFields[0].note, 'RBAC 报送字段说明');
+    assert.strictEqual(rbacFields[0].field_name_cn, null);
+    assert.strictEqual(rbacFields[0].submitted_by, seed.rbacSubmitterId);
 
     const otherImport = await uploadWorkbook(seed.mappingId, submitterBuffer, otherCookie);
     assert.strictEqual(otherImport.res.status, 403);
