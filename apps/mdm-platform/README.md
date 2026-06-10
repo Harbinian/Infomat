@@ -56,12 +56,21 @@ npm run test:terms
 npm run test:export
 npm run test:import
 npm run test:user-password-scripts
+npm run test:password-audit
 npm run test:frontend
 npm run test:security
 npm run test:mainline
 ```
 
 `npm run test:security` 已包含批量用户脚本口令红线：项目账号脚本和 Excel 用户导入脚本不得硬编码固定初始密码，新建账号必须标记首次登录改密。
+
+如需只读检查历史库中是否仍有旧固定口令账号，可运行：
+
+```bash
+node scripts/audit-fixed-default-passwords.js
+```
+
+该脚本只做 dry-run 审计，不改密码、不输出密码哈希。
 
 ## MDM 一期升级命令
 
