@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const { requireAuth, getUserEffectivePermissions } = require('../auth');
-const { canViewMapping } = require('../access');
+const { canViewMapping, getEffectiveRoleCodes } = require('../access');
 
 const ALL_FIELD_ENTRY_FIELDS = ['field_name_cn', 'field_name_en', 'data_object', 'field_type', 'consume_systems', 'sync_mode', 'note', 'process_governance_node_key', 'process_governance_a1_code'];
 const SUBMITTER_WRITABLE = ['data_object', 'note', 'process_governance_node_key', 'process_governance_a1_code'];
@@ -35,13 +35,15 @@ function canCreateFieldForMapping(req, mappingId) {
   const { permSet } = getUserEffectivePermissions(req.session.userId);
   if (permSet.has('admin:access') || permSet.has('*:*')) return true;
   const mapping = db.prepare('SELECT submitted_by FROM mappings WHERE id=?').get(mappingId);
-  return mapping && req.session.userRole === 'submitter' && mapping.submitted_by === req.session.userId;
+  const roleCodes = getEffectiveRoleCodes(req);
+  return mapping && roleCodes.has('submitter') && mapping.submitted_by === req.session.userId;
 }
 
 function canEditOwnerColumns(req, field) {
   const { permSet } = getUserEffectivePermissions(req.session.userId);
   if (permSet.has('admin:access') || permSet.has('review:approve') || permSet.has('*:*')) return true;
-  if (req.session.userRole !== 'owner') return false;
+  const roleCodes = getEffectiveRoleCodes(req);
+  if (!roleCodes.has('owner')) return false;
 
   const mapping = db.prepare('SELECT owner_dept_id FROM mappings WHERE id=?').get(field.mapping_id);
   return mapping && mapping.owner_dept_id === req.session.departmentId;
@@ -119,7 +121,7 @@ router.put('/:id', requireAuth, (req, res) => {
       allowedFields = ALL_FIELD_ENTRY_FIELDS;
     } else if (canEditOwnerColumns(req, field)) {
       allowedFields = OWNER_WRITABLE;
-    } else if (req.session.userRole === 'submitter' && field.submitted_by === req.session.userId) {
+    } else if (getEffectiveRoleCodes(req).has('submitter') && field.submitted_by === req.session.userId) {
       allowedFields = SUBMITTER_WRITABLE;
     } else {
       return res.status(403).json({ error: '仅字段报送人、映射 owner 部门、评审人或管理员可修改字段' });
@@ -173,8 +175,9 @@ router.delete('/:id', requireAuth, (req, res) => {
     if (!field) return res.status(404).json({ error: '字段不存在' });
     const mapping = db.prepare('SELECT status FROM mappings WHERE id=?').get(field.mapping_id);
     const { permSet: delPermSet } = getUserEffectivePermissions(req.session.userId);
+    const roleCodes = getEffectiveRoleCodes(req);
     const canDelete = delPermSet.has('admin:access') || delPermSet.has('*:*') ||
-      (req.session.userRole === 'submitter' && field.submitted_by === req.session.userId && mapping && mapping.status === 'draft');
+      (roleCodes.has('submitter') && field.submitted_by === req.session.userId && mapping && mapping.status === 'draft');
     if (!canDelete) return res.status(403).json({ error: '仅管理员或草稿字段报送人可删除字段' });
     db.prepare('DELETE FROM field_entries WHERE id=?').run(req.params.id);
     res.json({ success: true });

@@ -30,6 +30,7 @@
 | 第 2 层 | `/api/org/users` 员工目录暴露面过宽 | 已确认 | 第二批小片已处理目录收窄、后端候选人接口和前端切换 |
 | 第 2 层 | `applyFieldConstraints` readonly 未执行 | 已确认 | 第二批小片已处理读写两侧 |
 | 第 2 层 | 待办列表仍按旧基础角色单选过滤 | 已确认 | 第二批小片已处理多角色并集过滤 |
+| 第 2 层 | 字段台账编辑仍按旧基础角色判断 | 已确认 | 第二批小片已处理 `fieldEntries` owner/submitter 判断 |
 | 第 3 层 | 工程技术部流程映射交付物缺失 | 已确认风险 | 延后 |
 | 第 3 层 | `crossDept` 从报告 Markdown 派生 | 已确认风险 | 第三批小片已处理校验不固化数字 |
 | 第 3 层 | `综合管理部` 等历史/幽灵部门口径 | 待复核 | 延后 |
@@ -79,6 +80,8 @@
 - 第二批继续收敛默认口令：页面账号入库和重置密码改为展示服务端返回的一次性初始密码；`setup-mdm-project-users.js`、`import-mdm-users.js` 改为生成本次一次性初始密码、写入 `must_change_password=1`，并接入 `test:security`。
 - 追加待办多角色红线：旧基础角色为报送人、但 RBAC 具备 owner 的用户，应能看到本部门待确认字段待办。
 - 第二批继续统一角色口径：`GET /api/todos` 改为按 RBAC + 旧基础角色的并集过滤，并修正旧 SQL 字符串拼接导致报送人口径 500 的问题；`fieldEntries`、`fieldIdentities`、`import` 仍待后续单独处理。
+- 追加字段台账多角色红线：旧基础角色为报送人、但 RBAC 具备 owner 的用户，应能维护本部门字段 owner 列。
+- 第二批继续统一角色口径：`fieldEntries` 创建、编辑和删除的 submitter/owner 判断改为 RBAC + 旧基础角色并集；`fieldIdentities`、`import` 仍待后续单独处理。
 - 追加第三批校验红线：`check-dashboard-data.mjs` 不得把 `crossDept` 统计固化为 `168/6/1` 等历史数字。
 - 第三批先做只读校验收敛：`check-dashboard-data.mjs` 从 `跨部门完整性检查报告.md` 解析统计值，并与 `docs/company-sankey-data.json.crossDept`、PMO 内嵌 `#cross-dept-data` 比对；不改流程真源和生成快照。
 - 第四批先做导航止血：修正根 README、PMO README、PMO CLAUDE 和流程驾驶舱 CLAUDE 中不存在的甘特入口、截图、旧文档和手工 JSON 替换说明；不移动静态资产或大体积资料。
