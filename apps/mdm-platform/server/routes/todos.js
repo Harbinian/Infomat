@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const { requireAuth } = require('../auth');
-const { canUseTodo, isAdmin } = require('../access');
+const { canUseTodo, getEffectiveRoleCodes, isAdmin } = require('../access');
 
 function handleDbError(res, error) {
   if (error && (String(error.code).startsWith('SQLITE_CONSTRAINT') || String(error.message).includes('constraint failed'))) {
@@ -23,8 +23,8 @@ function runDbAction(res, action) {
 router.get('/', requireAuth, (req, res) => {
   return runDbAction(res, () => {
     const { dept_id, status, type } = req.query;
-    const userRole = req.session.userRole;
     const userDeptId = req.session.departmentId;
+    const roleCodes = getEffectiveRoleCodes(req);
 
     let sql = `SELECT t.*, fd.name as from_dept_name, td.name as to_dept_name
                FROM todos t
@@ -33,13 +33,22 @@ router.get('/', requireAuth, (req, res) => {
                WHERE 1=1`;
     const params = [];
 
-    if (userRole === 'owner') {
-      sql += ' AND t.to_dept_id = ?';
-      params.push(userDeptId);
-    } else if (userRole === 'reviewer') {
-      sql += ' AND t.type IN ("field_confirm","gold_source","conflict_resolution")';
-    } else if (userRole === 'submitter') {
-      sql += ' AND t.type IN ("general","terminology")';
+    if (!isAdmin(req)) {
+      const roleClauses = [];
+      if (roleCodes.has('owner') && userDeptId) {
+        roleClauses.push('t.to_dept_id = ?');
+        params.push(userDeptId);
+      }
+      if (roleCodes.has('reviewer')) {
+        roleClauses.push('t.type IN (?, ?, ?)');
+        params.push('field_confirm', 'gold_source', 'conflict_resolution');
+      }
+      if (roleCodes.has('submitter')) {
+        roleClauses.push('t.type IN (?, ?)');
+        params.push('general', 'terminology');
+      }
+
+      sql += roleClauses.length ? ` AND (${roleClauses.join(' OR ')})` : ' AND 1=0';
     }
 
     if (dept_id) {

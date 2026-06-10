@@ -99,10 +99,14 @@ function seedData() {
   const submitterB = insertUser('财务报送人', 'FIN001', deptB, 'submitter');
   const ownerB = insertUser('财务负责人', 'OWNFIN', deptB, 'owner');
   const rbacAdmin = insertUser('RBAC管理员', 'RBACADM', deptA, 'submitter');
+  const rbacOwner = insertUser('RBAC负责人', 'RBACOWN', deptB, 'submitter');
   const limitedProductFamilyEditor = insertUser('受限产品族维护员', 'PFEDIT', deptA, 'submitter');
   const adminRole = db.prepare("SELECT role_id FROM roles WHERE role_code='admin'").get();
+  const ownerRole = db.prepare("SELECT role_id FROM roles WHERE role_code='owner'").get();
   assert.ok(adminRole, 'admin RBAC role should exist');
+  assert.ok(ownerRole, 'owner RBAC role should exist');
   db.prepare('INSERT OR IGNORE INTO user_roles (user_id, role_id, assigned_by) VALUES (?, ?, ?)').run(rbacAdmin, adminRole.role_id, admin);
+  db.prepare('INSERT OR IGNORE INTO user_roles (user_id, role_id, assigned_by) VALUES (?, ?, ?)').run(rbacOwner, ownerRole.role_id, admin);
   ensureLimitedProductFamilyEditor(limitedProductFamilyEditor, admin);
   const orgUnitId = db.prepare(`
     INSERT INTO org_unit (org_unit_code, org_unit_name, org_type, org_mnemonic, created_by, updated_by)
@@ -318,6 +322,15 @@ async function assertRbacAdminUsesAdminPermission(seed, rbacAdminCookie) {
 
   const row = db.prepare('SELECT status FROM field_conflicts WHERE id=?').get(seed.conflict);
   assert.strictEqual(row.status, 'archived');
+}
+
+async function assertRbacRolesDriveTodoList(seed, rbacOwnerCookie) {
+  const todos = await request('/api/todos', {}, rbacOwnerCookie);
+  assert.strictEqual(todos.res.status, 200);
+  assert.ok(
+    todos.body.some(row => Number(row.id) === Number(seed.todoB)),
+    '拥有 owner RBAC 角色的用户应看到本部门待确认字段待办'
+  );
 }
 
 async function assertFieldConstraintsAreApplied(submitterCookie) {
@@ -537,6 +550,7 @@ async function main() {
     const submitterCookie = await login('SALE001');
     const ownerBCookie = await login('OWNFIN');
     const rbacAdminCookie = await login('RBACADM');
+    const rbacOwnerCookie = await login('RBACOWN');
     const limitedEditorCookie = await login('PFEDIT');
 
     const createSystem = await request('/api/systems', {
@@ -550,6 +564,7 @@ async function main() {
     await assertDefaultPasswordGuards(adminCookie);
     await assertFieldConstraintsAreApplied(submitterCookie);
     await assertReadonlyFieldConstraintsAreEnforced(adminCookie, limitedEditorCookie);
+    await assertRbacRolesDriveTodoList(seed, rbacOwnerCookie);
 
     const capBadAction = await request(`/api/capabilities/${seed.capA}/review`, {
       method: 'POST',
