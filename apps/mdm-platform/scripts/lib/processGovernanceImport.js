@@ -359,6 +359,125 @@ function stableKey(prefix, parts) {
   return `${prefix}:${crypto.createHash('sha256').update(parts.map(part => cleanCell(part)).join('|')).digest('hex')}`;
 }
 
+function normalizeProcessStatus(value) {
+  const text = cleanCell(value);
+  return ['纳入', '排除', '待复核'].includes(text) ? text : '待复核';
+}
+
+function normalizeRefType(value) {
+  const text = cleanCell(value).toUpperCase();
+  return ['L3', 'A1', 'MDM'].includes(text) ? text : null;
+}
+
+function sourceManifestFiles(data) {
+  return asArray(data && data.sourceManifest && data.sourceManifest.files);
+}
+
+function normalizeSourceFile(file = {}) {
+  const filePath = cleanCell(file.path || file.file_path || file.filePath || '');
+  if (!filePath) return null;
+  const sha256 = cleanCell(file.sha256 || file.hash || '');
+  return {
+    file_key: stableKey('source-file', [filePath, sha256]),
+    file_path: filePath,
+    dept_name: cleanCell(file.dept || file.dept_name || file.deptName || '') || null,
+    asset_type: cleanCell(file.assetType || file.asset_type || '') || null,
+    file_no: cleanCell(file.fileNo || file.file_no || '') || null,
+    revision: cleanCell(file.revision || '') || null,
+    size_bytes: Number(file.sizeBytes || file.size_bytes || file.size || 0) || null,
+    mtime: cleanCell(file.mtime || file.modifiedAt || file.modified_at || '') || null,
+    sha256: sha256 || null,
+    process_status: normalizeProcessStatus(file.status || file.processStatus || file.process_status),
+    process_reason: cleanCell(file.reason || file.processReason || file.process_reason || '') || null,
+  };
+}
+
+function normalizeMdmRequirement(item = {}) {
+  const masterDataObject = cleanCell(item.masterDataObject || item.master_data_object || item.object || '');
+  if (!masterDataObject) return null;
+  const deptName = cleanCell(item.dept || item.dept_name || item.deptName || '') || null;
+  const sourceL2 = cleanCell(item.sourceL2 || item.source_l2 || '') || null;
+  const sourceFile = cleanCell(item.sourceFile || item.source_file || '') || null;
+  return {
+    requirement_key: stableKey('mdm-req', [deptName, masterDataObject, sourceL2, sourceFile]),
+    dept_name: deptName,
+    master_data_object: masterDataObject,
+    source_l2: sourceL2,
+    key_fields: cleanCell(item.keyFields || item.key_fields || '') || null,
+    responsible_dept: cleanCell(item.responsibleDept || item.responsible_dept || '') || null,
+    system_boundary: cleanCell(item.systemBoundary || item.system_boundary || '') || null,
+    governance_requirement: cleanCell(item.governanceRequirement || item.governance_requirement || '') || null,
+    source_file: sourceFile,
+  };
+}
+
+function normalizeEvidenceRef(ref = {}) {
+  const refType = normalizeRefType(ref.refType || ref.ref_type || ref.type);
+  if (!refType) return null;
+  const sourceFile = cleanCell(ref.sourceFile || ref.source_file || '');
+  if (!sourceFile) return null;
+  const deptName = cleanCell(ref.dept || ref.deptName || ref.dept_name || '') || null;
+  const l3Name = cleanCell(ref.l3Name || ref.l3_name || '') || null;
+  const a1Code = cleanCell(ref.a1Code || ref.a1_code || '') || null;
+  const masterDataObject = cleanCell(ref.masterDataObject || ref.master_data_object || '') || null;
+  const evidenceType = cleanCell(ref.evidenceType || ref.evidence_type || '') || null;
+  const citation = cleanCell(ref.citation || ref.ref || '') || null;
+  return {
+    ref_key: cleanCell(ref.refKey || ref.ref_key || '') || stableKey('evidence', [
+      refType,
+      deptName,
+      l3Name,
+      a1Code,
+      masterDataObject,
+      sourceFile,
+      citation,
+      evidenceType,
+    ]),
+    ref_type: refType,
+    dept_name: deptName,
+    l3_name: l3Name,
+    a1_code: a1Code,
+    master_data_object: masterDataObject,
+    evidence_type: evidenceType,
+    source_file: sourceFile,
+    citation,
+    note: cleanCell(ref.note || ref.description || '') || null,
+  };
+}
+
+function dedupeByKey(items, keyName) {
+  const seen = new Set();
+  return items.filter(item => {
+    if (!item || seen.has(item[keyName])) return false;
+    seen.add(item[keyName]);
+    return true;
+  });
+}
+
+function summarizeSourceFiles(files) {
+  const byStatus = { '纳入': 0, '排除': 0, '待复核': 0 };
+  const byAssetType = {};
+  for (const file of files) {
+    byStatus[file.process_status] = (byStatus[file.process_status] || 0) + 1;
+    if (file.asset_type) byAssetType[file.asset_type] = (byAssetType[file.asset_type] || 0) + 1;
+  }
+  return { total: files.length, byStatus, byAssetType };
+}
+
+function summarizeMdmRequirements(items) {
+  const byDept = {};
+  for (const item of items) {
+    if (item.dept_name) byDept[item.dept_name] = (byDept[item.dept_name] || 0) + 1;
+  }
+  return { total: items.length, byDept };
+}
+
+function summarizeEvidenceRefs(items) {
+  const byType = { L3: 0, A1: 0, MDM: 0 };
+  for (const item of items) byType[item.ref_type] = (byType[item.ref_type] || 0) + 1;
+  return { total: items.length, byType };
+}
+
 function syncQualityCases(db, snapshotId, findings, importedBy) {
   const governanceFindings = findings.filter(finding => finding.severity === 'BLOCK' || finding.severity === 'WARN');
   const currentKeys = new Set(governanceFindings.map(finding => finding.finding_key));
@@ -810,11 +929,17 @@ function importProcessGovernanceSnapshot({ db, sourceJsonPath, a1MarkdownPaths =
   const data = JSON.parse(sourceText);
   const stats = { ...(data.stats || {}), crossDept: (data.crossDept && data.crossDept.stats) || {} };
   const nodeTypes = deriveNodeTypes(data);
+  const normalizedSourceFiles = dedupeByKey(sourceManifestFiles(data).map(normalizeSourceFile), 'file_key');
+  const normalizedMdmRequirements = dedupeByKey(asArray(data.mdmRequirements).map(normalizeMdmRequirement), 'requirement_key');
+  const normalizedEvidenceRefs = dedupeByKey(asArray(data.evidenceRefs).map(normalizeEvidenceRef), 'ref_key');
   const parsedA1Rows = [];
   for (const markdownPath of a1MarkdownPaths) {
     parsedA1Rows.push(...parseA1Markdown(fs.readFileSync(markdownPath, 'utf8'), markdownPath));
   }
   stats.a1Imported = parsedA1Rows.length;
+  stats.sourceFiles = summarizeSourceFiles(normalizedSourceFiles);
+  stats.mdmRequirements = summarizeMdmRequirements(normalizedMdmRequirements);
+  stats.evidenceRefs = summarizeEvidenceRefs(normalizedEvidenceRefs);
   const normalizedQualityFindings = qualityFindings.map(normalizeQualityFinding);
   stats.quality = summarizeQualityFindings(normalizedQualityFindings);
 
@@ -880,6 +1005,72 @@ function importProcessGovernanceSnapshot({ db, sourceJsonPath, a1MarkdownPaths =
         JSON.stringify(row.suggested_systems || []),
         row.verification_note,
         row.source_file
+      );
+    }
+
+    const insertSourceFile = db.prepare(`
+      INSERT OR IGNORE INTO process_source_files (
+        snapshot_id, file_key, file_path, dept_name, asset_type, file_no, revision,
+        size_bytes, mtime, sha256, process_status, process_reason
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    for (const file of normalizedSourceFiles) {
+      insertSourceFile.run(
+        snapshotId,
+        file.file_key,
+        file.file_path,
+        file.dept_name,
+        file.asset_type,
+        file.file_no,
+        file.revision,
+        file.size_bytes,
+        file.mtime,
+        file.sha256,
+        file.process_status,
+        file.process_reason
+      );
+    }
+
+    const insertMdmRequirement = db.prepare(`
+      INSERT OR IGNORE INTO process_mdm_requirement_items (
+        snapshot_id, requirement_key, dept_name, master_data_object, source_l2, key_fields,
+        responsible_dept, system_boundary, governance_requirement, source_file
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    for (const item of normalizedMdmRequirements) {
+      insertMdmRequirement.run(
+        snapshotId,
+        item.requirement_key,
+        item.dept_name,
+        item.master_data_object,
+        item.source_l2,
+        item.key_fields,
+        item.responsible_dept,
+        item.system_boundary,
+        item.governance_requirement,
+        item.source_file
+      );
+    }
+
+    const insertEvidenceRef = db.prepare(`
+      INSERT OR IGNORE INTO process_evidence_refs (
+        snapshot_id, ref_key, ref_type, dept_name, l3_name, a1_code, master_data_object,
+        evidence_type, source_file, citation, note
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    for (const ref of normalizedEvidenceRefs) {
+      insertEvidenceRef.run(
+        snapshotId,
+        ref.ref_key,
+        ref.ref_type,
+        ref.dept_name,
+        ref.l3_name,
+        ref.a1_code,
+        ref.master_data_object,
+        ref.evidence_type,
+        ref.source_file,
+        ref.citation,
+        ref.note
       );
     }
 

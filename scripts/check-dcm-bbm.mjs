@@ -16,6 +16,61 @@ const ROOT = resolve(SCRIPT_DIR, '..');
 const DEFAULT_CONTRACT = join(ROOT, 'docs', 'contracts', 'dcm-bbm-contract.json');
 const DEFAULT_REPORT = join(ROOT, 'docs', 'norms', '_quality-report.md');
 const SEVERITY_ORDER = { BLOCK: 0, WARN: 1, INFO: 2 };
+const TRANSFER_WORDS = [
+  '下发',
+  '下达',
+  '传递',
+  '发送',
+  '提交',
+  '报送',
+  '反馈',
+  '通知',
+  '签收',
+  '签字',
+  '接收',
+  '领取',
+  '移交',
+  '交接',
+  '递交',
+  '分配',
+  '流转',
+  '上报',
+  '转发',
+  '同步',
+  '确认',
+  '回传',
+  '提供',
+  '出具',
+  '沟通',
+  '跟踪',
+  '回执',
+];
+const BASIS_WORDS = ['依据', '根据', '基于', '参照', '按'];
+const BASIS_OBJECT_WORDS = ['订单', '清单', '计划', '制度', '文件', '资料', '数据', '台账', '附件', '标准', '通知'];
+const ROLE_ONLY_WORDS = ['负责', '执行', '组织', '参与', '配合', '协同', '归档', '备案', '存档', '审批', '审核', '批准', '会签'];
+const GENERIC_DEPT_PATTERNS = [
+  /相关/,
+  /各/,
+  /等$/,
+  /业务部门/,
+  /职能部门/,
+  /生产部门/,
+  /生产部$/,
+  /使用部门/,
+  /需求部门/,
+  /责任部门/,
+  /客户/,
+  /顾客/,
+  /供应商/,
+  /银行/,
+  /保险公司/,
+  /海关/,
+  /总部/,
+  /董事会/,
+  /总经理/,
+  /副总经理/,
+  /外部/,
+];
 
 function parseArgs(argv) {
   const args = { report: DEFAULT_REPORT, contract: DEFAULT_CONTRACT, fail: true };
@@ -62,6 +117,14 @@ function splitSystems(value, contract) {
     .split(/[、，,]/)
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+function splitDeptRefs(value, contract) {
+  if (isBlankToken(value, contract)) return [];
+  return String(value)
+    .split(/[、，,；;\/]/)
+    .map((item) => item.trim())
+    .filter((item) => item && !isBlankToken(item, contract));
 }
 
 function findHeaderIndex(header, names) {
@@ -141,6 +204,62 @@ function extractL3FromHeading(line) {
   return title;
 }
 
+function extractL2FromHeading(line) {
+  const trimmed = line.trim();
+  if (!/^#{3,6}\s+L2-\d+\s+/.test(trimmed)) return '';
+
+  return trimmed
+    .replace(/^#+\s*/, '')
+    .replace(/^L2-\d+\s+/, '')
+    .trim();
+}
+
+function normalizeProcessName(value) {
+  return String(value || '')
+    .replace(/[（(][^)）]*[)）]/g, '')
+    .replace(/[【】\[\]《》"“”'‘’`*]/g, '')
+    .replace(/[：:，,、；;\s]/g, '')
+    .replace(/管理$/g, '')
+    .trim();
+}
+
+function processNameScore(a, b) {
+  const left = normalizeProcessName(a);
+  const right = normalizeProcessName(b);
+  if (!left || !right) return 0;
+  if (left === right) return 1000;
+  if (right.startsWith(left) || left.startsWith(right)) return 900 + Math.min(left.length, right.length);
+  if (right.includes(left) || left.includes(right)) return 800 + Math.min(left.length, right.length);
+
+  const leftChars = new Set([...left]);
+  let common = 0;
+  for (const ch of leftChars) {
+    if (right.includes(ch)) common += 1;
+  }
+  return common / Math.max(left.length, right.length);
+}
+
+function resolveBbmL3(l3, l2, dcmMappings) {
+  if (!l3) return null;
+
+  const exact = dcmMappings.find((item) => item.l3 === l3);
+  if (exact) return exact;
+
+  const scored = dcmMappings
+    .map((item) => ({ item, score: processNameScore(l3, item.l3) }))
+    .sort((a, b) => b.score - a.score);
+  if (scored[0]?.score >= 800 || (scored[0]?.score >= 0.55 && scored[0].score > (scored[1]?.score ?? 0) + 0.08)) {
+    return scored[0].item;
+  }
+
+  if (l2) {
+    const sameL2 = dcmMappings.filter((item) => normalizeProcessName(item.l2) === normalizeProcessName(l2));
+    if (sameL2.length === 1) return sameL2[0];
+  }
+
+  return null;
+}
+
 function startsBbmSection(line, contract) {
   const trimmed = line.trim();
   return contract.bbm.sectionHeadingPatterns.some((pattern) => trimmed.startsWith(pattern));
@@ -153,6 +272,62 @@ function skipDataRow(row) {
 
 function addFinding(findings, severity, area, file, line, message, suggestion = '') {
   findings.push({ severity, area, file: file ? rel(file) : '', line, message, suggestion });
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function shortText(value, max = 100) {
+  const text = String(value ?? '').replace(/\s+/g, ' ').trim();
+  return text.length > max ? `${text.slice(0, max - 1)}...` : text;
+}
+
+function hasTransferWord(text) {
+  return TRANSFER_WORDS.some((word) => String(text).includes(word));
+}
+
+function hasDeptSpecificTransfer(text, dept) {
+  const d = escapeRegExp(dept);
+  const word = TRANSFER_WORDS.join('|');
+  return [
+    new RegExp(`${d}[^。；;|]{0,32}(${word})`),
+    new RegExp(`(${word})[^。；;|]{0,32}${d}`),
+    new RegExp(`(与|向|由|从|至|给|到)${d}[^。；;|]{0,32}(${word})`),
+  ].some((pattern) => pattern.test(text));
+}
+
+function hasBasisOnlyContext(text, dept) {
+  const d = escapeRegExp(dept);
+  const basis = BASIS_WORDS.join('|');
+  const objects = BASIS_OBJECT_WORDS.join('|');
+  const patterns = [
+    new RegExp(`(${basis})[^，,、。；;|]{0,40}${d}`),
+    new RegExp(`${d}[^，,、。；;|]{0,30}(${objects})[^，,、。；;|]{0,30}(作为|为|已|完成|来源|依据|前置|准备)`),
+    new RegExp(`(${objects})[^，,、。；;|]{0,24}(来源|依据|前置|准备)[^，,、。；;|]{0,24}${d}`),
+  ];
+  return String(text)
+    .split(/[，,、。；;|"“”]+/)
+    .map((segment) => segment.trim())
+    .filter(Boolean)
+    .some((segment) => patterns.some((pattern) => pattern.test(segment)));
+}
+
+function hasRoleOnlyContext(text, dept) {
+  const d = escapeRegExp(dept);
+  const words = ROLE_ONLY_WORDS.join('|');
+  return new RegExp(`${d}[^。；;|]{0,28}(${words})|(${words})[^。；;|]{0,28}${d}`).test(text);
+}
+
+function isUncontrolledDeptRef(dept, contract) {
+  const knownDepartments = new Set(Object.keys(contract.departments ?? {}));
+  if (knownDepartments.has(dept)) return false;
+  if (GENERIC_DEPT_PATTERNS.some((pattern) => pattern.test(dept))) return true;
+  return /[()（）]/.test(dept) || !knownDepartments.has(dept);
+}
+
+function hasWeakCrossEvidence(rowText, evidenceType) {
+  return /上下文推断|分析拆分|待确认|待补|未明确|不详|请部门确认/.test(`${evidenceType || ''} ${rowText}`);
 }
 
 function validateSystems({ findings, contract, raw, area, file, line, label }) {
@@ -190,6 +365,7 @@ function parseMappingDoc(file, contract) {
   const mainTables = [];
   const a1Tables = [];
   let inBbm = false;
+  let currentL2 = '';
   let currentL3 = '';
 
   for (let i = 0; i < lines.length; i += 1) {
@@ -199,6 +375,8 @@ function parseMappingDoc(file, contract) {
 
     const headingL3 = inBbm ? extractL3FromHeading(line) : '';
     if (headingL3) currentL3 = headingL3;
+    const headingL2 = inBbm ? extractL2FromHeading(line) : '';
+    if (headingL2) currentL2 = headingL2;
 
     if (!trimmed.startsWith('|')) continue;
     const header = splitMarkdownRow(trimmed);
@@ -208,6 +386,7 @@ function parseMappingDoc(file, contract) {
       i = table.endIndex - 1;
     } else if (inBbm && looksLikeA1Header(header)) {
       const table = collectTable(lines, i);
+      table.contextL2 = currentL2;
       table.contextL3 = currentL3;
       a1Tables.push(table);
       i = table.endIndex - 1;
@@ -331,7 +510,7 @@ function checkDeliverables(findings, contract, root) {
 function checkDcmTable(findings, contract, file, dept, parsed) {
   if (!parsed.mainTables.length) {
     addFinding(findings, 'BLOCK', 'DCM', file, 1, '未找到 DCM 主映射表', '主表必须包含 部门（D1）/能力域（L1）/业务能力（L2）/业务流程（L3）/应用系统（S1）。');
-    return { l3Set: new Set(), l3Rows: 0 };
+    return { l3Set: new Set(), l3Rows: 0, mappings: [] };
   }
 
   const table = parsed.mainTables[0];
@@ -341,10 +520,12 @@ function checkDcmTable(findings, contract, file, dept, parsed) {
   }
 
   const l3Set = new Set();
+  const mappings = [];
   let l3Rows = 0;
   for (const row of table.rows) {
     if (skipDataRow(row)) continue;
     const rowDept = cell(row, table.header, ['部门（D1）', '部门']);
+    const l2 = cell(row, table.header, ['业务能力（L2）', '业务能力']);
     const l3 = cell(row, table.header, ['业务流程（L3）', '业务流程']);
     const evidence = cell(row, table.header, ['制度依据（文件号/条款）', '制度依据']);
     const systemRaw = cell(row, table.header, ['应用系统（S1）', '应用系统']);
@@ -353,6 +534,7 @@ function checkDcmTable(findings, contract, file, dept, parsed) {
     if (!l3) continue;
     l3Rows += 1;
     l3Set.add(l3);
+    mappings.push({ l2, l3 });
 
     if (rowDept && rowDept !== dept) {
       addFinding(findings, 'WARN', 'DCM', file, row.line, `主表部门列为 ${rowDept}，与文件名部门 ${dept} 不一致`, '确认是否复制表格时未替换部门名。');
@@ -376,7 +558,7 @@ function checkDcmTable(findings, contract, file, dept, parsed) {
     addFinding(findings, 'WARN', 'DCM', file, 1, '缺少 DCM 变更记录章节', '增量更新时应保留 ## 变更记录。');
   }
 
-  return { l3Set, l3Rows };
+  return { l3Set, l3Rows, mappings };
 }
 
 function normalizeEvidenceType(raw, contract) {
@@ -388,7 +570,103 @@ function normalizeEvidenceType(raw, contract) {
   return { status: 'invalid', value };
 }
 
-function checkBbmTables(findings, contract, file, dept, parsed, l3Set) {
+function checkControlledTransferEvidence(findings, contract, file, row, record) {
+  const refs = [
+    ...splitDeptRefs(record.inputDept, contract).map((dept) => ({ field: '输入来源部门', dept })),
+    ...splitDeptRefs(record.outputDept, contract).map((dept) => ({ field: '输出目标部门', dept })),
+  ];
+  if (!refs.length) return;
+
+  const rowText = [
+    record.behavior,
+    record.role,
+    record.roleBasis,
+    record.trigger,
+    record.triggerBasis,
+    record.precondition,
+    record.preconditionBasis,
+    record.dataInput,
+    record.dataOutput,
+    record.evidence,
+    record.evidenceType,
+    record.reminder,
+    record.remark,
+  ].join(' ');
+  const basisText = [
+    record.precondition,
+    record.preconditionBasis,
+    record.dataInput,
+    record.roleBasis,
+    record.evidence,
+  ].join(' ');
+  const transferInRow = hasTransferWord(rowText);
+
+  for (const ref of refs) {
+    const label = `A1 ${record.a1Id || record.behavior}`;
+
+    if (isUncontrolledDeptRef(ref.dept, contract)) {
+      addFinding(
+        findings,
+        'WARN',
+        'CROSS_TRANSFER',
+        file,
+        row.line,
+        `${label} 的 ${ref.field} 含非标准或不受控对象: ${ref.dept}`,
+        '输入/输出部门应使用组织真源中的部门名称；外部客户、供应商、泛化部门或带括号用途说明的对象应放入备注/核验提醒。',
+      );
+    }
+
+    if (hasBasisOnlyContext(basisText, ref.dept)) {
+      addFinding(
+        findings,
+        'WARN',
+        'CROSS_TRANSFER',
+        file,
+        row.line,
+        `${label} 的 ${ref.field} 指向 ${ref.dept}，但当前证据更像依据来源而非受控传递`,
+        `依据摘录：${shortText(basisText)}。仅看到“依据/订单/清单/台账来源”时，不应直接填写输入/输出部门；需补传递流程、接收角色、表单/台账或签收/通知记录。`,
+      );
+    }
+
+    if (!transferInRow || !hasDeptSpecificTransfer(rowText, ref.dept)) {
+      addFinding(
+        findings,
+        'WARN',
+        'CROSS_TRANSFER',
+        file,
+        row.line,
+        `${label} 的 ${ref.field} 指向 ${ref.dept}，未见部门定向受控传递证据`,
+        `需在制度条款、流程图箭头、表单流转、台账交接、签收/通知/反馈记录中看到 ${ref.dept} 与具体输出物之间的传递关系；没有则标注“未见受控传递证据，待补”。`,
+      );
+    }
+
+    if (hasWeakCrossEvidence(rowText, record.evidenceType)) {
+      addFinding(
+        findings,
+        'WARN',
+        'CROSS_TRANSFER',
+        file,
+        row.line,
+        `${label} 的 ${ref.field} 指向 ${ref.dept}，但行内仍含推断/待确认语境`,
+        '跨部门输入/输出不能仅凭上下文推断或部门参与关系固化；证据不足时应放入前置条件依据、制度依据、备注或核验提醒。',
+      );
+    }
+
+    if (hasRoleOnlyContext(rowText, ref.dept) && !hasDeptSpecificTransfer(rowText, ref.dept)) {
+      addFinding(
+        findings,
+        'WARN',
+        'CROSS_TRANSFER',
+        file,
+        row.line,
+        `${label} 的 ${ref.field} 指向 ${ref.dept}，疑似把职责/审批/归档关系写成输入输出`,
+        '职责、审批、参与、协同和归档只说明过程角色，不能自动等同于受控输出物的输入来源或输出目标。',
+      );
+    }
+  }
+}
+
+function checkBbmTables(findings, contract, file, dept, parsed, dcmMappings) {
   if (!parsed.hasBbm) {
     addFinding(findings, 'WARN', 'BBM', file, 1, '未找到 业务行为（A1）映射章节', 'BBM 应并入标准映射文档，而不是另建旁路文件。');
     return { a1Rows: 0 };
@@ -406,8 +684,13 @@ function checkBbmTables(findings, contract, file, dept, parsed, l3Set) {
       const a1Id = cell(row, table.header, ['业务行为（A1）编号', 'A1编号']);
       const behavior = cell(row, table.header, ['业务行为（A1）']);
       const role = cell(row, table.header, ['执行角色']);
+      const roleBasis = cell(row, table.header, ['执行角色依据']);
       const trigger = cell(row, table.header, ['触发情景']);
+      const triggerBasis = cell(row, table.header, ['触发情景依据']);
       const precondition = cell(row, table.header, ['前置条件']);
+      const preconditionBasis = cell(row, table.header, ['前置条件依据']);
+      const dataInput = cell(row, table.header, ['数据输入']);
+      const dataOutput = cell(row, table.header, ['数据输出']);
       const approvalType = cell(row, table.header, ['审批类型']);
       const systemRaw = cell(row, table.header, ['应用系统（S1）', '应用系统']);
       const evidence = cell(row, table.header, ['制度依据']);
@@ -415,7 +698,10 @@ function checkBbmTables(findings, contract, file, dept, parsed, l3Set) {
       const reminder = cell(row, table.header, ['核验提醒']);
       const inputDept = cell(row, table.header, ['输入来源部门']);
       const outputDept = cell(row, table.header, ['输出目标部门']);
+      const remark = cell(row, table.header, ['备注']);
+      const l2FromColumn = cell(row, table.header, ['业务能力（L2）', '业务能力']);
       const l3FromColumn = cell(row, table.header, ['业务流程（L3）', '业务流程']);
+      const l2 = l2FromColumn || table.contextL2;
       const l3 = l3FromColumn || table.contextL3;
 
       if (!a1Id && !behavior) continue;
@@ -426,7 +712,7 @@ function checkBbmTables(findings, contract, file, dept, parsed, l3Set) {
       if (behavior && behavior === a1Id) {
         addFinding(findings, 'BLOCK', 'BBM', file, row.line, `A1 ${a1Id} 的行为列使用了编号`, '业务行为（A1）编号只能放追溯列，行为列必须放动作文本。');
       }
-      if (!role) addFinding(findings, 'WARN', 'BBM', file, row.line, `A1 ${a1Id} 缺少执行角色`, '若来源不足，应保守填写并给出核验提醒。');
+      if (!role) addFinding(findings, 'BLOCK', 'BBM', file, row.line, `A1 ${a1Id} 缺少执行角色`, 'A1 必须有执行角色；若来源不足，应保守填写并给出核验提醒。');
       if (!trigger) addFinding(findings, 'WARN', 'BBM', file, row.line, `A1 ${a1Id} 缺少触发情景`, '触发情景应与前置条件分开。');
       if (!precondition) addFinding(findings, 'WARN', 'BBM', file, row.line, `A1 ${a1Id} 缺少前置条件`, '前置条件应描述执行前必须满足的状态。');
       if (approvalType && !contract.bbm.approvalTypes.includes(approvalType)) {
@@ -446,7 +732,7 @@ function checkBbmTables(findings, contract, file, dept, parsed, l3Set) {
         addFinding(findings, 'BLOCK', 'BBM', file, row.line, `A1 ${a1Id} 证据类型不在枚举中: ${evidenceStatus.value}`, `仅允许 ${contract.bbm.evidenceTypes.join('、')}。`);
       }
 
-      if (l3 && !l3Set.has(l3)) {
+      if (l3 && !resolveBbmL3(l3, l2, dcmMappings)) {
         addFinding(
           findings,
           'WARN',
@@ -469,6 +755,26 @@ function checkBbmTables(findings, contract, file, dept, parsed, l3Set) {
           `A1 ${a1Id} 有跨部门输入/输出，但行为文本未显示跨部门标记`,
           '在 业务行为（A1） 文本或前端展示中加入【跨部门】标记，方便部门审核。',
         );
+      }
+      if (hasCrossDept) {
+        checkControlledTransferEvidence(findings, contract, file, row, {
+          a1Id,
+          behavior,
+          role,
+          roleBasis,
+          trigger,
+          triggerBasis,
+          precondition,
+          preconditionBasis,
+          dataInput,
+          dataOutput,
+          inputDept,
+          outputDept,
+          evidence,
+          evidenceType,
+          reminder,
+          remark,
+        });
       }
 
       if (role) {
@@ -619,7 +925,7 @@ function runChecks({ contractPath, reportPath, root }) {
 
     const parsed = parseMappingDoc(file, contract);
     const dcm = checkDcmTable(findings, contract, file, dept, parsed);
-    const bbm = checkBbmTables(findings, contract, file, dept, parsed, dcm.l3Set);
+    const bbm = checkBbmTables(findings, contract, file, dept, parsed, dcm.mappings);
     checkHtml(findings, contract, root, dept);
 
     totalL3Rows += dcm.l3Rows;
@@ -662,6 +968,7 @@ function renderReport({ contractPath, findings, deptStats, totalL3Rows, totalA1R
     `- 合同文件：\`${rel(contractPath)}\``,
     `- 源 L3 行数：${totalL3Rows}`,
     `- 源 A1 行数：${totalA1Rows}`,
+    '- 跨部门输入/输出口径：仅当制度条款、流程图箭头、表单流转、台账交接、签收/通知/反馈等证据证明受控输出物传递时，才视为已确认；证据不足项以 `CROSS_TRANSFER` 标记为复核提示。',
     '',
     '## 汇总',
     '',
@@ -707,6 +1014,10 @@ function runSelfTest() {
   assert.equal(extractL3FromHeading('##### CW-L3-01 生产成本定额管理与指标分解'), '生产成本定额管理与指标分解');
   assert.equal(extractL3FromHeading('##### 业务流程（L3）-0101 发展规划制定、调整'), '发展规划制定、调整');
   assert.equal(extractL3FromHeading('###### ZL-01-01 内部审核策划与实施'), '内部审核策划与实施');
+  assert.deepEqual(splitDeptRefs('经营发展部、物资保障部', contract), ['经营发展部', '物资保障部']);
+  assert.equal(hasBasisOnlyContext('§5.2 "依据经营发展部下达的订单"', '经营发展部'), true);
+  assert.equal(hasBasisOnlyContext('§5.2 "依据经营发展部下达的订单，与物资保障部沟通工装状态"', '物资保障部'), false);
+  assert.equal(hasDeptSpecificTransfer('与物资保障部沟通工装状态是否满足投产要求', '物资保障部'), true);
   console.log('self-test passed');
 }
 

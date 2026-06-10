@@ -14,12 +14,18 @@ assert.ok(html.includes('/api/process-governance/quality'), 'process governance 
 assert.ok(html.includes('/api/process-governance/quality-cases'), 'process governance quality cases API should be called');
 assert.ok(html.includes('/api/process-governance/mapping-workspace'), 'process governance mapping workspace API should be called');
 assert.ok(html.includes('/api/process-governance/mapping-todos'), 'process governance mapping todos API should be called');
+assert.ok(html.includes('/api/process-governance/source-files'), 'process governance source file API should be called');
+assert.ok(html.includes('/api/process-governance/mdm-requirements'), 'process governance MDM requirements API should be called');
+assert.ok(html.includes('/api/process-governance/evidence'), 'process governance evidence API should be called');
 assert.ok(html.includes('function renderProcessGovernance()'), 'process governance renderer should exist');
 assert.ok(html.includes('function renderProcessGovernanceSankey(data)'), 'process governance sankey renderer should exist');
 assert.ok(html.includes('id="pgQualityRows"'), 'process governance should render quality finding rows');
 assert.ok(html.includes('id="pgQualityCaseRows"'), 'process governance should render governance case rows');
 assert.ok(html.includes('id="pgMappingWorkspaceRows"'), 'process governance should render mapping workspace rows');
 assert.ok(html.includes('id="pgMappingTodoRows"'), 'process governance should render mapping todo rows');
+assert.ok(html.includes('id="pgSourceCoverageRows"'), 'process governance should render source coverage rows');
+assert.ok(html.includes('id="pgMdmRequirementRows"'), 'process governance should render MDM requirement rows');
+assert.ok(html.includes('id="pgEvidenceRows"'), 'process governance should render evidence rows');
 assert.ok(html.includes('id="pgQualitySeverityFilter"'), 'process governance should expose quality severity filter');
 assert.ok(html.includes('id="pgQualityAreaFilter"'), 'process governance should expose quality area filter');
 assert.ok(html.includes('id="pgQualityCaseStatusFilter"'), 'process governance should expose quality case status filter');
@@ -30,12 +36,22 @@ assert.ok(html.includes('id="pgMetricQualityBlock"'), 'process governance should
 assert.ok(html.includes('id="pgMetricQualityCaseOpen"'), 'process governance should show open quality case metric');
 assert.ok(html.includes('id="pgMetricMappingRecords"'), 'process governance should show mapping workspace metric');
 assert.ok(html.includes('id="pgMetricMappingTodos"'), 'process governance should show mapping todo metric');
+assert.ok(html.includes('id="pgMetricSourceIncluded"'), 'process governance should show included source file metric');
+assert.ok(html.includes('id="pgMetricSourceReview"'), 'process governance should show source review metric');
+assert.ok(html.includes('id="pgMetricMdmRequirements"'), 'process governance should show MDM requirement metric');
+assert.ok(html.includes('id="pgMetricEvidenceRefs"'), 'process governance should show evidence reference metric');
 assert.ok(html.includes('docs/organization/组织架构和部门职责.md'), 'process governance should show the current organization source path');
 assert.ok(html.includes('docs/norms/{部门}部门-能力-流程-系统映射关系.md'), 'process governance should show the process source path');
 assert.ok(html.includes('function renderProcessGovernanceQuality'), 'process governance should render quality findings');
 assert.ok(html.includes('function renderProcessGovernanceQualityCases'), 'process governance should render quality cases');
 assert.ok(html.includes('function renderProcessGovernanceMappingWorkspace'), 'process governance should render mapping workspace');
 assert.ok(html.includes('function renderProcessGovernanceMappingTodos'), 'process governance should render mapping todos');
+assert.ok(html.includes('function renderProcessGovernanceSourceCoverage'), 'process governance should render source coverage');
+assert.ok(html.includes('function renderProcessGovernanceMdmRequirements'), 'process governance should render MDM requirements');
+assert.ok(html.includes('function renderProcessGovernanceEvidence'), 'process governance should render evidence refs');
+assert.ok(html.includes('源文件覆盖'), 'process governance should name source coverage without creating a second truth');
+assert.ok(html.includes('主数据对象候选'), 'process governance should name MDM candidates as candidates');
+assert.ok(html.includes('证据链'), 'process governance should name evidence chain view');
 assert.ok(html.includes('回源文件整改后重新导入'), 'process governance should guide users back to source files instead of editing docs/norms in MDM');
 assert.ok(
   html.includes('qualityView: query.view') && html.includes('finding: query.finding') && html.includes('caseId: query.case') && html.includes('mappingTodoId: query.todo'),

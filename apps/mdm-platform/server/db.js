@@ -890,6 +890,67 @@ CREATE INDEX IF NOT EXISTS idx_process_quality_cases_dept ON process_governance_
 CREATE INDEX IF NOT EXISTS idx_process_quality_cases_latest_snapshot ON process_governance_quality_cases(latest_snapshot_id);
 CREATE INDEX IF NOT EXISTS idx_process_quality_case_events_case ON process_governance_quality_case_events(case_id, id);
 
+CREATE TABLE IF NOT EXISTS process_source_files (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  snapshot_id INTEGER NOT NULL REFERENCES process_governance_snapshots(id) ON DELETE CASCADE,
+  file_key TEXT NOT NULL,
+  file_path TEXT NOT NULL,
+  dept_name TEXT,
+  asset_type TEXT,
+  file_no TEXT,
+  revision TEXT,
+  size_bytes INTEGER,
+  mtime TEXT,
+  sha256 TEXT,
+  process_status TEXT NOT NULL DEFAULT '待复核' CHECK(process_status IN ('纳入','排除','待复核')),
+  process_reason TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(snapshot_id, file_key)
+);
+
+CREATE TABLE IF NOT EXISTS process_mdm_requirement_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  snapshot_id INTEGER NOT NULL REFERENCES process_governance_snapshots(id) ON DELETE CASCADE,
+  requirement_key TEXT NOT NULL,
+  dept_name TEXT,
+  master_data_object TEXT NOT NULL,
+  source_l2 TEXT,
+  key_fields TEXT,
+  responsible_dept TEXT,
+  system_boundary TEXT,
+  governance_requirement TEXT,
+  source_file TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(snapshot_id, requirement_key)
+);
+
+CREATE TABLE IF NOT EXISTS process_evidence_refs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  snapshot_id INTEGER NOT NULL REFERENCES process_governance_snapshots(id) ON DELETE CASCADE,
+  ref_key TEXT NOT NULL,
+  ref_type TEXT NOT NULL CHECK(ref_type IN ('L3','A1','MDM')),
+  dept_name TEXT,
+  l3_name TEXT,
+  a1_code TEXT,
+  master_data_object TEXT,
+  evidence_type TEXT,
+  source_file TEXT NOT NULL,
+  citation TEXT,
+  note TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(snapshot_id, ref_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_process_source_files_snapshot ON process_source_files(snapshot_id);
+CREATE INDEX IF NOT EXISTS idx_process_source_files_dept ON process_source_files(dept_name);
+CREATE INDEX IF NOT EXISTS idx_process_source_files_status ON process_source_files(process_status);
+CREATE INDEX IF NOT EXISTS idx_process_mdm_requirement_snapshot ON process_mdm_requirement_items(snapshot_id);
+CREATE INDEX IF NOT EXISTS idx_process_mdm_requirement_dept ON process_mdm_requirement_items(dept_name);
+CREATE INDEX IF NOT EXISTS idx_process_evidence_refs_snapshot ON process_evidence_refs(snapshot_id);
+CREATE INDEX IF NOT EXISTS idx_process_evidence_refs_dept ON process_evidence_refs(dept_name);
+CREATE INDEX IF NOT EXISTS idx_process_evidence_refs_l3_a1 ON process_evidence_refs(l3_name, a1_code);
+CREATE INDEX IF NOT EXISTS idx_process_evidence_refs_object ON process_evidence_refs(master_data_object);
+
 CREATE TABLE IF NOT EXISTS process_mapping_records (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   mapping_key TEXT NOT NULL UNIQUE,

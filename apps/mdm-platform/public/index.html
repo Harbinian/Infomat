@@ -879,6 +879,40 @@
           <div class="metric"><div class="num" id="pgMetricMappingTodos">0</div><div class="lbl">映射待办</div></div>
           <div class="metric"><div class="num" id="pgMetricMappingTodoOpen">0</div><div class="lbl">待处理映射项</div></div>
         </div>
+        <div class="grid g4" style="margin-top: 16px;">
+          <div class="metric"><div class="num" id="pgMetricSourceIncluded">0</div><div class="lbl">源文件纳入</div></div>
+          <div class="metric"><div class="num" id="pgMetricSourceReview">0</div><div class="lbl">待复核源文件</div></div>
+          <div class="metric"><div class="num" id="pgMetricMdmRequirements">0</div><div class="lbl">MDM 要求</div></div>
+          <div class="metric"><div class="num" id="pgMetricEvidenceRefs">0</div><div class="lbl">证据引用</div></div>
+        </div>
+        <div class="pg-section" id="pgSourceCoverageSection">
+          <div class="pg-section-hd"><h2>源文件覆盖</h2><span class="pg-status" id="pgSourceCoverageMeta"></span></div>
+          <div class="table-container">
+            <table>
+              <thead><tr><th>状态</th><th>部门</th><th>资产类型</th><th>文件号</th><th>版次</th><th>来源文件</th><th>处理理由</th></tr></thead>
+              <tbody id="pgSourceCoverageRows"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="pg-section" id="pgMdmRequirementsSection">
+          <div class="pg-section-hd"><h2>主数据对象候选</h2><span class="pg-status" id="pgMdmRequirementMeta"></span></div>
+          <div class="table-container">
+            <table>
+              <thead><tr><th>部门</th><th>来源 L2</th><th>主数据对象</th><th>关键字段</th><th>责任部门</th><th>边界说明</th><th>治理要求</th></tr></thead>
+              <tbody id="pgMdmRequirementRows"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="pg-section" id="pgEvidenceSection">
+          <div class="pg-section-hd"><h2>证据链</h2><span class="pg-status" id="pgEvidenceMeta"></span></div>
+          <div class="notice" id="pgEvidenceFocus" style="margin-bottom:12px">点击 A1 明细行后，这里会按对应 L3/A1 显示来源文件和制度依据。</div>
+          <div class="table-container">
+            <table>
+              <thead><tr><th>类型</th><th>部门</th><th>L3</th><th>A1</th><th>主数据对象</th><th>证据类型</th><th>来源文件</th><th>引用说明</th></tr></thead>
+              <tbody id="pgEvidenceRows"></tbody>
+            </table>
+          </div>
+        </div>
         <div class="pg-section">
           <div class="pg-section-hd"><h2>流程地图</h2><span class="pg-status" id="pgMapMeta"></span></div>
           <div class="pg-scope" aria-label="流程治理部门筛选">
@@ -1164,7 +1198,7 @@
 
   <script>
     // ===== State & Utilities =====
-    const state = { user:null, departments:[], capabilities:[], processes:[], termProcesses:[], termTypes:[], mappings:[], todos:[], conflicts:[], terms:[], currentRoute:null, currentView:'roleWorkbench', activeMapping:null, activeConflict:null, pollTimer:null, isEditing:false, activeReview:null, activeCapReview:null, activeProcReview:null, pgSelectedDept:'', pageWorkflow:null, pageWorkflowRequestId:0, roleWorkbench:{ mode:'todo', data:null, selectedNode:null } };
+    const state = { user:null, departments:[], capabilities:[], processes:[], termProcesses:[], termTypes:[], mappings:[], todos:[], conflicts:[], terms:[], currentRoute:null, currentView:'roleWorkbench', activeMapping:null, activeConflict:null, pollTimer:null, isEditing:false, activeReview:null, activeCapReview:null, activeProcReview:null, pgSelectedDept:'', pgEvidenceFocus:null, pageWorkflow:null, pageWorkflowRequestId:0, roleWorkbench:{ mode:'todo', data:null, selectedNode:null } };
 
     var DEFAULT_TERM_TYPES = [
       { code: 'noun', name: '名词' },
@@ -2801,6 +2835,98 @@
       await processMappingTodoAction(todoId, 'comment', { note: note });
     }
 
+    function pgSourceStatusTag(value) {
+      var cls = value === '纳入' ? 'green' : value === '排除' ? 'red' : 'amber';
+      return '<span class="tag ' + cls + '">' + safeText(value || '待复核') + '</span>';
+    }
+
+    function renderProcessGovernanceSourceCoverage(data, selectedDept) {
+      var rowsEl = document.getElementById('pgSourceCoverageRows');
+      if (!rowsEl) return;
+      var items = data.items || [];
+      var summary = data.summary || {};
+      var byStatus = summary.byStatus || {};
+      document.getElementById('pgMetricSourceIncluded').textContent = byStatus['纳入'] || 0;
+      document.getElementById('pgMetricSourceReview').textContent = byStatus['待复核'] || 0;
+      document.getElementById('pgSourceCoverageMeta').textContent = (selectedDept ? selectedDept + ' · ' : '') +
+        '纳入 ' + (byStatus['纳入'] || 0) + '，排除 ' + (byStatus['排除'] || 0) + '，待复核 ' + (byStatus['待复核'] || 0);
+
+      rowsEl.innerHTML = items.length
+        ? items.slice(0, 120).map(function(row) {
+            return '<tr>' +
+              '<td>' + pgSourceStatusTag(row.process_status) + '</td>' +
+              '<td>' + safeText(row.dept_name || '未归属') + '</td>' +
+              '<td>' + safeText(row.asset_type || '') + '</td>' +
+              '<td>' + safeText(row.file_no || '') + '</td>' +
+              '<td>' + safeText(row.revision || '') + '</td>' +
+              '<td>' + safeText(row.file_path || '') + '</td>' +
+              '<td>' + safeText(row.process_reason || '') + '</td>' +
+            '</tr>';
+          }).join('')
+        : '<tr><td colspan="7" class="empty">暂无源文件覆盖记录</td></tr>';
+    }
+
+    function renderProcessGovernanceMdmRequirements(data, selectedDept) {
+      var rowsEl = document.getElementById('pgMdmRequirementRows');
+      if (!rowsEl) return;
+      var items = data.items || [];
+      var summary = data.summary || {};
+      document.getElementById('pgMetricMdmRequirements').textContent = summary.total || items.length;
+      document.getElementById('pgMdmRequirementMeta').textContent = (selectedDept ? selectedDept + ' · ' : '') +
+        '显示 ' + items.length + ' 条 / 共 ' + (summary.total || items.length) + ' 条';
+
+      rowsEl.innerHTML = items.length
+        ? items.slice(0, 120).map(function(row) {
+            return '<tr>' +
+              '<td>' + safeText(row.dept_name || '') + '</td>' +
+              '<td>' + safeText(row.source_l2 || '') + '</td>' +
+              '<td>' + safeText(row.master_data_object || '') + '</td>' +
+              '<td>' + safeText(row.key_fields || '') + '</td>' +
+              '<td>' + safeText(row.responsible_dept || '') + '</td>' +
+              '<td>' + safeText(row.system_boundary || '') + '</td>' +
+              '<td>' + safeText(row.governance_requirement || '') + '</td>' +
+            '</tr>';
+          }).join('')
+        : '<tr><td colspan="7" class="empty">暂无主数据对象候选</td></tr>';
+    }
+
+    function renderProcessGovernanceEvidence(data, selectedDept) {
+      var rowsEl = document.getElementById('pgEvidenceRows');
+      if (!rowsEl) return;
+      var items = data.items || [];
+      var summary = data.summary || {};
+      var focus = state.pgEvidenceFocus || null;
+      document.getElementById('pgMetricEvidenceRefs').textContent = summary.total || items.length;
+      document.getElementById('pgEvidenceMeta').textContent = (selectedDept ? selectedDept + ' · ' : '') +
+        '显示 ' + items.length + ' 条 / 共 ' + (summary.total || items.length) + ' 条';
+      document.getElementById('pgEvidenceFocus').textContent = focus
+        ? '当前查看：' + focus.l3Name + (focus.a1Code ? ' / ' + focus.a1Code : '')
+        : '点击 A1 明细行后，这里会按对应 L3/A1 显示来源文件和制度依据。';
+
+      rowsEl.innerHTML = items.length
+        ? items.slice(0, 120).map(function(row) {
+            return '<tr>' +
+              '<td>' + safeText(row.ref_type || '') + '</td>' +
+              '<td>' + safeText(row.dept_name || '') + '</td>' +
+              '<td>' + safeText(row.l3_name || '') + '</td>' +
+              '<td>' + safeText(row.a1_code || '') + '</td>' +
+              '<td>' + safeText(row.master_data_object || '') + '</td>' +
+              '<td>' + safeText(row.evidence_type || '') + '</td>' +
+              '<td>' + safeText(row.source_file || '') + '</td>' +
+              '<td>' + safeText(row.citation || row.note || '') + '</td>' +
+            '</tr>';
+          }).join('')
+        : '<tr><td colspan="8" class="empty">暂无证据链记录</td></tr>';
+    }
+
+    function selectProcessGovernanceEvidence(l3Name, a1Code) {
+      state.pgEvidenceFocus = {
+        l3Name: l3Name || '',
+        a1Code: a1Code || ''
+      };
+      renderProcessGovernance();
+    }
+
     function renderProcessGovernanceSankey(data) {
       var chartDom = document.getElementById('pgSankeyChart');
       if (!chartDom) return;
@@ -2905,6 +3031,17 @@
         if (mappingTodoStatus) mappingTodoParams.set('status', mappingTodoStatus);
         if (state.pgSelectedDept) mappingTodoParams.set('dept', state.pgSelectedDept);
         var mappingTodoQuery = mappingTodoParams.toString() ? '?' + mappingTodoParams.toString() : '';
+        var sourceParams = new URLSearchParams();
+        if (state.pgSelectedDept) sourceParams.set('dept', state.pgSelectedDept);
+        var sourceQuery = sourceParams.toString() ? '?' + sourceParams.toString() : '';
+        var mdmRequirementParams = new URLSearchParams();
+        if (state.pgSelectedDept) mdmRequirementParams.set('dept', state.pgSelectedDept);
+        var mdmRequirementQuery = mdmRequirementParams.toString() ? '?' + mdmRequirementParams.toString() : '';
+        var evidenceParams = new URLSearchParams();
+        if (state.pgSelectedDept) evidenceParams.set('dept', state.pgSelectedDept);
+        if (state.pgEvidenceFocus && state.pgEvidenceFocus.l3Name) evidenceParams.set('l3', state.pgEvidenceFocus.l3Name);
+        if (state.pgEvidenceFocus && state.pgEvidenceFocus.a1Code) evidenceParams.set('a1', state.pgEvidenceFocus.a1Code);
+        var evidenceQuery = evidenceParams.toString() ? '?' + evidenceParams.toString() : '';
         var results = await Promise.all([
           api('/api/process-governance/current'),
           api('/api/process-governance/sankey'),
@@ -2913,7 +3050,10 @@
           api('/api/process-governance/quality' + qualityQuery),
           api('/api/process-governance/quality-cases' + caseQuery),
           api('/api/process-governance/mapping-workspace' + mappingWorkspaceQuery),
-          api('/api/process-governance/mapping-todos' + mappingTodoQuery)
+          api('/api/process-governance/mapping-todos' + mappingTodoQuery),
+          api('/api/process-governance/source-files' + sourceQuery),
+          api('/api/process-governance/mdm-requirements' + mdmRequirementQuery),
+          api('/api/process-governance/evidence' + evidenceQuery)
         ]);
         var current = results[0];
         var sankey = results[1];
@@ -2923,6 +3063,9 @@
         var qualityCases = results[5];
         var mappingWorkspace = results[6];
         var mappingTodos = results[7];
+        var sourceFiles = results[8];
+        var mdmRequirements = results[9];
+        var evidence = results[10];
         var stats = sankey.stats || {};
         var departments = getProcessGovernanceDepartments(sankey);
         var a1Items = a1.items || [];
@@ -2958,7 +3101,11 @@
         document.getElementById('pgA1Meta').textContent = (selectedDept ? selectedDept + ' · ' : '') + '显示前 ' + Math.min(a1Rows.length, 80) + ' 条 / 共 ' + a1Rows.length + ' 条';
         document.getElementById('pgA1Rows').innerHTML = a1Rows.length
           ? a1Rows.slice(0, 80).map(function(row) {
-              return '<tr><td>' + safeText(row.a1_code) + '</td><td>' + safeText(row.dept_name) + '</td><td>' + safeText(row.l3_name) + '</td><td>' + safeText(row.behavior) + '</td><td>' + safeText(row.input_source_dept) + '</td><td>' + safeText(row.output_target_dept) + '</td><td>' + safeText(pgSystemsText(row.suggested_systems)) + '</td></tr>';
+              var selected = state.pgEvidenceFocus &&
+                state.pgEvidenceFocus.l3Name === row.l3_name &&
+                state.pgEvidenceFocus.a1Code === row.a1_code;
+              return '<tr' + (selected ? ' style="background:#fff7ed"' : '') + ' data-pg-l3="' + escapeHtml(row.l3_name || '') + '" data-pg-a1="' + escapeHtml(row.a1_code || '') + '" title="查看证据链">' +
+                '<td>' + safeText(row.a1_code) + '</td><td>' + safeText(row.dept_name) + '</td><td>' + safeText(row.l3_name) + '</td><td>' + safeText(row.behavior) + '</td><td>' + safeText(row.input_source_dept) + '</td><td>' + safeText(row.output_target_dept) + '</td><td>' + safeText(pgSystemsText(row.suggested_systems)) + '</td></tr>';
             }).join('')
           : '<tr><td colspan="7" class="empty">暂无 A1 明细</td></tr>';
 
@@ -2970,6 +3117,9 @@
           : '<tr><td colspan="7" class="empty">暂无跨部门风险项</td></tr>';
 
         var route = parseHash();
+        renderProcessGovernanceSourceCoverage(sourceFiles, selectedDept);
+        renderProcessGovernanceMdmRequirements(mdmRequirements, selectedDept);
+        renderProcessGovernanceEvidence(evidence, selectedDept);
         renderProcessGovernanceMappingWorkspace(mappingWorkspace, selectedDept);
         renderProcessGovernanceMappingTodos(mappingTodos, selectedDept, route.mappingTodoId);
         renderProcessGovernanceQuality(quality, selectedDept, route.finding);
@@ -2984,6 +3134,9 @@
         document.getElementById('pgQualityCaseRows').innerHTML = '<tr><td colspan="8" class="empty">暂无治理问题单</td></tr>';
         document.getElementById('pgMappingWorkspaceRows').innerHTML = '<tr><td colspan="8" class="empty">暂无映射工作库记录</td></tr>';
         document.getElementById('pgMappingTodoRows').innerHTML = '<tr><td colspan="8" class="empty">暂无流程映射待办</td></tr>';
+        document.getElementById('pgSourceCoverageRows').innerHTML = '<tr><td colspan="7" class="empty">暂无源文件覆盖记录</td></tr>';
+        document.getElementById('pgMdmRequirementRows').innerHTML = '<tr><td colspan="7" class="empty">暂无主数据对象候选</td></tr>';
+        document.getElementById('pgEvidenceRows').innerHTML = '<tr><td colspan="8" class="empty">暂无证据链记录</td></tr>';
       }
     }
 
@@ -3477,6 +3630,12 @@
         event.preventDefault();
         state.roleWorkbench.mode = modeButton.dataset.mode || 'todo';
         renderRoleWorkbench();
+        return;
+      }
+      var evidenceRow = event.target.closest('[data-pg-l3][data-pg-a1]');
+      if (evidenceRow) {
+        event.preventDefault();
+        selectProcessGovernanceEvidence(evidenceRow.dataset.pgL3 || '', evidenceRow.dataset.pgA1 || '');
       }
     });
 
@@ -3550,6 +3709,7 @@
         if (!button) return;
         event.preventDefault();
         state.pgSelectedDept = button.dataset.pgDept || '';
+        state.pgEvidenceFocus = null;
         renderProcessGovernance();
       });
     }
