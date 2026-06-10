@@ -66,6 +66,30 @@ function insertUser(name, employeeNo, departmentId, role) {
   ).lastInsertRowid;
 }
 
+function ensureLimitedProductFamilyEditor(userId, assignedBy) {
+  db.prepare(`
+    INSERT OR IGNORE INTO roles (role_code, role_name, description)
+    VALUES ('security_pf_editor', '安全测试产品族受限维护', '仅用于安全测试的字段约束角色')
+  `).run();
+  const role = db.prepare("SELECT role_id FROM roles WHERE role_code='security_pf_editor'").get();
+
+  db.prepare(`
+    INSERT OR IGNORE INTO permissions (perm_code, resource, action, field_constraints, description)
+    VALUES ('product_family:update', 'product_family', 'update', ?, '受限产品族维护')
+  `).run(JSON.stringify({ readonly: ['model_name'] }));
+  db.prepare(`
+    UPDATE permissions
+    SET field_constraints=?
+    WHERE perm_code='product_family:update'
+  `).run(JSON.stringify({ readonly: ['model_name'] }));
+
+  db.prepare(`
+    INSERT OR IGNORE INTO role_permissions (role_id, perm_id)
+    SELECT ?, perm_id FROM permissions WHERE perm_code='product_family:update'
+  `).run(role.role_id);
+  db.prepare('INSERT OR IGNORE INTO user_roles (user_id, role_id, assigned_by) VALUES (?, ?, ?)').run(userId, role.role_id, assignedBy);
+}
+
 function seedData() {
   const deptA = db.prepare('INSERT INTO departments (name, code) VALUES (?, ?)').run('销售部', 'SALE').lastInsertRowid;
   const deptB = db.prepare('INSERT INTO departments (name, code) VALUES (?, ?)').run('财务部', 'FIN').lastInsertRowid;
@@ -75,9 +99,11 @@ function seedData() {
   const submitterB = insertUser('财务报送人', 'FIN001', deptB, 'submitter');
   const ownerB = insertUser('财务负责人', 'OWNFIN', deptB, 'owner');
   const rbacAdmin = insertUser('RBAC管理员', 'RBACADM', deptA, 'submitter');
+  const limitedProductFamilyEditor = insertUser('受限产品族维护员', 'PFEDIT', deptA, 'submitter');
   const adminRole = db.prepare("SELECT role_id FROM roles WHERE role_code='admin'").get();
   assert.ok(adminRole, 'admin RBAC role should exist');
   db.prepare('INSERT OR IGNORE INTO user_roles (user_id, role_id, assigned_by) VALUES (?, ?, ?)').run(rbacAdmin, adminRole.role_id, admin);
+  ensureLimitedProductFamilyEditor(limitedProductFamilyEditor, admin);
   const orgUnitId = db.prepare(`
     INSERT INTO org_unit (org_unit_code, org_unit_name, org_type, org_mnemonic, created_by, updated_by)
     VALUES ('SALE-ORG', '销售组织', 'department', 'SALEORG', ?, ?)
@@ -262,6 +288,31 @@ async function assertFieldConstraintsAreApplied(submitterCookie) {
   assert.ok(row._readonly_fields.includes('model_name'), 'model_name 应标记为 readonly');
 }
 
+async function assertReadonlyFieldConstraintsAreEnforced(adminCookie, limitedEditorCookie) {
+  const created = await request('/api/product-families', {
+    method: 'POST',
+    body: JSON.stringify({ model_name: '字段约束产品族', model_code: 'FCON', class_major: 'A', product_type: '原类型' })
+  }, adminCookie);
+  assert.strictEqual(created.res.status, 201);
+
+  const readonlyUpdate = await request(`/api/product-families/${created.body.product_family_code}`, {
+    method: 'PUT',
+    body: JSON.stringify({ model_name: '越权改名' })
+  }, limitedEditorCookie);
+  assert.strictEqual(readonlyUpdate.res.status, 403, '受限维护员不能写入 readonly 字段');
+  assert.ok(String(readonlyUpdate.body.error || '').includes('只读'));
+
+  const allowedUpdate = await request(`/api/product-families/${created.body.product_family_code}`, {
+    method: 'PUT',
+    body: JSON.stringify({ product_type: '允许维护类型' })
+  }, limitedEditorCookie);
+  assert.strictEqual(allowedUpdate.res.status, 200, '受限维护员仍可写入非 readonly 字段');
+
+  const row = db.prepare('SELECT model_name, product_type FROM product_family WHERE product_family_code=?').get(created.body.product_family_code);
+  assert.strictEqual(row.model_name, '字段约束产品族');
+  assert.strictEqual(row.product_type, '允许维护类型');
+}
+
 async function assertMasterDataWriteGuards(seed, adminCookie, submitterCookie) {
   const submitterOrgCreate = await request('/api/org-units', {
     method: 'POST',
@@ -427,6 +478,7 @@ async function main() {
     const submitterCookie = await login('SALE001');
     const ownerBCookie = await login('OWNFIN');
     const rbacAdminCookie = await login('RBACADM');
+    const limitedEditorCookie = await login('PFEDIT');
 
     const createSystem = await request('/api/systems', {
       method: 'POST',
@@ -437,6 +489,7 @@ async function main() {
     await assertMasterDataWriteGuards(seed, adminCookie, submitterCookie);
     await assertUserDirectoryGuards(adminCookie, submitterCookie);
     await assertFieldConstraintsAreApplied(submitterCookie);
+    await assertReadonlyFieldConstraintsAreEnforced(adminCookie, limitedEditorCookie);
 
     const capBadAction = await request(`/api/capabilities/${seed.capA}/review`, {
       method: 'POST',

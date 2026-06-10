@@ -10,7 +10,7 @@
 |---|---|---|
 | 根目录流程治理主线合约 | `npm run test:process-governance-mainline` | 已通过 |
 | MDM 主线稳定性 | `cd apps/mdm-platform && npm run test:mainline` | 已通过 |
-| MDM 安全专项 | `cd apps/mdm-platform && npm run test:security` | 已覆盖基础主数据越权、用户目录权限、字段约束、session secret 和 RBAC 管理员判断红线 |
+| MDM 安全专项 | `cd apps/mdm-platform && npm run test:security` | 已覆盖基础主数据越权、用户目录权限、字段约束读写、session secret 和 RBAC 管理员判断红线 |
 
 口径修正：
 
@@ -28,7 +28,7 @@
 | 第 2 层 | 默认口令 `init1234` 制度化 | 已确认 | 延后 |
 | 第 2 层 | `SESSION_SECRET` 固定回退 | 已确认 | 第二批小片已处理 |
 | 第 2 层 | `/api/org/users` 员工目录暴露面过宽 | 已确认 | 第二批小片已处理 |
-| 第 2 层 | `applyFieldConstraints` readonly 未执行 | 已确认 | 第二批小片已处理 |
+| 第 2 层 | `applyFieldConstraints` readonly 未执行 | 已确认 | 第二批小片已处理读写两侧 |
 | 第 3 层 | 工程技术部流程映射交付物缺失 | 已确认风险 | 延后 |
 | 第 3 层 | `crossDept` 从报告 Markdown 派生 | 已确认风险 | 延后 |
 | 第 3 层 | `综合管理部` 等历史/幽灵部门口径 | 待复核 | 延后 |
@@ -69,10 +69,12 @@
 - 第二批对应最小实现：`/api/org/users` 增加管理员权限，`applyFieldConstraints` 在普通 GET 响应中加载有效字段约束并输出 `_readonly_fields`，`server/index.js` 不再使用隐式固定 session secret。
 - 追加 RBAC 管理员红线：旧角色不是 `admin`、但具备 RBAC `admin` 角色的用户应能执行管理员归档动作。
 - 第二批继续收敛管理员判断：`auth.isAdmin`、旧数据权限管理员旁路、冲突归档、术语维护和集成凭据管理改用 RBAC 管理员口径。
+- 追加字段级写保护红线：具备受限写权限的用户不能写入该权限声明的 `readonly` 字段，但仍可写入非只读字段。
+- 第二批继续执行字段约束：`requirePermission` 对写请求检查当前权限码的 `readonly` 字段，命中后返回 `403`。
 
 ## 5. 后续建议顺序
 
-1. 第二批剩余 MDM 安全边界：默认口令、业务角色过滤口径、字段级写入保护、用户目录的业务替代接口。
+1. 第二批剩余 MDM 安全边界：默认口令、业务角色过滤口径、用户目录的业务替代接口。
 2. 第三批处理流程真源完整性：工程技术部、跨部门风险来源、历史部门别名。
 3. 第四批处理仓库边界：先修导航和 README，再对大体积资料与重复资产写迁移提案。
 4. 第五批处理架构债：前端拆分、测试框架、大脚本拆分和性能问题。

@@ -170,8 +170,29 @@ function requirePermission(permCode) {
     }
     req.effectivePermissions = permSet;
     req.effectiveFieldConstraints = fieldConstraints;
+    const readonlyViolation = readonlyWriteViolation(req, permCode, fieldConstraints);
+    if (readonlyViolation.length > 0) {
+      return res.status(403).json({ error: '字段只读，不允许写入', readonly_fields: readonlyViolation });
+    }
     next();
   };
+}
+
+function readonlyWriteViolation(req, permCode, fieldConstraints) {
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return [];
+  if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) return [];
+
+  const constraints = fieldConstraints || {};
+  const readonly = new Set();
+  for (const code of [permCode, '*:*']) {
+    const fc = constraints[code];
+    if (fc && Array.isArray(fc.readonly)) {
+      fc.readonly.forEach(field => readonly.add(field));
+    }
+  }
+  if (readonly.size === 0) return [];
+
+  return Array.from(readonly).filter(field => Object.prototype.hasOwnProperty.call(req.body, field));
 }
 
 function applyFieldConstraints(resourceType) {
