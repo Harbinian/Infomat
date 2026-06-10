@@ -237,7 +237,7 @@ async function assertServerRequiresSessionSecret() {
   assert.ok(stderr.includes('SESSION_SECRET'), '失败信息应提示 SESSION_SECRET');
 }
 
-async function assertUserDirectoryGuards(adminCookie, submitterCookie) {
+async function assertUserDirectoryGuards(adminCookie, reviewerCookie, submitterCookie) {
   const submitterUsers = await request('/api/org/users', {}, submitterCookie);
   assert.strictEqual(submitterUsers.res.status, 403, '普通用户不能查看全员用户目录');
 
@@ -245,6 +245,17 @@ async function assertUserDirectoryGuards(adminCookie, submitterCookie) {
   assert.strictEqual(adminUsers.res.status, 200, '管理员仍可查看用户目录');
   assert.ok(adminUsers.body.some(row => row.employee_no === 'SALE001'));
   assert.ok(adminUsers.body.every(row => row.password_hash === undefined));
+
+  const submitterAssignableUsers = await request('/api/org/users/assignable', {}, submitterCookie);
+  assert.strictEqual(submitterAssignableUsers.res.status, 403, '普通报送人不能查看指派候选人列表');
+
+  const reviewerAssignableUsers = await request('/api/org/users/assignable', {}, reviewerCookie);
+  assert.strictEqual(reviewerAssignableUsers.res.status, 200, '冲突处理角色可查看最小指派候选人列表');
+  assert.ok(reviewerAssignableUsers.body.some(row => row.name === '财务负责人'));
+  assert.ok(reviewerAssignableUsers.body.every(row => row.id && row.name));
+  assert.ok(reviewerAssignableUsers.body.every(row => row.employee_no === undefined));
+  assert.ok(reviewerAssignableUsers.body.every(row => row.post === undefined));
+  assert.ok(reviewerAssignableUsers.body.every(row => row.role === undefined));
 }
 
 async function assertRbacAdminUsesAdminPermission(seed, rbacAdminCookie) {
@@ -487,7 +498,7 @@ async function main() {
     assert.strictEqual(createSystem.res.status, 403);
 
     await assertMasterDataWriteGuards(seed, adminCookie, submitterCookie);
-    await assertUserDirectoryGuards(adminCookie, submitterCookie);
+    await assertUserDirectoryGuards(adminCookie, reviewerCookie, submitterCookie);
     await assertFieldConstraintsAreApplied(submitterCookie);
     await assertReadonlyFieldConstraintsAreEnforced(adminCookie, limitedEditorCookie);
 
