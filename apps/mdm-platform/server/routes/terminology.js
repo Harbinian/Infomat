@@ -30,6 +30,18 @@ function normalizeProcessId(value) {
   return processId;
 }
 
+function normalizeTermTypeCode(value) {
+  const code = String(value || 'noun').trim();
+  return code || 'noun';
+}
+
+function validateTermTypeCode(res, code) {
+  const termType = db.prepare('SELECT * FROM term_types WHERE code=? AND active=1').get(code);
+  if (termType) return true;
+  res.status(400).json({ error: '术语类型不存在' });
+  return false;
+}
+
 function termGovernanceScope(alias, req, options = {}) {
   const global = options.global === undefined ? hasGlobalView(req) : options.global;
   if (global) return { sql: '', params: [] };
@@ -94,10 +106,22 @@ router.get('/processes', requireAuth, (req, res) => {
   res.json(rows);
 });
 
+router.get('/types', requireAuth, (req, res) => {
+  const rows = db.prepare(`
+    SELECT code, name, description, sort_order
+    FROM term_types
+    WHERE active=1
+    ORDER BY sort_order, code
+  `).all();
+  res.json(rows);
+});
+
 router.get('/', requireAuth, (req, res) => {
   const { status } = req.query;
-  let sql = `SELECT t.*, p.name as process_name, p.owner_dept_id as process_owner_dept_id, d.name as process_dept_name
+  let sql = `SELECT t.*, tt.name as term_type_name, tt.description as term_type_description,
+                    p.name as process_name, p.owner_dept_id as process_owner_dept_id, d.name as process_dept_name
              FROM terms t
+             LEFT JOIN term_types tt ON t.term_type_code = tt.code
              LEFT JOIN processes p ON t.process_id = p.id
              LEFT JOIN departments d ON p.owner_dept_id = d.id`;
   const params = [];
@@ -122,10 +146,12 @@ router.get('/', requireAuth, (req, res) => {
 router.post('/', requireAuth, (req, res) => {
   return runDbAction(res, () => {
     const { term, definition, scope, forbidden, process_id } = req.body;
+    const termTypeCode = normalizeTermTypeCode(req.body.term_type_code);
+    if (!validateTermTypeCode(res, termTypeCode)) return;
     const normalizedProcessId = normalizeProcessId(process_id);
     if (!validateGovernableProcess(req, res, normalizedProcessId)) return;
-    const stmt = db.prepare('INSERT INTO terms (term, definition, scope, forbidden, process_id, created_by) VALUES (?, ?, ?, ?, ?, ?)');
-    const result = stmt.run(term, definition || null, scope || null, forbidden || null, normalizedProcessId || null, req.session.userId);
+    const stmt = db.prepare('INSERT INTO terms (term, term_type_code, definition, scope, forbidden, process_id, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)');
+    const result = stmt.run(term, termTypeCode, definition || null, scope || null, forbidden || null, normalizedProcessId || null, req.session.userId);
     res.json({ id: result.lastInsertRowid });
   });
 });
@@ -138,10 +164,13 @@ router.put('/:id', requireAuth, (req, res) => {
       return res.status(403).json({ error: '仅创建人可修改待审术语，或由管理员维护术语' });
     }
     const { term, definition, scope, forbidden, process_id } = req.body;
+    const termTypeCode = normalizeTermTypeCode(req.body.term_type_code);
+    if (!validateTermTypeCode(res, termTypeCode)) return;
     const normalizedProcessId = normalizeProcessId(process_id);
     if (!validateGovernableProcess(req, res, normalizedProcessId)) return;
-    db.prepare('UPDATE terms SET term=?, definition=?, scope=?, forbidden=?, process_id=? WHERE id=?').run(
+    db.prepare('UPDATE terms SET term=?, term_type_code=?, definition=?, scope=?, forbidden=?, process_id=? WHERE id=?').run(
       term,
+      termTypeCode,
       definition || null,
       scope || null,
       forbidden || null,

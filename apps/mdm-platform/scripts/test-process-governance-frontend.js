@@ -1,6 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const vm = require('vm');
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
 
@@ -60,6 +61,35 @@ assert.ok(
   html.includes('renderProcessGovernanceSankey(renderedSankey)'),
   'process governance sankey should render from capability level after department filtering'
 );
+const pruneMatch = html.match(/function pruneProcessGovernanceSankeyToCapability\(data\) \{[\s\S]*?\n    \}/);
+assert.ok(pruneMatch, 'process governance sankey pruning helper should be extractable');
+const pruneContext = {};
+vm.runInNewContext(`${pruneMatch[0]}; this.pruneProcessGovernanceSankeyToCapability = pruneProcessGovernanceSankeyToCapability;`, pruneContext);
+const pruned = pruneContext.pruneProcessGovernanceSankeyToCapability({
+  nodes: [
+    { name: '昌兴复材', node_type: 'root' },
+    { name: '经营域', node_type: 'domain' },
+    { name: '经营发展部', node_type: 'department' },
+    { name: '合同管理', node_type: 'l2' },
+    { name: '销售订单评审和执行管理', node_type: 'l3' },
+    { name: '接收订单并组织评审', node_type: 'a1' },
+    { name: 'OA', node_type: 'system' }
+  ],
+  links: [
+    { source: '昌兴复材', target: '经营域', value: 1 },
+    { source: '经营域', target: '经营发展部', value: 1 },
+    { source: '经营发展部', target: '合同管理', value: 1 },
+    { source: '合同管理', target: '销售订单评审和执行管理', value: 1 },
+    { source: '销售订单评审和执行管理', target: '接收订单并组织评审', value: 1 },
+    { source: '接收订单并组织评审', target: 'OA', value: 1 }
+  ]
+});
+assert.deepStrictEqual(pruned.nodes.map(node => node.name), ['合同管理', '销售订单评审和执行管理', '接收订单并组织评审', 'OA']);
+assert.deepStrictEqual(pruned.links.map(link => `${link.source}->${link.target}`), [
+  '合同管理->销售订单评审和执行管理',
+  '销售订单评审和执行管理->接收订单并组织评审',
+  '接收订单并组织评审->OA'
+]);
 assert.ok(
   html.includes("String(row.input_source_dept || '').includes(deptName)") &&
   html.includes("String(row.output_target_dept || '').includes(deptName)"),

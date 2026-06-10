@@ -22,4 +22,6 @@ Do not run a DCM-only workflow. The current project standard requires one contro
 - canonical Sankey/H5 update
 - validation and unresolved issue reporting
 
+During DCM work, do not turn制度依据, responsibility ownership, application placement, participant departments, approval roles, or archive destinations into BBM `输入来源部门` / `输出目标部门`. Those fields belong to A1 work and must later follow the controlled-transfer evidence rule in `process-evidence-mapping`.
+
 If this compatibility skill is invoked, stop here, open `process-evidence-mapping`, and follow its quality gates end to end.
