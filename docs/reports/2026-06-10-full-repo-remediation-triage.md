@@ -41,7 +41,7 @@
 | 第 4 层 | README / PMO 文档引用不存在入口或截图 | 已确认 | 第四批小片已处理失效导航 |
 | 第 4 层 | `scripts/` 缺少脚本职责和副作用说明 | 已确认 | 第四批小片已补 README |
 | 第 4 层 | `docs/` 根目录资料与子目录职责不清 | 已确认 | 第四批小片已补导航 README，不迁移文件 |
-| 第 4 层 | 重复静态资产、日志、数据库备份、缓存入库 | 已确认 | 小片处理运行产物；重复资产延后 |
+| 第 4 层 | 重复静态资产、日志、数据库备份、缓存入库 | 已确认 | 运行产物已处理；重复资产已补迁移提案 |
 | 第 5 层 | 前端单文件、测试 helper 重复、大脚本膨胀 | 已归类 | 延后 |
 | 第 5 层 | 审批第 5 步状态返回 `undefined` | 过时/未复现 | 当前 `mappingStatusAfterStep(5)` 返回 `final_reviewed`，`test:mappings` 覆盖终审发布 |
 | 第 5 层 | 编码流水号并发、冲突检测性能 | 待复核 | 延后 |
@@ -103,6 +103,7 @@
 - 第四批继续做运行产物收口：补充 `.bak` 和点分隔数据库备份忽略规则，并将已跟踪的 `apps/mdm-platform/data/platform.db.after-admin-reset-20260609-152533.bak`、`scripts/__pycache__/generate_digital_project_gantt_8k.cpython-313.pyc` 从版本管理中移出；本地文件不删除。
 - 重复静态资产仍只记录为后续治理项：`echarts.min.js` 多副本和 `pmo/tasks.json` 双副本本轮不迁移，避免误伤 PMO、MDM 和 norms 的静态页面引用约定。
 - 第四批继续补资料目录边界：新增 `docs/README.md`，说明 `docs/` 真源入口、子目录职责、根目录历史散放文件口径和修改自检；不移动资料文件。
+- 第四批继续补重复资产迁移提案：新增 `docs/reports/2026-06-10-duplicate-asset-migration-proposal.md`，确认 5 份 `echarts.min.js` 同 hash、两份 PMO `tasks.json` 同 hash；本轮仅标出 `pmo/echarts.min.js` 等后续候选，不移动资产。
 
 ## 5. 后续建议顺序
 
