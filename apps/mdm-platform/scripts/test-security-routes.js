@@ -345,6 +345,31 @@ async function assertRbacOwnerCanEditOwnerFieldColumns(seed, rbacOwnerCookie) {
   assert.strictEqual(row.field_type, '文本');
 }
 
+async function assertRbacOwnerCanMaintainFieldIdentity(seed, rbacOwnerCookie) {
+  const upsertIdentity = await request(`/api/field-identities/${seed.fieldB}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      candidate_systems: ['ERP'],
+      authoritative_system: 'ERP',
+      maintain_dept_id: null,
+      confirmed: false,
+      note: 'RBAC owner 维护黄金源'
+    })
+  }, rbacOwnerCookie);
+  assert.strictEqual(upsertIdentity.res.status, 200, '拥有 owner RBAC 角色的用户应能维护本部门字段身份');
+
+  const confirmIdentity = await request(`/api/field-identities/${seed.fieldB}/confirm`, {
+    method: 'POST',
+    body: JSON.stringify({ authoritative_system: 'ERP' })
+  }, rbacOwnerCookie);
+  assert.strictEqual(confirmIdentity.res.status, 200, '拥有 owner RBAC 角色的用户应能确认本部门字段权威系统');
+
+  const row = db.prepare('SELECT authoritative_system, confirmed, confirmed_by FROM field_identities WHERE field_entry_id=?').get(seed.fieldB);
+  assert.strictEqual(row.authoritative_system, 'ERP');
+  assert.strictEqual(row.confirmed, 1);
+  assert.ok(row.confirmed_by);
+}
+
 async function assertFieldConstraintsAreApplied(submitterCookie) {
   const submitterRole = db.prepare("SELECT role_id FROM roles WHERE role_code='submitter'").get();
   assert.ok(submitterRole, 'submitter role should exist');
@@ -578,6 +603,7 @@ async function main() {
     await assertReadonlyFieldConstraintsAreEnforced(adminCookie, limitedEditorCookie);
     await assertRbacRolesDriveTodoList(seed, rbacOwnerCookie);
     await assertRbacOwnerCanEditOwnerFieldColumns(seed, rbacOwnerCookie);
+    await assertRbacOwnerCanMaintainFieldIdentity(seed, rbacOwnerCookie);
 
     const capBadAction = await request(`/api/capabilities/${seed.capA}/review`, {
       method: 'POST',
