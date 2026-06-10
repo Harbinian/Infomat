@@ -48,6 +48,7 @@
 | 第 4 层 | `docs/adr/` 缺少架构决策目录说明 | 已确认 | 第四批小片已补 README |
 | 第 4 层 | `docs/archives/` 缺少历史归档目录说明 | 已确认 | 第四批小片已补 README |
 | 第 4 层 | `docs/contracts/` 缺少校验合同目录说明 | 已确认 | 第四批小片已补 README |
+| 第 4 层 | `docs/HardwareResearch/` 缺少基础设施知识库目录说明 | 已确认 | 第四批小片已补 README，不触碰既有正文改动 |
 | 第 4 层 | `docs/integration/` 缺少集成方案目录说明 | 已确认 | 第四批小片已补 README |
 | 第 4 层 | `docs/meetings/` 缺少会议记录目录说明 | 已确认 | 第四批小片已补 README |
 | 第 4 层 | `docs/norms/` 缺少面向人的真源目录说明 | 已确认 | 第四批小片已补 README，不移动 norms 文件 |
@@ -120,6 +121,7 @@
 - 第四批继续补脚本边界：新增 `scripts/README.md`，按主线入口、审计质量脚本、局部或历史工具说明输入、输出和写文件副作用；不移动脚本。
 - 第四批继续补 MDM 应用内脚本边界：新增 `apps/mdm-platform/scripts/README.md`，分类测试、安全审计、初始化维护和流程治理承接脚本，并标注数据库副作用。
 - 第四批继续补校验合同目录说明：新增 `docs/contracts/README.md`，说明 `dcm-bbm-contract.json` 是脚本合同，不替代组织或流程真源。
+- 第四批继续补基础设施知识库目录说明：新增 `docs/HardwareResearch/README.md`，说明该目录服务基础设施方案和招标准备，不替代流程、组织、应用或 PMO 真源；未触碰该目录既有正文改动。
 - 第四批继续补集成方案目录说明：新增 `docs/integration/README.md`，说明接口模板、集成关系、MDM 治理方案和选型评分材料只作方案参考，不替代流程落位或系统选型结论。
 - 第四批继续补会议记录目录说明：新增 `docs/meetings/README.md`，说明会议记录和供应商洽谈材料只解释当时背景，正式口径需沉淀到真源、计划或 ADR。
 - 第四批继续补组织真源目录说明：新增 `docs/organization/README.md`，说明部门清单、部门到域映射、组织编码、岗位和人员同步应优先核对 `组织架构和部门职责.md`。
