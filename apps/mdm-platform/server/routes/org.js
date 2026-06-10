@@ -87,6 +87,12 @@ function syncUserRoles(userId, roleIds, compatibleRole, assignedBy) {
   for (const roleId of ids) insert.run(userId, roleId, assignedBy || null);
 }
 
+function requestHasAnyPermission(req, permissionCodes) {
+  if (!req.session || !req.session.userId) return false;
+  const { permSet } = getUserEffectivePermissions(req.session.userId);
+  return permSet.has('*:*') || permissionCodes.some(code => permSet.has(code));
+}
+
 router.get('/departments', requireAuth, (req, res) => {
   const depts = db.prepare('SELECT * FROM departments ORDER BY code').all();
   res.json(depts);
@@ -202,6 +208,27 @@ router.get('/users/roles-summary', requireAuth, requirePermission('admin:access'
       created_at: u.created_at,
       rbac_role_codes: u.rbac_role_codes || '',
       rbac_role_names: u.rbac_role_names || ''
+    })));
+  });
+});
+
+// GET /api/org/users/assignable — minimal user picker for conflict assignment
+router.get('/users/assignable', requireAuth, (req, res) => {
+  return runDbAction(res, () => {
+    if (!requestHasAnyPermission(req, ['conflict:manage', 'review:approve', 'admin:access'])) {
+      return res.status(403).json({ error: '权限不足' });
+    }
+    const rows = db.prepare(`
+      SELECT u.id, u.name, u.department_id, d.name AS dept_name
+      FROM users u
+      LEFT JOIN departments d ON u.department_id = d.id
+      ORDER BY d.name, u.name
+    `).all();
+    res.json(rows.map(row => ({
+      id: row.id,
+      name: row.name,
+      department_id: row.department_id,
+      dept_name: row.dept_name || null
     })));
   });
 });
