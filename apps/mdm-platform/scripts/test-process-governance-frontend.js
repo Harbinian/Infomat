@@ -10,18 +10,35 @@ assert.ok(html.includes('/api/process-governance/sankey'), 'process governance s
 assert.ok(html.includes('/api/process-governance/a1'), 'process governance A1 API should be called');
 assert.ok(html.includes('/api/process-governance/cross-dept'), 'process governance risk API should be called');
 assert.ok(html.includes('/api/process-governance/quality'), 'process governance quality API should be called');
+assert.ok(html.includes('/api/process-governance/quality-cases'), 'process governance quality cases API should be called');
+assert.ok(html.includes('/api/process-governance/mapping-workspace'), 'process governance mapping workspace API should be called');
+assert.ok(html.includes('/api/process-governance/mapping-todos'), 'process governance mapping todos API should be called');
 assert.ok(html.includes('function renderProcessGovernance()'), 'process governance renderer should exist');
 assert.ok(html.includes('function renderProcessGovernanceSankey(data)'), 'process governance sankey renderer should exist');
 assert.ok(html.includes('id="pgQualityRows"'), 'process governance should render quality finding rows');
+assert.ok(html.includes('id="pgQualityCaseRows"'), 'process governance should render governance case rows');
+assert.ok(html.includes('id="pgMappingWorkspaceRows"'), 'process governance should render mapping workspace rows');
+assert.ok(html.includes('id="pgMappingTodoRows"'), 'process governance should render mapping todo rows');
 assert.ok(html.includes('id="pgQualitySeverityFilter"'), 'process governance should expose quality severity filter');
 assert.ok(html.includes('id="pgQualityAreaFilter"'), 'process governance should expose quality area filter');
+assert.ok(html.includes('id="pgQualityCaseStatusFilter"'), 'process governance should expose quality case status filter');
+assert.ok(html.includes('id="pgQualityCaseOwnerFilter"'), 'process governance should expose quality case owner filter');
+assert.ok(html.includes('id="pgMappingTodoTypeFilter"'), 'process governance should expose mapping todo type filter');
+assert.ok(html.includes('id="pgMappingTodoStatusFilter"'), 'process governance should expose mapping todo status filter');
 assert.ok(html.includes('id="pgMetricQualityBlock"'), 'process governance should show BLOCK quality metric');
+assert.ok(html.includes('id="pgMetricQualityCaseOpen"'), 'process governance should show open quality case metric');
+assert.ok(html.includes('id="pgMetricMappingRecords"'), 'process governance should show mapping workspace metric');
+assert.ok(html.includes('id="pgMetricMappingTodos"'), 'process governance should show mapping todo metric');
 assert.ok(html.includes('docs/organization/组织架构和部门职责.md'), 'process governance should show the current organization source path');
 assert.ok(html.includes('docs/norms/{部门}部门-能力-流程-系统映射关系.md'), 'process governance should show the process source path');
 assert.ok(html.includes('function renderProcessGovernanceQuality'), 'process governance should render quality findings');
+assert.ok(html.includes('function renderProcessGovernanceQualityCases'), 'process governance should render quality cases');
+assert.ok(html.includes('function renderProcessGovernanceMappingWorkspace'), 'process governance should render mapping workspace');
+assert.ok(html.includes('function renderProcessGovernanceMappingTodos'), 'process governance should render mapping todos');
+assert.ok(html.includes('回源文件整改后重新导入'), 'process governance should guide users back to source files instead of editing docs/norms in MDM');
 assert.ok(
-  html.includes('qualityView: query.view') && html.includes('finding: query.finding'),
-  'process governance should understand quality deep links'
+  html.includes('qualityView: query.view') && html.includes('finding: query.finding') && html.includes('caseId: query.case') && html.includes('mappingTodoId: query.todo'),
+  'process governance should understand quality and mapping deep links'
 );
 assert.ok(html.includes('id="pgDeptFilters"'), 'process governance should expose department tag filters');
 assert.ok(html.includes('pgSelectedDept'), 'process governance should track selected department scope');
