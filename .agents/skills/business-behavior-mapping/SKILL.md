@@ -23,4 +23,6 @@ Do not run a BBM-only workflow. The current project standard requires business b
 - canonical Sankey/H5 update
 - validation and unresolved issue reporting
 
+The legacy BBM entry point must also follow the controlled-transfer evidence rule from `process-evidence-mapping`: never fill `输入来源部门` or `输出目标部门` from business logic, basis documents, attachment lists, execution subjects, collaboration participants, approval actors, archive recipients, or external action owners unless the source proves a concrete output object is handed off through a controlled transfer.
+
 If this compatibility skill is invoked, stop here, open `process-evidence-mapping`, and follow its quality gates end to end.

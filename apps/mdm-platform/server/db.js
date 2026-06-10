@@ -323,6 +323,23 @@ CREATE TABLE IF NOT EXISTS conflict_coordination_history (
 );
 `);
 
+const upsertTermType = db.prepare(`
+  INSERT INTO term_types (code, name, description, sort_order, active)
+  VALUES (?, ?, ?, ?, 1)
+  ON CONFLICT(code) DO UPDATE SET
+    name=excluded.name,
+    description=excluded.description,
+    sort_order=excluded.sort_order,
+    active=1
+`);
+TERM_TYPES.forEach(type => upsertTermType.run(...type));
+
+const termsInfo = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='terms'").get();
+if (termsInfo && !termsInfo.sql.includes('term_type_code')) {
+  db.exec("ALTER TABLE terms ADD COLUMN term_type_code TEXT NOT NULL DEFAULT 'noun'");
+  dbInitLog('Migration: added term_type_code to terms');
+}
+
 // Migration: update field_conflicts status to support new states
 const fcInfo = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='field_conflicts'").get();
 if (fcInfo && !fcInfo.sql.includes("'archived'")) {

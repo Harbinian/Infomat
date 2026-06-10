@@ -787,6 +787,7 @@
         <div class="split">
           <div>
             <h2>术语维护</h2>
+            <div class="form-group"><label>术语类型<select id="termType"></select></label></div>
             <div class="form-group"><label>术语<input id="termName"></label></div>
             <div class="form-group"><label>定义<textarea id="termDefinition"></textarea></label></div>
             <div class="form-group"><label>范围<input id="termScope"></label></div>
@@ -801,7 +802,7 @@
                 <button class="btn secondary" id="refreshTermsBtn">刷新</button>
               </div>
             </div>
-            <div class="table-container"><table><thead><tr><th>ID</th><th>术语</th><th>定义</th><th>范围</th><th>状态</th><th>操作</th></tr></thead><tbody id="termRows"></tbody></table></div>
+            <div class="table-container"><table><thead><tr><th>ID</th><th>类型</th><th>术语</th><th>定义</th><th>范围</th><th>状态</th><th>操作</th></tr></thead><tbody id="termRows"></tbody></table></div>
           </div>
         </div>
       </section>
@@ -1163,7 +1164,21 @@
 
   <script>
     // ===== State & Utilities =====
-    const state = { user:null, departments:[], capabilities:[], processes:[], termProcesses:[], mappings:[], todos:[], conflicts:[], terms:[], currentRoute:null, currentView:'roleWorkbench', activeMapping:null, activeConflict:null, pollTimer:null, isEditing:false, activeReview:null, activeCapReview:null, activeProcReview:null, pgSelectedDept:'', pageWorkflow:null, pageWorkflowRequestId:0, roleWorkbench:{ mode:'todo', data:null, selectedNode:null } };
+    const state = { user:null, departments:[], capabilities:[], processes:[], termProcesses:[], termTypes:[], mappings:[], todos:[], conflicts:[], terms:[], currentRoute:null, currentView:'roleWorkbench', activeMapping:null, activeConflict:null, pollTimer:null, isEditing:false, activeReview:null, activeCapReview:null, activeProcReview:null, pgSelectedDept:'', pageWorkflow:null, pageWorkflowRequestId:0, roleWorkbench:{ mode:'todo', data:null, selectedNode:null } };
+
+    var DEFAULT_TERM_TYPES = [
+      { code: 'noun', name: '名词' },
+      { code: 'verb', name: '动词' },
+      { code: 'position', name: '岗位词' },
+      { code: 'role', name: '角色词' },
+      { code: 'input', name: '输入词' },
+      { code: 'output', name: '输出词' },
+      { code: 'time_limit', name: '时效词' },
+      { code: 'status', name: '状态词' },
+      { code: 'rule', name: '规则词' },
+      { code: 'metric', name: '指标词' },
+      { code: 'system_data', name: '系统数据词' }
+    ];
     const $ = id => document.getElementById(id);
 
     function escapeHtml(value) {
@@ -1784,6 +1799,26 @@
       return state.termProcesses;
     }
 
+    async function loadTermTypes() {
+      try {
+        state.termTypes = await api('/api/terminology/types');
+      } catch (error) {
+        state.termTypes = DEFAULT_TERM_TYPES;
+      }
+      renderTermTypeOptions();
+      return state.termTypes;
+    }
+
+    function renderTermTypeOptions() {
+      var select = $('termType');
+      if (!select) return;
+      var rows = (state.termTypes && state.termTypes.length ? state.termTypes : DEFAULT_TERM_TYPES);
+      select.innerHTML = rows.map(function(row) {
+        return '<option value="' + safeText(row.code) + '">' + safeText(row.name) + '</option>';
+      }).join('');
+      if (!select.value) select.value = 'noun';
+    }
+
     function renderTermProcessOptions() {
       var select = $('termProcess');
       if (!select) return;
@@ -2025,6 +2060,7 @@
 
     // ===== Terms =====
     async function loadTerms() {
+      await loadTermTypes();
       await loadTermGovernanceProcesses();
       var params = new URLSearchParams();
       var statusEl = $('termStatus');
@@ -2037,15 +2073,15 @@
         var actions = hasAdminAccess()
           ? '<button class="btn success" onclick="reviewTerm(' + rowId + ',\'approve\')">通过</button> <button class="btn danger" style="margin-left: 8px;" onclick="reviewTerm(' + rowId + ',\'reject\')">驳回</button> <a href="#" onclick="deleteTerm(' + rowId + ');return false" style="color:#e53935;margin-left:8px;">删除</a>'
           : '-';
-        return '<tr><td>' + rowId + '</td><td>' + safeText(row.term) + '</td><td>' + safeText(row.definition) + '</td><td>' + safeText(row.scope) + '</td><td>' + statusTag(row.status) + '</td><td>' + actions + '</td></tr>';
-      }).join('') || '<tr><td colspan="6" class="empty">暂无数据</td></tr>';
+        return '<tr><td>' + rowId + '</td><td>' + safeText(row.term_type_name || row.term_type_code || '名词') + '</td><td>' + safeText(row.term) + '</td><td>' + safeText(row.definition) + '</td><td>' + safeText(row.scope) + '</td><td>' + statusTag(row.status) + '</td><td>' + actions + '</td></tr>';
+      }).join('') || '<tr><td colspan="7" class="empty">暂无数据</td></tr>';
     }
 
     async function saveTerm() {
       var term = $('termName').value.trim();
       if (!term) return alert('请输入术语');
       if (!$('termProcess').value) return alert('请选择本部门映射关系线上的流程');
-      await api('/api/terminology', { method:'POST', body:JSON.stringify({ term: term, definition: $('termDefinition').value, scope: $('termScope').value, forbidden: $('termForbidden').value, process_id: Number($('termProcess').value) }) });
+      await api('/api/terminology', { method:'POST', body:JSON.stringify({ term: term, term_type_code: $('termType').value || 'noun', definition: $('termDefinition').value, scope: $('termScope').value, forbidden: $('termForbidden').value, process_id: Number($('termProcess').value) }) });
       await loadTerms();
     }
 

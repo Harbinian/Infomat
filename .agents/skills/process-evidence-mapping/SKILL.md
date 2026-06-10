@@ -149,6 +149,9 @@ Rules:
 - Do not use generic `原文明确`.
 - If role, trigger, precondition, or action is inferred, the relevant basis field must say how it was inferred.
 - If `输入来源部门` or `输出目标部门` is non-empty, the visible 业务行为（A1） text must include a cross-department marker.
+- `输入来源部门` / `输出目标部门` may only name a department when the source contains 受控传递证据 (controlled transfer evidence): a clause, flowchart arrow, form routing, ledger handoff, sign-off, notice, issuance, feedback, receipt, or equivalent handoff record showing the output object moves between departments.
+- Do not put 依据来源, attachment/checklist owners, 执行主体, collaboration participants, approval actors, archive recipients, or external action owners into `输入来源部门` / `输出目标部门` unless that same source also proves a controlled transfer of a concrete output object.
+- If the source only says an action is "based on" another department's document, lists that document as a preparation item, or names another department as responsible, keep that fact in `前置条件依据`, `制度依据`, `备注`, or `核验提醒`; write `未见受控传递证据，待补` rather than inferring an input/output department.
 - Every A1 must identify system support, record carrier, or no-fit reason.
 
 ### 6. Extract Flow Diagrams
@@ -227,7 +230,7 @@ Do not call work complete until these gates have been checked:
 5. **Evidence gate**: role, trigger, precondition, action, system support, and acceptance/control gates are source-backed or explicitly inferred.
 6. **Flow gate**: every source flowchart/flow model/flow-description artifact is either extracted to Markdown or listed in an unresolved flow register.
 7. **Form/table gate**: every process-relevant form/table/ledger is in a form/ledger sub-table or listed with an exclusion reason.
-8. **Cross-department gate**: every input/output department reference is marked in A1 text and prepared for completeness checking.
+8. **Cross-department gate**: every input/output department reference is marked in A1 text, backed by controlled transfer evidence, and prepared for completeness checking; basis-only, role-only, approval-only, archive-only, or external-executor-only references must be moved to basis/remarks/review prompts.
 9. **HTML gate**: canonical H5 only; no second behavior HTML; visible labels and static asset path follow project rules.
 10. **Validation gate**: run applicable scripts and explain all remaining BLOCK/WARN items.
 
