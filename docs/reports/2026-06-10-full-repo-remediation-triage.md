@@ -42,7 +42,8 @@
 | 第 4 层 | `docs/` 根目录资料与子目录职责不清 | 已确认 | 第四批小片已补导航 README，不迁移文件 |
 | 第 4 层 | 重复静态资产、日志、数据库备份、缓存入库 | 已确认 | 小片处理运行产物；重复资产延后 |
 | 第 5 层 | 前端单文件、测试 helper 重复、大脚本膨胀 | 已归类 | 延后 |
-| 第 5 层 | 编码流水号并发、审批状态机、冲突检测性能 | 待复核 | 延后 |
+| 第 5 层 | 审批第 5 步状态返回 `undefined` | 过时/未复现 | 当前 `mappingStatusAfterStep(5)` 返回 `final_reviewed`，`test:mappings` 覆盖终审发布 |
+| 第 5 层 | 编码流水号并发、冲突检测性能 | 待复核 | 延后 |
 
 ## 3. 第一批实际边界
 
@@ -91,6 +92,7 @@
 - 第二批继续统一角色口径：`fieldIdentities` 的 owner 判断改为 RBAC + 旧基础角色并集。
 - 追加导入多角色红线：旧基础角色不是报送人、但 RBAC 具备 submitter 且本人是映射提交人时，应能导入字段台账。
 - 第二批继续统一角色口径：`import` 字段台账导入的 submitter 判断改为 RBAC + 旧基础角色并集。
+- 复核 Deepseek 审批状态机结论：当前 `apps/mdm-platform/server/routes/mappings.js` 已包含第 5 步状态映射，`npm run test:mappings` 可跑完整终审发布路径，该单点标记为过时/未复现；不做代码改动。
 - 追加第三批校验红线：`check-dashboard-data.mjs` 不得把 `crossDept` 统计固化为 `168/6/1` 等历史数字。
 - 第三批先做只读校验收敛：`check-dashboard-data.mjs` 从 `跨部门完整性检查报告.md` 解析统计值，并与 `docs/company-sankey-data.json.crossDept`、PMO 内嵌 `#cross-dept-data` 比对；不改流程真源和生成快照。
 - 第三批继续补真源缺口审计：新增 `docs/reports/2026-06-10-process-truth-gap-audit.md`，确认工程技术部缺少 canonical 映射文件、`综合管理部` 属于待确认口径残留；不补写 norms、不重新生成 JSON。
