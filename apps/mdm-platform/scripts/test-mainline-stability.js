@@ -144,6 +144,52 @@ async function runMasterDataObjectSmoke() {
     assert.strictEqual(leaderPerson.org_unit_code, 'OU-OFC-CXF-CEO');
     assert.strictEqual(leaderPerson.org_unit_name, '总经理办公室');
 
+    const activePositions = await request('/api/positions?status=active&search=%E6%80%BB%E7%BB%8F%E7%90%86', {}, cookie);
+    assert.strictEqual(activePositions.res.status, 200, JSON.stringify(activePositions.body));
+    const ceoPosition = activePositions.body.rows.find(row => row.position_code === 'POS-CXF-CEO');
+    assert.ok(ceoPosition, 'positions list should expose synchronized leadership positions');
+    const activeOrgUnits = await request('/api/org-units?status=active&search=%E7%94%9F%E4%BA%A7%E5%89%AF%E6%80%BB%E5%8A%9E%E5%85%AC%E5%AE%A4', {}, cookie);
+    assert.strictEqual(activeOrgUnits.res.status, 200, JSON.stringify(activeOrgUnits.body));
+    const mismatchedOrgUnit = activeOrgUnits.body.rows.find(row => row.org_unit_code === 'OU-OFC-CXF-MVP');
+    assert.ok(mismatchedOrgUnit, 'org list should expose synchronized organization units');
+
+    const mismatchedAssignedPerson = await request('/api/persons', {
+      method: 'POST',
+      body: JSON.stringify({
+        person_name: '任岗错配测试',
+        org_unit_id: mismatchedOrgUnit.org_unit_id,
+        position_id: ceoPosition.position_id
+      })
+    }, cookie);
+    assert.strictEqual(mismatchedAssignedPerson.res.status, 400);
+    assert.strictEqual(mismatchedAssignedPerson.body.error, '任职岗位不属于所选组织');
+
+    const assignedPerson = await request('/api/persons', {
+      method: 'POST',
+      body: JSON.stringify({
+        person_name: '任岗登记测试',
+        mobile: '13800138001',
+        email: 'assigned@example.com',
+        org_unit_id: ceoPosition.org_unit_id,
+        position_id: ceoPosition.position_id
+      })
+    }, cookie);
+    assert.strictEqual(assignedPerson.res.status, 201, JSON.stringify(assignedPerson.body));
+
+    const assignedPersonDetail = await request(`/api/persons/${encodeURIComponent(assignedPerson.body.employee_no)}`, {}, cookie);
+    assert.strictEqual(assignedPersonDetail.res.status, 200, JSON.stringify(assignedPersonDetail.body));
+    assert.ok(
+      assignedPersonDetail.body.assignments.some(row => row.position_code === 'POS-CXF-CEO' && row.org_unit_code === 'OU-OFC-CXF-CEO'),
+      'creating a person with position_id should create an active org/position assignment'
+    );
+
+    const assignedPersonList = await request(`/api/persons?search=${encodeURIComponent(assignedPerson.body.employee_no)}`, {}, cookie);
+    assert.strictEqual(assignedPersonList.res.status, 200, JSON.stringify(assignedPersonList.body));
+    const assignedPersonRow = assignedPersonList.body.rows.find(row => row.employee_no === assignedPerson.body.employee_no);
+    assert.ok(assignedPersonRow, 'newly assigned person should be listed');
+    assert.strictEqual(assignedPersonRow.position_code, 'POS-CXF-CEO');
+    assert.strictEqual(assignedPersonRow.org_unit_code, 'OU-OFC-CXF-CEO');
+
     const person = await request('/api/persons', {
       method: 'POST',
       body: JSON.stringify({
@@ -229,8 +275,8 @@ async function runMasterDataObjectSmoke() {
     assert.strictEqual(quality.res.status, 200, JSON.stringify(quality.body));
     assert.strictEqual(quality.body.org_person.org_units, ORGANIZATION_STRUCTURE_UNITS.length);
     assert.strictEqual(quality.body.org_person.positions, LEADERSHIP_OFFICE_ASSIGNMENTS.length);
-    assert.strictEqual(quality.body.org_person.persons, LEADERSHIP_OFFICE_ASSIGNMENTS.length + 1);
-    assert.strictEqual(quality.body.org_person.active_assignments, LEADERSHIP_OFFICE_ASSIGNMENTS.length);
+    assert.strictEqual(quality.body.org_person.persons, LEADERSHIP_OFFICE_ASSIGNMENTS.length + 2);
+    assert.strictEqual(quality.body.org_person.active_assignments, LEADERSHIP_OFFICE_ASSIGNMENTS.length + 1);
     assert.strictEqual(quality.body.product.families, 1);
     assert.strictEqual(quality.body.product.released, 1);
 

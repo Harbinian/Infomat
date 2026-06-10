@@ -100,6 +100,8 @@ pmo/
 │   ├── public/tasks.json
 │   ├── public/pmo-source-manifest.json
 │   └── src/
+├── archive/
+│   └── page-snapshots/
 ├── tasks.json
 ├── pmo-source-manifest.json
 ├── convert_xlsx.py

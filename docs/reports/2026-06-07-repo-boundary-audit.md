@@ -59,6 +59,10 @@
 - 第一轮只登记，不移动。
 - 后续查引用后，迁移到 `artifacts/`、`pmo/archive/` 或 `docs/samples/`。
 
+后续处理：
+
+- 2026-06-10 已将根目录 45 个 PMO YAML 页面快照迁移到 `pmo/archive/page-snapshots/2026-06-05-playwright-yaml/`，并补充归档说明。
+
 ### F2 生成物已有部分被版本跟踪
 
 按候选生成物模式粗查，`*.png`、`*.zip`、`_tmp/*`、`output/*`、PMO 截图和 Playwright 输出等已跟踪条目约 419 个。其中部分截图可能是必要证据或样例，但 `_tmp/pptx_unpacked/`、批量截图、zip 和渲染输出不应默认留在主干。

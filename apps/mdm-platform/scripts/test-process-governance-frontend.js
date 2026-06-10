@@ -49,6 +49,17 @@ assert.ok(
   html.includes('processGovernanceA1MatchesDept(row, dept.name)'),
   'department tag counts should use the same A1 matching rule as department filtering'
 );
+assert.ok(html.includes('function pruneProcessGovernanceSankeyToCapability'), 'process governance sankey should prune non-capability context before rendering');
+assert.ok(
+  html.includes("['root', 'domain', 'department']") &&
+  html.includes("hiddenTypes.has(node.node_type)"),
+  'process governance sankey should hide company, management-domain, and department nodes'
+);
+assert.ok(
+  html.includes('var renderedSankey = pruneProcessGovernanceSankeyToCapability(filteredSankey)') &&
+  html.includes('renderProcessGovernanceSankey(renderedSankey)'),
+  'process governance sankey should render from capability level after department filtering'
+);
 assert.ok(
   html.includes("String(row.input_source_dept || '').includes(deptName)") &&
   html.includes("String(row.output_target_dept || '').includes(deptName)"),

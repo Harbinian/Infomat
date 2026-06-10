@@ -17,6 +17,20 @@ Object.defineProperty(db, '__dbPath', { value: dbPath });
 
 db.pragma('foreign_keys = ON');
 
+const TERM_TYPES = [
+  ['noun', '名词', '业务对象、数据对象、单据、资源等名词类术语', 10],
+  ['verb', '动词', '接收、审核、发布、归档等动作行为类术语', 20],
+  ['position', '岗位词', '岗位、职务、任职名称等后续需要编号的术语', 30],
+  ['role', '角色词', '流程角色、项目角色、职责身份等后续需要编号的术语', 40],
+  ['input', '输入词', '流程输入、数据输入、触发输入、来源材料等术语', 50],
+  ['output', '输出词', '流程输出、数据输出、交付物、结果物等术语', 60],
+  ['time_limit', '时效词', '时限、周期、频率、提前量、完成时点等术语', 70],
+  ['status', '状态词', '流程状态、单据状态、任务状态、结果状态等术语', 80],
+  ['rule', '规则词', '约束、口径、判定规则、审批规则等术语', 90],
+  ['metric', '指标词', '统计指标、质量指标、绩效指标、计量口径等术语', 100],
+  ['system_data', '系统数据词', '系统、字段、编码、接口、主数据对象等术语', 110]
+];
+
 db.exec(`
 CREATE TABLE IF NOT EXISTS departments (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -186,9 +200,18 @@ CREATE TABLE IF NOT EXISTS field_identities (
   note TEXT
 );
 
+CREATE TABLE IF NOT EXISTS term_types (
+  code TEXT PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE,
+  description TEXT,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  active INTEGER NOT NULL DEFAULT 1
+);
+
 CREATE TABLE IF NOT EXISTS terms (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   term TEXT NOT NULL UNIQUE,
+  term_type_code TEXT NOT NULL DEFAULT 'noun' REFERENCES term_types(code),
   definition TEXT,
   scope TEXT,
   forbidden TEXT,

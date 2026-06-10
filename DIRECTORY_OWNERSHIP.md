@@ -15,7 +15,7 @@
 | `DIRECTORY_OWNERSHIP.md` | 目录责任矩阵 | 定义每个目录怎么改 | 不记录具体迁移日志 |
 | `MAINLINE_MAP.md` | 主线数据流关系 | 定义资料、PMO、MDM、脚本的链路 | 不写平台实现细节 |
 
-根目录不应继续新增临时 YAML、截图、压缩包、解包目录或一次性调查文本。当前已存在的根目录 PMO YAML、`pmo.zip`、`topology_screenshot.png`、`temp_survey.txt` 属于待归类资产，先登记后迁移。
+根目录不应继续新增临时 YAML、截图、压缩包、解包目录或一次性调查文本。历史散放的根目录 PMO YAML 已归档到 `pmo/archive/page-snapshots/2026-06-05-playwright-yaml/`。当前仍散放的 `pmo.zip`、`topology_screenshot.png`、`temp_survey.txt` 属于待归类资产，先登记后迁移。
 
 ## 2. 可运行系统
 
