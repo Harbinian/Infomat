@@ -169,6 +169,17 @@ function mappingRecordSummary(items) {
   return { total: items.length, byType, byStatus };
 }
 
+function mappingRecordSummaryFromRows(rows) {
+  const summary = mappingRecordSummary([]);
+  rows.forEach(row => {
+    const count = Number(row.count || 0);
+    if (Object.prototype.hasOwnProperty.call(summary.byType, row.record_type)) summary.byType[row.record_type] += count;
+    if (Object.prototype.hasOwnProperty.call(summary.byStatus, row.status)) summary.byStatus[row.status] += count;
+    summary.total += count;
+  });
+  return summary;
+}
+
 function mappingTodoSummary(items) {
   const byType = { dept_confirm: 0, verification: 0, adjustment: 0, cross_dept: 0, evidence: 0 };
   const byStatus = {
@@ -186,6 +197,17 @@ function mappingTodoSummary(items) {
     if (Object.prototype.hasOwnProperty.call(byStatus, item.status)) byStatus[item.status] += 1;
   });
   return { total: items.length, byType, byStatus };
+}
+
+function mappingTodoSummaryFromRows(rows) {
+  const summary = mappingTodoSummary([]);
+  rows.forEach(row => {
+    const count = Number(row.count || 0);
+    if (Object.prototype.hasOwnProperty.call(summary.byType, row.todo_type)) summary.byType[row.todo_type] += count;
+    if (Object.prototype.hasOwnProperty.call(summary.byStatus, row.status)) summary.byStatus[row.status] += count;
+    summary.total += count;
+  });
+  return summary;
 }
 
 function mappingTodoSelectSql() {
@@ -731,23 +753,23 @@ router.post('/quality-cases/:id/reopen', requireAuth, (req, res) => {
 router.get('/mapping-workspace', requireAuth, (req, res) => {
   return runDbAction(res, () => {
     const params = [];
+    let whereSql = 'WHERE 1=1';
     let sql = `
       SELECT r.*, parent.l3_name AS parent_l3_name
       FROM process_mapping_records r
       LEFT JOIN process_mapping_records parent ON parent.id = r.parent_record_id
-      WHERE 1=1
     `;
 
     if (['l3', 'a1'].includes(String(req.query.type || ''))) {
-      sql += ' AND r.record_type=?';
+      whereSql += ' AND r.record_type=?';
       params.push(String(req.query.type));
     }
     if (MAPPING_RECORD_STATUSES.has(String(req.query.status || ''))) {
-      sql += ' AND r.status=?';
+      whereSql += ' AND r.status=?';
       params.push(String(req.query.status));
     }
     if (req.query.dept) {
-      sql += ' AND r.dept_name=?';
+      whereSql += ' AND r.dept_name=?';
       params.push(String(req.query.dept));
     }
 
@@ -755,11 +777,20 @@ router.get('/mapping-workspace', requireAuth, (req, res) => {
       const department = req.session.departmentId
         ? db.prepare('SELECT name FROM departments WHERE id=?').get(req.session.departmentId)
         : null;
-      sql += ' AND (r.dept_name=? OR r.input_source_dept=? OR r.output_target_dept=?)';
+      whereSql += ' AND (r.dept_name=? OR r.input_source_dept=? OR r.output_target_dept=?)';
       params.push(department && department.name || '__none__', department && department.name || '__none__', department && department.name || '__none__');
     }
 
+    const summaryRows = db.prepare(`
+      SELECT r.record_type, r.status, COUNT(*) AS count
+      FROM process_mapping_records r
+      ${whereSql}
+      GROUP BY r.record_type, r.status
+    `).all(...params);
+    const summary = mappingRecordSummaryFromRows(summaryRows);
+
     sql += `
+      ${whereSql}
       ORDER BY CASE r.record_type WHEN 'l3' THEN 0 ELSE 1 END,
                r.dept_name, r.l2_name, r.l3_name, r.a1_code, r.id
       LIMIT 500
@@ -768,34 +799,35 @@ router.get('/mapping-workspace', requireAuth, (req, res) => {
       ...row,
       suggested_systems: parseJsonArray(row.suggested_systems)
     }));
-    return res.json({ summary: mappingRecordSummary(items), items });
+    return res.json({ summary: { ...summary, returned: items.length, limit: 500 }, items });
   });
 });
 
 router.get('/mapping-todos', requireAuth, (req, res) => {
   return runDbAction(res, () => {
     const params = [];
-    let sql = `${mappingTodoSelectSql()} WHERE 1=1`;
+    let whereSql = 'WHERE 1=1';
+    let sql = mappingTodoSelectSql();
 
     const type = String(req.query.type || '');
     if (MAPPING_TODO_TYPES.has(type)) {
-      sql += ' AND t.todo_type=?';
+      whereSql += ' AND t.todo_type=?';
       params.push(type);
     }
     const status = String(req.query.status || '');
     if (MAPPING_TODO_STATUSES.has(status)) {
-      sql += ' AND t.status=?';
+      whereSql += ' AND t.status=?';
       params.push(status);
     }
     if (req.query.dept) {
-      sql += ' AND (t.dept_name=? OR t.target_dept_name=?)';
+      whereSql += ' AND (t.dept_name=? OR t.target_dept_name=?)';
       params.push(String(req.query.dept), String(req.query.dept));
     }
     if (req.query.owner === 'me') {
-      sql += ' AND t.owner_user_id=?';
+      whereSql += ' AND t.owner_user_id=?';
       params.push(req.session.userId);
     } else if (req.query.owner) {
-      sql += ' AND t.owner_user_id=?';
+      whereSql += ' AND t.owner_user_id=?';
       params.push(Number(req.query.owner));
     }
 
@@ -803,7 +835,7 @@ router.get('/mapping-todos', requireAuth, (req, res) => {
       const department = req.session.departmentId
         ? db.prepare('SELECT name FROM departments WHERE id=?').get(req.session.departmentId)
         : null;
-      sql += ` AND (
+      whereSql += ` AND (
         t.owner_user_id=?
         OR t.owner_dept_id=?
         OR t.dept_name=?
@@ -813,7 +845,16 @@ router.get('/mapping-todos', requireAuth, (req, res) => {
       params.push(req.session.userId, req.session.departmentId || -1, department && department.name || '__none__', department && department.name || '__none__');
     }
 
+    const summaryRows = db.prepare(`
+      SELECT t.todo_type, t.status, COUNT(*) AS count
+      FROM process_mapping_todos t
+      ${whereSql}
+      GROUP BY t.todo_type, t.status
+    `).all(...params);
+    const summary = mappingTodoSummaryFromRows(summaryRows);
+
     sql += `
+      ${whereSql}
       ORDER BY CASE t.status
                  WHEN 'open' THEN 0
                  WHEN 'reopened' THEN 1
@@ -830,7 +871,7 @@ router.get('/mapping-todos', requireAuth, (req, res) => {
       LIMIT 500
     `;
     const items = db.prepare(sql).all(...params);
-    return res.json({ summary: mappingTodoSummary(items), items });
+    return res.json({ summary: { ...summary, returned: items.length, limit: 500 }, items });
   });
 });
 

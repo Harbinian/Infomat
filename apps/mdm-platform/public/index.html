@@ -1163,7 +1163,7 @@
 
   <script>
     // ===== State & Utilities =====
-    const state = { user:null, departments:[], capabilities:[], processes:[], mappings:[], todos:[], conflicts:[], terms:[], currentRoute:null, currentView:'roleWorkbench', activeMapping:null, activeConflict:null, pollTimer:null, isEditing:false, activeReview:null, activeCapReview:null, activeProcReview:null, pgSelectedDept:'', pageWorkflow:null, pageWorkflowRequestId:0, roleWorkbench:{ mode:'todo', data:null, selectedNode:null } };
+    const state = { user:null, departments:[], capabilities:[], processes:[], termProcesses:[], mappings:[], todos:[], conflicts:[], terms:[], currentRoute:null, currentView:'roleWorkbench', activeMapping:null, activeConflict:null, pollTimer:null, isEditing:false, activeReview:null, activeCapReview:null, activeProcReview:null, pgSelectedDept:'', pageWorkflow:null, pageWorkflowRequestId:0, roleWorkbench:{ mode:'todo', data:null, selectedNode:null } };
     const $ = id => document.getElementById(id);
 
     function escapeHtml(value) {
@@ -1249,6 +1249,13 @@
       else if (view === 'operation') { location.hash = '#/' + params.tab + '/' + params.type + '/' + params.id + '/' + params.action; }
       state.currentView = view;
       renderCurrentView(params);
+    }
+
+    function runPageTask(task, fallbackMessage) {
+      Promise.resolve(typeof task === 'function' ? task() : task).catch(function(error) {
+        if (error && error.status === 401) return;
+        showToast((error && error.message) || fallbackMessage || '页面加载失败', 'error');
+      });
     }
 
     function renderCurrentView(params) {
@@ -1696,7 +1703,7 @@
       stopPolling();
       state.pollTimer = setInterval(function() {
         if (state.isEditing || state.currentView !== 'list') return;
-        try { loadCurrentListData(); } catch (e) { /* silent */ }
+        runPageTask(loadCurrentListData, '列表刷新失败');
       }, 60000);
     }
     function stopPolling() { if (state.pollTimer) { clearInterval(state.pollTimer); state.pollTimer = null; } }
@@ -1766,9 +1773,32 @@
       if ($('capDept')) fillSelect($('capDept'), state.departments);
       if ($('procDept')) fillSelect($('procDept'), state.departments);
       if ($('procCap')) fillSelect($('procCap'), state.capabilities, 'name');
-      if ($('termProcess')) fillSelect($('termProcess'), state.processes, 'name');
+      await loadTermGovernanceProcesses();
 
       renderCapsAndProcs();
+    }
+
+    async function loadTermGovernanceProcesses() {
+      state.termProcesses = await api('/api/terminology/processes');
+      renderTermProcessOptions();
+      return state.termProcesses;
+    }
+
+    function renderTermProcessOptions() {
+      var select = $('termProcess');
+      if (!select) return;
+      var rows = state.termProcesses || [];
+      var placeholder = '<option value="">请选择本部门映射关系线上的流程</option>';
+      if (rows.length === 0) {
+        select.innerHTML = placeholder;
+        select.disabled = true;
+        return;
+      }
+      select.disabled = false;
+      select.innerHTML = placeholder + rows.map(function(row) {
+        var label = row.name + (row.dept_name ? '（' + row.dept_name + '）' : '');
+        return '<option value="' + Number(row.id) + '">' + safeText(label) + '</option>';
+      }).join('');
     }
 
     function renderCapsAndProcs() {
@@ -1995,6 +2025,7 @@
 
     // ===== Terms =====
     async function loadTerms() {
+      await loadTermGovernanceProcesses();
       var params = new URLSearchParams();
       var statusEl = $('termStatus');
       if (statusEl && statusEl.value) params.set('status', statusEl.value);
@@ -2003,13 +2034,17 @@
       state.terms = terms;
       $('termRows').innerHTML = terms.map(function(row) {
         var rowId = Number(row.id);
-        return '<tr><td>' + rowId + '</td><td>' + safeText(row.term) + '</td><td>' + safeText(row.definition) + '</td><td>' + safeText(row.scope) + '</td><td>' + statusTag(row.status) + '</td><td><button class="btn success" onclick="reviewTerm(' + rowId + ',\'approve\')">通过</button> <button class="btn danger" style="margin-left: 8px;" onclick="reviewTerm(' + rowId + ',\'reject\')">驳回</button>' + (hasAdminAccess() ? ' <a href="#" onclick="deleteTerm(' + rowId + ');return false" style="color:#e53935;margin-left:8px;">删除</a>' : '') + '</td></tr>';
+        var actions = hasAdminAccess()
+          ? '<button class="btn success" onclick="reviewTerm(' + rowId + ',\'approve\')">通过</button> <button class="btn danger" style="margin-left: 8px;" onclick="reviewTerm(' + rowId + ',\'reject\')">驳回</button> <a href="#" onclick="deleteTerm(' + rowId + ');return false" style="color:#e53935;margin-left:8px;">删除</a>'
+          : '-';
+        return '<tr><td>' + rowId + '</td><td>' + safeText(row.term) + '</td><td>' + safeText(row.definition) + '</td><td>' + safeText(row.scope) + '</td><td>' + statusTag(row.status) + '</td><td>' + actions + '</td></tr>';
       }).join('') || '<tr><td colspan="6" class="empty">暂无数据</td></tr>';
     }
 
     async function saveTerm() {
       var term = $('termName').value.trim();
       if (!term) return alert('请输入术语');
+      if (!$('termProcess').value) return alert('请选择本部门映射关系线上的流程');
       await api('/api/terminology', { method:'POST', body:JSON.stringify({ term: term, definition: $('termDefinition').value, scope: $('termScope').value, forbidden: $('termForbidden').value, process_id: Number($('termProcess').value) }) });
       await loadTerms();
     }
@@ -2403,6 +2438,26 @@
       };
     }
 
+    function pruneProcessGovernanceSankeyToCapability(data) {
+      var hiddenTypes = new Set(['root', 'domain', 'department']);
+      var nodes = data.nodes || [];
+      var links = data.links || [];
+      var keep = new Set();
+      var visibleNodes = nodes.filter(function(node) {
+        if (hiddenTypes.has(node.node_type)) return false;
+        keep.add(node.name);
+        return true;
+      });
+
+      return {
+        ...data,
+        nodes: visibleNodes,
+        links: links.filter(function(link) {
+          return keep.has(link.source) && keep.has(link.target);
+        })
+      };
+    }
+
     function processGovernanceA1MatchesDept(row, deptName) {
       if (!deptName) return true;
       return row.dept_name === deptName ||
@@ -2592,7 +2647,7 @@
       var byType = summary.byType || {};
       document.getElementById('pgMetricMappingRecords').textContent = summary.total || 0;
       document.getElementById('pgMetricMappingA1').textContent = byType.a1 || 0;
-      document.getElementById('pgMappingWorkspaceMeta').textContent = (selectedDept ? selectedDept + ' · ' : '') + '显示 ' + items.length + ' 条';
+      document.getElementById('pgMappingWorkspaceMeta').textContent = (selectedDept ? selectedDept + ' · ' : '') + '显示 ' + items.length + ' 条 / 共 ' + (summary.total || items.length) + ' 条';
 
       rowsEl.innerHTML = items.length
         ? items.slice(0, 120).map(function(row) {
@@ -2618,7 +2673,7 @@
       var byStatus = summary.byStatus || {};
       document.getElementById('pgMetricMappingTodos').textContent = summary.total || 0;
       document.getElementById('pgMetricMappingTodoOpen').textContent = (byStatus.open || 0) + (byStatus.assigned || 0) + (byStatus.rectifying || 0) + (byStatus.reopened || 0);
-      document.getElementById('pgMappingTodoMeta').textContent = (selectedDept ? selectedDept + ' · ' : '') + '显示 ' + items.length + ' 项';
+      document.getElementById('pgMappingTodoMeta').textContent = (selectedDept ? selectedDept + ' · ' : '') + '显示 ' + items.length + ' 项 / 共 ' + (summary.total || items.length) + ' 项';
 
       rowsEl.innerHTML = items.length
         ? items.map(function(row) {
@@ -2840,6 +2895,7 @@
 
         var selectedDept = state.pgSelectedDept;
         var filteredSankey = filterProcessGovernanceSankeyByDept(sankey, selectedDept);
+        var renderedSankey = pruneProcessGovernanceSankeyToCapability(filteredSankey);
         var a1Rows = a1Items.filter(function(row) { return processGovernanceA1MatchesDept(row, selectedDept); });
         var riskRows = riskItems.filter(function(row) { return processGovernanceRiskMatchesDept(row, selectedDept); });
         var selectedL3Count = new Set(a1Rows.map(function(row) { return row.l3_name; }).filter(Boolean)).size;
@@ -2856,12 +2912,12 @@
 
         var imported = current.stats && current.stats.a1Imported ? current.stats.a1Imported : 0;
         document.getElementById('pgSnapshotMeta').textContent = current.id
-          ? '当前快照 #' + current.id + '，快照统计 A1 ' + (stats.a1 || 0) + ' 项，已导入明细 ' + imported + ' 行' + (selectedDept ? '，当前部门：' + selectedDept : '')
+          ? '当前快照 #' + current.id + '，图谱统计 A1 ' + (stats.a1 || 0) + ' 项，治理明细 ' + imported + ' 行' + (selectedDept ? '，当前部门：' + selectedDept : '')
           : '暂无流程治理快照';
         document.getElementById('pgSourceMeta').textContent = '组织真源：docs/organization/组织架构和部门职责.md；流程真源：docs/norms/{部门}部门-能力-流程-系统映射关系.md';
 
-        document.getElementById('pgMapMeta').textContent = (selectedDept ? selectedDept + ' · ' : '') + (filteredSankey.nodes || []).length + ' 个节点，' + (filteredSankey.links || []).length + ' 条关系';
-        renderProcessGovernanceSankey(filteredSankey);
+        document.getElementById('pgMapMeta').textContent = (selectedDept ? selectedDept + ' · ' : '') + (renderedSankey.nodes || []).length + ' 个节点，' + (renderedSankey.links || []).length + ' 条关系';
+        renderProcessGovernanceSankey(renderedSankey);
 
         document.getElementById('pgA1Meta').textContent = (selectedDept ? selectedDept + ' · ' : '') + '显示前 ' + Math.min(a1Rows.length, 80) + ' 条 / 共 ' + a1Rows.length + ' 条';
         document.getElementById('pgA1Rows').innerHTML = a1Rows.length
@@ -3014,24 +3070,30 @@
       if (panel) panel.classList.add('on');
       if (tab !== 'roleWorkbench' && panel) {
         ensureWorkflowShell(panel);
-        loadPageWorkflow(tab, { view: 'list', tab: tab });
+        runPageTask(function() { return loadPageWorkflow(tab, { view: 'list', tab: tab }); }, '页面工作流加载失败');
       }
       switch (tab) {
         case 'roleWorkbench': renderRoleWorkbench(); break;
         case 'dashboard': renderDashboard(); break;
         case 'roleGuide': renderRoleGuide(); break;
-        case 'mySubmissions': loadMySubmissions(); break;
-        case 'todos': loadTodos(); break;
-        case 'reviews': loadReviews(); break;
-        case 'terms': loadTerms(); break;
-        case 'conflicts': loadConflicts(); break;
-        case 'capabilities': loadCatalog(); break;
+        case 'mySubmissions': runPageTask(loadMySubmissions, '我的报送加载失败'); break;
+        case 'todos': runPageTask(loadTodos, '待办加载失败'); break;
+        case 'reviews': runPageTask(loadReviews, '评审记录加载失败'); break;
+        case 'terms': runPageTask(loadTerms, '术语加载失败'); break;
+        case 'conflicts': runPageTask(loadConflicts, '冲突列表加载失败'); break;
+        case 'capabilities': runPageTask(loadCatalog, '能力目录加载失败'); break;
         case 'businessMap': renderBusinessMap(); break;
         case 'processGovernance': renderProcessGovernance(); break;
-        case 'orgUnits': loadOrgUnits(); break;
-        case 'persons': loadPersons(); break;
-        case 'products': loadProductFamilies(); loadProducts(); break;
-        case 'quality': loadQualityDashboard(); loadGoldenSourceProgress(); break;
+        case 'orgUnits': runPageTask(loadOrgUnits, '组织架构加载失败'); break;
+        case 'persons': runPageTask(loadPersons, '人员列表加载失败'); break;
+        case 'products':
+          runPageTask(loadProductFamilies, '产品族加载失败');
+          runPageTask(loadProducts, '产品列表加载失败');
+          break;
+        case 'quality':
+          runPageTask(loadQualityDashboard, '数据质量看板加载失败');
+          runPageTask(loadGoldenSourceProgress, '黄金源进度加载失败');
+          break;
         case 'rbac': renderRbacPanel(); break;
       }
     }
@@ -3044,17 +3106,17 @@
       $('detailContent').innerHTML = '<div class="empty">加载中...</div>';
 
       if (params.type === 'process') {
-        renderProcessDetail(parseInt(params.id));
+        runPageTask(function() { return renderProcessDetail(parseInt(params.id)); }, '流程详情加载失败');
       } else if (params.type === 'mapping') {
-        renderMappingDetail(parseInt(params.id), params.tab);
+        runPageTask(function() { return renderMappingDetail(parseInt(params.id), params.tab); }, '流程映射加载失败');
       } else if (params.type === 'conflict' && params.conflictType) {
-        renderConflictDetail(parseInt(params.id), params.conflictType, params.tab);
+        runPageTask(function() { return renderConflictDetail(parseInt(params.id), params.conflictType, params.tab); }, '冲突详情加载失败');
       } else if (params.type === 'conflict') {
-        renderConflictDetail(parseInt(params.id), 'field', params.tab);
+        runPageTask(function() { return renderConflictDetail(parseInt(params.id), 'field', params.tab); }, '冲突详情加载失败');
       } else if (params.type === 'field' || params.type === 'term') {
-        renderConflictDetail(parseInt(params.id), params.type, params.tab);
+        runPageTask(function() { return renderConflictDetail(parseInt(params.id), params.type, params.tab); }, '冲突详情加载失败');
       } else if (['orgUnit', 'person', 'productFamily', 'product', 'role'].indexOf(params.type) >= 0) {
-        renderEntityForm(params.type, params.id, 'view', params.tab);
+        runPageTask(function() { return renderEntityForm(params.type, params.id, 'view', params.tab); }, '详情加载失败');
       } else {
         $('detailContent').innerHTML = '<div class="empty">未知详情类型</div>';
       }
@@ -3064,16 +3126,16 @@
       document.querySelectorAll('.panel').forEach(function(p) { p.classList.remove('on'); });
       $('detailPage').classList.add('on');
       ensureWorkflowShell($('detailPage'));
-      loadPageWorkflow(params.tab || 'dashboard', params);
+      runPageTask(function() { return loadPageWorkflow(params.tab || 'dashboard', params); }, '页面工作流加载失败');
       $('detailContent').innerHTML = '<div class="empty">加载中...</div>';
-      renderEntityForm(params.type, params.id || 'new', params.action || 'edit', params.tab);
+      runPageTask(function() { return renderEntityForm(params.type, params.id || 'new', params.action || 'edit', params.tab); }, '表单加载失败');
     }
 
     function renderOperationPage(params) {
       document.querySelectorAll('.panel').forEach(function(p) { p.classList.remove('on'); });
       $('detailPage').classList.add('on');
       ensureWorkflowShell($('detailPage'));
-      loadPageWorkflow(params.tab || 'dashboard', params);
+      runPageTask(function() { return loadPageWorkflow(params.tab || 'dashboard', params); }, '页面工作流加载失败');
       if (params.type === 'mapping' && params.action === 'reject') {
         openRejectPage(parseInt(params.id));
       } else {
@@ -3113,12 +3175,16 @@
         update: function(id) { return '/api/persons/' + encodeURIComponent(id); },
         createFields: [
           { name: 'person_name', label: '姓名', required: true },
+          { name: 'org_unit_id', label: '所属组织', type: 'select', valueType: 'number', required: true, optionsSource: 'orgUnits', optionPlaceholder: '请选择组织' },
+          { name: 'position_id', label: '任职岗位', type: 'select', valueType: 'number', required: true, optionsSource: 'positions', dependsOn: 'org_unit_id', optionPlaceholder: '请先选择组织' },
           { name: 'mobile', label: '手机号' },
           { name: 'email', label: '邮箱' },
           { name: 'employment_status', label: '在职状态', type: 'select', options: [['active','在职'], ['leave','离职'], ['suspended','停职']] }
         ],
         editFields: [
           { name: 'person_name', label: '姓名', required: true },
+          { name: 'org_unit_id', label: '所属组织', type: 'select', valueType: 'number', required: true, optionsSource: 'orgUnits', optionPlaceholder: '请选择组织' },
+          { name: 'position_id', label: '任职岗位', type: 'select', valueType: 'number', required: true, optionsSource: 'positions', dependsOn: 'org_unit_id', optionPlaceholder: '请先选择组织' },
           { name: 'mobile', label: '手机号' },
           { name: 'email', label: '邮箱' },
           { name: 'employment_status', label: '在职状态', type: 'select', options: [['active','在职'], ['leave','离职'], ['suspended','停职']] }
@@ -3197,12 +3263,71 @@
       if (field.type === 'select') {
         var options = (field.options || []).map(function(opt) {
           var selected = String(value || '') === String(opt[0]) ? ' selected' : '';
-          return '<option value="' + safeText(opt[0]) + '"' + selected + '>' + safeText(opt[1]) + '</option>';
+          var attrs = '';
+          if (opt[2]) {
+            Object.keys(opt[2]).forEach(function(key) {
+              attrs += ' data-' + key.replace(/_/g, '-') + '="' + safeText(opt[2][key]) + '"';
+            });
+          }
+          return '<option value="' + safeText(opt[0]) + '"' + selected + attrs + '>' + safeText(opt[1]) + '</option>';
         }).join('');
         return '<div class="form-group' + wide + '"><label>' + safeText(field.label) + '<select id="' + id + '" data-entity-field="' + safeText(field.name) + '"' + required + disabledAttr + '>' + options + '</select></label></div>';
       }
       var type = field.type === 'number' ? 'number' : 'text';
       return '<div class="form-group' + wide + '"><label>' + safeText(field.label) + '<input id="' + id + '" type="' + type + '" value="' + safeText(value, '') + '" data-entity-field="' + safeText(field.name) + '"' + required + disabledAttr + '></label></div>';
+    }
+
+    async function loadEntityFieldOptions(fields) {
+      var resolved = fields.map(function(field) { return Object.assign({}, field); });
+      for (var i = 0; i < resolved.length; i++) {
+        var field = resolved[i];
+        if (field.optionsSource === 'orgUnits') {
+          var orgData = await api('/api/org-units?status=active&limit=500');
+          var orgOptions = (orgData.rows || []).map(function(row) {
+            return [row.org_unit_id, row.org_unit_name + '（' + row.org_unit_code + '）'];
+          });
+          if (field.optionPlaceholder) orgOptions.unshift(['', field.optionPlaceholder]);
+          field.options = orgOptions;
+        } else if (field.optionsSource === 'positions') {
+          var data = await api('/api/positions?status=active&limit=500');
+          var options = (data.rows || []).map(function(row) {
+            return [
+              row.position_id,
+              row.position_name + '（' + row.position_code + '）',
+              { org_unit_id: row.org_unit_id }
+            ];
+          });
+          if (field.optionPlaceholder) options.unshift(['', field.optionPlaceholder]);
+          field.options = options;
+        }
+      }
+      return resolved;
+    }
+
+    function bindEntityFieldDependencies(fields) {
+      fields.forEach(function(field) {
+        if (!field.dependsOn) return;
+        var child = $('entity_' + field.name);
+        var parent = $('entity_' + field.dependsOn);
+        if (!child || !parent) return;
+
+        function refreshChildOptions() {
+          var selectedParent = String(parent.value || '');
+          var selectedChild = String(child.value || '');
+          var selectedStillVisible = false;
+          Array.prototype.forEach.call(child.options, function(option) {
+            var optionParent = option.getAttribute('data-' + field.dependsOn.replace(/_/g, '-'));
+            var visible = !option.value || !selectedParent || String(optionParent) === selectedParent;
+            option.hidden = !visible;
+            option.disabled = !visible;
+            if (visible && String(option.value) === selectedChild) selectedStillVisible = true;
+          });
+          if (!selectedStillVisible) child.value = '';
+        }
+
+        parent.addEventListener('change', refreshChildOptions);
+        refreshChildOptions();
+      });
     }
 
     async function renderEntityForm(type, id, mode) {
@@ -3230,7 +3355,18 @@
         { label: config.listLabel, onclick: "navigateTo('list',{tab:'" + listTab + "'})" },
         { label: (isNew ? '新增' : (isView ? '查看' : '编辑')) + config.label }
       ]);
-      var fields = entityFields(config, mode, isNew);
+      if (type === 'person' && row.assignments && row.assignments.length) {
+        var primaryAssignment = row.assignments.find(function(item) { return Number(item.is_primary) === 1; }) || row.assignments[0];
+        row.position_id = primaryAssignment.position_id;
+        row.org_unit_id = primaryAssignment.org_unit_id;
+      }
+      var fields = [];
+      try {
+        fields = await loadEntityFieldOptions(entityFields(config, mode, isNew));
+      } catch (error) {
+        $('detailContent').innerHTML = '<div class="empty">' + safeText(error.message || '表单选项加载失败，请重新登录后再试') + '</div>';
+        return;
+      }
       var title = (isNew ? '新增' : (isView ? '查看' : '编辑')) + config.label;
       var codeText = isNew ? '' : '<span>当前编码：' + safeText(id) + '</span>';
       $('detailContent').innerHTML =
@@ -3244,6 +3380,7 @@
           '</div>' +
         '</div>';
       $('entityCancelBtn').onclick = function() { navigateTo('list', { tab: listTab }); };
+      bindEntityFieldDependencies(fields);
       var editBtn = $('entityEditBtn');
       if (editBtn) editBtn.onclick = function() { navigateTo('form', { tab: listTab, type: type, id: id, action: 'edit' }); };
       var saveBtn = $('entitySaveBtn');
@@ -3263,7 +3400,7 @@
           el.focus();
           return null;
         }
-        if (field.type === 'number') payload[field.name] = raw ? Number(raw) : null;
+        if (field.type === 'number' || field.valueType === 'number') payload[field.name] = raw ? Number(raw) : null;
         else payload[field.name] = raw || null;
       }
       return payload;

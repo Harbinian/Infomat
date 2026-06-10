@@ -26,10 +26,10 @@ function resetData() {
     DELETE FROM mapping_related_departments;
     DELETE FROM mapping_systems;
     DELETE FROM mappings;
+    DELETE FROM terms;
     DELETE FROM processes;
     DELETE FROM capabilities;
     DELETE FROM systems;
-    DELETE FROM terms;
     DELETE FROM user_dept_roles;
     DELETE FROM users;
     DELETE FROM departments;
@@ -38,6 +38,7 @@ function resetData() {
 
 function seedData() {
   const deptId = db.prepare('INSERT INTO departments (name, code) VALUES (?, ?)').run('信息化部', 'IT').lastInsertRowid;
+  const otherDeptId = db.prepare('INSERT INTO departments (name, code) VALUES (?, ?)').run('财务部', 'FIN').lastInsertRowid;
   const adminId = db.prepare('INSERT INTO users (name, employee_no, department_id, post, role, password_hash) VALUES (?, ?, ?, ?, ?, ?)').run(
     '系统管理员',
     'ADMIN001',
@@ -57,6 +58,8 @@ function seedData() {
 
   const capabilityId = db.prepare('INSERT INTO capabilities (name, level, owner_dept_id) VALUES (?, ?, ?)').run('主数据管理', 'L1', deptId).lastInsertRowid;
   const processId = db.prepare('INSERT INTO processes (name, capability_id, owner_dept_id) VALUES (?, ?, ?)').run('客户主数据维护', capabilityId, deptId).lastInsertRowid;
+  const otherCapabilityId = db.prepare('INSERT INTO capabilities (name, level, owner_dept_id) VALUES (?, ?, ?)').run('财务核算', 'L1', otherDeptId).lastInsertRowid;
+  const otherProcessId = db.prepare('INSERT INTO processes (name, capability_id, owner_dept_id) VALUES (?, ?, ?)').run('应付账款维护', otherCapabilityId, otherDeptId).lastInsertRowid;
   const mappingId = db.prepare("INSERT INTO mappings (process_id, owner_dept_id, status, submitted_by, current_step) VALUES (?, ?, 'draft', ?, 1)").run(processId, deptId, adminId).lastInsertRowid;
   const fieldId = db.prepare(`
     INSERT INTO field_entries (mapping_id, field_name_cn, field_name_en, data_object, note, submitted_by)
@@ -72,7 +75,7 @@ function seedData() {
     VALUES ('field_entry', ?, 'note', '旧说明', '新说明', 'update', ?, ?)
   `).run(fieldId, adminId, fieldChangeSetId);
 
-  return { adminId, mappingId, fieldId };
+  return { adminId, mappingId, fieldId, processId, otherProcessId };
 }
 
 async function waitForServer() {
@@ -137,19 +140,40 @@ async function main() {
     const adminCookie = await login('ADMIN001', 'admin123');
     const submitterCookie = await login('SUB001', 'pass1234');
 
+    const termTypes = await request('/api/terminology/types', {}, adminCookie);
+    assert.strictEqual(termTypes.res.status, 200);
+    assert.ok(termTypes.body.some(row => row.code === 'noun' && row.name === '名词'), 'term type list should include nouns');
+    assert.ok(termTypes.body.some(row => row.code === 'position' && row.name === '岗位词'), 'term type list should include positions');
+    assert.ok(termTypes.body.some(row => row.code === 'role' && row.name === '角色词'), 'term type list should include roles');
+    assert.ok(termTypes.body.some(row => row.code === 'input' && row.name === '输入词'), 'term type list should include inputs');
+    assert.ok(termTypes.body.some(row => row.code === 'output' && row.name === '输出词'), 'term type list should include outputs');
+    assert.ok(termTypes.body.some(row => row.code === 'time_limit' && row.name === '时效词'), 'term type list should include time limits');
+
     const allowedCreate = await request('/api/terminology', {
       method: 'POST',
-      body: JSON.stringify({ term: '客户-sub', definition: '购买产品或服务的对象' })
+      body: JSON.stringify({ term: '客户-sub', definition: '购买产品或服务的对象', process_id: seed.processId })
     }, submitterCookie);
     assert.strictEqual(allowedCreate.res.status, 200);
+
+    const scopedProcesses = await request('/api/terminology/processes', {}, submitterCookie);
+    assert.strictEqual(scopedProcesses.res.status, 200);
+    assert.deepStrictEqual(scopedProcesses.body.map(row => row.id), [seed.processId]);
+
+    const forbiddenCreate = await request('/api/terminology', {
+      method: 'POST',
+      body: JSON.stringify({ term: '应付账款', definition: '供应商未付款项', process_id: seed.otherProcessId })
+    }, submitterCookie);
+    assert.strictEqual(forbiddenCreate.res.status, 403);
 
     const createdTerm = await request('/api/terminology', {
       method: 'POST',
       body: JSON.stringify({
         term: '客户',
+        term_type_code: 'noun',
         definition: '购买产品或服务的对象',
         scope: '集团',
-        forbidden: '客商'
+        forbidden: '客商',
+        process_id: seed.processId
       })
     }, adminCookie);
     assert.strictEqual(createdTerm.res.status, 200);
@@ -159,9 +183,11 @@ async function main() {
       method: 'PUT',
       body: JSON.stringify({
         term: '客户',
+        term_type_code: 'role',
         definition: '与集团发生业务关系的外部对象',
         scope: '主数据域',
-        forbidden: '客户资料'
+        forbidden: '客户资料',
+        process_id: seed.processId
       })
     }, adminCookie);
     assert.strictEqual(updatedTerm.res.status, 200);
@@ -176,6 +202,8 @@ async function main() {
     assert.strictEqual(approvedTerms.res.status, 200);
     assert.strictEqual(approvedTerms.body.length, 1);
     assert.strictEqual(approvedTerms.body[0].definition, '与集团发生业务关系的外部对象');
+    assert.strictEqual(approvedTerms.body[0].term_type_code, 'role');
+    assert.strictEqual(approvedTerms.body[0].term_type_name, '角色词');
     assert.strictEqual(approvedTerms.body[0].approved_by, seed.adminId);
 
     const entityVersions = await request(`/api/versions/entity/mapping/${seed.mappingId}`, {}, adminCookie);

@@ -58,6 +58,54 @@ db.prepare(`
   WHERE todo_type='verification'
 `).run();
 
+const activeSnapshotId = db.prepare(`
+  SELECT id
+  FROM process_governance_snapshots
+  WHERE status='active'
+  ORDER BY imported_at DESC, id DESC
+  LIMIT 1
+`).get().id;
+const insertBulkMappingRecord = db.prepare(`
+  INSERT INTO process_mapping_records (
+    mapping_key, record_type, first_snapshot_id, latest_snapshot_id, dept_name, domain_name,
+    l3_name, a1_code, behavior, suggested_systems, source_file, status
+  ) VALUES (?, 'a1', ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')
+`);
+const insertBulkMappingTodo = db.prepare(`
+  INSERT INTO process_mapping_todos (
+    todo_key, todo_type, first_snapshot_id, latest_snapshot_id, dept_name, l3_name,
+    a1_code, source_file, message, suggestion, status, priority
+  ) VALUES (?, 'evidence', ?, ?, ?, ?, ?, ?, ?, ?, 'closed', 'low')
+`);
+db.transaction(() => {
+  for (let index = 0; index < 505; index += 1) {
+    const suffix = String(index + 1).padStart(3, '0');
+    insertBulkMappingRecord.run(
+      `bulk-a1-record-${suffix}`,
+      activeSnapshotId,
+      activeSnapshotId,
+      '龥测试部',
+      '测试域',
+      `批量流程${suffix}`,
+      `BULK-A1-${suffix}`,
+      `批量行为${suffix}`,
+      JSON.stringify(['OA']),
+      'fixtures/bulk'
+    );
+    insertBulkMappingTodo.run(
+      `bulk-evidence-todo-${suffix}`,
+      activeSnapshotId,
+      activeSnapshotId,
+      '龥测试部',
+      `批量流程${suffix}`,
+      `BULK-A1-${suffix}`,
+      'fixtures/bulk',
+      `批量证据补全${suffix}`,
+      '批量测试记录',
+    );
+  }
+})();
+
 db.close();
 
 function waitForServer() {
@@ -247,16 +295,22 @@ async function main() {
 
     const workspace = await request('/api/process-governance/mapping-workspace', {}, cookie);
     assert.strictEqual(workspace.res.status, 200);
-    assert.strictEqual(workspace.body.summary.total, 2);
+    assert.strictEqual(workspace.body.summary.total, 507);
+    assert.strictEqual(workspace.body.summary.returned, 500);
+    assert.strictEqual(workspace.body.items.length, 500);
     assert.strictEqual(workspace.body.summary.byType.l3, 1);
-    assert.strictEqual(workspace.body.summary.byType.a1, 1);
+    assert.strictEqual(workspace.body.summary.byType.a1, 506);
     assert.ok(workspace.body.items.some(item => item.a1_code === 'JY-L3-01-A1-001'), 'workspace should expose imported A1 mapping records');
 
     const mappingTodos = await request('/api/process-governance/mapping-todos', {}, cookie);
     assert.strictEqual(mappingTodos.res.status, 200);
-    assert.strictEqual(mappingTodos.body.summary.total, 2);
+    assert.strictEqual(mappingTodos.body.summary.total, 507);
+    assert.strictEqual(mappingTodos.body.summary.returned, 500);
+    assert.strictEqual(mappingTodos.body.items.length, 500);
     assert.strictEqual(mappingTodos.body.summary.byType.verification, 1);
     assert.strictEqual(mappingTodos.body.summary.byType.cross_dept, 1);
+    assert.strictEqual(mappingTodos.body.summary.byType.evidence, 505);
+    assert.strictEqual(mappingTodos.body.summary.byStatus.closed, 505);
     assert.ok(mappingTodos.body.items.every(item => item.todo_key && item.latest_snapshot_id), 'mapping todos should expose stable keys and latest snapshot');
 
     const crossDeptTodos = await request('/api/process-governance/mapping-todos?type=cross_dept', {}, cookie);
