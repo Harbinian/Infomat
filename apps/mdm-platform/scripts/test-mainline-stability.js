@@ -135,6 +135,15 @@ async function runMasterDataObjectSmoke() {
     assert.strictEqual(orgList.res.status, 200, JSON.stringify(orgList.body));
     assert.ok(orgList.body.rows.some(row => row.org_unit_code === 'OU-DEP-ENG'));
 
+    const leadershipPersonList = await request('/api/persons?search=100000', {}, cookie);
+    assert.strictEqual(leadershipPersonList.res.status, 200, JSON.stringify(leadershipPersonList.body));
+    const leaderPerson = leadershipPersonList.body.rows.find(row => row.employee_no === '100000');
+    assert.ok(leaderPerson, 'person list should include synchronized leadership person');
+    assert.strictEqual(leaderPerson.position_code, 'POS-CXF-CEO');
+    assert.strictEqual(leaderPerson.position_name, '总经理');
+    assert.strictEqual(leaderPerson.org_unit_code, 'OU-OFC-CXF-CEO');
+    assert.strictEqual(leaderPerson.org_unit_name, '总经理办公室');
+
     const person = await request('/api/persons', {
       method: 'POST',
       body: JSON.stringify({

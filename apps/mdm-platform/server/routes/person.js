@@ -15,13 +15,38 @@ function handleDbError(res, error) {
 router.get('/', requireAuth, applyFieldConstraints('person'), (req, res) => {
   try {
     const { employment_status, status, search, page = 1, limit = 50 } = req.query;
-    let sql = `SELECT * FROM person WHERE 1=1`;
+    let fromSql = `
+      FROM person
+      LEFT JOIN person_position_assignment a ON a.assignment_id = (
+        SELECT assignment_id
+        FROM person_position_assignment
+        WHERE person_id = person.person_id AND status = 'active'
+        ORDER BY is_primary DESC, start_date DESC, assignment_id DESC
+        LIMIT 1
+      )
+      LEFT JOIN position p ON a.position_id = p.position_id
+      LEFT JOIN org_unit ou ON p.org_unit_id = ou.org_unit_id
+      WHERE 1=1
+    `;
     const params = [];
-    if (employment_status) { sql += ' AND employment_status=?'; params.push(employment_status); }
-    if (status) { sql += ' AND status=?'; params.push(status); }
-    if (search) { sql += ' AND (employee_no LIKE ? OR person_name LIKE ? OR mobile LIKE ? OR email LIKE ?)'; params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`); }
-    const count = db.prepare(sql.replace(/SELECT.*?FROM/, 'SELECT COUNT(*) as cnt FROM')).get(...params).cnt;
-    sql += ' ORDER BY employee_no LIMIT ? OFFSET ?';
+    if (employment_status) { fromSql += ' AND person.employment_status=?'; params.push(employment_status); }
+    if (status) { fromSql += ' AND person.status=?'; params.push(status); }
+    if (search) {
+      fromSql += ` AND (
+        person.employee_no LIKE ? OR person.person_name LIKE ? OR person.mobile LIKE ? OR person.email LIKE ?
+        OR p.position_code LIKE ? OR p.position_name LIKE ? OR ou.org_unit_code LIKE ? OR ou.org_unit_name LIKE ?
+      )`;
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
+    }
+    const count = db.prepare(`SELECT COUNT(*) as cnt ${fromSql}`).get(...params).cnt;
+    const sql = `
+      SELECT person.*,
+             a.assignment_id as primary_assignment_id,
+             p.position_id, p.position_code, p.position_name,
+             ou.org_unit_id, ou.org_unit_code, ou.org_unit_name
+      ${fromSql}
+      ORDER BY person.employee_no LIMIT ? OFFSET ?
+    `;
     params.push(Number(limit), (Number(page) - 1) * Number(limit));
     res.json({ rows: db.prepare(sql).all(...params), total: count, page: Number(page), limit: Number(limit) });
   } catch (e) { handleDbError(res, e); }
