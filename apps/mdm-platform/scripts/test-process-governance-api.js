@@ -189,6 +189,30 @@ async function main() {
     assert.strictEqual(filteredA1.res.status, 200);
     assert.strictEqual(filteredA1.body.items.length, 1);
 
+    const sourceFiles = await request('/api/process-governance/source-files?dept=经营发展部', {}, cookie);
+    assert.strictEqual(sourceFiles.res.status, 200);
+    assert.strictEqual(sourceFiles.body.summary.total, 2);
+    assert.strictEqual(sourceFiles.body.summary.byStatus['纳入'], 1);
+    assert.strictEqual(sourceFiles.body.summary.byStatus['排除'], 1);
+    assert.ok(sourceFiles.body.items.some(item => item.file_path.includes('GLTX-JY-23-A销售订单评审和执行管理程序.docx')));
+
+    const mdmRequirements = await request('/api/process-governance/mdm-requirements?dept=经营发展部', {}, cookie);
+    assert.strictEqual(mdmRequirements.res.status, 200);
+    assert.strictEqual(mdmRequirements.body.summary.total, 1);
+    assert.strictEqual(mdmRequirements.body.items[0].master_data_object, '客户订单');
+    assert.strictEqual(mdmRequirements.body.items[0].source_l2, '合同管理');
+
+    const evidence = await request('/api/process-governance/evidence?dept=经营发展部&l3=销售订单评审和执行管理&a1=JY-L3-01-A1-001', {}, cookie);
+    assert.strictEqual(evidence.res.status, 200);
+    assert.strictEqual(evidence.body.summary.total, 2);
+    assert.ok(evidence.body.items.some(item => item.ref_type === 'L3' && item.citation.includes('GLTX-JY-23-A')));
+    assert.ok(evidence.body.items.some(item => item.ref_type === 'A1' && item.a1_code === 'JY-L3-01-A1-001'));
+
+    const mdmEvidence = await request('/api/process-governance/evidence?object=客户订单', {}, cookie);
+    assert.strictEqual(mdmEvidence.res.status, 200);
+    assert.strictEqual(mdmEvidence.body.items.length, 1);
+    assert.strictEqual(mdmEvidence.body.items[0].ref_type, 'MDM');
+
     const risks = await request('/api/process-governance/cross-dept?risk=high', {}, cookie);
     assert.strictEqual(risks.res.status, 200);
     assert.strictEqual(risks.body.items[0].target_dept, '工程技术部');

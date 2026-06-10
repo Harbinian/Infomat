@@ -79,6 +79,9 @@ try {
     'process_mapping_records',
     'process_mapping_todos',
     'process_mapping_todo_events',
+    'process_source_files',
+    'process_mdm_requirement_items',
+    'process_evidence_refs',
   ].forEach(tableName => {
     const row = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?").get(tableName);
     assert.ok(row, `${tableName} should exist`);
@@ -133,6 +136,36 @@ try {
   assert.ok(tableColumns('process_mapping_todo_events').includes('todo_id'));
   assert.ok(tableColumns('process_mapping_todo_events').includes('event_type'));
   assert.ok(tableColumns('process_mapping_todo_events').includes('payload_json'));
+  assert.ok(tableColumns('process_source_files').includes('snapshot_id'));
+  assert.ok(tableColumns('process_source_files').includes('file_path'));
+  assert.ok(tableColumns('process_source_files').includes('dept_name'));
+  assert.ok(tableColumns('process_source_files').includes('asset_type'));
+  assert.ok(tableColumns('process_source_files').includes('file_no'));
+  assert.ok(tableColumns('process_source_files').includes('revision'));
+  assert.ok(tableColumns('process_source_files').includes('size_bytes'));
+  assert.ok(tableColumns('process_source_files').includes('mtime'));
+  assert.ok(tableColumns('process_source_files').includes('sha256'));
+  assert.ok(tableColumns('process_source_files').includes('process_status'));
+  assert.ok(tableColumns('process_source_files').includes('process_reason'));
+  assert.ok(tableColumns('process_mdm_requirement_items').includes('snapshot_id'));
+  assert.ok(tableColumns('process_mdm_requirement_items').includes('dept_name'));
+  assert.ok(tableColumns('process_mdm_requirement_items').includes('master_data_object'));
+  assert.ok(tableColumns('process_mdm_requirement_items').includes('source_l2'));
+  assert.ok(tableColumns('process_mdm_requirement_items').includes('key_fields'));
+  assert.ok(tableColumns('process_mdm_requirement_items').includes('responsible_dept'));
+  assert.ok(tableColumns('process_mdm_requirement_items').includes('system_boundary'));
+  assert.ok(tableColumns('process_mdm_requirement_items').includes('governance_requirement'));
+  assert.ok(tableColumns('process_mdm_requirement_items').includes('source_file'));
+  assert.ok(tableColumns('process_evidence_refs').includes('snapshot_id'));
+  assert.ok(tableColumns('process_evidence_refs').includes('ref_type'));
+  assert.ok(tableColumns('process_evidence_refs').includes('dept_name'));
+  assert.ok(tableColumns('process_evidence_refs').includes('l3_name'));
+  assert.ok(tableColumns('process_evidence_refs').includes('a1_code'));
+  assert.ok(tableColumns('process_evidence_refs').includes('master_data_object'));
+  assert.ok(tableColumns('process_evidence_refs').includes('evidence_type'));
+  assert.ok(tableColumns('process_evidence_refs').includes('source_file'));
+  assert.ok(tableColumns('process_evidence_refs').includes('citation'));
+  assert.ok(tableColumns('process_evidence_refs').includes('note'));
   assert.ok(!tableColumns('process_interaction_chains').includes('chain_key'));
   assert.ok(!tableColumns('process_interaction_chains').includes('steps_json'));
   assert.ok(tableColumns('field_entries').includes('process_governance_node_key'));
@@ -192,6 +225,22 @@ try {
       INSERT INTO process_mapping_todos
         (todo_key, todo_type, first_snapshot_id, latest_snapshot_id, dept_name, message, status)
       VALUES ('bad-todo-status', 'verification', 1, 1, '经营发展部', 'invalid status', 'done')
+    `).run();
+  });
+
+  assert.throws(() => {
+    db.prepare(`
+      INSERT INTO process_source_files
+        (snapshot_id, file_path, process_status)
+      VALUES (1, 'docs/norms/bad.docx', '处理中')
+    `).run();
+  });
+
+  assert.throws(() => {
+    db.prepare(`
+      INSERT INTO process_evidence_refs
+        (snapshot_id, ref_key, ref_type, source_file)
+      VALUES (1, 'bad-ref-type', 'FIELD', 'docs/norms/source.md')
     `).run();
   });
 

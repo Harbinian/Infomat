@@ -9,10 +9,12 @@
  *   - pmo/procedure-management/dashboard.html 内嵌数据快照
  */
 
-import { readFileSync, readdirSync, writeFileSync } from 'fs';
-import { resolve } from 'path';
+import { createHash } from 'crypto';
+import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'fs';
+import { basename, extname, join, relative, resolve } from 'path';
 
 const NORMS = resolve(import.meta.dirname || '.', '..', 'docs', 'norms');
+const REPO_ROOT = resolve(NORMS, '..', '..');
 const COMPANY_DATA_PATH = resolve(NORMS, '..', 'company-sankey-data.json');
 const CROSS_DEPT_REPORT = resolve(NORMS, '流程治理', '跨部门完整性检查报告.md');
 const CROSS_CHAIN_REPORT = resolve(NORMS, '流程治理', '跨部门流程识别报告.md');
@@ -48,6 +50,154 @@ function discoverMappingFiles() {
   return result;
 }
 
+function discoverMdmRequirementFiles() {
+  const result = [];
+  const entries = readdirSync(NORMS, { withFileTypes: true });
+  for (const e of entries) {
+    if (e.isFile() && e.name.endsWith('能力层与MDM建设要求.md')) {
+      result.push(e.name);
+    }
+  }
+  return result;
+}
+
+function toRepoPath(filePath) {
+  return relative(REPO_ROOT, filePath).replace(/\\/g, '/');
+}
+
+function sha256File(filePath) {
+  return createHash('sha256').update(readFileSync(filePath)).digest('hex');
+}
+
+function walkFiles(dirPath) {
+  const files = [];
+  if (!existsSync(dirPath)) return files;
+  for (const entry of readdirSync(dirPath, { withFileTypes: true })) {
+    const fullPath = join(dirPath, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...walkFiles(fullPath));
+    } else if (entry.isFile()) {
+      files.push(fullPath);
+    }
+  }
+  return files;
+}
+
+function inferFileNo(fileName) {
+  const name = basename(fileName);
+  const gltx = name.match(/\b(GLTX-[A-Z]{1,4}-\d{2})(?:[-_ ]?([A-Z]))?/i);
+  if (gltx) return { fileNo: gltx[1].toUpperCase(), revision: gltx[2] ? gltx[2].toUpperCase() : '?' };
+
+  const qms = name.match(/\b(SYCXQMS-[A-Z0-9-]+|SYCX[/-]?QMS-[A-Z0-9-]+)(?:[-_ ]?([A-Z]))?/i);
+  if (qms) return { fileNo: qms[1].replace('/', '-').toUpperCase(), revision: qms[2] ? qms[2].toUpperCase() : '?' };
+
+  const form = name.match(/\b(FM[-_ ]?[A-Z0-9.-]+)\b/i);
+  if (form) return { fileNo: form[1].replace(/[_ ]/g, '-').toUpperCase(), revision: '?' };
+
+  return { fileNo: '待分配编号', revision: '?' };
+}
+
+function inferAssetType(repoPath) {
+  const lower = repoPath.toLowerCase();
+  const ext = extname(lower);
+  const base = basename(lower);
+  if (base.startsWith('~$') || base === 'thumbs.db') return 'temp';
+  if (lower.includes('/_extracted/') || base.startsWith('_')) return 'generated';
+  if (['.py', '.mjs', '.js'].includes(ext)) return 'helper_script';
+  if (['.vsd', '.vsdx'].includes(ext)) return 'flow_model';
+  if (['.xlsx', '.xls'].includes(ext)) return 'spreadsheet';
+  if (['.jpg', '.jpeg', '.png'].includes(ext)) return 'image_or_template';
+  if (['.doc', '.docx', '.pdf'].includes(ext)) return 'procedure';
+  if (ext === '.md') return 'markdown_source';
+  if (ext === '.txt') return 'extracted_text';
+  return 'reference_copy';
+}
+
+function statusForAsset(assetType, repoPath) {
+  if (['temp', 'generated', 'helper_script'].includes(assetType)) {
+    return { status: '排除', reason: '临时、生成或辅助脚本文件，不作为流程证据' };
+  }
+  if (repoPath.includes('/_extracted/')) {
+    return { status: '排除', reason: '正文抽取中间件，不作为独立流程证据' };
+  }
+  return { status: '纳入', reason: '纳入源文件覆盖清单，用于流程治理证据追溯' };
+}
+
+function buildSourceManifest(mappingFiles, mdmRequirementFiles) {
+  const files = [];
+  const seen = new Set();
+
+  function addFile(filePath, dept, overrides = {}) {
+    if (!existsSync(filePath)) return;
+    const repoPath = toRepoPath(filePath);
+    if (seen.has(repoPath)) return;
+    seen.add(repoPath);
+
+    const stat = statSync(filePath);
+    const assetType = overrides.assetType || inferAssetType(repoPath);
+    const inferred = inferFileNo(repoPath);
+    const process = overrides.status && overrides.reason
+      ? { status: overrides.status, reason: overrides.reason }
+      : statusForAsset(assetType, repoPath);
+
+    files.push({
+      path: repoPath,
+      dept,
+      assetType,
+      fileNo: overrides.fileNo || inferred.fileNo,
+      revision: overrides.revision || inferred.revision,
+      size: stat.size,
+      mtime: stat.mtime.toISOString(),
+      sha256: sha256File(filePath),
+      status: process.status,
+      reason: process.reason,
+    });
+  }
+
+  for (const file of mappingFiles) {
+    const dept = file.replace('部门-能力-流程-系统映射关系.md', '');
+    addFile(resolve(NORMS, file), dept, {
+      assetType: 'mapping_markdown',
+      fileNo: '流程映射文档',
+      revision: '?',
+      status: '纳入',
+      reason: '部门 DCM/BBM 结构化映射真源',
+    });
+  }
+
+  for (const file of mdmRequirementFiles) {
+    const dept = file.replace('能力层与MDM建设要求.md', '');
+    addFile(resolve(NORMS, file), dept, {
+      assetType: 'mdm_requirement_markdown',
+      fileNo: 'MDM建设要求',
+      revision: '?',
+      status: '纳入',
+      reason: '部门主数据对象候选与治理要求来源',
+    });
+  }
+
+  const deptSourceDirs = readdirSync(NORMS, { withFileTypes: true })
+    .filter(entry => entry.isDirectory() && entry.name.endsWith('业务资料'))
+    .sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'));
+
+  for (const dir of deptSourceDirs) {
+    const dept = dir.name.replace('业务资料', '');
+    for (const filePath of walkFiles(resolve(NORMS, dir.name))) {
+      addFile(filePath, dept);
+    }
+  }
+
+  return {
+    files: files.sort((a, b) => a.path.localeCompare(b.path, 'zh-CN')),
+    stats: files.reduce((acc, file) => {
+      acc.total += 1;
+      acc.byStatus[file.status] = (acc.byStatus[file.status] || 0) + 1;
+      acc.byDept[file.dept] = (acc.byDept[file.dept] || 0) + 1;
+      return acc;
+    }, { total: 0, byStatus: {}, byDept: {} }),
+  };
+}
+
 // ---- 解析工具 ----
 
 /** 拆分中文顿号分隔的多值 S1，如 "OA、PLM、ERP" → ["OA","PLM","ERP"] */
@@ -76,6 +226,149 @@ function splitMarkdownRow(line) {
   return cells.map(c => c.trim());
 }
 
+function isMarkdownSeparatorRow(cells) {
+  return cells.length > 0 && cells.every(cell => /^:?-{3,}:?$/.test(String(cell).trim()));
+}
+
+function headerIndex(headers, names) {
+  for (const name of names) {
+    const exact = headers.findIndex(header => cleanMarkdownCell(header) === name);
+    if (exact !== -1) return exact;
+  }
+  for (const name of names) {
+    const fuzzy = headers.findIndex(header => cleanMarkdownCell(header).includes(name));
+    if (fuzzy !== -1) return fuzzy;
+  }
+  return -1;
+}
+
+function parseMarkdownTables(text) {
+  const tables = [];
+  let headers = null;
+  let rows = [];
+
+  function flush() {
+    if (headers && rows.length) tables.push({ headers, rows });
+    headers = null;
+    rows = [];
+  }
+
+  for (const rawLine of String(text || '').split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line.startsWith('|')) {
+      if (line) flush();
+      continue;
+    }
+    const cells = splitMarkdownRow(line);
+    if (isMarkdownSeparatorRow(cells)) continue;
+    if (!headers) {
+      headers = cells;
+      rows = [];
+      continue;
+    }
+    if (cells.join('|') === headers.join('|')) continue;
+    rows.push(cells);
+  }
+  flush();
+  return tables;
+}
+
+function looksLikeA1Header(header) {
+  const text = header.join('|');
+  return (
+    (text.includes('业务行为（A1）编号') || text.includes('A1编号')) &&
+    text.includes('业务行为（A1）') &&
+    text.includes('应用系统')
+  );
+}
+
+function extractL3FromHeading(line) {
+  const trimmed = line.trim();
+  if (!/^#{3,6}\s+/.test(trimmed)) return '';
+
+  let title = trimmed.replace(/^#+\s*/, '').trim();
+  if (!/(业务流程（L3）|L3-|^[A-Z]{1,6}-\d{2}-\d{2}|^\d{4}\s)/.test(title)) return '';
+
+  title = title
+    .replace(/^业务流程（L3）[-—\s]*/, '')
+    .replace(/^[A-Z]{1,6}-L3-\d+\s+/, '')
+    .replace(/^[A-Z]{1,6}-\d{2}-\d{2}\s+/, '')
+    .replace(/^L3-\d+\s+/, '')
+    .replace(/^\d{4}\s+/, '')
+    .trim();
+  return title;
+}
+
+function extractL2FromHeading(line) {
+  const trimmed = line.trim();
+  if (!/^#{3,6}\s+/.test(trimmed)) return '';
+
+  return trimmed
+    .replace(/^#+\s*/, '')
+    .replace(/^L2-\d+\s+/, '')
+    .trim();
+}
+
+function shouldSkipA1DataRow(cells, header) {
+  const first = cells[0] ?? '';
+  if (!first || first === '合计' || first === '统计' || first === '应用系统（S1）') return true;
+  if (first === '序号' || first === '指标' || first === '业务行为（A1）编号' || first === 'A1编号') return true;
+  return cells.join('|') === header.join('|');
+}
+
+function normalizeProcessName(value) {
+  return String(value || '')
+    .replace(/[（(][^)）]*[)）]/g, '')
+    .replace(/[【】\[\]《》"“”'‘’`*]/g, '')
+    .replace(/[：:，,、；;\s]/g, '')
+    .replace(/管理$/g, '')
+    .trim();
+}
+
+function processNameScore(a, b) {
+  const left = normalizeProcessName(a);
+  const right = normalizeProcessName(b);
+  if (!left || !right) return 0;
+  if (left === right) return 1000;
+  if (right.startsWith(left) || left.startsWith(right)) return 900 + Math.min(left.length, right.length);
+  if (right.includes(left) || left.includes(right)) return 800 + Math.min(left.length, right.length);
+
+  const leftChars = new Set([...left]);
+  let common = 0;
+  for (const ch of leftChars) {
+    if (right.includes(ch)) common += 1;
+  }
+  return common / Math.max(left.length, right.length);
+}
+
+function resolveA1Mapping(a1, allMappings) {
+  const candidates = allMappings.filter(m => m.dept === a1.dept);
+  const exact = candidates.find(m => m.l3 === a1.l3Name);
+  if (exact) return exact;
+
+  const scored = candidates
+    .map(m => ({ mapping: m, score: processNameScore(a1.l3Name, m.l3) }))
+    .sort((a, b) => b.score - a.score);
+  if (scored[0]?.score >= 800 || (scored[0]?.score >= 0.55 && scored[0].score > (scored[1]?.score ?? 0) + 0.08)) {
+    return scored[0].mapping;
+  }
+
+  if (a1.l2Name) {
+    const sameL2 = candidates.filter(m => normalizeProcessName(m.l2) === normalizeProcessName(a1.l2Name));
+    if (sameL2.length === 1) return sameL2[0];
+  }
+
+  return null;
+}
+
+function countMatchedA1(allA1, allMappings) {
+  let matched = 0;
+  for (const a of allA1) {
+    if (resolveA1Mapping(a, allMappings)) matched += 1;
+  }
+  return matched;
+}
+
 /**
  * 从 md 文本中解析全域映射表 (Markdown table)。
  * 返回 { dept, l1, l2, l3, systems }[]
@@ -91,6 +384,7 @@ function parseMappingTable(text) {
   let inTable = false;
   let headerDone = false;
   let s1ColIndex = 5; // 默认 S1 在第 5 列 (无序号表头)
+  let evidenceColIndex = -1;
 
   for (const line of lines) {
     const trimmed = line.trim();
@@ -109,12 +403,16 @@ function parseMappingTable(text) {
     )) {
       inTable = true;
       headerDone = false;
+      const header = splitMarkdownRow(trimmed);
       // 判断有没有序号列
       if (trimmed.includes('| 序号') || trimmed.match(/^\| 序号/)) {
         s1ColIndex = 6;
       } else {
         s1ColIndex = 5;
       }
+      const systemIdx = header.findIndex(cell => cell.includes('应用系统') || cell.includes('S1'));
+      if (systemIdx !== -1) s1ColIndex = systemIdx;
+      evidenceColIndex = header.findIndex(cell => cell.includes('制度依据'));
       continue;
     }
 
@@ -154,10 +452,11 @@ function parseMappingTable(text) {
       const l2 = cells[l2Idx] || '';
       const l3 = cells[l3Idx] || '';
       const systemsRaw = cells[s1ColIndex] || '';
+      const evidenceCitation = evidenceColIndex >= 0 ? cells[evidenceColIndex] || '' : '';
 
       const systems = splitS1(systemsRaw).flatMap(normalizeSystem);
 
-      rows.push({ dept, l1, l2, l3, systems });
+      rows.push({ dept, l1, l2, l3, systems, evidenceCitation });
     }
   }
 
@@ -167,13 +466,13 @@ function parseMappingTable(text) {
 /**
  * 解析 A1 行为明细。
  * 在 "## 业务行为（A1）映射" 节中，
- * 每个 L3 标题 (#####) 后跟 A1 表格。
+ * 每个 L3 标题后跟 A1 表格。
  *
  * 通过表头检测列位置，兼容多种表头格式。
  *
  * 返回 { l3Name, a1Name, system }[]
  */
-function parseA1Section(text) {
+function parseA1Section(text, diagnostics = null) {
   const results = [];
   const lines = text.split(/\r?\n/);
 
@@ -188,48 +487,63 @@ function parseA1Section(text) {
   if (a1Start === -1) return results;
 
   let currentL3 = null;
+  let currentL2 = null;
   let a1NameIdx = -1;
   let a1SysIdx = -1;
+  let a1CodeIdx = -1;
+  let a1EvidenceIdx = -1;
+  let a1EvidenceTypeIdx = -1;
   let inTable = false;
+  let currentHeader = [];
 
   for (let i = a1Start; i < lines.length; i++) {
     const line = lines[i].trim();
 
-      // 下一个 ## 大标题(非子标题),结束
-      if (line.startsWith('## ') && !line.includes('业务行为') && !line.startsWith('###') && !line.startsWith('####') && !line.startsWith('#####')) {
-        break;
-      }
+    // 下一个 ## 大标题(非子标题),结束
+    if (line.startsWith('## ') && !line.includes('业务行为') && !line.startsWith('###')) {
+      break;
+    }
 
-    // 检测 L3 标题 (##### 级别，含 "L3")
-    if (line.startsWith('#####') && (line.includes('L3') || line.includes('业务流程'))) {
-      // 提取 L3 名称
-      // 格式: "##### 业务流程（L3）-0101 发展规划制定、调整、评审、发布与宣贯跟踪"
-      // 或: "##### 业务流程（L3）-L3-01 安全基础..."
-      currentL3 = line.replace(/^#####\s*/, '').replace(/业务流程（L3）[-\d]+\s*/, '').trim();
+    const headingL3 = extractL3FromHeading(line);
+    if (headingL3) {
+      currentL3 = headingL3;
       inTable = false;
       a1NameIdx = -1;
       a1SysIdx = -1;
+      a1CodeIdx = -1;
+      a1EvidenceIdx = -1;
+      a1EvidenceTypeIdx = -1;
+      currentHeader = [];
+      if (diagnostics) diagnostics.l3Headings += 1;
+      continue;
+    }
+    if (line.startsWith('#') && /^#+\s+L2-\d+\s+/.test(line)) {
+      currentL2 = extractL2FromHeading(line);
       continue;
     }
 
     // 检测 A1 表格表头
-    // 修复:之前用 "含 A1 或 业务行为 或 执行角色" 太宽松,导致
-    //       `#### 业务行为分布统计` / `#### 审批类型分布` / `### 汇总统计` 等子表
-    //       被误识别为 A1 数据,产生大量伪 L3→A1 边(如 L3 → "应用系统" / L1 名 / "合计" / 审批类型 等)
-    // 收紧:必须同时含 "业务行为" 和 "执行角色" 才重入(真 A1 表才同时有这两列)
-    if (currentL3 && line.startsWith('|') && line.includes('业务行为') && line.includes('执行角色')) {
+    if (currentL3 && line.startsWith('|')) {
       const hdr = splitMarkdownRow(line);
-      for (let j = 0; j < hdr.length; j++) {
-        const c = hdr[j];
-        // 行为名称列: 含"业务行为"但不含"编号"
-        if (c.includes('业务行为') && !c.includes('编号')) a1NameIdx = j;
-        // 备用: 行为名称
-        if (c === '行为名称') a1NameIdx = j;
-        // 系统列: 含"应用系统"或"S1"
-        if (c.includes('应用系统') || c === 'S1') a1SysIdx = j;
+      if (looksLikeA1Header(hdr)) {
+        for (let j = 0; j < hdr.length; j++) {
+          const c = hdr[j];
+          if ((c.includes('业务行为') && c.includes('编号')) || c === 'A1编号') a1CodeIdx = j;
+          // 行为名称列: 含"业务行为"但不含"编号"
+          if (c.includes('业务行为') && !c.includes('编号')) a1NameIdx = j;
+          // 备用: 行为名称
+          if (c === '行为名称') a1NameIdx = j;
+          // 系统列: 含"应用系统"或"S1"
+          if (c.includes('应用系统') || c === 'S1') a1SysIdx = j;
+          if (c.includes('制度依据')) a1EvidenceIdx = j;
+          if (c.includes('证据类型')) a1EvidenceTypeIdx = j;
+        }
+        currentHeader = hdr;
+        inTable = true;
+        if (diagnostics) diagnostics.a1Tables += 1;
+        continue;
       }
-      inTable = true;
-      continue;
+      if (diagnostics && line.includes('业务行为')) diagnostics.rejectedHeaders += 1;
     }
 
     // 分隔行
@@ -240,14 +554,19 @@ function parseA1Section(text) {
     // 数据行
     if (inTable && a1NameIdx >= 0 && line.startsWith('|')) {
       const cells = splitMarkdownRow(line);
+      if (shouldSkipA1DataRow(cells, currentHeader)) continue;
       if (cells.length <= a1NameIdx) continue;
 
       const a1Name = cells[a1NameIdx];
+      const a1Code = a1CodeIdx >= 0 && a1CodeIdx < cells.length ? cells[a1CodeIdx] : '';
       const sysRaw = a1SysIdx >= 0 && a1SysIdx < cells.length ? cells[a1SysIdx] : '';
       const systems = sysRaw ? splitS1(sysRaw).flatMap(normalizeSystem) : [];
+      const evidenceCitation = a1EvidenceIdx >= 0 && a1EvidenceIdx < cells.length ? cells[a1EvidenceIdx] : '';
+      const evidenceType = a1EvidenceTypeIdx >= 0 && a1EvidenceTypeIdx < cells.length ? cells[a1EvidenceTypeIdx] : '';
 
       if (a1Name && a1Name.length > 1) {
-        results.push({ l3Name: currentL3, a1Name, systems });
+        results.push({ l3Name: currentL3, l2Name: currentL2, a1Name, a1Code, evidenceCitation, evidenceType, systems });
+        if (diagnostics) diagnostics.a1Rows += 1;
       }
     }
 
@@ -275,6 +594,109 @@ function cleanMarkdownCell(raw) {
 function parseReportNumber(raw, fallback = 0) {
   const match = String(raw || '').match(/\d+/);
   return match ? Number(match[0]) : fallback;
+}
+
+function buildMdmRequirements(files) {
+  const items = [];
+  for (const file of files) {
+    const dept = file.replace('能力层与MDM建设要求.md', '');
+    const sourceFile = `docs/norms/${file}`;
+    const text = readFileSync(resolve(NORMS, file), 'utf-8');
+
+    for (const table of parseMarkdownTables(text)) {
+      const headers = table.headers.map(cleanMarkdownCell);
+      const objectIdx = headerIndex(headers, ['主数据对象', '对象名称']);
+      if (objectIdx === -1) continue;
+      const keyFieldsIdx = headerIndex(headers, ['建议关键字段', '关键字段']);
+      const governanceIdx = headerIndex(headers, ['治理要求', '建设要求']);
+      if (keyFieldsIdx === -1 && governanceIdx === -1) continue;
+
+      const sourceL2Idx = headerIndex(headers, ['来源业务能力（L2）', '来源业务能力', '业务能力（L2）', '业务能力']);
+      const responsibleIdx = headerIndex(headers, ['数据责任部门', '责任部门']);
+      const boundaryIdx = headerIndex(headers, ['系统边界', '系统边界说明']);
+
+      for (const row of table.rows) {
+        const masterDataObject = cleanMarkdownCell(row[objectIdx]);
+        if (!masterDataObject || masterDataObject === '主数据对象') continue;
+        items.push({
+          dept,
+          masterDataObject,
+          sourceL2: sourceL2Idx >= 0 ? cleanMarkdownCell(row[sourceL2Idx]) : '',
+          keyFields: keyFieldsIdx >= 0 ? cleanMarkdownCell(row[keyFieldsIdx]) : '',
+          responsibleDept: responsibleIdx >= 0 ? cleanMarkdownCell(row[responsibleIdx]) : '',
+          systemBoundary: boundaryIdx >= 0 ? cleanMarkdownCell(row[boundaryIdx]) : '',
+          governanceRequirement: governanceIdx >= 0 ? cleanMarkdownCell(row[governanceIdx]) : '',
+          sourceFile,
+        });
+      }
+    }
+  }
+  return items;
+}
+
+function buildEvidenceRefs(allMappings, allA1, mdmRequirements) {
+  const refs = [];
+  const seen = new Set();
+
+  function add(ref) {
+    const key = [
+      ref.refType,
+      ref.dept,
+      ref.l3Name || '',
+      ref.a1Code || '',
+      ref.masterDataObject || '',
+      ref.sourceFile || '',
+      ref.citation || '',
+      ref.evidenceType || '',
+    ].join('|');
+    if (seen.has(key)) return;
+    seen.add(key);
+    refs.push(ref);
+  }
+
+  for (const row of allMappings) {
+    add({
+      refType: 'L3',
+      dept: row.dept,
+      l3Name: row.l3,
+      a1Code: '',
+      masterDataObject: '',
+      evidenceType: '制度依据',
+      sourceFile: row.sourceFile || `docs/norms/${row.dept}部门-能力-流程-系统映射关系.md`,
+      citation: row.evidenceCitation || '',
+      note: 'DCM 映射总表制度依据',
+    });
+  }
+
+  for (const row of allA1) {
+    add({
+      refType: 'A1',
+      dept: row.dept,
+      l3Name: row.l3Name,
+      a1Code: row.a1Code || '',
+      masterDataObject: '',
+      evidenceType: row.evidenceType || '待复核',
+      sourceFile: row.sourceFile || `docs/norms/${row.dept}部门-能力-流程-系统映射关系.md`,
+      citation: row.evidenceCitation || '',
+      note: '业务行为（A1）映射制度依据',
+    });
+  }
+
+  for (const row of mdmRequirements) {
+    add({
+      refType: 'MDM',
+      dept: row.dept,
+      l3Name: '',
+      a1Code: '',
+      masterDataObject: row.masterDataObject,
+      evidenceType: 'MDM建设要求',
+      sourceFile: row.sourceFile,
+      citation: '主数据对象识别',
+      note: row.governanceRequirement || '部门能力层与 MDM 建设要求',
+    });
+  }
+
+  return refs;
 }
 
 function extractReportMetric(text, label, fallback = 0) {
@@ -439,13 +861,37 @@ function parseCrossDeptReport(text, chainText = '') {
   };
 }
 
+function printA1Diagnostics(perDeptDiagnostics, allMappings, allA1) {
+  console.error('A1 parse diagnostics:');
+  console.error('dept\tmappings\tparsedA1\tmatchedA1\tunmatchedA1\tl3Headings\ta1Tables\trejectedHeaders');
+
+  for (const item of perDeptDiagnostics) {
+    const deptA1 = allA1.filter(a => a.dept === item.dept);
+    const matched = deptA1.filter(a => resolveA1Mapping(a, allMappings)).length;
+    const unmatched = deptA1.length - matched;
+    console.error([
+      item.dept,
+      item.mappings,
+      deptA1.length,
+      matched,
+      unmatched,
+      item.l3Headings,
+      item.a1Tables,
+      item.rejectedHeaders,
+    ].join('\t'));
+  }
+}
+
 // ---- 主流程 ----
 
 function main() {
   const allMappings = []; // { dept, l1, l2, l3, systems }
   const allA1 = [];       // { dept, l3Name, a1Name }
+  const perDeptDiagnostics = [];
+  const diagnoseA1 = process.argv.includes('--diagnose-a1');
 
   const files = discoverMappingFiles();
+  const mdmRequirementFiles = discoverMdmRequirementFiles();
   if (files.length === 0) {
     console.error('No mapping files found in norms directory.');
     process.exit(1);
@@ -463,14 +909,24 @@ function main() {
 
     const deptName = file.replace('部门-能力-流程-系统映射关系.md', '');
     const mappings = parseMappingTable(text);
-    const a1Entries = parseA1Section(text);
+    const diagnostics = { l3Headings: 0, a1Tables: 0, a1Rows: 0, rejectedHeaders: 0 };
+    const a1Entries = parseA1Section(text, diagnostics);
 
     for (const m of mappings) {
-      allMappings.push({ ...m, dept: deptName });
+      allMappings.push({ ...m, dept: deptName, sourceFile: `docs/norms/${file}` });
     }
     for (const a of a1Entries) {
-      allA1.push({ dept: deptName, ...a });
+      allA1.push({ dept: deptName, sourceFile: `docs/norms/${file}`, ...a });
     }
+    perDeptDiagnostics.push({ dept: deptName, mappings: mappings.length, ...diagnostics });
+  }
+
+  const mdmRequirements = buildMdmRequirements(mdmRequirementFiles);
+  const evidenceRefs = buildEvidenceRefs(allMappings, allA1, mdmRequirements);
+  const sourceManifest = buildSourceManifest(files, mdmRequirementFiles);
+
+  if (diagnoseA1) {
+    printA1Diagnostics(perDeptDiagnostics, allMappings, allA1);
   }
 
   // ---- 构建桑基图数据 ----
@@ -521,12 +977,9 @@ function main() {
   const l3WithA1 = new Set(); // dept||l3Name
 
   for (const a of allA1) {
-    // 精确匹配 L3 名称
-    const matched = allMappings.find(m =>
-      m.dept === a.dept && m.l3 === a.l3Name
-    );
+    const matched = resolveA1Mapping(a, allMappings);
     if (matched) {
-      l3WithA1.add(`${a.dept}||${a.l3Name}`);
+      l3WithA1.add(`${matched.dept}||${matched.l3}`);
       addLink(matched.l3, a.a1Name, 1);
 
       // Layer 5→6: A1 → S1
@@ -598,6 +1051,8 @@ function main() {
     allNodes.add(l.target);
   }
 
+  const a1Matched = countMatchedA1(allA1, allMappings);
+
   const finalData = {
     nodes: Array.from(allNodes).map(name => ({ name })),
     links: Array.from(merged2.values()),
@@ -629,9 +1084,14 @@ function main() {
     stats: {
       mappings: allMappings.length,
       a1: allA1.length,
+      a1Matched,
+      a1Unmatched: allA1.length - a1Matched,
       departmentsWithData: deptsWithData.size,
       departmentsEmpty: Object.keys(DEPT_DOMAIN).length - deptsWithData.size,
     },
+    sourceManifest,
+    mdmRequirements,
+    evidenceRefs,
   };
 
   let crossDeptReportText;

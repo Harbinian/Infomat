@@ -138,6 +138,14 @@ Every A1 row must include these columns:
 
 `业务行为（A1）编号 / 业务行为（A1） / 执行角色 / 执行角色依据 / 触发情景 / 触发情景依据 / 前置条件 / 前置条件依据 / 数据输入 / 数据输出 / 输入来源部门 / 输出目标部门 / 审批类型 / 应用系统（S1） / 应用模块（S2） / 制度依据 / 证据类型 / 验收标准 / 验收标准依据 / 核验提醒 / 部门确认意见 / 是否调整 / 调整建议 / 备注`
 
+Legacy template rule:
+
+- If an existing A1 table is an older skill-generated table with missing BBM columns, treat it as skill/template migration debt, not as department source error.
+- First perform a mechanical table migration: preserve existing cells in their matching fields, add missing columns, and use `旧模板未采集，待补`, `—`, or `待确认` for fields the old template did not collect.
+- Do not infer trigger, precondition, data input/output, cross-department fields, acceptance basis, or department feedback while migrating old tables.
+- If a row is visibly column-shifted, only move values when the value shape proves it (for example file number or `§` belongs in `制度依据`, and evidence-type enum belongs in `证据类型`). Otherwise keep the fact in `备注` and mark it for review.
+- External actors or generic parties found in old template fields, such as 客户, 供应商, 银行, 主管部门, or 相关部门, must not be moved into `输入来源部门` / `输出目标部门` during migration unless controlled-transfer evidence is present.
+
 Rules:
 
 - Each 业务流程（L3） should usually have 3-8 业务行为（A1）. Document exceptions.

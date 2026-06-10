@@ -25,6 +25,81 @@
     "departmentsWithData": 1,
     "departmentsEmpty": 8
   },
+  "sourceManifest": {
+    "files": [
+      {
+        "path": "docs/norms/经营发展部业务资料/GLTX-JY-23-A销售订单评审和执行管理程序.docx",
+        "dept": "经营发展部",
+        "assetType": "procedure",
+        "fileNo": "GLTX-JY-23",
+        "revision": "A",
+        "size": 12345,
+        "mtime": "2026-06-01T00:00:00.000Z",
+        "sha256": "source-file-hash-1",
+        "status": "纳入",
+        "reason": "已作为销售订单评审流程依据"
+      },
+      {
+        "path": "docs/norms/经营发展部业务资料/~$临时锁定文件.docx",
+        "dept": "经营发展部",
+        "assetType": "temp",
+        "fileNo": "待分配编号",
+        "revision": "?",
+        "size": 10,
+        "mtime": "2026-06-01T00:00:00.000Z",
+        "sha256": "source-file-hash-2",
+        "status": "排除",
+        "reason": "Office 临时锁定文件不作为流程证据"
+      }
+    ]
+  },
+  "mdmRequirements": [
+    {
+      "dept": "经营发展部",
+      "masterDataObject": "客户订单",
+      "sourceL2": "合同管理",
+      "keyFields": "订单号、客户名称、合同编号、状态",
+      "responsibleDept": "经营发展部",
+      "systemBoundary": "MDM治理对象；OA/ERP按流程消费或回写",
+      "governanceRequirement": "统一订单编码、状态和跨系统引用口径。",
+      "sourceFile": "docs/norms/经营发展部能力层与MDM建设要求.md"
+    }
+  ],
+  "evidenceRefs": [
+    {
+      "refType": "L3",
+      "dept": "经营发展部",
+      "l3Name": "销售订单评审和执行管理",
+      "a1Code": "",
+      "masterDataObject": "",
+      "evidenceType": "制度依据",
+      "sourceFile": "docs/norms/经营发展部部门-能力-流程-系统映射关系.md",
+      "citation": "GLTX-JY-23-A §5.1",
+      "note": "DCM 映射总表制度依据"
+    },
+    {
+      "refType": "A1",
+      "dept": "经营发展部",
+      "l3Name": "销售订单评审和执行管理",
+      "a1Code": "JY-L3-01-A1-001",
+      "masterDataObject": "",
+      "evidenceType": "原文明确-正文",
+      "sourceFile": "docs/norms/经营发展部部门-能力-流程-系统映射关系.md",
+      "citation": "GLTX-JY-23-A §5.1.1",
+      "note": "A1 制度依据"
+    },
+    {
+      "refType": "MDM",
+      "dept": "经营发展部",
+      "l3Name": "",
+      "a1Code": "",
+      "masterDataObject": "客户订单",
+      "evidenceType": "MDM建设要求",
+      "sourceFile": "docs/norms/经营发展部能力层与MDM建设要求.md",
+      "citation": "主数据对象识别",
+      "note": "MDM 要求表"
+    }
+  ],
   "crossDept": {
     "stats": {
       "totalChecked": 1,

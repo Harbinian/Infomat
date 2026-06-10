@@ -51,6 +51,37 @@ try {
 
   assert.strictEqual(db.prepare('SELECT COUNT(*) AS count FROM process_a1_items WHERE snapshot_id=?').get(snapshotId).count, 1);
 
+  const sourceFiles = db.prepare(`
+    SELECT file_path, dept_name, asset_type, process_status, process_reason
+    FROM process_source_files
+    WHERE snapshot_id=?
+    ORDER BY file_path
+  `).all(snapshotId);
+  assert.strictEqual(sourceFiles.length, 2);
+  assert.ok(sourceFiles.some(row => row.file_path.endsWith('GLTX-JY-23-A销售订单评审和执行管理程序.docx') && row.process_status === '纳入'));
+  assert.ok(sourceFiles.some(row => row.asset_type === 'temp' && row.process_status === '排除'));
+
+  const mdmRequirement = db.prepare(`
+    SELECT dept_name, master_data_object, source_l2, key_fields, responsible_dept, system_boundary, governance_requirement, source_file
+    FROM process_mdm_requirement_items
+    WHERE snapshot_id=? AND master_data_object='客户订单'
+  `).get(snapshotId);
+  assert.strictEqual(mdmRequirement.dept_name, '经营发展部');
+  assert.strictEqual(mdmRequirement.source_l2, '合同管理');
+  assert.ok(mdmRequirement.key_fields.includes('订单号'));
+  assert.ok(mdmRequirement.system_boundary.includes('OA/ERP'));
+
+  const evidenceRefs = db.prepare(`
+    SELECT ref_type, dept_name, l3_name, a1_code, master_data_object, evidence_type, source_file, citation, note
+    FROM process_evidence_refs
+    WHERE snapshot_id=?
+    ORDER BY ref_type
+  `).all(snapshotId);
+  assert.strictEqual(evidenceRefs.length, 3);
+  assert.ok(evidenceRefs.some(row => row.ref_type === 'L3' && row.l3_name === '销售订单评审和执行管理'));
+  assert.ok(evidenceRefs.some(row => row.ref_type === 'A1' && row.a1_code === 'JY-L3-01-A1-001'));
+  assert.ok(evidenceRefs.some(row => row.ref_type === 'MDM' && row.master_data_object === '客户订单'));
+
   const mixedMarkdown = `# 复材车间部门-能力-流程-系统映射关系
 
 ## 业务行为（A1）映射（BBM增补）

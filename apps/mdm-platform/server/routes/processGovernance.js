@@ -210,6 +210,37 @@ function mappingTodoSummaryFromRows(rows) {
   return summary;
 }
 
+function sourceFileSummaryFromRows(rows) {
+  const summary = { total: 0, byStatus: { '纳入': 0, '排除': 0, '待复核': 0 }, byAssetType: {} };
+  rows.forEach(row => {
+    const count = Number(row.count || 0);
+    summary.total += count;
+    if (row.process_status) summary.byStatus[row.process_status] = (summary.byStatus[row.process_status] || 0) + count;
+    if (row.asset_type) summary.byAssetType[row.asset_type] = (summary.byAssetType[row.asset_type] || 0) + count;
+  });
+  return summary;
+}
+
+function mdmRequirementSummaryFromRows(rows) {
+  const summary = { total: 0, byDept: {} };
+  rows.forEach(row => {
+    const count = Number(row.count || 0);
+    summary.total += count;
+    if (row.dept_name) summary.byDept[row.dept_name] = (summary.byDept[row.dept_name] || 0) + count;
+  });
+  return summary;
+}
+
+function evidenceSummaryFromRows(rows) {
+  const summary = { total: 0, byType: { L3: 0, A1: 0, MDM: 0 } };
+  rows.forEach(row => {
+    const count = Number(row.count || 0);
+    summary.total += count;
+    if (row.ref_type) summary.byType[row.ref_type] = (summary.byType[row.ref_type] || 0) + count;
+  });
+  return summary;
+}
+
 function mappingTodoSelectSql() {
   return `
     SELECT t.*,
@@ -449,6 +480,130 @@ router.get('/a1', requireAuth, (req, res) => {
       suggested_systems: parseJsonArray(row.suggested_systems)
     }));
     res.json({ items });
+  });
+});
+
+router.get('/source-files', requireAuth, (req, res) => {
+  return runDbAction(res, () => {
+    const snapshot = activeSnapshot();
+    if (!snapshot) {
+      return res.json({ summary: { total: 0, byStatus: { '纳入': 0, '排除': 0, '待复核': 0 }, byAssetType: {}, returned: 0, limit: 500 }, items: [] });
+    }
+
+    const params = [snapshot.id];
+    let whereSql = 'WHERE snapshot_id=?';
+    if (req.query.dept) {
+      whereSql += ' AND dept_name=?';
+      params.push(String(req.query.dept));
+    }
+    if (req.query.status && ['纳入', '排除', '待复核'].includes(String(req.query.status))) {
+      whereSql += ' AND process_status=?';
+      params.push(String(req.query.status));
+    }
+    if (req.query.assetType) {
+      whereSql += ' AND asset_type=?';
+      params.push(String(req.query.assetType));
+    }
+
+    const summaryRows = db.prepare(`
+      SELECT process_status, asset_type, COUNT(*) AS count
+      FROM process_source_files
+      ${whereSql}
+      GROUP BY process_status, asset_type
+    `).all(...params);
+    const items = db.prepare(`
+      SELECT file_path, dept_name, asset_type, file_no, revision, size_bytes, mtime, sha256, process_status, process_reason
+      FROM process_source_files
+      ${whereSql}
+      ORDER BY dept_name, process_status, asset_type, file_path
+      LIMIT 500
+    `).all(...params);
+    return res.json({ summary: { ...sourceFileSummaryFromRows(summaryRows), returned: items.length, limit: 500 }, items });
+  });
+});
+
+router.get('/mdm-requirements', requireAuth, (req, res) => {
+  return runDbAction(res, () => {
+    const snapshot = activeSnapshot();
+    if (!snapshot) return res.json({ summary: { total: 0, byDept: {}, returned: 0, limit: 500 }, items: [] });
+
+    const params = [snapshot.id];
+    let whereSql = 'WHERE snapshot_id=?';
+    if (req.query.dept) {
+      whereSql += ' AND dept_name=?';
+      params.push(String(req.query.dept));
+    }
+    if (req.query.object) {
+      whereSql += ' AND master_data_object=?';
+      params.push(String(req.query.object));
+    }
+
+    const summaryRows = db.prepare(`
+      SELECT dept_name, COUNT(*) AS count
+      FROM process_mdm_requirement_items
+      ${whereSql}
+      GROUP BY dept_name
+    `).all(...params);
+    const items = db.prepare(`
+      SELECT dept_name, master_data_object, source_l2, key_fields, responsible_dept, system_boundary, governance_requirement, source_file
+      FROM process_mdm_requirement_items
+      ${whereSql}
+      ORDER BY dept_name, source_l2, master_data_object, id
+      LIMIT 500
+    `).all(...params);
+    return res.json({ summary: { ...mdmRequirementSummaryFromRows(summaryRows), returned: items.length, limit: 500 }, items });
+  });
+});
+
+router.get('/evidence', requireAuth, (req, res) => {
+  return runDbAction(res, () => {
+    const snapshot = activeSnapshot();
+    if (!snapshot) return res.json({ summary: { total: 0, byType: { L3: 0, A1: 0, MDM: 0 }, returned: 0, limit: 500 }, items: [] });
+
+    const params = [snapshot.id];
+    let whereSql = 'WHERE snapshot_id=?';
+    if (req.query.dept) {
+      whereSql += ' AND dept_name=?';
+      params.push(String(req.query.dept));
+    }
+    if (req.query.l3) {
+      whereSql += ' AND l3_name=?';
+      params.push(String(req.query.l3));
+    }
+    if (req.query.a1) {
+      if (req.query.l3) {
+        whereSql += " AND (a1_code=? OR (ref_type='L3' AND (a1_code IS NULL OR a1_code='')))";
+        params.push(String(req.query.a1));
+      } else {
+        whereSql += ' AND a1_code=?';
+        params.push(String(req.query.a1));
+      }
+    }
+    if (req.query.object) {
+      whereSql += ' AND master_data_object=?';
+      params.push(String(req.query.object));
+    }
+    const refType = String(req.query.type || '').toUpperCase();
+    if (['L3', 'A1', 'MDM'].includes(refType)) {
+      whereSql += ' AND ref_type=?';
+      params.push(refType);
+    }
+
+    const summaryRows = db.prepare(`
+      SELECT ref_type, COUNT(*) AS count
+      FROM process_evidence_refs
+      ${whereSql}
+      GROUP BY ref_type
+    `).all(...params);
+    const items = db.prepare(`
+      SELECT ref_type, dept_name, l3_name, a1_code, master_data_object, evidence_type, source_file, citation, note
+      FROM process_evidence_refs
+      ${whereSql}
+      ORDER BY CASE ref_type WHEN 'L3' THEN 0 WHEN 'A1' THEN 1 ELSE 2 END,
+               dept_name, l3_name, a1_code, master_data_object, id
+      LIMIT 500
+    `).all(...params);
+    return res.json({ summary: { ...evidenceSummaryFromRows(summaryRows), returned: items.length, limit: 500 }, items });
   });
 });
 

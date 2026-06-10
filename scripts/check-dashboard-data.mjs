@@ -4,10 +4,11 @@
  * 用法: node scripts/check-dashboard-data.mjs
  */
 
-import { existsSync, readFileSync } from 'fs';
+import { existsSync, readFileSync, readdirSync } from 'fs';
 import { resolve } from 'path';
 
 const ROOT = resolve(import.meta.dirname || '.', '..');
+const NORMS_PATH = resolve(ROOT, 'docs', 'norms');
 const DATA_PATH = resolve(ROOT, 'docs', 'company-sankey-data.json');
 const DASHBOARD_PATH = resolve(ROOT, 'pmo', 'procedure-management', 'dashboard.html');
 
@@ -44,6 +45,67 @@ function stableJson(value) {
   return JSON.stringify(value);
 }
 
+function splitMarkdownRow(line) {
+  const cells = line.trim().split('|');
+  if (cells.length && cells[0].trim() === '') cells.shift();
+  if (cells.length && cells[cells.length - 1].trim() === '') cells.pop();
+  return cells.map(cell => cell.trim());
+}
+
+function looksLikeA1Header(header) {
+  const text = header.join('|');
+  return (
+    (text.includes('业务行为（A1）编号') || text.includes('A1编号')) &&
+    text.includes('业务行为（A1）') &&
+    text.includes('应用系统')
+  );
+}
+
+function isSeparatorRow(line) {
+  return /^\|[\s\-:|]+$/.test(line.trim());
+}
+
+function countA1RowsInMappingDoc(text) {
+  const lines = text.split(/\r?\n/);
+  let inBbm = false;
+  let count = 0;
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const trimmed = lines[i].trim();
+    if (trimmed.startsWith('## 业务行为（A1）')) inBbm = true;
+    if (!inBbm || !trimmed.startsWith('|')) continue;
+
+    const header = splitMarkdownRow(trimmed);
+    if (!looksLikeA1Header(header)) continue;
+
+    for (let j = i + 1; j < lines.length; j += 1) {
+      const row = lines[j].trim();
+      if (!row) continue;
+      if (!row.startsWith('|')) {
+        i = j - 1;
+        break;
+      }
+      if (isSeparatorRow(row)) continue;
+
+      const cells = splitMarkdownRow(row);
+      if (cells.join('|') === header.join('|')) continue;
+      if (['序号', '指标', '业务行为（A1）编号'].includes(cells[0])) continue;
+      count += 1;
+    }
+  }
+
+  return count;
+}
+
+function countSourceA1Rows() {
+  return readdirSync(NORMS_PATH, { withFileTypes: true })
+    .filter(entry => entry.isFile() && entry.name.endsWith('部门-能力-流程-系统映射关系.md'))
+    .reduce((sum, entry) => {
+      const text = readFileSync(resolve(NORMS_PATH, entry.name), 'utf-8');
+      return sum + countA1RowsInMappingDoc(text);
+    }, 0);
+}
+
 const fileData = readJsonFile(DATA_PATH);
 
 if (!Array.isArray(fileData.nodes) || fileData.nodes.length === 0) {
@@ -54,6 +116,12 @@ if (!Array.isArray(fileData.links) || fileData.links.length === 0) {
 }
 if (!fileData.stats || typeof fileData.stats.mappings !== 'number') {
   fail('docs/company-sankey-data.json has no stats.mappings');
+}
+if (fileData.stats.a1 !== countSourceA1Rows()) {
+  fail(`docs/company-sankey-data.json stats.a1 expected ${countSourceA1Rows()} from source A1 rows, got ${fileData.stats.a1}`);
+}
+if (fileData.stats.a1Unmatched !== 0) {
+  fail(`docs/company-sankey-data.json stats.a1Unmatched expected 0, got ${fileData.stats.a1Unmatched}`);
 }
 if (!fileData.crossDept) {
   fail('docs/company-sankey-data.json has no crossDept');
