@@ -1048,7 +1048,7 @@
           <button class="btn secondary" id="personNewBtn">+ 新增人员</button>
         </div>
         <div class="tw"><table><thead><tr>
-          <th>工号</th><th>姓名</th><th>手机</th><th>邮箱</th><th>在职状态</th><th>状态</th><th>操作</th>
+          <th>工号</th><th>姓名</th><th>组织</th><th>岗位</th><th>手机</th><th>邮箱</th><th>在职状态</th><th>状态</th><th>操作</th>
         </tr></thead><tbody id="personTableBody"></tbody></table></div>
       </section>
 
@@ -4068,12 +4068,12 @@
       if (search) params += '&search=' + encodeURIComponent(search);
       var data = await api('/api/persons?' + params);
       document.getElementById('personTableBody').innerHTML = (data.rows || []).map(function(r) {
-        return '<tr><td><code>' + escHtml(r.employee_no) + '</code></td><td>' + escHtml(r.person_name) + '</td><td>' + escHtml(r.mobile || '-') + '</td><td>' + escHtml(r.email || '-') + '</td><td>' + escHtml(r.employment_status) + '</td><td>' + escHtml(r.status) + '</td><td>' +
+        return '<tr><td><code>' + escHtml(r.employee_no) + '</code></td><td>' + escHtml(r.person_name) + '</td><td>' + escHtml(r.org_unit_name || '-') + '</td><td>' + escHtml(r.position_name || '-') + '</td><td>' + escHtml(r.mobile || '-') + '</td><td>' + escHtml(r.email || '-') + '</td><td>' + escHtml(r.employment_status) + '</td><td>' + escHtml(r.status) + '</td><td>' +
           '<a href="#" onclick="navigateTo(\'detail\',{tab:\'persons\',type:\'person\',id:\'' + escHtml(r.employee_no) + '\'});return false">详情</a>' +
           '<a href="#" onclick="navigateTo(\'form\',{tab:\'persons\',type:\'person\',id:\'' + escHtml(r.employee_no) + '\',action:\'edit\'});return false" style="margin-left:8px;">编辑</a>' +
           (r.status === 'draft' ? '<a href="#" onclick="activatePerson(\'' + escHtml(r.employee_no) + '\');return false" style="margin-left:8px;">激活</a>' : '') +
           (hasAdminAccess() ? '<a href="#" onclick="deletePerson(\'' + escHtml(r.employee_no) + '\');return false" style="color:#e53935;margin-left:8px;">删除</a>' : '') + '</td></tr>';
-      }).join('') || '<tr><td colspan="7" style="text-align:center">暂无数据</td></tr>';
+      }).join('') || '<tr><td colspan="9" style="text-align:center">暂无数据</td></tr>';
     }
 
     async function deletePerson(no) {
