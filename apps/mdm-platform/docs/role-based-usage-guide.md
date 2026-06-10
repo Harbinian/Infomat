@@ -34,7 +34,7 @@ npm start
 
 访问 `http://localhost:3000`。
 
-平台不会自动创建默认管理员。首次初始化必须通过 `MDM_ADMIN_EMPLOYEE_NO` 和 `MDM_ADMIN_PASSWORD` 创建管理员。新增普通账号后，默认初始密码是 `init1234`，首次登录会提示修改密码。
+平台不会自动创建默认管理员。首次初始化必须通过 `MDM_ADMIN_EMPLOYEE_NO` 和 `MDM_ADMIN_PASSWORD` 创建管理员。管理员在页面或接口新增 / 重置普通账号时，平台会生成一次性初始密码并要求用户首次登录后修改。
 
 可选数据准备：
 

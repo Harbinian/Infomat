@@ -70,7 +70,7 @@ async function main() {
     'function resetUserDefaultPassword',
     '基础权限角色',
     '项目工作角色',
-    '初始密码为 init1234',
+    '一次性初始密码',
     '当前批量导入仅给已存在用户分配角色',
     '组织架构来自',
     '组织架构和部门职责.md',
@@ -113,6 +113,7 @@ async function main() {
   ].forEach(needle => assert.ok(html.includes(needle), `missing frontend hook ${needle}`));
 
   assert.ok(!html.includes('admin123'), 'login page must not expose a default password');
+  assert.ok(!html.includes('init1234'), 'frontend must not expose or submit a fixed default password');
   assert.ok(!html.includes('value="ADMIN001"'), 'login page must not prefill the default admin employee number');
   assert.ok(html.includes('function escapeHtml'), 'frontend should expose a shared HTML escaping helper');
   assert.ok(html.includes('function safeText'), 'frontend should route service-provided display text through escaping');
@@ -140,6 +141,11 @@ async function main() {
   const assignDialogSnippet = html.slice(assignDialogStart, assignDialogStart + 1000);
   assert.ok(assignDialogSnippet.includes("/api/org/users/assignable"), 'conflict assignment should use the minimal assignable user directory');
   assert.ok(!assignDialogSnippet.includes("/api/org/users'"), 'conflict assignment must not read the admin-only full user directory');
+  const resetPasswordStart = html.indexOf('async function resetUserDefaultPassword');
+  const resetPasswordSnippet = html.slice(resetPasswordStart, resetPasswordStart + 900);
+  assert.ok(resetPasswordSnippet.includes('/api/org/users/'), 'password reset should call the user password endpoint');
+  assert.ok(!resetPasswordSnippet.includes('password:'), 'password reset must let the server generate a one-time password');
+  assert.ok(html.includes('initial_password'), 'user management should display the one-time password returned by the server');
   assert.ok(
     html.includes("location.hash = '#/' + (params.tab || 'dashboard');"),
     'list navigation should use hash routes with #/ to avoid browser anchor auto-scroll'
