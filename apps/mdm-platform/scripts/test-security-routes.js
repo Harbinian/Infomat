@@ -151,7 +151,7 @@ function seedData() {
   db.prepare("INSERT INTO terms (term, definition, scope, created_by, status) VALUES ('客户', '客户定义', '集团', ?, 'approved')").run(admin);
   db.prepare("INSERT INTO terms (term, definition, scope, created_by, status) VALUES ('客户号', '客户编号', '系统', ?, 'approved')").run(admin);
 
-  return { capA, processA, mappingA, mappingB, todoB, conflict, termConflict, submitterA, orgUnitId, orgUnitCode: 'SALE-ORG' };
+  return { capA, processA, mappingA, mappingB, fieldB, todoB, conflict, termConflict, submitterA, orgUnitId, orgUnitCode: 'SALE-ORG' };
 }
 
 async function waitForServer() {
@@ -331,6 +331,18 @@ async function assertRbacRolesDriveTodoList(seed, rbacOwnerCookie) {
     todos.body.some(row => Number(row.id) === Number(seed.todoB)),
     '拥有 owner RBAC 角色的用户应看到本部门待确认字段待办'
   );
+}
+
+async function assertRbacOwnerCanEditOwnerFieldColumns(seed, rbacOwnerCookie) {
+  const update = await request(`/api/field-entries/${seed.fieldB}`, {
+    method: 'PUT',
+    body: JSON.stringify({ field_name_cn: '客户名称确认', field_type: '文本' })
+  }, rbacOwnerCookie);
+  assert.strictEqual(update.res.status, 200, '拥有 owner RBAC 角色的用户应能维护本部门字段 owner 列');
+
+  const row = db.prepare('SELECT field_name_cn, field_type FROM field_entries WHERE id=?').get(seed.fieldB);
+  assert.strictEqual(row.field_name_cn, '客户名称确认');
+  assert.strictEqual(row.field_type, '文本');
 }
 
 async function assertFieldConstraintsAreApplied(submitterCookie) {
@@ -565,6 +577,7 @@ async function main() {
     await assertFieldConstraintsAreApplied(submitterCookie);
     await assertReadonlyFieldConstraintsAreEnforced(adminCookie, limitedEditorCookie);
     await assertRbacRolesDriveTodoList(seed, rbacOwnerCookie);
+    await assertRbacOwnerCanEditOwnerFieldColumns(seed, rbacOwnerCookie);
 
     const capBadAction = await request(`/api/capabilities/${seed.capA}/review`, {
       method: 'POST',
