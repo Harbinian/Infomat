@@ -47,6 +47,7 @@
 | 第 4 层 | `docs/contracts/` 缺少校验合同目录说明 | 已确认 | 第四批小片已补 README |
 | 第 4 层 | `docs/integration/` 缺少集成方案目录说明 | 已确认 | 第四批小片已补 README |
 | 第 4 层 | `docs/norms/` 缺少面向人的真源目录说明 | 已确认 | 第四批小片已补 README，不移动 norms 文件 |
+| 第 4 层 | `docs/organization/` 缺少组织真源目录说明 | 已确认 | 第四批小片已补 README |
 | 第 4 层 | `docs/plans/` 缺少计划文档目录说明 | 已确认 | 第四批小片已补 README |
 | 第 4 层 | `docs/reports/` 缺少审计报告目录说明 | 已确认 | 第四批小片已补 README，不迁移报告 |
 | 第 4 层 | 重复静态资产、日志、数据库备份、缓存入库 | 已确认 | 运行产物已处理；重复资产已补迁移提案 |
@@ -113,6 +114,7 @@
 - 第四批继续补 MDM 应用内脚本边界：新增 `apps/mdm-platform/scripts/README.md`，分类测试、安全审计、初始化维护和流程治理承接脚本，并标注数据库副作用。
 - 第四批继续补校验合同目录说明：新增 `docs/contracts/README.md`，说明 `dcm-bbm-contract.json` 是脚本合同，不替代组织或流程真源。
 - 第四批继续补集成方案目录说明：新增 `docs/integration/README.md`，说明接口模板、集成关系、MDM 治理方案和选型评分材料只作方案参考，不替代流程落位或系统选型结论。
+- 第四批继续补组织真源目录说明：新增 `docs/organization/README.md`，说明部门清单、部门到域映射、组织编码、岗位和人员同步应优先核对 `组织架构和部门职责.md`。
 - 第四批继续补计划目录说明：新增 `docs/plans/README.md`，说明计划和检查记录只解释阶段性安排，不能覆盖当前边界文件、真源和脚本入口。
 - 第四批继续做运行产物收口：补充 `.bak` 和点分隔数据库备份忽略规则，并将已跟踪的 `apps/mdm-platform/data/platform.db.after-admin-reset-20260609-152533.bak`、`scripts/__pycache__/generate_digital_project_gantt_8k.cpython-313.pyc` 从版本管理中移出；本地文件不删除。
 - 重复静态资产仍只记录为后续治理项：`echarts.min.js` 多副本和 `pmo/tasks.json` 双副本本轮不迁移，避免误伤 PMO、MDM 和 norms 的静态页面引用约定。
