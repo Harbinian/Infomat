@@ -1,0 +1,23 @@
+# pmo/scripts 说明
+
+> 状态：PMO 局部测试脚本目录  
+> 生效日期：2026-06-10  
+> 范围：PMO 页面、插件端点、交付物流程和前端写回相关 smoke 检查。
+
+本目录脚本只服务 PMO 应用和 PMO 局部页面。跨 `docs/`、`apps/` 和 PMO 的仓库级解析、注入、审计脚本应放在根目录 `scripts/`。
+
+## 当前脚本
+
+| 脚本 | 作用 |
+|---|---|
+| `smoke-deliverable-workflow.mjs` | 交付物工作流 smoke 检查 |
+| `smoke-frontmatter.mjs` | PMO 文档 frontmatter 检查 |
+| `smoke-hmr.mjs` | PMO 前端开发热更新相关 smoke 检查 |
+| `smoke-plugin-endpoints.mjs` | PMO 插件端点 smoke 检查 |
+| `smoke-writeback.mjs` | PMO 写回流程 smoke 检查 |
+
+## 修改自检
+
+1. 新增脚本时，说明输入、输出、是否写文件。
+2. 写 PMO 真源前，确认目标是 `pmo/` 下的项目计划材料，而不是流程真源。
+3. 不在本目录放仓库级 parser 或 MDM 平台测试。
