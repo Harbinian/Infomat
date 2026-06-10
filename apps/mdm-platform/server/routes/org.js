@@ -1,8 +1,8 @@
 const express = require('express');
-const crypto = require('crypto');
 const router = express.Router();
 const db = require('../db');
 const { hashPassword, verifyPassword, requireAuth, requirePermission, getUserEffectivePermissions } = require('../auth');
+const { FIXED_DEFAULT_PASSWORD, generateInitialPassword, isFixedDefaultPassword } = require('../passwordPolicy');
 
 function handleDbError(res, error) {
   if (error && (error.code === 'SQLITE_CONSTRAINT_UNIQUE' || String(error.message).includes('UNIQUE constraint failed'))) {
@@ -92,16 +92,6 @@ function requestHasAnyPermission(req, permissionCodes) {
   if (!req.session || !req.session.userId) return false;
   const { permSet } = getUserEffectivePermissions(req.session.userId);
   return permSet.has('*:*') || permissionCodes.some(code => permSet.has(code));
-}
-
-const FIXED_DEFAULT_PASSWORD = 'init1234';
-
-function isFixedDefaultPassword(password) {
-  return String(password || '') === FIXED_DEFAULT_PASSWORD;
-}
-
-function generateInitialPassword() {
-  return `tmp-${crypto.randomBytes(9).toString('hex')}`;
 }
 
 function resolveCreatePassword(password) {

@@ -2,8 +2,9 @@
 const ExcelJS = require('exceljs');
 const db = require('../server/db');
 const { hashPassword } = require('../server/auth');
+const { resolveInitialPassword } = require('../server/passwordPolicy');
 
-const EXCEL_PATH = 'C:/Users/charl/Desktop/MDM参与人员.xlsx';
+const EXCEL_PATH = process.env.MDM_USERS_EXCEL_PATH || 'C:/Users/charl/Desktop/MDM参与人员.xlsx';
 
 // 部门中文名 → 拼音简码映射
 const DEPT_CODE_MAP = {
@@ -69,9 +70,11 @@ async function main() {
 
   // 4. 批量插入用户
   const userInsert = db.prepare(
-    'INSERT INTO users (name, employee_no, department_id, post, role, password_hash) VALUES (?, ?, ?, ?, ?, ?)'
+    'INSERT INTO users (name, employee_no, department_id, post, role, password_hash, must_change_password) VALUES (?, ?, ?, ?, ?, ?, ?)'
   );
-  const defaultHash = hashPassword('init1234');
+  const passwordSetup = resolveInitialPassword(process.env.MDM_INITIAL_USER_PASSWORD);
+  if (passwordSetup.error) throw new Error(passwordSetup.error);
+  const defaultHash = hashPassword(passwordSetup.password);
 
   let created = 0;
   let skipped = 0;
@@ -82,7 +85,7 @@ async function main() {
       if (existing) { skipped++; continue; }
       const deptId = existingDepts[row.deptName] || null;
       const role = inferRole(row.post);
-      userInsert.run(row.name, row.badgeNo, deptId, row.post, role, defaultHash);
+      userInsert.run(row.name, row.badgeNo, deptId, row.post, role, defaultHash, passwordSetup.mustChangePassword);
       created++;
     }
   });
@@ -90,6 +93,9 @@ async function main() {
 
   console.log(`用户导入完成: 新增 ${created}, 跳过(已存在) ${skipped}`);
   console.log(`当前用户总数: ${db.prepare('SELECT COUNT(*) as c FROM users').get().c}`);
+  if (created > 0) {
+    console.log(`本次新增账号统一初始密码: ${passwordSetup.password}`);
+  }
 }
 
 main().catch(e => { console.error(e); process.exit(1); });

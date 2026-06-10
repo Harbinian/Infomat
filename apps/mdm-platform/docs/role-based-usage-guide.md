@@ -43,7 +43,7 @@ $env:ALLOW_PROJECT_USER_SETUP="true"
 node scripts/setup-mdm-project-users.js
 ```
 
-这会从 `docs/organization/花名册.md` 建立项目参与人、部门负责人和项目工作角色。
+这会从 `docs/organization/花名册.md` 建立项目参与人、部门负责人和项目工作角色。脚本会为新增账号生成本次一次性初始密码并要求首次登录后修改；如需指定受控初始密码，可设置 `MDM_INITIAL_USER_PASSWORD`。
 
 ```powershell
 $env:ALLOW_DEMO_SEED="true"
