@@ -31,13 +31,13 @@ assert.ok(
 );
 
 assert.ok(
-  audit.followUp.some(route =>
+  audit.businessGuarded.some(route =>
     route.file.endsWith('mappings.js') &&
     route.method === 'post' &&
     route.path === '/' &&
     route.reason.includes('草稿创建')
   ),
-  'mapping draft creation should remain visible as a follow-up item'
+  'mapping draft creation should be classified as business guarded'
 );
 
 console.log('Route write permission audit test passed');

@@ -24,6 +24,7 @@ const businessGuarded = new Map([
   ['fieldIdentities.js POST /:fieldEntryId/confirm', '黄金源确认通过字段 owner/admin 检查'],
   ['import.js POST /field-entries', '字段台账导入通过 submitter/admin 和映射提交人检查'],
   ['integration.js POST /credentials/generate', '集成凭据生成在路由内执行 requireAuth + admin 检查'],
+  ['mappings.js POST /', '映射草稿创建要求报送人或管理员'],
   ['mappings.js PUT /:id', '映射草稿更新要求创建人或管理员'],
   ['mappings.js DELETE /:id', '映射草稿删除要求创建人或管理员'],
   ['mappings.js POST /:id/submit', '映射提交要求本人提交的草稿'],
@@ -49,9 +50,7 @@ const businessGuarded = new Map([
   ['todos.js DELETE /:id', '待办删除通过目标部门或管理员检查']
 ]);
 
-const followUp = new Map([
-  ['mappings.js POST /', '草稿创建仍为登录即可，后续需细化为报送人/管理员或项目角色权限']
-]);
+const followUp = new Map();
 
 const publicOrSelfService = new Map([
   ['org.js POST /login', '登录入口'],

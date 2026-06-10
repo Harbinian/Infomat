@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const { requireAuth, getUserEffectivePermissions } = require('../auth');
-const { mappingVisibility } = require('../access');
+const { getEffectiveRoleCodes, mappingVisibility } = require('../access');
 
 function handleDbError(res, error) {
   if (error && (String(error.code).startsWith('SQLITE_CONSTRAINT') || String(error.message).includes('constraint failed'))) {
@@ -23,6 +23,12 @@ function runDbAction(res, action) {
 function hasAdminAccess(userId) {
   const { permSet } = getUserEffectivePermissions(userId);
   return permSet.has('admin:access') || permSet.has('*:*');
+}
+
+function canCreateMappingDraft(req) {
+  if (!req.session || !req.session.userId) return false;
+  if (hasAdminAccess(req.session.userId)) return true;
+  return getEffectiveRoleCodes(req).has('submitter');
 }
 
 router.get('/', requireAuth, (req, res) => {
@@ -141,6 +147,9 @@ function advanceToNextRunnableStep(mappingId, completedStep) {
 
 router.post('/', requireAuth, (req, res) => {
   return runDbAction(res, () => {
+    if (!canCreateMappingDraft(req)) {
+      return res.status(403).json({ error: '仅报送人或管理员可创建映射草稿' });
+    }
     const { process_id, description, approval_dept_id, owner_dept_id, systems = [], related_departments = [] } = req.body;
     const insertMapping = db.transaction(() => {
       const mStmt = db.prepare(`
