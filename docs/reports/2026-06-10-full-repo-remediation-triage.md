@@ -29,6 +29,7 @@
 | 第 2 层 | `SESSION_SECRET` 固定回退 | 已确认 | 第二批小片已处理 |
 | 第 2 层 | `/api/org/users` 员工目录暴露面过宽 | 已确认 | 第二批小片已处理目录收窄、后端候选人接口和前端切换 |
 | 第 2 层 | `applyFieldConstraints` readonly 未执行 | 已确认 | 第二批小片已处理读写两侧 |
+| 第 2 层 | 历史账号可能仍使用旧固定口令 | 待复核 | 第二批小片已补 dry-run 审计脚本 |
 | 第 2 层 | 待办列表仍按旧基础角色单选过滤 | 已确认 | 第二批小片已处理多角色并集过滤 |
 | 第 2 层 | 字段台账编辑仍按旧基础角色判断 | 已确认 | 第二批小片已处理 `fieldEntries` owner/submitter 判断 |
 | 第 2 层 | 黄金源维护仍按旧基础角色判断 | 已确认 | 第二批小片已处理 `fieldIdentities` owner 判断 |
@@ -80,6 +81,7 @@
 - 第二批继续收窄员工目录：`/api/org/users` 保持管理员专用，新增后端最小候选人接口，并将冲突指派弹窗切到 `/api/org/users/assignable`。
 - 追加默认口令红线：平台用户管理接口不得用固定 `init1234` 创建或重置账号，缺省时由服务端生成一次性初始密码并标记首次登录改密。
 - 第二批继续收敛默认口令：页面账号入库和重置密码改为展示服务端返回的一次性初始密码；`setup-mdm-project-users.js`、`import-mdm-users.js` 改为生成本次一次性初始密码、写入 `must_change_password=1`，并接入 `test:security`。
+- 追加历史账号审计红线：提供 `scripts/audit-fixed-default-passwords.js` dry-run 审计旧固定口令账号，不输出哈希、不修改用户；对应 `npm run test:password-audit` 已接入 `test:security`。
 - 追加待办多角色红线：旧基础角色为报送人、但 RBAC 具备 owner 的用户，应能看到本部门待确认字段待办。
 - 第二批继续统一角色口径：`GET /api/todos` 改为按 RBAC + 旧基础角色的并集过滤，并修正旧 SQL 字符串拼接导致报送人口径 500 的问题。
 - 追加字段台账多角色红线：旧基础角色为报送人、但 RBAC 具备 owner 的用户，应能维护本部门字段 owner 列。
