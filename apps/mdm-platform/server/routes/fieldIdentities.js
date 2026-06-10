@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const { requireAuth, getUserEffectivePermissions } = require('../auth');
+const { getEffectiveRoleCodes } = require('../access');
 
 function handleDbError(res, error) {
   if (error && (String(error.code).startsWith('SQLITE_CONSTRAINT') || String(error.message).includes('constraint failed'))) {
@@ -22,7 +23,8 @@ function runDbAction(res, action) {
 function canEditFieldIdentity(req, fieldEntryId, identity) {
   const { permSet } = getUserEffectivePermissions(req.session.userId);
   if (permSet.has('admin:access') || permSet.has('*:*')) return true;
-  if (req.session.userRole !== 'owner') return false;
+  const roleCodes = getEffectiveRoleCodes(req);
+  if (!roleCodes.has('owner')) return false;
   if (identity && identity.owner_user_id) return identity.owner_user_id === req.session.userId;
 
   const field = db.prepare(`
