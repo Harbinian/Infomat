@@ -866,6 +866,18 @@
           <div class="metric"><div class="num" id="pgMetricQualityInfo">0</div><div class="lbl">INFO</div></div>
           <div class="metric"><div class="num" id="pgMetricQualityShown">0</div><div class="lbl">质量项</div></div>
         </div>
+        <div class="grid g4" style="margin-top: 16px;">
+          <div class="metric"><div class="num" id="pgMetricQualityCaseOpen">0</div><div class="lbl">待处理问题单</div></div>
+          <div class="metric"><div class="num" id="pgMetricQualityCaseSubmitted">0</div><div class="lbl">待验证</div></div>
+          <div class="metric"><div class="num" id="pgMetricQualityCaseResolved">0</div><div class="lbl">待关闭确认</div></div>
+          <div class="metric"><div class="num" id="pgMetricQualityCaseClosed">0</div><div class="lbl">已关闭</div></div>
+        </div>
+        <div class="grid g4" style="margin-top: 16px;">
+          <div class="metric"><div class="num" id="pgMetricMappingRecords">0</div><div class="lbl">工作库记录</div></div>
+          <div class="metric"><div class="num" id="pgMetricMappingA1">0</div><div class="lbl">A1 工作记录</div></div>
+          <div class="metric"><div class="num" id="pgMetricMappingTodos">0</div><div class="lbl">映射待办</div></div>
+          <div class="metric"><div class="num" id="pgMetricMappingTodoOpen">0</div><div class="lbl">待处理映射项</div></div>
+        </div>
         <div class="pg-section">
           <div class="pg-section-hd"><h2>流程地图</h2><span class="pg-status" id="pgMapMeta"></span></div>
           <div class="pg-scope" aria-label="流程治理部门筛选">
@@ -891,6 +903,85 @@
               <tbody id="pgRiskRows"></tbody>
             </table>
           </div>
+        </div>
+        <div class="pg-section" id="pgMappingWorkspaceSection">
+          <div class="pg-section-hd">
+            <h2>映射工作库</h2><span class="pg-status" id="pgMappingWorkspaceMeta"></span>
+          </div>
+          <div class="table-container">
+            <table>
+              <thead><tr><th>类型</th><th>部门</th><th>L2</th><th>L3</th><th>A1</th><th>业务行为</th><th>状态</th><th>来源</th></tr></thead>
+              <tbody id="pgMappingWorkspaceRows"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="pg-section" id="pgMappingTodosSection">
+          <div class="pg-section-hd">
+            <h2>映射待办</h2><span class="pg-status" id="pgMappingTodoMeta"></span>
+          </div>
+          <div class="notice" style="margin-bottom:12px">映射待办来自 norms 映射关系、A1 核验提醒和跨部门衔接风险；在 MDM 记录处理过程，仍回源文件整改后重新导入。</div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+            <select id="pgMappingTodoTypeFilter" style="width: 150px; height: 36px; padding: 0 12px;">
+              <option value="">全部类型</option>
+              <option value="verification">核验提醒</option>
+              <option value="cross_dept">跨部门确认</option>
+              <option value="dept_confirm">部门确认</option>
+              <option value="adjustment">调整建议</option>
+              <option value="evidence">证据补全</option>
+            </select>
+            <select id="pgMappingTodoStatusFilter" style="width: 150px; height: 36px; padding: 0 12px;">
+              <option value="">全部状态</option>
+              <option value="open">待分派</option>
+              <option value="assigned">已分派</option>
+              <option value="rectifying">处理中</option>
+              <option value="submitted">已提交</option>
+              <option value="source_resolved">待关闭确认</option>
+              <option value="closed">已关闭</option>
+              <option value="reopened">复现重开</option>
+              <option value="accepted">已接受</option>
+            </select>
+          </div>
+          <div class="table-container">
+            <table>
+              <thead><tr><th>状态</th><th>类型</th><th>部门</th><th>目标部门</th><th>A1</th><th>说明</th><th>责任</th><th>动作</th></tr></thead>
+              <tbody id="pgMappingTodoRows"></tbody>
+            </table>
+          </div>
+          <div id="pgMappingTodoDetail" class="notice" style="margin-top:12px">选择映射待办后，这里会显示处理历史和可执行动作。</div>
+        </div>
+        <div class="pg-section" id="pgQualityCasesSection">
+          <div class="pg-section-hd">
+            <h2>治理闭环</h2><span class="pg-status" id="pgQualityCaseMeta"></span>
+          </div>
+          <div class="notice" style="margin-bottom:12px">回源文件整改后重新导入，MDM 只记录责任、状态、整改说明和关闭确认，不直接编辑 docs/norms。</div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+            <select id="pgQualityCaseSeverityFilter" style="width: 140px; height: 36px; padding: 0 12px;">
+              <option value="">全部严重度</option>
+              <option value="BLOCK">BLOCK</option>
+              <option value="WARN">WARN</option>
+            </select>
+            <select id="pgQualityCaseStatusFilter" style="width: 150px; height: 36px; padding: 0 12px;">
+              <option value="">全部状态</option>
+              <option value="open">待分派</option>
+              <option value="assigned">已分派</option>
+              <option value="rectifying">整改中</option>
+              <option value="submitted">已提交整改</option>
+              <option value="source_resolved">待关闭确认</option>
+              <option value="closed">已关闭</option>
+              <option value="reopened">复现重开</option>
+            </select>
+            <select id="pgQualityCaseOwnerFilter" style="width: 140px; height: 36px; padding: 0 12px;">
+              <option value="">全部责任人</option>
+              <option value="me">只看我的</option>
+            </select>
+          </div>
+          <div class="table-container">
+            <table>
+              <thead><tr><th>状态</th><th>严重度</th><th>部门</th><th>责任</th><th>截止</th><th>来源</th><th>说明</th><th>动作</th></tr></thead>
+              <tbody id="pgQualityCaseRows"></tbody>
+            </table>
+          </div>
+          <div id="pgQualityCaseDetail" class="notice" style="margin-top:12px">选择工作台跳转的问题单后，这里会显示处理历史和可执行动作。</div>
         </div>
         <div class="pg-section" id="pgQualitySection">
           <div class="pg-section-hd">
@@ -1182,7 +1273,7 @@
       }
       if (!hash) return { view: 'list', tab: 'roleWorkbench' };
       var parts = hash.split('/');
-      if (parts.length === 1) return { view: 'list', tab: parts[0], query: query, qualityView: query.view, finding: query.finding };
+      if (parts.length === 1) return { view: 'list', tab: parts[0], query: query, qualityView: query.view, finding: query.finding, caseId: query.case, mappingTodoId: query.todo };
       if (parts[0] === 'processes' && parts.length >= 3) {
         return { view: 'detail', tab: 'processes', type: 'process', id: parts[2] };
       }
@@ -2352,6 +2443,273 @@
         : '<tr><td colspan="7" class="empty">暂无质量问题</td></tr>';
     }
 
+    function pgQualityCaseStatusTag(value) {
+      var map = {
+        open: '待分派',
+        assigned: '已分派',
+        rectifying: '整改中',
+        submitted: '已提交整改',
+        source_resolved: '待关闭确认',
+        closed: '已关闭',
+        reopened: '复现重开'
+      };
+      var cls = value === 'closed' ? 'green' : value === 'source_resolved' ? 'green' : value === 'reopened' ? 'red' : value === 'submitted' ? 'amber' : '';
+      return '<span class="tag ' + cls + '">' + safeText(map[value] || value) + '</span>';
+    }
+
+    function renderProcessGovernanceQualityCases(cases, selectedDept, highlightedCaseId) {
+      var rowsEl = document.getElementById('pgQualityCaseRows');
+      if (!rowsEl) return;
+      var items = cases.items || [];
+      var summary = cases.summary || {};
+      var byStatus = summary.byStatus || {};
+      document.getElementById('pgMetricQualityCaseOpen').textContent = (byStatus.open || 0) + (byStatus.assigned || 0) + (byStatus.rectifying || 0) + (byStatus.reopened || 0);
+      document.getElementById('pgMetricQualityCaseSubmitted').textContent = byStatus.submitted || 0;
+      document.getElementById('pgMetricQualityCaseResolved').textContent = byStatus.source_resolved || 0;
+      document.getElementById('pgMetricQualityCaseClosed').textContent = byStatus.closed || 0;
+      document.getElementById('pgQualityCaseMeta').textContent = (selectedDept ? selectedDept + ' · ' : '') + '显示 ' + items.length + ' 单';
+
+      rowsEl.innerHTML = items.length
+        ? items.map(function(row) {
+            var isHighlighted = highlightedCaseId && String(row.id) === String(highlightedCaseId);
+            var owner = row.owner_user_name || row.owner_dept_name || '未分派';
+            var source = row.source_file + (row.source_line ? ':' + row.source_line : '');
+            return '<tr' + (isHighlighted ? ' style="background:#fff7ed"' : '') + ' data-quality-case="' + safeText(row.id) + '">' +
+              '<td>' + pgQualityCaseStatusTag(row.status) + '</td>' +
+              '<td>' + pgSeverityTag(row.severity) + '</td>' +
+              '<td>' + safeText(row.dept_name || '全局') + '</td>' +
+              '<td>' + safeText(owner) + '</td>' +
+              '<td>' + safeText(row.due_date || '') + '</td>' +
+              '<td>' + safeText(source) + '</td>' +
+              '<td>' + safeText(row.message) + '</td>' +
+              '<td><button class="btn secondary" type="button" onclick="renderProcessGovernanceQualityCaseDetail(' + Number(row.id) + ')">详情</button></td>' +
+            '</tr>';
+          }).join('')
+        : '<tr><td colspan="8" class="empty">暂无治理问题单</td></tr>';
+
+      if (highlightedCaseId) {
+        renderProcessGovernanceQualityCaseDetail(highlightedCaseId);
+      } else {
+        document.getElementById('pgQualityCaseDetail').textContent = '选择工作台跳转的问题单后，这里会显示处理历史和可执行动作。';
+      }
+    }
+
+    async function renderProcessGovernanceQualityCaseDetail(caseId) {
+      var detailEl = document.getElementById('pgQualityCaseDetail');
+      if (!detailEl || !caseId) return;
+      detailEl.innerHTML = '<div class="empty">加载治理问题单...</div>';
+      try {
+        var detail = await api('/api/process-governance/quality-cases/' + encodeURIComponent(caseId));
+        var item = detail.case || {};
+        var events = detail.events || [];
+        var source = (item.source_file || '') + (item.source_line ? ':' + item.source_line : '');
+        var eventHtml = events.length
+          ? events.slice().reverse().slice(0, 8).map(function(event) {
+              return '<div style="padding:6px 0;border-bottom:1px solid var(--border)">' +
+                '<strong>' + safeText(event.event_type) + '</strong> · ' + safeText(event.actor_user_name || '系统') +
+                '<div style="color:var(--muted);font-size:12px">' + safeText(event.created_at) + '</div>' +
+                '<div>' + safeText(event.note || '') + '</div>' +
+              '</div>';
+            }).join('')
+          : '<div class="empty">暂无处理历史</div>';
+        detailEl.innerHTML =
+          '<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,360px);gap:16px">' +
+            '<div>' +
+              '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">' +
+                pgQualityCaseStatusTag(item.status) + pgSeverityTag(item.severity) +
+                '<strong>' + safeText(item.message) + '</strong>' +
+              '</div>' +
+              '<div style="color:var(--muted);font-size:13px;margin-bottom:6px">来源：' + safeText(source) + '</div>' +
+              '<div style="margin-bottom:6px">整改建议：' + safeText(item.suggestion || '回源文件整改后重新导入') + '</div>' +
+              '<div style="margin-bottom:10px">责任：' + safeText(item.owner_user_name || item.owner_dept_name || '未分派') + '；截止：' + safeText(item.due_date || '') + '</div>' +
+              '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+                "<button class=\"btn secondary\" type=\"button\" onclick=\"processQualityCaseAction(" + Number(item.id) + ",'status',{status:'rectifying',note:'已开始回源整改'})\">标记整改中</button>" +
+                "<button class=\"btn secondary\" type=\"button\" onclick=\"processQualityCaseAction(" + Number(item.id) + ",'submit',{note:'已提交整改说明，等待重新质检'})\">提交整改</button>" +
+                "<button class=\"btn secondary\" type=\"button\" onclick=\"processQualityCaseAction(" + Number(item.id) + ",'close',{note:'重新质检未再出现，确认关闭'})\">确认关闭</button>" +
+                "<button class=\"btn secondary\" type=\"button\" onclick=\"processQualityCaseAction(" + Number(item.id) + ",'reopen',{note:'复核后继续跟踪'})\">重开</button>" +
+              '</div>' +
+              '<div style="display:flex;gap:8px;margin-top:10px"><input id="pgQualityCaseCommentInput" placeholder="补充处理记录" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:6px"><button class="btn" type="button" onclick="addProcessQualityCaseComment(' + Number(item.id) + ')">记录备注</button></div>' +
+            '</div>' +
+            '<div><strong>处理历史</strong>' + eventHtml + '</div>' +
+          '</div>';
+      } catch (error) {
+        detailEl.innerHTML = '<div class="empty">治理问题单暂不可用：' + safeText(error.message || '未知错误') + '</div>';
+      }
+    }
+
+    async function processQualityCaseAction(caseId, action, body) {
+      try {
+        await api('/api/process-governance/quality-cases/' + encodeURIComponent(caseId) + '/' + action, {
+          method: 'POST',
+          body: JSON.stringify(body || {})
+        });
+        await renderProcessGovernance();
+        await renderProcessGovernanceQualityCaseDetail(caseId);
+      } catch (error) {
+        showToast(error.message || '治理问题单处理失败', 'error');
+      }
+    }
+
+    async function addProcessQualityCaseComment(caseId) {
+      var input = document.getElementById('pgQualityCaseCommentInput');
+      var note = input ? input.value.trim() : '';
+      if (!note) {
+        showToast('请先填写处理记录', 'error');
+        return;
+      }
+      await processQualityCaseAction(caseId, 'comment', { note: note });
+    }
+
+    function pgMappingRecordTypeText(value) {
+      return value === 'l3' ? 'L3流程' : value === 'a1' ? 'A1行为' : value;
+    }
+
+    function pgMappingTodoTypeText(value) {
+      var map = { dept_confirm: '部门确认', verification: '核验提醒', adjustment: '调整建议', cross_dept: '跨部门确认', evidence: '证据补全' };
+      return map[value] || value;
+    }
+
+    function pgMappingTodoStatusTag(value) {
+      var map = {
+        open: '待分派',
+        assigned: '已分派',
+        rectifying: '处理中',
+        submitted: '已提交',
+        source_resolved: '待关闭确认',
+        closed: '已关闭',
+        reopened: '复现重开',
+        accepted: '已接受'
+      };
+      var cls = value === 'closed' || value === 'accepted' || value === 'source_resolved' ? 'green' : value === 'reopened' ? 'red' : value === 'submitted' ? 'amber' : '';
+      return '<span class="tag ' + cls + '">' + safeText(map[value] || value) + '</span>';
+    }
+
+    function renderProcessGovernanceMappingWorkspace(workspace, selectedDept) {
+      var rowsEl = document.getElementById('pgMappingWorkspaceRows');
+      if (!rowsEl) return;
+      var items = workspace.items || [];
+      var summary = workspace.summary || {};
+      var byType = summary.byType || {};
+      document.getElementById('pgMetricMappingRecords').textContent = summary.total || 0;
+      document.getElementById('pgMetricMappingA1').textContent = byType.a1 || 0;
+      document.getElementById('pgMappingWorkspaceMeta').textContent = (selectedDept ? selectedDept + ' · ' : '') + '显示 ' + items.length + ' 条';
+
+      rowsEl.innerHTML = items.length
+        ? items.slice(0, 120).map(function(row) {
+            return '<tr>' +
+              '<td>' + safeText(pgMappingRecordTypeText(row.record_type)) + '</td>' +
+              '<td>' + safeText(row.dept_name || '') + '</td>' +
+              '<td>' + safeText(row.l2_name || '') + '</td>' +
+              '<td>' + safeText(row.l3_name || '') + '</td>' +
+              '<td>' + safeText(row.a1_code || '') + '</td>' +
+              '<td>' + safeText(row.behavior || '') + '</td>' +
+              '<td>' + safeText(row.status || '') + '</td>' +
+              '<td>' + safeText(row.source_file || '') + '</td>' +
+            '</tr>';
+          }).join('')
+        : '<tr><td colspan="8" class="empty">暂无映射工作库记录</td></tr>';
+    }
+
+    function renderProcessGovernanceMappingTodos(todos, selectedDept, highlightedTodoId) {
+      var rowsEl = document.getElementById('pgMappingTodoRows');
+      if (!rowsEl) return;
+      var items = todos.items || [];
+      var summary = todos.summary || {};
+      var byStatus = summary.byStatus || {};
+      document.getElementById('pgMetricMappingTodos').textContent = summary.total || 0;
+      document.getElementById('pgMetricMappingTodoOpen').textContent = (byStatus.open || 0) + (byStatus.assigned || 0) + (byStatus.rectifying || 0) + (byStatus.reopened || 0);
+      document.getElementById('pgMappingTodoMeta').textContent = (selectedDept ? selectedDept + ' · ' : '') + '显示 ' + items.length + ' 项';
+
+      rowsEl.innerHTML = items.length
+        ? items.map(function(row) {
+            var isHighlighted = highlightedTodoId && String(row.id) === String(highlightedTodoId);
+            var owner = row.owner_user_name || row.owner_dept_name || '未分派';
+            return '<tr' + (isHighlighted ? ' style="background:#fff7ed"' : '') + ' data-mapping-todo="' + safeText(row.id) + '">' +
+              '<td>' + pgMappingTodoStatusTag(row.status) + '</td>' +
+              '<td>' + safeText(pgMappingTodoTypeText(row.todo_type)) + '</td>' +
+              '<td>' + safeText(row.dept_name || '全局') + '</td>' +
+              '<td>' + safeText(row.target_dept_name || '') + '</td>' +
+              '<td>' + safeText(row.a1_code || '') + '</td>' +
+              '<td>' + safeText(row.message || '') + '</td>' +
+              '<td>' + safeText(owner) + '</td>' +
+              '<td><button class="btn secondary" type="button" onclick="renderProcessGovernanceMappingTodoDetail(' + Number(row.id) + ')">详情</button></td>' +
+            '</tr>';
+          }).join('')
+        : '<tr><td colspan="8" class="empty">暂无流程映射待办</td></tr>';
+
+      if (highlightedTodoId) {
+        renderProcessGovernanceMappingTodoDetail(highlightedTodoId);
+      } else {
+        document.getElementById('pgMappingTodoDetail').textContent = '选择映射待办后，这里会显示处理历史和可执行动作。';
+      }
+    }
+
+    async function renderProcessGovernanceMappingTodoDetail(todoId) {
+      var detailEl = document.getElementById('pgMappingTodoDetail');
+      if (!detailEl || !todoId) return;
+      detailEl.innerHTML = '<div class="empty">加载映射待办...</div>';
+      try {
+        var detail = await api('/api/process-governance/mapping-todos/' + encodeURIComponent(todoId));
+        var item = detail.todo || {};
+        var events = detail.events || [];
+        var eventHtml = events.length
+          ? events.slice().reverse().slice(0, 8).map(function(event) {
+              return '<div style="padding:6px 0;border-bottom:1px solid var(--border)">' +
+                '<strong>' + safeText(event.event_type) + '</strong> · ' + safeText(event.actor_user_name || '系统') +
+                '<div style="color:var(--muted);font-size:12px">' + safeText(event.created_at) + '</div>' +
+                '<div>' + safeText(event.note || '') + '</div>' +
+              '</div>';
+            }).join('')
+          : '<div class="empty">暂无处理历史</div>';
+        detailEl.innerHTML =
+          '<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,360px);gap:16px">' +
+            '<div>' +
+              '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">' +
+                pgMappingTodoStatusTag(item.status) +
+                '<span class="tag">' + safeText(pgMappingTodoTypeText(item.todo_type)) + '</span>' +
+                '<strong>' + safeText(item.message) + '</strong>' +
+              '</div>' +
+              '<div style="color:var(--muted);font-size:13px;margin-bottom:6px">来源：' + safeText(item.source_file || '') + (item.source_line ? ':' + safeText(item.source_line) : '') + '</div>' +
+              '<div style="margin-bottom:6px">整改建议：' + safeText(item.suggestion || '回源文件整改后重新导入') + '</div>' +
+              '<div style="margin-bottom:10px">责任：' + safeText(item.owner_user_name || item.owner_dept_name || '未分派') + '；截止：' + safeText(item.due_date || '') + '</div>' +
+              '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+                "<button class=\"btn secondary\" type=\"button\" onclick=\"processMappingTodoAction(" + Number(item.id) + ",'status',{status:'rectifying',note:'已开始处理映射待办'})\">标记处理中</button>" +
+                "<button class=\"btn secondary\" type=\"button\" onclick=\"processMappingTodoAction(" + Number(item.id) + ",'submit',{note:'已提交映射处理说明，等待重新导入验证'})\">提交处理</button>" +
+                "<button class=\"btn secondary\" type=\"button\" onclick=\"processMappingTodoAction(" + Number(item.id) + ",'close',{note:'回源整改并重新导入后确认关闭'})\">确认关闭</button>" +
+                "<button class=\"btn secondary\" type=\"button\" onclick=\"processMappingTodoAction(" + Number(item.id) + ",'reopen',{note:'继续跟踪该映射待办'})\">重开</button>" +
+              '</div>' +
+              '<div style="display:flex;gap:8px;margin-top:10px"><input id="pgMappingTodoCommentInput" placeholder="补充处理记录" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:6px"><button class="btn" type="button" onclick="addProcessMappingTodoComment(' + Number(item.id) + ')">记录备注</button></div>' +
+            '</div>' +
+            '<div><strong>处理历史</strong>' + eventHtml + '</div>' +
+          '</div>';
+      } catch (error) {
+        detailEl.innerHTML = '<div class="empty">映射待办暂不可用：' + safeText(error.message || '未知错误') + '</div>';
+      }
+    }
+
+    async function processMappingTodoAction(todoId, action, body) {
+      try {
+        await api('/api/process-governance/mapping-todos/' + encodeURIComponent(todoId) + '/' + action, {
+          method: 'POST',
+          body: JSON.stringify(body || {})
+        });
+        await renderProcessGovernance();
+        await renderProcessGovernanceMappingTodoDetail(todoId);
+      } catch (error) {
+        showToast(error.message || '流程映射待办处理失败', 'error');
+      }
+    }
+
+    async function addProcessMappingTodoComment(todoId) {
+      var input = document.getElementById('pgMappingTodoCommentInput');
+      var note = input ? input.value.trim() : '';
+      if (!note) {
+        showToast('请先填写处理记录', 'error');
+        return;
+      }
+      await processMappingTodoAction(todoId, 'comment', { note: note });
+    }
+
     function renderProcessGovernanceSankey(data) {
       var chartDom = document.getElementById('pgSankeyChart');
       if (!chartDom) return;
@@ -2437,18 +2795,43 @@
         if (qualityArea) qualityParams.set('area', qualityArea);
         if (state.pgSelectedDept) qualityParams.set('dept', state.pgSelectedDept);
         var qualityQuery = qualityParams.toString() ? '?' + qualityParams.toString() : '';
+        var caseParams = new URLSearchParams();
+        var caseSeverity = document.getElementById('pgQualityCaseSeverityFilter') ? document.getElementById('pgQualityCaseSeverityFilter').value : '';
+        var caseStatus = document.getElementById('pgQualityCaseStatusFilter') ? document.getElementById('pgQualityCaseStatusFilter').value : '';
+        var caseOwner = document.getElementById('pgQualityCaseOwnerFilter') ? document.getElementById('pgQualityCaseOwnerFilter').value : '';
+        if (caseSeverity) caseParams.set('severity', caseSeverity);
+        if (caseStatus) caseParams.set('status', caseStatus);
+        if (caseOwner) caseParams.set('owner', caseOwner);
+        if (state.pgSelectedDept) caseParams.set('dept', state.pgSelectedDept);
+        var caseQuery = caseParams.toString() ? '?' + caseParams.toString() : '';
+        var mappingWorkspaceParams = new URLSearchParams();
+        if (state.pgSelectedDept) mappingWorkspaceParams.set('dept', state.pgSelectedDept);
+        var mappingWorkspaceQuery = mappingWorkspaceParams.toString() ? '?' + mappingWorkspaceParams.toString() : '';
+        var mappingTodoParams = new URLSearchParams();
+        var mappingTodoType = document.getElementById('pgMappingTodoTypeFilter') ? document.getElementById('pgMappingTodoTypeFilter').value : '';
+        var mappingTodoStatus = document.getElementById('pgMappingTodoStatusFilter') ? document.getElementById('pgMappingTodoStatusFilter').value : '';
+        if (mappingTodoType) mappingTodoParams.set('type', mappingTodoType);
+        if (mappingTodoStatus) mappingTodoParams.set('status', mappingTodoStatus);
+        if (state.pgSelectedDept) mappingTodoParams.set('dept', state.pgSelectedDept);
+        var mappingTodoQuery = mappingTodoParams.toString() ? '?' + mappingTodoParams.toString() : '';
         var results = await Promise.all([
           api('/api/process-governance/current'),
           api('/api/process-governance/sankey'),
           api('/api/process-governance/a1'),
           api('/api/process-governance/cross-dept' + riskQuery),
-          api('/api/process-governance/quality' + qualityQuery)
+          api('/api/process-governance/quality' + qualityQuery),
+          api('/api/process-governance/quality-cases' + caseQuery),
+          api('/api/process-governance/mapping-workspace' + mappingWorkspaceQuery),
+          api('/api/process-governance/mapping-todos' + mappingTodoQuery)
         ]);
         var current = results[0];
         var sankey = results[1];
         var a1 = results[2];
         var risks = results[3];
         var quality = results[4];
+        var qualityCases = results[5];
+        var mappingWorkspace = results[6];
+        var mappingTodos = results[7];
         var stats = sankey.stats || {};
         var departments = getProcessGovernanceDepartments(sankey);
         var a1Items = a1.items || [];
@@ -2495,7 +2878,10 @@
           : '<tr><td colspan="7" class="empty">暂无跨部门风险项</td></tr>';
 
         var route = parseHash();
+        renderProcessGovernanceMappingWorkspace(mappingWorkspace, selectedDept);
+        renderProcessGovernanceMappingTodos(mappingTodos, selectedDept, route.mappingTodoId);
         renderProcessGovernanceQuality(quality, selectedDept, route.finding);
+        renderProcessGovernanceQualityCases(qualityCases, selectedDept, route.caseId);
       } catch (error) {
         document.getElementById('pgSnapshotMeta').textContent = '流程治理数据暂不可用';
         document.getElementById('pgMapMeta').textContent = '';
@@ -2503,6 +2889,9 @@
         document.getElementById('pgA1Rows').innerHTML = '<tr><td colspan="7" class="empty">暂无 A1 明细</td></tr>';
         document.getElementById('pgRiskRows').innerHTML = '<tr><td colspan="7" class="empty">暂无跨部门风险项</td></tr>';
         document.getElementById('pgQualityRows').innerHTML = '<tr><td colspan="7" class="empty">暂无质量问题</td></tr>';
+        document.getElementById('pgQualityCaseRows').innerHTML = '<tr><td colspan="8" class="empty">暂无治理问题单</td></tr>';
+        document.getElementById('pgMappingWorkspaceRows').innerHTML = '<tr><td colspan="8" class="empty">暂无映射工作库记录</td></tr>';
+        document.getElementById('pgMappingTodoRows').innerHTML = '<tr><td colspan="8" class="empty">暂无流程映射待办</td></tr>';
       }
     }
 
@@ -2966,6 +3355,21 @@
     }
     if (document.getElementById('pgQualityAreaFilter')) {
       document.getElementById('pgQualityAreaFilter').onchange = renderProcessGovernance;
+    }
+    if (document.getElementById('pgQualityCaseSeverityFilter')) {
+      document.getElementById('pgQualityCaseSeverityFilter').onchange = renderProcessGovernance;
+    }
+    if (document.getElementById('pgQualityCaseStatusFilter')) {
+      document.getElementById('pgQualityCaseStatusFilter').onchange = renderProcessGovernance;
+    }
+    if (document.getElementById('pgQualityCaseOwnerFilter')) {
+      document.getElementById('pgQualityCaseOwnerFilter').onchange = renderProcessGovernance;
+    }
+    if (document.getElementById('pgMappingTodoTypeFilter')) {
+      document.getElementById('pgMappingTodoTypeFilter').onchange = renderProcessGovernance;
+    }
+    if (document.getElementById('pgMappingTodoStatusFilter')) {
+      document.getElementById('pgMappingTodoStatusFilter').onchange = renderProcessGovernance;
     }
     if (document.getElementById('pgDeptFilters')) {
       document.getElementById('pgDeptFilters').addEventListener('click', function(event) {

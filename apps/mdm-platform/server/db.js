@@ -796,6 +796,7 @@ CREATE TABLE IF NOT EXISTS process_interaction_chains (
 CREATE TABLE IF NOT EXISTS process_governance_quality_findings (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   snapshot_id INTEGER NOT NULL REFERENCES process_governance_snapshots(id) ON DELETE CASCADE,
+  case_id INTEGER REFERENCES process_governance_quality_cases(id) ON DELETE SET NULL,
   severity TEXT NOT NULL CHECK(severity IN ('BLOCK','WARN','INFO')),
   area TEXT NOT NULL,
   source_file TEXT NOT NULL,
@@ -807,6 +808,119 @@ CREATE TABLE IF NOT EXISTS process_governance_quality_findings (
   imported_at TEXT DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(snapshot_id, finding_key)
 );
+
+CREATE TABLE IF NOT EXISTS process_governance_quality_cases (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  finding_key TEXT NOT NULL UNIQUE,
+  first_snapshot_id INTEGER NOT NULL REFERENCES process_governance_snapshots(id) ON DELETE RESTRICT,
+  latest_snapshot_id INTEGER NOT NULL REFERENCES process_governance_snapshots(id) ON DELETE RESTRICT,
+  latest_finding_id INTEGER REFERENCES process_governance_quality_findings(id) ON DELETE SET NULL,
+  severity TEXT NOT NULL CHECK(severity IN ('BLOCK','WARN')),
+  area TEXT NOT NULL,
+  source_file TEXT NOT NULL,
+  source_line INTEGER,
+  message TEXT NOT NULL,
+  suggestion TEXT,
+  dept_name TEXT,
+  status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open','assigned','rectifying','submitted','source_resolved','closed','reopened')),
+  priority TEXT NOT NULL DEFAULT 'medium' CHECK(priority IN ('high','medium','low')),
+  owner_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  owner_dept_id INTEGER REFERENCES departments(id) ON DELETE SET NULL,
+  due_date TEXT,
+  closed_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  closed_at TEXT,
+  closure_note TEXT,
+  reopened_count INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS process_governance_quality_case_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  case_id INTEGER NOT NULL REFERENCES process_governance_quality_cases(id) ON DELETE CASCADE,
+  event_type TEXT NOT NULL CHECK(event_type IN ('import_created','import_seen','source_resolved','assigned','status_changed','commented','submitted','closed','reopened')),
+  actor_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  note TEXT,
+  payload_json TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_process_quality_cases_status ON process_governance_quality_cases(status);
+CREATE INDEX IF NOT EXISTS idx_process_quality_cases_dept ON process_governance_quality_cases(dept_name);
+CREATE INDEX IF NOT EXISTS idx_process_quality_cases_latest_snapshot ON process_governance_quality_cases(latest_snapshot_id);
+CREATE INDEX IF NOT EXISTS idx_process_quality_case_events_case ON process_governance_quality_case_events(case_id, id);
+
+CREATE TABLE IF NOT EXISTS process_mapping_records (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  mapping_key TEXT NOT NULL UNIQUE,
+  record_type TEXT NOT NULL CHECK(record_type IN ('l3','a1')),
+  first_snapshot_id INTEGER NOT NULL REFERENCES process_governance_snapshots(id) ON DELETE RESTRICT,
+  latest_snapshot_id INTEGER NOT NULL REFERENCES process_governance_snapshots(id) ON DELETE RESTRICT,
+  parent_record_id INTEGER REFERENCES process_mapping_records(id) ON DELETE SET NULL,
+  latest_a1_item_id INTEGER REFERENCES process_a1_items(id) ON DELETE SET NULL,
+  dept_name TEXT,
+  domain_name TEXT,
+  l2_name TEXT,
+  l3_name TEXT NOT NULL,
+  a1_code TEXT,
+  behavior TEXT,
+  execution_role TEXT,
+  approval_type TEXT,
+  input_source_dept TEXT,
+  output_target_dept TEXT,
+  suggested_systems TEXT,
+  verification_note TEXT,
+  source_file TEXT,
+  status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','source_missing','published','archived')),
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS process_mapping_todos (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  todo_key TEXT NOT NULL UNIQUE,
+  mapping_record_id INTEGER REFERENCES process_mapping_records(id) ON DELETE SET NULL,
+  todo_type TEXT NOT NULL CHECK(todo_type IN ('dept_confirm','verification','adjustment','cross_dept','evidence')),
+  first_snapshot_id INTEGER NOT NULL REFERENCES process_governance_snapshots(id) ON DELETE RESTRICT,
+  latest_snapshot_id INTEGER NOT NULL REFERENCES process_governance_snapshots(id) ON DELETE RESTRICT,
+  dept_name TEXT,
+  target_dept_name TEXT,
+  l3_name TEXT,
+  a1_code TEXT,
+  source_file TEXT,
+  source_line INTEGER,
+  message TEXT NOT NULL,
+  suggestion TEXT,
+  status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open','assigned','rectifying','submitted','source_resolved','closed','reopened','accepted')),
+  priority TEXT NOT NULL DEFAULT 'medium' CHECK(priority IN ('high','medium','low')),
+  owner_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  owner_dept_id INTEGER REFERENCES departments(id) ON DELETE SET NULL,
+  due_date TEXT,
+  closed_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  closed_at TEXT,
+  closure_note TEXT,
+  reopened_count INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS process_mapping_todo_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  todo_id INTEGER NOT NULL REFERENCES process_mapping_todos(id) ON DELETE CASCADE,
+  event_type TEXT NOT NULL CHECK(event_type IN ('import_created','import_seen','source_resolved','assigned','status_changed','commented','submitted','closed','reopened')),
+  actor_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  note TEXT,
+  payload_json TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_process_mapping_records_type ON process_mapping_records(record_type);
+CREATE INDEX IF NOT EXISTS idx_process_mapping_records_dept ON process_mapping_records(dept_name);
+CREATE INDEX IF NOT EXISTS idx_process_mapping_records_latest_snapshot ON process_mapping_records(latest_snapshot_id);
+CREATE INDEX IF NOT EXISTS idx_process_mapping_todos_status ON process_mapping_todos(status);
+CREATE INDEX IF NOT EXISTS idx_process_mapping_todos_type ON process_mapping_todos(todo_type);
+CREATE INDEX IF NOT EXISTS idx_process_mapping_todos_dept ON process_mapping_todos(dept_name);
+CREATE INDEX IF NOT EXISTS idx_process_mapping_todo_events_todo ON process_mapping_todo_events(todo_id, id);
 `);
 
 function tableInfo(tableName) {
@@ -834,6 +948,11 @@ if (!tableHasColumn('field_entries', 'process_governance_node_key')) {
 if (!tableHasColumn('field_entries', 'process_governance_a1_code')) {
   db.exec('ALTER TABLE field_entries ADD COLUMN process_governance_a1_code TEXT');
   dbInitLog('Migration: added process_governance_a1_code to field_entries');
+}
+
+if (tableExists('process_governance_quality_findings') && !tableHasColumn('process_governance_quality_findings', 'case_id')) {
+  db.exec('ALTER TABLE process_governance_quality_findings ADD COLUMN case_id INTEGER REFERENCES process_governance_quality_cases(id) ON DELETE SET NULL');
+  dbInitLog('Migration: added case_id to process_governance_quality_findings');
 }
 
 if (tableExists('process_interaction_chains') && (!tableHasColumn('process_interaction_chains', 'name') || !tableHasColumn('process_interaction_chains', 'status'))) {

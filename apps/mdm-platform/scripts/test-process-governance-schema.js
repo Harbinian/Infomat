@@ -74,6 +74,11 @@ try {
     'process_cross_dept_interactions',
     'process_interaction_chains',
     'process_governance_quality_findings',
+    'process_governance_quality_cases',
+    'process_governance_quality_case_events',
+    'process_mapping_records',
+    'process_mapping_todos',
+    'process_mapping_todo_events',
   ].forEach(tableName => {
     const row = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?").get(tableName);
     assert.ok(row, `${tableName} should exist`);
@@ -90,6 +95,44 @@ try {
   assert.ok(tableColumns('process_interaction_chains').includes('status'));
   assert.ok(tableColumns('process_governance_quality_findings').includes('finding_key'));
   assert.ok(tableColumns('process_governance_quality_findings').includes('dept_name'));
+  assert.ok(tableColumns('process_governance_quality_findings').includes('case_id'));
+  assert.ok(tableColumns('process_governance_quality_cases').includes('finding_key'));
+  assert.ok(tableColumns('process_governance_quality_cases').includes('latest_snapshot_id'));
+  assert.ok(tableColumns('process_governance_quality_cases').includes('latest_finding_id'));
+  assert.ok(tableColumns('process_governance_quality_cases').includes('status'));
+  assert.ok(tableColumns('process_governance_quality_cases').includes('owner_user_id'));
+  assert.ok(tableColumns('process_governance_quality_cases').includes('owner_dept_id'));
+  assert.ok(tableColumns('process_governance_quality_cases').includes('priority'));
+  assert.ok(tableColumns('process_governance_quality_cases').includes('due_date'));
+  assert.ok(tableColumns('process_governance_quality_cases').includes('closed_by'));
+  assert.ok(tableColumns('process_governance_quality_cases').includes('closed_at'));
+  assert.ok(tableColumns('process_governance_quality_cases').includes('closure_note'));
+  assert.ok(tableColumns('process_governance_quality_cases').includes('reopened_count'));
+  assert.ok(tableColumns('process_governance_quality_case_events').includes('case_id'));
+  assert.ok(tableColumns('process_governance_quality_case_events').includes('event_type'));
+  assert.ok(tableColumns('process_governance_quality_case_events').includes('actor_user_id'));
+  assert.ok(tableColumns('process_governance_quality_case_events').includes('note'));
+  assert.ok(tableColumns('process_governance_quality_case_events').includes('payload_json'));
+  assert.ok(tableColumns('process_mapping_records').includes('mapping_key'));
+  assert.ok(tableColumns('process_mapping_records').includes('record_type'));
+  assert.ok(tableColumns('process_mapping_records').includes('latest_snapshot_id'));
+  assert.ok(tableColumns('process_mapping_records').includes('parent_record_id'));
+  assert.ok(tableColumns('process_mapping_records').includes('dept_name'));
+  assert.ok(tableColumns('process_mapping_records').includes('l2_name'));
+  assert.ok(tableColumns('process_mapping_records').includes('l3_name'));
+  assert.ok(tableColumns('process_mapping_records').includes('a1_code'));
+  assert.ok(tableColumns('process_mapping_records').includes('status'));
+  assert.ok(tableColumns('process_mapping_todos').includes('todo_key'));
+  assert.ok(tableColumns('process_mapping_todos').includes('mapping_record_id'));
+  assert.ok(tableColumns('process_mapping_todos').includes('todo_type'));
+  assert.ok(tableColumns('process_mapping_todos').includes('status'));
+  assert.ok(tableColumns('process_mapping_todos').includes('owner_user_id'));
+  assert.ok(tableColumns('process_mapping_todos').includes('owner_dept_id'));
+  assert.ok(tableColumns('process_mapping_todos').includes('target_dept_name'));
+  assert.ok(tableColumns('process_mapping_todos').includes('reopened_count'));
+  assert.ok(tableColumns('process_mapping_todo_events').includes('todo_id'));
+  assert.ok(tableColumns('process_mapping_todo_events').includes('event_type'));
+  assert.ok(tableColumns('process_mapping_todo_events').includes('payload_json'));
   assert.ok(!tableColumns('process_interaction_chains').includes('chain_key'));
   assert.ok(!tableColumns('process_interaction_chains').includes('steps_json'));
   assert.ok(tableColumns('field_entries').includes('process_governance_node_key'));
@@ -125,6 +168,30 @@ try {
       INSERT INTO process_governance_quality_findings
         (snapshot_id, severity, area, source_file, message, finding_key)
       VALUES (1, 'CRITICAL', 'ORG', 'docs/organization/组织架构和部门职责.md', 'invalid severity', 'bad-severity')
+    `).run();
+  });
+
+  assert.throws(() => {
+    db.prepare(`
+      INSERT INTO process_governance_quality_cases
+        (finding_key, first_snapshot_id, latest_snapshot_id, severity, area, source_file, message, status)
+      VALUES ('bad-status', 1, 1, 'BLOCK', 'ORG', 'docs/organization/组织架构和部门职责.md', 'invalid status', 'done')
+    `).run();
+  });
+
+  assert.throws(() => {
+    db.prepare(`
+      INSERT INTO process_mapping_records
+        (mapping_key, record_type, first_snapshot_id, latest_snapshot_id, dept_name, l3_name, status)
+      VALUES ('bad-record-type', 'field', 1, 1, '经营发展部', '销售订单评审和执行管理', 'active')
+    `).run();
+  });
+
+  assert.throws(() => {
+    db.prepare(`
+      INSERT INTO process_mapping_todos
+        (todo_key, todo_type, first_snapshot_id, latest_snapshot_id, dept_name, message, status)
+      VALUES ('bad-todo-status', 'verification', 1, 1, '经营发展部', 'invalid status', 'done')
     `).run();
   });
 

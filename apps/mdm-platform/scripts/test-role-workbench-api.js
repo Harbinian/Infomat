@@ -119,7 +119,7 @@ function seedProcessGovernance(deptName) {
     VALUES (?, ?, ?, ?, ?, '合同管理员', '审批', '项目管理部', '工程技术部', ?, '核对技术条款输入', 'test.md')
   `).run(snapshotId, `${TEST_PREFIX}A1`, deptName, '销售订单评审流程', '接收订单并组织评审', JSON.stringify(['OA', 'ERP']));
 
-  db.prepare(`
+  const findingId = db.prepare(`
     INSERT INTO process_governance_quality_findings
       (snapshot_id, severity, area, source_file, source_line, message, suggestion, dept_name, finding_key)
     VALUES (?, 'BLOCK', 'BBM', ?, 88, ?, '回源补充核验提醒后重新导入 MDM 快照', ?, ?)
@@ -129,6 +129,43 @@ function seedProcessGovernance(deptName) {
     `${TEST_PREFIX}流程治理质量问题`,
     deptName,
     `${TEST_PREFIX}quality-finding`
+  ).lastInsertRowid;
+
+  db.prepare(`
+    INSERT INTO process_governance_quality_cases
+      (finding_key, first_snapshot_id, latest_snapshot_id, latest_finding_id, severity, area, source_file,
+       source_line, message, suggestion, dept_name, status, priority)
+    VALUES (?, ?, ?, ?, 'BLOCK', 'BBM', ?, 88, ?, '回源补充核验提醒后重新导入 MDM 快照', ?, 'open', 'high')
+  `).run(
+    `${TEST_PREFIX}quality-finding`,
+    snapshotId,
+    snapshotId,
+    findingId,
+    `docs/norms/${deptName}部门-能力-流程-系统映射关系.md`,
+    `${TEST_PREFIX}流程治理质量问题`,
+    deptName
+  );
+
+  const mappingRecordId = db.prepare(`
+    INSERT INTO process_mapping_records
+      (mapping_key, record_type, first_snapshot_id, latest_snapshot_id, dept_name, l2_name, l3_name,
+       a1_code, behavior, source_file, status)
+    VALUES (?, 'a1', ?, ?, ?, '订单管理能力', '销售订单评审流程', ?, '接收订单并组织评审', 'test.md', 'active')
+  `).run(`${TEST_PREFIX}mapping-record`, snapshotId, snapshotId, deptName, `${TEST_PREFIX}A1`).lastInsertRowid;
+
+  db.prepare(`
+    INSERT INTO process_mapping_todos
+      (todo_key, mapping_record_id, todo_type, first_snapshot_id, latest_snapshot_id, dept_name,
+       target_dept_name, a1_code, source_file, message, suggestion, status, priority)
+    VALUES (?, ?, 'verification', ?, ?, ?, NULL, ?, 'test.md', ?, '回源补充核验提醒后重新导入', 'open', 'medium')
+  `).run(
+    `${TEST_PREFIX}mapping-todo`,
+    mappingRecordId,
+    snapshotId,
+    snapshotId,
+    deptName,
+    `${TEST_PREFIX}A1`,
+    `${TEST_PREFIX}桑基图核验提醒待办`
   );
 }
 
@@ -222,7 +259,12 @@ async function main() {
     assert(todoWorkbench.body.workItems.some(item => item.type === 'process_quality'), '应返回流程治理质量问题待办');
     const qualityItem = todoWorkbench.body.workItems.find(item => item.type === 'process_quality');
     assert(qualityItem.roleHint === 'data_quality', '质量问题默认应提示数据质量角色处理');
-    assert(String(qualityItem.target).includes('#/processGovernance?view=quality&finding='), '质量问题应跳转到流程治理质量视图');
+    assert(String(qualityItem.target).includes('#/processGovernance?view=qualityCases&case='), '质量问题应跳转到流程治理闭环视图');
+    assert(String(qualityItem.id).startsWith('process-quality-case:'), '质量问题待办应绑定治理问题单');
+    assert(todoWorkbench.body.workItems.some(item => item.type === 'process_mapping_todo'), '应返回流程映射待办');
+    const mappingTodoItem = todoWorkbench.body.workItems.find(item => item.type === 'process_mapping_todo');
+    assert(mappingTodoItem.roleHint === 'business_contact', '核验类映射待办默认应提示业务对接人处理');
+    assert(String(mappingTodoItem.target).includes('#/processGovernance?view=mappingTodos&todo='), '映射待办应跳转到流程治理映射待办视图');
 
     const ownedRoles = todoWorkbench.body.roles.filter(role => role.owned);
     assert(ownedRoles.some(role => role.code === 'business_contact'), '工作台应标记业务对接人角色');
@@ -260,6 +302,7 @@ async function main() {
     const quietWorkbench = await request('GET', '/api/role-workbench?mode=todo', null, quietCookie);
     assert(quietWorkbench.status === 200, `无待办工作台失败: ${quietWorkbench.status}`);
     assert(quietWorkbench.body.workItems.some(item => item.type === 'process_quality'), '本部门项目组长应看到本部门流程质量问题');
+    assert(quietWorkbench.body.workItems.some(item => item.type === 'process_mapping_todo'), '本部门项目组长应看到本部门流程映射待办');
     assert(quietWorkbench.body.nextActions.length >= 1, '无字段待办用户也应有下一步指引');
     assert(quietWorkbench.body.nextActions[0].sample, '无字段待办下一步动作也应给出样例');
 
