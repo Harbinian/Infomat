@@ -11,6 +11,7 @@ const ROOT = resolve(import.meta.dirname || '.', '..');
 const NORMS_PATH = resolve(ROOT, 'docs', 'norms');
 const DATA_PATH = resolve(ROOT, 'docs', 'company-sankey-data.json');
 const DASHBOARD_PATH = resolve(ROOT, 'pmo', 'procedure-management', 'dashboard.html');
+const CROSS_DEPT_REPORT_PATH = resolve(NORMS_PATH, '流程治理', '跨部门完整性检查报告.md');
 
 function fail(message) {
   console.error(`Dashboard data check failed: ${message}`);
@@ -43,6 +44,35 @@ function extractEmbeddedJson(html, id) {
 
 function stableJson(value) {
   return JSON.stringify(value);
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function parseReportNumber(value, fallback = 0) {
+  const match = String(value || '').replace(/,/g, '').match(/-?\d+/);
+  return match ? Number(match[0]) : fallback;
+}
+
+function extractReportMetric(text, label, fallback = 0) {
+  const re = new RegExp(`\\|\\s*${escapeRegExp(label)}\\s*\\|\\s*([^|]+)\\|`);
+  const match = text.match(re);
+  return match ? parseReportNumber(match[1], fallback) : fallback;
+}
+
+function readCrossDeptReportMetrics() {
+  if (!existsSync(CROSS_DEPT_REPORT_PATH)) {
+    fail(`missing ${CROSS_DEPT_REPORT_PATH}`);
+  }
+  const text = readFileSync(CROSS_DEPT_REPORT_PATH, 'utf-8');
+  return {
+    totalChecked: extractReportMetric(text, '检查的跨部门引用总数（内部）'),
+    confirmed: extractReportMetric(text, '已确认有对应覆盖'),
+    pendingConfirm: extractReportMetric(text, '待确认（需人工判断）'),
+    highRisk: extractReportMetric(text, '🔴 高风险项'),
+    mediumRisk: extractReportMetric(text, '🟡 中风险项'),
+  };
 }
 
 function splitMarkdownRow(line) {
@@ -128,17 +158,15 @@ if (!fileData.crossDept) {
 }
 
 const cross = fileData.crossDept;
-if (cross.stats?.totalChecked !== 168) {
-  fail(`crossDept.stats.totalChecked expected 168, got ${cross.stats?.totalChecked}`);
+const reportCrossStats = readCrossDeptReportMetrics();
+for (const [field, expected] of Object.entries(reportCrossStats)) {
+  if (cross.stats?.[field] !== expected) {
+    fail(`crossDept.stats.${field} expected ${expected} from 跨部门完整性检查报告.md, got ${cross.stats?.[field]}`);
+  }
 }
-if (cross.stats?.pendingConfirm !== 6) {
-  fail(`crossDept.stats.pendingConfirm expected 6, got ${cross.stats?.pendingConfirm}`);
-}
-if (cross.stats?.highRisk !== 1) {
-  fail(`crossDept.stats.highRisk expected 1, got ${cross.stats?.highRisk}`);
-}
-if (!Array.isArray(cross.risks) || cross.risks.length < 8) {
-  fail('crossDept.risks should contain 工程技术部、复材车间和 6 条待确认项');
+const expectedMinimumRisks = 2 + reportCrossStats.pendingConfirm;
+if (!Array.isArray(cross.risks) || cross.risks.length < expectedMinimumRisks) {
+  fail(`crossDept.risks should contain at least 工程技术部、复材车间 and ${reportCrossStats.pendingConfirm} pending items`);
 }
 
 const allowedRisks = new Set(['high', 'medium', 'low']);
