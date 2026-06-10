@@ -44,6 +44,8 @@
 | 第 4 层 | `scripts/` 缺少脚本职责和副作用说明 | 已确认 | 第四批小片已补 README |
 | 第 4 层 | `apps/mdm-platform/scripts/` 缺少应用内脚本职责说明 | 已确认 | 第四批小片已补 README |
 | 第 4 层 | `docs/` 根目录资料与子目录职责不清 | 已确认 | 第四批小片已补导航 README，不迁移文件 |
+| 第 4 层 | `docs/adr/` 缺少架构决策目录说明 | 已确认 | 第四批小片已补 README |
+| 第 4 层 | `docs/archives/` 缺少历史归档目录说明 | 已确认 | 第四批小片已补 README |
 | 第 4 层 | `docs/contracts/` 缺少校验合同目录说明 | 已确认 | 第四批小片已补 README |
 | 第 4 层 | `docs/integration/` 缺少集成方案目录说明 | 已确认 | 第四批小片已补 README |
 | 第 4 层 | `docs/norms/` 缺少面向人的真源目录说明 | 已确认 | 第四批小片已补 README，不移动 norms 文件 |
@@ -110,6 +112,7 @@
 - 第三批继续补真源缺口审计：新增 `docs/reports/2026-06-10-process-truth-gap-audit.md`，确认工程技术部缺少 canonical 映射文件、`综合管理部` 属于待确认口径残留；不补写 norms、不重新生成 JSON。
 - 第四批先做导航止血：修正根 README、PMO README、PMO CLAUDE 和流程驾驶舱 CLAUDE 中不存在的甘特入口、截图、旧文档和手工 JSON 替换说明；不移动静态资产或大体积资料。
 - 第四批继续补应用边界导航：更新 `apps/mdm-platform/README.md`，说明 MDM 目录只负责平台应用、应用内脚本和平台说明，不维护流程真源、组织真源、PMO 展示或仓库级脚本。
+- 第四批继续补决策和归档目录说明：新增 `docs/adr/README.md`、`docs/archives/README.md`，区分长期架构决策、历史归档、阶段计划和审计报告。
 - 第四批继续补脚本边界：新增 `scripts/README.md`，按主线入口、审计质量脚本、局部或历史工具说明输入、输出和写文件副作用；不移动脚本。
 - 第四批继续补 MDM 应用内脚本边界：新增 `apps/mdm-platform/scripts/README.md`，分类测试、安全审计、初始化维护和流程治理承接脚本，并标注数据库副作用。
 - 第四批继续补校验合同目录说明：新增 `docs/contracts/README.md`，说明 `dcm-bbm-contract.json` 是脚本合同，不替代组织或流程真源。
