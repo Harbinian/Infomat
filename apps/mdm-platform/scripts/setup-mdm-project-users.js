@@ -43,17 +43,6 @@ const DEPARTMENT_TYPES = {
   '项目管理部': '业务'
 };
 
-const SUPPLEMENTAL_PERSONNEL = {
-  '马成文': {
-    name: '马成文',
-    employeeNo: '100000',
-    department: '公司领导',
-    team: '公司领导',
-    post: '总经理 / 信息化项目组组长',
-    category: '职员'
-  }
-};
-
 const PARTICIPANTS = [
   { name: '马成文', department: '公司领导', projectRole: '信息化项目组组长/决策组' },
   { name: '赵亮', department: '公司领导', projectRole: '决策组' },
@@ -95,6 +84,39 @@ const PARTICIPANTS = [
   { name: '张席铭', department: '项目管理部', projectRole: '业务对接人/数据质量员' }
 ];
 
+const PARTICIPANT_EMPLOYEE_NOS = {
+  '马成文': '100000',
+  '赵亮': '51568',
+  '李洪哲': '100002',
+  '张广懿': '100016',
+  '陈娟': '100122',
+  '赵襄璇': '100107',
+  '董含琪': '100059',
+  '刘春含': '100102',
+  '万恒洋': '23914',
+  '张琇雅': '100125',
+  '李铄康': '100133',
+  '黄吉': '100039',
+  '佟浩': '100156',
+  '胡婷婷': '100085',
+  '曲明盛': '51809',
+  '安建国': '100008',
+  '刘楠楠': '100145',
+  '池炳辉': '100096',
+  '常云龙': '100094',
+  '万旭': '100046',
+  '王潇': '50476',
+  '郎春生': '100006',
+  '纪鹏飞': '52266',
+  '刘洪雨': '50943',
+  '李雪': '100014',
+  '刘佳': '100032',
+  '李新潮': '100127',
+  '范秋南': '51845',
+  '肖明哲': '100009',
+  '张席铭': '100129'
+};
+
 const DEPARTMENT_STEWARDS = [
   { department: '行政人事部', manager: '陈娟', dataOwner: '赵襄璇' },
   { department: '经营发展部', manager: '刘春含', dataOwner: '张琇雅' },
@@ -111,19 +133,59 @@ function normalizeDepartment(name) {
 }
 
 function parseRoster(markdown) {
-  const records = new Map();
+  const byEmployeeNo = new Map();
+  const byName = new Map();
   const lines = markdown.split(/\r?\n/);
+  let headers = null;
 
   for (const line of lines) {
-    if (!line.startsWith('|') || line.includes('---') || line.includes('姓名')) continue;
+    if (!line.startsWith('|')) continue;
     const cells = line.split('|').slice(1, -1).map(cell => cell.trim());
-    if (cells.length < 6) continue;
-    const [name, employeeNo, department, team, post, category] = cells;
+    if (cells.length === 0 || cells.every(cell => /^-+$/.test(cell))) continue;
+    if (cells.includes('姓名')) {
+      headers = cells;
+      continue;
+    }
+    if (!headers) continue;
+
+    const cellValue = (...names) => {
+      for (const name of names) {
+        const index = headers.indexOf(name);
+        if (index >= 0) return cells[index] || '';
+      }
+      return '';
+    };
+
+    const name = cellValue('姓名');
+    const employeeNo = cellValue('工号', '胸卡号');
+    const department = cellValue('部门');
+    const team = cellValue('班组') || department;
+    const post = cellValue('职务', '岗位');
+    const gender = cellValue('性别');
+    const category = cellValue('人员类别');
     if (!name || !employeeNo) continue;
-    records.set(name, { name, employeeNo, department, team, post, category });
+    if (byEmployeeNo.has(employeeNo)) {
+      throw new Error(`花名册工号重复: ${employeeNo}`);
+    }
+    const record = { name, employeeNo, department, team, post, gender, category };
+    byEmployeeNo.set(employeeNo, record);
+    byName.set(name, record);
   }
 
-  return records;
+  return { byEmployeeNo, byName };
+}
+
+function getRosterRecord(roster, participant) {
+  const employeeNo = participant.employeeNo || PARTICIPANT_EMPLOYEE_NOS[participant.name];
+  if (employeeNo) {
+    const record = roster.byEmployeeNo.get(employeeNo);
+    if (!record) return null;
+    if (record.name !== participant.name) {
+      throw new Error(`花名册工号与姓名不一致: ${employeeNo} 应为 ${participant.name}, 实为 ${record.name}`);
+    }
+    return record;
+  }
+  return roster.byName.get(participant.name) || null;
 }
 
 function inferLegacyRole(projectRole) {
@@ -313,8 +375,12 @@ function main() {
       if (seen.has(participant.name)) continue;
       seen.add(participant.name);
 
-      const rosterRecord = roster.get(participant.name) || SUPPLEMENTAL_PERSONNEL[participant.name];
-      if (!rosterRecord) throw new Error(`花名册中未找到: ${participant.name}`);
+      const rosterRecord = getRosterRecord(roster, participant);
+      if (!rosterRecord) {
+        const employeeNo = participant.employeeNo || PARTICIPANT_EMPLOYEE_NOS[participant.name];
+        const suffix = employeeNo ? ` / ${employeeNo}` : '';
+        throw new Error(`花名册中未找到: ${participant.name}${suffix}`);
+      }
 
       const normalizedDepartment = normalizeDepartment(participant.department);
       const departmentId = ensureDepartment(normalizedDepartment);
