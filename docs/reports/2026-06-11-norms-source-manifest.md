@@ -48,7 +48,7 @@
 
 | 优先级 | 动作 | 验证 |
 |---|---|---|
-| P1 | 建立工程技术部 source manifest | 已补初版：见 `docs/reports/2026-06-11-engineering-source-manifest.md`；当前无工程技术部业务资料目录，外部参考仅登记为待复核候选 |
+| P1 | 建立工程技术部 source manifest | 已补初版并接入只读校验：见 `docs/reports/2026-06-11-engineering-source-manifest.md` 和 `npm run test:engineering-source-manifest`；当前无工程技术部业务资料目录，外部参考仅登记为待复核候选 |
 | P1 | 补齐工程技术部 canonical 三件套 | `node scripts/parse-sankey-data.mjs`、`node scripts/check-dcm-bbm.mjs --no-fail` |
 | P2 | 复核 `复材车间` 与 `复材一车间/复材二车间` 口径差异 | 已处理当前协作提示：`AGENTS.md` 对齐组织真源；如未来拆分一、二车间，先改组织真源和合同 |
 | P2 | 将本清单纳入后续流程治理检查 | 已补 `npm run test:norms-source-manifest`，根目录主线合约检查该命令入口 |

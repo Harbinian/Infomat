@@ -84,6 +84,15 @@ assert.ok(
   existsSync(resolve(root, 'scripts', 'check-dept-domain-mapping.mjs')),
   'check-dept-domain-mapping.mjs should exist'
 );
+assert.strictEqual(
+  pkg.scripts && pkg.scripts['test:engineering-source-manifest'],
+  'node scripts/check-engineering-source-manifest.mjs',
+  'root package should expose test:engineering-source-manifest'
+);
+assert.ok(
+  existsSync(resolve(root, 'scripts', 'check-engineering-source-manifest.mjs')),
+  'check-engineering-source-manifest.mjs should exist'
+);
 assert.ok(
   dashboardCheckSource.includes('跨部门完整性检查报告.md'),
   'dashboard data check should derive crossDept expectations from the cross-department report'
