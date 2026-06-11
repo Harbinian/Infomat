@@ -63,6 +63,7 @@
 | 第 4 层 | 根目录散放资产仍需分流 | 已确认 | 第四批小片已补只读分流报告，不迁移文件 |
 | 第 4 层 | AI 协作、输入材料和历史快照目录缺少边界说明 | 已确认 | 第四批小片已补 README，不迁移历史输出 |
 | 第 4 层 | 忽略型输出工作区仍需说明 | 已确认 | 第四批小片已补只读审计报告，不提交本地输出 |
+| 第 4 层 | 大体积参考资产仍需迁移提案 | 已确认 | 第四批小片已补迁移提案，不移动文件 |
 | 第 4 层 | 重复静态资产、日志、数据库备份、缓存入库 | 已确认 | 运行产物已处理；重复资产已补迁移提案 |
 | 第 5 层 | 前端单文件、测试 helper 重复、大脚本膨胀 | 已归类 | 延后 |
 | 第 5 层 | 审批第 5 步状态返回 `undefined` | 过时/未复现 | 当前 `mappingStatusAfterStep(5)` 返回 `final_reviewed`，`test:mappings` 覆盖终审发布 |
@@ -140,6 +141,7 @@
 - 第四批继续补根目录散放资产分流：新增 `docs/reports/2026-06-10-root-loose-asset-triage.md`，将根目录文件分为保留、待复核迁移或已过时结论；不移动 `analyze-layout.js`、`temp_survey.txt` 或静态资产。
 - 第四批继续补 AI/快照工作区说明：新增 `.agents/README.md`、`.claude/README.md`、`.planning/README.md`、`.superpowers/README.md`、`ai_materials/README.md`、`snapshots/README.md`，说明技能配置、历史计划、brainstorm 输出、AI 输入材料和 norms 历史快照都不替代当前真源。
 - 第四批继续补忽略型输出工作区审计：新增 `docs/reports/2026-06-11-ignored-artifact-workspace-audit.md`，确认 `.playwright-cli/`、`output/`、`tests/__pycache__/` 均已忽略且未跟踪，`.superpowers/` 属于已跟踪历史输出，后续迁移需提案。
+- 第四批继续补大体积参考资产迁移提案：新增 `docs/reports/2026-06-11-large-reference-asset-migration-proposal.md`，量化 `docs/U8SoftHelp/`、`docs/外部参考/`、`docs/training/`、`ai_materials/` 等目录体积并给出迁移路径；不移动大文件。
 - 追加 2026-06-11 回归记录：新增 `docs/reports/2026-06-11-remediation-verification-log.md`，记录根主线、MDM 安全、MDM 主线、项目角色和流程治理专项均通过。
 - 第四批继续做运行产物收口：补充 `.bak` 和点分隔数据库备份忽略规则，并将已跟踪的 `apps/mdm-platform/data/platform.db.after-admin-reset-20260609-152533.bak`、`scripts/__pycache__/generate_digital_project_gantt_8k.cpython-313.pyc` 从版本管理中移出；本地文件不删除。
 - 重复静态资产仍只记录为后续治理项：`echarts.min.js` 多副本和 `pmo/tasks.json` 双副本本轮不迁移，避免误伤 PMO、MDM 和 norms 的静态页面引用约定。
