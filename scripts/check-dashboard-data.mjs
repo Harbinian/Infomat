@@ -4,14 +4,16 @@
  * 用法: node scripts/check-dashboard-data.mjs
  */
 
+import { createHash } from 'crypto';
 import { existsSync, readFileSync, readdirSync } from 'fs';
-import { resolve } from 'path';
+import { relative, resolve } from 'path';
 
 const ROOT = resolve(import.meta.dirname || '.', '..');
 const NORMS_PATH = resolve(ROOT, 'docs', 'norms');
 const DATA_PATH = resolve(ROOT, 'docs', 'company-sankey-data.json');
 const DASHBOARD_PATH = resolve(ROOT, 'pmo', 'procedure-management', 'dashboard.html');
 const CROSS_DEPT_REPORT_PATH = resolve(NORMS_PATH, '流程治理', '跨部门完整性检查报告.md');
+const CROSS_CHAIN_REPORT_PATH = resolve(NORMS_PATH, '流程治理', '跨部门流程识别报告.md');
 
 function fail(message) {
   console.error(`Dashboard data check failed: ${message}`);
@@ -46,6 +48,14 @@ function stableJson(value) {
   return JSON.stringify(value);
 }
 
+function toRepoPath(path) {
+  return relative(ROOT, path).replace(/\\/g, '/');
+}
+
+function sha256File(path) {
+  return createHash('sha256').update(readFileSync(path)).digest('hex');
+}
+
 function escapeRegExp(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -73,6 +83,31 @@ function readCrossDeptReportMetrics() {
     highRisk: extractReportMetric(text, '🔴 高风险项'),
     mediumRisk: extractReportMetric(text, '🟡 中风险项'),
   };
+}
+
+function expectedCrossDeptSourceReports() {
+  return [CROSS_DEPT_REPORT_PATH, CROSS_CHAIN_REPORT_PATH]
+    .filter(existsSync)
+    .map(path => ({
+      path: toRepoPath(path),
+      sha256: sha256File(path),
+    }));
+}
+
+function assertCrossDeptSourceReports(cross) {
+  if (!Array.isArray(cross.sourceReports)) {
+    fail('crossDept.sourceReports must record source report fingerprints');
+  }
+  const actualByPath = new Map(cross.sourceReports.map(item => [item.path, item]));
+  for (const expected of expectedCrossDeptSourceReports()) {
+    const actual = actualByPath.get(expected.path);
+    if (!actual) {
+      fail(`crossDept.sourceReports missing ${expected.path}`);
+    }
+    if (actual.sha256 !== expected.sha256) {
+      fail(`crossDept.sourceReports ${expected.path} sha256 expected ${expected.sha256}, got ${actual.sha256}`);
+    }
+  }
 }
 
 function splitMarkdownRow(line) {
@@ -164,6 +199,7 @@ for (const [field, expected] of Object.entries(reportCrossStats)) {
     fail(`crossDept.stats.${field} expected ${expected} from 跨部门完整性检查报告.md, got ${cross.stats?.[field]}`);
   }
 }
+assertCrossDeptSourceReports(cross);
 const expectedMinimumRisks = 2 + reportCrossStats.pendingConfirm;
 if (!Array.isArray(cross.risks) || cross.risks.length < expectedMinimumRisks) {
   fail(`crossDept.risks should contain at least 工程技术部、复材车间 and ${reportCrossStats.pendingConfirm} pending items`);

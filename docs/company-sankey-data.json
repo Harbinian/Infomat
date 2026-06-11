@@ -50408,6 +50408,21 @@
         "status": "ok"
       }
     ],
-    "source": "docs/norms/流程治理/跨部门完整性检查报告.md"
+    "source": "docs/norms/流程治理/跨部门完整性检查报告.md",
+    "sourceReports": [
+      {
+        "path": "docs/norms/流程治理/跨部门完整性检查报告.md",
+        "sha256": "4ad8929e133196644a89f0c21aa1573c63bc721bb7f8a99af9027d8f083849ca",
+        "declaredVersion": "V1.0",
+        "declaredGeneratedDate": "2026-06-01",
+        "declaredInput": "跨部门流程识别报告.md V1.1"
+      },
+      {
+        "path": "docs/norms/流程治理/跨部门流程识别报告.md",
+        "sha256": "0a7c338321cb6944b3d053a659a7240a7c021e2c7c633626d4b71aa6ae45d52b",
+        "declaredVersion": "V1.1",
+        "declaredGeneratedDate": "2026-06-01"
+      }
+    ]
   }
 }

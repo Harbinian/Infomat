@@ -2,7 +2,16 @@
 
 > 日期：2026-06-11  
 > 范围：只定义 `crossDept` 风险数据的新鲜度校验口径，不修改流程真源、生成快照或 PMO 驾驶舱。  
-> 结论：下一批应先把跨部门报告的来源指纹写入生成数据，再做自动校验；不要仅用文件日期或页面统计值判断是否同步。
+> 结论：已按本提案的第一步把跨部门报告来源指纹写入生成数据并接入自动校验；不要仅用文件日期或页面统计值判断是否同步。
+
+## 0. 执行状态
+
+| 项目 | 状态 |
+|---|---|
+| `crossDept.sourceReports` 写入 `docs/company-sankey-data.json` | 已实现 |
+| `#cross-dept-data` 内嵌同一份来源指纹 | 已实现 |
+| `scripts/check-dashboard-data.mjs` 比对磁盘报告 hash | 已实现 |
+| 直接从部门映射真源计算跨部门闭环风险 | 延后 |
 
 ## 1. 当前状态
 
@@ -36,9 +45,9 @@
 
 更稳妥的方式是记录可复验的输入指纹。
 
-## 3. 建议的下一批实现
+## 3. 已实现的第一步
 
-下一批修改 `scripts/parse-sankey-data.mjs` 时，建议在生成数据中加入 `crossDept.sourceReports` 或同等结构：
+`scripts/parse-sankey-data.mjs` 已在生成数据中加入 `crossDept.sourceReports`：
 
 ```json
 {
@@ -59,14 +68,14 @@
 }
 ```
 
-同时，`check-dashboard-data.mjs` 应新增只读校验：
+同时，`check-dashboard-data.mjs` 已新增只读校验：
 
 1. 从磁盘重新计算跨部门报告 hash。
 2. 比对 `docs/company-sankey-data.json.crossDept.sourceReports` 中记录的 hash。
 3. 比对 PMO 驾驶舱内嵌数据中的同一份 hash。
 4. 校验失败时提示“请重新运行 `node scripts/parse-sankey-data.mjs`”，而不是要求人工改页面。
 
-## 4. 不进入下一批的内容
+## 4. 本批未进入的内容
 
 这些事仍然延后，不和来源指纹混在一起：
 
@@ -77,7 +86,7 @@
 
 ## 5. 验收口径
 
-下一批实现完成后，至少应满足：
+本批实现后，至少应满足：
 
 | 命令 | 预期 |
 |---|---|

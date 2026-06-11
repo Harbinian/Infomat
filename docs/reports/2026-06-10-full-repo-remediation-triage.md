@@ -38,7 +38,7 @@
 | 第 2 层 | 字段台账导入仍按旧基础角色判断 | 已确认 | 第二批小片已处理 `import` submitter 判断 |
 | 第 2 层 | 流程映射草稿创建仍为登录即可 | 已确认 | 第二批小片已收紧为报送人或管理员 |
 | 第 3 层 | 工程技术部流程映射交付物缺失 | 已确认风险 | 第三批小片已补缺口审计和 source manifest 初版 |
-| 第 3 层 | `crossDept` 从报告 Markdown 派生 | 已确认风险 | 第三批小片已处理校验不固化数字，并补来源新鲜度提案 |
+| 第 3 层 | `crossDept` 从报告 Markdown 派生 | 已确认风险 | 第三批小片已处理校验不固化数字，并补来源指纹校验 |
 | 第 3 层 | `综合管理部` 等历史/幽灵部门口径 | 已登记待确认 | 第三批小片已补缺口审计，并登记到过时部门名称追踪表 |
 | 第 3 层 | 缺少部门 canonical 映射交付物清单 | 已确认 | 第三批小片已补只读 source manifest 和校验脚本 |
 | 第 4 层 | README / PMO 文档引用不存在入口或截图 | 已确认 | 第四批小片已处理失效导航 |
@@ -122,7 +122,7 @@
 - 复核 Deepseek 审批状态机结论：当前 `apps/mdm-platform/server/routes/mappings.js` 已包含第 5 步状态映射，`npm run test:mappings` 可跑完整终审发布路径，该单点标记为过时/未复现；不做代码改动。
 - 追加第三批校验红线：`check-dashboard-data.mjs` 不得把 `crossDept` 统计固化为 `168/6/1` 等历史数字。
 - 第三批先做只读校验收敛：`check-dashboard-data.mjs` 从 `跨部门完整性检查报告.md` 解析统计值，并与 `docs/company-sankey-data.json.crossDept`、PMO 内嵌 `#cross-dept-data` 比对；不改流程真源和生成快照。
-- 第三批继续补跨部门来源新鲜度口径：新增 `docs/reports/2026-06-11-cross-dept-source-freshness-proposal.md`，记录当前跨部门报告 hash，并定义后续应把报告来源指纹写入 parser 输出和 PMO 内嵌数据；本轮不改生成数据。
+- 第三批继续补跨部门来源新鲜度口径：新增并落地 `docs/reports/2026-06-11-cross-dept-source-freshness-proposal.md`，`parse-sankey-data.mjs` 已把两份跨部门报告来源指纹写入 `crossDept.sourceReports`，`check-dashboard-data.mjs` 已比对磁盘报告 hash、公司级 JSON 和 PMO 内嵌数据。
 - 第三批继续补真源缺口审计：新增 `docs/reports/2026-06-10-process-truth-gap-audit.md`，确认工程技术部缺少 canonical 映射文件、`综合管理部` 属于待确认口径残留；不补写 norms、不重新生成 JSON。
 - 第三批继续补历史部门/外部实体口径：更新 `docs/norms/流程治理/过时部门名称追踪表.md`，将 `综合管理部` 登记为待确认项，区分沈飞民机外部实体线索和昌兴制度旧称线索；确认前不自动归并到当前组织真源。
 - 第三批继续补流程映射真源清单：新增 `docs/reports/2026-06-11-norms-source-manifest.md`，按组织真源和 DCM/BBM 合同登记 9 个部门、8 组 canonical 交付物和工程技术部缺口；新增 `docs/reports/2026-06-11-engineering-source-manifest.md`，登记工程技术部 source manifest 初版和外部候选资料；新增 `scripts/check-norms-source-manifest.mjs` 和 `npm run test:norms-source-manifest`，校验合同、三件套和报告状态一致；当前协作提示已对齐 `复材车间` 口径，未来如拆分一、二车间需先改组织真源和合同；不改 `docs/norms/`。
