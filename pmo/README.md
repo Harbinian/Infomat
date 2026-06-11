@@ -71,6 +71,12 @@ python convert_xlsx.py
 
 运行完成后应看到 `Wrote 434 tasks from 信息化项目_计划管控真源.md`。如任务数变化，应先确认 MD 真源是否确实发生增删。
 
+可在仓库根目录运行以下命令，确认 PMO 根目录备份数据与 React 应用实际读取数据同源：
+
+```bash
+npm run test:pmo-task-data
+```
+
 ## 数据字段
 
 `tasks.json` 保留旧展示字段，并新增最终执行版的执行管控字段。

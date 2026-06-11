@@ -10,6 +10,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "sync:process-governance": "node scripts/sync-process-governance-mainline.mjs",
+    "test:pmo-task-data": "node scripts/check-pmo-task-data.mjs",
     "test:process-governance-mainline": "node scripts/test-process-governance-mainline-contract.mjs"
   },
   "repository": {
