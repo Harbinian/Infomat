@@ -19,23 +19,47 @@ const COMPANY_DATA_PATH = resolve(NORMS, '..', 'company-sankey-data.json');
 const CROSS_DEPT_REPORT = resolve(NORMS, '流程治理', '跨部门完整性检查报告.md');
 const CROSS_CHAIN_REPORT = resolve(NORMS, '流程治理', '跨部门流程识别报告.md');
 const DASHBOARD_PATH = resolve(NORMS, '..', '..', 'pmo', 'procedure-management', 'dashboard.html');
+const ORGANIZATION_SOURCE = resolve(NORMS, '..', 'organization', '组织架构和部门职责.md');
 
-// 组织架构: 部门 → 域 的映射
-// 来源: docs/organization/组织架构和部门职责.md (以组织架构图为准)
-//   总经理直辖: 工程技术部 / 质量管理部 / 财务部
-//   经营副总: 行政人事部 / 经营发展部 / 物资保障部
-//   生产副总: 项目管理部 / 复材车间 / 运维安环部
-const DEPT_DOMAIN = {
-  '经营发展部': '经营域',
-  '行政人事部': '经营域',
-  '物资保障部': '经营域',
-  '财务部':     '总经理直辖域',  // 财务部归总经理直辖
-  '工程技术部': '总经理直辖域',
-  '质量管理部': '总经理直辖域',
-  '项目管理部': '生产域',
-  '复材车间': '生产域',
-  '运维安环部': '生产域',
-};
+function parseOrganizationDomainMap(text) {
+  const blockMatch = text.match(/```([\s\S]*?)```/);
+  if (!blockMatch) {
+    throw new Error('组织真源缺少组织架构图代码块');
+  }
+
+  const result = {};
+  let currentDomain = '总经理直辖域';
+  for (const rawLine of blockMatch[1].split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line) continue;
+
+    const nodeMatch = line.match(/[├└]──\s*(.+)$/);
+    if (!nodeMatch) continue;
+
+    const name = nodeMatch[1].replace(/（.*?）/g, '').trim();
+    if (name === '经营副总') {
+      currentDomain = '经营域';
+      continue;
+    }
+    if (name === '生产副总') {
+      currentDomain = '生产域';
+      continue;
+    }
+
+    result[name] = currentDomain;
+  }
+
+  if (Object.keys(result).length === 0) {
+    throw new Error('组织真源未解析出部门到域映射');
+  }
+  return result;
+}
+
+function buildDeptDomainMap() {
+  return parseOrganizationDomainMap(readFileSync(ORGANIZATION_SOURCE, 'utf-8'));
+}
+
+const DEPT_DOMAIN = buildDeptDomainMap();
 
 // 全域映射表文件名 — 自动发现 norms 目录下所有符合命名规范的文件
 // 规范: {部门名}部门-能力-流程-系统映射关系.md
@@ -173,6 +197,14 @@ function buildSourceManifest(mappingFiles, mdmRequirementFiles) {
       reason: process.reason,
     });
   }
+
+  addFile(ORGANIZATION_SOURCE, '全公司', {
+    assetType: 'organization_source',
+    fileNo: '组织真源',
+    revision: '?',
+    status: '纳入',
+    reason: '部门清单与部门到域映射真源',
+  });
 
   for (const file of mappingFiles) {
     const dept = file.replace('部门-能力-流程-系统映射关系.md', '');

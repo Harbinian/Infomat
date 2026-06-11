@@ -51,15 +51,15 @@ function parseOrganizationDomainMap(text) {
   return result;
 }
 
-function parseParserDeptDomain(text) {
-  const match = text.match(/const\s+DEPT_DOMAIN\s*=\s*\{([\s\S]*?)\};/);
-  assert.ok(match, 'parse-sankey-data.mjs must define DEPT_DOMAIN');
-
-  const result = {};
-  for (const entry of match[1].matchAll(/'([^']+)'\s*:\s*'([^']+)'/g)) {
-    result[entry[1]] = entry[2];
-  }
-  return result;
+function assertParserUsesOrganizationSource(text) {
+  assert.ok(
+    !/const\s+DEPT_DOMAIN\s*=\s*\{/.test(text),
+    'parse-sankey-data.mjs must derive DEPT_DOMAIN from organization source instead of hard-coding a map'
+  );
+  assert.ok(
+    text.includes('组织架构和部门职责.md') && /parseOrganizationDomainMap|buildDeptDomainMap/.test(text),
+    'parse-sankey-data.mjs must read and parse the organization source for department domains'
+  );
 }
 
 function assertSameDomainMap(actual, expected, label) {
@@ -76,11 +76,11 @@ function assertSameDomainMap(actual, expected, label) {
 
 const organizationMap = parseOrganizationDomainMap(readText(organizationPath));
 const contract = readJson(contractPath);
-const parserMap = parseParserDeptDomain(readText(parserPath));
+const parserText = readText(parserPath);
 
 assert.equal(Object.keys(organizationMap).length, 9, 'organization source should define 9 departments');
 assert.ok(!Object.values(organizationMap).some(domain => domain.includes('直属')), 'organization domains must use 直辖, not 直属');
 assertSameDomainMap(contract.departments || {}, organizationMap, 'dcm-bbm contract');
-assertSameDomainMap(parserMap, organizationMap, 'parse-sankey-data DEPT_DOMAIN');
+assertParserUsesOrganizationSource(parserText);
 
 console.log(`Department domain mapping check passed: ${Object.keys(organizationMap).length} departments`);
