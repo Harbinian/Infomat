@@ -4,7 +4,6 @@
 
 ```text
 E:\CA001\Infomat
-├── analyze-layout.js
 ├── CONTEXT.md
 ├── README.md
 ├── .gitignore
@@ -15,6 +14,7 @@ E:\CA001\Infomat
 │   ├── superpowers\
 │   └── norms\
 ├── scripts\
+│   └── analyze-layout.js
 └── .planning\
     └── codebase\
 ```
@@ -27,7 +27,7 @@ E:\CA001\Infomat
   - 可运行应用目录
   - 目前包含 `apps/mdm-platform/`，后续待业务部门完成流程地图/数据地图梳理后再进入开发迭代
 
-- `analyze-layout.js`
+- `scripts/analyze-layout.js`
   - 布局计算辅助脚本
   - 不属于主业务链路
 

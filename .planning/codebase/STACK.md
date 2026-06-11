@@ -29,7 +29,7 @@ Infomat 当前是一个“零构建前端 + 独立 Python 工具”的轻量项�
 
 ## Node 辅助脚本
 
-- **Node.js**: `analyze-layout.js` 用于快速验证页面布局参数
+- **Node.js**: `scripts/analyze-layout.js` 用于快速验证页面布局参数
 - **用途**: 计算节点行数、画布高度和列起始位置，不参与正式运行时
 
 ## 外部服务与环境变量
@@ -43,7 +43,7 @@ Infomat 当前是一个“零构建前端 + 独立 Python 工具”的轻量项�
 ## 运行形态
 
 - **主应用运行方式**: 直接在浏览器打开 `index.html`
-- **布局分析**: `node analyze-layout.js`
+- **布局分析**: `node scripts/analyze-layout.js`
 - **图片转映射**: `python bizmapper.py <图片路径> [输出目录]`
 - **Excel 转 JSON**: `python bizmapper.py --to-json <Excel路径> [输出目录]`
 

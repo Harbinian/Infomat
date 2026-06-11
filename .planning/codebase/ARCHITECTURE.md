@@ -14,7 +14,7 @@
    - 将业务图图片转换为 Excel，再将审核后的 Excel 转换为前端可消费 JSON
 
 3. **布局诊断脚本**
-   - `analyze-layout.js`
+   - `scripts/analyze-layout.js`
    - 用于验证静态布局参数，不属于主业务链路
 
 ## 逻辑分层
