@@ -11,6 +11,7 @@ import { join, resolve } from 'node:path';
 const root = resolve(import.meta.dirname, '..');
 const manifestPath = resolve(root, 'docs', 'reports', '2026-06-11-engineering-source-manifest.md');
 const attributionChecklistPath = resolve(root, 'docs', 'reports', '2026-06-11-engineering-source-attribution-checklist.md');
+const triageReportPath = resolve(root, 'docs', 'reports', '2026-06-10-full-repo-remediation-triage.md');
 
 const indexedSections = [
   {
@@ -73,6 +74,7 @@ function parseBacktickedPathRows(sectionText) {
 
 const manifestText = readText(manifestPath);
 const attributionChecklistText = readText(attributionChecklistPath);
+const triageReportText = readText(triageReportPath);
 
 assert.ok(
   manifestText.includes('不能直接等同工程技术部真源'),
@@ -89,6 +91,17 @@ assert.ok(
 assert.ok(
   attributionChecklistText.includes('工程技术部候选源承接确认检查表'),
   'engineering source attribution checklist must exist'
+);
+assert.ok(
+  !triageReportText.includes('工程技术部真源归属') && !triageReportText.includes('源文件归属确认'),
+  'remediation triage should use acceptance confirmation wording, not ownership wording, for external engineering source candidates'
+);
+assert.ok(
+  triageReportText.includes('工程技术部真源缺口与候选承接确认') &&
+    triageReportText.includes('沈飞民机侧科技创新部') &&
+    triageReportText.includes('沈飞民机侧数字工程部') &&
+    triageReportText.includes('集成研发业务域'),
+  'remediation triage should keep the external-department and business-domain acceptance sequence explicit'
 );
 for (const requiredGroup of ['科技创新部', '数字工程部', '集成研发']) {
   assert.ok(
