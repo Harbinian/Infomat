@@ -163,7 +163,7 @@
 
 当前主线已经从“补零散校验”进入“在校验保护下补真源”的阶段。后续建议按以下顺序推进：
 
-1. 第三批优先处理工程技术部真源归属：按 `docs/reports/2026-06-11-engineering-source-attribution-checklist.md` 确认是否存在独立制度包或部门资料目录；对科技创新部、数字工程部、集成研发候选材料逐项确认所有者、适用范围和版本；确认前不生成工程技术部 DCM/BBM。
+1. 第三批优先处理工程技术部真源归属：按 `docs/reports/2026-06-11-engineering-source-attribution-checklist.md` 确认是否存在独立制度包或部门资料目录；对沈飞民机侧科技创新部、沈飞民机侧数字工程部和集成研发业务域候选材料逐项确认外部来源、适用范围、版本和昌兴侧承接证据；确认前不生成工程技术部 DCM/BBM。
 2. 第三批继续补工程技术部 canonical 三件套：在源文件归属确认后，再新增 `工程技术部部门-能力-流程-系统映射关系.md`、`工程技术部能力层与MDM建设要求.md` 和部门桑基图，并运行 `node scripts/parse-sankey-data.mjs`、`npm run test:process-governance-mainline`、`node scripts/check-dcm-bbm.mjs --no-fail`。
 3. 第三批再处理跨部门风险计算口径：当前已校验报告 hash 和快照一致，下一步是减少从报告 Markdown 反推风险数据的依赖，逐步让 parser 从组织真源和部门映射真源直接计算缺口。
 4. 第四批处理仓库边界执行项：大体积资料迁移、重复 `echarts.min.js` 归并、PMO 历史文件收口等仍只按迁移提案推进，执行前单独评估影响，不和流程真源补齐混做。

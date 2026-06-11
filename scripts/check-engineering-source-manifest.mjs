@@ -79,7 +79,15 @@ assert.ok(
   'engineering source manifest must keep candidate-source caution wording'
 );
 assert.ok(
-  attributionChecklistText.includes('工程技术部候选源归属确认检查表'),
+  manifestText.includes('沈飞民机侧部门') && attributionChecklistText.includes('沈飞民机侧部门'),
+  'engineering source docs must state 科技创新部 and 数字工程部 are Shenyang Aircraft Civil Aviation-side departments'
+);
+assert.ok(
+  manifestText.includes('集成研发业务域') && attributionChecklistText.includes('集成研发业务域'),
+  'engineering source docs must state 集成研发 is a business domain'
+);
+assert.ok(
+  attributionChecklistText.includes('工程技术部候选源承接确认检查表'),
   'engineering source attribution checklist must exist'
 );
 for (const requiredGroup of ['科技创新部', '数字工程部', '集成研发']) {
