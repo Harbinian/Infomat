@@ -13,6 +13,7 @@ const checks = [
   ['主线合约', 'scripts/test-process-governance-mainline-contract.mjs'],
   ['PMO 驾驶舱数据', 'scripts/check-dashboard-data.mjs'],
   ['部门域映射', 'scripts/check-dept-domain-mapping.mjs'],
+  ['工程技术部源文件清单', 'scripts/check-engineering-source-manifest.mjs'],
   ['流程真源清单', 'scripts/check-norms-source-manifest.mjs'],
   ['PMO 任务数据', 'scripts/check-pmo-task-data.mjs'],
 ];
