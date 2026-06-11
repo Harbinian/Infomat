@@ -32,6 +32,7 @@ npm run sync:process-governance
 
 | 脚本 | 作用 | 当前注意事项 |
 |---|---|---|
+| `analyze-layout.js` | 快速计算旧布局样例的行数、画布高度和列起始位置 | 只读输出，可通过 `npm run analyze:layout` 运行；不属于流程治理主线 |
 | `build-feedback-sankey.mjs` | 给单个部门桑基图 HTML 注入反馈交互 | 会直接改 `docs/norms/{部门}部门能力流程系统桑基图.html`，运行前先确认目标部门页面仍作为当前资产维护 |
 | `generate_digital_project_gantt_8k.py` | 从 `output/digital_project_gantt_8k.md` 渲染 8K 甘特图 PNG | 偏 PMO 渲染工具，写入 `output/` |
 | `render_gantt_h5_png.mjs` | 用 Chrome DevTools 把 H5 甘特图渲染成 PNG | 偏 PMO 渲染工具，写入 `output/` 和临时 Chrome profile |

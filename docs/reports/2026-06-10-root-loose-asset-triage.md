@@ -2,7 +2,7 @@
 
 > 日期：2026-06-10  
 > 范围：仓库根目录文件，不含目录内容。  
-> 结论：本报告只做分流，不移动文件，不修改脚本入口。
+> 结论：本报告先做分流；2026-06-11 已将 `analyze-layout.js` 迁入 `scripts/` 并保留根命令入口。
 
 ## 1. 当前根目录文件口径
 
@@ -16,7 +16,7 @@
 | `.gitignore` | 仓库忽略规则 | 保留 |
 | `echarts.min.js` | PMO 驾驶舱和 DCM/BBM 合同要求的根静态资产 | 保留 |
 | `skills-lock.json` | 当前 AI skill 锁文件 | 保留；已移除废弃 `claude-to-im` |
-| `analyze-layout.js` | 孤立布局分析辅助脚本 | 待复核迁移或删除 |
+| `analyze-layout.js` | 已迁入 `scripts/analyze-layout.js` 的布局分析辅助脚本 | 已处理，保留只读命令入口 |
 | `temp_survey.txt` | 一次性调查文本，已被边界文件标为待归类资产 | 待复核迁移 |
 
 ## 2. 已过时或已变化结论
@@ -30,14 +30,15 @@
 
 当前引用：
 
-- `package.json` 的 `main` 字段指向它。
+- `package.json` 的 `main` 字段指向 `scripts/analyze-layout.js`。
+- 根目录提供 `npm run analyze:layout` 作为显式运行入口。
 - 历史 `docs/superpowers/specs/SPEC.md` 提到它是布局分析辅助脚本。
 
 判断：
 
-- 它不是根目录主线脚本入口。
-- 迁移或删除前，应先确认是否仍有人直接运行它。
-- 若保留，建议后续迁入 `scripts/` 或 `docs/samples/` 并补说明；若不再使用，先删除 `package.json.main` 的误导性入口，再移除文件。
+- 它不是根目录主线脚本入口，也不属于流程治理数据链路。
+- 已按“保留但收口”的方式迁入 `scripts/`，并在 `scripts/README.md` 标注为只读历史/局部工具。
+- 历史方案目录中的提及保留为上下文，不作为当前入口。
 
 ### `temp_survey.txt`
 
@@ -56,7 +57,7 @@
 
 | 优先级 | 动作 | 验证 |
 |---|---|---|
-| P1 | 复核 `analyze-layout.js` 是否仍被人工使用 | 搜索引用；确认 `package.json.main` 是否需要保留 |
+| P1 | 复核 `analyze-layout.js` 是否仍被人工使用 | 已处理：迁入 `scripts/`，保留 `npm run analyze:layout` |
 | P1 | 复核 `temp_survey.txt` 的资料归属 | 确认是否属于会议、计划、基础设施或外部参考 |
 | P2 | 若迁移根目录临时资产，先提交迁移提案 | 更新引用、运行根目录主线合约 |
 

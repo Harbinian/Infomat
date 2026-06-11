@@ -2,13 +2,14 @@
   "name": "infomat",
   "version": "1.0.0",
   "description": "",
-  "main": "analyze-layout.js",
+  "main": "scripts/analyze-layout.js",
   "directories": {
     "doc": "docs",
     "test": "tests"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "analyze:layout": "node scripts/analyze-layout.js",
     "sync:process-governance": "node scripts/sync-process-governance-mainline.mjs",
     "test:pmo-task-data": "node scripts/check-pmo-task-data.mjs",
     "test:process-governance-mainline": "node scripts/test-process-governance-mainline-contract.mjs"

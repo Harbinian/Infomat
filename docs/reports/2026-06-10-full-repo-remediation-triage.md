@@ -60,7 +60,7 @@
 | 第 4 层 | `docs/外部参考/`、`docs/training/`、`docs/Demo/`、`docs/screenshots/`、`docs/U8SoftHelp/` 缺少参考资产目录说明 | 已确认 | 第四批小片已补 README，不移动大文件 |
 | 第 4 层 | `pmo/archive/`、`pmo/deliverables/`、`pmo/procedure-management/`、`pmo/scripts/` 缺少子目录说明 | 已确认 | 第四批小片已补 README，不改 PMO 真源 |
 | 第 4 层 | 废弃 `claude-to-im` skill 仍残留在锁文件 | 已确认 | 已删除本地失效入口并移除 `skills-lock.json` 记录 |
-| 第 4 层 | 根目录散放资产仍需分流 | 已确认 | 第四批小片已补只读分流报告，不迁移文件 |
+| 第 4 层 | 根目录散放资产仍需分流 | 已确认 | 第四批小片已补分流报告，`analyze-layout.js` 已迁入 `scripts/`，`temp_survey.txt` 仍待复核 |
 | 第 4 层 | AI 协作、输入材料和历史快照目录缺少边界说明 | 已确认 | 第四批小片已补 README，不迁移历史输出 |
 | 第 4 层 | 忽略型输出工作区仍需说明 | 已确认 | 第四批小片已补只读审计报告，不提交本地输出 |
 | 第 4 层 | 大体积参考资产仍需迁移提案 | 已确认 | 第四批小片已补迁移提案，不移动文件 |
@@ -139,7 +139,7 @@
 - 第四批继续补参考资产目录说明：新增 `docs/外部参考/README.md`、`docs/training/README.md`、`docs/Demo/README.md`、`docs/screenshots/README.md`、`docs/U8SoftHelp/README.md`，说明外部参考、培训、演示、截图和 U8 帮助文件都不替代当前真源；同步修正 `docs/Demo/CLAUDE.md` 中的实际主文件名。
 - 第四批继续补 PMO 子目录说明：新增 `pmo/archive/README.md`、`pmo/deliverables/README.md`、`pmo/procedure-management/README.md`、`pmo/scripts/README.md`，区分历史快照、交付物、流程地图驾驶舱和 PMO 局部 smoke 脚本；不改 PMO 真源、JSON 或驾驶舱 HTML。
 - 第四批继续清理废弃 AI 协作入口：根据用户确认，删除本地未跟踪的 `.claude/skills/claude-to-im` 失效入口，并从 `skills-lock.json` 移除 `claude-to-im` 记录；历史审计报告不回写。
-- 第四批继续补根目录散放资产分流：新增 `docs/reports/2026-06-10-root-loose-asset-triage.md`，将根目录文件分为保留、待复核迁移或已过时结论；不移动 `analyze-layout.js`、`temp_survey.txt` 或静态资产。
+- 第四批继续补根目录散放资产分流：新增 `docs/reports/2026-06-10-root-loose-asset-triage.md`，将根目录文件分为保留、待复核迁移或已过时结论；随后将孤立布局脚本迁入 `scripts/analyze-layout.js` 并补 `npm run analyze:layout`，`temp_survey.txt` 和静态资产仍不移动。
 - 第四批继续补 AI/快照工作区说明：新增 `.agents/README.md`、`.claude/README.md`、`.planning/README.md`、`.superpowers/README.md`、`ai_materials/README.md`、`snapshots/README.md`，说明技能配置、历史计划、brainstorm 输出、AI 输入材料和 norms 历史快照都不替代当前真源。
 - 第四批继续补忽略型输出工作区审计：新增 `docs/reports/2026-06-11-ignored-artifact-workspace-audit.md`，确认 `.playwright-cli/`、`output/`、`tests/__pycache__/` 均已忽略且未跟踪，`.superpowers/` 属于已跟踪历史输出，后续迁移需提案。
 - 第四批继续补大体积参考资产迁移提案：新增 `docs/reports/2026-06-11-large-reference-asset-migration-proposal.md`，量化 `docs/U8SoftHelp/`、`docs/外部参考/`、`docs/training/`、`ai_materials/` 等目录体积并给出迁移路径；不移动大文件。
