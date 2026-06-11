@@ -20,6 +20,10 @@ assert.ok(
   'source manifest should include hashed source files marked 纳入'
 );
 assert.ok(
+  data.sourceManifest.files.some(file => file.status === '纳入' && file.sha256 && file.path === 'docs/organization/组织架构和部门职责.md'),
+  'source manifest should include hashed organization source because parser derives department domains from it'
+);
+assert.ok(
   data.sourceManifest.files.every(file => ['纳入', '排除', '待复核'].includes(file.status)),
   'source manifest statuses should use controlled values'
 );
