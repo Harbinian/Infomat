@@ -114,7 +114,7 @@
 
 ## 6. 下一步建议
 
-1. 先确认工程技术部是否有独立制度包或部门资料目录；如果有，应新增到 `docs/norms/工程技术部业务资料/` 并逐文件登记。
+1. 先按 `docs/reports/2026-06-11-engineering-source-attribution-checklist.md` 确认工程技术部是否有独立制度包或部门资料目录；如果有，应新增到 `docs/norms/工程技术部业务资料/` 并逐文件登记。
 2. 对科技创新部、数字工程部和集成研发候选资料做业务归属确认；确认前只能作为参考线索，不作为 DCM/BBM 证据。
 3. 对 `.vsd` 信息流图配套的 `.xlsx` 汇总清单做结构读取，确认每个流程是否有角色、输入输出、表单和流转对象。
 4. 再创建 `工程技术部部门-能力-流程-系统映射关系.md`、`工程技术部能力层与MDM建设要求.md` 和部门桑基图；完成后运行 `node scripts/parse-sankey-data.mjs` 与 `node scripts/check-dcm-bbm.mjs --no-fail`。
