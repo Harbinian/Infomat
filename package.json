@@ -14,7 +14,7 @@
     "test:dept-domain-mapping": "node scripts/check-dept-domain-mapping.mjs",
     "test:norms-source-manifest": "node scripts/check-norms-source-manifest.mjs",
     "test:pmo-task-data": "node scripts/check-pmo-task-data.mjs",
-    "test:process-governance-mainline": "node scripts/test-process-governance-mainline-contract.mjs"
+    "test:process-governance-mainline": "node scripts/test-process-governance-mainline.mjs"
   },
   "repository": {
     "type": "git",

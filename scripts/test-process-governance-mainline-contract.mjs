@@ -58,6 +58,15 @@ assert.ok(
   'sync-process-governance-mainline.mjs should exist'
 );
 assert.strictEqual(
+  pkg.scripts && pkg.scripts['test:process-governance-mainline'],
+  'node scripts/test-process-governance-mainline.mjs',
+  'root package should expose the aggregated process governance mainline test'
+);
+assert.ok(
+  existsSync(resolve(root, 'scripts', 'test-process-governance-mainline.mjs')),
+  'test-process-governance-mainline.mjs should exist'
+);
+assert.strictEqual(
   pkg.scripts && pkg.scripts['test:norms-source-manifest'],
   'node scripts/check-norms-source-manifest.mjs',
   'root package should expose test:norms-source-manifest'
