@@ -93,6 +93,15 @@ assert.ok(
   existsSync(resolve(root, 'scripts', 'check-engineering-source-manifest.mjs')),
   'check-engineering-source-manifest.mjs should exist'
 );
+assert.strictEqual(
+  pkg.scripts && pkg.scripts['test:source-manifest-hashes'],
+  'node scripts/check-source-manifest-hashes.mjs',
+  'root package should expose test:source-manifest-hashes'
+);
+assert.ok(
+  existsSync(resolve(root, 'scripts', 'check-source-manifest-hashes.mjs')),
+  'check-source-manifest-hashes.mjs should exist'
+);
 assert.ok(
   dashboardCheckSource.includes('跨部门完整性检查报告.md'),
   'dashboard data check should derive crossDept expectations from the cross-department report'
