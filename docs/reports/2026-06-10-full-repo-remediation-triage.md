@@ -11,6 +11,7 @@
 | 根目录流程治理主线合约 | `npm run test:process-governance-mainline` | 已通过 |
 | MDM 主线稳定性 | `cd apps/mdm-platform && npm run test:mainline` | 已通过 |
 | MDM 安全专项 | `cd apps/mdm-platform && npm run test:security` | 已覆盖基础主数据越权、用户目录权限、最小候选人接口、字段约束读写、session secret、写接口盘点和 RBAC 管理员判断红线 |
+| 2026-06-11 分层整改回归 | 见 `docs/reports/2026-06-11-remediation-verification-log.md` | 根主线、安全专项、MDM 主线、项目角色、流程治理专项均通过 |
 
 口径修正：
 
@@ -139,6 +140,7 @@
 - 第四批继续补根目录散放资产分流：新增 `docs/reports/2026-06-10-root-loose-asset-triage.md`，将根目录文件分为保留、待复核迁移或已过时结论；不移动 `analyze-layout.js`、`temp_survey.txt` 或静态资产。
 - 第四批继续补 AI/快照工作区说明：新增 `.agents/README.md`、`.claude/README.md`、`.planning/README.md`、`.superpowers/README.md`、`ai_materials/README.md`、`snapshots/README.md`，说明技能配置、历史计划、brainstorm 输出、AI 输入材料和 norms 历史快照都不替代当前真源。
 - 第四批继续补忽略型输出工作区审计：新增 `docs/reports/2026-06-11-ignored-artifact-workspace-audit.md`，确认 `.playwright-cli/`、`output/`、`tests/__pycache__/` 均已忽略且未跟踪，`.superpowers/` 属于已跟踪历史输出，后续迁移需提案。
+- 追加 2026-06-11 回归记录：新增 `docs/reports/2026-06-11-remediation-verification-log.md`，记录根主线、MDM 安全、MDM 主线、项目角色和流程治理专项均通过。
 - 第四批继续做运行产物收口：补充 `.bak` 和点分隔数据库备份忽略规则，并将已跟踪的 `apps/mdm-platform/data/platform.db.after-admin-reset-20260609-152533.bak`、`scripts/__pycache__/generate_digital_project_gantt_8k.cpython-313.pyc` 从版本管理中移出；本地文件不删除。
 - 重复静态资产仍只记录为后续治理项：`echarts.min.js` 多副本和 `pmo/tasks.json` 双副本本轮不迁移，避免误伤 PMO、MDM 和 norms 的静态页面引用约定。
 - 第四批继续补资料目录边界：新增 `docs/README.md`，说明 `docs/` 真源入口、子目录职责、根目录历史散放文件口径和修改自检；不移动资料文件。
