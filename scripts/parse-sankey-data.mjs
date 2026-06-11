@@ -69,6 +69,26 @@ function sha256File(filePath) {
   return createHash('sha256').update(readFileSync(filePath)).digest('hex');
 }
 
+function extractReportHeader(text, label) {
+  const re = new RegExp(`^>\\s*${label}：\\s*(.+)$`, 'm');
+  const match = text.match(re);
+  return match ? match[1].trim().replace(/`/g, '') : undefined;
+}
+
+function buildReportSourceMetadata(filePath, text) {
+  const metadata = {
+    path: toRepoPath(filePath),
+    sha256: sha256File(filePath),
+  };
+  const declaredVersion = extractReportHeader(text, '版本');
+  const declaredGeneratedDate = extractReportHeader(text, '生成日期');
+  const declaredInput = extractReportHeader(text, '前置输入');
+  if (declaredVersion) metadata.declaredVersion = declaredVersion;
+  if (declaredGeneratedDate) metadata.declaredGeneratedDate = declaredGeneratedDate;
+  if (declaredInput) metadata.declaredInput = declaredInput;
+  return metadata;
+}
+
 function walkFiles(dirPath) {
   const files = [];
   if (!existsSync(dirPath)) return files;
@@ -1109,7 +1129,17 @@ function main() {
     console.error(`WARN: Cannot read ${CROSS_CHAIN_REPORT}: ${e.message}`);
   }
 
-  finalData.crossDept = parseCrossDeptReport(crossDeptReportText, crossChainReportText);
+  const crossDeptSourceReports = [
+    buildReportSourceMetadata(CROSS_DEPT_REPORT, crossDeptReportText),
+  ];
+  if (crossChainReportText) {
+    crossDeptSourceReports.push(buildReportSourceMetadata(CROSS_CHAIN_REPORT, crossChainReportText));
+  }
+
+  finalData.crossDept = {
+    ...parseCrossDeptReport(crossDeptReportText, crossChainReportText),
+    sourceReports: crossDeptSourceReports,
+  };
 
   writeFileSync(COMPANY_DATA_PATH, `${JSON.stringify(finalData, null, 2)}\n`, 'utf-8');
   console.error(`Wrote ${COMPANY_DATA_PATH}`);
