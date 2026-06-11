@@ -12,6 +12,7 @@ const root = resolve(import.meta.dirname, '..');
 const manifestPath = resolve(root, 'docs', 'reports', '2026-06-11-engineering-source-manifest.md');
 const attributionChecklistPath = resolve(root, 'docs', 'reports', '2026-06-11-engineering-source-attribution-checklist.md');
 const triageReportPath = resolve(root, 'docs', 'reports', '2026-06-10-full-repo-remediation-triage.md');
+const crossDeptIdentificationPath = resolve(root, 'docs', 'norms', '流程治理', '跨部门流程识别报告.md');
 
 const indexedSections = [
   {
@@ -75,6 +76,7 @@ function parseBacktickedPathRows(sectionText) {
 const manifestText = readText(manifestPath);
 const attributionChecklistText = readText(attributionChecklistPath);
 const triageReportText = readText(triageReportPath);
+const crossDeptIdentificationText = readText(crossDeptIdentificationPath);
 
 assert.ok(
   manifestText.includes('不能直接等同工程技术部真源'),
@@ -102,6 +104,17 @@ assert.ok(
     triageReportText.includes('沈飞民机侧数字工程部') &&
     triageReportText.includes('集成研发业务域'),
   'remediation triage should keep the external-department and business-domain acceptance sequence explicit'
+);
+assert.ok(
+  crossDeptIdentificationText.includes('| **科技创新部** | 沈飞民机 |') &&
+    crossDeptIdentificationText.includes('| **数字工程部** | 沈飞民机 |') &&
+    crossDeptIdentificationText.includes('| **科创部** | 沈飞民机 | 即科技创新部的简称，非独立部门 |') &&
+    crossDeptIdentificationText.includes('昌兴无此部门'),
+  'cross-department identification report should classify 科技创新部/数字工程部 as Shenyang Aircraft Civil Aviation-side departments'
+);
+assert.ok(
+  crossDeptIdentificationText.includes('由沈飞民机科技创新部发文，昌兴作为生产厂执行'),
+  'cross-department identification report should preserve source-evidence wording for Shenyang Aircraft Civil Aviation technology documents'
 );
 for (const requiredGroup of ['科技创新部', '数字工程部', '集成研发']) {
   assert.ok(
