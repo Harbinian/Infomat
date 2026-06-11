@@ -53,6 +53,15 @@ assert.ok(
   existsSync(resolve(root, 'scripts', 'sync-process-governance-mainline.mjs')),
   'sync-process-governance-mainline.mjs should exist'
 );
+assert.strictEqual(
+  pkg.scripts && pkg.scripts['test:norms-source-manifest'],
+  'node scripts/check-norms-source-manifest.mjs',
+  'root package should expose test:norms-source-manifest'
+);
+assert.ok(
+  existsSync(resolve(root, 'scripts', 'check-norms-source-manifest.mjs')),
+  'check-norms-source-manifest.mjs should exist'
+);
 assert.ok(
   dashboardCheckSource.includes('跨部门完整性检查报告.md'),
   'dashboard data check should derive crossDept expectations from the cross-department report'

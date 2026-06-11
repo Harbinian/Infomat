@@ -11,6 +11,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "analyze:layout": "node scripts/analyze-layout.js",
     "sync:process-governance": "node scripts/sync-process-governance-mainline.mjs",
+    "test:norms-source-manifest": "node scripts/check-norms-source-manifest.mjs",
     "test:pmo-task-data": "node scripts/check-pmo-task-data.mjs",
     "test:process-governance-mainline": "node scripts/test-process-governance-mainline-contract.mjs"
   },
