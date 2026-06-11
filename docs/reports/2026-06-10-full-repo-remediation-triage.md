@@ -39,6 +39,7 @@
 | 第 3 层 | 工程技术部流程映射交付物缺失 | 已确认风险 | 第三批小片已补缺口审计 |
 | 第 3 层 | `crossDept` 从报告 Markdown 派生 | 已确认风险 | 第三批小片已处理校验不固化数字 |
 | 第 3 层 | `综合管理部` 等历史/幽灵部门口径 | 已确认口径残留 | 第三批小片已补缺口审计 |
+| 第 3 层 | 缺少部门 canonical 映射交付物清单 | 已确认 | 第三批小片已补只读 source manifest |
 | 第 4 层 | README / PMO 文档引用不存在入口或截图 | 已确认 | 第四批小片已处理失效导航 |
 | 第 4 层 | `apps/` 缺少应用集合目录说明 | 已确认 | 第四批小片已补 README |
 | 第 4 层 | `apps/mdm-platform/` 应用边界说明不够集中 | 已确认 | 第四批小片已补 README 边界入口 |
@@ -119,6 +120,7 @@
 - 追加第三批校验红线：`check-dashboard-data.mjs` 不得把 `crossDept` 统计固化为 `168/6/1` 等历史数字。
 - 第三批先做只读校验收敛：`check-dashboard-data.mjs` 从 `跨部门完整性检查报告.md` 解析统计值，并与 `docs/company-sankey-data.json.crossDept`、PMO 内嵌 `#cross-dept-data` 比对；不改流程真源和生成快照。
 - 第三批继续补真源缺口审计：新增 `docs/reports/2026-06-10-process-truth-gap-audit.md`，确认工程技术部缺少 canonical 映射文件、`综合管理部` 属于待确认口径残留；不补写 norms、不重新生成 JSON。
+- 第三批继续补流程映射真源清单：新增 `docs/reports/2026-06-11-norms-source-manifest.md`，按组织真源和 DCM/BBM 合同登记 9 个部门、8 组 canonical 交付物、工程技术部缺口和 `复材车间` 命名待复核项；不改 `docs/norms/`。
 - 第四批先做导航止血：修正根 README、PMO README、PMO CLAUDE 和流程驾驶舱 CLAUDE 中不存在的甘特入口、截图、旧文档和手工 JSON 替换说明；不移动静态资产或大体积资料。
 - 第四批继续补应用集合导航：新增 `apps/README.md`，说明 `apps/` 只放可运行应用，当前唯一应用入口为 `apps/mdm-platform/`。
 - 第四批继续补应用边界导航：更新 `apps/mdm-platform/README.md`，说明 MDM 目录只负责平台应用、应用内脚本和平台说明，不维护流程真源、组织真源、PMO 展示或仓库级脚本。
