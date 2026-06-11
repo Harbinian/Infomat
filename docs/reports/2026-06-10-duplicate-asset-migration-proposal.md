@@ -66,7 +66,7 @@ pmo/gantt-react/public/tasks.json
 | P1 | 删除候选预检：再次扫描 `pmo/echarts.min.js` 引用；若仍为 0，删除该文件并更新文档中任何误导性描述 | `rg "pmo/echarts.min.js|src=\"echarts.min.js\"" pmo`、打开 PMO 驾驶舱或运行现有 dashboard 检查 |
 | P1 | 保持根目录、`docs/norms/`、MDM 前端三份 `echarts.min.js` | `node scripts/check-dcm-bbm.mjs --no-fail`、`cd apps/mdm-platform && npm run test:frontend` |
 | P2 | 判断 `docs/Demo/` 是否仍要求离线自包含；若不要求，改 Demo HTML 引用 `../echarts.min.js` 后删除 Demo 副本 | 直接打开 Demo HTML 或用浏览器 smoke 检查图表加载 |
-| P2 | 为 PMO 任务数据增加一致性检查：确认 `pmo/tasks.json` 与 `pmo/gantt-react/public/tasks.json` 同源同 hash | 新增轻量校验脚本或并入 PMO 主线检查 |
+| P2 | 为 PMO 任务数据增加一致性检查：确认 `pmo/tasks.json` 与 `pmo/gantt-react/public/tasks.json` 同源同 hash | 已新增 `npm run test:pmo-task-data` |
 | P3 | 若要减少 PMO 双副本，先改 `convert_xlsx.py` 与文档，把其中一份定义为生成缓存或构建时复制文件 | `python pmo/convert_xlsx.py`、PMO React 应用读取检查、根目录主线合约 |
 
 ## 5. 本次未做

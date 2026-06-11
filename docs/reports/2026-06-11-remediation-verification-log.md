@@ -13,6 +13,7 @@
 | MDM 主线稳定性 | `cd apps/mdm-platform && npm run test:mainline` | 通过 |
 | MDM 项目角色边界 | `cd apps/mdm-platform && npm run test:project-roles` | 通过 |
 | MDM 流程治理专项 | `cd apps/mdm-platform && npm run test:process-governance` | 通过 |
+| PMO 任务数据一致性 | `npm run test:pmo-task-data` | 通过 |
 
 ## 2. 说明
 
