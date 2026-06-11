@@ -10,6 +10,7 @@ import { join, resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
 const manifestPath = resolve(root, 'docs', 'reports', '2026-06-11-engineering-source-manifest.md');
+const attributionChecklistPath = resolve(root, 'docs', 'reports', '2026-06-11-engineering-source-attribution-checklist.md');
 
 const indexedSections = [
   {
@@ -71,11 +72,22 @@ function parseBacktickedPathRows(sectionText) {
 }
 
 const manifestText = readText(manifestPath);
+const attributionChecklistText = readText(attributionChecklistPath);
 
 assert.ok(
   manifestText.includes('不能直接等同工程技术部真源'),
   'engineering source manifest must keep candidate-source caution wording'
 );
+assert.ok(
+  attributionChecklistText.includes('工程技术部候选源归属确认检查表'),
+  'engineering source attribution checklist must exist'
+);
+for (const requiredGroup of ['科技创新部', '数字工程部', '集成研发']) {
+  assert.ok(
+    attributionChecklistText.includes(requiredGroup),
+    `engineering source attribution checklist must cover ${requiredGroup}`
+  );
+}
 
 const canonicalSection = extractSection(manifestText, 'Canonical 交付物缺口');
 const canonicalRows = parseBacktickedPathRows(canonicalSection);
