@@ -8,9 +8,10 @@
 
 | 范围 | 命令 | 结果 |
 |---|---|---|
-| 根目录流程治理主线聚合校验 | `npm run test:process-governance-mainline` | 通过；包含合约、PMO 数据、部门域、source manifest 和 PMO 任务数据 |
+| 根目录流程治理主线聚合校验 | `npm run test:process-governance-mainline` | 通过；包含合约、PMO 数据、部门域、工程候选源、sourceManifest 指纹、流程真源清单和 PMO 任务数据 |
 | 根目录部门域一致性 | `npm run test:dept-domain-mapping` | 通过 |
 | 工程技术部候选源清单 | `npm run test:engineering-source-manifest` | 通过 |
+| 公司级 sourceManifest 指纹 | `npm run test:source-manifest-hashes` | 通过 |
 | PMO 驾驶舱数据一致性 | `node scripts/check-dashboard-data.mjs` | 通过 |
 | MDM 安全专项 | `cd apps/mdm-platform && npm run test:security` | 通过 |
 | MDM 主线稳定性 | `cd apps/mdm-platform && npm run test:mainline` | 通过 |
