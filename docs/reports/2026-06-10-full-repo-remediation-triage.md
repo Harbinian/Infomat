@@ -41,6 +41,7 @@
 | 第 3 层 | `crossDept` 从报告 Markdown 派生 | 已确认风险 | 第三批小片已处理校验不固化数字，并补来源指纹校验 |
 | 第 3 层 | `综合管理部` 等历史/幽灵部门口径 | 已登记待确认 | 第三批小片已补缺口审计，并登记到过时部门名称追踪表 |
 | 第 3 层 | 缺少部门 canonical 映射交付物清单 | 已确认 | 第三批小片已补只读 source manifest 和校验脚本 |
+| 第 3 层 | 部门到域映射仍在组织真源、合同和 parser 中多处维护 | 已确认 | 第三批小片已补 `test:dept-domain-mapping` 只读一致性检查 |
 | 第 4 层 | README / PMO 文档引用不存在入口或截图 | 已确认 | 第四批小片已处理失效导航 |
 | 第 4 层 | `apps/` 缺少应用集合目录说明 | 已确认 | 第四批小片已补 README |
 | 第 4 层 | `apps/mdm-platform/` 应用边界说明不够集中 | 已确认 | 第四批小片已补 README 边界入口 |
@@ -126,6 +127,7 @@
 - 第三批继续补真源缺口审计：新增 `docs/reports/2026-06-10-process-truth-gap-audit.md`，确认工程技术部缺少 canonical 映射文件、`综合管理部` 属于待确认口径残留；不补写 norms、不重新生成 JSON。
 - 第三批继续补历史部门/外部实体口径：更新 `docs/norms/流程治理/过时部门名称追踪表.md`，将 `综合管理部` 登记为待确认项，区分沈飞民机外部实体线索和昌兴制度旧称线索；确认前不自动归并到当前组织真源。
 - 第三批继续补流程映射真源清单：新增 `docs/reports/2026-06-11-norms-source-manifest.md`，按组织真源和 DCM/BBM 合同登记 9 个部门、8 组 canonical 交付物和工程技术部缺口；新增 `docs/reports/2026-06-11-engineering-source-manifest.md`，登记工程技术部 source manifest 初版和外部候选资料；新增 `scripts/check-norms-source-manifest.mjs` 和 `npm run test:norms-source-manifest`，校验合同、三件套和报告状态一致；当前协作提示已对齐 `复材车间` 口径，未来如拆分一、二车间需先改组织真源和合同；不改 `docs/norms/`。
+- 第三批继续补部门域口径红线：新增 `scripts/check-dept-domain-mapping.mjs` 和 `npm run test:dept-domain-mapping`，从 `docs/organization/组织架构和部门职责.md` 解析三组部门，并校验 `docs/contracts/dcm-bbm-contract.json` 与 `scripts/parse-sankey-data.mjs` 的部门到域映射一致；当前仍保留硬编码，后续再逐步改成从组织真源读取。
 - 第四批先做导航止血：修正根 README、PMO README、PMO CLAUDE 和流程驾驶舱 CLAUDE 中不存在的甘特入口、截图、旧文档和手工 JSON 替换说明；不移动静态资产或大体积资料。
 - 第四批继续补应用集合导航：新增 `apps/README.md`，说明 `apps/` 只放可运行应用，当前唯一应用入口为 `apps/mdm-platform/`。
 - 第四批继续补应用边界导航：更新 `apps/mdm-platform/README.md`，说明 MDM 目录只负责平台应用、应用内脚本和平台说明，不维护流程真源、组织真源、PMO 展示或仓库级脚本。

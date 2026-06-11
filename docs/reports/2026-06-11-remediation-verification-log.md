@@ -9,6 +9,8 @@
 | 范围 | 命令 | 结果 |
 |---|---|---|
 | 根目录流程治理主线合约 | `npm run test:process-governance-mainline` | 通过 |
+| 根目录部门域一致性 | `npm run test:dept-domain-mapping` | 通过 |
+| PMO 驾驶舱数据一致性 | `node scripts/check-dashboard-data.mjs` | 通过 |
 | MDM 安全专项 | `cd apps/mdm-platform && npm run test:security` | 通过 |
 | MDM 主线稳定性 | `cd apps/mdm-platform && npm run test:mainline` | 通过 |
 | MDM 项目角色边界 | `cd apps/mdm-platform && npm run test:project-roles` | 通过 |

@@ -8,6 +8,7 @@
 |---|---|---|---|
 | `parse-sankey-data.mjs` | 从部门流程映射真源生成公司级桑基数据，并注入 PMO 流程驾驶舱 | `docs/norms/`、`docs/organization/组织架构和部门职责.md`、跨部门报告 | 写入 `docs/company-sankey-data.json` 和 `pmo/procedure-management/dashboard.html` |
 | `check-dashboard-data.mjs` | 校验公司级快照、PMO 内嵌数据、跨部门报告派生统计和报告来源指纹一致 | `docs/company-sankey-data.json`、`pmo/procedure-management/dashboard.html`、`docs/norms/流程治理/跨部门完整性检查报告.md` | 只读校验 |
+| `check-dept-domain-mapping.mjs` | 校验组织真源、DCM/BBM 合同和 parser 里的部门到域映射一致 | `docs/organization/组织架构和部门职责.md`、`docs/contracts/dcm-bbm-contract.json`、`scripts/parse-sankey-data.mjs` | 只读校验 |
 | `check-norms-source-manifest.mjs` | 校验部门流程真源清单与合同部门、`docs/norms` canonical 三件套一致 | `docs/contracts/dcm-bbm-contract.json`、`docs/norms/`、两份 source manifest 报告 | 只读校验 |
 | `check-pmo-task-data.mjs` | 校验 PMO 根目录备份数据与 React 应用读取数据同源同 hash | `pmo/tasks.json`、`pmo/gantt-react/public/tasks.json`、两份 PMO source manifest | 只读校验 |
 | `sync-process-governance-mainline.mjs` | 串起流程治理主线同步、检查和 MDM 快照导入 | 流程真源、PMO 驾驶舱、MDM 平台脚本 | 会运行 parser，并调用 MDM 平台同步 / 导入脚本 |
@@ -17,6 +18,7 @@
 
 ```bash
 npm run test:process-governance-mainline
+npm run test:dept-domain-mapping
 npm run test:norms-source-manifest
 npm run test:pmo-task-data
 npm run sync:process-governance
