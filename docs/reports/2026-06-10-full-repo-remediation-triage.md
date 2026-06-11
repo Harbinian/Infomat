@@ -8,7 +8,7 @@
 
 | 检查项 | 命令 | 当前结论 |
 |---|---|---|
-| 根目录流程治理主线合约 | `npm run test:process-governance-mainline` | 已通过 |
+| 根目录流程治理主线聚合校验 | `npm run test:process-governance-mainline` | 已通过，包含合约、PMO 数据、部门域、source manifest 和 PMO 任务数据 |
 | MDM 主线稳定性 | `cd apps/mdm-platform && npm run test:mainline` | 已通过 |
 | MDM 安全专项 | `cd apps/mdm-platform && npm run test:security` | 已覆盖基础主数据越权、用户目录权限、最小候选人接口、字段约束读写、session secret、写接口盘点和 RBAC 管理员判断红线 |
 | 2026-06-11 分层整改回归 | 见 `docs/reports/2026-06-11-remediation-verification-log.md` | 根主线、安全专项、MDM 主线、项目角色、流程治理专项均通过 |
@@ -122,6 +122,7 @@
 - 追加流程映射草稿创建红线：评审人等非报送人账号不能创建映射草稿，报送人和管理员仍可创建；`POST /api/mappings` 已增加报送人/管理员检查，并从写接口审计的后续项移入业务内保护。
 - 复核 Deepseek 审批状态机结论：当前 `apps/mdm-platform/server/routes/mappings.js` 已包含第 5 步状态映射，`npm run test:mappings` 可跑完整终审发布路径，该单点标记为过时/未复现；不做代码改动。
 - 追加第三批校验红线：`check-dashboard-data.mjs` 不得把 `crossDept` 统计固化为 `168/6/1` 等历史数字。
+- 第三批继续收紧根主线入口：`npm run test:process-governance-mainline` 已改为聚合校验，依次执行主线合约、PMO 驾驶舱数据、部门域映射、流程真源清单和 PMO 任务数据一致性检查。
 - 第三批先做只读校验收敛：`check-dashboard-data.mjs` 从 `跨部门完整性检查报告.md` 解析统计值，并与 `docs/company-sankey-data.json.crossDept`、PMO 内嵌 `#cross-dept-data` 比对；不改流程真源和生成快照。
 - 第三批继续补跨部门来源新鲜度口径：新增并落地 `docs/reports/2026-06-11-cross-dept-source-freshness-proposal.md`，`parse-sankey-data.mjs` 已把两份跨部门报告来源指纹写入 `crossDept.sourceReports`，`check-dashboard-data.mjs` 已比对磁盘报告 hash、公司级 JSON 和 PMO 内嵌数据。
 - 第三批继续补真源缺口审计：新增 `docs/reports/2026-06-10-process-truth-gap-audit.md`，确认工程技术部缺少 canonical 映射文件、`综合管理部` 属于待确认口径残留；不补写 norms、不重新生成 JSON。

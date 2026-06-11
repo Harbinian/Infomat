@@ -8,7 +8,7 @@
 
 | 范围 | 命令 | 结果 |
 |---|---|---|
-| 根目录流程治理主线合约 | `npm run test:process-governance-mainline` | 通过 |
+| 根目录流程治理主线聚合校验 | `npm run test:process-governance-mainline` | 通过；包含合约、PMO 数据、部门域、source manifest 和 PMO 任务数据 |
 | 根目录部门域一致性 | `npm run test:dept-domain-mapping` | 通过 |
 | PMO 驾驶舱数据一致性 | `node scripts/check-dashboard-data.mjs` | 通过 |
 | MDM 安全专项 | `cd apps/mdm-platform && npm run test:security` | 通过 |
