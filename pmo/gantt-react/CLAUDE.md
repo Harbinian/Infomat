@@ -34,7 +34,7 @@ python convert_xlsx.py
 | `public/tasks.json` | 本应用实际读取的任务数据 |
 | `public/pmo-source-manifest.json` | 本应用可读取的 PMO 真源清单 |
 
-运行完成后应看到 `Wrote 434 tasks from 信息化项目_计划管控真源.md`。
+运行完成后应看到 `Wrote 467 tasks from 信息化项目_计划管控真源.md`。
 
 ## 开发命令
 

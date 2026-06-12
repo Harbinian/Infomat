@@ -1,6 +1,6 @@
 {
   "schemaVersion": "pmo-service-source-manifest-v1",
-  "snapshotDate": "2026-06-05",
+  "snapshotDate": "2026-06-12",
   "authoritativeMode": "markdown-only",
   "legacyInput": {
     "xlsx": "信息化项目_Project_H5最终执行版_导入表.xlsx",
@@ -12,14 +12,14 @@
       "path": "信息化项目_计划管控真源.md",
       "purpose": "维护任务排程、资源责任、风险交付、阶段门和执行管控字段",
       "exists": true,
-      "sha256_16": "66d6cdf86fc31a89"
+      "sha256_16": "fcc8ea59d394e16b"
     },
     {
       "role": "WBS结构真源",
       "path": "信息化项目_WBS结构真源.md",
       "purpose": "维护 WBS 编号、父子层级、排序和摘要/里程碑结构",
       "exists": true,
-      "sha256_16": "5d8cd98be46c4fcc"
+      "sha256_16": "f21afb15c71b8913"
     },
     {
       "role": "工作平衡",
@@ -42,11 +42,11 @@
     "gantt-react/public/pmo-source-manifest.json"
   ],
   "taskSummary": {
-    "recordCount": 434,
+    "recordCount": 467,
     "fieldCount": 45,
     "projectStart": "2026-06-01",
     "projectFinish": "2028-01-31",
-    "milestoneCount": 46,
+    "milestoneCount": 102,
     "criticalControlCount": 75,
     "h5FocusCount": 214
   },

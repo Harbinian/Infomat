@@ -21,9 +21,9 @@ const SKIP_DIRS = new Set(['.git', 'node_modules', 'artifacts', 'test-results'])
 function parseArgs(argv) {
   const args = {
     root: 'docs/norms',
-    out: 'build/evidence/evidence_chunks.jsonl',
-    sourceIndex: 'build/evidence/source_index.jsonl',
-    warnings: 'build/evidence/chunking_warnings.md',
+    out: 'artifacts/evidence-index/latest/chunks.jsonl',
+    sourceIndex: 'artifacts/evidence-index/latest/source_index.jsonl',
+    warnings: 'artifacts/evidence-index/latest/chunking_warnings.md',
     maxChars: 1600,
   };
   for (let i = 2; i < argv.length; i += 1) {
@@ -45,7 +45,7 @@ function parseArgs(argv) {
 
 function printHelp() {
   console.log(`Usage:
-  node .agents/skills/process-evidence-mapping/scripts/source-chunker.mjs --root docs/norms --out build/evidence/evidence_chunks.jsonl
+  node .agents/skills/process-evidence-mapping/scripts/source-chunker.mjs --root docs/norms --out artifacts/evidence-index/<run-id>/chunks.jsonl
 
 Supported text inputs: .md, .txt, .csv, .json, .html, .htm.
 Binary Office/PDF/VSD files should first be converted/extracted; unsupported files are recorded in warnings.`);
@@ -107,7 +107,12 @@ function chunkText({ text, source, maxChars }) {
       clause_title: sectionTitle,
       raw_text: raw,
       normalized_text: normalizeText(raw),
+      normalized_candidate: '',
       artifact_type: 'body',
+      extraction_method: 'text',
+      extraction_quality: 'clean',
+      verification_status: 'unverified',
+      allowed_downstream_use: 'review_only',
     });
     buffer = [];
   }
@@ -132,7 +137,12 @@ function chunkText({ text, source, maxChars }) {
           clause_title: sectionTitle,
           raw_text: trimmed,
           normalized_text: normalizeText(trimmed),
+          normalized_candidate: '',
           artifact_type: 'table',
+          extraction_method: 'text',
+          extraction_quality: 'clean',
+          verification_status: 'unverified',
+          allowed_downstream_use: 'review_only',
         });
       }
       continue;

@@ -333,7 +333,7 @@
       </div>
 
       <div class="read-guide">
-        <strong>阅读说明：</strong>本页展示项目管理部从部门（D1）到应用系统（S1）的完整映射链路。默认"全域总览"视图展示 部门（D1）→ 能力域（L1-L3）→ 业务能力（L2）→ 应用系统（S1）；点击各域按钮可查看域内 能力域（L1-A1）：业务能力（L2）→ 业务流程（L3）→ 业务行为（A1）→ 应用系统（S1）的详细视图（含 128 条业务行为（A1）记录）。鼠标悬停连线可查看制度依据与系统设计依据。状态：部门审核稿。
+        <strong>阅读说明：</strong>本页展示项目管理部从部门（D1）到应用系统（S1）的完整映射链路。默认"全域总览"视图展示 部门（D1）→ 能力域（层级范围 L1-L3）→ 业务能力（L2）→ 应用系统（S1）；点击各域按钮可查看域内 能力域（层级范围 L1-A1）：业务能力（L2）→ 业务流程（L3）→ 业务行为（A1）→ 应用系统（S1）的详细视图（含 128 条业务行为（A1）记录）。鼠标悬停连线可查看制度依据与系统设计依据。状态：部门审核稿。
       </div>
 
       <!-- 统计卡片 -->
@@ -344,7 +344,7 @@
       <!-- 桑基图 -->
       <div class="sankey-wrap">
         <div class="sankey-title" id="chartTitle">项目管理部全域总览</div>
-        <div class="sankey-sub" id="chartSub">部门（D1）→ 能力域（L1-L3）→ 业务能力（L2）→ 应用系统（S1）</div>
+        <div class="sankey-sub" id="chartSub">部门（D1）→ 能力域（层级范围 L1-L3）→ 业务能力（L2）→ 应用系统（S1）</div>
         <div class="sankey-chart" id="chart"></div>
         <div class="legend-row" id="legendRow"></div>
       </div>
@@ -754,18 +754,31 @@ var a1Rows = [
         return raw;
       }
 
+      function l3CodeFromText(value) {
+        var m = String(value || "").match(/L3[-_ ]?(\d+)/i);
+        return m ? "L3-" + String(m[1]).padStart(2, "0") : "";
+      }
+
       function processCode(rowOrProc) {
         var raw = rowOrProc && typeof rowOrProc === "object" && !Array.isArray(rowOrProc)
           ? String(rowOrProc.code || rowOrProc.id || rowOrProc.process || rowOrProc.proc || "")
           : String(rowOrProc || "");
         var name = processName(rowOrProc);
-        var m = raw.match(/L3[-_ ]?(\d+)/i) || String(name || "").match(/L3[-_ ]?(\d+)/i);
-        if (m) return "L3-" + String(m[1]).padStart(2, "0");
-        var rows = typeof filteredL3 === "function" ? filteredL3() : (typeof l3Rows !== "undefined" ? l3Rows : []);
-        var idx = rows.findIndex(function(row) { return processName(row) === name; });
-        if (idx < 0 && typeof l3Rows !== "undefined") {
-          idx = l3Rows.findIndex(function(row) { return processName(row) === name; });
+        var directCode = l3CodeFromText(raw) || l3CodeFromText(name);
+        if (directCode) return directCode;
+
+        if (typeof a1Rows !== "undefined") {
+          for (var i = 0; i < a1Rows.length; i++) {
+            if (String(a1Rows[i][14] || "") === name || String(a1Rows[i][11] || "") === name) {
+              var fromA1 = l3CodeFromText(a1Rows[i][0]);
+              if (fromA1) return fromA1;
+            }
+          }
         }
+
+        var idx = typeof l3Rows !== "undefined"
+          ? l3Rows.findIndex(function(row) { return processName(row) === name; })
+          : -1;
         return idx >= 0 ? "L3-" + String(idx + 1).padStart(2, "0") : "L3";
       }
 
@@ -775,13 +788,19 @@ var a1Rows = [
       }
 
       function isProcessNode(name) {
-        return typeof l3Rows !== "undefined" && l3Rows.some(function(row) {
-          return processName(row) === String(name || "");
-        });
+        var text = String(name || "");
+        if (typeof l3Rows !== "undefined" && l3Rows.some(function(row) {
+          return processName(row) === text;
+        })) return true;
+        if (typeof a1Rows !== "undefined" && a1Rows.some(function(row) {
+          if (String(row[14] || "") === text || String(row[11] || "") === text) return true;
+          return typeof l3NameMap !== "undefined" && l3NameMap && String(l3NameMap[row[11]] || "") === text;
+        })) return true;
+        return false;
       }
 
       function modeDisplayLabel(name) {
-        return name === "全域总览" ? "全域总览（L1-L3）" : name + "（L1-A1）";
+        return name === "全域总览" ? "全域总览（层级范围 L1-L3）" : name + "（层级范围 L1-A1）";
       }
 
       function evidenceLegendHtml() {
@@ -932,7 +951,7 @@ var a1Rows = [
             });
           });
         } else {
-          // 域详情: 能力域（L1-A1）：业务能力（L2）→ 业务流程（L3）→ 业务行为（A1）→ 应用系统（S1）
+          // 域详情: 能力域（层级范围 L1-A1）：业务能力（L2）→ 业务流程（L3）→ 业务行为（A1）→ 应用系统（S1）
           var fa = filteredA1();
           var seenProc = {};
           var seenCap = {};
@@ -982,8 +1001,8 @@ var a1Rows = [
 
         document.getElementById("chartTitle").textContent = isGlobal ? "项目管理部全域总览" : active;
         document.getElementById("chartSub").textContent = isGlobal
-          ? "部门（D1）→ 能力域（L1-L3）→ 业务能力（L2）→ 应用系统（S1）"
-          : "能力域（L1-A1）：业务能力（L2）→ 业务流程（L3）→ 业务行为（A1）→ 应用系统（S1）";
+          ? "部门（D1）→ 能力域（层级范围 L1-L3）→ 业务能力（L2）→ 应用系统（S1）"
+          : "能力域（层级范围 L1-A1）：业务能力（L2）→ 业务流程（L3）→ 业务行为（A1）→ 应用系统（S1）";
 
         if (!chart) { chart = echarts.init(document.getElementById("chart")); }
 
@@ -1098,7 +1117,7 @@ var a1Rows = [
       // ===== 控件 =====
       function renderControls() {
         var bar = document.getElementById("modebar");
-        bar.innerHTML = '<span class="mode-label">视图（能力域 L1-L3 / L1-A1）</span>';
+        bar.innerHTML = '<span class="mode-label">视图（层级范围 L1-L3 / L1-A1）</span>';
         ["全域总览"].concat(domains).forEach(function(name) {
           var btn = document.createElement("button");
           btn.className = "mode-btn" + (name === active ? " active" : "");
@@ -1213,7 +1232,7 @@ var a1Rows = [
               '<td class="col-seq">' + (i+1) + '</td>' +
               '<td class="col-a1id">' + esc(a1[0]) + '</td>' +
               '<td class="col-cap">' + esc(a1[10]) + '</td>' +
-              '<td class="col-proc">' + esc(l3NameMap[a1[11]] || a1[11]) + '</td>' +
+              '<td class="col-proc">' + esc(processDisplayLabel(a1[11])) + '</td>' +
               '<td class="col-a1name">' + esc(a1ShortCode(a1) + " " + a1[1]) + '</td>' +
               '<td class="col-role">' + esc(a1[2]) + roleWarn + '</td>' +
               '<td class="col-trigger">' + esc(a1[3]) + '</td>' +
@@ -1271,7 +1290,7 @@ function persistFeedback() {
 
 var currentA1Id = null;
 
-var l3NameMap = {};
+var l3NameMap = typeof l3NameMap !== "undefined" && l3NameMap ? l3NameMap : {};
 
 var a1Index = {};
 a1Rows.forEach(function(r) {

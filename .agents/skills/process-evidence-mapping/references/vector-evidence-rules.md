@@ -17,6 +17,8 @@ Final conclusions must be verified against original source anchors:
 
 If no source anchor is available, write `候选，未见可核验原文定位`.
 
+Extraction repair is not source evidence. If extracted text is broken, such as `公司 月综合打分表`, keep the broken `raw_text`, mark `extraction_quality=partial`, and use any `normalized_candidate` only to find the original source location. Cite the clean original clause/table after review, not the repair hint.
+
 ## Allowed Uses
 
 Embedding retrieval may recommend:
@@ -75,6 +77,8 @@ Semantic similarity does not prove object identity. Object names may be merged o
 - cross-file reference by document number, form number, or attachment number
 
 Otherwise write `对象别名候选，未见同一对象链路证据，待确认`.
+
+For GLTX-JY-05-like cases, `绩效结果`, `核算结果`, and `公司月度综合打分表` remain alias candidates until the same form number, table title, field set, signature block, flow output, or explicit clause proves the object chain.
 
 ## Controlled Transfer Rule
 

@@ -12,7 +12,7 @@
 | WBS结构真源 | `pmo/信息化项目_WBS结构真源.md` |
 | 工作平衡 | `pmo/信息化项目_工作平衡.md` |
 | 工作开展原则 | `pmo/信息化项目_工作开展原则.md` |
-| 任务数 | 434 |
+| 任务数 | 467 |
 | 字段数 | 45 |
 | 项目周期 | 2026-06-01 至 2028-01-31 |
 | 里程碑数量 | 46 |
@@ -62,7 +62,7 @@ python convert_xlsx.py
 | `pmo/pmo-source-manifest.json` | PMO 真源清单 |
 | `pmo/gantt-react/public/pmo-source-manifest.json` | React 服务可读取的真源清单 |
 
-运行完成后应看到 `Wrote 434 tasks from 信息化项目_计划管控真源.md`。如任务数变化，应先确认 MD 真源是否确实发生增删。
+运行完成后应看到 `Wrote 467 tasks from 信息化项目_计划管控真源.md`。如任务数变化，应先确认 MD 真源是否确实发生增删。
 
 可在仓库根目录运行以下命令，确认 PMO 根目录备份数据与 React 应用实际读取数据同源：
 

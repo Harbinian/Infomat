@@ -16,6 +16,17 @@ const ROOT = resolve(SCRIPT_DIR, '..');
 const DEFAULT_CONTRACT = join(ROOT, 'docs', 'contracts', 'dcm-bbm-contract.json');
 const DEFAULT_REPORT = join(ROOT, 'docs', 'norms', '_quality-report.md');
 const SEVERITY_ORDER = { BLOCK: 0, WARN: 1, INFO: 2 };
+const SOURCE_EXTENSIONS = new Set(['.doc', '.docx', '.xls', '.xlsx', '.pdf', '.md', '.txt', '.html', '.jpg', '.jpeg', '.png', '.tif', '.tiff']);
+const GENERATED_SOURCE_PARTS = ['/_extracted/', '/流程治理/'];
+const GENERATED_SOURCE_NAME_PATTERNS = [
+  /^~\$/,
+  /部门-能力-流程-系统映射关系\.md$/,
+  /能力层与MDM建设要求\.md$/,
+  /部门能力流程系统桑基图\.html$/,
+  /^_quality-report\.md$/,
+  /^README\.md$/,
+  /^CLAUDE\.md$/,
+];
 const TRANSFER_WORDS = [
   '下发',
   '下达',
@@ -108,6 +119,68 @@ function readJson(path) {
 
 function rel(path, root = ROOT) {
   return relative(root, path).replace(/\\/g, '/');
+}
+
+function extnameLower(path) {
+  const match = String(path).match(/(\.[^.\\/]+)$/);
+  return match ? match[1].toLowerCase() : '';
+}
+
+function basenameOf(path) {
+  return String(path).replace(/\\/g, '/').split('/').pop() ?? '';
+}
+
+function normalizeForMatch(value) {
+  return String(value ?? '')
+    .toUpperCase()
+    .replace(/版/g, '')
+    .replace(/[^\u4e00-\u9fa5A-Z0-9]+/g, '');
+}
+
+function walkFiles(dir, out = []) {
+  if (!existsSync(dir)) return out;
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) walkFiles(full, out);
+    else if (entry.isFile()) out.push(full);
+  }
+  return out;
+}
+
+function isGeneratedOrHelperSource(filePath, root = ROOT) {
+  const repoPath = rel(filePath, root);
+  const normalized = repoPath.replace(/\\/g, '/');
+  const name = basenameOf(normalized);
+  if (GENERATED_SOURCE_PARTS.some((part) => normalized.includes(part))) return true;
+  return GENERATED_SOURCE_NAME_PATTERNS.some((pattern) => pattern.test(name));
+}
+
+const sourceIndexCache = new Map();
+
+function getDeptSourceIndex(root, contract, dept) {
+  const key = `${root}::${dept}`;
+  if (sourceIndexCache.has(key)) return sourceIndexCache.get(key);
+
+  const sourceDir = join(root, contract.paths.normsDir, `${dept}业务资料`);
+  const files = walkFiles(sourceDir)
+    .filter((filePath) => SOURCE_EXTENSIONS.has(extnameLower(filePath)))
+    .filter((filePath) => !isGeneratedOrHelperSource(filePath, root))
+    .map((filePath) => {
+      const repoPath = rel(filePath, root);
+      const name = basenameOf(repoPath);
+      const stem = name.replace(/\.[^.]+$/, '');
+      return {
+        path: filePath,
+        repoPath,
+        name,
+        normalizedPath: normalizeForMatch(repoPath),
+        normalizedName: normalizeForMatch(name),
+        normalizedStem: normalizeForMatch(stem),
+      };
+    });
+
+  sourceIndexCache.set(key, files);
+  return files;
 }
 
 function splitMarkdownRow(line) {
@@ -298,6 +371,217 @@ function escapeRegExp(value) {
 function shortText(value, max = 100) {
   const text = String(value ?? '').replace(/\s+/g, ' ').trim();
   return text.length > max ? `${text.slice(0, max - 1)}...` : text;
+}
+
+function uniqueItems(items) {
+  return Array.from(new Set(items.filter(Boolean)));
+}
+
+function extractSourceRefs(text, fallbackRefs = []) {
+  const raw = String(text ?? '').replace(/\s+/g, ' ').trim();
+  if (!raw) return [];
+
+  const refs = [];
+  const segments = raw
+    .split(/[；;]|(?:\s+\+\s+)/)
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+
+  for (const segment of segments) {
+    const titles = [...segment.matchAll(/《([^》]+)》/g)].map((match) => match[1].trim());
+    const codes = uniqueItems([
+      ...[...segment.matchAll(/\bGLTX-[A-Z0-9]+-\d+(?:-\d+)?-[A-Z]+\b/gi)].map((match) => match[0]),
+      ...[...segment.matchAll(/\bGL[BC]\d{4,}(?:-\d+)?\b/gi)].map((match) => match[0]),
+      ...[...segment.matchAll(/\bFM\d{4,}(?:-\d+)?\b/gi)].map((match) => match[0]),
+      ...[...segment.matchAll(/\bSYCX[/-]QMS-[A-Z]\d?-\d{2}-[A-Z](?:版)?\b/gi)].map((match) => match[0]),
+    ]);
+    const sections = uniqueItems([
+      ...[...segment.matchAll(/§\s*\d+(?:\.\d+)*(?:\s*[-—~至]+\s*§?\s*\d+(?:\.\d+)*)?(?:[（(]\d+[）)])?/g)].map((match) => match[0].replace(/\s+/g, '')),
+      ...[...segment.matchAll(/表\s*\d+/g)].map((match) => match[0].replace(/\s+/g, '')),
+      ...[...segment.matchAll(/附件\s*\d+/g)].map((match) => match[0].replace(/\s+/g, '')),
+    ]);
+
+    const hasSourceToken = codes.length || titles.length;
+    if (hasSourceToken) {
+      refs.push({
+        code: codes[0] ?? '',
+        title: titles[0] ?? '',
+        sections,
+        raw: segment,
+      });
+      continue;
+    }
+
+    if (sections.length && fallbackRefs.length === 1) {
+      refs.push({
+        code: fallbackRefs[0].code,
+        title: fallbackRefs[0].title,
+        sections,
+        raw: segment,
+      });
+    }
+  }
+
+  const deduped = [];
+  const seen = new Set();
+  for (const refItem of refs) {
+    const key = `${normalizeForMatch(refItem.code)}|${normalizeForMatch(refItem.title)}|${refItem.sections.join(',')}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(refItem);
+  }
+  return deduped;
+}
+
+function matchSourceFile(refItem, sourceIndex) {
+  const normalizedCode = normalizeForMatch(refItem.code);
+  const normalizedTitle = normalizeForMatch(refItem.title);
+  const codeVariants = normalizedCode
+    ? uniqueItems([
+        normalizedCode,
+        /[A-Z]$/.test(normalizedCode) ? normalizedCode.slice(0, -1) : '',
+      ])
+    : [];
+  const candidates = [];
+
+  for (const item of sourceIndex) {
+    let score = 0;
+    for (const [index, variant] of codeVariants.entries()) {
+      if (variant && item.normalizedName.includes(variant)) score += (index === 0 ? 1000 : 850) + variant.length;
+      if (variant && item.normalizedPath.includes(variant)) score += (index === 0 ? 900 : 760) + variant.length;
+    }
+    if (normalizedTitle && item.normalizedName.includes(normalizedTitle)) score += 500 + normalizedTitle.length;
+    if (normalizedTitle && item.normalizedPath.includes(normalizedTitle)) score += 420 + normalizedTitle.length;
+    if (normalizedCode && normalizedCode.includes(item.normalizedStem)) score += 50;
+    if (score > 0) candidates.push({ item, score });
+  }
+
+  candidates.sort((a, b) => b.score - a.score || a.item.repoPath.length - b.item.repoPath.length);
+  return candidates[0]?.item ?? null;
+}
+
+function formatSourceAnchor(refItem, matchedFile) {
+  const sourceLabel = refItem.code || (refItem.title ? `《${refItem.title}》` : '未写明源文件');
+  const section = refItem.sections.length ? refItem.sections.join('、') : '章节未写明';
+  if (matchedFile) return `${matchedFile.repoPath} ${section}`;
+  return `未匹配源文件：${sourceLabel} ${section}`;
+}
+
+function deptFromMappingPath(repoPath) {
+  const name = basenameOf(repoPath);
+  const suffix = '部门-能力-流程-系统映射关系.md';
+  return name.endsWith(suffix) ? name.slice(0, -suffix.length) : '';
+}
+
+function nearestHeading(lines, lineIndex, pattern) {
+  for (let i = lineIndex; i >= 0; i -= 1) {
+    const line = lines[i] ?? '';
+    if (pattern.test(line.trim())) return line.trim();
+  }
+  return '';
+}
+
+function findTableHeaderForLine(lines, lineIndex) {
+  for (let i = lineIndex; i >= 0; i -= 1) {
+    const line = lines[i] ?? '';
+    if (!line.trim().startsWith('|')) continue;
+    const header = splitMarkdownRow(line);
+    if (looksLikeMainHeader(header) || looksLikeA1Header(header)) return { line: i, header };
+  }
+  return null;
+}
+
+const dcmEvidenceCache = new Map();
+
+function getDcmEvidenceByL3(file, contract) {
+  const key = String(file);
+  if (dcmEvidenceCache.has(key)) return dcmEvidenceCache.get(key);
+
+  const parsed = parseMappingDoc(file, contract);
+  const map = new Map();
+  for (const table of parsed.mainTables) {
+    for (const row of table.rows) {
+      const l3 = cell(row, table.header, ['业务流程（L3）', '业务流程']);
+      const evidence = cell(row, table.header, ['制度依据（文件号/条款）', '制度依据']);
+      if (l3 && evidence && !map.has(l3)) map.set(l3, evidence);
+    }
+  }
+  dcmEvidenceCache.set(key, map);
+  return map;
+}
+
+function rowSourceContext({ file, line, contract }) {
+  if (!existsSync(file) || !line) return '';
+  const lines = readFileSync(file, 'utf8').split(/\r?\n/);
+  const lineIndex = Math.max(0, line - 1);
+  const lineText = lines[lineIndex] ?? '';
+  const chunks = [];
+
+  if (lineText.trim().startsWith('|')) {
+    const headerInfo = findTableHeaderForLine(lines, lineIndex);
+    if (headerInfo) {
+      const row = { line, cells: splitMarkdownRow(lineText) };
+      const header = headerInfo.header;
+      const evidenceFields = [
+        ['制度依据（文件号/条款）', '制度依据'],
+        ['执行角色依据'],
+        ['触发情景依据'],
+        ['前置条件依据'],
+        ['验收标准依据'],
+        ['核验提醒'],
+        ['备注'],
+      ];
+      for (const names of evidenceFields) {
+        const value = cell(row, header, names);
+        if (value) chunks.push(value);
+      }
+
+      const l3 =
+        cell(row, header, ['业务流程（L3）', '业务流程'])
+        || extractL3FromHeading(nearestHeading(lines, lineIndex, /^#+\s+/));
+      if (l3) {
+        const dcmEvidence = getDcmEvidenceByL3(file, contract).get(l3);
+        if (dcmEvidence) chunks.push(dcmEvidence);
+      }
+    }
+  }
+
+  if (!chunks.length) chunks.push(lineText);
+  return uniqueItems(chunks).join('；');
+}
+
+function enrichFindingSourceAnchors(findings, contract, root) {
+  for (const finding of findings) {
+    const repoPath = finding.file || '';
+    const dept = deptFromMappingPath(repoPath);
+    if (!dept) {
+      finding.sourceAnchor = '不适用：该项检查对象不是部门映射行，请按“映射位置”复核。';
+      continue;
+    }
+
+    const file = join(root, repoPath);
+    const context = rowSourceContext({ file, line: finding.line, contract });
+    const primaryRefs = extractSourceRefs(context);
+    const refs = extractSourceRefs(context, primaryRefs);
+
+    if (!refs.length) {
+      finding.sourceAnchor = '未写明源文件/章节；请先补制度依据或源文件锚点。';
+      continue;
+    }
+
+    const sourceIndex = getDeptSourceIndex(root, contract, dept);
+    const anchors = [];
+    for (const refItem of refs) {
+      const matched = matchSourceFile(refItem, sourceIndex);
+      anchors.push(formatSourceAnchor(refItem, matched));
+    }
+
+    const uniqueAnchors = uniqueItems(anchors);
+    finding.sourceAnchor =
+      uniqueAnchors.length > 3
+        ? `${uniqueAnchors.slice(0, 3).join('；')}；等 ${uniqueAnchors.length} 项`
+        : uniqueAnchors.join('；');
+  }
 }
 
 function hasTransferWord(text) {
@@ -1157,6 +1441,7 @@ function runChecks({ contractPath, reportPath, root }) {
   }
 
   checkCompanyData(findings, contract, root, { l3Rows: totalL3Rows, a1Rows: totalA1Rows });
+  enrichFindingSourceAnchors(findings, contract, root);
 
   findings.sort((a, b) => {
     const sev = SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity];
@@ -1193,6 +1478,7 @@ function renderReport({ contractPath, findings, deptStats, totalL3Rows, totalA1R
     `- 源 A1 行数：${totalA1Rows}`,
     '- 跨部门输入/输出口径：仅当制度条款、流程图箭头、表单流转、台账交接、签收/通知/反馈等证据证明受控输出物传递时，才视为已确认；证据不足项以 `CROSS_TRANSFER` 标记为复核提示。',
     '- 审批类型口径：`单人审批`、`多级审批`、`会签`、`无审批` 必须由原文、流程图、表单签批栏或审批链证据支撑；抽象/推断行为不得凭输出目标或业务理解写成审批结论。',
+    '- 问题清单源锚点：`源文件/章节` 优先从行内制度依据、角色/触发/前置/验收依据、核验提醒和同 L3 的 DCM 制度依据解析；无法匹配到源文件时明确标注，不以推测路径替代。',
     '',
     '## 汇总',
     '',
@@ -1218,11 +1504,11 @@ function renderReport({ contractPath, findings, deptStats, totalL3Rows, totalA1R
     return `${lines.join('\n')}\n`;
   }
 
-  lines.push('| 严重度 | 领域 | 位置 | 说明 | 建议 |');
-  lines.push('|---|---|---|---|---|');
+  lines.push('| 严重度 | 领域 | 映射位置 | 源文件/章节 | 说明 | 建议 |');
+  lines.push('|---|---|---|---|---|---|');
   for (const finding of findings) {
     const location = finding.file ? `${finding.file}${finding.line ? `:${finding.line}` : ''}` : '';
-    lines.push(`| ${finding.severity} | ${md(finding.area)} | ${md(location)} | ${md(finding.message)} | ${md(finding.suggestion)} |`);
+    lines.push(`| ${finding.severity} | ${md(finding.area)} | ${md(location)} | ${md(finding.sourceAnchor)} | ${md(finding.message)} | ${md(finding.suggestion)} |`);
   }
   return `${lines.join('\n')}\n`;
 }
@@ -1242,6 +1528,13 @@ function runSelfTest() {
   assert.equal(hasBasisOnlyContext('§5.2 "依据经营发展部下达的订单"', '经营发展部'), true);
   assert.equal(hasBasisOnlyContext('§5.2 "依据经营发展部下达的订单，与物资保障部沟通工装状态"', '物资保障部'), false);
   assert.equal(hasDeptSpecificTransfer('与物资保障部沟通工装状态是否满足投产要求', '物资保障部'), true);
+  assert.deepEqual(extractSourceRefs('GLTX-CW-01-A §5.1.2').map((item) => [item.code, item.sections]), [
+    ['GLTX-CW-01-A', ['§5.1.2']],
+  ]);
+  assert.deepEqual(extractSourceRefs('§5.1.2', [{ code: 'GLTX-CW-01-A', title: '', sections: [] }]).map((item) => [item.code, item.sections]), [
+    ['GLTX-CW-01-A', ['§5.1.2']],
+  ]);
+  assert.equal(normalizeForMatch('SYCX/QMS-P2-16-B版《项目合同评审执行管理规定》'), 'SYCXQMSP216B项目合同评审执行管理规定');
   console.log('self-test passed');
 }
 

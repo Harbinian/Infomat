@@ -13,10 +13,10 @@ const DEFAULT_CONFIG = path.resolve(SCRIPT_DIR, '../references/ollama-embedding-
 function parseArgs(argv) {
   const args = {
     query: '',
-    chunks: 'build/evidence/evidence_chunks.jsonl',
-    vectors: 'build/evidence/evidence_embeddings.jsonl',
+    chunks: 'artifacts/evidence-index/latest/chunks.jsonl',
+    vectors: 'artifacts/evidence-index/latest/vectors.jsonl',
     config: DEFAULT_CONFIG,
-    out: 'build/evidence/candidate_evidence.jsonl',
+    out: 'artifacts/evidence-index/latest/candidate_evidence.jsonl',
     topK: 10,
     noFail: false,
   };
@@ -41,6 +41,18 @@ function printHelp() {
   node .agents/skills/process-evidence-mapping/scripts/evidence-retriever.mjs --query "绩效结果 综合打分表 核算结果" --top-k 8
 
 Results are candidates only and default to allowed_downstream_use=review_only.`);
+}
+
+function classifyRelation(query, text, chunk) {
+  const haystack = `${query} ${text}`;
+  if (chunk.extraction_quality && chunk.extraction_quality !== 'clean') return 'extraction_quality_issue';
+  if (/归档|保存|保管|留存/.test(text)) return 'archive_or_retention';
+  if (/编制|校对|核对|审核|审批|批准|初审|复核|签批/.test(haystack)) return 'approval_chain_candidate';
+  if (/通报|发布|下发|签收|提交|反馈|发放|传递|流转/.test(text)) return 'controlled_transfer_candidate';
+  if (/负责|职责|配合|参与|主管部门|责任部门/.test(text)) return 'responsibility_or_participation';
+  if (/依据|根据|来源|引用|参考/.test(text)) return 'reference_basis';
+  if (/绩效结果|核算结果|综合打分表|评分表|得分表|对象|别名/.test(haystack)) return 'object_alias_candidate';
+  return 'object_alias_candidate';
 }
 
 function ensureDir(filePath) {
@@ -126,7 +138,10 @@ async function main() {
       source_anchor: item.chunk.clause || item.chunk.clause_title || item.chunk.table_id || item.chunk.form_name || '',
       retrieval_method: 'vector',
       retrieval_score: Number(item.score.toFixed(6)),
+      relation_type: classifyRelation(args.query, item.chunk.raw_text, item.chunk),
+      extraction_quality: item.chunk.extraction_quality || 'clean',
       evidence_status: 'candidate',
+      verification_status: item.chunk.verification_status || 'unverified',
       review_required: true,
       review_reason: 'Vector retrieval result; verify original source before mapping use.',
       allowed_downstream_use: 'review_only',

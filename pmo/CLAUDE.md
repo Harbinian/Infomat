@@ -15,7 +15,7 @@ pmo/
 │   ├── README.md                      #   甘特图开发指南
 │   ├── src/                           #   源码
 │   └── package.json                   #   依赖与脚本
-├── tasks.json                         # 甘特图/PMO 看板任务数据 (434 条, 由 MD 真源生成)
+├── tasks.json                         # 甘特图/PMO 看板任务数据 (467 条, 由 MD 真源生成)
 ├── pmo-source-manifest.json           # PMO 服务读取的真源清单
 ├── 信息化项目_计划管控真源.md           # 计划、资源、风险、阶段门和执行字段真源
 ├── 信息化项目_WBS结构真源.md            # WBS 编号、父子层级和排序真源
@@ -47,7 +47,7 @@ pmo/
 - **构建**：`cd gantt-react && npm run build`
 - **数据流**：`信息化项目_计划管控真源.md` + `信息化项目_WBS结构真源.md` → `convert_xlsx.py` → `tasks.json` / `gantt-react/public/tasks.json` → 甘特图/PMO 看板渲染
 - **服务清单**：`pmo-source-manifest.json` 同步写入 `gantt-react/public/pmo-source-manifest.json`，记录计划管控、WBS结构、工作平衡、工作开展原则四类 MD 入口
-- **当前数据**：434 条任务，45 个字段
+- **当前数据**：467 条任务，45 个字段
 
 ### 模块 B 扩展:动态凭证消费 (2026-06-05+)
 
@@ -66,7 +66,7 @@ pmo/
 1. 修改 `信息化项目_计划管控真源.md`；如调整 WBS 编号/层级，同步修改 `信息化项目_WBS结构真源.md`
 2. 如调整人员分配或推进机制，同步修改 `信息化项目_工作平衡.md`、`信息化项目_工作开展原则.md`
 3. 运行 `python convert_xlsx.py` 重新生成 `tasks.json`、`gantt-react/public/tasks.json` 和 `pmo-source-manifest.json`
-4. 确认输出为 `Wrote 434 tasks from 信息化项目_计划管控真源.md`（如任务数变化，先核对 MD 真源）
+4. 确认输出为 `Wrote 467 tasks from 信息化项目_计划管控真源.md`（如任务数变化，先核对 MD 真源）
 5. 刷新浏览器
 
 ### 甘特图已知问题

@@ -13,8 +13,10 @@
 | `smoke-deliverable-workflow.mjs` | 交付物工作流 smoke 检查 |
 | `smoke-frontmatter.mjs` | PMO 文档 frontmatter 检查 |
 | `smoke-hmr.mjs` | PMO 前端开发热更新相关 smoke 检查 |
+| `smoke-milestone-rules.mjs` | PMO 甘特图里程碑判定 smoke 检查，防止 `10/20/30工作日` 被误判为 `0工作日` |
 | `smoke-plugin-endpoints.mjs` | PMO 插件端点 smoke 检查 |
 | `smoke-writeback.mjs` | PMO 写回流程 smoke 检查 |
+| `regroup-wbs-semantic.mjs` | 按语义工作包补齐 PMO WBS 二级摘要层，并同步计划/WBS Markdown 真源 |
 
 ## 修改自检
 

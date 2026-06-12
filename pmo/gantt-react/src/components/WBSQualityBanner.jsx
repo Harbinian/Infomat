@@ -1,3 +1,5 @@
+import { isZeroWorkdayDuration } from '../utils/dateUtils';
+
 export default function WBSQualityBanner({ rawTasks }) {
   if (!rawTasks || rawTasks.length === 0) return null;
 
@@ -11,7 +13,7 @@ export default function WBSQualityBanner({ rawTasks }) {
 
   const allWbs = new Set(rawTasks.map(task => String(task.wbs)));
   const milestoneParents = rawTasks.filter(task => {
-    const isMilestone = task.milestone === '是' || task.type === '里程碑' || String(task.duration || '').includes('0工作日');
+    const isMilestone = task.milestone === '是' || task.type === '里程碑' || isZeroWorkdayDuration(task.duration);
     return isMilestone && rawTasks.some(child => String(child.wbs).startsWith(String(task.wbs) + '.') && child.wbs !== task.wbs);
   });
   const toleratedMilestoneParents = milestoneParents.filter(task => /ERP-MES/.test(task.name || ''));

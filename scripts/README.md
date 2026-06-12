@@ -12,6 +12,7 @@
 | `check-engineering-source-manifest.mjs` | 校验工程技术部源文件清单中的 canonical 缺口和外部候选索引仍与仓库现状一致 | `docs/reports/2026-06-11-engineering-source-manifest.md`、外部参考候选目录 | 只读校验 |
 | `check-norms-source-manifest.mjs` | 校验部门流程真源清单与合同部门、`docs/norms` canonical 三件套一致 | `docs/contracts/dcm-bbm-contract.json`、`docs/norms/`、两份 source manifest 报告 | 只读校验 |
 | `check-pmo-task-data.mjs` | 校验 PMO 根目录备份数据与 React 应用读取数据同源同 hash | `pmo/tasks.json`、`pmo/gantt-react/public/tasks.json`、两份 PMO source manifest | 只读校验 |
+| `check-pmo-wbs-semantic-depth.mjs` | 校验 PMO WBS 语义补组后不再保留二级叶子任务，并确认父级日期覆盖子任务 | `pmo/tasks.json` | 只读校验 |
 | `check-source-manifest-hashes.mjs` | 校验公司级快照里的 sourceManifest 文件大小和 SHA256 仍匹配磁盘源文件 | `docs/company-sankey-data.json`、`sourceManifest.files` 中登记的源文件 | 只读校验 |
 | `sync-process-governance-mainline.mjs` | 串起流程治理主线同步、检查和 MDM 快照导入 | 流程真源、PMO 驾驶舱、MDM 平台脚本 | 会运行 parser，并调用 MDM 平台同步 / 导入脚本 |
 | `test-process-governance-mainline.mjs` | 聚合仓库级流程治理主线只读校验 | 根级主线检查脚本 | 依次运行合约、PMO 数据、部门域、source manifest 和 PMO 任务数据校验 |
@@ -25,7 +26,11 @@ npm run test:dept-domain-mapping
 npm run test:engineering-source-manifest
 npm run test:norms-source-manifest
 npm run test:pmo-task-data
+npm run test:pmo-wbs-semantic-depth
 npm run test:source-manifest-hashes
+npm run test:process-evidence-skill
+npm run test:process-candidates
+npm run test:ocr-source
 npm run sync:process-governance
 ```
 
@@ -35,6 +40,12 @@ npm run sync:process-governance
 |---|---|---|---|
 | `check-dcm-bbm.mjs` | 校验 DCM/BBM 合同、部门映射、跨部门证据和驾驶舱数据 | `docs/contracts/dcm-bbm-contract.json`、`docs/norms/`、PMO 驾驶舱 | 默认写 `docs/norms/_quality-report.md`；`--no-fail` 可用于主线容错 |
 | `audit-a1-transfer-evidence.mjs` | 审计 A1 跨部门输入 / 输出证据 | `docs/contracts/dcm-bbm-contract.json`、`docs/norms/` | 默认写 `docs/reports/{日期}-a1-transfer-evidence-audit.md`；`--no-write` 可只读运行 |
+| `ocr-source.mjs` | 对扫描 PDF 和图片源文件生成 OCR 候选证据中间件；PaddleOCR 不可用时登记待复核 | `docs/norms/` 或指定文件/目录下的 PDF/图片 | 默认写 `artifacts/ocr/<run-id>/`；可显式写 `build/ocr/`，但不生成流程结论 |
+| `test-ocr-source.mjs` | 校验 OCR 包装脚本的输出边界、复核登记和非结论化规则 | 一个扫描 PDF 样例 | 写入被忽略的 `artifacts/ocr/test-ocr-source/` |
+| `.agents/skills/process-evidence-mapping/scripts/run-process-candidate-workflow.mjs` | 串联 OCR 判断、evidence chunks、embedding/降级、候选解读、角色抽取、对象链、差异报告和候选待办 Markdown | 单个制度文件、部门名、当前部门映射 | 写入 `artifacts/process-candidates/<run-id>/`；更新 `docs/norms/流程治理/候选映射待办.md` |
+| `.agents/skills/process-evidence-mapping/scripts/update-candidate-todo-md.mjs` | 将未解决候选项写入人工待办面板，按稳定键去重，并过滤当前正式映射已覆盖项 | `mapping_diff_items.json`、当前部门映射 | 写入候选待办 Markdown；只保留未解决项 |
+| `test-process-evidence-skill.mjs` | 校验 process-evidence-mapping 技能是否按固定执行顺序重写，且包含 OCR、embedding、候选待办边界 | `.agents/skills/process-evidence-mapping/SKILL.md` | 只读校验 |
+| `.agents/skills/process-evidence-mapping/scripts/test-candidate-workflow.mjs` | 用 GLTX-CW-01 回归候选解读、角色簿、对象链、差异报告和候选待办 Markdown | 财务部 GLTX-CW-01 制度和当前财务部映射 | 写入被忽略的 `artifacts/process-candidates/test-gltx-cw-01/` |
 | `glossary.mjs` | 查询仓库术语表 | `docs/glossary.md` | 只读查询 |
 
 ## 局部或历史工具

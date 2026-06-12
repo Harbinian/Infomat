@@ -220,11 +220,11 @@
     <main class="page">
       <section class="hero">
         <h1>质量管理部 · 部门能力流程系统桑基图</h1>
-        <p>部门（D1）→ 能力域（L1-L3）→ 业务能力（L2）→ 应用系统（S1）[全域]；能力域（L1-A1）：业务能力（L2）→ 业务流程（L3）→ 业务行为（A1）→ 应用系统（S1）[域详情]。含362条业务行为（A1），覆盖6大能力域24项业务能力24条业务流程（L3）。</p>
+        <p>部门（D1）→ 能力域（层级范围 L1-L3）→ 业务能力（L2）→ 应用系统（S1）[全域]；能力域（层级范围 L1-A1）：业务能力（L2）→ 业务流程（L3）→ 业务行为（A1）→ 应用系统（S1）[域详情]。含362条业务行为（A1），覆盖6大能力域24项业务能力24条业务流程（L3）。</p>
         <div class="badge">部门审核稿 · 待反馈</div>
       </section>
       <div class="read-guide">
-        <strong>读图方法：</strong>"全域总览"看质量管理部覆盖哪些领域和系统；切换到具体能力域（L1-A1），看 能力域（L1-A1）：业务能力（L2）→ 业务流程（L3）→ 业务行为（A1）→ 应用系统（S1） 的四层细节。悬停连线可见制度依据和系统设计依据。业务行为（A1）节点显示A1序号、行为名称和执行角色，业务行为（A1）编号保留在悬停提示和明细表中用于追溯。下方明细表在"全域总览"显示业务流程（L3）行，在能力域视图显示业务行为（A1）行。
+        <strong>读图方法：</strong>"全域总览"看质量管理部覆盖哪些领域和系统；切换到具体能力域（层级范围 L1-A1），看 能力域（层级范围 L1-A1）：业务能力（L2）→ 业务流程（L3）→ 业务行为（A1）→ 应用系统（S1） 的四层细节。悬停连线可见制度依据和系统设计依据。业务行为（A1）节点显示A1序号、行为名称和执行角色，业务行为（A1）编号保留在悬停提示和明细表中用于追溯。下方明细表在"全域总览"显示业务流程（L3）行，在能力域视图显示业务行为（A1）行。
       </div>
       <section class="stat-row" id="stats">
         <div class="stat-box"><div class="num">1</div><div class="lbl">部门（D1）</div></div>
@@ -235,10 +235,10 @@
         <div class="stat-box"><div class="num">4</div><div class="lbl">应用系统（S1）</div></div>
         <div class="stat-box"><div class="num">24</div><div class="lbl">映射记录</div></div>
       </section>
-      <section class="modebar" id="modebar"><span class="mode-label">视图（能力域 L1-L3 / L1-A1）</span></section>
+      <section class="modebar" id="modebar"><span class="mode-label">视图（层级范围 L1-L3 / L1-A1）</span></section>
       <section class="sankey-wrap">
         <div class="sankey-title" id="chartTitle">质量管理部全域总览</div>
-        <div class="sankey-sub" id="chartSub">部门（D1）→ 能力域（L1-L3）→ 业务能力（L2）→ 应用系统（S1）</div>
+        <div class="sankey-sub" id="chartSub">部门（D1）→ 能力域（层级范围 L1-L3）→ 业务能力（L2）→ 应用系统（S1）</div>
         <div id="chart" class="sankey-chart"></div>
         <div class="legend-row" id="legendRow"></div>
       </section>
@@ -247,7 +247,7 @@
         <div class="note"><strong>部门审核口径：</strong>本页用于部门逐条确认业务行为（A1）。证据类型需区分"原文明确-正文"、"原文明确-流程图"、"原文明确-表单"、"上下文推断"或"分析拆分"；执行角色、触发情景、前置条件可由部门补充或修正。验收标准只检查业务流程（L3）最终环节或跨部门交接前的最后环节；跟踪类任务优先由系统待办提醒、到期预警和进度展示承载。</div>
       </section>
       <section class="summary-grid">
-        <div class="panel"><h3>能力域（L1-A1）规模（业务行为（A1）数）</h3><div class="bar-list" id="domainBars"></div></div>
+        <div class="panel"><h3>能力域（层级范围 L1-A1）规模（业务行为（A1）数）</h3><div class="bar-list" id="domainBars"></div></div>
         <div class="panel"><h3>系统承载分布（A1参与次数）</h3><div class="bar-list" id="systemBars"></div></div>
       </section>
       <section class="table-wrap">
@@ -891,18 +891,31 @@ var a1Rows = [
         return raw;
       }
 
+      function l3CodeFromText(value) {
+        var m = String(value || "").match(/L3[-_ ]?(\d+)/i);
+        return m ? "L3-" + String(m[1]).padStart(2, "0") : "";
+      }
+
       function processCode(rowOrProc) {
         var raw = rowOrProc && typeof rowOrProc === "object" && !Array.isArray(rowOrProc)
           ? String(rowOrProc.code || rowOrProc.id || rowOrProc.process || rowOrProc.proc || "")
           : String(rowOrProc || "");
         var name = processName(rowOrProc);
-        var m = raw.match(/L3[-_ ]?(\d+)/i) || String(name || "").match(/L3[-_ ]?(\d+)/i);
-        if (m) return "L3-" + String(m[1]).padStart(2, "0");
-        var rows = typeof filteredL3 === "function" ? filteredL3() : (typeof l3Rows !== "undefined" ? l3Rows : []);
-        var idx = rows.findIndex(function(row) { return processName(row) === name; });
-        if (idx < 0 && typeof l3Rows !== "undefined") {
-          idx = l3Rows.findIndex(function(row) { return processName(row) === name; });
+        var directCode = l3CodeFromText(raw) || l3CodeFromText(name);
+        if (directCode) return directCode;
+
+        if (typeof a1Rows !== "undefined") {
+          for (var i = 0; i < a1Rows.length; i++) {
+            if (String(a1Rows[i][14] || "") === name || String(a1Rows[i][11] || "") === name) {
+              var fromA1 = l3CodeFromText(a1Rows[i][0]);
+              if (fromA1) return fromA1;
+            }
+          }
         }
+
+        var idx = typeof l3Rows !== "undefined"
+          ? l3Rows.findIndex(function(row) { return processName(row) === name; })
+          : -1;
         return idx >= 0 ? "L3-" + String(idx + 1).padStart(2, "0") : "L3";
       }
 
@@ -912,13 +925,19 @@ var a1Rows = [
       }
 
       function isProcessNode(name) {
-        return typeof l3Rows !== "undefined" && l3Rows.some(function(row) {
-          return processName(row) === String(name || "");
-        });
+        var text = String(name || "");
+        if (typeof l3Rows !== "undefined" && l3Rows.some(function(row) {
+          return processName(row) === text;
+        })) return true;
+        if (typeof a1Rows !== "undefined" && a1Rows.some(function(row) {
+          if (String(row[14] || "") === text || String(row[11] || "") === text) return true;
+          return typeof l3NameMap !== "undefined" && l3NameMap && String(l3NameMap[row[11]] || "") === text;
+        })) return true;
+        return false;
       }
 
       function modeDisplayLabel(name) {
-        return name === "全域总览" ? "全域总览（L1-L3）" : name + "（L1-A1）";
+        return name === "全域总览" ? "全域总览（层级范围 L1-L3）" : name + "（层级范围 L1-A1）";
       }
 
       function evidenceLegendHtml() {
@@ -1045,8 +1064,8 @@ var a1Rows = [
 
         document.getElementById("chartTitle").textContent = isGlobal ? "质量管理部全域总览" : active;
         document.getElementById("chartSub").textContent = isGlobal
-          ? "部门（D1）→ 能力域（L1-L3）→ 业务能力（L2）→ 应用系统（S1）"
-          : "能力域（L1-A1）：业务能力（L2）→ 业务流程（L3）→ 业务行为（A1）→ 应用系统（S1）";
+          ? "部门（D1）→ 能力域（层级范围 L1-L3）→ 业务能力（L2）→ 应用系统（S1）"
+          : "能力域（层级范围 L1-A1）：业务能力（L2）→ 业务流程（L3）→ 业务行为（A1）→ 应用系统（S1）";
 
         if (!chart) { chart = echarts.init(document.getElementById("chart")); }
 
@@ -1161,7 +1180,7 @@ var a1Rows = [
       // ===== 控件 =====
       function renderControls() {
         var bar = document.getElementById("modebar");
-        bar.innerHTML = '<span class="mode-label">视图（能力域 L1-L3 / L1-A1）</span>';
+        bar.innerHTML = '<span class="mode-label">视图（层级范围 L1-L3 / L1-A1）</span>';
         ["全域总览"].concat(domains).forEach(function(name) {
           var btn = document.createElement("button");
           btn.className = "mode-btn" + (name === active ? " active" : "");

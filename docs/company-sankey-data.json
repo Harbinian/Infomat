@@ -3001,7 +3001,7 @@
       "name": "监控物料消耗，按工艺单控制领料并管理退补料"
     },
     {
-      "name": "监控人工工时执行与工时调整审批"
+      "name": "登记工时调整审批链并核验财务是否参与"
     },
     {
       "name": "监控折旧费用分配：按产能对比实际单位时间产出与标准产能"
@@ -3016,7 +3016,7 @@
       "name": "按生产订单归集直接材料成本"
     },
     {
-      "name": "接收行政人事部提供的人员工时与工资数据"
+      "name": "接收行政人事部工资总额及明细费用"
     },
     {
       "name": "调整设备调拨引起的折旧归属"
@@ -3047,6 +3047,15 @@
     },
     {
       "name": "结转销售成本并处理销售退换货账务"
+    },
+    {
+      "name": "处理原材料等盈亏账务（盘盈盘亏）"
+    },
+    {
+      "name": "处理废品损失账务"
+    },
+    {
+      "name": "归档成本核算报表及处理记录"
     },
     {
       "name": "计算收入利润率、成本费用利润率等关键指标"
@@ -13579,11 +13588,11 @@
     },
     {
       "source": "生产成本事中控制",
-      "target": "监控人工工时执行与工时调整审批",
+      "target": "登记工时调整审批链并核验财务是否参与",
       "value": 1
     },
     {
-      "source": "监控人工工时执行与工时调整审批",
+      "source": "登记工时调整审批链并核验财务是否参与",
       "target": "OA",
       "value": 1
     },
@@ -13634,11 +13643,11 @@
     },
     {
       "source": "产品成本核算基础管理",
-      "target": "接收行政人事部提供的人员工时与工资数据",
+      "target": "接收行政人事部工资总额及明细费用",
       "value": 1
     },
     {
-      "source": "接收行政人事部提供的人员工时与工资数据",
+      "source": "接收行政人事部工资总额及明细费用",
       "target": "ERP",
       "value": 1
     },
@@ -13739,6 +13748,36 @@
     },
     {
       "source": "结转销售成本并处理销售退换货账务",
+      "target": "ERP",
+      "value": 1
+    },
+    {
+      "source": "月度产品成本核算与成本结转",
+      "target": "处理原材料等盈亏账务（盘盈盘亏）",
+      "value": 1
+    },
+    {
+      "source": "处理原材料等盈亏账务（盘盈盘亏）",
+      "target": "ERP",
+      "value": 1
+    },
+    {
+      "source": "月度产品成本核算与成本结转",
+      "target": "处理废品损失账务",
+      "value": 1
+    },
+    {
+      "source": "处理废品损失账务",
+      "target": "ERP",
+      "value": 1
+    },
+    {
+      "source": "月度产品成本核算与成本结转",
+      "target": "归档成本核算报表及处理记录",
+      "value": 1
+    },
+    {
+      "source": "归档成本核算报表及处理记录",
       "target": "ERP",
       "value": 1
     },
@@ -21771,8 +21810,8 @@
   ],
   "stats": {
     "mappings": 252,
-    "a1": 1331,
-    "a1Matched": 1331,
+    "a1": 1334,
+    "a1Matched": 1334,
     "a1Unmatched": 0,
     "departmentsWithData": 8,
     "departmentsEmpty": 1
@@ -21785,9 +21824,9 @@
         "assetType": "mapping_markdown",
         "fileNo": "流程映射文档",
         "revision": "?",
-        "size": 83706,
-        "mtime": "2026-06-12T03:38:06.177Z",
-        "sha256": "ee86d32bd2ba460de63bf41c340c43ec063172ae42f736540f8039882b634933",
+        "size": 88081,
+        "mtime": "2026-06-12T09:30:53.287Z",
+        "sha256": "9a410b09708c08a3d01ecb198394b422225e5453353d770c8487ffe7ff429468",
         "status": "纳入",
         "reason": "部门 DCM/BBM 结构化映射真源"
       },
@@ -55558,6 +55597,39 @@
       "evidenceType": "原文明确-正文",
       "sourceFile": "docs/norms/财务部部门-能力-流程-系统映射关系.md",
       "citation": "GLTX-CW-01-A §5.4.3(6)、§5.4.4(4)",
+      "note": "业务行为（A1）映射制度依据"
+    },
+    {
+      "refType": "A1",
+      "dept": "财务部",
+      "l3Name": "月度产品成本核算与成本结转",
+      "a1Code": "CW-L3-04-A08",
+      "masterDataObject": "",
+      "evidenceType": "原文明确-正文",
+      "sourceFile": "docs/norms/财务部部门-能力-流程-系统映射关系.md",
+      "citation": "GLTX-CW-01-A §5.4.4(6)",
+      "note": "业务行为（A1）映射制度依据"
+    },
+    {
+      "refType": "A1",
+      "dept": "财务部",
+      "l3Name": "月度产品成本核算与成本结转",
+      "a1Code": "CW-L3-04-A09",
+      "masterDataObject": "",
+      "evidenceType": "原文明确-正文",
+      "sourceFile": "docs/norms/财务部部门-能力-流程-系统映射关系.md",
+      "citation": "GLTX-CW-01-A §5.4.4(6)",
+      "note": "业务行为（A1）映射制度依据"
+    },
+    {
+      "refType": "A1",
+      "dept": "财务部",
+      "l3Name": "月度产品成本核算与成本结转",
+      "a1Code": "CW-L3-04-A10",
+      "masterDataObject": "",
+      "evidenceType": "原文明确-正文",
+      "sourceFile": "docs/norms/财务部部门-能力-流程-系统映射关系.md",
+      "citation": "GLTX-CW-01-A §8",
       "note": "业务行为（A1）映射制度依据"
     },
     {
