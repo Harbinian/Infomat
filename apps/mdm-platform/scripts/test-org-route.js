@@ -107,6 +107,13 @@ async function main() {
 
     await waitForServer();
 
+    const anonymousSession = await request('/api/org/session');
+    assert.strictEqual(anonymousSession.res.status, 200);
+    assert.deepStrictEqual(anonymousSession.body, { authenticated: false });
+
+    const anonymousMe = await request('/api/org/me');
+    assert.strictEqual(anonymousMe.res.status, 401);
+
     const protectedRes = await request('/api/org/departments');
     assert.strictEqual(protectedRes.res.status, 401);
 
@@ -150,18 +157,19 @@ async function main() {
         employee_no: 'U001',
         department_id: dept.body.id,
         post: '专员',
-        role: 'submitter',
-        password: 'pass1234'
+        role: 'submitter'
       })
     }, cookie);
     assert.strictEqual(user.res.status, 200);
     assert.ok(user.body.id);
+    assert.strictEqual(user.body.initial_password, '000000');
 
     const roles = await request('/api/roles', {}, cookie);
     assert.strictEqual(roles.res.status, 200);
     const roleIdByCode = new Map(roles.body.map(row => [row.role_code, row.role_id]));
     assert.ok(roleIdByCode.has('owner'), 'owner role should exist');
     assert.ok(roleIdByCode.has('reviewer'), 'reviewer role should exist');
+    assert.ok(roleIdByCode.has('workgroup_lead'), 'workgroup_lead project role should exist');
     assert.ok(roleIdByCode.has('business_contact'), 'business_contact project role should exist');
     assert.ok(roleIdByCode.has('data_quality'), 'data_quality project role should exist');
 

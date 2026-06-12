@@ -179,6 +179,11 @@
       border-radius: 4px; font-size: 12px; font-weight: 500;
       background: var(--surface); color: var(--text-muted); border: 1px solid var(--border);
     }
+    .pg-source-status-cell { width: 58px; white-space: nowrap; }
+    .pg-source-status {
+      height: 20px; min-width: 42px; justify-content: center; padding: 0 5px;
+      line-height: 20px; white-space: nowrap;
+    }
     .tag.green { color: var(--success); border-color: #a7f3d0; background: #ecfdf5; }
     .tag.amber { color: var(--warning); border-color: #fde68a; background: #fffbeb; }
     .tag.red { color: var(--error); border-color: #fecaca; background: #fef2f2; }
@@ -337,6 +342,24 @@
     .pg-section-hd { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
     .pg-section-hd h2 { margin-bottom: 0; }
     .pg-status { white-space: nowrap; }
+    .pg-filterbar {
+      display: grid; grid-template-columns: minmax(220px, 1fr) repeat(3, minmax(120px, 160px));
+      gap: 10px; margin: 0 0 12px;
+    }
+    .pg-filterbar input, .pg-filterbar select { height: 34px; background: var(--surface-2); }
+    .pg-mdm-guide {
+      display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+      margin: 0 0 12px; padding: 10px 12px;
+      background: #fffaf5; border: 1px solid #eadfd4; border-left: 4px solid var(--sage);
+      border-radius: 8px;
+    }
+    .pg-mdm-step {
+      min-height: 26px; display: inline-flex; align-items: center;
+      padding: 0 10px; border: 1px solid #dfd2c4; border-radius: 6px;
+      background: #ffffff; color: var(--text-main); font-size: 12px; font-weight: 700;
+    }
+    .pg-mdm-arrow { color: var(--text-muted); font-size: 13px; }
+    .pg-mdm-note { color: var(--text-muted); font-size: 12px; margin-left: 4px; }
     .pg-scope {
       display: flex; align-items: flex-start; gap: 12px; flex-wrap: wrap;
       margin: 12px 0 16px; padding: 12px 14px;
@@ -673,6 +696,10 @@
                 <p>数据质量员发现同一字段存在不同黄金源候选时，先查看字段台账和消费系统，再发起冲突协调。</p>
               </div>
               <div class="wb-guide-card">
+                <h4>工作组组长</h4>
+                <p>工作组组长看到本工作组有跨部门衔接风险时，先进入流程治理详情，确认输入来源、输出目标和本组责任人。</p>
+              </div>
+              <div class="wb-guide-card">
                 <h4>项目组长</h4>
                 <p>项目组长看到本部门有跨部门衔接风险时，先进入流程治理详情，确认输入来源和输出目标是否缺接收流程。</p>
               </div>
@@ -715,6 +742,7 @@
             <ul>
               <li><strong>典型样例：</strong>业务对接人收到字段确认待办后，先打开 A1 业务行为，确认字段是否确实在该流程中产生或消费。</li>
               <li><strong>典型样例：</strong>数据质量员发现同一字段存在不同黄金源候选时，先查看字段台账和消费系统，再发起冲突协调。</li>
+              <li><strong>典型样例：</strong>工作组组长看到本工作组有跨部门衔接风险时，先进入流程治理详情，确认输入来源、输出目标和本组责任人。</li>
               <li><strong>典型样例：</strong>项目组长看到本部门有跨部门衔接风险时，先进入流程治理详情，确认输入来源和输出目标是否缺接收流程。</li>
             </ul>
             <div class="role-guide-flow">进入角色工作台后，左侧“我现在该做什么”会给出 1 到 3 个下一步动作。</div>
@@ -887,6 +915,21 @@
         </div>
         <div class="pg-section" id="pgSourceCoverageSection">
           <div class="pg-section-hd"><h2>源文件覆盖</h2><span class="pg-status" id="pgSourceCoverageMeta"></span></div>
+          <div class="pg-filterbar" id="pgSourceCoverageFilters">
+            <input id="pgSourceCoverageSearch" placeholder="搜索文件号、来源文件、处理理由">
+            <select id="pgSourceCoverageStatusFilter">
+              <option value="">全部状态</option>
+              <option value="纳入">纳入</option>
+              <option value="排除">排除</option>
+              <option value="待复核">待复核</option>
+            </select>
+            <select id="pgSourceCoverageDeptFilter">
+              <option value="">全部部门</option>
+            </select>
+            <select id="pgSourceCoverageTypeFilter">
+              <option value="">全部资产类型</option>
+            </select>
+          </div>
           <div class="table-container">
             <table>
               <thead><tr><th>状态</th><th>部门</th><th>资产类型</th><th>文件号</th><th>版次</th><th>来源文件</th><th>处理理由</th></tr></thead>
@@ -896,6 +939,16 @@
         </div>
         <div class="pg-section" id="pgMdmRequirementsSection">
           <div class="pg-section-hd"><h2>主数据对象候选</h2><span class="pg-status" id="pgMdmRequirementMeta"></span></div>
+          <div class="pg-mdm-guide" aria-label="主数据对象候选沉淀路径">
+            <span class="pg-mdm-step">候选对象</span>
+            <span class="pg-mdm-arrow">→</span>
+            <span class="pg-mdm-step">关键字段</span>
+            <span class="pg-mdm-arrow">→</span>
+            <span class="pg-mdm-step">证据引用</span>
+            <span class="pg-mdm-arrow">→</span>
+            <span class="pg-mdm-step">治理要求</span>
+            <span class="pg-mdm-note">从底部候选回看证据链，再收敛进入主数据治理。</span>
+          </div>
           <div class="table-container">
             <table>
               <thead><tr><th>部门</th><th>来源 L2</th><th>主数据对象</th><th>关键字段</th><th>责任部门</th><th>边界说明</th><th>治理要求</th></tr></thead>
@@ -1198,7 +1251,8 @@
 
   <script>
     // ===== State & Utilities =====
-    const state = { user:null, departments:[], capabilities:[], processes:[], termProcesses:[], termTypes:[], mappings:[], todos:[], conflicts:[], terms:[], currentRoute:null, currentView:'roleWorkbench', activeMapping:null, activeConflict:null, pollTimer:null, isEditing:false, activeReview:null, activeCapReview:null, activeProcReview:null, pgSelectedDept:'', pgEvidenceFocus:null, pageWorkflow:null, pageWorkflowRequestId:0, roleWorkbench:{ mode:'todo', data:null, selectedNode:null } };
+    const state = { user:null, departments:[], capabilities:[], processes:[], termProcesses:[], termTypes:[], mappings:[], todos:[], conflicts:[], terms:[], currentRoute:null, currentView:'roleWorkbench', activeMapping:null, activeConflict:null, pollTimer:null, isEditing:false, activeReview:null, activeCapReview:null, activeProcReview:null, pgSelectedDept:'', pgEvidenceFocus:null, pgSourceCoverageData:null, pageWorkflow:null, pageWorkflowRequestId:0, roleWorkbench:{ mode:'todo', data:null, selectedNode:null } };
+    const SOURCE_COVERAGE_VISIBLE_LIMIT = 20;
 
     var DEFAULT_TERM_TYPES = [
       { code: 'noun', name: '名词' },
@@ -1232,12 +1286,18 @@
 
     // ===== API helper (with 401 handling) =====
     async function api(path, options = {}) {
-      const res = await fetch(path, { credentials:'same-origin', headers:{ ...(options.body && !(options.body instanceof FormData) ? {'Content-Type':'application/json'} : {}) }, ...options });
+      const requestOptions = { ...options };
+      const silentUnauthorized = !!requestOptions.silentUnauthorized;
+      delete requestOptions.silentUnauthorized;
+      const res = await fetch(path, { credentials:'same-origin', headers:{ ...(requestOptions.body && !(requestOptions.body instanceof FormData) ? {'Content-Type':'application/json'} : {}) }, ...requestOptions });
       const text = await res.text();
       let body = {};
       if (text) { try { body = JSON.parse(text); } catch { body = text; } }
       if (!res.ok) {
-        if (res.status === 401) { state.user = null; showLogin(); showToast('登录已过期，请重新登录', 'error'); stopPolling(); }
+        if (res.status === 401) {
+          showLogin();
+          if (!silentUnauthorized && path !== '/api/org/login') showToast('登录已过期，请重新登录', 'error');
+        }
         throw { status: res.status, message: body.error || 'HTTP ' + res.status, details: body.details };
       }
       return body;
@@ -1284,8 +1344,24 @@
     }
 
     // ===== Show/Hide helpers =====
-    function showLogin() { $('loginBox').style.display = 'flex'; $('appContent').style.display = 'none'; }
-    function showApp() { $('loginBox').style.display = 'none'; $('appContent').style.display = 'block'; }
+    function resetSessionUi() {
+      state.user = null;
+      stopPolling();
+      if ($('sessionUserName')) $('sessionUserName').textContent = '未登录';
+      var passwordChangeBtn = $('passwordChangeBtn');
+      if (passwordChangeBtn) passwordChangeBtn.remove();
+      if ($('logoutBtn')) $('logoutBtn').style.display = 'none';
+    }
+    function showLogin() {
+      resetSessionUi();
+      $('loginBox').style.display = 'flex';
+      $('appContent').style.display = 'none';
+    }
+    function showApp() {
+      $('loginBox').style.display = 'none';
+      $('appContent').style.display = 'block';
+      if ($('logoutBtn')) $('logoutBtn').style.display = '';
+    }
 
     // ===== Navigation & Hash Router =====
     function navigateTo(view, params) {
@@ -1801,8 +1877,12 @@
 
     async function checkSession() {
       try {
-        var user = await api('/api/org/me');
-        await activateAuthenticatedApp(user);
+        var session = await api('/api/org/session', { silentUnauthorized: true });
+        if (session && session.authenticated && session.user) {
+          await activateAuthenticatedApp(session.user);
+          return;
+        }
+        showLogin();
       } catch (e) {
         showLogin();
       }
@@ -2837,24 +2917,89 @@
 
     function pgSourceStatusTag(value) {
       var cls = value === '纳入' ? 'green' : value === '排除' ? 'red' : 'amber';
-      return '<span class="tag ' + cls + '">' + safeText(value || '待复核') + '</span>';
+      return '<span class="tag pg-source-status ' + cls + '">' + safeText(value || '待复核') + '</span>';
     }
 
-    function renderProcessGovernanceSourceCoverage(data, selectedDept) {
+    function getProcessGovernanceSourceCoverageFilters() {
+      return {
+        query: (document.getElementById('pgSourceCoverageSearch') && document.getElementById('pgSourceCoverageSearch').value || '').trim().toLowerCase(),
+        status: document.getElementById('pgSourceCoverageStatusFilter') ? document.getElementById('pgSourceCoverageStatusFilter').value : '',
+        dept: document.getElementById('pgSourceCoverageDeptFilter') ? document.getElementById('pgSourceCoverageDeptFilter').value : '',
+        type: document.getElementById('pgSourceCoverageTypeFilter') ? document.getElementById('pgSourceCoverageTypeFilter').value : ''
+      };
+    }
+
+    function processGovernanceSourceCoverageMatches(row, filters) {
+      filters = filters || {};
+      if (filters.status && row.process_status !== filters.status) return false;
+      if (filters.dept && row.dept_name !== filters.dept) return false;
+      if (filters.type && row.asset_type !== filters.type) return false;
+      if (!filters.query) return true;
+      var haystack = [
+        row.process_status,
+        row.dept_name,
+        row.asset_type,
+        row.file_no,
+        row.revision,
+        row.file_path,
+        row.process_reason
+      ].map(function(value) { return String(value || '').toLowerCase(); }).join(' ');
+      return haystack.indexOf(filters.query) !== -1;
+    }
+
+    function processGovernanceSourceCoverageValues(items, key) {
+      var values = new Set();
+      (items || []).forEach(function(item) {
+        if (item[key]) values.add(item[key]);
+      });
+      return Array.from(values).sort(function(a, b) { return String(a).localeCompare(String(b), 'zh-CN'); });
+    }
+
+    function setProcessGovernanceSourceFilterOptions(id, label, values) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      var current = el.value || '';
+      el.innerHTML = '<option value="">' + safeText(label) + '</option>' + values.map(function(value) {
+        return '<option value="' + safeText(value) + '">' + safeText(value) + '</option>';
+      }).join('');
+      el.value = values.indexOf(current) >= 0 ? current : '';
+    }
+
+    function populateProcessGovernanceSourceCoverageFilters(items) {
+      setProcessGovernanceSourceFilterOptions('pgSourceCoverageDeptFilter', '全部部门', processGovernanceSourceCoverageValues(items, 'dept_name'));
+      setProcessGovernanceSourceFilterOptions('pgSourceCoverageTypeFilter', '全部资产类型', processGovernanceSourceCoverageValues(items, 'asset_type'));
+    }
+
+    function rerenderProcessGovernanceSourceCoverage() {
+      renderProcessGovernanceSourceCoverage(state.pgSourceCoverageData || { items: [], summary: {} }, state.pgSelectedDept, { refreshFilters: false });
+    }
+
+    function renderProcessGovernanceSourceCoverage(data, selectedDept, options) {
+      options = options || {};
       var rowsEl = document.getElementById('pgSourceCoverageRows');
       if (!rowsEl) return;
       var items = data.items || [];
       var summary = data.summary || {};
       var byStatus = summary.byStatus || {};
+      if (options.refreshFilters !== false) populateProcessGovernanceSourceCoverageFilters(items);
+      var filters = getProcessGovernanceSourceCoverageFilters();
+      var filteredItems = items.filter(function(row) {
+        return processGovernanceSourceCoverageMatches(row, filters);
+      });
+      var visibleItems = filteredItems.slice(0, SOURCE_COVERAGE_VISIBLE_LIMIT);
+      var sourceCoverageMeta = visibleItems.length < filteredItems.length
+        ? '展示前 ' + visibleItems.length + ' 条覆盖记录，可用筛选定位具体文件；'
+        : '展示 ' + visibleItems.length + ' 条覆盖记录；';
       document.getElementById('pgMetricSourceIncluded').textContent = byStatus['纳入'] || 0;
       document.getElementById('pgMetricSourceReview').textContent = byStatus['待复核'] || 0;
       document.getElementById('pgSourceCoverageMeta').textContent = (selectedDept ? selectedDept + ' · ' : '') +
+        sourceCoverageMeta +
         '纳入 ' + (byStatus['纳入'] || 0) + '，排除 ' + (byStatus['排除'] || 0) + '，待复核 ' + (byStatus['待复核'] || 0);
 
-      rowsEl.innerHTML = items.length
-        ? items.slice(0, 120).map(function(row) {
+      rowsEl.innerHTML = visibleItems.length
+        ? visibleItems.map(function(row) {
             return '<tr>' +
-              '<td>' + pgSourceStatusTag(row.process_status) + '</td>' +
+              '<td class="pg-source-status-cell">' + pgSourceStatusTag(row.process_status) + '</td>' +
               '<td>' + safeText(row.dept_name || '未归属') + '</td>' +
               '<td>' + safeText(row.asset_type || '') + '</td>' +
               '<td>' + safeText(row.file_no || '') + '</td>' +
@@ -3032,6 +3177,7 @@
         if (state.pgSelectedDept) mappingTodoParams.set('dept', state.pgSelectedDept);
         var mappingTodoQuery = mappingTodoParams.toString() ? '?' + mappingTodoParams.toString() : '';
         var sourceParams = new URLSearchParams();
+        sourceParams.set('limit', SOURCE_COVERAGE_VISIBLE_LIMIT);
         if (state.pgSelectedDept) sourceParams.set('dept', state.pgSelectedDept);
         var sourceQuery = sourceParams.toString() ? '?' + sourceParams.toString() : '';
         var mdmRequirementParams = new URLSearchParams();
@@ -3066,6 +3212,7 @@
         var sourceFiles = results[8];
         var mdmRequirements = results[9];
         var evidence = results[10];
+        state.pgSourceCoverageData = sourceFiles;
         var stats = sankey.stats || {};
         var departments = getProcessGovernanceDepartments(sankey);
         var a1Items = a1.items || [];
@@ -3702,6 +3849,18 @@
     }
     if (document.getElementById('pgMappingTodoStatusFilter')) {
       document.getElementById('pgMappingTodoStatusFilter').onchange = renderProcessGovernance;
+    }
+    if (document.getElementById('pgSourceCoverageSearch')) {
+      document.getElementById('pgSourceCoverageSearch').oninput = rerenderProcessGovernanceSourceCoverage;
+    }
+    if (document.getElementById('pgSourceCoverageStatusFilter')) {
+      document.getElementById('pgSourceCoverageStatusFilter').onchange = rerenderProcessGovernanceSourceCoverage;
+    }
+    if (document.getElementById('pgSourceCoverageDeptFilter')) {
+      document.getElementById('pgSourceCoverageDeptFilter').onchange = rerenderProcessGovernanceSourceCoverage;
+    }
+    if (document.getElementById('pgSourceCoverageTypeFilter')) {
+      document.getElementById('pgSourceCoverageTypeFilter').onchange = rerenderProcessGovernanceSourceCoverage;
     }
     if (document.getElementById('pgDeptFilters')) {
       document.getElementById('pgDeptFilters').addEventListener('click', function(event) {
@@ -4607,7 +4766,7 @@
 
     async function renderUserManagement() {
       var panel = document.getElementById('rbacPanel');
-      panel.innerHTML = '<div id="rbacUserManagement"><div class="user-management-head"><div><h3>用户管理</h3><p>账号入库、角色分配和初始密码维护。</p></div></div><div class="empty">加载中...</div></div>';
+      panel.innerHTML = '<div id="rbacUserManagement"><div class="user-management-head"><div><h3>用户管理</h3><p>账号入库、角色分配和首次登录密码维护。</p></div></div><div class="empty">加载中...</div></div>';
       try {
         await loadUserManagementSources();
         userManagementEditingId = null;
@@ -4627,7 +4786,7 @@
       panel.innerHTML =
         '<div id="rbacUserManagement">' +
           '<div class="user-management-head">' +
-            '<div><h3>用户管理</h3><p>账号入库、角色分配和一次性初始密码维护。新增或重置后，用户首次登录需修改密码。</p></div>' +
+            '<div><h3>用户管理</h3><p>账号入库和角色分配。新增或重置后，用户首次登录密码统一为 000000，登录后必须修改。</p></div>' +
             '<button class="btn primary" onclick="showUserEditor(\'new\')">新增账号</button>' +
           '</div>' +
           '<div class="user-management-filters">' +
@@ -4714,7 +4873,7 @@
 
       document.getElementById('userManagementEditor').innerHTML =
         '<div class="user-management-form">' +
-          '<div><h3>' + (user ? '编辑账号' : '账号入库') + '</h3><p class="notice">新增账号时由服务端生成一次性初始密码，用户首次登录后会被提示修改。</p></div>' +
+          '<div><h3>' + (user ? '编辑账号' : '账号入库') + '</h3><p class="notice">新增账号首次登录密码统一为 000000，用户登录后会被强制修改。</p></div>' +
           '<div class="user-management-grid">' +
             '<label>工号<input id="userEditorEmployeeNo" value="' + safeText(user && user.employee_no, '') + '" ' + (user ? 'disabled' : '') + '></label>' +
             '<label>姓名<input id="userEditorName" value="' + safeText(user && user.name, '') + '"></label>' +
@@ -4771,7 +4930,7 @@
           body: JSON.stringify(payload)
         });
         if (!userManagementEditingId && result && result.initial_password) {
-          showToast('账号已入库，一次性初始密码：' + result.initial_password);
+          showToast('账号已入库，首次登录密码：' + result.initial_password);
         } else {
           showToast(userManagementEditingId ? '账号已保存' : '账号已入库');
         }
@@ -4787,7 +4946,7 @@
       var user = userManagementData.find(function(row) { return Number(row.id) === Number(userId); });
       var confirmed = await showConfirm({
         title: '重置密码',
-        message: '将为 ' + (user ? user.name : '该用户') + ' 生成一次性初始密码，并要求首次登录后修改。',
+        message: '将把 ' + (user ? user.name : '该用户') + ' 的首次登录密码重置为 000000，并要求登录后修改。',
         confirmLabel: '重置',
         confirmClass: 'danger'
       });
@@ -4797,7 +4956,7 @@
           method: 'POST',
           body: JSON.stringify({})
         });
-        showToast(result && result.initial_password ? '一次性初始密码：' + result.initial_password : '密码已重置');
+        showToast(result && result.initial_password ? '首次登录密码：' + result.initial_password : '密码已重置');
       } catch (error) {
         showToast(error.message || '密码重置失败', 'error');
       }

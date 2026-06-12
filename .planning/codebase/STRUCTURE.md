@@ -1,5 +1,9 @@
 # 结构扫描
 
+> 状态：历史扫描快照，不是当前仓库架构入口
+> 适用范围：仅用于追溯早期 `index.html` / `bizmapper.py` 轻量工具形态
+> 当前口径：如与 `REPOSITORY_BOUNDARY.md`、`DIRECTORY_OWNERSHIP.md` 或 `MAINLINE_MAP.md` 冲突，以根目录执行规则为准
+
 ## 仓库结构
 
 ```text
@@ -36,7 +40,7 @@ E:\CA001\Infomat
 - `CONTEXT.md`
   - 域语言与仓库规范术语
 - `README.md`
-  - 仓库入口与目录职责（唯一真源）
+  - 历史扫描时的仓库入口描述；当前以根目录三份边界文件为准
 - `docs/adr/`
   - 结构与规范的架构决策记录（ADR）
 

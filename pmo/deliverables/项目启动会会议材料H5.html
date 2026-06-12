@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>项目启动会会议材料</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#0b1f4a;--blue:#1f5fbf;--cyan:#0e9ab8;--green:#21835b;
+  --gold:#b88322;--red:#b83a3a;--ink:#172033;--muted:#5a6678;
+  --bg:#f5f7fb;--card:#fff;--line:#dbe3ef;--soft:#eef4ff;
+}
+html{scroll-behavior:smooth;scroll-padding-top:64px}
+body{font-family:"Microsoft YaHei","PingFang SC","Source Han Sans SC",Arial,sans-serif;background:var(--bg);color:var(--ink);line-height:1.72;font-size:16px;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+nav{position:fixed;z-index:50;inset:0 0 auto 0;min-height:58px;background:rgba(11,31,74,.97);color:#fff;display:flex;align-items:center;justify-content:space-between;gap:18px;padding:9px clamp(16px,3vw,36px);box-shadow:0 6px 22px rgba(11,31,74,.18)}
+.brand{font-weight:900;font-size:14px;white-space:nowrap}
+.navlinks{display:flex;gap:5px;overflow-x:auto;scrollbar-width:none}
+.navlinks::-webkit-scrollbar{display:none}
+.navlinks a{font-size:13px;color:rgba(255,255,255,.76);padding:6px 11px;border-radius:7px;white-space:nowrap}
+.navlinks a:hover{background:rgba(255,255,255,.13);color:#fff}
+.cover{min-height:100vh;background:linear-gradient(135deg,#061735 0%,#113a82 52%,#0f7b96 100%);display:grid;grid-template-columns:minmax(0,1.28fr) minmax(300px,.72fr);gap:38px;align-items:center;padding:92px clamp(22px,7vw,98px) 54px;color:#fff;position:relative;overflow:hidden}
+.cover:before{content:"";position:absolute;inset:auto 0 0 0;height:18px;background:linear-gradient(90deg,var(--cyan),var(--gold),var(--green))}
+.kicker{display:inline-flex;width:fit-content;border:1px solid rgba(255,255,255,.28);background:rgba(255,255,255,.1);border-radius:7px;padding:6px 13px;color:#cfe7ff;font-size:13px;font-weight:800;margin-bottom:18px}
+h1{font-size:clamp(36px,5vw,62px);line-height:1.14;letter-spacing:0;margin-bottom:16px}
+.lead{max-width:780px;color:rgba(255,255,255,.82);font-size:clamp(17px,1.45vw,21px);margin-bottom:24px}
+.cover-line{max-width:800px;border-left:4px solid #64d4ed;background:rgba(255,255,255,.1);border-radius:8px;padding:15px 18px;font-size:16px;color:#eef8ff}
+.chips{display:flex;flex-wrap:wrap;gap:10px;margin:26px 0}
+.chip{border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.11);border-radius:8px;padding:11px 13px;min-width:128px}
+.chip small{display:block;color:rgba(255,255,255,.6);font-size:11px;margin-bottom:2px}
+.chip b{display:block;font-size:16px}
+.hero-card{border:1px solid rgba(255,255,255,.2);background:rgba(4,16,42,.5);border-radius:8px;padding:18px;box-shadow:0 24px 70px rgba(0,0,0,.22)}
+.diagram-title{font-size:18px;font-weight:900;margin-bottom:14px;color:#fff}
+.cover-flow{display:grid;gap:9px;margin-bottom:13px}
+.flow-node{position:relative;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);border-radius:7px;padding:11px 12px}
+.flow-node:not(:last-child):after{content:"";position:absolute;left:18px;bottom:-10px;width:2px;height:10px;background:#64d4ed}
+.flow-node b{display:block;color:#fff;font-size:16px;margin-bottom:3px}
+.flow-node span{display:block;color:#bfefff;font-size:14px}
+.cover-entries{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+.entry{border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.08);border-radius:7px;padding:10px 8px;text-align:center}
+.entry b{display:block;color:#fff;font-size:14px;margin-bottom:4px}
+.entry span{display:block;color:#9be4f7;font-size:12px}
+.page{padding:74px clamp(18px,4vw,72px) 52px}
+.sec{min-height:calc(100vh - 64px);display:flex;flex-direction:column;justify-content:center;margin-bottom:58px;scroll-margin-top:64px}
+.sec-head{display:flex;align-items:flex-start;gap:13px;margin-bottom:22px}
+.num{width:40px;height:40px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;flex:none}
+h2{font-size:clamp(26px,2.75vw,38px);line-height:1.25;color:var(--navy);letter-spacing:0;margin-bottom:4px}
+.sub{font-size:15px;color:var(--muted)}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:18px 20px;box-shadow:0 2px 8px rgba(16,33,71,.04);min-width:0}
+.card h3{font-size:17px;color:var(--navy);margin-bottom:8px}
+.card p,.card li{font-size:15px;color:var(--muted)}
+.card ul{padding-left:18px}
+.note{border:1px solid #bed0ef;border-left:4px solid var(--blue);background:#eef5ff;border-radius:8px;padding:15px 18px;margin-bottom:14px;color:#1b4388}
+.note strong{display:block;color:#173f81;margin-bottom:5px}
+.warn{border-color:#f0d8a6;border-left-color:var(--gold);background:#fff8ea;color:#704b0b}
+.warn strong{color:#7a510b}
+.ok{border-color:#b9dfca;border-left-color:var(--green);background:#effaf4;color:#1d5a3f}
+.ok strong{color:#1d6b4a}
+.danger{border-color:#e7bbbb;border-left-color:var(--red);background:#fff1f1;color:#873030}
+.danger strong{color:#963333}
+.tagrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.tag{display:inline-flex;border-radius:7px;background:#edf3ff;color:#214d96;font-size:12px;font-weight:900;padding:5px 10px}
+.statement{font-size:20px;line-height:1.75;color:#263346;background:#fff;border:1px solid var(--line);border-radius:8px;padding:24px 26px;margin-bottom:14px}
+.plain-list{display:grid;gap:10px}
+.plain-list li{list-style:none;background:#fff;border:1px solid var(--line);border-left:4px solid var(--cyan);border-radius:8px;padding:12px 14px;color:var(--muted)}
+.plain-list li:nth-child(2){border-left-color:var(--green)}
+.plain-list li:nth-child(3){border-left-color:var(--gold)}
+.plain-list li:nth-child(4){border-left-color:var(--blue)}
+.plain-list li:nth-child(5){border-left-color:var(--red)}
+.plain-list li:nth-child(6){border-left-color:#7b61c8}
+.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:14px}
+.metric{background:#fff;border:1px solid var(--line);border-radius:8px;padding:15px 16px;border-top:4px solid var(--blue)}
+.metric:nth-child(2){border-top-color:var(--cyan)}
+.metric:nth-child(3){border-top-color:var(--green)}
+.metric:nth-child(4){border-top-color:var(--gold)}
+.metric b{display:block;color:var(--navy);font-size:28px;line-height:1.1}
+.metric span{display:block;color:var(--muted);font-size:14px;margin-top:5px}
+.toolgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.tool{background:#fff;border:1px solid var(--line);border-radius:8px;overflow:hidden;box-shadow:0 8px 26px rgba(16,33,71,.06);min-width:0}
+.tool-title{display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid var(--line);padding:15px 17px}
+.tool-title h3{font-size:19px;color:var(--navy)}
+.badge{font-size:12px;color:#fff;background:var(--blue);border-radius:7px;padding:4px 9px;font-weight:900;white-space:nowrap}
+.badge.cyan{background:var(--cyan)}.badge.green{background:var(--green)}
+.screen{height:220px;background:#101a32;padding:12px}
+.gantt,.board,.mdm{height:100%;border-radius:7px;overflow:hidden;background:#f8fafc;border:1px solid rgba(255,255,255,.18)}
+.gantt{display:grid;grid-template-columns:38% 62%}
+.tree{background:#fff;border-right:1px solid #dbe3ef;padding:11px}
+.tree i{display:block;height:10px;border-radius:6px;background:#dbeafe;margin:9px 0}
+.tree i:nth-child(2n){width:78%;background:#d8f3f7}.tree i:nth-child(3n){width:92%;background:#f6e7bd}
+.bars{position:relative;background:linear-gradient(90deg,#e6edf7 0 1px,transparent 1px) 0 0/36px 100%,#f8fafc}
+.bar{position:absolute;left:var(--x);top:var(--y);width:var(--w);height:13px;border-radius:7px;background:var(--c);box-shadow:0 1px 3px rgba(16,33,71,.2)}
+.board{padding:12px}
+.board-top{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:12px}
+.board-kpi{height:42px;background:#fff;border:1px solid #dfe7f2;border-radius:7px;padding:5px}
+.board-kpi b{display:block;color:#0b1f4a;font-size:17px;line-height:1}.board-kpi span{display:block;color:#6d7788;font-size:9px;margin-top:2px}
+.board-row{height:19px;background:#fff;border-left:4px solid var(--blue);border-radius:5px;margin-bottom:7px}
+.board-row:nth-child(2){border-left-color:var(--gold)}.board-row:nth-child(3){border-left-color:var(--red)}.board-row:nth-child(4){border-left-color:#7b61c8}.board-row:nth-child(5){border-left-color:var(--green)}
+.mdm{display:grid;grid-template-columns:34% 1fr;gap:10px;padding:10px}
+.mdm-side,.mdm-main{background:#fff;border:1px solid #dfe7f2;border-radius:7px;padding:9px}
+.mdm-role{height:22px;border-radius:5px;background:#dbeafe;margin-bottom:7px}
+.mdm-role:nth-child(2){background:#d8f3f7}.mdm-role:nth-child(3){background:#f6e7bd}.mdm-role:nth-child(4){background:#e7f5ec}
+.mdm-main{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.mdm-tile{border:1px solid #dfe7f2;border-left:4px solid var(--blue);border-radius:6px;background:#fafcff;padding:7px}
+.mdm-tile:nth-child(2){border-left-color:var(--cyan)}
+.mdm-tile:nth-child(3){border-left-color:var(--gold)}
+.mdm-tile:nth-child(4){border-left-color:var(--green)}
+.mdm-tile b{display:block;color:#0b1f4a;font-size:12px;margin-bottom:5px}
+.mdm-tile i{display:block;height:7px;border-radius:4px;background:#e5edf7;margin-top:5px}
+.tool-body{padding:16px 18px}
+.tool-body p,.tool-body li{font-size:14px;color:var(--muted)}
+.tool-body ul{padding-left:17px;margin-top:8px}
+.panel{background:#fff;border:1px solid var(--line);border-radius:8px;padding:18px 20px}
+.panel h3{font-size:18px;color:var(--navy);margin-bottom:9px}
+.panel p,.panel li{font-size:15px;color:var(--muted)}
+.panel ul{padding-left:18px}
+.process{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-top:14px}
+.step{background:#fff;border:1px solid var(--line);border-radius:8px;padding:14px;text-align:center;min-height:112px}
+.step b{display:inline-flex;width:28px;height:28px;border-radius:50%;background:var(--blue);color:#fff;align-items:center;justify-content:center;margin-bottom:8px}
+.step span{display:block;font-size:14px;color:var(--muted)}
+.tablewrap{background:#fff;border:1px solid var(--line);border-radius:8px;overflow-x:auto;box-shadow:0 2px 8px rgba(16,33,71,.04)}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:820px}
+th{background:var(--navy);color:#fff;text-align:left;padding:12px 14px;white-space:nowrap}
+td{padding:12px 14px;border-bottom:1px solid var(--line);color:var(--muted);vertical-align:top}
+tr:last-child td{border-bottom:0}
+.vote{font-weight:900;color:var(--blue);white-space:nowrap}
+.close{font-size:19px;line-height:1.8;background:var(--navy);color:#edf6ff;border-radius:8px;padding:22px 24px;margin-top:16px}
+footer{padding:16px;text-align:center;background:#fff;border-top:1px solid var(--line);color:#687386;font-size:13px}
+@media(max-width:980px){
+  .cover,.grid2,.grid3,.toolgrid{grid-template-columns:1fr}
+  .grid4,.metrics,.process{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .sec{min-height:auto;padding:30px 0}
+}
+@media(max-width:640px){
+  nav{align-items:flex-start;flex-direction:column;gap:8px;padding:10px 14px}
+  .navlinks{width:100%;padding-bottom:2px}
+  .navlinks a{font-size:12px;padding:5px 8px}
+  .page{padding-top:98px}
+  .cover{padding-top:112px}
+  .grid4,.metrics,.process{grid-template-columns:1fr}
+  .screen{height:186px}
+  .chip{min-width:calc(50% - 5px)}
+  .statement{font-size:17px;padding:18px}
+}
+</style>
+</head>
+<body>
+<nav>
+  <div class="brand">昌兴复材 · 数字化底座项目启动会</div>
+  <div class="navlinks">
+    <a href="#cover">封面</a>
+    <a href="#s1">定位</a>
+    <a href="#s2">背景</a>
+    <a href="#s3">阶段</a>
+    <a href="#s4">治理</a>
+    <a href="#s5">调研</a>
+    <a href="#s6">责任池</a>
+    <a href="#s7">工具</a>
+    <a href="#s8">机制</a>
+    <a href="#s9">事项</a>
+  </div>
+</nav>
+
+<section class="cover" id="cover">
+  <div>
+    <div class="kicker">章节 1 | 封面：数字化底座项目启动会</div>
+    <h1>数字化底座项目启动会</h1>
+    <p class="lead">今天这场会要把项目从准备状态推到执行状态，把启动、治理、调研、责任池和工具试运行讲清楚。</p>
+    <div class="chips">
+      <div class="chip"><small>启动口径</small><b>从今天开始往前走</b></div>
+      <div class="chip"><small>治理抓手</small><b>计划、交付物、阶段门</b></div>
+      <div class="chip"><small>现场重点</small><b>甘特图、PMO 看板、MDM 平台</b></div>
+      <div class="chip"><small>讨论框架</small><b>V-01 至 V-10</b></div>
+    </div>
+    <div class="cover-line">从今天开始，项目按计划、交付物、阶段门和治理台账往前走。</div>
+  </div>
+  <aside class="hero-card" aria-label="项目启动后的推进方式">
+    <div class="diagram-title">启动后怎么往前走</div>
+    <div class="cover-flow">
+      <div class="flow-node"><b>计划真源</b><span>任务、里程碑、阶段门先落到一张计划里</span></div>
+      <div class="flow-node"><b>交付物闭环</b><span>每件事有结果、有状态、有责任边界</span></div>
+      <div class="flow-node"><b>阻塞公开</b><span>长期不反馈和跨部门卡点进入治理台账</span></div>
+      <div class="flow-node"><b>机制推进</b><span>周会、专项会和阶段确认按规则往前走</span></div>
+    </div>
+    <div class="cover-entries">
+      <div class="entry"><b>甘特图</b><span>看计划</span></div>
+      <div class="entry"><b>PMO 看板</b><span>看交付</span></div>
+      <div class="entry"><b>MDM 平台</b><span>看承接</span></div>
+    </div>
+  </aside>
+</section>
+
+<main class="page">
+  <section class="sec" id="s1">
+    <div class="sec-head"><div class="num">2</div><div><h2>会议定位：为什么这次会议是启动会</h2><div class="sub">先把会的性质说清楚，后面才知道怎么推进。</div></div></div>
+    <p class="statement">这不是一次普通说明会。普通说明会讲的是“大家了解一下”；启动会讲的是“后面就照这个机制往前推进”。</p>
+    <div class="grid2">
+      <div class="card">
+        <h3>启动后有什么变化</h3>
+        <ul>
+          <li>任务不再只靠口头催办，要进入计划和台账。</li>
+          <li>部门反馈不再只停在聊天记录里，要形成可追踪记录。</li>
+          <li>流程、数据、责任边界和证据要能被复核。</li>
+          <li>长期不反馈、边界不清、材料不一致的问题，PMO 要能记录事实、说明影响，并推到下一轮处理。</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>当前阶段先看什么</h3>
+        <p>先把流程和数据摸清楚，不急着把所有事情都写成系统功能。流程没讲清，系统页面做得再漂亮也会返工。</p>
+        <div class="tagrow">
+          <span class="tag">流程</span><span class="tag">数据</span><span class="tag">证据</span><span class="tag">责任边界</span>
+        </div>
+      </div>
+    </div>
+    <div class="note ok" style="margin-top:14px"><strong>会议目标</strong>本次会议要形成项目启动口径、PMO 治理口径、调研授权口径、责任池口径、工具承接口径和项目管理机制处理口径。</div>
+  </section>
+
+  <section class="sec" id="s2">
+    <div class="sec-head"><div class="num">3</div><div><h2>项目背景：为什么现在要启动数字化底座项目</h2><div class="sub">背景不用喊口号，要把真正卡住项目的事情说透。</div></div></div>
+    <p class="statement">公司现在的信息化工作已经不是买一个系统、上一批功能那么简单。真正麻烦的地方在流程和数据。</p>
+    <div class="grid3">
+      <div class="card"><h3>流程要说清</h3><p>一件事从哪里开始，经过哪些岗位和部门，最后形成什么结果，不能只靠经验和临时解释。</p></div>
+      <div class="card"><h3>数据要说清</h3><p>一张表从哪个部门来，谁确认，谁接收，后面哪个岗位继续用，都要有明确说法。</p></div>
+      <div class="card"><h3>争议要能升级</h3><p>出了问题谁来判断，怎么留证据，怎么进入下一轮处理，需要一套大家都认的机制。</p></div>
+    </div>
+    <div class="metrics">
+      <div class="metric"><b>434</b><span>434 项任务已经拆到计划里</span></div>
+      <div class="metric"><b>46</b><span>46 个里程碑用于控制关键节点</span></div>
+      <div class="metric"><b>214</b><span>214 项适合重点展示</span></div>
+      <div class="metric"><b>75</b><span>75 项需要作为关键路径控制</span></div>
+    </div>
+    <div class="note warn" style="margin-top:14px"><strong>现场要讲明白</strong>这个量级不能靠临时协调推进，必须有管控节奏。</div>
+  </section>
+
+  <section class="sec" id="s3">
+    <div class="sec-head"><div class="num">4</div><div><h2>当前阶段：流程地图、数据地图和主数据治理准备</h2><div class="sub">现在不是直接进开发，而是先把底层链路沉下来。</div></div></div>
+    <div class="grid2">
+      <div class="card">
+        <h3>这一阶段要做的事</h3>
+        <ul>
+          <li>先看流程：业务动作从哪里开始，经过哪些岗位和部门，最后形成什么结果。</li>
+          <li>再看数据：流程里产生哪些字段、表单、台账和系统痕迹，哪些数据以后可能成为主数据。</li>
+          <li>然后看责任：谁维护，谁确认，谁消费，跨部门交接有没有明确输入和输出。</li>
+          <li>最后看治理：发现历史问题、字段缺口、边界不清，先进责任池，先把事实说清。</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>MDM 平台的位置</h3>
+        <p>MDM 平台是后续承接治理结果的地方，不是替大家编流程的地方。流程和数据要先被业务讲清楚，平台才有东西可承接。</p>
+        <div class="note" style="margin-top:14px;margin-bottom:0"><strong>一句话</strong>当前更重要的是把流程和数据治理链路跑通。</div>
+      </div>
+    </div>
+    <div class="grid4" style="margin-top:14px">
+      <div class="card"><h3>流程地图</h3><p>看清业务动作、岗位协作和跨部门输入输出。</p></div>
+      <div class="card"><h3>数据地图</h3><p>看清字段、表单、台账和系统痕迹的流转关系。</p></div>
+      <div class="card"><h3>字段台账</h3><p>看清字段含义、维护责任、消费场景和冲突点。</p></div>
+      <div class="card"><h3>主数据候选</h3><p>把后续可能沉淀为基础对象的数据先识别出来。</p></div>
+    </div>
+  </section>
+
+  <section class="sec" id="s4">
+    <div class="sec-head"><div class="num">5</div><div><h2>治理方式：PMO 如何管计划、交付物、阶段门和阻塞事项</h2><div class="sub">PMO 看的是项目能不能按机制往前走。</div></div></div>
+    <p class="statement">项目计划不是一张排期表。启动后，PMO 要围绕任务、里程碑、阶段门、关键路径、风险任务和交付物推进。</p>
+    <div class="grid3">
+      <div class="card"><h3>任务</h3><p>看每件事有没有责任部门、计划节点和交付物。</p></div>
+      <div class="card"><h3>里程碑</h3><p>看关键节点是否按节奏推进，是否影响后续安排。</p></div>
+      <div class="card"><h3>阶段门</h3><p>看进入下一阶段前，该有的材料和确认是否齐。</p></div>
+      <div class="card"><h3>关键路径</h3><p>看哪些任务一拖就会带着后续工作一起拖。</p></div>
+      <div class="card"><h3>风险任务</h3><p>看哪些事项需要提前暴露、提前协调。</p></div>
+      <div class="card"><h3>交付物</h3><p>看每件事最后有没有可归档、可复核的结果。</p></div>
+    </div>
+    <div class="note" style="margin-top:14px"><strong>周会怎么开</strong>PMO 看板不是为了多做一个页面，而是为了周会能少讲空话。周会要看本周 A/B 类交付物、已经延期的交付物、阶段门缺口和高风险任务。</div>
+  </section>
+
+  <section class="sec" id="s5">
+    <div class="sec-head"><div class="num">6</div><div><h2>调研方式：PMO 如何还原真实流程、数据和证据链</h2><div class="sub">调研不是吓人，是把真实做法还原出来。</div></div></div>
+    <p class="statement">制度怎么写、现场怎么做、表单怎么走、台账怎么记、系统里留下什么痕迹，这几件事经常不完全一致。调研就是把差异摆出来。</p>
+    <div class="grid2">
+      <div class="panel">
+        <h3>可以怎么调研</h3>
+        <ul>
+          <li>访谈和会议：把业务口径说清楚。</li>
+          <li>现场观察：看真实节奏，不看表演出来的流程。</li>
+          <li>表单台账比对：看字段、版本、审批痕迹是否一致。</li>
+          <li>业务行为模拟：拿一个样例从申请、审批、变更、异常一直推到关闭。</li>
+          <li>历史问题推演：从已经发生过的问题倒推流程断点和数据断点。</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3>记录拿来做什么</h3>
+        <p>记录不是为了情绪化追责，是为了让会议纪要、流程图、数据图和问题处理有依据。能还原事实，后面才好判断哪些做法要保留，哪些要修改，哪些先进责任池。</p>
+        <div class="tagrow"><span class="tag">事实</span><span class="tag">差异</span><span class="tag">影响</span><span class="tag">下一步</span></div>
+      </div>
+    </div>
+    <div class="note ok" style="margin-top:14px"><strong>现场口径</strong>PMO 调研不是检查式追责，而是为流程地图、数据地图、风险处理、问题处理、变更处理、责任池和阶段门判断提供事实基础。</div>
+  </section>
+
+  <section class="sec" id="s6">
+    <div class="sec-head"><div class="num">7</div><div><h2>责任池：历史问题如何先治理、再整改、再关闭</h2><div class="sub">责任池不是免做池，是让问题先被真实暴露出来。</div></div></div>
+    <p class="statement">如果大家一暴露历史问题就担心被追责，会议上听到的就只会是“没问题”“一直这么做”“后面再说”。这样项目会在假平稳里往前走，后面再集中返工。</p>
+    <div class="grid2">
+      <div class="card">
+        <h3>哪些先进入责任池</h3>
+        <ul>
+          <li>历史流程问题。</li>
+          <li>历史数据问题。</li>
+          <li>跨部门边界问题。</li>
+          <li>表单台账不一致问题。</li>
+          <li>历史不符合项推演出来的问题。</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>进入责任池以后怎么处理</h3>
+        <ul>
+          <li>先把事实记下来。</li>
+          <li>先判断影响。</li>
+          <li>再明确责任边界。</li>
+          <li>再定治理动作。</li>
+          <li>最后跟踪整改和关闭。</li>
+        </ul>
+      </div>
+    </div>
+    <div class="grid2" style="margin-top:14px">
+      <div class="note ok" style="margin-bottom:0"><strong>历史问题先治理</strong>重点是还原事实、补齐证据、明确边界。</div>
+      <div class="note danger" style="margin-bottom:0"><strong>新的执行问题要处理</strong>拖期、材料不交、材料质量无法支撑下一步评审，不能用责任池挡掉。</div>
+    </div>
+  </section>
+
+  <section class="sec" id="s7">
+    <div class="sec-head"><div class="num">8</div><div><h2>工具展示：甘特图、PMO 看板、MDM 平台</h2><div class="sub">这是现场展示重点，但不要讲成产品发布会。</div></div></div>
+    <div class="toolgrid">
+      <article class="tool">
+        <div class="tool-title"><h3>数字化底座甘特图</h3><span class="badge">计划主线</span></div>
+        <div class="screen">
+          <div class="gantt">
+            <div class="tree"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            <div class="bars">
+              <i class="bar" style="--x:6%;--y:25px;--w:36%;--c:#1f5fbf"></i>
+              <i class="bar" style="--x:20%;--y:56px;--w:48%;--c:#0e9ab8"></i>
+              <i class="bar" style="--x:42%;--y:87px;--w:38%;--c:#7b61c8"></i>
+              <i class="bar" style="--x:62%;--y:118px;--w:28%;--c:#b88322"></i>
+              <i class="bar" style="--x:32%;--y:149px;--w:54%;--c:#21835b"></i>
+            </div>
+          </div>
+        </div>
+        <div class="tool-body">
+          <p>甘特图解决的是“项目怎么排、怎么追、哪里卡住”。</p>
+          <ul>
+            <li>它不是普通排期图，而是项目计划真源的可视化入口。</li>
+            <li>展示 WBS 主线、任务层级、里程碑、阶段门、关键路径和风险任务。</li>
+            <li>让大家看到项目是一条有前后关系的执行链，不是一堆散点任务。</li>
+          </ul>
+        </div>
+      </article>
+      <article class="tool">
+        <div class="tool-title"><h3>PMO 看板</h3><span class="badge cyan">交付闭环</span></div>
+        <div class="screen">
+          <div class="board">
+            <div class="board-top">
+              <div class="board-kpi"><b>A/B</b><span>本周交付物</span></div>
+              <div class="board-kpi"><b>延</b><span>延期交付物</span></div>
+              <div class="board-kpi"><b>门</b><span>阶段门缺失</span></div>
+              <div class="board-kpi"><b>险</b><span>高风险任务</span></div>
+            </div>
+            <div class="board-row"></div><div class="board-row"></div><div class="board-row"></div><div class="board-row"></div><div class="board-row"></div>
+          </div>
+        </div>
+        <div class="tool-body">
+          <p>PMO 看板解决的是“周会看什么、交付物怎么盯”。</p>
+          <ul>
+            <li>周会围绕本周交付物、延期交付物、阶段门缺失、高风险任务和交付物台账开。</li>
+            <li>每次会议不用从头问进度，直接看事实、影响和下一步动作。</li>
+            <li>交付物台账按等级、类型、部门、月份和状态追踪。</li>
+          </ul>
+        </div>
+      </article>
+      <article class="tool">
+        <div class="tool-title"><h3>MDM 平台</h3><span class="badge green">治理承接</span></div>
+        <div class="screen">
+          <div class="mdm" aria-label="MDM 平台工作台示意">
+            <div class="mdm-side">
+              <div class="mdm-role"></div><div class="mdm-role"></div><div class="mdm-role"></div><div class="mdm-role"></div>
+            </div>
+            <div class="mdm-main">
+              <div class="mdm-tile"><b>角色工作台</b><i></i><i></i></div>
+              <div class="mdm-tile"><b>流程治理</b><i></i><i></i></div>
+              <div class="mdm-tile"><b>字段台账</b><i></i><i></i></div>
+              <div class="mdm-tile"><b>冲突管理</b><i></i><i></i></div>
+            </div>
+          </div>
+        </div>
+        <div class="tool-body">
+          <p>MDM 平台解决的是“治理结果放哪里、谁来处理下一步”。</p>
+          <ul>
+            <li>重点展示角色工作台、流程治理、字段台账、冲突管理和基础主数据。</li>
+            <li>平台承接结构化查看、状态记录、角色工作台和后续治理验证。</li>
+            <li>平台不直接改原始流程资料，也不替业务编流程。</li>
+          </ul>
+        </div>
+      </article>
+    </div>
+    <div class="note warn" style="margin-top:14px"><strong>现场收口</strong>今天只确认这些工具作为启动后的试运行管控入口，不把它讲成正式验收。</div>
+  </section>
+
+  <section class="sec" id="s8">
+    <div class="sec-head"><div class="num">9</div><div><h2>项目管理机制：治理与调研机制如何落地</h2><div class="sub">把机制讲成以后怎么干活，而不是逐字念制度。</div></div></div>
+    <p class="statement">项目管理机制要回答的不是“文字好不好看”，而是项目启动后遇到计划、交付物、调研、责任池和阻塞事项时，PMO 和各部门按什么规则处理。</p>
+    <div class="grid2">
+      <div class="panel">
+        <h3>会上要谈清楚的问题</h3>
+        <ul>
+          <li>PMO 管哪些事，不管哪些事。</li>
+          <li>调研可以怎么做，证据怎么留。</li>
+          <li>历史问题进责任池后怎么跟踪。</li>
+          <li>周会和专项会分别处理什么。</li>
+          <li>风险、问题、变更、责任池要不要分开记。</li>
+          <li>部门确认是阶段性确认，还是永久背书。</li>
+          <li>遇到长期不反馈，项目怎么继续往前走。</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3>这一章怎么讲</h3>
+        <p>不需要逐字审全文。更合适的方式，是把几个现实问题拿出来谈，确认方向以后，再把文字修顺、补完整、发出来执行。</p>
+        <div class="process">
+          <div class="step"><b>1</b><span>治理原则</span></div>
+          <div class="step"><b>2</b><span>责任池机制</span></div>
+          <div class="step"><b>3</b><span>调研机制</span></div>
+          <div class="step"><b>4</b><span>会议机制</span></div>
+          <div class="step"><b>5</b><span>默认处理</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="s9">
+    <div class="sec-head"><div class="num">10</div><div><h2>会议事项：V-01 至 V-10 的讨论框架</h2><div class="sub">这里只做讨论框架，不写预设结果。</div></div></div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>编号</th><th>事项</th><th>现场要讨论清楚什么</th></tr></thead>
+        <tbody>
+          <tr><td class="vote">V-01</td><td>项目启动</td><td>启动后项目按什么机制推进。</td></tr>
+          <tr><td class="vote">V-02</td><td>PMO 治理授权</td><td>PMO 能管哪些项目事项，如何公开阻塞。</td></tr>
+          <tr><td class="vote">V-03</td><td>PMO 调研授权</td><td>PMO 可以采用哪些调研方式，证据如何使用。</td></tr>
+          <tr><td class="vote">V-04</td><td>责任池原则</td><td>哪些历史问题先进入责任池。</td></tr>
+          <tr><td class="vote">V-05</td><td>不追责边界</td><td>责任池保护什么，不保护什么。</td></tr>
+          <tr><td class="vote">V-06</td><td>部门配合机制</td><td>部门如何提供材料、说明流程、确认阶段性结果。</td></tr>
+          <tr><td class="vote">V-07</td><td>默认推进规则</td><td>长期不反馈时，项目如何进入下一轮。</td></tr>
+          <tr><td class="vote">V-08</td><td>启动令签发</td><td>启动会结论如何转为执行依据。</td></tr>
+          <tr><td class="vote">V-09</td><td>项目管理机制处理口径</td><td>治理机制办法如何修订、发布和执行。</td></tr>
+          <tr><td class="vote">V-10</td><td>工具试运行入口</td><td>甘特图、PMO 看板、MDM 平台如何进入启动后的日常管控。</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="close">今天要解决的不是所有细节，而是先把项目往前走的规则定下来。</div>
+  </section>
+</main>
+<footer>沈阳昌兴复材航空科技有限责任公司 · 数字化底座项目启动会 · H5 会议材料</footer>
+</body>
+</html>

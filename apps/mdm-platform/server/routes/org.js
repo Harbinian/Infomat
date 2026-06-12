@@ -95,24 +95,18 @@ function requestHasAnyPermission(req, permissionCodes) {
 }
 
 function resolveCreatePassword(password) {
-  if (password) {
-    if (isFixedDefaultPassword(password)) {
-      return { error: '不能使用固定默认口令' };
-    }
-    return { password, mustChangePassword: 0 };
-  }
   const initialPassword = generateInitialPassword();
+  if (password && String(password) !== initialPassword) {
+    return { error: '首次登录密码固定为 000000' };
+  }
   return { password: initialPassword, initialPassword, mustChangePassword: 1 };
 }
 
 function resolveResetPassword(password) {
-  if (password) {
-    if (isFixedDefaultPassword(password)) {
-      return { error: '不能使用固定默认口令' };
-    }
-    return { password, mustChangePassword: 1 };
-  }
   const initialPassword = generateInitialPassword();
+  if (password && String(password) !== initialPassword) {
+    return { error: '首次登录密码固定为 000000' };
+  }
   return { password: initialPassword, initialPassword, mustChangePassword: 1 };
 }
 
@@ -328,13 +322,13 @@ router.post('/logout', (req, res) => {
   });
 });
 
-router.get('/me', requireAuth, (req, res) => {
+function currentUserPayload(req) {
   const { permSet } = getUserEffectivePermissions(req.session.userId);
   const rbacRoles = getUserRoleCodes(req.session.userId, req.session.userRole);
   const department = req.session.departmentId
     ? db.prepare('SELECT name FROM departments WHERE id=?').get(req.session.departmentId)
     : null;
-  res.json({
+  return {
     id: req.session.userId,
     name: req.session.userName,
     role: req.session.userRole,
@@ -343,7 +337,18 @@ router.get('/me', requireAuth, (req, res) => {
     rbacRoles,
     roleCodes: rbacRoles.map(role => role.code),
     permissions: Array.from(permSet)
-  });
+  };
+}
+
+router.get('/session', (req, res) => {
+  if (!req.session || !req.session.userId) {
+    return res.json({ authenticated: false });
+  }
+  return res.json({ authenticated: true, user: currentUserPayload(req) });
+});
+
+router.get('/me', requireAuth, (req, res) => {
+  res.json(currentUserPayload(req));
 });
 
 // GET /api/users/:id/roles — get user's assigned roles

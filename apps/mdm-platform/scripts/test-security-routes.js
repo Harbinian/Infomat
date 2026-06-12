@@ -263,16 +263,16 @@ async function assertUserDirectoryGuards(adminCookie, reviewerCookie, submitterC
 }
 
 async function assertDefaultPasswordGuards(adminCookie) {
-  const fixedCreate = await request('/api/org/users', {
+  const customCreate = await request('/api/org/users', {
     method: 'POST',
     body: JSON.stringify({
-      name: '固定默认口令账号',
-      employee_no: 'FIXPW',
+      name: '自定义初始密码账号',
+      employee_no: 'CUSTOMPW',
       role: 'submitter',
-      password: 'init1234'
+      password: 'pass1234'
     })
   }, adminCookie);
-  assert.strictEqual(fixedCreate.res.status, 400, '管理员不能使用固定默认口令创建账号');
+  assert.strictEqual(customCreate.res.status, 400, '管理员不能指定自定义初始密码');
 
   const generatedCreate = await request('/api/org/users', {
     method: 'POST',
@@ -282,32 +282,30 @@ async function assertDefaultPasswordGuards(adminCookie) {
       role: 'submitter'
     })
   }, adminCookie);
-  assert.strictEqual(generatedCreate.res.status, 200, '未提供密码时应由服务端生成一次性初始密码');
+  assert.strictEqual(generatedCreate.res.status, 200, '未提供密码时应由服务端设置统一首次登录密码');
   assert.ok(generatedCreate.body.id);
-  assert.ok(generatedCreate.body.initial_password, '创建响应应返回一次性初始密码给管理员');
-  assert.notStrictEqual(generatedCreate.body.initial_password, 'init1234');
-  assert.ok(generatedCreate.body.initial_password.length >= 12);
+  assert.strictEqual(generatedCreate.body.initial_password, '000000', '创建响应应返回统一首次登录密码');
 
   const createdRow = db.prepare('SELECT password_hash, must_change_password FROM users WHERE id=?').get(generatedCreate.body.id);
   assert.ok(createdRow);
-  assert.strictEqual(createdRow.must_change_password, 1, '随机初始口令账号应要求首次改密');
-  assert.ok(!verifyPassword('init1234', createdRow.password_hash), '生成的初始密码不能等于固定默认口令');
-  assert.ok(verifyPassword(generatedCreate.body.initial_password, createdRow.password_hash), '生成的初始密码应能登录');
+  assert.strictEqual(createdRow.must_change_password, 1, '首次登录账号应要求首次改密');
+  assert.ok(verifyPassword('000000', createdRow.password_hash), '统一首次登录密码应能登录');
 
-  const fixedReset = await request(`/api/org/users/${generatedCreate.body.id}/password`, {
+  const customReset = await request(`/api/org/users/${generatedCreate.body.id}/password`, {
     method: 'POST',
-    body: JSON.stringify({ password: 'init1234' })
+    body: JSON.stringify({ password: 'pass1234' })
   }, adminCookie);
-  assert.strictEqual(fixedReset.res.status, 400, '管理员不能把密码重置为固定默认口令');
+  assert.strictEqual(customReset.res.status, 400, '管理员不能把密码重置为自定义初始密码');
 
   const generatedReset = await request(`/api/org/users/${generatedCreate.body.id}/password`, {
     method: 'POST',
     body: JSON.stringify({})
   }, adminCookie);
-  assert.strictEqual(generatedReset.res.status, 200, '未提供重置密码时应由服务端生成一次性初始密码');
-  assert.ok(generatedReset.body.initial_password);
-  assert.notStrictEqual(generatedReset.body.initial_password, 'init1234');
-  assert.ok(generatedReset.body.initial_password.length >= 12);
+  assert.strictEqual(generatedReset.res.status, 200, '未提供重置密码时应由服务端设置统一首次登录密码');
+  assert.strictEqual(generatedReset.body.initial_password, '000000');
+  const resetRow = db.prepare('SELECT password_hash, must_change_password FROM users WHERE id=?').get(generatedCreate.body.id);
+  assert.strictEqual(resetRow.must_change_password, 1, '重置后应要求改密');
+  assert.ok(verifyPassword('000000', resetRow.password_hash), '重置后统一首次登录密码应能登录');
 }
 
 async function assertRbacAdminUsesAdminPermission(seed, rbacAdminCookie) {

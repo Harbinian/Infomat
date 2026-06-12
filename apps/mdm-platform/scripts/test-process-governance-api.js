@@ -192,9 +192,11 @@ async function main() {
     const sourceFiles = await request('/api/process-governance/source-files?dept=经营发展部', {}, cookie);
     assert.strictEqual(sourceFiles.res.status, 200);
     assert.strictEqual(sourceFiles.body.summary.total, 2);
+    assert.strictEqual(sourceFiles.body.summary.limit, 20);
+    assert.ok(sourceFiles.body.summary.returned <= 20);
     assert.strictEqual(sourceFiles.body.summary.byStatus['纳入'], 1);
     assert.strictEqual(sourceFiles.body.summary.byStatus['排除'], 1);
-    assert.ok(sourceFiles.body.items.some(item => item.file_path.includes('GLTX-JY-23-A销售订单评审和执行管理程序.docx.md.md')));
+    assert.ok(sourceFiles.body.items.some(item => item.file_path.includes('GLTX-JY-23-A销售订单评审和执行管理程序.docx.md')));
 
     const mdmRequirements = await request('/api/process-governance/mdm-requirements?dept=经营发展部', {}, cookie);
     assert.strictEqual(mdmRequirements.res.status, 200);

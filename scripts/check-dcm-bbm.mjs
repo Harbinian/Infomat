@@ -42,12 +42,29 @@ const TRANSFER_WORDS = [
   '提供',
   '出具',
   '沟通',
+  '核对',
+  '校对',
   '跟踪',
   '回执',
 ];
 const BASIS_WORDS = ['依据', '根据', '基于', '参照', '按'];
 const BASIS_OBJECT_WORDS = ['订单', '清单', '计划', '制度', '文件', '资料', '数据', '台账', '附件', '标准', '通知'];
 const ROLE_ONLY_WORDS = ['负责', '执行', '组织', '参与', '配合', '协同', '归档', '备案', '存档', '审批', '审核', '批准', '会签'];
+const APPROVAL_TYPES_REQUIRING_EVIDENCE = new Set(['单人审批', '多级审批', '会签']);
+const APPROVAL_EVIDENCE_WORDS = [
+  '审批',
+  '批准',
+  '审核',
+  '审定',
+  '审签',
+  '签发',
+  '会签',
+  '校对',
+  '复核',
+  '批准实施',
+  '审批后执行',
+];
+const APPROVAL_CHAIN_NODE_WORDS = ['校对', '核对', '审核', '审定', '批准', '审批', '会签', '签发', '复核', '初审', '终审'];
 const GENERIC_DEPT_PATTERNS = [
   /相关/,
   /各/,
@@ -330,6 +347,166 @@ function hasWeakCrossEvidence(rowText, evidenceType) {
   return /上下文推断|分析拆分|待确认|待补|未明确|不详|请部门确认/.test(`${evidenceType || ''} ${rowText}`);
 }
 
+function hasApprovalEvidence(text) {
+  return APPROVAL_EVIDENCE_WORDS.some((word) => String(text).includes(word));
+}
+
+function hasMultipleApprovalNodes(text) {
+  const source = String(text || '');
+  const nodes = APPROVAL_CHAIN_NODE_WORDS.filter((word) => source.includes(word));
+  return nodes.length >= 2 && hasApprovalEvidence(source);
+}
+
+function checkApprovalEvidence(findings, file, row, record) {
+  const approvalType = String(record.approvalType || '').trim();
+  if (!approvalType) return;
+
+  const rowText = [
+    record.behavior,
+    record.role,
+    record.roleBasis,
+    record.trigger,
+    record.triggerBasis,
+    record.precondition,
+    record.preconditionBasis,
+    record.dataInput,
+    record.dataOutput,
+    record.evidence,
+    record.evidenceType,
+    record.reminder,
+    record.remark,
+  ].join(' ');
+  const label = `A1 ${record.a1Id || record.behavior}`;
+
+  if (approvalType === '无审批' && hasApprovalEvidence(rowText)) {
+    addFinding(
+      findings,
+      'BLOCK',
+      'BBM',
+      file,
+      row.line,
+      `${label} 标为无审批，但行内出现审批/审核/批准/会签等证据`,
+      '审批类型不能按业务理解填写；若源对象存在审核、批准、签发、会签、校对等节点，应改为有审批并补足证据链，或拆分 A1。',
+    );
+  }
+
+  if (approvalType === '单人审批' && hasMultipleApprovalNodes(rowText)) {
+    addFinding(
+      findings,
+      'BLOCK',
+      'BBM',
+      file,
+      row.line,
+      `${label} 标为单人审批，但行内出现多节点审批链证据`,
+      '同一输出物链路出现校对、核对、审核、批准、会签、签发、复核等多个审批/控制节点时，不能写成单人审批。单纯“编制+一个审批节点”不按多级审批处理。',
+    );
+  }
+
+  if (
+    APPROVAL_TYPES_REQUIRING_EVIDENCE.has(approvalType)
+    && /分析拆分|上下文推断/.test(record.evidenceType || '')
+    && !hasApprovalEvidence(rowText)
+  ) {
+    addFinding(
+      findings,
+      'BLOCK',
+      'BBM',
+      file,
+      row.line,
+      `${label} 以${record.evidenceType || '推断'}给出${approvalType}，但行内未见审批链证据`,
+      '抽象动作也必须锚定原文对象/流程节点；不能因为输出目标是某个人或部门，就推断审批类型。证据不足时写“未见审批链证据，待补”。',
+    );
+  }
+}
+
+function checkGoldenExamples(findings, file, row, record) {
+  if (!String(file).endsWith('经营发展部部门-能力-流程-系统映射关系.md')) return;
+  const a1Id = String(record.a1Id || '').trim();
+  const evidence = String(record.evidence || '');
+  if (!/GLTX-JY-05-D?\s*§5\.4|GLTX-JY-05-D/.test(evidence)) return;
+
+  const rowText = [
+    record.behavior,
+    record.role,
+    record.roleBasis,
+    record.trigger,
+    record.triggerBasis,
+    record.precondition,
+    record.preconditionBasis,
+    record.dataInput,
+    record.dataOutput,
+    record.inputDept,
+    record.outputDept,
+    record.approvalType,
+    record.evidence,
+    record.evidenceType,
+    record.reminder,
+    record.remark,
+  ].join(' ');
+
+  if (a1Id === 'JY-L3-04-A04') {
+    if (!rowText.includes('公司月度综合打分表')) {
+      addFinding(
+        findings,
+        'BLOCK',
+        'GOLDEN_GLTX_JY_05',
+        file,
+        row.line,
+        'A1 JY-L3-04-A04 未锚定 GLTX-JY-05 的公司月度综合打分表对象',
+        '§5.4.3 与表格签批栏证明该抽象动作对应“公司月度综合打分表”；行内必须写明该对象或对象链，不能只写“月度绩效结果”。',
+      );
+    }
+
+    if (record.approvalType === '单人审批') {
+      addFinding(
+        findings,
+        'BLOCK',
+        'GOLDEN_GLTX_JY_05',
+        file,
+        row.line,
+        'A1 JY-L3-04-A04 仍写为单人审批',
+        'GLTX-JY-05 §5.4.3 及表格签批栏显示“经营发展部部长编制→财务部部长校对/核对→分管领导审核→总经理批准实施”，不是单人审批。',
+      );
+    }
+
+    if (String(record.outputDept || '').includes('经营发展部部长')) {
+      addFinding(
+        findings,
+        'BLOCK',
+        'GOLDEN_GLTX_JY_05',
+        file,
+        row.line,
+        'A1 JY-L3-04-A04 把经营发展部部长写成输出目标部门',
+        '经营发展部部长在 §5.4.3 中是“公司月度综合打分表”的编制角色，不是受控输出物的目标部门。',
+      );
+    }
+
+    if (String(record.role || '').trim() === '经营发展部') {
+      addFinding(
+        findings,
+        'BLOCK',
+        'GOLDEN_GLTX_JY_05',
+        file,
+        row.line,
+        'A1 JY-L3-04-A04 执行角色仍为泛化部门',
+        'GLTX-JY-05 §5.4.3 明确“公司月度综合打分表由经营发展部部长编制”；应优先使用原文角色，或说明为何该 A1 被拆分为部门级动作。',
+      );
+    }
+  }
+
+  if (a1Id === 'JY-L3-04-A05' && String(record.outputDept || '').includes('公司各部门')) {
+    addFinding(
+      findings,
+      'BLOCK',
+      'GOLDEN_GLTX_JY_05',
+      file,
+      row.line,
+      'A1 JY-L3-04-A05 把公司各部门写成输出目标部门，但 GLTX-JY-05 行内未见通报/发布受控传递证据',
+      '§5.4.3 证明综合打分表批准实施，不等于结果已向公司各部门受控传递；需补通知、发布、下发、签收等证据，否则写“未见受控传递证据，待补”。',
+    );
+  }
+}
+
 function validateSystems({ findings, contract, raw, area, file, line, label }) {
   const systems = splitSystems(raw, contract);
   const allowed = new Set(contract.systems.allowedS1);
@@ -599,10 +776,20 @@ function checkControlledTransferEvidence(findings, contract, file, row, record) 
     record.roleBasis,
     record.evidence,
   ].join(' ');
+  const weakEvidenceText = [
+    record.roleBasis,
+    record.triggerBasis,
+    record.preconditionBasis,
+    record.dataInput,
+    record.dataOutput,
+    record.evidence,
+    record.evidenceType,
+  ].join(' ');
   const transferInRow = hasTransferWord(rowText);
 
   for (const ref of refs) {
     const label = `A1 ${record.a1Id || record.behavior}`;
+    const deptHasSpecificTransfer = transferInRow && hasDeptSpecificTransfer(rowText, ref.dept);
 
     if (isUncontrolledDeptRef(ref.dept, contract)) {
       addFinding(
@@ -628,7 +815,7 @@ function checkControlledTransferEvidence(findings, contract, file, row, record) 
       );
     }
 
-    if (!transferInRow || !hasDeptSpecificTransfer(rowText, ref.dept)) {
+    if (!deptHasSpecificTransfer) {
       addFinding(
         findings,
         'WARN',
@@ -640,7 +827,7 @@ function checkControlledTransferEvidence(findings, contract, file, row, record) 
       );
     }
 
-    if (hasWeakCrossEvidence(rowText, record.evidenceType)) {
+    if (!deptHasSpecificTransfer && hasWeakCrossEvidence(weakEvidenceText, record.evidenceType)) {
       addFinding(
         findings,
         'WARN',
@@ -718,6 +905,42 @@ function checkBbmTables(findings, contract, file, dept, parsed, dcmMappings) {
       if (approvalType && !contract.bbm.approvalTypes.includes(approvalType)) {
         addFinding(findings, 'WARN', 'BBM', file, row.line, `A1 ${a1Id} 审批类型不在枚举中: ${approvalType}`, `建议使用 ${contract.bbm.approvalTypes.join('、')}。`);
       }
+      checkApprovalEvidence(findings, file, row, {
+        a1Id,
+        behavior,
+        role,
+        roleBasis,
+        trigger,
+        triggerBasis,
+        precondition,
+        preconditionBasis,
+        dataInput,
+        dataOutput,
+        approvalType,
+        evidence,
+        evidenceType,
+        reminder,
+        remark,
+      });
+      checkGoldenExamples(findings, file, row, {
+        a1Id,
+        behavior,
+        role,
+        roleBasis,
+        trigger,
+        triggerBasis,
+        precondition,
+        preconditionBasis,
+        dataInput,
+        dataOutput,
+        inputDept,
+        outputDept,
+        approvalType,
+        evidence,
+        evidenceType,
+        reminder,
+        remark,
+      });
       validateSystems({ findings, contract, raw: systemRaw, area: 'BBM', file, line: row.line, label: `A1 ${a1Id || behavior}` });
       if (!evidence) {
         addFinding(findings, 'BLOCK', 'BBM', file, row.line, `A1 ${a1Id} 缺少制度依据`, 'A1 行必须可追溯到制度条款、流程图或表单。');
@@ -969,6 +1192,7 @@ function renderReport({ contractPath, findings, deptStats, totalL3Rows, totalA1R
     `- 源 L3 行数：${totalL3Rows}`,
     `- 源 A1 行数：${totalA1Rows}`,
     '- 跨部门输入/输出口径：仅当制度条款、流程图箭头、表单流转、台账交接、签收/通知/反馈等证据证明受控输出物传递时，才视为已确认；证据不足项以 `CROSS_TRANSFER` 标记为复核提示。',
+    '- 审批类型口径：`单人审批`、`多级审批`、`会签`、`无审批` 必须由原文、流程图、表单签批栏或审批链证据支撑；抽象/推断行为不得凭输出目标或业务理解写成审批结论。',
     '',
     '## 汇总',
     '',

@@ -15,14 +15,21 @@ function handleDbError(res, error) {
 router.get('/', requireAuth, applyFieldConstraints('product'), (req, res) => {
   try {
     const { product_family_id, lifecycle_state, search, page = 1, limit = 50 } = req.query;
-    let sql = `SELECT p.*, pf.product_family_code, pf.model_name
-               FROM product p JOIN product_family pf ON p.product_family_id = pf.product_family_id WHERE 1=1`;
+    let fromSql = `
+      FROM product p
+      JOIN product_family pf ON p.product_family_id = pf.product_family_id
+      WHERE 1=1
+    `;
     const params = [];
-    if (product_family_id) { sql += ' AND p.product_family_id=?'; params.push(product_family_id); }
-    if (lifecycle_state) { sql += ' AND p.lifecycle_state=?'; params.push(lifecycle_state); }
-    if (search) { sql += ' AND (p.product_code LIKE ? OR pf.model_name LIKE ?)'; params.push(`%${search}%`, `%${search}%`); }
-    const count = db.prepare(sql.replace(/SELECT.*?FROM/, 'SELECT COUNT(*) as cnt FROM')).get(...params).cnt;
-    sql += ' ORDER BY p.updated_at DESC LIMIT ? OFFSET ?';
+    if (product_family_id) { fromSql += ' AND p.product_family_id=?'; params.push(product_family_id); }
+    if (lifecycle_state) { fromSql += ' AND p.lifecycle_state=?'; params.push(lifecycle_state); }
+    if (search) { fromSql += ' AND (p.product_code LIKE ? OR pf.model_name LIKE ?)'; params.push(`%${search}%`, `%${search}%`); }
+    const count = db.prepare(`SELECT COUNT(*) as cnt ${fromSql}`).get(...params).cnt;
+    const sql = `
+      SELECT p.*, pf.product_family_code, pf.model_name
+      ${fromSql}
+      ORDER BY p.updated_at DESC LIMIT ? OFFSET ?
+    `;
     params.push(Number(limit), (Number(page) - 1) * Number(limit));
     res.json({ rows: db.prepare(sql).all(...params), total: count, page: Number(page), limit: Number(limit) });
   } catch (e) { handleDbError(res, e); }

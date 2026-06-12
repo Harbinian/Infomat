@@ -1,0 +1,16 @@
+{
+  "provider": "ollama",
+  "base_url": "http://127.0.0.1:11434",
+  "embed_endpoint": "/api/embed",
+  "model": "qwen3-embedding:latest",
+  "dimensions": 1024,
+  "truncate": true,
+  "keep_alive": "5m",
+  "chunking_rule": "process-evidence-mapping/chunking-spec-v1",
+  "role": "candidate_evidence_retrieval_only",
+  "notes": [
+    "Embeddings are used only for candidate evidence retrieval.",
+    "Similarity score is not evidence.",
+    "Confirmed conclusions must cite original source anchors."
+  ]
+}

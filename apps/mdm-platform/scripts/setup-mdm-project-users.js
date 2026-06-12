@@ -192,6 +192,7 @@ function inferLegacyRole(projectRole) {
   if (projectRole.includes('决策组')) return 'reviewer';
   if (projectRole.includes('信息化负责人')) return 'reviewer';
   if (projectRole.includes('数据质量员')) return 'reviewer';
+  if (projectRole.includes('工作组组长') || /工作组.*组长/.test(projectRole)) return 'owner';
   if (projectRole.includes('项目组长')) return 'owner';
   if (projectRole.includes('业务对接人')) return 'owner';
   return 'submitter';
@@ -202,6 +203,7 @@ function inferRbacRoles(projectRole) {
   if (projectRole.includes('决策组')) roles.add('decision_group');
   if (projectRole.includes('信息化负责人')) roles.add('it_lead');
   if (projectRole.includes('项目组长')) roles.add('project_lead');
+  if (projectRole.includes('工作组组长') || /工作组.*组长/.test(projectRole)) roles.add('workgroup_lead');
   if (projectRole.includes('业务对接人')) roles.add('business_contact');
   if (projectRole.includes('数据质量员')) roles.add('data_quality');
   if (roles.size === 0) roles.add('submitter');

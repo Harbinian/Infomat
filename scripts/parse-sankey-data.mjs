@@ -11,7 +11,7 @@
 
 import { createHash } from 'crypto';
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'fs';
-import { basename, extname, join, relative, resolve } from 'path';
+import { basename, dirname, extname, join, relative, resolve } from 'path';
 
 const NORMS = resolve(import.meta.dirname || '.', '..', 'docs', 'norms');
 const REPO_ROOT = resolve(NORMS, '..', '..');
@@ -127,6 +127,31 @@ function walkFiles(dirPath) {
   return files;
 }
 
+function walkDirectories(dirPath) {
+  const dirs = [];
+  if (!existsSync(dirPath)) return dirs;
+  for (const entry of readdirSync(dirPath, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const fullPath = join(dirPath, entry.name);
+    dirs.push(fullPath);
+    dirs.push(...walkDirectories(fullPath));
+  }
+  return dirs;
+}
+
+function discoverLeafDirectories(rootPath) {
+  const dirs = [rootPath, ...walkDirectories(rootPath)];
+  return dirs.filter(dirPath => {
+    const entries = readdirSync(dirPath, { withFileTypes: true });
+    return !entries.some(entry => entry.isDirectory());
+  });
+}
+
+function sourceLeafDir(rootPath, filePath) {
+  const rel = relative(rootPath, dirname(filePath)).replace(/\\/g, '/');
+  return rel || '.';
+}
+
 function inferFileNo(fileName) {
   const name = basename(fileName);
   const gltx = name.match(/\b(GLTX-[A-Z]{1,4}-\d{2})(?:[-_ ]?([A-Z]))?/i);
@@ -169,7 +194,36 @@ function statusForAsset(assetType, repoPath) {
 
 function buildSourceManifest(mappingFiles, mdmRequirementFiles) {
   const files = [];
+  const leafDirectories = [];
   const seen = new Set();
+  const seenLeafDirectories = new Set();
+
+  function addLeafDirectory(dirPath, dept, sourceRoot) {
+    if (!existsSync(dirPath)) return;
+    const repoPath = toRepoPath(dirPath);
+    if (seenLeafDirectories.has(repoPath)) return;
+    seenLeafDirectories.add(repoPath);
+
+    const directFiles = readdirSync(dirPath, { withFileTypes: true })
+      .filter(entry => entry.isFile() && !entry.name.startsWith('~$'))
+      .map(entry => join(dirPath, entry.name));
+    const supportedFiles = directFiles.filter(filePath => {
+      const assetType = inferAssetType(toRepoPath(filePath));
+      return !['temp', 'generated', 'helper_script'].includes(assetType);
+    });
+
+    leafDirectories.push({
+      path: repoPath,
+      dept,
+      leafDir: relative(sourceRoot, dirPath).replace(/\\/g, '/') || '.',
+      fileCount: directFiles.length,
+      supportedFileCount: supportedFiles.length,
+      status: directFiles.length > 0 ? '纳入' : '待复核',
+      reason: directFiles.length > 0
+        ? '已递归到底层目录，目录内文件纳入逐项分类'
+        : '空叶子目录，需确认是否缺少源文件或仅作分类占位',
+    });
+  }
 
   function addFile(filePath, dept, overrides = {}) {
     if (!existsSync(filePath)) return;
@@ -193,6 +247,7 @@ function buildSourceManifest(mappingFiles, mdmRequirementFiles) {
       size: stat.size,
       mtime: stat.mtime.toISOString(),
       sha256: sha256File(filePath),
+      leafDir: overrides.sourceRoot ? sourceLeafDir(overrides.sourceRoot, filePath) : undefined,
       status: process.status,
       reason: process.reason,
     });
@@ -234,19 +289,37 @@ function buildSourceManifest(mappingFiles, mdmRequirementFiles) {
 
   for (const dir of deptSourceDirs) {
     const dept = dir.name.replace('业务资料', '');
-    for (const filePath of walkFiles(resolve(NORMS, dir.name))) {
-      addFile(filePath, dept);
+    const sourceRoot = resolve(NORMS, dir.name);
+    for (const leafDir of discoverLeafDirectories(sourceRoot)) {
+      addLeafDirectory(leafDir, dept, sourceRoot);
+    }
+    for (const filePath of walkFiles(sourceRoot)) {
+      addFile(filePath, dept, { sourceRoot });
     }
   }
 
+  const fileStats = files.reduce((acc, file) => {
+    acc.total += 1;
+    acc.byStatus[file.status] = (acc.byStatus[file.status] || 0) + 1;
+    acc.byDept[file.dept] = (acc.byDept[file.dept] || 0) + 1;
+    return acc;
+  }, { total: 0, byStatus: {}, byDept: {} });
+
+  const leafStats = leafDirectories.reduce((acc, dir) => {
+    acc.total += 1;
+    acc.byStatus[dir.status] = (acc.byStatus[dir.status] || 0) + 1;
+    acc.byDept[dir.dept] = (acc.byDept[dir.dept] || 0) + 1;
+    if (dir.fileCount === 0) acc.empty += 1;
+    return acc;
+  }, { total: 0, empty: 0, byStatus: {}, byDept: {} });
+
   return {
     files: files.sort((a, b) => a.path.localeCompare(b.path, 'zh-CN')),
-    stats: files.reduce((acc, file) => {
-      acc.total += 1;
-      acc.byStatus[file.status] = (acc.byStatus[file.status] || 0) + 1;
-      acc.byDept[file.dept] = (acc.byDept[file.dept] || 0) + 1;
-      return acc;
-    }, { total: 0, byStatus: {}, byDept: {} }),
+    leafDirectories: leafDirectories.sort((a, b) => a.path.localeCompare(b.path, 'zh-CN')),
+    stats: {
+      ...fileStats,
+      leafDirectories: leafStats,
+    },
   };
 }
 
