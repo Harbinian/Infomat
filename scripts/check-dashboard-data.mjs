@@ -6,7 +6,7 @@
 
 import { createHash } from 'crypto';
 import { existsSync, readFileSync, readdirSync } from 'fs';
-import { relative, resolve } from 'path';
+import { extname, relative, resolve } from 'path';
 
 const ROOT = resolve(import.meta.dirname || '.', '..');
 const NORMS_PATH = resolve(ROOT, 'docs', 'norms');
@@ -52,8 +52,16 @@ function toRepoPath(path) {
   return relative(ROOT, path).replace(/\\/g, '/');
 }
 
+const TEXT_SOURCE_EXTENSIONS = new Set(['.css', '.html', '.js', '.json', '.md', '.mjs', '.txt', '.yaml', '.yml']);
+
+function normalizedSourceBuffer(path) {
+  const bytes = readFileSync(path);
+  if (!TEXT_SOURCE_EXTENSIONS.has(extname(path).toLowerCase())) return bytes;
+  return Buffer.from(bytes.toString('utf8').replace(/\r\n/g, '\n'), 'utf8');
+}
+
 function sha256File(path) {
-  return createHash('sha256').update(readFileSync(path)).digest('hex');
+  return createHash('sha256').update(normalizedSourceBuffer(path)).digest('hex');
 }
 
 function escapeRegExp(value) {

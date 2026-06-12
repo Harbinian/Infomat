@@ -89,8 +89,20 @@ function toRepoPath(filePath) {
   return relative(REPO_ROOT, filePath).replace(/\\/g, '/');
 }
 
+const TEXT_SOURCE_EXTENSIONS = new Set(['.css', '.html', '.js', '.json', '.md', '.mjs', '.txt', '.yaml', '.yml']);
+
+function normalizedSourceBuffer(filePath) {
+  const bytes = readFileSync(filePath);
+  if (!TEXT_SOURCE_EXTENSIONS.has(extname(filePath).toLowerCase())) return bytes;
+  return Buffer.from(bytes.toString('utf8').replace(/\r\n/g, '\n'), 'utf8');
+}
+
+function normalizedSourceSize(filePath) {
+  return normalizedSourceBuffer(filePath).length;
+}
+
 function sha256File(filePath) {
-  return createHash('sha256').update(readFileSync(filePath)).digest('hex');
+  return createHash('sha256').update(normalizedSourceBuffer(filePath)).digest('hex');
 }
 
 function extractReportHeader(text, label) {
@@ -244,7 +256,7 @@ function buildSourceManifest(mappingFiles, mdmRequirementFiles) {
       assetType,
       fileNo: overrides.fileNo || inferred.fileNo,
       revision: overrides.revision || inferred.revision,
-      size: stat.size,
+      size: normalizedSourceSize(filePath),
       mtime: stat.mtime.toISOString(),
       sha256: sha256File(filePath),
       leafDir: overrides.sourceRoot ? sourceLeafDir(overrides.sourceRoot, filePath) : undefined,

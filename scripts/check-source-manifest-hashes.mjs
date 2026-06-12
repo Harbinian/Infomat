@@ -6,8 +6,8 @@
 
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync, statSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
+import { extname, resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
 const companyDataPath = resolve(root, 'docs', 'company-sankey-data.json');
@@ -17,8 +17,20 @@ function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
 }
 
+const TEXT_SOURCE_EXTENSIONS = new Set(['.css', '.html', '.js', '.json', '.md', '.mjs', '.txt', '.yaml', '.yml']);
+
+function normalizedSourceBuffer(path) {
+  const bytes = readFileSync(path);
+  if (!TEXT_SOURCE_EXTENSIONS.has(extname(path).toLowerCase())) return bytes;
+  return Buffer.from(bytes.toString('utf8').replace(/\r\n/g, '\n'), 'utf8');
+}
+
+function normalizedSourceSize(path) {
+  return normalizedSourceBuffer(path).length;
+}
+
 function sha256File(path) {
-  return createHash('sha256').update(readFileSync(path)).digest('hex');
+  return createHash('sha256').update(normalizedSourceBuffer(path)).digest('hex');
 }
 
 const companyData = readJson(companyDataPath);
@@ -34,7 +46,7 @@ for (const file of files) {
 
   const fullPath = resolve(root, file.path);
   assert.ok(existsSync(fullPath), `${file.path} must exist`);
-  assert.equal(statSync(fullPath).size, file.size, `${file.path} size must match sourceManifest`);
+  assert.equal(normalizedSourceSize(fullPath), file.size, `${file.path} normalized size must match sourceManifest`);
   assert.equal(sha256File(fullPath), file.sha256, `${file.path} sha256 must match sourceManifest`);
 }
 
