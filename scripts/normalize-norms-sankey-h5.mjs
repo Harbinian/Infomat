@@ -44,18 +44,31 @@ const helperBlock = `function a1ShortCode(a1) {
         return raw;
       }
 
+      function l3CodeFromText(value) {
+        var m = String(value || "").match(/L3[-_ ]?(\\d+)/i);
+        return m ? "L3-" + String(m[1]).padStart(2, "0") : "";
+      }
+
       function processCode(rowOrProc) {
         var raw = rowOrProc && typeof rowOrProc === "object" && !Array.isArray(rowOrProc)
           ? String(rowOrProc.code || rowOrProc.id || rowOrProc.process || rowOrProc.proc || "")
           : String(rowOrProc || "");
         var name = processName(rowOrProc);
-        var m = raw.match(/L3[-_ ]?(\\d+)/i) || String(name || "").match(/L3[-_ ]?(\\d+)/i);
-        if (m) return "L3-" + String(m[1]).padStart(2, "0");
-        var rows = typeof filteredL3 === "function" ? filteredL3() : (typeof l3Rows !== "undefined" ? l3Rows : []);
-        var idx = rows.findIndex(function(row) { return processName(row) === name; });
-        if (idx < 0 && typeof l3Rows !== "undefined") {
-          idx = l3Rows.findIndex(function(row) { return processName(row) === name; });
+        var directCode = l3CodeFromText(raw) || l3CodeFromText(name);
+        if (directCode) return directCode;
+
+        if (typeof a1Rows !== "undefined") {
+          for (var i = 0; i < a1Rows.length; i++) {
+            if (String(a1Rows[i][14] || "") === name || String(a1Rows[i][11] || "") === name) {
+              var fromA1 = l3CodeFromText(a1Rows[i][0]);
+              if (fromA1) return fromA1;
+            }
+          }
         }
+
+        var idx = typeof l3Rows !== "undefined"
+          ? l3Rows.findIndex(function(row) { return processName(row) === name; })
+          : -1;
         return idx >= 0 ? "L3-" + String(idx + 1).padStart(2, "0") : "L3";
       }
 
@@ -65,13 +78,19 @@ const helperBlock = `function a1ShortCode(a1) {
       }
 
       function isProcessNode(name) {
-        return typeof l3Rows !== "undefined" && l3Rows.some(function(row) {
-          return processName(row) === String(name || "");
-        });
+        var text = String(name || "");
+        if (typeof l3Rows !== "undefined" && l3Rows.some(function(row) {
+          return processName(row) === text;
+        })) return true;
+        if (typeof a1Rows !== "undefined" && a1Rows.some(function(row) {
+          if (String(row[14] || "") === text || String(row[11] || "") === text) return true;
+          return typeof l3NameMap !== "undefined" && l3NameMap && String(l3NameMap[row[11]] || "") === text;
+        })) return true;
+        return false;
       }
 
       function modeDisplayLabel(name) {
-        return name === "全域总览" ? "全域总览（L1-L3）" : name + "（L1-A1）";
+        return name === "全域总览" ? "全域总览（层级范围 L1-L3）" : name + "（层级范围 L1-A1）";
       }
 
       function evidenceLegendHtml() {
@@ -94,6 +113,11 @@ function normalizeText(text) {
 
   out = insertHelper(out);
 
+  out = out.replace(
+    /function processCode\(rowOrProc\) \{\s*var raw = rowOrProc && typeof rowOrProc === "object" && !Array\.isArray\(rowOrProc\)\s*\? String\(rowOrProc\.code \|\| rowOrProc\.id \|\| rowOrProc\.process \|\| rowOrProc\.proc \|\| ""\)\s*: String\(rowOrProc \|\| ""\);\s*var name = processName\(rowOrProc\);\s*var m = raw\.match\(\/L3\[-_ \]\?\(\\d\+\)\/i\) \|\| String\(name \|\| ""\)\.match\(\/L3\[-_ \]\?\(\\d\+\)\/i\);\s*if \(m\) return "L3-" \+ String\(m\[1\]\)\.padStart\(2, "0"\);\s*var rows = typeof filteredL3 === "function" \? filteredL3\(\) : \(typeof l3Rows !== "undefined" \? l3Rows : \[\]\);\s*var idx = rows\.findIndex\(function\(row\) \{ return processName\(row\) === name; \}\);\s*if \(idx < 0 && typeof l3Rows !== "undefined"\) \{\s*idx = l3Rows\.findIndex\(function\(row\) \{ return processName\(row\) === name; \}\);\s*\}\s*return idx >= 0 \? "L3-" \+ String\(idx \+ 1\)\.padStart\(2, "0"\) : "L3";\s*\}/g,
+    'function l3CodeFromText(value) {\n        var m = String(value || "").match(/L3[-_ ]?(\\d+)/i);\n        return m ? "L3-" + String(m[1]).padStart(2, "0") : "";\n      }\n\n      function processCode(rowOrProc) {\n        var raw = rowOrProc && typeof rowOrProc === "object" && !Array.isArray(rowOrProc)\n          ? String(rowOrProc.code || rowOrProc.id || rowOrProc.process || rowOrProc.proc || "")\n          : String(rowOrProc || "");\n        var name = processName(rowOrProc);\n        var directCode = l3CodeFromText(raw) || l3CodeFromText(name);\n        if (directCode) return directCode;\n\n        if (typeof a1Rows !== "undefined") {\n          for (var i = 0; i < a1Rows.length; i++) {\n            if (String(a1Rows[i][14] || "") === name || String(a1Rows[i][11] || "") === name) {\n              var fromA1 = l3CodeFromText(a1Rows[i][0]);\n              if (fromA1) return fromA1;\n            }\n          }\n        }\n\n        var idx = typeof l3Rows !== "undefined"\n          ? l3Rows.findIndex(function(row) { return processName(row) === name; })\n          : -1;\n        return idx >= 0 ? "L3-" + String(idx + 1).padStart(2, "0") : "L3";\n      }',
+  );
+
   out = out.replace(/能力域（L1-A1）：能力域（L1-A1）：/g, '能力域（L1-A1）：');
   out = out.replaceAll(detailNew, detailToken);
   out = out.replaceAll(detailOld, detailToken);
@@ -105,7 +129,8 @@ function normalizeText(text) {
   );
   out = out.replace(/能力域（L1）规模/g, '能力域（L1-A1）规模');
   out = out.replace(/切换到具体能力域（L1）/g, '切换到具体能力域（L1-A1）');
-  out = out.replace('<span class="mode-label">视图</span>', '<span class="mode-label">视图（能力域 L1-L3 / L1-A1）</span>');
+  out = out.replace('<span class="mode-label">视图</span>', '<span class="mode-label">视图（层级范围 L1-L3 / L1-A1）</span>');
+  out = out.replace(/视图（能力域 L1-L3 \/ L1-A1）/g, '视图（层级范围 L1-L3 / L1-A1）');
   out = out.replace(/业务行为（A1）节点显示行为名称和执行角色/g, '业务行为（A1）节点显示A1序号、行为名称和执行角色');
   out = out.replace(/<i style="background:#0891b2"><\/i>能力域（L1）/g, '<i style="background:#0891b2"></i>能力域（L1-L3）');
 
@@ -154,7 +179,21 @@ function normalizeText(text) {
 
   out = out.replace(
     /bar\.innerHTML = '<span class="mode-label">视图<\/span>';/g,
-    'bar.innerHTML = \'<span class="mode-label">视图（能力域 L1-L3 / L1-A1）</span>\';',
+    'bar.innerHTML = \'<span class="mode-label">视图（层级范围 L1-L3 / L1-A1）</span>\';',
+  );
+  out = out.replace(/全域总览（L1-L3）/g, '全域总览（层级范围 L1-L3）');
+  out = out.replace(/能力域（L1-L3）/g, '能力域（层级范围 L1-L3）');
+  out = out.replace(/（L1-A1）/g, '（层级范围 L1-A1）');
+  while (out.includes('能力域（层级范围 L1-A1）：能力域（层级范围 L1-A1）：')) {
+    out = out.replace(/能力域（层级范围 L1-A1）：能力域（层级范围 L1-A1）：/g, '能力域（层级范围 L1-A1）：');
+  }
+  out = out.replace(
+    /if \(String\(a1Rows\[i\]\[14\] \|\| ""\) === name\) \{/g,
+    'if (String(a1Rows[i][14] || "") === name || String(a1Rows[i][11] || "") === name) {',
+  );
+  out = out.replace(
+    /function isProcessNode\(name\) \{\s*return typeof l3Rows !== "undefined" && l3Rows\.some\(function\(row\) \{\s*return processName\(row\) === String\(name \|\| ""\);\s*\}\);\s*\}/g,
+    'function isProcessNode(name) {\n        var text = String(name || "");\n        if (typeof l3Rows !== "undefined" && l3Rows.some(function(row) {\n          return processName(row) === text;\n        })) return true;\n        if (typeof a1Rows !== "undefined" && a1Rows.some(function(row) {\n          if (String(row[14] || "") === text || String(row[11] || "") === text) return true;\n          return typeof l3NameMap !== "undefined" && l3NameMap && String(l3NameMap[row[11]] || "") === text;\n        })) return true;\n        return false;\n      }',
   );
   out = out.replace(/btn\.textContent = name;/g, 'btn.textContent = modeDisplayLabel(name);\n          btn.dataset.mode = name;');
   out = out.replace(/b\.textContent === name/g, 'b.dataset.mode === name');
@@ -196,6 +235,8 @@ function normalizeText(text) {
   out = out.replace(/esc\(row\.proc\)/g, 'esc(processDisplayLabel(row))');
   out = out.replace(/'<td class="col-proc">' \+ esc\(a1\[14\]\) \+ '<\/td>'/g, '\'<td class="col-proc">\' + esc(processDisplayLabel(a1[14])) + \'</td>\'');
   out = out.replace(/'<td class="col-proc">' \+ esc\(a1\[11\]\) \+ '<\/td>'/g, '\'<td class="col-proc">\' + esc(processDisplayLabel(a1[11])) + \'</td>\'');
+  out = out.replace(/'<td class="col-proc">' \+ esc\(l3NameMap\[a1\[11\]\] \|\| a1\[11\]\) \+ '<\/td>'/g, '\'<td class="col-proc">\' + esc(processDisplayLabel(a1[11])) + \'</td>\'');
+  out = out.replace(/var l3NameMap = \{\};/g, 'var l3NameMap = typeof l3NameMap !== "undefined" && l3NameMap ? l3NameMap : {};');
   out = out.replace(/'<td class="col-a1name">' \+ esc\(a1\[1\]\) \+ '<\/td>'/g, '\'<td class="col-a1name">\' + esc(a1ShortCode(a1) + " " + a1[1]) + \'</td>\'');
   out = out.replace(
     /<td>'\+esc\(r\[13\]\)\+'<\/td><td>'\+esc\(r\[14\]\)\+'<\/td><td>'\+esc\(r\[1\]\)\+warn/g,

@@ -11,7 +11,8 @@
     "test:frontmatter": "node ../scripts/smoke-frontmatter.mjs",
     "test:writeback": "node ../scripts/smoke-writeback.mjs",
     "test:plugin": "node ../scripts/smoke-plugin-endpoints.mjs",
-    "test:hmr": "node ../scripts/smoke-hmr.mjs"
+    "test:hmr": "node ../scripts/smoke-hmr.mjs",
+    "test:milestone-rules": "node ../scripts/smoke-milestone-rules.mjs"
   },
   "dependencies": {
     "gray-matter": "^4.0.3",

@@ -17,7 +17,7 @@ npm run preview
 
 `public/tasks.json` 由 `pmo/信息化项目_计划管控真源.md` 通过 `pmo/convert_xlsx.py` 转换生成。页面实际读取 `public/tasks.json`，同时保留 `pmo/tasks.json` 作为 PMO 根目录备份。
 
-当前任务数为 434，字段数为 45。转换脚本会保留基础甘特字段，并附带阶段门、关键路径控制、H5 重点展示、合同/付款控制口径等执行管控字段。
+当前任务数为 467，字段数为 45。转换脚本会保留基础甘特字段，并附带阶段门、关键路径控制、H5 重点展示、合同/付款控制口径等执行管控字段。
 
 服务侧同步读取/提供 `public/pmo-source-manifest.json`，用于标识当前 PMO 真源组合：
 
@@ -37,7 +37,7 @@ npm run preview
 5. 脚本同时写入 `pmo/tasks.json`、`pmo/gantt-react/public/tasks.json` 和 `pmo/gantt-react/public/pmo-source-manifest.json`。
 6. 刷新浏览器。
 
-运行完成后应看到 `Wrote 434 tasks from 信息化项目_计划管控真源.md`。如任务数发生变化，先确认 MD 真源是否确实增删任务。
+运行完成后应看到 `Wrote 467 tasks from 信息化项目_计划管控真源.md`。如任务数发生变化，先确认 MD 真源是否确实增删任务。
 
 ## 交付物文件系统(dev 模式)
 

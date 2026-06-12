@@ -13,10 +13,10 @@ const DEFAULT_CONFIG = path.resolve(SCRIPT_DIR, '../references/ollama-embedding-
 
 function parseArgs(argv) {
   const args = {
-    chunks: 'build/evidence/evidence_chunks.jsonl',
+    chunks: 'artifacts/evidence-index/latest/chunks.jsonl',
     config: DEFAULT_CONFIG,
-    out: 'build/evidence/embedding_manifest.json',
-    vectors: 'build/evidence/evidence_embeddings.jsonl',
+    out: 'artifacts/evidence-index/latest/embedding_manifest.json',
+    vectors: 'artifacts/evidence-index/latest/vectors.jsonl',
     batchSize: 8,
     limit: 0,
     dryRun: false,
@@ -41,7 +41,7 @@ function parseArgs(argv) {
 
 function printHelp() {
   console.log(`Usage:
-  node .agents/skills/process-evidence-mapping/scripts/build-embedding-manifest.mjs --chunks build/evidence/evidence_chunks.jsonl
+  node .agents/skills/process-evidence-mapping/scripts/build-embedding-manifest.mjs --chunks artifacts/evidence-index/<run-id>/chunks.jsonl
 
 Defaults to Ollama qwen3-embedding:latest using .agents/skills/process-evidence-mapping/references/ollama-embedding-config.json.
 Use --dry-run to validate inputs without calling Ollama.`);
@@ -86,12 +86,14 @@ async function embedBatch(config, inputs) {
 }
 
 function writeManifest(args, config, extra) {
+  const endpointPath = config.embed_endpoint || '/api/embed';
   ensureDir(args.out);
   fs.writeFileSync(args.out, JSON.stringify({
     created_at: new Date().toISOString(),
     provider: config.provider,
     base_url: config.base_url,
-    endpoint: config.embed_endpoint || '/api/embed',
+    endpoint: endpointPath,
+    endpoint_url: new URL(endpointPath, config.base_url).toString(),
     model: config.model,
     dimensions: config.dimensions || null,
     chunking_rule: config.chunking_rule || null,
@@ -127,7 +129,7 @@ async function main() {
   try {
     for (let start = 0; start < chunks.length; start += args.batchSize) {
       const batch = chunks.slice(start, start + args.batchSize);
-      const inputs = batch.map((chunk) => chunk.normalized_text || chunk.raw_text || '');
+      const inputs = batch.map((chunk) => [chunk.normalized_text, chunk.normalized_candidate].filter(Boolean).join('\n') || chunk.raw_text || '');
       const embeddings = await embedBatch(config, inputs);
       if (embeddings.length !== batch.length) throw new Error(`Embedding count mismatch: got ${embeddings.length}, expected ${batch.length}`);
       embeddings.forEach((embedding, index) => {
@@ -140,6 +142,7 @@ async function main() {
           embedding_model: config.model,
           embedding_dimensions: embedding.length,
           evidence_status: 'candidate',
+          verification_status: 'unverified',
           review_required: true,
           allowed_downstream_use: 'review_only',
         }) + '\n');

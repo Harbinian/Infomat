@@ -105,7 +105,7 @@ export function compareWbs(a, b) {
 function getTaskSortWeight(task) {
   const typeMap = { '摘要':0, '启动':1, '调研':2, '需求':3, '设计':4, '开发准备':5, '开发':6, '配置':7, '联调':8, '测试':9, '培训':10, '上线':11, '验收':12, '里程碑':13, '方案评审':14, '招采':15, '合同':16, '进场':17, '管理':18, '修订':19, '评审':20, '缓冲':21, '整改':22, '修复':23, '推广':24, '试点':25, '试运行':26, '部署':27, '驾驶舱':28, 'AI应用':29 };
   const completionPattern = /(上线|验收|发布|就绪|完成|评审通过)/;
-  if (task.milestone === '是' || task.duration === '0工作日') return 100;
+  if (task.milestone === '是' || isZeroWorkdayDuration(task.duration)) return 100;
   const nameWeight = completionPattern.test(task.name) ? 50 : 0;
   return (typeMap[task.type] ?? 30) + nameWeight;
 }
@@ -118,10 +118,14 @@ function isSummaryTask(task, allTasks) {
 }
 
 // ===== 里程碑判定 =====
+export function isZeroWorkdayDuration(duration) {
+  return /^0\s*工作日$/.test(String(duration || '').trim());
+}
+
 export function isMilestoneTask(task) {
   if (task.milestone === '是') return true;
   if (task.type === '里程碑') return true;
-  if (String(task.duration || '').includes('0工作日')) return true;
+  if (isZeroWorkdayDuration(task.duration)) return true;
   return /(上线|验收$|发布|就绪|完成|评审通过$|正式进场)/.test(task.name);
 }
 

@@ -15,7 +15,12 @@
     "test:engineering-source-manifest": "node scripts/check-engineering-source-manifest.mjs",
     "test:norms-source-manifest": "node scripts/check-norms-source-manifest.mjs",
     "test:pmo-task-data": "node scripts/check-pmo-task-data.mjs",
+    "test:pmo-wbs-semantic-depth": "node scripts/check-pmo-wbs-semantic-depth.mjs",
     "test:source-manifest-hashes": "node scripts/check-source-manifest-hashes.mjs",
+    "test:ocr-source": "node scripts/test-ocr-source.mjs",
+    "test:process-candidates": "node .agents/skills/process-evidence-mapping/scripts/test-candidate-workflow.mjs",
+    "test:process-evidence-evolution": "node .agents/skills/process-evidence-mapping/scripts/test-evolution-workflow.mjs",
+    "test:process-evidence-skill": "node scripts/test-process-evidence-skill.mjs",
     "test:process-governance-mainline": "node scripts/test-process-governance-mainline.mjs"
   },
   "repository": {

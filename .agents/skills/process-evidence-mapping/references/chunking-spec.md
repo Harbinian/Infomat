@@ -30,6 +30,24 @@ The model, dimensions, chunking rule, and hash must be recorded in the embedding
 
 For binary Office/PDF/VSD sources, first extract text, tables, or flow descriptions with an appropriate converter. If extraction fails, create a manifest entry with `extraction_status=failed` or `待复核`; do not silently skip it.
 
+Generated mapping deliverables, governance reports, and helper outputs are not source evidence for vector retrieval. Exclude canonical mapping Markdown, MDM requirement Markdown, department Sankey HTML, `docs/norms/流程治理/`, `_quality-report.md`, `README.md`, `CLAUDE.md`, `_extracted/`, scripts, and ECharts assets from production evidence chunks unless the user explicitly requests an audit of generated outputs.
+
+When running this broad production pass, do not extract Visio content unless the user explicitly asks for a visual-flow专项抽取. Keep Visio files in the source index as deferred visual material:
+
+```powershell
+node .agents/skills/process-evidence-mapping/scripts/extract-evidence-chunks.mjs --input docs/norms --out artifacts/evidence-index/<run-id>/chunks.jsonl --defer-ext .vsd,.vsdx --defer-reason "本轮取消Visio内容提取；按解释性图表登记，后续如需流程图证据再人工目视或专项抽取。"
+```
+
+Deferred Visio files must remain in `source_index.jsonl` with `extraction_status=deferred`; do not infer DCM/BBM facts from these diagrams unless they are later reviewed as original visual evidence.
+
+For scan-only PDF and image sources, run the repository OCR wrapper first:
+
+```powershell
+node scripts/ocr-source.mjs --input <file-or-dir> --out artifacts/ocr/<run-id>
+```
+
+OCR blocks remain candidate source text with `evidence_status=ocr_extracted_not_confirmed`. They can be chunked for retrieval, but downstream mapping fields require original visual source review before use.
+
 ## Required Chunk Fields
 
 Every chunk should contain:
@@ -62,14 +80,34 @@ Every chunk should contain:
 | `swimlane` | Swimlane/role |
 | `raw_text` | Original excerpt |
 | `normalized_text` | Search-only normalized text |
+| `normalized_candidate` | Search-only repair/alias hint; not a source quote |
 | `artifact_type` | body/table/form/ledger/flow/attachment/ocr |
+| `extraction_method` | Tool/path used to extract the text |
+| `extraction_quality` | clean/partial/failed/needs_ocr |
 | `retrieval_method` | chunking/vector/keyword/rule/manual |
 | `retrieval_score` | Similarity or ranking score, if any |
 | `evidence_status` | confirmed/candidate/insufficient/no_evidence/conflict/excluded |
+| `verification_status` | unverified/source_checked/rejected/confirmed |
 | `review_required` | true/false |
 | `review_reason` | Why review is needed |
+| `allowed_downstream_use` | review_only unless source-verified |
 | `content_hash` | Source content hash |
 | `chunk_hash` | Raw text hash |
+
+## Extraction Quality
+
+Use these values:
+
+| Value | Meaning |
+|---|---|
+| `clean` | Extracted text is usable for review, subject to normal source checking |
+| `partial` | Missing words, broken spaces, template blanks, underscores, or suspected extraction damage |
+| `failed` | Extraction failed; no text chunk can support a candidate |
+| `needs_ocr` | Scan-only PDF/image or visual source requiring OCR/manual reading |
+
+When a chunk is `partial`, preserve `raw_text` exactly and put repair hints only in `normalized_candidate`.
+For example, `raw_text=公司 月综合打分表` may have `normalized_candidate=公司__月综合打分表 / 公司月度综合打分表候选`.
+Do not cite the candidate as the final source sentence; use it to locate a cleaner original clause or table.
 
 ## Candidate Output Rules
 
@@ -85,3 +123,13 @@ Retriever output must not look like final mapping. Candidate records must includ
 - `allowed_downstream_use`
 
 Default `allowed_downstream_use` is `review_only`. Change it only after source verification.
+
+Candidate records should also include `relation_type`:
+
+- `object_alias_candidate`
+- `approval_chain_candidate`
+- `controlled_transfer_candidate`
+- `archive_or_retention`
+- `responsibility_or_participation`
+- `reference_basis`
+- `extraction_quality_issue`

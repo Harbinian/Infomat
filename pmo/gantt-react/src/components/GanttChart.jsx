@@ -1,7 +1,7 @@
 import { useRef, useEffect, useCallback } from 'react';
 import {
   parseDate, formatDate, getWbsColor, getTotalMonths, getMonthLabels,
-  getXForDate
+  getXForDate, isZeroWorkdayDuration
 } from '../utils/dateUtils';
 
 const ROW_HEIGHT = 32;
@@ -302,7 +302,7 @@ function drawTaskBar(ctx, task, rowIndex, monthWidth, positions) {
   const y = rowIndex * ROW_HEIGHT;
 
   const isSummary = task.type === '摘要';
-  const isMilestone = task.milestone === '是' || task.duration === '0工作日';
+  const isMilestone = task.milestone === '是' || isZeroWorkdayDuration(task.duration);
   const isBuffer = task.type === '缓冲';
   const isHighRisk = task.risk === '高';
 
