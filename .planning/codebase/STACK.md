@@ -1,5 +1,9 @@
 # 技术栈扫描
 
+> 状态：历史扫描快照，不是当前仓库架构入口
+> 适用范围：仅用于追溯早期 `index.html` / `bizmapper.py` 轻量工具形态
+> 当前口径：如与 `REPOSITORY_BOUNDARY.md`、`DIRECTORY_OWNERSHIP.md` 或 `MAINLINE_MAP.md` 冲突，以根目录执行规则为准
+
 ## 总览
 
 Infomat 当前是一个“零构建前端 + 独立 Python 工具”的轻量项目，没有前端框架、打包器或依赖清单文件。

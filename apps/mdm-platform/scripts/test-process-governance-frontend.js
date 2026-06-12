@@ -50,7 +50,23 @@ assert.ok(html.includes('function renderProcessGovernanceSourceCoverage'), 'proc
 assert.ok(html.includes('function renderProcessGovernanceMdmRequirements'), 'process governance should render MDM requirements');
 assert.ok(html.includes('function renderProcessGovernanceEvidence'), 'process governance should render evidence refs');
 assert.ok(html.includes('源文件覆盖'), 'process governance should name source coverage without creating a second truth');
+assert.ok(html.includes('id="pgSourceCoverageSearch"'), 'source coverage should expose keyword filtering');
+assert.ok(html.includes('id="pgSourceCoverageStatusFilter"'), 'source coverage should expose status filtering');
+assert.ok(html.includes('id="pgSourceCoverageDeptFilter"'), 'source coverage should expose department filtering');
+assert.ok(html.includes('id="pgSourceCoverageTypeFilter"'), 'source coverage should expose asset type filtering');
+assert.ok(html.includes('function processGovernanceSourceCoverageMatches'), 'source coverage should filter rows before rendering');
+assert.ok(html.includes('function populateProcessGovernanceSourceCoverageFilters'), 'source coverage should populate filter options from current data');
+assert.ok(html.includes('pg-source-status'), 'source coverage status tags should use compact non-wrapping styling');
+assert.ok(html.includes('SOURCE_COVERAGE_VISIBLE_LIMIT = 20'), 'source coverage should only render 20 rows for page performance');
+assert.ok(html.includes('refreshFilters: false'), 'source coverage should not rebuild filter options on every filter keystroke');
+const sourceCoverageRenderStart = html.indexOf('function renderProcessGovernanceSourceCoverage');
+const sourceCoverageRenderEnd = html.indexOf('function renderProcessGovernanceMdmRequirements');
+const sourceCoverageRenderSnippet = html.slice(sourceCoverageRenderStart, sourceCoverageRenderEnd);
+assert.ok(sourceCoverageRenderSnippet.includes('覆盖记录'), 'source coverage meta should describe rows as coverage records');
+assert.ok(!sourceCoverageRenderSnippet.includes('/ 共 '), 'source coverage meta should not present a questionable global total');
 assert.ok(html.includes('主数据对象候选'), 'process governance should name MDM candidates as candidates');
+assert.ok(html.includes('pg-mdm-guide'), 'MDM candidate section should include visual guidance');
+assert.ok(html.includes('候选对象') && html.includes('关键字段') && html.includes('证据引用') && html.includes('治理要求'), 'MDM candidate guidance should show the review path');
 assert.ok(html.includes('证据链'), 'process governance should name evidence chain view');
 assert.ok(html.includes('回源文件整改后重新导入'), 'process governance should guide users back to source files instead of editing docs/norms in MDM');
 assert.ok(
@@ -106,6 +122,24 @@ assert.deepStrictEqual(pruned.links.map(link => `${link.source}->${link.target}`
   '销售订单评审和执行管理->接收订单并组织评审',
   '接收订单并组织评审->OA'
 ]);
+const sourceFilterMatch = html.match(/function processGovernanceSourceCoverageMatches\(row, filters\) \{[\s\S]*?\n    \}/);
+assert.ok(sourceFilterMatch, 'source coverage filter helper should be extractable');
+const sourceFilterContext = {};
+vm.runInNewContext(`${sourceFilterMatch[0]}; this.processGovernanceSourceCoverageMatches = processGovernanceSourceCoverageMatches;`, sourceFilterContext);
+const sourceRows = [
+  { process_status: '纳入', dept_name: '经营发展部', asset_type: 'Procedure', file_no: 'GLB-001', file_path: 'docs/norms/经营发展部制度.md', process_reason: '流程依据' },
+  { process_status: '排除', dept_name: '财务部', asset_type: 'Reference', file_no: 'REF-001', file_path: 'docs/norms/财务部参考.md', process_reason: '参考副本' }
+];
+assert.deepStrictEqual(
+  sourceRows.filter(row => sourceFilterContext.processGovernanceSourceCoverageMatches(row, { status: '纳入', query: '经营' })).map(row => row.file_no),
+  ['GLB-001'],
+  'source coverage filters should match status and keyword before rendering'
+);
+assert.strictEqual(
+  sourceFilterContext.processGovernanceSourceCoverageMatches(sourceRows[0], { dept: '财务部' }),
+  false,
+  'source coverage department filter should exclude other departments'
+);
 assert.ok(
   html.includes("String(row.input_source_dept || '').includes(deptName)") &&
   html.includes("String(row.output_target_dept || '').includes(deptName)"),

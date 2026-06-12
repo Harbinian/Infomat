@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const { requireAuth, getUserEffectivePermissions } = require('../auth');
+const SOURCE_FILE_COVERAGE_LIMIT = 20;
 
 function runDbAction(res, action) {
   try {
@@ -115,7 +116,7 @@ function canManageQualityCase(req, qualityCase) {
   if (requestHasQualityRole(req, ['admin', 'data_quality', 'decision_group'])) return true;
   if (!qualityCase || !req.session || !req.session.departmentId) return false;
   const department = db.prepare('SELECT name FROM departments WHERE id=?').get(req.session.departmentId);
-  return requestHasQualityRole(req, ['project_lead']) &&
+  return requestHasQualityRole(req, ['project_lead', 'workgroup_lead']) &&
     (qualityCase.owner_dept_id === req.session.departmentId || qualityCase.dept_name === (department && department.name));
 }
 
@@ -134,7 +135,7 @@ function canManageMappingTodo(req, todo) {
   if (requestHasQualityRole(req, ['admin', 'data_quality', 'it_lead'])) return true;
   if (!todo || !req.session || !req.session.departmentId) return false;
   const department = db.prepare('SELECT name FROM departments WHERE id=?').get(req.session.departmentId);
-  return requestHasQualityRole(req, ['project_lead', 'business_contact']) &&
+  return requestHasQualityRole(req, ['project_lead', 'workgroup_lead', 'business_contact']) &&
     (todo.owner_dept_id === req.session.departmentId ||
      todo.dept_name === (department && department.name) ||
      todo.target_dept_name === (department && department.name));
@@ -487,7 +488,7 @@ router.get('/source-files', requireAuth, (req, res) => {
   return runDbAction(res, () => {
     const snapshot = activeSnapshot();
     if (!snapshot) {
-      return res.json({ summary: { total: 0, byStatus: { '纳入': 0, '排除': 0, '待复核': 0 }, byAssetType: {}, returned: 0, limit: 500 }, items: [] });
+      return res.json({ summary: { total: 0, byStatus: { '纳入': 0, '排除': 0, '待复核': 0 }, byAssetType: {}, returned: 0, limit: SOURCE_FILE_COVERAGE_LIMIT }, items: [] });
     }
 
     const params = [snapshot.id];
@@ -516,9 +517,9 @@ router.get('/source-files', requireAuth, (req, res) => {
       FROM process_source_files
       ${whereSql}
       ORDER BY dept_name, process_status, asset_type, file_path
-      LIMIT 500
-    `).all(...params);
-    return res.json({ summary: { ...sourceFileSummaryFromRows(summaryRows), returned: items.length, limit: 500 }, items });
+      LIMIT ?
+    `).all(...params, SOURCE_FILE_COVERAGE_LIMIT);
+    return res.json({ summary: { ...sourceFileSummaryFromRows(summaryRows), returned: items.length, limit: SOURCE_FILE_COVERAGE_LIMIT }, items });
   });
 });
 

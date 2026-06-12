@@ -167,6 +167,22 @@ function seedProcessGovernance(deptName) {
     `${TEST_PREFIX}A1`,
     `${TEST_PREFIX}桑基图核验提醒待办`
   );
+
+  db.prepare(`
+    INSERT INTO process_mapping_todos
+      (todo_key, mapping_record_id, todo_type, first_snapshot_id, latest_snapshot_id, dept_name,
+       target_dept_name, a1_code, source_file, message, suggestion, status, priority)
+    VALUES (?, ?, 'cross_dept', ?, ?, ?, ?, ?, 'test.md', ?, '由工作组组长协调输入输出部门确认', 'open', 'high')
+  `).run(
+    `${TEST_PREFIX}cross-dept-todo`,
+    mappingRecordId,
+    snapshotId,
+    snapshotId,
+    deptName,
+    '工程技术部',
+    `${TEST_PREFIX}A1`,
+    `${TEST_PREFIX}跨部门衔接待办`
+  );
 }
 
 function seedData() {
@@ -183,6 +199,7 @@ function seedData() {
   const multiRoleUserId = createUser(`${TEST_PREFIX}MULTI`, '多角色用户', deptId, 'owner', ['business_contact', 'data_quality']);
   createUser(`${TEST_PREFIX}DECISION`, '决策组用户', deptId, 'reviewer', ['decision_group']);
   createUser(`${TEST_PREFIX}QUIET`, '无待办用户', deptId, 'owner', ['project_lead']);
+  createUser(`${TEST_PREFIX}WORKGROUP`, '工作组组长用户', deptId, 'owner', ['workgroup_lead']);
 
   seedProcessGovernance(`${TEST_PREFIX}经营发展部`);
 
@@ -262,9 +279,11 @@ async function main() {
     assert(String(qualityItem.target).includes('#/processGovernance?view=qualityCases&case='), '质量问题应跳转到流程治理闭环视图');
     assert(String(qualityItem.id).startsWith('process-quality-case:'), '质量问题待办应绑定治理问题单');
     assert(todoWorkbench.body.workItems.some(item => item.type === 'process_mapping_todo'), '应返回流程映射待办');
-    const mappingTodoItem = todoWorkbench.body.workItems.find(item => item.type === 'process_mapping_todo');
+    const mappingTodoItem = todoWorkbench.body.workItems.find(item => item.type === 'process_mapping_todo' && item.area === 'verification');
     assert(mappingTodoItem.roleHint === 'business_contact', '核验类映射待办默认应提示业务对接人处理');
     assert(String(mappingTodoItem.target).includes('#/processGovernance?view=mappingTodos&todo='), '映射待办应跳转到流程治理映射待办视图');
+    const crossDeptTodoItem = todoWorkbench.body.workItems.find(item => item.type === 'process_mapping_todo' && item.area === 'cross_dept');
+    assert(crossDeptTodoItem && crossDeptTodoItem.roleHint === 'workgroup_lead', '跨部门衔接待办应提示工作组组长处理');
 
     const ownedRoles = todoWorkbench.body.roles.filter(role => role.owned);
     assert(ownedRoles.some(role => role.code === 'business_contact'), '工作台应标记业务对接人角色');
@@ -272,8 +291,10 @@ async function main() {
     ownedRoles.forEach(assertRoleGuide);
 
     const allRoleCodes = todoWorkbench.body.roles.map(role => role.code);
-    ['it_lead', 'project_lead', 'business_contact', 'data_quality', 'decision_group', 'submitter', 'owner', 'reviewer', 'admin']
+    ['it_lead', 'project_lead', 'workgroup_lead', 'business_contact', 'data_quality', 'decision_group', 'submitter', 'owner', 'reviewer', 'admin']
       .forEach(code => assert(allRoleCodes.includes(code), `工作台缺少角色说明: ${code}`));
+    const projectGroup = todoWorkbench.body.roleGroups.find(group => group.key === 'project');
+    assert(projectGroup && projectGroup.roles.some(role => role.code === 'workgroup_lead'), '工作组组长应归入项目工作角色');
 
     const sankey = todoWorkbench.body.sankey;
     assert(sankey && sankey.nodes.length > 0 && sankey.links.length > 0, '角色桑基图不应为空');
@@ -305,6 +326,16 @@ async function main() {
     assert(quietWorkbench.body.workItems.some(item => item.type === 'process_mapping_todo'), '本部门项目组长应看到本部门流程映射待办');
     assert(quietWorkbench.body.nextActions.length >= 1, '无字段待办用户也应有下一步指引');
     assert(quietWorkbench.body.nextActions[0].sample, '无字段待办下一步动作也应给出样例');
+
+    const workgroupCookie = await login(`${TEST_PREFIX}WORKGROUP`);
+    const workgroupWorkbench = await request('GET', '/api/role-workbench?mode=todo', null, workgroupCookie);
+    assert(workgroupWorkbench.status === 200, `工作组组长工作台失败: ${workgroupWorkbench.status}`);
+    const workgroupOwnedRoles = workgroupWorkbench.body.roles.filter(role => role.owned);
+    assert(workgroupOwnedRoles.some(role => role.code === 'workgroup_lead'), '工作台应标记工作组组长角色');
+    workgroupOwnedRoles.forEach(assertRoleGuide);
+    assert(workgroupWorkbench.body.workItems.some(item => item.type === 'process_quality'), '工作组组长应看到本工作组流程质量问题');
+    assert(workgroupWorkbench.body.workItems.some(item => item.type === 'process_mapping_todo'), '工作组组长应看到本工作组流程映射待办');
+    assert(workgroupWorkbench.body.nextActions.some(item => item.roleCode === 'workgroup_lead' || item.roleCode === 'business_contact' || item.roleCode === 'data_quality'), '工作组组长下一步应关联项目工作角色');
 
     console.log('Role workbench API test passed');
   } finally {

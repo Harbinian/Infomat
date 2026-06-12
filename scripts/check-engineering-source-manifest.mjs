@@ -126,10 +126,17 @@ for (const requiredGroup of ['科技创新部', '数字工程部', '集成研发
 const canonicalSection = extractSection(manifestText, 'Canonical 交付物缺口');
 const canonicalRows = parseBacktickedPathRows(canonicalSection);
 for (const row of canonicalRows) {
+  const fullPath = resolve(root, row.path);
+  if (row.path === 'docs/norms/工程技术部业务资料/') {
+    assert.equal(row.cells[1], '已建立', `${row.path} must be documented as 已建立`);
+    assert.ok(existsSync(fullPath), `${row.path} must exist after engineering source materials are added`);
+    assert.equal(countFiles(fullPath), 536, `${row.path} file count must match the audited source directory`);
+    continue;
+  }
   assert.equal(row.cells[1], '缺失', `${row.path} must be documented as 缺失`);
-  assert.ok(!existsSync(resolve(root, row.path)), `${row.path} should still be absent before engineering DCM/BBM is created`);
+  assert.ok(!existsSync(fullPath), `${row.path} should still be absent before engineering DCM/BBM is created`);
 }
-assert.equal(canonicalRows.length, 4, 'engineering canonical gap table should list 4 missing items');
+assert.equal(canonicalRows.length, 4, 'engineering source status table should list source directory plus 3 missing canonical items');
 
 const groupSection = extractSection(manifestText, '候选资料分组');
 const groupRows = parseBacktickedPathRows(groupSection);
@@ -159,4 +166,4 @@ for (const section of indexedSections) {
   }
 }
 
-console.log('Engineering source manifest check passed: canonical gap plus 47 candidate files');
+console.log('Engineering source manifest check passed: source directory plus 3 canonical gaps and 47 candidate files');

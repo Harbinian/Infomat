@@ -37,6 +37,8 @@ const TRANSFER_WORDS = [
   '提供',
   '出具',
   '沟通',
+  '核对',
+  '校对',
   '跟踪',
   '回执',
 ];
@@ -307,9 +309,9 @@ function hasWeakEvidence(record) {
     record.roleBasis,
     record.triggerBasis,
     record.preconditionBasis,
+    record.dataInput,
+    record.dataOutput,
     record.evidenceBasis,
-    record.reminder,
-    record.remark,
     record.evidenceType,
   ].join(' ');
   return /上下文推断|分析拆分|待确认|待补|未明确|不详|请部门确认/.test(text);
@@ -385,7 +387,7 @@ function analyzeDeptReference(record, field, dept, knownDepartments) {
     );
   }
 
-  if (hasWeakEvidence(record)) {
+  if (!deptSpecificTransfer && hasWeakEvidence(record)) {
     findings.push(
       makeFinding({
         level: '需部门确认',

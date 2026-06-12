@@ -4,7 +4,6 @@ const path = require('path');
 const { testDbPath, cleanupDb } = require('./testHelpers/isolatedDb');
 const db = require('../server/db');
 const { hashPassword } = require('../server/auth');
-const { FIXED_DEFAULT_PASSWORD } = require('../server/passwordPolicy');
 
 const root = path.join(__dirname, '..');
 
@@ -24,7 +23,11 @@ function seedUsers() {
   db.prepare(`
     INSERT INTO users (name, employee_no, department_id, post, role, password_hash, must_change_password)
     VALUES (?, ?, NULL, ?, ?, ?, ?)
-  `).run('旧固定口令用户', 'OLD001', '专员', 'submitter', hashPassword(FIXED_DEFAULT_PASSWORD), 0);
+  `).run('未强制改密默认口令用户', 'OLD001', '专员', 'submitter', hashPassword('000000'), 0);
+  db.prepare(`
+    INSERT INTO users (name, employee_no, department_id, post, role, password_hash, must_change_password)
+    VALUES (?, ?, NULL, ?, ?, ?, ?)
+  `).run('首登待改密用户', 'ONBOARD001', '专员', 'submitter', hashPassword('000000'), 1);
   db.prepare(`
     INSERT INTO users (name, employee_no, department_id, post, role, password_hash, must_change_password)
     VALUES (?, ?, NULL, ?, ?, ?, ?)

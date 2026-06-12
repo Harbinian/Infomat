@@ -30,6 +30,7 @@ async function main() {
     '@keyframes blink',
     '@keyframes pulse',
     '/api/org/me',
+    '/api/org/session',
     '/api/mappings',
     '/api/field-entries',
     '/api/todos',
@@ -70,13 +71,14 @@ async function main() {
     'function resetUserDefaultPassword',
     '基础权限角色',
     '项目工作角色',
-    '一次性初始密码',
+    '首次登录密码',
     '当前批量导入仅给已存在用户分配角色',
     '组织架构来自',
     '组织架构和部门职责.md',
     '不支持手动新增',
     '业务对接人收到字段确认待办后',
     '数据质量员发现同一字段存在不同黄金源候选时',
+    '工作组组长看到本工作组有跨部门衔接风险时',
     '项目组长看到本部门有跨部门衔接风险时',
     'function renderProcessGovernance()',
     'function renderRoleGuide()',
@@ -114,6 +116,7 @@ async function main() {
 
   assert.ok(!html.includes('admin123'), 'login page must not expose a default password');
   assert.ok(!html.includes('init1234'), 'frontend must not expose or submit a fixed default password');
+  assert.ok(html.includes('000000'), 'user management copy should disclose the unified first-login password');
   assert.ok(!html.includes('value="ADMIN001"'), 'login page must not prefill the default admin employee number');
   assert.ok(html.includes('function escapeHtml'), 'frontend should expose a shared HTML escaping helper');
   assert.ok(html.includes('function safeText'), 'frontend should route service-provided display text through escaping');
@@ -126,6 +129,10 @@ async function main() {
   assert.ok(!html.includes("type:'orgUnit',id:'new'"), 'organization structure should not route to a manual create form');
   assert.ok(!html.includes('class="panel role-workbench on"'), 'role workbench must not be the static default panel because hash routes should decide the first visible page');
   assert.ok(html.includes('async function activateAuthenticatedApp'), 'authenticated startup should use a shared route-first boot helper');
+  assert.ok(html.includes("api('/api/org/session'"), 'startup session check should use the non-401 session endpoint');
+  assert.ok(html.includes("api('/api/org/session', { silentUnauthorized: true })"), 'startup session check should not show an expired-login toast');
+  assert.ok(html.includes('function resetSessionUi'), 'login screen should reset stale authenticated header state');
+  assert.ok(html.includes("$('sessionUserName').textContent = '未登录'"), 'login screen should clear stale user identity text');
   const startupSnippetStart = html.indexOf('async function activateAuthenticatedApp');
   const startupSnippet = html.slice(startupSnippetStart, startupSnippetStart + 1200);
   assert.ok(

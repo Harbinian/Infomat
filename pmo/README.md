@@ -1,6 +1,6 @@
 # PMO 数字化底座
 
-`pmo/` 目录包含两个项目管理入口：流程地图驾驶舱和 React 甘特/PMO 管控看板。
+`pmo/` 目录包含三个同级项目管理入口：流程地图驾驶舱、React 甘特图和 PMO 管控看板。
 
 ## 当前真源
 
@@ -23,22 +23,7 @@
 
 ## 快速开始
 
-### 流程地图驾驶舱
-
-直接打开：
-
-```bash
-pmo/procedure-management/dashboard.html
-```
-
-或使用本地服务：
-
-```bash
-cd pmo/procedure-management
-python -m http.server 8080
-```
-
-### React 甘特图 / PMO 看板
+### PMO 服务
 
 ```bash
 cd pmo/gantt-react
@@ -46,7 +31,15 @@ npm install
 npm run dev
 ```
 
-开发模式默认访问 `http://localhost:5173`。
+开发模式默认访问 `http://localhost:5174`，顶部可在“甘特图 / PMO看板 / 流程地图”之间切换。
+
+流程地图驾驶舱的独立路由为：
+
+```text
+http://localhost:5174/#/procedure-dashboard
+```
+
+原始页面仍保留在 `pmo/procedure-management/dashboard.html`，由 PMO 服务直接读取，不另维护副本。
 
 ## 更新任务数据
 

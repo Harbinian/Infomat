@@ -11,7 +11,7 @@ const users = db.prepare(`
 `).all();
 
 const matches = users
-  .filter(user => verifyPassword(FIXED_DEFAULT_PASSWORD, user.password_hash))
+  .filter(user => !user.must_change_password && verifyPassword(FIXED_DEFAULT_PASSWORD, user.password_hash))
   .map(({ password_hash, ...user }) => user);
 
 const report = {

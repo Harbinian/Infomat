@@ -40,6 +40,7 @@ tr:last-child td{border-bottom:none}
 .domain-pill{display:inline-flex;align-items:center;min-height:24px;padding:2px 8px;border-radius:7px;color:#fff;font-size:12px;white-space:normal}
 .evidence-tag{display:inline-block;padding:1px 6px;border-radius:4px;font-size:11px;font-weight:700;white-space:nowrap}
 .evidence-tag.explicit{background:#dcfce7;color:#166534}.evidence-tag.inferred{background:#fef3c7;color:#92400e}
+      .evidence-tag.gap { background: #fee2e2; color: #991b1b; border: 1px solid #dc2626; }
 .appr-tag{display:inline-block;padding:1px 6px;border-radius:4px;font-size:11px}.appr-tag.none{background:#e2e8f0;color:#475569}
 .warn-tag{display:inline-block;margin:0 4px 4px 0;padding:2px 6px;border-radius:4px;background:#fef3c7;color:#92400e;font-size:11px;font-weight:700;line-height:1.35}
 .soft-warn-tag{display:inline-block;margin:0 4px 4px 0;padding:2px 6px;border-radius:4px;background:#e0f2fe;color:#075985;font-size:11px;font-weight:700;line-height:1.35}
@@ -68,21 +69,21 @@ tr:last-child td{border-bottom:none}
 .source-card{background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:12px 14px;margin-bottom:14px;font-size:13px;color:#334155;line-height:1.7}.source-card .src-label{font-size:11px;color:#64748b;font-weight:700;margin-bottom:4px}
 @media(max-width:900px){.page{padding:20px 14px 34px}.badge{position:static;display:inline-block;margin-top:10px}.stat-row{grid-template-columns:repeat(3,minmax(0,1fr))}.g2,.summary-grid{grid-template-columns:1fr}.sankey-chart{height:1120px}.bar-line{grid-template-columns:160px 1fr 34px}.table-a1{min-width:0}.feedback-overlay{width:100vw}}
 </style></head><body><main class="page">
-<section class="hero"><h1>复材车间 · 部门能力流程系统桑基图</h1><p>部门（D1）→ 能力域（L1）→ 业务能力（L2）→ 业务流程（L3）→ 业务行为（A1）→ 应用系统（S1）。含29条业务行为（A1），覆盖1个能力域6条业务流程（L3）。</p><div class="badge">部门审核稿 · 待反馈</div></section>
+<section class="hero"><h1>复材车间 · 部门能力流程系统桑基图</h1><p>部门（D1）→ 能力域（L1-L3）→ 业务能力（L2）→ 应用系统（S1）[全域]；能力域（L1-A1）：业务能力（L2）→ 业务流程（L3）→ 业务行为（A1）→ 应用系统（S1）[域详情]。含29条业务行为（A1），覆盖1个能力域6条业务流程（L3）。</p><div class="badge">部门审核稿 · 待反馈</div></section>
 
 <div class="declaration"><strong>郑重声明：制度文件来源与归属说明</strong><ul><li>本页所依据的3份核心制度文件在提交归档时存放于<b>项目管理部</b>文件夹，但文件内容实质为<b>复材车间</b>的生产执行与制造管理职能。</li><li>具体依据：内部排罐管理程序明确由班组排产、物料核查、工装状态确认等车间现场执行活动组成；横向工序管理方案以生产部交付组为执行主体；随炉件移交规定以班组为出罐通知和交接的执行方。</li><li>上述文档的职能归属判断标准为<b>"谁执行、谁所有"</b>，而非"谁提交归档"。</li><li>通用行政程序（生产部快递管理程序、车辆使用申请管理规定、专用物资出门申请管理规定）不纳入本图能力映射。</li></ul></div>
 
-<div class="read-guide"><strong>读图方法：</strong>"全域总览"看复材车间覆盖哪些领域和系统；切换到"生产执行管控"看 业务能力（L2）→ 业务流程（L3）→ 业务行为（A1）→ 应用系统（S1） 的四层细节。悬停连线可见制度依据和系统设计依据。业务行为（A1）节点显示行为名称和执行角色。下方明细表在"全域总览"显示业务流程（L3）行，在能力域视图显示业务行为（A1）行。</div>
+<div class="read-guide"><strong>读图方法：</strong>"全域总览"看复材车间覆盖哪些领域和系统；切换到"生产执行管控"看 能力域（L1-A1）：业务能力（L2）→ 业务流程（L3）→ 业务行为（A1）→ 应用系统（S1） 的四层细节。悬停连线可见制度依据和系统设计依据。业务行为（A1）节点显示A1序号、行为名称和执行角色。下方明细表在"全域总览"显示业务流程（L3）行，在能力域视图显示业务行为（A1）行。</div>
 
 <section class="stat-row"><div class="stat-box"><div class="num">1</div><div class="lbl">部门（D1）</div></div><div class="stat-box"><div class="num">1</div><div class="lbl">能力域（L1）</div></div><div class="stat-box"><div class="num">3</div><div class="lbl">业务能力（L2）</div></div><div class="stat-box"><div class="num">6</div><div class="lbl">业务流程（L3）</div></div><div class="stat-box"><div class="num">29</div><div class="lbl">业务行为（A1）</div></div><div class="stat-box"><div class="num">2</div><div class="lbl">应用系统（S1）</div></div></section>
 
-<section class="modebar" id="modebar"><span class="mode-label">视图</span></section>
+<section class="modebar" id="modebar"><span class="mode-label">视图（能力域 L1-L3 / L1-A1）</span></section>
 
-<section class="sankey-wrap"><div class="sankey-title" id="chartTitle">复材车间全域总览</div><div class="sankey-sub" id="chartSub">部门（D1）→ 能力域（L1）→ 业务能力（L2）→ 应用系统（S1）</div><div id="chart" class="sankey-chart"></div><div class="legend-row" id="legendRow"></div></section>
+<section class="sankey-wrap"><div class="sankey-title" id="chartTitle">复材车间全域总览</div><div class="sankey-sub" id="chartSub">部门（D1）→ 能力域（L1-L3）→ 业务能力（L2）→ 应用系统（S1）</div><div id="chart" class="sankey-chart"></div><div class="legend-row" id="legendRow"></div></section>
 
 <section class="g2"><div class="note"><strong>应用系统（S1）口径：</strong>只展示OA、MES、PLM、ERP四类面向员工使用的信息化系统；MDM不作为应用系统（S1）节点。</div><div class="note"><strong>部门审核口径：</strong>本页用于部门逐条确认业务行为（A1）。证据类型需区分"原文明确-正文"、"上下文推断"等；执行角色、触发情景、前置条件可由部门补充或修正。验收标准只检查业务流程（L3）最终环节或跨部门交接前的最后环节；跟踪类任务优先由系统待办提醒、到期预警和进度展示承载。</div></section>
 
-<section class="summary-grid"><div class="panel"><h3>能力域（L1）规模（业务行为（A1）数）</h3><div class="bar-list" id="domainBars"></div></div><div class="panel"><h3>系统承载分布（A1参与次数）</h3><div class="bar-list" id="systemBars"></div></div></section>
+<section class="summary-grid"><div class="panel"><h3>能力域（L1-A1）规模（业务行为（A1）数）</h3><div class="bar-list" id="domainBars"></div></div><div class="panel"><h3>系统承载分布（A1参与次数）</h3><div class="bar-list" id="systemBars"></div></div></section>
 
 <section class="table-wrap"><table id="mappingTable"><thead id="tableHead"></thead><tbody id="mappingBody"></tbody></table></section>
 
@@ -179,9 +180,79 @@ function acceptanceText(a1){
   if(isFinalStep(a1))return"请部门确认是否需要验收/完成标准";
   return isTrackingTask(a1)?"不适用-跟踪类":"不适用-过程环节";
 }
-function evidenceClass(evi){return evi==="上下文推断"||evi==="分析拆分"?"inferred":"explicit";}
+function evidenceClass(evi){var text=String(evi||"");if(/待补|未见|缺少|证据不足/.test(text))return"gap";return evi==="上下文推断"||evi==="分析拆分"?"inferred":"explicit";}
 function trackingNote(a1){return isTrackingTask(a1)?'<span class="soft-warn-tag">跟踪类</span>':'';}
-function a1DisplayLabel(a1){var role=roleWarning(a1)?"待确认："+a1[2]:a1[2];return shortText(a1[1],18)+"\n"+shortText(role,18);}
+function a1ShortCode(a1) {
+        var id = Array.isArray(a1) ? a1[0] : a1;
+        var m = String(id || "").match(/A\d+$/);
+        return m ? m[0] : String(id || "");
+      }
+
+      function a1JoinedText(a1) {
+        return Array.isArray(a1) ? a1.join(" ") : String(a1 || "");
+      }
+
+      function isInferenceEvidence(a1) {
+        return /上下文推断|分析拆分/.test(String((Array.isArray(a1) ? a1[8] : a1) || ""));
+      }
+
+      function hasEvidenceGap(a1) {
+        return /待补|未见|缺少|证据不足/.test(a1JoinedText(a1));
+      }
+
+      function a1NodeColor(a1) {
+        if (roleWarning(a1) || hasEvidenceGap(a1)) return "#dc2626";
+        if (isInferenceEvidence(a1)) return "#f59e0b";
+        return "#64748b";
+      }
+
+      function processName(rowOrProc) {
+        if (rowOrProc && typeof rowOrProc === "object" && !Array.isArray(rowOrProc)) {
+          return rowOrProc.process || rowOrProc.proc || rowOrProc.l3 || "";
+        }
+        var raw = String(rowOrProc || "");
+        if (typeof l3NameMap !== "undefined" && l3NameMap && l3NameMap[raw]) return l3NameMap[raw];
+        return raw;
+      }
+
+      function processCode(rowOrProc) {
+        var raw = rowOrProc && typeof rowOrProc === "object" && !Array.isArray(rowOrProc)
+          ? String(rowOrProc.code || rowOrProc.id || rowOrProc.process || rowOrProc.proc || "")
+          : String(rowOrProc || "");
+        var name = processName(rowOrProc);
+        var m = raw.match(/L3[-_ ]?(\d+)/i) || String(name || "").match(/L3[-_ ]?(\d+)/i);
+        if (m) return "L3-" + String(m[1]).padStart(2, "0");
+        var rows = typeof filteredL3 === "function" ? filteredL3() : (typeof l3Rows !== "undefined" ? l3Rows : []);
+        var idx = rows.findIndex(function(row) { return processName(row) === name; });
+        if (idx < 0 && typeof l3Rows !== "undefined") {
+          idx = l3Rows.findIndex(function(row) { return processName(row) === name; });
+        }
+        return idx >= 0 ? "L3-" + String(idx + 1).padStart(2, "0") : "L3";
+      }
+
+      function processDisplayLabel(rowOrProc) {
+        var name = processName(rowOrProc);
+        return processCode(rowOrProc) + " " + name;
+      }
+
+      function isProcessNode(name) {
+        return typeof l3Rows !== "undefined" && l3Rows.some(function(row) {
+          return processName(row) === String(name || "");
+        });
+      }
+
+      function modeDisplayLabel(name) {
+        return name === "全域总览" ? "全域总览（L1-L3）" : name + "（L1-A1）";
+      }
+
+      function evidenceLegendHtml() {
+        return '<span class="legend"><i style="background:#64748b"></i>原文明确</span>' +
+          '<span class="legend"><i style="background:#f59e0b"></i>上下文推断/分析拆分</span>' +
+          '<span class="legend"><i style="background:#dc2626"></i>待补证据/需确认</span>';
+      }
+
+
+function a1DisplayLabel(a1){var role=roleWarning(a1)?"待确认："+a1[2]:a1[2];return a1ShortCode(a1)+" "+shortText(a1[1],16)+"\n"+shortText(role,18);}
 
 var a1Index = {};
 for(var i=0;i<a1Rows.length;i++){var r=a1Rows[i];a1Index[r[0]]={name:r[1],role:r[2],trigger:r[3],precond:r[4],appr:r[5],system:systemTextFor(r),evidence:r[7],eviType:r[8],roleEvidence:r[9]||r[7],triggerEvidence:r[10]||r[7],preconditionEvidence:r[11]||r[7],domain:r[12],capability:r[13],process:r[14],sourceText:'依据制度文件 '+((r[7]||'未标注')+'（'+(r[8]||'')+'），该条款明确由「'+(r[2]||'')+'」执行「'+(r[1]||'')+'」，触发情景为「'+(r[3]||'')+'」，前置条件为「'+(r[4]||'')+'」。审批类型：'+(r[5]||'')+'，系统支撑：'+systemTextFor(r)+'。')};}
@@ -270,7 +341,7 @@ updateProgress();
 var myChart=null;
 function renderSankey(mode){
   var nodes=[],links=[],nodesIdx={},idx=0;
-  function addNode(name,type,a1id){var key=name;if(nodesIdx[key]===undefined){nodesIdx[key]=idx;nodes.push({name:name,itemStyle:{color:nodeColor[type]||'#64748b'},_type:type,_meta:{id:a1id||name}});idx++;}return nodesIdx[key];}
+  function addNode(name,type,a1id){var key=name;if(nodesIdx[key]===undefined){nodesIdx[key]=idx;var nodeFill=nodeColor[type]||'#64748b';if(type==='A1'){var a1Row=null;for(var ai=0;ai<a1Rows.length;ai++){if(a1Rows[ai][0]===a1id){a1Row=a1Rows[ai];break;}}nodeFill=a1NodeColor(a1Row||[a1id,name]);}nodes.push({name:name,itemStyle:{color:nodeFill},_type:type,_meta:{id:a1id||name}});idx++;}return nodesIdx[key];}
   if(mode==='all'){
     addNode("复材车间","D1");
     for(var i=0;i<l3Rows.length;i++){var r=l3Rows[i];addNode(r.domain,"L1");addNode(r.capability,"L2");var ss=systemsFor(r.system);for(var j=0;j<ss.length;j++)addNode(ss[j],"S1");}
@@ -280,8 +351,8 @@ function renderSankey(mode){
     var sysMap={};for(var i=0;i<l3Rows.length;i++){var r=l3Rows[i];var ss=systemsFor(r.system);for(var j=0;j<ss.length;j++){var sk=r.capability+"|"+ss[j];sysMap[sk]=(sysMap[sk]||0)+1;}}
     for(var sk in sysMap){var p=sk.split("|");links.push({source:addNode(p[0],"L2"),target:addNode(p[1],"S1"),value:sysMap[sk]});}
     document.getElementById('chartTitle').textContent='复材车间全域总览';
-    document.getElementById('chartSub').textContent='部门（D1）→ 能力域（L1）→ 业务能力（L2）→ 应用系统（S1）';
-    document.getElementById('legendRow').innerHTML='<span class="legend"><i style="background:#1a56db"></i>部门（D1）</span><span class="legend"><i style="background:#0891b2"></i>能力域（L1）</span><span class="legend"><i style="background:#0d9488"></i>业务能力（L2）</span><span class="legend"><i style="background:#f59e0b"></i>应用系统（S1）</span>';
+    document.getElementById('chartSub').textContent='部门（D1）→ 能力域（L1-L3）→ 业务能力（L2）→ 应用系统（S1）';
+    document.getElementById('legendRow').innerHTML='<span class="legend"><i style="background:#1a56db"></i>部门（D1）</span><span class="legend"><i style="background:#0891b2"></i>能力域（L1-L3）</span><span class="legend"><i style="background:#0d9488"></i>业务能力（L2）</span><span class="legend"><i style="background:#f59e0b"></i>应用系统（S1）</span>'+evidenceLegendHtml();
   }else{
     var domainA1s=[];for(var i=0;i<a1Rows.length;i++){if(a1Rows[i][12]===mode)domainA1s.push(a1Rows[i]);}
     var capMap={},procMap={},sysMap={};
@@ -294,8 +365,8 @@ function renderSankey(mode){
 for(var i=0;i<domainA1s.length;i++){var r=domainA1s[i];var lbl=a1DisplayLabel(r);links.push({source:addNode(r[14],"L3"),target:addNode(lbl,"A1",r[0]),value:1});}
     for(var i=0;i<domainA1s.length;i++){var r=domainA1s[i];var lbl=a1DisplayLabel(r);var ss=systemsFor(r[6]);for(var j=0;j<ss.length;j++)links.push({source:addNode(lbl,"A1"),target:addNode(ss[j],"S1"),value:1});}
     document.getElementById('chartTitle').textContent=mode+' · 能力域详情';
-    document.getElementById('chartSub').textContent='业务能力（L2）→ 业务流程（L3）→ 业务行为（A1）→ 应用系统（S1）';
-    document.getElementById('legendRow').innerHTML='<span class="legend"><i style="background:#0d9488"></i>业务能力（L2）</span><span class="legend"><i style="background:#6366f1"></i>业务流程（L3）</span><span class="legend"><i style="background:#8b5cf6"></i>业务行为（A1）</span><span class="legend"><i style="background:#f59e0b"></i>应用系统（S1）</span>';
+    document.getElementById('chartSub').textContent='能力域（L1-A1）：业务能力（L2）→ 业务流程（L3）→ 业务行为（A1）→ 应用系统（S1）';
+    document.getElementById('legendRow').innerHTML='<span class="legend"><i style="background:#0d9488"></i>业务能力（L2）</span><span class="legend"><i style="background:#6366f1"></i>业务流程（L3）</span><span class="legend"><i style="background:#8b5cf6"></i>业务行为（A1）</span><span class="legend"><i style="background:#f59e0b"></i>应用系统（S1）</span>'+evidenceLegendHtml();
   }
   // override A1 node colors by feedback
   if(mode!=='all'){
@@ -308,7 +379,7 @@ for(var i=0;i<domainA1s.length;i++){var r=domainA1s[i];var lbl=a1DisplayLabel(r)
   if(!myChart){myChart=echarts.init(document.getElementById('chart'));}
   myChart.setOption({
     tooltip:{trigger:'item',triggerOn:'mousemove',formatter:function(p){if(p.dataType==='edge')return esc(p.data.source)+' → '+esc(p.data.target);if(p.data&&p.data._type==='A1'){var a=null;for(var i=0;i<a1Rows.length;i++){if(a1Rows[i][0]===p.data._meta.id){a=a1Rows[i];break;}}if(a){return["<b>"+esc(a[0])+" "+esc(a[1])+"</b>","执行角色："+esc(a[2]||""),"触发情景："+esc(a[3]||""),"前置条件："+esc(a[4]||""),"审批类型："+esc(a[5]||""),"制度依据："+esc(a[7]||""),"证据类型："+esc(a[8]||""),"应用系统："+esc(systemTextFor(a)),carrierTooltipLines(a).join("<br>")].filter(Boolean).join("<br>");}}return esc(p.name);}},
-    series:[{type:'sankey',layout:'none',layoutIterations:0,emphasis:{focus:'adjacency'},nodeAlign:'left',data:nodes,links:links,label:{fontSize:12,color:'#e2e8f0',fontWeight:500},lineStyle:{color:'gradient',curveness:.5,opacity:.25}}]
+    series:[{type:'sankey',layout:'none',layoutIterations:0,emphasis:{focus:'adjacency'},nodeAlign:'left',data:nodes,links:links,label:{fontSize:12,color:'#e2e8f0',fontWeight:500,formatter:function(p){if(p.data&&p.data._type==='L3')return processDisplayLabel(p.name);return p.name;}},lineStyle:{color:'gradient',curveness:.5,opacity:.25}}]
   });
 }
 function attachFeedbackHandlers(myChart){
@@ -319,10 +390,10 @@ function attachFeedbackHandlers(myChart){
 // ===== 模式栏 =====
 var activeMode='all';
 (function buildModebar(){
-  var mb=document.getElementById('modebar');var all=document.createElement('button');all.className='mode-btn active';all.textContent='全域总览';all.onclick=function(){setMode('all');};mb.appendChild(all);
-  for(var i=0;i<domains.length;i++){var btn=document.createElement('button');btn.className='mode-btn';btn.textContent=domains[i];btn.onclick=(function(d){return function(){setMode(d);};})(domains[i]);mb.appendChild(btn);}
+  var mb=document.getElementById('modebar');var all=document.createElement('button');all.className='mode-btn active';all.textContent=modeDisplayLabel('全域总览');all.dataset.mode='all';all.onclick=function(){setMode('all',this);};mb.appendChild(all);
+  for(var i=0;i<domains.length;i++){var btn=document.createElement('button');btn.className='mode-btn';btn.textContent=modeDisplayLabel(domains[i]);btn.dataset.mode=domains[i];btn.onclick=(function(d){return function(){setMode(d,this);};})(domains[i]);mb.appendChild(btn);}
 })();
-function setMode(mode){activeMode=mode;var btns=document.querySelectorAll('.mode-btn');for(var i=0;i<btns.length;i++)btns[i].classList.remove('active');event.target.classList.add('active');renderSankey(mode);renderTable(mode);}
+function setMode(mode,target){activeMode=mode;var btns=document.querySelectorAll('.mode-btn');for(var i=0;i<btns.length;i++)btns[i].classList.remove('active');if(target)target.classList.add('active');renderSankey(mode);renderTable(mode);}
 
 // ===== 明细表 =====
 function renderTable(mode){
@@ -345,7 +416,7 @@ function renderTable(mode){
       var acc=isFinal?(accMap[a1id]||'请部门确认是否需要验收/完成标准'):acc;
       var warn='';if(!!roleWarning(r))warn='<span class="warn-tag">角色待确认：'+r[2]+'</span>';
       if(alert)warn+=warn?'<br>':'';
-      h+='<tr style="'+bg+'"><td class="col-seq">'+seq+'</td><td class="col-a1id">'+esc(a1id)+'</td><td>'+esc(r[13])+'</td><td>'+esc(r[14])+'</td><td>'+esc(r[1])+warn+trackingNote(r)+'</td><td>'+esc(r[2])+'</td><td>'+esc(r[3])+'</td><td>'+esc(r[4])+'</td><td><span class="appr-tag none">'+esc(r[5])+'</span></td><td>'+esc(acc)+'</td><td>'+esc(r[7])+'</td><td><span class="evidence-tag '+evidenceClass(r[8])+'">'+esc(r[8])+'</span></td><td>'+systemCellHtml(r)+'</td><td>'+alertCellHtml(r,alert)+'</td><td class="feedback-cell">'+esc(confirm)+'</td><td>'+esc(adjust)+'</td><td>'+esc(suggest)+'</td></tr>';
+      h+='<tr style="'+bg+'"><td class="col-seq">'+seq+'</td><td class="col-a1id">'+esc(a1id)+'</td><td>'+esc(r[13])+'</td><td>'+esc(processDisplayLabel(r[14]))+'</td><td>'+esc(a1ShortCode(r)+' '+r[1])+warn+trackingNote(r)+'</td><td>'+esc(r[2])+'</td><td>'+esc(r[3])+'</td><td>'+esc(r[4])+'</td><td><span class="appr-tag none">'+esc(r[5])+'</span></td><td>'+esc(acc)+'</td><td>'+esc(r[7])+'</td><td><span class="evidence-tag '+evidenceClass(r[8])+'">'+esc(r[8])+'</span></td><td>'+systemCellHtml(r)+'</td><td>'+alertCellHtml(r,alert)+'</td><td class="feedback-cell">'+esc(confirm)+'</td><td>'+esc(adjust)+'</td><td>'+esc(suggest)+'</td></tr>';
     }body.innerHTML=h;
   }
 }

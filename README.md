@@ -15,7 +15,7 @@ Infomat 是航空复材制造领域的信息化资料与工具仓库，包含：
 - [MAINLINE_MAP.md](MAINLINE_MAP.md)：流程治理、字段台账、MDM、PMO 和脚本的数据流。
 - [2026-06-07 仓库边界审计报告](docs/reports/2026-06-07-repo-boundary-audit.md)：当前混放、生成物和轻量整理建议。
 
-## 目录结构（唯一真源）
+## 目录结构（当前导航）
 
 - `apps/`：可运行应用
   - `apps/mdm-platform/`：MDM 平台（Express + SQLite + 原生前端）

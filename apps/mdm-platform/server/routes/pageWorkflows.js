@@ -16,6 +16,7 @@ const PAGE_DEFINITIONS = {
     roles: {
       it_lead: { title: '查看全局阻塞和冲突概览', target: '#/conflicts', actionLabel: '查看冲突' },
       project_lead: { title: '查看本部门进度和待办压力', target: '#/processGovernance', actionLabel: '查看流程治理' },
+      workgroup_lead: { title: '查看本工作组待办和跨部门衔接', target: '#/processGovernance', actionLabel: '查看流程治理' },
       business_contact: { title: '查看本人报送和待办状态', target: '#/mySubmissions', actionLabel: '查看报送' },
       data_quality: { title: '查看字段台账和质量进度', target: '#/quality', actionLabel: '查看数据质量' },
       admin: { title: '查看平台发布和权限维护入口', target: '#/rbac', actionLabel: '查看角色权限' }
@@ -31,6 +32,7 @@ const PAGE_DEFINITIONS = {
     target: '#/roleGuide',
     roles: {
       business_contact: { title: '查看业务对接人的入口和完成标准', target: '#/roleGuide', actionLabel: '查看角色说明' },
+      workgroup_lead: { title: '查看工作组组长的分派和闭环标准', target: '#/roleGuide', actionLabel: '查看角色说明' },
       data_quality: { title: '查看数据质量员的处理边界', target: '#/roleGuide', actionLabel: '查看角色说明' },
       owner: { title: '查看业务负责人的待办处理口径', target: '#/roleGuide', actionLabel: '查看角色说明' },
       admin: { title: '查看管理员和项目角色边界', target: '#/roleGuide', actionLabel: '查看角色说明' }

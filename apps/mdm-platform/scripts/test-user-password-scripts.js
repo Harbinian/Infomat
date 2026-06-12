@@ -34,8 +34,8 @@ async function writeRosterWorkbook(filePath) {
 async function main() {
   const setupSource = fs.readFileSync(path.join(root, 'scripts', 'setup-mdm-project-users.js'), 'utf8');
   const importSource = fs.readFileSync(path.join(root, 'scripts', 'import-mdm-users.js'), 'utf8');
-  assert.ok(!setupSource.includes('init1234'), 'project user setup must not hardcode the fixed initial password');
-  assert.ok(!importSource.includes('init1234'), 'MDM user import must not hardcode the fixed initial password');
+  assert.ok(!setupSource.includes('init1234'), 'project user setup must not use the historical fixed initial password');
+  assert.ok(!importSource.includes('init1234'), 'MDM user import must not use the historical fixed initial password');
 
   const setup = runScript('scripts/setup-mdm-project-users.js', {
     ALLOW_PROJECT_USER_SETUP: 'true'
@@ -45,7 +45,7 @@ async function main() {
   const projectUsers = db.prepare("SELECT employee_no, password_hash, must_change_password FROM users WHERE employee_no <> 'ADMIN001'").all();
   assert.ok(projectUsers.length > 0, 'project user setup should create users in the isolated database');
   assert.ok(projectUsers.every(row => row.must_change_password === 1), 'project setup users should be required to change password');
-  assert.ok(projectUsers.every(row => !verifyPassword('init1234', row.password_hash)), 'project setup users must not use the fixed initial password');
+  assert.ok(projectUsers.every(row => verifyPassword('000000', row.password_hash)), 'project setup users should use the unified first-login password');
 
   const workbookPath = path.join(tempDir, 'mdm-users.xlsx');
   await writeRosterWorkbook(workbookPath);
@@ -58,7 +58,7 @@ async function main() {
   const batchUser = db.prepare("SELECT password_hash, must_change_password FROM users WHERE employee_no='BATCH001'").get();
   assert.ok(batchUser, 'Excel import should create the test user');
   assert.strictEqual(batchUser.must_change_password, 1, 'Excel import users should be required to change password');
-  assert.ok(!verifyPassword('init1234', batchUser.password_hash), 'Excel import users must not use the fixed initial password');
+  assert.ok(verifyPassword('000000', batchUser.password_hash), 'Excel import users should use the unified first-login password');
 
   console.log('User password script test passed');
 }

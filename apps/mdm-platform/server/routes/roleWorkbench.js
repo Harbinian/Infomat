@@ -245,7 +245,7 @@ function loadProcessQualityFindings(req, canViewAll) {
 
 function roleHintForMappingTodo(row) {
   if (row.todo_type === 'verification' || row.todo_type === 'evidence' || row.todo_type === 'adjustment') return 'business_contact';
-  if (row.todo_type === 'cross_dept' || row.todo_type === 'dept_confirm') return 'project_lead';
+  if (row.todo_type === 'cross_dept' || row.todo_type === 'dept_confirm') return 'workgroup_lead';
   return 'business_contact';
 }
 

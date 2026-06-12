@@ -58,6 +58,25 @@ const ROLE_GUIDES = [
     ]
   },
   {
+    code: 'workgroup_lead',
+    name: '工作组组长',
+    group: 'project',
+    description: '组织本工作组成员处理流程治理、跨部门衔接和待办闭环',
+    goal: '把本工作组的任务拆给成员，盯住跨部门输入输出和整改闭环。',
+    firstEntry: { label: '本组治理事项', target: '#/processGovernance' },
+    workflow: ['查看本组待办', '分派成员处理', '协调跨部门衔接', '复核闭环结果'],
+    sample: '工作组组长看到本工作组有跨部门衔接风险时，先进入流程治理详情，确认输入来源、输出目标和本组责任人。',
+    pitfall: '不要只把事项转给成员；需要确认成员处理后是否回源整改、重新导入并形成闭环状态。',
+    doneCriteria: '本工作组事项有责任人、有处理状态，跨部门衔接风险有确认或升级记录。',
+    permissions: [
+      BASE_PERMISSIONS.dataViewDepartment,
+      BASE_PERMISSIONS.dashboard,
+      BASE_PERMISSIONS.mappingRead,
+      BASE_PERMISSIONS.reviewApprove,
+      BASE_PERMISSIONS.todosManage
+    ]
+  },
+  {
     code: 'business_contact',
     name: '业务对接人',
     group: 'project',

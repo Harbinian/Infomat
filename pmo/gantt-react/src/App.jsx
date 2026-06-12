@@ -34,8 +34,22 @@ const PMO_VIEW_LABELS = [
   { key: 'overdue', label: '延期交付物' },
 ];
 
+const TOP_LEVEL_PAGES = [
+  { key: 'gantt', label: '甘特图' },
+  { key: 'pmo', label: 'PMO看板' },
+  { key: 'procedure', label: '流程地图' },
+];
+
+const PAGE_META = {
+  gantt: { title: '数字化底座项目甘特图', hash: '#/gantt' },
+  pmo: { title: '数字化底座 PMO 项目管控看板', hash: '#/pmo' },
+  procedure: { title: '流程地图驾驶舱', hash: '#/procedure-dashboard' },
+};
+
 function getInitialPage() {
-  return window.location.hash === '#/pmo' ? 'pmo' : 'gantt';
+  if (window.location.hash === '#/pmo') return 'pmo';
+  if (['#/procedure-dashboard', '#/procedure'].includes(window.location.hash)) return 'procedure';
+  return 'gantt';
 }
 
 function loadStoredEvidence() {
@@ -173,7 +187,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    document.title = page === 'pmo' ? '数字化底座 PMO 项目管控看板' : '数字化底座项目甘特图';
+    document.title = PAGE_META[page]?.title || PAGE_META.gantt.title;
   }, [page]);
 
   useEffect(() => {
@@ -252,8 +266,9 @@ export default function App() {
     setSelectedNodeKey(null);
     setSelectedDeliverable(null);
     setShowMilestonePanel(false);
-    setPage(nextPage);
-    window.location.hash = nextPage === 'pmo' ? '#/pmo' : '#/gantt';
+    const normalizedPage = PAGE_META[nextPage] ? nextPage : 'gantt';
+    setPage(normalizedPage);
+    window.location.hash = PAGE_META[normalizedPage].hash;
   }, []);
 
   const handleViewChange = useCallback((newView) => {
@@ -440,8 +455,8 @@ export default function App() {
     return () => document.removeEventListener('keydown', onKey);
   }, []);
 
-  if (loading) return <div className="loading">数据加载中</div>;
-  if (error) return <div className="loading">数据加载失败：{error}</div>;
+  if (page !== 'procedure' && loading) return <div className="loading">数据加载中</div>;
+  if (page !== 'procedure' && error) return <div className="loading">数据加载失败：{error}</div>;
 
   const renderPMOContent = () => {
     switch (pmoView) {
@@ -471,17 +486,23 @@ export default function App() {
     }
   };
 
+  const pageTitle = PAGE_META[page]?.title || PAGE_META.gantt.title;
+  const headerSubtitle = page === 'procedure' ? '' : subtitle;
+
   return (
     <>
       <div className="header">
         <div className="header-top">
           <div>
-            <h1>{page === 'pmo' ? '数字化底座 PMO 项目管控看板' : '数字化底座项目甘特图'}</h1>
-            <div className="subtitle">{subtitle}</div>
+            <h1>{pageTitle}</h1>
+            {headerSubtitle && <div className="subtitle">{headerSubtitle}</div>}
           </div>
           <div className="page-tabs">
-            <button className={page === 'gantt' ? 'active' : ''} onClick={() => handlePageChange('gantt')} type="button">甘特图</button>
-            <button className={page === 'pmo' ? 'active' : ''} onClick={() => handlePageChange('pmo')} type="button">PMO看板</button>
+            {TOP_LEVEL_PAGES.map(item => (
+              <button key={item.key} className={page === item.key ? 'active' : ''} onClick={() => handlePageChange(item.key)} type="button">
+                {item.label}
+              </button>
+            ))}
           </div>
         </div>
       </div>
@@ -506,6 +527,10 @@ export default function App() {
 
           {selectedTask && <TaskDetail task={selectedTask} onClose={() => setSelectedNodeKey(null)} />}
         </>
+      ) : page === 'procedure' ? (
+        <div className="procedure-page">
+          <iframe className="procedure-dashboard-frame" src="/procedure-management/dashboard.html" title="流程地图驾驶舱" />
+        </div>
       ) : (
         <div className="pmo-page">
           <WBSQualityBanner rawTasks={rawTasks} />

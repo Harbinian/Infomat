@@ -424,6 +424,7 @@
         background: #fef3c7;
         color: #92400e;
       }
+      .evidence-tag.gap { background: #fee2e2; color: #991b1b; border: 1px solid #dc2626; }
 
       .appr-tag {
         display: inline-block;
@@ -604,12 +605,12 @@
     <main class="page">
       <section class="hero">
         <h1>行政人事部 · 部门能力流程系统桑基图</h1>
-        <p>部门（D1）→ 能力域（L1）→ 业务能力（L2）→ 业务流程（L3）→ 业务行为（A1）→ 应用系统（S1）。含159条业务行为（A1），覆盖6大能力域39条业务流程（L3）。</p>
+        <p>部门（D1）→ 能力域（L1-L3）→ 业务能力（L2）→ 应用系统（S1）[全域]；能力域（L1-A1）：业务能力（L2）→ 业务流程（L3）→ 业务行为（A1）→ 应用系统（S1）[域详情]。含159条业务行为（A1），覆盖6大能力域39条业务流程（L3）。</p>
         <div class="badge">部门审核稿 · 待反馈</div>
       </section>
 
       <div class="read-guide">
-        <strong>读图方法：</strong>"全域总览"看行政人事部覆盖哪些领域和系统；切换到具体能力域（L1），看 业务能力（L2）→ 业务流程（L3）→ 业务行为（A1）→ 应用系统（S1） 的四层细节。悬停连线可见制度依据和系统设计依据。业务行为（A1）节点显示行为名称和执行角色，业务行为（A1）编号保留在悬停提示和明细表中用于追溯。下方明细表在"全域总览"显示业务流程（L3）行，在能力域视图显示业务行为（A1）行。
+        <strong>读图方法：</strong>"全域总览"看行政人事部覆盖哪些领域和系统；切换到具体能力域（L1-A1），看 能力域（L1-A1）：业务能力（L2）→ 业务流程（L3）→ 业务行为（A1）→ 应用系统（S1） 的四层细节。悬停连线可见制度依据和系统设计依据。业务行为（A1）节点显示A1序号、行为名称和执行角色，业务行为（A1）编号保留在悬停提示和明细表中用于追溯。下方明细表在"全域总览"显示业务流程（L3）行，在能力域视图显示业务行为（A1）行。
       </div>
 
             <section class="stat-row">
@@ -622,12 +623,12 @@
       </section>
 
       <section class="modebar" id="modebar">
-        <span class="mode-label">视图</span>
+        <span class="mode-label">视图（能力域 L1-L3 / L1-A1）</span>
       </section>
 
       <section class="sankey-wrap">
         <div class="sankey-title" id="chartTitle">行政人事部全域总览</div>
-        <div class="sankey-sub" id="chartSub">部门（D1）→ 能力域（L1）→ 业务能力（L2）→ 应用系统（S1）</div>
+        <div class="sankey-sub" id="chartSub">部门（D1）→ 能力域（L1-L3）→ 业务能力（L2）→ 应用系统（S1）</div>
         <div id="chart" class="sankey-chart"></div>
         <div class="legend-row" id="legendRow"></div>
       </section>
@@ -643,7 +644,7 @@
 
       <section class="summary-grid">
         <div class="panel">
-          <h3>能力域（L1）规模（业务行为（A1）数）</h3>
+          <h3>能力域（L1-A1）规模（业务行为（A1）数）</h3>
           <div class="bar-list" id="domainBars"></div>
         </div>
         <div class="panel">
@@ -3347,7 +3348,9 @@
       }
 
       function evidenceClass(type) {
-        return /^原文明确-(正文|流程图|表单)$/.test(String(type || "")) ? "explicit" : "inferred";
+        var text = String(type || "");
+        if (/待补|未见|缺少|证据不足/.test(text)) return "gap";
+        return /^原文明确-(正文|流程图|表单)$/.test(text) ? "explicit" : "inferred";
       }
 
       function auditWarnings(a1) {
@@ -3372,9 +3375,80 @@
         return isTrackingTask(a1) ? "跟踪类任务：建议由系统待办提醒、到期预警或进度展示承载" : "";
       }
 
+      function a1ShortCode(a1) {
+        var id = Array.isArray(a1) ? a1[0] : a1;
+        var m = String(id || "").match(/A\d+$/);
+        return m ? m[0] : String(id || "");
+      }
+
+      function a1JoinedText(a1) {
+        return Array.isArray(a1) ? a1.join(" ") : String(a1 || "");
+      }
+
+      function isInferenceEvidence(a1) {
+        return /上下文推断|分析拆分/.test(String((Array.isArray(a1) ? a1[8] : a1) || ""));
+      }
+
+      function hasEvidenceGap(a1) {
+        return /待补|未见|缺少|证据不足/.test(a1JoinedText(a1));
+      }
+
+      function a1NodeColor(a1) {
+        if (roleWarning(a1) || hasEvidenceGap(a1)) return "#dc2626";
+        if (isInferenceEvidence(a1)) return "#f59e0b";
+        return "#64748b";
+      }
+
+      function processName(rowOrProc) {
+        if (rowOrProc && typeof rowOrProc === "object" && !Array.isArray(rowOrProc)) {
+          return rowOrProc.process || rowOrProc.proc || rowOrProc.l3 || "";
+        }
+        var raw = String(rowOrProc || "");
+        if (typeof l3NameMap !== "undefined" && l3NameMap && l3NameMap[raw]) return l3NameMap[raw];
+        return raw;
+      }
+
+      function processCode(rowOrProc) {
+        var raw = rowOrProc && typeof rowOrProc === "object" && !Array.isArray(rowOrProc)
+          ? String(rowOrProc.code || rowOrProc.id || rowOrProc.process || rowOrProc.proc || "")
+          : String(rowOrProc || "");
+        var name = processName(rowOrProc);
+        var m = raw.match(/L3[-_ ]?(\d+)/i) || String(name || "").match(/L3[-_ ]?(\d+)/i);
+        if (m) return "L3-" + String(m[1]).padStart(2, "0");
+        var rows = typeof filteredL3 === "function" ? filteredL3() : (typeof l3Rows !== "undefined" ? l3Rows : []);
+        var idx = rows.findIndex(function(row) { return processName(row) === name; });
+        if (idx < 0 && typeof l3Rows !== "undefined") {
+          idx = l3Rows.findIndex(function(row) { return processName(row) === name; });
+        }
+        return idx >= 0 ? "L3-" + String(idx + 1).padStart(2, "0") : "L3";
+      }
+
+      function processDisplayLabel(rowOrProc) {
+        var name = processName(rowOrProc);
+        return processCode(rowOrProc) + " " + name;
+      }
+
+      function isProcessNode(name) {
+        return typeof l3Rows !== "undefined" && l3Rows.some(function(row) {
+          return processName(row) === String(name || "");
+        });
+      }
+
+      function modeDisplayLabel(name) {
+        return name === "全域总览" ? "全域总览（L1-L3）" : name + "（L1-A1）";
+      }
+
+      function evidenceLegendHtml() {
+        return '<span class="legend"><i style="background:#64748b"></i>原文明确</span>' +
+          '<span class="legend"><i style="background:#f59e0b"></i>上下文推断/分析拆分</span>' +
+          '<span class="legend"><i style="background:#dc2626"></i>待补证据/需确认</span>';
+      }
+
+
+
       function a1DisplayLabel(a1) {
         var role = roleWarning(a1) ? "待确认：" + a1[2] : a1[2];
-        return shortText(a1[1], 18) + "\n" + shortText(role, 18);
+        return a1ShortCode(a1) + " " + shortText(a1[1], 16) + "\n" + shortText(role, 18);
       }
 
       function processFill(proc) {
@@ -3446,7 +3520,7 @@
             addNode(cap);
             addNode(proc);
             addNode(a1Id, {
-              itemStyle: { color: roleWarning(a1) ? "#dc2626" : "#64748b" },
+              itemStyle: { color: a1NodeColor(a1) },
               label: { formatter: a1DisplayLabel(a1) }
             });
 
@@ -3485,8 +3559,8 @@
 
         document.getElementById("chartTitle").textContent = isGlobal ? "行政人事部全域总览" : active;
         document.getElementById("chartSub").textContent = isGlobal
-          ? "部门（D1）→ 能力域（L1）→ 业务能力（L2）→ 应用系统（S1）"
-          : "业务能力（L2）→ 业务流程（L3）→ 业务行为（A1）→ 应用系统（S1）";
+          ? "部门（D1）→ 能力域（L1-L3）→ 业务能力（L2）→ 应用系统（S1）"
+          : "能力域（L1-A1）：业务能力（L2）→ 业务流程（L3）→ 业务行为（A1）→ 应用系统（S1）";
 
         if (!chart) { chart = echarts.init(document.getElementById("chart")); }
 
@@ -3584,6 +3658,7 @@
                   var a1 = a1Rows.find(function(r) { return r[0] === name; });
                   return a1DisplayLabel(a1);
                 }
+                if (!isGlobal && isProcessNode(name)) return processDisplayLabel(name);
                 return name;
               }
             },
@@ -3595,14 +3670,15 @@
       // ===== 控件 =====
       function renderControls() {
         var bar = document.getElementById("modebar");
-        bar.innerHTML = '<span class="mode-label">视图</span>';
+        bar.innerHTML = '<span class="mode-label">视图（能力域 L1-L3 / L1-A1）</span>';
         ["全域总览"].concat(domains).forEach(function(name) {
           var btn = document.createElement("button");
           btn.className = "mode-btn" + (name === active ? " active" : "");
-          btn.textContent = name;
+          btn.textContent = modeDisplayLabel(name);
+          btn.dataset.mode = name;
           btn.onclick = function() {
             active = name;
-            Array.from(bar.querySelectorAll(".mode-btn")).forEach(function(b) { b.classList.toggle("active", b.textContent === name); });
+            Array.from(bar.querySelectorAll(".mode-btn")).forEach(function(b) { b.classList.toggle("active", b.dataset.mode === name); });
             renderAll();
           };
           bar.appendChild(btn);
@@ -3632,7 +3708,7 @@
       function renderLegend() {
         var dLeg = domains.map(function(d) { return '<span class="legend"><i style="background:' + domainColors[d] + '"></i>' + esc(d) + '</span>'; }).join("");
         var sLeg = Object.keys(systemColors).map(function(s) { return '<span class="legend"><i style="background:' + systemColors[s] + '"></i>' + esc(s) + '</span>'; }).join("");
-        document.getElementById("legendRow").innerHTML = dLeg + sLeg;
+        document.getElementById("legendRow").innerHTML = dLeg + sLeg + evidenceLegendHtml();
       }
 
       // ===== 表格 =====
@@ -3646,7 +3722,7 @@
           tbl.className = "table-l3";
           head.innerHTML = '<tr><th class="col-seq">序号</th><th class="col-dept">部门（D1）</th><th class="col-domain">能力域（L1）</th><th class="col-cap">业务能力（L2）</th><th class="col-proc">业务流程（L3）</th><th class="col-evidence">制度依据</th><th class="col-system">应用系统（S1）</th><th class="col-evidence">系统设计依据</th></tr>';
           body.innerHTML = filteredL3().map(function(row, i) {
-            return '<tr><td class="col-seq">' + (i+1) + '</td><td class="col-dept">行政人事部</td><td class="col-domain"><span class="domain-pill" style="background:' + colorFor(row.domain) + '">' + esc(row.domain) + '</span></td><td class="col-cap">' + esc(row.capability) + '</td><td class="col-proc">' + esc(row.process) + '</td><td class="col-evidence">' + esc(row.evidence) + '</td><td class="col-system">' + esc(row.system) + '</td><td class="col-evidence">' + esc(row.basis) + '</td></tr>';
+            return '<tr><td class="col-seq">' + (i+1) + '</td><td class="col-dept">行政人事部</td><td class="col-domain"><span class="domain-pill" style="background:' + colorFor(row.domain) + '">' + esc(row.domain) + '</span></td><td class="col-cap">' + esc(row.capability) + '</td><td class="col-proc">' + esc(processDisplayLabel(row)) + '</td><td class="col-evidence">' + esc(row.evidence) + '</td><td class="col-system">' + esc(row.system) + '</td><td class="col-evidence">' + esc(row.basis) + '</td></tr>';
           }).join("");
         } else {
           tbl.className = "table-a1";
@@ -3661,8 +3737,8 @@
               '<td class="col-seq">' + (i+1) + '</td>' +
               '<td class="col-a1id">' + esc(a1[0]) + '</td>' +
               '<td class="col-cap">' + esc(a1[10]) + '</td>' +
-              '<td class="col-proc">' + esc(a1[11]) + '</td>' +
-              '<td class="col-a1name">' + esc(a1[1]) + '</td>' +
+              '<td class="col-proc">' + esc(processDisplayLabel(a1[11])) + '</td>' +
+              '<td class="col-a1name">' + esc(a1ShortCode(a1) + " " + a1[1]) + '</td>' +
               '<td class="col-role">' + roleCell + '</td>' +
               '<td class="col-trigger">' + esc(a1[3]) + '</td>' +
               '<td class="col-precond">' + esc(a1[4]) + '</td>' +

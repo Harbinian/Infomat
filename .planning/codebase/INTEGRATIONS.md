@@ -1,5 +1,9 @@
 # 集成扫描
 
+> 状态：历史扫描快照，不是当前仓库架构入口
+> 适用范围：仅用于追溯早期 `index.html` / `bizmapper.py` 轻量工具形态
+> 当前口径：如与 `REPOSITORY_BOUNDARY.md`、`DIRECTORY_OWNERSHIP.md` 或 `MAINLINE_MAP.md` 冲突，以根目录执行规则为准
+
 ## 运行时集成
 
 ### 浏览器侧
