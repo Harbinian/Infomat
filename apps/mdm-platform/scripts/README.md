@@ -33,6 +33,7 @@
 | 脚本 | 作用 | 副作用 |
 |---|---|---|
 | `init-db.js` | 初始化默认数据库和管理员账号 | 写 `data/platform.db` 或 `MDM_DB_PATH` 指定库 |
+| `setup-local-baseline.js` | 从现有 schema 初始化、组织真源同步和环境变量管理员 RBAC 绑定重建本地基础数据 | 写 `data/platform.db` 或 `MDM_DB_PATH` 指定库；不导入花名册账号、不保存密码 |
 | `seed-demo-data.js` | 填充演示数据 | 写当前数据库，运行前确认目标库 |
 | `setup-mdm-project-users.js` | 建立项目角色账号 | 写当前数据库；需要显式环境变量允许执行 |
 | `import-mdm-users.js` | 从 Excel 花名册导入平台用户 | 写当前数据库；新账号生成一次性初始密码并标记首次登录改密 |

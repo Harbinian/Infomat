@@ -27,6 +27,8 @@
     "test:delete": "node scripts/test-delete-routes.js",
     "test:products": "node scripts/test-product-routes.js",
     "test:db-path": "node scripts/test-db-path-isolation.js",
+    "setup:local-baseline": "node scripts/setup-local-baseline.js",
+    "test:local-baseline": "node scripts/test-local-baseline-setup.js",
     "sync:organization-structure": "node scripts/sync-organization-structure.js",
     "test:organization-structure": "node scripts/test-organization-structure-sync.js",
     "test:roster-import": "node scripts/test-roster-users-import.js",
