@@ -23,19 +23,36 @@
 
 ## 快速启动
 
-```bash
+全新 clone 或另一台设备拉取后，使用脚本从仓库真源重建本地 SQLite 基线；不要复制或提交 `data/platform.db`。
+
+```powershell
 cd apps/mdm-platform
 npm install
-set MDM_ADMIN_EMPLOYEE_NO=your-admin-no
-set MDM_ADMIN_PASSWORD=your-long-random-password
-npm run init-db
+$env:MDM_ADMIN_EMPLOYEE_NO="your-admin-no"
+$env:MDM_ADMIN_PASSWORD="your-long-random-password"
+$env:ALLOW_INSECURE_SESSION_SECRET="1"
+npm run setup:local-baseline
 npm run smoke
 npm start
 ```
 
 访问 `http://localhost:3000`。
 
-平台不会创建默认管理员。首次初始化前请通过环境变量提供管理员工号和不少于 12 位的初始密码。
+平台不会创建默认管理员。首次初始化前请通过环境变量提供管理员工号和不少于 12 位的初始密码；脚本不会在仓库中保存密码、Cookie 或本地数据库。
+
+`npm run setup:local-baseline` 是幂等本地基线入口，会：
+
+- 初始化 SQLite schema 和系统角色/权限。
+- 从 `docs/organization/组织架构和部门职责.md` 同步组织架构、领导岗位和对应人员。
+- 仅为 `MDM_ADMIN_EMPLOYEE_NO` 指定的管理员创建/补齐 `admin` RBAC 角色。
+
+默认基线不导入花名册账号或项目账号，避免把本机登录账号状态当成仓库真源。确需导入花名册用户时，先确认口令策略和数据边界，再单独运行对应导入脚本。
+
+如需在临时库验证，不写默认 `data/platform.db`，可先设置：
+
+```powershell
+$env:MDM_DB_PATH="$env:TEMP\mdm-platform-baseline.db"
+```
 
 ## 功能模块
 
@@ -71,6 +88,7 @@ npm run test:import
 npm run test:user-password-scripts
 npm run test:password-audit
 npm run test:frontend
+npm run test:local-baseline
 npm run test:security
 npm run test:mainline
 ```
