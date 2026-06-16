@@ -133,10 +133,26 @@ for (const row of canonicalRows) {
     assert.equal(countFiles(fullPath), 536, `${row.path} file count must match the audited source directory`);
     continue;
   }
+  if (row.path === 'docs/norms/工程技术部部门-能力-流程-系统映射关系.md') {
+    assert.equal(row.cells[1], '已建立', `${row.path} must be documented as 已建立`);
+    assert.ok(existsSync(fullPath), `${row.path} must exist after engineering DCM is created`);
+    const mapping = readText(fullPath);
+    assert.match(mapping, /保守版/, `${row.path} must declare conservative status`);
+    assert.match(mapping, /应用承接待工程技术部确认/, `${row.path} must keep application landing as pending confirmation`);
+    continue;
+  }
+  if (row.path === 'docs/norms/工程技术部部门能力流程系统桑基图.html') {
+    assert.equal(row.cells[1], '模型预览已建立', `${row.path} must be documented as 模型预览已建立`);
+    assert.ok(existsSync(fullPath), `${row.path} preview page must exist`);
+    const html = readText(fullPath);
+    assert.match(html, /模型预览/, `${row.path} must show preview status`);
+    assert.match(html, /未经过映射复核，不作为正式结论/, `${row.path} must say unrevised maps are not final`);
+    continue;
+  }
   assert.equal(row.cells[1], '缺失', `${row.path} must be documented as 缺失`);
-  assert.ok(!existsSync(fullPath), `${row.path} should still be absent before engineering DCM/BBM is created`);
+  assert.ok(!existsSync(fullPath), `${row.path} should still be absent until engineering MDM requirements are created`);
 }
-assert.equal(canonicalRows.length, 4, 'engineering source status table should list source directory plus 3 missing canonical items');
+assert.equal(canonicalRows.length, 4, 'engineering source status table should list source directory, conservative DCM, missing MDM item, and preview Sankey');
 
 const groupSection = extractSection(manifestText, '候选资料分组');
 const groupRows = parseBacktickedPathRows(groupSection);
@@ -166,4 +182,4 @@ for (const section of indexedSections) {
   }
 }
 
-console.log('Engineering source manifest check passed: source directory plus 3 canonical gaps and 47 candidate files');
+console.log('Engineering source manifest check passed: source directory, conservative DCM, preview Sankey, 1 canonical gap, and 47 candidate files');
