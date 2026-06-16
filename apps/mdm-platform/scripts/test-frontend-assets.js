@@ -133,6 +133,9 @@ async function main() {
   assert.ok(html.includes("api('/api/org/session', { silentUnauthorized: true })"), 'startup session check should not show an expired-login toast');
   assert.ok(html.includes('/api/csrf-token'), 'frontend should load a CSRF token for authenticated write requests');
   assert.ok(html.includes('X-CSRF-Token'), 'frontend should attach CSRF token header to unsafe API requests');
+  assert.ok(!html.includes('onclick="selectUserForRoles('), 'user role search results must not pass server text through inline onclick handlers');
+  assert.ok(html.includes('class="user-role-result"'), 'user role search results should use delegated click handling');
+  assert.ok(html.includes('data-user-id'), 'user role search results should bind the selected user through data attributes');
   assert.ok(html.includes('function resetSessionUi'), 'login screen should reset stale authenticated header state');
   assert.ok(html.includes("$('sessionUserName').textContent = '未登录'"), 'login screen should clear stale user identity text');
   const startupSnippetStart = html.indexOf('async function activateAuthenticatedApp');
@@ -170,6 +173,11 @@ async function main() {
   assert.ok(html.includes('deptEl.dataset.departmentSignature'), 'department filter should avoid clearing selected departments on every render');
   assert.ok(html.includes('formatter: function(params) {'), 'sankey node labels should render display labels while keeping stable node keys');
   assert.ok(html.includes('nodeLabels[p.data.source]'), 'sankey edge tooltip should show display labels for stable node keys');
+  const businessSankeyTooltipStart = html.indexOf('formatter: function(p) {');
+  const businessSankeyTooltip = html.slice(businessSankeyTooltipStart, businessSankeyTooltipStart + 600);
+  assert.ok(!businessSankeyTooltip.includes('return nodeLabels[p.data.source] +'), 'business sankey edge tooltip must escape service-provided labels');
+  assert.ok(businessSankeyTooltip.includes('safeText(nodeLabels[p.data.source]'), 'business sankey edge tooltip should escape source labels');
+  assert.ok(businessSankeyTooltip.includes('safeText(node.label || p.name'), 'business sankey node tooltip should escape node labels');
 
   assert.ok(fs.existsSync(templatePath), 'public/template.xlsx should exist');
   const workbook = new ExcelJS.Workbook();

@@ -100,6 +100,8 @@ function seedProcessGovernance(deptName) {
   insertNode.run(snapshotId, `${TEST_PREFIX}L2`, 'l2', '订单管理能力', '经营域', deptName, deptName, 4);
   insertNode.run(snapshotId, `${TEST_PREFIX}L3`, 'l3', '销售订单评审流程', '经营域', deptName, `${TEST_PREFIX}L2`, 5);
   insertNode.run(snapshotId, `${TEST_PREFIX}A1`, 'a1', '接收订单并组织评审', '经营域', deptName, `${TEST_PREFIX}L3`, 6);
+  insertNode.run(snapshotId, `${TEST_PREFIX}L3_GUIDE`, 'l3', '订单履约复盘流程', '经营域', deptName, `${TEST_PREFIX}L2`, 7);
+  insertNode.run(snapshotId, `${TEST_PREFIX}A1_GUIDE`, 'a1', '复盘订单履约数据', '经营域', deptName, `${TEST_PREFIX}L3_GUIDE`, 8);
 
   const insertEdge = db.prepare(`
     INSERT INTO process_governance_edges
@@ -111,6 +113,8 @@ function seedProcessGovernance(deptName) {
   insertEdge.run(snapshotId, deptName, `${TEST_PREFIX}L2`, 'dept_l2');
   insertEdge.run(snapshotId, `${TEST_PREFIX}L2`, `${TEST_PREFIX}L3`, 'l2_l3');
   insertEdge.run(snapshotId, `${TEST_PREFIX}L3`, `${TEST_PREFIX}A1`, 'l3_a1');
+  insertEdge.run(snapshotId, `${TEST_PREFIX}L2`, `${TEST_PREFIX}L3_GUIDE`, 'l2_l3');
+  insertEdge.run(snapshotId, `${TEST_PREFIX}L3_GUIDE`, `${TEST_PREFIX}A1_GUIDE`, 'l3_a1');
 
   db.prepare(`
     INSERT INTO process_a1_items
@@ -118,6 +122,13 @@ function seedProcessGovernance(deptName) {
        input_source_dept, output_target_dept, suggested_systems, verification_note, source_file)
     VALUES (?, ?, ?, ?, ?, '合同管理员', '审批', '项目管理部', '工程技术部', ?, '核对技术条款输入', 'test.md')
   `).run(snapshotId, `${TEST_PREFIX}A1`, deptName, '销售订单评审流程', '接收订单并组织评审', JSON.stringify(['OA', 'ERP']));
+
+  db.prepare(`
+    INSERT INTO process_a1_items
+      (snapshot_id, a1_code, dept_name, l3_name, behavior, execution_role, approval_type,
+       input_source_dept, output_target_dept, suggested_systems, verification_note, source_file)
+    VALUES (?, ?, ?, ?, ?, '合同管理员', '记录', '经营发展部', '项目管理部', ?, '全量职责模式用于查看非待办责任链路', 'test.md')
+  `).run(snapshotId, `${TEST_PREFIX}A1_GUIDE`, deptName, '订单履约复盘流程', '复盘订单履约数据', JSON.stringify(['ERP']));
 
   const findingId = db.prepare(`
     INSERT INTO process_governance_quality_findings
@@ -307,11 +318,15 @@ async function main() {
     });
     assert(sankey.links.some(link => link.source.startsWith('role:') && link.target.startsWith('capability:')), '角色应连到业务能力');
     assert(sankey.links.some(link => link.target.startsWith('entry:')), 'A1 应连到处理入口');
+    assert(!sankey.nodes.some(node => node.id === `a1:${TEST_PREFIX}A1_GUIDE`), '待办优先模式不应混入无待办责任链路');
 
     const allMode = await request('GET', '/api/role-workbench?mode=all', null, multiCookie);
     assert(allMode.status === 200, `全量职责模式失败: ${allMode.status}`);
     assert(allMode.body.mode === 'all', '全量职责模式应被保留在响应里');
     assert(allMode.body.sankey.nodes.length >= todoWorkbench.body.sankey.nodes.length, '全量职责模式不应少于待办模式节点');
+    assert(allMode.body.sankey.nodes.some(node => node.id === `a1:${TEST_PREFIX}A1_GUIDE`), '全量职责模式应包含无待办责任链路');
+    assert(allMode.body.workItems.some(item => item.type === 'guidance' && item.roleHint === 'business_contact'), '全量职责模式应包含业务对接人角色说明入口');
+    assert(allMode.body.sankey.nodes.some(node => node.id === 'entry:business_contact'), '全量职责桑基图应保留业务对接人处理入口');
 
     const decisionCookie = await login(`${TEST_PREFIX}DECISION`);
     const decisionWorkbench = await request('GET', '/api/role-workbench?mode=todo', null, decisionCookie);
