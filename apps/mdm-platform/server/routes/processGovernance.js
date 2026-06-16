@@ -1,8 +1,20 @@
 const express = require('express');
+const fs = require('fs');
+const path = require('path');
+const mysql = require('mysql2/promise');
 const router = express.Router();
 const db = require('../db');
 const { requireAuth, getUserEffectivePermissions } = require('../auth');
+const { mysqlConfigFromEnv } = require('../mysqlConfig');
+const {
+  loadCandidateRunBundle: loadProcessCandidateRunBundle,
+  makeProcessCandidateReviewRepository,
+  normalizeReviewPayload
+} = require('../processCandidateReviewRepository');
 const SOURCE_FILE_COVERAGE_LIMIT = 20;
+const REPO_ROOT = path.resolve(__dirname, '../../../..');
+let candidateReviewRepoPromise = null;
+let candidateReviewRepositoryFactory = null;
 
 function runDbAction(res, action) {
   try {
@@ -10,6 +22,54 @@ function runDbAction(res, action) {
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: '服务器错误' });
+  }
+}
+
+function runAsyncAction(res, action) {
+  return action().catch(error => {
+    console.error(error);
+    return res.status(500).json({ error: '服务器错误' });
+  });
+}
+
+async function candidateReviewRepository() {
+  if (candidateReviewRepositoryFactory) {
+    return await candidateReviewRepositoryFactory();
+  }
+  if (!candidateReviewRepoPromise) {
+    candidateReviewRepoPromise = (async () => {
+      const pool = mysql.createPool(mysqlConfigFromEnv());
+      const repo = makeProcessCandidateReviewRepository(pool);
+      await repo.initSchema();
+      return repo;
+    })();
+  }
+  try {
+    return await candidateReviewRepoPromise;
+  } catch (error) {
+    candidateReviewRepoPromise = null;
+    throw error;
+  }
+}
+
+function setCandidateReviewRepositoryFactory(factory) {
+  candidateReviewRepositoryFactory = factory;
+  candidateReviewRepoPromise = null;
+}
+
+function resetCandidateReviewRepositoryFactory() {
+  candidateReviewRepositoryFactory = null;
+  candidateReviewRepoPromise = null;
+}
+
+async function candidateReviewRepositoryOrNull() {
+  try {
+    return await candidateReviewRepository();
+  } catch (error) {
+    if (process.env.MDM_DB_QUIET !== '1') {
+      console.warn(`candidate review MySQL unavailable: ${error.message}`);
+    }
+    return null;
   }
 }
 
@@ -40,6 +100,165 @@ function parseJsonArray(value) {
   } catch {
     return [];
   }
+}
+
+function readJsonFile(filePath, fallback) {
+  if (!fs.existsSync(filePath)) return fallback;
+  return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+}
+
+function readJsonlFile(filePath) {
+  if (!fs.existsSync(filePath)) return [];
+  return fs.readFileSync(filePath, 'utf8')
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(Boolean)
+    .map(line => JSON.parse(line));
+}
+
+function candidateArtifactsRoot() {
+  return process.env.PROCESS_CANDIDATE_ARTIFACTS_DIR
+    ? path.resolve(process.env.PROCESS_CANDIDATE_ARTIFACTS_DIR)
+    : path.join(REPO_ROOT, 'artifacts', 'process-candidates');
+}
+
+function safeRunId(value) {
+  const runId = String(value || '').trim();
+  return /^[A-Za-z0-9._-]+$/.test(runId) ? runId : '';
+}
+
+function candidateRunDir(runId) {
+  const safeId = safeRunId(runId);
+  return safeId ? path.join(candidateArtifactsRoot(), safeId) : '';
+}
+
+function documentNameFromSource(sourceFile) {
+  return String(sourceFile || '')
+    .replace(/\\/g, '/')
+    .split('/')
+    .filter(Boolean)
+    .pop() || '来源未标注文档';
+}
+
+function parseCandidateAnchor(anchor) {
+  const text = String(anchor || '');
+  return {
+    clause: text.match(/§\s*([0-9]+(?:\.[0-9]+)*)/)?.[1] || '',
+    page: text.match(/\bpage\s*=?\s*(\d+)\b/i)?.[1] || text.match(/第?(\d+)页/)?.[1] || '',
+    paragraph_id: text.match(/\bP(\d+)\b/i)?.[1] ? `P${text.match(/\bP(\d+)\b/i)[1]}` : '',
+    table_id: text.match(/\b(T\d+)\b/i)?.[1] || ''
+  };
+}
+
+function formatCandidateSource(sourceFile, sourceAnchor) {
+  const parts = [];
+  const fileName = sourceFile ? documentNameFromSource(sourceFile) : '';
+  if (fileName) parts.push(fileName);
+  const anchor = parseCandidateAnchor(sourceAnchor);
+  if (anchor.clause) parts.push(`第${anchor.clause}条`);
+  if (anchor.page) parts.push(`第${anchor.page}页`);
+  if (anchor.paragraph_id) parts.push(`段落${anchor.paragraph_id}`);
+  if (anchor.table_id) parts.push(anchor.table_id.replace(/^T/i, '表'));
+  return parts.join(' · ') || String(sourceAnchor || '').replace(/\bP(\d+)\b/gi, '段落P$1') || '来源未标注';
+}
+
+function candidateSourceMatches(candidate, chunk) {
+  const candidateFile = String(candidate.source_file || '').replace(/\\/g, '/');
+  const chunkFile = String(chunk.source_file || '').replace(/\\/g, '/');
+  return !candidateFile || !chunkFile || candidateFile === chunkFile || candidateFile.endsWith(chunkFile) || chunkFile.endsWith(candidateFile);
+}
+
+function candidateExcerptScore(candidate, anchor, chunk) {
+  if (!candidateSourceMatches(candidate, chunk)) return -1;
+  let score = 0;
+  if (anchor.clause && chunk.clause === anchor.clause) score += 10;
+  if (anchor.paragraph_id && chunk.paragraph_id === anchor.paragraph_id) score += 10;
+  const text = `${chunk.raw_text || ''}\n${chunk.normalized_text || ''}`;
+  String(candidate.content || '')
+    .split(/[→；;，,。\s、/]+/)
+    .map(part => part.trim())
+    .filter(part => part.length >= 3)
+    .forEach(part => {
+      if (text.includes(part)) score += part.length >= 8 ? 8 : 3;
+    });
+  return score;
+}
+
+function loadCandidateRunBundle(runId) {
+  const safeId = safeRunId(runId);
+  if (!safeId) return null;
+  const runDir = path.join(candidateArtifactsRoot(), safeId);
+  const itemsPath = path.join(runDir, 'mapping_diff_items.json');
+  if (!fs.existsSync(itemsPath)) return null;
+  const candidates = readJsonFile(itemsPath, []);
+  const chunks = readJsonlFile(path.join(runDir, 'chunks.jsonl'));
+  const embedding = readJsonFile(path.join(runDir, 'embedding_manifest.json'), {});
+  const items = candidates.map((candidate, index) => {
+    const anchor = parseCandidateAnchor(candidate.source_anchor);
+    const sourceExcerpts = chunks
+      .map(chunk => ({ chunk, score: candidateExcerptScore(candidate, anchor, chunk) }))
+      .filter(item => item.score > 0)
+      .sort((left, right) => right.score - left.score)
+      .slice(0, 3)
+      .map(({ chunk }, excerptIndex) => ({
+        chunk_id: chunk.chunk_id || `excerpt-${excerptIndex + 1}`,
+        source_anchor: [chunk.doc_no, chunk.clause ? `§${chunk.clause}` : '', chunk.page ? `page=${chunk.page}` : '', chunk.paragraph_id].filter(Boolean).join(' '),
+        source_label: formatCandidateSource('', [chunk.doc_no, chunk.clause ? `§${chunk.clause}` : '', chunk.page ? `page=${chunk.page}` : '', chunk.paragraph_id].filter(Boolean).join(' ')),
+        raw_text: chunk.raw_text || '',
+        evidence_status: chunk.evidence_status || 'candidate',
+        verification_status: chunk.verification_status || 'unverified',
+        allowed_downstream_use: chunk.allowed_downstream_use || 'review_only'
+      }));
+    return {
+      ...candidate,
+      stable_key: candidate.stable_key || candidate.id || `candidate-${index + 1}`,
+      document_name: candidate.document_name || documentNameFromSource(candidate.source_file),
+      source_label: formatCandidateSource(candidate.source_file, candidate.source_anchor),
+      source_excerpts: sourceExcerpts
+    };
+  });
+  return {
+    run: {
+      run_id: safeId,
+      candidate_count: items.length,
+      embedding_status: embedding.status || 'missing',
+      embedding_model: embedding.model || ''
+    },
+    items
+  };
+}
+
+function groupCandidateReviewItems(items) {
+  const byDepartment = new Map();
+  for (const item of items) {
+    const department = item.department || '未标注部门';
+    const documentName = item.document_name || documentNameFromSource(item.source_file);
+    const type = item.candidate_type || '其他候选';
+    if (!byDepartment.has(department)) byDepartment.set(department, new Map());
+    const byDocument = byDepartment.get(department);
+    if (!byDocument.has(documentName)) byDocument.set(documentName, new Map());
+    const byType = byDocument.get(documentName);
+    if (!byType.has(type)) byType.set(type, []);
+    byType.get(type).push(item);
+  }
+  return [...byDepartment.entries()].map(([department, documents]) => ({
+    department,
+    documents: [...documents.entries()].map(([document_name, types]) => ({
+      document_name,
+      types: [...types.entries()].map(([candidate_type, candidates]) => ({ candidate_type, candidates }))
+    }))
+  }));
+}
+
+function listCandidateRuns() {
+  const root = candidateArtifactsRoot();
+  if (!fs.existsSync(root)) return [];
+  return fs.readdirSync(root, { withFileTypes: true })
+    .filter(entry => entry.isDirectory())
+    .map(entry => loadCandidateRunBundle(entry.name))
+    .filter(Boolean)
+    .map(bundle => bundle.run)
+    .sort((left, right) => right.run_id.localeCompare(left.run_id));
 }
 
 function emptySankey() {
@@ -1179,6 +1398,105 @@ router.post('/mapping-todos/:id/reopen', requireAuth, (req, res) => {
   });
 });
 
+router.get('/candidate-review/runs', requireAuth, (req, res) => {
+  return runAsyncAction(res, async () => {
+    const artifactRuns = listCandidateRuns();
+    const byRunId = new Map(artifactRuns.map(item => [item.run_id, item]));
+    const repo = await candidateReviewRepositoryOrNull();
+    if (repo) {
+      const storedRuns = await repo.listRuns();
+      for (const item of storedRuns) {
+        byRunId.set(item.run_id, { ...item, ...(byRunId.get(item.run_id) || {}) });
+      }
+    }
+    const items = [...byRunId.values()].sort((left, right) => right.run_id.localeCompare(left.run_id));
+    res.json({ summary: { total: items.length }, items });
+  });
+});
+
+router.get('/candidate-review/runs/:runId/candidates', requireAuth, (req, res) => {
+  return runAsyncAction(res, async () => {
+    const bundle = loadCandidateRunBundle(req.params.runId);
+    const filters = {
+      dept: req.query.dept,
+      document: req.query.document,
+      type: req.query.type
+    };
+    const repo = await candidateReviewRepositoryOrNull();
+    if (repo) {
+      const runDir = candidateRunDir(req.params.runId);
+      const itemsPath = runDir && path.join(runDir, 'mapping_diff_items.json');
+      if (itemsPath && fs.existsSync(itemsPath)) {
+        await repo.upsertBundle(loadProcessCandidateRunBundle(runDir));
+      }
+      const stored = await repo.getCandidates(req.params.runId, filters);
+      if (stored.items.length || !bundle) {
+        return res.json({
+          run: bundle ? bundle.run : { run_id: req.params.runId, candidate_count: stored.items.length },
+          ...stored
+        });
+      }
+    }
+    if (!bundle) return res.status(404).json({ error: '候选运行不存在' });
+    const items = bundle.items.filter(item => {
+      if (filters.dept && item.department !== String(filters.dept)) return false;
+      if (filters.document && item.document_name !== String(filters.document)) return false;
+      if (filters.type && item.candidate_type !== String(filters.type)) return false;
+      return true;
+    });
+    res.json({
+      run: bundle.run,
+      summary: { total: items.length },
+      groups: groupCandidateReviewItems(items),
+      items
+    });
+  });
+});
+
+router.put('/candidate-review/runs/:runId/candidates/:stableKey/review', requireAuth, (req, res) => {
+  return runAsyncAction(res, async () => {
+    const safeId = safeRunId(req.params.runId);
+    if (!safeId) return res.status(400).json({ error: '候选运行编号无效' });
+    const stableKey = String(req.params.stableKey || '').trim();
+    if (!stableKey) return res.status(400).json({ error: '候选项编号无效' });
+
+    const runDir = candidateRunDir(safeId);
+    const itemsPath = path.join(runDir, 'mapping_diff_items.json');
+    if (!fs.existsSync(itemsPath)) return res.status(404).json({ error: '候选运行不存在' });
+
+    let repo;
+    try {
+      repo = await candidateReviewRepository();
+    } catch (error) {
+      console.error(error);
+      return res.status(503).json({ error: '候选复核 MySQL 不可用' });
+    }
+
+    const bundle = loadProcessCandidateRunBundle(runDir);
+    const candidate = bundle.items.find(item => item.stable_key === stableKey);
+    if (!candidate) return res.status(404).json({ error: '候选项不存在' });
+
+    await repo.upsertBundle(bundle);
+    const review = await repo.saveDecision(safeId, stableKey, normalizeReviewPayload({
+      ...req.body,
+      reviewer: req.session.userName || String(req.session.userId || '') || req.body.reviewer
+    }));
+
+    return res.json({
+      run: bundle.run,
+      candidate: {
+        stable_key: candidate.stable_key,
+        department: candidate.department,
+        document_name: candidate.document_name,
+        candidate_type: candidate.candidate_type,
+        content: candidate.content,
+        source_label: candidate.source_label
+      },
+      review
+    });
+  });
+});
+
 router.get('/chains', requireAuth, (req, res) => {
   return runDbAction(res, () => {
     const snapshot = activeSnapshot();
@@ -1195,5 +1513,8 @@ router.get('/chains', requireAuth, (req, res) => {
     res.json({ items });
   });
 });
+
+router.setCandidateReviewRepositoryFactory = setCandidateReviewRepositoryFactory;
+router.resetCandidateReviewRepositoryFactory = resetCandidateReviewRepositoryFactory;
 
 module.exports = router;

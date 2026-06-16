@@ -44,6 +44,7 @@ async function main() {
     '/api/process-governance/sankey',
     '/api/process-governance/a1',
     '/api/process-governance/cross-dept',
+    '/api/process-governance/candidate-review/runs',
     '/api/role-workbench',
     '/api/page-workflows',
     'data-tab="roleWorkbench"',
@@ -81,6 +82,18 @@ async function main() {
     '工作组组长看到本工作组有跨部门衔接风险时',
     '项目组长看到本部门有跨部门衔接风险时',
     'function renderProcessGovernance()',
+    'function renderProcessGovernanceCandidateReview',
+    'function renderCandidateReviewGroupedRows',
+    '候选映射复核',
+    'function saveProcessGovernanceCandidateReview',
+    "method: 'PUT'",
+    'data-review-field',
+    'data-candidate-review-group="department"',
+    'data-candidate-review-group="document"',
+    'data-candidate-review-group="type"',
+    'issue_type',
+    'definition_status',
+    'normalized_note',
     'function renderRoleGuide()',
     'function renderRoleGuideCard(role)',
     'function loadPageWorkflow(tab, route)',
@@ -124,6 +137,8 @@ async function main() {
   assert.ok(!html.includes('承载最多'), 'frontend copy should avoid evaluative system wording');
   assert.ok(!html.includes('主用系统'), 'frontend copy should avoid evaluative system wording');
   assert.ok(!html.includes('prompt('), 'maintenance create/edit flows should use routed forms instead of native prompts');
+  assert.ok(!html.includes('data-correction-fragment'), 'candidate review must not restore click-to-concat correction fragments');
+  assert.ok(!html.includes('点选标签生成修正意见'), 'candidate review must not restore click-to-concat correction copy');
   assert.ok(!html.includes('id="ouNewBtn"'), 'organization structure should not expose a manual create button');
   assert.ok(!html.includes('+ 新增组织'), 'organization structure should not show manual create copy');
   assert.ok(!html.includes("type:'orgUnit',id:'new'"), 'organization structure should not route to a manual create form');

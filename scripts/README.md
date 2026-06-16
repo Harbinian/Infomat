@@ -14,7 +14,7 @@
 | `check-pmo-task-data.mjs` | 校验 PMO 根目录备份数据与 React 应用读取数据同源同 hash | `pmo/tasks.json`、`pmo/gantt-react/public/tasks.json`、两份 PMO source manifest | 只读校验 |
 | `check-pmo-wbs-semantic-depth.mjs` | 校验 PMO WBS 语义补组后不再保留二级叶子任务，并确认父级日期覆盖子任务 | `pmo/tasks.json` | 只读校验 |
 | `check-source-manifest-hashes.mjs` | 校验公司级快照里的 sourceManifest 文件大小和 SHA256 仍匹配磁盘源文件 | `docs/company-sankey-data.json`、`sourceManifest.files` 中登记的源文件 | 只读校验 |
-| `sync-process-governance-mainline.mjs` | 串起流程治理主线同步、检查和 MDM 快照导入 | 流程真源、PMO 驾驶舱、MDM 平台脚本；必须显式设置 `MDM_DB_PATH` | 会运行 parser，并调用 MDM 平台同步 / 导入脚本 |
+| `sync-process-governance-mainline.mjs` | 串起流程治理主线同步、检查和 MDM 快照导入 | 流程真源、PMO 驾驶舱、MDM 平台脚本；迁移过渡期的遗留本地库必须显式隔离 | 会运行 parser，并调用 MDM 平台同步 / 导入脚本 |
 | `test-process-governance-mainline.mjs` | 聚合仓库级流程治理主线只读校验 | 根级主线检查脚本 | 依次运行合约、PMO 数据、部门域、source manifest 和 PMO 任务数据校验 |
 | `test-process-governance-mainline-contract.mjs` | 仓库级流程治理主线契约测试 | `package.json`、`docs/company-sankey-data.json`、仓库级脚本 | 只读校验 |
 
@@ -30,9 +30,31 @@ npm run test:pmo-wbs-semantic-depth
 npm run test:source-manifest-hashes
 npm run test:process-evidence-skill
 npm run test:process-candidates
+npm run test:process-candidate-review
 npm run test:ocr-source
 $env:MDM_DB_PATH='apps/mdm-platform/data/<target>.db'; npm run sync:process-governance
 ```
+
+候选复核正式入口在 MDM 平台：
+
+```bash
+cd apps/mdm-platform
+npm run init:mysql
+npm run import:process-candidate-review -- --candidate-run artifacts/process-candidates/<run-id>
+npm start
+```
+
+复核 API 固定为 `/api/process-governance/candidate-review/*`，复核决策写入 MDM MySQL `process_candidate_review_*` 表。
+
+根目录候选复核 MySQL 服务只作为迁移过渡工具保留，不作为正式 MDM 入口：
+
+```bash
+npm run review:mysql:init
+npm run review:mysql:import -- --candidate-run artifacts/process-candidates/<run-id>
+npm run review:mysql:serve
+```
+
+连接参数通过环境变量传入：`MYSQL_HOST`、`MYSQL_PORT`、`MYSQL_USER`、`MYSQL_PASSWORD`、`MYSQL_DATABASE`。临时服务只读候选产物并把人工复核结果写入 MySQL，不自动修改正式流程映射。
 
 ## 审计与质量脚本
 
@@ -44,8 +66,16 @@ $env:MDM_DB_PATH='apps/mdm-platform/data/<target>.db'; npm run sync:process-gove
 | `test-ocr-source.mjs` | 校验 OCR 包装脚本的输出边界、复核登记和非结论化规则 | 一个扫描 PDF 样例 | 写入被忽略的 `artifacts/ocr/test-ocr-source/` |
 | `.agents/skills/process-evidence-mapping/scripts/run-process-candidate-workflow.mjs` | 串联 OCR 判断、evidence chunks、embedding/降级、候选解读、角色抽取、对象链、差异报告和候选待办 Markdown | 单个制度文件、部门名、当前部门映射 | 写入 `artifacts/process-candidates/<run-id>/`；更新 `docs/norms/流程治理/候选映射待办.md` |
 | `.agents/skills/process-evidence-mapping/scripts/update-candidate-todo-md.mjs` | 将未解决候选项写入人工待办面板，按稳定键去重，并过滤当前正式映射已覆盖项 | `mapping_diff_items.json`、当前部门映射 | 写入候选待办 Markdown；只保留未解决项 |
+| `build-candidate-sankey-preview.mjs` | 为候选运行生成部门候选预览页 | `artifacts/process-candidates/<run-id>/mapping_diff_items.json` | 默认写入同一候选运行目录的 `preview.html`；只有显式 `--out` 才会写指定路径 |
+| `mark-sankey-preview-status.mjs` | 旧批量预览标记脚本的安全兼容入口 | 无 | 不再批量修改正式部门桑基图，只输出 deprecated/no-op 提示 |
+| `rebuild-department-sankey-page.mjs` | 从部门正式映射 Markdown 重建单个部门桑基图 HTML | `docs/norms/{部门}部门-能力-流程-系统映射关系.md` | 写 `docs/norms/{部门}部门能力流程系统桑基图.html`，不读取候选产物 |
+| `init-candidate-review-mysql.mjs` | 初始化候选复核 MySQL 表结构 | MySQL 连接环境变量 | 写入 MySQL schema，不写仓库真源 |
+| `import-candidate-review-mysql.mjs` | 将候选运行产物、原文摘录导入 MySQL | `artifacts/process-candidates/<run-id>/` | 写入 MySQL 候选题库和原文摘录 |
+| `candidate-review-service.mjs` | 启动候选复核网页服务 | MySQL 候选题库 | 页面从接口读取题目和原文高亮，选择结果直接写 MySQL |
+| `candidate-review-core.mjs` | 候选复核 MySQL schema、原文匹配、高亮和仓库方法 | 候选 JSON、`chunks.jsonl`、MySQL pool | 供导入脚本、服务和测试复用 |
 | `test-process-evidence-skill.mjs` | 校验 process-evidence-mapping 技能是否按固定执行顺序重写，且包含 OCR、embedding、候选待办边界 | `.agents/skills/process-evidence-mapping/SKILL.md` | 只读校验 |
 | `.agents/skills/process-evidence-mapping/scripts/test-candidate-workflow.mjs` | 用 GLTX-CW-01 回归候选解读、角色簿、对象链、差异报告和候选待办 Markdown | 财务部 GLTX-CW-01 制度和当前财务部映射 | 写入被忽略的 `artifacts/process-candidates/test-gltx-cw-01/` |
+| `test-candidate-review-mysql.mjs` | 校验 MySQL 表结构、原文高亮、对比色按钮和服务页面契约 | 测试候选运行夹具 | 写入被忽略的 `artifacts/process-candidates/test-candidate-review-mysql/` |
 | `glossary.mjs` | 查询仓库术语表 | `docs/glossary.md` | 只读查询 |
 
 ## 局部或历史工具

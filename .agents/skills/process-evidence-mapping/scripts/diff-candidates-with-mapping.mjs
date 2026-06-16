@@ -15,6 +15,18 @@ import {
   writeJson,
 } from './candidate-utils.mjs';
 
+const TYPE_ORDER = new Map([
+  ['候选L3', 1],
+  ['候选A1', 2],
+  ['角色待确认', 3],
+  ['审批链待确认', 4],
+  ['受控传递待确认', 5],
+  ['OCR待复核', 6],
+  ['验收标准待补', 7],
+  ['归档要求待补', 8],
+  ['系统落位待确认', 9],
+]);
+
 function itemFromCandidate({ department, type, candidate, content, action, mappingText, owner }) {
   const sourceFile = candidate.source_file || '';
   const sourceAnchor = candidate.source_anchor || '';
@@ -114,7 +126,7 @@ function buildItems(documentCandidate, roleBook, objectChains, mappingText) {
       candidate,
       action: '补充到相关A1验收标准、归档要求或核验提醒前先核验源条款。',
       mappingText,
-      owner: '财务部/流程治理负责人',
+      owner: '制度责任部门/流程治理负责人',
     });
     if (item) items.push(item);
   }
@@ -134,7 +146,8 @@ function buildItems(documentCandidate, roleBook, objectChains, mappingText) {
 
   for (const role of roleBook.roles || []) {
     if (mappingCovers(mappingText, role.name)) continue;
-    if (['财务部成本会计', '有关部门'].includes(role.name) || role.confidence === 'context_inferred') {
+    if (role.name === department) continue;
+    if (['财务部成本会计', '有关部门'].includes(role.name) || ['candidate', 'context_inferred'].includes(role.confidence)) {
       const item = itemFromCandidate({
         department,
         type: '角色待确认',
@@ -165,7 +178,11 @@ function buildItems(documentCandidate, roleBook, objectChains, mappingText) {
 
   const byKey = new Map();
   for (const item of items) byKey.set(item.stable_key, item);
-  return [...byKey.values()].sort((a, b) => `${a.candidate_type}${a.content}`.localeCompare(`${b.candidate_type}${b.content}`, 'zh-Hans-CN'));
+  return [...byKey.values()].sort((a, b) => {
+    const typeDiff = (TYPE_ORDER.get(a.candidate_type) || 99) - (TYPE_ORDER.get(b.candidate_type) || 99);
+    if (typeDiff) return typeDiff;
+    return `${a.source_file}${a.content}`.localeCompare(`${b.source_file}${b.content}`, 'zh-Hans-CN');
+  });
 }
 
 function writeReport(filePath, items, embeddingManifest, mappingPath) {

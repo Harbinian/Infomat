@@ -10,7 +10,7 @@
 
 ## 边界和入口
 
-`apps/mdm-platform/` 只负责 MDM 平台应用本身：Express 路由、SQLite 数据、单文件前端、应用内脚本和平台使用说明。
+`apps/mdm-platform/` 只负责 MDM 平台应用本身：Express 路由、MySQL 目标 schema、单文件前端、应用内脚本和平台使用说明。
 
 不在本目录维护流程原始真源、PMO 驾驶舱或仓库级数据转换脚本：
 
@@ -23,14 +23,20 @@
 
 ## 快速启动
 
-全新 clone 或另一台设备拉取后，使用脚本从仓库真源重建本地 SQLite 基线；不要复制或提交 `data/platform.db`。
+全新 clone 或另一台设备拉取后，使用 MySQL 配置和初始化脚本从仓库真源重建平台基线；不要复制或提交本地运行态数据库。
 
 ```powershell
 cd apps/mdm-platform
 npm install
+$env:MYSQL_HOST="127.0.0.1"
+$env:MYSQL_PORT="3306"
+$env:MYSQL_USER="mdm_user"
+$env:MYSQL_PASSWORD="your-mysql-password"
+$env:MYSQL_DATABASE="infomat_mdm"
 $env:MDM_ADMIN_EMPLOYEE_NO="your-admin-no"
 $env:MDM_ADMIN_PASSWORD="your-long-random-password"
 $env:ALLOW_INSECURE_SESSION_SECRET="1"
+npm run init:mysql
 npm run setup:local-baseline
 npm run smoke
 npm start
@@ -40,15 +46,15 @@ npm start
 
 平台不会创建默认管理员。首次初始化前请通过环境变量提供管理员工号和不少于 12 位的初始密码；脚本不会在仓库中保存密码、Cookie 或本地数据库。
 
-`npm run setup:local-baseline` 是幂等本地基线入口，会：
+`npm run init:mysql` 会初始化 MySQL schema 中已迁移的 MDM/流程候选复核表。`npm run setup:local-baseline` 仍是迁移过渡期的幂等基线入口，会：
 
-- 初始化 SQLite schema 和系统角色/权限。
+- 初始化遗留本地 schema 和系统角色/权限。
 - 从 `docs/organization/组织架构和部门职责.md` 同步组织架构、领导岗位和对应人员。
 - 仅为 `MDM_ADMIN_EMPLOYEE_NO` 指定的管理员创建/补齐 `admin` RBAC 角色。
 
 默认基线不导入花名册账号或项目账号，避免把本机登录账号状态当成仓库真源。确需导入花名册用户时，先确认口令策略和数据边界，再单独运行对应导入脚本。
 
-如需在临时库验证，不写默认 `data/platform.db`，可先设置：
+迁移完成前，如需运行仍依赖遗留本地库的测试，可通过隔离路径避免写默认运行态文件：
 
 ```powershell
 $env:MDM_DB_PATH="$env:TEMP\mdm-platform-baseline.db"
@@ -69,7 +75,7 @@ $env:MDM_DB_PATH="$env:TEMP\mdm-platform-baseline.db"
 ## 技术栈
 
 - 前端：单文件 HTML（原生 JS + CSS，参考演示文件视觉风格）
-- 后端：Express.js + SQLite (better-sqlite3)
+- 后端：Express.js + MySQL（迁移过渡期仍有遗留 SQLite 代码待替换）
 - 认证：bcryptjs + express-session
 - 导入/导出：multer + exceljs
 
@@ -91,6 +97,9 @@ npm run test:frontend
 npm run test:local-baseline
 npm run test:security
 npm run test:mainline
+npm run test:mysql-config
+npm run init:mysql
+npm run import:process-candidate-review -- --candidate-run artifacts/process-candidates/<run-id>
 ```
 
 `npm run test:security` 已包含批量用户脚本口令红线：项目账号脚本和 Excel 用户导入脚本不得硬编码固定初始密码，新建账号必须标记首次登录改密。
@@ -118,8 +127,10 @@ npm run check:process-governance
 
 数据库安全约定：
 
-- 默认数据库仍为 `apps/mdm-platform/data/platform.db`。
-- 测试必须通过 `MDM_DB_PATH` 使用隔离 SQLite 文件。
+- MySQL 连接统一使用 `MYSQL_HOST`、`MYSQL_PORT`、`MYSQL_USER`、`MYSQL_PASSWORD`、`MYSQL_DATABASE`、`MYSQL_CONNECTION_LIMIT`。
+- 旧 SQLite `platform.db` 不迁移；MySQL 通过组织真源、流程快照和基线脚本重建。
+- 迁移过渡期仍依赖遗留本地库的测试，必须通过隔离路径运行，不能污染共享运行态文件。
+- 候选映射复核正式入口为 `/api/process-governance/candidate-review/*`；候选运行通过 `npm run import:process-candidate-review -- --candidate-run artifacts/process-candidates/<run-id>` 导入 MySQL。
 - `npm run test:mainline` 用于验证“流程治理 -> 字段台账 -> 主数据对象 -> 权限 -> 导入导出”主线，详见 `docs/plans/流程治理字段台账主线稳定性检查.md`。
 - 不直接运行会删除共享数据库的旧式测试逻辑。
 - `seed-demo-data.js` 和 `setup-mdm-project-users.js` 需要显式环境变量才可运行。
