@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(SCRIPT_DIR, '..');
 const DEFAULT_CONTRACT = join(ROOT, 'docs', 'contracts', 'dcm-bbm-contract.json');
-const DEFAULT_REPORT = join(ROOT, 'docs', 'norms', '_quality-report.md');
+const DEFAULT_REPORT = join(ROOT, 'docs', 'reports', 'dcm-bbm-quality-report.md');
 const SEVERITY_ORDER = { BLOCK: 0, WARN: 1, INFO: 2 };
 const SOURCE_EXTENSIONS = new Set(['.doc', '.docx', '.xls', '.xlsx', '.pdf', '.md', '.txt', '.html', '.jpg', '.jpeg', '.png', '.tif', '.tiff']);
 const GENERATED_SOURCE_PARTS = ['/_extracted/', '/流程治理/'];

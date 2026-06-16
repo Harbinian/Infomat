@@ -1,11 +1,23 @@
 '\nMerge norms-formatter output files by document code.\nPhase 1: Remove duplicate "English Version (unmatched sections)" from main docs.\nPhase 2: Embed tables content, append ANF forms, write one merged file per document code.\n'
 
 import re
+import argparse
 from pathlib import Path
 from collections import defaultdict
 
-SRC = Path(r"E:\CA001\Infomat\docs\norms")
-OUT = Path(r"E:\CA001\Infomat\docs\norms\merged")
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Merge norms-formatter output files by document code.")
+    parser.add_argument("--src", type=Path, default=ROOT / "docs" / "norms", help="Source directory containing markdown files.")
+    parser.add_argument("--out", type=Path, default=ROOT / "docs" / "norms" / "merged", help="Output directory for merged markdown files.")
+    return parser.parse_args()
+
+
+ARGS = parse_args()
+SRC = ARGS.src.resolve()
+OUT = ARGS.out.resolve()
 OUT.mkdir(parents=True, exist_ok=True)
 
 # ── Phase 1: Scan & group files ──────────────────────────────────────────

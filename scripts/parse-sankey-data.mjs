@@ -1267,26 +1267,26 @@ function main() {
   // 同步注入到 PMO 驾驶舱的内嵌 JSON 标签，使页面保持单文件可双击打开。
   try {
     let dash = readFileSync(DASHBOARD_PATH, 'utf-8');
-    const sankeyTagRe = /(<script type="application\/json" id="sankey-data">)[\s\S]*?(<\/script>)/;
-    const crossTagRe = /(<script type="application\/json" id="cross-dept-data">)[\s\S]*?(<\/script>)/;
+    const sankeyTagRe = /(<script type="application\/json" id="sankey-data">)[\s\S]*?(<\/script>)/g;
+    const crossTagRe = /(<script type="application\/json" id="cross-dept-data">)[\s\S]*?(<\/script>)/g;
+    const sankeyDataBlocks = [...dash.matchAll(sankeyTagRe)];
+    const crossDeptDataBlocks = [...dash.matchAll(crossTagRe)];
 
-    if (sankeyTagRe.test(dash)) {
-      dash = dash.replace(sankeyTagRe, `$1\n${JSON.stringify(finalData)}\n$2`);
-    } else {
-      console.error(`WARN: ${DASHBOARD_PATH} 没有 sankey-data 标签, 跳过内嵌`);
+    if (sankeyDataBlocks.length !== 1) {
+      throw new Error(`Expected exactly one sankey-data script tag in ${DASHBOARD_PATH}, found ${sankeyDataBlocks.length}`);
+    }
+    if (crossDeptDataBlocks.length !== 1) {
+      throw new Error(`Expected exactly one cross-dept-data script tag in ${DASHBOARD_PATH}, found ${crossDeptDataBlocks.length}`);
     }
 
-    if (crossTagRe.test(dash)) {
-      dash = dash.replace(crossTagRe, `$1\n${JSON.stringify(finalData.crossDept)}\n$2`);
-    } else {
-      console.error(`WARN: ${DASHBOARD_PATH} 没有 cross-dept-data 标签, 跳过内嵌`);
-    }
-
+    dash = dash.replace(sankeyTagRe, `$1\n${JSON.stringify(finalData)}\n$2`);
+    dash = dash.replace(crossTagRe, `$1\n${JSON.stringify(finalData.crossDept)}\n$2`);
     writeFileSync(DASHBOARD_PATH, dash, 'utf-8');
     const sizeKB = (Buffer.byteLength(dash, 'utf-8') / 1024).toFixed(0);
     console.error(`Inlined dashboard data into ${DASHBOARD_PATH} (${sizeKB} KB)`);
   } catch (e) {
-    console.error(`WARN: 内嵌 dashboard.html 失败: ${e.message}`);
+    console.error(`内嵌 dashboard.html 失败: ${e.message}`);
+    throw e;
   }
 }
 

@@ -4,12 +4,84 @@
  * 用法: node scripts/test-process-governance-mainline.mjs
  */
 
+import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
 
+function readRepoFile(relativePath) {
+  return readFileSync(resolve(root, relativePath), 'utf8');
+}
+
+function assertSourceContract() {
+  const mainlineSync = readRepoFile('scripts/sync-process-governance-mainline.mjs');
+  const orgSync = readRepoFile('apps/mdm-platform/scripts/sync-process-governance-org.js');
+  const appImport = readRepoFile('apps/mdm-platform/scripts/import-process-governance.js');
+  const checker = readRepoFile('scripts/check-dcm-bbm.mjs');
+  const parser = readRepoFile('scripts/parse-sankey-data.mjs');
+  const normalizer = readRepoFile('scripts/normalize-norms-sankey-h5.mjs');
+  const mergeNorms = readRepoFile('scripts/merge_norms.py');
+  const renderGantt = readRepoFile('scripts/render_gantt_h5_png.mjs');
+  const generateGantt = readRepoFile('scripts/generate_digital_project_gantt_8k.py');
+
+  assert.match(mainlineSync, /MDM_DB_PATH/, '主线同步脚本必须显式要求 MDM_DB_PATH');
+  assert.match(mainlineSync, /--snapshot/, '主线同步导入 MDM 快照时必须显式传入 snapshot');
+  assert.match(mainlineSync, /sync:process-org.*--write/s, '主线同步组织范围时必须显式写入');
+
+  assert.match(orgSync, /--archive-non-canonical/, '组织同步归档非标准部门必须使用显式开关');
+  assert.match(orgSync, /dryRun/, '组织同步必须支持默认预览模式');
+
+  assert.match(appImport, /--snapshot/, 'MDM 流程治理导入脚本必须使用 --snapshot 输入');
+  assert.doesNotMatch(appImport, /readdirSync\(normsDir\)/, 'MDM 导入脚本默认不得扫描 docs/norms');
+  assert.doesNotMatch(appImport, /check-dcm-bbm/, 'MDM 导入脚本默认不得调用根目录质量检查');
+
+  assert.match(checker, /docs['"], ['"]reports['"], ['"]dcm-bbm-quality-report\.md/, 'DCM/BBM 默认报告必须写入 docs/reports');
+  assert.doesNotMatch(checker, /docs['"], ['"]norms['"], ['"]_quality-report\.md/, 'DCM/BBM 默认报告不得写入 docs/norms');
+
+  assert.match(parser, /sankeyDataBlocks/, 'Sankey 解析脚本必须校验 sankey-data 标签唯一性');
+  assert.match(parser, /Expected exactly one sankey-data/, 'Sankey 解析脚本必须在缺失或重复标签时失败');
+
+  assert.match(normalizer, /--write/, '部门 Sankey H5 规范化脚本必须通过 --write 才能写入');
+  assert.match(normalizer, /dry-run/, '部门 Sankey H5 规范化脚本默认必须是 dry-run');
+
+  assert.doesNotMatch(mergeNorms, /E:\\\\CA001|E:\/CA001/, 'merge_norms.py 不得写死本机仓库路径');
+  assert.doesNotMatch(renderGantt, /Program Files\\\\Google\\\\Chrome/, 'Gantt 渲染脚本不得写死 Chrome 安装路径');
+  assert.doesNotMatch(generateGantt, /C:\\\\Windows\\\\Fonts/, 'Gantt 生成脚本不得写死 Windows 字体路径');
+}
+
+function assertMainlineSyncRequiresExplicitDbPath() {
+  const tempDir = mkdtempSync(resolve(tmpdir(), 'infomat-mainline-sync-'));
+  const tempDb = resolve(tempDir, 'platform.db');
+  try {
+    const envWithoutDb = { ...process.env };
+    delete envWithoutDb.MDM_DB_PATH;
+    const missing = spawnSync(process.execPath, [resolve(root, 'scripts/sync-process-governance-mainline.mjs')], {
+      cwd: root,
+      env: envWithoutDb,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    assert.notStrictEqual(missing.status, 0, '缺少 MDM_DB_PATH 时主线同步必须失败');
+    assert.match(`${missing.stdout}\n${missing.stderr}`, /MDM_DB_PATH/, '缺少 MDM_DB_PATH 的失败信息必须说明原因');
+
+    const configured = spawnSync(process.execPath, [resolve(root, 'scripts/sync-process-governance-mainline.mjs'), '--check-env'], {
+      cwd: root,
+      env: { ...process.env, MDM_DB_PATH: tempDb },
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    assert.strictEqual(configured.status, 0, configured.stderr || configured.stdout);
+  } finally {
+    rmSync(tempDir, { recursive: true, force: true });
+  }
+}
+
 const checks = [
+  ['脚本边界合约', assertSourceContract],
+  ['主线同步数据库路径保护', assertMainlineSyncRequiresExplicitDbPath],
   ['主线合约', 'scripts/test-process-governance-mainline-contract.mjs'],
   ['PMO 驾驶舱数据', 'scripts/check-dashboard-data.mjs'],
   ['部门域映射', 'scripts/check-dept-domain-mapping.mjs'],
@@ -21,6 +93,10 @@ const checks = [
 
 for (const [label, script] of checks) {
   console.log(`\n[process-governance-mainline] ${label}`);
+  if (typeof script === 'function') {
+    script();
+    continue;
+  }
   const result = spawnSync(process.execPath, [resolve(root, script)], {
     cwd: root,
     stdio: 'inherit',
