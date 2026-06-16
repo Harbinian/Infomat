@@ -1,14 +1,23 @@
 import { spawn } from "node:child_process";
 import { mkdir, rm, writeFile } from "node:fs/promises";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import path from "node:path";
 
-const root = path.resolve(new URL("..", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1"));
-const input = path.join(root, "digital_project_gantt_H5.html");
-const output = path.join(root, "output", "digital_project_gantt_8k.png");
-const profileDir = path.join(root, "tmp", "chrome-gantt-render-profile");
-const chrome = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
-const port = 9333;
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+
+function argValue(name, fallback) {
+  const index = process.argv.indexOf(name);
+  if (index >= 0) return process.argv[index + 1] || fallback;
+  const prefix = `${name}=`;
+  const inline = process.argv.find(arg => arg.startsWith(prefix));
+  return inline ? inline.slice(prefix.length) : fallback;
+}
+
+const input = path.resolve(root, argValue("--input", "digital_project_gantt_H5.html"));
+const output = path.resolve(root, argValue("--output", path.join("output", "digital_project_gantt_8k.png")));
+const profileDir = path.resolve(root, argValue("--profile-dir", path.join("tmp", "chrome-gantt-render-profile")));
+const chrome = argValue("--chrome", process.env.CHROME_PATH || "chrome");
+const port = Number(argValue("--port", process.env.GANTT_RENDER_PORT || "9333"));
 
 const cssWidth = 5333;
 const cssHeight = 3000;

@@ -10,6 +10,7 @@ import { readFileSync, readdirSync, writeFileSync } from 'fs';
 import { join, resolve } from 'path';
 
 const NORMS = resolve(import.meta.dirname || '.', '..', 'docs', 'norms');
+const writeChanges = process.argv.includes('--write');
 
 const helperBlock = `function a1ShortCode(a1) {
         var id = Array.isArray(a1) ? a1[0] : a1;
@@ -255,9 +256,15 @@ for (const file of files) {
   const before = readFileSync(file, 'utf-8');
   const after = normalizeText(before);
   if (after !== before) {
-    writeFileSync(file, after, 'utf-8');
+    if (writeChanges) {
+      writeFileSync(file, after, 'utf-8');
+    }
     changed += 1;
   }
 }
 
-console.log(`normalized ${changed}/${files.length} department Sankey pages`);
+if (writeChanges) {
+  console.log(`normalized ${changed}/${files.length} department Sankey pages`);
+} else {
+  console.log(`dry-run: would normalize ${changed}/${files.length} department Sankey pages; pass --write to update files`);
+}

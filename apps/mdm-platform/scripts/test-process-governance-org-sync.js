@@ -19,8 +19,20 @@ try {
     VALUES ('工程技术部', 'DEPT_GCJS', 'inactive', '其他', 999, 'HR_SYSTEM', 'HR-DEPT-GCJS')
   `).run();
 
-  syncProcessGovernanceOrg({ db });
-  syncProcessGovernanceOrg({ db });
+  const dryRun = syncProcessGovernanceOrg({ db });
+  assert.strictEqual(dryRun.dryRun, true);
+  assert.deepStrictEqual(
+    dryRun.archiveCandidates.map(row => row.name).sort(new Intl.Collator('zh-Hans-CN').compare),
+    ['公司领导', '信息化部']
+  );
+  assert.strictEqual(
+    db.prepare("SELECT COUNT(*) AS count FROM departments WHERE name IN ('公司领导', '信息化部') AND status='active'").get().count,
+    2,
+    '默认预览模式不得归档现有部门'
+  );
+
+  syncProcessGovernanceOrg({ db, dryRun: false });
+  syncProcessGovernanceOrg({ db, dryRun: false, archiveNonCanonical: true });
 
   const active = db.prepare("SELECT name FROM departments WHERE status='active' ORDER BY sort_order, name").all().map(row => row.name);
   assert.deepStrictEqual(active, [

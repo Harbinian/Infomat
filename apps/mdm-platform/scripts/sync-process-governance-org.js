@@ -12,6 +12,8 @@ const PROCESS_GOVERNANCE_DEPARTMENTS = [
 
 function syncProcessGovernanceOrg(options = {}) {
   const database = options.db || require('../server/db');
+  const dryRun = options.dryRun !== undefined ? Boolean(options.dryRun) : true;
+  const archiveNonCanonical = Boolean(options.archiveNonCanonical);
 
   const findByCode = database.prepare('SELECT id FROM departments WHERE code = ?');
   const findByName = database.prepare('SELECT id FROM departments WHERE name = ? ORDER BY id LIMIT 1');
@@ -49,6 +51,34 @@ function syncProcessGovernanceOrg(options = {}) {
     ) VALUES (?, ?, ?, ?, 'active', 'PROCESS_GOVERNANCE', ?)
   `);
 
+  function resolveCanonicalIds() {
+    return PROCESS_GOVERNANCE_DEPARTMENTS
+      .map(department => findByCode.get(department.code) || findByName.get(department.name))
+      .filter(Boolean)
+      .map(row => row.id);
+  }
+
+  function loadArchiveCandidates(canonicalIds) {
+    const placeholders = canonicalIds.length ? canonicalIds.map(() => '?').join(', ') : 'NULL';
+    return database.prepare(`
+      SELECT id, name, code
+      FROM departments
+      WHERE status = 'active'
+        AND id NOT IN (${placeholders})
+      ORDER BY sort_order, name
+    `).all(...canonicalIds);
+  }
+
+  if (dryRun) {
+    const canonicalIds = resolveCanonicalIds();
+    return {
+      dryRun: true,
+      canonicalDepartments: PROCESS_GOVERNANCE_DEPARTMENTS.map(department => ({ ...department })),
+      archiveCandidates: loadArchiveCandidates(canonicalIds)
+    };
+  }
+
+  let archiveCandidates = [];
   const sync = database.transaction(() => {
     const canonicalIds = [];
 
@@ -76,16 +106,26 @@ function syncProcessGovernanceOrg(options = {}) {
       }
     }
 
-    database.prepare(`
-      UPDATE departments
-      SET status = 'archived',
-          updated_at = datetime('now')
-      WHERE status = 'active'
-        AND id NOT IN (${canonicalIds.map(() => '?').join(', ')})
-    `).run(...canonicalIds);
+    archiveCandidates = loadArchiveCandidates(canonicalIds);
+
+    if (archiveNonCanonical && canonicalIds.length) {
+      database.prepare(`
+        UPDATE departments
+        SET status = 'archived',
+            updated_at = datetime('now')
+        WHERE status = 'active'
+          AND id NOT IN (${canonicalIds.map(() => '?').join(', ')})
+      `).run(...canonicalIds);
+    }
   });
 
   sync();
+  return {
+    dryRun: false,
+    archiveNonCanonical,
+    canonicalDepartments: PROCESS_GOVERNANCE_DEPARTMENTS.map(department => ({ ...department })),
+    archiveCandidates
+  };
 }
 
 module.exports = {
@@ -94,6 +134,10 @@ module.exports = {
 };
 
 if (require.main === module) {
-  syncProcessGovernanceOrg();
-  console.log('Process governance organization scope synchronized');
+  const argv = new Set(process.argv.slice(2));
+  const result = syncProcessGovernanceOrg({
+    dryRun: !(argv.has('--write') || argv.has('--archive-non-canonical')),
+    archiveNonCanonical: argv.has('--archive-non-canonical')
+  });
+  console.log(JSON.stringify(result, null, 2));
 }

@@ -11,6 +11,11 @@ const a1MarkdownPath = path.join(fixtureDir, 'process-governance-a1.md');
 const extraA1MarkdownPath = path.join(fixtureDir, 'process-governance-a1-extra.tmp.md');
 
 try {
+  const cliSource = fs.readFileSync(path.join(__dirname, 'import-process-governance.js'), 'utf8');
+  assert.match(cliSource, /--snapshot/, '导入脚本必须通过 --snapshot 明确指定流程治理快照');
+  assert.doesNotMatch(cliSource, /readdirSync\(normsDir\)/, '导入脚本默认不得扫描 docs/norms');
+  assert.doesNotMatch(cliSource, /check-dcm-bbm/, '导入脚本默认不得调用根目录质量检查');
+
   const snapshotId = importProcessGovernanceSnapshot({
     db,
     sourceJsonPath,
