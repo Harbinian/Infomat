@@ -124,14 +124,30 @@ function waitForServer() {
   });
 }
 
+const csrfTokens = new Map();
+
 async function request(routePath, options = {}, cookie = '') {
+  const requestOptions = { ...options };
+  const method = String(requestOptions.method || 'GET').toUpperCase();
   const headers = {
-    ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+    ...(requestOptions.body ? { 'Content-Type': 'application/json' } : {}),
     ...(cookie ? { Cookie: cookie } : {})
   };
-  const res = await fetch(`${BASE_URL}${routePath}`, { ...options, headers });
+  if (cookie && !['GET', 'HEAD', 'OPTIONS'].includes(method) && routePath !== '/api/org/login') {
+    const token = await csrfTokenFor(cookie);
+    if (token) headers['X-CSRF-Token'] = token;
+  }
+  const res = await fetch(`${BASE_URL}${routePath}`, { ...requestOptions, headers });
   const body = await res.json();
   return { res, body };
+}
+
+async function csrfTokenFor(cookie) {
+  if (csrfTokens.has(cookie)) return csrfTokens.get(cookie);
+  const result = await request('/api/csrf-token', {}, cookie);
+  if (result.res.status !== 200 || !result.body.csrfToken) return '';
+  csrfTokens.set(cookie, result.body.csrfToken);
+  return result.body.csrfToken;
 }
 
 async function main() {

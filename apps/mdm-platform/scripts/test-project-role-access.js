@@ -12,14 +12,24 @@ const BASE = `http://localhost:${PORT}`;
 const PASSWORD = 'pass1234';
 const TEST_PREFIX = 'TEST_PROJECT_ROLE_';
 
-function request(method, urlPath, body, cookie) {
+const csrfTokens = new Map();
+
+async function csrfTokenFor(cookie) {
+  if (csrfTokens.has(cookie)) return csrfTokens.get(cookie);
+  const res = await rawRequest('GET', '/api/csrf-token', null, cookie);
+  const token = res.status === 200 && res.body ? res.body.csrfToken : '';
+  if (token) csrfTokens.set(cookie, token);
+  return token;
+}
+
+function rawRequest(method, urlPath, body, cookie, extraHeaders = {}) {
   const url = new URL(urlPath, BASE);
   const options = {
     hostname: url.hostname,
     port: url.port,
     path: url.pathname + url.search,
     method,
-    headers: { 'Content-Type': 'application/json' }
+    headers: { 'Content-Type': 'application/json', ...extraHeaders }
   };
   if (cookie) options.headers.Cookie = cookie;
 
@@ -37,6 +47,15 @@ function request(method, urlPath, body, cookie) {
     if (body) req.write(JSON.stringify(body));
     req.end();
   });
+}
+
+async function request(method, urlPath, body, cookie) {
+  const headers = {};
+  if (cookie && !['GET', 'HEAD', 'OPTIONS'].includes(String(method).toUpperCase()) && urlPath !== '/api/org/login') {
+    const token = await csrfTokenFor(cookie);
+    if (token) headers['X-CSRF-Token'] = token;
+  }
+  return rawRequest(method, urlPath, body, cookie, headers);
 }
 
 async function waitForServer(child) {
