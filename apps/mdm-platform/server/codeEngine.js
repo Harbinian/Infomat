@@ -8,7 +8,7 @@ function pad(n, width) {
   return String(n).padStart(width, '0');
 }
 
-function takeSeq(entityType, scopeKey) {
+const reserveSequence = db.transaction((entityType, scopeKey) => {
   const key = scopeKey || '';
   const row = db.prepare(
     'SELECT id, next_seq FROM code_sequences WHERE entity_type=? AND scope_key=?'
@@ -23,6 +23,10 @@ function takeSeq(entityType, scopeKey) {
     'UPDATE code_sequences SET next_seq = next_seq + 1 WHERE id=?'
   ).run(row.id);
   return row.next_seq;
+});
+
+function takeSeq(entityType, scopeKey) {
+  return reserveSequence(entityType, scopeKey || '');
 }
 
 const codeGenerators = {
