@@ -2455,12 +2455,12 @@
             triggerOn: 'mousemove',
             formatter: function(p) {
               if (p.dataType === 'edge') {
-                return nodeLabels[p.data.source] + ' → ' + nodeLabels[p.data.target];
+                return safeText(nodeLabels[p.data.source] || p.data.source) + ' → ' + safeText(nodeLabels[p.data.target] || p.data.target);
               }
               var node = data.nodes.find(function(n) { return n.name === p.name; });
-              if (!node) return p.name;
+              if (!node) return safeText(p.name);
               var labels = {1:'部门',2:'业务能力',3:'业务流程',4:'应用系统'};
-              return (node.label || p.name) + '<br/><span style="color:#888;font-size:12px;">' + (labels[node.layer] || '') + '</span>';
+              return safeText(node.label || p.name) + '<br/><span style="color:#888;font-size:12px;">' + safeText(labels[node.layer] || '') + '</span>';
             }
           },
           series: [{
@@ -3828,6 +3828,16 @@
         renderRoleWorkbench();
         return;
       }
+      var userRoleResult = event.target.closest('.user-role-result[data-user-id]');
+      if (userRoleResult) {
+        event.preventDefault();
+        var userId = Number(userRoleResult.dataset.userId);
+        var selectedUser = state.rbacUserSearchById && state.rbacUserSearchById[String(userId)];
+        if (selectedUser) {
+          selectUserForRoles(userId, selectedUser.name, selectedUser.dept_name || '', selectedUser.post || '');
+        }
+        return;
+      }
       var evidenceRow = event.target.closest('[data-pg-l3][data-pg-a1]');
       if (evidenceRow) {
         event.preventDefault();
@@ -5149,8 +5159,10 @@
         var filtered = users.filter(function(u) {
           return !q || u.employee_no.toLowerCase().includes(q) || u.name.toLowerCase().includes(q);
         });
+        state.rbacUserSearchById = {};
         var html = filtered.slice(0, 50).map(function(u) {
-          return '<div onclick="selectUserForRoles(' + u.id + ',\'' + escapeHtml(u.name) + '\',\'' + escapeHtml(u.dept_name || '') + '\',\'' + escapeHtml(u.post || '') + '\')" style="padding:8px;cursor:pointer;border-bottom:1px solid #eee;">' + escapeHtml(u.employee_no) + ' — ' + escapeHtml(u.name) + (u.dept_name ? ' <span style="color:#999;font-size:12px;">' + escapeHtml(u.dept_name) + '</span>' : '') + (u.post ? ' <span style="color:#999;font-size:12px;">' + escapeHtml(u.post) + '</span>' : '') + (u.role ? ' <span style="color:#1565c0;font-size:12px;">' + escapeHtml(u.role) + '</span>' : '') + '</div>';
+          state.rbacUserSearchById[String(u.id)] = u;
+          return '<button type="button" class="user-role-result" data-user-id="' + Number(u.id) + '" style="display:block;width:100%;text-align:left;background:#fff;padding:8px;cursor:pointer;border:0;border-bottom:1px solid #eee;">' + escapeHtml(u.employee_no) + ' — ' + escapeHtml(u.name) + (u.dept_name ? ' <span style="color:#999;font-size:12px;">' + escapeHtml(u.dept_name) + '</span>' : '') + (u.post ? ' <span style="color:#999;font-size:12px;">' + escapeHtml(u.post) + '</span>' : '') + (u.role ? ' <span style="color:#1565c0;font-size:12px;">' + escapeHtml(u.role) + '</span>' : '') + '</button>';
         }).join('');
         document.getElementById('userSearchResults').innerHTML = html || '<p style="padding:8px;color:#999;">无匹配用户</p>';
       });

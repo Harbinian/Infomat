@@ -366,6 +366,20 @@ function fallbackActions(ownedRoles) {
   }));
 }
 
+function guidanceItemsForRoles(ownedRoles) {
+  const roles = ownedRoles.length ? ownedRoles : ROLE_GUIDES.filter(role => role.code === 'submitter');
+  return roles.map(role => ({
+    id: `guide:${role.code}`,
+    type: 'guidance',
+    title: `${role.name}：${role.workflow[0] || role.firstEntry.label}`,
+    roleHint: role.code,
+    target: role.firstEntry.target,
+    actionLabel: role.firstEntry.label,
+    sample: role.sample,
+    urgency: 'normal'
+  }));
+}
+
 function buildNextActions(workItems, ownedRoles) {
   const actionItems = workItems.slice(0, 3).map(item => ({
     title: item.type === 'escalated_conflict' ? `处理升级/终裁事项：${item.title}` : item.title,
@@ -484,10 +498,13 @@ router.get('/', requireAuth, (req, res) => {
     const qualityFindings = loadProcessQualityFindings(req, canViewAll);
     const mappingTodos = loadProcessMappingTodos(req, canViewAll);
     const escalated = loadEscalatedConflicts(canDecideEscalated);
-    const workItems = mode === 'todo' ? [...escalated, ...qualityFindings, ...mappingTodos, ...todos] : [...escalated, ...qualityFindings, ...mappingTodos, ...todos];
-    const contexts = loadProcessContexts(mode, workItems);
     const activeRoles = ownedRoles.length ? ownedRoles : roles.filter(role => role.code === req.session.userRole);
-    const nextActions = buildNextActions(workItems, activeRoles);
+    const pendingWorkItems = [...escalated, ...qualityFindings, ...mappingTodos, ...todos];
+    const guidanceItems = guidanceItemsForRoles(activeRoles);
+    const workItems = mode === 'all' ? [...pendingWorkItems, ...guidanceItems] : pendingWorkItems;
+    const contexts = loadProcessContexts(mode, pendingWorkItems);
+    const nextActions = buildNextActions(pendingWorkItems, activeRoles);
+    const sankeyWorkItems = mode === 'all' ? [] : pendingWorkItems;
 
     res.json({
       mode,
@@ -528,7 +545,7 @@ router.get('/', requireAuth, (req, res) => {
         actionLabel: action.actionLabel,
         sample: action.sample
       })),
-      sankey: buildSankey(activeRoles, contexts, workItems)
+      sankey: buildSankey(activeRoles, contexts, sankeyWorkItems)
     });
   });
 });
