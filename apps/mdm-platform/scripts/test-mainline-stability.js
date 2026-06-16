@@ -55,12 +55,26 @@ function cookieFrom(response) {
   return cookie.split(';')[0];
 }
 
+async function csrfTokenFor(cookie) {
+  const res = await fetch(`${BASE_URL}/api/csrf-token`, { headers: { Cookie: cookie } });
+  if (!res.ok) return null;
+  const body = await res.json();
+  return body.csrfToken;
+}
+
 async function request(routePath, options = {}, cookie = '') {
+  const requestOptions = { ...options };
+  const method = String(requestOptions.method || 'GET').toUpperCase();
   const headers = {
-    ...(options.body ? { 'Content-Type': 'application/json' } : {}),
-    ...(cookie ? { Cookie: cookie } : {})
+    ...(requestOptions.body ? { 'Content-Type': 'application/json' } : {}),
+    ...(cookie ? { Cookie: cookie } : {}),
+    ...(requestOptions.headers || {})
   };
-  const res = await fetch(`${BASE_URL}${routePath}`, { ...options, headers });
+  if (cookie && !['GET', 'HEAD', 'OPTIONS'].includes(method) && routePath !== '/api/org/login') {
+    const token = await csrfTokenFor(cookie);
+    if (token) headers['X-CSRF-Token'] = token;
+  }
+  const res = await fetch(`${BASE_URL}${routePath}`, { ...requestOptions, headers });
   const body = await res.json().catch(async () => ({ raw: await res.text() }));
   return { res, body };
 }

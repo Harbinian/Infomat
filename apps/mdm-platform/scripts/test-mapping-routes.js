@@ -51,15 +51,23 @@ function insertUser(name, employeeNo, departmentId, role) {
   ).lastInsertRowid;
 }
 
+function assignRole(userId, roleCode, assignedBy = null) {
+  const role = db.prepare('SELECT role_id FROM roles WHERE role_code=?').get(roleCode);
+  assert.ok(role, `${roleCode} role should exist`);
+  db.prepare('INSERT OR IGNORE INTO user_roles (user_id, role_id, assigned_by) VALUES (?, ?, ?)').run(userId, role.role_id, assignedBy);
+}
+
 function seedCatalog() {
   const submitDeptId = insertDepartment('业务部', 'BUS');
   const ownerDeptId = insertDepartment('数据管理部', 'MDM');
   const crossDeptId = insertDepartment('财务部', 'FIN');
 
   const adminId = insertUser('系统管理员', 'ADMIN001', ownerDeptId, 'admin');
+  const legacyAdminId = insertUser('旧管理员', 'LEGADMIN', ownerDeptId, 'admin');
   const submitterId = insertUser('报送专员', 'SUB001', submitDeptId, 'submitter');
   const ownerId = insertUser('数据负责人', 'OWN001', ownerDeptId, 'owner');
   const crossOwnerId = insertUser('财务负责人', 'FIN001', crossDeptId, 'owner');
+  assignRole(adminId, 'admin', adminId);
 
   db.prepare('UPDATE departments SET manager_user_id=? WHERE id=?').run(ownerId, ownerDeptId);
   db.prepare('UPDATE departments SET manager_user_id=? WHERE id=?').run(crossOwnerId, crossDeptId);
@@ -70,7 +78,7 @@ function seedCatalog() {
 
   db.prepare("INSERT INTO terms (term, definition, scope, created_by, status) VALUES (?, ?, ?, ?, 'approved')").run('客户名称', '客户的显示名称', 'CRM,MDM', adminId);
 
-  return { submitDeptId, ownerDeptId, crossDeptId, adminId, submitterId, ownerId, crossOwnerId, systemId, capabilityId, processId };
+  return { submitDeptId, ownerDeptId, crossDeptId, adminId, legacyAdminId, submitterId, ownerId, crossOwnerId, systemId, capabilityId, processId };
 }
 
 async function waitForServer() {
@@ -87,12 +95,18 @@ async function waitForServer() {
 }
 
 async function request(routePath, options = {}, cookie = '') {
+  const requestOptions = { ...options };
+  const method = String(requestOptions.method || 'GET').toUpperCase();
   const headers = {
-    ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+    ...(requestOptions.body ? { 'Content-Type': 'application/json' } : {}),
     ...(cookie ? { Cookie: cookie } : {}),
-    ...(options.headers || {})
+    ...(requestOptions.headers || {})
   };
-  const res = await fetch(`${BASE_URL}${routePath}`, { ...options, headers });
+  if (cookie && !['GET', 'HEAD', 'OPTIONS'].includes(method) && routePath !== '/api/org/login') {
+    const token = await csrfTokenFor(cookie);
+    if (token) headers['X-CSRF-Token'] = token;
+  }
+  const res = await fetch(`${BASE_URL}${routePath}`, { ...requestOptions, headers });
   const text = await res.text();
   let body = {};
   if (text) {
@@ -103,6 +117,16 @@ async function request(routePath, options = {}, cookie = '') {
     }
   }
   return { res, body };
+}
+
+const csrfTokens = new Map();
+
+async function csrfTokenFor(cookie) {
+  if (csrfTokens.has(cookie)) return csrfTokens.get(cookie);
+  const result = await request('/api/csrf-token', {}, cookie);
+  if (result.res.status !== 200 || !result.body.csrfToken) return '';
+  csrfTokens.set(cookie, result.body.csrfToken);
+  return result.body.csrfToken;
 }
 
 async function login(employeeNo) {
@@ -223,6 +247,7 @@ async function main() {
     assert.ok(detail.body.approvalTasks.some(task => task.step === 3 && task.status === 'pending' && task.assignee_user_id === seed.crossOwnerId));
     assert.ok(detail.body.approvalTasks.some(task => task.step === 4 && task.status === 'pending' && task.assignee_user_id === seed.ownerId));
     assert.ok(detail.body.approvalTasks.some(task => task.step === 5 && task.status === 'pending' && task.assignee_user_id === seed.adminId));
+    assert.ok(!detail.body.approvalTasks.some(task => task.step === 5 && task.assignee_user_id === seed.legacyAdminId), 'legacy users.role admin without RBAC admin must not receive final review tasks');
 
     const approveStep2 = await request(`/api/mappings/${mapping.body.id}/review`, {
       method: 'POST',

@@ -25,6 +25,19 @@ function hasAdminAccess(userId) {
   return permSet.has('admin:access') || permSet.has('*:*');
 }
 
+function usersWithRbacPermission(permCode) {
+  return db.prepare(`
+    SELECT DISTINCT u.id, u.department_id
+    FROM users u
+    JOIN user_roles ur ON u.id = ur.user_id
+    JOIN role_permissions rp ON ur.role_id = rp.role_id
+    JOIN permissions p ON rp.perm_id = p.perm_id
+    WHERE rp.effect='allow'
+      AND p.perm_code IN (?, '*:*')
+    ORDER BY u.id
+  `).all(permCode);
+}
+
 function canCreateMappingDraft(req) {
   if (!req.session || !req.session.userId) return false;
   if (hasAdminAccess(req.session.userId)) return true;
@@ -250,7 +263,7 @@ router.post('/:id/submit', requireAuth, (req, res) => {
 
     const missingTerms = findMissingTermsForMapping(req.params.id);
     if (missingTerms.length > 0) {
-      const admins = db.prepare("SELECT id, department_id FROM users WHERE role='admin'").all();
+      const admins = usersWithRbacPermission('admin:access');
       
       const insertMissingTermTodo = db.transaction(() => {
         admins.forEach(admin => {
@@ -326,7 +339,7 @@ router.post('/:id/submit', requireAuth, (req, res) => {
         }
       }
 
-      const fallbackAdmin = db.prepare("SELECT id FROM users WHERE role='admin' ORDER BY id LIMIT 1").get();
+      const fallbackAdmin = usersWithRbacPermission('admin:access')[0];
       if (fallbackAdmin) {
         db.prepare("UPDATE approval_tasks SET assignee_user_id=? WHERE mapping_id=? AND assignee_user_id IS NULL AND status='pending'").run(
           fallbackAdmin.id,
@@ -336,7 +349,7 @@ router.post('/:id/submit', requireAuth, (req, res) => {
         db.prepare("UPDATE approval_tasks SET status='approved' WHERE mapping_id=? AND assignee_user_id IS NULL AND status='pending'").run(req.params.id);
       }
 
-      const admins = db.prepare("SELECT id FROM users WHERE role='admin'").all();
+      const admins = usersWithRbacPermission('admin:access');
       if (admins.length === 0) {
         db.prepare("INSERT INTO approval_tasks (mapping_id, step, step_name, status) VALUES (?, 5, '信息化项目组终审', 'approved')").run(req.params.id);
       } else {
