@@ -27,6 +27,10 @@ function seedUsers() {
   db.prepare(`
     INSERT INTO users (name, employee_no, department_id, post, role, password_hash, must_change_password)
     VALUES (?, ?, NULL, ?, ?, ?, ?)
+  `).run('未强制改密历史口令用户', 'OLD002', '专员', 'submitter', hashPassword('init1234'), 0);
+  db.prepare(`
+    INSERT INTO users (name, employee_no, department_id, post, role, password_hash, must_change_password)
+    VALUES (?, ?, NULL, ?, ?, ?, ?)
   `).run('首登待改密用户', 'ONBOARD001', '专员', 'submitter', hashPassword('000000'), 1);
   db.prepare(`
     INSERT INTO users (name, employee_no, department_id, post, role, password_hash, must_change_password)
@@ -42,8 +46,8 @@ try {
 
   const report = JSON.parse(result.stdout);
   assert.strictEqual(report.dry_run, true);
-  assert.strictEqual(report.fixed_default_password_count, 1);
-  assert.deepStrictEqual(report.users.map(row => row.employee_no), ['OLD001']);
+  assert.strictEqual(report.fixed_default_password_count, 2);
+  assert.deepStrictEqual(report.users.map(row => row.employee_no), ['OLD001', 'OLD002']);
   assert.ok(report.users.every(row => row.password_hash === undefined), 'audit output must not expose password hashes');
 
   const unchanged = db.prepare("SELECT must_change_password FROM users WHERE employee_no='OLD001'").get();

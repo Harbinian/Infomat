@@ -116,7 +116,7 @@ async function main() {
 
   assert.ok(!html.includes('admin123'), 'login page must not expose a default password');
   assert.ok(!html.includes('init1234'), 'frontend must not expose or submit a fixed default password');
-  assert.ok(html.includes('000000'), 'user management copy should disclose the unified first-login password');
+  assert.ok(!html.includes('000000'), 'frontend must not expose or describe 000000 as a first-login password');
   assert.ok(!html.includes('value="ADMIN001"'), 'login page must not prefill the default admin employee number');
   assert.ok(html.includes('function escapeHtml'), 'frontend should expose a shared HTML escaping helper');
   assert.ok(html.includes('function safeText'), 'frontend should route service-provided display text through escaping');
@@ -155,6 +155,8 @@ async function main() {
   assert.ok(resetPasswordSnippet.includes('/api/org/users/'), 'password reset should call the user password endpoint');
   assert.ok(!resetPasswordSnippet.includes('password:'), 'password reset must let the server generate a one-time password');
   assert.ok(html.includes('initial_password'), 'user management should display the one-time password returned by the server');
+  assert.ok(!html.includes("showToast('账号已入库，首次登录密码：'"), 'user create must not show the initial password in a toast');
+  assert.ok(!html.includes("showToast(result && result.initial_password ? '首次登录密码：'"), 'password reset must not show the initial password in a toast');
   assert.ok(
     html.includes("location.hash = '#/' + (params.tab || 'dashboard');"),
     'list navigation should use hash routes with #/ to avoid browser anchor auto-scroll'

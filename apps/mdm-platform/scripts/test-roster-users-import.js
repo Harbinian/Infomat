@@ -88,7 +88,8 @@ function main() {
     const engineerUser = userPasswordRow('RT001');
     assert.ok(engineerUser, 'roster employee should have a user account');
     assert.strictEqual(engineerUser.must_change_password, 1, 'roster employee should be forced to change password on first login');
-    assert.ok(verifyPassword('000000', engineerUser.password_hash), 'roster employee should use the unified first-login password');
+    assert.ok(!verifyPassword('000000', engineerUser.password_hash), 'roster employee must not use 000000');
+    assert.ok(!verifyPassword('init1234', engineerUser.password_hash), 'roster employee must not use init1234');
 
     writeRoster([
       {

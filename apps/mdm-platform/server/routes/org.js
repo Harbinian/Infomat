@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const { hashPassword, verifyPassword, requireAuth, requirePermission, getUserEffectivePermissions } = require('../auth');
-const { FIXED_DEFAULT_PASSWORD, generateInitialPassword, isFixedDefaultPassword } = require('../passwordPolicy');
+const { resolveInitialPassword, validatePasswordStrength } = require('../passwordPolicy');
 const { loginRateLimit, recordLoginFailure, clearLoginFailures } = require('../security');
 
 function handleDbError(res, error) {
@@ -96,19 +96,11 @@ function requestHasAnyPermission(req, permissionCodes) {
 }
 
 function resolveCreatePassword(password) {
-  const initialPassword = generateInitialPassword();
-  if (password && String(password) !== initialPassword) {
-    return { error: '首次登录密码固定为 000000' };
-  }
-  return { password: initialPassword, initialPassword, mustChangePassword: 1 };
+  return resolveInitialPassword(password);
 }
 
 function resolveResetPassword(password) {
-  const initialPassword = generateInitialPassword();
-  if (password && String(password) !== initialPassword) {
-    return { error: '首次登录密码固定为 000000' };
-  }
-  return { password: initialPassword, initialPassword, mustChangePassword: 1 };
+  return resolveInitialPassword(password);
 }
 
 router.get('/departments', requireAuth, (req, res) => {
@@ -407,10 +399,9 @@ router.get('/permissions', requireAuth, requirePermission('admin:access'), (req,
 // GET /api/me/password-status — check if using default password
 router.get('/me/password-status', requireAuth, (req, res) => {
   return runDbAction(res, () => {
-    const user = db.prepare('SELECT password_hash, must_change_password FROM users WHERE id=?').get(req.session.userId);
+    const user = db.prepare('SELECT must_change_password FROM users WHERE id=?').get(req.session.userId);
     if (!user) return res.status(404).json({ error: '用户不存在' });
-    const isDefault = Boolean(user.must_change_password) || verifyPassword(FIXED_DEFAULT_PASSWORD, user.password_hash);
-    res.json({ is_default_password: isDefault });
+    res.json({ is_default_password: Boolean(user.must_change_password) });
   });
 });
 
@@ -419,13 +410,13 @@ router.post('/me/password', requireAuth, (req, res) => {
   return runDbAction(res, () => {
     const { current_password, new_password } = req.body;
     if (!current_password || !new_password) return res.status(400).json({ error: '缺少当前密码或新密码' });
-    if (new_password.length < 6) return res.status(400).json({ error: '新密码至少 6 位' });
 
-    const user = db.prepare('SELECT password_hash FROM users WHERE id=?').get(req.session.userId);
+    const user = db.prepare('SELECT employee_no, password_hash FROM users WHERE id=?').get(req.session.userId);
     if (!user) return res.status(404).json({ error: '用户不存在' });
     if (!verifyPassword(current_password, user.password_hash)) return res.status(403).json({ error: '当前密码不正确' });
 
-    if (isFixedDefaultPassword(new_password)) return res.status(400).json({ error: '不能使用固定默认口令' });
+    const strengthError = validatePasswordStrength(new_password, user);
+    if (strengthError) return res.status(400).json({ error: strengthError });
 
     const hash = hashPassword(new_password);
     db.prepare('UPDATE users SET password_hash=?, must_change_password=0 WHERE id=?').run(hash, req.session.userId);
