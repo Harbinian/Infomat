@@ -12,11 +12,11 @@
 |---|---|
 | `DLV-*.md` | 交付物 Markdown 正文 |
 | `DLV-*.xlsx` / `DLV-*.docx` | 交付物配套表格或文档 |
-| `_history/` | 交付物历史版本或过程材料 |
+| `_history/` | 历史遗留目录；新的运行上传、状态快照和过程历史默认写入 `artifacts/pmo/deliverables/` |
 
 ## 修改自检
 
 1. 新增交付物时，保持 `DLV-编号-主题` 命名。
 2. 若交付物内容改变项目计划，应同步 PMO 根目录真源 Markdown。
 3. 若交付物内容改变流程或组织口径，应回到 `docs/norms/` 或 `docs/organization/` 修改。
-4. 临时导出、签字扫描件和未脱敏附件不要直接提交。
+4. 临时导出、签字扫描件、未脱敏附件和 dev 服务运行历史不要直接提交；运行产物默认清理 `artifacts/pmo/deliverables/` 即可。

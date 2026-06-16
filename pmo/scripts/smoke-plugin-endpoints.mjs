@@ -2,13 +2,16 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { createServer } from 'vite';
+import { createRequire } from 'node:module';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(scriptDir, '../gantt-react');
 const deliverablesDir = path.resolve(root, '../deliverables');
 const fixturePath = path.join(deliverablesDir, 'DLV-200-端点测试.md');
+const runtimeRoot = path.resolve(root, '../../artifacts/pmo/deliverables/test-plugin-endpoints');
+const requireFromApp = createRequire(path.join(root, 'package.json'));
+const { createServer } = await import(pathToFileURL(requireFromApp.resolve('vite')).href);
 
 fs.writeFileSync(fixturePath, `---
 deliverableId: DLV-200
@@ -28,6 +31,10 @@ workflowHistory: []
 | 版本 | 状态 | 动作 | 责任人 | 时间 | 备注 |
 | --- | --- | --- | --- | --- | --- |
 `);
+
+process.env.PMO_DELIVERABLE_RUNTIME_DIR = runtimeRoot;
+await fsp.rm(runtimeRoot, { recursive: true, force: true });
+await fsp.rm(path.join(deliverablesDir, '_history', 'DLV-200'), { recursive: true, force: true });
 
 const server = await createServer({
   configFile: path.join(root, 'vite.config.js'),
@@ -96,12 +103,19 @@ try {
   const mdUpload = await fetch(`${base}/DLV-200/upload`, { method: 'POST', body: mdForm });
   assert.equal(mdUpload.status, 200);
   const uploadJson = await mdUpload.json();
+  assert.equal(uploadJson.data.runtimeRoot, runtimeRoot);
   assert.ok(uploadJson.data.archivePath.includes('upload-upload.md'));
-  assert.ok(fs.existsSync(path.join(deliverablesDir, uploadJson.data.archivePath)));
+  assert.ok(fs.existsSync(path.join(runtimeRoot, uploadJson.data.archivePath)));
+  assert.equal(
+    fs.existsSync(path.join(deliverablesDir, '_history', 'DLV-200')),
+    false,
+    'runtime uploads must not be written under pmo/deliverables/_history'
+  );
 
   console.log('结果: 6 端点 + If-Match + schema + upload 错误码/归档全部通过');
 } finally {
   await server.close();
   await fsp.rm(fixturePath, { force: true });
   await fsp.rm(path.join(deliverablesDir, '_history', 'DLV-200'), { recursive: true, force: true });
+  await fsp.rm(runtimeRoot, { recursive: true, force: true });
 }

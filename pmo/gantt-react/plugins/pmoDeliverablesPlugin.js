@@ -23,7 +23,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export const DELIVERABLES_DIR = path.resolve(__dirname, '../../deliverables');
-export const HISTORY_DIR = path.join(DELIVERABLES_DIR, '_history');
+export const RUNTIME_ROOT = process.env.PMO_DELIVERABLE_RUNTIME_DIR
+  ? path.resolve(process.env.PMO_DELIVERABLE_RUNTIME_DIR)
+  : path.resolve(process.cwd(), '..', '..', 'artifacts', 'pmo', 'deliverables');
+export const HISTORY_DIR = path.join(RUNTIME_ROOT, '_history');
 
 const FILENAME_RE = /^DLV-(\d{3})-[^/\\]+\.md$/u;
 const API_ROOT = '/api/pmo/deliverables';
@@ -293,7 +296,11 @@ function itemSummary(item) {
   };
 }
 
-export function pmoDeliverablesPlugin({ deliverablesDir = DELIVERABLES_DIR, historyDir = HISTORY_DIR } = {}) {
+export function pmoDeliverablesPlugin({
+  deliverablesDir = DELIVERABLES_DIR,
+  runtimeRoot = RUNTIME_ROOT,
+  historyDir = path.join(runtimeRoot, '_history'),
+} = {}) {
   let cache = new Map();
 
   const refresh = () => {
@@ -434,7 +441,8 @@ export function pmoDeliverablesPlugin({ deliverablesDir = DELIVERABLES_DIR, hist
       data: {
         deliverableId: id,
         mtime: next?.mtime || 0,
-        archivePath: path.relative(deliverablesDir, archivePath).replace(/\\/g, '/'),
+        archivePath: path.relative(runtimeRoot, archivePath).replace(/\\/g, '/'),
+        runtimeRoot,
       },
     });
   }
@@ -529,6 +537,7 @@ export function pmoDeliverablesPlugin({ deliverablesDir = DELIVERABLES_DIR, hist
 
 export const _internal = {
   DELIVERABLES_DIR,
+  RUNTIME_ROOT,
   HISTORY_DIR,
   createChangeEventPayload,
   readDeliverableFile,
