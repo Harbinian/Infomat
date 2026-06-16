@@ -164,13 +164,18 @@ function main() {
     ], { noFail: true });
   }
 
-  runNode([
+  const chunkArgs = [
     '.agents/skills/process-evidence-mapping/scripts/extract-evidence-chunks.mjs',
     '--input', inputPath,
     '--out', chunksPath,
     '--source-index', sourceManifestPath,
     '--warnings', warningsPath,
-  ], { inherit: false });
+  ];
+  if (args.includeExt) chunkArgs.push('--include-ext', args.includeExt);
+  if (args.excludeExt) chunkArgs.push('--exclude-ext', args.excludeExt);
+  if (args.deferExt) chunkArgs.push('--defer-ext', args.deferExt);
+  if (args.deferReason) chunkArgs.push('--defer-reason', args.deferReason);
+  runNode(chunkArgs, { inherit: false });
 
   if (args.noEmbedding) {
     writeSkippedEmbeddingManifest({

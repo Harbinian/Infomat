@@ -17,19 +17,44 @@ import {
 } from './candidate-utils.mjs';
 
 const HEADERS = ['编号', '部门', '来源文件/条款', '候选类型', '候选内容', '当前映射位置', '建议动作', '处理状态', '负责人/确认对象'];
+const STATUS_CORRUPTION_RE = /当前正式映射|确认是否|补充到|回到原文|对照制度|核验原文|系统室|培训工作/;
+const OWNER_CORRUPTION_RE = /^(待处理|处理中|已处理|暂缓)$/;
+const TYPE_ORDER = new Map(TODO_TYPES.map((type, index) => [type, index + 1]));
+
+function splitMarkdownRow(line) {
+  const text = line.trim().replace(/^\|/, '').replace(/\|$/, '');
+  const cells = [];
+  let cell = '';
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    const next = text[index + 1];
+    if (char === '\\' && next === '|') {
+      cell += '|';
+      index += 1;
+      continue;
+    }
+    if (char === '|') {
+      cells.push(cell.trim());
+      cell = '';
+      continue;
+    }
+    cell += char;
+  }
+  cells.push(cell.trim());
+  return cells;
+}
 
 function parseExistingRows(markdown) {
   const rows = new Map();
   for (const line of markdown.split(/\r?\n/)) {
     if (!line.startsWith('| CAND-')) continue;
-    const cells = line
-      .slice(1, -1)
-      .split('|')
-      .map((cell) => cell.trim().replace(/\\\|/g, '|'));
+    const cells = splitMarkdownRow(line);
     if (cells.length < HEADERS.length) continue;
+    const status = cells[7] || '';
+    const owner = cells[8] || '';
     rows.set(cells[0], {
-      status: cells[7] || '待处理',
-      owner: cells[8] || '待部门确认',
+      status: STATUS_CORRUPTION_RE.test(status) ? '' : status,
+      owner: STATUS_CORRUPTION_RE.test(owner) || OWNER_CORRUPTION_RE.test(owner) ? '' : owner,
     });
   }
   return rows;
@@ -43,7 +68,29 @@ function unresolvedItems(items, mappingText) {
     byKey.set(item.stable_key || item.id, item);
   }
   return [...byKey.values()]
-    .sort((a, b) => `${a.candidate_type}${a.source_file}${a.content}`.localeCompare(`${b.candidate_type}${b.source_file}${b.content}`, 'zh-Hans-CN'));
+    .sort((a, b) => {
+      const typeDiff = (TYPE_ORDER.get(a.candidate_type) || 99) - (TYPE_ORDER.get(b.candidate_type) || 99);
+      if (typeDiff) return typeDiff;
+      return `${a.source_file}${a.content}`.localeCompare(`${b.source_file}${b.content}`, 'zh-Hans-CN');
+    });
+}
+
+function sourceLabel(item) {
+  const fileName = String(item.source_file || '')
+    .replace(/\\/g, '/')
+    .split('/')
+    .filter(Boolean)
+    .pop() || '';
+  return `${fileName} ${humanizeAnchor(item.source_anchor || '')}`.trim();
+}
+
+function humanizeAnchor(value) {
+  return String(value || '')
+    .replace(/§\s*([0-9]+(?:\.[0-9]+)*)/g, '第$1条')
+    .replace(/\bT(\d+)R(\d+)\b/gi, '表$1第$2行')
+    .replace(/\bP(\d+)\b/gi, '第$1页')
+    .replace(/\bT(\d+)\b/gi, '表$1')
+    .trim();
 }
 
 function buildMarkdown(items, existingRows) {
@@ -63,7 +110,7 @@ function buildMarkdown(items, existingRows) {
     const row = [
       item.id,
       item.department,
-      `${item.source_file || ''} ${item.source_anchor || ''}`.trim(),
+      sourceLabel(item),
       item.candidate_type,
       shorten(item.content, 220),
       item.mapping_location,

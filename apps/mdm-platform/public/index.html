@@ -184,6 +184,11 @@
       height: 20px; min-width: 42px; justify-content: center; padding: 0 5px;
       line-height: 20px; white-space: nowrap;
     }
+    .candidate-review-group-row td { font-weight: 600; color: var(--text-main); }
+    .candidate-review-group-row .tag { margin-left: 8px; }
+    .candidate-review-department-row td { background: #fff7ed; }
+    .candidate-review-document-row td { background: #f8fafc; padding-left: 28px; }
+    .candidate-review-type-row td { background: #fefce8; padding-left: 44px; color: var(--text-muted); }
     .tag.green { color: var(--success); border-color: #a7f3d0; background: #ecfdf5; }
     .tag.amber { color: var(--warning); border-color: #fde68a; background: #fffbeb; }
     .tag.red { color: var(--error); border-color: #fecaca; background: #fef2f2; }
@@ -912,6 +917,16 @@
           <div class="metric"><div class="num" id="pgMetricSourceReview">0</div><div class="lbl">待复核源文件</div></div>
           <div class="metric"><div class="num" id="pgMetricMdmRequirements">0</div><div class="lbl">MDM 要求</div></div>
           <div class="metric"><div class="num" id="pgMetricEvidenceRefs">0</div><div class="lbl">证据引用</div></div>
+        </div>
+        <div class="pg-section" id="pgCandidateReviewSection">
+          <div class="pg-section-hd"><h2>候选映射复核</h2><span class="pg-status" id="pgCandidateReviewMeta"></span></div>
+          <div class="notice" style="margin-bottom:12px">候选项按部门、文档名称和候选类型分组展示；正式映射仍需回源核验后按受控流程更新。</div>
+          <div class="table-container">
+            <table>
+              <thead><tr><th>部门</th><th>文档名称</th><th>候选类型</th><th>候选内容</th><th>定义充分性</th><th>来源锚点</th><th>结构化复核</th></tr></thead>
+              <tbody id="pgCandidateReviewRows"></tbody>
+            </table>
+          </div>
         </div>
         <div class="pg-section" id="pgSourceCoverageSection">
           <div class="pg-section-hd"><h2>源文件覆盖</h2><span class="pg-status" id="pgSourceCoverageMeta"></span></div>
@@ -3084,6 +3099,199 @@
         : '<tr><td colspan="7" class="empty">暂无主数据对象候选</td></tr>';
     }
 
+    async function loadProcessGovernanceCandidateReview(selectedDept) {
+      var runs = await api('/api/process-governance/candidate-review/runs');
+      var run = runs.items && runs.items[0];
+      if (!run) return { run: null, summary: { total: 0 }, items: [], groups: [] };
+      var params = new URLSearchParams();
+      if (selectedDept) params.set('dept', selectedDept);
+      var query = params.toString() ? '?' + params.toString() : '';
+      var candidates = await api('/api/process-governance/candidate-review/runs/' + encodeURIComponent(run.run_id) + '/candidates' + query);
+      return Object.assign({ runs: runs.items || [] }, candidates);
+    }
+
+    var pgCandidateDecisionOptions = [
+      ['confirm_candidate', '成立'],
+      ['needs_correction', '需修正'],
+      ['reject_candidate', '不采纳'],
+      ['insufficient_evidence', '证据不足']
+    ];
+    var pgCandidateEvidenceOptions = [
+      ['not_reviewed', '未复核'],
+      ['source_verified', '原文支撑'],
+      ['need_original_review', '需回源'],
+      ['source_mismatch', '原文不支撑']
+    ];
+    var pgCandidateIssueOptions = [
+      ['none', '无明显问题'],
+      ['role_definition_insufficient', '角色定义不足'],
+      ['role_mismatch', '角色或部门不匹配'],
+      ['behavior_boundary', '行为边界不清'],
+      ['source_mismatch', '原文不支撑'],
+      ['missing_delivery', '交付物或归档不清'],
+      ['other', '其他']
+    ];
+    var pgCandidateDefinitionOptions = [
+      ['needs_original_review', '需回源确认'],
+      ['source_defined', '原文明确'],
+      ['source_definition_insufficient', '原文定义不足']
+    ];
+
+    function renderCandidateReviewSelect(field, row, options, selectedValue) {
+      var stableKey = escapeHtml(row.stable_key || '');
+      var selected = selectedValue || '';
+      return '<select data-review-field="' + escapeHtml(field) + '" data-stable-key="' + stableKey + '">' +
+        options.map(function(option) {
+          return '<option value="' + escapeHtml(option[0]) + '"' + (option[0] === selected ? ' selected' : '') + '>' + safeText(option[1]) + '</option>';
+        }).join('') +
+        '</select>';
+    }
+
+    function renderCandidateReviewControls(row, run) {
+      var stableKey = escapeHtml(row.stable_key || '');
+      var runId = escapeHtml((run && run.run_id) || '');
+      return '<div style="display:grid;grid-template-columns:repeat(2,minmax(120px,1fr));gap:6px;min-width:360px">' +
+        renderCandidateReviewSelect('decision', row, pgCandidateDecisionOptions, row.decision || '') +
+        renderCandidateReviewSelect('evidence_status', row, pgCandidateEvidenceOptions, row.decision_evidence_status || 'not_reviewed') +
+        renderCandidateReviewSelect('issue_type', row, pgCandidateIssueOptions, row.issue_type || 'none') +
+        renderCandidateReviewSelect('definition_status', row, pgCandidateDefinitionOptions, row.definition_status || 'needs_original_review') +
+        '<textarea data-review-field="normalized_note" data-stable-key="' + stableKey + '" placeholder="规范化说明" style="grid-column:1/-1;min-height:58px;padding:6px;border:1px solid var(--border);border-radius:6px">' + safeText(row.normalized_note || '', '') + '</textarea>' +
+        '<button type="button" class="btn primary" data-review-save="1" data-run-id="' + runId + '" data-stable-key="' + stableKey + '">保存复核</button>' +
+        '</div>';
+    }
+
+    function groupCandidateReviewItemsForRender(items) {
+      var byDepartment = {};
+      (items || []).forEach(function(item) {
+        var department = item.department || '未标注部门';
+        var documentName = item.document_name || '来源未标注文档';
+        var candidateType = item.candidate_type || '其他候选';
+        if (!byDepartment[department]) byDepartment[department] = {};
+        if (!byDepartment[department][documentName]) byDepartment[department][documentName] = {};
+        if (!byDepartment[department][documentName][candidateType]) byDepartment[department][documentName][candidateType] = [];
+        byDepartment[department][documentName][candidateType].push(item);
+      });
+      return Object.keys(byDepartment).sort(function(a, b) { return a.localeCompare(b, 'zh-CN'); }).map(function(department) {
+        var documents = byDepartment[department];
+        return {
+          department: department,
+          documents: Object.keys(documents).sort(function(a, b) { return a.localeCompare(b, 'zh-CN'); }).map(function(documentName) {
+            var types = documents[documentName];
+            return {
+              document_name: documentName,
+              types: Object.keys(types).sort(function(a, b) { return a.localeCompare(b, 'zh-CN'); }).map(function(candidateType) {
+                return { candidate_type: candidateType, candidates: types[candidateType] };
+              })
+            };
+          })
+        };
+      });
+    }
+
+    function countCandidateReviewType(typeGroup) {
+      return ((typeGroup && typeGroup.candidates) || []).length;
+    }
+
+    function countCandidateReviewDocument(documentGroup) {
+      return ((documentGroup && documentGroup.types) || []).reduce(function(total, typeGroup) {
+        return total + countCandidateReviewType(typeGroup);
+      }, 0);
+    }
+
+    function countCandidateReviewDepartment(departmentGroup) {
+      return ((departmentGroup && departmentGroup.documents) || []).reduce(function(total, documentGroup) {
+        return total + countCandidateReviewDocument(documentGroup);
+      }, 0);
+    }
+
+    function renderCandidateReviewItemRow(row, run) {
+      return '<tr>' +
+        '<td>' + safeText(row.department || '') + '</td>' +
+        '<td>' + safeText(row.document_name || '') + '</td>' +
+        '<td>' + safeText(row.candidate_type || '') + '</td>' +
+        '<td>' + safeText(row.content || '') + '</td>' +
+        '<td>' + safeText(row.definition_status || '待回源确认') + '</td>' +
+        '<td>' + safeText(row.source_label || '') + '</td>' +
+        '<td>' + renderCandidateReviewControls(row, run) + '</td>' +
+      '</tr>';
+    }
+
+    function renderCandidateReviewGroupedRows(data, run) {
+      var groups = data.groups && data.groups.length
+        ? data.groups
+        : groupCandidateReviewItemsForRender(data.items || []);
+      var renderedCount = 0;
+      var rows = [];
+      groups.forEach(function(departmentGroup) {
+        var departmentCount = countCandidateReviewDepartment(departmentGroup);
+        rows.push('<tr class="candidate-review-group-row candidate-review-department-row" data-candidate-review-group="department"><td colspan="7">部门：' +
+          safeText(departmentGroup.department || '未标注部门') + '<span class="tag">' + departmentCount + ' 项</span></td></tr>');
+        (departmentGroup.documents || []).forEach(function(documentGroup) {
+          var documentCount = countCandidateReviewDocument(documentGroup);
+          rows.push('<tr class="candidate-review-group-row candidate-review-document-row" data-candidate-review-group="document"><td colspan="7">文档：' +
+            safeText(documentGroup.document_name || '来源未标注文档') + '<span class="tag">' + documentCount + ' 项</span></td></tr>');
+          (documentGroup.types || []).forEach(function(typeGroup) {
+            var candidates = (typeGroup.candidates || []).slice(0, Math.max(0, 80 - renderedCount));
+            if (!candidates.length) return;
+            rows.push('<tr class="candidate-review-group-row candidate-review-type-row" data-candidate-review-group="type"><td colspan="7">候选类型：' +
+              safeText(typeGroup.candidate_type || '其他候选') + '<span class="tag">' + candidates.length + ' 项</span></td></tr>');
+            candidates.forEach(function(row) {
+              rows.push(renderCandidateReviewItemRow(row, run));
+              renderedCount += 1;
+            });
+          });
+        });
+      });
+      return rows.join('');
+    }
+
+    function renderProcessGovernanceCandidateReview(data, selectedDept) {
+      var rowsEl = document.getElementById('pgCandidateReviewRows');
+      if (!rowsEl) return;
+      state.pgCandidateReviewData = data;
+      var items = data.items || [];
+      var run = data.run || null;
+      document.getElementById('pgCandidateReviewMeta').textContent = run
+        ? (selectedDept ? selectedDept + ' · ' : '') + '运行 ' + run.run_id + '，显示 ' + items.length + ' 条 / 共 ' + ((data.summary && data.summary.total) || items.length) + ' 条'
+        : '暂无候选运行';
+      rowsEl.innerHTML = items.length
+        ? renderCandidateReviewGroupedRows(data, run)
+        : '<tr><td colspan="7" class="empty">暂无候选映射复核项</td></tr>';
+      rowsEl.querySelectorAll('[data-review-save]').forEach(function(button) {
+        button.addEventListener('click', function() {
+          saveProcessGovernanceCandidateReview(button);
+        });
+      });
+    }
+
+    async function saveProcessGovernanceCandidateReview(button) {
+      var row = button.closest('tr');
+      var runId = button.dataset.runId || '';
+      var stableKey = button.dataset.stableKey || '';
+      if (!row || !runId || !stableKey) {
+        showToast('候选复核项信息不完整', 'error');
+        return;
+      }
+      var payload = {};
+      row.querySelectorAll('[data-review-field]').forEach(function(input) {
+        payload[input.dataset.reviewField] = input.value;
+      });
+      button.disabled = true;
+      try {
+        await api('/api/process-governance/candidate-review/runs/' + encodeURIComponent(runId) + '/candidates/' + encodeURIComponent(stableKey) + '/review', {
+          method: 'PUT',
+          body: JSON.stringify(payload)
+        });
+        showToast('候选复核已保存');
+        var refreshed = await loadProcessGovernanceCandidateReview(state.pgSelectedDept || '');
+        renderProcessGovernanceCandidateReview(refreshed, state.pgSelectedDept || '');
+      } catch (error) {
+        showToast(error.message || '候选复核保存失败', 'error');
+      } finally {
+        button.disabled = false;
+      }
+    }
+
     function renderProcessGovernanceEvidence(data, selectedDept) {
       var rowsEl = document.getElementById('pgEvidenceRows');
       if (!rowsEl) return;
@@ -3248,7 +3456,8 @@
           api('/api/process-governance/mapping-todos' + mappingTodoQuery),
           api('/api/process-governance/source-files' + sourceQuery),
           api('/api/process-governance/mdm-requirements' + mdmRequirementQuery),
-          api('/api/process-governance/evidence' + evidenceQuery)
+          api('/api/process-governance/evidence' + evidenceQuery),
+          loadProcessGovernanceCandidateReview(state.pgSelectedDept)
         ]);
         var current = results[0];
         var sankey = results[1];
@@ -3261,6 +3470,7 @@
         var sourceFiles = results[8];
         var mdmRequirements = results[9];
         var evidence = results[10];
+        var candidateReview = results[11];
         state.pgSourceCoverageData = sourceFiles;
         var stats = sankey.stats || {};
         var departments = getProcessGovernanceDepartments(sankey);
@@ -3314,6 +3524,7 @@
 
         var route = parseHash();
         renderProcessGovernanceSourceCoverage(sourceFiles, selectedDept);
+        renderProcessGovernanceCandidateReview(candidateReview, selectedDept);
         renderProcessGovernanceMdmRequirements(mdmRequirements, selectedDept);
         renderProcessGovernanceEvidence(evidence, selectedDept);
         renderProcessGovernanceMappingWorkspace(mappingWorkspace, selectedDept);
@@ -3331,6 +3542,7 @@
         document.getElementById('pgMappingWorkspaceRows').innerHTML = '<tr><td colspan="8" class="empty">暂无映射工作库记录</td></tr>';
         document.getElementById('pgMappingTodoRows').innerHTML = '<tr><td colspan="8" class="empty">暂无流程映射待办</td></tr>';
         document.getElementById('pgSourceCoverageRows').innerHTML = '<tr><td colspan="7" class="empty">暂无源文件覆盖记录</td></tr>';
+        document.getElementById('pgCandidateReviewRows').innerHTML = '<tr><td colspan="7" class="empty">暂无候选映射复核项</td></tr>';
         document.getElementById('pgMdmRequirementRows').innerHTML = '<tr><td colspan="7" class="empty">暂无主数据对象候选</td></tr>';
         document.getElementById('pgEvidenceRows').innerHTML = '<tr><td colspan="8" class="empty">暂无证据链记录</td></tr>';
       }

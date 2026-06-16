@@ -1,5 +1,7 @@
 const assert = require('assert');
 const { spawn } = require('child_process');
+const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const { cleanupDb, stopServer } = require('./testHelpers/isolatedDb');
 
@@ -11,6 +13,43 @@ const { importProcessGovernanceSnapshot } = require('./lib/processGovernanceImpo
 
 const PORT = 3226;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
+const candidateArtifactsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdm-candidate-review-'));
+const candidateRunDir = path.join(candidateArtifactsDir, 'review-run-001');
+
+fs.mkdirSync(candidateRunDir, { recursive: true });
+fs.writeFileSync(path.join(candidateRunDir, 'mapping_diff_items.json'), JSON.stringify([
+  {
+    id: 'CAND-MDM-001',
+    stable_key: 'candidate-mdm-001',
+    department: '工程技术部',
+    document_name: '产品设计需求定义管理程序.docx',
+    source_file: 'docs/norms/工程技术部业务资料/产品设计需求定义管理程序.docx',
+    source_anchor: 'GLC120102 §5.2 P71',
+    candidate_type: '角色待确认',
+    content: '审核人审核产品设计需求文件',
+    mapping_location: '当前正式映射未见同名受控覆盖',
+    suggested_action: '回到原文确认角色是否定义充分。',
+    definition_status: '原文定义不足',
+    status: '待处理',
+    owner: '工程技术部确认人'
+  }
+], null, 2), 'utf8');
+fs.writeFileSync(path.join(candidateRunDir, 'chunks.jsonl'), `${JSON.stringify({
+  chunk_id: 'eng-P0071',
+  source_file: 'docs/norms/工程技术部业务资料/产品设计需求定义管理程序.docx',
+  doc_no: 'GLC120102',
+  clause: '5.2',
+  paragraph_id: 'P71',
+  raw_text: '审核人审核产品设计需求文件，工程技术部审核人复核设计更改记录。',
+  extraction_quality: 'clean',
+  evidence_status: 'candidate',
+  verification_status: 'unverified',
+  allowed_downstream_use: 'review_only'
+})}\n`, 'utf8');
+fs.writeFileSync(path.join(candidateRunDir, 'embedding_manifest.json'), JSON.stringify({
+  status: 'skipped',
+  model: 'qwen3-embedding:latest'
+}, null, 2), 'utf8');
 
 db.prepare(`
   INSERT INTO users (name, employee_no, post, role, password_hash)
@@ -157,7 +196,8 @@ async function main() {
       ...process.env,
       PORT: String(PORT),
       SESSION_SECRET: 'process-governance-api-test',
-      MDM_DB_QUIET: '1'
+      MDM_DB_QUIET: '1',
+      PROCESS_CANDIDATE_ARTIFACTS_DIR: candidateArtifactsDir
     },
     stdio: ['ignore', 'pipe', 'pipe']
   });
@@ -238,6 +278,21 @@ async function main() {
     const chains = await request('/api/process-governance/chains', {}, cookie);
     assert.strictEqual(chains.res.status, 200);
     assert.deepStrictEqual(chains.body.items[0].breaks, ['工程技术部: 技术条款评审节点待补全']);
+
+    const candidateRuns = await request('/api/process-governance/candidate-review/runs', {}, cookie);
+    assert.strictEqual(candidateRuns.res.status, 200);
+    assert.strictEqual(candidateRuns.body.items[0].run_id, 'review-run-001');
+    assert.strictEqual(candidateRuns.body.items[0].candidate_count, 1);
+
+    const candidateReview = await request('/api/process-governance/candidate-review/runs/review-run-001/candidates?dept=工程技术部', {}, cookie);
+    assert.strictEqual(candidateReview.res.status, 200);
+    assert.strictEqual(candidateReview.body.summary.total, 1);
+    assert.strictEqual(candidateReview.body.groups[0].department, '工程技术部');
+    assert.strictEqual(candidateReview.body.groups[0].documents[0].document_name, '产品设计需求定义管理程序.docx');
+    assert.strictEqual(candidateReview.body.groups[0].documents[0].types[0].candidate_type, '角色待确认');
+    assert.strictEqual(candidateReview.body.items[0].definition_status, '原文定义不足');
+    assert.ok(candidateReview.body.items[0].source_label.includes('段落P71'));
+    assert.strictEqual(candidateReview.body.items[0].source_label.includes('第71页'), false);
 
     const quality = await request('/api/process-governance/quality', {}, cookie);
     assert.strictEqual(quality.res.status, 200);
@@ -409,6 +464,7 @@ async function main() {
   } finally {
     await stopServer(server);
     cleanupDb();
+    fs.rmSync(candidateArtifactsDir, { recursive: true, force: true });
   }
 }
 

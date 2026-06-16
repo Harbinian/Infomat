@@ -15,6 +15,7 @@ const todoPath = join(runDir, '候选映射待办.md');
 const sourceDoc = join(root, 'docs', 'norms', '财务部业务资料', 'GLTX-CW-01-A财务成本核算管理程序.docx');
 const mappingPath = join(runDir, 'fixture-财务部映射-未覆盖.md');
 const coveredMappingPath = join(runDir, 'fixture-财务部映射-已覆盖.md');
+const genericRunDir = join(root, 'artifacts', 'process-candidates', 'test-engineering-generic');
 
 function runNode(args) {
   execFileSync(process.execPath, args, {
@@ -28,6 +29,10 @@ function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
 }
 
+function writeJsonl(path, records) {
+  writeFileSync(path, `${records.map((record) => JSON.stringify(record)).join('\n')}\n`, 'utf8');
+}
+
 function countTodoRows(markdown) {
   return markdown
     .split(/\r?\n/)
@@ -35,7 +40,9 @@ function countTodoRows(markdown) {
 }
 
 rmSync(runDir, { recursive: true, force: true });
+rmSync(genericRunDir, { recursive: true, force: true });
 mkdirSync(runDir, { recursive: true });
+mkdirSync(genericRunDir, { recursive: true });
 const staleMappingFixture = [
   '# 财务部部门-能力-流程-系统映射关系（候选测试夹具）',
   '',
@@ -161,5 +168,158 @@ runNode([
 const coveredTodo = readFileSync(todoPath, 'utf8');
 assert.equal(coveredTodo.includes('处理盘盈盘亏'), false, 'formally covered candidate should not reappear in todo');
 assert.equal(coveredTodo.includes('相关报表由财务部负责存档，保存年限30年'), false, 'covered archive candidate should not reappear in todo');
+
+const engineeringSource = 'docs/norms/工程技术部业务资料/12.0-集成研发/GLC120102产品设计需求定义管理程序/产品设计需求定义管理程序.docx';
+const engineeringChunksPath = join(genericRunDir, 'chunks.jsonl');
+const engineeringDocumentPath = join(genericRunDir, 'document_candidate.json');
+const engineeringRolesPath = join(genericRunDir, 'role_candidates.json');
+const engineeringObjectsPath = join(genericRunDir, 'object_chains.json');
+const pipeCandidatesPath = join(genericRunDir, 'pipe-candidates.json');
+const pipeTodoPath = join(genericRunDir, 'pipe-todo.md');
+writeJsonl(engineeringChunksPath, [
+  {
+    chunk_id: 'eng-001',
+    source_file: engineeringSource,
+    source_file_name: '产品设计需求定义管理程序.docx',
+    leaf_dir: 'docs/norms/工程技术部业务资料/12.0-集成研发/GLC120102产品设计需求定义管理程序',
+    doc_no: 'GLC120102',
+    version: '',
+    clause: '5.1',
+    paragraph_id: 'P1',
+    raw_text: '工程技术部负责产品设计需求定义的编制、审核、批准和发放。',
+    extraction_quality: 'clean',
+    evidence_status: 'candidate',
+    verification_status: 'unverified',
+    allowed_downstream_use: 'review_only',
+    chunk_hash: 'eng-001',
+  },
+  {
+    chunk_id: 'eng-002',
+    source_file: engineeringSource,
+    source_file_name: '产品设计需求定义管理程序.docx',
+    leaf_dir: 'docs/norms/工程技术部业务资料/12.0-集成研发/GLC120102产品设计需求定义管理程序',
+    doc_no: 'GLC120102',
+    version: '',
+    clause: '5.2',
+    paragraph_id: 'P2',
+    raw_text: '设计人员编制产品设计需求文件，项目负责人审核，部门负责人批准后发放。',
+    extraction_quality: 'clean',
+    evidence_status: 'candidate',
+    verification_status: 'unverified',
+    allowed_downstream_use: 'review_only',
+    chunk_hash: 'eng-002',
+  },
+  {
+    chunk_id: 'eng-003',
+    source_file: engineeringSource,
+    source_file_name: '产品设计需求定义管理程序.docx',
+    leaf_dir: 'docs/norms/工程技术部业务资料/12.0-集成研发/GLC120102产品设计需求定义管理程序',
+    doc_no: 'GLC120102',
+    version: '',
+    clause: '6',
+    paragraph_id: 'P3',
+    raw_text: '产品设计需求文件由工程技术部归档保存。',
+    extraction_quality: 'clean',
+    evidence_status: 'candidate',
+    verification_status: 'unverified',
+    allowed_downstream_use: 'review_only',
+    chunk_hash: 'eng-003',
+  },
+  {
+    chunk_id: 'eng-004',
+    source_file: engineeringSource,
+    source_file_name: '产品设计需求定义管理程序.docx',
+    leaf_dir: 'docs/norms/工程技术部业务资料/12.0-集成研发/GLC120102产品设计需求定义管理程序',
+    doc_no: 'GLC120102',
+    version: '',
+    clause: '7',
+    paragraph_id: 'P4',
+    raw_text: '研发项目成本核算数据仅用于项目成本控制，不改变本资料的工程技术部归属。',
+    extraction_quality: 'clean',
+    evidence_status: 'candidate',
+    verification_status: 'unverified',
+    allowed_downstream_use: 'review_only',
+    chunk_hash: 'eng-004',
+  },
+  {
+    chunk_id: 'eng-005',
+    source_file: engineeringSource,
+    source_file_name: '产品设计需求定义管理程序.docx',
+    leaf_dir: 'docs/norms/工程技术部业务资料/12.0-集成研发/GLC120102产品设计需求定义管理程序',
+    doc_no: 'GLC120102',
+    version: '',
+    clause: '8',
+    paragraph_id: 'P5',
+    raw_text: '生产副总审批重大产品设计需求变更。工程技术部审核人复核设计更改记录。',
+    extraction_quality: 'clean',
+    evidence_status: 'candidate',
+    verification_status: 'unverified',
+    allowed_downstream_use: 'review_only',
+    chunk_hash: 'eng-005',
+  },
+]);
+runNode([
+  '.agents/skills/process-evidence-mapping/scripts/extract-process-candidates.mjs',
+  '--chunks', engineeringChunksPath,
+  '--department', '工程技术部',
+  '--out', engineeringDocumentPath,
+]);
+runNode([
+  '.agents/skills/process-evidence-mapping/scripts/extract-role-candidates.mjs',
+  '--chunks', engineeringChunksPath,
+  '--department', '工程技术部',
+  '--out', engineeringRolesPath,
+]);
+runNode([
+  '.agents/skills/process-evidence-mapping/scripts/build-object-chains.mjs',
+  '--chunks', engineeringChunksPath,
+  '--roles', engineeringRolesPath,
+  '--out', engineeringObjectsPath,
+]);
+const engineeringDocument = readJson(engineeringDocumentPath);
+const engineeringRoles = readJson(engineeringRolesPath);
+const engineeringObjects = readJson(engineeringObjectsPath);
+assert.ok(engineeringDocument.process_candidates.some((item) => item.name.includes('产品设计需求定义管理')), 'generic process extraction should use engineering document title');
+assert.equal(JSON.stringify(engineeringDocument).includes('处理盘盈盘亏'), false, 'generic process extraction must not emit finance-only candidates');
+assert.equal(JSON.stringify(engineeringDocument).includes('成本核算'), false, 'generic process extraction must not emit finance-only capabilities');
+for (const expected of ['工程技术部', '设计人员', '项目负责人', '部门负责人']) {
+  assert.ok(engineeringRoles.roles.some((role) => role.name === expected), `generic role extraction should include ${expected}`);
+}
+function engineeringRole(name) {
+  return engineeringRoles.roles.find((role) => role.name === name);
+}
+assert.equal(engineeringRole('设计人员')?.definition_status, '原文定义不足', 'bare ordinary roles should be marked as insufficient source definition');
+assert.equal(engineeringRole('项目负责人')?.definition_status, '原文定义不足', 'bare project roles should be marked as insufficient source definition');
+assert.equal(engineeringRole('部门负责人')?.definition_status, '原文定义不足', 'generic department roles without a named department should be insufficient');
+assert.equal(engineeringRole('工程技术部审核人')?.definition_status, '原文明确', 'department-prefixed roles should be source-defined');
+assert.equal(engineeringRole('生产副总')?.definition_status, '原文明确', 'three leader roles should be source-defined without department prefix');
+assert.ok(engineeringObjects.chains.some((chain) => chain.object_name === '产品设计需求文件' && chain.actions.some((action) => action.includes('批准'))), 'generic object chain should preserve approval action on product design requirement file');
+
+writeFileSync(pipeCandidatesPath, JSON.stringify([{
+  id: 'CAND-PIPEESCAPE',
+  stable_key: 'pipeescape',
+  department: '工程技术部',
+  source_file: engineeringSource,
+  source_anchor: 'T01R1',
+  candidate_type: '候选A1',
+  content: '表格内容 A | 表格内容 B',
+  mapping_location: '当前正式映射未见同名受控覆盖',
+  suggested_action: '确认是否需要补入。',
+  status: '待处理',
+  owner: '部门确认人',
+}], null, 2), 'utf8');
+for (let index = 0; index < 2; index += 1) {
+  runNode([
+    '.agents/skills/process-evidence-mapping/scripts/update-candidate-todo-md.mjs',
+    '--candidates', pipeCandidatesPath,
+    '--mapping', mappingPath,
+    '--todo', pipeTodoPath,
+  ]);
+}
+const pipeTodo = readFileSync(pipeTodoPath, 'utf8');
+const pipeLine = pipeTodo.split(/\r?\n/).find((line) => line.startsWith('| CAND-PIPEESCAPE'));
+assert.ok(pipeLine.includes('表格内容 A \\| 表格内容 B'), 'todo markdown should escape pipe characters in candidate content');
+assert.ok(pipeLine.endsWith('| 待处理 | 部门确认人 |'), 'rerunning todo update should preserve status and owner when content contains escaped pipes');
+assert.ok(pipeLine.includes('产品设计需求定义管理程序.docx 表01第1行'), 'todo source label should omit parent directories and humanize anchors');
 
 console.log('Process candidate workflow checks passed');
