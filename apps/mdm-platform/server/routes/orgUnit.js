@@ -11,6 +11,19 @@ function handleDbError(res, error) {
   return res.status(500).json({ error: '服务器错误' });
 }
 
+function wouldCreateCycle(currentId, nextParentId) {
+  if (!nextParentId) return false;
+  let cursor = Number(nextParentId);
+  const seen = new Set([Number(currentId)]);
+  while (cursor) {
+    if (seen.has(cursor)) return true;
+    seen.add(cursor);
+    const row = db.prepare('SELECT parent_org_unit_id AS parent_id FROM org_unit WHERE org_unit_id=?').get(cursor);
+    cursor = row && row.parent_id ? Number(row.parent_id) : null;
+  }
+  return false;
+}
+
 router.get('/', requireAuth, applyFieldConstraints('org_unit'), (req, res) => {
   try {
     const { org_type, status, search, page = 1, limit = 50 } = req.query;
@@ -62,12 +75,16 @@ router.put('/:code', requireAuth, requirePermission('org_unit:update'), (req, re
     const { org_unit_name, parent_org_unit_id, manager_person_id, status } = req.body;
     const existing = db.prepare('SELECT * FROM org_unit WHERE org_unit_code=?').get(req.params.code);
     if (!existing) return res.status(404).json({ error: '组织不存在' });
+    const nextParentId = parent_org_unit_id !== undefined ? parent_org_unit_id : existing.parent_org_unit_id;
+    if (wouldCreateCycle(existing.org_unit_id, nextParentId)) {
+      return res.status(409).json({ error: '组织层级不能形成循环' });
+    }
     db.prepare(`
       UPDATE org_unit SET org_unit_name=?, parent_org_unit_id=?, manager_person_id=?, status=?,
         updated_by=?, updated_at=CURRENT_TIMESTAMP WHERE org_unit_code=?
     `).run(
       org_unit_name || existing.org_unit_name,
-      parent_org_unit_id !== undefined ? parent_org_unit_id : existing.parent_org_unit_id,
+      nextParentId,
       manager_person_id !== undefined ? manager_person_id : existing.manager_person_id,
       status || existing.status,
       req.session.userId, req.params.code

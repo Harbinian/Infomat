@@ -11,6 +11,19 @@ function handleDbError(res, error) {
   return res.status(500).json({ error: '服务器错误' });
 }
 
+function wouldCreateCycle(currentId, nextParentId) {
+  if (!nextParentId) return false;
+  let cursor = Number(nextParentId);
+  const seen = new Set([Number(currentId)]);
+  while (cursor) {
+    if (seen.has(cursor)) return true;
+    seen.add(cursor);
+    const row = db.prepare('SELECT parent_class_node_id AS parent_id FROM class_node WHERE class_node_id=?').get(cursor);
+    cursor = row && row.parent_id ? Number(row.parent_id) : null;
+  }
+  return false;
+}
+
 router.get('/', requireAuth, applyFieldConstraints('class_node'), (req, res) => {
   try {
     const { class_type } = req.query;
@@ -54,11 +67,15 @@ router.put('/:code', requireAuth, requirePermission('class_node:update'), (req, 
     const { class_name, parent_class_node_id, status } = req.body;
     const existing = db.prepare('SELECT * FROM class_node WHERE class_code=?').get(req.params.code);
     if (!existing) return res.status(404).json({ error: '分类不存在' });
+    const nextParentId = parent_class_node_id !== undefined ? parent_class_node_id : existing.parent_class_node_id;
+    if (wouldCreateCycle(existing.class_node_id, nextParentId)) {
+      return res.status(409).json({ error: '分类层级不能形成循环' });
+    }
     db.prepare(`
       UPDATE class_node SET class_name=?, parent_class_node_id=?, status=? WHERE class_code=?
     `).run(
       class_name || existing.class_name,
-      parent_class_node_id !== undefined ? parent_class_node_id : existing.parent_class_node_id,
+      nextParentId,
       status || existing.status,
       req.params.code
     );

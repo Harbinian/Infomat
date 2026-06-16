@@ -133,6 +133,46 @@ function runDbAction(res, action) {
   }
 }
 
+function applyAdoptedFieldValue(conflict, adoptedValue, userId) {
+  if (conflict.conflict_field === 'authoritative_system' && adoptedValue) {
+    [conflict.field_entry_a_id, conflict.field_entry_b_id].forEach(fieldEntryId => {
+      const identity = db.prepare('SELECT id FROM field_identities WHERE field_entry_id=?').get(fieldEntryId);
+      if (identity) {
+        db.prepare(`
+          UPDATE field_identities
+          SET authoritative_system=?, confirmed=1, confirmed_by=?, confirmed_at=datetime('now')
+          WHERE field_entry_id=?
+        `).run(adoptedValue, userId, fieldEntryId);
+      }
+    });
+  } else if (FIELD_ENTRY_CONFLICT_FIELDS.includes(conflict.conflict_field) && adoptedValue !== undefined) {
+    [conflict.field_entry_a_id, conflict.field_entry_b_id].forEach(fieldEntryId => {
+      db.prepare(`UPDATE field_entries SET ${conflict.conflict_field}=?, updated_at=datetime('now') WHERE id=?`).run(adoptedValue, fieldEntryId);
+    });
+  }
+}
+
+function unblockMappingIfNoOpenErrors(conflict) {
+  const mapping = db.prepare(`
+    SELECT m.id as mapping_id
+    FROM mappings m
+    JOIN field_entries fe ON fe.mapping_id = m.id
+    WHERE fe.id IN (?, ?)
+    LIMIT 1
+  `).get(conflict.field_entry_a_id, conflict.field_entry_b_id);
+
+  if (!mapping) return;
+  const remainingErrors = db.prepare(`
+    SELECT COUNT(DISTINCT fc.id) as cnt
+    FROM field_conflicts fc
+    JOIN field_entries fe ON fc.field_entry_a_id = fe.id OR fc.field_entry_b_id = fe.id
+    WHERE fe.mapping_id = ? AND fc.severity = 'error' AND fc.status IN ('pending','coordinating')
+  `).get(mapping.mapping_id);
+  if (remainingErrors.cnt === 0) {
+    db.prepare("UPDATE approval_tasks SET status='in_progress' WHERE mapping_id=? AND status='blocked'").run(mapping.mapping_id);
+  }
+}
+
 function addFilters(baseSql, params, severity, status) {
   let sql = `${baseSql} WHERE 1=1`;
   if (severity) {
@@ -205,10 +245,7 @@ router.get('/', requireAuth, (req, res) => {
     if (!canViewAll && !status) {
       sql = sql.replace('WHERE 1=1', "WHERE 1=1 AND tc.status NOT IN ('archived','silenced')");
     }
-    const termRows = db.prepare(sql).all(...params);
-    termRows.forEach(function(c) { checkAndEscalate(c, 'term'); });
-    const updated = db.prepare(sql).all(...params);
-    return res.json(updated);
+    return res.json(db.prepare(sql).all(...params));
   }
 
   if (type === 'field') {
@@ -217,10 +254,7 @@ router.get('/', requireAuth, (req, res) => {
     if (!canViewAll && !status) {
       sql = sql.replace('WHERE 1=1', "WHERE 1=1 AND fc.status NOT IN ('archived','silenced')");
     }
-    const fieldRows = db.prepare(sql).all(...params);
-    fieldRows.forEach(function(c) { checkAndEscalate(c, 'field'); });
-    const updated = db.prepare(sql).all(...params);
-    return res.json(updated);
+    return res.json(db.prepare(sql).all(...params));
   }
 
   const termParams = [];
@@ -235,27 +269,12 @@ router.get('/', requireAuth, (req, res) => {
 
   const termRows = db.prepare(termSql).all(...termParams);
   const fieldRows = db.prepare(fieldSql).all(...fieldParams);
-  termRows.forEach(function(c) { checkAndEscalate(c, 'term'); });
-  fieldRows.forEach(function(c) { checkAndEscalate(c, 'field'); });
-  const updatedTermRows = db.prepare(termSql).all(...termParams);
-  const updatedFieldRows = db.prepare(fieldSql).all(...fieldParams);
-  res.json([...updatedTermRows, ...updatedFieldRows].sort((a, b) => String(b.created_at).localeCompare(String(a.created_at))));
+  res.json([...termRows, ...fieldRows].sort((a, b) => String(b.created_at).localeCompare(String(a.created_at))));
 });
 
 // GET /stats — conflict statistics grouped by status and severity
 router.get('/stats', requireAuth, (req, res) => {
   return runDbAction(res, () => {
-    // Run escalation check before returning stats
-    const needEscalation = db.prepare(`
-      SELECT * FROM field_conflicts WHERE status = 'coordinating' AND deadline < date('now')
-    `).all();
-    needEscalation.forEach(function(c) { checkAndEscalate(c, 'field'); });
-    const termNeedEscalation = db.prepare(`
-      SELECT * FROM term_conflicts WHERE status = 'coordinating' AND deadline < date('now')
-    `).all();
-    termNeedEscalation.forEach(function(c) { checkAndEscalate(c, 'term'); });
-
-    // Re-query after escalation
     const finalFieldStats = db.prepare(`
       SELECT status, severity, COUNT(*) as cnt FROM field_conflicts GROUP BY status, severity
     `).all();
@@ -323,25 +342,6 @@ router.get('/:id', requireAuth, (req, res) => {
       `).get(req.params.id);
     }
     if (!conflict) return res.status(404).json({ error: '冲突不存在' });
-
-    const wasEscalated = checkAndEscalate(conflict, conflictType);
-    if (wasEscalated) {
-      // Re-fetch after escalation
-      if (conflictType === 'term') {
-        conflict = db.prepare('SELECT * FROM term_conflicts WHERE id = ?').get(req.params.id);
-      } else {
-        conflict = db.prepare(`
-          SELECT fc.*, fe_a.field_name_cn as field_name_a, fe_b.field_name_cn as field_name_b,
-                 da.name as dept_a_name, db.name as dept_b_name
-          FROM field_conflicts fc
-          JOIN field_entries fe_a ON fc.field_entry_a_id = fe_a.id
-          JOIN field_entries fe_b ON fc.field_entry_b_id = fe_b.id
-          LEFT JOIN departments da ON fc.dept_a = da.id
-          LEFT JOIN departments db ON fc.dept_b = db.id
-          WHERE fc.id = ?
-        `).get(req.params.id);
-      }
-    }
 
     const currentAssignee = db.prepare(`
       SELECT ca.*, u.name as assignee_name
@@ -496,15 +496,20 @@ router.post('/:id/coordination', requireAuth, (req, res) => {
       return res.status(422).json({ error: 'result 必须为 A, B, 或 compromise' });
     }
 
-    const currentAssignee = db.prepare(`
+    const assignedParticipant = db.prepare(`
       SELECT assignee_user_id FROM conflict_assignments
-      WHERE conflict_id=? AND conflict_type=?
-      ORDER BY created_at DESC LIMIT 1
+      WHERE conflict_id=? AND conflict_type=? AND assignee_user_id=?
+      LIMIT 1
+    `).get(req.params.id, conflictType, req.session.userId);
+
+    const assigneeCount = db.prepare(`
+      SELECT COUNT(DISTINCT assignee_user_id) as cnt FROM conflict_assignments
+      WHERE conflict_id = ? AND conflict_type = ?
     `).get(req.params.id, conflictType);
 
-    if (!currentAssignee) return res.status(400).json({ error: '尚未指定责任人' });
-    if (currentAssignee.assignee_user_id !== req.session.userId && !requestHasAnyPermission(req, ['admin:access'])) {
-      return res.status(403).json({ error: '仅当前责任人可提交协调结果' });
+    if (assigneeCount.cnt === 0) return res.status(400).json({ error: '尚未指定责任人' });
+    if (!assignedParticipant && !requestHasAnyPermission(req, ['admin:access'])) {
+      return res.status(403).json({ error: '仅已指派协调人可提交协调结果' });
     }
 
     const table = conflictType === 'term' ? 'term_conflicts' : 'field_conflicts';
@@ -519,25 +524,23 @@ router.post('/:id/coordination', requireAuth, (req, res) => {
       VALUES (?, ?, ?, ?, ?)
     `).run(req.params.id, conflictType, req.session.userId, result, note || null);
 
-    // Check if both sides have submitted — auto-advance to reviewer decision queue
-    const assigneeCount = db.prepare(`
-      SELECT COUNT(DISTINCT assignee_user_id) as cnt FROM conflict_assignments
-      WHERE conflict_id = ? AND conflict_type = ?
-    `).get(req.params.id, conflictType);
-
     const submissionCount = db.prepare(`
-      SELECT COUNT(DISTINCT assignee_user_id) as cnt FROM conflict_coordination_history
-      WHERE conflict_id = ? AND conflict_type = ?
+      SELECT COUNT(DISTINCT cch.assignee_user_id) as cnt
+      FROM conflict_coordination_history cch
+      JOIN conflict_assignments ca
+        ON ca.conflict_id = cch.conflict_id
+       AND ca.conflict_type = cch.conflict_type
+       AND ca.assignee_user_id = cch.assignee_user_id
+      WHERE cch.conflict_id = ? AND cch.conflict_type = ?
     `).get(req.params.id, conflictType);
 
-    if (assigneeCount.cnt >= 2 && submissionCount.cnt >= 2) {
-      // Both sides submitted — notify users who can process general conflicts.
+    if (assigneeCount.cnt > 0 && submissionCount.cnt >= assigneeCount.cnt) {
       const reviewers = usersWithAnyPermission(['conflict:manage', 'review:approve', 'admin:access']);
       reviewers.forEach(function(r) {
         db.prepare(`
           INSERT INTO todos (from_dept_id, to_dept_id, type, content, urgency)
           VALUES (NULL, ?, 'conflict_resolution', ?, 'high')
-        `).run(r.department_id, '冲突 #' + req.params.id + ' 双方已提交立场，等待终裁');
+        `).run(r.department_id, '冲突 #' + req.params.id + ' 全部协调人已提交立场，等待终裁');
       });
     }
 
@@ -550,7 +553,7 @@ router.post('/:id/final-decide', requireAuth, (req, res) => {
   return runDbAction(res, () => {
     const { type } = req.query;
     const conflictType = type || 'field';
-    const { resolution, opinion } = req.body;
+    const { resolution, adopted_value } = req.body;
 
     const table = conflictType === 'term' ? 'term_conflicts' : 'field_conflicts';
     const conflict = db.prepare(`SELECT * FROM ${table} WHERE id=?`).get(req.params.id);
@@ -567,10 +570,17 @@ router.post('/:id/final-decide', requireAuth, (req, res) => {
       return res.status(409).json({ error: '仅协调中或已升级状态可终裁' });
     }
 
-    db.prepare(`
-      UPDATE ${table} SET status='resolved', resolution=?, resolved_by=?, resolved_at=datetime('now')
-      WHERE id=?
-    `).run(resolution || null, req.session.userId, req.params.id);
+    db.transaction(() => {
+      db.prepare(`
+        UPDATE ${table} SET status='resolved', resolution=?, resolved_by=?, resolved_at=datetime('now')
+        WHERE id=?
+      `).run(resolution || null, req.session.userId, req.params.id);
+
+      if (conflictType === 'field') {
+        applyAdoptedFieldValue(conflict, adopted_value, req.session.userId);
+        unblockMappingIfNoOpenErrors(conflict);
+      }
+    })();
 
     res.json({ success: true });
   });
@@ -770,42 +780,8 @@ router.post('/:id/resolve', requireAuth, (req, res) => {
         req.params.id
       );
 
-      if (conflict.conflict_field === 'authoritative_system' && adopted_value) {
-        [conflict.field_entry_a_id, conflict.field_entry_b_id].forEach(fieldEntryId => {
-          const identity = db.prepare('SELECT id FROM field_identities WHERE field_entry_id=?').get(fieldEntryId);
-          if (identity) {
-            db.prepare(`
-              UPDATE field_identities
-              SET authoritative_system=?, confirmed=1, confirmed_by=?, confirmed_at=datetime('now')
-              WHERE field_entry_id=?
-            `).run(adopted_value, req.session.userId, fieldEntryId);
-          }
-        });
-      } else if (FIELD_ENTRY_CONFLICT_FIELDS.includes(conflict.conflict_field) && adopted_value !== undefined) {
-        [conflict.field_entry_a_id, conflict.field_entry_b_id].forEach(fieldEntryId => {
-          db.prepare(`UPDATE field_entries SET ${conflict.conflict_field}=?, updated_at=datetime('now') WHERE id=?`).run(adopted_value, fieldEntryId);
-        });
-      }
-
-      const mapping = db.prepare(`
-        SELECT m.id as mapping_id
-        FROM mappings m
-        JOIN field_entries fe ON fe.mapping_id = m.id
-        WHERE fe.id IN (?, ?)
-        LIMIT 1
-      `).get(conflict.field_entry_a_id, conflict.field_entry_b_id);
-
-      if (mapping) {
-        const remainingErrors = db.prepare(`
-          SELECT COUNT(DISTINCT fc.id) as cnt
-          FROM field_conflicts fc
-          JOIN field_entries fe ON fc.field_entry_a_id = fe.id OR fc.field_entry_b_id = fe.id
-          WHERE fe.mapping_id = ? AND fc.severity = 'error' AND fc.status IN ('pending','coordinating')
-        `).get(mapping.mapping_id);
-        if (remainingErrors.cnt === 0) {
-          db.prepare("UPDATE approval_tasks SET status='in_progress' WHERE mapping_id=? AND status='blocked'").run(mapping.mapping_id);
-        }
-      }
+      applyAdoptedFieldValue(conflict, adopted_value, req.session.userId);
+      unblockMappingIfNoOpenErrors(conflict);
     });
 
     resolve();

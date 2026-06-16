@@ -364,7 +364,16 @@ if (fcInfo && !fcInfo.sql.includes("'archived'")) {
         resolved_at DATETIME,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
-      INSERT INTO field_conflicts_new SELECT * FROM field_conflicts;
+      INSERT INTO field_conflicts_new (
+        id, field_entry_a_id, field_entry_b_id, conflict_field,
+        submitter_a, value_a, submitter_b, value_b, dept_a, dept_b,
+        severity, status, resolution, resolved_by, resolved_at, created_at
+      )
+      SELECT
+        id, field_entry_a_id, field_entry_b_id, conflict_field,
+        submitter_a, value_a, submitter_b, value_b, dept_a, dept_b,
+        severity, status, resolution, resolved_by, resolved_at, created_at
+      FROM field_conflicts;
       DROP TABLE field_conflicts;
       ALTER TABLE field_conflicts_new RENAME TO field_conflicts;
     `);
@@ -390,7 +399,14 @@ if (tcInfo && !tcInfo.sql.includes("'archived'")) {
         resolved_at DATETIME,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
-      INSERT INTO term_conflicts_new SELECT * FROM term_conflicts;
+      INSERT INTO term_conflicts_new (
+        id, term, dept_a, dept_a_meaning, dept_b, dept_b_meaning,
+        severity, status, resolution, resolved_by, resolved_at, created_at
+      )
+      SELECT
+        id, term, dept_a, dept_a_meaning, dept_b, dept_b_meaning,
+        severity, status, resolution, resolved_by, resolved_at, created_at
+      FROM term_conflicts;
       DROP TABLE term_conflicts;
       ALTER TABLE term_conflicts_new RENAME TO term_conflicts;
     `);
@@ -761,6 +777,48 @@ if (tcSql2 && !tcSql2.sql.includes("'silenced'")) {
   })();
   dbInitLog('Migration: added silenced/escalated to term_conflicts CHECK');
 }
+
+db.exec(`
+CREATE TRIGGER IF NOT EXISTS conflict_assignments_conflict_exists_insert
+BEFORE INSERT ON conflict_assignments
+WHEN
+  (NEW.conflict_type='field' AND NOT EXISTS (SELECT 1 FROM field_conflicts WHERE id=NEW.conflict_id))
+  OR
+  (NEW.conflict_type='term' AND NOT EXISTS (SELECT 1 FROM term_conflicts WHERE id=NEW.conflict_id))
+BEGIN
+  SELECT RAISE(ABORT, 'conflict_assignments conflict_id missing');
+END;
+
+CREATE TRIGGER IF NOT EXISTS conflict_assignments_conflict_exists_update
+BEFORE UPDATE OF conflict_id, conflict_type ON conflict_assignments
+WHEN
+  (NEW.conflict_type='field' AND NOT EXISTS (SELECT 1 FROM field_conflicts WHERE id=NEW.conflict_id))
+  OR
+  (NEW.conflict_type='term' AND NOT EXISTS (SELECT 1 FROM term_conflicts WHERE id=NEW.conflict_id))
+BEGIN
+  SELECT RAISE(ABORT, 'conflict_assignments conflict_id missing');
+END;
+
+CREATE TRIGGER IF NOT EXISTS conflict_coordination_history_conflict_exists_insert
+BEFORE INSERT ON conflict_coordination_history
+WHEN
+  (NEW.conflict_type='field' AND NOT EXISTS (SELECT 1 FROM field_conflicts WHERE id=NEW.conflict_id))
+  OR
+  (NEW.conflict_type='term' AND NOT EXISTS (SELECT 1 FROM term_conflicts WHERE id=NEW.conflict_id))
+BEGIN
+  SELECT RAISE(ABORT, 'conflict_coordination_history conflict_id missing');
+END;
+
+CREATE TRIGGER IF NOT EXISTS conflict_coordination_history_conflict_exists_update
+BEFORE UPDATE OF conflict_id, conflict_type ON conflict_coordination_history
+WHEN
+  (NEW.conflict_type='field' AND NOT EXISTS (SELECT 1 FROM field_conflicts WHERE id=NEW.conflict_id))
+  OR
+  (NEW.conflict_type='term' AND NOT EXISTS (SELECT 1 FROM term_conflicts WHERE id=NEW.conflict_id))
+BEGIN
+  SELECT RAISE(ABORT, 'conflict_coordination_history conflict_id missing');
+END;
+`);
 
 // ── Process Governance Snapshot Schema ──
 

@@ -132,12 +132,18 @@ async function waitForServer() {
 }
 
 async function request(routePath, options = {}, cookie = '') {
+  const requestOptions = { ...options };
+  const method = String(requestOptions.method || 'GET').toUpperCase();
   const headers = {
-    ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+    ...(requestOptions.body ? { 'Content-Type': 'application/json' } : {}),
     ...(cookie ? { Cookie: cookie } : {}),
-    ...(options.headers || {})
+    ...(requestOptions.headers || {})
   };
-  const res = await fetch(`${BASE_URL}${routePath}`, { ...options, headers });
+  if (cookie && !['GET', 'HEAD', 'OPTIONS'].includes(method) && routePath !== '/api/org/login') {
+    const token = await csrfTokenFor(cookie);
+    if (token) headers['X-CSRF-Token'] = token;
+  }
+  const res = await fetch(`${BASE_URL}${routePath}`, { ...requestOptions, headers });
   const text = await res.text();
   let body = {};
   if (text) {
@@ -150,12 +156,38 @@ async function request(routePath, options = {}, cookie = '') {
   return { res, body };
 }
 
+const csrfTokens = new Map();
+
+async function csrfTokenFor(cookie) {
+  if (csrfTokens.has(cookie)) return csrfTokens.get(cookie);
+  const result = await request('/api/csrf-token', {}, cookie);
+  if (result.res.status !== 200 || !result.body.csrfToken) return '';
+  csrfTokens.set(cookie, result.body.csrfToken);
+  return result.body.csrfToken;
+}
+
 async function main() {
   let server;
 
   try {
     resetData();
     const seed = seedData();
+    assert.throws(
+      () => db.prepare(`
+        INSERT INTO conflict_assignments (conflict_id, conflict_type, assignee_user_id, assigned_by)
+        VALUES (?, 'field', ?, ?)
+      `).run(999999, seed.admin, seed.admin),
+      /conflict_id|冲突/,
+      'conflict assignments should reject missing field conflicts'
+    );
+    assert.throws(
+      () => db.prepare(`
+        INSERT INTO conflict_coordination_history (conflict_id, conflict_type, assignee_user_id, result, note)
+        VALUES (?, 'field', ?, 'A', 'bad reference')
+      `).run(999999, seed.admin),
+      /conflict_id|冲突/,
+      'coordination history should reject missing field conflicts'
+    );
 
     server = spawn(process.execPath, ['server/index.js'], {
       cwd: path.join(__dirname, '..'),
@@ -255,6 +287,24 @@ async function main() {
     const assignedTodos = db.prepare("SELECT * FROM todos WHERE type = 'conflict_resolution' AND content LIKE '%冲突协调%'").all();
     assert.strictEqual(assignedTodos.length, 2, 'should create 2 todos');
 
+    db.prepare("UPDATE field_conflicts SET status='coordinating', deadline=date('now','-1 day'), escalated=0 WHERE id=?").run(errorConflict.id);
+    const escalationTodoCountBefore = db.prepare("SELECT COUNT(*) AS cnt FROM todos WHERE content LIKE ?").get(`冲突升级：#${errorConflict.id}%`).cnt;
+    const historyCountBeforeRead = db.prepare('SELECT COUNT(*) AS cnt FROM conflict_coordination_history WHERE conflict_id=? AND conflict_type=?').get(errorConflict.id, 'field').cnt;
+    const readDetail = await request(`/api/conflicts/${errorConflict.id}?type=field`, {}, cookie);
+    assert.strictEqual(readDetail.res.status, 200, JSON.stringify(readDetail.body));
+    let readOnlyConflict = db.prepare('SELECT status, escalated FROM field_conflicts WHERE id=?').get(errorConflict.id);
+    assert.strictEqual(readOnlyConflict.status, 'coordinating', 'GET conflict detail must not escalate stale conflicts');
+    assert.strictEqual(readOnlyConflict.escalated, 0, 'GET conflict detail must not set escalated flag');
+    assert.strictEqual(db.prepare("SELECT COUNT(*) AS cnt FROM todos WHERE content LIKE ?").get(`冲突升级：#${errorConflict.id}%`).cnt, escalationTodoCountBefore, 'GET conflict detail must not create escalation todos');
+    assert.strictEqual(db.prepare('SELECT COUNT(*) AS cnt FROM conflict_coordination_history WHERE conflict_id=? AND conflict_type=?').get(errorConflict.id, 'field').cnt, historyCountBeforeRead, 'GET conflict detail must not insert coordination history');
+
+    const readStats = await request('/api/conflicts/stats', {}, cookie);
+    assert.strictEqual(readStats.res.status, 200, JSON.stringify(readStats.body));
+    readOnlyConflict = db.prepare('SELECT status, escalated FROM field_conflicts WHERE id=?').get(errorConflict.id);
+    assert.strictEqual(readOnlyConflict.status, 'coordinating', 'GET conflict stats must not escalate stale conflicts');
+    assert.strictEqual(readOnlyConflict.escalated, 0, 'GET conflict stats must not set escalated flag');
+    assert.strictEqual(db.prepare("SELECT COUNT(*) AS cnt FROM todos WHERE content LIKE ?").get(`冲突升级：#${errorConflict.id}%`).cnt, escalationTodoCountBefore, 'GET conflict stats must not create escalation todos');
+
     // Test manual escalate - login as reviewer (errorConflict is still coordinating)
     const revLogin = await request('/api/org/login', {
       method: 'POST',
@@ -267,6 +317,89 @@ async function main() {
     const escConflict = db.prepare('SELECT * FROM field_conflicts WHERE id = ?').get(errorConflict.id);
     assert.strictEqual(escConflict.status, 'escalated');
     assert.strictEqual(escConflict.escalated, 1);
+
+    const triFieldA = db.prepare(`
+      INSERT INTO field_entries (mapping_id, field_name_cn, field_name_en, data_object, field_type, consume_systems, sync_mode, note, submitted_by)
+      VALUES (?, '三方协调字段', 'tri_field', '客户', '文本', ?, '实时', '销售口径', ?)
+    `).run(seed.mappingB, JSON.stringify(['CRM']), seed.userA).lastInsertRowid;
+    const triFieldB = db.prepare(`
+      INSERT INTO field_entries (mapping_id, field_name_cn, field_name_en, data_object, field_type, consume_systems, sync_mode, note, submitted_by)
+      VALUES (?, '三方协调字段', 'tri_field', '客户', '文本', ?, '实时', '财务口径', ?)
+    `).run(seed.mappingB, JSON.stringify(['ERP']), seed.userB).lastInsertRowid;
+    const triConflictId = db.prepare(`
+      INSERT INTO field_conflicts
+        (field_entry_a_id, field_entry_b_id, conflict_field, submitter_a, value_a, submitter_b, value_b, dept_a, dept_b, severity, status, deadline)
+      VALUES (?, ?, 'note', ?, '销售口径', ?, '财务口径', ?, ?, 'error', 'coordinating', date('now','+3 day'))
+    `).run(triFieldA, triFieldB, seed.userA, seed.userB, seed.deptA, seed.deptB).lastInsertRowid;
+    db.prepare(`
+      INSERT INTO conflict_assignments (conflict_id, conflict_type, assignee_user_id, assigned_by, created_at)
+      VALUES (?, 'field', ?, NULL, ?)
+    `).run(triConflictId, seed.ownerA, '2026-06-16 10:00:00');
+    db.prepare(`
+      INSERT INTO conflict_assignments (conflict_id, conflict_type, assignee_user_id, assigned_by, created_at)
+      VALUES (?, 'field', ?, NULL, ?)
+    `).run(triConflictId, seed.ownerB, '2026-06-16 10:00:01');
+    db.prepare(`
+      INSERT INTO conflict_assignments (conflict_id, conflict_type, assignee_user_id, assigned_by, created_at)
+      VALUES (?, 'field', ?, NULL, ?)
+    `).run(triConflictId, seed.reviewer, '2026-06-16 10:00:02');
+
+    const ownerALogin = await request('/api/org/login', {
+      method: 'POST',
+      body: JSON.stringify({ employee_no: 'SALEOW01', password: 'pass1234' })
+    });
+    assert.strictEqual(ownerALogin.res.status, 200);
+    const ownerACookie = ownerALogin.res.headers.get('set-cookie').split(';')[0];
+    const ownerBLogin = await request('/api/org/login', {
+      method: 'POST',
+      body: JSON.stringify({ employee_no: 'FINOW01', password: 'pass1234' })
+    });
+    assert.strictEqual(ownerBLogin.res.status, 200);
+    const ownerBCookie = ownerBLogin.res.headers.get('set-cookie').split(';')[0];
+    const reviewerCookie = revCookie;
+    const triTodoPattern = `冲突 #${triConflictId} %已提交立场%`;
+    const triTodosBefore = db.prepare('SELECT COUNT(*) AS cnt FROM todos WHERE content LIKE ?').get(triTodoPattern).cnt;
+    const triA = await request(`/api/conflicts/${triConflictId}/coordination?type=field`, {
+      method: 'POST',
+      body: JSON.stringify({ result: 'A', note: '销售侧坚持原口径' })
+    }, ownerACookie);
+    assert.strictEqual(triA.res.status, 200, JSON.stringify(triA.body));
+    const triB = await request(`/api/conflicts/${triConflictId}/coordination?type=field`, {
+      method: 'POST',
+      body: JSON.stringify({ result: 'B', note: '财务侧坚持原口径' })
+    }, ownerBCookie);
+    assert.strictEqual(triB.res.status, 200, JSON.stringify(triB.body));
+    assert.strictEqual(db.prepare('SELECT COUNT(*) AS cnt FROM todos WHERE content LIKE ?').get(triTodoPattern).cnt, triTodosBefore, 'two of three assignees must not trigger final-decision todo');
+    const triC = await request(`/api/conflicts/${triConflictId}/coordination?type=field`, {
+      method: 'POST',
+      body: JSON.stringify({ result: 'compromise', note: '审核人确认折中方案' })
+    }, reviewerCookie);
+    assert.strictEqual(triC.res.status, 200, JSON.stringify(triC.body));
+    assert.ok(db.prepare('SELECT COUNT(*) AS cnt FROM todos WHERE content LIKE ?').get(triTodoPattern).cnt > triTodosBefore, 'all assigned participants should trigger final-decision todo');
+
+    const finalFieldA = db.prepare(`
+      INSERT INTO field_entries (mapping_id, field_name_cn, field_name_en, data_object, field_type, consume_systems, sync_mode, note, submitted_by)
+      VALUES (?, '终裁黄金源字段', 'final_source', '客户', '文本', ?, '实时', 'A', ?)
+    `).run(seed.mappingB, JSON.stringify(['CRM']), seed.userA).lastInsertRowid;
+    const finalFieldB = db.prepare(`
+      INSERT INTO field_entries (mapping_id, field_name_cn, field_name_en, data_object, field_type, consume_systems, sync_mode, note, submitted_by)
+      VALUES (?, '终裁黄金源字段', 'final_source', '客户', '文本', ?, '实时', 'B', ?)
+    `).run(seed.mappingB, JSON.stringify(['ERP']), seed.userB).lastInsertRowid;
+    db.prepare('INSERT INTO field_identities (field_entry_id, authoritative_system, maintain_dept_id, confirmed) VALUES (?, ?, ?, 1)').run(finalFieldA, 'CRM', seed.deptA);
+    db.prepare('INSERT INTO field_identities (field_entry_id, authoritative_system, maintain_dept_id, confirmed) VALUES (?, ?, ?, 1)').run(finalFieldB, 'ERP', seed.deptB);
+    const finalConflictId = db.prepare(`
+      INSERT INTO field_conflicts
+        (field_entry_a_id, field_entry_b_id, conflict_field, submitter_a, value_a, submitter_b, value_b, dept_a, dept_b, severity, status)
+      VALUES (?, ?, 'authoritative_system', ?, 'CRM', ?, 'ERP', ?, ?, 'error', 'coordinating')
+    `).run(finalFieldA, finalFieldB, seed.userA, seed.userB, seed.deptA, seed.deptB).lastInsertRowid;
+    const finalDecision = await request(`/api/conflicts/${finalConflictId}/final-decide?type=field`, {
+      method: 'POST',
+      body: JSON.stringify({ resolution: '采用 MDM 统一黄金源', adopted_value: 'MDM' })
+    }, cookie);
+    assert.strictEqual(finalDecision.res.status, 200, JSON.stringify(finalDecision.body));
+    const finalIdentities = db.prepare('SELECT authoritative_system, confirmed_by FROM field_identities WHERE field_entry_id IN (?, ?) ORDER BY field_entry_id').all(finalFieldA, finalFieldB);
+    assert.deepStrictEqual(finalIdentities.map(row => row.authoritative_system), ['MDM', 'MDM']);
+    assert.ok(finalIdentities.every(row => row.confirmed_by === seed.admin));
 
     // Test stats endpoint
     const stats = await request('/api/conflicts/stats', {}, cookie);
