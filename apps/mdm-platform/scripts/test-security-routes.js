@@ -168,12 +168,20 @@ async function waitForServer() {
 }
 
 async function request(routePath, options = {}, cookie = '') {
+  const requestOptions = { ...options };
+  const skipCsrf = !!requestOptions.skipCsrf;
+  delete requestOptions.skipCsrf;
+  const method = String(requestOptions.method || 'GET').toUpperCase();
   const headers = {
-    ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+    ...(requestOptions.body ? { 'Content-Type': 'application/json' } : {}),
     ...(cookie ? { Cookie: cookie } : {}),
-    ...(options.headers || {})
+    ...(requestOptions.headers || {})
   };
-  const res = await fetch(`${BASE_URL}${routePath}`, { ...options, headers });
+  if (!skipCsrf && cookie && !['GET', 'HEAD', 'OPTIONS'].includes(method) && routePath !== '/api/org/login') {
+    const token = await csrfTokenFor(cookie);
+    if (token) headers['X-CSRF-Token'] = token;
+  }
+  const res = await fetch(`${BASE_URL}${routePath}`, { ...requestOptions, headers });
   const contentType = res.headers.get('content-type') || '';
   if (contentType.includes('spreadsheet')) {
     return { res, buffer: Buffer.from(await res.arrayBuffer()) };
@@ -190,13 +198,28 @@ async function request(routePath, options = {}, cookie = '') {
   return { res, body };
 }
 
+const csrfTokens = new Map();
+
+async function csrfTokenFor(cookie) {
+  if (csrfTokens.has(cookie)) return csrfTokens.get(cookie);
+  const result = await request('/api/csrf-token', {}, cookie);
+  if (result.res.status !== 200 || !result.body.csrfToken) return '';
+  csrfTokens.set(cookie, result.body.csrfToken);
+  return result.body.csrfToken;
+}
+
+function cookieFrom(result) {
+  const setCookie = result.res.headers.get('set-cookie');
+  return setCookie ? setCookie.split(';')[0] : '';
+}
+
 async function login(employeeNo) {
   const result = await request('/api/org/login', {
     method: 'POST',
     body: JSON.stringify({ employee_no: employeeNo, password: 'pass1234' })
   });
   assert.strictEqual(result.res.status, 200);
-  return result.res.headers.get('set-cookie').split(';')[0];
+  return cookieFrom(result);
 }
 
 function columnIndexByHeader(worksheet, headerText) {
@@ -239,6 +262,61 @@ async function assertServerRequiresSessionSecret() {
   assert.notStrictEqual(exitCode, null, '生产模式缺少 SESSION_SECRET 时服务不应继续运行');
   assert.notStrictEqual(exitCode, 0, '生产模式缺少 SESSION_SECRET 时服务应失败退出');
   assert.ok(stderr.includes('SESSION_SECRET'), '失败信息应提示 SESSION_SECRET');
+}
+
+async function assertSecurityHeaders() {
+  const health = await request('/api/health');
+  assert.strictEqual(health.res.status, 200);
+  assert.strictEqual(health.res.headers.get('x-content-type-options'), 'nosniff', 'responses should set X-Content-Type-Options');
+  assert.ok(health.res.headers.get('referrer-policy'), 'responses should set Referrer-Policy');
+  assert.ok(health.res.headers.get('content-security-policy'), 'responses should set Content-Security-Policy');
+}
+
+async function assertLoginRegeneratesSession() {
+  const initialLogin = await request('/api/org/login', {
+    method: 'POST',
+    body: JSON.stringify({ employee_no: 'REV001', password: 'pass1234' })
+  });
+  assert.strictEqual(initialLogin.res.status, 200);
+  const initialCookie = cookieFrom(initialLogin);
+  assert.ok(initialCookie, 'initial login should issue a session cookie');
+
+  const secondLogin = await request('/api/org/login', {
+    method: 'POST',
+    body: JSON.stringify({ employee_no: 'ADMIN001', password: 'pass1234' })
+  }, initialCookie);
+  assert.strictEqual(secondLogin.res.status, 200);
+  const regeneratedCookie = cookieFrom(secondLogin);
+  assert.ok(regeneratedCookie, 'login should issue a session cookie');
+  assert.notStrictEqual(regeneratedCookie, initialCookie, 'successful login should regenerate the session id');
+}
+
+async function assertCsrfProtection(adminCookie) {
+  const tokenResult = await request('/api/csrf-token', {}, adminCookie);
+  assert.strictEqual(tokenResult.res.status, 200, 'authenticated users should receive a CSRF token');
+  assert.ok(tokenResult.body.csrfToken, 'CSRF token response should include csrfToken');
+
+  const missingToken = await request('/api/org/users', {
+    method: 'POST',
+    skipCsrf: true,
+    body: JSON.stringify({
+      name: 'CSRF 未授权写入',
+      employee_no: 'CSRFBAD',
+      role: 'submitter'
+    })
+  }, adminCookie);
+  assert.strictEqual(missingToken.res.status, 403, 'authenticated unsafe writes without CSRF token should be rejected');
+}
+
+async function assertLoginRateLimit() {
+  let lastResult;
+  for (let i = 0; i < 9; i += 1) {
+    lastResult = await request('/api/org/login', {
+      method: 'POST',
+      body: JSON.stringify({ employee_no: 'RATE001', password: `wrong-password-${i}` })
+    });
+  }
+  assert.strictEqual(lastResult.res.status, 429, 'repeated failed login attempts should be rate limited');
 }
 
 async function assertUserDirectoryGuards(adminCookie, reviewerCookie, submitterCookie) {
@@ -611,8 +689,12 @@ async function main() {
     });
 
     await waitForServer();
+    await assertSecurityHeaders();
 
+    await assertLoginRegeneratesSession();
     const adminCookie = await login('ADMIN001');
+    await assertCsrfProtection(adminCookie);
+    await assertLoginRateLimit();
     const reviewerCookie = await login('REV001');
     const submitterCookie = await login('SALE001');
     const ownerBCookie = await login('OWNFIN');

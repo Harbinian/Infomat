@@ -2,6 +2,8 @@ const express = require('express');
 const session = require('express-session');
 const path = require('path');
 const fs = require('fs');
+const { requireAuth } = require('./auth');
+const { securityHeaders, csrfProtection, issueCsrfToken } = require('./security');
 
 function resolveSessionSecret(env) {
   if (env.SESSION_SECRET) return env.SESSION_SECRET;
@@ -13,6 +15,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const SESSION_SECRET = resolveSessionSecret(process.env);
 
+app.use(securityHeaders);
 app.use(express.static(path.join(__dirname, '../public')));
 app.use(express.json());
 
@@ -27,6 +30,10 @@ app.use(session({
     maxAge: 24 * 60 * 60 * 1000
   }
 }));
+
+app.use(csrfProtection);
+
+app.get('/api/csrf-token', requireAuth, issueCsrfToken);
 
 function registerRouteIfExists(basePath, routeName) {
   const routePath = path.join(__dirname, 'routes', `${routeName}.js`);
