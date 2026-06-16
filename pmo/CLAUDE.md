@@ -54,7 +54,7 @@ pmo/
 `pmo/deliverables/DLV-XXX-*.md` 是交付物状态正本。5173 dev 模式通过 Vite 插件 `pmoDeliverablesPlugin` 扫目录、暴露 6 个 `/api/pmo/deliverables*` 端点、用 Vite 内置 watcher 发 HMR。前端优先读取正本文件,服务端 `applyTransitionToFile` 跑状态机并写回 .md frontmatter + body 变更记录表。
 
 - 真源:`pmo/deliverables/DLV-XXX-*.md`(frontmatter + body)
-- 归档:`pmo/deliverables/_history/DLV-XXX/<ts>-<kind>-<suffix>`
+- 运行归档:`artifacts/pmo/deliverables/_history/DLV-XXX/<ts>-<kind>-<suffix>`；可用 `PMO_DELIVERABLE_RUNTIME_DIR` 覆盖
 - dev-only:`apply: 'serve'`,生产构建降级到 WBS 字段/旧覆盖层
 - 兜底:API 正本 → `deliverable-status.json` → `tasks.json` 默认 DLV 字段
 - 测试:`npm run test:frontmatter` / `test:writeback` / `test:plugin` / `test:hmr`

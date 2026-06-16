@@ -21,6 +21,19 @@
 
 `pmo-source-manifest.json` 会同步写入 `pmo/gantt-react/public/pmo-source-manifest.json`，供甘特图/PMO 看板服务识别当前真源组合。
 
+## 交付物运行产物
+
+`pmo/deliverables/` 保存受控交付物正本 Markdown 和明确纳管的配套文件。开发服务中的上传原件、状态快照和运行历史不是 PMO 正本，默认写入仓库根目录下被忽略的 `artifacts/pmo/deliverables/`。
+
+如需临时改运行产物位置，可在启动 `pmo/gantt-react` 前设置：
+
+```powershell
+$env:PMO_DELIVERABLE_RUNTIME_DIR='E:\temp\infomat-pmo-deliverables'
+npm run dev
+```
+
+`artifacts/pmo/deliverables/` 可在烟测或本地调试后清理；不要把其中的上传原件、截图或历史快照提交为源文件。
+
 ## 快速开始
 
 ### PMO 服务

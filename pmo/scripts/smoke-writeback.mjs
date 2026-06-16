@@ -3,9 +3,16 @@ import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { applyTransitionToFile } from '../gantt-react/plugins/pmoDeliverablesPlugin.js';
+import { fileURLToPath } from 'node:url';
+import { _internal, applyTransitionToFile } from '../gantt-react/plugins/pmoDeliverablesPlugin.js';
 import { parseDeliverableFrontmatter } from '../gantt-react/src/utils/deliverableFrontmatter.js';
 import { transitionDeliverableStatus } from '../gantt-react/src/utils/deliverableWorkflow.js';
+
+const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(scriptDir, '..', '..');
+const versionedHistoryRoot = path.join(repoRoot, 'pmo', 'deliverables', '_history');
+assert.ok(_internal.HISTORY_DIR.startsWith(path.join(repoRoot, 'artifacts', 'pmo', 'deliverables')));
+assert.notEqual(_internal.HISTORY_DIR, versionedHistoryRoot);
 
 const tmp = await fsp.mkdtemp(path.join(os.tmpdir(), 'pmo-writeback-'));
 const filePath = path.join(tmp, 'DLV-201-写回测试.md');
