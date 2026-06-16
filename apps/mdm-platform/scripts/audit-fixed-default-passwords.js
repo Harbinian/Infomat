@@ -1,6 +1,6 @@
 const db = require('../server/db');
 const { verifyPassword } = require('../server/auth');
-const { FIXED_DEFAULT_PASSWORD } = require('../server/passwordPolicy');
+const { KNOWN_FIXED_DEFAULT_PASSWORDS } = require('../server/passwordPolicy');
 
 const json = process.argv.includes('--json');
 
@@ -11,7 +11,7 @@ const users = db.prepare(`
 `).all();
 
 const matches = users
-  .filter(user => !user.must_change_password && verifyPassword(FIXED_DEFAULT_PASSWORD, user.password_hash))
+  .filter(user => !user.must_change_password && KNOWN_FIXED_DEFAULT_PASSWORDS.some(password => verifyPassword(password, user.password_hash)))
   .map(({ password_hash, ...user }) => user);
 
 const report = {

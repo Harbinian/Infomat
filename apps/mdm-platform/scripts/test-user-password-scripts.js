@@ -23,6 +23,18 @@ function runScript(script, env = {}) {
   });
 }
 
+function extractInitialPassword(stdout) {
+  const match = String(stdout || '').match(/初始密码[:：]\s*(\S+)/);
+  return match ? match[1] : '';
+}
+
+function assertRandomInitialPassword(password, label) {
+  assert.ok(password, `${label} should report the generated initial password`);
+  assert.notStrictEqual(password, '000000', `${label} must not use 000000`);
+  assert.notStrictEqual(password, 'init1234', `${label} must not use init1234`);
+  assert.ok(password.length >= 12, `${label} should be long enough to avoid trivial defaults`);
+}
+
 async function writeRosterWorkbook(filePath) {
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet('users');
@@ -41,11 +53,15 @@ async function main() {
     ALLOW_PROJECT_USER_SETUP: 'true'
   });
   assert.strictEqual(setup.status, 0, setup.stderr || setup.stdout);
+  const setupInitialPassword = extractInitialPassword(setup.stdout);
+  assertRandomInitialPassword(setupInitialPassword, 'project user setup');
 
   const projectUsers = db.prepare("SELECT employee_no, password_hash, must_change_password FROM users WHERE employee_no <> 'ADMIN001'").all();
   assert.ok(projectUsers.length > 0, 'project user setup should create users in the isolated database');
   assert.ok(projectUsers.every(row => row.must_change_password === 1), 'project setup users should be required to change password');
-  assert.ok(projectUsers.every(row => verifyPassword('000000', row.password_hash)), 'project setup users should use the unified first-login password');
+  assert.ok(projectUsers.every(row => verifyPassword(setupInitialPassword, row.password_hash)), 'project setup users should use the generated initial password from this run');
+  assert.ok(projectUsers.every(row => !verifyPassword('000000', row.password_hash)), 'project setup users must not use 000000');
+  assert.ok(projectUsers.every(row => !verifyPassword('init1234', row.password_hash)), 'project setup users must not use init1234');
 
   const workbookPath = path.join(tempDir, 'mdm-users.xlsx');
   await writeRosterWorkbook(workbookPath);
@@ -54,11 +70,15 @@ async function main() {
     MDM_USERS_EXCEL_PATH: workbookPath
   });
   assert.strictEqual(imported.status, 0, imported.stderr || imported.stdout);
+  const importInitialPassword = extractInitialPassword(imported.stdout);
+  assertRandomInitialPassword(importInitialPassword, 'Excel user import');
 
   const batchUser = db.prepare("SELECT password_hash, must_change_password FROM users WHERE employee_no='BATCH001'").get();
   assert.ok(batchUser, 'Excel import should create the test user');
   assert.strictEqual(batchUser.must_change_password, 1, 'Excel import users should be required to change password');
-  assert.ok(verifyPassword('000000', batchUser.password_hash), 'Excel import users should use the unified first-login password');
+  assert.ok(verifyPassword(importInitialPassword, batchUser.password_hash), 'Excel import users should use the generated initial password from this run');
+  assert.ok(!verifyPassword('000000', batchUser.password_hash), 'Excel import users must not use 000000');
+  assert.ok(!verifyPassword('init1234', batchUser.password_hash), 'Excel import users must not use init1234');
 
   console.log('User password script test passed');
 }

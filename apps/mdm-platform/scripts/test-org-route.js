@@ -74,12 +74,18 @@ async function waitForServer() {
 }
 
 async function request(path, options = {}, cookie = '') {
+  const requestOptions = { ...options };
+  const method = String(requestOptions.method || 'GET').toUpperCase();
   const headers = {
-    ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+    ...(requestOptions.body ? { 'Content-Type': 'application/json' } : {}),
     ...(cookie ? { Cookie: cookie } : {}),
-    ...(options.headers || {})
+    ...(requestOptions.headers || {})
   };
-  const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
+  if (cookie && !['GET', 'HEAD', 'OPTIONS'].includes(method) && path !== '/api/org/login') {
+    const token = await csrfTokenFor(cookie);
+    if (token) headers['X-CSRF-Token'] = token;
+  }
+  const res = await fetch(`${BASE_URL}${path}`, { ...requestOptions, headers });
   const text = await res.text();
   let body = {};
   if (text) {
@@ -90,6 +96,16 @@ async function request(path, options = {}, cookie = '') {
     }
   }
   return { res, body };
+}
+
+const csrfTokens = new Map();
+
+async function csrfTokenFor(cookie) {
+  if (csrfTokens.has(cookie)) return csrfTokens.get(cookie);
+  const result = await request('/api/csrf-token', {}, cookie);
+  if (result.res.status !== 200 || !result.body.csrfToken) return '';
+  csrfTokens.set(cookie, result.body.csrfToken);
+  return result.body.csrfToken;
 }
 
 async function main() {
@@ -162,7 +178,9 @@ async function main() {
     }, cookie);
     assert.strictEqual(user.res.status, 200);
     assert.ok(user.body.id);
-    assert.strictEqual(user.body.initial_password, '000000');
+    assert.ok(user.body.initial_password);
+    assert.notStrictEqual(user.body.initial_password, '000000');
+    assert.notStrictEqual(user.body.initial_password, 'init1234');
 
     const roles = await request('/api/roles', {}, cookie);
     assert.strictEqual(roles.res.status, 200);

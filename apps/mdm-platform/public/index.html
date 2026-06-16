@@ -4835,7 +4835,7 @@
       panel.innerHTML =
         '<div id="rbacUserManagement">' +
           '<div class="user-management-head">' +
-            '<div><h3>用户管理</h3><p>账号入库和角色分配。新增或重置后，用户首次登录密码统一为 000000，登录后必须修改。</p></div>' +
+            '<div><h3>用户管理</h3><p>账号入库和角色分配。新增或重置后，系统生成一次性初始密码，用户登录后必须修改。</p></div>' +
             '<button class="btn primary" onclick="showUserEditor(\'new\')">新增账号</button>' +
           '</div>' +
           '<div class="user-management-filters">' +
@@ -4922,7 +4922,7 @@
 
       document.getElementById('userManagementEditor').innerHTML =
         '<div class="user-management-form">' +
-          '<div><h3>' + (user ? '编辑账号' : '账号入库') + '</h3><p class="notice">新增账号首次登录密码统一为 000000，用户登录后会被强制修改。</p></div>' +
+          '<div><h3>' + (user ? '编辑账号' : '账号入库') + '</h3><p class="notice">新增账号会生成一次性初始密码，用户登录后会被强制修改。</p></div>' +
           '<div class="user-management-grid">' +
             '<label>工号<input id="userEditorEmployeeNo" value="' + safeText(user && user.employee_no, '') + '" ' + (user ? 'disabled' : '') + '></label>' +
             '<label>姓名<input id="userEditorName" value="' + safeText(user && user.name, '') + '"></label>' +
@@ -4944,6 +4944,17 @@
       userManagementEditingId = null;
       var editor = document.getElementById('userManagementEditor');
       if (editor) editor.innerHTML = '';
+    }
+
+    function renderInitialPasswordNotice(initialPassword) {
+      var editor = document.getElementById('userManagementEditor');
+      if (!editor || !initialPassword) return;
+      editor.innerHTML =
+        '<div class="notice initial-password-notice">' +
+          '<strong>一次性初始密码</strong>' +
+          '<p>请通过线下安全渠道交给用户。关闭或刷新后这里不再保留。</p>' +
+          '<code style="display:inline-block;margin-top:8px;padding:6px 10px;background:#fff;border:1px solid var(--border);border-radius:4px;">' + safeText(initialPassword, '') + '</code>' +
+        '</div>';
     }
 
     async function saveUserFromManagement() {
@@ -4978,14 +4989,12 @@
           method: userManagementEditingId ? 'PUT' : 'POST',
           body: JSON.stringify(payload)
         });
-        if (!userManagementEditingId && result && result.initial_password) {
-          showToast('账号已入库，首次登录密码：' + result.initial_password);
-        } else {
-          showToast(userManagementEditingId ? '账号已保存' : '账号已入库');
-        }
+        var initialPassword = !userManagementEditingId && result ? result.initial_password : '';
+        showToast(userManagementEditingId ? '账号已保存' : '账号已入库');
         userManagementEditingId = null;
         await loadUserManagementSources();
         renderUserManagementShell();
+        renderInitialPasswordNotice(initialPassword);
       } catch (error) {
         showToast(error.message || '账号保存失败', 'error');
       }
@@ -4995,7 +5004,7 @@
       var user = userManagementData.find(function(row) { return Number(row.id) === Number(userId); });
       var confirmed = await showConfirm({
         title: '重置密码',
-        message: '将把 ' + (user ? user.name : '该用户') + ' 的首次登录密码重置为 000000，并要求登录后修改。',
+        message: '将为 ' + (user ? user.name : '该用户') + ' 生成一次性初始密码，并要求登录后修改。',
         confirmLabel: '重置',
         confirmClass: 'danger'
       });
@@ -5005,7 +5014,8 @@
           method: 'POST',
           body: JSON.stringify({})
         });
-        showToast(result && result.initial_password ? '首次登录密码：' + result.initial_password : '密码已重置');
+        showToast('密码已重置');
+        renderInitialPasswordNotice(result && result.initial_password);
       } catch (error) {
         showToast(error.message || '密码重置失败', 'error');
       }
