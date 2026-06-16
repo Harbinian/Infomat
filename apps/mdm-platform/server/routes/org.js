@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require('../db');
 const { hashPassword, verifyPassword, requireAuth, requirePermission, getUserEffectivePermissions } = require('../auth');
 const { FIXED_DEFAULT_PASSWORD, generateInitialPassword, isFixedDefaultPassword } = require('../passwordPolicy');
+const { loginRateLimit, recordLoginFailure, clearLoginFailures } = require('../security');
 
 function handleDbError(res, error) {
   if (error && (error.code === 'SQLITE_CONSTRAINT_UNIQUE' || String(error.message).includes('UNIQUE constraint failed'))) {
@@ -301,18 +302,23 @@ router.post('/users/:id/password', requirePermission('admin:access'), (req, res)
   });
 });
 
-router.post('/login', (req, res) => {
+router.post('/login', loginRateLimit, (req, res) => {
   const { employee_no, password } = req.body;
   const user = db.prepare('SELECT * FROM users WHERE employee_no=?').get(employee_no);
   if (!user || !verifyPassword(password, user.password_hash)) {
+    recordLoginFailure(req);
     return res.status(401).json({ error: '工号或密码错误' });
   }
 
-  req.session.userId = user.id;
-  req.session.userRole = user.role;
-  req.session.userName = user.name;
-  req.session.departmentId = user.department_id;
-  res.json({ id: user.id, name: user.name, role: user.role });
+  req.session.regenerate(error => {
+    if (error) return res.status(500).json({ error: '登录失败' });
+    clearLoginFailures(req);
+    req.session.userId = user.id;
+    req.session.userRole = user.role;
+    req.session.userName = user.name;
+    req.session.departmentId = user.department_id;
+    res.json({ id: user.id, name: user.name, role: user.role });
+  });
 });
 
 router.post('/logout', (req, res) => {

@@ -131,6 +131,8 @@ async function main() {
   assert.ok(html.includes('async function activateAuthenticatedApp'), 'authenticated startup should use a shared route-first boot helper');
   assert.ok(html.includes("api('/api/org/session'"), 'startup session check should use the non-401 session endpoint');
   assert.ok(html.includes("api('/api/org/session', { silentUnauthorized: true })"), 'startup session check should not show an expired-login toast');
+  assert.ok(html.includes('/api/csrf-token'), 'frontend should load a CSRF token for authenticated write requests');
+  assert.ok(html.includes('X-CSRF-Token'), 'frontend should attach CSRF token header to unsafe API requests');
   assert.ok(html.includes('function resetSessionUi'), 'login screen should reset stale authenticated header state');
   assert.ok(html.includes("$('sessionUserName').textContent = '未登录'"), 'login screen should clear stale user identity text');
   const startupSnippetStart = html.indexOf('async function activateAuthenticatedApp');
