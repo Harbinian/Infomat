@@ -1,7 +1,12 @@
 const express = require('express');
+const mysql = require('mysql2/promise');
 const router = express.Router();
 const db = require('../db');
 const { requireAuth, requirePermission } = require('../auth');
+const { mysqlConfigFromEnv } = require('../mysqlConfig');
+const { makeIdentityMysqlRepository } = require('../identityMysqlRepository');
+let identityRepoPromise = null;
+let identityRepositoryFactory = null;
 
 function handleDbError(res, error) {
   if (error && (error.code === 'SQLITE_CONSTRAINT_UNIQUE' || String(error.message).includes('UNIQUE constraint failed'))) {
@@ -18,10 +23,88 @@ function runDbAction(res, action) {
   try { return action(); } catch (error) { return handleDbError(res, error); }
 }
 
-const adminOnly = [requireAuth, requirePermission('admin:access')];
+function runAsyncAction(res, action) {
+  return action().catch(error => {
+    console.error(error);
+    return res.status(503).json({ error: '身份 MySQL 读取模型不可用' });
+  });
+}
+
+function useMysqlIdentityReadModel() {
+  return String(process.env.MDM_IDENTITY_READ_MODEL || '').toLowerCase() === 'mysql';
+}
+
+async function identityRepository() {
+  if (identityRepositoryFactory) {
+    return await identityRepositoryFactory();
+  }
+  if (!identityRepoPromise) {
+    identityRepoPromise = (async () => {
+      const pool = mysql.createPool(mysqlConfigFromEnv());
+      const repo = makeIdentityMysqlRepository(pool);
+      await repo.initSchema();
+      return repo;
+    })();
+  }
+  try {
+    return await identityRepoPromise;
+  } catch (error) {
+    identityRepoPromise = null;
+    throw error;
+  }
+}
+
+function setIdentityRepositoryFactory(factory) {
+  identityRepositoryFactory = factory;
+  identityRepoPromise = null;
+}
+
+function resetIdentityRepositoryFactory() {
+  identityRepositoryFactory = null;
+  identityRepoPromise = null;
+}
+
+function requireRolesPermission(permCode) {
+  return (req, res, next) => {
+    if (!useMysqlIdentityReadModel()) {
+      return requirePermission(permCode)(req, res, next);
+    }
+    if (!req.session || !req.session.userId) return res.status(401).json({ error: '未登录' });
+    return identityRepository()
+      .then(repo => repo.getUserEffectivePermissions(req.session.userId))
+      .then(({ permSet, fieldConstraints }) => {
+        if (!permSet.has(permCode) && !permSet.has('*:*')) {
+          return res.status(403).json({ error: '权限不足' });
+        }
+        req.effectivePermissions = permSet;
+        req.effectiveFieldConstraints = fieldConstraints;
+        return next();
+      })
+      .catch(error => {
+        console.error(error);
+        return res.status(503).json({ error: '身份 MySQL 读取模型不可用' });
+      });
+  };
+}
+
+function rejectMysqlRoleWrite(req, res, next) {
+  if (useMysqlIdentityReadModel()) {
+    return res.status(501).json({ error: '角色写入 MySQL 迁移未完成' });
+  }
+  return next();
+}
+
+const readAdminOnly = [requireAuth, requireRolesPermission('admin:access')];
+const writeAdminOnly = [requireAuth, requireRolesPermission('admin:access'), rejectMysqlRoleWrite];
 
 // GET /api/roles — list all roles with inherited info, permission count, user count
-router.get('/', ...adminOnly, (req, res) => {
+router.get('/', ...readAdminOnly, (req, res) => {
+  if (useMysqlIdentityReadModel()) {
+    return runAsyncAction(res, async () => {
+      const repo = await identityRepository();
+      res.json(await repo.listRoles());
+    });
+  }
   return runDbAction(res, () => {
     const roles = db.prepare(`
       SELECT r.*,
@@ -36,7 +119,15 @@ router.get('/', ...adminOnly, (req, res) => {
 });
 
 // GET /api/roles/:id — role detail with full permission tree and assigned users
-router.get('/:id', ...adminOnly, (req, res) => {
+router.get('/:id', ...readAdminOnly, (req, res) => {
+  if (useMysqlIdentityReadModel()) {
+    return runAsyncAction(res, async () => {
+      const repo = await identityRepository();
+      const role = await repo.getRoleDetail(Number(req.params.id));
+      if (!role) return res.status(404).json({ error: '角色不存在' });
+      res.json(role);
+    });
+  }
   return runDbAction(res, () => {
     const role = db.prepare('SELECT * FROM roles WHERE role_id=?').get(req.params.id);
     if (!role) return res.status(404).json({ error: '角色不存在' });
@@ -85,7 +176,7 @@ router.get('/:id', ...adminOnly, (req, res) => {
 });
 
 // POST /api/roles — create custom role
-router.post('/', ...adminOnly, (req, res) => {
+router.post('/', ...writeAdminOnly, (req, res) => {
   return runDbAction(res, () => {
     const { role_code, role_name, description, parent_role_id } = req.body;
     if (!role_code || !role_name) return res.status(400).json({ error: '角色编码和名称为必填' });
@@ -100,7 +191,7 @@ router.post('/', ...adminOnly, (req, res) => {
 });
 
 // PUT /api/roles/:id — update role
-router.put('/:id', ...adminOnly, (req, res) => {
+router.put('/:id', ...writeAdminOnly, (req, res) => {
   return runDbAction(res, () => {
     const role = db.prepare('SELECT * FROM roles WHERE role_id=?').get(req.params.id);
     if (!role) return res.status(404).json({ error: '角色不存在' });
@@ -116,7 +207,7 @@ router.put('/:id', ...adminOnly, (req, res) => {
 });
 
 // DELETE /api/roles/:id — delete role (protect system roles and assigned roles)
-router.delete('/:id', ...adminOnly, (req, res) => {
+router.delete('/:id', ...writeAdminOnly, (req, res) => {
   return runDbAction(res, () => {
     const role = db.prepare('SELECT * FROM roles WHERE role_id=?').get(req.params.id);
     if (!role) return res.status(404).json({ error: '角色不存在' });
@@ -136,7 +227,15 @@ router.delete('/:id', ...adminOnly, (req, res) => {
 });
 
 // GET /api/roles/:id/permissions — get permission matrix for a role
-router.get('/:id/permissions', ...adminOnly, (req, res) => {
+router.get('/:id/permissions', ...readAdminOnly, (req, res) => {
+  if (useMysqlIdentityReadModel()) {
+    return runAsyncAction(res, async () => {
+      const repo = await identityRepository();
+      const payload = await repo.getRolePermissionMatrix(Number(req.params.id));
+      if (!payload) return res.status(404).json({ error: '角色不存在' });
+      res.json(payload);
+    });
+  }
   return runDbAction(res, () => {
     const role = db.prepare('SELECT * FROM roles WHERE role_id=?').get(req.params.id);
     if (!role) return res.status(404).json({ error: '角色不存在' });
@@ -159,7 +258,7 @@ router.get('/:id/permissions', ...adminOnly, (req, res) => {
 });
 
 // PUT /api/roles/:id/permissions — bulk update role permissions (replace all)
-router.put('/:id/permissions', ...adminOnly, (req, res) => {
+router.put('/:id/permissions', ...writeAdminOnly, (req, res) => {
   return runDbAction(res, () => {
     const role = db.prepare('SELECT * FROM roles WHERE role_id=?').get(req.params.id);
     if (!role) return res.status(404).json({ error: '角色不存在' });
@@ -179,5 +278,8 @@ router.put('/:id/permissions', ...adminOnly, (req, res) => {
     res.json({ success: true, count: perm_ids.length });
   });
 });
+
+router.setIdentityRepositoryFactory = setIdentityRepositoryFactory;
+router.resetIdentityRepositoryFactory = resetIdentityRepositoryFactory;
 
 module.exports = router;

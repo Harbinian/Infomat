@@ -49,9 +49,9 @@ function makeFakePool() {
       { user_id: 43, role_id: 2 }
     ],
     permissions: [
-      { perm_id: 10, perm_code: 'mapping:read', field_constraints: null },
-      { perm_id: 11, perm_code: 'data:view_all', field_constraints: '{"readonly":["source_file"]}' },
-      { perm_id: 12, perm_code: 'process_quality:manage', field_constraints: null },
+      { perm_id: 10, perm_code: 'mapping:read', resource: 'mapping', action: 'read', field_constraints: null },
+      { perm_id: 11, perm_code: 'data:view_all', resource: 'data', action: 'view_all', field_constraints: '{"readonly":["source_file"]}' },
+      { perm_id: 12, perm_code: 'process_quality:manage', resource: 'process_quality', action: 'manage', field_constraints: null },
       { perm_id: 13, perm_code: 'admin:access', resource: 'admin', action: 'access', field_constraints: null },
       { perm_id: 14, perm_code: 'review:approve', resource: 'review', action: 'approve', field_constraints: null }
     ],
@@ -335,6 +335,75 @@ function makeFakePool() {
         return [[role ? { parent_role_id: role.parent_role_id } : undefined].filter(Boolean), undefined];
       }
 
+      if (normalizedSql.includes('SELECT r.*, (SELECT role_name FROM roles pr WHERE pr.role_id = r.parent_role_id) as parent_role_name')) {
+        const rows = state.roles
+          .map(role => {
+            const parent = state.roles.find(item => item.role_id === role.parent_role_id);
+            return {
+              ...role,
+              parent_role_name: parent ? parent.role_name : null,
+              perm_count: state.rolePermissions.filter(row => row.role_id === role.role_id).length,
+              user_count: state.userRoles.filter(row => row.role_id === role.role_id).length
+            };
+          })
+          .sort((left, right) => Number(right.is_system) - Number(left.is_system) || left.role_code.localeCompare(right.role_code));
+        return [rows, undefined];
+      }
+
+      if (normalizedSql === 'SELECT * FROM roles WHERE role_id=?') {
+        const role = state.roles.find(row => row.role_id === params[0]);
+        return [[role].filter(Boolean), undefined];
+      }
+
+      if (normalizedSql.includes('SELECT p.perm_id, p.perm_code, p.resource, p.action, p.field_constraints, p.description, rp.effect, 0 as inherited')) {
+        const rows = state.rolePermissions
+          .filter(row => row.role_id === params[0])
+          .map(row => {
+            const permission = state.permissions.find(item => item.perm_id === row.perm_id);
+            return { ...permission, description: permission.description || null, effect: row.effect, inherited: 0 };
+          });
+        return [rows, undefined];
+      }
+
+      if (normalizedSql.includes('SELECT p.perm_id, p.perm_code, p.resource, p.action, p.field_constraints, p.description, rp.effect, 1 as inherited')) {
+        const rows = state.rolePermissions
+          .filter(row => row.role_id === params[0])
+          .map(row => {
+            const permission = state.permissions.find(item => item.perm_id === row.perm_id);
+            return { ...permission, description: permission.description || null, effect: row.effect, inherited: 1 };
+          });
+        return [rows, undefined];
+      }
+
+      if (normalizedSql.includes('SELECT u.id, u.name, u.employee_no, u.department_id, u.post, d.name as dept_name FROM user_roles ur JOIN users u ON ur.user_id = u.id')) {
+        const rows = state.userRoles
+          .filter(row => row.role_id === params[0])
+          .map(row => state.users.find(user => user.id === row.user_id))
+          .filter(Boolean)
+          .map(user => {
+            const dept = state.departments.find(row => row.id === user.department_id);
+            return {
+              id: user.id,
+              name: user.name,
+              employee_no: user.employee_no,
+              department_id: user.department_id,
+              post: user.post,
+              dept_name: dept ? dept.name : null
+            };
+          });
+        return [rows, undefined];
+      }
+
+      if (normalizedSql === 'SELECT p.perm_code, rp.effect FROM role_permissions rp JOIN permissions p ON rp.perm_id = p.perm_id WHERE rp.role_id=?') {
+        const rows = state.rolePermissions
+          .filter(row => row.role_id === params[0])
+          .map(row => {
+            const permission = state.permissions.find(item => item.perm_id === row.perm_id);
+            return { perm_code: permission.perm_code, effect: row.effect };
+          });
+        return [rows, undefined];
+      }
+
       if (normalizedSql.includes('FROM role_permissions rp JOIN permissions p ON rp.perm_id = p.perm_id')) {
         const roleIds = new Set(params);
         const rows = state.rolePermissions
@@ -482,6 +551,31 @@ async function main() {
   const groupedPermissions = await repo.getPermissionsGrouped();
   assert.ok(Array.isArray(groupedPermissions.admin));
   assert.strictEqual(groupedPermissions.admin[0].perm_code, 'admin:access');
+
+  const roles = await repo.listRoles();
+  assert.deepStrictEqual(roles.map(role => role.role_code), ['admin', 'owner', 'reviewer', 'submitter', 'data_quality', 'it_lead']);
+  const itLeadSummary = roles.find(role => role.role_code === 'it_lead');
+  assert.strictEqual(itLeadSummary.parent_role_name, '业务负责人');
+  assert.strictEqual(itLeadSummary.perm_count, 1);
+  assert.strictEqual(itLeadSummary.user_count, 1);
+
+  const itLeadDetail = await repo.getRoleDetail(3);
+  assert.strictEqual(itLeadDetail.role_code, 'it_lead');
+  assert.deepStrictEqual(
+    itLeadDetail.permissions.map(permission => `${permission.perm_code}:${permission.inherited}`).sort(),
+    ['data:view_all:0', 'mapping:read:1', 'review:approve:1']
+  );
+  assert.deepStrictEqual(itLeadDetail.users.map(user => user.name), ['张三']);
+  assert.strictEqual(await repo.getRoleDetail(9999), null);
+
+  const qualityMatrix = await repo.getRolePermissionMatrix(4);
+  assert.strictEqual(qualityMatrix.role.role_code, 'data_quality');
+  const qualityPermission = qualityMatrix.matrix.find(permission => permission.perm_code === 'process_quality:manage');
+  assert.strictEqual(qualityPermission.assigned, true);
+  assert.strictEqual(qualityPermission.effect, 'allow');
+  const inheritedParentPermission = qualityMatrix.matrix.find(permission => permission.perm_code === 'mapping:read');
+  assert.strictEqual(inheritedParentPermission.assigned, false);
+  assert.strictEqual(await repo.getRolePermissionMatrix(9999), null);
 
   const created = await repo.createUser({
     name: '王五',

@@ -32,6 +32,16 @@ assert.ok(
 );
 
 assert.ok(
+  audit.permissionGuarded.some(route =>
+    route.file.endsWith('roles.js') &&
+    route.method === 'post' &&
+    route.path === '/' &&
+    route.permission === 'admin:access'
+  ),
+  'role creation through writeAdminOnly should be classified as permission guarded'
+);
+
+assert.ok(
   audit.businessGuarded.some(route =>
     route.file.endsWith('todos.js') &&
     route.method === 'post' &&
