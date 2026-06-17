@@ -1,7 +1,7 @@
 # MDM 候选复核与 MySQL 化收尾计划
 
 > 状态：本轮收口已合并，进入下一阶段前审计。
-> 最后确认：2026-06-17，基点 `7906cec`。
+> 最后确认：2026-06-17，按当前 `master` 提交记录追踪。
 > 适用范围：候选复核治理、流程治理 MySQL 化、MDM 身份/RBAC MySQL 化、角色工作台流程待办数据层，以及本轮验证文档。
 
 ## Summary
@@ -26,8 +26,10 @@
 - 角色工作台在 `PROCESS_GOVERNANCE_READ_MODEL=mysql` 开启时，流程质量问题和映射待办工作项已从流程治理 MySQL repository 读取；角色定义、桑基结构和前端显示口径不变。
 - 验证阶段发现“治理活跃/参与热力”前序资产只有后端和测试口径、前端未接入，导致 `test:frontend` 阻断；已补齐 `/api/activity/heatmap` 前端入口、角色工作台热力图、统计看板参与热力和 API/资产测试，不涉及 `docs/norms` 数据。
 - `/api/activity/heatmap` 管理视图权限已接入 MySQL-aware 异步身份 helper；`MDM_IDENTITY_READ_MODEL=mysql` 开启时，不再依赖 SQLite `user_roles` 或同步权限表判断全量/部门/人员筛选权限。
-- 本轮改动已通过分支提交并快进合并到 `master`，当前合并节点为 `7906cec fix: use mysql identity for activity heatmap`。
+- 活动热力图身份权限收口已合并到 `7906cec fix: use mysql identity for activity heatmap`。
 - 下一阶段启动后，字段台账路由已先完成身份权限层收口：`/api/field-entries` 的映射可见性、创建、编辑、删除权限判断改用 MySQL-aware 异步 helper；字段业务表仍是后续迁移对象。
+- 字段台账身份权限收口已合并到 `6cb78ce fix: use mysql identity for field entries`。
+- 字段黄金源身份路由已先完成身份权限层收口：`/api/field-identities` 的维护和确认权限判断改用 MySQL-aware 异步 helper；字段身份业务表仍是后续迁移对象。
 - 文档治理已完成并合并到 `master`，本轮只维护与当前收尾相关的计划文档。
 
 ## Pxx 与原文定位
@@ -56,7 +58,7 @@
 
 1. 字段台账与字段身份：
    - `fieldEntries` 已先接入 MySQL-aware 身份权限判断，但字段业务表仍未迁 MySQL。
-   - `fieldIdentities` 仍是独立业务域，不属于本轮流程治理读模型。
+   - `fieldIdentities` 已先接入 MySQL-aware 身份权限判断，但字段身份业务表仍未迁 MySQL。
    - 若推进，应先补 MySQL repository/API 测试，再替换读写路径。
 2. 冲突、术语、映射基础库：
    - `conflicts`、`terminology`、`mappings` 仍有 SQLite 查询和权限 helper 直连。
