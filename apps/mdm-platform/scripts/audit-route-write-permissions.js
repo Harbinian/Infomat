@@ -87,7 +87,7 @@ function parseRoutes() {
 }
 
 function permissionFromSignature(signature) {
-  const match = signature.match(/requirePermission\(\s*['"`]([^'"`]+)['"`]\s*\)/);
+  const match = signature.match(/require(?:Org)?Permission\(\s*['"`]([^'"`]+)['"`]\s*\)/);
   if (match) return match[1];
   if (signature.includes('...adminGate') || signature.includes('...adminOnly')) return 'admin:access';
   return '';

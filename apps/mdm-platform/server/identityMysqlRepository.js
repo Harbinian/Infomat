@@ -21,6 +21,23 @@ function parseJsonObject(value, fallback = {}) {
   }
 }
 
+const BASIC_ROLE_CODES = new Set(['submitter', 'owner', 'reviewer', 'admin']);
+
+function normalizeRoleIds(roleIds) {
+  if (!Array.isArray(roleIds)) return [];
+  return [...new Set(roleIds.map(id => Number(id)).filter(id => Number.isInteger(id) && id > 0))];
+}
+
+function affectedRows(result) {
+  const meta = Array.isArray(result) ? result[0] : result;
+  return Number(meta && meta.affectedRows || 0);
+}
+
+function insertId(result) {
+  const meta = Array.isArray(result) ? result[0] : result;
+  return Number(meta && meta.insertId || 0);
+}
+
 function makeIdentityMysqlRepository(pool) {
   async function getUserRoleCodes(userId, legacyRole) {
     const assignedRoles = await rows(pool, `
@@ -101,6 +118,71 @@ function makeIdentityMysqlRepository(pool) {
     }
 
     return { permSet, fieldConstraints };
+  }
+
+  async function withOptionalTransaction(work) {
+    if (typeof pool.getConnection !== 'function') {
+      return await work(pool);
+    }
+
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+      const result = await work(connection);
+      await connection.commit();
+      return result;
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+  }
+
+  async function getRolesByIds(roleIds, executor = pool) {
+    const ids = normalizeRoleIds(roleIds);
+    if (ids.length === 0) return [];
+    const placeholders = ids.map(() => '?').join(',');
+    return await rows(executor, `
+      SELECT role_id, role_code, role_name
+      FROM roles
+      WHERE role_id IN (${placeholders})
+      ORDER BY is_system DESC, role_code
+    `, ids);
+  }
+
+  async function getRoleIdByCode(roleCode, executor = pool) {
+    if (!roleCode) return null;
+    const role = await first(executor, 'SELECT role_id FROM roles WHERE role_code=?', [roleCode]);
+    return role ? role.role_id : null;
+  }
+
+  async function chooseCompatibleRole(requestedRole, roleIds, fallbackRole, executor = pool) {
+    if (BASIC_ROLE_CODES.has(requestedRole)) return requestedRole;
+
+    const allRoleIds = await collectRoleAndAncestors(normalizeRoleIds(roleIds));
+    const roles = await getRolesByIds(allRoleIds, executor);
+    const basicRole = roles.find(role => BASIC_ROLE_CODES.has(role.role_code));
+    if (basicRole) return basicRole.role_code;
+
+    if (BASIC_ROLE_CODES.has(fallbackRole)) return fallbackRole;
+    return 'submitter';
+  }
+
+  async function syncUserRoles(userId, roleIds, compatibleRole, assignedBy, executor = pool) {
+    const ids = new Set(normalizeRoleIds(roleIds));
+    const compatibleRoleId = await getRoleIdByCode(compatibleRole, executor);
+    if (compatibleRoleId) ids.add(compatibleRoleId);
+    if (ids.size === 0) return;
+
+    await executor.execute('DELETE FROM user_roles WHERE user_id=?', [userId]);
+    for (const roleId of ids) {
+      await executor.execute('INSERT IGNORE INTO user_roles (user_id, role_id, assigned_by) VALUES (?, ?, ?)', [
+        userId,
+        roleId,
+        assignedBy || null
+      ]);
+    }
   }
 
   return {
@@ -224,8 +306,72 @@ function makeIdentityMysqlRepository(pool) {
 
     async updateOwnPassword(userId, passwordHash) {
       const result = await pool.execute('UPDATE users SET password_hash=?, must_change_password=0 WHERE id=?', [passwordHash, userId]);
-      const meta = Array.isArray(result) ? result[0] : null;
-      return Boolean(meta && meta.affectedRows > 0);
+      return affectedRows(result) > 0;
+    },
+
+    async createUser(payload = {}) {
+      return await withOptionalTransaction(async executor => {
+        const compatibleRole = await chooseCompatibleRole(payload.role, payload.role_ids, 'submitter', executor);
+        const result = await executor.execute(
+          'INSERT INTO users (name, employee_no, department_id, post, role, password_hash, must_change_password) VALUES (?, ?, ?, ?, ?, ?, ?)',
+          [
+            payload.name,
+            payload.employee_no,
+            payload.department_id || null,
+            payload.post || null,
+            compatibleRole,
+            payload.password_hash,
+            payload.must_change_password ? 1 : 0
+          ]
+        );
+        const id = insertId(result);
+        await syncUserRoles(id, payload.role_ids, compatibleRole, payload.assigned_by, executor);
+        return { id, role: compatibleRole };
+      });
+    },
+
+    async updateUser(userId, payload = {}) {
+      return await withOptionalTransaction(async executor => {
+        const existing = await first(executor, 'SELECT * FROM users WHERE id=?', [userId]);
+        if (!existing) return false;
+
+        const compatibleRole = await chooseCompatibleRole(payload.role, payload.role_ids, existing.role, executor);
+        const result = await executor.execute(
+          'UPDATE users SET name=?, department_id=?, post=?, role=? WHERE id=?',
+          [
+            payload.name || existing.name,
+            Object.prototype.hasOwnProperty.call(payload, 'department_id') ? payload.department_id || null : existing.department_id || null,
+            Object.prototype.hasOwnProperty.call(payload, 'post') ? payload.post || null : existing.post || null,
+            compatibleRole,
+            userId
+          ]
+        );
+        if (Array.isArray(payload.role_ids)) {
+          await syncUserRoles(userId, payload.role_ids, compatibleRole, payload.assigned_by, executor);
+        }
+        return affectedRows(result) > 0;
+      });
+    },
+
+    async resetUserPassword(userId, passwordHash, mustChangePassword) {
+      const result = await pool.execute('UPDATE users SET password_hash=?, must_change_password=? WHERE id=?', [
+        passwordHash,
+        mustChangePassword ? 1 : 0,
+        userId
+      ]);
+      return affectedRows(result) > 0;
+    },
+
+    async replaceUserRoles(userId, roleIds, assignedBy) {
+      return await withOptionalTransaction(async executor => {
+        const existing = await first(executor, 'SELECT * FROM users WHERE id=?', [userId]);
+        if (!existing) return false;
+
+        const compatibleRole = await chooseCompatibleRole(null, roleIds, existing.role, executor);
+        await syncUserRoles(userId, roleIds, compatibleRole, assignedBy, executor);
+        const result = await executor.execute('UPDATE users SET role=? WHERE id=?', [compatibleRole, userId]);
+        return affectedRows(result) > 0;
+      });
     },
 
     getUserEffectivePermissions

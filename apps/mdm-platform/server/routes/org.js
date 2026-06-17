@@ -11,6 +11,12 @@ let identityRepoPromise = null;
 let identityRepositoryFactory = null;
 
 function handleDbError(res, error) {
+  if (error && (error.code === 'ER_DUP_ENTRY' || String(error.message).includes('Duplicate'))) {
+    return res.status(409).json({ error: '编码或工号已存在' });
+  }
+  if (error && (String(error.code || '').startsWith('ER_CHECK_CONSTRAINT') || String(error.code || '').startsWith('ER_NO_REFERENCED_ROW'))) {
+    return res.status(400).json({ error: '数据不符合约束' });
+  }
   if (error && (error.code === 'SQLITE_CONSTRAINT_UNIQUE' || String(error.message).includes('UNIQUE constraint failed'))) {
     return res.status(409).json({ error: '编码或工号已存在' });
   }
@@ -33,6 +39,14 @@ function runAsyncAction(res, action, unavailableMessage) {
   return action().catch(error => {
     if (error && error.statusCode) {
       return res.status(error.statusCode).json({ error: error.message });
+    }
+    if (error && (
+      error.code === 'ER_DUP_ENTRY' ||
+      String(error.message).includes('Duplicate') ||
+      String(error.code || '').startsWith('ER_CHECK_CONSTRAINT') ||
+      String(error.code || '').startsWith('ER_NO_REFERENCED_ROW')
+    )) {
+      return handleDbError(res, error);
     }
     console.error(error);
     return res.status(unavailableMessage ? 503 : 500).json({ error: unavailableMessage || '服务器错误' });
@@ -346,7 +360,31 @@ router.get('/users/assignable', requireAuth, (req, res) => {
   });
 });
 
-router.post('/users', requirePermission('admin:access'), (req, res) => {
+router.post('/users', requireOrgPermission('admin:access'), (req, res) => {
+  if (useMysqlIdentityReadModel()) {
+    return runAsyncAction(res, async () => {
+      const { name, employee_no, department_id, post, role, password, role_ids } = req.body;
+      if (!name || !employee_no) return res.status(400).json({ error: '姓名和工号为必填' });
+      const passwordSetup = resolveCreatePassword(password);
+      if (passwordSetup.error) return res.status(400).json({ error: passwordSetup.error });
+      const repo = await identityRepository();
+      const created = await repo.createUser({
+        name,
+        employee_no,
+        department_id: department_id || null,
+        post: post || null,
+        role,
+        password_hash: hashPassword(passwordSetup.password),
+        must_change_password: passwordSetup.mustChangePassword,
+        role_ids,
+        assigned_by: req.session.userId
+      });
+      const body = { id: created.id };
+      if (passwordSetup.initialPassword) body.initial_password = passwordSetup.initialPassword;
+      return res.json(body);
+    }, '身份 MySQL 读取模型不可用');
+  }
+
   return runDbAction(res, () => {
     const { name, employee_no, department_id, post, role, password, role_ids } = req.body;
     if (!name || !employee_no) return res.status(400).json({ error: '姓名和工号为必填' });
@@ -366,7 +404,20 @@ router.post('/users', requirePermission('admin:access'), (req, res) => {
   });
 });
 
-router.put('/users/:id', requirePermission('admin:access'), (req, res) => {
+router.put('/users/:id', requireOrgPermission('admin:access'), (req, res) => {
+  if (useMysqlIdentityReadModel()) {
+    return runAsyncAction(res, async () => {
+      const { name, department_id, post, role, role_ids } = req.body;
+      const payload = { name, role, role_ids, assigned_by: req.session.userId };
+      if (Object.prototype.hasOwnProperty.call(req.body, 'department_id')) payload.department_id = department_id || null;
+      if (Object.prototype.hasOwnProperty.call(req.body, 'post')) payload.post = post || null;
+      const repo = await identityRepository();
+      const updated = await repo.updateUser(Number(req.params.id), payload);
+      if (!updated) return res.status(404).json({ error: '用户不存在' });
+      return res.json({ success: true });
+    }, '身份 MySQL 读取模型不可用');
+  }
+
   return runDbAction(res, () => {
     const existing = db.prepare('SELECT * FROM users WHERE id=?').get(req.params.id);
     if (!existing) return res.status(404).json({ error: '用户不存在' });
@@ -382,7 +433,25 @@ router.put('/users/:id', requirePermission('admin:access'), (req, res) => {
   });
 });
 
-router.post('/users/:id/password', requirePermission('admin:access'), (req, res) => {
+router.post('/users/:id/password', requireOrgPermission('admin:access'), (req, res) => {
+  if (useMysqlIdentityReadModel()) {
+    return runAsyncAction(res, async () => {
+      const { password } = req.body;
+      const passwordSetup = resolveResetPassword(password);
+      if (passwordSetup.error) return res.status(400).json({ error: passwordSetup.error });
+      const repo = await identityRepository();
+      const updated = await repo.resetUserPassword(
+        Number(req.params.id),
+        hashPassword(passwordSetup.password),
+        passwordSetup.mustChangePassword
+      );
+      if (!updated) return res.status(404).json({ error: '用户不存在' });
+      const body = { success: true };
+      if (passwordSetup.initialPassword) body.initial_password = passwordSetup.initialPassword;
+      return res.json(body);
+    }, '身份 MySQL 读取模型不可用');
+  }
+
   return runDbAction(res, () => {
     const { password } = req.body;
     const existing = db.prepare('SELECT id FROM users WHERE id=?').get(req.params.id);
@@ -517,7 +586,21 @@ router.get('/users/:id/roles', requireAuth, requireOrgPermission('admin:access')
 });
 
 // PUT /api/users/:id/roles — set user roles (replace all)
-router.put('/users/:id/roles', requireAuth, requirePermission('admin:access'), (req, res) => {
+router.put('/users/:id/roles', requireAuth, requireOrgPermission('admin:access'), (req, res) => {
+  if (useMysqlIdentityReadModel()) {
+    return runAsyncAction(res, async () => {
+      const { role_ids } = req.body;
+      if (!Array.isArray(role_ids) || role_ids.length === 0) {
+        return res.status(400).json({ error: '至少需要一个角色' });
+      }
+
+      const repo = await identityRepository();
+      const updated = await repo.replaceUserRoles(Number(req.params.id), role_ids, req.session.userId);
+      if (!updated) return res.status(404).json({ error: '用户不存在' });
+      return res.json({ success: true });
+    }, '身份 MySQL 读取模型不可用');
+  }
+
   return runDbAction(res, () => {
     const { role_ids } = req.body;
     if (!Array.isArray(role_ids) || role_ids.length === 0) {
