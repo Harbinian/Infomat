@@ -46,6 +46,7 @@ async function main() {
     '/api/process-governance/cross-dept',
     '/api/process-governance/candidate-review/runs',
     '/api/role-workbench',
+    '/api/activity/heatmap',
     '/api/page-workflows',
     'data-tab="roleWorkbench"',
     'id="roleWorkbench"',
@@ -55,7 +56,23 @@ async function main() {
     'id="roleWorkbenchMode"',
     'id="roleWorkbenchNextActions"',
     'id="roleWorkbenchSankey"',
+    'id="roleWorkbenchActivityHeatmap"',
     '我现在该做什么',
+    '我的治理活跃',
+    '治理活跃',
+    '参与热力',
+    'function renderActivityHeatmap',
+    'function loadRoleWorkbenchActivity',
+    'function loadDashboardActivity',
+    'function activityLevel',
+    'function renderActivityDayDetail',
+    'data-activity-date',
+    'id="dashboardActivityHeatmap"',
+    'id="dashboardActivityScope"',
+    'id="dashboardActivityDepartment"',
+    'id="dashboardActivityUser"',
+    'id="departmentActivitySummary"',
+    'id="userActivitySummary"',
     '项目工作角色',
     '基础权限角色',
     '角色目标',
@@ -136,6 +153,7 @@ async function main() {
   assert.ok(!html.includes('系统最忙'), 'frontend copy should avoid evaluative system wording');
   assert.ok(!html.includes('承载最多'), 'frontend copy should avoid evaluative system wording');
   assert.ok(!html.includes('主用系统'), 'frontend copy should avoid evaluative system wording');
+  assert.ok(!html.includes('出勤'), 'governance activity copy should not use attendance wording');
   assert.ok(!html.includes('prompt('), 'maintenance create/edit flows should use routed forms instead of native prompts');
   assert.ok(!html.includes('data-correction-fragment'), 'candidate review must not restore click-to-concat correction fragments');
   assert.ok(!html.includes('点选标签生成修正意见'), 'candidate review must not restore click-to-concat correction copy');

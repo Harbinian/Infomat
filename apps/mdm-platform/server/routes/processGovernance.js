@@ -4,7 +4,14 @@ const path = require('path');
 const mysql = require('mysql2/promise');
 const router = express.Router();
 const db = require('../db');
-const { requireAuth, getUserEffectivePermissions } = require('../auth');
+const {
+  requireAuth,
+  getUserEffectivePermissions,
+  getUserEffectivePermissionsAsync,
+  getUserRoleCodesAsync,
+  getUserByIdAsync,
+  getDepartmentByIdAsync
+} = require('../auth');
 const { mysqlConfigFromEnv } = require('../mysqlConfig');
 const {
   loadCandidateRunBundle: loadProcessCandidateRunBundle,
@@ -415,6 +422,72 @@ function canCloseMappingTodo(req) {
     requestHasQualityRole(req, ['admin', 'data_quality', 'decision_group', 'it_lead']);
 }
 
+async function getCurrentRoleCodesAsync(req) {
+  if (!req.session || !req.session.userId) return [];
+  const rows = await getUserRoleCodesAsync(req.session.userId, req.session.userRole);
+  const codes = new Set((rows || []).map(row => row.code || row.role_code).filter(Boolean));
+  if (req.session.userRole) codes.add(req.session.userRole);
+  return Array.from(codes);
+}
+
+async function requestHasQualityRoleAsync(req, roleCodes) {
+  if (!req.session || !req.session.userId) return false;
+  const current = await getCurrentRoleCodesAsync(req);
+  return roleCodes.some(code => current.includes(code));
+}
+
+async function requestHasAnyPermissionAsync(req, permissionCodes) {
+  if (!req.session || !req.session.userId) return false;
+  const { permSet } = await getUserEffectivePermissionsAsync(req.session.userId);
+  return permSet.has('*:*') || permissionCodes.some(code => permSet.has(code));
+}
+
+async function currentDepartmentNameAsync(req) {
+  if (!req.session || !req.session.departmentId) return '';
+  const department = await getDepartmentByIdAsync(req.session.departmentId);
+  return department && department.name || '';
+}
+
+async function canViewAllQualityCasesAsync(req) {
+  return await requestHasAnyPermissionAsync(req, ['data:view_all', 'admin:access']) ||
+    await requestHasQualityRoleAsync(req, ['admin', 'data_quality', 'decision_group']);
+}
+
+async function canManageQualityCaseAsync(req, qualityCase) {
+  if (await requestHasAnyPermissionAsync(req, ['process_quality:manage', 'review:approve', 'admin:access'])) return true;
+  if (await requestHasQualityRoleAsync(req, ['admin', 'data_quality', 'decision_group'])) return true;
+  if (!qualityCase || !req.session || !req.session.departmentId) return false;
+  const departmentName = await currentDepartmentNameAsync(req);
+  return await requestHasQualityRoleAsync(req, ['project_lead', 'workgroup_lead']) &&
+    (qualityCase.owner_dept_id === req.session.departmentId || qualityCase.dept_name === departmentName);
+}
+
+async function canCloseQualityCaseAsync(req) {
+  return await requestHasAnyPermissionAsync(req, ['process_quality:close', 'review:approve', 'admin:access']) ||
+    await requestHasQualityRoleAsync(req, ['admin', 'data_quality', 'decision_group']);
+}
+
+async function canViewAllMappingTodosAsync(req) {
+  return await requestHasAnyPermissionAsync(req, ['data:view_all', 'admin:access']) ||
+    await requestHasQualityRoleAsync(req, ['admin', 'data_quality', 'decision_group', 'it_lead']);
+}
+
+async function canManageMappingTodoAsync(req, todo) {
+  if (await requestHasAnyPermissionAsync(req, ['process_mapping:manage', 'review:approve', 'admin:access'])) return true;
+  if (await requestHasQualityRoleAsync(req, ['admin', 'data_quality', 'it_lead'])) return true;
+  if (!todo || !req.session || !req.session.departmentId) return false;
+  const departmentName = await currentDepartmentNameAsync(req);
+  return await requestHasQualityRoleAsync(req, ['project_lead', 'workgroup_lead', 'business_contact']) &&
+    (todo.owner_dept_id === req.session.departmentId ||
+     todo.dept_name === departmentName ||
+     todo.target_dept_name === departmentName);
+}
+
+async function canCloseMappingTodoAsync(req) {
+  return await requestHasAnyPermissionAsync(req, ['process_mapping:close', 'review:approve', 'admin:access']) ||
+    await requestHasQualityRoleAsync(req, ['admin', 'data_quality', 'decision_group', 'it_lead']);
+}
+
 function caseSelectSql() {
   return `
     SELECT c.*,
@@ -619,6 +692,20 @@ function getOwnerDeptId(ownerUserId, ownerDeptId) {
   if (!ownerUserId) return null;
   const owner = db.prepare('SELECT department_id FROM users WHERE id=?').get(ownerUserId);
   return owner && owner.department_id || null;
+}
+
+async function resolveOwnerAssignmentAsync(ownerUserId, requestedOwnerDeptId) {
+  let owner = null;
+  if (ownerUserId) {
+    owner = await getUserByIdAsync(ownerUserId);
+    if (!owner) return { error: '责任人不存在' };
+  }
+  const ownerDeptId = requestedOwnerDeptId || (owner && (owner.department_id || owner.departmentId)) || null;
+  if (ownerDeptId) {
+    const department = await getDepartmentByIdAsync(ownerDeptId);
+    if (!department) return { error: '责任部门不存在' };
+  }
+  return { ownerDeptId };
 }
 
 function parseCaseId(req) {
@@ -1059,6 +1146,8 @@ router.get('/quality-cases', requireAuth, (req, res) => {
     return runAsyncAction(res, async () => {
       const repo = await processGovernanceRepositoryOrSendUnavailable(res);
       if (!repo) return null;
+      const canViewAll = await canViewAllQualityCasesAsync(req);
+      const departmentName = await currentDepartmentNameAsync(req);
       return res.json(await repo.getQualityCases({
         severity: String(req.query.severity || '').toUpperCase(),
         status: req.query.status,
@@ -1068,10 +1157,8 @@ router.get('/quality-cases', requireAuth, (req, res) => {
         userId: req.session.userId,
         departmentId: req.session.departmentId || -1,
         snapshot: req.query.snapshot,
-        canViewAll: canViewAllQualityCases(req),
-        departmentName: req.session.departmentId
-          ? db.prepare('SELECT name FROM departments WHERE id=?').get(req.session.departmentId)?.name
-          : ''
+        canViewAll,
+        departmentName
       }));
     });
   }
@@ -1155,7 +1242,7 @@ router.get('/quality-cases/:id', requireAuth, (req, res) => {
       if (!repo) return null;
       const qualityCase = await repo.getQualityCase(parseCaseId(req));
       if (!qualityCase) return res.status(404).json({ error: '问题单不存在' });
-      if (!canViewAllQualityCases(req) && !canManageQualityCase(req, qualityCase)) {
+      if (!await canViewAllQualityCasesAsync(req) && !await canManageQualityCaseAsync(req, qualityCase)) {
         return res.status(403).json({ error: '权限不足' });
       }
       return res.json({ case: qualityCase, events: await repo.getQualityCaseEvents(qualityCase.id) });
@@ -1178,22 +1265,17 @@ router.post('/quality-cases/:id/assign', requireAuth, (req, res) => {
       if (!repo) return null;
       const qualityCase = await repo.getQualityCase(parseCaseId(req));
       if (!qualityCase) return res.status(404).json({ error: '问题单不存在' });
-      if (!canManageQualityCase(req, qualityCase)) return res.status(403).json({ error: '权限不足' });
+      if (!await canManageQualityCaseAsync(req, qualityCase)) return res.status(403).json({ error: '权限不足' });
       if (qualityCase.status === 'closed') return res.status(409).json({ error: '已关闭问题单不能分派' });
 
       const ownerUserId = req.body.owner_user_id ? Number(req.body.owner_user_id) : null;
-      if (ownerUserId && !db.prepare('SELECT id FROM users WHERE id=?').get(ownerUserId)) {
-        return res.status(400).json({ error: '责任人不存在' });
-      }
-      const ownerDeptId = getOwnerDeptId(ownerUserId, req.body.owner_dept_id ? Number(req.body.owner_dept_id) : null);
-      if (ownerDeptId && !db.prepare('SELECT id FROM departments WHERE id=?').get(ownerDeptId)) {
-        return res.status(400).json({ error: '责任部门不存在' });
-      }
+      const assignment = await resolveOwnerAssignmentAsync(ownerUserId, req.body.owner_dept_id ? Number(req.body.owner_dept_id) : null);
+      if (assignment.error) return res.status(400).json({ error: assignment.error });
       const priority = String(req.body.priority || qualityCase.priority || 'medium');
       if (!QUALITY_CASE_PRIORITIES.has(priority)) return res.status(400).json({ error: '优先级无效' });
       return res.json(await repo.assignQualityCase(qualityCase.id, {
         owner_user_id: ownerUserId,
-        owner_dept_id: ownerDeptId,
+        owner_dept_id: assignment.ownerDeptId,
         priority,
         due_date: req.body.due_date ? String(req.body.due_date) : null,
         actor_user_id: req.session.userId,
@@ -1246,7 +1328,7 @@ router.post('/quality-cases/:id/status', requireAuth, (req, res) => {
       if (!repo) return null;
       const qualityCase = await repo.getQualityCase(parseCaseId(req));
       if (!qualityCase) return res.status(404).json({ error: '问题单不存在' });
-      if (!canManageQualityCase(req, qualityCase)) return res.status(403).json({ error: '权限不足' });
+      if (!await canManageQualityCaseAsync(req, qualityCase)) return res.status(403).json({ error: '权限不足' });
       const nextStatus = String(req.body.status || '');
       if (!USER_SET_STATUSES.has(nextStatus)) return res.status(400).json({ error: '状态无效' });
       if (qualityCase.status === 'closed') return res.status(409).json({ error: '已关闭问题单不能直接改状态' });
@@ -1286,7 +1368,7 @@ router.post('/quality-cases/:id/comment', requireAuth, (req, res) => {
       if (!repo) return null;
       const qualityCase = await repo.getQualityCase(parseCaseId(req));
       if (!qualityCase) return res.status(404).json({ error: '问题单不存在' });
-      if (!canViewAllQualityCases(req) && !canManageQualityCase(req, qualityCase)) {
+      if (!await canViewAllQualityCasesAsync(req) && !await canManageQualityCaseAsync(req, qualityCase)) {
         return res.status(403).json({ error: '权限不足' });
       }
       const note = String(req.body.note || '').trim();
@@ -1318,7 +1400,7 @@ router.post('/quality-cases/:id/submit', requireAuth, (req, res) => {
       if (!repo) return null;
       const qualityCase = await repo.getQualityCase(parseCaseId(req));
       if (!qualityCase) return res.status(404).json({ error: '问题单不存在' });
-      if (!canManageQualityCase(req, qualityCase)) return res.status(403).json({ error: '权限不足' });
+      if (!await canManageQualityCaseAsync(req, qualityCase)) return res.status(403).json({ error: '权限不足' });
       if (qualityCase.status === 'closed') return res.status(409).json({ error: '已关闭问题单不能提交整改' });
       return res.json(await repo.submitQualityCase(qualityCase.id, {
         actor_user_id: req.session.userId,
@@ -1352,7 +1434,7 @@ router.post('/quality-cases/:id/close', requireAuth, (req, res) => {
       if (!repo) return null;
       const qualityCase = await repo.getQualityCase(parseCaseId(req));
       if (!qualityCase) return res.status(404).json({ error: '问题单不存在' });
-      if (!canCloseQualityCase(req)) return res.status(403).json({ error: '权限不足' });
+      if (!await canCloseQualityCaseAsync(req)) return res.status(403).json({ error: '权限不足' });
       if (qualityCase.status !== 'source_resolved') {
         return res.status(409).json({ error: '只有重新质检未再出现的问题单才能关闭' });
       }
@@ -1398,7 +1480,7 @@ router.post('/quality-cases/:id/reopen', requireAuth, (req, res) => {
       if (!repo) return null;
       const qualityCase = await repo.getQualityCase(parseCaseId(req));
       if (!qualityCase) return res.status(404).json({ error: '问题单不存在' });
-      if (!canCloseQualityCase(req)) return res.status(403).json({ error: '权限不足' });
+      if (!await canCloseQualityCaseAsync(req)) return res.status(403).json({ error: '权限不足' });
       return res.json(await repo.reopenQualityCase(qualityCase.id, {
         actor_user_id: req.session.userId,
         note: req.body.note || '手动重开治理问题单',
@@ -1433,14 +1515,14 @@ router.get('/mapping-workspace', requireAuth, (req, res) => {
     return runAsyncAction(res, async () => {
       const repo = await processGovernanceRepositoryOrSendUnavailable(res);
       if (!repo) return null;
+      const canViewAll = await canViewAllMappingTodosAsync(req);
+      const departmentName = await currentDepartmentNameAsync(req);
       return res.json(await repo.getMappingWorkspace({
         type: req.query.type,
         status: req.query.status,
         dept: req.query.dept,
-        canViewAll: canViewAllMappingTodos(req),
-        departmentName: req.session.departmentId
-          ? db.prepare('SELECT name FROM departments WHERE id=?').get(req.session.departmentId)?.name
-          : ''
+        canViewAll,
+        departmentName
       }));
     });
   }
@@ -1501,6 +1583,8 @@ router.get('/mapping-todos', requireAuth, (req, res) => {
     return runAsyncAction(res, async () => {
       const repo = await processGovernanceRepositoryOrSendUnavailable(res);
       if (!repo) return null;
+      const canViewAll = await canViewAllMappingTodosAsync(req);
+      const departmentName = await currentDepartmentNameAsync(req);
       return res.json(await repo.getMappingTodos({
         type: req.query.type,
         status: req.query.status,
@@ -1508,10 +1592,8 @@ router.get('/mapping-todos', requireAuth, (req, res) => {
         owner: req.query.owner,
         userId: req.session.userId,
         departmentId: req.session.departmentId || -1,
-        canViewAll: canViewAllMappingTodos(req),
-        departmentName: req.session.departmentId
-          ? db.prepare('SELECT name FROM departments WHERE id=?').get(req.session.departmentId)?.name
-          : ''
+        canViewAll,
+        departmentName
       }));
     });
   }
@@ -1593,7 +1675,7 @@ router.get('/mapping-todos/:id', requireAuth, (req, res) => {
       if (!repo) return null;
       const todo = await repo.getMappingTodo(Number(req.params.id || 0));
       if (!todo) return res.status(404).json({ error: '映射待办不存在' });
-      if (!canViewAllMappingTodos(req) && !canManageMappingTodo(req, todo)) {
+      if (!await canViewAllMappingTodosAsync(req) && !await canManageMappingTodoAsync(req, todo)) {
         return res.status(403).json({ error: '权限不足' });
       }
       return res.json({ todo, events: await repo.getMappingTodoEvents(todo.id) });
@@ -1616,22 +1698,17 @@ router.post('/mapping-todos/:id/assign', requireAuth, (req, res) => {
       if (!repo) return null;
       const todo = await repo.getMappingTodo(Number(req.params.id || 0));
       if (!todo) return res.status(404).json({ error: '映射待办不存在' });
-      if (!canManageMappingTodo(req, todo)) return res.status(403).json({ error: '权限不足' });
+      if (!await canManageMappingTodoAsync(req, todo)) return res.status(403).json({ error: '权限不足' });
       if (todo.status === 'closed') return res.status(409).json({ error: '已关闭待办不能分派' });
 
       const ownerUserId = req.body.owner_user_id ? Number(req.body.owner_user_id) : null;
-      if (ownerUserId && !db.prepare('SELECT id FROM users WHERE id=?').get(ownerUserId)) {
-        return res.status(400).json({ error: '责任人不存在' });
-      }
-      const ownerDeptId = getOwnerDeptId(ownerUserId, req.body.owner_dept_id ? Number(req.body.owner_dept_id) : null);
-      if (ownerDeptId && !db.prepare('SELECT id FROM departments WHERE id=?').get(ownerDeptId)) {
-        return res.status(400).json({ error: '责任部门不存在' });
-      }
+      const assignment = await resolveOwnerAssignmentAsync(ownerUserId, req.body.owner_dept_id ? Number(req.body.owner_dept_id) : null);
+      if (assignment.error) return res.status(400).json({ error: assignment.error });
       const priority = String(req.body.priority || todo.priority || 'medium');
       if (!QUALITY_CASE_PRIORITIES.has(priority)) return res.status(400).json({ error: '优先级无效' });
       return res.json(await repo.assignMappingTodo(todo.id, {
         owner_user_id: ownerUserId,
-        owner_dept_id: ownerDeptId,
+        owner_dept_id: assignment.ownerDeptId,
         priority,
         due_date: req.body.due_date ? String(req.body.due_date) : null,
         actor_user_id: req.session.userId,
@@ -1684,7 +1761,7 @@ router.post('/mapping-todos/:id/status', requireAuth, (req, res) => {
       if (!repo) return null;
       const todo = await repo.getMappingTodo(Number(req.params.id || 0));
       if (!todo) return res.status(404).json({ error: '映射待办不存在' });
-      if (!canManageMappingTodo(req, todo)) return res.status(403).json({ error: '权限不足' });
+      if (!await canManageMappingTodoAsync(req, todo)) return res.status(403).json({ error: '权限不足' });
       const nextStatus = String(req.body.status || '');
       if (!USER_SET_MAPPING_TODO_STATUSES.has(nextStatus)) return res.status(400).json({ error: '状态无效' });
       if (todo.status === 'closed') return res.status(409).json({ error: '已关闭待办不能直接改状态' });
@@ -1720,7 +1797,7 @@ router.post('/mapping-todos/:id/comment', requireAuth, (req, res) => {
       if (!repo) return null;
       const todo = await repo.getMappingTodo(Number(req.params.id || 0));
       if (!todo) return res.status(404).json({ error: '映射待办不存在' });
-      if (!canViewAllMappingTodos(req) && !canManageMappingTodo(req, todo)) {
+      if (!await canViewAllMappingTodosAsync(req) && !await canManageMappingTodoAsync(req, todo)) {
         return res.status(403).json({ error: '权限不足' });
       }
       const note = String(req.body.note || '').trim();
@@ -1752,7 +1829,7 @@ router.post('/mapping-todos/:id/submit', requireAuth, (req, res) => {
       if (!repo) return null;
       const todo = await repo.getMappingTodo(Number(req.params.id || 0));
       if (!todo) return res.status(404).json({ error: '映射待办不存在' });
-      if (!canManageMappingTodo(req, todo)) return res.status(403).json({ error: '权限不足' });
+      if (!await canManageMappingTodoAsync(req, todo)) return res.status(403).json({ error: '权限不足' });
       if (todo.status === 'closed') return res.status(409).json({ error: '已关闭待办不能提交' });
       return res.json(await repo.submitMappingTodo(todo.id, {
         actor_user_id: req.session.userId,
@@ -1782,7 +1859,7 @@ router.post('/mapping-todos/:id/close', requireAuth, (req, res) => {
       if (!repo) return null;
       const todo = await repo.getMappingTodo(Number(req.params.id || 0));
       if (!todo) return res.status(404).json({ error: '映射待办不存在' });
-      if (!canCloseMappingTodo(req)) return res.status(403).json({ error: '权限不足' });
+      if (!await canCloseMappingTodoAsync(req)) return res.status(403).json({ error: '权限不足' });
       if (todo.status !== 'source_resolved') {
         return res.status(409).json({ error: '只有重新导入后未再出现的映射待办才能关闭' });
       }
@@ -1828,7 +1905,7 @@ router.post('/mapping-todos/:id/reopen', requireAuth, (req, res) => {
       if (!repo) return null;
       const todo = await repo.getMappingTodo(Number(req.params.id || 0));
       if (!todo) return res.status(404).json({ error: '映射待办不存在' });
-      if (!canCloseMappingTodo(req)) return res.status(403).json({ error: '权限不足' });
+      if (!await canCloseMappingTodoAsync(req)) return res.status(403).json({ error: '权限不足' });
       return res.json(await repo.reopenMappingTodo(todo.id, {
         actor_user_id: req.session.userId,
         note: req.body.note || '手动重开流程映射待办',

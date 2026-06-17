@@ -5,10 +5,13 @@ const db = require('../db');
 const { requireAuth, getUserEffectivePermissions } = require('../auth');
 const { mysqlConfigFromEnv } = require('../mysqlConfig');
 const { makeIdentityMysqlRepository } = require('../identityMysqlRepository');
+const { makeProcessGovernanceMysqlRepository } = require('../processGovernanceMysqlRepository');
 const { ROLE_GUIDES } = require('../roleDefinitions');
 
 let identityRepoPromise = null;
 let identityRepositoryFactory = null;
+let processGovernanceRepoPromise = null;
+let processGovernanceRepositoryFactory = null;
 
 const TODO_TYPE_LABELS = {
   field_confirm: '字段确认',
@@ -44,6 +47,10 @@ function useMysqlIdentityReadModel() {
   return String(process.env.MDM_IDENTITY_READ_MODEL || '').toLowerCase() === 'mysql';
 }
 
+function useMysqlProcessGovernanceReadModel() {
+  return String(process.env.PROCESS_GOVERNANCE_READ_MODEL || '').toLowerCase() === 'mysql';
+}
+
 async function identityRepository() {
   if (identityRepositoryFactory) {
     return await identityRepositoryFactory();
@@ -72,6 +79,36 @@ function setIdentityRepositoryFactory(factory) {
 function resetIdentityRepositoryFactory() {
   identityRepositoryFactory = null;
   identityRepoPromise = null;
+}
+
+async function processGovernanceRepository() {
+  if (processGovernanceRepositoryFactory) {
+    return await processGovernanceRepositoryFactory();
+  }
+  if (!processGovernanceRepoPromise) {
+    processGovernanceRepoPromise = (async () => {
+      const pool = mysql.createPool(mysqlConfigFromEnv());
+      const repo = makeProcessGovernanceMysqlRepository(pool);
+      await repo.initSchema();
+      return repo;
+    })();
+  }
+  try {
+    return await processGovernanceRepoPromise;
+  } catch (error) {
+    processGovernanceRepoPromise = null;
+    throw error;
+  }
+}
+
+function setProcessGovernanceRepositoryFactory(factory) {
+  processGovernanceRepositoryFactory = factory;
+  processGovernanceRepoPromise = null;
+}
+
+function resetProcessGovernanceRepositoryFactory() {
+  processGovernanceRepositoryFactory = null;
+  processGovernanceRepoPromise = null;
 }
 
 function getCurrentRoles(userId, legacyRole) {
@@ -299,6 +336,26 @@ function loadTodos(req, canViewAll) {
   }));
 }
 
+function qualityCaseWorkItem(row) {
+  return {
+    id: `process-quality-case:${row.id}`,
+    type: 'process_quality',
+    title: `${row.severity}：${row.message}`,
+    roleHint: 'data_quality',
+    urgency: row.priority === 'high' || row.severity === 'BLOCK' ? 'high' : 'medium',
+    dueDate: row.due_date || null,
+    target: `#/processGovernance?view=qualityCases&case=${row.id}`,
+    actionLabel: '查看治理问题单',
+    sample: row.suggestion || '先回到来源文件确认问题，完成整改后重新运行流程治理解析和导入。',
+    source: row.source_file,
+    targetDept: row.dept_name || null,
+    area: row.area,
+    sourceLine: row.source_line,
+    status: row.status,
+    ownerDept: row.owner_dept_name || null
+  };
+}
+
 function loadProcessQualityFindings(req, canViewAll, currentDepartmentName) {
   const departmentName = currentDepartmentName || (
     req.session.departmentId
@@ -328,29 +385,53 @@ function loadProcessQualityFindings(req, canViewAll, currentDepartmentName) {
     LIMIT 20
   `;
 
-  return db.prepare(sql).all(...params).map(row => ({
-    id: `process-quality-case:${row.id}`,
-    type: 'process_quality',
-    title: `${row.severity}：${row.message}`,
-    roleHint: 'data_quality',
-    urgency: row.priority === 'high' || row.severity === 'BLOCK' ? 'high' : 'medium',
-    dueDate: row.due_date || null,
-    target: `#/processGovernance?view=qualityCases&case=${row.id}`,
-    actionLabel: '查看治理问题单',
-    sample: row.suggestion || '先回到来源文件确认问题，完成整改后重新运行流程治理解析和导入。',
-    source: row.source_file,
-    targetDept: row.dept_name || null,
-    area: row.area,
-    sourceLine: row.source_line,
-    status: row.status,
-    ownerDept: row.owner_dept_name || null
-  }));
+  return db.prepare(sql).all(...params).map(qualityCaseWorkItem);
+}
+
+async function loadProcessQualityFindingsAsync(req, canViewAll, currentDepartmentName) {
+  if (!useMysqlProcessGovernanceReadModel()) {
+    return loadProcessQualityFindings(req, canViewAll, currentDepartmentName);
+  }
+
+  const repo = await processGovernanceRepository();
+  const result = await repo.getQualityCases({
+    userId: req.session.userId,
+    departmentId: req.session.departmentId || -1,
+    canViewAll,
+    departmentName: currentDepartmentName || ''
+  });
+  return (result.items || [])
+    .filter(row => ['BLOCK', 'WARN'].includes(String(row.severity || '').toUpperCase()))
+    .filter(row => !['closed', 'source_resolved'].includes(String(row.status || '')))
+    .slice(0, 20)
+    .map(qualityCaseWorkItem);
 }
 
 function roleHintForMappingTodo(row) {
   if (row.todo_type === 'verification' || row.todo_type === 'evidence' || row.todo_type === 'adjustment') return 'business_contact';
   if (row.todo_type === 'cross_dept' || row.todo_type === 'dept_confirm') return 'workgroup_lead';
   return 'business_contact';
+}
+
+function mappingTodoWorkItem(row) {
+  return {
+    id: `process-mapping-todo:${row.id}`,
+    type: 'process_mapping_todo',
+    title: `${TODO_TYPE_LABELS.process_mapping_todo}：${row.message}`,
+    roleHint: roleHintForMappingTodo(row),
+    urgency: row.priority === 'high' ? 'high' : 'medium',
+    dueDate: row.due_date || null,
+    target: `#/processGovernance?view=mappingTodos&todo=${row.id}`,
+    actionLabel: '查看映射待办',
+    sample: row.suggestion || '先核对来源映射关系，回源整改后重新导入。',
+    a1Code: row.a1_code || null,
+    source: row.source_file || '流程映射工作库',
+    targetDept: row.target_dept_name || row.dept_name || null,
+    area: row.todo_type,
+    sourceLine: row.source_line,
+    status: row.status,
+    ownerDept: row.owner_dept_name || null
+  };
 }
 
 function loadProcessMappingTodos(req, canViewAll, currentDepartmentName) {
@@ -380,24 +461,25 @@ function loadProcessMappingTodos(req, canViewAll, currentDepartmentName) {
     LIMIT 20
   `;
 
-  return db.prepare(sql).all(...params).map(row => ({
-    id: `process-mapping-todo:${row.id}`,
-    type: 'process_mapping_todo',
-    title: `${TODO_TYPE_LABELS.process_mapping_todo}：${row.message}`,
-    roleHint: roleHintForMappingTodo(row),
-    urgency: row.priority === 'high' ? 'high' : 'medium',
-    dueDate: row.due_date || null,
-    target: `#/processGovernance?view=mappingTodos&todo=${row.id}`,
-    actionLabel: '查看映射待办',
-    sample: row.suggestion || '先核对来源映射关系，回源整改后重新导入。',
-    a1Code: row.a1_code || null,
-    source: row.source_file || '流程映射工作库',
-    targetDept: row.target_dept_name || row.dept_name || null,
-    area: row.todo_type,
-    sourceLine: row.source_line,
-    status: row.status,
-    ownerDept: row.owner_dept_name || null
-  }));
+  return db.prepare(sql).all(...params).map(mappingTodoWorkItem);
+}
+
+async function loadProcessMappingTodosAsync(req, canViewAll, currentDepartmentName) {
+  if (!useMysqlProcessGovernanceReadModel()) {
+    return loadProcessMappingTodos(req, canViewAll, currentDepartmentName);
+  }
+
+  const repo = await processGovernanceRepository();
+  const result = await repo.getMappingTodos({
+    userId: req.session.userId,
+    departmentId: req.session.departmentId || -1,
+    canViewAll,
+    departmentName: currentDepartmentName || ''
+  }, 20);
+  return (result.items || [])
+    .filter(row => !['closed', 'source_resolved', 'accepted'].includes(String(row.status || '')))
+    .slice(0, 20)
+    .map(mappingTodoWorkItem);
 }
 
 function roleHintForTodo(type) {
@@ -599,8 +681,8 @@ router.get('/', requireAuth, (req, res) => {
     const canDecideEscalated = permSet.has('conflict:final_decide_escalated') || permSet.has('*:*') || roleCodes.includes('admin');
     const currentDepartmentName = identity.user.departmentName;
     const todos = loadTodos(req, canViewAll);
-    const qualityFindings = loadProcessQualityFindings(req, canViewAll, currentDepartmentName);
-    const mappingTodos = loadProcessMappingTodos(req, canViewAll, currentDepartmentName);
+    const qualityFindings = await loadProcessQualityFindingsAsync(req, canViewAll, currentDepartmentName);
+    const mappingTodos = await loadProcessMappingTodosAsync(req, canViewAll, currentDepartmentName);
     const escalated = loadEscalatedConflicts(canDecideEscalated);
     const activeRoles = ownedRoles.length ? ownedRoles : roles.filter(role => role.code === req.session.userRole);
     const pendingWorkItems = [...escalated, ...qualityFindings, ...mappingTodos, ...todos];
@@ -656,5 +738,7 @@ router.get('/', requireAuth, (req, res) => {
 
 router.setIdentityRepositoryFactory = setIdentityRepositoryFactory;
 router.resetIdentityRepositoryFactory = resetIdentityRepositoryFactory;
+router.setProcessGovernanceRepositoryFactory = setProcessGovernanceRepositoryFactory;
+router.resetProcessGovernanceRepositoryFactory = resetProcessGovernanceRepositoryFactory;
 
 module.exports = router;

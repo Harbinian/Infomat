@@ -257,6 +257,11 @@ function makeFakePool() {
         return [[user].filter(Boolean), undefined];
       }
 
+      if (normalizedSql === 'SELECT * FROM departments WHERE id=?') {
+        const department = state.departments.find(row => row.id === params[0]);
+        return [[department].filter(Boolean), undefined];
+      }
+
       if (normalizedSql === 'UPDATE users SET name=?, department_id=?, post=?, role=? WHERE id=?') {
         const user = state.users.find(row => row.id === params[4]);
         if (user) {
@@ -532,6 +537,10 @@ async function main() {
   assert.strictEqual(loginUser.id, 42);
   assert.ok(verifyPassword(OLD_PASSWORD, loginUser.password_hash));
 
+  const userById = await repo.getUserById(42);
+  assert.strictEqual(userById.employee_no, 'U042');
+  assert.strictEqual(userById.department_id, 9);
+
   const missingLoginUser = await repo.getUserByEmployeeNo('missing');
   assert.strictEqual(missingLoginUser, null);
 
@@ -554,6 +563,9 @@ async function main() {
 
   const departments = await repo.listDepartments();
   assert.deepStrictEqual(departments.map(department => department.code), ['ENG', 'QMS']);
+
+  const departmentById = await repo.getDepartmentById(9);
+  assert.strictEqual(departmentById.name, '工程技术部');
 
   const createdDepartment = await repo.createDepartment({
     name: '项目管理部',
