@@ -34,6 +34,7 @@ async function main() {
   let mustChangePassword = 1;
   let loginCalls = 0;
   let passwordUpdates = 0;
+  let permissionChecks = 0;
   orgRouter.setIdentityRepositoryFactory(() => ({
     async getUserByEmployeeNo(employeeNo) {
       loginCalls += 1;
@@ -62,6 +63,42 @@ async function main() {
         ],
         roleCodes: ['owner', 'data_quality'],
         permissions: ['mapping:read', 'process_quality:manage']
+      };
+    },
+    async getUserEffectivePermissions(userId) {
+      assert.strictEqual(userId, 42);
+      permissionChecks += 1;
+      return {
+        permSet: new Set(['admin:access', 'conflict:manage', 'review:approve']),
+        fieldConstraints: {}
+      };
+    },
+    async listUsers() {
+      return [
+        { id: 42, name: '张三', employee_no: 'U042', department_id: 9, post: '流程治理专员', role: 'owner', created_at: null, dept_name: '工程技术部' },
+        { id: 43, name: '李四', employee_no: 'U043', department_id: 10, post: '质量审核员', role: 'reviewer', created_at: null, dept_name: '质量管理部' }
+      ];
+    },
+    async listUserRoleSummaries() {
+      return [
+        { id: 42, name: '张三', employee_no: 'U042', department_id: 9, dept_name: '工程技术部', post: '流程治理专员', role: 'owner', created_at: null, rbac_role_codes: 'data_quality,it_lead', rbac_role_names: '数据质量员,IT负责人' }
+      ];
+    },
+    async listAssignableUsers() {
+      return [
+        { id: 42, name: '张三', department_id: 9, dept_name: '工程技术部' }
+      ];
+    },
+    async getAssignedRoles(userId) {
+      assert.strictEqual(userId, 42);
+      return [
+        { role_id: 4, role_code: 'data_quality', role_name: '数据质量员', is_system: 0 }
+      ];
+    },
+    async getPermissionsGrouped() {
+      return {
+        admin: [{ perm_id: 13, perm_code: 'admin:access', resource: 'admin', action: 'access' }],
+        review: [{ perm_id: 14, perm_code: 'review:approve', resource: 'review', action: 'approve' }]
       };
     },
     async getPasswordStatus(userId) {
@@ -176,6 +213,32 @@ async function main() {
     const updatedStatusBody = await updatedStatusRes.json();
     assert.strictEqual(updatedStatusRes.status, 200, JSON.stringify(updatedStatusBody));
     assert.strictEqual(updatedStatusBody.is_default_password, false);
+
+    const usersRes = await fetch(`${baseUrl}/api/org/users`);
+    const usersBody = await usersRes.json();
+    assert.strictEqual(usersRes.status, 200, JSON.stringify(usersBody));
+    assert.deepStrictEqual(usersBody.map(user => user.employee_no), ['U042', 'U043']);
+
+    const rolesSummaryRes = await fetch(`${baseUrl}/api/org/users/roles-summary`);
+    const rolesSummaryBody = await rolesSummaryRes.json();
+    assert.strictEqual(rolesSummaryRes.status, 200, JSON.stringify(rolesSummaryBody));
+    assert.strictEqual(rolesSummaryBody[0].rbac_role_codes, 'data_quality,it_lead');
+
+    const assignableRes = await fetch(`${baseUrl}/api/org/users/assignable`);
+    const assignableBody = await assignableRes.json();
+    assert.strictEqual(assignableRes.status, 200, JSON.stringify(assignableBody));
+    assert.strictEqual(assignableBody[0].dept_name, '工程技术部');
+
+    const assignedRolesRes = await fetch(`${baseUrl}/api/org/users/42/roles`);
+    const assignedRolesBody = await assignedRolesRes.json();
+    assert.strictEqual(assignedRolesRes.status, 200, JSON.stringify(assignedRolesBody));
+    assert.deepStrictEqual(assignedRolesBody.map(role => role.role_code), ['data_quality']);
+
+    const permissionsRes = await fetch(`${baseUrl}/api/org/permissions`);
+    const permissionsBody = await permissionsRes.json();
+    assert.strictEqual(permissionsRes.status, 200, JSON.stringify(permissionsBody));
+    assert.strictEqual(permissionsBody.admin[0].perm_code, 'admin:access');
+    assert.ok(permissionChecks >= 5, 'admin read routes should check permissions through identity repository');
 
     console.log('Org /me MySQL API route test passed');
   } finally {

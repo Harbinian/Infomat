@@ -114,6 +114,77 @@ function makeIdentityMysqlRepository(pool) {
       return await first(pool, 'SELECT * FROM users WHERE employee_no=?', [employeeNo]);
     },
 
+    async listUsers() {
+      return await rows(pool, `
+        SELECT u.id, u.name, u.employee_no, u.department_id, u.post, u.role, u.created_at, d.name as dept_name
+        FROM users u
+        LEFT JOIN departments d ON u.department_id = d.id
+        ORDER BY u.employee_no
+      `);
+    },
+
+    async listUserRoleSummaries() {
+      const userRows = await rows(pool, `
+        SELECT u.id, u.name, u.employee_no, u.post, u.role, u.department_id, u.created_at,
+               d.name as dept_name,
+               COALESCE(GROUP_CONCAT(r.role_code), '') as rbac_role_codes,
+               COALESCE(GROUP_CONCAT(r.role_name), '') as rbac_role_names
+        FROM users u
+        LEFT JOIN departments d ON u.department_id = d.id
+        LEFT JOIN user_roles ur ON u.id = ur.user_id
+        LEFT JOIN roles r ON ur.role_id = r.role_id
+        GROUP BY u.id
+        ORDER BY u.employee_no
+      `);
+      return userRows.map(user => ({
+        id: user.id,
+        name: user.name,
+        employee_no: user.employee_no,
+        department_id: user.department_id,
+        dept_name: user.dept_name || null,
+        post: user.post,
+        role: user.role,
+        created_at: user.created_at,
+        rbac_role_codes: user.rbac_role_codes || '',
+        rbac_role_names: user.rbac_role_names || ''
+      }));
+    },
+
+    async listAssignableUsers() {
+      const userRows = await rows(pool, `
+        SELECT u.id, u.name, u.department_id, d.name AS dept_name
+        FROM users u
+        LEFT JOIN departments d ON u.department_id = d.id
+        ORDER BY d.name, u.name
+      `);
+      return userRows.map(user => ({
+        id: user.id,
+        name: user.name,
+        department_id: user.department_id,
+        dept_name: user.dept_name || null
+      }));
+    },
+
+    async getAssignedRoles(userId) {
+      return await rows(pool, `
+        SELECT r.role_id, r.role_code, r.role_name, r.is_system
+        FROM user_roles ur
+        JOIN roles r ON ur.role_id = r.role_id
+        WHERE ur.user_id=?
+        ORDER BY r.is_system DESC, r.role_code
+      `, [userId]);
+    },
+
+    async getPermissionsGrouped() {
+      const permissions = await rows(pool, 'SELECT * FROM permissions ORDER BY resource, action');
+      const grouped = {};
+      for (const permission of permissions) {
+        if (!grouped[permission.resource]) grouped[permission.resource] = [];
+        grouped[permission.resource].push(permission);
+      }
+      return grouped;
+    },
+
     async getCurrentUserPayload(session = {}) {
       if (!session.userId) return null;
 
