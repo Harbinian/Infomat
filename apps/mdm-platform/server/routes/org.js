@@ -197,11 +197,43 @@ function resolveResetPassword(password) {
 }
 
 router.get('/departments', requireAuth, (req, res) => {
+  if (useMysqlIdentityReadModel()) {
+    return runAsyncAction(res, async () => {
+      const repo = await identityRepository();
+      return res.json(await repo.listDepartments());
+    }, '身份 MySQL 读取模型不可用');
+  }
+
   const depts = db.prepare('SELECT * FROM departments ORDER BY code').all();
   res.json(depts);
 });
 
-router.post('/departments', requirePermission('admin:access'), (req, res) => {
+router.post('/departments', requireOrgPermission('admin:access'), (req, res) => {
+  if (useMysqlIdentityReadModel()) {
+    return runAsyncAction(res, async () => {
+      const {
+        name, code, parent_id, department_type, manager_user_id, data_owner_user_id,
+        source_system, external_id, status, effective_from, effective_to
+      } = req.body;
+      const repo = await identityRepository();
+      const created = await repo.createDepartment({
+        name,
+        code,
+        parent_id: parent_id || null,
+        department_type: department_type || null,
+        manager_user_id: manager_user_id || null,
+        data_owner_user_id: data_owner_user_id || null,
+        source_system: source_system || 'MDM_SYS',
+        external_id: external_id || null,
+        status: status || 'active',
+        effective_from: effective_from || null,
+        effective_to: effective_to || null,
+        created_by: req.session.userId
+      });
+      return res.json({ id: created.id });
+    }, '身份 MySQL 读取模型不可用');
+  }
+
   return runDbAction(res, () => {
     const { 
       name, code, parent_id, department_type, manager_user_id, data_owner_user_id, 
@@ -236,7 +268,33 @@ router.post('/departments', requirePermission('admin:access'), (req, res) => {
   });
 });
 
-router.put('/departments/:id', requirePermission('admin:access'), (req, res) => {
+router.put('/departments/:id', requireOrgPermission('admin:access'), (req, res) => {
+  if (useMysqlIdentityReadModel()) {
+    return runAsyncAction(res, async () => {
+      const {
+        name, code, parent_id, sort_order, department_type, manager_user_id, data_owner_user_id,
+        source_system, external_id, status, effective_from, effective_to
+      } = req.body;
+      const repo = await identityRepository();
+      await repo.updateDepartment(Number(req.params.id), {
+        name,
+        code,
+        parent_id: parent_id || null,
+        sort_order: sort_order || 0,
+        department_type: department_type || null,
+        manager_user_id: manager_user_id || null,
+        data_owner_user_id: data_owner_user_id || null,
+        source_system: source_system || 'MDM_SYS',
+        external_id: external_id || null,
+        status: status || 'active',
+        effective_from: effective_from || null,
+        effective_to: effective_to || null,
+        updated_by: req.session.userId
+      });
+      return res.json({ success: true });
+    }, '身份 MySQL 读取模型不可用');
+  }
+
   return runDbAction(res, () => {
     const { 
       name, code, parent_id, sort_order, department_type, manager_user_id, data_owner_user_id, 
@@ -268,7 +326,15 @@ router.put('/departments/:id', requirePermission('admin:access'), (req, res) => 
   });
 });
 
-router.delete('/departments/:id', requirePermission('admin:access'), (req, res) => {
+router.delete('/departments/:id', requireOrgPermission('admin:access'), (req, res) => {
+  if (useMysqlIdentityReadModel()) {
+    return runAsyncAction(res, async () => {
+      const repo = await identityRepository();
+      await repo.deleteDepartment(Number(req.params.id));
+      return res.json({ success: true });
+    }, '身份 MySQL 读取模型不可用');
+  }
+
   return runDbAction(res, () => {
     db.prepare('DELETE FROM departments WHERE id=?').run(req.params.id);
     res.json({ success: true });

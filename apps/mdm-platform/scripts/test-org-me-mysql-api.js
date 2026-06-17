@@ -39,6 +39,9 @@ async function main() {
   const updatedUsers = [];
   const resetPasswords = [];
   const replacedRoles = [];
+  const createdDepartments = [];
+  const updatedDepartments = [];
+  const deletedDepartments = [];
   orgRouter.setIdentityRepositoryFactory(() => ({
     async getUserByEmployeeNo(employeeNo) {
       loginCalls += 1;
@@ -104,6 +107,24 @@ async function main() {
         admin: [{ perm_id: 13, perm_code: 'admin:access', resource: 'admin', action: 'access' }],
         review: [{ perm_id: 14, perm_code: 'review:approve', resource: 'review', action: 'approve' }]
       };
+    },
+    async listDepartments() {
+      return [
+        { id: 9, name: '工程技术部', code: 'ENG', path: '/9/', status: 'active' },
+        { id: 10, name: '质量管理部', code: 'QMS', path: '/10/', status: 'active' }
+      ];
+    },
+    async createDepartment(payload) {
+      createdDepartments.push(payload);
+      return { id: 99 };
+    },
+    async updateDepartment(departmentId, payload) {
+      updatedDepartments.push({ departmentId, payload });
+      return departmentId === 99;
+    },
+    async deleteDepartment(departmentId) {
+      deletedDepartments.push(departmentId);
+      return departmentId === 99;
     },
     async createUser(payload) {
       createdUsers.push(payload);
@@ -234,6 +255,61 @@ async function main() {
     assert.strictEqual(updatedStatusRes.status, 200, JSON.stringify(updatedStatusBody));
     assert.strictEqual(updatedStatusBody.is_default_password, false);
 
+    const departmentsRes = await fetch(`${baseUrl}/api/org/departments`);
+    const departmentsBody = await departmentsRes.json();
+    assert.strictEqual(departmentsRes.status, 200, JSON.stringify(departmentsBody));
+    assert.deepStrictEqual(departmentsBody.map(department => department.code), ['ENG', 'QMS']);
+
+    const createDepartmentRes = await fetch(`${baseUrl}/api/org/departments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: '项目管理部',
+        code: 'PMO',
+        parent_id: 9,
+        department_type: '业务',
+        manager_user_id: 42,
+        data_owner_user_id: 43,
+        source_system: 'MDM_SYS',
+        external_id: 'EXT-PMO',
+        status: 'active',
+        effective_from: '2026-01-01',
+        effective_to: null
+      })
+    });
+    const createDepartmentBody = await createDepartmentRes.json();
+    assert.strictEqual(createDepartmentRes.status, 200, JSON.stringify(createDepartmentBody));
+    assert.strictEqual(createDepartmentBody.id, 99);
+    assert.strictEqual(createdDepartments[0].code, 'PMO');
+    assert.strictEqual(createdDepartments[0].created_by, 42);
+
+    const updateDepartmentRes = await fetch(`${baseUrl}/api/org/departments/99`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: '项目管理部更新',
+        code: 'PMO2',
+        parent_id: null,
+        sort_order: 7,
+        department_type: '管理',
+        data_owner_user_id: 42,
+        source_system: 'MDM_SYS',
+        status: 'active'
+      })
+    });
+    const updateDepartmentBody = await updateDepartmentRes.json();
+    assert.strictEqual(updateDepartmentRes.status, 200, JSON.stringify(updateDepartmentBody));
+    assert.strictEqual(updateDepartmentBody.success, true);
+    assert.strictEqual(updatedDepartments[0].departmentId, 99);
+    assert.strictEqual(updatedDepartments[0].payload.code, 'PMO2');
+    assert.strictEqual(updatedDepartments[0].payload.updated_by, 42);
+
+    const deleteDepartmentRes = await fetch(`${baseUrl}/api/org/departments/99`, { method: 'DELETE' });
+    const deleteDepartmentBody = await deleteDepartmentRes.json();
+    assert.strictEqual(deleteDepartmentRes.status, 200, JSON.stringify(deleteDepartmentBody));
+    assert.strictEqual(deleteDepartmentBody.success, true);
+    assert.deepStrictEqual(deletedDepartments, [99]);
+
     const usersRes = await fetch(`${baseUrl}/api/org/users`);
     const usersBody = await usersRes.json();
     assert.strictEqual(usersRes.status, 200, JSON.stringify(usersBody));
@@ -321,7 +397,7 @@ async function main() {
     assert.strictEqual(replaceRolesBody.success, true);
     assert.deepStrictEqual(replacedRoles[0].roleIds, [1, 4]);
     assert.strictEqual(replacedRoles[0].assignedBy, 42);
-    assert.ok(permissionChecks >= 9, 'admin read/write routes should check permissions through identity repository');
+    assert.ok(permissionChecks >= 12, 'admin read/write routes should check permissions through identity repository');
 
     console.log('Org /me MySQL API route test passed');
   } finally {

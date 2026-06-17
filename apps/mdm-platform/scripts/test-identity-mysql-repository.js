@@ -10,8 +10,8 @@ function makeFakePool() {
   const state = {
     statements: [],
     departments: [
-      { id: 9, name: '工程技术部', code: 'ENG' },
-      { id: 10, name: '质量管理部', code: 'QMS' }
+      { id: 9, name: '工程技术部', code: 'ENG', path: '/9/', status: 'active' },
+      { id: 10, name: '质量管理部', code: 'QMS', path: '/10/', status: 'active' }
     ],
     users: [
       {
@@ -62,7 +62,8 @@ function makeFakePool() {
       { role_id: 4, perm_id: 13, effect: 'allow' },
       { role_id: 2, perm_id: 14, effect: 'allow' }
     ],
-    nextUserId: 100
+    nextUserId: 100,
+    nextDepartmentId: 30
   };
 
   return {
@@ -73,6 +74,74 @@ function makeFakePool() {
 
       if (normalizedSql.startsWith('CREATE TABLE') || normalizedSql.startsWith('CREATE INDEX')) {
         return [[], undefined];
+      }
+
+      if (normalizedSql === 'SELECT * FROM departments ORDER BY code') {
+        return [state.departments.slice().sort((left, right) => left.code.localeCompare(right.code)), undefined];
+      }
+
+      if (normalizedSql === 'INSERT INTO departments (name, code, parent_id, department_type, manager_user_id, data_owner_user_id, source_system, external_id, status, effective_from, effective_to, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)') {
+        if (state.departments.some(department => department.code === params[1])) {
+          const error = new Error('Duplicate department code');
+          error.code = 'ER_DUP_ENTRY';
+          throw error;
+        }
+        const department = {
+          id: state.nextDepartmentId++,
+          name: params[0],
+          code: params[1],
+          parent_id: params[2],
+          department_type: params[3],
+          manager_user_id: params[4],
+          data_owner_user_id: params[5],
+          source_system: params[6],
+          external_id: params[7],
+          status: params[8],
+          effective_from: params[9],
+          effective_to: params[10],
+          created_by: params[11],
+          path: null
+        };
+        state.departments.push(department);
+        return [{ insertId: department.id, affectedRows: 1 }, undefined];
+      }
+
+      if (normalizedSql === 'SELECT path FROM departments WHERE id=?') {
+        const department = state.departments.find(row => row.id === params[0]);
+        return [[department ? { path: department.path } : undefined].filter(Boolean), undefined];
+      }
+
+      if (normalizedSql === 'UPDATE departments SET path=? WHERE id=?') {
+        const department = state.departments.find(row => row.id === params[1]);
+        if (department) department.path = params[0];
+        return [{ affectedRows: department ? 1 : 0 }, undefined];
+      }
+
+      if (normalizedSql.includes('UPDATE departments SET name=?, code=?, parent_id=?, path=?, sort_order=?, department_type=?,')) {
+        const department = state.departments.find(row => row.id === params[14]);
+        if (department) {
+          department.name = params[0];
+          department.code = params[1];
+          department.parent_id = params[2];
+          department.path = params[3];
+          department.sort_order = params[4];
+          department.department_type = params[5];
+          department.manager_user_id = params[6];
+          department.data_owner_user_id = params[7];
+          department.source_system = params[8];
+          department.external_id = params[9];
+          department.status = params[10];
+          department.effective_from = params[11];
+          department.effective_to = params[12];
+          department.updated_by = params[13];
+        }
+        return [{ affectedRows: department ? 1 : 0 }, undefined];
+      }
+
+      if (normalizedSql === 'DELETE FROM departments WHERE id=?') {
+        const before = state.departments.length;
+        state.departments = state.departments.filter(row => row.id !== params[0]);
+        return [{ affectedRows: before - state.departments.length }, undefined];
       }
 
       if (normalizedSql.includes('FROM users u LEFT JOIN departments d') && normalizedSql.includes('WHERE u.id=?')) {
@@ -355,6 +424,49 @@ async function main() {
   assert.deepStrictEqual(users.map(user => user.employee_no), ['U042', 'U043']);
   assert.strictEqual(users[0].dept_name, '工程技术部');
   assert.strictEqual(users[1].dept_name, '质量管理部');
+
+  const departments = await repo.listDepartments();
+  assert.deepStrictEqual(departments.map(department => department.code), ['ENG', 'QMS']);
+
+  const createdDepartment = await repo.createDepartment({
+    name: '项目管理部',
+    code: 'PMO',
+    parent_id: 9,
+    department_type: '业务',
+    manager_user_id: 42,
+    data_owner_user_id: 43,
+    source_system: 'MDM_SYS',
+    external_id: 'EXT-PMO',
+    status: 'active',
+    effective_from: '2026-01-01',
+    effective_to: null,
+    created_by: 42
+  });
+  assert.strictEqual(createdDepartment.id, 30);
+  assert.strictEqual(pool.state.departments.find(department => department.id === 30).path, '/9/30/');
+
+  const updatedDepartment = await repo.updateDepartment(30, {
+    name: '项目管理部更新',
+    code: 'PMO2',
+    parent_id: null,
+    sort_order: 7,
+    department_type: '管理',
+    manager_user_id: null,
+    data_owner_user_id: 42,
+    source_system: 'MDM_SYS',
+    external_id: null,
+    status: 'active',
+    effective_from: '2026-02-01',
+    effective_to: null,
+    updated_by: 42
+  });
+  assert.strictEqual(updatedDepartment, true);
+  const updatedDepartmentRow = pool.state.departments.find(department => department.id === 30);
+  assert.strictEqual(updatedDepartmentRow.name, '项目管理部更新');
+  assert.strictEqual(updatedDepartmentRow.path, '/30/');
+
+  assert.strictEqual(await repo.deleteDepartment(30), true);
+  assert.ok(!pool.state.departments.some(department => department.id === 30));
 
   const roleSummary = await repo.listUserRoleSummaries();
   assert.strictEqual(roleSummary[0].rbac_role_codes, 'it_lead,data_quality');
