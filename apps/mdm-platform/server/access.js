@@ -105,6 +105,42 @@ function canViewMapping(req, mappingId) {
   return Boolean(row);
 }
 
+async function mappingVisibilityAsync(alias, req) {
+  if (await hasGlobalViewAsync(req)) return { sql: '', params: [] };
+  const table = alias || 'm';
+  const params = [req.session.userId];
+  const clauses = [`${table}.submitted_by=?`];
+  if (req.session.departmentId) {
+    clauses.push(`${table}.owner_dept_id=?`);
+    params.push(req.session.departmentId);
+    clauses.push(`${table}.approval_dept_id=?`);
+    params.push(req.session.departmentId);
+    clauses.push(`EXISTS (
+      SELECT 1 FROM mapping_related_departments mrd
+      WHERE mrd.mapping_id=${table}.id AND mrd.department_id=?
+    )`);
+    params.push(req.session.departmentId);
+    clauses.push(`EXISTS (
+      SELECT 1 FROM approval_tasks at
+      WHERE at.mapping_id=${table}.id AND (at.assignee_user_id=? OR at.assigned_dept_id=?)
+    )`);
+    params.push(req.session.userId, req.session.departmentId);
+  } else {
+    clauses.push(`EXISTS (
+      SELECT 1 FROM approval_tasks at
+      WHERE at.mapping_id=${table}.id AND at.assignee_user_id=?
+    )`);
+    params.push(req.session.userId);
+  }
+  return { sql: ` AND (${clauses.join(' OR ')})`, params };
+}
+
+async function canViewMappingAsync(req, mappingId) {
+  const visibility = await mappingVisibilityAsync('m', req);
+  const row = db.prepare(`SELECT m.id FROM mappings m WHERE m.id=?${visibility.sql}`).get(mappingId, ...visibility.params);
+  return Boolean(row);
+}
+
 function canUseTodo(req, todo) {
   if (!todo) return false;
   if (isAdmin(req)) return true;
@@ -128,7 +164,9 @@ module.exports = {
   getEffectiveRoleCodesAsync,
   validateAction,
   mappingVisibility,
+  mappingVisibilityAsync,
   canViewMapping,
+  canViewMappingAsync,
   canUseTodo,
   canUseTodoAsync
 };

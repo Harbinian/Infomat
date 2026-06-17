@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const { requireAuth, getUserEffectivePermissions } = require('../auth');
-const { canViewMapping, getEffectiveRoleCodes } = require('../access');
+const { requireAuth, getUserEffectivePermissionsAsync } = require('../auth');
+const { canViewMappingAsync, getEffectiveRoleCodesAsync } = require('../access');
 
 const ALL_FIELD_ENTRY_FIELDS = ['field_name_cn', 'field_name_en', 'data_object', 'field_type', 'consume_systems', 'sync_mode', 'note', 'process_governance_node_key', 'process_governance_a1_code'];
 const SUBMITTER_WRITABLE = ['data_object', 'note', 'process_governance_node_key', 'process_governance_a1_code'];
@@ -24,6 +24,10 @@ function runDbAction(res, action) {
   }
 }
 
+function runAsyncAction(res, action) {
+  return action().catch(error => handleDbError(res, error));
+}
+
 function normalizeValue(fieldName, value) {
   if (fieldName === 'consume_systems' && Array.isArray(value)) {
     return JSON.stringify(value);
@@ -31,18 +35,18 @@ function normalizeValue(fieldName, value) {
   return value;
 }
 
-function canCreateFieldForMapping(req, mappingId) {
-  const { permSet } = getUserEffectivePermissions(req.session.userId);
+async function canCreateFieldForMapping(req, mappingId) {
+  const { permSet } = await getUserEffectivePermissionsAsync(req.session.userId);
   if (permSet.has('admin:access') || permSet.has('*:*')) return true;
   const mapping = db.prepare('SELECT submitted_by FROM mappings WHERE id=?').get(mappingId);
-  const roleCodes = getEffectiveRoleCodes(req);
+  const roleCodes = await getEffectiveRoleCodesAsync(req);
   return mapping && roleCodes.has('submitter') && mapping.submitted_by === req.session.userId;
 }
 
-function canEditOwnerColumns(req, field) {
-  const { permSet } = getUserEffectivePermissions(req.session.userId);
+async function canEditOwnerColumns(req, field) {
+  const { permSet } = await getUserEffectivePermissionsAsync(req.session.userId);
   if (permSet.has('admin:access') || permSet.has('review:approve') || permSet.has('*:*')) return true;
-  const roleCodes = getEffectiveRoleCodes(req);
+  const roleCodes = await getEffectiveRoleCodesAsync(req);
   if (!roleCodes.has('owner')) return false;
 
   const mapping = db.prepare('SELECT owner_dept_id FROM mappings WHERE id=?').get(field.mapping_id);
@@ -50,11 +54,13 @@ function canEditOwnerColumns(req, field) {
 }
 
 router.get('/mapping/:mappingId', requireAuth, (req, res) => {
-  if (!canViewMapping(req, req.params.mappingId)) {
-    return res.status(403).json({ error: '无权查看该映射字段' });
-  }
-  const fields = db.prepare('SELECT * FROM field_entries WHERE mapping_id=? ORDER BY id').all(req.params.mappingId);
-  res.json(fields);
+  return runAsyncAction(res, async () => {
+    if (!await canViewMappingAsync(req, req.params.mappingId)) {
+      return res.status(403).json({ error: '无权查看该映射字段' });
+    }
+    const fields = db.prepare('SELECT * FROM field_entries WHERE mapping_id=? ORDER BY id').all(req.params.mappingId);
+    res.json(fields);
+  });
 });
 
 function validateTerms(fieldName) {
@@ -69,9 +75,9 @@ function validateTerms(fieldName) {
 }
 
 router.post('/', requireAuth, (req, res) => {
-  return runDbAction(res, () => {
+  return runAsyncAction(res, async () => {
     const { mapping_id, field_name_cn, field_name_en, data_object, field_type, consume_systems, sync_mode, note, process_governance_node_key, process_governance_a1_code } = req.body;
-    if (!canCreateFieldForMapping(req, mapping_id)) {
+    if (!await canCreateFieldForMapping(req, mapping_id)) {
       return res.status(403).json({ error: '仅该映射报送人或管理员可创建字段' });
     }
 
@@ -81,7 +87,7 @@ router.post('/', requireAuth, (req, res) => {
     }
 
     const normalizedConsumeSystems = normalizeValue('consume_systems', consume_systems);
-    const { permSet: createPermSet } = getUserEffectivePermissions(req.session.userId);
+    const { permSet: createPermSet } = await getUserEffectivePermissionsAsync(req.session.userId);
     const creatorIsAdmin = createPermSet.has('admin:access') || createPermSet.has('*:*');
     const values = creatorIsAdmin
       ? { field_name_cn, field_name_en, data_object, field_type, consume_systems: normalizedConsumeSystems, sync_mode, note, process_governance_node_key, process_governance_a1_code }
@@ -110,18 +116,18 @@ router.post('/', requireAuth, (req, res) => {
 });
 
 router.put('/:id', requireAuth, (req, res) => {
-  return runDbAction(res, () => {
+  return runAsyncAction(res, async () => {
     const fieldId = req.params.id;
     const field = db.prepare('SELECT * FROM field_entries WHERE id=?').get(fieldId);
     if (!field) return res.status(404).json({ error: '字段不存在' });
 
     let allowedFields;
-    const { permSet: editPermSet } = getUserEffectivePermissions(req.session.userId);
+    const { permSet: editPermSet } = await getUserEffectivePermissionsAsync(req.session.userId);
     if (editPermSet.has('admin:access') || editPermSet.has('review:approve') || editPermSet.has('*:*')) {
       allowedFields = ALL_FIELD_ENTRY_FIELDS;
-    } else if (canEditOwnerColumns(req, field)) {
+    } else if (await canEditOwnerColumns(req, field)) {
       allowedFields = OWNER_WRITABLE;
-    } else if (getEffectiveRoleCodes(req).has('submitter') && field.submitted_by === req.session.userId) {
+    } else if ((await getEffectiveRoleCodesAsync(req)).has('submitter') && field.submitted_by === req.session.userId) {
       allowedFields = SUBMITTER_WRITABLE;
     } else {
       return res.status(403).json({ error: '仅字段报送人、映射 owner 部门、评审人或管理员可修改字段' });
@@ -170,12 +176,12 @@ router.put('/:id', requireAuth, (req, res) => {
 });
 
 router.delete('/:id', requireAuth, (req, res) => {
-  return runDbAction(res, () => {
+  return runAsyncAction(res, async () => {
     const field = db.prepare('SELECT * FROM field_entries WHERE id=?').get(req.params.id);
     if (!field) return res.status(404).json({ error: '字段不存在' });
     const mapping = db.prepare('SELECT status FROM mappings WHERE id=?').get(field.mapping_id);
-    const { permSet: delPermSet } = getUserEffectivePermissions(req.session.userId);
-    const roleCodes = getEffectiveRoleCodes(req);
+    const { permSet: delPermSet } = await getUserEffectivePermissionsAsync(req.session.userId);
+    const roleCodes = await getEffectiveRoleCodesAsync(req);
     const canDelete = delPermSet.has('admin:access') || delPermSet.has('*:*') ||
       (roleCodes.has('submitter') && field.submitted_by === req.session.userId && mapping && mapping.status === 'draft');
     if (!canDelete) return res.status(403).json({ error: '仅管理员或草稿字段报送人可删除字段' });
