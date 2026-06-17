@@ -61,7 +61,6 @@ CREATE TABLE IF NOT EXISTS candidate_review_decisions (
   issue_type VARCHAR(64) NOT NULL DEFAULT '',
   definition_status VARCHAR(64) NOT NULL DEFAULT '',
   normalized_note TEXT NULL,
-  correction_note TEXT NULL,
   reviewer VARCHAR(128) NOT NULL DEFAULT '',
   reviewed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -231,8 +230,11 @@ export function formatSourceForBusiness(sourceFile, sourceAnchor) {
   const anchor = parseAnchor(sourceAnchor);
   if (anchor.clause) parts.push(`第${anchor.clause}条`);
   if (anchor.page) parts.push(`第${anchor.page}页`);
-  if (anchor.paragraph_id) parts.push(`段落${anchor.paragraph_id}`);
+  if (anchor.paragraph_id) parts.push(`内部锚点${anchor.paragraph_id}`);
   if (anchor.table_id) parts.push(anchor.table_id.replace(/^T/i, '表'));
+  if (anchor.paragraph_id && !anchor.clause && !anchor.page && !anchor.table_id) {
+    parts.push('原文定位不足');
+  }
 
   if (!parts.length && sourceAnchor) {
     parts.push(humanizeAnchor(sourceAnchor));
@@ -254,47 +256,12 @@ export function describeMappingForBusiness(mappingLocation) {
   return value;
 }
 
-export function correctionIssueTemplates() {
-  return [
-    '部门/岗位角色不对，应该是：',
-    '业务行为前置条件不对，应该是：',
-    '业务行为顺序不对，应该是：',
-    '业务行为名称不对，应该是：',
-    '审批链不完整，应该补充：',
-    '原文只能说明：',
-    '这条不应作为正式映射，原因是：',
-  ];
-}
-
-export function correctionConclusionTemplates() {
-  return [
-    '按原文审核顺序描述',
-    '只作为待确认线索',
-    '需要补充发起条件',
-    '需要补充办理对象',
-    '需要确认是否属于正式审批',
-    '确认前不写入正式映射',
-    '回源确认后再判断',
-    '；',
-    '。',
-  ];
-}
-
-export function combineCorrectionText(currentText, fragment) {
-  const current = String(currentText || '').trimEnd();
-  const value = String(fragment || '').trim();
-  if (!value) return current;
-  if (!current) return value;
-  if (/^[；，。、。！？]$/.test(value)) return current.endsWith(value) ? current : current + value;
-  return current + value;
-}
-
 function humanizeAnchor(anchorText) {
   return String(anchorText || '')
     .replace(/§\s*([0-9]+(?:\.[0-9]+)*)/g, '第$1条')
     .replace(/\bpage\s*=?\s*(\d+)\b/gi, '第$1页')
     .replace(/第?(\d+)页/g, '第$1页')
-    .replace(/\bP(\d+)\b/gi, '段落P$1')
+    .replace(/\bP(\d+)\b/gi, '内部锚点P$1')
     .replace(/\bT(\d+)\b/gi, '表$1')
     .trim();
 }
@@ -583,7 +550,7 @@ export function makeCandidateReviewRepository(pool) {
       const [items] = await pool.execute(
         `SELECT i.*, d.decision, d.evidence_status AS decision_evidence_status, d.next_action,
                 d.failure_class AS decision_failure_class, d.issue_type, d.definition_status,
-                d.normalized_note, d.correction_note, d.reviewer, d.reviewed_at
+                d.normalized_note, d.reviewer, d.reviewed_at
          FROM candidate_review_items i
          LEFT JOIN candidate_review_decisions d
            ON d.run_id = i.run_id AND d.stable_key = i.stable_key
@@ -613,8 +580,8 @@ export function makeCandidateReviewRepository(pool) {
       await pool.execute(
         `INSERT INTO candidate_review_decisions
           (run_id, stable_key, decision, evidence_status, next_action, failure_class,
-           issue_type, definition_status, normalized_note, correction_note, reviewer, reviewed_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+           issue_type, definition_status, normalized_note, reviewer, reviewed_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
          ON DUPLICATE KEY UPDATE
           decision=VALUES(decision),
           evidence_status=VALUES(evidence_status),
@@ -623,7 +590,6 @@ export function makeCandidateReviewRepository(pool) {
           issue_type=VALUES(issue_type),
           definition_status=VALUES(definition_status),
           normalized_note=VALUES(normalized_note),
-          correction_note=VALUES(correction_note),
           reviewer=VALUES(reviewer),
           reviewed_at=CURRENT_TIMESTAMP,
           updated_at=CURRENT_TIMESTAMP`,
@@ -637,7 +603,6 @@ export function makeCandidateReviewRepository(pool) {
           decision.issue_type || '',
           decision.definition_status || '',
           decision.normalized_note || '',
-          decision.correction_note || '',
           decision.reviewer || '',
         ],
       );
@@ -763,39 +728,6 @@ export function buildReviewAppHtml() {
     .structured-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
     .structured-grid label { display: block; color: var(--muted); font-size: 12px; margin-bottom: 6px; }
     .structured-grid textarea { min-height: 86px; resize: vertical; }
-    .tag-groups { display: grid; gap: 12px; margin-top: 10px; }
-    .tag-group label { display: block; color: var(--muted); font-size: 12px; margin-bottom: 6px; }
-    .tag-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
-    .tag-button {
-      border: 1px solid #9d7b49;
-      background: #fff6e6;
-      color: #332719;
-      border-radius: 7px;
-      min-height: 34px;
-      padding: 6px 9px;
-      cursor: pointer;
-    }
-    .tag-button:hover { border-color: var(--focus); box-shadow: 0 0 0 2px rgba(38, 92, 126, 0.16); }
-    .correction-preview {
-      min-height: 46px;
-      border: 1px solid #b58d4a;
-      background: #fff8e8;
-      border-radius: 7px;
-      padding: 10px;
-      line-height: 1.6;
-      margin-top: 12px;
-    }
-    .correction-preview.empty { color: var(--muted); }
-    .tag-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
-    .mini-action {
-      border: 1px solid var(--line);
-      background: #fffdf8;
-      color: var(--ink);
-      border-radius: 7px;
-      min-height: 32px;
-      padding: 0 10px;
-      cursor: pointer;
-    }
     .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 18px; }
     .save { background: #7f2f28; color: #fff; border: 0; border-radius: 7px; min-height: 38px; padding: 0 14px; cursor: pointer; }
     .ghost { background: #fffdf8; color: var(--ink); border: 1px solid var(--line); border-radius: 7px; min-height: 38px; padding: 0 14px; cursor: pointer; }
@@ -1040,8 +972,9 @@ export function buildReviewAppHtml() {
       const table = String(sourceAnchor || '').match(/\\bT(\\d+)\\b/i)?.[1] || '';
       if (clause) parts.push('第' + clause + '条');
       if (page) parts.push('第' + page + '页');
-      if (paragraph) parts.push('段落P' + paragraph);
+      if (paragraph) parts.push('内部锚点P' + paragraph);
       if (table) parts.push('表' + table);
+      if (paragraph && !clause && !page && !table) parts.push('原文定位不足');
       return parts.join(' · ') || humanizeAnchor(sourceAnchor) || '来源未标注';
     }
 
@@ -1050,7 +983,7 @@ export function buildReviewAppHtml() {
         .replace(/§\\s*([0-9]+(?:\\.[0-9]+)*)/g, '第$1条')
         .replace(/\\bpage\\s*=?\\s*(\\d+)\\b/gi, '第$1页')
         .replace(/第?(\\d+)页/g, '第$1页')
-        .replace(/\\bP(\\d+)\\b/gi, '段落P$1')
+        .replace(/\\bP(\\d+)\\b/gi, '内部锚点P$1')
         .replace(/\\bT(\\d+)\\b/gi, '表$1')
         .trim();
     }

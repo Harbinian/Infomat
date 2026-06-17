@@ -10,12 +10,17 @@ async function main() {
     for (const statement of splitSqlStatements(mdmMysqlSchemaSql())) {
       await pool.execute(statement);
     }
-    await pool.execute(
-      `INSERT INTO schema_migrations (migration_key)
-       VALUES (?)
-       ON DUPLICATE KEY UPDATE applied_at=CURRENT_TIMESTAMP`,
-      ['2026-06-16-process-candidate-review'],
-    );
+    for (const migrationKey of [
+      '2026-06-16-process-candidate-review',
+      '2026-06-16-process-governance-read-model'
+    ]) {
+      await pool.execute(
+        `INSERT INTO schema_migrations (migration_key)
+         VALUES (?)
+         ON DUPLICATE KEY UPDATE applied_at=CURRENT_TIMESTAMP`,
+        [migrationKey],
+      );
+    }
     console.log(`mysql_schema_initialized=${JSON.stringify(redactMysqlConfig(config))}`);
   } finally {
     await pool.end();

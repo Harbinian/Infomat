@@ -1139,5 +1139,9 @@ module.exports = {
   importProcessGovernanceSnapshot,
   parseA1Markdown,
   deriveNodeTypes,
+  sourceManifestFiles,
+  normalizeSourceFile,
+  normalizeMdmRequirement,
+  normalizeEvidenceRef,
   normalizeQualityFinding,
 };
