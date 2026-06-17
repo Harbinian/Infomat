@@ -35,6 +35,10 @@ async function main() {
   let loginCalls = 0;
   let passwordUpdates = 0;
   let permissionChecks = 0;
+  const createdUsers = [];
+  const updatedUsers = [];
+  const resetPasswords = [];
+  const replacedRoles = [];
   orgRouter.setIdentityRepositoryFactory(() => ({
     async getUserByEmployeeNo(employeeNo) {
       loginCalls += 1;
@@ -100,6 +104,22 @@ async function main() {
         admin: [{ perm_id: 13, perm_code: 'admin:access', resource: 'admin', action: 'access' }],
         review: [{ perm_id: 14, perm_code: 'review:approve', resource: 'review', action: 'approve' }]
       };
+    },
+    async createUser(payload) {
+      createdUsers.push(payload);
+      return { id: 88, role: 'owner' };
+    },
+    async updateUser(userId, payload) {
+      updatedUsers.push({ userId, payload });
+      return userId === 88;
+    },
+    async resetUserPassword(userId, passwordHash, mustChangePassword) {
+      resetPasswords.push({ userId, passwordHash, mustChangePassword });
+      return userId === 88;
+    },
+    async replaceUserRoles(userId, roleIds, assignedBy) {
+      replacedRoles.push({ userId, roleIds, assignedBy });
+      return userId === 88;
     },
     async getPasswordStatus(userId) {
       assert.strictEqual(userId, 42);
@@ -238,7 +258,70 @@ async function main() {
     const permissionsBody = await permissionsRes.json();
     assert.strictEqual(permissionsRes.status, 200, JSON.stringify(permissionsBody));
     assert.strictEqual(permissionsBody.admin[0].perm_code, 'admin:access');
-    assert.ok(permissionChecks >= 5, 'admin read routes should check permissions through identity repository');
+
+    const createUserRes = await fetch(`${baseUrl}/api/org/users`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: '王五',
+        employee_no: 'U088',
+        department_id: 9,
+        post: '项目经理',
+        role: 'it_lead',
+        role_ids: [3, 4]
+      })
+    });
+    const createUserBody = await createUserRes.json();
+    assert.strictEqual(createUserRes.status, 200, JSON.stringify(createUserBody));
+    assert.strictEqual(createUserBody.id, 88);
+    assert.ok(createUserBody.initial_password, '创建用户应返回系统生成的初始密码');
+    assert.strictEqual(createdUsers.length, 1);
+    assert.strictEqual(createdUsers[0].employee_no, 'U088');
+    assert.strictEqual(createdUsers[0].must_change_password, 1);
+    assert.ok(verifyPassword(createUserBody.initial_password, createdUsers[0].password_hash));
+    assert.deepStrictEqual(createdUsers[0].role_ids, [3, 4]);
+
+    const updateUserRes = await fetch(`${baseUrl}/api/org/users/88`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: '王五更新',
+        department_id: 10,
+        post: '流程负责人',
+        role: 'reviewer',
+        role_ids: [4]
+      })
+    });
+    const updateUserBody = await updateUserRes.json();
+    assert.strictEqual(updateUserRes.status, 200, JSON.stringify(updateUserBody));
+    assert.strictEqual(updateUserBody.success, true);
+    assert.strictEqual(updatedUsers[0].userId, 88);
+    assert.strictEqual(updatedUsers[0].payload.name, '王五更新');
+
+    const resetPasswordRes = await fetch(`${baseUrl}/api/org/users/88/password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    });
+    const resetPasswordBody = await resetPasswordRes.json();
+    assert.strictEqual(resetPasswordRes.status, 200, JSON.stringify(resetPasswordBody));
+    assert.strictEqual(resetPasswordBody.success, true);
+    assert.ok(resetPasswordBody.initial_password, '重置密码应返回系统生成的初始密码');
+    assert.strictEqual(resetPasswords[0].userId, 88);
+    assert.strictEqual(resetPasswords[0].mustChangePassword, 1);
+    assert.ok(verifyPassword(resetPasswordBody.initial_password, resetPasswords[0].passwordHash));
+
+    const replaceRolesRes = await fetch(`${baseUrl}/api/org/users/88/roles`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role_ids: [1, 4] })
+    });
+    const replaceRolesBody = await replaceRolesRes.json();
+    assert.strictEqual(replaceRolesRes.status, 200, JSON.stringify(replaceRolesBody));
+    assert.strictEqual(replaceRolesBody.success, true);
+    assert.deepStrictEqual(replacedRoles[0].roleIds, [1, 4]);
+    assert.strictEqual(replacedRoles[0].assignedBy, 42);
+    assert.ok(permissionChecks >= 9, 'admin read/write routes should check permissions through identity repository');
 
     console.log('Org /me MySQL API route test passed');
   } finally {

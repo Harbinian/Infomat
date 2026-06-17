@@ -22,6 +22,16 @@ assert.ok(
 );
 
 assert.ok(
+  audit.permissionGuarded.some(route =>
+    route.file.endsWith('org.js') &&
+    route.method === 'post' &&
+    route.path === '/users' &&
+    route.permission === 'admin:access'
+  ),
+  'org user creation through requireOrgPermission should be classified as permission guarded'
+);
+
+assert.ok(
   audit.businessGuarded.some(route =>
     route.file.endsWith('todos.js') &&
     route.method === 'post' &&
