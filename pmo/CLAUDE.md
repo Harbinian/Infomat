@@ -21,7 +21,7 @@ pmo/
 ├── 信息化项目_WBS结构真源.md            # WBS 编号、父子层级和排序真源
 ├── 信息化项目_工作平衡.md               # 人员分配、例会把关机制和高压窗口
 ├── 信息化项目_工作开展原则.md           # PMO 推进原则、协同边界和闭环规则
-├── 信息化项目_Project_H5最终执行版_导入表.xlsx.json # 历史导入/备份口径
+├── 信息化项目_Project_H5最终执行版_导入表.xlsx.json.json # 历史导入/备份口径
 ├── 信息化项目.csv                      # 转换脚本运行后的排查用中间产物（不要手改）
 ├── convert_xlsx.py                    # MD 真源 → tasks.json / 服务清单转换脚本
 ├── build-standalone.js                # 生成内嵌数据版 HTML
@@ -43,7 +43,7 @@ pmo/
 
 **React + Vite 单页应用**，基于 Canvas 2D 的 WBS 甘特图看板。
 
-- **启动**：`cd gantt-react && npm run dev` → `http://localhost:5173/`
+- **启动**：`cd gantt-react && npm run dev` → `http://localhost:5174/`
 - **构建**：`cd gantt-react && npm run build`
 - **数据流**：`信息化项目_计划管控真源.md` + `信息化项目_WBS结构真源.md` → `convert_xlsx.py` → `tasks.json` / `gantt-react/public/tasks.json` → 甘特图/PMO 看板渲染
 - **服务清单**：`pmo-source-manifest.json` 同步写入 `gantt-react/public/pmo-source-manifest.json`，记录计划管控、WBS结构、工作平衡、工作开展原则四类 MD 入口
@@ -51,7 +51,7 @@ pmo/
 
 ### 模块 B 扩展:动态凭证消费 (2026-06-05+)
 
-`pmo/deliverables/DLV-XXX-*.md` 是交付物状态正本。5173 dev 模式通过 Vite 插件 `pmoDeliverablesPlugin` 扫目录、暴露 6 个 `/api/pmo/deliverables*` 端点、用 Vite 内置 watcher 发 HMR。前端优先读取正本文件,服务端 `applyTransitionToFile` 跑状态机并写回 .md frontmatter + body 变更记录表。
+`pmo/deliverables/DLV-XXX-*.md` 是交付物状态正本。5174 dev 模式通过 Vite 插件 `pmoDeliverablesPlugin` 扫目录、暴露 6 个 `/api/pmo/deliverables*` 端点、用 Vite 内置 watcher 发 HMR。前端优先读取正本文件,服务端 `applyTransitionToFile` 跑状态机并写回 .md frontmatter + body 变更记录表。
 
 - 真源:`pmo/deliverables/DLV-XXX-*.md`(frontmatter + body)
 - 运行归档:`artifacts/pmo/deliverables/_history/DLV-XXX/<ts>-<kind>-<suffix>`；可用 `PMO_DELIVERABLE_RUNTIME_DIR` 覆盖

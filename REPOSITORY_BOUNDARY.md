@@ -17,7 +17,7 @@ Infomat 是一个信息化治理工作仓库，不是单一源码仓库。它允
 | PMO / 项目管理展示工具 | 流程地图驾驶舱、甘特图、项目管理页面、交付物工作台 | `pmo/` |
 | 仓库级脚本工具 | 跨资料、跨页面、跨 app 的解析、注入、生成、校验脚本 | `scripts/` |
 | AI 协作工作区 | Agent 技能、历史计划、Claude/Codex 协作配置 | `.agents/`、`.claude/`、`docs/superpowers/` |
-| 历史方案归档 | 旧设计、旧计划、历史输出物、阶段性审查记录 | `docs/superpowers/`、`docs/archives/`、后续 `docs/archive/` |
+| 历史方案归档 | 旧设计、旧计划、历史输出物、阶段性审查记录 | `docs/superpowers/`、`docs/archives/` |
 
 ## 2. 放入规则
 

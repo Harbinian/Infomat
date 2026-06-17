@@ -18,7 +18,7 @@ Infomat 是航空复材制造领域的信息化资料与工具仓库，包含：
 ## 目录结构（当前导航）
 
 - `apps/`：可运行应用
-  - `apps/mdm-platform/`：MDM 平台（Express + SQLite + 原生前端）
+  - `apps/mdm-platform/`：MDM 平台（Express + MySQL 目标形态 + 原生前端；SQLite 仅作历史/待迁移实现说明）
 - `docs/`：资料、说明、方案与沉淀
   - `docs/samples/`：必要样例（用于复现、格式示例与对齐）
   - `docs/superpowers/`：历史方案与计划（可能含旧路径，按仓库结构说明做替换）
@@ -41,7 +41,7 @@ Infomat 是航空复材制造领域的信息化资料与工具仓库，包含：
 
 ## MDM 平台
 
-常用命令见 [apps/mdm-platform/README.md](file:///e:/CA001/Infomat/apps/mdm-platform/README.md)。
+常用命令见 [apps/mdm-platform/README.md](apps/mdm-platform/README.md)。
 
 ## 流程地图驾驶舱
 
