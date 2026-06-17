@@ -1,8 +1,14 @@
 const express = require('express');
+const mysql = require('mysql2/promise');
 const router = express.Router();
 const db = require('../db');
 const { requireAuth, getUserEffectivePermissions } = require('../auth');
+const { mysqlConfigFromEnv } = require('../mysqlConfig');
+const { makeIdentityMysqlRepository } = require('../identityMysqlRepository');
 const { ROLE_GUIDES } = require('../roleDefinitions');
+
+let identityRepoPromise = null;
+let identityRepositoryFactory = null;
 
 const TODO_TYPE_LABELS = {
   field_confirm: '字段确认',
@@ -24,13 +30,48 @@ const TODO_TARGETS = {
   general: '#/todos'
 };
 
-function runDbAction(res, action) {
-  try {
-    return action();
-  } catch (error) {
+function runAsyncAction(res, action, unavailableMessage) {
+  return action().catch(error => {
+    if (error && error.statusCode) {
+      return res.status(error.statusCode).json({ error: error.message });
+    }
     console.error(error);
-    return res.status(500).json({ error: '服务器错误' });
+    return res.status(unavailableMessage ? 503 : 500).json({ error: unavailableMessage || '服务器错误' });
+  });
+}
+
+function useMysqlIdentityReadModel() {
+  return String(process.env.MDM_IDENTITY_READ_MODEL || '').toLowerCase() === 'mysql';
+}
+
+async function identityRepository() {
+  if (identityRepositoryFactory) {
+    return await identityRepositoryFactory();
   }
+  if (!identityRepoPromise) {
+    identityRepoPromise = (async () => {
+      const pool = mysql.createPool(mysqlConfigFromEnv());
+      const repo = makeIdentityMysqlRepository(pool);
+      await repo.initSchema();
+      return repo;
+    })();
+  }
+  try {
+    return await identityRepoPromise;
+  } catch (error) {
+    identityRepoPromise = null;
+    throw error;
+  }
+}
+
+function setIdentityRepositoryFactory(factory) {
+  identityRepositoryFactory = factory;
+  identityRepoPromise = null;
+}
+
+function resetIdentityRepositoryFactory() {
+  identityRepositoryFactory = null;
+  identityRepoPromise = null;
 }
 
 function getCurrentRoles(userId, legacyRole) {
@@ -48,6 +89,67 @@ function getCurrentRoles(userId, legacyRole) {
   }
 
   return roles;
+}
+
+function sqliteWorkbenchIdentity(req) {
+  const currentRoles = getCurrentRoles(req.session.userId, req.session.userRole);
+  const { permSet } = getUserEffectivePermissions(req.session.userId);
+  const department = req.session.departmentId
+    ? db.prepare('SELECT name FROM departments WHERE id=?').get(req.session.departmentId)
+    : null;
+  return {
+    currentRoles,
+    roleCodes: currentRoles.map(role => role.code),
+    permSet,
+    user: {
+      id: req.session.userId,
+      name: req.session.userName,
+      role: req.session.userRole,
+      departmentId: req.session.departmentId,
+      departmentName: department && department.name || null
+    }
+  };
+}
+
+async function mysqlWorkbenchIdentity(req) {
+  const repo = await identityRepository();
+  const payload = await repo.getCurrentUserPayload(req.session);
+  if (!payload) {
+    const error = new Error('用户不存在');
+    error.statusCode = 401;
+    throw error;
+  }
+
+  let permSet = new Set(Array.isArray(payload.permissions) ? payload.permissions : []);
+  if (permSet.size === 0 && typeof repo.getUserEffectivePermissions === 'function') {
+    const effective = await repo.getUserEffectivePermissions(payload.id || req.session.userId);
+    permSet = effective && effective.permSet || permSet;
+  }
+
+  const currentRoles = Array.isArray(payload.rbacRoles)
+    ? payload.rbacRoles.map(role => ({ code: role.code, name: role.name }))
+    : [];
+  const roleCodes = Array.isArray(payload.roleCodes) && payload.roleCodes.length
+    ? payload.roleCodes
+    : currentRoles.map(role => role.code);
+
+  return {
+    currentRoles,
+    roleCodes,
+    permSet,
+    user: {
+      id: payload.id || req.session.userId,
+      name: payload.name || req.session.userName,
+      role: payload.role || req.session.userRole,
+      departmentId: payload.departmentId || req.session.departmentId || null,
+      departmentName: payload.departmentName || null
+    }
+  };
+}
+
+async function workbenchIdentity(req) {
+  if (useMysqlIdentityReadModel()) return await mysqlWorkbenchIdentity(req);
+  return sqliteWorkbenchIdentity(req);
 }
 
 function buildRoleGroups(roleCodes) {
@@ -197,10 +299,12 @@ function loadTodos(req, canViewAll) {
   }));
 }
 
-function loadProcessQualityFindings(req, canViewAll) {
-  const department = req.session.departmentId
-    ? db.prepare('SELECT name FROM departments WHERE id=?').get(req.session.departmentId)
-    : null;
+function loadProcessQualityFindings(req, canViewAll, currentDepartmentName) {
+  const departmentName = currentDepartmentName || (
+    req.session.departmentId
+      ? (db.prepare('SELECT name FROM departments WHERE id=?').get(req.session.departmentId) || {}).name
+      : null
+  );
 
   const params = [];
   let sql = `
@@ -213,7 +317,7 @@ function loadProcessQualityFindings(req, canViewAll) {
 
   if (!canViewAll) {
     sql += ' AND (c.dept_name=? OR c.owner_dept_id=? OR c.dept_name IS NULL)';
-    params.push(department && department.name || '__none__', req.session.departmentId || -1);
+    params.push(departmentName || '__none__', req.session.departmentId || -1);
   }
 
   sql += `
@@ -249,10 +353,12 @@ function roleHintForMappingTodo(row) {
   return 'business_contact';
 }
 
-function loadProcessMappingTodos(req, canViewAll) {
-  const department = req.session.departmentId
-    ? db.prepare('SELECT name FROM departments WHERE id=?').get(req.session.departmentId)
-    : null;
+function loadProcessMappingTodos(req, canViewAll, currentDepartmentName) {
+  const departmentName = currentDepartmentName || (
+    req.session.departmentId
+      ? (db.prepare('SELECT name FROM departments WHERE id=?').get(req.session.departmentId) || {}).name
+      : null
+  );
 
   const params = [];
   let sql = `
@@ -264,7 +370,7 @@ function loadProcessMappingTodos(req, canViewAll) {
 
   if (!canViewAll) {
     sql += ' AND (t.dept_name=? OR t.target_dept_name=? OR t.owner_dept_id=? OR t.dept_name IS NULL)';
-    params.push(department && department.name || '__none__', department && department.name || '__none__', req.session.departmentId || -1);
+    params.push(departmentName || '__none__', departmentName || '__none__', req.session.departmentId || -1);
   }
 
   sql += `
@@ -482,21 +588,19 @@ function buildSankey(activeRoles, contexts, workItems) {
 }
 
 router.get('/', requireAuth, (req, res) => {
-  return runDbAction(res, () => {
+  return runAsyncAction(res, async () => {
     const mode = req.query.mode === 'all' ? 'all' : 'todo';
-    const currentRoles = getCurrentRoles(req.session.userId, req.session.userRole);
-    const roleCodes = currentRoles.map(role => role.code);
+    const identity = await workbenchIdentity(req);
+    const roleCodes = identity.roleCodes;
     const { roles, roleGroups } = buildRoleGroups(roleCodes);
     const ownedRoles = roles.filter(role => role.owned);
-    const { permSet } = getUserEffectivePermissions(req.session.userId);
+    const permSet = identity.permSet;
     const canViewAll = permSet.has('data:view_all') || permSet.has('*:*') || roleCodes.includes('admin') || roleCodes.includes('data_quality') || roleCodes.includes('it_lead');
     const canDecideEscalated = permSet.has('conflict:final_decide_escalated') || permSet.has('*:*') || roleCodes.includes('admin');
-    const department = req.session.departmentId
-      ? db.prepare('SELECT name FROM departments WHERE id=?').get(req.session.departmentId)
-      : null;
+    const currentDepartmentName = identity.user.departmentName;
     const todos = loadTodos(req, canViewAll);
-    const qualityFindings = loadProcessQualityFindings(req, canViewAll);
-    const mappingTodos = loadProcessMappingTodos(req, canViewAll);
+    const qualityFindings = loadProcessQualityFindings(req, canViewAll, currentDepartmentName);
+    const mappingTodos = loadProcessMappingTodos(req, canViewAll, currentDepartmentName);
     const escalated = loadEscalatedConflicts(canDecideEscalated);
     const activeRoles = ownedRoles.length ? ownedRoles : roles.filter(role => role.code === req.session.userRole);
     const pendingWorkItems = [...escalated, ...qualityFindings, ...mappingTodos, ...todos];
@@ -509,11 +613,11 @@ router.get('/', requireAuth, (req, res) => {
     res.json({
       mode,
       user: {
-        id: req.session.userId,
-        name: req.session.userName,
-        role: req.session.userRole,
-        departmentId: req.session.departmentId,
-        departmentName: department && department.name || null,
+        id: identity.user.id,
+        name: identity.user.name,
+        role: identity.user.role,
+        departmentId: identity.user.departmentId,
+        departmentName: identity.user.departmentName,
         roleCodes
       },
       summary: {
@@ -547,7 +651,10 @@ router.get('/', requireAuth, (req, res) => {
       })),
       sankey: buildSankey(activeRoles, contexts, sankeyWorkItems)
     });
-  });
+  }, useMysqlIdentityReadModel() ? '身份 MySQL 读取模型不可用' : null);
 });
+
+router.setIdentityRepositoryFactory = setIdentityRepositoryFactory;
+router.resetIdentityRepositoryFactory = resetIdentityRepositoryFactory;
 
 module.exports = router;
