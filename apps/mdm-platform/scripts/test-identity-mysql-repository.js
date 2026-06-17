@@ -1,6 +1,10 @@
 const assert = require('assert');
 
+const { hashPassword, verifyPassword } = require('../server/auth');
 const { makeIdentityMysqlRepository } = require('../server/identityMysqlRepository');
+
+const OLD_PASSWORD = 'OldPass123456!';
+const NEW_PASSWORD = 'NewPass123456!';
 
 function makeFakePool() {
   const state = {
@@ -15,7 +19,9 @@ function makeFakePool() {
         employee_no: 'U042',
         department_id: 9,
         post: '流程治理专员',
-        role: 'owner'
+        role: 'owner',
+        password_hash: hashPassword(OLD_PASSWORD),
+        must_change_password: 1
       }
     ],
     roles: [
@@ -63,6 +69,30 @@ function makeFakePool() {
           post: user.post,
           role: user.role
         }], undefined];
+      }
+
+      if (normalizedSql === 'SELECT * FROM users WHERE employee_no=?') {
+        const user = state.users.find(row => row.employee_no === params[0]);
+        return [[user].filter(Boolean), undefined];
+      }
+
+      if (normalizedSql === 'SELECT must_change_password FROM users WHERE id=?') {
+        const user = state.users.find(row => row.id === params[0]);
+        return [[user ? { must_change_password: user.must_change_password } : undefined].filter(Boolean), undefined];
+      }
+
+      if (normalizedSql === 'SELECT employee_no, password_hash FROM users WHERE id=?') {
+        const user = state.users.find(row => row.id === params[0]);
+        return [[user ? { employee_no: user.employee_no, password_hash: user.password_hash } : undefined].filter(Boolean), undefined];
+      }
+
+      if (normalizedSql === 'UPDATE users SET password_hash=?, must_change_password=0 WHERE id=?') {
+        const user = state.users.find(row => row.id === params[1]);
+        if (user) {
+          user.password_hash = params[0];
+          user.must_change_password = 0;
+        }
+        return [{ affectedRows: user ? 1 : 0 }, undefined];
       }
 
       if (normalizedSql.includes('FROM user_roles ur JOIN roles r ON ur.role_id = r.role_id')) {
@@ -146,6 +176,25 @@ async function main() {
   const effective = await repo.getUserEffectivePermissions(42);
   assert.ok(effective.permSet.has('mapping:read'));
   assert.deepStrictEqual(effective.fieldConstraints['data:view_all'], { readonly: ['source_file'] });
+
+  const loginUser = await repo.getUserByEmployeeNo('U042');
+  assert.strictEqual(loginUser.id, 42);
+  assert.ok(verifyPassword(OLD_PASSWORD, loginUser.password_hash));
+
+  const missingLoginUser = await repo.getUserByEmployeeNo('missing');
+  assert.strictEqual(missingLoginUser, null);
+
+  const passwordStatus = await repo.getPasswordStatus(42);
+  assert.deepStrictEqual(passwordStatus, { is_default_password: true });
+
+  const passwordCredential = await repo.getPasswordCredential(42);
+  assert.strictEqual(passwordCredential.employee_no, 'U042');
+  assert.ok(verifyPassword(OLD_PASSWORD, passwordCredential.password_hash));
+
+  await repo.updateOwnPassword(42, hashPassword(NEW_PASSWORD));
+  const updatedCredential = await repo.getPasswordCredential(42);
+  assert.ok(verifyPassword(NEW_PASSWORD, updatedCredential.password_hash));
+  assert.deepStrictEqual(await repo.getPasswordStatus(42), { is_default_password: false });
 
   const unsafeSql = pool.state.statements.map(entry => entry.sql).join('\n');
   assert.ok(!unsafeSql.includes('sqlite_master'), 'identity MySQL repository must not use SQLite catalog tables');

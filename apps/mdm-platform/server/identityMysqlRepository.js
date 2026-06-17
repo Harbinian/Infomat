@@ -110,6 +110,10 @@ function makeIdentityMysqlRepository(pool) {
       }
     },
 
+    async getUserByEmployeeNo(employeeNo) {
+      return await first(pool, 'SELECT * FROM users WHERE employee_no=?', [employeeNo]);
+    },
+
     async getCurrentUserPayload(session = {}) {
       if (!session.userId) return null;
 
@@ -135,6 +139,22 @@ function makeIdentityMysqlRepository(pool) {
         roleCodes: rbacRoles.map(role => role.code),
         permissions: Array.from(permSet)
       };
+    },
+
+    async getPasswordStatus(userId) {
+      const user = await first(pool, 'SELECT must_change_password FROM users WHERE id=?', [userId]);
+      if (!user) return null;
+      return { is_default_password: Boolean(user.must_change_password) };
+    },
+
+    async getPasswordCredential(userId) {
+      return await first(pool, 'SELECT employee_no, password_hash FROM users WHERE id=?', [userId]);
+    },
+
+    async updateOwnPassword(userId, passwordHash) {
+      const result = await pool.execute('UPDATE users SET password_hash=?, must_change_password=0 WHERE id=?', [passwordHash, userId]);
+      const meta = Array.isArray(result) ? result[0] : null;
+      return Boolean(meta && meta.affectedRows > 0);
     },
 
     getUserEffectivePermissions
