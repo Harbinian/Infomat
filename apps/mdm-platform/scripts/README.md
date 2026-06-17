@@ -13,7 +13,7 @@
 | `npm run test:security` | 安全专项：默认口令、历史口令审计、写接口盘点、越权路由红线 | 迁移过渡期使用隔离遗留本地库，测试结束清理 |
 | `npm run test:mainline` | MDM 主线：组织同步、角色工作台、流程治理、导入导出、项目角色 | 迁移过渡期使用隔离遗留本地库，测试结束清理 |
 | `npm run test:process-governance` | 流程治理快照导入、质量问题、映射待办、前端挂钩、字段引用、候选复核契约 | 迁移过渡期使用隔离遗留本地库；流程治理读模型和候选复核 repository 覆盖 MySQL SQL 契约，`/snapshots`、`/current`、`/sankey`、`/a1`、源文件、MDM 要求、证据和交互链接口可在受控开关下走 MySQL |
-| `npm run test:identity-mysql` | 身份/RBAC MySQL 模型：repository 契约、登录、会话、本人改密、管理员用户/部门/权限读写路由、角色读路由验证 | 使用 fake MySQL pool 和 fake repository，不连接真实库；默认不开启该切换；角色写路由在该模式下显式阻断 |
+| `npm run test:identity-mysql` | 身份/RBAC MySQL 模型：repository 契约、登录、会话、本人改密、管理员用户/部门/权限读写路由、角色读写路由验证 | 使用 fake MySQL pool 和 fake repository，不连接真实库；默认不开启该切换 |
 | `npm run test:role-workbench-mysql` | 角色工作台在 `MDM_IDENTITY_READ_MODEL=mysql` 下从 MySQL 身份读模型读取当前用户、角色、部门和权限 | 使用 fake repository；流程待办数据仍使用隔离遗留本地库 |
 | `npm run smoke:process-governance-mysql` | 可选真实 MySQL 冒烟：初始化 schema、导入 `docs/company-sankey-data.json`、读回 Sankey | 只有设置 `MYSQL_HOST`、`MYSQL_USER`、`MYSQL_DATABASE` 时写 MySQL；否则跳过 |
 | `npm run test:mappings` | 映射草稿、字段台账、黄金源、审批流完整路径 | 迁移过渡期使用隔离遗留本地库，测试结束清理 |
@@ -62,9 +62,9 @@
 | `test-process-governance-sankey-mysql-api.js` | 验证 `PROCESS_GOVERNANCE_READ_MODEL=mysql` 时流程治理只读接口读取 MySQL repository | 覆盖 `/snapshots`、`/current`、`/sankey`、`/a1`、`/source-files`、`/mdm-requirements`、`/evidence`、`/chains`；使用 fake repository，默认不开启该切换 |
 | `test-process-candidate-review-mysql.js` | 验证 MDM 候选复核 MySQL repository 的导入、查询和结构化决策保存 | 使用 fake MySQL pool，只读仓库 |
 | `test-process-candidate-review-api.js` | 验证 MDM 正式候选复核 API 保存结构化字段、以后端会话写 reviewer、内部抽取锚点不显示为页码或原文段落号 | 使用 fake repository 和临时候选目录 |
-| `test-identity-mysql-repository.js` | 验证身份/RBAC MySQL repository 可读取用户、部门、登录凭据、角色、角色详情、角色权限矩阵、继承权限、字段约束、本人改密状态、管理员用户列表、部门列表、权限清单和管理员写入 | 使用 fake MySQL pool，不连接真实库 |
+| `test-identity-mysql-repository.js` | 验证身份/RBAC MySQL repository 可读取用户、部门、登录凭据、角色、角色详情、角色权限矩阵、继承权限、字段约束、本人改密状态、管理员用户列表、部门列表、权限清单、管理员写入和角色写入 | 使用 fake MySQL pool，不连接真实库 |
 | `test-org-me-mysql-api.js` | 验证 `MDM_IDENTITY_READ_MODEL=mysql` 时登录、`/api/org/me`、`/api/org/session`、本人密码状态、本人改密、管理员用户/部门/权限读写接口走 MySQL repository | 使用 fake repository，不连接真实库 |
-| `test-roles-mysql-api.js` | 验证 `MDM_IDENTITY_READ_MODEL=mysql` 时 `/api/roles`、`/api/roles/:id`、`/api/roles/:id/permissions` 读取 MySQL repository，角色写接口不回落 SQLite | 使用 fake repository，不连接真实库 |
+| `test-roles-mysql-api.js` | 验证 `MDM_IDENTITY_READ_MODEL=mysql` 时 `/api/roles`、`/api/roles/:id`、`/api/roles/:id/permissions` 读取 MySQL repository，角色创建、更新、删除和权限替换不回落 SQLite | 使用 fake repository，不连接真实库 |
 | `test-role-workbench-mysql-api.js` | 验证角色工作台在 MySQL 身份读模型下使用仓储返回的角色、部门名和 `data:view_all` 权限 | 使用 fake repository，不连接真实库 |
 
 ## 5. 单项测试脚本

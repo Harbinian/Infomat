@@ -9,6 +9,12 @@ let identityRepoPromise = null;
 let identityRepositoryFactory = null;
 
 function handleDbError(res, error) {
+  if (error && (error.code === 'ER_DUP_ENTRY' || String(error.message).includes('Duplicate'))) {
+    return res.status(409).json({ error: '角色编码已存在' });
+  }
+  if (error && (String(error.code || '').startsWith('ER_CHECK_CONSTRAINT') || String(error.code || '').startsWith('ER_NO_REFERENCED_ROW'))) {
+    return res.status(400).json({ error: '数据不符合约束' });
+  }
   if (error && (error.code === 'SQLITE_CONSTRAINT_UNIQUE' || String(error.message).includes('UNIQUE constraint failed'))) {
     return res.status(409).json({ error: '角色编码已存在' });
   }
@@ -25,6 +31,14 @@ function runDbAction(res, action) {
 
 function runAsyncAction(res, action) {
   return action().catch(error => {
+    if (error && (
+      error.code === 'ER_DUP_ENTRY' ||
+      String(error.message).includes('Duplicate') ||
+      String(error.code || '').startsWith('ER_CHECK_CONSTRAINT') ||
+      String(error.code || '').startsWith('ER_NO_REFERENCED_ROW')
+    )) {
+      return handleDbError(res, error);
+    }
     console.error(error);
     return res.status(503).json({ error: '身份 MySQL 读取模型不可用' });
   });
@@ -87,15 +101,8 @@ function requireRolesPermission(permCode) {
   };
 }
 
-function rejectMysqlRoleWrite(req, res, next) {
-  if (useMysqlIdentityReadModel()) {
-    return res.status(501).json({ error: '角色写入 MySQL 迁移未完成' });
-  }
-  return next();
-}
-
 const readAdminOnly = [requireAuth, requireRolesPermission('admin:access')];
-const writeAdminOnly = [requireAuth, requireRolesPermission('admin:access'), rejectMysqlRoleWrite];
+const writeAdminOnly = [requireAuth, requireRolesPermission('admin:access')];
 
 // GET /api/roles — list all roles with inherited info, permission count, user count
 router.get('/', ...readAdminOnly, (req, res) => {
@@ -177,6 +184,21 @@ router.get('/:id', ...readAdminOnly, (req, res) => {
 
 // POST /api/roles — create custom role
 router.post('/', ...writeAdminOnly, (req, res) => {
+  if (useMysqlIdentityReadModel()) {
+    return runAsyncAction(res, async () => {
+      const { role_code, role_name, description, parent_role_id } = req.body;
+      if (!role_code || !role_name) return res.status(400).json({ error: '角色编码和名称为必填' });
+      const repo = await identityRepository();
+      const result = await repo.createRole({
+        role_code,
+        role_name,
+        description: description || null,
+        parent_role_id: parent_role_id || null,
+        created_by: req.session.userId
+      });
+      res.status(201).json({ role_id: result.role_id });
+    });
+  }
   return runDbAction(res, () => {
     const { role_code, role_name, description, parent_role_id } = req.body;
     if (!role_code || !role_name) return res.status(400).json({ error: '角色编码和名称为必填' });
@@ -192,6 +214,14 @@ router.post('/', ...writeAdminOnly, (req, res) => {
 
 // PUT /api/roles/:id — update role
 router.put('/:id', ...writeAdminOnly, (req, res) => {
+  if (useMysqlIdentityReadModel()) {
+    return runAsyncAction(res, async () => {
+      const repo = await identityRepository();
+      const updated = await repo.updateRole(Number(req.params.id), req.body);
+      if (!updated) return res.status(404).json({ error: '角色不存在' });
+      res.json({ success: true });
+    });
+  }
   return runDbAction(res, () => {
     const role = db.prepare('SELECT * FROM roles WHERE role_id=?').get(req.params.id);
     if (!role) return res.status(404).json({ error: '角色不存在' });
@@ -208,6 +238,17 @@ router.put('/:id', ...writeAdminOnly, (req, res) => {
 
 // DELETE /api/roles/:id — delete role (protect system roles and assigned roles)
 router.delete('/:id', ...writeAdminOnly, (req, res) => {
+  if (useMysqlIdentityReadModel()) {
+    return runAsyncAction(res, async () => {
+      const repo = await identityRepository();
+      const result = await repo.deleteRole(Number(req.params.id));
+      if (!result.deleted && result.reason === 'missing') return res.status(404).json({ error: '角色不存在' });
+      if (!result.deleted && result.reason === 'system') return res.status(403).json({ error: '系统角色不可删除' });
+      if (!result.deleted && result.reason === 'assigned') return res.status(403).json({ error: `该角色已分配给 ${result.count} 个用户，请先取消分配` });
+      if (!result.deleted && result.reason === 'children') return res.status(403).json({ error: `有 ${result.count} 个子角色继承自此角色，请先修改子角色的父角色` });
+      res.json({ success: true });
+    });
+  }
   return runDbAction(res, () => {
     const role = db.prepare('SELECT * FROM roles WHERE role_id=?').get(req.params.id);
     if (!role) return res.status(404).json({ error: '角色不存在' });
@@ -259,6 +300,16 @@ router.get('/:id/permissions', ...readAdminOnly, (req, res) => {
 
 // PUT /api/roles/:id/permissions — bulk update role permissions (replace all)
 router.put('/:id/permissions', ...writeAdminOnly, (req, res) => {
+  if (useMysqlIdentityReadModel()) {
+    return runAsyncAction(res, async () => {
+      const { perm_ids, effects } = req.body;
+      if (!Array.isArray(perm_ids)) return res.status(400).json({ error: 'perm_ids 必须是数组' });
+      const repo = await identityRepository();
+      const result = await repo.replaceRolePermissions(Number(req.params.id), perm_ids, effects || {});
+      if (!result) return res.status(404).json({ error: '角色不存在' });
+      res.json({ success: true, count: result.count });
+    });
+  }
   return runDbAction(res, () => {
     const role = db.prepare('SELECT * FROM roles WHERE role_id=?').get(req.params.id);
     if (!role) return res.status(404).json({ error: '角色不存在' });
