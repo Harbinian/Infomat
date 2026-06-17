@@ -11,10 +11,13 @@ const {
   makeProcessCandidateReviewRepository,
   normalizeReviewPayload
 } = require('../processCandidateReviewRepository');
+const { makeProcessGovernanceMysqlRepository } = require('../processGovernanceMysqlRepository');
 const SOURCE_FILE_COVERAGE_LIMIT = 20;
 const REPO_ROOT = path.resolve(__dirname, '../../../..');
 let candidateReviewRepoPromise = null;
 let candidateReviewRepositoryFactory = null;
+let processGovernanceRepoPromise = null;
+let processGovernanceRepositoryFactory = null;
 
 function runDbAction(res, action) {
   try {
@@ -60,6 +63,50 @@ function setCandidateReviewRepositoryFactory(factory) {
 function resetCandidateReviewRepositoryFactory() {
   candidateReviewRepositoryFactory = null;
   candidateReviewRepoPromise = null;
+}
+
+function useMysqlProcessGovernanceReadModel() {
+  return String(process.env.PROCESS_GOVERNANCE_READ_MODEL || '').toLowerCase() === 'mysql';
+}
+
+async function processGovernanceRepository() {
+  if (processGovernanceRepositoryFactory) {
+    return await processGovernanceRepositoryFactory();
+  }
+  if (!processGovernanceRepoPromise) {
+    processGovernanceRepoPromise = (async () => {
+      const pool = mysql.createPool(mysqlConfigFromEnv());
+      const repo = makeProcessGovernanceMysqlRepository(pool);
+      await repo.initSchema();
+      return repo;
+    })();
+  }
+  try {
+    return await processGovernanceRepoPromise;
+  } catch (error) {
+    processGovernanceRepoPromise = null;
+    throw error;
+  }
+}
+
+async function processGovernanceRepositoryOrSendUnavailable(res) {
+  try {
+    return await processGovernanceRepository();
+  } catch (error) {
+    console.error(error);
+    res.status(503).json({ error: '流程治理 MySQL 读模型不可用' });
+    return null;
+  }
+}
+
+function setProcessGovernanceRepositoryFactory(factory) {
+  processGovernanceRepositoryFactory = factory;
+  processGovernanceRepoPromise = null;
+}
+
+function resetProcessGovernanceRepositoryFactory() {
+  processGovernanceRepositoryFactory = null;
+  processGovernanceRepoPromise = null;
 }
 
 async function candidateReviewRepositoryOrNull() {
@@ -157,9 +204,12 @@ function formatCandidateSource(sourceFile, sourceAnchor) {
   const anchor = parseCandidateAnchor(sourceAnchor);
   if (anchor.clause) parts.push(`第${anchor.clause}条`);
   if (anchor.page) parts.push(`第${anchor.page}页`);
-  if (anchor.paragraph_id) parts.push(`段落${anchor.paragraph_id}`);
+  if (anchor.paragraph_id) parts.push(`内部锚点${anchor.paragraph_id}`);
   if (anchor.table_id) parts.push(anchor.table_id.replace(/^T/i, '表'));
-  return parts.join(' · ') || String(sourceAnchor || '').replace(/\bP(\d+)\b/gi, '段落P$1') || '来源未标注';
+  if (anchor.paragraph_id && !anchor.clause && !anchor.page && !anchor.table_id) {
+    parts.push('原文定位不足');
+  }
+  return parts.join(' · ') || String(sourceAnchor || '').replace(/\bP(\d+)\b/gi, '内部锚点P$1') || '来源未标注';
 }
 
 function candidateSourceMatches(candidate, chunk) {
@@ -576,6 +626,19 @@ function parseCaseId(req) {
 }
 
 router.get('/snapshots', requireAuth, (req, res) => {
+  if (useMysqlProcessGovernanceReadModel()) {
+    return runAsyncAction(res, async () => {
+      let repo;
+      try {
+        repo = await processGovernanceRepository();
+      } catch (error) {
+        console.error(error);
+        return res.status(503).json({ error: '流程治理 MySQL 读模型不可用' });
+      }
+      return res.json(await repo.listSnapshots());
+    });
+  }
+
   return runDbAction(res, () => {
     const snapshots = db.prepare(`
       SELECT id, source_json_path, source_hash, generated_at, imported_at, status, note
@@ -587,6 +650,19 @@ router.get('/snapshots', requireAuth, (req, res) => {
 });
 
 router.get('/current', requireAuth, (req, res) => {
+  if (useMysqlProcessGovernanceReadModel()) {
+    return runAsyncAction(res, async () => {
+      let repo;
+      try {
+        repo = await processGovernanceRepository();
+      } catch (error) {
+        console.error(error);
+        return res.status(503).json({ error: '流程治理 MySQL 读模型不可用' });
+      }
+      return res.json(await repo.getCurrentSnapshot());
+    });
+  }
+
   return runDbAction(res, () => {
     const snapshot = activeSnapshot();
     if (!snapshot) return res.json({});
@@ -605,6 +681,19 @@ router.get('/current', requireAuth, (req, res) => {
 });
 
 router.get('/sankey', requireAuth, (req, res) => {
+  if (useMysqlProcessGovernanceReadModel()) {
+    return runAsyncAction(res, async () => {
+      let repo;
+      try {
+        repo = await processGovernanceRepository();
+      } catch (error) {
+        console.error(error);
+        return res.status(503).json({ error: '流程治理 MySQL 读模型不可用' });
+      }
+      return res.json(await repo.getActiveSankey());
+    });
+  }
+
   return runDbAction(res, () => {
     const snapshot = activeSnapshot();
     if (!snapshot) return res.json(emptySankey());
@@ -670,6 +759,19 @@ router.get('/sankey', requireAuth, (req, res) => {
 });
 
 router.get('/a1', requireAuth, (req, res) => {
+  if (useMysqlProcessGovernanceReadModel()) {
+    return runAsyncAction(res, async () => {
+      let repo;
+      try {
+        repo = await processGovernanceRepository();
+      } catch (error) {
+        console.error(error);
+        return res.status(503).json({ error: '流程治理 MySQL 读模型不可用' });
+      }
+      return res.json({ items: await repo.getA1Items(req.query) });
+    });
+  }
+
   return runDbAction(res, () => {
     const snapshot = activeSnapshot();
     if (!snapshot) return res.json({ items: [] });
@@ -704,6 +806,17 @@ router.get('/a1', requireAuth, (req, res) => {
 });
 
 router.get('/source-files', requireAuth, (req, res) => {
+  if (useMysqlProcessGovernanceReadModel()) {
+    return runAsyncAction(res, async () => {
+      const repo = await processGovernanceRepository();
+      const result = await repo.getSourceFiles({
+        dept: req.query.dept,
+        status: req.query.status,
+        assetType: req.query.assetType
+      }, SOURCE_FILE_COVERAGE_LIMIT);
+      return res.json(result);
+    });
+  }
   return runDbAction(res, () => {
     const snapshot = activeSnapshot();
     if (!snapshot) {
@@ -743,6 +856,16 @@ router.get('/source-files', requireAuth, (req, res) => {
 });
 
 router.get('/mdm-requirements', requireAuth, (req, res) => {
+  if (useMysqlProcessGovernanceReadModel()) {
+    return runAsyncAction(res, async () => {
+      const repo = await processGovernanceRepository();
+      const result = await repo.getMdmRequirements({
+        dept: req.query.dept,
+        object: req.query.object
+      }, 500);
+      return res.json(result);
+    });
+  }
   return runDbAction(res, () => {
     const snapshot = activeSnapshot();
     if (!snapshot) return res.json({ summary: { total: 0, byDept: {}, returned: 0, limit: 500 }, items: [] });
@@ -776,6 +899,19 @@ router.get('/mdm-requirements', requireAuth, (req, res) => {
 });
 
 router.get('/evidence', requireAuth, (req, res) => {
+  if (useMysqlProcessGovernanceReadModel()) {
+    return runAsyncAction(res, async () => {
+      const repo = await processGovernanceRepository();
+      const result = await repo.getEvidenceRefs({
+        dept: req.query.dept,
+        l3: req.query.l3,
+        a1: req.query.a1,
+        object: req.query.object,
+        type: req.query.type
+      }, 500);
+      return res.json(result);
+    });
+  }
   return runDbAction(res, () => {
     const snapshot = activeSnapshot();
     if (!snapshot) return res.json({ summary: { total: 0, byType: { L3: 0, A1: 0, MDM: 0 }, returned: 0, limit: 500 }, items: [] });
@@ -828,6 +964,18 @@ router.get('/evidence', requireAuth, (req, res) => {
 });
 
 router.get('/cross-dept', requireAuth, (req, res) => {
+  if (useMysqlProcessGovernanceReadModel()) {
+    return runAsyncAction(res, async () => {
+      const repo = await processGovernanceRepositoryOrSendUnavailable(res);
+      if (!repo) return null;
+      const items = await repo.getCrossDeptInteractions({
+        risk: req.query.risk,
+        status: req.query.status,
+        dept: req.query.dept
+      });
+      return res.json({ items });
+    });
+  }
   return runDbAction(res, () => {
     const snapshot = activeSnapshot();
     if (!snapshot) return res.json({ items: [] });
@@ -858,6 +1006,17 @@ router.get('/cross-dept', requireAuth, (req, res) => {
 });
 
 router.get('/quality', requireAuth, (req, res) => {
+  if (useMysqlProcessGovernanceReadModel()) {
+    return runAsyncAction(res, async () => {
+      const repo = await processGovernanceRepositoryOrSendUnavailable(res);
+      if (!repo) return null;
+      return res.json(await repo.getQualityFindings({
+        severity: String(req.query.severity || '').toUpperCase(),
+        area: req.query.area,
+        dept: req.query.dept
+      }));
+    });
+  }
   return runDbAction(res, () => {
     const snapshot = activeSnapshot();
     if (!snapshot) return res.json({ summary: emptyQualitySummary(), items: [] });
@@ -896,6 +1055,26 @@ router.get('/quality', requireAuth, (req, res) => {
 });
 
 router.get('/quality-cases', requireAuth, (req, res) => {
+  if (useMysqlProcessGovernanceReadModel()) {
+    return runAsyncAction(res, async () => {
+      const repo = await processGovernanceRepositoryOrSendUnavailable(res);
+      if (!repo) return null;
+      return res.json(await repo.getQualityCases({
+        severity: String(req.query.severity || '').toUpperCase(),
+        status: req.query.status,
+        area: req.query.area,
+        dept: req.query.dept,
+        owner: req.query.owner,
+        userId: req.session.userId,
+        departmentId: req.session.departmentId || -1,
+        snapshot: req.query.snapshot,
+        canViewAll: canViewAllQualityCases(req),
+        departmentName: req.session.departmentId
+          ? db.prepare('SELECT name FROM departments WHERE id=?').get(req.session.departmentId)?.name
+          : ''
+      }));
+    });
+  }
   return runDbAction(res, () => {
     const params = [];
     let sql = `${caseSelectSql()} WHERE 1=1`;
@@ -970,6 +1149,18 @@ router.get('/quality-cases', requireAuth, (req, res) => {
 });
 
 router.get('/quality-cases/:id', requireAuth, (req, res) => {
+  if (useMysqlProcessGovernanceReadModel()) {
+    return runAsyncAction(res, async () => {
+      const repo = await processGovernanceRepositoryOrSendUnavailable(res);
+      if (!repo) return null;
+      const qualityCase = await repo.getQualityCase(parseCaseId(req));
+      if (!qualityCase) return res.status(404).json({ error: '问题单不存在' });
+      if (!canViewAllQualityCases(req) && !canManageQualityCase(req, qualityCase)) {
+        return res.status(403).json({ error: '权限不足' });
+      }
+      return res.json({ case: qualityCase, events: await repo.getQualityCaseEvents(qualityCase.id) });
+    });
+  }
   return runDbAction(res, () => {
     const qualityCase = loadQualityCase(parseCaseId(req));
     if (!qualityCase) return res.status(404).json({ error: '问题单不存在' });
@@ -981,6 +1172,35 @@ router.get('/quality-cases/:id', requireAuth, (req, res) => {
 });
 
 router.post('/quality-cases/:id/assign', requireAuth, (req, res) => {
+  if (useMysqlProcessGovernanceReadModel()) {
+    return runAsyncAction(res, async () => {
+      const repo = await processGovernanceRepositoryOrSendUnavailable(res);
+      if (!repo) return null;
+      const qualityCase = await repo.getQualityCase(parseCaseId(req));
+      if (!qualityCase) return res.status(404).json({ error: '问题单不存在' });
+      if (!canManageQualityCase(req, qualityCase)) return res.status(403).json({ error: '权限不足' });
+      if (qualityCase.status === 'closed') return res.status(409).json({ error: '已关闭问题单不能分派' });
+
+      const ownerUserId = req.body.owner_user_id ? Number(req.body.owner_user_id) : null;
+      if (ownerUserId && !db.prepare('SELECT id FROM users WHERE id=?').get(ownerUserId)) {
+        return res.status(400).json({ error: '责任人不存在' });
+      }
+      const ownerDeptId = getOwnerDeptId(ownerUserId, req.body.owner_dept_id ? Number(req.body.owner_dept_id) : null);
+      if (ownerDeptId && !db.prepare('SELECT id FROM departments WHERE id=?').get(ownerDeptId)) {
+        return res.status(400).json({ error: '责任部门不存在' });
+      }
+      const priority = String(req.body.priority || qualityCase.priority || 'medium');
+      if (!QUALITY_CASE_PRIORITIES.has(priority)) return res.status(400).json({ error: '优先级无效' });
+      return res.json(await repo.assignQualityCase(qualityCase.id, {
+        owner_user_id: ownerUserId,
+        owner_dept_id: ownerDeptId,
+        priority,
+        due_date: req.body.due_date ? String(req.body.due_date) : null,
+        actor_user_id: req.session.userId,
+        note: req.body.note || '已分派治理问题单'
+      }));
+    });
+  }
   return runDbAction(res, () => {
     const qualityCase = loadQualityCase(parseCaseId(req));
     if (!qualityCase) return res.status(404).json({ error: '问题单不存在' });
@@ -1020,6 +1240,24 @@ router.post('/quality-cases/:id/assign', requireAuth, (req, res) => {
 });
 
 router.post('/quality-cases/:id/status', requireAuth, (req, res) => {
+  if (useMysqlProcessGovernanceReadModel()) {
+    return runAsyncAction(res, async () => {
+      const repo = await processGovernanceRepositoryOrSendUnavailable(res);
+      if (!repo) return null;
+      const qualityCase = await repo.getQualityCase(parseCaseId(req));
+      if (!qualityCase) return res.status(404).json({ error: '问题单不存在' });
+      if (!canManageQualityCase(req, qualityCase)) return res.status(403).json({ error: '权限不足' });
+      const nextStatus = String(req.body.status || '');
+      if (!USER_SET_STATUSES.has(nextStatus)) return res.status(400).json({ error: '状态无效' });
+      if (qualityCase.status === 'closed') return res.status(409).json({ error: '已关闭问题单不能直接改状态' });
+      return res.json(await repo.updateQualityCaseStatus(qualityCase.id, {
+        status: nextStatus,
+        actor_user_id: req.session.userId,
+        note: req.body.note || null,
+        from_status: qualityCase.status
+      }));
+    });
+  }
   return runDbAction(res, () => {
     const qualityCase = loadQualityCase(parseCaseId(req));
     if (!qualityCase) return res.status(404).json({ error: '问题单不存在' });
@@ -1042,6 +1280,23 @@ router.post('/quality-cases/:id/status', requireAuth, (req, res) => {
 });
 
 router.post('/quality-cases/:id/comment', requireAuth, (req, res) => {
+  if (useMysqlProcessGovernanceReadModel()) {
+    return runAsyncAction(res, async () => {
+      const repo = await processGovernanceRepositoryOrSendUnavailable(res);
+      if (!repo) return null;
+      const qualityCase = await repo.getQualityCase(parseCaseId(req));
+      if (!qualityCase) return res.status(404).json({ error: '问题单不存在' });
+      if (!canViewAllQualityCases(req) && !canManageQualityCase(req, qualityCase)) {
+        return res.status(403).json({ error: '权限不足' });
+      }
+      const note = String(req.body.note || '').trim();
+      if (!note) return res.status(400).json({ error: '备注不能为空' });
+      return res.json(await repo.addQualityCaseComment(qualityCase.id, {
+        actor_user_id: req.session.userId,
+        note
+      }));
+    });
+  }
   return runDbAction(res, () => {
     const qualityCase = loadQualityCase(parseCaseId(req));
     if (!qualityCase) return res.status(404).json({ error: '问题单不存在' });
@@ -1057,6 +1312,21 @@ router.post('/quality-cases/:id/comment', requireAuth, (req, res) => {
 });
 
 router.post('/quality-cases/:id/submit', requireAuth, (req, res) => {
+  if (useMysqlProcessGovernanceReadModel()) {
+    return runAsyncAction(res, async () => {
+      const repo = await processGovernanceRepositoryOrSendUnavailable(res);
+      if (!repo) return null;
+      const qualityCase = await repo.getQualityCase(parseCaseId(req));
+      if (!qualityCase) return res.status(404).json({ error: '问题单不存在' });
+      if (!canManageQualityCase(req, qualityCase)) return res.status(403).json({ error: '权限不足' });
+      if (qualityCase.status === 'closed') return res.status(409).json({ error: '已关闭问题单不能提交整改' });
+      return res.json(await repo.submitQualityCase(qualityCase.id, {
+        actor_user_id: req.session.userId,
+        note: req.body.note || '已提交整改说明，等待重新质检',
+        from_status: qualityCase.status
+      }));
+    });
+  }
   return runDbAction(res, () => {
     const qualityCase = loadQualityCase(parseCaseId(req));
     if (!qualityCase) return res.status(404).json({ error: '问题单不存在' });
@@ -1076,6 +1346,25 @@ router.post('/quality-cases/:id/submit', requireAuth, (req, res) => {
 });
 
 router.post('/quality-cases/:id/close', requireAuth, (req, res) => {
+  if (useMysqlProcessGovernanceReadModel()) {
+    return runAsyncAction(res, async () => {
+      const repo = await processGovernanceRepositoryOrSendUnavailable(res);
+      if (!repo) return null;
+      const qualityCase = await repo.getQualityCase(parseCaseId(req));
+      if (!qualityCase) return res.status(404).json({ error: '问题单不存在' });
+      if (!canCloseQualityCase(req)) return res.status(403).json({ error: '权限不足' });
+      if (qualityCase.status !== 'source_resolved') {
+        return res.status(409).json({ error: '只有重新质检未再出现的问题单才能关闭' });
+      }
+      const note = String(req.body.note || '').trim();
+      if (!note) return res.status(400).json({ error: '关闭说明不能为空' });
+      return res.json(await repo.closeQualityCase(qualityCase.id, {
+        actor_user_id: req.session.userId,
+        note,
+        from_status: qualityCase.status
+      }));
+    });
+  }
   return runDbAction(res, () => {
     const qualityCase = loadQualityCase(parseCaseId(req));
     if (!qualityCase) return res.status(404).json({ error: '问题单不存在' });
@@ -1103,6 +1392,20 @@ router.post('/quality-cases/:id/close', requireAuth, (req, res) => {
 });
 
 router.post('/quality-cases/:id/reopen', requireAuth, (req, res) => {
+  if (useMysqlProcessGovernanceReadModel()) {
+    return runAsyncAction(res, async () => {
+      const repo = await processGovernanceRepositoryOrSendUnavailable(res);
+      if (!repo) return null;
+      const qualityCase = await repo.getQualityCase(parseCaseId(req));
+      if (!qualityCase) return res.status(404).json({ error: '问题单不存在' });
+      if (!canCloseQualityCase(req)) return res.status(403).json({ error: '权限不足' });
+      return res.json(await repo.reopenQualityCase(qualityCase.id, {
+        actor_user_id: req.session.userId,
+        note: req.body.note || '手动重开治理问题单',
+        from_status: qualityCase.status
+      }));
+    });
+  }
   return runDbAction(res, () => {
     const qualityCase = loadQualityCase(parseCaseId(req));
     if (!qualityCase) return res.status(404).json({ error: '问题单不存在' });
@@ -1126,6 +1429,21 @@ router.post('/quality-cases/:id/reopen', requireAuth, (req, res) => {
 });
 
 router.get('/mapping-workspace', requireAuth, (req, res) => {
+  if (useMysqlProcessGovernanceReadModel()) {
+    return runAsyncAction(res, async () => {
+      const repo = await processGovernanceRepositoryOrSendUnavailable(res);
+      if (!repo) return null;
+      return res.json(await repo.getMappingWorkspace({
+        type: req.query.type,
+        status: req.query.status,
+        dept: req.query.dept,
+        canViewAll: canViewAllMappingTodos(req),
+        departmentName: req.session.departmentId
+          ? db.prepare('SELECT name FROM departments WHERE id=?').get(req.session.departmentId)?.name
+          : ''
+      }));
+    });
+  }
   return runDbAction(res, () => {
     const params = [];
     let whereSql = 'WHERE 1=1';
@@ -1179,6 +1497,24 @@ router.get('/mapping-workspace', requireAuth, (req, res) => {
 });
 
 router.get('/mapping-todos', requireAuth, (req, res) => {
+  if (useMysqlProcessGovernanceReadModel()) {
+    return runAsyncAction(res, async () => {
+      const repo = await processGovernanceRepositoryOrSendUnavailable(res);
+      if (!repo) return null;
+      return res.json(await repo.getMappingTodos({
+        type: req.query.type,
+        status: req.query.status,
+        dept: req.query.dept,
+        owner: req.query.owner,
+        userId: req.session.userId,
+        departmentId: req.session.departmentId || -1,
+        canViewAll: canViewAllMappingTodos(req),
+        departmentName: req.session.departmentId
+          ? db.prepare('SELECT name FROM departments WHERE id=?').get(req.session.departmentId)?.name
+          : ''
+      }));
+    });
+  }
   return runDbAction(res, () => {
     const params = [];
     let whereSql = 'WHERE 1=1';
@@ -1251,6 +1587,18 @@ router.get('/mapping-todos', requireAuth, (req, res) => {
 });
 
 router.get('/mapping-todos/:id', requireAuth, (req, res) => {
+  if (useMysqlProcessGovernanceReadModel()) {
+    return runAsyncAction(res, async () => {
+      const repo = await processGovernanceRepositoryOrSendUnavailable(res);
+      if (!repo) return null;
+      const todo = await repo.getMappingTodo(Number(req.params.id || 0));
+      if (!todo) return res.status(404).json({ error: '映射待办不存在' });
+      if (!canViewAllMappingTodos(req) && !canManageMappingTodo(req, todo)) {
+        return res.status(403).json({ error: '权限不足' });
+      }
+      return res.json({ todo, events: await repo.getMappingTodoEvents(todo.id) });
+    });
+  }
   return runDbAction(res, () => {
     const todo = loadMappingTodo(Number(req.params.id || 0));
     if (!todo) return res.status(404).json({ error: '映射待办不存在' });
@@ -1262,6 +1610,35 @@ router.get('/mapping-todos/:id', requireAuth, (req, res) => {
 });
 
 router.post('/mapping-todos/:id/assign', requireAuth, (req, res) => {
+  if (useMysqlProcessGovernanceReadModel()) {
+    return runAsyncAction(res, async () => {
+      const repo = await processGovernanceRepositoryOrSendUnavailable(res);
+      if (!repo) return null;
+      const todo = await repo.getMappingTodo(Number(req.params.id || 0));
+      if (!todo) return res.status(404).json({ error: '映射待办不存在' });
+      if (!canManageMappingTodo(req, todo)) return res.status(403).json({ error: '权限不足' });
+      if (todo.status === 'closed') return res.status(409).json({ error: '已关闭待办不能分派' });
+
+      const ownerUserId = req.body.owner_user_id ? Number(req.body.owner_user_id) : null;
+      if (ownerUserId && !db.prepare('SELECT id FROM users WHERE id=?').get(ownerUserId)) {
+        return res.status(400).json({ error: '责任人不存在' });
+      }
+      const ownerDeptId = getOwnerDeptId(ownerUserId, req.body.owner_dept_id ? Number(req.body.owner_dept_id) : null);
+      if (ownerDeptId && !db.prepare('SELECT id FROM departments WHERE id=?').get(ownerDeptId)) {
+        return res.status(400).json({ error: '责任部门不存在' });
+      }
+      const priority = String(req.body.priority || todo.priority || 'medium');
+      if (!QUALITY_CASE_PRIORITIES.has(priority)) return res.status(400).json({ error: '优先级无效' });
+      return res.json(await repo.assignMappingTodo(todo.id, {
+        owner_user_id: ownerUserId,
+        owner_dept_id: ownerDeptId,
+        priority,
+        due_date: req.body.due_date ? String(req.body.due_date) : null,
+        actor_user_id: req.session.userId,
+        note: req.body.note || '已分派流程映射待办'
+      }));
+    });
+  }
   return runDbAction(res, () => {
     const todo = loadMappingTodo(Number(req.params.id || 0));
     if (!todo) return res.status(404).json({ error: '映射待办不存在' });
@@ -1301,6 +1678,24 @@ router.post('/mapping-todos/:id/assign', requireAuth, (req, res) => {
 });
 
 router.post('/mapping-todos/:id/status', requireAuth, (req, res) => {
+  if (useMysqlProcessGovernanceReadModel()) {
+    return runAsyncAction(res, async () => {
+      const repo = await processGovernanceRepositoryOrSendUnavailable(res);
+      if (!repo) return null;
+      const todo = await repo.getMappingTodo(Number(req.params.id || 0));
+      if (!todo) return res.status(404).json({ error: '映射待办不存在' });
+      if (!canManageMappingTodo(req, todo)) return res.status(403).json({ error: '权限不足' });
+      const nextStatus = String(req.body.status || '');
+      if (!USER_SET_MAPPING_TODO_STATUSES.has(nextStatus)) return res.status(400).json({ error: '状态无效' });
+      if (todo.status === 'closed') return res.status(409).json({ error: '已关闭待办不能直接改状态' });
+      return res.json(await repo.updateMappingTodoStatus(todo.id, {
+        status: nextStatus,
+        actor_user_id: req.session.userId,
+        note: req.body.note || null,
+        from_status: todo.status
+      }));
+    });
+  }
   return runDbAction(res, () => {
     const todo = loadMappingTodo(Number(req.params.id || 0));
     if (!todo) return res.status(404).json({ error: '映射待办不存在' });
@@ -1319,6 +1714,23 @@ router.post('/mapping-todos/:id/status', requireAuth, (req, res) => {
 });
 
 router.post('/mapping-todos/:id/comment', requireAuth, (req, res) => {
+  if (useMysqlProcessGovernanceReadModel()) {
+    return runAsyncAction(res, async () => {
+      const repo = await processGovernanceRepositoryOrSendUnavailable(res);
+      if (!repo) return null;
+      const todo = await repo.getMappingTodo(Number(req.params.id || 0));
+      if (!todo) return res.status(404).json({ error: '映射待办不存在' });
+      if (!canViewAllMappingTodos(req) && !canManageMappingTodo(req, todo)) {
+        return res.status(403).json({ error: '权限不足' });
+      }
+      const note = String(req.body.note || '').trim();
+      if (!note) return res.status(400).json({ error: '备注不能为空' });
+      return res.json(await repo.addMappingTodoComment(todo.id, {
+        actor_user_id: req.session.userId,
+        note
+      }));
+    });
+  }
   return runDbAction(res, () => {
     const todo = loadMappingTodo(Number(req.params.id || 0));
     if (!todo) return res.status(404).json({ error: '映射待办不存在' });
@@ -1334,6 +1746,21 @@ router.post('/mapping-todos/:id/comment', requireAuth, (req, res) => {
 });
 
 router.post('/mapping-todos/:id/submit', requireAuth, (req, res) => {
+  if (useMysqlProcessGovernanceReadModel()) {
+    return runAsyncAction(res, async () => {
+      const repo = await processGovernanceRepositoryOrSendUnavailable(res);
+      if (!repo) return null;
+      const todo = await repo.getMappingTodo(Number(req.params.id || 0));
+      if (!todo) return res.status(404).json({ error: '映射待办不存在' });
+      if (!canManageMappingTodo(req, todo)) return res.status(403).json({ error: '权限不足' });
+      if (todo.status === 'closed') return res.status(409).json({ error: '已关闭待办不能提交' });
+      return res.json(await repo.submitMappingTodo(todo.id, {
+        actor_user_id: req.session.userId,
+        note: req.body.note || '已提交流程映射处理说明',
+        from_status: todo.status
+      }));
+    });
+  }
   return runDbAction(res, () => {
     const todo = loadMappingTodo(Number(req.params.id || 0));
     if (!todo) return res.status(404).json({ error: '映射待办不存在' });
@@ -1349,6 +1776,25 @@ router.post('/mapping-todos/:id/submit', requireAuth, (req, res) => {
 });
 
 router.post('/mapping-todos/:id/close', requireAuth, (req, res) => {
+  if (useMysqlProcessGovernanceReadModel()) {
+    return runAsyncAction(res, async () => {
+      const repo = await processGovernanceRepositoryOrSendUnavailable(res);
+      if (!repo) return null;
+      const todo = await repo.getMappingTodo(Number(req.params.id || 0));
+      if (!todo) return res.status(404).json({ error: '映射待办不存在' });
+      if (!canCloseMappingTodo(req)) return res.status(403).json({ error: '权限不足' });
+      if (todo.status !== 'source_resolved') {
+        return res.status(409).json({ error: '只有重新导入后未再出现的映射待办才能关闭' });
+      }
+      const note = String(req.body.note || '').trim();
+      if (!note) return res.status(400).json({ error: '关闭说明不能为空' });
+      return res.json(await repo.closeMappingTodo(todo.id, {
+        actor_user_id: req.session.userId,
+        note,
+        from_status: todo.status
+      }));
+    });
+  }
   return runDbAction(res, () => {
     const todo = loadMappingTodo(Number(req.params.id || 0));
     if (!todo) return res.status(404).json({ error: '映射待办不存在' });
@@ -1376,6 +1822,20 @@ router.post('/mapping-todos/:id/close', requireAuth, (req, res) => {
 });
 
 router.post('/mapping-todos/:id/reopen', requireAuth, (req, res) => {
+  if (useMysqlProcessGovernanceReadModel()) {
+    return runAsyncAction(res, async () => {
+      const repo = await processGovernanceRepositoryOrSendUnavailable(res);
+      if (!repo) return null;
+      const todo = await repo.getMappingTodo(Number(req.params.id || 0));
+      if (!todo) return res.status(404).json({ error: '映射待办不存在' });
+      if (!canCloseMappingTodo(req)) return res.status(403).json({ error: '权限不足' });
+      return res.json(await repo.reopenMappingTodo(todo.id, {
+        actor_user_id: req.session.userId,
+        note: req.body.note || '手动重开流程映射待办',
+        from_status: todo.status
+      }));
+    });
+  }
   return runDbAction(res, () => {
     const todo = loadMappingTodo(Number(req.params.id || 0));
     if (!todo) return res.status(404).json({ error: '映射待办不存在' });
@@ -1498,6 +1958,13 @@ router.put('/candidate-review/runs/:runId/candidates/:stableKey/review', require
 });
 
 router.get('/chains', requireAuth, (req, res) => {
+  if (useMysqlProcessGovernanceReadModel()) {
+    return runAsyncAction(res, async () => {
+      const repo = await processGovernanceRepository();
+      const items = await repo.getInteractionChains();
+      return res.json({ items });
+    });
+  }
   return runDbAction(res, () => {
     const snapshot = activeSnapshot();
     if (!snapshot) return res.json({ items: [] });
@@ -1516,5 +1983,7 @@ router.get('/chains', requireAuth, (req, res) => {
 
 router.setCandidateReviewRepositoryFactory = setCandidateReviewRepositoryFactory;
 router.resetCandidateReviewRepositoryFactory = resetCandidateReviewRepositoryFactory;
+router.setProcessGovernanceRepositoryFactory = setProcessGovernanceRepositoryFactory;
+router.resetProcessGovernanceRepositoryFactory = resetProcessGovernanceRepositoryFactory;
 
 module.exports = router;

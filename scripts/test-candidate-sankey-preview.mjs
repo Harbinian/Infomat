@@ -138,8 +138,10 @@ try {
   assert.match(html, /归档要求待补/);
   assert.match(html, /角色待确认/);
   assert.match(html, /工程数据集审签和发放管理标准/);
-  assert.match(html, /段落P14/);
+  assert.match(html, /内部锚点P14/);
+  assert.match(html, /原文定位不足/);
   assert.doesNotMatch(html, /第14页/);
+  assert.doesNotMatch(html, /段落P14/);
   assert.match(html, /表01第2行/);
   assert.match(html, /可能的审批或确认环节/);
   assert.match(html, /资料、表单或结果传递关系/);

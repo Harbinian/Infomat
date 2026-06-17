@@ -176,14 +176,16 @@ async function main() {
     assert.strictEqual(fakeRepo.state.savedDecisions.length, 1);
     assert.strictEqual(fakeRepo.state.upsertedBundles[0].run.run_id, 'review-run-001');
     assert.strictEqual(fakeRepo.state.upsertedBundles[0].run.candidate_count, 1);
-    assert.strictEqual(fakeRepo.state.upsertedBundles[0].items[0].source_label.includes('段落P71'), true);
+    assert.strictEqual(fakeRepo.state.upsertedBundles[0].items[0].source_label.includes('内部锚点P71'), true);
     assert.strictEqual(fakeRepo.state.upsertedBundles[0].items[0].source_label.includes('第71页'), false);
+    assert.strictEqual(fakeRepo.state.upsertedBundles[0].items[0].source_label.includes('段落P71'), false);
 
     assert.strictEqual(body.candidate.stable_key, 'candidate-mdm-001');
     assert.strictEqual(body.candidate.department, '工程技术部');
     assert.strictEqual(body.candidate.document_name, '产品设计需求定义管理程序.docx');
-    assert.strictEqual(body.candidate.source_label.includes('段落P71'), true);
+    assert.strictEqual(body.candidate.source_label.includes('内部锚点P71'), true);
     assert.strictEqual(body.candidate.source_label.includes('第71页'), false);
+    assert.strictEqual(body.candidate.source_label.includes('段落P71'), false);
 
     assert.strictEqual(body.review.decision, 'needs_correction');
     assert.strictEqual(body.review.evidence_status, 'need_original_review');

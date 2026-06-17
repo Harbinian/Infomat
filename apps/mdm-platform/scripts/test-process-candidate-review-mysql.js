@@ -4,9 +4,11 @@ const os = require('os');
 const path = require('path');
 
 const {
+  formatSourceForBusiness,
   loadCandidateRunBundle,
   makeProcessCandidateReviewRepository,
-  normalizeReviewPayload
+  normalizeReviewPayload,
+  roleDefinitionStatus
 } = require('../server/processCandidateReviewRepository');
 
 function makeFakePool() {
@@ -217,7 +219,6 @@ async function main() {
       content: '审核人审核产品设计需求文件',
       mapping_location: '当前正式映射未见同名覆盖',
       suggested_action: '回源确认角色定义是否充分。',
-      definition_status: '原文定义不足',
       owner: '工程技术部确认人'
     }
   ], null, 2), 'utf8');
@@ -242,8 +243,19 @@ async function main() {
     const bundle = loadCandidateRunBundle(runDir);
     assert.strictEqual(bundle.run.run_id, 'review-run-001');
     assert.strictEqual(bundle.items[0].document_name, '产品设计需求定义管理程序.docx');
-    assert.strictEqual(bundle.items[0].source_label.includes('段落P71'), true);
+    assert.strictEqual(bundle.items[0].source_label.includes('内部锚点P71'), true);
     assert.strictEqual(bundle.items[0].source_label.includes('第71页'), false);
+    assert.strictEqual(bundle.items[0].source_label.includes('段落P71'), false);
+    assert.strictEqual(bundle.items[0].source_label.includes('块号P71'), false);
+    assert.strictEqual(bundle.items[0].definition_status, '原文定义不足');
+    assert.strictEqual(roleDefinitionStatus('总经理', '总经理批准后执行。'), '原文明确');
+    assert.strictEqual(roleDefinitionStatus('经营副总', '经营副总审批。'), '原文明确');
+    assert.strictEqual(roleDefinitionStatus('生产副总', '生产副总审批。'), '原文明确');
+    assert.strictEqual(roleDefinitionStatus('审核人', '审核人审核后提交。'), '原文定义不足');
+    assert.strictEqual(
+      formatSourceForBusiness('制度.docx', 'P71'),
+      '制度.docx · 内部锚点P71 · 原文定位不足'
+    );
 
     const pool = makeFakePool();
     const repo = makeProcessCandidateReviewRepository(pool);

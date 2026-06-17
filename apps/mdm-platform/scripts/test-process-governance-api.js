@@ -291,8 +291,9 @@ async function main() {
     assert.strictEqual(candidateReview.body.groups[0].documents[0].document_name, '产品设计需求定义管理程序.docx');
     assert.strictEqual(candidateReview.body.groups[0].documents[0].types[0].candidate_type, '角色待确认');
     assert.strictEqual(candidateReview.body.items[0].definition_status, '原文定义不足');
-    assert.ok(candidateReview.body.items[0].source_label.includes('段落P71'));
+    assert.ok(candidateReview.body.items[0].source_label.includes('内部锚点P71'));
     assert.strictEqual(candidateReview.body.items[0].source_label.includes('第71页'), false);
+    assert.strictEqual(candidateReview.body.items[0].source_label.includes('段落P71'), false);
 
     const quality = await request('/api/process-governance/quality', {}, cookie);
     assert.strictEqual(quality.res.status, 200);

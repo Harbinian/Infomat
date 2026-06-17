@@ -30,6 +30,109 @@ function documentNameFromSource(sourceFile) {
     .pop() || '来源未标注文档';
 }
 
+const DEPARTMENT_OR_OFFICE_NAMES = [
+  '工程技术部',
+  '质量管理部',
+  '财务部',
+  '经营发展部',
+  '项目管理部',
+  '物资保障部',
+  '复材车间',
+  '运维安环部',
+  '行政人事部',
+  '办公室',
+  '综合办公室',
+  '总经理办公室'
+];
+
+const LEADER_ROLE_EXCEPTIONS = new Set(['总经理', '经营副总', '生产副总']);
+const COMMON_ROLE_TERMS = [
+  '负责人',
+  '责任人',
+  '审核人',
+  '批准人',
+  '编制人',
+  '申请人',
+  '管理员',
+  '成本会计',
+  '设计人员',
+  '定额员',
+  '检验员',
+  '工程师',
+  '技术员',
+  '部长',
+  '主任',
+  '经理'
+];
+const ROLE_TERM_RE = /[\u4e00-\u9fff]{2,20}(?:办公室|负责人|责任人|审核人|批准人|编制人|申请人|管理员|成本会计|设计人员|定额员|检验员|工程师|技术员|副总|部长|主任|经理|车间|部门|部)/g;
+
+function uniqueTerms(values) {
+  const seen = new Set();
+  const output = [];
+  for (const value of values) {
+    const term = String(value || '').trim();
+    if (!term || seen.has(term)) continue;
+    seen.add(term);
+    output.push(term);
+  }
+  return output;
+}
+
+function roleDefinitionStatus(roleName, sourceText = '') {
+  const name = String(roleName || '').trim();
+  const text = String(sourceText || '');
+  if (!name) return '待回源确认';
+  if (LEADER_ROLE_EXCEPTIONS.has(name)) return '原文明确';
+  if (DEPARTMENT_OR_OFFICE_NAMES.includes(name)) return '原文明确';
+  if (DEPARTMENT_OR_OFFICE_NAMES.some(prefix => name.startsWith(prefix) && name.length > prefix.length)) {
+    return '原文明确';
+  }
+  if (DEPARTMENT_OR_OFFICE_NAMES.some(prefix => text.includes(`${prefix}${name}`))) {
+    return '原文明确';
+  }
+  return '原文定义不足';
+}
+
+function roleTermHasDepartmentPrefix(roleName) {
+  const name = String(roleName || '').trim();
+  return DEPARTMENT_OR_OFFICE_NAMES.includes(name) ||
+    DEPARTMENT_OR_OFFICE_NAMES.some(prefix => name.startsWith(prefix) && name.length > prefix.length);
+}
+
+function roleTermsFromText(text) {
+  return uniqueTerms([
+    ...[...LEADER_ROLE_EXCEPTIONS].filter(role => String(text || '').includes(role)),
+    ...COMMON_ROLE_TERMS.filter(role => String(text || '').includes(role)),
+    ...[...String(text || '').matchAll(ROLE_TERM_RE)].map(match => match[0])
+  ]);
+}
+
+function roleAppearsNaked(roleName, sourceText) {
+  const role = String(roleName || '').trim();
+  const text = String(sourceText || '');
+  if (!role || LEADER_ROLE_EXCEPTIONS.has(role) || roleTermHasDepartmentPrefix(role)) return false;
+  let index = text.indexOf(role);
+  while (index >= 0) {
+    const hasPrefix = DEPARTMENT_OR_OFFICE_NAMES.some(prefix =>
+      index >= prefix.length && text.slice(index - prefix.length, index) === prefix
+    );
+    if (!hasPrefix) return true;
+    index = text.indexOf(role, index + role.length);
+  }
+  return false;
+}
+
+function inferDefinitionStatus(item, sourceText = '') {
+  if (item.definition_status) return item.definition_status;
+  const text = `${item.content || item.candidate_content || ''}\n${sourceText || ''}`;
+  const roleTerms = roleTermsFromText(text);
+  if (!roleTerms.length) return '';
+  if (roleTerms.some(role => roleAppearsNaked(role, text))) {
+    return '原文定义不足';
+  }
+  return '原文明确';
+}
+
 function parseAnchor(anchor) {
   const text = String(anchor || '');
   const clause = text.match(/§\s*([0-9]+(?:\.[0-9]+)*)/)?.[1] || '';
@@ -49,7 +152,7 @@ function humanizeAnchor(anchorText) {
     .replace(/§\s*([0-9]+(?:\.[0-9]+)*)/g, '第$1条')
     .replace(/\bpage\s*=?\s*(\d+)\b/gi, '第$1页')
     .replace(/第?(\d+)页/g, '第$1页')
-    .replace(/\bP(\d+)\b/gi, '段落P$1')
+    .replace(/\bP(\d+)\b/gi, '内部锚点P$1')
     .replace(/\bT(\d+)\b/gi, '表$1')
     .trim();
 }
@@ -62,8 +165,11 @@ function formatSourceForBusiness(sourceFile, sourceAnchor) {
   const anchor = parseAnchor(sourceAnchor);
   if (anchor.clause) parts.push(`第${anchor.clause}条`);
   if (anchor.page) parts.push(`第${anchor.page}页`);
-  if (anchor.paragraph_id) parts.push(`段落${anchor.paragraph_id}`);
+  if (anchor.paragraph_id) parts.push(`内部锚点${anchor.paragraph_id}`);
   if (anchor.table_id) parts.push(anchor.table_id.replace(/^T/i, '表'));
+  if (anchor.paragraph_id && !anchor.clause && !anchor.page && !anchor.table_id) {
+    parts.push('原文定位不足');
+  }
 
   if (!parts.length && sourceAnchor) parts.push(humanizeAnchor(sourceAnchor));
   return parts.filter(Boolean).join(' · ') || '来源未标注';
@@ -160,6 +266,7 @@ function loadCandidateRunBundle(candidateRunDir) {
   const items = candidates.map((candidate, index) => {
     const item = normalizeCandidate(candidate, index);
     item.source_excerpts = evidenceForCandidate(item, chunks);
+    item.definition_status = inferDefinitionStatus(item, item.source_excerpts.map(excerpt => excerpt.raw_text).join('\n'));
     return item;
   });
 
@@ -455,5 +562,6 @@ module.exports = {
   groupCandidatesForReview,
   loadCandidateRunBundle,
   makeProcessCandidateReviewRepository,
-  normalizeReviewPayload
+  normalizeReviewPayload,
+  roleDefinitionStatus
 };

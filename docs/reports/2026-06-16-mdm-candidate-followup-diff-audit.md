@@ -28,6 +28,24 @@
 - 本轮只做候选复核 MySQL 持久化第一阶段，不删除 SQLite 依赖，不改认证、RBAC、角色工作台的既有隔离测试链。
 - 旧 SQLite `platform.db` 不迁移，后续通过 MySQL 基线脚本重建。
 
+执行记录：MySQL schema 已补齐流程治理读模型和待办/质量闭环表，包括 `process_governance_snapshots`、nodes/edges、A1 明细、跨部门交互、证据引用、源文件覆盖、MDM 要求、质量问题单、映射工作库和映射待办事件。`init:mysql` 会登记 `2026-06-16-process-governance-read-model`。本步只落 schema，不切换现有流程治理 Express 路由或 SQLite 过渡导入链路。
+
+执行记录：已新增 `apps/mdm-platform/server/processGovernanceMysqlRepository.js`，覆盖流程治理 MySQL 读模型的最小闭环：替换活动快照、写入节点/边/跨部门风险/交互链，并按现有 Sankey 接口结构读回当前活动快照。`npm run test:process-governance` 已纳入 fake MySQL pool 测试；本步仍不切换现有 Express 路由和 SQLite 过渡导入链路。
+
+执行记录：`/api/process-governance/sankey` 已增加受控 MySQL 读模型接入，只有 `PROCESS_GOVERNANCE_READ_MODEL=mysql` 时才读取 MySQL repository；默认仍走现有过渡链路。路由测试使用 fake repository 验证开关行为，不连接真实 MySQL，不改变其他流程治理接口。
+
+执行记录：`/api/process-governance/snapshots` 与 `/api/process-governance/current` 已纳入同一受控 MySQL 读模型开关。MySQL repository 新增 `listSnapshots()` 和 `getCurrentSnapshot()`，后者返回当前快照、解析后的 stats 和质量摘要；默认不开关时仍走现有 SQLite 过渡链路。尚未切换 A1、source-files、MDM requirements、evidence、cross-dept、quality、mapping workspace/todos 等接口。
+
+执行记录：`/api/process-governance/a1` 已纳入受控 MySQL 读模型开关。MySQL repository 新增 A1 明细写入与 `getA1Items()`，支持按部门、L3 和系统过滤，并把 `suggested_systems` 还原为数组。MySQL 导入适配器与 CLI 已支持 `--a1-source`，可从部门映射 Markdown 的 A1 表生成 `process_a1_items`。
+
+执行记录：`/api/process-governance/source-files`、`/mdm-requirements`、`/evidence` 与 `/chains` 已纳入同一受控 MySQL 读模型开关。MySQL repository 已写入并读回源文件覆盖、MDM 建设要求、证据引用和交互链，查询返回结构保持与旧接口一致。MySQL 导入适配器已从 `docs/company-sankey-data.json` 中带出 `sourceManifest.files`、`mdmRequirements` 和 `evidenceRefs`，不扫描或修改 `docs/norms`。尚未切换 cross-dept 独立列表、quality、mapping workspace/todos 等接口。
+
+补充执行记录（2026-06-17）：`/api/process-governance/cross-dept`、`/quality`、`/quality-cases*`、`/mapping-workspace` 与 `/mapping-todos*` 已纳入 `PROCESS_GOVERNANCE_READ_MODEL=mysql` 开关。质量问题单和映射待办按读写一体方式接入 MySQL repository，避免 MySQL 读、SQLite 写的混用状态；认证、RBAC、用户和部门校验仍沿用当前 SQLite 过渡链路，等待后续数据层迁移。
+
+执行记录：已新增 MySQL 版流程治理导入适配器和 CLI：`apps/mdm-platform/scripts/lib/processGovernanceMysqlImport.js` 与 `apps/mdm-platform/scripts/import-process-governance-mysql.js`。该适配器从 `docs/company-sankey-data.json` 读取 parser 快照，计算 source hash，推断节点类型/父子关系，归一化跨部门风险和交互链状态，然后写入 MySQL 读模型 repository。旧 `import-process-governance.js` 仍保留为 SQLite 过渡导入链路，默认未删除。
+
+执行记录：已新增可选真实 MySQL smoke：`apps/mdm-platform/scripts/smoke-process-governance-mysql.js` 和共享 runner `apps/mdm-platform/scripts/lib/processGovernanceMysqlSmoke.js`。只有同时设置 `MYSQL_HOST`、`MYSQL_USER`、`MYSQL_DATABASE` 时才会初始化 schema、导入 `docs/company-sankey-data.json` 并读回 Sankey；缺少环境变量时输出 skipped 并退出 0。该 smoke 不读取 `MDM_DB_PATH`，也不加载 SQLite `server/db`。
+
 依赖审计记录：`cd apps/mdm-platform && npm audit --omit=dev --json` 显示生产依赖仍有 5 个告警（4 moderate、1 high），涉及 `express/qs`、`exceljs/uuid`、`tmp`。本轮只分类记录，不自动执行依赖升级或降级。
 
 ## 本轮安全边界
@@ -52,5 +70,12 @@
 - MDM 候选复核保存接口必须返回持久化后的复核时间和更新时间。
 - MDM 候选复核查询接口必须在候选明细和分组明细中回显已保存的结构化复核结果。
 - MDM 候选复核前端必须按部门、文档名称和候选类型分组展示。
-- `Pxx` 只能显示为段落或块号，不能显示为页次。
+- MySQL schema 初始化必须包含流程治理读模型和待办/质量闭环表，且不得依赖尚未迁移的 `users/departments` 外键。
+- 流程治理 MySQL 读模型 repository 必须能替换活动快照并读回现有 Sankey 消费结构；切换正式路由前仍需单独做 API 接入测试。
+- `/api/process-governance/snapshots`、`/current`、`/sankey`、`/a1`、`/source-files`、`/mdm-requirements`、`/evidence`、`/chains` 的 MySQL 读取必须只在 `PROCESS_GOVERNANCE_READ_MODEL=mysql` 下启用；默认行为不得被隐式切换。
+- `/api/process-governance/cross-dept`、`/quality`、`/quality-cases*`、`/mapping-workspace`、`/mapping-todos*` 的 MySQL 读写也必须只在 `PROCESS_GOVERNANCE_READ_MODEL=mysql` 下启用；默认 SQLite 过渡链路保持可回归。
+- MySQL 版 A1 导入必须通过显式 `--a1-source` 或 `a1MarkdownPaths` 提供部门映射 Markdown，不自动扫描 `docs/norms`。
+- MySQL 版流程治理导入必须直接消费 `docs/company-sankey-data.json` 快照，推断无类型节点并写入 MySQL 读模型，不依赖 `MDM_DB_PATH` 或 SQLite `server/db`。
+- 真实 MySQL smoke 必须可跳过：缺少 `MYSQL_HOST`、`MYSQL_USER`、`MYSQL_DATABASE` 时不得尝试连接默认本地库；配齐时才写指定 MySQL schema。
+- `Pxx` 只能显示为内部抽取锚点，不能显示为页次、原文段落号或块号；缺少真实页次、条款号或表格位置时，应标记为原文定位不足。
 - 裸普通角色必须标记为 `原文定义不足`，`总经理`、`经营副总`、`生产副总` 例外。

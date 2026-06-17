@@ -87,9 +87,10 @@ for (const required of [
   'ENGINE=InnoDB',
   'utf8mb4',
 ]) {
-  assert.ok(schema.includes(required), `schema should include ${required}`);
+assert.ok(schema.includes(required), `schema should include ${required}`);
 }
 assert.equal(schema.includes('sqlite_master'), false, 'schema must not use SQLite');
+assert.equal(schema.includes('correction_note'), false, 'candidate review schema must not keep concatenated correction note fields');
 
 const bundle = loadCandidateRunBundle(runDir);
 assert.equal(bundle.run.run_id, 'test-candidate-review-mysql');
@@ -117,11 +118,18 @@ const businessSource = formatSourceForBusiness(
 );
 assert.equal(
   businessSource,
-  'GLTX-CW-01-A财务成本核算管理程序.docx · 第5.4条 · 段落P71',
-  'business source should hide parent directories and keep Pxx as paragraph/block anchor, not page',
+  'GLTX-CW-01-A财务成本核算管理程序.docx · 第5.4条 · 内部锚点P71',
+  'business source should hide parent directories and keep Pxx as an internal extraction anchor, not page or original paragraph',
 );
 assert.equal(businessSource.includes('docs/norms'), false, 'business source should not expose parent directories');
 assert.equal(businessSource.includes('第71页'), false, 'paragraph ids must not be displayed as pages');
+assert.equal(businessSource.includes('段落P71'), false, 'internal extraction anchors must not be displayed as original paragraphs');
+assert.equal(businessSource.includes('块号P71'), false, 'internal extraction anchors must not be displayed as original block ids');
+assert.equal(
+  formatSourceForBusiness('制度.docx', 'P71'),
+  '制度.docx · 内部锚点P71 · 原文定位不足',
+  'Pxx without real page, clause, or table location should be marked as insufficient original location',
+);
 assert.equal(formatSourceForBusiness('制度.docx', 'page=71 §5.4'), '制度.docx · 第5.4条 · 第71页');
 assert.equal(documentNameFromSource('docs/norms/财务部业务资料/制度.docx'), '制度.docx');
 
@@ -183,6 +191,8 @@ assert.equal(html.includes('data-correction-fragment='), false, 'review app must
 assert.equal(html.includes('点选标签生成修正意见'), false, 'review app must not present click-to-concat correction instructions');
 assert.equal(html.includes('id="correctionPreview"'), false, 'review app must not keep correction preview composer');
 assert.equal(html.includes('id="correctionNote"'), false, 'review app must not save a hidden concatenated correction note');
+assert.equal(html.includes('tag-button'), false, 'review app must not keep click-to-concat tag button styles');
+assert.equal(html.includes('correction-preview'), false, 'review app must not keep click-to-concat preview styles');
 assert.equal(html.includes('导出复核 JSON'), false, 'service UI must not expose JSON export');
 assert.equal(html.includes('review_decisions.json'), false, 'service UI must not mention JSON files');
 const oldCorrectionTextarea = '<textarea id=' + '"correctionNote"';
@@ -234,6 +244,11 @@ assert.ok(
 assert.ok(
   executed.some((entry) => entry.sql.includes('issue_type') && entry.sql.includes('definition_status') && entry.sql.includes('normalized_note')),
   'repository should persist structured review fields instead of a concatenated correction note',
+);
+assert.equal(
+  executed.some((entry) => entry.sql.includes('correction_note')),
+  false,
+  'repository SQL must not persist concatenated correction notes',
 );
 
 const packageJson = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
