@@ -42,6 +42,16 @@ assert.ok(
 );
 
 assert.ok(
+  audit.permissionGuarded.some(route =>
+    route.file.endsWith('importRbac.js') &&
+    route.method === 'post' &&
+    route.path === '/full' &&
+    route.permission === 'admin:access'
+  ),
+  'RBAC full import through importWriteGate should be classified as permission guarded'
+);
+
+assert.ok(
   audit.businessGuarded.some(route =>
     route.file.endsWith('todos.js') &&
     route.method === 'post' &&
