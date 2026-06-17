@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const { requireAuth, getUserEffectivePermissions } = require('../auth');
-const { getEffectiveRoleCodes } = require('../access');
+const { requireAuth, getUserEffectivePermissionsAsync } = require('../auth');
+const { getEffectiveRoleCodesAsync } = require('../access');
 
 function handleDbError(res, error) {
   if (error && (String(error.code).startsWith('SQLITE_CONSTRAINT') || String(error.message).includes('constraint failed'))) {
@@ -12,18 +12,14 @@ function handleDbError(res, error) {
   return res.status(500).json({ error: '服务器错误' });
 }
 
-function runDbAction(res, action) {
-  try {
-    return action();
-  } catch (error) {
-    return handleDbError(res, error);
-  }
+function runAsyncAction(res, action) {
+  return action().catch(error => handleDbError(res, error));
 }
 
-function canEditFieldIdentity(req, fieldEntryId, identity) {
-  const { permSet } = getUserEffectivePermissions(req.session.userId);
+async function canEditFieldIdentity(req, fieldEntryId, identity) {
+  const { permSet } = await getUserEffectivePermissionsAsync(req.session.userId);
   if (permSet.has('admin:access') || permSet.has('*:*')) return true;
-  const roleCodes = getEffectiveRoleCodes(req);
+  const roleCodes = await getEffectiveRoleCodesAsync(req);
   if (!roleCodes.has('owner')) return false;
   if (identity && identity.owner_user_id) return identity.owner_user_id === req.session.userId;
 
@@ -42,10 +38,10 @@ router.get('/field/:fieldEntryId', requireAuth, (req, res) => {
 });
 
 router.put('/:fieldEntryId', requireAuth, (req, res) => {
-  return runDbAction(res, () => {
+  return runAsyncAction(res, async () => {
     const { candidate_systems, authoritative_system, maintain_dept_id, owner_user_id, confirmed, note } = req.body;
     const existing = db.prepare('SELECT * FROM field_identities WHERE field_entry_id=?').get(req.params.fieldEntryId);
-    if (!canEditFieldIdentity(req, req.params.fieldEntryId, existing)) {
+    if (!await canEditFieldIdentity(req, req.params.fieldEntryId, existing)) {
       return res.status(403).json({ error: '仅数据 owner 或管理员可维护黄金源信息' });
     }
 
@@ -84,11 +80,11 @@ router.put('/:fieldEntryId', requireAuth, (req, res) => {
 });
 
 router.post('/:fieldEntryId/confirm', requireAuth, (req, res) => {
-  return runDbAction(res, () => {
+  return runAsyncAction(res, async () => {
     const { authoritative_system } = req.body;
     const existing = db.prepare('SELECT * FROM field_identities WHERE field_entry_id=?').get(req.params.fieldEntryId);
     if (!existing) return res.status(404).json({ error: '字段身份不存在' });
-    if (!canEditFieldIdentity(req, req.params.fieldEntryId, existing)) {
+    if (!await canEditFieldIdentity(req, req.params.fieldEntryId, existing)) {
       return res.status(403).json({ error: '仅该字段数据 owner 或管理员可确认权威系统' });
     }
 
