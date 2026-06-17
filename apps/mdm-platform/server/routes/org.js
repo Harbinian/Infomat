@@ -1,9 +1,14 @@
 const express = require('express');
+const mysql = require('mysql2/promise');
 const router = express.Router();
 const db = require('../db');
 const { hashPassword, verifyPassword, requireAuth, requirePermission, getUserEffectivePermissions } = require('../auth');
+const { mysqlConfigFromEnv } = require('../mysqlConfig');
+const { makeIdentityMysqlRepository } = require('../identityMysqlRepository');
 const { resolveInitialPassword, validatePasswordStrength } = require('../passwordPolicy');
 const { loginRateLimit, recordLoginFailure, clearLoginFailures } = require('../security');
+let identityRepoPromise = null;
+let identityRepositoryFactory = null;
 
 function handleDbError(res, error) {
   if (error && (error.code === 'SQLITE_CONSTRAINT_UNIQUE' || String(error.message).includes('UNIQUE constraint failed'))) {
@@ -22,6 +27,50 @@ function runDbAction(res, action) {
   } catch (error) {
     return handleDbError(res, error);
   }
+}
+
+function runAsyncAction(res, action, unavailableMessage) {
+  return action().catch(error => {
+    if (error && error.statusCode) {
+      return res.status(error.statusCode).json({ error: error.message });
+    }
+    console.error(error);
+    return res.status(unavailableMessage ? 503 : 500).json({ error: unavailableMessage || '服务器错误' });
+  });
+}
+
+function useMysqlIdentityReadModel() {
+  return String(process.env.MDM_IDENTITY_READ_MODEL || '').toLowerCase() === 'mysql';
+}
+
+async function identityRepository() {
+  if (identityRepositoryFactory) {
+    return await identityRepositoryFactory();
+  }
+  if (!identityRepoPromise) {
+    identityRepoPromise = (async () => {
+      const pool = mysql.createPool(mysqlConfigFromEnv());
+      const repo = makeIdentityMysqlRepository(pool);
+      await repo.initSchema();
+      return repo;
+    })();
+  }
+  try {
+    return await identityRepoPromise;
+  } catch (error) {
+    identityRepoPromise = null;
+    throw error;
+  }
+}
+
+function setIdentityRepositoryFactory(factory) {
+  identityRepositoryFactory = factory;
+  identityRepoPromise = null;
+}
+
+function resetIdentityRepositoryFactory() {
+  identityRepositoryFactory = null;
+  identityRepoPromise = null;
 }
 
 function getUserRoleCodes(userId, legacyRole) {
@@ -320,7 +369,7 @@ router.post('/logout', (req, res) => {
   });
 });
 
-function currentUserPayload(req) {
+function currentUserPayloadFromSqlite(req) {
   const { permSet } = getUserEffectivePermissions(req.session.userId);
   const rbacRoles = getUserRoleCodes(req.session.userId, req.session.userRole);
   const department = req.session.departmentId
@@ -338,15 +387,31 @@ function currentUserPayload(req) {
   };
 }
 
+async function currentUserPayload(req) {
+  if (!useMysqlIdentityReadModel()) return currentUserPayloadFromSqlite(req);
+  const repo = await identityRepository();
+  const payload = await repo.getCurrentUserPayload(req.session);
+  if (!payload) {
+    const error = new Error('用户不存在');
+    error.statusCode = 401;
+    throw error;
+  }
+  return payload;
+}
+
 router.get('/session', (req, res) => {
   if (!req.session || !req.session.userId) {
     return res.json({ authenticated: false });
   }
-  return res.json({ authenticated: true, user: currentUserPayload(req) });
+  return runAsyncAction(res, async () => {
+    return res.json({ authenticated: true, user: await currentUserPayload(req) });
+  }, useMysqlIdentityReadModel() ? '身份 MySQL 读取模型不可用' : null);
 });
 
 router.get('/me', requireAuth, (req, res) => {
-  res.json(currentUserPayload(req));
+  return runAsyncAction(res, async () => {
+    res.json(await currentUserPayload(req));
+  }, useMysqlIdentityReadModel() ? '身份 MySQL 读取模型不可用' : null);
 });
 
 // GET /api/users/:id/roles — get user's assigned roles
@@ -423,5 +488,8 @@ router.post('/me/password', requireAuth, (req, res) => {
     res.json({ success: true });
   });
 });
+
+router.setIdentityRepositoryFactory = setIdentityRepositoryFactory;
+router.resetIdentityRepositoryFactory = resetIdentityRepositoryFactory;
 
 module.exports = router;

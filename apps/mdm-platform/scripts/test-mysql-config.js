@@ -24,6 +24,12 @@ assert.strictEqual(redactMysqlConfig(config).password, '***');
 const schema = mdmMysqlSchemaSql();
 for (const required of [
   'CREATE TABLE IF NOT EXISTS schema_migrations',
+  'CREATE TABLE IF NOT EXISTS departments',
+  'CREATE TABLE IF NOT EXISTS users',
+  'CREATE TABLE IF NOT EXISTS roles',
+  'CREATE TABLE IF NOT EXISTS permissions',
+  'CREATE TABLE IF NOT EXISTS role_permissions',
+  'CREATE TABLE IF NOT EXISTS user_roles',
   'CREATE TABLE IF NOT EXISTS process_candidate_review_runs',
   'CREATE TABLE IF NOT EXISTS process_candidate_review_items',
   'CREATE TABLE IF NOT EXISTS process_candidate_review_excerpts',
@@ -55,6 +61,10 @@ for (const required of [
   'issue_type VARCHAR(64)',
   'definition_status VARCHAR(64)',
   'normalized_note TEXT',
+  'employee_no VARCHAR(128) NOT NULL',
+  'password_hash VARCHAR(255) NOT NULL',
+  'field_constraints MEDIUMTEXT',
+  'effect VARCHAR(16) NOT NULL DEFAULT',
   'AUTO_INCREMENT',
   'ENGINE=InnoDB',
   'utf8mb4'
@@ -73,10 +83,12 @@ assert.strictEqual(packageJson.scripts['test:mysql-config'], 'node scripts/test-
 assert.strictEqual(packageJson.scripts['import:process-governance-mysql'], 'node scripts/import-process-governance-mysql.js');
 assert.strictEqual(packageJson.scripts['import:process-candidate-review'], 'node scripts/import-process-candidate-review-mysql.js');
 assert.strictEqual(packageJson.scripts['smoke:process-governance-mysql'], 'node scripts/smoke-process-governance-mysql.js');
+assert.strictEqual(packageJson.scripts['test:identity-mysql'], 'node scripts/test-identity-mysql-repository.js && node scripts/test-org-me-mysql-api.js');
 assert.ok(packageJson.dependencies.mysql2, 'MDM app should declare mysql2 dependency');
 
 const initScript = readFileSync(path.join(__dirname, 'init-mysql-schema.js'), 'utf8');
 assert.ok(initScript.includes('2026-06-16-process-candidate-review'), 'init script should record candidate review schema migration');
 assert.ok(initScript.includes('2026-06-16-process-governance-read-model'), 'init script should record process governance read model schema migration');
+assert.ok(initScript.includes('2026-06-17-identity-rbac-read-model'), 'init script should record identity/RBAC schema migration');
 
 console.log('MySQL config checks passed');

@@ -43,6 +43,7 @@ const businessGuarded = new Map([
   ['processGovernance.js POST /mapping-todos/:id/submit', '映射待办提交通过负责人/管理权限检查'],
   ['processGovernance.js POST /mapping-todos/:id/close', '映射待办关闭通过关闭/审核/管理权限检查'],
   ['processGovernance.js POST /mapping-todos/:id/reopen', '映射待办重开通过管理权限检查'],
+  ['processGovernance.js PUT /candidate-review/runs/:runId/candidates/:stableKey/review', '候选复核决策保存要求登录用户，会话 reviewer 覆盖请求体 reviewer'],
   ['terminology.js POST /', '术语创建通过本部门流程治理范围检查'],
   ['terminology.js PUT /:id', '术语编辑要求本人待审术语或管理员'],
   ['todos.js POST /', '待办创建在路由内限制管理员'],
