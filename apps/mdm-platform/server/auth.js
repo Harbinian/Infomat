@@ -200,13 +200,21 @@ function getUserEffectivePermissions(userId) {
   return { permSet, fieldConstraints };
 }
 
+async function getUserEffectivePermissionsAsync(userId) {
+  if (useMysqlIdentityReadModel()) {
+    const repo = await identityRepository();
+    return await repo.getUserEffectivePermissions(userId);
+  }
+
+  return getUserEffectivePermissions(userId);
+}
+
 function requirePermission(permCode) {
   return (req, res, next) => {
     if (!req.session || !req.session.userId) return res.status(401).json({ error: '未登录' });
 
     if (useMysqlIdentityReadModel()) {
-      return identityRepository()
-        .then(repo => repo.getUserEffectivePermissions(req.session.userId))
+      return getUserEffectivePermissionsAsync(req.session.userId)
         .then(({ permSet, fieldConstraints }) => {
           if (!permSet.has(permCode) && !permSet.has('*:*')) {
             return res.status(403).json({ error: '权限不足' });
@@ -325,6 +333,7 @@ module.exports = {
   requirePermission,
   applyFieldConstraints,
   getUserEffectivePermissions,
+  getUserEffectivePermissionsAsync,
   isAdmin,
   stripInternalIds,
   send401,
