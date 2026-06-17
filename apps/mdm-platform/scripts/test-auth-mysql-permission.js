@@ -25,6 +25,11 @@ async function main() {
     'function',
     'auth should allow MySQL identity repository injection'
   );
+  assert.strictEqual(
+    typeof auth.getUserEffectivePermissionsAsync,
+    'function',
+    'auth should expose a MySQL-aware async permission reader'
+  );
 
   let mode = 'allow';
   let permissionChecks = 0;
@@ -66,6 +71,10 @@ async function main() {
   const baseUrl = `http://127.0.0.1:${server.address().port}`;
 
   try {
+    const effectivePermissions = await auth.getUserEffectivePermissionsAsync(42);
+    assert.deepStrictEqual(Array.from(effectivePermissions.permSet), ['attribute:update']);
+    assert.deepStrictEqual(effectivePermissions.fieldConstraints['attribute:update'].readonly, ['source_file']);
+
     const allowedRes = await fetch(`${baseUrl}/allowed`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -106,7 +115,7 @@ async function main() {
     assert.strictEqual(noSessionRes.status, 401, JSON.stringify(noSessionBody));
     assert.strictEqual(noSessionBody.error, '未登录');
 
-    assert.strictEqual(permissionChecks, 3);
+    assert.strictEqual(permissionChecks, 4);
     console.log('Auth MySQL permission middleware test passed');
   } finally {
     await closeServer(server);
