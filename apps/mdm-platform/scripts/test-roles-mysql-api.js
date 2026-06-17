@@ -28,6 +28,10 @@ async function main() {
 
   const calls = [];
   let permissionChecks = 0;
+  const createdRoles = [];
+  const updatedRoles = [];
+  const deletedRoles = [];
+  const replacedPermissions = [];
   rolesRouter.setIdentityRepositoryFactory(async () => ({
     async getUserEffectivePermissions(userId) {
       assert.strictEqual(userId, 42);
@@ -74,6 +78,27 @@ async function main() {
           { perm_code: 'mapping:read', resource: 'mapping', action: 'read', assigned: false, effect: null }
         ]
       };
+    },
+    async createRole(payload) {
+      createdRoles.push(payload);
+      return { role_id: 77 };
+    },
+    async updateRole(roleId, payload) {
+      updatedRoles.push({ roleId, payload });
+      return roleId === 77;
+    },
+    async deleteRole(roleId) {
+      deletedRoles.push(roleId);
+      if (roleId === 1) return { deleted: false, reason: 'system' };
+      if (roleId === 3) return { deleted: false, reason: 'assigned', count: 2 };
+      if (roleId === 4) return { deleted: false, reason: 'children', count: 1 };
+      if (roleId !== 77) return { deleted: false, reason: 'missing' };
+      return { deleted: true };
+    },
+    async replaceRolePermissions(roleId, permIds, effects) {
+      replacedPermissions.push({ roleId, permIds, effects });
+      if (roleId !== 77) return null;
+      return { success: true, count: permIds.length };
     }
   }));
 
@@ -117,14 +142,99 @@ async function main() {
     assert.strictEqual(matrixBody.role.role_code, 'it_lead');
     assert.strictEqual(matrixBody.matrix.find(permission => permission.perm_code === 'data:view_all').assigned, true);
 
-    const blockedWriteRes = await fetch(`${baseUrl}/api/roles`, {
+    const createRes = await fetch(`${baseUrl}/api/roles`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ role_code: 'new_role', role_name: '新角色' })
+      body: JSON.stringify({ role_code: 'new_role', role_name: '新角色', description: '自定义角色', parent_role_id: 2 })
     });
-    const blockedWriteBody = await blockedWriteRes.json();
-    assert.strictEqual(blockedWriteRes.status, 501, JSON.stringify(blockedWriteBody));
-    assert.strictEqual(blockedWriteBody.error, '角色写入 MySQL 迁移未完成');
+    const createBody = await createRes.json();
+    assert.strictEqual(createRes.status, 201, JSON.stringify(createBody));
+    assert.strictEqual(createBody.role_id, 77);
+    assert.strictEqual(createdRoles[0].created_by, 42);
+
+    const createInvalidRes = await fetch(`${baseUrl}/api/roles`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role_code: 'missing_name' })
+    });
+    const createInvalidBody = await createInvalidRes.json();
+    assert.strictEqual(createInvalidRes.status, 400, JSON.stringify(createInvalidBody));
+    assert.strictEqual(createInvalidBody.error, '角色编码和名称为必填');
+
+    const updateRes = await fetch(`${baseUrl}/api/roles/77`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role_name: '新角色更新', description: null, parent_role_id: null })
+    });
+    const updateBody = await updateRes.json();
+    assert.strictEqual(updateRes.status, 200, JSON.stringify(updateBody));
+    assert.strictEqual(updateBody.success, true);
+    assert.deepStrictEqual(updatedRoles[0], {
+      roleId: 77,
+      payload: { role_name: '新角色更新', description: null, parent_role_id: null }
+    });
+
+    const missingUpdateRes = await fetch(`${baseUrl}/api/roles/999`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role_name: '不存在' })
+    });
+    const missingUpdateBody = await missingUpdateRes.json();
+    assert.strictEqual(missingUpdateRes.status, 404, JSON.stringify(missingUpdateBody));
+    assert.strictEqual(missingUpdateBody.error, '角色不存在');
+
+    const replaceRes = await fetch(`${baseUrl}/api/roles/77/permissions`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ perm_ids: [10, 13], effects: { 13: 'deny' } })
+    });
+    const replaceBody = await replaceRes.json();
+    assert.strictEqual(replaceRes.status, 200, JSON.stringify(replaceBody));
+    assert.strictEqual(replaceBody.count, 2);
+    assert.deepStrictEqual(replacedPermissions[0], { roleId: 77, permIds: [10, 13], effects: { 13: 'deny' } });
+
+    const invalidReplaceRes = await fetch(`${baseUrl}/api/roles/77/permissions`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ perm_ids: '10' })
+    });
+    const invalidReplaceBody = await invalidReplaceRes.json();
+    assert.strictEqual(invalidReplaceRes.status, 400, JSON.stringify(invalidReplaceBody));
+    assert.strictEqual(invalidReplaceBody.error, 'perm_ids 必须是数组');
+
+    const missingReplaceRes = await fetch(`${baseUrl}/api/roles/999/permissions`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ perm_ids: [10] })
+    });
+    const missingReplaceBody = await missingReplaceRes.json();
+    assert.strictEqual(missingReplaceRes.status, 404, JSON.stringify(missingReplaceBody));
+    assert.strictEqual(missingReplaceBody.error, '角色不存在');
+
+    const systemDeleteRes = await fetch(`${baseUrl}/api/roles/1`, { method: 'DELETE' });
+    const systemDeleteBody = await systemDeleteRes.json();
+    assert.strictEqual(systemDeleteRes.status, 403, JSON.stringify(systemDeleteBody));
+    assert.strictEqual(systemDeleteBody.error, '系统角色不可删除');
+
+    const assignedDeleteRes = await fetch(`${baseUrl}/api/roles/3`, { method: 'DELETE' });
+    const assignedDeleteBody = await assignedDeleteRes.json();
+    assert.strictEqual(assignedDeleteRes.status, 403, JSON.stringify(assignedDeleteBody));
+    assert.strictEqual(assignedDeleteBody.error, '该角色已分配给 2 个用户，请先取消分配');
+
+    const childrenDeleteRes = await fetch(`${baseUrl}/api/roles/4`, { method: 'DELETE' });
+    const childrenDeleteBody = await childrenDeleteRes.json();
+    assert.strictEqual(childrenDeleteRes.status, 403, JSON.stringify(childrenDeleteBody));
+    assert.strictEqual(childrenDeleteBody.error, '有 1 个子角色继承自此角色，请先修改子角色的父角色');
+
+    const missingDeleteRes = await fetch(`${baseUrl}/api/roles/999`, { method: 'DELETE' });
+    const missingDeleteBody = await missingDeleteRes.json();
+    assert.strictEqual(missingDeleteRes.status, 404, JSON.stringify(missingDeleteBody));
+    assert.strictEqual(missingDeleteBody.error, '角色不存在');
+
+    const deleteRes = await fetch(`${baseUrl}/api/roles/77`, { method: 'DELETE' });
+    const deleteBody = await deleteRes.json();
+    assert.strictEqual(deleteRes.status, 200, JSON.stringify(deleteBody));
+    assert.strictEqual(deleteBody.success, true);
 
     assert.deepStrictEqual(calls, [
       ['listRoles'],
@@ -132,7 +242,8 @@ async function main() {
       ['getRoleDetail', 999],
       ['getRolePermissionMatrix', 3]
     ]);
-    assert.ok(permissionChecks >= 5, 'role routes should check admin permission through identity repository');
+    assert.ok(deletedRoles.includes(77), 'role delete should call MySQL repository');
+    assert.ok(permissionChecks >= 14, 'role routes should check admin permission through identity repository');
 
     console.log('Roles MySQL API route test passed');
   } finally {

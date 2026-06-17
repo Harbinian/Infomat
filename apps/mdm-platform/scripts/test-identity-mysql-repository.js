@@ -63,7 +63,8 @@ function makeFakePool() {
       { role_id: 2, perm_id: 14, effect: 'allow' }
     ],
     nextUserId: 100,
-    nextDepartmentId: 30
+    nextDepartmentId: 30,
+    nextRoleId: 20
   };
 
   return {
@@ -355,6 +356,60 @@ function makeFakePool() {
         return [[role].filter(Boolean), undefined];
       }
 
+      if (normalizedSql === 'INSERT INTO roles (role_code, role_name, description, parent_role_id, created_by) VALUES (?, ?, ?, ?, ?)') {
+        if (state.roles.some(role => role.role_code === params[0])) {
+          const error = new Error('Duplicate role code');
+          error.code = 'ER_DUP_ENTRY';
+          throw error;
+        }
+        const role = {
+          role_id: state.nextRoleId++,
+          role_code: params[0],
+          role_name: params[1],
+          description: params[2],
+          parent_role_id: params[3],
+          created_by: params[4],
+          is_system: 0
+        };
+        state.roles.push(role);
+        return [{ insertId: role.role_id, affectedRows: 1 }, undefined];
+      }
+
+      if (normalizedSql === 'UPDATE roles SET role_name=?, description=?, parent_role_id=?, updated_at=CURRENT_TIMESTAMP WHERE role_id=?') {
+        const role = state.roles.find(row => row.role_id === params[3]);
+        if (role) {
+          role.role_name = params[0];
+          role.description = params[1];
+          role.parent_role_id = params[2];
+        }
+        return [{ affectedRows: role ? 1 : 0 }, undefined];
+      }
+
+      if (normalizedSql === 'SELECT COUNT(*) as cnt FROM user_roles WHERE role_id=?') {
+        return [[{ cnt: state.userRoles.filter(row => row.role_id === params[0]).length }], undefined];
+      }
+
+      if (normalizedSql === 'SELECT COUNT(*) as cnt FROM roles WHERE parent_role_id=?') {
+        return [[{ cnt: state.roles.filter(row => row.parent_role_id === params[0]).length }], undefined];
+      }
+
+      if (normalizedSql === 'DELETE FROM role_permissions WHERE role_id=?') {
+        const before = state.rolePermissions.length;
+        state.rolePermissions = state.rolePermissions.filter(row => row.role_id !== params[0]);
+        return [{ affectedRows: before - state.rolePermissions.length }, undefined];
+      }
+
+      if (normalizedSql === 'DELETE FROM roles WHERE role_id=?') {
+        const before = state.roles.length;
+        state.roles = state.roles.filter(row => row.role_id !== params[0]);
+        return [{ affectedRows: before - state.roles.length }, undefined];
+      }
+
+      if (normalizedSql === 'INSERT INTO role_permissions (role_id, perm_id, effect) VALUES (?, ?, ?)') {
+        state.rolePermissions.push({ role_id: params[0], perm_id: params[1], effect: params[2] });
+        return [{ affectedRows: 1 }, undefined];
+      }
+
       if (normalizedSql.includes('SELECT p.perm_id, p.perm_code, p.resource, p.action, p.field_constraints, p.description, rp.effect, 0 as inherited')) {
         const rows = state.rolePermissions
           .filter(row => row.role_id === params[0])
@@ -576,6 +631,47 @@ async function main() {
   const inheritedParentPermission = qualityMatrix.matrix.find(permission => permission.perm_code === 'mapping:read');
   assert.strictEqual(inheritedParentPermission.assigned, false);
   assert.strictEqual(await repo.getRolePermissionMatrix(9999), null);
+
+  const createdRole = await repo.createRole({
+    role_code: 'process_reviewer',
+    role_name: '流程复核员',
+    description: '负责流程复核',
+    parent_role_id: 2,
+    created_by: 42
+  });
+  assert.strictEqual(createdRole.role_id, 20);
+  const createdRoleRow = pool.state.roles.find(role => role.role_id === 20);
+  assert.strictEqual(createdRoleRow.role_code, 'process_reviewer');
+  assert.strictEqual(createdRoleRow.created_by, 42);
+
+  assert.strictEqual(await repo.updateRole(20, {
+    role_name: '流程复核员更新',
+    description: null,
+    parent_role_id: null
+  }), true);
+  assert.strictEqual(pool.state.roles.find(role => role.role_id === 20).role_name, '流程复核员更新');
+  assert.strictEqual(await repo.updateRole(9999, { role_name: '不存在' }), false);
+
+  const replacedRolePermissions = await repo.replaceRolePermissions(20, [10, 13], { 13: 'deny' });
+  assert.deepStrictEqual(replacedRolePermissions, { success: true, count: 2 });
+  assert.deepStrictEqual(
+    pool.state.rolePermissions
+      .filter(row => row.role_id === 20)
+      .map(row => `${row.perm_id}:${row.effect}`)
+      .sort(),
+    ['10:allow', '13:deny']
+  );
+  assert.strictEqual(await repo.replaceRolePermissions(9999, [10], {}), null);
+
+  assert.deepStrictEqual(await repo.deleteRole(1), { deleted: false, reason: 'system' });
+  assert.deepStrictEqual(await repo.deleteRole(3), { deleted: false, reason: 'assigned', count: 1 });
+  pool.state.roles.push({ role_id: 21, role_code: 'child_role', role_name: '子角色', parent_role_id: 20, is_system: 0 });
+  assert.deepStrictEqual(await repo.deleteRole(20), { deleted: false, reason: 'children', count: 1 });
+  pool.state.roles = pool.state.roles.filter(role => role.role_id !== 21);
+  assert.deepStrictEqual(await repo.deleteRole(20), { deleted: true });
+  assert.ok(!pool.state.roles.some(role => role.role_id === 20));
+  assert.ok(!pool.state.rolePermissions.some(row => row.role_id === 20));
+  assert.deepStrictEqual(await repo.deleteRole(9999), { deleted: false, reason: 'missing' });
 
   const created = await repo.createUser({
     name: '王五',

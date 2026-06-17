@@ -416,6 +416,75 @@ function makeIdentityMysqlRepository(pool) {
       };
     },
 
+    async createRole(payload = {}) {
+      const result = await pool.execute(
+        'INSERT INTO roles (role_code, role_name, description, parent_role_id, created_by) VALUES (?, ?, ?, ?, ?)',
+        [
+          payload.role_code,
+          payload.role_name,
+          payload.description || null,
+          payload.parent_role_id || null,
+          payload.created_by || null
+        ]
+      );
+      return { role_id: insertId(result) };
+    },
+
+    async updateRole(roleId, payload = {}) {
+      const role = await first(pool, 'SELECT * FROM roles WHERE role_id=?', [roleId]);
+      if (!role) return false;
+      const result = await pool.execute(
+        'UPDATE roles SET role_name=?, description=?, parent_role_id=?, updated_at=CURRENT_TIMESTAMP WHERE role_id=?',
+        [
+          payload.role_name || role.role_name,
+          Object.prototype.hasOwnProperty.call(payload, 'description') ? payload.description : role.description,
+          Object.prototype.hasOwnProperty.call(payload, 'parent_role_id') ? payload.parent_role_id || null : role.parent_role_id || null,
+          roleId
+        ]
+      );
+      return affectedRows(result) > 0;
+    },
+
+    async deleteRole(roleId) {
+      const role = await first(pool, 'SELECT * FROM roles WHERE role_id=?', [roleId]);
+      if (!role) return { deleted: false, reason: 'missing' };
+      if (role.is_system) return { deleted: false, reason: 'system' };
+
+      const userCount = await first(pool, 'SELECT COUNT(*) as cnt FROM user_roles WHERE role_id=?', [roleId]);
+      if (Number(userCount && userCount.cnt || 0) > 0) {
+        return { deleted: false, reason: 'assigned', count: Number(userCount.cnt) };
+      }
+
+      const childCount = await first(pool, 'SELECT COUNT(*) as cnt FROM roles WHERE parent_role_id=?', [roleId]);
+      if (Number(childCount && childCount.cnt || 0) > 0) {
+        return { deleted: false, reason: 'children', count: Number(childCount.cnt) };
+      }
+
+      return await withOptionalTransaction(async executor => {
+        await executor.execute('DELETE FROM role_permissions WHERE role_id=?', [roleId]);
+        await executor.execute('DELETE FROM roles WHERE role_id=?', [roleId]);
+        return { deleted: true };
+      });
+    },
+
+    async replaceRolePermissions(roleId, permIds = [], effects = {}) {
+      const role = await first(pool, 'SELECT * FROM roles WHERE role_id=?', [roleId]);
+      if (!role) return null;
+
+      const ids = normalizeRoleIds(permIds);
+      return await withOptionalTransaction(async executor => {
+        await executor.execute('DELETE FROM role_permissions WHERE role_id=?', [roleId]);
+        for (const permId of ids) {
+          await executor.execute('INSERT INTO role_permissions (role_id, perm_id, effect) VALUES (?, ?, ?)', [
+            roleId,
+            permId,
+            effects && effects[permId] ? effects[permId] : 'allow'
+          ]);
+        }
+        return { success: true, count: ids.length };
+      });
+    },
+
     async getCurrentUserPayload(session = {}) {
       if (!session.userId) return null;
 
