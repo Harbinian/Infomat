@@ -1,5 +1,5 @@
 const db = require('./db');
-const { getUserEffectivePermissions } = require('./auth');
+const { getUserEffectivePermissions, getUserRoleCodesAsync } = require('./auth');
 
 function isAdmin(req) {
   if (!req.session || !req.session.userId) return false;
@@ -31,6 +31,18 @@ function getEffectiveRoleCodes(req) {
   `).all(req.session.userId);
   for (const row of rows) {
     if (row.role_code) codes.add(row.role_code);
+  }
+  return codes;
+}
+
+async function getEffectiveRoleCodesAsync(req) {
+  const codes = new Set();
+  if (!req.session || !req.session.userId) return codes;
+  if (req.session.userRole) codes.add(req.session.userRole);
+  const roles = await getUserRoleCodesAsync(req.session.userId, req.session.userRole);
+  for (const role of roles) {
+    const code = role.code || role.role_code;
+    if (code) codes.add(code);
   }
   return codes;
 }
@@ -81,4 +93,4 @@ function canUseTodo(req, todo) {
   return Boolean(todo.to_dept_id && req.session.departmentId && todo.to_dept_id === req.session.departmentId);
 }
 
-module.exports = { isAdmin, hasGlobalView, isReviewerOrAdmin, getEffectiveRoleCodes, validateAction, mappingVisibility, canViewMapping, canUseTodo };
+module.exports = { isAdmin, hasGlobalView, isReviewerOrAdmin, getEffectiveRoleCodes, getEffectiveRoleCodesAsync, validateAction, mappingVisibility, canViewMapping, canUseTodo };

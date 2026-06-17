@@ -521,6 +521,9 @@ async function main() {
   assert.ok(payload.permissions.includes('data:view_all'), 'direct role permissions should be included');
   assert.ok(payload.permissions.includes('process_quality:manage'), 'multiple direct roles should be included');
 
+  const roleCodes = await repo.getUserRoleCodes(42, 'submitter');
+  assert.deepStrictEqual(roleCodes.map(role => role.code), ['submitter', 'data_quality', 'it_lead']);
+
   const effective = await repo.getUserEffectivePermissions(42);
   assert.ok(effective.permSet.has('mapping:read'));
   assert.deepStrictEqual(effective.fieldConstraints['data:view_all'], { readonly: ['source_file'] });

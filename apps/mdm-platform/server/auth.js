@@ -209,6 +209,22 @@ async function getUserEffectivePermissionsAsync(userId) {
   return getUserEffectivePermissions(userId);
 }
 
+async function getUserRoleCodesAsync(userId, legacyRole) {
+  if (useMysqlIdentityReadModel()) {
+    const repo = await identityRepository();
+    return await repo.getUserRoleCodes(userId, legacyRole);
+  }
+
+  const db = require('./db');
+  return db.prepare(`
+    SELECT r.role_code AS code, r.role_name AS name
+    FROM user_roles ur
+    JOIN roles r ON ur.role_id = r.role_id
+    WHERE ur.user_id=?
+    ORDER BY r.is_system DESC, r.role_code
+  `).all(userId);
+}
+
 function requirePermission(permCode) {
   return (req, res, next) => {
     if (!req.session || !req.session.userId) return res.status(401).json({ error: '未登录' });
@@ -334,6 +350,7 @@ module.exports = {
   applyFieldConstraints,
   getUserEffectivePermissions,
   getUserEffectivePermissionsAsync,
+  getUserRoleCodesAsync,
   isAdmin,
   stripInternalIds,
   send401,
