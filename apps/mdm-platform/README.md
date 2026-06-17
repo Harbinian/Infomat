@@ -46,7 +46,7 @@ npm start
 
 平台不会创建默认管理员。首次初始化前请通过环境变量提供管理员工号和不少于 12 位的初始密码；脚本不会在仓库中保存密码、Cookie 或本地数据库。
 
-`npm run init:mysql` 会初始化 MySQL schema 中已迁移的 MDM/流程候选复核表。`npm run setup:local-baseline` 仍是迁移过渡期的幂等基线入口，会：
+`npm run init:mysql` 会初始化 MySQL schema 中已迁移的身份/RBAC、候选复核和流程治理读模型表。`npm run setup:local-baseline` 仍是迁移过渡期的幂等基线入口，会：
 
 - 初始化遗留本地 schema 和系统角色/权限。
 - 从 `docs/organization/组织架构和部门职责.md` 同步组织架构、领导岗位和对应人员。
@@ -98,6 +98,7 @@ npm run test:local-baseline
 npm run test:security
 npm run test:mainline
 npm run test:mysql-config
+npm run test:identity-mysql
 npm run init:mysql
 npm run import:process-candidate-review -- --candidate-run artifacts/process-candidates/<run-id>
 ```
@@ -130,6 +131,7 @@ npm run check:process-governance
 - MySQL 连接统一使用 `MYSQL_HOST`、`MYSQL_PORT`、`MYSQL_USER`、`MYSQL_PASSWORD`、`MYSQL_DATABASE`、`MYSQL_CONNECTION_LIMIT`。
 - 旧 SQLite `platform.db` 不迁移；MySQL 通过组织真源、流程快照和基线脚本重建。
 - 迁移过渡期仍依赖遗留本地库的测试，必须通过隔离路径运行，不能污染共享运行态文件。
+- `MDM_IDENTITY_READ_MODEL=mysql` 目前只切换 `/api/org/me` 和 `/api/org/session` 的身份/RBAC 读取；登录、用户管理写入和角色工作台底层写入仍在后续迁移中。
 - 候选映射复核正式入口为 `/api/process-governance/candidate-review/*`；候选运行通过 `npm run import:process-candidate-review -- --candidate-run artifacts/process-candidates/<run-id>` 导入 MySQL。
 - `npm run test:mainline` 用于验证“流程治理 -> 字段台账 -> 主数据对象 -> 权限 -> 导入导出”主线，详见 `docs/plans/流程治理字段台账主线稳定性检查.md`。
 - 不直接运行会删除共享数据库的旧式测试逻辑。

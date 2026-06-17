@@ -12,7 +12,8 @@ async function main() {
     }
     for (const migrationKey of [
       '2026-06-16-process-candidate-review',
-      '2026-06-16-process-governance-read-model'
+      '2026-06-16-process-governance-read-model',
+      '2026-06-17-identity-rbac-read-model'
     ]) {
       await pool.execute(
         `INSERT INTO schema_migrations (migration_key)

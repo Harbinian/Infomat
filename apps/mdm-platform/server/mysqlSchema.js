@@ -5,6 +5,96 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
   applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS departments (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  code VARCHAR(128) NOT NULL,
+  parent_id BIGINT NULL,
+  path VARCHAR(1024) NULL,
+  sort_order INT NOT NULL DEFAULT 0,
+  department_type VARCHAR(64) NULL,
+  manager_user_id BIGINT NULL,
+  data_owner_user_id BIGINT NULL,
+  source_system VARCHAR(128) NOT NULL DEFAULT 'MDM_SYS',
+  external_id VARCHAR(255) NULL,
+  status VARCHAR(32) NOT NULL DEFAULT 'active',
+  effective_from DATE NULL,
+  effective_to DATE NULL,
+  created_by BIGINT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_by BIGINT NULL,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_departments_code (code),
+  INDEX idx_departments_parent (parent_id),
+  INDEX idx_departments_status (status),
+  CHECK (status IN ('active','inactive','archived'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS users (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  employee_no VARCHAR(128) NOT NULL,
+  department_id BIGINT NULL,
+  post VARCHAR(255) NULL,
+  role VARCHAR(64) NOT NULL DEFAULT 'submitter',
+  password_hash VARCHAR(255) NOT NULL,
+  must_change_password TINYINT NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_users_employee_no (employee_no),
+  INDEX idx_users_department (department_id),
+  INDEX idx_users_role (role),
+  CHECK (role IN ('submitter','owner','reviewer','admin'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS roles (
+  role_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  role_code VARCHAR(128) NOT NULL,
+  role_name VARCHAR(255) NOT NULL,
+  description TEXT NULL,
+  parent_role_id BIGINT NULL,
+  is_system TINYINT NOT NULL DEFAULT 0,
+  permissions_json MEDIUMTEXT NULL,
+  created_by BIGINT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_roles_code (role_code),
+  INDEX idx_roles_parent (parent_role_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS permissions (
+  perm_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  perm_code VARCHAR(160) NOT NULL,
+  resource VARCHAR(128) NOT NULL,
+  action VARCHAR(128) NOT NULL,
+  field_constraints MEDIUMTEXT NULL,
+  description TEXT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_permissions_code (perm_code),
+  INDEX idx_permissions_resource_action (resource, action)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS role_permissions (
+  role_perm_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  role_id BIGINT NOT NULL,
+  perm_id BIGINT NOT NULL,
+  effect VARCHAR(16) NOT NULL DEFAULT 'allow',
+  UNIQUE KEY uq_role_permissions_role_perm (role_id, perm_id),
+  INDEX idx_role_permissions_role (role_id),
+  INDEX idx_role_permissions_perm (perm_id),
+  CHECK (effect IN ('allow','deny'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS user_roles (
+  user_role_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  user_id BIGINT NOT NULL,
+  role_id BIGINT NOT NULL,
+  assigned_by BIGINT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_user_roles_user_role (user_id, role_id),
+  INDEX idx_user_roles_user (user_id),
+  INDEX idx_user_roles_role (role_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS process_candidate_review_runs (
   run_id VARCHAR(128) PRIMARY KEY,
   candidate_run_path VARCHAR(512) NOT NULL,
