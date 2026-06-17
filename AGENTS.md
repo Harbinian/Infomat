@@ -49,7 +49,8 @@ AI 助手在本项目协作时的补充约定(与 CLAUDE.md 配套)。
 
 ## 静态资产
 
-- `pmo/` 等项目页使用项目根的 `echarts.min.js`，按相对路径引用 `<script src="../echarts.min.js"></script>`。
+- `pmo/procedure-management/dashboard.html` 使用项目根的 `echarts.min.js`，必须按相对路径引用 `<script src="../../echarts.min.js"></script>`。
+- `pmo/gantt-react` 开发服务通过 Vite 插件提供流程地图驾驶舱和 `/echarts.min.js`，不要为服务模式手工复制第二份驾驶舱资产。
 - `docs/norms/` 下的部门桑基图页面使用本目录内的 `docs/norms/echarts.min.js`，必须引用 `<script src="echarts.min.js"></script>`，禁止写成 `../echarts.min.js`。
 - `apps/mdm-platform/public/` 下的 MDM 前端页面使用本目录内的 `echarts.min.js`,必须引用 `<script src="echarts.min.js"></script>`。
 

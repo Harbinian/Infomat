@@ -23,7 +23,7 @@
 |---|---|---|---|---|
 | `apps/` | 可运行应用集合 | 子目录 README | 新应用必须有独立 README、运行命令和数据边界 | 不放业务资料原件 |
 | `apps/mdm-platform/` | MDM 平台源码 | `package.json`、`server/`、`public/`、`scripts/` | 平台功能、平台测试、平台维护脚本在此修改 | 不放 PMO 甘特图、流程制度原文、历史方案 |
-| `apps/mdm-platform/server/` | MDM 后端实现 | Express 路由和 SQLite schema | 修改时同步平台测试 | 不直接依赖 PMO 页面内嵌数据 |
+| `apps/mdm-platform/server/` | MDM 后端实现 | Express 路由、MySQL 目标 schema 与历史 SQLite 待迁移实现 | 修改时同步平台测试 | 不直接依赖 PMO 页面内嵌数据 |
 | `apps/mdm-platform/public/` | MDM 前端 | 单文件前端和静态资源 | 仅放平台运行所需前端资源 | 不放 PMO 驾驶舱截图 |
 | `apps/mdm-platform/scripts/` | 平台内脚本和测试 | 平台数据库、平台路由 | 脚本应说明是否写数据库，测试应使用隔离库 | 不放仓库级 parser |
 | `apps/mdm-platform/data/` | 本地运行态数据 | 本地 SQLite | 只作本地运行使用 | 不作为仓库真源，不提交数据库 |
@@ -42,7 +42,7 @@
 | `docs/architecture/` | 架构说明 | 架构主题文档 | 用于说明长期结构、模块关系、职责规则 | 不替代 ADR |
 | `docs/adr/` | 架构决策记录 | ADR 编号 | 记录已经接受的长期决策 | 不写普通会议纪要 |
 | `docs/superpowers/` | 历史设计和计划 | 历史计划、设计文档 | 只用于追溯，旧路径按当前结构解释 | 不作为当前执行真源 |
-| `docs/archives/` / `docs/archive/` | 历史归档 | 归档索引 | 后续迁移旧方案或废弃材料 | 不放仍在执行的资料真源 |
+| `docs/archives/` | 历史归档 | 归档索引 | 后续迁移旧方案或废弃材料 | 不放仍在执行的资料真源 |
 
 ## 4. PMO / 展示工具
 

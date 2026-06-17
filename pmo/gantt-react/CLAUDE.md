@@ -44,7 +44,7 @@ npm run build
 npm run preview
 ```
 
-开发模式默认访问 `http://localhost:5173`。
+开发模式默认访问 `http://localhost:5174`。
 
 ## 注意事项
 
