@@ -10,7 +10,8 @@ function makeFakePool() {
   const state = {
     statements: [],
     departments: [
-      { id: 9, name: '工程技术部', code: 'ENG' }
+      { id: 9, name: '工程技术部', code: 'ENG' },
+      { id: 10, name: '质量管理部', code: 'QMS' }
     ],
     users: [
       {
@@ -22,6 +23,16 @@ function makeFakePool() {
         role: 'owner',
         password_hash: hashPassword(OLD_PASSWORD),
         must_change_password: 1
+      },
+      {
+        id: 43,
+        name: '李四',
+        employee_no: 'U043',
+        department_id: 10,
+        post: '质量审核员',
+        role: 'reviewer',
+        password_hash: hashPassword('OtherPass123456!'),
+        must_change_password: 0
       }
     ],
     roles: [
@@ -32,17 +43,22 @@ function makeFakePool() {
     ],
     userRoles: [
       { user_id: 42, role_id: 3 },
-      { user_id: 42, role_id: 4 }
+      { user_id: 42, role_id: 4 },
+      { user_id: 43, role_id: 2 }
     ],
     permissions: [
       { perm_id: 10, perm_code: 'mapping:read', field_constraints: null },
       { perm_id: 11, perm_code: 'data:view_all', field_constraints: '{"readonly":["source_file"]}' },
-      { perm_id: 12, perm_code: 'process_quality:manage', field_constraints: null }
+      { perm_id: 12, perm_code: 'process_quality:manage', field_constraints: null },
+      { perm_id: 13, perm_code: 'admin:access', resource: 'admin', action: 'access', field_constraints: null },
+      { perm_id: 14, perm_code: 'review:approve', resource: 'review', action: 'approve', field_constraints: null }
     ],
     rolePermissions: [
       { role_id: 2, perm_id: 10, effect: 'allow' },
       { role_id: 3, perm_id: 11, effect: 'allow' },
-      { role_id: 4, perm_id: 12, effect: 'allow' }
+      { role_id: 4, perm_id: 12, effect: 'allow' },
+      { role_id: 4, perm_id: 13, effect: 'allow' },
+      { role_id: 2, perm_id: 14, effect: 'allow' }
     ]
   };
 
@@ -56,7 +72,7 @@ function makeFakePool() {
         return [[], undefined];
       }
 
-      if (normalizedSql.includes('FROM users u LEFT JOIN departments d')) {
+      if (normalizedSql.includes('FROM users u LEFT JOIN departments d') && normalizedSql.includes('WHERE u.id=?')) {
         const user = state.users.find(row => row.id === params[0]);
         if (!user) return [[], undefined];
         const dept = state.departments.find(row => row.id === user.department_id);
@@ -74,6 +90,54 @@ function makeFakePool() {
       if (normalizedSql === 'SELECT * FROM users WHERE employee_no=?') {
         const user = state.users.find(row => row.employee_no === params[0]);
         return [[user].filter(Boolean), undefined];
+      }
+
+      if (normalizedSql.includes('FROM users u LEFT JOIN departments d ON u.department_id = d.id ORDER BY u.employee_no')) {
+        return [state.users
+          .slice()
+          .sort((left, right) => left.employee_no.localeCompare(right.employee_no))
+          .map(user => {
+            const dept = state.departments.find(row => row.id === user.department_id);
+            return {
+              id: user.id,
+              name: user.name,
+              employee_no: user.employee_no,
+              department_id: user.department_id,
+              post: user.post,
+              role: user.role,
+              created_at: user.created_at || null,
+              dept_name: dept ? dept.name : null
+            };
+          }), undefined];
+      }
+
+      if (normalizedSql.includes('GROUP_CONCAT(r.role_code')) {
+        return [state.users.map(user => {
+          const dept = state.departments.find(row => row.id === user.department_id);
+          const roleIds = state.userRoles.filter(row => row.user_id === user.id).map(row => row.role_id);
+          const roles = state.roles.filter(role => roleIds.includes(role.role_id));
+          return {
+            id: user.id,
+            name: user.name,
+            employee_no: user.employee_no,
+            post: user.post,
+            role: user.role,
+            department_id: user.department_id,
+            created_at: user.created_at || null,
+            dept_name: dept ? dept.name : null,
+            rbac_role_codes: roles.map(role => role.role_code).join(','),
+            rbac_role_names: roles.map(role => role.role_name).join(',')
+          };
+        }).sort((left, right) => left.employee_no.localeCompare(right.employee_no)), undefined];
+      }
+
+      if (normalizedSql.includes('SELECT u.id, u.name, u.department_id, d.name AS dept_name FROM users u')) {
+        return [state.users
+          .map(user => {
+            const dept = state.departments.find(row => row.id === user.department_id);
+            return { id: user.id, name: user.name, department_id: user.department_id, dept_name: dept ? dept.name : null };
+          })
+          .sort((left, right) => String(left.dept_name || '').localeCompare(String(right.dept_name || ''), 'zh-CN') || left.name.localeCompare(right.name, 'zh-CN')), undefined];
       }
 
       if (normalizedSql === 'SELECT must_change_password FROM users WHERE id=?') {
@@ -95,13 +159,23 @@ function makeFakePool() {
         return [{ affectedRows: user ? 1 : 0 }, undefined];
       }
 
-      if (normalizedSql.includes('FROM user_roles ur JOIN roles r ON ur.role_id = r.role_id')) {
+      if (normalizedSql.includes('SELECT r.role_code as code') && normalizedSql.includes('FROM user_roles ur JOIN roles r ON ur.role_id = r.role_id')) {
         const rows = state.userRoles
           .filter(row => row.user_id === params[0])
           .map(row => state.roles.find(role => role.role_id === row.role_id))
           .filter(Boolean)
           .sort((left, right) => Number(right.is_system) - Number(left.is_system) || left.role_code.localeCompare(right.role_code))
           .map(role => ({ code: role.role_code, name: role.role_name }));
+        return [rows, undefined];
+      }
+
+      if (normalizedSql.includes('SELECT r.role_id, r.role_code, r.role_name, r.is_system FROM user_roles ur JOIN roles r')) {
+        const rows = state.userRoles
+          .filter(row => row.user_id === params[0])
+          .map(row => state.roles.find(role => role.role_id === row.role_id))
+          .filter(Boolean)
+          .sort((left, right) => Number(right.is_system) - Number(left.is_system) || left.role_code.localeCompare(right.role_code))
+          .map(role => ({ role_id: role.role_id, role_code: role.role_code, role_name: role.role_name, is_system: role.is_system }));
         return [rows, undefined];
       }
 
@@ -142,6 +216,12 @@ function makeFakePool() {
             };
           });
         return [rows, undefined];
+      }
+
+      if (normalizedSql === 'SELECT * FROM permissions ORDER BY resource, action') {
+        return [state.permissions
+          .map(permission => ({ ...permission }))
+          .sort((left, right) => String(left.resource || '').localeCompare(String(right.resource || '')) || String(left.action || '').localeCompare(String(right.action || ''))), undefined];
       }
 
       throw new Error(`Unhandled SQL in fake identity pool: ${normalizedSql}`);
@@ -195,6 +275,26 @@ async function main() {
   const updatedCredential = await repo.getPasswordCredential(42);
   assert.ok(verifyPassword(NEW_PASSWORD, updatedCredential.password_hash));
   assert.deepStrictEqual(await repo.getPasswordStatus(42), { is_default_password: false });
+
+  const users = await repo.listUsers();
+  assert.deepStrictEqual(users.map(user => user.employee_no), ['U042', 'U043']);
+  assert.strictEqual(users[0].dept_name, '工程技术部');
+  assert.strictEqual(users[1].dept_name, '质量管理部');
+
+  const roleSummary = await repo.listUserRoleSummaries();
+  assert.strictEqual(roleSummary[0].rbac_role_codes, 'it_lead,data_quality');
+  assert.strictEqual(roleSummary[1].rbac_role_names, '业务负责人');
+
+  const assignableUsers = await repo.listAssignableUsers();
+  assert.deepStrictEqual(assignableUsers.map(user => user.name), ['张三', '李四']);
+  assert.strictEqual(assignableUsers[0].dept_name, '工程技术部');
+
+  const userRoles = await repo.getAssignedRoles(42);
+  assert.deepStrictEqual(userRoles.map(role => role.role_code), ['data_quality', 'it_lead']);
+
+  const groupedPermissions = await repo.getPermissionsGrouped();
+  assert.ok(Array.isArray(groupedPermissions.admin));
+  assert.strictEqual(groupedPermissions.admin[0].perm_code, 'admin:access');
 
   const unsafeSql = pool.state.statements.map(entry => entry.sql).join('\n');
   assert.ok(!unsafeSql.includes('sqlite_master'), 'identity MySQL repository must not use SQLite catalog tables');

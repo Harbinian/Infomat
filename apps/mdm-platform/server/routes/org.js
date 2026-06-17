@@ -39,6 +39,29 @@ function runAsyncAction(res, action, unavailableMessage) {
   });
 }
 
+function requireOrgPermission(permCode) {
+  return (req, res, next) => {
+    if (!useMysqlIdentityReadModel()) {
+      return requirePermission(permCode)(req, res, next);
+    }
+    if (!req.session || !req.session.userId) return res.status(401).json({ error: '未登录' });
+    return identityRepository()
+      .then(repo => repo.getUserEffectivePermissions(req.session.userId))
+      .then(({ permSet, fieldConstraints }) => {
+        if (!permSet.has(permCode) && !permSet.has('*:*')) {
+          return res.status(403).json({ error: '权限不足' });
+        }
+        req.effectivePermissions = permSet;
+        req.effectiveFieldConstraints = fieldConstraints;
+        return next();
+      })
+      .catch(error => {
+        console.error(error);
+        return res.status(503).json({ error: '身份 MySQL 读取模型不可用' });
+      });
+  };
+}
+
 function useMysqlIdentityReadModel() {
   return String(process.env.MDM_IDENTITY_READ_MODEL || '').toLowerCase() === 'mysql';
 }
@@ -144,6 +167,13 @@ function requestHasAnyPermission(req, permissionCodes) {
   return permSet.has('*:*') || permissionCodes.some(code => permSet.has(code));
 }
 
+async function requestHasAnyPermissionWithMysqlIdentity(req, permissionCodes) {
+  if (!req.session || !req.session.userId) return false;
+  const repo = await identityRepository();
+  const { permSet } = await repo.getUserEffectivePermissions(req.session.userId);
+  return permSet.has('*:*') || permissionCodes.some(code => permSet.has(code));
+}
+
 function resolveCreatePassword(password) {
   return resolveInitialPassword(password);
 }
@@ -231,7 +261,14 @@ router.delete('/departments/:id', requirePermission('admin:access'), (req, res) 
   });
 });
 
-router.get('/users', requireAuth, requirePermission('admin:access'), (req, res) => {
+router.get('/users', requireAuth, requireOrgPermission('admin:access'), (req, res) => {
+  if (useMysqlIdentityReadModel()) {
+    return runAsyncAction(res, async () => {
+      const repo = await identityRepository();
+      return res.json(await repo.listUsers());
+    }, '身份 MySQL 读取模型不可用');
+  }
+
   const users = db.prepare(`
     SELECT u.id, u.name, u.employee_no, u.department_id, u.post, u.role, u.created_at, d.name as dept_name
     FROM users u
@@ -242,7 +279,14 @@ router.get('/users', requireAuth, requirePermission('admin:access'), (req, res) 
 });
 
 // GET /api/users/roles-summary — all users with legacy role + RBAC roles
-router.get('/users/roles-summary', requireAuth, requirePermission('admin:access'), (req, res) => {
+router.get('/users/roles-summary', requireAuth, requireOrgPermission('admin:access'), (req, res) => {
+  if (useMysqlIdentityReadModel()) {
+    return runAsyncAction(res, async () => {
+      const repo = await identityRepository();
+      return res.json(await repo.listUserRoleSummaries());
+    }, '身份 MySQL 读取模型不可用');
+  }
+
   return runDbAction(res, () => {
     const users = db.prepare(`
       SELECT u.id, u.name, u.employee_no, u.post, u.role, u.department_id, u.created_at,
@@ -273,6 +317,16 @@ router.get('/users/roles-summary', requireAuth, requirePermission('admin:access'
 
 // GET /api/org/users/assignable — minimal user picker for conflict assignment
 router.get('/users/assignable', requireAuth, (req, res) => {
+  if (useMysqlIdentityReadModel()) {
+    return runAsyncAction(res, async () => {
+      if (!await requestHasAnyPermissionWithMysqlIdentity(req, ['conflict:manage', 'review:approve', 'admin:access'])) {
+        return res.status(403).json({ error: '权限不足' });
+      }
+      const repo = await identityRepository();
+      return res.json(await repo.listAssignableUsers());
+    }, '身份 MySQL 读取模型不可用');
+  }
+
   return runDbAction(res, () => {
     if (!requestHasAnyPermission(req, ['conflict:manage', 'review:approve', 'admin:access'])) {
       return res.status(403).json({ error: '权限不足' });
@@ -443,7 +497,14 @@ router.get('/me', requireAuth, (req, res) => {
 });
 
 // GET /api/users/:id/roles — get user's assigned roles
-router.get('/users/:id/roles', requireAuth, requirePermission('admin:access'), (req, res) => {
+router.get('/users/:id/roles', requireAuth, requireOrgPermission('admin:access'), (req, res) => {
+  if (useMysqlIdentityReadModel()) {
+    return runAsyncAction(res, async () => {
+      const repo = await identityRepository();
+      return res.json(await repo.getAssignedRoles(Number(req.params.id)));
+    }, '身份 MySQL 读取模型不可用');
+  }
+
   return runDbAction(res, () => {
     const roles = db.prepare(`
       SELECT r.role_id, r.role_code, r.role_name, r.is_system
@@ -477,7 +538,14 @@ router.put('/users/:id/roles', requireAuth, requirePermission('admin:access'), (
 });
 
 // GET /api/permissions — all permission definitions grouped by resource
-router.get('/permissions', requireAuth, requirePermission('admin:access'), (req, res) => {
+router.get('/permissions', requireAuth, requireOrgPermission('admin:access'), (req, res) => {
+  if (useMysqlIdentityReadModel()) {
+    return runAsyncAction(res, async () => {
+      const repo = await identityRepository();
+      return res.json(await repo.getPermissionsGrouped());
+    }, '身份 MySQL 读取模型不可用');
+  }
+
   return runDbAction(res, () => {
     const perms = db.prepare('SELECT * FROM permissions ORDER BY resource, action').all();
     const grouped = {};
