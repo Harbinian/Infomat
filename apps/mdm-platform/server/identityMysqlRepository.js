@@ -205,6 +205,8 @@ function makeIdentityMysqlRepository(pool) {
       return await first(pool, 'SELECT * FROM users WHERE employee_no=?', [employeeNo]);
     },
 
+    getUserRoleCodes,
+
     async listDepartments() {
       return await rows(pool, 'SELECT * FROM departments ORDER BY code');
     },
