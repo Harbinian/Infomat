@@ -1,4 +1,9 @@
 const bcrypt = require('bcryptjs');
+const mysql = require('mysql2/promise');
+const { mysqlConfigFromEnv } = require('./mysqlConfig');
+const { makeIdentityMysqlRepository } = require('./identityMysqlRepository');
+let identityRepoPromise = null;
+let identityRepositoryFactory = null;
 
 function hashPassword(password) {
   return bcrypt.hashSync(password, 10);
@@ -100,6 +105,40 @@ function requireDataPermission(categoryCode, action) {
 
 // ── RBAC: Permission Engine ──
 
+function useMysqlIdentityReadModel() {
+  return String(process.env.MDM_IDENTITY_READ_MODEL || '').toLowerCase() === 'mysql';
+}
+
+async function identityRepository() {
+  if (identityRepositoryFactory) {
+    return await identityRepositoryFactory();
+  }
+  if (!identityRepoPromise) {
+    identityRepoPromise = (async () => {
+      const pool = mysql.createPool(mysqlConfigFromEnv());
+      const repo = makeIdentityMysqlRepository(pool);
+      await repo.initSchema();
+      return repo;
+    })();
+  }
+  try {
+    return await identityRepoPromise;
+  } catch (error) {
+    identityRepoPromise = null;
+    throw error;
+  }
+}
+
+function setIdentityRepositoryFactory(factory) {
+  identityRepositoryFactory = factory;
+  identityRepoPromise = null;
+}
+
+function resetIdentityRepositoryFactory() {
+  identityRepositoryFactory = null;
+  identityRepoPromise = null;
+}
+
 function getUserEffectivePermissions(userId) {
   const db = require('./db');
 
@@ -164,6 +203,28 @@ function getUserEffectivePermissions(userId) {
 function requirePermission(permCode) {
   return (req, res, next) => {
     if (!req.session || !req.session.userId) return res.status(401).json({ error: '未登录' });
+
+    if (useMysqlIdentityReadModel()) {
+      return identityRepository()
+        .then(repo => repo.getUserEffectivePermissions(req.session.userId))
+        .then(({ permSet, fieldConstraints }) => {
+          if (!permSet.has(permCode) && !permSet.has('*:*')) {
+            return res.status(403).json({ error: '权限不足' });
+          }
+          req.effectivePermissions = permSet;
+          req.effectiveFieldConstraints = fieldConstraints;
+          const readonlyViolation = readonlyWriteViolation(req, permCode, fieldConstraints);
+          if (readonlyViolation.length > 0) {
+            return res.status(403).json({ error: '字段只读，不允许写入', readonly_fields: readonlyViolation });
+          }
+          return next();
+        })
+        .catch(error => {
+          console.error(error);
+          return res.status(503).json({ error: '身份 MySQL 读取模型不可用' });
+        });
+    }
+
     const { permSet, fieldConstraints } = getUserEffectivePermissions(req.session.userId);
     if (!permSet.has(permCode) && !permSet.has('*:*')) {
       return res.status(403).json({ error: '权限不足' });
@@ -270,5 +331,7 @@ module.exports = {
   send403,
   send404,
   send409,
-  send422
+  send422,
+  setIdentityRepositoryFactory,
+  resetIdentityRepositoryFactory
 };
