@@ -236,6 +236,54 @@
     .role-guide-card li { margin: 8px 0; }
     .role-guide-card strong { font-weight: 600; }
     .role-guide-flow { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 13px; }
+    .activity-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      background: rgba(251, 246, 233, 0.72);
+    }
+    .activity-card h2, .activity-card h3 { margin-bottom: 8px; }
+    .activity-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0 12px; }
+    .activity-toolbar select { width: auto; min-width: 136px; height: 32px; padding: 4px 8px; font-size: 12px; }
+    .activity-meta { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
+    .activity-grid {
+      display: grid;
+      grid-template-columns: repeat(13, 12px);
+      grid-auto-rows: 12px;
+      gap: 3px;
+      align-items: center;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+    .activity-day {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      border: 1px solid rgba(58, 46, 31, 0.10);
+      background: #e3dac6;
+      cursor: pointer;
+    }
+    .activity-day:hover { outline: 2px solid rgba(178, 86, 56, 0.28); outline-offset: 1px; }
+    .activity-day.lv1 { background: #b9e5c8; }
+    .activity-day.lv2 { background: #63c787; }
+    .activity-day.lv3 { background: #20d779; }
+    .activity-legend { display: flex; align-items: center; gap: 5px; justify-content: flex-end; color: var(--text-muted); font-size: 11px; margin-top: 8px; }
+    .activity-detail { margin-top: 10px; font-size: 12px; color: var(--text-muted); line-height: 1.6; }
+    .activity-detail strong { color: var(--text-main); }
+    .activity-summary-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 16px; }
+    .activity-summary-list { display: grid; gap: 8px; }
+    .activity-summary-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      padding: 8px 10px;
+      border: 1px solid var(--border-soft);
+      border-radius: 6px;
+      background: var(--surface-2);
+      font-size: 12px;
+    }
+    .activity-summary-row small { display: block; color: var(--text-muted); margin-top: 2px; }
+    .activity-count { font-weight: 700; color: var(--accent); white-space: nowrap; }
     .role-workbench {
       max-width: none; margin: 0; padding: 0;
       min-height: calc(100vh - 103px);
@@ -343,6 +391,40 @@
       color: var(--text-main); background: transparent; font-size: 12px;
     }
     .wb-link-btn:hover { border-color: var(--text-main); }
+    .activity-panel {
+      border: 1px solid var(--border);
+      background: rgba(251,246,233,0.74);
+      border-radius: 8px;
+      padding: 14px;
+      box-shadow: var(--shadow-sm);
+    }
+    .activity-head {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 12px; margin-bottom: 10px;
+    }
+    .activity-head h3 { margin: 0; color: var(--text-main); font-size: 14px; letter-spacing: 0; }
+    .activity-head p { margin: 4px 0 0; color: var(--text-muted); font-size: 12px; line-height: 1.55; }
+    .activity-controls { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 12px; }
+    .activity-controls select {
+      min-height: 32px; min-width: 132px; border-radius: 6px;
+      background: var(--surface-2); border-color: var(--border); color: var(--text-main);
+    }
+    .activity-heatmap {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(12px, 1fr));
+      gap: 4px; align-items: center;
+    }
+    .activity-day {
+      width: 100%; aspect-ratio: 1; min-width: 10px;
+      border: 1px solid rgba(154,122,48,0.18);
+      border-radius: 3px; background: #efe7d5; cursor: pointer;
+    }
+    .activity-day[data-level="1"] { background: #d8d2a1; }
+    .activity-day[data-level="2"] { background: #9cab70; }
+    .activity-day[data-level="3"] { background: #5f7447; }
+    .activity-detail, .activity-summary {
+      margin-top: 10px; color: var(--text-muted); font-size: 12px; line-height: 1.6;
+    }
+    .activity-summary strong { color: var(--text-main); }
     .pg-section { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--border); }
     .pg-section-hd { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
     .pg-section-hd h2 { margin-bottom: 0; }
@@ -524,6 +606,9 @@
       .role-workbench-top, .role-workbench-left, .role-workbench-main, .role-workbench-right { display: block; border: 0; }
       .role-workbench-top { padding: 14px 16px; }
       #roleWorkbenchSankey { height: 360px; }
+      .activity-summary-grid { grid-template-columns: 1fr; }
+      .activity-grid { grid-template-columns: repeat(13, 11px); grid-auto-rows: 11px; gap: 3px; }
+      .activity-day { width: 11px; height: 11px; }
     }
 
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -654,6 +739,14 @@
               <div class="wb-empty">正在读取当前角色的下一步动作...</div>
             </div>
           </div>
+          <div class="wb-group activity-card">
+            <h3>我的治理活跃</h3>
+            <div class="activity-meta" id="roleWorkbenchActivityMeta">近 90 天有效治理动作</div>
+            <div id="roleWorkbenchActivityHeatmap">
+              <div class="wb-empty">正在读取治理活跃...</div>
+            </div>
+            <div class="activity-detail" id="roleWorkbenchActivityDetail">点击日期查看当天动作摘要。</div>
+          </div>
           <div class="wb-group">
             <h3>项目工作角色</h3>
             <div class="wb-work-list" id="roleWorkbenchProjectRoles"></div>
@@ -678,6 +771,13 @@
         </main>
 
         <aside class="role-workbench-right">
+          <div class="wb-group">
+            <h3>我的治理活跃</h3>
+            <div id="roleWorkbenchActivityHeatmap" class="activity-heatmap">
+              <div class="wb-empty">正在读取治理活跃...</div>
+            </div>
+            <div class="activity-detail" id="roleWorkbenchActivityDetail"></div>
+          </div>
           <div class="wb-group">
             <h3>当前节点</h3>
             <div id="roleWorkbenchNodeDetail">
@@ -721,10 +821,72 @@
           <div class="metric"><div class="num" id="metricTodos">0</div><div class="lbl">待处理待办</div></div>
           <div class="metric"><div class="num" id="metricConflicts">0</div><div class="lbl">未解决冲突</div></div>
         </div>
+        <div class="activity-panel" style="margin-top: 20px;">
+          <div class="activity-head">
+            <div>
+              <h3>治理活跃</h3>
+              <p>参与热力按治理动作汇总，帮助查看近期流程治理、映射、术语和冲突处理参与情况。</p>
+            </div>
+          </div>
+          <div class="activity-controls">
+            <select id="dashboardActivityScope" onchange="loadDashboardActivity()">
+              <option value="me">我的参与</option>
+              <option value="team">本部门参与</option>
+              <option value="all">全公司参与</option>
+            </select>
+            <select id="dashboardActivityDepartment" onchange="loadDashboardActivity()">
+              <option value="">全部部门</option>
+            </select>
+            <select id="dashboardActivityUser" onchange="loadDashboardActivity()">
+              <option value="">全部人员</option>
+            </select>
+          </div>
+          <div id="dashboardActivityHeatmap" class="activity-heatmap">
+            <div class="wb-empty">正在读取参与热力...</div>
+          </div>
+          <div class="activity-detail" id="dashboardActivityDetail"></div>
+          <div class="activity-summary" id="departmentActivitySummary"></div>
+          <div class="activity-summary" id="userActivitySummary"></div>
+        </div>
         <div id="conflictOverview" style="margin-top: 20px; padding: 16px; background: var(--surface); border-radius: 8px; border: 1px solid var(--border);"></div>
         <div id="dashboardActions" style="margin-top: 20px;">
           <a class="btn secondary" href="template.xlsx" download style="display:none;">下载模板</a>
           <a id="exportLink" href="/api/export/excel" style="display:none;">导出台账</a>
+        </div>
+        <div class="activity-card" style="margin-top: 24px;">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+            <div>
+              <h2>人员参与热力</h2>
+              <div class="activity-meta" id="dashboardActivityMeta">近 180 天有效治理动作</div>
+            </div>
+            <div class="activity-toolbar">
+              <select id="dashboardActivityScope" aria-label="治理活跃范围">
+                <option value="all">全部人员</option>
+                <option value="team">本部门</option>
+                <option value="me">仅本人</option>
+              </select>
+              <select id="dashboardActivityDepartment" aria-label="治理活跃部门">
+                <option value="">全部部门</option>
+              </select>
+              <select id="dashboardActivityUser" aria-label="治理活跃人员">
+                <option value="">全部人员</option>
+              </select>
+            </div>
+          </div>
+          <div id="dashboardActivityHeatmap">
+            <div class="empty">正在读取治理活跃...</div>
+          </div>
+          <div class="activity-detail" id="dashboardActivityDetail">点击日期查看当天动作摘要。</div>
+          <div class="activity-summary-grid">
+            <div>
+              <h2>部门参与连续性</h2>
+              <div class="activity-summary-list" id="departmentActivitySummary"></div>
+            </div>
+            <div>
+              <h2>人员参与概览</h2>
+              <div class="activity-summary-list" id="userActivitySummary"></div>
+            </div>
+          </div>
         </div>
         <div class="grid g2" style="margin-top: 48px;">
           <div><h2>各部门流程数</h2><div class="chart" id="deptChart"></div></div>
@@ -1266,7 +1428,7 @@
 
   <script>
     // ===== State & Utilities =====
-    const state = { user:null, departments:[], capabilities:[], processes:[], termProcesses:[], termTypes:[], mappings:[], todos:[], conflicts:[], terms:[], currentRoute:null, currentView:'roleWorkbench', activeMapping:null, activeConflict:null, pollTimer:null, isEditing:false, activeReview:null, activeCapReview:null, activeProcReview:null, pgSelectedDept:'', pgEvidenceFocus:null, pgSourceCoverageData:null, pageWorkflow:null, pageWorkflowRequestId:0, roleWorkbench:{ mode:'todo', data:null, selectedNode:null } };
+    const state = { user:null, departments:[], capabilities:[], processes:[], termProcesses:[], termTypes:[], mappings:[], todos:[], conflicts:[], terms:[], currentRoute:null, currentView:'roleWorkbench', activeMapping:null, activeConflict:null, pollTimer:null, isEditing:false, activeReview:null, activeCapReview:null, activeProcReview:null, pgSelectedDept:'', pgEvidenceFocus:null, pgSourceCoverageData:null, pageWorkflow:null, pageWorkflowRequestId:0, roleWorkbench:{ mode:'todo', data:null, selectedNode:null }, activity:{ roleWorkbench:null, dashboard:null, dashboardUsers:[] } };
     const SOURCE_COVERAGE_VISIBLE_LIMIT = 20;
 
     var DEFAULT_TERM_TYPES = [
@@ -1297,6 +1459,134 @@
     function hasAdminAccess() {
       var perms = (state.user && state.user.permissions) || [];
       return !!(state.user && (state.user.role === 'admin' || perms.indexOf('admin:access') >= 0 || perms.indexOf('*:*') >= 0));
+    }
+
+    function activityLevel(count) {
+      if (count >= 6) return 3;
+      if (count >= 3) return 2;
+      if (count >= 1) return 1;
+      return 0;
+    }
+
+    function activitySourcesText(day) {
+      var labels = day && day.sourceLabels || {};
+      var sources = day && day.sources || {};
+      var keys = Object.keys(sources).filter(function(key) { return sources[key] > 0; });
+      if (!keys.length) return '无有效治理动作';
+      return keys.map(function(key) {
+        return safeText(labels[key] || key) + ' ' + safeText(sources[key]);
+      }).join(' · ');
+    }
+
+    function renderActivityDayDetail(day, payload, detailId) {
+      var detail = $(detailId);
+      if (!detail) return;
+      if (!day) {
+        detail.innerHTML = '点击日期查看当天动作摘要。';
+        return;
+      }
+      detail.innerHTML =
+        '<strong>' + safeText(day.date) + '</strong>：' +
+        safeText(day.count || 0) + ' 次有效治理动作<br>' +
+        activitySourcesText(day);
+    }
+
+    function renderActivityHeatmap(containerId, payload, detailId) {
+      var wrap = $(containerId);
+      if (!wrap) return;
+      var dates = payload && Array.isArray(payload.dates) ? payload.dates : [];
+      if (!dates.length) {
+        wrap.innerHTML = '<div class="empty">暂无治理动作记录</div>';
+        renderActivityDayDetail(null, payload, detailId);
+        return;
+      }
+      var days = dates.map(function(day) {
+        var level = activityLevel(day.count || 0);
+        return '<button type="button" class="activity-day lv' + level + '" data-activity-date="' + safeText(day.date) + '" data-activity-target="' + safeText(containerId) + '" title="' + safeText(day.date) + ' · ' + safeText(day.count || 0) + ' 次"></button>';
+      }).join('');
+      wrap.innerHTML =
+        '<div class="activity-grid">' + days + '</div>' +
+        '<div class="activity-legend"><span>少</span><span class="activity-day"></span><span class="activity-day lv1"></span><span class="activity-day lv2"></span><span class="activity-day lv3"></span><span>多</span></div>';
+      renderActivityDayDetail(dates.find(function(day) { return day.count > 0; }) || null, payload, detailId);
+    }
+
+    function renderActivitySummaryList(containerId, rows, emptyText) {
+      var wrap = $(containerId);
+      if (!wrap) return;
+      var topRows = (rows || []).slice(0, 6);
+      if (!topRows.length) {
+        wrap.innerHTML = '<div class="empty" style="padding:18px">' + safeText(emptyText || '暂无治理动作记录') + '</div>';
+        return;
+      }
+      wrap.innerHTML = topRows.map(function(row) {
+        var name = row.name || row.departmentName || '未命名';
+        var meta = row.departmentName && row.name ? row.departmentName + ' · ' : '';
+        meta += (row.activeDays || 0) + ' 个活跃日';
+        return '<div class="activity-summary-row">' +
+          '<div><strong>' + safeText(name) + '</strong><small>' + safeText(meta) + '</small></div>' +
+          '<div class="activity-count">' + safeText(row.count || 0) + ' 次</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    function populateDashboardActivityFilters(payload) {
+      var deptEl = $('dashboardActivityDepartment');
+      if (deptEl && state.departments && state.departments.length && !deptEl.dataset.loaded) {
+        deptEl.innerHTML = '<option value="">全部部门</option>' + state.departments.map(function(dept) {
+          return '<option value="' + safeText(dept.id) + '">' + safeText(dept.name) + '</option>';
+        }).join('');
+        deptEl.dataset.loaded = '1';
+      }
+      var userEl = $('dashboardActivityUser');
+      if (!userEl) return;
+      var current = userEl.value || '';
+      var users = payload && Array.isArray(payload.users) && payload.users.length ? payload.users : state.activity.dashboardUsers || [];
+      if (payload && Array.isArray(payload.users) && payload.users.length) state.activity.dashboardUsers = payload.users;
+      userEl.innerHTML = '<option value="">全部人员</option>' + users.map(function(user) {
+        return '<option value="' + safeText(user.userId) + '">' + safeText(user.name) + '</option>';
+      }).join('');
+      if (current && users.some(function(user) { return String(user.userId) === String(current); })) userEl.value = current;
+    }
+
+    async function loadRoleWorkbenchActivity() {
+      var wrap = $('roleWorkbenchActivityHeatmap');
+      if (wrap) wrap.innerHTML = '<div class="wb-empty">正在读取治理活跃...</div>';
+      try {
+        var data = await api('/api/activity/heatmap?scope=me&days=90');
+        state.activity.roleWorkbench = data;
+        if ($('roleWorkbenchActivityMeta')) $('roleWorkbenchActivityMeta').textContent = '近 90 天 ' + ((data.summary && data.summary.totalActions) || 0) + ' 次有效治理动作';
+        renderActivityHeatmap('roleWorkbenchActivityHeatmap', data, 'roleWorkbenchActivityDetail');
+      } catch (error) {
+        if (wrap) wrap.innerHTML = '<div class="wb-empty">' + safeText(error.message || '治理活跃加载失败') + '</div>';
+      }
+    }
+
+    async function loadDashboardActivity() {
+      var wrap = $('dashboardActivityHeatmap');
+      if (wrap) wrap.innerHTML = '<div class="empty">正在读取治理活跃...</div>';
+      var scopeEl = $('dashboardActivityScope');
+      var deptEl = $('dashboardActivityDepartment');
+      var userEl = $('dashboardActivityUser');
+      var params = new URLSearchParams();
+      params.set('scope', scopeEl ? scopeEl.value || 'all' : 'all');
+      params.set('days', '180');
+      if (deptEl && deptEl.value) params.set('department_id', deptEl.value);
+      if (userEl && userEl.value) params.set('user_id', userEl.value);
+      try {
+        var data = await api('/api/activity/heatmap?' + params.toString());
+        state.activity.dashboard = data;
+        populateDashboardActivityFilters(data);
+        if ($('dashboardActivityMeta')) $('dashboardActivityMeta').textContent = '近 180 天 ' + ((data.summary && data.summary.totalActions) || 0) + ' 次有效治理动作';
+        renderActivityHeatmap('dashboardActivityHeatmap', data, 'dashboardActivityDetail');
+        renderActivitySummaryList('departmentActivitySummary', data.departments || [], '暂无部门参与记录');
+        renderActivitySummaryList('userActivitySummary', data.users || [], '暂无人员参与记录');
+      } catch (error) {
+        if (params.get('scope') !== 'me' && error && error.status === 403) {
+          if (scopeEl) scopeEl.value = 'me';
+          return loadDashboardActivity();
+        }
+        if (wrap) wrap.innerHTML = '<div class="empty">' + safeText(error.message || '治理活跃加载失败') + '</div>';
+      }
     }
 
     // ===== API helper (with 401 handling and CSRF protection) =====
@@ -1691,6 +1981,96 @@
       return shell;
     }
 
+    function activityLevel(count) {
+      if (Number(count || 0) >= 6) return 3;
+      if (Number(count || 0) >= 3) return 2;
+      if (Number(count || 0) >= 1) return 1;
+      return 0;
+    }
+
+    function activitySourceText(day) {
+      var labels = day.sourceLabels || {};
+      var sources = day.sources || {};
+      return Object.keys(sources).map(function(key) {
+        return safeText(labels[key] || key) + ' ' + Number(sources[key] || 0) + ' 次';
+      }).join('；') || '暂无治理动作';
+    }
+
+    function renderActivityDayDetail(detailId, day) {
+      var detail = $(detailId);
+      if (!detail || !day) return;
+      detail.innerHTML = '<strong>' + safeText(day.date) + '</strong>：' + Number(day.count || 0) + ' 次，' + activitySourceText(day);
+    }
+
+    function renderActivityHeatmap(containerId, payload, detailId) {
+      var wrap = $(containerId);
+      if (!wrap) return;
+      var dates = (payload && payload.dates) || [];
+      if (!dates.length) {
+        wrap.innerHTML = '<div class="wb-empty">暂无治理活跃数据。</div>';
+        renderActivityDayDetail(detailId, { date: '', count: 0, sources: {}, sourceLabels: {} });
+        return;
+      }
+      wrap.innerHTML = dates.map(function(day) {
+        var level = activityLevel(day.count);
+        return '<button type="button" class="activity-day" data-activity-date="' + safeText(day.date) + '" data-level="' + level + '" title="' + safeText(day.date) + '：' + Number(day.count || 0) + ' 次"></button>';
+      }).join('');
+      var byDate = {};
+      dates.forEach(function(day) { byDate[day.date] = day; });
+      wrap.querySelectorAll('[data-activity-date]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          renderActivityDayDetail(detailId, byDate[btn.dataset.activityDate]);
+        });
+      });
+      renderActivityDayDetail(detailId, dates.slice().reverse().find(function(day) { return Number(day.count || 0) > 0; }) || dates[dates.length - 1]);
+    }
+
+    async function loadRoleWorkbenchActivity() {
+      try {
+        var payload = await api('/api/activity/heatmap?scope=me&days=90');
+        renderActivityHeatmap('roleWorkbenchActivityHeatmap', payload, 'roleWorkbenchActivityDetail');
+      } catch (error) {
+        if ($('roleWorkbenchActivityHeatmap')) $('roleWorkbenchActivityHeatmap').innerHTML = '<div class="wb-empty">' + safeText(error.message || '治理活跃加载失败') + '</div>';
+      }
+    }
+
+    function setActivityOptions(selectId, rows, valueField, labelField, allLabel) {
+      var select = $(selectId);
+      if (!select) return;
+      var previous = select.value;
+      select.innerHTML = '<option value="">' + safeText(allLabel) + '</option>' + (rows || []).map(function(row) {
+        var value = row[valueField];
+        return '<option value="' + safeText(value) + '">' + safeText(row[labelField] || value) + '</option>';
+      }).join('');
+      select.value = previous;
+    }
+
+    async function loadDashboardActivity() {
+      try {
+        var params = new URLSearchParams();
+        params.set('scope', ($('dashboardActivityScope') && $('dashboardActivityScope').value) || 'me');
+        params.set('days', '180');
+        if ($('dashboardActivityDepartment') && $('dashboardActivityDepartment').value) params.set('department_id', $('dashboardActivityDepartment').value);
+        if ($('dashboardActivityUser') && $('dashboardActivityUser').value) params.set('user_id', $('dashboardActivityUser').value);
+        var payload = await api('/api/activity/heatmap?' + params.toString());
+        renderActivityHeatmap('dashboardActivityHeatmap', payload, 'dashboardActivityDetail');
+        setActivityOptions('dashboardActivityDepartment', payload.departments || [], 'departmentId', 'name', '全部部门');
+        setActivityOptions('dashboardActivityUser', payload.users || [], 'userId', 'name', '全部人员');
+        if ($('departmentActivitySummary')) {
+          $('departmentActivitySummary').innerHTML = '<strong>部门参与热力：</strong>' + ((payload.departments || []).slice(0, 5).map(function(row) {
+            return safeText(row.name) + ' ' + Number(row.count || 0) + ' 次';
+          }).join('；') || '暂无部门汇总');
+        }
+        if ($('userActivitySummary')) {
+          $('userActivitySummary').innerHTML = '<strong>人员参与热力：</strong>' + ((payload.users || []).slice(0, 5).map(function(row) {
+            return safeText(row.name) + ' ' + Number(row.count || 0) + ' 次';
+          }).join('；') || '暂无人员汇总');
+        }
+      } catch (error) {
+        if ($('dashboardActivityHeatmap')) $('dashboardActivityHeatmap').innerHTML = '<div class="wb-empty">' + safeText(error.message || '治理活跃加载失败') + '</div>';
+      }
+    }
+
     function renderWorkbenchNextActions(actions) {
       var wrap = $('roleWorkbenchNextActions');
       if (!wrap) return;
@@ -1843,6 +2223,7 @@
         renderRoleWorkbenchGuide(data);
         renderRoleWorkbenchNodeDetail(null, data);
         renderRoleWorkbenchSankey(data);
+        loadRoleWorkbenchActivity();
       } catch (error) {
         if ($('roleWorkbenchNextActions')) $('roleWorkbenchNextActions').innerHTML = '<div class="wb-empty">' + safeText(error.message || '角色工作台加载失败') + '</div>';
       }
@@ -2371,6 +2752,7 @@
       }
       var actionArea = $('dashboardActions');
       if (actionArea) actionArea.innerHTML = quickActions;
+      loadDashboardActivity();
 
       if (!window.echarts) return;
       var deptCounts = {};
@@ -4040,6 +4422,18 @@
         renderRoleWorkbench();
         return;
       }
+      var activityDay = event.target.closest('[data-activity-date]');
+      if (activityDay) {
+        event.preventDefault();
+        var targetId = activityDay.dataset.activityTarget || '';
+        var payload = targetId === 'roleWorkbenchActivityHeatmap' ? state.activity.roleWorkbench : state.activity.dashboard;
+        var detailId = targetId === 'roleWorkbenchActivityHeatmap' ? 'roleWorkbenchActivityDetail' : 'dashboardActivityDetail';
+        var day = payload && Array.isArray(payload.dates)
+          ? payload.dates.find(function(item) { return item.date === activityDay.dataset.activityDate; })
+          : null;
+        renderActivityDayDetail(day, payload, detailId);
+        return;
+      }
       var userRoleResult = event.target.closest('.user-role-result[data-user-id]');
       if (userRoleResult) {
         event.preventDefault();
@@ -4071,6 +4465,9 @@
     if ($('refreshTermsBtn')) $('refreshTermsBtn').onclick = loadTerms;
     if ($('termStatus')) $('termStatus').onchange = loadTerms;
     if ($('refreshConflictsBtn')) $('refreshConflictsBtn').onclick = loadConflicts;
+    ['dashboardActivityScope', 'dashboardActivityDepartment', 'dashboardActivityUser'].forEach(function(id) {
+      if ($(id)) $(id).onchange = loadDashboardActivity;
+    });
     // Conflict sub-tab switching
     var conflictTabLinks = document.querySelectorAll('#conflicts [data-ctab]');
     conflictTabLinks.forEach(function(link) {

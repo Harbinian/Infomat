@@ -225,6 +225,30 @@ async function getUserRoleCodesAsync(userId, legacyRole) {
   `).all(userId);
 }
 
+async function getUserByIdAsync(userId) {
+  if (!userId) return null;
+  if (useMysqlIdentityReadModel()) {
+    const repo = await identityRepository();
+    if (typeof repo.getUserById !== 'function') return null;
+    return await repo.getUserById(userId);
+  }
+
+  const db = require('./db');
+  return db.prepare('SELECT * FROM users WHERE id=?').get(userId) || null;
+}
+
+async function getDepartmentByIdAsync(departmentId) {
+  if (!departmentId) return null;
+  if (useMysqlIdentityReadModel()) {
+    const repo = await identityRepository();
+    if (typeof repo.getDepartmentById !== 'function') return null;
+    return await repo.getDepartmentById(departmentId);
+  }
+
+  const db = require('./db');
+  return db.prepare('SELECT * FROM departments WHERE id=?').get(departmentId) || null;
+}
+
 function requirePermission(permCode) {
   return (req, res, next) => {
     if (!req.session || !req.session.userId) return res.status(401).json({ error: '未登录' });
@@ -351,6 +375,8 @@ module.exports = {
   getUserEffectivePermissions,
   getUserEffectivePermissionsAsync,
   getUserRoleCodesAsync,
+  getUserByIdAsync,
+  getDepartmentByIdAsync,
   isAdmin,
   stripInternalIds,
   send401,

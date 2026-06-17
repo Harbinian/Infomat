@@ -71,6 +71,7 @@ registerRouteIfExists('/api/integration', 'integration');
 registerRouteIfExists('/api/quality', 'quality');
 registerRouteIfExists('/api/roles', 'roles');
 registerRouteIfExists('/api/import-rbac', 'importRbac');
+registerRouteIfExists('/api/activity', 'activity');
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });

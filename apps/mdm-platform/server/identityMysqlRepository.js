@@ -205,10 +205,18 @@ function makeIdentityMysqlRepository(pool) {
       return await first(pool, 'SELECT * FROM users WHERE employee_no=?', [employeeNo]);
     },
 
+    async getUserById(userId) {
+      return await first(pool, 'SELECT * FROM users WHERE id=?', [userId]);
+    },
+
     getUserRoleCodes,
 
     async listDepartments() {
       return await rows(pool, 'SELECT * FROM departments ORDER BY code');
+    },
+
+    async getDepartmentById(departmentId) {
+      return await first(pool, 'SELECT * FROM departments WHERE id=?', [departmentId]);
     },
 
     async createDepartment(payload = {}) {
