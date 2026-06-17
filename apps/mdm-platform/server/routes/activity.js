@@ -1,28 +1,27 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const { requireAuth, getUserEffectivePermissions } = require('../auth');
+const {
+  requireAuth,
+  getUserEffectivePermissionsAsync,
+  getUserRoleCodesAsync
+} = require('../auth');
 
 const MANAGER_ROLE_CODES = new Set(['admin', 'it_lead', 'project_lead', 'data_quality']);
 const ALLOWED_SCOPES = new Set(['me', 'team', 'all']);
 const ALLOWED_DAYS = new Set([90, 180, 365]);
 
-function roleCodesForUser(userId, legacyRole) {
-  const rows = db.prepare(`
-    SELECT r.role_code AS code
-    FROM user_roles ur
-    JOIN roles r ON ur.role_id = r.role_id
-    WHERE ur.user_id=?
-  `).all(userId);
-  const codes = new Set(rows.map(row => row.code));
+async function roleCodesForUserAsync(userId, legacyRole) {
+  const rows = await getUserRoleCodesAsync(userId, legacyRole);
+  const codes = new Set((rows || []).map(row => row.code || row.role_code).filter(Boolean));
   if (legacyRole) codes.add(legacyRole);
   return codes;
 }
 
-function canViewManagedActivity(req) {
-  const { permSet } = getUserEffectivePermissions(req.session.userId);
+async function canViewManagedActivityAsync(req) {
+  const { permSet } = await getUserEffectivePermissionsAsync(req.session.userId);
   if (permSet.has('*:*') || permSet.has('admin:access') || permSet.has('data:view_all')) return true;
-  const roleCodes = roleCodesForUser(req.session.userId, req.session.userRole);
+  const roleCodes = await roleCodesForUserAsync(req.session.userId, req.session.userRole);
   return Array.from(roleCodes).some(code => MANAGER_ROLE_CODES.has(code));
 }
 
@@ -234,11 +233,11 @@ function buildPayload({ scope, days, startDate, endDate, rows }) {
   };
 }
 
-router.get('/heatmap', requireAuth, (req, res) => {
+router.get('/heatmap', requireAuth, async (req, res) => {
   try {
     const scope = ALLOWED_SCOPES.has(req.query.scope) ? req.query.scope : 'me';
     const days = parseDays(req.query.days);
-    const canManage = canViewManagedActivity(req);
+    const canManage = await canViewManagedActivityAsync(req);
     if (scope !== 'me' && !canManage) {
       return res.status(403).json({ error: '权限不足' });
     }

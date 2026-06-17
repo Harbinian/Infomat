@@ -20,7 +20,7 @@
     "test:security": "node scripts/test-user-password-scripts.js && node scripts/test-password-audit.js && node scripts/test-route-write-audit.js && node scripts/test-security-routes.js",
     "test:project-roles": "node scripts/test-project-role-access.js",
     "test:role-workbench": "node scripts/test-role-workbench-api.js",
-    "test:activity": "node scripts/test-activity-heatmap-api.js",
+    "test:activity": "node scripts/test-activity-heatmap-api.js && node scripts/test-activity-heatmap-mysql-identity-api.js",
     "test:role-workbench-mysql": "node scripts/test-role-workbench-mysql-api.js && node scripts/test-role-workbench-process-governance-mysql-api.js",
     "test:page-workflows": "node scripts/test-page-workflows-api.js",
     "test:views": "node scripts/test-views-sankey-filters.js",

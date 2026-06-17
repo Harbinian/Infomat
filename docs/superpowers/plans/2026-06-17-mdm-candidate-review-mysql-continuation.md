@@ -25,6 +25,7 @@
 - 流程治理 MySQL 分支已接入异步身份 helper；`PROCESS_GOVERNANCE_READ_MODEL=mysql` 与 `MDM_IDENTITY_READ_MODEL=mysql` 同时开启时，`quality-cases`、`mapping-workspace`、`mapping-todos` 不再依赖 SQLite 身份/部门表做权限、责任人或责任部门判断。
 - 角色工作台在 `PROCESS_GOVERNANCE_READ_MODEL=mysql` 开启时，流程质量问题和映射待办工作项已从流程治理 MySQL repository 读取；角色定义、桑基结构和前端显示口径不变。
 - 验证阶段发现“治理活跃/参与热力”前序资产只有后端和测试口径、前端未接入，导致 `test:frontend` 阻断；已补齐 `/api/activity/heatmap` 前端入口、角色工作台热力图、统计看板参与热力和 API/资产测试，不涉及 `docs/norms` 数据。
+- `/api/activity/heatmap` 管理视图权限已接入 MySQL-aware 异步身份 helper；`MDM_IDENTITY_READ_MODEL=mysql` 开启时，不再依赖 SQLite `user_roles` 或同步权限表判断全量/部门/人员筛选权限。
 - 文档治理已完成并合并到 `master`，本轮只维护与当前收尾相关的计划文档。
 
 ## Pxx 与原文定位
@@ -49,7 +50,7 @@
 - `PROCESS_GOVERNANCE_READ_MODEL=mysql` 仍是显式开关。
 - 旧 SQLite 本地库不迁移，MySQL 通过组织真源、流程快照和基线脚本重建。
 - `better-sqlite3` 暂不移除，直到认证、RBAC、角色工作台相关数据层全部迁完。
-- 当前已经具备 MySQL 身份/RBAC 读写基础能力；本轮已清理流程治理和角色工作台已存在 MySQL 分支中的身份/部门 SQLite 混用查询。
+- 当前已经具备 MySQL 身份/RBAC 读写基础能力；本轮已清理流程治理、角色工作台和治理活跃热力图已存在路径中的身份/部门 SQLite 混用查询。
 - 如果缺少真实 MySQL 环境变量，smoke 只能记录为跳过，不能宣称真实库验证已通过。
 
 ## 验证命令
