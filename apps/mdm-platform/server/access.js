@@ -1,9 +1,15 @@
 const db = require('./db');
-const { getUserEffectivePermissions, getUserRoleCodesAsync } = require('./auth');
+const { getUserEffectivePermissions, getUserEffectivePermissionsAsync, getUserRoleCodesAsync } = require('./auth');
 
 function isAdmin(req) {
   if (!req.session || !req.session.userId) return false;
   const { permSet } = getUserEffectivePermissions(req.session.userId);
+  return permSet.has('admin:access') || permSet.has('*:*');
+}
+
+async function isAdminAsync(req) {
+  if (!req.session || !req.session.userId) return false;
+  const { permSet } = await getUserEffectivePermissionsAsync(req.session.userId);
   return permSet.has('admin:access') || permSet.has('*:*');
 }
 
@@ -13,9 +19,21 @@ function hasGlobalView(req) {
   return permSet.has('data:view_all') || permSet.has('admin:access') || permSet.has('*:*');
 }
 
+async function hasGlobalViewAsync(req) {
+  if (!req.session || !req.session.userId) return false;
+  const { permSet } = await getUserEffectivePermissionsAsync(req.session.userId);
+  return permSet.has('data:view_all') || permSet.has('admin:access') || permSet.has('*:*');
+}
+
 function isReviewerOrAdmin(req) {
   if (!req.session || !req.session.userId) return false;
   const { permSet } = getUserEffectivePermissions(req.session.userId);
+  return permSet.has('admin:access') || permSet.has('review:approve') || permSet.has('*:*');
+}
+
+async function isReviewerOrAdminAsync(req) {
+  if (!req.session || !req.session.userId) return false;
+  const { permSet } = await getUserEffectivePermissionsAsync(req.session.userId);
   return permSet.has('admin:access') || permSet.has('review:approve') || permSet.has('*:*');
 }
 
@@ -93,4 +111,24 @@ function canUseTodo(req, todo) {
   return Boolean(todo.to_dept_id && req.session.departmentId && todo.to_dept_id === req.session.departmentId);
 }
 
-module.exports = { isAdmin, hasGlobalView, isReviewerOrAdmin, getEffectiveRoleCodes, getEffectiveRoleCodesAsync, validateAction, mappingVisibility, canViewMapping, canUseTodo };
+async function canUseTodoAsync(req, todo) {
+  if (!todo) return false;
+  if (await isAdminAsync(req)) return true;
+  return Boolean(todo.to_dept_id && req.session.departmentId && todo.to_dept_id === req.session.departmentId);
+}
+
+module.exports = {
+  isAdmin,
+  isAdminAsync,
+  hasGlobalView,
+  hasGlobalViewAsync,
+  isReviewerOrAdmin,
+  isReviewerOrAdminAsync,
+  getEffectiveRoleCodes,
+  getEffectiveRoleCodesAsync,
+  validateAction,
+  mappingVisibility,
+  canViewMapping,
+  canUseTodo,
+  canUseTodoAsync
+};
