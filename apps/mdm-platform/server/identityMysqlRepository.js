@@ -342,6 +342,80 @@ function makeIdentityMysqlRepository(pool) {
       return grouped;
     },
 
+    async listRoles() {
+      return await rows(pool, `
+        SELECT r.*,
+          (SELECT role_name FROM roles pr WHERE pr.role_id = r.parent_role_id) as parent_role_name,
+          (SELECT COUNT(*) FROM role_permissions WHERE role_id = r.role_id) as perm_count,
+          (SELECT COUNT(*) FROM user_roles WHERE role_id = r.role_id) as user_count
+        FROM roles r
+        ORDER BY r.is_system DESC, r.role_code
+      `);
+    },
+
+    async getRoleDetail(roleId) {
+      const role = await first(pool, 'SELECT * FROM roles WHERE role_id=?', [roleId]);
+      if (!role) return null;
+
+      const ownPerms = await rows(pool, `
+        SELECT p.perm_id, p.perm_code, p.resource, p.action, p.field_constraints, p.description, rp.effect, 0 as inherited
+        FROM role_permissions rp JOIN permissions p ON rp.perm_id = p.perm_id
+        WHERE rp.role_id=?
+      `, [roleId]);
+      const knownPermCodes = new Set(ownPerms.map(permission => permission.perm_code));
+      const inheritedPerms = [];
+
+      let parentId = role.parent_role_id;
+      const visited = new Set();
+      while (parentId && !visited.has(parentId)) {
+        visited.add(parentId);
+        const parentPerms = await rows(pool, `
+          SELECT p.perm_id, p.perm_code, p.resource, p.action, p.field_constraints, p.description, rp.effect, 1 as inherited
+          FROM role_permissions rp JOIN permissions p ON rp.perm_id = p.perm_id
+          WHERE rp.role_id=?
+        `, [parentId]);
+        for (const permission of parentPerms) {
+          if (!knownPermCodes.has(permission.perm_code)) {
+            inheritedPerms.push(permission);
+            knownPermCodes.add(permission.perm_code);
+          }
+        }
+        const parent = await first(pool, 'SELECT parent_role_id FROM roles WHERE role_id=?', [parentId]);
+        parentId = parent ? parent.parent_role_id : null;
+      }
+
+      const users = await rows(pool, `
+        SELECT u.id, u.name, u.employee_no, u.department_id, u.post, d.name as dept_name
+        FROM user_roles ur
+        JOIN users u ON ur.user_id = u.id
+        LEFT JOIN departments d ON u.department_id = d.id
+        WHERE ur.role_id=?
+      `, [roleId]);
+
+      return { ...role, permissions: [...ownPerms, ...inheritedPerms], users };
+    },
+
+    async getRolePermissionMatrix(roleId) {
+      const role = await first(pool, 'SELECT * FROM roles WHERE role_id=?', [roleId]);
+      if (!role) return null;
+
+      const allPerms = await rows(pool, 'SELECT * FROM permissions ORDER BY resource, action');
+      const rolePerms = await rows(pool, `
+        SELECT p.perm_code, rp.effect FROM role_permissions rp
+        JOIN permissions p ON rp.perm_id = p.perm_id WHERE rp.role_id=?
+      `, [roleId]);
+      const rolePermMap = new Map(rolePerms.map(permission => [permission.perm_code, permission.effect]));
+
+      return {
+        role,
+        matrix: allPerms.map(permission => ({
+          ...permission,
+          assigned: rolePermMap.has(permission.perm_code),
+          effect: rolePermMap.get(permission.perm_code) || null
+        }))
+      };
+    },
+
     async getCurrentUserPayload(session = {}) {
       if (!session.userId) return null;
 
