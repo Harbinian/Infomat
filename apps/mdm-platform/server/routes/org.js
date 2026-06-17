@@ -343,7 +343,38 @@ router.post('/users/:id/password', requirePermission('admin:access'), (req, res)
   });
 });
 
+function writeLoginSession(req, user) {
+  return new Promise((resolve, reject) => {
+    req.session.regenerate(error => {
+      if (error) return reject(error);
+      req.session.userId = user.id;
+      req.session.userRole = user.role;
+      req.session.userName = user.name;
+      req.session.departmentId = user.department_id;
+      resolve();
+    });
+  });
+}
+
+async function loginWithMysqlIdentity(req, res) {
+  const { employee_no, password } = req.body;
+  const repo = await identityRepository();
+  const user = await repo.getUserByEmployeeNo(employee_no);
+  if (!user || !verifyPassword(password, user.password_hash)) {
+    recordLoginFailure(req);
+    return res.status(401).json({ error: '工号或密码错误' });
+  }
+
+  await writeLoginSession(req, user);
+  clearLoginFailures(req);
+  return res.json({ id: user.id, name: user.name, role: user.role });
+}
+
 router.post('/login', loginRateLimit, (req, res) => {
+  if (useMysqlIdentityReadModel()) {
+    return runAsyncAction(res, async () => loginWithMysqlIdentity(req, res), '身份 MySQL 读取模型不可用');
+  }
+
   const { employee_no, password } = req.body;
   const user = db.prepare('SELECT * FROM users WHERE employee_no=?').get(employee_no);
   if (!user || !verifyPassword(password, user.password_hash)) {
@@ -351,15 +382,12 @@ router.post('/login', loginRateLimit, (req, res) => {
     return res.status(401).json({ error: '工号或密码错误' });
   }
 
-  req.session.regenerate(error => {
-    if (error) return res.status(500).json({ error: '登录失败' });
-    clearLoginFailures(req);
-    req.session.userId = user.id;
-    req.session.userRole = user.role;
-    req.session.userName = user.name;
-    req.session.departmentId = user.department_id;
-    res.json({ id: user.id, name: user.name, role: user.role });
-  });
+  return writeLoginSession(req, user)
+    .then(() => {
+      clearLoginFailures(req);
+      res.json({ id: user.id, name: user.name, role: user.role });
+    })
+    .catch(() => res.status(500).json({ error: '登录失败' }));
 });
 
 router.post('/logout', (req, res) => {
@@ -463,6 +491,15 @@ router.get('/permissions', requireAuth, requirePermission('admin:access'), (req,
 
 // GET /api/me/password-status — check if using default password
 router.get('/me/password-status', requireAuth, (req, res) => {
+  if (useMysqlIdentityReadModel()) {
+    return runAsyncAction(res, async () => {
+      const repo = await identityRepository();
+      const status = await repo.getPasswordStatus(req.session.userId);
+      if (!status) return res.status(404).json({ error: '用户不存在' });
+      return res.json(status);
+    }, '身份 MySQL 读取模型不可用');
+  }
+
   return runDbAction(res, () => {
     const user = db.prepare('SELECT must_change_password FROM users WHERE id=?').get(req.session.userId);
     if (!user) return res.status(404).json({ error: '用户不存在' });
@@ -472,6 +509,25 @@ router.get('/me/password-status', requireAuth, (req, res) => {
 
 // POST /api/me/password — change own password
 router.post('/me/password', requireAuth, (req, res) => {
+  if (useMysqlIdentityReadModel()) {
+    return runAsyncAction(res, async () => {
+      const { current_password, new_password } = req.body;
+      if (!current_password || !new_password) return res.status(400).json({ error: '缺少当前密码或新密码' });
+
+      const repo = await identityRepository();
+      const user = await repo.getPasswordCredential(req.session.userId);
+      if (!user) return res.status(404).json({ error: '用户不存在' });
+      if (!verifyPassword(current_password, user.password_hash)) return res.status(403).json({ error: '当前密码不正确' });
+
+      const strengthError = validatePasswordStrength(new_password, user);
+      if (strengthError) return res.status(400).json({ error: strengthError });
+
+      const updated = await repo.updateOwnPassword(req.session.userId, hashPassword(new_password));
+      if (!updated) return res.status(404).json({ error: '用户不存在' });
+      return res.json({ success: true });
+    }, '身份 MySQL 读取模型不可用');
+  }
+
   return runDbAction(res, () => {
     const { current_password, new_password } = req.body;
     if (!current_password || !new_password) return res.status(400).json({ error: '缺少当前密码或新密码' });

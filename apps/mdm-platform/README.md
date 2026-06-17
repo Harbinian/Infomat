@@ -131,7 +131,7 @@ npm run check:process-governance
 - MySQL 连接统一使用 `MYSQL_HOST`、`MYSQL_PORT`、`MYSQL_USER`、`MYSQL_PASSWORD`、`MYSQL_DATABASE`、`MYSQL_CONNECTION_LIMIT`。
 - 旧 SQLite `platform.db` 不迁移；MySQL 通过组织真源、流程快照和基线脚本重建。
 - 迁移过渡期仍依赖遗留本地库的测试，必须通过隔离路径运行，不能污染共享运行态文件。
-- `MDM_IDENTITY_READ_MODEL=mysql` 目前只切换 `/api/org/me` 和 `/api/org/session` 的身份/RBAC 读取；登录、用户管理写入和角色工作台底层写入仍在后续迁移中。
+- `MDM_IDENTITY_READ_MODEL=mysql` 目前切换登录、`/api/org/session`、`/api/org/me`、本人密码状态和本人改密；管理员用户管理写入和角色工作台底层读取仍在后续迁移中。
 - 候选映射复核正式入口为 `/api/process-governance/candidate-review/*`；候选运行通过 `npm run import:process-candidate-review -- --candidate-run artifacts/process-candidates/<run-id>` 导入 MySQL。
 - `npm run test:mainline` 用于验证“流程治理 -> 字段台账 -> 主数据对象 -> 权限 -> 导入导出”主线，详见 `docs/plans/流程治理字段台账主线稳定性检查.md`。
 - 不直接运行会删除共享数据库的旧式测试逻辑。
