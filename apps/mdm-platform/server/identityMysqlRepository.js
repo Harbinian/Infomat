@@ -185,6 +185,15 @@ function makeIdentityMysqlRepository(pool) {
     }
   }
 
+  async function departmentPath(departmentId, parentId, executor = pool) {
+    let path = `/${departmentId}/`;
+    if (parentId) {
+      const parent = await first(executor, 'SELECT path FROM departments WHERE id=?', [parentId]);
+      if (parent && parent.path) path = `${parent.path}${departmentId}/`;
+    }
+    return path;
+  }
+
   return {
     async initSchema() {
       for (const statement of splitSqlStatements(mdmMysqlSchemaSql())) {
@@ -194,6 +203,72 @@ function makeIdentityMysqlRepository(pool) {
 
     async getUserByEmployeeNo(employeeNo) {
       return await first(pool, 'SELECT * FROM users WHERE employee_no=?', [employeeNo]);
+    },
+
+    async listDepartments() {
+      return await rows(pool, 'SELECT * FROM departments ORDER BY code');
+    },
+
+    async createDepartment(payload = {}) {
+      return await withOptionalTransaction(async executor => {
+        const result = await executor.execute(
+          'INSERT INTO departments (name, code, parent_id, department_type, manager_user_id, data_owner_user_id, source_system, external_id, status, effective_from, effective_to, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          [
+            payload.name,
+            payload.code,
+            payload.parent_id || null,
+            payload.department_type || null,
+            payload.manager_user_id || null,
+            payload.data_owner_user_id || null,
+            payload.source_system || 'MDM_SYS',
+            payload.external_id || null,
+            payload.status || 'active',
+            payload.effective_from || null,
+            payload.effective_to || null,
+            payload.created_by || null
+          ]
+        );
+        const id = insertId(result);
+        await executor.execute('UPDATE departments SET path=? WHERE id=?', [
+          await departmentPath(id, payload.parent_id || null, executor),
+          id
+        ]);
+        return { id };
+      });
+    },
+
+    async updateDepartment(departmentId, payload = {}) {
+      const path = await departmentPath(departmentId, payload.parent_id || null);
+      const result = await pool.execute(
+        `UPDATE departments
+         SET name=?, code=?, parent_id=?, path=?, sort_order=?, department_type=?,
+             manager_user_id=?, data_owner_user_id=?, source_system=?, external_id=?,
+             status=?, effective_from=?, effective_to=?, updated_by=?
+         WHERE id=?`,
+        [
+          payload.name,
+          payload.code,
+          payload.parent_id || null,
+          path,
+          payload.sort_order || 0,
+          payload.department_type || null,
+          payload.manager_user_id || null,
+          payload.data_owner_user_id || null,
+          payload.source_system || 'MDM_SYS',
+          payload.external_id || null,
+          payload.status || 'active',
+          payload.effective_from || null,
+          payload.effective_to || null,
+          payload.updated_by || null,
+          departmentId
+        ]
+      );
+      return affectedRows(result) > 0;
+    },
+
+    async deleteDepartment(departmentId) {
+      const result = await pool.execute('DELETE FROM departments WHERE id=?', [departmentId]);
+      return affectedRows(result) > 0;
     },
 
     async listUsers() {
