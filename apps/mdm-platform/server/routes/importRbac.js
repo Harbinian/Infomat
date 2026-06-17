@@ -13,6 +13,19 @@ const upload = multer({
 
 const adminGate = [requireAuth, requirePermission('admin:access')];
 
+function useMysqlIdentityReadModel() {
+  return String(process.env.MDM_IDENTITY_READ_MODEL || '').toLowerCase() === 'mysql';
+}
+
+function rejectMysqlRbacImport(req, res, next) {
+  if (useMysqlIdentityReadModel()) {
+    return res.status(501).json({ error: 'RBAC 批量导入 MySQL 迁移未完成' });
+  }
+  return next();
+}
+
+const importWriteGate = [...adminGate, rejectMysqlRbacImport];
+
 function cellText(row, headerMap, header) {
   const index = headerMap[header];
   if (!index) return '';
@@ -41,7 +54,7 @@ function parseCsvRows(buffer) {
 }
 
 // POST /api/import-rbac/user-roles
-router.post('/user-roles', ...adminGate, upload.single('file'), async (req, res) => {
+router.post('/user-roles', ...importWriteGate, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: '缺少文件' });
 
@@ -140,7 +153,7 @@ router.post('/user-roles', ...adminGate, upload.single('file'), async (req, res)
 });
 
 // POST /api/import-rbac/role-permissions
-router.post('/role-permissions', ...adminGate, upload.single('file'), async (req, res) => {
+router.post('/role-permissions', ...importWriteGate, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: '缺少文件' });
 
@@ -302,7 +315,7 @@ router.get('/templates/role-permissions', ...adminGate, async (req, res) => {
 const FULL_COLUMNS = ['工号', '姓名', '部门', '角色编码', '角色名称', '父角色编码', '权限码', '效果', '操作类型'];
 
 // POST /api/import-rbac/full — unified import
-router.post('/full', ...adminGate, upload.single('file'), async (req, res) => {
+router.post('/full', ...importWriteGate, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: '缺少文件' });
 
