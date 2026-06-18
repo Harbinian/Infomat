@@ -16,7 +16,7 @@
 | `npm run test:identity-mysql` | 身份/RBAC MySQL 模型：repository 契约、登录、会话、本人改密、管理员用户/部门/权限读写路由、角色读写路由、通用权限中间件、access 权限 helper 和 RBAC 导入混写保护验证 | 使用 fake MySQL pool 和 fake repository，不连接真实库；默认不开启该切换 |
 | `npm run test:access-mysql` | 验证 `access.js` 中角色码读取、管理员判断、全局查看、复核权限和待办处理判断的 MySQL-aware 异步 helper | 使用 fake repository，不连接真实库 |
 | `npm run test:role-workbench-mysql` | 角色工作台在 `MDM_IDENTITY_READ_MODEL=mysql` 下从 MySQL 身份读模型读取当前用户、角色、部门和权限；在 `PROCESS_GOVERNANCE_READ_MODEL=mysql` 下从流程治理 MySQL repository 读取质量问题和映射待办 | 使用 fake repository，不连接真实库 |
-| `npm run test:activity` | 治理活跃热力图 API：本人/部门/全量视图、权限边界、治理动作来源汇总，以及 `MDM_IDENTITY_READ_MODEL=mysql` 下的管理视图权限判断 | 迁移过渡期使用隔离遗留本地库和 fake identity repository |
+| `npm run test:activity` | 治理活跃热力图 API：本人/部门/全量视图、权限边界、治理动作来源汇总，以及 `MDM_IDENTITY_READ_MODEL=mysql` 下的管理视图权限判断 | 使用 fake repository，不连接真实库 |
 | `npm run test:data-map-mysql` | 数据地图字段域 MySQL schema、repository 和上下文 API | 使用 fake MySQL pool / fake repository，不连接真实库 |
 | `npm run test:field-entries-mysql` | 字段台账公开接口直接读取 Data Map MySQL repository，`mapping_id` 仅作 `context_id` 别名 | 使用 fake repository，不连接真实库 |
 | `npm run test:field-identities-mysql` | 字段黄金源维护和确认接口直接读取 Data Map MySQL repository | 使用 fake repository，不连接真实库 |
@@ -25,6 +25,8 @@
 | `npm run test:mappings-mysql` | 旧映射审批 schema、repository 和 `/api/mappings` 接口直接读取 MySQL repository，不再读取 SQLite 映射、字段、术语或版本日志表 | 使用 fake MySQL pool / fake repository，不连接真实库 |
 | `npm run test:conflicts-mysql` | 冲突治理 schema、repository 和 `/api/conflicts` 接口直接读取 MySQL repository；字段冲突来自 Data Map 字段域，术语冲突来自术语 MySQL 表 | 使用 fake MySQL pool / fake repository，不连接真实库 |
 | `npm run test:todos-mysql` | 通用待办 schema、repository 和 `/api/todos` 接口直接读取 MySQL repository，不再读取或写入 SQLite `todos` | 使用 fake MySQL pool / fake repository，不连接真实库 |
+| `npm run test:versions-mysql` | 平台通用版本记录 schema、repository 和 `/api/versions` 接口直接读取 MySQL `mdm_change_sets` / `mdm_version_log` | 使用 fake MySQL pool / fake repository，不连接真实库 |
+| `npm run test:activity-mysql` | 治理活跃热力图从已迁移 MySQL 表汇总活动来源，不再读取 SQLite 版本、术语、冲突或待办表 | 使用 fake MySQL pool / fake repository，不连接真实库 |
 | `npm run smoke:process-governance-mysql` | 可选真实 MySQL 冒烟：初始化 schema、导入 `docs/company-sankey-data.json`、读回 Sankey | 只有设置 `MYSQL_HOST`、`MYSQL_USER`、`MYSQL_DATABASE` 时写 MySQL；否则跳过 |
 | `npm run smoke:data-map-mysql` | 可选真实 MySQL 冒烟：初始化 schema、写入 Data Map context、字段和黄金源并读回 | 只有设置 `MYSQL_HOST`、`MYSQL_USER`、`MYSQL_DATABASE` 时写 MySQL；否则跳过 |
 | `npm run test:mappings` | 旧映射审批 MySQL 定向回归 | 等同 `npm run test:mappings-mysql`；不连接真实库 |
@@ -47,7 +49,7 @@
 
 | 脚本 | 作用 | 副作用 |
 |---|---|---|
-| `init-mysql-schema.js` | 初始化 MySQL 中已迁移的平台 schema，当前包含身份/RBAC、候选复核、流程治理读模型/待办、数据地图字段域、术语治理、旧映射审批、冲突治理和通用待办表 | 写 MySQL，不写仓库真源 |
+| `init-mysql-schema.js` | 初始化 MySQL 中已迁移的平台 schema，当前包含身份/RBAC、候选复核、流程治理读模型/待办、数据地图字段域、术语治理、旧映射审批、冲突治理、通用待办和平台通用审计表 | 写 MySQL，不写仓库真源 |
 | `import-process-governance-mysql.js` | 将 `docs/company-sankey-data.json` 导入 MySQL 流程治理读模型，可用 `--a1-source` 显式补充 A1 Markdown | 写 MySQL 流程治理读模型、源文件、MDM 要求、证据和交互链表，不写流程真源 |
 | `smoke-process-governance-mysql.js` | 可选真实 MySQL 端到端 smoke：初始化、导入、读回 Sankey | 缺少 `MYSQL_HOST`、`MYSQL_USER`、`MYSQL_DATABASE` 时跳过；不读取 `MDM_DB_PATH` |
 | `smoke-data-map-mysql.js` | 可选真实 MySQL 端到端 smoke：初始化、写入 Data Map context、字段、黄金源并读回 | 缺少 `MYSQL_HOST`、`MYSQL_USER`、`MYSQL_DATABASE` 时跳过；不读取 `MDM_DB_PATH` |
@@ -84,7 +86,8 @@
 | `test-import-rbac-mysql-api.js` | 验证 `MDM_IDENTITY_READ_MODEL=mysql` 时 RBAC 批量导入写接口不会在 MySQL 鉴权后回落 SQLite 写入 | 使用 fake repository，不连接真实库 |
 | `test-role-workbench-mysql-api.js` | 验证角色工作台在 MySQL 身份读模型下使用仓储返回的角色、部门名和 `data:view_all` 权限 | 使用 fake repository，不连接真实库 |
 | `test-role-workbench-process-governance-mysql-api.js` | 验证角色工作台在流程治理 MySQL 读模型下从 repository 读取质量问题和映射待办 | 使用 fake repository，不连接真实库 |
-| `test-activity-heatmap-api.js` | 验证治理活跃热力图统计流程治理、映射、术语、冲突和通用待办动作，并限制普通用户查看全量视图 | 使用隔离遗留本地库 |
+| `test-activity-mysql-repository.js` | 验证治理活跃热力图从 MySQL 活动来源表汇总动作，并断言不访问 SQLite 版本、术语、冲突或待办表 | 使用 fake MySQL pool，不连接真实库 |
+| `test-activity-mysql-api.js` | 验证 `/api/activity/heatmap` 保持公开路径和响应口径，同时通过审计 repository 访问活动数据 | 使用 fake repository，不连接真实库 |
 | `test-activity-heatmap-mysql-identity-api.js` | 验证 `MDM_IDENTITY_READ_MODEL=mysql` 时治理活跃热力图管理视图权限来自 MySQL 身份 helper，不回落 SQLite 角色/权限表 | 使用 fake repository，不连接真实库 |
 | `test-data-map-mysql-repository.js` | 验证 Data Map MySQL repository 的上下文、字段、命名校验、黄金源、导入批次和进度统计 | 使用 fake MySQL pool，不连接真实库 |
 | `test-data-map-contexts-api.js` | 验证 `/api/data-map/contexts` 上下文创建、查询和更新 | 使用 fake repository，不连接真实库 |
@@ -101,6 +104,8 @@
 | `test-check-escalations-mysql.js` | 验证超期冲突升级维护脚本通过 conflict repository 工作，不加载 SQLite 本地库 | 使用 fake repository，不连接真实库 |
 | `test-todos-mysql-repository.js` | 验证通用待办 MySQL repository 的创建、查询、完成和删除，并断言不访问 SQLite `todos` | 使用 fake MySQL pool，不连接真实库 |
 | `test-todos-mysql-api.js` | 验证 `/api/todos` 保持公开路径和响应口径，同时通过 todo repository 访问待办数据 | 使用 fake repository，不连接真实库 |
+| `test-versions-mysql-repository.js` | 验证平台通用审计 repository 可写入和读取 `mdm_change_sets` / `mdm_version_log`，并断言不访问 SQLite `change_set` / `version_log` | 使用 fake MySQL pool，不连接真实库 |
+| `test-versions-mysql-api.js` | 验证 `/api/versions` 保持公开路径和响应口径，同时通过审计 repository 访问版本数据 | 使用 fake repository，不连接真实库 |
 
 ## 5. 单项测试脚本
 
@@ -110,7 +115,7 @@
 | 映射与字段 | `test-mappings-mysql-repository.js`、`test-mappings-mysql-api.js`、`test-mapping-routes.js`、`test-import-route.js`、`test-export-route.js`、`test-data-map-mysql-repository.js`、`test-data-map-contexts-api.js`、`test-field-entries-mysql-api.js`、`test-field-identities-mysql-api.js`、`test-data-map-import-export-mysql-api.js` |
 | 冲突和角色 | `test-conflicts-mysql-repository.js`、`test-conflicts-mysql-api.js`、`test-conflicts-mysql-identity-api.js`、`test-todos-mysql-repository.js`、`test-todos-mysql-api.js`、`test-project-role-access.js`、`test-role-workbench-api.js`、`test-role-workbench-mysql-api.js`、`test-role-workbench-process-governance-mysql-api.js`、`test-page-workflows-api.js` |
 | 流程治理 | `test-process-governance-*.js`、`test-process-mapping-workspace-import.js` |
-| 前端和视图 | `test-frontend-assets.js`、`test-views-routes.js`、`test-views-sankey-filters.js`、`test-activity-heatmap-api.js`、`test-activity-heatmap-mysql-identity-api.js` |
+| 前端和视图 | `test-frontend-assets.js`、`test-views-routes.js`、`test-views-sankey-filters.js`、`test-activity-mysql-repository.js`、`test-activity-mysql-api.js`、`test-activity-heatmap-mysql-identity-api.js` |
 | 冒烟 | `smoke-test.js`、`smoke-master-data.js`、`smoke-rbac.js`、`smoke-integration.js` |
 
 ## 6. 修改规则

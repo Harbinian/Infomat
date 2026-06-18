@@ -37,6 +37,20 @@ async function main() {
       return [{ code: legacyRole, name: '基础角色' }].filter(role => role.code);
     }
   }));
+  activityRouter.setAuditRepositoryFactory(async () => ({
+    async listActivityRows(range) {
+      return [{
+        date: range.endDate,
+        sourceType: 'mapping_review',
+        sourceLabel: '映射提交/审核',
+        actorUserId: 42,
+        actorName: 'MySQL 身份用户',
+        employeeNo: '',
+        departmentId: 900,
+        departmentName: '测试部门'
+      }];
+    }
+  }));
 
   const app = express();
   app.use(express.json());
@@ -67,6 +81,7 @@ async function main() {
     console.log('Activity heatmap MySQL identity API test passed');
   } finally {
     await closeServer(server);
+    activityRouter.resetAuditRepositoryFactory();
     auth.resetIdentityRepositoryFactory();
   }
 }
