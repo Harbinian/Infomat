@@ -118,17 +118,18 @@ const businessSource = formatSourceForBusiness(
 );
 assert.equal(
   businessSource,
-  'GLTX-CW-01-A财务成本核算管理程序.docx · 第5.4条 · 内部锚点P71',
-  'business source should hide parent directories and keep Pxx as an internal extraction anchor, not page or original paragraph',
+  'GLTX-CW-01-A财务成本核算管理程序.docx · 第5.4条',
+  'business source should hide parent directories and hide Pxx extraction anchors from business users',
 );
 assert.equal(businessSource.includes('docs/norms'), false, 'business source should not expose parent directories');
+assert.equal(businessSource.includes('内部锚点P71'), false, 'internal extraction anchors must not be displayed to business users');
 assert.equal(businessSource.includes('第71页'), false, 'paragraph ids must not be displayed as pages');
 assert.equal(businessSource.includes('段落P71'), false, 'internal extraction anchors must not be displayed as original paragraphs');
 assert.equal(businessSource.includes('块号P71'), false, 'internal extraction anchors must not be displayed as original block ids');
 assert.equal(
   formatSourceForBusiness('制度.docx', 'P71'),
-  '制度.docx · 内部锚点P71 · 原文定位不足',
-  'Pxx without real page, clause, or table location should be marked as insufficient original location',
+  '制度.docx · 原文位置待核对',
+  'Pxx without real page, clause, or table location should be shown as a plain location warning',
 );
 assert.equal(formatSourceForBusiness('制度.docx', 'page=71 §5.4'), '制度.docx · 第5.4条 · 第71页');
 assert.equal(documentNameFromSource('docs/norms/财务部业务资料/制度.docx'), '制度.docx');

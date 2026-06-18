@@ -243,7 +243,9 @@ async function main() {
     const bundle = loadCandidateRunBundle(runDir);
     assert.strictEqual(bundle.run.run_id, 'review-run-001');
     assert.strictEqual(bundle.items[0].document_name, '产品设计需求定义管理程序.docx');
-    assert.strictEqual(bundle.items[0].source_label.includes('内部锚点P71'), true);
+    assert.strictEqual(bundle.items[0].source_label.includes('内部锚点P71'), false);
+    assert.strictEqual(bundle.items[0].source_label.includes('原文位置待核对'), false);
+    assert.strictEqual(bundle.items[0].source_label.includes('第5.2条'), true);
     assert.strictEqual(bundle.items[0].source_label.includes('第71页'), false);
     assert.strictEqual(bundle.items[0].source_label.includes('段落P71'), false);
     assert.strictEqual(bundle.items[0].source_label.includes('块号P71'), false);
@@ -254,7 +256,7 @@ async function main() {
     assert.strictEqual(roleDefinitionStatus('审核人', '审核人审核后提交。'), '原文定义不足');
     assert.strictEqual(
       formatSourceForBusiness('制度.docx', 'P71'),
-      '制度.docx · 内部锚点P71 · 原文定位不足'
+      '制度.docx · 原文位置待核对'
     );
 
     const pool = makeFakePool();

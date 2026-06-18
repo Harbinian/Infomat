@@ -266,6 +266,28 @@ function emptyEvidenceSummary() {
   return { total: 0, byType: { L3: 0, A1: 0, MDM: 0 } };
 }
 
+function normalizeLimit(value, fallback = 500, max = 1000) {
+  const limit = Number(value);
+  if (!Number.isFinite(limit) || limit <= 0) return fallback;
+  return Math.min(Math.trunc(limit), max);
+}
+
+function activeSnapshotSql() {
+  return `
+    SELECT s.*
+    FROM process_governance_snapshots s
+    WHERE s.status='active'
+    ORDER BY EXISTS (
+      SELECT 1
+      FROM process_a1_items a
+      WHERE a.snapshot_id=s.id
+      LIMIT 1
+    ) DESC,
+    s.imported_at DESC,
+    s.id DESC
+    LIMIT 1`;
+}
+
 function sourceFileSummaryFromRows(rows) {
   const summary = emptySourceFileSummary();
   rows.forEach(row => {
@@ -553,13 +575,7 @@ function makeProcessGovernanceMysqlRepository(pool) {
     },
 
     async getCurrentSnapshot() {
-      const [snapshots] = await pool.execute(
-        `SELECT *
-         FROM process_governance_snapshots
-         WHERE status='active'
-         ORDER BY imported_at DESC, id DESC
-         LIMIT 1`
-      );
+      const [snapshots] = await pool.execute(activeSnapshotSql());
       const snapshot = snapshots[0];
       if (!snapshot) return {};
 
@@ -591,13 +607,7 @@ function makeProcessGovernanceMysqlRepository(pool) {
     },
 
     async getA1Items(filters = {}) {
-      const [snapshots] = await pool.execute(
-        `SELECT *
-         FROM process_governance_snapshots
-         WHERE status='active'
-         ORDER BY imported_at DESC, id DESC
-         LIMIT 1`
-      );
+      const [snapshots] = await pool.execute(activeSnapshotSql());
       const snapshot = snapshots[0];
       if (!snapshot) return [];
 
@@ -630,15 +640,10 @@ function makeProcessGovernanceMysqlRepository(pool) {
     },
 
     async getSourceFiles(filters = {}, limit = 20) {
-      const [snapshots] = await pool.execute(
-        `SELECT *
-         FROM process_governance_snapshots
-         WHERE status='active'
-         ORDER BY imported_at DESC, id DESC
-         LIMIT 1`
-      );
+      const safeLimit = normalizeLimit(limit, 20, 200);
+      const [snapshots] = await pool.execute(activeSnapshotSql());
       const snapshot = snapshots[0];
-      if (!snapshot) return { summary: { ...emptySourceFileSummary(), returned: 0, limit }, items: [] };
+      if (!snapshot) return { summary: { ...emptySourceFileSummary(), returned: 0, limit: safeLimit }, items: [] };
 
       const params = [snapshot.id];
       let whereSql = 'WHERE snapshot_id=?';
@@ -667,22 +672,17 @@ function makeProcessGovernanceMysqlRepository(pool) {
          FROM process_source_files
          ${whereSql}
          ORDER BY dept_name, process_status, asset_type, file_path
-         LIMIT ?`,
-        [...params, limit]
+         LIMIT ${safeLimit}`,
+        params
       );
-      return { summary: { ...sourceFileSummaryFromRows(summaryRows), returned: items.length, limit }, items };
+      return { summary: { ...sourceFileSummaryFromRows(summaryRows), returned: items.length, limit: safeLimit }, items };
     },
 
     async getMdmRequirements(filters = {}, limit = 500) {
-      const [snapshots] = await pool.execute(
-        `SELECT *
-         FROM process_governance_snapshots
-         WHERE status='active'
-         ORDER BY imported_at DESC, id DESC
-         LIMIT 1`
-      );
+      const safeLimit = normalizeLimit(limit);
+      const [snapshots] = await pool.execute(activeSnapshotSql());
       const snapshot = snapshots[0];
-      if (!snapshot) return { summary: { ...emptyMdmRequirementSummary(), returned: 0, limit }, items: [] };
+      if (!snapshot) return { summary: { ...emptyMdmRequirementSummary(), returned: 0, limit: safeLimit }, items: [] };
 
       const params = [snapshot.id];
       let whereSql = 'WHERE snapshot_id=?';
@@ -708,22 +708,17 @@ function makeProcessGovernanceMysqlRepository(pool) {
          FROM process_mdm_requirement_items
          ${whereSql}
          ORDER BY dept_name, source_l2, master_data_object, id
-         LIMIT ?`,
-        [...params, limit]
+         LIMIT ${safeLimit}`,
+        params
       );
-      return { summary: { ...mdmRequirementSummaryFromRows(summaryRows), returned: items.length, limit }, items };
+      return { summary: { ...mdmRequirementSummaryFromRows(summaryRows), returned: items.length, limit: safeLimit }, items };
     },
 
     async getEvidenceRefs(filters = {}, limit = 500) {
-      const [snapshots] = await pool.execute(
-        `SELECT *
-         FROM process_governance_snapshots
-         WHERE status='active'
-         ORDER BY imported_at DESC, id DESC
-         LIMIT 1`
-      );
+      const safeLimit = normalizeLimit(limit);
+      const [snapshots] = await pool.execute(activeSnapshotSql());
       const snapshot = snapshots[0];
-      if (!snapshot) return { summary: { ...emptyEvidenceSummary(), returned: 0, limit }, items: [] };
+      if (!snapshot) return { summary: { ...emptyEvidenceSummary(), returned: 0, limit: safeLimit }, items: [] };
 
       const params = [snapshot.id];
       let whereSql = 'WHERE snapshot_id=?';
@@ -768,20 +763,14 @@ function makeProcessGovernanceMysqlRepository(pool) {
          ${whereSql}
          ORDER BY CASE ref_type WHEN 'L3' THEN 0 WHEN 'A1' THEN 1 ELSE 2 END,
                   dept_name, l3_name, a1_code, master_data_object, id
-         LIMIT ?`,
-        [...params, limit]
+         LIMIT ${safeLimit}`,
+        params
       );
-      return { summary: { ...evidenceSummaryFromRows(summaryRows), returned: items.length, limit }, items };
+      return { summary: { ...evidenceSummaryFromRows(summaryRows), returned: items.length, limit: safeLimit }, items };
     },
 
     async getInteractionChains() {
-      const [snapshots] = await pool.execute(
-        `SELECT *
-         FROM process_governance_snapshots
-         WHERE status='active'
-         ORDER BY imported_at DESC, id DESC
-         LIMIT 1`
-      );
+      const [snapshots] = await pool.execute(activeSnapshotSql());
       const snapshot = snapshots[0];
       if (!snapshot) return [];
 
@@ -799,13 +788,7 @@ function makeProcessGovernanceMysqlRepository(pool) {
     },
 
     async getCrossDeptInteractions(filters = {}) {
-      const [snapshots] = await pool.execute(
-        `SELECT *
-         FROM process_governance_snapshots
-         WHERE status='active'
-         ORDER BY imported_at DESC, id DESC
-         LIMIT 1`
-      );
+      const [snapshots] = await pool.execute(activeSnapshotSql());
       const snapshot = snapshots[0];
       if (!snapshot) return [];
 
@@ -833,13 +816,7 @@ function makeProcessGovernanceMysqlRepository(pool) {
     },
 
     async getQualityFindings(filters = {}) {
-      const [snapshots] = await pool.execute(
-        `SELECT *
-         FROM process_governance_snapshots
-         WHERE status='active'
-         ORDER BY imported_at DESC, id DESC
-         LIMIT 1`
-      );
+      const [snapshots] = await pool.execute(activeSnapshotSql());
       const snapshot = snapshots[0];
       if (!snapshot) return { summary: emptyQualitySummary(), items: [] };
 
@@ -909,13 +886,7 @@ function makeProcessGovernanceMysqlRepository(pool) {
         params.push(Number(filters.owner));
       }
       if (filters.snapshot === 'active') {
-        const [snapshots] = await pool.execute(
-          `SELECT id
-           FROM process_governance_snapshots
-           WHERE status='active'
-           ORDER BY imported_at DESC, id DESC
-           LIMIT 1`
-        );
+        const [snapshots] = await pool.execute(activeSnapshotSql());
         if (snapshots[0]) {
           whereSql += ' AND latest_snapshot_id=?';
           params.push(snapshots[0].id);
@@ -1080,6 +1051,7 @@ function makeProcessGovernanceMysqlRepository(pool) {
     },
 
     async getMappingWorkspace(filters = {}, limit = 500) {
+      const safeLimit = normalizeLimit(limit);
       const params = [];
       let whereSql = 'WHERE 1=1';
       if (['l3', 'a1'].includes(String(filters.type || ''))) {
@@ -1113,16 +1085,17 @@ function makeProcessGovernanceMysqlRepository(pool) {
          ${whereSql}
          ORDER BY CASE r.record_type WHEN 'l3' THEN 0 ELSE 1 END,
                   r.dept_name, r.l2_name, r.l3_name, r.a1_code, r.id
-         LIMIT ?`,
-        [...params, limit]
+         LIMIT ${safeLimit}`,
+        params
       );
       return {
-        summary: { ...mappingRecordSummaryFromRows(summaryRows), returned: items.length, limit },
+        summary: { ...mappingRecordSummaryFromRows(summaryRows), returned: items.length, limit: safeLimit },
         items: items.map(item => ({ ...item, suggested_systems: parseJsonArray(item.suggested_systems) }))
       };
     },
 
     async getMappingTodos(filters = {}, limit = 500) {
+      const safeLimit = normalizeLimit(limit);
       const params = [];
       let whereSql = 'WHERE 1=1';
       const type = String(filters.type || '');
@@ -1182,10 +1155,10 @@ function makeProcessGovernanceMysqlRepository(pool) {
                   END,
                   CASE t.priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END,
                   t.due_date IS NULL, t.due_date, t.dept_name, t.id
-         LIMIT ?`,
-        [...params, limit]
+         LIMIT ${safeLimit}`,
+        params
       );
-      return { summary: { ...mappingTodoSummaryFromRows(summaryRows), returned: items.length, limit }, items };
+      return { summary: { ...mappingTodoSummaryFromRows(summaryRows), returned: items.length, limit: safeLimit }, items };
     },
 
     async getMappingTodo(todoId) {
@@ -1314,13 +1287,7 @@ function makeProcessGovernanceMysqlRepository(pool) {
     },
 
     async getActiveSankey() {
-      const [snapshots] = await pool.execute(
-        `SELECT *
-         FROM process_governance_snapshots
-         WHERE status='active'
-         ORDER BY imported_at DESC, id DESC
-         LIMIT 1`
-      );
+      const [snapshots] = await pool.execute(activeSnapshotSql());
       const snapshot = snapshots[0];
       if (!snapshot) return emptySankey();
 

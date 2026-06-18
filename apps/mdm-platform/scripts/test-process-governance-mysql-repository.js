@@ -2,6 +2,11 @@ const assert = require('assert');
 
 const { makeProcessGovernanceMysqlRepository } = require('../server/processGovernanceMysqlRepository');
 
+function limitFromSql(normalizedSql, fallback = 500) {
+  const match = normalizedSql.match(/\bLIMIT\s+(\d+)\b/i);
+  return match ? Number(match[1]) : fallback;
+}
+
 function makeFakePool() {
   const state = {
     snapshots: [],
@@ -28,6 +33,11 @@ function makeFakePool() {
     async execute(sql, params = []) {
       state.statements.push({ sql, params });
       const normalizedSql = sql.replace(/\s+/g, ' ').trim();
+      if (normalizedSql.includes('LIMIT ?')) {
+        const error = new Error('Incorrect arguments to mysqld_stmt_execute');
+        error.code = 'ER_WRONG_ARGUMENTS';
+        throw error;
+      }
 
       if (normalizedSql.startsWith('CREATE TABLE')) return [[], undefined];
 
@@ -215,10 +225,17 @@ function makeFakePool() {
         return [{ affectedRows: 1 }, undefined];
       }
 
-      if (normalizedSql.includes("FROM process_governance_snapshots WHERE status='active'")) {
+      if (
+        normalizedSql.includes("FROM process_governance_snapshots WHERE status='active'") ||
+        normalizedSql.includes("FROM process_governance_snapshots s WHERE s.status='active'")
+      ) {
         const rows = state.snapshots
           .filter(snapshot => snapshot.status === 'active')
-          .sort((left, right) => right.id - left.id)
+          .sort((left, right) => {
+            const leftHasA1 = state.a1Items.some(item => item.snapshot_id === left.id) ? 1 : 0;
+            const rightHasA1 = state.a1Items.some(item => item.snapshot_id === right.id) ? 1 : 0;
+            return rightHasA1 - leftHasA1 || right.id - left.id;
+          })
           .slice(0, 1);
         return [rows, undefined];
       }
@@ -342,7 +359,7 @@ function makeFakePool() {
             left.asset_type.localeCompare(right.asset_type, 'zh-CN') ||
             left.file_path.localeCompare(right.file_path, 'zh-CN')
           )
-          .slice(0, params[params.length - 1])
+          .slice(0, limitFromSql(normalizedSql, params[params.length - 1]))
           .map(({ snapshot_id, file_key, id, ...file }) => file), undefined];
       }
 
@@ -370,7 +387,7 @@ function makeFakePool() {
             left.master_data_object.localeCompare(right.master_data_object, 'zh-CN') ||
             left.id - right.id
           )
-          .slice(0, params[params.length - 1])
+          .slice(0, limitFromSql(normalizedSql, params[params.length - 1]))
           .map(({ snapshot_id, requirement_key, id, ...item }) => item), undefined];
       }
 
@@ -417,7 +434,7 @@ function makeFakePool() {
             left.master_data_object.localeCompare(right.master_data_object, 'zh-CN') ||
             left.id - right.id
           )
-          .slice(0, params[params.length - 1])
+          .slice(0, limitFromSql(normalizedSql, params[params.length - 1]))
           .map(({ snapshot_id, ref_key, id, ...ref }) => ref), undefined];
       }
 

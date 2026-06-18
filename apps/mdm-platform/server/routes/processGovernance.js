@@ -46,6 +46,9 @@ async function candidateReviewRepository() {
   if (candidateReviewRepositoryFactory) {
     return await candidateReviewRepositoryFactory();
   }
+  if (!useCandidateReviewMysqlStore()) {
+    throw new Error('Process candidate review MySQL store is disabled');
+  }
   if (!candidateReviewRepoPromise) {
     candidateReviewRepoPromise = (async () => {
       const pool = mysql.createPool(mysqlConfigFromEnv());
@@ -70,6 +73,11 @@ function setCandidateReviewRepositoryFactory(factory) {
 function resetCandidateReviewRepositoryFactory() {
   candidateReviewRepositoryFactory = null;
   candidateReviewRepoPromise = null;
+}
+
+function useCandidateReviewMysqlStore() {
+  const mode = String(process.env.PROCESS_CANDIDATE_REVIEW_STORE || 'mysql').trim().toLowerCase();
+  return !['artifact', 'none', 'off', 'false', '0'].includes(mode);
 }
 
 function useMysqlProcessGovernanceReadModel() {
@@ -117,6 +125,7 @@ function resetProcessGovernanceRepositoryFactory() {
 }
 
 async function candidateReviewRepositoryOrNull() {
+  if (!candidateReviewRepositoryFactory && !useCandidateReviewMysqlStore()) return null;
   try {
     return await candidateReviewRepository();
   } catch (error) {
@@ -211,12 +220,11 @@ function formatCandidateSource(sourceFile, sourceAnchor) {
   const anchor = parseCandidateAnchor(sourceAnchor);
   if (anchor.clause) parts.push(`第${anchor.clause}条`);
   if (anchor.page) parts.push(`第${anchor.page}页`);
-  if (anchor.paragraph_id) parts.push(`内部锚点${anchor.paragraph_id}`);
   if (anchor.table_id) parts.push(anchor.table_id.replace(/^T/i, '表'));
   if (anchor.paragraph_id && !anchor.clause && !anchor.page && !anchor.table_id) {
-    parts.push('原文定位不足');
+    parts.push('原文位置待核对');
   }
-  return parts.join(' · ') || String(sourceAnchor || '').replace(/\bP(\d+)\b/gi, '内部锚点P$1') || '来源未标注';
+  return parts.join(' · ') || String(sourceAnchor || '').replace(/\bP(\d+)\b/gi, '原文位置待核对') || '来源未标注';
 }
 
 function candidateSourceMatches(candidate, chunk) {

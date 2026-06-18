@@ -112,19 +112,54 @@
     .tab.on { color: var(--accent); border-bottom-color: var(--accent); }
 
     /* Panels */
-    .panel { display: none; animation: fadeIn 0.3s ease; padding: 32px 32px 80px; max-width: 1200px; margin: 0 auto; }
+    .panel { display: none; animation: fadeIn 0.3s ease; padding: 24px 28px 64px; max-width: min(100%, 1440px); margin: 0 auto; }
     .panel.on { display: block; }
 
     /* Components */
-    .grid { display: grid; gap: 32px; }
+    .grid { display: grid; gap: 24px; }
     .g2 { grid-template-columns: repeat(2, 1fr); }
     .g4 { grid-template-columns: repeat(4, 1fr); }
-    .split { display: grid; grid-template-columns: minmax(360px, 30%) minmax(0, 1fr); gap: 64px; }
+    .split { display: grid; grid-template-columns: minmax(320px, 28%) minmax(0, 1fr); gap: 32px; }
 
 
-    .metric { padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+    .metric { padding-bottom: 14px; border-bottom: 1px solid var(--border); }
     .metric .num { font-size: 36px; font-weight: 500; color: var(--text-main); line-height: 1; letter-spacing: -0.03em; }
-    .metric .lbl { font-size: 13px; color: var(--text-muted); margin-top: 12px; font-weight: 500; }
+    .metric .lbl { font-size: 13px; color: var(--text-muted); margin-top: 8px; font-weight: 500; }
+    .compact-panel { padding-top: 18px; }
+    .compact-panel h1, .compact-panel h2 { margin-bottom: 0; }
+    .compact-head {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 16px; margin-bottom: 12px;
+    }
+    .compact-title h2 { font-size: 16px; text-transform: none; letter-spacing: 0; }
+    .compact-title p { margin-top: 3px; color: var(--text-muted); font-size: 12px; }
+    .action-metrics {
+      display: grid; grid-template-columns: repeat(4, minmax(120px, 1fr));
+      gap: 10px; margin-bottom: 12px;
+    }
+    .action-metric {
+      min-height: 64px; padding: 10px 12px; border: 1px solid var(--border);
+      border-radius: 8px; background: rgba(251, 246, 233, 0.72);
+    }
+    .action-metric.primary { border-color: rgba(178, 86, 56, 0.34); background: #fff8ec; }
+    .action-metric .value { display: block; font-size: 30px; line-height: 1; font-weight: 700; color: var(--text-main); }
+    .action-metric .label { display: block; margin-top: 6px; font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+    .compact-toolbar {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      margin-bottom: 10px; padding: 8px 10px; border: 1px solid var(--border-soft);
+      border-radius: 8px; background: rgba(247, 241, 224, 0.54);
+    }
+    .compact-toolbar h2 { margin-right: auto; }
+    .compact-toolbar .toolbar-right { margin-left: auto; }
+    .compact-toolbar select, .compact-toolbar input { width: auto; min-width: 132px; height: 32px; padding: 4px 10px; }
+    .dense-split { gap: 20px; grid-template-columns: minmax(280px, 24%) minmax(0, 1fr); }
+    .compact-form-panel {
+      padding: 12px; border: 1px solid var(--border-soft);
+      border-radius: 8px; background: rgba(251, 246, 233, 0.58);
+    }
+    .compact-form-panel .form-group { margin-bottom: 10px; }
+    .compact-form-panel textarea { min-height: 64px; }
+    .compact-table-panel { min-width: 0; }
 
     /* Forms */
     .form-group { margin-bottom: 20px; }
@@ -147,7 +182,7 @@
     textarea { min-height: 80px; resize: vertical; }
 
     /* Buttons */
-    .toolbar { display: flex; gap: 12px; align-items: center; margin-bottom: 20px; flex-wrap: wrap; }
+    .toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
     .toolbar-right { margin-left: auto; display: flex; gap: 8px; }
     .btn {
       display: inline-flex; align-items: center; justify-content: center;
@@ -167,10 +202,42 @@
     .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
     /* Tables */
-    .table-container { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
-    th { color: var(--text-muted); font-weight: 500; padding: 12px 16px; border-bottom: 1px solid var(--border); white-space: nowrap; }
-    td { padding: 12px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    .table-container { overflow: auto; border: 1px solid var(--border); border-radius: 8px; background: #fff; }
+    table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; text-align: left; }
+    th { color: var(--text-muted); font-weight: 500; padding: 9px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    .table-container thead th {
+      position: sticky; top: 0; z-index: 3;
+      background: var(--surface-2);
+      box-shadow: inset 0 -1px 0 var(--border);
+    }
+    .table-container th, .table-container td { border-right: 1px solid var(--border-soft); }
+    .table-container th:last-child, .table-container td:last-child { border-right: 0; }
+    .table-container tbody tr:last-child td { border-bottom: 0; }
+    .detail-sticky-head {
+      position: fixed;
+      display: none;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 19;
+      border: 1px solid var(--border);
+      border-bottom: 0;
+      border-radius: 8px 8px 0 0;
+      background: #fff;
+      box-shadow: var(--shadow-sm);
+    }
+    .detail-sticky-head.on { display: block; }
+    .detail-sticky-head table {
+      border-collapse: separate;
+      border-spacing: 0;
+      table-layout: fixed;
+      font-size: 13px;
+      text-align: left;
+    }
+    .detail-sticky-head th {
+      background: var(--surface-2);
+      box-shadow: inset 0 -1px 0 var(--border);
+    }
     tr:hover td { background: #fefafa; }
 
     /* Tags */
@@ -391,40 +458,6 @@
       color: var(--text-main); background: transparent; font-size: 12px;
     }
     .wb-link-btn:hover { border-color: var(--text-main); }
-    .activity-panel {
-      border: 1px solid var(--border);
-      background: rgba(251,246,233,0.74);
-      border-radius: 8px;
-      padding: 14px;
-      box-shadow: var(--shadow-sm);
-    }
-    .activity-head {
-      display: flex; align-items: flex-start; justify-content: space-between;
-      gap: 12px; margin-bottom: 10px;
-    }
-    .activity-head h3 { margin: 0; color: var(--text-main); font-size: 14px; letter-spacing: 0; }
-    .activity-head p { margin: 4px 0 0; color: var(--text-muted); font-size: 12px; line-height: 1.55; }
-    .activity-controls { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 12px; }
-    .activity-controls select {
-      min-height: 32px; min-width: 132px; border-radius: 6px;
-      background: var(--surface-2); border-color: var(--border); color: var(--text-main);
-    }
-    .activity-heatmap {
-      display: grid; grid-template-columns: repeat(auto-fill, minmax(12px, 1fr));
-      gap: 4px; align-items: center;
-    }
-    .activity-day {
-      width: 100%; aspect-ratio: 1; min-width: 10px;
-      border: 1px solid rgba(154,122,48,0.18);
-      border-radius: 3px; background: #efe7d5; cursor: pointer;
-    }
-    .activity-day[data-level="1"] { background: #d8d2a1; }
-    .activity-day[data-level="2"] { background: #9cab70; }
-    .activity-day[data-level="3"] { background: #5f7447; }
-    .activity-detail, .activity-summary {
-      margin-top: 10px; color: var(--text-muted); font-size: 12px; line-height: 1.6;
-    }
-    .activity-summary strong { color: var(--text-main); }
     .pg-section { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--border); }
     .pg-section-hd { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
     .pg-section-hd h2 { margin-bottom: 0; }
@@ -472,6 +505,44 @@
     .pg-dept-tag.on .pg-dot { background: #fff; }
     .pg-dept-tag .pg-count { color: var(--text-muted); font-size: 11px; }
     .pg-dept-tag.on .pg-count { color: rgba(255,255,255,0.78); }
+    .pg-work-help {
+      margin: 0 0 12px; padding: 10px 12px;
+      border: 1px solid #eadfd4; border-left: 4px solid var(--sage);
+      border-radius: 8px; background: #fffaf5; color: var(--text-main);
+      font-size: 12px; line-height: 1.65;
+    }
+    .pg-work-help strong { color: var(--text-main); }
+    .pg-help-steps { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+    .pg-help-step {
+      min-height: 26px; display: inline-flex; align-items: center;
+      padding: 0 9px; border: 1px solid #dfd2c4; border-radius: 6px;
+      background: #fff; color: var(--text-main); font-weight: 700;
+    }
+    .pg-inline-help { color: var(--text-muted); font-size: 12px; line-height: 1.55; margin-top: 4px; }
+    .pg-review-grid {
+      display: grid; grid-template-columns: repeat(2, minmax(140px, 1fr));
+      gap: 8px; min-width: 420px;
+    }
+    .pg-review-field label {
+      display: block; margin-bottom: 3px; color: var(--text-muted);
+      font-size: 11px; font-weight: 700;
+    }
+    .pg-review-field select { width: 100%; }
+    .pg-review-note { grid-column: 1 / -1; }
+    .pg-review-note textarea {
+      width: 100%; min-height: 92px; padding: 7px;
+      border: 1px solid var(--border); border-radius: 6px; background: var(--surface-2);
+    }
+    .pg-detail-grid {
+      display: grid; grid-template-columns: minmax(0,1fr) minmax(260px,360px);
+      gap: 16px;
+    }
+    .pg-action-meaning {
+      margin: 10px 0; padding: 8px 10px; border: 1px solid var(--border-soft);
+      border-radius: 8px; background: rgba(251,246,233,0.64);
+      color: var(--text-muted); font-size: 12px; line-height: 1.65;
+    }
+    .pg-action-meaning strong { color: var(--text-main); }
 
     .workflow-panel {
       max-width: none;
@@ -570,6 +641,16 @@
       border-top: 1px solid var(--border);
     }
     @media (max-width: 900px) {
+      .panel { padding: 16px 14px 48px; }
+      .compact-head { display: block; }
+      .action-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .compact-toolbar { align-items: stretch; }
+      .compact-toolbar .toolbar-right { width: 100%; margin-left: 0; }
+      .compact-toolbar select, .compact-toolbar input, .compact-toolbar button { width: 100%; }
+      .dense-split, .split { grid-template-columns: 1fr; gap: 16px; }
+      .pg-review-grid { grid-template-columns: 1fr; min-width: 280px; }
+      .pg-detail-grid { grid-template-columns: 1fr; }
+      .pg-help-steps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .workflow-shell { display: block; }
       .workflow-top, .workflow-sidebar, .workflow-main { display: block; border: 0; }
       .workflow-top { padding: 14px 16px; }
@@ -599,6 +680,7 @@
     .close:hover { color: var(--text-main); }
 
     @media (max-width: 800px) {
+      .action-metrics { grid-template-columns: 1fr; }
       .role-guide-header { flex-direction: column; gap: 12px; }
       .role-guide-grid { grid-template-columns: 1fr; }
       .role-workbench { height: auto; overflow: visible; }
@@ -773,13 +855,6 @@
 
         <aside class="role-workbench-right">
           <div class="wb-group">
-            <h3>我的治理活跃</h3>
-            <div id="roleWorkbenchActivityHeatmap" class="activity-heatmap">
-              <div class="wb-empty">正在读取治理活跃...</div>
-            </div>
-            <div class="activity-detail" id="roleWorkbenchActivityDetail"></div>
-          </div>
-          <div class="wb-group">
             <h3>当前节点</h3>
             <div id="roleWorkbenchNodeDetail">
               <div class="wb-detail-title">先处理左侧第一项</div>
@@ -815,39 +890,12 @@
       </section>
 
       <!-- Dashboard -->
-      <section class="panel" id="dashboard">
+      <section class="panel compact-panel" id="dashboard">
         <div class="grid g4">
           <div class="metric"><div class="num" id="metricMappings">0</div><div class="lbl">流程映射</div></div>
           <div class="metric"><div class="num" id="metricFields">0</div><div class="lbl">字段台账</div></div>
           <div class="metric"><div class="num" id="metricTodos">0</div><div class="lbl">待处理待办</div></div>
           <div class="metric"><div class="num" id="metricConflicts">0</div><div class="lbl">未解决冲突</div></div>
-        </div>
-        <div class="activity-panel" style="margin-top: 20px;">
-          <div class="activity-head">
-            <div>
-              <h3>治理活跃</h3>
-              <p>参与热力按治理动作汇总，帮助查看近期流程治理、映射、术语和冲突处理参与情况。</p>
-            </div>
-          </div>
-          <div class="activity-controls">
-            <select id="dashboardActivityScope" onchange="loadDashboardActivity()">
-              <option value="me">我的参与</option>
-              <option value="team">本部门参与</option>
-              <option value="all">全公司参与</option>
-            </select>
-            <select id="dashboardActivityDepartment" onchange="loadDashboardActivity()">
-              <option value="">全部部门</option>
-            </select>
-            <select id="dashboardActivityUser" onchange="loadDashboardActivity()">
-              <option value="">全部人员</option>
-            </select>
-          </div>
-          <div id="dashboardActivityHeatmap" class="activity-heatmap">
-            <div class="wb-empty">正在读取参与热力...</div>
-          </div>
-          <div class="activity-detail" id="dashboardActivityDetail"></div>
-          <div class="activity-summary" id="departmentActivitySummary"></div>
-          <div class="activity-summary" id="userActivitySummary"></div>
         </div>
         <div id="conflictOverview" style="margin-top: 20px; padding: 16px; background: var(--surface); border-radius: 8px; border: 1px solid var(--border);"></div>
         <div id="dashboardActions" style="margin-top: 20px;">
@@ -925,16 +973,25 @@
       </section>
 
       <!-- Data Map -->
-      <section class="panel" id="dataMap">
-        <div class="toolbar">
-          <h2>数据地图字段域</h2>
+      <section class="panel compact-panel" id="dataMap">
+        <div class="compact-head">
+          <div class="compact-title"><h2>数据地图字段域</h2><p>优先查看当前上下文字段命中和质量状态。</p></div>
+        </div>
+        <div class="action-metrics">
+          <div class="action-metric primary" data-action-metric="data-map-fields"><span class="value" id="dataMapMetricFields">0</span><span class="label">当前字段</span></div>
+          <div class="action-metric" data-action-metric="data-map-contexts"><span class="value" id="dataMapMetricContexts">0</span><span class="label">上下文</span></div>
+          <div class="action-metric" data-action-metric="data-map-quality"><span class="value" id="dataMapMetricQuality">0</span><span class="label">需关注质量</span></div>
+          <div class="action-metric" data-action-metric="data-map-import"><span class="value">Excel</span><span class="label">导入入口</span></div>
+        </div>
+        <div class="compact-toolbar">
+          <h2>字段域操作</h2>
           <div class="toolbar-right">
             <button class="btn secondary" type="button" onclick="loadDataMapContexts()">刷新上下文</button>
           </div>
         </div>
         <div class="notice" style="margin-bottom:16px">字段台账以数据地图上下文为归属锚点；旧流程映射审批记录仍保留，但不再作为字段台账默认入口。</div>
-        <div class="split">
-          <div>
+        <div class="split dense-split">
+          <div class="compact-form-panel">
             <h2>数据地图上下文</h2>
             <div class="form-group">
               <label>选择上下文
@@ -949,7 +1006,7 @@
               <button class="btn primary" type="button" onclick="createDataMapContext()">创建上下文</button>
             </div>
           </div>
-          <div>
+          <div class="compact-table-panel">
             <h2>字段导入</h2>
             <div class="notice" style="margin-bottom:12px">Excel 会导入到当前选中的数据地图上下文。字段名命中阻断级禁用词时会拒绝保存，警告级规则会进入质量问题。</div>
             <input type="file" id="importFile" accept=".xlsx,.xls" style="margin-bottom:12px">
@@ -1001,8 +1058,17 @@
       </section>
 
       <!-- Todos -->
-      <section class="panel" id="todos">
-        <div class="toolbar"><h2>待办收到</h2>
+      <section class="panel compact-panel" id="todos">
+        <div class="compact-head">
+          <div class="compact-title"><h2>待办收到</h2><p>优先处理待处理、紧急和临近截止事项。</p></div>
+        </div>
+        <div class="action-metrics">
+          <div class="action-metric primary" data-action-metric="todos-pending"><span class="value" id="todoMetricPending">0</span><span class="label">待处理</span></div>
+          <div class="action-metric" data-action-metric="todos-urgent"><span class="value" id="todoMetricUrgent">0</span><span class="label">高紧急</span></div>
+          <div class="action-metric" data-action-metric="todos-done"><span class="value" id="todoMetricDone">0</span><span class="label">已完成</span></div>
+          <div class="action-metric" data-action-metric="todos-shown"><span class="value" id="todoMetricShown">0</span><span class="label">当前显示</span></div>
+        </div>
+        <div class="compact-toolbar"><h2>待办筛选</h2>
           <div class="toolbar-right">
             <select id="todoType" style="width: 140px; height: 32px; padding: 0 12px;">
               <option value="">全部类型</option>
@@ -1027,9 +1093,18 @@
       </section>
 
       <!-- Terms -->
-      <section class="panel" id="terms">
-        <div class="split">
-          <div>
+      <section class="panel compact-panel" id="terms">
+        <div class="compact-head">
+          <div class="compact-title"><h2>术语词典</h2><p>优先处理待审术语，维护口径一致性。</p></div>
+        </div>
+        <div class="action-metrics">
+          <div class="action-metric primary" data-action-metric="terms-pending"><span class="value" id="termMetricPending">0</span><span class="label">待审</span></div>
+          <div class="action-metric" data-action-metric="terms-approved"><span class="value" id="termMetricApproved">0</span><span class="label">已通过</span></div>
+          <div class="action-metric" data-action-metric="terms-rejected"><span class="value" id="termMetricRejected">0</span><span class="label">已驳回</span></div>
+          <div class="action-metric" data-action-metric="terms-shown"><span class="value" id="termMetricShown">0</span><span class="label">当前显示</span></div>
+        </div>
+        <div class="split dense-split">
+          <div class="compact-form-panel">
             <h2>术语维护</h2>
             <div class="form-group"><label>术语类型<select id="termType"></select></label></div>
             <div class="form-group"><label>术语<input id="termName"></label></div>
@@ -1039,8 +1114,8 @@
             <div class="form-group"><label>所属业务流程<select id="termProcess"></select></label></div>
             <div class="toolbar"><button class="btn primary" id="saveTermBtn">保存术语</button></div>
           </div>
-          <div>
-            <div class="toolbar"><h2>术语词典</h2>
+          <div class="compact-table-panel">
+            <div class="compact-toolbar"><h2>术语列表</h2>
               <div class="toolbar-right">
                 <select id="termStatus" style="width: 120px; height: 32px; padding: 0 12px;"><option value="">全部</option><option value="pending">待审</option><option value="approved">已通过</option><option value="rejected">已驳回</option></select>
                 <button class="btn secondary" id="refreshTermsBtn">刷新</button>
@@ -1052,8 +1127,17 @@
       </section>
 
       <!-- Conflicts -->
-      <section class="panel" id="conflicts">
-        <div class="toolbar"><h2>冲突管理</h2>
+      <section class="panel compact-panel" id="conflicts">
+        <div class="compact-head">
+          <div class="compact-title"><h2>冲突管理</h2><p>优先处理待协调、已升级和临近截止冲突。</p></div>
+        </div>
+        <div class="action-metrics">
+          <div class="action-metric primary" data-action-metric="conflicts-open"><span class="value" id="conflictMetricOpen">0</span><span class="label">待协调</span></div>
+          <div class="action-metric" data-action-metric="conflicts-escalated"><span class="value" id="conflictMetricEscalated">0</span><span class="label">已升级</span></div>
+          <div class="action-metric" data-action-metric="conflicts-silenced"><span class="value" id="conflictMetricSilenced">0</span><span class="label">静默归档</span></div>
+          <div class="action-metric" data-action-metric="conflicts-shown"><span class="value" id="conflictMetricShown">0</span><span class="label">当前显示</span></div>
+        </div>
+        <div class="compact-toolbar"><h2>冲突视图</h2>
           <div class="toolbar-right">
             <button class="btn secondary" id="refreshConflictsBtn">刷新</button>
           </div>
@@ -1130,11 +1214,20 @@
           <div class="metric"><div class="num" id="pgMetricEvidenceRefs">0</div><div class="lbl">证据引用</div></div>
         </div>
         <div class="pg-section" id="pgCandidateReviewSection">
-          <div class="pg-section-hd"><h2>候选映射复核</h2><span class="pg-status" id="pgCandidateReviewMeta"></span></div>
-          <div class="notice" style="margin-bottom:12px">候选项按部门、文档名称和候选类型分组展示；正式映射仍需回源核验后按受控流程更新。</div>
+          <div class="pg-section-hd"><h2>待确认的问题</h2><span class="pg-status" id="pgCandidateReviewMeta"></span></div>
+          <div class="notice" style="margin-bottom:12px">这里不是正式映射库。系统只是把可能有问题的原文片段列出来，请你确认：这是不是个问题，证据有没有问题，要不要修改原文。</div>
+          <div class="pg-work-help">
+            <strong>每一条问题先说清楚：</strong>哪里有问题，在哪发现的，是哪种问题；再请你确认这是不是个问题、证据有没有问题、要不要处理。
+            <div class="pg-help-steps">
+              <span class="pg-help-step">1 看哪里有问题</span>
+              <span class="pg-help-step">2 找在哪发现的</span>
+              <span class="pg-help-step">3 判断是哪种问题</span>
+              <span class="pg-help-step">4 确认证据和处理结论</span>
+            </div>
+          </div>
           <div class="table-container">
             <table>
-              <thead><tr><th>部门</th><th>文档名称</th><th>候选类型</th><th>候选内容</th><th>定义充分性</th><th>来源锚点</th><th>结构化复核</th></tr></thead>
+              <thead><tr><th>部门</th><th>来源文件</th><th>在哪发现的</th><th>哪里有问题</th><th>是哪种问题</th><th>证据有没有问题</th><th>请你确认</th></tr></thead>
               <tbody id="pgCandidateReviewRows"></tbody>
             </table>
           </div>
@@ -1156,6 +1249,7 @@
               <option value="">全部资产类型</option>
             </select>
           </div>
+          <div class="pg-work-help"><strong>状态含义：</strong>纳入表示可作为流程证据来源；待复核表示先核文件归属、版次或可读性；排除表示不参与正式证据链，比如临时稿、外部参考或生成物。</div>
           <div class="table-container">
             <table>
               <thead><tr><th>状态</th><th>部门</th><th>资产类型</th><th>文件号</th><th>版次</th><th>来源文件</th><th>处理理由</th></tr></thead>
@@ -1222,6 +1316,7 @@
           <div class="pg-section-hd">
             <h2>映射工作库</h2><span class="pg-status" id="pgMappingWorkspaceMeta"></span>
           </div>
+          <div class="pg-work-help"><strong>这里看现状，不在这里改真源。</strong>映射工作库展示当前已沉淀的 L3/A1 工作记录；发现内容不对时，到下方映射待办处理，并回到部门映射文件整改后重新导入。</div>
           <div class="table-container">
             <table>
               <thead><tr><th>类型</th><th>部门</th><th>L2</th><th>L3</th><th>A1</th><th>业务行为</th><th>状态</th><th>来源</th></tr></thead>
@@ -1233,7 +1328,11 @@
           <div class="pg-section-hd">
             <h2>映射待办</h2><span class="pg-status" id="pgMappingTodoMeta"></span>
           </div>
-          <div class="notice" style="margin-bottom:12px">映射待办来自 norms 映射关系、A1 核验提醒和跨部门衔接风险；在 MDM 记录处理过程，仍回源文件整改后重新导入。</div>
+          <div class="notice" style="margin-bottom:12px">映射待办来自 norms 映射关系、A1 核验提醒和跨部门衔接风险；在 MDM 记录处理过程，仍修改原文文件后重新导入。</div>
+          <div class="pg-work-help">
+            <strong>类型含义：</strong>核验提醒看原文是否支撑；跨部门确认补清输入来源和输出目标；部门确认确认流程、行为或责任归属；调整建议修改原文里的正式映射；证据补全补文件、条款、页码或交付物依据。
+            <div class="pg-inline-help">状态含义：待分派/已分派表示先明确责任，处理中表示正在修改原文，已提交表示等待重新导入验证，待关闭确认表示重新导入后问题未再出现，可以确认关闭。</div>
+          </div>
           <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
             <select id="pgMappingTodoTypeFilter" style="width: 150px; height: 36px; padding: 0 12px;">
               <option value="">全部类型</option>
@@ -1261,13 +1360,13 @@
               <tbody id="pgMappingTodoRows"></tbody>
             </table>
           </div>
-          <div id="pgMappingTodoDetail" class="notice" style="margin-top:12px">选择映射待办后，这里会显示处理历史和可执行动作。</div>
+          <div id="pgMappingTodoDetail" class="notice" style="margin-top:12px">先选一条映射待办；这里会显示来源、处理步骤、按钮含义和处理历史。</div>
         </div>
         <div class="pg-section" id="pgQualityCasesSection">
           <div class="pg-section-hd">
             <h2>治理闭环</h2><span class="pg-status" id="pgQualityCaseMeta"></span>
           </div>
-          <div class="notice" style="margin-bottom:12px">回源文件整改后重新导入，MDM 只记录责任、状态、整改说明和关闭确认，不直接编辑 docs/norms。</div>
+          <div class="notice" style="margin-bottom:12px">修改原文文件后重新导入，MDM 只记录责任、状态、整改说明和关闭确认，不直接编辑 docs/norms。</div>
           <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
             <select id="pgQualityCaseSeverityFilter" style="width: 140px; height: 36px; padding: 0 12px;">
               <option value="">全部严重度</option>
@@ -1295,7 +1394,7 @@
               <tbody id="pgQualityCaseRows"></tbody>
             </table>
           </div>
-          <div id="pgQualityCaseDetail" class="notice" style="margin-top:12px">选择工作台跳转的问题单后，这里会显示处理历史和可执行动作。</div>
+          <div id="pgQualityCaseDetail" class="notice" style="margin-top:12px">先选一条治理问题单；这里会显示来源、整改步骤、按钮含义和处理历史。</div>
         </div>
         <div class="pg-section" id="pgQualitySection">
           <div class="pg-section-hd">
@@ -1330,8 +1429,9 @@
       </section>
 
       <!-- Org Units Panel -->
-      <section class="panel" id="orgUnits">
-        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:16px">
+      <section class="panel compact-panel" id="orgUnits">
+        <div class="compact-head"><div class="compact-title"><h2>组织架构</h2><p>来自组织真源，当前页只做查询和查看。</p></div></div>
+        <div class="compact-toolbar">
           <select id="ouTypeFilter" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px">
             <option value="">全部类型</option>
             <option value="company">公司</option>
@@ -1349,8 +1449,15 @@
       </section>
 
       <!-- Persons Panel -->
-      <section class="panel" id="persons">
-        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:16px">
+      <section class="panel compact-panel" id="persons">
+        <div class="compact-head"><div class="compact-title"><h2>人员管理</h2><p>优先查看在职人员和缺失岗位/组织信息。</p></div></div>
+        <div class="action-metrics">
+          <div class="action-metric primary" data-action-metric="persons-active"><span class="value" id="personMetricActive">0</span><span class="label">在职</span></div>
+          <div class="action-metric" data-action-metric="persons-attention"><span class="value" id="personMetricAttention">0</span><span class="label">需补全</span></div>
+          <div class="action-metric" data-action-metric="persons-shown"><span class="value" id="personMetricShown">0</span><span class="label">当前显示</span></div>
+          <div class="action-metric" data-action-metric="persons-total"><span class="value" id="personMetricTotal">0</span><span class="label">人员总数</span></div>
+        </div>
+        <div class="compact-toolbar">
           <select id="personStatusFilter" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px">
             <option value="">全部状态</option>
             <option value="active">在职</option>
@@ -1367,8 +1474,9 @@
       </section>
 
       <!-- Products Panel -->
-      <section class="panel" id="products">
-        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:16px">
+      <section class="panel compact-panel" id="products">
+        <div class="compact-head"><div class="compact-title"><h2>产品主数据</h2><p>优先查看产品族、产品清单和生命周期状态。</p></div></div>
+        <div class="compact-toolbar">
           <input id="prodSearch" placeholder="搜索编码或型号..." style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;width:200px">
           <button class="btn" id="prodSearchBtn">查询</button>
           <button class="btn secondary" id="prodPfNewBtn">+ 新增产品族</button>
@@ -1385,13 +1493,19 @@
       </section>
 
       <!-- Quality Panel -->
-      <section class="panel" id="quality">
-        <h2>数据质量仪表盘</h2>
+      <section class="panel compact-panel" id="quality">
+        <div class="compact-head"><div class="compact-title"><h2>数据质量仪表盘</h2><p>关注主数据基础对象和黄金源确认进度。</p></div></div>
         <div class="grid g4" style="margin-bottom:24px">
           <div class="metric"><div class="num" id="qOrgs">-</div><div class="lbl">组织单元</div></div>
           <div class="metric"><div class="num" id="qPersons">-</div><div class="lbl">人员</div></div>
           <div class="metric"><div class="num" id="qProducts">-</div><div class="lbl">产品</div></div>
           <div class="metric"><div class="num" id="qExtIds">-</div><div class="lbl">外部映射</div></div>
+        </div>
+        <div class="action-metrics">
+          <div class="action-metric primary" data-action-metric="quality-attention"><span class="value" id="qualityMetricAttention">0</span><span class="label">需关注对象</span></div>
+          <div class="action-metric" data-action-metric="quality-persons"><span class="value" id="qualityMetricPersons">-</span><span class="label">人员基数</span></div>
+          <div class="action-metric" data-action-metric="quality-products"><span class="value" id="qualityMetricProducts">-</span><span class="label">产品基数</span></div>
+          <div class="action-metric" data-action-metric="quality-ext"><span class="value" id="qualityMetricExtIds">-</span><span class="label">外部映射</span></div>
         </div>
         <h2 style="margin-top:32px">黄金源确认进度</h2>
         <div id="goldenSourceProgress" style="margin-bottom:16px"></div>
@@ -1503,6 +1617,152 @@
 
     function safeText(value, fallback = '-') {
       return escapeHtml(value === null || value === undefined || value === '' ? fallback : value);
+    }
+
+    function businessSourceLabel(value) {
+      return String(value || '')
+        .replace(/\u5185\u90e8\u951a\u70b9P?\d+/g, '原文位置待核对')
+        .replace(/原文定位不足/g, '原文位置待核对')
+        .replace(/(\s*·\s*原文位置待核对){2,}/g, ' · 原文位置待核对')
+        .trim();
+    }
+
+    var detailStickyTableHeaderState = { shell: null, raf: 0 };
+
+    function ensureDetailStickyTableHeader() {
+      if (detailStickyTableHeaderState.shell) return detailStickyTableHeaderState.shell;
+      var shell = document.createElement('div');
+      shell.className = 'detail-sticky-head';
+      shell.setAttribute('aria-hidden', 'true');
+      document.body.appendChild(shell);
+      detailStickyTableHeaderState.shell = shell;
+      return shell;
+    }
+
+    function detailStickyScrollParent(container) {
+      var node = container ? container.parentElement : null;
+      while (node && node !== document.body && node !== document.documentElement) {
+        var style = window.getComputedStyle(node);
+        if (/(auto|scroll|overlay)/.test(style.overflowY) && node.scrollHeight > node.clientHeight + 1) {
+          return node;
+        }
+        node = node.parentElement;
+      }
+      return window;
+    }
+
+    function detailStickyTopFor(container) {
+      var topbar = document.querySelector('.topbar');
+      var topbarBottom = topbar ? Math.ceil(topbar.getBoundingClientRect().bottom) : 0;
+      var scrollParent = detailStickyScrollParent(container);
+      if (scrollParent === window) return topbarBottom;
+      var parentTop = Math.ceil(scrollParent.getBoundingClientRect().top);
+      return Math.max(parentTop, topbarBottom);
+    }
+
+    function visibleDetailTableContainers() {
+      return Array.prototype.slice.call(document.querySelectorAll(
+        '.panel.on .table-container, .panel.on .tw, .page.on .table-container, .page.on .tw'
+      )).filter(function(container) {
+        var table = container.querySelector('table');
+        var thead = table && table.querySelector('thead');
+        var rect = container.getBoundingClientRect();
+        return !!(table && thead && thead.querySelector('th') && rect.width > 0 && rect.height > 0);
+      });
+    }
+
+    function activeDetailTableContainer() {
+      var containers = visibleDetailTableContainers();
+      for (var i = 0; i < containers.length; i += 1) {
+        var container = containers[i];
+        var table = container.querySelector('table');
+        var thead = table && table.querySelector('thead');
+        if (!thead) continue;
+        var top = detailStickyTopFor(container);
+        var containerRect = container.getBoundingClientRect();
+        var tableRect = table.getBoundingClientRect();
+        var headRect = thead.getBoundingClientRect();
+        var lowerBound = Math.min(containerRect.bottom, tableRect.bottom);
+        if (containerRect.top <= top && lowerBound > top + headRect.height + 8) {
+          return { container: container, table: table, thead: thead, top: top };
+        }
+      }
+      return null;
+    }
+
+    function renderDetailStickyTableHeader() {
+      var shell = ensureDetailStickyTableHeader();
+      var active = activeDetailTableContainer();
+      if (!active) {
+        shell.classList.remove('on');
+        shell.innerHTML = '';
+        return;
+      }
+
+      var containerRect = active.container.getBoundingClientRect();
+      var tableRect = active.table.getBoundingClientRect();
+      var originalHeaders = Array.prototype.slice.call(active.thead.querySelectorAll('th'));
+      var cloneTable = document.createElement('table');
+      var cloneHead = active.thead.cloneNode(true);
+      var cloneHeaders = Array.prototype.slice.call(cloneHead.querySelectorAll('th'));
+      cloneHeaders.forEach(function(th, index) {
+        var width = originalHeaders[index] ? originalHeaders[index].getBoundingClientRect().width : 0;
+        th.style.width = width + 'px';
+        th.style.minWidth = width + 'px';
+        th.style.maxWidth = width + 'px';
+      });
+
+      cloneTable.style.width = tableRect.width + 'px';
+      cloneTable.style.transform = 'translateX(' + (tableRect.left - containerRect.left) + 'px)';
+      cloneTable.appendChild(cloneHead);
+      shell.innerHTML = '';
+      shell.appendChild(cloneTable);
+      shell.style.left = Math.round(containerRect.left) + 'px';
+      shell.style.top = Math.round(active.top) + 'px';
+      shell.style.width = Math.round(containerRect.width) + 'px';
+      shell.classList.add('on');
+    }
+
+    function scheduleDetailStickyTableHeader() {
+      if (detailStickyTableHeaderState.raf) return;
+      detailStickyTableHeaderState.raf = window.requestAnimationFrame(function() {
+        detailStickyTableHeaderState.raf = 0;
+        renderDetailStickyTableHeader();
+      });
+    }
+
+    function setActionMetric(id, value) {
+      var el = $(id);
+      if (el) el.textContent = value;
+    }
+
+    function renderActionMetrics() {
+      var todos = state.todos || [];
+      setActionMetric('todoMetricPending', todos.filter(function(row) { return row.status === 'pending'; }).length);
+      setActionMetric('todoMetricUrgent', todos.filter(function(row) { return row.urgency === 'high' && row.status === 'pending'; }).length);
+      setActionMetric('todoMetricDone', todos.filter(function(row) { return row.status === 'done'; }).length);
+      setActionMetric('todoMetricShown', todos.length);
+
+      var terms = state.terms || [];
+      setActionMetric('termMetricPending', terms.filter(function(row) { return row.status === 'pending'; }).length);
+      setActionMetric('termMetricApproved', terms.filter(function(row) { return row.status === 'approved'; }).length);
+      setActionMetric('termMetricRejected', terms.filter(function(row) { return row.status === 'rejected'; }).length);
+      setActionMetric('termMetricShown', terms.length);
+
+      var conflicts = state.conflicts || [];
+      var conflictStats = state.conflictStats || {};
+      setActionMetric('conflictMetricOpen', conflicts.filter(function(row) { return row.status === 'pending' || row.status === 'coordinating'; }).length || conflictStats.coordinating || 0);
+      setActionMetric('conflictMetricEscalated', conflicts.filter(function(row) { return row.status === 'escalated'; }).length || conflictStats.escalated || 0);
+      setActionMetric('conflictMetricSilenced', conflictStats.silenced || conflicts.filter(function(row) { return row.status === 'silenced'; }).length);
+      setActionMetric('conflictMetricShown', conflicts.length);
+
+      var fields = state.dataMapFields || [];
+      var contexts = state.dataMapContexts || [];
+      setActionMetric('dataMapMetricFields', fields.length);
+      setActionMetric('dataMapMetricContexts', contexts.length);
+      setActionMetric('dataMapMetricQuality', fields.filter(function(row) {
+        return row.quality_status && row.quality_status !== 'ok' && row.quality_status !== 'approved';
+      }).length);
     }
 
     function hasAdminAccess() {
@@ -1778,10 +2038,12 @@
     }
 
     function runPageTask(task, fallbackMessage) {
-      Promise.resolve(typeof task === 'function' ? task() : task).catch(function(error) {
-        if (error && error.status === 401) return;
-        showToast((error && error.message) || fallbackMessage || '页面加载失败', 'error');
-      });
+      Promise.resolve(typeof task === 'function' ? task() : task)
+        .then(function() { scheduleDetailStickyTableHeader(); })
+        .catch(function(error) {
+          if (error && error.status === 401) return;
+          showToast((error && error.message) || fallbackMessage || '页面加载失败', 'error');
+        });
     }
 
     function renderCurrentView(params) {
@@ -1791,6 +2053,7 @@
       else if (state.currentView === 'detail') { renderDetailPage(params); }
       else if (state.currentView === 'form') { renderFormPage(params); }
       else if (state.currentView === 'operation') { renderOperationPage(params); }
+      scheduleDetailStickyTableHeader();
     }
 
     function parseHash() {
@@ -1826,6 +2089,8 @@
     window.addEventListener('hashchange', function() {
       renderRouteFromHash();
     });
+    window.addEventListener('scroll', scheduleDetailStickyTableHeader, true);
+    window.addEventListener('resize', scheduleDetailStickyTableHeader);
 
     // ===== Role-based nav =====
     function applyRoleVisibility() {
@@ -2028,96 +2293,6 @@
         '</div>';
       }).join('') : '<div class="wb-empty">暂无额外入口。</div>';
       return shell;
-    }
-
-    function activityLevel(count) {
-      if (Number(count || 0) >= 6) return 3;
-      if (Number(count || 0) >= 3) return 2;
-      if (Number(count || 0) >= 1) return 1;
-      return 0;
-    }
-
-    function activitySourceText(day) {
-      var labels = day.sourceLabels || {};
-      var sources = day.sources || {};
-      return Object.keys(sources).map(function(key) {
-        return safeText(labels[key] || key) + ' ' + Number(sources[key] || 0) + ' 次';
-      }).join('；') || '暂无治理动作';
-    }
-
-    function renderActivityDayDetail(detailId, day) {
-      var detail = $(detailId);
-      if (!detail || !day) return;
-      detail.innerHTML = '<strong>' + safeText(day.date) + '</strong>：' + Number(day.count || 0) + ' 次，' + activitySourceText(day);
-    }
-
-    function renderActivityHeatmap(containerId, payload, detailId) {
-      var wrap = $(containerId);
-      if (!wrap) return;
-      var dates = (payload && payload.dates) || [];
-      if (!dates.length) {
-        wrap.innerHTML = '<div class="wb-empty">暂无治理活跃数据。</div>';
-        renderActivityDayDetail(detailId, { date: '', count: 0, sources: {}, sourceLabels: {} });
-        return;
-      }
-      wrap.innerHTML = dates.map(function(day) {
-        var level = activityLevel(day.count);
-        return '<button type="button" class="activity-day" data-activity-date="' + safeText(day.date) + '" data-level="' + level + '" title="' + safeText(day.date) + '：' + Number(day.count || 0) + ' 次"></button>';
-      }).join('');
-      var byDate = {};
-      dates.forEach(function(day) { byDate[day.date] = day; });
-      wrap.querySelectorAll('[data-activity-date]').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-          renderActivityDayDetail(detailId, byDate[btn.dataset.activityDate]);
-        });
-      });
-      renderActivityDayDetail(detailId, dates.slice().reverse().find(function(day) { return Number(day.count || 0) > 0; }) || dates[dates.length - 1]);
-    }
-
-    async function loadRoleWorkbenchActivity() {
-      try {
-        var payload = await api('/api/activity/heatmap?scope=me&days=90');
-        renderActivityHeatmap('roleWorkbenchActivityHeatmap', payload, 'roleWorkbenchActivityDetail');
-      } catch (error) {
-        if ($('roleWorkbenchActivityHeatmap')) $('roleWorkbenchActivityHeatmap').innerHTML = '<div class="wb-empty">' + safeText(error.message || '治理活跃加载失败') + '</div>';
-      }
-    }
-
-    function setActivityOptions(selectId, rows, valueField, labelField, allLabel) {
-      var select = $(selectId);
-      if (!select) return;
-      var previous = select.value;
-      select.innerHTML = '<option value="">' + safeText(allLabel) + '</option>' + (rows || []).map(function(row) {
-        var value = row[valueField];
-        return '<option value="' + safeText(value) + '">' + safeText(row[labelField] || value) + '</option>';
-      }).join('');
-      select.value = previous;
-    }
-
-    async function loadDashboardActivity() {
-      try {
-        var params = new URLSearchParams();
-        params.set('scope', ($('dashboardActivityScope') && $('dashboardActivityScope').value) || 'me');
-        params.set('days', '180');
-        if ($('dashboardActivityDepartment') && $('dashboardActivityDepartment').value) params.set('department_id', $('dashboardActivityDepartment').value);
-        if ($('dashboardActivityUser') && $('dashboardActivityUser').value) params.set('user_id', $('dashboardActivityUser').value);
-        var payload = await api('/api/activity/heatmap?' + params.toString());
-        renderActivityHeatmap('dashboardActivityHeatmap', payload, 'dashboardActivityDetail');
-        setActivityOptions('dashboardActivityDepartment', payload.departments || [], 'departmentId', 'name', '全部部门');
-        setActivityOptions('dashboardActivityUser', payload.users || [], 'userId', 'name', '全部人员');
-        if ($('departmentActivitySummary')) {
-          $('departmentActivitySummary').innerHTML = '<strong>部门参与热力：</strong>' + ((payload.departments || []).slice(0, 5).map(function(row) {
-            return safeText(row.name) + ' ' + Number(row.count || 0) + ' 次';
-          }).join('；') || '暂无部门汇总');
-        }
-        if ($('userActivitySummary')) {
-          $('userActivitySummary').innerHTML = '<strong>人员参与热力：</strong>' + ((payload.users || []).slice(0, 5).map(function(row) {
-            return safeText(row.name) + ' ' + Number(row.count || 0) + ' 次';
-          }).join('；') || '暂无人员汇总');
-        }
-      } catch (error) {
-        if ($('dashboardActivityHeatmap')) $('dashboardActivityHeatmap').innerHTML = '<div class="wb-empty">' + safeText(error.message || '治理活跃加载失败') + '</div>';
-      }
     }
 
     function renderWorkbenchNextActions(actions) {
@@ -2565,6 +2740,7 @@
         state.dataMapFields = [];
         rowsEl.innerHTML = '<tr><td colspan="7" class="empty">请选择或创建数据地图上下文</td></tr>';
         if (metaEl) metaEl.textContent = '';
+        renderActionMetrics();
         return;
       }
       try {
@@ -2577,9 +2753,11 @@
         }).join('') || '<tr><td colspan="7" class="empty">当前上下文暂无字段</td></tr>';
         if (metaEl) metaEl.textContent = '共 ' + state.dataMapFields.length + ' 个字段';
       } catch (error) {
+        state.dataMapFields = [];
         rowsEl.innerHTML = '<tr><td colspan="7" class="empty">字段台账暂不可用</td></tr>';
         if (metaEl) metaEl.textContent = '';
       }
+      renderActionMetrics();
     }
 
     function jsonListDisplay(value) {
@@ -2672,6 +2850,7 @@
       if (type) query.set('type', type);
       state.todos = await api('/api/todos?' + query.toString());
       renderTodosList();
+      renderActionMetrics();
     }
 
     function renderTodosList() {
@@ -2770,6 +2949,7 @@
           : '-';
         return '<tr><td>' + rowId + '</td><td>' + safeText(row.term_type_name || row.term_type_code || '名词') + '</td><td>' + safeText(row.term) + '</td><td>' + safeText(row.definition) + '</td><td>' + safeText(row.scope) + '</td><td>' + statusTag(row.status) + '</td><td>' + actions + '</td></tr>';
       }).join('') || '<tr><td colspan="7" class="empty">暂无数据</td></tr>';
+      renderActionMetrics();
     }
 
     async function saveTerm() {
@@ -2815,6 +2995,7 @@
         state.conflicts = await api('/api/conflicts');
       }
       renderConflictsList();
+      renderActionMetrics();
     }
 
     function renderConflictsList() {
@@ -3277,7 +3458,7 @@
       if (highlightedCaseId) {
         renderProcessGovernanceQualityCaseDetail(highlightedCaseId);
       } else {
-        document.getElementById('pgQualityCaseDetail').textContent = '选择工作台跳转的问题单后，这里会显示处理历史和可执行动作。';
+        document.getElementById('pgQualityCaseDetail').textContent = '先选一条治理问题单；这里会显示来源、整改步骤、按钮含义和处理历史。';
       }
     }
 
@@ -3299,23 +3480,27 @@
               '</div>';
             }).join('')
           : '<div class="empty">暂无处理历史</div>';
+        var canClose = item.status === 'source_resolved';
+        var closeAttrs = canClose ? '' : ' disabled title="重新导入后问题未再出现时才能关闭"';
         detailEl.innerHTML =
-          '<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,360px);gap:16px">' +
+          '<div class="pg-detail-grid">' +
             '<div>' +
               '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">' +
                 pgQualityCaseStatusTag(item.status) + pgSeverityTag(item.severity) +
                 '<strong>' + safeText(item.message) + '</strong>' +
               '</div>' +
               '<div style="color:var(--muted);font-size:13px;margin-bottom:6px">来源：' + safeText(source) + '</div>' +
-              '<div style="margin-bottom:6px">整改建议：' + safeText(item.suggestion || '回源文件整改后重新导入') + '</div>' +
+              '<div style="margin-bottom:6px">整改建议：' + safeText(item.suggestion || '修改原文文件后重新导入') + '</div>' +
               '<div style="margin-bottom:10px">责任：' + safeText(item.owner_user_name || item.owner_dept_name || '未分派') + '；截止：' + safeText(item.due_date || '') + '</div>' +
+              '<div class="pg-work-help" style="margin-bottom:10px"><strong>整改这条问题单：</strong><div class="pg-help-steps"><span class="pg-help-step">1 看来源位置</span><span class="pg-help-step">2 回部门映射文件整改</span><span class="pg-help-step">3 提交处理说明</span><span class="pg-help-step">4 重新导入后关闭</span></div></div>' +
+              '<div class="pg-action-meaning"><strong>按钮含义：</strong>标记整改中表示责任人已开始处理原文；提交整改表示已写明处理说明，等待重新质检；确认关闭只在重新导入后状态变成“待关闭确认”时可用；重开表示复核后仍需继续跟踪。</div>' +
               '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
-                "<button class=\"btn secondary\" type=\"button\" onclick=\"processQualityCaseAction(" + Number(item.id) + ",'status',{status:'rectifying',note:'已开始回源整改'})\">标记整改中</button>" +
+                "<button class=\"btn secondary\" type=\"button\" onclick=\"processQualityCaseAction(" + Number(item.id) + ",'status',{status:'rectifying',note:'已开始修改原文'})\">标记整改中</button>" +
                 "<button class=\"btn secondary\" type=\"button\" onclick=\"processQualityCaseAction(" + Number(item.id) + ",'submit',{note:'已提交整改说明，等待重新质检'})\">提交整改</button>" +
-                "<button class=\"btn secondary\" type=\"button\" onclick=\"processQualityCaseAction(" + Number(item.id) + ",'close',{note:'重新质检未再出现，确认关闭'})\">确认关闭</button>" +
+                "<button class=\"btn secondary\" type=\"button\"" + closeAttrs + " onclick=\"processQualityCaseAction(" + Number(item.id) + ",'close',{note:'重新质检未再出现，确认关闭'})\">确认关闭</button>" +
                 "<button class=\"btn secondary\" type=\"button\" onclick=\"processQualityCaseAction(" + Number(item.id) + ",'reopen',{note:'复核后继续跟踪'})\">重开</button>" +
               '</div>' +
-              '<div style="display:flex;gap:8px;margin-top:10px"><input id="pgQualityCaseCommentInput" placeholder="补充处理记录" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:6px"><button class="btn" type="button" onclick="addProcessQualityCaseComment(' + Number(item.id) + ')">记录备注</button></div>' +
+              '<div style="display:flex;gap:8px;margin-top:10px"><input id="pgQualityCaseCommentInput" placeholder="处理记录：已核对哪份文件；修改了哪里；还等什么验证" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:6px"><button class="btn" type="button" onclick="addProcessQualityCaseComment(' + Number(item.id) + ')">记录备注</button></div>' +
             '</div>' +
             '<div><strong>处理历史</strong>' + eventHtml + '</div>' +
           '</div>';
@@ -3354,6 +3539,31 @@
     function pgMappingTodoTypeText(value) {
       var map = { dept_confirm: '部门确认', verification: '核验提醒', adjustment: '调整建议', cross_dept: '跨部门确认', evidence: '证据补全' };
       return map[value] || value;
+    }
+
+    function pgMappingTodoTypeHelp(value) {
+      var map = {
+        dept_confirm: '请部门确认流程、A1 行为或责任归属是否正确。',
+        verification: '请回来源文件核验候选是否有原文支撑。',
+        adjustment: '请回部门映射文件修正式 L3/A1 或说明不采纳原因。',
+        cross_dept: '请补清输入来源部门、输出目标部门和交接物。',
+        evidence: '请补文件、条款、页码、表单或交付物依据。'
+      };
+      return map[value] || '请先看来源和说明，再判断应修改原文还是补证据。';
+    }
+
+    function pgMappingTodoStatusHelp(value) {
+      var map = {
+        open: '待分派：先明确责任部门或责任人。',
+        assigned: '已分派：责任已明确，等待处理。',
+        rectifying: '处理中：正在核验原文或修改部门映射文件。',
+        submitted: '已提交：处理说明已记录，等待重新导入验证。',
+        source_resolved: '待关闭确认：重新导入后问题未再出现，可以关闭。',
+        closed: '已关闭：已完成闭环。',
+        reopened: '复现重开：重新导入或复核后仍需继续处理。',
+        accepted: '已接受：已确认纳入口径或后续处理。'
+      };
+      return map[value] || '按处理历史继续跟踪。';
     }
 
     function pgMappingTodoStatusTag(value) {
@@ -3427,7 +3637,7 @@
       if (highlightedTodoId) {
         renderProcessGovernanceMappingTodoDetail(highlightedTodoId);
       } else {
-        document.getElementById('pgMappingTodoDetail').textContent = '选择映射待办后，这里会显示处理历史和可执行动作。';
+        document.getElementById('pgMappingTodoDetail').textContent = '先选一条映射待办；这里会显示来源、处理步骤、按钮含义和处理历史。';
       }
     }
 
@@ -3448,8 +3658,10 @@
               '</div>';
             }).join('')
           : '<div class="empty">暂无处理历史</div>';
+        var canClose = item.status === 'source_resolved';
+        var closeAttrs = canClose ? '' : ' disabled title="重新导入验证通过后才能关闭"';
         detailEl.innerHTML =
-          '<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,360px);gap:16px">' +
+          '<div class="pg-detail-grid">' +
             '<div>' +
               '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">' +
                 pgMappingTodoStatusTag(item.status) +
@@ -3457,15 +3669,18 @@
                 '<strong>' + safeText(item.message) + '</strong>' +
               '</div>' +
               '<div style="color:var(--muted);font-size:13px;margin-bottom:6px">来源：' + safeText(item.source_file || '') + (item.source_line ? ':' + safeText(item.source_line) : '') + '</div>' +
-              '<div style="margin-bottom:6px">整改建议：' + safeText(item.suggestion || '回源文件整改后重新导入') + '</div>' +
+              '<div class="pg-inline-help" style="margin-bottom:6px">' + safeText(pgMappingTodoTypeHelp(item.todo_type)) + ' ' + safeText(pgMappingTodoStatusHelp(item.status)) + '</div>' +
+              '<div style="margin-bottom:6px">整改建议：' + safeText(item.suggestion || '修改原文文件后重新导入') + '</div>' +
               '<div style="margin-bottom:10px">责任：' + safeText(item.owner_user_name || item.owner_dept_name || '未分派') + '；截止：' + safeText(item.due_date || '') + '</div>' +
+              '<div class="pg-work-help" style="margin-bottom:10px"><strong>处理这条待办：</strong><div class="pg-help-steps"><span class="pg-help-step">1 看来源位置</span><span class="pg-help-step">2 按类型判断问题</span><span class="pg-help-step">3 回部门映射文件整改</span><span class="pg-help-step">4 重新导入后关闭</span></div></div>' +
+              '<div class="pg-action-meaning"><strong>按钮含义：</strong>标记处理中表示已经开始核验或整改；提交处理表示已经写明处理结论，等待重新导入验证；确认关闭只在状态变成“待关闭确认”后可用；重开表示复核后仍需继续跟踪。</div>' +
               '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
                 "<button class=\"btn secondary\" type=\"button\" onclick=\"processMappingTodoAction(" + Number(item.id) + ",'status',{status:'rectifying',note:'已开始处理映射待办'})\">标记处理中</button>" +
                 "<button class=\"btn secondary\" type=\"button\" onclick=\"processMappingTodoAction(" + Number(item.id) + ",'submit',{note:'已提交映射处理说明，等待重新导入验证'})\">提交处理</button>" +
-                "<button class=\"btn secondary\" type=\"button\" onclick=\"processMappingTodoAction(" + Number(item.id) + ",'close',{note:'回源整改并重新导入后确认关闭'})\">确认关闭</button>" +
+                "<button class=\"btn secondary\" type=\"button\"" + closeAttrs + " onclick=\"processMappingTodoAction(" + Number(item.id) + ",'close',{note:'修改原文并重新导入后确认关闭'})\">确认关闭</button>" +
                 "<button class=\"btn secondary\" type=\"button\" onclick=\"processMappingTodoAction(" + Number(item.id) + ",'reopen',{note:'继续跟踪该映射待办'})\">重开</button>" +
               '</div>' +
-              '<div style="display:flex;gap:8px;margin-top:10px"><input id="pgMappingTodoCommentInput" placeholder="补充处理记录" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:6px"><button class="btn" type="button" onclick="addProcessMappingTodoComment(' + Number(item.id) + ')">记录备注</button></div>' +
+              '<div style="display:flex;gap:8px;margin-top:10px"><input id="pgMappingTodoCommentInput" placeholder="处理记录：已核对哪份文件；调整了哪个 L3/A1；等待哪次重新导入验证" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:6px"><button class="btn" type="button" onclick="addProcessMappingTodoComment(' + Number(item.id) + ')">记录备注</button></div>' +
             '</div>' +
             '<div><strong>处理历史</strong>' + eventHtml + '</div>' +
           '</div>';
@@ -3629,31 +3844,121 @@
     }
 
     var pgCandidateDecisionOptions = [
-      ['confirm_candidate', '成立'],
-      ['needs_correction', '需修正'],
-      ['reject_candidate', '不采纳'],
-      ['insufficient_evidence', '证据不足']
+      ['confirm_candidate', '是问题，需要修改原文'],
+      ['needs_correction', '是问题，但改法要再确认'],
+      ['reject_candidate', '不是问题，不采纳'],
+      ['insufficient_evidence', '证据不够，先别定']
     ];
     var pgCandidateEvidenceOptions = [
-      ['not_reviewed', '未复核'],
-      ['source_verified', '原文支撑'],
-      ['need_original_review', '需回源'],
-      ['source_mismatch', '原文不支撑']
+      ['not_reviewed', '还没核证据'],
+      ['source_verified', '证据没问题'],
+      ['need_original_review', '证据还要再核'],
+      ['source_mismatch', '证据对不上']
     ];
     var pgCandidateIssueOptions = [
       ['none', '无明显问题'],
-      ['role_definition_insufficient', '角色定义不足'],
-      ['role_mismatch', '角色或部门不匹配'],
-      ['behavior_boundary', '行为边界不清'],
-      ['source_mismatch', '原文不支撑'],
+      ['role_definition_insufficient', '角色没写清楚'],
+      ['role_mismatch', '角色或部门对不上'],
+      ['behavior_boundary', '动作范围不清'],
+      ['source_mismatch', '原文不支持'],
       ['missing_delivery', '交付物或归档不清'],
       ['other', '其他']
     ];
     var pgCandidateDefinitionOptions = [
-      ['needs_original_review', '需回源确认'],
-      ['source_defined', '原文明确'],
-      ['source_definition_insufficient', '原文定义不足']
+      ['needs_original_review', '还要回原文确认'],
+      ['source_defined', '原文写清楚了'],
+      ['source_definition_insufficient', '原文没写清楚']
     ];
+
+    function pgCandidateTypeHelp(value) {
+      var text = String(value || '');
+      if (text.indexOf('L3') >= 0) return '看来源文件是否支撑新增或调整 L3 流程；成立后回到部门映射文件补正式 L3。';
+      if (text.indexOf('A1') >= 0) return '看业务行为是否有执行角色、动作、对象和输出；规范化成“动词 + 对象 + 结果”。';
+      if (text.indexOf('角色') >= 0) return '明确执行、审核、批准或协同角色；不要只写“相关部门”。';
+      if (text.indexOf('审批') >= 0) return '核对签批栏、流程图或表单流转节点，写清审核和批准边界。';
+      if (text.indexOf('传递') >= 0 || text.indexOf('跨部门') >= 0) return '确认输入来源部门和输出目标部门，避免只写“传递资料”。';
+      if (text.indexOf('OCR') >= 0) return '先核原图或 PDF；没核验前不要采纳这条问题。';
+      if (text.indexOf('验收') >= 0) return '补清完成标准、交付物和判定口径。';
+      if (text.indexOf('归档') >= 0) return '补清归档对象、保存位置、责任角色和保存要求。';
+      if (text.indexOf('系统') >= 0) return '只确认流程建议落位，不做“主用”“最忙”等评价。';
+      return '先看是在哪发现的，再判断它影响流程、动作、角色、交付物还是证据说明。';
+    }
+
+    function pgCandidateFieldHelp(field, value) {
+      var helpers = {
+        decision: {
+          confirm_candidate: '原文支撑充分，需要修改正式映射文件。',
+          needs_correction: '确实有问题，但名称、边界或归属还要再确认。',
+          reject_candidate: '不应进入正式映射，要写明不采纳原因。',
+          insufficient_evidence: '看不到足够原文依据，先补证据或核验原文。'
+        },
+        evidence_status: {
+          not_reviewed: '还没核原文，不建议直接定稿。',
+          source_verified: '已看到原文支撑。',
+          need_original_review: '需要再看制度原文、表单或流程图。',
+          source_mismatch: '抽取内容与原文不一致。'
+        },
+        issue_type: {
+          none: '未发现明显结构问题。',
+          role_definition_insufficient: '角色、责任或审批人没有写清。',
+          role_mismatch: '部门或角色归属可能不一致。',
+          behavior_boundary: 'A1 行为边界过大、过小或混在一起。',
+          source_mismatch: '抽取内容与来源文本不一致。',
+          missing_delivery: '缺交付物、记录、归档或验收口径。',
+          other: '用规范化说明补清特殊问题。'
+        },
+        definition_status: {
+          needs_original_review: '还需要回原文确认。',
+          source_defined: '原文已经写清楚。',
+          source_definition_insufficient: '原文提到了相关内容，但责任、动作、对象或交付物没写完整。'
+        }
+      };
+      return ((helpers[field] || {})[value]) || '按原文证据和事项类型判断。';
+    }
+
+    function pgCandidateFieldLabel(field) {
+      var labels = {
+        decision: '这是不是个问题',
+        evidence_status: '证据有没有问题',
+        issue_type: '是哪种问题',
+        definition_status: '原文有没有写清'
+      };
+      return labels[field] || field;
+    }
+
+    function pgCandidateOptionText(options, value, fallback) {
+      var selected = String(value || '');
+      for (var i = 0; i < options.length; i += 1) {
+        if (options[i][0] === selected || options[i][1] === selected) return options[i][1];
+      }
+      if (selected === '原文定义不足') return '原文没写清楚';
+      if (selected === '原文明确') return '原文写清楚了';
+      return fallback || selected;
+    }
+
+    function pgCandidateDisplayType(value) {
+      var text = String(value || '').trim();
+      if (!text) return '其他待确认事项';
+      if (text.indexOf('L3') >= 0 || text.indexOf('流程') >= 0) return '流程名称可能要补或改';
+      if (text.indexOf('A1') >= 0 || text.indexOf('行为') >= 0) return '业务动作可能要补或改';
+      if (text.indexOf('角色') >= 0) return '角色责任可能没写清';
+      if (text.indexOf('审批') >= 0) return '审批边界可能没写清';
+      if (text.indexOf('传递') >= 0 || text.indexOf('跨部门') >= 0) return '跨部门交接可能没写清';
+      if (text.indexOf('OCR') >= 0) return 'OCR 抽取需要核原文';
+      if (text.indexOf('验收') >= 0) return '验收标准可能没写清';
+      if (text.indexOf('归档') >= 0) return '归档要求可能没写清';
+      if (text.indexOf('系统') >= 0) return '流程落位需要确认';
+      return text.replace(/候选/g, '待确认问题');
+    }
+
+    function renderCandidateReviewField(field, row, options, selectedValue) {
+      var selected = selectedValue || '';
+      return '<div class="pg-review-field">' +
+        '<label>' + safeText(pgCandidateFieldLabel(field)) + '</label>' +
+        renderCandidateReviewSelect(field, row, options, selected) +
+        '<div class="pg-inline-help">' + safeText(pgCandidateFieldHelp(field, selected)) + '</div>' +
+      '</div>';
+    }
 
     function renderCandidateReviewSelect(field, row, options, selectedValue) {
       var stableKey = escapeHtml(row.stable_key || '');
@@ -3668,13 +3973,17 @@
     function renderCandidateReviewControls(row, run) {
       var stableKey = escapeHtml(row.stable_key || '');
       var runId = escapeHtml((run && run.run_id) || '');
-      return '<div style="display:grid;grid-template-columns:repeat(2,minmax(120px,1fr));gap:6px;min-width:360px">' +
-        renderCandidateReviewSelect('decision', row, pgCandidateDecisionOptions, row.decision || '') +
-        renderCandidateReviewSelect('evidence_status', row, pgCandidateEvidenceOptions, row.decision_evidence_status || 'not_reviewed') +
-        renderCandidateReviewSelect('issue_type', row, pgCandidateIssueOptions, row.issue_type || 'none') +
-        renderCandidateReviewSelect('definition_status', row, pgCandidateDefinitionOptions, row.definition_status || 'needs_original_review') +
-        '<textarea data-review-field="normalized_note" data-stable-key="' + stableKey + '" placeholder="规范化说明" style="grid-column:1/-1;min-height:58px;padding:6px;border:1px solid var(--border);border-radius:6px">' + safeText(row.normalized_note || '', '') + '</textarea>' +
-        '<button type="button" class="btn primary" data-review-save="1" data-run-id="' + runId + '" data-stable-key="' + stableKey + '">保存复核</button>' +
+      return '<div class="pg-review-grid">' +
+        renderCandidateReviewField('decision', row, pgCandidateDecisionOptions, row.decision || '') +
+        renderCandidateReviewField('evidence_status', row, pgCandidateEvidenceOptions, row.decision_evidence_status || 'not_reviewed') +
+        renderCandidateReviewField('issue_type', row, pgCandidateIssueOptions, row.issue_type || 'none') +
+        renderCandidateReviewField('definition_status', row, pgCandidateDefinitionOptions, row.definition_status || 'needs_original_review') +
+        '<div class="pg-review-note">' +
+          '<label>给后续处理人的说明</label>' +
+          '<textarea data-review-field="normalized_note" data-stable-key="' + stableKey + '" placeholder="证据：在哪个文件、条款、表单或真实页码看到&#10;判断：这是不是问题，为什么&#10;改法：如果要改，建议写成哪个 L3/A1/角色/交付物口径&#10;下一步：修改哪个部门映射文件的哪一处">' + safeText(row.normalized_note || '', '') + '</textarea>' +
+          '<div class="pg-inline-help">写给下一位处理人看：说明证据、判断和正式映射应怎么改，不要把这条问题记录当成已入库结论。</div>' +
+        '</div>' +
+        '<button type="button" class="btn primary" data-review-save="1" data-run-id="' + runId + '" data-stable-key="' + stableKey + '">保存确认结果</button>' +
         '</div>';
     }
 
@@ -3683,7 +3992,7 @@
       (items || []).forEach(function(item) {
         var department = item.department || '未标注部门';
         var documentName = item.document_name || '来源未标注文档';
-        var candidateType = item.candidate_type || '其他候选';
+        var candidateType = item.candidate_type || '其他待确认事项';
         if (!byDepartment[department]) byDepartment[department] = {};
         if (!byDepartment[department][documentName]) byDepartment[department][documentName] = {};
         if (!byDepartment[department][documentName][candidateType]) byDepartment[department][documentName][candidateType] = [];
@@ -3726,10 +4035,10 @@
       return '<tr>' +
         '<td>' + safeText(row.department || '') + '</td>' +
         '<td>' + safeText(row.document_name || '') + '</td>' +
-        '<td>' + safeText(row.candidate_type || '') + '</td>' +
+        '<td>' + safeText(businessSourceLabel(row.source_label) || '原文位置待补') + '</td>' +
         '<td>' + safeText(row.content || '') + '</td>' +
-        '<td>' + safeText(row.definition_status || '待回源确认') + '</td>' +
-        '<td>' + safeText(row.source_label || '') + '</td>' +
+        '<td>' + safeText(pgCandidateDisplayType(row.candidate_type)) + '<div class="pg-inline-help">' + safeText(pgCandidateTypeHelp(row.candidate_type)) + '</div></td>' +
+        '<td>' + safeText(pgCandidateOptionText(pgCandidateDefinitionOptions, row.definition_status, '还要回原文确认')) + '</td>' +
         '<td>' + renderCandidateReviewControls(row, run) + '</td>' +
       '</tr>';
     }
@@ -3746,13 +4055,14 @@
           safeText(departmentGroup.department || '未标注部门') + '<span class="tag">' + departmentCount + ' 项</span></td></tr>');
         (departmentGroup.documents || []).forEach(function(documentGroup) {
           var documentCount = countCandidateReviewDocument(documentGroup);
-          rows.push('<tr class="candidate-review-group-row candidate-review-document-row" data-candidate-review-group="document"><td colspan="7">文档：' +
+          rows.push('<tr class="candidate-review-group-row candidate-review-document-row" data-candidate-review-group="document"><td colspan="7">来源文件：' +
             safeText(documentGroup.document_name || '来源未标注文档') + '<span class="tag">' + documentCount + ' 项</span></td></tr>');
           (documentGroup.types || []).forEach(function(typeGroup) {
             var candidates = (typeGroup.candidates || []).slice(0, Math.max(0, 80 - renderedCount));
             if (!candidates.length) return;
-            rows.push('<tr class="candidate-review-group-row candidate-review-type-row" data-candidate-review-group="type"><td colspan="7">候选类型：' +
-              safeText(typeGroup.candidate_type || '其他候选') + '<span class="tag">' + candidates.length + ' 项</span></td></tr>');
+            rows.push('<tr class="candidate-review-group-row candidate-review-type-row" data-candidate-review-group="type"><td colspan="7">是哪种问题：' +
+              safeText(pgCandidateDisplayType(typeGroup.candidate_type)) + '<span class="tag">' + candidates.length + ' 项</span>' +
+              '<div class="pg-inline-help">' + safeText(pgCandidateTypeHelp(typeGroup.candidate_type)) + '</div></td></tr>');
             candidates.forEach(function(row) {
               rows.push(renderCandidateReviewItemRow(row, run));
               renderedCount += 1;
@@ -3771,10 +4081,10 @@
       var run = data.run || null;
       document.getElementById('pgCandidateReviewMeta').textContent = run
         ? (selectedDept ? selectedDept + ' · ' : '') + '运行 ' + run.run_id + '，显示 ' + items.length + ' 条 / 共 ' + ((data.summary && data.summary.total) || items.length) + ' 条'
-        : '暂无候选运行';
+        : '暂无待确认的问题';
       rowsEl.innerHTML = items.length
         ? renderCandidateReviewGroupedRows(data, run)
-        : '<tr><td colspan="7" class="empty">暂无候选映射复核项</td></tr>';
+        : '<tr><td colspan="7" class="empty">暂无待确认的问题。若部门文档已更新，请先完成问题抽取或导入；若只查看当前正式映射，请看映射工作库。</td></tr>';
       rowsEl.querySelectorAll('[data-review-save]').forEach(function(button) {
         button.addEventListener('click', function() {
           saveProcessGovernanceCandidateReview(button);
@@ -3787,7 +4097,7 @@
       var runId = button.dataset.runId || '';
       var stableKey = button.dataset.stableKey || '';
       if (!row || !runId || !stableKey) {
-        showToast('候选复核项信息不完整', 'error');
+        showToast('这条问题记录的信息不完整', 'error');
         return;
       }
       var payload = {};
@@ -3800,11 +4110,11 @@
           method: 'PUT',
           body: JSON.stringify(payload)
         });
-        showToast('候选复核已保存');
+        showToast('确认结果已保存');
         var refreshed = await loadProcessGovernanceCandidateReview(state.pgSelectedDept || '');
         renderProcessGovernanceCandidateReview(refreshed, state.pgSelectedDept || '');
       } catch (error) {
-        showToast(error.message || '候选复核保存失败', 'error');
+        showToast(error.message || '确认结果保存失败', 'error');
       } finally {
         button.disabled = false;
       }
@@ -4060,7 +4370,7 @@
         document.getElementById('pgMappingWorkspaceRows').innerHTML = '<tr><td colspan="8" class="empty">暂无映射工作库记录</td></tr>';
         document.getElementById('pgMappingTodoRows').innerHTML = '<tr><td colspan="8" class="empty">暂无流程映射待办</td></tr>';
         document.getElementById('pgSourceCoverageRows').innerHTML = '<tr><td colspan="7" class="empty">暂无源文件覆盖记录</td></tr>';
-        document.getElementById('pgCandidateReviewRows').innerHTML = '<tr><td colspan="7" class="empty">暂无候选映射复核项</td></tr>';
+        document.getElementById('pgCandidateReviewRows').innerHTML = '<tr><td colspan="7" class="empty">暂无待确认的问题。若部门文档已更新，请先完成问题抽取或导入；若只查看当前正式映射，请看映射工作库。</td></tr>';
         document.getElementById('pgMdmRequirementRows').innerHTML = '<tr><td colspan="7" class="empty">暂无主数据对象候选</td></tr>';
         document.getElementById('pgEvidenceRows').innerHTML = '<tr><td colspan="8" class="empty">暂无证据链记录</td></tr>';
       }
@@ -5364,6 +5674,11 @@
       if (status) params += '&employment_status=' + status;
       if (search) params += '&search=' + encodeURIComponent(search);
       var data = await api('/api/persons?' + params);
+      var personRows = data.rows || [];
+      setActionMetric('personMetricActive', personRows.filter(function(row) { return row.employment_status === 'active'; }).length);
+      setActionMetric('personMetricAttention', personRows.filter(function(row) { return !row.org_unit_name || !row.position_name; }).length);
+      setActionMetric('personMetricShown', personRows.length);
+      setActionMetric('personMetricTotal', personRows.length);
       document.getElementById('personTableBody').innerHTML = (data.rows || []).map(function(r) {
         return '<tr><td><code>' + escHtml(r.employee_no) + '</code></td><td>' + escHtml(r.person_name) + '</td><td>' + escHtml(r.org_unit_name || '-') + '</td><td>' + escHtml(r.position_name || '-') + '</td><td>' + escHtml(r.mobile || '-') + '</td><td>' + escHtml(r.email || '-') + '</td><td>' + escHtml(r.employment_status) + '</td><td>' + escHtml(r.status) + '</td><td>' +
           '<a href="#" onclick="navigateTo(\'detail\',{tab:\'persons\',type:\'person\',id:\'' + escHtml(r.employee_no) + '\'});return false">详情</a>' +
@@ -5485,10 +5800,18 @@
     // ── Quality Tab ──
     async function loadQualityDashboard() {
       var data = await api('/api/quality/dashboard');
-      document.getElementById('qOrgs').textContent = (data.org_person || {}).org_units || 0;
-      document.getElementById('qPersons').textContent = (data.org_person || {}).persons || 0;
-      document.getElementById('qProducts').textContent = (data.product || {}).total || 0;
-      document.getElementById('qExtIds').textContent = (data.integration || {}).external_identities || 0;
+      var orgs = (data.org_person || {}).org_units || 0;
+      var persons = (data.org_person || {}).persons || 0;
+      var products = (data.product || {}).total || 0;
+      var extIds = (data.integration || {}).external_identities || 0;
+      document.getElementById('qOrgs').textContent = orgs;
+      document.getElementById('qPersons').textContent = persons;
+      document.getElementById('qProducts').textContent = products;
+      document.getElementById('qExtIds').textContent = extIds;
+      setActionMetric('qualityMetricAttention', Math.max(0, products - extIds));
+      setActionMetric('qualityMetricPersons', persons);
+      setActionMetric('qualityMetricProducts', products);
+      setActionMetric('qualityMetricExtIds', extIds);
     }
 
     async function loadGoldenSourceProgress() {

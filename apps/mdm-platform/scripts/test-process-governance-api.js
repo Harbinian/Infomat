@@ -199,6 +199,7 @@ async function main() {
       MDM_DB_QUIET: '1',
       MDM_IDENTITY_READ_MODEL: '',
       PROCESS_GOVERNANCE_READ_MODEL: '',
+      PROCESS_CANDIDATE_REVIEW_STORE: 'artifact',
       PROCESS_CANDIDATE_ARTIFACTS_DIR: candidateArtifactsDir
     },
     stdio: ['ignore', 'pipe', 'pipe']
@@ -283,6 +284,7 @@ async function main() {
 
     const candidateRuns = await request('/api/process-governance/candidate-review/runs', {}, cookie);
     assert.strictEqual(candidateRuns.res.status, 200);
+    assert.strictEqual(candidateRuns.body.items.length, 1);
     assert.strictEqual(candidateRuns.body.items[0].run_id, 'review-run-001');
     assert.strictEqual(candidateRuns.body.items[0].candidate_count, 1);
 
@@ -293,7 +295,9 @@ async function main() {
     assert.strictEqual(candidateReview.body.groups[0].documents[0].document_name, '产品设计需求定义管理程序.docx');
     assert.strictEqual(candidateReview.body.groups[0].documents[0].types[0].candidate_type, '角色待确认');
     assert.strictEqual(candidateReview.body.items[0].definition_status, '原文定义不足');
-    assert.ok(candidateReview.body.items[0].source_label.includes('内部锚点P71'));
+    assert.strictEqual(candidateReview.body.items[0].source_label.includes('内部锚点P71'), false);
+    assert.strictEqual(candidateReview.body.items[0].source_label.includes('原文位置待核对'), false);
+    assert.strictEqual(candidateReview.body.items[0].source_label.includes('第5.2条'), true);
     assert.strictEqual(candidateReview.body.items[0].source_label.includes('第71页'), false);
     assert.strictEqual(candidateReview.body.items[0].source_label.includes('段落P71'), false);
 
