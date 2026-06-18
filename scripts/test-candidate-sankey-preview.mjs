@@ -23,7 +23,7 @@ try {
       id: 'CAND-L3-001',
       department: '工程技术部',
       source_file:
-        'docs/norms/工程技术部业务资料/12.0-集成研发/DOPC462862-64工程数据集审签和发放管理标准/工程数据集审签和发放管理标准.docx.md',
+        'docs/norms/工程技术部业务资料/12.0-集成研发/DOPC462862-64工程数据集审签和发放管理标准/工程数据集审签和发放管理标准.docx.md.md',
       source_anchor: 'P14',
       candidate_type: '候选L3',
       content: '工程数据集审签和发放管理标准',
@@ -35,7 +35,7 @@ try {
       id: 'CAND-A1-001',
       department: '工程技术部',
       source_file:
-        'docs/norms/工程技术部业务资料/12.0-集成研发/DOPC462862-64工程数据集审签和发放管理标准/工程数据集审签和发放管理标准.docx.md',
+        'docs/norms/工程技术部业务资料/12.0-集成研发/DOPC462862-64工程数据集审签和发放管理标准/工程数据集审签和发放管理标准.docx.md.md',
       source_anchor: 'P14',
       candidate_type: '候选A1',
       content: '组织工程数据集审签',
@@ -138,8 +138,9 @@ try {
   assert.match(html, /归档要求待补/);
   assert.match(html, /角色待确认/);
   assert.match(html, /工程数据集审签和发放管理标准/);
-  assert.match(html, /内部锚点P14/);
-  assert.match(html, /原文定位不足/);
+  assert.doesNotMatch(html, /内部锚点P14/);
+  assert.doesNotMatch(html, /原文定位不足/);
+  assert.match(html, /原文位置待核对/);
   assert.doesNotMatch(html, /第14页/);
   assert.doesNotMatch(html, /段落P14/);
   assert.match(html, /表01第2行/);

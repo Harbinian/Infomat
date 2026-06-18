@@ -64,11 +64,29 @@ const sourceCoverageRenderEnd = html.indexOf('function renderProcessGovernanceMd
 const sourceCoverageRenderSnippet = html.slice(sourceCoverageRenderStart, sourceCoverageRenderEnd);
 assert.ok(sourceCoverageRenderSnippet.includes('覆盖记录'), 'source coverage meta should describe rows as coverage records');
 assert.ok(!sourceCoverageRenderSnippet.includes('/ 共 '), 'source coverage meta should not present a questionable global total');
+assert.ok(html.includes('待确认的问题'), 'candidate review should be named in plain business language');
+assert.ok(html.includes('这里不是正式映射库'), 'candidate review should explain that rows are not official mappings');
+assert.ok(html.includes('<th>在哪发现的</th>'), 'candidate review source column should use plain wording');
+assert.ok(html.includes('<th>哪里有问题</th>'), 'candidate review content column should use plain wording');
+assert.ok(html.includes('<th>是哪种问题</th>'), 'candidate review issue column should use plain wording');
+assert.ok(html.includes('<th>证据有没有问题</th>'), 'candidate review evidence column should use plain wording');
+assert.ok(html.includes('<th>请你确认</th>'), 'candidate review action column should use plain wording');
+assert.ok(html.includes('这是不是个问题'), 'candidate review decision copy should ask users to confirm the problem');
+assert.ok(html.includes('证据有没有问题'), 'candidate review evidence copy should ask users to confirm evidence quality');
+assert.ok(html.includes('要不要修改原文'), 'candidate review should ask users to decide whether source files need changes');
+assert.ok(html.includes('是哪种问题：'), 'candidate review groups should name issue types plainly');
+assert.ok(!html.includes('<th>候选类型</th>'), 'candidate review should not expose candidate type as a table header');
+assert.ok(!html.includes('<th>候选内容</th>'), 'candidate review should not expose candidate content as a table header');
+assert.ok(!html.includes('<th>定义充分性</th>'), 'candidate review should not expose definition sufficiency as a table header');
+assert.ok(!html.includes('<th>来源锚点</th>'), 'candidate review should not expose source anchor as a table header');
+assert.ok(!html.includes('线索复核') && !html.includes('这条线索') && !html.includes('暂无待确认线索'), 'candidate review should not expose clue-style internal wording');
+assert.ok(!html.includes('是哪类问题') && !html.includes('保存复核'), 'candidate review should use confirmation wording instead of review jargon');
+assert.ok(!html.includes('回源') && !html.includes('回到原文修改'), 'process governance should say 修改原文 instead of 回源');
 assert.ok(html.includes('主数据对象候选'), 'process governance should name MDM candidates as candidates');
 assert.ok(html.includes('pg-mdm-guide'), 'MDM candidate section should include visual guidance');
 assert.ok(html.includes('候选对象') && html.includes('关键字段') && html.includes('证据引用') && html.includes('治理要求'), 'MDM candidate guidance should show the review path');
 assert.ok(html.includes('证据链'), 'process governance should name evidence chain view');
-assert.ok(html.includes('回源文件整改后重新导入'), 'process governance should guide users back to source files instead of editing docs/norms in MDM');
+assert.ok(html.includes('修改原文文件后重新导入'), 'process governance should guide users to update source files instead of editing docs/norms in MDM');
 assert.ok(
   html.includes('qualityView: query.view') && html.includes('finding: query.finding') && html.includes('caseId: query.case') && html.includes('mappingTodoId: query.todo'),
   'process governance should understand quality and mapping deep links'

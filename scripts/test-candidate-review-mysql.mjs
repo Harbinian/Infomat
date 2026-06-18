@@ -34,7 +34,7 @@ writeFileSync(
         id: 'CAND-APPROVAL',
         stable_key: 'approval-chain-001',
         department: '财务部',
-        source_file: 'docs/norms/财务部业务资料/GLTX-CW-01-A财务成本核算管理程序.docx.md',
+        source_file: 'docs/norms/财务部业务资料/GLTX-CW-01-A财务成本核算管理程序.docx.md.md',
         source_anchor: 'GLTX-CW-01-A §5.4 P71',
         candidate_type: '审批链待确认',
         content: '盈亏处理需查明原因，按照规定审批权限报有关部门审核批准',
@@ -53,7 +53,7 @@ writeFileSync(
   join(runDir, 'chunks.jsonl'),
   JSON.stringify({
     chunk_id: 'test-P0071',
-    source_file: 'docs/norms/财务部业务资料/GLTX-CW-01-A财务成本核算管理程序.docx.md',
+    source_file: 'docs/norms/财务部业务资料/GLTX-CW-01-A财务成本核算管理程序.docx.md.md',
     doc_no: 'GLTX-CW-01-A',
     clause: '5.4',
     paragraph_id: 'P71',
@@ -95,7 +95,7 @@ assert.equal(schema.includes('correction_note'), false, 'candidate review schema
 const bundle = loadCandidateRunBundle(runDir);
 assert.equal(bundle.run.run_id, 'test-candidate-review-mysql');
 assert.equal(bundle.items.length, 1);
-assert.equal(bundle.items[0].document_name, 'GLTX-CW-01-A财务成本核算管理程序.docx.md');
+assert.equal(bundle.items[0].document_name, 'GLTX-CW-01-A财务成本核算管理程序.docx.md.md');
 assert.equal(bundle.items[0].source_excerpts.length, 1);
 assert.equal(bundle.items[0].source_excerpts[0].raw_text.includes('盈亏处理需查明原因'), true);
 
@@ -113,22 +113,23 @@ const highlighted = highlightEvidenceHtml(
 assert.ok(highlighted.includes('<mark>盈亏处理需查明原因</mark>'), 'evidence text should highlight candidate phrase');
 
 const businessSource = formatSourceForBusiness(
-  'docs/norms/财务部业务资料/GLTX-CW-01-A财务成本核算管理程序.docx.md',
+  'docs/norms/财务部业务资料/GLTX-CW-01-A财务成本核算管理程序.docx.md.md',
   'GLTX-CW-01-A §5.4 P71',
 );
 assert.equal(
   businessSource,
-  'GLTX-CW-01-A财务成本核算管理程序.docx.md · 第5.4条 · 内部锚点P71',
-  'business source should hide parent directories and keep Pxx as an internal extraction anchor, not page or original paragraph',
+  'GLTX-CW-01-A财务成本核算管理程序.docx.md.md · 第5.4条',
+  'business source should hide parent directories and hide Pxx extraction anchors from business users',
 );
 assert.equal(businessSource.includes('docs/norms'), false, 'business source should not expose parent directories');
+assert.equal(businessSource.includes('内部锚点P71'), false, 'internal extraction anchors must not be displayed to business users');
 assert.equal(businessSource.includes('第71页'), false, 'paragraph ids must not be displayed as pages');
 assert.equal(businessSource.includes('段落P71'), false, 'internal extraction anchors must not be displayed as original paragraphs');
 assert.equal(businessSource.includes('块号P71'), false, 'internal extraction anchors must not be displayed as original block ids');
 assert.equal(
   formatSourceForBusiness('制度.docx', 'P71'),
-  '制度.docx · 内部锚点P71 · 原文定位不足',
-  'Pxx without real page, clause, or table location should be marked as insufficient original location',
+  '制度.docx · 原文位置待核对',
+  'Pxx without real page, clause, or table location should be shown as a plain location warning',
 );
 assert.equal(formatSourceForBusiness('制度.docx', 'page=71 §5.4'), '制度.docx · 第5.4条 · 第71页');
 assert.equal(documentNameFromSource('docs/norms/财务部业务资料/制度.docx'), '制度.docx');
@@ -143,7 +144,7 @@ const grouped = groupCandidatesForReview([
   { ...bundle.items[0], stable_key: 'other', department: '财务部', document_name: '制度B.docx', candidate_type: '角色待确认' },
 ]);
 assert.equal(grouped[0].department, '财务部');
-const financeDocGroup = grouped[0].documents.find((doc) => doc.document_name === 'GLTX-CW-01-A财务成本核算管理程序.docx.md');
+const financeDocGroup = grouped[0].documents.find((doc) => doc.document_name === 'GLTX-CW-01-A财务成本核算管理程序.docx.md.md');
 const otherDocGroup = grouped[0].documents.find((doc) => doc.document_name === '制度B.docx');
 assert.ok(financeDocGroup, 'grouping should include the source document name');
 assert.ok(otherDocGroup, 'grouping should separate another document');

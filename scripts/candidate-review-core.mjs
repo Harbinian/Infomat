@@ -230,10 +230,9 @@ export function formatSourceForBusiness(sourceFile, sourceAnchor) {
   const anchor = parseAnchor(sourceAnchor);
   if (anchor.clause) parts.push(`第${anchor.clause}条`);
   if (anchor.page) parts.push(`第${anchor.page}页`);
-  if (anchor.paragraph_id) parts.push(`内部锚点${anchor.paragraph_id}`);
   if (anchor.table_id) parts.push(anchor.table_id.replace(/^T/i, '表'));
   if (anchor.paragraph_id && !anchor.clause && !anchor.page && !anchor.table_id) {
-    parts.push('原文定位不足');
+    parts.push('原文位置待核对');
   }
 
   if (!parts.length && sourceAnchor) {
@@ -261,7 +260,7 @@ function humanizeAnchor(anchorText) {
     .replace(/§\s*([0-9]+(?:\.[0-9]+)*)/g, '第$1条')
     .replace(/\bpage\s*=?\s*(\d+)\b/gi, '第$1页')
     .replace(/第?(\d+)页/g, '第$1页')
-    .replace(/\bP(\d+)\b/gi, '内部锚点P$1')
+    .replace(/\bP(\d+)\b/gi, '原文位置待核对')
     .replace(/\bT(\d+)\b/gi, '表$1')
     .trim();
 }
@@ -972,9 +971,8 @@ export function buildReviewAppHtml() {
       const table = String(sourceAnchor || '').match(/\\bT(\\d+)\\b/i)?.[1] || '';
       if (clause) parts.push('第' + clause + '条');
       if (page) parts.push('第' + page + '页');
-      if (paragraph) parts.push('内部锚点P' + paragraph);
       if (table) parts.push('表' + table);
-      if (paragraph && !clause && !page && !table) parts.push('原文定位不足');
+      if (paragraph && !clause && !page && !table) parts.push('原文位置待核对');
       return parts.join(' · ') || humanizeAnchor(sourceAnchor) || '来源未标注';
     }
 
@@ -983,7 +981,7 @@ export function buildReviewAppHtml() {
         .replace(/§\\s*([0-9]+(?:\\.[0-9]+)*)/g, '第$1条')
         .replace(/\\bpage\\s*=?\\s*(\\d+)\\b/gi, '第$1页')
         .replace(/第?(\\d+)页/g, '第$1页')
-        .replace(/\\bP(\\d+)\\b/gi, '内部锚点P$1')
+        .replace(/\\bP(\\d+)\\b/gi, '原文位置待核对')
         .replace(/\\bT(\\d+)\\b/gi, '表$1')
         .trim();
     }

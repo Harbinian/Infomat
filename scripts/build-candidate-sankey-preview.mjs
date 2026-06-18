@@ -107,10 +107,10 @@ function humanizeAnchor(anchor) {
   if (!text) return '未标注位置';
   const hasInternalAnchor = /\bP\s*\d+\b/i.test(text);
   const hasOriginalLocator = /§\s*[0-9]|page\s*=?\s*\d+|第?\d+页|\bT\s*\d+/i.test(text);
-  text = text.replace(/\bP\s*(\d+)\b/gi, '内部锚点P$1');
+  text = text.replace(/\bP\s*(\d+)\b/gi, '原文位置待核对');
   text = text.replace(/\bR\s*(\d+)\b/gi, '第$1行');
   text = text.replace(/\s+/g, '');
-  if (hasInternalAnchor && !hasOriginalLocator) return `${text} · 原文定位不足`;
+  if (hasInternalAnchor && !hasOriginalLocator) return '原文位置待核对';
   return text;
 }
 

@@ -102,7 +102,7 @@ async function main() {
     'function renderProcessGovernance()',
     'function renderProcessGovernanceCandidateReview',
     'function renderCandidateReviewGroupedRows',
-    '候选映射复核',
+    '待确认的问题',
     'function saveProcessGovernanceCandidateReview',
     "method: 'PUT'",
     'data-review-field',
@@ -160,9 +160,86 @@ async function main() {
   assert.ok(!html.includes('承载最多'), 'frontend copy should avoid evaluative system wording');
   assert.ok(!html.includes('主用系统'), 'frontend copy should avoid evaluative system wording');
   assert.ok(!html.includes('出勤'), 'governance activity copy should not use attendance wording');
+  function countOccurrences(needle) {
+    return html.split(needle).length - 1;
+  }
+  [
+    'id="roleWorkbenchActivityHeatmap"',
+    'id="roleWorkbenchActivityDetail"',
+    'id="dashboardActivityHeatmap"',
+    'id="dashboardActivityScope"',
+    'id="dashboardActivityDepartment"',
+    'id="dashboardActivityUser"',
+    'id="departmentActivitySummary"',
+    'id="userActivitySummary"',
+    'function activityLevel',
+    'function loadRoleWorkbenchActivity',
+    'function loadDashboardActivity'
+  ].forEach(needle => assert.strictEqual(countOccurrences(needle), 1, `frontend should contain exactly one ${needle}`));
+  [
+    'class="panel compact-panel"',
+    'class="action-metrics"',
+    'class="action-metric primary"',
+    'class="compact-toolbar"',
+    'dense-split',
+    'class="compact-form-panel"',
+    'class="compact-table-panel"',
+    'data-action-metric="todos-pending"',
+    'data-action-metric="terms-pending"',
+    'data-action-metric="conflicts-open"',
+    'data-action-metric="data-map-fields"',
+    'data-action-metric="quality-attention"',
+    'function renderActionMetrics'
+  ].forEach(needle => assert.ok(html.includes(needle), `missing compact layout hook ${needle}`));
+  [
+    'className = \'detail-sticky-head\'',
+    'function visibleDetailTableContainers',
+    '.panel.on .table-container, .panel.on .tw, .page.on .table-container, .page.on .tw',
+    'function activeDetailTableContainer',
+    'function scheduleDetailStickyTableHeader',
+    "window.addEventListener('scroll', scheduleDetailStickyTableHeader, true)"
+  ].forEach(needle => assert.ok(html.includes(needle), `missing detail table sticky header hook ${needle}`));
   assert.ok(!html.includes('prompt('), 'maintenance create/edit flows should use routed forms instead of native prompts');
   assert.ok(!html.includes('data-correction-fragment'), 'candidate review must not restore click-to-concat correction fragments');
   assert.ok(!html.includes('点选标签生成修正意见'), 'candidate review must not restore click-to-concat correction copy');
+  [
+    '<th>候选类型</th>',
+    '<th>候选内容</th>',
+    '<th>定义充分性</th>',
+    '<th>来源锚点</th>',
+    '候选类型：',
+    '待确认的流程线索',
+    '线索复核',
+    '这条线索',
+    '暂无待确认线索',
+    '<th>在哪里发现</th>',
+    '<th>问题在哪</th>',
+    '<th>哪类问题</th>',
+    '<th>证据怎么看</th>',
+    '是哪类问题',
+    '保存复核',
+    '回源',
+    '回到原文修改',
+    '回到正式映射文件修改',
+    '回到哪个部门映射文件'
+  ].forEach(needle => assert.ok(!html.includes(needle), `candidate review should not expose internal wording ${needle}`));
+  [
+    '<th>在哪发现的</th>',
+    '<th>哪里有问题</th>',
+    '<th>是哪种问题</th>',
+    '<th>证据有没有问题</th>',
+    '<th>请你确认</th>',
+    '这里不是正式映射库',
+    '每一条问题先说清楚',
+    '这是不是个问题',
+    '证据有没有问题',
+    '要不要修改原文',
+    '修改原文文件后重新导入',
+    '是哪种问题：'
+  ].forEach(needle => assert.ok(html.includes(needle), `candidate review should use plain wording ${needle}`));
+  assert.ok(html.includes('.table-container thead th') && html.includes('position: sticky') && html.includes('top: 0'), 'detail table headers should stay visible while scrolling');
+  assert.ok(html.includes('.table-container th, .table-container td') && html.includes('border-right'), 'detail table cells should show vertical grid lines');
+  assert.ok(html.includes('border-collapse: separate') && html.includes('border-spacing: 0'), 'detail tables should use separate borders for visible cells and sticky headers');
   assert.ok(!html.includes('id="ouNewBtn"'), 'organization structure should not expose a manual create button');
   assert.ok(!html.includes('+ 新增组织'), 'organization structure should not show manual create copy');
   assert.ok(!html.includes("type:'orgUnit',id:'new'"), 'organization structure should not route to a manual create form');
