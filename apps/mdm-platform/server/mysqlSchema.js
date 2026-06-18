@@ -500,6 +500,40 @@ CREATE TABLE IF NOT EXISTS process_mapping_todo_events (
     REFERENCES process_mapping_todos(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS terminology_term_types (
+  code VARCHAR(64) PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  description TEXT NULL,
+  sort_order INT NOT NULL DEFAULT 0,
+  active TINYINT NOT NULL DEFAULT 1,
+  UNIQUE KEY uq_terminology_term_types_name (name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS terminology_terms (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  term VARCHAR(255) NOT NULL,
+  term_type_code VARCHAR(64) NOT NULL DEFAULT 'noun',
+  definition TEXT NULL,
+  scope VARCHAR(255) NULL,
+  forbidden VARCHAR(255) NULL,
+  process_mapping_record_id BIGINT NULL,
+  status VARCHAR(32) NOT NULL DEFAULT 'pending',
+  created_by BIGINT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  approved_by BIGINT NULL,
+  approved_at TIMESTAMP NULL,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_terminology_terms_term (term),
+  INDEX idx_terminology_terms_type (term_type_code),
+  INDEX idx_terminology_terms_status (status),
+  INDEX idx_terminology_terms_process (process_mapping_record_id),
+  CHECK (status IN ('pending','approved','rejected')),
+  CONSTRAINT fk_terminology_terms_type FOREIGN KEY (term_type_code)
+    REFERENCES terminology_term_types(code) ON UPDATE CASCADE,
+  CONSTRAINT fk_terminology_terms_process FOREIGN KEY (process_mapping_record_id)
+    REFERENCES process_mapping_records(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS data_map_objects (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
   object_key VARCHAR(180) NOT NULL,

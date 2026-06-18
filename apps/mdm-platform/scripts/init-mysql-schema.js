@@ -2,6 +2,7 @@
 const mysql = require('mysql2/promise');
 const { mysqlConfigFromEnv, redactMysqlConfig } = require('../server/mysqlConfig');
 const { mdmMysqlSchemaSql, splitSqlStatements } = require('../server/mysqlSchema');
+const { seedDefaultTerminologyTermTypes } = require('../server/terminologyMysqlRepository');
 
 async function main() {
   const config = mysqlConfigFromEnv();
@@ -10,11 +11,13 @@ async function main() {
     for (const statement of splitSqlStatements(mdmMysqlSchemaSql())) {
       await pool.execute(statement);
     }
+    await seedDefaultTerminologyTermTypes(pool);
     for (const migrationKey of [
       '2026-06-16-process-candidate-review',
       '2026-06-16-process-governance-read-model',
       '2026-06-17-identity-rbac-read-model',
-      '2026-06-18-data-map-field-domain'
+      '2026-06-18-data-map-field-domain',
+      '2026-06-18-terminology-domain'
     ]) {
       await pool.execute(
         `INSERT INTO schema_migrations (migration_key)

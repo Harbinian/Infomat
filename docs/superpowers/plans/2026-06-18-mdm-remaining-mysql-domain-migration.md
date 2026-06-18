@@ -18,7 +18,7 @@
 
 ## Migration Order
 
-- [ ] **Task 1: Terminology domain**
+- [x] **Task 1: Terminology domain**
   - 新增独立 MySQL 术语 schema 与 `terminologyMysqlRepository`。
   - `/api/terminology` 保持现有 API 路径和响应语义，但运行态不再读 SQLite `terms`。
   - 不将旧术语治理数据悄悄合并到 `data_map_terms`；`data_map_terms` 只服务字段命名规则和 Data Map 字段域校验。
@@ -94,3 +94,4 @@
 
 - 2026-06-18：已嗅探当前 `master` 合并后的剩余 SQLite 表面。核心遗留点集中在 `terminology`、`mappings`、`conflicts`、`todos`、`versions`、`activity` 以及部分主数据 CRUD 路由。
 - 2026-06-18：`docs/norms` 在合并和计划新增前保持无差异。
+- 2026-06-18：术语治理已新增独立 MySQL schema 与 `terminologyMysqlRepository`；`/api/terminology`、`/api/terminology/types` 改走 repository，`/api/terminology/processes` 读取流程治理 MySQL 读模型 `process_mapping_records`，不再读取 SQLite `terms`。新增 `test:terminology-mysql` 并纳入 `test:mainline`。
