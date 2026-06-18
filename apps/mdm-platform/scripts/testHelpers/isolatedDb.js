@@ -60,4 +60,11 @@ function stopServer(child, timeoutMs = 2000) {
   });
 }
 
-module.exports = { testDbPath, cleanupDb, stopServer };
+function legacyTestEnv(overrides = {}) {
+  const env = { ...process.env, ...overrides };
+  delete env.MDM_IDENTITY_READ_MODEL;
+  delete env.PROCESS_GOVERNANCE_READ_MODEL;
+  return env;
+}
+
+module.exports = { testDbPath, cleanupDb, stopServer, legacyTestEnv };

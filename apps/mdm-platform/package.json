@@ -23,6 +23,9 @@
     "test:activity": "node scripts/test-activity-heatmap-api.js && node scripts/test-activity-heatmap-mysql-identity-api.js",
     "test:field-entries-mysql-identity": "node scripts/test-field-entries-mysql-identity-api.js",
     "test:field-identities-mysql-identity": "node scripts/test-field-identities-mysql-identity-api.js",
+    "test:conflicts-mysql-identity": "node scripts/test-conflicts-mysql-identity-api.js",
+    "test:mappings-mysql-identity": "node scripts/test-mappings-mysql-identity-api.js",
+    "test:terminology-mysql-identity": "node scripts/test-terminology-mysql-identity-api.js",
     "test:role-workbench-mysql": "node scripts/test-role-workbench-mysql-api.js && node scripts/test-role-workbench-process-governance-mysql-api.js",
     "test:page-workflows": "node scripts/test-page-workflows-api.js",
     "test:views": "node scripts/test-views-sankey-filters.js",
@@ -64,7 +67,7 @@
     "test:process-frontend": "node scripts/test-process-governance-frontend.js",
     "test:process-field-links": "node scripts/test-process-governance-field-links.js",
     "test:process-governance": "node scripts/test-db-path-isolation.js && node scripts/test-process-governance-org-sync.js && node scripts/test-process-governance-schema.js && node scripts/test-process-governance-import.js && node scripts/test-process-governance-quality-import.js && node scripts/test-process-mapping-workspace-import.js && node scripts/test-process-governance-api.js && node scripts/test-process-governance-mysql-repository.js && node scripts/test-process-governance-mysql-import.js && node scripts/test-process-governance-mysql-smoke.js && node scripts/test-process-governance-sankey-mysql-api.js && node scripts/test-process-governance-mysql-identity-api.js && node scripts/test-process-candidate-review-mysql.js && node scripts/test-process-candidate-review-api.js && node scripts/test-process-governance-frontend.js && node scripts/test-process-governance-field-links.js",
-    "test:mainline": "node scripts/test-organization-structure-sync.js && node scripts/test-roster-users-import.js && node scripts/test-product-routes.js && node scripts/test-role-workbench-api.js && node scripts/test-role-workbench-mysql-api.js && node scripts/test-role-workbench-process-governance-mysql-api.js && node scripts/test-identity-mysql-repository.js && node scripts/test-org-me-mysql-api.js && node scripts/test-roles-mysql-api.js && node scripts/test-auth-mysql-permission.js && npm run test:access-mysql && node scripts/test-import-rbac-mysql-api.js && npm run test:field-entries-mysql-identity && npm run test:field-identities-mysql-identity && node scripts/test-mainline-stability.js",
+    "test:mainline": "node scripts/test-organization-structure-sync.js && node scripts/test-roster-users-import.js && node scripts/test-product-routes.js && node scripts/test-role-workbench-api.js && node scripts/test-role-workbench-mysql-api.js && node scripts/test-role-workbench-process-governance-mysql-api.js && node scripts/test-identity-mysql-repository.js && node scripts/test-org-me-mysql-api.js && node scripts/test-roles-mysql-api.js && node scripts/test-auth-mysql-permission.js && npm run test:access-mysql && node scripts/test-import-rbac-mysql-api.js && npm run test:field-entries-mysql-identity && npm run test:field-identities-mysql-identity && npm run test:conflicts-mysql-identity && npm run test:mappings-mysql-identity && npm run test:terminology-mysql-identity && node scripts/test-mainline-stability.js",
     "init:mysql": "node scripts/init-mysql-schema.js",
     "test:mysql-config": "node scripts/test-mysql-config.js",
     "dev": "nodemon server/index.js"
