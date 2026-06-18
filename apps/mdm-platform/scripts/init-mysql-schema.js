@@ -19,7 +19,8 @@ async function main() {
       '2026-06-18-data-map-field-domain',
       '2026-06-18-terminology-domain',
       '2026-06-18-mapping-approval-domain',
-      '2026-06-18-conflict-todo-domain'
+      '2026-06-18-conflict-todo-domain',
+      '2026-06-18-version-activity-domain'
     ]) {
       await pool.execute(
         `INSERT INTO schema_migrations (migration_key)

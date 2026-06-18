@@ -1,35 +1,48 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db');
 const { requireAuth } = require('../auth');
+const {
+  auditRepository,
+  resetAuditRepositoryFactory,
+  setAuditRepositoryFactory
+} = require('../auditMysqlRepository');
+
+function handleDbError(res, error) {
+  const code = String(error && error.code || '');
+  const message = String(error && error.message || '');
+  if (code.startsWith('ER_') || message.includes('constraint')) {
+    return res.status(400).json({ error: '数据不符合约束' });
+  }
+  console.error(error);
+  return res.status(500).json({ error: '服务器错误' });
+}
+
+function runAction(res, action) {
+  return action().catch(error => handleDbError(res, error));
+}
 
 router.get('/entity/:type/:id', requireAuth, (req, res) => {
-  const { type, id } = req.params;
-  const changeSets = db.prepare('SELECT * FROM change_set WHERE entity_type=? AND entity_id=? ORDER BY operated_at DESC').all(type, id);
-  const logs = db.prepare('SELECT * FROM version_log WHERE entity_type=? AND entity_id=? ORDER BY operated_at DESC').all(type, id);
-  res.json({ changeSets, logs });
+  return runAction(res, async () => {
+    const repo = await auditRepository();
+    return res.json(await repo.listEntityVersions(req.params.type, req.params.id));
+  });
 });
 
 router.get('/mapping/:id', requireAuth, (req, res) => {
-  const logs = db.prepare(`
-    SELECT vl.*, u.name as operator_name
-    FROM version_log vl
-    LEFT JOIN users u ON vl.operated_by = u.id
-    WHERE vl.entity_type='mapping' AND vl.entity_id=?
-    ORDER BY vl.operated_at DESC
-  `).all(req.params.id);
-  res.json(logs);
+  return runAction(res, async () => {
+    const repo = await auditRepository();
+    return res.json(await repo.listMappingVersions(req.params.id));
+  });
 });
 
 router.get('/field/:id', requireAuth, (req, res) => {
-  const logs = db.prepare(`
-    SELECT vl.*, u.name as operator_name
-    FROM version_log vl
-    LEFT JOIN users u ON vl.operated_by = u.id
-    WHERE vl.entity_type='field_entry' AND vl.entity_id=?
-    ORDER BY vl.operated_at DESC
-  `).all(req.params.id);
-  res.json(logs);
+  return runAction(res, async () => {
+    const repo = await auditRepository();
+    return res.json(await repo.listFieldVersions(req.params.id));
+  });
 });
+
+router.setAuditRepositoryFactory = setAuditRepositoryFactory;
+router.resetAuditRepositoryFactory = resetAuditRepositoryFactory;
 
 module.exports = router;

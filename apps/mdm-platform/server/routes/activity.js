@@ -1,11 +1,15 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db');
 const {
   requireAuth,
   getUserEffectivePermissionsAsync,
   getUserRoleCodesAsync
 } = require('../auth');
+const {
+  auditRepository,
+  resetAuditRepositoryFactory,
+  setAuditRepositoryFactory
+} = require('../auditMysqlRepository');
 
 const MANAGER_ROLE_CODES = new Set(['admin', 'it_lead', 'project_lead', 'data_quality']);
 const ALLOWED_SCOPES = new Set(['me', 'team', 'all']);
@@ -74,80 +78,6 @@ function buildBaseQuery(scope, req, query) {
   }
 
   return { filters, params };
-}
-
-function loadActivityRows(startDate, endDate) {
-  const sql = `
-    SELECT date(e.occurred_at) AS activity_date,
-           e.source_type,
-           e.source_label,
-           e.actor_user_id,
-           u.name AS actor_name,
-           u.employee_no,
-           COALESCE(u.department_id, e.department_id) AS department_id,
-           d.name AS department_name
-    FROM (
-      SELECT created_at AS occurred_at, actor_user_id, 'process_mapping_todo' AS source_type, '流程映射待办' AS source_label, NULL AS department_id
-      FROM process_mapping_todo_events
-      WHERE actor_user_id IS NOT NULL
-
-      UNION ALL
-      SELECT created_at, actor_user_id, 'process_quality', '流程治理质量问题', NULL
-      FROM process_governance_quality_case_events
-      WHERE actor_user_id IS NOT NULL
-
-      UNION ALL
-      SELECT created_at, operator_user_id, 'mapping_review', '映射提交/审核', NULL
-      FROM approval_history
-      WHERE operator_user_id IS NOT NULL
-
-      UNION ALL
-      SELECT operated_at, operated_by, 'mapping_version', '映射版本记录', NULL
-      FROM version_log
-      WHERE operated_by IS NOT NULL
-
-      UNION ALL
-      SELECT created_at, created_by, 'terminology', '术语创建/审核', NULL
-      FROM terms
-      WHERE created_by IS NOT NULL
-
-      UNION ALL
-      SELECT approved_at, approved_by, 'terminology', '术语创建/审核', NULL
-      FROM terms
-      WHERE approved_by IS NOT NULL AND approved_at IS NOT NULL
-
-      UNION ALL
-      SELECT resolved_at, resolved_by, 'conflict', '冲突处理', NULL
-      FROM term_conflicts
-      WHERE resolved_by IS NOT NULL AND resolved_at IS NOT NULL
-
-      UNION ALL
-      SELECT resolved_at, resolved_by, 'conflict', '冲突处理', NULL
-      FROM field_conflicts
-      WHERE resolved_by IS NOT NULL AND resolved_at IS NOT NULL
-
-      UNION ALL
-      SELECT done_at, NULL, 'todo_done', '通用待办完成', to_dept_id
-      FROM todos
-      WHERE done_at IS NOT NULL
-    ) e
-    LEFT JOIN users u ON u.id = e.actor_user_id
-    LEFT JOIN departments d ON d.id = COALESCE(u.department_id, e.department_id)
-    WHERE e.occurred_at IS NOT NULL
-      AND date(e.occurred_at) BETWEEN @startDate AND @endDate
-    ORDER BY activity_date ASC, source_type ASC
-  `;
-
-  return db.prepare(sql).all({ startDate, endDate }).map(row => ({
-    date: row.activity_date,
-    sourceType: row.source_type,
-    sourceLabel: row.source_label,
-    actorUserId: row.actor_user_id == null ? null : Number(row.actor_user_id),
-    actorName: row.actor_name || null,
-    employeeNo: row.employee_no || null,
-    departmentId: row.department_id == null ? null : Number(row.department_id),
-    departmentName: row.department_name || null
-  }));
 }
 
 function filterRows(rows, filters, params) {
@@ -247,13 +177,17 @@ router.get('/heatmap', requireAuth, async (req, res) => {
 
     const endDate = isoDate(0);
     const startDate = isoDate(-days + 1);
+    const repo = await auditRepository();
     const base = buildBaseQuery(scope, req, req.query);
-    const rows = filterRows(loadActivityRows(startDate, endDate), base.filters, base.params);
+    const rows = filterRows(await repo.listActivityRows({ startDate, endDate }), base.filters, base.params);
     return res.json(buildPayload({ scope, days, startDate, endDate, rows }));
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: '服务器错误' });
   }
 });
+
+router.setAuditRepositoryFactory = setAuditRepositoryFactory;
+router.resetAuditRepositoryFactory = resetAuditRepositoryFactory;
 
 module.exports = router;

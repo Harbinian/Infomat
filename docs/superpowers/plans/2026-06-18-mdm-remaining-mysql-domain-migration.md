@@ -36,13 +36,13 @@
   - 通用待办不再混用 SQLite 写入和 MySQL 读取；迁移后同一接口读写同库。
   - 补 `test:conflicts-mysql` 和 `test:todos-mysql`，覆盖冲突检测、解决、待办生成、领取/关闭和权限。
 
-- [ ] **Task 4: Version and activity domains**
+- [x] **Task 4: Version and activity domains**
   - 新增统一审计/版本 repository，承接旧 `change_set`、`version_log` 的运行态职责。
   - `/api/versions` 和活动热力图不再直接读 SQLite `version_log` 或 `terms`。
   - 与 Data Map 已有 `data_map_change_sets` / `data_map_version_log` 保持边界：字段域审计继续留在 Data Map，平台通用审计进入独立审计表。
   - 补 `test:versions-mysql` 和 `test:activity-mysql`。
 
-- [ ] **Task 5: Mainline cleanup**
+- [x] **Task 5: Mainline cleanup**
   - `test:mainline` 纳入术语、映射、冲突、待办、版本/活动 MySQL 定向测试。
   - 更新 `apps/mdm-platform/README.md`、`apps/mdm-platform/scripts/README.md` 和本计划执行记录。
   - 重新嗅探剩余 `require('../db')`，把人员、产品、分类、系统、组织单元等主数据对象 CRUD 登记到下一轮计划。
@@ -97,3 +97,5 @@
 - 2026-06-18：术语治理已新增独立 MySQL schema 与 `terminologyMysqlRepository`；`/api/terminology`、`/api/terminology/types` 改走 repository，`/api/terminology/processes` 读取流程治理 MySQL 读模型 `process_mapping_records`，不再读取 SQLite `terms`。新增 `test:terminology-mysql` 并纳入 `test:mainline`。
 - 2026-06-18：旧映射审批已新增 `mdm_mapping_*` MySQL schema 与 `mappingMysqlRepository`；`/api/mappings` 改走 repository factory 注入，保留旧 API 路径和基本响应形状，详情中的 `fields` 固定为空数组以避免恢复旧 `field_entries` 归属。新增 `test:mappings-mysql` 和 MySQL 身份模式测试，并纳入 `test:mainline`。
 - 2026-06-18：冲突治理和通用待办已新增 `mdm_field_conflicts`、`mdm_term_conflicts`、`mdm_conflict_assignments`、`mdm_conflict_coordination_history`、`mdm_todos`、`mdm_todo_events` MySQL schema；`/api/conflicts` 和 `/api/todos` 改走 `conflictMysqlRepository` / `todoMysqlRepository`。字段冲突检测读取 Data Map 字段域，术语冲突检测读取 `terminology_terms`，通用待办同一接口读写 `mdm_todos`。新增 `test:conflicts-mysql`、`test:todos-mysql` 和 MySQL 身份模式测试，并纳入 `test:mainline`。本地 Docker MySQL 已执行 `npm run init:mysql`、`npm run smoke:data-map-mysql` 和一次性冲突/待办真实库写读清理 smoke。
+- 2026-06-18：版本与活动域已新增 `auditMysqlRepository`、`mdm_change_sets` 和 `mdm_version_log`，承接平台通用版本记录；`/api/versions` 通过 repository 查询版本记录，活动热力图从 `process_*_events`、`mdm_mapping_approval_history`、`mdm_version_log`、`terminology_terms`、`mdm_*_conflicts` 和 `mdm_todos` 汇总治理动作，不再直接读取 SQLite `change_set`、`version_log`、`terms`、`term_conflicts`、`field_conflicts` 或 `todos`。新增 `test:versions-mysql` 和 `test:activity-mysql`，并纳入 `test:mainline`。
+- 2026-06-18：Task 5 收口已完成。`npm run test:mainline` 已覆盖术语、映射、冲突、待办、版本和活动 MySQL 定向测试；真实 MySQL 已执行 `npm run init:mysql`、`npm run smoke:data-map-mysql` 和一次性审计表写入-读回-清理 smoke。剩余 `require('../db')` 主要分布在下一轮对象：人员、产品、产品族、分类节点、系统、组织单元、组织/角色部分遗留路由、页面工作流汇总、角色工作台概览、流程删除级联、RBAC 导入和演示/旧式测试脚本。

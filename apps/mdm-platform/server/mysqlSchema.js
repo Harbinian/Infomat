@@ -894,6 +894,37 @@ CREATE TABLE IF NOT EXISTS mdm_todo_events (
     REFERENCES mdm_todos(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS mdm_change_sets (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  entity_type VARCHAR(64) NOT NULL,
+  entity_id BIGINT NOT NULL,
+  operated_by BIGINT NULL,
+  operated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  description TEXT NULL,
+  metadata_json MEDIUMTEXT NULL,
+  INDEX idx_mdm_change_sets_entity (entity_type, entity_id, operated_at),
+  INDEX idx_mdm_change_sets_operator (operated_by, operated_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS mdm_version_log (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  entity_type VARCHAR(64) NOT NULL,
+  entity_id BIGINT NOT NULL,
+  field_name VARCHAR(128) NULL,
+  old_value TEXT NULL,
+  new_value TEXT NULL,
+  operation VARCHAR(64) NOT NULL,
+  operated_by BIGINT NULL,
+  operated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  change_set_id BIGINT NULL,
+  metadata_json MEDIUMTEXT NULL,
+  INDEX idx_mdm_version_log_entity (entity_type, entity_id, operated_at),
+  INDEX idx_mdm_version_log_change_set (change_set_id),
+  INDEX idx_mdm_version_log_operator (operated_by, operated_at),
+  CONSTRAINT fk_mdm_version_log_change_set FOREIGN KEY (change_set_id)
+    REFERENCES mdm_change_sets(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS data_map_term_types (
   code VARCHAR(64) PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
