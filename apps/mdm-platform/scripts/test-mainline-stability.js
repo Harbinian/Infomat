@@ -3,6 +3,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { spawn, spawnSync } = require('child_process');
+const { legacyTestEnv } = require('./testHelpers/isolatedDb');
 const {
   LEADERSHIP_OFFICE_ASSIGNMENTS,
   ORGANIZATION_STRUCTURE_UNITS,
@@ -19,7 +20,7 @@ function runNpmScript(scriptName) {
   const args = process.env.npm_execpath ? [process.env.npm_execpath, 'run', scriptName] : ['run', scriptName];
   const result = spawnSync(command, args, {
     cwd: appRoot,
-    env: { ...process.env, MDM_DB_QUIET: process.env.MDM_DB_QUIET || '1' },
+    env: legacyTestEnv({ MDM_DB_QUIET: process.env.MDM_DB_QUIET || '1' }),
     stdio: 'inherit'
   });
   if (result.error) {
@@ -116,13 +117,12 @@ async function runMasterDataObjectSmoke() {
 
     server = spawn(process.execPath, ['server/index.js'], {
       cwd: appRoot,
-      env: {
-        ...process.env,
+      env: legacyTestEnv({
         MDM_DB_PATH: dbPath,
         MDM_DB_QUIET: '1',
         PORT: String(PORT),
         SESSION_SECRET: 'mainline-master-data-test'
-      },
+      }),
       stdio: ['ignore', 'pipe', 'pipe']
     });
 

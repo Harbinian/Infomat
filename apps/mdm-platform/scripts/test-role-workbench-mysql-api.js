@@ -2,7 +2,10 @@ const http = require('http');
 
 const { cleanupDb } = require('./testHelpers/isolatedDb');
 
+const previousIdentityReadModel = process.env.MDM_IDENTITY_READ_MODEL;
+const previousProcessReadModel = process.env.PROCESS_GOVERNANCE_READ_MODEL;
 process.env.MDM_IDENTITY_READ_MODEL = 'mysql';
+delete process.env.PROCESS_GOVERNANCE_READ_MODEL;
 
 const express = require('express');
 const db = require('../server/db');
@@ -133,4 +136,15 @@ async function main() {
 main().catch(error => {
   console.error(error.message);
   process.exit(1);
+}).finally(() => {
+  if (previousIdentityReadModel === undefined) {
+    delete process.env.MDM_IDENTITY_READ_MODEL;
+  } else {
+    process.env.MDM_IDENTITY_READ_MODEL = previousIdentityReadModel;
+  }
+  if (previousProcessReadModel === undefined) {
+    delete process.env.PROCESS_GOVERNANCE_READ_MODEL;
+  } else {
+    process.env.PROCESS_GOVERNANCE_READ_MODEL = previousProcessReadModel;
+  }
 });

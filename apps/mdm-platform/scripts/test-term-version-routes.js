@@ -91,12 +91,27 @@ async function waitForServer() {
   throw new Error('server did not start');
 }
 
+const csrfTokens = new Map();
+
+async function csrfTokenFor(cookie) {
+  if (csrfTokens.has(cookie)) return csrfTokens.get(cookie);
+  const result = await request('/api/csrf-token', {}, cookie);
+  if (result.res.status !== 200 || !result.body.csrfToken) return '';
+  csrfTokens.set(cookie, result.body.csrfToken);
+  return result.body.csrfToken;
+}
+
 async function request(routePath, options = {}, cookie = '') {
+  const method = String(options.method || 'GET').toUpperCase();
   const headers = {
     ...(options.body ? { 'Content-Type': 'application/json' } : {}),
     ...(cookie ? { Cookie: cookie } : {}),
     ...(options.headers || {})
   };
+  if (cookie && !['GET', 'HEAD', 'OPTIONS'].includes(method) && routePath !== '/api/org/login') {
+    const csrfToken = await csrfTokenFor(cookie);
+    if (csrfToken) headers['X-CSRF-Token'] = csrfToken;
+  }
   const res = await fetch(`${BASE_URL}${routePath}`, { ...options, headers });
   const text = await res.text();
   let body = {};

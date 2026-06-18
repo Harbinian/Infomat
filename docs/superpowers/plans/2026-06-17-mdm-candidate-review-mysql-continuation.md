@@ -30,6 +30,9 @@
 - 下一阶段启动后，字段台账路由已先完成身份权限层收口：`/api/field-entries` 的映射可见性、创建、编辑、删除权限判断改用 MySQL-aware 异步 helper；字段业务表仍是后续迁移对象。
 - 字段台账身份权限收口已合并到 `6cb78ce fix: use mysql identity for field entries`。
 - 字段黄金源身份路由已先完成身份权限层收口：`/api/field-identities` 的维护和确认权限判断改用 MySQL-aware 异步 helper；字段身份业务表仍是后续迁移对象。
+- 术语治理路由已先完成身份权限层收口：`/api/terminology` 的流程可见性、全局术语创建和术语维护判断改用 MySQL-aware 异步 helper；术语业务表仍是后续迁移对象。
+- 映射基础路由已先完成身份权限层收口：`/api/mappings` 的列表/详情可见性、草稿创建/维护和发布判断改用 MySQL-aware 异步 helper；映射业务表仍是后续迁移对象。
+- 冲突治理路由已先完成身份权限层收口：`/api/conflicts` 的列表全局可见、指派、协调、终裁、升级、重开、归档和 resolve 判断改用 MySQL-aware 异步 helper；冲突业务表和通知候选人筛选仍是后续迁移对象。
 - 文档治理已完成并合并到 `master`，本轮只维护与当前收尾相关的计划文档。
 
 ## Pxx 与原文定位
@@ -61,7 +64,9 @@
    - `fieldIdentities` 已先接入 MySQL-aware 身份权限判断，但字段身份业务表仍未迁 MySQL。
    - 若推进，应先补 MySQL repository/API 测试，再替换读写路径。
 2. 冲突、术语、映射基础库：
-   - `conflicts`、`terminology`、`mappings` 仍有 SQLite 查询和权限 helper 直连。
+   - `terminology` 已先接入 MySQL-aware 身份权限判断，但术语业务表仍未迁 MySQL。
+   - `mappings` 已先接入 MySQL-aware 身份权限判断，但映射业务表仍未迁 MySQL。
+   - `conflicts` 已先接入 MySQL-aware 身份权限判断，但冲突业务表、自动指派和通知候选人筛选仍未迁 MySQL。
    - 若推进，应逐域迁移，避免 MySQL 身份判断与 SQLite 业务写入混用。
 3. 导入导出与本地维护脚本：
    - `import`、`export`、本地初始化、用户导入等脚本仍服务历史 SQLite 流程或测试隔离。
@@ -96,6 +101,9 @@
 - `cd apps/mdm-platform && npm run test:security`
 - `cd apps/mdm-platform && npm run test:role-workbench`
 - `cd apps/mdm-platform && npm run test:role-workbench-mysql`
+- `cd apps/mdm-platform && npm run test:conflicts-mysql-identity`
+- `cd apps/mdm-platform && npm run test:mappings-mysql-identity`
+- `cd apps/mdm-platform && npm run test:terminology-mysql-identity`
 - `cd apps/mdm-platform && npm run test:mainline`
 - `cd apps/mdm-platform && npm run smoke:process-governance-mysql`
 - `git diff --check`

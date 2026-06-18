@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const { requireAuth, getUserEffectivePermissions } = require('../auth');
-const { getEffectiveRoleCodes, mappingVisibility } = require('../access');
+const { requireAuth, getUserEffectivePermissionsAsync } = require('../auth');
+const { getEffectiveRoleCodesAsync, mappingVisibilityAsync } = require('../access');
 
 function handleDbError(res, error) {
   if (error && (String(error.code).startsWith('SQLITE_CONSTRAINT') || String(error.message).includes('constraint failed'))) {
@@ -20,8 +20,12 @@ function runDbAction(res, action) {
   }
 }
 
-function hasAdminAccess(userId) {
-  const { permSet } = getUserEffectivePermissions(userId);
+function runAsyncAction(res, action) {
+  return action().catch(error => handleDbError(res, error));
+}
+
+async function hasAdminAccess(userId) {
+  const { permSet } = await getUserEffectivePermissionsAsync(userId);
   return permSet.has('admin:access') || permSet.has('*:*');
 }
 
@@ -38,61 +42,65 @@ function usersWithRbacPermission(permCode) {
   `).all(permCode);
 }
 
-function canCreateMappingDraft(req) {
+async function canCreateMappingDraft(req) {
   if (!req.session || !req.session.userId) return false;
-  if (hasAdminAccess(req.session.userId)) return true;
-  return getEffectiveRoleCodes(req).has('submitter');
+  if (await hasAdminAccess(req.session.userId)) return true;
+  return (await getEffectiveRoleCodesAsync(req)).has('submitter');
 }
 
 router.get('/', requireAuth, (req, res) => {
-  const { status, dept_id } = req.query;
-  const visibility = mappingVisibility('m', req);
-  let sql = `SELECT m.*, p.name as process_name, c.name as cap_name, d.name as owner_dept_name,
-             (SELECT GROUP_CONCAT(s.name, ', ') FROM mapping_systems ms JOIN systems s ON ms.system_id = s.id WHERE ms.mapping_id = m.id) as systems
-             FROM mappings m
-             JOIN processes p ON m.process_id = p.id
-             LEFT JOIN capabilities c ON p.capability_id = c.id
-             JOIN departments d ON m.owner_dept_id = d.id
-             WHERE 1=1`;
-  const params = [...visibility.params];
-  sql += visibility.sql;
+  return runAsyncAction(res, async () => {
+    const { status, dept_id } = req.query;
+    const visibility = await mappingVisibilityAsync('m', req);
+    let sql = `SELECT m.*, p.name as process_name, c.name as cap_name, d.name as owner_dept_name,
+               (SELECT GROUP_CONCAT(s.name, ', ') FROM mapping_systems ms JOIN systems s ON ms.system_id = s.id WHERE ms.mapping_id = m.id) as systems
+               FROM mappings m
+               JOIN processes p ON m.process_id = p.id
+               LEFT JOIN capabilities c ON p.capability_id = c.id
+               JOIN departments d ON m.owner_dept_id = d.id
+               WHERE 1=1`;
+    const params = [...visibility.params];
+    sql += visibility.sql;
 
-  if (status) {
-    sql += ' AND m.status=?';
-    params.push(status);
-  }
-  if (dept_id) {
-    sql += ' AND m.owner_dept_id=?';
-    params.push(dept_id);
-  }
+    if (status) {
+      sql += ' AND m.status=?';
+      params.push(status);
+    }
+    if (dept_id) {
+      sql += ' AND m.owner_dept_id=?';
+      params.push(dept_id);
+    }
 
-  sql += ' ORDER BY m.created_at DESC';
-  res.json(db.prepare(sql).all(...params));
+    sql += ' ORDER BY m.created_at DESC';
+    res.json(db.prepare(sql).all(...params));
+  });
 });
 
 router.get('/:id', requireAuth, (req, res) => {
-  const visibility = mappingVisibility('m', req);
-  const mapping = db.prepare(`
-    SELECT m.*, p.name as process_name, d.name as owner_dept_name
-    FROM mappings m
-    JOIN processes p ON m.process_id = p.id
-    JOIN departments d ON m.owner_dept_id = d.id
-    WHERE m.id=?${visibility.sql}
-  `).get(req.params.id, ...visibility.params);
-  if (!mapping) return res.status(404).json({ error: '映射不存在' });
+  return runAsyncAction(res, async () => {
+    const visibility = await mappingVisibilityAsync('m', req);
+    const mapping = db.prepare(`
+      SELECT m.*, p.name as process_name, d.name as owner_dept_name
+      FROM mappings m
+      JOIN processes p ON m.process_id = p.id
+      JOIN departments d ON m.owner_dept_id = d.id
+      WHERE m.id=?${visibility.sql}
+    `).get(req.params.id, ...visibility.params);
+    if (!mapping) return res.status(404).json({ error: '映射不存在' });
 
-  const systems = db.prepare(`
-    SELECT ms.*, s.name as system_name
-    FROM mapping_systems ms
-    JOIN systems s ON ms.system_id = s.id
-    WHERE ms.mapping_id=?
-    ORDER BY ms.sort_order
-  `).all(req.params.id);
-  const fields = db.prepare('SELECT * FROM field_entries WHERE mapping_id=? ORDER BY id').all(req.params.id);
-  const relatedDepts = db.prepare('SELECT * FROM mapping_related_departments WHERE mapping_id=?').all(req.params.id);
-  const approvalTasks = db.prepare('SELECT * FROM approval_tasks WHERE mapping_id=? ORDER BY step, id').all(req.params.id);
+    const systems = db.prepare(`
+      SELECT ms.*, s.name as system_name
+      FROM mapping_systems ms
+      JOIN systems s ON ms.system_id = s.id
+      WHERE ms.mapping_id=?
+      ORDER BY ms.sort_order
+    `).all(req.params.id);
+    const fields = db.prepare('SELECT * FROM field_entries WHERE mapping_id=? ORDER BY id').all(req.params.id);
+    const relatedDepts = db.prepare('SELECT * FROM mapping_related_departments WHERE mapping_id=?').all(req.params.id);
+    const approvalTasks = db.prepare('SELECT * FROM approval_tasks WHERE mapping_id=? ORDER BY step, id').all(req.params.id);
 
-  res.json({ ...mapping, systems, fields, relatedDepts, approvalTasks });
+    res.json({ ...mapping, systems, fields, relatedDepts, approvalTasks });
+  });
 });
 
 function mappingStatusAfterStep(step) {
@@ -159,8 +167,8 @@ function advanceToNextRunnableStep(mappingId, completedStep) {
 }
 
 router.post('/', requireAuth, (req, res) => {
-  return runDbAction(res, () => {
-    if (!canCreateMappingDraft(req)) {
+  return runAsyncAction(res, async () => {
+    if (!await canCreateMappingDraft(req)) {
       return res.status(403).json({ error: '仅报送人或管理员可创建映射草稿' });
     }
     const { process_id, description, approval_dept_id, owner_dept_id, systems = [], related_departments = [] } = req.body;
@@ -192,12 +200,12 @@ router.post('/', requireAuth, (req, res) => {
 });
 
 router.put('/:id', requireAuth, (req, res) => {
-  return runDbAction(res, () => {
+  return runAsyncAction(res, async () => {
     const { process_id, description, approval_dept_id, owner_dept_id, systems = [], related_departments = [] } = req.body;
     const mapping = db.prepare('SELECT * FROM mappings WHERE id=?').get(req.params.id);
     if (!mapping) return res.status(404).json({ error: '映射不存在' });
     if (mapping.status !== 'draft') return res.status(400).json({ error: '只能修改草稿状态' });
-    if (mapping.submitted_by !== req.session.userId && !hasAdminAccess(req.session.userId)) {
+    if (mapping.submitted_by !== req.session.userId && !await hasAdminAccess(req.session.userId)) {
       return res.status(403).json({ error: '仅创建人或管理员可修改草稿' });
     }
 
@@ -225,11 +233,11 @@ router.put('/:id', requireAuth, (req, res) => {
 });
 
 router.delete('/:id', requireAuth, (req, res) => {
-  return runDbAction(res, () => {
+  return runAsyncAction(res, async () => {
     const mapping = db.prepare('SELECT * FROM mappings WHERE id=?').get(req.params.id);
     if (!mapping) return res.status(404).json({ error: '映射不存在' });
     if (mapping.status !== 'draft') return res.status(400).json({ error: '只能删除草稿状态' });
-    if (mapping.submitted_by !== req.session.userId && !hasAdminAccess(req.session.userId)) {
+    if (mapping.submitted_by !== req.session.userId && !await hasAdminAccess(req.session.userId)) {
       return res.status(403).json({ error: '仅创建人或管理员可删除草稿' });
     }
     db.prepare('DELETE FROM mappings WHERE id=?').run(req.params.id);
@@ -440,8 +448,8 @@ router.post('/:id/review', requireAuth, (req, res) => {
 });
 
 router.post('/:id/publish', requireAuth, (req, res) => {
-  return runDbAction(res, () => {
-    if (!hasAdminAccess(req.session.userId)) return res.status(403).json({ error: '仅信息化项目组可发布' });
+  return runAsyncAction(res, async () => {
+    if (!await hasAdminAccess(req.session.userId)) return res.status(403).json({ error: '仅信息化项目组可发布' });
     const mapping = db.prepare('SELECT status FROM mappings WHERE id=?').get(req.params.id);
     if (!mapping) return res.status(404).json({ error: '映射不存在' });
     if (mapping.status !== 'final_reviewed') return res.status(409).json({ error: '仅终审完成后可发布' });

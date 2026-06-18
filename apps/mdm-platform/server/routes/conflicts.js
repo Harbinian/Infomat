@@ -1,13 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const { requireAuth, requirePermission, getUserEffectivePermissions } = require('../auth');
+const { requireAuth, requirePermission, getUserEffectivePermissions, getUserEffectivePermissionsAsync } = require('../auth');
 
 const FIELD_ENTRY_CONFLICT_FIELDS = ['note', 'field_type', 'sync_mode', 'consume_systems'];
 
-function requestHasAnyPermission(req, permissionCodes) {
+async function requestHasAnyPermissionAsync(req, permissionCodes) {
   if (!req.session || !req.session.userId) return false;
-  const { permSet } = getUserEffectivePermissions(req.session.userId);
+  const { permSet } = await getUserEffectivePermissionsAsync(req.session.userId);
   return permSet.has('*:*') || permissionCodes.some(code => permSet.has(code));
 }
 
@@ -20,20 +20,20 @@ function usersWithAnyPermission(permissionCodes) {
   return db.prepare('SELECT id, name, department_id FROM users').all().filter(user => userHasAnyPermission(user.id, permissionCodes));
 }
 
-function canViewAllConflicts(req) {
-  return requestHasAnyPermission(req, ['data:view_all', 'admin:access']);
+async function canViewAllConflictsAsync(req) {
+  return await requestHasAnyPermissionAsync(req, ['data:view_all', 'admin:access']);
 }
 
-function canManageGeneralConflict(req) {
-  return requestHasAnyPermission(req, ['conflict:manage', 'review:approve', 'admin:access']);
+async function canManageGeneralConflictAsync(req) {
+  return await requestHasAnyPermissionAsync(req, ['conflict:manage', 'review:approve', 'admin:access']);
 }
 
-function canEscalateConflict(req) {
-  return requestHasAnyPermission(req, ['conflict:escalate', 'conflict:manage', 'review:approve', 'admin:access']);
+async function canEscalateConflictAsync(req) {
+  return await requestHasAnyPermissionAsync(req, ['conflict:escalate', 'conflict:manage', 'review:approve', 'admin:access']);
 }
 
-function canDecideEscalatedConflict(req) {
-  return requestHasAnyPermission(req, ['conflict:final_decide_escalated', 'review:approve', 'admin:access']);
+async function canDecideEscalatedConflictAsync(req) {
+  return await requestHasAnyPermissionAsync(req, ['conflict:final_decide_escalated', 'review:approve', 'admin:access']);
 }
 
 function addWorkingDays(startDate, days) {
@@ -131,6 +131,10 @@ function runDbAction(res, action) {
   } catch (error) {
     return handleDbError(res, error);
   }
+}
+
+function runAsyncAction(res, action) {
+  return action().catch(error => handleDbError(res, error));
 }
 
 function applyAdoptedFieldValue(conflict, adoptedValue, userId) {
@@ -236,40 +240,42 @@ function detectConflictValues(aId, bId) {
 
 // GET / — list all conflicts, optionally filtered
 router.get('/', requireAuth, (req, res) => {
-  const { type, severity, status } = req.query;
-  const canViewAll = canViewAllConflicts(req);
+  return runAsyncAction(res, async () => {
+    const { type, severity, status } = req.query;
+    const canViewAll = await canViewAllConflictsAsync(req);
 
-  if (type === 'term') {
-    const params = [];
-    let sql = addFilters("SELECT tc.*, 'term' as conflict_type FROM term_conflicts tc", params, severity, status);
-    if (!canViewAll && !status) {
-      sql = sql.replace('WHERE 1=1', "WHERE 1=1 AND tc.status NOT IN ('archived','silenced')");
+    if (type === 'term') {
+      const params = [];
+      let sql = addFilters("SELECT tc.*, 'term' as conflict_type FROM term_conflicts tc", params, severity, status);
+      if (!canViewAll && !status) {
+        sql = sql.replace('WHERE 1=1', "WHERE 1=1 AND tc.status NOT IN ('archived','silenced')");
+      }
+      return res.json(db.prepare(sql).all(...params));
     }
-    return res.json(db.prepare(sql).all(...params));
-  }
 
-  if (type === 'field') {
-    const params = [];
-    let sql = addFilters("SELECT fc.*, 'field' as conflict_type FROM field_conflicts fc", params, severity, status);
-    if (!canViewAll && !status) {
-      sql = sql.replace('WHERE 1=1', "WHERE 1=1 AND fc.status NOT IN ('archived','silenced')");
+    if (type === 'field') {
+      const params = [];
+      let sql = addFilters("SELECT fc.*, 'field' as conflict_type FROM field_conflicts fc", params, severity, status);
+      if (!canViewAll && !status) {
+        sql = sql.replace('WHERE 1=1', "WHERE 1=1 AND fc.status NOT IN ('archived','silenced')");
+      }
+      return res.json(db.prepare(sql).all(...params));
     }
-    return res.json(db.prepare(sql).all(...params));
-  }
 
-  const termParams = [];
-  const fieldParams = [];
-  let termSql = addFilters("SELECT tc.*, 'term' as conflict_type FROM term_conflicts tc", termParams, severity, status);
-  let fieldSql = addFilters("SELECT fc.*, 'field' as conflict_type FROM field_conflicts fc", fieldParams, severity, status);
+    const termParams = [];
+    const fieldParams = [];
+    let termSql = addFilters("SELECT tc.*, 'term' as conflict_type FROM term_conflicts tc", termParams, severity, status);
+    let fieldSql = addFilters("SELECT fc.*, 'field' as conflict_type FROM field_conflicts fc", fieldParams, severity, status);
 
-  if (!canViewAll && !status) {
-    termSql = termSql.replace('WHERE 1=1', "WHERE 1=1 AND tc.status NOT IN ('archived','silenced')");
-    fieldSql = fieldSql.replace('WHERE 1=1', "WHERE 1=1 AND fc.status NOT IN ('archived','silenced')");
-  }
+    if (!canViewAll && !status) {
+      termSql = termSql.replace('WHERE 1=1', "WHERE 1=1 AND tc.status NOT IN ('archived','silenced')");
+      fieldSql = fieldSql.replace('WHERE 1=1', "WHERE 1=1 AND fc.status NOT IN ('archived','silenced')");
+    }
 
-  const termRows = db.prepare(termSql).all(...termParams);
-  const fieldRows = db.prepare(fieldSql).all(...fieldParams);
-  res.json([...termRows, ...fieldRows].sort((a, b) => String(b.created_at).localeCompare(String(a.created_at))));
+    const termRows = db.prepare(termSql).all(...termParams);
+    const fieldRows = db.prepare(fieldSql).all(...fieldParams);
+    res.json([...termRows, ...fieldRows].sort((a, b) => String(b.created_at).localeCompare(String(a.created_at))));
+  });
 });
 
 // GET /stats — conflict statistics grouped by status and severity
@@ -411,8 +417,8 @@ router.get('/:id', requireAuth, (req, res) => {
 
 // POST /:id/assign — assign owner
 router.post('/:id/assign', requireAuth, (req, res) => {
-  return runDbAction(res, () => {
-    if (!canManageGeneralConflict(req)) {
+  return runAsyncAction(res, async () => {
+    if (!await canManageGeneralConflictAsync(req)) {
       return res.status(403).json({ error: '无冲突处理权限' });
     }
     const { type } = req.query;
@@ -459,8 +465,8 @@ router.post('/:id/assign', requireAuth, (req, res) => {
 
 // PUT /:id/assign — reassign owner
 router.put('/:id/assign', requireAuth, (req, res) => {
-  return runDbAction(res, () => {
-    if (!canManageGeneralConflict(req)) {
+  return runAsyncAction(res, async () => {
+    if (!await canManageGeneralConflictAsync(req)) {
       return res.status(403).json({ error: '无冲突处理权限' });
     }
     const { type } = req.query;
@@ -487,7 +493,7 @@ router.put('/:id/assign', requireAuth, (req, res) => {
 
 // POST /:id/coordination — submit coordination result (assignee only)
 router.post('/:id/coordination', requireAuth, (req, res) => {
-  return runDbAction(res, () => {
+  return runAsyncAction(res, async () => {
     const { type } = req.query;
     const conflictType = type || 'field';
     const { result, note } = req.body;
@@ -508,7 +514,7 @@ router.post('/:id/coordination', requireAuth, (req, res) => {
     `).get(req.params.id, conflictType);
 
     if (assigneeCount.cnt === 0) return res.status(400).json({ error: '尚未指定责任人' });
-    if (!assignedParticipant && !requestHasAnyPermission(req, ['admin:access'])) {
+    if (!assignedParticipant && !await requestHasAnyPermissionAsync(req, ['admin:access'])) {
       return res.status(403).json({ error: '仅已指派协调人可提交协调结果' });
     }
 
@@ -550,7 +556,7 @@ router.post('/:id/coordination', requireAuth, (req, res) => {
 
 // POST /:id/final-decide — final decision for general or escalated conflicts
 router.post('/:id/final-decide', requireAuth, (req, res) => {
-  return runDbAction(res, () => {
+  return runAsyncAction(res, async () => {
     const { type } = req.query;
     const conflictType = type || 'field';
     const { resolution, adopted_value } = req.body;
@@ -559,11 +565,11 @@ router.post('/:id/final-decide', requireAuth, (req, res) => {
     const conflict = db.prepare(`SELECT * FROM ${table} WHERE id=?`).get(req.params.id);
     if (!conflict) return res.status(404).json({ error: '冲突不存在' });
     if (conflict.status === 'escalated') {
-      if (!canDecideEscalatedConflict(req)) {
+      if (!await canDecideEscalatedConflictAsync(req)) {
         return res.status(403).json({ error: '无升级冲突处理权限' });
       }
     } else if (conflict.status === 'coordinating') {
-      if (!canManageGeneralConflict(req)) {
+      if (!await canManageGeneralConflictAsync(req)) {
         return res.status(403).json({ error: '无一般冲突处理权限' });
       }
     } else {
@@ -588,8 +594,8 @@ router.post('/:id/final-decide', requireAuth, (req, res) => {
 
 // POST /:id/escalate — manually escalate to decision group
 router.post('/:id/escalate', requireAuth, (req, res) => {
-  return runDbAction(res, () => {
-    if (!canEscalateConflict(req)) {
+  return runAsyncAction(res, async () => {
+    if (!await canEscalateConflictAsync(req)) {
       return res.status(403).json({ error: '无冲突升级权限' });
     }
     const { type } = req.query;
@@ -618,8 +624,8 @@ router.post('/:id/escalate', requireAuth, (req, res) => {
 
 // POST /:id/reopen — reopen resolved conflict
 router.post('/:id/reopen', requireAuth, (req, res) => {
-  return runDbAction(res, () => {
-    if (!canManageGeneralConflict(req) && !canDecideEscalatedConflict(req)) {
+  return runAsyncAction(res, async () => {
+    if (!await canManageGeneralConflictAsync(req) && !await canDecideEscalatedConflictAsync(req)) {
       return res.status(403).json({ error: '无冲突重开权限' });
     }
     const { type } = req.query;
@@ -639,8 +645,8 @@ router.post('/:id/reopen', requireAuth, (req, res) => {
 
 // POST /:id/archive — archive resolved conflict (admin only)
 router.post('/:id/archive', requireAuth, (req, res) => {
-  return runDbAction(res, () => {
-    if (!requestHasAnyPermission(req, ['admin:access'])) {
+  return runAsyncAction(res, async () => {
+    if (!await requestHasAnyPermissionAsync(req, ['admin:access'])) {
       return res.status(403).json({ error: '仅管理员可归档' });
     }
     const { type } = req.query;
@@ -761,15 +767,15 @@ router.post('/detect', requirePermission('conflict:manage'), (req, res) => {
 
 // Keep existing resolve endpoint
 router.post('/:id/resolve', requireAuth, (req, res) => {
-  return runDbAction(res, () => {
+  return runAsyncAction(res, async () => {
     const { resolution, adopted_value } = req.body;
     const conflict = db.prepare('SELECT * FROM field_conflicts WHERE id=?').get(req.params.id);
     if (!conflict) return res.status(404).json({ error: '冲突不存在' });
     if (conflict.status === 'escalated') {
-      if (!canDecideEscalatedConflict(req)) {
+      if (!await canDecideEscalatedConflictAsync(req)) {
         return res.status(403).json({ error: '无升级冲突处理权限' });
       }
-    } else if (!canManageGeneralConflict(req)) {
+    } else if (!await canManageGeneralConflictAsync(req)) {
       return res.status(403).json({ error: '无一般冲突处理权限' });
     }
 
@@ -791,15 +797,15 @@ router.post('/:id/resolve', requireAuth, (req, res) => {
 
 // Keep existing term resolve endpoint
 router.post('/term/:id/resolve', requireAuth, (req, res) => {
-  return runDbAction(res, () => {
+  return runAsyncAction(res, async () => {
     const { resolution } = req.body;
     const conflict = db.prepare('SELECT * FROM term_conflicts WHERE id=?').get(req.params.id);
     if (!conflict) return res.status(404).json({ error: '冲突不存在' });
     if (conflict.status === 'escalated') {
-      if (!canDecideEscalatedConflict(req)) {
+      if (!await canDecideEscalatedConflictAsync(req)) {
         return res.status(403).json({ error: '无升级冲突处理权限' });
       }
-    } else if (!canManageGeneralConflict(req)) {
+    } else if (!await canManageGeneralConflictAsync(req)) {
       return res.status(403).json({ error: '无一般冲突处理权限' });
     }
     db.prepare("UPDATE term_conflicts SET status='resolved', resolution=?, resolved_by=?, resolved_at=datetime('now') WHERE id=?").run(
