@@ -17,9 +17,12 @@
 | `npm run test:access-mysql` | 验证 `access.js` 中角色码读取、管理员判断、全局查看、复核权限和待办处理判断的 MySQL-aware 异步 helper | 使用 fake repository，不连接真实库 |
 | `npm run test:role-workbench-mysql` | 角色工作台在 `MDM_IDENTITY_READ_MODEL=mysql` 下从 MySQL 身份读模型读取当前用户、角色、部门和权限；在 `PROCESS_GOVERNANCE_READ_MODEL=mysql` 下从流程治理 MySQL repository 读取质量问题和映射待办 | 使用 fake repository，不连接真实库 |
 | `npm run test:activity` | 治理活跃热力图 API：本人/部门/全量视图、权限边界、治理动作来源汇总，以及 `MDM_IDENTITY_READ_MODEL=mysql` 下的管理视图权限判断 | 迁移过渡期使用隔离遗留本地库和 fake identity repository |
-| `npm run test:field-entries-mysql-identity` | 字段台账仍使用遗留业务表时，验证 `MDM_IDENTITY_READ_MODEL=mysql` 下查看/创建字段的权限判断读取 MySQL 身份 helper | 迁移过渡期使用隔离遗留本地库和 fake identity repository |
-| `npm run test:field-identities-mysql-identity` | 黄金源字段身份仍使用遗留业务表时，验证 `MDM_IDENTITY_READ_MODEL=mysql` 下维护/确认权限读取 MySQL 身份 helper | 迁移过渡期使用隔离遗留本地库和 fake identity repository |
+| `npm run test:data-map-mysql` | 数据地图字段域 MySQL schema、repository 和上下文 API | 使用 fake MySQL pool / fake repository，不连接真实库 |
+| `npm run test:field-entries-mysql` | 字段台账公开接口直接读取 Data Map MySQL repository，`mapping_id` 仅作 `context_id` 别名 | 使用 fake repository，不连接真实库 |
+| `npm run test:field-identities-mysql` | 字段黄金源维护和确认接口直接读取 Data Map MySQL repository | 使用 fake repository，不连接真实库 |
+| `npm run test:data-map-import-export-mysql` | 字段导入、字段导出和黄金源进度接口直接读取 Data Map MySQL repository | 使用 fake repository 和内存 Excel，不连接真实库 |
 | `npm run smoke:process-governance-mysql` | 可选真实 MySQL 冒烟：初始化 schema、导入 `docs/company-sankey-data.json`、读回 Sankey | 只有设置 `MYSQL_HOST`、`MYSQL_USER`、`MYSQL_DATABASE` 时写 MySQL；否则跳过 |
+| `npm run smoke:data-map-mysql` | 可选真实 MySQL 冒烟：初始化 schema、写入 Data Map context、字段和黄金源并读回 | 只有设置 `MYSQL_HOST`、`MYSQL_USER`、`MYSQL_DATABASE` 时写 MySQL；否则跳过 |
 | `npm run test:mappings` | 映射草稿、字段台账、黄金源、审批流完整路径 | 迁移过渡期使用隔离遗留本地库，测试结束清理 |
 | `npm run test:project-roles` | 项目工作角色访问边界 | 迁移过渡期使用隔离遗留本地库，测试结束清理 |
 | `npm run test:frontend` | 前端静态资产和关键脚本片段 | 只读 |
@@ -39,9 +42,10 @@
 
 | 脚本 | 作用 | 副作用 |
 |---|---|---|
-| `init-mysql-schema.js` | 初始化 MySQL 中已迁移的平台 schema，当前包含身份/RBAC 表、候选复核表和流程治理读模型/待办表 | 写 MySQL，不写仓库真源 |
+| `init-mysql-schema.js` | 初始化 MySQL 中已迁移的平台 schema，当前包含身份/RBAC、候选复核、流程治理读模型/待办和数据地图字段域表 | 写 MySQL，不写仓库真源 |
 | `import-process-governance-mysql.js` | 将 `docs/company-sankey-data.json` 导入 MySQL 流程治理读模型，可用 `--a1-source` 显式补充 A1 Markdown | 写 MySQL 流程治理读模型、源文件、MDM 要求、证据和交互链表，不写流程真源 |
 | `smoke-process-governance-mysql.js` | 可选真实 MySQL 端到端 smoke：初始化、导入、读回 Sankey | 缺少 `MYSQL_HOST`、`MYSQL_USER`、`MYSQL_DATABASE` 时跳过；不读取 `MDM_DB_PATH` |
+| `smoke-data-map-mysql.js` | 可选真实 MySQL 端到端 smoke：初始化、写入 Data Map context、字段、黄金源并读回 | 缺少 `MYSQL_HOST`、`MYSQL_USER`、`MYSQL_DATABASE` 时跳过；不读取 `MDM_DB_PATH` |
 | `import-process-candidate-review-mysql.js` | 将 `artifacts/process-candidates/<run-id>` 导入 MDM 候选复核表 | 写 MySQL `process_candidate_review_*` 表 |
 | `init-db.js` | 历史本地库初始化入口，迁移完成前仅服务遗留测试链 | 写 `data/platform.db` 或 `MDM_DB_PATH` 指定库 |
 | `setup-local-baseline.js` | 从现有 schema 初始化、组织真源同步和环境变量管理员 RBAC 绑定重建本地基础数据 | 迁移过渡期写隔离遗留本地库；不导入花名册账号、不保存密码 |
@@ -77,15 +81,18 @@
 | `test-role-workbench-process-governance-mysql-api.js` | 验证角色工作台在流程治理 MySQL 读模型下从 repository 读取质量问题和映射待办 | 使用 fake repository，不连接真实库 |
 | `test-activity-heatmap-api.js` | 验证治理活跃热力图统计流程治理、映射、术语、冲突和通用待办动作，并限制普通用户查看全量视图 | 使用隔离遗留本地库 |
 | `test-activity-heatmap-mysql-identity-api.js` | 验证 `MDM_IDENTITY_READ_MODEL=mysql` 时治理活跃热力图管理视图权限来自 MySQL 身份 helper，不回落 SQLite 角色/权限表 | 使用 fake repository，不连接真实库 |
-| `test-field-entries-mysql-identity-api.js` | 验证字段台账在 MySQL 身份模式下使用异步权限 helper 查看/创建字段，不回落 SQLite 角色/权限表 | 使用隔离遗留本地库和 fake identity repository |
-| `test-field-identities-mysql-identity-api.js` | 验证字段黄金源身份在 MySQL 身份模式下使用异步权限 helper 维护/确认权威系统，不回落 SQLite 角色/权限表 | 使用隔离遗留本地库和 fake identity repository |
+| `test-data-map-mysql-repository.js` | 验证 Data Map MySQL repository 的上下文、字段、命名校验、黄金源、导入批次和进度统计 | 使用 fake MySQL pool，不连接真实库 |
+| `test-data-map-contexts-api.js` | 验证 `/api/data-map/contexts` 上下文创建、查询和更新 | 使用 fake repository，不连接真实库 |
+| `test-field-entries-mysql-api.js` | 验证 `/api/field-entries/*` 字段接口不再读取遗留字段表 | 使用 fake repository，不连接真实库 |
+| `test-field-identities-mysql-api.js` | 验证 `/api/field-identities/*` 黄金源接口不再读取遗留字段表 | 使用 fake repository，不连接真实库 |
+| `test-data-map-import-export-mysql-api.js` | 验证字段导入、导出和黄金源进度均通过 Data Map repository | 使用 fake repository 和内存 Excel，不连接真实库 |
 
 ## 5. 单项测试脚本
 
 | 类别 | 脚本 |
 |---|---|
 | 基础路由 | `test-org-route.js`、`test-catalog-routes.js`、`test-delete-routes.js`、`test-term-version-routes.js` |
-| 映射与字段 | `test-mapping-routes.js`、`test-import-route.js`、`test-export-route.js`、`test-field-entries-mysql-identity-api.js`、`test-field-identities-mysql-identity-api.js` |
+| 映射与字段 | `test-mapping-routes.js`、`test-import-route.js`、`test-export-route.js`、`test-data-map-mysql-repository.js`、`test-data-map-contexts-api.js`、`test-field-entries-mysql-api.js`、`test-field-identities-mysql-api.js`、`test-data-map-import-export-mysql-api.js` |
 | 冲突和角色 | `test-conflict-routes.js`、`test-project-role-access.js`、`test-role-workbench-api.js`、`test-role-workbench-mysql-api.js`、`test-role-workbench-process-governance-mysql-api.js`、`test-page-workflows-api.js` |
 | 流程治理 | `test-process-governance-*.js`、`test-process-mapping-workspace-import.js` |
 | 前端和视图 | `test-frontend-assets.js`、`test-views-routes.js`、`test-views-sankey-filters.js`、`test-activity-heatmap-api.js`、`test-activity-heatmap-mysql-identity-api.js` |

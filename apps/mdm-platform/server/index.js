@@ -47,6 +47,7 @@ registerRouteIfExists('/api/systems', 'systems');
 registerRouteIfExists('/api/capabilities', 'capabilities');
 registerRouteIfExists('/api/processes', 'processes');
 registerRouteIfExists('/api/mappings', 'mappings');
+registerRouteIfExists('/api/data-map', 'dataMap');
 registerRouteIfExists('/api/field-entries', 'fieldEntries');
 registerRouteIfExists('/api/field-identities', 'fieldIdentities');
 registerRouteIfExists('/api/todos', 'todos');

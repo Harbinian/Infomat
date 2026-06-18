@@ -499,6 +499,254 @@ CREATE TABLE IF NOT EXISTS process_mapping_todo_events (
   CONSTRAINT fk_process_mapping_todo_events_todo FOREIGN KEY (todo_id)
     REFERENCES process_mapping_todos(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS data_map_objects (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  object_key VARCHAR(180) NOT NULL,
+  object_name_cn VARCHAR(255) NOT NULL,
+  object_name_en VARCHAR(255) NULL,
+  object_type VARCHAR(64) NOT NULL DEFAULT 'master_data_candidate',
+  owner_dept_id BIGINT NULL,
+  steward_user_id BIGINT NULL,
+  description TEXT NULL,
+  status VARCHAR(32) NOT NULL DEFAULT 'active',
+  source_type VARCHAR(64) NOT NULL DEFAULT 'manual',
+  source_ref VARCHAR(512) NULL,
+  created_by BIGINT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_by BIGINT NULL,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_data_map_objects_key (object_key),
+  INDEX idx_data_map_objects_name (object_name_cn),
+  INDEX idx_data_map_objects_owner_dept (owner_dept_id),
+  CHECK (status IN ('draft','active','inactive','archived'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS data_map_contexts (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  context_key VARCHAR(180) NOT NULL,
+  context_type VARCHAR(64) NOT NULL DEFAULT 'process',
+  title VARCHAR(512) NOT NULL,
+  dept_id BIGINT NULL,
+  dept_name VARCHAR(128) NULL,
+  owner_user_id BIGINT NULL,
+  process_snapshot_id BIGINT NULL,
+  process_mapping_record_id BIGINT NULL,
+  process_node_key VARCHAR(255) NULL,
+  a1_code VARCHAR(128) NULL,
+  l3_name VARCHAR(512) NULL,
+  source_file VARCHAR(512) NULL,
+  source_anchor VARCHAR(255) NULL,
+  source_excerpt MEDIUMTEXT NULL,
+  status VARCHAR(32) NOT NULL DEFAULT 'active',
+  created_by BIGINT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_by BIGINT NULL,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_data_map_contexts_key (context_key),
+  INDEX idx_data_map_contexts_dept (dept_id),
+  INDEX idx_data_map_contexts_status (status),
+  INDEX idx_data_map_contexts_process_record (process_mapping_record_id),
+  CHECK (context_type IN ('process','manual','import','baseline')),
+  CHECK (status IN ('draft','active','inactive','archived'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS data_map_fields (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  context_id BIGINT NOT NULL,
+  object_id BIGINT NULL,
+  field_key VARCHAR(220) NOT NULL,
+  field_name_cn VARCHAR(255) NULL,
+  field_name_en VARCHAR(255) NULL,
+  business_definition TEXT NULL,
+  data_type VARCHAR(64) NULL,
+  data_format VARCHAR(128) NULL,
+  length_precision VARCHAR(64) NULL,
+  nullable TINYINT NOT NULL DEFAULT 1,
+  enum_values_json MEDIUMTEXT NULL,
+  sensitivity_level VARCHAR(32) NOT NULL DEFAULT 'internal',
+  master_data_level VARCHAR(32) NOT NULL DEFAULT 'candidate',
+  process_governance_node_key VARCHAR(255) NULL,
+  process_governance_a1_code VARCHAR(128) NULL,
+  source_file VARCHAR(512) NULL,
+  source_anchor VARCHAR(255) NULL,
+  source_excerpt MEDIUMTEXT NULL,
+  status VARCHAR(32) NOT NULL DEFAULT 'draft',
+  quality_status VARCHAR(32) NOT NULL DEFAULT 'unchecked',
+  submitted_by BIGINT NULL,
+  submitted_at TIMESTAMP NULL,
+  reviewed_by BIGINT NULL,
+  reviewed_at TIMESTAMP NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_data_map_fields_key (field_key),
+  INDEX idx_data_map_fields_context (context_id),
+  INDEX idx_data_map_fields_object (object_id),
+  INDEX idx_data_map_fields_name_cn (field_name_cn),
+  INDEX idx_data_map_fields_status (status),
+  CHECK (status IN ('draft','submitted','confirmed','conflicted','archived')),
+  CHECK (quality_status IN ('unchecked','pass','warn','block')),
+  CONSTRAINT fk_data_map_fields_context FOREIGN KEY (context_id)
+    REFERENCES data_map_contexts(id) ON DELETE CASCADE,
+  CONSTRAINT fk_data_map_fields_object FOREIGN KEY (object_id)
+    REFERENCES data_map_objects(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS data_map_field_system_links (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  field_id BIGINT NOT NULL,
+  system_name VARCHAR(255) NOT NULL,
+  system_code VARCHAR(128) NULL,
+  relation_type VARCHAR(32) NOT NULL,
+  sync_mode VARCHAR(64) NULL,
+  interface_note TEXT NULL,
+  is_primary TINYINT NOT NULL DEFAULT 0,
+  status VARCHAR(32) NOT NULL DEFAULT 'active',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_data_map_field_system_links_field (field_id),
+  INDEX idx_data_map_field_system_links_system (system_name),
+  CHECK (relation_type IN ('producer','consumer','candidate_authority','authority')),
+  CHECK (status IN ('active','inactive','archived')),
+  CONSTRAINT fk_data_map_field_system_links_field FOREIGN KEY (field_id)
+    REFERENCES data_map_fields(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS data_map_field_identities (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  field_id BIGINT NOT NULL,
+  authoritative_system_name VARCHAR(255) NULL,
+  authoritative_system_code VARCHAR(128) NULL,
+  maintain_dept_id BIGINT NULL,
+  owner_user_id BIGINT NULL,
+  confidence_level VARCHAR(32) NOT NULL DEFAULT 'medium',
+  confirmed TINYINT NOT NULL DEFAULT 0,
+  confirmed_by BIGINT NULL,
+  confirmed_at TIMESTAMP NULL,
+  note TEXT NULL,
+  status VARCHAR(32) NOT NULL DEFAULT 'candidate',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_data_map_field_identities_field (field_id),
+  INDEX idx_data_map_field_identities_dept (maintain_dept_id),
+  INDEX idx_data_map_field_identities_owner (owner_user_id),
+  CHECK (confidence_level IN ('low','medium','high')),
+  CHECK (status IN ('candidate','confirmed','rejected','archived')),
+  CONSTRAINT fk_data_map_field_identities_field FOREIGN KEY (field_id)
+    REFERENCES data_map_fields(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS data_map_term_types (
+  code VARCHAR(64) PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  description TEXT NULL,
+  sort_order INT NOT NULL DEFAULT 0,
+  active TINYINT NOT NULL DEFAULT 1
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS data_map_terms (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  term VARCHAR(255) NOT NULL,
+  term_type_code VARCHAR(64) NOT NULL DEFAULT 'noun',
+  preferred_term VARCHAR(255) NULL,
+  forbidden_term VARCHAR(255) NULL,
+  definition TEXT NULL,
+  scope_type VARCHAR(64) NOT NULL DEFAULT 'field',
+  severity VARCHAR(16) NOT NULL DEFAULT 'warn',
+  status VARCHAR(32) NOT NULL DEFAULT 'active',
+  created_by BIGINT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_by BIGINT NULL,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_data_map_terms_term_scope (term, scope_type),
+  INDEX idx_data_map_terms_forbidden (forbidden_term),
+  INDEX idx_data_map_terms_status (status),
+  CHECK (severity IN ('warn','block')),
+  CHECK (status IN ('draft','active','inactive','archived'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS data_map_naming_rules (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  rule_type VARCHAR(64) NOT NULL,
+  match_value VARCHAR(255) NOT NULL,
+  replacement_value VARCHAR(255) NULL,
+  severity VARCHAR(16) NOT NULL DEFAULT 'warn',
+  status VARCHAR(32) NOT NULL DEFAULT 'active',
+  created_by BIGINT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_by BIGINT NULL,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_data_map_naming_rules_type_status (rule_type, status),
+  CHECK (severity IN ('warn','block')),
+  CHECK (status IN ('draft','active','inactive','archived'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS data_map_quality_issues (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  field_id BIGINT NULL,
+  context_id BIGINT NULL,
+  issue_type VARCHAR(64) NOT NULL,
+  severity VARCHAR(16) NOT NULL,
+  message TEXT NOT NULL,
+  suggestion TEXT NULL,
+  status VARCHAR(32) NOT NULL DEFAULT 'open',
+  created_by BIGINT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  resolved_by BIGINT NULL,
+  resolved_at TIMESTAMP NULL,
+  INDEX idx_data_map_quality_issues_field (field_id),
+  INDEX idx_data_map_quality_issues_context (context_id),
+  INDEX idx_data_map_quality_issues_status (status),
+  CHECK (severity IN ('info','warn','block')),
+  CHECK (status IN ('open','resolved','dismissed')),
+  CONSTRAINT fk_data_map_quality_issues_field FOREIGN KEY (field_id)
+    REFERENCES data_map_fields(id) ON DELETE CASCADE,
+  CONSTRAINT fk_data_map_quality_issues_context FOREIGN KEY (context_id)
+    REFERENCES data_map_contexts(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS data_map_import_batches (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  source_type VARCHAR(64) NOT NULL,
+  file_name VARCHAR(512) NULL,
+  context_id BIGINT NULL,
+  imported_by BIGINT NULL,
+  row_count INT NOT NULL DEFAULT 0,
+  status VARCHAR(32) NOT NULL DEFAULT 'imported',
+  note TEXT NULL,
+  imported_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_data_map_import_batches_context (context_id),
+  CHECK (status IN ('imported','failed','partial')),
+  CONSTRAINT fk_data_map_import_batches_context FOREIGN KEY (context_id)
+    REFERENCES data_map_contexts(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS data_map_change_sets (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  entity_type VARCHAR(64) NOT NULL,
+  entity_id BIGINT NOT NULL,
+  operated_by BIGINT NULL,
+  operated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  description TEXT NULL,
+  INDEX idx_data_map_change_sets_entity (entity_type, entity_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS data_map_version_log (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  entity_type VARCHAR(64) NOT NULL,
+  entity_id BIGINT NOT NULL,
+  field_name VARCHAR(128) NULL,
+  old_value TEXT NULL,
+  new_value TEXT NULL,
+  operation VARCHAR(32) NOT NULL,
+  operated_by BIGINT NULL,
+  operated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  change_set_id BIGINT NULL,
+  INDEX idx_data_map_version_log_entity (entity_type, entity_id),
+  CHECK (operation IN ('create','update','delete')),
+  CONSTRAINT fk_data_map_version_log_change_set FOREIGN KEY (change_set_id)
+    REFERENCES data_map_change_sets(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 `;
 }
 

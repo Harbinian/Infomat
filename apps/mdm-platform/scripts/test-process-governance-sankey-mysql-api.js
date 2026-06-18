@@ -4,7 +4,9 @@ const { cleanupDb } = require('./testHelpers/isolatedDb');
 
 process.env.MDM_DB_QUIET = '1';
 const previousReadModel = process.env.PROCESS_GOVERNANCE_READ_MODEL;
+const previousIdentityReadModel = process.env.MDM_IDENTITY_READ_MODEL;
 process.env.PROCESS_GOVERNANCE_READ_MODEL = 'mysql';
+process.env.MDM_IDENTITY_READ_MODEL = 'mysql';
 
 function listen(app) {
   return new Promise(resolve => {
@@ -19,6 +21,7 @@ function closeServer(server) {
 }
 
 async function main() {
+  const auth = require('../server/auth');
   const processGovernanceRouter = require('../server/routes/processGovernance');
   assert.strictEqual(
     typeof processGovernanceRouter.setProcessGovernanceRepositoryFactory,
@@ -27,6 +30,32 @@ async function main() {
   );
 
   let called = 0;
+  auth.setIdentityRepositoryFactory(async () => ({
+    async getUserEffectivePermissions(userId) {
+      assert.strictEqual(userId, 1);
+      return {
+        permSet: new Set([
+          'admin:access',
+          'data:view_all',
+          'process_quality:manage',
+          'process_quality:close',
+          'process_mapping:manage',
+          'process_mapping:close'
+        ]),
+        fieldConstraints: {}
+      };
+    },
+    async getUserRoleCodes(userId, legacyRole) {
+      assert.strictEqual(userId, 1);
+      return [{ code: legacyRole || 'admin', name: '管理员' }, { code: 'admin', name: '管理员' }];
+    },
+    async getDepartmentById(id) {
+      return { id, name: '经营发展部' };
+    },
+    async getUserById(id) {
+      return { id, name: '系统管理员', department_id: 8 };
+    }
+  }));
   processGovernanceRouter.setProcessGovernanceRepositoryFactory(() => ({
     async listSnapshots() {
       return [
@@ -359,7 +388,7 @@ async function main() {
   const app = express();
   app.use(express.json());
   app.use((req, res, next) => {
-    req.session = { userId: 1, userName: '系统管理员', userRole: 'admin' };
+    req.session = { userId: 1, userName: '系统管理员', userRole: 'admin', departmentId: 8 };
     next();
   });
   app.use('/api/process-governance', processGovernanceRouter);
@@ -499,6 +528,7 @@ async function main() {
   } finally {
     await closeServer(server);
     processGovernanceRouter.resetProcessGovernanceRepositoryFactory();
+    auth.resetIdentityRepositoryFactory();
   }
 }
 
@@ -510,6 +540,11 @@ main().catch(error => {
     delete process.env.PROCESS_GOVERNANCE_READ_MODEL;
   } else {
     process.env.PROCESS_GOVERNANCE_READ_MODEL = previousReadModel;
+  }
+  if (previousIdentityReadModel === undefined) {
+    delete process.env.MDM_IDENTITY_READ_MODEL;
+  } else {
+    process.env.MDM_IDENTITY_READ_MODEL = previousIdentityReadModel;
   }
   cleanupDb({ ignoreErrors: true });
 });
