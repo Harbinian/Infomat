@@ -225,6 +225,16 @@ def build_source_manifest(tasks, plan_data):
         doc["exists"] = path.exists()
         doc["sha256_16"] = file_digest(path) if path.exists() else ""
 
+    computed_summary = {
+        "recordCount": len(tasks),
+        "fieldCount": summary.get("fieldCount", 45),
+        "projectStart": summary.get("projectStart"),
+        "projectFinish": summary.get("projectFinish"),
+        "milestoneCount": sum(1 for task in tasks if task.get("milestone") == "是"),
+        "criticalControlCount": sum(1 for task in tasks if task.get("isCriticalControl") == "是"),
+        "h5FocusCount": sum(1 for task in tasks if task.get("isH5Focus") == "是"),
+    }
+
     return {
         "schemaVersion": "pmo-service-source-manifest-v1",
         "snapshotDate": summary.get("snapshotDate") or plan_data.get("snapshotDate") or "2026-06-05",
@@ -239,15 +249,7 @@ def build_source_manifest(tasks, plan_data):
             "gantt-react/public/tasks.json",
             "gantt-react/public/pmo-source-manifest.json",
         ],
-        "taskSummary": {
-            "recordCount": len(tasks),
-            "fieldCount": summary.get("fieldCount", 45),
-            "projectStart": summary.get("projectStart"),
-            "projectFinish": summary.get("projectFinish"),
-            "milestoneCount": summary.get("milestoneCount"),
-            "criticalControlCount": summary.get("criticalControlCount"),
-            "h5FocusCount": summary.get("h5FocusCount"),
-        },
+        "taskSummary": computed_summary,
         "updateRule": "修改 MD 真源后运行 python convert_xlsx.py，将计划数据输入甘特图和 PMO 看板服务。",
     }
 
