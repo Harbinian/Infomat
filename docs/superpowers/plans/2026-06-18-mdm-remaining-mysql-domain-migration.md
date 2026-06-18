@@ -30,7 +30,7 @@
   - 旧 `mapping_id` 不再作为字段台账归属锚点；需要字段上下文时显式引用 `context_id`。
   - 补 `test:mappings-mysql`，覆盖创建、草稿更新、提交、审批、退回、发布、详情和权限。
 
-- [ ] **Task 3: Conflict and todo domains**
+- [x] **Task 3: Conflict and todo domains**
   - 新增 `conflictMysqlRepository` 和 `todoMysqlRepository`。
   - 字段冲突改用 Data Map 字段域数据，术语冲突改用术语 MySQL repository。
   - 通用待办不再混用 SQLite 写入和 MySQL 读取；迁移后同一接口读写同库。
@@ -96,3 +96,4 @@
 - 2026-06-18：`docs/norms` 在合并和计划新增前保持无差异。
 - 2026-06-18：术语治理已新增独立 MySQL schema 与 `terminologyMysqlRepository`；`/api/terminology`、`/api/terminology/types` 改走 repository，`/api/terminology/processes` 读取流程治理 MySQL 读模型 `process_mapping_records`，不再读取 SQLite `terms`。新增 `test:terminology-mysql` 并纳入 `test:mainline`。
 - 2026-06-18：旧映射审批已新增 `mdm_mapping_*` MySQL schema 与 `mappingMysqlRepository`；`/api/mappings` 改走 repository factory 注入，保留旧 API 路径和基本响应形状，详情中的 `fields` 固定为空数组以避免恢复旧 `field_entries` 归属。新增 `test:mappings-mysql` 和 MySQL 身份模式测试，并纳入 `test:mainline`。
+- 2026-06-18：冲突治理和通用待办已新增 `mdm_field_conflicts`、`mdm_term_conflicts`、`mdm_conflict_assignments`、`mdm_conflict_coordination_history`、`mdm_todos`、`mdm_todo_events` MySQL schema；`/api/conflicts` 和 `/api/todos` 改走 `conflictMysqlRepository` / `todoMysqlRepository`。字段冲突检测读取 Data Map 字段域，术语冲突检测读取 `terminology_terms`，通用待办同一接口读写 `mdm_todos`。新增 `test:conflicts-mysql`、`test:todos-mysql` 和 MySQL 身份模式测试，并纳入 `test:mainline`。本地 Docker MySQL 已执行 `npm run init:mysql`、`npm run smoke:data-map-mysql` 和一次性冲突/待办真实库写读清理 smoke。
