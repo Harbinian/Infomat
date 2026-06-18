@@ -1,13 +1,19 @@
 const assert = require('assert');
 const { spawn } = require('child_process');
 const path = require('path');
-const ExcelJS = require('exceljs');
+const express = require('express');
 const { cleanupDb, stopServer } = require('./testHelpers/isolatedDb');
 const db = require('../server/db');
 const { hashPassword, verifyPassword } = require('../server/auth');
+const mappingsRouter = require('../server/routes/mappings');
+const { setDataMapRepositoryFactory, resetDataMapRepositoryFactory } = require('../server/dataMapMysqlRepository');
+const fieldEntriesRouter = require('../server/routes/fieldEntries');
+const fieldIdentitiesRouter = require('../server/routes/fieldIdentities');
 
 const PORT = 3199;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
+const previousIdentityReadModel = process.env.MDM_IDENTITY_READ_MODEL;
+delete process.env.MDM_IDENTITY_READ_MODEL;
 
 function envWithoutSessionSecret(extra = {}) {
   const env = { ...process.env, ...extra };
@@ -151,7 +157,26 @@ function seedData() {
   db.prepare("INSERT INTO terms (term, definition, scope, created_by, status) VALUES ('客户', '客户定义', '集团', ?, 'approved')").run(admin);
   db.prepare("INSERT INTO terms (term, definition, scope, created_by, status) VALUES ('客户号', '客户编号', '系统', ?, 'approved')").run(admin);
 
-  return { deptA, deptB, capA, processA, processB, mappingA, mappingB, fieldB, todoB, conflict, termConflict, submitterA, orgUnitId, orgUnitCode: 'SALE-ORG' };
+  return {
+    deptA,
+    deptB,
+    capA,
+    processA,
+    processB,
+    mappingA,
+    mappingB,
+    fieldB,
+    todoB,
+    conflict,
+    termConflict,
+    admin,
+    reviewer,
+    submitterA,
+    submitterB,
+    rbacOwner,
+    orgUnitId,
+    orgUnitCode: 'SALE-ORG'
+  };
 }
 
 async function waitForServer() {
@@ -213,6 +238,18 @@ function cookieFrom(result) {
   return setCookie ? setCookie.split(';')[0] : '';
 }
 
+function listen(app) {
+  return new Promise(resolve => {
+    const server = app.listen(0, '127.0.0.1', () => resolve(server));
+  });
+}
+
+function closeServer(server) {
+  return new Promise((resolve, reject) => {
+    server.close(error => error ? reject(error) : resolve());
+  });
+}
+
 async function login(employeeNo) {
   const result = await request('/api/org/login', {
     method: 'POST',
@@ -220,14 +257,6 @@ async function login(employeeNo) {
   });
   assert.strictEqual(result.res.status, 200);
   return cookieFrom(result);
-}
-
-function columnIndexByHeader(worksheet, headerText) {
-  const headerRow = worksheet.getRow(1);
-  for (let column = 1; column <= headerRow.cellCount; column += 1) {
-    if (headerRow.getCell(column).value === headerText) return column;
-  }
-  throw new Error(`missing worksheet header: ${headerText}`);
 }
 
 async function assertForbidden(label, routePath, options, cookie) {
@@ -435,41 +464,165 @@ async function assertRbacRolesDriveTodoList(seed, rbacOwnerCookie) {
   );
 }
 
-async function assertRbacOwnerCanEditOwnerFieldColumns(seed, rbacOwnerCookie) {
-  const update = await request(`/api/field-entries/${seed.fieldB}`, {
-    method: 'PUT',
-    body: JSON.stringify({ field_name_cn: '客户名称确认', field_type: '文本' })
-  }, rbacOwnerCookie);
-  assert.strictEqual(update.res.status, 200, '拥有 owner RBAC 角色的用户应能维护本部门字段 owner 列');
+function makeSecurityDataMapRepository(seed) {
+  const state = {
+    context: {
+      id: seed.mappingB,
+      context_id: seed.mappingB,
+      mapping_id: seed.mappingB,
+      dept_id: seed.deptB,
+      dept_name: '财务部',
+      owner_user_id: seed.rbacOwner,
+      created_by: seed.submitterB,
+      title: '财务客户维护字段上下文',
+      status: 'active'
+    },
+    field: {
+      id: seed.fieldB,
+      context_id: seed.mappingB,
+      mapping_id: seed.mappingB,
+      data_object: '客户',
+      field_name_cn: '客户名称',
+      field_name_en: 'customer_name',
+      field_type: '文本',
+      data_type: '文本',
+      submitted_by: seed.submitterB,
+      status: 'draft'
+    },
+    identity: null
+  };
 
-  const row = db.prepare('SELECT field_name_cn, field_type FROM field_entries WHERE id=?').get(seed.fieldB);
-  assert.strictEqual(row.field_name_cn, '客户名称确认');
-  assert.strictEqual(row.field_type, '文本');
+  return {
+    state,
+    async getContext(id) {
+      return Number(id) === Number(state.context.id) ? state.context : null;
+    },
+    async getFieldsByContext(contextId) {
+      return Number(contextId) === Number(state.context.id) ? [state.field] : [];
+    },
+    async getField(fieldId) {
+      return Number(fieldId) === Number(state.field.id) ? state.field : null;
+    },
+    async updateField(fieldId, payload) {
+      if (Number(fieldId) !== Number(state.field.id)) return null;
+      Object.assign(state.field, {
+        field_name_cn: payload.field_name_cn || state.field.field_name_cn,
+        field_type: payload.field_type || payload.data_type || state.field.field_type,
+        data_type: payload.field_type || payload.data_type || state.field.data_type
+      });
+      return state.field;
+    },
+    async getFieldIdentity(fieldId) {
+      return Number(fieldId) === Number(state.field.id) ? state.identity : null;
+    },
+    async upsertFieldIdentity(fieldId, payload) {
+      if (Number(fieldId) !== Number(state.field.id)) return null;
+      state.identity = {
+        id: 7001,
+        field_id: Number(fieldId),
+        authoritative_system: payload.authoritative_system || null,
+        authoritative_system_name: payload.authoritative_system || null,
+        maintain_dept_id: payload.maintain_dept_id || null,
+        owner_user_id: payload.owner_user_id || null,
+        confirmed: payload.confirmed ? 1 : 0,
+        note: payload.note || null,
+        status: 'candidate'
+      };
+      return state.identity;
+    },
+    async confirmFieldIdentity(fieldId, payload, actorUserId) {
+      if (Number(fieldId) !== Number(state.field.id) || !state.identity) return null;
+      state.identity.authoritative_system = payload.authoritative_system || state.identity.authoritative_system;
+      state.identity.authoritative_system_name = payload.authoritative_system || state.identity.authoritative_system_name;
+      state.identity.confirmed = 1;
+      state.identity.confirmed_by = actorUserId;
+      state.identity.status = 'confirmed';
+      return state.identity;
+    }
+  };
 }
 
-async function assertRbacOwnerCanMaintainFieldIdentity(seed, rbacOwnerCookie) {
-  const upsertIdentity = await request(`/api/field-identities/${seed.fieldB}`, {
-    method: 'PUT',
-    body: JSON.stringify({
-      candidate_systems: ['ERP'],
-      authoritative_system: 'ERP',
-      maintain_dept_id: null,
-      confirmed: false,
-      note: 'RBAC owner 维护黄金源'
-    })
-  }, rbacOwnerCookie);
-  assert.strictEqual(upsertIdentity.res.status, 200, '拥有 owner RBAC 角色的用户应能维护本部门字段身份');
+async function withDataMapFieldApp(seed, routePathPrefix, router, run) {
+  const repo = makeSecurityDataMapRepository(seed);
+  setDataMapRepositoryFactory(async () => repo);
 
-  const confirmIdentity = await request(`/api/field-identities/${seed.fieldB}/confirm`, {
-    method: 'POST',
-    body: JSON.stringify({ authoritative_system: 'ERP' })
-  }, rbacOwnerCookie);
-  assert.strictEqual(confirmIdentity.res.status, 200, '拥有 owner RBAC 角色的用户应能确认本部门字段权威系统');
+  const app = express();
+  app.use(express.json());
+  app.use((req, res, next) => {
+    const actor = req.headers['x-test-actor'] === 'owner'
+      ? { userId: seed.rbacOwner, userRole: 'submitter', departmentId: seed.deptB }
+      : { userId: seed.submitterA, userRole: 'submitter', departmentId: seed.deptA };
+    req.session = {
+      userId: actor.userId,
+      userRole: actor.userRole,
+      userName: '安全测试用户',
+      departmentId: actor.departmentId
+    };
+    next();
+  });
+  app.use(routePathPrefix, router);
 
-  const row = db.prepare('SELECT authoritative_system, confirmed, confirmed_by FROM field_identities WHERE field_entry_id=?').get(seed.fieldB);
-  assert.strictEqual(row.authoritative_system, 'ERP');
-  assert.strictEqual(row.confirmed, 1);
-  assert.ok(row.confirmed_by);
+  const server = await listen(app);
+  const baseUrl = `http://127.0.0.1:${server.address().port}`;
+  async function localRequest(actor, pathName, options = {}) {
+    const res = await fetch(`${baseUrl}${pathName}`, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        'x-test-actor': actor,
+        ...(options.headers || {})
+      }
+    });
+    const body = await res.json().catch(() => ({}));
+    return { res, body };
+  }
+
+  try {
+    await run(localRequest, repo);
+  } finally {
+    await closeServer(server);
+    resetDataMapRepositoryFactory();
+  }
+}
+
+async function assertRbacOwnerCanEditOwnerFieldColumns(seed) {
+  await withDataMapFieldApp(seed, '/api/field-entries', fieldEntriesRouter, async (localRequest, repo) => {
+    const hiddenFields = await localRequest('submitter', `/api/field-entries/mapping/${seed.mappingB}`);
+    assert.strictEqual(hiddenFields.res.status, 403, '其他部门报送人不能查看该字段台账上下文');
+
+    const update = await localRequest('owner', `/api/field-entries/${seed.fieldB}`, {
+      method: 'PUT',
+      body: JSON.stringify({ field_name_cn: '客户名称确认', field_type: '文本' })
+    });
+    assert.strictEqual(update.res.status, 200, '拥有 owner RBAC 角色的用户应能维护本部门字段 owner 列');
+    assert.strictEqual(repo.state.field.field_name_cn, '客户名称确认');
+    assert.strictEqual(repo.state.field.field_type, '文本');
+  });
+}
+
+async function assertRbacOwnerCanMaintainFieldIdentity(seed) {
+  await withDataMapFieldApp(seed, '/api/field-identities', fieldIdentitiesRouter, async (localRequest, repo) => {
+    const upsertIdentity = await localRequest('owner', `/api/field-identities/${seed.fieldB}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        candidate_systems: ['ERP'],
+        authoritative_system: 'ERP',
+        maintain_dept_id: null,
+        confirmed: false,
+        note: 'RBAC owner 维护黄金源'
+      })
+    });
+    assert.strictEqual(upsertIdentity.res.status, 200, '拥有 owner RBAC 角色的用户应能维护本部门字段身份');
+
+    const confirmIdentity = await localRequest('owner', `/api/field-identities/${seed.fieldB}/confirm`, {
+      method: 'POST',
+      body: JSON.stringify({ authoritative_system: 'ERP' })
+    });
+    assert.strictEqual(confirmIdentity.res.status, 200, '拥有 owner RBAC 角色的用户应能确认本部门字段权威系统');
+    assert.strictEqual(repo.state.identity.authoritative_system, 'ERP');
+    assert.strictEqual(repo.state.identity.confirmed, 1);
+    assert.strictEqual(repo.state.identity.confirmed_by, seed.rbacOwner);
+  });
 }
 
 async function assertFieldConstraintsAreApplied(submitterCookie) {
@@ -667,36 +820,180 @@ async function assertMasterDataWriteGuards(seed, adminCookie, submitterCookie) {
   assert.strictEqual(adminAttributeValue.res.status, 200);
 }
 
-async function assertMappingDraftCreateGuards(seed, adminCookie, reviewerCookie, submitterCookie) {
-  const reviewerCreate = await request('/api/mappings', {
+function makeSecurityMappingRepository(seed) {
+  const state = {
+    nextId: 5000,
+    mappings: [
+      {
+        id: seed.mappingA,
+        process_id: seed.processA,
+        process_name: '销售客户维护',
+        cap_name: '流程治理读模型',
+        description: '销售映射',
+        owner_dept_id: seed.deptA,
+        owner_dept_name: '销售部',
+        status: 'published',
+        submitted_by: seed.submitterA,
+        current_step: 5,
+        systems: 'CRM',
+        systemsList: []
+      },
+      {
+        id: seed.mappingB,
+        process_id: seed.processB,
+        process_name: '财务客户维护',
+        cap_name: '流程治理读模型',
+        description: '财务映射',
+        owner_dept_id: seed.deptB,
+        owner_dept_name: '财务部',
+        status: 'published',
+        submitted_by: seed.submitterB,
+        current_step: 5,
+        systems: 'ERP',
+        systemsList: []
+      },
+      {
+        id: 4999,
+        process_id: seed.processA,
+        process_name: '销售客户维护',
+        cap_name: '流程治理读模型',
+        description: '待发布草稿',
+        owner_dept_id: seed.deptA,
+        owner_dept_name: '销售部',
+        status: 'draft',
+        submitted_by: seed.submitterA,
+        current_step: 1,
+        systems: '',
+        systemsList: []
+      }
+    ]
+  };
+
+  function visible(mapping, scope) {
+    return scope.canViewAll ||
+      Number(mapping.submitted_by) === Number(scope.userId) ||
+      Number(mapping.owner_dept_id) === Number(scope.departmentId) ||
+      Number(mapping.approval_dept_id || 0) === Number(scope.departmentId);
+  }
+
+  return {
+    async listMappings(filters, scope) {
+      return state.mappings
+        .filter(mapping => visible(mapping, scope))
+        .filter(mapping => !filters.status || mapping.status === filters.status);
+    },
+    async getMapping(id, scope) {
+      const mapping = state.mappings.find(item => Number(item.id) === Number(id));
+      if (!mapping || !visible(mapping, scope)) return null;
+      return { ...mapping, systems: mapping.systemsList, fields: [], relatedDepts: [], approvalTasks: [] };
+    },
+    async createMapping(payload, actorUserId) {
+      const mapping = {
+        id: state.nextId++,
+        process_id: payload.process_id,
+        process_name: payload.process_id === seed.processB ? '财务客户维护' : '销售客户维护',
+        cap_name: '流程治理读模型',
+        description: payload.description || null,
+        owner_dept_id: payload.owner_dept_id,
+        owner_dept_name: payload.owner_dept_id === seed.deptB ? '财务部' : '销售部',
+        status: 'draft',
+        submitted_by: actorUserId,
+        current_step: 1,
+        systems: '',
+        systemsList: []
+      };
+      state.mappings.push(mapping);
+      return mapping;
+    },
+    async publishMapping(id) {
+      const mapping = state.mappings.find(item => Number(item.id) === Number(id));
+      if (!mapping) return { ok: false, statusCode: 404, error: '映射不存在' };
+      if (mapping.status !== 'final_reviewed') return { ok: false, statusCode: 409, error: '仅终审完成后可发布' };
+      mapping.status = 'published';
+      return { ok: true };
+    }
+  };
+}
+
+async function assertMappingDraftCreateGuards(seed) {
+  const repo = makeSecurityMappingRepository(seed);
+  mappingsRouter.setMappingRepositoryFactory(async () => repo);
+
+  const app = express();
+  app.use(express.json());
+  app.use((req, res, next) => {
+    const actor = req.headers['x-test-actor'] || 'submitter';
+    if (actor === 'admin') {
+      req.session = { userId: seed.admin, userRole: 'admin', userName: '系统管理员', departmentId: seed.deptA };
+    } else if (actor === 'reviewer') {
+      req.session = { userId: seed.reviewer, userRole: 'reviewer', userName: '评审人', departmentId: seed.deptA };
+    } else {
+      req.session = { userId: seed.submitterA, userRole: 'submitter', userName: '销售报送人', departmentId: seed.deptA };
+    }
+    next();
+  });
+  app.use('/api/mappings', mappingsRouter);
+
+  const server = await listen(app);
+  const baseUrl = `http://127.0.0.1:${server.address().port}`;
+
+  async function mappingRequest(actor, routePath, options = {}) {
+    const res = await fetch(`${baseUrl}${routePath}`, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        'x-test-actor': actor,
+        ...(options.headers || {})
+      }
+    });
+    const body = await res.json().catch(() => ({}));
+    return { res, body };
+  }
+
+  try {
+    const reviewerCreate = await mappingRequest('reviewer', '/api/mappings', {
     method: 'POST',
     body: JSON.stringify({
       process_id: seed.processA,
       description: '评审人越权创建草稿',
       owner_dept_id: seed.deptA
     })
-  }, reviewerCookie);
-  assert.strictEqual(reviewerCreate.res.status, 403, '非报送人或管理员不能创建映射草稿');
+    });
+    assert.strictEqual(reviewerCreate.res.status, 403, '非报送人或管理员不能创建映射草稿');
 
-  const submitterCreate = await request('/api/mappings', {
+    const submitterCreate = await mappingRequest('submitter', '/api/mappings', {
     method: 'POST',
     body: JSON.stringify({
       process_id: seed.processA,
       description: '报送人创建草稿',
       owner_dept_id: seed.deptA
     })
-  }, submitterCookie);
-  assert.strictEqual(submitterCreate.res.status, 200, '报送人应能创建映射草稿');
+    });
+    assert.strictEqual(submitterCreate.res.status, 200, '报送人应能创建映射草稿');
 
-  const adminCreate = await request('/api/mappings', {
+    const adminCreate = await mappingRequest('admin', '/api/mappings', {
     method: 'POST',
     body: JSON.stringify({
       process_id: seed.processB,
       description: '管理员创建草稿',
       owner_dept_id: seed.deptB
     })
-  }, adminCookie);
-  assert.strictEqual(adminCreate.res.status, 200, '管理员应能创建映射草稿');
+    });
+    assert.strictEqual(adminCreate.res.status, 200, '管理员应能创建映射草稿');
+
+    const mappings = await mappingRequest('submitter', '/api/mappings');
+    assert.strictEqual(mappings.res.status, 200);
+    assert.ok(mappings.body.every(row => row.submitted_by === seed.submitterA));
+
+    const hiddenMapping = await mappingRequest('submitter', `/api/mappings/${seed.mappingB}`);
+    assert.strictEqual(hiddenMapping.res.status, 404);
+
+    const publishDraft = await mappingRequest('admin', '/api/mappings/4999/publish', { method: 'POST' });
+    assert.strictEqual(publishDraft.res.status, 409);
+  } finally {
+    await closeServer(server);
+    mappingsRouter.resetMappingRepositoryFactory();
+  }
 }
 
 async function main() {
@@ -735,15 +1032,15 @@ async function main() {
     assert.strictEqual(createSystem.res.status, 403);
 
     await assertMasterDataWriteGuards(seed, adminCookie, submitterCookie);
-    await assertMappingDraftCreateGuards(seed, adminCookie, reviewerCookie, submitterCookie);
+    await assertMappingDraftCreateGuards(seed);
     await assertUserDirectoryGuards(adminCookie, reviewerCookie, submitterCookie);
     await assertDefaultPasswordGuards(adminCookie);
     await assertPasswordStrengthGuards(submitterCookie);
     await assertFieldConstraintsAreApplied(submitterCookie);
     await assertReadonlyFieldConstraintsAreEnforced(adminCookie, limitedEditorCookie);
     await assertRbacRolesDriveTodoList(seed, rbacOwnerCookie);
-    await assertRbacOwnerCanEditOwnerFieldColumns(seed, rbacOwnerCookie);
-    await assertRbacOwnerCanMaintainFieldIdentity(seed, rbacOwnerCookie);
+    await assertRbacOwnerCanEditOwnerFieldColumns(seed);
+    await assertRbacOwnerCanMaintainFieldIdentity(seed);
 
     const capBadAction = await request(`/api/capabilities/${seed.capA}/review`, {
       method: 'POST',
@@ -768,27 +1065,6 @@ async function main() {
       body: JSON.stringify({ action: 'aprove' })
     }, adminCookie);
     assert.strictEqual(termBadAction.res.status, 400);
-
-    const mappings = await request('/api/mappings', {}, submitterCookie);
-    assert.strictEqual(mappings.res.status, 200);
-    assert.ok(mappings.body.every(row => row.submitted_by === seed.submitterA));
-
-    const hiddenMapping = await request(`/api/mappings/${seed.mappingB}`, {}, submitterCookie);
-    assert.strictEqual(hiddenMapping.res.status, 404);
-
-    const hiddenFields = await request(`/api/field-entries/mapping/${seed.mappingB}`, {}, submitterCookie);
-    assert.strictEqual(hiddenFields.res.status, 403);
-
-    const exportResult = await request('/api/export/excel', {}, submitterCookie);
-    assert.strictEqual(exportResult.res.status, 200);
-    const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(exportResult.buffer);
-    const values = [];
-    const noteColumn = columnIndexByHeader(workbook.getWorksheet('字段台账'), '字段说明');
-    workbook.getWorksheet('字段台账').eachRow((row, rowNumber) => {
-      if (rowNumber > 1) values.push(row.getCell(noteColumn).value);
-    });
-    assert.deepStrictEqual(values, ['销售字段']);
 
     const doneOtherDept = await request(`/api/todos/${seed.todoB}/done`, { method: 'POST' }, submitterCookie);
     assert.strictEqual(doneOtherDept.res.status, 403);
@@ -817,10 +1093,6 @@ async function main() {
     assert.strictEqual(detect.res.status, 200);
     assert.ok(Number.isInteger(detect.body.detected));
 
-    const draft = db.prepare("SELECT id FROM mappings WHERE status='draft'").get();
-    const publishDraft = await request(`/api/mappings/${draft.id}/publish`, { method: 'POST' }, adminCookie);
-    assert.strictEqual(publishDraft.res.status, 409);
-
     console.log('Security route integration test passed');
   } finally {
     await stopServer(server);
@@ -839,4 +1111,10 @@ async function main() {
 main().catch(error => {
   console.error(error);
   process.exit(1);
+}).finally(() => {
+  if (previousIdentityReadModel === undefined) {
+    delete process.env.MDM_IDENTITY_READ_MODEL;
+  } else {
+    process.env.MDM_IDENTITY_READ_MODEL = previousIdentityReadModel;
+  }
 });

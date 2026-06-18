@@ -1,12 +1,10 @@
 const assert = require('assert');
 const express = require('express');
-const { cleanupDb } = require('./testHelpers/isolatedDb');
 
 process.env.MDM_DB_QUIET = '1';
 const previousReadModel = process.env.MDM_IDENTITY_READ_MODEL;
 process.env.MDM_IDENTITY_READ_MODEL = 'mysql';
 
-const db = require('../server/db');
 const auth = require('../server/auth');
 const mappingsRouter = require('../server/routes/mappings');
 
@@ -22,71 +20,89 @@ function closeServer(server) {
   });
 }
 
-function resetData() {
-  db.exec(`
-    DELETE FROM version_log;
-    DELETE FROM change_set;
-    DELETE FROM approval_tasks;
-    DELETE FROM approval_history;
-    DELETE FROM field_entries;
-    DELETE FROM mapping_related_departments;
-    DELETE FROM mapping_systems;
-    DELETE FROM mappings;
-    DELETE FROM processes;
-    DELETE FROM capabilities;
-    DELETE FROM systems;
-    DELETE FROM user_roles;
-    DELETE FROM users;
-    DELETE FROM departments;
-  `);
-}
+function makeFakeMappingRepository() {
+  const state = {
+    calls: [],
+    nextId: 301,
+    mappings: [
+      {
+        id: 201,
+        process_id: 31,
+        process_mapping_record_id: 31,
+        process_name: '本部门映射流程',
+        cap_name: '流程治理读模型',
+        description: '本部门映射',
+        owner_dept_id: 601,
+        owner_dept_name: 'MySQL 会话部门',
+        approval_dept_id: 601,
+        submitted_by: 42,
+        status: 'draft',
+        current_step: 1,
+        systems: ''
+      },
+      {
+        id: 202,
+        process_id: 32,
+        process_mapping_record_id: 32,
+        process_name: '其他部门映射流程',
+        cap_name: '流程治理读模型',
+        description: '其他部门映射',
+        owner_dept_id: 602,
+        owner_dept_name: '其他部门',
+        approval_dept_id: 602,
+        submitted_by: 77,
+        status: 'draft',
+        current_step: 1,
+        systems: ''
+      }
+    ]
+  };
 
-function seedMappingsScope() {
-  const sessionDeptId = db.prepare('INSERT INTO departments (name, code) VALUES (?, ?)').run('会话部门', 'SESSION').lastInsertRowid;
-  const otherDeptId = db.prepare('INSERT INTO departments (name, code) VALUES (?, ?)').run('其他部门', 'OTHER').lastInsertRowid;
-
-  db.prepare(`
-    INSERT INTO users (id, name, employee_no, department_id, post, role, password_hash)
-    VALUES (42, 'MySQL 身份报送人', 'MYSQL042', ?, '审核员', 'reviewer', 'hash')
-  `).run(sessionDeptId);
-  const localSubmitterId = db.prepare(`
-    INSERT INTO users (name, employee_no, department_id, post, role, password_hash)
-    VALUES ('本地报送人', 'LOCAL043', ?, '报送人', 'submitter', 'hash')
-  `).run(sessionDeptId).lastInsertRowid;
-
-  const capabilityId = db.prepare(`
-    INSERT INTO capabilities (name, level, owner_dept_id, status)
-    VALUES ('映射治理能力', 'L1', ?, 'pending')
-  `).run(sessionDeptId).lastInsertRowid;
-  const processId = db.prepare(`
-    INSERT INTO processes (name, capability_id, owner_dept_id, status)
-    VALUES ('本部门映射流程', ?, ?, 'pending')
-  `).run(capabilityId, sessionDeptId).lastInsertRowid;
-
-  const otherCapabilityId = db.prepare(`
-    INSERT INTO capabilities (name, level, owner_dept_id, status)
-    VALUES ('跨部门映射能力', 'L1', ?, 'pending')
-  `).run(otherDeptId).lastInsertRowid;
-  const otherProcessId = db.prepare(`
-    INSERT INTO processes (name, capability_id, owner_dept_id, status)
-    VALUES ('其他部门映射流程', ?, ?, 'pending')
-  `).run(otherCapabilityId, otherDeptId).lastInsertRowid;
-
-  const mappingId = db.prepare(`
-    INSERT INTO mappings (process_id, owner_dept_id, status, submitted_by, current_step)
-    VALUES (?, ?, 'draft', ?, 1)
-  `).run(processId, sessionDeptId, localSubmitterId).lastInsertRowid;
-  const otherMappingId = db.prepare(`
-    INSERT INTO mappings (process_id, owner_dept_id, status, submitted_by, current_step)
-    VALUES (?, ?, 'draft', ?, 1)
-  `).run(otherProcessId, otherDeptId, localSubmitterId).lastInsertRowid;
-
-  return { sessionDeptId, processId, mappingId, otherMappingId };
+  return {
+    state,
+    async listMappings(filters, scope) {
+      state.calls.push(['listMappings', filters, scope]);
+      assert.strictEqual(scope.canViewAll, true, 'MySQL 身份全局查看权限应传入映射 repository');
+      assert.strictEqual(scope.departmentName, 'MySQL 会话部门');
+      return state.mappings;
+    },
+    async getMapping(id) {
+      return state.mappings.find(mapping => Number(mapping.id) === Number(id)) || null;
+    },
+    async createMapping(payload, actorUserId) {
+      state.calls.push(['createMapping', payload, actorUserId]);
+      assert.strictEqual(actorUserId, 42);
+      const mapping = {
+        id: state.nextId++,
+        process_id: payload.process_id,
+        process_mapping_record_id: payload.process_id,
+        process_name: 'MySQL 身份报送人创建映射',
+        cap_name: '流程治理读模型',
+        description: payload.description,
+        owner_dept_id: payload.owner_dept_id,
+        owner_dept_name: 'MySQL 会话部门',
+        approval_dept_id: payload.approval_dept_id || null,
+        submitted_by: actorUserId,
+        status: 'draft',
+        current_step: 1,
+        systems: ''
+      };
+      state.mappings.push(mapping);
+      return mapping;
+    }
+  };
 }
 
 async function main() {
+  assert.strictEqual(
+    typeof mappingsRouter.setMappingRepositoryFactory,
+    'function',
+    '映射路由应支持注入 MySQL 映射 repository'
+  );
+
   let permissionCalls = 0;
   let roleCalls = 0;
+  let departmentCalls = 0;
   auth.setIdentityRepositoryFactory(async () => ({
     async getUserEffectivePermissions(userId) {
       permissionCalls += 1;
@@ -97,11 +113,16 @@ async function main() {
       roleCalls += 1;
       assert.strictEqual(userId, 42);
       return [{ code: legacyRole, name: '基础角色' }, { code: 'submitter', name: '报送人' }].filter(role => role.code);
+    },
+    async getDepartmentById(departmentId) {
+      departmentCalls += 1;
+      assert.strictEqual(departmentId, 601);
+      return { id: 601, name: 'MySQL 会话部门' };
     }
   }));
 
-  resetData();
-  const seed = seedMappingsScope();
+  const mappingRepo = makeFakeMappingRepository();
+  mappingsRouter.setMappingRepositoryFactory(async () => mappingRepo);
 
   const app = express();
   app.use(express.json());
@@ -110,7 +131,7 @@ async function main() {
       userId: 42,
       userRole: 'reviewer',
       userName: 'MySQL 身份报送人',
-      departmentId: seed.sessionDeptId
+      departmentId: 601
     };
     next();
   });
@@ -125,7 +146,7 @@ async function main() {
     assert.strictEqual(listRes.status, 200, JSON.stringify(listBody));
     assert.deepStrictEqual(
       listBody.map(row => row.id).sort((a, b) => a - b),
-      [seed.mappingId, seed.otherMappingId].sort((a, b) => a - b),
+      [201, 202],
       'MySQL 身份全局查看权限应能看到全部映射'
     );
 
@@ -133,9 +154,9 @@ async function main() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        process_id: seed.processId,
+        process_id: 31,
         description: 'MySQL 身份报送人创建映射',
-        owner_dept_id: seed.sessionDeptId,
+        owner_dept_id: 601,
         systems: [],
         related_departments: []
       })
@@ -145,12 +166,17 @@ async function main() {
     assert.ok(createBody.id);
     assert.ok(permissionCalls > 0, '映射可见性应读取 MySQL 身份权限');
     assert.ok(roleCalls > 0, '映射创建权限应读取 MySQL 身份角色');
+    assert.ok(departmentCalls > 0, '映射可见性应读取 MySQL 部门信息');
+    assert.ok(
+      mappingRepo.state.calls.some(call => call[0] === 'createMapping'),
+      '映射创建应通过 MySQL mapping repository'
+    );
 
     console.log('Mappings MySQL identity API test passed');
   } finally {
     await closeServer(server);
+    mappingsRouter.resetMappingRepositoryFactory();
     auth.resetIdentityRepositoryFactory();
-    resetData();
   }
 }
 
@@ -163,5 +189,4 @@ main().catch(error => {
   } else {
     process.env.MDM_IDENTITY_READ_MODEL = previousReadModel;
   }
-  cleanupDb({ ignoreErrors: true });
 });
