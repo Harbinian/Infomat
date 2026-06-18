@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const { requireAuth } = require('../auth');
+const { dataMapRepository } = require('../dataMapMysqlRepository');
 
 function handleDbError(res, error) {
   console.error(error);
@@ -29,20 +30,10 @@ router.get('/dashboard', requireAuth, (req, res) => {
   } catch (e) { handleDbError(res, e); }
 });
 
-router.get('/field-identities/progress', requireAuth, (req, res) => {
+router.get('/field-identities/progress', requireAuth, async (req, res) => {
   try {
-    const total = db.prepare('SELECT COUNT(*) as cnt FROM field_identities').get().cnt;
-    const confirmed = db.prepare('SELECT COUNT(*) as cnt FROM field_identities WHERE confirmed=1').get().cnt;
-    const byDomain = db.prepare(`
-      SELECT fe.data_object as domain, COUNT(fi.id) as total, SUM(CASE WHEN fi.confirmed=1 THEN 1 ELSE 0 END) as confirmed
-      FROM field_identities fi
-      JOIN field_entries fe ON fi.field_entry_id = fe.id
-      GROUP BY fe.data_object ORDER BY fe.data_object
-    `).all();
-    res.json({
-      overall: { total, confirmed, pct: total > 0 ? Math.round((confirmed / total) * 100) : 0 },
-      by_domain: byDomain.map(d => ({ ...d, pct: d.total > 0 ? Math.round((d.confirmed / d.total) * 100) : 0 }))
-    });
+    const repo = await dataMapRepository();
+    res.json(await repo.fieldIdentityProgress());
   } catch (e) { handleDbError(res, e); }
 });
 

@@ -700,6 +700,7 @@
         <button class="tab" data-tab="dashboard" data-roles="submitter,owner,reviewer,admin">统计看板</button>
         <button class="tab" data-tab="roleGuide" data-roles="submitter,owner,reviewer,admin">角色使用说明</button>
         <button class="tab" data-tab="mySubmissions" data-roles="submitter,admin">报送管理</button>
+        <button class="tab" data-tab="dataMap" data-roles="submitter,owner,reviewer,admin">数据地图</button>
         <button class="tab" data-tab="capabilities" data-roles="admin">能力与流程申报</button>
         <button class="tab" data-tab="businessMap" data-roles="owner,reviewer,admin">业务地图</button>
         <button class="tab" data-tab="processGovernance" data-roles="owner,reviewer,admin">流程治理</button>
@@ -921,6 +922,54 @@
       <section class="panel" id="mySubmissions">
         <div class="toolbar"><h2>报送管理</h2><button class="btn secondary" style="margin-left: auto;" onclick="loadMySubmissions()">刷新</button></div>
         <div id="mySubmissionsList"></div>
+      </section>
+
+      <!-- Data Map -->
+      <section class="panel" id="dataMap">
+        <div class="toolbar">
+          <h2>数据地图字段域</h2>
+          <div class="toolbar-right">
+            <button class="btn secondary" type="button" onclick="loadDataMapContexts()">刷新上下文</button>
+          </div>
+        </div>
+        <div class="notice" style="margin-bottom:16px">字段台账以数据地图上下文为归属锚点；旧流程映射审批记录仍保留，但不再作为字段台账默认入口。</div>
+        <div class="split">
+          <div>
+            <h2>数据地图上下文</h2>
+            <div class="form-group">
+              <label>选择上下文
+                <select id="dataMapContextSelect" onchange="renderDataMapFields()"></select>
+              </label>
+            </div>
+            <div class="form-group"><label>上下文标题<input id="dataMapContextTitle" placeholder="例如：客户主数据字段上下文"></label></div>
+            <div class="form-group"><label>所属部门<select id="dataMapContextDept"></select></label></div>
+            <div class="form-group"><label>来源文件<input id="dataMapContextSourceFile" placeholder="制度、台账或访谈记录名称"></label></div>
+            <div class="form-group"><label>来源锚点<input id="dataMapContextSourceAnchor" placeholder="真实页码、条款、章节或内部抽取锚点"></label></div>
+            <div class="toolbar">
+              <button class="btn primary" type="button" onclick="createDataMapContext()">创建上下文</button>
+            </div>
+          </div>
+          <div>
+            <h2>字段导入</h2>
+            <div class="notice" style="margin-bottom:12px">Excel 会导入到当前选中的数据地图上下文。字段名命中阻断级禁用词时会拒绝保存，警告级规则会进入质量问题。</div>
+            <input type="file" id="importFile" accept=".xlsx,.xls" style="margin-bottom:12px">
+            <div class="toolbar">
+              <button class="btn primary" type="button" onclick="importFields()">导入字段台账</button>
+              <a class="btn secondary" href="template.xlsx" download>下载模板</a>
+              <a class="btn secondary" href="/api/export/excel">导出台账</a>
+            </div>
+          </div>
+        </div>
+        <div class="toolbar" style="margin-top:32px">
+          <h2>字段列表</h2>
+          <span class="muted" id="dataMapFieldMeta"></span>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead><tr><th>中文字段名</th><th>英文字段名</th><th>数据对象</th><th>类型</th><th>同步方式</th><th>消费系统</th><th>质量状态</th></tr></thead>
+            <tbody id="dataMapFieldRows"></tbody>
+          </table>
+        </div>
       </section>
 
       <!-- Capabilities (admin only) -->
@@ -1428,7 +1477,7 @@
 
   <script>
     // ===== State & Utilities =====
-    const state = { user:null, departments:[], capabilities:[], processes:[], termProcesses:[], termTypes:[], mappings:[], todos:[], conflicts:[], terms:[], currentRoute:null, currentView:'roleWorkbench', activeMapping:null, activeConflict:null, pollTimer:null, isEditing:false, activeReview:null, activeCapReview:null, activeProcReview:null, pgSelectedDept:'', pgEvidenceFocus:null, pgSourceCoverageData:null, pageWorkflow:null, pageWorkflowRequestId:0, roleWorkbench:{ mode:'todo', data:null, selectedNode:null }, activity:{ roleWorkbench:null, dashboard:null, dashboardUsers:[] } };
+    const state = { user:null, departments:[], capabilities:[], processes:[], termProcesses:[], termTypes:[], mappings:[], dataMapContexts:[], dataMapFields:[], todos:[], conflicts:[], terms:[], currentRoute:null, currentView:'roleWorkbench', activeMapping:null, activeConflict:null, pollTimer:null, isEditing:false, activeReview:null, activeCapReview:null, activeProcReview:null, pgSelectedDept:'', pgEvidenceFocus:null, pgSourceCoverageData:null, pageWorkflow:null, pageWorkflowRequestId:0, roleWorkbench:{ mode:'todo', data:null, selectedNode:null }, activity:{ roleWorkbench:null, dashboard:null, dashboardUsers:[] } };
     const SOURCE_COVERAGE_VISIBLE_LIMIT = 20;
 
     var DEFAULT_TERM_TYPES = [
@@ -2335,7 +2384,7 @@
 
     // ===== Data loading =====
     async function loadAll() {
-      await Promise.all([loadCatalog(), loadMappings(), loadTodos(), loadTerms(), loadConflicts()]);
+      await Promise.all([loadCatalog(), loadMappings(), loadDataMapContexts(), loadTodos(), loadTerms(), loadConflicts()]);
       renderDashboard();
     }
 
@@ -2345,6 +2394,7 @@
       state.processes = await api('/api/processes');
 
       if ($('capDept')) fillSelect($('capDept'), state.departments);
+      if ($('dataMapContextDept')) fillSelect($('dataMapContextDept'), state.departments);
       if ($('procDept')) fillSelect($('procDept'), state.departments);
       if ($('procCap')) fillSelect($('procCap'), state.capabilities, 'name');
       await loadTermGovernanceProcesses();
@@ -2459,6 +2509,89 @@
       renderDashboard();
     }
 
+    async function loadDataMapContexts() {
+      state.dataMapContexts = await api('/api/data-map/contexts');
+      renderDataMapContextOptions();
+      await renderDataMapFields();
+      renderDashboard();
+    }
+
+    function renderDataMapContextOptions() {
+      var select = $('dataMapContextSelect');
+      if (!select) return;
+      var rows = state.dataMapContexts || [];
+      var current = select.value || String(window.selectedDataMapContextId || '');
+      select.innerHTML = '<option value="">请选择数据地图上下文</option>' + rows.map(function(row) {
+        var label = (row.title || row.context_key || ('上下文 #' + row.id)) + (row.dept_name ? '（' + row.dept_name + '）' : '');
+        return '<option value="' + Number(row.id) + '">' + safeText(label) + '</option>';
+      }).join('');
+      if (current && rows.some(function(row) { return String(row.id) === String(current); })) {
+        select.value = current;
+      } else if (rows.length) {
+        select.value = String(rows[0].id);
+      }
+      window.selectedDataMapContextId = select.value ? Number(select.value) : null;
+    }
+
+    async function createDataMapContext() {
+      var title = ($('dataMapContextTitle') && $('dataMapContextTitle').value.trim()) || '';
+      if (!title) return alert('请填写数据地图上下文标题');
+      var dept = $('dataMapContextDept');
+      var selectedDept = dept && dept.selectedOptions && dept.selectedOptions[0];
+      var payload = {
+        title: title,
+        dept_id: dept && dept.value ? Number(dept.value) : null,
+        dept_name: selectedDept ? selectedDept.textContent : '',
+        source_file: ($('dataMapContextSourceFile') && $('dataMapContextSourceFile').value.trim()) || '',
+        source_anchor: ($('dataMapContextSourceAnchor') && $('dataMapContextSourceAnchor').value.trim()) || ''
+      };
+      var context = await api('/api/data-map/contexts', { method:'POST', body:JSON.stringify(payload) });
+      window.selectedDataMapContextId = context.id;
+      if ($('dataMapContextTitle')) $('dataMapContextTitle').value = '';
+      if ($('dataMapContextSourceFile')) $('dataMapContextSourceFile').value = '';
+      if ($('dataMapContextSourceAnchor')) $('dataMapContextSourceAnchor').value = '';
+      await loadDataMapContexts();
+      showToast('数据地图上下文已创建');
+    }
+
+    async function renderDataMapFields() {
+      var select = $('dataMapContextSelect');
+      var contextId = select && select.value ? Number(select.value) : Number(window.selectedDataMapContextId || 0);
+      window.selectedDataMapContextId = contextId || null;
+      var rowsEl = $('dataMapFieldRows');
+      var metaEl = $('dataMapFieldMeta');
+      if (!rowsEl) return;
+      if (!contextId) {
+        state.dataMapFields = [];
+        rowsEl.innerHTML = '<tr><td colspan="7" class="empty">请选择或创建数据地图上下文</td></tr>';
+        if (metaEl) metaEl.textContent = '';
+        return;
+      }
+      try {
+        state.dataMapFields = await api('/api/field-entries/mapping/' + contextId);
+        rowsEl.innerHTML = state.dataMapFields.map(function(row) {
+          return '<tr><td>' + safeText(row.field_name_cn) + '</td><td>' + safeText(row.field_name_en) + '</td>' +
+            '<td>' + safeText(row.data_object) + '</td><td>' + safeText(row.field_type) + '</td>' +
+            '<td>' + safeText(row.sync_mode) + '</td><td>' + safeText(jsonListDisplay(row.consume_systems)) + '</td>' +
+            '<td>' + safeText(row.quality_status || row.status) + '</td></tr>';
+        }).join('') || '<tr><td colspan="7" class="empty">当前上下文暂无字段</td></tr>';
+        if (metaEl) metaEl.textContent = '共 ' + state.dataMapFields.length + ' 个字段';
+      } catch (error) {
+        rowsEl.innerHTML = '<tr><td colspan="7" class="empty">字段台账暂不可用</td></tr>';
+        if (metaEl) metaEl.textContent = '';
+      }
+    }
+
+    function jsonListDisplay(value) {
+      if (!value) return '';
+      if (Array.isArray(value)) return value.join(', ');
+      try {
+        var parsed = JSON.parse(value);
+        if (Array.isArray(parsed)) return parsed.join(', ');
+      } catch (error) {}
+      return value;
+    }
+
     async function selectMapping(id) {
       var detail = await api('/api/mappings/' + id);
       window.selectedMappingId = id;
@@ -2485,13 +2618,16 @@
 
     async function importFields() {
       var fileInput = $('importFile');
-      if (!fileInput || !window.selectedMappingId || !fileInput.files[0]) return alert('请选择映射和 Excel 文件');
+      var select = $('dataMapContextSelect');
+      var contextId = select && select.value ? Number(select.value) : Number(window.selectedDataMapContextId || 0);
+      if (!fileInput || !contextId || !fileInput.files[0]) return alert('请选择数据地图上下文和 Excel 文件');
       var form = new FormData();
-      form.append('mapping_id', String(window.selectedMappingId));
+      form.append('context_id', String(contextId));
       form.append('file', fileInput.files[0]);
       try {
         var result = await api('/api/import/field-entries', { method:'POST', body: form });
         alert('已导入 ' + result.imported + ' 行');
+        await renderDataMapFields();
       } catch (e) {
         alert((e && e.message) || '导入失败');
       }
@@ -2736,7 +2872,7 @@
           '</div>';
       }
 
-      Promise.all(state.mappings.map(function(row) { return api('/api/field-entries/mapping/' + row.id).catch(function() { return []; }); })).then(function(groups) {
+      Promise.all((state.dataMapContexts || []).map(function(row) { return api('/api/field-entries/mapping/' + row.id).catch(function() { return []; }); })).then(function(groups) {
         $('metricFields').textContent = groups.flat().length;
       });
 
@@ -4056,6 +4192,7 @@
         case 'dashboard': renderDashboard(); break;
         case 'roleGuide': renderRoleGuide(); break;
         case 'mySubmissions': runPageTask(loadMySubmissions, '我的报送加载失败'); break;
+        case 'dataMap': runPageTask(loadDataMapContexts, '数据地图加载失败'); break;
         case 'todos': runPageTask(loadTodos, '待办加载失败'); break;
         case 'reviews': runPageTask(loadReviews, '评审记录加载失败'); break;
         case 'terms': runPageTask(loadTerms, '术语加载失败'); break;

@@ -1,191 +1,101 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db');
 const { requireAuth, getUserEffectivePermissionsAsync } = require('../auth');
-const { canViewMappingAsync, getEffectiveRoleCodesAsync } = require('../access');
+const { getEffectiveRoleCodesAsync } = require('../access');
+const { dataMapRepository } = require('../dataMapMysqlRepository');
 
-const ALL_FIELD_ENTRY_FIELDS = ['field_name_cn', 'field_name_en', 'data_object', 'field_type', 'consume_systems', 'sync_mode', 'note', 'process_governance_node_key', 'process_governance_a1_code'];
-const SUBMITTER_WRITABLE = ['data_object', 'note', 'process_governance_node_key', 'process_governance_a1_code'];
-const OWNER_WRITABLE = ['field_name_cn', 'field_name_en', 'field_type', 'consume_systems', 'sync_mode'];
-
-function handleDbError(res, error) {
-  if (error && (String(error.code).startsWith('SQLITE_CONSTRAINT') || String(error.message).includes('constraint failed'))) {
+function handleError(res, error) {
+  if (error && error.statusCode) return res.status(error.statusCode).json({ error: error.message });
+  if (error && (error.code === 'ER_DUP_ENTRY' || String(error.message).includes('Duplicate entry'))) {
+    return res.status(409).json({ error: '字段已存在' });
+  }
+  if (error && (String(error.code || '').startsWith('ER_') || String(error.message).includes('constraint'))) {
     return res.status(400).json({ error: '数据不符合约束' });
   }
   console.error(error);
   return res.status(500).json({ error: '服务器错误' });
 }
 
-function runDbAction(res, action) {
-  try {
-    return action();
-  } catch (error) {
-    return handleDbError(res, error);
-  }
+function runAction(res, action) {
+  return action().catch(error => handleError(res, error));
 }
 
-function runAsyncAction(res, action) {
-  return action().catch(error => handleDbError(res, error));
-}
-
-function normalizeValue(fieldName, value) {
-  if (fieldName === 'consume_systems' && Array.isArray(value)) {
-    return JSON.stringify(value);
-  }
-  return value;
-}
-
-async function canCreateFieldForMapping(req, mappingId) {
+async function isAdmin(req) {
   const { permSet } = await getUserEffectivePermissionsAsync(req.session.userId);
-  if (permSet.has('admin:access') || permSet.has('*:*')) return true;
-  const mapping = db.prepare('SELECT submitted_by FROM mappings WHERE id=?').get(mappingId);
-  const roleCodes = await getEffectiveRoleCodesAsync(req);
-  return mapping && roleCodes.has('submitter') && mapping.submitted_by === req.session.userId;
+  return permSet.has('admin:access') || permSet.has('*:*');
 }
 
-async function canEditOwnerColumns(req, field) {
-  const { permSet } = await getUserEffectivePermissionsAsync(req.session.userId);
-  if (permSet.has('admin:access') || permSet.has('review:approve') || permSet.has('*:*')) return true;
+async function canUseContext(req, context) {
+  if (!context) return false;
+  if (await isAdmin(req)) return true;
   const roleCodes = await getEffectiveRoleCodesAsync(req);
-  if (!roleCodes.has('owner')) return false;
-
-  const mapping = db.prepare('SELECT owner_dept_id FROM mappings WHERE id=?').get(field.mapping_id);
-  return mapping && mapping.owner_dept_id === req.session.departmentId;
+  const sameDepartment = Number(context.dept_id || 0) === Number(req.session.departmentId || 0);
+  const ownsContext = Number(context.owner_user_id || 0) === Number(req.session.userId || 0);
+  const createdContext = Number(context.created_by || 0) === Number(req.session.userId || 0);
+  return createdContext || ownsContext || (sameDepartment && (roleCodes.has('owner') || roleCodes.has('submitter')));
 }
 
-router.get('/mapping/:mappingId', requireAuth, (req, res) => {
-  return runAsyncAction(res, async () => {
-    if (!await canViewMappingAsync(req, req.params.mappingId)) {
-      return res.status(403).json({ error: '无权查看该映射字段' });
-    }
-    const fields = db.prepare('SELECT * FROM field_entries WHERE mapping_id=? ORDER BY id').all(req.params.mappingId);
-    res.json(fields);
+async function canEditField(req, field, context) {
+  if (await isAdmin(req)) return true;
+  const roleCodes = await getEffectiveRoleCodesAsync(req);
+  const sameDepartment = Number(context && context.dept_id || 0) === Number(req.session.departmentId || 0);
+  if (roleCodes.has('owner') && sameDepartment) return true;
+  return roleCodes.has('submitter') && Number(field.submitted_by || 0) === Number(req.session.userId || 0);
+}
+
+function contextIdFromPayload(payload = {}) {
+  return Number(payload.context_id || payload.mapping_id || 0);
+}
+
+router.get('/mapping/:contextId', requireAuth, (req, res) => {
+  return runAction(res, async () => {
+    const repo = await dataMapRepository();
+    const context = await repo.getContext(req.params.contextId);
+    if (!context) return res.status(404).json({ error: '数据地图上下文不存在' });
+    if (!await canUseContext(req, context)) return res.status(403).json({ error: '无权查看该字段台账' });
+    res.json(await repo.getFieldsByContext(context.id));
   });
 });
 
-function validateTerms(fieldName) {
-  if (!fieldName) return null;
-  const terms = db.prepare('SELECT term, forbidden FROM terms').all();
-  for (const t of terms) {
-    if (t.forbidden && fieldName.includes(t.forbidden)) {
-      return `字段名 "${fieldName}" 包含禁用词汇 "${t.forbidden}"，请使用标准术语 "${t.term}"`;
-    }
-  }
-  return null;
-}
-
 router.post('/', requireAuth, (req, res) => {
-  return runAsyncAction(res, async () => {
-    const { mapping_id, field_name_cn, field_name_en, data_object, field_type, consume_systems, sync_mode, note, process_governance_node_key, process_governance_a1_code } = req.body;
-    if (!await canCreateFieldForMapping(req, mapping_id)) {
-      return res.status(403).json({ error: '仅该映射报送人或管理员可创建字段' });
-    }
-
-    const termError = validateTerms(field_name_cn);
-    if (termError) {
-      return res.status(400).json({ error: termError });
-    }
-
-    const normalizedConsumeSystems = normalizeValue('consume_systems', consume_systems);
-    const { permSet: createPermSet } = await getUserEffectivePermissionsAsync(req.session.userId);
-    const creatorIsAdmin = createPermSet.has('admin:access') || createPermSet.has('*:*');
-    const values = creatorIsAdmin
-      ? { field_name_cn, field_name_en, data_object, field_type, consume_systems: normalizedConsumeSystems, sync_mode, note, process_governance_node_key, process_governance_a1_code }
-      : { field_name_cn: null, field_name_en: null, data_object, field_type: null, consume_systems: null, sync_mode: null, note, process_governance_node_key, process_governance_a1_code };
-
-    const stmt = db.prepare(`
-      INSERT INTO field_entries
-        (mapping_id, field_name_cn, field_name_en, data_object, field_type, consume_systems, sync_mode, note, process_governance_node_key, process_governance_a1_code, submitted_by, submitted_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
-    `);
-    const result = stmt.run(
-      mapping_id,
-      values.field_name_cn || null,
-      values.field_name_en || null,
-      values.data_object || null,
-      values.field_type || null,
-      values.consume_systems || null,
-      values.sync_mode || null,
-      values.note || null,
-      values.process_governance_node_key || null,
-      values.process_governance_a1_code || null,
-      req.session.userId
-    );
-    res.json({ id: result.lastInsertRowid });
+  return runAction(res, async () => {
+    const contextId = contextIdFromPayload(req.body);
+    if (!contextId) return res.status(400).json({ error: '缺少 context_id' });
+    const repo = await dataMapRepository();
+    const context = await repo.getContext(contextId);
+    if (!context) return res.status(404).json({ error: '数据地图上下文不存在' });
+    if (!await canUseContext(req, context)) return res.status(403).json({ error: '无权维护该字段台账' });
+    const field = await repo.createField({ ...req.body, context_id: contextId }, req.session.userId);
+    res.json(field);
   });
 });
 
 router.put('/:id', requireAuth, (req, res) => {
-  return runAsyncAction(res, async () => {
-    const fieldId = req.params.id;
-    const field = db.prepare('SELECT * FROM field_entries WHERE id=?').get(fieldId);
+  return runAction(res, async () => {
+    const repo = await dataMapRepository();
+    const field = await repo.getField(req.params.id);
     if (!field) return res.status(404).json({ error: '字段不存在' });
-
-    let allowedFields;
-    const { permSet: editPermSet } = await getUserEffectivePermissionsAsync(req.session.userId);
-    if (editPermSet.has('admin:access') || editPermSet.has('review:approve') || editPermSet.has('*:*')) {
-      allowedFields = ALL_FIELD_ENTRY_FIELDS;
-    } else if (await canEditOwnerColumns(req, field)) {
-      allowedFields = OWNER_WRITABLE;
-    } else if ((await getEffectiveRoleCodesAsync(req)).has('submitter') && field.submitted_by === req.session.userId) {
-      allowedFields = SUBMITTER_WRITABLE;
-    } else {
-      return res.status(403).json({ error: '仅字段报送人、映射 owner 部门、评审人或管理员可修改字段' });
+    const context = await repo.getContext(field.context_id);
+    if (!await canEditField(req, field, context)) {
+      return res.status(403).json({ error: '仅字段报送人、本部门 owner 或管理员可修改字段' });
     }
-
-    if (req.body.field_name_cn && allowedFields.includes('field_name_cn')) {
-      const termError = validateTerms(req.body.field_name_cn);
-      if (termError) {
-        return res.status(400).json({ error: termError });
-      }
-    }
-
-    const updateField = db.transaction(() => {
-      const nextValues = allowedFields.map(fieldName => {
-        if (Object.prototype.hasOwnProperty.call(req.body, fieldName)) {
-          return normalizeValue(fieldName, req.body[fieldName]);
-        }
-        return field[fieldName];
-      });
-
-      const changed = allowedFields
-        .map((fieldName, index) => ({ fieldName, nextValue: nextValues[index] }))
-        .filter(change => String(field[change.fieldName] ?? '') !== String(change.nextValue ?? ''));
-
-      if (changed.length > 0) {
-        const changeSet = db.prepare("INSERT INTO change_set (entity_type, entity_id, operated_by, description) VALUES ('field_entry', ?, ?, '更新字段')").run(
-          fieldId,
-          req.session.userId
-        );
-        changed.forEach(({ fieldName, nextValue }) => {
-          db.prepare(`
-            INSERT INTO version_log
-              (entity_type, entity_id, field_name, old_value, new_value, operation, operated_by, change_set_id)
-            VALUES ('field_entry', ?, ?, ?, ?, 'update', ?, ?)
-          `).run(fieldId, fieldName, field[fieldName], nextValue, req.session.userId, changeSet.lastInsertRowid);
-        });
-      }
-
-      const updates = allowedFields.map(fieldName => `${fieldName}=?`).join(', ');
-      db.prepare(`UPDATE field_entries SET ${updates}, updated_at=datetime('now') WHERE id=?`).run(...nextValues, fieldId);
-    });
-
-    updateField();
-    res.json({ success: true });
+    const updated = await repo.updateField(req.params.id, req.body, req.session.userId);
+    if (!updated) return res.status(404).json({ error: '字段不存在' });
+    res.json({ success: true, field: updated });
   });
 });
 
 router.delete('/:id', requireAuth, (req, res) => {
-  return runAsyncAction(res, async () => {
-    const field = db.prepare('SELECT * FROM field_entries WHERE id=?').get(req.params.id);
+  return runAction(res, async () => {
+    const repo = await dataMapRepository();
+    const field = await repo.getField(req.params.id);
     if (!field) return res.status(404).json({ error: '字段不存在' });
-    const mapping = db.prepare('SELECT status FROM mappings WHERE id=?').get(field.mapping_id);
-    const { permSet: delPermSet } = await getUserEffectivePermissionsAsync(req.session.userId);
-    const roleCodes = await getEffectiveRoleCodesAsync(req);
-    const canDelete = delPermSet.has('admin:access') || delPermSet.has('*:*') ||
-      (roleCodes.has('submitter') && field.submitted_by === req.session.userId && mapping && mapping.status === 'draft');
-    if (!canDelete) return res.status(403).json({ error: '仅管理员或草稿字段报送人可删除字段' });
-    db.prepare('DELETE FROM field_entries WHERE id=?').run(req.params.id);
+    const context = await repo.getContext(field.context_id);
+    if (!await canEditField(req, field, context)) {
+      return res.status(403).json({ error: '仅字段报送人、本部门 owner 或管理员可删除字段' });
+    }
+    const deleted = await repo.deleteField(req.params.id, req.session.userId);
+    if (!deleted) return res.status(404).json({ error: '字段不存在' });
     res.json({ success: true });
   });
 });

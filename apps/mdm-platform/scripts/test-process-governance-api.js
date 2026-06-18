@@ -197,6 +197,8 @@ async function main() {
       PORT: String(PORT),
       SESSION_SECRET: 'process-governance-api-test',
       MDM_DB_QUIET: '1',
+      MDM_IDENTITY_READ_MODEL: '',
+      PROCESS_GOVERNANCE_READ_MODEL: '',
       PROCESS_CANDIDATE_ARTIFACTS_DIR: candidateArtifactsDir
     },
     stdio: ['ignore', 'pipe', 'pipe']
