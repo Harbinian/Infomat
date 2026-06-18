@@ -121,17 +121,80 @@ h2{font-size:clamp(26px,2.75vw,38px);line-height:1.25;color:var(--navy);letter-s
 .step{background:#fff;border:1px solid var(--line);border-radius:8px;padding:14px;text-align:center;min-height:112px}
 .step b{display:inline-flex;width:28px;height:28px;border-radius:50%;background:var(--blue);color:#fff;align-items:center;justify-content:center;margin-bottom:8px}
 .step span{display:block;font-size:14px;color:var(--muted)}
+.orgbox{background:#fff;border:1px solid var(--line);border-radius:8px;padding:18px;box-shadow:0 2px 8px rgba(16,33,71,.04);overflow:hidden}
+.org-top{max-width:560px;margin:0 auto 16px;background:var(--navy);color:#fff;border-radius:8px;padding:14px 18px;text-align:center;border-left:6px solid #60a5fa}
+.org-top b,.org-office b{display:block;font-size:18px;margin-bottom:4px}
+.org-top span,.org-office span{display:block;font-size:13px;color:rgba(255,255,255,.78)}
+.org-office{background:var(--blue);color:#fff;border-radius:8px;padding:14px 18px;text-align:center;margin-bottom:14px}
+.org-subgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:16px}
+.org-sub{border-radius:8px;padding:12px;border:1px solid var(--line);background:#f8fbff}
+.org-sub:nth-child(1){border-left:4px solid var(--green)}
+.org-sub:nth-child(2){border-left:4px solid #7b61c8}
+.org-sub:nth-child(3){border-left:4px solid var(--gold)}
+.org-sub b{display:block;color:var(--navy);font-size:15px;margin-bottom:5px}
+.org-sub span{display:block;color:var(--muted);font-size:13px}
+.org-groups{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.org-group{border:1px solid var(--line);border-radius:8px;background:#fff;overflow:hidden;min-width:0}
+.org-group h3{color:#fff;font-size:15px;padding:10px 11px;margin:0;background:var(--blue)}
+.org-group:nth-child(1) h3{background:var(--gold)}
+.org-group:nth-child(2) h3{background:#7b61c8}
+.org-group:nth-child(3) h3{background:var(--green)}
+.org-group:nth-child(4) h3{background:var(--blue)}
+.org-group:nth-child(5) h3{background:var(--cyan)}
+.org-group:nth-child(6) h3{background:var(--red)}
+.org-group div{padding:11px}
+.org-group p{font-size:13px;color:var(--muted);margin-bottom:7px}
+.org-group strong{color:var(--ink)}
+.workgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.work-card{background:#fff;border:1px solid var(--line);border-radius:8px;padding:16px 17px;box-shadow:0 2px 8px rgba(16,33,71,.04);border-top:4px solid var(--gold);min-width:0}
+.work-card:nth-child(2){border-top-color:#7b61c8}
+.work-card:nth-child(3){border-top-color:var(--green)}
+.work-card:nth-child(4){border-top-color:var(--blue)}
+.work-card:nth-child(5){border-top-color:var(--green)}
+.work-card:nth-child(6){border-top-color:var(--red)}
+.work-card:nth-child(7){border-top-color:var(--blue)}
+.work-card h3{font-size:18px;color:var(--navy);margin-bottom:10px}
+.work-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-bottom:12px}
+.work-stat{background:#f6f9fe;border:1px solid #e1e9f5;border-radius:7px;padding:8px;text-align:center}
+.work-stat b{display:block;color:var(--navy);font-size:20px;line-height:1}
+.work-stat span{display:block;color:var(--muted);font-size:11px;margin-top:4px}
+.work-meta{font-size:13px;color:var(--muted);margin-bottom:10px}
+.work-card ul{padding-left:17px}
+.work-card li{font-size:14px;color:var(--muted);margin-bottom:5px}
+.timeline{position:relative;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:14px}
+.timeline:before{content:"";position:absolute;left:4%;right:4%;top:23px;height:2px;background:#dbe3ef}
+.mile{position:relative;background:#fff;border:1px solid var(--line);border-radius:8px;padding:15px 14px 13px;box-shadow:0 2px 8px rgba(16,33,71,.04);min-width:0}
+.mile:before{content:"";position:absolute;top:17px;left:14px;width:13px;height:13px;border-radius:50%;background:var(--blue);box-shadow:0 0 0 4px #eef5ff}
+.mile time{display:block;color:var(--blue);font-weight:900;font-size:13px;padding-left:23px;margin-bottom:8px}
+.mile b{display:block;color:var(--navy);font-size:15px;margin-bottom:5px}
+.mile span{display:block;color:var(--muted);font-size:13px}
 .tablewrap{background:#fff;border:1px solid var(--line);border-radius:8px;overflow-x:auto;box-shadow:0 2px 8px rgba(16,33,71,.04)}
 table{width:100%;border-collapse:collapse;font-size:14px;min-width:820px}
 th{background:var(--navy);color:#fff;text-align:left;padding:12px 14px;white-space:nowrap}
 td{padding:12px 14px;border-bottom:1px solid var(--line);color:var(--muted);vertical-align:top}
 tr:last-child td{border-bottom:0}
 .vote{font-weight:900;color:var(--blue);white-space:nowrap}
+.vote-framework{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.vote-card{background:#fff;border:1px solid var(--line);border-radius:8px;padding:16px 17px;box-shadow:0 2px 8px rgba(16,33,71,.04);border-top:4px solid var(--blue);min-width:0}
+.vote-card:nth-child(3n+1){border-top-color:var(--gold)}
+.vote-card:nth-child(3n+2){border-top-color:var(--green)}
+.vote-card:nth-child(3n+3){border-top-color:var(--cyan)}
+.vote-title{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px}
+.vote-title .vote{display:inline-flex;align-items:center;justify-content:center;background:#eef5ff;border:1px solid #d8e7fb;border-radius:7px;padding:5px 8px;font-size:13px}
+.vote-title h3{font-size:17px;color:var(--navy);margin:2px 0 0}
+.vote-card p{font-size:14px;color:var(--muted);margin-bottom:9px}
+.vote-card p strong{color:var(--ink)}
+.vote-levels{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0}
+.vote-level{background:#f8fbff;border:1px solid #e1e9f5;border-radius:7px;padding:10px;min-width:0}
+.vote-level b{display:block;color:var(--navy);font-size:13px;margin-bottom:5px}
+.vote-level span{display:block;color:var(--muted);font-size:13px;line-height:1.55}
+.vote-result{background:#fffaf0;border:1px solid #f2ddb3;border-radius:7px;padding:9px 10px;color:#75521b;font-size:13px}
 .close{font-size:19px;line-height:1.8;background:var(--navy);color:#edf6ff;border-radius:8px;padding:22px 24px;margin-top:16px}
 footer{padding:16px;text-align:center;background:#fff;border-top:1px solid var(--line);color:#687386;font-size:13px}
 @media(max-width:980px){
-  .cover,.grid2,.grid3,.toolgrid{grid-template-columns:1fr}
-  .grid4,.metrics,.process{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .cover,.grid2,.grid3,.toolgrid,.org-groups,.workgrid,.vote-framework{grid-template-columns:1fr}
+  .grid4,.metrics,.process,.org-subgrid,.timeline{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .timeline:before{display:none}
   .sec{min-height:auto;padding:30px 0}
 }
 @media(max-width:640px){
@@ -140,10 +203,12 @@ footer{padding:16px;text-align:center;background:#fff;border-top:1px solid var(-
   .navlinks a{font-size:12px;padding:5px 8px}
   .page{padding-top:98px}
   .cover{padding-top:112px}
-  .grid4,.metrics,.process{grid-template-columns:1fr}
+  .grid4,.metrics,.process,.org-subgrid,.timeline{grid-template-columns:1fr}
   .screen{height:186px}
   .chip{min-width:calc(50% - 5px)}
   .statement{font-size:17px;padding:18px}
+  .work-stats{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .vote-levels{grid-template-columns:1fr}
 }
 </style>
 </head>
@@ -158,9 +223,11 @@ footer{padding:16px;text-align:center;background:#fff;border-top:1px solid var(-
     <a href="#s4">治理</a>
     <a href="#s5">调研</a>
     <a href="#s6">责任池</a>
-    <a href="#s7">工具</a>
-    <a href="#s8">机制</a>
-    <a href="#s9">事项</a>
+    <a href="#s7">组织</a>
+    <a href="#s8">分工</a>
+    <a href="#s9">工具</a>
+    <a href="#s10">机制</a>
+    <a href="#s11">事项</a>
   </div>
 </nav>
 
@@ -215,7 +282,7 @@ footer{padding:16px;text-align:center;background:#fff;border-top:1px solid var(-
         </div>
       </div>
     </div>
-    <div class="note ok" style="margin-top:14px"><strong>会议目标</strong>本次会议要形成项目启动口径、PMO 治理口径、调研授权口径、责任池口径、工具承接口径和项目管理机制处理口径。</div>
+    <div class="note ok" style="margin-top:14px"><strong>会议目标</strong>本次会议要形成项目启动口径、PMO 治理口径、调研授权口径、责任池口径、阶段门口径和联调验收控制口径。</div>
   </section>
 
   <section class="sec" id="s2">
@@ -330,7 +397,166 @@ footer{padding:16px;text-align:center;background:#fff;border-top:1px solid var(-
   </section>
 
   <section class="sec" id="s7">
-    <div class="sec-head"><div class="num">8</div><div><h2>工具展示：甘特图、PMO 看板、MDM 平台</h2><div class="sub">这是现场展示重点，但不要讲成产品发布会。</div></div></div>
+    <div class="sec-head"><div class="num">8</div><div><h2>项目组架构：谁决策、谁统筹、谁执行和复核</h2><div class="sub">先把组织关系讲清楚，后面讲分工和计划才有承接对象。</div></div></div>
+    <div class="orgbox" aria-label="昌兴复材信息化项目组架构">
+      <div class="org-top">
+        <b>项目决策组</b>
+        <span>组长：马成文；执行副组长：李洪哲；副组长：刘春含</span>
+      </div>
+      <div class="org-office">
+        <b>信息化项目管理工作室</b>
+        <span>统筹项目运行，推进关键节点，审核各工作组成果，控制项目边界</span>
+      </div>
+      <div class="org-subgrid">
+        <div class="org-sub"><b>技术架构</b><span>负责人：张广懿；专员：佟浩</span></div>
+        <div class="org-sub"><b>变更控制</b><span>负责人：曲明盛、池炳辉；专员：张永翔、胡睿</span></div>
+        <div class="org-sub"><b>基础设施</b><span>负责人：刘洪雨；专员：方嵩荐</span></div>
+      </div>
+      <div class="org-groups">
+        <article class="org-group">
+          <h3>MDM 工作组</h3>
+          <div>
+            <p><strong>组长：</strong>张广懿</p>
+            <p><strong>定位：</strong>管理主数据，汇总元数据，制定数据标准、质量模板和治理口径，发布数据纠正通知。</p>
+          </div>
+        </article>
+        <article class="org-group">
+          <h3>数据质量工作组</h3>
+          <div>
+            <p><strong>组长：</strong>池炳辉；副组长：胡睿、范秋南、张永翔</p>
+            <p><strong>定位：</strong>根据 MDM 标准与质量模板审核各系统数据合规性，并出具审计报告。</p>
+          </div>
+        </article>
+        <article class="org-group">
+          <h3>基础设施工作组</h3>
+          <div>
+            <p><strong>推进：</strong>方嵩荐；技术执行：刘洪雨</p>
+            <p><strong>定位：</strong>负责基础设施计划、招采衔接、网络、服务器、虚拟化、机房条件和现场技术确认。</p>
+          </div>
+        </article>
+        <article class="org-group">
+          <h3>PLM 工作组</h3>
+          <div>
+            <p><strong>组长：</strong>池炳辉</p>
+            <p><strong>定位：</strong>治理业务流程关系与数据链，持续完善主映射关系与业务行为标准。</p>
+          </div>
+        </article>
+        <article class="org-group">
+          <h3>MES 工作组</h3>
+          <div>
+            <p><strong>组长：</strong>范秋南；副组长：纪鹏飞</p>
+            <p><strong>定位：</strong>治理生产、质量、工装、安全、设备、测量等场景的流程关系与数据链。</p>
+          </div>
+        </article>
+        <article class="org-group">
+          <h3>ERP · OA 工作组</h3>
+          <div>
+            <p><strong>组长：</strong>李雪；副组长：陈娟</p>
+            <p><strong>定位：</strong>治理 ERP 与 OA 相关业务流程关系、数据链和接口协同边界。</p>
+          </div>
+        </article>
+      </div>
+    </div>
+    <div class="note ok" style="margin-top:14px"><strong>会议口径</strong>决策组定重大事项，项目管理工作室统筹推进；基础设施工作组按项目工作组口径管理，刘洪雨负责技术口径，方嵩荐负责计划、招采和资源协调。</div>
+  </section>
+
+  <section class="sec" id="s8">
+    <div class="sec-head"><div class="num">9</div><div><h2>工作组/部门主要工作内容：按甘特图看责任和节奏</h2><div class="sub">这里用当前甘特图快照做静态汇总，让每个组知道自己在计划里的主要位置。</div></div></div>
+    <div class="workgrid">
+      <article class="work-card">
+        <h3>MDM 工作组</h3>
+        <div class="work-stats"><div class="work-stat"><b>70</b><span>任务</span></div><div class="work-stat"><b>8</b><span>关键控制</span></div><div class="work-stat"><b>7</b><span>里程碑</span></div></div>
+        <p class="work-meta">时间范围：2026-06-08 至 2028-01-31</p>
+        <ul>
+          <li>梳理流程地图、数据地图、主数据对象、字段口径和责任边界。</li>
+          <li>制定组织人员、物料编码、BOM、设备、工装、工具、工位、供应商、客户、库房库位等标准。</li>
+          <li>建立主数据版本台账、24 小时交底机制、变更影响评估和分发口径。</li>
+          <li>沉淀数据质量规则库、指标口径、接口校验规则和治理资料库。</li>
+          <li>关键交付物：主数据对象清单、字段口径表、数据标准 V1.0/V1.1、版本变更台账、质量问题清单。</li>
+        </ul>
+      </article>
+      <article class="work-card">
+        <h3>数据质量工作组</h3>
+        <div class="work-stats"><div class="work-stat"><b>86</b><span>复核事项</span></div><div class="work-stat"><b>9</b><span>关键控制</span></div><div class="work-stat"><b>7</b><span>里程碑</span></div></div>
+        <p class="work-meta">复核范围：2026-06-08 至 2028-01-31；H5 重点事项 48 项</p>
+        <ul>
+          <li>按审核复核口径展示，不作为普通执行任务组统计。</li>
+          <li>复核数据标准、字段口径、质量模板、接口校验口径和规则中心试运行口径。</li>
+          <li>参与主数据 V0.8/V0.9/V1.0/V1.1、联调完成、推广完成和治理常态化验收复核。</li>
+          <li>跟踪数据问题清单、纠正通知、整改证据、闭环记录和月度审计机制。</li>
+          <li>关键交付物：质量审计报告、质量问题清单、整改闭环记录、一致性评审记录、规则中心试运行口径报告。</li>
+        </ul>
+      </article>
+      <article class="work-card">
+        <h3>基础设施工作组</h3>
+        <div class="work-stats"><div class="work-stat"><b>79</b><span>任务</span></div><div class="work-stat"><b>15</b><span>关键控制</span></div><div class="work-stat"><b>7</b><span>里程碑</span></div></div>
+        <p class="work-meta">时间范围：2026-07-01 至 2027-01-20</p>
+        <ul>
+          <li>组织基础设施、AI服务器/本地模型环境、虚拟化/瘦终端平台方案评审和预算评审。</li>
+          <li>推进招采草案、正式发布、答疑、评标选型、合同审批、供应商进场和资源交付。</li>
+          <li>完成虚拟化资源池、基础网络、测试环境、机房动力环境、存储备份、网络安全、数据库中间件等建设。</li>
+          <li>支撑 PLM、MES/低代码平台、ERP/OA 测试环境资源交付和生产环境就绪。</li>
+          <li>人员口径：刘洪雨负责技术执行；方嵩荐负责计划、招采和资源协调。</li>
+          <li>关键交付物：技术方案与预算评审意见、招采文件、资源配额表、网络开通记录、资源池分配表、备份恢复演练记录、验收报告。</li>
+        </ul>
+      </article>
+      <article class="work-card">
+        <h3>PLM 工作组</h3>
+        <div class="work-stats"><div class="work-stat"><b>30</b><span>任务</span></div><div class="work-stat"><b>5</b><span>关键控制</span></div><div class="work-stat"><b>4</b><span>里程碑</span></div></div>
+        <p class="work-meta">时间范围：2026-08-03 至 2027-05-04</p>
+        <ul>
+          <li>推进 PLM 深化方案、预算评审、招采草案、正式发布、评标选型、合同审批和供应商进场。</li>
+          <li>完成 PLM 内部调研、问题清单、图文档管理规范、EBOM 规范、工艺文件结构化模板和 ECN/ECO 流程方案。</li>
+          <li>明确 EBOM 到 MBOM 转换规则、PLM 主数据标准映射方案和 PLM-MES 集成方案。</li>
+          <li>推进供应商复核、深化蓝图、配置/开发方案、模块配置、接口联调、系统测试、培训、上线和验收。</li>
+          <li>关键交付物：PLM 合同、问题清单、图文档规范、EBOM 规范、转换规则草案、深化蓝图、测试报告、上线确认单、验收报告。</li>
+        </ul>
+      </article>
+      <article class="work-card">
+        <h3>MES 工作组</h3>
+        <div class="work-stats"><div class="work-stat"><b>91</b><span>任务</span></div><div class="work-stat"><b>9</b><span>关键控制</span></div><div class="work-stat"><b>6</b><span>里程碑</span></div></div>
+        <p class="work-meta">时间范围：2026-09-01 至 2027-08-18</p>
+        <ul>
+          <li>推进 MES/低代码平台和设备数据采集硬件/网关的方案评审、招采、合同、进场和供应商复核。</li>
+          <li>完成 MES 内部需求清单、初版蓝图、内部评审、供应商复核蓝图和蓝图评审。</li>
+          <li>覆盖主数据接收、工艺/轻量 MBOM、生产计划、执行报工、仓储、工装工具、质量基础、进度看板和接口。</li>
+          <li>推进详细需求、详细设计、配置/开发、单元测试、系统测试、培训、风险缓冲、试运行、正式上线和一期验收。</li>
+          <li>关键交付物：MES 需求清单、初版蓝图、复核蓝图、接口方案、测试报告、培训材料、试运行报告、上线报告、一期验收报告。</li>
+        </ul>
+      </article>
+      <article class="work-card">
+        <h3>ERP · OA 工作组</h3>
+        <div class="work-stats"><div class="work-stat"><b>47</b><span>任务</span></div><div class="work-stat"><b>12</b><span>关键控制</span></div><div class="work-stat"><b>9</b><span>里程碑</span></div></div>
+        <p class="work-meta">时间范围：2026-08-03 至 2027-04-09</p>
+        <ul>
+          <li>推进 ERP 服务器扩容、OA 系统采购、合同/订单确认、到货验收、资源上架和环境验证。</li>
+          <li>完成 ERP/OA 现状与差距分析、MRP 补强、采购计划补强、生产计划补强和 OA 待办/流程集成需求。</li>
+          <li>冻结 ERP/OA 需求，形成 ERP 主数据标准映射方案、ERP-MES 接口方案和 ERP/OA 接口评审结论。</li>
+          <li>推进 MRP、采购计划、生产计划、OA 待办接口配置/开发、单元测试、集成测试、培训、验收和上线。</li>
+          <li>关键交付物：ERP扩容需求确认单、OA采购需求说明、需求冻结确认单、接口方案、合同/订单、环境验证报告、联调记录、上线确认单。</li>
+        </ul>
+      </article>
+    </div>
+    <div class="note ok" style="margin-top:14px"><strong>统筹口径</strong>信息化项目组不是具体专业工作组，不参与本组卡片并列排序；其职责是项目启动、治理机制、核心采购边界、联合启动、联调准备、风险升级和总体验收统筹。</div>
+    <div class="timeline" aria-label="关键里程碑时间线">
+      <div class="mile"><time>2026-06-08</time><b>项目启动会召开</b><span>项目进入按计划、交付物和阶段门推进的执行状态。</span></div>
+      <div class="mile"><time>2026-06-19</time><b>核心采购包边界冻结</b><span>冻结核心采购包范围和责任边界，不作为招标发布条件。</span></div>
+      <div class="mile"><time>2026-08-14</time><b>主数据 V0.8 设计版冻结</b><span>形成主数据对象清单和初版编码规则。</span></div>
+      <div class="mile"><time>2026-09-11</time><b>主数据 V0.9 字段草案发布</b><span>输出字段草案和映射表，支撑后续复核。</span></div>
+      <div class="mile"><time>2026-09-30</time><b>ERP/OA 需求冻结</b><span>形成 ERP/OA 需求冻结确认单。</span></div>
+      <div class="mile"><time>2026-10-22</time><b>总体蓝图评审通过</b><span>形成总体蓝图评审意见，并支撑后续实施。</span></div>
+      <div class="mile"><time>2026-12-04</time><b>OA 供应商正式进场</b><span>OA 进入供应商进场和实施准备。</span></div>
+      <div class="mile"><time>2027-01-14</time><b>MES/低代码平台进场</b><span>供应商进场后进入复核、配置、开发与测试链路。</span></div>
+      <div class="mile"><time>2027-01-15</time><b>PLM 供应商进场</b><span>PLM 深化进入供应商正式进场节点。</span></div>
+      <div class="mile"><time>2027-01-20</time><b>数据标准 V1.0 发布</b><span>形成后续质量复核和数据治理的标准依据。</span></div>
+      <div class="mile"><time>2027-01-22</time><b>核心招采满足联调准备</b><span>核心系统具备进入 WBS9 联调准备的前置条件。</span></div>
+      <div class="mile"><time>2028-01-31</time><b>项目总体验收</b><span>形成总体验收报告，完成项目总体收口。</span></div>
+    </div>
+    <div class="note warn" style="margin-top:14px"><strong>数据口径</strong>本页统计以当前甘特图快照为准，静态写入 H5，不在页面运行时读取 JSON。</div>
+  </section>
+
+  <section class="sec" id="s9">
+    <div class="sec-head"><div class="num">10</div><div><h2>工具展示：甘特图、PMO 看板、MDM 平台</h2><div class="sub">这是现场展示重点，但不要讲成产品发布会。</div></div></div>
     <div class="toolgrid">
       <article class="tool">
         <div class="tool-title"><h3>数字化底座甘特图</h3><span class="badge">计划主线</span></div>
@@ -405,8 +631,8 @@ footer{padding:16px;text-align:center;background:#fff;border-top:1px solid var(-
     <div class="note warn" style="margin-top:14px"><strong>现场收口</strong>今天只确认这些工具作为启动后的试运行管控入口，不把它讲成正式验收。</div>
   </section>
 
-  <section class="sec" id="s8">
-    <div class="sec-head"><div class="num">9</div><div><h2>项目管理机制：治理与调研机制如何落地</h2><div class="sub">把机制讲成以后怎么干活，而不是逐字念制度。</div></div></div>
+  <section class="sec" id="s10">
+    <div class="sec-head"><div class="num">11</div><div><h2>项目管理机制：治理与调研机制如何落地</h2><div class="sub">把机制讲成以后怎么干活，而不是逐字念制度。</div></div></div>
     <p class="statement">项目管理机制要回答的不是“文字好不好看”，而是项目启动后遇到计划、交付物、调研、责任池和阻塞事项时，PMO 和各部门按什么规则处理。</p>
     <div class="grid2">
       <div class="panel">
@@ -435,24 +661,69 @@ footer{padding:16px;text-align:center;background:#fff;border-top:1px solid var(-
     </div>
   </section>
 
-  <section class="sec" id="s9">
-    <div class="sec-head"><div class="num">10</div><div><h2>会议事项：V-01 至 V-10 的讨论框架</h2><div class="sub">这里只做讨论框架，不写预设结果。</div></div></div>
-    <div class="tablewrap">
-      <table>
-        <thead><tr><th>编号</th><th>事项</th><th>现场要讨论清楚什么</th></tr></thead>
-        <tbody>
-          <tr><td class="vote">V-01</td><td>项目启动</td><td>启动后项目按什么机制推进。</td></tr>
-          <tr><td class="vote">V-02</td><td>PMO 治理授权</td><td>PMO 能管哪些项目事项，如何公开阻塞。</td></tr>
-          <tr><td class="vote">V-03</td><td>PMO 调研授权</td><td>PMO 可以采用哪些调研方式，证据如何使用。</td></tr>
-          <tr><td class="vote">V-04</td><td>责任池原则</td><td>哪些历史问题先进入责任池。</td></tr>
-          <tr><td class="vote">V-05</td><td>不追责边界</td><td>责任池保护什么，不保护什么。</td></tr>
-          <tr><td class="vote">V-06</td><td>部门配合机制</td><td>部门如何提供材料、说明流程、确认阶段性结果。</td></tr>
-          <tr><td class="vote">V-07</td><td>默认推进规则</td><td>长期不反馈时，项目如何进入下一轮。</td></tr>
-          <tr><td class="vote">V-08</td><td>启动令签发</td><td>启动会结论如何转为执行依据。</td></tr>
-          <tr><td class="vote">V-09</td><td>项目管理机制处理口径</td><td>治理机制办法如何修订、发布和执行。</td></tr>
-          <tr><td class="vote">V-10</td><td>工具试运行入口</td><td>甘特图、PMO 看板、MDM 平台如何进入启动后的日常管控。</td></tr>
-        </tbody>
-      </table>
+  <section class="sec" id="s11">
+    <div class="sec-head"><div class="num">12</div><div><h2>会议事项：V-01 至 V-10 的讨论框架</h2><div class="sub">每项给出 A/B 两档建议，现场可按治理严格程度形成结论。</div></div></div>
+    <div class="vote-framework">
+      <article class="vote-card">
+        <div class="vote-title"><span class="vote">V-01</span><h3>项目启动</h3></div>
+        <p><strong>讨论重点：</strong>是否同意项目从准备状态进入启动执行状态，启动后按什么机制推进。</p>
+        <div class="vote-levels"><div class="vote-level"><b>A 档</b><span>同意启动，允许 PMO 会后完善计划基线、交付物清单和例会安排。</span></div><div class="vote-level"><b>B 档</b><span>同意启动，同时要求责任人、计划基线、交付物基线和周例会机制同步生效。</span></div></div>
+        <div class="vote-result">建议结论：确认启动状态，并明确会后第一轮基线发布时间。</div>
+      </article>
+      <article class="vote-card">
+        <div class="vote-title"><span class="vote">V-02</span><h3>PMO 治理授权</h3></div>
+        <p><strong>讨论重点：</strong>PMO 可治理哪些项目事项，风险、问题、变更和阻塞如何公开处理。</p>
+        <div class="vote-levels"><div class="vote-level"><b>A 档</b><span>授权 PMO 跟踪计划、交付物、阶段门、风险、问题、变更和责任池事项。</span></div><div class="vote-level"><b>B 档</b><span>在 A 档基础上，授权 PMO 对逾期、缺证据、跨部门阻塞事项发起升级和阶段门拦截。</span></div></div>
+        <div class="vote-result">建议结论：明确 PMO 治理范围、公开机制和升级路径。</div>
+      </article>
+      <article class="vote-card">
+        <div class="vote-title"><span class="vote">V-03</span><h3>PMO 调研授权</h3></div>
+        <p><strong>讨论重点：</strong>PMO 可采用哪些调研方式，调研记录如何用于流程地图、数据地图和阶段门判断。</p>
+        <div class="vote-levels"><div class="vote-level"><b>A 档</b><span>允许访谈、资料收集、流程确认会和业务场景 walkthrough。</span></div><div class="vote-level"><b>B 档</b><span>在 A 档基础上，允许录音录像、全日跟产或参会、业务行为模拟和历史不符合项推演。</span></div></div>
+        <div class="vote-result">建议结论：确认调研方式、记录用途和资料保密要求。</div>
+      </article>
+      <article class="vote-card">
+        <div class="vote-title"><span class="vote">V-04</span><h3>责任池原则</h3></div>
+        <p><strong>讨论重点：</strong>哪些历史问题、边界问题和资料不一致事项先进入责任池治理。</p>
+        <div class="vote-levels"><div class="vote-level"><b>A 档</b><span>历史问题先进入责任池，由 PMO 分类记录并推动确认责任边界。</span></div><div class="vote-level"><b>B 档</b><span>责任池事项必须登记证据、问题分类、责任池编号、处理期限和关闭标准。</span></div></div>
+        <div class="vote-result">建议结论：确认责任池不是免做池，而是问题暴露与闭环机制。</div>
+      </article>
+      <article class="vote-card">
+        <div class="vote-title"><span class="vote">V-05</span><h3>不追责边界</h3></div>
+        <p><strong>讨论重点：</strong>责任池保护什么，不保护什么，哪些执行问题不能用历史问题解释。</p>
+        <div class="vote-levels"><div class="vote-level"><b>A 档</b><span>责任池内历史问题以治理闭环为主，除拖期、交付物未交、材料质量过低外不追责。</span></div><div class="vote-level"><b>B 档</b><span>进一步明确拒不配合、反复逾期、拒交材料和新发生执行问题不适用不追责边界。</span></div></div>
+        <div class="vote-result">建议结论：保护主动暴露问题，同时保留执行纪律。</div>
+      </article>
+      <article class="vote-card">
+        <div class="vote-title"><span class="vote">V-06</span><h3>部门配合机制</h3></div>
+        <p><strong>讨论重点：</strong>部门如何提供材料、说明流程、确认阶段性结果，并保证反馈不断档。</p>
+        <div class="vote-levels"><div class="vote-level"><b>A 档</b><span>各部门指定联络人，配合资料提供、现场说明、流程确认和阶段性反馈。</span></div><div class="vote-level"><b>B 档</b><span>在 A 档基础上，明确部门确认人、备岗、反馈时限、材料清单和逾期公开规则。</span></div></div>
+        <div class="vote-result">建议结论：确认联络人机制，并把关键反馈纳入 PMO 跟踪。</div>
+      </article>
+      <article class="vote-card">
+        <div class="vote-title"><span class="vote">V-07</span><h3>默认推进规则</h3></div>
+        <p><strong>讨论重点：</strong>逾期未反馈事项如何进入下一轮，后续补充意见按什么规则处理。</p>
+        <div class="vote-levels"><div class="vote-level"><b>A 档</b><span>逾期未反馈时，由 PMO 形成默认版本进入下一轮评审。</span></div><div class="vote-level"><b>B 档</b><span>逾期视为对当前版本无异议；后续再修改时，按变更控制提交依据和影响说明。</span></div></div>
+        <div class="vote-result">建议结论：确认项目不能因长期无反馈停滞。</div>
+      </article>
+      <article class="vote-card">
+        <div class="vote-title"><span class="vote">V-08</span><h3>启动令签发</h3></div>
+        <p><strong>讨论重点：</strong>启动会结论如何转为执行依据，启动令附带哪些会后材料。</p>
+        <div class="vote-levels"><div class="vote-level"><b>A 档</b><span>会后按表决结果签发项目启动令，作为进入执行状态的依据。</span></div><div class="vote-level"><b>B 档</b><span>启动令签发前同步形成纪要、责任清单、风险问题清单和待关闭条件项。</span></div></div>
+        <div class="vote-result">建议结论：明确启动令签发条件和附件范围。</div>
+      </article>
+      <article class="vote-card">
+        <div class="vote-title"><span class="vote">V-09</span><h3>阶段门与交付物验收控制</h3></div>
+        <p><strong>讨论重点：</strong>关键阶段是否必须形成交付物、证据和评审结论后才能进入下一阶段。</p>
+        <div class="vote-levels"><div class="vote-level"><b>A 档</b><span>关键阶段设置阶段门，PMO 汇总交付物、问题清单和评审意见后组织通过。</span></div><div class="vote-level"><b>B 档</b><span>未通过阶段门、缺少关键交付物或证据不足时，不进入下一阶段或触发关键节点。</span></div></div>
+        <div class="vote-result">建议结论：确认阶段门、交付物和证据闭环是推进前提。</div>
+      </article>
+      <article class="vote-card">
+        <div class="vote-title"><span class="vote">V-10</span><h3>联调启动与总体验收控制</h3></div>
+        <p><strong>讨论重点：</strong>联调和总体验收是否只按日期推进，启动前必须满足哪些准备条件。</p>
+        <div class="vote-levels"><div class="vote-level"><b>A 档</b><span>联调启动前由 PMO 组织准备度检查，未关闭事项形成条件清单。</span></div><div class="vote-level"><b>B 档</b><span>主数据版本、接口清单、测试环境、权限、备份和阻塞问题未满足前，不启动联调或总体验收。</span></div></div>
+        <div class="vote-result">建议结论：确认联调和验收以准备度为依据，不只按日期推进。</div>
+      </article>
     </div>
     <div class="close">今天要解决的不是所有细节，而是先把项目往前走的规则定下来。</div>
   </section>

@@ -107,7 +107,7 @@
     "deliverable": "项目启动会纪要",
     "notes": "",
     "viewCategory": "Gate",
-    "phaseGateNo": "",
+    "phaseGateNo": "G0",
     "isCriticalControl": "是",
     "versionControlObject": "",
     "changeLevel": "",
@@ -527,7 +527,7 @@
     "deliverable": "总体蓝图评审意见",
     "notes": "",
     "viewCategory": "Gate",
-    "phaseGateNo": "",
+    "phaseGateNo": "G0",
     "isCriticalControl": "是",
     "versionControlObject": "",
     "changeLevel": "",
@@ -1014,7 +1014,7 @@
     "integrationStartCondition": "",
     "isH5Focus": "是",
     "phaseGateName": "",
-    "releaseRule": "",
+    "releaseRule": "不通过不得进入对应供应商进场、上线、验收或总体验收下一阶段。",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
     "executionNote": ""
@@ -1148,10 +1148,10 @@
     "start": "2026-07-16",
     "finish": "2026-08-14",
     "predecessors": "35",
-    "resources": "信息化项目组",
-    "department": "信息化项目组",
+    "resources": "基础设施工作组",
+    "department": "基础设施工作组",
     "vendor": "基础设施供应商",
-    "reviewer": "项目决策组",
+    "reviewer": "信息化项目管理工作室;项目决策组",
     "risk": "高",
     "milestone": "否",
     "deliverable": "机房动力环境改造方案、采购草案",
@@ -1167,7 +1167,7 @@
     "releaseRule": "未完成对应系统详细需求包或需求冻结前，不得发布招标/比选文件。",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": "采购准备与正式发布拆分管理，本节点不触发供应商正式投标/比选。"
+    "executionNote": "基础设施工作组负责机房动力环境技术方案和现场条件确认；信息化项目管理工作室负责采购节奏、材料齐套和决策组上会协调。"
   },
   {
     "id": 37,
@@ -1344,7 +1344,7 @@
     "integrationStartCondition": "",
     "isH5Focus": "是",
     "phaseGateName": "",
-    "releaseRule": "",
+    "releaseRule": "不通过不得进入对应供应商进场、上线、验收或总体验收下一阶段。",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
     "executionNote": ""
@@ -1614,7 +1614,7 @@
     "integrationStartCondition": "",
     "isH5Focus": "是",
     "phaseGateName": "",
-    "releaseRule": "",
+    "releaseRule": "不通过不得进入对应供应商进场、上线、验收或总体验收下一阶段。",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
     "executionNote": ""
@@ -1884,7 +1884,7 @@
     "integrationStartCondition": "",
     "isH5Focus": "是",
     "phaseGateName": "",
-    "releaseRule": "",
+    "releaseRule": "不通过不得进入对应供应商进场、上线、验收或总体验收下一阶段。",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
     "executionNote": ""
@@ -2154,7 +2154,7 @@
     "integrationStartCondition": "",
     "isH5Focus": "是",
     "phaseGateName": "",
-    "releaseRule": "",
+    "releaseRule": "不通过不得进入对应供应商进场、上线、验收或总体验收下一阶段。",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
     "executionNote": ""
@@ -2424,7 +2424,7 @@
     "integrationStartCondition": "",
     "isH5Focus": "是",
     "phaseGateName": "",
-    "releaseRule": "",
+    "releaseRule": "不通过不得进入对应供应商进场、上线、验收或总体验收下一阶段。",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
     "executionNote": ""
@@ -2694,7 +2694,7 @@
     "integrationStartCondition": "",
     "isH5Focus": "是",
     "phaseGateName": "",
-    "releaseRule": "",
+    "releaseRule": "不通过不得进入对应供应商进场、上线、验收或总体验收下一阶段。",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
     "executionNote": ""
@@ -2964,7 +2964,7 @@
     "integrationStartCondition": "",
     "isH5Focus": "是",
     "phaseGateName": "",
-    "releaseRule": "",
+    "releaseRule": "不通过不得进入对应供应商进场、上线、验收或总体验收下一阶段。",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
     "executionNote": ""
@@ -3234,7 +3234,7 @@
     "integrationStartCondition": "",
     "isH5Focus": "是",
     "phaseGateName": "",
-    "releaseRule": "",
+    "releaseRule": "不通过不得进入对应供应商进场、上线、验收或总体验收下一阶段。",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
     "executionNote": ""
@@ -4671,7 +4671,7 @@
     "isCriticalControl": "是",
     "versionControlObject": "",
     "changeLevel": "",
-    "integrationStartCondition": "",
+    "integrationStartCondition": "主数据版本控制",
     "isH5Focus": "是",
     "phaseGateName": "",
     "releaseRule": "",
@@ -4701,7 +4701,7 @@
     "isCriticalControl": "是",
     "versionControlObject": "V0.8",
     "changeLevel": "",
-    "integrationStartCondition": "",
+    "integrationStartCondition": "主数据版本控制",
     "isH5Focus": "是",
     "phaseGateName": "",
     "releaseRule": "",
@@ -4761,7 +4761,7 @@
     "isCriticalControl": "是",
     "versionControlObject": "V0.9",
     "changeLevel": "",
-    "integrationStartCondition": "",
+    "integrationStartCondition": "主数据版本控制",
     "isH5Focus": "是",
     "phaseGateName": "",
     "releaseRule": "",
@@ -4941,7 +4941,7 @@
     "isCriticalControl": "是",
     "versionControlObject": "全版本",
     "changeLevel": "A类",
-    "integrationStartCondition": "",
+    "integrationStartCondition": "主数据版本控制",
     "isH5Focus": "是",
     "phaseGateName": "",
     "releaseRule": "",
@@ -6221,7 +6221,7 @@
     "resources": "基础设施工作组",
     "department": "基础设施工作组",
     "vendor": "基础设施供应商",
-    "reviewer": "网络工程副主任;技术架构副主任",
+    "reviewer": "网络工程负责人;技术架构负责人",
     "risk": "",
     "milestone": "否",
     "deliverable": "",
@@ -6251,7 +6251,7 @@
     "resources": "基础设施工作组",
     "department": "基础设施工作组",
     "vendor": "基础设施供应商",
-    "reviewer": "网络工程副主任;技术架构副主任",
+    "reviewer": "网络工程负责人;技术架构负责人",
     "risk": "中",
     "milestone": "否",
     "deliverable": "服务器与虚拟化平台到货验收",
@@ -6281,7 +6281,7 @@
     "resources": "基础设施工作组",
     "department": "基础设施工作组",
     "vendor": "基础设施供应商",
-    "reviewer": "网络工程副主任;技术架构副主任",
+    "reviewer": "网络工程负责人;技术架构负责人",
     "risk": "中",
     "milestone": "否",
     "deliverable": "服务器与虚拟化平台虚拟化部署",
@@ -6311,7 +6311,7 @@
     "resources": "基础设施工作组",
     "department": "基础设施工作组",
     "vendor": "基础设施供应商",
-    "reviewer": "网络工程副主任;技术架构副主任",
+    "reviewer": "网络工程负责人;技术架构负责人",
     "risk": "中",
     "milestone": "否",
     "deliverable": "服务器与虚拟化平台资源池配置",
@@ -6371,7 +6371,7 @@
     "resources": "基础设施工作组",
     "department": "基础设施工作组",
     "vendor": "基础设施供应商",
-    "reviewer": "网络工程副主任;技术架构副主任",
+    "reviewer": "网络工程负责人;技术架构负责人",
     "risk": "中",
     "milestone": "否",
     "deliverable": "服务器与虚拟化平台高可用测试",
@@ -6401,7 +6401,7 @@
     "resources": "基础设施工作组",
     "department": "基础设施工作组",
     "vendor": "基础设施供应商",
-    "reviewer": "网络工程副主任;技术架构副主任",
+    "reviewer": "网络工程负责人;技术架构负责人",
     "risk": "中",
     "milestone": "否",
     "deliverable": "服务器与虚拟化平台验收",
@@ -6431,7 +6431,7 @@
     "resources": "基础设施工作组",
     "department": "基础设施工作组",
     "vendor": "基础设施供应商",
-    "reviewer": "网络工程副主任;技术架构副主任",
+    "reviewer": "网络工程负责人;技术架构负责人",
     "risk": "",
     "milestone": "否",
     "deliverable": "",
@@ -6461,7 +6461,7 @@
     "resources": "基础设施工作组",
     "department": "基础设施工作组",
     "vendor": "基础设施供应商",
-    "reviewer": "网络工程副主任;技术架构副主任",
+    "reviewer": "网络工程负责人;技术架构负责人",
     "risk": "中",
     "milestone": "否",
     "deliverable": "存储与备份存储部署",
@@ -6491,7 +6491,7 @@
     "resources": "基础设施工作组",
     "department": "基础设施工作组",
     "vendor": "基础设施供应商",
-    "reviewer": "网络工程副主任;技术架构副主任",
+    "reviewer": "网络工程负责人;技术架构负责人",
     "risk": "中",
     "milestone": "否",
     "deliverable": "存储与备份备份方案配置",
@@ -6581,7 +6581,7 @@
     "resources": "基础设施工作组",
     "department": "基础设施工作组",
     "vendor": "基础设施供应商",
-    "reviewer": "网络工程副主任;技术架构副主任",
+    "reviewer": "网络工程负责人;技术架构负责人",
     "risk": "中",
     "milestone": "否",
     "deliverable": "存储与备份备份策略测试",
@@ -6611,7 +6611,7 @@
     "resources": "基础设施工作组",
     "department": "基础设施工作组",
     "vendor": "基础设施供应商",
-    "reviewer": "网络工程副主任;技术架构副主任",
+    "reviewer": "网络工程负责人;技术架构负责人",
     "risk": "中",
     "milestone": "否",
     "deliverable": "存储与备份恢复演练",
@@ -6641,7 +6641,7 @@
     "resources": "基础设施工作组",
     "department": "基础设施工作组",
     "vendor": "基础设施供应商",
-    "reviewer": "网络工程副主任;技术架构副主任",
+    "reviewer": "网络工程负责人;技术架构负责人",
     "risk": "中",
     "milestone": "否",
     "deliverable": "存储与备份验收",
@@ -6671,7 +6671,7 @@
     "resources": "基础设施工作组",
     "department": "基础设施工作组",
     "vendor": "基础设施供应商",
-    "reviewer": "网络工程副主任;技术架构副主任",
+    "reviewer": "网络工程负责人;技术架构负责人",
     "risk": "",
     "milestone": "否",
     "deliverable": "",
@@ -6715,7 +6715,7 @@
     "isH5Focus": "是",
     "phaseGateName": "",
     "releaseRule": "",
-    "contractPaymentControl": "",
+    "contractPaymentControl": "作为验收或付款资料的一部分，需保留评审、验收或问题闭环证据。",
     "h5DiagnosticRule": "",
     "executionNote": ""
   },
@@ -6731,7 +6731,7 @@
     "resources": "基础设施工作组",
     "department": "基础设施工作组",
     "vendor": "基础设施供应商",
-    "reviewer": "网络工程副主任;技术架构副主任",
+    "reviewer": "网络工程负责人;技术架构负责人",
     "risk": "中",
     "milestone": "否",
     "deliverable": "网络与安全网络规划",
@@ -6761,7 +6761,7 @@
     "resources": "基础设施工作组",
     "department": "基础设施工作组",
     "vendor": "基础设施供应商",
-    "reviewer": "网络工程副主任;技术架构副主任",
+    "reviewer": "网络工程负责人;技术架构负责人",
     "risk": "中",
     "milestone": "否",
     "deliverable": "网络与安全安全策略配置",
@@ -6821,7 +6821,7 @@
     "resources": "基础设施工作组",
     "department": "基础设施工作组",
     "vendor": "基础设施供应商",
-    "reviewer": "网络工程副主任;技术架构副主任",
+    "reviewer": "网络工程负责人;技术架构负责人",
     "risk": "中",
     "milestone": "否",
     "deliverable": "网络与安全账号权限基线",
@@ -6851,7 +6851,7 @@
     "resources": "基础设施工作组",
     "department": "基础设施工作组",
     "vendor": "基础设施供应商",
-    "reviewer": "网络工程副主任;技术架构副主任",
+    "reviewer": "网络工程负责人;技术架构负责人",
     "risk": "中",
     "milestone": "否",
     "deliverable": "网络与安全日志审计配置",
@@ -6881,7 +6881,7 @@
     "resources": "基础设施工作组",
     "department": "基础设施工作组",
     "vendor": "基础设施供应商",
-    "reviewer": "网络工程副主任;技术架构副主任",
+    "reviewer": "网络工程负责人;技术架构负责人",
     "risk": "中",
     "milestone": "否",
     "deliverable": "网络与安全验收",
@@ -6911,7 +6911,7 @@
     "resources": "基础设施工作组",
     "department": "基础设施工作组",
     "vendor": "基础设施供应商",
-    "reviewer": "网络工程副主任;技术架构副主任",
+    "reviewer": "网络工程负责人;技术架构负责人",
     "risk": "",
     "milestone": "否",
     "deliverable": "",
@@ -6941,7 +6941,7 @@
     "resources": "基础设施工作组",
     "department": "基础设施工作组",
     "vendor": "基础设施供应商",
-    "reviewer": "网络工程副主任;技术架构副主任",
+    "reviewer": "网络工程负责人;技术架构负责人",
     "risk": "中",
     "milestone": "否",
     "deliverable": "数据库与中间件数据库部署",
@@ -6971,7 +6971,7 @@
     "resources": "基础设施工作组",
     "department": "基础设施工作组",
     "vendor": "基础设施供应商",
-    "reviewer": "网络工程副主任;技术架构副主任",
+    "reviewer": "网络工程负责人;技术架构负责人",
     "risk": "中",
     "milestone": "否",
     "deliverable": "数据库与中间件中间件部署",
@@ -7031,7 +7031,7 @@
     "resources": "基础设施工作组",
     "department": "基础设施工作组",
     "vendor": "基础设施供应商",
-    "reviewer": "网络工程副主任;技术架构副主任",
+    "reviewer": "网络工程负责人;技术架构负责人",
     "risk": "中",
     "milestone": "否",
     "deliverable": "数据库与中间件测试环境搭建",
@@ -7061,7 +7061,7 @@
     "resources": "基础设施工作组",
     "department": "基础设施工作组",
     "vendor": "基础设施供应商",
-    "reviewer": "网络工程副主任;技术架构副主任",
+    "reviewer": "网络工程负责人;技术架构负责人",
     "risk": "高",
     "milestone": "否",
     "deliverable": "数据库与中间件预生产环境搭建",
@@ -7091,7 +7091,7 @@
     "resources": "基础设施工作组",
     "department": "基础设施工作组",
     "vendor": "基础设施供应商",
-    "reviewer": "网络工程副主任;技术架构副主任",
+    "reviewer": "网络工程负责人;技术架构负责人",
     "risk": "高",
     "milestone": "否",
     "deliverable": "数据库与中间件生产环境搭建",
@@ -7151,7 +7151,7 @@
     "resources": "基础设施工作组",
     "department": "基础设施工作组",
     "vendor": "基础设施供应商;AI服务器供应商",
-    "reviewer": "网络工程副主任;技术架构副主任",
+    "reviewer": "网络工程负责人;技术架构负责人",
     "risk": "",
     "milestone": "否",
     "deliverable": "",
@@ -7181,7 +7181,7 @@
     "resources": "基础设施工作组",
     "department": "基础设施工作组",
     "vendor": "基础设施供应商;AI服务器供应商",
-    "reviewer": "网络工程副主任;技术架构副主任",
+    "reviewer": "网络工程负责人;技术架构负责人",
     "risk": "高",
     "milestone": "否",
     "deliverable": "AI服务器与本地模型硬件到货验收",
@@ -7195,7 +7195,7 @@
     "isH5Focus": "是",
     "phaseGateName": "",
     "releaseRule": "",
-    "contractPaymentControl": "",
+    "contractPaymentControl": "作为验收或付款资料的一部分，需保留评审、验收或问题闭环证据。",
     "h5DiagnosticRule": "",
     "executionNote": ""
   },
@@ -7255,7 +7255,7 @@
     "isH5Focus": "是",
     "phaseGateName": "",
     "releaseRule": "",
-    "contractPaymentControl": "",
+    "contractPaymentControl": "作为验收或付款资料的一部分，需保留评审、验收或问题闭环证据。",
     "h5DiagnosticRule": "",
     "executionNote": ""
   },
@@ -7271,7 +7271,7 @@
     "resources": "基础设施工作组",
     "department": "基础设施工作组",
     "vendor": "基础设施供应商;AI服务器供应商",
-    "reviewer": "网络工程副主任;技术架构副主任",
+    "reviewer": "网络工程负责人;技术架构负责人",
     "risk": "高",
     "milestone": "否",
     "deliverable": "AI服务器与本地模型模型服务部署",
@@ -7301,7 +7301,7 @@
     "resources": "基础设施工作组",
     "department": "基础设施工作组",
     "vendor": "基础设施供应商;AI服务器供应商",
-    "reviewer": "网络工程副主任;技术架构副主任",
+    "reviewer": "网络工程负责人;技术架构负责人",
     "risk": "高",
     "milestone": "否",
     "deliverable": "AI服务器与本地模型代码助手接入",
@@ -7331,7 +7331,7 @@
     "resources": "基础设施工作组",
     "department": "基础设施工作组",
     "vendor": "基础设施供应商;AI服务器供应商",
-    "reviewer": "网络工程副主任;技术架构副主任",
+    "reviewer": "网络工程负责人;技术架构负责人",
     "risk": "高",
     "milestone": "否",
     "deliverable": "AI服务器与本地模型知识库原型",
@@ -7361,7 +7361,7 @@
     "resources": "基础设施工作组",
     "department": "基础设施工作组",
     "vendor": "基础设施供应商;AI服务器供应商",
-    "reviewer": "网络工程副主任;技术架构副主任",
+    "reviewer": "网络工程负责人;技术架构负责人",
     "risk": "高",
     "milestone": "否",
     "deliverable": "AI服务器与本地模型MDM辅助开发试点",
@@ -7391,7 +7391,7 @@
     "resources": "基础设施工作组",
     "department": "基础设施工作组",
     "vendor": "基础设施供应商;AI服务器供应商",
-    "reviewer": "网络工程副主任;技术架构副主任",
+    "reviewer": "网络工程负责人;技术架构负责人",
     "risk": "高",
     "milestone": "否",
     "deliverable": "AI服务器与本地模型试点效果报告",
@@ -7421,7 +7421,7 @@
     "resources": "基础设施工作组",
     "department": "基础设施工作组",
     "vendor": "基础设施供应商",
-    "reviewer": "网络工程副主任;技术架构副主任",
+    "reviewer": "网络工程负责人;技术架构负责人",
     "risk": "",
     "milestone": "否",
     "deliverable": "",
@@ -7451,7 +7451,7 @@
     "resources": "基础设施工作组",
     "department": "基础设施工作组",
     "vendor": "基础设施供应商",
-    "reviewer": "网络工程副主任;技术架构副主任",
+    "reviewer": "网络工程负责人;技术架构负责人",
     "risk": "中",
     "milestone": "否",
     "deliverable": "虚拟桌面/瘦终端平台平台部署",
@@ -7481,7 +7481,7 @@
     "resources": "基础设施工作组",
     "department": "基础设施工作组",
     "vendor": "基础设施供应商",
-    "reviewer": "网络工程副主任;技术架构副主任",
+    "reviewer": "网络工程负责人;技术架构负责人",
     "risk": "中",
     "milestone": "否",
     "deliverable": "虚拟桌面/瘦终端平台镜像模板",
@@ -7511,7 +7511,7 @@
     "resources": "基础设施工作组",
     "department": "基础设施工作组",
     "vendor": "基础设施供应商",
-    "reviewer": "网络工程副主任;技术架构副主任",
+    "reviewer": "网络工程负责人;技术架构负责人",
     "risk": "中",
     "milestone": "否",
     "deliverable": "虚拟桌面/瘦终端平台账号权限",
@@ -7541,7 +7541,7 @@
     "resources": "基础设施工作组",
     "department": "基础设施工作组",
     "vendor": "基础设施供应商",
-    "reviewer": "网络工程副主任;技术架构副主任",
+    "reviewer": "网络工程负责人;技术架构负责人",
     "risk": "中",
     "milestone": "否",
     "deliverable": "虚拟桌面/瘦终端平台试点接入",
@@ -7571,7 +7571,7 @@
     "resources": "基础设施工作组",
     "department": "基础设施工作组",
     "vendor": "基础设施供应商",
-    "reviewer": "网络工程副主任;技术架构副主任",
+    "reviewer": "网络工程负责人;技术架构负责人",
     "risk": "中",
     "milestone": "否",
     "deliverable": "虚拟桌面/瘦终端平台验收",
@@ -7601,7 +7601,7 @@
     "resources": "基础设施工作组",
     "department": "基础设施工作组",
     "vendor": "基础设施供应商",
-    "reviewer": "网络工程副主任;技术架构副主任",
+    "reviewer": "网络工程负责人;技术架构负责人",
     "risk": "",
     "milestone": "否",
     "deliverable": "",
@@ -7631,7 +7631,7 @@
     "resources": "基础设施工作组",
     "department": "基础设施工作组",
     "vendor": "基础设施供应商",
-    "reviewer": "网络工程副主任;技术架构副主任",
+    "reviewer": "网络工程负责人;技术架构负责人",
     "risk": "中",
     "milestone": "否",
     "deliverable": "运维监控与日志审计监控指标设计",
@@ -7661,7 +7661,7 @@
     "resources": "基础设施工作组",
     "department": "基础设施工作组",
     "vendor": "基础设施供应商",
-    "reviewer": "网络工程副主任;技术架构副主任",
+    "reviewer": "网络工程负责人;技术架构负责人",
     "risk": "中",
     "milestone": "否",
     "deliverable": "运维监控与日志审计监控平台配置",
@@ -7691,7 +7691,7 @@
     "resources": "基础设施工作组",
     "department": "基础设施工作组",
     "vendor": "基础设施供应商",
-    "reviewer": "网络工程副主任;技术架构副主任",
+    "reviewer": "网络工程负责人;技术架构负责人",
     "risk": "中",
     "milestone": "否",
     "deliverable": "运维监控与日志审计日志审计联调",
@@ -7721,7 +7721,7 @@
     "resources": "基础设施工作组",
     "department": "基础设施工作组",
     "vendor": "基础设施供应商",
-    "reviewer": "网络工程副主任;技术架构副主任",
+    "reviewer": "网络工程负责人;技术架构负责人",
     "risk": "中",
     "milestone": "否",
     "deliverable": "运维监控与日志审计告警演练",
@@ -7751,7 +7751,7 @@
     "resources": "基础设施工作组",
     "department": "基础设施工作组",
     "vendor": "基础设施供应商",
-    "reviewer": "网络工程副主任;技术架构副主任",
+    "reviewer": "网络工程负责人;技术架构负责人",
     "risk": "中",
     "milestone": "否",
     "deliverable": "运维监控与日志审计运维移交",
@@ -7825,7 +7825,7 @@
     "isH5Focus": "是",
     "phaseGateName": "",
     "releaseRule": "",
-    "contractPaymentControl": "",
+    "contractPaymentControl": "作为验收或付款资料的一部分，需保留评审、验收或问题闭环证据。",
     "h5DiagnosticRule": "",
     "executionNote": ""
   },
@@ -7884,7 +7884,7 @@
     "integrationStartCondition": "",
     "isH5Focus": "是",
     "phaseGateName": "",
-    "releaseRule": "",
+    "releaseRule": "不通过不得进入对应供应商进场、上线、验收或总体验收下一阶段。",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
     "executionNote": ""
@@ -8634,7 +8634,7 @@
     "integrationStartCondition": "",
     "isH5Focus": "是",
     "phaseGateName": "",
-    "releaseRule": "",
+    "releaseRule": "不通过不得进入对应供应商进场、上线、验收或总体验收下一阶段。",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
     "executionNote": ""
@@ -8695,7 +8695,7 @@
     "isH5Focus": "是",
     "phaseGateName": "",
     "releaseRule": "",
-    "contractPaymentControl": "",
+    "contractPaymentControl": "作为验收或付款资料的一部分，需保留评审、验收或问题闭环证据。",
     "h5DiagnosticRule": "",
     "executionNote": ""
   },
@@ -8725,7 +8725,7 @@
     "isH5Focus": "是",
     "phaseGateName": "",
     "releaseRule": "",
-    "contractPaymentControl": "",
+    "contractPaymentControl": "作为验收或付款资料的一部分，需保留评审、验收或问题闭环证据。",
     "h5DiagnosticRule": "",
     "executionNote": ""
   },
@@ -9084,7 +9084,7 @@
     "integrationStartCondition": "",
     "isH5Focus": "是",
     "phaseGateName": "",
-    "releaseRule": "",
+    "releaseRule": "不通过不得进入对应供应商进场、上线、验收或总体验收下一阶段。",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
     "executionNote": ""
@@ -9384,7 +9384,7 @@
     "integrationStartCondition": "",
     "isH5Focus": "是",
     "phaseGateName": "",
-    "releaseRule": "",
+    "releaseRule": "不通过不得进入对应供应商进场、上线、验收或总体验收下一阶段。",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
     "executionNote": ""
@@ -9474,7 +9474,7 @@
     "integrationStartCondition": "",
     "isH5Focus": "是",
     "phaseGateName": "",
-    "releaseRule": "",
+    "releaseRule": "不通过不得进入对应供应商进场、上线、验收或总体验收下一阶段。",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
     "executionNote": ""
@@ -12025,7 +12025,7 @@
     "isH5Focus": "是",
     "phaseGateName": "",
     "releaseRule": "",
-    "contractPaymentControl": "",
+    "contractPaymentControl": "作为验收或付款资料的一部分，需保留评审、验收或问题闭环证据。",
     "h5DiagnosticRule": "",
     "executionNote": ""
   },
@@ -12354,7 +12354,7 @@
     "integrationStartCondition": "",
     "isH5Focus": "是",
     "phaseGateName": "",
-    "releaseRule": "",
+    "releaseRule": "不通过不得进入对应供应商进场、上线、验收或总体验收下一阶段。",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
     "executionNote": ""
@@ -12384,7 +12384,7 @@
     "integrationStartCondition": "",
     "isH5Focus": "是",
     "phaseGateName": "",
-    "releaseRule": "",
+    "releaseRule": "不通过不得进入对应供应商进场、上线、验收或总体验收下一阶段。",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
     "executionNote": ""
@@ -12444,7 +12444,7 @@
     "integrationStartCondition": "",
     "isH5Focus": "是",
     "phaseGateName": "",
-    "releaseRule": "",
+    "releaseRule": "不通过不得进入对应供应商进场、上线、验收或总体验收下一阶段。",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
     "executionNote": ""
@@ -12475,7 +12475,7 @@
     "isH5Focus": "是",
     "phaseGateName": "",
     "releaseRule": "",
-    "contractPaymentControl": "",
+    "contractPaymentControl": "作为验收或付款资料的一部分，需保留评审、验收或问题闭环证据。",
     "h5DiagnosticRule": "",
     "executionNote": ""
   },
@@ -12567,7 +12567,7 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": ""
+    "executionNote": "信息化项目组统筹联调启动条件核验；对应工作组提供招采、环境、主数据、接口、规则中心、备份和冒烟测试证据，项目决策组按阶段门口径放行。"
   },
   {
     "id": 394,
@@ -12597,7 +12597,7 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": ""
+    "executionNote": "信息化项目组统筹联调启动条件核验；对应工作组提供招采、环境、主数据、接口、规则中心、备份和冒烟测试证据，项目决策组按阶段门口径放行。"
   },
   {
     "id": 395,
@@ -12627,7 +12627,7 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": ""
+    "executionNote": "信息化项目组统筹联调启动条件核验；对应工作组提供招采、环境、主数据、接口、规则中心、备份和冒烟测试证据，项目决策组按阶段门口径放行。"
   },
   {
     "id": 396,
@@ -12657,7 +12657,7 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": ""
+    "executionNote": "信息化项目组统筹联调启动条件核验；对应工作组提供招采、环境、主数据、接口、规则中心、备份和冒烟测试证据，项目决策组按阶段门口径放行。"
   },
   {
     "id": 397,
@@ -12687,7 +12687,7 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": ""
+    "executionNote": "信息化项目组统筹联调启动条件核验；对应工作组提供招采、环境、主数据、接口、规则中心、备份和冒烟测试证据，项目决策组按阶段门口径放行。"
   },
   {
     "id": 398,
@@ -12717,7 +12717,7 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": ""
+    "executionNote": "信息化项目组统筹联调启动条件核验；对应工作组提供招采、环境、主数据、接口、规则中心、备份和冒烟测试证据，项目决策组按阶段门口径放行。"
   },
   {
     "id": 399,
@@ -12747,7 +12747,7 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": ""
+    "executionNote": "信息化项目组统筹联调启动条件核验；对应工作组提供招采、环境、主数据、接口、规则中心、备份和冒烟测试证据，项目决策组按阶段门口径放行。"
   },
   {
     "id": 400,
@@ -12777,7 +12777,7 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": ""
+    "executionNote": "信息化项目组统筹联调启动条件核验；对应工作组提供招采、环境、主数据、接口、规则中心、备份和冒烟测试证据，项目决策组按阶段门口径放行。"
   },
   {
     "id": 461,
@@ -12837,7 +12837,7 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": ""
+    "executionNote": "信息化项目组统筹联调节奏和问题台账；对应系统工作组负责本系统接口场景、供应商负责接口适配，MDM工作组负责主数据口径，数据质量工作组按复核口径抽审。"
   },
   {
     "id": 402,
@@ -12867,7 +12867,7 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": ""
+    "executionNote": "信息化项目组统筹联调节奏和问题台账；对应系统工作组负责本系统接口场景、供应商负责接口适配，MDM工作组负责主数据口径，数据质量工作组按复核口径抽审。"
   },
   {
     "id": 403,
@@ -12897,7 +12897,7 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": ""
+    "executionNote": "信息化项目组统筹联调节奏和问题台账；对应系统工作组负责本系统接口场景、供应商负责接口适配，MDM工作组负责主数据口径，数据质量工作组按复核口径抽审。"
   },
   {
     "id": 404,
@@ -12927,7 +12927,7 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": ""
+    "executionNote": "信息化项目组统筹联调节奏和问题台账；对应系统工作组负责本系统接口场景、供应商负责接口适配，MDM工作组负责主数据口径，数据质量工作组按复核口径抽审。"
   },
   {
     "id": 405,
@@ -12957,7 +12957,7 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": ""
+    "executionNote": "信息化项目组统筹联调节奏和问题台账；对应系统工作组负责本系统接口场景、供应商负责接口适配，MDM工作组负责主数据口径，数据质量工作组按复核口径抽审。"
   },
   {
     "id": 406,
@@ -12987,7 +12987,7 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": ""
+    "executionNote": "信息化项目组统筹联调节奏和问题台账；对应系统工作组负责本系统接口场景、供应商负责接口适配，MDM工作组负责主数据口径，数据质量工作组按复核口径抽审。"
   },
   {
     "id": 462,
@@ -13047,7 +13047,7 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": ""
+    "executionNote": "信息化项目组统筹跨系统业务场景测试；业务场景对应工作组负责场景确认，供应商负责缺陷修复，数据质量工作组复核数据一致性和问题闭环证据。"
   },
   {
     "id": 408,
@@ -13077,7 +13077,7 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": ""
+    "executionNote": "信息化项目组统筹跨系统业务场景测试；业务场景对应工作组负责场景确认，供应商负责缺陷修复，数据质量工作组复核数据一致性和问题闭环证据。"
   },
   {
     "id": 409,
@@ -13107,7 +13107,7 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": ""
+    "executionNote": "信息化项目组统筹跨系统业务场景测试；业务场景对应工作组负责场景确认，供应商负责缺陷修复，数据质量工作组复核数据一致性和问题闭环证据。"
   },
   {
     "id": 410,
@@ -13137,7 +13137,7 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": ""
+    "executionNote": "信息化项目组统筹跨系统业务场景测试；业务场景对应工作组负责场景确认，供应商负责缺陷修复，数据质量工作组复核数据一致性和问题闭环证据。"
   },
   {
     "id": 411,
@@ -13167,7 +13167,7 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": ""
+    "executionNote": "信息化项目组统筹跨系统业务场景测试；业务场景对应工作组负责场景确认，供应商负责缺陷修复，数据质量工作组复核数据一致性和问题闭环证据。"
   },
   {
     "id": 412,
@@ -13191,13 +13191,13 @@
     "isCriticalControl": "是",
     "versionControlObject": "",
     "changeLevel": "",
-    "integrationStartCondition": "",
+    "integrationStartCondition": "数据质量/推广/治理验收",
     "isH5Focus": "是",
     "phaseGateName": "",
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": ""
+    "executionNote": "信息化项目组统筹跨系统业务场景测试；业务场景对应工作组负责场景确认，供应商负责缺陷修复，数据质量工作组复核数据一致性和问题闭环证据。"
   },
   {
     "id": 463,
@@ -13257,7 +13257,7 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": ""
+    "executionNote": "信息化项目组统筹推广计划和培训节奏；对应业务部门和系统工作组负责现场确认，供应商负责培训材料和问题响应。"
   },
   {
     "id": 414,
@@ -13287,7 +13287,7 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": ""
+    "executionNote": "信息化项目组统筹推广计划和培训节奏；对应业务部门和系统工作组负责现场确认，供应商负责培训材料和问题响应。"
   },
   {
     "id": 415,
@@ -13317,7 +13317,7 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": ""
+    "executionNote": "信息化项目组统筹推广计划和培训节奏；对应业务部门和系统工作组负责现场确认，供应商负责培训材料和问题响应。"
   },
   {
     "id": 416,
@@ -13347,7 +13347,7 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": ""
+    "executionNote": "信息化项目组统筹推广计划和培训节奏；对应业务部门和系统工作组负责现场确认，供应商负责培训材料和问题响应。"
   },
   {
     "id": 417,
@@ -13371,13 +13371,13 @@
     "isCriticalControl": "是",
     "versionControlObject": "",
     "changeLevel": "",
-    "integrationStartCondition": "",
+    "integrationStartCondition": "数据质量/推广/治理验收",
     "isH5Focus": "是",
     "phaseGateName": "",
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": ""
+    "executionNote": "信息化项目组统筹推广计划和培训节奏；对应业务部门和系统工作组负责现场确认，供应商负责培训材料和问题响应。"
   },
   {
     "id": 464,
@@ -13437,7 +13437,7 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": ""
+    "executionNote": "信息化项目组统筹机制固化；MDM工作组维护主数据规则版本，数据质量工作组负责月度审计、复核和闭环跟踪。"
   },
   {
     "id": 419,
@@ -13467,7 +13467,7 @@
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": ""
+    "executionNote": "信息化项目组统筹机制固化；MDM工作组维护主数据规则版本，数据质量工作组负责月度审计、复核和闭环跟踪。"
   },
   {
     "id": 420,
@@ -13491,13 +13491,13 @@
     "isCriticalControl": "是",
     "versionControlObject": "",
     "changeLevel": "",
-    "integrationStartCondition": "",
+    "integrationStartCondition": "数据质量/推广/治理验收",
     "isH5Focus": "是",
     "phaseGateName": "",
     "releaseRule": "",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
-    "executionNote": ""
+    "executionNote": "信息化项目组统筹机制固化；MDM工作组维护主数据规则版本，数据质量工作组负责月度审计、复核和闭环跟踪。"
   },
   {
     "id": 421,
@@ -13794,7 +13794,7 @@
     "integrationStartCondition": "",
     "isH5Focus": "是",
     "phaseGateName": "",
-    "releaseRule": "",
+    "releaseRule": "不通过不得进入对应供应商进场、上线、验收或总体验收下一阶段。",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
     "executionNote": ""
@@ -13945,7 +13945,7 @@
     "isH5Focus": "是",
     "phaseGateName": "",
     "releaseRule": "",
-    "contractPaymentControl": "",
+    "contractPaymentControl": "作为验收或付款资料的一部分，需保留评审、验收或问题闭环证据。",
     "h5DiagnosticRule": "",
     "executionNote": ""
   },
@@ -13974,7 +13974,7 @@
     "integrationStartCondition": "",
     "isH5Focus": "是",
     "phaseGateName": "",
-    "releaseRule": "",
+    "releaseRule": "不通过不得进入对应供应商进场、上线、验收或总体验收下一阶段。",
     "contractPaymentControl": "",
     "h5DiagnosticRule": "",
     "executionNote": ""
@@ -14005,7 +14005,7 @@
     "isH5Focus": "是",
     "phaseGateName": "",
     "releaseRule": "",
-    "contractPaymentControl": "",
+    "contractPaymentControl": "作为验收或付款资料的一部分，需保留评审、验收或问题闭环证据。",
     "h5DiagnosticRule": "",
     "executionNote": ""
   }
