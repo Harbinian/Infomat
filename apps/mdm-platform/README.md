@@ -46,7 +46,7 @@ npm start
 
 平台不会创建默认管理员。首次初始化前请通过环境变量提供管理员工号和不少于 12 位的初始密码；脚本不会在仓库中保存密码、Cookie 或本地数据库。
 
-`npm run init:mysql` 会初始化 MySQL schema 中已迁移的身份/RBAC、候选复核、流程治理读模型、数据地图字段域、术语治理和旧映射审批表。`npm run setup:local-baseline` 仍是迁移过渡期的幂等基线入口，会：
+`npm run init:mysql` 会初始化 MySQL schema 中已迁移的身份/RBAC、候选复核、流程治理读模型、数据地图字段域、术语治理、旧映射审批、冲突治理和通用待办表。`npm run setup:local-baseline` 仍是迁移过渡期的幂等基线入口，会：
 
 - 初始化遗留本地 schema 和系统角色/权限。
 - 从 `docs/organization/组织架构和部门职责.md` 同步组织架构、领导岗位和对应人员。
@@ -106,6 +106,8 @@ npm run test:field-identities-mysql
 npm run test:data-map-import-export-mysql
 npm run test:terminology-mysql
 npm run test:mappings-mysql
+npm run test:conflicts-mysql
+npm run test:todos-mysql
 npm run test:role-workbench-mysql
 npm run init:mysql
 npm run smoke:data-map-mysql
@@ -143,6 +145,7 @@ npm run check:process-governance
 - 数据地图字段域已直接切换到 MySQL：`/api/data-map/contexts`、`/api/field-entries/*`、`/api/field-identities/*`、字段导入、字段导出和黄金源质量进度都通过 Data Map MySQL repository 访问；`context_id` 是公开主键，`mapping_id` 只作为短期兼容别名。
 - 术语治理已切换到 MySQL：`/api/terminology` 和 `/api/terminology/types` 通过 `terminologyMysqlRepository` 访问独立 `terminology_*` 表；`/api/terminology/processes` 使用流程治理 MySQL 读模型 `process_mapping_records` 作为流程选择来源，不再读取 SQLite `terms`。
 - 旧映射审批已切换到 MySQL：`/api/mappings` 通过 `mappingMysqlRepository` 访问 `mdm_mapping_*` 表，保留旧审批 API 形状；字段台账仍以 Data Map context 为正式归属，映射详情不再读取 SQLite `field_entries`、`field_identities`、`terms`、`change_set` 或 `version_log`。
+- 冲突治理和通用待办已切换到 MySQL：`/api/conflicts` 通过 `conflictMysqlRepository` 访问 `mdm_field_conflicts`、`mdm_term_conflicts`、`mdm_conflict_*` 和 `mdm_todos`；字段冲突检测读取 Data Map 字段域，术语冲突检测读取 `terminology_terms`。`/api/todos` 通过 `todoMysqlRepository` 访问 `mdm_todos` 和 `mdm_todo_events`，不再混用 SQLite 写入和 MySQL 读取。
 - `MDM_IDENTITY_READ_MODEL=mysql` 目前切换登录、`/api/org/session`、`/api/org/me`、本人密码状态、本人改密、管理员用户/部门/权限读写接口、`/api/roles` 角色读写接口、通用 `requirePermission` 权限中间件、角色工作台身份读取、流程治理 MySQL 分支权限判断、治理活跃热力图管理视图权限判断、字段台账查看/创建/维护中的身份权限判断，以及字段黄金源维护/确认中的身份权限判断。`auth.js` / `access.js` 已提供 MySQL-aware 异步权限、角色码、用户和部门读取 helper；后续业务路由接入时应优先复用这些 helper。
 - `/api/import-rbac/*` 批量写入仍是遗留本地库实现；在 `MDM_IDENTITY_READ_MODEL=mysql` 下会显式拒绝，直到对应导入写入链路迁到 MySQL。
 - 候选映射复核正式入口为 `/api/process-governance/candidate-review/*`；候选运行通过 `npm run import:process-candidate-review -- --candidate-run artifacts/process-candidates/<run-id>` 导入 MySQL。

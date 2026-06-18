@@ -768,6 +768,132 @@ CREATE TABLE IF NOT EXISTS data_map_field_identities (
     REFERENCES data_map_fields(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS mdm_field_conflicts (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  field_id_a BIGINT NOT NULL,
+  field_id_b BIGINT NOT NULL,
+  conflict_field VARCHAR(128) NOT NULL,
+  submitter_a BIGINT NULL,
+  value_a TEXT NULL,
+  submitter_b BIGINT NULL,
+  value_b TEXT NULL,
+  dept_a BIGINT NULL,
+  dept_b BIGINT NULL,
+  severity VARCHAR(16) NOT NULL DEFAULT 'warn',
+  status VARCHAR(32) NOT NULL DEFAULT 'pending',
+  resolution TEXT NULL,
+  resolution_type VARCHAR(64) NULL,
+  resolved_by BIGINT NULL,
+  resolved_at TIMESTAMP NULL,
+  deadline DATE NULL,
+  escalated TINYINT NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_mdm_field_conflicts_active (field_id_a, field_id_b, conflict_field, status),
+  INDEX idx_mdm_field_conflicts_status (status, severity),
+  INDEX idx_mdm_field_conflicts_dept_a (dept_a),
+  INDEX idx_mdm_field_conflicts_dept_b (dept_b),
+  CHECK (severity IN ('blocking','error','high','medium','low','warn')),
+  CHECK (status IN ('pending','coordinating','escalated','resolved','silenced','archived')),
+  CONSTRAINT fk_mdm_field_conflicts_a FOREIGN KEY (field_id_a)
+    REFERENCES data_map_fields(id) ON DELETE CASCADE,
+  CONSTRAINT fk_mdm_field_conflicts_b FOREIGN KEY (field_id_b)
+    REFERENCES data_map_fields(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS mdm_term_conflicts (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  term VARCHAR(255) NOT NULL,
+  term_a_id BIGINT NULL,
+  term_b_id BIGINT NULL,
+  dept_a BIGINT NULL,
+  dept_a_meaning TEXT NULL,
+  dept_b BIGINT NULL,
+  dept_b_meaning TEXT NULL,
+  severity VARCHAR(16) NOT NULL DEFAULT 'warn',
+  status VARCHAR(32) NOT NULL DEFAULT 'pending',
+  resolution TEXT NULL,
+  resolution_type VARCHAR(64) NULL,
+  resolved_by BIGINT NULL,
+  resolved_at TIMESTAMP NULL,
+  deadline DATE NULL,
+  escalated TINYINT NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_mdm_term_conflicts_term (term),
+  INDEX idx_mdm_term_conflicts_status (status, severity),
+  INDEX idx_mdm_term_conflicts_dept_a (dept_a),
+  INDEX idx_mdm_term_conflicts_dept_b (dept_b),
+  CHECK (severity IN ('blocking','error','high','medium','low','warn')),
+  CHECK (status IN ('pending','coordinating','escalated','resolved','silenced','archived')),
+  CONSTRAINT fk_mdm_term_conflicts_a FOREIGN KEY (term_a_id)
+    REFERENCES terminology_terms(id) ON DELETE SET NULL,
+  CONSTRAINT fk_mdm_term_conflicts_b FOREIGN KEY (term_b_id)
+    REFERENCES terminology_terms(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS mdm_conflict_assignments (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  conflict_id BIGINT NOT NULL,
+  conflict_type VARCHAR(16) NOT NULL,
+  assignee_user_id BIGINT NOT NULL,
+  assigned_by BIGINT NULL,
+  status VARCHAR(32) NOT NULL DEFAULT 'active',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_mdm_conflict_assignments_conflict (conflict_type, conflict_id),
+  INDEX idx_mdm_conflict_assignments_assignee (assignee_user_id),
+  CHECK (conflict_type IN ('field','term')),
+  CHECK (status IN ('active','inactive','archived'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS mdm_conflict_coordination_history (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  conflict_id BIGINT NOT NULL,
+  conflict_type VARCHAR(16) NOT NULL,
+  assignee_user_id BIGINT NULL,
+  result VARCHAR(32) NOT NULL,
+  note TEXT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_mdm_conflict_coordination_conflict (conflict_type, conflict_id, created_at),
+  CHECK (conflict_type IN ('field','term')),
+  CHECK (result IN ('A','B','compromise'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS mdm_todos (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  from_dept_id BIGINT NULL,
+  to_dept_id BIGINT NULL,
+  type VARCHAR(64) NOT NULL DEFAULT 'general',
+  related_mapping_id BIGINT NULL,
+  related_field_id BIGINT NULL,
+  content TEXT NOT NULL,
+  due_date DATE NULL,
+  urgency VARCHAR(16) NOT NULL DEFAULT 'medium',
+  status VARCHAR(32) NOT NULL DEFAULT 'pending',
+  done_at TIMESTAMP NULL,
+  completed_by BIGINT NULL,
+  created_by BIGINT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_mdm_todos_to_dept (to_dept_id, status),
+  INDEX idx_mdm_todos_type_status (type, status),
+  CHECK (urgency IN ('low','medium','high')),
+  CHECK (status IN ('pending','done','closed','archived'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS mdm_todo_events (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  todo_id BIGINT NOT NULL,
+  event_type VARCHAR(64) NOT NULL,
+  actor_user_id BIGINT NULL,
+  note TEXT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_mdm_todo_events_todo (todo_id, created_at),
+  CONSTRAINT fk_mdm_todo_events_todo FOREIGN KEY (todo_id)
+    REFERENCES mdm_todos(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS data_map_term_types (
   code VARCHAR(64) PRIMARY KEY,
   name VARCHAR(255) NOT NULL,

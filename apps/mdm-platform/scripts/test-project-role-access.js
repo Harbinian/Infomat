@@ -7,6 +7,7 @@ const { cleanupDb, stopServer } = require('./testHelpers/isolatedDb');
 const db = require('../server/db');
 const { hashPassword } = require('../server/auth');
 const mappingsRouter = require('../server/routes/mappings');
+const conflictsRouter = require('../server/routes/conflicts');
 
 const APP_ROOT = path.join(__dirname, '..');
 const PORT = 3107;
@@ -86,7 +87,6 @@ async function login(employeeNo) {
 }
 
 function cleanTestData() {
-  const termIds = db.prepare("SELECT id FROM term_conflicts WHERE term LIKE ?").all(`${TEST_PREFIX}%`).map(row => row.id);
   const mappingIds = db.prepare("SELECT id FROM mappings WHERE description LIKE ?").all(`${TEST_PREFIX}%`).map(row => row.id);
   const processIds = db.prepare("SELECT id FROM processes WHERE name LIKE ?").all(`${TEST_PREFIX}%`).map(row => row.id);
   const capabilityIds = db.prepare("SELECT id FROM capabilities WHERE name LIKE ?").all(`${TEST_PREFIX}%`).map(row => row.id);
@@ -95,15 +95,6 @@ function cleanTestData() {
   const deptIds = db.prepare("SELECT id FROM departments WHERE code LIKE ?").all(`${TEST_PREFIX}%`).map(row => row.id);
 
   db.transaction(() => {
-    for (const id of termIds) {
-      db.prepare("DELETE FROM conflict_coordination_history WHERE conflict_id=? AND conflict_type='term'").run(id);
-      db.prepare("DELETE FROM conflict_assignments WHERE conflict_id=? AND conflict_type='term'").run(id);
-    }
-    for (const id of deptIds) {
-      db.prepare('DELETE FROM todos WHERE from_dept_id=? OR to_dept_id=?').run(id, id);
-    }
-    db.prepare('DELETE FROM todos WHERE content LIKE ?').run(`%${TEST_PREFIX}%`);
-    db.prepare("DELETE FROM term_conflicts WHERE term LIKE ?").run(`${TEST_PREFIX}%`);
     for (const id of mappingIds) {
       db.prepare('DELETE FROM approval_tasks WHERE mapping_id=?').run(id);
       db.prepare('DELETE FROM approval_history WHERE mapping_id=?').run(id);
@@ -285,24 +276,107 @@ function seedData() {
     VALUES (?, ?, ?)
   `).run(`${TEST_PREFIX}流程B`, cap, deptB).lastInsertRowid;
 
-  const generalTerm = db.prepare(`
-    INSERT INTO term_conflicts (term, dept_a, dept_a_meaning, dept_b, dept_b_meaning, severity, status)
-    VALUES (?, ?, 'A', ?, 'B', 'high', 'coordinating')
-  `).run(`${TEST_PREFIX}GENERAL`, deptA, deptB).lastInsertRowid;
-  const escalateTerm = db.prepare(`
-    INSERT INTO term_conflicts (term, dept_a, dept_a_meaning, dept_b, dept_b_meaning, severity, status)
-    VALUES (?, ?, 'A', ?, 'B', 'high', 'coordinating')
-  `).run(`${TEST_PREFIX}ESCALATE`, deptA, deptB).lastInsertRowid;
-  const escalatedTerm = db.prepare(`
-    INSERT INTO term_conflicts (term, dept_a, dept_a_meaning, dept_b, dept_b_meaning, severity, status, escalated)
-    VALUES (?, ?, 'A', ?, 'B', 'blocking', 'escalated', 1)
-  `).run(`${TEST_PREFIX}ESCALATED`, deptA, deptB).lastInsertRowid;
-  const decisionDeniedTerm = db.prepare(`
-    INSERT INTO term_conflicts (term, dept_a, dept_a_meaning, dept_b, dept_b_meaning, severity, status)
-    VALUES (?, ?, 'A', ?, 'B', 'medium', 'coordinating')
-  `).run(`${TEST_PREFIX}DECISION_DENIED`, deptA, deptB).lastInsertRowid;
+  const generalTerm = 1001;
+  const escalateTerm = 1002;
+  const escalatedTerm = 1003;
+  const decisionDeniedTerm = 1004;
 
   return { generalTerm, escalateTerm, escalatedTerm, decisionDeniedTerm, deptA, deptB, procA, procB, infoUserId, decisionUserId };
+}
+
+function makeConflictRepositoryForProjectRoleTest(ids) {
+  const conflicts = [
+    { id: ids.generalTerm, conflict_type: 'term', term: `${TEST_PREFIX}GENERAL`, status: 'coordinating', severity: 'high', dept_a: ids.deptA, dept_b: ids.deptB },
+    { id: ids.escalateTerm, conflict_type: 'term', term: `${TEST_PREFIX}ESCALATE`, status: 'coordinating', severity: 'high', dept_a: ids.deptA, dept_b: ids.deptB },
+    { id: ids.escalatedTerm, conflict_type: 'term', term: `${TEST_PREFIX}ESCALATED`, status: 'escalated', severity: 'blocking', dept_a: ids.deptA, dept_b: ids.deptB, escalated: 1 },
+    { id: ids.decisionDeniedTerm, conflict_type: 'term', term: `${TEST_PREFIX}DECISION_DENIED`, status: 'coordinating', severity: 'medium', dept_a: ids.deptA, dept_b: ids.deptB }
+  ];
+
+  function findConflict(id, type) {
+    return conflicts.find(conflict => Number(conflict.id) === Number(id) && conflict.conflict_type === type);
+  }
+
+  return {
+    async getConflict(id, type) {
+      return findConflict(id, type) || null;
+    },
+    async finalDecideConflict(id, type, payload) {
+      const conflict = findConflict(id, type);
+      if (!conflict) return { ok: false, statusCode: 404, error: '冲突不存在' };
+      conflict.status = 'resolved';
+      conflict.resolution = payload.resolution || null;
+      return { ok: true };
+    },
+    async escalateConflict(id, type) {
+      const conflict = findConflict(id, type);
+      if (!conflict) return { ok: false, statusCode: 404, error: '冲突不存在' };
+      if (conflict.status !== 'coordinating') return { ok: false, statusCode: 409, error: '仅协调中的冲突可升级' };
+      conflict.status = 'escalated';
+      conflict.escalated = 1;
+      return { ok: true };
+    }
+  };
+}
+
+async function assertConflictAccessViaRepository(ids) {
+  const repo = makeConflictRepositoryForProjectRoleTest(ids);
+  conflictsRouter.setConflictRepositoryFactory(async () => repo);
+
+  const app = express();
+  app.use(express.json());
+  app.use((req, res, next) => {
+    const userKey = req.headers['x-test-user'] || 'info';
+    req.session = {
+      userId: userKey === 'decision' ? ids.decisionUserId : ids.infoUserId,
+      userRole: userKey === 'decision' ? 'decision_group' : 'it_lead',
+      userName: userKey === 'decision' ? '测试决策组成员' : '测试信息化负责人',
+      departmentId: ids.deptA
+    };
+    next();
+  });
+  app.use('/api/conflicts', conflictsRouter);
+
+  const server = await listen(app);
+  const baseUrl = `http://127.0.0.1:${server.address().port}`;
+
+  async function conflictRequest(userKey, routePath, body) {
+    const res = await fetch(`${baseUrl}${routePath}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Test-User': userKey },
+      body: body ? JSON.stringify(body) : undefined
+    });
+    let parsed = {};
+    try { parsed = await res.json(); } catch (error) { /* keep empty */ }
+    return { status: res.status, body: parsed };
+  }
+
+  try {
+    const infoResolveGeneral = await conflictRequest('info', `/api/conflicts/${ids.generalTerm}/final-decide?type=term`, {
+      resolution: '信息化负责人处理一般冲突'
+    });
+    assert(infoResolveGeneral.status === 200, `信息化负责人应可处理一般冲突，实际 ${infoResolveGeneral.status}`);
+
+    const infoEscalate = await conflictRequest('info', `/api/conflicts/${ids.escalateTerm}/escalate?type=term`);
+    assert(infoEscalate.status === 200, `信息化负责人应可升级冲突，实际 ${infoEscalate.status}`);
+
+    const infoResolveEscalated = await conflictRequest('info', `/api/conflicts/${ids.escalatedTerm}/final-decide?type=term`, {
+      resolution: '信息化负责人不应终裁升级冲突'
+    });
+    assert(infoResolveEscalated.status === 403, `信息化负责人不应处理升级冲突，实际 ${infoResolveEscalated.status}`);
+
+    const decisionResolveEscalated = await conflictRequest('decision', `/api/conflicts/${ids.escalatedTerm}/final-decide?type=term`, {
+      resolution: '决策组处理升级冲突'
+    });
+    assert(decisionResolveEscalated.status === 200, `决策组应可处理升级冲突，实际 ${decisionResolveEscalated.status}`);
+
+    const decisionResolveGeneral = await conflictRequest('decision', `/api/conflicts/${ids.decisionDeniedTerm}/final-decide?type=term`, {
+      resolution: '决策组不应处理一般冲突'
+    });
+    assert(decisionResolveGeneral.status === 403, `决策组不应处理一般冲突，实际 ${decisionResolveGeneral.status}`);
+  } finally {
+    await closeServer(server);
+    conflictsRouter.resetConflictRepositoryFactory();
+  }
 }
 
 function assert(condition, message) {
@@ -310,47 +384,13 @@ function assert(condition, message) {
 }
 
 async function main() {
-  let child;
-
   try {
     const ids = seedData();
     await assertMappingAccessViaRepository(ids);
-    child = spawn(process.execPath, ['server/index.js'], {
-      cwd: APP_ROOT,
-      env: { ...process.env, PORT: String(PORT), SESSION_SECRET: 'project-role-access-test' },
-      stdio: 'ignore'
-    });
-
-    await waitForServer(child);
-    const infoCookie = await login(`${TEST_PREFIX}INFO`);
-    const decisionCookie = await login(`${TEST_PREFIX}DECISION`);
-
-    const infoResolveGeneral = await request('POST', `/api/conflicts/${ids.generalTerm}/final-decide?type=term`, {
-      resolution: '信息化负责人处理一般冲突'
-    }, infoCookie);
-    assert(infoResolveGeneral.status === 200, `信息化负责人应可处理一般冲突，实际 ${infoResolveGeneral.status}`);
-
-    const infoEscalate = await request('POST', `/api/conflicts/${ids.escalateTerm}/escalate?type=term`, null, infoCookie);
-    assert(infoEscalate.status === 200, `信息化负责人应可升级冲突，实际 ${infoEscalate.status}`);
-
-    const infoResolveEscalated = await request('POST', `/api/conflicts/${ids.escalatedTerm}/final-decide?type=term`, {
-      resolution: '信息化负责人不应终裁升级冲突'
-    }, infoCookie);
-    assert(infoResolveEscalated.status === 403, `信息化负责人不应处理升级冲突，实际 ${infoResolveEscalated.status}`);
-
-    const decisionResolveEscalated = await request('POST', `/api/conflicts/${ids.escalatedTerm}/final-decide?type=term`, {
-      resolution: '决策组处理升级冲突'
-    }, decisionCookie);
-    assert(decisionResolveEscalated.status === 200, `决策组应可处理升级冲突，实际 ${decisionResolveEscalated.status}`);
-
-    const decisionResolveGeneral = await request('POST', `/api/conflicts/${ids.decisionDeniedTerm}/final-decide?type=term`, {
-      resolution: '决策组不应处理一般冲突'
-    }, decisionCookie);
-    assert(decisionResolveGeneral.status === 403, `决策组不应处理一般冲突，实际 ${decisionResolveGeneral.status}`);
+    await assertConflictAccessViaRepository(ids);
 
     console.log('Project role access test passed');
   } finally {
-    await stopServer(child);
     try {
       cleanTestData();
     } finally {

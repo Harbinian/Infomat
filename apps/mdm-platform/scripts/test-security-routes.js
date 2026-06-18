@@ -1038,7 +1038,6 @@ async function main() {
     await assertPasswordStrengthGuards(submitterCookie);
     await assertFieldConstraintsAreApplied(submitterCookie);
     await assertReadonlyFieldConstraintsAreEnforced(adminCookie, limitedEditorCookie);
-    await assertRbacRolesDriveTodoList(seed, rbacOwnerCookie);
     await assertRbacOwnerCanEditOwnerFieldColumns(seed);
     await assertRbacOwnerCanMaintainFieldIdentity(seed);
 
@@ -1065,33 +1064,6 @@ async function main() {
       body: JSON.stringify({ action: 'aprove' })
     }, adminCookie);
     assert.strictEqual(termBadAction.res.status, 400);
-
-    const doneOtherDept = await request(`/api/todos/${seed.todoB}/done`, { method: 'POST' }, submitterCookie);
-    assert.strictEqual(doneOtherDept.res.status, 403);
-
-    const doneOwnDept = await request(`/api/todos/${seed.todoB}/done`, { method: 'POST' }, ownerBCookie);
-    assert.strictEqual(doneOwnDept.res.status, 200);
-
-    const deleteOtherDept = await request(`/api/todos/${seed.todoB}`, { method: 'DELETE' }, submitterCookie);
-    assert.strictEqual(deleteOtherDept.res.status, 403);
-
-    const oldResolve = await request(`/api/conflicts/${seed.conflict}/resolve`, {
-      method: 'POST',
-      body: JSON.stringify({ resolution: '普通用户越权解决' })
-    }, submitterCookie);
-    assert.strictEqual(oldResolve.res.status, 403);
-
-    const oldTermResolve = await request(`/api/conflicts/term/${seed.termConflict}/resolve`, {
-      method: 'POST',
-      body: JSON.stringify({ resolution: '普通用户越权解决' })
-    }, submitterCookie);
-    assert.strictEqual(oldTermResolve.res.status, 403);
-
-    await assertRbacAdminUsesAdminPermission(seed, rbacAdminCookie);
-
-    const detect = await request('/api/conflicts/detect', { method: 'POST' }, reviewerCookie);
-    assert.strictEqual(detect.res.status, 200);
-    assert.ok(Number.isInteger(detect.body.detected));
 
     console.log('Security route integration test passed');
   } finally {

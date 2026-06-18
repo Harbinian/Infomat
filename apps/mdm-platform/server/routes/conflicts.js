@@ -1,820 +1,244 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db');
-const { requireAuth, requirePermission, getUserEffectivePermissions, getUserEffectivePermissionsAsync } = require('../auth');
-
-const FIELD_ENTRY_CONFLICT_FIELDS = ['note', 'field_type', 'sync_mode', 'consume_systems'];
-
-async function requestHasAnyPermissionAsync(req, permissionCodes) {
-  if (!req.session || !req.session.userId) return false;
-  const { permSet } = await getUserEffectivePermissionsAsync(req.session.userId);
-  return permSet.has('*:*') || permissionCodes.some(code => permSet.has(code));
-}
-
-function userHasAnyPermission(userId, permissionCodes) {
-  const { permSet } = getUserEffectivePermissions(userId);
-  return permSet.has('*:*') || permissionCodes.some(code => permSet.has(code));
-}
-
-function usersWithAnyPermission(permissionCodes) {
-  return db.prepare('SELECT id, name, department_id FROM users').all().filter(user => userHasAnyPermission(user.id, permissionCodes));
-}
-
-async function canViewAllConflictsAsync(req) {
-  return await requestHasAnyPermissionAsync(req, ['data:view_all', 'admin:access']);
-}
-
-async function canManageGeneralConflictAsync(req) {
-  return await requestHasAnyPermissionAsync(req, ['conflict:manage', 'review:approve', 'admin:access']);
-}
-
-async function canEscalateConflictAsync(req) {
-  return await requestHasAnyPermissionAsync(req, ['conflict:escalate', 'conflict:manage', 'review:approve', 'admin:access']);
-}
-
-async function canDecideEscalatedConflictAsync(req) {
-  return await requestHasAnyPermissionAsync(req, ['conflict:final_decide_escalated', 'review:approve', 'admin:access']);
-}
-
-function addWorkingDays(startDate, days) {
-  const d = new Date(startDate);
-  let added = 0;
-  while (added < days) {
-    d.setDate(d.getDate() + 1);
-    if (d.getDay() !== 0 && d.getDay() !== 6) added++;
-  }
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
-function autoAssignBothDepts(conflictId, conflictType, deptA, deptB) {
-  const today = new Date().toISOString().slice(0, 10);
-  const deadline = addWorkingDays(today, 3);
-
-  // Find owner for each department: data_owner first, manager fallback
-  const assigneeA = db.prepare(`
-    SELECT id FROM users WHERE department_id = ? AND (id = (SELECT data_owner_user_id FROM departments WHERE id = ?) OR id = (SELECT manager_user_id FROM departments WHERE id = ?))
-    LIMIT 1
-  `).get(deptA, deptA, deptA);
-
-  const assigneeB = db.prepare(`
-    SELECT id FROM users WHERE department_id = ? AND (id = (SELECT data_owner_user_id FROM departments WHERE id = ?) OR id = (SELECT manager_user_id FROM departments WHERE id = ?))
-    LIMIT 1
-  `).get(deptB, deptB, deptB);
-
-  // Use null for system-initiated assignments (FK constraint won't match null)
-  [assigneeA, assigneeB].forEach(function(assignee) {
-    if (assignee) {
-      db.prepare(`
-        INSERT INTO conflict_assignments (conflict_id, conflict_type, assignee_user_id, assigned_by)
-        VALUES (?, ?, ?, ?)
-      `).run(conflictId, conflictType, assignee.id, null);
-    }
-  });
-
-  // Update deadline on conflict record
-  const table = conflictType === 'term' ? 'term_conflicts' : 'field_conflicts';
-  db.prepare(`UPDATE ${table} SET deadline = ? WHERE id = ?`).run(deadline, conflictId);
-
-  // Create todos for both departments
-  const deptNames = [];
-  [deptA, deptB].forEach(function(did) {
-    const dept = db.prepare('SELECT name FROM departments WHERE id = ?').get(did);
-    if (dept) deptNames.push(dept.name);
-  });
-  const todoContent = '冲突协调：' + deptNames.join(' vs ') + '（截止：' + deadline + '）';
-
-  [deptA, deptB].forEach(function(did) {
-    db.prepare(`
-      INSERT INTO todos (from_dept_id, to_dept_id, type, related_mapping_id, content, urgency)
-      VALUES (NULL, ?, 'conflict_resolution', NULL, ?, 'high')
-    `).run(did, todoContent);
-  });
-}
+const {
+  requireAuth,
+  getUserByIdAsync,
+  getUserEffectivePermissionsAsync
+} = require('../auth');
+const {
+  conflictRepository,
+  resetConflictRepositoryFactory,
+  setConflictRepositoryFactory
+} = require('../conflictMysqlRepository');
 
 function handleDbError(res, error) {
-  if (error && (String(error.code).startsWith('SQLITE_CONSTRAINT') || String(error.message).includes('constraint failed'))) {
+  const code = String(error && error.code || '');
+  const message = String(error && error.message || '');
+  if (code.startsWith('ER_') || message.includes('constraint')) {
     return res.status(400).json({ error: '数据不符合约束' });
   }
   console.error(error);
   return res.status(500).json({ error: '服务器错误' });
 }
 
-function checkAndEscalate(conflict, conflictType) {
-  if (!conflict || conflict.status !== 'coordinating') return false;
-  if (!conflict.deadline) return false;
-
-  const today = new Date().toISOString().slice(0, 10);
-  if (conflict.deadline >= today) return false;
-
-  // Deadlock: escalate
-  const table = conflictType === 'term' ? 'term_conflicts' : 'field_conflicts';
-  db.prepare(`UPDATE ${table} SET status = 'escalated', escalated = 1 WHERE id = ?`).run(conflict.id);
-
-  // Create escalation todo for users allowed to decide escalated conflicts.
-  const reviewers = usersWithAnyPermission(['conflict:final_decide_escalated', 'review:approve', 'admin:access']);
-  reviewers.forEach(function(r) {
-    db.prepare(`
-      INSERT INTO todos (from_dept_id, to_dept_id, type, content, urgency)
-      VALUES (NULL, ?, 'conflict_resolution', ?, 'high')
-    `).run(r.department_id, '冲突升级：#' + conflict.id + ' 已超时，请 reviewer 终裁');
-  });
-
-  return true;
-}
-
-function runDbAction(res, action) {
-  try {
-    return action();
-  } catch (error) {
-    return handleDbError(res, error);
-  }
-}
-
-function runAsyncAction(res, action) {
+function runAction(res, action) {
   return action().catch(error => handleDbError(res, error));
 }
 
-function applyAdoptedFieldValue(conflict, adoptedValue, userId) {
-  if (conflict.conflict_field === 'authoritative_system' && adoptedValue) {
-    [conflict.field_entry_a_id, conflict.field_entry_b_id].forEach(fieldEntryId => {
-      const identity = db.prepare('SELECT id FROM field_identities WHERE field_entry_id=?').get(fieldEntryId);
-      if (identity) {
-        db.prepare(`
-          UPDATE field_identities
-          SET authoritative_system=?, confirmed=1, confirmed_by=?, confirmed_at=datetime('now')
-          WHERE field_entry_id=?
-        `).run(adoptedValue, userId, fieldEntryId);
-      }
-    });
-  } else if (FIELD_ENTRY_CONFLICT_FIELDS.includes(conflict.conflict_field) && adoptedValue !== undefined) {
-    [conflict.field_entry_a_id, conflict.field_entry_b_id].forEach(fieldEntryId => {
-      db.prepare(`UPDATE field_entries SET ${conflict.conflict_field}=?, updated_at=datetime('now') WHERE id=?`).run(adoptedValue, fieldEntryId);
-    });
+function sendRepositoryResult(res, result, successBody = { success: true }) {
+  if (result && result.ok === false) {
+    return res.status(result.statusCode || 400).json({ error: result.error || '操作失败' });
   }
+  return res.json(successBody);
 }
 
-function unblockMappingIfNoOpenErrors(conflict) {
-  const mapping = db.prepare(`
-    SELECT m.id as mapping_id
-    FROM mappings m
-    JOIN field_entries fe ON fe.mapping_id = m.id
-    WHERE fe.id IN (?, ?)
-    LIMIT 1
-  `).get(conflict.field_entry_a_id, conflict.field_entry_b_id);
-
-  if (!mapping) return;
-  const remainingErrors = db.prepare(`
-    SELECT COUNT(DISTINCT fc.id) as cnt
-    FROM field_conflicts fc
-    JOIN field_entries fe ON fc.field_entry_a_id = fe.id OR fc.field_entry_b_id = fe.id
-    WHERE fe.mapping_id = ? AND fc.severity = 'error' AND fc.status IN ('pending','coordinating')
-  `).get(mapping.mapping_id);
-  if (remainingErrors.cnt === 0) {
-    db.prepare("UPDATE approval_tasks SET status='in_progress' WHERE mapping_id=? AND status='blocked'").run(mapping.mapping_id);
-  }
+async function permissionSet(req) {
+  if (!req.session || !req.session.userId) return new Set();
+  const { permSet } = await getUserEffectivePermissionsAsync(req.session.userId);
+  return permSet;
 }
 
-function addFilters(baseSql, params, severity, status) {
-  let sql = `${baseSql} WHERE 1=1`;
-  if (severity) {
-    sql += ' AND severity=?';
-    params.push(severity);
-  }
-  if (status) {
-    sql += ' AND status=?';
-    params.push(status);
-  }
-  return `${sql} ORDER BY CASE severity WHEN 'blocking' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 WHEN 'low' THEN 3 WHEN 'error' THEN 4 WHEN 'warn' THEN 5 ELSE 6 END, created_at DESC`;
+async function requestHasAnyPermission(req, permissionCodes) {
+  const perms = await permissionSet(req);
+  return perms.has('*:*') || permissionCodes.some(code => perms.has(code));
 }
 
-function conflictAlreadyExists(aId, bId, conflictField) {
-  const existing = db.prepare(`
-    SELECT id
-    FROM field_conflicts
-    WHERE field_entry_a_id=? AND field_entry_b_id=? AND conflict_field=? AND status IN ('pending','coordinating','silenced')
-  `).get(aId, bId, conflictField);
-  return Boolean(existing);
+async function canViewAllConflicts(req) {
+  return await requestHasAnyPermission(req, ['data:view_all', 'admin:access']);
 }
 
-function detectConflictValues(aId, bId) {
-  const identityA = db.prepare('SELECT * FROM field_identities WHERE field_entry_id=?').get(aId);
-  const identityB = db.prepare('SELECT * FROM field_identities WHERE field_entry_id=?').get(bId);
-
-  if (
-    identityA &&
-    identityB &&
-    identityA.authoritative_system &&
-    identityB.authoritative_system &&
-    identityA.authoritative_system !== identityB.authoritative_system
-  ) {
-    return {
-      conflictField: 'authoritative_system',
-      severity: 'error',
-      valueA: identityA.authoritative_system,
-      valueB: identityB.authoritative_system
-    };
-  }
-
-  const fieldA = db.prepare('SELECT note, field_type, sync_mode, consume_systems FROM field_entries WHERE id=?').get(aId);
-  const fieldB = db.prepare('SELECT note, field_type, sync_mode, consume_systems FROM field_entries WHERE id=?').get(bId);
-  if (!fieldA || !fieldB) return null;
-
-  for (const fieldName of FIELD_ENTRY_CONFLICT_FIELDS) {
-    const valueA = fieldA[fieldName] || '';
-    const valueB = fieldB[fieldName] || '';
-    if (valueA !== valueB) {
-      return {
-        conflictField: fieldName,
-        severity: 'warn',
-        valueA,
-        valueB
-      };
-    }
-  }
-
-  return null;
+async function canManageGeneralConflict(req) {
+  return await requestHasAnyPermission(req, ['conflict:manage', 'review:approve', 'admin:access']);
 }
 
-// GET / — list all conflicts, optionally filtered
+async function canEscalateConflict(req) {
+  return await requestHasAnyPermission(req, ['conflict:escalate', 'conflict:manage', 'review:approve', 'admin:access']);
+}
+
+async function canDecideEscalatedConflict(req) {
+  return await requestHasAnyPermission(req, ['conflict:final_decide_escalated', 'review:approve', 'admin:access']);
+}
+
+async function conflictScope(req) {
+  return {
+    canViewAll: await canViewAllConflicts(req),
+    userId: req.session.userId,
+    departmentId: req.session.departmentId || null
+  };
+}
+
+async function conflictActor(req, extra = {}) {
+  return {
+    actor_user_id: req.session.userId,
+    actor_dept_id: req.session.departmentId || null,
+    canManageAll: await requestHasAnyPermission(req, ['admin:access']),
+    ...extra
+  };
+}
+
+function conflictTypeFromQuery(req) {
+  return req.query.type === 'term' ? 'term' : 'field';
+}
+
 router.get('/', requireAuth, (req, res) => {
-  return runAsyncAction(res, async () => {
-    const { type, severity, status } = req.query;
-    const canViewAll = await canViewAllConflictsAsync(req);
-
-    if (type === 'term') {
-      const params = [];
-      let sql = addFilters("SELECT tc.*, 'term' as conflict_type FROM term_conflicts tc", params, severity, status);
-      if (!canViewAll && !status) {
-        sql = sql.replace('WHERE 1=1', "WHERE 1=1 AND tc.status NOT IN ('archived','silenced')");
-      }
-      return res.json(db.prepare(sql).all(...params));
-    }
-
-    if (type === 'field') {
-      const params = [];
-      let sql = addFilters("SELECT fc.*, 'field' as conflict_type FROM field_conflicts fc", params, severity, status);
-      if (!canViewAll && !status) {
-        sql = sql.replace('WHERE 1=1', "WHERE 1=1 AND fc.status NOT IN ('archived','silenced')");
-      }
-      return res.json(db.prepare(sql).all(...params));
-    }
-
-    const termParams = [];
-    const fieldParams = [];
-    let termSql = addFilters("SELECT tc.*, 'term' as conflict_type FROM term_conflicts tc", termParams, severity, status);
-    let fieldSql = addFilters("SELECT fc.*, 'field' as conflict_type FROM field_conflicts fc", fieldParams, severity, status);
-
-    if (!canViewAll && !status) {
-      termSql = termSql.replace('WHERE 1=1', "WHERE 1=1 AND tc.status NOT IN ('archived','silenced')");
-      fieldSql = fieldSql.replace('WHERE 1=1', "WHERE 1=1 AND fc.status NOT IN ('archived','silenced')");
-    }
-
-    const termRows = db.prepare(termSql).all(...termParams);
-    const fieldRows = db.prepare(fieldSql).all(...fieldParams);
-    res.json([...termRows, ...fieldRows].sort((a, b) => String(b.created_at).localeCompare(String(a.created_at))));
+  return runAction(res, async () => {
+    const repo = await conflictRepository();
+    const result = await repo.listConflicts({
+      type: req.query.type || null,
+      severity: req.query.severity || null,
+      status: req.query.status || null
+    }, await conflictScope(req));
+    return res.json(result);
   });
 });
 
-// GET /stats — conflict statistics grouped by status and severity
 router.get('/stats', requireAuth, (req, res) => {
-  return runDbAction(res, () => {
-    const finalFieldStats = db.prepare(`
-      SELECT status, severity, COUNT(*) as cnt FROM field_conflicts GROUP BY status, severity
-    `).all();
-    const finalTermStats = db.prepare(`
-      SELECT status, severity, COUNT(*) as cnt FROM term_conflicts GROUP BY status, severity
-    `).all();
-
-    // Aggregate
-    const byStatus = {};
-    [finalFieldStats, finalTermStats].forEach(function(rows) {
-      rows.forEach(function(r) {
-        const key = r.status;
-        if (!byStatus[key]) byStatus[key] = 0;
-        byStatus[key] += r.cnt;
-      });
-    });
-
-    const coordinating = byStatus['coordinating'] || 0;
-    const escalated = byStatus['escalated'] || 0;
-    const silenced = byStatus['silenced'] || 0;
-    const resolved = byStatus['resolved'] || 0;
-
-    // This month resolved
-    const thisMonth = new Date().toISOString().slice(0, 7);
-    const fieldResolvedThisMonth = db.prepare(`
-      SELECT COUNT(*) as cnt FROM field_conflicts
-      WHERE status = 'resolved' AND resolved_at LIKE ?
-    `).get(thisMonth + '%');
-    const termResolvedThisMonth = db.prepare(`
-      SELECT COUNT(*) as cnt FROM term_conflicts
-      WHERE status = 'resolved' AND resolved_at LIKE ?
-    `).get(thisMonth + '%');
-    const resolvedThisMonth = (fieldResolvedThisMonth.cnt || 0) + (termResolvedThisMonth.cnt || 0);
-
-    res.json({
-      coordinating: coordinating,
-      escalated: escalated,
-      silenced: silenced,
-      resolved: resolved,
-      resolvedThisMonth: resolvedThisMonth,
-      byStatus: byStatus
-    });
+  return runAction(res, async () => {
+    const repo = await conflictRepository();
+    return res.json(await repo.conflictStats(await conflictScope(req)));
   });
 });
 
-// GET /:id — conflict detail with assignments and coordination history
+router.post('/detect', requireAuth, (req, res) => {
+  return runAction(res, async () => {
+    if (!await canManageGeneralConflict(req)) return res.status(403).json({ error: '权限不足' });
+    const repo = await conflictRepository();
+    return res.json(await repo.detectConflicts({
+      field_name_cn: req.query.field_name_cn || null
+    }, await conflictActor(req)));
+  });
+});
+
 router.get('/:id', requireAuth, (req, res) => {
-  return runDbAction(res, () => {
-    const { type } = req.query;
-    const conflictType = type || 'field';
-
-    let conflict;
-    if (conflictType === 'term') {
-      conflict = db.prepare('SELECT * FROM term_conflicts WHERE id=?').get(req.params.id);
-    } else {
-      conflict = db.prepare(`
-        SELECT fc.*, fe_a.field_name_cn as field_name_a, fe_b.field_name_cn as field_name_b,
-               da.name as dept_a_name, db.name as dept_b_name
-        FROM field_conflicts fc
-        JOIN field_entries fe_a ON fc.field_entry_a_id = fe_a.id
-        JOIN field_entries fe_b ON fc.field_entry_b_id = fe_b.id
-        LEFT JOIN departments da ON fc.dept_a = da.id
-        LEFT JOIN departments db ON fc.dept_b = db.id
-        WHERE fc.id=?
-      `).get(req.params.id);
-    }
+  return runAction(res, async () => {
+    const repo = await conflictRepository();
+    const conflict = await repo.getConflict(req.params.id, conflictTypeFromQuery(req), await conflictScope(req));
     if (!conflict) return res.status(404).json({ error: '冲突不存在' });
-
-    const currentAssignee = db.prepare(`
-      SELECT ca.*, u.name as assignee_name
-      FROM conflict_assignments ca
-      LEFT JOIN users u ON ca.assignee_user_id = u.id
-      WHERE ca.conflict_id=? AND ca.conflict_type=?
-      ORDER BY ca.created_at DESC LIMIT 1
-    `).get(req.params.id, conflictType);
-
-    const coordinationHistory = db.prepare(`
-      SELECT cch.*, u.name as assignee_name
-      FROM conflict_coordination_history cch
-      LEFT JOIN users u ON cch.assignee_user_id = u.id
-      WHERE cch.conflict_id=? AND cch.conflict_type=?
-      ORDER BY cch.created_at DESC
-    `).all(req.params.id, conflictType);
-
-    const assignmentHistory = db.prepare(`
-      SELECT ca.*, u.name as assignee_name, au.name as assigned_by_name
-      FROM conflict_assignments ca
-      LEFT JOIN users u ON ca.assignee_user_id = u.id
-      LEFT JOIN users au ON ca.assigned_by = au.id
-      WHERE ca.conflict_id=? AND ca.conflict_type=?
-      ORDER BY ca.created_at DESC
-    `).all(req.params.id, conflictType);
-
-    // Get latest position from each department's assignee for side-by-side comparison
-    const sideA = db.prepare(`
-      SELECT cch.*, u.name as assignee_name
-      FROM conflict_coordination_history cch
-      LEFT JOIN users u ON cch.assignee_user_id = u.id
-      WHERE cch.conflict_id = ? AND cch.conflict_type = ?
-        AND cch.assignee_user_id IN (SELECT assignee_user_id FROM conflict_assignments WHERE conflict_id = ? AND conflict_type = ?)
-        AND u.department_id = ?
-      ORDER BY cch.created_at DESC LIMIT 1
-    `).get(req.params.id, conflictType, req.params.id, conflictType, conflict.dept_a);
-
-    const sideB = db.prepare(`
-      SELECT cch.*, u.name as assignee_name
-      FROM conflict_coordination_history cch
-      LEFT JOIN users u ON cch.assignee_user_id = u.id
-      WHERE cch.conflict_id = ? AND cch.conflict_type = ?
-        AND cch.assignee_user_id IN (SELECT assignee_user_id FROM conflict_assignments WHERE conflict_id = ? AND conflict_type = ?)
-        AND u.department_id = ?
-      ORDER BY cch.created_at DESC LIMIT 1
-    `).get(req.params.id, conflictType, req.params.id, conflictType, conflict.dept_b);
-
-    // Check both sides submitted (verify cross-department participation)
-    const submittedDepts = db.prepare(`
-      SELECT DISTINCT u.department_id FROM conflict_coordination_history cch
-      JOIN users u ON cch.assignee_user_id = u.id
-      WHERE cch.conflict_id = ? AND cch.conflict_type = ?
-    `).all(req.params.id, conflictType);
-    const bothSubmitted = submittedDepts.length >= 2;
-
-    res.json({
-      ...conflict, conflict_type: conflictType,
-      currentAssignee, coordinationHistory, assignmentHistory,
-      sideA: sideA || null, sideB: sideB || null,
-      bothSubmitted: Boolean(bothSubmitted),
-      deadline: conflict.deadline || null,
-      escalated: conflict.escalated || 0,
-      resolution_type: conflict.resolution_type || null
-    });
+    return res.json(conflict);
   });
 });
 
-// POST /:id/assign — assign owner
 router.post('/:id/assign', requireAuth, (req, res) => {
-  return runAsyncAction(res, async () => {
-    if (!await canManageGeneralConflictAsync(req)) {
-      return res.status(403).json({ error: '无冲突处理权限' });
-    }
-    const { type } = req.query;
-    const conflictType = type || 'field';
-    const { assignee_user_id } = req.body;
-
-    let conflict;
-    if (conflictType === 'term') {
-      conflict = db.prepare('SELECT * FROM term_conflicts WHERE id=?').get(req.params.id);
-    } else {
-      conflict = db.prepare('SELECT * FROM field_conflicts WHERE id=?').get(req.params.id);
-    }
-    if (!conflict) return res.status(404).json({ error: '冲突不存在' });
-    if (conflict.status !== 'pending') {
-      return res.status(409).json({ error: '只能在待处理状态下首次指定责任人；协调中请使用 PUT 改派' });
-    }
-
-    db.transaction(() => {
-      db.prepare(`
-        INSERT INTO conflict_assignments (conflict_id, conflict_type, assignee_user_id, assigned_by)
-        VALUES (?, ?, ?, ?)
-      `).run(req.params.id, conflictType, assignee_user_id, req.session.userId);
-
-      if (conflict.status === 'pending') {
-        const table = conflictType === 'term' ? 'term_conflicts' : 'field_conflicts';
-        db.prepare(`UPDATE ${table} SET status='coordinating' WHERE id=?`).run(req.params.id);
-      }
-
-      const assignee = db.prepare('SELECT * FROM users WHERE id=?').get(assignee_user_id);
-      const fromDept = db.prepare('SELECT department_id FROM users WHERE id=?').get(req.session.userId);
-      db.prepare(`
-        INSERT INTO todos (from_dept_id, to_dept_id, type, related_mapping_id, content, urgency)
-        VALUES (?, ?, 'conflict_resolution', NULL, ?, 'high')
-      `).run(
-        fromDept ? fromDept.department_id : null,
-        assignee ? assignee.department_id : null,
-        `冲突协调：${conflictType === 'term' ? conflict.term : `字段冲突 #${conflict.id}`}`
-      );
-    })();
-
-    res.json({ success: true });
+  return runAction(res, async () => {
+    if (!await canManageGeneralConflict(req)) return res.status(403).json({ error: '无冲突处理权限' });
+    const repo = await conflictRepository();
+    const assignee = await getUserByIdAsync(req.body && req.body.assignee_user_id);
+    const result = await repo.assignConflict(req.params.id, conflictTypeFromQuery(req), await conflictActor(req, {
+      assignee_user_id: req.body && req.body.assignee_user_id,
+      assignee_dept_id: assignee ? assignee.department_id : null
+    }));
+    return sendRepositoryResult(res, result);
   });
 });
 
-// PUT /:id/assign — reassign owner
 router.put('/:id/assign', requireAuth, (req, res) => {
-  return runAsyncAction(res, async () => {
-    if (!await canManageGeneralConflictAsync(req)) {
-      return res.status(403).json({ error: '无冲突处理权限' });
-    }
-    const { type } = req.query;
-    const conflictType = type || 'field';
-    const { assignee_user_id } = req.body;
-
-    const table = conflictType === 'term' ? 'term_conflicts' : 'field_conflicts';
-    const conflict = db.prepare(`SELECT * FROM ${table} WHERE id=?`).get(req.params.id);
-    if (!conflict) return res.status(404).json({ error: '冲突不存在' });
-    if (conflict.status !== 'coordinating') {
-      return res.status(409).json({ error: '仅协调中状态可改派' });
-    }
-
-    db.transaction(() => {
-      db.prepare(`
-        INSERT INTO conflict_assignments (conflict_id, conflict_type, assignee_user_id, assigned_by)
-        VALUES (?, ?, ?, ?)
-      `).run(req.params.id, conflictType, assignee_user_id, req.session.userId);
-    })();
-
-    res.json({ success: true });
+  return runAction(res, async () => {
+    if (!await canManageGeneralConflict(req)) return res.status(403).json({ error: '无冲突处理权限' });
+    const repo = await conflictRepository();
+    const assignee = await getUserByIdAsync(req.body && req.body.assignee_user_id);
+    const result = await repo.reassignConflict(req.params.id, conflictTypeFromQuery(req), await conflictActor(req, {
+      assignee_user_id: req.body && req.body.assignee_user_id,
+      assignee_dept_id: assignee ? assignee.department_id : null
+    }));
+    return sendRepositoryResult(res, result);
   });
 });
 
-// POST /:id/coordination — submit coordination result (assignee only)
 router.post('/:id/coordination', requireAuth, (req, res) => {
-  return runAsyncAction(res, async () => {
-    const { type } = req.query;
-    const conflictType = type || 'field';
-    const { result, note } = req.body;
-
-    if (!['A','B','compromise'].includes(result)) {
-      return res.status(422).json({ error: 'result 必须为 A, B, 或 compromise' });
-    }
-
-    const assignedParticipant = db.prepare(`
-      SELECT assignee_user_id FROM conflict_assignments
-      WHERE conflict_id=? AND conflict_type=? AND assignee_user_id=?
-      LIMIT 1
-    `).get(req.params.id, conflictType, req.session.userId);
-
-    const assigneeCount = db.prepare(`
-      SELECT COUNT(DISTINCT assignee_user_id) as cnt FROM conflict_assignments
-      WHERE conflict_id = ? AND conflict_type = ?
-    `).get(req.params.id, conflictType);
-
-    if (assigneeCount.cnt === 0) return res.status(400).json({ error: '尚未指定责任人' });
-    if (!assignedParticipant && !await requestHasAnyPermissionAsync(req, ['admin:access'])) {
-      return res.status(403).json({ error: '仅已指派协调人可提交协调结果' });
-    }
-
-    const table = conflictType === 'term' ? 'term_conflicts' : 'field_conflicts';
-    const conflict = db.prepare(`SELECT * FROM ${table} WHERE id=?`).get(req.params.id);
-    if (!conflict) return res.status(404).json({ error: '冲突不存在' });
-    if (conflict.status !== 'coordinating') {
-      return res.status(409).json({ error: '仅协调中状态可提交协调结果' });
-    }
-
-    db.prepare(`
-      INSERT INTO conflict_coordination_history (conflict_id, conflict_type, assignee_user_id, result, note)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(req.params.id, conflictType, req.session.userId, result, note || null);
-
-    const submissionCount = db.prepare(`
-      SELECT COUNT(DISTINCT cch.assignee_user_id) as cnt
-      FROM conflict_coordination_history cch
-      JOIN conflict_assignments ca
-        ON ca.conflict_id = cch.conflict_id
-       AND ca.conflict_type = cch.conflict_type
-       AND ca.assignee_user_id = cch.assignee_user_id
-      WHERE cch.conflict_id = ? AND cch.conflict_type = ?
-    `).get(req.params.id, conflictType);
-
-    if (assigneeCount.cnt > 0 && submissionCount.cnt >= assigneeCount.cnt) {
-      const reviewers = usersWithAnyPermission(['conflict:manage', 'review:approve', 'admin:access']);
-      reviewers.forEach(function(r) {
-        db.prepare(`
-          INSERT INTO todos (from_dept_id, to_dept_id, type, content, urgency)
-          VALUES (NULL, ?, 'conflict_resolution', ?, 'high')
-        `).run(r.department_id, '冲突 #' + req.params.id + ' 全部协调人已提交立场，等待终裁');
-      });
-    }
-
-    res.json({ success: true });
+  return runAction(res, async () => {
+    const repo = await conflictRepository();
+    const result = await repo.submitCoordination(req.params.id, conflictTypeFromQuery(req), await conflictActor(req, {
+      result: req.body && req.body.result,
+      note: req.body && req.body.note
+    }));
+    return sendRepositoryResult(res, result);
   });
 });
 
-// POST /:id/final-decide — final decision for general or escalated conflicts
 router.post('/:id/final-decide', requireAuth, (req, res) => {
-  return runAsyncAction(res, async () => {
-    const { type } = req.query;
-    const conflictType = type || 'field';
-    const { resolution, adopted_value } = req.body;
-
-    const table = conflictType === 'term' ? 'term_conflicts' : 'field_conflicts';
-    const conflict = db.prepare(`SELECT * FROM ${table} WHERE id=?`).get(req.params.id);
+  return runAction(res, async () => {
+    const repo = await conflictRepository();
+    const type = conflictTypeFromQuery(req);
+    const conflict = await repo.getConflict(req.params.id, type, { canViewAll: true });
     if (!conflict) return res.status(404).json({ error: '冲突不存在' });
     if (conflict.status === 'escalated') {
-      if (!await canDecideEscalatedConflictAsync(req)) {
-        return res.status(403).json({ error: '无升级冲突处理权限' });
-      }
-    } else if (conflict.status === 'coordinating') {
-      if (!await canManageGeneralConflictAsync(req)) {
-        return res.status(403).json({ error: '无一般冲突处理权限' });
-      }
-    } else {
-      return res.status(409).json({ error: '仅协调中或已升级状态可终裁' });
+      if (!await canDecideEscalatedConflict(req)) return res.status(403).json({ error: '无升级冲突处理权限' });
+    } else if (!await canManageGeneralConflict(req)) {
+      return res.status(403).json({ error: '无一般冲突处理权限' });
     }
-
-    db.transaction(() => {
-      db.prepare(`
-        UPDATE ${table} SET status='resolved', resolution=?, resolved_by=?, resolved_at=datetime('now')
-        WHERE id=?
-      `).run(resolution || null, req.session.userId, req.params.id);
-
-      if (conflictType === 'field') {
-        applyAdoptedFieldValue(conflict, adopted_value, req.session.userId);
-        unblockMappingIfNoOpenErrors(conflict);
-      }
-    })();
-
-    res.json({ success: true });
+    const result = await repo.finalDecideConflict(req.params.id, type, await conflictActor(req, {
+      resolution: req.body && req.body.resolution,
+      adopted_value: req.body && req.body.adopted_value
+    }));
+    return sendRepositoryResult(res, result);
   });
 });
 
-// POST /:id/escalate — manually escalate to decision group
 router.post('/:id/escalate', requireAuth, (req, res) => {
-  return runAsyncAction(res, async () => {
-    if (!await canEscalateConflictAsync(req)) {
-      return res.status(403).json({ error: '无冲突升级权限' });
-    }
-    const { type } = req.query;
-    const conflictType = type || 'field';
-    const table = conflictType === 'term' ? 'term_conflicts' : 'field_conflicts';
-    const conflict = db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(req.params.id);
-    if (!conflict) return res.status(404).json({ error: '冲突不存在' });
-    if (conflict.status !== 'coordinating') {
-      return res.status(409).json({ error: '仅协调中的冲突可升级' });
-    }
-
-    db.prepare(`UPDATE ${table} SET status = 'escalated', escalated = 1 WHERE id = ?`).run(req.params.id);
-
-    // Notify users who can decide escalated conflicts.
-    const reviewers = usersWithAnyPermission(['conflict:final_decide_escalated', 'review:approve', 'admin:access']);
-    reviewers.forEach(function(r) {
-      db.prepare(`
-        INSERT INTO todos (from_dept_id, to_dept_id, type, content, urgency)
-        VALUES (NULL, ?, 'conflict_resolution', ?, 'high')
-      `).run(r.department_id, '冲突升级：#' + req.params.id + ' 已升级，请决策组终裁');
-    });
-
-    res.json({ success: true });
+  return runAction(res, async () => {
+    if (!await canEscalateConflict(req)) return res.status(403).json({ error: '无冲突升级权限' });
+    const repo = await conflictRepository();
+    const result = await repo.escalateConflict(req.params.id, conflictTypeFromQuery(req), await conflictActor(req));
+    return sendRepositoryResult(res, result);
   });
 });
 
-// POST /:id/reopen — reopen resolved conflict
 router.post('/:id/reopen', requireAuth, (req, res) => {
-  return runAsyncAction(res, async () => {
-    if (!await canManageGeneralConflictAsync(req) && !await canDecideEscalatedConflictAsync(req)) {
+  return runAction(res, async () => {
+    if (!await canManageGeneralConflict(req) && !await canDecideEscalatedConflict(req)) {
       return res.status(403).json({ error: '无冲突重开权限' });
     }
-    const { type } = req.query;
-    const conflictType = type || 'field';
-
-    const table = conflictType === 'term' ? 'term_conflicts' : 'field_conflicts';
-    const conflict = db.prepare(`SELECT * FROM ${table} WHERE id=?`).get(req.params.id);
-    if (!conflict) return res.status(404).json({ error: '冲突不存在' });
-    if (conflict.status !== 'resolved') {
-      return res.status(409).json({ error: '仅已解决状态可重开' });
-    }
-
-    db.prepare(`UPDATE ${table} SET status='pending', resolution=NULL, resolved_by=NULL, resolved_at=NULL, escalated=0 WHERE id=?`).run(req.params.id);
-    res.json({ success: true });
+    const repo = await conflictRepository();
+    const result = await repo.reopenConflict(req.params.id, conflictTypeFromQuery(req), await conflictActor(req));
+    return sendRepositoryResult(res, result);
   });
 });
 
-// POST /:id/archive — archive resolved conflict (admin only)
 router.post('/:id/archive', requireAuth, (req, res) => {
-  return runAsyncAction(res, async () => {
-    if (!await requestHasAnyPermissionAsync(req, ['admin:access'])) {
-      return res.status(403).json({ error: '仅管理员可归档' });
-    }
-    const { type } = req.query;
-    const conflictType = type || 'field';
-
-    const table = conflictType === 'term' ? 'term_conflicts' : 'field_conflicts';
-    const conflict = db.prepare(`SELECT * FROM ${table} WHERE id=?`).get(req.params.id);
-    if (!conflict) return res.status(404).json({ error: '冲突不存在' });
-    if (conflict.status !== 'resolved') {
-      return res.status(409).json({ error: '仅已解决状态可归档' });
-    }
-
-    db.prepare(`UPDATE ${table} SET status='archived' WHERE id=?`).run(req.params.id);
-    res.json({ success: true });
+  return runAction(res, async () => {
+    if (!await requestHasAnyPermission(req, ['admin:access'])) return res.status(403).json({ error: '仅管理员可归档' });
+    const repo = await conflictRepository();
+    const result = await repo.archiveConflict(req.params.id, conflictTypeFromQuery(req), await conflictActor(req));
+    return sendRepositoryResult(res, result);
   });
 });
 
-// Keep existing detect endpoint
-router.post('/detect', requirePermission('conflict:manage'), (req, res) => {
-  return runDbAction(res, () => {
-    const { field_name_cn } = req.query;
-
-    const detectTerms = db.transaction(() => {
-      let inserted = 0;
-      const terms = db.prepare(`
-        SELECT t.id, t.term, t.definition, t.scope, p.owner_dept_id
-        FROM terms t
-        LEFT JOIN processes p ON t.process_id = p.id
-        WHERE t.status='approved'
-      `).all();
-
-      for (let i = 0; i < terms.length; i++) {
-        for (let j = i + 1; j < terms.length; j++) {
-          const t1 = terms[i];
-          const t2 = terms[j];
-
-          // Detect term conflicts (e.g. similar term names but different scope/definition)
-          if (t1.term === t2.term || (t1.term.includes(t2.term) && t1.term.length - t2.term.length < 3)) {
-            if (t1.definition !== t2.definition || t1.scope !== t2.scope) {
-              const existing = db.prepare(`
-                SELECT id FROM term_conflicts
-                WHERE term=? AND dept_a_meaning=? AND dept_b_meaning=? AND status IN ('pending','coordinating','silenced')
-              `).get(t1.term, t1.definition || null, t2.definition || null);
-              if (!existing) {
-                 const tSeverity = (t1.term === t2.term && t1.definition !== t2.definition) ? 'error' : 'warn';
-                 const tStatus = tSeverity === 'warn' ? 'silenced' : 'coordinating';
-                 const tResType = tSeverity === 'warn' ? 'auto_silenced' : null;
-                 const result = db.prepare(`
-                   INSERT INTO term_conflicts (term, dept_a, dept_a_meaning, dept_b, dept_b_meaning, severity, status, resolution_type)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                 `).run(t1.term, t1.owner_dept_id || null, t1.definition || null, t2.owner_dept_id || null, t2.definition || null, tSeverity, tStatus, tResType);
-                 if (tSeverity === 'error') {
-                   autoAssignBothDepts(result.lastInsertRowid, 'term', t1.owner_dept_id, t2.owner_dept_id);
-                 }
-                 inserted += 1;
-              }
-            }
-          }
-        }
-      }
-      return inserted;
-    });
-    const termConflictsDetected = detectTerms();
-
-    if (!field_name_cn) {
-        return res.json({ detected: termConflictsDetected, message: '术语冲突检测完成，未提供 field_name_cn 故跳过字段冲突检测' });
-    }
-
-    const pairs = db.prepare(`
-      SELECT a.id as a_id, b.id as b_id, a.submitted_by as sa, b.submitted_by as sb,
-             ua.department_id as da, ub.department_id as db
-      FROM field_entries a
-      JOIN field_entries b ON a.field_name_cn = b.field_name_cn AND a.field_name_en = b.field_name_en AND a.id < b.id
-      JOIN users ua ON a.submitted_by = ua.id
-      JOIN users ub ON b.submitted_by = ub.id
-      WHERE a.field_name_cn = ? AND ua.department_id != ub.department_id
-    `).all(field_name_cn);
-
-    const insertConflicts = db.transaction(() => {
-      let inserted = 0;
-      pairs.forEach(pair => {
-        const result = detectConflictValues(pair.a_id, pair.b_id);
-        if (!result) return;
-        if (result.valueA === result.valueB) return;
-        if (conflictAlreadyExists(pair.a_id, pair.b_id, result.conflictField)) return;
-
-        const fcStatus = result.severity === 'warn' ? 'silenced' : 'coordinating';
-        const fcResType = result.severity === 'warn' ? 'auto_silenced' : null;
-        const insertResult = db.prepare(`
-          INSERT INTO field_conflicts
-            (field_entry_a_id, field_entry_b_id, conflict_field, submitter_a, value_a, submitter_b, value_b, dept_a, dept_b, severity, status, resolution_type)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(
-          pair.a_id,
-          pair.b_id,
-          result.conflictField,
-          pair.sa,
-          result.valueA,
-          pair.sb,
-          result.valueB,
-          pair.da,
-          pair.db,
-          result.severity,
-          fcStatus,
-          fcResType
-        );
-        if (result.severity === 'error') {
-          autoAssignBothDepts(insertResult.lastInsertRowid, 'field', pair.da, pair.db);
-        }
-        inserted += 1;
-      });
-      return inserted;
-    });
-
-    res.json({ detected: insertConflicts() + termConflictsDetected });
-  });
-});
-
-// Keep existing resolve endpoint
 router.post('/:id/resolve', requireAuth, (req, res) => {
-  return runAsyncAction(res, async () => {
-    const { resolution, adopted_value } = req.body;
-    const conflict = db.prepare('SELECT * FROM field_conflicts WHERE id=?').get(req.params.id);
+  return runAction(res, async () => {
+    const repo = await conflictRepository();
+    const conflict = await repo.getConflict(req.params.id, 'field', { canViewAll: true });
     if (!conflict) return res.status(404).json({ error: '冲突不存在' });
     if (conflict.status === 'escalated') {
-      if (!await canDecideEscalatedConflictAsync(req)) {
-        return res.status(403).json({ error: '无升级冲突处理权限' });
-      }
-    } else if (!await canManageGeneralConflictAsync(req)) {
+      if (!await canDecideEscalatedConflict(req)) return res.status(403).json({ error: '无升级冲突处理权限' });
+    } else if (!await canManageGeneralConflict(req)) {
       return res.status(403).json({ error: '无一般冲突处理权限' });
     }
-
-    const resolve = db.transaction(() => {
-      db.prepare("UPDATE field_conflicts SET status='resolved', resolution=?, resolved_by=?, resolved_at=datetime('now') WHERE id=?").run(
-        resolution || null,
-        req.session.userId,
-        req.params.id
-      );
-
-      applyAdoptedFieldValue(conflict, adopted_value, req.session.userId);
-      unblockMappingIfNoOpenErrors(conflict);
-    });
-
-    resolve();
-    res.json({ success: true });
+    const result = await repo.resolveFieldConflict(req.params.id, await conflictActor(req, {
+      resolution: req.body && req.body.resolution,
+      adopted_value: req.body && req.body.adopted_value
+    }));
+    return sendRepositoryResult(res, result);
   });
 });
 
-// Keep existing term resolve endpoint
 router.post('/term/:id/resolve', requireAuth, (req, res) => {
-  return runAsyncAction(res, async () => {
-    const { resolution } = req.body;
-    const conflict = db.prepare('SELECT * FROM term_conflicts WHERE id=?').get(req.params.id);
+  return runAction(res, async () => {
+    const repo = await conflictRepository();
+    const conflict = await repo.getConflict(req.params.id, 'term', { canViewAll: true });
     if (!conflict) return res.status(404).json({ error: '冲突不存在' });
     if (conflict.status === 'escalated') {
-      if (!await canDecideEscalatedConflictAsync(req)) {
-        return res.status(403).json({ error: '无升级冲突处理权限' });
-      }
-    } else if (!await canManageGeneralConflictAsync(req)) {
+      if (!await canDecideEscalatedConflict(req)) return res.status(403).json({ error: '无升级冲突处理权限' });
+    } else if (!await canManageGeneralConflict(req)) {
       return res.status(403).json({ error: '无一般冲突处理权限' });
     }
-    db.prepare("UPDATE term_conflicts SET status='resolved', resolution=?, resolved_by=?, resolved_at=datetime('now') WHERE id=?").run(
-      resolution || null,
-      req.session.userId,
-      req.params.id
-    );
-    res.json({ success: true });
+    const result = await repo.resolveTermConflict(req.params.id, await conflictActor(req, {
+      resolution: req.body && req.body.resolution
+    }));
+    return sendRepositoryResult(res, result);
   });
 });
+
+router.setConflictRepositoryFactory = setConflictRepositoryFactory;
+router.resetConflictRepositoryFactory = resetConflictRepositoryFactory;
 
 module.exports = router;
