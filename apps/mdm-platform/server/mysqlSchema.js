@@ -534,6 +534,104 @@ CREATE TABLE IF NOT EXISTS terminology_terms (
     REFERENCES process_mapping_records(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS mdm_mapping_records (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  process_mapping_record_id BIGINT NOT NULL,
+  description TEXT NULL,
+  approval_dept_id BIGINT NULL,
+  owner_dept_id BIGINT NOT NULL,
+  status VARCHAR(32) NOT NULL DEFAULT 'draft',
+  submitted_by BIGINT NULL,
+  submitted_at TIMESTAMP NULL,
+  current_step INT NOT NULL DEFAULT 1,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_mdm_mapping_records_process (process_mapping_record_id),
+  INDEX idx_mdm_mapping_records_owner_dept (owner_dept_id),
+  INDEX idx_mdm_mapping_records_status (status),
+  CHECK (status IN ('draft','submitted','dept_reviewed','cross_confirmed','fields_confirmed','final_reviewed','published')),
+  CONSTRAINT fk_mdm_mapping_records_process FOREIGN KEY (process_mapping_record_id)
+    REFERENCES process_mapping_records(id) ON DELETE RESTRICT,
+  CONSTRAINT fk_mdm_mapping_records_owner_dept FOREIGN KEY (owner_dept_id)
+    REFERENCES departments(id) ON DELETE RESTRICT,
+  CONSTRAINT fk_mdm_mapping_records_approval_dept FOREIGN KEY (approval_dept_id)
+    REFERENCES departments(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS mdm_mapping_system_links (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  mapping_id BIGINT NOT NULL,
+  system_id BIGINT NULL,
+  system_name VARCHAR(255) NULL,
+  system_role VARCHAR(64) NOT NULL DEFAULT 'secondary',
+  sort_order INT NOT NULL DEFAULT 1,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_mdm_mapping_system_links_mapping (mapping_id),
+  CONSTRAINT fk_mdm_mapping_system_links_mapping FOREIGN KEY (mapping_id)
+    REFERENCES mdm_mapping_records(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS mdm_mapping_related_departments (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  mapping_id BIGINT NOT NULL,
+  department_id BIGINT NOT NULL,
+  relation VARCHAR(64) NOT NULL DEFAULT 'collaborator',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_mdm_mapping_related_departments_mapping (mapping_id),
+  INDEX idx_mdm_mapping_related_departments_dept (department_id),
+  CONSTRAINT fk_mdm_mapping_related_departments_mapping FOREIGN KEY (mapping_id)
+    REFERENCES mdm_mapping_records(id) ON DELETE CASCADE,
+  CONSTRAINT fk_mdm_mapping_related_departments_dept FOREIGN KEY (department_id)
+    REFERENCES departments(id) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS mdm_mapping_approval_tasks (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  mapping_id BIGINT NOT NULL,
+  step INT NOT NULL,
+  step_name VARCHAR(255) NOT NULL,
+  assignee_user_id BIGINT NULL,
+  assigned_dept_id BIGINT NULL,
+  status VARCHAR(32) NOT NULL DEFAULT 'pending',
+  opinion TEXT NULL,
+  operated_by BIGINT NULL,
+  operated_at TIMESTAMP NULL,
+  reject_count INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_mdm_mapping_approval_tasks_mapping_step (mapping_id, step),
+  INDEX idx_mdm_mapping_approval_tasks_assignee (assignee_user_id),
+  INDEX idx_mdm_mapping_approval_tasks_dept (assigned_dept_id),
+  CHECK (status IN ('pending','in_progress','approved','rejected','blocked')),
+  CONSTRAINT fk_mdm_mapping_approval_tasks_mapping FOREIGN KEY (mapping_id)
+    REFERENCES mdm_mapping_records(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS mdm_mapping_approval_history (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  mapping_id BIGINT NOT NULL,
+  step INT NOT NULL,
+  operator_user_id BIGINT NULL,
+  action VARCHAR(64) NOT NULL,
+  opinion TEXT NULL,
+  operated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_mdm_mapping_approval_history_mapping (mapping_id, operated_at),
+  CONSTRAINT fk_mdm_mapping_approval_history_mapping FOREIGN KEY (mapping_id)
+    REFERENCES mdm_mapping_records(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS mdm_mapping_rejection_reasons (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  mapping_id BIGINT NOT NULL,
+  field_entry_id BIGINT NULL,
+  rejection_reason TEXT NOT NULL,
+  rejected_by BIGINT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_mdm_mapping_rejection_reasons_mapping (mapping_id, created_at),
+  CONSTRAINT fk_mdm_mapping_rejection_reasons_mapping FOREIGN KEY (mapping_id)
+    REFERENCES mdm_mapping_records(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS data_map_objects (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
   object_key VARCHAR(180) NOT NULL,

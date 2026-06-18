@@ -17,6 +17,8 @@ const businessGuarded = new Map([
   ['conflicts.js POST /:id/archive', '冲突归档通过 admin:access 权限检查'],
   ['conflicts.js POST /:id/resolve', '字段冲突解决要求当前指派人或管理权限'],
   ['conflicts.js POST /term/:id/resolve', '术语冲突解决要求当前指派人或管理权限'],
+  ['dataMap.js POST /contexts', '数据地图上下文创建通过 admin/data:view_all 管理权限检查'],
+  ['dataMap.js PUT /contexts/:id', '数据地图上下文维护通过 admin/data:view_all 管理权限检查'],
   ['fieldEntries.js POST /', '字段台账创建通过提交人/管理员和映射提交人检查'],
   ['fieldEntries.js PUT /:id', '字段台账编辑通过 owner/reviewer/admin 或本人提交检查'],
   ['fieldEntries.js DELETE /:id', '字段台账删除通过 admin 或本人提交检查'],

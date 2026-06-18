@@ -24,7 +24,7 @@
   - 不将旧术语治理数据悄悄合并到 `data_map_terms`；`data_map_terms` 只服务字段命名规则和 Data Map 字段域校验。
   - 补 `test:terminology-mysql`，覆盖列表、创建、更新、审批、删除、禁用词/推荐词、权限和 MySQL 身份模式。
 
-- [ ] **Task 2: Legacy mapping approval domain**
+- [x] **Task 2: Legacy mapping approval domain**
   - 新增 `mappingMysqlRepository`，迁移旧 `/api/mappings` 审批运行态数据。
   - 保留旧基础映射审批 UI 和 API 形状，但字段台账默认入口仍是 Data Map context。
   - 旧 `mapping_id` 不再作为字段台账归属锚点；需要字段上下文时显式引用 `context_id`。
@@ -95,3 +95,4 @@
 - 2026-06-18：已嗅探当前 `master` 合并后的剩余 SQLite 表面。核心遗留点集中在 `terminology`、`mappings`、`conflicts`、`todos`、`versions`、`activity` 以及部分主数据 CRUD 路由。
 - 2026-06-18：`docs/norms` 在合并和计划新增前保持无差异。
 - 2026-06-18：术语治理已新增独立 MySQL schema 与 `terminologyMysqlRepository`；`/api/terminology`、`/api/terminology/types` 改走 repository，`/api/terminology/processes` 读取流程治理 MySQL 读模型 `process_mapping_records`，不再读取 SQLite `terms`。新增 `test:terminology-mysql` 并纳入 `test:mainline`。
+- 2026-06-18：旧映射审批已新增 `mdm_mapping_*` MySQL schema 与 `mappingMysqlRepository`；`/api/mappings` 改走 repository factory 注入，保留旧 API 路径和基本响应形状，详情中的 `fields` 固定为空数组以避免恢复旧 `field_entries` 归属。新增 `test:mappings-mysql` 和 MySQL 身份模式测试，并纳入 `test:mainline`。

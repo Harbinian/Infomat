@@ -1,16 +1,20 @@
 const http = require('http');
 const path = require('path');
 const { spawn } = require('child_process');
+const express = require('express');
 const { cleanupDb, stopServer } = require('./testHelpers/isolatedDb');
 
 const db = require('../server/db');
 const { hashPassword } = require('../server/auth');
+const mappingsRouter = require('../server/routes/mappings');
 
 const APP_ROOT = path.join(__dirname, '..');
 const PORT = 3107;
 const BASE = `http://localhost:${PORT}`;
 const PASSWORD = 'pass1234';
 const TEST_PREFIX = 'TEST_PROJECT_ROLE_';
+const previousIdentityReadModel = process.env.MDM_IDENTITY_READ_MODEL;
+delete process.env.MDM_IDENTITY_READ_MODEL;
 
 const csrfTokens = new Map();
 
@@ -151,6 +155,91 @@ function createUser(employeeNo, name, departmentId, roleId) {
   return userId;
 }
 
+function listen(app) {
+  return new Promise(resolve => {
+    const server = app.listen(0, '127.0.0.1', () => resolve(server));
+  });
+}
+
+function closeServer(server) {
+  return new Promise((resolve, reject) => {
+    server.close(error => error ? reject(error) : resolve());
+  });
+}
+
+async function assertMappingAccessViaRepository(seed) {
+  const mappings = [
+    {
+      id: 901,
+      process_id: 901,
+      process_name: `${TEST_PREFIX}流程A`,
+      cap_name: '流程治理读模型',
+      description: `${TEST_PREFIX}映射A`,
+      owner_dept_id: seed.deptA,
+      owner_dept_name: `${TEST_PREFIX}部门A`,
+      status: 'published',
+      submitted_by: seed.infoUserId,
+      current_step: 5,
+      systems: ''
+    },
+    {
+      id: 902,
+      process_id: 902,
+      process_name: `${TEST_PREFIX}流程B`,
+      cap_name: '流程治理读模型',
+      description: `${TEST_PREFIX}映射B`,
+      owner_dept_id: seed.deptB,
+      owner_dept_name: `${TEST_PREFIX}部门B`,
+      status: 'published',
+      submitted_by: seed.decisionUserId,
+      current_step: 5,
+      systems: ''
+    }
+  ];
+
+  mappingsRouter.setMappingRepositoryFactory(async () => ({
+    async listMappings(filters, scope) {
+      assert(scope.canViewAll === true, '项目角色的 data:view_all 权限应传入映射 MySQL repository');
+      return mappings;
+    }
+  }));
+
+  const app = express();
+  app.use(express.json());
+  app.use((req, res, next) => {
+    const actor = req.headers['x-test-actor'] === 'decision'
+      ? { userId: seed.decisionUserId, employeeNo: `${TEST_PREFIX}DECISION` }
+      : { userId: seed.infoUserId, employeeNo: `${TEST_PREFIX}INFO` };
+    req.session = {
+      userId: actor.userId,
+      userRole: 'submitter',
+      userName: actor.employeeNo,
+      departmentId: seed.deptA
+    };
+    next();
+  });
+  app.use('/api/mappings', mappingsRouter);
+
+  const server = await listen(app);
+  const baseUrl = `http://127.0.0.1:${server.address().port}`;
+  try {
+    const infoRes = await fetch(`${baseUrl}/api/mappings`, { headers: { 'x-test-actor': 'info' } });
+    const infoBody = await infoRes.json();
+    assert(infoRes.status === 200, `信息化负责人查看映射失败: ${infoRes.status}`);
+    const visibleTestMappings = infoBody.filter(row => String(row.description || '').startsWith(TEST_PREFIX));
+    assert(visibleTestMappings.length === 2, `信息化负责人应可查看全部测试映射，实际 ${visibleTestMappings.length}`);
+
+    const decisionRes = await fetch(`${baseUrl}/api/mappings`, { headers: { 'x-test-actor': 'decision' } });
+    const decisionBody = await decisionRes.json();
+    assert(decisionRes.status === 200, `决策组查看映射失败: ${decisionRes.status}`);
+    const decisionVisibleMappings = decisionBody.filter(row => String(row.description || '').startsWith(TEST_PREFIX));
+    assert(decisionVisibleMappings.length === 2, `决策组应可查看全部测试映射，实际 ${decisionVisibleMappings.length}`);
+  } finally {
+    await closeServer(server);
+    mappingsRouter.resetMappingRepositoryFactory();
+  }
+}
+
 function seedData() {
   cleanTestData();
   ensurePermission('data:view_all', 'data', 'view_all', '查看全部业务数据');
@@ -180,8 +269,8 @@ function seedData() {
     VALUES (?, ?, '业务')
   `).run(`${TEST_PREFIX}部门B`, `${TEST_PREFIX}DEPT_B`).lastInsertRowid;
 
-  createUser(`${TEST_PREFIX}INFO`, '测试信息化负责人', deptA, infoRole);
-  createUser(`${TEST_PREFIX}DECISION`, '测试决策组成员', deptA, decisionRole);
+  const infoUserId = createUser(`${TEST_PREFIX}INFO`, '测试信息化负责人', deptA, infoRole);
+  const decisionUserId = createUser(`${TEST_PREFIX}DECISION`, '测试决策组成员', deptA, decisionRole);
 
   const cap = db.prepare(`
     INSERT INTO capabilities (name, level, owner_dept_id)
@@ -195,15 +284,6 @@ function seedData() {
     INSERT INTO processes (name, capability_id, owner_dept_id)
     VALUES (?, ?, ?)
   `).run(`${TEST_PREFIX}流程B`, cap, deptB).lastInsertRowid;
-
-  db.prepare(`
-    INSERT INTO mappings (process_id, description, owner_dept_id, status, current_step)
-    VALUES (?, ?, ?, 'published', 5)
-  `).run(procA, `${TEST_PREFIX}映射A`, deptA);
-  db.prepare(`
-    INSERT INTO mappings (process_id, description, owner_dept_id, status, current_step)
-    VALUES (?, ?, ?, 'published', 5)
-  `).run(procB, `${TEST_PREFIX}映射B`, deptB);
 
   const generalTerm = db.prepare(`
     INSERT INTO term_conflicts (term, dept_a, dept_a_meaning, dept_b, dept_b_meaning, severity, status)
@@ -222,7 +302,7 @@ function seedData() {
     VALUES (?, ?, 'A', ?, 'B', 'medium', 'coordinating')
   `).run(`${TEST_PREFIX}DECISION_DENIED`, deptA, deptB).lastInsertRowid;
 
-  return { generalTerm, escalateTerm, escalatedTerm, decisionDeniedTerm };
+  return { generalTerm, escalateTerm, escalatedTerm, decisionDeniedTerm, deptA, deptB, procA, procB, infoUserId, decisionUserId };
 }
 
 function assert(condition, message) {
@@ -234,6 +314,7 @@ async function main() {
 
   try {
     const ids = seedData();
+    await assertMappingAccessViaRepository(ids);
     child = spawn(process.execPath, ['server/index.js'], {
       cwd: APP_ROOT,
       env: { ...process.env, PORT: String(PORT), SESSION_SECRET: 'project-role-access-test' },
@@ -243,16 +324,6 @@ async function main() {
     await waitForServer(child);
     const infoCookie = await login(`${TEST_PREFIX}INFO`);
     const decisionCookie = await login(`${TEST_PREFIX}DECISION`);
-
-    const infoMappings = await request('GET', `/api/mappings`, null, infoCookie);
-    assert(infoMappings.status === 200, `信息化负责人查看映射失败: ${infoMappings.status}`);
-    const visibleTestMappings = infoMappings.body.filter(row => String(row.description || '').startsWith(TEST_PREFIX));
-    assert(visibleTestMappings.length === 2, `信息化负责人应可查看全部测试映射，实际 ${visibleTestMappings.length}`);
-
-    const decisionMappings = await request('GET', `/api/mappings`, null, decisionCookie);
-    assert(decisionMappings.status === 200, `决策组查看映射失败: ${decisionMappings.status}`);
-    const decisionVisibleMappings = decisionMappings.body.filter(row => String(row.description || '').startsWith(TEST_PREFIX));
-    assert(decisionVisibleMappings.length === 2, `决策组应可查看全部测试映射，实际 ${decisionVisibleMappings.length}`);
 
     const infoResolveGeneral = await request('POST', `/api/conflicts/${ids.generalTerm}/final-decide?type=term`, {
       resolution: '信息化负责人处理一般冲突'
@@ -295,4 +366,10 @@ async function main() {
 main().catch(error => {
   console.error(error.message);
   process.exit(1);
+}).finally(() => {
+  if (previousIdentityReadModel === undefined) {
+    delete process.env.MDM_IDENTITY_READ_MODEL;
+  } else {
+    process.env.MDM_IDENTITY_READ_MODEL = previousIdentityReadModel;
+  }
 });
