@@ -1,12 +1,10 @@
 const assert = require('assert');
 const express = require('express');
-const { cleanupDb } = require('./testHelpers/isolatedDb');
 
 process.env.MDM_DB_QUIET = '1';
 const previousReadModel = process.env.MDM_IDENTITY_READ_MODEL;
 process.env.MDM_IDENTITY_READ_MODEL = 'mysql';
 
-const db = require('../server/db');
 const auth = require('../server/auth');
 const terminologyRouter = require('../server/routes/terminology');
 
@@ -22,46 +20,59 @@ function closeServer(server) {
   });
 }
 
-function resetData() {
-  db.exec(`
-    DELETE FROM terms;
-    DELETE FROM mappings;
-    DELETE FROM processes;
-    DELETE FROM capabilities;
-    DELETE FROM user_roles;
-    DELETE FROM users;
-    DELETE FROM departments;
-  `);
-}
+function makeFakeTerminologyRepository() {
+  const state = {
+    calls: [],
+    processes: [
+      { id: 10, name: '本部门术语流程', owner_dept_id: 8, dept_name: '会话部门', cap_name: '流程治理读模型' },
+      { id: 11, name: '其他部门术语流程', owner_dept_id: 9, dept_name: '其他部门', cap_name: '流程治理读模型' }
+    ],
+    terms: [],
+    nextId: 1
+  };
 
-function seedTerminologyScope() {
-  const sessionDeptId = db.prepare('INSERT INTO departments (name, code) VALUES (?, ?)').run('会话部门', 'SESSION').lastInsertRowid;
-  const otherDeptId = db.prepare('INSERT INTO departments (name, code) VALUES (?, ?)').run('其他部门', 'OTHER').lastInsertRowid;
-
-  db.prepare(`
-    INSERT INTO users (id, name, employee_no, department_id, post, role, password_hash)
-    VALUES (42, 'MySQL 身份管理员', 'MYSQL042', ?, '报送人', 'submitter', 'hash')
-  `).run(sessionDeptId);
-
-  const capabilityId = db.prepare(`
-    INSERT INTO capabilities (name, level, owner_dept_id, status)
-    VALUES ('术语治理能力', 'L1', ?, 'pending')
-  `).run(sessionDeptId).lastInsertRowid;
-  const processId = db.prepare(`
-    INSERT INTO processes (name, capability_id, owner_dept_id, status)
-    VALUES ('本部门术语流程', ?, ?, 'pending')
-  `).run(capabilityId, sessionDeptId).lastInsertRowid;
-
-  const otherCapabilityId = db.prepare(`
-    INSERT INTO capabilities (name, level, owner_dept_id, status)
-    VALUES ('跨部门术语能力', 'L1', ?, 'pending')
-  `).run(otherDeptId).lastInsertRowid;
-  const otherProcessId = db.prepare(`
-    INSERT INTO processes (name, capability_id, owner_dept_id, status)
-    VALUES ('其他部门术语流程', ?, ?, 'pending')
-  `).run(otherCapabilityId, otherDeptId).lastInsertRowid;
-
-  return { sessionDeptId, processId, otherProcessId };
+  return {
+    state,
+    async listProcesses(scope) {
+      state.calls.push(['listProcesses', scope]);
+      return scope.canViewAll
+        ? state.processes
+        : state.processes.filter(process => Number(process.owner_dept_id) === Number(scope.departmentId));
+    },
+    async getProcess(processId, scope) {
+      state.calls.push(['getProcess', Number(processId), scope]);
+      const visible = await this.listProcesses(scope);
+      return visible.find(process => Number(process.id) === Number(processId)) || null;
+    },
+    async processExists(processId) {
+      state.calls.push(['processExists', Number(processId)]);
+      return state.processes.some(process => Number(process.id) === Number(processId));
+    },
+    async listTermTypes() {
+      return [{ code: 'noun', name: '名词', description: '业务名词', sort_order: 10 }];
+    },
+    async getTermType(code) {
+      return code === 'noun' ? { code, name: '名词' } : null;
+    },
+    async createTerm(payload, actorUserId) {
+      state.calls.push(['createTerm', payload, actorUserId]);
+      const term = {
+        id: state.nextId++,
+        ...payload,
+        created_by: actorUserId,
+        status: 'pending'
+      };
+      state.terms.push(term);
+      return term;
+    },
+    async listTerms(filters) {
+      state.calls.push(['listTerms', filters]);
+      return state.terms;
+    },
+    async getTerm(id) {
+      return state.terms.find(term => Number(term.id) === Number(id)) || null;
+    }
+  };
 }
 
 async function main() {
@@ -70,6 +81,11 @@ async function main() {
     'function',
     'auth should allow MySQL identity repository injection'
   );
+  assert.strictEqual(
+    typeof terminologyRouter.setTerminologyRepositoryFactory,
+    'function',
+    'terminology should allow MySQL terminology repository injection'
+  );
 
   let permissionCalls = 0;
   auth.setIdentityRepositoryFactory(async () => ({
@@ -77,11 +93,18 @@ async function main() {
       permissionCalls += 1;
       assert.strictEqual(userId, 42);
       return { permSet: new Set(['*:*']), fieldConstraints: {} };
+    },
+    async getUserRoleCodes(userId, legacyRole) {
+      assert.strictEqual(userId, 42);
+      return [{ code: legacyRole || 'admin', name: '管理员' }];
+    },
+    async getDepartmentById(id) {
+      return { id, name: '会话部门' };
     }
   }));
 
-  resetData();
-  const seed = seedTerminologyScope();
+  const terminologyRepo = makeFakeTerminologyRepository();
+  terminologyRouter.setTerminologyRepositoryFactory(async () => terminologyRepo);
 
   const app = express();
   app.use(express.json());
@@ -90,7 +113,7 @@ async function main() {
       userId: 42,
       userRole: 'submitter',
       userName: 'MySQL 身份管理员',
-      departmentId: seed.sessionDeptId
+      departmentId: 8
     };
     next();
   });
@@ -105,7 +128,7 @@ async function main() {
     assert.strictEqual(processRes.status, 200, JSON.stringify(processBody));
     assert.deepStrictEqual(
       processBody.map(row => row.id).sort((a, b) => a - b),
-      [seed.processId, seed.otherProcessId].sort((a, b) => a - b),
+      [10, 11],
       'MySQL 身份管理员应能看到全部术语治理流程'
     );
 
@@ -122,12 +145,16 @@ async function main() {
     assert.strictEqual(createGlobalRes.status, 200, JSON.stringify(createGlobalBody));
     assert.ok(createGlobalBody.id);
     assert.ok(permissionCalls > 0, '术语路由管理员判断应读取 MySQL 身份权限');
+    assert.ok(
+      terminologyRepo.state.calls.some(call => call[0] === 'createTerm'),
+      '术语创建应通过 MySQL terminology repository'
+    );
 
     console.log('Terminology MySQL identity API test passed');
   } finally {
     await closeServer(server);
+    terminologyRouter.resetTerminologyRepositoryFactory();
     auth.resetIdentityRepositoryFactory();
-    resetData();
   }
 }
 
@@ -140,5 +167,4 @@ main().catch(error => {
   } else {
     process.env.MDM_IDENTITY_READ_MODEL = previousReadModel;
   }
-  cleanupDb({ ignoreErrors: true });
 });
