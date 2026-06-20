@@ -7,6 +7,16 @@ const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'),
 
 assert.ok(html.includes('data-tab="processGovernance"'), 'process governance tab should exist');
 assert.ok(html.includes('id="processGovernancePanel"'), 'process governance panel should exist');
+assert.ok(html.includes('id="pgSubtabs"'), 'process governance should expose a subtab navigation container');
+assert.ok(html.includes('function processGovernanceViewFromRoute(route)'), 'process governance should map routes to page subtabs');
+assert.ok(html.includes('function renderProcessGovernanceSubtabs(activeView)'), 'process governance should render page subtabs');
+assert.ok(html.includes('function applyProcessGovernanceSubtab(activeView)'), 'process governance should hide non-active subtab sections');
+['总览', '待确认问题', '流程图谱', '证据来源', '映射工作', '治理闭环'].forEach(label => {
+  assert.ok(html.includes(label), `process governance should include subtab ${label}`);
+});
+['overview', 'candidateReview', 'map', 'evidence', 'mapping', 'quality'].forEach(view => {
+  assert.ok(html.includes(`data-pg-view="${view}"`), `process governance should assign sections to ${view}`);
+});
 assert.ok(html.includes('/api/process-governance/sankey'), 'process governance sankey API should be called');
 assert.ok(html.includes('/api/process-governance/a1'), 'process governance A1 API should be called');
 assert.ok(html.includes('/api/process-governance/cross-dept'), 'process governance risk API should be called');
@@ -79,18 +89,30 @@ assert.ok(
 );
 assert.ok(html.includes('正在加载待确认的问题'), 'candidate review should show an explicit initial loading state');
 assert.ok(html.includes('待确认问题加载失败，请刷新流程治理'), 'candidate review should show a clear failure state');
-assert.ok(html.includes('<th>在哪发现的</th>'), 'candidate review source column should use plain wording');
-assert.ok(html.includes('<th>哪里有问题</th>'), 'candidate review content column should use plain wording');
-assert.ok(html.includes('<th>是哪种问题</th>'), 'candidate review issue column should use plain wording');
-assert.ok(html.includes('<th>证据有没有问题</th>'), 'candidate review evidence column should use plain wording');
-assert.ok(html.includes('<th>请你确认</th>'), 'candidate review action column should use plain wording');
+assert.ok(html.includes('哪里有问题'), 'candidate review detail should use plain problem wording');
+assert.ok(html.includes('在哪发现的'), 'candidate review detail should use plain source wording');
+assert.ok(html.includes('是哪种问题'), 'candidate review detail should use plain issue wording');
+assert.ok(html.includes('证据有没有问题'), 'candidate review detail should use plain evidence wording');
+assert.ok(html.includes('请你确认'), 'candidate review detail should use plain action wording');
 assert.ok(html.includes('这是不是个问题'), 'candidate review decision copy should ask users to confirm the problem');
 assert.ok(html.includes('证据有没有问题'), 'candidate review evidence copy should ask users to confirm evidence quality');
 assert.ok(html.includes('要不要修改原文'), 'candidate review should ask users to decide whether source files need changes');
-assert.ok(html.includes('是哪种问题：'), 'candidate review groups should name issue types plainly');
-assert.ok(html.includes('class="candidate-review-table"'), 'candidate review detail table should have a dedicated readable table class');
-assert.ok(html.includes('.candidate-review-table td {') && html.includes('vertical-align: top'), 'candidate review detail cells should be top-aligned for long text');
-assert.ok(html.includes('.candidate-review-table th, .candidate-review-table td') && html.includes('border-bottom: 1.5px solid #d6cec0'), 'candidate review detail table should use stronger cell borders');
+assert.ok(html.includes('是哪种问题'), 'candidate review detail should name issue types plainly');
+assert.ok(html.includes('function renderCandidateReviewList'), 'candidate review should render a list of problems before opening one problem');
+assert.ok(html.includes('function renderCandidateReviewDetailPage'), 'candidate review should render one problem per detail page');
+assert.ok(html.includes('pgView: query.view'), 'process governance route should expose pgView from the hash query');
+assert.ok(html.includes('candidateReviewKey: query.candidate'), 'process governance route should understand candidate review detail links');
+assert.ok(html.includes('data-candidate-open'), 'candidate review list should open a single-problem confirmation page');
+assert.ok(html.includes('class="candidate-review-detail"'), 'candidate review detail page should have a dedicated readable layout');
+assert.ok(html.includes('candidate-review-confirmation'), 'candidate review confirmation controls should be below the problem body');
+assert.ok(html.includes('class="candidate-review-card"'), 'candidate review list should use readable problem cards');
+assert.ok(html.includes('.candidate-review-detail-grid'), 'candidate review detail should lay out problem evidence before confirmation controls');
+assert.ok(html.includes('data-candidate-back'), 'candidate review detail page should provide a return-to-list action');
+assert.ok(html.includes('#processGovernancePanel {') && html.includes('max-width: none'), 'process governance panel should use the full available workspace');
+assert.ok(html.includes('.pg-review-grid') && html.includes('min-width: 0'), 'candidate review confirmation grid should not force a wider minimum than the action column');
+const candidateSourceExcerptCss = html.slice(html.indexOf('.candidate-source-excerpt {'), html.indexOf('.tag.green {'));
+assert.ok(!candidateSourceExcerptCss.includes('-webkit-line-clamp'), 'candidate review source excerpts should not be visually clamped');
+assert.ok(candidateSourceExcerptCss.includes('white-space: normal') && candidateSourceExcerptCss.includes('overflow-wrap: anywhere'), 'candidate review source excerpts should wrap naturally');
 assert.ok(html.includes('function candidateReviewExcerptText(row)'), 'candidate review should extract source excerpt text for the source cell');
 assert.ok(html.includes('(row.source_excerpts && row.source_excerpts[0] && row.source_excerpts[0].raw_text)'), 'candidate review source excerpt should use source_excerpts[0].raw_text');
 assert.ok(html.includes('未匹配到原文摘录，请按来源文件核对原文'), 'candidate review should tell users when no source excerpt is matched');
@@ -108,7 +130,8 @@ assert.ok(html.includes('候选对象') && html.includes('关键字段') && html
 assert.ok(html.includes('证据链'), 'process governance should name evidence chain view');
 assert.ok(html.includes('修改原文文件后重新导入'), 'process governance should guide users to update source files instead of editing docs/norms in MDM');
 assert.ok(
-  html.includes('qualityView: query.view') && html.includes('finding: query.finding') && html.includes('caseId: query.case') && html.includes('mappingTodoId: query.todo'),
+  html.includes('qualityView: query.view') && html.includes('finding: query.finding') && html.includes('caseId: query.case') && html.includes('mappingTodoId: query.todo') &&
+    html.includes('candidateReview:') && html.includes('mappingTodos:') && html.includes('qualityCases:'),
   'process governance should understand quality and mapping deep links'
 );
 assert.ok(html.includes('id="pgDeptFilters"'), 'process governance should expose department tag filters');
