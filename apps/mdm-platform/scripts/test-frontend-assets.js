@@ -104,6 +104,13 @@ async function main() {
     'function processGovernanceViewFromRoute(route)',
     'function renderProcessGovernanceSubtabs(activeView)',
     'function applyProcessGovernanceSubtab(activeView)',
+    'PROCESS_GOVERNANCE_VIEW_PRODUCTS',
+    'pgViewCache:{}',
+    'pgViewRequests:{}',
+    'function processGovernanceLoadKey(view, filters)',
+    'async function loadProcessGovernanceView(view, options)',
+    'function renderProcessGovernanceView(view, payload, route)',
+    'function clearProcessGovernanceViewCache(reason)',
     'data-pg-view="overview"',
     'data-pg-view="candidateReview"',
     'data-pg-view="map"',
@@ -295,7 +302,8 @@ async function main() {
   assert.ok(!html.includes("showToast('账号已入库，首次登录密码：'"), 'user create must not show the initial password in a toast');
   assert.ok(!html.includes("showToast(result && result.initial_password ? '首次登录密码：'"), 'password reset must not show the initial password in a toast');
   assert.ok(
-    html.includes("location.hash = '#/' + (params.tab || 'dashboard');"),
+    html.includes("var listHash = '#/' + (params.tab || 'dashboard');") &&
+      html.includes("location.hash = listHash + (queryString ? '?' + queryString : '');"),
     'list navigation should use hash routes with #/ to avoid browser anchor auto-scroll'
   );
   assert.ok(

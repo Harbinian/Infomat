@@ -20,8 +20,8 @@ function writeCandidateFixture() {
       id: 'CAND-MDM-001',
       stable_key: 'candidate-mdm-001',
       department: '工程技术部',
-      document_name: '产品设计需求定义管理程序.docx.md',
-      source_file: 'docs/norms/工程技术部业务资料/产品设计需求定义管理程序.docx.md',
+      document_name: '产品设计需求定义管理程序.docx.md.md',
+      source_file: 'docs/norms/工程技术部业务资料/产品设计需求定义管理程序.docx.md.md',
       source_anchor: 'DOPB135365 §5.2 P71',
       candidate_type: '角色待确认',
       content: '审核人审核产品设计需求文件',
@@ -49,7 +49,7 @@ function writeCandidateFixture() {
   ], null, 2), 'utf8');
   fs.writeFileSync(path.join(candidateRunDir, 'chunks.jsonl'), `${JSON.stringify({
     chunk_id: 'eng-P0071',
-    source_file: 'docs/norms/工程技术部业务资料/产品设计需求定义管理程序.docx.md',
+    source_file: 'docs/norms/工程技术部业务资料/产品设计需求定义管理程序.docx.md.md',
     doc_no: 'DOPB135365',
     clause: '5.2',
     paragraph_id: 'P71',
@@ -202,7 +202,7 @@ async function main() {
 
     assert.strictEqual(body.candidate.stable_key, 'candidate-mdm-001');
     assert.strictEqual(body.candidate.department, '工程技术部');
-    assert.strictEqual(body.candidate.document_name, '产品设计需求定义管理程序.docx.md');
+    assert.strictEqual(body.candidate.document_name, '产品设计需求定义管理程序.docx.md.md');
     assert.strictEqual(body.candidate.source_label.includes('内部锚点P71'), false);
     assert.strictEqual(body.candidate.source_label.includes('原文位置待核对'), false);
     assert.strictEqual(body.candidate.source_label.includes('第5.2条'), true);
@@ -259,6 +259,23 @@ async function main() {
     const crossDeptSaveBody = await crossDeptSaveRes.json();
     assert.strictEqual(crossDeptSaveRes.status, 403, JSON.stringify(crossDeptSaveBody));
     assert.strictEqual(crossDeptSaveBody.error, '只能处理本部门待确认问题');
+
+    processGovernanceRouter.setCandidateReviewRepositoryFactory(() => ({
+      async listRuns() {
+        return [];
+      },
+      async upsertBundle() {
+        throw new Error('simulated candidate review MySQL read-model failure');
+      },
+      async getCandidates() {
+        throw new Error('simulated candidate review MySQL read-model failure');
+      }
+    }));
+    const fallbackRes = await fetch(`${baseUrl}/api/process-governance/candidate-review/runs/review-run-001/candidates?dept=${encodeURIComponent('工程技术部')}`);
+    const fallbackBody = await fallbackRes.json();
+    assert.strictEqual(fallbackRes.status, 200, JSON.stringify(fallbackBody));
+    assert.strictEqual(fallbackBody.summary.total, 1, '候选复核 MySQL 读模型失败时，存在 artifact 的只读列表应回退并继续按部门收口');
+    assert.strictEqual(fallbackBody.items[0].department, '工程技术部');
 
     console.log('Process candidate review API route test passed');
   } finally {

@@ -315,6 +315,25 @@ function groupCandidateReviewItems(items) {
   }));
 }
 
+function filterCandidateReviewItems(items, filters) {
+  return (items || []).filter(item => {
+    if (filters.dept && item.department !== String(filters.dept)) return false;
+    if (filters.document && item.document_name !== String(filters.document)) return false;
+    if (filters.type && item.candidate_type !== String(filters.type)) return false;
+    return true;
+  });
+}
+
+function candidateReviewPayloadFromBundle(bundle, filters) {
+  const items = filterCandidateReviewItems(bundle.items, filters);
+  return {
+    run: bundle.run,
+    summary: { total: items.length },
+    groups: groupCandidateReviewItems(items),
+    items
+  };
+}
+
 function listCandidateRuns() {
   const root = candidateArtifactsRoot();
   if (!fs.existsSync(root)) return [];
@@ -1988,32 +2007,28 @@ router.get('/candidate-review/runs/:runId/candidates', requireAuth, (req, res) =
     const filters = scopedCandidateReviewFilters(requestedFilters, departmentName);
     const repo = await candidateReviewRepositoryOrNull();
     if (repo) {
-      const runDir = candidateRunDir(req.params.runId);
-      const itemsPath = runDir && path.join(runDir, 'mapping_diff_items.json');
-      if (itemsPath && fs.existsSync(itemsPath)) {
-        await repo.upsertBundle(loadProcessCandidateRunBundle(runDir));
-      }
-      const stored = await repo.getCandidates(req.params.runId, filters);
-      if (stored.items.length || !bundle) {
-        return res.json({
-          run: bundle ? bundle.run : { run_id: req.params.runId, candidate_count: stored.items.length },
-          ...stored
-        });
+      try {
+        const runDir = candidateRunDir(req.params.runId);
+        const itemsPath = runDir && path.join(runDir, 'mapping_diff_items.json');
+        if (itemsPath && fs.existsSync(itemsPath)) {
+          await repo.upsertBundle(loadProcessCandidateRunBundle(runDir));
+        }
+        const stored = await repo.getCandidates(req.params.runId, filters);
+        if (stored.items.length || !bundle) {
+          return res.json({
+            run: bundle ? bundle.run : { run_id: req.params.runId, candidate_count: stored.items.length },
+            ...stored
+          });
+        }
+      } catch (error) {
+        if (!bundle) throw error;
+        if (process.env.MDM_DB_QUIET !== '1') {
+          console.warn(`candidate review MySQL read failed; falling back to artifact run ${req.params.runId}: ${error.message}`);
+        }
       }
     }
     if (!bundle) return res.status(404).json({ error: '候选运行不存在' });
-    const items = bundle.items.filter(item => {
-      if (filters.dept && item.department !== String(filters.dept)) return false;
-      if (filters.document && item.document_name !== String(filters.document)) return false;
-      if (filters.type && item.candidate_type !== String(filters.type)) return false;
-      return true;
-    });
-    res.json({
-      run: bundle.run,
-      summary: { total: items.length },
-      groups: groupCandidateReviewItems(items),
-      items
-    });
+    res.json(candidateReviewPayloadFromBundle(bundle, filters));
   });
 });
 

@@ -11,6 +11,13 @@ assert.ok(html.includes('id="pgSubtabs"'), 'process governance should expose a s
 assert.ok(html.includes('function processGovernanceViewFromRoute(route)'), 'process governance should map routes to page subtabs');
 assert.ok(html.includes('function renderProcessGovernanceSubtabs(activeView)'), 'process governance should render page subtabs');
 assert.ok(html.includes('function applyProcessGovernanceSubtab(activeView)'), 'process governance should hide non-active subtab sections');
+assert.ok(html.includes("queryParts.set('view', params.pgView || params.qualityView)") && html.includes("queryParts.set('candidate', params.candidateReviewKey)"), 'list navigation should preserve process governance deep-link query parameters');
+assert.ok(html.includes('PROCESS_GOVERNANCE_VIEW_PRODUCTS'), 'process governance should declare governed data-product view loaders');
+assert.ok(html.includes('pgViewCache:{}') && html.includes('pgViewRequests:{}'), 'process governance should keep per-view session caches and request guards');
+assert.ok(html.includes('function processGovernanceLoadKey(view, filters)'), 'process governance should build stable per-view cache keys');
+assert.ok(html.includes('async function loadProcessGovernanceView(view, options)'), 'process governance should lazy-load the active subtab view');
+assert.ok(html.includes('function renderProcessGovernanceView(view, payload, route)'), 'process governance should render one loaded governance view at a time');
+assert.ok(html.includes('function clearProcessGovernanceViewCache(reason)'), 'process governance should clear session-only caches when scope changes');
 ['总览', '待确认问题', '流程图谱', '证据来源', '映射工作', '治理闭环'].forEach(label => {
   assert.ok(html.includes(label), `process governance should include subtab ${label}`);
 });
@@ -29,6 +36,17 @@ assert.ok(html.includes('/api/process-governance/mdm-requirements'), 'process go
 assert.ok(html.includes('/api/process-governance/evidence'), 'process governance evidence API should be called');
 assert.ok(html.includes('function renderProcessGovernance()'), 'process governance renderer should exist');
 assert.ok(html.includes('function renderProcessGovernanceSankey(data)'), 'process governance sankey renderer should exist');
+const pgRenderStart = html.indexOf('async function renderProcessGovernance()');
+const pgRenderEnd = html.indexOf('// ===== Capability Preview Sankey =====', pgRenderStart);
+const pgRenderSnippet = html.slice(pgRenderStart, pgRenderEnd);
+assert.ok(!pgRenderSnippet.includes('Promise.all(['), 'process governance shell renderer should not eagerly load every governance view');
+assert.ok(pgRenderSnippet.includes('loadProcessGovernanceView(activePgView'), 'process governance shell renderer should load only the active subtab');
+assert.ok(!pgRenderSnippet.includes('renderProcessGovernanceSankey('), 'process governance shell renderer should not initialize the map chart outside the map subtab');
+assert.ok(pgRenderSnippet.includes('if (error && error.status === 401) return;'), 'process governance should let the login flow handle expired sessions without extra console errors');
+const pgMapViewStart = html.indexOf('function renderProcessGovernanceMapView');
+const pgMapViewEnd = html.indexOf('function renderProcessGovernanceEvidenceView', pgMapViewStart);
+const pgMapViewSnippet = html.slice(pgMapViewStart, pgMapViewEnd);
+assert.ok(pgMapViewSnippet.includes('renderProcessGovernanceSankey(renderedSankey)'), 'process governance map view should own Sankey rendering');
 assert.ok(html.includes('id="pgQualityRows"'), 'process governance should render quality finding rows');
 assert.ok(html.includes('id="pgQualityCaseRows"'), 'process governance should render governance case rows');
 assert.ok(html.includes('id="pgMappingWorkspaceRows"'), 'process governance should render mapping workspace rows');
