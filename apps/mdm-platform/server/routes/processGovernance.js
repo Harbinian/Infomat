@@ -451,9 +451,26 @@ async function requestHasAnyPermissionAsync(req, permissionCodes) {
 }
 
 async function currentDepartmentNameAsync(req) {
+  if (req.session && req.session.departmentName) return String(req.session.departmentName || '');
   if (!req.session || !req.session.departmentId) return '';
   const department = await getDepartmentByIdAsync(req.session.departmentId);
   return department && department.name || '';
+}
+
+async function currentCandidateReviewDepartmentName(req) {
+  return await currentDepartmentNameAsync(req);
+}
+
+function scopedCandidateReviewFilters(filters, departmentName) {
+  const requestedDept = filters && filters.dept ? String(filters.dept) : '';
+  return {
+    ...filters,
+    dept: requestedDept && requestedDept !== departmentName ? '__no_department__' : (departmentName || '__no_department__')
+  };
+}
+
+function canAccessCandidateReviewItem(candidate, departmentName) {
+  return !!candidate && !!departmentName && candidate.department === departmentName;
 }
 
 async function canViewAllQualityCasesAsync(req) {
@@ -1962,11 +1979,13 @@ router.get('/candidate-review/runs', requireAuth, (req, res) => {
 router.get('/candidate-review/runs/:runId/candidates', requireAuth, (req, res) => {
   return runAsyncAction(res, async () => {
     const bundle = loadCandidateRunBundle(req.params.runId);
-    const filters = {
+    const requestedFilters = {
       dept: req.query.dept,
       document: req.query.document,
       type: req.query.type
     };
+    const departmentName = await currentCandidateReviewDepartmentName(req);
+    const filters = scopedCandidateReviewFilters(requestedFilters, departmentName);
     const repo = await candidateReviewRepositoryOrNull();
     if (repo) {
       const runDir = candidateRunDir(req.params.runId);
@@ -2020,6 +2039,10 @@ router.put('/candidate-review/runs/:runId/candidates/:stableKey/review', require
     const bundle = loadProcessCandidateRunBundle(runDir);
     const candidate = bundle.items.find(item => item.stable_key === stableKey);
     if (!candidate) return res.status(404).json({ error: '候选项不存在' });
+    const departmentName = await currentCandidateReviewDepartmentName(req);
+    if (!canAccessCandidateReviewItem(candidate, departmentName)) {
+      return res.status(403).json({ error: '只能处理本部门待确认问题' });
+    }
 
     await repo.upsertBundle(bundle);
     const review = await repo.saveDecision(safeId, stableKey, normalizeReviewPayload({

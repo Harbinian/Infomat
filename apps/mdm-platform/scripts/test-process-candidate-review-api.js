@@ -30,6 +30,21 @@ function writeCandidateFixture() {
       definition_status: '原文定义不足',
       status: '待处理',
       owner: '工程技术部确认人'
+    },
+    {
+      id: 'CAND-FIN-001',
+      stable_key: 'candidate-fin-001',
+      department: '财务部',
+      document_name: '财务成本核算管理程序.docx',
+      source_file: 'docs/norms/财务部业务资料/财务成本核算管理程序.docx',
+      source_anchor: 'GLTX-CW-01 §8',
+      candidate_type: '归档要求可能没写清',
+      content: '相关报表由财务部负责存档，保存年限30年。',
+      mapping_location: '当前正式映射未见归档要求',
+      suggested_action: '确认归档对象和保存要求。',
+      definition_status: '原文定义不足',
+      status: '待处理',
+      owner: '财务部确认人'
     }
   ], null, 2), 'utf8');
   fs.writeFileSync(path.join(candidateRunDir, 'chunks.jsonl'), `${JSON.stringify({
@@ -143,10 +158,13 @@ async function main() {
   const app = express();
   app.use(express.json());
   app.use((req, res, next) => {
+    const departmentName = req.headers['x-test-department'] || '工程技术部';
     req.session = {
       userId: 1,
       userName: '系统管理员',
-      userRole: 'admin'
+      userRole: 'owner',
+      departmentId: departmentName === '财务部' ? 2 : 1,
+      departmentName
     };
     next();
   });
@@ -175,7 +193,7 @@ async function main() {
     assert.strictEqual(fakeRepo.state.upsertedBundles.length, 1);
     assert.strictEqual(fakeRepo.state.savedDecisions.length, 1);
     assert.strictEqual(fakeRepo.state.upsertedBundles[0].run.run_id, 'review-run-001');
-    assert.strictEqual(fakeRepo.state.upsertedBundles[0].run.candidate_count, 1);
+    assert.strictEqual(fakeRepo.state.upsertedBundles[0].run.candidate_count, 2);
     assert.strictEqual(fakeRepo.state.upsertedBundles[0].items[0].source_label.includes('内部锚点P71'), false);
     assert.strictEqual(fakeRepo.state.upsertedBundles[0].items[0].source_label.includes('原文位置待核对'), false);
     assert.strictEqual(fakeRepo.state.upsertedBundles[0].items[0].source_label.includes('第5.2条'), true);
@@ -220,6 +238,27 @@ async function main() {
     assert.strictEqual(groupedCandidate.decision, 'needs_correction');
     assert.strictEqual(groupedCandidate.definition_status, 'source_definition_insufficient');
     assert.strictEqual(groupedCandidate.normalized_note, '审核人缺少部门前缀，应回源确认。');
+
+    const crossDeptListRes = await fetch(`${baseUrl}/api/process-governance/candidate-review/runs/review-run-001/candidates?dept=${encodeURIComponent('财务部')}`);
+    const crossDeptListBody = await crossDeptListRes.json();
+    assert.strictEqual(crossDeptListRes.status, 200, JSON.stringify(crossDeptListBody));
+    assert.strictEqual(crossDeptListBody.summary.total, 0, '本部门成员不能通过 dept 参数读取其他部门待确认问题');
+    assert.deepStrictEqual(crossDeptListBody.items.map(item => item.department), []);
+
+    const crossDeptSaveRes = await fetch(`${baseUrl}/api/process-governance/candidate-review/runs/review-run-001/candidates/candidate-fin-001/review`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        decision: 'confirm_candidate',
+        evidence_status: 'source_verified',
+        issue_type: 'missing_delivery',
+        definition_status: 'source_definition_insufficient',
+        normalized_note: '尝试跨部门保存。'
+      })
+    });
+    const crossDeptSaveBody = await crossDeptSaveRes.json();
+    assert.strictEqual(crossDeptSaveRes.status, 403, JSON.stringify(crossDeptSaveBody));
+    assert.strictEqual(crossDeptSaveBody.error, '只能处理本部门待确认问题');
 
     console.log('Process candidate review API route test passed');
   } finally {

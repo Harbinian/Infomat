@@ -86,6 +86,12 @@ importProcessGovernanceSnapshot({
   note: 'api fixture'
 });
 
+db.prepare("INSERT OR IGNORE INTO departments (name, code) VALUES ('工程技术部', 'ENG')").run();
+const engineeringDept = db.prepare("SELECT id FROM departments WHERE name='工程技术部'").get();
+if (engineeringDept) {
+  db.prepare("UPDATE users SET department_id=? WHERE employee_no='ADMIN001'").run(engineeringDept.id);
+}
+
 db.prepare(`
   UPDATE process_governance_quality_cases
   SET status='source_resolved'

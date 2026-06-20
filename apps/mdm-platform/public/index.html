@@ -114,6 +114,7 @@
     /* Panels */
     .panel { display: none; animation: fadeIn 0.3s ease; padding: 24px 28px 64px; max-width: min(100%, 1440px); margin: 0 auto; }
     .panel.on { display: block; }
+    #processGovernancePanel { max-width: none; }
 
     /* Components */
     .grid { display: grid; gap: 24px; }
@@ -251,57 +252,38 @@
       height: 20px; min-width: 42px; justify-content: center; padding: 0 5px;
       line-height: 20px; white-space: nowrap;
     }
-    .candidate-review-group-row td { font-weight: 600; color: var(--text-main); }
-    .candidate-review-group-row .tag { margin-left: 8px; }
-    .candidate-review-department-row td { background: #fff7ed; }
-    .candidate-review-document-row td { background: #f8fafc; padding-left: 28px; }
-    .candidate-review-type-row td { background: #fefce8; padding-left: 44px; color: var(--text-muted); }
-    .candidate-review-table {
-      min-width: 1480px;
-      table-layout: fixed;
-      border-collapse: separate;
-      border-spacing: 0;
-      background: #f4f1eb;
+    .candidate-review-list { display: grid; gap: 10px; }
+    .candidate-review-card {
+      display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px;
+      padding: 12px 14px; border: 1px solid #d8d0c2; border-left: 4px solid var(--sage);
+      border-radius: 8px; background: #fbfaf6;
     }
-    .candidate-review-table th {
-      background: #ece5d8;
-      color: #5f564b;
-      border-top: 1.5px solid #d6cec0;
+    .candidate-review-card h3 { margin: 0; font-size: 14px; line-height: 1.45; color: #233044; }
+    .candidate-review-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; color: var(--text-muted); font-size: 12px; }
+    .candidate-review-card-action { display: flex; align-items: center; }
+    .candidate-review-detail {
+      display: grid; gap: 14px;
+      padding: 16px; border: 1px solid #d8d0c2; border-radius: 8px; background: #fbfaf6;
     }
-    .candidate-review-table th, .candidate-review-table td {
-      border-right: 1.5px solid #d6cec0;
-      border-bottom: 1.5px solid #d6cec0;
+    .candidate-review-detail-head {
+      display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
+      padding-bottom: 12px; border-bottom: 1px solid #e4dccf;
     }
-    .candidate-review-table td {
-      vertical-align: top;
-      background: #fbfaf6;
-      line-height: 1.62;
-      color: var(--text-main);
+    .candidate-review-detail-head h3 { margin: 0; font-size: 16px; color: #233044; }
+    .candidate-review-detail-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+    .candidate-review-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .candidate-review-detail-field {
+      padding: 10px 12px; border: 1px solid #e4dccf; border-radius: 8px; background: #fffdf8;
     }
-    .candidate-review-table th:nth-child(1) { width: 82px; }
-    .candidate-review-table th:nth-child(2) { width: 172px; }
-    .candidate-review-table th:nth-child(3) { width: 230px; }
-    .candidate-review-table th:nth-child(4) { width: 270px; }
-    .candidate-review-table th:nth-child(5) { width: 168px; }
-    .candidate-review-table th:nth-child(6) { width: 132px; }
-    .candidate-review-table th:nth-child(7) { width: 426px; }
-    .candidate-review-table .candidate-review-department-row td {
-      background: #f4eadf;
-      border-top: 2px solid #cbb9a2;
+    .candidate-review-detail-field strong {
+      display: block; margin-bottom: 5px; font-size: 12px; color: var(--text-muted);
     }
-    .candidate-review-table .candidate-review-document-row td {
-      background: #eef1f4;
+    .candidate-review-detail-field p { margin: 0; line-height: 1.65; }
+    .candidate-review-detail-field.wide { grid-column: 1 / -1; }
+    .candidate-review-confirmation {
+      padding-top: 14px; border-top: 1px solid #e4dccf;
     }
-    .candidate-review-table .candidate-review-type-row td {
-      background: #f5f1d5;
-    }
-    .candidate-review-item-row:nth-of-type(even) td { background: #f7f5f0; }
-    .candidate-review-item-row td { padding: 13px 12px; }
-    .candidate-review-compact-cell {
-      word-break: keep-all;
-      overflow-wrap: anywhere;
-      line-height: 1.5;
-    }
+    .candidate-review-confirmation h4 { margin: 0 0 10px; font-size: 14px; color: var(--text-main); }
     .candidate-cell-main {
       font-weight: 600;
       color: #233044;
@@ -318,10 +300,6 @@
       margin-bottom: 8px;
     }
     .candidate-source-excerpt {
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
       padding: 7px 8px;
       border: 1px solid #d8d0c2;
       border-radius: 6px;
@@ -329,9 +307,8 @@
       color: #4a4036;
       font-size: 12px;
       line-height: 1.55;
-    }
-    .candidate-review-action-cell {
-      background: #fffaf2 !important;
+      white-space: normal;
+      overflow-wrap: anywhere;
     }
     .tag.green { color: var(--success); border-color: #a7f3d0; background: #ecfdf5; }
     .tag.amber { color: var(--warning); border-color: #fde68a; background: #fffbeb; }
@@ -535,7 +512,25 @@
       color: var(--text-main); background: transparent; font-size: 12px;
     }
     .wb-link-btn:hover { border-color: var(--text-main); }
+    .pg-subtabs {
+      display: flex; flex-wrap: wrap; gap: 8px;
+      margin: 16px 0 18px; padding: 8px;
+      border: 1px solid var(--border); border-radius: 8px;
+      background: rgba(255, 255, 255, 0.55);
+    }
+    .pg-subtab {
+      border: 1px solid transparent; background: transparent; color: var(--text-muted);
+      padding: 8px 12px; border-radius: 6px; font-weight: 700; cursor: pointer;
+    }
+    .pg-subtab:hover { border-color: var(--border); color: var(--text-main); background: #fffaf0; }
+    .pg-subtab.on {
+      border-color: var(--sienna); color: #fff; background: var(--sienna);
+      box-shadow: 0 6px 16px rgba(181, 90, 56, 0.18);
+    }
+    .pg-subtab:focus-visible { outline: 2px solid var(--sienna); outline-offset: 2px; }
     .pg-section { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--border); }
+    .pg-section.pg-overview-section { margin-top: 0; padding-top: 0; border-top: 0; }
+    .pg-hidden { display: none !important; }
     .pg-section-hd { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
     .pg-section-hd h2 { margin-bottom: 0; }
     .pg-status { white-space: nowrap; }
@@ -597,8 +592,8 @@
     }
     .pg-inline-help { color: var(--text-muted); font-size: 12px; line-height: 1.55; margin-top: 4px; }
     .pg-review-grid {
-      display: grid; grid-template-columns: repeat(2, minmax(140px, 1fr));
-      gap: 8px; min-width: 420px;
+      display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px; min-width: 0;
     }
     .pg-review-field label {
       display: block; margin-bottom: 3px; color: var(--text-muted);
@@ -725,7 +720,7 @@
       .compact-toolbar .toolbar-right { width: 100%; margin-left: 0; }
       .compact-toolbar select, .compact-toolbar input, .compact-toolbar button { width: 100%; }
       .dense-split, .split { grid-template-columns: 1fr; gap: 16px; }
-      .pg-review-grid { grid-template-columns: 1fr; min-width: 280px; }
+      .pg-review-grid { grid-template-columns: 1fr; min-width: 0; }
       .pg-detail-grid { grid-template-columns: 1fr; }
       .pg-help-steps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .workflow-shell { display: block; }
@@ -1258,6 +1253,8 @@
             <button class="btn secondary" id="refreshProcessGovernanceBtn">刷新</button>
           </div>
         </div>
+        <div class="pg-subtabs" id="pgSubtabs" aria-label="流程治理子标签"></div>
+        <div class="pg-section pg-overview-section" data-pg-view="overview">
         <div class="grid g4">
           <div class="metric"><div class="num" id="pgMetricL3">0</div><div class="lbl">流程数</div></div>
           <div class="metric"><div class="num" id="pgMetricA1">0</div><div class="lbl">A1 行为</div></div>
@@ -1290,7 +1287,8 @@
           <div class="metric"><div class="num" id="pgMetricMdmRequirements">0</div><div class="lbl">MDM 要求</div></div>
           <div class="metric"><div class="num" id="pgMetricEvidenceRefs">0</div><div class="lbl">证据引用</div></div>
         </div>
-        <div class="pg-section" id="pgCandidateReviewSection">
+        </div>
+        <div class="pg-section" id="pgCandidateReviewSection" data-pg-view="candidateReview">
           <div class="pg-section-hd"><h2>待确认的问题</h2><span class="pg-status" id="pgCandidateReviewMeta"></span></div>
           <div class="notice" style="margin-bottom:12px">这里不是正式映射库。系统只是把可能有问题的原文片段列出来，请你确认：这是不是个问题，证据有没有问题，要不要修改原文。</div>
           <div class="pg-work-help">
@@ -1302,14 +1300,9 @@
               <span class="pg-help-step">4 确认证据和处理结论</span>
             </div>
           </div>
-          <div class="table-container">
-            <table class="candidate-review-table">
-              <thead><tr><th>部门</th><th>来源文件</th><th>在哪发现的</th><th>哪里有问题</th><th>是哪种问题</th><th>证据有没有问题</th><th>请你确认</th></tr></thead>
-              <tbody id="pgCandidateReviewRows"></tbody>
-            </table>
-          </div>
+          <div id="pgCandidateReviewRows" class="candidate-review-list"></div>
         </div>
-        <div class="pg-section" id="pgSourceCoverageSection">
+        <div class="pg-section" id="pgSourceCoverageSection" data-pg-view="evidence">
           <div class="pg-section-hd"><h2>源文件覆盖</h2><span class="pg-status" id="pgSourceCoverageMeta"></span></div>
           <div class="pg-filterbar" id="pgSourceCoverageFilters">
             <input id="pgSourceCoverageSearch" placeholder="搜索文件号、来源文件、处理理由">
@@ -1334,7 +1327,7 @@
             </table>
           </div>
         </div>
-        <div class="pg-section" id="pgMdmRequirementsSection">
+        <div class="pg-section" id="pgMdmRequirementsSection" data-pg-view="evidence">
           <div class="pg-section-hd"><h2>主数据对象候选</h2><span class="pg-status" id="pgMdmRequirementMeta"></span></div>
           <div class="pg-mdm-guide" aria-label="主数据对象候选沉淀路径">
             <span class="pg-mdm-step">候选对象</span>
@@ -1353,7 +1346,7 @@
             </table>
           </div>
         </div>
-        <div class="pg-section" id="pgEvidenceSection">
+        <div class="pg-section" id="pgEvidenceSection" data-pg-view="evidence">
           <div class="pg-section-hd"><h2>证据链</h2><span class="pg-status" id="pgEvidenceMeta"></span></div>
           <div class="notice" id="pgEvidenceFocus" style="margin-bottom:12px">点击 A1 明细行后，这里会按对应 L3/A1 显示来源文件和制度依据。</div>
           <div class="table-container">
@@ -1363,7 +1356,7 @@
             </table>
           </div>
         </div>
-        <div class="pg-section">
+        <div class="pg-section" id="pgMapSection" data-pg-view="map">
           <div class="pg-section-hd"><h2>流程地图</h2><span class="pg-status" id="pgMapMeta"></span></div>
           <div class="pg-scope" aria-label="流程治理部门筛选">
             <span class="pg-scope-label">部门标签</span>
@@ -1371,7 +1364,7 @@
           </div>
           <div class="chart" id="pgSankeyChart" style="height: 560px;"></div>
         </div>
-        <div class="pg-section">
+        <div class="pg-section" id="pgA1Section" data-pg-view="map">
           <div class="pg-section-hd"><h2>A1 明细</h2><span class="pg-status" id="pgA1Meta"></span></div>
           <div class="table-container">
             <table>
@@ -1380,7 +1373,7 @@
             </table>
           </div>
         </div>
-        <div class="pg-section">
+        <div class="pg-section" id="pgRiskSection" data-pg-view="map">
           <div class="pg-section-hd"><h2>跨部门风险</h2><span class="pg-status" id="pgRiskMeta"></span></div>
           <div class="table-container">
             <table>
@@ -1389,7 +1382,7 @@
             </table>
           </div>
         </div>
-        <div class="pg-section" id="pgMappingWorkspaceSection">
+        <div class="pg-section" id="pgMappingWorkspaceSection" data-pg-view="mapping">
           <div class="pg-section-hd">
             <h2>映射工作库</h2><span class="pg-status" id="pgMappingWorkspaceMeta"></span>
           </div>
@@ -1401,7 +1394,7 @@
             </table>
           </div>
         </div>
-        <div class="pg-section" id="pgMappingTodosSection">
+        <div class="pg-section" id="pgMappingTodosSection" data-pg-view="mapping">
           <div class="pg-section-hd">
             <h2>映射待办</h2><span class="pg-status" id="pgMappingTodoMeta"></span>
           </div>
@@ -1439,7 +1432,7 @@
           </div>
           <div id="pgMappingTodoDetail" class="notice" style="margin-top:12px">先选一条映射待办；这里会显示来源、处理步骤、按钮含义和处理历史。</div>
         </div>
-        <div class="pg-section" id="pgQualityCasesSection">
+        <div class="pg-section" id="pgQualityCasesSection" data-pg-view="quality">
           <div class="pg-section-hd">
             <h2>治理闭环</h2><span class="pg-status" id="pgQualityCaseMeta"></span>
           </div>
@@ -1473,7 +1466,7 @@
           </div>
           <div id="pgQualityCaseDetail" class="notice" style="margin-top:12px">先选一条治理问题单；这里会显示来源、整改步骤、按钮含义和处理历史。</div>
         </div>
-        <div class="pg-section" id="pgQualitySection">
+        <div class="pg-section" id="pgQualitySection" data-pg-view="quality">
           <div class="pg-section-hd">
             <h2>质量问题</h2><span class="pg-status" id="pgQualityMeta"></span>
           </div>
@@ -1670,6 +1663,62 @@
     // ===== State & Utilities =====
     const state = { user:null, departments:[], capabilities:[], processes:[], termProcesses:[], termTypes:[], mappings:[], dataMapContexts:[], dataMapFields:[], todos:[], conflicts:[], terms:[], currentRoute:null, currentView:'roleWorkbench', activeMapping:null, activeConflict:null, pollTimer:null, isEditing:false, activeReview:null, activeCapReview:null, activeProcReview:null, pgSelectedDept:'', pgEvidenceFocus:null, pgSourceCoverageData:null, processGovernanceRenderRequestId:0, pageWorkflow:null, pageWorkflowRequestId:0, roleWorkbench:{ mode:'todo', data:null, selectedNode:null }, activity:{ roleWorkbench:null, dashboard:null, dashboardUsers:[] } };
     const SOURCE_COVERAGE_VISIBLE_LIMIT = 20;
+    const PROCESS_GOVERNANCE_SUBTABS = [
+      { key: 'overview', label: '总览' },
+      { key: 'candidateReview', label: '待确认问题' },
+      { key: 'map', label: '流程图谱' },
+      { key: 'evidence', label: '证据来源' },
+      { key: 'mapping', label: '映射工作' },
+      { key: 'quality', label: '治理闭环' }
+    ];
+    const PROCESS_GOVERNANCE_VIEW_ALIASES = {
+      overview: 'overview',
+      candidateReview: 'candidateReview',
+      map: 'map',
+      processMap: 'map',
+      evidence: 'evidence',
+      sourceCoverage: 'evidence',
+      mdmRequirements: 'evidence',
+      mapping: 'mapping',
+      mappingWorkspace: 'mapping',
+      mappingTodos: 'mapping',
+      quality: 'quality',
+      qualityCases: 'quality'
+    };
+
+    function processGovernanceViewFromRoute(route) {
+      var rawView = route && (route.pgView || route.qualityView);
+      return PROCESS_GOVERNANCE_VIEW_ALIASES[rawView] || 'overview';
+    }
+
+    function processGovernanceSubtabHash(view) {
+      if (view === 'overview') return '#/processGovernance';
+      return '#/processGovernance?view=' + encodeURIComponent(view);
+    }
+
+    function renderProcessGovernanceSubtabs(activeView) {
+      var container = document.getElementById('pgSubtabs');
+      if (!container) return;
+      container.innerHTML = PROCESS_GOVERNANCE_SUBTABS.map(function(tab) {
+        var isActive = tab.key === activeView;
+        return '<button type="button" class="pg-subtab' + (isActive ? ' on' : '') + '" data-pg-subtab="' + tab.key + '" aria-selected="' + (isActive ? 'true' : 'false') + '">' + tab.label + '</button>';
+      }).join('');
+      container.querySelectorAll('[data-pg-subtab]').forEach(function(button) {
+        button.addEventListener('click', function() {
+          var nextView = button.dataset.pgSubtab || 'overview';
+          location.hash = processGovernanceSubtabHash(nextView);
+        });
+      });
+    }
+
+    function applyProcessGovernanceSubtab(activeView) {
+      document.querySelectorAll('#processGovernancePanel [data-pg-view]').forEach(function(section) {
+        section.classList.toggle('pg-hidden', section.dataset.pgView !== activeView);
+      });
+      if (activeView === 'map' && pgSankeyResizeHandler) {
+        setTimeout(pgSankeyResizeHandler, 0);
+      }
+    }
 
     var DEFAULT_TERM_TYPES = [
       { code: 'noun', name: '名词' },
@@ -2146,7 +2195,7 @@
       }
       if (!hash) return { view: 'list', tab: 'roleWorkbench' };
       var parts = hash.split('/');
-      if (parts.length === 1) return { view: 'list', tab: parts[0], query: query, qualityView: query.view, finding: query.finding, caseId: query.case, mappingTodoId: query.todo };
+      if (parts.length === 1) return { view: 'list', tab: parts[0], query: query, pgView: query.view, qualityView: query.view, finding: query.finding, caseId: query.case, mappingTodoId: query.todo, candidateReviewKey: query.candidate };
       if (parts[0] === 'processes' && parts.length >= 3) {
         return { view: 'detail', tab: 'processes', type: 'process', id: parts[2] };
       }
@@ -4120,49 +4169,95 @@
         '<div class="candidate-source-excerpt" title="' + safeText(excerpt, '') + '">' + safeText(excerpt) + '</div>';
     }
 
-    function renderCandidateReviewItemRow(row, run) {
-      return '<tr class="candidate-review-item-row">' +
-        '<td class="candidate-review-compact-cell">' + safeText(row.department || '') + '</td>' +
-        '<td class="candidate-review-compact-cell">' + safeText(row.document_name || '') + '</td>' +
-        '<td>' + renderCandidateReviewSourceCell(row) + '</td>' +
-        '<td><div class="candidate-cell-main">' + safeText(row.content || '') + '</div></td>' +
-        '<td><div class="candidate-cell-main">' + safeText(pgCandidateDisplayType(row.candidate_type)) + '</div><div class="candidate-cell-help">' + safeText(pgCandidateTypeHelp(row.candidate_type)) + '</div></td>' +
-        '<td><div class="candidate-cell-main">' + safeText(pgCandidateOptionText(pgCandidateDefinitionOptions, row.definition_status, '还要回原文确认')) + '</div></td>' +
-        '<td class="candidate-review-action-cell">' + renderCandidateReviewControls(row, run) + '</td>' +
-      '</tr>';
+    function candidateReviewDetailHash(stableKey) {
+      return '#/processGovernance?view=candidateReview&candidate=' + encodeURIComponent(stableKey || '');
     }
 
-    function renderCandidateReviewGroupedRows(data, run) {
-      var groups = data.groups && data.groups.length
-        ? data.groups
-        : groupCandidateReviewItemsForRender(data.items || []);
-      var renderedCount = 0;
-      var rows = [];
-      groups.forEach(function(departmentGroup) {
-        var departmentCount = countCandidateReviewDepartment(departmentGroup);
-        rows.push('<tr class="candidate-review-group-row candidate-review-department-row" data-candidate-review-group="department"><td colspan="7">部门：' +
-          safeText(departmentGroup.department || '未标注部门') + '<span class="tag">' + departmentCount + ' 项</span></td></tr>');
-        (departmentGroup.documents || []).forEach(function(documentGroup) {
-          var documentCount = countCandidateReviewDocument(documentGroup);
-          rows.push('<tr class="candidate-review-group-row candidate-review-document-row" data-candidate-review-group="document"><td colspan="7">来源文件：' +
-            safeText(documentGroup.document_name || '来源未标注文档') + '<span class="tag">' + documentCount + ' 项</span></td></tr>');
-          (documentGroup.types || []).forEach(function(typeGroup) {
-            var candidates = (typeGroup.candidates || []).slice(0, Math.max(0, 80 - renderedCount));
-            if (!candidates.length) return;
-            rows.push('<tr class="candidate-review-group-row candidate-review-type-row" data-candidate-review-group="type"><td colspan="7">是哪种问题：' +
-              safeText(pgCandidateDisplayType(typeGroup.candidate_type)) + '<span class="tag">' + candidates.length + ' 项</span>' +
-              '<div class="pg-inline-help">' + safeText(pgCandidateTypeHelp(typeGroup.candidate_type)) + '</div></td></tr>');
-            candidates.forEach(function(row) {
-              rows.push(renderCandidateReviewItemRow(row, run));
-              renderedCount += 1;
-            });
-          });
+    function candidateReviewListHash() {
+      return '#/processGovernance';
+    }
+
+    function renderCandidateReviewCard(row, index) {
+      return '<article class="candidate-review-card" data-candidate-review-item="' + escapeHtml(row.stable_key || '') + '">' +
+        '<div>' +
+          '<h3>' + safeText(index + 1) + '. ' + safeText(row.content || '待确认问题') + '</h3>' +
+          '<div class="candidate-review-meta">' +
+            '<span class="tag">' + safeText(row.department || '未标注部门') + '</span>' +
+            '<span class="tag">' + safeText(row.document_name || '来源未标注文档') + '</span>' +
+            '<span class="tag">' + safeText(pgCandidateDisplayType(row.candidate_type)) + '</span>' +
+            '<span class="tag">' + safeText(pgCandidateOptionText(pgCandidateDefinitionOptions, row.definition_status, '还要回原文确认')) + '</span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="candidate-review-card-action">' +
+          '<button type="button" class="btn secondary" data-candidate-open="' + escapeHtml(row.stable_key || '') + '">打开确认</button>' +
+        '</div>' +
+      '</article>';
+    }
+
+    function renderCandidateReviewList(data) {
+      var items = (data.items || []).slice(0, 80);
+      if (!items.length) return '<div class="empty">暂无待确认的问题。若部门文档已更新，请先完成问题抽取或导入；若只查看当前正式映射，请看映射工作库。</div>';
+      return items.map(renderCandidateReviewCard).join('');
+    }
+
+    function renderCandidateReviewDetailField(label, value, wide) {
+      return '<div class="candidate-review-detail-field' + (wide ? ' wide' : '') + '">' +
+        '<strong>' + safeText(label) + '</strong>' +
+        '<p>' + safeText(value || '未标注') + '</p>' +
+      '</div>';
+    }
+
+    function renderCandidateReviewDetailPage(data, run, candidateKey) {
+      var items = data.items || [];
+      var index = Math.max(0, items.findIndex(function(item) { return item.stable_key === candidateKey; }));
+      var row = items[index];
+      if (!row) return renderCandidateReviewList(data);
+      var previous = items[index - 1];
+      var next = items[index + 1];
+      return '<article class="candidate-review-detail" data-candidate-review-item="' + escapeHtml(row.stable_key || '') + '">' +
+        '<div class="candidate-review-detail-head">' +
+          '<div>' +
+            '<h3>待确认问题 ' + safeText(index + 1) + ' / ' + safeText(items.length) + '</h3>' +
+            '<div class="candidate-review-meta">' +
+              '<span class="tag">' + safeText(row.department || '未标注部门') + '</span>' +
+              '<span class="tag">' + safeText(row.document_name || '来源未标注文档') + '</span>' +
+              '<span class="tag">' + safeText(pgCandidateDisplayType(row.candidate_type)) + '</span>' +
+            '</div>' +
+          '</div>' +
+          '<div class="candidate-review-detail-actions">' +
+            '<button type="button" class="btn secondary" data-candidate-back="1">返回列表</button>' +
+            (previous ? '<button type="button" class="btn secondary" data-candidate-open="' + escapeHtml(previous.stable_key || '') + '">上一题</button>' : '') +
+            (next ? '<button type="button" class="btn secondary" data-candidate-open="' + escapeHtml(next.stable_key || '') + '">下一题</button>' : '') +
+          '</div>' +
+        '</div>' +
+        '<div class="candidate-review-detail-grid">' +
+          renderCandidateReviewDetailField('哪里有问题', row.content || '', true) +
+          '<div class="candidate-review-detail-field wide"><strong>在哪发现的</strong>' + renderCandidateReviewSourceCell(row) + '</div>' +
+          renderCandidateReviewDetailField('是哪种问题', pgCandidateDisplayType(row.candidate_type)) +
+          renderCandidateReviewDetailField('证据有没有问题', pgCandidateOptionText(pgCandidateDefinitionOptions, row.definition_status, '还要回原文确认')) +
+          renderCandidateReviewDetailField('处理提示', pgCandidateTypeHelp(row.candidate_type), true) +
+        '</div>' +
+        '<div class="candidate-review-confirmation">' +
+          '<h4>请你确认</h4>' +
+          renderCandidateReviewControls(row, run) +
+        '</div>' +
+      '</article>';
+    }
+
+    function wireCandidateReviewNavigation(container) {
+      container.querySelectorAll('[data-candidate-open]').forEach(function(button) {
+        button.addEventListener('click', function() {
+          location.hash = candidateReviewDetailHash(button.dataset.candidateOpen || '');
         });
       });
-      return rows.join('');
+      container.querySelectorAll('[data-candidate-back]').forEach(function(button) {
+        button.addEventListener('click', function() {
+          location.hash = candidateReviewListHash();
+        });
+      });
     }
 
-    function renderProcessGovernanceCandidateReview(data, selectedDept) {
+    function renderProcessGovernanceCandidateReview(data, selectedDept, route) {
       var rowsEl = document.getElementById('pgCandidateReviewRows');
       if (!rowsEl) return;
       state.pgCandidateReviewData = data;
@@ -4171,9 +4266,10 @@
       document.getElementById('pgCandidateReviewMeta').textContent = run
         ? (selectedDept ? selectedDept + ' · ' : '') + '运行 ' + run.run_id + '，显示 ' + items.length + ' 条 / 共 ' + ((data.summary && data.summary.total) || items.length) + ' 条'
         : '暂无待确认的问题';
-      rowsEl.innerHTML = items.length
-        ? renderCandidateReviewGroupedRows(data, run)
-        : '<tr><td colspan="7" class="empty">暂无待确认的问题。若部门文档已更新，请先完成问题抽取或导入；若只查看当前正式映射，请看映射工作库。</td></tr>';
+      rowsEl.innerHTML = (route && route.qualityView === 'candidateReview' && route.candidateReviewKey)
+        ? renderCandidateReviewDetailPage(data, run, route.candidateReviewKey)
+        : renderCandidateReviewList(data);
+      wireCandidateReviewNavigation(rowsEl);
       rowsEl.querySelectorAll('[data-review-save]').forEach(function(button) {
         button.addEventListener('click', function() {
           saveProcessGovernanceCandidateReview(button);
@@ -4189,7 +4285,7 @@
       var rowsEl = document.getElementById('pgCandidateReviewRows');
       var metaEl = document.getElementById('pgCandidateReviewMeta');
       if (metaEl) metaEl.textContent = '正在加载待确认的问题';
-      if (rowsEl) rowsEl.innerHTML = '<tr><td colspan="7" class="empty">正在加载待确认的问题...</td></tr>';
+      if (rowsEl) rowsEl.innerHTML = '<div class="empty">正在加载待确认的问题...</div>';
     }
 
     function setProcessGovernanceCandidateReviewError(message) {
@@ -4197,11 +4293,11 @@
       var metaEl = document.getElementById('pgCandidateReviewMeta');
       var text = message || '待确认问题加载失败，请刷新流程治理';
       if (metaEl) metaEl.textContent = '待确认问题加载失败';
-      if (rowsEl) rowsEl.innerHTML = '<tr><td colspan="7" class="empty">' + safeText(text) + '</td></tr>';
+      if (rowsEl) rowsEl.innerHTML = '<div class="empty">' + safeText(text) + '</div>';
     }
 
     async function saveProcessGovernanceCandidateReview(button) {
-      var row = button.closest('tr');
+      var row = button.closest('[data-candidate-review-item]');
       var runId = button.dataset.runId || '';
       var stableKey = button.dataset.stableKey || '';
       if (!row || !runId || !stableKey) {
@@ -4220,7 +4316,7 @@
         });
         showToast('确认结果已保存');
         var refreshed = await loadProcessGovernanceCandidateReview(state.pgSelectedDept || '');
-        renderProcessGovernanceCandidateReview(refreshed, state.pgSelectedDept || '');
+        renderProcessGovernanceCandidateReview(refreshed, state.pgSelectedDept || '', parseHash());
       } catch (error) {
         showToast(error.message || '确认结果保存失败', 'error');
       } finally {
@@ -4340,6 +4436,10 @@
       var panel = document.getElementById('processGovernancePanel');
       if (!panel) return;
       var requestId = ++state.processGovernanceRenderRequestId;
+      var route = parseHash();
+      var activePgView = processGovernanceViewFromRoute(route);
+      renderProcessGovernanceSubtabs(activePgView);
+      applyProcessGovernanceSubtab(activePgView);
       setProcessGovernanceCandidateReviewLoading();
 
       try {
@@ -4461,15 +4561,18 @@
             }).join('')
           : '<tr><td colspan="7" class="empty">暂无跨部门风险项</td></tr>';
 
-        var route = parseHash();
+        route = parseHash();
+        activePgView = processGovernanceViewFromRoute(route);
         renderProcessGovernanceSourceCoverage(sourceFiles, selectedDept);
-        renderProcessGovernanceCandidateReview(candidateReview, selectedDept);
+        renderProcessGovernanceCandidateReview(candidateReview, selectedDept, route);
         renderProcessGovernanceMdmRequirements(mdmRequirements, selectedDept);
         renderProcessGovernanceEvidence(evidence, selectedDept);
         renderProcessGovernanceMappingWorkspace(mappingWorkspace, selectedDept);
         renderProcessGovernanceMappingTodos(mappingTodos, selectedDept, route.mappingTodoId);
         renderProcessGovernanceQuality(quality, selectedDept, route.finding);
         renderProcessGovernanceQualityCases(qualityCases, selectedDept, route.caseId);
+        renderProcessGovernanceSubtabs(activePgView);
+        applyProcessGovernanceSubtab(activePgView);
       } catch (error) {
         if (!isCurrentProcessGovernanceRender(requestId)) return;
         document.getElementById('pgSnapshotMeta').textContent = '流程治理数据暂不可用';
