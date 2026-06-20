@@ -1661,7 +1661,7 @@
 
   <script>
     // ===== State & Utilities =====
-    const state = { user:null, departments:[], capabilities:[], processes:[], termProcesses:[], termTypes:[], mappings:[], dataMapContexts:[], dataMapFields:[], todos:[], conflicts:[], terms:[], currentRoute:null, currentView:'roleWorkbench', activeMapping:null, activeConflict:null, pollTimer:null, isEditing:false, activeReview:null, activeCapReview:null, activeProcReview:null, pgSelectedDept:'', pgEvidenceFocus:null, pgSourceCoverageData:null, processGovernanceRenderRequestId:0, pageWorkflow:null, pageWorkflowRequestId:0, roleWorkbench:{ mode:'todo', data:null, selectedNode:null }, activity:{ roleWorkbench:null, dashboard:null, dashboardUsers:[] } };
+    const state = { user:null, departments:[], capabilities:[], processes:[], termProcesses:[], termTypes:[], mappings:[], dataMapContexts:[], dataMapFields:[], todos:[], conflicts:[], terms:[], currentRoute:null, currentView:'roleWorkbench', activeMapping:null, activeConflict:null, pollTimer:null, isEditing:false, activeReview:null, activeCapReview:null, activeProcReview:null, pgSelectedDept:'', pgEvidenceFocus:null, pgSourceCoverageData:null, pgViewCache:{}, pgViewRequests:{}, processGovernanceRenderRequestId:0, pageWorkflow:null, pageWorkflowRequestId:0, roleWorkbench:{ mode:'todo', data:null, selectedNode:null }, activity:{ roleWorkbench:null, dashboard:null, dashboardUsers:[] } };
     const SOURCE_COVERAGE_VISIBLE_LIMIT = 20;
     const PROCESS_GOVERNANCE_SUBTABS = [
       { key: 'overview', label: '总览' },
@@ -1684,6 +1684,14 @@
       mappingTodos: 'mapping',
       quality: 'quality',
       qualityCases: 'quality'
+    };
+    const PROCESS_GOVERNANCE_VIEW_PRODUCTS = {
+      overview: { label: '总览', load: loadProcessGovernanceOverviewView, render: renderProcessGovernanceOverviewView },
+      candidateReview: { label: '待确认问题', load: loadProcessGovernanceCandidateReviewView, render: renderProcessGovernanceCandidateReviewView },
+      map: { label: '流程图谱', load: loadProcessGovernanceMapView, render: renderProcessGovernanceMapView },
+      evidence: { label: '证据来源', load: loadProcessGovernanceEvidenceView, render: renderProcessGovernanceEvidenceView },
+      mapping: { label: '映射工作', load: loadProcessGovernanceMappingView, render: renderProcessGovernanceMappingView },
+      quality: { label: '治理闭环', load: loadProcessGovernanceQualityView, render: renderProcessGovernanceQualityView }
     };
 
     function processGovernanceViewFromRoute(route) {
@@ -2153,7 +2161,17 @@
     // ===== Navigation & Hash Router =====
     function navigateTo(view, params) {
       if (!params) params = {};
-      if (view === 'list') { location.hash = '#/' + (params.tab || 'dashboard'); }
+      if (view === 'list') {
+        var listHash = '#/' + (params.tab || 'dashboard');
+        var queryParts = new URLSearchParams(params.query || {});
+        if (params.pgView || params.qualityView) queryParts.set('view', params.pgView || params.qualityView);
+        if (params.finding) queryParts.set('finding', params.finding);
+        if (params.caseId) queryParts.set('case', params.caseId);
+        if (params.mappingTodoId) queryParts.set('todo', params.mappingTodoId);
+        if (params.candidateReviewKey) queryParts.set('candidate', params.candidateReviewKey);
+        var queryString = queryParts.toString();
+        location.hash = listHash + (queryString ? '?' + queryString : '');
+      }
       else if (view === 'detail') { location.hash = '#/' + params.tab + '/' + params.type + '/' + params.id; }
       else if (view === 'form') {
         location.hash = '#/' + params.tab + '/' + params.type + '/' + (params.id || 'new') + ((params.action && params.id !== 'new') ? '/' + params.action : '');
@@ -3641,6 +3659,7 @@
           method: 'POST',
           body: JSON.stringify(body || {})
         });
+        clearProcessGovernanceViewCache('quality-case-action');
         await renderProcessGovernance();
         await renderProcessGovernanceQualityCaseDetail(caseId);
       } catch (error) {
@@ -3821,6 +3840,7 @@
           method: 'POST',
           body: JSON.stringify(body || {})
         });
+        clearProcessGovernanceViewCache('mapping-todo-action');
         await renderProcessGovernance();
         await renderProcessGovernanceMappingTodoDetail(todoId);
       } catch (error) {
@@ -4315,8 +4335,8 @@
           body: JSON.stringify(payload)
         });
         showToast('确认结果已保存');
-        var refreshed = await loadProcessGovernanceCandidateReview(state.pgSelectedDept || '');
-        renderProcessGovernanceCandidateReview(refreshed, state.pgSelectedDept || '', parseHash());
+        clearProcessGovernanceViewCache('candidate-review-save');
+        await loadProcessGovernanceView('candidateReview', { route: parseHash(), force: true });
       } catch (error) {
         showToast(error.message || '确认结果保存失败', 'error');
       } finally {
@@ -4358,7 +4378,8 @@
         l3Name: l3Name || '',
         a1Code: a1Code || ''
       };
-      renderProcessGovernance();
+      clearProcessGovernanceViewCache('evidence-focus');
+      location.hash = '#/processGovernance?view=evidence';
     }
 
     function renderProcessGovernanceSankey(data) {
@@ -4432,6 +4453,281 @@
       window.addEventListener('resize', pgSankeyResizeHandler);
     }
 
+    function processGovernanceQuery(params) {
+      var query = new URLSearchParams();
+      Object.keys(params || {}).sort().forEach(function(key) {
+        var value = params[key];
+        if (value !== undefined && value !== null && value !== '') query.set(key, value);
+      });
+      return query.toString() ? '?' + query.toString() : '';
+    }
+
+    function processGovernanceLoadKey(view, filters) {
+      var normalized = {};
+      Object.keys(filters || {}).sort().forEach(function(key) {
+        var value = filters[key];
+        if (value !== undefined && value !== null && value !== '') normalized[key] = String(value);
+      });
+      return view + ':' + JSON.stringify(normalized);
+    }
+
+    function processGovernanceViewFilters(view) {
+      var filters = { dept: state.pgSelectedDept || '' };
+      if (view === 'map') {
+        filters.risk = document.getElementById('pgRiskFilter') ? document.getElementById('pgRiskFilter').value : '';
+      }
+      if (view === 'evidence') {
+        filters.limit = SOURCE_COVERAGE_VISIBLE_LIMIT;
+        filters.l3 = state.pgEvidenceFocus && state.pgEvidenceFocus.l3Name || '';
+        filters.a1 = state.pgEvidenceFocus && state.pgEvidenceFocus.a1Code || '';
+      }
+      if (view === 'mapping') {
+        filters.todoType = document.getElementById('pgMappingTodoTypeFilter') ? document.getElementById('pgMappingTodoTypeFilter').value : '';
+        filters.todoStatus = document.getElementById('pgMappingTodoStatusFilter') ? document.getElementById('pgMappingTodoStatusFilter').value : '';
+      }
+      if (view === 'quality') {
+        filters.qualitySeverity = document.getElementById('pgQualitySeverityFilter') ? document.getElementById('pgQualitySeverityFilter').value : '';
+        filters.qualityArea = document.getElementById('pgQualityAreaFilter') ? document.getElementById('pgQualityAreaFilter').value : '';
+        filters.caseSeverity = document.getElementById('pgQualityCaseSeverityFilter') ? document.getElementById('pgQualityCaseSeverityFilter').value : '';
+        filters.caseStatus = document.getElementById('pgQualityCaseStatusFilter') ? document.getElementById('pgQualityCaseStatusFilter').value : '';
+        filters.caseOwner = document.getElementById('pgQualityCaseOwnerFilter') ? document.getElementById('pgQualityCaseOwnerFilter').value : '';
+      }
+      return filters;
+    }
+
+    function clearProcessGovernanceViewCache(reason) {
+      state.pgViewCache = {};
+      state.pgSourceCoverageData = null;
+      return reason || 'manual';
+    }
+
+    async function loadProcessGovernanceOverviewView() {
+      return { current: await api('/api/process-governance/current') };
+    }
+
+    async function loadProcessGovernanceCandidateReviewView(filters) {
+      return { candidateReview: await loadProcessGovernanceCandidateReview(filters.dept || '') };
+    }
+
+    async function loadProcessGovernanceMapView(filters) {
+      var riskQuery = processGovernanceQuery({ risk: filters.risk });
+      var results = await Promise.all([
+        api('/api/process-governance/sankey'),
+        api('/api/process-governance/a1'),
+        api('/api/process-governance/cross-dept' + riskQuery)
+      ]);
+      return { sankey: results[0], a1: results[1], risks: results[2] };
+    }
+
+    async function loadProcessGovernanceEvidenceView(filters) {
+      var sourceQuery = processGovernanceQuery({ limit: SOURCE_COVERAGE_VISIBLE_LIMIT, dept: filters.dept });
+      var mdmRequirementQuery = processGovernanceQuery({ dept: filters.dept });
+      var evidenceQuery = processGovernanceQuery({ dept: filters.dept, l3: filters.l3, a1: filters.a1 });
+      var results = await Promise.all([
+        api('/api/process-governance/source-files' + sourceQuery),
+        api('/api/process-governance/mdm-requirements' + mdmRequirementQuery),
+        api('/api/process-governance/evidence' + evidenceQuery)
+      ]);
+      return { sourceFiles: results[0], mdmRequirements: results[1], evidence: results[2] };
+    }
+
+    async function loadProcessGovernanceMappingView(filters) {
+      var mappingWorkspaceQuery = processGovernanceQuery({ dept: filters.dept });
+      var mappingTodoQuery = processGovernanceQuery({ dept: filters.dept, type: filters.todoType, status: filters.todoStatus });
+      var results = await Promise.all([
+        api('/api/process-governance/mapping-workspace' + mappingWorkspaceQuery),
+        api('/api/process-governance/mapping-todos' + mappingTodoQuery)
+      ]);
+      return { mappingWorkspace: results[0], mappingTodos: results[1] };
+    }
+
+    async function loadProcessGovernanceQualityView(filters) {
+      var qualityQuery = processGovernanceQuery({ dept: filters.dept, severity: filters.qualitySeverity, area: filters.qualityArea });
+      var caseQuery = processGovernanceQuery({ dept: filters.dept, severity: filters.caseSeverity, status: filters.caseStatus, owner: filters.caseOwner });
+      var results = await Promise.all([
+        api('/api/process-governance/quality' + qualityQuery),
+        api('/api/process-governance/quality-cases' + caseQuery)
+      ]);
+      return { quality: results[0], qualityCases: results[1] };
+    }
+
+    function renderProcessGovernanceOverviewView(payload) {
+      var current = payload.current || {};
+      var stats = current.stats || {};
+      var crossStats = stats.crossDept || {};
+      var currentQualitySummary = current.qualitySummary || {};
+      document.getElementById('pgMetricL3').textContent = stats.mappings || 0;
+      document.getElementById('pgMetricA1').textContent = stats.a1 || stats.a1Imported || 0;
+      document.getElementById('pgMetricCross').textContent = crossStats.totalChecked || crossStats.total || 0;
+      document.getElementById('pgMetricRisk').textContent = crossStats.highRisk || 0;
+      document.getElementById('pgMetricQualityBlock').textContent = currentQualitySummary.BLOCK || 0;
+      document.getElementById('pgMetricQualityWarn').textContent = currentQualitySummary.WARN || 0;
+      document.getElementById('pgMetricQualityInfo').textContent = currentQualitySummary.INFO || 0;
+      document.getElementById('pgMetricQualityShown').textContent = (currentQualitySummary.BLOCK || 0) + (currentQualitySummary.WARN || 0) + (currentQualitySummary.INFO || 0);
+      document.getElementById('pgMetricQualityCaseOpen').textContent = '—';
+      document.getElementById('pgMetricQualityCaseSubmitted').textContent = '—';
+      document.getElementById('pgMetricQualityCaseResolved').textContent = '—';
+      document.getElementById('pgMetricQualityCaseClosed').textContent = '—';
+      document.getElementById('pgMetricMappingRecords').textContent = '—';
+      document.getElementById('pgMetricMappingA1').textContent = '—';
+      document.getElementById('pgMetricMappingTodos').textContent = '—';
+      document.getElementById('pgMetricMappingTodoOpen').textContent = '—';
+      document.getElementById('pgMetricSourceIncluded').textContent = '—';
+      document.getElementById('pgMetricSourceReview').textContent = '—';
+      document.getElementById('pgMetricMdmRequirements').textContent = '—';
+      document.getElementById('pgMetricEvidenceRefs').textContent = '—';
+      var imported = stats.a1Imported || 0;
+      document.getElementById('pgSnapshotMeta').textContent = current.id
+        ? '当前快照 #' + current.id + '，图谱统计 A1 ' + (stats.a1 || 0) + ' 项，治理明细 ' + imported + ' 行' + (state.pgSelectedDept ? '，当前部门：' + state.pgSelectedDept : '')
+        : '暂无流程治理快照';
+      document.getElementById('pgSourceMeta').textContent = '组织真源：docs/organization/组织架构和部门职责.md；流程真源：docs/norms/{部门}部门-能力-流程-系统映射关系.md';
+    }
+
+    function renderProcessGovernanceCandidateReviewView(payload, route) {
+      renderProcessGovernanceCandidateReview(payload.candidateReview || { items: [], summary: {} }, state.pgSelectedDept, route);
+    }
+
+    function renderProcessGovernanceMapView(payload) {
+      var sankey = payload.sankey || {};
+      var a1 = payload.a1 || {};
+      var risks = payload.risks || {};
+      var stats = sankey.stats || {};
+      var departments = getProcessGovernanceDepartments(sankey);
+      var a1Items = a1.items || [];
+      var riskItems = risks.items || [];
+      renderProcessGovernanceDeptTags(departments, a1Items);
+
+      var selectedDept = state.pgSelectedDept;
+      var riskValue = document.getElementById('pgRiskFilter') ? document.getElementById('pgRiskFilter').value : '';
+      var filteredSankey = filterProcessGovernanceSankeyByDept(sankey, selectedDept);
+      var renderedSankey = pruneProcessGovernanceSankeyToCapability(filteredSankey);
+      var a1Rows = a1Items.filter(function(row) { return processGovernanceA1MatchesDept(row, selectedDept); });
+      var riskRows = riskItems.filter(function(row) { return processGovernanceRiskMatchesDept(row, selectedDept); });
+      var selectedL3Count = new Set(a1Rows.map(function(row) { return row.l3_name; }).filter(Boolean)).size;
+      var selectedHighRiskCount = riskRows.filter(function(row) { return row.risk_level === 'high'; }).length;
+
+      document.getElementById('pgMetricL3').textContent = selectedL3Count;
+      document.getElementById('pgMetricA1').textContent = a1Rows.length;
+      document.getElementById('pgMetricCross').textContent = riskRows.length;
+      document.getElementById('pgMetricRisk').textContent = selectedHighRiskCount;
+      document.getElementById('pgMapMeta').textContent = (selectedDept ? selectedDept + ' · ' : '') + (renderedSankey.nodes || []).length + ' 个节点，' + (renderedSankey.links || []).length + ' 条关系';
+      renderProcessGovernanceSankey(renderedSankey);
+
+      document.getElementById('pgA1Meta').textContent = (selectedDept ? selectedDept + ' · ' : '') + '显示前 ' + Math.min(a1Rows.length, 80) + ' 条 / 共 ' + a1Rows.length + ' 条';
+      document.getElementById('pgA1Rows').innerHTML = a1Rows.length
+        ? a1Rows.slice(0, 80).map(function(row) {
+            var selected = state.pgEvidenceFocus &&
+              state.pgEvidenceFocus.l3Name === row.l3_name &&
+              state.pgEvidenceFocus.a1Code === row.a1_code;
+            return '<tr' + (selected ? ' style="background:#fff7ed"' : '') + ' data-pg-l3="' + escapeHtml(row.l3_name || '') + '" data-pg-a1="' + escapeHtml(row.a1_code || '') + '" title="查看证据链">' +
+              '<td>' + safeText(row.a1_code) + '</td><td>' + safeText(row.dept_name) + '</td><td>' + safeText(row.l3_name) + '</td><td>' + safeText(row.behavior) + '</td><td>' + safeText(row.input_source_dept) + '</td><td>' + safeText(row.output_target_dept) + '</td><td>' + safeText(pgSystemsText(row.suggested_systems)) + '</td></tr>';
+          }).join('')
+        : '<tr><td colspan="7" class="empty">暂无 A1 明细</td></tr>';
+
+      document.getElementById('pgRiskMeta').textContent = (riskValue || selectedDept) ? '筛选后 ' + riskRows.length + ' 条' : '共 ' + riskRows.length + ' 条';
+      document.getElementById('pgRiskRows').innerHTML = riskRows.length
+        ? riskRows.map(function(row) {
+            return '<tr><td>' + safeText(row.source_dept) + '</td><td>' + safeText(row.target_dept) + '</td><td>' + safeText(row.a1_code) + '</td><td>' + safeText(row.refs) + '</td><td>' + pgRiskTag(row.risk_level) + '</td><td>' + pgConfirmTag(row.confirm_status) + '</td><td>' + safeText(row.description) + '</td></tr>';
+          }).join('')
+        : '<tr><td colspan="7" class="empty">暂无跨部门风险项</td></tr>';
+    }
+
+    function renderProcessGovernanceEvidenceView(payload) {
+      state.pgSourceCoverageData = payload.sourceFiles || { items: [], summary: {} };
+      renderProcessGovernanceSourceCoverage(payload.sourceFiles || { items: [], summary: {} }, state.pgSelectedDept);
+      renderProcessGovernanceMdmRequirements(payload.mdmRequirements || { items: [], summary: {} }, state.pgSelectedDept);
+      renderProcessGovernanceEvidence(payload.evidence || { items: [], summary: {} }, state.pgSelectedDept);
+    }
+
+    function renderProcessGovernanceMappingView(payload, route) {
+      renderProcessGovernanceMappingWorkspace(payload.mappingWorkspace || { items: [], summary: {} }, state.pgSelectedDept);
+      renderProcessGovernanceMappingTodos(payload.mappingTodos || { items: [], summary: {} }, state.pgSelectedDept, route.mappingTodoId);
+    }
+
+    function renderProcessGovernanceQualityView(payload, route) {
+      renderProcessGovernanceQuality(payload.quality || { items: [], summary: {} }, state.pgSelectedDept, route.finding);
+      renderProcessGovernanceQualityCases(payload.qualityCases || { items: [], summary: {} }, state.pgSelectedDept, route.caseId);
+    }
+
+    function renderProcessGovernanceView(view, payload, route) {
+      var product = PROCESS_GOVERNANCE_VIEW_PRODUCTS[view] || PROCESS_GOVERNANCE_VIEW_PRODUCTS.overview;
+      product.render(payload || {}, route || parseHash());
+    }
+
+    function setProcessGovernanceViewLoading(view) {
+      if (view === 'overview') {
+        document.getElementById('pgSnapshotMeta').textContent = '正在加载流程治理总览...';
+      } else if (view === 'candidateReview') {
+        setProcessGovernanceCandidateReviewLoading();
+      } else if (view === 'map') {
+        document.getElementById('pgMapMeta').textContent = '正在加载流程图谱...';
+        document.getElementById('pgSankeyChart').innerHTML = '<div class="empty">正在加载流程图谱...</div>';
+        document.getElementById('pgA1Rows').innerHTML = '<tr><td colspan="7" class="empty">正在加载 A1 明细...</td></tr>';
+        document.getElementById('pgRiskRows').innerHTML = '<tr><td colspan="7" class="empty">正在加载跨部门风险...</td></tr>';
+      } else if (view === 'evidence') {
+        document.getElementById('pgSourceCoverageRows').innerHTML = '<tr><td colspan="7" class="empty">正在加载源文件覆盖...</td></tr>';
+        document.getElementById('pgMdmRequirementRows').innerHTML = '<tr><td colspan="7" class="empty">正在加载主数据对象候选...</td></tr>';
+        document.getElementById('pgEvidenceRows').innerHTML = '<tr><td colspan="8" class="empty">正在加载证据链...</td></tr>';
+      } else if (view === 'mapping') {
+        document.getElementById('pgMappingWorkspaceRows').innerHTML = '<tr><td colspan="8" class="empty">正在加载映射工作库...</td></tr>';
+        document.getElementById('pgMappingTodoRows').innerHTML = '<tr><td colspan="8" class="empty">正在加载流程映射待办...</td></tr>';
+      } else if (view === 'quality') {
+        document.getElementById('pgQualityRows').innerHTML = '<tr><td colspan="7" class="empty">正在加载质量问题...</td></tr>';
+        document.getElementById('pgQualityCaseRows').innerHTML = '<tr><td colspan="8" class="empty">正在加载治理问题单...</td></tr>';
+      }
+    }
+
+    function setProcessGovernanceViewError(view, error) {
+      var message = error && error.message || '流程治理数据暂不可用';
+      if (view === 'overview') {
+        document.getElementById('pgSnapshotMeta').textContent = message;
+      } else if (view === 'candidateReview') {
+        setProcessGovernanceCandidateReviewError('待确认问题加载失败，请刷新流程治理');
+      } else if (view === 'map') {
+        document.getElementById('pgMapMeta').textContent = '';
+        document.getElementById('pgSankeyChart').innerHTML = '<div class="empty">' + safeText(message) + '</div>';
+        document.getElementById('pgA1Rows').innerHTML = '<tr><td colspan="7" class="empty">暂无 A1 明细</td></tr>';
+        document.getElementById('pgRiskRows').innerHTML = '<tr><td colspan="7" class="empty">暂无跨部门风险项</td></tr>';
+      } else if (view === 'evidence') {
+        document.getElementById('pgSourceCoverageRows').innerHTML = '<tr><td colspan="7" class="empty">暂无源文件覆盖记录</td></tr>';
+        document.getElementById('pgMdmRequirementRows').innerHTML = '<tr><td colspan="7" class="empty">暂无主数据对象候选</td></tr>';
+        document.getElementById('pgEvidenceRows').innerHTML = '<tr><td colspan="8" class="empty">暂无证据链记录</td></tr>';
+      } else if (view === 'mapping') {
+        document.getElementById('pgMappingWorkspaceRows').innerHTML = '<tr><td colspan="8" class="empty">暂无映射工作库记录</td></tr>';
+        document.getElementById('pgMappingTodoRows').innerHTML = '<tr><td colspan="8" class="empty">暂无流程映射待办</td></tr>';
+      } else if (view === 'quality') {
+        document.getElementById('pgQualityRows').innerHTML = '<tr><td colspan="7" class="empty">暂无质量问题</td></tr>';
+        document.getElementById('pgQualityCaseRows').innerHTML = '<tr><td colspan="8" class="empty">暂无治理问题单</td></tr>';
+      }
+    }
+
+    async function loadProcessGovernanceView(view, options) {
+      options = options || {};
+      var product = PROCESS_GOVERNANCE_VIEW_PRODUCTS[view] || PROCESS_GOVERNANCE_VIEW_PRODUCTS.overview;
+      var route = options.route || parseHash();
+      var filters = processGovernanceViewFilters(view);
+      var cacheKey = processGovernanceLoadKey(view, filters);
+      if (!options.force && state.pgViewCache[cacheKey]) {
+        renderProcessGovernanceView(view, state.pgViewCache[cacheKey], route);
+        return state.pgViewCache[cacheKey];
+      }
+
+      var requestId = (state.pgViewRequests[view] || 0) + 1;
+      state.pgViewRequests[view] = requestId;
+      setProcessGovernanceViewLoading(view);
+      try {
+        var payload = await product.load(filters, route);
+        if (state.pgViewRequests[view] !== requestId) return null;
+        if (processGovernanceViewFromRoute(parseHash()) !== view) return null;
+        state.pgViewCache[cacheKey] = payload;
+        renderProcessGovernanceView(view, payload, route);
+        return payload;
+      } catch (error) {
+        if (state.pgViewRequests[view] === requestId) setProcessGovernanceViewError(view, error);
+        throw error;
+      }
+    }
+
     async function renderProcessGovernance() {
       var panel = document.getElementById('processGovernancePanel');
       if (!panel) return;
@@ -4440,154 +4736,16 @@
       var activePgView = processGovernanceViewFromRoute(route);
       renderProcessGovernanceSubtabs(activePgView);
       applyProcessGovernanceSubtab(activePgView);
-      setProcessGovernanceCandidateReviewLoading();
-
       try {
-        var riskValue = document.getElementById('pgRiskFilter') ? document.getElementById('pgRiskFilter').value : '';
-        var riskQuery = riskValue ? '?risk=' + encodeURIComponent(riskValue) : '';
-        var qualityParams = new URLSearchParams();
-        var qualitySeverity = document.getElementById('pgQualitySeverityFilter') ? document.getElementById('pgQualitySeverityFilter').value : '';
-        var qualityArea = document.getElementById('pgQualityAreaFilter') ? document.getElementById('pgQualityAreaFilter').value : '';
-        if (qualitySeverity) qualityParams.set('severity', qualitySeverity);
-        if (qualityArea) qualityParams.set('area', qualityArea);
-        if (state.pgSelectedDept) qualityParams.set('dept', state.pgSelectedDept);
-        var qualityQuery = qualityParams.toString() ? '?' + qualityParams.toString() : '';
-        var caseParams = new URLSearchParams();
-        var caseSeverity = document.getElementById('pgQualityCaseSeverityFilter') ? document.getElementById('pgQualityCaseSeverityFilter').value : '';
-        var caseStatus = document.getElementById('pgQualityCaseStatusFilter') ? document.getElementById('pgQualityCaseStatusFilter').value : '';
-        var caseOwner = document.getElementById('pgQualityCaseOwnerFilter') ? document.getElementById('pgQualityCaseOwnerFilter').value : '';
-        if (caseSeverity) caseParams.set('severity', caseSeverity);
-        if (caseStatus) caseParams.set('status', caseStatus);
-        if (caseOwner) caseParams.set('owner', caseOwner);
-        if (state.pgSelectedDept) caseParams.set('dept', state.pgSelectedDept);
-        var caseQuery = caseParams.toString() ? '?' + caseParams.toString() : '';
-        var mappingWorkspaceParams = new URLSearchParams();
-        if (state.pgSelectedDept) mappingWorkspaceParams.set('dept', state.pgSelectedDept);
-        var mappingWorkspaceQuery = mappingWorkspaceParams.toString() ? '?' + mappingWorkspaceParams.toString() : '';
-        var mappingTodoParams = new URLSearchParams();
-        var mappingTodoType = document.getElementById('pgMappingTodoTypeFilter') ? document.getElementById('pgMappingTodoTypeFilter').value : '';
-        var mappingTodoStatus = document.getElementById('pgMappingTodoStatusFilter') ? document.getElementById('pgMappingTodoStatusFilter').value : '';
-        if (mappingTodoType) mappingTodoParams.set('type', mappingTodoType);
-        if (mappingTodoStatus) mappingTodoParams.set('status', mappingTodoStatus);
-        if (state.pgSelectedDept) mappingTodoParams.set('dept', state.pgSelectedDept);
-        var mappingTodoQuery = mappingTodoParams.toString() ? '?' + mappingTodoParams.toString() : '';
-        var sourceParams = new URLSearchParams();
-        sourceParams.set('limit', SOURCE_COVERAGE_VISIBLE_LIMIT);
-        if (state.pgSelectedDept) sourceParams.set('dept', state.pgSelectedDept);
-        var sourceQuery = sourceParams.toString() ? '?' + sourceParams.toString() : '';
-        var mdmRequirementParams = new URLSearchParams();
-        if (state.pgSelectedDept) mdmRequirementParams.set('dept', state.pgSelectedDept);
-        var mdmRequirementQuery = mdmRequirementParams.toString() ? '?' + mdmRequirementParams.toString() : '';
-        var evidenceParams = new URLSearchParams();
-        if (state.pgSelectedDept) evidenceParams.set('dept', state.pgSelectedDept);
-        if (state.pgEvidenceFocus && state.pgEvidenceFocus.l3Name) evidenceParams.set('l3', state.pgEvidenceFocus.l3Name);
-        if (state.pgEvidenceFocus && state.pgEvidenceFocus.a1Code) evidenceParams.set('a1', state.pgEvidenceFocus.a1Code);
-        var evidenceQuery = evidenceParams.toString() ? '?' + evidenceParams.toString() : '';
-        var results = await Promise.all([
-          api('/api/process-governance/current'),
-          api('/api/process-governance/sankey'),
-          api('/api/process-governance/a1'),
-          api('/api/process-governance/cross-dept' + riskQuery),
-          api('/api/process-governance/quality' + qualityQuery),
-          api('/api/process-governance/quality-cases' + caseQuery),
-          api('/api/process-governance/mapping-workspace' + mappingWorkspaceQuery),
-          api('/api/process-governance/mapping-todos' + mappingTodoQuery),
-          api('/api/process-governance/source-files' + sourceQuery),
-          api('/api/process-governance/mdm-requirements' + mdmRequirementQuery),
-          api('/api/process-governance/evidence' + evidenceQuery),
-          loadProcessGovernanceCandidateReview(state.pgSelectedDept)
-        ]);
+        await loadProcessGovernanceView(activePgView, { route: route });
         if (!isCurrentProcessGovernanceRender(requestId)) return;
-        var current = results[0];
-        var sankey = results[1];
-        var a1 = results[2];
-        var risks = results[3];
-        var quality = results[4];
-        var qualityCases = results[5];
-        var mappingWorkspace = results[6];
-        var mappingTodos = results[7];
-        var sourceFiles = results[8];
-        var mdmRequirements = results[9];
-        var evidence = results[10];
-        var candidateReview = results[11];
-        state.pgSourceCoverageData = sourceFiles;
-        var stats = sankey.stats || {};
-        var departments = getProcessGovernanceDepartments(sankey);
-        var a1Items = a1.items || [];
-        var riskItems = risks.items || [];
-        renderProcessGovernanceDeptTags(departments, a1Items);
-
-        var selectedDept = state.pgSelectedDept;
-        var filteredSankey = filterProcessGovernanceSankeyByDept(sankey, selectedDept);
-        var renderedSankey = pruneProcessGovernanceSankeyToCapability(filteredSankey);
-        var a1Rows = a1Items.filter(function(row) { return processGovernanceA1MatchesDept(row, selectedDept); });
-        var riskRows = riskItems.filter(function(row) { return processGovernanceRiskMatchesDept(row, selectedDept); });
-        var selectedL3Count = new Set(a1Rows.map(function(row) { return row.l3_name; }).filter(Boolean)).size;
-        var selectedHighRiskCount = riskRows.filter(function(row) { return row.risk_level === 'high'; }).length;
-
-        document.getElementById('pgMetricL3').textContent = selectedL3Count;
-        document.getElementById('pgMetricA1').textContent = a1Rows.length;
-        document.getElementById('pgMetricCross').textContent = riskRows.length;
-        document.getElementById('pgMetricRisk').textContent = selectedHighRiskCount;
-        var currentQualitySummary = current.qualitySummary || {};
-        document.getElementById('pgMetricQualityBlock').textContent = currentQualitySummary.BLOCK || 0;
-        document.getElementById('pgMetricQualityWarn').textContent = currentQualitySummary.WARN || 0;
-        document.getElementById('pgMetricQualityInfo').textContent = currentQualitySummary.INFO || 0;
-
-        var imported = current.stats && current.stats.a1Imported ? current.stats.a1Imported : 0;
-        document.getElementById('pgSnapshotMeta').textContent = current.id
-          ? '当前快照 #' + current.id + '，图谱统计 A1 ' + (stats.a1 || 0) + ' 项，治理明细 ' + imported + ' 行' + (selectedDept ? '，当前部门：' + selectedDept : '')
-          : '暂无流程治理快照';
-        document.getElementById('pgSourceMeta').textContent = '组织真源：docs/organization/组织架构和部门职责.md；流程真源：docs/norms/{部门}部门-能力-流程-系统映射关系.md';
-
-        document.getElementById('pgMapMeta').textContent = (selectedDept ? selectedDept + ' · ' : '') + (renderedSankey.nodes || []).length + ' 个节点，' + (renderedSankey.links || []).length + ' 条关系';
-        renderProcessGovernanceSankey(renderedSankey);
-
-        document.getElementById('pgA1Meta').textContent = (selectedDept ? selectedDept + ' · ' : '') + '显示前 ' + Math.min(a1Rows.length, 80) + ' 条 / 共 ' + a1Rows.length + ' 条';
-        document.getElementById('pgA1Rows').innerHTML = a1Rows.length
-          ? a1Rows.slice(0, 80).map(function(row) {
-              var selected = state.pgEvidenceFocus &&
-                state.pgEvidenceFocus.l3Name === row.l3_name &&
-                state.pgEvidenceFocus.a1Code === row.a1_code;
-              return '<tr' + (selected ? ' style="background:#fff7ed"' : '') + ' data-pg-l3="' + escapeHtml(row.l3_name || '') + '" data-pg-a1="' + escapeHtml(row.a1_code || '') + '" title="查看证据链">' +
-                '<td>' + safeText(row.a1_code) + '</td><td>' + safeText(row.dept_name) + '</td><td>' + safeText(row.l3_name) + '</td><td>' + safeText(row.behavior) + '</td><td>' + safeText(row.input_source_dept) + '</td><td>' + safeText(row.output_target_dept) + '</td><td>' + safeText(pgSystemsText(row.suggested_systems)) + '</td></tr>';
-            }).join('')
-          : '<tr><td colspan="7" class="empty">暂无 A1 明细</td></tr>';
-
-        document.getElementById('pgRiskMeta').textContent = (riskValue || selectedDept) ? '筛选后 ' + riskRows.length + ' 条' : '共 ' + riskRows.length + ' 条';
-        document.getElementById('pgRiskRows').innerHTML = riskRows.length
-          ? riskRows.map(function(row) {
-              return '<tr><td>' + safeText(row.source_dept) + '</td><td>' + safeText(row.target_dept) + '</td><td>' + safeText(row.a1_code) + '</td><td>' + safeText(row.refs) + '</td><td>' + pgRiskTag(row.risk_level) + '</td><td>' + pgConfirmTag(row.confirm_status) + '</td><td>' + safeText(row.description) + '</td></tr>';
-            }).join('')
-          : '<tr><td colspan="7" class="empty">暂无跨部门风险项</td></tr>';
-
-        route = parseHash();
-        activePgView = processGovernanceViewFromRoute(route);
-        renderProcessGovernanceSourceCoverage(sourceFiles, selectedDept);
-        renderProcessGovernanceCandidateReview(candidateReview, selectedDept, route);
-        renderProcessGovernanceMdmRequirements(mdmRequirements, selectedDept);
-        renderProcessGovernanceEvidence(evidence, selectedDept);
-        renderProcessGovernanceMappingWorkspace(mappingWorkspace, selectedDept);
-        renderProcessGovernanceMappingTodos(mappingTodos, selectedDept, route.mappingTodoId);
-        renderProcessGovernanceQuality(quality, selectedDept, route.finding);
-        renderProcessGovernanceQualityCases(qualityCases, selectedDept, route.caseId);
         renderProcessGovernanceSubtabs(activePgView);
         applyProcessGovernanceSubtab(activePgView);
       } catch (error) {
         if (!isCurrentProcessGovernanceRender(requestId)) return;
-        document.getElementById('pgSnapshotMeta').textContent = '流程治理数据暂不可用';
-        document.getElementById('pgMapMeta').textContent = '';
-        document.getElementById('pgSankeyChart').innerHTML = '<div class="empty">流程治理数据暂不可用</div>';
-        document.getElementById('pgA1Rows').innerHTML = '<tr><td colspan="7" class="empty">暂无 A1 明细</td></tr>';
-        document.getElementById('pgRiskRows').innerHTML = '<tr><td colspan="7" class="empty">暂无跨部门风险项</td></tr>';
-        document.getElementById('pgQualityRows').innerHTML = '<tr><td colspan="7" class="empty">暂无质量问题</td></tr>';
-        document.getElementById('pgQualityCaseRows').innerHTML = '<tr><td colspan="8" class="empty">暂无治理问题单</td></tr>';
-        document.getElementById('pgMappingWorkspaceRows').innerHTML = '<tr><td colspan="8" class="empty">暂无映射工作库记录</td></tr>';
-        document.getElementById('pgMappingTodoRows').innerHTML = '<tr><td colspan="8" class="empty">暂无流程映射待办</td></tr>';
-        document.getElementById('pgSourceCoverageRows').innerHTML = '<tr><td colspan="7" class="empty">暂无源文件覆盖记录</td></tr>';
-        setProcessGovernanceCandidateReviewError('待确认问题加载失败，请刷新流程治理');
-        document.getElementById('pgMdmRequirementRows').innerHTML = '<tr><td colspan="7" class="empty">暂无主数据对象候选</td></tr>';
-        document.getElementById('pgEvidenceRows').innerHTML = '<tr><td colspan="8" class="empty">暂无证据链记录</td></tr>';
+        if (error && error.status === 401) return;
+        console.error(error);
+        showToast(error.message || '流程治理加载失败', 'error');
       }
     }
 
@@ -5199,11 +5357,15 @@
         event.preventDefault();
         state.pgSelectedDept = button.dataset.pgDept || '';
         state.pgEvidenceFocus = null;
+        clearProcessGovernanceViewCache('department-filter');
         renderProcessGovernance();
       });
     }
     if (document.getElementById('refreshProcessGovernanceBtn')) {
-      document.getElementById('refreshProcessGovernanceBtn').onclick = renderProcessGovernance;
+      document.getElementById('refreshProcessGovernanceBtn').onclick = function() {
+        clearProcessGovernanceViewCache('manual-refresh');
+        renderProcessGovernance();
+      };
     }
 
     // ===== Process Detail Page =====

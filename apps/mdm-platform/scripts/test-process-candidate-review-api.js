@@ -260,6 +260,23 @@ async function main() {
     assert.strictEqual(crossDeptSaveRes.status, 403, JSON.stringify(crossDeptSaveBody));
     assert.strictEqual(crossDeptSaveBody.error, '只能处理本部门待确认问题');
 
+    processGovernanceRouter.setCandidateReviewRepositoryFactory(() => ({
+      async listRuns() {
+        return [];
+      },
+      async upsertBundle() {
+        throw new Error('simulated candidate review MySQL read-model failure');
+      },
+      async getCandidates() {
+        throw new Error('simulated candidate review MySQL read-model failure');
+      }
+    }));
+    const fallbackRes = await fetch(`${baseUrl}/api/process-governance/candidate-review/runs/review-run-001/candidates?dept=${encodeURIComponent('工程技术部')}`);
+    const fallbackBody = await fallbackRes.json();
+    assert.strictEqual(fallbackRes.status, 200, JSON.stringify(fallbackBody));
+    assert.strictEqual(fallbackBody.summary.total, 1, '候选复核 MySQL 读模型失败时，存在 artifact 的只读列表应回退并继续按部门收口');
+    assert.strictEqual(fallbackBody.items[0].department, '工程技术部');
+
     console.log('Process candidate review API route test passed');
   } finally {
     await closeServer(server);
