@@ -66,6 +66,19 @@ assert.ok(sourceCoverageRenderSnippet.includes('覆盖记录'), 'source coverage
 assert.ok(!sourceCoverageRenderSnippet.includes('/ 共 '), 'source coverage meta should not present a questionable global total');
 assert.ok(html.includes('待确认的问题'), 'candidate review should be named in plain business language');
 assert.ok(html.includes('这里不是正式映射库'), 'candidate review should explain that rows are not official mappings');
+assert.ok(
+  html.includes("case 'processGovernance': runPageTask(function() { return renderProcessGovernance(); }, '流程治理加载失败'); break;"),
+  'process governance list route should use the unified page task runner'
+);
+assert.ok(html.includes('processGovernanceRenderRequestId:0'), 'process governance should track render request order');
+assert.ok(html.includes('function isCurrentProcessGovernanceRender(requestId)'), 'process governance should expose a current-render guard');
+assert.ok(html.includes('var requestId = ++state.processGovernanceRenderRequestId'), 'process governance should create a new request id per render');
+assert.ok(
+  html.includes('if (!isCurrentProcessGovernanceRender(requestId)) return;'),
+  'process governance should ignore stale render responses'
+);
+assert.ok(html.includes('正在加载待确认的问题'), 'candidate review should show an explicit initial loading state');
+assert.ok(html.includes('待确认问题加载失败，请刷新流程治理'), 'candidate review should show a clear failure state');
 assert.ok(html.includes('<th>在哪发现的</th>'), 'candidate review source column should use plain wording');
 assert.ok(html.includes('<th>哪里有问题</th>'), 'candidate review content column should use plain wording');
 assert.ok(html.includes('<th>是哪种问题</th>'), 'candidate review issue column should use plain wording');
@@ -75,6 +88,13 @@ assert.ok(html.includes('这是不是个问题'), 'candidate review decision cop
 assert.ok(html.includes('证据有没有问题'), 'candidate review evidence copy should ask users to confirm evidence quality');
 assert.ok(html.includes('要不要修改原文'), 'candidate review should ask users to decide whether source files need changes');
 assert.ok(html.includes('是哪种问题：'), 'candidate review groups should name issue types plainly');
+assert.ok(html.includes('class="candidate-review-table"'), 'candidate review detail table should have a dedicated readable table class');
+assert.ok(html.includes('.candidate-review-table td {') && html.includes('vertical-align: top'), 'candidate review detail cells should be top-aligned for long text');
+assert.ok(html.includes('.candidate-review-table th, .candidate-review-table td') && html.includes('border-bottom: 1.5px solid #d6cec0'), 'candidate review detail table should use stronger cell borders');
+assert.ok(html.includes('function candidateReviewExcerptText(row)'), 'candidate review should extract source excerpt text for the source cell');
+assert.ok(html.includes('(row.source_excerpts && row.source_excerpts[0] && row.source_excerpts[0].raw_text)'), 'candidate review source excerpt should use source_excerpts[0].raw_text');
+assert.ok(html.includes('未匹配到原文摘录，请按来源文件核对原文'), 'candidate review should tell users when no source excerpt is matched');
+assert.ok(html.includes('class="candidate-source-excerpt"'), 'candidate review should render source excerpts inside the source cell');
 assert.ok(!html.includes('<th>候选类型</th>'), 'candidate review should not expose candidate type as a table header');
 assert.ok(!html.includes('<th>候选内容</th>'), 'candidate review should not expose candidate content as a table header');
 assert.ok(!html.includes('<th>定义充分性</th>'), 'candidate review should not expose definition sufficiency as a table header');
@@ -157,6 +177,20 @@ assert.strictEqual(
   sourceFilterContext.processGovernanceSourceCoverageMatches(sourceRows[0], { dept: '财务部' }),
   false,
   'source coverage department filter should exclude other departments'
+);
+const processGovernanceRenderGuardMatch = html.match(/function isCurrentProcessGovernanceRender\(requestId\) \{[\s\S]*?\n    \}/);
+assert.ok(processGovernanceRenderGuardMatch, 'process governance current-render guard should be extractable');
+const processGovernanceRenderGuardContext = { state: { processGovernanceRenderRequestId: 2 } };
+vm.runInNewContext(`${processGovernanceRenderGuardMatch[0]}; this.isCurrentProcessGovernanceRender = isCurrentProcessGovernanceRender;`, processGovernanceRenderGuardContext);
+assert.strictEqual(
+  processGovernanceRenderGuardContext.isCurrentProcessGovernanceRender(2),
+  true,
+  'latest process governance request should be allowed to render'
+);
+assert.strictEqual(
+  processGovernanceRenderGuardContext.isCurrentProcessGovernanceRender(1),
+  false,
+  'older process governance request should not be allowed to render over newer data'
 );
 assert.ok(
   html.includes("String(row.input_source_dept || '').includes(deptName)") &&
