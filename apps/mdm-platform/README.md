@@ -39,7 +39,7 @@ npm run smoke:infomat-services
 |---|---|
 | MDM | `127.0.0.1:3000` |
 | PMO | `127.0.0.1:5173` |
-| MySQL | `127.0.0.1:3307` |
+| MySQL | `localhost:3307` |
 | MySQL 用户 / 库 | `mdm_user` / `infomat_mdm` |
 | MySQL 连接池 | `MYSQL_CONNECTION_LIMIT=16` |
 | 读模型 | `MDM_IDENTITY_READ_MODEL=mysql`、`PROCESS_GOVERNANCE_READ_MODEL=mysql` |
@@ -61,7 +61,7 @@ cd E:\CA001\Infomat
 $localEnv = Get-Content scripts\infomat-services.local.env
 $env:MYSQL_PASSWORD = ($localEnv | Where-Object { $_ -like 'MYSQL_PASSWORD=*' }).Split('=',2)[1]
 $env:MDM_ADMIN_PASSWORD = ($localEnv | Where-Object { $_ -like 'MDM_ADMIN_PASSWORD=*' }).Split('=',2)[1]
-$env:MYSQL_HOST = "127.0.0.1"
+$env:MYSQL_HOST = "localhost"
 $env:MYSQL_PORT = "3307"
 $env:MYSQL_USER = "mdm_user"
 $env:MYSQL_DATABASE = "infomat_mdm"

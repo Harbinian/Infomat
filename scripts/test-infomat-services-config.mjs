@@ -17,7 +17,7 @@ fs.mkdirSync(path.join(tempRoot, 'scripts'), { recursive: true });
 
 assert.equal(INFOMAT_SERVICE_CONFIG.mdm.port, 3000);
 assert.equal(INFOMAT_SERVICE_CONFIG.pmo.port, 5173);
-assert.equal(INFOMAT_SERVICE_CONFIG.mysql.host, '127.0.0.1');
+assert.equal(INFOMAT_SERVICE_CONFIG.mysql.host, 'localhost');
 assert.equal(INFOMAT_SERVICE_CONFIG.mysql.port, 3307);
 assert.equal(INFOMAT_SERVICE_CONFIG.mysql.user, 'mdm_user');
 assert.equal(INFOMAT_SERVICE_CONFIG.mysql.database, 'infomat_mdm');
@@ -41,7 +41,7 @@ const fixed = buildFixedServiceEnv({
   MDM_ADMIN_PASSWORD: 'admin-secret'
 }, tempRoot);
 
-assert.equal(fixed.MYSQL_HOST, '127.0.0.1');
+assert.equal(fixed.MYSQL_HOST, 'localhost');
 assert.equal(fixed.MYSQL_PORT, '3307');
 assert.equal(fixed.MYSQL_USER, 'mdm_user');
 assert.equal(fixed.MYSQL_PASSWORD, 'secret-from-env');
@@ -88,6 +88,8 @@ assert.ok(startScript.includes('infomat-services.config.json'), 'PowerShell star
 assert.ok(startScript.includes('infomat-services.local.env'), 'PowerShell starter should load the local private env file');
 assert.ok(startScript.includes('$fixedMysqlPort'), 'PowerShell starter should use the fixed MySQL port');
 assert.ok(!startScript.includes('[int]$MysqlPort'), 'PowerShell starter should not accept a mutable MySQL port parameter');
+assert.ok(startScript.includes('GetHostAddresses($HostName)'), 'PowerShell starter should resolve localhost across IPv4 and IPv6');
+assert.ok(startScript.includes('TcpClient($address.AddressFamily)'), 'PowerShell starter should create TcpClient with the resolved IP address family');
 
 const packageJson = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
 assert.equal(packageJson.scripts['start:infomat-services'], 'cmd /c start-infomat-services.cmd');
@@ -102,13 +104,13 @@ assert.ok(gitignore.includes('*.local.env'), 'local service secrets must stay ou
 
 const rootReadme = fs.readFileSync(path.join(repoRoot, 'README.md'), 'utf8');
 assert.ok(rootReadme.includes('npm run start:infomat-services'), 'root README should document the fixed starter');
-assert.ok(rootReadme.includes('127.0.0.1:3307'), 'root README should document the fixed MySQL port');
+assert.ok(rootReadme.includes('localhost:3307'), 'root README should document the fixed MySQL port');
 assert.ok(rootReadme.includes('scripts/infomat-services.local.env'), 'root README should document local-only service secrets');
 
 const scriptsReadme = fs.readFileSync(path.join(repoRoot, 'scripts', 'README.md'), 'utf8');
 assert.ok(scriptsReadme.includes('MDM / PMO 固定启动合同'), 'scripts README should document the fixed startup contract');
 assert.ok(scriptsReadme.includes('启动确认项'), 'scripts README should document startup checks');
-assert.ok(scriptsReadme.includes('Docker 容器 `infomat-candidate-review-mysql` 通过 `127.0.0.1:3307` 提供服务'), 'scripts README should document the fixed MySQL service');
+assert.ok(scriptsReadme.includes('Docker 容器 `infomat-candidate-review-mysql` 通过 `localhost:3307` 提供服务'), 'scripts README should document the fixed MySQL service');
 
 const mdmReadme = fs.readFileSync(path.join(repoRoot, 'apps', 'mdm-platform', 'README.md'), 'utf8');
 assert.ok(mdmReadme.includes('MDM 和 PMO 从仓库根目录使用固定入口启动'), 'MDM README should document the fixed root starter');
