@@ -1,18 +1,56 @@
 param(
   [int]$MdmPort = 3000,
-  [int]$PmoPort = 5173,
-  [int]$MysqlPort = 3307,
-  [string]$MysqlHost = "127.0.0.1"
+  [int]$PmoPort = 5173
 )
 
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
+$configPath = Join-Path $PSScriptRoot "infomat-services.config.json"
+$localEnvPath = Join-Path $PSScriptRoot "infomat-services.local.env"
+$config = Get-Content -Raw -LiteralPath $configPath | ConvertFrom-Json
+
+$fixedMdmPort = [int]$config.mdm.port
+$fixedPmoPort = [int]$config.pmo.port
+$fixedMysqlHost = [string]$config.mysql.host
+$fixedMysqlPort = [int]$config.mysql.port
+$fixedMysqlUser = [string]$config.mysql.user
+$fixedMysqlDatabase = [string]$config.mysql.database
+$fixedMysqlConnectionLimit = [string]$config.mysql.connectionLimit
+$fixedMysqlContainer = [string]$config.mysql.dockerContainer
+
+if ($MdmPort -ne $fixedMdmPort -or $PmoPort -ne $fixedPmoPort) {
+  throw "Infomat service ports are fixed: MDM=$fixedMdmPort, PMO=$fixedPmoPort. Do not pass drifting ports."
+}
+
 $mdmDir = Join-Path $repoRoot "apps\mdm-platform"
 $pmoDir = Join-Path $repoRoot "pmo\gantt-react"
 $logDir = Join-Path $env:TEMP "infomat-services"
 
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
+
+function Import-LocalEnvFile {
+  param([string]$Path)
+  if (-not (Test-Path -LiteralPath $Path)) { return }
+  Get-Content -LiteralPath $Path | ForEach-Object {
+    $line = $_.Trim()
+    if (-not $line -or $line.StartsWith("#")) { return }
+    $splitAt = $line.IndexOf("=")
+    if ($splitAt -le 0) { return }
+    $name = $line.Substring(0, $splitAt).Trim()
+    $value = $line.Substring($splitAt + 1).Trim()
+    if ($name) { Set-Item -Path "Env:$name" -Value $value }
+  }
+}
+
+function Require-Env {
+  param([string]$Name)
+  $value = [Environment]::GetEnvironmentVariable($Name, "Process")
+  if (-not $value) {
+    throw "Missing $Name. Set it in scripts\infomat-services.local.env or the current shell before starting Infomat services."
+  }
+  return $value
+}
 
 function Test-PortListening {
   param([int]$Port)
@@ -31,7 +69,7 @@ function Stop-Listener {
   }
 }
 
-function Test-Mysql {
+function Test-Tcp {
   param([string]$HostName, [int]$Port)
   $client = New-Object System.Net.Sockets.TcpClient
   try {
@@ -45,17 +83,51 @@ function Test-Mysql {
   }
 }
 
-if (-not (Test-Mysql -HostName $MysqlHost -Port $MysqlPort)) {
-  throw "MySQL is not listening on $MysqlHost`:$MysqlPort. Start the project MySQL instance first, or pass -MysqlPort."
+function Wait-Tcp {
+  param([string]$HostName, [int]$Port, [string]$Name)
+  $deadline = (Get-Date).AddSeconds(30)
+  while ((Get-Date) -lt $deadline) {
+    if (Test-Tcp -HostName $HostName -Port $Port) { return }
+    Start-Sleep -Seconds 1
+  }
+  throw "$Name did not start listening on $HostName`:$Port."
 }
 
-Stop-Listener -Port $MdmPort -Name "MDM"
-Stop-Listener -Port $PmoPort -Name "PMO"
+function Ensure-FixedMysql {
+  if (Test-Tcp -HostName $fixedMysqlHost -Port $fixedMysqlPort) { return }
 
-$env:PORT = [string]$MdmPort
-$env:MYSQL_HOST = $MysqlHost
-$env:MYSQL_PORT = [string]$MysqlPort
-$env:ALLOW_INSECURE_SESSION_SECRET = "1"
+  $inspect = docker inspect $fixedMysqlContainer 2>$null
+  if (-not $inspect) {
+    throw "Fixed MySQL container '$fixedMysqlContainer' was not found. Restore it or update scripts\infomat-services.config.json intentionally."
+  }
+
+  Write-Host "Starting fixed MySQL container $fixedMysqlContainer on $fixedMysqlHost`:$fixedMysqlPort"
+  docker start $fixedMysqlContainer | Out-Null
+  Wait-Tcp -HostName $fixedMysqlHost -Port $fixedMysqlPort -Name "MySQL"
+}
+
+Import-LocalEnvFile -Path $localEnvPath
+
+$env:PORT = [string]$fixedMdmPort
+$env:INFOMAT_MDM_URL = "http://$($config.mdm.host):$fixedMdmPort"
+$env:INFOMAT_PMO_URL = "http://$($config.pmo.host):$fixedPmoPort"
+$env:MYSQL_HOST = $fixedMysqlHost
+$env:MYSQL_PORT = [string]$fixedMysqlPort
+$env:MYSQL_USER = $fixedMysqlUser
+$env:MYSQL_DATABASE = $fixedMysqlDatabase
+$env:MYSQL_CONNECTION_LIMIT = $fixedMysqlConnectionLimit
+$env:MDM_IDENTITY_READ_MODEL = [string]$config.readModels.identity
+$env:PROCESS_GOVERNANCE_READ_MODEL = [string]$config.readModels.processGovernance
+$env:MDM_ADMIN_EMPLOYEE_NO = [string]$config.admin.employeeNo
+$env:ALLOW_INSECURE_SESSION_SECRET = [string]$config.session.allowInsecureDevSecret
+
+Require-Env -Name "MYSQL_PASSWORD" | Out-Null
+Require-Env -Name "MDM_ADMIN_PASSWORD" | Out-Null
+
+Ensure-FixedMysql
+
+Stop-Listener -Port $fixedMdmPort -Name "MDM"
+Stop-Listener -Port $fixedPmoPort -Name "PMO"
 
 Start-Process -FilePath "npm.cmd" `
   -ArgumentList "start" `
@@ -65,23 +137,16 @@ Start-Process -FilePath "npm.cmd" `
   -RedirectStandardError (Join-Path $logDir "mdm-platform.err.log")
 
 Start-Process -FilePath "npm.cmd" `
-  -ArgumentList "run dev -- --host 127.0.0.1 --port $PmoPort --strictPort" `
+  -ArgumentList "run dev -- --host 127.0.0.1 --port $fixedPmoPort --strictPort" `
   -WorkingDirectory $pmoDir `
   -WindowStyle Hidden `
   -RedirectStandardOutput (Join-Path $logDir "pmo-gantt.out.log") `
   -RedirectStandardError (Join-Path $logDir "pmo-gantt.err.log")
 
-Start-Sleep -Seconds 4
+Wait-Tcp -HostName "127.0.0.1" -Port $fixedMdmPort -Name "MDM"
+Wait-Tcp -HostName "127.0.0.1" -Port $fixedPmoPort -Name "PMO"
 
-$mdmReady = Test-PortListening -Port $MdmPort
-$pmoReady = Test-PortListening -Port $PmoPort
-$mdmStatus = if ($mdmReady) { "ready" } else { "not listening" }
-$pmoStatus = if ($pmoReady) { "ready" } else { "not listening" }
-
-Write-Host "MDM: http://localhost:$MdmPort/ $mdmStatus"
-Write-Host "PMO: http://127.0.0.1:$PmoPort/ $pmoStatus"
+Write-Host "Fixed MySQL: $fixedMysqlHost`:$fixedMysqlPort / $fixedMysqlDatabase / $fixedMysqlUser"
+Write-Host "MDM: http://localhost:$fixedMdmPort/ ready"
+Write-Host "PMO: http://127.0.0.1:$fixedPmoPort/ ready"
 Write-Host "Logs: $logDir"
-
-if (-not $mdmReady -or -not $pmoReady) {
-  throw "Not all services started. Check the log directory."
-}

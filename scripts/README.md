@@ -17,10 +17,18 @@
 | `sync-process-governance-mainline.mjs` | 串起流程治理主线同步、检查和 MDM 快照导入 | 流程真源、PMO 驾驶舱、MDM 平台脚本；迁移过渡期的遗留本地库必须显式隔离 | 会运行 parser，并调用 MDM 平台同步 / 导入脚本 |
 | `test-process-governance-mainline.mjs` | 聚合仓库级流程治理主线只读校验 | 根级主线检查脚本 | 依次运行合约、PMO 数据、部门域、source manifest 和 PMO 任务数据校验 |
 | `test-process-governance-mainline-contract.mjs` | 仓库级流程治理主线契约测试 | `package.json`、`docs/company-sankey-data.json`、仓库级脚本 | 只读校验 |
+| `infomat-services.config.json` | MDM、PMO、MySQL 固定启动合同 | 固定端口、固定 MySQL 用户/库、固定读模型 | 非敏感配置真源 |
+| `infomat-service-config.mjs` | 读取固定启动合同并合成本机运行环境 | `infomat-services.config.json`、本机 `infomat-services.local.env` | 供启动和冒烟脚本复用 |
+| `start-infomat-services.ps1` | 固定启动 MDM、PMO 和项目 MySQL | 固定合同、本机私有 env、Docker 容器 `infomat-candidate-review-mysql` | 按固定环境启动服务，不修改仓库真源 |
+| `smoke-infomat-services.mjs` | 固定配置下检查 MDM/PMO 是否可用 | 固定合同、本机私有 env、运行中的服务 | 只读检查，输出会隐藏密码 |
+| `test-infomat-services-config.mjs` | 防止启动配置再次漂移 | 固定合同、启动脚本、冒烟脚本、`.gitignore` | 只读校验 |
 
 常用命令：
 
 ```bash
+npm run start:infomat-services
+npm run smoke:infomat-services
+npm run test:infomat-services-config
 npm run test:process-governance-mainline
 npm run test:dept-domain-mapping
 npm run test:engineering-source-manifest
@@ -34,6 +42,46 @@ npm run test:process-candidate-review
 npm run test:ocr-source
 $env:MDM_DB_PATH='apps/mdm-platform/data/<target>.db'; npm run sync:process-governance
 ```
+
+## MDM / PMO 固定启动合同
+
+MDM 和 PMO 的仓库根目录启动入口：
+
+```powershell
+npm run start:infomat-services
+npm run smoke:infomat-services
+```
+
+固定配置在 `scripts/infomat-services.config.json`，当前约定为：
+
+| 项 | 固定值 |
+|---|---|
+| MDM | `127.0.0.1:3000` |
+| PMO | `127.0.0.1:5173` |
+| MySQL | `127.0.0.1:3307` |
+| MySQL Docker 容器 | `infomat-candidate-review-mysql` |
+| MySQL 用户 / 库 | `mdm_user` / `infomat_mdm` |
+| 读模型 | `MDM_IDENTITY_READ_MODEL=mysql`、`PROCESS_GOVERNANCE_READ_MODEL=mysql` |
+| 管理员工号 | `ADMIN001` |
+
+本机密码写入 `scripts/infomat-services.local.env`，该文件被 `.gitignore` 忽略：
+
+```text
+MYSQL_PASSWORD=你的项目 MySQL 密码
+MDM_ADMIN_PASSWORD=你的管理员密码
+```
+
+`start-infomat-services.ps1` 使用固定合同启动服务，并在启动前刷新 3000/5173 上的 MDM/PMO 进程。非敏感配置放在 `infomat-services.config.json`，本机密码放在 `infomat-services.local.env`。
+
+启动确认项：
+
+| 检查项 | 正确状态 |
+|---|---|
+| MDM | `http://127.0.0.1:3000` 可访问 |
+| PMO | `http://127.0.0.1:5173` 可访问 |
+| MySQL | Docker 容器 `infomat-candidate-review-mysql` 通过 `127.0.0.1:3307` 提供服务 |
+| 权限数据 | `npm run smoke:infomat-services` 显示 `ADMIN001 / 系统管理员 / admin` |
+| 私有密码 | `scripts/infomat-services.local.env` 包含 `MYSQL_PASSWORD` 和 `MDM_ADMIN_PASSWORD` |
 
 候选复核正式入口在 MDM 平台：
 
