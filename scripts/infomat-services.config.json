@@ -12,7 +12,7 @@
     "port": 3307,
     "user": "mdm_user",
     "database": "infomat_mdm",
-    "connectionLimit": 10,
+    "connectionLimit": 16,
     "dockerContainer": "infomat-candidate-review-mysql"
   },
   "readModels": {

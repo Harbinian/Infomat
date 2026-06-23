@@ -65,6 +65,7 @@ npm run smoke:infomat-services
 | PMO | `http://127.0.0.1:5173` |
 | MySQL | `127.0.0.1:3307` |
 | MySQL 用户 / 库 | `mdm_user` / `infomat_mdm` |
+| MySQL 连接池 | `MYSQL_CONNECTION_LIMIT=16` |
 | 读模型 | `MDM_IDENTITY_READ_MODEL=mysql`、`PROCESS_GOVERNANCE_READ_MODEL=mysql` |
 | 管理员工号 | `ADMIN001` |
 

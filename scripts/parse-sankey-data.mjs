@@ -483,6 +483,9 @@ function resolveA1Mapping(a1, allMappings) {
   const exact = candidates.find(m => m.l3 === a1.l3Name);
   if (exact) return exact;
 
+  const sameL2ByHeading = candidates.filter(m => normalizeProcessName(m.l2) === normalizeProcessName(a1.l3Name));
+  if (sameL2ByHeading.length === 1) return sameL2ByHeading[0];
+
   const scored = candidates
     .map(m => ({ mapping: m, score: processNameScore(a1.l3Name, m.l3) }))
     .sort((a, b) => b.score - a.score);
@@ -898,10 +901,10 @@ function buildTargetRisk(text, target, risk, metricLabel, fallback) {
   const impact = extractRiskField(section, '影响范围');
 
   let desc = fallback.desc;
-  if (target === '工程技术部' && impact) {
-    desc = `所有指向工程技术部的A1在目标侧无对应流程，跨部门交互链在此节点断裂。${impact}`;
-  } else if (riskDesc) {
+  if (riskDesc) {
     desc = riskDesc;
+  } else if (target === '工程技术部' && impact) {
+    desc = `所有指向工程技术部的A1在目标侧无对应流程，跨部门交互链在此节点断裂。${impact}`;
   }
 
   return {
@@ -951,12 +954,12 @@ function parseInteractionChains(text) {
   const candidates = [
     {
       name: '客户订单→交付链',
-      breaks: ['工程技术部: BOM/工艺节点断裂,无映射文档'],
+      breaks: ['工程技术部: BOM/工艺节点已完成目标侧建模,待跨部门受控传递证据复核'],
       status: 'partial',
     },
     {
       name: '成本管控链',
-      breaks: ['工程技术部: BOM/技术方案输入缺失,财务部无法完整核算'],
+      breaks: ['工程技术部: BOM/技术方案输入已有目标侧流程骨架,待成本核算输入传递证据复核'],
       status: 'partial',
     },
     {
@@ -972,10 +975,10 @@ function parseInteractionChains(text) {
 
 function parseCrossDeptReport(text, chainText = '') {
   const risks = [
-    buildTargetRisk(text, '工程技术部', 'high', '指向未映射部门（工程技术部）', {
+    buildTargetRisk(text, '工程技术部', 'medium', '指向已映射待复核部门（工程技术部）', {
       source: '全部已映射部门',
-      status: '未映射-无文档',
-      desc: '所有指向工程技术部的A1在目标侧无对应流程，跨部门交互链在此断裂。',
+      status: '已完成首轮 DCM/BBM 建模-待跨部门传递复核',
+      desc: '工程技术部已完成首轮 DCM/BBM 建模，历史跨部门引用仍需逐条核验受控输出物传递证据。',
     }),
     buildTargetRisk(text, '复材车间', 'low', '指向已映射待复核部门（复材车间）', {
       status: '已映射-待复核',

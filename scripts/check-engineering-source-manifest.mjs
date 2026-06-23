@@ -149,10 +149,18 @@ for (const row of canonicalRows) {
     assert.match(html, /仅展示已沉淀的 DCM 主映射/, `${row.path} must explain formal DCM display scope`);
     continue;
   }
+  if (row.path === 'docs/norms/工程技术部能力层与MDM建设要求.md') {
+    assert.equal(row.cells[1], '已建立', `${row.path} must be documented as 已建立`);
+    assert.ok(existsSync(fullPath), `${row.path} must exist after engineering MDM requirements are created`);
+    const mdmRequirements = readText(fullPath);
+    assert.match(mdmRequirements, /MDM .*不作为应用系统（S1）节点/, `${row.path} must keep MDM outside application system S1`);
+    assert.match(mdmRequirements, /能力层建设口径/, `${row.path} must explain capability-layer scope`);
+    continue;
+  }
   assert.equal(row.cells[1], '缺失', `${row.path} must be documented as 缺失`);
   assert.ok(!existsSync(fullPath), `${row.path} should still be absent until engineering MDM requirements are created`);
 }
-assert.equal(canonicalRows.length, 4, 'engineering source status table should list source directory, conservative DCM, missing MDM item, and formal Sankey page');
+assert.equal(canonicalRows.length, 4, 'engineering source status table should list source directory, conservative DCM, MDM requirements, and formal Sankey page');
 
 const groupSection = extractSection(manifestText, '候选资料分组');
 const groupRows = parseBacktickedPathRows(groupSection);
@@ -182,4 +190,4 @@ for (const section of indexedSections) {
   }
 }
 
-console.log('Engineering source manifest check passed: source directory, conservative DCM, formal Sankey page, 1 canonical gap, and 47 candidate files');
+console.log('Engineering source manifest check passed: source directory, conservative DCM, MDM requirements, formal Sankey page, and 47 candidate files');
