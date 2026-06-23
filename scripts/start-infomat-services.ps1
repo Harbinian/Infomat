@@ -71,16 +71,33 @@ function Stop-Listener {
 
 function Test-Tcp {
   param([string]$HostName, [int]$Port)
+  $addresses = @()
+  try {
+    $addresses = [System.Net.Dns]::GetHostAddresses($HostName)
+  } catch {
+    $addresses = @()
+  }
+
+  foreach ($address in $addresses) {
+    $client = New-Object System.Net.Sockets.TcpClient($address.AddressFamily)
+    try {
+      $task = $client.ConnectAsync($address, $Port)
+      if ($task.Wait(2000) -and $client.Connected) { return $true }
+    } catch {
+    } finally {
+      $client.Dispose()
+    }
+  }
+
   $client = New-Object System.Net.Sockets.TcpClient
   try {
     $task = $client.ConnectAsync($HostName, $Port)
-    if (-not $task.Wait(2000)) { return $false }
-    return $client.Connected
+    if ($task.Wait(2000) -and $client.Connected) { return $true }
   } catch {
-    return $false
   } finally {
     $client.Dispose()
   }
+  return $false
 }
 
 function Wait-Tcp {

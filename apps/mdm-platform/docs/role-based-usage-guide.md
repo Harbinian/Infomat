@@ -29,7 +29,7 @@ MDM 和 PMO 使用仓库根目录的固定启动方式。固定启动脚本会�
 |---|---|
 | MDM | `http://127.0.0.1:3000` |
 | PMO | `http://127.0.0.1:5173` |
-| MySQL | `127.0.0.1:3307` |
+| MySQL | `localhost:3307` |
 | MySQL 用户 / 库 | `mdm_user` / `infomat_mdm` |
 | 读模型 | 身份/RBAC 和流程治理均走 MySQL |
 | 管理员工号 | `ADMIN001` |
