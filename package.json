@@ -17,7 +17,8 @@
     "test:pmo-task-data": "node scripts/check-pmo-task-data.mjs",
     "test:pmo-wbs-semantic-depth": "node scripts/check-pmo-wbs-semantic-depth.mjs",
     "test:source-manifest-hashes": "node scripts/check-source-manifest-hashes.mjs",
-    "start:infomat-services": "node scripts/smoke-infomat-services.mjs --start",
+    "test:infomat-services-config": "node scripts/test-infomat-services-config.mjs",
+    "start:infomat-services": "cmd /c start-infomat-services.cmd",
     "smoke:infomat-services": "node scripts/smoke-infomat-services.mjs",
     "test:ocr-source": "node scripts/test-ocr-source.mjs",
     "review:mysql:init": "node scripts/init-candidate-review-mysql.mjs",
@@ -28,7 +29,11 @@
     "test:sankey-preview-status": "node scripts/test-sankey-preview-status.mjs",
     "test:process-evidence-evolution": "node .agents/skills/process-evidence-mapping/scripts/test-evolution-workflow.mjs",
     "test:process-evidence-skill": "node scripts/test-process-evidence-skill.mjs",
-    "test:process-governance-mainline": "node scripts/test-process-governance-mainline.mjs"
+    "test:process-governance-mainline": "node scripts/test-process-governance-mainline.mjs",
+    "test:customer-file-boundary": "node scripts/test-customer-file-boundary.mjs",
+    "audit:customer-file-acceptance": "node scripts/audit-customer-file-acceptance.mjs",
+    "test:customer-file-acceptance-audit": "node scripts/test-customer-file-acceptance-audit.mjs",
+    "test:customer-file-sankey-labels": "node scripts/test-customer-file-sankey-labels.mjs"
   },
   "repository": {
     "type": "git",

@@ -7,6 +7,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { classifySourceBoundary } from '../../../../scripts/source-boundary-rules.mjs';
 
 const SCRIPT_DIR = path.dirname(new URL(import.meta.url).pathname).replace(/^\/([A-Za-z]:)/, '$1');
 const PY_HELPER = path.join(SCRIPT_DIR, 'evidence_extractor.py');
@@ -59,6 +60,44 @@ Use --defer-reason to record why deferred files are not extracted in this run.
 Outputs are candidate retrieval artifacts only; raw_text is never corrected.`);
 }
 
+function readJsonl(filePath) {
+  if (!fs.existsSync(filePath)) return [];
+  return fs.readFileSync(filePath, 'utf8')
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .map((line) => JSON.parse(line));
+}
+
+function writeJsonl(filePath, records) {
+  const body = records.map((record) => JSON.stringify(record)).join('\n');
+  fs.writeFileSync(filePath, body ? `${body}\n` : '', 'utf8');
+}
+
+function sourceBoundaryFields(record) {
+  const boundary = classifySourceBoundary({
+    path: record.source_file || '',
+    fileName: record.source_file_name || '',
+    fileNo: record.doc_no || '',
+    citation: record.source_anchor || record.clause || '',
+  });
+  return {
+    source_boundary_flag: boundary.source_boundary_flag,
+    source_boundary_label: boundary.source_boundary_label,
+    source_acceptance_status: boundary.acceptance_status,
+    source_boundary_allowed_downstream_use: boundary.allowed_downstream_use,
+    customer_acceptance_required: boundary.customer_acceptance_required,
+  };
+}
+
+function annotateJsonl(filePath) {
+  const records = readJsonl(filePath);
+  if (records.length === 0) return;
+  writeJsonl(filePath, records.map((record) => ({
+    ...record,
+    ...sourceBoundaryFields(record),
+  })));
+}
+
 function main() {
   const args = parseArgs(process.argv);
   if (!fs.existsSync(args.input)) throw new Error(`Input does not exist: ${args.input}`);
@@ -84,6 +123,9 @@ function main() {
   });
   if (result.error) throw result.error;
   if (result.status !== 0) throw new Error(`extractor failed with exit code ${result.status}`);
+
+  annotateJsonl(args.sourceIndex);
+  annotateJsonl(args.out);
 }
 
 try {

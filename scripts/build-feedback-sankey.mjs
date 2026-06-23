@@ -131,6 +131,9 @@ function FEEDBACK_HTML(dept, total) {
 
 <div class="export-bar">
   <button class="export-btn" id="exportJsonBtn">导出反馈 JSON</button>
+  <button class="export-btn" id="importJsonBtn">导入反馈 JSON</button>
+  <button class="export-btn" id="clearFeedbackBtn">清空本地反馈</button>
+  <input type="file" id="importFileInput" accept=".json" style="display:none">
   <span class="node-legend">
     <span><span class="dot done"></span>准确</span>
     <span><span class="dot issue"></span>有小问题</span>
@@ -232,6 +235,25 @@ var currentA1Id = null;
 var CURRENT_DOMAIN = null;
 var TOTAL = ${total};
 
+function feedbackStorageKey() {
+  return 'sankeyFeedback:' + '${dept}';
+}
+
+function loadFeedbackState() {
+  try {
+    var raw = localStorage.getItem(feedbackStorageKey());
+    if (raw) feedbackState = JSON.parse(raw) || {};
+  } catch (e) {
+    feedbackState = {};
+  }
+}
+
+function saveFeedbackState() {
+  try {
+    localStorage.setItem(feedbackStorageKey(), JSON.stringify(feedbackState));
+  } catch (e) {}
+}
+
 // ===== 构建 A1 索引（快速查找） =====
 var a1Index = {};
 a1Rows.forEach(function(r) {
@@ -244,6 +266,7 @@ a1Rows.forEach(function(r) {
 var feedbackNodeColors = {};
 
 function syncNodeColors() {
+  feedbackNodeColors = {};
   Object.keys(feedbackState).forEach(function(a1Id) {
     var fb = feedbackState[a1Id];
     var nodeName = ${nodeKey};
@@ -364,6 +387,7 @@ function closeFeedbackCard() {
 document.getElementById('feedbackSubmit').addEventListener('click', function() {
   if (!currentA1Id) return;
   feedbackState[currentA1Id] = collectFeedback();
+  saveFeedbackState();
   syncNodeColors();
   updateProgress();
   closeFeedbackCard();
@@ -416,8 +440,58 @@ document.getElementById('exportJsonBtn').addEventListener('click', function() {
   URL.revokeObjectURL(url);
 });
 
+document.getElementById('importJsonBtn').addEventListener('click', function() {
+  document.getElementById('importFileInput').click();
+});
+
+document.getElementById('importFileInput').addEventListener('change', function(evt) {
+  var file = evt.target.files && evt.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function() {
+    try {
+      var data = JSON.parse(String(reader.result || '{}'));
+      var items = Array.isArray(data.feedback) ? data.feedback : [];
+      items.forEach(function(item) {
+        var id = item.a1_id;
+        if (!id || !a1Index[id]) return;
+        feedbackState[id] = {
+          row_confirmed: item.row_confirmed || '',
+          role_confirmed: item.role_confirmed || '',
+          approval_confirmed: item.approval_confirmed || '',
+          io_dept_confirmed: item.io_dept_confirmed || '',
+          verification_response: item.verification_response || '',
+          notes: item.notes || ''
+        };
+      });
+      saveFeedbackState();
+      syncNodeColors();
+      updateProgress();
+      ${renderCall};
+      alert('已导入 ' + items.length + ' 条反馈记录。');
+    } catch (e) {
+      alert('导入失败，请确认文件是反馈 JSON。');
+    }
+    evt.target.value = '';
+  };
+  reader.readAsText(file, 'utf-8');
+});
+
+document.getElementById('clearFeedbackBtn').addEventListener('click', function() {
+  if (!confirm('确定要清空本地反馈吗？此操作不可恢复。建议先导出备份。')) return;
+  if (!confirm('再次确认：清空所有已填写的反馈数据？')) return;
+  feedbackState = {};
+  try { localStorage.removeItem(feedbackStorageKey()); } catch (e) {}
+  syncNodeColors();
+  updateProgress();
+  ${renderCall};
+});
+
 // ===== ECharts 补丁（按代码结构自动适配） =====
 ${monkeyPatches}
+loadFeedbackState();
+syncNodeColors();
+updateProgress();
 `;
 }
 

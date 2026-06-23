@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="echarts.min.js"></script>
+  <link rel="icon" href="/logo.png">
   <title>MDM 平台</title>
   <style>
     :root {
@@ -524,10 +525,50 @@
     }
     .pg-subtab:hover { border-color: var(--border); color: var(--text-main); background: #fffaf0; }
     .pg-subtab.on {
-      border-color: var(--sienna); color: #fff; background: var(--sienna);
-      box-shadow: 0 6px 16px rgba(181, 90, 56, 0.18);
+      border-color: rgba(178, 86, 56, 0.48); color: var(--accent-hover); background: #fff3e8;
+      box-shadow: 0 6px 16px rgba(178, 86, 56, 0.14);
     }
-    .pg-subtab:focus-visible { outline: 2px solid var(--sienna); outline-offset: 2px; }
+    .pg-subtab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .pg-workspace-choices {
+      display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;
+      margin: 14px 0 16px;
+    }
+    .pg-workspace-choice {
+      text-align: left; border: 1px solid #e3d5c5; background: #fffaf5; color: var(--text-main);
+      border-radius: 8px; padding: 14px 16px; cursor: pointer; min-height: 88px;
+      display: flex; flex-direction: column; justify-content: center; gap: 6px;
+      box-shadow: 0 8px 20px rgba(117, 78, 42, 0.05);
+    }
+    .pg-workspace-choice strong { font-size: 15px; }
+    .pg-workspace-choice span { color: var(--text-muted); font-size: 12px; line-height: 1.45; }
+    .pg-workspace-choice.on { border-color: var(--sienna); background: #fff3e8; box-shadow: 0 10px 24px rgba(181, 90, 56, 0.12); }
+    .pg-workspace-region.pg-hidden { display: none; }
+    .pg-wizard {
+      margin: 12px 0 16px; padding: 14px; border: 1px solid #eadfd4; border-radius: 8px;
+      background: rgba(255, 255, 255, 0.62);
+    }
+    .pg-wizard-steps { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+    .pg-wizard-step {
+      min-height: 48px; display: flex; align-items: center; justify-content: center; text-align: center;
+      padding: 6px 8px; border: 1px solid #e1d5c8; border-radius: 6px; background: #fff; color: var(--text-main);
+      font-size: 12px; font-weight: 700; line-height: 1.3;
+    }
+    .outcome-card {
+      display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px;
+      margin-top: 12px;
+    }
+    .outcome-cell {
+      min-height: 78px; padding: 10px 12px; border: 1px solid #eadfd4; border-radius: 8px; background: #fffaf5;
+    }
+    .outcome-cell b { display: block; margin-bottom: 6px; color: var(--sienna); font-size: 12px; }
+    .outcome-cell span { color: var(--text-main); font-size: 12px; line-height: 1.45; overflow-wrap: anywhere; }
+    .process-design-form {
+      display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 12px;
+    }
+    .process-design-form label { display: grid; gap: 5px; font-size: 12px; color: var(--text-muted); }
+    .process-design-form .wide { grid-column: 1 / -1; }
+    .process-design-form input, .process-design-form textarea, .process-design-form select { min-width: 0; }
+    .process-design-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
     .pg-section { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--border); }
     .pg-section.pg-overview-section { margin-top: 0; padding-top: 0; border-top: 0; }
     .pg-hidden { display: none !important; }
@@ -577,6 +618,14 @@
     .pg-dept-tag.on .pg-dot { background: #fff; }
     .pg-dept-tag .pg-count { color: var(--text-muted); font-size: 11px; }
     .pg-dept-tag.on .pg-count { color: rgba(255,255,255,0.78); }
+    .pg-current-scope {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+      margin: 12px 0 0; padding: 10px 12px;
+      border: 1px solid #eadfd4; border-left: 4px solid var(--accent);
+      border-radius: 8px; background: #fffaf5; color: var(--text-main); font-size: 12px;
+    }
+    .pg-current-scope[hidden] { display: none !important; }
+    .pg-current-scope .btn { min-height: 28px; padding: 0 10px; }
     .pg-work-help {
       margin: 0 0 12px; padding: 10px 12px;
       border: 1px solid #eadfd4; border-left: 4px solid var(--sage);
@@ -760,6 +809,8 @@
       .role-workbench-top, .role-workbench-left, .role-workbench-main, .role-workbench-right { display: block; border: 0; }
       .role-workbench-top { padding: 14px 16px; }
       #roleWorkbenchSankey { height: 360px; }
+      .pg-workspace-choices, .pg-wizard-steps, .outcome-card, .process-design-form { grid-template-columns: 1fr; }
+      .process-design-form .wide { grid-column: auto; }
       .activity-summary-grid { grid-template-columns: 1fr; }
       .activity-grid { grid-template-columns: repeat(13, 11px); grid-auto-rows: 11px; gap: 3px; }
       .activity-day { width: 11px; height: 11px; }
@@ -841,11 +892,13 @@
 
   <div class="page-container">
     <section class="login" id="loginBox">
-      <h2>登录系统</h2>
-      <div class="form-group"><label>工号<input id="employeeNo" autocomplete="username"></label></div>
-      <div class="form-group"><label>密码<input id="password" type="password" autocomplete="current-password"></label></div>
-      <button class="btn primary" id="loginBtn" style="width: 100%; height: 36px; margin-top: 8px;">登录</button>
-      <div class="notice" id="loginMsg" style="text-align: center; margin-top: 16px; background: transparent; border: none;"></div>
+      <form id="loginForm">
+        <h2>登录系统</h2>
+        <div class="form-group"><label>工号<input id="employeeNo" autocomplete="username"></label></div>
+        <div class="form-group"><label>密码<input id="password" type="password" autocomplete="current-password"></label></div>
+        <button class="btn primary" id="loginBtn" type="submit" style="width: 100%; height: 36px; margin-top: 8px;">登录</button>
+        <div class="notice" id="loginMsg" style="text-align: center; margin-top: 16px; background: transparent; border: none;"></div>
+      </form>
     </section>
 
     <div id="appContent" style="display: none;">
@@ -1253,7 +1306,62 @@
             <button class="btn secondary" id="refreshProcessGovernanceBtn">刷新</button>
           </div>
         </div>
-        <div class="pg-subtabs" id="pgSubtabs" aria-label="流程治理子标签"></div>
+        <div class="pg-workspace-choices" id="pgWorkspaceChoices" aria-label="流程治理工作区">
+          <button type="button" class="pg-workspace-choice on" data-pg-workspace="existing">
+            <strong>治理已有流程</strong>
+            <span>处理已导入快照中的问题、证据、待办和关闭确认。</span>
+          </button>
+          <button type="button" class="pg-workspace-choice" data-pg-workspace="new">
+            <strong>创建新流程</strong>
+            <span>为当前快照没有覆盖的流程补说明、步骤、表单、字段和证据。</span>
+          </button>
+        </div>
+        <div class="pg-workspace-region" id="pgExistingWorkspace" data-pg-workspace-region="existing">
+          <div class="pg-wizard" id="pgExistingWizard">
+            <div class="pg-section-hd"><h2>治理已有流程</h2><span class="pg-status">待办优先</span></div>
+            <div class="pg-wizard-steps">
+              <div class="pg-wizard-step">看本部门有哪些问题</div>
+              <div class="pg-wizard-step">找到问题来自哪里</div>
+              <div class="pg-wizard-step">修改或补充说明</div>
+              <div class="pg-wizard-step">提交处理结果</div>
+              <div class="pg-wizard-step">等待重新验证</div>
+              <div class="pg-wizard-step">确认关闭</div>
+            </div>
+            <div id="pgExistingOutcome" class="outcome-card"></div>
+          </div>
+          <div class="pg-subtabs" id="pgSubtabs" aria-label="流程治理子标签"></div>
+          <div class="pg-current-scope" id="pgCurrentScope" hidden>
+            <span id="pgCurrentScopeText"></span>
+            <button type="button" class="btn secondary" id="pgClearDeptScopeBtn">查看全公司</button>
+          </div>
+        </div>
+        <div class="pg-workspace-region pg-hidden" id="pgNewProcessWorkspace" data-pg-workspace-region="new">
+          <div class="pg-wizard" id="pgDesignWizard">
+            <div class="pg-section-hd"><h2>创建新流程</h2><span class="pg-status" id="pgDesignSummaryMeta"></span></div>
+            <div class="pg-wizard-steps">
+              <div class="pg-wizard-step">流程说明</div>
+              <div class="pg-wizard-step">实际步骤</div>
+              <div class="pg-wizard-step">在线表单</div>
+              <div class="pg-wizard-step">字段与证据</div>
+              <div class="pg-wizard-step">提交审核</div>
+              <div class="pg-wizard-step">成果预览</div>
+            </div>
+            <div id="pgDesignOutcome" class="outcome-card"></div>
+            <div class="process-design-form" id="pgDesignDraftForm">
+              <label>流程名称<input id="pgDesignProcessName" placeholder="例如：客户资料变更确认流程"></label>
+              <label>依据类型<select id="pgDesignBasisType"><option value="现场实际">现场实际</option><option value="制度 / 规程">制度 / 规程</option><option value="表单 / 台账">表单 / 台账</option><option value="会议 / 访谈">会议 / 访谈</option><option value="暂无证据">暂无证据</option></select></label>
+              <label class="wide">为什么新增<textarea id="pgDesignReason" rows="2" placeholder="说明当前快照为什么没有覆盖，以及业务为什么需要沉淀"></textarea></label>
+              <label class="wide">依据说明<textarea id="pgDesignBasisDescription" rows="2" placeholder="说明来源、现场动作、访谈结论或暂缺原因"></textarea></label>
+              <label>是否涉及其他部门<select id="pgDesignInvolvesOtherDepartments"><option value="false">否</option><option value="true">是</option></select></label>
+              <label>涉及其他部门<input id="pgDesignRelatedDepartments" placeholder="多个部门用顿号或逗号分隔"></label>
+            </div>
+            <div class="process-design-actions">
+              <button type="button" class="btn primary" id="saveProcessDesignDraftBtn">保存草稿</button>
+              <span class="pg-status" id="pgDesignSaveStatus"></span>
+            </div>
+            <div class="notice" id="pgDesignDraftList" style="margin-top:12px">正在读取新增流程草稿...</div>
+          </div>
+        </div>
         <div class="pg-section pg-overview-section" data-pg-view="overview">
         <div class="grid g4">
           <div class="metric"><div class="num" id="pgMetricL3">0</div><div class="lbl">流程数</div></div>
@@ -1661,8 +1769,9 @@
 
   <script>
     // ===== State & Utilities =====
-    const state = { user:null, departments:[], capabilities:[], processes:[], termProcesses:[], termTypes:[], mappings:[], dataMapContexts:[], dataMapFields:[], todos:[], conflicts:[], terms:[], currentRoute:null, currentView:'roleWorkbench', activeMapping:null, activeConflict:null, pollTimer:null, isEditing:false, activeReview:null, activeCapReview:null, activeProcReview:null, pgSelectedDept:'', pgEvidenceFocus:null, pgSourceCoverageData:null, pgViewCache:{}, pgViewRequests:{}, processGovernanceRenderRequestId:0, pageWorkflow:null, pageWorkflowRequestId:0, roleWorkbench:{ mode:'todo', data:null, selectedNode:null }, activity:{ roleWorkbench:null, dashboard:null, dashboardUsers:[] } };
+    const state = { user:null, departments:[], capabilities:[], processes:[], termProcesses:[], termTypes:[], mappings:[], dataMapContexts:[], dataMapFields:[], todos:[], conflicts:[], terms:[], currentRoute:null, currentView:'roleWorkbench', activeMapping:null, activeConflict:null, pollTimer:null, isEditing:false, activeReview:null, activeCapReview:null, activeProcReview:null, pgSelectedDept:'', pgEvidenceFocus:null, pgSourceCoverageData:null, pgViewCache:{}, pgViewRequests:{}, pgWorkspace:'existing', processDesign:{ summary:null, draft:null, activeStep:'intro' }, processGovernanceRenderRequestId:0, pageWorkflow:null, pageWorkflowRequestId:0, roleWorkbench:{ mode:'todo', data:null, selectedNode:null }, activity:{ roleWorkbench:null, dashboard:null, dashboardUsers:[] } };
     const SOURCE_COVERAGE_VISIBLE_LIMIT = 20;
+    const PROCESS_GOVERNANCE_QUALITY_VISIBLE_LIMIT = 80;
     const PROCESS_GOVERNANCE_SUBTABS = [
       { key: 'overview', label: '总览' },
       { key: 'candidateReview', label: '待确认问题' },
@@ -1726,6 +1835,114 @@
       if (activeView === 'map' && pgSankeyResizeHandler) {
         setTimeout(pgSankeyResizeHandler, 0);
       }
+    }
+
+    function renderProcessGovernanceScopeNotice(activeView) {
+      var container = document.getElementById('pgCurrentScope');
+      var textEl = document.getElementById('pgCurrentScopeText');
+      if (!container || !textEl) return;
+      if (!state.pgSelectedDept || state.pgWorkspace !== 'existing') {
+        container.hidden = true;
+        textEl.textContent = '';
+        return;
+      }
+      container.hidden = false;
+      var suffix = activeView === 'map'
+        ? '图谱、A1 明细和跨部门风险已按该部门过滤。'
+        : '当前页继承了这个部门范围，切回全公司后可查看全部数据。';
+      textEl.textContent = '当前范围：' + state.pgSelectedDept + '。' + suffix;
+    }
+
+    function processGovernanceWorkspaceFromRoute(route) {
+      return route && route.pgWorkspace === 'new' ? 'new' : 'existing';
+    }
+
+    function renderProcessGovernanceWorkspaceChoices(activeWorkspace) {
+      document.querySelectorAll('#pgWorkspaceChoices [data-pg-workspace]').forEach(function(button) {
+        var isActive = button.dataset.pgWorkspace === activeWorkspace;
+        button.classList.toggle('on', isActive);
+        button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      });
+      document.querySelectorAll('[data-pg-workspace-region]').forEach(function(region) {
+        region.classList.toggle('pg-hidden', region.dataset.pgWorkspaceRegion !== activeWorkspace);
+      });
+    }
+
+    function renderProcessDesignOutcomeCard(outcome) {
+      outcome = outcome || {};
+      var missing = Array.isArray(outcome.missing) && outcome.missing.length ? outcome.missing.join('；') : '暂无阻断缺项';
+      return '<div class="outcome-cell"><b>已形成</b><span>' + safeText(outcome.formed || '已形成 0 条治理资产') + '</span></div>' +
+        '<div class="outcome-cell"><b>当前能做</b><span>' + safeText(outcome.current || '当前可以保存草稿') + '</span></div>' +
+        '<div class="outcome-cell"><b>还差什么</b><span>' + safeText(missing) + '</span></div>' +
+        '<div class="outcome-cell"><b>下一步</b><span>' + safeText(outcome.next || '继续补材料') + '</span></div>';
+    }
+
+    function renderProcessExistingWizard() {
+      var outcome = {
+        formed: '已形成处理记录、备注和问题状态',
+        current: '当前可以标记处理中、提交整改、等待验证或确认关闭',
+        missing: ['来源未补、重新验证未通过或状态未到 source_resolved 时不能关闭'],
+        next: '继续处理、查看证据、提交处理或确认关闭'
+      };
+      if ($('pgExistingOutcome')) $('pgExistingOutcome').innerHTML = renderProcessDesignOutcomeCard(outcome);
+    }
+
+    async function renderProcessDesignWorkspace(options) {
+      options = options || {};
+      try {
+        var data = await api('/api/process-design/summary');
+        state.processDesign.summary = data;
+        var summary = data.summary || {};
+        if ($('pgDesignSummaryMeta')) {
+          $('pgDesignSummaryMeta').textContent = '草稿 ' + (summary.totalDrafts || 0) + ' 条，发布版本 ' + (summary.publishedVersions || 0) + ' 个';
+        }
+        var outcome = state.processDesign.draft && state.processDesign.draft.outcome || {
+          formed: '已形成 ' + (summary.totalDrafts || 0) + ' 条流程草稿、' + (summary.publishedVersions || 0) + ' 个发布版本',
+          current: '当前可以保存草稿或继续补步骤、表单、字段和证据',
+          missing: summary.totalDrafts ? [] : ['先保存 1 条流程草稿'],
+          next: summary.totalDrafts ? '打开草稿继续补材料' : '保存草稿'
+        };
+        if ($('pgDesignOutcome')) $('pgDesignOutcome').innerHTML = renderProcessDesignOutcomeCard(outcome);
+        if ($('pgDesignDraftList')) {
+          var drafts = data.drafts || [];
+          $('pgDesignDraftList').innerHTML = drafts.length
+            ? drafts.slice(0, 5).map(function(draft) {
+                return '<div><strong>' + safeText(draft.process_name) + '</strong> <span class="pg-status">' + safeText(draft.status) + ' · ' + safeText(draft.department_name || '') + '</span></div>';
+              }).join('')
+            : '暂无新增流程草稿';
+        }
+      } catch (error) {
+        if ($('pgDesignSummaryMeta')) $('pgDesignSummaryMeta').textContent = '新增流程线暂不可用';
+        if ($('pgDesignOutcome')) $('pgDesignOutcome').innerHTML = renderProcessDesignOutcomeCard({
+          formed: '已形成 0 条治理资产',
+          current: '当前不能读取新增流程线',
+          missing: [error.message || '接口暂不可用'],
+          next: '刷新后重试'
+        });
+      }
+    }
+
+    function processDesignRelatedDepartmentsInput() {
+      var raw = $('pgDesignRelatedDepartments') ? $('pgDesignRelatedDepartments').value : '';
+      return raw.split(/[、,，;；]/).map(function(item) { return item.trim(); }).filter(Boolean);
+    }
+
+    async function saveProcessDesignDraftFromWizard() {
+      var payload = {
+        process_name: $('pgDesignProcessName') ? $('pgDesignProcessName').value : '',
+        reason: $('pgDesignReason') ? $('pgDesignReason').value : '',
+        basis_type: $('pgDesignBasisType') ? $('pgDesignBasisType').value : '现场实际',
+        basis_description: $('pgDesignBasisDescription') ? $('pgDesignBasisDescription').value : '',
+        involves_other_departments: $('pgDesignInvolvesOtherDepartments') ? $('pgDesignInvolvesOtherDepartments').value === 'true' : false,
+        related_departments: processDesignRelatedDepartmentsInput()
+      };
+      if ($('pgDesignSaveStatus')) $('pgDesignSaveStatus').textContent = '正在保存...';
+      var result = await api('/api/process-design/drafts', { method: 'POST', body: JSON.stringify(payload) });
+      state.processDesign.draft = result;
+      if ($('pgDesignSaveStatus')) $('pgDesignSaveStatus').textContent = '草稿已保存';
+      if ($('pgDesignOutcome')) $('pgDesignOutcome').innerHTML = renderProcessDesignOutcomeCard(result.outcome);
+      await renderProcessDesignWorkspace({ force: true });
+      return result;
     }
 
     var DEFAULT_TERM_TYPES = [
@@ -2213,7 +2430,7 @@
       }
       if (!hash) return { view: 'list', tab: 'roleWorkbench' };
       var parts = hash.split('/');
-      if (parts.length === 1) return { view: 'list', tab: parts[0], query: query, pgView: query.view, qualityView: query.view, finding: query.finding, caseId: query.case, mappingTodoId: query.todo, candidateReviewKey: query.candidate };
+      if (parts.length === 1) return { view: 'list', tab: parts[0], query: query, pgView: query.view, qualityView: query.view, pgWorkspace: query.workspace, finding: query.finding, caseId: query.case, mappingTodoId: query.todo, candidateReviewKey: query.candidate };
       if (parts[0] === 'processes' && parts.length >= 3) {
         return { view: 'detail', tab: 'processes', type: 'process', id: parts[2] };
       }
@@ -3527,19 +3744,29 @@
       return String(row.source_dept || '').includes(deptName) || String(row.target_dept || '').includes(deptName);
     }
 
+    function processGovernanceVisibleRows(items, limit, highlightedId) {
+      var rows = (items || []).slice(0, limit);
+      if (highlightedId && !rows.some(function(row) { return String(row.id) === String(highlightedId); })) {
+        var highlighted = (items || []).find(function(row) { return String(row.id) === String(highlightedId); });
+        if (highlighted) rows.push(highlighted);
+      }
+      return rows;
+    }
+
     function renderProcessGovernanceQuality(quality, selectedDept, highlightedFindingId) {
       var rowsEl = document.getElementById('pgQualityRows');
       if (!rowsEl) return;
       var items = quality.items || [];
+      var visibleItems = processGovernanceVisibleRows(items, PROCESS_GOVERNANCE_QUALITY_VISIBLE_LIMIT, highlightedFindingId);
       var summary = quality.summary || {};
       document.getElementById('pgMetricQualityBlock').textContent = summary.BLOCK || 0;
       document.getElementById('pgMetricQualityWarn').textContent = summary.WARN || 0;
       document.getElementById('pgMetricQualityInfo').textContent = summary.INFO || 0;
       document.getElementById('pgMetricQualityShown').textContent = items.length;
-      document.getElementById('pgQualityMeta').textContent = (selectedDept ? selectedDept + ' · ' : '') + '显示 ' + items.length + ' 条';
+      document.getElementById('pgQualityMeta').textContent = (selectedDept ? selectedDept + ' · ' : '') + '显示前 ' + visibleItems.length + ' 条 / 共 ' + items.length + ' 条';
 
       rowsEl.innerHTML = items.length
-        ? items.map(function(row) {
+        ? visibleItems.map(function(row) {
             var isHighlighted = highlightedFindingId && String(row.id) === String(highlightedFindingId);
             var location = row.source_file || '';
             return '<tr' + (isHighlighted ? ' style="background:#fff7ed"' : '') + ' data-quality-finding="' + safeText(row.id) + '">' +
@@ -3573,16 +3800,17 @@
       var rowsEl = document.getElementById('pgQualityCaseRows');
       if (!rowsEl) return;
       var items = cases.items || [];
+      var visibleItems = processGovernanceVisibleRows(items, PROCESS_GOVERNANCE_QUALITY_VISIBLE_LIMIT, highlightedCaseId);
       var summary = cases.summary || {};
       var byStatus = summary.byStatus || {};
       document.getElementById('pgMetricQualityCaseOpen').textContent = (byStatus.open || 0) + (byStatus.assigned || 0) + (byStatus.rectifying || 0) + (byStatus.reopened || 0);
       document.getElementById('pgMetricQualityCaseSubmitted').textContent = byStatus.submitted || 0;
       document.getElementById('pgMetricQualityCaseResolved').textContent = byStatus.source_resolved || 0;
       document.getElementById('pgMetricQualityCaseClosed').textContent = byStatus.closed || 0;
-      document.getElementById('pgQualityCaseMeta').textContent = (selectedDept ? selectedDept + ' · ' : '') + '显示 ' + items.length + ' 单';
+      document.getElementById('pgQualityCaseMeta').textContent = (selectedDept ? selectedDept + ' · ' : '') + '显示前 ' + visibleItems.length + ' 单 / 共 ' + items.length + ' 单';
 
       rowsEl.innerHTML = items.length
-        ? items.map(function(row) {
+        ? visibleItems.map(function(row) {
             var isHighlighted = highlightedCaseId && String(row.id) === String(highlightedCaseId);
             var owner = row.owner_user_name || row.owner_dept_name || '未分派';
             var source = row.source_file + (row.source_line ? ':' + row.source_line : '');
@@ -4194,7 +4422,7 @@
     }
 
     function candidateReviewListHash() {
-      return '#/processGovernance';
+      return '#/processGovernance?view=candidateReview';
     }
 
     function renderCandidateReviewCard(row, index) {
@@ -4286,7 +4514,7 @@
       document.getElementById('pgCandidateReviewMeta').textContent = run
         ? (selectedDept ? selectedDept + ' · ' : '') + '运行 ' + run.run_id + '，显示 ' + items.length + ' 条 / 共 ' + ((data.summary && data.summary.total) || items.length) + ' 条'
         : '暂无待确认的问题';
-      rowsEl.innerHTML = (route && route.qualityView === 'candidateReview' && route.candidateReviewKey)
+      rowsEl.innerHTML = (route && route.pgView === 'candidateReview' && route.candidateReviewKey)
         ? renderCandidateReviewDetailPage(data, run, route.candidateReviewKey)
         : renderCandidateReviewList(data);
       wireCandidateReviewNavigation(rowsEl);
@@ -4382,22 +4610,19 @@
       location.hash = '#/processGovernance?view=evidence';
     }
 
-    function renderProcessGovernanceSankey(data) {
-      var chartDom = document.getElementById('pgSankeyChart');
-      if (!chartDom) return;
-
-      if (!data.nodes || data.nodes.length === 0) {
-        chartDom.innerHTML = '<div class="empty">暂无流程治理快照</div>';
-        return;
-      }
-      if (!window.echarts) {
-        chartDom.innerHTML = '<div class="empty">ECharts 加载失败</div>';
-        return;
-      }
-
+    function safeDisposeProcessGovernanceSankeyChart(chartDom) {
+      if (!chartDom || !window.echarts) return;
       var existing = echarts.getInstanceByDom(chartDom);
-      if (existing) existing.dispose();
-      var chart = echarts.init(chartDom);
+      if (!existing) return;
+      try {
+        existing.dispose();
+      } catch (error) {
+        // ECharts can keep a stale instance after the container is replaced; clear the marker and rebuild below.
+      }
+      chartDom.removeAttribute('_echarts_instance_');
+    }
+
+    function processGovernanceSankeyOption(data) {
       var typeColors = {
         root: '#9f1239',
         domain: '#b45309',
@@ -4410,7 +4635,7 @@
       var nodeLabels = {};
       data.nodes.forEach(function(node) { nodeLabels[node.name] = node.label || node.name; });
 
-      chart.setOption({
+      return {
         tooltip: {
           trigger: 'item',
           triggerOn: 'mousemove',
@@ -4446,7 +4671,37 @@
           lineStyle: { color: 'gradient', opacity: 0.22, curveness: 0.48 },
           emphasis: { focus: 'adjacency', lineStyle: { opacity: 0.65 } }
         }]
-      });
+      };
+    }
+
+    function renderProcessGovernanceSankey(data) {
+      var chartDom = document.getElementById('pgSankeyChart');
+      if (!chartDom) return;
+
+      if (!data.nodes || data.nodes.length === 0) {
+        safeDisposeProcessGovernanceSankeyChart(chartDom);
+        chartDom.innerHTML = '<div class="empty">暂无流程治理快照</div>';
+        return;
+      }
+      if (!window.echarts) {
+        chartDom.innerHTML = '<div class="empty">ECharts 加载失败</div>';
+        return;
+      }
+
+      var chart = echarts.getInstanceByDom(chartDom);
+      if (!chart) {
+        chartDom.innerHTML = '';
+        chart = echarts.init(chartDom);
+      }
+
+      try {
+        chart.setOption(processGovernanceSankeyOption(data), true);
+      } catch (error) {
+        safeDisposeProcessGovernanceSankeyChart(chartDom);
+        chartDom.innerHTML = '';
+        chart = echarts.init(chartDom);
+        chart.setOption(processGovernanceSankeyOption(data), true);
+      }
 
       if (pgSankeyResizeHandler) window.removeEventListener('resize', pgSankeyResizeHandler);
       pgSankeyResizeHandler = function() { chart.resize(); };
@@ -4556,6 +4811,7 @@
       var stats = current.stats || {};
       var crossStats = stats.crossDept || {};
       var currentQualitySummary = current.qualitySummary || {};
+      var sourceFileStatus = stats.sourceFiles && stats.sourceFiles.byStatus || {};
       document.getElementById('pgMetricL3').textContent = stats.mappings || 0;
       document.getElementById('pgMetricA1').textContent = stats.a1 || stats.a1Imported || 0;
       document.getElementById('pgMetricCross').textContent = crossStats.totalChecked || crossStats.total || 0;
@@ -4572,10 +4828,10 @@
       document.getElementById('pgMetricMappingA1').textContent = '—';
       document.getElementById('pgMetricMappingTodos').textContent = '—';
       document.getElementById('pgMetricMappingTodoOpen').textContent = '—';
-      document.getElementById('pgMetricSourceIncluded').textContent = '—';
-      document.getElementById('pgMetricSourceReview').textContent = '—';
-      document.getElementById('pgMetricMdmRequirements').textContent = '—';
-      document.getElementById('pgMetricEvidenceRefs').textContent = '—';
+      document.getElementById('pgMetricSourceIncluded').textContent = sourceFileStatus['纳入'] || 0;
+      document.getElementById('pgMetricSourceReview').textContent = sourceFileStatus['待复核'] || 0;
+      document.getElementById('pgMetricMdmRequirements').textContent = stats.mdmRequirements && stats.mdmRequirements.total || 0;
+      document.getElementById('pgMetricEvidenceRefs').textContent = stats.evidenceRefs && stats.evidenceRefs.total || 0;
       var imported = stats.a1Imported || 0;
       document.getElementById('pgSnapshotMeta').textContent = current.id
         ? '当前快照 #' + current.id + '，图谱统计 A1 ' + (stats.a1 || 0) + ' 项，治理明细 ' + imported + ' 行' + (state.pgSelectedDept ? '，当前部门：' + state.pgSelectedDept : '')
@@ -4651,6 +4907,7 @@
 
     function renderProcessGovernanceView(view, payload, route) {
       var product = PROCESS_GOVERNANCE_VIEW_PRODUCTS[view] || PROCESS_GOVERNANCE_VIEW_PRODUCTS.overview;
+      renderProcessGovernanceScopeNotice(view);
       product.render(payload || {}, route || parseHash());
     }
 
@@ -4734,6 +4991,11 @@
       var requestId = ++state.processGovernanceRenderRequestId;
       var route = parseHash();
       var activePgView = processGovernanceViewFromRoute(route);
+      var activeWorkspace = processGovernanceWorkspaceFromRoute(route);
+      state.pgWorkspace = activeWorkspace;
+      renderProcessGovernanceWorkspaceChoices(activeWorkspace);
+      renderProcessExistingWizard();
+      renderProcessDesignWorkspace();
       renderProcessGovernanceSubtabs(activePgView);
       applyProcessGovernanceSubtab(activePgView);
       try {
@@ -5271,7 +5533,14 @@
       }
     });
 
-    $('loginBtn').onclick = login;
+    if ($('loginForm')) {
+      $('loginForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+        login();
+      });
+    } else if ($('loginBtn')) {
+      $('loginBtn').onclick = login;
+    }
     $('logoutBtn').onclick = async function() { await api('/api/org/logout', { method:'POST' }).catch(function() { return null; }); stopPolling(); location.reload(); };
     $('createCapBtn').onclick = createCapability;
     $('createProcBtn').onclick = createProcess;
@@ -5361,11 +5630,33 @@
         renderProcessGovernance();
       });
     }
+    if (document.getElementById('pgClearDeptScopeBtn')) {
+      document.getElementById('pgClearDeptScopeBtn').addEventListener('click', function(event) {
+        event.preventDefault();
+        state.pgSelectedDept = '';
+        state.pgEvidenceFocus = null;
+        clearProcessGovernanceViewCache('department-scope-clear');
+        renderProcessGovernance();
+      });
+    }
     if (document.getElementById('refreshProcessGovernanceBtn')) {
       document.getElementById('refreshProcessGovernanceBtn').onclick = function() {
         clearProcessGovernanceViewCache('manual-refresh');
         renderProcessGovernance();
       };
+    }
+    if (document.getElementById('pgWorkspaceChoices')) {
+      document.getElementById('pgWorkspaceChoices').addEventListener('click', function(event) {
+        var button = event.target.closest('[data-pg-workspace]');
+        if (!button) return;
+        var workspace = button.dataset.pgWorkspace || 'existing';
+        location.hash = workspace === 'new' ? '#/processGovernance?workspace=new' : '#/processGovernance';
+      });
+    }
+    if (document.getElementById('saveProcessDesignDraftBtn')) {
+      document.getElementById('saveProcessDesignDraftBtn').addEventListener('click', function() {
+        runPageTask(function() { return saveProcessDesignDraftFromWizard(); }, '新增流程草稿保存失败');
+      });
     }
 
     // ===== Process Detail Page =====
