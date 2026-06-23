@@ -20,8 +20,8 @@ function writeCandidateFixture() {
       id: 'CAND-MDM-001',
       stable_key: 'candidate-mdm-001',
       department: '工程技术部',
-      document_name: '产品设计需求定义管理程序.docx.md.md',
-      source_file: 'docs/norms/工程技术部业务资料/产品设计需求定义管理程序.docx.md.md',
+      document_name: '产品设计需求定义管理程序.docx.md',
+      source_file: 'docs/norms/工程技术部业务资料/产品设计需求定义管理程序.docx.md',
       source_anchor: 'DOPB135365 §5.2 P71',
       candidate_type: '角色待确认',
       content: '审核人审核产品设计需求文件',
@@ -49,7 +49,7 @@ function writeCandidateFixture() {
   ], null, 2), 'utf8');
   fs.writeFileSync(path.join(candidateRunDir, 'chunks.jsonl'), `${JSON.stringify({
     chunk_id: 'eng-P0071',
-    source_file: 'docs/norms/工程技术部业务资料/产品设计需求定义管理程序.docx.md.md',
+    source_file: 'docs/norms/工程技术部业务资料/产品设计需求定义管理程序.docx.md',
     doc_no: 'DOPB135365',
     clause: '5.2',
     paragraph_id: 'P71',
@@ -158,11 +158,19 @@ async function main() {
   const app = express();
   app.use(express.json());
   app.use((req, res, next) => {
-    const departmentName = req.headers['x-test-department'] || '工程技术部';
+    const rawDepartmentName = req.headers['x-test-department'] || 'engineering';
+    const departmentNameMap = {
+      engineering: '工程技术部',
+      finance: '财务部',
+      leadership: '公司领导'
+    };
+    const departmentName = departmentNameMap[rawDepartmentName] || rawDepartmentName;
+    const userRole = req.headers['x-test-role'] || 'owner';
     req.session = {
       userId: 1,
       userName: '系统管理员',
-      userRole: 'owner',
+      userRole,
+      roleCodes: [userRole],
       departmentId: departmentName === '财务部' ? 2 : 1,
       departmentName
     };
@@ -202,7 +210,7 @@ async function main() {
 
     assert.strictEqual(body.candidate.stable_key, 'candidate-mdm-001');
     assert.strictEqual(body.candidate.department, '工程技术部');
-    assert.strictEqual(body.candidate.document_name, '产品设计需求定义管理程序.docx.md.md');
+    assert.strictEqual(body.candidate.document_name, '产品设计需求定义管理程序.docx.md');
     assert.strictEqual(body.candidate.source_label.includes('内部锚点P71'), false);
     assert.strictEqual(body.candidate.source_label.includes('原文位置待核对'), false);
     assert.strictEqual(body.candidate.source_label.includes('第5.2条'), true);
@@ -245,6 +253,25 @@ async function main() {
     assert.strictEqual(crossDeptListBody.summary.total, 0, '本部门成员不能通过 dept 参数读取其他部门待确认问题');
     assert.deepStrictEqual(crossDeptListBody.items.map(item => item.department), []);
 
+    const adminListRes = await fetch(`${baseUrl}/api/process-governance/candidate-review/runs/review-run-001/candidates`, {
+      headers: { 'x-test-role': 'admin', 'x-test-department': 'leadership' }
+    });
+    const adminListBody = await adminListRes.json();
+    assert.strictEqual(adminListRes.status, 200, JSON.stringify(adminListBody));
+    assert.strictEqual(adminListBody.summary.total, 2, '管理员不应被自身部门收窄，应能看到全部待确认问题');
+    assert.deepStrictEqual(
+      new Set(adminListBody.items.map(item => item.department)),
+      new Set(['工程技术部', '财务部'])
+    );
+
+    const adminDeptListRes = await fetch(`${baseUrl}/api/process-governance/candidate-review/runs/review-run-001/candidates?dept=${encodeURIComponent('财务部')}`, {
+      headers: { 'x-test-role': 'admin', 'x-test-department': 'leadership' }
+    });
+    const adminDeptListBody = await adminDeptListRes.json();
+    assert.strictEqual(adminDeptListRes.status, 200, JSON.stringify(adminDeptListBody));
+    assert.strictEqual(adminDeptListBody.summary.total, 1, '管理员应能主动筛选任一部门待确认问题');
+    assert.strictEqual(adminDeptListBody.items[0].department, '财务部');
+
     const crossDeptSaveRes = await fetch(`${baseUrl}/api/process-governance/candidate-review/runs/review-run-001/candidates/candidate-fin-001/review`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -259,6 +286,22 @@ async function main() {
     const crossDeptSaveBody = await crossDeptSaveRes.json();
     assert.strictEqual(crossDeptSaveRes.status, 403, JSON.stringify(crossDeptSaveBody));
     assert.strictEqual(crossDeptSaveBody.error, '只能处理本部门待确认问题');
+
+    const adminCrossDeptSaveRes = await fetch(`${baseUrl}/api/process-governance/candidate-review/runs/review-run-001/candidates/candidate-fin-001/review`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'x-test-role': 'admin', 'x-test-department': 'leadership' },
+      body: JSON.stringify({
+        decision: 'confirm_candidate',
+        evidence_status: 'source_verified',
+        issue_type: 'missing_delivery',
+        definition_status: 'source_definition_insufficient',
+        normalized_note: '管理员确认财务部问题。'
+      })
+    });
+    const adminCrossDeptSaveBody = await adminCrossDeptSaveRes.json();
+    assert.strictEqual(adminCrossDeptSaveRes.status, 200, JSON.stringify(adminCrossDeptSaveBody));
+    assert.strictEqual(adminCrossDeptSaveBody.candidate.department, '财务部');
+    assert.strictEqual(adminCrossDeptSaveBody.review.reviewer, '系统管理员');
 
     processGovernanceRouter.setCandidateReviewRepositoryFactory(() => ({
       async listRuns() {
