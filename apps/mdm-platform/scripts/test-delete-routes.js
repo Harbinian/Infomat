@@ -1,7 +1,7 @@
 const assert = require('assert');
 const { spawn } = require('child_process');
 const path = require('path');
-const { cleanupDb, stopServer, testDbPath } = require('./testHelpers/isolatedDb');
+const { cleanupDb, legacyTestEnv, stopServer, testDbPath } = require('./testHelpers/isolatedDb');
 
 const PORT = 3219;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
@@ -11,12 +11,17 @@ if (path.resolve(db.__dbPath) !== path.resolve(testDbPath)) {
   throw new Error('delete route test is not using the isolated database');
 }
 const { hashPassword } = require('../server/auth');
+const csrfTokens = new Map();
 
 function seed() {
   const dept = db.prepare("INSERT INTO departments (name, code, status) VALUES ('信息化部', 'IT', 'active')").run().lastInsertRowid;
   const admin = db.prepare('INSERT INTO users (name, employee_no, department_id, post, role, password_hash) VALUES (?, ?, ?, ?, ?, ?)').run(
     '系统管理员', 'ADMIN001', dept, '系统管理员', 'admin', hashPassword('admin123')
   ).lastInsertRowid;
+  const adminRole = db.prepare("SELECT role_id FROM roles WHERE role_code='admin'").get();
+  assert.ok(adminRole, 'admin role should exist');
+  db.prepare('INSERT INTO user_roles (user_id, role_id, assigned_by) VALUES (?, ?, ?)').run(admin, adminRole.role_id, admin);
+
   const submitter = db.prepare('INSERT INTO users (name, employee_no, department_id, post, role, password_hash) VALUES (?, ?, ?, ?, ?, ?)').run(
     '普通用户', 'SUB001', dept, '专员', 'submitter', hashPassword('pass1234')
   ).lastInsertRowid;
@@ -89,15 +94,28 @@ function waitForServer() {
 }
 
 async function request(routePath, options = {}, cookie = '') {
+  const method = String(options.method || 'GET').toUpperCase();
   const headers = {
     'Content-Type': 'application/json',
     ...(cookie ? { Cookie: cookie } : {}),
     ...(options.headers || {})
   };
+  if (cookie && !['GET', 'HEAD', 'OPTIONS'].includes(method) && routePath !== '/api/org/login') {
+    const token = await csrfTokenFor(cookie);
+    if (token) headers['X-CSRF-Token'] = token;
+  }
   const res = await fetch(`${BASE_URL}${routePath}`, { ...options, headers });
   let body = {};
   try { body = await res.json(); } catch (e) {}
   return { res, body };
+}
+
+async function csrfTokenFor(cookie) {
+  if (csrfTokens.has(cookie)) return csrfTokens.get(cookie);
+  const result = await request('/api/csrf-token', {}, cookie);
+  if (result.res.status !== 200 || !result.body.csrfToken) return '';
+  csrfTokens.set(cookie, result.body.csrfToken);
+  return result.body.csrfToken;
 }
 
 async function login(employeeNo, password) {
@@ -116,7 +134,7 @@ async function login(employeeNo, password) {
     const ids = seed();
     server = spawn(process.execPath, ['server/index.js'], {
       cwd: path.join(__dirname, '..'),
-      env: { ...process.env, PORT: String(PORT), SESSION_SECRET: 'delete-test-secret' },
+      env: legacyTestEnv({ PORT: String(PORT), SESSION_SECRET: 'delete-test-secret' }),
       stdio: 'inherit'
     });
 

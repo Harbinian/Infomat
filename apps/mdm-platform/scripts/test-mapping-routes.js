@@ -1,7 +1,7 @@
 const assert = require('assert');
 const { spawn } = require('child_process');
 const path = require('path');
-const { cleanupDb, stopServer } = require('./testHelpers/isolatedDb');
+const { cleanupDb, legacyTestEnv, stopServer } = require('./testHelpers/isolatedDb');
 const db = require('../server/db');
 const { hashPassword } = require('../server/auth');
 
@@ -75,10 +75,19 @@ function seedCatalog() {
   const systemId = db.prepare('INSERT INTO systems (name, dept_id) VALUES (?, ?)').run('MDM平台', ownerDeptId).lastInsertRowid;
   const capabilityId = db.prepare('INSERT INTO capabilities (name, level, owner_dept_id) VALUES (?, ?, ?)').run('主数据管理', 'L1', ownerDeptId).lastInsertRowid;
   const processId = db.prepare('INSERT INTO processes (name, capability_id, owner_dept_id) VALUES (?, ?, ?)').run('客户主数据维护', capabilityId, ownerDeptId).lastInsertRowid;
+  const snapshotId = db.prepare(`
+    INSERT INTO process_governance_snapshots (source_json_path, source_hash, generated_at, stats_json, status)
+    VALUES ('test-mapping-routes.json', 'test-mapping-routes-hash', '2026-06-23', '{}', 'active')
+  `).run().lastInsertRowid;
+  const processMappingRecordId = db.prepare(`
+    INSERT INTO process_mapping_records (
+      mapping_key, record_type, first_snapshot_id, latest_snapshot_id, dept_name, l3_name, source_file
+    ) VALUES ('test-mapping-routes-l3', 'l3', ?, ?, '数据管理部', '客户主数据维护', 'test-mapping-routes')
+  `).run(snapshotId, snapshotId).lastInsertRowid;
 
   db.prepare("INSERT INTO terms (term, definition, scope, created_by, status) VALUES (?, ?, ?, ?, 'approved')").run('客户名称', '客户的显示名称', 'CRM,MDM', adminId);
 
-  return { submitDeptId, ownerDeptId, crossDeptId, adminId, legacyAdminId, submitterId, ownerId, crossOwnerId, systemId, capabilityId, processId };
+  return { submitDeptId, ownerDeptId, crossDeptId, adminId, legacyAdminId, submitterId, ownerId, crossOwnerId, systemId, capabilityId, processId, processMappingRecordId };
 }
 
 async function waitForServer() {
@@ -147,7 +156,7 @@ async function main() {
 
     server = spawn(process.execPath, ['server/index.js'], {
       cwd: path.join(__dirname, '..'),
-      env: { ...process.env, PORT: String(PORT), SESSION_SECRET: 'test-secret' },
+      env: legacyTestEnv({ PORT: String(PORT), SESSION_SECRET: 'test-secret' }),
       stdio: ['ignore', 'pipe', 'pipe']
     });
 
@@ -164,7 +173,7 @@ async function main() {
     const mapping = await request('/api/mappings', {
       method: 'POST',
       body: JSON.stringify({
-        process_id: seed.processId,
+        process_id: seed.processMappingRecordId,
         description: '客户主数据采集',
         owner_dept_id: seed.ownerDeptId,
         systems: [{ system_id: seed.systemId, system_role: 'primary' }],

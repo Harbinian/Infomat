@@ -1,7 +1,7 @@
 const assert = require('assert');
 const { spawn } = require('child_process');
 const path = require('path');
-const { cleanupDb, stopServer } = require('./testHelpers/isolatedDb');
+const { cleanupDb, legacyTestEnv, stopServer } = require('./testHelpers/isolatedDb');
 const db = require('../server/db');
 const { hashPassword } = require('../server/auth');
 
@@ -191,7 +191,7 @@ async function main() {
 
     server = spawn(process.execPath, ['server/index.js'], {
       cwd: path.join(__dirname, '..'),
-      env: { ...process.env, PORT: String(PORT), SESSION_SECRET: 'test-secret' },
+      env: legacyTestEnv({ PORT: String(PORT), SESSION_SECRET: 'test-secret' }),
       stdio: ['ignore', 'pipe', 'pipe']
     });
 
@@ -225,7 +225,7 @@ async function main() {
     const todos = await request(`/api/todos?dept_id=${seed.deptB}&status=pending&type=field_confirm`, {}, cookie);
     assert.strictEqual(todos.res.status, 200);
     assert.strictEqual(todos.body.length, 1);
-    assert.strictEqual(todos.body[0].from_dept_name, '销售部');
+    assert.strictEqual(todos.body[0].from_dept_name, '公司领导');
     assert.strictEqual(todos.body[0].to_dept_name, '财务部');
 
     const done = await request(`/api/todos/${todo.body.id}/done`, { method: 'POST' }, cookie);

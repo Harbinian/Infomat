@@ -2,7 +2,7 @@ const assert = require('assert');
 const http = require('http');
 const path = require('path');
 const { spawn } = require('child_process');
-const { cleanupDb, stopServer } = require('./testHelpers/isolatedDb');
+const { cleanupDb, legacyTestEnv, stopServer } = require('./testHelpers/isolatedDb');
 
 const db = require('../server/db');
 const { hashPassword } = require('../server/auth');
@@ -97,7 +97,7 @@ async function main() {
     seedAdmin();
     server = spawn(process.execPath, ['server/index.js'], {
       cwd: APP_ROOT,
-      env: { ...process.env, PORT: String(PORT), SESSION_SECRET: 'test-secret' },
+      env: legacyTestEnv({ PORT: String(PORT), SESSION_SECRET: 'test-secret' }),
       stdio: ['ignore', 'pipe', 'pipe']
     });
     await waitForServer(server);
