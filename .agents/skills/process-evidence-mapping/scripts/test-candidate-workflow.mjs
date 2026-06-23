@@ -29,6 +29,13 @@ function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
 }
 
+function readJsonl(path) {
+  return readFileSync(path, 'utf8')
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .map((line) => JSON.parse(line));
+}
+
 function writeJsonl(path, records) {
   writeFileSync(path, `${records.map((record) => JSON.stringify(record)).join('\n')}\n`, 'utf8');
 }
@@ -87,11 +94,22 @@ const documentCandidate = readJson(join(runDir, 'document_candidate.json'));
 const roleCandidates = readJson(join(runDir, 'role_candidates.json'));
 const objectChains = readJson(join(runDir, 'object_chains.json'));
 const embeddingManifest = readJson(join(runDir, 'embedding_manifest.json'));
+const sourceManifest = readJsonl(join(runDir, 'source_manifest.jsonl'));
+const chunks = readJsonl(join(runDir, 'chunks.jsonl'));
+const mappingItems = readJson(join(runDir, 'mapping_diff_items.json'));
 const diffReport = readFileSync(join(runDir, 'mapping_diff_report.md'), 'utf8');
 const todoMarkdown = readFileSync(todoPath, 'utf8');
 
 assert.equal(documentCandidate.department, '财务部');
 assert.equal(documentCandidate.source_file.endsWith('GLTX-CW-01-A财务成本核算管理程序.docx'), true);
+assert.equal(sourceManifest[0]?.source_boundary_flag, 'changxing_owned', 'source manifest should keep GLTX boundary');
+assert.equal(chunks[0]?.source_boundary_flag, 'changxing_owned', 'chunks should inherit source boundary');
+assert.equal(chunks[0]?.allowed_downstream_use, 'review_only', 'candidate chunks must remain review-only even for GLTX files');
+assert.equal(
+  mappingItems.every((item) => item.source_boundary_flag === 'changxing_owned'),
+  true,
+  'candidate todo items should inherit source boundary from their evidence',
+);
 assert.ok(documentCandidate.capability_candidates.some((item) => item.name.includes('成本核算')), 'should identify cost accounting candidate capability');
 assert.ok(documentCandidate.process_candidates.some((item) => item.name.includes('月度产品成本核算')), 'should identify monthly product cost process candidate');
 assert.ok(documentCandidate.behavior_candidates.some((item) => item.name.includes('处理盘盈盘亏')), 'should identify inventory gain/loss behavior candidate');

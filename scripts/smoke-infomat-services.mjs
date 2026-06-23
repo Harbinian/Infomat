@@ -3,11 +3,15 @@ import fs from 'node:fs';
 import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-const DEFAULT_MDM_URL = 'http://127.0.0.1:3000';
-const DEFAULT_PMO_URL = 'http://127.0.0.1:5173';
+import {
+  INFOMAT_SERVICE_CONFIG,
+  buildFixedServiceEnv,
+  redactedFixedServiceEnv
+} from './infomat-service-config.mjs';
+
 const timeoutMs = Number(process.env.INFOMAT_SMOKE_TIMEOUT_MS || 8000);
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const logDir = path.join(os.tmpdir(), 'infomat-services');
@@ -102,6 +106,19 @@ async function waitForTcp(host, port, label) {
   throw new Error(`${label} did not start listening on ${host}:${port}`);
 }
 
+function startFixedMysqlContainer(summary) {
+  const container = INFOMAT_SERVICE_CONFIG.mysql.dockerContainer;
+  const inspect = spawnSync('docker', ['inspect', container], { encoding: 'utf8' });
+  if (inspect.status !== 0) {
+    throw new Error(`Fixed MySQL container "${container}" was not found. Create or restore it before starting Infomat services.`);
+  }
+  const started = spawnSync('docker', ['start', container], { encoding: 'utf8' });
+  if (started.status !== 0) {
+    throw new Error(`Fixed MySQL container "${container}" did not start: ${(started.stderr || started.stdout || '').trim()}`);
+  }
+  addCheck(summary, 'MySQL container startup', { container, status: 'started' });
+}
+
 function startDetached(command, args, cwd, env, logPrefix) {
   fs.mkdirSync(logDir, { recursive: true });
   const out = fs.openSync(path.join(logDir, `${logPrefix}.out.log`), 'a');
@@ -117,26 +134,24 @@ function startDetached(command, args, cwd, env, logPrefix) {
   return child.pid;
 }
 
-async function ensureServices(summary, mdmBaseUrl, pmoBaseUrl) {
-  const mysqlHost = process.env.MYSQL_HOST || '127.0.0.1';
-  const mysqlPort = Number(process.env.MYSQL_PORT || 3307);
+async function ensureServices(summary, fixedEnv, mdmBaseUrl, pmoBaseUrl) {
+  const mysqlHost = fixedEnv.MYSQL_HOST;
+  const mysqlPort = Number(fixedEnv.MYSQL_PORT);
   const mdmPort = parsePort(mdmBaseUrl, 3000);
   const pmoPort = parsePort(pmoBaseUrl, 5173);
   const mdmDir = path.join(repoRoot, 'apps', 'mdm-platform');
   const pmoDir = path.join(repoRoot, 'pmo', 'gantt-react');
 
-  assert.equal(await testTcp(mysqlHost, mysqlPort), true, `MySQL is not listening on ${mysqlHost}:${mysqlPort}`);
+  if (!(await testTcp(mysqlHost, mysqlPort))) {
+    startFixedMysqlContainer(summary);
+    await waitForTcp(mysqlHost, mysqlPort, 'MySQL');
+  }
   addCheck(summary, 'MySQL port', { host: mysqlHost, port: mysqlPort });
 
   if (await testTcp('127.0.0.1', mdmPort)) {
     addCheck(summary, 'MDM service startup', { status: 'already listening', port: mdmPort });
   } else {
-    const pid = startDetached('npm.cmd', ['start'], mdmDir, {
-      PORT: String(mdmPort),
-      MYSQL_HOST: mysqlHost,
-      MYSQL_PORT: String(mysqlPort),
-      ALLOW_INSECURE_SESSION_SECRET: '1'
-    }, 'mdm-platform');
+    const pid = startDetached('npm.cmd', ['start'], mdmDir, fixedEnv, 'mdm-platform');
     await waitForTcp('127.0.0.1', mdmPort, 'MDM');
     addCheck(summary, 'MDM service startup', { status: 'started', port: mdmPort, pid, logs: logDir });
   }
@@ -173,9 +188,9 @@ async function checkPmo(summary, pmoBaseUrl) {
   addCheck(summary, 'PMO procedure dashboard data', { nodes, links });
 }
 
-async function checkMdm(summary, mdmBaseUrl) {
-  const adminEmployeeNo = process.env.MDM_ADMIN_EMPLOYEE_NO;
-  const adminPassword = process.env.MDM_ADMIN_PASSWORD;
+async function checkMdm(summary, fixedEnv, mdmBaseUrl) {
+  const adminEmployeeNo = fixedEnv.MDM_ADMIN_EMPLOYEE_NO;
+  const adminPassword = fixedEnv.MDM_ADMIN_PASSWORD;
   assert.ok(adminEmployeeNo, 'Missing MDM_ADMIN_EMPLOYEE_NO for login smoke');
   assert.ok(adminPassword, 'Missing MDM_ADMIN_PASSWORD for login smoke');
 
@@ -246,26 +261,25 @@ async function checkMdm(summary, mdmBaseUrl) {
 }
 
 async function main() {
-  const mdmBaseUrl = trimSlash(process.env.INFOMAT_MDM_URL || DEFAULT_MDM_URL);
-  const pmoBaseUrl = trimSlash(process.env.INFOMAT_PMO_URL || DEFAULT_PMO_URL);
+  const fixedEnv = buildFixedServiceEnv(process.env, repoRoot);
+  const mdmBaseUrl = trimSlash(fixedEnv.INFOMAT_MDM_URL);
+  const pmoBaseUrl = trimSlash(fixedEnv.INFOMAT_PMO_URL);
   const shouldStart = process.argv.includes('--start');
   const summary = {
     ok: true,
     mdmBaseUrl,
     pmoBaseUrl,
-    readModels: {
-      identity: process.env.MDM_IDENTITY_READ_MODEL || 'sqlite',
-      processGovernance: process.env.PROCESS_GOVERNANCE_READ_MODEL || 'sqlite'
-    },
+    fixedConfig: redactedFixedServiceEnv(fixedEnv),
+    readModels: redactedFixedServiceEnv(fixedEnv).readModels,
     checks: []
   };
 
   try {
     if (shouldStart) {
-      await ensureServices(summary, mdmBaseUrl, pmoBaseUrl);
+      await ensureServices(summary, fixedEnv, mdmBaseUrl, pmoBaseUrl);
     }
     await checkPmo(summary, pmoBaseUrl);
-    await checkMdm(summary, mdmBaseUrl);
+    await checkMdm(summary, fixedEnv, mdmBaseUrl);
     console.log(JSON.stringify(summary, null, 2));
     console.log('Infomat service smoke passed');
   } catch (error) {

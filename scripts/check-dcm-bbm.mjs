@@ -10,6 +10,7 @@ import {
 } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { sourceBoundaryFromCitation } from './source-boundary-rules.mjs';
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(SCRIPT_DIR, '..');
@@ -1007,6 +1008,11 @@ function checkDcmTable(findings, contract, file, dept, parsed) {
     }
 
     validateSystems({ findings, contract, raw: systemRaw, area: 'DCM', file, line: row.line, label: `业务流程（L3）“${l3}”` });
+    checkCustomerFileBoundary(findings, contract, file, row, {
+      l3,
+      evidence,
+      systemRaw,
+    });
     if (!isBlankToken(systemRaw, contract) && !designBasis) {
       addFinding(findings, 'BLOCK', 'DCM', file, row.line, `业务流程（L3）“${l3}”缺少系统设计依据`, '非空 应用系统（S1） 必须说明落位依据。');
     }
@@ -1029,6 +1035,41 @@ function normalizeEvidenceType(raw, contract) {
   const base = contract.bbm.evidenceTypes.find((type) => value.startsWith(type));
   if (base) return { status: 'extended', value, base };
   return { status: 'invalid', value };
+}
+
+function checkCustomerFileBoundary(findings, contract, file, row, record) {
+  const boundary = sourceBoundaryFromCitation(record.evidence || '');
+  if (!boundary.customer_acceptance_required) return;
+
+  const protectedFields = [];
+  if (record.approvalType && APPROVAL_TYPES_REQUIRING_EVIDENCE.has(record.approvalType)) {
+    protectedFields.push('正式审批链');
+  }
+  if (!isBlankToken(record.inputDept, contract)) {
+    protectedFields.push('输入来源部门');
+  }
+  if (!isBlankToken(record.outputDept, contract)) {
+    protectedFields.push('输出目标部门');
+  }
+  if (!isBlankToken(record.systemRaw, contract)) {
+    protectedFields.push('系统落位');
+  }
+  if (!protectedFields.length) return;
+
+  const label = record.a1Id
+    ? `A1 ${record.a1Id}`
+    : record.l3
+      ? `业务流程（L3）“${record.l3}”`
+      : '映射行';
+  addFinding(
+    findings,
+    'WARN',
+    'CUSTOMER_FILE_BOUNDARY',
+    file,
+    row.line,
+    `${label} 使用${boundary.source_boundary_label}支撑${protectedFields.join('、')}`,
+    '客户文件证据不得单独支撑正式审批链、输入来源部门、输出目标部门或系统落位；需补 GLTX、部门确认、实际执行记录或昌兴内部流程证据后再固化。',
+  );
 }
 
 function checkControlledTransferEvidence(findings, contract, file, row, record) {
@@ -1226,6 +1267,15 @@ function checkBbmTables(findings, contract, file, dept, parsed, dcmMappings) {
         remark,
       });
       validateSystems({ findings, contract, raw: systemRaw, area: 'BBM', file, line: row.line, label: `A1 ${a1Id || behavior}` });
+      checkCustomerFileBoundary(findings, contract, file, row, {
+        a1Id,
+        behavior,
+        approvalType,
+        inputDept,
+        outputDept,
+        systemRaw,
+        evidence,
+      });
       if (!evidence) {
         addFinding(findings, 'BLOCK', 'BBM', file, row.line, `A1 ${a1Id} 缺少制度依据`, 'A1 行必须可追溯到制度条款、流程图或表单。');
       }
@@ -1478,6 +1528,7 @@ function renderReport({ contractPath, findings, deptStats, totalL3Rows, totalA1R
     `- 源 A1 行数：${totalA1Rows}`,
     '- 跨部门输入/输出口径：仅当制度条款、流程图箭头、表单流转、台账交接、签收/通知/反馈等证据证明受控输出物传递时，才视为已确认；证据不足项以 `CROSS_TRANSFER` 标记为复核提示。',
     '- 审批类型口径：`单人审批`、`多级审批`、`会签`、`无审批` 必须由原文、流程图、表单签批栏或审批链证据支撑；抽象/推断行为不得凭输出目标或业务理解写成审批结论。',
+    '- 客户文件边界：客户文件证据不得单独支撑正式审批链、输入来源部门、输出目标部门或系统落位；需补昌兴承接证据。',
     '- 问题清单源锚点：`源文件/章节` 优先从行内制度依据、角色/触发/前置/验收依据、核验提醒和同 L3 的 DCM 制度依据解析；无法匹配到源文件时明确标注，不以推测路径替代。',
     '',
     '## 汇总',

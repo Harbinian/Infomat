@@ -199,6 +199,9 @@ if (fileData.stats.a1Unmatched !== 0) {
 if (!fileData.crossDept) {
   fail('docs/company-sankey-data.json has no crossDept');
 }
+if (!Array.isArray(fileData.evidenceRefs) || !fileData.evidenceRefs.some(ref => ref.customer_acceptance_required)) {
+  fail('docs/company-sankey-data.json should include customer acceptance evidence refs');
+}
 
 const cross = fileData.crossDept;
 const reportCrossStats = readCrossDeptReportMetrics();
@@ -257,6 +260,17 @@ const prohibitedCopy = [
 for (const phrase of prohibitedCopy) {
   if (dashboardHtml.includes(phrase)) {
     fail(`dashboard contains prohibited copy: ${phrase}`);
+  }
+}
+
+for (const required of [
+  'id="kpiCustomerAcceptance"',
+  '客户文件承接',
+  '客户要求-待承接',
+  'customerAcceptance',
+]) {
+  if (!dashboardHtml.includes(required)) {
+    fail(`dashboard missing customer file acceptance marker: ${required}`);
   }
 }
 

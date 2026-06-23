@@ -120,6 +120,11 @@ export function evidenceFromChunk(chunk) {
     verification_status: 'unverified',
     review_required: true,
     allowed_downstream_use: 'review_only',
+    source_boundary_flag: chunk?.source_boundary_flag || '',
+    source_boundary_label: chunk?.source_boundary_label || '',
+    source_acceptance_status: chunk?.source_acceptance_status || '',
+    source_boundary_allowed_downstream_use: chunk?.source_boundary_allowed_downstream_use || '',
+    customer_acceptance_required: Boolean(chunk?.customer_acceptance_required),
   };
 }
 

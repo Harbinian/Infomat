@@ -2,7 +2,7 @@ const express = require('express');
 const mysql = require('mysql2/promise');
 const router = express.Router();
 const db = require('../db');
-const { hashPassword, verifyPassword, requireAuth, requirePermission, getUserEffectivePermissions } = require('../auth');
+const { hashPassword, verifyPassword, verifyPasswordAsync, requireAuth, requirePermission, getUserEffectivePermissions } = require('../auth');
 const { mysqlConfigFromEnv } = require('../mysqlConfig');
 const { makeIdentityMysqlRepository } = require('../identityMysqlRepository');
 const { resolveInitialPassword, validatePasswordStrength } = require('../passwordPolicy');
@@ -549,7 +549,12 @@ async function loginWithMysqlIdentity(req, res) {
   const { employee_no, password } = req.body;
   const repo = await identityRepository();
   const user = await repo.getUserByEmployeeNo(employee_no);
-  if (!user || !verifyPassword(password, user.password_hash)) {
+  if (!user) {
+    recordLoginFailure(req);
+    return res.status(401).json({ error: '工号或密码错误' });
+  }
+  const passwordMatched = await verifyPasswordAsync(password, user.password_hash);
+  if (!passwordMatched) {
     recordLoginFailure(req);
     return res.status(401).json({ error: '工号或密码错误' });
   }
@@ -564,19 +569,23 @@ router.post('/login', loginRateLimit, (req, res) => {
     return runAsyncAction(res, async () => loginWithMysqlIdentity(req, res), '身份 MySQL 读取模型不可用');
   }
 
-  const { employee_no, password } = req.body;
-  const user = db.prepare('SELECT * FROM users WHERE employee_no=?').get(employee_no);
-  if (!user || !verifyPassword(password, user.password_hash)) {
-    recordLoginFailure(req);
-    return res.status(401).json({ error: '工号或密码错误' });
-  }
+  return runAsyncAction(res, async () => {
+    const { employee_no, password } = req.body;
+    const user = db.prepare('SELECT * FROM users WHERE employee_no=?').get(employee_no);
+    if (!user) {
+      recordLoginFailure(req);
+      return res.status(401).json({ error: '工号或密码错误' });
+    }
+    const passwordMatched = await verifyPasswordAsync(password, user.password_hash);
+    if (!passwordMatched) {
+      recordLoginFailure(req);
+      return res.status(401).json({ error: '工号或密码错误' });
+    }
 
-  return writeLoginSession(req, user)
-    .then(() => {
-      clearLoginFailures(req);
-      res.json({ id: user.id, name: user.name, role: user.role });
-    })
-    .catch(() => res.status(500).json({ error: '登录失败' }));
+    await writeLoginSession(req, user);
+    clearLoginFailures(req);
+    return res.json({ id: user.id, name: user.name, role: user.role });
+  });
 });
 
 router.post('/logout', (req, res) => {

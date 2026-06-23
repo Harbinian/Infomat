@@ -1,7 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const { requireAuth, getUserEffectivePermissions } = require('../auth');
+const {
+  requireAuth,
+  getUserEffectivePermissionsAsync,
+  getUserRoleCodesAsync,
+  getDepartmentByIdAsync
+} = require('../auth');
 const { ROLE_GUIDES } = require('../roleDefinitions');
 
 const PAGE_DEFINITIONS = {
@@ -188,25 +193,16 @@ function runDbAction(res, action) {
   }
 }
 
-function getCurrentRoles(userId, legacyRole) {
-  const roles = db.prepare(`
-    SELECT r.role_code as code, r.role_name as name
-    FROM user_roles ur
-    JOIN roles r ON ur.role_id = r.role_id
-    WHERE ur.user_id=?
-    ORDER BY r.is_system DESC, r.role_code
-  `).all(userId);
-
-  if (legacyRole && !roles.some(role => role.code === legacyRole)) {
-    const legacy = db.prepare('SELECT role_code as code, role_name as name FROM roles WHERE role_code=?').get(legacyRole);
-    if (legacy) roles.unshift(legacy);
-  }
-  return roles;
+function runAction(res, action) {
+  return action().catch(error => {
+    console.error(error);
+    return res.status(500).json({ error: '服务器错误' });
+  });
 }
 
-function departmentName(departmentId) {
+async function departmentName(departmentId) {
   if (!departmentId) return null;
-  const row = db.prepare('SELECT name FROM departments WHERE id=?').get(departmentId);
+  const row = await getDepartmentByIdAsync(departmentId);
   return row && row.name || null;
 }
 
@@ -337,17 +333,17 @@ function detailActions(tab, view, entityType, entityId, page) {
 }
 
 router.get('/', requireAuth, (req, res) => {
-  return runDbAction(res, () => {
+  return runAction(res, async () => {
     const tab = String(req.query.tab || 'dashboard');
     const view = ['list', 'detail', 'form'].includes(req.query.view) ? req.query.view : 'list';
     const entityType = req.query.entityType ? String(req.query.entityType) : null;
     const entityId = req.query.entityId ? String(req.query.entityId) : null;
     const mode = req.query.mode === 'all' ? 'all' : 'todo';
     const page = pageFor(tab);
-    const currentRoles = getCurrentRoles(req.session.userId, req.session.userRole);
-    const roleCodes = currentRoles.map(role => role.code);
+    const currentRoles = await getUserRoleCodesAsync(req.session.userId, req.session.userRole);
+    const roleCodes = currentRoles.map(role => role.code || role.role_code).filter(Boolean);
     const ownedRoles = ROLE_GUIDES.filter(role => roleCodes.includes(role.code));
-    const { permSet } = getUserEffectivePermissions(req.session.userId);
+    const { permSet } = await getUserEffectivePermissionsAsync(req.session.userId);
     const canViewAll = permSet.has('data:view_all') || permSet.has('admin:access') || permSet.has('*:*') || roleCodes.includes('admin');
     const canDecideEscalated = permSet.has('conflict:final_decide_escalated') || permSet.has('*:*') || roleCodes.includes('decision_group');
     const counts = {
@@ -356,6 +352,7 @@ router.get('/', requireAuth, (req, res) => {
     };
     const nextActions = buildNextActions(req, page, ownedRoles, counts);
     const workflow = view === 'form' ? formWorkflow(entityType) : workflowFromLabels(page.workflow, view);
+    const currentDepartmentName = await departmentName(req.session.departmentId);
 
     res.json({
       mode,
@@ -366,7 +363,7 @@ router.get('/', requireAuth, (req, res) => {
         name: req.session.userName,
         role: req.session.userRole,
         departmentId: req.session.departmentId,
-        departmentName: departmentName(req.session.departmentId),
+        departmentName: currentDepartmentName,
         roleCodes
       },
       page: {

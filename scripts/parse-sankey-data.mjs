@@ -12,6 +12,7 @@
 import { createHash } from 'crypto';
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'fs';
 import { basename, dirname, extname, join, relative, resolve } from 'path';
+import { classifySourceBoundary, sourceBoundaryFromCitation } from './source-boundary-rules.mjs';
 
 const NORMS = resolve(import.meta.dirname || '.', '..', 'docs', 'norms');
 const REPO_ROOT = resolve(NORMS, '..', '..');
@@ -262,6 +263,11 @@ function buildSourceManifest(mappingFiles, mdmRequirementFiles) {
       leafDir: overrides.sourceRoot ? sourceLeafDir(overrides.sourceRoot, filePath) : undefined,
       status: process.status,
       reason: process.reason,
+      ...classifySourceBoundary({
+        path: repoPath,
+        fileName: basename(filePath),
+        fileNo: overrides.fileNo || inferred.fileNo,
+      }),
     });
   }
 
@@ -482,6 +488,9 @@ function resolveA1Mapping(a1, allMappings) {
   const candidates = allMappings.filter(m => m.dept === a1.dept);
   const exact = candidates.find(m => m.l3 === a1.l3Name);
   if (exact) return exact;
+
+  const sameL2ByHeading = candidates.filter(m => normalizeProcessName(m.l2) === normalizeProcessName(a1.l3Name));
+  if (sameL2ByHeading.length === 1) return sameL2ByHeading[0];
 
   const scored = candidates
     .map(m => ({ mapping: m, score: processNameScore(a1.l3Name, m.l3) }))
@@ -792,6 +801,7 @@ function buildEvidenceRefs(allMappings, allA1, mdmRequirements) {
   }
 
   for (const row of allMappings) {
+    const boundary = sourceBoundaryFromCitation(row.evidenceCitation || row.sourceFile || '');
     add({
       refType: 'L3',
       dept: row.dept,
@@ -802,10 +812,12 @@ function buildEvidenceRefs(allMappings, allA1, mdmRequirements) {
       sourceFile: row.sourceFile || `docs/norms/${row.dept}部门-能力-流程-系统映射关系.md`,
       citation: row.evidenceCitation || '',
       note: 'DCM 映射总表制度依据',
+      ...boundary,
     });
   }
 
   for (const row of allA1) {
+    const boundary = sourceBoundaryFromCitation(row.evidenceCitation || row.sourceFile || '');
     add({
       refType: 'A1',
       dept: row.dept,
@@ -816,10 +828,12 @@ function buildEvidenceRefs(allMappings, allA1, mdmRequirements) {
       sourceFile: row.sourceFile || `docs/norms/${row.dept}部门-能力-流程-系统映射关系.md`,
       citation: row.evidenceCitation || '',
       note: '业务行为（A1）映射制度依据',
+      ...boundary,
     });
   }
 
   for (const row of mdmRequirements) {
+    const boundary = classifySourceBoundary({ path: row.sourceFile, citation: 'MDM建设要求' });
     add({
       refType: 'MDM',
       dept: row.dept,
@@ -830,6 +844,7 @@ function buildEvidenceRefs(allMappings, allA1, mdmRequirements) {
       sourceFile: row.sourceFile,
       citation: '主数据对象识别',
       note: row.governanceRequirement || '部门能力层与 MDM 建设要求',
+      ...boundary,
     });
   }
 
@@ -898,10 +913,10 @@ function buildTargetRisk(text, target, risk, metricLabel, fallback) {
   const impact = extractRiskField(section, '影响范围');
 
   let desc = fallback.desc;
-  if (target === '工程技术部' && impact) {
-    desc = `所有指向工程技术部的A1在目标侧无对应流程，跨部门交互链在此节点断裂。${impact}`;
-  } else if (riskDesc) {
+  if (riskDesc) {
     desc = riskDesc;
+  } else if (target === '工程技术部' && impact) {
+    desc = `所有指向工程技术部的A1在目标侧无对应流程，跨部门交互链在此节点断裂。${impact}`;
   }
 
   return {
@@ -951,12 +966,12 @@ function parseInteractionChains(text) {
   const candidates = [
     {
       name: '客户订单→交付链',
-      breaks: ['工程技术部: BOM/工艺节点断裂,无映射文档'],
+      breaks: ['工程技术部: BOM/工艺节点已完成目标侧建模,待跨部门受控传递证据复核'],
       status: 'partial',
     },
     {
       name: '成本管控链',
-      breaks: ['工程技术部: BOM/技术方案输入缺失,财务部无法完整核算'],
+      breaks: ['工程技术部: BOM/技术方案输入已有目标侧流程骨架,待成本核算输入传递证据复核'],
       status: 'partial',
     },
     {
@@ -972,10 +987,10 @@ function parseInteractionChains(text) {
 
 function parseCrossDeptReport(text, chainText = '') {
   const risks = [
-    buildTargetRisk(text, '工程技术部', 'high', '指向未映射部门（工程技术部）', {
+    buildTargetRisk(text, '工程技术部', 'medium', '指向已映射待复核部门（工程技术部）', {
       source: '全部已映射部门',
-      status: '未映射-无文档',
-      desc: '所有指向工程技术部的A1在目标侧无对应流程，跨部门交互链在此断裂。',
+      status: '已完成首轮 DCM/BBM 建模-待跨部门传递复核',
+      desc: '工程技术部已完成首轮 DCM/BBM 建模，历史跨部门引用仍需逐条核验受控输出物传递证据。',
     }),
     buildTargetRisk(text, '复材车间', 'low', '指向已映射待复核部门（复材车间）', {
       status: '已映射-待复核',
@@ -1191,6 +1206,7 @@ function main() {
   const a1Matched = countMatchedA1(allA1, allMappings);
 
   const finalData = {
+    snapshotDate: new Date().toISOString().slice(0, 10),
     nodes: Array.from(allNodes).map(name => ({ name })),
     links: Array.from(merged2.values()),
     systems: (() => {

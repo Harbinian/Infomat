@@ -41,7 +41,35 @@ Infomat 是航空复材制造领域的信息化资料与工具仓库，包含：
 
 ## MDM 平台
 
-常用命令见 [apps/mdm-platform/README.md](apps/mdm-platform/README.md)。
+MDM 平台使用仓库根目录的固定启动入口。
+
+第一次启动前，在本机私有文件 `scripts/infomat-services.local.env` 写入两项密码；该文件已被 `.gitignore` 忽略，只保留在本机：
+
+```text
+MYSQL_PASSWORD=你的项目 MySQL 密码
+MDM_ADMIN_PASSWORD=你的管理员密码
+```
+
+之后统一使用：
+
+```powershell
+npm run start:infomat-services
+npm run smoke:infomat-services
+```
+
+固定配置见 `scripts/infomat-services.config.json`：
+
+| 项 | 固定值 |
+|---|---|
+| MDM | `http://127.0.0.1:3000` |
+| PMO | `http://127.0.0.1:5173` |
+| MySQL | `127.0.0.1:3307` |
+| MySQL 用户 / 库 | `mdm_user` / `infomat_mdm` |
+| MySQL 连接池 | `MYSQL_CONNECTION_LIMIT=16` |
+| 读模型 | `MDM_IDENTITY_READ_MODEL=mysql`、`PROCESS_GOVERNANCE_READ_MODEL=mysql` |
+| 管理员工号 | `ADMIN001` |
+
+启动脚本会使用固定 Docker 容器 `infomat-candidate-review-mysql`，并按固定环境启动 MDM 与 PMO。更多说明见 [apps/mdm-platform/README.md](apps/mdm-platform/README.md) 和 [scripts/README.md](scripts/README.md)。
 
 ## 流程地图驾驶舱
 
