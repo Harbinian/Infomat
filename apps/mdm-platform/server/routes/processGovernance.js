@@ -538,11 +538,18 @@ async function currentDepartmentNameAsync(req) {
 }
 
 async function currentCandidateReviewDepartmentName(req) {
+  if (await canViewAllCandidateReviewsAsync(req)) return '';
   return await currentDepartmentNameAsync(req);
 }
 
 function scopedCandidateReviewFilters(filters, departmentName) {
   const requestedDept = filters && filters.dept ? String(filters.dept) : '';
+  if (!departmentName) {
+    return {
+      ...filters,
+      dept: requestedDept
+    };
+  }
   return {
     ...filters,
     dept: requestedDept && requestedDept !== departmentName ? '__no_department__' : (departmentName || '__no_department__')
@@ -551,6 +558,28 @@ function scopedCandidateReviewFilters(filters, departmentName) {
 
 function canAccessCandidateReviewItem(candidate, departmentName) {
   return !!candidate && !!departmentName && candidate.department === departmentName;
+}
+
+function sessionHasAnyRole(req, roleCodes) {
+  if (!req.session) return false;
+  const current = new Set();
+  if (req.session.userRole) current.add(req.session.userRole);
+  if (Array.isArray(req.session.roleCodes)) {
+    req.session.roleCodes.forEach(code => current.add(code));
+  }
+  return roleCodes.some(code => current.has(code));
+}
+
+async function canViewAllCandidateReviewsAsync(req) {
+  if (sessionHasAnyRole(req, ['admin', 'data_quality', 'decision_group'])) return true;
+  if (req.session && ['submitter', 'owner', 'reviewer'].includes(req.session.userRole)) return false;
+  return await requestHasAnyPermissionAsync(req, ['data:view_all', 'admin:access']) ||
+    await requestHasQualityRoleAsync(req, ['admin', 'data_quality', 'decision_group']);
+}
+
+async function canAccessCandidateReviewItemAsync(req, candidate, departmentName) {
+  if (await canViewAllCandidateReviewsAsync(req)) return !!candidate;
+  return canAccessCandidateReviewItem(candidate, departmentName);
 }
 
 async function canViewAllQualityCasesAsync(req) {
@@ -2123,7 +2152,7 @@ router.put('/candidate-review/runs/:runId/candidates/:stableKey/review', require
     const candidate = bundle.items.find(item => item.stable_key === stableKey);
     if (!candidate) return res.status(404).json({ error: '候选项不存在' });
     const departmentName = await currentCandidateReviewDepartmentName(req);
-    if (!canAccessCandidateReviewItem(candidate, departmentName)) {
+    if (!await canAccessCandidateReviewItemAsync(req, candidate, departmentName)) {
       return res.status(403).json({ error: '只能处理本部门待确认问题' });
     }
 

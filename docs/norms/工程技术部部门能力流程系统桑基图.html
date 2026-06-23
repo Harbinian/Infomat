@@ -217,7 +217,13 @@
       }
 
       function addNode(nodes, name, type, color, id) {
-        if (!nodes[name]) nodes[name] = { name: name, itemStyle: { color: color }, _type: type, _meta: { id: id || name } };
+        if (!nodes[name]) {
+          var node = { name: name, itemStyle: { color: color }, _type: type, _meta: { id: id || name } };
+          if (type === "A1") node.label = { width: 150, overflow: "truncate", fontSize: 11 };
+          if (type === "L3") node.label = { width: 260, overflow: "truncate", fontSize: 11 };
+          if (type === "S1") node.label = { width: 130, overflow: "truncate", fontSize: 12, fontWeight: 800 };
+          nodes[name] = node;
+        }
       }
 
       function filteredL3() {
@@ -314,6 +320,10 @@
         return processCode(rowOrProc) + " " + processName(rowOrProc);
       }
 
+      function processChartLabel(rowOrProc) {
+        return processCode(rowOrProc) + " " + shortText(processName(rowOrProc), 24);
+      }
+
       function isProcessNode(name) {
         var text = String(name || "");
         if (l3Rows.some(function(row) { return processName(row) === text; })) return true;
@@ -357,8 +367,7 @@
       }
 
       function a1DisplayLabel(a1) {
-        var role = a1 && a1[2] ? a1[2] : "";
-        return a1ShortCode(a1) + " " + shortText(a1[1], 16) + "\n" + shortText(role, 18);
+        return a1ShortCode(a1) + " " + shortText(a1[1], 10);
       }
 
       function a1NodeName(a1) {
@@ -395,12 +404,26 @@
             });
           });
         } else {
-          filteredL3().forEach(function(row) {
+          var activeA1Rows = filteredA1();
+          var hasA1Rows = activeA1Rows.length > 0;
+          var a1ProcessSet = activeA1Rows.reduce(function(set, a1) {
+            set[String(a1[11] || "")] = true;
+            return set;
+          }, {});
+          filteredL3().filter(function(row) {
+            return !hasA1Rows || a1ProcessSet[row.process];
+          }).forEach(function(row) {
             addNode(nodes, row.capability, "L2", colors.capability);
             addNode(nodes, row.process, "L3", row.customer_evidence_label ? "#0f766e" : colors.process, row.code);
             addLink(links, row.capability, row.process);
+            if (!hasA1Rows) {
+              splitSystems(row.system).forEach(function(system) {
+                addNode(nodes, system, "S1", system === "应用承接待确认" ? colors.pending : colors.system);
+                addLink(links, row.process, system);
+              });
+            }
           });
-          filteredA1().forEach(function(a1) {
+          activeA1Rows.forEach(function(a1) {
             var systemList = splitSystems(a1[6]);
             var a1Name = a1NodeName(a1);
             addNode(nodes, a1Name, "A1", a1NodeColor(a1), a1[0]);
@@ -422,6 +445,12 @@
       function renderChart() {
         var graph = buildGraph();
         var isGlobal = activeMode === "全域总览";
+        var chartEl = document.getElementById("chart");
+        var chartHeight = isGlobal
+          ? 920
+          : Math.max(1120, 220 + filteredL3().length * 44 + filteredA1().length * 32);
+        chartEl.style.height = chartHeight + "px";
+        if (chart) chart.resize();
         document.getElementById("chartTitle").textContent = isGlobal ? departmentName + "全域总览" : activeMode;
         document.getElementById("chartSub").textContent = isGlobal
           ? "部门（D1）→ 能力域（层级范围 L1-L3）→ 业务能力（L2）→ 应用系统（S1）"
@@ -459,11 +488,12 @@
             data: graph.nodes,
             links: graph.links,
             left: 40,
-            right: 100,
+            right: isGlobal ? 120 : 180,
             top: 30,
             bottom: 30,
             nodeWidth: 18,
             nodeGap: isGlobal ? 18 : 12,
+            layoutIterations: isGlobal ? 32 : 0,
             draggable: false,
             emphasis: { focus: "adjacency" },
             lineStyle: { color: "gradient", curveness: 0.5, opacity: 0.42 },
@@ -474,7 +504,7 @@
                 if (!isGlobal) {
                   var a1 = findA1ByNode(params);
                   if (a1) return a1DisplayLabel(a1);
-                  if (isProcessNode(params.name)) return processDisplayLabel(params.name);
+                  if (isProcessNode(params.name)) return processChartLabel(params.name);
                 }
                 return params.name;
               },

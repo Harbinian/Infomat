@@ -51,6 +51,18 @@ assert.ok(html.includes('/api/process-governance/mdm-requirements'), 'process go
 assert.ok(html.includes('/api/process-governance/evidence'), 'process governance evidence API should be called');
 assert.ok(html.includes('function renderProcessGovernance()'), 'process governance renderer should exist');
 assert.ok(html.includes('function renderProcessGovernanceSankey(data)'), 'process governance sankey renderer should exist');
+assert.ok(html.includes('safeDisposeProcessGovernanceSankeyChart'), 'process governance sankey renderer should safely dispose broken chart instances');
+assert.ok(html.includes('chart.setOption(processGovernanceSankeyOption(data), true)'), 'process governance sankey should replace options without tearing down the DOM each time');
+assert.ok(html.includes('id="pgCurrentScope"'), 'process governance should show the active department scope outside the map view');
+assert.ok(html.includes('id="pgClearDeptScopeBtn"'), 'process governance should let users clear a cross-view department scope');
+assert.ok(html.includes('function renderProcessGovernanceScopeNotice'), 'process governance should render a reusable scope notice');
+assert.ok(html.includes("stats.sourceFiles && stats.sourceFiles.byStatus || {}"), 'process governance overview should use source-file summary metrics from current snapshot');
+assert.ok(html.includes("stats.mdmRequirements && stats.mdmRequirements.total || 0"), 'process governance overview should use MDM requirement summary metrics from current snapshot');
+assert.ok(html.includes("stats.evidenceRefs && stats.evidenceRefs.total || 0"), 'process governance overview should use evidence reference summary metrics from current snapshot');
+assert.ok(html.includes('id="loginForm"'), 'login inputs should be wrapped in a form for browser password handling');
+assert.ok(html.includes('<link rel="icon" href="/logo.png">'), 'MDM page should declare a favicon to avoid noisy 404s');
+assert.ok(html.includes('PROCESS_GOVERNANCE_QUALITY_VISIBLE_LIMIT = 80'), 'process governance quality tables should cap visible rows for page performance');
+assert.ok(html.includes('processGovernanceVisibleRows(items, PROCESS_GOVERNANCE_QUALITY_VISIBLE_LIMIT'), 'process governance quality renderers should use capped visible rows');
 const pgRenderStart = html.indexOf('async function renderProcessGovernance()');
 const pgRenderEnd = html.indexOf('// ===== Capability Preview Sankey =====', pgRenderStart);
 const pgRenderSnippet = html.slice(pgRenderStart, pgRenderEnd);
@@ -135,6 +147,8 @@ assert.ok(html.includes('function renderCandidateReviewList'), 'candidate review
 assert.ok(html.includes('function renderCandidateReviewDetailPage'), 'candidate review should render one problem per detail page');
 assert.ok(html.includes('pgView: query.view'), 'process governance route should expose pgView from the hash query');
 assert.ok(html.includes('candidateReviewKey: query.candidate'), 'process governance route should understand candidate review detail links');
+assert.ok(html.includes("return '#/processGovernance?view=candidateReview'"), 'candidate review back navigation should stay on the candidate review view');
+assert.ok(html.includes("route.pgView === 'candidateReview' && route.candidateReviewKey"), 'candidate review detail rendering should use process governance route view');
 assert.ok(html.includes('data-candidate-open'), 'candidate review list should open a single-problem confirmation page');
 assert.ok(html.includes('class="candidate-review-detail"'), 'candidate review detail page should have a dedicated readable layout');
 assert.ok(html.includes('candidate-review-confirmation'), 'candidate review confirmation controls should be below the problem body');
