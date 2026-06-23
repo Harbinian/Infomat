@@ -1,0 +1,28 @@
+{
+  "mdm": {
+    "host": "127.0.0.1",
+    "port": 3000
+  },
+  "pmo": {
+    "host": "127.0.0.1",
+    "port": 5173
+  },
+  "mysql": {
+    "host": "127.0.0.1",
+    "port": 3307,
+    "user": "mdm_user",
+    "database": "infomat_mdm",
+    "connectionLimit": 10,
+    "dockerContainer": "infomat-candidate-review-mysql"
+  },
+  "readModels": {
+    "identity": "mysql",
+    "processGovernance": "mysql"
+  },
+  "admin": {
+    "employeeNo": "ADMIN001"
+  },
+  "session": {
+    "allowInsecureDevSecret": "1"
+  }
+}

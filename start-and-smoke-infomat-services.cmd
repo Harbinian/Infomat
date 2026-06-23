@@ -8,9 +8,12 @@ if /I "%~1"=="-SkipStart" (
 )
 
 if "%SKIP_START%"=="0" (
-  node "%~dp0scripts\smoke-infomat-services.mjs" --start
-) else (
-  node "%~dp0scripts\smoke-infomat-services.mjs"
+  call "%~dp0start-infomat-services.cmd"
+  if errorlevel 1 (
+    set EXITCODE=%ERRORLEVEL%
+    endlocal & exit /b %EXITCODE%
+  )
 )
+node "%~dp0scripts\smoke-infomat-services.mjs"
 set EXITCODE=%ERRORLEVEL%
 endlocal & exit /b %EXITCODE%

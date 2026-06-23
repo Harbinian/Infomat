@@ -23,28 +23,56 @@
 
 ## 快速启动
 
-全新 clone 或另一台设备拉取后，使用 MySQL 配置和初始化脚本从仓库真源重建平台基线；不要复制或提交本地运行态数据库。
+MDM 和 PMO 从仓库根目录使用固定入口启动。固定入口会统一写入 MDM 端口、PMO 端口、MySQL 端口、MySQL 用户、数据库名和 MySQL 读模型。
 
 ```powershell
-cd apps/mdm-platform
-npm install
-$env:MYSQL_HOST="127.0.0.1"
-$env:MYSQL_PORT="3306"
-$env:MYSQL_USER="mdm_user"
-$env:MYSQL_PASSWORD="your-mysql-password"
-$env:MYSQL_DATABASE="infomat_mdm"
-$env:MDM_ADMIN_EMPLOYEE_NO="your-admin-no"
-$env:MDM_ADMIN_PASSWORD="your-long-random-password"
-$env:ALLOW_INSECURE_SESSION_SECRET="1"
-npm run init:mysql
-npm run setup:local-baseline
-npm run smoke
-npm start
+cd E:\CA001\Infomat
+npm run start:infomat-services
+npm run smoke:infomat-services
 ```
 
 访问 `http://localhost:3000`。
 
-平台不会创建默认管理员。首次初始化前请通过环境变量提供管理员工号和不少于 12 位的初始密码；脚本不会在仓库中保存密码、Cookie 或本地数据库。
+固定配置在 `scripts/infomat-services.config.json`：
+
+| 项 | 固定值 |
+|---|---|
+| MDM | `127.0.0.1:3000` |
+| PMO | `127.0.0.1:5173` |
+| MySQL | `127.0.0.1:3307` |
+| MySQL 用户 / 库 | `mdm_user` / `infomat_mdm` |
+| 读模型 | `MDM_IDENTITY_READ_MODEL=mysql`、`PROCESS_GOVERNANCE_READ_MODEL=mysql` |
+| 管理员工号 | `ADMIN001` |
+
+本机密码放在仓库根目录的 `scripts/infomat-services.local.env`，该文件只保留在本机：
+
+```text
+MYSQL_PASSWORD=你的项目 MySQL 密码
+MDM_ADMIN_PASSWORD=你的管理员密码
+```
+
+平台不会自动创建新的默认管理员。当前固定管理员账号是 `ADMIN001`，密码来自本机私有 env 文件。脚本不会在仓库中保存密码、Cookie 或本地数据库。
+
+全新 clone 或另一台设备拉取后，如需重建 MySQL schema 和平台基线，先确认固定 MySQL 容器和 `scripts/infomat-services.local.env` 已准备好，再在 `apps/mdm-platform/` 下执行：
+
+```powershell
+cd E:\CA001\Infomat
+$localEnv = Get-Content scripts\infomat-services.local.env
+$env:MYSQL_PASSWORD = ($localEnv | Where-Object { $_ -like 'MYSQL_PASSWORD=*' }).Split('=',2)[1]
+$env:MDM_ADMIN_PASSWORD = ($localEnv | Where-Object { $_ -like 'MDM_ADMIN_PASSWORD=*' }).Split('=',2)[1]
+$env:MYSQL_HOST = "127.0.0.1"
+$env:MYSQL_PORT = "3307"
+$env:MYSQL_USER = "mdm_user"
+$env:MYSQL_DATABASE = "infomat_mdm"
+$env:MYSQL_CONNECTION_LIMIT = "10"
+$env:MDM_IDENTITY_READ_MODEL = "mysql"
+$env:PROCESS_GOVERNANCE_READ_MODEL = "mysql"
+$env:MDM_ADMIN_EMPLOYEE_NO = "ADMIN001"
+cd apps\mdm-platform
+npm install
+npm run init:mysql
+npm run setup:local-baseline
+```
 
 `npm run init:mysql` 会初始化 MySQL schema 中已迁移的身份/RBAC、候选复核、流程治理读模型、数据地图字段域、术语治理、旧映射审批、冲突治理、通用待办和平台通用审计表。`npm run setup:local-baseline` 仍是迁移过渡期的幂等基线入口，会：
 
