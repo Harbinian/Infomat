@@ -132,6 +132,84 @@ function assertWorkflowPayload(body, tab, view) {
   assert(Array.isArray(body.detailActions), `${tab} 应返回 detailActions 数组`);
 }
 
+async function listen(app) {
+  return new Promise(resolve => {
+    const server = app.listen(0, '127.0.0.1', () => resolve(server));
+  });
+}
+
+function closeServer(server) {
+  return new Promise((resolve, reject) => {
+    server.close(error => error ? reject(error) : resolve());
+  });
+}
+
+async function runMysqlIdentityPageWorkflowCollisionRegression() {
+  const express = require('express');
+  const auth = require('../server/auth');
+  const pageWorkflowsRouter = require('../server/routes/pageWorkflows');
+  const previousReadModel = process.env.MDM_IDENTITY_READ_MODEL;
+  process.env.MDM_IDENTITY_READ_MODEL = 'mysql';
+
+  db.prepare(`
+    INSERT INTO departments (id, name, code, department_type, source_system, external_id)
+    VALUES (901, '质量管理部', 'PAGE_WF_LOCAL_COLLISION_DEPT_901', '职能', 'PROCESS_GOVERNANCE', 'PAGE_WF_LOCAL_DEPT_901')
+  `).run();
+  db.prepare(`
+    INSERT INTO users (id, name, employee_no, department_id, post, role, password_hash)
+    VALUES (43, '本地同号用户', 'PAGE_WF_LOCAL_COLLISION_USER_43', 901, '本地旧用户', 'submitter', ?)
+  `).run(hashPassword(PASSWORD));
+
+  auth.setIdentityRepositoryFactory(async () => ({
+    async getUserEffectivePermissions(userId) {
+      assert(userId === 43, `权限读取用户应为 43，实际 ${userId}`);
+      return { permSet: new Set(['admin:access']), fieldConstraints: {} };
+    },
+    async getUserRoleCodes(userId) {
+      assert(userId === 43, `角色读取用户应为 43，实际 ${userId}`);
+      return [
+        { code: 'admin', name: '管理员' },
+        { code: 'it_lead', name: '信息化负责人' }
+      ];
+    },
+    async getDepartmentById(departmentId) {
+      assert(Number(departmentId) === 901, `部门读取应为 901，实际 ${departmentId}`);
+      return { id: 901, name: '经营发展部', code: 'DEPT_JYFZ' };
+    }
+  }));
+
+  const app = express();
+  app.use(express.json());
+  app.use((req, res, next) => {
+    req.session = {
+      userId: 43,
+      userRole: 'admin',
+      userName: 'MySQL 身份用户',
+      departmentId: 901
+    };
+    next();
+  });
+  app.use('/api/page-workflows', pageWorkflowsRouter);
+  const server = await listen(app);
+  const baseUrl = `http://127.0.0.1:${server.address().port}`;
+
+  try {
+    const response = await fetch(`${baseUrl}/api/page-workflows?tab=processGovernance&view=list`);
+    const body = await response.json();
+    assert(response.status === 200, `MySQL 身份页面工作流失败: ${response.status} ${JSON.stringify(body)}`);
+    assert(body.user.departmentName === '经营发展部', `页面工作流应返回 MySQL 身份部门，实际 ${body.user.departmentName}`);
+    assert(body.user.roleCodes.includes('it_lead'), '页面工作流应返回 MySQL 身份角色');
+  } finally {
+    await closeServer(server);
+    auth.resetIdentityRepositoryFactory();
+    if (previousReadModel === undefined) {
+      delete process.env.MDM_IDENTITY_READ_MODEL;
+    } else {
+      process.env.MDM_IDENTITY_READ_MODEL = previousReadModel;
+    }
+  }
+}
+
 async function main() {
   let child;
 
@@ -139,7 +217,13 @@ async function main() {
     const seeded = seedData();
     child = spawn(process.execPath, ['server/index.js'], {
       cwd: APP_ROOT,
-      env: { ...process.env, PORT: String(PORT), SESSION_SECRET: 'page-workflow-test' },
+      env: {
+        ...process.env,
+        PORT: String(PORT),
+        SESSION_SECRET: 'page-workflow-test',
+        MDM_IDENTITY_READ_MODEL: '',
+        PROCESS_GOVERNANCE_READ_MODEL: ''
+      },
       stdio: 'ignore'
     });
     await waitForServer(child);
@@ -189,6 +273,7 @@ async function main() {
     assert(adminRbac.body.nextActions.some(action => action.roleCode === 'admin' || String(action.target).includes('rbac')), '管理员应看到角色权限优先动作');
 
     console.log('Page workflows API test passed');
+    await runMysqlIdentityPageWorkflowCollisionRegression();
   } finally {
     await stopServer(child);
     try {

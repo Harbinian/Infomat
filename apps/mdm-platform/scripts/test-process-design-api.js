@@ -225,6 +225,110 @@ async function runMysqlIdentityDepartmentBridgeRegression() {
   }
 }
 
+async function runMysqlIdentityIdCollisionRegression() {
+  db.prepare(`
+    INSERT INTO departments (id, name, code, department_type, source_system, external_id)
+    VALUES (901, '质量管理部', 'LOCAL_COLLISION_DEPT_901', '职能', 'PROCESS_GOVERNANCE', 'LOCAL_DEPT_901')
+  `).run();
+  db.prepare(`
+    INSERT INTO users (id, name, employee_no, department_id, post, role, password_hash)
+    VALUES (43, '本地同号用户', 'LOCAL_COLLISION_USER_43', 901, '本地旧用户', 'submitter', ?)
+  `).run(hashPassword(PASSWORD));
+
+  const previousReadModel = process.env.MDM_IDENTITY_READ_MODEL;
+  process.env.MDM_IDENTITY_READ_MODEL = 'mysql';
+  const auth = require('../server/auth');
+  const processDesignRouter = require('../server/routes/processDesign');
+  let departmentReads = 0;
+  let userReads = 0;
+
+  auth.setIdentityRepositoryFactory(async () => ({
+    async getUserEffectivePermissions(userId) {
+      assert.strictEqual(userId, 43);
+      return { permSet: new Set(['admin:access']), fieldConstraints: {} };
+    },
+    async getUserRoleCodes(userId) {
+      assert.strictEqual(userId, 43);
+      return [
+        { code: 'admin', name: '管理员' },
+        { code: 'it_lead', name: '信息化负责人' }
+      ];
+    },
+    async getDepartmentById(departmentId) {
+      departmentReads += 1;
+      assert.strictEqual(Number(departmentId), 901);
+      return { id: 901, name: '经营发展部', code: 'DEPT_JYFZ' };
+    },
+    async getUserById(userId) {
+      userReads += 1;
+      assert.strictEqual(userId, 43);
+      return {
+        id: 43,
+        name: 'MySQL 身份用户',
+        employee_no: 'MYSQL_PROC_43',
+        department_id: 901,
+        post: '流程治理测试岗',
+        role: 'admin'
+      };
+    }
+  }));
+
+  const app = express();
+  app.use(express.json());
+  app.use((req, res, next) => {
+    req.session = {
+      userId: 43,
+      userRole: 'admin',
+      userName: 'MySQL 身份用户',
+      departmentId: 901
+    };
+    next();
+  });
+  app.use('/api/process-design', processDesignRouter);
+
+  const server = await listen(app);
+  const baseUrl = `http://127.0.0.1:${server.address().port}`;
+
+  try {
+    const response = await fetch(`${baseUrl}/api/process-design/drafts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        process_name: 'MySQL 身份 ID 碰撞草稿',
+        reason: '身份读取模型与本地 SQLite 存在同 ID 不同语义',
+        basis_type: '现场实际',
+        basis_description: '页面烟测发现草稿错误落到本地同 ID 部门',
+        involves_other_departments: false,
+        related_departments: []
+      })
+    });
+    const body = await response.json();
+    assert.strictEqual(response.status, 201, JSON.stringify(body));
+    assert.notStrictEqual(body.department_id, 901, '不应复用本地同 ID 但不同语义的部门');
+    assert.strictEqual(body.department_name, '经营发展部');
+    assert.notStrictEqual(body.created_by, 43, '不应复用本地同 ID 但不同语义的用户');
+    assert.strictEqual(body.created_by_name, 'MySQL 身份用户');
+    const event = db.prepare(`
+      SELECT e.actor_user_id, u.name AS actor_user_name
+      FROM process_design_events e
+      LEFT JOIN users u ON u.id=e.actor_user_id
+      WHERE e.draft_id=? AND e.event_type='draft_created'
+    `).get(body.id);
+    assert.strictEqual(event.actor_user_id, body.created_by);
+    assert.strictEqual(event.actor_user_name, 'MySQL 身份用户');
+    assert.ok(departmentReads > 0, '应读取 MySQL 身份部门以识别 ID 碰撞');
+    assert.ok(userReads > 0, '应读取 MySQL 身份用户以识别 ID 碰撞');
+  } finally {
+    await closeServer(server);
+    auth.resetIdentityRepositoryFactory();
+    if (previousReadModel === undefined) {
+      delete process.env.MDM_IDENTITY_READ_MODEL;
+    } else {
+      process.env.MDM_IDENTITY_READ_MODEL = previousReadModel;
+    }
+  }
+}
+
 async function main() {
   const { operatingDeptId, engineeringDeptId } = seedData();
   const normFile = path.join(__dirname, '..', '..', '..', 'docs', 'norms', '经营发展部部门-能力-流程-系统映射关系.md');
@@ -486,6 +590,7 @@ async function main() {
     }
 
     await runMysqlIdentityDepartmentBridgeRegression();
+    await runMysqlIdentityIdCollisionRegression();
   } finally {
     await stopServer(child);
     try {
