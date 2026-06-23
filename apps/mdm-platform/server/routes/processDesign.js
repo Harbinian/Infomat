@@ -109,54 +109,145 @@ function ensureDepartmentExists(departmentId) {
   return Boolean(db.prepare('SELECT id FROM departments WHERE id=?').get(departmentId));
 }
 
+function uniqueDepartmentCode(preferredCode, identityDepartmentId) {
+  const base = text(preferredCode) || `MYSQL_DEPT_${identityDepartmentId}`;
+  if (!db.prepare('SELECT id FROM departments WHERE code=?').get(base)) return base;
+  const fallback = `MYSQL_DEPT_${identityDepartmentId}`;
+  if (!db.prepare('SELECT id FROM departments WHERE code=?').get(fallback)) return fallback;
+  let suffix = 2;
+  while (db.prepare('SELECT id FROM departments WHERE code=?').get(`${fallback}_${suffix}`)) suffix += 1;
+  return `${fallback}_${suffix}`;
+}
+
+function sameIdentityDepartment(localDepartment, identityDepartment, externalId) {
+  if (!localDepartment || !identityDepartment) return false;
+  const identityName = text(identityDepartment.name);
+  const identityCode = text(identityDepartment.code);
+  if (text(localDepartment.source_system) === 'MYSQL_IDENTITY' && text(localDepartment.external_id) === externalId) return true;
+  if (!identityName || text(localDepartment.name) !== identityName) return false;
+  return !identityCode || text(localDepartment.code) === identityCode;
+}
+
 async function ensureLocalDepartment(departmentId) {
   if (!departmentId) return null;
   const numericId = Number(departmentId);
-  const local = db.prepare('SELECT id FROM departments WHERE id=?').get(numericId);
-  if (local) return local.id;
-
+  const localById = db.prepare('SELECT id, name, code, source_system, external_id FROM departments WHERE id=?').get(numericId);
   const identityDepartment = await getDepartmentByIdAsync(numericId);
-  if (!identityDepartment || !text(identityDepartment.name)) return null;
+  if (!identityDepartment || !text(identityDepartment.name)) return localById ? localById.id : null;
 
-  const code = text(identityDepartment.code) || `MYSQL_DEPT_${numericId}`;
-  const byCode = db.prepare('SELECT id FROM departments WHERE code=?').get(code);
-  if (byCode) return byCode.id;
+  const externalId = String(numericId);
+  if (sameIdentityDepartment(localById, identityDepartment, externalId)) return localById.id;
 
-  db.prepare(`
-    INSERT INTO departments (id, name, code, path, department_type, source_system, external_id, status)
-    VALUES (?, ?, ?, ?, '其他', 'MYSQL_IDENTITY', ?, 'active')
-  `).run(
-    numericId,
-    text(identityDepartment.name),
+  const identityName = text(identityDepartment.name);
+  const identityCode = text(identityDepartment.code);
+  const byExternalId = db.prepare(`
+    SELECT id, name, code, source_system, external_id
+    FROM departments
+    WHERE source_system='MYSQL_IDENTITY' AND external_id=?
+  `).get(externalId);
+  if (byExternalId) {
+    db.prepare('UPDATE departments SET name=?, status=? WHERE id=?').run(identityName, 'active', byExternalId.id);
+    return byExternalId.id;
+  }
+
+  if (identityCode) {
+    const byCode = db.prepare('SELECT id, name, code, source_system, external_id FROM departments WHERE code=?').get(identityCode);
+    if (sameIdentityDepartment(byCode, identityDepartment, externalId)) return byCode.id;
+  }
+
+  const code = uniqueDepartmentCode(identityCode, numericId);
+  const columns = localById
+    ? '(name, code, path, department_type, source_system, external_id, status)'
+    : '(id, name, code, path, department_type, source_system, external_id, status)';
+  const placeholders = localById
+    ? "(?, ?, ?, '其他', 'MYSQL_IDENTITY', ?, 'active')"
+    : "(?, ?, ?, ?, '其他', 'MYSQL_IDENTITY', ?, 'active')";
+  const params = localById ? [
+    identityName,
     code,
-    `/${numericId}/`,
-    String(numericId)
+    `/mysql-identity/${numericId}/`,
+    externalId
+  ] : [
+    numericId,
+    identityName,
+    code,
+    `/mysql-identity/${numericId}/`,
+    externalId
+  ];
+
+  return db.prepare(`INSERT INTO departments ${columns} VALUES ${placeholders}`).run(...params).lastInsertRowid;
+}
+
+function uniqueEmployeeNo(preferredEmployeeNo, identityUserId) {
+  const base = text(preferredEmployeeNo) || `MYSQL_USER_${identityUserId}`;
+  if (!db.prepare('SELECT id FROM users WHERE employee_no=?').get(base)) return base;
+  const fallback = `MYSQL_USER_${identityUserId}`;
+  if (!db.prepare('SELECT id FROM users WHERE employee_no=?').get(fallback)) return fallback;
+  let suffix = 2;
+  while (db.prepare('SELECT id FROM users WHERE employee_no=?').get(`${fallback}_${suffix}`)) suffix += 1;
+  return `${fallback}_${suffix}`;
+}
+
+function sameIdentityUser(localUser, identityUser) {
+  if (!localUser || !identityUser) return false;
+  const identityEmployeeNo = text(identityUser.employee_no);
+  if (identityEmployeeNo) return text(localUser.employee_no) === identityEmployeeNo;
+  return text(localUser.name) === text(identityUser.name);
+}
+
+function compatibleUserRole(identityUser, sessionRole) {
+  const identityRole = text(identityUser && identityUser.role);
+  if (BASIC_USER_ROLES.has(identityRole)) return identityRole;
+  const fallbackRole = text(sessionRole);
+  return BASIC_USER_ROLES.has(fallbackRole) ? fallbackRole : 'submitter';
+}
+
+function syncLocalIdentityUser(userId, identityUser, departmentId, role) {
+  db.prepare(`
+    UPDATE users
+    SET name=?, department_id=?, post=?, role=?
+    WHERE id=?
+  `).run(
+    text(identityUser && identityUser.name) || `MySQL 用户 ${userId}`,
+    departmentId || null,
+    optionalText(identityUser && identityUser.post),
+    role,
+    userId
   );
-  return numericId;
+  return userId;
 }
 
 async function ensureLocalUser(req, departmentId) {
   if (!req.session || !req.session.userId) return null;
   const userId = Number(req.session.userId);
-  const local = db.prepare('SELECT id FROM users WHERE id=?').get(userId);
-  if (local) return local.id;
-
   const identityUser = await getUserByIdAsync(userId);
+  const localById = db.prepare('SELECT id, name, employee_no, department_id FROM users WHERE id=?').get(userId);
   const name = text(identityUser && identityUser.name) || text(req.session.userName) || `MySQL 用户 ${userId}`;
   const preferredEmployeeNo = text(identityUser && identityUser.employee_no) || `MYSQL_USER_${userId}`;
-  const employeeNo = db.prepare('SELECT id FROM users WHERE employee_no=?').get(preferredEmployeeNo)
-    ? `MYSQL_USER_${userId}`
-    : preferredEmployeeNo;
-  const role = BASIC_USER_ROLES.has(text(identityUser && identityUser.role))
-    ? text(identityUser.role)
-    : BASIC_USER_ROLES.has(text(req.session.userRole))
-      ? text(req.session.userRole)
-      : 'submitter';
+  const role = compatibleUserRole(identityUser, req.session.userRole);
 
-  db.prepare(`
-    INSERT INTO users (id, name, employee_no, department_id, post, role, password_hash)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(
+  if (sameIdentityUser(localById, identityUser)) {
+    return syncLocalIdentityUser(localById.id, { ...identityUser, name }, departmentId, role);
+  }
+
+  const byEmployeeNo = db.prepare('SELECT id, name, employee_no, department_id FROM users WHERE employee_no=?').get(preferredEmployeeNo);
+  if (byEmployeeNo) {
+    return syncLocalIdentityUser(byEmployeeNo.id, { ...identityUser, name }, departmentId, role);
+  }
+
+  const employeeNo = uniqueEmployeeNo(preferredEmployeeNo, userId);
+  const columns = localById
+    ? '(name, employee_no, department_id, post, role, password_hash)'
+    : '(id, name, employee_no, department_id, post, role, password_hash)';
+  const placeholders = localById ? '(?, ?, ?, ?, ?, ?)' : '(?, ?, ?, ?, ?, ?, ?)';
+  const params = localById ? [
+    name,
+    employeeNo,
+    departmentId || null,
+    optionalText(identityUser && identityUser.post),
+    role,
+    hashPassword('mysql-identity-disabled')
+  ] : [
     userId,
     name,
     employeeNo,
@@ -164,8 +255,9 @@ async function ensureLocalUser(req, departmentId) {
     optionalText(identityUser && identityUser.post),
     role,
     hashPassword('mysql-identity-disabled')
-  );
-  return userId;
+  ];
+
+  return db.prepare(`INSERT INTO users ${columns} VALUES ${placeholders}`).run(...params).lastInsertRowid;
 }
 
 function draftRequiredErrors(body) {
@@ -668,7 +760,7 @@ router.post('/drafts', requireAuth, (req, res) => runAction(res, async () => {
     optionalText(req.body.proxy_reason),
     createdBy
   );
-  addEvent(info.lastInsertRowid, 'draft_created', req.session.userId, '已创建流程草稿');
+  addEvent(info.lastInsertRowid, 'draft_created', createdBy, '已创建流程草稿');
   const draft = loadDraft(info.lastInsertRowid);
   res.status(201).json({ ...draft, outcome: outcomeForDraft(draft) });
 }));
