@@ -12,6 +12,7 @@
 import { createHash } from 'crypto';
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'fs';
 import { basename, dirname, extname, join, relative, resolve } from 'path';
+import { classifySourceBoundary, sourceBoundaryFromCitation } from './source-boundary-rules.mjs';
 
 const NORMS = resolve(import.meta.dirname || '.', '..', 'docs', 'norms');
 const REPO_ROOT = resolve(NORMS, '..', '..');
@@ -262,6 +263,11 @@ function buildSourceManifest(mappingFiles, mdmRequirementFiles) {
       leafDir: overrides.sourceRoot ? sourceLeafDir(overrides.sourceRoot, filePath) : undefined,
       status: process.status,
       reason: process.reason,
+      ...classifySourceBoundary({
+        path: repoPath,
+        fileName: basename(filePath),
+        fileNo: overrides.fileNo || inferred.fileNo,
+      }),
     });
   }
 
@@ -795,6 +801,7 @@ function buildEvidenceRefs(allMappings, allA1, mdmRequirements) {
   }
 
   for (const row of allMappings) {
+    const boundary = sourceBoundaryFromCitation(row.evidenceCitation || row.sourceFile || '');
     add({
       refType: 'L3',
       dept: row.dept,
@@ -805,10 +812,12 @@ function buildEvidenceRefs(allMappings, allA1, mdmRequirements) {
       sourceFile: row.sourceFile || `docs/norms/${row.dept}部门-能力-流程-系统映射关系.md`,
       citation: row.evidenceCitation || '',
       note: 'DCM 映射总表制度依据',
+      ...boundary,
     });
   }
 
   for (const row of allA1) {
+    const boundary = sourceBoundaryFromCitation(row.evidenceCitation || row.sourceFile || '');
     add({
       refType: 'A1',
       dept: row.dept,
@@ -819,10 +828,12 @@ function buildEvidenceRefs(allMappings, allA1, mdmRequirements) {
       sourceFile: row.sourceFile || `docs/norms/${row.dept}部门-能力-流程-系统映射关系.md`,
       citation: row.evidenceCitation || '',
       note: '业务行为（A1）映射制度依据',
+      ...boundary,
     });
   }
 
   for (const row of mdmRequirements) {
+    const boundary = classifySourceBoundary({ path: row.sourceFile, citation: 'MDM建设要求' });
     add({
       refType: 'MDM',
       dept: row.dept,
@@ -833,6 +844,7 @@ function buildEvidenceRefs(allMappings, allA1, mdmRequirements) {
       sourceFile: row.sourceFile,
       citation: '主数据对象识别',
       note: row.governanceRequirement || '部门能力层与 MDM 建设要求',
+      ...boundary,
     });
   }
 
@@ -1194,6 +1206,7 @@ function main() {
   const a1Matched = countMatchedA1(allA1, allMappings);
 
   const finalData = {
+    snapshotDate: new Date().toISOString().slice(0, 10),
     nodes: Array.from(allNodes).map(name => ({ name })),
     links: Array.from(merged2.values()),
     systems: (() => {

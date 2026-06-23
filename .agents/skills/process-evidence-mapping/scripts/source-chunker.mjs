@@ -14,6 +14,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { classifySourceBoundary } from '../../../../scripts/source-boundary-rules.mjs';
 
 const TEXT_EXTENSIONS = new Set(['.md', '.txt', '.csv', '.json', '.html', '.htm']);
 const SKIP_DIRS = new Set(['.git', 'node_modules', 'artifacts', 'test-results']);
@@ -61,6 +62,21 @@ function ensureDir(filePath) {
 
 function toRepoPath(filePath) {
   return path.relative(process.cwd(), filePath).replaceAll(path.sep, '/');
+}
+
+function sourceBoundaryFields(record) {
+  const boundary = classifySourceBoundary({
+    path: record.source_file || '',
+    fileName: record.source_file_name || '',
+    fileNo: record.doc_no || '',
+  });
+  return {
+    source_boundary_flag: boundary.source_boundary_flag,
+    source_boundary_label: boundary.source_boundary_label,
+    source_acceptance_status: boundary.acceptance_status,
+    source_boundary_allowed_downstream_use: boundary.allowed_downstream_use,
+    customer_acceptance_required: boundary.customer_acceptance_required,
+  };
 }
 
 function* walk(dir) {
@@ -188,6 +204,7 @@ function main() {
       included_status: 'candidate',
       included_reason: 'Chunked for retrieval review only; inclusion still requires source verification.',
     };
+    Object.assign(sourceBase, sourceBoundaryFields(sourceBase));
 
     if (!TEXT_EXTENSIONS.has(ext)) {
       unsupportedCount += 1;
@@ -223,6 +240,7 @@ function main() {
       review_reason: 'Retrieval chunk only; verify original source before using in mapping.',
       content_hash: contentHash,
     };
+    Object.assign(source, sourceBoundaryFields(source));
 
     for (const chunk of chunkText({ text, source, maxChars: args.maxChars })) {
       if (!chunk.normalized_text) continue;

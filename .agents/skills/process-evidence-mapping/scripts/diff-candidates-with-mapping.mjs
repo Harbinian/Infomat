@@ -32,7 +32,7 @@ function itemFromCandidate({ department, type, candidate, content, action, mappi
   const sourceAnchor = candidate.source_anchor || '';
   const candidateContent = content || candidate.content || candidate.name || '';
   if (mappingCovers(mappingText, candidateContent)) return null;
-  return makeCandidateItem({
+  const item = makeCandidateItem({
     department,
     sourceFile,
     sourceAnchor,
@@ -42,6 +42,17 @@ function itemFromCandidate({ department, type, candidate, content, action, mappi
     suggestedAction: action,
     owner,
   });
+  return {
+    ...item,
+    evidence_status: candidate.evidence_status || 'candidate',
+    verification_status: candidate.verification_status || 'unverified',
+    allowed_downstream_use: 'review_only',
+    source_boundary_flag: candidate.source_boundary_flag || '',
+    source_boundary_label: candidate.source_boundary_label || '',
+    source_acceptance_status: candidate.source_acceptance_status || '',
+    source_boundary_allowed_downstream_use: candidate.source_boundary_allowed_downstream_use || '',
+    customer_acceptance_required: Boolean(candidate.customer_acceptance_required),
+  };
 }
 
 function acceptanceGapCovered(mappingText, content) {
