@@ -26,6 +26,19 @@ async function canManageDataMap(req) {
   return permSet.has('admin:access') || permSet.has('*:*') || permSet.has('data:view_all');
 }
 
+async function canCreateOwnDepartmentContext(req, payload = {}) {
+  if (await canManageDataMap(req)) return true;
+  const { getUserRoleCodesAsync } = require('../auth');
+  const roles = await getUserRoleCodesAsync(req.session.userId, req.session.userRole);
+  const roleCodes = new Set((roles || []).map(role => role.code || role.role_code).filter(Boolean));
+  if (req.session.userRole) roleCodes.add(req.session.userRole);
+  const canCreate = roleCodes.has('submitter') || roleCodes.has('business_contact');
+  if (!canCreate) return false;
+  const sessionDeptId = Number(req.session.departmentId || 0);
+  const requestedDeptId = Number(payload.dept_id || sessionDeptId || 0);
+  return !!sessionDeptId && requestedDeptId === sessionDeptId;
+}
+
 router.get('/contexts', requireAuth, (req, res) => {
   return runAction(res, async () => {
     const repo = await dataMapRepository();
@@ -43,8 +56,11 @@ router.get('/contexts', requireAuth, (req, res) => {
 
 router.post('/contexts', requireAuth, (req, res) => {
   return runAction(res, async () => {
-    if (!await canManageDataMap(req)) {
+    if (!await canCreateOwnDepartmentContext(req, req.body)) {
       return res.status(403).json({ error: '无权创建数据地图上下文' });
+    }
+    if (!await canManageDataMap(req)) {
+      req.body = { ...req.body, dept_id: req.session.departmentId };
     }
     const repo = await dataMapRepository();
     const context = await repo.createContext(req.body, req.session.userId);

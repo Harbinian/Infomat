@@ -7,6 +7,21 @@ const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'),
 
 assert.ok(html.includes('data-tab="processGovernance"'), 'process governance tab should exist');
 assert.ok(html.includes('id="processGovernancePanel"'), 'process governance panel should exist');
+assert.ok(html.includes('id="pgWorkspaceChoices"'), 'process governance should first show existing/new-process workspace choices');
+assert.ok(html.includes('治理已有流程'), 'process governance should expose the existing-process workspace');
+assert.ok(html.includes('创建新流程'), 'process governance should expose the new-process workspace');
+assert.ok(html.includes('data-pg-workspace="existing"') && html.includes('data-pg-workspace="new"'), 'process governance workspace choices should be routeable');
+assert.ok(html.includes('id="pgExistingWizard"'), 'existing process governance should show a guided workflow');
+assert.ok(html.includes('看本部门有哪些问题') && html.includes('确认关闭'), 'existing process wizard should show the six-step closure path');
+assert.ok(html.includes('id="pgDesignWizard"'), 'new process creation should show a design wizard');
+['流程说明', '实际步骤', '在线表单', '字段与证据', '提交审核', '成果预览'].forEach(label => {
+  assert.ok(html.includes(label), `new process wizard should include step ${label}`);
+});
+assert.ok(html.includes('class="outcome-card"'), 'process governance should render reusable outcome feedback cards');
+assert.ok(html.includes('/api/process-design/summary'), 'process governance should load process design summary');
+assert.ok(html.includes('/api/process-design/drafts'), 'process governance should create process design drafts through API');
+assert.ok(html.includes('function renderProcessDesignWorkspace'), 'process governance should render new process design workspace');
+assert.ok(html.includes('function renderProcessDesignOutcomeCard'), 'process governance should render outcome feedback from real counts');
 assert.ok(html.includes('id="pgSubtabs"'), 'process governance should expose a subtab navigation container');
 assert.ok(html.includes('function processGovernanceViewFromRoute(route)'), 'process governance should map routes to page subtabs');
 assert.ok(html.includes('function renderProcessGovernanceSubtabs(activeView)'), 'process governance should render page subtabs');

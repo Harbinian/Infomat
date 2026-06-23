@@ -355,6 +355,67 @@ function emptySankey() {
   };
 }
 
+function publishedDesignSankeyParts() {
+  const versions = db.prepare(`
+    SELECT v.id AS version_id, v.l1_name, v.l2_name, v.l3_name, d.department_id, dept.name AS department_name
+    FROM process_design_versions v
+    JOIN process_design_drafts d ON d.id=v.draft_id
+    LEFT JOIN departments dept ON dept.id=v.department_id
+    WHERE v.status='published'
+    ORDER BY v.id
+  `).all();
+  const steps = db.prepare(`
+    SELECT s.id, s.step_name, s.a1_code, s.sort_order, v.id AS version_id
+    FROM process_design_steps s
+    JOIN process_design_versions v ON v.draft_id=s.draft_id
+    WHERE v.status='published'
+    ORDER BY v.id, s.sort_order, s.id
+  `).all();
+  const stepByVersion = new Map();
+  steps.forEach(step => {
+    if (!stepByVersion.has(step.version_id)) stepByVersion.set(step.version_id, []);
+    stepByVersion.get(step.version_id).push(step);
+  });
+
+  const nodeByName = new Map();
+  const links = [];
+  function addNode(name, label, nodeType, deptName, parentKey) {
+    if (!name || nodeByName.has(name)) return;
+    nodeByName.set(name, {
+      name,
+      label: label || name,
+      node_type: nodeType,
+      domain_name: null,
+      dept_name: deptName || null,
+      parent_key: parentKey || null,
+      source_file: 'process_design_versions'
+    });
+  }
+  function addLink(source, target) {
+    if (source && target) links.push({ source, target, value: 1 });
+  }
+
+  versions.forEach(version => {
+    const deptName = version.department_name || '未绑定部门';
+    const l1Key = `process-design:${version.version_id}:l1`;
+    const l2Key = `process-design:${version.version_id}:l2`;
+    const l3Key = `process-design:${version.version_id}:l3`;
+    addNode(deptName, deptName, 'department', deptName);
+    addNode(l1Key, version.l1_name, 'l2', deptName, deptName);
+    addNode(l2Key, version.l2_name, 'l2', deptName, l1Key);
+    addNode(l3Key, version.l3_name, 'l3', deptName, l2Key);
+    addLink(deptName, l1Key);
+    addLink(l1Key, l2Key);
+    addLink(l2Key, l3Key);
+    (stepByVersion.get(version.version_id) || []).forEach(step => {
+      const stepKey = `process-design:${version.version_id}:step:${step.id}`;
+      addNode(stepKey, step.step_name, 'a1', deptName, l3Key);
+      addLink(l3Key, stepKey);
+    });
+  });
+  return { nodes: Array.from(nodeByName.values()), links };
+}
+
 function emptyQualitySummary() {
   return { BLOCK: 0, WARN: 0, INFO: 0 };
 }
@@ -829,19 +890,24 @@ router.get('/sankey', requireAuth, (req, res) => {
     const snapshot = activeSnapshot();
     if (!snapshot) return res.json(emptySankey());
 
-    const nodes = db.prepare(`
+    let nodes = db.prepare(`
       SELECT node_key AS name, name AS label, node_type, domain_name, dept_name, parent_key, source_file
       FROM process_governance_nodes
       WHERE snapshot_id=?
       ORDER BY sort_order, id
     `).all(snapshot.id);
 
-    const links = db.prepare(`
+    let links = db.prepare(`
       SELECT source_key AS source, target_key AS target, value
       FROM process_governance_edges
       WHERE snapshot_id=?
       ORDER BY id
     `).all(snapshot.id);
+    const publishedDesignParts = publishedDesignSankeyParts();
+    const existingNodeNames = new Set(nodes.map(node => node.name));
+    const extraNodes = publishedDesignParts.nodes.filter(node => !existingNodeNames.has(node.name));
+    nodes = nodes.concat(extraNodes);
+    links = links.concat(publishedDesignParts.links);
 
     const systems = nodes
       .filter(node => node.node_type === 'system')
@@ -869,13 +935,15 @@ router.get('/sankey', requireAuth, (req, res) => {
     }));
 
     const stats = snapshotStats(snapshot);
+    const publishedA1Count = publishedDesignParts.nodes.filter(node => node.node_type === 'a1').length;
+    const publishedL3Count = publishedDesignParts.nodes.filter(node => node.node_type === 'l3').length;
     res.json({
       nodes,
       links,
       systems,
       stats: {
-        mappings: stats.mappings || 0,
-        a1: stats.a1 || 0,
+        mappings: (stats.mappings || 0) + publishedL3Count,
+        a1: (stats.a1 || 0) + publishedA1Count,
         departmentsWithData: stats.departmentsWithData || 0,
         departmentsEmpty: stats.departmentsEmpty || 0
       },

@@ -1089,6 +1089,159 @@ CREATE INDEX IF NOT EXISTS idx_process_mapping_todos_dept ON process_mapping_tod
 CREATE INDEX IF NOT EXISTS idx_process_mapping_todo_events_todo ON process_mapping_todo_events(todo_id, id);
 `);
 
+db.exec(`
+CREATE TABLE IF NOT EXISTS process_design_drafts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  process_name TEXT NOT NULL,
+  reason TEXT NOT NULL,
+  basis_type TEXT NOT NULL,
+  basis_description TEXT NOT NULL,
+  involves_other_departments INTEGER NOT NULL DEFAULT 0,
+  related_departments_json TEXT,
+  department_id INTEGER NOT NULL REFERENCES departments(id) ON DELETE RESTRICT,
+  proxy_department_id INTEGER REFERENCES departments(id) ON DELETE SET NULL,
+  proxy_reason TEXT,
+  l1_name TEXT,
+  l1_status TEXT NOT NULL DEFAULT 'unclassified' CHECK(l1_status IN ('unclassified','candidate','confirmed')),
+  l2_name TEXT,
+  l2_status TEXT NOT NULL DEFAULT 'unclassified' CHECK(l2_status IN ('unclassified','candidate','confirmed')),
+  l3_name TEXT,
+  status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','submitted','under_review','needs_changes','approved','published','rejected')),
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  submitted_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  submitted_at TEXT,
+  published_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  published_at TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS process_design_steps (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  draft_id INTEGER NOT NULL REFERENCES process_design_drafts(id) ON DELETE CASCADE,
+  step_name TEXT NOT NULL,
+  actor_role TEXT,
+  timing TEXT,
+  input_materials TEXT,
+  output_result TEXT,
+  need_confirmation INTEGER NOT NULL DEFAULT 0,
+  related_departments TEXT,
+  basis TEXT,
+  a1_code TEXT,
+  sort_order INTEGER NOT NULL DEFAULT 1,
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS process_design_forms (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  draft_id INTEGER NOT NULL REFERENCES process_design_drafts(id) ON DELETE CASCADE,
+  step_id INTEGER REFERENCES process_design_steps(id) ON DELETE SET NULL,
+  form_name TEXT NOT NULL,
+  description TEXT,
+  archive_rule TEXT,
+  status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','submitted','published','retired')),
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS process_design_form_fields (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  form_id INTEGER NOT NULL REFERENCES process_design_forms(id) ON DELETE CASCADE,
+  field_name_cn TEXT NOT NULL,
+  field_name_en TEXT,
+  data_object TEXT,
+  field_type TEXT,
+  enum_options TEXT,
+  evidence_note TEXT,
+  status TEXT NOT NULL DEFAULT 'suggested' CHECK(status IN ('suggested','business_confirmed','data_governed','published','retired')),
+  sort_order INTEGER NOT NULL DEFAULT 1,
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS process_design_evidence (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  draft_id INTEGER NOT NULL REFERENCES process_design_drafts(id) ON DELETE CASCADE,
+  object_type TEXT NOT NULL CHECK(object_type IN ('process','step','form','field')),
+  object_id INTEGER,
+  evidence_type TEXT NOT NULL,
+  description TEXT NOT NULL,
+  source_name TEXT,
+  source_anchor TEXT,
+  confirmer TEXT,
+  record_time TEXT,
+  missing_reason TEXT,
+  expected_provider TEXT,
+  expected_at TEXT,
+  maturity TEXT NOT NULL DEFAULT '可保存草稿',
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS process_design_risks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  draft_id INTEGER NOT NULL REFERENCES process_design_drafts(id) ON DELETE CASCADE,
+  object_type TEXT NOT NULL,
+  object_id INTEGER,
+  message TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open','confirmed','needs_fix','accepted','rejected')),
+  handled_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  handled_at TEXT,
+  note TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS process_design_review_tasks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  draft_id INTEGER NOT NULL REFERENCES process_design_drafts(id) ON DELETE CASCADE,
+  task_type TEXT NOT NULL DEFAULT 'department_review' CHECK(task_type IN ('department_review','capability_review','publish_review')),
+  status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','approved','rejected','needs_changes')),
+  assignee_role TEXT,
+  decision_note TEXT,
+  decided_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  decided_at TEXT,
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS process_design_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  draft_id INTEGER NOT NULL REFERENCES process_design_drafts(id) ON DELETE CASCADE,
+  event_type TEXT NOT NULL,
+  actor_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  note TEXT,
+  payload_json TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS process_design_versions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  draft_id INTEGER NOT NULL REFERENCES process_design_drafts(id) ON DELETE RESTRICT,
+  version_no TEXT NOT NULL UNIQUE,
+  department_id INTEGER NOT NULL REFERENCES departments(id) ON DELETE RESTRICT,
+  l1_name TEXT NOT NULL,
+  l2_name TEXT NOT NULL,
+  l3_name TEXT NOT NULL,
+  content_json TEXT NOT NULL,
+  published_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  published_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  status TEXT NOT NULL DEFAULT 'published' CHECK(status IN ('published','retired'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_process_design_drafts_dept ON process_design_drafts(department_id, status);
+CREATE INDEX IF NOT EXISTS idx_process_design_steps_draft ON process_design_steps(draft_id, sort_order);
+CREATE INDEX IF NOT EXISTS idx_process_design_forms_draft ON process_design_forms(draft_id);
+CREATE INDEX IF NOT EXISTS idx_process_design_fields_form ON process_design_form_fields(form_id, sort_order);
+CREATE INDEX IF NOT EXISTS idx_process_design_evidence_draft ON process_design_evidence(draft_id);
+CREATE INDEX IF NOT EXISTS idx_process_design_review_tasks_draft ON process_design_review_tasks(draft_id, status);
+CREATE INDEX IF NOT EXISTS idx_process_design_versions_draft ON process_design_versions(draft_id);
+`);
+
 function tableInfo(tableName) {
   return db.prepare(`PRAGMA table_info(${tableName})`).all();
 }
