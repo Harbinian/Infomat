@@ -1,7 +1,7 @@
 const http = require('http');
 const path = require('path');
 const { spawn } = require('child_process');
-const { cleanupDb, stopServer } = require('./testHelpers/isolatedDb');
+const { cleanupDb, legacyTestEnv, stopServer } = require('./testHelpers/isolatedDb');
 
 const db = require('../server/db');
 const { hashPassword } = require('../server/auth');
@@ -185,7 +185,7 @@ async function main() {
     const seeded = seedData();
     child = spawn(process.execPath, ['server/index.js'], {
       cwd: APP_ROOT,
-      env: { ...process.env, PORT: String(PORT), SESSION_SECRET: 'activity-heatmap-api-test' },
+      env: legacyTestEnv({ PORT: String(PORT), SESSION_SECRET: 'activity-heatmap-api-test' }),
       stdio: 'ignore'
     });
     await waitForServer(child);

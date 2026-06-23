@@ -1,6 +1,6 @@
 const assert = require('assert');
 const { spawn } = require('child_process');
-const { cleanupDb, stopServer } = require('./testHelpers/isolatedDb');
+const { cleanupDb, legacyTestEnv, stopServer } = require('./testHelpers/isolatedDb');
 const db = require('../server/db');
 const { hashPassword } = require('../server/auth');
 
@@ -117,7 +117,7 @@ async function main() {
 
     server = spawn(process.execPath, ['server/index.js'], {
       cwd: require('path').join(__dirname, '..'),
-      env: { ...process.env, PORT: String(PORT), SESSION_SECRET: 'test-secret' },
+      env: legacyTestEnv({ PORT: String(PORT), SESSION_SECRET: 'test-secret' }),
       stdio: ['ignore', 'pipe', 'pipe']
     });
 

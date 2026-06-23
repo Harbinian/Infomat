@@ -73,8 +73,18 @@ for (const required of [
 }
 assert.ok(!schema.includes('sqlite_master'), 'MySQL schema must not use SQLite catalog tables');
 assert.ok(!schema.includes('PRAGMA'), 'MySQL schema must not use SQLite PRAGMA');
-assert.ok(!schema.includes('REFERENCES users('), 'process governance MySQL schema should not depend on unmigrated users table');
-assert.ok(!schema.includes('REFERENCES departments('), 'process governance MySQL schema should not depend on unmigrated departments table');
+const processGovernanceStatements = splitSqlStatements(schema).filter(statement => {
+  const normalized = statement.replace(/\s+/g, ' ');
+  return normalized.includes('CREATE TABLE IF NOT EXISTS process_');
+});
+assert.ok(
+  processGovernanceStatements.every(statement => !statement.includes('REFERENCES users(')),
+  'process governance MySQL tables should not depend on identity users table'
+);
+assert.ok(
+  processGovernanceStatements.every(statement => !statement.includes('REFERENCES departments(')),
+  'process governance MySQL tables should not depend on identity departments table'
+);
 assert.ok(splitSqlStatements(schema).length >= 20, 'schema should split into executable statements');
 
 const packageJson = JSON.parse(readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
@@ -83,7 +93,7 @@ assert.strictEqual(packageJson.scripts['test:mysql-config'], 'node scripts/test-
 assert.strictEqual(packageJson.scripts['import:process-governance-mysql'], 'node scripts/import-process-governance-mysql.js');
 assert.strictEqual(packageJson.scripts['import:process-candidate-review'], 'node scripts/import-process-candidate-review-mysql.js');
 assert.strictEqual(packageJson.scripts['smoke:process-governance-mysql'], 'node scripts/smoke-process-governance-mysql.js');
-assert.strictEqual(packageJson.scripts['test:identity-mysql'], 'node scripts/test-identity-mysql-repository.js && node scripts/test-org-me-mysql-api.js');
+assert.strictEqual(packageJson.scripts['test:identity-mysql'], 'node scripts/test-identity-mysql-repository.js && node scripts/test-org-me-mysql-api.js && node scripts/test-roles-mysql-api.js && node scripts/test-auth-mysql-permission.js && npm run test:access-mysql && node scripts/test-import-rbac-mysql-api.js');
 assert.ok(packageJson.dependencies.mysql2, 'MDM app should declare mysql2 dependency');
 
 const initScript = readFileSync(path.join(__dirname, 'init-mysql-schema.js'), 'utf8');
