@@ -29,7 +29,11 @@
     "test:sankey-preview-status": "node scripts/test-sankey-preview-status.mjs",
     "test:process-evidence-evolution": "node .agents/skills/process-evidence-mapping/scripts/test-evolution-workflow.mjs",
     "test:process-evidence-skill": "node scripts/test-process-evidence-skill.mjs",
-    "test:process-governance-mainline": "node scripts/test-process-governance-mainline.mjs"
+    "test:process-governance-mainline": "node scripts/test-process-governance-mainline.mjs",
+    "test:customer-file-boundary": "node scripts/test-customer-file-boundary.mjs",
+    "audit:customer-file-acceptance": "node scripts/audit-customer-file-acceptance.mjs",
+    "test:customer-file-acceptance-audit": "node scripts/test-customer-file-acceptance-audit.mjs",
+    "test:customer-file-sankey-labels": "node scripts/test-customer-file-sankey-labels.mjs"
   },
   "repository": {
     "type": "git",

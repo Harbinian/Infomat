@@ -13,6 +13,7 @@
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { sourceBoundaryFromCitation } from './source-boundary-rules.mjs';
 
 const ROOT = resolve(import.meta.dirname, '..');
 const NORMS = resolve(ROOT, 'docs', 'norms');
@@ -79,6 +80,23 @@ function splitSystems(value) {
   return text.split(/[、，,]/).map(item => item.trim()).filter(Boolean);
 }
 
+function customerEvidenceLabel(boundary) {
+  if (!boundary.customer_acceptance_required) return '';
+  if (boundary.acceptance_status === '已形成昌兴承接流程') return '客户要求-已承接';
+  return '客户要求-待承接';
+}
+
+function sourceBoundaryFields(evidence) {
+  const boundary = sourceBoundaryFromCitation(evidence);
+  return {
+    source_boundary_flag: boundary.source_boundary_flag,
+    source_boundary_label: boundary.source_boundary_label,
+    acceptance_status: boundary.acceptance_status,
+    customer_acceptance_required: boundary.customer_acceptance_required,
+    customer_evidence_label: customerEvidenceLabel(boundary),
+  };
+}
+
 function parseMappingRows(tables) {
   const table = tables.find(item =>
     item.header.includes('部门（D1）') &&
@@ -88,16 +106,20 @@ function parseMappingRows(tables) {
   );
   if (!table) return [];
 
-  return tableRows(table).map((row, index) => ({
-    dept: row['部门（D1）'] || dept,
-    domain: row['能力域（L1）'] || '未标注能力域',
-    capability: row['业务能力（L2）'] || '未标注业务能力',
-    process: row['业务流程（L3）'] || '未标注业务流程',
-    evidence: row['制度依据（文件号/条款）'] || '',
-    system: row['应用系统（S1）'] || '',
-    basis: row['系统设计依据'] || '',
-    order: index + 1,
-  }));
+  return tableRows(table).map((row, index) => {
+    const evidence = row['制度依据（文件号/条款）'] || '';
+    return {
+      dept: row['部门（D1）'] || dept,
+      domain: row['能力域（L1）'] || '未标注能力域',
+      capability: row['业务能力（L2）'] || '未标注业务能力',
+      process: row['业务流程（L3）'] || '未标注业务流程',
+      evidence,
+      ...sourceBoundaryFields(evidence),
+      system: row['应用系统（S1）'] || '',
+      basis: row['系统设计依据'] || '',
+      order: index + 1,
+    };
+  });
 }
 
 function parseL3CodeMap(tables) {
@@ -133,6 +155,8 @@ function parseA1Rows(tables, l3Rows) {
     const process = l3.process || table.heading.replace(/^[A-Z]+-L3-\d{2}\s*/, '') || '';
     const alert = row['核验提醒'] || row['备注'] || '';
     const system = row['应用系统（S1）'] || '—';
+    const evidence = row['制度依据'] || '';
+    const boundary = sourceBoundaryFields(evidence);
 
     return [
       id,
@@ -142,7 +166,7 @@ function parseA1Rows(tables, l3Rows) {
       row['前置条件'] || '',
       row['审批类型'] || '',
       system,
-      row['制度依据'] || '',
+      evidence,
       row['证据类型'] || '',
       l3.domain || '',
       l3.capability || '',
@@ -158,6 +182,11 @@ function parseA1Rows(tables, l3Rows) {
       row['是否调整'] || '',
       row['调整建议'] || '',
       row['应用模块（S2）'] || '',
+      boundary.source_boundary_flag,
+      boundary.source_boundary_label,
+      boundary.acceptance_status,
+      boundary.customer_acceptance_required,
+      boundary.customer_evidence_label,
     ];
   })).filter(row => row[0] && row[1]);
 }
@@ -296,6 +325,9 @@ function renderHtml(l3Rows, a1Rows) {
       .evidence-tag.explicit { background: #dcfce7; color: #166534; }
       .evidence-tag.inferred { background: #fef3c7; color: #92400e; }
       .evidence-tag.gap { background: #fee2e2; color: #991b1b; border: 1px solid #dc2626; }
+      .customer-evidence-tag { display: inline-block; margin-top: 4px; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 800; line-height: 1.35; white-space: nowrap; }
+      .customer-evidence-tag.pending { background: #ccfbf1; color: #0f766e; border: 1px solid #14b8a6; }
+      .customer-evidence-tag.accepted { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
       .appr-tag { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 11px; }
       .appr-tag.none { background: #e2e8f0; color: #475569; }
       .appr-tag.single { background: #dbeafe; color: #1e40af; }
@@ -456,7 +488,29 @@ function renderHtml(l3Rows, a1Rows) {
         return /待补|未见|缺少|证据不足/.test(a1JoinedText(a1));
       }
 
+      function customerEvidenceLabel(flag, status) {
+        if (!flag || flag === "changxing_owned" || flag === "internal_or_unknown") return "";
+        return status === "已形成昌兴承接流程" ? "客户要求-已承接" : "客户要求-待承接";
+      }
+
+      function customerEvidenceClass(flag, status) {
+        return customerEvidenceLabel(flag, status)
+          ? "customer-evidence-tag " + (status === "已形成昌兴承接流程" ? "accepted" : "pending")
+          : "";
+      }
+
+      function a1CustomerLabel(a1) {
+        return Array.isArray(a1) ? (a1[27] || customerEvidenceLabel(a1[23], a1[25])) : "";
+      }
+
+      function customerEvidenceTagHtml(flag, status, label) {
+        var text = label || customerEvidenceLabel(flag, status);
+        if (!text) return "";
+        return '<span class="' + customerEvidenceClass(flag, status) + '">' + esc(text) + '</span>';
+      }
+
       function a1NodeColor(a1) {
+        if (a1CustomerLabel(a1)) return "#0f766e";
         if (roleWarning(a1) || hasEvidenceGap(a1)) return "#dc2626";
         if (isInferenceEvidence(a1)) return "#f59e0b";
         return "#64748b";
@@ -510,7 +564,8 @@ function renderHtml(l3Rows, a1Rows) {
       function evidenceLegendHtml() {
         return '<span class="legend"><i style="background:#64748b"></i>原文明确</span>' +
           '<span class="legend"><i style="background:#f59e0b"></i>上下文推断/分析拆分</span>' +
-          '<span class="legend"><i style="background:#dc2626"></i>待补证据/需确认</span>';
+          '<span class="legend"><i style="background:#dc2626"></i>待补证据/需确认</span>' +
+          '<span class="legend"><i style="background:#0f766e"></i>客户要求-待承接</span>';
       }
 
       function evidenceClass(type) {
@@ -579,7 +634,7 @@ function renderHtml(l3Rows, a1Rows) {
         } else {
           filteredL3().forEach(function(row) {
             addNode(nodes, row.capability, "L2", colors.capability);
-            addNode(nodes, row.process, "L3", colors.process, row.code);
+            addNode(nodes, row.process, "L3", row.customer_evidence_label ? "#0f766e" : colors.process, row.code);
             addLink(links, row.capability, row.process);
           });
           filteredA1().forEach(function(a1) {
@@ -629,8 +684,8 @@ function renderHtml(l3Rows, a1Rows) {
               if (!params.data) return "";
               if (!isGlobal && params.data._type === "A1") {
                 var a1 = findA1ByNode(params);
-                if (!a1) return params.name;
-                return esc(a1[0] + " " + a1[1]) + "<br/>执行角色：" + esc(a1[2]) + "<br/>审批类型：" + esc(a1[5]) + "<br/>处理入口：" + esc(a1EntryName(a1));
+              if (!a1) return params.name;
+                return esc(a1[0] + " " + a1[1]) + "<br/>执行角色：" + esc(a1[2]) + "<br/>审批类型：" + esc(a1[5]) + "<br/>处理入口：" + esc(a1EntryName(a1)) + (a1CustomerLabel(a1) ? "<br/>来源边界：" + esc(a1CustomerLabel(a1)) : "");
               }
               if (!isGlobal && isProcessNode(params.name)) return esc(processDisplayLabel(params.name));
               return esc(params.name);
@@ -691,18 +746,20 @@ function renderHtml(l3Rows, a1Rows) {
         if (tableTitle) tableTitle.textContent = isGlobal ? "正式映射明细" : activeMode + " A1 明细";
         if (isGlobal) {
           table.className = "table-l3";
-          head.innerHTML = '<tr><th class="col-seq">序号</th><th class="col-dept">部门（D1）</th><th class="col-domain">能力域（L1）</th><th class="col-cap">业务能力（L2）</th><th class="col-proc">业务流程（L3）</th><th class="col-evidence">制度依据</th><th class="col-system">应用系统（S1）</th><th class="col-evidence">系统设计依据</th></tr>';
+          head.innerHTML = '<tr><th class="col-seq">序号</th><th class="col-dept">部门（D1）</th><th class="col-domain">能力域（L1）</th><th class="col-cap">业务能力（L2）</th><th class="col-proc">业务流程（L3）</th><th class="col-evidence">制度依据</th><th class="col-evidtype">来源边界</th><th class="col-system">应用系统（S1）</th><th class="col-evidence">系统设计依据</th></tr>';
           body.innerHTML = filteredL3().map(function(row, i) {
-            return '<tr><td class="col-seq">' + (i + 1) + '</td><td class="col-dept">' + esc(departmentName) + '</td><td class="col-domain"><span class="domain-pill" style="background:' + colorFor(row.domain) + '">' + esc(row.domain) + '</span></td><td class="col-cap">' + esc(row.capability) + '</td><td class="col-proc">' + esc(processDisplayLabel(row)) + '</td><td class="col-evidence">' + esc(row.evidence) + '</td><td class="col-system">' + esc(normalizeSystem(row.system)) + '</td><td class="col-evidence">' + esc(row.basis) + '</td></tr>';
+            var customerTag = customerEvidenceTagHtml(row.source_boundary_flag, row.acceptance_status, row.customer_evidence_label);
+            return '<tr><td class="col-seq">' + (i + 1) + '</td><td class="col-dept">' + esc(departmentName) + '</td><td class="col-domain"><span class="domain-pill" style="background:' + colorFor(row.domain) + '">' + esc(row.domain) + '</span></td><td class="col-cap">' + esc(row.capability) + '</td><td class="col-proc">' + esc(processDisplayLabel(row)) + '</td><td class="col-evidence">' + esc(row.evidence) + '</td><td class="col-evidtype">' + (customerTag || esc(row.source_boundary_label || "")) + '</td><td class="col-system">' + esc(normalizeSystem(row.system)) + '</td><td class="col-evidence">' + esc(row.basis) + '</td></tr>';
           }).join("");
         } else {
           table.className = "table-a1";
-          head.innerHTML = '<tr><th class="col-seq">序号</th><th class="col-a1id">业务行为（A1）编号</th><th class="col-cap">业务能力（L2）</th><th class="col-proc">业务流程（L3）</th><th class="col-a1name">业务行为（A1）</th><th class="col-role">执行角色</th><th class="col-trigger">触发情景</th><th class="col-precond">前置条件</th><th class="col-appr">审批类型</th><th class="col-accept">验收标准</th><th class="col-evidence">制度依据</th><th class="col-evidtype">证据类型</th><th class="col-system">处理入口（S1/S2）</th><th class="col-alert">请部门确认</th><th class="col-feedback">部门确认意见</th><th class="col-adjust">是否调整</th><th class="col-suggestion">调整建议</th></tr>';
+          head.innerHTML = '<tr><th class="col-seq">序号</th><th class="col-a1id">业务行为（A1）编号</th><th class="col-cap">业务能力（L2）</th><th class="col-proc">业务流程（L3）</th><th class="col-a1name">业务行为（A1）</th><th class="col-role">执行角色</th><th class="col-trigger">触发情景</th><th class="col-precond">前置条件</th><th class="col-appr">审批类型</th><th class="col-accept">验收标准</th><th class="col-evidence">制度依据</th><th class="col-evidtype">证据类型</th><th class="col-evidtype">来源边界</th><th class="col-system">处理入口（S1/S2）</th><th class="col-alert">请部门确认</th><th class="col-feedback">部门确认意见</th><th class="col-adjust">是否调整</th><th class="col-suggestion">调整建议</th></tr>';
           body.innerHTML = filteredA1().map(function(a1, i) {
             var fill = processFill(a1[14]);
             var roleCell = esc(a1[2]) + (roleWarning(a1) ? '<br><span class="warn-tag">请确认岗位</span>' : '');
             var approval = '<span class="appr-tag ' + approvalClass(a1[5]) + '">' + esc(a1[5]) + '</span>';
             var evidence = '<span class="evidence-tag ' + evidenceClass(a1[8]) + '">' + esc(a1[8]) + '</span>';
+            var customerTag = customerEvidenceTagHtml(a1[23], a1[25], a1[27]);
             return '<tr style="background:' + fill + '">' +
               '<td class="col-seq">' + (i + 1) + '</td>' +
               '<td class="col-a1id">' + esc(a1[0]) + '</td>' +
@@ -716,6 +773,7 @@ function renderHtml(l3Rows, a1Rows) {
               '<td class="col-accept"><span class="soft-warn-tag">' + esc(safeText(a1[18], "待确认")) + '</span></td>' +
               '<td class="col-evidence">' + esc(a1[7]) + '</td>' +
               '<td class="col-evidtype">' + evidence + '</td>' +
+              '<td class="col-evidtype">' + (customerTag || esc(a1[24] || "")) + '</td>' +
               '<td class="col-system">' + esc(a1EntryName(a1)) + '</td>' +
               '<td class="col-alert">' + esc(a1[12]) + '</td>' +
               '<td class="col-feedback">' + esc(safeText(a1[19], "待确认")) + '</td>' +
