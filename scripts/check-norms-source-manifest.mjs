@@ -103,12 +103,12 @@ const knownGapDepartments = [...manifestRows.values()]
 
 assert.deepEqual(
   knownGapDepartments,
-  ['工程技术部'],
-  `known canonical gap departments should be 工程技术部 only, got ${knownGapDepartments.join(', ') || 'none'}`
+  [],
+  `known canonical gap departments should be empty, got ${knownGapDepartments.join(', ') || 'none'}`
 );
 assert.ok(
   existsSync(engineeringManifestPath),
-  'engineering source manifest must exist while 工程技术部 canonical deliverables are missing'
+  'engineering source manifest must remain available for engineering candidate-source review'
 );
 
 const canonicalNamePattern = new RegExp(
@@ -132,4 +132,4 @@ assert.ok(
   'norms source manifest must link the engineering source manifest'
 );
 
-console.log(`Norms source manifest check passed: ${departments.length} departments, known gap ${knownGapDepartments.join(', ')}`);
+console.log(`Norms source manifest check passed: ${departments.length} departments, known gaps ${knownGapDepartments.length}`);

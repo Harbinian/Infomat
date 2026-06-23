@@ -1,9 +1,11 @@
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const mysql = require('mysql2/promise');
 const { mysqlConfigFromEnv } = require('./mysqlConfig');
 const { makeIdentityMysqlRepository } = require('./identityMysqlRepository');
 let identityRepoPromise = null;
 let identityRepositoryFactory = null;
+const inFlightPasswordChecks = new Map();
 
 function hashPassword(password) {
   return bcrypt.hashSync(password, 10);
@@ -11,6 +13,32 @@ function hashPassword(password) {
 
 function verifyPassword(password, hash) {
   return bcrypt.compareSync(password, hash);
+}
+
+function passwordCheckKey(password, hash) {
+  return crypto
+    .createHash('sha256')
+    .update(String(hash || ''))
+    .update('\0')
+    .update(String(password || ''))
+    .digest('hex');
+}
+
+function verifyPasswordAsync(password, hash) {
+  const key = passwordCheckKey(password, hash);
+  const pending = inFlightPasswordChecks.get(key);
+  if (pending) return pending;
+
+  const check = new Promise((resolve, reject) => {
+    bcrypt.compare(password, hash, (error, matched) => {
+      if (error) return reject(error);
+      resolve(Boolean(matched));
+    });
+  }).finally(() => {
+    inFlightPasswordChecks.delete(key);
+  });
+  inFlightPasswordChecks.set(key, check);
+  return check;
 }
 
 function requireAuth(req, res, next) {
@@ -367,6 +395,7 @@ function applyFieldConstraints(resourceType) {
 module.exports = {
   hashPassword,
   verifyPassword,
+  verifyPasswordAsync,
   requireAuth,
   requireRole,
   requireDataPermission,

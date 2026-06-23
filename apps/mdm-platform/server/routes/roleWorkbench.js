@@ -12,6 +12,10 @@ let identityRepoPromise = null;
 let identityRepositoryFactory = null;
 let processGovernanceRepoPromise = null;
 let processGovernanceRepositoryFactory = null;
+const WORKBENCH_CACHE_TTL_MS = 15 * 1000;
+const roleGroupsCache = new Map();
+const workbenchResponseCache = new Map();
+let processContextBundleCache = null;
 
 const TODO_TYPE_LABELS = {
   field_confirm: '字段确认',
@@ -214,6 +218,65 @@ function buildRoleGroups(roleCodes) {
   };
 }
 
+function buildRoleGroupsCached(roleCodes) {
+  const key = [...new Set(roleCodes || [])].sort().join('|');
+  const cached = roleGroupsCache.get(key);
+  if (cached && cached.expiresAt > Date.now()) return cached.value;
+  const value = buildRoleGroups(roleCodes);
+  roleGroupsCache.set(key, { value, expiresAt: Date.now() + WORKBENCH_CACHE_TTL_MS });
+  return value;
+}
+
+function cachePart(value) {
+  if (Array.isArray(value)) return value.map(cachePart).join(',');
+  if (value instanceof Set) return Array.from(value).sort().join(',');
+  return String(value == null ? '' : value);
+}
+
+async function getOrBuildWorkbenchResponse(cacheKey, build) {
+  const now = Date.now();
+  const cached = workbenchResponseCache.get(cacheKey);
+  if (cached && cached.expiresAt > now) {
+    if (cached.value) return cached.value;
+    if (cached.promise) return await cached.promise;
+  }
+
+  const pending = {
+    expiresAt: now + WORKBENCH_CACHE_TTL_MS,
+    promise: Promise.resolve().then(build)
+  };
+  workbenchResponseCache.set(cacheKey, pending);
+
+  try {
+    const value = await pending.promise;
+    workbenchResponseCache.set(cacheKey, {
+      value,
+      expiresAt: Date.now() + WORKBENCH_CACHE_TTL_MS
+    });
+    return value;
+  } catch (error) {
+    if (workbenchResponseCache.get(cacheKey) === pending) workbenchResponseCache.delete(cacheKey);
+    throw error;
+  }
+}
+
+function workbenchResponseCacheKey({ mode, identity, roleCodes, permSet }) {
+  return [
+    mode,
+    identity.user.id,
+    identity.user.departmentId,
+    identity.user.role,
+    cachePart(roleCodes),
+    cachePart(permSet)
+  ].map(cachePart).join('|');
+}
+
+function clearWorkbenchCaches() {
+  roleGroupsCache.clear();
+  workbenchResponseCache.clear();
+  processContextBundleCache = null;
+}
+
 function activeSnapshot() {
   return db.prepare(`
     SELECT *
@@ -235,46 +298,17 @@ function parseJsonArray(value) {
 }
 
 function loadProcessContexts(mode, workItems) {
-  const snapshot = activeSnapshot();
-  if (!snapshot) return [];
+  const bundle = cachedProcessContextBundle();
+  if (!bundle) return [];
 
-  const a1Rows = db.prepare(`
-    SELECT *
-    FROM process_a1_items
-    WHERE snapshot_id=?
-    ORDER BY dept_name, l3_name, a1_code, id
-    LIMIT 80
-  `).all(snapshot.id);
-
-  const nodes = db.prepare(`
-    SELECT node_key, node_type, name, parent_key, dept_name, domain_name
-    FROM process_governance_nodes
-    WHERE snapshot_id=?
-  `).all(snapshot.id);
-  const edges = db.prepare(`
-    SELECT source_key, target_key
-    FROM process_governance_edges
-    WHERE snapshot_id=?
-  `).all(snapshot.id);
-
-  const nodeByKey = new Map(nodes.map(node => [node.node_key, node]));
-  const parentByTarget = new Map(edges.map(edge => [edge.target_key, edge.source_key]));
   const todoA1Codes = new Set(workItems.map(item => item.a1Code).filter(Boolean));
 
-  function findA1Node(row) {
-    return nodes.find(node => node.node_type === 'a1' && (
-      node.node_key === row.a1_code ||
-      String(node.node_key || '').includes(row.a1_code || '__none__') ||
-      node.name === row.behavior
-    ));
-  }
-
-  const contexts = a1Rows
+  const contexts = bundle.a1Rows
     .filter(row => mode !== 'todo' || todoA1Codes.size === 0 || todoA1Codes.has(row.a1_code))
     .map(row => {
-      const a1Node = findA1Node(row);
-      const l3Node = a1Node ? nodeByKey.get(parentByTarget.get(a1Node.node_key)) : null;
-      const l2Node = l3Node ? nodeByKey.get(parentByTarget.get(l3Node.node_key)) : null;
+      const a1Node = findA1Node(row, bundle);
+      const l3Node = a1Node ? bundle.nodeByKey.get(bundle.parentByTarget.get(a1Node.node_key)) : null;
+      const l2Node = l3Node ? bundle.nodeByKey.get(bundle.parentByTarget.get(l3Node.node_key)) : null;
       return {
         capabilityKey: l2Node ? l2Node.node_key : `capability:${row.dept_name || 'default'}`,
         capabilityLabel: l2Node ? l2Node.name : '流程治理能力',
@@ -299,6 +333,61 @@ function loadProcessContexts(mode, workItems) {
     deptName: '',
     systems: []
   }];
+}
+
+function cachedProcessContextBundle() {
+  const now = Date.now();
+  if (
+    processContextBundleCache &&
+    processContextBundleCache.expiresAt > now
+  ) {
+    return processContextBundleCache.value;
+  }
+
+  const snapshot = activeSnapshot();
+  if (!snapshot) return null;
+  const a1Rows = db.prepare(`
+    SELECT *
+    FROM process_a1_items
+    WHERE snapshot_id=?
+    ORDER BY dept_name, l3_name, a1_code, id
+    LIMIT 80
+  `).all(snapshot.id);
+
+  const nodes = db.prepare(`
+    SELECT node_key, node_type, name, parent_key, dept_name, domain_name
+    FROM process_governance_nodes
+    WHERE snapshot_id=?
+  `).all(snapshot.id);
+  const edges = db.prepare(`
+    SELECT source_key, target_key
+    FROM process_governance_edges
+    WHERE snapshot_id=?
+  `).all(snapshot.id);
+
+  const a1Nodes = nodes.filter(node => node.node_type === 'a1');
+  const value = {
+    a1Rows,
+    a1Nodes,
+    nodeByKey: new Map(nodes.map(node => [node.node_key, node])),
+    a1NodeByName: new Map(a1Nodes.map(node => [node.name, node])),
+    parentByTarget: new Map(edges.map(edge => [edge.target_key, edge.source_key]))
+  };
+  processContextBundleCache = {
+    snapshotId: snapshot.id,
+    value,
+    expiresAt: now + WORKBENCH_CACHE_TTL_MS
+  };
+  return value;
+}
+
+function findA1Node(row, bundle) {
+  const code = row.a1_code || '';
+  const exact = code ? bundle.nodeByKey.get(code) : null;
+  if (exact && exact.node_type === 'a1') return exact;
+  const byName = bundle.a1NodeByName.get(row.behavior);
+  if (byName) return byName;
+  return bundle.a1Nodes.find(node => String(node.node_key || '').includes(code || '__none__')) || null;
 }
 
 function loadTodos(req, canViewAll) {
@@ -674,65 +763,71 @@ router.get('/', requireAuth, (req, res) => {
     const mode = req.query.mode === 'all' ? 'all' : 'todo';
     const identity = await workbenchIdentity(req);
     const roleCodes = identity.roleCodes;
-    const { roles, roleGroups } = buildRoleGroups(roleCodes);
+    const { roles, roleGroups } = buildRoleGroupsCached(roleCodes);
     const ownedRoles = roles.filter(role => role.owned);
     const permSet = identity.permSet;
     const canViewAll = permSet.has('data:view_all') || permSet.has('*:*') || roleCodes.includes('admin') || roleCodes.includes('data_quality') || roleCodes.includes('it_lead');
     const canDecideEscalated = permSet.has('conflict:final_decide_escalated') || permSet.has('*:*') || roleCodes.includes('admin');
     const currentDepartmentName = identity.user.departmentName;
-    const todos = loadTodos(req, canViewAll);
-    const qualityFindings = await loadProcessQualityFindingsAsync(req, canViewAll, currentDepartmentName);
-    const mappingTodos = await loadProcessMappingTodosAsync(req, canViewAll, currentDepartmentName);
-    const escalated = loadEscalatedConflicts(canDecideEscalated);
-    const activeRoles = ownedRoles.length ? ownedRoles : roles.filter(role => role.code === req.session.userRole);
-    const pendingWorkItems = [...escalated, ...qualityFindings, ...mappingTodos, ...todos];
-    const guidanceItems = guidanceItemsForRoles(activeRoles);
-    const workItems = mode === 'all' ? [...pendingWorkItems, ...guidanceItems] : pendingWorkItems;
-    const contexts = loadProcessContexts(mode, pendingWorkItems);
-    const nextActions = buildNextActions(pendingWorkItems, activeRoles);
-    const sankeyWorkItems = mode === 'all' ? [] : pendingWorkItems;
+    const cacheKey = workbenchResponseCacheKey({ mode, identity, roleCodes, permSet });
+    const body = await getOrBuildWorkbenchResponse(cacheKey, async () => {
+      const [todos, qualityFindings, mappingTodos, escalated] = await Promise.all([
+        Promise.resolve().then(() => loadTodos(req, canViewAll)),
+        loadProcessQualityFindingsAsync(req, canViewAll, currentDepartmentName),
+        loadProcessMappingTodosAsync(req, canViewAll, currentDepartmentName),
+        Promise.resolve().then(() => loadEscalatedConflicts(canDecideEscalated))
+      ]);
+      const activeRoles = ownedRoles.length ? ownedRoles : roles.filter(role => role.code === req.session.userRole);
+      const pendingWorkItems = [...escalated, ...qualityFindings, ...mappingTodos, ...todos];
+      const guidanceItems = guidanceItemsForRoles(activeRoles);
+      const workItems = mode === 'all' ? [...pendingWorkItems, ...guidanceItems] : pendingWorkItems;
+      const contexts = loadProcessContexts(mode, pendingWorkItems);
+      const nextActions = buildNextActions(pendingWorkItems, activeRoles);
+      const sankeyWorkItems = mode === 'all' ? [] : pendingWorkItems;
 
-    res.json({
-      mode,
-      user: {
-        id: identity.user.id,
-        name: identity.user.name,
-        role: identity.user.role,
-        departmentId: identity.user.departmentId,
-        departmentName: identity.user.departmentName,
-        roleCodes
-      },
-      summary: {
-        priorityCount: nextActions.length,
-        pendingTodos: todos.length,
-        escalatedConflicts: escalated.length,
-        processContexts: contexts.length
-      },
-      roles,
-      roleGroups,
-      workflowGroups: roleGroups.map(group => ({
-        key: group.key,
-        label: group.label,
-        roles: group.roles.map(role => ({
-          code: role.code,
-          name: role.name,
-          owned: role.owned,
-          workflow: role.workflow,
-          firstEntry: role.firstEntry
-        }))
-      })),
-      nextActions,
-      workItems: workItems.length ? workItems : fallbackActions(activeRoles).map((action, index) => ({
-        id: `guide:${index}`,
-        type: 'guidance',
-        title: action.title,
-        roleHint: action.roleCode,
-        target: action.target,
-        actionLabel: action.actionLabel,
-        sample: action.sample
-      })),
-      sankey: buildSankey(activeRoles, contexts, sankeyWorkItems)
+      return {
+        mode,
+        user: {
+          id: identity.user.id,
+          name: identity.user.name,
+          role: identity.user.role,
+          departmentId: identity.user.departmentId,
+          departmentName: identity.user.departmentName,
+          roleCodes
+        },
+        summary: {
+          priorityCount: nextActions.length,
+          pendingTodos: todos.length,
+          escalatedConflicts: escalated.length,
+          processContexts: contexts.length
+        },
+        roles,
+        roleGroups,
+        workflowGroups: roleGroups.map(group => ({
+          key: group.key,
+          label: group.label,
+          roles: group.roles.map(role => ({
+            code: role.code,
+            name: role.name,
+            owned: role.owned,
+            workflow: role.workflow,
+            firstEntry: role.firstEntry
+          }))
+        })),
+        nextActions,
+        workItems: workItems.length ? workItems : fallbackActions(activeRoles).map((action, index) => ({
+          id: `guide:${index}`,
+          type: 'guidance',
+          title: action.title,
+          roleHint: action.roleCode,
+          target: action.target,
+          actionLabel: action.actionLabel,
+          sample: action.sample
+        })),
+        sankey: buildSankey(activeRoles, contexts, sankeyWorkItems)
+      };
     });
+    res.json(body);
   }, useMysqlIdentityReadModel() ? '身份 MySQL 读取模型不可用' : null);
 });
 
@@ -740,5 +835,6 @@ router.setIdentityRepositoryFactory = setIdentityRepositoryFactory;
 router.resetIdentityRepositoryFactory = resetIdentityRepositoryFactory;
 router.setProcessGovernanceRepositoryFactory = setProcessGovernanceRepositoryFactory;
 router.resetProcessGovernanceRepositoryFactory = resetProcessGovernanceRepositoryFactory;
+router.clearWorkbenchCaches = clearWorkbenchCaches;
 
 module.exports = router;

@@ -66,4 +66,15 @@ assert(
   'manifest serviceOutputs must list both PMO task outputs'
 );
 
+const kickoffTask = tasks.find((task) => task.name === '项目启动会召开');
+assert(kickoffTask, 'tasks must include 项目启动会召开');
+assert(
+  kickoffTask.start === '2026-06-23' && kickoffTask.finish === '2026-06-23',
+  `项目启动会召开 must be scheduled on 2026-06-23, got ${kickoffTask.start} to ${kickoffTask.finish}`
+);
+assert(
+  manifest?.taskSummary?.projectStart === '2026-06-16',
+  `manifest taskSummary.projectStart must be 2026-06-16, got ${manifest?.taskSummary?.projectStart}`
+);
+
 console.log(`PMO task data check passed: ${tasks.length} tasks, tasks ${taskHash.slice(0, 12)}, manifest ${manifestHash.slice(0, 12)}`);
