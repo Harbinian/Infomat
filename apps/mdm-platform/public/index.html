@@ -601,6 +601,36 @@
     .pg-section-hd { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
     .pg-section-hd h2 { margin-bottom: 0; }
     .pg-status { white-space: nowrap; }
+    .pg-guidance-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin: 10px 0 0;
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+    .pg-guidance-strip span {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface-2);
+      padding: 6px 9px;
+    }
+    .pg-guidance-input {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: min(100%, 320px);
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+    .pg-guidance-input input { height: 32px; min-width: 220px; }
+    .pg-guidance-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
     .pg-filterbar {
       display: grid; grid-template-columns: minmax(220px, 1fr) repeat(3, minmax(120px, 160px));
       gap: 10px; margin: 0 0 12px;
@@ -1329,7 +1359,22 @@
               <option value="medium">中风险</option>
               <option value="low">低风险</option>
             </select>
+            <button class="btn secondary" id="pgCreateGuidanceBtn" data-permission="guidance:create" data-requires-governance-object="true" data-disabled-reason="请先选择一个流程治理对象">形成指导意见</button>
             <button class="btn secondary" id="refreshProcessGovernanceBtn">刷新</button>
+          </div>
+        </div>
+        <div class="pg-guidance-strip" id="pgGuidanceContext">
+          <span data-guidance-field="finalResponsiblePerson">最终响应责任人：<b id="pgGuidanceFinalResponsiblePerson">—</b></span>
+          <span data-guidance-field="currentHandlerPerson">当前处理人：<b id="pgGuidanceCurrentHandlerPerson">—</b></span>
+          <span data-guidance-field="delegatePerson">代理处理人：<b id="pgGuidanceDelegatePerson">—</b></span>
+          <span data-guidance-field="executorPerson">执行人：<b id="pgGuidanceExecutorPerson">—</b></span>
+          <span>下一步：<b id="pgGuidanceNextAction">—</b></span>
+          <label class="pg-guidance-input" data-permission="guidance:create">指导意见<input id="pgGuidanceContent" placeholder="填写后提交"></label>
+          <div class="pg-guidance-actions" id="pgGuidanceActions" aria-label="指导意见操作">
+            <button class="btn secondary" id="pgRespondGuidanceBtn" data-permission="guidance:respond" data-requires-guidance-state="pending_response,in_progress,clarification_requested,objected" data-requires-responsibility="currentHandler">响应</button>
+            <button class="btn secondary" id="pgClarifyGuidanceBtn" data-permission="guidance:respond" data-requires-guidance-state="pending_response,in_progress" data-requires-responsibility="currentHandler">申请澄清</button>
+            <button class="btn secondary" id="pgObjectGuidanceBtn" data-permission="guidance:respond" data-requires-guidance-state="pending_response,in_progress" data-requires-responsibility="currentHandler">提出异议</button>
+            <button class="btn secondary" id="pgFinalConfirmGuidanceBtn" data-permission="guidance:final_confirm" data-requires-guidance-state="pending_final_confirm" data-requires-responsibility="finalResponsible">确认闭环</button>
           </div>
         </div>
         <div class="pg-workspace-choices" id="pgWorkspaceChoices" aria-label="流程治理工作区">
@@ -1795,7 +1840,7 @@
 
   <script>
     // ===== State & Utilities =====
-    const state = { user:null, departments:[], capabilities:[], processes:[], termProcesses:[], termTypes:[], mappings:[], dataMapContexts:[], dataMapFields:[], todos:[], conflicts:[], terms:[], currentRoute:null, currentView:'roleWorkbench', activeMapping:null, activeConflict:null, pollTimer:null, isEditing:false, activeReview:null, activeCapReview:null, activeProcReview:null, pgSelectedDept:'', pgEvidenceFocus:null, pgSourceCoverageData:null, pgViewCache:{}, pgViewRequests:{}, pgWorkspace:'existing', processDesign:{ summary:null, draft:null, activeStep:'intro' }, processGovernanceRenderRequestId:0, pageWorkflow:null, pageWorkflowRequestId:0, roleWorkbench:{ mode:'todo', data:null, selectedNode:null }, activity:{ roleWorkbench:null, dashboard:null, dashboardUsers:[] } };
+    const state = { user:null, departments:[], capabilities:[], processes:[], termProcesses:[], termTypes:[], mappings:[], dataMapContexts:[], dataMapFields:[], todos:[], conflicts:[], terms:[], currentRoute:null, currentView:'roleWorkbench', activeMapping:null, activeConflict:null, pollTimer:null, isEditing:false, activeReview:null, activeCapReview:null, activeProcReview:null, pgSelectedDept:'', pgEvidenceFocus:null, pgActiveGuidance:null, pgSourceCoverageData:null, pgViewCache:{}, pgViewRequests:{}, pgWorkspace:'existing', processDesign:{ summary:null, draft:null, activeStep:'intro' }, processGovernanceRenderRequestId:0, pageWorkflow:null, pageWorkflowRequestId:0, roleWorkbench:{ mode:'todo', data:null, selectedNode:null }, activity:{ roleWorkbench:null, dashboard:null, dashboardUsers:[] } };
     const SOURCE_COVERAGE_VISIBLE_LIMIT = 20;
     const PROCESS_GOVERNANCE_QUALITY_VISIBLE_LIMIT = 80;
     const PROCESS_GOVERNANCE_SUBTABS = [
@@ -2145,6 +2190,219 @@
     function hasAdminAccess() {
       var perms = (state.user && state.user.permissions) || [];
       return !!(state.user && (state.user.role === 'admin' || perms.indexOf('admin:access') >= 0 || perms.indexOf('*:*') >= 0));
+    }
+
+    function hasPermission(permissionCode) {
+      var perms = (state.user && state.user.permissions) || [];
+      return perms.indexOf('*:*') >= 0 || perms.indexOf(permissionCode) >= 0;
+    }
+
+    function activeGovernanceObject() {
+      if (state.pgEvidenceFocus && state.pgEvidenceFocus.id) {
+        return {
+          related_entity_type: state.pgEvidenceFocus.type || 'process_governance_quality_case',
+          related_entity_id: state.pgEvidenceFocus.id,
+          related_department_id: state.pgEvidenceFocus.department_id || state.pgEvidenceFocus.owner_dept_id || null
+        };
+      }
+      if (state.activeMapping && state.activeMapping.id) {
+        return {
+          related_entity_type: 'mapping',
+          related_entity_id: state.activeMapping.id,
+          related_department_id: state.activeMapping.owner_dept_id || null
+        };
+      }
+      return null;
+    }
+
+    function guidanceStatusText(status) {
+      var labels = {
+        submitted: '待分派责任人',
+        pending_response: '等待责任部门响应',
+        in_progress: '责任部门处理中',
+        responded: '已响应',
+        pending_final_confirm: '等待最终责任人确认闭环',
+        closed: '已闭环',
+        clarification_requested: '等待补充澄清',
+        objected: '存在异议，等待处理'
+      };
+      return labels[status] || status || '暂无指导意见';
+    }
+
+    function guidancePlainText(value, fallback) {
+      return value === null || value === undefined || value === '' ? fallback : String(value);
+    }
+
+    function updateGuidanceContext(guidance) {
+      state.pgActiveGuidance = guidance || null;
+      if ($('pgGuidanceFinalResponsiblePerson')) {
+        $('pgGuidanceFinalResponsiblePerson').textContent = guidancePlainText(guidance && guidance.finalResponsiblePerson, '待补全');
+      }
+      if ($('pgGuidanceCurrentHandlerPerson')) {
+        $('pgGuidanceCurrentHandlerPerson').textContent = guidancePlainText(guidance && guidance.currentHandlerPerson, '待分派');
+      }
+      if ($('pgGuidanceDelegatePerson')) {
+        $('pgGuidanceDelegatePerson').textContent = guidancePlainText(guidance && guidance.delegatePerson, '无');
+      }
+      if ($('pgGuidanceExecutorPerson')) {
+        $('pgGuidanceExecutorPerson').textContent = guidancePlainText(guidance && guidance.executorPerson, '待明确');
+      }
+      if ($('pgGuidanceNextAction')) {
+        $('pgGuidanceNextAction').textContent = guidanceStatusText(guidance && guidance.status);
+      }
+    }
+
+    function guidanceMatchesTarget(guidance, target) {
+      if (!guidance || !target) return false;
+      return String(guidance.related_entity_type || '') === String(target.related_entity_type || '') &&
+        Number(guidance.related_entity_id) === Number(target.related_entity_id);
+    }
+
+    function actionKeyFromGuidanceButton(button) {
+      var byId = {
+        pgRespondGuidanceBtn: 'canRespond',
+        pgClarifyGuidanceBtn: 'canClarify',
+        pgObjectGuidanceBtn: 'canObject',
+        pgFinalConfirmGuidanceBtn: 'canFinalConfirm'
+      };
+      return byId[button.id] || ('can' + button.id.replace(/^pg/, '').replace(/GuidanceBtn$/, ''));
+    }
+
+    function guidanceStateAllowed(guidance, button) {
+      var required = button.getAttribute('data-requires-guidance-state');
+      if (!required) return true;
+      if (!guidance || !guidance.status) return false;
+      return required.split(',').map(function(item) { return item.trim(); }).indexOf(guidance.status) >= 0;
+    }
+
+    function guidanceResponsibilityAllowed(guidance, button) {
+      var responsibility = button.getAttribute('data-requires-responsibility');
+      if (!responsibility) return true;
+      if (!guidance || !state.user) return false;
+      var currentPersonId = Number(state.user.personId || state.user.id);
+      if (responsibility === 'finalResponsible') {
+        return Number(guidance.final_responsible_person_id) === currentPersonId;
+      }
+      if (responsibility === 'currentHandler') {
+        return Number(guidance.current_handler_person_id) === currentPersonId ||
+          Number(guidance.final_responsible_person_id) === currentPersonId;
+      }
+      return true;
+    }
+
+    function applyGuidanceAffordances(guidance) {
+      var actions = guidance && guidance.guidanceActions || {};
+      var disabledReasons = actions.disabledReasons || {};
+      document.querySelectorAll('[data-requires-guidance-state]').forEach(function(button) {
+        var permissionCode = button.getAttribute('data-permission');
+        if (permissionCode && !hasPermission(permissionCode)) {
+          button.hidden = true;
+          return;
+        }
+        var actionKey = actionKeyFromGuidanceButton(button);
+        var hasBackendAffordance = Boolean(guidance && guidance.guidanceActions);
+        var allowed = hasBackendAffordance
+          ? Boolean(actions[actionKey])
+          : Boolean(guidance && guidanceStateAllowed(guidance, button) && guidanceResponsibilityAllowed(guidance, button));
+        button.hidden = !guidance;
+        button.disabled = !allowed;
+        button.title = allowed ? '' : (disabledReasons[actionKey] || button.getAttribute('data-disabled-reason') || '当前不可操作');
+      });
+    }
+
+    async function refreshGuidanceContextForActiveObject() {
+      var target = activeGovernanceObject();
+      if (!target) {
+        updateGuidanceContext(null);
+        applyGuidanceAffordances(null);
+        return null;
+      }
+      try {
+        var list = await api('/api/process-governance/guidance', { silentUnauthorized: true });
+        var matched = (Array.isArray(list) ? list : []).find(function(guidance) {
+          return guidanceMatchesTarget(guidance, target);
+        });
+        updateGuidanceContext(matched || null);
+        applyGuidanceAffordances(matched || null);
+        return matched || null;
+      } catch (error) {
+        console.warn('Guidance context unavailable', error);
+        updateGuidanceContext(null);
+        applyGuidanceAffordances(null);
+        return null;
+      }
+    }
+
+    function applyPermissionControlledActions() {
+      document.querySelectorAll('[data-permission]').forEach(function(action) {
+        var permissionCode = action.getAttribute('data-permission');
+        var allowed = hasPermission(permissionCode);
+        action.hidden = !allowed;
+        if (!allowed) return;
+
+        var disabledReason = action.getAttribute('data-disabled-reason') || '';
+        var needsGovernanceObject = action.getAttribute('data-requires-governance-object') === 'true';
+        var disabled = needsGovernanceObject && !activeGovernanceObject();
+        action.disabled = disabled;
+        action.title = disabled ? disabledReason : '';
+      });
+    }
+
+    function guidanceActionPayload(action) {
+      var contentEl = $('pgGuidanceContent');
+      var content = contentEl && contentEl.value ? contentEl.value.trim() : '';
+      if (action === 'respond') return { response_content: content || '已处理，请确认。' };
+      if (action === 'clarify') return { note: content || '需要补充澄清后继续处理。' };
+      if (action === 'object') return { note: content || '当前意见存在异议，需要重议。' };
+      return content ? { note: content } : {};
+    }
+
+    async function submitGuidanceAction(action, endpoint) {
+      var guidance = state.pgActiveGuidance;
+      var guidanceId = guidance && (guidance.guidance_id || guidance.guidanceId || guidance.id);
+      if (!guidanceId) {
+        showToast('请先选择一条指导意见', 'error');
+        return;
+      }
+      try {
+        var result = await api('/api/process-governance/guidance/' + encodeURIComponent(guidanceId) + '/' + endpoint, {
+          method: 'POST',
+          body: JSON.stringify(guidanceActionPayload(action))
+        });
+        if ($('pgGuidanceContent')) $('pgGuidanceContent').value = '';
+        updateGuidanceContext(Object.assign({}, guidance, { status: result.status || guidance.status }));
+        await refreshGuidanceContextForActiveObject();
+        showToast('指导意见已更新', 'success');
+      } catch (error) {
+        showToast(error.message || '指导意见操作失败', 'error');
+      }
+    }
+
+    async function createGovernanceGuidanceDraft() {
+      var target = activeGovernanceObject();
+      if (!target) {
+        showToast('请先选择一个流程治理对象', 'error');
+        return;
+      }
+      var contentEl = $('pgGuidanceContent');
+      var content = contentEl ? contentEl.value : '';
+      if (!content || !content.trim()) return;
+      try {
+        var created = await api('/api/process-governance/guidance', {
+          method: 'POST',
+          body: JSON.stringify(Object.assign({}, target, {
+            guidance_type: '指导',
+            content: content.trim(),
+            is_major: true
+          }))
+        });
+        updateGuidanceContext(created);
+        applyGuidanceAffordances(created);
+        if (contentEl) contentEl.value = '';
+        showToast('指导意见已形成', 'success');
+      } catch (error) {
+        showToast(error.message || '指导意见提交失败', 'error');
+      }
     }
 
     function activityLevel(count) {
@@ -2912,9 +3170,11 @@
       await loadCsrfToken();
       showApp();
       applyRoleVisibility();
+      applyPermissionControlledActions();
       renderRouteFromHash();
       await loadAllSafely();
       renderRouteFromHash();
+      applyPermissionControlledActions();
       startPolling();
       if (options.checkPassword) checkPasswordStatus();
       addPasswordChangeButton();
@@ -5205,6 +5465,7 @@
       renderProcessGovernanceSubtabs(activePgView);
       applyProcessGovernanceSubtab(activePgView);
       try {
+        await refreshGuidanceContextForActiveObject();
         await loadProcessGovernanceView(activePgView, { route: route });
         if (!isCurrentProcessGovernanceRender(requestId)) return;
         renderProcessGovernanceSubtabs(activePgView);
@@ -5214,6 +5475,9 @@
         if (error && error.status === 401) return;
         console.error(error);
         showToast(error.message || '流程治理加载失败', 'error');
+      } finally {
+        applyPermissionControlledActions();
+        applyGuidanceAffordances(state.pgActiveGuidance);
       }
     }
 
@@ -5850,6 +6114,31 @@
         clearProcessGovernanceViewCache('manual-refresh');
         renderProcessGovernance();
       };
+    }
+    if (document.getElementById('pgCreateGuidanceBtn')) {
+      document.getElementById('pgCreateGuidanceBtn').addEventListener('click', function() {
+        createGovernanceGuidanceDraft();
+      });
+    }
+    if (document.getElementById('pgRespondGuidanceBtn')) {
+      document.getElementById('pgRespondGuidanceBtn').addEventListener('click', function() {
+        submitGuidanceAction('respond', 'respond');
+      });
+    }
+    if (document.getElementById('pgClarifyGuidanceBtn')) {
+      document.getElementById('pgClarifyGuidanceBtn').addEventListener('click', function() {
+        submitGuidanceAction('clarify', 'clarify');
+      });
+    }
+    if (document.getElementById('pgObjectGuidanceBtn')) {
+      document.getElementById('pgObjectGuidanceBtn').addEventListener('click', function() {
+        submitGuidanceAction('object', 'object');
+      });
+    }
+    if (document.getElementById('pgFinalConfirmGuidanceBtn')) {
+      document.getElementById('pgFinalConfirmGuidanceBtn').addEventListener('click', function() {
+        submitGuidanceAction('finalConfirm', 'final-confirm');
+      });
     }
     if (document.getElementById('pgWorkspaceChoices')) {
       document.getElementById('pgWorkspaceChoices').addEventListener('click', function(event) {

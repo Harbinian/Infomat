@@ -80,6 +80,10 @@ function useMysqlIdentityReadModel() {
   return String(process.env.MDM_IDENTITY_READ_MODEL || '').toLowerCase() === 'mysql';
 }
 
+function requestPersonId(req) {
+  return req.session && (req.session.personId || req.session.userId) || null;
+}
+
 async function identityRepository() {
   if (identityRepositoryFactory) {
     return await identityRepositoryFactory();
@@ -213,6 +217,7 @@ router.post('/departments', requireOrgPermission('admin:access'), (req, res) => 
     return runAsyncAction(res, async () => {
       const {
         name, code, parent_id, department_type, manager_user_id, data_owner_user_id,
+        final_responsible_person_id, data_owner_person_id,
         source_system, external_id, status, effective_from, effective_to
       } = req.body;
       const repo = await identityRepository();
@@ -223,12 +228,14 @@ router.post('/departments', requireOrgPermission('admin:access'), (req, res) => 
         department_type: department_type || null,
         manager_user_id: manager_user_id || null,
         data_owner_user_id: data_owner_user_id || null,
+        final_responsible_person_id: final_responsible_person_id || manager_user_id || null,
+        data_owner_person_id: data_owner_person_id || data_owner_user_id || null,
         source_system: source_system || 'MDM_SYS',
         external_id: external_id || null,
         status: status || 'active',
         effective_from: effective_from || null,
         effective_to: effective_to || null,
-        created_by: req.session.userId
+        created_by: requestPersonId(req)
       });
       return res.json({ id: created.id });
     }, '身份 MySQL 读取模型不可用');
@@ -273,6 +280,7 @@ router.put('/departments/:id', requireOrgPermission('admin:access'), (req, res) 
     return runAsyncAction(res, async () => {
       const {
         name, code, parent_id, sort_order, department_type, manager_user_id, data_owner_user_id,
+        final_responsible_person_id, data_owner_person_id,
         source_system, external_id, status, effective_from, effective_to
       } = req.body;
       const repo = await identityRepository();
@@ -284,12 +292,14 @@ router.put('/departments/:id', requireOrgPermission('admin:access'), (req, res) 
         department_type: department_type || null,
         manager_user_id: manager_user_id || null,
         data_owner_user_id: data_owner_user_id || null,
+        final_responsible_person_id: final_responsible_person_id || manager_user_id || null,
+        data_owner_person_id: data_owner_person_id || data_owner_user_id || null,
         source_system: source_system || 'MDM_SYS',
         external_id: external_id || null,
         status: status || 'active',
         effective_from: effective_from || null,
         effective_to: effective_to || null,
-        updated_by: req.session.userId
+        updated_by: requestPersonId(req)
       });
       return res.json({ success: true });
     }, '身份 MySQL 读取模型不可用');
@@ -443,7 +453,7 @@ router.post('/users', requireOrgPermission('admin:access'), (req, res) => {
         password_hash: hashPassword(passwordSetup.password),
         must_change_password: passwordSetup.mustChangePassword,
         role_ids,
-        assigned_by: req.session.userId
+        assigned_by: requestPersonId(req)
       });
       const body = { id: created.id };
       if (passwordSetup.initialPassword) body.initial_password = passwordSetup.initialPassword;
@@ -474,7 +484,7 @@ router.put('/users/:id', requireOrgPermission('admin:access'), (req, res) => {
   if (useMysqlIdentityReadModel()) {
     return runAsyncAction(res, async () => {
       const { name, department_id, post, role, role_ids } = req.body;
-      const payload = { name, role, role_ids, assigned_by: req.session.userId };
+      const payload = { name, role, role_ids, assigned_by: requestPersonId(req) };
       if (Object.prototype.hasOwnProperty.call(req.body, 'department_id')) payload.department_id = department_id || null;
       if (Object.prototype.hasOwnProperty.call(req.body, 'post')) payload.post = post || null;
       const repo = await identityRepository();
@@ -536,10 +546,14 @@ function writeLoginSession(req, user) {
   return new Promise((resolve, reject) => {
     req.session.regenerate(error => {
       if (error) return reject(error);
-      req.session.userId = user.id;
+      const personId = user.personId || user.person_id || user.id;
+      req.session.userId = personId;
+      req.session.personId = personId;
+      req.session.accountId = user.accountId || user.account_id || null;
+      req.session.employeeNo = user.employeeNo || user.employee_no || user.login_name || null;
       req.session.userRole = user.role;
-      req.session.userName = user.name;
-      req.session.departmentId = user.department_id;
+      req.session.userName = user.personName || user.person_name || user.name;
+      req.session.departmentId = user.current_department_id || user.department_id;
       resolve();
     });
   });
@@ -561,7 +575,14 @@ async function loginWithMysqlIdentity(req, res) {
 
   await writeLoginSession(req, user);
   clearLoginFailures(req);
-  return res.json({ id: user.id, name: user.name, role: user.role });
+  return res.json({
+    id: user.personId || user.id,
+    personId: user.personId || user.id,
+    accountId: user.accountId || null,
+    employeeNo: user.employeeNo || user.employee_no,
+    name: user.personName || user.name,
+    role: user.role
+  });
 }
 
 router.post('/login', loginRateLimit, (req, res) => {
@@ -584,7 +605,7 @@ router.post('/login', loginRateLimit, (req, res) => {
 
     await writeLoginSession(req, user);
     clearLoginFailures(req);
-    return res.json({ id: user.id, name: user.name, role: user.role });
+    return res.json({ id: user.id, personId: user.id, accountId: null, employeeNo: user.employee_no, name: user.name, role: user.role });
   });
 });
 
@@ -670,7 +691,7 @@ router.put('/users/:id/roles', requireAuth, requireOrgPermission('admin:access')
       }
 
       const repo = await identityRepository();
-      const updated = await repo.replaceUserRoles(Number(req.params.id), role_ids, req.session.userId);
+      const updated = await repo.replaceUserRoles(Number(req.params.id), role_ids, requestPersonId(req));
       if (!updated) return res.status(404).json({ error: '用户不存在' });
       return res.json({ success: true });
     }, '身份 MySQL 读取模型不可用');
