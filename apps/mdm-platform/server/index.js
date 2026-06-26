@@ -57,6 +57,7 @@ registerRouteIfExists('/api/versions', 'versions');
 registerRouteIfExists('/api/import', 'import');
 registerRouteIfExists('/api/export', 'export');
 registerRouteIfExists('/api/views', 'views');
+registerRouteIfExists('/api/process-governance/guidance', 'governanceGuidance');
 registerRouteIfExists('/api/process-governance', 'processGovernance');
 registerRouteIfExists('/api/process-design', 'processDesign');
 registerRouteIfExists('/api/role-workbench', 'roleWorkbench');

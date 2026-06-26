@@ -3,6 +3,7 @@ const mysql = require('mysql2/promise');
 const { mysqlConfigFromEnv, redactMysqlConfig } = require('../server/mysqlConfig');
 const { mdmMysqlSchemaSql, splitSqlStatements } = require('../server/mysqlSchema');
 const { seedDefaultTerminologyTermTypes } = require('../server/terminologyMysqlRepository');
+const { migrateLegacyIdentityToPersonIdentity } = require('../server/identityMysqlRepository');
 
 async function main() {
   const config = mysqlConfigFromEnv();
@@ -11,6 +12,7 @@ async function main() {
     for (const statement of splitSqlStatements(mdmMysqlSchemaSql())) {
       await pool.execute(statement);
     }
+    await migrateLegacyIdentityToPersonIdentity(pool);
     await seedDefaultTerminologyTermTypes(pool);
     for (const migrationKey of [
       '2026-06-16-process-candidate-review',
