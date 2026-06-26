@@ -142,9 +142,16 @@ router.get('/:id', requireAuth, async (req, res) => {
 
 router.get('/:id/events', requireAuth, async (req, res) => {
   try {
+    const personId = requestPersonId(req);
+    const identityRepo = await identityRepository();
+    const { permSet } = await identityRepo.getUserEffectivePermissions(personId);
     const repo = await guidanceRepository();
+    const guidance = repo.getGuidanceDetail
+      ? await repo.getGuidanceDetail(Number(req.params.id), personId, permSet)
+      : await repo.getGuidanceById(Number(req.params.id));
+    if (!guidance) return res.status(404).json({ error: '指导意见不存在' });
     if (!repo.listGuidanceEvents) return res.json([]);
-    return res.json(await repo.listGuidanceEvents(Number(req.params.id), requestPersonId(req)));
+    return res.json(await repo.listGuidanceEvents(Number(req.params.id), personId, permSet));
   } catch (error) {
     console.error(error);
     return res.status(503).json({ error: '指导意见事件读取模型不可用' });

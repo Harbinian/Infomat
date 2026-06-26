@@ -24,11 +24,14 @@ async function main() {
   const delegated = [];
   const revoked = [];
   const executorAssignments = [];
+  let deniedEventsRead = false;
 
   const identityRepo = {
     async getUserEffectivePermissions(personId) {
       const permissions = Number(personId) === 501
         ? ['guidance:respond', 'guidance:delegate', 'guidance:final_confirm', 'process_governance:view_global']
+        : Number(personId) === 777
+          ? ['guidance:respond']
         : ['guidance:respond'];
       return { permSet: new Set(permissions), fieldConstraints: {} };
     },
@@ -77,10 +80,12 @@ async function main() {
     },
     async getGuidanceDetail(guidanceId, personId) {
       assert.strictEqual(Number(guidanceId), 77);
+      if (Number(personId) === 777) return null;
       return { ...guidance, requestedBy: Number(personId) };
     },
     async listGuidanceEvents(guidanceId) {
       assert.strictEqual(Number(guidanceId), 77);
+      if (sessionPersonId === 777) deniedEventsRead = true;
       return [
         { event_id: 1, event_type: 'created', actor_person_id: 701, actorPerson: '公司领导', note: '形成指导意见' },
         { event_id: 2, event_type: 'delegated', actor_person_id: 501, actorPerson: '质量负责人', note: '授权代理处理' }
@@ -161,6 +166,12 @@ async function main() {
     const executorBody = await executorRes.json();
     assert.strictEqual(executorRes.status, 200, JSON.stringify(executorBody));
     assert.strictEqual(executorAssignments[0].payload.executor_person_id, 602);
+
+    sessionPersonId = 777;
+    const deniedEventsRes = await fetch(`${baseUrl}/api/process-governance/guidance/77/events`);
+    const deniedEventsBody = await deniedEventsRes.json();
+    assert.strictEqual(deniedEventsRes.status, 404, JSON.stringify(deniedEventsBody));
+    assert.strictEqual(deniedEventsRead, false, 'events route must check guidance visibility before loading timeline');
 
     console.log('Guidance workspace MySQL API test passed');
   } finally {

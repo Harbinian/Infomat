@@ -282,6 +282,8 @@ async function main() {
     assert.strictEqual(createDepartmentBody.id, 99);
     assert.strictEqual(createdDepartments[0].code, 'PMO');
     assert.strictEqual(createdDepartments[0].created_by, 42);
+    assert.strictEqual(createdDepartments[0].final_responsible_person_id, null, 'route must not copy manager_user_id into person responsibility');
+    assert.strictEqual(createdDepartments[0].data_owner_person_id, null, 'route must not copy data_owner_user_id into person owner');
 
     const updateDepartmentRes = await fetch(`${baseUrl}/api/org/departments/99`, {
       method: 'PUT',
@@ -303,6 +305,8 @@ async function main() {
     assert.strictEqual(updatedDepartments[0].departmentId, 99);
     assert.strictEqual(updatedDepartments[0].payload.code, 'PMO2');
     assert.strictEqual(updatedDepartments[0].payload.updated_by, 42);
+    assert.strictEqual(updatedDepartments[0].payload.final_responsible_person_id, null, 'route update must not copy manager_user_id into person responsibility');
+    assert.strictEqual(updatedDepartments[0].payload.data_owner_person_id, null, 'route update must not copy data_owner_user_id into person owner');
 
     const deleteDepartmentRes = await fetch(`${baseUrl}/api/org/departments/99`, { method: 'DELETE' });
     const deleteDepartmentBody = await deleteDepartmentRes.json();
