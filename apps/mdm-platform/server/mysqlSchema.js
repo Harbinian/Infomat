@@ -500,6 +500,147 @@ CREATE TABLE IF NOT EXISTS process_mapping_todo_events (
     REFERENCES process_mapping_todos(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS process_governance_issue_batches (
+  batch_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  batch_key VARCHAR(128) NOT NULL,
+  source_type VARCHAR(64) NOT NULL,
+  source_snapshot_id BIGINT NULL,
+  department_name VARCHAR(128) NULL,
+  status VARCHAR(32) NOT NULL DEFAULT 'preparing',
+  summary_json JSON NULL,
+  error_message TEXT NULL,
+  generated_by BIGINT NULL,
+  generated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_process_governance_issue_batches_key (batch_key),
+  INDEX idx_issue_batches_status_dept (status, department_name),
+  INDEX idx_issue_batches_generated_at (generated_at),
+  CHECK (status IN ('preparing','ready','failed','superseded'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS process_governance_issues (
+  issue_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  issue_key VARCHAR(160) NOT NULL,
+  batch_id BIGINT NULL,
+  primary_dept_name VARCHAR(128) NOT NULL,
+  owner_dept_name VARCHAR(128) NULL,
+  source_layer VARCHAR(64) NOT NULL DEFAULT 'procedure',
+  source_type VARCHAR(64) NOT NULL,
+  source_ref_table VARCHAR(128) NULL,
+  source_ref_id VARCHAR(128) NULL,
+  l1_name VARCHAR(255) NULL,
+  l2_name VARCHAR(255) NULL,
+  l3_name VARCHAR(255) NULL,
+  a1_code VARCHAR(128) NULL,
+  a1_name VARCHAR(255) NULL,
+  title VARCHAR(255) NOT NULL,
+  what_text TEXT NOT NULL,
+  why_text TEXT NOT NULL,
+  where_text TEXT NOT NULL,
+  who_text TEXT NOT NULL,
+  when_text TEXT NOT NULL,
+  how_text TEXT NOT NULL,
+  how_much_text TEXT NOT NULL,
+  display_status VARCHAR(64) NOT NULL DEFAULT 'waiting_my_action',
+  priority_score INT NOT NULL DEFAULT 0,
+  due_at DATETIME NULL,
+  closed_at DATETIME NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_process_governance_issues_key (issue_key),
+  INDEX idx_issues_dept_status (primary_dept_name, display_status, priority_score),
+  INDEX idx_issues_a1 (a1_code),
+  INDEX idx_issues_updated (updated_at),
+  CHECK (source_layer IN ('rule','procedure','standard','form','unknown')),
+  CHECK (display_status IN ('waiting_my_action','waiting_others','waiting_department_review','waiting_studio_review','waiting_mdm_decision','completed','closed','data_preparing','data_failed','not_in_scope','no_permission')),
+  CONSTRAINT fk_issue_batch FOREIGN KEY (batch_id) REFERENCES process_governance_issue_batches(batch_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS process_governance_issue_points (
+  point_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  issue_id BIGINT NOT NULL,
+  point_key VARCHAR(180) NOT NULL,
+  point_type VARCHAR(64) NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  prompt_text TEXT NOT NULL,
+  enum_options_json JSON NOT NULL,
+  selected_option VARCHAR(128) NULL,
+  note TEXT NULL,
+  evidence_json JSON NULL,
+  current_step VARCHAR(64) NOT NULL DEFAULT 'business_confirm',
+  point_status VARCHAR(64) NOT NULL DEFAULT 'pending_business_confirm',
+  requires_mdm_decision TINYINT(1) NOT NULL DEFAULT 0,
+  requires_studio_review TINYINT(1) NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_process_governance_issue_points_key (point_key),
+  INDEX idx_issue_points_issue (issue_id, point_status),
+  INDEX idx_issue_points_type_status (point_type, point_status),
+  CHECK (point_type IN ('owner_role','completion_standard','controlled_transfer','cross_department','process_structure','system_landing','data_object','evidence_gap','terminology')),
+  CHECK (point_status IN ('pending_business_confirm','pending_department_review','pending_collaboration','pending_studio_review','pending_mdm_decision','needs_more_info','accepted','not_accepted','closed')),
+  CONSTRAINT fk_issue_points_issue FOREIGN KEY (issue_id) REFERENCES process_governance_issues(issue_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS process_governance_issue_participants (
+  participant_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  issue_id BIGINT NOT NULL,
+  point_id BIGINT NULL,
+  participant_type VARCHAR(64) NOT NULL,
+  dept_name VARCHAR(128) NULL,
+  role_code VARCHAR(64) NULL,
+  user_id BIGINT NULL,
+  can_view TINYINT(1) NOT NULL DEFAULT 1,
+  can_act TINYINT(1) NOT NULL DEFAULT 0,
+  action_label VARCHAR(128) NULL,
+  action_status VARCHAR(64) NOT NULL DEFAULT 'waiting',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_issue_participants_issue (issue_id, can_view, can_act),
+  INDEX idx_issue_participants_user (user_id, action_status),
+  INDEX idx_issue_participants_dept (dept_name, action_status),
+  CHECK (participant_type IN ('business_owner','department_reviewer','collaborator','studio_reviewer','mdm_decider','terminology_reviewer','observer')),
+  CONSTRAINT fk_issue_participants_issue FOREIGN KEY (issue_id) REFERENCES process_governance_issues(issue_id),
+  CONSTRAINT fk_issue_participants_point FOREIGN KEY (point_id) REFERENCES process_governance_issue_points(point_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS process_governance_issue_events (
+  event_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  issue_id BIGINT NOT NULL,
+  point_id BIGINT NULL,
+  event_type VARCHAR(64) NOT NULL,
+  actor_user_id BIGINT NULL,
+  actor_dept_name VARCHAR(128) NULL,
+  actor_role_code VARCHAR(64) NULL,
+  note TEXT NULL,
+  payload_json JSON NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_issue_events_issue (issue_id, created_at),
+  INDEX idx_issue_events_point (point_id, created_at),
+  CHECK (event_type IN ('created','business_confirmed','department_reviewed','collaboration_added','collaboration_answered','studio_reviewed','mdm_decided','more_info_requested','revision_suggested','different_opinion_added','terminology_task_created','terminology_answered','terminology_decided','commented','closed','reopened')),
+  CONSTRAINT fk_issue_events_issue FOREIGN KEY (issue_id) REFERENCES process_governance_issues(issue_id),
+  CONSTRAINT fk_issue_events_point FOREIGN KEY (point_id) REFERENCES process_governance_issue_points(point_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS process_governance_term_tasks (
+  term_task_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  issue_id BIGINT NOT NULL,
+  point_id BIGINT NULL,
+  term_text VARCHAR(255) NOT NULL,
+  context_text TEXT NOT NULL,
+  selected_departments_json JSON NOT NULL,
+  status VARCHAR(64) NOT NULL DEFAULT 'pending_departments',
+  decision_json JSON NULL,
+  created_by BIGINT NULL,
+  decided_by BIGINT NULL,
+  decided_at DATETIME NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_term_tasks_status (status),
+  CHECK (status IN ('pending_departments','pending_mdm_decision','decided','closed')),
+  CONSTRAINT fk_term_tasks_issue FOREIGN KEY (issue_id) REFERENCES process_governance_issues(issue_id),
+  CONSTRAINT fk_term_tasks_point FOREIGN KEY (point_id) REFERENCES process_governance_issue_points(point_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS terminology_term_types (
   code VARCHAR(64) PRIMARY KEY,
   name VARCHAR(255) NOT NULL,

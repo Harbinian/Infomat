@@ -22,8 +22,8 @@ fs.writeFileSync(path.join(candidateRunDir, 'mapping_diff_items.json'), JSON.str
     id: 'CAND-MDM-001',
     stable_key: 'candidate-mdm-001',
     department: '工程技术部',
-    document_name: '产品设计需求定义管理程序.docx.md.md',
-    source_file: 'docs/norms/工程技术部业务资料/产品设计需求定义管理程序.docx.md.md',
+    document_name: '产品设计需求定义管理程序.docx.md',
+    source_file: 'docs/norms/工程技术部业务资料/产品设计需求定义管理程序.docx.md',
     source_anchor: 'DOPB135365 §5.2 P71',
     candidate_type: '角色待确认',
     content: '审核人审核产品设计需求文件',
@@ -36,7 +36,7 @@ fs.writeFileSync(path.join(candidateRunDir, 'mapping_diff_items.json'), JSON.str
 ], null, 2), 'utf8');
 fs.writeFileSync(path.join(candidateRunDir, 'chunks.jsonl'), `${JSON.stringify({
   chunk_id: 'eng-P0071',
-  source_file: 'docs/norms/工程技术部业务资料/产品设计需求定义管理程序.docx.md.md',
+  source_file: 'docs/norms/工程技术部业务资料/产品设计需求定义管理程序.docx.md',
   doc_no: 'DOPB135365',
   clause: '5.2',
   paragraph_id: 'P71',
@@ -234,6 +234,17 @@ async function main() {
     assert.strictEqual(current.body.stats.mappings, 1);
     assert.deepStrictEqual(current.body.qualitySummary, { BLOCK: 1, WARN: 1, INFO: 0 });
 
+    const issuePoolBatch = await request('/api/process-governance/issue-pool/batches/generate', {
+      method: 'POST',
+      body: JSON.stringify({})
+    }, cookie);
+    assert.strictEqual(issuePoolBatch.res.status, 200);
+    assert.strictEqual(issuePoolBatch.body.batch.status, 'ready');
+
+    const issuePoolQueues = await request('/api/process-governance/issue-pool/queues', {}, cookie);
+    assert.strictEqual(issuePoolQueues.res.status, 200);
+    assert.ok(issuePoolQueues.body.queues.some(queue => queue.label === '需要我确认'), 'issue pool should expose human queue labels');
+
     const snapshots = await request('/api/process-governance/snapshots', {}, cookie);
     assert.strictEqual(snapshots.res.status, 200);
     assert.strictEqual(snapshots.body.length, 1);
@@ -261,7 +272,7 @@ async function main() {
     assert.ok(sourceFiles.body.summary.returned <= 20);
     assert.strictEqual(sourceFiles.body.summary.byStatus['纳入'], 1);
     assert.strictEqual(sourceFiles.body.summary.byStatus['排除'], 1);
-    assert.ok(sourceFiles.body.items.some(item => item.file_path.includes('GLTX-JY-23-A销售订单评审和执行管理程序.docx.md.md')));
+    assert.ok(sourceFiles.body.items.some(item => item.file_path.includes('GLTX-JY-23-A销售订单评审和执行管理程序.docx.md')));
 
     const mdmRequirements = await request('/api/process-governance/mdm-requirements?dept=经营发展部', {}, cookie);
     assert.strictEqual(mdmRequirements.res.status, 200);
@@ -298,7 +309,7 @@ async function main() {
     assert.strictEqual(candidateReview.res.status, 200);
     assert.strictEqual(candidateReview.body.summary.total, 1);
     assert.strictEqual(candidateReview.body.groups[0].department, '工程技术部');
-    assert.strictEqual(candidateReview.body.groups[0].documents[0].document_name, '产品设计需求定义管理程序.docx.md.md');
+    assert.strictEqual(candidateReview.body.groups[0].documents[0].document_name, '产品设计需求定义管理程序.docx.md');
     assert.strictEqual(candidateReview.body.groups[0].documents[0].types[0].candidate_type, '角色待确认');
     assert.strictEqual(candidateReview.body.items[0].definition_status, '原文定义不足');
     assert.strictEqual(candidateReview.body.items[0].source_label.includes('内部锚点P71'), false);
