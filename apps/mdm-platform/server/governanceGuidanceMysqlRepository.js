@@ -158,6 +158,12 @@ function makeGovernanceGuidanceMysqlRepository(pool) {
     return Boolean(await findActiveDelegation(guidance, personId));
   }
 
+  async function activePersonExists(personId) {
+    if (!personId) return false;
+    const person = await first(pool, "SELECT person_id FROM person WHERE person_id=? AND status='active' LIMIT 1", [personId]);
+    return Boolean(person);
+  }
+
   async function computeGuidanceActions(guidance, personId, permissions = new Set()) {
     const actions = defaultGuidanceActions();
     const disabledReasons = actions.disabledReasons;
@@ -423,6 +429,7 @@ function makeGovernanceGuidanceMysqlRepository(pool) {
       if (!guidance) return { updated: false, reason: 'missing' };
       if (Number(guidance.final_responsible_person_id) !== Number(personId)) return { updated: false, reason: 'not_responsible' };
       if (!payload.delegate_person_id) return { updated: false, reason: 'missing_delegate' };
+      if (!await activePersonExists(payload.delegate_person_id)) return { updated: false, reason: 'invalid_delegate' };
       const result = await pool.execute(`
         INSERT INTO department_responsibility_delegations (
           department_id, final_responsible_person_id, delegate_person_id,
@@ -472,6 +479,7 @@ function makeGovernanceGuidanceMysqlRepository(pool) {
       const guidance = await this.getGuidanceById(guidanceId);
       if (!guidance) return { updated: false, reason: 'missing' };
       if (!payload.executor_person_id) return { updated: false, reason: 'missing_executor' };
+      if (!await activePersonExists(payload.executor_person_id)) return { updated: false, reason: 'invalid_executor' };
       const isFinalResponsible = Number(guidance.final_responsible_person_id) === Number(personId);
       const delegation = isFinalResponsible ? null : await findActiveDelegation(guidance, personId);
       if (!isFinalResponsible && !delegation) return { updated: false, reason: 'not_responsible' };

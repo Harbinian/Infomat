@@ -100,7 +100,9 @@ function sendGuidanceActionResult(res, result) {
     if (result && result.reason === 'delegate_out_of_scope') return res.status(403).json({ error: '代理授权范围不包含该事项' });
     if (result && result.reason === 'final_confirm_denied') return res.status(403).json({ error: '重大闭环需要最终响应责任人确认' });
     if (result && result.reason === 'missing_delegate') return res.status(400).json({ error: '缺少代理人' });
+    if (result && result.reason === 'invalid_delegate') return res.status(400).json({ error: '代理人不存在或不可用' });
     if (result && result.reason === 'missing_executor') return res.status(400).json({ error: '缺少执行人' });
+    if (result && result.reason === 'invalid_executor') return res.status(400).json({ error: '执行人不存在或不可用' });
     return res.status(400).json({ error: '指导意见操作失败' });
   }
   return res.json({ success: true, status: result.status, delegationId: result.delegationId || null });
