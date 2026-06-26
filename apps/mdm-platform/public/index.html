@@ -254,6 +254,32 @@
       line-height: 20px; white-space: nowrap;
     }
     .candidate-review-list { display: grid; gap: 10px; }
+    .pg-issue-pool { display: grid; gap: 14px; }
+    .pg-issue-queues { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+    .pg-issue-queue {
+      display: grid; gap: 6px; text-align: left; min-height: 76px;
+      padding: 12px; border: 1px solid #d8d0c2; border-left: 4px solid var(--ochre);
+      border-radius: 8px; background: #fffdf8; cursor: pointer;
+    }
+    .pg-issue-queue strong { font-size: 14px; color: #233044; }
+    .pg-issue-queue span { font-size: 22px; font-weight: 700; color: var(--ochre); }
+    .pg-issue-card, .pg-issue-detail {
+      display: grid; gap: 12px; padding: 14px; border: 1px solid #d8d0c2;
+      border-radius: 8px; background: #fbfaf6;
+    }
+    .pg-issue-card { grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+    .pg-issue-card h3, .pg-issue-detail h3 { margin: 0; font-size: 15px; line-height: 1.45; color: #233044; }
+    .pg-issue-a1 { color: var(--text-muted); font-size: 12px; }
+    .pg-issue-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .pg-issue-fact, .pg-issue-point, .pg-issue-event {
+      padding: 10px 12px; border: 1px solid #e4dccf; border-radius: 8px; background: #fffdf8;
+    }
+    .pg-issue-fact strong, .pg-issue-point strong, .pg-issue-event strong {
+      display: block; margin-bottom: 5px; font-size: 12px; color: var(--text-muted);
+    }
+    .pg-issue-fact p, .pg-issue-point p, .pg-issue-event p { margin: 0; line-height: 1.65; white-space: pre-wrap; }
+    .pg-issue-fact.wide { grid-column: 1 / -1; }
+    .pg-issue-actions { display: flex; flex-wrap: wrap; gap: 8px; }
     .candidate-review-card {
       display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px;
       padding: 12px 14px; border: 1px solid #d8d0c2; border-left: 4px solid var(--sage);
@@ -2430,7 +2456,7 @@
       }
       if (!hash) return { view: 'list', tab: 'roleWorkbench' };
       var parts = hash.split('/');
-      if (parts.length === 1) return { view: 'list', tab: parts[0], query: query, pgView: query.view, qualityView: query.view, pgWorkspace: query.workspace, finding: query.finding, caseId: query.case, mappingTodoId: query.todo, candidateReviewKey: query.candidate };
+      if (parts.length === 1) return { view: 'list', tab: parts[0], query: query, pgView: query.view, qualityView: query.view, pgWorkspace: query.workspace, finding: query.finding, caseId: query.case, mappingTodoId: query.todo, candidateReviewKey: query.candidate, issueQueue: query.queue, issueId: query.issue };
       if (parts[0] === 'processes' && parts.length >= 3) {
         return { view: 'detail', tab: 'processes', type: 'process', id: parts[2] };
       }
@@ -4206,6 +4232,174 @@
         : '<tr><td colspan="7" class="empty">暂无主数据对象候选</td></tr>';
     }
 
+    async function loadProcessGovernanceIssueQueues() {
+      return await api('/api/process-governance/issue-pool/queues');
+    }
+
+    async function loadProcessGovernanceIssueList(queueKey) {
+      var query = processGovernanceQuery({ queue: queueKey, limit: 20, offset: 0 });
+      return await api('/api/process-governance/issue-pool/issues' + query);
+    }
+
+    async function loadProcessGovernanceIssueDetail(issueId) {
+      return await api('/api/process-governance/issue-pool/issues/' + encodeURIComponent(issueId || ''));
+    }
+
+    var PROCESS_GOVERNANCE_ISSUE_QUEUE_LABELS = {
+      waiting_my_action: '需要我确认',
+      waiting_department_review: '需要我审核',
+      pending_collaboration: '需要我协同',
+      waiting_others: '等待别人',
+      waiting_mdm_decision: '待最终裁决',
+      completed: '已完成'
+    };
+
+    function processGovernanceIssueQueueHash(queueKey) {
+      return '#/processGovernance?view=candidateReview&queue=' + encodeURIComponent(queueKey || 'waiting_my_action');
+    }
+
+    function processGovernanceIssueDetailHash(issueId, queueKey) {
+      var query = new URLSearchParams({ view: 'candidateReview', issue: issueId || '' });
+      if (queueKey) query.set('queue', queueKey);
+      return '#/processGovernance?' + query.toString();
+    }
+
+    function renderProcessGovernanceIssueQueues(data) {
+      var queues = data.queues || [];
+      if (data.dataStatus === 'failed') return '<div class="empty">数据准备失败，请联系流程治理负责人。</div>';
+      if (data.dataStatus === 'preparing') return '<div class="empty">数据正在准备，请稍后查看。</div>';
+      if (data.dataStatus === 'not_in_scope') return '<div class="empty">本部门尚未纳入本轮治理。</div>';
+      if (data.dataStatus === 'no_permission') return '<div class="empty">当前账户没有查看本部门问题的权限。</div>';
+      if (!queues.some(function(queue) { return Number(queue.count || 0) > 0; })) {
+        return '<div class="empty">今天没有需要你处理的问题。</div>';
+      }
+      return '<div class="pg-issue-queues">' + queues.map(function(queue) {
+        var queueLabel = queue.label || PROCESS_GOVERNANCE_ISSUE_QUEUE_LABELS[queue.key] || '待处理';
+        return '<button class="pg-issue-queue" type="button" data-issue-queue="' + escapeHtml(queue.key) + '">' +
+          '<strong>' + safeText(queueLabel) + '</strong><span>' + safeText(queue.count || 0) + '</span>' +
+        '</button>';
+      }).join('') + '</div>';
+    }
+
+    function renderProcessGovernanceIssueList(list, queueKey) {
+      var items = (list && list.items) || [];
+      if (!items.length) return '<div class="empty">这个队列暂时没有需要你处理的问题。</div>';
+      return items.map(function(issue) {
+        return '<article class="pg-issue-card" data-issue-card="' + escapeHtml(issue.issue_id || '') + '">' +
+          '<div>' +
+            '<h3>' + safeText(issue.title || '待确认问题') + '</h3>' +
+            '<div class="candidate-review-meta">' +
+              '<span class="tag">' + safeText(issue.primary_dept_name || '未标注部门') + '</span>' +
+              '<span class="tag">业务行为 ' + safeText(issue.a1_code || '') + '</span>' +
+              '<span class="tag">' + safeText(issue.a1_name || '业务行为待补') + '</span>' +
+            '</div>' +
+          '</div>' +
+          '<button type="button" class="btn secondary" data-issue-open="' + escapeHtml(issue.issue_id || '') + '" data-issue-queue="' + escapeHtml(queueKey || '') + '">打开问题卡</button>' +
+        '</article>';
+      }).join('');
+    }
+
+    function renderIssueFact(label, value, wide) {
+      return '<div class="pg-issue-fact' + (wide ? ' wide' : '') + '">' +
+        '<strong>' + safeText(label) + '</strong>' +
+        '<p>' + safeText(value || '待补充') + '</p>' +
+      '</div>';
+    }
+
+    function renderIssuePoints(points) {
+      if (!points.length) return '<div class="empty">暂无问题点。</div>';
+      return '<div class="pg-issue-points">' + points.map(function(point) {
+        var options = (point.enum_options || []).join(' / ');
+        return '<div class="pg-issue-point">' +
+          '<strong>' + safeText(point.title || '问题点') + '</strong>' +
+          '<p>' + safeText(point.prompt_text || '') + '</p>' +
+          '<p>可选处理：' + safeText(options || '待配置') + '</p>' +
+        '</div>';
+      }).join('') + '</div>';
+    }
+
+    function renderIssueEvents(events) {
+      if (!events.length) return '<div class="empty">暂无处理历史。</div>';
+      return '<div class="pg-issue-events">' + events.slice(-8).map(function(event) {
+        return '<div class="pg-issue-event">' +
+          '<strong>' + safeText(event.event_type || '处理记录') + '</strong>' +
+          '<p>' + safeText(event.note || '已记录') + '</p>' +
+        '</div>';
+      }).join('') + '</div>';
+    }
+
+    function renderProcessGovernanceIssueDetail(detail) {
+      var issue = detail.issue || {};
+      return '<article class="pg-issue-detail">' +
+        '<div class="candidate-review-detail-head">' +
+          '<div>' +
+            '<h3>' + safeText(issue.title || '待确认问题') + '</h3>' +
+            '<div class="pg-issue-a1">业务行为：' + safeText(issue.a1_code || '') + ' ' + safeText(issue.a1_name || '') + '</div>' +
+          '</div>' +
+          '<div class="candidate-review-detail-actions">' +
+            '<button type="button" class="btn secondary" data-issue-back="1">返回队列</button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="pg-issue-facts">' +
+          renderIssueFact('这是什么问题', issue.what_text, true) +
+          renderIssueFact('为什么要你确认', issue.why_text, true) +
+          renderIssueFact('在哪发现', issue.where_text, true) +
+          renderIssueFact('谁负责处理', issue.who_text) +
+          renderIssueFact('什么时候处理', issue.when_text) +
+          renderIssueFact('怎么处理', issue.how_text, true) +
+          renderIssueFact('影响多大', issue.how_much_text, true) +
+        '</div>' +
+        '<div class="pg-issue-actions" aria-label="协作处理选项">' +
+          '<span class="tag">需要补充依据</span>' +
+          '<span class="tag">建议修订</span>' +
+          '<span class="tag">请再确认</span>' +
+          '<span class="tag">存在不同意见</span>' +
+        '</div>' +
+        '<div class="pg-work-help"><strong>术语统一：</strong>输入时提示可能有标准术语；可以选择采用推荐术语、保留原表达，并说明原因，或提交 MDM 工作组裁决。术语裁决结果将进入术语真源。</div>' +
+        '<h3>问题点</h3>' +
+        renderIssuePoints(detail.points || []) +
+        '<h3>处理历史</h3>' +
+        renderIssueEvents(detail.events || []) +
+      '</article>';
+    }
+
+    function wireProcessGovernanceIssuePool(container, activeQueue) {
+      container.querySelectorAll('[data-issue-queue]').forEach(function(button) {
+        if (button.dataset.issueOpen) return;
+        button.addEventListener('click', function() {
+          location.hash = processGovernanceIssueQueueHash(button.dataset.issueQueue || 'waiting_my_action');
+        });
+      });
+      container.querySelectorAll('[data-issue-open]').forEach(function(button) {
+        button.addEventListener('click', function() {
+          location.hash = processGovernanceIssueDetailHash(button.dataset.issueOpen || '', button.dataset.issueQueue || activeQueue || '');
+        });
+      });
+      container.querySelectorAll('[data-issue-back]').forEach(function(button) {
+        button.addEventListener('click', function() {
+          location.hash = processGovernanceIssueQueueHash(activeQueue || 'waiting_my_action');
+        });
+      });
+    }
+
+    function renderProcessGovernanceIssuePool(payload, route) {
+      var rowsEl = document.getElementById('pgCandidateReviewRows');
+      var metaEl = document.getElementById('pgCandidateReviewMeta');
+      if (!rowsEl) return;
+      var data = payload.issuePool || {};
+      var queueKey = route && route.issueQueue || 'waiting_my_action';
+      var queueCount = (data.queues || []).reduce(function(total, queue) { return total + Number(queue.count || 0); }, 0);
+      if (metaEl) metaEl.textContent = (data.departmentName ? data.departmentName + ' · ' : '') + '统一问题池 ' + queueCount + ' 条';
+      if (data.detail) {
+        rowsEl.innerHTML = renderProcessGovernanceIssueDetail(data.detail);
+      } else if (data.list) {
+        rowsEl.innerHTML = '<div class="pg-issue-pool">' + renderProcessGovernanceIssueQueues(data) + renderProcessGovernanceIssueList(data.list, queueKey) + '</div>';
+      } else {
+        rowsEl.innerHTML = '<div class="pg-issue-pool">' + renderProcessGovernanceIssueQueues(data) + '</div>';
+      }
+      wireProcessGovernanceIssuePool(rowsEl, queueKey);
+    }
+
     async function loadProcessGovernanceCandidateReview(selectedDept) {
       var runs = await api('/api/process-governance/candidate-review/runs');
       var run = runs.items && runs.items[0];
@@ -4736,6 +4930,11 @@
         filters.l3 = state.pgEvidenceFocus && state.pgEvidenceFocus.l3Name || '';
         filters.a1 = state.pgEvidenceFocus && state.pgEvidenceFocus.a1Code || '';
       }
+      if (view === 'candidateReview') {
+        var route = parseHash();
+        filters.issueQueue = route.issueQueue || '';
+        filters.issueId = route.issueId || '';
+      }
       if (view === 'mapping') {
         filters.todoType = document.getElementById('pgMappingTodoTypeFilter') ? document.getElementById('pgMappingTodoTypeFilter').value : '';
         filters.todoStatus = document.getElementById('pgMappingTodoStatusFilter') ? document.getElementById('pgMappingTodoStatusFilter').value : '';
@@ -4761,7 +4960,14 @@
     }
 
     async function loadProcessGovernanceCandidateReviewView(filters) {
-      return { candidateReview: await loadProcessGovernanceCandidateReview(filters.dept || '') };
+      var route = parseHash();
+      var issuePool = await loadProcessGovernanceIssueQueues();
+      if (route.issueId) {
+        issuePool.detail = await loadProcessGovernanceIssueDetail(route.issueId);
+      } else if (route.issueQueue) {
+        issuePool.list = await loadProcessGovernanceIssueList(route.issueQueue);
+      }
+      return { issuePool: issuePool };
     }
 
     async function loadProcessGovernanceMapView(filters) {
@@ -4840,7 +5046,7 @@
     }
 
     function renderProcessGovernanceCandidateReviewView(payload, route) {
-      renderProcessGovernanceCandidateReview(payload.candidateReview || { items: [], summary: {} }, state.pgSelectedDept, route);
+      renderProcessGovernanceIssuePool(payload || {}, route || parseHash());
     }
 
     function renderProcessGovernanceMapView(payload) {

@@ -234,6 +234,17 @@ async function main() {
     assert.strictEqual(current.body.stats.mappings, 1);
     assert.deepStrictEqual(current.body.qualitySummary, { BLOCK: 1, WARN: 1, INFO: 0 });
 
+    const issuePoolBatch = await request('/api/process-governance/issue-pool/batches/generate', {
+      method: 'POST',
+      body: JSON.stringify({})
+    }, cookie);
+    assert.strictEqual(issuePoolBatch.res.status, 200);
+    assert.strictEqual(issuePoolBatch.body.batch.status, 'ready');
+
+    const issuePoolQueues = await request('/api/process-governance/issue-pool/queues', {}, cookie);
+    assert.strictEqual(issuePoolQueues.res.status, 200);
+    assert.ok(issuePoolQueues.body.queues.some(queue => queue.label === '需要我确认'), 'issue pool should expose human queue labels');
+
     const snapshots = await request('/api/process-governance/snapshots', {}, cookie);
     assert.strictEqual(snapshots.res.status, 200);
     assert.strictEqual(snapshots.body.length, 1);
