@@ -79,6 +79,7 @@
     "test:legacy-identity-inventory": "node scripts/test-legacy-identity-inventory.js",
     "test:guidance-workflow": "node scripts/test-guidance-workflow-mysql-api.js && node scripts/test-guidance-affordances-mysql-repository.js",
     "test:guidance-workspace": "node scripts/test-guidance-workspace-mysql-api.js && node scripts/test-guidance-workspace-frontend.js",
+    "test:person-identity-migration-rehearsal": "node scripts/test-person-identity-migration-rehearsal-mysql.js",
     "test:person-operation-controls": "node scripts/test-person-operation-controls-frontend.js",
     "test:person-identity-rbac-completion": "npm run test:person-identity-rbac && npm run test:person-rbac-matrix && npm run test:person-identity-payload && npm run test:department-responsibility && npm run test:no-new-user-identity-fields && npm run test:guidance-workflow && npm run test:person-operation-controls",
     "test:identity-mysql": "node scripts/test-identity-mysql-repository.js && node scripts/test-org-me-mysql-api.js && node scripts/test-roles-mysql-api.js && node scripts/test-auth-mysql-permission.js && npm run test:access-mysql && node scripts/test-import-rbac-mysql-api.js",
