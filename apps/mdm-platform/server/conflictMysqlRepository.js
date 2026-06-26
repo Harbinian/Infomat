@@ -159,12 +159,21 @@ function conflictValueFromPair(pair = {}) {
   return null;
 }
 
+function personIdFromPayload(payload = {}, fallback = null) {
+  return payload.actor_person_id || payload.actorPersonId || payload.person_id || payload.personId || fallback || null;
+}
+
+function assigneePersonIdFromPayload(payload = {}) {
+  return payload.assignee_person_id || payload.assigneePersonId || payload.assignee_user_id || payload.assigneeUserId || null;
+}
+
 function makeConflictMysqlRepository(pool) {
   async function insertTodo(payload = {}, actorUserId = null) {
+    const actorPersonId = personIdFromPayload(payload, actorUserId);
     const result = await pool.execute(
       `INSERT INTO mdm_todos
-        (from_dept_id, to_dept_id, type, related_mapping_id, related_field_id, content, due_date, urgency, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        (from_dept_id, to_dept_id, type, related_mapping_id, related_field_id, content, due_date, urgency, created_by, created_by_person_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         payload.from_dept_id || null,
         payload.to_dept_id || null,
@@ -174,14 +183,15 @@ function makeConflictMysqlRepository(pool) {
         payload.content || null,
         payload.due_date || null,
         payload.urgency || 'high',
-        actorUserId || null
+        actorUserId || null,
+        actorPersonId
       ]
     );
     const todoId = insertId(result);
     await pool.execute(
-      `INSERT INTO mdm_todo_events (todo_id, event_type, actor_user_id, note)
-       VALUES (?, 'created', ?, ?)`,
-      [todoId, actorUserId || null, payload.content || null]
+      `INSERT INTO mdm_todo_events (todo_id, event_type, actor_user_id, actor_person_id, note)
+       VALUES (?, 'created', ?, ?, ?)`,
+      [todoId, actorUserId || null, actorPersonId, payload.content || null]
     );
     return todoId;
   }
@@ -219,9 +229,11 @@ function makeConflictMysqlRepository(pool) {
   async function conflictAssignments(conflictId, conflictType) {
     return await rows(
       pool,
-      `SELECT ca.*, u.name AS assignee_name, au.name AS assigned_by_name
+      `SELECT ca.*, COALESCE(p.person_name, u.name) AS assignee_name, COALESCE(ap.person_name, au.name) AS assigned_by_name
        FROM mdm_conflict_assignments ca
+       LEFT JOIN person p ON p.person_id = COALESCE(ca.assignee_person_id, ca.assignee_user_id)
        LEFT JOIN users u ON u.id = ca.assignee_user_id
+       LEFT JOIN person ap ON ap.person_id = COALESCE(ca.assigned_by_person_id, ca.assigned_by)
        LEFT JOIN users au ON au.id = ca.assigned_by
        WHERE ca.conflict_id=? AND ca.conflict_type=?
        ORDER BY ca.created_at DESC, ca.id DESC`,
@@ -232,8 +244,9 @@ function makeConflictMysqlRepository(pool) {
   async function coordinationHistory(conflictId, conflictType) {
     return await rows(
       pool,
-      `SELECT cch.*, u.name AS assignee_name
+      `SELECT cch.*, COALESCE(p.person_name, u.name) AS assignee_name
        FROM mdm_conflict_coordination_history cch
+       LEFT JOIN person p ON p.person_id = COALESCE(cch.assignee_person_id, cch.assignee_user_id)
        LEFT JOIN users u ON u.id = cch.assignee_user_id
        WHERE cch.conflict_id=? AND cch.conflict_type=?
        ORDER BY cch.created_at DESC, cch.id DESC`,
@@ -347,8 +360,8 @@ function makeConflictMysqlRepository(pool) {
       if (!scope.canViewAll && !scope.status && ['archived', 'silenced'].includes(conflict.status)) return null;
       const assignments = await conflictAssignments(conflictId, conflictType);
       const history = await coordinationHistory(conflictId, conflictType);
-      const submitted = new Set(history.map(row => Number(row.assignee_user_id)).filter(Boolean));
-      const assigned = new Set(assignments.map(row => Number(row.assignee_user_id)).filter(Boolean));
+      const submitted = new Set(history.map(row => Number(row.assignee_person_id || row.assignee_user_id)).filter(Boolean));
+      const assigned = new Set(assignments.map(row => Number(row.assignee_person_id || row.assignee_user_id)).filter(Boolean));
       return {
         ...conflict,
         currentAssignee: assignments[0] || null,
@@ -487,15 +500,17 @@ function makeConflictMysqlRepository(pool) {
     },
 
     async assignConflict(conflictId, conflictType = 'field', payload = {}) {
+      const assigneePersonId = assigneePersonIdFromPayload(payload);
+      const actorPersonId = personIdFromPayload(payload, payload.actor_user_id);
       const conflict = await getBaseConflict(conflictId, conflictType);
       if (!conflict) return resultError(404, '冲突不存在');
       if (!['pending', 'coordinating'].includes(conflict.status)) {
         return resultError(409, '仅待处理或协调中状态可指定责任人');
       }
       await pool.execute(
-        `INSERT INTO mdm_conflict_assignments (conflict_id, conflict_type, assignee_user_id, assigned_by)
-         VALUES (?, ?, ?, ?)`,
-        [conflictId, conflictType, payload.assignee_user_id, payload.actor_user_id || null]
+        `INSERT INTO mdm_conflict_assignments (conflict_id, conflict_type, assignee_user_id, assignee_person_id, assigned_by, assigned_by_person_id)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [conflictId, conflictType, payload.assignee_user_id, assigneePersonId, payload.actor_user_id || null, actorPersonId]
       );
       const table = conflictType === 'term' ? 'mdm_term_conflicts' : 'mdm_field_conflicts';
       await pool.execute(`UPDATE ${table} SET status='coordinating', updated_at=CURRENT_TIMESTAMP WHERE id=?`, [conflictId]);
@@ -511,30 +526,33 @@ function makeConflictMysqlRepository(pool) {
     },
 
     async reassignConflict(conflictId, conflictType = 'field', payload = {}) {
+      const assigneePersonId = assigneePersonIdFromPayload(payload);
+      const actorPersonId = personIdFromPayload(payload, payload.actor_user_id);
       const conflict = await getBaseConflict(conflictId, conflictType);
       if (!conflict) return resultError(404, '冲突不存在');
       if (conflict.status !== 'coordinating') return resultError(409, '仅协调中状态可改派');
       await pool.execute(
-        `INSERT INTO mdm_conflict_assignments (conflict_id, conflict_type, assignee_user_id, assigned_by)
-         VALUES (?, ?, ?, ?)`,
-        [conflictId, conflictType, payload.assignee_user_id, payload.actor_user_id || null]
+        `INSERT INTO mdm_conflict_assignments (conflict_id, conflict_type, assignee_user_id, assignee_person_id, assigned_by, assigned_by_person_id)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [conflictId, conflictType, payload.assignee_user_id, assigneePersonId, payload.actor_user_id || null, actorPersonId]
       );
       return { ok: true };
     },
 
     async submitCoordination(conflictId, conflictType = 'field', payload = {}) {
+      const actorPersonId = personIdFromPayload(payload, payload.actor_user_id);
       if (!['A', 'B', 'compromise'].includes(payload.result)) return resultError(422, 'result 必须为 A, B, 或 compromise');
       const conflict = await getBaseConflict(conflictId, conflictType);
       if (!conflict) return resultError(404, '冲突不存在');
       if (conflict.status !== 'coordinating') return resultError(409, '仅协调中状态可提交协调结果');
       const assignments = await conflictAssignments(conflictId, conflictType);
-      if (assignments.length > 0 && !payload.canManageAll && !assignments.some(row => Number(row.assignee_user_id) === Number(payload.actor_user_id))) {
+      if (assignments.length > 0 && !payload.canManageAll && !assignments.some(row => Number(row.assignee_person_id || row.assignee_user_id) === Number(actorPersonId))) {
         return resultError(403, '仅已指派协调人可提交协调结果');
       }
       await pool.execute(
-        `INSERT INTO mdm_conflict_coordination_history (conflict_id, conflict_type, assignee_user_id, result, note)
-         VALUES (?, ?, ?, ?, ?)`,
-        [conflictId, conflictType, payload.actor_user_id || null, payload.result, payload.note || null]
+        `INSERT INTO mdm_conflict_coordination_history (conflict_id, conflict_type, assignee_user_id, assignee_person_id, result, note)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [conflictId, conflictType, payload.actor_user_id || null, actorPersonId, payload.result, payload.note || null]
       );
       return { ok: true };
     },

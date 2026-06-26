@@ -383,6 +383,14 @@ function eventRow(row) {
   };
 }
 
+function personIdFromPayload(payload = {}, fallback = null) {
+  return payload.actor_person_id || payload.actorPersonId || payload.person_id || payload.personId || fallback || null;
+}
+
+function ownerPersonIdFromPayload(payload = {}) {
+  return payload.owner_person_id || payload.ownerPersonId || payload.owner_user_id || payload.ownerUserId || null;
+}
+
 function makeProcessGovernanceMysqlRepository(pool) {
   return {
     async initSchema() {
@@ -879,10 +887,10 @@ function makeProcessGovernanceMysqlRepository(pool) {
         params.push(String(filters.dept));
       }
       if (filters.owner === 'me') {
-        whereSql += ' AND owner_user_id=?';
-        params.push(filters.userId || 0);
+        whereSql += ' AND COALESCE(owner_person_id, owner_user_id)=?';
+        params.push(filters.personId || filters.userId || 0);
       } else if (filters.owner) {
-        whereSql += ' AND owner_user_id=?';
+        whereSql += ' AND COALESCE(owner_person_id, owner_user_id)=?';
         params.push(Number(filters.owner));
       }
       if (filters.snapshot === 'active') {
@@ -894,12 +902,12 @@ function makeProcessGovernanceMysqlRepository(pool) {
       }
       if (!filters.canViewAll) {
         whereSql += ` AND (
-          owner_user_id=?
+          COALESCE(owner_person_id, owner_user_id)=?
           OR owner_dept_id=?
           OR dept_name=?
           OR dept_name IS NULL
         )`;
-        params.push(filters.userId || 0, filters.departmentId || -1, filters.departmentName || '__none__');
+        params.push(filters.personId || filters.userId || 0, filters.departmentId || -1, filters.departmentName || '__none__');
       }
 
       const [items] = await pool.execute(
@@ -949,11 +957,12 @@ function makeProcessGovernanceMysqlRepository(pool) {
     },
 
     async addQualityCaseEvent(caseId, eventType, actorUserId, note, payload) {
+      const actorPersonId = personIdFromPayload(payload || {}, actorUserId);
       await pool.execute(
         `INSERT INTO process_governance_quality_case_events
-          (case_id, event_type, actor_user_id, note, payload_json)
-         VALUES (?, ?, ?, ?, ?)`,
-        [caseId, eventType, actorUserId || null, note || null, payload ? JSON.stringify(payload) : null]
+          (case_id, event_type, actor_user_id, actor_person_id, note, payload_json)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [caseId, eventType, actorUserId || null, actorPersonId, note || null, payload ? JSON.stringify(payload) : null]
       );
     },
 
@@ -962,22 +971,26 @@ function makeProcessGovernanceMysqlRepository(pool) {
     },
 
     async assignQualityCase(caseId, payload = {}) {
+      const ownerPersonId = ownerPersonIdFromPayload(payload);
       await pool.execute(
         `UPDATE process_governance_quality_cases
          SET owner_user_id=COALESCE(?, owner_user_id),
+             owner_person_id=COALESCE(?, owner_person_id),
              owner_dept_id=COALESCE(?, owner_dept_id),
              priority=?,
              due_date=?,
              status='assigned',
              updated_at=CURRENT_TIMESTAMP
          WHERE id=?`,
-        [payload.owner_user_id || null, payload.owner_dept_id || null, payload.priority || 'medium', payload.due_date || null, caseId]
+        [payload.owner_user_id || null, ownerPersonId, payload.owner_dept_id || null, payload.priority || 'medium', payload.due_date || null, caseId]
       );
       await this.addQualityCaseEvent(caseId, 'assigned', payload.actor_user_id, payload.note || '已分派治理问题单', {
         owner_user_id: payload.owner_user_id || null,
+        owner_person_id: ownerPersonId,
         owner_dept_id: payload.owner_dept_id || null,
         priority: payload.priority || 'medium',
-        due_date: payload.due_date || null
+        due_date: payload.due_date || null,
+        actor_person_id: personIdFromPayload(payload, payload.actor_user_id)
       });
       return this.qualityCaseWithEvents(caseId);
     },
@@ -991,13 +1004,16 @@ function makeProcessGovernanceMysqlRepository(pool) {
       );
       await this.addQualityCaseEvent(caseId, 'status_changed', payload.actor_user_id, payload.note || null, {
         from_status: payload.from_status,
-        to_status: payload.status
+        to_status: payload.status,
+        actor_person_id: personIdFromPayload(payload, payload.actor_user_id)
       });
       return this.qualityCaseWithEvents(caseId);
     },
 
     async addQualityCaseComment(caseId, payload = {}) {
-      await this.addQualityCaseEvent(caseId, 'commented', payload.actor_user_id, payload.note, null);
+      await this.addQualityCaseEvent(caseId, 'commented', payload.actor_user_id, payload.note, {
+        actor_person_id: personIdFromPayload(payload, payload.actor_user_id)
+      });
       await pool.execute('UPDATE process_governance_quality_cases SET updated_at=CURRENT_TIMESTAMP WHERE id=?', [caseId]);
       return this.qualityCaseWithEvents(caseId);
     },
@@ -1010,7 +1026,8 @@ function makeProcessGovernanceMysqlRepository(pool) {
         [caseId]
       );
       await this.addQualityCaseEvent(caseId, 'submitted', payload.actor_user_id, payload.note || '已提交整改说明，等待重新质检', {
-        from_status: payload.from_status
+        from_status: payload.from_status,
+        actor_person_id: personIdFromPayload(payload, payload.actor_user_id)
       });
       return this.qualityCaseWithEvents(caseId);
     },
@@ -1020,14 +1037,16 @@ function makeProcessGovernanceMysqlRepository(pool) {
         `UPDATE process_governance_quality_cases
          SET status='closed',
              closed_by=?,
+             closed_by_person_id=?,
              closed_at=CURRENT_TIMESTAMP,
              closure_note=?,
              updated_at=CURRENT_TIMESTAMP
          WHERE id=?`,
-        [payload.actor_user_id || null, payload.note, caseId]
+        [payload.actor_user_id || null, personIdFromPayload(payload, payload.actor_user_id), payload.note, caseId]
       );
       await this.addQualityCaseEvent(caseId, 'closed', payload.actor_user_id, payload.note, {
-        from_status: payload.from_status
+        from_status: payload.from_status,
+        actor_person_id: personIdFromPayload(payload, payload.actor_user_id)
       });
       return this.qualityCaseWithEvents(caseId);
     },
@@ -1045,7 +1064,8 @@ function makeProcessGovernanceMysqlRepository(pool) {
         [caseId]
       );
       await this.addQualityCaseEvent(caseId, 'reopened', payload.actor_user_id, payload.note || '手动重开治理问题单', {
-        from_status: payload.from_status
+        from_status: payload.from_status,
+        actor_person_id: personIdFromPayload(payload, payload.actor_user_id)
       });
       return this.qualityCaseWithEvents(caseId);
     },
@@ -1113,21 +1133,21 @@ function makeProcessGovernanceMysqlRepository(pool) {
         params.push(String(filters.dept), String(filters.dept));
       }
       if (filters.owner === 'me') {
-        whereSql += ' AND t.owner_user_id=?';
-        params.push(filters.userId || 0);
+        whereSql += ' AND COALESCE(t.owner_person_id, t.owner_user_id)=?';
+        params.push(filters.personId || filters.userId || 0);
       } else if (filters.owner) {
-        whereSql += ' AND t.owner_user_id=?';
+        whereSql += ' AND COALESCE(t.owner_person_id, t.owner_user_id)=?';
         params.push(Number(filters.owner));
       }
       if (!filters.canViewAll) {
         whereSql += ` AND (
-          t.owner_user_id=?
+          COALESCE(t.owner_person_id, t.owner_user_id)=?
           OR t.owner_dept_id=?
           OR t.dept_name=?
           OR t.target_dept_name=?
           OR t.dept_name IS NULL
         )`;
-        params.push(filters.userId || 0, filters.departmentId || -1, filters.departmentName || '__none__', filters.departmentName || '__none__');
+        params.push(filters.personId || filters.userId || 0, filters.departmentId || -1, filters.departmentName || '__none__', filters.departmentName || '__none__');
       }
 
       const [summaryRows] = await pool.execute(
@@ -1185,11 +1205,12 @@ function makeProcessGovernanceMysqlRepository(pool) {
     },
 
     async addMappingTodoEvent(todoId, eventType, actorUserId, note, payload) {
+      const actorPersonId = personIdFromPayload(payload || {}, actorUserId);
       await pool.execute(
         `INSERT INTO process_mapping_todo_events
-          (todo_id, event_type, actor_user_id, note, payload_json)
-         VALUES (?, ?, ?, ?, ?)`,
-        [todoId, eventType, actorUserId || null, note || null, payload ? JSON.stringify(payload) : null]
+          (todo_id, event_type, actor_user_id, actor_person_id, note, payload_json)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [todoId, eventType, actorUserId || null, actorPersonId, note || null, payload ? JSON.stringify(payload) : null]
       );
     },
 
@@ -1198,22 +1219,26 @@ function makeProcessGovernanceMysqlRepository(pool) {
     },
 
     async assignMappingTodo(todoId, payload = {}) {
+      const ownerPersonId = ownerPersonIdFromPayload(payload);
       await pool.execute(
         `UPDATE process_mapping_todos
          SET owner_user_id=COALESCE(?, owner_user_id),
+             owner_person_id=COALESCE(?, owner_person_id),
              owner_dept_id=COALESCE(?, owner_dept_id),
              priority=?,
              due_date=?,
              status='assigned',
              updated_at=CURRENT_TIMESTAMP
          WHERE id=?`,
-        [payload.owner_user_id || null, payload.owner_dept_id || null, payload.priority || 'medium', payload.due_date || null, todoId]
+        [payload.owner_user_id || null, ownerPersonId, payload.owner_dept_id || null, payload.priority || 'medium', payload.due_date || null, todoId]
       );
       await this.addMappingTodoEvent(todoId, 'assigned', payload.actor_user_id, payload.note || '已分派流程映射待办', {
         owner_user_id: payload.owner_user_id || null,
+        owner_person_id: ownerPersonId,
         owner_dept_id: payload.owner_dept_id || null,
         priority: payload.priority || 'medium',
-        due_date: payload.due_date || null
+        due_date: payload.due_date || null,
+        actor_person_id: personIdFromPayload(payload, payload.actor_user_id)
       });
       return this.mappingTodoWithEvents(todoId);
     },
@@ -1227,13 +1252,16 @@ function makeProcessGovernanceMysqlRepository(pool) {
       );
       await this.addMappingTodoEvent(todoId, 'status_changed', payload.actor_user_id, payload.note || null, {
         from_status: payload.from_status,
-        to_status: payload.status
+        to_status: payload.status,
+        actor_person_id: personIdFromPayload(payload, payload.actor_user_id)
       });
       return this.mappingTodoWithEvents(todoId);
     },
 
     async addMappingTodoComment(todoId, payload = {}) {
-      await this.addMappingTodoEvent(todoId, 'commented', payload.actor_user_id, payload.note, null);
+      await this.addMappingTodoEvent(todoId, 'commented', payload.actor_user_id, payload.note, {
+        actor_person_id: personIdFromPayload(payload, payload.actor_user_id)
+      });
       await pool.execute('UPDATE process_mapping_todos SET updated_at=CURRENT_TIMESTAMP WHERE id=?', [todoId]);
       return this.mappingTodoWithEvents(todoId);
     },
@@ -1246,7 +1274,8 @@ function makeProcessGovernanceMysqlRepository(pool) {
         [todoId]
       );
       await this.addMappingTodoEvent(todoId, 'submitted', payload.actor_user_id, payload.note || '已提交流程映射处理说明', {
-        from_status: payload.from_status
+        from_status: payload.from_status,
+        actor_person_id: personIdFromPayload(payload, payload.actor_user_id)
       });
       return this.mappingTodoWithEvents(todoId);
     },
@@ -1256,14 +1285,16 @@ function makeProcessGovernanceMysqlRepository(pool) {
         `UPDATE process_mapping_todos
          SET status='closed',
              closed_by=?,
+             closed_by_person_id=?,
              closed_at=CURRENT_TIMESTAMP,
              closure_note=?,
              updated_at=CURRENT_TIMESTAMP
          WHERE id=?`,
-        [payload.actor_user_id || null, payload.note, todoId]
+        [payload.actor_user_id || null, personIdFromPayload(payload, payload.actor_user_id), payload.note, todoId]
       );
       await this.addMappingTodoEvent(todoId, 'closed', payload.actor_user_id, payload.note, {
-        from_status: payload.from_status
+        from_status: payload.from_status,
+        actor_person_id: personIdFromPayload(payload, payload.actor_user_id)
       });
       return this.mappingTodoWithEvents(todoId);
     },
@@ -1281,7 +1312,8 @@ function makeProcessGovernanceMysqlRepository(pool) {
         [todoId]
       );
       await this.addMappingTodoEvent(todoId, 'reopened', payload.actor_user_id, payload.note || '手动重开流程映射待办', {
-        from_status: payload.from_status
+        from_status: payload.from_status,
+        actor_person_id: personIdFromPayload(payload, payload.actor_user_id)
       });
       return this.mappingTodoWithEvents(todoId);
     },

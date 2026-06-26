@@ -1323,6 +1323,7 @@ CREATE TABLE IF NOT EXISTS data_map_change_sets (
   entity_type VARCHAR(64) NOT NULL,
   entity_id BIGINT NOT NULL,
   operated_by BIGINT NULL,
+  operated_by_person_id BIGINT NULL,
   operated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   description TEXT NULL,
   INDEX idx_data_map_change_sets_entity (entity_type, entity_id)
@@ -1337,6 +1338,7 @@ CREATE TABLE IF NOT EXISTS data_map_version_log (
   new_value TEXT NULL,
   operation VARCHAR(32) NOT NULL,
   operated_by BIGINT NULL,
+  operated_by_person_id BIGINT NULL,
   operated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   change_set_id BIGINT NULL,
   INDEX idx_data_map_version_log_entity (entity_type, entity_id),

@@ -54,7 +54,9 @@ function makeFakePool() {
       process_owner_dept_id: processPayload.owner_dept_id || null,
       process_dept_name: processPayload.dept_name || null,
       created_by: row.created_by,
-      approved_by: row.approved_by || null
+      created_by_person_id: row.created_by_person_id || null,
+      approved_by: row.approved_by || null,
+      approved_by_person_id: row.approved_by_person_id || null
     };
   }
 
@@ -131,6 +133,7 @@ function makeFakePool() {
           forbidden: params[4],
           process_mapping_record_id: params[5],
           created_by: params[6],
+          created_by_person_id: params[7],
           status: 'pending'
         });
         return [{ insertId: id, affectedRows: 1 }, undefined];
@@ -162,11 +165,12 @@ function makeFakePool() {
       }
 
       if (normalizedSql.startsWith('UPDATE terminology_terms SET status=')) {
-        const id = Number(params[2]);
+        const id = Number(params[3]);
         const term = state.terms.find(item => Number(item.id) === id);
         if (term) {
           term.status = params[0];
           term.approved_by = params[1];
+          term.approved_by_person_id = params[2];
         }
         return [{ affectedRows: term ? 1 : 0 }, undefined];
       }

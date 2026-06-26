@@ -63,6 +63,7 @@ function makeFakePool() {
           owner_dept_id: Number(params[3]),
           status: 'draft',
           submitted_by: Number(params[4]),
+          submitted_by_person_id: Number(params[5]),
           current_step: 1
         });
         return [{ insertId: id, affectedRows: 1 }, undefined];
@@ -106,8 +107,9 @@ function makeFakePool() {
           mapping_id: Number(params[0]),
           step: Number(params[1]),
           operator_user_id: Number(params[2]),
-          action: params[3],
-          opinion: params[4]
+          operator_person_id: Number(params[3]),
+          action: params[4],
+          opinion: params[5]
         });
         return [{ insertId: state.history[state.history.length - 1].id, affectedRows: 1 }, undefined];
       }
@@ -171,8 +173,9 @@ function makeFakePool() {
           step: Number(params[1]),
           step_name: params[2],
           assignee_user_id: params[3] == null ? null : Number(params[3]),
-          assigned_dept_id: params[4] == null ? null : Number(params[4]),
-          status: params[5]
+          assignee_person_id: params[4] == null ? null : Number(params[4]),
+          assigned_dept_id: params[5] == null ? null : Number(params[5]),
+          status: params[6]
         });
         return [{ insertId: state.tasks[state.tasks.length - 1].id, affectedRows: 1 }, undefined];
       }
@@ -187,11 +190,24 @@ function makeFakePool() {
       }
 
       if (normalizedSql.startsWith('UPDATE mdm_mapping_approval_tasks SET status=')) {
-        const task = state.tasks.find(item => item.id === Number(params[3]));
+        if (normalizedSql.includes('WHERE mapping_id=?')) {
+          const mappingId = Number(params[params.length - 1]);
+          state.tasks
+            .filter(item => item.mapping_id === mappingId && ['pending', 'in_progress', 'blocked'].includes(item.status))
+            .forEach(task => {
+              task.status = 'rejected';
+              task.opinion = params[0];
+              task.operated_by = params[1];
+              task.operated_by_person_id = params[2];
+            });
+          return [{ affectedRows: 1 }, undefined];
+        }
+        const task = state.tasks.find(item => item.id === Number(params[4]));
         if (task) {
           task.status = params[0];
           task.opinion = params[1];
           task.operated_by = params[2];
+          task.operated_by_person_id = params[3];
         }
         return [{ affectedRows: task ? 1 : 0 }, undefined];
       }
@@ -215,7 +231,8 @@ function makeFakePool() {
           mapping_id: Number(params[0]),
           field_entry_id: Number(params[1]),
           rejection_reason: params[2],
-          rejected_by: Number(params[3])
+          rejected_by: Number(params[3]),
+          rejected_by_person_id: Number(params[4])
         });
         return [{ affectedRows: 1 }, undefined];
       }

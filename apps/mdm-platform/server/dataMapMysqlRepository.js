@@ -124,6 +124,7 @@ function httpError(statusCode, message) {
 function normalizeContextPayload(payload = {}, actorUserId) {
   const title = cleanText(payload.title || payload.l3_name || payload.context_key);
   if (!title) throw httpError(400, '数据地图上下文标题不能为空');
+  const actorPersonId = payload.actor_person_id || payload.actorPersonId || actorUserId || payload.updated_by || payload.created_by || null;
   return {
     context_key: cleanText(payload.context_key) || stableKey('ctx', [title, payload.dept_id, payload.a1_code, payload.source_file]),
     context_type: cleanText(payload.context_type) || 'process',
@@ -131,6 +132,7 @@ function normalizeContextPayload(payload = {}, actorUserId) {
     dept_id: payload.dept_id ? Number(payload.dept_id) : null,
     dept_name: nullableText(payload.dept_name),
     owner_user_id: payload.owner_user_id ? Number(payload.owner_user_id) : null,
+    owner_person_id: payload.owner_person_id ? Number(payload.owner_person_id) : (payload.owner_user_id ? Number(payload.owner_user_id) : null),
     process_snapshot_id: payload.process_snapshot_id ? Number(payload.process_snapshot_id) : null,
     process_mapping_record_id: payload.process_mapping_record_id ? Number(payload.process_mapping_record_id) : null,
     process_node_key: nullableText(payload.process_node_key),
@@ -140,13 +142,15 @@ function normalizeContextPayload(payload = {}, actorUserId) {
     source_anchor: nullableText(payload.source_anchor),
     source_excerpt: nullableText(payload.source_excerpt),
     status: cleanText(payload.status) || 'active',
-    actor_user_id: actorUserId || payload.updated_by || payload.created_by || null
+    actor_user_id: actorUserId || payload.updated_by || payload.created_by || null,
+    actor_person_id: actorPersonId
   };
 }
 
 function normalizeObjectPayload(payload = {}, actorUserId) {
   const objectName = cleanText(payload.data_object || payload.object_name_cn || payload.object_name);
   if (!objectName) return null;
+  const actorPersonId = payload.actor_person_id || payload.actorPersonId || actorUserId || payload.created_by || null;
   return {
     object_key: cleanText(payload.object_key) || stableKey('obj', [objectName]),
     object_name_cn: objectName,
@@ -154,11 +158,13 @@ function normalizeObjectPayload(payload = {}, actorUserId) {
     object_type: cleanText(payload.object_type) || 'master_data_candidate',
     owner_dept_id: payload.owner_dept_id ? Number(payload.owner_dept_id) : null,
     steward_user_id: payload.steward_user_id ? Number(payload.steward_user_id) : null,
+    steward_person_id: payload.steward_person_id ? Number(payload.steward_person_id) : (payload.steward_user_id ? Number(payload.steward_user_id) : null),
     description: nullableText(payload.object_description || payload.description),
     status: cleanText(payload.object_status) || 'active',
     source_type: cleanText(payload.source_type) || 'field_ledger',
     source_ref: nullableText(payload.source_ref),
-    actor_user_id: actorUserId || payload.created_by || null
+    actor_user_id: actorUserId || payload.created_by || null,
+    actor_person_id: actorPersonId
   };
 }
 
@@ -168,6 +174,7 @@ function normalizeFieldPayload(payload = {}, actorUserId, existing = {}) {
   const fieldNameCn = nullableText(payload.field_name_cn ?? existing.field_name_cn);
   const fieldNameEn = nullableText(payload.field_name_en ?? existing.field_name_en);
   const fieldKey = cleanText(payload.field_key) || existing.field_key || stableKey('field', [contextId, fieldNameCn, fieldNameEn, payload.data_object || existing.data_object]);
+  const actorPersonId = payload.actor_person_id || payload.actorPersonId || actorUserId || payload.updated_by || payload.created_by || null;
   return {
     context_id: contextId,
     field_key: fieldKey,
@@ -189,7 +196,9 @@ function normalizeFieldPayload(payload = {}, actorUserId, existing = {}) {
     status: cleanText(payload.status || existing.status) || 'draft',
     quality_status: cleanText(payload.quality_status || existing.quality_status) || 'unchecked',
     submitted_by: payload.submitted_by ? Number(payload.submitted_by) : (existing.submitted_by || actorUserId || null),
-    actor_user_id: actorUserId || payload.updated_by || payload.created_by || null
+    submitted_by_person_id: payload.submitted_by_person_id ? Number(payload.submitted_by_person_id) : (existing.submitted_by_person_id || payload.submitted_by || actorUserId || null),
+    actor_user_id: actorUserId || payload.updated_by || payload.created_by || null,
+    actor_person_id: actorPersonId
   };
 }
 
@@ -225,6 +234,7 @@ function normalizeIdentityPayload(payload = {}) {
     authoritative_system_code: nullableText(payload.authoritative_system_code),
     maintain_dept_id: payload.maintain_dept_id ? Number(payload.maintain_dept_id) : null,
     owner_user_id: payload.owner_user_id ? Number(payload.owner_user_id) : null,
+    owner_person_id: payload.owner_person_id ? Number(payload.owner_person_id) : (payload.owner_user_id ? Number(payload.owner_user_id) : null),
     confidence_level: cleanText(payload.confidence_level) || 'medium',
     confirmed: payload.confirmed ? 1 : 0,
     note: nullableText(payload.note),
@@ -262,20 +272,22 @@ function makeDataMapMysqlRepository(pool) {
     if (!normalized) return null;
     await pool.execute(
       `INSERT INTO data_map_objects
-        (object_key, object_name_cn, object_name_en, object_type, owner_dept_id, steward_user_id,
-         description, status, source_type, source_ref, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (object_key, object_name_cn, object_name_en, object_type, owner_dept_id, steward_user_id, steward_person_id,
+         description, status, source_type, source_ref, created_by, created_by_person_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE
         object_name_cn=VALUES(object_name_cn),
         object_name_en=VALUES(object_name_en),
         object_type=VALUES(object_type),
         owner_dept_id=VALUES(owner_dept_id),
         steward_user_id=VALUES(steward_user_id),
+        steward_person_id=VALUES(steward_person_id),
         description=VALUES(description),
         status=VALUES(status),
         source_type=VALUES(source_type),
         source_ref=VALUES(source_ref),
         updated_by=VALUES(created_by),
+        updated_by_person_id=VALUES(created_by_person_id),
         updated_at=CURRENT_TIMESTAMP`,
       [
         normalized.object_key,
@@ -284,11 +296,13 @@ function makeDataMapMysqlRepository(pool) {
         normalized.object_type,
         normalized.owner_dept_id,
         normalized.steward_user_id,
+        normalized.steward_person_id,
         normalized.description,
         normalized.status,
         normalized.source_type,
         normalized.source_ref,
-        normalized.actor_user_id
+        normalized.actor_user_id,
+        normalized.actor_person_id
       ]
     );
     return await first(pool, 'SELECT * FROM data_map_objects WHERE object_key=?', [normalized.object_key]);
@@ -353,8 +367,8 @@ function makeDataMapMysqlRepository(pool) {
   async function createQualityIssue(fieldId, contextId, issue, actorUserId) {
     await pool.execute(
       `INSERT INTO data_map_quality_issues
-        (field_id, context_id, issue_type, severity, message, suggestion, status, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        (field_id, context_id, issue_type, severity, message, suggestion, status, created_by, created_by_person_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         fieldId || null,
         contextId || null,
@@ -363,6 +377,7 @@ function makeDataMapMysqlRepository(pool) {
         issue.message,
         issue.suggestion || null,
         'open',
+        actorUserId || null,
         actorUserId || null
       ]
     );
@@ -371,16 +386,16 @@ function makeDataMapMysqlRepository(pool) {
   async function auditUpdate(entityType, entityId, actorUserId, description, changes) {
     if (!changes.length) return;
     const result = await pool.execute(
-      `INSERT INTO data_map_change_sets (entity_type, entity_id, operated_by, description)
-       VALUES (?, ?, ?, ?)`,
-      [entityType, entityId, actorUserId || null, description]
+      `INSERT INTO data_map_change_sets (entity_type, entity_id, operated_by, operated_by_person_id, description)
+       VALUES (?, ?, ?, ?, ?)`,
+      [entityType, entityId, actorUserId || null, actorUserId || null, description]
     );
     const changeSetId = insertId(result);
     for (const change of changes) {
       await pool.execute(
         `INSERT INTO data_map_version_log
-          (entity_type, entity_id, field_name, old_value, new_value, operation, operated_by, change_set_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          (entity_type, entity_id, field_name, old_value, new_value, operation, operated_by, operated_by_person_id, change_set_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           entityType,
           entityId,
@@ -388,6 +403,7 @@ function makeDataMapMysqlRepository(pool) {
           change.old_value == null ? null : String(change.old_value),
           change.new_value == null ? null : String(change.new_value),
           change.operation || 'update',
+          actorUserId || null,
           actorUserId || null,
           changeSetId || null
         ]
@@ -406,10 +422,10 @@ function makeDataMapMysqlRepository(pool) {
       const normalized = normalizeContextPayload(payload, actorUserId);
       const result = await pool.execute(
         `INSERT INTO data_map_contexts
-          (context_key, context_type, title, dept_id, dept_name, owner_user_id, process_snapshot_id,
+          (context_key, context_type, title, dept_id, dept_name, owner_user_id, owner_person_id, process_snapshot_id,
            process_mapping_record_id, process_node_key, a1_code, l3_name, source_file, source_anchor,
-           source_excerpt, status, created_by)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           source_excerpt, status, created_by, created_by_person_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           normalized.context_key,
           normalized.context_type,
@@ -417,6 +433,7 @@ function makeDataMapMysqlRepository(pool) {
           normalized.dept_id,
           normalized.dept_name,
           normalized.owner_user_id,
+          normalized.owner_person_id,
           normalized.process_snapshot_id,
           normalized.process_mapping_record_id,
           normalized.process_node_key,
@@ -426,7 +443,8 @@ function makeDataMapMysqlRepository(pool) {
           normalized.source_anchor,
           normalized.source_excerpt,
           normalized.status,
-          normalized.actor_user_id
+          normalized.actor_user_id,
+          normalized.actor_person_id
         ]
       );
       return await this.getContext(insertId(result));
@@ -451,9 +469,9 @@ function makeDataMapMysqlRepository(pool) {
       const normalized = normalizeContextPayload({ ...existing, ...payload }, actorUserId);
       const result = await pool.execute(
         `UPDATE data_map_contexts
-         SET context_key=?, context_type=?, title=?, dept_id=?, dept_name=?, owner_user_id=?,
+         SET context_key=?, context_type=?, title=?, dept_id=?, dept_name=?, owner_user_id=?, owner_person_id=?,
              process_snapshot_id=?, process_mapping_record_id=?, process_node_key=?, a1_code=?, l3_name=?,
-             source_file=?, source_anchor=?, source_excerpt=?, status=?, updated_by=?
+             source_file=?, source_anchor=?, source_excerpt=?, status=?, updated_by=?, updated_by_person_id=?
          WHERE id=?`,
         [
           normalized.context_key,
@@ -462,6 +480,7 @@ function makeDataMapMysqlRepository(pool) {
           normalized.dept_id,
           normalized.dept_name,
           normalized.owner_user_id,
+          normalized.owner_person_id,
           normalized.process_snapshot_id,
           normalized.process_mapping_record_id,
           normalized.process_node_key,
@@ -472,6 +491,7 @@ function makeDataMapMysqlRepository(pool) {
           normalized.source_excerpt,
           normalized.status,
           normalized.actor_user_id,
+          normalized.actor_person_id,
           contextId
         ]
       );
@@ -516,8 +536,8 @@ function makeDataMapMysqlRepository(pool) {
           (context_id, object_id, field_key, field_name_cn, field_name_en, business_definition,
            data_type, data_format, length_precision, nullable, enum_values_json, sensitivity_level,
            master_data_level, process_governance_node_key, process_governance_a1_code, source_file,
-           source_anchor, source_excerpt, status, quality_status, submitted_by, submitted_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+           source_anchor, source_excerpt, status, quality_status, submitted_by, submitted_by_person_id, submitted_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
         [
           normalized.context_id,
           object ? object.id : null,
@@ -539,7 +559,8 @@ function makeDataMapMysqlRepository(pool) {
           normalized.source_excerpt,
           normalized.status,
           validation.issues.length ? 'warn' : normalized.quality_status,
-          normalized.submitted_by
+          normalized.submitted_by,
+          normalized.submitted_by_person_id
         ]
       );
       const fieldId = insertId(result);
@@ -608,6 +629,7 @@ function makeDataMapMysqlRepository(pool) {
              data_type=?, data_format=?, length_precision=?, nullable=?, enum_values_json=?,
              sensitivity_level=?, master_data_level=?, process_governance_node_key=?, process_governance_a1_code=?,
              source_file=?, source_anchor=?, source_excerpt=?, status=?, quality_status=?, reviewed_by=?,
+             reviewed_by_person_id=?,
              reviewed_at=CURRENT_TIMESTAMP
          WHERE id=?`,
         [
@@ -630,6 +652,7 @@ function makeDataMapMysqlRepository(pool) {
           comparable.source_excerpt,
           comparable.status,
           comparable.quality_status,
+          actorUserId || null,
           actorUserId || null,
           fieldId
         ]
@@ -658,14 +681,15 @@ function makeDataMapMysqlRepository(pool) {
       const normalized = normalizeIdentityPayload(payload);
       await pool.execute(
         `INSERT INTO data_map_field_identities
-          (field_id, authoritative_system_name, authoritative_system_code, maintain_dept_id, owner_user_id,
+          (field_id, authoritative_system_name, authoritative_system_code, maintain_dept_id, owner_user_id, owner_person_id,
            confidence_level, confirmed, note, status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON DUPLICATE KEY UPDATE
           authoritative_system_name=VALUES(authoritative_system_name),
           authoritative_system_code=VALUES(authoritative_system_code),
           maintain_dept_id=VALUES(maintain_dept_id),
           owner_user_id=VALUES(owner_user_id),
+          owner_person_id=VALUES(owner_person_id),
           confidence_level=VALUES(confidence_level),
           confirmed=VALUES(confirmed),
           note=VALUES(note),
@@ -677,6 +701,7 @@ function makeDataMapMysqlRepository(pool) {
           normalized.authoritative_system_code,
           normalized.maintain_dept_id,
           normalized.owner_user_id,
+          normalized.owner_person_id,
           normalized.confidence_level,
           normalized.confirmed,
           normalized.note,
@@ -694,6 +719,7 @@ function makeDataMapMysqlRepository(pool) {
              authoritative_system_code=?,
              confirmed=1,
              confirmed_by=?,
+             confirmed_by_person_id=?,
              status=?,
              confirmed_at=CURRENT_TIMESTAMP,
              updated_at=CURRENT_TIMESTAMP
@@ -701,6 +727,7 @@ function makeDataMapMysqlRepository(pool) {
         [
           normalized.authoritative_system_name,
           normalized.authoritative_system_code,
+          actorUserId || null,
           actorUserId || null,
           'confirmed',
           fieldId

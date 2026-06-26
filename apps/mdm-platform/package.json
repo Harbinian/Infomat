@@ -74,6 +74,7 @@
     "test:person-rbac-matrix": "node scripts/test-person-rbac-matrix-mysql.js",
     "test:person-identity-payload": "node scripts/test-person-identity-payload-mysql.js",
     "test:department-responsibility": "node scripts/test-department-responsibility-mysql.js",
+    "test:person-business-writes": "node scripts/test-person-business-writes-mysql.js",
     "test:no-new-user-identity-fields": "node scripts/test-no-new-user-identity-fields.js",
     "test:legacy-identity-inventory": "node scripts/test-legacy-identity-inventory.js",
     "test:guidance-workflow": "node scripts/test-guidance-workflow-mysql-api.js && node scripts/test-guidance-affordances-mysql-repository.js",
