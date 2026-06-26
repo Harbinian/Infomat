@@ -77,7 +77,7 @@
     "test:person-business-writes": "node scripts/test-person-business-writes-mysql.js",
     "test:no-new-user-identity-fields": "node scripts/test-no-new-user-identity-fields.js",
     "test:legacy-identity-inventory": "node scripts/test-legacy-identity-inventory.js",
-    "test:guidance-workflow": "node scripts/test-guidance-workflow-mysql-api.js && node scripts/test-guidance-affordances-mysql-repository.js && node scripts/test-guidance-visibility-mysql-repository.js",
+    "test:guidance-workflow": "node scripts/test-guidance-workflow-mysql-api.js && node scripts/test-guidance-affordances-mysql-repository.js && node scripts/test-guidance-visibility-mysql-repository.js && node scripts/test-guidance-person-validation-mysql-repository.js",
     "test:guidance-workspace": "node scripts/test-guidance-workspace-mysql-api.js && node scripts/test-guidance-workspace-frontend.js",
     "test:person-identity-migration-rehearsal": "node scripts/test-person-identity-migration-rehearsal-mysql.js",
     "test:person-operation-controls": "node scripts/test-person-operation-controls-frontend.js",
