@@ -100,9 +100,10 @@ function sendGuidanceActionResult(res, result) {
     if (result && result.reason === 'delegate_out_of_scope') return res.status(403).json({ error: '代理授权范围不包含该事项' });
     if (result && result.reason === 'final_confirm_denied') return res.status(403).json({ error: '重大闭环需要最终响应责任人确认' });
     if (result && result.reason === 'missing_delegate') return res.status(400).json({ error: '缺少代理人' });
+    if (result && result.reason === 'missing_executor') return res.status(400).json({ error: '缺少执行人' });
     return res.status(400).json({ error: '指导意见操作失败' });
   }
-  return res.json({ success: true, status: result.status });
+  return res.json({ success: true, status: result.status, delegationId: result.delegationId || null });
 }
 
 router.get('/', requireAuth, async (req, res) => {
@@ -111,10 +112,42 @@ router.get('/', requireAuth, async (req, res) => {
     const identityRepo = await identityRepository();
     const { permSet } = await identityRepo.getUserEffectivePermissions(personId);
     const repo = await guidanceRepository();
-    return res.json(await repo.listGuidanceForPerson(personId, permSet));
+    const filters = {
+      related_entity_type: req.query.related_entity_type || null,
+      related_entity_id: req.query.related_entity_id ? Number(req.query.related_entity_id) : null
+    };
+    return res.json(await repo.listGuidanceForPerson(personId, permSet, filters));
   } catch (error) {
     console.error(error);
     return res.status(503).json({ error: '指导意见读取模型不可用' });
+  }
+});
+
+router.get('/:id', requireAuth, async (req, res) => {
+  try {
+    const personId = requestPersonId(req);
+    const identityRepo = await identityRepository();
+    const { permSet } = await identityRepo.getUserEffectivePermissions(personId);
+    const repo = await guidanceRepository();
+    const guidance = repo.getGuidanceDetail
+      ? await repo.getGuidanceDetail(Number(req.params.id), personId, permSet)
+      : await repo.getGuidanceById(Number(req.params.id));
+    if (!guidance) return res.status(404).json({ error: '指导意见不存在' });
+    return res.json(guidance);
+  } catch (error) {
+    console.error(error);
+    return res.status(503).json({ error: '指导意见读取模型不可用' });
+  }
+});
+
+router.get('/:id/events', requireAuth, async (req, res) => {
+  try {
+    const repo = await guidanceRepository();
+    if (!repo.listGuidanceEvents) return res.json([]);
+    return res.json(await repo.listGuidanceEvents(Number(req.params.id), requestPersonId(req)));
+  } catch (error) {
+    console.error(error);
+    return res.status(503).json({ error: '指导意见事件读取模型不可用' });
   }
 });
 
@@ -190,6 +223,32 @@ router.post('/:id/delegate', requireAuth, requireGuidancePermission('guidance:de
   try {
     const repo = await guidanceRepository();
     const result = await repo.delegateGuidance(Number(req.params.id), requestPersonId(req), req.body || {});
+    return sendGuidanceActionResult(res, result);
+  } catch (error) {
+    console.error(error);
+    return res.status(503).json({ error: '指导意见写入模型不可用' });
+  }
+});
+
+router.delete('/:id/delegations/:delegationId', requireAuth, requireGuidancePermission('guidance:delegate'), async (req, res) => {
+  try {
+    const repo = await guidanceRepository();
+    const result = await repo.revokeGuidanceDelegation(
+      Number(req.params.id),
+      Number(req.params.delegationId),
+      requestPersonId(req)
+    );
+    return sendGuidanceActionResult(res, result);
+  } catch (error) {
+    console.error(error);
+    return res.status(503).json({ error: '指导意见写入模型不可用' });
+  }
+});
+
+router.post('/:id/assign-executor', requireAuth, requireGuidancePermission('guidance:delegate'), async (req, res) => {
+  try {
+    const repo = await guidanceRepository();
+    const result = await repo.assignGuidanceExecutor(Number(req.params.id), requestPersonId(req), req.body || {});
     return sendGuidanceActionResult(res, result);
   } catch (error) {
     console.error(error);

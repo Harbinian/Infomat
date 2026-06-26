@@ -27,6 +27,7 @@ function defaultGuidanceActions() {
     canClarify: false,
     canObject: false,
     canDelegate: false,
+    canAssignExecutor: false,
     canFinalConfirm: false,
     disabledReasons: {}
   };
@@ -47,7 +48,11 @@ function normalizeGuidance(row = {}, guidanceActions = defaultGuidanceActions())
     finalResponsiblePerson: row.final_responsible_person_name || null,
     current_handler_person_id: row.current_handler_person_id,
     currentHandlerPerson: row.current_handler_person_name || null,
+    delegate_person_id: row.delegate_person_id || null,
+    delegation_id: row.delegation_id || null,
+    delegation_can_final_confirm: row.delegation_can_final_confirm == null ? null : Boolean(row.delegation_can_final_confirm),
     delegatePerson: row.delegate_person_name || null,
+    executor_person_id: row.executor_person_id || null,
     executorPerson: row.executor_person_name || null,
     is_major: Boolean(row.is_major),
     visibility_scope: row.visibility_scope,
@@ -180,6 +185,16 @@ function makeGovernanceGuidanceMysqlRepository(pool) {
     else if (!isFinalResponsible) disabledReasons.canDelegate = '只有最终响应责任人可授权代理';
     else if (guidance.status === 'closed') disabledReasons.canDelegate = '已闭环事项不能再授权代理';
 
+    let executorDelegation = null;
+    if (canDelegateByPermission && !isFinalResponsible) {
+      executorDelegation = await findActiveDelegation(guidance, personId);
+    }
+    const canAssignExecutorByResponsibility = isFinalResponsible || Boolean(executorDelegation);
+    actions.canAssignExecutor = canDelegateByPermission && canAssignExecutorByResponsibility && guidance.status !== 'closed';
+    if (!canDelegateByPermission) disabledReasons.canAssignExecutor = '缺少执行人分派权限';
+    else if (!canAssignExecutorByResponsibility) disabledReasons.canAssignExecutor = '只有最终响应责任人或授权代理可分派执行人';
+    else if (guidance.status === 'closed') disabledReasons.canAssignExecutor = '已闭环事项不能再分派执行人';
+
     const canFinalConfirmByPermission = permissionsHas(permissions, 'guidance:final_confirm');
     const finalStatusAllowed = finalConfirmStatuses.has(guidance.status);
     let finalConfirmDelegation = null;
@@ -193,6 +208,43 @@ function makeGovernanceGuidanceMysqlRepository(pool) {
     else if (!isFinalResponsible && !canConfirmAsDelegate) disabledReasons.canFinalConfirm = '重大闭环需要最终响应责任人确认';
 
     return actions;
+  }
+
+  function guidanceSelectSql(whereSql = '') {
+    return `
+      SELECT g.*, d.name AS related_department_name,
+             fp.person_name AS final_responsible_person_name,
+             hp.person_name AS current_handler_person_name,
+             ep.person_name AS executor_person_name,
+             ad.delegation_id,
+             ad.delegate_person_id,
+             ad.can_final_confirm AS delegation_can_final_confirm,
+             dp.person_name AS delegate_person_name
+      FROM process_governance_guidance g
+      LEFT JOIN departments d ON g.related_department_id = d.id
+      LEFT JOIN person fp ON g.final_responsible_person_id = fp.person_id
+      LEFT JOIN person hp ON g.current_handler_person_id = hp.person_id
+      LEFT JOIN person ep ON g.executor_person_id = ep.person_id
+      LEFT JOIN department_responsibility_delegations ad
+        ON ad.delegation_id = (
+          SELECT ad2.delegation_id
+          FROM department_responsibility_delegations ad2
+          WHERE ad2.department_id = g.related_department_id
+            AND ad2.final_responsible_person_id = g.final_responsible_person_id
+            AND ad2.status='active'
+            AND (ad2.start_at IS NULL OR ad2.start_at <= CURRENT_TIMESTAMP)
+            AND (ad2.end_at IS NULL OR ad2.end_at >= CURRENT_TIMESTAMP)
+            AND (
+              ad2.scope_type='全部'
+              OR (ad2.scope_type='指定业务对象' AND ad2.scope_ref_type=g.related_entity_type AND ad2.scope_ref_id=g.related_entity_id)
+              OR (ad2.scope_type='指定问题类型' AND ad2.scope_ref_type=g.related_entity_type)
+            )
+          ORDER BY ad2.can_final_confirm DESC, ad2.delegation_id DESC
+          LIMIT 1
+        )
+      LEFT JOIN person dp ON ad.delegate_person_id = dp.person_id
+      ${whereSql}
+    `;
   }
 
   async function updateGuidanceStatus(guidance, status, actorPersonId, eventType, payload = {}) {
@@ -254,37 +306,32 @@ function makeGovernanceGuidanceMysqlRepository(pool) {
 
     async getGuidanceById(guidanceId) {
       const row = await first(pool, `
-        SELECT g.*, d.name AS related_department_name,
-               fp.person_name AS final_responsible_person_name,
-               hp.person_name AS current_handler_person_name
-        FROM process_governance_guidance g
-        LEFT JOIN departments d ON g.related_department_id = d.id
-        LEFT JOIN person fp ON g.final_responsible_person_id = fp.person_id
-        LEFT JOIN person hp ON g.current_handler_person_id = hp.person_id
-        WHERE g.guidance_id=?
+        ${guidanceSelectSql('WHERE g.guidance_id=?')}
       `, [guidanceId]);
       return row ? normalizeGuidance(row) : null;
     },
 
-    async listGuidanceForPerson(personId, permissions = new Set()) {
+    async listGuidanceForPerson(personId, permissions = new Set(), filters = {}) {
       const canViewGlobal = permissions.has('*:*') ||
         permissions.has('process_governance:view_global') ||
         permissions.has('admin:access');
       const params = [];
-      let where = '';
+      const conditions = [];
       if (!canViewGlobal) {
-        where = 'WHERE g.current_handler_person_id=? OR g.final_responsible_person_id=? OR g.created_by_person_id=?';
+        conditions.push('(g.current_handler_person_id=? OR g.final_responsible_person_id=? OR g.created_by_person_id=?)');
         params.push(personId, personId, personId);
       }
+      if (filters.related_entity_type) {
+        conditions.push('g.related_entity_type=?');
+        params.push(String(filters.related_entity_type));
+      }
+      if (filters.related_entity_id) {
+        conditions.push('g.related_entity_id=?');
+        params.push(Number(filters.related_entity_id));
+      }
+      const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
       const result = await rows(pool, `
-        SELECT g.*, d.name AS related_department_name,
-               fp.person_name AS final_responsible_person_name,
-               hp.person_name AS current_handler_person_name
-        FROM process_governance_guidance g
-        LEFT JOIN departments d ON g.related_department_id = d.id
-        LEFT JOIN person fp ON g.final_responsible_person_id = fp.person_id
-        LEFT JOIN person hp ON g.current_handler_person_id = hp.person_id
-        ${where}
+        ${guidanceSelectSql(where)}
         ORDER BY g.updated_at DESC, g.guidance_id DESC
       `, params);
       return await Promise.all(result.map(async row => {
@@ -292,6 +339,24 @@ function makeGovernanceGuidanceMysqlRepository(pool) {
         const guidanceActions = await computeGuidanceActions(guidance, personId, permissions);
         return normalizeGuidance(row, guidanceActions);
       }));
+    },
+
+    async getGuidanceDetail(guidanceId, personId, permissions = new Set()) {
+      const row = await first(pool, guidanceSelectSql('WHERE g.guidance_id=?'), [guidanceId]);
+      if (!row) return null;
+      const guidance = normalizeGuidance(row);
+      const guidanceActions = await computeGuidanceActions(guidance, personId, permissions);
+      return normalizeGuidance(row, guidanceActions);
+    },
+
+    async listGuidanceEvents(guidanceId) {
+      return await rows(pool, `
+        SELECT e.*, p.person_name AS actorPerson
+        FROM process_governance_guidance_events e
+        LEFT JOIN person p ON e.actor_person_id = p.person_id
+        WHERE e.guidance_id=?
+        ORDER BY e.created_at ASC, e.event_id ASC
+      `, [guidanceId]);
     },
 
     async respondGuidance(guidanceId, personId, payload = {}) {
@@ -328,7 +393,7 @@ function makeGovernanceGuidanceMysqlRepository(pool) {
       if (!guidance) return { updated: false, reason: 'missing' };
       if (Number(guidance.final_responsible_person_id) !== Number(personId)) return { updated: false, reason: 'not_responsible' };
       if (!payload.delegate_person_id) return { updated: false, reason: 'missing_delegate' };
-      await pool.execute(`
+      const result = await pool.execute(`
         INSERT INTO department_responsibility_delegations (
           department_id, final_responsible_person_id, delegate_person_id,
           delegation_type, scope_type, scope_ref_type, scope_ref_id,
@@ -348,8 +413,55 @@ function makeGovernanceGuidanceMysqlRepository(pool) {
         payload.end_at || null,
         personId
       ]);
+      const delegationId = insertId(result);
       await recordGuidanceEvent(guidanceId, 'delegated', personId, guidance.status, guidance.status, payload.reason || null, payload);
+      return { updated: true, status: guidance.status, delegationId };
+    },
+
+    async revokeGuidanceDelegation(guidanceId, delegationId, personId) {
+      const guidance = await this.getGuidanceById(guidanceId);
+      if (!guidance) return { updated: false, reason: 'missing' };
+      if (Number(guidance.final_responsible_person_id) !== Number(personId)) return { updated: false, reason: 'not_responsible' };
+      const result = await pool.execute(`
+        UPDATE department_responsibility_delegations
+        SET status='revoked', end_at=COALESCE(end_at, CURRENT_TIMESTAMP)
+        WHERE delegation_id=?
+          AND department_id=?
+          AND final_responsible_person_id=?
+          AND status='active'
+      `, [delegationId, guidance.related_department_id, guidance.final_responsible_person_id]);
+      if (affectedRows(result) === 0) return { updated: false, reason: 'missing' };
+      await recordGuidanceEvent(guidanceId, 'delegated', personId, guidance.status, guidance.status, '已撤销代理授权', {
+        delegation_id: delegationId,
+        revoked: true
+      });
       return { updated: true, status: guidance.status };
+    },
+
+    async assignGuidanceExecutor(guidanceId, personId, payload = {}) {
+      const guidance = await this.getGuidanceById(guidanceId);
+      if (!guidance) return { updated: false, reason: 'missing' };
+      if (!payload.executor_person_id) return { updated: false, reason: 'missing_executor' };
+      const isFinalResponsible = Number(guidance.final_responsible_person_id) === Number(personId);
+      const delegation = isFinalResponsible ? null : await findActiveDelegation(guidance, personId);
+      if (!isFinalResponsible && !delegation) return { updated: false, reason: 'not_responsible' };
+      if (guidance.status === 'closed') return { updated: false, reason: 'invalid_status' };
+      const nextStatus = guidance.status === 'pending_response' ? 'in_progress' : guidance.status;
+      const result = await pool.execute(`
+        UPDATE process_governance_guidance
+        SET executor_person_id=?,
+            current_handler_person_id=?,
+            status=?,
+            updated_at=CURRENT_TIMESTAMP
+        WHERE guidance_id=?
+      `, [payload.executor_person_id, payload.executor_person_id, nextStatus, guidanceId]);
+      if (affectedRows(result) === 0) return { updated: false, reason: 'missing' };
+      await recordGuidanceEvent(guidanceId, 'executor_assigned', personId, guidance.status, nextStatus, payload.note || null, {
+        executor_person_id: payload.executor_person_id,
+        assigned_by_person_id: personId,
+        via: isFinalResponsible ? 'final_responsible' : 'delegation'
+      });
+      return { updated: true, status: nextStatus };
     },
 
     async finalConfirmGuidance(guidanceId, personId, payload = {}) {

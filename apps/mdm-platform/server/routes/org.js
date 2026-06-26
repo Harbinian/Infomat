@@ -436,6 +436,39 @@ router.get('/users/assignable', requireAuth, (req, res) => {
   });
 });
 
+// GET /api/org/persons/assignable — person picker for guidance delegation and executor assignment
+router.get('/persons/assignable', requireAuth, (req, res) => {
+  const permissions = ['guidance:delegate', 'guidance:respond', 'guidance:final_confirm', 'conflict:manage', 'review:approve', 'admin:access'];
+  if (useMysqlIdentityReadModel()) {
+    return runAsyncAction(res, async () => {
+      if (!await requestHasAnyPermissionWithMysqlIdentity(req, permissions)) {
+        return res.status(403).json({ error: '权限不足' });
+      }
+      const repo = await identityRepository();
+      return res.json(await repo.listAssignableUsers());
+    }, '身份 MySQL 读取模型不可用');
+  }
+
+  return runDbAction(res, () => {
+    if (!requestHasAnyPermission(req, permissions)) {
+      return res.status(403).json({ error: '权限不足' });
+    }
+    const rows = db.prepare(`
+      SELECT u.id, u.id AS person_id, u.name, u.department_id, d.name AS dept_name
+      FROM users u
+      LEFT JOIN departments d ON u.department_id = d.id
+      ORDER BY d.name, u.name
+    `).all();
+    res.json(rows.map(row => ({
+      id: row.id,
+      personId: row.person_id || row.id,
+      name: row.name,
+      department_id: row.department_id,
+      dept_name: row.dept_name || null
+    })));
+  });
+});
+
 router.post('/users', requireOrgPermission('admin:access'), (req, res) => {
   if (useMysqlIdentityReadModel()) {
     return runAsyncAction(res, async () => {
