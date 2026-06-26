@@ -49,6 +49,10 @@ assert.ok(html.includes('/api/process-governance/mapping-todos'), 'process gover
 assert.ok(html.includes('/api/process-governance/source-files'), 'process governance source file API should be called');
 assert.ok(html.includes('/api/process-governance/mdm-requirements'), 'process governance MDM requirements API should be called');
 assert.ok(html.includes('/api/process-governance/evidence'), 'process governance evidence API should be called');
+assert.ok(html.includes('/api/process-governance/issue-pool/queues'), 'process governance issue pool queue API should be called');
+assert.ok(html.includes('/api/process-governance/issue-pool/issues'), 'process governance issue pool issue API should be called');
+assert.ok(html.includes('function renderProcessGovernanceIssueQueues'), 'process governance should render human action queues for issue pool');
+assert.ok(html.includes('function renderProcessGovernanceIssueDetail'), 'process governance should render one 5W2H issue card on demand');
 assert.ok(html.includes('function renderProcessGovernance()'), 'process governance renderer should exist');
 assert.ok(html.includes('function renderProcessGovernanceSankey(data)'), 'process governance sankey renderer should exist');
 assert.ok(html.includes('safeDisposeProcessGovernanceSankeyChart'), 'process governance sankey renderer should safely dispose broken chart instances');

@@ -1087,6 +1087,129 @@ CREATE INDEX IF NOT EXISTS idx_process_mapping_todos_status ON process_mapping_t
 CREATE INDEX IF NOT EXISTS idx_process_mapping_todos_type ON process_mapping_todos(todo_type);
 CREATE INDEX IF NOT EXISTS idx_process_mapping_todos_dept ON process_mapping_todos(dept_name);
 CREATE INDEX IF NOT EXISTS idx_process_mapping_todo_events_todo ON process_mapping_todo_events(todo_id, id);
+
+CREATE TABLE IF NOT EXISTS process_governance_issue_batches (
+  batch_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  batch_key TEXT NOT NULL UNIQUE,
+  source_type TEXT NOT NULL,
+  source_snapshot_id INTEGER REFERENCES process_governance_snapshots(id) ON DELETE SET NULL,
+  department_name TEXT,
+  status TEXT NOT NULL DEFAULT 'preparing' CHECK(status IN ('preparing','ready','failed','superseded')),
+  summary_json TEXT,
+  error_message TEXT,
+  generated_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  generated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS process_governance_issues (
+  issue_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  issue_key TEXT NOT NULL UNIQUE,
+  batch_id INTEGER REFERENCES process_governance_issue_batches(batch_id) ON DELETE SET NULL,
+  primary_dept_name TEXT NOT NULL,
+  owner_dept_name TEXT,
+  source_layer TEXT NOT NULL DEFAULT 'procedure' CHECK(source_layer IN ('rule','procedure','standard','form','unknown')),
+  source_type TEXT NOT NULL,
+  source_ref_table TEXT,
+  source_ref_id TEXT,
+  l1_name TEXT,
+  l2_name TEXT,
+  l3_name TEXT,
+  a1_code TEXT,
+  a1_name TEXT,
+  title TEXT NOT NULL,
+  what_text TEXT NOT NULL,
+  why_text TEXT NOT NULL,
+  where_text TEXT NOT NULL,
+  who_text TEXT NOT NULL,
+  when_text TEXT NOT NULL,
+  how_text TEXT NOT NULL,
+  how_much_text TEXT NOT NULL,
+  display_status TEXT NOT NULL DEFAULT 'waiting_my_action' CHECK(display_status IN ('waiting_my_action','waiting_others','waiting_department_review','waiting_studio_review','waiting_mdm_decision','completed','closed','data_preparing','data_failed','not_in_scope','no_permission')),
+  priority_score INTEGER NOT NULL DEFAULT 0,
+  due_at TEXT,
+  closed_at TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS process_governance_issue_points (
+  point_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  issue_id INTEGER NOT NULL REFERENCES process_governance_issues(issue_id) ON DELETE CASCADE,
+  point_key TEXT NOT NULL UNIQUE,
+  point_type TEXT NOT NULL CHECK(point_type IN ('owner_role','completion_standard','controlled_transfer','cross_department','process_structure','system_landing','data_object','evidence_gap','terminology')),
+  title TEXT NOT NULL,
+  prompt_text TEXT NOT NULL,
+  enum_options_json TEXT NOT NULL,
+  selected_option TEXT,
+  note TEXT,
+  evidence_json TEXT,
+  current_step TEXT NOT NULL DEFAULT 'business_confirm',
+  point_status TEXT NOT NULL DEFAULT 'pending_business_confirm' CHECK(point_status IN ('pending_business_confirm','pending_department_review','pending_collaboration','pending_studio_review','pending_mdm_decision','needs_more_info','accepted','not_accepted','closed')),
+  requires_mdm_decision INTEGER NOT NULL DEFAULT 0,
+  requires_studio_review INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS process_governance_issue_participants (
+  participant_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  issue_id INTEGER NOT NULL REFERENCES process_governance_issues(issue_id) ON DELETE CASCADE,
+  point_id INTEGER REFERENCES process_governance_issue_points(point_id) ON DELETE CASCADE,
+  participant_type TEXT NOT NULL CHECK(participant_type IN ('business_owner','department_reviewer','collaborator','studio_reviewer','mdm_decider','terminology_reviewer','observer')),
+  dept_name TEXT,
+  role_code TEXT,
+  user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  can_view INTEGER NOT NULL DEFAULT 1,
+  can_act INTEGER NOT NULL DEFAULT 0,
+  action_label TEXT,
+  action_status TEXT NOT NULL DEFAULT 'waiting',
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS process_governance_issue_events (
+  event_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  issue_id INTEGER NOT NULL REFERENCES process_governance_issues(issue_id) ON DELETE CASCADE,
+  point_id INTEGER REFERENCES process_governance_issue_points(point_id) ON DELETE CASCADE,
+  event_type TEXT NOT NULL CHECK(event_type IN ('created','business_confirmed','department_reviewed','collaboration_added','collaboration_answered','studio_reviewed','mdm_decided','more_info_requested','revision_suggested','different_opinion_added','terminology_task_created','terminology_answered','terminology_decided','commented','closed','reopened')),
+  actor_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  actor_dept_name TEXT,
+  actor_role_code TEXT,
+  note TEXT,
+  payload_json TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS process_governance_term_tasks (
+  term_task_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  issue_id INTEGER NOT NULL REFERENCES process_governance_issues(issue_id) ON DELETE CASCADE,
+  point_id INTEGER REFERENCES process_governance_issue_points(point_id) ON DELETE SET NULL,
+  term_text TEXT NOT NULL,
+  context_text TEXT NOT NULL,
+  selected_departments_json TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending_departments' CHECK(status IN ('pending_departments','pending_mdm_decision','decided','closed')),
+  decision_json TEXT,
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  decided_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  decided_at TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_issue_batches_status_dept ON process_governance_issue_batches(status, department_name);
+CREATE INDEX IF NOT EXISTS idx_issue_batches_generated_at ON process_governance_issue_batches(generated_at);
+CREATE INDEX IF NOT EXISTS idx_issues_dept_status ON process_governance_issues(primary_dept_name, display_status, priority_score);
+CREATE INDEX IF NOT EXISTS idx_issues_a1 ON process_governance_issues(a1_code);
+CREATE INDEX IF NOT EXISTS idx_issues_updated ON process_governance_issues(updated_at);
+CREATE INDEX IF NOT EXISTS idx_issue_points_issue ON process_governance_issue_points(issue_id, point_status);
+CREATE INDEX IF NOT EXISTS idx_issue_points_type_status ON process_governance_issue_points(point_type, point_status);
+CREATE INDEX IF NOT EXISTS idx_issue_participants_issue ON process_governance_issue_participants(issue_id, can_view, can_act);
+CREATE INDEX IF NOT EXISTS idx_issue_participants_user ON process_governance_issue_participants(user_id, action_status);
+CREATE INDEX IF NOT EXISTS idx_issue_participants_dept ON process_governance_issue_participants(dept_name, action_status);
+CREATE INDEX IF NOT EXISTS idx_issue_events_issue ON process_governance_issue_events(issue_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_issue_events_point ON process_governance_issue_events(point_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_term_tasks_status ON process_governance_term_tasks(status);
 `);
 
 db.exec(`
