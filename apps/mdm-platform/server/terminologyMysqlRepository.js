@@ -51,14 +51,14 @@ function scopedTermSql(scope = {}) {
   if (scope.canViewAll) return { sql: '', params: [] };
   return {
     sql: ` AND (
-      t.created_by=?
+      COALESCE(t.created_by_person_id, t.created_by)=?
       OR d.id=?
       OR r.dept_name=?
       OR r.input_source_dept=?
       OR r.output_target_dept=?
     )`,
     params: [
-      scope.userId || 0,
+      scope.personId || scope.userId || 0,
       scope.departmentId || -1,
       scope.departmentName || '__none__',
       scope.departmentName || '__none__',
@@ -94,8 +94,10 @@ const TERM_SELECT = `
          d.id AS process_owner_dept_id,
          r.dept_name AS process_dept_name,
          t.created_by,
+         t.created_by_person_id,
          t.created_at,
          t.approved_by,
+         t.approved_by_person_id,
          t.approved_at,
          t.updated_at
   FROM terminology_terms t
@@ -237,10 +239,11 @@ function makeTerminologyMysqlRepository(pool) {
 
     async createTerm(payload = {}, actorUserId = null) {
       const normalized = normalizeTermPayload(payload);
+      const actorPersonId = payload.actor_person_id || payload.actorPersonId || actorUserId || null;
       const result = await pool.execute(
         `INSERT INTO terminology_terms
-          (term, term_type_code, definition, scope, forbidden, process_mapping_record_id, created_by)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          (term, term_type_code, definition, scope, forbidden, process_mapping_record_id, created_by, created_by_person_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           normalized.term,
           normalized.term_type_code,
@@ -248,7 +251,8 @@ function makeTerminologyMysqlRepository(pool) {
           normalized.scope,
           normalized.forbidden,
           normalized.process_id,
-          actorUserId || null
+          actorUserId || null,
+          actorPersonId
         ]
       );
       return await this.getTerm(insertId(result));
@@ -279,14 +283,16 @@ function makeTerminologyMysqlRepository(pool) {
     },
 
     async reviewTerm(termId, action, reviewerId) {
+      const reviewerPersonId = reviewerId;
       const newStatus = action === 'approve' ? 'approved' : 'rejected';
       const result = await pool.execute(
         `UPDATE terminology_terms
          SET status=?,
              approved_by=?,
+             approved_by_person_id=?,
              approved_at=CURRENT_TIMESTAMP
-         WHERE id=?`,
-        [newStatus, reviewerId || null, termId]
+          WHERE id=?`,
+        [newStatus, reviewerId || null, reviewerPersonId || null, termId]
       );
       return affectedRows(result) > 0 ? await this.getTerm(termId) : null;
     },

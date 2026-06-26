@@ -444,16 +444,18 @@ function makeFakePool() {
         if (item) {
           if (normalizedSql.includes("status='assigned'")) {
             item.owner_user_id = params[0] || item.owner_user_id;
-            item.owner_dept_id = params[1] || item.owner_dept_id;
-            item.priority = params[2];
-            item.due_date = params[3];
+            item.owner_person_id = params[1] || item.owner_person_id;
+            item.owner_dept_id = params[2] || item.owner_dept_id;
+            item.priority = params[3];
+            item.due_date = params[4];
             item.status = 'assigned';
           } else if (normalizedSql.includes("status='submitted'")) {
             item.status = 'submitted';
           } else if (normalizedSql.includes("status='closed'")) {
             item.status = 'closed';
             item.closed_by = params[0];
-            item.closure_note = params[1];
+            item.closed_by_person_id = params[1];
+            item.closure_note = params[2];
           } else if (normalizedSql.includes("status='reopened'")) {
             item.status = 'reopened';
             item.reopened_count += item.status === 'reopened' ? 0 : 1;
@@ -465,12 +467,13 @@ function makeFakePool() {
       }
 
       if (normalizedSql.includes('INSERT INTO process_governance_quality_case_events')) {
-        const [case_id, event_type, actor_user_id, note, payload_json] = params;
+        const [case_id, event_type, actor_user_id, actor_person_id, note, payload_json] = params;
         state.qualityCaseEvents.push({
           id: state.qualityCaseEvents.length + 1,
           case_id,
           event_type,
           actor_user_id,
+          actor_person_id,
           note,
           payload_json
         });
@@ -504,16 +507,18 @@ function makeFakePool() {
         if (item) {
           if (normalizedSql.includes("status='assigned'")) {
             item.owner_user_id = params[0] || item.owner_user_id;
-            item.owner_dept_id = params[1] || item.owner_dept_id;
-            item.priority = params[2];
-            item.due_date = params[3];
+            item.owner_person_id = params[1] || item.owner_person_id;
+            item.owner_dept_id = params[2] || item.owner_dept_id;
+            item.priority = params[3];
+            item.due_date = params[4];
             item.status = 'assigned';
           } else if (normalizedSql.includes("status='submitted'")) {
             item.status = 'submitted';
           } else if (normalizedSql.includes("status='closed'")) {
             item.status = 'closed';
             item.closed_by = params[0];
-            item.closure_note = params[1];
+            item.closed_by_person_id = params[1];
+            item.closure_note = params[2];
           } else if (normalizedSql.includes("status='reopened'")) {
             item.status = 'reopened';
           } else if (normalizedSql.includes('SET status=?')) {
@@ -524,12 +529,13 @@ function makeFakePool() {
       }
 
       if (normalizedSql.includes('INSERT INTO process_mapping_todo_events')) {
-        const [todo_id, event_type, actor_user_id, note, payload_json] = params;
+        const [todo_id, event_type, actor_user_id, actor_person_id, note, payload_json] = params;
         state.mappingTodoEvents.push({
           id: state.mappingTodoEvents.length + 1,
           todo_id,
           event_type,
           actor_user_id,
+          actor_person_id,
           note,
           payload_json
         });

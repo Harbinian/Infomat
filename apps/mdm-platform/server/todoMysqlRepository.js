@@ -60,6 +60,10 @@ function normalizeTodoPayload(payload = {}) {
   };
 }
 
+function personIdFromActor(actor = {}) {
+  return actor.actor_person_id || actor.actorPersonId || actor.person_id || actor.personId || actor.actor_user_id || null;
+}
+
 function publicTodo(row) {
   if (!row) return null;
   return {
@@ -94,11 +98,11 @@ function scopeClause(scope = {}) {
 }
 
 function makeTodoMysqlRepository(pool) {
-  async function insertEvent(todoId, eventType, actorUserId, note = null) {
+  async function insertEvent(todoId, eventType, actorUserId, note = null, actorPersonId = actorUserId) {
     await pool.execute(
-      `INSERT INTO mdm_todo_events (todo_id, event_type, actor_user_id, note)
-       VALUES (?, ?, ?, ?)`,
-      [todoId, eventType, actorUserId || null, note || null]
+      `INSERT INTO mdm_todo_events (todo_id, event_type, actor_user_id, actor_person_id, note)
+       VALUES (?, ?, ?, ?, ?)`,
+      [todoId, eventType, actorUserId || null, actorPersonId || null, note || null]
     );
   }
 
@@ -161,10 +165,11 @@ function makeTodoMysqlRepository(pool) {
 
     async createTodo(payload = {}, actor = {}) {
       const normalized = normalizeTodoPayload(payload);
+      const actorPersonId = personIdFromActor(actor);
       const result = await pool.execute(
         `INSERT INTO mdm_todos
-          (from_dept_id, to_dept_id, type, related_mapping_id, related_field_id, content, due_date, urgency, created_by)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          (from_dept_id, to_dept_id, type, related_mapping_id, related_field_id, content, due_date, urgency, created_by, created_by_person_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           normalized.from_dept_id,
           normalized.to_dept_id,
@@ -174,28 +179,30 @@ function makeTodoMysqlRepository(pool) {
           normalized.content,
           normalized.due_date,
           normalized.urgency,
-          actor.actor_user_id || null
+          actor.actor_user_id || null,
+          actorPersonId
         ]
       );
       const todoId = insertId(result);
-      await insertEvent(todoId, 'created', actor.actor_user_id || null);
+      await insertEvent(todoId, 'created', actor.actor_user_id || null, null, actorPersonId);
       return await this.getTodo(todoId);
     },
 
     async completeTodo(todoId, actor = {}) {
+      const actorPersonId = personIdFromActor(actor);
       const result = await pool.execute(
-        "UPDATE mdm_todos SET status='done', done_at=CURRENT_TIMESTAMP, completed_by=?, updated_at=CURRENT_TIMESTAMP WHERE id=?",
-        [actor.actor_user_id || null, todoId]
+        "UPDATE mdm_todos SET status='done', done_at=CURRENT_TIMESTAMP, completed_by=?, completed_by_person_id=?, updated_at=CURRENT_TIMESTAMP WHERE id=?",
+        [actor.actor_user_id || null, actorPersonId, todoId]
       );
       if (affectedRows(result) === 0) return null;
-      await insertEvent(todoId, 'done', actor.actor_user_id || null);
+      await insertEvent(todoId, 'done', actor.actor_user_id || null, null, actorPersonId);
       return await this.getTodo(todoId);
     },
 
     async deleteTodo(todoId, actor = {}) {
       const existing = await this.getTodo(todoId);
       if (!existing) return false;
-      await insertEvent(todoId, 'deleted', actor.actor_user_id || null);
+      await insertEvent(todoId, 'deleted', actor.actor_user_id || null, null, personIdFromActor(actor));
       const result = await pool.execute('DELETE FROM mdm_todos WHERE id=?', [todoId]);
       return affectedRows(result) > 0;
     }

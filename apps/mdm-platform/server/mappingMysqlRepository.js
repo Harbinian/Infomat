@@ -90,11 +90,16 @@ function normalizeRelatedDepartment(department = {}) {
   };
 }
 
+function personIdFromPayload(payload = {}, fallback = null) {
+  return payload.actor_person_id || payload.actorPersonId || payload.person_id || payload.personId || fallback || null;
+}
+
 function scopeClause(alias, scope = {}) {
   if (scope.canViewAll) return { sql: '', params: [] };
   const table = alias || 'm';
-  const params = [scope.userId || 0];
-  const clauses = [`${table}.submitted_by=?`];
+  const scopedPersonId = scope.personId || scope.userId || 0;
+  const params = [scopedPersonId];
+  const clauses = [`COALESCE(${table}.submitted_by_person_id, ${table}.submitted_by)=?`];
   if (scope.departmentId) {
     clauses.push(`${table}.owner_dept_id=?`);
     params.push(scope.departmentId);
@@ -107,15 +112,15 @@ function scopeClause(alias, scope = {}) {
     params.push(scope.departmentId);
     clauses.push(`EXISTS (
       SELECT 1 FROM mdm_mapping_approval_tasks at
-      WHERE at.mapping_id=${table}.id AND (at.assignee_user_id=? OR at.assigned_dept_id=?)
+      WHERE at.mapping_id=${table}.id AND (COALESCE(at.assignee_person_id, at.assignee_user_id)=? OR at.assigned_dept_id=?)
     )`);
-    params.push(scope.userId || 0, scope.departmentId);
+    params.push(scopedPersonId, scope.departmentId);
   } else {
     clauses.push(`EXISTS (
       SELECT 1 FROM mdm_mapping_approval_tasks at
-      WHERE at.mapping_id=${table}.id AND at.assignee_user_id=?
+      WHERE at.mapping_id=${table}.id AND COALESCE(at.assignee_person_id, at.assignee_user_id)=?
     )`);
-    params.push(scope.userId || 0);
+    params.push(scopedPersonId);
   }
   return { sql: ` AND (${clauses.join(' OR ')})`, params };
 }
@@ -146,6 +151,7 @@ function publicMapping(row) {
     owner_dept_id: row.owner_dept_id ? Number(row.owner_dept_id) : null,
     approval_dept_id: row.approval_dept_id ? Number(row.approval_dept_id) : null,
     submitted_by: row.submitted_by ? Number(row.submitted_by) : null,
+    submitted_by_person_id: row.submitted_by_person_id ? Number(row.submitted_by_person_id) : null,
     current_step: Number(row.current_step || 1)
   };
 }
@@ -157,7 +163,9 @@ function resultError(statusCode, error) {
 function canUseTask(task, payload = {}) {
   if (!task) return false;
   if (payload.canManageAll) return true;
-  if (task.assignee_user_id && Number(task.assignee_user_id) === Number(payload.actor_user_id)) return true;
+  const actorPersonId = personIdFromPayload(payload, payload.actor_user_id);
+  const assigneePersonId = task.assignee_person_id || task.assignee_user_id;
+  if (assigneePersonId && Number(assigneePersonId) === Number(actorPersonId)) return true;
   if (task.assigned_dept_id && Number(task.assigned_dept_id) === Number(payload.actor_dept_id)) return true;
   return false;
 }
@@ -188,12 +196,12 @@ function makeMappingMysqlRepository(pool) {
     }
   }
 
-  async function insertHistory(mappingId, step, actorUserId, action, opinion = null) {
+  async function insertHistory(mappingId, step, actorUserId, action, opinion = null, actorPersonId = actorUserId) {
     await pool.execute(
       `INSERT INTO mdm_mapping_approval_history
-        (mapping_id, step, operator_user_id, action, opinion)
-       VALUES (?, ?, ?, ?, ?)`,
-      [mappingId, Number(step), actorUserId || null, action, opinion || null]
+        (mapping_id, step, operator_user_id, operator_person_id, action, opinion)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [mappingId, Number(step), actorUserId || null, actorPersonId || null, action, opinion || null]
     );
   }
 
@@ -218,12 +226,12 @@ function makeMappingMysqlRepository(pool) {
     ));
   }
 
-  async function insertApprovalTask(mappingId, step, stepName, assigneeUserId, assignedDeptId, status) {
+  async function insertApprovalTask(mappingId, step, stepName, assigneeUserId, assignedDeptId, status, assigneePersonId = assigneeUserId) {
     await pool.execute(
       `INSERT INTO mdm_mapping_approval_tasks
-        (mapping_id, step, step_name, assignee_user_id, assigned_dept_id, status)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [mappingId, Number(step), stepName, assigneeUserId || null, assignedDeptId || null, status]
+        (mapping_id, step, step_name, assignee_user_id, assignee_person_id, assigned_dept_id, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [mappingId, Number(step), stepName, assigneeUserId || null, assigneePersonId || null, assignedDeptId || null, status]
     );
   }
 
@@ -292,21 +300,23 @@ function makeMappingMysqlRepository(pool) {
 
     async createMapping(payload = {}, actorUserId = null) {
       const normalized = normalizeMappingPayload(payload);
+      const actorPersonId = personIdFromPayload(payload, actorUserId);
       const result = await pool.execute(
         `INSERT INTO mdm_mapping_records
-          (process_mapping_record_id, description, approval_dept_id, owner_dept_id, status, submitted_by, current_step)
-         VALUES (?, ?, ?, ?, 'draft', ?, 1)`,
+          (process_mapping_record_id, description, approval_dept_id, owner_dept_id, status, submitted_by, submitted_by_person_id, current_step)
+         VALUES (?, ?, ?, ?, 'draft', ?, ?, 1)`,
         [
           normalized.process_id,
           normalized.description,
           normalized.approval_dept_id,
           normalized.owner_dept_id,
-          actorUserId || null
+          actorUserId || null,
+          actorPersonId
         ]
       );
       const mappingId = insertId(result);
       await replaceMappingRelations(mappingId, normalized.systems, normalized.related_departments);
-      await insertHistory(mappingId, 1, actorUserId, 'create');
+      await insertHistory(mappingId, 1, actorUserId, 'create', null, actorPersonId);
       return await this.getMapping(mappingId, { canViewAll: true });
     },
 
@@ -348,7 +358,8 @@ function makeMappingMysqlRepository(pool) {
 
     async submitMapping(mappingId, actorUserId = null) {
       const mapping = await getBaseMapping(mappingId);
-      if (!mapping || Number(mapping.submitted_by) !== Number(actorUserId)) {
+      const actorPersonId = actorUserId;
+      if (!mapping || Number(mapping.submitted_by_person_id || mapping.submitted_by) !== Number(actorPersonId)) {
         return resultError(403, '无权限或映射不存在');
       }
       if (mapping.status !== 'draft') return resultError(400, '只能提交草稿状态');
@@ -358,7 +369,7 @@ function makeMappingMysqlRepository(pool) {
         "UPDATE mdm_mapping_records SET status='submitted', submitted_at=CURRENT_TIMESTAMP, current_step=2, updated_at=CURRENT_TIMESTAMP WHERE id=?",
         [mappingId]
       );
-      await insertHistory(mappingId, 1, actorUserId, 'submit');
+      await insertHistory(mappingId, 1, actorUserId, 'submit', null, actorPersonId);
       await insertApprovalTask(mappingId, 2, '部门内审', null, mapping.owner_dept_id, 'in_progress');
 
       const relatedDepts = await rows(
@@ -382,6 +393,7 @@ function makeMappingMysqlRepository(pool) {
     },
 
     async reviewMapping(mappingId, payload = {}) {
+      const actorPersonId = personIdFromPayload(payload, payload.actor_user_id);
       const action = cleanText(payload.action);
       if (!['approve', 'reject'].includes(action)) return resultError(400, '不支持的审核操作');
       const step = Number(payload.step || 0);
@@ -402,11 +414,12 @@ function makeMappingMysqlRepository(pool) {
          SET status=?,
              opinion=?,
              operated_by=?,
+             operated_by_person_id=?,
              operated_at=CURRENT_TIMESTAMP
-         WHERE id=?`,
-        [taskStatus, nullableText(payload.opinion), payload.actor_user_id || null, task.id]
+          WHERE id=?`,
+        [taskStatus, nullableText(payload.opinion), payload.actor_user_id || null, actorPersonId, task.id]
       );
-      await insertHistory(mappingId, step, payload.actor_user_id, action, payload.opinion);
+      await insertHistory(mappingId, step, payload.actor_user_id, action, payload.opinion, actorPersonId);
 
       if (action === 'reject') {
         await pool.execute(
@@ -455,11 +468,12 @@ function makeMappingMysqlRepository(pool) {
         'UPDATE mdm_mapping_records SET status=?, current_step=?, updated_at=CURRENT_TIMESTAMP WHERE id=?',
         ['published', 5, mappingId]
       );
-      await insertHistory(mappingId, 5, actorUserId, 'publish');
+      await insertHistory(mappingId, 5, actorUserId, 'publish', null, actorUserId);
       return { ok: true };
     },
 
     async rejectMapping(mappingId, payload = {}, actorUserId = null) {
+      const actorPersonId = personIdFromPayload(payload, actorUserId);
       const mapping = await getBaseMapping(mappingId);
       if (!mapping) return resultError(404, '映射不存在');
       const rejections = Array.isArray(payload.rejections) ? payload.rejections : [];
@@ -471,16 +485,16 @@ function makeMappingMysqlRepository(pool) {
         if (!reason) return resultError(422, '请填写每个被标记驳回字段的原因');
         await pool.execute(
           `INSERT INTO mdm_mapping_rejection_reasons
-            (mapping_id, field_entry_id, rejection_reason, rejected_by)
-           VALUES (?, ?, ?, ?)`,
-          [mappingId, rejection.field_entry_id || null, reason, actorUserId || null]
+            (mapping_id, field_entry_id, rejection_reason, rejected_by, rejected_by_person_id)
+           VALUES (?, ?, ?, ?, ?)`,
+          [mappingId, rejection.field_entry_id || null, reason, actorUserId || null, actorPersonId]
         );
       }
       await pool.execute(
-        "UPDATE mdm_mapping_approval_tasks SET status='rejected', opinion=?, operated_by=?, operated_at=CURRENT_TIMESTAMP WHERE mapping_id=? AND status IN ('pending','in_progress','blocked')",
-        [nullableText(payload.opinion), actorUserId || null, mappingId]
+        "UPDATE mdm_mapping_approval_tasks SET status='rejected', opinion=?, operated_by=?, operated_by_person_id=?, operated_at=CURRENT_TIMESTAMP WHERE mapping_id=? AND status IN ('pending','in_progress','blocked')",
+        [nullableText(payload.opinion), actorUserId || null, actorPersonId, mappingId]
       );
-      await insertHistory(mappingId, mapping.current_step || 1, actorUserId, 'reject', payload.opinion);
+      await insertHistory(mappingId, mapping.current_step || 1, actorUserId, 'reject', payload.opinion, actorPersonId);
       await pool.execute(
         'UPDATE mdm_mapping_records SET status=?, current_step=?, updated_at=CURRENT_TIMESTAMP WHERE id=?',
         ['draft', 1, mappingId]

@@ -299,22 +299,24 @@ function makeFakePool() {
           authoritative_system_code: params[2],
           maintain_dept_id: params[3],
           owner_user_id: params[4],
-          confidence_level: params[5],
-          confirmed: params[6],
-          note: params[7],
-          status: params[8]
+          owner_person_id: params[5],
+          confidence_level: params[6],
+          confirmed: params[7],
+          note: params[8],
+          status: params[9]
         });
         return [{ insertId: identity.id, affectedRows: 1 }, undefined];
       }
 
       if (normalizedSql.startsWith('UPDATE data_map_field_identities SET authoritative_system_name=')) {
-        const identity = state.identities.find(item => item.field_id === Number(params[4]));
+        const identity = state.identities.find(item => item.field_id === Number(params[5]));
         if (identity) {
           identity.authoritative_system_name = params[0];
           identity.authoritative_system_code = params[1];
           identity.confirmed = 1;
           identity.confirmed_by = params[2];
-          identity.status = params[3];
+          identity.confirmed_by_person_id = params[3];
+          identity.status = params[4];
         }
         return [{ affectedRows: identity ? 1 : 0 }, undefined];
       }
