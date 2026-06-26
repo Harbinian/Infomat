@@ -148,6 +148,16 @@ function makeGovernanceGuidanceMysqlRepository(pool) {
     return { allowed: false };
   }
 
+  async function canViewGuidance(guidance, personId, permissions = new Set()) {
+    if (permissionsHas(permissions, '*:*') ||
+        permissionsHas(permissions, 'process_governance:view_global') ||
+        permissionsHas(permissions, 'admin:access')) return true;
+    if (Number(guidance.current_handler_person_id) === Number(personId)) return true;
+    if (Number(guidance.final_responsible_person_id) === Number(personId)) return true;
+    if (Number(guidance.created_by_person_id) === Number(personId)) return true;
+    return Boolean(await findActiveDelegation(guidance, personId));
+  }
+
   async function computeGuidanceActions(guidance, personId, permissions = new Set()) {
     const actions = defaultGuidanceActions();
     const disabledReasons = actions.disabledReasons;
@@ -318,8 +328,27 @@ function makeGovernanceGuidanceMysqlRepository(pool) {
       const params = [];
       const conditions = [];
       if (!canViewGlobal) {
-        conditions.push('(g.current_handler_person_id=? OR g.final_responsible_person_id=? OR g.created_by_person_id=?)');
-        params.push(personId, personId, personId);
+        conditions.push(`(
+          g.current_handler_person_id=?
+          OR g.final_responsible_person_id=?
+          OR g.created_by_person_id=?
+          OR EXISTS (
+            SELECT 1
+            FROM department_responsibility_delegations vd
+            WHERE vd.department_id=g.related_department_id
+              AND vd.final_responsible_person_id=g.final_responsible_person_id
+              AND vd.delegate_person_id=?
+              AND vd.status='active'
+              AND (vd.start_at IS NULL OR vd.start_at <= CURRENT_TIMESTAMP)
+              AND (vd.end_at IS NULL OR vd.end_at >= CURRENT_TIMESTAMP)
+              AND (
+                vd.scope_type='全部'
+                OR (vd.scope_type='指定业务对象' AND vd.scope_ref_type=g.related_entity_type AND vd.scope_ref_id=g.related_entity_id)
+                OR (vd.scope_type='指定问题类型' AND vd.scope_ref_type=g.related_entity_type)
+              )
+          )
+        )`);
+        params.push(personId, personId, personId, personId);
       }
       if (filters.related_entity_type) {
         conditions.push('g.related_entity_type=?');
@@ -345,6 +374,7 @@ function makeGovernanceGuidanceMysqlRepository(pool) {
       const row = await first(pool, guidanceSelectSql('WHERE g.guidance_id=?'), [guidanceId]);
       if (!row) return null;
       const guidance = normalizeGuidance(row);
+      if (!await canViewGuidance(guidance, personId, permissions)) return null;
       const guidanceActions = await computeGuidanceActions(guidance, personId, permissions);
       return normalizeGuidance(row, guidanceActions);
     },
