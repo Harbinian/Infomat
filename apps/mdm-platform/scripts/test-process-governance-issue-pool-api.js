@@ -14,11 +14,13 @@ const BASE_URL = `http://127.0.0.1:${PORT}`;
 function seedFixture() {
   db.prepare("INSERT OR IGNORE INTO departments (name, code) VALUES ('项目管理部', 'PMO')").run();
   db.prepare("INSERT OR IGNORE INTO departments (name, code) VALUES ('工程技术部', 'ENG')").run();
+  db.prepare("INSERT OR IGNORE INTO departments (name, code) VALUES ('公司领导', 'EXEC')").run();
   const dept = db.prepare("SELECT id FROM departments WHERE name='项目管理部'").get();
+  const execDept = db.prepare("SELECT id FROM departments WHERE name='公司领导'").get();
   db.prepare(`
     INSERT INTO users (name, employee_no, department_id, post, role, password_hash)
     VALUES (?, ?, ?, ?, ?, ?)
-  `).run('系统管理员', 'ADMIN001', dept.id, '系统管理员', 'admin', hashPassword('admin123'));
+  `).run('系统管理员', 'ADMIN001', execDept.id, '系统管理员', 'admin', hashPassword('admin123'));
   db.prepare(`
     INSERT INTO users (name, employee_no, department_id, post, role, password_hash)
     VALUES (?, ?, ?, ?, ?, ?)
@@ -153,9 +155,14 @@ async function main() {
     const queues = await request('/api/process-governance/issue-pool/queues', {}, cookie);
     assert.strictEqual(queues.res.status, 200);
     assert.strictEqual(queues.body.dataStatus, 'ready');
-    assert.strictEqual(queues.body.departmentName, '项目管理部');
+    assert.strictEqual(queues.body.departmentName, '全部部门');
     assert.ok(queues.body.queues.some(queue => queue.label === '需要我确认' && queue.count === 1));
     assert.ok(queues.body.queues.some(queue => queue.label === '需要我协同'));
+
+    const normalQueues = await request('/api/process-governance/issue-pool/queues', {}, normalCookie);
+    assert.strictEqual(normalQueues.res.status, 200);
+    assert.strictEqual(normalQueues.body.departmentName, '项目管理部');
+    assert.ok(normalQueues.body.queues.some(queue => queue.label === '需要我确认' && queue.count === 1));
 
     const issues = await request('/api/process-governance/issue-pool/issues?queue=waiting_my_action&limit=20', {}, cookie);
     assert.strictEqual(issues.res.status, 200);

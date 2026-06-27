@@ -40,7 +40,15 @@ const issuePoolSnippet = issuePoolStart >= 0 && issuePoolEnd > issuePoolStart
   '可能有标准术语',
   '保留原表达，并说明原因',
   '提交 MDM 工作组裁决',
-  '术语裁决结果将进入术语真源'
+  '术语裁决结果将进入术语真源',
+  '处理结论',
+  '处理说明',
+  '提交确认',
+  'data-issue-point-submit',
+  '/api/process-governance/issue-pool/points/',
+  '/confirm',
+  '请选择处理结论',
+  '确认结果已提交'
 ].forEach(needle => assert.ok(html.includes(needle), `missing issue pool frontend hook ${needle}`));
 
 assert.ok(!html.includes('mapping todo'), 'frontend should not expose mapping todo wording');

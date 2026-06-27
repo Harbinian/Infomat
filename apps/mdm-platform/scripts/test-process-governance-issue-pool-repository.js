@@ -6,7 +6,10 @@ process.env.MDM_DB_QUIET = '1';
 const db = require('../server/db');
 const { hashPassword } = require('../server/auth');
 const { mdmMysqlSchemaSql } = require('../server/mysqlSchema');
-const { makeSqliteProcessGovernanceIssuePoolRepository } = require('../server/processGovernanceIssuePoolRepository');
+const {
+  makeProcessGovernanceIssuePoolRepository,
+  makeSqliteProcessGovernanceIssuePoolRepository
+} = require('../server/processGovernanceIssuePoolRepository');
 
 function seedMappingSource() {
   db.prepare("INSERT OR IGNORE INTO departments (name, code) VALUES ('项目管理部', 'PMO')").run();
@@ -64,6 +67,9 @@ async function main() {
   assert.ok(queues.items.some(item => item.display_status === 'waiting_my_action' && Number(item.count) === 1), 'queue summary should count actionable issues');
   assert.ok(queues.items[0].preview.length <= 5, 'queue preview should stay small');
 
+  const globalQueues = await repo.listQueues();
+  assert.ok(globalQueues.items.some(item => item.display_status === 'waiting_my_action' && Number(item.count) === 1), 'global queue summary should not require a department filter');
+
   const list = await repo.listIssues({ departmentName: '项目管理部', queue: 'waiting_my_action', limit: 20, offset: 0 });
   assert.strictEqual(list.pagination.limit, 20);
   assert.strictEqual(list.items.length, 1);
@@ -119,6 +125,27 @@ async function main() {
     decidedBy: 1
   });
   assert.strictEqual(decision.decision.standard_term, '项目负责人');
+
+  const mysqlCalls = [];
+  const fakeMysqlPool = {
+    async execute(sql, params = []) {
+      mysqlCalls.push({ sql, params });
+      if (sql.includes('COUNT(DISTINCT i.issue_id)')) return [[{ count: 1 }], []];
+      if (sql.includes('SELECT DISTINCT i.*')) return [[{
+        issue_id: 1,
+        issue_key: 'todo:mysql-limit-test',
+        primary_dept_name: '项目管理部',
+        display_status: 'waiting_my_action',
+        a1_name: '设置阶段评审计划'
+      }], []];
+      return [[], []];
+    }
+  };
+  const mysqlRepo = makeProcessGovernanceIssuePoolRepository(fakeMysqlPool);
+  const mysqlList = await mysqlRepo.listIssues({ queue: 'waiting_my_action', limit: 3, offset: 0 });
+  assert.strictEqual(mysqlList.pagination.total, 1);
+  const mysqlListCall = mysqlCalls.find(call => call.sql.includes('LIMIT ? OFFSET ?'));
+  assert.deepStrictEqual(mysqlListCall.params.slice(-2), ['3', '0'], 'MySQL LIMIT/OFFSET params should be strings for prepared execution');
 
   console.log('Process governance issue pool repository test passed');
 }

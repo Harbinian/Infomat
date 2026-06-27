@@ -57,7 +57,7 @@ npm run smoke:infomat-services
 | 项 | 固定值 |
 |---|---|
 | MDM | `127.0.0.1:3000` |
-| PMO | `127.0.0.1:5173` |
+| PMO | 本机访问 `127.0.0.1:5173`，服务监听 `0.0.0.0:5173` |
 | MySQL | `localhost:3307` |
 | MySQL Docker 容器 | `infomat-candidate-review-mysql` |
 | MySQL 用户 / 库 | `mdm_user` / `infomat_mdm` |
@@ -79,7 +79,7 @@ MDM_ADMIN_PASSWORD=你的管理员密码
 | 检查项 | 正确状态 |
 |---|---|
 | MDM | `http://127.0.0.1:3000` 可访问 |
-| PMO | `http://127.0.0.1:5173` 可访问 |
+| PMO | 本机 `http://127.0.0.1:5173` 可访问；同事使用 `http://<本机局域网IP>:5173` |
 | MySQL | Docker 容器 `infomat-candidate-review-mysql` 通过 `localhost:3307` 提供服务 |
 | 权限数据 | `npm run smoke:infomat-services` 显示 `ADMIN001 / 系统管理员 / admin` |
 | 私有密码 | `scripts/infomat-services.local.env` 包含 `MYSQL_PASSWORD` 和 `MDM_ADMIN_PASSWORD` |

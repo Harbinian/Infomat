@@ -9,6 +9,9 @@ import {
   transitionDeliverableStatus,
   validateDeliverableOverrides,
 } from '../gantt-react/src/utils/deliverableWorkflow.js';
+import {
+  mergeDeliverableWithFrontmatter,
+} from '../gantt-react/src/utils/deliverableUtils.js';
 
 const baseDeliverable = {
   deliverableId: 'DLV-001',
@@ -68,6 +71,47 @@ const merged = applyDeliverableOverrides([baseDeliverable], overrides);
 assert.equal(merged[0].deliverableStatus, '待评审');
 assert.equal(merged[0].reviewOpinion, '等待周会评审');
 assert.equal(merged[0].workflowHistory.length, 1);
+
+const shiftedPlanDeliverable = {
+  deliverableId: 'DLV-001',
+  deliverableName: '启动会议程、参会清单',
+  taskName: '项目启动会准备',
+  plannedFinish: '2026-06-20',
+  deliverableStatus: '未提交',
+};
+const matchingFrontmatter = {
+  fileName: 'DLV-001-启动会议程和参会清单.md',
+  frontmatter: {
+    deliverableId: 'DLV-001',
+    title: '昌兴复材数字化底座项目启动会议程与参会清单',
+    plannedFinish: '2026-06-05',
+    status: '待评审',
+  },
+};
+const mergedFrontmatter = mergeDeliverableWithFrontmatter(shiftedPlanDeliverable, matchingFrontmatter);
+assert.equal(mergedFrontmatter.deliverableStatus, '待评审');
+assert.equal(mergedFrontmatter.plannedFinish, '2026-06-20', '计划完成日期应以 tasks.json 为准');
+
+const currentDlv4FromTasks = {
+  deliverableId: 'DLV-004',
+  deliverableName: '调研计划',
+  taskName: '现状调研计划编制',
+  plannedFinish: '2026-07-07',
+  deliverableStatus: '未提交',
+};
+const staleDlv4Frontmatter = {
+  fileName: 'DLV-004-项目决策组预审文档.md',
+  frontmatter: {
+    deliverableId: 'DLV-004',
+    title: '昌兴复材数字化底座项目 — 决策组预审文档（V0.3）',
+    plannedFinish: '2026-06-05',
+    status: '已提交',
+  },
+};
+const guardedDlv4 = mergeDeliverableWithFrontmatter(currentDlv4FromTasks, staleDlv4Frontmatter);
+assert.equal(guardedDlv4.deliverableName, '调研计划');
+assert.equal(guardedDlv4.plannedFinish, '2026-07-07');
+assert.equal(guardedDlv4.deliverableStatus, '未提交');
 
 const deliverables = [
   merged[0],

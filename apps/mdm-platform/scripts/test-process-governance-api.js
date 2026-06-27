@@ -90,6 +90,7 @@ db.prepare("INSERT OR IGNORE INTO departments (name, code) VALUES ('工程技术
 const engineeringDept = db.prepare("SELECT id FROM departments WHERE name='工程技术部'").get();
 if (engineeringDept) {
   db.prepare("UPDATE users SET department_id=? WHERE employee_no='ADMIN001'").run(engineeringDept.id);
+  db.prepare("UPDATE users SET department_id=? WHERE employee_no='USER001'").run(engineeringDept.id);
 }
 
 db.prepare(`
@@ -110,6 +111,65 @@ const activeSnapshotId = db.prepare(`
   ORDER BY imported_at DESC, id DESC
   LIMIT 1
 `).get().id;
+if (engineeringDept) {
+  db.prepare(`
+    INSERT INTO process_governance_quality_cases (
+      finding_key, first_snapshot_id, latest_snapshot_id, severity, area, source_file,
+      source_line, message, suggestion, dept_name, status, priority, owner_dept_id
+    ) VALUES (?, ?, ?, 'WARN', 'BBM', ?, 88, ?, ?, '工程技术部', 'open', 'medium', ?)
+  `).run(
+    'fixture-engineering-quality',
+    activeSnapshotId,
+    activeSnapshotId,
+    'docs/norms/工程技术部部门-能力-流程-系统映射关系.md',
+    '工程技术部 A1 确认入口待补充',
+    '请工程技术部确认 A1 拆分和证据链。',
+    engineeringDept.id
+  );
+  db.prepare(`
+    INSERT INTO process_governance_quality_cases (
+      finding_key, first_snapshot_id, latest_snapshot_id, severity, area, source_file,
+      source_line, message, suggestion, dept_name, status, priority, owner_dept_id
+    ) VALUES (?, ?, ?, 'BLOCK', 'BBM', ?, 96, ?, ?, '经营发展部', 'open', 'high', ?)
+  `).run(
+    'fixture-cross-dept-owner-quality',
+    activeSnapshotId,
+    activeSnapshotId,
+    'docs/norms/经营发展部部门-能力-流程-系统映射关系.md',
+    '经营发展部问题单不应因责任部门错挂进入工程技术部',
+    '有明确 dept_name 时，普通员工按问题归属部门查看。',
+    engineeringDept.id
+  );
+  const engineeringRecordResult = db.prepare(`
+    INSERT INTO process_mapping_records (
+      mapping_key, record_type, first_snapshot_id, latest_snapshot_id, dept_name, domain_name,
+      l2_name, l3_name, a1_code, behavior, suggested_systems, source_file, status
+    ) VALUES (?, 'a1', ?, ?, '工程技术部', '总经理直辖', '产品设计和开发管理',
+      '产品设计策划管理', 'GC-L3-02-A1-001', '确认产品设计策划输入',
+      ?, 'docs/norms/工程技术部部门-能力-流程-系统映射关系.md', 'active')
+  `).run(
+    'fixture-engineering-a1-record',
+    activeSnapshotId,
+    activeSnapshotId,
+    JSON.stringify(['PLM/PDM'])
+  );
+  db.prepare(`
+    INSERT INTO process_mapping_todos (
+      todo_key, mapping_record_id, todo_type, first_snapshot_id, latest_snapshot_id,
+      dept_name, target_dept_name, l3_name, a1_code, source_file, message, suggestion,
+      status, priority, owner_dept_id
+    ) VALUES (?, ?, 'dept_confirm', ?, ?, '工程技术部', NULL, '产品设计策划管理',
+      'GC-L3-02-A1-001', 'docs/norms/工程技术部部门-能力-流程-系统映射关系.md',
+      '工程技术部确认 DCM/BBM 转化结果', '核对 A1 业务行为、证据和处理入口。',
+      'open', 'medium', ?)
+  `).run(
+    'fixture-engineering-mapping-todo',
+    engineeringRecordResult.lastInsertRowid,
+    activeSnapshotId,
+    activeSnapshotId,
+    engineeringDept.id
+  );
+}
 const insertBulkMappingRecord = db.prepare(`
   INSERT INTO process_mapping_records (
     mapping_key, record_type, first_snapshot_id, latest_snapshot_id, dept_name, domain_name,
@@ -336,20 +396,20 @@ async function main() {
 
     const cases = await request('/api/process-governance/quality-cases', {}, cookie);
     assert.strictEqual(cases.res.status, 200);
-    assert.strictEqual(cases.body.summary.total, 2);
-    assert.deepStrictEqual(cases.body.summary.bySeverity, { BLOCK: 1, WARN: 1 });
+    assert.strictEqual(cases.body.summary.total, 4);
+    assert.deepStrictEqual(cases.body.summary.bySeverity, { BLOCK: 2, WARN: 2 });
     assert.strictEqual(cases.body.summary.byStatus.source_resolved, 1);
     assert.ok(cases.body.items.every(item => item.finding_key && item.latest_snapshot_id), 'cases should expose stable keys and latest snapshot');
 
     const openCases = await request('/api/process-governance/quality-cases?status=open', {}, cookie);
     assert.strictEqual(openCases.res.status, 200);
-    assert.strictEqual(openCases.body.items.length, 1);
-    assert.strictEqual(openCases.body.items[0].severity, 'WARN');
+    assert.strictEqual(openCases.body.items.length, 3);
+    assert.ok(openCases.body.items.some(item => item.severity === 'WARN'));
 
     const deptCases = await request('/api/process-governance/quality-cases?dept=经营发展部', {}, cookie);
     assert.strictEqual(deptCases.res.status, 200);
-    assert.strictEqual(deptCases.body.items.length, 1);
-    const warnCaseId = deptCases.body.items[0].id;
+    assert.strictEqual(deptCases.body.items.length, 2);
+    const warnCaseId = deptCases.body.items.find(item => item.severity === 'WARN').id;
 
     const warnDetail = await request(`/api/process-governance/quality-cases/${warnCaseId}`, {}, cookie);
     assert.strictEqual(warnDetail.res.status, 200);
@@ -393,6 +453,30 @@ async function main() {
     });
     assert.strictEqual(normalLogin.res.status, 200);
     const normalCookie = normalLogin.res.headers.get('set-cookie').split(';')[0];
+
+    const normalWorkspace = await request('/api/process-governance/mapping-workspace', {}, normalCookie);
+    assert.strictEqual(normalWorkspace.res.status, 200);
+    assert.strictEqual(normalWorkspace.body.summary.total, 1);
+    assert.ok(normalWorkspace.body.items.every(item => item.dept_name === '工程技术部'), '普通员工只能看到本部门 DCM/BBM 转化结果');
+    assert.ok(normalWorkspace.body.items.some(item => item.a1_code === 'GC-L3-02-A1-001'), '部门员工应能看到本部门 A1 转化结果');
+    assert.ok(!normalWorkspace.body.items.some(item => item.dept_name === '经营发展部'), '普通员工不能看到其他部门转化结果');
+
+    const normalMappingTodos = await request('/api/process-governance/mapping-todos', {}, normalCookie);
+    assert.strictEqual(normalMappingTodos.res.status, 200);
+    assert.ok(normalMappingTodos.body.items.every(item => item.dept_name === '工程技术部' || item.target_dept_name === '工程技术部'), '普通员工只能看到本部门确认待办');
+    assert.ok(normalMappingTodos.body.items.some(item => item.a1_code === 'GC-L3-02-A1-001'), '部门员工应能看到本部门确认动作');
+
+    const normalCases = await request('/api/process-governance/quality-cases', {}, normalCookie);
+    assert.strictEqual(normalCases.res.status, 200);
+    assert.strictEqual(normalCases.body.summary.total, 1);
+    assert.ok(normalCases.body.items.every(item => item.dept_name === '工程技术部'), '普通员工只能看到本部门治理问题单');
+    const normalCaseId = normalCases.body.items[0].id;
+    const normalCaseDetail = await request(`/api/process-governance/quality-cases/${normalCaseId}`, {}, normalCookie);
+    assert.strictEqual(normalCaseDetail.res.status, 200, JSON.stringify(normalCaseDetail.body));
+
+    const crossDeptCaseDetail = await request(`/api/process-governance/quality-cases/${warnCaseId}`, {}, normalCookie);
+    assert.strictEqual(crossDeptCaseDetail.res.status, 403);
+
     const forbiddenClose = await request(`/api/process-governance/quality-cases/${sourceResolvedCase.id}/close`, {
       method: 'POST',
       body: JSON.stringify({ note: '普通用户不能关闭' })
@@ -416,19 +500,20 @@ async function main() {
 
     const workspace = await request('/api/process-governance/mapping-workspace', {}, cookie);
     assert.strictEqual(workspace.res.status, 200);
-    assert.strictEqual(workspace.body.summary.total, 507);
+    assert.strictEqual(workspace.body.summary.total, 508);
     assert.strictEqual(workspace.body.summary.returned, 500);
     assert.strictEqual(workspace.body.items.length, 500);
     assert.strictEqual(workspace.body.summary.byType.l3, 1);
-    assert.strictEqual(workspace.body.summary.byType.a1, 506);
+    assert.strictEqual(workspace.body.summary.byType.a1, 507);
     assert.ok(workspace.body.items.some(item => item.a1_code === 'JY-L3-01-A1-001'), 'workspace should expose imported A1 mapping records');
 
     const mappingTodos = await request('/api/process-governance/mapping-todos', {}, cookie);
     assert.strictEqual(mappingTodos.res.status, 200);
-    assert.strictEqual(mappingTodos.body.summary.total, 507);
+    assert.strictEqual(mappingTodos.body.summary.total, 508);
     assert.strictEqual(mappingTodos.body.summary.returned, 500);
     assert.strictEqual(mappingTodos.body.items.length, 500);
     assert.strictEqual(mappingTodos.body.summary.byType.verification, 1);
+    assert.strictEqual(mappingTodos.body.summary.byType.dept_confirm, 1);
     assert.strictEqual(mappingTodos.body.summary.byType.cross_dept, 1);
     assert.strictEqual(mappingTodos.body.summary.byType.evidence, 505);
     assert.strictEqual(mappingTodos.body.summary.byStatus.closed, 505);

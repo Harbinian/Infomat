@@ -915,7 +915,7 @@ function makeProcessGovernanceIssuePoolRepository(pool) {
         ${where}
         ORDER BY i.priority_score DESC, i.updated_at DESC, i.issue_id
         LIMIT ? OFFSET ?
-      `, [...params, safeLimit, safeOffset]);
+      `, [...params, String(safeLimit), String(safeOffset)]);
       return { items: items.map(mapIssueRow), pagination: { total: Number(count.count || 0), limit: safeLimit, offset: safeOffset } };
     },
 

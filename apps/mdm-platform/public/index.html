@@ -1071,7 +1071,7 @@
         <button class="tab" data-tab="dataMap" data-roles="submitter,owner,reviewer,admin">数据地图</button>
         <button class="tab" data-tab="capabilities" data-roles="admin">能力与流程申报</button>
         <button class="tab" data-tab="businessMap" data-roles="owner,reviewer,admin">业务地图</button>
-        <button class="tab" data-tab="processGovernance" data-roles="owner,reviewer,admin">流程治理</button>
+        <button class="tab" data-tab="processGovernance" data-roles="submitter,owner,reviewer,admin,project_lead,workgroup_lead,business_contact,data_quality,it_lead,decision_group">流程治理</button>
         <button class="tab" data-tab="todos" data-roles="submitter,owner,reviewer,admin">待办收到</button>
         <button class="tab" data-tab="reviews" data-roles="submitter,owner,reviewer,admin">评审记录</button>
         <button class="tab" data-tab="terms" data-roles="submitter,owner,reviewer,admin">术语词典</button>
@@ -2041,6 +2041,7 @@
     function renderProcessGovernanceScopeNotice(activeView) {
       var container = document.getElementById('pgCurrentScope');
       var textEl = document.getElementById('pgCurrentScopeText');
+      var clearBtn = document.getElementById('pgClearDeptScopeBtn');
       if (!container || !textEl) return;
       if (!state.pgSelectedDept || state.pgWorkspace !== 'existing') {
         container.hidden = true;
@@ -2048,9 +2049,10 @@
         return;
       }
       container.hidden = false;
+      if (clearBtn) clearBtn.hidden = !canViewAllProcessGovernanceClient();
       var suffix = activeView === 'map'
         ? '图谱、A1 明细和跨部门风险已按该部门过滤。'
-        : '当前页继承了这个部门范围，切回全公司后可查看全部数据。';
+        : (canViewAllProcessGovernanceClient() ? '当前页继承了这个部门范围，切回全公司后可查看全部数据。' : '当前页只显示本部门可确认范围。');
       textEl.textContent = '当前范围：' + state.pgSelectedDept + '。' + suffix;
     }
 
@@ -2929,6 +2931,16 @@
       }
     }
 
+    function canViewManagedActivityClient() {
+      var user = state.user || {};
+      var roles = new Set([user.role].concat(user.roleCodes || []).filter(Boolean));
+      var permissions = new Set(user.permissions || []);
+      return permissions.has('*:*') ||
+        permissions.has('admin:access') ||
+        permissions.has('data:view_all') ||
+        ['admin', 'it_lead', 'project_lead', 'data_quality'].some(function(code) { return roles.has(code); });
+    }
+
     async function loadDashboardActivity() {
       var wrap = $('dashboardActivityHeatmap');
       if (wrap) wrap.innerHTML = '<div class="empty">正在读取治理活跃...</div>';
@@ -2936,7 +2948,12 @@
       var deptEl = $('dashboardActivityDepartment');
       var userEl = $('dashboardActivityUser');
       var params = new URLSearchParams();
-      params.set('scope', scopeEl ? scopeEl.value || 'all' : 'all');
+      var requestedScope = scopeEl ? scopeEl.value || 'all' : 'all';
+      if (!canViewManagedActivityClient() && requestedScope !== 'me') {
+        requestedScope = 'me';
+        if (scopeEl) scopeEl.value = 'me';
+      }
+      params.set('scope', requestedScope);
       params.set('days', '180');
       if (deptEl && deptEl.value) params.set('department_id', deptEl.value);
       if (userEl && userEl.value) params.set('user_id', userEl.value);
@@ -3165,9 +3182,11 @@
     function applyRoleVisibility() {
       if (!state.user) return;
       var role = state.user.role;
+      var currentRoleCodes = roleCodesOfCurrentUser();
       document.querySelectorAll('.tab[data-roles]').forEach(function(tab) {
         var roles = tab.dataset.roles.split(',');
-        tab.style.display = roles.indexOf(role) !== -1 ? '' : 'none';
+        var visible = roles.some(function(code) { return currentRoleCodes.indexOf(code) !== -1; });
+        tab.style.display = visible ? '' : 'none';
       });
       var defaultTabs = { submitter: 'roleWorkbench', owner: 'roleWorkbench', reviewer: 'roleWorkbench', admin: 'roleWorkbench' };
       var defaultTab = defaultTabs[role] || 'dashboard';
@@ -3183,6 +3202,26 @@
       if (state.user && Array.isArray(state.user.roleCodes)) codes = codes.concat(state.user.roleCodes);
       if (state.user && state.user.role && codes.indexOf(state.user.role) < 0) codes.push(state.user.role);
       return codes;
+    }
+
+    function canViewAllProcessGovernanceClient() {
+      var user = state.user || {};
+      var roles = new Set(roleCodesOfCurrentUser());
+      var permissions = new Set(user.permissions || []);
+      return permissions.has('*:*') ||
+        permissions.has('admin:access') ||
+        permissions.has('process_governance:view_all') ||
+        ['admin', 'decision_group', 'it_lead'].some(function(code) { return roles.has(code); });
+    }
+
+    function currentUserDepartmentName() {
+      var user = state.user || {};
+      return user.departmentName || user.department_name || user.deptName || user.dept_name || '';
+    }
+
+    function ensureProcessGovernanceDepartmentScope() {
+      if (canViewAllProcessGovernanceClient()) return;
+      state.pgSelectedDept = currentUserDepartmentName();
     }
 
     function renderRoleGuideCard(role) {
@@ -3590,8 +3629,14 @@
     async function activateAuthenticatedApp(user, options) {
       options = options || {};
       state.user = user;
-      $('sessionUserName').textContent = user.name + ' · ' + user.role;
       await loadCsrfToken();
+      try {
+        var currentUser = await api('/api/org/me');
+        state.user = Object.assign({}, state.user || {}, currentUser || {});
+      } catch (error) {
+        console.warn('当前用户资料补全失败，继续使用登录返回资料', error);
+      }
+      $('sessionUserName').textContent = state.user.name + ' · ' + state.user.role;
       showApp();
       applyRoleVisibility();
       applyPermissionControlledActions();
@@ -4993,11 +5038,26 @@
     function renderIssuePoints(points) {
       if (!points.length) return '<div class="empty">暂无问题点。</div>';
       return '<div class="pg-issue-points">' + points.map(function(point) {
-        var options = (point.enum_options || []).join(' / ');
+        var options = point.enum_options || [];
+        var selected = point.selected_option || '';
+        var pointId = point.point_id || '';
         return '<div class="pg-issue-point">' +
           '<strong>' + safeText(point.title || '问题点') + '</strong>' +
           '<p>' + safeText(point.prompt_text || '') + '</p>' +
-          '<p>可选处理：' + safeText(options || '待配置') + '</p>' +
+          '<label class="field">处理结论' +
+            '<select data-issue-point-option="' + escapeHtml(pointId) + '">' +
+              '<option value="">请选择处理结论</option>' +
+              options.map(function(option) {
+                return '<option value="' + escapeHtml(option) + '"' + (option === selected ? ' selected' : '') + '>' + safeText(option) + '</option>';
+              }).join('') +
+            '</select>' +
+          '</label>' +
+          '<label class="field">处理说明' +
+            '<textarea rows="2" data-issue-point-note="' + escapeHtml(pointId) + '" placeholder="说明证据、依据或需要调整的内容">' + escapeHtml(point.review_note || '') + '</textarea>' +
+          '</label>' +
+          '<div class="candidate-review-detail-actions">' +
+            '<button type="button" class="btn primary" data-issue-point-submit="' + escapeHtml(pointId) + '">提交确认</button>' +
+          '</div>' +
         '</div>';
       }).join('') + '</div>';
     }
@@ -5062,6 +5122,34 @@
       container.querySelectorAll('[data-issue-back]').forEach(function(button) {
         button.addEventListener('click', function() {
           location.hash = processGovernanceIssueQueueHash(activeQueue || 'waiting_my_action');
+        });
+      });
+      container.querySelectorAll('[data-issue-point-submit]').forEach(function(button) {
+        button.addEventListener('click', function() {
+          var pointId = button.dataset.issuePointSubmit || '';
+          var optionEl = container.querySelector('[data-issue-point-option="' + CSS.escape(pointId) + '"]');
+          var noteEl = container.querySelector('[data-issue-point-note="' + CSS.escape(pointId) + '"]');
+          var selectedOption = optionEl ? optionEl.value : '';
+          var note = noteEl ? noteEl.value.trim() : '';
+          if (!selectedOption) {
+            showToast('请选择处理结论', 'error');
+            return;
+          }
+          button.disabled = true;
+          button.textContent = '提交中...';
+          api('/api/process-governance/issue-pool/points/' + encodeURIComponent(pointId) + '/confirm', {
+            method: 'POST',
+            body: JSON.stringify({ selected_option: selectedOption, note: note })
+          }).then(function() {
+            showToast('确认结果已提交');
+            clearProcessGovernanceViewCache('issue-point-confirm');
+            return loadProcessGovernanceView('candidateReview', { route: parseHash(), force: true });
+          }).catch(function(error) {
+            showToast(error.message || '确认结果提交失败', 'error');
+          }).finally(function() {
+            button.disabled = false;
+            button.textContent = '提交确认';
+          });
         });
       });
     }
@@ -5320,9 +5408,23 @@
       '</article>';
     }
 
-    function renderCandidateReviewList(data) {
+    function renderCandidateReviewMappingTodoFallback(mappingTodos) {
+      var todos = (mappingTodos && mappingTodos.items) || [];
+      var total = mappingTodos && mappingTodos.summary && Number(mappingTodos.summary.total || 0) || todos.length;
+      if (!total) return '<div class="empty">暂无待确认的问题。若部门文档已更新，请先完成问题抽取或导入；若只查看当前正式映射，请看映射工作库。</div>';
+      var rows = todos.slice(0, 5).map(function(todo) {
+        return '<li><strong>' + safeText(todo.l3_name || todo.a1_code || '映射待办') + '</strong><span>' + safeText(todo.message || todo.suggestion || '请确认当前正式映射中的核验提醒') + '</span></li>';
+      }).join('');
+      return '<div class="empty candidate-review-fallback">' +
+        '<p>暂无新的问题抽取结果；当前正式映射里已有 ' + safeText(total) + ' 条映射待办需要确认。</p>' +
+        (rows ? '<ul>' + rows + '</ul>' : '') +
+        '<a class="btn primary" href="#/processGovernance?view=mapping">去映射待办处理</a>' +
+      '</div>';
+    }
+
+    function renderCandidateReviewList(data, mappingTodos) {
       var items = (data.items || []).slice(0, 80);
-      if (!items.length) return '<div class="empty">暂无待确认的问题。若部门文档已更新，请先完成问题抽取或导入；若只查看当前正式映射，请看映射工作库。</div>';
+      if (!items.length) return renderCandidateReviewMappingTodoFallback(mappingTodos);
       return items.map(renderCandidateReviewCard).join('');
     }
 
@@ -5333,11 +5435,11 @@
       '</div>';
     }
 
-    function renderCandidateReviewDetailPage(data, run, candidateKey) {
+    function renderCandidateReviewDetailPage(data, run, candidateKey, mappingTodos) {
       var items = data.items || [];
       var index = Math.max(0, items.findIndex(function(item) { return item.stable_key === candidateKey; }));
       var row = items[index];
-      if (!row) return renderCandidateReviewList(data);
+      if (!row) return renderCandidateReviewList(data, mappingTodos);
       var previous = items[index - 1];
       var next = items[index + 1];
       return '<article class="candidate-review-detail" data-candidate-review-item="' + escapeHtml(row.stable_key || '') + '">' +
@@ -5383,18 +5485,19 @@
       });
     }
 
-    function renderProcessGovernanceCandidateReview(data, selectedDept, route) {
+    function renderProcessGovernanceCandidateReview(data, selectedDept, route, mappingTodos) {
       var rowsEl = document.getElementById('pgCandidateReviewRows');
       if (!rowsEl) return;
       state.pgCandidateReviewData = data;
       var items = data.items || [];
       var run = data.run || null;
+      var mappingTodoTotal = mappingTodos && mappingTodos.summary && Number(mappingTodos.summary.total || 0) || ((mappingTodos && mappingTodos.items) || []).length;
       document.getElementById('pgCandidateReviewMeta').textContent = run
         ? (selectedDept ? selectedDept + ' · ' : '') + '运行 ' + run.run_id + '，显示 ' + items.length + ' 条 / 共 ' + ((data.summary && data.summary.total) || items.length) + ' 条'
-        : '暂无待确认的问题';
+        : (mappingTodoTotal ? (selectedDept ? selectedDept + ' · ' : '') + '暂无新的问题抽取，映射待办 ' + mappingTodoTotal + ' 条' : '暂无待确认的问题');
       rowsEl.innerHTML = (route && route.pgView === 'candidateReview' && route.candidateReviewKey)
-        ? renderCandidateReviewDetailPage(data, run, route.candidateReviewKey)
-        : renderCandidateReviewList(data);
+        ? renderCandidateReviewDetailPage(data, run, route.candidateReviewKey, mappingTodos)
+        : renderCandidateReviewList(data, mappingTodos);
       wireCandidateReviewNavigation(rowsEl);
       rowsEl.querySelectorAll('[data-review-save]').forEach(function(button) {
         button.addEventListener('click', function() {
@@ -5639,19 +5742,44 @@
       return reason || 'manual';
     }
 
-    async function loadProcessGovernanceOverviewView() {
-      return { current: await api('/api/process-governance/current') };
+    async function loadProcessGovernanceOverviewView(filters) {
+      var current = await api('/api/process-governance/current');
+      if (!filters || !filters.dept) return { current: current };
+      var scopedQuery = processGovernanceQuery({ dept: filters.dept });
+      var scoped = await Promise.all([
+        api('/api/process-governance/mapping-workspace' + scopedQuery),
+        api('/api/process-governance/mapping-todos' + scopedQuery),
+        api('/api/process-governance/quality' + scopedQuery),
+        api('/api/process-governance/quality-cases' + scopedQuery),
+        api('/api/process-governance/source-files' + processGovernanceQuery({ dept: filters.dept, limit: SOURCE_COVERAGE_VISIBLE_LIMIT })),
+        api('/api/process-governance/mdm-requirements' + scopedQuery),
+        api('/api/process-governance/evidence' + scopedQuery)
+      ]);
+      return {
+        current: current,
+        scopedOverview: {
+          mappingWorkspace: scoped[0],
+          mappingTodos: scoped[1],
+          quality: scoped[2],
+          qualityCases: scoped[3],
+          sourceFiles: scoped[4],
+          mdmRequirements: scoped[5],
+          evidence: scoped[6]
+        }
+      };
     }
 
     async function loadProcessGovernanceCandidateReviewView(filters) {
       var route = parseHash();
+      var mappingTodoQuery = processGovernanceQuery({ dept: filters.dept });
+      var mappingTodosPromise = api('/api/process-governance/mapping-todos' + mappingTodoQuery);
       var issuePool = await loadProcessGovernanceIssueQueues();
       if (route.issueId) {
         issuePool.detail = await loadProcessGovernanceIssueDetail(route.issueId);
       } else if (route.issueQueue) {
         issuePool.list = await loadProcessGovernanceIssueList(route.issueQueue);
       }
-      return { issuePool: issuePool };
+      return { issuePool: issuePool, mappingTodos: await mappingTodosPromise };
     }
 
     async function loadProcessGovernanceMapView(filters) {
@@ -5702,6 +5830,39 @@
       var crossStats = stats.crossDept || {};
       var currentQualitySummary = current.qualitySummary || {};
       var sourceFileStatus = stats.sourceFiles && stats.sourceFiles.byStatus || {};
+      var scoped = payload.scopedOverview || null;
+      if (scoped) {
+        var workspaceSummary = scoped.mappingWorkspace && scoped.mappingWorkspace.summary || {};
+        var mappingTodoSummary = scoped.mappingTodos && scoped.mappingTodos.summary || {};
+        var qualitySummary = scoped.quality && scoped.quality.summary || {};
+        var qualityCaseSummary = scoped.qualityCases && scoped.qualityCases.summary || {};
+        var sourceSummary = scoped.sourceFiles && scoped.sourceFiles.summary || {};
+        var mdmSummary = scoped.mdmRequirements && scoped.mdmRequirements.summary || {};
+        var evidenceSummary = scoped.evidence && scoped.evidence.summary || {};
+        stats = {
+          mappings: workspaceSummary.byType && workspaceSummary.byType.l3 || 0,
+          a1: workspaceSummary.byType && workspaceSummary.byType.a1 || 0,
+          a1Imported: workspaceSummary.total || 0,
+          crossDept: {
+            totalChecked: mappingTodoSummary.byType && mappingTodoSummary.byType.cross_dept || 0,
+            highRisk: 0
+          },
+          sourceFiles: { byStatus: sourceSummary.byStatus || {} },
+          mdmRequirements: { total: mdmSummary.total || 0 },
+          evidenceRefs: { total: evidenceSummary.total || 0 }
+        };
+        crossStats = stats.crossDept || {};
+        currentQualitySummary = qualitySummary;
+        sourceFileStatus = stats.sourceFiles.byStatus || {};
+        document.getElementById('pgMetricQualityCaseOpen').textContent = qualityCaseSummary.byStatus && qualityCaseSummary.byStatus.open || 0;
+        document.getElementById('pgMetricQualityCaseSubmitted').textContent = qualityCaseSummary.byStatus && qualityCaseSummary.byStatus.submitted || 0;
+        document.getElementById('pgMetricQualityCaseResolved').textContent = qualityCaseSummary.byStatus && qualityCaseSummary.byStatus.source_resolved || 0;
+        document.getElementById('pgMetricQualityCaseClosed').textContent = qualityCaseSummary.byStatus && qualityCaseSummary.byStatus.closed || 0;
+        document.getElementById('pgMetricMappingRecords').textContent = workspaceSummary.total || 0;
+        document.getElementById('pgMetricMappingA1').textContent = workspaceSummary.byType && workspaceSummary.byType.a1 || 0;
+        document.getElementById('pgMetricMappingTodos').textContent = mappingTodoSummary.total || 0;
+        document.getElementById('pgMetricMappingTodoOpen').textContent = mappingTodoSummary.byStatus && mappingTodoSummary.byStatus.open || 0;
+      }
       document.getElementById('pgMetricL3').textContent = stats.mappings || 0;
       document.getElementById('pgMetricA1').textContent = stats.a1 || stats.a1Imported || 0;
       document.getElementById('pgMetricCross').textContent = crossStats.totalChecked || crossStats.total || 0;
@@ -5710,14 +5871,16 @@
       document.getElementById('pgMetricQualityWarn').textContent = currentQualitySummary.WARN || 0;
       document.getElementById('pgMetricQualityInfo').textContent = currentQualitySummary.INFO || 0;
       document.getElementById('pgMetricQualityShown').textContent = (currentQualitySummary.BLOCK || 0) + (currentQualitySummary.WARN || 0) + (currentQualitySummary.INFO || 0);
-      document.getElementById('pgMetricQualityCaseOpen').textContent = '—';
-      document.getElementById('pgMetricQualityCaseSubmitted').textContent = '—';
-      document.getElementById('pgMetricQualityCaseResolved').textContent = '—';
-      document.getElementById('pgMetricQualityCaseClosed').textContent = '—';
-      document.getElementById('pgMetricMappingRecords').textContent = '—';
-      document.getElementById('pgMetricMappingA1').textContent = '—';
-      document.getElementById('pgMetricMappingTodos').textContent = '—';
-      document.getElementById('pgMetricMappingTodoOpen').textContent = '—';
+      if (!scoped) {
+        document.getElementById('pgMetricQualityCaseOpen').textContent = '—';
+        document.getElementById('pgMetricQualityCaseSubmitted').textContent = '—';
+        document.getElementById('pgMetricQualityCaseResolved').textContent = '—';
+        document.getElementById('pgMetricQualityCaseClosed').textContent = '—';
+        document.getElementById('pgMetricMappingRecords').textContent = '—';
+        document.getElementById('pgMetricMappingA1').textContent = '—';
+        document.getElementById('pgMetricMappingTodos').textContent = '—';
+        document.getElementById('pgMetricMappingTodoOpen').textContent = '—';
+      }
       document.getElementById('pgMetricSourceIncluded').textContent = sourceFileStatus['纳入'] || 0;
       document.getElementById('pgMetricSourceReview').textContent = sourceFileStatus['待复核'] || 0;
       document.getElementById('pgMetricMdmRequirements').textContent = stats.mdmRequirements && stats.mdmRequirements.total || 0;
@@ -5883,6 +6046,7 @@
       var activePgView = processGovernanceViewFromRoute(route);
       var activeWorkspace = processGovernanceWorkspaceFromRoute(route);
       state.pgWorkspace = activeWorkspace;
+      ensureProcessGovernanceDepartmentScope();
       renderProcessGovernanceWorkspaceChoices(activeWorkspace);
       renderProcessExistingWizard();
       renderProcessDesignWorkspace();
@@ -6518,6 +6682,7 @@
         var button = event.target.closest('[data-pg-dept]');
         if (!button) return;
         event.preventDefault();
+        if (!canViewAllProcessGovernanceClient() && !button.dataset.pgDept) return;
         state.pgSelectedDept = button.dataset.pgDept || '';
         state.pgEvidenceFocus = null;
         clearProcessGovernanceViewCache('department-filter');
@@ -6527,6 +6692,10 @@
     if (document.getElementById('pgClearDeptScopeBtn')) {
       document.getElementById('pgClearDeptScopeBtn').addEventListener('click', function(event) {
         event.preventDefault();
+        if (!canViewAllProcessGovernanceClient()) {
+          state.pgSelectedDept = state.user && state.user.departmentName || '';
+          return;
+        }
         state.pgSelectedDept = '';
         state.pgEvidenceFocus = null;
         clearProcessGovernanceViewCache('department-scope-clear');

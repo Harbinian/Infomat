@@ -16,6 +16,7 @@ const WORKBENCH_CACHE_TTL_MS = 15 * 1000;
 const roleGroupsCache = new Map();
 const workbenchResponseCache = new Map();
 let processContextBundleCache = null;
+const PROCESS_GOVERNANCE_GLOBAL_ROLES = new Set(['admin', 'decision_group', 'it_lead']);
 
 const TODO_TYPE_LABELS = {
   field_confirm: '字段确认',
@@ -297,13 +298,16 @@ function parseJsonArray(value) {
   }
 }
 
-function loadProcessContexts(mode, workItems) {
+function loadProcessContexts(mode, workItems, options = {}) {
   const bundle = cachedProcessContextBundle();
   if (!bundle) return [];
 
   const todoA1Codes = new Set(workItems.map(item => item.a1Code).filter(Boolean));
+  const departmentName = String(options.departmentName || '');
+  const canViewAll = Boolean(options.canViewAll);
 
   const contexts = bundle.a1Rows
+    .filter(row => canViewAll || !departmentName || row.dept_name === departmentName)
     .filter(row => mode !== 'todo' || todoA1Codes.size === 0 || todoA1Codes.has(row.a1_code))
     .map(row => {
       const a1Node = findA1Node(row, bundle);
@@ -766,7 +770,10 @@ router.get('/', requireAuth, (req, res) => {
     const { roles, roleGroups } = buildRoleGroupsCached(roleCodes);
     const ownedRoles = roles.filter(role => role.owned);
     const permSet = identity.permSet;
-    const canViewAll = permSet.has('data:view_all') || permSet.has('*:*') || roleCodes.includes('admin') || roleCodes.includes('data_quality') || roleCodes.includes('it_lead');
+    const canViewAll = permSet.has('*:*') ||
+      permSet.has('admin:access') ||
+      permSet.has('process_governance:view_all') ||
+      roleCodes.some(code => PROCESS_GOVERNANCE_GLOBAL_ROLES.has(code));
     const canDecideEscalated = permSet.has('conflict:final_decide_escalated') || permSet.has('*:*') || roleCodes.includes('admin');
     const currentDepartmentName = identity.user.departmentName;
     const cacheKey = workbenchResponseCacheKey({ mode, identity, roleCodes, permSet });
@@ -781,7 +788,10 @@ router.get('/', requireAuth, (req, res) => {
       const pendingWorkItems = [...escalated, ...qualityFindings, ...mappingTodos, ...todos];
       const guidanceItems = guidanceItemsForRoles(activeRoles);
       const workItems = mode === 'all' ? [...pendingWorkItems, ...guidanceItems] : pendingWorkItems;
-      const contexts = loadProcessContexts(mode, pendingWorkItems);
+      const contexts = loadProcessContexts(mode, pendingWorkItems, {
+        canViewAll,
+        departmentName: currentDepartmentName
+      });
       const nextActions = buildNextActions(pendingWorkItems, activeRoles);
       const sankeyWorkItems = mode === 'all' ? [] : pendingWorkItems;
 

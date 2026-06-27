@@ -247,6 +247,13 @@ async function main() {
     assert.strictEqual(groupedCandidate.definition_status, 'source_definition_insufficient');
     assert.strictEqual(groupedCandidate.normalized_note, '审核人缺少部门前缀，应回源确认。');
 
+    const runsRes = await fetch(`${baseUrl}/api/process-governance/candidate-review/runs`);
+    const runsBody = await runsRes.json();
+    assert.strictEqual(runsRes.status, 200, JSON.stringify(runsBody));
+    assert.strictEqual(runsBody.summary.total, 1, '本部门成员只能看到包含本部门待确认问题的运行');
+    assert.strictEqual(runsBody.items[0].run_id, 'review-run-001');
+    assert.strictEqual(runsBody.items[0].candidate_count, 1, '本部门成员看到的运行计数应按本部门重算');
+
     const crossDeptListRes = await fetch(`${baseUrl}/api/process-governance/candidate-review/runs/review-run-001/candidates?dept=${encodeURIComponent('财务部')}`);
     const crossDeptListBody = await crossDeptListRes.json();
     assert.strictEqual(crossDeptListRes.status, 200, JSON.stringify(crossDeptListBody));
@@ -263,6 +270,14 @@ async function main() {
       new Set(adminListBody.items.map(item => item.department)),
       new Set(['工程技术部', '财务部'])
     );
+
+    const adminRunsRes = await fetch(`${baseUrl}/api/process-governance/candidate-review/runs`, {
+      headers: { 'x-test-role': 'admin', 'x-test-department': 'leadership' }
+    });
+    const adminRunsBody = await adminRunsRes.json();
+    assert.strictEqual(adminRunsRes.status, 200, JSON.stringify(adminRunsBody));
+    assert.strictEqual(adminRunsBody.summary.total, 1, '管理员应能看到全部运行');
+    assert.strictEqual(adminRunsBody.items[0].candidate_count, 2, '管理员运行计数应保留全量候选数');
 
     const adminDeptListRes = await fetch(`${baseUrl}/api/process-governance/candidate-review/runs/review-run-001/candidates?dept=${encodeURIComponent('财务部')}`, {
       headers: { 'x-test-role': 'admin', 'x-test-department': 'leadership' }

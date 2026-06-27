@@ -17,6 +17,8 @@ fs.mkdirSync(path.join(tempRoot, 'scripts'), { recursive: true });
 
 assert.equal(INFOMAT_SERVICE_CONFIG.mdm.port, 3000);
 assert.equal(INFOMAT_SERVICE_CONFIG.pmo.port, 5173);
+assert.equal(INFOMAT_SERVICE_CONFIG.pmo.host, '127.0.0.1');
+assert.equal(INFOMAT_SERVICE_CONFIG.pmo.bindHost, '0.0.0.0');
 assert.equal(INFOMAT_SERVICE_CONFIG.mysql.host, 'localhost');
 assert.equal(INFOMAT_SERVICE_CONFIG.mysql.port, 3307);
 assert.equal(INFOMAT_SERVICE_CONFIG.mysql.user, 'mdm_user');
@@ -87,6 +89,8 @@ const startScript = fs.readFileSync(path.join(repoRoot, 'scripts', 'start-infoma
 assert.ok(startScript.includes('infomat-services.config.json'), 'PowerShell starter should read the fixed service config');
 assert.ok(startScript.includes('infomat-services.local.env'), 'PowerShell starter should load the local private env file');
 assert.ok(startScript.includes('$fixedMysqlPort'), 'PowerShell starter should use the fixed MySQL port');
+assert.ok(startScript.includes('$fixedPmoBindHost'), 'PowerShell starter should use the fixed PMO bind host');
+assert.ok(startScript.includes('--host $fixedPmoBindHost'), 'PowerShell starter should bind PMO to the fixed bind host');
 assert.ok(!startScript.includes('[int]$MysqlPort'), 'PowerShell starter should not accept a mutable MySQL port parameter');
 assert.ok(startScript.includes('GetHostAddresses($HostName)'), 'PowerShell starter should resolve localhost across IPv4 and IPv6');
 assert.ok(startScript.includes('TcpClient($address.AddressFamily)'), 'PowerShell starter should create TcpClient with the resolved IP address family');
@@ -94,6 +98,7 @@ assert.ok(startScript.includes('TcpClient($address.AddressFamily)'), 'PowerShell
 const packageJson = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
 assert.equal(packageJson.scripts['start:infomat-services'], 'cmd /c start-infomat-services.cmd');
 assert.equal(packageJson.scripts['smoke:infomat-services'], 'node scripts/smoke-infomat-services.mjs');
+assert.ok(smokeScript.includes('pmoBindHost'), 'smoke should start PMO with the fixed bind host when requested');
 
 const startAndSmoke = fs.readFileSync(path.join(repoRoot, 'start-and-smoke-infomat-services.cmd'), 'utf8');
 assert.ok(startAndSmoke.includes('call "%~dp0start-infomat-services.cmd"'), 'start-and-smoke should use the fixed starter');

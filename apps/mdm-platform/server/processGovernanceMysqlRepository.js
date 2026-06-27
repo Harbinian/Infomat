@@ -905,7 +905,6 @@ function makeProcessGovernanceMysqlRepository(pool) {
           COALESCE(owner_person_id, owner_user_id)=?
           OR owner_dept_id=?
           OR dept_name=?
-          OR dept_name IS NULL
         )`;
         params.push(filters.personId || filters.userId || 0, filters.departmentId || -1, filters.departmentName || '__none__');
       }
@@ -1087,8 +1086,8 @@ function makeProcessGovernanceMysqlRepository(pool) {
         params.push(String(filters.dept));
       }
       if (!filters.canViewAll) {
-        whereSql += ' AND (r.dept_name=? OR r.input_source_dept=? OR r.output_target_dept=?)';
-        params.push(filters.departmentName || '__none__', filters.departmentName || '__none__', filters.departmentName || '__none__');
+        whereSql += ' AND r.dept_name=?';
+        params.push(filters.departmentName || '__none__');
       }
 
       const [summaryRows] = await pool.execute(
@@ -1145,7 +1144,6 @@ function makeProcessGovernanceMysqlRepository(pool) {
           OR t.owner_dept_id=?
           OR t.dept_name=?
           OR t.target_dept_name=?
-          OR t.dept_name IS NULL
         )`;
         params.push(filters.personId || filters.userId || 0, filters.departmentId || -1, filters.departmentName || '__none__', filters.departmentName || '__none__');
       }
