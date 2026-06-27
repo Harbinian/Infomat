@@ -139,6 +139,7 @@ async function ensureServices(summary, fixedEnv, mdmBaseUrl, pmoBaseUrl) {
   const mysqlPort = Number(fixedEnv.MYSQL_PORT);
   const mdmPort = parsePort(mdmBaseUrl, 3000);
   const pmoPort = parsePort(pmoBaseUrl, 5173);
+  const pmoBindHost = INFOMAT_SERVICE_CONFIG.pmo.bindHost || INFOMAT_SERVICE_CONFIG.pmo.host || '127.0.0.1';
   const mdmDir = path.join(repoRoot, 'apps', 'mdm-platform');
   const pmoDir = path.join(repoRoot, 'pmo', 'gantt-react');
 
@@ -159,9 +160,9 @@ async function ensureServices(summary, fixedEnv, mdmBaseUrl, pmoBaseUrl) {
   if (await testTcp('127.0.0.1', pmoPort)) {
     addCheck(summary, 'PMO service startup', { status: 'already listening', port: pmoPort });
   } else {
-    const pid = startDetached('npm.cmd', ['run', 'dev', '--', '--host', '127.0.0.1', '--port', String(pmoPort), '--strictPort'], pmoDir, {}, 'pmo-gantt');
+    const pid = startDetached('npm.cmd', ['run', 'dev', '--', '--host', pmoBindHost, '--port', String(pmoPort), '--strictPort'], pmoDir, {}, 'pmo-gantt');
     await waitForTcp('127.0.0.1', pmoPort, 'PMO');
-    addCheck(summary, 'PMO service startup', { status: 'started', port: pmoPort, pid, logs: logDir });
+    addCheck(summary, 'PMO service startup', { status: 'started', bindHost: pmoBindHost, port: pmoPort, pid, logs: logDir });
   }
 }
 
@@ -252,6 +253,17 @@ async function checkMdm(summary, fixedEnv, mdmBaseUrl) {
   assert.ok(sankeyNodes > 0, 'MDM process governance Sankey has no nodes');
   assert.ok(sankeyLinks > 0, 'MDM process governance Sankey has no links');
   addCheck(summary, 'MDM process governance data', { nodes: sankeyNodes, links: sankeyLinks });
+
+  const issueQueues = await requireJson(`${mdmBaseUrl}/api/process-governance/issue-pool/queues`, { headers: authedHeaders });
+  const issueQueueCount = countRows(issueQueues.body.queues || []);
+  const issueQueueTotal = (issueQueues.body.queues || []).reduce((sum, queue) => sum + Number(queue.count || 0), 0);
+  assert.ok(issueQueueCount > 0, 'MDM process governance issue pool returned no queues');
+  assert.ok(issueQueueTotal > 0, 'MDM process governance issue pool has no visible issues');
+  addCheck(summary, 'MDM process governance issue pool queues', {
+    departmentName: issueQueues.body.departmentName || null,
+    queues: issueQueueCount,
+    total: issueQueueTotal
+  });
 
   const dataMapContexts = await requireJson(`${mdmBaseUrl}/api/data-map/contexts`, { headers: authedHeaders });
   addCheck(summary, 'MDM data map contexts', { count: countRows(dataMapContexts.body) });

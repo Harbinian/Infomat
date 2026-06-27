@@ -79,8 +79,8 @@ async function main() {
   roleWorkbenchRouter.setProcessGovernanceRepositoryFactory(() => ({
     async getQualityCases(filters = {}) {
       qualityCalls += 1;
-      if (filters.canViewAll !== true) {
-        throw new Error('角色工作台应把 MySQL 身份权限传给质量问题仓储');
+      if (filters.canViewAll !== false) {
+        throw new Error('非管理层角色工作台应按本部门读取质量问题');
       }
       if (filters.departmentName !== 'MySQL 经营发展部') {
         throw new Error('角色工作台应把 MySQL 身份部门传给质量问题仓储');
@@ -107,8 +107,8 @@ async function main() {
     },
     async getMappingTodos(filters = {}) {
       mappingCalls += 1;
-      if (filters.canViewAll !== true) {
-        throw new Error('角色工作台应把 MySQL 身份权限传给映射待办仓储');
+      if (filters.canViewAll !== false) {
+        throw new Error('非管理层角色工作台应按本部门读取映射待办');
       }
       if (filters.departmentName !== 'MySQL 经营发展部') {
         throw new Error('角色工作台应把 MySQL 身份部门传给映射待办仓储');

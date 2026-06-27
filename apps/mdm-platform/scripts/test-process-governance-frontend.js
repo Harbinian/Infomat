@@ -6,6 +6,12 @@ const vm = require('vm');
 const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
 
 assert.ok(html.includes('data-tab="processGovernance"'), 'process governance tab should exist');
+const processGovernanceTab = html.match(/<button class="tab" data-tab="processGovernance" data-roles="([^"]+)">流程治理<\/button>/);
+assert.ok(processGovernanceTab, 'process governance tab should declare role visibility');
+assert.ok(
+  processGovernanceTab[1].split(',').includes('submitter'),
+  'process governance tab should be visible to submitters because every department member must confirm their own DCM/BBM results'
+);
 assert.ok(html.includes('id="processGovernancePanel"'), 'process governance panel should exist');
 assert.ok(html.includes('id="pgWorkspaceChoices"'), 'process governance should first show existing/new-process workspace choices');
 assert.ok(html.includes('治理已有流程'), 'process governance should expose the existing-process workspace');
@@ -82,6 +88,12 @@ assert.ok(html.includes('id="pgQualityRows"'), 'process governance should render
 assert.ok(html.includes('id="pgQualityCaseRows"'), 'process governance should render governance case rows');
 assert.ok(html.includes('id="pgMappingWorkspaceRows"'), 'process governance should render mapping workspace rows');
 assert.ok(html.includes('id="pgMappingTodoRows"'), 'process governance should render mapping todo rows');
+assert.ok(html.includes('var currentRoleCodes = roleCodesOfCurrentUser()'), 'role visibility should use all current role codes, not only the legacy base role');
+assert.ok(html.includes('function canViewAllProcessGovernanceClient()'), 'process governance should have a client-side global-scope guard');
+assert.ok(html.includes('function ensureProcessGovernanceDepartmentScope()'), 'process governance should force non-management users into their own department scope');
+assert.ok(html.includes("var currentUser = await api('/api/org/me')"), 'authenticated app activation should hydrate the full current user profile');
+assert.ok(html.includes('function currentUserDepartmentName()'), 'process governance should resolve the current user department through a reusable helper');
+assert.ok(html.includes('state.pgSelectedDept = currentUserDepartmentName()'), 'non-management process governance scope should default to the current user department');
 assert.ok(html.includes('id="pgSourceCoverageRows"'), 'process governance should render source coverage rows');
 assert.ok(html.includes('id="pgMdmRequirementRows"'), 'process governance should render MDM requirement rows');
 assert.ok(html.includes('id="pgEvidenceRows"'), 'process governance should render evidence rows');
@@ -138,6 +150,9 @@ assert.ok(
 );
 assert.ok(html.includes('正在加载待确认的问题'), 'candidate review should show an explicit initial loading state');
 assert.ok(html.includes('待确认问题加载失败，请刷新流程治理'), 'candidate review should show a clear failure state');
+assert.ok(html.includes('function renderCandidateReviewMappingTodoFallback'), 'candidate review should fall back to current mapping todos when no candidate extraction exists');
+assert.ok(html.includes('payload.mappingTodos'), 'candidate review view should receive mapping todo data for the empty-candidate fallback');
+assert.ok(html.includes('去映射待办处理'), 'candidate review empty state should guide users to the mapping todo work queue');
 assert.ok(html.includes('哪里有问题'), 'candidate review detail should use plain problem wording');
 assert.ok(html.includes('在哪发现的'), 'candidate review detail should use plain source wording');
 assert.ok(html.includes('是哪种问题'), 'candidate review detail should use plain issue wording');

@@ -397,6 +397,27 @@ function listCandidateRuns() {
     .sort((left, right) => right.run_id.localeCompare(left.run_id));
 }
 
+async function scopedCandidateRunForDepartment(run, departmentName, repo) {
+  if (!departmentName || !run || !run.run_id) return run;
+  let count = 0;
+  if (repo && typeof repo.getCandidates === 'function') {
+    try {
+      const stored = await repo.getCandidates(run.run_id, { dept: departmentName });
+      count = Number(stored && stored.summary && stored.summary.total || 0);
+    } catch (error) {
+      count = 0;
+    }
+  }
+  if (count === 0) {
+    const bundle = loadCandidateRunBundle(run.run_id);
+    if (bundle && Array.isArray(bundle.items)) {
+      count = filterCandidateReviewItems(bundle.items, { dept: departmentName }).length;
+    }
+  }
+  if (count <= 0) return null;
+  return { ...run, candidate_count: count };
+}
+
 function emptySankey() {
   return {
     nodes: [],
@@ -496,6 +517,8 @@ const MAPPING_RECORD_STATUSES = new Set(['active', 'source_missing', 'published'
 const MAPPING_TODO_TYPES = new Set(['dept_confirm', 'verification', 'adjustment', 'cross_dept', 'evidence']);
 const MAPPING_TODO_STATUSES = new Set(['open', 'assigned', 'rectifying', 'submitted', 'source_resolved', 'closed', 'reopened', 'accepted']);
 const USER_SET_MAPPING_TODO_STATUSES = new Set(['open', 'assigned', 'rectifying', 'submitted', 'reopened']);
+const PROCESS_GOVERNANCE_GLOBAL_ROLES = ['admin', 'decision_group', 'it_lead'];
+const DEPARTMENT_CONFIRM_ROLES = ['project_lead', 'workgroup_lead', 'business_contact', 'data_quality', 'submitter', 'owner', 'reviewer'];
 
 function getCurrentRoleCodes(req) {
   if (!req.session || !req.session.userId) return [];
@@ -522,44 +545,105 @@ function requestHasAnyPermission(req, permissionCodes) {
   return permSet.has('*:*') || permissionCodes.some(code => permSet.has(code));
 }
 
+function canViewAllProcessGovernance(req) {
+  return requestHasAnyPermission(req, ['admin:access', 'process_governance:view_all']) ||
+    requestHasQualityRole(req, PROCESS_GOVERNANCE_GLOBAL_ROLES);
+}
+
+async function canViewAllProcessGovernanceAsync(req) {
+  return await requestHasAnyPermissionAsync(req, ['admin:access', 'process_governance:view_all']) ||
+    await requestHasQualityRoleAsync(req, PROCESS_GOVERNANCE_GLOBAL_ROLES);
+}
+
+function currentDepartmentName(req) {
+  if (req.session && req.session.departmentName) return String(req.session.departmentName || '');
+  if (!req.session || !req.session.departmentId) return '';
+  const department = db.prepare('SELECT name FROM departments WHERE id=?').get(req.session.departmentId);
+  return department && department.name || '';
+}
+
+function canAccessDepartmentQualityCase(req, qualityCase) {
+  if (!qualityCase || !req.session || !req.session.userId) return false;
+  const departmentName = currentDepartmentName(req);
+  if (qualityCase.dept_name) return !!departmentName && qualityCase.dept_name === departmentName;
+  return Number(qualityCase.owner_user_id || 0) === Number(req.session.userId || 0) ||
+    Number(qualityCase.owner_dept_id || 0) === Number(req.session.departmentId || 0);
+}
+
+function canAccessDepartmentMappingTodo(req, todo) {
+  if (!todo || !req.session || !req.session.userId) return false;
+  const departmentName = currentDepartmentName(req);
+  if (todo.dept_name || todo.target_dept_name) {
+    return !!departmentName && (todo.dept_name === departmentName || todo.target_dept_name === departmentName);
+  }
+  return Number(todo.owner_user_id || 0) === Number(req.session.userId || 0) ||
+    Number(todo.owner_dept_id || 0) === Number(req.session.departmentId || 0);
+}
+
+async function canAccessDepartmentQualityCaseAsync(req, qualityCase) {
+  if (!qualityCase || !req.session || !req.session.userId) return false;
+  const departmentName = await currentDepartmentNameAsync(req);
+  if (qualityCase.dept_name) return !!departmentName && qualityCase.dept_name === departmentName;
+  return Number(qualityCase.owner_user_id || 0) === Number(req.session.userId || 0) ||
+    Number(qualityCase.owner_dept_id || 0) === Number(req.session.departmentId || 0);
+}
+
+async function canAccessDepartmentMappingTodoAsync(req, todo) {
+  if (!todo || !req.session || !req.session.userId) return false;
+  const departmentName = await currentDepartmentNameAsync(req);
+  if (todo.dept_name || todo.target_dept_name) {
+    return !!departmentName && (todo.dept_name === departmentName || todo.target_dept_name === departmentName);
+  }
+  return Number(todo.owner_user_id || 0) === Number(req.session.userId || 0) ||
+    Number(todo.owner_dept_id || 0) === Number(req.session.departmentId || 0);
+}
+
+function canViewQualityCase(req, qualityCase) {
+  return canViewAllProcessGovernance(req) || canAccessDepartmentQualityCase(req, qualityCase);
+}
+
+async function canViewQualityCaseAsync(req, qualityCase) {
+  return await canViewAllProcessGovernanceAsync(req) || await canAccessDepartmentQualityCaseAsync(req, qualityCase);
+}
+
+function canViewMappingTodo(req, todo) {
+  return canViewAllProcessGovernance(req) || canAccessDepartmentMappingTodo(req, todo);
+}
+
+async function canViewMappingTodoAsync(req, todo) {
+  return await canViewAllProcessGovernanceAsync(req) || await canAccessDepartmentMappingTodoAsync(req, todo);
+}
+
 function canViewAllQualityCases(req) {
-  return requestHasAnyPermission(req, ['data:view_all', 'admin:access']) ||
-    requestHasQualityRole(req, ['admin', 'data_quality', 'decision_group']);
+  return canViewAllProcessGovernance(req);
 }
 
 function canManageQualityCase(req, qualityCase) {
-  if (requestHasAnyPermission(req, ['process_quality:manage', 'review:approve', 'admin:access'])) return true;
-  if (requestHasQualityRole(req, ['admin', 'data_quality', 'decision_group'])) return true;
-  if (!qualityCase || !req.session || !req.session.departmentId) return false;
-  const department = db.prepare('SELECT name FROM departments WHERE id=?').get(req.session.departmentId);
-  return requestHasQualityRole(req, ['project_lead', 'workgroup_lead']) &&
-    (qualityCase.owner_dept_id === req.session.departmentId || qualityCase.dept_name === (department && department.name));
+  if (canViewAllProcessGovernance(req)) return true;
+  if (!canAccessDepartmentQualityCase(req, qualityCase)) return false;
+  return requestHasAnyPermission(req, ['process_quality:manage', 'review:approve']) ||
+    requestHasQualityRole(req, DEPARTMENT_CONFIRM_ROLES);
 }
 
 function canCloseQualityCase(req) {
-  return requestHasAnyPermission(req, ['process_quality:close', 'review:approve', 'admin:access']) ||
-    requestHasQualityRole(req, ['admin', 'data_quality', 'decision_group']);
+  return canViewAllProcessGovernance(req) ||
+    requestHasAnyPermission(req, ['process_quality:close']);
 }
 
 function canViewAllMappingTodos(req) {
-  return requestHasAnyPermission(req, ['data:view_all', 'admin:access']) ||
-    requestHasQualityRole(req, ['admin', 'data_quality', 'decision_group', 'it_lead']);
+  return canViewAllProcessGovernance(req);
 }
 
 function canManageMappingTodo(req, todo) {
-  if (requestHasAnyPermission(req, ['process_mapping:manage', 'review:approve', 'admin:access'])) return true;
-  if (requestHasQualityRole(req, ['admin', 'data_quality', 'it_lead'])) return true;
-  if (!todo || !req.session || !req.session.departmentId) return false;
-  const department = db.prepare('SELECT name FROM departments WHERE id=?').get(req.session.departmentId);
-  return requestHasQualityRole(req, ['project_lead', 'workgroup_lead', 'business_contact']) &&
-    (todo.owner_dept_id === req.session.departmentId ||
-     todo.dept_name === (department && department.name) ||
-     todo.target_dept_name === (department && department.name));
+  if (canViewAllProcessGovernance(req)) return true;
+  if (!canAccessDepartmentMappingTodo(req, todo)) return false;
+  return requestHasAnyPermission(req, ['process_mapping:manage', 'review:approve']) ||
+    requestHasQualityRole(req, DEPARTMENT_CONFIRM_ROLES);
 }
 
 function canCloseMappingTodo(req) {
-  return requestHasAnyPermission(req, ['process_mapping:close', 'review:approve', 'admin:access']) ||
-    requestHasQualityRole(req, ['admin', 'data_quality', 'decision_group', 'it_lead']);
+  return canViewAllProcessGovernance(req) ||
+    requestHasAnyPermission(req, ['process_mapping:close']);
 }
 
 async function getCurrentRoleCodesAsync(req) {
@@ -587,6 +671,11 @@ async function currentDepartmentNameAsync(req) {
   if (!req.session || !req.session.departmentId) return '';
   const department = await getDepartmentByIdAsync(req.session.departmentId);
   return department && department.name || '';
+}
+
+async function currentIssuePoolDepartmentNameAsync(req) {
+  if (await canViewAllProcessGovernanceAsync(req)) return '';
+  return await currentDepartmentNameAsync(req);
 }
 
 async function currentCandidateReviewDepartmentName(req) {
@@ -623,10 +712,9 @@ function sessionHasAnyRole(req, roleCodes) {
 }
 
 async function canViewAllCandidateReviewsAsync(req) {
-  if (sessionHasAnyRole(req, ['admin', 'data_quality', 'decision_group'])) return true;
+  if (sessionHasAnyRole(req, PROCESS_GOVERNANCE_GLOBAL_ROLES)) return true;
   if (req.session && ['submitter', 'owner', 'reviewer'].includes(req.session.userRole)) return false;
-  return await requestHasAnyPermissionAsync(req, ['data:view_all', 'admin:access']) ||
-    await requestHasQualityRoleAsync(req, ['admin', 'data_quality', 'decision_group']);
+  return await canViewAllProcessGovernanceAsync(req);
 }
 
 async function canAccessCandidateReviewItemAsync(req, candidate, departmentName) {
@@ -635,43 +723,35 @@ async function canAccessCandidateReviewItemAsync(req, candidate, departmentName)
 }
 
 async function canViewAllQualityCasesAsync(req) {
-  return await requestHasAnyPermissionAsync(req, ['data:view_all', 'admin:access']) ||
-    await requestHasQualityRoleAsync(req, ['admin', 'data_quality', 'decision_group']);
+  return await canViewAllProcessGovernanceAsync(req);
 }
 
 async function canManageQualityCaseAsync(req, qualityCase) {
-  if (await requestHasAnyPermissionAsync(req, ['process_quality:manage', 'review:approve', 'admin:access'])) return true;
-  if (await requestHasQualityRoleAsync(req, ['admin', 'data_quality', 'decision_group'])) return true;
-  if (!qualityCase || !req.session || !req.session.departmentId) return false;
-  const departmentName = await currentDepartmentNameAsync(req);
-  return await requestHasQualityRoleAsync(req, ['project_lead', 'workgroup_lead']) &&
-    (qualityCase.owner_dept_id === req.session.departmentId || qualityCase.dept_name === departmentName);
+  if (await canViewAllProcessGovernanceAsync(req)) return true;
+  if (!await canAccessDepartmentQualityCaseAsync(req, qualityCase)) return false;
+  return await requestHasAnyPermissionAsync(req, ['process_quality:manage', 'review:approve']) ||
+    await requestHasQualityRoleAsync(req, DEPARTMENT_CONFIRM_ROLES);
 }
 
 async function canCloseQualityCaseAsync(req) {
-  return await requestHasAnyPermissionAsync(req, ['process_quality:close', 'review:approve', 'admin:access']) ||
-    await requestHasQualityRoleAsync(req, ['admin', 'data_quality', 'decision_group']);
+  return await canViewAllProcessGovernanceAsync(req) ||
+    await requestHasAnyPermissionAsync(req, ['process_quality:close']);
 }
 
 async function canViewAllMappingTodosAsync(req) {
-  return await requestHasAnyPermissionAsync(req, ['data:view_all', 'admin:access']) ||
-    await requestHasQualityRoleAsync(req, ['admin', 'data_quality', 'decision_group', 'it_lead']);
+  return await canViewAllProcessGovernanceAsync(req);
 }
 
 async function canManageMappingTodoAsync(req, todo) {
-  if (await requestHasAnyPermissionAsync(req, ['process_mapping:manage', 'review:approve', 'admin:access'])) return true;
-  if (await requestHasQualityRoleAsync(req, ['admin', 'data_quality', 'it_lead'])) return true;
-  if (!todo || !req.session || !req.session.departmentId) return false;
-  const departmentName = await currentDepartmentNameAsync(req);
-  return await requestHasQualityRoleAsync(req, ['project_lead', 'workgroup_lead', 'business_contact']) &&
-    (todo.owner_dept_id === req.session.departmentId ||
-     todo.dept_name === departmentName ||
-     todo.target_dept_name === departmentName);
+  if (await canViewAllProcessGovernanceAsync(req)) return true;
+  if (!await canAccessDepartmentMappingTodoAsync(req, todo)) return false;
+  return await requestHasAnyPermissionAsync(req, ['process_mapping:manage', 'review:approve']) ||
+    await requestHasQualityRoleAsync(req, DEPARTMENT_CONFIRM_ROLES);
 }
 
 async function canCloseMappingTodoAsync(req) {
-  return await requestHasAnyPermissionAsync(req, ['process_mapping:close', 'review:approve', 'admin:access']) ||
-    await requestHasQualityRoleAsync(req, ['admin', 'data_quality', 'decision_group', 'it_lead']);
+  return await canViewAllProcessGovernanceAsync(req) ||
+    await requestHasAnyPermissionAsync(req, ['process_mapping:close']);
 }
 
 function mapIssueQueues(rows) {
@@ -1421,12 +1501,13 @@ router.get('/quality-cases', requireAuth, (req, res) => {
         ? db.prepare('SELECT name FROM departments WHERE id=?').get(req.session.departmentId)
         : null;
       sql += ` AND (
-        c.owner_user_id=?
-        OR c.owner_dept_id=?
-        OR c.dept_name=?
-        OR c.dept_name IS NULL
+        c.dept_name=?
+        OR (
+          c.dept_name IS NULL
+          AND (c.owner_user_id=? OR c.owner_dept_id=?)
+        )
       )`;
-      params.push(req.session.userId, req.session.departmentId || -1, department && department.name || '__none__');
+      params.push(department && department.name || '__none__', req.session.userId, req.session.departmentId || -1);
     }
 
     sql += `
@@ -1459,7 +1540,7 @@ router.get('/quality-cases/:id', requireAuth, (req, res) => {
       if (!repo) return null;
       const qualityCase = await repo.getQualityCase(parseCaseId(req));
       if (!qualityCase) return res.status(404).json({ error: '问题单不存在' });
-      if (!await canViewAllQualityCasesAsync(req) && !await canManageQualityCaseAsync(req, qualityCase)) {
+      if (!await canViewQualityCaseAsync(req, qualityCase)) {
         return res.status(403).json({ error: '权限不足' });
       }
       return res.json({ case: qualityCase, events: await repo.getQualityCaseEvents(qualityCase.id) });
@@ -1468,7 +1549,7 @@ router.get('/quality-cases/:id', requireAuth, (req, res) => {
   return runDbAction(res, () => {
     const qualityCase = loadQualityCase(parseCaseId(req));
     if (!qualityCase) return res.status(404).json({ error: '问题单不存在' });
-    if (!canViewAllQualityCases(req) && !canManageQualityCase(req, qualityCase)) {
+    if (!canViewQualityCase(req, qualityCase)) {
       return res.status(403).json({ error: '权限不足' });
     }
     return res.json({ case: qualityCase, events: qualityCaseEvents(qualityCase.id) });
@@ -1585,7 +1666,7 @@ router.post('/quality-cases/:id/comment', requireAuth, (req, res) => {
       if (!repo) return null;
       const qualityCase = await repo.getQualityCase(parseCaseId(req));
       if (!qualityCase) return res.status(404).json({ error: '问题单不存在' });
-      if (!await canViewAllQualityCasesAsync(req) && !await canManageQualityCaseAsync(req, qualityCase)) {
+      if (!await canViewQualityCaseAsync(req, qualityCase)) {
         return res.status(403).json({ error: '权限不足' });
       }
       const note = String(req.body.note || '').trim();
@@ -1599,7 +1680,7 @@ router.post('/quality-cases/:id/comment', requireAuth, (req, res) => {
   return runDbAction(res, () => {
     const qualityCase = loadQualityCase(parseCaseId(req));
     if (!qualityCase) return res.status(404).json({ error: '问题单不存在' });
-    if (!canViewAllQualityCases(req) && !canManageQualityCase(req, qualityCase)) {
+    if (!canViewQualityCase(req, qualityCase)) {
       return res.status(403).json({ error: '权限不足' });
     }
     const note = String(req.body.note || '').trim();
@@ -1731,11 +1812,11 @@ router.get('/issue-pool/queues', requireAuth, (req, res) => {
   return runAsyncAction(res, async () => {
     const repo = await issuePoolRepositoryOrSendUnavailable(res);
     if (!repo) return null;
-    const departmentName = await currentDepartmentNameAsync(req);
+    const departmentName = await currentIssuePoolDepartmentNameAsync(req);
     const queues = await repo.listQueues({ departmentName });
     return res.json({
       dataStatus: 'ready',
-      departmentName,
+      departmentName: departmentName || '全部部门',
       queues: mapIssueQueues(queues.items || [])
     });
   });
@@ -1745,7 +1826,7 @@ router.get('/issue-pool/issues', requireAuth, (req, res) => {
   return runAsyncAction(res, async () => {
     const repo = await issuePoolRepositoryOrSendUnavailable(res);
     if (!repo) return null;
-    const departmentName = await currentDepartmentNameAsync(req);
+    const departmentName = await currentIssuePoolDepartmentNameAsync(req);
     return res.json(await repo.listIssues({
       departmentName,
       queue: req.query.queue,
@@ -1879,7 +1960,10 @@ router.post('/issue-pool/batches/generate', requireAuth, (req, res) => {
     if (!await canGenerateIssuePoolAsync(req)) return res.status(403).json({ error: '权限不足' });
     const repo = await issuePoolRepositoryOrSendUnavailable(res);
     if (!repo) return null;
-    const departmentName = req.body.department_name || await currentDepartmentNameAsync(req);
+    const body = req.body || {};
+    const departmentName = Object.prototype.hasOwnProperty.call(body, 'department_name')
+      ? body.department_name
+      : await currentIssuePoolDepartmentNameAsync(req);
     return res.json(await repo.generateIssuePool({
       departmentName,
       generatedBy: req.session.userId,
@@ -1930,8 +2014,8 @@ router.get('/mapping-workspace', requireAuth, (req, res) => {
       const department = req.session.departmentId
         ? db.prepare('SELECT name FROM departments WHERE id=?').get(req.session.departmentId)
         : null;
-      whereSql += ' AND (r.dept_name=? OR r.input_source_dept=? OR r.output_target_dept=?)';
-      params.push(department && department.name || '__none__', department && department.name || '__none__', department && department.name || '__none__');
+      whereSql += ' AND r.dept_name=?';
+      params.push(department && department.name || '__none__');
     }
 
     const summaryRows = db.prepare(`
@@ -2007,13 +2091,15 @@ router.get('/mapping-todos', requireAuth, (req, res) => {
         ? db.prepare('SELECT name FROM departments WHERE id=?').get(req.session.departmentId)
         : null;
       whereSql += ` AND (
-        t.owner_user_id=?
-        OR t.owner_dept_id=?
-        OR t.dept_name=?
+        t.dept_name=?
         OR t.target_dept_name=?
-        OR t.dept_name IS NULL
+        OR (
+          t.dept_name IS NULL
+          AND t.target_dept_name IS NULL
+          AND (t.owner_user_id=? OR t.owner_dept_id=?)
+        )
       )`;
-      params.push(req.session.userId, req.session.departmentId || -1, department && department.name || '__none__', department && department.name || '__none__');
+      params.push(department && department.name || '__none__', department && department.name || '__none__', req.session.userId, req.session.departmentId || -1);
     }
 
     const summaryRows = db.prepare(`
@@ -2053,7 +2139,7 @@ router.get('/mapping-todos/:id', requireAuth, (req, res) => {
       if (!repo) return null;
       const todo = await repo.getMappingTodo(Number(req.params.id || 0));
       if (!todo) return res.status(404).json({ error: '映射待办不存在' });
-      if (!await canViewAllMappingTodosAsync(req) && !await canManageMappingTodoAsync(req, todo)) {
+      if (!await canViewMappingTodoAsync(req, todo)) {
         return res.status(403).json({ error: '权限不足' });
       }
       return res.json({ todo, events: await repo.getMappingTodoEvents(todo.id) });
@@ -2062,7 +2148,7 @@ router.get('/mapping-todos/:id', requireAuth, (req, res) => {
   return runDbAction(res, () => {
     const todo = loadMappingTodo(Number(req.params.id || 0));
     if (!todo) return res.status(404).json({ error: '映射待办不存在' });
-    if (!canViewAllMappingTodos(req) && !canManageMappingTodo(req, todo)) {
+    if (!canViewMappingTodo(req, todo)) {
       return res.status(403).json({ error: '权限不足' });
     }
     return res.json({ todo, events: mappingTodoEvents(todo.id) });
@@ -2175,7 +2261,7 @@ router.post('/mapping-todos/:id/comment', requireAuth, (req, res) => {
       if (!repo) return null;
       const todo = await repo.getMappingTodo(Number(req.params.id || 0));
       if (!todo) return res.status(404).json({ error: '映射待办不存在' });
-      if (!await canViewAllMappingTodosAsync(req) && !await canManageMappingTodoAsync(req, todo)) {
+      if (!await canViewMappingTodoAsync(req, todo)) {
         return res.status(403).json({ error: '权限不足' });
       }
       const note = String(req.body.note || '').trim();
@@ -2189,7 +2275,7 @@ router.post('/mapping-todos/:id/comment', requireAuth, (req, res) => {
   return runDbAction(res, () => {
     const todo = loadMappingTodo(Number(req.params.id || 0));
     if (!todo) return res.status(404).json({ error: '映射待办不存在' });
-    if (!canViewAllMappingTodos(req) && !canManageMappingTodo(req, todo)) {
+    if (!canViewMappingTodo(req, todo)) {
       return res.status(403).json({ error: '权限不足' });
     }
     const note = String(req.body.note || '').trim();
@@ -2324,7 +2410,17 @@ router.get('/candidate-review/runs', requireAuth, (req, res) => {
         byRunId.set(item.run_id, { ...item, ...(byRunId.get(item.run_id) || {}) });
       }
     }
-    const items = [...byRunId.values()].sort((left, right) => right.run_id.localeCompare(left.run_id));
+    let items = [...byRunId.values()];
+    const departmentName = await currentCandidateReviewDepartmentName(req);
+    if (departmentName) {
+      const scoped = [];
+      for (const item of items) {
+        const scopedItem = await scopedCandidateRunForDepartment(item, departmentName, repo);
+        if (scopedItem) scoped.push(scopedItem);
+      }
+      items = scoped;
+    }
+    items.sort((left, right) => right.run_id.localeCompare(left.run_id));
     res.json({ summary: { total: items.length }, items });
   });
 });

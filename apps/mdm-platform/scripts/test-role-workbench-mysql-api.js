@@ -43,7 +43,7 @@ function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
-function seedCrossDepartmentQualityCase() {
+function seedDepartmentQualityCases() {
   const snapshotId = db.prepare(`
     INSERT INTO process_governance_snapshots (source_json_path, source_hash, generated_at, stats_json, status, note)
     VALUES ('test-role-workbench-mysql.json', 'test-role-workbench-mysql-hash', '2026-06-17', '{}', 'active', 'MySQL 身份读模型测试')
@@ -55,6 +55,13 @@ function seedCrossDepartmentQualityCase() {
        source_line, message, suggestion, dept_name, status, priority)
     VALUES ('test-role-workbench-mysql-quality', ?, ?, 'BLOCK', 'BBM', 'test.md',
        12, '跨部门流程治理问题', '应由有全量权限的角色看到', '其他部门', 'open', 'high')
+  `).run(snapshotId, snapshotId);
+  db.prepare(`
+    INSERT INTO process_governance_quality_cases
+      (finding_key, first_snapshot_id, latest_snapshot_id, severity, area, source_file,
+       source_line, message, suggestion, dept_name, status, priority)
+    VALUES ('test-role-workbench-mysql-own-quality', ?, ?, 'WARN', 'BBM', 'test-own.md',
+       18, '本部门流程治理问题', '应由本部门角色看到', 'MySQL 经营发展部', 'open', 'medium')
   `).run(snapshotId, snapshotId);
 }
 
@@ -104,7 +111,7 @@ async function main() {
       }
     }));
 
-    seedCrossDepartmentQualityCase();
+    seedDepartmentQualityCases();
     server = makeApp().listen(PORT);
 
     const res = await request('GET', '/api/role-workbench?mode=todo');
@@ -117,8 +124,12 @@ async function main() {
     assert(res.body.roles.some(role => role.code === 'business_contact' && role.owned), '业务对接人应标记为当前拥有角色');
     assert(res.body.roles.some(role => role.code === 'data_quality' && role.owned), '数据质量员应标记为当前拥有角色');
     assert(
-      res.body.workItems.some(item => item.type === 'process_quality' && item.title.includes('跨部门流程治理问题')),
-      'data:view_all 权限应让角色工作台看到跨部门流程治理问题'
+      res.body.workItems.some(item => item.type === 'process_quality' && item.title.includes('本部门流程治理问题')),
+      '非管理层角色工作台应看到本部门流程治理问题'
+    );
+    assert(
+      !res.body.workItems.some(item => item.type === 'process_quality' && item.title.includes('跨部门流程治理问题')),
+      '非管理层角色工作台不应因 data:view_all 看到跨部门流程治理问题'
     );
 
     console.log('Role workbench MySQL identity API test passed');

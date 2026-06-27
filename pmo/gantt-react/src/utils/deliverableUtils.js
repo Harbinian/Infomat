@@ -27,8 +27,53 @@ const GATE_DELIVERABLE_NAMES = [
 const MAINLINE_WBS_PREFIXES = ['3', '4', '5', '6', '7', '8', '9', '10'];
 const loadFsApi = import.meta.env?.DEV ? () => import('./deliverableFsApi.js') : null;
 
-function mergeDeliverableWithFrontmatter(deliverable, record) {
+function compactMatchText(value) {
+  return String(value || '').toLowerCase().replace(/[^\p{Script=Han}a-z0-9]/gu, '');
+}
+
+function longestCommonSubstringLength(left, right) {
+  if (!left || !right) return 0;
+  let longest = 0;
+  const previous = new Array(right.length + 1).fill(0);
+  const current = new Array(right.length + 1).fill(0);
+  for (let i = 1; i <= left.length; i += 1) {
+    for (let j = 1; j <= right.length; j += 1) {
+      current[j] = left[i - 1] === right[j - 1] ? previous[j - 1] + 1 : 0;
+      if (current[j] > longest) longest = current[j];
+    }
+    previous.splice(0, previous.length, ...current);
+    current.fill(0);
+  }
+  return longest;
+}
+
+function hasDeliverableTextOverlap(deliverable, frontmatter) {
+  const title = compactMatchText(frontmatter.title);
+  if (!title) return false;
+  const generatedTexts = [
+    deliverable.deliverableName,
+    deliverable.taskName,
+  ].map(compactMatchText).filter(Boolean);
+  return generatedTexts.some(text => (
+    title.includes(text) ||
+    text.includes(title) ||
+    longestCommonSubstringLength(title, text) >= 4
+  ));
+}
+
+export function shouldMergeDeliverableFrontmatter(deliverable, record) {
   const fm = record?.frontmatter || {};
+  if (!fm.deliverableId || fm.deliverableId !== deliverable.deliverableId) return false;
+  if (fm.nodeKey && deliverable.nodeKey && fm.nodeKey === deliverable.nodeKey) return true;
+  if (fm.normalizedWbs && deliverable.normalizedWbs && String(fm.normalizedWbs) === String(deliverable.normalizedWbs)) return true;
+  if (fm.taskId && deliverable.taskId && String(fm.taskId) === String(deliverable.taskId)) return true;
+  if (hasDeliverableTextOverlap(deliverable, fm)) return true;
+  return Boolean(fm.plannedFinish && deliverable.plannedFinish && fm.plannedFinish === deliverable.plannedFinish);
+}
+
+export function mergeDeliverableWithFrontmatter(deliverable, record) {
+  const fm = record?.frontmatter || {};
+  if (!shouldMergeDeliverableFrontmatter(deliverable, record)) return deliverable;
   return {
     ...deliverable,
     deliverableId: fm.deliverableId || deliverable.deliverableId,
@@ -38,7 +83,7 @@ function mergeDeliverableWithFrontmatter(deliverable, record) {
     department: fm.department || deliverable.department,
     owner: fm.owner || deliverable.owner || '',
     reviewer: fm.reviewer || deliverable.reviewer,
-    plannedFinish: fm.plannedFinish || deliverable.plannedFinish,
+    plannedFinish: deliverable.plannedFinish || fm.plannedFinish,
     taskRisk: fm.risk || deliverable.taskRisk,
     deliverableStatus: fm.status || deliverable.deliverableStatus,
     _actualSubmitDate: fm.actualSubmitDate || deliverable._actualSubmitDate || '',
@@ -165,15 +210,22 @@ export async function loadDeliverableStatusOverrides(deliverables) {
       const { listDeliverables } = await loadFsApi();
       const records = await listDeliverables();
       const recordMap = new Map((records || []).map(record => [record.deliverableId, record]));
+      const skipped = [];
       const updated = deliverables.map(deliverable => {
         const record = recordMap.get(deliverable.deliverableId);
-        return record ? mergeDeliverableWithFrontmatter(deliverable, record) : deliverable;
+        if (!record) return deliverable;
+        const merged = mergeDeliverableWithFrontmatter(deliverable, record);
+        if (merged === deliverable) skipped.push(`${record.deliverableId}(${record.fileName || '正本'})`);
+        return merged;
       });
-      const changed = updated.filter(item => recordMap.has(item.deliverableId));
+      const changed = updated.filter(item => item.canonicalFileName);
       if (changed.length) {
         console.log(`%c✓ 加载交付物正本文件：${changed.length} 项`, 'color:#27ae60;');
       } else {
         console.log('%cℹ 未读取到交付物正本文件，继续使用旧覆盖层/默认字段', 'color:#8b90a0;');
+      }
+      if (skipped.length) {
+        console.warn(`跳过与当前计划任务不匹配的交付物正本：${skipped.join('、')}`);
       }
       return updated;
     } catch (error) {

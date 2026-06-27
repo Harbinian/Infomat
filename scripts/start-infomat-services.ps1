@@ -12,6 +12,8 @@ $config = Get-Content -Raw -LiteralPath $configPath | ConvertFrom-Json
 
 $fixedMdmPort = [int]$config.mdm.port
 $fixedPmoPort = [int]$config.pmo.port
+$fixedPmoBindHost = [string]$config.pmo.bindHost
+if (-not $fixedPmoBindHost) { $fixedPmoBindHost = [string]$config.pmo.host }
 $fixedMysqlHost = [string]$config.mysql.host
 $fixedMysqlPort = [int]$config.mysql.port
 $fixedMysqlUser = [string]$config.mysql.user
@@ -154,7 +156,7 @@ Start-Process -FilePath "npm.cmd" `
   -RedirectStandardError (Join-Path $logDir "mdm-platform.err.log")
 
 Start-Process -FilePath "npm.cmd" `
-  -ArgumentList "run dev -- --host 127.0.0.1 --port $fixedPmoPort --strictPort" `
+  -ArgumentList "run dev -- --host $fixedPmoBindHost --port $fixedPmoPort --strictPort" `
   -WorkingDirectory $pmoDir `
   -WindowStyle Hidden `
   -RedirectStandardOutput (Join-Path $logDir "pmo-gantt.out.log") `
@@ -165,5 +167,5 @@ Wait-Tcp -HostName "127.0.0.1" -Port $fixedPmoPort -Name "PMO"
 
 Write-Host "Fixed MySQL: $fixedMysqlHost`:$fixedMysqlPort / $fixedMysqlDatabase / $fixedMysqlUser"
 Write-Host "MDM: http://localhost:$fixedMdmPort/ ready"
-Write-Host "PMO: http://127.0.0.1:$fixedPmoPort/ ready"
+Write-Host "PMO: http://127.0.0.1:$fixedPmoPort/ ready, bind $fixedPmoBindHost`:$fixedPmoPort"
 Write-Host "Logs: $logDir"

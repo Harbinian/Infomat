@@ -38,7 +38,7 @@ npm run smoke:infomat-services
 | 项 | 固定值 |
 |---|---|
 | MDM | `127.0.0.1:3000` |
-| PMO | `127.0.0.1:5173` |
+| PMO | 本机访问 `127.0.0.1:5173`，服务监听 `0.0.0.0:5173` |
 | MySQL | `localhost:3307` |
 | MySQL 用户 / 库 | `mdm_user` / `infomat_mdm` |
 | MySQL 连接池 | `MYSQL_CONNECTION_LIMIT=16` |
