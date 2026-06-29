@@ -4,7 +4,7 @@
 
 ## 当前真源
 
-甘特图和 PMO 看板任务数据已切换为 Markdown 真源。历史 XLSX / MPP 已废弃，不再保留或读取。
+甘特图和 PMO 看板任务数据已切换为 Markdown 真源。历史 XLSX / MPP / CSV 任务导入文件已废弃，不再保留或读取。
 
 | 项目 | 当前口径 |
 |------|----------|
@@ -14,7 +14,7 @@
 | 工作平衡 | `pmo/信息化项目_工作平衡.md` |
 | 工作开展原则 | `pmo/信息化项目_工作开展原则.md` |
 | 任务数 | 516 |
-| 字段数 | 52 |
+| 字段数 | 53 |
 | 项目周期 | 2026-06-16 至 2028-02-15 |
 | 里程碑数量 | 47 |
 | H5 重点展示任务 | 251 |
@@ -63,7 +63,7 @@ http://localhost:5174/#/procedure-dashboard
 4. 在 `pmo/` 下运行：
 
 ```bash
-python convert_xlsx.py
+python build_pmo_task_data.py
 ```
 
 脚本会同时写入：
@@ -90,8 +90,9 @@ npm run test:pmo-task-data
 | 字段组 | 字段 |
 |--------|------|
 | 基础展示字段 | `id`、`wbs`、`name`、`type`、`duration`、`start`、`finish`、`predecessors`、`resources`、`department`、`vendor`、`reviewer`、`risk`、`milestone`、`deliverable`、`notes` |
-| 执行管控字段 | `viewCategory`、`phaseGateNo`、`isCriticalControl`、`versionControlObject`、`changeLevel`、`integrationStartCondition`、`isH5Focus`、`phaseGateName`、`releaseRule`、`contractPaymentControl`、`h5DiagnosticRule`、`executionNote` |
+| 执行管控字段 | `viewCategory`、`phaseGateNo`、`isCriticalControl`、`versionControlObject`、`changeLevel`、`integrationStartCondition`、`isH5Focus`、`phaseGateName`、`releaseRule`、`contractPaymentControl`、`h5DiagnosticRule`、`executionNote`、`milestoneOverrideReason` |
 | 执行标准字段 | `executionStandardId`、`inputMaterialList`、`checklistId`、`completionCriteria`、`evidenceRequirements`、`standardGapFlag`、`standardDeferredReason` |
+| 执行标准缺口治理字段 | `requiresExecutionStandard`、`standardsGapBucket`、`standardsGapReasons`、`standardsGapPriorityScore`、`suggestedStandardId`、`suggestedAction` |
 
 ## Console 与已知问题
 
@@ -117,7 +118,7 @@ pmo/
 │   └── page-snapshots/
 ├── tasks.json
 ├── pmo-source-manifest.json
-├── convert_xlsx.py
+├── build_pmo_task_data.py
 ├── pmo-gantt-known-issues.md
 ├── PMO项目计划管控体系建设方案_V1.md
 ├── WBS评审记录_V1.md

@@ -3,7 +3,7 @@
   "snapshotDate": "2026-06-12",
   "authoritativeMode": "markdown-only",
   "deprecatedInputs": {
-    "status": "历史 XLSX/MPP 已废弃；当前不再保留或读取 Project 导入表、旧版备份和 MPP 文件"
+    "status": "历史 XLSX/MPP/CSV 任务导入文件已废弃；当前不再保留或读取 Project 导入表、旧版备份、MPP 或 CSV 文件"
   },
   "sourceDocuments": [
     {
@@ -11,7 +11,7 @@
       "path": "信息化项目_计划管控真源.md",
       "purpose": "维护任务排程、资源责任、风险交付、阶段门和执行管控字段",
       "exists": true,
-      "sha256_16": "f83955cf6b8b4de3"
+      "sha256_16": "210c93e5f1bbc291"
     },
     {
       "role": "WBS结构真源",
@@ -39,7 +39,7 @@
       "path": "信息化项目_执行标准真源.md",
       "purpose": "维护执行标准卡正文、检查清单、完成判定和证据要求",
       "exists": true,
-      "sha256_16": "48dae9d93a402e97"
+      "sha256_16": "2779d072a4f03bf6"
     }
   ],
   "serviceOutputs": [
@@ -49,12 +49,31 @@
   ],
   "taskSummary": {
     "recordCount": 516,
-    "fieldCount": 52,
+    "fieldCount": 53,
     "projectStart": "2026-06-16",
     "projectFinish": "2028-02-15",
     "milestoneCount": 47,
     "criticalControlCount": 112,
     "h5FocusCount": 251
   },
-  "updateRule": "修改 MD 真源后运行 python convert_xlsx.py，将计划数据输入甘特图和 PMO 看板服务。"
+  "standardGovernance": {
+    "schemaVersion": "pmo-standard-gap-operations-v1",
+    "referenceDate": "2026-06-12",
+    "standardSource": "信息化项目_执行标准真源.md",
+    "generatedBy": "pmo/build_pmo_task_data.py",
+    "taskCount": 516,
+    "fieldCount": 53,
+    "bucketCounts": {
+      "必须补": 211,
+      "自动可补": 61,
+      "合理暂缓": 94,
+      "需拆分后补": 53,
+      "人工复核": 28
+    },
+    "actionableGapCount": 353,
+    "highRiskActionableCount": 168,
+    "criticalControlActionableCount": 70,
+    "phaseGateActionableCount": 33
+  },
+  "updateRule": "修改 MD 真源后运行 python build_pmo_task_data.py，将计划数据输入甘特图和 PMO 看板服务。"
 }

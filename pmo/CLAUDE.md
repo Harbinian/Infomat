@@ -22,7 +22,7 @@ pmo/
 ├── 信息化项目_执行标准真源.md            # 执行标准卡、检查清单、完成判定和证据要求真源
 ├── 信息化项目_工作平衡.md               # 人员分配、例会把关机制和高压窗口
 ├── 信息化项目_工作开展原则.md           # PMO 推进原则、协同边界和闭环规则
-├── convert_xlsx.py                    # MD 真源 → tasks.json / 服务清单转换脚本
+├── build_pmo_task_data.py             # MD 真源 → tasks.json / 服务清单生成脚本
 ├── build-standalone.js                # 生成内嵌数据版 HTML
 ├── report_no_pred_tasks.py            # 无前置任务报告脚本
 ├── pmo-gantt-known-issues.md          # 甘特图已知不修/误判记录
@@ -44,9 +44,9 @@ pmo/
 
 - **启动**：`cd gantt-react && npm run dev` → `http://localhost:5174/`
 - **构建**：`cd gantt-react && npm run build`
-- **数据流**：`信息化项目_计划管控真源.md` + `信息化项目_WBS结构真源.md` → `convert_xlsx.py` → `tasks.json` / `gantt-react/public/tasks.json` → 甘特图/PMO 看板渲染
+- **数据流**：`信息化项目_计划管控真源.md` + `信息化项目_WBS结构真源.md` → `build_pmo_task_data.py` → `tasks.json` / `gantt-react/public/tasks.json` → 甘特图/PMO 看板渲染
 - **服务清单**：`pmo-source-manifest.json` 同步写入 `gantt-react/public/pmo-source-manifest.json`，记录计划管控、WBS结构、执行标准、工作平衡、工作开展原则五类 MD 入口
-- **当前数据**：516 条任务，52 个字段
+- **当前数据**：516 条任务，53 个字段
 
 ### 模块 B 扩展:动态凭证消费 (2026-06-05+)
 
@@ -64,7 +64,7 @@ pmo/
 
 1. 修改 `信息化项目_计划管控真源.md`；如调整 WBS 编号/层级，同步修改 `信息化项目_WBS结构真源.md`
 2. 如调整人员分配或推进机制，同步修改 `信息化项目_工作平衡.md`、`信息化项目_工作开展原则.md`
-3. 运行 `python convert_xlsx.py` 重新生成 `tasks.json`、`gantt-react/public/tasks.json` 和 `pmo-source-manifest.json`
+3. 运行 `python build_pmo_task_data.py` 重新生成 `tasks.json`、`gantt-react/public/tasks.json` 和 `pmo-source-manifest.json`
 4. 确认输出为 `Wrote 516 tasks from 信息化项目_计划管控真源.md`（如任务数变化，先核对 MD 真源）
 5. 刷新浏览器
 

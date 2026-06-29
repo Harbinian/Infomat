@@ -36,6 +36,13 @@ function describeExecutionStandard(task) {
   const standardId = String(task.executionStandardId || '').trim();
   const deferredReason = String(task.standardDeferredReason || '').trim();
   const diagnostics = getExecutionStandardDiagnostics(task);
+  if (task.standardsGapBucket && task.standardsGapBucket !== '合理暂缓') {
+    const suggested = task.suggestedStandardId ? `：${task.suggestedStandardId}` : '';
+    return `${task.standardsGapBucket}${suggested}`;
+  }
+  if (task.standardsGapBucket === '合理暂缓') {
+    return deferredReason ? `暂缓：${deferredReason}` : '合理暂缓';
+  }
   if (standardId && standardId !== '暂缓') return standardId;
   if (standardId === '暂缓') return deferredReason ? `暂缓：${deferredReason}` : '暂缓未说明';
   return diagnostics.length ? diagnostics.join('、') : '-';
