@@ -72,6 +72,11 @@ assert(
 );
 
 const maxDepth = Math.max(...tasks.map(task => depthOf(task.wbs)));
-assert(maxDepth <= 3, `Expected WBS depth <= 3, got ${maxDepth}`);
+assert(maxDepth <= 4, `Expected WBS depth <= 4, got ${maxDepth}`);
+
+const wbs12Tasks = tasks.filter(task => String(task.wbs) === '1.2' || String(task.wbs).startsWith('1.2.'));
+const wbs12MaxDepth = Math.max(...wbs12Tasks.map(task => depthOf(task.wbs)));
+assert(wbs12MaxDepth >= 4, `Expected WBS 1.2 sample to reach depth 4, got ${wbs12MaxDepth}`);
+assert(byWbs.has('1.2.7'), 'Expected WBS 1.2.7 现状调研汇总与评审 to exist');
 
 console.log(`PMO WBS semantic-depth check passed: ${tasks.length} tasks, ${childrenByWbs.size} parent nodes`);

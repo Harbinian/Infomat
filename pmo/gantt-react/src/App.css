@@ -652,6 +652,9 @@ tr.dlv-high-risk { border-left: 3px solid var(--focus); }
   color: var(--c-sys);
 }
 .dlv-action { font-size: 11px; color: var(--c-biz); max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+.standard-cell { max-width: 240px; color: var(--c-direct); }
+.standard-gap-row .standard-cell { color: var(--c-biz); font-weight: 700; }
+.standard-gap-text { color: var(--c-biz); font-weight: 700; }
 .overdue-days { color: var(--c-biz); font-weight: 700; }
 .empty-row { text-align: center; color: var(--muted); padding: 20px !important; }
 
@@ -773,6 +776,41 @@ tr.dlv-high-risk { border-left: 3px solid var(--focus); }
   border-bottom: 1px solid var(--line);
   color: var(--ink);
   font-size: 15px;
+}
+.pmo-governance-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+.pmo-governance-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(136px, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.pmo-governance-metric {
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.48);
+  padding: 9px 10px;
+  min-width: 0;
+}
+.pmo-governance-metric .metric-value {
+  display: block;
+  font-family: "Source Han Serif SC", "Noto Serif CJK SC", "Songti SC", serif;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--ink);
+}
+.pmo-governance-metric .metric-label {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
 }
 .empty-text { color: var(--muted); font-size: 13px; padding: 12px 0; }
 .gate-missing-list { display: flex; flex-direction: column; gap: 8px; }

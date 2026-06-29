@@ -2,9 +2,8 @@
   "schemaVersion": "pmo-service-source-manifest-v1",
   "snapshotDate": "2026-06-12",
   "authoritativeMode": "markdown-only",
-  "legacyInput": {
-    "xlsx": "信息化项目_Project_H5最终执行版_导入表.xlsx",
-    "status": "历史导入/备份口径；不再作为默认真源"
+  "deprecatedInputs": {
+    "status": "历史 XLSX/MPP 已废弃；当前不再保留或读取 Project 导入表、旧版备份和 MPP 文件"
   },
   "sourceDocuments": [
     {
@@ -12,14 +11,14 @@
       "path": "信息化项目_计划管控真源.md",
       "purpose": "维护任务排程、资源责任、风险交付、阶段门和执行管控字段",
       "exists": true,
-      "sha256_16": "9ee2715cdbbee404"
+      "sha256_16": "f83955cf6b8b4de3"
     },
     {
       "role": "WBS结构真源",
       "path": "信息化项目_WBS结构真源.md",
       "purpose": "维护 WBS 编号、父子层级、排序和摘要/里程碑结构",
       "exists": true,
-      "sha256_16": "a88ecd4192883a51"
+      "sha256_16": "2d4091df2246e19b"
     },
     {
       "role": "工作平衡",
@@ -34,6 +33,13 @@
       "purpose": "维护 PMO 推进原则、协同边界、阶段确认和闭环规则",
       "exists": true,
       "sha256_16": "241c08a1f361cf42"
+    },
+    {
+      "role": "执行标准真源",
+      "path": "信息化项目_执行标准真源.md",
+      "purpose": "维护执行标准卡正文、检查清单、完成判定和证据要求",
+      "exists": true,
+      "sha256_16": "48dae9d93a402e97"
     }
   ],
   "serviceOutputs": [
@@ -42,13 +48,13 @@
     "gantt-react/public/pmo-source-manifest.json"
   ],
   "taskSummary": {
-    "recordCount": 467,
-    "fieldCount": 45,
+    "recordCount": 516,
+    "fieldCount": 52,
     "projectStart": "2026-06-16",
     "projectFinish": "2028-02-15",
-    "milestoneCount": 46,
-    "criticalControlCount": 75,
-    "h5FocusCount": 214
+    "milestoneCount": 47,
+    "criticalControlCount": 112,
+    "h5FocusCount": 251
   },
   "updateRule": "修改 MD 真源后运行 python convert_xlsx.py，将计划数据输入甘特图和 PMO 看板服务。"
 }

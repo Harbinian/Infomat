@@ -1,11 +1,8 @@
-import csv
 import hashlib
 import json
 import pathlib
 import re
 from datetime import date, datetime
-
-import openpyxl
 
 
 ROOT = pathlib.Path(__file__).resolve().parent
@@ -15,9 +12,7 @@ PLAN_SOURCE_MD = "信息化项目_计划管控真源.md"
 WBS_SOURCE_MD = "信息化项目_WBS结构真源.md"
 WORK_BALANCE_MD = "信息化项目_工作平衡.md"
 WORK_PRINCIPLES_MD = "信息化项目_工作开展原则.md"
-
-LEGACY_SOURCE_XLSX = "信息化项目_Project_H5最终执行版_导入表.xlsx"
-PREFERRED_TASK_SHEET = "Project导入任务表_最终执行版"
+EXECUTION_STANDARD_MD = "信息化项目_执行标准真源.md"
 
 BASE_FIELD_MAP = [
     ("ID", "id"),
@@ -52,6 +47,18 @@ EXECUTION_FIELD_MAP = [
     ("H5诊断规则", "h5DiagnosticRule"),
     ("执行说明", "executionNote"),
 ]
+
+EXECUTION_STANDARD_FIELD_MAP = [
+    ("执行标准ID", "executionStandardId"),
+    ("输入资料清单", "inputMaterialList"),
+    ("检查清单ID", "checklistId"),
+    ("完成判定", "completionCriteria"),
+    ("证据要求", "evidenceRequirements"),
+    ("标准缺失标记", "standardGapFlag"),
+    ("标准暂缓原因", "standardDeferredReason"),
+]
+
+TASK_FIELD_MAP = BASE_FIELD_MAP + EXECUTION_FIELD_MAP + EXECUTION_STANDARD_FIELD_MAP
 
 
 def norm_text(v):
@@ -118,6 +125,8 @@ def map_task(row):
             task[key] = norm_text(row.get(source_name))
     for source_name, key in EXECUTION_FIELD_MAP:
         task[key] = norm_text(row.get(source_name))
+    for source_name, key in EXECUTION_STANDARD_FIELD_MAP:
+        task[key] = norm_text(row.get(source_name))
     return task
 
 
@@ -127,40 +136,6 @@ def read_tasks_from_md(plan_path: pathlib.Path):
     tasks = [map_task(row) for row in rows if norm_text(row.get("任务名称"))]
     validate_tasks(tasks)
     return tasks, data
-
-
-def read_tasks_from_xlsx(xlsx_path: pathlib.Path):
-    wb = openpyxl.load_workbook(xlsx_path, data_only=True)
-    target = PREFERRED_TASK_SHEET if PREFERRED_TASK_SHEET in wb.sheetnames else None
-    if target is None:
-        for sn in wb.sheetnames:
-            if "Project" in sn and "导入任务" in sn:
-                target = sn
-                break
-    if target is None:
-        raise RuntimeError(f"Sheet containing 'Project导入任务表' not found. Available: {wb.sheetnames}")
-    ws = wb[target]
-
-    header = [norm_text(c.value) for c in ws[1]]
-    idx = {name: i for i, name in enumerate(header)}
-
-    def get(row, name):
-        i = idx.get(name)
-        if i is None or i >= len(row):
-            return None
-        return row[i]
-
-    rows = []
-    for r in ws.iter_rows(min_row=2, values_only=True):
-        if not r:
-            continue
-        if not norm_text(get(r, "任务名称")):
-            continue
-        rows.append({name: get(r, name) for name in header})
-
-    tasks = [map_task(row) for row in rows]
-    validate_tasks(tasks)
-    return tasks
 
 
 def validate_tasks(tasks):
@@ -178,16 +153,6 @@ def validate_tasks(tasks):
 
 def write_tasks_json(tasks, out_path: pathlib.Path):
     out_path.write_text(json.dumps(tasks, ensure_ascii=False, indent=2), encoding="utf-8")
-
-
-def write_tasks_csv(tasks, out_path: pathlib.Path):
-    header = [source_name for source_name, _ in BASE_FIELD_MAP] + [source_name for source_name, _ in EXECUTION_FIELD_MAP]
-    fields = BASE_FIELD_MAP + EXECUTION_FIELD_MAP
-    with out_path.open("w", encoding="utf-8", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow(header)
-        for task in tasks:
-            writer.writerow([task.get(key) or "" for _, key in fields])
 
 
 def file_digest(path: pathlib.Path):
@@ -219,6 +184,11 @@ def build_source_manifest(tasks, plan_data):
             "path": WORK_PRINCIPLES_MD,
             "purpose": "维护 PMO 推进原则、协同边界、阶段确认和闭环规则",
         },
+        {
+            "role": "执行标准真源",
+            "path": EXECUTION_STANDARD_MD,
+            "purpose": "维护执行标准卡正文、检查清单、完成判定和证据要求",
+        },
     ]
     for doc in source_docs:
         path = ROOT / doc["path"]
@@ -239,9 +209,8 @@ def build_source_manifest(tasks, plan_data):
         "schemaVersion": "pmo-service-source-manifest-v1",
         "snapshotDate": summary.get("snapshotDate") or plan_data.get("snapshotDate") or "2026-06-05",
         "authoritativeMode": "markdown-only",
-        "legacyInput": {
-            "xlsx": LEGACY_SOURCE_XLSX,
-            "status": "历史导入/备份口径；不再作为默认真源",
+        "deprecatedInputs": {
+            "status": "历史 XLSX/MPP 已废弃；当前不再保留或读取 Project 导入表、旧版备份和 MPP 文件",
         },
         "sourceDocuments": source_docs,
         "serviceOutputs": [
@@ -260,7 +229,6 @@ def write_manifest(manifest, out_path: pathlib.Path):
 
 def main():
     tasks_path = ROOT / "tasks.json"
-    csv_path = ROOT / "信息化项目.csv"
     manifest_path = ROOT / "pmo-source-manifest.json"
     react_public = ROOT / "gantt-react" / "public"
     react_tasks_path = react_public / "tasks.json"
@@ -270,7 +238,6 @@ def main():
     manifest = build_source_manifest(tasks, plan_data)
 
     write_tasks_json(tasks, tasks_path)
-    write_tasks_csv(tasks, csv_path)
     write_manifest(manifest, manifest_path)
     react_tasks_path.write_text(tasks_path.read_text(encoding="utf-8"), encoding="utf-8")
     react_manifest_path.write_text(manifest_path.read_text(encoding="utf-8"), encoding="utf-8")

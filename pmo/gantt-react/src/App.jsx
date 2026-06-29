@@ -78,6 +78,24 @@ const loadDeliverableFsApi = import.meta.env.DEV
     throw error;
   };
 
+async function loadProjectGovernanceSnapshot() {
+  try {
+    const response = await fetch('project-governance-weekly-report.json', { cache: 'no-store' });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return {
+      status: 'ready',
+      data: await response.json(),
+      error: null,
+    };
+  } catch (error) {
+    return {
+      status: 'missing',
+      data: null,
+      error: error.message || '项目治理快照未生成',
+    };
+  }
+}
+
 function openEvidenceDatabase() {
   return new Promise((resolve, reject) => {
     if (!window.indexedDB) {
@@ -153,13 +171,18 @@ export default function App() {
   const [ledgerSort, setLedgerSort] = useState({ key: 'plannedFinish', direction: 'asc' });
   const [taskFilters, setTaskFilters] = useState({});
   const [localTransitions, setLocalTransitions] = useState({});
+  const [projectGovernance, setProjectGovernance] = useState({ status: 'loading', data: null, error: null });
 
   const loadProjectData = useCallback(async ({ showLoading = false } = {}) => {
     if (showLoading) setLoading(true);
     try {
-      const response = await fetch('tasks.json');
+      const [response, projectGovernanceSnapshot] = await Promise.all([
+        fetch('tasks.json'),
+        loadProjectGovernanceSnapshot(),
+      ]);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
+      setProjectGovernance(projectGovernanceSnapshot);
       setRawTasks(data);
       const normalized = normalizeTasks(data);
       computeProjectRange(normalized);
@@ -480,9 +503,9 @@ export default function App() {
       case 'overdue':
         return <OverdueDeliverables deliverables={deliverablesWithEvidence} pmoDate={pmoDate} onSelectDeliverable={handleSelectDeliverable} />;
       case 'pmo':
-        return <PMOWeeklyView deliverables={deliverablesWithEvidence} phaseGates={phaseGates} tasks={allTasks} pmoDate={pmoDate} onSelectDeliverable={handleSelectDeliverable} />;
+        return <PMOWeeklyView deliverables={deliverablesWithEvidence} phaseGates={phaseGates} tasks={allTasks} pmoDate={pmoDate} projectGovernance={projectGovernance} onSelectDeliverable={handleSelectDeliverable} />;
       default:
-        return <PMOWeeklyView deliverables={deliverablesWithEvidence} phaseGates={phaseGates} tasks={allTasks} pmoDate={pmoDate} onSelectDeliverable={handleSelectDeliverable} />;
+        return <PMOWeeklyView deliverables={deliverablesWithEvidence} phaseGates={phaseGates} tasks={allTasks} pmoDate={pmoDate} projectGovernance={projectGovernance} onSelectDeliverable={handleSelectDeliverable} />;
     }
   };
 

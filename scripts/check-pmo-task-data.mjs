@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const root = process.cwd();
@@ -52,6 +52,13 @@ const manifestHash = compareTextHash(files.rootManifest, files.appManifest);
 
 const tasks = readJson(files.rootTasks);
 const manifest = readJson(files.rootManifest);
+const deprecatedPmoInputs = [
+  'pmo/信息化项目_Project_H5最终执行版_导入表.xlsx',
+  'pmo/信息化项目_Project_H5最终执行版_导入表_旧版备份.xlsx',
+  'pmo/信息化项目组项目管理表.mpp',
+  'pmo/信息化项目.csv',
+  'pmo/md_to_xlsx.py',
+];
 
 assert(Array.isArray(tasks), `${files.rootTasks} must be a JSON array`);
 assert(tasks.length > 0, `${files.rootTasks} must contain at least one task`);
@@ -65,6 +72,10 @@ assert(
     manifest.serviceOutputs.includes('gantt-react/public/tasks.json'),
   'manifest serviceOutputs must list both PMO task outputs'
 );
+assert(!manifest.legacyInput, 'manifest must not expose legacyInput for removed XLSX/MPP files');
+for (const relativePath of deprecatedPmoInputs) {
+  assert(!existsSync(resolve(root, relativePath)), `${relativePath} has been retired and must not exist`);
+}
 
 const kickoffTask = tasks.find((task) => task.name === '项目启动会召开');
 assert(kickoffTask, 'tasks must include 项目启动会召开');

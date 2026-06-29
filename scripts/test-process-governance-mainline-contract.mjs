@@ -6,6 +6,7 @@ const root = resolve(import.meta.dirname, '..');
 const data = JSON.parse(readFileSync(resolve(root, 'docs', 'company-sankey-data.json'), 'utf8'));
 const pkg = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8'));
 const dashboardCheckSource = readFileSync(resolve(root, 'scripts', 'check-dashboard-data.mjs'), 'utf8');
+const mainlineTestSource = readFileSync(resolve(root, 'scripts', 'test-process-governance-mainline.mjs'), 'utf8');
 
 assert.ok(Array.isArray(data.nodes), 'company snapshot should keep nodes');
 assert.ok(Array.isArray(data.links), 'company snapshot should keep links');
@@ -62,9 +63,18 @@ assert.strictEqual(
   'node scripts/test-process-governance-mainline.mjs',
   'root package should expose the aggregated process governance mainline test'
 );
+assert.strictEqual(
+  pkg.scripts && pkg.scripts['test:project-governance-upgrade'],
+  'node scripts/test-project-governance-report.mjs && npm --prefix apps/mdm-platform run test:role-workbench && npm --prefix apps/mdm-platform run test:role-workbench-mysql',
+  'root package should expose the project governance upgrade test'
+);
 assert.ok(
   existsSync(resolve(root, 'scripts', 'test-process-governance-mainline.mjs')),
   'test-process-governance-mainline.mjs should exist'
+);
+assert.ok(
+  mainlineTestSource.includes('test:project-governance-upgrade'),
+  'aggregated process governance mainline test should include the project governance upgrade test'
 );
 assert.strictEqual(
   pkg.scripts && pkg.scripts['test:norms-source-manifest'],
