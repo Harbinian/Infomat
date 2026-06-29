@@ -4,6 +4,10 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..');
+const DEFAULT_MARKDOWN_OUTPUT = path.join('docs', 'reports', 'project-governance-weekly-report.md');
+const DEFAULT_JSON_OUTPUT = path.join('pmo', 'gantt-react', 'public', 'project-governance-weekly-report.json');
+const INPUT_BASELINE_PATH = path.join('docs', 'norms', '流程治理', '输入基线问题待办.md');
+const QUALITY_REPORT_PATH = path.join('docs', 'reports', 'dcm-bbm-quality-report.md');
 const sampleDepartments = ['工程技术部', '项目管理部'];
 const explicitConfirmers = {
   工程技术部: '池炳辉',
@@ -23,6 +27,14 @@ function readText(relativePath) {
   return fs.existsSync(fullPath) ? fs.readFileSync(fullPath, 'utf8') : '';
 }
 
+function normalizeRelativePath(filePath) {
+  return filePath.replace(/\\/g, '/');
+}
+
+function sourceStatus(relativePath) {
+  return fs.existsSync(path.join(repoRoot, relativePath)) ? 'present' : 'missing';
+}
+
 function parseMarkdownTableRows(text) {
   return text
     .split(/\r?\n/)
@@ -32,7 +44,7 @@ function parseMarkdownTableRows(text) {
 }
 
 function countInputBaselineIssues() {
-  const text = readText(path.join('docs', 'norms', '流程治理', '输入基线问题待办.md'));
+  const text = readText(INPUT_BASELINE_PATH);
   const rows = parseMarkdownTableRows(text).filter(row => row[0] !== '编号' && sampleDepartments.includes(row[1]));
   const byDepartment = new Map(sampleDepartments.map(department => [department, {
     total: 0,
@@ -53,7 +65,7 @@ function countInputBaselineIssues() {
 }
 
 function countQualityIssues() {
-  const text = readText(path.join('docs', 'reports', 'dcm-bbm-quality-report.md'));
+  const text = readText(QUALITY_REPORT_PATH);
   const rows = parseMarkdownTableRows(text).filter(row => ['BLOCK', 'WARN', 'INFO'].includes(row[0]));
   const byDepartment = new Map(sampleDepartments.map(department => [department, {
     BLOCK: 0,
@@ -83,9 +95,14 @@ function emptyWorkbenchCounts() {
 
 function countWorkbenchSnapshot(snapshotPath) {
   const counts = emptyWorkbenchCounts();
-  if (!snapshotPath) return { counts, source: '未提供工作台快照' };
+  if (!snapshotPath) {
+    return { counts, source: '未提供工作台快照', sourcePath: '', sourceStatus: 'not_provided' };
+  }
   const fullPath = path.resolve(repoRoot, snapshotPath);
-  if (!fs.existsSync(fullPath)) return { counts, source: `未找到工作台快照：${snapshotPath}` };
+  const sourcePath = normalizeRelativePath(path.relative(repoRoot, fullPath));
+  if (!fs.existsSync(fullPath)) {
+    return { counts, source: `未找到工作台快照：${snapshotPath}`, sourcePath, sourceStatus: 'missing' };
+  }
 
   const payload = JSON.parse(fs.readFileSync(fullPath, 'utf8'));
   const workItems = Array.isArray(payload)
@@ -101,7 +118,7 @@ function countWorkbenchSnapshot(snapshotPath) {
     if (Object.prototype.hasOwnProperty.call(bucket, type)) bucket[type] += 1;
     if (item.overdue) bucket.overdue += 1;
   }
-  return { counts, source: path.relative(repoRoot, fullPath).replace(/\\/g, '/') };
+  return { counts, source: sourcePath, sourcePath, sourceStatus: 'present' };
 }
 
 function formatTypeSummary(typeMap) {
@@ -110,20 +127,87 @@ function formatTypeSummary(typeMap) {
   return entries.slice(0, 4).map(([type, count]) => `${type} ${count}`).join('；');
 }
 
-function renderReport({ date, outputPath, workbenchSnapshot }) {
+function buildReportSnapshot({ date, workbenchSnapshot }) {
   const inputBaseline = countInputBaselineIssues();
   const quality = countQualityIssues();
-  const { counts: workbench, source: workbenchSource } = countWorkbenchSnapshot(workbenchSnapshot);
+  const { counts: workbench, source: workbenchSource, sourcePath: workbenchSourcePath, sourceStatus: workbenchSourceStatus } = countWorkbenchSnapshot(workbenchSnapshot);
 
-  const rows = sampleDepartments.map(department => {
+  const departments = sampleDepartments.map(department => {
     const input = inputBaseline.get(department);
     const q = quality.get(department);
     const w = workbench.get(department);
-    const qualityText = `BLOCK ${q.BLOCK} / WARN ${q.WARN}`;
     const nextStep = input.open > 0
       ? '先处理输入基线待确认问题，再进入字段和质量闭环'
       : '维护本周关闭记录并准备双周复盘';
-    return `| ${department} | ${explicitConfirmers[department]} | ${input.open} | ${qualityText} | ${w.field_ledger_gap} | ${w.gold_source_confirmation} | ${w.overdue} | ${nextStep} |`;
+    return {
+      department,
+      confirmPerson: explicitConfirmers[department],
+      inputBaselineOpen: input.open,
+      inputBaselineTypes: [...input.byType.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .map(([type, count]) => ({ type, count })),
+      qualityBlock: q.BLOCK,
+      qualityWarn: q.WARN,
+      fieldLedgerGap: w.field_ledger_gap,
+      goldSourceConfirmation: w.gold_source_confirmation,
+      overdue: w.overdue,
+      nextStep
+    };
+  });
+
+  const summary = departments.reduce((acc, row) => {
+    acc.inputBaselineOpen += row.inputBaselineOpen;
+    acc.qualityBlock += row.qualityBlock;
+    acc.qualityWarn += row.qualityWarn;
+    acc.fieldLedgerGap += row.fieldLedgerGap;
+    acc.goldSourceConfirmation += row.goldSourceConfirmation;
+    acc.overdue += row.overdue;
+    return acc;
+  }, {
+    inputBaselineOpen: 0,
+    qualityBlock: 0,
+    qualityWarn: 0,
+    fieldLedgerGap: 0,
+    goldSourceConfirmation: 0,
+    overdue: 0
+  });
+
+  return {
+    schemaVersion: 1,
+    generatedDate: date,
+    scope: {
+      type: 'sample',
+      departments: [...sampleDepartments]
+    },
+    sources: [
+      {
+        key: 'inputBaselineIssues',
+        path: normalizeRelativePath(INPUT_BASELINE_PATH),
+        status: sourceStatus(INPUT_BASELINE_PATH)
+      },
+      {
+        key: 'qualityReport',
+        path: normalizeRelativePath(QUALITY_REPORT_PATH),
+        status: sourceStatus(QUALITY_REPORT_PATH)
+      },
+      {
+        key: 'workbenchSnapshot',
+        path: workbenchSourcePath,
+        status: workbenchSourceStatus,
+        label: workbenchSource
+      }
+    ],
+    summary,
+    departments
+  };
+}
+
+function renderReport({ date, outputPath, jsonOutputPath, workbenchSnapshot }) {
+  const snapshot = buildReportSnapshot({ date, workbenchSnapshot });
+
+  const rows = snapshot.departments.map(row => {
+    const qualityText = `BLOCK ${row.qualityBlock} / WARN ${row.qualityWarn}`;
+    return `| ${row.department} | ${row.confirmPerson} | ${row.inputBaselineOpen} | ${qualityText} | ${row.fieldLedgerGap} | ${row.goldSourceConfirmation} | ${row.overdue} | ${row.nextStep} |`;
   });
 
   const lines = [
@@ -132,18 +216,18 @@ function renderReport({ date, outputPath, workbenchSnapshot }) {
     `- 生成日期：${date}`,
     '- 样板部门：工程技术部、项目管理部',
     '- MDM 定位：承接、分派、记录、追踪和验证；规则制定和发布仍由人工回源核验后受控完成。',
-    `- 工作台快照：${workbenchSource}`,
+    `- 工作台快照：${snapshot.sources.find(source => source.key === 'workbenchSnapshot').label}`,
     '',
     '## 本周治理看板',
     '',
     '| 指标 | 工程技术部 | 项目管理部 | 说明 |',
     '|---|---:|---:|---|',
-    `| 输入基线待确认问题 | ${inputBaseline.get('工程技术部').open} | ${inputBaseline.get('项目管理部').open} | 来自 \`docs/norms/流程治理/输入基线问题待办.md\` |`,
-    `| 资料质量 BLOCK | ${quality.get('工程技术部').BLOCK} | ${quality.get('项目管理部').BLOCK} | 来自 \`docs/reports/dcm-bbm-quality-report.md\` |`,
-    `| 资料质量 WARN | ${quality.get('工程技术部').WARN} | ${quality.get('项目管理部').WARN} | 用于提示需回源复核的质量风险 |`,
-    `| 字段台账缺口 | ${workbench.get('工程技术部').field_ledger_gap} | ${workbench.get('项目管理部').field_ledger_gap} | 来自角色工作台工作项快照 |`,
-    `| 待确认黄金源 | ${workbench.get('工程技术部').gold_source_confirmation} | ${workbench.get('项目管理部').gold_source_confirmation} | 来自角色工作台工作项快照 |`,
-    `| 超期事项 | ${workbench.get('工程技术部').overdue} | ${workbench.get('项目管理部').overdue} | 以工作项 dueDate 与当前日期判断 |`,
+    `| 输入基线待确认问题 | ${snapshot.departments[0].inputBaselineOpen} | ${snapshot.departments[1].inputBaselineOpen} | 来自 \`docs/norms/流程治理/输入基线问题待办.md\` |`,
+    `| 资料质量 BLOCK | ${snapshot.departments[0].qualityBlock} | ${snapshot.departments[1].qualityBlock} | 来自 \`docs/reports/dcm-bbm-quality-report.md\` |`,
+    `| 资料质量 WARN | ${snapshot.departments[0].qualityWarn} | ${snapshot.departments[1].qualityWarn} | 用于提示需回源复核的质量风险 |`,
+    `| 字段台账缺口 | ${snapshot.departments[0].fieldLedgerGap} | ${snapshot.departments[1].fieldLedgerGap} | 来自角色工作台工作项快照 |`,
+    `| 待确认黄金源 | ${snapshot.departments[0].goldSourceConfirmation} | ${snapshot.departments[1].goldSourceConfirmation} | 来自角色工作台工作项快照 |`,
+    `| 超期事项 | ${snapshot.departments[0].overdue} | ${snapshot.departments[1].overdue} | 以工作项 dueDate 与当前日期判断 |`,
     '',
     '## 双部门治理台账',
     '',
@@ -153,7 +237,10 @@ function renderReport({ date, outputPath, workbenchSnapshot }) {
     '',
     '## 输入基线问题分布',
     '',
-    ...sampleDepartments.map(department => `- ${department}：${formatTypeSummary(inputBaseline.get(department).byType)}`),
+    ...snapshot.departments.map(row => {
+      const typeMap = new Map(row.inputBaselineTypes.map(item => [item.type, item.count]));
+      return `- ${row.department}：${formatTypeSummary(typeMap)}`;
+    }),
     '',
     '## PMO 节奏',
     '',
@@ -171,12 +258,17 @@ function renderReport({ date, outputPath, workbenchSnapshot }) {
 
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
   fs.writeFileSync(outputPath, lines.join('\n'), 'utf8');
-  return outputPath;
+  fs.mkdirSync(path.dirname(jsonOutputPath), { recursive: true });
+  fs.writeFileSync(jsonOutputPath, `${JSON.stringify(snapshot, null, 2)}\n`, 'utf8');
+  return { outputPath, jsonOutputPath };
 }
 
 const date = argValue('--date', new Date().toISOString().slice(0, 10));
-const outputArg = argValue('--out', path.join('docs', 'reports', 'project-governance-weekly-report.md'));
+const outputArg = argValue('--out', DEFAULT_MARKDOWN_OUTPUT);
 const outputPath = path.resolve(repoRoot, outputArg);
+const jsonOutputArg = argValue('--json-out', DEFAULT_JSON_OUTPUT);
+const jsonOutputPath = path.resolve(repoRoot, jsonOutputArg);
 const workbenchSnapshot = argValue('--workbench-json', '');
-const written = renderReport({ date, outputPath, workbenchSnapshot });
-console.log(`project_governance_report=${path.relative(repoRoot, written).replace(/\\/g, '/')}`);
+const written = renderReport({ date, outputPath, jsonOutputPath, workbenchSnapshot });
+console.log(`project_governance_report=${normalizeRelativePath(path.relative(repoRoot, written.outputPath))}`);
+console.log(`project_governance_snapshot=${normalizeRelativePath(path.relative(repoRoot, written.jsonOutputPath))}`);

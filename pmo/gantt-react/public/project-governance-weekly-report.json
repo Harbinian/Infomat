@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "generatedDate": "2026-06-29",
+  "scope": {
+    "type": "sample",
+    "departments": [
+      "工程技术部",
+      "项目管理部"
+    ]
+  },
+  "sources": [
+    {
+      "key": "inputBaselineIssues",
+      "path": "docs/norms/流程治理/输入基线问题待办.md",
+      "status": "present"
+    },
+    {
+      "key": "qualityReport",
+      "path": "docs/reports/dcm-bbm-quality-report.md",
+      "status": "present"
+    },
+    {
+      "key": "workbenchSnapshot",
+      "path": "",
+      "status": "not_provided",
+      "label": "未提供工作台快照"
+    }
+  ],
+  "summary": {
+    "inputBaselineOpen": 790,
+    "qualityBlock": 25,
+    "qualityWarn": 188,
+    "fieldLedgerGap": 0,
+    "goldSourceConfirmation": 0,
+    "overdue": 0
+  },
+  "departments": [
+    {
+      "department": "工程技术部",
+      "confirmPerson": "池炳辉",
+      "inputBaselineOpen": 790,
+      "inputBaselineTypes": [
+        {
+          "type": "审批链待确认",
+          "count": 163
+        },
+        {
+          "type": "待确认L3",
+          "count": 148
+        },
+        {
+          "type": "待确认A1",
+          "count": 140
+        },
+        {
+          "type": "角色待确认",
+          "count": 139
+        },
+        {
+          "type": "受控传递待确认",
+          "count": 120
+        },
+        {
+          "type": "归档要求待补",
+          "count": 80
+        }
+      ],
+      "qualityBlock": 11,
+      "qualityWarn": 142,
+      "fieldLedgerGap": 0,
+      "goldSourceConfirmation": 0,
+      "overdue": 0,
+      "nextStep": "先处理输入基线待确认问题，再进入字段和质量闭环"
+    },
+    {
+      "department": "项目管理部",
+      "confirmPerson": "范秋南",
+      "inputBaselineOpen": 0,
+      "inputBaselineTypes": [],
+      "qualityBlock": 14,
+      "qualityWarn": 46,
+      "fieldLedgerGap": 0,
+      "goldSourceConfirmation": 0,
+      "overdue": 0,
+      "nextStep": "维护本周关闭记录并准备双周复盘"
+    }
+  ]
+}
