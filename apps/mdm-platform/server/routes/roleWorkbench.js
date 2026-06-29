@@ -6,17 +6,25 @@ const { requireAuth, getUserEffectivePermissions } = require('../auth');
 const { mysqlConfigFromEnv } = require('../mysqlConfig');
 const { makeIdentityMysqlRepository } = require('../identityMysqlRepository');
 const { makeProcessGovernanceMysqlRepository } = require('../processGovernanceMysqlRepository');
+const { makeProcessInputBaselineReviewRepository } = require('../processInputBaselineReviewRepository');
 const { ROLE_GUIDES } = require('../roleDefinitions');
 
 let identityRepoPromise = null;
 let identityRepositoryFactory = null;
 let processGovernanceRepoPromise = null;
 let processGovernanceRepositoryFactory = null;
+let inputBaselineReviewRepoPromise = null;
+let inputBaselineReviewRepositoryFactory = null;
 const WORKBENCH_CACHE_TTL_MS = 15 * 1000;
 const roleGroupsCache = new Map();
 const workbenchResponseCache = new Map();
 let processContextBundleCache = null;
 const PROCESS_GOVERNANCE_GLOBAL_ROLES = new Set(['admin', 'decision_group', 'it_lead']);
+const PMO_REVIEW_GATE_ROLES = new Set(['project_lead', 'it_lead', 'decision_group']);
+const SAMPLE_DEPARTMENT_CONFIRMERS = {
+  工程技术部: '池炳辉',
+  项目管理部: '范秋南'
+};
 
 const TODO_TYPE_LABELS = {
   field_confirm: '字段确认',
@@ -25,6 +33,10 @@ const TODO_TYPE_LABELS = {
   conflict_resolution: '冲突协调',
   process_quality: '流程治理质量问题',
   process_mapping_todo: '流程映射待办',
+  input_baseline_issue: '输入基线待确认问题',
+  field_ledger_gap: '字段台账补全',
+  gold_source_confirmation: '待确认黄金源确认',
+  pmo_review_gate: 'PMO治理评审',
   general: '一般待办'
 };
 
@@ -35,7 +47,22 @@ const TODO_TARGETS = {
   conflict_resolution: '#/conflicts',
   process_quality: '#/processGovernance?view=qualityCases',
   process_mapping_todo: '#/processGovernance?view=mappingTodos',
+  input_baseline_issue: '#/processGovernance?view=inputBaselineReview',
+  field_ledger_gap: '#/todos',
+  gold_source_confirmation: '#/todos',
+  pmo_review_gate: '#/processGovernance?view=qualityCases',
   general: '#/todos'
+};
+
+const GOVERNANCE_TYPE_BY_TODO_TYPE = {
+  field_confirm: 'field_ledger_gap',
+  gold_source: 'gold_source_confirmation',
+  terminology: 'input_baseline_issue',
+  conflict_resolution: 'process_quality',
+  process_quality: 'process_quality',
+  process_mapping_todo: 'input_baseline_issue',
+  input_baseline_issue: 'input_baseline_issue',
+  pmo_review_gate: 'pmo_review_gate'
 };
 
 function runAsyncAction(res, action, unavailableMessage) {
@@ -54,6 +81,13 @@ function useMysqlIdentityReadModel() {
 
 function useMysqlProcessGovernanceReadModel() {
   return String(process.env.PROCESS_GOVERNANCE_READ_MODEL || '').toLowerCase() === 'mysql';
+}
+
+function useInputBaselineReviewMysqlStore() {
+  const rawMode = process.env.PROCESS_INPUT_BASELINE_REVIEW_STORE;
+  if (rawMode == null || rawMode === '') return useMysqlProcessGovernanceReadModel();
+  const mode = String(rawMode).trim().toLowerCase();
+  return !['artifact', 'none', 'off', 'false', '0'].includes(mode);
 }
 
 async function identityRepository() {
@@ -114,6 +148,48 @@ function setProcessGovernanceRepositoryFactory(factory) {
 function resetProcessGovernanceRepositoryFactory() {
   processGovernanceRepositoryFactory = null;
   processGovernanceRepoPromise = null;
+}
+
+async function inputBaselineReviewRepository() {
+  if (inputBaselineReviewRepositoryFactory) {
+    return await inputBaselineReviewRepositoryFactory();
+  }
+  if (!inputBaselineReviewRepoPromise) {
+    inputBaselineReviewRepoPromise = (async () => {
+      const pool = mysql.createPool(mysqlConfigFromEnv());
+      const repo = makeProcessInputBaselineReviewRepository(pool);
+      await repo.initSchema();
+      return repo;
+    })();
+  }
+  try {
+    return await inputBaselineReviewRepoPromise;
+  } catch (error) {
+    inputBaselineReviewRepoPromise = null;
+    throw error;
+  }
+}
+
+async function inputBaselineReviewRepositoryOrNull() {
+  if (!inputBaselineReviewRepositoryFactory && !useInputBaselineReviewMysqlStore()) return null;
+  try {
+    return await inputBaselineReviewRepository();
+  } catch (error) {
+    if (process.env.MDM_DB_QUIET !== '1') {
+      console.warn(`input baseline review store unavailable: ${error.message}`);
+    }
+    return null;
+  }
+}
+
+function setInputBaselineReviewRepositoryFactory(factory) {
+  inputBaselineReviewRepositoryFactory = factory;
+  inputBaselineReviewRepoPromise = null;
+}
+
+function resetInputBaselineReviewRepositoryFactory() {
+  inputBaselineReviewRepositoryFactory = null;
+  inputBaselineReviewRepoPromise = null;
 }
 
 function getCurrentRoles(userId, legacyRole) {
@@ -298,6 +374,55 @@ function parseJsonArray(value) {
   }
 }
 
+function isPastDue(dueDate) {
+  if (!dueDate) return false;
+  const parsed = new Date(`${String(dueDate).slice(0, 10)}T23:59:59+08:00`);
+  return !Number.isNaN(parsed.getTime()) && parsed.getTime() < Date.now();
+}
+
+function governanceTypeForItem(item) {
+  return item.governanceType || GOVERNANCE_TYPE_BY_TODO_TYPE[item.type] || item.type || 'general';
+}
+
+function fallbackConfirmPerson(departmentName) {
+  if (departmentName && SAMPLE_DEPARTMENT_CONFIRMERS[departmentName]) {
+    return SAMPLE_DEPARTMENT_CONFIRMERS[departmentName];
+  }
+  return '待明确确认人';
+}
+
+function normalizeWorkItem(item, defaults = {}) {
+  const governanceType = governanceTypeForItem(item);
+  const department = item.department || item.targetDept || item.ownerDept || defaults.department || null;
+  const responsiblePerson = item.responsiblePerson || item.owner || item.ownerName || defaults.responsiblePerson || fallbackConfirmPerson(department);
+  const confirmPerson = item.confirmPerson || item.reviewer || defaults.confirmPerson || responsiblePerson;
+  const currentStatus = item.currentStatus || item.status || defaults.currentStatus || 'pending';
+  const nextStep = item.nextStep || item.actionLabel || defaults.nextStep || '处理事项';
+  return {
+    ...item,
+    governanceType,
+    sourceType: item.sourceType || governanceType,
+    department,
+    responsiblePerson,
+    confirmPerson,
+    currentStatus,
+    nextStep,
+    overdue: item.overdue == null ? isPastDue(item.dueDate) : Boolean(item.overdue)
+  };
+}
+
+function normalizeWorkItems(items, defaults = {}) {
+  return items.map(item => normalizeWorkItem(item, defaults));
+}
+
+function openInputBaselineReviewItem(row) {
+  const decision = String(row.decision || '').trim();
+  const evidenceStatus = String(row.decision_evidence_status || row.evidence_status || '').trim();
+  if (['confirm_not_issue', 'covered_by_existing_mapping', 'no_action_needed'].includes(decision)) return false;
+  if (['source_verified'].includes(evidenceStatus) && decision === 'confirm_not_issue') return false;
+  return true;
+}
+
 function loadProcessContexts(mode, workItems, options = {}) {
   const bundle = cachedProcessContextBundle();
   if (!bundle) return [];
@@ -425,7 +550,13 @@ function loadTodos(req, canViewAll) {
     sample: sampleForTodo(row.type),
     a1Code: row.a1_code || null,
     source: row.from_dept_name || '平台',
-    targetDept: row.to_dept_name || null
+    targetDept: row.to_dept_name || null,
+    status: row.status || 'pending',
+    currentStatus: row.status || 'pending',
+    nextStep: sampleForTodo(row.type),
+    department: row.to_dept_name || row.from_dept_name || null,
+    responsiblePerson: row.to_dept_name ? fallbackConfirmPerson(row.to_dept_name) : '流程治理负责人',
+    confirmPerson: row.to_dept_name ? fallbackConfirmPerson(row.to_dept_name) : '流程治理负责人'
   }));
 }
 
@@ -445,7 +576,12 @@ function qualityCaseWorkItem(row) {
     area: row.area,
     sourceLine: row.source_line,
     status: row.status,
-    ownerDept: row.owner_dept_name || null
+    currentStatus: row.status,
+    nextStep: row.suggestion || '回源核验并提交整改结论',
+    department: row.dept_name || row.owner_dept_name || null,
+    ownerDept: row.owner_dept_name || null,
+    responsiblePerson: row.owner_dept_name ? fallbackConfirmPerson(row.owner_dept_name) : fallbackConfirmPerson(row.dept_name),
+    confirmPerson: fallbackConfirmPerson(row.dept_name || row.owner_dept_name)
   };
 }
 
@@ -523,7 +659,12 @@ function mappingTodoWorkItem(row) {
     area: row.todo_type,
     sourceLine: row.source_line,
     status: row.status,
-    ownerDept: row.owner_dept_name || null
+    currentStatus: row.status,
+    nextStep: row.suggestion || '核对来源文件并提交处理结论',
+    department: row.target_dept_name || row.dept_name || row.owner_dept_name || null,
+    ownerDept: row.owner_dept_name || null,
+    responsiblePerson: fallbackConfirmPerson(row.target_dept_name || row.dept_name || row.owner_dept_name),
+    confirmPerson: fallbackConfirmPerson(row.target_dept_name || row.dept_name || row.owner_dept_name)
   };
 }
 
@@ -573,6 +714,76 @@ async function loadProcessMappingTodosAsync(req, canViewAll, currentDepartmentNa
     .filter(row => !['closed', 'source_resolved', 'accepted'].includes(String(row.status || '')))
     .slice(0, 20)
     .map(mappingTodoWorkItem);
+}
+
+function inputBaselineReviewWorkItem(row, runId) {
+  const stableKey = row.stable_key || row.review_item_id || row.id;
+  const department = row.department || null;
+  const target = `#/processGovernance?view=inputBaselineReview&run=${encodeURIComponent(runId)}&reviewItem=${encodeURIComponent(stableKey)}`;
+  return {
+    id: `input-baseline-review:${runId}:${stableKey}`,
+    type: 'input_baseline_issue',
+    governanceType: 'input_baseline_issue',
+    title: `${TODO_TYPE_LABELS.input_baseline_issue}：${row.content || row.document_name || stableKey}`,
+    roleHint: 'business_contact',
+    urgency: 'medium',
+    dueDate: row.due_date || null,
+    target,
+    actionLabel: '确认输入基线问题',
+    sample: row.suggested_action || '先回到来源文件核验，再确认是否进入流程映射整改或留在问题池。',
+    a1Code: row.a1_code || null,
+    source: row.source_label || row.source_file || row.document_name || '输入基线复核',
+    targetDept: department,
+    department,
+    area: row.issue_type || null,
+    status: row.decision || row.status || 'not_reviewed',
+    currentStatus: row.decision || row.status || 'not_reviewed',
+    nextStep: row.suggested_action || '回源核验并记录复核结论',
+    responsiblePerson: row.owner || fallbackConfirmPerson(department),
+    confirmPerson: row.owner || fallbackConfirmPerson(department),
+    sourceLine: row.source_anchor || null,
+    reviewRunId: runId,
+    reviewStableKey: stableKey,
+    definitionStatus: row.definition_status || row.decision_definition_status || null,
+    evidenceStatus: row.decision_evidence_status || row.evidence_status || null
+  };
+}
+
+async function loadInputBaselineReviewIssuesAsync(canViewAll, currentDepartmentName) {
+  const repo = await inputBaselineReviewRepositoryOrNull();
+  if (!repo || typeof repo.listRuns !== 'function' || typeof repo.getReviewItems !== 'function') return [];
+  const runs = await repo.listRuns();
+  const run = Array.isArray(runs) && runs.length ? runs[0] : null;
+  if (!run || !run.run_id) return [];
+  const filters = canViewAll || !currentDepartmentName ? {} : { dept: currentDepartmentName };
+  const result = await repo.getReviewItems(run.run_id, filters);
+  return (result.items || [])
+    .filter(openInputBaselineReviewItem)
+    .slice(0, 20)
+    .map(row => inputBaselineReviewWorkItem(row, run.run_id));
+}
+
+function pmoReviewGateWorkItems(roleCodes, currentDepartmentName) {
+  if (!roleCodes.some(code => PMO_REVIEW_GATE_ROLES.has(code))) return [];
+  const department = currentDepartmentName || '双部门样板';
+  return [normalizeWorkItem({
+    id: `pmo-review-gate:${department}`,
+    type: 'pmo_review_gate',
+    governanceType: 'pmo_review_gate',
+    title: `PMO治理评审：更新${department}闭环状态`,
+    roleHint: roleCodes.includes('decision_group') ? 'decision_group' : 'project_lead',
+    urgency: 'medium',
+    dueDate: null,
+    target: '#/processGovernance?view=qualityCases',
+    actionLabel: '更新治理周报',
+    sample: '核对新增、关闭、超期、字段台账和待确认黄金源进度；未完成回源核验的事项继续留在问题池。',
+    source: 'PMO治理节奏',
+    department,
+    responsiblePerson: fallbackConfirmPerson(department),
+    confirmPerson: fallbackConfirmPerson(department),
+    currentStatus: 'weekly_review',
+    nextStep: '汇总本周治理状态并标出需决策事项'
+  })];
 }
 
 function roleHintForTodo(type) {
@@ -649,7 +860,7 @@ function fallbackActions(ownedRoles) {
 
 function guidanceItemsForRoles(ownedRoles) {
   const roles = ownedRoles.length ? ownedRoles : ROLE_GUIDES.filter(role => role.code === 'submitter');
-  return roles.map(role => ({
+  return roles.map(role => normalizeWorkItem({
     id: `guide:${role.code}`,
     type: 'guidance',
     title: `${role.name}：${role.workflow[0] || role.firstEntry.label}`,
@@ -657,7 +868,14 @@ function guidanceItemsForRoles(ownedRoles) {
     target: role.firstEntry.target,
     actionLabel: role.firstEntry.label,
     sample: role.sample,
-    urgency: 'normal'
+    urgency: 'normal',
+    governanceType: 'role_guidance',
+    sourceType: 'role_guidance',
+    department: null,
+    responsiblePerson: '当前用户',
+    confirmPerson: '当前用户',
+    currentStatus: 'guidance',
+    nextStep: role.firstEntry.label
   }));
 }
 
@@ -778,14 +996,19 @@ router.get('/', requireAuth, (req, res) => {
     const currentDepartmentName = identity.user.departmentName;
     const cacheKey = workbenchResponseCacheKey({ mode, identity, roleCodes, permSet });
     const body = await getOrBuildWorkbenchResponse(cacheKey, async () => {
-      const [todos, qualityFindings, mappingTodos, escalated] = await Promise.all([
+      const [todos, qualityFindings, mappingTodos, inputBaselineIssues, escalated] = await Promise.all([
         Promise.resolve().then(() => loadTodos(req, canViewAll)),
         loadProcessQualityFindingsAsync(req, canViewAll, currentDepartmentName),
         loadProcessMappingTodosAsync(req, canViewAll, currentDepartmentName),
+        loadInputBaselineReviewIssuesAsync(canViewAll, currentDepartmentName),
         Promise.resolve().then(() => loadEscalatedConflicts(canDecideEscalated))
       ]);
       const activeRoles = ownedRoles.length ? ownedRoles : roles.filter(role => role.code === req.session.userRole);
-      const pendingWorkItems = [...escalated, ...qualityFindings, ...mappingTodos, ...todos];
+      const pmoReviewGates = pmoReviewGateWorkItems(roleCodes, currentDepartmentName);
+      const pendingWorkItems = normalizeWorkItems(
+        [...escalated, ...inputBaselineIssues, ...qualityFindings, ...mappingTodos, ...todos, ...pmoReviewGates],
+        { department: currentDepartmentName }
+      );
       const guidanceItems = guidanceItemsForRoles(activeRoles);
       const workItems = mode === 'all' ? [...pendingWorkItems, ...guidanceItems] : pendingWorkItems;
       const contexts = loadProcessContexts(mode, pendingWorkItems, {
@@ -809,7 +1032,15 @@ router.get('/', requireAuth, (req, res) => {
           priorityCount: nextActions.length,
           pendingTodos: todos.length,
           escalatedConflicts: escalated.length,
-          processContexts: contexts.length
+          processContexts: contexts.length,
+          governance: {
+            inputBaselineIssues: inputBaselineIssues.length,
+            fieldLedgerGaps: pendingWorkItems.filter(item => item.governanceType === 'field_ledger_gap').length,
+            goldSourceConfirmations: pendingWorkItems.filter(item => item.governanceType === 'gold_source_confirmation').length,
+            processQuality: pendingWorkItems.filter(item => item.governanceType === 'process_quality').length,
+            pmoReviewGates: pmoReviewGates.length,
+            overdue: pendingWorkItems.filter(item => item.overdue).length
+          }
         },
         roles,
         roleGroups,
@@ -825,14 +1056,21 @@ router.get('/', requireAuth, (req, res) => {
           }))
         })),
         nextActions,
-        workItems: workItems.length ? workItems : fallbackActions(activeRoles).map((action, index) => ({
+        workItems: workItems.length ? workItems : fallbackActions(activeRoles).map((action, index) => normalizeWorkItem({
           id: `guide:${index}`,
           type: 'guidance',
           title: action.title,
           roleHint: action.roleCode,
           target: action.target,
           actionLabel: action.actionLabel,
-          sample: action.sample
+          sample: action.sample,
+          governanceType: 'role_guidance',
+          sourceType: 'role_guidance',
+          department: currentDepartmentName,
+          responsiblePerson: '当前用户',
+          confirmPerson: '当前用户',
+          currentStatus: 'guidance',
+          nextStep: action.actionLabel
         })),
         sankey: buildSankey(activeRoles, contexts, sankeyWorkItems)
       };
@@ -845,6 +1083,8 @@ router.setIdentityRepositoryFactory = setIdentityRepositoryFactory;
 router.resetIdentityRepositoryFactory = resetIdentityRepositoryFactory;
 router.setProcessGovernanceRepositoryFactory = setProcessGovernanceRepositoryFactory;
 router.resetProcessGovernanceRepositoryFactory = resetProcessGovernanceRepositoryFactory;
+router.setInputBaselineReviewRepositoryFactory = setInputBaselineReviewRepositoryFactory;
+router.resetInputBaselineReviewRepositoryFactory = resetInputBaselineReviewRepositoryFactory;
 router.clearWorkbenchCaches = clearWorkbenchCaches;
 
 module.exports = router;

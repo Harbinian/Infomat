@@ -18,6 +18,8 @@
     "test:pmo-wbs-semantic-depth": "node scripts/check-pmo-wbs-semantic-depth.mjs",
     "test:source-manifest-hashes": "node scripts/check-source-manifest-hashes.mjs",
     "test:no-banned-terminology": "node apps/mdm-platform/scripts/test-no-banned-terminology.js",
+    "governance:weekly-report": "node scripts/build-project-governance-report.mjs",
+    "test:project-governance-upgrade": "node scripts/test-project-governance-report.mjs && npm --prefix apps/mdm-platform run test:role-workbench && npm --prefix apps/mdm-platform run test:role-workbench-mysql",
     "test:infomat-services-config": "node scripts/test-infomat-services-config.mjs",
     "start:infomat-services": "cmd /c start-infomat-services.cmd",
     "smoke:infomat-services": "node scripts/smoke-infomat-services.mjs",

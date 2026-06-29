@@ -54,9 +54,13 @@ async function main() {
   if (typeof roleWorkbenchRouter.setProcessGovernanceRepositoryFactory !== 'function') {
     throw new Error('角色工作台应支持注入流程治理 MySQL 仓储');
   }
+  if (typeof roleWorkbenchRouter.setInputBaselineReviewRepositoryFactory !== 'function') {
+    throw new Error('角色工作台应支持注入输入基线复核 MySQL 仓储');
+  }
 
   let qualityCalls = 0;
   let mappingCalls = 0;
+  let reviewItemCalls = 0;
 
   roleWorkbenchRouter.setIdentityRepositoryFactory(async () => ({
     async getCurrentUserPayload(session) {
@@ -136,6 +140,47 @@ async function main() {
     }
   }));
 
+  roleWorkbenchRouter.setInputBaselineReviewRepositoryFactory(() => ({
+    async listRuns() {
+      return [
+        {
+          run_id: 'review-run-mysql-001',
+          issue_count: 1,
+          imported_at: '2026-06-29 00:00:00'
+        }
+      ];
+    },
+    async getReviewItems(runId, filters = {}) {
+      reviewItemCalls += 1;
+      if (runId !== 'review-run-mysql-001') {
+        throw new Error('角色工作台应读取最新输入基线复核批次');
+      }
+      if (filters.dept !== 'MySQL 经营发展部') {
+        throw new Error('角色工作台应按当前部门读取输入基线待确认问题');
+      }
+      return {
+        summary: { total: 1 },
+        items: [
+          {
+            id: 'IBR-MYSQL-001',
+            stable_key: 'ibr-mysql-001',
+            department: 'MySQL 经营发展部',
+            document_name: '经营资料.docx',
+            source_file: 'docs/norms/MySQL经营发展部业务资料/经营资料.docx',
+            source_label: '经营资料.docx 第5.1条',
+            issue_type: '待确认A1',
+            content: 'MySQL 输入基线待确认问题',
+            mapping_location: '当前映射位置待核对',
+            suggested_action: '回源核验后记录处理结论',
+            definition_status: 'needs_original_review',
+            owner: '经营发展部确认人',
+            status: '待处理'
+          }
+        ]
+      };
+    }
+  }));
+
   const app = express();
   app.use(express.json());
   app.use((req, res, next) => {
@@ -163,8 +208,15 @@ async function main() {
     if (!workItems.some(item => item.type === 'process_mapping_todo' && item.title.includes('MySQL 映射待办'))) {
       throw new Error('角色工作台应显示来自 MySQL 流程治理仓储的映射待办');
     }
-    if (qualityCalls !== 1 || mappingCalls !== 1) {
-      throw new Error(`角色工作台应各调用一次流程治理 MySQL 仓储，实际 quality=${qualityCalls}, mapping=${mappingCalls}`);
+    const inputBaselineItem = workItems.find(item => item.type === 'input_baseline_issue' && item.title.includes('MySQL 输入基线待确认问题'));
+    if (!inputBaselineItem) {
+      throw new Error('角色工作台应显示来自输入基线复核仓储的待确认问题');
+    }
+    if (inputBaselineItem.sourceType !== 'input_baseline_issue' || !inputBaselineItem.responsiblePerson || !inputBaselineItem.nextStep) {
+      throw new Error('输入基线待确认工作项应包含统一治理字段');
+    }
+    if (qualityCalls !== 1 || mappingCalls !== 1 || reviewItemCalls !== 1) {
+      throw new Error(`角色工作台应各调用一次治理仓储，实际 quality=${qualityCalls}, mapping=${mappingCalls}, review=${reviewItemCalls}`);
     }
 
     console.log('Role workbench process governance MySQL API test passed');
@@ -172,6 +224,7 @@ async function main() {
     await closeServer(server);
     if (roleWorkbenchRouter.resetIdentityRepositoryFactory) roleWorkbenchRouter.resetIdentityRepositoryFactory();
     if (roleWorkbenchRouter.resetProcessGovernanceRepositoryFactory) roleWorkbenchRouter.resetProcessGovernanceRepositoryFactory();
+    if (roleWorkbenchRouter.resetInputBaselineReviewRepositoryFactory) roleWorkbenchRouter.resetInputBaselineReviewRepositoryFactory();
   }
 }
 
