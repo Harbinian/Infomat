@@ -239,6 +239,11 @@ function seedData() {
   `).run(otherDeptId, deptId, mappingId, fieldId, `${TEST_PREFIX}字段确认：确认订单号是否在 A1 中产生或消费`);
 
   db.prepare(`
+    INSERT INTO todos (from_dept_id, to_dept_id, type, related_mapping_id, related_field_id, content, urgency, due_date)
+    VALUES (?, ?, 'gold_source', ?, ?, ?, 'medium', '2026-06-20')
+  `).run(otherDeptId, deptId, mappingId, fieldId, `${TEST_PREFIX}待确认黄金源：确认订单号维护系统和维护部门`);
+
+  db.prepare(`
     INSERT INTO term_conflicts (term, dept_a, dept_a_meaning, dept_b, dept_b_meaning, severity, status, escalated)
     VALUES (?, ?, 'A', ?, 'B', 'blocking', 'escalated', 1)
   `).run(`${TEST_PREFIX}升级术语`, deptId, otherDeptId);
@@ -284,6 +289,17 @@ async function main() {
     assert(todoWorkbench.body.nextActions.length >= 1 && todoWorkbench.body.nextActions.length <= 3, '下一步动作应为 1 到 3 项');
     assert(todoWorkbench.body.nextActions[0].title && todoWorkbench.body.nextActions[0].target, '下一步动作应包含标题和跳转目标');
     assert(Array.isArray(todoWorkbench.body.workItems) && todoWorkbench.body.workItems.some(item => item.type === 'field_confirm'), '应返回字段确认待办');
+    const normalizedTypes = new Set(todoWorkbench.body.workItems.map(item => item.governanceType));
+    ['field_ledger_gap', 'gold_source_confirmation', 'process_quality', 'input_baseline_issue']
+      .forEach(type => assert(normalizedTypes.has(type), `角色工作台应返回治理工作项类型: ${type}`));
+    const fieldGapItem = todoWorkbench.body.workItems.find(item => item.governanceType === 'field_ledger_gap');
+    assert(fieldGapItem.sourceType === 'field_ledger_gap', '字段台账缺口应标明来源类型');
+    assert(fieldGapItem.department && fieldGapItem.responsiblePerson && fieldGapItem.confirmPerson, '治理工作项应包含部门和责任链字段');
+    assert(fieldGapItem.currentStatus && fieldGapItem.nextStep, '治理工作项应包含当前状态和下一步动作');
+    assert(fieldGapItem.overdue === true, '逾期待办应标记 overdue=true');
+    assert(todoWorkbench.body.summary.governance.fieldLedgerGaps >= 1, '治理汇总应统计字段台账缺口');
+    assert(todoWorkbench.body.summary.governance.goldSourceConfirmations >= 1, '治理汇总应统计待确认黄金源');
+    assert(todoWorkbench.body.summary.governance.overdue >= 1, '治理汇总应统计超期事项');
     assert(todoWorkbench.body.workItems.some(item => item.type === 'process_quality'), '应返回流程治理质量问题待办');
     const qualityItem = todoWorkbench.body.workItems.find(item => item.type === 'process_quality');
     assert(qualityItem.roleHint === 'data_quality', '质量问题默认应提示数据质量角色处理');
@@ -339,6 +355,9 @@ async function main() {
     assert(quietWorkbench.status === 200, `无待办工作台失败: ${quietWorkbench.status}`);
     assert(quietWorkbench.body.workItems.some(item => item.type === 'process_quality'), '本部门项目组长应看到本部门流程质量问题');
     assert(quietWorkbench.body.workItems.some(item => item.type === 'process_mapping_todo'), '本部门项目组长应看到本部门流程映射待办');
+    const pmoGateItem = quietWorkbench.body.workItems.find(item => item.type === 'pmo_review_gate');
+    assert(pmoGateItem && pmoGateItem.governanceType === 'pmo_review_gate', '项目组长应看到 PMO 治理评审入口');
+    assert(pmoGateItem.sourceType && pmoGateItem.currentStatus && pmoGateItem.nextStep, 'PMO 治理评审入口应包含统一治理字段');
     assert(quietWorkbench.body.nextActions.length >= 1, '无字段待办用户也应有下一步指引');
     assert(quietWorkbench.body.nextActions[0].sample, '无字段待办下一步动作也应给出样例');
 
