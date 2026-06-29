@@ -498,24 +498,24 @@ async function main() {
     assert.strictEqual(publishMissingClassification.res.status, 422);
     assert.ok(publishMissingClassification.body.details.some(item => item.includes('L1')));
 
-    const candidateClassification = await request(`/api/process-design/drafts/${draftId}`, {
+    const issueClassification = await request(`/api/process-design/drafts/${draftId}`, {
       method: 'PUT',
       body: JSON.stringify({
         l1_name: '客户管理',
-        l1_status: 'candidate',
+        l1_status: 'needs_review',
         l2_name: '客户资料管理',
         l2_status: 'confirmed',
         l3_name: '客户资料变更确认流程'
       })
     }, reviewerCookie);
-    assert.strictEqual(candidateClassification.res.status, 200, JSON.stringify(candidateClassification.body));
+    assert.strictEqual(issueClassification.res.status, 200, JSON.stringify(issueClassification.body));
 
-    const publishCandidate = await request(`/api/process-design/drafts/${draftId}/publish`, {
+    const publishReviewItem = await request(`/api/process-design/drafts/${draftId}/publish`, {
       method: 'POST',
-      body: JSON.stringify({ note: '候选能力不可发布' })
+      body: JSON.stringify({ note: '待确认能力不可发布' })
     }, reviewerCookie);
-    assert.strictEqual(publishCandidate.res.status, 422);
-    assert.ok(publishCandidate.body.details.some(item => item.includes('候选')));
+    assert.strictEqual(publishReviewItem.res.status, 422);
+    assert.ok(publishReviewItem.body.details.some(item => item.includes('待确认')));
 
     const confirmedClassification = await request(`/api/process-design/drafts/${draftId}`, {
       method: 'PUT',

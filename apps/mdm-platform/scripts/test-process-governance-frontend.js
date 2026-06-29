@@ -32,7 +32,7 @@ assert.ok(html.includes('id="pgSubtabs"'), 'process governance should expose a s
 assert.ok(html.includes('function processGovernanceViewFromRoute(route)'), 'process governance should map routes to page subtabs');
 assert.ok(html.includes('function renderProcessGovernanceSubtabs(activeView)'), 'process governance should render page subtabs');
 assert.ok(html.includes('function applyProcessGovernanceSubtab(activeView)'), 'process governance should hide non-active subtab sections');
-assert.ok(html.includes("queryParts.set('view', params.pgView || params.qualityView)") && html.includes("queryParts.set('candidate', params.candidateReviewKey)"), 'list navigation should preserve process governance deep-link query parameters');
+assert.ok(html.includes("queryParts.set('view', params.pgView || params.qualityView)") && html.includes("queryParts.set('needs_review', params.inputBaselineReviewKey)"), 'list navigation should preserve process governance deep-link query parameters');
 assert.ok(html.includes('PROCESS_GOVERNANCE_VIEW_PRODUCTS'), 'process governance should declare governed data-product view loaders');
 assert.ok(html.includes('pgViewCache:{}') && html.includes('pgViewRequests:{}'), 'process governance should keep per-view session caches and request guards');
 assert.ok(html.includes('function processGovernanceLoadKey(view, filters)'), 'process governance should build stable per-view cache keys');
@@ -42,7 +42,7 @@ assert.ok(html.includes('function clearProcessGovernanceViewCache(reason)'), 'pr
 ['总览', '待确认问题', '流程图谱', '证据来源', '映射工作', '治理闭环'].forEach(label => {
   assert.ok(html.includes(label), `process governance should include subtab ${label}`);
 });
-['overview', 'candidateReview', 'map', 'evidence', 'mapping', 'quality'].forEach(view => {
+['overview', 'inputBaselineReview', 'map', 'evidence', 'mapping', 'quality'].forEach(view => {
   assert.ok(html.includes(`data-pg-view="${view}"`), `process governance should assign sections to ${view}`);
 });
 assert.ok(html.includes('/api/process-governance/sankey'), 'process governance sankey API should be called');
@@ -135,8 +135,8 @@ const sourceCoverageRenderEnd = html.indexOf('function renderProcessGovernanceMd
 const sourceCoverageRenderSnippet = html.slice(sourceCoverageRenderStart, sourceCoverageRenderEnd);
 assert.ok(sourceCoverageRenderSnippet.includes('覆盖记录'), 'source coverage meta should describe rows as coverage records');
 assert.ok(!sourceCoverageRenderSnippet.includes('/ 共 '), 'source coverage meta should not present a questionable global total');
-assert.ok(html.includes('待确认的问题'), 'candidate review should be named in plain business language');
-assert.ok(html.includes('这里不是正式映射库'), 'candidate review should explain that rows are not official mappings');
+assert.ok(html.includes('待确认的问题'), 'input baseline review should be named in plain business language');
+assert.ok(html.includes('这里不是已确认流程映射库'), 'input baseline review should explain that rows are not official mappings');
 assert.ok(
   html.includes("case 'processGovernance': runPageTask(function() { return renderProcessGovernance(); }, '流程治理加载失败'); break;"),
   'process governance list route should use the unified page task runner'
@@ -148,56 +148,56 @@ assert.ok(
   html.includes('if (!isCurrentProcessGovernanceRender(requestId)) return;'),
   'process governance should ignore stale render responses'
 );
-assert.ok(html.includes('正在加载待确认的问题'), 'candidate review should show an explicit initial loading state');
-assert.ok(html.includes('待确认问题加载失败，请刷新流程治理'), 'candidate review should show a clear failure state');
-assert.ok(html.includes('function renderCandidateReviewMappingTodoFallback'), 'candidate review should fall back to current mapping todos when no candidate extraction exists');
-assert.ok(html.includes('payload.mappingTodos'), 'candidate review view should receive mapping todo data for the empty-candidate fallback');
-assert.ok(html.includes('去映射待办处理'), 'candidate review empty state should guide users to the mapping todo work queue');
-assert.ok(html.includes('哪里有问题'), 'candidate review detail should use plain problem wording');
-assert.ok(html.includes('在哪发现的'), 'candidate review detail should use plain source wording');
-assert.ok(html.includes('是哪种问题'), 'candidate review detail should use plain issue wording');
-assert.ok(html.includes('证据有没有问题'), 'candidate review detail should use plain evidence wording');
-assert.ok(html.includes('请你确认'), 'candidate review detail should use plain action wording');
-assert.ok(html.includes('这是不是个问题'), 'candidate review decision copy should ask users to confirm the problem');
-assert.ok(html.includes('证据有没有问题'), 'candidate review evidence copy should ask users to confirm evidence quality');
-assert.ok(html.includes('要不要修改原文'), 'candidate review should ask users to decide whether source files need changes');
-assert.ok(html.includes('是哪种问题'), 'candidate review detail should name issue types plainly');
-assert.ok(html.includes('function renderCandidateReviewList'), 'candidate review should render a list of problems before opening one problem');
-assert.ok(html.includes('function renderCandidateReviewDetailPage'), 'candidate review should render one problem per detail page');
+assert.ok(html.includes('正在加载待确认的问题'), 'input baseline review should show an explicit initial loading state');
+assert.ok(html.includes('待确认问题加载失败，请刷新流程治理'), 'input baseline review should show a clear failure state');
+assert.ok(html.includes('function renderInputBaselineReviewMappingTodoFallback'), 'input baseline review should fall back to current mapping todos when no input baseline review extraction exists');
+assert.ok(html.includes('payload.mappingTodos'), 'input baseline review view should receive mapping todo data for the empty-reviewItem fallback');
+assert.ok(html.includes('去映射待办处理'), 'input baseline review empty state should guide users to the mapping todo work queue');
+assert.ok(html.includes('哪里有问题'), 'input baseline review detail should use plain problem wording');
+assert.ok(html.includes('在哪发现的'), 'input baseline review detail should use plain source wording');
+assert.ok(html.includes('是哪种问题'), 'input baseline review detail should use plain issue wording');
+assert.ok(html.includes('证据有没有问题'), 'input baseline review detail should use plain evidence wording');
+assert.ok(html.includes('请你确认'), 'input baseline review detail should use plain action wording');
+assert.ok(html.includes('这是不是个问题'), 'input baseline review decision copy should ask users to confirm the problem');
+assert.ok(html.includes('证据有没有问题'), 'input baseline review evidence copy should ask users to confirm evidence quality');
+assert.ok(html.includes('要不要修改原文'), 'input baseline review should ask users to decide whether source files need changes');
+assert.ok(html.includes('是哪种问题'), 'input baseline review detail should name issue types plainly');
+assert.ok(html.includes('function renderInputBaselineReviewList'), 'input baseline review should render a list of problems before opening one problem');
+assert.ok(html.includes('function renderInputBaselineReviewDetailPage'), 'input baseline review should render one problem per detail page');
 assert.ok(html.includes('pgView: query.view'), 'process governance route should expose pgView from the hash query');
-assert.ok(html.includes('candidateReviewKey: query.candidate'), 'process governance route should understand candidate review detail links');
-assert.ok(html.includes("return '#/processGovernance?view=candidateReview'"), 'candidate review back navigation should stay on the candidate review view');
-assert.ok(html.includes("route.pgView === 'candidateReview' && route.candidateReviewKey"), 'candidate review detail rendering should use process governance route view');
-assert.ok(html.includes('data-candidate-open'), 'candidate review list should open a single-problem confirmation page');
-assert.ok(html.includes('class="candidate-review-detail"'), 'candidate review detail page should have a dedicated readable layout');
-assert.ok(html.includes('candidate-review-confirmation'), 'candidate review confirmation controls should be below the problem body');
-assert.ok(html.includes('class="candidate-review-card"'), 'candidate review list should use readable problem cards');
-assert.ok(html.includes('.candidate-review-detail-grid'), 'candidate review detail should lay out problem evidence before confirmation controls');
-assert.ok(html.includes('data-candidate-back'), 'candidate review detail page should provide a return-to-list action');
+assert.ok(html.includes('inputBaselineReviewKey: query.reviewItem'), 'process governance route should understand input baseline review detail links');
+assert.ok(html.includes("return '#/processGovernance?view=inputBaselineReview'"), 'input baseline review back navigation should stay on the input baseline review view');
+assert.ok(html.includes("route.pgView === 'inputBaselineReview' && route.inputBaselineReviewKey"), 'input baseline review detail rendering should use process governance route view');
+assert.ok(html.includes('data-reviewItem-open'), 'input baseline review list should open a single-problem confirmation page');
+assert.ok(html.includes('class="input-baseline-review-detail"'), 'input baseline review detail page should have a dedicated readable layout');
+assert.ok(html.includes('input-baseline-review-confirmation'), 'input baseline review confirmation controls should be below the problem body');
+assert.ok(html.includes('class="input-baseline-review-card"'), 'input baseline review list should use readable problem cards');
+assert.ok(html.includes('.input-baseline-review-detail-grid'), 'input baseline review detail should lay out problem evidence before confirmation controls');
+assert.ok(html.includes('data-reviewItem-back'), 'input baseline review detail page should provide a return-to-list action');
 assert.ok(html.includes('#processGovernancePanel {') && html.includes('max-width: none'), 'process governance panel should use the full available workspace');
-assert.ok(html.includes('.pg-review-grid') && html.includes('min-width: 0'), 'candidate review confirmation grid should not force a wider minimum than the action column');
-const candidateSourceExcerptCss = html.slice(html.indexOf('.candidate-source-excerpt {'), html.indexOf('.tag.green {'));
-assert.ok(!candidateSourceExcerptCss.includes('-webkit-line-clamp'), 'candidate review source excerpts should not be visually clamped');
-assert.ok(candidateSourceExcerptCss.includes('white-space: normal') && candidateSourceExcerptCss.includes('overflow-wrap: anywhere'), 'candidate review source excerpts should wrap naturally');
-assert.ok(html.includes('function candidateReviewExcerptText(row)'), 'candidate review should extract source excerpt text for the source cell');
-assert.ok(html.includes('(row.source_excerpts && row.source_excerpts[0] && row.source_excerpts[0].raw_text)'), 'candidate review source excerpt should use source_excerpts[0].raw_text');
-assert.ok(html.includes('未匹配到原文摘录，请按来源文件核对原文'), 'candidate review should tell users when no source excerpt is matched');
-assert.ok(html.includes('class="candidate-source-excerpt"'), 'candidate review should render source excerpts inside the source cell');
-assert.ok(!html.includes('<th>候选类型</th>'), 'candidate review should not expose candidate type as a table header');
-assert.ok(!html.includes('<th>候选内容</th>'), 'candidate review should not expose candidate content as a table header');
-assert.ok(!html.includes('<th>定义充分性</th>'), 'candidate review should not expose definition sufficiency as a table header');
-assert.ok(!html.includes('<th>来源锚点</th>'), 'candidate review should not expose source anchor as a table header');
-assert.ok(!html.includes('线索复核') && !html.includes('这条线索') && !html.includes('暂无待确认线索'), 'candidate review should not expose clue-style internal wording');
-assert.ok(!html.includes('是哪类问题') && !html.includes('保存复核'), 'candidate review should use confirmation wording instead of review jargon');
+assert.ok(html.includes('.pg-review-grid') && html.includes('min-width: 0'), 'input baseline review confirmation grid should not force a wider minimum than the action column');
+const reviewSourceExcerptCss = html.slice(html.indexOf('.reviewItem-source-excerpt {'), html.indexOf('.tag.green {'));
+assert.ok(!reviewSourceExcerptCss.includes('-webkit-line-clamp'), 'input baseline review source excerpts should not be visually clamped');
+assert.ok(reviewSourceExcerptCss.includes('white-space: normal') && reviewSourceExcerptCss.includes('overflow-wrap: anywhere'), 'input baseline review source excerpts should wrap naturally');
+assert.ok(html.includes('function inputBaselineReviewExcerptText(row)'), 'input baseline review should extract source excerpt text for the source cell');
+assert.ok(html.includes('(row.source_excerpts && row.source_excerpts[0] && row.source_excerpts[0].raw_text)'), 'input baseline review source excerpt should use source_excerpts[0].raw_text');
+assert.ok(html.includes('未匹配到原文摘录，请按来源文件核对原文'), 'input baseline review should tell users when no source excerpt is matched');
+assert.ok(html.includes('class="reviewItem-source-excerpt"'), 'input baseline review should render source excerpts inside the source cell');
+assert.ok(!html.includes('<th>问题类型</th>'), 'input baseline review should not expose issue type as a table header');
+assert.ok(!html.includes('<th>问题内容</th>'), 'input baseline review should not expose reviewItem content as a table header');
+assert.ok(!html.includes('<th>定义充分性</th>'), 'input baseline review should not expose definition sufficiency as a table header');
+assert.ok(!html.includes('<th>来源锚点</th>'), 'input baseline review should not expose source anchor as a table header');
+assert.ok(!html.includes('线索复核') && !html.includes('这条线索') && !html.includes('暂无待确认线索'), 'input baseline review should not expose clue-style internal wording');
+assert.ok(!html.includes('是哪类问题') && !html.includes('保存复核'), 'input baseline review should use confirmation wording instead of review jargon');
 assert.ok(!html.includes('回源') && !html.includes('回到原文修改'), 'process governance should say 修改原文 instead of 回源');
-assert.ok(html.includes('主数据对象候选'), 'process governance should name MDM candidates as candidates');
-assert.ok(html.includes('pg-mdm-guide'), 'MDM candidate section should include visual guidance');
-assert.ok(html.includes('候选对象') && html.includes('关键字段') && html.includes('证据引用') && html.includes('治理要求'), 'MDM candidate guidance should show the review path');
+assert.ok(html.includes('待确认主数据对象'), 'process governance should name MDM reviewItems as reviewItems');
+assert.ok(html.includes('pg-mdm-guide'), 'MDM reviewItem section should include visual guidance');
+assert.ok(html.includes('待确认对象') && html.includes('关键字段') && html.includes('证据引用') && html.includes('治理要求'), 'MDM reviewItem guidance should show the review path');
 assert.ok(html.includes('证据链'), 'process governance should name evidence chain view');
 assert.ok(html.includes('修改原文文件后重新导入'), 'process governance should guide users to update source files instead of editing docs/norms in MDM');
 assert.ok(
   html.includes('qualityView: query.view') && html.includes('finding: query.finding') && html.includes('caseId: query.case') && html.includes('mappingTodoId: query.todo') &&
-    html.includes('candidateReview:') && html.includes('mappingTodos:') && html.includes('qualityCases:'),
+    html.includes('inputBaselineReview:') && html.includes('mappingTodos:') && html.includes('qualityCases:'),
   'process governance should understand quality and mapping deep links'
 );
 assert.ok(html.includes('id="pgDeptFilters"'), 'process governance should expose department tag filters');

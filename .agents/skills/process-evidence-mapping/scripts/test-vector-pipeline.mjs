@@ -9,8 +9,8 @@ const RUN_DIR = path.join(REPO, 'artifacts', 'evidence-index', 'test-gltx-jy-05'
 const CHUNKS = path.join(RUN_DIR, 'chunks.jsonl');
 const VECTORS = path.join(RUN_DIR, 'vectors.jsonl');
 const MANIFEST = path.join(RUN_DIR, 'embedding_manifest.json');
-const CANDIDATES = path.join(RUN_DIR, 'candidate_signature.jsonl');
-const REPORT = path.join(RUN_DIR, 'candidate_evidence_report.md');
+const CANDIDATES = path.join(RUN_DIR, 'review_evidence.jsonl');
+const REPORT = path.join(RUN_DIR, 'review_evidence_report.md');
 const DEFERRED_CHUNKS = path.join(RUN_DIR, 'deferred_visio_chunks.jsonl');
 const DEFERRED_SOURCES = path.join(RUN_DIR, 'deferred_visio_sources.jsonl');
 const SOURCE = path.join(
@@ -83,8 +83,8 @@ const partialTitle = chunks.find((chunk) => chunk.raw_text === '公司 月综合
 assert.ok(partialTitle, 'expected raw partial title chunk 公司 月综合打分表');
 assert.equal(partialTitle.extraction_quality, 'partial');
 assert.equal(partialTitle.raw_text, '公司 月综合打分表');
-assert.match(partialTitle.normalized_candidate, /公司__月综合打分表/);
-assert.match(partialTitle.normalized_candidate, /公司月度综合打分表候选/);
+assert.match(partialTitle.normalized_review_text, /公司__月综合打分表/);
+assert.match(partialTitle.normalized_review_text, /公司月度综合打分表待确认/);
 
 const section543 = chunks.find((chunk) => chunk.raw_text.includes('5.4.3公司月度综合打分表由经营发展部部长编制'));
 assert.ok(section543, 'expected §5.4.3 object-chain chunk');
@@ -114,19 +114,19 @@ runNode([
   '--out', CANDIDATES,
 ]);
 
-const candidates = readJsonl(CANDIDATES);
-assert.ok(candidates.some((item) => item.raw_text.includes('5.4.3公司月度综合打分表由经营发展部部长编制')), 'expected §5.4.3 in candidates');
-assert.ok(candidates.some((item) => item.raw_text.includes('编制：') && item.raw_text.includes('财务核对')), 'expected table 26 signature row in candidates');
-assert.ok(candidates.every((item) => item.evidence_status === 'candidate'), 'candidates must stay candidate');
-assert.ok(candidates.every((item) => item.verification_status === 'unverified'), 'candidates must stay unverified');
-assert.ok(candidates.every((item) => item.allowed_downstream_use === 'review_only'), 'candidates must be review-only');
-assert.ok(candidates.some((item) => item.relation_type === 'approval_chain_candidate'), 'expected approval_chain_candidate classification');
+const reviewItems = readJsonl(CANDIDATES);
+assert.ok(reviewItems.some((item) => item.raw_text.includes('5.4.3公司月度综合打分表由经营发展部部长编制')), 'expected §5.4.3 in reviewItems');
+assert.ok(reviewItems.some((item) => item.raw_text.includes('编制：') && item.raw_text.includes('财务核对')), 'expected table 26 signature row in reviewItems');
+assert.ok(reviewItems.every((item) => item.evidence_status === 'needs_review'), 'review items must stay needs_review');
+assert.ok(reviewItems.every((item) => item.verification_status === 'unverified'), 'review items must stay unverified');
+assert.ok(reviewItems.every((item) => item.allowed_downstream_use === 'review_only'), 'review items must be review-only');
+assert.ok(reviewItems.some((item) => item.relation_type === 'approval_chain_review'), 'expected approval_chain_review classification');
 
 runNode([
-  '.agents/skills/process-evidence-mapping/scripts/build-candidate-report.mjs',
-  '--candidates', CANDIDATES,
+  '.agents/skills/process-evidence-mapping/scripts/build-review-evidence-report.mjs',
+  '--review-items', CANDIDATES,
   '--out', REPORT,
-  '--title', 'GLTX-JY-05候选证据回归报告',
+  '--title', 'GLTX-JY-05待确认证据回归报告',
 ]);
 
 const report = fs.readFileSync(REPORT, 'utf8');

@@ -30,10 +30,10 @@ for (const required of [
   'CREATE TABLE IF NOT EXISTS permissions',
   'CREATE TABLE IF NOT EXISTS role_permissions',
   'CREATE TABLE IF NOT EXISTS user_roles',
-  'CREATE TABLE IF NOT EXISTS process_candidate_review_runs',
-  'CREATE TABLE IF NOT EXISTS process_candidate_review_items',
-  'CREATE TABLE IF NOT EXISTS process_candidate_review_excerpts',
-  'CREATE TABLE IF NOT EXISTS process_candidate_review_decisions',
+  'CREATE TABLE IF NOT EXISTS process_input_baseline_review_runs',
+  'CREATE TABLE IF NOT EXISTS process_input_baseline_review_items',
+  'CREATE TABLE IF NOT EXISTS process_input_baseline_review_excerpts',
+  'CREATE TABLE IF NOT EXISTS process_input_baseline_review_decisions',
   'CREATE TABLE IF NOT EXISTS process_governance_snapshots',
   'CREATE TABLE IF NOT EXISTS process_governance_nodes',
   'CREATE TABLE IF NOT EXISTS process_governance_edges',
@@ -91,13 +91,13 @@ const packageJson = JSON.parse(readFileSync(path.join(__dirname, '..', 'package.
 assert.strictEqual(packageJson.scripts['init:mysql'], 'node scripts/init-mysql-schema.js');
 assert.strictEqual(packageJson.scripts['test:mysql-config'], 'node scripts/test-mysql-config.js');
 assert.strictEqual(packageJson.scripts['import:process-governance-mysql'], 'node scripts/import-process-governance-mysql.js');
-assert.strictEqual(packageJson.scripts['import:process-candidate-review'], 'node scripts/import-process-candidate-review-mysql.js');
+assert.strictEqual(packageJson.scripts['import:process-input-baseline-review'], 'node scripts/import-process-input-baseline-review-mysql.js');
 assert.strictEqual(packageJson.scripts['smoke:process-governance-mysql'], 'node scripts/smoke-process-governance-mysql.js');
 assert.strictEqual(packageJson.scripts['test:identity-mysql'], 'node scripts/test-identity-mysql-repository.js && node scripts/test-org-me-mysql-api.js && node scripts/test-roles-mysql-api.js && node scripts/test-auth-mysql-permission.js && npm run test:access-mysql && node scripts/test-import-rbac-mysql-api.js');
 assert.ok(packageJson.dependencies.mysql2, 'MDM app should declare mysql2 dependency');
 
 const initScript = readFileSync(path.join(__dirname, 'init-mysql-schema.js'), 'utf8');
-assert.ok(initScript.includes('2026-06-16-process-candidate-review'), 'init script should record candidate review schema migration');
+assert.ok(initScript.includes('2026-06-16-process-input-baseline-review'), 'init script should record input baseline review schema migration');
 assert.ok(initScript.includes('2026-06-16-process-governance-read-model'), 'init script should record process governance read model schema migration');
 assert.ok(initScript.includes('2026-06-17-identity-rbac-read-model'), 'init script should record identity/RBAC schema migration');
 

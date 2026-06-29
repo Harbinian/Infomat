@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Extract review-only role candidates from evidence chunks.
+ * Extract review-only role review items from evidence chunks.
  */
 import {
   evidenceFromChunk,
@@ -9,7 +9,7 @@ import {
   requireArg,
   readJsonl,
   writeJson,
-} from './candidate-utils.mjs';
+} from './review-item-utils.mjs';
 
 const DEPARTMENT_NAMES = [
   '工程技术部',
@@ -53,7 +53,7 @@ function roleDefinitionStatus(name, text) {
   return '原文定义不足';
 }
 
-function roleRecord(name, roleTypes, chunk, basis, confidence = 'candidate') {
+function roleRecord(name, roleTypes, chunk, basis, confidence = 'needs_review') {
   return {
     name,
     role_types: roleTypes,
@@ -80,7 +80,7 @@ function outputFor(args, chunks, roles) {
     generated_at: new Date().toISOString(),
     source_files: [...new Set(chunks.map((chunk) => chunk.source_file).filter(Boolean))],
     policy: {
-      evidence_status: 'candidate',
+      evidence_status: 'needs_review',
       allowed_downstream_use: 'review_only',
       formal_mapping_requires_source_verification: true,
     },
@@ -102,7 +102,7 @@ function financeRoles(args, chunks) {
     '财务部成本会计',
     ['执行角色'],
     findChunk(chunks, ['财务部成本会计']) || findChunk(chunks, ['财务部每月末']) || findChunk(chunks, ['成本核算']),
-    '制度在成本费用分析条款中出现“财务部成本会计”；部分成本核算环节为上下文候选。',
+    '制度在成本费用分析条款中出现“财务部成本会计”；部分成本核算环节为上下文待确认。',
   ));
 
   addRole(roles, roleRecord(

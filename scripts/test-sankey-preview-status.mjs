@@ -35,7 +35,7 @@ assert.match(
 for (const file of files) {
   assert.equal(fileHash(file), before.get(file), `${file} should not be modified by preview status marker`);
   const html = readFileSync(file, 'utf8');
-  for (const marker of ['模型预览', '候选映射预览', '未经过映射复核', '候选条目']) {
-    assert.equal(html.includes(marker), false, `${file} must not contain candidate preview marker: ${marker}`);
+  for (const marker of ['模型预览', '输入基线问题预览', '未经过映射复核', '待确认条目']) {
+    assert.equal(html.includes(marker), false, `${file} must not contain reviewItem preview marker: ${marker}`);
   }
 }

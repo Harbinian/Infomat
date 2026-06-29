@@ -7,7 +7,7 @@ function isRejectedKnownPassword(password) {
   return KNOWN_FIXED_DEFAULT_PASSWORDS.includes(String(password || ''));
 }
 
-function randomPasswordCandidate(length = 16) {
+function randomPasswordReviewItem(length = 16) {
   let password = '';
   for (let index = 0; index < length; index += 1) {
     password += PASSWORD_ALPHABET[crypto.randomInt(0, PASSWORD_ALPHABET.length)];
@@ -16,9 +16,9 @@ function randomPasswordCandidate(length = 16) {
 }
 
 function generateInitialPassword() {
-  let password = randomPasswordCandidate();
+  let password = randomPasswordReviewItem();
   while (validatePasswordStrength(password) !== null || isRejectedKnownPassword(password)) {
-    password = randomPasswordCandidate();
+    password = randomPasswordReviewItem();
   }
   return password;
 }

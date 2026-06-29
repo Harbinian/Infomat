@@ -91,22 +91,22 @@ def looks_heading(text: str) -> bool:
     }
 
 
-def normalized_candidate(raw: str) -> str:
-    candidates: list[str] = []
+def normalized_review_text(raw: str) -> str:
+    reviewItems: list[str] = []
     if re.search(r"公司\s+月综合打分表", raw) or "公司_月综合打分表" in raw or "公司__月综合打分表" in raw:
-        candidates.append("公司__月综合打分表")
-        candidates.append("公司月度综合打分表候选")
+        reviewItems.append("公司__月综合打分表")
+        reviewItems.append("公司月度综合打分表待确认")
     if "__" in raw:
-        candidates.append(raw.replace("__", "_"))
+        reviewItems.append(raw.replace("__", "_"))
     if re.search(r"[\u4e00-\u9fff]\s{2,}[\u4e00-\u9fff]", raw):
-        candidates.append(re.sub(r"\s{2,}", "", raw))
-    return " / ".join(dict.fromkeys(candidate for candidate in candidates if candidate))
+        reviewItems.append(re.sub(r"\s{2,}", "", raw))
+    return " / ".join(dict.fromkeys(reviewItem for reviewItem in reviewItems if reviewItem))
 
 
 def extraction_quality(raw: str, status: str = "clean") -> str:
     if status in {"failed", "needs_ocr"}:
         return status
-    if normalized_candidate(raw):
+    if normalized_review_text(raw):
         return "partial"
     if "__" in raw or re.search(r"[\u4e00-\u9fff]\s+月综合打分表", raw):
         return "partial"
@@ -130,7 +130,7 @@ def base_source(file_path: Path, repo: Path, extraction_status: str) -> dict:
         "file_size": stat.st_size,
         "modified_time": stat.st_mtime,
         "extraction_status": extraction_status,
-        "included_status": "candidate",
+        "included_status": "needs_review",
         "included_reason": "Chunked for retrieval review only; inclusion still requires source verification.",
     }
 
@@ -138,7 +138,7 @@ def base_source(file_path: Path, repo: Path, extraction_status: str) -> dict:
 def chunk_record(source: dict, raw: str, artifact_type: str, index: str, **extra: str) -> dict:
     raw = normalize_text(raw)
     quality = extraction_quality(raw)
-    candidate = normalized_candidate(raw)
+    reviewItem = normalized_review_text(raw)
     return {
         "chunk_id": f"{source['source_file_id']}-{index}",
         "source_file_id": source["source_file_id"],
@@ -159,12 +159,12 @@ def chunk_record(source: dict, raw: str, artifact_type: str, index: str, **extra
         "form_name": extra.get("form_name", ""),
         "raw_text": raw,
         "normalized_text": raw,
-        "normalized_candidate": candidate,
+        "normalized_review_text": reviewItem,
         "artifact_type": artifact_type,
         "extraction_method": extra.get("extraction_method", source.get("extraction_method", "python")),
         "extraction_quality": quality,
         "retrieval_method": "chunking",
-        "evidence_status": "candidate",
+        "evidence_status": "needs_review",
         "verification_status": "unverified",
         "review_required": True,
         "review_reason": "Retrieval chunk only; verify original source before using in mapping.",

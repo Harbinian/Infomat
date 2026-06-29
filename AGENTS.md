@@ -37,7 +37,7 @@ AI 助手在本项目协作时的补充约定(与 CLAUDE.md 配套)。
 
 ## MDM 角色工作台约定
 
-- MDM 前端主责资产在 `apps/mdm-platform/`。调整登录后首页、角色工作台、项目角色或 RBAC 接口时,不要改 `docs/norms/`、PMO 驾驶舱或流程真源。
+- MDM 前端主责资产在 `apps/mdm-platform/`。调整登录后首页、角色工作台、项目角色或 RBAC 接口时,不要改 `docs/norms/`、PMO 驾驶舱或流程输入基线。
 - MDM / PMO 本地联动启动使用仓库根目录固定入口：`npm run start:infomat-services` 和 `npm run smoke:infomat-services`。固定启动合同在 `scripts/infomat-services.config.json`，本机密码放在 `scripts/infomat-services.local.env`。
 - 登录后默认第一屏为 `roleWorkbench`。首屏必须让用户知道自己该干什么:顶部显示当前身份、当前部门、今天优先处理事项数;左侧第一块固定为"我现在该做什么",列出 1 到 3 个下一步动作。
 - 角色分组保持为"项目工作角色 / 基础权限角色"。项目工作角色至少覆盖 `it_lead`、`project_lead`、`business_contact`、`data_quality`、`decision_group`;基础权限角色保留 `submitter`、`owner`、`reviewer`、`admin`。

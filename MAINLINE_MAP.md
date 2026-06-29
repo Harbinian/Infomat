@@ -32,7 +32,7 @@ apps/mdm-platform 流程治理快照导入
 
 - `docs/norms/` 是流程数据原始来源。
 - `docs/company-sankey-data.json` 是 parser 生成快照。
-- `pmo/procedure-management/dashboard.html` 是展示副本，不是流程原始来源。
+- `pmo/procedure-management/dashboard.html` 是展示副本，不是流程输入基线来源。
 - `apps/mdm-platform` 只在导入快照后承接结构化查看和后续治理，不反向覆盖 `docs/norms/`。
 
 ## 3. 字段台账与主数据主线
@@ -44,9 +44,9 @@ field_entries
   数据对象、字段、消费系统、同步方式、L3/A1 引用
   ↓
 field_identities
-  黄金源候选、权威系统、维护部门、owner、确认状态
+  待确认黄金源、权威系统、维护部门、owner、确认状态
   ↓
-主数据对象候选
+待确认主数据对象
   组织、人员、岗位、产品、物料、供应商、工装、设备等
   ↓
 后续 MDM 建模、权限、导入导出和接口设计
@@ -54,7 +54,7 @@ field_identities
 
 规则：
 
-- 字段台账中的 `data_object` 是主数据对象候选，不等同于已经完成主数据建模。
+- 字段台账中的 `data_object` 是待确认主数据对象，不等同于已经完成主数据建模。
 - 黄金源确认必须按字段进行，不因流程建议落位自动认定。
 - 主数据对象沉淀前必须确认维护部门、审批部门、消费系统和权限边界。
 - MDM 本身也作为“主数据治理与数据地图承接能力”管理，当前补充流程见 `docs/norms/流程治理/MDM治理承接流程.md`。该流程先按信息化工作组 / MDM 工作组项目执行架构承接，不伪造常设部门归属，不作为应用系统（S1）写入 DCM/BBM。
@@ -138,7 +138,7 @@ docs/superpowers/plans/*
 
 | 禁止操作 | 原因 | 正确做法 |
 |---|---|---|
-| 改 MDM 时顺手改 `docs/norms/` | 平台代码和流程真源混线 | 先确认是否是资料变更任务 |
+| 改 MDM 时顺手改 `docs/norms/` | 平台代码和流程输入基线混线 | 先确认是否是资料变更任务 |
 | 改 PMO 驾驶舱时手工重造流程数据 | 展示副本会偏离 parser 真源 | 修改 `docs/norms/` 后运行 parser |
 | 跑测试时写共享 `platform.db` | 会污染平台本地状态 | 使用 `MDM_DB_PATH` 隔离数据库 |
 | 整理文档时移动 `apps/mdm-platform/` | 运行系统路径被脚本和说明引用 | 先写迁移计划和验证命令 |

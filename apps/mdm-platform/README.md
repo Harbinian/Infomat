@@ -14,7 +14,7 @@
 
 不在本目录维护流程原始真源、PMO 驾驶舱或仓库级数据转换脚本：
 
-- 流程真源：`docs/norms/{部门}部门-能力-流程-系统映射关系.md`
+- 流程输入基线：`docs/norms/{部门}部门-能力-流程-系统映射关系.md`
 - 组织真源：`docs/organization/组织架构和部门职责.md`
 - PMO 展示：`pmo/procedure-management/dashboard.html`
 - 仓库级脚本：根目录 `scripts/`
@@ -75,7 +75,7 @@ npm run init:mysql
 npm run setup:local-baseline
 ```
 
-`npm run init:mysql` 会初始化 MySQL schema 中已迁移的身份/RBAC、候选复核、流程治理读模型、数据地图字段域、术语治理、旧映射审批、冲突治理、通用待办和平台通用审计表。`npm run setup:local-baseline` 仍是迁移过渡期的幂等基线入口，会：
+`npm run init:mysql` 会初始化 MySQL schema 中已迁移的身份/RBAC、输入基线问题复核、流程治理读模型、数据地图字段域、术语治理、旧映射审批、冲突治理、通用待办和平台通用审计表。`npm run setup:local-baseline` 仍是迁移过渡期的幂等基线入口，会：
 
 - 初始化遗留本地 schema 和系统角色/权限。
 - 从 `docs/organization/组织架构和部门职责.md` 同步组织架构、领导岗位和对应人员。
@@ -142,7 +142,7 @@ npm run test:activity-mysql
 npm run test:role-workbench-mysql
 npm run init:mysql
 npm run smoke:data-map-mysql
-npm run import:process-candidate-review -- --candidate-run artifacts/process-candidates/<run-id>
+npm run import:process-input-baseline-review -- --review-run artifacts/process-input-baseline-review/<run-id>
 ```
 
 `npm run test:security` 已包含批量用户脚本口令红线：项目账号脚本和 Excel 用户导入脚本不得硬编码固定初始密码，新建账号必须标记首次登录改密。
@@ -180,7 +180,7 @@ npm run check:process-governance
 - 平台通用版本和活动热力图已切换到 MySQL：`/api/versions` 通过 `auditMysqlRepository` 访问 `mdm_change_sets` 和 `mdm_version_log`；`/api/activity/heatmap` 从流程治理事件、映射审批历史、版本记录、术语、冲突和通用待办 MySQL 表汇总，不再读取 SQLite `change_set`、`version_log`、`terms`、`term_conflicts`、`field_conflicts` 或 `todos`。
 - `MDM_IDENTITY_READ_MODEL=mysql` 目前切换登录、`/api/org/session`、`/api/org/me`、本人密码状态、本人改密、管理员用户/部门/权限读写接口、`/api/roles` 角色读写接口、通用 `requirePermission` 权限中间件、角色工作台身份读取、流程治理 MySQL 分支权限判断、治理活跃热力图管理视图权限判断、字段台账查看/创建/维护中的身份权限判断，以及字段黄金源维护/确认中的身份权限判断。`auth.js` / `access.js` 已提供 MySQL-aware 异步权限、角色码、用户和部门读取 helper；后续业务路由接入时应优先复用这些 helper。
 - `/api/import-rbac/*` 批量写入仍是遗留本地库实现；在 `MDM_IDENTITY_READ_MODEL=mysql` 下会显式拒绝，直到对应导入写入链路迁到 MySQL。
-- 候选映射复核正式入口为 `/api/process-governance/candidate-review/*`；候选运行通过 `npm run import:process-candidate-review -- --candidate-run artifacts/process-candidates/<run-id>` 导入 MySQL。
+- 输入基线问题复核正式入口为 `/api/process-governance/input-baseline-review/*`；问题识别批次通过 `npm run import:process-input-baseline-review -- --review-run artifacts/process-input-baseline-review/<run-id>` 导入 MySQL。
 - `npm run test:mainline` 用于验证“流程治理 -> 字段台账 -> 主数据对象 -> 权限 -> 导入导出”主线，详见 `docs/plans/流程治理字段台账主线稳定性检查.md`。
 - 不直接运行会删除共享数据库的旧式测试逻辑。
 - `seed-demo-data.js` 和 `setup-mdm-project-users.js` 需要显式环境变量才可运行。
@@ -188,6 +188,6 @@ npm run check:process-governance
 流程治理口径：
 
 - 组织真源为 `docs/organization/组织架构和部门职责.md`。
-- 流程真源为 `docs/norms/{部门}部门-能力-流程-系统映射关系.md`。
+- 流程输入基线为 `docs/norms/{部门}部门-能力-流程-系统映射关系.md`。
 - 快照来源为 `docs/company-sankey-data.json`。
 - PMO 静态驾驶舱仍通过 parser 和内嵌快照运行。

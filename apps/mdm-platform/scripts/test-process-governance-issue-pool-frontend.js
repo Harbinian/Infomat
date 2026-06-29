@@ -4,7 +4,7 @@ const path = require('path');
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
 const issuePoolStart = html.indexOf('function loadProcessGovernanceIssueQueues');
-const issuePoolEnd = html.indexOf('async function loadProcessGovernanceCandidateReview');
+const issuePoolEnd = html.indexOf('async function loadProcessGovernanceInputBaselineReview');
 const issuePoolSnippet = issuePoolStart >= 0 && issuePoolEnd > issuePoolStart
   ? html.slice(issuePoolStart, issuePoolEnd)
   : '';

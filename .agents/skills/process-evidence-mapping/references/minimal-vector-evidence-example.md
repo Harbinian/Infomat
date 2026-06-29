@@ -15,18 +15,18 @@ Use this as a regression example when vector retrieval suggests object aliases o
 各部门于每月3日前反馈绩效评分数据。
 ```
 
-## Vector Retrieval Candidate
+## Vector Retrieval ReviewItem
 
 ```json
 {
   "query": "绩效结果 评分表 核算结果",
-  "retrieved_candidates": [
+  "retrieved_reviewItems": [
     {
       "chunk_id": "GLTX-JY-05#5.2",
       "raw_text": "经营发展部编制公司月度综合打分表...",
       "retrieval_score": 0.86,
-      "claim_candidate": "绩效结果可能与公司月度综合打分表相关",
-      "evidence_status": "candidate",
+      "claim_reviewItem": "绩效结果可能与公司月度综合打分表相关",
+      "evidence_status": "needs_review",
       "review_required": true
     }
   ]
@@ -38,10 +38,10 @@ Use this as a regression example when vector retrieval suggests object aliases o
 | Item | Status | Reason |
 |---|---|---|
 | `综合打分表` and `公司月度综合打分表` | confirmed | Attachment title and clause object match |
-| `绩效结果` equals `公司月度综合打分表` | candidate | Similar wording only; no explicit same-object source |
+| `绩效结果` equals `公司月度综合打分表` | reviewItem | Similar wording only; no explicit same-object source |
 | `核算结果` equals `公司月度综合打分表` | no_evidence | The phrase does not appear in the sample source |
 | Approval type for `公司月度综合打分表` | confirmed as `多级审批` | Same output object has `编制 -> 校对 -> 批准` |
-| Input from `各部门` | candidate/needs decomposition | `反馈绩效评分数据` is a transfer clue, but `各部门` is a generic group and should be decomposed or confirmed |
+| Input from `各部门` | reviewItem/needs decomposition | `反馈绩效评分数据` is a transfer clue, but `各部门` is a generic group and should be decomposed or confirmed |
 | Output to company leader | not an output department | Approver is an approval actor, not an output target department |
 
 ## Wrong Handling
@@ -54,13 +54,13 @@ Use this as a regression example when vector retrieval suggests object aliases o
 ## Correct A1 Notes
 
 ```text
-对象别名候选：
-“绩效结果” ↔ “公司月度综合打分表”：向量召回候选；未见同一表单/同一字段/上下文指代证据，待确认。
+对象别名待确认：
+“绩效结果” ↔ “公司月度综合打分表”：向量召回待确认；未见同一表单/同一字段/上下文指代证据，待确认。
 
 审批类型：
 公司月度综合打分表：原文链路为“编制 -> 校对 -> 批准”，同一输出物存在多个控制节点，可标“多级审批”。
 
 跨部门输入：
-“各部门 -> 经营发展部”仅为候选受控传递线索。需记录对象“绩效评分数据”和动作“反馈”，并确认是否允许泛称“各部门”或需拆解到具体部门。
+“各部门 -> 经营发展部”仅为待确认受控传递线索。需记录对象“绩效评分数据”和动作“反馈”，并确认是否允许泛称“各部门”或需拆解到具体部门。
 ```
 

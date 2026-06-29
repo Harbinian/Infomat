@@ -14,10 +14,10 @@ const {
 } = require('../auth');
 const { mysqlConfigFromEnv } = require('../mysqlConfig');
 const {
-  loadCandidateRunBundle: loadProcessCandidateRunBundle,
-  makeProcessCandidateReviewRepository,
+  loadReviewRunBundle: loadProcessReviewRunBundle,
+  makeProcessInputBaselineReviewRepository,
   normalizeReviewPayload
-} = require('../processCandidateReviewRepository');
+} = require('../processInputBaselineReviewRepository');
 const { makeProcessGovernanceMysqlRepository } = require('../processGovernanceMysqlRepository');
 const {
   QUEUE_DEFINITIONS,
@@ -26,8 +26,8 @@ const {
 } = require('../processGovernanceIssuePoolRepository');
 const SOURCE_FILE_COVERAGE_LIMIT = 20;
 const REPO_ROOT = path.resolve(__dirname, '../../../..');
-let candidateReviewRepoPromise = null;
-let candidateReviewRepositoryFactory = null;
+let inputBaselineReviewRepoPromise = null;
+let inputBaselineReviewRepositoryFactory = null;
 let processGovernanceRepoPromise = null;
 let processGovernanceRepositoryFactory = null;
 let issuePoolRepoPromise = null;
@@ -49,40 +49,40 @@ function runAsyncAction(res, action) {
   });
 }
 
-async function candidateReviewRepository() {
-  if (candidateReviewRepositoryFactory) {
-    return await candidateReviewRepositoryFactory();
+async function inputBaselineReviewRepository() {
+  if (inputBaselineReviewRepositoryFactory) {
+    return await inputBaselineReviewRepositoryFactory();
   }
-  if (!useCandidateReviewMysqlStore()) {
-    throw new Error('Process candidate review MySQL store is disabled');
+  if (!useInputBaselineReviewMysqlStore()) {
+    throw new Error('Process input baseline review MySQL store is disabled');
   }
-  if (!candidateReviewRepoPromise) {
-    candidateReviewRepoPromise = (async () => {
+  if (!inputBaselineReviewRepoPromise) {
+    inputBaselineReviewRepoPromise = (async () => {
       const pool = mysql.createPool(mysqlConfigFromEnv());
-      const repo = makeProcessCandidateReviewRepository(pool);
+      const repo = makeProcessInputBaselineReviewRepository(pool);
       await repo.initSchema();
       return repo;
     })();
   }
   try {
-    return await candidateReviewRepoPromise;
+    return await inputBaselineReviewRepoPromise;
   } catch (error) {
-    candidateReviewRepoPromise = null;
+    inputBaselineReviewRepoPromise = null;
     throw error;
   }
 }
 
-function setCandidateReviewRepositoryFactory(factory) {
-  candidateReviewRepositoryFactory = factory;
-  candidateReviewRepoPromise = null;
+function setInputBaselineReviewRepositoryFactory(factory) {
+  inputBaselineReviewRepositoryFactory = factory;
+  inputBaselineReviewRepoPromise = null;
 }
 
-function resetCandidateReviewRepositoryFactory() {
-  candidateReviewRepositoryFactory = null;
-  candidateReviewRepoPromise = null;
+function resetInputBaselineReviewRepositoryFactory() {
+  inputBaselineReviewRepositoryFactory = null;
+  inputBaselineReviewRepoPromise = null;
 }
 
-function useCandidateReviewMysqlStore() {
+function useInputBaselineReviewMysqlStore() {
   const mode = String(process.env.PROCESS_CANDIDATE_REVIEW_STORE || 'mysql').trim().toLowerCase();
   return !['artifact', 'none', 'off', 'false', '0'].includes(mode);
 }
@@ -176,13 +176,13 @@ function resetIssuePoolRepositoryFactory() {
   issuePoolRepoPromise = null;
 }
 
-async function candidateReviewRepositoryOrNull() {
-  if (!candidateReviewRepositoryFactory && !useCandidateReviewMysqlStore()) return null;
+async function inputBaselineReviewRepositoryOrNull() {
+  if (!inputBaselineReviewRepositoryFactory && !useInputBaselineReviewMysqlStore()) return null;
   try {
-    return await candidateReviewRepository();
+    return await inputBaselineReviewRepository();
   } catch (error) {
     if (process.env.MDM_DB_QUIET !== '1') {
-      console.warn(`candidate review MySQL unavailable: ${error.message}`);
+      console.warn(`input baseline review MySQL unavailable: ${error.message}`);
     }
     return null;
   }
@@ -231,10 +231,10 @@ function readJsonlFile(filePath) {
     .map(line => JSON.parse(line));
 }
 
-function candidateArtifactsRoot() {
-  return process.env.PROCESS_CANDIDATE_ARTIFACTS_DIR
-    ? path.resolve(process.env.PROCESS_CANDIDATE_ARTIFACTS_DIR)
-    : path.join(REPO_ROOT, 'artifacts', 'process-candidates');
+function reviewArtifactsRoot() {
+  return process.env.PROCESS_INPUT_BASELINE_REVIEW_ARTIFACTS_DIR
+    ? path.resolve(process.env.PROCESS_INPUT_BASELINE_REVIEW_ARTIFACTS_DIR)
+    : path.join(REPO_ROOT, 'artifacts', 'process-input-baseline-review');
 }
 
 function safeRunId(value) {
@@ -242,9 +242,9 @@ function safeRunId(value) {
   return /^[A-Za-z0-9._-]+$/.test(runId) ? runId : '';
 }
 
-function candidateRunDir(runId) {
+function reviewRunDir(runId) {
   const safeId = safeRunId(runId);
-  return safeId ? path.join(candidateArtifactsRoot(), safeId) : '';
+  return safeId ? path.join(reviewArtifactsRoot(), safeId) : '';
 }
 
 function documentNameFromSource(sourceFile) {
@@ -255,7 +255,7 @@ function documentNameFromSource(sourceFile) {
     .pop() || '来源未标注文档';
 }
 
-function parseCandidateAnchor(anchor) {
+function parseReviewItemAnchor(anchor) {
   const text = String(anchor || '');
   return {
     clause: text.match(/§\s*([0-9]+(?:\.[0-9]+)*)/)?.[1] || '',
@@ -265,11 +265,11 @@ function parseCandidateAnchor(anchor) {
   };
 }
 
-function formatCandidateSource(sourceFile, sourceAnchor) {
+function formatReviewItemSource(sourceFile, sourceAnchor) {
   const parts = [];
   const fileName = sourceFile ? documentNameFromSource(sourceFile) : '';
   if (fileName) parts.push(fileName);
-  const anchor = parseCandidateAnchor(sourceAnchor);
+  const anchor = parseReviewItemAnchor(sourceAnchor);
   if (anchor.clause) parts.push(`第${anchor.clause}条`);
   if (anchor.page) parts.push(`第${anchor.page}页`);
   if (anchor.table_id) parts.push(anchor.table_id.replace(/^T/i, '表'));
@@ -279,19 +279,19 @@ function formatCandidateSource(sourceFile, sourceAnchor) {
   return parts.join(' · ') || String(sourceAnchor || '').replace(/\bP(\d+)\b/gi, '原文位置待核对') || '来源未标注';
 }
 
-function candidateSourceMatches(candidate, chunk) {
-  const candidateFile = String(candidate.source_file || '').replace(/\\/g, '/');
+function reviewSourceMatches(reviewItem, chunk) {
+  const reviewFile = String(reviewItem.source_file || '').replace(/\\/g, '/');
   const chunkFile = String(chunk.source_file || '').replace(/\\/g, '/');
-  return !candidateFile || !chunkFile || candidateFile === chunkFile || candidateFile.endsWith(chunkFile) || chunkFile.endsWith(candidateFile);
+  return !reviewFile || !chunkFile || reviewFile === chunkFile || reviewFile.endsWith(chunkFile) || chunkFile.endsWith(reviewFile);
 }
 
-function candidateExcerptScore(candidate, anchor, chunk) {
-  if (!candidateSourceMatches(candidate, chunk)) return -1;
+function reviewExcerptScore(reviewItem, anchor, chunk) {
+  if (!reviewSourceMatches(reviewItem, chunk)) return -1;
   let score = 0;
   if (anchor.clause && chunk.clause === anchor.clause) score += 10;
   if (anchor.paragraph_id && chunk.paragraph_id === anchor.paragraph_id) score += 10;
   const text = `${chunk.raw_text || ''}\n${chunk.normalized_text || ''}`;
-  String(candidate.content || '')
+  String(reviewItem.content || '')
     .split(/[→；;，,。\s、/]+/)
     .map(part => part.trim())
     .filter(part => part.length >= 3)
@@ -301,43 +301,43 @@ function candidateExcerptScore(candidate, anchor, chunk) {
   return score;
 }
 
-function loadCandidateRunBundle(runId) {
+function loadReviewRunBundle(runId) {
   const safeId = safeRunId(runId);
   if (!safeId) return null;
-  const runDir = path.join(candidateArtifactsRoot(), safeId);
+  const runDir = path.join(reviewArtifactsRoot(), safeId);
   const itemsPath = path.join(runDir, 'mapping_diff_items.json');
   if (!fs.existsSync(itemsPath)) return null;
-  const candidates = readJsonFile(itemsPath, []);
+  const reviewItems = readJsonFile(itemsPath, []);
   const chunks = readJsonlFile(path.join(runDir, 'chunks.jsonl'));
   const embedding = readJsonFile(path.join(runDir, 'embedding_manifest.json'), {});
-  const items = candidates.map((candidate, index) => {
-    const anchor = parseCandidateAnchor(candidate.source_anchor);
+  const items = reviewItems.map((reviewItem, index) => {
+    const anchor = parseReviewItemAnchor(reviewItem.source_anchor);
     const sourceExcerpts = chunks
-      .map(chunk => ({ chunk, score: candidateExcerptScore(candidate, anchor, chunk) }))
+      .map(chunk => ({ chunk, score: reviewExcerptScore(reviewItem, anchor, chunk) }))
       .filter(item => item.score > 0)
       .sort((left, right) => right.score - left.score)
       .slice(0, 3)
       .map(({ chunk }, excerptIndex) => ({
         chunk_id: chunk.chunk_id || `excerpt-${excerptIndex + 1}`,
         source_anchor: [chunk.doc_no, chunk.clause ? `§${chunk.clause}` : '', chunk.page ? `page=${chunk.page}` : '', chunk.paragraph_id].filter(Boolean).join(' '),
-        source_label: formatCandidateSource('', [chunk.doc_no, chunk.clause ? `§${chunk.clause}` : '', chunk.page ? `page=${chunk.page}` : '', chunk.paragraph_id].filter(Boolean).join(' ')),
+        source_label: formatReviewItemSource('', [chunk.doc_no, chunk.clause ? `§${chunk.clause}` : '', chunk.page ? `page=${chunk.page}` : '', chunk.paragraph_id].filter(Boolean).join(' ')),
         raw_text: chunk.raw_text || '',
-        evidence_status: chunk.evidence_status || 'candidate',
+        evidence_status: chunk.evidence_status || 'needs_review',
         verification_status: chunk.verification_status || 'unverified',
         allowed_downstream_use: chunk.allowed_downstream_use || 'review_only'
       }));
     return {
-      ...candidate,
-      stable_key: candidate.stable_key || candidate.id || `candidate-${index + 1}`,
-      document_name: candidate.document_name || documentNameFromSource(candidate.source_file),
-      source_label: formatCandidateSource(candidate.source_file, candidate.source_anchor),
+      ...reviewItem,
+      stable_key: reviewItem.stable_key || reviewItem.id || `review-item-${index + 1}`,
+      document_name: reviewItem.document_name || documentNameFromSource(reviewItem.source_file),
+      source_label: formatReviewItemSource(reviewItem.source_file, reviewItem.source_anchor),
       source_excerpts: sourceExcerpts
     };
   });
   return {
     run: {
       run_id: safeId,
-      candidate_count: items.length,
+      issue_count: items.length,
       embedding_status: embedding.status || 'missing',
       embedding_model: embedding.model || ''
     },
@@ -345,12 +345,12 @@ function loadCandidateRunBundle(runId) {
   };
 }
 
-function groupCandidateReviewItems(items) {
+function groupInputBaselineReviewItems(items) {
   const byDepartment = new Map();
   for (const item of items) {
     const department = item.department || '未标注部门';
     const documentName = item.document_name || documentNameFromSource(item.source_file);
-    const type = item.candidate_type || '其他候选';
+    const type = item.issue_type || '其他待确认';
     if (!byDepartment.has(department)) byDepartment.set(department, new Map());
     const byDocument = byDepartment.get(department);
     if (!byDocument.has(documentName)) byDocument.set(documentName, new Map());
@@ -362,60 +362,60 @@ function groupCandidateReviewItems(items) {
     department,
     documents: [...documents.entries()].map(([document_name, types]) => ({
       document_name,
-      types: [...types.entries()].map(([candidate_type, candidates]) => ({ candidate_type, candidates }))
+      types: [...types.entries()].map(([issue_type, reviewItems]) => ({ issue_type, reviewItems }))
     }))
   }));
 }
 
-function filterCandidateReviewItems(items, filters) {
+function filterInputBaselineReviewItems(items, filters) {
   return (items || []).filter(item => {
     if (filters.dept && item.department !== String(filters.dept)) return false;
     if (filters.document && item.document_name !== String(filters.document)) return false;
-    if (filters.type && item.candidate_type !== String(filters.type)) return false;
+    if (filters.type && item.issue_type !== String(filters.type)) return false;
     return true;
   });
 }
 
-function candidateReviewPayloadFromBundle(bundle, filters) {
-  const items = filterCandidateReviewItems(bundle.items, filters);
+function inputBaselineReviewPayloadFromBundle(bundle, filters) {
+  const items = filterInputBaselineReviewItems(bundle.items, filters);
   return {
     run: bundle.run,
     summary: { total: items.length },
-    groups: groupCandidateReviewItems(items),
+    groups: groupInputBaselineReviewItems(items),
     items
   };
 }
 
-function listCandidateRuns() {
-  const root = candidateArtifactsRoot();
+function listReviewRuns() {
+  const root = reviewArtifactsRoot();
   if (!fs.existsSync(root)) return [];
   return fs.readdirSync(root, { withFileTypes: true })
     .filter(entry => entry.isDirectory())
-    .map(entry => loadCandidateRunBundle(entry.name))
+    .map(entry => loadReviewRunBundle(entry.name))
     .filter(Boolean)
     .map(bundle => bundle.run)
     .sort((left, right) => right.run_id.localeCompare(left.run_id));
 }
 
-async function scopedCandidateRunForDepartment(run, departmentName, repo) {
+async function scopedReviewRunForDepartment(run, departmentName, repo) {
   if (!departmentName || !run || !run.run_id) return run;
   let count = 0;
-  if (repo && typeof repo.getCandidates === 'function') {
+  if (repo && typeof repo.getReviewItems === 'function') {
     try {
-      const stored = await repo.getCandidates(run.run_id, { dept: departmentName });
+      const stored = await repo.getReviewItems(run.run_id, { dept: departmentName });
       count = Number(stored && stored.summary && stored.summary.total || 0);
     } catch (error) {
       count = 0;
     }
   }
   if (count === 0) {
-    const bundle = loadCandidateRunBundle(run.run_id);
+    const bundle = loadReviewRunBundle(run.run_id);
     if (bundle && Array.isArray(bundle.items)) {
-      count = filterCandidateReviewItems(bundle.items, { dept: departmentName }).length;
+      count = filterInputBaselineReviewItems(bundle.items, { dept: departmentName }).length;
     }
   }
   if (count <= 0) return null;
-  return { ...run, candidate_count: count };
+  return { ...run, issue_count: count };
 }
 
 function emptySankey() {
@@ -678,12 +678,12 @@ async function currentIssuePoolDepartmentNameAsync(req) {
   return await currentDepartmentNameAsync(req);
 }
 
-async function currentCandidateReviewDepartmentName(req) {
-  if (await canViewAllCandidateReviewsAsync(req)) return '';
+async function currentInputBaselineReviewDepartmentName(req) {
+  if (await canViewAllInputBaselineReviewsAsync(req)) return '';
   return await currentDepartmentNameAsync(req);
 }
 
-function scopedCandidateReviewFilters(filters, departmentName) {
+function scopedInputBaselineReviewFilters(filters, departmentName) {
   const requestedDept = filters && filters.dept ? String(filters.dept) : '';
   if (!departmentName) {
     return {
@@ -697,8 +697,8 @@ function scopedCandidateReviewFilters(filters, departmentName) {
   };
 }
 
-function canAccessCandidateReviewItem(candidate, departmentName) {
-  return !!candidate && !!departmentName && candidate.department === departmentName;
+function canAccessInputBaselineReviewItem(reviewItem, departmentName) {
+  return !!reviewItem && !!departmentName && reviewItem.department === departmentName;
 }
 
 function sessionHasAnyRole(req, roleCodes) {
@@ -711,15 +711,15 @@ function sessionHasAnyRole(req, roleCodes) {
   return roleCodes.some(code => current.has(code));
 }
 
-async function canViewAllCandidateReviewsAsync(req) {
+async function canViewAllInputBaselineReviewsAsync(req) {
   if (sessionHasAnyRole(req, PROCESS_GOVERNANCE_GLOBAL_ROLES)) return true;
   if (req.session && ['submitter', 'owner', 'reviewer'].includes(req.session.userRole)) return false;
   return await canViewAllProcessGovernanceAsync(req);
 }
 
-async function canAccessCandidateReviewItemAsync(req, candidate, departmentName) {
-  if (await canViewAllCandidateReviewsAsync(req)) return !!candidate;
-  return canAccessCandidateReviewItem(candidate, departmentName);
+async function canAccessInputBaselineReviewItemAsync(req, reviewItem, departmentName) {
+  if (await canViewAllInputBaselineReviewsAsync(req)) return !!reviewItem;
+  return canAccessInputBaselineReviewItem(reviewItem, departmentName);
 }
 
 async function canViewAllQualityCasesAsync(req) {
@@ -2399,11 +2399,11 @@ router.post('/mapping-todos/:id/reopen', requireAuth, (req, res) => {
   });
 });
 
-router.get('/candidate-review/runs', requireAuth, (req, res) => {
+router.get('/input-baseline-review/runs', requireAuth, (req, res) => {
   return runAsyncAction(res, async () => {
-    const artifactRuns = listCandidateRuns();
+    const artifactRuns = listReviewRuns();
     const byRunId = new Map(artifactRuns.map(item => [item.run_id, item]));
-    const repo = await candidateReviewRepositoryOrNull();
+    const repo = await inputBaselineReviewRepositoryOrNull();
     if (repo) {
       const storedRuns = await repo.listRuns();
       for (const item of storedRuns) {
@@ -2411,11 +2411,11 @@ router.get('/candidate-review/runs', requireAuth, (req, res) => {
       }
     }
     let items = [...byRunId.values()];
-    const departmentName = await currentCandidateReviewDepartmentName(req);
+    const departmentName = await currentInputBaselineReviewDepartmentName(req);
     if (departmentName) {
       const scoped = [];
       for (const item of items) {
-        const scopedItem = await scopedCandidateRunForDepartment(item, departmentName, repo);
+        const scopedItem = await scopedReviewRunForDepartment(item, departmentName, repo);
         if (scopedItem) scoped.push(scopedItem);
       }
       items = scoped;
@@ -2425,67 +2425,67 @@ router.get('/candidate-review/runs', requireAuth, (req, res) => {
   });
 });
 
-router.get('/candidate-review/runs/:runId/candidates', requireAuth, (req, res) => {
+router.get('/input-baseline-review/runs/:runId/review-items', requireAuth, (req, res) => {
   return runAsyncAction(res, async () => {
-    const bundle = loadCandidateRunBundle(req.params.runId);
+    const bundle = loadReviewRunBundle(req.params.runId);
     const requestedFilters = {
       dept: req.query.dept,
       document: req.query.document,
       type: req.query.type
     };
-    const departmentName = await currentCandidateReviewDepartmentName(req);
-    const filters = scopedCandidateReviewFilters(requestedFilters, departmentName);
-    const repo = await candidateReviewRepositoryOrNull();
+    const departmentName = await currentInputBaselineReviewDepartmentName(req);
+    const filters = scopedInputBaselineReviewFilters(requestedFilters, departmentName);
+    const repo = await inputBaselineReviewRepositoryOrNull();
     if (repo) {
       try {
-        const runDir = candidateRunDir(req.params.runId);
+        const runDir = reviewRunDir(req.params.runId);
         const itemsPath = runDir && path.join(runDir, 'mapping_diff_items.json');
         if (itemsPath && fs.existsSync(itemsPath)) {
-          await repo.upsertBundle(loadProcessCandidateRunBundle(runDir));
+          await repo.upsertBundle(loadProcessReviewRunBundle(runDir));
         }
-        const stored = await repo.getCandidates(req.params.runId, filters);
+        const stored = await repo.getReviewItems(req.params.runId, filters);
         if (stored.items.length || !bundle) {
           return res.json({
-            run: bundle ? bundle.run : { run_id: req.params.runId, candidate_count: stored.items.length },
+            run: bundle ? bundle.run : { run_id: req.params.runId, issue_count: stored.items.length },
             ...stored
           });
         }
       } catch (error) {
         if (!bundle) throw error;
         if (process.env.MDM_DB_QUIET !== '1') {
-          console.warn(`candidate review MySQL read failed; falling back to artifact run ${req.params.runId}: ${error.message}`);
+          console.warn(`input baseline review MySQL read failed; falling back to artifact run ${req.params.runId}: ${error.message}`);
         }
       }
     }
-    if (!bundle) return res.status(404).json({ error: '候选运行不存在' });
-    res.json(candidateReviewPayloadFromBundle(bundle, filters));
+    if (!bundle) return res.status(404).json({ error: '问题识别批次不存在' });
+    res.json(inputBaselineReviewPayloadFromBundle(bundle, filters));
   });
 });
 
-router.put('/candidate-review/runs/:runId/candidates/:stableKey/review', requireAuth, (req, res) => {
+router.put('/input-baseline-review/runs/:runId/review-items/:stableKey/review', requireAuth, (req, res) => {
   return runAsyncAction(res, async () => {
     const safeId = safeRunId(req.params.runId);
-    if (!safeId) return res.status(400).json({ error: '候选运行编号无效' });
+    if (!safeId) return res.status(400).json({ error: '问题识别批次编号无效' });
     const stableKey = String(req.params.stableKey || '').trim();
-    if (!stableKey) return res.status(400).json({ error: '候选项编号无效' });
+    if (!stableKey) return res.status(400).json({ error: '待确认问题编号无效' });
 
-    const runDir = candidateRunDir(safeId);
+    const runDir = reviewRunDir(safeId);
     const itemsPath = path.join(runDir, 'mapping_diff_items.json');
-    if (!fs.existsSync(itemsPath)) return res.status(404).json({ error: '候选运行不存在' });
+    if (!fs.existsSync(itemsPath)) return res.status(404).json({ error: '问题识别批次不存在' });
 
     let repo;
     try {
-      repo = await candidateReviewRepository();
+      repo = await inputBaselineReviewRepository();
     } catch (error) {
       console.error(error);
-      return res.status(503).json({ error: '候选复核 MySQL 不可用' });
+      return res.status(503).json({ error: '输入基线问题复核 MySQL 不可用' });
     }
 
-    const bundle = loadProcessCandidateRunBundle(runDir);
-    const candidate = bundle.items.find(item => item.stable_key === stableKey);
-    if (!candidate) return res.status(404).json({ error: '候选项不存在' });
-    const departmentName = await currentCandidateReviewDepartmentName(req);
-    if (!await canAccessCandidateReviewItemAsync(req, candidate, departmentName)) {
+    const bundle = loadProcessReviewRunBundle(runDir);
+    const reviewItem = bundle.items.find(item => item.stable_key === stableKey);
+    if (!reviewItem) return res.status(404).json({ error: '待确认问题不存在' });
+    const departmentName = await currentInputBaselineReviewDepartmentName(req);
+    if (!await canAccessInputBaselineReviewItemAsync(req, reviewItem, departmentName)) {
       return res.status(403).json({ error: '只能处理本部门待确认问题' });
     }
 
@@ -2497,13 +2497,13 @@ router.put('/candidate-review/runs/:runId/candidates/:stableKey/review', require
 
     return res.json({
       run: bundle.run,
-      candidate: {
-        stable_key: candidate.stable_key,
-        department: candidate.department,
-        document_name: candidate.document_name,
-        candidate_type: candidate.candidate_type,
-        content: candidate.content,
-        source_label: candidate.source_label
+      reviewItem: {
+        stable_key: reviewItem.stable_key,
+        department: reviewItem.department,
+        document_name: reviewItem.document_name,
+        issue_type: reviewItem.issue_type,
+        content: reviewItem.content,
+        source_label: reviewItem.source_label
       },
       review
     });
@@ -2534,8 +2534,8 @@ router.get('/chains', requireAuth, (req, res) => {
   });
 });
 
-router.setCandidateReviewRepositoryFactory = setCandidateReviewRepositoryFactory;
-router.resetCandidateReviewRepositoryFactory = resetCandidateReviewRepositoryFactory;
+router.setInputBaselineReviewRepositoryFactory = setInputBaselineReviewRepositoryFactory;
+router.resetInputBaselineReviewRepositoryFactory = resetInputBaselineReviewRepositoryFactory;
 router.setProcessGovernanceRepositoryFactory = setProcessGovernanceRepositoryFactory;
 router.resetProcessGovernanceRepositoryFactory = resetProcessGovernanceRepositoryFactory;
 router.setIssuePoolRepositoryFactory = setIssuePoolRepositoryFactory;

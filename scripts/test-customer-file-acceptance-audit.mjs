@@ -49,6 +49,6 @@ assert.ok(
   'tasks should state that customer evidence needs Changxing acceptance evidence',
 );
 assert.match(report, /# 客户文件承接影响清单/);
-assert.match(report, /本清单不改写正式映射/);
+assert.match(report, /本清单不改写已确认流程映射/);
 
 console.log('Customer file acceptance audit checks passed');

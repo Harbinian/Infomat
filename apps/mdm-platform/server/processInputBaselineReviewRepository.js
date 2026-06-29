@@ -124,7 +124,7 @@ function roleAppearsNaked(roleName, sourceText) {
 
 function inferDefinitionStatus(item, sourceText = '') {
   if (item.definition_status) return item.definition_status;
-  const text = `${item.content || item.candidate_content || ''}\n${sourceText || ''}`;
+  const text = `${item.content || item.issue_content || ''}\n${sourceText || ''}`;
   const roleTerms = roleTermsFromText(text);
   if (!roleTerms.length) return '';
   if (roleTerms.some(role => roleAppearsNaked(role, text))) {
@@ -184,11 +184,11 @@ function chunkAnchor(chunk) {
   return parts.join(' ');
 }
 
-function sourceMatch(candidate, chunk) {
-  const candidateFile = String(candidate.source_file || '').replace(/\\/g, '/');
+function sourceMatch(reviewItem, chunk) {
+  const reviewFile = String(reviewItem.source_file || '').replace(/\\/g, '/');
   const chunkFile = String(chunk.source_file || '').replace(/\\/g, '/');
-  return !candidateFile || !chunkFile || candidateFile === chunkFile ||
-    candidateFile.endsWith(chunkFile) || chunkFile.endsWith(candidateFile);
+  return !reviewFile || !chunkFile || reviewFile === chunkFile ||
+    reviewFile.endsWith(chunkFile) || chunkFile.endsWith(reviewFile);
 }
 
 function highlightPhrases(value) {
@@ -199,23 +199,23 @@ function highlightPhrases(value) {
     .slice(0, 18);
 }
 
-function scoreChunk(candidate, anchor, chunk) {
-  if (!sourceMatch(candidate, chunk)) return -1;
+function scoreChunk(reviewItem, anchor, chunk) {
+  if (!sourceMatch(reviewItem, chunk)) return -1;
   let score = 0;
   if (anchor.clause && chunk.clause === anchor.clause) score += 12;
   if (anchor.paragraph_id && chunk.paragraph_id === anchor.paragraph_id) score += 12;
   if (anchor.table_id && chunk.table_id === anchor.table_id) score += 10;
   const text = `${chunk.raw_text || ''}\n${chunk.normalized_text || ''}`;
-  for (const phrase of highlightPhrases(candidate.content)) {
+  for (const phrase of highlightPhrases(reviewItem.content)) {
     if (text.includes(phrase)) score += phrase.length >= 8 ? 8 : 3;
   }
   return score;
 }
 
-function evidenceForCandidate(candidate, chunks) {
-  const anchor = parseAnchor(candidate.source_anchor);
+function evidenceForReviewItem(reviewItem, chunks) {
+  const anchor = parseAnchor(reviewItem.source_anchor);
   return chunks
-    .map(chunk => ({ chunk, score: scoreChunk(candidate, anchor, chunk) }))
+    .map(chunk => ({ chunk, score: scoreChunk(reviewItem, anchor, chunk) }))
     .filter(item => item.score > 0)
     .sort((left, right) => right.score - left.score)
     .slice(0, 3)
@@ -226,7 +226,7 @@ function evidenceForCandidate(candidate, chunks) {
         source_anchor: sourceAnchor,
         source_label: formatSourceForBusiness('', sourceAnchor),
         raw_text: chunk.raw_text || '',
-        evidence_status: chunk.evidence_status || 'candidate',
+        evidence_status: chunk.evidence_status || 'needs_review',
         verification_status: chunk.verification_status || 'unverified',
         allowed_downstream_use: chunk.allowed_downstream_use || 'review_only',
         display_order: index + 1
@@ -234,19 +234,19 @@ function evidenceForCandidate(candidate, chunks) {
     });
 }
 
-function normalizeCandidate(item, index) {
-  const stableKey = item.stable_key || item.id || `candidate-${index + 1}`;
+function normalizeReviewItem(item, index) {
+  const stableKey = item.stable_key || item.id || `review-item-${index + 1}`;
   return {
-    id: item.id || `CAND-${String(stableKey).toUpperCase()}`,
+    id: item.id || `IBR-${String(stableKey).toUpperCase()}`,
     stable_key: stableKey,
-    candidate_id: item.candidate_id || item.id || `CAND-${String(stableKey).toUpperCase()}`,
+    review_item_id: item.review_item_id || item.id || `IBR-${String(stableKey).toUpperCase()}`,
     department: item.department || '',
     document_name: item.document_name || documentNameFromSource(item.source_file),
     source_file: item.source_file || '',
     source_anchor: item.source_anchor || '',
     source_label: formatSourceForBusiness(item.source_file, item.source_anchor),
-    candidate_type: item.candidate_type || '',
-    content: item.content || item.candidate_content || '',
+    issue_type: item.issue_type || '',
+    content: item.content || item.issue_content || '',
     mapping_location: item.mapping_location || item.current_mapping_location || '',
     suggested_action: item.suggested_action || '',
     definition_status: item.definition_status || '',
@@ -255,16 +255,16 @@ function normalizeCandidate(item, index) {
   };
 }
 
-function loadCandidateRunBundle(candidateRunDir) {
-  const runId = path.basename(candidateRunDir);
-  const candidates = readJson(path.join(candidateRunDir, 'mapping_diff_items.json'), []);
-  const chunks = readJsonl(path.join(candidateRunDir, 'chunks.jsonl'));
-  const embedding = readJson(path.join(candidateRunDir, 'embedding_manifest.json'), {});
-  const reportPath = path.join(candidateRunDir, 'mapping_diff_report.md');
+function loadReviewRunBundle(reviewRunDir) {
+  const runId = path.basename(reviewRunDir);
+  const reviewItems = readJson(path.join(reviewRunDir, 'mapping_diff_items.json'), []);
+  const chunks = readJsonl(path.join(reviewRunDir, 'chunks.jsonl'));
+  const embedding = readJson(path.join(reviewRunDir, 'embedding_manifest.json'), {});
+  const reportPath = path.join(reviewRunDir, 'mapping_diff_report.md');
   const mappingDiffReport = fs.existsSync(reportPath) ? fs.readFileSync(reportPath, 'utf8') : '';
-  const items = candidates.map((candidate, index) => {
-    const item = normalizeCandidate(candidate, index);
-    item.source_excerpts = evidenceForCandidate(item, chunks);
+  const items = reviewItems.map((reviewItem, index) => {
+    const item = normalizeReviewItem(reviewItem, index);
+    item.source_excerpts = evidenceForReviewItem(item, chunks);
     item.definition_status = inferDefinitionStatus(item, item.source_excerpts.map(excerpt => excerpt.raw_text).join('\n'));
     return item;
   });
@@ -272,8 +272,8 @@ function loadCandidateRunBundle(candidateRunDir) {
   return {
     run: {
       run_id: runId,
-      candidate_run_path: candidateRunDir,
-      candidate_count: items.length,
+      review_run_path: reviewRunDir,
+      issue_count: items.length,
       embedding_status: embedding.status || 'missing',
       embedding_model: embedding.model || '',
       mapping_diff_report: mappingDiffReport
@@ -282,12 +282,12 @@ function loadCandidateRunBundle(candidateRunDir) {
   };
 }
 
-function groupCandidatesForReview(items) {
+function groupReviewItemsForReview(items) {
   const byDepartment = new Map();
   for (const item of items || []) {
     const department = item.department || '未标注部门';
     const documentName = item.document_name || documentNameFromSource(item.source_file);
-    const type = item.candidate_type || '其他候选';
+    const type = item.issue_type || '其他待确认';
     if (!byDepartment.has(department)) byDepartment.set(department, new Map());
     const byDocument = byDepartment.get(department);
     if (!byDocument.has(documentName)) byDocument.set(documentName, new Map());
@@ -306,7 +306,7 @@ function groupCandidatesForReview(items) {
           document_name,
           types: [...types.entries()]
             .sort((a, b) => a[0].localeCompare(b[0], 'zh-Hans-CN'))
-            .map(([candidate_type, candidates]) => ({ candidate_type, candidates }))
+            .map(([issue_type, reviewItems]) => ({ issue_type, reviewItems }))
         }))
     }));
 }
@@ -338,16 +338,16 @@ function attachExcerpts(items, excerpts) {
   }));
 }
 
-function filterCandidates(items, filters = {}) {
+function filterReviewItems(items, filters = {}) {
   return items.filter(item => {
     if (filters.dept && item.department !== String(filters.dept)) return false;
     if (filters.document && item.document_name !== String(filters.document)) return false;
-    if (filters.type && item.candidate_type !== String(filters.type)) return false;
+    if (filters.type && item.issue_type !== String(filters.type)) return false;
     return true;
   });
 }
 
-function makeProcessCandidateReviewRepository(pool) {
+function makeProcessInputBaselineReviewRepository(pool) {
   return {
     async initSchema() {
       for (const statement of splitSqlStatements(mdmMysqlSchemaSql())) {
@@ -357,20 +357,20 @@ function makeProcessCandidateReviewRepository(pool) {
 
     async upsertBundle(bundle) {
       await pool.execute(
-        `INSERT INTO process_candidate_review_runs
-          (run_id, candidate_run_path, candidate_count, embedding_status, embedding_model, mapping_diff_report)
+        `INSERT INTO process_input_baseline_review_runs
+          (run_id, review_run_path, issue_count, embedding_status, embedding_model, mapping_diff_report)
          VALUES (?, ?, ?, ?, ?, ?)
          ON DUPLICATE KEY UPDATE
-          candidate_run_path=VALUES(candidate_run_path),
-          candidate_count=VALUES(candidate_count),
+          review_run_path=VALUES(review_run_path),
+          issue_count=VALUES(issue_count),
           embedding_status=VALUES(embedding_status),
           embedding_model=VALUES(embedding_model),
           mapping_diff_report=VALUES(mapping_diff_report),
           updated_at=CURRENT_TIMESTAMP`,
         [
           bundle.run.run_id,
-          bundle.run.candidate_run_path,
-          bundle.run.candidate_count,
+          bundle.run.review_run_path,
+          bundle.run.issue_count,
           bundle.run.embedding_status,
           bundle.run.embedding_model,
           bundle.run.mapping_diff_report || ''
@@ -380,27 +380,27 @@ function makeProcessCandidateReviewRepository(pool) {
       const stableKeys = bundle.items.map(item => item.stable_key).filter(Boolean);
       if (stableKeys.length) {
         await pool.execute(
-          `DELETE FROM process_candidate_review_items
+          `DELETE FROM process_input_baseline_review_items
            WHERE run_id = ? AND stable_key NOT IN (${stableKeys.map(() => '?').join(', ')})`,
           [bundle.run.run_id, ...stableKeys]
         );
       } else {
-        await pool.execute('DELETE FROM process_candidate_review_items WHERE run_id = ?', [bundle.run.run_id]);
+        await pool.execute('DELETE FROM process_input_baseline_review_items WHERE run_id = ?', [bundle.run.run_id]);
       }
 
       for (const item of bundle.items) {
         await pool.execute(
-          `INSERT INTO process_candidate_review_items
-            (run_id, stable_key, candidate_id, department, document_name, source_file, source_anchor,
-             candidate_type, content, mapping_location, suggested_action, definition_status, owner, display_order)
+          `INSERT INTO process_input_baseline_review_items
+            (run_id, stable_key, review_item_id, department, document_name, source_file, source_anchor,
+             issue_type, content, mapping_location, suggested_action, definition_status, owner, display_order)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
            ON DUPLICATE KEY UPDATE
-            candidate_id=VALUES(candidate_id),
+            review_item_id=VALUES(review_item_id),
             department=VALUES(department),
             document_name=VALUES(document_name),
             source_file=VALUES(source_file),
             source_anchor=VALUES(source_anchor),
-            candidate_type=VALUES(candidate_type),
+            issue_type=VALUES(issue_type),
             content=VALUES(content),
             mapping_location=VALUES(mapping_location),
             suggested_action=VALUES(suggested_action),
@@ -411,12 +411,12 @@ function makeProcessCandidateReviewRepository(pool) {
           [
             bundle.run.run_id,
             item.stable_key,
-            item.candidate_id || item.id || '',
+            item.review_item_id || item.id || '',
             item.department,
             item.document_name,
             item.source_file,
             item.source_anchor,
-            item.candidate_type,
+            item.issue_type,
             item.content,
             item.mapping_location,
             item.suggested_action,
@@ -427,13 +427,13 @@ function makeProcessCandidateReviewRepository(pool) {
         );
 
         await pool.execute(
-          'DELETE FROM process_candidate_review_excerpts WHERE run_id = ? AND stable_key = ?',
+          'DELETE FROM process_input_baseline_review_excerpts WHERE run_id = ? AND stable_key = ?',
           [bundle.run.run_id, item.stable_key]
         );
 
         for (const excerpt of item.source_excerpts || []) {
           await pool.execute(
-            `INSERT INTO process_candidate_review_excerpts
+            `INSERT INTO process_input_baseline_review_excerpts
               (run_id, stable_key, chunk_id, source_anchor, source_label, raw_text, evidence_status,
                verification_status, allowed_downstream_use, display_order)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -456,14 +456,14 @@ function makeProcessCandidateReviewRepository(pool) {
 
     async listRuns() {
       const [rows] = await pool.execute(
-        `SELECT run_id, candidate_run_path, candidate_count, embedding_status, embedding_model, imported_at, updated_at
-         FROM process_candidate_review_runs
+        `SELECT run_id, review_run_path, issue_count, embedding_status, embedding_model, imported_at, updated_at
+         FROM process_input_baseline_review_runs
          ORDER BY imported_at DESC, run_id DESC`
       );
       return rows;
     },
 
-    async getCandidates(runId, filters = {}) {
+    async getReviewItems(runId, filters = {}) {
       const [itemRows] = await pool.execute(
         `SELECT i.*,
                 d.decision,
@@ -474,11 +474,11 @@ function makeProcessCandidateReviewRepository(pool) {
                 d.reviewer,
                 d.reviewed_at,
                 d.updated_at AS decision_updated_at
-         FROM process_candidate_review_items i
-         LEFT JOIN process_candidate_review_decisions d
+         FROM process_input_baseline_review_items i
+         LEFT JOIN process_input_baseline_review_decisions d
            ON d.run_id = i.run_id AND d.stable_key = i.stable_key
          WHERE i.run_id = ?
-         ORDER BY i.department, i.document_name, i.candidate_type, i.display_order, i.stable_key`,
+         ORDER BY i.department, i.document_name, i.issue_type, i.display_order, i.stable_key`,
         [runId]
       );
 
@@ -491,7 +491,7 @@ function makeProcessCandidateReviewRepository(pool) {
         const [excerptRows] = await pool.execute(
           `SELECT run_id, stable_key, chunk_id, source_anchor, source_label, raw_text, evidence_status,
                   verification_status, allowed_downstream_use, display_order
-           FROM process_candidate_review_excerpts
+           FROM process_input_baseline_review_excerpts
            WHERE run_id = ? AND stable_key IN (${stableKeys.map(() => '?').join(', ')})
            ORDER BY stable_key, display_order, chunk_id`,
           [runId, ...stableKeys]
@@ -499,10 +499,10 @@ function makeProcessCandidateReviewRepository(pool) {
         items = attachExcerpts(items, excerptRows);
       }
 
-      items = filterCandidates(items, filters);
+      items = filterReviewItems(items, filters);
       return {
         summary: { total: items.length },
-        groups: groupCandidatesForReview(items),
+        groups: groupReviewItemsForReview(items),
         items
       };
     },
@@ -510,7 +510,7 @@ function makeProcessCandidateReviewRepository(pool) {
     async saveDecision(runId, stableKey, payload) {
       const normalized = normalizeReviewPayload(payload);
       await pool.execute(
-        `INSERT INTO process_candidate_review_decisions
+        `INSERT INTO process_input_baseline_review_decisions
           (run_id, stable_key, decision, evidence_status, issue_type, definition_status, normalized_note, reviewer)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
          ON DUPLICATE KEY UPDATE
@@ -535,7 +535,7 @@ function makeProcessCandidateReviewRepository(pool) {
       );
       const [rows] = await pool.execute(
         `SELECT decision, evidence_status, issue_type, definition_status, normalized_note, reviewer, reviewed_at, updated_at
-         FROM process_candidate_review_decisions
+         FROM process_input_baseline_review_decisions
          WHERE run_id = ? AND stable_key = ?
          LIMIT 1`,
         [runId, stableKey]
@@ -558,9 +558,9 @@ function makeProcessCandidateReviewRepository(pool) {
 module.exports = {
   documentNameFromSource,
   formatSourceForBusiness,
-  groupCandidatesForReview,
-  loadCandidateRunBundle,
-  makeProcessCandidateReviewRepository,
+  groupReviewItemsForReview,
+  loadReviewRunBundle,
+  makeProcessInputBaselineReviewRepository,
   normalizeReviewPayload,
   roleDefinitionStatus
 };

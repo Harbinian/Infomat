@@ -96,7 +96,7 @@ async function main() {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        candidate_systems: ['CRM', 'ERP'],
+        authority_system_options: ['CRM', 'ERP'],
         authoritative_system: 'CRM',
         maintain_dept_id: seed.ownerDeptId,
         confirmed: false,

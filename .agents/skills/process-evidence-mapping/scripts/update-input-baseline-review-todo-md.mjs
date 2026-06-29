@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Update the human-facing candidate todo markdown.
+ * Update the human-facing input baseline review todo markdown.
  *
  * The markdown is an unresolved-item panel, not the long-term record.
  */
@@ -14,10 +14,10 @@ import {
   readJson,
   requireArg,
   shorten,
-} from './candidate-utils.mjs';
+} from './review-item-utils.mjs';
 
-const HEADERS = ['编号', '部门', '来源文件/条款', '候选类型', '候选内容', '当前映射位置', '建议动作', '处理状态', '负责人/确认对象'];
-const STATUS_CORRUPTION_RE = /当前正式映射|确认是否|补充到|回到原文|对照制度|核验原文|系统室|培训工作/;
+const HEADERS = ['编号', '部门', '来源文件/条款', '问题类型', '问题内容', '当前映射位置', '建议动作', '处理状态', '负责人/确认对象'];
+const STATUS_CORRUPTION_RE = /当前已确认流程映射|确认是否|补充到|回到原文|对照制度|核验原文|系统室|培训工作/;
 const OWNER_CORRUPTION_RE = /^(待处理|处理中|已处理|暂缓)$/;
 const TYPE_ORDER = new Map(TODO_TYPES.map((type, index) => [type, index + 1]));
 
@@ -47,7 +47,7 @@ function splitMarkdownRow(line) {
 function parseExistingRows(markdown) {
   const rows = new Map();
   for (const line of markdown.split(/\r?\n/)) {
-    if (!line.startsWith('| CAND-')) continue;
+    if (!line.startsWith('| IBR-')) continue;
     const cells = splitMarkdownRow(line);
     if (cells.length < HEADERS.length) continue;
     const status = cells[7] || '';
@@ -63,13 +63,13 @@ function parseExistingRows(markdown) {
 function unresolvedItems(items, mappingText) {
   const byKey = new Map();
   for (const item of items) {
-    if (!item || !item.id || !TODO_TYPES.includes(item.candidate_type)) continue;
+    if (!item || !item.id || !TODO_TYPES.includes(item.issue_type)) continue;
     if (mappingCovers(mappingText, item.content)) continue;
     byKey.set(item.stable_key || item.id, item);
   }
   return [...byKey.values()]
     .sort((a, b) => {
-      const typeDiff = (TYPE_ORDER.get(a.candidate_type) || 99) - (TYPE_ORDER.get(b.candidate_type) || 99);
+      const typeDiff = (TYPE_ORDER.get(a.issue_type) || 99) - (TYPE_ORDER.get(b.issue_type) || 99);
       if (typeDiff) return typeDiff;
       return `${a.source_file}${a.content}`.localeCompare(`${b.source_file}${b.content}`, 'zh-Hans-CN');
     });
@@ -95,13 +95,13 @@ function humanizeAnchor(value) {
 
 function buildMarkdown(items, existingRows) {
   const lines = [
-    '# 候选映射待办',
+    '# 输入基线问题待办',
     '',
-    '> 该文件只保留未解决候选项，不作为流程真源；解决一条后直接删除该条。追溯依赖原始候选 JSON、正式映射变更记录和 git 历史。',
+    '> 该文件只保留未解决待确认问题，不作为流程输入基线；解决一条后直接删除该条。追溯依赖原始待确认 JSON、已确认流程映射变更记录和 git 历史。',
     '',
-    `候选类型固定为：${TODO_TYPES.join('、')}。`,
+    `问题类型固定为：${TODO_TYPES.join('、')}。`,
     '',
-    '| 编号 | 部门 | 来源文件/条款 | 候选类型 | 候选内容 | 当前映射位置 | 建议动作 | 处理状态 | 负责人/确认对象 |',
+    '| 编号 | 部门 | 来源文件/条款 | 问题类型 | 问题内容 | 当前映射位置 | 建议动作 | 处理状态 | 负责人/确认对象 |',
     '|---|---|---|---|---|---|---|---|---|',
   ];
 
@@ -111,7 +111,7 @@ function buildMarkdown(items, existingRows) {
       item.id,
       item.department,
       sourceLabel(item),
-      item.candidate_type,
+      item.issue_type,
       shorten(item.content, 220),
       item.mapping_location,
       item.suggested_action,
@@ -122,7 +122,7 @@ function buildMarkdown(items, existingRows) {
   }
 
   if (items.length === 0) {
-    lines.push('| 暂无 | — | — | — | 当前无未解决候选项 | — | — | — | — |');
+    lines.push('| 暂无 | — | — | — | 当前无未解决待确认问题 | — | — | — | — |');
   }
 
   lines.push('');
@@ -131,16 +131,16 @@ function buildMarkdown(items, existingRows) {
 
 function main() {
   const args = parseArgs(process.argv);
-  requireArg(args, 'candidates');
+  requireArg(args, 'reviewItems');
   requireArg(args, 'mapping');
   requireArg(args, 'todo');
 
-  const candidates = readJson(args.candidates);
-  if (!Array.isArray(candidates)) throw new Error('--candidates must point to a JSON array');
+  const reviewItems = readJson(args.reviewItems);
+  if (!Array.isArray(reviewItems)) throw new Error('--review items must point to a JSON array');
   const mappingText = fs.existsSync(args.mapping) ? fs.readFileSync(args.mapping, 'utf8') : '';
   const oldMarkdown = fs.existsSync(args.todo) ? fs.readFileSync(args.todo, 'utf8') : '';
   const existingRows = parseExistingRows(oldMarkdown);
-  const items = unresolvedItems(candidates, mappingText);
+  const items = unresolvedItems(reviewItems, mappingText);
   fs.mkdirSync(path.dirname(args.todo), { recursive: true });
   fs.writeFileSync(args.todo, buildMarkdown(items, existingRows), 'utf8');
   console.error(`todo_items=${items.length} out=${args.todo}`);

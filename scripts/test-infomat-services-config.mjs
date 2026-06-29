@@ -24,7 +24,7 @@ assert.equal(INFOMAT_SERVICE_CONFIG.mysql.port, 3307);
 assert.equal(INFOMAT_SERVICE_CONFIG.mysql.user, 'mdm_user');
 assert.equal(INFOMAT_SERVICE_CONFIG.mysql.database, 'infomat_mdm');
 assert.equal(INFOMAT_SERVICE_CONFIG.mysql.connectionLimit, 16);
-assert.equal(INFOMAT_SERVICE_CONFIG.mysql.dockerContainer, 'infomat-candidate-review-mysql');
+assert.equal(INFOMAT_SERVICE_CONFIG.mysql.dockerContainer, 'infomat-input-baseline-review-mysql');
 assert.equal(INFOMAT_SERVICE_CONFIG.readModels.identity, 'mysql');
 assert.equal(INFOMAT_SERVICE_CONFIG.readModels.processGovernance, 'mysql');
 assert.equal(INFOMAT_SERVICE_CONFIG.admin.employeeNo, 'ADMIN001');
@@ -115,7 +115,7 @@ assert.ok(rootReadme.includes('scripts/infomat-services.local.env'), 'root READM
 const scriptsReadme = fs.readFileSync(path.join(repoRoot, 'scripts', 'README.md'), 'utf8');
 assert.ok(scriptsReadme.includes('MDM / PMO 固定启动合同'), 'scripts README should document the fixed startup contract');
 assert.ok(scriptsReadme.includes('启动确认项'), 'scripts README should document startup checks');
-assert.ok(scriptsReadme.includes('Docker 容器 `infomat-candidate-review-mysql` 通过 `localhost:3307` 提供服务'), 'scripts README should document the fixed MySQL service');
+assert.ok(scriptsReadme.includes('Docker 容器 `infomat-input-baseline-review-mysql` 通过 `localhost:3307` 提供服务'), 'scripts README should document the fixed MySQL service');
 
 const mdmReadme = fs.readFileSync(path.join(repoRoot, 'apps', 'mdm-platform', 'README.md'), 'utf8');
 assert.ok(mdmReadme.includes('MDM 和 PMO 从仓库根目录使用固定入口启动'), 'MDM README should document the fixed root starter');

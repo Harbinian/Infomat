@@ -1,5 +1,5 @@
 /**
- * 校验部门流程真源清单与 DCM/BBM 合同、docs/norms canonical 三件套一致。
+ * 校验部门流程输入基线清单与 DCM/BBM 合同、docs/norms canonical 三件套一致。
  *
  * 用法: node scripts/check-norms-source-manifest.mjs
  */
@@ -108,7 +108,7 @@ assert.deepEqual(
 );
 assert.ok(
   existsSync(engineeringManifestPath),
-  'engineering source manifest must remain available for engineering candidate-source review'
+  'engineering source manifest must remain available for engineering reviewItem-source review'
 );
 
 const canonicalNamePattern = new RegExp(

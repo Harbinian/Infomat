@@ -358,10 +358,10 @@ async function assertUserDirectoryGuards(adminCookie, reviewerCookie, submitterC
   assert.ok(adminUsers.body.every(row => row.password_hash === undefined));
 
   const submitterAssignableUsers = await request('/api/org/users/assignable', {}, submitterCookie);
-  assert.strictEqual(submitterAssignableUsers.res.status, 403, '普通报送人不能查看指派候选人列表');
+  assert.strictEqual(submitterAssignableUsers.res.status, 403, '普通报送人不能查看指派待确认人列表');
 
   const reviewerAssignableUsers = await request('/api/org/users/assignable', {}, reviewerCookie);
-  assert.strictEqual(reviewerAssignableUsers.res.status, 200, '冲突处理角色可查看最小指派候选人列表');
+  assert.strictEqual(reviewerAssignableUsers.res.status, 200, '冲突处理角色可查看最小指派待确认人列表');
   assert.ok(reviewerAssignableUsers.body.some(row => row.name === '财务负责人'));
   assert.ok(reviewerAssignableUsers.body.every(row => row.id && row.name));
   assert.ok(reviewerAssignableUsers.body.every(row => row.employee_no === undefined));
@@ -526,7 +526,7 @@ function makeSecurityDataMapRepository(seed) {
         owner_user_id: payload.owner_user_id || null,
         confirmed: payload.confirmed ? 1 : 0,
         note: payload.note || null,
-        status: 'candidate'
+        status: 'needs_review'
       };
       return state.identity;
     },
@@ -605,7 +605,7 @@ async function assertRbacOwnerCanMaintainFieldIdentity(seed) {
     const upsertIdentity = await localRequest('owner', `/api/field-identities/${seed.fieldB}`, {
       method: 'PUT',
       body: JSON.stringify({
-        candidate_systems: ['ERP'],
+        authority_system_options: ['ERP'],
         authoritative_system: 'ERP',
         maintain_dept_id: null,
         confirmed: false,

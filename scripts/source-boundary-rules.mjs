@@ -59,7 +59,7 @@ function result(flag, overrides = {}) {
     internal_or_unknown: {
       source_boundary_flag: 'internal_or_unknown',
       source_boundary_label: '内部或未识别来源',
-      acceptance_status: '已入正式映射',
+      acceptance_status: '已入已确认流程映射',
       allowed_downstream_use: 'review_required_before_formal_use',
       customer_acceptance_required: false,
     },

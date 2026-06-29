@@ -416,7 +416,7 @@ async function main() {
     owner_user_id: 42,
     confidence_level: 'high',
     confirmed: false,
-    note: '候选黄金源'
+    note: '待确认黄金源'
   });
   assert.strictEqual(identity.authoritative_system, 'CRM');
   assert.strictEqual(identity.confirmed, 0);

@@ -54,7 +54,7 @@ function makeFakeRepository() {
         fields: [field],
         identities: [{
           ...field,
-          candidate_systems: JSON.stringify(['MDM平台', 'CRM']),
+          authority_system_options: JSON.stringify(['MDM平台', 'CRM']),
           authoritative_system_name: 'MDM平台',
           maintain_dept_name: '信息化部',
           confirmed: 1,

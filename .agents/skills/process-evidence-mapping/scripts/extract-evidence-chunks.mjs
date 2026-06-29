@@ -57,7 +57,7 @@ function printHelp() {
 Supported inputs: .docx, .doc, .xlsx, .xls, .md, .txt, .html, .pdf, .vsd/.vsdx.
 Use --defer-ext .vsd,.vsdx to keep Visio files in the source index without invoking Visio.
 Use --defer-reason to record why deferred files are not extracted in this run.
-Outputs are candidate retrieval artifacts only; raw_text is never corrected.`);
+Outputs are review retrieval artifacts only; raw_text is never corrected.`);
 }
 
 function readJsonl(filePath) {

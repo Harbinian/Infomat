@@ -246,7 +246,7 @@ function parseA1Markdown(text, sourceFile) {
       }
       const fuzzyName = names.find(name => Object.keys(row).some(key => key.includes(name)));
       if (!fuzzyName) return '';
-      const key = Object.keys(row).find(candidate => candidate.includes(fuzzyName));
+      const key = Object.keys(row).find(reviewItem => reviewItem.includes(fuzzyName));
       return row[key] || '';
     };
     const a1Code = valueFor('A1编号', '业务行为（A1）编号');

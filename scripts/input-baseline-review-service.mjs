@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 /**
- * MySQL-backed candidate review web service.
+ * MySQL-backed input baseline review web service.
  */
 import http from 'node:http';
 import {
   buildReviewAppHtml,
   createMysqlPoolFromEnv,
-  makeCandidateReviewRepository,
-} from './candidate-review-core.mjs';
+  makeInputBaselineReviewRepository,
+} from './input-baseline-review-core.mjs';
 
 function parseArgs(argv) {
   const args = {
@@ -21,7 +21,7 @@ function parseArgs(argv) {
     } else if (arg === '--port') {
       args.port = Number(argv[++index]);
     } else if (arg === '--help' || arg === '-h') {
-      console.log('Usage: node scripts/candidate-review-service.mjs [--host 127.0.0.1] [--port 8765]');
+      console.log('Usage: node scripts/input-baseline-review-service.mjs [--host 127.0.0.1] [--port 8765]');
       process.exit(0);
     } else {
       throw new Error(`Unknown argument: ${arg}`);
@@ -50,7 +50,7 @@ function sendText(res, status, value, contentType = 'text/plain; charset=utf-8')
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const pool = await createMysqlPoolFromEnv();
-  const repo = makeCandidateReviewRepository(pool);
+  const repo = makeInputBaselineReviewRepository(pool);
 
   const server = http.createServer(async (req, res) => {
     try {
@@ -67,13 +67,13 @@ async function main() {
         return;
       }
 
-      const candidateListMatch = pathname.match(/^\/api\/runs\/([^/]+)\/candidates$/);
-      if (req.method === 'GET' && candidateListMatch) {
-        sendJson(res, 200, await repo.getCandidates(candidateListMatch[1]));
+      const reviewItemListMatch = pathname.match(/^\/api\/runs\/([^/]+)\/review-items$/);
+      if (req.method === 'GET' && reviewItemListMatch) {
+        sendJson(res, 200, await repo.getReviewItems(reviewItemListMatch[1]));
         return;
       }
 
-      const reviewMatch = pathname.match(/^\/api\/runs\/([^/]+)\/candidates\/([^/]+)\/review$/);
+      const reviewMatch = pathname.match(/^\/api\/runs\/([^/]+)\/review-items\/([^/]+)\/review$/);
       if (req.method === 'PUT' && reviewMatch) {
         const body = await readBody(req);
         await repo.saveDecision({
@@ -99,7 +99,7 @@ async function main() {
   });
 
   server.listen(args.port, args.host, () => {
-    console.log(`candidate_review_service=http://${args.host}:${args.port}/`);
+    console.log(`input_baseline_review_service=http://${args.host}:${args.port}/`);
   });
 
   const shutdown = async () => {

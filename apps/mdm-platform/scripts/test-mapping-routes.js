@@ -232,7 +232,7 @@ async function main() {
     const ownerIdentity = await request(`/api/field-identities/${field.body.id}`, {
       method: 'PUT',
       body: JSON.stringify({
-        candidate_systems: ['MDM平台', 'CRM'],
+        authority_system_options: ['MDM平台', 'CRM'],
         authoritative_system: 'MDM平台',
         maintain_dept_id: seed.ownerDeptId,
         owner_user_id: seed.ownerId,

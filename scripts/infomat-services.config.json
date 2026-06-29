@@ -14,7 +14,7 @@
     "user": "mdm_user",
     "database": "infomat_mdm",
     "connectionLimit": 16,
-    "dockerContainer": "infomat-candidate-review-mysql"
+    "dockerContainer": "infomat-input-baseline-review-mysql"
   },
   "readModels": {
     "identity": "mysql",

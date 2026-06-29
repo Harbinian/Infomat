@@ -15,7 +15,7 @@ const REVIEW_ROLES = new Set(['admin', 'it_lead', 'reviewer', 'owner', 'data_qua
 const DEPT_CREATE_ROLES = new Set(['submitter', 'business_contact']);
 const FIELD_STATUSES = new Set(['suggested', 'business_confirmed', 'data_governed', 'published', 'retired']);
 const DRAFT_STATUSES = new Set(['draft', 'submitted', 'under_review', 'needs_changes', 'approved', 'published', 'rejected']);
-const CLASSIFICATION_STATUSES = new Set(['unclassified', 'candidate', 'confirmed']);
+const CLASSIFICATION_STATUSES = new Set(['unclassified', 'needs_review', 'confirmed']);
 const BASIC_USER_ROLES = new Set(['submitter', 'owner', 'reviewer', 'admin']);
 
 function runAction(res, action) {
@@ -515,8 +515,8 @@ function publishValidationDetails(draft, options = {}) {
   if (!text(draft.l1_name)) details.push('发布前还需确认 L1。');
   if (!text(draft.l2_name)) details.push('发布前还需确认 L2。');
   if (!text(draft.l3_name)) details.push('发布前还需确认 L3。');
-  if (draft.l1_status === 'candidate' || draft.l2_status === 'candidate') {
-    details.push('候选 L1/L2 未复核前不能作为正式能力结构发布。');
+  if (draft.l1_status === 'needs_review' || draft.l2_status === 'needs_review') {
+    details.push('待确认 L1/L2 未复核前不能作为正式能力结构发布。');
   }
   if (!options.relaxed) {
     if (draft.l1_status !== 'confirmed') details.push('L1 必须由审核人确认。');
