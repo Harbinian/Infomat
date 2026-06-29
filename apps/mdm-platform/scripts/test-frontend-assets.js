@@ -45,7 +45,7 @@ async function main() {
     '/api/process-governance/sankey',
     '/api/process-governance/a1',
     '/api/process-governance/cross-dept',
-    '/api/process-governance/candidate-review/runs',
+    '/api/process-governance/input-baseline-review/runs',
     '/api/role-workbench',
     '/api/activity/heatmap',
     '/api/page-workflows',
@@ -96,7 +96,7 @@ async function main() {
     '组织架构和部门职责.md',
     '不支持手动新增',
     '业务对接人收到字段确认待办后',
-    '数据质量员发现同一字段存在不同黄金源候选时',
+    '数据质量员发现同一字段存在不同待确认黄金源时',
     '工作组组长看到本工作组有跨部门衔接风险时',
     '项目组长看到本部门有跨部门衔接风险时',
     'function renderProcessGovernance()',
@@ -122,14 +122,14 @@ async function main() {
     'function renderProcessGovernanceView(view, payload, route)',
     'function clearProcessGovernanceViewCache(reason)',
     'data-pg-view="overview"',
-    'data-pg-view="candidateReview"',
+    'data-pg-view="inputBaselineReview"',
     'data-pg-view="map"',
     'data-pg-view="evidence"',
     'data-pg-view="mapping"',
     'data-pg-view="quality"',
-    'function renderProcessGovernanceCandidateReview',
-    'function renderCandidateReviewList',
-    'function renderCandidateReviewDetailPage',
+    'function renderProcessGovernanceInputBaselineReview',
+    'function renderInputBaselineReviewList',
+    'function renderInputBaselineReviewDetailPage',
     '待确认的问题',
     '总览',
     '待确认问题',
@@ -137,12 +137,12 @@ async function main() {
     '证据来源',
     '映射工作',
     '治理闭环',
-    'function saveProcessGovernanceCandidateReview',
+    'function saveProcessGovernanceInputBaselineReview',
     "method: 'PUT'",
     'data-review-field',
-    'data-candidate-open',
-    'data-candidate-back',
-    'candidate-review-confirmation',
+    'data-reviewItem-open',
+    'data-reviewItem-back',
+    'input-baseline-review-confirmation',
     'issue_type',
     'definition_status',
     'normalized_note',
@@ -234,14 +234,14 @@ async function main() {
     "window.addEventListener('scroll', scheduleDetailStickyTableHeader, true)"
   ].forEach(needle => assert.ok(html.includes(needle), `missing detail table sticky header hook ${needle}`));
   assert.ok(!html.includes('prompt('), 'maintenance create/edit flows should use routed forms instead of native prompts');
-  assert.ok(!html.includes('data-correction-fragment'), 'candidate review must not restore click-to-concat correction fragments');
-  assert.ok(!html.includes('点选标签生成修正意见'), 'candidate review must not restore click-to-concat correction copy');
+  assert.ok(!html.includes('data-correction-fragment'), 'input baseline review must not restore click-to-concat correction fragments');
+  assert.ok(!html.includes('点选标签生成修正意见'), 'input baseline review must not restore click-to-concat correction copy');
   [
-    '<th>候选类型</th>',
-    '<th>候选内容</th>',
+    '<th>问题类型</th>',
+    '<th>问题内容</th>',
     '<th>定义充分性</th>',
     '<th>来源锚点</th>',
-    '候选类型：',
+    '问题类型：',
     '待确认的流程线索',
     '线索复核',
     '这条线索',
@@ -254,24 +254,24 @@ async function main() {
     '保存复核',
     '回源',
     '回到原文修改',
-    '回到正式映射文件修改',
+    '回到已确认流程映射文件修改',
     '回到哪个部门映射文件'
-  ].forEach(needle => assert.ok(!html.includes(needle), `candidate review should not expose internal wording ${needle}`));
+  ].forEach(needle => assert.ok(!html.includes(needle), `input baseline review should not expose internal wording ${needle}`));
   [
     '在哪发现的',
     '哪里有问题',
     '是哪种问题',
     '证据有没有问题',
     '请你确认',
-    '这里不是正式映射库',
+    '这里不是已确认流程映射库',
     '每一条问题先说清楚',
     '这是不是个问题',
     '证据有没有问题',
     '要不要修改原文',
     '修改原文文件后重新导入',
-    'class="candidate-review-detail"',
-    'candidate-review-confirmation'
-  ].forEach(needle => assert.ok(html.includes(needle), `candidate review should use plain wording ${needle}`));
+    'class="input-baseline-review-detail"',
+    'input-baseline-review-confirmation'
+  ].forEach(needle => assert.ok(html.includes(needle), `input baseline review should use plain wording ${needle}`));
   assert.ok(html.includes('.table-container thead th') && html.includes('position: sticky') && html.includes('top: 0'), 'detail table headers should stay visible while scrolling');
   assert.ok(html.includes('.table-container th, .table-container td') && html.includes('border-right'), 'detail table cells should show vertical grid lines');
   assert.ok(html.includes('border-collapse: separate') && html.includes('border-spacing: 0'), 'detail tables should use separate borders for visible cells and sticky headers');

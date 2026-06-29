@@ -4,7 +4,7 @@
 
 **Goal:** 在 Data Map 字段域已直接切换到 MySQL 后，继续清理 MDM 平台仍依赖 SQLite 的业务域，优先迁移术语、旧映射审批、冲突、通用待办、版本/活动日志。
 
-**Current Baseline:** `master` 已快进合并 `codex/mdm-data-map-mysql-direct-cutover`。候选复核、流程治理 MySQL 分支、身份/RBAC MySQL 基础、Data Map 字段域 MySQL 直接切换已经落地。
+**Current Baseline:** `master` 已快进合并 `codex/mdm-data-map-mysql-direct-cutover`。输入基线问题复核、流程治理 MySQL 分支、身份/RBAC MySQL 基础、Data Map 字段域 MySQL 直接切换已经落地。
 
 **Architecture:** 新迁移域必须走 MySQL repository 和 repository factory 注入，不在路由中直写 SQL。权限继续使用 MySQL-aware 身份/RBAC helper。旧 SQLite 数据不迁移，不桥接；`better-sqlite3` 暂留给未迁移域和隔离测试。
 
@@ -12,7 +12,7 @@
 
 ## Summary
 
-本阶段不再回头扩大候选复核或 Data Map 字段域。当前剩余风险集中在仍 `require('../db')` 的业务域中，尤其是 `terminology`、`mappings`、`conflicts`、`todos`、`versions`、`activity` 仍会读取或写入 SQLite `terms`、`field_entries`、`field_identities`、`change_set`、`version_log` 等遗留表。
+本阶段不再回头扩大输入基线问题复核或 Data Map 字段域。当前剩余风险集中在仍 `require('../db')` 的业务域中，尤其是 `terminology`、`mappings`、`conflicts`、`todos`、`versions`、`activity` 仍会读取或写入 SQLite `terms`、`field_entries`、`field_identities`、`change_set`、`version_log` 等遗留表。
 
 迁移按依赖顺序推进：先术语，再旧映射审批，再冲突/待办/版本日志。人员、产品、分类、系统等主数据对象 CRUD 面积更大，本轮只登记为后续迁移对象，不抢占当前主线。
 
@@ -87,7 +87,7 @@
 - MySQL 目标版本为 8.0+。
 - 旧 SQLite `platform.db` 不迁移。
 - 本轮不迁人员、产品、分类、系统、组织单元等主数据对象 CRUD。
-- 本轮不改公开 API 路径，不重排目录，不改 PMO 驾驶舱和流程真源。
+- 本轮不改公开 API 路径，不重排目录，不改 PMO 驾驶舱和流程输入基线。
 - `2026-06-16-full-repo-audit-remediation.md` 仍作为后续全仓审计参考，但不抢占本阶段剩余 MySQL 迁移主线。
 
 ## Execution Notes

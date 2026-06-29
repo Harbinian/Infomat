@@ -356,7 +356,7 @@ function renderHtml(l3Rows, a1Rows) {
         <div class="badge">部门审核稿 · 待反馈</div>
       </section>
       <div class="read-guide">
-        <strong>读图方法：</strong>"全域总览"看${escapeHtml(dept)}覆盖哪些领域和系统；切换到具体能力域（层级范围 L1-A1），看 能力域（层级范围 L1-A1）：业务能力（L2）→ 业务流程（L3）→ 业务行为（A1）→ 应用系统（S1） 的四层细节。悬停连线可见制度依据和系统设计依据。业务行为（A1）节点显示A1序号、行为名称和执行角色，业务行为（A1）编号保留在悬停提示和明细表中用于追溯。下方明细表在"全域总览"显示业务流程（L3）行，在能力域视图显示业务行为（A1）行。本页由正式映射 Markdown 生成；全域视图仅展示已沉淀的 DCM 主映射，能力域视图展示已受控入库的 BBM/A1 明细。
+        <strong>读图方法：</strong>"全域总览"看${escapeHtml(dept)}覆盖哪些领域和系统；切换到具体能力域（层级范围 L1-A1），看 能力域（层级范围 L1-A1）：业务能力（L2）→ 业务流程（L3）→ 业务行为（A1）→ 应用系统（S1） 的四层细节。悬停连线可见制度依据和系统设计依据。业务行为（A1）节点显示A1序号、行为名称和执行角色，业务行为（A1）编号保留在悬停提示和明细表中用于追溯。下方明细表在"全域总览"显示业务流程（L3）行，在能力域视图显示业务行为（A1）行。本页由已确认流程映射 Markdown 生成；全域视图仅展示已沉淀的 DCM 主映射，能力域视图展示已受控入库的 BBM/A1 明细。
       </div>
       <section class="stat-row">
         <div class="stat-box"><div class="num">1</div><div class="lbl">部门（D1）</div></div>
@@ -403,7 +403,7 @@ function renderHtml(l3Rows, a1Rows) {
           <tbody id="mappingBody"></tbody>
         </table>
       </section>
-      <div class="foot">数据来源：${escapeHtml(sourcePath)}。应用系统（S1）口径限定为OA、MES、PLM、ERP；未见明确系统证据的流程显示为应用承接待确认。业务行为（A1）分解基于正式映射文档和已回源的工程技术部资料包。</div>
+      <div class="foot">数据来源：${escapeHtml(sourcePath)}。应用系统（S1）口径限定为OA、MES、PLM、ERP；未见明确系统证据的流程显示为应用承接待确认。业务行为（A1）分解基于已确认流程映射文档和已回源的工程技术部资料包。</div>
     </main>
     <script>
       var departmentName = ${toJson(dept)};
@@ -773,7 +773,7 @@ function renderHtml(l3Rows, a1Rows) {
         var body = document.getElementById("mappingBody");
         var isGlobal = activeMode === "全域总览";
         var tableTitle = document.getElementById("tableTitle");
-        if (tableTitle) tableTitle.textContent = isGlobal ? "正式映射明细" : activeMode + " A1 明细";
+        if (tableTitle) tableTitle.textContent = isGlobal ? "已确认流程映射明细" : activeMode + " A1 明细";
         if (isGlobal) {
           table.className = "table-l3";
           head.innerHTML = '<tr><th class="col-seq">序号</th><th class="col-dept">部门（D1）</th><th class="col-domain">能力域（L1）</th><th class="col-cap">业务能力（L2）</th><th class="col-proc">业务流程（L3）</th><th class="col-evidence">制度依据</th><th class="col-evidtype">来源边界</th><th class="col-system">应用系统（S1）</th><th class="col-evidence">系统设计依据</th></tr>';

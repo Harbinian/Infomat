@@ -130,9 +130,9 @@ const ROLE_GUIDES = [
     goal: '让字段台账可复核、可追溯，并逐步形成黄金源判断。',
     firstEntry: { label: '数据质量', target: '#/quality' },
     workflow: ['检查字段完整性', '确认黄金源', '处理字段冲突', '标记质量问题'],
-    sample: '数据质量员发现同一字段存在不同黄金源候选时，先查看字段台账和消费系统，再发起冲突协调。',
+    sample: '数据质量员发现同一字段存在不同待确认黄金源时，先查看字段台账和消费系统，再发起冲突协调。',
     pitfall: '不要因为流程建议落位就直接认定黄金源；黄金源必须按字段确认。',
-    doneCriteria: '字段完整性、黄金源候选和冲突处理状态都有记录。',
+    doneCriteria: '字段完整性、待确认黄金源和冲突处理状态都有记录。',
     permissions: [
       BASE_PERMISSIONS.dataViewDepartment,
       BASE_PERMISSIONS.dashboard,
@@ -193,7 +193,7 @@ const ROLE_GUIDES = [
     goal: '确认本部门流程和字段口径，并推动跨部门确认。',
     firstEntry: { label: '待办收到', target: '#/todos' },
     workflow: ['清理部门待办', '核字段口径', '确认跨部门输入输出'],
-    sample: '业务负责人收到黄金源确认待办后，先看字段消费方，再判断维护部门和权威系统候选。',
+    sample: '业务负责人收到黄金源确认待办后，先看字段消费方，再判断维护部门和待确认权威系统。',
     pitfall: '不要只确认本部门视角；跨部门输入输出也要一起看。',
     doneCriteria: '本部门待办已有处理记录，字段口径明确。',
     permissions: [

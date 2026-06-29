@@ -58,7 +58,7 @@ function syncProcessGovernanceOrg(options = {}) {
       .map(row => row.id);
   }
 
-  function loadArchiveCandidates(canonicalIds) {
+  function loadArchiveReviewItems(canonicalIds) {
     const placeholders = canonicalIds.length ? canonicalIds.map(() => '?').join(', ') : 'NULL';
     return database.prepare(`
       SELECT id, name, code
@@ -74,11 +74,11 @@ function syncProcessGovernanceOrg(options = {}) {
     return {
       dryRun: true,
       canonicalDepartments: PROCESS_GOVERNANCE_DEPARTMENTS.map(department => ({ ...department })),
-      archiveCandidates: loadArchiveCandidates(canonicalIds)
+      archiveReviewItems: loadArchiveReviewItems(canonicalIds)
     };
   }
 
-  let archiveCandidates = [];
+  let archiveReviewItems = [];
   const sync = database.transaction(() => {
     const canonicalIds = [];
 
@@ -106,7 +106,7 @@ function syncProcessGovernanceOrg(options = {}) {
       }
     }
 
-    archiveCandidates = loadArchiveCandidates(canonicalIds);
+    archiveReviewItems = loadArchiveReviewItems(canonicalIds);
 
     if (archiveNonCanonical && canonicalIds.length) {
       database.prepare(`
@@ -124,7 +124,7 @@ function syncProcessGovernanceOrg(options = {}) {
     dryRun: false,
     archiveNonCanonical,
     canonicalDepartments: PROCESS_GOVERNANCE_DEPARTMENTS.map(department => ({ ...department })),
-    archiveCandidates
+    archiveReviewItems
   };
 }
 

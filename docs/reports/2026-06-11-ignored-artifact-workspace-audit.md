@@ -25,4 +25,4 @@
 1. 保持 `.playwright-cli/`、`output/`、`__pycache__/` 继续被忽略。
 2. 若某张截图需要长期保存，先精选到 `docs/samples/` 或写入报告引用，不直接提交整批输出。
 3. `.superpowers/` 的历史输出如需迁移，应先写迁移提案，确认哪些进入 `docs/superpowers/`、`docs/reports/` 或归档目录。
-4. 不从这些输出目录反推当前 PMO、MDM 或流程真源状态。
+4. 不从这些输出目录反推当前 PMO、MDM 或流程输入基线状态。

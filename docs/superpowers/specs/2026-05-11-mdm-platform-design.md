@@ -215,8 +215,8 @@ field_entries {
 ```sql
 field_identities {
   id, field_entry_id,
-  candidate_systems: '["ERP","MES","PLM"]',  -- 候选系统（JSON 数组）
-  authoritative_system,   -- 权威系统（从候选系统中确认一个）
+  review_systems: '["ERP","MES","PLM"]',  -- 待确认系统（JSON 数组）
+  authoritative_system,   -- 权威系统（从待确认系统中确认一个）
   maintain_dept_id,      -- 维护部门（部门ID）
   -- owner_user_id：直接指明该字段的数据 owner，避免跨表查找
   owner_user_id,
@@ -368,7 +368,7 @@ version_log.change_set_id -> change_set.id
 | E | 涉及数据对象 | 报送人 | 如物料、BOM、工装、批次，可多选 |
 | F | 对应字段（字段名） | 数据 owner | 如"物料编码"、"工艺规范版本"，按行填写 |
 | G | 字段类型 | 数据 owner | 文本/编码/日期/枚举/附件，从下拉选 |
-| H | 黄金源系统 | 数据 owner | 从候选系统中确认唯一权威源 |
+| H | 黄金源系统 | 数据 owner | 从待确认系统中确认唯一权威源 |
 | I | 维护部门 | 数据 owner | 从部门列表选择 |
 | J | 消费系统 | 数据 owner | 从系统列表多选，导出时展开为多行 |
 | K | 同步方式 | 数据 owner | 实时/批量/人工导入/事件触发，从下拉选 |

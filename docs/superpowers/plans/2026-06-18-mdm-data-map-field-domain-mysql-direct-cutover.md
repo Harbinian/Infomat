@@ -14,14 +14,14 @@
 
 本阶段按“字段域优先 + 直接替换 + 可大幅重构”执行。目标不是把 SQLite `field_entries` 原样搬到 MySQL，而是建立一套更完整的数据地图字段域：数据对象、字段上下文、字段定义、系统关系、黄金源、命名规则、质量问题、导入批次和审计记录全部进入 MySQL。
 
-旧 SQLite 字段表不迁移、不桥接；字段域运行态接口直接走 MySQL。`docs/norms` 是流程真源，本计划不修改正式流程映射数据。
+旧 SQLite 字段表不迁移、不桥接；字段域运行态接口直接走 MySQL。`docs/norms` 是流程输入基线，本计划不修改正式流程映射数据。
 
 ## Data Model
 
-- `data_map_objects`：主数据对象候选，包含 `object_key`、中英文名、对象类型、责任部门、数据管家、来源和状态。
+- `data_map_objects`：主数据对象待确认，包含 `object_key`、中英文名、对象类型、责任部门、数据管家、来源和状态。
 - `data_map_contexts`：字段台账上下文，替代旧 `mappings.id` 作为字段归属锚点，保留流程快照、流程映射记录、L3/A1、来源文件和原文锚点。
 - `data_map_fields`：字段定义主表，包含中英文名、业务定义、数据类型、格式、长度、可空、枚举、敏感等级、主数据等级、流程治理引用、来源证据、质量状态和审计字段。
-- `data_map_field_system_links`：字段与系统的生产、消费、候选权威、权威关系，包含同步方式、接口说明和主关系标记。
+- `data_map_field_system_links`：字段与系统的生产、消费、待确认权威、权威关系，包含同步方式、接口说明和主关系标记。
 - `data_map_field_identities`：黄金源、维护部门、owner、置信度、确认状态和确认记录。
 - `data_map_term_types`、`data_map_terms`、`data_map_naming_rules`：字段命名与禁用词校验。
 - `data_map_quality_issues`：字段完整性、命名、黄金源、重复冲突等质量问题。
@@ -97,8 +97,8 @@
 - `cd apps/mdm-platform && npm run test:role-workbench`
 - `cd apps/mdm-platform && npm run test:mainline`
 - `cd apps/mdm-platform && npm run smoke:data-map-mysql`
-- `npm run test:process-candidates`
-- `npm run test:process-candidate-review`
+- `npm run test:process-input-baseline-review`
+- `npm run test:process-input-baseline-review`
 - `git diff --check`
 - `git diff -- docs/norms`
 

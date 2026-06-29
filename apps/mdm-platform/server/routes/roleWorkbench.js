@@ -587,7 +587,7 @@ function roleHintForTodo(type) {
 
 function sampleForTodo(type) {
   if (type === 'field_confirm') return '先打开 A1 业务行为，确认字段是否确实在该流程中产生或消费。';
-  if (type === 'gold_source') return '先查看字段台账和消费系统，再确认维护部门和权威系统候选。';
+  if (type === 'gold_source') return '先查看字段台账和消费系统，再确认维护部门和待确认权威系统。';
   if (type === 'conflict_resolution') return '先查看双方字段说明和消费场景，再提交协调意见。';
   if (type === 'terminology') return '先确认术语适用范围，再补充定义和禁用说法。';
   if (type === 'process_quality') return '先打开流程治理闭环视图，定位来源文件、整改建议和当前责任人。';

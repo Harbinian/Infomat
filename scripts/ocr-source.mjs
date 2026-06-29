@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * OCR source wrapper for candidate evidence extraction.
+ * OCR source wrapper for review evidence extraction.
  *
  * Usage:
  *   node scripts/ocr-source.mjs --input docs/norms --out artifacts/ocr/<run-id>
@@ -9,7 +9,7 @@
  * Input: pdf/png/jpg/jpeg/tif/tiff files.
  * Output: manifest.json, raw/*.txt, json/*.json, markdown/*.md, images/, review-required.jsonl.
  *
- * This script only creates OCR candidate evidence. It does not create process
+ * This script only creates OCR review evidence. It does not create process
  * mapping conclusions or department relationship fields.
  */
 
@@ -165,11 +165,11 @@ function pythonEnv() {
 }
 
 function firstAvailablePython() {
-  const localCandidates = [
+  const localReviewItems = [
     join(root, '.venv-paddleocr', 'Scripts', 'python.exe'),
     join(root, '.venv', 'Scripts', 'python.exe'),
   ];
-  for (const command of [...localCandidates, 'python', 'py']) {
+  for (const command of [...localReviewItems, 'python', 'py']) {
     if (command.endsWith('.exe') && !existsSync(command)) {
       continue;
     }
@@ -503,7 +503,7 @@ function writeSourceOutputs(outDir, outputName, sourceRecord, blocks) {
     `- review_required: ${sourceRecord.review_required}`,
     `- evidence_status: ${sourceRecord.evidence_status}`,
     '',
-    'OCR text below is candidate source text only. It requires original-file review before downstream use.',
+    'OCR text below is review-only source text only. It requires original-file review before downstream use.',
     '',
   ];
   if (blocks.length === 0) {
@@ -718,7 +718,7 @@ function main() {
     policy: {
       ocr_is_final_evidence: false,
       can_generate_business_conclusions: false,
-      downstream_use: 'candidate_review_only',
+      downstream_use: 'input_baseline_review_only',
     },
     sources: [],
     totals: {

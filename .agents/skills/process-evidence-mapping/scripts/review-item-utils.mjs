@@ -3,8 +3,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 export const TODO_TYPES = [
-  '候选L3',
-  '候选A1',
+  '待确认L3',
+  '待确认A1',
   '角色待确认',
   '审批链待确认',
   '受控传递待确认',
@@ -116,7 +116,7 @@ export function evidenceFromChunk(chunk) {
     source_anchor: sourceAnchor(chunk),
     source_excerpt: chunk?.raw_text || '',
     chunk_id: chunk?.chunk_id || '',
-    evidence_status: 'candidate',
+    evidence_status: 'needs_review',
     verification_status: 'unverified',
     review_required: true,
     allowed_downstream_use: 'review_only',
@@ -138,34 +138,34 @@ export function findChunk(chunks, patterns, options = {}) {
   }) || null;
 }
 
-export function makeCandidateItem({
+export function makeReviewItemItem({
   department,
   sourceFile,
   sourceAnchor: anchor,
-  candidateType,
+  issueType,
   content,
   mappingLocation = '未在当前映射中形成受控条目',
   suggestedAction,
   owner = '待部门确认',
 }) {
-  if (!TODO_TYPES.includes(candidateType)) {
-    throw new Error(`Unsupported candidate type: ${candidateType}`);
+  if (!TODO_TYPES.includes(issueType)) {
+    throw new Error(`Unsupported issue type: ${issueType}`);
   }
   const contentHash = sha1Text(content).slice(0, 12);
   const stableKey = sha1Text([
     department,
     sourceFile,
     anchor,
-    candidateType,
+    issueType,
     contentHash,
   ].join('|')).slice(0, 12);
   return {
-    id: `CAND-${stableKey.toUpperCase()}`,
+    id: `IBR-${stableKey.toUpperCase()}`,
     stable_key: stableKey,
     department,
     source_file: sourceFile,
     source_anchor: anchor,
-    candidate_type: candidateType,
+    issue_type: issueType,
     content,
     content_hash: contentHash,
     mapping_location: mappingLocation,

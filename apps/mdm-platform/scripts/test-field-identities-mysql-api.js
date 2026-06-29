@@ -58,7 +58,7 @@ function makeFakeDataMapRepository() {
         confidence_level: payload.confidence_level || 'medium',
         confirmed: payload.confirmed ? 1 : 0,
         note: payload.note || null,
-        status: 'candidate'
+        status: 'needs_review'
       };
       state.identities.set(Number(fieldId), identity);
       return identity;
@@ -128,7 +128,7 @@ async function main() {
         owner_user_id: 42,
         confidence_level: 'high',
         confirmed: false,
-        note: '候选黄金源'
+        note: '待确认黄金源'
       })
     });
     const upsertBody = await upsertRes.json();

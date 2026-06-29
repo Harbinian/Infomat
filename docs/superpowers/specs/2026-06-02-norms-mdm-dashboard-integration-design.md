@@ -26,7 +26,7 @@ PMO 驾驶舱 HTML (内嵌展示副本)
 
 | # | 决策 | 说明 |
 |---|------|------|
-| D1 | 本期不修改 `apps/mdm-platform/` | 不新增表、不新增 API、不写 seed 脚本；MDM 方案仅作为后续候选 |
+| D1 | 本期不修改 `apps/mdm-platform/` | 不新增表、不新增 API、不写 seed 脚本；MDM 方案仅作为后续待确认 |
 | D2 | `docs/company-sankey-data.json` 是生成数据真源 | `scripts/parse-sankey-data.mjs` 写出 JSON 文件，再把同一份快照注入 dashboard HTML 的 `<script>` 标签 |
 | D3 | 跨部门衔接数据应由 parser 生成 | 不再长期手工复制到驾驶舱 HTML 的 `#cross-dept-data` |
 | D4 | 驾驶舱 HTML 保持静态可用 | 页面继续支持直接打开；不依赖登录、API、CORS 或本地服务 |
@@ -125,7 +125,7 @@ parser 解析部门、能力、流程、业务行为 A1 与应用系统建议，
 
 - 不使用 `cross_dept`；统一使用 `crossDept`。
 - 不把现有顶层结构改造成 `meta/sankey/crossDept` 包裹结构。
-- 不新增第三套 API 风格字段名，例如 `source_dept`、`ref_count`、`risk_level`。这些字段只适合后续 MDM API 候选方案，不能混入当前静态 JSON 契约。
+- 不新增第三套 API 风格字段名，例如 `source_dept`、`ref_count`、`risk_level`。这些字段只适合后续 MDM API 待确认方案，不能混入当前静态 JSON 契约。
 
 ## 4. 驾驶舱行为
 
@@ -151,7 +151,7 @@ parser 解析部门、能力、流程、业务行为 A1 与应用系统建议，
 
 2026-06-03 已检查 `apps/mdm-platform/` 与流程治理数据的适配性。本轮只审查平台代码和现有库状态，不修改 MDM 代码。
 
-结论：当前 MDM 平台可以作为后续候选承接平台，但尚不能作为本期流程治理数据真源，也不能替代 `docs/company-sankey-data.json` 或 PMO 静态驾驶舱。
+结论：当前 MDM 平台可以作为后续待确认承接平台，但尚不能作为本期流程治理数据真源，也不能替代 `docs/company-sankey-data.json` 或 PMO 静态驾驶舱。
 
 主要证据：
 
@@ -164,7 +164,7 @@ parser 解析部门、能力、流程、业务行为 A1 与应用系统建议，
 
 因此，近期仍应保持“Markdown 真源 -> parser -> JSON 快照 -> PMO 静态驾驶舱”的链路。MDM 业务地图中存在的 Sankey 视图只属于登录态平台内视图，不应与 PMO 驾驶舱的静态展示混用。
 
-## 7. 后续 MDM 候选方向
+## 7. 后续 MDM 待确认方向
 
 当 MDM 平台开发恢复后，可以重新评估以下方向：
 

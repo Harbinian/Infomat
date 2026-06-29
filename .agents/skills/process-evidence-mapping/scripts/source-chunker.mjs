@@ -2,7 +2,7 @@
 /**
  * Build traceable evidence chunks for retrieval.
  *
- * This script creates candidate retrieval units only. It does not decide DCM/BBM facts.
+ * This script creates review retrieval units only. It does not decide DCM/BBM facts.
  *
  * Inputs:
  *   --root docs/norms
@@ -123,7 +123,7 @@ function chunkText({ text, source, maxChars }) {
       clause_title: sectionTitle,
       raw_text: raw,
       normalized_text: normalizeText(raw),
-      normalized_candidate: '',
+      normalized_review_text: '',
       artifact_type: 'body',
       extraction_method: 'text',
       extraction_quality: 'clean',
@@ -153,7 +153,7 @@ function chunkText({ text, source, maxChars }) {
           clause_title: sectionTitle,
           raw_text: trimmed,
           normalized_text: normalizeText(trimmed),
-          normalized_candidate: '',
+          normalized_review_text: '',
           artifact_type: 'table',
           extraction_method: 'text',
           extraction_quality: 'clean',
@@ -201,7 +201,7 @@ function main() {
       file_size: stat.size,
       modified_time: stat.mtime.toISOString(),
       extraction_status: TEXT_EXTENSIONS.has(ext) ? 'text_read' : 'unsupported',
-      included_status: 'candidate',
+      included_status: 'needs_review',
       included_reason: 'Chunked for retrieval review only; inclusion still requires source verification.',
     };
     Object.assign(sourceBase, sourceBoundaryFields(sourceBase));
@@ -235,7 +235,7 @@ function main() {
       source_company: '',
       source_org_name: '',
       retrieval_method: 'chunking',
-      evidence_status: 'candidate',
+      evidence_status: 'needs_review',
       review_required: true,
       review_reason: 'Retrieval chunk only; verify original source before using in mapping.',
       content_hash: contentHash,

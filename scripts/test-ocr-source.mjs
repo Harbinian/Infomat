@@ -1,5 +1,5 @@
 /**
- * Regression check for the OCR candidate-evidence extraction wrapper.
+ * Regression check for the OCR reviewItem-evidence extraction wrapper.
  *
  * Usage: node scripts/test-ocr-source.mjs
  */

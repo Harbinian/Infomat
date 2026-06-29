@@ -22,7 +22,7 @@ try {
   const dryRun = syncProcessGovernanceOrg({ db });
   assert.strictEqual(dryRun.dryRun, true);
   assert.deepStrictEqual(
-    dryRun.archiveCandidates.map(row => row.name).sort(new Intl.Collator('zh-Hans-CN').compare),
+    dryRun.archiveReviewItems.map(row => row.name).sort(new Intl.Collator('zh-Hans-CN').compare),
     ['公司领导', '信息化部']
   );
   assert.strictEqual(

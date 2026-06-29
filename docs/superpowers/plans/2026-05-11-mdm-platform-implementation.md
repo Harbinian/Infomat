@@ -216,7 +216,7 @@ CREATE TABLE IF NOT EXISTS field_entries (
 CREATE TABLE IF NOT EXISTS field_identities (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   field_entry_id INTEGER NOT NULL UNIQUE REFERENCES field_entries(id) ON DELETE CASCADE,
-  candidate_systems TEXT,
+  review_systems TEXT,
   authoritative_system TEXT,
   maintain_dept_id INTEGER REFERENCES departments(id),
   owner_user_id INTEGER REFERENCES users(id),
@@ -1172,19 +1172,19 @@ router.get('/field/:fieldEntryId', requireAuth, (req, res) => {
 
 // 创建或更新 field_identity（黄金源确认）
 router.put('/:fieldEntryId', requireAuth, (req, res) => {
-  const { candidate_systems, authoritative_system, maintain_dept_id, owner_user_id, confirmed, note } = req.body;
+  const { review_systems, authoritative_system, maintain_dept_id, owner_user_id, confirmed, note } = req.body;
   const existing = db.prepare("SELECT * FROM field_identities WHERE field_entry_id=?").get(req.params.fieldEntryId);
   if (!canEditFieldIdentity(req, req.params.fieldEntryId, existing)) {
     return res.status(403).json({ error: '仅数据 owner 或管理员可维护黄金源信息' });
   }
-  const cs = Array.isArray(candidate_systems) ? JSON.stringify(candidate_systems) : candidate_systems;
+  const cs = Array.isArray(review_systems) ? JSON.stringify(review_systems) : review_systems;
 
   if (existing) {
-    db.prepare("UPDATE field_identities SET candidate_systems=?, authoritative_system=?, maintain_dept_id=?, owner_user_id=?, confirmed=?, note=? WHERE field_entry_id=?").run(
+    db.prepare("UPDATE field_identities SET review_systems=?, authoritative_system=?, maintain_dept_id=?, owner_user_id=?, confirmed=?, note=? WHERE field_entry_id=?").run(
       cs, authoritative_system, maintain_dept_id, owner_user_id, confirmed ? 1 : 0, note, req.params.fieldEntryId
     );
   } else {
-    db.prepare("INSERT INTO field_identities (field_entry_id, candidate_systems, authoritative_system, maintain_dept_id, owner_user_id, confirmed, note) VALUES (?, ?, ?, ?, ?, ?, ?)").run(
+    db.prepare("INSERT INTO field_identities (field_entry_id, review_systems, authoritative_system, maintain_dept_id, owner_user_id, confirmed, note) VALUES (?, ?, ?, ?, ?, ?, ?)").run(
       req.params.fieldEntryId, cs, authoritative_system, maintain_dept_id, owner_user_id, confirmed ? 1 : 0, note
     );
   }
@@ -1613,7 +1613,7 @@ router.get('/excel', requireAuth, async (req, res) => {
     { header: '业务流程', key: 'process_name', width: 20 },
     { header: '应用系统', key: 'system_name', width: 15 },
     { header: '中文字段名', key: 'field_name_cn', width: 18 },
-    { header: '候选系统', key: 'candidate_systems', width: 25 },
+    { header: '待确认系统', key: 'review_systems', width: 25 },
     { header: '权威系统', key: 'authoritative_system', width: 15 },
     { header: '维护部门', key: 'maintain_dept', width: 12 },
     { header: '是否确认', key: 'confirmed', width: 10 },
@@ -1623,7 +1623,7 @@ router.get('/excel', requireAuth, async (req, res) => {
 
   const identities = db.prepare(`
     SELECT fe.field_name_cn, p.name as process_name, s.name as system_name,
-           fi.candidate_systems, fi.authoritative_system, d.name as maintain_dept,
+           fi.review_systems, fi.authoritative_system, d.name as maintain_dept,
            fi.confirmed, u.name as confirmer, fi.confirmed_at
     FROM field_identities fi
     JOIN field_entries fe ON fi.field_entry_id = fe.id
@@ -1637,13 +1637,13 @@ router.get('/excel', requireAuth, async (req, res) => {
   `).all();
 
   identities.forEach(i => {
-    let cands = i.candidate_systems;
+    let cands = i.review_systems;
     if (cands) { try { cands = JSON.parse(cands).join(', '); } catch(e) {} }
     ws2.addRow({
       process_name: i.process_name,
       system_name: i.system_name,
       field_name_cn: i.field_name_cn,
-      candidate_systems: cands || '',
+      review_systems: cands || '',
       authoritative_system: i.authoritative_system || '',
       maintain_dept: i.maintain_dept || '',
       confirmed: i.confirmed ? '是' : '否',

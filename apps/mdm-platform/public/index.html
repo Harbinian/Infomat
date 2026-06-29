@@ -253,7 +253,7 @@
       height: 20px; min-width: 42px; justify-content: center; padding: 0 5px;
       line-height: 20px; white-space: nowrap;
     }
-    .candidate-review-list { display: grid; gap: 10px; }
+    .input-baseline-review-list { display: grid; gap: 10px; }
     .pg-issue-pool { display: grid; gap: 14px; }
     .pg-issue-queues { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
     .pg-issue-queue {
@@ -280,53 +280,53 @@
     .pg-issue-fact p, .pg-issue-point p, .pg-issue-event p { margin: 0; line-height: 1.65; white-space: pre-wrap; }
     .pg-issue-fact.wide { grid-column: 1 / -1; }
     .pg-issue-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-    .candidate-review-card {
+    .input-baseline-review-card {
       display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px;
       padding: 12px 14px; border: 1px solid #d8d0c2; border-left: 4px solid var(--sage);
       border-radius: 8px; background: #fbfaf6;
     }
-    .candidate-review-card h3 { margin: 0; font-size: 14px; line-height: 1.45; color: #233044; }
-    .candidate-review-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; color: var(--text-muted); font-size: 12px; }
-    .candidate-review-card-action { display: flex; align-items: center; }
-    .candidate-review-detail {
+    .input-baseline-review-card h3 { margin: 0; font-size: 14px; line-height: 1.45; color: #233044; }
+    .input-baseline-review-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; color: var(--text-muted); font-size: 12px; }
+    .input-baseline-review-card-action { display: flex; align-items: center; }
+    .input-baseline-review-detail {
       display: grid; gap: 14px;
       padding: 16px; border: 1px solid #d8d0c2; border-radius: 8px; background: #fbfaf6;
     }
-    .candidate-review-detail-head {
+    .input-baseline-review-detail-head {
       display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
       padding-bottom: 12px; border-bottom: 1px solid #e4dccf;
     }
-    .candidate-review-detail-head h3 { margin: 0; font-size: 16px; color: #233044; }
-    .candidate-review-detail-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
-    .candidate-review-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-    .candidate-review-detail-field {
+    .input-baseline-review-detail-head h3 { margin: 0; font-size: 16px; color: #233044; }
+    .input-baseline-review-detail-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+    .input-baseline-review-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .input-baseline-review-detail-field {
       padding: 10px 12px; border: 1px solid #e4dccf; border-radius: 8px; background: #fffdf8;
     }
-    .candidate-review-detail-field strong {
+    .input-baseline-review-detail-field strong {
       display: block; margin-bottom: 5px; font-size: 12px; color: var(--text-muted);
     }
-    .candidate-review-detail-field p { margin: 0; line-height: 1.65; }
-    .candidate-review-detail-field.wide { grid-column: 1 / -1; }
-    .candidate-review-confirmation {
+    .input-baseline-review-detail-field p { margin: 0; line-height: 1.65; }
+    .input-baseline-review-detail-field.wide { grid-column: 1 / -1; }
+    .input-baseline-review-confirmation {
       padding-top: 14px; border-top: 1px solid #e4dccf;
     }
-    .candidate-review-confirmation h4 { margin: 0 0 10px; font-size: 14px; color: var(--text-main); }
-    .candidate-cell-main {
+    .input-baseline-review-confirmation h4 { margin: 0 0 10px; font-size: 14px; color: var(--text-main); }
+    .reviewItem-cell-main {
       font-weight: 600;
       color: #233044;
     }
-    .candidate-cell-help {
+    .reviewItem-cell-help {
       margin-top: 6px;
       color: var(--text-muted);
       font-size: 12px;
       line-height: 1.55;
     }
-    .candidate-source-location {
+    .reviewItem-source-location {
       font-weight: 700;
       color: #253247;
       margin-bottom: 8px;
     }
-    .candidate-source-excerpt {
+    .reviewItem-source-excerpt {
       padding: 7px 8px;
       border: 1px solid #d8d0c2;
       border-radius: 6px;
@@ -1160,7 +1160,7 @@
               </div>
               <div class="wb-guide-card">
                 <h4>数据质量员</h4>
-                <p>数据质量员发现同一字段存在不同黄金源候选时，先查看字段台账和消费系统，再发起冲突协调。</p>
+                <p>数据质量员发现同一字段存在不同待确认黄金源时，先查看字段台账和消费系统，再发起冲突协调。</p>
               </div>
               <div class="wb-guide-card">
                 <h4>工作组组长</h4>
@@ -1243,7 +1243,7 @@
             <div class="role-guide-title"><h3>样例参考</h3><span class="tag">example</span></div>
             <ul>
               <li><strong>典型样例：</strong>业务对接人收到字段确认待办后，先打开 A1 业务行为，确认字段是否确实在该流程中产生或消费。</li>
-              <li><strong>典型样例：</strong>数据质量员发现同一字段存在不同黄金源候选时，先查看字段台账和消费系统，再发起冲突协调。</li>
+              <li><strong>典型样例：</strong>数据质量员发现同一字段存在不同待确认黄金源时，先查看字段台账和消费系统，再发起冲突协调。</li>
               <li><strong>典型样例：</strong>工作组组长看到本工作组有跨部门衔接风险时，先进入流程治理详情，确认输入来源、输出目标和本组责任人。</li>
               <li><strong>典型样例：</strong>项目组长看到本部门有跨部门衔接风险时，先进入流程治理详情，确认输入来源和输出目标是否缺接收流程。</li>
             </ul>
@@ -1571,7 +1571,7 @@
           <div class="metric"><div class="num" id="pgMetricRisk">0</div><div class="lbl">高风险项</div></div>
         </div>
         <div class="notice" id="pgSnapshotMeta" style="margin-top: 24px;"></div>
-        <div class="notice" id="pgSourceMeta" style="margin-top: 12px;">组织真源：docs/organization/组织架构和部门职责.md；流程真源：docs/norms/{部门}部门-能力-流程-系统映射关系.md</div>
+        <div class="notice" id="pgSourceMeta" style="margin-top: 12px;">组织真源：docs/organization/组织架构和部门职责.md；流程输入基线：docs/norms/{部门}部门-能力-流程-系统映射关系.md</div>
         <div class="grid g4" style="margin-top: 16px;">
           <div class="metric"><div class="num" id="pgMetricQualityBlock">0</div><div class="lbl">BLOCK</div></div>
           <div class="metric"><div class="num" id="pgMetricQualityWarn">0</div><div class="lbl">WARN</div></div>
@@ -1597,9 +1597,9 @@
           <div class="metric"><div class="num" id="pgMetricEvidenceRefs">0</div><div class="lbl">证据引用</div></div>
         </div>
         </div>
-        <div class="pg-section" id="pgCandidateReviewSection" data-pg-view="candidateReview">
-          <div class="pg-section-hd"><h2>待确认的问题</h2><span class="pg-status" id="pgCandidateReviewMeta"></span></div>
-          <div class="notice" style="margin-bottom:12px">这里不是正式映射库。系统只是把可能有问题的原文片段列出来，请你确认：这是不是个问题，证据有没有问题，要不要修改原文。</div>
+        <div class="pg-section" id="pgInputBaselineReviewSection" data-pg-view="inputBaselineReview">
+          <div class="pg-section-hd"><h2>待确认的问题</h2><span class="pg-status" id="pgInputBaselineReviewMeta"></span></div>
+          <div class="notice" style="margin-bottom:12px">这里不是已确认流程映射库。系统只是把可能有问题的原文片段列出来，请你确认：这是不是个问题，证据有没有问题，要不要修改原文。</div>
           <div class="pg-work-help">
             <strong>每一条问题先说清楚：</strong>哪里有问题，在哪发现的，是哪种问题；再请你确认这是不是个问题、证据有没有问题、要不要处理。
             <div class="pg-help-steps">
@@ -1609,7 +1609,7 @@
               <span class="pg-help-step">4 确认证据和处理结论</span>
             </div>
           </div>
-          <div id="pgCandidateReviewRows" class="candidate-review-list"></div>
+          <div id="pgInputBaselineReviewRows" class="input-baseline-review-list"></div>
         </div>
         <div class="pg-section" id="pgSourceCoverageSection" data-pg-view="evidence">
           <div class="pg-section-hd"><h2>源文件覆盖</h2><span class="pg-status" id="pgSourceCoverageMeta"></span></div>
@@ -1637,16 +1637,16 @@
           </div>
         </div>
         <div class="pg-section" id="pgMdmRequirementsSection" data-pg-view="evidence">
-          <div class="pg-section-hd"><h2>主数据对象候选</h2><span class="pg-status" id="pgMdmRequirementMeta"></span></div>
-          <div class="pg-mdm-guide" aria-label="主数据对象候选沉淀路径">
-            <span class="pg-mdm-step">候选对象</span>
+          <div class="pg-section-hd"><h2>待确认主数据对象</h2><span class="pg-status" id="pgMdmRequirementMeta"></span></div>
+          <div class="pg-mdm-guide" aria-label="待确认主数据对象沉淀路径">
+            <span class="pg-mdm-step">待确认对象</span>
             <span class="pg-mdm-arrow">→</span>
             <span class="pg-mdm-step">关键字段</span>
             <span class="pg-mdm-arrow">→</span>
             <span class="pg-mdm-step">证据引用</span>
             <span class="pg-mdm-arrow">→</span>
             <span class="pg-mdm-step">治理要求</span>
-            <span class="pg-mdm-note">从底部候选回看证据链，再收敛进入主数据治理。</span>
+            <span class="pg-mdm-note">从底部待确认回看证据链，再收敛进入主数据治理。</span>
           </div>
           <div class="table-container">
             <table>
@@ -1709,7 +1709,7 @@
           </div>
           <div class="notice" style="margin-bottom:12px">映射待办来自 norms 映射关系、A1 核验提醒和跨部门衔接风险；在 MDM 记录处理过程，仍修改原文文件后重新导入。</div>
           <div class="pg-work-help">
-            <strong>类型含义：</strong>核验提醒看原文是否支撑；跨部门确认补清输入来源和输出目标；部门确认确认流程、行为或责任归属；调整建议修改原文里的正式映射；证据补全补文件、条款、页码或交付物依据。
+            <strong>类型含义：</strong>核验提醒看原文是否支撑；跨部门确认补清输入来源和输出目标；部门确认确认流程、行为或责任归属；调整建议修改原文里的已确认流程映射；证据补全补文件、条款、页码或交付物依据。
             <div class="pg-inline-help">状态含义：待分派/已分派表示先明确责任，处理中表示正在修改原文，已提交表示等待重新导入验证，待关闭确认表示重新导入后问题未再出现，可以确认关闭。</div>
           </div>
           <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
@@ -1975,7 +1975,7 @@
     const PROCESS_GOVERNANCE_QUALITY_VISIBLE_LIMIT = 80;
     const PROCESS_GOVERNANCE_SUBTABS = [
       { key: 'overview', label: '总览' },
-      { key: 'candidateReview', label: '待确认问题' },
+      { key: 'inputBaselineReview', label: '待确认问题' },
       { key: 'map', label: '流程图谱' },
       { key: 'evidence', label: '证据来源' },
       { key: 'mapping', label: '映射工作' },
@@ -1983,7 +1983,7 @@
     ];
     const PROCESS_GOVERNANCE_VIEW_ALIASES = {
       overview: 'overview',
-      candidateReview: 'candidateReview',
+      inputBaselineReview: 'inputBaselineReview',
       map: 'map',
       processMap: 'map',
       evidence: 'evidence',
@@ -1997,7 +1997,7 @@
     };
     const PROCESS_GOVERNANCE_VIEW_PRODUCTS = {
       overview: { label: '总览', load: loadProcessGovernanceOverviewView, render: renderProcessGovernanceOverviewView },
-      candidateReview: { label: '待确认问题', load: loadProcessGovernanceCandidateReviewView, render: renderProcessGovernanceCandidateReviewView },
+      inputBaselineReview: { label: '待确认问题', load: loadProcessGovernanceInputBaselineReviewView, render: renderProcessGovernanceInputBaselineReviewView },
       map: { label: '流程图谱', load: loadProcessGovernanceMapView, render: renderProcessGovernanceMapView },
       evidence: { label: '证据来源', load: loadProcessGovernanceEvidenceView, render: renderProcessGovernanceEvidenceView },
       mapping: { label: '映射工作', load: loadProcessGovernanceMappingView, render: renderProcessGovernanceMappingView },
@@ -3110,7 +3110,7 @@
         if (params.finding) queryParts.set('finding', params.finding);
         if (params.caseId) queryParts.set('case', params.caseId);
         if (params.mappingTodoId) queryParts.set('todo', params.mappingTodoId);
-        if (params.candidateReviewKey) queryParts.set('candidate', params.candidateReviewKey);
+        if (params.inputBaselineReviewKey) queryParts.set('needs_review', params.inputBaselineReviewKey);
         var queryString = queryParts.toString();
         location.hash = listHash + (queryString ? '?' + queryString : '');
       }
@@ -3155,7 +3155,7 @@
       }
       if (!hash) return { view: 'list', tab: 'roleWorkbench' };
       var parts = hash.split('/');
-      if (parts.length === 1) return { view: 'list', tab: parts[0], query: query, pgView: query.view, qualityView: query.view, pgWorkspace: query.workspace, finding: query.finding, caseId: query.case, mappingTodoId: query.todo, candidateReviewKey: query.candidate, issueQueue: query.queue, issueId: query.issue };
+      if (parts.length === 1) return { view: 'list', tab: parts[0], query: query, pgView: query.view, qualityView: query.view, pgWorkspace: query.workspace, finding: query.finding, caseId: query.case, mappingTodoId: query.todo, inputBaselineReviewKey: query.reviewItem, issueQueue: query.queue, issueId: query.issue };
       if (parts[0] === 'processes' && parts.length >= 3) {
         return { view: 'detail', tab: 'processes', type: 'process', id: parts[2] };
       }
@@ -4672,7 +4672,7 @@
     function pgMappingTodoTypeHelp(value) {
       var map = {
         dept_confirm: '请部门确认流程、A1 行为或责任归属是否正确。',
-        verification: '请回来源文件核验候选是否有原文支撑。',
+        verification: '请回来源文件核验待确认是否有原文支撑。',
         adjustment: '请回部门映射文件修正式 L3/A1 或说明不采纳原因。',
         cross_dept: '请补清输入来源部门、输出目标部门和交接物。',
         evidence: '请补文件、条款、页码、表单或交付物依据。'
@@ -4958,7 +4958,7 @@
               '<td>' + safeText(row.governance_requirement || '') + '</td>' +
             '</tr>';
           }).join('')
-        : '<tr><td colspan="7" class="empty">暂无主数据对象候选</td></tr>';
+        : '<tr><td colspan="7" class="empty">暂无待确认主数据对象</td></tr>';
     }
 
     async function loadProcessGovernanceIssueQueues() {
@@ -4984,11 +4984,11 @@
     };
 
     function processGovernanceIssueQueueHash(queueKey) {
-      return '#/processGovernance?view=candidateReview&queue=' + encodeURIComponent(queueKey || 'waiting_my_action');
+      return '#/processGovernance?view=inputBaselineReview&queue=' + encodeURIComponent(queueKey || 'waiting_my_action');
     }
 
     function processGovernanceIssueDetailHash(issueId, queueKey) {
-      var query = new URLSearchParams({ view: 'candidateReview', issue: issueId || '' });
+      var query = new URLSearchParams({ view: 'inputBaselineReview', issue: issueId || '' });
       if (queueKey) query.set('queue', queueKey);
       return '#/processGovernance?' + query.toString();
     }
@@ -5017,7 +5017,7 @@
         return '<article class="pg-issue-card" data-issue-card="' + escapeHtml(issue.issue_id || '') + '">' +
           '<div>' +
             '<h3>' + safeText(issue.title || '待确认问题') + '</h3>' +
-            '<div class="candidate-review-meta">' +
+            '<div class="input-baseline-review-meta">' +
               '<span class="tag">' + safeText(issue.primary_dept_name || '未标注部门') + '</span>' +
               '<span class="tag">业务行为 ' + safeText(issue.a1_code || '') + '</span>' +
               '<span class="tag">' + safeText(issue.a1_name || '业务行为待补') + '</span>' +
@@ -5055,7 +5055,7 @@
           '<label class="field">处理说明' +
             '<textarea rows="2" data-issue-point-note="' + escapeHtml(pointId) + '" placeholder="说明证据、依据或需要调整的内容">' + escapeHtml(point.review_note || '') + '</textarea>' +
           '</label>' +
-          '<div class="candidate-review-detail-actions">' +
+          '<div class="input-baseline-review-detail-actions">' +
             '<button type="button" class="btn primary" data-issue-point-submit="' + escapeHtml(pointId) + '">提交确认</button>' +
           '</div>' +
         '</div>';
@@ -5075,12 +5075,12 @@
     function renderProcessGovernanceIssueDetail(detail) {
       var issue = detail.issue || {};
       return '<article class="pg-issue-detail">' +
-        '<div class="candidate-review-detail-head">' +
+        '<div class="input-baseline-review-detail-head">' +
           '<div>' +
             '<h3>' + safeText(issue.title || '待确认问题') + '</h3>' +
             '<div class="pg-issue-a1">业务行为：' + safeText(issue.a1_code || '') + ' ' + safeText(issue.a1_name || '') + '</div>' +
           '</div>' +
-          '<div class="candidate-review-detail-actions">' +
+          '<div class="input-baseline-review-detail-actions">' +
             '<button type="button" class="btn secondary" data-issue-back="1">返回队列</button>' +
           '</div>' +
         '</div>' +
@@ -5143,7 +5143,7 @@
           }).then(function() {
             showToast('确认结果已提交');
             clearProcessGovernanceViewCache('issue-point-confirm');
-            return loadProcessGovernanceView('candidateReview', { route: parseHash(), force: true });
+            return loadProcessGovernanceView('inputBaselineReview', { route: parseHash(), force: true });
           }).catch(function(error) {
             showToast(error.message || '确认结果提交失败', 'error');
           }).finally(function() {
@@ -5155,8 +5155,8 @@
     }
 
     function renderProcessGovernanceIssuePool(payload, route) {
-      var rowsEl = document.getElementById('pgCandidateReviewRows');
-      var metaEl = document.getElementById('pgCandidateReviewMeta');
+      var rowsEl = document.getElementById('pgInputBaselineReviewRows');
+      var metaEl = document.getElementById('pgInputBaselineReviewMeta');
       if (!rowsEl) return;
       var data = payload.issuePool || {};
       var queueKey = route && route.issueQueue || 'waiting_my_action';
@@ -5172,30 +5172,30 @@
       wireProcessGovernanceIssuePool(rowsEl, queueKey);
     }
 
-    async function loadProcessGovernanceCandidateReview(selectedDept) {
-      var runs = await api('/api/process-governance/candidate-review/runs');
+    async function loadProcessGovernanceInputBaselineReview(selectedDept) {
+      var runs = await api('/api/process-governance/input-baseline-review/runs');
       var run = runs.items && runs.items[0];
       if (!run) return { run: null, summary: { total: 0 }, items: [], groups: [] };
       var params = new URLSearchParams();
       if (selectedDept) params.set('dept', selectedDept);
       var query = params.toString() ? '?' + params.toString() : '';
-      var candidates = await api('/api/process-governance/candidate-review/runs/' + encodeURIComponent(run.run_id) + '/candidates' + query);
-      return Object.assign({ runs: runs.items || [] }, candidates);
+      var reviewItems = await api('/api/process-governance/input-baseline-review/runs/' + encodeURIComponent(run.run_id) + '/review-items' + query);
+      return Object.assign({ runs: runs.items || [] }, reviewItems);
     }
 
-    var pgCandidateDecisionOptions = [
-      ['confirm_candidate', '是问题，需要修改原文'],
+    var pgReviewItemDecisionOptions = [
+      ['confirm_issue', '是问题，需要修改原文'],
       ['needs_correction', '是问题，但改法要再确认'],
-      ['reject_candidate', '不是问题，不采纳'],
+      ['reject_issue', '不是问题，不采纳'],
       ['insufficient_evidence', '证据不够，先别定']
     ];
-    var pgCandidateEvidenceOptions = [
+    var pgReviewItemEvidenceOptions = [
       ['not_reviewed', '还没核证据'],
       ['source_verified', '证据没问题'],
       ['need_original_review', '证据还要再核'],
       ['source_mismatch', '证据对不上']
     ];
-    var pgCandidateIssueOptions = [
+    var pgReviewItemIssueOptions = [
       ['none', '无明显问题'],
       ['role_definition_insufficient', '角色没写清楚'],
       ['role_mismatch', '角色或部门对不上'],
@@ -5204,13 +5204,13 @@
       ['missing_delivery', '交付物或归档不清'],
       ['other', '其他']
     ];
-    var pgCandidateDefinitionOptions = [
+    var pgReviewItemDefinitionOptions = [
       ['needs_original_review', '还要回原文确认'],
       ['source_defined', '原文写清楚了'],
       ['source_definition_insufficient', '原文没写清楚']
     ];
 
-    function pgCandidateTypeHelp(value) {
+    function pgIssueTypeHelp(value) {
       var text = String(value || '');
       if (text.indexOf('L3') >= 0) return '看来源文件是否支撑新增或调整 L3 流程；成立后回到部门映射文件补正式 L3。';
       if (text.indexOf('A1') >= 0) return '看业务行为是否有执行角色、动作、对象和输出；规范化成“动词 + 对象 + 结果”。';
@@ -5224,12 +5224,12 @@
       return '先看是在哪发现的，再判断它影响流程、动作、角色、交付物还是证据说明。';
     }
 
-    function pgCandidateFieldHelp(field, value) {
+    function pgReviewItemFieldHelp(field, value) {
       var helpers = {
         decision: {
-          confirm_candidate: '原文支撑充分，需要修改正式映射文件。',
+          confirm_issue: '原文支撑充分，需要修改已确认流程映射文件。',
           needs_correction: '确实有问题，但名称、边界或归属还要再确认。',
-          reject_candidate: '不应进入正式映射，要写明不采纳原因。',
+          reject_issue: '不应进入已确认流程映射，要写明不采纳原因。',
           insufficient_evidence: '看不到足够原文依据，先补证据或核验原文。'
         },
         evidence_status: {
@@ -5256,7 +5256,7 @@
       return ((helpers[field] || {})[value]) || '按原文证据和事项类型判断。';
     }
 
-    function pgCandidateFieldLabel(field) {
+    function pgReviewItemFieldLabel(field) {
       var labels = {
         decision: '这是不是个问题',
         evidence_status: '证据有没有问题',
@@ -5266,7 +5266,7 @@
       return labels[field] || field;
     }
 
-    function pgCandidateOptionText(options, value, fallback) {
+    function pgReviewItemOptionText(options, value, fallback) {
       var selected = String(value || '');
       for (var i = 0; i < options.length; i += 1) {
         if (options[i][0] === selected || options[i][1] === selected) return options[i][1];
@@ -5276,7 +5276,7 @@
       return fallback || selected;
     }
 
-    function pgCandidateDisplayType(value) {
+    function pgReviewItemDisplayType(value) {
       var text = String(value || '').trim();
       if (!text) return '其他待确认事项';
       if (text.indexOf('L3') >= 0 || text.indexOf('流程') >= 0) return '流程名称可能要补或改';
@@ -5288,19 +5288,19 @@
       if (text.indexOf('验收') >= 0) return '验收标准可能没写清';
       if (text.indexOf('归档') >= 0) return '归档要求可能没写清';
       if (text.indexOf('系统') >= 0) return '流程落位需要确认';
-      return text.replace(/候选/g, '待确认问题');
+      return text.replace(/待确认/g, '待确认问题');
     }
 
-    function renderCandidateReviewField(field, row, options, selectedValue) {
+    function renderInputBaselineReviewField(field, row, options, selectedValue) {
       var selected = selectedValue || '';
       return '<div class="pg-review-field">' +
-        '<label>' + safeText(pgCandidateFieldLabel(field)) + '</label>' +
-        renderCandidateReviewSelect(field, row, options, selected) +
-        '<div class="pg-inline-help">' + safeText(pgCandidateFieldHelp(field, selected)) + '</div>' +
+        '<label>' + safeText(pgReviewItemFieldLabel(field)) + '</label>' +
+        renderInputBaselineReviewSelect(field, row, options, selected) +
+        '<div class="pg-inline-help">' + safeText(pgReviewItemFieldHelp(field, selected)) + '</div>' +
       '</div>';
     }
 
-    function renderCandidateReviewSelect(field, row, options, selectedValue) {
+    function renderInputBaselineReviewSelect(field, row, options, selectedValue) {
       var stableKey = escapeHtml(row.stable_key || '');
       var selected = selectedValue || '';
       return '<select data-review-field="' + escapeHtml(field) + '" data-stable-key="' + stableKey + '">' +
@@ -5310,33 +5310,33 @@
         '</select>';
     }
 
-    function renderCandidateReviewControls(row, run) {
+    function renderInputBaselineReviewControls(row, run) {
       var stableKey = escapeHtml(row.stable_key || '');
       var runId = escapeHtml((run && run.run_id) || '');
       return '<div class="pg-review-grid">' +
-        renderCandidateReviewField('decision', row, pgCandidateDecisionOptions, row.decision || '') +
-        renderCandidateReviewField('evidence_status', row, pgCandidateEvidenceOptions, row.decision_evidence_status || 'not_reviewed') +
-        renderCandidateReviewField('issue_type', row, pgCandidateIssueOptions, row.issue_type || 'none') +
-        renderCandidateReviewField('definition_status', row, pgCandidateDefinitionOptions, row.definition_status || 'needs_original_review') +
+        renderInputBaselineReviewField('decision', row, pgReviewItemDecisionOptions, row.decision || '') +
+        renderInputBaselineReviewField('evidence_status', row, pgReviewItemEvidenceOptions, row.decision_evidence_status || 'not_reviewed') +
+        renderInputBaselineReviewField('issue_type', row, pgReviewItemIssueOptions, row.issue_type || 'none') +
+        renderInputBaselineReviewField('definition_status', row, pgReviewItemDefinitionOptions, row.definition_status || 'needs_original_review') +
         '<div class="pg-review-note">' +
           '<label>给后续处理人的说明</label>' +
           '<textarea data-review-field="normalized_note" data-stable-key="' + stableKey + '" placeholder="证据：在哪个文件、条款、表单或真实页码看到&#10;判断：这是不是问题，为什么&#10;改法：如果要改，建议写成哪个 L3/A1/角色/交付物口径&#10;下一步：修改哪个部门映射文件的哪一处">' + safeText(row.normalized_note || '', '') + '</textarea>' +
-          '<div class="pg-inline-help">写给下一位处理人看：说明证据、判断和正式映射应怎么改，不要把这条问题记录当成已入库结论。</div>' +
+          '<div class="pg-inline-help">写给下一位处理人看：说明证据、判断和已确认流程映射应怎么改，不要把这条问题记录当成已入库结论。</div>' +
         '</div>' +
         '<button type="button" class="btn primary" data-review-save="1" data-run-id="' + runId + '" data-stable-key="' + stableKey + '">保存确认结果</button>' +
         '</div>';
     }
 
-    function groupCandidateReviewItemsForRender(items) {
+    function groupInputBaselineReviewItemsForRender(items) {
       var byDepartment = {};
       (items || []).forEach(function(item) {
         var department = item.department || '未标注部门';
         var documentName = item.document_name || '来源未标注文档';
-        var candidateType = item.candidate_type || '其他待确认事项';
+        var issueType = item.issue_type || '其他待确认事项';
         if (!byDepartment[department]) byDepartment[department] = {};
         if (!byDepartment[department][documentName]) byDepartment[department][documentName] = {};
-        if (!byDepartment[department][documentName][candidateType]) byDepartment[department][documentName][candidateType] = [];
-        byDepartment[department][documentName][candidateType].push(item);
+        if (!byDepartment[department][documentName][issueType]) byDepartment[department][documentName][issueType] = [];
+        byDepartment[department][documentName][issueType].push(item);
       });
       return Object.keys(byDepartment).sort(function(a, b) { return a.localeCompare(b, 'zh-CN'); }).map(function(department) {
         var documents = byDepartment[department];
@@ -5346,8 +5346,8 @@
             var types = documents[documentName];
             return {
               document_name: documentName,
-              types: Object.keys(types).sort(function(a, b) { return a.localeCompare(b, 'zh-CN'); }).map(function(candidateType) {
-                return { candidate_type: candidateType, candidates: types[candidateType] };
+              types: Object.keys(types).sort(function(a, b) { return a.localeCompare(b, 'zh-CN'); }).map(function(issueType) {
+                return { issue_type: issueType, reviewItems: types[issueType] };
               })
             };
           })
@@ -5355,153 +5355,153 @@
       });
     }
 
-    function countCandidateReviewType(typeGroup) {
-      return ((typeGroup && typeGroup.candidates) || []).length;
+    function countInputBaselineReviewType(typeGroup) {
+      return ((typeGroup && typeGroup.reviewItems) || []).length;
     }
 
-    function countCandidateReviewDocument(documentGroup) {
+    function countInputBaselineReviewDocument(documentGroup) {
       return ((documentGroup && documentGroup.types) || []).reduce(function(total, typeGroup) {
-        return total + countCandidateReviewType(typeGroup);
+        return total + countInputBaselineReviewType(typeGroup);
       }, 0);
     }
 
-    function countCandidateReviewDepartment(departmentGroup) {
+    function countInputBaselineReviewDepartment(departmentGroup) {
       return ((departmentGroup && departmentGroup.documents) || []).reduce(function(total, documentGroup) {
-        return total + countCandidateReviewDocument(documentGroup);
+        return total + countInputBaselineReviewDocument(documentGroup);
       }, 0);
     }
 
-    function candidateReviewExcerptText(row) {
+    function inputBaselineReviewExcerptText(row) {
       var text = (row.source_excerpts && row.source_excerpts[0] && row.source_excerpts[0].raw_text) || '';
       return String(text || '').replace(/\s+/g, ' ').trim();
     }
 
-    function renderCandidateReviewSourceCell(row) {
+    function renderInputBaselineReviewSourceCell(row) {
       var sourceLabel = businessSourceLabel(row.source_label) || '原文位置待补';
-      var excerpt = candidateReviewExcerptText(row) || '未匹配到原文摘录，请按来源文件核对原文';
-      return '<div class="candidate-source-location">' + safeText(sourceLabel) + '</div>' +
-        '<div class="candidate-source-excerpt" title="' + safeText(excerpt, '') + '">' + safeText(excerpt) + '</div>';
+      var excerpt = inputBaselineReviewExcerptText(row) || '未匹配到原文摘录，请按来源文件核对原文';
+      return '<div class="reviewItem-source-location">' + safeText(sourceLabel) + '</div>' +
+        '<div class="reviewItem-source-excerpt" title="' + safeText(excerpt, '') + '">' + safeText(excerpt) + '</div>';
     }
 
-    function candidateReviewDetailHash(stableKey) {
-      return '#/processGovernance?view=candidateReview&candidate=' + encodeURIComponent(stableKey || '');
+    function inputBaselineReviewDetailHash(stableKey) {
+      return '#/processGovernance?view=inputBaselineReview&reviewItem=' + encodeURIComponent(stableKey || '');
     }
 
-    function candidateReviewListHash() {
-      return '#/processGovernance?view=candidateReview';
+    function inputBaselineReviewListHash() {
+      return '#/processGovernance?view=inputBaselineReview';
     }
 
-    function renderCandidateReviewCard(row, index) {
-      return '<article class="candidate-review-card" data-candidate-review-item="' + escapeHtml(row.stable_key || '') + '">' +
+    function renderInputBaselineReviewCard(row, index) {
+      return '<article class="input-baseline-review-card" data-input-baseline-review-item="' + escapeHtml(row.stable_key || '') + '">' +
         '<div>' +
           '<h3>' + safeText(index + 1) + '. ' + safeText(row.content || '待确认问题') + '</h3>' +
-          '<div class="candidate-review-meta">' +
+          '<div class="input-baseline-review-meta">' +
             '<span class="tag">' + safeText(row.department || '未标注部门') + '</span>' +
             '<span class="tag">' + safeText(row.document_name || '来源未标注文档') + '</span>' +
-            '<span class="tag">' + safeText(pgCandidateDisplayType(row.candidate_type)) + '</span>' +
-            '<span class="tag">' + safeText(pgCandidateOptionText(pgCandidateDefinitionOptions, row.definition_status, '还要回原文确认')) + '</span>' +
+            '<span class="tag">' + safeText(pgReviewItemDisplayType(row.issue_type)) + '</span>' +
+            '<span class="tag">' + safeText(pgReviewItemOptionText(pgReviewItemDefinitionOptions, row.definition_status, '还要回原文确认')) + '</span>' +
           '</div>' +
         '</div>' +
-        '<div class="candidate-review-card-action">' +
-          '<button type="button" class="btn secondary" data-candidate-open="' + escapeHtml(row.stable_key || '') + '">打开确认</button>' +
+        '<div class="input-baseline-review-card-action">' +
+          '<button type="button" class="btn secondary" data-reviewItem-open="' + escapeHtml(row.stable_key || '') + '">打开确认</button>' +
         '</div>' +
       '</article>';
     }
 
-    function renderCandidateReviewMappingTodoFallback(mappingTodos) {
+    function renderInputBaselineReviewMappingTodoFallback(mappingTodos) {
       var todos = (mappingTodos && mappingTodos.items) || [];
       var total = mappingTodos && mappingTodos.summary && Number(mappingTodos.summary.total || 0) || todos.length;
-      if (!total) return '<div class="empty">暂无待确认的问题。若部门文档已更新，请先完成问题抽取或导入；若只查看当前正式映射，请看映射工作库。</div>';
+      if (!total) return '<div class="empty">暂无待确认的问题。若部门文档已更新，请先完成问题抽取或导入；若只查看当前已确认流程映射，请看映射工作库。</div>';
       var rows = todos.slice(0, 5).map(function(todo) {
-        return '<li><strong>' + safeText(todo.l3_name || todo.a1_code || '映射待办') + '</strong><span>' + safeText(todo.message || todo.suggestion || '请确认当前正式映射中的核验提醒') + '</span></li>';
+        return '<li><strong>' + safeText(todo.l3_name || todo.a1_code || '映射待办') + '</strong><span>' + safeText(todo.message || todo.suggestion || '请确认当前已确认流程映射中的核验提醒') + '</span></li>';
       }).join('');
-      return '<div class="empty candidate-review-fallback">' +
-        '<p>暂无新的问题抽取结果；当前正式映射里已有 ' + safeText(total) + ' 条映射待办需要确认。</p>' +
+      return '<div class="empty input-baseline-review-fallback">' +
+        '<p>暂无新的问题抽取结果；当前已确认流程映射里已有 ' + safeText(total) + ' 条映射待办需要确认。</p>' +
         (rows ? '<ul>' + rows + '</ul>' : '') +
         '<a class="btn primary" href="#/processGovernance?view=mapping">去映射待办处理</a>' +
       '</div>';
     }
 
-    function renderCandidateReviewList(data, mappingTodos) {
+    function renderInputBaselineReviewList(data, mappingTodos) {
       var items = (data.items || []).slice(0, 80);
-      if (!items.length) return renderCandidateReviewMappingTodoFallback(mappingTodos);
-      return items.map(renderCandidateReviewCard).join('');
+      if (!items.length) return renderInputBaselineReviewMappingTodoFallback(mappingTodos);
+      return items.map(renderInputBaselineReviewCard).join('');
     }
 
-    function renderCandidateReviewDetailField(label, value, wide) {
-      return '<div class="candidate-review-detail-field' + (wide ? ' wide' : '') + '">' +
+    function renderInputBaselineReviewDetailField(label, value, wide) {
+      return '<div class="input-baseline-review-detail-field' + (wide ? ' wide' : '') + '">' +
         '<strong>' + safeText(label) + '</strong>' +
         '<p>' + safeText(value || '未标注') + '</p>' +
       '</div>';
     }
 
-    function renderCandidateReviewDetailPage(data, run, candidateKey, mappingTodos) {
+    function renderInputBaselineReviewDetailPage(data, run, reviewItemKey, mappingTodos) {
       var items = data.items || [];
-      var index = Math.max(0, items.findIndex(function(item) { return item.stable_key === candidateKey; }));
+      var index = Math.max(0, items.findIndex(function(item) { return item.stable_key === reviewItemKey; }));
       var row = items[index];
-      if (!row) return renderCandidateReviewList(data, mappingTodos);
+      if (!row) return renderInputBaselineReviewList(data, mappingTodos);
       var previous = items[index - 1];
       var next = items[index + 1];
-      return '<article class="candidate-review-detail" data-candidate-review-item="' + escapeHtml(row.stable_key || '') + '">' +
-        '<div class="candidate-review-detail-head">' +
+      return '<article class="input-baseline-review-detail" data-input-baseline-review-item="' + escapeHtml(row.stable_key || '') + '">' +
+        '<div class="input-baseline-review-detail-head">' +
           '<div>' +
             '<h3>待确认问题 ' + safeText(index + 1) + ' / ' + safeText(items.length) + '</h3>' +
-            '<div class="candidate-review-meta">' +
+            '<div class="input-baseline-review-meta">' +
               '<span class="tag">' + safeText(row.department || '未标注部门') + '</span>' +
               '<span class="tag">' + safeText(row.document_name || '来源未标注文档') + '</span>' +
-              '<span class="tag">' + safeText(pgCandidateDisplayType(row.candidate_type)) + '</span>' +
+              '<span class="tag">' + safeText(pgReviewItemDisplayType(row.issue_type)) + '</span>' +
             '</div>' +
           '</div>' +
-          '<div class="candidate-review-detail-actions">' +
-            '<button type="button" class="btn secondary" data-candidate-back="1">返回列表</button>' +
-            (previous ? '<button type="button" class="btn secondary" data-candidate-open="' + escapeHtml(previous.stable_key || '') + '">上一题</button>' : '') +
-            (next ? '<button type="button" class="btn secondary" data-candidate-open="' + escapeHtml(next.stable_key || '') + '">下一题</button>' : '') +
+          '<div class="input-baseline-review-detail-actions">' +
+            '<button type="button" class="btn secondary" data-reviewItem-back="1">返回列表</button>' +
+            (previous ? '<button type="button" class="btn secondary" data-reviewItem-open="' + escapeHtml(previous.stable_key || '') + '">上一题</button>' : '') +
+            (next ? '<button type="button" class="btn secondary" data-reviewItem-open="' + escapeHtml(next.stable_key || '') + '">下一题</button>' : '') +
           '</div>' +
         '</div>' +
-        '<div class="candidate-review-detail-grid">' +
-          renderCandidateReviewDetailField('哪里有问题', row.content || '', true) +
-          '<div class="candidate-review-detail-field wide"><strong>在哪发现的</strong>' + renderCandidateReviewSourceCell(row) + '</div>' +
-          renderCandidateReviewDetailField('是哪种问题', pgCandidateDisplayType(row.candidate_type)) +
-          renderCandidateReviewDetailField('证据有没有问题', pgCandidateOptionText(pgCandidateDefinitionOptions, row.definition_status, '还要回原文确认')) +
-          renderCandidateReviewDetailField('处理提示', pgCandidateTypeHelp(row.candidate_type), true) +
+        '<div class="input-baseline-review-detail-grid">' +
+          renderInputBaselineReviewDetailField('哪里有问题', row.content || '', true) +
+          '<div class="input-baseline-review-detail-field wide"><strong>在哪发现的</strong>' + renderInputBaselineReviewSourceCell(row) + '</div>' +
+          renderInputBaselineReviewDetailField('是哪种问题', pgReviewItemDisplayType(row.issue_type)) +
+          renderInputBaselineReviewDetailField('证据有没有问题', pgReviewItemOptionText(pgReviewItemDefinitionOptions, row.definition_status, '还要回原文确认')) +
+          renderInputBaselineReviewDetailField('处理提示', pgIssueTypeHelp(row.issue_type), true) +
         '</div>' +
-        '<div class="candidate-review-confirmation">' +
+        '<div class="input-baseline-review-confirmation">' +
           '<h4>请你确认</h4>' +
-          renderCandidateReviewControls(row, run) +
+          renderInputBaselineReviewControls(row, run) +
         '</div>' +
       '</article>';
     }
 
-    function wireCandidateReviewNavigation(container) {
-      container.querySelectorAll('[data-candidate-open]').forEach(function(button) {
+    function wireInputBaselineReviewNavigation(container) {
+      container.querySelectorAll('[data-reviewItem-open]').forEach(function(button) {
         button.addEventListener('click', function() {
-          location.hash = candidateReviewDetailHash(button.dataset.candidateOpen || '');
+          location.hash = inputBaselineReviewDetailHash(button.dataset.reviewItemOpen || '');
         });
       });
-      container.querySelectorAll('[data-candidate-back]').forEach(function(button) {
+      container.querySelectorAll('[data-reviewItem-back]').forEach(function(button) {
         button.addEventListener('click', function() {
-          location.hash = candidateReviewListHash();
+          location.hash = inputBaselineReviewListHash();
         });
       });
     }
 
-    function renderProcessGovernanceCandidateReview(data, selectedDept, route, mappingTodos) {
-      var rowsEl = document.getElementById('pgCandidateReviewRows');
+    function renderProcessGovernanceInputBaselineReview(data, selectedDept, route, mappingTodos) {
+      var rowsEl = document.getElementById('pgInputBaselineReviewRows');
       if (!rowsEl) return;
-      state.pgCandidateReviewData = data;
+      state.pgInputBaselineReviewData = data;
       var items = data.items || [];
       var run = data.run || null;
       var mappingTodoTotal = mappingTodos && mappingTodos.summary && Number(mappingTodos.summary.total || 0) || ((mappingTodos && mappingTodos.items) || []).length;
-      document.getElementById('pgCandidateReviewMeta').textContent = run
+      document.getElementById('pgInputBaselineReviewMeta').textContent = run
         ? (selectedDept ? selectedDept + ' · ' : '') + '运行 ' + run.run_id + '，显示 ' + items.length + ' 条 / 共 ' + ((data.summary && data.summary.total) || items.length) + ' 条'
         : (mappingTodoTotal ? (selectedDept ? selectedDept + ' · ' : '') + '暂无新的问题抽取，映射待办 ' + mappingTodoTotal + ' 条' : '暂无待确认的问题');
-      rowsEl.innerHTML = (route && route.pgView === 'candidateReview' && route.candidateReviewKey)
-        ? renderCandidateReviewDetailPage(data, run, route.candidateReviewKey, mappingTodos)
-        : renderCandidateReviewList(data, mappingTodos);
-      wireCandidateReviewNavigation(rowsEl);
+      rowsEl.innerHTML = (route && route.pgView === 'inputBaselineReview' && route.inputBaselineReviewKey)
+        ? renderInputBaselineReviewDetailPage(data, run, route.inputBaselineReviewKey, mappingTodos)
+        : renderInputBaselineReviewList(data, mappingTodos);
+      wireInputBaselineReviewNavigation(rowsEl);
       rowsEl.querySelectorAll('[data-review-save]').forEach(function(button) {
         button.addEventListener('click', function() {
-          saveProcessGovernanceCandidateReview(button);
+          saveProcessGovernanceInputBaselineReview(button);
         });
       });
     }
@@ -5510,23 +5510,23 @@
       return requestId === state.processGovernanceRenderRequestId;
     }
 
-    function setProcessGovernanceCandidateReviewLoading() {
-      var rowsEl = document.getElementById('pgCandidateReviewRows');
-      var metaEl = document.getElementById('pgCandidateReviewMeta');
+    function setProcessGovernanceInputBaselineReviewLoading() {
+      var rowsEl = document.getElementById('pgInputBaselineReviewRows');
+      var metaEl = document.getElementById('pgInputBaselineReviewMeta');
       if (metaEl) metaEl.textContent = '正在加载待确认的问题';
       if (rowsEl) rowsEl.innerHTML = '<div class="empty">正在加载待确认的问题...</div>';
     }
 
-    function setProcessGovernanceCandidateReviewError(message) {
-      var rowsEl = document.getElementById('pgCandidateReviewRows');
-      var metaEl = document.getElementById('pgCandidateReviewMeta');
+    function setProcessGovernanceInputBaselineReviewError(message) {
+      var rowsEl = document.getElementById('pgInputBaselineReviewRows');
+      var metaEl = document.getElementById('pgInputBaselineReviewMeta');
       var text = message || '待确认问题加载失败，请刷新流程治理';
       if (metaEl) metaEl.textContent = '待确认问题加载失败';
       if (rowsEl) rowsEl.innerHTML = '<div class="empty">' + safeText(text) + '</div>';
     }
 
-    async function saveProcessGovernanceCandidateReview(button) {
-      var row = button.closest('[data-candidate-review-item]');
+    async function saveProcessGovernanceInputBaselineReview(button) {
+      var row = button.closest('[data-input-baseline-review-item]');
       var runId = button.dataset.runId || '';
       var stableKey = button.dataset.stableKey || '';
       if (!row || !runId || !stableKey) {
@@ -5539,13 +5539,13 @@
       });
       button.disabled = true;
       try {
-        await api('/api/process-governance/candidate-review/runs/' + encodeURIComponent(runId) + '/candidates/' + encodeURIComponent(stableKey) + '/review', {
+        await api('/api/process-governance/input-baseline-review/runs/' + encodeURIComponent(runId) + '/review-items/' + encodeURIComponent(stableKey) + '/review', {
           method: 'PUT',
           body: JSON.stringify(payload)
         });
         showToast('确认结果已保存');
-        clearProcessGovernanceViewCache('candidate-review-save');
-        await loadProcessGovernanceView('candidateReview', { route: parseHash(), force: true });
+        clearProcessGovernanceViewCache('input-baseline-review-save');
+        await loadProcessGovernanceView('inputBaselineReview', { route: parseHash(), force: true });
       } catch (error) {
         showToast(error.message || '确认结果保存失败', 'error');
       } finally {
@@ -5717,7 +5717,7 @@
         filters.l3 = state.pgEvidenceFocus && state.pgEvidenceFocus.l3Name || '';
         filters.a1 = state.pgEvidenceFocus && state.pgEvidenceFocus.a1Code || '';
       }
-      if (view === 'candidateReview') {
+      if (view === 'inputBaselineReview') {
         var route = parseHash();
         filters.issueQueue = route.issueQueue || '';
         filters.issueId = route.issueId || '';
@@ -5769,7 +5769,7 @@
       };
     }
 
-    async function loadProcessGovernanceCandidateReviewView(filters) {
+    async function loadProcessGovernanceInputBaselineReviewView(filters) {
       var route = parseHash();
       var mappingTodoQuery = processGovernanceQuery({ dept: filters.dept });
       var mappingTodosPromise = api('/api/process-governance/mapping-todos' + mappingTodoQuery);
@@ -5889,10 +5889,10 @@
       document.getElementById('pgSnapshotMeta').textContent = current.id
         ? '当前快照 #' + current.id + '，图谱统计 A1 ' + (stats.a1 || 0) + ' 项，治理明细 ' + imported + ' 行' + (state.pgSelectedDept ? '，当前部门：' + state.pgSelectedDept : '')
         : '暂无流程治理快照';
-      document.getElementById('pgSourceMeta').textContent = '组织真源：docs/organization/组织架构和部门职责.md；流程真源：docs/norms/{部门}部门-能力-流程-系统映射关系.md';
+      document.getElementById('pgSourceMeta').textContent = '组织真源：docs/organization/组织架构和部门职责.md；流程输入基线：docs/norms/{部门}部门-能力-流程-系统映射关系.md';
     }
 
-    function renderProcessGovernanceCandidateReviewView(payload, route) {
+    function renderProcessGovernanceInputBaselineReviewView(payload, route) {
       renderProcessGovernanceIssuePool(payload || {}, route || parseHash());
     }
 
@@ -5967,8 +5967,8 @@
     function setProcessGovernanceViewLoading(view) {
       if (view === 'overview') {
         document.getElementById('pgSnapshotMeta').textContent = '正在加载流程治理总览...';
-      } else if (view === 'candidateReview') {
-        setProcessGovernanceCandidateReviewLoading();
+      } else if (view === 'inputBaselineReview') {
+        setProcessGovernanceInputBaselineReviewLoading();
       } else if (view === 'map') {
         document.getElementById('pgMapMeta').textContent = '正在加载流程图谱...';
         document.getElementById('pgSankeyChart').innerHTML = '<div class="empty">正在加载流程图谱...</div>';
@@ -5976,7 +5976,7 @@
         document.getElementById('pgRiskRows').innerHTML = '<tr><td colspan="7" class="empty">正在加载跨部门风险...</td></tr>';
       } else if (view === 'evidence') {
         document.getElementById('pgSourceCoverageRows').innerHTML = '<tr><td colspan="7" class="empty">正在加载源文件覆盖...</td></tr>';
-        document.getElementById('pgMdmRequirementRows').innerHTML = '<tr><td colspan="7" class="empty">正在加载主数据对象候选...</td></tr>';
+        document.getElementById('pgMdmRequirementRows').innerHTML = '<tr><td colspan="7" class="empty">正在加载待确认主数据对象...</td></tr>';
         document.getElementById('pgEvidenceRows').innerHTML = '<tr><td colspan="8" class="empty">正在加载证据链...</td></tr>';
       } else if (view === 'mapping') {
         document.getElementById('pgMappingWorkspaceRows').innerHTML = '<tr><td colspan="8" class="empty">正在加载映射工作库...</td></tr>';
@@ -5991,8 +5991,8 @@
       var message = error && error.message || '流程治理数据暂不可用';
       if (view === 'overview') {
         document.getElementById('pgSnapshotMeta').textContent = message;
-      } else if (view === 'candidateReview') {
-        setProcessGovernanceCandidateReviewError('待确认问题加载失败，请刷新流程治理');
+      } else if (view === 'inputBaselineReview') {
+        setProcessGovernanceInputBaselineReviewError('待确认问题加载失败，请刷新流程治理');
       } else if (view === 'map') {
         document.getElementById('pgMapMeta').textContent = '';
         document.getElementById('pgSankeyChart').innerHTML = '<div class="empty">' + safeText(message) + '</div>';
@@ -6000,7 +6000,7 @@
         document.getElementById('pgRiskRows').innerHTML = '<tr><td colspan="7" class="empty">暂无跨部门风险项</td></tr>';
       } else if (view === 'evidence') {
         document.getElementById('pgSourceCoverageRows').innerHTML = '<tr><td colspan="7" class="empty">暂无源文件覆盖记录</td></tr>';
-        document.getElementById('pgMdmRequirementRows').innerHTML = '<tr><td colspan="7" class="empty">暂无主数据对象候选</td></tr>';
+        document.getElementById('pgMdmRequirementRows').innerHTML = '<tr><td colspan="7" class="empty">暂无待确认主数据对象</td></tr>';
         document.getElementById('pgEvidenceRows').innerHTML = '<tr><td colspan="8" class="empty">暂无证据链记录</td></tr>';
       } else if (view === 'mapping') {
         document.getElementById('pgMappingWorkspaceRows').innerHTML = '<tr><td colspan="8" class="empty">暂无映射工作库记录</td></tr>';

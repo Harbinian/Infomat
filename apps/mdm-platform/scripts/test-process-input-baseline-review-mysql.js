@@ -5,11 +5,11 @@ const path = require('path');
 
 const {
   formatSourceForBusiness,
-  loadCandidateRunBundle,
-  makeProcessCandidateReviewRepository,
+  loadReviewRunBundle,
+  makeProcessInputBaselineReviewRepository,
   normalizeReviewPayload,
   roleDefinitionStatus
-} = require('../server/processCandidateReviewRepository');
+} = require('../server/processInputBaselineReviewRepository');
 
 function makeFakePool() {
   const state = {
@@ -28,12 +28,12 @@ function makeFakePool() {
 
       if (normalizedSql.startsWith('CREATE TABLE')) return [[], undefined];
 
-      if (normalizedSql.includes('INSERT INTO process_candidate_review_runs')) {
-        const [run_id, candidate_run_path, candidate_count, embedding_status, embedding_model, mapping_diff_report] = params;
+      if (normalizedSql.includes('INSERT INTO process_input_baseline_review_runs')) {
+        const [run_id, review_run_path, issue_count, embedding_status, embedding_model, mapping_diff_report] = params;
         state.runs.set(run_id, {
           run_id,
-          candidate_run_path,
-          candidate_count,
+          review_run_path,
+          issue_count,
           embedding_status,
           embedding_model,
           mapping_diff_report,
@@ -43,7 +43,7 @@ function makeFakePool() {
         return [{ affectedRows: 1 }, undefined];
       }
 
-      if (normalizedSql.includes('DELETE FROM process_candidate_review_items')) {
+      if (normalizedSql.includes('DELETE FROM process_input_baseline_review_items')) {
         const runId = params[0];
         const keep = new Set(params.slice(1));
         for (const key of Array.from(state.items.keys())) {
@@ -59,16 +59,16 @@ function makeFakePool() {
         return [{ affectedRows: 1 }, undefined];
       }
 
-      if (normalizedSql.includes('INSERT INTO process_candidate_review_items')) {
+      if (normalizedSql.includes('INSERT INTO process_input_baseline_review_items')) {
         const [
           run_id,
           stable_key,
-          candidate_id,
+          review_item_id,
           department,
           document_name,
           source_file,
           source_anchor,
-          candidate_type,
+          issue_type,
           content,
           mapping_location,
           suggested_action,
@@ -79,12 +79,12 @@ function makeFakePool() {
         state.items.set(`${run_id}\u0000${stable_key}`, {
           run_id,
           stable_key,
-          candidate_id,
+          review_item_id,
           department,
           document_name,
           source_file,
           source_anchor,
-          candidate_type,
+          issue_type,
           content,
           mapping_location,
           suggested_action,
@@ -96,7 +96,7 @@ function makeFakePool() {
         return [{ affectedRows: 1 }, undefined];
       }
 
-      if (normalizedSql.includes('DELETE FROM process_candidate_review_excerpts')) {
+      if (normalizedSql.includes('DELETE FROM process_input_baseline_review_excerpts')) {
         const [runId, stableKey] = params;
         const prefix = `${runId}\u0000${stableKey}\u0000`;
         for (const key of Array.from(state.excerpts.keys())) {
@@ -105,7 +105,7 @@ function makeFakePool() {
         return [{ affectedRows: 1 }, undefined];
       }
 
-      if (normalizedSql.includes('INSERT INTO process_candidate_review_excerpts')) {
+      if (normalizedSql.includes('INSERT INTO process_input_baseline_review_excerpts')) {
         const [
           run_id,
           stable_key,
@@ -133,7 +133,7 @@ function makeFakePool() {
         return [{ affectedRows: 1 }, undefined];
       }
 
-      if (normalizedSql.includes('INSERT INTO process_candidate_review_decisions')) {
+      if (normalizedSql.includes('INSERT INTO process_input_baseline_review_decisions')) {
         const [
           run_id,
           stable_key,
@@ -159,7 +159,7 @@ function makeFakePool() {
         return [{ affectedRows: 1 }, undefined];
       }
 
-      if (normalizedSql.includes('FROM process_candidate_review_decisions')) {
+      if (normalizedSql.includes('FROM process_input_baseline_review_decisions')) {
         const [runId, stableKey] = params;
         const row = state.decisions.get(`${runId}\u0000${stableKey}`);
         return [[row ? {
@@ -174,11 +174,11 @@ function makeFakePool() {
         } : undefined].filter(Boolean), undefined];
       }
 
-      if (normalizedSql.includes('FROM process_candidate_review_runs')) {
+      if (normalizedSql.includes('FROM process_input_baseline_review_runs')) {
         return [[...state.runs.values()].sort((a, b) => b.run_id.localeCompare(a.run_id)), undefined];
       }
 
-      if (normalizedSql.includes('FROM process_candidate_review_items i')) {
+      if (normalizedSql.includes('FROM process_input_baseline_review_items i')) {
         const runId = params[0];
         const rows = [...state.items.values()]
           .filter(item => item.run_id === runId)
@@ -190,7 +190,7 @@ function makeFakePool() {
         return [rows, undefined];
       }
 
-      if (normalizedSql.includes('FROM process_candidate_review_excerpts')) {
+      if (normalizedSql.includes('FROM process_input_baseline_review_excerpts')) {
         const runId = params[0];
         const stableKeys = new Set(params.slice(1));
         return [[...state.excerpts.values()]
@@ -204,20 +204,20 @@ function makeFakePool() {
 }
 
 async function main() {
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'mdm-process-candidate-review-'));
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'mdm-process-input-baseline-review-'));
   const runDir = path.join(tmp, 'review-run-001');
   fs.mkdirSync(runDir, { recursive: true });
 
   fs.writeFileSync(path.join(runDir, 'mapping_diff_items.json'), JSON.stringify([
     {
-      id: 'CAND-001',
-      stable_key: 'candidate-001',
+      id: 'IBR-001',
+      stable_key: 'review-item-001',
       department: '工程技术部',
       source_file: 'docs/norms/工程技术部业务资料/产品设计需求定义管理程序.docx',
       source_anchor: 'GLC120102 §5.2 P71',
-      candidate_type: '角色待确认',
+      issue_type: '角色待确认',
       content: '审核人审核产品设计需求文件',
-      mapping_location: '当前正式映射未见同名覆盖',
+      mapping_location: '当前已确认流程映射未见同名覆盖',
       suggested_action: '回源确认角色定义是否充分。',
       owner: '工程技术部确认人'
     }
@@ -229,7 +229,7 @@ async function main() {
     clause: '5.2',
     paragraph_id: 'P71',
     raw_text: '审核人审核产品设计需求文件，工程技术部审核人复核设计更改记录。',
-    evidence_status: 'candidate',
+    evidence_status: 'needs_review',
     verification_status: 'unverified',
     allowed_downstream_use: 'review_only'
   })}\n`, 'utf8');
@@ -240,7 +240,7 @@ async function main() {
   fs.writeFileSync(path.join(runDir, 'mapping_diff_report.md'), '# 测试报告\n', 'utf8');
 
   try {
-    const bundle = loadCandidateRunBundle(runDir);
+    const bundle = loadReviewRunBundle(runDir);
     assert.strictEqual(bundle.run.run_id, 'review-run-001');
     assert.strictEqual(bundle.items[0].document_name, '产品设计需求定义管理程序.docx');
     assert.strictEqual(bundle.items[0].source_label.includes('内部锚点P71'), false);
@@ -260,18 +260,18 @@ async function main() {
     );
 
     const pool = makeFakePool();
-    const repo = makeProcessCandidateReviewRepository(pool);
+    const repo = makeProcessInputBaselineReviewRepository(pool);
     await repo.initSchema();
     await repo.upsertBundle(bundle);
 
     const runs = await repo.listRuns();
     assert.strictEqual(runs.length, 1);
-    assert.strictEqual(runs[0].candidate_count, 1);
+    assert.strictEqual(runs[0].issue_count, 1);
 
-    const candidates = await repo.getCandidates('review-run-001');
-    assert.strictEqual(candidates.items.length, 1);
-    assert.strictEqual(candidates.groups[0].department, '工程技术部');
-    assert.strictEqual(candidates.groups[0].documents[0].document_name, '产品设计需求定义管理程序.docx');
+    const reviewItems = await repo.getReviewItems('review-run-001');
+    assert.strictEqual(reviewItems.items.length, 1);
+    assert.strictEqual(reviewItems.groups[0].department, '工程技术部');
+    assert.strictEqual(reviewItems.groups[0].documents[0].document_name, '产品设计需求定义管理程序.docx');
 
     const payload = normalizeReviewPayload({
       decision: 'needs_correction',
@@ -284,7 +284,7 @@ async function main() {
     });
     assert.strictEqual(payload.correction_note, undefined);
 
-    const firstSave = await repo.saveDecision('review-run-001', 'candidate-001', payload);
+    const firstSave = await repo.saveDecision('review-run-001', 'review-item-001', payload);
     assert.strictEqual(firstSave.decision, 'needs_correction');
     assert.strictEqual(firstSave.issue_type, 'role_definition_insufficient');
     assert.strictEqual(firstSave.definition_status, 'source_definition_insufficient');
@@ -292,20 +292,20 @@ async function main() {
     assert.strictEqual(firstSave.reviewed_at, '2026-06-16 00:00:00');
     assert.strictEqual(firstSave.updated_at, '2026-06-16 00:00:00');
 
-    const secondSave = await repo.saveDecision('review-run-001', 'candidate-001', {
+    const secondSave = await repo.saveDecision('review-run-001', 'review-item-001', {
       ...payload,
-      decision: 'reject_candidate',
-      normalized_note: '原文定义不足，暂不进入正式映射。'
+      decision: 'reject_issue',
+      normalized_note: '原文定义不足，暂不进入已确认流程映射。'
     });
-    assert.strictEqual(secondSave.decision, 'reject_candidate');
-    assert.strictEqual(secondSave.normalized_note, '原文定义不足，暂不进入正式映射。');
+    assert.strictEqual(secondSave.decision, 'reject_issue');
+    assert.strictEqual(secondSave.normalized_note, '原文定义不足，暂不进入已确认流程映射。');
 
-    const updated = await repo.getCandidates('review-run-001');
-    assert.strictEqual(updated.items[0].decision, 'reject_candidate');
-    assert.strictEqual(updated.items[0].normalized_note, '原文定义不足，暂不进入正式映射。');
+    const updated = await repo.getReviewItems('review-run-001');
+    assert.strictEqual(updated.items[0].decision, 'reject_issue');
+    assert.strictEqual(updated.items[0].normalized_note, '原文定义不足，暂不进入已确认流程映射。');
     assert.ok(pool.state.statements.some(entry => entry.sql.includes('ON DUPLICATE KEY UPDATE')), 'decisions should be upserted for repeat saves');
 
-    console.log('Process candidate review MySQL repository test passed');
+    console.log('Process input baseline review MySQL repository test passed');
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });
   }

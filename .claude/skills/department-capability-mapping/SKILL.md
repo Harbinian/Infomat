@@ -169,7 +169,7 @@ MES can be used as:
 
 8. **Separate MDM requirements**
    - Identify stable data objects, codes, classifications, statuses, responsibilities, lifecycle states, effective periods, and cross-system references.
-   - Start from generic master-data candidates such as customer, supplier, contract, project, order, product/material, organization, role/person, form template, code rule, classification, status, and effective period; then add department-specific objects only when the source documents support them.
+   - Start from generic master-data reviewItems such as customer, supplier, contract, project, order, product/material, organization, role/person, form template, code rule, classification, status, and effective period; then add department-specific objects only when the source documents support them.
    - Present these as MDM construction requirements, not employee-facing workflow systems.
 
 9. **Produce deliverables**

@@ -26,7 +26,7 @@ const indexedSections = [
     expectedCount: 5,
   },
   {
-    heading: '集成研发候选',
+    heading: '集成研发待确认',
     baseDir: 'docs/外部参考/集成研发/集成研发业务域信息流图20251030',
     expectedCount: 1,
   },
@@ -79,8 +79,8 @@ const triageReportText = readText(triageReportPath);
 const crossDeptIdentificationText = readText(crossDeptIdentificationPath);
 
 assert.ok(
-  manifestText.includes('不能直接等同工程技术部真源'),
-  'engineering source manifest must keep candidate-source caution wording'
+  manifestText.includes('不能直接等同工程技术部流程输入基线'),
+  'engineering source manifest must keep review-source caution wording'
 );
 assert.ok(
   manifestText.includes('沈飞民机侧部门') && attributionChecklistText.includes('沈飞民机侧部门'),
@@ -91,15 +91,15 @@ assert.ok(
   'engineering source docs must state 集成研发 is a business domain'
 );
 assert.ok(
-  attributionChecklistText.includes('工程技术部候选源承接确认检查表'),
+  attributionChecklistText.includes('工程技术部待确认源承接确认检查表'),
   'engineering source attribution checklist must exist'
 );
 assert.ok(
   !triageReportText.includes('工程技术部真源归属') && !triageReportText.includes('源文件归属确认'),
-  'remediation triage should use acceptance confirmation wording, not ownership wording, for external engineering source candidates'
+  'remediation triage should use acceptance confirmation wording, not ownership wording, for external engineering source review items'
 );
 assert.ok(
-  triageReportText.includes('工程技术部真源缺口与候选承接确认') &&
+  triageReportText.includes('工程技术部流程输入基线缺口与待确认承接确认') &&
     triageReportText.includes('沈飞民机侧科技创新部') &&
     triageReportText.includes('沈飞民机侧数字工程部') &&
     triageReportText.includes('集成研发业务域'),
@@ -142,10 +142,10 @@ for (const row of canonicalRows) {
     continue;
   }
   if (row.path === 'docs/norms/工程技术部部门能力流程系统桑基图.html') {
-    assert.equal(row.cells[1], '正式映射已建立', `${row.path} must be documented as 正式映射已建立`);
+    assert.equal(row.cells[1], '已确认流程映射已建立', `${row.path} must be documented as 已确认流程映射已建立`);
     assert.ok(existsSync(fullPath), `${row.path} formal mapping page must exist`);
     const html = readText(fullPath);
-    assert.match(html, /正式映射/, `${row.path} must show formal mapping status`);
+    assert.match(html, /已确认流程映射/, `${row.path} must show formal mapping status`);
     assert.match(html, /仅展示已沉淀的 DCM 主映射/, `${row.path} must explain formal DCM display scope`);
     continue;
   }
@@ -162,9 +162,9 @@ for (const row of canonicalRows) {
 }
 assert.equal(canonicalRows.length, 4, 'engineering source status table should list source directory, conservative DCM, MDM requirements, and formal Sankey page');
 
-const groupSection = extractSection(manifestText, '候选资料分组');
+const groupSection = extractSection(manifestText, '待确认资料分组');
 const groupRows = parseBacktickedPathRows(groupSection);
-assert.ok(groupRows.length >= indexedSections.length, 'candidate group table must list indexed candidate groups');
+assert.ok(groupRows.length >= indexedSections.length, 'review group table must list indexed review groups');
 for (const row of groupRows) {
   assert.equal(row.cells[3], '待复核', `${row.path} must remain 待复核`);
   const fullPath = resolve(root, row.path);
@@ -190,4 +190,4 @@ for (const section of indexedSections) {
   }
 }
 
-console.log('Engineering source manifest check passed: source directory, conservative DCM, MDM requirements, formal Sankey page, and 47 candidate files');
+console.log('Engineering source manifest check passed: source directory, conservative DCM, MDM requirements, formal Sankey page, and 47 review files');

@@ -2,7 +2,7 @@
 /**
  * Generate a read-only process-evidence-mapping skill evolution proposal.
  *
- * This script reads evolution cases and optional candidate run artifacts, then
+ * This script reads evolution cases and optional review run artifacts, then
  * writes a proposal under artifacts/process-evolution. It never edits
  * docs/norms formal mappings or skill files.
  */
@@ -16,7 +16,7 @@ const defaultCases = join(root, '.agents', 'skills', 'process-evidence-mapping',
 function parseArgs(argv) {
   const args = {
     cases: defaultCases,
-    candidateRun: null,
+    reviewRun: null,
     out: join(root, 'artifacts', 'process-evolution', new Date().toISOString().replace(/[:.]/g, '-')),
   };
 
@@ -24,8 +24,8 @@ function parseArgs(argv) {
     const arg = argv[index];
     if (arg === '--cases') {
       args.cases = resolve(root, argv[++index]);
-    } else if (arg === '--candidate-run') {
-      args.candidateRun = resolve(root, argv[++index]);
+    } else if (arg === '--review-run') {
+      args.reviewRun = resolve(root, argv[++index]);
     } else if (arg === '--out') {
       args.out = resolve(root, argv[++index]);
     } else if (arg === '--help' || arg === '-h') {
@@ -44,7 +44,7 @@ function printHelp() {
 
 Options:
   --cases <path>          JSONL evolution cases. Defaults to references/evolution-cases.jsonl.
-  --candidate-run <path>  Optional artifacts/process-candidates run directory.
+  --review-run <path>  Optional artifacts/process-input-baseline-review run directory.
   --out <path>            Output directory. Defaults to artifacts/process-evolution/<run-id>.
 `);
 }
@@ -92,10 +92,10 @@ function validateCase(item) {
   assert.ok(Array.isArray(item.evidence_anchors), `${item.id} evidence_anchors must be an array`);
 }
 
-function candidateClass(candidateType) {
+function issueClass(issueType) {
   const mapping = {
-    候选L3: '漏判',
-    候选A1: '漏判',
+    待确认L3: '漏判',
+    待确认A1: '漏判',
     角色待确认: '证据不足',
     审批链待确认: '证据不足',
     受控传递待确认: '证据不足',
@@ -104,7 +104,7 @@ function candidateClass(candidateType) {
     归档要求待补: '规则缺失',
     系统落位待确认: '规则缺失',
   };
-  return mapping[candidateType] || '测试缺失';
+  return mapping[issueType] || '测试缺失';
 }
 
 function markdownList(items) {
@@ -116,20 +116,20 @@ function tableRow(values) {
   return `| ${values.map((value) => String(value).replace(/\r?\n/g, '<br>')).join(' | ')} |`;
 }
 
-function buildProposal({ cases, candidateRun, candidates, embeddingManifest, diffReport }) {
+function buildProposal({ cases, reviewRun, reviewItems, embeddingManifest, diffReport }) {
   const failureTypes = new Map();
   for (const item of cases) {
     failureTypes.set(item.failure_type, (failureTypes.get(item.failure_type) || 0) + 1);
   }
-  for (const item of candidates) {
-    const type = candidateClass(item.candidate_type);
+  for (const item of reviewItems) {
+    const type = issueClass(item.issue_type);
     failureTypes.set(type, (failureTypes.get(type) || 0) + 1);
   }
 
   const rules = [...new Set(cases.map((item) => item.skill_rule))];
   const tests = [...new Set(cases.map((item) => `${item.id}: ${item.verification_command}`))];
   const sourceFiles = [...new Set(cases.map((item) => item.source_file))];
-  const candidateTypes = [...new Set(candidates.map((item) => item.candidate_type).filter(Boolean))];
+  const issueTypes = [...new Set(reviewItems.map((item) => item.issue_type).filter(Boolean))];
   const embeddingStatus = embeddingManifest?.status || '未提供';
   const embeddingNotice = embeddingStatus === 'skipped'
     ? '本轮未使用向量检索；不得把降级结果说成向量评测通过。'
@@ -138,13 +138,13 @@ function buildProposal({ cases, candidateRun, candidates, embeddingManifest, dif
   const lines = [
     '# 流程证据映射技能演进提案',
     '',
-    '> 边界：只生成提案，不自动修改正式映射、PMO 页面、MDM 接口或技能文件。任何 DCM/BBM 入库仍必须逐条回源核验。',
+    '> 边界：只生成提案，不自动修改已确认流程映射、PMO 页面、MDM 接口或技能文件。任何 DCM/BBM 入库仍必须逐条回源核验。',
     '',
     '## 输入概览',
     '',
     `- 演进案例数：${cases.length}`,
-    `- 候选运行目录：${candidateRun ? candidateRun : '未提供'}`,
-    `- 候选项数：${candidates.length}`,
+    `- 问题识别批次目录：${reviewRun ? reviewRun : '未提供'}`,
+    `- 待确认问题数：${reviewItems.length}`,
     `- Embedding 状态：${embeddingStatus}`,
     `- ${embeddingNotice}`,
     '',
@@ -166,25 +166,25 @@ function buildProposal({ cases, candidateRun, candidates, embeddingManifest, dif
       item.evidence_anchors.join('<br>'),
     ])),
     '',
-    '## 候选运行分类',
+    '## 问题识别批次分类',
     '',
   ];
 
-  if (candidates.length) {
+  if (reviewItems.length) {
     lines.push(
-      tableRow(['稳定键', '候选类型', '分类', '候选内容', '建议动作']),
+      tableRow(['稳定键', '问题类型', '分类', '问题内容', '建议动作']),
       tableRow(['---', '---', '---', '---', '---']),
-      ...candidates.map((item) => tableRow([
+      ...reviewItems.map((item) => tableRow([
         item.stable_key || item.id || '(无稳定键)',
-        item.candidate_type || '(未标注)',
-        candidateClass(item.candidate_type),
-        item.content || item.candidate_content || '',
+        item.issue_type || '(未标注)',
+        issueClass(item.issue_type),
+        item.content || item.issue_content || '',
         item.suggested_action || '',
       ])),
       '',
     );
   } else {
-    lines.push('- 未提供候选运行产物。', '');
+    lines.push('- 未提供问题识别批次产物。', '');
   }
 
   lines.push(
@@ -200,14 +200,14 @@ function buildProposal({ cases, candidateRun, candidates, embeddingManifest, dif
     '',
     markdownList([
       `案例来源：${sourceFiles.join('；')}`,
-      candidateTypes.length ? `候选类型：${candidateTypes.join('、')}` : '候选类型：未提供',
-      '影响对象：技能说明、评测案例、候选解释质量；不影响正式流程真源。',
+      issueTypes.length ? `问题类型：${issueTypes.join('、')}` : '问题类型：未提供',
+      '影响对象：技能说明、评测案例、待确认解释质量；不影响流程输入基线。',
     ]),
     '',
   );
 
   if (diffReport.includes('本轮未使用向量检索')) {
-    lines.push('## 降级记录', '', '- 本轮未使用向量检索。', '- 相似度相关结论只能保留为候选或待确认。', '');
+    lines.push('## 降级记录', '', '- 本轮未使用向量检索。', '- 相似度相关结论只能保留为待确认或待确认。', '');
   }
 
   return `${lines.join('\n')}\n`;
@@ -224,22 +224,22 @@ assert.ok(
 const cases = readJsonLines(args.cases);
 cases.forEach(validateCase);
 
-const candidateRun = args.candidateRun;
-const candidates = candidateRun
-  ? readJson(join(candidateRun, 'mapping_diff_items.json'), [])
+const reviewRun = args.reviewRun;
+const reviewItems = reviewRun
+  ? readJson(join(reviewRun, 'mapping_diff_items.json'), [])
   : [];
-const embeddingManifest = candidateRun
-  ? readJson(join(candidateRun, 'embedding_manifest.json'), null)
+const embeddingManifest = reviewRun
+  ? readJson(join(reviewRun, 'embedding_manifest.json'), null)
   : null;
-const diffReport = candidateRun
-  ? readText(join(candidateRun, 'mapping_diff_report.md'))
+const diffReport = reviewRun
+  ? readText(join(reviewRun, 'mapping_diff_report.md'))
   : '';
 
 mkdirSync(outDir, { recursive: true });
 const proposal = buildProposal({
   cases,
-  candidateRun: candidateRun ? `${basename(candidateRun)}` : null,
-  candidates: Array.isArray(candidates) ? candidates : [],
+  reviewRun: reviewRun ? `${basename(reviewRun)}` : null,
+  reviewItems: Array.isArray(reviewItems) ? reviewItems : [],
   embeddingManifest,
   diffReport,
 });

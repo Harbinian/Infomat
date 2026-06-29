@@ -107,7 +107,7 @@ Year 3： 扩展完善
 | Month 1-2 | ERP（用友U8） | 最熟悉，先跑通 |
 | Month 3-4 | MES（北京虎蜥） | 制造数据核心 |
 | Month 5-6 | OA（华天动力） | 审批流对接 |
-| Month 5-6 | PLM（候选方） | 根据选型结果 |
+| Month 5-6 | PLM（待确认方） | 根据选型结果 |
 | Month 5-6 | PDM / CAPP / WMS / SCIM | 根据实施进度 |
 
 ### 4.3 接口数量变化

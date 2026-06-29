@@ -22,7 +22,7 @@
 |---|---|---|
 | 仓库边界与资料清单 | 通过 | 部门域、工程技术部资料清单、norms 清单、源文件 hash 均通过 |
 | PMO 流程地图静态链路 | 通过 | 任务、WBS 语义深度、驾驶舱数据、流程地图解析均通过 |
-| 流程治理候选与证据 | 通过 | 候选、证据、客户文件边界、客户文件承接审计均通过 |
+| 流程治理待确认与证据 | 通过 | 待确认、证据、客户文件边界、客户文件承接审计均通过 |
 | DCM/BBM 质检脚本 | 通过运行 | 脚本无失败退出；当前仍有质量账本缺口，见下方 |
 | MDM 平台正式测试 | 通过 | 主线、流程治理、前端、安全、MySQL 配置、角色工作台等测试均通过 |
 | PMO/MDM 本地联动烟测 | 通过 | 固定入口重启后，MDM 管理员登录和流程治理链路均通过 |
@@ -33,7 +33,7 @@
 |---|---:|
 | 部门映射文件 | 9 |
 | 源文件 hash 覆盖 | 1615 |
-| 工程技术部候选文件 | 47 |
+| 工程技术部待确认文件 | 47 |
 | PMO 任务 | 467 |
 | PMO WBS 父节点 | 85 |
 | 客户文件承接任务 | 234 |
@@ -51,8 +51,8 @@
 - `npm run test:pmo-wbs-semantic-depth`
 - `npm run test:source-manifest-hashes`
 - `npm run test:infomat-services-config`
-- `npm run test:process-candidates`
-- `npm run test:process-candidate-review`
+- `npm run test:process-input-baseline-review`
+- `npm run test:process-input-baseline-review`
 - `npm run test:sankey-preview-status`
 - `npm run test:process-evidence-skill`
 - `npm run test:customer-file-boundary`
@@ -96,7 +96,7 @@
 | WARN | 660 |
 | INFO | 0 |
 
-这不是脚本失败，但说明正式映射仍有待补齐或待确认项，后续应按部门和源文件继续收敛。
+这不是脚本失败，但说明已确认流程映射仍有待补齐或待确认项，后续应按部门和源文件继续收敛。
 
 ## 本地联动烟测
 

@@ -1,16 +1,16 @@
 # Infomat 全库整改分流报告
 
 > 日期：2026-06-10
-> 范围：本报告只归并和分流本轮全库审查发现，不作为流程真源、PMO 真源或 MDM 配置真源。
+> 范围：本报告只归并和分流本轮全库审查发现，不作为流程输入基线、PMO 真源或 MDM 配置真源。
 > 执行策略：分批推进。第一批完成第 0 层核验分流和第 1 层验证体系止血；第二批先处理 MDM 安全边界中可明确测试的最小切片。
 
 ## 1. 实测基线
 
 | 检查项 | 命令 | 当前结论 |
 |---|---|---|
-| 根目录流程治理主线聚合校验 | `npm run test:process-governance-mainline` | 已通过，包含合约、PMO 数据、部门域、工程候选源、sourceManifest 指纹、流程真源清单和 PMO 任务数据 |
+| 根目录流程治理主线聚合校验 | `npm run test:process-governance-mainline` | 已通过，包含合约、PMO 数据、部门域、工程待确认源、sourceManifest 指纹、流程输入基线清单和 PMO 任务数据 |
 | MDM 主线稳定性 | `cd apps/mdm-platform && npm run test:mainline` | 已通过 |
-| MDM 安全专项 | `cd apps/mdm-platform && npm run test:security` | 已覆盖基础主数据越权、用户目录权限、最小候选人接口、字段约束读写、session secret、写接口盘点和 RBAC 管理员判断红线 |
+| MDM 安全专项 | `cd apps/mdm-platform && npm run test:security` | 已覆盖基础主数据越权、用户目录权限、最小可指派人员接口、字段约束读写、session secret、写接口盘点和 RBAC 管理员判断红线 |
 | 2026-06-11 分层整改回归 | 见 `docs/reports/2026-06-11-remediation-verification-log.md` | 根主线、安全专项、MDM 主线、项目角色、流程治理专项均通过 |
 
 口径修正：
@@ -29,7 +29,7 @@
 | 第 2 层 | 旧 `users.role` 与 RBAC 管理员判断并存 | 已确认 | 第二批小片已处理管理员判断 |
 | 第 2 层 | 默认口令 `init1234` 制度化 | 已确认 | 第二批小片已处理平台用户管理和批量脚本 |
 | 第 2 层 | `SESSION_SECRET` 固定回退 | 已确认 | 第二批小片已处理 |
-| 第 2 层 | `/api/org/users` 员工目录暴露面过宽 | 已确认 | 第二批小片已处理目录收窄、后端候选人接口和前端切换 |
+| 第 2 层 | `/api/org/users` 员工目录暴露面过宽 | 已确认 | 第二批小片已处理目录收窄、后端可指派人员接口和前端切换 |
 | 第 2 层 | `applyFieldConstraints` readonly 未执行 | 已确认 | 第二批小片已处理读写两侧 |
 | 第 2 层 | 历史账号可能仍使用旧固定口令 | 待复核 | 第二批小片已补 dry-run 审计脚本 |
 | 第 2 层 | 待办列表仍按旧基础角色单选过滤 | 已确认 | 第二批小片已处理多角色并集过滤 |
@@ -37,7 +37,7 @@
 | 第 2 层 | 黄金源维护仍按旧基础角色判断 | 已确认 | 第二批小片已处理 `fieldIdentities` owner 判断 |
 | 第 2 层 | 字段台账导入仍按旧基础角色判断 | 已确认 | 第二批小片已处理 `import` submitter 判断 |
 | 第 2 层 | 流程映射草稿创建仍为登录即可 | 已确认 | 第二批小片已收紧为报送人或管理员 |
-| 第 3 层 | 工程技术部流程映射交付物缺失 | 已确认风险 | 第三批小片已补缺口审计、source manifest 初版和候选源校验 |
+| 第 3 层 | 工程技术部流程映射交付物缺失 | 已确认风险 | 第三批小片已补缺口审计、source manifest 初版和待确认源校验 |
 | 第 3 层 | `crossDept` 从报告 Markdown 派生 | 已确认风险 | 第三批小片已处理校验不固化数字，并补来源指纹校验 |
 | 第 3 层 | `综合管理部` 等历史/幽灵部门口径 | 已登记待确认 | 第三批小片已补缺口审计，并登记到过时部门名称追踪表 |
 | 第 3 层 | 缺少部门 canonical 映射交付物清单 | 已确认 | 第三批小片已补只读 source manifest 和校验脚本 |
@@ -107,8 +107,8 @@
 - 第二批继续收敛管理员判断：`auth.isAdmin`、旧数据权限管理员旁路、冲突归档、术语维护和集成凭据管理改用 RBAC 管理员口径。
 - 追加字段级写保护红线：具备受限写权限的用户不能写入该权限声明的 `readonly` 字段，但仍可写入非只读字段。
 - 第二批继续执行字段约束：`requirePermission` 对写请求检查当前权限码的 `readonly` 字段，命中后返回 `403`。
-- 追加用户目录替代红线：普通报送人不能查看指派候选人，冲突处理角色只能通过 `/api/org/users/assignable` 获取 `id/name/department_id/dept_name`。
-- 第二批继续收窄员工目录：`/api/org/users` 保持管理员专用，新增后端最小候选人接口，并将冲突指派弹窗切到 `/api/org/users/assignable`。
+- 追加用户目录替代红线：普通报送人不能查看指派可选人员，冲突处理角色只能通过 `/api/org/users/assignable` 获取 `id/name/department_id/dept_name`。
+- 第二批继续收窄员工目录：`/api/org/users` 保持管理员专用，新增后端最小可指派人员接口，并将冲突指派弹窗切到 `/api/org/users/assignable`。
 - 追加默认口令红线：平台用户管理接口不得用固定 `init1234` 创建或重置账号，缺省时由服务端生成一次性初始密码并标记首次登录改密。
 - 第二批继续收敛默认口令：页面账号入库和重置密码改为展示服务端返回的一次性初始密码；`setup-mdm-project-users.js`、`import-mdm-users.js` 改为生成本次一次性初始密码、写入 `must_change_password=1`，并接入 `test:security`。
 - 追加历史账号审计红线：提供 `scripts/audit-fixed-default-passwords.js` dry-run 审计旧固定口令账号，不输出哈希、不修改用户；对应 `npm run test:password-audit` 已接入 `test:security`。
@@ -123,21 +123,21 @@
 - 追加流程映射草稿创建红线：评审人等非报送人账号不能创建映射草稿，报送人和管理员仍可创建；`POST /api/mappings` 已增加报送人/管理员检查，并从写接口审计的后续项移入业务内保护。
 - 复核 Deepseek 审批状态机结论：当前 `apps/mdm-platform/server/routes/mappings.js` 已包含第 5 步状态映射，`npm run test:mappings` 可跑完整终审发布路径，该单点标记为过时/未复现；不做代码改动。
 - 追加第三批校验红线：`check-dashboard-data.mjs` 不得把 `crossDept` 统计固化为 `168/6/1` 等历史数字。
-- 第三批继续收紧根主线入口：`npm run test:process-governance-mainline` 已改为聚合校验，依次执行主线合约、PMO 驾驶舱数据、部门域映射、工程技术部源文件清单、sourceManifest 文件指纹、流程真源清单和 PMO 任务数据一致性检查。
-- 第三批先做只读校验收敛：`check-dashboard-data.mjs` 从 `跨部门完整性检查报告.md` 解析统计值，并与 `docs/company-sankey-data.json.crossDept`、PMO 内嵌 `#cross-dept-data` 比对；不改流程真源和生成快照。
+- 第三批继续收紧根主线入口：`npm run test:process-governance-mainline` 已改为聚合校验，依次执行主线合约、PMO 驾驶舱数据、部门域映射、工程技术部源文件清单、sourceManifest 文件指纹、流程输入基线清单和 PMO 任务数据一致性检查。
+- 第三批先做只读校验收敛：`check-dashboard-data.mjs` 从 `跨部门完整性检查报告.md` 解析统计值，并与 `docs/company-sankey-data.json.crossDept`、PMO 内嵌 `#cross-dept-data` 比对；不改流程输入基线和生成快照。
 - 第三批继续补跨部门来源新鲜度口径：新增并落地 `docs/reports/2026-06-11-cross-dept-source-freshness-proposal.md`，`parse-sankey-data.mjs` 已把两份跨部门报告来源指纹写入 `crossDept.sourceReports`，`check-dashboard-data.mjs` 已比对磁盘报告 hash、公司级 JSON 和 PMO 内嵌数据。
 - 第三批继续补真源缺口审计：新增 `docs/reports/2026-06-10-process-truth-gap-audit.md`，确认工程技术部缺少 canonical 映射文件、`综合管理部` 属于待确认口径残留；不补写 norms、不重新生成 JSON。
 - 第三批继续补历史部门/外部实体口径：更新 `docs/norms/流程治理/过时部门名称追踪表.md`，将 `综合管理部` 登记为待确认项，区分沈飞民机外部实体线索和昌兴制度旧称线索；确认前不自动归并到当前组织真源。
-- 第三批继续补流程映射真源清单：新增 `docs/reports/2026-06-11-norms-source-manifest.md`，按组织真源和 DCM/BBM 合同登记 9 个部门、8 组 canonical 交付物和工程技术部缺口；新增 `docs/reports/2026-06-11-engineering-source-manifest.md`，登记工程技术部 source manifest 初版和外部候选资料；新增 `scripts/check-norms-source-manifest.mjs`、`scripts/check-engineering-source-manifest.mjs`、`npm run test:norms-source-manifest` 和 `npm run test:engineering-source-manifest`，校验合同、三件套、工程技术部缺口和 47 个候选源索引仍与仓库现状一致；当前协作提示已对齐 `复材车间` 口径，未来如拆分一、二车间需先改组织真源和合同；不改 `docs/norms/`。
+- 第三批继续补流程映射真源清单：新增 `docs/reports/2026-06-11-norms-source-manifest.md`，按组织真源和 DCM/BBM 合同登记 9 个部门、8 组 canonical 交付物和工程技术部缺口；新增 `docs/reports/2026-06-11-engineering-source-manifest.md`，登记工程技术部 source manifest 初版和外部待确认资料；新增 `scripts/check-norms-source-manifest.mjs`、`scripts/check-engineering-source-manifest.mjs`、`npm run test:norms-source-manifest` 和 `npm run test:engineering-source-manifest`，校验合同、三件套、工程技术部缺口和 47 个待确认源索引仍与仓库现状一致；当前协作提示已对齐 `复材车间` 口径，未来如拆分一、二车间需先改组织真源和合同；不改 `docs/norms/`。
 - 第三批继续补部门域口径红线：新增 `scripts/check-dept-domain-mapping.mjs` 和 `npm run test:dept-domain-mapping`，从 `docs/organization/组织架构和部门职责.md` 解析三组部门，并校验 `docs/contracts/dcm-bbm-contract.json` 一致；`scripts/parse-sankey-data.mjs` 已移除部门到域硬编码，改为从组织真源读取，并在 `sourceManifest` 记录组织真源 hash。
 - 第三批继续补 sourceManifest 指纹红线：新增 `scripts/check-source-manifest-hashes.mjs` 和 `npm run test:source-manifest-hashes`，逐项校验 `docs/company-sankey-data.json.sourceManifest.files` 中登记的源文件路径、大小和 SHA256 仍匹配磁盘。
 - 第四批先做导航止血：修正根 README、PMO README、PMO CLAUDE 和流程驾驶舱 CLAUDE 中不存在的甘特入口、截图、旧文档和手工 JSON 替换说明；不移动静态资产或大体积资料。
 - 第四批继续补应用集合导航：新增 `apps/README.md`，说明 `apps/` 只放可运行应用，当前唯一应用入口为 `apps/mdm-platform/`。
-- 第四批继续补应用边界导航：更新 `apps/mdm-platform/README.md`，说明 MDM 目录只负责平台应用、应用内脚本和平台说明，不维护流程真源、组织真源、PMO 展示或仓库级脚本。
+- 第四批继续补应用边界导航：更新 `apps/mdm-platform/README.md`，说明 MDM 目录只负责平台应用、应用内脚本和平台说明，不维护流程输入基线、组织真源、PMO 展示或仓库级脚本。
 - 第四批继续补决策和归档目录说明：新增 `docs/adr/README.md`、`docs/archives/README.md`，区分长期架构决策、历史归档、阶段计划和审计报告。
 - 第四批继续补脚本边界：新增 `scripts/README.md`，按主线入口、审计质量脚本、局部或历史工具说明输入、输出和写文件副作用；不移动脚本。
 - 第四批继续补 MDM 应用内脚本边界：新增 `apps/mdm-platform/scripts/README.md`，分类测试、安全审计、初始化维护和流程治理承接脚本，并标注数据库副作用。
-- 第四批继续补校验合同目录说明：新增 `docs/contracts/README.md`，说明 `dcm-bbm-contract.json` 是脚本合同，不替代组织或流程真源。
+- 第四批继续补校验合同目录说明：新增 `docs/contracts/README.md`，说明 `dcm-bbm-contract.json` 是脚本合同，不替代组织或流程输入基线。
 - 第四批继续补基础设施知识库目录说明：新增 `docs/HardwareResearch/README.md`，说明该目录服务基础设施方案和招标准备，不替代流程、组织、应用或 PMO 真源；未触碰该目录既有正文改动。
 - 第四批继续补集成方案目录说明：新增 `docs/integration/README.md`，说明接口模板、集成关系、MDM 治理方案和选型评分材料只作方案参考，不替代流程落位或系统选型结论。
 - 第四批继续补会议记录目录说明：新增 `docs/meetings/README.md`，说明会议记录和供应商洽谈材料只解释当时背景，正式口径需沉淀到真源、计划或 ADR。
@@ -155,17 +155,17 @@
 - 第四批继续做运行产物收口：补充 `.bak` 和点分隔数据库备份忽略规则，并将已跟踪的 `apps/mdm-platform/data/platform.db.after-admin-reset-20260609-152533.bak`、`scripts/__pycache__/generate_digital_project_gantt_8k.cpython-313.pyc` 从版本管理中移出；本地文件不删除。
 - 重复静态资产仍只记录为后续治理项：`echarts.min.js` 多副本和 `pmo/tasks.json` 双副本本轮不迁移，避免误伤 PMO、MDM 和 norms 的静态页面引用约定。
 - 第四批继续补资料目录边界：新增 `docs/README.md`，说明 `docs/` 真源入口、子目录职责、根目录历史散放文件口径和修改自检；不移动资料文件。
-- 第四批继续补流程真源目录说明：新增 `docs/norms/README.md`，区分标准映射 Markdown、部门配套说明、静态桑基图、跨部门完整性报告和 `_quality-report.md` 生成物；不补写缺失部门映射。
+- 第四批继续补流程输入基线目录说明：新增 `docs/norms/README.md`，区分标准映射 Markdown、部门配套说明、静态桑基图、跨部门完整性报告和 `_quality-report.md` 生成物；不补写缺失部门映射。
 - 第四批继续补审计报告目录说明：新增 `docs/reports/README.md`，明确报告只记录审计、分流和迁移提案，不替代组织、流程、PMO 或 MDM 真源。
-- 第四批继续补重复资产迁移提案：新增 `docs/reports/2026-06-10-duplicate-asset-migration-proposal.md`，确认 5 份 `echarts.min.js` 同 hash、两份 PMO `tasks.json` 同 hash；本轮仅标出 `pmo/echarts.min.js` 等后续候选，不移动资产。
+- 第四批继续补重复资产迁移提案：新增 `docs/reports/2026-06-10-duplicate-asset-migration-proposal.md`，确认 5 份 `echarts.min.js` 同 hash、两份 PMO `tasks.json` 同 hash；本轮仅标出 `pmo/echarts.min.js` 等后续待确认，不移动资产。
 
 ## 5. 后续建议顺序
 
 当前主线已经从“补零散校验”进入“在校验保护下补真源”的阶段。后续建议按以下顺序推进：
 
-1. 第三批优先处理工程技术部真源缺口与候选承接确认：按 `docs/reports/2026-06-11-engineering-source-attribution-checklist.md` 确认是否存在独立制度包或部门资料目录；对沈飞民机侧科技创新部、沈飞民机侧数字工程部和集成研发业务域候选材料逐项确认外部来源、适用范围、版本和昌兴侧承接证据；确认前不生成工程技术部 DCM/BBM。
+1. 第三批优先处理工程技术部流程输入基线缺口与待确认承接确认：按 `docs/reports/2026-06-11-engineering-source-attribution-checklist.md` 确认是否存在独立制度包或部门资料目录；对沈飞民机侧科技创新部、沈飞民机侧数字工程部和集成研发业务域待确认材料逐项确认外部来源、适用范围、版本和昌兴侧承接证据；确认前不生成工程技术部 DCM/BBM。
 2. 第三批继续补工程技术部 canonical 三件套：在昌兴侧承接证据和独立制度来源确认后，再新增 `工程技术部部门-能力-流程-系统映射关系.md`、`工程技术部能力层与MDM建设要求.md` 和部门桑基图，并运行 `node scripts/parse-sankey-data.mjs`、`npm run test:process-governance-mainline`、`node scripts/check-dcm-bbm.mjs --no-fail`。
 3. 第三批再处理跨部门风险计算口径：当前已校验报告 hash 和快照一致，下一步是减少从报告 Markdown 反推风险数据的依赖，逐步让 parser 从组织真源和部门映射真源直接计算缺口。
-4. 第四批处理仓库边界执行项：大体积资料迁移、重复 `echarts.min.js` 归并、PMO 历史文件收口等仍只按迁移提案推进，执行前单独评估影响，不和流程真源补齐混做。
+4. 第四批处理仓库边界执行项：大体积资料迁移、重复 `echarts.min.js` 归并、PMO 历史文件收口等仍只按迁移提案推进，执行前单独评估影响，不和流程输入基线补齐混做。
 5. 第二批 MDM 安全边界暂不作为默认下一步：已完成的权限、目录、session、默认口令、角色口径红线继续保留；除非重新恢复 MDM 平台开发，否则只处理明确复现的安全缺陷或审计脚本发现的问题。
-6. 第五批长期架构债继续延后：前端拆分、测试框架统一、大脚本拆分、编码流水号事务化和冲突检测性能治理，等流程真源和主线校验稳定后再开。
+6. 第五批长期架构债继续延后：前端拆分、测试框架统一、大脚本拆分、编码流水号事务化和冲突检测性能治理，等流程输入基线和主线校验稳定后再开。

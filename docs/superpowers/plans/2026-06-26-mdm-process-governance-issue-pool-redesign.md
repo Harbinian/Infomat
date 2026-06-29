@@ -4,7 +4,7 @@
 
 **Goal:** 把 MDM 流程治理从“多个技术来源各自展示”改为“按当前用户工作动作组织的统一问题池”，让部门用户、部门长、信息化项目管理工作室和 MDM 工作组在同一张问题卡上完成确认、审核、协同、术语统一和最终裁决。
 
-**Architecture:** 新增平台侧统一问题池 read model，候选抽取、正式映射核验、跨部门风险、质量检查和术语提示都作为来源输入；前端只读取问题池摘要、队列和单卡详情，不在打开页面时实时解析 Markdown 或跨多表拼装。问题卡以 A1 业务行为为上下文容器，问题点按类型流转，但审批链上的所有人都能看到完整 5W2H、证据、意见、历史和裁决。
+**Architecture:** 新增平台侧统一问题池 read model，输入基线问题识别、已确认流程映射核验、跨部门风险、质量检查和术语提示都作为来源输入；前端只读取问题池摘要、队列和单卡详情，不在打开页面时实时解析 Markdown 或跨多表拼装。问题卡以 A1 业务行为为上下文容器，问题点按类型流转，但审批链上的所有人都能看到完整 5W2H、证据、意见、历史和裁决。
 
 **Tech Stack:** Express.js、MySQL、单文件前端 `apps/mdm-platform/public/index.html`、现有 `processGovernance` 路由与 MySQL repository、现有平台测试脚本。`docs/norms` 保持基线真源，不由本计划直接回写。
 
@@ -14,12 +14,12 @@
 
 ### 1.1 真实需求
 
-“待确认问题”不是候选抽取表，也不是映射待办表。它是当前部门对自己流程资产必须确认、补证、纠偏、协同、审核、裁决和关闭的一切问题集合。
+“待确认问题”不是输入基线问题识别表，也不是映射待办表。它是当前部门对自己流程资产必须确认、补证、纠偏、协同、审核、裁决和关闭的一切问题集合。
 
 统一问题池应汇总：
 
 - 新增资料或制度抽取出的待确认问题。
-- 正式映射中的核验提醒、责任人不具体、完成标准待补、受控传递待补。
+- 已确认流程映射中的核验提醒、责任人不具体、完成标准待补、受控传递待补。
 - 跨部门输入、输出、传递证据确认。
 - 流程结构、系统落位、数据对象、字段和 MDM 相关问题。
 - 术语不统一导致的确认、审核和裁决障碍。
@@ -27,7 +27,7 @@
 
 ### 1.2 用户入口
 
-普通业务用户不应理解 `candidate review`、`mapping todo`、`quality case`、`read model` 等技术来源。前端继续说人话，第一屏按动作队列组织：
+普通业务用户不应理解 `input baseline review`、`mapping todo`、`quality case`、`read model` 等技术来源。前端继续说人话，第一屏按动作队列组织：
 
 - 需要我确认
 - 需要我审核
@@ -258,7 +258,7 @@ Where:
 
 - `apps/mdm-platform/server/routes/processGovernance.js`
   - 增加 `/api/process-governance/issue-pool/*` 路由。
-  - 保留现有候选抽取、映射工作库、映射待办、质量问题接口，作为来源或兼容入口。
+  - 保留现有输入基线问题识别、映射工作库、映射待办、质量问题接口，作为来源或兼容入口。
 
 - `apps/mdm-platform/public/index.html`
   - `待确认问题` 子页改读统一问题池。
@@ -275,7 +275,7 @@ Where:
 ### 2.3 不直接修改
 
 - `docs/norms/`
-  - 本计划不修改正式映射真源。
+  - 本计划不修改已确认流程映射。
   - 后续只有经过裁决且可回写的结论，才进入受控回写流程。
 
 - `pmo/`
@@ -1506,7 +1506,7 @@ Expected: PASS.
 ### 6.1 Phase 1: Read-only Issue Pool
 
 - Generate issue cards from existing `process_mapping_records` and `process_mapping_todos`.
-- Do not remove old candidate review or mapping todo views.
+- Do not remove old input baseline review or mapping todo views.
 - Frontend “待确认问题” reads issue pool first.
 - If no issue pool batch is ready, show data preparation status.
 
@@ -1541,7 +1541,7 @@ Expected: PASS.
 
 Functional:
 
-- 费常益 `100003` 进入流程治理时，不再因为候选抽取表为空而看到无意义空态。
+- 费常益 `100003` 进入流程治理时，不再因为输入基线问题识别表为空而看到无意义空态。
 - 项目管理部用户默认看到项目管理部问题池。
 - 跨部门问题在主责部门可处理，在协同部门可确认，并在同一张问题卡保留整体上下文。
 - 一张问题卡显示具体 A1 行为名称，不只显示代码。
@@ -1553,7 +1553,7 @@ Functional:
 
 Experience:
 
-- 前端不用 `candidate review`、`mapping todo`、`quality case` 等技术词。
+- 前端不用 `input baseline review`、`mapping todo`、`quality case` 等技术词。
 - 空状态区分“已清空”“准备中”“准备失败”“未纳入”“无权限”。
 - 日常协作语气尊重同事成果，少用否定式按钮。
 - 审批链上的所有人能看到完整上下文，不丧失整体感。

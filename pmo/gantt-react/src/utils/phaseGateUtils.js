@@ -165,10 +165,10 @@ function computeGateStatus(gate, confirmed, suspected, missing, referenceDate) {
   const confirmedCount = confirmed.length;
   const suspectedCount = suspected.length;
   const confirmedDeliverables = confirmed.map(({ deliverable }) => deliverable);
-  const reviewCandidates = [...confirmed, ...suspected].map(({ deliverable }) => deliverable);
+  const reviewReviewItems = [...confirmed, ...suspected].map(({ deliverable }) => deliverable);
 
   if (confirmedCount === 0 && suspectedCount === 0) return { status: '未开始', color: '#9A8F7A' };
-  const hasOverdue = reviewCandidates.some(deliverable => {
+  const hasOverdue = reviewReviewItems.some(deliverable => {
     const finish = parseDate(deliverable.plannedFinish);
     return finish && finish < now && !isApproved(deliverable);
   });

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Build review-only object/action chains from evidence chunks and role candidates.
+ * Build review-only object/action chains from evidence chunks and role reviewItems.
  */
 import {
   evidenceFromChunk,
@@ -10,7 +10,7 @@ import {
   readJsonl,
   requireArg,
   writeJson,
-} from './candidate-utils.mjs';
+} from './review-item-utils.mjs';
 
 const ACTION_RE = /编制|制定|建立|维护|审核|审批|批准|发放|下发|提交|接收|反馈|更改|变更|确认|评审|会签|归档|保存|记录|统计|分析|策划|验证|发布|关闭|申请|处理/g;
 const OBJECT_RE = /([\u4e00-\u9fffA-Za-z0-9（）()《》“”_\-]{2,42}(?:文件|方案|计划|清单|大纲|指令|需求|报告|记录|申请单|更改单|数据库|BOM|工艺规程|控制卡|流程图|PFMEA|作业指导书|说明|规程|图纸|表|卡|单))/g;
@@ -48,25 +48,25 @@ function financeChains(chunks) {
       '提交至定额员审核',
       '经营发展部长审核后修改',
     ], chunkWorkHour, {
-      chain_type: 'approval_candidate',
-      role_candidates: ['车间工人', '车间主任', '定额员', '经营发展部长'],
+      chain_type: 'approval_reviewItem',
+      role_review_items: ['车间工人', '车间主任', '定额员', '经营发展部长'],
     }),
     chain('工资总额及明细费用', [
       '经营发展部定额员统计人工工时',
       '提交行政人事部门计算工时工资及其他薪金',
       '行政人事部发送工资总额及明细费用至财务部门',
-      '财务部候选接收并用于直接人工成本归集',
+      '财务部待确认接收并用于直接人工成本归集',
     ], chunkPayroll, {
-      chain_type: 'controlled_transfer_candidate',
-      role_candidates: ['经营发展部', '定额员', '行政人事部', '财务部'],
+      chain_type: 'controlled_transfer_review',
+      role_review_items: ['经营发展部', '定额员', '行政人事部', '财务部'],
     }),
     chain('材料出库单列表/直接材料成本', [
       '财务部从供应链系统导出材料出库单列表',
       '按全月平均单价和领用数量核算材料成本',
       '记入生产成本-原材料',
     ], chunkMaterial, {
-      chain_type: 'cost_collection_candidate',
-      role_candidates: ['财务部成本会计'],
+      chain_type: 'cost_collection_reviewItem',
+      role_review_items: ['财务部成本会计'],
     }),
     chain('盘盈盘亏/盈亏处理事项', [
       '查明盈亏原因',
@@ -74,9 +74,9 @@ function financeChains(chunks) {
       '扣除责任者赔偿后按权责划分计入或冲减相关科目',
       '按规定调整消耗量或产量',
     ], chunkGainLoss, {
-      chain_type: 'approval_candidate',
-      role_candidates: ['有关部门'],
-      review_note: '原文为“盈亏处理”，候选链名称需人工确认是否映射为盘盈盘亏。',
+      chain_type: 'approval_reviewItem',
+      role_review_items: ['有关部门'],
+      review_note: '原文为“盈亏处理”，待确认链名称需人工确认是否映射为盘盈盘亏。',
     }),
     chain('废品损失', [
       '生产中的废品扣除可回收价值后在原成本项目中反映',
@@ -84,16 +84,16 @@ function financeChains(chunks) {
       '废品损失计入该产品生产成本',
       '废品修复后入库则增加车间当月产量',
     ], chunkScrap, {
-      chain_type: 'cost_exception_candidate',
-      role_candidates: ['复材车间', '财务部成本会计'],
+      chain_type: 'cost_exception_reviewItem',
+      role_review_items: ['复材车间', '财务部成本会计'],
     }),
     chain('成本核算报表', [
       '形成相关成本核算报表',
       '财务部负责归档',
       '保存年限30年',
     ], chunkArchive, {
-      chain_type: 'archive_candidate',
-      role_candidates: ['财务部'],
+      chain_type: 'archive_reviewItem',
+      role_review_items: ['财务部'],
     }),
   ];
 }
@@ -122,10 +122,10 @@ function normalizeObjectName(value) {
 
 function chainType(actions, text) {
   const joined = `${actions.join(' ')} ${text}`;
-  if (ARCHIVE_RE.test(joined)) return 'archive_candidate';
-  if (APPROVAL_RE.test(joined)) return 'approval_candidate';
-  if (TRANSFER_RE.test(joined)) return 'controlled_transfer_candidate';
-  return 'object_action_candidate';
+  if (ARCHIVE_RE.test(joined)) return 'archive_reviewItem';
+  if (APPROVAL_RE.test(joined)) return 'approval_reviewItem';
+  if (TRANSFER_RE.test(joined)) return 'controlled_transfer_review';
+  return 'object_action_reviewItem';
 }
 
 function genericChains(chunks, roleBook) {
@@ -160,8 +160,8 @@ function genericChains(chunks, roleBook) {
     .slice(0, 160)
     .map((record) => chain(record.objectName, record.actions, record.chunk, {
       chain_type: chainType(record.actions, record.text),
-      role_candidates: roleNames.filter((name) => record.text.includes(name)).slice(0, 12),
-      review_note: '由原文对象词和动作词串联的候选对象链；正式入库前必须回源核验。',
+      role_review_items: roleNames.filter((name) => record.text.includes(name)).slice(0, 12),
+      review_note: '由原文对象词和动作词串联的待确认对象链；正式入库前必须回源核验。',
     }));
 }
 
@@ -181,7 +181,7 @@ function main() {
     department: roleBook.department || args.department || '',
     generated_at: new Date().toISOString(),
     policy: {
-      evidence_status: 'candidate',
+      evidence_status: 'needs_review',
       allowed_downstream_use: 'review_only',
       object_chain_requires_original_source_verification: true,
     },

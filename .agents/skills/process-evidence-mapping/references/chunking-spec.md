@@ -46,7 +46,7 @@ For scan-only PDF and image sources, run the repository OCR wrapper first:
 node scripts/ocr-source.mjs --input <file-or-dir> --out artifacts/ocr/<run-id>
 ```
 
-OCR blocks remain candidate source text with `evidence_status=ocr_extracted_not_confirmed`. They can be chunked for retrieval, but downstream mapping fields require original visual source review before use.
+OCR blocks remain review-only source text with `evidence_status=ocr_extracted_not_confirmed`. They can be chunked for retrieval, but downstream mapping fields require original visual source review before use.
 
 ## Required Chunk Fields
 
@@ -80,13 +80,13 @@ Every chunk should contain:
 | `swimlane` | Swimlane/role |
 | `raw_text` | Original excerpt |
 | `normalized_text` | Search-only normalized text |
-| `normalized_candidate` | Search-only repair/alias hint; not a source quote |
+| `normalized_review_text` | Search-only repair/alias hint; not a source quote |
 | `artifact_type` | body/table/form/ledger/flow/attachment/ocr |
 | `extraction_method` | Tool/path used to extract the text |
 | `extraction_quality` | clean/partial/failed/needs_ocr |
 | `retrieval_method` | chunking/vector/keyword/rule/manual |
 | `retrieval_score` | Similarity or ranking score, if any |
-| `evidence_status` | confirmed/candidate/insufficient/no_evidence/conflict/excluded |
+| `evidence_status` | confirmed/reviewItem/insufficient/no_evidence/conflict/excluded |
 | `verification_status` | unverified/source_checked/rejected/confirmed |
 | `review_required` | true/false |
 | `review_reason` | Why review is needed |
@@ -102,16 +102,16 @@ Use these values:
 |---|---|
 | `clean` | Extracted text is usable for review, subject to normal source checking |
 | `partial` | Missing words, broken spaces, template blanks, underscores, or suspected extraction damage |
-| `failed` | Extraction failed; no text chunk can support a candidate |
+| `failed` | Extraction failed; no text chunk can support a reviewItem |
 | `needs_ocr` | Scan-only PDF/image or visual source requiring OCR/manual reading |
 
-When a chunk is `partial`, preserve `raw_text` exactly and put repair hints only in `normalized_candidate`.
-For example, `raw_text=公司 月综合打分表` may have `normalized_candidate=公司__月综合打分表 / 公司月度综合打分表候选`.
-Do not cite the candidate as the final source sentence; use it to locate a cleaner original clause or table.
+When a chunk is `partial`, preserve `raw_text` exactly and put repair hints only in `normalized_review_text`.
+For example, `raw_text=公司 月综合打分表` may have `normalized_review_text=公司__月综合打分表 / 公司月度综合打分表待确认`.
+Do not cite the reviewItem as the final source sentence; use it to locate a cleaner original clause or table.
 
-## Candidate Output Rules
+## ReviewItem Output Rules
 
-Retriever output must not look like final mapping. Candidate records must include:
+Retriever output must not look like final mapping. ReviewItem records must include:
 
 - `claim_type`
 - `claim_text`
@@ -124,11 +124,11 @@ Retriever output must not look like final mapping. Candidate records must includ
 
 Default `allowed_downstream_use` is `review_only`. Change it only after source verification.
 
-Candidate records should also include `relation_type`:
+ReviewItem records should also include `relation_type`:
 
-- `object_alias_candidate`
-- `approval_chain_candidate`
-- `controlled_transfer_candidate`
+- `object_alias_review`
+- `approval_chain_review`
+- `controlled_transfer_review`
 - `archive_or_retention`
 - `responsibility_or_participation`
 - `reference_basis`

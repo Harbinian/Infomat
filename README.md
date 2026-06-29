@@ -69,7 +69,7 @@ npm run smoke:infomat-services
 | 读模型 | `MDM_IDENTITY_READ_MODEL=mysql`、`PROCESS_GOVERNANCE_READ_MODEL=mysql` |
 | 管理员工号 | `ADMIN001` |
 
-启动脚本会使用固定 Docker 容器 `infomat-candidate-review-mysql`，并按固定环境启动 MDM 与 PMO。更多说明见 [apps/mdm-platform/README.md](apps/mdm-platform/README.md) 和 [scripts/README.md](scripts/README.md)。
+启动脚本会使用固定 Docker 容器 `infomat-input-baseline-review-mysql`，并按固定环境启动 MDM 与 PMO。更多说明见 [apps/mdm-platform/README.md](apps/mdm-platform/README.md) 和 [scripts/README.md](scripts/README.md)。
 
 ## 流程地图驾驶舱
 

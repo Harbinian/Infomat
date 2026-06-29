@@ -39,12 +39,12 @@
 
 MySQL 中还存在少量非旧库数据：
 
-- `process_candidate_review_runs`: 1
-- `process_candidate_review_items`: 1
+- `process_input_baseline_review_runs`: 1
+- `process_input_baseline_review_items`: 1
 - `data_map_objects`: 2
 - `mdm_todos`: 2
 
-这些属于近期 MySQL 功能验证或候选复核导入，不代表旧 SQLite 数据已完整迁移。
+这些属于近期 MySQL 功能验证或输入基线问题复核导入，不代表旧 SQLite 数据已完整迁移。
 
 ## 旧 SQLite 数据是否还在
 

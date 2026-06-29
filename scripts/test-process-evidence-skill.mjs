@@ -18,11 +18,11 @@ const expectedSteps = [
   '可读性判断/OCR',
   'Evidence Chunks',
   'Embedding 检索',
-  '候选解读',
+  '输入基线解读',
   '角色抽取',
   '对象链',
-  '候选映射',
-  '候选待办 Markdown',
+  '输入基线问题',
+  '待确认待办 Markdown',
   '当前映射差异审计',
   '受控入库',
   '验证与报告',
@@ -44,12 +44,12 @@ for (const [index, step] of expectedSteps.entries()) {
   }
 }
 
-assert.ok(skill.includes('docs/norms/流程治理/候选映射待办.md'), 'skill should name the candidate todo markdown path');
+assert.ok(skill.includes('docs/norms/流程治理/输入基线问题待办.md'), 'skill should name the input baseline review todo markdown path');
 assert.ok(skill.includes('qwen3-embedding:latest'), 'skill should document the default embedding model');
 assert.ok(skill.includes('1024'), 'skill should document embedding dimensions');
 assert.ok(skill.includes('ocr_extracted_not_confirmed'), 'skill should keep OCR evidence status boundary');
-assert.ok(skill.includes('allowed_downstream_use=review_only'), 'skill should keep review-only candidate boundary');
-assert.ok(skill.includes('不得直接填写 `审批类型`、`输入来源部门`、`输出目标部门`'), 'skill should forbid candidate-to-formal field promotion');
+assert.ok(skill.includes('allowed_downstream_use=review_only'), 'skill should keep review-only reviewItem boundary');
+assert.ok(skill.includes('不得直接填写 `审批类型`、`输入来源部门`、`输出目标部门`'), 'skill should forbid reviewItem-to-formal field promotion');
 
 const vectorBoundary = skill.indexOf('## Vectorization Boundary');
 const ocrBoundary = skill.indexOf('## OCR Boundary');

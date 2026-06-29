@@ -31,7 +31,7 @@ assert.ok(
 assert.ok(Array.isArray(data.mdmRequirements), 'mdmRequirements should exist');
 assert.ok(
   data.mdmRequirements.some(item => item.masterDataObject && item.sourceFile && item.sourceFile.endsWith('能力层与MDM建设要求.md')),
-  'mdmRequirements should include master data candidates from department MDM documents'
+  'mdmRequirements should include master data review items from department MDM documents'
 );
 
 assert.ok(Array.isArray(data.evidenceRefs), 'evidenceRefs should exist');

@@ -46,7 +46,7 @@ const businessGuarded = new Map([
   ['processGovernance.js POST /mapping-todos/:id/submit', '映射待办提交通过负责人/管理权限检查'],
   ['processGovernance.js POST /mapping-todos/:id/close', '映射待办关闭通过关闭/审核/管理权限检查'],
   ['processGovernance.js POST /mapping-todos/:id/reopen', '映射待办重开通过管理权限检查'],
-  ['processGovernance.js PUT /candidate-review/runs/:runId/candidates/:stableKey/review', '候选复核决策保存要求登录用户，会话 reviewer 覆盖请求体 reviewer'],
+  ['processGovernance.js PUT /input-baseline-review/runs/:runId/review-items/:stableKey/review', '输入基线问题复核决策保存要求登录用户，会话 reviewer 覆盖请求体 reviewer'],
   ['processDesign.js POST /drafts', '流程草稿创建通过本人部门、授权部门和流程治理角色检查'],
   ['processDesign.js PUT /drafts/:id', '流程草稿编辑通过 assertCanEditDraft 检查'],
   ['processDesign.js POST /drafts/:id/steps', '流程步骤新增通过 assertCanEditDraft 检查'],

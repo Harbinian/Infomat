@@ -222,14 +222,14 @@ Dashboard data check passed.
 
 ---
 
-### Task 4: 后续 MDM 候选方案归档
+### Task 4: 后续 MDM 待确认方案归档
 
 **Files:**
 - Modify: `docs/superpowers/specs/2026-06-02-norms-mdm-dashboard-integration-design.md`
 
 - [x] **Step 1: 保留但降级 MDM 方案**
 
-将 MDM 表/API 方案保留在“后续 MDM 候选方向”，不要写成本期任务。
+将 MDM 表/API 方案保留在“后续 MDM 待确认方向”，不要写成本期任务。
 
 - [x] **Step 2: 记录恢复 MDM 开发前置条件**
 

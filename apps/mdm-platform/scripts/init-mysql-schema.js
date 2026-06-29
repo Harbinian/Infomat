@@ -15,7 +15,7 @@ async function main() {
     await migrateLegacyIdentityToPersonIdentity(pool);
     await seedDefaultTerminologyTermTypes(pool);
     for (const migrationKey of [
-      '2026-06-16-process-candidate-review',
+      '2026-06-16-process-input-baseline-review',
       '2026-06-16-process-governance-read-model',
       '2026-06-17-identity-rbac-read-model',
       '2026-06-18-data-map-field-domain',

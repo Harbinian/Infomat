@@ -5,45 +5,45 @@ const ROOT = resolve(import.meta.dirname, '..');
 const DEFAULT_RUN = resolve(
   ROOT,
   'artifacts',
-  'process-candidates',
+  'process-input-baseline-review',
   'engineering-technology-2026-06-15T11-45-00',
 );
 
 const TYPE_ORDER = new Map([
-  ['候选L3', 1],
-  ['候选A1', 2],
+  ['待确认L3', 1],
+  ['待确认A1', 2],
   ['角色待确认', 3],
-  ['角色候选', 3],
+  ['角色待确认', 3],
   ['审批链待确认', 4],
-  ['审批链候选', 4],
+  ['审批链待确认', 4],
   ['受控传递待确认', 5],
-  ['传递关系候选', 5],
+  ['传递关系待确认', 5],
   ['归档要求待补', 6],
-  ['归档/输出候选', 6],
+  ['归档/输出待确认', 6],
   ['OCR待复核', 7],
 ]);
 
 const TYPE_COLOR = {
-  候选L3: '#3b6f88',
-  候选A1: '#6f8f5f',
+  待确认L3: '#3b6f88',
+  待确认A1: '#6f8f5f',
   角色待确认: '#b7791f',
-  角色候选: '#b7791f',
+  角色待确认: '#b7791f',
   审批链待确认: '#9b4d4d',
-  审批链候选: '#9b4d4d',
+  审批链待确认: '#9b4d4d',
   受控传递待确认: '#55708d',
-  传递关系候选: '#55708d',
+  传递关系待确认: '#55708d',
   归档要求待补: '#7a5f91',
-  '归档/输出候选': '#7a5f91',
+  '归档/输出待确认': '#7a5f91',
   OCR待复核: '#a23d3d',
 };
 
 const APPROVAL_LIKE_TYPES = new Set([
   '审批链待确认',
-  '审批链候选',
+  '审批链待确认',
   '受控传递待确认',
-  '传递关系候选',
+  '传递关系待确认',
   '归档要求待补',
-  '归档/输出候选',
+  '归档/输出待确认',
 ]);
 
 function argValue(name, fallback = '') {
@@ -98,8 +98,8 @@ function sourceDomain(sourceFile) {
   const marker = parts.indexOf('工程技术部业务资料');
   const folders = marker >= 0 ? parts.slice(marker + 1, -1) : parts.slice(0, -1);
   const numbered = folders.find(part => /^\d+(?:\.\d+)?[-_ ]/.test(part));
-  const candidate = numbered || folders[0] || '未识别资料方向';
-  return stripCodePrefix(candidate) || candidate;
+  const reviewItem = numbered || folders[0] || '未识别资料方向';
+  return stripCodePrefix(reviewItem) || reviewItem;
 }
 
 function humanizeAnchor(anchor) {
@@ -120,26 +120,26 @@ function typeRank(type) {
 
 function relationDescription(item) {
   const domain = sourceDomain(item.source_file);
-  const type = item.candidate_type || '候选项';
-  const content = String(item.content || '未命名候选').trim();
-  if (type === '候选L3') return `${domain} 方向下，当前模型识别到一个可能的业务流程：${content}`;
-  if (type === '候选A1') return `${domain} 方向下，当前模型识别到一个可能的业务行为：${content}`;
-  if (['角色待确认', '角色候选'].includes(type)) return `${domain} 方向下，当前模型识别到一个可能需要确认的执行角色：${content}`;
-  if (['审批链待确认', '审批链候选'].includes(type)) return `${domain} 方向下，当前模型识别到一个可能的审批或确认环节：${content}`;
-  if (['受控传递待确认', '传递关系候选'].includes(type)) return `${domain} 方向下，当前模型识别到一个可能的资料、表单或结果传递关系：${content}`;
-  if (['归档要求待补', '归档/输出候选'].includes(type)) return `${domain} 方向下，当前模型识别到一个可能的输出物或归档要求：${content}`;
+  const type = item.issue_type || '待确认问题';
+  const content = String(item.content || '未命名待确认').trim();
+  if (type === '待确认L3') return `${domain} 方向下，当前模型识别到一个可能的业务流程：${content}`;
+  if (type === '待确认A1') return `${domain} 方向下，当前模型识别到一个可能的业务行为：${content}`;
+  if (['角色待确认', '角色待确认'].includes(type)) return `${domain} 方向下，当前模型识别到一个可能需要确认的执行角色：${content}`;
+  if (['审批链待确认', '审批链待确认'].includes(type)) return `${domain} 方向下，当前模型识别到一个可能的审批或确认环节：${content}`;
+  if (['受控传递待确认', '传递关系待确认'].includes(type)) return `${domain} 方向下，当前模型识别到一个可能的资料、表单或结果传递关系：${content}`;
+  if (['归档要求待补', '归档/输出待确认'].includes(type)) return `${domain} 方向下，当前模型识别到一个可能的输出物或归档要求：${content}`;
   if (type === 'OCR待复核') return `${domain} 方向下，有材料需要先补 OCR 或人工回源后再判断：${content}`;
-  return `${domain} 方向下，当前模型识别到一个待确认候选：${content}`;
+  return `${domain} 方向下，当前模型识别到一个待确认待确认：${content}`;
 }
 
 function reviewerPrompt(item) {
-  const type = item.candidate_type || '';
-  if (type === '候选L3') return '请确认它是否应作为业务流程纳入，或已被现有流程覆盖。';
-  if (type === '候选A1') return '请确认它是否是独立业务行为，还是只属于某个流程的描述片段。';
-  if (['角色待确认', '角色候选'].includes(type)) return '请确认该角色是否真实负责，后续角色编号暂缓处理。';
-  if (['审批链待确认', '审批链候选'].includes(type)) return '请回到原文确认审批、审核、会签关系是否真实受控。';
-  if (['受控传递待确认', '传递关系候选'].includes(type)) return '请确认传递双方、传递物和完成标准是否说得通。';
-  if (['归档要求待补', '归档/输出候选'].includes(type)) return '请确认输出物名称、保存位置和归档责任。';
+  const type = item.issue_type || '';
+  if (type === '待确认L3') return '请确认它是否应作为业务流程纳入，或已被现有流程覆盖。';
+  if (type === '待确认A1') return '请确认它是否是独立业务行为，还是只属于某个流程的描述片段。';
+  if (['角色待确认', '角色待确认'].includes(type)) return '请确认该角色是否真实负责，后续角色编号暂缓处理。';
+  if (['审批链待确认', '审批链待确认'].includes(type)) return '请回到原文确认审批、审核、会签关系是否真实受控。';
+  if (['受控传递待确认', '传递关系待确认'].includes(type)) return '请确认传递双方、传递物和完成标准是否说得通。';
+  if (['归档要求待补', '归档/输出待确认'].includes(type)) return '请确认输出物名称、保存位置和归档责任。';
   if (type === 'OCR待复核') return '请先补原文识别或人工摘录，再决定是否纳入映射。';
   return '请回到原文确认后再决定是否纳入。';
 }
@@ -177,9 +177,9 @@ function buildGraph(items) {
 
   for (const item of items) {
     const domain = sourceDomain(item.source_file);
-    const type = item.candidate_type || '其他候选';
+    const type = item.issue_type || '其他待确认';
     const domainNode = `资料方向：${domain}`;
-    const typeNode = `候选类型：${type}`;
+    const typeNode = `问题类型：${type}`;
 
     addNode(nodes, domainNode, 'domain', '#b85c38');
     addNode(nodes, typeNode, 'type', TYPE_COLOR[type] || '#71717a');
@@ -191,7 +191,7 @@ function buildGraph(items) {
 }
 
 function buildTypeStats(items) {
-  return [...countBy(items, item => item.candidate_type || '其他候选').entries()]
+  return [...countBy(items, item => item.issue_type || '其他待确认').entries()]
     .sort((a, b) => typeRank(a[0]) - typeRank(b[0]) || b[1] - a[1])
     .map(([type, count]) => ({ type, count, color: TYPE_COLOR[type] || '#71717a' }));
 }
@@ -204,23 +204,23 @@ function buildDomainStats(items) {
 
 function buildHtml({ department, items, graph, typeStats, domainStats, runDir }) {
   const sourceCount = new Set(items.map(item => sourceLabel(item.source_file))).size;
-  const l3Count = items.filter(item => item.candidate_type === '候选L3').length;
-  const a1Count = items.filter(item => item.candidate_type === '候选A1').length;
-  const approvalLikeCount = items.filter(item => APPROVAL_LIKE_TYPES.has(item.candidate_type)).length;
-  const ocrCount = items.filter(item => item.candidate_type === 'OCR待复核').length;
+  const l3Count = items.filter(item => item.issue_type === '待确认L3').length;
+  const a1Count = items.filter(item => item.issue_type === '待确认A1').length;
+  const approvalLikeCount = items.filter(item => APPROVAL_LIKE_TYPES.has(item.issue_type)).length;
+  const ocrCount = items.filter(item => item.issue_type === 'OCR待复核').length;
 
   const rowHtml = items
     .slice()
     .sort((a, b) => {
       return (
         sourceDomain(a.source_file).localeCompare(sourceDomain(b.source_file), 'zh-Hans-CN') ||
-        typeRank(a.candidate_type) - typeRank(b.candidate_type) ||
+        typeRank(a.issue_type) - typeRank(b.issue_type) ||
         String(a.content || '').localeCompare(String(b.content || ''), 'zh-Hans-CN')
       );
     })
     .map(
       item => `<tr>
-        <td><span class="type-pill" style="--pill:${htmlEscape(TYPE_COLOR[item.candidate_type] || '#71717a')}">${htmlEscape(item.candidate_type || '其他候选')}</span></td>
+        <td><span class="type-pill" style="--pill:${htmlEscape(TYPE_COLOR[item.issue_type] || '#71717a')}">${htmlEscape(item.issue_type || '其他待确认')}</span></td>
         <td>${htmlEscape(relationDescription(item))}</td>
         <td>${htmlEscape(sourceLabel(item.source_file))}</td>
         <td>${htmlEscape(humanizeAnchor(item.source_anchor))}</td>
@@ -314,14 +314,14 @@ function buildHtml({ department, items, graph, typeStats, domainStats, runDir })
       <section class="hero">
         <div>
           <h1>${htmlEscape(department)} · 部门能力流程系统桑基图</h1>
-          <p class="subtitle">基于当前候选识别结果生成，用来帮助业务部门看清资料方向、候选类型和需要回源确认的内容。</p>
+          <p class="subtitle">基于当前待确认识别结果生成，用来帮助业务部门看清资料方向、问题类型和需要回源确认的内容。</p>
         </div>
         <div class="badge">模型预览</div>
       </section>
-      <div class="notice"><strong>口径说明：</strong>本页未经过映射复核，不作为正式结论；每条候选都需要回到原文确认后，才能进入后续映射沉淀。</div>
+      <div class="notice"><strong>口径说明：</strong>本页未经过映射复核，不作为正式结论；每条待确认都需要回到原文确认后，才能进入后续映射沉淀。</div>
 
       <section class="stat-row">
-        <div class="stat-box"><span class="num">${items.length}</span><div class="lbl">候选条目</div></div>
+        <div class="stat-box"><span class="num">${items.length}</span><div class="lbl">待确认条目</div></div>
         <div class="stat-box"><span class="num">${sourceCount}</span><div class="lbl">来源文件</div></div>
         <div class="stat-box"><span class="num">${l3Count}</span><div class="lbl">可能的业务流程</div></div>
         <div class="stat-box"><span class="num">${a1Count}</span><div class="lbl">可能的业务行为</div></div>
@@ -331,8 +331,8 @@ function buildHtml({ department, items, graph, typeStats, domainStats, runDir })
 
       <section class="layout">
         <div class="panel chart-panel">
-          <div class="chart-title">${htmlEscape(department)}候选映射预览</div>
-          <div class="chart-sub">部门 → 资料方向 → 候选类型（未复核，明细见下方表格）</div>
+          <div class="chart-title">${htmlEscape(department)}输入基线问题预览</div>
+          <div class="chart-sub">部门 → 资料方向 → 问题类型（未复核，明细见下方表格）</div>
           <div id="chart"></div>
           <div class="legend-row">${typeHtml}</div>
         </div>
@@ -340,17 +340,17 @@ function buildHtml({ department, items, graph, typeStats, domainStats, runDir })
           <h2>资料方向分布</h2>
           ${domainHtml}
           <div class="source-note">来源位置只显示文件名和原文锚点，避免把上级目录当成业务信息。</div>
-          <div class="source-note">候选内容保留文字说明，不只显示关系编号。</div>
+          <div class="source-note">问题内容保留文字说明，不只显示关系编号。</div>
         </aside>
       </section>
 
       <section class="panel table-wrap">
-        <h2>候选映射说明</h2>
+        <h2>输入基线问题说明</h2>
         <div class="table-scroll">
           <table>
             <thead>
               <tr>
-                <th>候选类型</th>
+                <th>问题类型</th>
                 <th>关系说明</th>
                 <th>来源</th>
                 <th>位置</th>
@@ -362,7 +362,7 @@ function buildHtml({ department, items, graph, typeStats, domainStats, runDir })
             </tbody>
           </table>
         </div>
-        <div class="source-note">数据来源：${htmlEscape(sourceLabel(resolve(runDir, 'mapping_diff_items.json')))}，本页只展示模型候选，不自动写入映射文件。</div>
+        <div class="source-note">数据来源：${htmlEscape(sourceLabel(resolve(runDir, 'mapping_diff_items.json')))}，本页只展示模型待确认，不自动写入映射文件。</div>
       </section>
     </main>
     <script>
@@ -375,7 +375,7 @@ function buildHtml({ department, items, graph, typeStats, domainStats, runDir })
             triggerOn: 'mousemove',
             formatter: function (params) {
               if (params.dataType === 'edge') {
-                return params.data.source + '<br/>→ ' + params.data.target + '<br/>候选数：' + params.data.value;
+                return params.data.source + '<br/>→ ' + params.data.target + '<br/>待确认数：' + params.data.value;
               }
               return params.name;
             }
@@ -401,12 +401,12 @@ function buildHtml({ department, items, graph, typeStats, domainStats, runDir })
 `;
 }
 
-const runDir = resolve(ROOT, argValue('--candidate-run', DEFAULT_RUN));
+const runDir = resolve(ROOT, argValue('--review-run', DEFAULT_RUN));
 const itemsPath = resolve(runDir, 'mapping_diff_items.json');
 if (!existsSync(itemsPath)) fail(`missing ${itemsPath}`);
 
 const items = JSON.parse(readFileSync(itemsPath, 'utf8'));
-if (!Array.isArray(items) || items.length === 0) fail(`${itemsPath} has no candidate items`);
+if (!Array.isArray(items) || items.length === 0) fail(`${itemsPath} has no reviewItem items`);
 
 const department = argValue('--department', items[0]?.department || '工程技术部');
 const outPath = resolve(

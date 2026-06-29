@@ -15,15 +15,15 @@
 
 ```text
  M .agents/skills/process-evidence-mapping/scripts/build-object-chains.mjs
- M .agents/skills/process-evidence-mapping/scripts/diff-candidates-with-mapping.mjs
- M .agents/skills/process-evidence-mapping/scripts/extract-process-candidates.mjs
- M .agents/skills/process-evidence-mapping/scripts/extract-role-candidates.mjs
- M .agents/skills/process-evidence-mapping/scripts/run-process-candidate-workflow.mjs
- M .agents/skills/process-evidence-mapping/scripts/test-candidate-workflow.mjs
- M .agents/skills/process-evidence-mapping/scripts/update-candidate-todo-md.mjs
+ M .agents/skills/process-evidence-mapping/scripts/diff-reviewItems-with-mapping.mjs
+ M .agents/skills/process-evidence-mapping/scripts/extract-process-input-baseline-review.mjs
+ M .agents/skills/process-evidence-mapping/scripts/extract-role-reviewItems.mjs
+ M .agents/skills/process-evidence-mapping/scripts/run-process-reviewItem-workflow.mjs
+ M .agents/skills/process-evidence-mapping/scripts/test-reviewItem-workflow.mjs
+ M .agents/skills/process-evidence-mapping/scripts/update-reviewItem-todo-md.mjs
  M docs/norms/_quality-report.md
  M docs/norms/复材车间部门能力流程系统桑基图.html
- M docs/norms/流程治理/候选映射待办.md
+ M docs/norms/流程治理/输入基线问题待办.md
  M docs/norms/物资保障部部门能力流程系统桑基图.html
  M docs/norms/经营发展部部门能力流程系统桑基图.html
  M docs/norms/行政人事部部门能力流程系统桑基图.html
@@ -43,14 +43,14 @@
 ?? docs/organization/花名册岗位名称问题清单批注.md
 ?? docs/reports/2026-06-15-full-repo-audit-summary.md
 ?? docs/superpowers/plans/2026-06-16-full-repo-audit-remediation.md
-?? scripts/build-candidate-sankey-preview.mjs
-?? scripts/candidate-review-core.mjs
-?? scripts/candidate-review-service.mjs
-?? scripts/import-candidate-review-mysql.mjs
-?? scripts/init-candidate-review-mysql.mjs
+?? scripts/build-reviewItem-sankey-preview.mjs
+?? scripts/input-baseline-review-core.mjs
+?? scripts/input-baseline-review-service.mjs
+?? scripts/import-input-baseline-review-mysql.mjs
+?? scripts/init-input-baseline-review-mysql.mjs
 ?? scripts/mark-sankey-preview-status.mjs
-?? scripts/test-candidate-review-mysql.mjs
-?? scripts/test-candidate-sankey-preview.mjs
+?? scripts/test-input-baseline-review-mysql.mjs
+?? scripts/test-reviewItem-sankey-preview.mjs
 ?? scripts/test-sankey-preview-status.mjs
 ```
 
@@ -70,7 +70,7 @@ npm run test:process-governance-mainline
 Process governance mainline contract test passed
 Dashboard data check passed.
 Department domain mapping check passed: 9 departments
-Engineering source manifest check passed: source directory, preview Sankey, 2 canonical gaps, and 47 candidate files
+Engineering source manifest check passed: source directory, preview Sankey, 2 canonical gaps, and 47 review files
 Source manifest hash check passed: 1613 files
 Norms source manifest check passed: 9 departments, known gap 工程技术部
 PMO task data check passed: 467 tasks, tasks 74936214301b, manifest db46f9392b8b

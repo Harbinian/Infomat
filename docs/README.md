@@ -4,7 +4,7 @@
 > 生效日期：2026-06-10  
 > 依据：`REPOSITORY_BOUNDARY.md`、`DIRECTORY_OWNERSHIP.md`、`MAINLINE_MAP.md`
 
-`docs/` 是信息化资料库，承载组织架构、流程地图、数据地图、主数据治理资料、审计报告、历史方案和参考材料。当前阶段分析对象是流程，不是具体应用系统；涉及流程真源时，应优先读取 `docs/organization/` 和 `docs/norms/`。
+`docs/` 是信息化资料库，承载组织架构、流程地图、数据地图、主数据治理资料、审计报告、历史方案和参考材料。当前阶段分析对象是流程，不是具体应用系统；涉及流程输入基线时，应优先读取 `docs/organization/` 和 `docs/norms/`。
 
 ## 1. 当前真源
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Extract review-only process candidates from traceable evidence chunks.
+ * Extract review-only process review items from traceable evidence chunks.
  */
 import {
   evidenceFromChunk,
@@ -9,7 +9,7 @@ import {
   requireArg,
   readJsonl,
   writeJson,
-} from './candidate-utils.mjs';
+} from './review-item-utils.mjs';
 
 const ACTION_RE = /编制|制定|建立|维护|审核|审批|批准|发放|下发|提交|接收|反馈|更改|变更|确认|评审|会签|归档|保存|记录|统计|分析|策划|验证|发布|关闭|申请|处理/g;
 const APPROVAL_RE = /审核|审批|批准|评审|会签|签批|复核/;
@@ -19,7 +19,7 @@ const OBJECT_RE = /([\u4e00-\u9fffA-Za-z0-9（）()《》“”_\-]{2,42}(?:文�
 const FORM_TITLE_RE = /(?:^FM|附件|申请单|更改单|记录表|清单|首页|续页|封面|表$|卡$|单$)/i;
 const ACTION_SPLIT_RE = /编制|制定|建立|维护|审核|审批|批准|发放|下发|提交|接收|反馈|更改|变更|确认|评审|会签|归档|保存|记录|统计|分析|策划|验证|发布|关闭|申请|处理/;
 
-function candidate(name, chunk, extra = {}) {
+function reviewItem(name, chunk, extra = {}) {
   return {
     name,
     ...evidenceFromChunk(chunk),
@@ -27,7 +27,7 @@ function candidate(name, chunk, extra = {}) {
   };
 }
 
-function candidateWithContent(content, chunk, extra = {}) {
+function reviewItemWithContent(content, chunk, extra = {}) {
   return {
     content,
     ...evidenceFromChunk(chunk),
@@ -53,69 +53,69 @@ function financeOutput(args, chunks) {
     source_file: sourceFile,
     generated_at: new Date().toISOString(),
     policy: {
-      evidence_status: 'candidate',
+      evidence_status: 'needs_review',
       verification_status: 'unverified',
       allowed_downstream_use: 'review_only',
       similarity_is_ranking_only: true,
       formal_mapping_requires_source_verification: true,
     },
-    capability_candidates: [
-      candidate('成本核算管理', chunk511 || chunk544, {
+    capability_review_items: [
+      reviewItem('成本核算管理', chunk511 || chunk544, {
         rationale: '制度名称、目的和5.x条款集中指向生产成本管理和产品成本核算。',
       }),
     ],
-    process_candidates: [
-      candidate('生产成本定额管理与指标分解', chunk511, {
+    process_review_items: [
+      reviewItem('生产成本定额管理与指标分解', chunk511, {
         current_mapping_hint: '可能已覆盖为现有L3，需与当前映射比对。',
       }),
-      candidate('生产成本事中控制', chunk512, {
+      reviewItem('生产成本事中控制', chunk512, {
         current_mapping_hint: '工时调整链需单独复核是否只是协同审批，不宜直接当作财务输出部门结论。',
       }),
-      candidate('产品成本核算基础管理', chunk522, {
-        current_mapping_hint: '工资明细传递是受控传递候选，应保留源锚。',
+      reviewItem('产品成本核算基础管理', chunk522, {
+        current_mapping_hint: '工资明细传递是受控传递待确认，应保留源锚。',
       }),
-      candidate('月度产品成本核算与成本结转', chunk541 || chunk544, {
-        current_mapping_hint: '当前财务部映射中已有相近L3，候选用于校验A1完整性。',
+      reviewItem('月度产品成本核算与成本结转', chunk541 || chunk544, {
+        current_mapping_hint: '当前财务部映射中已有相近L3，待确认用于校验A1完整性。',
       }),
-      candidate('成本费用核算分析', chunkAnalysis, {
-        current_mapping_hint: '当前财务部映射中已有相近L3，候选用于校验分析行为和验收标准。',
-      }),
-    ],
-    behavior_candidates: [
-      candidate('接收行政人事部工资总额及明细费用', chunk522, {
-        object_candidate: '人工工时统计、工资总额及明细费用',
-        review_note: '只能作为受控传递候选，不能直接输出正式来源/目标部门字段。',
-      }),
-      candidate('归集直接材料成本（全月平均法）', chunk543Material, {
-        object_candidate: '材料出库单列表、直接材料成本',
-      }),
-      candidate('归集直接人工成本并按工时分摊', findChunk(chunks, ['生产成本-直接人工', '分配率'], { all: true }) || chunk522, {
-        object_candidate: '人工工时、工资明细、直接人工成本分摊表',
-      }),
-      candidate('归集制造费用并按工时分摊', findChunk(chunks, ['制造费用', '人工工时'], { all: true }) || chunk544, {
-        object_candidate: '制造费用明细、制造费用分摊表',
-      }),
-      candidate('处理盘盈盘亏', chunkGainLoss, {
-        object_candidate: '原材料、燃料、备品备件、半成品等盈亏处理',
-        review_note: '原文为“盈亏处理”，候选名称按财务核算语言暂归并为盘盈盘亏，需人工确认。',
-      }),
-      candidate('处理废品损失', chunkScrap, {
-        object_candidate: '废品损失',
-      }),
-      candidate('归档成本核算报表', chunkArchive, {
-        object_candidate: '相关报表',
+      reviewItem('成本费用核算分析', chunkAnalysis, {
+        current_mapping_hint: '当前财务部映射中已有相近L3，待确认用于校验分析行为和验收标准。',
       }),
     ],
-    approval_chain_candidates: [
-      candidateWithContent(
+    behavior_review_items: [
+      reviewItem('接收行政人事部工资总额及明细费用', chunk522, {
+        object_review_item: '人工工时统计、工资总额及明细费用',
+        review_note: '只能作为受控传递待确认，不能直接输出正式来源/目标部门字段。',
+      }),
+      reviewItem('归集直接材料成本（全月平均法）', chunk543Material, {
+        object_review_item: '材料出库单列表、直接材料成本',
+      }),
+      reviewItem('归集直接人工成本并按工时分摊', findChunk(chunks, ['生产成本-直接人工', '分配率'], { all: true }) || chunk522, {
+        object_review_item: '人工工时、工资明细、直接人工成本分摊表',
+      }),
+      reviewItem('归集制造费用并按工时分摊', findChunk(chunks, ['制造费用', '人工工时'], { all: true }) || chunk544, {
+        object_review_item: '制造费用明细、制造费用分摊表',
+      }),
+      reviewItem('处理盘盈盘亏', chunkGainLoss, {
+        object_review_item: '原材料、燃料、备品备件、半成品等盈亏处理',
+        review_note: '原文为“盈亏处理”，待确认名称按财务核算语言暂归并为盘盈盘亏，需人工确认。',
+      }),
+      reviewItem('处理废品损失', chunkScrap, {
+        object_review_item: '废品损失',
+      }),
+      reviewItem('归档成本核算报表', chunkArchive, {
+        object_review_item: '相关报表',
+      }),
+    ],
+    approval_chain_reviews: [
+      reviewItemWithContent(
         '工时调整链：车间工人填写情况说明 → 车间主任审核 → 定额员审核 → 经营发展部长审核后修改',
         chunk512,
         {
           chain_roles: ['车间工人', '车间主任', '定额员', '经营发展部长'],
-          review_note: '候选审批链不得直接写为财务部A1审批类型，需确认财务部是否参与该节点。',
+          review_note: '待确认审批链不得直接写为财务部A1审批类型，需确认财务部是否参与该节点。',
         },
       ),
-      candidateWithContent(
+      reviewItemWithContent(
         '盈亏处理需查明原因，按照规定审批权限报有关部门审核批准',
         chunkGainLoss,
         {
@@ -124,33 +124,33 @@ function financeOutput(args, chunks) {
         },
       ),
     ],
-    controlled_transfer_candidates: [
-      candidateWithContent(
+    controlled_transfer_reviews: [
+      reviewItemWithContent(
         '行政人事部将各车间生产工人工资总额及其明细费用发至财务部门',
         chunk522,
         {
           transfer_object: '工资总额及明细费用',
-          review_note: '这是受控传递候选；正式字段需回源核验后再填写。',
+          review_note: '这是受控传递待确认；正式字段需回源核验后再填写。',
         },
       ),
-      candidateWithContent(
+      reviewItemWithContent(
         '工程技术部提供技术方案、BOM单；经营发展部制定工时定额用于订单成本预测',
         chunk511,
         {
           transfer_object: '技术方案、BOM单、工时定额',
-          review_note: '存在跨部门输入候选，但不能凭相似度或上下文直接写入正式部门字段。',
+          review_note: '存在跨部门输入待确认，但不能凭相似度或上下文直接写入正式部门字段。',
         },
       ),
     ],
-    archive_candidates: [
-      candidateWithContent('相关报表由财务部负责存档，保存年限30年。', chunkArchive, {
+    archive_review_items: [
+      reviewItemWithContent('相关报表由财务部负责存档，保存年限30年。', chunkArchive, {
         retention_period: '30年',
         review_note: '归档要求需补入对应A1验收/归档字段前先核验原文位置。',
       }),
     ],
-    acceptance_gap_candidates: [
-      candidateWithContent('成本核算报表、成本分摊表、废品损失处理等最终成果缺少可验收标准拆解。', chunkArchive || chunkScrap, {
-        review_note: '候选缺口，不等于正式验收标准。',
+    acceptance_gap_review_items: [
+      reviewItemWithContent('成本核算报表、成本分摊表、废品损失处理等最终成果缺少可验收标准拆解。', chunkArchive || chunkScrap, {
+        review_note: '待确认缺口，不等于正式验收标准。',
       }),
     ],
   };
@@ -265,21 +265,21 @@ function genericOutput(args, chunks) {
   for (const chunk of representativeChunks) {
     const name = capabilityName(chunk);
     if (name && !capabilities.has(name)) {
-      capabilities.set(name, candidate(name, chunk, {
+      capabilities.set(name, reviewItem(name, chunk, {
         rationale: '来源目录显示该资料归属的能力/业务域；正式入库前仍需结合部门确认。',
       }));
     }
   }
 
-  const processCandidates = representativeChunks
+  const processReviewItems = representativeChunks
     .map((chunk) => ({ chunk, title: sourceTitle(chunk) }))
     .filter(({ title }) => isProcessDocumentTitle(title))
     .slice(0, 240)
-    .map(({ chunk, title }) => candidate(title, chunk, {
-      current_mapping_hint: '由制度/标准/程序标题形成的L3候选，需回到原文职责和工作程序确认。',
+    .map(({ chunk, title }) => reviewItem(title, chunk, {
+      current_mapping_hint: '由制度/标准/程序标题形成的L3待确认，需回到原文职责和工作程序确认。',
     }));
 
-  const behaviorCandidates = takeInterestingChunks(chunks, ACTION_RE, 3, 240)
+  const behaviorReviewItems = takeInterestingChunks(chunks, ACTION_RE, 3, 240)
     .map((chunk) => {
       const title = sourceTitle(chunk);
       const actions = uniqueActions(chunk.raw_text).slice(0, 4);
@@ -287,24 +287,24 @@ function genericOutput(args, chunks) {
       const name = object && actions.length
         ? `${actions.join('、')}${object}`
         : `${title || '未命名资料'}相关业务行为`;
-      return candidate(name, chunk, {
-        object_candidate: object,
+      return reviewItem(name, chunk, {
+        object_review_item: object,
         review_note: `由原文动作词抽取：${actions.join('、') || '未识别明确动作'}。正式A1需人工确认名称和边界。`,
       });
     });
 
-  const approvalCandidates = takeInterestingChunks(chunks, APPROVAL_RE, 2, 120)
-    .map((chunk) => candidateWithContent(shortText(chunk.raw_text, 180), chunk, {
-      review_note: '原文包含审核/批准/评审等词，先作为审批链候选；不得直接写入正式审批结论。',
+  const approvalReviewItems = takeInterestingChunks(chunks, APPROVAL_RE, 2, 120)
+    .map((chunk) => reviewItemWithContent(shortText(chunk.raw_text, 180), chunk, {
+      review_note: '原文包含审核/批准/评审等词，先作为审批链待确认；不得直接写入正式审批结论。',
     }));
 
-  const transferCandidates = takeInterestingChunks(chunks, TRANSFER_RE, 2, 120)
-    .map((chunk) => candidateWithContent(shortText(chunk.raw_text, 180), chunk, {
-      review_note: '原文包含提交/发放/反馈/提供等交接动作，先作为受控传递候选。',
+  const transferReviewItems = takeInterestingChunks(chunks, TRANSFER_RE, 2, 120)
+    .map((chunk) => reviewItemWithContent(shortText(chunk.raw_text, 180), chunk, {
+      review_note: '原文包含提交/发放/反馈/提供等交接动作，先作为受控传递待确认。',
     }));
 
-  const archiveCandidates = takeInterestingChunks(chunks, ARCHIVE_RE, 2, 80)
-    .map((chunk) => candidateWithContent(shortText(chunk.raw_text, 160), chunk, {
+  const archiveReviewItems = takeInterestingChunks(chunks, ARCHIVE_RE, 2, 80)
+    .map((chunk) => reviewItemWithContent(shortText(chunk.raw_text, 160), chunk, {
       review_note: '原文包含归档/保存/保管要求，需确认是否补入A1验收或归档要求。',
     }));
 
@@ -313,19 +313,19 @@ function genericOutput(args, chunks) {
     source_file: representativeChunks[0]?.source_file || args.input || '',
     generated_at: new Date().toISOString(),
     policy: {
-      evidence_status: 'candidate',
+      evidence_status: 'needs_review',
       verification_status: 'unverified',
       allowed_downstream_use: 'review_only',
       similarity_is_ranking_only: true,
       formal_mapping_requires_source_verification: true,
     },
-    capability_candidates: dedupeByName([...capabilities.values()]),
-    process_candidates: dedupeByName(processCandidates),
-    behavior_candidates: dedupeByName(behaviorCandidates),
-    approval_chain_candidates: dedupeByName(approvalCandidates),
-    controlled_transfer_candidates: dedupeByName(transferCandidates),
-    archive_candidates: dedupeByName(archiveCandidates),
-    acceptance_gap_candidates: [],
+    capability_review_items: dedupeByName([...capabilities.values()]),
+    process_review_items: dedupeByName(processReviewItems),
+    behavior_review_items: dedupeByName(behaviorReviewItems),
+    approval_chain_reviews: dedupeByName(approvalReviewItems),
+    controlled_transfer_reviews: dedupeByName(transferReviewItems),
+    archive_review_items: dedupeByName(archiveReviewItems),
+    acceptance_gap_review_items: [],
   };
 }
 
@@ -341,7 +341,7 @@ function main() {
     : genericOutput(args, chunks);
 
   writeJson(args.out, output);
-  console.error(`process_candidates=${output.process_candidates.length} out=${args.out}`);
+  console.error(`process_review_items=${output.process_review_items.length} out=${args.out}`);
 }
 
 try {

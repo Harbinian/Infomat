@@ -297,7 +297,7 @@ function buildSourceManifest(mappingFiles, mdmRequirementFiles) {
       fileNo: 'MDM建设要求',
       revision: '?',
       status: '纳入',
-      reason: '部门主数据对象候选与治理要求来源',
+      reason: '部门待确认主数据对象与治理要求来源',
     });
   }
 
@@ -485,14 +485,14 @@ function processNameScore(a, b) {
 }
 
 function resolveA1Mapping(a1, allMappings) {
-  const candidates = allMappings.filter(m => m.dept === a1.dept);
-  const exact = candidates.find(m => m.l3 === a1.l3Name);
+  const reviewItems = allMappings.filter(m => m.dept === a1.dept);
+  const exact = reviewItems.find(m => m.l3 === a1.l3Name);
   if (exact) return exact;
 
-  const sameL2ByHeading = candidates.filter(m => normalizeProcessName(m.l2) === normalizeProcessName(a1.l3Name));
+  const sameL2ByHeading = reviewItems.filter(m => normalizeProcessName(m.l2) === normalizeProcessName(a1.l3Name));
   if (sameL2ByHeading.length === 1) return sameL2ByHeading[0];
 
-  const scored = candidates
+  const scored = reviewItems
     .map(m => ({ mapping: m, score: processNameScore(a1.l3Name, m.l3) }))
     .sort((a, b) => b.score - a.score);
   if (scored[0]?.score >= 800 || (scored[0]?.score >= 0.55 && scored[0].score > (scored[1]?.score ?? 0) + 0.08)) {
@@ -500,7 +500,7 @@ function resolveA1Mapping(a1, allMappings) {
   }
 
   if (a1.l2Name) {
-    const sameL2 = candidates.filter(m => normalizeProcessName(m.l2) === normalizeProcessName(a1.l2Name));
+    const sameL2 = reviewItems.filter(m => normalizeProcessName(m.l2) === normalizeProcessName(a1.l2Name));
     if (sameL2.length === 1) return sameL2[0];
   }
 
@@ -963,7 +963,7 @@ function parsePendingConfirmItems(text) {
 function parseInteractionChains(text) {
   // 图示链路来自 docs/norms/流程治理/跨部门流程识别报告.md 的“三、关键跨部门流程链”。
   // 当前报告使用方框图表达，先保留与驾驶舱兼容的摘要，避免把图示文本误解析成结构化风险项。
-  const candidates = [
+  const reviewItems = [
     {
       name: '客户订单→交付链',
       breaks: ['工程技术部: BOM/工艺节点已完成目标侧建模,待跨部门受控传递证据复核'],
@@ -981,8 +981,8 @@ function parseInteractionChains(text) {
     },
   ];
 
-  if (!text) return candidates;
-  return candidates.filter(chain => text.includes(chain.name));
+  if (!text) return reviewItems;
+  return reviewItems.filter(chain => text.includes(chain.name));
 }
 
 function parseCrossDeptReport(text, chainText = '') {

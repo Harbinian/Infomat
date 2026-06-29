@@ -13,28 +13,28 @@ const { importProcessGovernanceSnapshot } = require('./lib/processGovernanceImpo
 
 const PORT = 3226;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
-const candidateArtifactsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdm-candidate-review-'));
-const candidateRunDir = path.join(candidateArtifactsDir, 'review-run-001');
+const reviewArtifactsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdm-input-baseline-review-'));
+const reviewRunDir = path.join(reviewArtifactsDir, 'review-run-001');
 
-fs.mkdirSync(candidateRunDir, { recursive: true });
-fs.writeFileSync(path.join(candidateRunDir, 'mapping_diff_items.json'), JSON.stringify([
+fs.mkdirSync(reviewRunDir, { recursive: true });
+fs.writeFileSync(path.join(reviewRunDir, 'mapping_diff_items.json'), JSON.stringify([
   {
-    id: 'CAND-MDM-001',
-    stable_key: 'candidate-mdm-001',
+    id: 'IBR-MDM-001',
+    stable_key: 'review-item-mdm-001',
     department: '工程技术部',
     document_name: '产品设计需求定义管理程序.docx',
     source_file: 'docs/norms/工程技术部业务资料/产品设计需求定义管理程序.docx',
     source_anchor: 'GLC120102 §5.2 P71',
-    candidate_type: '角色待确认',
+    issue_type: '角色待确认',
     content: '审核人审核产品设计需求文件',
-    mapping_location: '当前正式映射未见同名受控覆盖',
+    mapping_location: '当前已确认流程映射未见同名受控覆盖',
     suggested_action: '回到原文确认角色是否定义充分。',
     definition_status: '原文定义不足',
     status: '待处理',
     owner: '工程技术部确认人'
   }
 ], null, 2), 'utf8');
-fs.writeFileSync(path.join(candidateRunDir, 'chunks.jsonl'), `${JSON.stringify({
+fs.writeFileSync(path.join(reviewRunDir, 'chunks.jsonl'), `${JSON.stringify({
   chunk_id: 'eng-P0071',
   source_file: 'docs/norms/工程技术部业务资料/产品设计需求定义管理程序.docx',
   doc_no: 'GLC120102',
@@ -42,11 +42,11 @@ fs.writeFileSync(path.join(candidateRunDir, 'chunks.jsonl'), `${JSON.stringify({
   paragraph_id: 'P71',
   raw_text: '审核人审核产品设计需求文件，工程技术部审核人复核设计更改记录。',
   extraction_quality: 'clean',
-  evidence_status: 'candidate',
+  evidence_status: 'needs_review',
   verification_status: 'unverified',
   allowed_downstream_use: 'review_only'
 })}\n`, 'utf8');
-fs.writeFileSync(path.join(candidateRunDir, 'embedding_manifest.json'), JSON.stringify({
+fs.writeFileSync(path.join(reviewRunDir, 'embedding_manifest.json'), JSON.stringify({
   status: 'skipped',
   model: 'qwen3-embedding:latest'
 }, null, 2), 'utf8');
@@ -266,7 +266,7 @@ async function main() {
       MDM_IDENTITY_READ_MODEL: '',
       PROCESS_GOVERNANCE_READ_MODEL: '',
       PROCESS_CANDIDATE_REVIEW_STORE: 'artifact',
-      PROCESS_CANDIDATE_ARTIFACTS_DIR: candidateArtifactsDir
+      PROCESS_INPUT_BASELINE_REVIEW_ARTIFACTS_DIR: reviewArtifactsDir
     },
     stdio: ['ignore', 'pipe', 'pipe']
   });
@@ -359,24 +359,24 @@ async function main() {
     assert.strictEqual(chains.res.status, 200);
     assert.deepStrictEqual(chains.body.items[0].breaks, ['工程技术部: 技术条款评审节点待补全']);
 
-    const candidateRuns = await request('/api/process-governance/candidate-review/runs', {}, cookie);
-    assert.strictEqual(candidateRuns.res.status, 200);
-    assert.strictEqual(candidateRuns.body.items.length, 1);
-    assert.strictEqual(candidateRuns.body.items[0].run_id, 'review-run-001');
-    assert.strictEqual(candidateRuns.body.items[0].candidate_count, 1);
+    const reviewRuns = await request('/api/process-governance/input-baseline-review/runs', {}, cookie);
+    assert.strictEqual(reviewRuns.res.status, 200);
+    assert.strictEqual(reviewRuns.body.items.length, 1);
+    assert.strictEqual(reviewRuns.body.items[0].run_id, 'review-run-001');
+    assert.strictEqual(reviewRuns.body.items[0].issue_count, 1);
 
-    const candidateReview = await request('/api/process-governance/candidate-review/runs/review-run-001/candidates?dept=工程技术部', {}, cookie);
-    assert.strictEqual(candidateReview.res.status, 200);
-    assert.strictEqual(candidateReview.body.summary.total, 1);
-    assert.strictEqual(candidateReview.body.groups[0].department, '工程技术部');
-    assert.strictEqual(candidateReview.body.groups[0].documents[0].document_name, '产品设计需求定义管理程序.docx');
-    assert.strictEqual(candidateReview.body.groups[0].documents[0].types[0].candidate_type, '角色待确认');
-    assert.strictEqual(candidateReview.body.items[0].definition_status, '原文定义不足');
-    assert.strictEqual(candidateReview.body.items[0].source_label.includes('内部锚点P71'), false);
-    assert.strictEqual(candidateReview.body.items[0].source_label.includes('原文位置待核对'), false);
-    assert.strictEqual(candidateReview.body.items[0].source_label.includes('第5.2条'), true);
-    assert.strictEqual(candidateReview.body.items[0].source_label.includes('第71页'), false);
-    assert.strictEqual(candidateReview.body.items[0].source_label.includes('段落P71'), false);
+    const inputBaselineReview = await request('/api/process-governance/input-baseline-review/runs/review-run-001/review-items?dept=工程技术部', {}, cookie);
+    assert.strictEqual(inputBaselineReview.res.status, 200);
+    assert.strictEqual(inputBaselineReview.body.summary.total, 1);
+    assert.strictEqual(inputBaselineReview.body.groups[0].department, '工程技术部');
+    assert.strictEqual(inputBaselineReview.body.groups[0].documents[0].document_name, '产品设计需求定义管理程序.docx');
+    assert.strictEqual(inputBaselineReview.body.groups[0].documents[0].types[0].issue_type, '角色待确认');
+    assert.strictEqual(inputBaselineReview.body.items[0].definition_status, '原文定义不足');
+    assert.strictEqual(inputBaselineReview.body.items[0].source_label.includes('内部锚点P71'), false);
+    assert.strictEqual(inputBaselineReview.body.items[0].source_label.includes('原文位置待核对'), false);
+    assert.strictEqual(inputBaselineReview.body.items[0].source_label.includes('第5.2条'), true);
+    assert.strictEqual(inputBaselineReview.body.items[0].source_label.includes('第71页'), false);
+    assert.strictEqual(inputBaselineReview.body.items[0].source_label.includes('段落P71'), false);
 
     const quality = await request('/api/process-governance/quality', {}, cookie);
     assert.strictEqual(quality.res.status, 200);
@@ -573,7 +573,7 @@ async function main() {
   } finally {
     await stopServer(server);
     cleanupDb();
-    fs.rmSync(candidateArtifactsDir, { recursive: true, force: true });
+    fs.rmSync(reviewArtifactsDir, { recursive: true, force: true });
   }
 }
 

@@ -7,9 +7,9 @@
   "truncate": true,
   "keep_alive": "5m",
   "chunking_rule": "process-evidence-mapping/chunking-spec-v1",
-  "role": "candidate_evidence_retrieval_only",
+  "role": "review_evidence_retrieval_only",
   "notes": [
-    "Embeddings are used only for candidate evidence retrieval.",
+    "Embeddings are used only for review evidence retrieval.",
     "Similarity score is not evidence.",
     "Confirmed conclusions must cite original source anchors."
   ]

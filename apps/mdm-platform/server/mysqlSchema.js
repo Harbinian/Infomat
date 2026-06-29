@@ -222,10 +222,10 @@ CREATE TABLE IF NOT EXISTS department_responsibility_delegations (
   CHECK (status IN ('active','inactive','expired','revoked'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS process_candidate_review_runs (
+CREATE TABLE IF NOT EXISTS process_input_baseline_review_runs (
   run_id VARCHAR(128) PRIMARY KEY,
-  candidate_run_path VARCHAR(512) NOT NULL,
-  candidate_count INT NOT NULL DEFAULT 0,
+  review_run_path VARCHAR(512) NOT NULL,
+  issue_count INT NOT NULL DEFAULT 0,
   embedding_status VARCHAR(64) NOT NULL DEFAULT 'missing',
   embedding_model VARCHAR(128) NOT NULL DEFAULT '',
   mapping_diff_report MEDIUMTEXT NULL,
@@ -233,15 +233,15 @@ CREATE TABLE IF NOT EXISTS process_candidate_review_runs (
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS process_candidate_review_items (
+CREATE TABLE IF NOT EXISTS process_input_baseline_review_items (
   run_id VARCHAR(128) NOT NULL,
   stable_key VARCHAR(128) NOT NULL,
-  candidate_id VARCHAR(128) NOT NULL DEFAULT '',
+  review_item_id VARCHAR(128) NOT NULL DEFAULT '',
   department VARCHAR(128) NOT NULL DEFAULT '',
   document_name VARCHAR(255) NOT NULL DEFAULT '',
   source_file VARCHAR(512) NOT NULL DEFAULT '',
   source_anchor VARCHAR(255) NOT NULL DEFAULT '',
-  candidate_type VARCHAR(64) NOT NULL DEFAULT '',
+  issue_type VARCHAR(64) NOT NULL DEFAULT '',
   content TEXT NOT NULL,
   mapping_location TEXT NULL,
   suggested_action TEXT NULL,
@@ -250,28 +250,28 @@ CREATE TABLE IF NOT EXISTS process_candidate_review_items (
   display_order INT NOT NULL DEFAULT 0,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (run_id, stable_key),
-  CONSTRAINT fk_process_candidate_review_items_run FOREIGN KEY (run_id)
-    REFERENCES process_candidate_review_runs(run_id) ON DELETE CASCADE,
-  INDEX idx_process_candidate_review_items_group (department, document_name, candidate_type)
+  CONSTRAINT fk_process_input_baseline_review_items_run FOREIGN KEY (run_id)
+    REFERENCES process_input_baseline_review_runs(run_id) ON DELETE CASCADE,
+  INDEX idx_process_input_baseline_review_items_group (department, document_name, issue_type)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS process_candidate_review_excerpts (
+CREATE TABLE IF NOT EXISTS process_input_baseline_review_excerpts (
   run_id VARCHAR(128) NOT NULL,
   stable_key VARCHAR(128) NOT NULL,
   chunk_id VARCHAR(128) NOT NULL,
   source_anchor VARCHAR(255) NOT NULL DEFAULT '',
   source_label VARCHAR(512) NOT NULL DEFAULT '',
   raw_text MEDIUMTEXT NOT NULL,
-  evidence_status VARCHAR(64) NOT NULL DEFAULT 'candidate',
+  evidence_status VARCHAR(64) NOT NULL DEFAULT 'needs_review',
   verification_status VARCHAR(64) NOT NULL DEFAULT 'unverified',
   allowed_downstream_use VARCHAR(64) NOT NULL DEFAULT 'review_only',
   display_order INT NOT NULL DEFAULT 0,
   PRIMARY KEY (run_id, stable_key, chunk_id),
-  CONSTRAINT fk_process_candidate_review_excerpts_item FOREIGN KEY (run_id, stable_key)
-    REFERENCES process_candidate_review_items(run_id, stable_key) ON DELETE CASCADE
+  CONSTRAINT fk_process_input_baseline_review_excerpts_item FOREIGN KEY (run_id, stable_key)
+    REFERENCES process_input_baseline_review_items(run_id, stable_key) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS process_candidate_review_decisions (
+CREATE TABLE IF NOT EXISTS process_input_baseline_review_decisions (
   run_id VARCHAR(128) NOT NULL,
   stable_key VARCHAR(128) NOT NULL,
   decision VARCHAR(64) NOT NULL DEFAULT '',
@@ -283,8 +283,8 @@ CREATE TABLE IF NOT EXISTS process_candidate_review_decisions (
   reviewed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (run_id, stable_key),
-  CONSTRAINT fk_process_candidate_review_decisions_item FOREIGN KEY (run_id, stable_key)
-    REFERENCES process_candidate_review_items(run_id, stable_key) ON DELETE CASCADE
+  CONSTRAINT fk_process_input_baseline_review_decisions_item FOREIGN KEY (run_id, stable_key)
+    REFERENCES process_input_baseline_review_items(run_id, stable_key) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS process_governance_snapshots (
@@ -923,7 +923,7 @@ CREATE TABLE IF NOT EXISTS data_map_objects (
   object_key VARCHAR(180) NOT NULL,
   object_name_cn VARCHAR(255) NOT NULL,
   object_name_en VARCHAR(255) NULL,
-  object_type VARCHAR(64) NOT NULL DEFAULT 'master_data_candidate',
+  object_type VARCHAR(64) NOT NULL DEFAULT 'master_data_reviewItem',
   owner_dept_id BIGINT NULL,
   steward_user_id BIGINT NULL,
   steward_person_id BIGINT NULL,
@@ -989,7 +989,7 @@ CREATE TABLE IF NOT EXISTS data_map_fields (
   nullable TINYINT NOT NULL DEFAULT 1,
   enum_values_json MEDIUMTEXT NULL,
   sensitivity_level VARCHAR(32) NOT NULL DEFAULT 'internal',
-  master_data_level VARCHAR(32) NOT NULL DEFAULT 'candidate',
+  master_data_level VARCHAR(32) NOT NULL DEFAULT 'needs_review',
   process_governance_node_key VARCHAR(255) NULL,
   process_governance_a1_code VARCHAR(128) NULL,
   source_file VARCHAR(512) NULL,
@@ -1032,7 +1032,7 @@ CREATE TABLE IF NOT EXISTS data_map_field_system_links (
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_data_map_field_system_links_field (field_id),
   INDEX idx_data_map_field_system_links_system (system_name),
-  CHECK (relation_type IN ('producer','consumer','candidate_authority','authority')),
+  CHECK (relation_type IN ('producer','consumer','reviewItem_authority','authority')),
   CHECK (status IN ('active','inactive','archived')),
   CONSTRAINT fk_data_map_field_system_links_field FOREIGN KEY (field_id)
     REFERENCES data_map_fields(id) ON DELETE CASCADE
@@ -1052,14 +1052,14 @@ CREATE TABLE IF NOT EXISTS data_map_field_identities (
   confirmed_by_person_id BIGINT NULL,
   confirmed_at TIMESTAMP NULL,
   note TEXT NULL,
-  status VARCHAR(32) NOT NULL DEFAULT 'candidate',
+  status VARCHAR(32) NOT NULL DEFAULT 'needs_review',
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uq_data_map_field_identities_field (field_id),
   INDEX idx_data_map_field_identities_dept (maintain_dept_id),
   INDEX idx_data_map_field_identities_owner (owner_user_id),
   CHECK (confidence_level IN ('low','medium','high')),
-  CHECK (status IN ('candidate','confirmed','rejected','archived')),
+  CHECK (status IN ('needs_review','confirmed','rejected','archived')),
   CONSTRAINT fk_data_map_field_identities_field FOREIGN KEY (field_id)
     REFERENCES data_map_fields(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

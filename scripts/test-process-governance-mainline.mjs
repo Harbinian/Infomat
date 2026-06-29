@@ -80,6 +80,7 @@ function assertMainlineSyncRequiresExplicitDbPath() {
 }
 
 const checks = [
+  ['禁用术语', 'apps/mdm-platform/scripts/test-no-banned-terminology.js'],
   ['脚本边界合约', assertSourceContract],
   ['主线同步数据库路径保护', assertMainlineSyncRequiresExplicitDbPath],
   ['主线合约', 'scripts/test-process-governance-mainline-contract.mjs'],
@@ -87,7 +88,7 @@ const checks = [
   ['部门域映射', 'scripts/check-dept-domain-mapping.mjs'],
   ['工程技术部源文件清单', 'scripts/check-engineering-source-manifest.mjs'],
   ['源文件指纹', 'scripts/check-source-manifest-hashes.mjs'],
-  ['流程真源清单', 'scripts/check-norms-source-manifest.mjs'],
+  ['流程输入基线清单', 'scripts/check-norms-source-manifest.mjs'],
   ['PMO 任务数据', 'scripts/check-pmo-task-data.mjs'],
 ];
 

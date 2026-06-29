@@ -99,7 +99,7 @@ function writeManifest(args, config, extra) {
     chunking_rule: config.chunking_rule || null,
     chunks_file: args.chunks,
     vectors_file: args.vectors,
-    role: config.role || 'candidate_evidence_retrieval_only',
+    role: config.role || 'review_evidence_retrieval_only',
     ...extra,
   }, null, 2), 'utf8');
 }
@@ -129,7 +129,7 @@ async function main() {
   try {
     for (let start = 0; start < chunks.length; start += args.batchSize) {
       const batch = chunks.slice(start, start + args.batchSize);
-      const inputs = batch.map((chunk) => [chunk.normalized_text, chunk.normalized_candidate].filter(Boolean).join('\n') || chunk.raw_text || '');
+      const inputs = batch.map((chunk) => [chunk.normalized_text, chunk.normalized_review_text].filter(Boolean).join('\n') || chunk.raw_text || '');
       const embeddings = await embedBatch(config, inputs);
       if (embeddings.length !== batch.length) throw new Error(`Embedding count mismatch: got ${embeddings.length}, expected ${batch.length}`);
       embeddings.forEach((embedding, index) => {
@@ -141,7 +141,7 @@ async function main() {
           embedding,
           embedding_model: config.model,
           embedding_dimensions: embedding.length,
-          evidence_status: 'candidate',
+          evidence_status: 'needs_review',
           verification_status: 'unverified',
           review_required: true,
           allowed_downstream_use: 'review_only',

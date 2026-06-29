@@ -25,7 +25,7 @@ def parse_args() -> argparse.Namespace:
         "--font",
         action="append",
         default=[],
-        help="Font file candidate. Can be repeated; GANTT_FONT_PATHS also accepts os.pathsep-separated candidates.",
+        help="Font file reviewItem. Can be repeated; GANTT_FONT_PATHS also accepts os.pathsep-separated reviewItems.",
     )
     return parser.parse_args()
 
@@ -84,16 +84,16 @@ class Task:
 
 
 def font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
-    env_candidates = [Path(p) for p in os.environ.get("GANTT_FONT_PATHS", "").split(os.pathsep) if p]
-    cli_candidates = [Path(p) for p in ARGS.font]
-    local_candidates = [
+    env_reviewItems = [Path(p) for p in os.environ.get("GANTT_FONT_PATHS", "").split(os.pathsep) if p]
+    cli_reviewItems = [Path(p) for p in ARGS.font]
+    local_reviewItems = [
         ROOT / "assets" / "fonts" / "NotoSansSC-VF.ttf",
         ROOT / "assets" / "fonts" / ("msyhbd.ttc" if bold else "msyh.ttc"),
         ROOT / "assets" / "fonts" / ("Dengb.ttf" if bold else "Deng.ttf"),
         ROOT / "assets" / "fonts" / "simhei.ttf",
     ]
-    candidates = cli_candidates + env_candidates + local_candidates
-    for path in candidates:
+    reviewItems = cli_reviewItems + env_reviewItems + local_reviewItems
+    for path in reviewItems:
         if Path(path).exists():
             return ImageFont.truetype(path, size=size)
     return ImageFont.load_default()

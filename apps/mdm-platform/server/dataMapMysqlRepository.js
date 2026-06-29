@@ -155,7 +155,7 @@ function normalizeObjectPayload(payload = {}, actorUserId) {
     object_key: cleanText(payload.object_key) || stableKey('obj', [objectName]),
     object_name_cn: objectName,
     object_name_en: nullableText(payload.object_name_en),
-    object_type: cleanText(payload.object_type) || 'master_data_candidate',
+    object_type: cleanText(payload.object_type) || 'master_data_reviewItem',
     owner_dept_id: payload.owner_dept_id ? Number(payload.owner_dept_id) : null,
     steward_user_id: payload.steward_user_id ? Number(payload.steward_user_id) : null,
     steward_person_id: payload.steward_person_id ? Number(payload.steward_person_id) : (payload.steward_user_id ? Number(payload.steward_user_id) : null),
@@ -187,7 +187,7 @@ function normalizeFieldPayload(payload = {}, actorUserId, existing = {}) {
     nullable: boolInt(payload.nullable, existing.nullable === undefined ? 1 : Number(existing.nullable)),
     enum_values_json: jsonOrNull(payload.enum_values_json ?? payload.enum_values ?? existing.enum_values_json),
     sensitivity_level: cleanText(payload.sensitivity_level || existing.sensitivity_level) || 'internal',
-    master_data_level: cleanText(payload.master_data_level || existing.master_data_level) || 'candidate',
+    master_data_level: cleanText(payload.master_data_level || existing.master_data_level) || 'needs_review',
     process_governance_node_key: nullableText(payload.process_governance_node_key ?? existing.process_governance_node_key),
     process_governance_a1_code: nullableText(payload.process_governance_a1_code ?? existing.process_governance_a1_code),
     source_file: nullableText(payload.source_file ?? existing.source_file),
@@ -238,7 +238,7 @@ function normalizeIdentityPayload(payload = {}) {
     confidence_level: cleanText(payload.confidence_level) || 'medium',
     confirmed: payload.confirmed ? 1 : 0,
     note: nullableText(payload.note),
-    status: cleanText(payload.status) || (payload.confirmed ? 'confirmed' : 'candidate')
+    status: cleanText(payload.status) || (payload.confirmed ? 'confirmed' : 'needs_review')
   };
 }
 

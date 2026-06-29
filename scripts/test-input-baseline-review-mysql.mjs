@@ -1,27 +1,27 @@
 #!/usr/bin/env node
 /**
- * Contract checks for the MySQL-backed candidate review service.
+ * Contract checks for the MySQL-backed input baseline review service.
  */
 import assert from 'node:assert/strict';
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import {
   buildReviewAppHtml,
-  candidateReviewSchemaSql,
+  inputBaselineReviewSchemaSql,
   describeMappingForBusiness,
   documentNameFromSource,
   formatSourceForBusiness,
-  groupCandidatesForReview,
+  groupReviewItemsForReview,
   highlightEvidenceHtml,
-  highlightTermsForCandidate,
-  loadCandidateRunBundle,
-  makeCandidateReviewRepository,
+  highlightTermsForReviewItem,
+  loadReviewRunBundle,
+  makeInputBaselineReviewRepository,
   reviewButtonPalette,
   roleDefinitionStatus,
-} from './candidate-review-core.mjs';
+} from './input-baseline-review-core.mjs';
 
 const root = resolve(import.meta.dirname, '..');
-const runDir = join(root, 'artifacts', 'process-candidates', 'test-candidate-review-mysql');
+const runDir = join(root, 'artifacts', 'process-input-baseline-review', 'test-input-baseline-review-mysql');
 
 rmSync(runDir, { recursive: true, force: true });
 mkdirSync(runDir, { recursive: true });
@@ -31,12 +31,12 @@ writeFileSync(
   JSON.stringify(
     [
       {
-        id: 'CAND-APPROVAL',
+        id: 'IBR-APPROVAL',
         stable_key: 'approval-chain-001',
         department: '财务部',
         source_file: 'docs/norms/财务部业务资料/GLTX-CW-01-A财务成本核算管理程序.docx',
         source_anchor: 'GLTX-CW-01-A §5.4 P71',
-        candidate_type: '审批链待确认',
+        issue_type: '审批链待确认',
         content: '盈亏处理需查明原因，按照规定审批权限报有关部门审核批准',
         mapping_location: 'CW-L3-04',
         suggested_action: '回到原文条款/签批栏确认审批链；不得直接写入正式审批结论。',
@@ -59,7 +59,7 @@ writeFileSync(
     paragraph_id: 'P71',
     raw_text: '盈亏处理需查明原因，按照规定审批权限报有关部门审核批准。',
     extraction_quality: 'clean',
-    evidence_status: 'candidate',
+    evidence_status: 'needs_review',
     verification_status: 'unverified',
     allowed_downstream_use: 'review_only',
   }) + '\n',
@@ -72,14 +72,14 @@ writeFileSync(
   'utf8',
 );
 
-writeFileSync(join(runDir, 'mapping_diff_report.md'), '# 候选映射差异审计报告\n', 'utf8');
+writeFileSync(join(runDir, 'mapping_diff_report.md'), '# 输入基线问题差异审计报告\n', 'utf8');
 
-const schema = candidateReviewSchemaSql();
+const schema = inputBaselineReviewSchemaSql();
 for (const required of [
-  'CREATE TABLE IF NOT EXISTS candidate_review_runs',
-  'CREATE TABLE IF NOT EXISTS candidate_review_items',
-  'CREATE TABLE IF NOT EXISTS candidate_review_excerpts',
-  'CREATE TABLE IF NOT EXISTS candidate_review_decisions',
+  'CREATE TABLE IF NOT EXISTS input_baseline_review_runs',
+  'CREATE TABLE IF NOT EXISTS input_baseline_review_items',
+  'CREATE TABLE IF NOT EXISTS input_baseline_review_excerpts',
+  'CREATE TABLE IF NOT EXISTS input_baseline_review_decisions',
   'document_name VARCHAR(255)',
   'issue_type VARCHAR(64)',
   'definition_status VARCHAR(64)',
@@ -90,16 +90,16 @@ for (const required of [
 assert.ok(schema.includes(required), `schema should include ${required}`);
 }
 assert.equal(schema.includes('sqlite_master'), false, 'schema must not use SQLite');
-assert.equal(schema.includes('correction_note'), false, 'candidate review schema must not keep concatenated correction note fields');
+assert.equal(schema.includes('correction_note'), false, 'input baseline review schema must not keep concatenated correction note fields');
 
-const bundle = loadCandidateRunBundle(runDir);
-assert.equal(bundle.run.run_id, 'test-candidate-review-mysql');
+const bundle = loadReviewRunBundle(runDir);
+assert.equal(bundle.run.run_id, 'test-input-baseline-review-mysql');
 assert.equal(bundle.items.length, 1);
 assert.equal(bundle.items[0].document_name, 'GLTX-CW-01-A财务成本核算管理程序.docx');
 assert.equal(bundle.items[0].source_excerpts.length, 1);
 assert.equal(bundle.items[0].source_excerpts[0].raw_text.includes('盈亏处理需查明原因'), true);
 
-const terms = highlightTermsForCandidate({
+const terms = highlightTermsForReviewItem({
   content: '经营发展部长审核批准成本核算报表',
   source_excerpts: [{ raw_text: '经营发展部长审核批准成本核算报表后，财务部成本会计归档。' }],
 });
@@ -110,7 +110,7 @@ const highlighted = highlightEvidenceHtml(
   bundle.items[0].source_excerpts[0].raw_text,
   bundle.items[0].content,
 );
-assert.ok(highlighted.includes('<mark>盈亏处理需查明原因</mark>'), 'evidence text should highlight candidate phrase');
+assert.ok(highlighted.includes('<mark>盈亏处理需查明原因</mark>'), 'evidence text should highlight review phrase');
 
 const businessSource = formatSourceForBusiness(
   'docs/norms/财务部业务资料/GLTX-CW-01-A财务成本核算管理程序.docx',
@@ -139,16 +139,16 @@ assert.ok(mappingDescription.includes('CW-L3-04'), 'mapping description can keep
 assert.notEqual(mappingDescription, 'CW-L3-04', 'mapping description must not be only a relation id');
 assert.ok(mappingDescription.includes('现有映射编号'), 'mapping description should explain what the relation id means');
 
-const grouped = groupCandidatesForReview([
+const grouped = groupReviewItemsForReview([
   bundle.items[0],
-  { ...bundle.items[0], stable_key: 'other', department: '财务部', document_name: '制度B.docx', candidate_type: '角色待确认' },
+  { ...bundle.items[0], stable_key: 'other', department: '财务部', document_name: '制度B.docx', issue_type: '角色待确认' },
 ]);
 assert.equal(grouped[0].department, '财务部');
 const financeDocGroup = grouped[0].documents.find((doc) => doc.document_name === 'GLTX-CW-01-A财务成本核算管理程序.docx');
 const otherDocGroup = grouped[0].documents.find((doc) => doc.document_name === '制度B.docx');
 assert.ok(financeDocGroup, 'grouping should include the source document name');
 assert.ok(otherDocGroup, 'grouping should separate another document');
-assert.equal(financeDocGroup.types[0].candidate_type, '审批链待确认');
+assert.equal(financeDocGroup.types[0].issue_type, '审批链待确认');
 
 assert.equal(roleDefinitionStatus('总经理', '总经理批准后执行。'), '原文明确');
 assert.equal(roleDefinitionStatus('经营副总', '经营副总审批。'), '原文明确');
@@ -164,14 +164,14 @@ for (const [key, config] of Object.entries(palette)) {
 
 const html = buildReviewAppHtml();
 for (const required of [
-  '<title>候选映射复核工作台</title>',
+  '<title>输入基线问题复核工作台</title>',
   '/api/runs',
   '/api/runs/',
   'fetch(',
   '原文摘录',
   'mark',
   '现有映射说明',
-  '这条候选说法是否成立',
+  '这条待确认说法是否成立',
   '原文能不能支撑这条说法',
   '问题类型',
   '定义充分性',
@@ -180,11 +180,11 @@ for (const required of [
   'id="definitionStatus"',
   'id="normalizedNote"',
   '原文定义不足',
-  'data-action="confirm_candidate"',
+  'data-action="confirm_issue"',
   'data-action="needs_correction"',
-  'data-action="reject_candidate"',
+  'data-action="reject_issue"',
   'data-action="insufficient_evidence"',
-  '正式映射仍需逐条回源核验',
+  '已确认流程映射仍需逐条回源核验',
 ]) {
   assert.ok(html.includes(required), `review app should include ${required}`);
 }
@@ -211,7 +211,7 @@ const fakePool = {
     return [[], undefined];
   },
 };
-const repo = makeCandidateReviewRepository(fakePool);
+const repo = makeInputBaselineReviewRepository(fakePool);
 await repo.upsertBundle(bundle);
 await repo.saveDecision({
   run_id: bundle.run.run_id,
@@ -227,19 +227,19 @@ await repo.saveDecision({
 });
 
 assert.ok(
-  executed.some((entry) => entry.sql.includes('INSERT INTO candidate_review_runs')),
-  'repository should insert candidate runs',
+  executed.some((entry) => entry.sql.includes('INSERT INTO input_baseline_review_runs')),
+  'repository should insert review runs',
 );
 assert.ok(
-  executed.some((entry) => entry.sql.includes('DELETE FROM candidate_review_items') && entry.sql.includes('stable_key NOT IN')),
-  'repository should remove stale candidates when re-importing the same run',
+  executed.some((entry) => entry.sql.includes('DELETE FROM input_baseline_review_items') && entry.sql.includes('stable_key NOT IN')),
+  'repository should remove stale reviewItems when re-importing the same run',
 );
 assert.ok(
-  executed.some((entry) => entry.sql.includes('INSERT INTO candidate_review_excerpts')),
+  executed.some((entry) => entry.sql.includes('INSERT INTO input_baseline_review_excerpts')),
   'repository should insert source excerpts',
 );
 assert.ok(
-  executed.some((entry) => entry.sql.includes('INSERT INTO candidate_review_decisions')),
+  executed.some((entry) => entry.sql.includes('INSERT INTO input_baseline_review_decisions')),
   'repository should save decisions in MySQL',
 );
 assert.ok(
@@ -253,11 +253,13 @@ assert.equal(
 );
 
 const packageJson = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
-assert.equal(packageJson.scripts['review:mysql:init'], 'node scripts/init-candidate-review-mysql.mjs');
-assert.equal(packageJson.scripts['review:mysql:import'], 'node scripts/import-candidate-review-mysql.mjs');
-assert.equal(packageJson.scripts['review:mysql:serve'], 'node scripts/candidate-review-service.mjs');
-assert.equal(packageJson.scripts['test:process-candidate-review'], 'node scripts/test-candidate-review-mysql.mjs');
+assert.equal(packageJson.scripts['review:mysql:init'], 'node scripts/init-input-baseline-review-mysql.mjs');
+assert.equal(packageJson.scripts['review:mysql:import'], 'node scripts/import-input-baseline-review-mysql.mjs');
+assert.equal(packageJson.scripts['review:mysql:serve'], 'node scripts/input-baseline-review-service.mjs');
+assert.equal(packageJson.scripts['test:process-input-baseline-review-workflow'], 'node .agents/skills/process-evidence-mapping/scripts/test-input-baseline-review-workflow.mjs');
+assert.equal(packageJson.scripts['test:input-baseline-review-mysql'], 'node scripts/test-input-baseline-review-mysql.mjs');
+assert.equal(packageJson.scripts['test:process-input-baseline-review'], 'npm run test:process-input-baseline-review-workflow && npm run test:input-baseline-review-mysql');
 assert.equal(packageJson.scripts['test:sankey-preview-status'], 'node scripts/test-sankey-preview-status.mjs');
 assert.ok(packageJson.dependencies.mysql2, 'root package should depend on mysql2');
 
-console.log('MySQL candidate review checks passed');
+console.log('MySQL input baseline review checks passed');

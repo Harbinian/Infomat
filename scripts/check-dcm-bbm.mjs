@@ -443,7 +443,7 @@ function matchSourceFile(refItem, sourceIndex) {
         /[A-Z]$/.test(normalizedCode) ? normalizedCode.slice(0, -1) : '',
       ])
     : [];
-  const candidates = [];
+  const reviewItems = [];
 
   for (const item of sourceIndex) {
     let score = 0;
@@ -454,11 +454,11 @@ function matchSourceFile(refItem, sourceIndex) {
     if (normalizedTitle && item.normalizedName.includes(normalizedTitle)) score += 500 + normalizedTitle.length;
     if (normalizedTitle && item.normalizedPath.includes(normalizedTitle)) score += 420 + normalizedTitle.length;
     if (normalizedCode && normalizedCode.includes(item.normalizedStem)) score += 50;
-    if (score > 0) candidates.push({ item, score });
+    if (score > 0) reviewItems.push({ item, score });
   }
 
-  candidates.sort((a, b) => b.score - a.score || a.item.repoPath.length - b.item.repoPath.length);
-  return candidates[0]?.item ?? null;
+  reviewItems.sort((a, b) => b.score - a.score || a.item.repoPath.length - b.item.repoPath.length);
+  return reviewItems[0]?.item ?? null;
 }
 
 function formatSourceAnchor(refItem, matchedFile) {

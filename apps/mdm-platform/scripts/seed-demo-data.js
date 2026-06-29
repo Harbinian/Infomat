@@ -360,7 +360,7 @@ for (const { process, fields } of fieldGroups) {
       feId = existingFE.id;
     }
     if (!exists('field_identities', 'field_entry_id', feId)) {
-      db.prepare(`INSERT INTO field_identities (field_entry_id, candidate_systems, authoritative_system, maintain_dept_id, confirmed, note)
+      db.prepare(`INSERT INTO field_identities (field_entry_id, authority_system_options, authoritative_system, maintain_dept_id, confirmed, note)
                   VALUES (?, ?, ?, ?, 1, ?)`)
         .run(feId, f.consume, f.consume.split(',')[0].trim(), deptMap['DEPT_GCJS'] || null,
              '黄金源认定 — 维护部门:工程技术部');

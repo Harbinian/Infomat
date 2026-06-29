@@ -4,7 +4,7 @@ Use these rules when embeddings, semantic search, nearest-neighbor retrieval, or
 
 ## Core Rule
 
-Embeddings are retrieval aids only. They may surface candidate evidence, but they never prove a business fact.
+Embeddings are retrieval aids only. They may surface review evidence, but they never prove a business fact.
 
 Final conclusions must be verified against original source anchors:
 
@@ -15,24 +15,24 @@ Final conclusions must be verified against original source anchors:
 - ledger field, handoff record, signature, notice, issuance, feedback, or receipt
 - attachment number/title and excerpt
 
-If no source anchor is available, write `候选，未见可核验原文定位`.
+If no source anchor is available, write `待确认，未见可核验原文定位`.
 
-Extraction repair is not source evidence. If extracted text is broken, such as `公司 月综合打分表`, keep the broken `raw_text`, mark `extraction_quality=partial`, and use any `normalized_candidate` only to find the original source location. Cite the clean original clause/table after review, not the repair hint.
+Extraction repair is not source evidence. If extracted text is broken, such as `公司 月综合打分表`, keep the broken `raw_text`, mark `extraction_quality=partial`, and use any `normalized_review_text` only to find the original source location. Cite the clean original clause/table after review, not the repair hint.
 
 ## Allowed Uses
 
 Embedding retrieval may recommend:
 
-- candidate clauses, table rows, form fields, ledgers, flow nodes, and attachments
-- candidate object aliases
-- candidate similar L3/A1 coverage gaps
-- candidate approval-chain snippets
-- candidate controlled-transfer snippets
-- candidate near-duplicate files or older/reference versions
-- candidate source-company organization names needing boundary checks
-- candidate domain attributes to strip, such as `装配`
+- reviewItem clauses, table rows, form fields, ledgers, flow nodes, and attachments
+- reviewItem object aliases
+- reviewItem similar L3/A1 coverage gaps
+- reviewItem approval-chain snippets
+- reviewItem controlled-transfer snippets
+- reviewItem near-duplicate files or older/reference versions
+- reviewItem source-company organization names needing boundary checks
+- reviewItem domain attributes to strip, such as `装配`
 
-All retrieved items default to `evidence_status=candidate` and `review_required=true`.
+All retrieved items default to `evidence_status=reviewItem` and `review_required=true`.
 
 ## Forbidden Uses
 
@@ -54,7 +54,7 @@ Use these statuses consistently:
 | Status | Meaning | May enter final DCM/BBM/H5 |
 |---|---|---|
 | `confirmed` | Verified against original source location | Yes |
-| `candidate` | Retrieved or suggested, not yet verified | No |
+| `reviewItem` | Retrieved or suggested, not yet verified | No |
 | `insufficient` | Some clues exist but source chain is incomplete | No |
 | `no_evidence` | Search/read found no supporting source | No |
 | `conflict` | Source fragments disagree | No |
@@ -76,9 +76,9 @@ Semantic similarity does not prove object identity. Object names may be merged o
 - clear contextual reference in the same source file
 - cross-file reference by document number, form number, or attachment number
 
-Otherwise write `对象别名候选，未见同一对象链路证据，待确认`.
+Otherwise write `对象别名待确认，未见同一对象链路证据，待确认`.
 
-For GLTX-JY-05-like cases, `绩效结果`, `核算结果`, and `公司月度综合打分表` remain alias candidates until the same form number, table title, field set, signature block, flow output, or explicit clause proves the object chain.
+For GLTX-JY-05-like cases, `绩效结果`, `核算结果`, and `公司月度综合打分表` remain alias reviewItems until the same form number, table title, field set, signature block, flow output, or explicit clause proves the object chain.
 
 ## Controlled Transfer Rule
 
@@ -120,12 +120,12 @@ For 沈飞民机 materials used in 昌兴复材 mapping, write `源公司组织�
 
 ## Portable Process Abstraction Rule
 
-Domain attributes such as `装配` may be stripped only as a candidate abstraction. Preserve:
+Domain attributes such as `装配` may be stripped only as a reviewItem abstraction. Preserve:
 
 - original title and path
 - original object/action
 - stripped attribute
-- candidate portable logic
+- reviewItem portable logic
 - missing target-company confirmation
 
 Do not transfer source-specific forms, roles, departments, approval chains, or controlled-transfer chains as target-company facts.
