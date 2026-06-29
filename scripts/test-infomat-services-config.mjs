@@ -84,11 +84,22 @@ const smokeScript = fs.readFileSync(path.join(repoRoot, 'scripts', 'smoke-infoma
 assert.ok(smokeScript.includes("from './infomat-service-config.mjs'"), 'smoke should load the fixed service config');
 assert.ok(smokeScript.includes('buildFixedServiceEnv'), 'smoke should build a fixed env contract');
 assert.ok(!smokeScript.includes("process.env.MYSQL_PORT || 3307"), 'smoke must not pick a drifting MySQL port from the shell');
+assert.ok(smokeScript.includes("permissions.has('admin:access')"), 'smoke should verify admin permission readiness');
+assert.ok(smokeScript.includes("permissions.has('*:*')"), 'smoke should verify wildcard admin readiness');
 
 const startScript = fs.readFileSync(path.join(repoRoot, 'scripts', 'start-infomat-services.ps1'), 'utf8');
+const repairScriptPath = path.join(repoRoot, 'scripts', 'repair-infomat-mysql-container.ps1');
+assert.ok(fs.existsSync(repairScriptPath), 'MySQL repair script should exist');
+const repairScript = fs.readFileSync(repairScriptPath, 'utf8');
+assert.ok(repairScript.includes('infomat-services.config.json'), 'MySQL repair script should read the fixed service config');
+assert.ok(repairScript.includes('infomat-services.local.env'), 'MySQL repair script should load local private env');
+assert.ok(repairScript.includes('Docker container rename failed'), 'MySQL repair script should align the Docker container name');
 assert.ok(startScript.includes('infomat-services.config.json'), 'PowerShell starter should read the fixed service config');
 assert.ok(startScript.includes('infomat-services.local.env'), 'PowerShell starter should load the local private env file');
 assert.ok(startScript.includes('$fixedMysqlPort'), 'PowerShell starter should use the fixed MySQL port');
+assert.ok(startScript.includes('repair-infomat-mysql-container.ps1'), 'PowerShell starter should point to the MySQL repair script when the fixed container is missing');
+assert.ok(startScript.includes('test:person-identity-live-schema'), 'PowerShell starter should gate startup on person identity schema readiness');
+assert.ok(startScript.includes('test:admin-permission-mysql'), 'PowerShell starter should gate startup on admin permission readiness');
 assert.ok(startScript.includes('$fixedPmoBindHost'), 'PowerShell starter should use the fixed PMO bind host');
 assert.ok(startScript.includes('--host $fixedPmoBindHost'), 'PowerShell starter should bind PMO to the fixed bind host');
 assert.ok(!startScript.includes('[int]$MysqlPort'), 'PowerShell starter should not accept a mutable MySQL port parameter');
@@ -98,6 +109,7 @@ assert.ok(startScript.includes('TcpClient($address.AddressFamily)'), 'PowerShell
 const packageJson = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
 assert.equal(packageJson.scripts['start:infomat-services'], 'cmd /c start-infomat-services.cmd');
 assert.equal(packageJson.scripts['smoke:infomat-services'], 'node scripts/smoke-infomat-services.mjs');
+assert.equal(packageJson.scripts['repair:infomat-mysql'], 'powershell -ExecutionPolicy Bypass -File scripts/repair-infomat-mysql-container.ps1');
 assert.ok(smokeScript.includes('pmoBindHost'), 'smoke should start PMO with the fixed bind host when requested');
 
 const startAndSmoke = fs.readFileSync(path.join(repoRoot, 'start-and-smoke-infomat-services.cmd'), 'utf8');
@@ -116,6 +128,7 @@ const scriptsReadme = fs.readFileSync(path.join(repoRoot, 'scripts', 'README.md'
 assert.ok(scriptsReadme.includes('MDM / PMO 固定启动合同'), 'scripts README should document the fixed startup contract');
 assert.ok(scriptsReadme.includes('启动确认项'), 'scripts README should document startup checks');
 assert.ok(scriptsReadme.includes('Docker 容器 `infomat-input-baseline-review-mysql` 通过 `localhost:3307` 提供服务'), 'scripts README should document the fixed MySQL service');
+assert.ok(scriptsReadme.includes('npm run repair:infomat-mysql'), 'scripts README should document the MySQL repair path');
 
 const mdmReadme = fs.readFileSync(path.join(repoRoot, 'apps', 'mdm-platform', 'README.md'), 'utf8');
 assert.ok(mdmReadme.includes('MDM 和 PMO 从仓库根目录使用固定入口启动'), 'MDM README should document the fixed root starter');

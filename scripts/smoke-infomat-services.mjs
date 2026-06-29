@@ -204,9 +204,11 @@ async function checkMdm(summary, fixedEnv, mdmBaseUrl) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ employee_no: adminEmployeeNo, password: adminPassword })
   });
+  assert.ok(Number(login.body.personId || login.body.id || 0) > 0, 'MDM admin login did not resolve to a person identity');
   const cookie = extractCookie(login.response);
   addCheck(summary, 'MDM admin login', {
     employee_no: adminEmployeeNo,
+    personId: login.body.personId || login.body.id || null,
     user: login.body.name || null,
     role: login.body.role || null
   });
@@ -214,10 +216,14 @@ async function checkMdm(summary, fixedEnv, mdmBaseUrl) {
   const authedHeaders = { Cookie: cookie };
   const me = await requireJson(`${mdmBaseUrl}/api/org/me`, { headers: authedHeaders });
   assert.equal(me.body.id > 0, true, 'MDM /api/org/me did not return a valid user');
+  const permissions = new Set(me.body.permissions || []);
+  assert.ok(permissions.has('admin:access'), 'MDM /api/org/me admin user lacks admin:access');
+  assert.ok(permissions.has('*:*'), 'MDM /api/org/me admin user lacks *:*');
   addCheck(summary, 'MDM current user', {
     displayName: me.body.name || null,
     role: me.body.role || null,
-    roles: me.body.roleCodes || []
+    roles: me.body.roleCodes || [],
+    permissions: ['admin:access', '*:*']
   });
 
   const departments = await requireJson(`${mdmBaseUrl}/api/org/departments`, { headers: authedHeaders });

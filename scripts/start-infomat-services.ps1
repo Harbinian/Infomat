@@ -112,17 +112,45 @@ function Wait-Tcp {
   throw "$Name did not start listening on $HostName`:$Port."
 }
 
+function Get-DockerInspect {
+  param([string]$Container)
+  $previousErrorActionPreference = $ErrorActionPreference
+  $ErrorActionPreference = "Continue"
+  try {
+    $inspect = & docker inspect $Container 2>$null
+    $exitCode = $LASTEXITCODE
+  } finally {
+    $ErrorActionPreference = $previousErrorActionPreference
+  }
+  if ($exitCode -ne 0 -or -not $inspect) { return $null }
+  return $inspect
+}
+
 function Ensure-FixedMysql {
   if (Test-Tcp -HostName $fixedMysqlHost -Port $fixedMysqlPort) { return }
 
-  $inspect = docker inspect $fixedMysqlContainer 2>$null
+  $inspect = Get-DockerInspect -Container $fixedMysqlContainer
   if (-not $inspect) {
-    throw "Fixed MySQL container '$fixedMysqlContainer' was not found. Restore it or update scripts\infomat-services.config.json intentionally."
+    throw "Fixed MySQL container '$fixedMysqlContainer' was not found. Run scripts\repair-infomat-mysql-container.ps1 to align the local Docker container with scripts\infomat-services.config.json."
   }
 
   Write-Host "Starting fixed MySQL container $fixedMysqlContainer on $fixedMysqlHost`:$fixedMysqlPort"
   docker start $fixedMysqlContainer | Out-Null
   Wait-Tcp -HostName $fixedMysqlHost -Port $fixedMysqlPort -Name "MySQL"
+}
+
+function Invoke-CheckedNpm {
+  param([string]$Name, [string[]]$Arguments)
+  Push-Location $repoRoot
+  try {
+    Write-Host "Running $Name"
+    & npm.cmd @Arguments
+    if ($LASTEXITCODE -ne 0) {
+      throw "$Name failed with exit code $LASTEXITCODE."
+    }
+  } finally {
+    Pop-Location
+  }
 }
 
 Import-LocalEnvFile -Path $localEnvPath
@@ -144,6 +172,9 @@ Require-Env -Name "MYSQL_PASSWORD" | Out-Null
 Require-Env -Name "MDM_ADMIN_PASSWORD" | Out-Null
 
 Ensure-FixedMysql
+Invoke-CheckedNpm -Name "MDM MySQL schema initialization" -Arguments @("--prefix", "apps/mdm-platform", "run", "init:mysql")
+Invoke-CheckedNpm -Name "MDM person identity live schema check" -Arguments @("--prefix", "apps/mdm-platform", "run", "test:person-identity-live-schema")
+Invoke-CheckedNpm -Name "MDM admin permission check" -Arguments @("--prefix", "apps/mdm-platform", "run", "test:admin-permission-mysql")
 
 Stop-Listener -Port $fixedMdmPort -Name "MDM"
 Stop-Listener -Port $fixedPmoPort -Name "PMO"
