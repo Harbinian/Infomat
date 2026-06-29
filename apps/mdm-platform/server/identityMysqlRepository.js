@@ -121,6 +121,42 @@ async function executeIfSupported(pool, sql, params = []) {
   }
 }
 
+async function columnExists(pool, tableName, columnName) {
+  const row = await first(pool, `
+    SELECT 1 AS found
+    FROM information_schema.columns
+    WHERE table_schema=DATABASE()
+      AND table_name=?
+      AND column_name=?
+    LIMIT 1
+  `, [tableName, columnName]);
+  return Boolean(row && row.found);
+}
+
+async function indexExists(pool, tableName, indexName) {
+  const row = await first(pool, `
+    SELECT 1 AS found
+    FROM information_schema.statistics
+    WHERE table_schema=DATABASE()
+      AND table_name=?
+      AND index_name=?
+    LIMIT 1
+  `, [tableName, indexName]);
+  return Boolean(row && row.found);
+}
+
+async function ensureMysqlPersonIdentityColumns(pool) {
+  if (!await columnExists(pool, 'person', 'current_department_id')) {
+    await pool.execute('ALTER TABLE person ADD COLUMN current_department_id BIGINT NULL AFTER person_name');
+  }
+  if (!await columnExists(pool, 'person', 'updated_at')) {
+    await pool.execute('ALTER TABLE person ADD COLUMN updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
+  }
+  if (!await indexExists(pool, 'person', 'idx_person_department')) {
+    await pool.execute('ALTER TABLE person ADD INDEX idx_person_department (current_department_id)');
+  }
+}
+
 function normalizePermissionDefinition(permission = {}) {
   return {
     code: permission.code || permission[0],
@@ -310,7 +346,9 @@ async function migrateLegacyBusinessUsersToPersons(pool) {
 }
 
 async function migrateLegacyIdentityToPersonIdentity(pool) {
-  await executeIfSupported(pool, `
+  await ensureMysqlPersonIdentityColumns(pool);
+
+  await pool.execute(`
     INSERT INTO person (employee_no, person_name, current_department_id, employment_status, status, created_at)
     SELECT u.employee_no, u.name, u.department_id, 'active', 'active', u.created_at
     FROM users u
@@ -321,7 +359,7 @@ async function migrateLegacyIdentityToPersonIdentity(pool) {
       updated_at=CURRENT_TIMESTAMP
   `);
 
-  await executeIfSupported(pool, `
+  await pool.execute(`
     INSERT INTO user_accounts (person_id, login_name, password_hash, must_change_password, account_status)
     SELECT p.person_id, u.employee_no, u.password_hash, u.must_change_password, 'active'
     FROM users u
@@ -334,7 +372,7 @@ async function migrateLegacyIdentityToPersonIdentity(pool) {
       updated_at=CURRENT_TIMESTAMP
   `);
 
-  await executeIfSupported(pool, `
+  await pool.execute(`
     INSERT IGNORE INTO person_roles (person_id, role_id, assigned_by_person_id)
     SELECT p.person_id, ur.role_id, assigned_person.person_id
     FROM user_roles ur
@@ -344,7 +382,7 @@ async function migrateLegacyIdentityToPersonIdentity(pool) {
     LEFT JOIN person assigned_person ON assigned_person.employee_no = assigned_user.employee_no
   `);
 
-  await executeIfSupported(pool, `
+  await pool.execute(`
     INSERT IGNORE INTO person_roles (person_id, role_id, assigned_by_person_id)
     SELECT p.person_id, r.role_id, NULL
     FROM users u
@@ -352,7 +390,7 @@ async function migrateLegacyIdentityToPersonIdentity(pool) {
     JOIN roles r ON r.role_code = u.role
   `);
 
-  await executeIfSupported(pool, `
+  await pool.execute(`
     INSERT IGNORE INTO person_roles (person_id, role_id)
     SELECT p.person_id, r.role_id
     FROM person p
@@ -411,9 +449,10 @@ function makeIdentityMysqlRepository(pool) {
 
   async function getDirectRoleIds(userId) {
     try {
+      const person = await first(pool, 'SELECT person_id FROM person WHERE person_id=?', [userId]);
       const directRoles = (await rows(pool, 'SELECT role_id FROM person_roles WHERE person_id=?', [userId]))
         .map(role => role.role_id);
-      if (directRoles.length > 0) return directRoles;
+      if (person) return directRoles;
     } catch (error) {
       if (!shouldFallbackFromPersonIdentity(error)) throw error;
     }
@@ -661,6 +700,7 @@ function makeIdentityMysqlRepository(pool) {
       for (const statement of splitSqlStatements(mdmMysqlSchemaSql())) {
         await pool.execute(statement);
       }
+      await ensureMysqlPersonIdentityColumns(pool);
       await ensureMysqlBuiltInRolesAndPermissions(pool);
       await migrateLegacyIdentityToPersonIdentity(pool);
     },
@@ -1361,5 +1401,6 @@ function makeIdentityMysqlRepository(pool) {
 module.exports = {
   makeIdentityMysqlRepository,
   ensureMysqlBuiltInRolesAndPermissions,
+  ensureMysqlPersonIdentityColumns,
   migrateLegacyIdentityToPersonIdentity
 };

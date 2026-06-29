@@ -77,6 +77,30 @@ function makeFakePool() {
         return [[], undefined];
       }
 
+      if (normalizedSql.includes('FROM information_schema.columns')) {
+        return [[{ found: 1 }], undefined];
+      }
+
+      if (normalizedSql.includes('FROM information_schema.statistics')) {
+        return [[{ found: 1 }], undefined];
+      }
+
+      if (normalizedSql.startsWith('ALTER TABLE person')) {
+        return [{ affectedRows: 0 }, undefined];
+      }
+
+      if (normalizedSql.startsWith('INSERT INTO person (employee_no, person_name, current_department_id')) {
+        return [{ affectedRows: state.users.length }, undefined];
+      }
+
+      if (normalizedSql.startsWith('INSERT INTO user_accounts (person_id, login_name, password_hash')) {
+        return [{ affectedRows: state.users.length }, undefined];
+      }
+
+      if (normalizedSql.startsWith('INSERT IGNORE INTO person_roles')) {
+        return [{ affectedRows: state.userRoles.length }, undefined];
+      }
+
       if (normalizedSql === 'SELECT * FROM departments ORDER BY code') {
         return [state.departments.slice().sort((left, right) => left.code.localeCompare(right.code)), undefined];
       }

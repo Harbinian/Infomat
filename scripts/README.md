@@ -19,6 +19,7 @@
 | `test-process-governance-mainline-contract.mjs` | 仓库级流程治理主线契约测试 | `package.json`、`docs/company-sankey-data.json`、仓库级脚本 | 只读校验 |
 | `infomat-services.config.json` | MDM、PMO、MySQL 固定启动合同 | 固定端口、固定 MySQL 用户/库、固定读模型 | 非敏感配置真源 |
 | `infomat-service-config.mjs` | 读取固定启动合同并合成本机运行环境 | `infomat-services.config.json`、本机 `infomat-services.local.env` | 供启动和冒烟脚本复用 |
+| `repair-infomat-mysql-container.ps1` | 将本机历史 MySQL 容器对齐到固定启动合同 | 固定合同、本机私有 env、Docker 容器状态 | 只修复本机 Docker 运行态，不写仓库真源 |
 | `start-infomat-services.ps1` | 固定启动 MDM、PMO 和项目 MySQL | 固定合同、本机私有 env、Docker 容器 `infomat-input-baseline-review-mysql` | 按固定环境启动服务，不修改仓库真源 |
 | `smoke-infomat-services.mjs` | 固定配置下检查 MDM/PMO 是否可用 | 固定合同、本机私有 env、运行中的服务 | 只读检查，输出会隐藏密码 |
 | `test-infomat-services-config.mjs` | 防止启动配置再次漂移 | 固定合同、启动脚本、冒烟脚本、`.gitignore` | 只读校验 |
@@ -28,6 +29,7 @@
 ```bash
 npm run start:infomat-services
 npm run smoke:infomat-services
+npm run repair:infomat-mysql
 npm run test:infomat-services-config
 npm run test:process-governance-mainline
 npm run test:dept-domain-mapping
@@ -73,6 +75,16 @@ MDM_ADMIN_PASSWORD=你的管理员密码
 ```
 
 `start-infomat-services.ps1` 使用固定合同启动服务，并在启动前刷新 3000/5173 上的 MDM/PMO 进程。非敏感配置放在 `infomat-services.config.json`，本机密码放在 `infomat-services.local.env`。
+
+如果固定 MySQL 容器不存在，先运行：
+
+```powershell
+npm run repair:infomat-mysql
+npm run start:infomat-services
+npm run smoke:infomat-services
+```
+
+修复脚本只对齐本机 Docker 容器和固定端口，不改变资料真源。启动脚本会先完成 MDM MySQL schema 初始化、人员身份 live schema 校验和管理员权限校验，再启动 MDM / PMO。
 
 启动确认项：
 
