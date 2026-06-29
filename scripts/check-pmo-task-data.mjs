@@ -10,6 +10,7 @@ const files = {
   rootManifest: 'pmo/pmo-source-manifest.json',
   appManifest: 'pmo/gantt-react/public/pmo-source-manifest.json'
 };
+const activePmoBuildScript = 'pmo/build_pmo_task_data.py';
 
 function readText(relativePath) {
   return readFileSync(resolve(root, relativePath), 'utf8');
@@ -62,9 +63,15 @@ const deprecatedPmoInputs = [
 
 assert(Array.isArray(tasks), `${files.rootTasks} must be a JSON array`);
 assert(tasks.length > 0, `${files.rootTasks} must contain at least one task`);
+assert(existsSync(resolve(root, activePmoBuildScript)), `${activePmoBuildScript} must exist as the PMO Markdown truth-source builder`);
+assert(!existsSync(resolve(root, 'pmo/convert_xlsx.py')), 'pmo/convert_xlsx.py has been renamed because it no longer reads XLSX');
 assert(
   manifest?.taskSummary?.recordCount === tasks.length,
   `manifest taskSummary.recordCount (${manifest?.taskSummary?.recordCount}) must equal task count (${tasks.length})`
+);
+assert(
+  manifest?.standardGovernance?.generatedBy === activePmoBuildScript,
+  `manifest standardGovernance.generatedBy must be ${activePmoBuildScript}, got ${manifest?.standardGovernance?.generatedBy}`
 );
 assert(
   Array.isArray(manifest.serviceOutputs) &&

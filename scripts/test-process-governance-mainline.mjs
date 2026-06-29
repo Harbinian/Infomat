@@ -91,6 +91,7 @@ const checks = [
   ['源文件指纹', 'scripts/check-source-manifest-hashes.mjs'],
   ['流程输入基线清单', 'scripts/check-norms-source-manifest.mjs'],
   ['PMO 执行标准库', 'scripts/check-pmo-execution-standards.mjs'],
+  ['PMO 标准缺口治理', 'scripts/check-pmo-standard-gap-operations.mjs'],
   ['PMO 任务数据', 'scripts/check-pmo-task-data.mjs'],
 ];
 

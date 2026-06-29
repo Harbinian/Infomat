@@ -64,6 +64,11 @@ assert.strictEqual(
   'root package should expose the aggregated process governance mainline test'
 );
 assert.strictEqual(
+  pkg.scripts && pkg.scripts['build:pmo-task-data'],
+  'python pmo/build_pmo_task_data.py',
+  'root package should expose the PMO Markdown truth-source data builder'
+);
+assert.strictEqual(
   pkg.scripts && pkg.scripts['test:project-governance-upgrade'],
   'node scripts/test-project-governance-report.mjs && npm --prefix apps/mdm-platform run test:role-workbench && npm --prefix apps/mdm-platform run test:role-workbench-mysql',
   'root package should expose the project governance upgrade test'
@@ -75,6 +80,15 @@ assert.ok(
 assert.ok(
   mainlineTestSource.includes('test:project-governance-upgrade'),
   'aggregated process governance mainline test should include the project governance upgrade test'
+);
+assert.strictEqual(
+  pkg.scripts && pkg.scripts['test:pmo-standard-gap-operations'],
+  'node scripts/check-pmo-standard-gap-operations.mjs',
+  'root package should expose the PMO standard gap operations test'
+);
+assert.ok(
+  mainlineTestSource.includes('check-pmo-standard-gap-operations.mjs'),
+  'aggregated process governance mainline test should include PMO standard gap operations'
 );
 assert.strictEqual(
   pkg.scripts && pkg.scripts['test:norms-source-manifest'],

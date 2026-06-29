@@ -46,6 +46,11 @@ const REQUIRED_STANDARD_IDS = [
   'STD-REV-001',
   'STD-MOM-001',
   'STD-ACC-001',
+  'STD-GATE-001',
+  'STD-G9-001',
+  'STD-UAT-001',
+  'STD-PAY-001',
+  'STD-DR-001',
 ];
 
 const WBS3_STANDARD_BINDINGS = {
@@ -128,6 +133,7 @@ assert.equal(
 for (const field of REQUIRED_STANDARD_FIELDS) {
   assert.ok(planData.columns?.includes(field), `plan columns should include ${field}`);
 }
+assert.ok(planData.columns?.includes('里程碑例外原因'), 'plan columns should include 里程碑例外原因');
 const executionStandardGroup = (planData.fieldGroups || []).find(group => group.name === '执行标准字段');
 assert.ok(executionStandardGroup, 'plan fieldGroups should include 执行标准字段');
 assert.deepEqual(REQUIRED_STANDARD_FIELDS.filter(field => !executionStandardGroup.fields.includes(field)), []);
