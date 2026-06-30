@@ -86,7 +86,7 @@
 - 当前目标平台形态是 Express.js + MySQL + 单文件前端 `public/index.html`，不要擅自改成其他后端、数据库或前端框架。
 - 不得绕过现有 Express API 路由结构。新增接口优先放在 `server/routes/` 并在 `server/index.js` 注册。
 - MySQL 配置统一使用 `MYSQL_HOST`、`MYSQL_PORT`、`MYSQL_USER`、`MYSQL_PASSWORD`、`MYSQL_DATABASE`、`MYSQL_CONNECTION_LIMIT`。
-- 迁移完成前，遗留 SQLite 代码只作为待替换实现和既有测试隔离机制保留；不要新增 SQLite 专用能力。
+- 遗留 SQLite 代码只作为待删除实现和既有测试隔离机制保留；不要新增 SQLite 专用能力、运行回退或文档口径。
 - 不得擅自修改数据库表结构；确需改表时，必须说明兼容策略、历史数据影响和验证方式。
 - 不得随意更改已有接口路径、请求字段或响应结构。确需调整时，必须说明影响范围。
 - 不得把临时调试代码、临时账号、临时密码或本地数据提交为正式代码。

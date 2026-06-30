@@ -13,12 +13,21 @@ assert.ok(
   'process governance tab should be visible to submitters because every department member must confirm their own DCM/BBM results'
 );
 assert.ok(html.includes('id="processGovernancePanel"'), 'process governance panel should exist');
-assert.ok(html.includes('id="pgWorkspaceChoices"'), 'process governance should first show existing/new-process workspace choices');
-assert.ok(html.includes('治理已有流程'), 'process governance should expose the existing-process workspace');
-assert.ok(html.includes('创建新流程'), 'process governance should expose the new-process workspace');
-assert.ok(html.includes('data-pg-workspace="existing"') && html.includes('data-pg-workspace="new"'), 'process governance workspace choices should be routeable');
-assert.ok(html.includes('id="pgExistingWizard"'), 'existing process governance should show a guided workflow');
-assert.ok(html.includes('看本部门有哪些问题') && html.includes('确认关闭'), 'existing process wizard should show the six-step closure path');
+assert.ok(!html.includes('id="pgTaskEntryPanel"'), 'process governance main area should not duplicate task-entry cards from the workflow sidebar');
+assert.ok(!html.includes('id="pgWorkspaceChoices"'), 'process governance main area should not show duplicate existing/new workspace choices before work items');
+assert.ok(!html.includes('id="pgExistingWizard"'), 'existing process guidance should live in the workflow sidebar, not above the work queue');
+assert.ok(html.includes('data-workflow-actions-title'), 'workflow sidebar action title should be configurable per page');
+assert.ok(html.includes('function renderProcessGovernanceWorkflowActions'), 'process governance should render task entry buttons in the workflow sidebar');
+assert.ok(html.includes('你现在要处理什么？'), 'process governance workflow sidebar should ask the task question');
+assert.ok(html.includes('.workflow-shell.pg-task-focused .workflow-body > .toolbar'), 'process governance task-focused mode should remove the duplicate main toolbar before work items');
+assert.ok(html.includes('data-pg-task-entry'), 'process governance workflow actions should render direct task-entry buttons');
+assert.ok(html.includes("key: 'inputBaselineReview'"), 'process governance should expose a direct task entry for issue confirmation');
+assert.ok(html.includes("key: 'quality'"), 'process governance should expose a direct task entry for closure work');
+assert.ok(html.includes("key: 'map'"), 'process governance should expose a direct task entry for map lookup');
+assert.ok(html.includes("key: 'newProcess'"), 'process governance should expose a direct task entry for creating a new process');
+assert.ok(html.includes('开始确认'), 'process governance should offer plain first-action copy for issue confirmation');
+assert.ok(html.includes('pg-guidance-deferred'), 'process governance guidance controls should be visually deferred until a governance object is selected');
+assert.ok(html.includes('看本部门有哪些问题') && html.includes('确认关闭'), 'workflow guidance should still explain the existing-process closure path');
 assert.ok(html.includes('id="pgDesignWizard"'), 'new process creation should show a design wizard');
 ['流程说明', '实际步骤', '在线表单', '字段与证据', '提交审核', '成果预览'].forEach(label => {
   assert.ok(html.includes(label), `new process wizard should include step ${label}`);
@@ -26,6 +35,34 @@ assert.ok(html.includes('id="pgDesignWizard"'), 'new process creation should sho
 assert.ok(html.includes('class="outcome-card"'), 'process governance should render reusable outcome feedback cards');
 assert.ok(html.includes('/api/process-design/summary'), 'process governance should load process design summary');
 assert.ok(html.includes('/api/process-design/drafts'), 'process governance should create process design drafts through API');
+[
+  'function loadProcessDesignDraftDetail',
+  'function saveProcessDesignStepFromWizard',
+  'function saveProcessDesignFormFromWizard',
+  'function saveProcessDesignFieldFromWizard',
+  'function saveProcessDesignEvidenceFromWizard',
+  'function submitProcessDesignDraftFromWizard',
+  'function publishProcessDesignDraftFromWizard',
+  'function renderProcessDesignDraftDetail',
+  '/api/process-design/drafts/',
+  '/steps',
+  '/forms',
+  '/fields',
+  '/evidence',
+  '/risks',
+  '/outcome-preview',
+  '/submit',
+  '/api/process-design/review-tasks/',
+  '/decision',
+  '/publish',
+  'data-process-design-draft-open',
+  'id="saveProcessDesignStepBtn"',
+  'id="saveProcessDesignFormBtn"',
+  'id="saveProcessDesignFieldBtn"',
+  'id="saveProcessDesignEvidenceBtn"',
+  'id="submitProcessDesignDraftBtn"',
+  'id="publishProcessDesignDraftBtn"'
+].forEach(needle => assert.ok(html.includes(needle), `process design frontend should include ${needle}`));
 assert.ok(html.includes('function renderProcessDesignWorkspace'), 'process governance should render new process design workspace');
 assert.ok(html.includes('function renderProcessDesignOutcomeCard'), 'process governance should render outcome feedback from real counts');
 assert.ok(html.includes('id="pgSubtabs"'), 'process governance should expose a subtab navigation container');
@@ -50,8 +87,18 @@ assert.ok(html.includes('/api/process-governance/a1'), 'process governance A1 AP
 assert.ok(html.includes('/api/process-governance/cross-dept'), 'process governance risk API should be called');
 assert.ok(html.includes('/api/process-governance/quality'), 'process governance quality API should be called');
 assert.ok(html.includes('/api/process-governance/quality-cases'), 'process governance quality cases API should be called');
+assert.ok(html.includes('/api/process-governance/quality-cases/') && html.includes('/assign'), 'quality case frontend should call assign API');
 assert.ok(html.includes('/api/process-governance/mapping-workspace'), 'process governance mapping workspace API should be called');
 assert.ok(html.includes('/api/process-governance/mapping-todos'), 'process governance mapping todos API should be called');
+assert.ok(html.includes('/api/process-governance/mapping-todos/') && html.includes('/assign'), 'mapping todo frontend should call assign API');
+assert.ok(html.includes('/api/org/persons/assignable'), 'process governance assignment should use assignable persons API');
+[
+  'function renderProcessGovernanceAssigneePicker',
+  'function assignProcessGovernanceQualityCase',
+  'function assignProcessGovernanceMappingTodo',
+  'data-quality-case-assign',
+  'data-mapping-todo-assign'
+].forEach(needle => assert.ok(html.includes(needle), `process governance assignment frontend should include ${needle}`));
 assert.ok(html.includes('/api/process-governance/source-files'), 'process governance source file API should be called');
 assert.ok(html.includes('/api/process-governance/mdm-requirements'), 'process governance MDM requirements API should be called');
 assert.ok(html.includes('/api/process-governance/evidence'), 'process governance evidence API should be called');
@@ -59,6 +106,23 @@ assert.ok(html.includes('/api/process-governance/issue-pool/queues'), 'process g
 assert.ok(html.includes('/api/process-governance/issue-pool/issues'), 'process governance issue pool issue API should be called');
 assert.ok(html.includes('function renderProcessGovernanceIssueQueues'), 'process governance should render human action queues for issue pool');
 assert.ok(html.includes('function renderProcessGovernanceIssueDetail'), 'process governance should render one 5W2H issue card on demand');
+assert.ok(html.includes('function renderProcessGovernancePriorityIssue'), 'process governance should surface the first actionable issue before broad status blocks');
+[
+  'process_governance_issue',
+  'process_mapping_todo',
+  'process_governance_a1',
+  'data-pg-record-id',
+  'function setActiveGovernanceObjectFocus',
+  'related_entity_type',
+  'related_entity_id'
+].forEach(needle => assert.ok(html.includes(needle), `guidance binding should include stable object hook ${needle}`));
+const inputBaselineSectionStart = html.indexOf('id="pgInputBaselineReviewSection"');
+const inputBaselineSectionEnd = html.indexOf('id="pgSourceCoverageSection"', inputBaselineSectionStart);
+const inputBaselineSection = html.slice(inputBaselineSectionStart, inputBaselineSectionEnd);
+assert.ok(
+  inputBaselineSection.indexOf('id="pgInputBaselineReviewRows"') < inputBaselineSection.indexOf('class="pg-work-help"'),
+  'input baseline review should show the actionable queue before explanatory help'
+);
 assert.ok(html.includes('function renderProcessGovernance()'), 'process governance renderer should exist');
 assert.ok(html.includes('function renderProcessGovernanceSankey(data)'), 'process governance sankey renderer should exist');
 assert.ok(html.includes('safeDisposeProcessGovernanceSankeyChart'), 'process governance sankey renderer should safely dispose broken chart instances');
