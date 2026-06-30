@@ -779,6 +779,195 @@ CREATE TABLE IF NOT EXISTS process_governance_term_tasks (
   CONSTRAINT fk_term_tasks_point FOREIGN KEY (point_id) REFERENCES process_governance_issue_points(point_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS process_design_drafts (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  process_name VARCHAR(255) NOT NULL,
+  reason TEXT NOT NULL,
+  basis_type VARCHAR(128) NOT NULL,
+  basis_description TEXT NOT NULL,
+  involves_other_departments TINYINT NOT NULL DEFAULT 0,
+  related_departments_json JSON NULL,
+  department_id BIGINT NOT NULL,
+  proxy_department_id BIGINT NULL,
+  proxy_reason TEXT NULL,
+  l1_name VARCHAR(255) NULL,
+  l1_status VARCHAR(32) NOT NULL DEFAULT 'unclassified',
+  l2_name VARCHAR(255) NULL,
+  l2_status VARCHAR(32) NOT NULL DEFAULT 'unclassified',
+  l3_name VARCHAR(255) NULL,
+  status VARCHAR(32) NOT NULL DEFAULT 'draft',
+  created_by BIGINT NULL,
+  submitted_by BIGINT NULL,
+  submitted_at TIMESTAMP NULL,
+  published_by BIGINT NULL,
+  published_at TIMESTAMP NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_process_design_drafts_dept (department_id, status),
+  INDEX idx_process_design_drafts_creator (created_by, status),
+  CHECK (l1_status IN ('unclassified','needs_review','confirmed')),
+  CHECK (l2_status IN ('unclassified','needs_review','confirmed')),
+  CHECK (status IN ('draft','submitted','under_review','needs_changes','approved','published','rejected')),
+  CONSTRAINT fk_process_design_drafts_department FOREIGN KEY (department_id)
+    REFERENCES departments(id) ON DELETE RESTRICT,
+  CONSTRAINT fk_process_design_drafts_proxy_department FOREIGN KEY (proxy_department_id)
+    REFERENCES departments(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS process_design_steps (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  draft_id BIGINT NOT NULL,
+  step_name VARCHAR(255) NOT NULL,
+  actor_role VARCHAR(255) NULL,
+  timing VARCHAR(255) NULL,
+  input_materials TEXT NULL,
+  output_result TEXT NULL,
+  need_confirmation TINYINT NOT NULL DEFAULT 0,
+  related_departments TEXT NULL,
+  basis TEXT NULL,
+  a1_code VARCHAR(128) NULL,
+  sort_order INT NOT NULL DEFAULT 1,
+  created_by BIGINT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_process_design_steps_draft (draft_id, sort_order),
+  CONSTRAINT fk_process_design_steps_draft FOREIGN KEY (draft_id)
+    REFERENCES process_design_drafts(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS process_design_forms (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  draft_id BIGINT NOT NULL,
+  step_id BIGINT NULL,
+  form_name VARCHAR(255) NOT NULL,
+  description TEXT NULL,
+  archive_rule TEXT NULL,
+  status VARCHAR(32) NOT NULL DEFAULT 'draft',
+  created_by BIGINT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_process_design_forms_draft (draft_id),
+  INDEX idx_process_design_forms_step (step_id),
+  CHECK (status IN ('draft','submitted','published','retired')),
+  CONSTRAINT fk_process_design_forms_draft FOREIGN KEY (draft_id)
+    REFERENCES process_design_drafts(id) ON DELETE CASCADE,
+  CONSTRAINT fk_process_design_forms_step FOREIGN KEY (step_id)
+    REFERENCES process_design_steps(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS process_design_form_fields (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  form_id BIGINT NOT NULL,
+  field_name_cn VARCHAR(255) NOT NULL,
+  field_name_en VARCHAR(255) NULL,
+  data_object VARCHAR(255) NULL,
+  field_type VARCHAR(128) NULL,
+  enum_options TEXT NULL,
+  evidence_note TEXT NULL,
+  status VARCHAR(32) NOT NULL DEFAULT 'suggested',
+  sort_order INT NOT NULL DEFAULT 1,
+  created_by BIGINT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_process_design_fields_form (form_id, sort_order),
+  CHECK (status IN ('suggested','business_confirmed','data_governed','published','retired')),
+  CONSTRAINT fk_process_design_fields_form FOREIGN KEY (form_id)
+    REFERENCES process_design_forms(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS process_design_evidence (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  draft_id BIGINT NOT NULL,
+  object_type VARCHAR(64) NOT NULL,
+  object_id BIGINT NULL,
+  evidence_type VARCHAR(128) NOT NULL,
+  description TEXT NOT NULL,
+  source_name VARCHAR(512) NULL,
+  source_anchor VARCHAR(512) NULL,
+  confirmer VARCHAR(255) NULL,
+  record_time VARCHAR(128) NULL,
+  missing_reason TEXT NULL,
+  expected_provider VARCHAR(255) NULL,
+  expected_at VARCHAR(128) NULL,
+  maturity VARCHAR(64) NOT NULL DEFAULT '可保存草稿',
+  created_by BIGINT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_process_design_evidence_draft (draft_id),
+  CHECK (object_type IN ('process','step','form','field')),
+  CONSTRAINT fk_process_design_evidence_draft FOREIGN KEY (draft_id)
+    REFERENCES process_design_drafts(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS process_design_risks (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  draft_id BIGINT NOT NULL,
+  object_type VARCHAR(64) NOT NULL,
+  object_id BIGINT NULL,
+  message TEXT NOT NULL,
+  status VARCHAR(32) NOT NULL DEFAULT 'open',
+  handled_by BIGINT NULL,
+  handled_at TIMESTAMP NULL,
+  note TEXT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_process_design_risks_draft (draft_id, status),
+  CHECK (status IN ('open','confirmed','needs_fix','accepted','rejected')),
+  CONSTRAINT fk_process_design_risks_draft FOREIGN KEY (draft_id)
+    REFERENCES process_design_drafts(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS process_design_review_tasks (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  draft_id BIGINT NOT NULL,
+  task_type VARCHAR(64) NOT NULL DEFAULT 'department_review',
+  status VARCHAR(32) NOT NULL DEFAULT 'pending',
+  assignee_role VARCHAR(128) NULL,
+  decision_note TEXT NULL,
+  decided_by BIGINT NULL,
+  decided_at TIMESTAMP NULL,
+  created_by BIGINT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_process_design_review_tasks_draft (draft_id, status),
+  CHECK (task_type IN ('department_review','capability_review','publish_review')),
+  CHECK (status IN ('pending','approved','rejected','needs_changes')),
+  CONSTRAINT fk_process_design_review_tasks_draft FOREIGN KEY (draft_id)
+    REFERENCES process_design_drafts(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS process_design_events (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  draft_id BIGINT NOT NULL,
+  event_type VARCHAR(64) NOT NULL,
+  actor_user_id BIGINT NULL,
+  note TEXT NULL,
+  payload_json JSON NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_process_design_events_draft (draft_id, created_at),
+  CONSTRAINT fk_process_design_events_draft FOREIGN KEY (draft_id)
+    REFERENCES process_design_drafts(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS process_design_versions (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  draft_id BIGINT NOT NULL,
+  version_no VARCHAR(128) NOT NULL,
+  department_id BIGINT NOT NULL,
+  l1_name VARCHAR(255) NOT NULL,
+  l2_name VARCHAR(255) NOT NULL,
+  l3_name VARCHAR(255) NOT NULL,
+  content_json JSON NOT NULL,
+  published_by BIGINT NULL,
+  published_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  status VARCHAR(32) NOT NULL DEFAULT 'published',
+  UNIQUE KEY uq_process_design_versions_no (version_no),
+  INDEX idx_process_design_versions_draft (draft_id),
+  CHECK (status IN ('published','retired')),
+  CONSTRAINT fk_process_design_versions_draft FOREIGN KEY (draft_id)
+    REFERENCES process_design_drafts(id) ON DELETE RESTRICT,
+  CONSTRAINT fk_process_design_versions_department FOREIGN KEY (department_id)
+    REFERENCES departments(id) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS terminology_term_types (
   code VARCHAR(64) PRIMARY KEY,
   name VARCHAR(255) NOT NULL,

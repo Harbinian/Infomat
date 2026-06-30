@@ -21,8 +21,7 @@ const {
 const { makeProcessGovernanceMysqlRepository } = require('../processGovernanceMysqlRepository');
 const {
   QUEUE_DEFINITIONS,
-  makeProcessGovernanceIssuePoolRepository,
-  makeSqliteProcessGovernanceIssuePoolRepository
+  makeProcessGovernanceIssuePoolRepository
 } = require('../processGovernanceIssuePoolRepository');
 const SOURCE_FILE_COVERAGE_LIMIT = 20;
 const REPO_ROOT = path.resolve(__dirname, '../../../..');
@@ -138,9 +137,7 @@ async function issuePoolRepository() {
   if (!issuePoolRepoPromise) {
     issuePoolRepoPromise = (async () => {
       if (!useMysqlProcessGovernanceReadModel()) {
-        const repo = makeSqliteProcessGovernanceIssuePoolRepository(db);
-        await repo.initSchema();
-        return repo;
+        throw new Error('Process governance issue pool requires PROCESS_GOVERNANCE_READ_MODEL=mysql');
       }
       const pool = mysql.createPool(mysqlConfigFromEnv());
       const repo = makeProcessGovernanceIssuePoolRepository(pool);
@@ -776,6 +773,88 @@ async function issuePoolActor(req) {
     actorDeptName: await currentDepartmentNameAsync(req),
     actorRoleCode: roleCodes[0] || req.session && req.session.userRole || ''
   };
+}
+
+function issuePoolRelatedDepartments(detail) {
+  const issue = detail && detail.issue || {};
+  const departments = new Set();
+  [
+    issue.primary_dept_name,
+    issue.owner_dept_name,
+    issue.dept_name,
+    issue.target_dept_name
+  ].forEach(name => {
+    if (name) departments.add(String(name));
+  });
+  ((detail && detail.participants) || []).forEach(participant => {
+    if (participant && participant.dept_name) departments.add(String(participant.dept_name));
+  });
+  return departments;
+}
+
+async function canAccessIssuePoolDetailAsync(req, detail) {
+  if (!detail || !detail.issue) return false;
+  if (await canViewAllProcessGovernanceAsync(req)) return true;
+  const departmentName = await currentDepartmentNameAsync(req);
+  return !!departmentName && issuePoolRelatedDepartments(detail).has(departmentName);
+}
+
+async function canDepartmentActOnIssuePoolAsync(req, detail) {
+  if (await canViewAllProcessGovernanceAsync(req)) return true;
+  if (!await canAccessIssuePoolDetailAsync(req, detail)) return false;
+  return await requestHasAnyPermissionAsync(req, ['process_governance:submit', 'process_governance:review']) ||
+    await requestHasQualityRoleAsync(req, DEPARTMENT_CONFIRM_ROLES);
+}
+
+async function canReviewIssuePoolAsync(req, detail) {
+  if (await canViewAllProcessGovernanceAsync(req)) return true;
+  if (!await canAccessIssuePoolDetailAsync(req, detail)) return false;
+  return await requestHasAnyPermissionAsync(req, ['process_governance:review']) ||
+    await requestHasQualityRoleAsync(req, ['project_lead', 'workgroup_lead', 'data_quality', 'owner', 'reviewer']);
+}
+
+async function canDecideIssuePoolAsync(req) {
+  return await requestHasAnyPermissionAsync(req, ['admin:access']) ||
+    await requestHasQualityRoleAsync(req, ['admin', 'it_lead', 'decision_group']);
+}
+
+async function canCloseIssuePoolAsync(req, detail) {
+  if (await canViewAllProcessGovernanceAsync(req)) return true;
+  return await canReviewIssuePoolAsync(req, detail);
+}
+
+async function canApplyIssuePoolPointActionAsync(req, detail, actionName) {
+  if (['mdm-decision', 'studio-review'].includes(actionName)) {
+    return await canDecideIssuePoolAsync(req);
+  }
+  if (actionName === 'review') {
+    return await canReviewIssuePoolAsync(req, detail);
+  }
+  return await canDepartmentActOnIssuePoolAsync(req, detail);
+}
+
+async function issuePoolDetailForPoint(repo, pointId) {
+  if (typeof repo.getIssueDetailByPoint === 'function') {
+    return await repo.getIssueDetailByPoint(pointId);
+  }
+  return null;
+}
+
+async function issuePoolTermTask(repo, termTaskId) {
+  if (typeof repo.getTermTask === 'function') {
+    return await repo.getTermTask(termTaskId);
+  }
+  return null;
+}
+
+async function canAnswerIssuePoolTermTaskAsync(req, task, detail, requestedDepartmentName) {
+  if (!task || !detail || !detail.issue) return false;
+  if (await canDecideIssuePoolAsync(req)) return true;
+  if (!await canDepartmentActOnIssuePoolAsync(req, detail)) return false;
+  const actorDepartmentName = await currentDepartmentNameAsync(req);
+  if (!actorDepartmentName || requestedDepartmentName !== actorDepartmentName) return false;
+  const selectedDepartments = Array.isArray(task.selected_departments) ? task.selected_departments : [];
+  return selectedDepartments.includes(actorDepartmentName);
 }
 
 function caseSelectSql() {
@@ -1842,6 +1921,7 @@ router.get('/issue-pool/issues/:issueId', requireAuth, (req, res) => {
     if (!repo) return null;
     const detail = await repo.getIssueDetail(Number(req.params.issueId || 0));
     if (!detail || !detail.issue) return res.status(404).json({ error: '问题不存在' });
+    if (!await canAccessIssuePoolDetailAsync(req, detail)) return res.status(403).json({ error: '只能查看本部门相关问题' });
     return res.json(detail);
   });
 });
@@ -1851,13 +1931,22 @@ function registerIssuePoolPointAction(actionName, routeName) {
     return runAsyncAction(res, async () => {
       const repo = await issuePoolRepositoryOrSendUnavailable(res);
       if (!repo) return null;
+      const pointId = Number(req.params.pointId || 0);
+      const detail = await issuePoolDetailForPoint(repo, pointId);
+      if (!detail || !detail.issue) return res.status(404).json({ error: '问题点不存在' });
+      if (!await canApplyIssuePoolPointActionAsync(req, detail, actionName)) {
+        return res.status(403).json({ error: '当前账户不能处理这个问题点' });
+      }
       const result = await repo.applyPointAction(Number(req.params.pointId || 0), {
         action: actionName,
         selectedOption: req.body.selected_option || req.body.selectedOption || null,
+        handlingMethod: req.body.handling_method || req.body.handlingMethod || '',
+        handlingReason: req.body.handling_reason || req.body.handlingReason || '',
         note: req.body.note || '',
         ...(await issuePoolActor(req))
       });
       if (!result) return res.status(404).json({ error: '问题点不存在' });
+      if (result.blocked) return res.status(409).json({ error: result.reason || '当前问题点缺少确认依据', ...result });
       return res.json(result);
     });
   });
@@ -1875,7 +1964,11 @@ router.post('/issue-pool/issues/:issueId/comment', requireAuth, (req, res) => {
     if (!repo) return null;
     const note = String(req.body.note || '').trim();
     if (!note) return res.status(400).json({ error: '说明不能为空' });
-    const detail = await repo.addIssueComment(Number(req.params.issueId || 0), {
+    const issueId = Number(req.params.issueId || 0);
+    const current = await repo.getIssueDetail(issueId);
+    if (!current || !current.issue) return res.status(404).json({ error: '问题不存在' });
+    if (!await canDepartmentActOnIssuePoolAsync(req, current)) return res.status(403).json({ error: '当前账户不能备注这个问题' });
+    const detail = await repo.addIssueComment(issueId, {
       note,
       ...(await issuePoolActor(req))
     });
@@ -1888,7 +1981,11 @@ router.post('/issue-pool/issues/:issueId/close', requireAuth, (req, res) => {
   return runAsyncAction(res, async () => {
     const repo = await issuePoolRepositoryOrSendUnavailable(res);
     if (!repo) return null;
-    const detail = await repo.closeIssue(Number(req.params.issueId || 0), {
+    const issueId = Number(req.params.issueId || 0);
+    const current = await repo.getIssueDetail(issueId);
+    if (!current || !current.issue) return res.status(404).json({ error: '问题不存在' });
+    if (!await canCloseIssuePoolAsync(req, current)) return res.status(403).json({ error: '当前账户不能关闭这个问题' });
+    const detail = await repo.closeIssue(issueId, {
       note: req.body.note || '已关闭问题卡',
       ...(await issuePoolActor(req))
     });
@@ -1901,7 +1998,11 @@ router.post('/issue-pool/issues/:issueId/reopen', requireAuth, (req, res) => {
   return runAsyncAction(res, async () => {
     const repo = await issuePoolRepositoryOrSendUnavailable(res);
     if (!repo) return null;
-    const detail = await repo.reopenIssue(Number(req.params.issueId || 0), {
+    const issueId = Number(req.params.issueId || 0);
+    const current = await repo.getIssueDetail(issueId);
+    if (!current || !current.issue) return res.status(404).json({ error: '问题不存在' });
+    if (!await canCloseIssuePoolAsync(req, current)) return res.status(403).json({ error: '当前账户不能重开这个问题' });
+    const detail = await repo.reopenIssue(issueId, {
       note: req.body.note || '已重新打开问题卡',
       ...(await issuePoolActor(req))
     });
@@ -1914,6 +2015,9 @@ router.post('/issue-pool/term-tasks', requireAuth, (req, res) => {
   return runAsyncAction(res, async () => {
     const repo = await issuePoolRepositoryOrSendUnavailable(res);
     if (!repo) return null;
+    if (!await canDecideIssuePoolAsync(req)) return res.status(403).json({ error: '当前账户不能创建术语统一待办' });
+    const detail = await repo.getIssueDetail(Number(req.body.issue_id || 0));
+    if (!detail || !detail.issue) return res.status(404).json({ error: '问题不存在' });
     const selectedDepartments = Array.isArray(req.body.selected_departments) ? req.body.selected_departments : [];
     const result = await repo.createTermTask({
       issueId: Number(req.body.issue_id || 0),
@@ -1931,8 +2035,16 @@ router.post('/issue-pool/term-tasks/:termTaskId/answer', requireAuth, (req, res)
   return runAsyncAction(res, async () => {
     const repo = await issuePoolRepositoryOrSendUnavailable(res);
     if (!repo) return null;
+    const task = await issuePoolTermTask(repo, Number(req.params.termTaskId || 0));
+    if (!task) return res.status(404).json({ error: '术语待办不存在' });
+    const detail = await repo.getIssueDetail(Number(task.issue_id || 0));
+    const actorDepartmentName = await currentDepartmentNameAsync(req);
+    const requestedDepartmentName = req.body.department_name || actorDepartmentName;
+    if (!await canAnswerIssuePoolTermTaskAsync(req, task, detail, requestedDepartmentName)) {
+      return res.status(403).json({ error: '当前账户不能回复这个术语待办' });
+    }
     const result = await repo.answerTermTask(Number(req.params.termTaskId || 0), {
-      departmentName: req.body.department_name || await currentDepartmentNameAsync(req),
+      departmentName: requestedDepartmentName,
       answer: req.body.answer || '',
       note: req.body.note || '',
       actorUserId: req.session.userId
@@ -1946,6 +2058,11 @@ router.post('/issue-pool/term-tasks/:termTaskId/decision', requireAuth, (req, re
   return runAsyncAction(res, async () => {
     const repo = await issuePoolRepositoryOrSendUnavailable(res);
     if (!repo) return null;
+    const task = await issuePoolTermTask(repo, Number(req.params.termTaskId || 0));
+    if (!task) return res.status(404).json({ error: '术语待办不存在' });
+    const detail = await repo.getIssueDetail(Number(task.issue_id || 0));
+    if (!detail || !detail.issue) return res.status(404).json({ error: '问题不存在' });
+    if (!await canDecideIssuePoolAsync(req)) return res.status(403).json({ error: '当前账户不能裁决术语待办' });
     const result = await repo.decideTermTask(Number(req.params.termTaskId || 0), {
       decision: req.body.decision || {},
       decidedBy: req.session.userId

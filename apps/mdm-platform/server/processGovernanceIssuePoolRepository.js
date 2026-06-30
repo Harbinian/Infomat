@@ -10,16 +10,18 @@ const QUEUE_DEFINITIONS = [
 ];
 
 const POINT_OPTIONS = {
-  owner_role: ['已有具体岗位', '只能确认到部门', '制度未写清，需补依据', '不适用'],
-  completion_standard: ['已有完成标准', '需要补完成标准', '该行为不需要完成标准', '制度未写清'],
+  owner_role: ['已有具体岗位', '只能确认到部门', '制度或表单原文没写清', '这条核验项不适用'],
+  completion_standard: ['已有完成标准', '制度或表单原文缺少完成标准', '该行为不需要完成标准', '制度或表单原文没写清'],
   controlled_transfer: ['有受控传递证据', '没有受控传递证据', '需要对方部门确认', '不涉及跨部门传递'],
   cross_department: ['本部门可以确认', '需要对方部门确认', '需要工作室协调', '提交 MDM 工作组裁决'],
   process_structure: ['当前流程结构合理', '流程结构需调整', '需要补 L1/L2 口径', '提交 MDM 工作组裁决'],
   system_landing: ['当前应用落位合理', '应用落位需调整', '暂不落位系统', '需要信息化工作组判断'],
   data_object: ['数据对象已明确', '字段口径需补充', '黄金源需确认', '提交 MDM 工作组裁决'],
-  evidence_gap: ['证据链充分', '需要补证据', '证据不匹配', '制度未写清'],
+  evidence_gap: ['证据链充分', '当前问题卡缺少来源证据', '证据与原文对不上', '制度或表单原文没写清'],
   terminology: ['采用推荐术语', '保留原表达并说明原因', '需要多部门统一', '提交 MDM 工作组裁决']
 };
+
+const MISSING_ORIGINAL_EVIDENCE_TEXT = '缺少制度或表单原文摘录，本问题不能确认。';
 
 function asArray(value) {
   return Array.isArray(value) ? value : [];
@@ -68,6 +70,186 @@ function sourceLayer(sourceFile) {
   if (/标准|作业/.test(text)) return 'standard';
   if (!text) return 'unknown';
   return 'procedure';
+}
+
+function fileNameFromSource(sourceFile) {
+  return String(sourceFile || '')
+    .replace(/\\/g, '/')
+    .split('/')
+    .filter(Boolean)
+    .pop() || '';
+}
+
+function parseSourceDocuments(rawValue) {
+  return String(rawValue || '')
+    .split(';;')
+    .map(piece => {
+      const [fileNo, filePath] = String(piece || '').split('||');
+      return {
+        file_no: inferSourceFileNo(fileNo, filePath),
+        file_path: cleanText(filePath),
+        document_name: fileNameFromSource(filePath)
+      };
+    })
+    .filter(item => item.file_path || item.file_no || item.document_name);
+}
+
+function uniqueNonEmpty(values) {
+  return [...new Set(values.map(cleanText).filter(Boolean))];
+}
+
+function inferSourceFileNo(...values) {
+  const text = values.map(cleanText).filter(Boolean).join(' ').replace(/\\/g, '/').toUpperCase();
+  const match = text.match(/\b([A-Z]{2,8}(?:[-_][A-Z0-9]{2,12}){1,5}|[A-Z]{2,8}\d{2,12})\b/);
+  return match ? match[1].replace(/_/g, '-') : '';
+}
+
+function readableList(values, emptyText) {
+  const uniqueValues = uniqueNonEmpty(values);
+  if (!uniqueValues.length) return emptyText;
+  if (uniqueValues.length <= 4) return uniqueValues.join('；');
+  return `${uniqueValues.slice(0, 4).join('；')}；另有${uniqueValues.length - 4}个来源文件`;
+}
+
+function sourceDocumentsFromRow(row = {}) {
+  const evidenceFile = cleanText(row.evidence_source_file);
+  const evidenceName = cleanText(row.evidence_document_name) || fileNameFromSource(evidenceFile);
+  const evidenceAnchor = cleanText(row.evidence_source_anchor || row.evidence_source_label);
+  const evidenceDocuments = evidenceFile || evidenceName || evidenceAnchor
+    ? [{
+        file_no: inferSourceFileNo(evidenceAnchor, evidenceFile, evidenceName),
+        file_path: evidenceFile,
+        document_name: evidenceName || '制度或表单源文件未识别'
+      }]
+    : [];
+  const documents = evidenceDocuments.length
+    ? evidenceDocuments
+    : parseSourceDocuments(row.source_documents || row.sourceDocuments);
+  const sourceFile = row.source_file || row.sourceFile || '';
+  if (!evidenceDocuments.length && sourceFile && !isIntermediateMappingSource(sourceFile)) {
+    documents.unshift({
+      file_no: inferSourceFileNo(row.source_file_no, row.sourceFileNo, row.doc_no, row.docNo, sourceFile),
+      file_path: cleanText(sourceFile),
+      document_name: fileNameFromSource(sourceFile)
+    });
+  }
+  const seen = new Set();
+  return documents.filter(document => {
+    const key = `${document.file_no || ''}|${document.file_path || document.document_name || ''}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function isIntermediateMappingSource(sourceFile) {
+  const text = String(sourceFile || '').replace(/\\/g, '/');
+  return !text || /\.md\b/i.test(text) || /process[-_]input[-_]baseline|mapping[_-]diff|company-sankey|artifacts/i.test(text);
+}
+
+function sourcePositionText(sourceFile, sourceLine) {
+  const text = String(sourceFile || '');
+  const paragraph = text.match(/第?\s*(\d+)\s*段/)?.[1] || text.match(/\bP(\d+)\b/i)?.[1];
+  if (paragraph) return `第${paragraph}段附近`;
+  const clause = text.match(/§\s*([0-9]+(?:\.[0-9]+)*)/)?.[1];
+  if (clause) return `第${clause}条`;
+  const page = text.match(/\bpage\s*=?\s*(\d+)\b/i)?.[1] || text.match(/第?(\d+)页/)?.[1];
+  if (page) return `第${page}页`;
+  const table = text.match(/\b(T\d+)\b/i)?.[1];
+  if (table) return table.replace(/^T/i, '表');
+  const lineAsParagraph = Number(sourceLine);
+  if (Number.isFinite(lineAsParagraph) && lineAsParagraph > 0) return `第${Math.floor(lineAsParagraph)}段附近`;
+  return '';
+}
+
+function businessSourceInfo(row = {}) {
+  const sourceFile = row.source_file || row.sourceFile || '';
+  const sourceLine = Number(row.source_line || row.sourceLine || 0);
+  const sourceDocuments = sourceDocumentsFromRow(row);
+  const documentNo = readableList(
+    sourceDocuments.map(document => document.file_no),
+    '源文件编号未随输入基线入库'
+  );
+  const documentName = readableList(
+    sourceDocuments.map(document => document.document_name || fileNameFromSource(document.file_path)),
+    '制度或表单源文件未识别'
+  );
+  if (isIntermediateMappingSource(sourceFile)) {
+    const inputBaselinePosition = sourcePositionText(sourceFile, sourceLine);
+    return {
+      documentNo,
+      documentName,
+      position: inputBaselinePosition ? `流程治理输入基线${inputBaselinePosition}` : '来源依据不足：未标注可核对段落号',
+      residualIssue: sourceDocuments.length
+        ? '残留问题：已给出制度或表单编号和名称，但尚未定位到该文件中的具体段落、页码或表格位置。'
+        : '残留问题：本问题卡缺少制度或表单源文件编号、名称和可核对位置，需要先补充来源依据再确认。'
+    };
+  }
+  const position = sourcePositionText(sourceFile, sourceLine);
+  return {
+    documentNo,
+    documentName: documentName || fileNameFromSource(sourceFile) || '制度或表单源文件未识别',
+    position: position || '来源依据不足：未标注可核对段落号',
+    residualIssue: position ? '' : '残留问题：源文件已识别，但缺少可核对的段落号，需要先补充来源依据再确认。'
+  };
+}
+
+function businessLines(parts) {
+  return parts.filter(Boolean).join('\n');
+}
+
+function readableIssueText(value) {
+  return String(value || '')
+    .replace(/原输出目标部门/g, '输出给哪个部门')
+    .replace(/输出目标部门/g, '输出给哪个部门')
+    .replace(/未见受控传递证据/g, '没有看到制度或表单里写清交接依据')
+    .replace(/待补/g, '需要补清')
+    .replace(/\s*[；;]\s*/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function handlingMethodLabel(value) {
+  const map = {
+    source_revision: '修改制度或表单源文件后重新导入',
+    not_issue: '这条核验项不是问题'
+  };
+  return map[value] || '';
+}
+
+function handlingReasonLabel(value) {
+  const map = {
+    source_already_clear: '制度或表单原文已经写清楚',
+    not_controlled_transfer: '这不是受控传递事项',
+    not_current_department: '不属于本部门处理范围',
+    no_business_impact: '不会影响这个业务行为',
+    duplicate_or_covered: '已被其他问题或来源覆盖'
+  };
+  return map[value] || value || '';
+}
+
+function pointActionNote(options = {}) {
+  const selectedOption = options.selectedOption || options.selected_option || '';
+  const method = options.handlingMethod || options.handling_method || '';
+  const reason = options.handlingReason || options.handling_reason || '';
+  const methodLabel = handlingMethodLabel(method);
+  if (methodLabel) {
+    return businessLines([
+      `处理方式：${methodLabel}`,
+      reason ? `问题原因：${handlingReasonLabel(reason)}` : '',
+      selectedOption ? `处理结论：${selectedOption}` : ''
+    ]);
+  }
+  return options.note || null;
+}
+
+function pointActionPayload(options = {}, nextStatus) {
+  return {
+    selected_option: options.selectedOption || options.selected_option || null,
+    handling_method: options.handlingMethod || options.handling_method || null,
+    handling_reason: options.handlingReason || options.handling_reason || null,
+    next_status: nextStatus
+  };
 }
 
 function displayStatusForSource(row) {
@@ -132,7 +314,8 @@ function issueShape(row, batchId) {
   const l3Name = row.l3_name || '未标注流程';
   const sourceFile = row.source_file || '';
   const targetDept = row.target_dept_name || row.output_target_dept || '';
-  const what = row.message || `${a1Name}需要补充确认`;
+  const sourceInfo = businessSourceInfo(row);
+  const what = readableIssueText(row.message || `${a1Name}需要补充确认`);
   const why = '不确认会影响流程结构、责任边界、证据链和后续 MDM 承接。';
   return {
     issue_key: issueKeyForSource(row),
@@ -148,14 +331,37 @@ function issueShape(row, batchId) {
     l3_name: l3Name,
     a1_code: a1Code,
     a1_name: a1Name,
-    title: `${a1Name}需要确认`,
+    title: `${a1Name}待确认`,
     what_text: what,
     why_text: why,
-    where_text: `${deptName}流程映射表\n业务流程：${l3Name}\n业务行为：${a1Code ? `${a1Code} ` : ''}${a1Name}\n来源：${sourceFile || '来源文件待补'}`,
-    who_text: `主责部门：${deptName}${targetDept ? `；协同部门：${targetDept}` : ''}；审核人：部门长或授权账户；裁决人：按问题类型进入工作室或 MDM 工作组。`,
+    where_text: businessLines([
+      `发现范围：${deptName}流程治理`,
+      `业务流程：${l3Name}`,
+      `业务行为：${a1Code ? `${a1Code} ` : ''}${a1Name}`,
+      `源文件编号：${sourceInfo.documentNo}`,
+      `制度或表单名称：${sourceInfo.documentName}`,
+      `大概位置：${sourceInfo.position}`,
+      sourceInfo.residualIssue
+    ]),
+    who_text: businessLines([
+      `主责部门：${deptName}`,
+      `协同部门：${targetDept || '暂未识别协同部门'}`,
+      '审核人：部门长或授权账户',
+      '裁决人：按问题类型进入信息化项目管理工作室或 MDM 工作组'
+    ]),
     when_text: row.due_date ? `本轮治理，建议在 ${row.due_date} 前处理。` : '本轮流程治理中处理，按优先级排序。',
-    how_text: row.suggestion || '请选择结构化处理结论，必要时补充依据、证据或说明。',
-    how_much_text: `影响 1 个 A1 业务行为${targetDept ? `，涉及 ${targetDept} 协同确认` : ''}。`,
+    how_text: businessLines([
+      '1. 回到制度或表单源文件查看来源位置。',
+      '2. 确认业务行为：看谁做、做什么、处理什么对象、产出什么结果。',
+      '3. 如果这条核验项成立，完善制度或表单源文件后重新导入。',
+      '4. 如果这条核验项不是问题，在本页选择问题原因提交。',
+      '提示：尚未建立“确认业务行为”的标准流程，需要创建标准。'
+    ]),
+    how_much_text: businessLines([
+      '影响范围：1 个业务行为',
+      `涉及业务行为：${a1Code ? `${a1Code} ` : ''}${a1Name}`,
+      targetDept ? `协同部门：${targetDept}` : '涉及对象：暂未识别涉及对象'
+    ]),
     display_status: displayStatusForSource(row),
     priority_score: priorityScore(row),
     due_at: row.due_date || null
@@ -164,6 +370,35 @@ function issueShape(row, batchId) {
 
 function pointShape(row, issueId) {
   const pointType = pointTypeForSource(row);
+  const rawText = cleanText(row.evidence_raw_text);
+  const evidenceRequired = Number(row.evidence_required || 0) === 1;
+  const originalEvidence = rawText
+    ? {
+        can_confirm: true,
+        raw_text: rawText,
+        source_label: row.evidence_source_label || row.evidence_source_anchor || '',
+        source_anchor: row.evidence_source_anchor || '',
+        source_file: row.evidence_source_file || '',
+        document_name: row.evidence_document_name || '',
+        review_run_id: row.evidence_run_id || '',
+        review_item_id: row.evidence_review_item_id || '',
+        stable_key: row.evidence_stable_key || '',
+        evidence_status: row.evidence_status || '',
+        verification_status: row.verification_status || '',
+        allowed_downstream_use: row.allowed_downstream_use || ''
+      }
+    : {
+        can_confirm: !evidenceRequired,
+        raw_text: '',
+        source_label: '',
+        source_anchor: '',
+        source_file: '',
+        document_name: '',
+        evidence_status: evidenceRequired ? 'missing_original_excerpt' : '',
+        verification_status: evidenceRequired ? 'missing' : '',
+        allowed_downstream_use: evidenceRequired ? 'blocked' : '',
+        missing_reason: evidenceRequired ? MISSING_ORIGINAL_EVIDENCE_TEXT : ''
+      };
   return {
     issue_id: issueId,
     point_key: pointKeyForSource(row, pointType),
@@ -173,9 +408,18 @@ function pointShape(row, issueId) {
     enum_options_json: json(POINT_OPTIONS[pointType] || POINT_OPTIONS.completion_standard),
     evidence_json: json({
       source_file: row.source_file || '',
+      source_file_no: readableList(
+        sourceDocumentsFromRow(row).map(document => document.file_no),
+        '源文件编号未随输入基线入库'
+      ),
+      source_document_name: readableList(
+        sourceDocumentsFromRow(row).map(document => document.document_name || fileNameFromSource(document.file_path)),
+        '制度或表单源文件未识别'
+      ),
       l3_name: row.l3_name || '',
       a1_code: row.a1_code || '',
-      source_ref_id: row.todo_id || row.record_id || row.id || null
+      source_ref_id: row.todo_id || row.record_id || row.id || null,
+      ...originalEvidence
     }),
     requires_mdm_decision: ['process_structure', 'system_landing', 'data_object', 'terminology'].includes(pointType) ? 1 : 0,
     requires_studio_review: ['cross_department', 'system_landing'].includes(pointType) ? 1 : 0
@@ -208,6 +452,7 @@ function mapParticipantRow(row) {
 function mapEventRow(row) {
   return row ? {
     ...row,
+    actor_display_name: row.actor_user_name || row.actor_dept_name || '系统',
     payload: parseJsonObject(row.payload_json, null)
   } : null;
 }
@@ -218,6 +463,15 @@ function mapTermTaskRow(row) {
     selected_departments: parseJsonArray(row.selected_departments_json),
     decision: parseJsonObject(row.decision_json, null)
   } : null;
+}
+
+function pointActionBlockedReason(point, options = {}) {
+  const action = String(options.action || 'confirm').trim();
+  if (action !== 'confirm') return '';
+  const evidence = parseJsonObject(point && point.evidence_json, {});
+  return evidence.can_confirm === false
+    ? evidence.missing_reason || MISSING_ORIGINAL_EVIDENCE_TEXT
+    : '';
 }
 
 function normalizeAction(action) {
@@ -385,11 +639,89 @@ function makeSqliteProcessGovernanceIssuePoolRepository(db) {
         t.todo_type,
         t.target_dept_name,
         COALESCE(t.source_file, r.source_file) AS source_file,
+        t.source_line,
         t.message,
         t.suggestion,
         t.status AS todo_status,
         t.priority,
-        t.due_date
+        t.due_date,
+        1 AS evidence_required,
+        (
+          SELECT e.raw_text
+          FROM process_input_baseline_review_items i
+          JOIN process_input_baseline_review_excerpts e
+            ON e.run_id=i.run_id AND e.stable_key=i.stable_key
+          WHERE i.department=r.dept_name
+            AND (
+              i.mapping_location LIKE '%' || r.a1_code || '%'
+              OR i.content=t.message
+              OR i.suggested_action=t.suggestion
+              OR i.mapping_location LIKE '%' || r.behavior || '%'
+            )
+          ORDER BY i.display_order, e.display_order
+          LIMIT 1
+        ) AS evidence_raw_text,
+        (
+          SELECT e.source_label
+          FROM process_input_baseline_review_items i
+          JOIN process_input_baseline_review_excerpts e
+            ON e.run_id=i.run_id AND e.stable_key=i.stable_key
+          WHERE i.department=r.dept_name
+            AND (
+              i.mapping_location LIKE '%' || r.a1_code || '%'
+              OR i.content=t.message
+              OR i.suggested_action=t.suggestion
+              OR i.mapping_location LIKE '%' || r.behavior || '%'
+            )
+          ORDER BY i.display_order, e.display_order
+          LIMIT 1
+        ) AS evidence_source_label,
+        (
+          SELECT i.source_anchor
+          FROM process_input_baseline_review_items i
+          WHERE i.department=r.dept_name
+            AND (
+              i.mapping_location LIKE '%' || r.a1_code || '%'
+              OR i.content=t.message
+              OR i.suggested_action=t.suggestion
+              OR i.mapping_location LIKE '%' || r.behavior || '%'
+            )
+          ORDER BY i.display_order
+          LIMIT 1
+        ) AS evidence_source_anchor,
+        (
+          SELECT i.source_file
+          FROM process_input_baseline_review_items i
+          WHERE i.department=r.dept_name
+            AND (
+              i.mapping_location LIKE '%' || r.a1_code || '%'
+              OR i.content=t.message
+              OR i.suggested_action=t.suggestion
+              OR i.mapping_location LIKE '%' || r.behavior || '%'
+            )
+          ORDER BY i.display_order
+          LIMIT 1
+        ) AS evidence_source_file,
+        (
+          SELECT i.document_name
+          FROM process_input_baseline_review_items i
+          WHERE i.department=r.dept_name
+            AND (
+              i.mapping_location LIKE '%' || r.a1_code || '%'
+              OR i.content=t.message
+              OR i.suggested_action=t.suggestion
+              OR i.mapping_location LIKE '%' || r.behavior || '%'
+            )
+          ORDER BY i.display_order
+          LIMIT 1
+        ) AS evidence_document_name,
+        (
+          SELECT group_concat(COALESCE(sf.file_no, '') || '||' || COALESCE(sf.file_path, ''), ';;')
+          FROM process_source_files sf
+          WHERE sf.snapshot_id=COALESCE(t.latest_snapshot_id, r.latest_snapshot_id)
+            AND COALESCE(sf.process_status, '') <> '排除'
+            AND (sf.dept_name=r.dept_name OR sf.dept_name=t.dept_name OR sf.file_path=COALESCE(t.source_file, r.source_file))
+        ) AS source_documents
       FROM process_mapping_records r
       LEFT JOIN process_mapping_todos t ON t.mapping_record_id=r.id
       ${where}
@@ -516,7 +848,13 @@ function makeSqliteProcessGovernanceIssuePoolRepository(db) {
         issue: mapIssueRow(issue),
         points: db.prepare('SELECT * FROM process_governance_issue_points WHERE issue_id=? ORDER BY point_id').all(issueId).map(mapPointRow),
         participants: db.prepare('SELECT * FROM process_governance_issue_participants WHERE issue_id=? ORDER BY participant_id').all(issueId).map(mapParticipantRow),
-        events: db.prepare('SELECT * FROM process_governance_issue_events WHERE issue_id=? ORDER BY event_id').all(issueId).map(mapEventRow),
+        events: db.prepare(`
+          SELECT e.*, u.name AS actor_user_name
+          FROM process_governance_issue_events e
+          LEFT JOIN users u ON u.id=e.actor_user_id
+          WHERE e.issue_id=?
+          ORDER BY e.event_id
+        `).all(issueId).map(mapEventRow),
         termTasks: db.prepare('SELECT * FROM process_governance_term_tasks WHERE issue_id=? ORDER BY term_task_id').all(issueId).map(mapTermTaskRow)
       };
     },
@@ -524,12 +862,25 @@ function makeSqliteProcessGovernanceIssuePoolRepository(db) {
     async applyPointAction(pointId, options = {}) {
       const point = db.prepare('SELECT * FROM process_governance_issue_points WHERE point_id=?').get(pointId);
       if (!point) return null;
+      const blockedReason = pointActionBlockedReason(point, options);
+      if (blockedReason) {
+        const detail = await this.getIssueDetail(point.issue_id);
+        return {
+          blocked: true,
+          reason: blockedReason,
+          point: detail.points.find(item => Number(item.point_id) === Number(pointId)),
+          events: detail.events,
+          issue: detail.issue
+        };
+      }
       const [eventType, nextStep, nextStatus] = normalizeAction(options.action);
+      const note = pointActionNote(options);
+      const payload = pointActionPayload(options, nextStatus);
       sqliteRun(db, `
         UPDATE process_governance_issue_points
         SET selected_option=?, note=?, current_step=?, point_status=?, updated_at=CURRENT_TIMESTAMP
         WHERE point_id=?
-      `, [options.selectedOption || options.selected_option || null, options.note || null, nextStep, nextStatus, pointId]);
+      `, [options.selectedOption || options.selected_option || null, note, nextStep, nextStatus, pointId]);
       const issueStatus = nextStatus === 'accepted'
         ? 'completed'
         : nextStatus === 'pending_mdm_decision'
@@ -540,10 +891,7 @@ function makeSqliteProcessGovernanceIssuePoolRepository(db) {
               ? 'waiting_department_review'
               : 'waiting_my_action';
       sqliteRun(db, 'UPDATE process_governance_issues SET display_status=?, updated_at=CURRENT_TIMESTAMP WHERE issue_id=?', [issueStatus, point.issue_id]);
-      addEvent(point.issue_id, pointId, eventType, options, options.note || null, {
-        selected_option: options.selectedOption || options.selected_option || null,
-        next_status: nextStatus
-      });
+      addEvent(point.issue_id, pointId, eventType, options, note, payload);
       const detail = await this.getIssueDetail(point.issue_id);
       return { point: detail.points.find(item => Number(item.point_id) === Number(pointId)), events: detail.events, issue: detail.issue };
     },
@@ -793,11 +1141,89 @@ function makeProcessGovernanceIssuePoolRepository(pool) {
         t.todo_type,
         t.target_dept_name,
         COALESCE(t.source_file, r.source_file) AS source_file,
+        t.source_line,
         t.message,
         t.suggestion,
         t.status AS todo_status,
         t.priority,
-        t.due_date
+        t.due_date,
+        1 AS evidence_required,
+        (
+          SELECT e.raw_text
+          FROM process_input_baseline_review_items i
+          JOIN process_input_baseline_review_excerpts e
+            ON e.run_id=i.run_id AND e.stable_key=i.stable_key
+          WHERE i.department=r.dept_name
+            AND (
+              i.mapping_location LIKE CONCAT('%', r.a1_code, '%')
+              OR i.content=t.message
+              OR i.suggested_action=t.suggestion
+              OR i.mapping_location LIKE CONCAT('%', r.behavior, '%')
+            )
+          ORDER BY i.display_order, e.display_order
+          LIMIT 1
+        ) AS evidence_raw_text,
+        (
+          SELECT e.source_label
+          FROM process_input_baseline_review_items i
+          JOIN process_input_baseline_review_excerpts e
+            ON e.run_id=i.run_id AND e.stable_key=i.stable_key
+          WHERE i.department=r.dept_name
+            AND (
+              i.mapping_location LIKE CONCAT('%', r.a1_code, '%')
+              OR i.content=t.message
+              OR i.suggested_action=t.suggestion
+              OR i.mapping_location LIKE CONCAT('%', r.behavior, '%')
+            )
+          ORDER BY i.display_order, e.display_order
+          LIMIT 1
+        ) AS evidence_source_label,
+        (
+          SELECT i.source_anchor
+          FROM process_input_baseline_review_items i
+          WHERE i.department=r.dept_name
+            AND (
+              i.mapping_location LIKE CONCAT('%', r.a1_code, '%')
+              OR i.content=t.message
+              OR i.suggested_action=t.suggestion
+              OR i.mapping_location LIKE CONCAT('%', r.behavior, '%')
+            )
+          ORDER BY i.display_order
+          LIMIT 1
+        ) AS evidence_source_anchor,
+        (
+          SELECT i.source_file
+          FROM process_input_baseline_review_items i
+          WHERE i.department=r.dept_name
+            AND (
+              i.mapping_location LIKE CONCAT('%', r.a1_code, '%')
+              OR i.content=t.message
+              OR i.suggested_action=t.suggestion
+              OR i.mapping_location LIKE CONCAT('%', r.behavior, '%')
+            )
+          ORDER BY i.display_order
+          LIMIT 1
+        ) AS evidence_source_file,
+        (
+          SELECT i.document_name
+          FROM process_input_baseline_review_items i
+          WHERE i.department=r.dept_name
+            AND (
+              i.mapping_location LIKE CONCAT('%', r.a1_code, '%')
+              OR i.content=t.message
+              OR i.suggested_action=t.suggestion
+              OR i.mapping_location LIKE CONCAT('%', r.behavior, '%')
+            )
+          ORDER BY i.display_order
+          LIMIT 1
+        ) AS evidence_document_name,
+        (
+          SELECT GROUP_CONCAT(CONCAT(COALESCE(sf.file_no, ''), '||', COALESCE(sf.file_path, '')) SEPARATOR ';;')
+          FROM process_source_files sf
+          WHERE sf.snapshot_id=COALESCE(t.latest_snapshot_id, r.latest_snapshot_id)
+            AND COALESCE(sf.process_status, '') <> '排除'
+            AND (sf.dept_name=r.dept_name OR sf.dept_name=t.dept_name OR sf.file_path=COALESCE(t.source_file, r.source_file))
+        ) AS source_documents
       FROM process_mapping_records r
       LEFT JOIN process_mapping_todos t ON t.mapping_record_id=r.id
       ${where}
@@ -924,7 +1350,13 @@ function makeProcessGovernanceIssuePoolRepository(pool) {
       if (!issue) return { issue: null, points: [], participants: [], events: [], termTasks: [] };
       const points = await mysqlQuery(pool, 'SELECT * FROM process_governance_issue_points WHERE issue_id=? ORDER BY point_id', [issueId]);
       const participants = await mysqlQuery(pool, 'SELECT * FROM process_governance_issue_participants WHERE issue_id=? ORDER BY participant_id', [issueId]);
-      const events = await mysqlQuery(pool, 'SELECT * FROM process_governance_issue_events WHERE issue_id=? ORDER BY event_id', [issueId]);
+      const events = await mysqlQuery(pool, `
+        SELECT e.*, u.name AS actor_user_name
+        FROM process_governance_issue_events e
+        LEFT JOIN users u ON u.id=e.actor_user_id
+        WHERE e.issue_id=?
+        ORDER BY e.event_id
+      `, [issueId]);
       const termTasks = await mysqlQuery(pool, 'SELECT * FROM process_governance_term_tasks WHERE issue_id=? ORDER BY term_task_id', [issueId]);
       return {
         issue: mapIssueRow(issue),
@@ -935,15 +1367,34 @@ function makeProcessGovernanceIssuePoolRepository(pool) {
       };
     },
 
+    async getIssueDetailByPoint(pointId) {
+      const [point] = await mysqlQuery(pool, 'SELECT issue_id FROM process_governance_issue_points WHERE point_id=?', [pointId]);
+      if (!point) return { issue: null, points: [], participants: [], events: [], termTasks: [] };
+      return await this.getIssueDetail(point.issue_id);
+    },
+
     async applyPointAction(pointId, options = {}) {
       const [point] = await mysqlQuery(pool, 'SELECT * FROM process_governance_issue_points WHERE point_id=?', [pointId]);
       if (!point) return null;
+      const blockedReason = pointActionBlockedReason(point, options);
+      if (blockedReason) {
+        const detail = await this.getIssueDetail(point.issue_id);
+        return {
+          blocked: true,
+          reason: blockedReason,
+          point: detail.points.find(item => Number(item.point_id) === Number(pointId)),
+          events: detail.events,
+          issue: detail.issue
+        };
+      }
       const [eventType, nextStep, nextStatus] = normalizeAction(options.action);
+      const note = pointActionNote(options);
+      const payload = pointActionPayload(options, nextStatus);
       await mysqlRun(pool, `
         UPDATE process_governance_issue_points
         SET selected_option=?, note=?, current_step=?, point_status=?, updated_at=CURRENT_TIMESTAMP
         WHERE point_id=?
-      `, [options.selectedOption || options.selected_option || null, options.note || null, nextStep, nextStatus, pointId]);
+      `, [options.selectedOption || options.selected_option || null, note, nextStep, nextStatus, pointId]);
       const issueStatus = nextStatus === 'accepted'
         ? 'completed'
         : nextStatus === 'pending_mdm_decision'
@@ -954,10 +1405,7 @@ function makeProcessGovernanceIssuePoolRepository(pool) {
               ? 'waiting_department_review'
               : 'waiting_my_action';
       await mysqlRun(pool, 'UPDATE process_governance_issues SET display_status=?, updated_at=CURRENT_TIMESTAMP WHERE issue_id=?', [issueStatus, point.issue_id]);
-      await addEvent(point.issue_id, pointId, eventType, options, options.note || null, {
-        selected_option: options.selectedOption || options.selected_option || null,
-        next_status: nextStatus
-      });
+      await addEvent(point.issue_id, pointId, eventType, options, note, payload);
       const detail = await this.getIssueDetail(point.issue_id);
       return { point: detail.points.find(item => Number(item.point_id) === Number(pointId)), events: detail.events, issue: detail.issue };
     },
@@ -1005,6 +1453,11 @@ function makeProcessGovernanceIssuePoolRepository(pool) {
         selected_departments: selectedDepartments
       });
       return { task: mapTermTaskRow(task) };
+    },
+
+    async getTermTask(termTaskId) {
+      const [task] = await mysqlQuery(pool, 'SELECT * FROM process_governance_term_tasks WHERE term_task_id=?', [termTaskId]);
+      return mapTermTaskRow(task);
     },
 
     async answerTermTask(termTaskId, options = {}) {
