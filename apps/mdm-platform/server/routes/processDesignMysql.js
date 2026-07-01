@@ -18,6 +18,7 @@ const CLASSIFICATION_STATUSES = new Set(['unclassified', 'needs_review', 'confir
 const TABLE_KINDS = new Set(['main', 'detail']);
 const HANDOFF_STATUSES = new Set(['pending_return', 'returned', 'pending_review', 'confirmed']);
 const PROCESS_TYPES = new Set(['new', 'inherit', 'handoff', 'adjustment']);
+const EDITABLE_DRAFT_STATUSES = new Set(['draft', 'needs_changes']);
 const BASIS_TYPES = new Set(['现场实际', '制度 / 规程', '表单 / 台账', '会议 / 访谈', '暂无证据']);
 const FIELD_TYPES = new Set(['文本', '数字', '日期', '金额', '枚举', '布尔', '部门', '人员', '附件']);
 const EVIDENCE_TYPES = new Set(['制度条款', '表单样例', '访谈记录', '会议纪要', '流程图', '台账记录', '暂无证据']);
@@ -139,6 +140,28 @@ function publicHandoff(row) {
   return row || null;
 }
 
+function activeSteps(steps) {
+  return (steps || []).filter(step => (step.status || 'active') === 'active');
+}
+
+function behaviorDetailHasContent(detail) {
+  if (!detail) return false;
+  if (detail.requires_approval || detail.is_cross_department) return true;
+  return ['precondition', 'trigger_scene', 'execution_standard', 'delivery_object', 'approval_note']
+    .some(field => Boolean(text(detail[field])));
+}
+
+function objectEventPayload(objectType, objectId, objectName, action) {
+  return {
+    metadata: {
+      object_type: objectType,
+      object_id: objectId,
+      object_name: objectName || null,
+      action
+    }
+  };
+}
+
 function publicFormTableField(row) {
   if (!row) return null;
   return {
@@ -178,7 +201,7 @@ function processDesignMarkdown(detail) {
     markdownList(detail.processes || [], process => `- ${text(process.process_code) || '未编号'} ${text(process.l1_name)} / ${text(process.l2_name)} / ${text(process.l3_name)}`),
     '',
     '## 业务行为',
-    markdownList(detail.steps || [], step => {
+    markdownList(activeSteps(detail.steps), step => {
       const process = (detail.processes || []).find(item => Number(item.id) === Number(step.process_id)) || {};
       const behavior = step.behaviorDetail || {};
       const handoffs = markdownList(step.handoffs || [], handoff => `  - 承接部门：${text(handoff.target_department)}；流程编号：${text(handoff.target_process_code) || '待定'}；流程：${text(handoff.target_process_name)}；业务行为：${text(handoff.target_behavior_name)}`);
@@ -344,6 +367,16 @@ function makeProcessDesignMysqlRepository(pool) {
     return publicDraft(row);
   }
 
+  async function getDraftByTerm(termId) {
+    const [row] = await mysqlQuery(pool, `
+      SELECT d.*
+      FROM process_design_terms t
+      JOIN process_design_drafts d ON d.id=t.draft_id
+      WHERE t.id=?
+    `, [termId]);
+    return publicDraft(row);
+  }
+
   async function getDraftByProcess(processId) {
     const [row] = await mysqlQuery(pool, `
       SELECT d.*
@@ -427,7 +460,7 @@ function makeProcessDesignMysqlRepository(pool) {
   async function getCounts(draftId) {
     const [[processes], [steps], [forms], [fields], [tableFields], [evidence], [publishableEvidence], [terms], [handoffs]] = await Promise.all([
       mysqlQuery(pool, 'SELECT COUNT(*) AS count FROM process_design_processes WHERE draft_id=?', [draftId]),
-      mysqlQuery(pool, 'SELECT COUNT(*) AS count FROM process_design_steps WHERE draft_id=?', [draftId]),
+      mysqlQuery(pool, "SELECT COUNT(*) AS count FROM process_design_steps WHERE draft_id=? AND status='active'", [draftId]),
       mysqlQuery(pool, 'SELECT COUNT(*) AS count FROM process_design_forms WHERE draft_id=?', [draftId]),
       mysqlQuery(pool, `
         SELECT COUNT(*) AS count
@@ -449,7 +482,7 @@ function makeProcessDesignMysqlRepository(pool) {
         SELECT COUNT(*) AS count
         FROM process_design_cross_dept_handoffs h
         JOIN process_design_steps s ON s.id=h.step_id
-        WHERE s.draft_id=?
+        WHERE s.draft_id=? AND s.status='active'
       `, [draftId])
     ]);
     const risks = (await buildRisks(draftId)).length;
@@ -487,7 +520,7 @@ function makeProcessDesignMysqlRepository(pool) {
     if (!profile || !text(profile.purpose) || !text(profile.scope)) {
       risks.push({ object_type: 'document', object_id: draft.id, message: '制度文档还没有写清目的和范围。', status: 'open' });
     }
-    for (const step of await loadSteps(draftId)) {
+    for (const step of activeSteps(await loadSteps(draftId))) {
       if (!text(step.output_result)) risks.push({ object_type: 'step', object_id: step.id, message: '这一步做完后没有写清会产生什么结果。', status: 'open' });
       if (step.need_confirmation && !text(step.related_departments)) risks.push({ object_type: 'step', object_id: step.id, message: '这一步需要别人确认，但还没有指定确认部门。', status: 'open' });
       const detail = step.behaviorDetail || {};
@@ -536,7 +569,7 @@ function makeProcessDesignMysqlRepository(pool) {
     if (!profile || !text(profile.document_title)) details.push('发布前还需填写制度名称。');
     if (!profile || !text(profile.purpose)) details.push('发布前还需填写制度目的。');
     if (!profile || !text(profile.scope)) details.push('发布前还需填写制度范围。');
-    const steps = await loadSteps(draft.id);
+    const steps = activeSteps(await loadSteps(draft.id));
     if (!steps.length) details.push('发布前至少需要 1 个业务行为。');
     if (steps.some(step => !step.process_id)) details.push('发布前每个业务行为都要归属到具体流程。');
     if (steps.some(step => !text(step.output_result))) details.push('发布前每个步骤都要写清输出结果。');
@@ -594,7 +627,7 @@ function makeProcessDesignMysqlRepository(pool) {
       documentProfile: await loadDocumentProfile(draft.id),
       terms: await loadTerms(draft.id),
       processes: await loadProcesses(draft.id),
-      steps: await loadSteps(draft.id),
+      steps: activeSteps(await loadSteps(draft.id)),
       forms: await loadForms(draft.id),
       evidence: await loadEvidence(draft.id)
     };
@@ -610,7 +643,7 @@ function makeProcessDesignMysqlRepository(pool) {
     `);
     if (!snapshot) return;
     const processes = await loadProcesses(draft.id);
-    const steps = await loadSteps(draft.id);
+    const steps = activeSteps(await loadSteps(draft.id));
     const sourceFile = `process_design_versions:${version.id}`;
     for (const process of processes) {
       const l3Key = `process-design:${version.id}:process:${process.id}`;
@@ -719,6 +752,7 @@ function makeProcessDesignMysqlRepository(pool) {
       return Boolean(row);
     },
     getDraft,
+    getDraftByTerm,
     getDraftByProcess,
     getDraftByStep,
     getDraftByHandoff,
@@ -846,8 +880,26 @@ function makeProcessDesignMysqlRepository(pool) {
         draft.id, text(body.term_name), text(body.definition), optionalText(body.applies_to),
         body.sort_order ? Number(body.sort_order) : Number(orderRow.next_order || 1), actorUserId
       ]);
-      await addEvent(draft.id, 'term_added', actorUserId, `已补充术语：${text(body.term_name)}`);
+      await addEvent(draft.id, 'term_added', actorUserId, `已补充术语：${text(body.term_name)}`, objectEventPayload('term', result.insertId, text(body.term_name), 'added'));
       return await getById('process_design_terms', result.insertId);
+    },
+    async updateTerm(draft, termId, body, actorUserId) {
+      const current = await getById('process_design_terms', termId);
+      if (!current || Number(current.draft_id) !== Number(draft.id)) throw httpError(404, '术语不存在');
+      await mysqlRun(pool, `
+        UPDATE process_design_terms
+        SET term_name=?, definition=?, applies_to=?, updated_at=CURRENT_TIMESTAMP
+        WHERE id=?
+      `, [text(body.term_name), text(body.definition), optionalText(body.applies_to), termId]);
+      await addEvent(draft.id, 'term_updated', actorUserId, `已修改术语：${text(body.term_name)}`, objectEventPayload('term', termId, text(body.term_name), 'updated'));
+      return await getById('process_design_terms', termId);
+    },
+    async deleteTerm(draft, termId, actorUserId) {
+      const current = await getById('process_design_terms', termId);
+      if (!current || Number(current.draft_id) !== Number(draft.id)) throw httpError(404, '术语不存在');
+      await mysqlRun(pool, 'DELETE FROM process_design_terms WHERE id=?', [termId]);
+      await addEvent(draft.id, 'term_deleted', actorUserId, `已删除术语：${text(current.term_name)}`, objectEventPayload('term', termId, text(current.term_name), 'deleted'));
+      return { deleted: true, id: Number(termId) };
     },
     async createProcess(draft, body, actorUserId) {
       const processType = PROCESS_TYPES.has(text(body.process_type)) ? text(body.process_type) : 'new';
@@ -861,8 +913,34 @@ function makeProcessDesignMysqlRepository(pool) {
         text(body.l1_name), text(body.l2_name), text(body.l3_name),
         optionalText(body.description), body.sort_order ? Number(body.sort_order) : Number(orderRow.next_order || 1), actorUserId
       ]);
-      await addEvent(draft.id, 'process_added', actorUserId, `已补充流程：${text(body.l3_name)}`);
+      await addEvent(draft.id, 'process_added', actorUserId, `已补充流程：${text(body.l3_name)}`, objectEventPayload('process', result.insertId, text(body.l3_name), 'added'));
       return await getById('process_design_processes', result.insertId);
+    },
+    async updateProcess(draft, processId, body, actorUserId) {
+      const current = await getById('process_design_processes', processId);
+      if (!current || Number(current.draft_id) !== Number(draft.id)) throw httpError(404, '流程不存在');
+      const processType = PROCESS_TYPES.has(text(body.process_type)) ? text(body.process_type) : 'new';
+      await mysqlRun(pool, `
+        UPDATE process_design_processes
+        SET process_code=?, process_type=?, l1_name=?, l2_name=?, l3_name=?, description=?, updated_at=CURRENT_TIMESTAMP
+        WHERE id=?
+      `, [
+        optionalText(body.process_code), processType, text(body.l1_name), text(body.l2_name), text(body.l3_name),
+        optionalText(body.description), processId
+      ]);
+      await addEvent(draft.id, 'process_updated', actorUserId, `已修改流程：${text(body.l3_name)}`, objectEventPayload('process', processId, text(body.l3_name), 'updated'));
+      return await getById('process_design_processes', processId);
+    },
+    async deleteProcess(draft, processId, actorUserId) {
+      const current = await getById('process_design_processes', processId);
+      if (!current || Number(current.draft_id) !== Number(draft.id)) throw httpError(404, '流程不存在');
+      const [stepCount] = await mysqlQuery(pool, 'SELECT COUNT(*) AS count FROM process_design_steps WHERE process_id=?', [processId]);
+      if (Number(stepCount.count || 0) > 0) {
+        throw httpError(409, '这个流程下面还有业务行为，不能直接删除。请先把这些行为改到其它流程，或逐条处理这些行为。');
+      }
+      await mysqlRun(pool, 'DELETE FROM process_design_processes WHERE id=?', [processId]);
+      await addEvent(draft.id, 'process_deleted', actorUserId, `已删除流程：${text(current.l3_name)}`, objectEventPayload('process', processId, text(current.l3_name), 'deleted'));
+      return { deleted: true, id: Number(processId) };
     },
     async createStep(draft, body, actorUserId) {
       const processId = Number(body.process_id || 0);
@@ -880,10 +958,13 @@ function makeProcessDesignMysqlRepository(pool) {
         optionalText(body.related_departments), optionalText(body.basis),
         body.sort_order ? Number(body.sort_order) : Number(orderRow.next_order || 1), actorUserId
       ]);
-      await addEvent(draft.id, 'step_added', actorUserId, `已补充步骤：${text(body.step_name)}`);
+      await addEvent(draft.id, 'step_added', actorUserId, `已补充步骤：${text(body.step_name)}`, objectEventPayload('step', result.insertId, text(body.step_name), 'added'));
       return await getById('process_design_steps', result.insertId);
     },
     async updateStep(draft, stepId, body, actorUserId) {
+      const current = await getById('process_design_steps', stepId);
+      if (!current || Number(current.draft_id) !== Number(draft.id)) throw httpError(404, '业务行为不存在');
+      if ((current.status || 'active') === 'voided') throw httpError(409, '已作废业务行为不能直接修改');
       const fields = ['step_name', 'actor_role', 'timing', 'input_materials', 'output_result', 'related_departments', 'basis'];
       const sets = [];
       const params = [];
@@ -893,6 +974,13 @@ function makeProcessDesignMysqlRepository(pool) {
           params.push(field === 'step_name' ? text(body[field]) : optionalText(body[field]));
         }
       });
+      if (Object.prototype.hasOwnProperty.call(body, 'process_id')) {
+        const processId = Number(body.process_id || 0);
+        const [processRow] = await mysqlQuery(pool, 'SELECT id FROM process_design_processes WHERE id=? AND draft_id=?', [processId, draft.id]);
+        if (!processRow) throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'process_id', message: '业务行为必须归属同一制度草稿下的流程' }] });
+        sets.push('process_id=?');
+        params.push(processId);
+      }
       if (Object.prototype.hasOwnProperty.call(body, 'need_confirmation')) {
         sets.push('need_confirmation=?');
         params.push(boolInt(body.need_confirmation));
@@ -900,11 +988,19 @@ function makeProcessDesignMysqlRepository(pool) {
       if (sets.length) {
         sets.push('updated_at=CURRENT_TIMESTAMP');
         await mysqlRun(pool, `UPDATE process_design_steps SET ${sets.join(', ')} WHERE id=?`, [...params, stepId]);
-        await addEvent(draft.id, 'step_updated', actorUserId, '已更新实际步骤');
+        await addEvent(draft.id, 'step_updated', actorUserId, `已修改业务行为：${text(body.step_name) || text(current.step_name)}`, objectEventPayload('step', stepId, text(body.step_name) || text(current.step_name), 'updated'));
       }
       return await getById('process_design_steps', stepId);
     },
     async saveBehaviorDetail(draft, stepId, body, actorUserId) {
+      const step = await getById('process_design_steps', stepId);
+      if (!step || Number(step.draft_id) !== Number(draft.id)) throw httpError(404, '业务行为不存在');
+      if ((step.status || 'active') === 'voided') throw httpError(409, '已作废业务行为不能直接修改');
+      const existing = await loadBehaviorDetail(stepId);
+      if (existing && existing.is_cross_department && !boolInt(body.is_cross_department)) {
+        const [handoffCount] = await mysqlQuery(pool, 'SELECT COUNT(*) AS count FROM process_design_cross_dept_handoffs WHERE step_id=?', [stepId]);
+        if (Number(handoffCount.count || 0) > 0) throw httpError(409, '已经存在跨部门承接记录，不能改为非跨部门');
+      }
       await mysqlRun(pool, `
         INSERT INTO process_design_behavior_details
           (step_id, precondition, trigger_scene, execution_standard, delivery_object,
@@ -925,8 +1021,31 @@ function makeProcessDesignMysqlRepository(pool) {
         boolInt(body.requires_approval), optionalText(body.approval_note),
         boolInt(body.is_cross_department), actorUserId
       ]);
-      await addEvent(draft.id, 'behavior_detail_saved', actorUserId, '已保存业务行为详情');
+      await addEvent(draft.id, 'step_updated', actorUserId, `已保存业务行为详情：${text(step.step_name)}`, objectEventPayload('step', stepId, text(step.step_name), 'updated'));
       return await loadBehaviorDetail(stepId);
+    },
+    async deleteStep(draft, stepId, options = {}) {
+      const current = await getById('process_design_steps', stepId);
+      if (!current || Number(current.draft_id) !== Number(draft.id)) throw httpError(404, '业务行为不存在');
+      const [handoffCount] = await mysqlQuery(pool, 'SELECT COUNT(*) AS count FROM process_design_cross_dept_handoffs WHERE step_id=?', [stepId]);
+      const [formCount] = await mysqlQuery(pool, 'SELECT COUNT(*) AS count FROM process_design_forms WHERE step_id=?', [stepId]);
+      const detail = await loadBehaviorDetail(stepId);
+      const hasDependency = Number(handoffCount.count || 0) > 0 || Number(formCount.count || 0) > 0 || behaviorDetailHasContent(detail);
+      if (options.mode === 'delete') {
+        if (hasDependency) throw httpError(409, '这个业务行为已有跨部门承接、关联表单或行为详情，不能物理删除，请作废。');
+        await mysqlRun(pool, 'DELETE FROM process_design_steps WHERE id=?', [stepId]);
+        await addEvent(draft.id, 'step_deleted', options.actorUserId, `已删除业务行为：${text(current.step_name)}`, objectEventPayload('step', stepId, text(current.step_name), 'deleted'));
+        return { deleted: true, id: Number(stepId) };
+      }
+      if ((current.status || 'active') !== 'voided') {
+        await mysqlRun(pool, `
+          UPDATE process_design_steps
+          SET status='voided', void_reason=?, voided_by=?, voided_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP
+          WHERE id=?
+        `, [optionalText(options.reason) || '由维护人作废', options.actorUserId || null, stepId]);
+        await addEvent(draft.id, 'step_voided', options.actorUserId, `已作废业务行为：${text(current.step_name)}`, objectEventPayload('step', stepId, text(current.step_name), 'voided'));
+      }
+      return await getById('process_design_steps', stepId);
     },
     async createHandoff(draft, stepId, body, actorUserId) {
       const [orderRow] = await mysqlQuery(pool, 'SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_order FROM process_design_cross_dept_handoffs WHERE step_id=?', [stepId]);
@@ -1322,6 +1441,14 @@ async function assertCanEditDraft(req, repo, draft) {
   throw httpError(403, '无权维护该流程草稿');
 }
 
+async function assertCanEditDraftContent(req, repo, draft) {
+  const roleCodes = await assertCanEditDraft(req, repo, draft);
+  if (!EDITABLE_DRAFT_STATUSES.has(draft.status || 'draft')) {
+    throw httpError(409, '当前状态只读，需要退回修改或新建变更版本');
+  }
+  return roleCodes;
+}
+
 async function assertCanReview(req, repo, draft) {
   const roleCodes = await assertCanViewDraft(req, repo, draft);
   if (await canWorkAcrossDepartments(req, roleCodes) || hasRole(roleCodes, REVIEW_ROLES)) return roleCodes;
@@ -1385,14 +1512,14 @@ router.get('/drafts/:id', requireAuth, (req, res) => runAction(res, async () => 
 router.put('/drafts/:id', requireAuth, (req, res) => runAction(res, async () => {
   const repo = await repository();
   const draft = await repo.getDraft(req.params.id);
-  await assertCanEditDraft(req, repo, draft);
+  await assertCanEditDraftContent(req, repo, draft);
   res.json(await repo.updateDraft(draft, req.body || {}, req.session.userId));
 }));
 
 router.put('/drafts/:id/document-profile', requireAuth, (req, res) => runAction(res, async () => {
   const repo = await repository();
   const draft = await repo.getDraft(req.params.id);
-  await assertCanEditDraft(req, repo, draft);
+  await assertCanEditDraftContent(req, repo, draft);
   const body = req.body || {};
   const details = [];
   if (!text(body.document_title)) details.push({ field: 'document_title', message: '制度名称不能为空' });
@@ -1405,7 +1532,7 @@ router.put('/drafts/:id/document-profile', requireAuth, (req, res) => runAction(
 router.post('/drafts/:id/terms', requireAuth, (req, res) => runAction(res, async () => {
   const repo = await repository();
   const draft = await repo.getDraft(req.params.id);
-  await assertCanEditDraft(req, repo, draft);
+  await assertCanEditDraftContent(req, repo, draft);
   const body = req.body || {};
   const details = [];
   if (!text(body.term_name)) details.push({ field: 'term_name', message: '术语名称不能为空' });
@@ -1414,10 +1541,29 @@ router.post('/drafts/:id/terms', requireAuth, (req, res) => runAction(res, async
   res.status(201).json(await repo.createTerm(draft, body, req.session.userId));
 }));
 
+router.put('/terms/:id', requireAuth, (req, res) => runAction(res, async () => {
+  const repo = await repository();
+  const draft = await repo.getDraftByTerm(req.params.id);
+  await assertCanEditDraftContent(req, repo, draft);
+  const body = req.body || {};
+  const details = [];
+  if (!text(body.term_name)) details.push({ field: 'term_name', message: '术语名称不能为空' });
+  if (!text(body.definition)) details.push({ field: 'definition', message: '术语定义不能为空' });
+  if (details.length) throw httpError(422, '校验失败', { error: '校验失败', details });
+  res.json(await repo.updateTerm(draft, Number(req.params.id), body, req.session.userId));
+}));
+
+router.delete('/terms/:id', requireAuth, (req, res) => runAction(res, async () => {
+  const repo = await repository();
+  const draft = await repo.getDraftByTerm(req.params.id);
+  await assertCanEditDraftContent(req, repo, draft);
+  res.json(await repo.deleteTerm(draft, Number(req.params.id), req.session.userId));
+}));
+
 router.post('/drafts/:id/processes', requireAuth, (req, res) => runAction(res, async () => {
   const repo = await repository();
   const draft = await repo.getDraft(req.params.id);
-  await assertCanEditDraft(req, repo, draft);
+  await assertCanEditDraftContent(req, repo, draft);
   const body = req.body || {};
   const details = [];
   if (!text(body.l1_name)) details.push({ field: 'l1_name', message: 'L1 能力不能为空' });
@@ -1426,6 +1572,27 @@ router.post('/drafts/:id/processes', requireAuth, (req, res) => runAction(res, a
   if (text(body.process_type) && !PROCESS_TYPES.has(text(body.process_type))) details.push({ field: 'process_type', message: '流程类型必须从系统选项中选择' });
   if (details.length) throw httpError(422, '校验失败', { error: '校验失败', details });
   res.status(201).json(await repo.createProcess(draft, body, req.session.userId));
+}));
+
+router.put('/processes/:id', requireAuth, (req, res) => runAction(res, async () => {
+  const repo = await repository();
+  const draft = await repo.getDraftByProcess(req.params.id);
+  await assertCanEditDraftContent(req, repo, draft);
+  const body = req.body || {};
+  const details = [];
+  if (!text(body.l1_name)) details.push({ field: 'l1_name', message: 'L1 能力不能为空' });
+  if (!text(body.l2_name)) details.push({ field: 'l2_name', message: 'L2 流程域不能为空' });
+  if (!text(body.l3_name)) details.push({ field: 'l3_name', message: 'L3 流程不能为空' });
+  if (text(body.process_type) && !PROCESS_TYPES.has(text(body.process_type))) details.push({ field: 'process_type', message: '流程类型必须从系统选项中选择' });
+  if (details.length) throw httpError(422, '校验失败', { error: '校验失败', details });
+  res.json(await repo.updateProcess(draft, Number(req.params.id), body, req.session.userId));
+}));
+
+router.delete('/processes/:id', requireAuth, (req, res) => runAction(res, async () => {
+  const repo = await repository();
+  const draft = await repo.getDraftByProcess(req.params.id);
+  await assertCanEditDraftContent(req, repo, draft);
+  res.json(await repo.deleteProcess(draft, Number(req.params.id), req.session.userId));
 }));
 
 router.get('/drafts/:id/markdown', requireAuth, (req, res) => runAction(res, async () => {
@@ -1440,7 +1607,7 @@ router.get('/drafts/:id/markdown', requireAuth, (req, res) => runAction(res, asy
 router.post('/drafts/:id/steps', requireAuth, (req, res) => runAction(res, async () => {
   const repo = await repository();
   const draft = await repo.getDraft(req.params.id);
-  await assertCanEditDraft(req, repo, draft);
+  await assertCanEditDraftContent(req, repo, draft);
   const details = [];
   if (!Number(req.body && req.body.process_id || 0)) details.push({ field: 'process_id', message: '业务行为必须归属一个制度流程' });
   if (!text(req.body.step_name)) details.push({ field: 'step_name', message: '步骤名称不能为空' });
@@ -1451,21 +1618,32 @@ router.post('/drafts/:id/steps', requireAuth, (req, res) => runAction(res, async
 router.put('/steps/:id', requireAuth, (req, res) => runAction(res, async () => {
   const repo = await repository();
   const draft = await repo.getDraftByStep(req.params.id);
-  await assertCanEditDraft(req, repo, draft);
+  await assertCanEditDraftContent(req, repo, draft);
   res.json(await repo.updateStep(draft, Number(req.params.id), req.body || {}, req.session.userId));
 }));
 
 router.put('/steps/:id/behavior-detail', requireAuth, (req, res) => runAction(res, async () => {
   const repo = await repository();
   const draft = await repo.getDraftByStep(req.params.id);
-  await assertCanEditDraft(req, repo, draft);
+  await assertCanEditDraftContent(req, repo, draft);
   res.json(await repo.saveBehaviorDetail(draft, Number(req.params.id), req.body || {}, req.session.userId));
+}));
+
+router.delete('/steps/:id', requireAuth, (req, res) => runAction(res, async () => {
+  const repo = await repository();
+  const draft = await repo.getDraftByStep(req.params.id);
+  await assertCanEditDraftContent(req, repo, draft);
+  res.json(await repo.deleteStep(draft, Number(req.params.id), {
+    mode: text(req.query && req.query.mode) === 'delete' ? 'delete' : 'void',
+    reason: req.body && req.body.reason,
+    actorUserId: req.session.userId
+  }));
 }));
 
 router.post('/steps/:id/cross-dept-handoffs', requireAuth, (req, res) => runAction(res, async () => {
   const repo = await repository();
   const draft = await repo.getDraftByStep(req.params.id);
-  await assertCanEditDraft(req, repo, draft);
+  await assertCanEditDraftContent(req, repo, draft);
   const body = req.body || {};
   const details = [];
   if (!text(body.target_department)) details.push({ field: 'target_department', message: '承接部门不能为空' });
@@ -1479,7 +1657,7 @@ router.post('/steps/:id/cross-dept-handoffs', requireAuth, (req, res) => runActi
 router.put('/cross-dept-handoffs/:id', requireAuth, (req, res) => runAction(res, async () => {
   const repo = await repository();
   const draft = await repo.getDraftByHandoff(req.params.id);
-  await assertCanEditDraft(req, repo, draft);
+  await assertCanEditDraftContent(req, repo, draft);
   res.json(await repo.updateHandoff(draft, Number(req.params.id), req.body || {}, req.session.userId));
 }));
 
@@ -1488,6 +1666,7 @@ router.put('/cross-dept-handoffs/:id/returned-result', requireAuth, (req, res) =
   const draft = await repo.getDraftByHandoff(req.params.id);
   const handoff = await repo.getHandoff(req.params.id);
   await assertCanReturnHandoff(req, repo, draft, handoff);
+  if (!EDITABLE_DRAFT_STATUSES.has(draft.status || 'draft')) throw httpError(409, '当前状态只读，需要退回修改或新建变更版本');
   const body = req.body || {};
   const details = [];
   if (!text(body.target_process_name)) details.push({ field: 'target_process_name', message: '承接流程不能为空' });
@@ -1499,7 +1678,7 @@ router.put('/cross-dept-handoffs/:id/returned-result', requireAuth, (req, res) =
 router.post('/drafts/:id/forms', requireAuth, (req, res) => runAction(res, async () => {
   const repo = await repository();
   const draft = await repo.getDraft(req.params.id);
-  await assertCanEditDraft(req, repo, draft);
+  await assertCanEditDraftContent(req, repo, draft);
   if (!text(req.body.form_name)) throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'form_name', message: '表单名称不能为空' }] });
   res.status(201).json(await repo.createForm(draft, req.body || {}, req.session.userId));
 }));
@@ -1507,14 +1686,14 @@ router.post('/drafts/:id/forms', requireAuth, (req, res) => runAction(res, async
 router.put('/forms/:id', requireAuth, (req, res) => runAction(res, async () => {
   const repo = await repository();
   const draft = await repo.getDraftByForm(req.params.id);
-  await assertCanEditDraft(req, repo, draft);
+  await assertCanEditDraftContent(req, repo, draft);
   res.json(await repo.updateForm(draft, Number(req.params.id), req.body || {}, req.session.userId));
 }));
 
 router.post('/forms/:id/tables', requireAuth, (req, res) => runAction(res, async () => {
   const repo = await repository();
   const draft = await repo.getDraftByForm(req.params.id);
-  await assertCanEditDraft(req, repo, draft);
+  await assertCanEditDraftContent(req, repo, draft);
   assertNoManualNumber(req.body || {}, 'table_no', '表编号');
   assertEnum(req.body || {}, 'table_kind', TABLE_KINDS, '附表类型');
   if (!text(req.body && req.body.table_name)) throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'table_name', message: '附表名称不能为空' }] });
@@ -1524,14 +1703,14 @@ router.post('/forms/:id/tables', requireAuth, (req, res) => runAction(res, async
 router.put('/form-tables/:id', requireAuth, (req, res) => runAction(res, async () => {
   const repo = await repository();
   const draft = await repo.getDraftByFormTable(req.params.id);
-  await assertCanEditDraft(req, repo, draft);
+  await assertCanEditDraftContent(req, repo, draft);
   res.json(await repo.updateFormTable(draft, Number(req.params.id), req.body || {}, req.session.userId));
 }));
 
 router.post('/form-tables/:id/fields', requireAuth, (req, res) => runAction(res, async () => {
   const repo = await repository();
   const draft = await repo.getDraftByFormTable(req.params.id);
-  await assertCanEditDraft(req, repo, draft);
+  await assertCanEditDraftContent(req, repo, draft);
   assertNoManualNumber(req.body || {}, 'field_no', '字段编号');
   assertNoWhitespaceFields(req.body || {}, ['field_name']);
   assertEnum(req.body || {}, 'field_type', FIELD_TYPES, '字段类型');
@@ -1542,14 +1721,14 @@ router.post('/form-tables/:id/fields', requireAuth, (req, res) => runAction(res,
 router.put('/form-table-fields/:id', requireAuth, (req, res) => runAction(res, async () => {
   const repo = await repository();
   const draft = await repo.getDraftByFormTableField(req.params.id);
-  await assertCanEditDraft(req, repo, draft);
+  await assertCanEditDraftContent(req, repo, draft);
   res.json(await repo.updateFormTableField(draft, Number(req.params.id), req.body || {}, req.session.userId));
 }));
 
 router.post('/forms/:id/fields', requireAuth, (req, res) => runAction(res, async () => {
   const repo = await repository();
   const draft = await repo.getDraftByForm(req.params.id);
-  await assertCanEditDraft(req, repo, draft);
+  await assertCanEditDraftContent(req, repo, draft);
   assertNoWhitespaceFields(req.body || {}, ['field_name_cn', 'field_name_en', 'data_object']);
   assertEnum(req.body || {}, 'field_type', FIELD_TYPES, '字段类型');
   if (!text(req.body.field_name_cn)) throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'field_name_cn', message: '中文字段名不能为空' }] });
@@ -1559,14 +1738,14 @@ router.post('/forms/:id/fields', requireAuth, (req, res) => runAction(res, async
 router.put('/form-fields/:id', requireAuth, (req, res) => runAction(res, async () => {
   const repo = await repository();
   const draft = await repo.getDraftByField(req.params.id);
-  await assertCanEditDraft(req, repo, draft);
+  await assertCanEditDraftContent(req, repo, draft);
   res.json(await repo.updateField(draft, Number(req.params.id), req.body || {}, req.session.userId));
 }));
 
 router.post('/drafts/:id/evidence', requireAuth, (req, res) => runAction(res, async () => {
   const repo = await repository();
   const draft = await repo.getDraft(req.params.id);
-  await assertCanEditDraft(req, repo, draft);
+  await assertCanEditDraftContent(req, repo, draft);
   assertEnum(req.body || {}, 'evidence_type', EVIDENCE_TYPES, '证据类型');
   if (!text(req.body.evidence_type) || !text(req.body.description)) throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'evidence', message: '证据类型和说明不能为空' }] });
   res.status(201).json(await repo.createEvidence(draft, req.body || {}, req.session.userId));
@@ -1575,7 +1754,7 @@ router.post('/drafts/:id/evidence', requireAuth, (req, res) => runAction(res, as
 router.put('/evidence/:id', requireAuth, (req, res) => runAction(res, async () => {
   const repo = await repository();
   const draft = await repo.getDraftByEvidence(req.params.id);
-  await assertCanEditDraft(req, repo, draft);
+  await assertCanEditDraftContent(req, repo, draft);
   res.json(await repo.updateEvidence(draft, Number(req.params.id), req.body || {}, req.session.userId));
 }));
 
@@ -1597,7 +1776,7 @@ router.get('/drafts/:id/outcome-preview', requireAuth, (req, res) => runAction(r
 router.post('/drafts/:id/submit', requireAuth, (req, res) => runAction(res, async () => {
   const repo = await repository();
   const draft = await repo.getDraft(req.params.id);
-  await assertCanEditDraft(req, repo, draft);
+  await assertCanEditDraftContent(req, repo, draft);
   const errors = draftRequiredErrors(draft);
   if (errors.length) throw httpError(422, '校验失败', { error: '校验失败', details: errors });
   res.json(await repo.submitDraft(draft, req.body && req.body.note, req.session.userId));

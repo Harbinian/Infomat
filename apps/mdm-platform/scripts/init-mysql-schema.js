@@ -57,6 +57,24 @@ async function ensureDocumentStructuredOutputV2(pool) {
   if (!await columnExists(pool, 'process_design_cross_dept_handoffs', 'returned_at')) {
     await pool.execute('ALTER TABLE process_design_cross_dept_handoffs ADD COLUMN returned_at TIMESTAMP NULL AFTER returned_by');
   }
+  if (!await columnExists(pool, 'process_design_steps', 'status')) {
+    await pool.execute("ALTER TABLE process_design_steps ADD COLUMN status VARCHAR(32) NOT NULL DEFAULT 'active' AFTER a1_code");
+  }
+  if (!await columnExists(pool, 'process_design_steps', 'void_reason')) {
+    await pool.execute('ALTER TABLE process_design_steps ADD COLUMN void_reason TEXT NULL AFTER status');
+  }
+  if (!await columnExists(pool, 'process_design_steps', 'voided_by')) {
+    await pool.execute('ALTER TABLE process_design_steps ADD COLUMN voided_by BIGINT NULL AFTER void_reason');
+  }
+  if (!await columnExists(pool, 'process_design_steps', 'voided_at')) {
+    await pool.execute('ALTER TABLE process_design_steps ADD COLUMN voided_at TIMESTAMP NULL AFTER voided_by');
+  }
+  await pool.execute("UPDATE process_design_steps SET status='active' WHERE status IS NULL OR status=''");
+  if (!await indexExists(pool, 'process_design_steps', 'idx_process_design_steps_status')) {
+    await pool.execute('ALTER TABLE process_design_steps ADD INDEX idx_process_design_steps_status (draft_id, status, sort_order)');
+  }
+  await dropCheckConstraints(pool, 'process_design_steps');
+  await pool.execute("ALTER TABLE process_design_steps ADD CONSTRAINT chk_process_design_steps_status CHECK (status IN ('active','voided'))");
   await pool.execute(`
     INSERT INTO process_design_processes
       (draft_id, process_code, process_type, l1_name, l2_name, l3_name, description, sort_order, created_by)
@@ -122,7 +140,8 @@ async function main() {
       '2026-06-18-conflict-todo-domain',
       '2026-06-18-version-activity-domain',
       '2026-07-01-document-structured-output',
-      '2026-07-01-document-structured-output-v2'
+      '2026-07-01-document-structured-output-v2',
+      '2026-07-01-document-structured-output-editing'
     ]) {
       await pool.execute(
         `INSERT INTO schema_migrations (migration_key)
