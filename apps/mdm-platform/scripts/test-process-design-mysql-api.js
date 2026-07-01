@@ -62,13 +62,14 @@ function makeFakeRepository() {
   };
   const calls = [];
   function outcome() {
+    const activeSteps = state.steps.filter(step => step.status !== 'voided');
     return {
       formed: '已形成 1 条流程草稿',
       current: '当前内容可以保存草稿或提交部门内审',
       missing: [],
       next: '提交审核或发布',
       counts: {
-        steps: state.steps.length,
+        steps: activeSteps.length,
         processes: state.processes.length,
         forms: state.form ? 1 : 0,
         fields: (state.field ? 1 : 0) + (state.tableField ? 1 : 0),
@@ -80,6 +81,9 @@ function makeFakeRepository() {
   }
   return {
     calls,
+    setDraftStatus(status) {
+      state.draft = { ...state.draft, status };
+    },
     async summary() {
       calls.push('summary');
       return {
@@ -117,6 +121,14 @@ function makeFakeRepository() {
     },
     async getDraftByStep() {
       calls.push('getDraftByStep');
+      return state.draft;
+    },
+    async getDraftByTerm() {
+      calls.push('getDraftByTerm');
+      return state.draft;
+    },
+    async getDraftByProcess() {
+      calls.push('getDraftByProcess');
       return state.draft;
     },
     async getDraftByHandoff() {
@@ -185,7 +197,7 @@ function makeFakeRepository() {
     async createTerm(draft, body, actorUserId) {
       calls.push('createTerm');
       const term = {
-        id: 161,
+        id: 161 + state.terms.length,
         draft_id: draft.id,
         term_name: body.term_name,
         definition: body.definition,
@@ -194,6 +206,22 @@ function makeFakeRepository() {
       };
       state.terms.push(term);
       return term;
+    },
+    async updateTerm(draft, termId, body) {
+      calls.push('updateTerm');
+      const index = state.terms.findIndex(term => Number(term.id) === Number(termId));
+      state.terms[index] = {
+        ...state.terms[index],
+        term_name: body.term_name,
+        definition: body.definition,
+        applies_to: body.applies_to || null
+      };
+      return state.terms[index];
+    },
+    async deleteTerm(draft, termId) {
+      calls.push('deleteTerm');
+      state.terms = state.terms.filter(term => Number(term.id) !== Number(termId));
+      return { deleted: true, id: Number(termId) };
     },
     async createProcess(draft, body, actorUserId) {
       calls.push('createProcess');
@@ -210,9 +238,34 @@ function makeFakeRepository() {
       state.processes.push(process);
       return process;
     },
+    async updateProcess(draft, processId, body) {
+      calls.push('updateProcess');
+      const index = state.processes.findIndex(process => Number(process.id) === Number(processId));
+      state.processes[index] = {
+        ...state.processes[index],
+        process_code: body.process_code || null,
+        process_type: body.process_type || 'new',
+        l1_name: body.l1_name,
+        l2_name: body.l2_name,
+        l3_name: body.l3_name,
+        description: body.description || null
+      };
+      return state.processes[index];
+    },
+    async deleteProcess(draft, processId) {
+      calls.push('deleteProcess');
+      if (state.steps.some(step => Number(step.process_id) === Number(processId))) {
+        const error = new Error('这个流程下面还有业务行为，请先改挂或处理行为');
+        error.statusCode = 409;
+        error.payload = { error: error.message };
+        throw error;
+      }
+      state.processes = state.processes.filter(process => Number(process.id) !== Number(processId));
+      return { deleted: true, id: Number(processId) };
+    },
     async createStep(draft, body, actorUserId) {
       calls.push('createStep');
-      const step = { id: 201 + state.steps.length, draft_id: draft.id, process_id: Number(body.process_id), step_name: body.step_name, output_result: body.output_result || null, created_by: actorUserId };
+      const step = { id: 201 + state.steps.length, draft_id: draft.id, process_id: Number(body.process_id), step_name: body.step_name, actor_role: body.actor_role || null, input_materials: body.input_materials || null, output_result: body.output_result || null, status: 'active', created_by: actorUserId };
       state.steps.push(step);
       return step;
     },
@@ -220,10 +273,18 @@ function makeFakeRepository() {
       calls.push('updateStep');
       const index = state.steps.findIndex(step => Number(step.id) === Number(stepId));
       state.steps[index] = { ...state.steps[index], id: stepId, ...body };
+      if (Object.prototype.hasOwnProperty.call(body, 'process_id')) state.steps[index].process_id = Number(body.process_id);
       return state.steps[index];
     },
     async saveBehaviorDetail(draft, stepId, body, actorUserId) {
       calls.push('saveBehaviorDetail');
+      const current = state.behaviorDetails.get(Number(stepId));
+      if (current && current.is_cross_department && !Boolean(body.is_cross_department) && state.handoffs.some(handoff => Number(handoff.step_id) === Number(stepId))) {
+        const error = new Error('已经存在跨部门承接记录，不能改为非跨部门');
+        error.statusCode = 409;
+        error.payload = { error: error.message };
+        throw error;
+      }
       const detail = {
         id: 251,
         step_id: stepId,
@@ -237,6 +298,33 @@ function makeFakeRepository() {
       };
       state.behaviorDetails.set(Number(stepId), detail);
       return detail;
+    },
+    async deleteStep(draft, stepId, options = {}) {
+      calls.push('deleteStep');
+      const index = state.steps.findIndex(step => Number(step.id) === Number(stepId));
+      const hasHandoff = state.handoffs.some(handoff => Number(handoff.step_id) === Number(stepId));
+      const hasForm = state.form && Number(state.form.step_id || 0) === Number(stepId);
+      const detail = state.behaviorDetails.get(Number(stepId));
+      const hasDetail = detail && ['precondition', 'trigger_scene', 'execution_standard', 'delivery_object', 'approval_note']
+        .some(field => detail[field]) || (detail && (detail.requires_approval || detail.is_cross_department));
+      if (options.mode === 'delete') {
+        if (hasHandoff || hasForm || hasDetail) {
+          const error = new Error('这个业务行为已有承接、表单或详情，不能物理删除，请作废');
+          error.statusCode = 409;
+          error.payload = { error: error.message };
+          throw error;
+        }
+        state.steps.splice(index, 1);
+        return { deleted: true, id: Number(stepId) };
+      }
+      state.steps[index] = {
+        ...state.steps[index],
+        status: 'voided',
+        void_reason: options.reason || '录入后作废',
+        voided_by: options.actorUserId || null,
+        voided_at: '2026-07-01T00:00:00.000Z'
+      };
+      return state.steps[index];
     },
     async createHandoff(draft, stepId, body, actorUserId) {
       calls.push('createHandoff');
@@ -275,7 +363,7 @@ function makeFakeRepository() {
     },
     async createForm(draft, body, actorUserId) {
       calls.push('createForm');
-      state.form = { id: 301, draft_id: draft.id, form_name: body.form_name, archive_rule: body.archive_rule || null, created_by: actorUserId };
+      state.form = { id: 301, draft_id: draft.id, step_id: body.step_id ? Number(body.step_id) : null, form_name: body.form_name, archive_rule: body.archive_rule || null, created_by: actorUserId };
       return state.form;
     },
     async updateForm(draft, formId, body) {
@@ -392,6 +480,8 @@ async function main() {
   ].forEach(tableName => {
     assert.ok(mdmMysqlSchemaSql().includes(`CREATE TABLE IF NOT EXISTS ${tableName}`), `MySQL schema must include ${tableName}`);
   });
+  assert.ok(mdmMysqlSchemaSql().includes('status VARCHAR(32) NOT NULL DEFAULT'), 'process design steps must keep active/voided status');
+  assert.ok(mdmMysqlSchemaSql().includes('void_reason TEXT NULL'), 'process design steps must keep void reason');
 
   const permissionsByUser = new Map([
     [10, ['process_governance:submit']],
@@ -480,6 +570,22 @@ async function main() {
     });
     assert.strictEqual(term.res.status, 201, JSON.stringify(term.body));
 
+    const termUpdate = await request(baseUrl, 'submitter', '/api/process-design/terms/161', {
+      method: 'PUT',
+      body: JSON.stringify({ term_name: '需求变更申请', definition: '客户对已确认需求提出的调整申请', applies_to: '客户需求变更制度' })
+    });
+    assert.strictEqual(termUpdate.res.status, 200, JSON.stringify(termUpdate.body));
+    assert.strictEqual(termUpdate.body.term_name, '需求变更申请');
+
+    const termToDelete = await request(baseUrl, 'submitter', '/api/process-design/drafts/101/terms', {
+      method: 'POST',
+      body: JSON.stringify({ term_name: '临时术语', definition: '录错的术语', applies_to: '临时' })
+    });
+    assert.strictEqual(termToDelete.res.status, 201, JSON.stringify(termToDelete.body));
+    const termDelete = await request(baseUrl, 'submitter', '/api/process-design/terms/162', { method: 'DELETE' });
+    assert.strictEqual(termDelete.res.status, 200, JSON.stringify(termDelete.body));
+    assert.strictEqual(termDelete.body.deleted, true);
+
     const processA = await request(baseUrl, 'submitter', '/api/process-design/drafts/101/processes', {
       method: 'POST',
       body: JSON.stringify({ l1_name: '经营管理', l2_name: '客户管理', l3_name: '客户需求变更处理', process_type: 'new' })
@@ -487,11 +593,34 @@ async function main() {
     assert.strictEqual(processA.res.status, 201, JSON.stringify(processA.body));
     assert.strictEqual(processA.body.id, 181);
 
+    const processUpdate = await request(baseUrl, 'submitter', '/api/process-design/processes/181', {
+      method: 'PUT',
+      body: JSON.stringify({
+        l1_name: '经营管理',
+        l2_name: '客户需求管理',
+        l3_name: '客户需求变更受理',
+        process_code: 'L3-SAL-001',
+        process_type: 'adjustment',
+        description: '受理并登记客户需求变更'
+      })
+    });
+    assert.strictEqual(processUpdate.res.status, 200, JSON.stringify(processUpdate.body));
+    assert.strictEqual(processUpdate.body.l3_name, '客户需求变更受理');
+
     const processB = await request(baseUrl, 'submitter', '/api/process-design/drafts/101/processes', {
       method: 'POST',
       body: JSON.stringify({ l1_name: '工程管理', l2_name: '技术评审', l3_name: '技术影响评估', process_type: 'handoff' })
     });
     assert.strictEqual(processB.res.status, 201, JSON.stringify(processB.body));
+
+    const processC = await request(baseUrl, 'submitter', '/api/process-design/drafts/101/processes', {
+      method: 'POST',
+      body: JSON.stringify({ l1_name: '经营管理', l2_name: '临时流程域', l3_name: '录错流程', process_type: 'new' })
+    });
+    assert.strictEqual(processC.res.status, 201, JSON.stringify(processC.body));
+    const emptyProcessDelete = await request(baseUrl, 'submitter', '/api/process-design/processes/183', { method: 'DELETE' });
+    assert.strictEqual(emptyProcessDelete.res.status, 200, JSON.stringify(emptyProcessDelete.body));
+    assert.strictEqual(emptyProcessDelete.body.deleted, true);
 
     const stepWithoutProcess = await request(baseUrl, 'submitter', '/api/process-design/drafts/101/steps', {
       method: 'POST',
@@ -507,11 +636,16 @@ async function main() {
     assert.strictEqual(step.res.status, 201);
     assert.strictEqual(step.body.process_id, 181);
 
+    const blockedProcessDelete = await request(baseUrl, 'submitter', '/api/process-design/processes/181', { method: 'DELETE' });
+    assert.strictEqual(blockedProcessDelete.res.status, 409, JSON.stringify(blockedProcessDelete.body));
+    assert.ok(JSON.stringify(blockedProcessDelete.body).includes('业务行为'), 'process with behavior must not be deleted');
+
     const stepUpdate = await request(baseUrl, 'submitter', '/api/process-design/steps/201', {
       method: 'PUT',
-      body: JSON.stringify({ actor_role: '业务联系人' })
+      body: JSON.stringify({ process_id: 182, actor_role: '业务联系人' })
     });
     assert.strictEqual(stepUpdate.res.status, 200);
+    assert.strictEqual(Number(stepUpdate.body.process_id), 182);
 
     const behaviorDetail = await request(baseUrl, 'submitter', '/api/process-design/steps/201/behavior-detail', {
       method: 'PUT',
@@ -574,6 +708,57 @@ async function main() {
     });
     assert.strictEqual(returnedHandoff.res.status, 200, JSON.stringify(returnedHandoff.body));
     assert.strictEqual(returnedHandoff.body.target_process_name, '技术方案评审');
+
+    const forbiddenCrossDeptDowngrade = await request(baseUrl, 'submitter', '/api/process-design/steps/201/behavior-detail', {
+      method: 'PUT',
+      body: JSON.stringify({
+        precondition: '客户已提出变更诉求',
+        trigger_scene: '客户电话、邮件或会议提出变更',
+        execution_standard: '2 个工作日内登记并确认影响范围',
+        delivery_object: '需求变更记录',
+        requires_approval: true,
+        approval_note: '部门负责人确认后流转',
+        is_cross_department: false
+      })
+    });
+    assert.strictEqual(forbiddenCrossDeptDowngrade.res.status, 409, JSON.stringify(forbiddenCrossDeptDowngrade.body));
+
+    const physicalDeleteLinkedStep = await request(baseUrl, 'submitter', '/api/process-design/steps/201?mode=delete', { method: 'DELETE' });
+    assert.strictEqual(physicalDeleteLinkedStep.res.status, 409, JSON.stringify(physicalDeleteLinkedStep.body));
+
+    const voidedStep = await request(baseUrl, 'submitter', '/api/process-design/steps/201', {
+      method: 'DELETE',
+      body: JSON.stringify({ reason: '跨部门承接后发现本部门记录需作废' })
+    });
+    assert.strictEqual(voidedStep.res.status, 200, JSON.stringify(voidedStep.body));
+    assert.strictEqual(voidedStep.body.status, 'voided');
+
+    const typoStep = await request(baseUrl, 'submitter', '/api/process-design/drafts/101/steps', {
+      method: 'POST',
+      body: JSON.stringify({ process_id: 182, step_name: '录错的业务行为', output_result: '录错' })
+    });
+    assert.strictEqual(typoStep.res.status, 201, JSON.stringify(typoStep.body));
+    const physicalDeleteTypoStep = await request(baseUrl, 'submitter', '/api/process-design/steps/202?mode=delete', { method: 'DELETE' });
+    assert.strictEqual(physicalDeleteTypoStep.res.status, 200, JSON.stringify(physicalDeleteTypoStep.body));
+    assert.strictEqual(physicalDeleteTypoStep.body.deleted, true);
+
+    const activeStep = await request(baseUrl, 'submitter', '/api/process-design/drafts/101/steps', {
+      method: 'POST',
+      body: JSON.stringify({ process_id: 182, step_name: '确认技术影响', actor_role: '工程接口人', output_result: '形成技术影响确认记录' })
+    });
+    assert.strictEqual(activeStep.res.status, 201, JSON.stringify(activeStep.body));
+    const activeBehaviorDetail = await request(baseUrl, 'submitter', '/api/process-design/steps/202/behavior-detail', {
+      method: 'PUT',
+      body: JSON.stringify({
+        precondition: '需求变更已登记',
+        trigger_scene: '经营发展部提交技术评估请求',
+        execution_standard: '3 个工作日内确认影响范围',
+        delivery_object: '技术影响确认记录',
+        requires_approval: false,
+        is_cross_department: false
+      })
+    });
+    assert.strictEqual(activeBehaviorDetail.res.status, 200, JSON.stringify(activeBehaviorDetail.body));
 
     const form = await request(baseUrl, 'submitter', '/api/process-design/drafts/101/forms', {
       method: 'POST',
@@ -662,12 +847,21 @@ async function main() {
     const detailAfterStructure = await request(baseUrl, 'submitter', '/api/process-design/drafts/101');
     assert.strictEqual(detailAfterStructure.res.status, 200);
     assert.strictEqual(detailAfterStructure.body.documentProfile.document_title, '客户需求变更管理制度');
-    assert.strictEqual(detailAfterStructure.body.terms[0].term_name, '需求变更');
+    assert.strictEqual(detailAfterStructure.body.terms[0].term_name, '需求变更申请');
     assert.strictEqual(detailAfterStructure.body.processes.length, 2);
-    assert.strictEqual(detailAfterStructure.body.steps[0].process_id, 181);
-    assert.strictEqual(detailAfterStructure.body.steps[0].behaviorDetail.execution_standard, '2 个工作日内登记并确认影响范围');
-    assert.strictEqual(detailAfterStructure.body.steps[0].handoffs[0].target_process_code, 'L3-ENG-001');
+    assert.ok(detailAfterStructure.body.steps.some(row => row.status === 'voided'), 'voided behavior should remain visible in draft detail');
+    const activeStepDetail = detailAfterStructure.body.steps.find(row => row.status !== 'voided');
+    assert.strictEqual(activeStepDetail.process_id, 182);
+    assert.strictEqual(activeStepDetail.behaviorDetail.execution_standard, '3 个工作日内确认影响范围');
     assert.strictEqual(detailAfterStructure.body.forms[0].tables[0].fields[0].field_name, '客户名称');
+
+    fakeRepo.setDraftStatus('submitted');
+    const readonlyTermUpdate = await request(baseUrl, 'submitter', '/api/process-design/terms/161', {
+      method: 'PUT',
+      body: JSON.stringify({ term_name: '已提交后不应修改', definition: '只读', applies_to: '只读' })
+    });
+    assert.strictEqual(readonlyTermUpdate.res.status, 409, JSON.stringify(readonlyTermUpdate.body));
+    fakeRepo.setDraftStatus('draft');
 
     const markdown = await request(baseUrl, 'submitter', '/api/process-design/drafts/101/markdown');
     assert.strictEqual(markdown.res.status, 200);
@@ -700,9 +894,15 @@ async function main() {
       'createDraft',
       'saveDocumentProfile',
       'createTerm',
+      'updateTerm',
+      'deleteTerm',
       'createProcess',
+      'updateProcess',
+      'deleteProcess',
       'createStep',
+      'updateStep',
       'saveBehaviorDetail',
+      'deleteStep',
       'createHandoff',
       'acceptHandoffReturn',
       'createForm',

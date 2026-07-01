@@ -95,7 +95,7 @@ $env:MDM_DB_PATH="$env:TEMP\mdm-platform-baseline.db"
 - 数据地图：按上下文维护字段台账、字段定义、系统关系和黄金源
 - 数据报送：表单录入 + Excel 批量导入
 - 审批流：提交 -> 部门内审 -> 跨部门确认 -> 字段台账确认 -> 终审
-- 文档结构化输出：在网页中按节点录入制度目的、范围、承继关系、术语、多个流程、多个业务行为、跨部门回写承接和附表结构，可前后翻阅编辑，发布后投影到能力-流程-行为结构
+- 文档结构化输出：在网页中按节点录入制度目的、范围、承继关系、术语、多个流程、多个业务行为、跨部门回写承接和附表结构；术语、流程和业务行为支持在草稿/退回修改状态下回填编辑、删除或作废，发布后投影到能力-流程-行为结构
 - 跨部门待办：给其他部门派发待办
 - 冲突管理：字段冲突 + 术语冲突，severity 分级
 - 术语词典：术语维护 + 审批流
@@ -183,7 +183,7 @@ npm run smoke:process-governance-mysql
 - `MDM_IDENTITY_READ_MODEL=mysql` 目前切换登录、`/api/org/session`、`/api/org/me`、本人密码状态、本人改密、管理员用户/部门/权限读写接口、`/api/roles` 角色读写接口、通用 `requirePermission` 权限中间件、角色工作台身份读取、流程治理 MySQL 分支权限判断、流程设计 MySQL 路由权限判断、治理活跃热力图管理视图权限判断、字段台账查看/创建/维护中的身份权限判断，以及字段黄金源维护/确认中的身份权限判断。`auth.js` / `access.js` 已提供 MySQL-aware 异步权限、角色码、用户和部门读取 helper；后续业务路由接入时应优先复用这些 helper。
 - `/api/import-rbac/*` 批量写入仍是遗留本地库实现；在 `MDM_IDENTITY_READ_MODEL=mysql` 下会显式拒绝，直到对应导入写入链路迁到 MySQL。
 - 当前前端主入口为统一问题池 `/api/process-governance/issue-pool/*`；旧输入基线问题复核 `/api/process-governance/input-baseline-review/*` 保留为导入、复核和过渡 API。问题识别批次通过 `npm run import:process-input-baseline-review -- --review-run artifacts/process-input-baseline-review/<run-id>` 导入 MySQL。
-- 文档结构化输出在 `PROCESS_GOVERNANCE_READ_MODEL=mysql` 下使用 `/api/process-design/*` 的 MySQL 路由完成制度草稿、目的/范围、术语、流程明细、业务行为详情、跨部门承接回写、附表结构、字段、证据、审核、发布和 Markdown 草案导出；前端按节点进度条分步显示，支持前后翻阅编辑；表编号和字段编号由后端自动生成，字段类输入不允许包含空格；发布不反向修改 `docs/norms/`，只投影到平台流程图谱和 A1 明细。
+- 文档结构化输出在 `PROCESS_GOVERNANCE_READ_MODEL=mysql` 下使用 `/api/process-design/*` 的 MySQL 路由完成制度草稿、目的/范围、术语、流程明细、业务行为详情、跨部门承接回写、附表结构、字段、证据、审核、发布和 Markdown 草案导出；前端按节点进度条分步显示，术语、流程和业务行为可点击列表回填编辑。只有 `draft` / `needs_changes` 可修改正文，`submitted` / `approved` / `published` 只读；业务行为作废后仍保留历史，但 Markdown、发布版本、流程图谱和 A1 投影只使用 active 行为。表编号和字段编号由后端自动生成，字段类输入不允许包含空格；发布不反向修改 `docs/norms/`，只投影到平台流程图谱和 A1 明细。
 - `npm run test:mainline` 用于验证“流程治理 -> 字段台账 -> 主数据对象 -> 权限 -> 导入导出”主线，详见 `docs/plans/流程治理字段台账主线稳定性检查.md`。
 - 不直接运行会删除共享数据库的旧式测试逻辑。
 - `seed-demo-data.js` 和 `setup-mdm-project-users.js` 需要显式环境变量才可运行。

@@ -63,8 +63,13 @@ assert.ok(html.includes('/api/process-design/drafts'), 'process governance shoul
   'function saveProcessDesignDocumentProfileFromWizard',
   'function saveProcessDesignTermFromWizard',
   'function saveProcessDesignProcessFromWizard',
-  'function saveProcessDesignStepFromWizard',
-  'function saveProcessDesignBehaviorDetailFromWizard',
+  'function saveProcessDesignBehaviorFromWizard',
+  'function startProcessDesignTermEdit',
+  'function startProcessDesignProcessEdit',
+  'function startProcessDesignStepEdit',
+  'function cancelProcessDesignEdit',
+  'function processDesignDraftEditable',
+  'function applyProcessDesignReadOnlyState',
   'function saveProcessDesignHandoffFromWizard',
   'function saveProcessDesignFormFromWizard',
   'function saveProcessDesignFormTableFromWizard',
@@ -98,8 +103,9 @@ assert.ok(html.includes('/api/process-design/drafts'), 'process governance shoul
   'id="saveProcessDesignDocumentProfileBtn"',
   'id="saveProcessDesignTermBtn"',
   'id="saveProcessDesignProcessBtn"',
-  'id="saveProcessDesignStepBtn"',
-  'id="saveProcessDesignBehaviorDetailBtn"',
+  'id="saveProcessDesignBehaviorBtn"',
+  'id="cancelProcessDesignEditBtn"',
+  'id="newProcessDesignItemBtn"',
   'id="saveProcessDesignHandoffBtn"',
   'id="saveProcessDesignFormBtn"',
   'id="saveProcessDesignFormTableBtn"',
@@ -110,12 +116,27 @@ assert.ok(html.includes('/api/process-design/drafts'), 'process governance shoul
   'id="submitProcessDesignDraftBtn"',
   'id="publishProcessDesignDraftBtn"'
 ].forEach(needle => assert.ok(html.includes(needle), `process design frontend should include ${needle}`));
+assert.ok(!html.includes('id="saveProcessDesignStepBtn"'), 'business behavior should no longer use a separate step save button');
+assert.ok(!html.includes('id="saveProcessDesignBehaviorDetailBtn"'), 'business behavior should no longer use a separate behavior-detail save button');
 assert.ok(html.includes('id="pgDesignProcessForm"'), 'document structured output should use a process detail form before behavior entry');
 assert.ok(html.includes('id="pgDesignStepProcessSelect"'), 'business behavior entry should choose the process it belongs to');
 assert.ok(html.includes('id="pgDesignTermList"'), 'term entry should show an inline detail list so users can add more than one term');
 assert.ok(html.includes('id="pgDesignProcessList"'), 'process entry should show an inline detail list so one document can contain multiple processes');
 assert.ok(html.includes('id="pgDesignBehaviorList"'), 'behavior entry should show an inline detail list so each process can contain multiple behaviors');
 assert.ok(html.includes('function renderProcessDesignInlineLists'), 'process design should refresh inline detail lists after every save');
+[
+  'process-design-list-item editing',
+  'data-process-design-edit',
+  'data-process-design-delete',
+  'data-process-design-void',
+  'data-process-design-delete-mode',
+  '保存术语修改',
+  '保存流程修改',
+  '保存业务行为修改',
+  '取消编辑',
+  '新增下一条',
+  '当前状态只读，需要退回修改或新建变更版本'
+].forEach(needle => assert.ok(html.includes(needle), `process design editable detail list should include ${needle}`));
 assert.ok(html.includes('id="pgDesignProcessType"') && html.includes('<select id="pgDesignProcessType"'), 'process type should be an enum select');
 assert.ok(html.includes('<select id="pgDesignTableFieldType"') && html.includes('<select id="pgDesignFieldType"'), 'field type inputs should be enum selects');
 assert.ok(html.includes('<select id="pgDesignEvidenceType"'), 'evidence type should be an enum select');

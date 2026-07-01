@@ -879,12 +879,18 @@ CREATE TABLE IF NOT EXISTS process_design_steps (
   related_departments TEXT NULL,
   basis TEXT NULL,
   a1_code VARCHAR(128) NULL,
+  status VARCHAR(32) NOT NULL DEFAULT 'active',
+  void_reason TEXT NULL,
+  voided_by BIGINT NULL,
+  voided_at TIMESTAMP NULL,
   sort_order INT NOT NULL DEFAULT 1,
   created_by BIGINT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_process_design_steps_draft (draft_id, sort_order),
   INDEX idx_process_design_steps_process (process_id, sort_order),
+  INDEX idx_process_design_steps_status (draft_id, status, sort_order),
+  CHECK (status IN ('active','voided')),
   CONSTRAINT fk_process_design_steps_draft FOREIGN KEY (draft_id)
     REFERENCES process_design_drafts(id) ON DELETE CASCADE,
   CONSTRAINT fk_process_design_steps_process FOREIGN KEY (process_id)
