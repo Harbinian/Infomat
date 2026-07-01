@@ -119,6 +119,18 @@ assert.ok(html.includes('/api/process-design/drafts'), 'process governance shoul
 assert.ok(!html.includes('id="saveProcessDesignStepBtn"'), 'business behavior should no longer use a separate step save button');
 assert.ok(!html.includes('id="saveProcessDesignBehaviorDetailBtn"'), 'business behavior should no longer use a separate behavior-detail save button');
 assert.ok(html.includes('id="pgDesignProcessForm"'), 'document structured output should use a process detail form before behavior entry');
+assert.ok(html.includes('/api/process-design/process-taxonomy'), 'process design should load L1/L2 options from existing mapping relationships');
+assert.ok(html.includes('<select id="pgDesignProcessL1Name"'), 'L1 capability should be selected from existing mapping relationships');
+assert.ok(html.includes('<select id="pgDesignProcessL2Name"'), 'L2 business capability should be selected from existing mapping relationships');
+assert.ok(!html.includes('L1 能力<input id="pgDesignProcessL1Name"'), 'L1 capability should not be a free text input');
+assert.ok(!html.includes('L2 流程域<input id="pgDesignProcessL2Name"'), 'L2 business capability should not be a free text input');
+[
+  'function loadProcessDesignTaxonomy',
+  'function renderProcessDesignTaxonomyOptions',
+  'function assertProcessDesignTaxonomySelection',
+  'data-process-design-taxonomy-notice',
+  '暂不开放新增能力域或业务能力'
+].forEach(needle => assert.ok(html.includes(needle), `process design taxonomy selection should include ${needle}`));
 assert.ok(html.includes('id="pgDesignStepProcessSelect"'), 'business behavior entry should choose the process it belongs to');
 assert.ok(html.includes('id="pgDesignTermList"'), 'term entry should show an inline detail list so users can add more than one term');
 assert.ok(html.includes('id="pgDesignProcessList"'), 'process entry should show an inline detail list so one document can contain multiple processes');
