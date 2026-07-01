@@ -181,7 +181,7 @@ npm run smoke:process-governance-mysql
 - `MDM_IDENTITY_READ_MODEL=mysql` 目前切换登录、`/api/org/session`、`/api/org/me`、本人密码状态、本人改密、管理员用户/部门/权限读写接口、`/api/roles` 角色读写接口、通用 `requirePermission` 权限中间件、角色工作台身份读取、流程治理 MySQL 分支权限判断、流程设计 MySQL 路由权限判断、治理活跃热力图管理视图权限判断、字段台账查看/创建/维护中的身份权限判断，以及字段黄金源维护/确认中的身份权限判断。`auth.js` / `access.js` 已提供 MySQL-aware 异步权限、角色码、用户和部门读取 helper；后续业务路由接入时应优先复用这些 helper。
 - `/api/import-rbac/*` 批量写入仍是遗留本地库实现；在 `MDM_IDENTITY_READ_MODEL=mysql` 下会显式拒绝，直到对应导入写入链路迁到 MySQL。
 - 当前前端主入口为统一问题池 `/api/process-governance/issue-pool/*`；旧输入基线问题复核 `/api/process-governance/input-baseline-review/*` 保留为导入、复核和过渡 API。问题识别批次通过 `npm run import:process-input-baseline-review -- --review-run artifacts/process-input-baseline-review/<run-id>` 导入 MySQL。
-- 新增流程在 `PROCESS_GOVERNANCE_READ_MODEL=mysql` 下使用 `/api/process-design/*` 的 MySQL 路由完成草稿、步骤、表单、字段、证据、审核和发布；发布不反向修改 `docs/norms/`。
+- 新增流程在 `PROCESS_GOVERNANCE_READ_MODEL=mysql` 下使用 `/api/process-design/*` 的 MySQL 路由完成草稿、步骤、表单、字段、证据、审核和发布；发布不反向修改 `docs/norms/`。发布卡口以至少 1 条 `process_design_evidence.status='verified'` 为准，`maturity` 只作为前端完成度提示；草稿详情返回 `publishable` 供前端展示是否可发布。
 - `npm run test:mainline` 用于验证“流程治理 -> 字段台账 -> 主数据对象 -> 权限 -> 导入导出”主线，详见 `docs/plans/流程治理字段台账主线稳定性检查.md`。
 - 不直接运行会删除共享数据库的旧式测试逻辑。
 - `seed-demo-data.js` 和 `setup-mdm-project-users.js` 需要显式环境变量才可运行。

@@ -55,6 +55,7 @@
 | 基线 | Baseline | 某一时刻冻结的产品结构快照，用于控制 EBOM/PBOM/MBOM 下发和变更的参照点 |
 | 配置有效性 | Configuration Effectiveness | 定义某个零部件版本在什么条件下适用（时间、批次、架次、订单），是版本控制的关键维度 |
 | 成熟度 | Maturity | 设计/工艺/制造对象的就绪程度标识，如设计中→审批中→冻结→发布，不等同于版本号 |
+| 证据状态 | Evidence Status | 增量流程证据的核验状态，使用 `verified`、`pending_review`、`source_missing`、`ocr_extracted_not_confirmed`、`review_only` 等英文枚举；发布准入只认 `verified` |
 | 关键件 | Critical Part | 对产品安全、功能或性能有重大影响的零部件，需重点控制其版本、状态和变更 |
 | 工步 | Work Step | 工序下的最小操作单元，定义具体的加工动作和技术参数 |
 | 工位 | Work Station | 生产现场的作业位置，关联设备、工装和人员，用于组织工序执行 |

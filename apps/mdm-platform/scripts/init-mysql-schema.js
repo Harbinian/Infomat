@@ -5,6 +5,7 @@ const { mdmMysqlSchemaSql, splitSqlStatements } = require('../server/mysqlSchema
 const { seedDefaultTerminologyTermTypes } = require('../server/terminologyMysqlRepository');
 const { migrateLegacyIdentityToPersonIdentity } = require('../server/identityMysqlRepository');
 const { ensureProcessGovernanceCloseGateSchema } = require('../server/processGovernanceMysqlRepository');
+const { ensureProcessDesignEvidenceStatusSchema } = require('../server/routes/processDesignMysql');
 
 async function main() {
   const config = mysqlConfigFromEnv();
@@ -14,6 +15,7 @@ async function main() {
       await pool.execute(statement);
     }
     await ensureProcessGovernanceCloseGateSchema(pool);
+    await ensureProcessDesignEvidenceStatusSchema(pool);
     await migrateLegacyIdentityToPersonIdentity(pool);
     await seedDefaultTerminologyTermTypes(pool);
     for (const migrationKey of [
@@ -26,7 +28,8 @@ async function main() {
       '2026-06-18-mapping-approval-domain',
       '2026-06-18-conflict-todo-domain',
       '2026-06-18-version-activity-domain',
-      '2026-07-01-process-governance-close-gate-fingerprints'
+      '2026-07-01-process-governance-close-gate-fingerprints',
+      '2026-07-01-process-design-evidence-status'
     ]) {
       await pool.execute(
         `INSERT INTO schema_migrations (migration_key)

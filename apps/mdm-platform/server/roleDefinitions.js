@@ -28,6 +28,7 @@ const BASE_PERMISSIONS = {
   processGovernanceViewDepartment: perm('process_governance:view_department', 'process_governance', 'view_department', '查看本部门流程治理材料', { defaultScope: 'department' }),
   processGovernanceSubmit: perm('process_governance:submit', 'process_governance', 'submit', '提交流程治理材料', { defaultScope: 'department' }),
   processGovernanceReview: perm('process_governance:review', 'process_governance', 'review', '复核流程治理材料', { defaultScope: 'department' }),
+  processEvidenceVerify: perm('process_evidence:verify', 'process_evidence', 'verify', '核验增量流程证据状态', { defaultScope: 'department' }),
   guidanceCreate: perm('guidance:create', 'guidance', 'create', '形成管理层指导意见', { defaultScope: 'global' }),
   guidanceRespond: perm('guidance:respond', 'guidance', 'respond', '响应本部门指导意见', { defaultScope: 'department' }),
   guidanceDelegate: perm('guidance:delegate', 'guidance', 'delegate', '维护指导意见响应代理授权', { isDangerous: true, defaultScope: 'department' }),
@@ -57,6 +58,7 @@ const ROLE_GUIDES = [
       BASE_PERMISSIONS.dataViewAll,
       BASE_PERMISSIONS.dashboard,
       BASE_PERMISSIONS.mappingRead,
+      BASE_PERMISSIONS.processEvidenceVerify,
       BASE_PERMISSIONS.conflictManage,
       BASE_PERMISSIONS.conflictResolve,
       BASE_PERMISSIONS.conflictEscalate,
@@ -79,6 +81,7 @@ const ROLE_GUIDES = [
       BASE_PERMISSIONS.dashboard,
       BASE_PERMISSIONS.mappingRead,
       BASE_PERMISSIONS.reviewApprove,
+      BASE_PERMISSIONS.processEvidenceVerify,
       BASE_PERMISSIONS.todosManage
     ]
   },
@@ -98,6 +101,7 @@ const ROLE_GUIDES = [
       BASE_PERMISSIONS.dashboard,
       BASE_PERMISSIONS.mappingRead,
       BASE_PERMISSIONS.reviewApprove,
+      BASE_PERMISSIONS.processEvidenceVerify,
       BASE_PERMISSIONS.todosManage
     ]
   },
@@ -138,6 +142,7 @@ const ROLE_GUIDES = [
       BASE_PERMISSIONS.dashboard,
       BASE_PERMISSIONS.mappingRead,
       BASE_PERMISSIONS.qualityManage,
+      BASE_PERMISSIONS.processEvidenceVerify,
       BASE_PERMISSIONS.conflictManage,
       BASE_PERMISSIONS.todosManage
     ]
@@ -202,6 +207,7 @@ const ROLE_GUIDES = [
       BASE_PERMISSIONS.mappingRead,
       BASE_PERMISSIONS.reviewApprove,
       BASE_PERMISSIONS.processGovernanceViewDepartment,
+      BASE_PERMISSIONS.processEvidenceVerify,
       BASE_PERMISSIONS.guidanceRespond,
       BASE_PERMISSIONS.guidanceDelegate,
       BASE_PERMISSIONS.guidanceFinalConfirm,
@@ -225,6 +231,7 @@ const ROLE_GUIDES = [
       BASE_PERMISSIONS.mappingRead,
       BASE_PERMISSIONS.reviewApprove,
       BASE_PERMISSIONS.processGovernanceReview,
+      BASE_PERMISSIONS.processEvidenceVerify,
       BASE_PERMISSIONS.conflictManage,
       BASE_PERMISSIONS.todosManage
     ]
@@ -246,6 +253,7 @@ const ROLE_GUIDES = [
       BASE_PERMISSIONS.dashboard,
       BASE_PERMISSIONS.mappingRead,
       BASE_PERMISSIONS.rbacManage,
+      BASE_PERMISSIONS.processEvidenceVerify,
       BASE_PERMISSIONS.accountManage,
       BASE_PERMISSIONS.personManage,
       BASE_PERMISSIONS.positionManage,
