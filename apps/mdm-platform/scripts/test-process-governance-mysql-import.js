@@ -13,6 +13,17 @@ async function main() {
   const a1MarkdownPath = path.join(__dirname, 'fixtures', 'process-governance-a1.md');
   const bundle = loadProcessGovernanceMysqlBundle(sourceJsonPath, {
     a1MarkdownPaths: [a1MarkdownPath],
+    qualityFindings: [
+      {
+        severity: 'WARN',
+        area: 'source',
+        source_file: 'docs/norms/经营发展部部门-能力-流程-系统映射关系.md',
+        source_line: 32,
+        message: '来源条款待复核',
+        suggestion: '回到制度或表单源文件确认',
+        dept_name: '经营发展部'
+      }
+    ],
     importedBy: 9,
     note: 'mysql import test'
   });
@@ -53,6 +64,11 @@ async function main() {
   assert.strictEqual(bundle.mdmRequirements[0].master_data_object, '客户订单');
   assert.strictEqual(bundle.evidenceRefs.length, 3);
   assert.deepStrictEqual(bundle.evidenceRefs.map(item => item.ref_type), ['L3', 'A1', 'MDM']);
+  assert.strictEqual(bundle.qualityFindings.length, 1);
+  assert.strictEqual(bundle.qualityFindings[0].finding_key.length, 64);
+  assert.strictEqual(bundle.mappingTodos.length, 2);
+  assert.deepStrictEqual(bundle.mappingTodos.map(item => item.todo_type), ['verification', 'cross_dept']);
+  assert.ok(bundle.mappingTodos.every(item => item.todo_key), 'mapping todos should expose stable keys for fingerprint import');
 
   const repo = {
     initSchemaCalls: 0,
@@ -69,6 +85,7 @@ async function main() {
     repository: repo,
     sourceJsonPath,
     a1MarkdownPaths: [a1MarkdownPath],
+    qualityFindings: bundle.qualityFindings,
     importedBy: 9,
     note: 'mysql import test'
   });
@@ -78,6 +95,8 @@ async function main() {
   assert.strictEqual(repo.replacedBundle.sourceFiles.length, 2);
   assert.strictEqual(repo.replacedBundle.mdmRequirements.length, 1);
   assert.strictEqual(repo.replacedBundle.evidenceRefs.length, 3);
+  assert.strictEqual(repo.replacedBundle.qualityFindings.length, 1);
+  assert.strictEqual(repo.replacedBundle.mappingTodos.length, 2);
   assert.strictEqual(result.snapshot_id, 42);
   assert.strictEqual(result.bundle.nodes.length, bundle.nodes.length);
 
@@ -108,6 +127,7 @@ async function main() {
   const cliSource = fs.readFileSync(path.join(__dirname, 'import-process-governance-mysql.js'), 'utf8');
   assert.ok(cliSource.includes('mysql2/promise'), 'MySQL import CLI should use mysql2');
   assert.ok(cliSource.includes('--a1-source'), 'MySQL import CLI should accept A1 markdown sources');
+  assert.ok(cliSource.includes('--quality-findings'), 'MySQL import CLI should accept quality finding sources');
   assert.ok(!cliSource.includes("require('../server/db')"), 'MySQL import CLI must not load SQLite db');
   assert.ok(!cliSource.includes('MDM_DB_PATH'), 'MySQL import CLI must not use MDM_DB_PATH');
 

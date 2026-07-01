@@ -510,6 +510,7 @@ CREATE TABLE IF NOT EXISTS process_governance_quality_findings (
   suggestion TEXT NULL,
   dept_name VARCHAR(128) NULL,
   finding_key VARCHAR(160) NOT NULL,
+  fingerprint VARCHAR(64) NULL,
   imported_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uq_process_quality_findings_key (snapshot_id, finding_key),
   INDEX idx_process_quality_findings_snapshot (snapshot_id),
@@ -590,6 +591,7 @@ CREATE TABLE IF NOT EXISTS process_mapping_todos (
   source_line INT NULL,
   message TEXT NOT NULL,
   suggestion TEXT NULL,
+  fingerprint VARCHAR(64) NULL,
   status VARCHAR(32) NOT NULL DEFAULT 'open',
   priority VARCHAR(16) NOT NULL DEFAULT 'medium',
   owner_user_id BIGINT NULL,
@@ -616,6 +618,16 @@ CREATE TABLE IF NOT EXISTS process_mapping_todos (
     REFERENCES process_governance_snapshots(id) ON DELETE RESTRICT,
   CONSTRAINT fk_process_mapping_todos_latest_snapshot FOREIGN KEY (latest_snapshot_id)
     REFERENCES process_governance_snapshots(id) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS process_import_fingerprints (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  import_batch_id VARCHAR(64) NOT NULL,
+  scope ENUM('quality','mapping') NOT NULL,
+  fingerprint VARCHAR(64) NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_batch (import_batch_id),
+  INDEX idx_fp (scope, fingerprint)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS process_mapping_todo_events (
