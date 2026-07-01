@@ -112,6 +112,10 @@ assert.ok(html.includes('/api/process-design/drafts'), 'process governance shoul
 ].forEach(needle => assert.ok(html.includes(needle), `process design frontend should include ${needle}`));
 assert.ok(html.includes('id="pgDesignProcessForm"'), 'document structured output should use a process detail form before behavior entry');
 assert.ok(html.includes('id="pgDesignStepProcessSelect"'), 'business behavior entry should choose the process it belongs to');
+assert.ok(html.includes('id="pgDesignTermList"'), 'term entry should show an inline detail list so users can add more than one term');
+assert.ok(html.includes('id="pgDesignProcessList"'), 'process entry should show an inline detail list so one document can contain multiple processes');
+assert.ok(html.includes('id="pgDesignBehaviorList"'), 'behavior entry should show an inline detail list so each process can contain multiple behaviors');
+assert.ok(html.includes('function renderProcessDesignInlineLists'), 'process design should refresh inline detail lists after every save');
 assert.ok(html.includes('id="pgDesignProcessType"') && html.includes('<select id="pgDesignProcessType"'), 'process type should be an enum select');
 assert.ok(html.includes('<select id="pgDesignTableFieldType"') && html.includes('<select id="pgDesignFieldType"'), 'field type inputs should be enum selects');
 assert.ok(html.includes('<select id="pgDesignEvidenceType"'), 'evidence type should be an enum select');
