@@ -1,4 +1,6 @@
 const express = require('express');
+const fs = require('fs');
+const path = require('path');
 const mysql = require('mysql2/promise');
 const router = express.Router();
 const {
@@ -22,6 +24,7 @@ const EDITABLE_DRAFT_STATUSES = new Set(['draft', 'needs_changes']);
 const BASIS_TYPES = new Set(['现场实际', '制度 / 规程', '表单 / 台账', '会议 / 访谈', '暂无证据']);
 const FIELD_TYPES = new Set(['文本', '数字', '日期', '金额', '枚举', '布尔', '部门', '人员', '附件']);
 const EVIDENCE_TYPES = new Set(['制度条款', '表单样例', '访谈记录', '会议纪要', '流程图', '台账记录', '暂无证据']);
+const REPO_ROOT = path.resolve(__dirname, '../../../..');
 
 let repositoryFactory = null;
 let repositoryPromise = null;
@@ -112,6 +115,127 @@ function jsonArray(value) {
   if (Array.isArray(value)) return JSON.stringify(value.map(item => text(item)).filter(Boolean));
   const single = text(value);
   return single ? JSON.stringify([single]) : JSON.stringify([]);
+}
+
+function splitMarkdownRow(line) {
+  return String(line || '')
+    .trim()
+    .replace(/^\|/, '')
+    .replace(/\|$/, '')
+    .split('|')
+    .map(cell => cell.trim());
+}
+
+function isMarkdownSeparator(cells) {
+  return (cells || []).length > 0 && cells.every(cell => /^:?-{2,}:?$/.test(String(cell || '').replace(/\s/g, '')));
+}
+
+function headerIndex(header, names) {
+  return header.findIndex(cell => names.some(name => String(cell || '').includes(name)));
+}
+
+function parseProcessTaxonomyMarkdown(markdown, sourceFile) {
+  const rows = [];
+  const lines = String(markdown || '').split(/\r?\n/);
+  let header = null;
+  let indexes = null;
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith('|')) {
+      if (header && rows.length) break;
+      continue;
+    }
+    const cells = splitMarkdownRow(trimmed);
+    if (!header && cells.some(cell => cell.includes('能力域')) && cells.some(cell => cell.includes('业务能力'))) {
+      header = cells;
+      indexes = {
+        dept: headerIndex(header, ['部门（D1）', '部门']),
+        l1: headerIndex(header, ['能力域（L1）', '能力域']),
+        l2: headerIndex(header, ['业务能力（L2）', '业务能力']),
+        l3: headerIndex(header, ['业务流程（L3）', '业务流程'])
+      };
+      continue;
+    }
+    if (!header || !indexes) continue;
+    if (isMarkdownSeparator(cells)) continue;
+    const l1Name = text(cells[indexes.l1]);
+    const l2Name = text(cells[indexes.l2]);
+    if (!l1Name || !l2Name || l1Name.includes('能力域') || l2Name.includes('业务能力')) continue;
+    rows.push({
+      l1_name: l1Name,
+      l2_name: l2Name,
+      l3_name: text(cells[indexes.l3]),
+      department_name: text(cells[indexes.dept]),
+      source_file: sourceFile || null
+    });
+  }
+  return rows;
+}
+
+function buildProcessTaxonomyPayload(rows) {
+  const byPair = new Map();
+  for (const row of rows || []) {
+    const l1Name = text(row.l1_name);
+    const l2Name = text(row.l2_name);
+    if (!l1Name || !l2Name) continue;
+    const key = `${l1Name}\n${l2Name}`;
+    if (!byPair.has(key)) {
+      byPair.set(key, {
+        l1_name: l1Name,
+        l2_name: l2Name,
+        l3_count: 0,
+        departments: new Set(),
+        source_files: new Set()
+      });
+    }
+    const item = byPair.get(key);
+    if (text(row.l3_name)) item.l3_count += 1;
+    if (text(row.department_name)) item.departments.add(text(row.department_name));
+    if (text(row.source_file)) item.source_files.add(text(row.source_file));
+  }
+  const items = [...byPair.values()]
+    .map(item => ({
+      l1_name: item.l1_name,
+      l2_name: item.l2_name,
+      l3_count: item.l3_count,
+      departments: [...item.departments].sort((left, right) => left.localeCompare(right, 'zh-CN')),
+      source_files: [...item.source_files].sort((left, right) => left.localeCompare(right, 'zh-CN'))
+    }))
+    .sort((left, right) => (left.l1_name + left.l2_name).localeCompare(right.l1_name + right.l2_name, 'zh-CN'));
+  const l1Options = [...new Set(items.map(item => item.l1_name))]
+    .sort((left, right) => left.localeCompare(right, 'zh-CN'));
+  return { items, l1Options };
+}
+
+function readProcessTaxonomyFromNorms() {
+  const normsDir = path.join(REPO_ROOT, 'docs', 'norms');
+  if (!fs.existsSync(normsDir)) return buildProcessTaxonomyPayload([]);
+  const rows = [];
+  for (const entry of fs.readdirSync(normsDir, { withFileTypes: true })) {
+    if (!entry.isFile() || !entry.name.endsWith('部门-能力-流程-系统映射关系.md')) continue;
+    const relativePath = path.posix.join('docs/norms', entry.name);
+    const fullPath = path.join(normsDir, entry.name);
+    rows.push(...parseProcessTaxonomyMarkdown(fs.readFileSync(fullPath, 'utf8'), relativePath));
+  }
+  return buildProcessTaxonomyPayload(rows);
+}
+
+async function appendProcessTaxonomyValidation(repo, body, details) {
+  const l1Name = text(body && body.l1_name);
+  const l2Name = text(body && body.l2_name);
+  if (!l1Name || !l2Name) return;
+  const taxonomy = typeof repo.listProcessTaxonomy === 'function'
+    ? await repo.listProcessTaxonomy()
+    : buildProcessTaxonomyPayload([]);
+  const items = taxonomy.items || [];
+  if (!items.length) {
+    details.push({ field: 'l1_name', message: '请先导入已有流程映射关系后再选择 L1/L2' });
+    return;
+  }
+  const matched = items.some(item => text(item.l1_name) === l1Name && text(item.l2_name) === l2Name);
+  if (!matched) {
+    details.push({ field: 'l2_name', message: 'L1/L2 必须从已有映射关系中选择，暂不开放新增能力域或业务能力' });
+  }
 }
 
 function publicDraft(row) {
@@ -710,6 +834,9 @@ function makeProcessDesignMysqlRepository(pool) {
   }
 
   return {
+    async listProcessTaxonomy() {
+      return readProcessTaxonomyFromNorms();
+    },
     async summary(departmentIds) {
       const params = [];
       let whereSql = 'WHERE 1=1';
@@ -1475,6 +1602,11 @@ router.get('/summary', requireAuth, (req, res) => runAction(res, async () => {
   res.json(await repo.summary(deptIds));
 }));
 
+router.get('/process-taxonomy', requireAuth, (req, res) => runAction(res, async () => {
+  const repo = await repository();
+  res.json(await repo.listProcessTaxonomy());
+}));
+
 router.post('/drafts', requireAuth, (req, res) => runAction(res, async () => {
   const repo = await repository();
   const roleCodes = await currentRoleCodes(req);
@@ -1567,9 +1699,10 @@ router.post('/drafts/:id/processes', requireAuth, (req, res) => runAction(res, a
   const body = req.body || {};
   const details = [];
   if (!text(body.l1_name)) details.push({ field: 'l1_name', message: 'L1 能力不能为空' });
-  if (!text(body.l2_name)) details.push({ field: 'l2_name', message: 'L2 流程域不能为空' });
+  if (!text(body.l2_name)) details.push({ field: 'l2_name', message: 'L2 业务能力不能为空' });
   if (!text(body.l3_name)) details.push({ field: 'l3_name', message: 'L3 流程不能为空' });
   if (text(body.process_type) && !PROCESS_TYPES.has(text(body.process_type))) details.push({ field: 'process_type', message: '流程类型必须从系统选项中选择' });
+  await appendProcessTaxonomyValidation(repo, body, details);
   if (details.length) throw httpError(422, '校验失败', { error: '校验失败', details });
   res.status(201).json(await repo.createProcess(draft, body, req.session.userId));
 }));
@@ -1581,9 +1714,10 @@ router.put('/processes/:id', requireAuth, (req, res) => runAction(res, async () 
   const body = req.body || {};
   const details = [];
   if (!text(body.l1_name)) details.push({ field: 'l1_name', message: 'L1 能力不能为空' });
-  if (!text(body.l2_name)) details.push({ field: 'l2_name', message: 'L2 流程域不能为空' });
+  if (!text(body.l2_name)) details.push({ field: 'l2_name', message: 'L2 业务能力不能为空' });
   if (!text(body.l3_name)) details.push({ field: 'l3_name', message: 'L3 流程不能为空' });
   if (text(body.process_type) && !PROCESS_TYPES.has(text(body.process_type))) details.push({ field: 'process_type', message: '流程类型必须从系统选项中选择' });
+  await appendProcessTaxonomyValidation(repo, body, details);
   if (details.length) throw httpError(422, '校验失败', { error: '校验失败', details });
   res.json(await repo.updateProcess(draft, Number(req.params.id), body, req.session.userId));
 }));

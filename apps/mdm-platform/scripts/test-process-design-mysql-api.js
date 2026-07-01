@@ -58,7 +58,11 @@ function makeFakeRepository() {
     field: null,
     evidence: null,
     reviewTask: null,
-    version: null
+    version: null,
+    taxonomy: [
+      { l1_name: '市场开发与客户合同治理', l2_name: '客户合同评审管理', l3_count: 3 },
+      { l1_name: '产品设计全生命周期管理', l2_name: '设计更改管理', l3_count: 2 }
+    ]
   };
   const calls = [];
   function outcome() {
@@ -94,6 +98,13 @@ function makeFakeRepository() {
     async departmentExists(departmentId) {
       calls.push('departmentExists');
       return [1, 2].includes(Number(departmentId));
+    },
+    async listProcessTaxonomy() {
+      calls.push('listProcessTaxonomy');
+      return {
+        items: state.taxonomy,
+        l1Options: ['市场开发与客户合同治理', '产品设计全生命周期管理']
+      };
     },
     async createDraft(body, actorUserId, targetDeptId) {
       calls.push('createDraft');
@@ -545,9 +556,16 @@ async function main() {
     const detail = await request(baseUrl, 'submitter', '/api/process-design/drafts/101');
     assert.strictEqual(detail.res.status, 200);
 
+    const taxonomy = await request(baseUrl, 'submitter', '/api/process-design/process-taxonomy');
+    assert.strictEqual(taxonomy.res.status, 200, JSON.stringify(taxonomy.body));
+    assert.deepStrictEqual(
+      taxonomy.body.items.map(item => `${item.l1_name}/${item.l2_name}`),
+      ['市场开发与客户合同治理/客户合同评审管理', '产品设计全生命周期管理/设计更改管理']
+    );
+
     const classification = await request(baseUrl, 'submitter', '/api/process-design/drafts/101', {
       method: 'PUT',
-      body: JSON.stringify({ l1_name: '经营管理', l1_status: 'confirmed', l2_name: '客户管理', l2_status: 'confirmed', l3_name: '客户需求变更处理' })
+      body: JSON.stringify({ l1_name: '市场开发与客户合同治理', l1_status: 'confirmed', l2_name: '客户合同评审管理', l2_status: 'confirmed', l3_name: '客户需求变更处理' })
     });
     assert.strictEqual(classification.res.status, 200, JSON.stringify(classification.body));
 
@@ -586,18 +604,38 @@ async function main() {
     assert.strictEqual(termDelete.res.status, 200, JSON.stringify(termDelete.body));
     assert.strictEqual(termDelete.body.deleted, true);
 
+    const invalidProcess = await request(baseUrl, 'submitter', '/api/process-design/drafts/101/processes', {
+      method: 'POST',
+      body: JSON.stringify({ l1_name: '自定义能力域', l2_name: '自定义业务能力', l3_name: '不应保存的流程', process_type: 'new' })
+    });
+    assert.strictEqual(invalidProcess.res.status, 422, JSON.stringify(invalidProcess.body));
+    assert.ok(JSON.stringify(invalidProcess.body).includes('已有映射关系'), 'process L1/L2 must come from existing mapping relationships');
+
     const processA = await request(baseUrl, 'submitter', '/api/process-design/drafts/101/processes', {
       method: 'POST',
-      body: JSON.stringify({ l1_name: '经营管理', l2_name: '客户管理', l3_name: '客户需求变更处理', process_type: 'new' })
+      body: JSON.stringify({ l1_name: '市场开发与客户合同治理', l2_name: '客户合同评审管理', l3_name: '客户需求变更处理', process_type: 'new' })
     });
     assert.strictEqual(processA.res.status, 201, JSON.stringify(processA.body));
     assert.strictEqual(processA.body.id, 181);
 
+    const invalidProcessUpdate = await request(baseUrl, 'submitter', '/api/process-design/processes/181', {
+      method: 'PUT',
+      body: JSON.stringify({
+        l1_name: '市场开发与客户合同治理',
+        l2_name: '新增业务能力',
+        l3_name: '客户需求变更受理',
+        process_code: 'L3-SAL-001',
+        process_type: 'adjustment'
+      })
+    });
+    assert.strictEqual(invalidProcessUpdate.res.status, 422, JSON.stringify(invalidProcessUpdate.body));
+    assert.ok(JSON.stringify(invalidProcessUpdate.body).includes('已有映射关系'), 'process update should reject new L1/L2 pairs');
+
     const processUpdate = await request(baseUrl, 'submitter', '/api/process-design/processes/181', {
       method: 'PUT',
       body: JSON.stringify({
-        l1_name: '经营管理',
-        l2_name: '客户需求管理',
+        l1_name: '市场开发与客户合同治理',
+        l2_name: '客户合同评审管理',
         l3_name: '客户需求变更受理',
         process_code: 'L3-SAL-001',
         process_type: 'adjustment',
@@ -609,13 +647,13 @@ async function main() {
 
     const processB = await request(baseUrl, 'submitter', '/api/process-design/drafts/101/processes', {
       method: 'POST',
-      body: JSON.stringify({ l1_name: '工程管理', l2_name: '技术评审', l3_name: '技术影响评估', process_type: 'handoff' })
+      body: JSON.stringify({ l1_name: '产品设计全生命周期管理', l2_name: '设计更改管理', l3_name: '技术影响评估', process_type: 'handoff' })
     });
     assert.strictEqual(processB.res.status, 201, JSON.stringify(processB.body));
 
     const processC = await request(baseUrl, 'submitter', '/api/process-design/drafts/101/processes', {
       method: 'POST',
-      body: JSON.stringify({ l1_name: '经营管理', l2_name: '临时流程域', l3_name: '录错流程', process_type: 'new' })
+      body: JSON.stringify({ l1_name: '市场开发与客户合同治理', l2_name: '客户合同评审管理', l3_name: '录错流程', process_type: 'new' })
     });
     assert.strictEqual(processC.res.status, 201, JSON.stringify(processC.body));
     const emptyProcessDelete = await request(baseUrl, 'submitter', '/api/process-design/processes/183', { method: 'DELETE' });

@@ -1741,13 +1741,14 @@
               <div class="empty">选择或保存草稿后继续补制度、术语、业务行为、附表和证据。</div>
             </div>
             <div class="process-design-form process-design-step-panel pg-hidden" data-process-design-step-panel="behavior" id="pgDesignProcessForm">
-              <label>L1 能力<input id="pgDesignProcessL1Name" placeholder="例如：经营管理"></label>
-              <label>L2 流程域<input id="pgDesignProcessL2Name" placeholder="例如：客户管理"></label>
+              <label>L1 能力域<select id="pgDesignProcessL1Name"><option value="">正在读取已有能力域</option></select></label>
+              <label>L2 业务能力<select id="pgDesignProcessL2Name"><option value="">请先选择 L1 能力域</option></select></label>
               <label>L3 流程<input id="pgDesignProcessL3Name" placeholder="例如：客户需求变更处理"></label>
               <label>流程类型<select id="pgDesignProcessType"><option value="new">新增流程</option><option value="inherit">承继流程</option><option value="handoff">跨部门承接流程</option><option value="adjustment">调整流程</option></select></label>
               <label>流程编号<input id="pgDesignProcessCode" placeholder="如已有编号可填写"></label>
               <label class="wide">流程说明<textarea id="pgDesignProcessDescription" rows="2" placeholder="说明这个流程对应的业务边界"></textarea></label>
             </div>
+            <div class="notice process-design-step-panel pg-hidden" data-process-design-step-panel="behavior" data-process-design-taxonomy-notice>暂不开放新增能力域或业务能力；请从已有映射关系中选择 L1/L2。</div>
             <div class="process-design-actions process-design-step-panel pg-hidden" data-process-design-step-panel="behavior">
               <button type="button" class="btn secondary" id="saveProcessDesignProcessBtn">保存流程</button>
             </div>
@@ -2253,7 +2254,7 @@
 
   <script>
     // ===== State & Utilities =====
-    const state = { user:null, departments:[], capabilities:[], processes:[], termProcesses:[], termTypes:[], mappings:[], dataMapContexts:[], dataMapFields:[], todos:[], conflicts:[], terms:[], currentRoute:null, currentView:'roleWorkbench', activeMapping:null, activeConflict:null, pollTimer:null, isEditing:false, activeReview:null, activeCapReview:null, activeProcReview:null, pgSelectedDept:'', pgEvidenceFocus:null, pgActiveGuidance:null, pgActiveGovernanceObject:null, pgSourceCoverageData:null, pgTaskSummary:null, pgAssignablePersons:null, pgViewCache:{}, pgViewRequests:{}, pgWorkspace:'existing', processDesign:{ summary:null, draft:null, activeStep:'draft', editing:null }, processGovernanceRenderRequestId:0, pageWorkflow:null, pageWorkflowRequestId:0, roleWorkbench:{ mode:'todo', data:null, selectedNode:null }, activity:{ roleWorkbench:null, dashboard:null, dashboardUsers:[] } };
+    const state = { user:null, departments:[], capabilities:[], processes:[], termProcesses:[], termTypes:[], mappings:[], dataMapContexts:[], dataMapFields:[], todos:[], conflicts:[], terms:[], currentRoute:null, currentView:'roleWorkbench', activeMapping:null, activeConflict:null, pollTimer:null, isEditing:false, activeReview:null, activeCapReview:null, activeProcReview:null, pgSelectedDept:'', pgEvidenceFocus:null, pgActiveGuidance:null, pgActiveGovernanceObject:null, pgSourceCoverageData:null, pgTaskSummary:null, pgAssignablePersons:null, pgViewCache:{}, pgViewRequests:{}, pgWorkspace:'existing', processDesign:{ summary:null, draft:null, activeStep:'draft', editing:null, taxonomy:null, taxonomyLoaded:false, taxonomyError:null }, processGovernanceRenderRequestId:0, pageWorkflow:null, pageWorkflowRequestId:0, roleWorkbench:{ mode:'todo', data:null, selectedNode:null }, activity:{ roleWorkbench:null, dashboard:null, dashboardUsers:[] } };
     const SOURCE_COVERAGE_VISIBLE_LIMIT = 20;
     const PROCESS_GOVERNANCE_QUALITY_VISIBLE_LIMIT = 80;
     const PROCESS_GOVERNANCE_SUBTABS = [
@@ -2441,9 +2442,92 @@
       renderProcessDesignStepProgress();
     }
 
+    function processDesignTaxonomyItems() {
+      var taxonomy = state.processDesign && state.processDesign.taxonomy || {};
+      return Array.isArray(taxonomy.items) ? taxonomy.items : [];
+    }
+
+    function uniqueProcessDesignTaxonomyValues(rows, field) {
+      return Array.from(new Set((rows || []).map(function(row) {
+        return String(row[field] || '').trim();
+      }).filter(Boolean))).sort(function(left, right) { return left.localeCompare(right, 'zh-CN'); });
+    }
+
+    function renderProcessDesignTaxonomyOptions(selectedL1, selectedL2) {
+      var items = processDesignTaxonomyItems();
+      var l1Select = $('pgDesignProcessL1Name');
+      var l2Select = $('pgDesignProcessL2Name');
+      var notice = document.querySelector('[data-process-design-taxonomy-notice]');
+      var l1Options = state.processDesign && state.processDesign.taxonomy && state.processDesign.taxonomy.l1Options || uniqueProcessDesignTaxonomyValues(items, 'l1_name');
+      selectedL1 = String(selectedL1 || '').trim();
+      selectedL2 = String(selectedL2 || '').trim();
+      if (notice) {
+        notice.textContent = state.processDesign.taxonomyError
+          ? '暂时无法读取已有映射关系；请刷新后重试。'
+          : '暂不开放新增能力域或业务能力；请从已有映射关系中选择 L1/L2。';
+      }
+      if (l1Select) {
+        l1Select.innerHTML = '<option value="">' + (l1Options.length ? '请选择已有 L1 能力域' : '请先导入已有映射关系') + '</option>' +
+          l1Options.map(function(name) {
+            return '<option value="' + escapeHtml(name) + '">' + safeText(name) + '</option>';
+          }).join('');
+        l1Select.disabled = !l1Options.length;
+        l1Select.value = l1Options.indexOf(selectedL1) >= 0 ? selectedL1 : '';
+      }
+      var activeL1 = l1Select ? l1Select.value : selectedL1;
+      var l2Options = activeL1 ? uniqueProcessDesignTaxonomyValues(items.filter(function(item) {
+        return String(item.l1_name || '').trim() === activeL1;
+      }), 'l2_name') : [];
+      if (l2Select) {
+        l2Select.innerHTML = '<option value="">' + (activeL1 ? '请选择已有 L2 业务能力' : '请先选择 L1 能力域') + '</option>' +
+          l2Options.map(function(name) {
+            return '<option value="' + escapeHtml(name) + '">' + safeText(name) + '</option>';
+          }).join('');
+        l2Select.disabled = !activeL1 || !l2Options.length;
+        l2Select.value = l2Options.indexOf(selectedL2) >= 0 ? selectedL2 : '';
+      }
+    }
+
+    async function loadProcessDesignTaxonomy(options) {
+      options = options || {};
+      if (state.processDesign.taxonomyLoaded && !options.force) {
+        renderProcessDesignTaxonomyOptions(
+          $('pgDesignProcessL1Name') ? $('pgDesignProcessL1Name').value : '',
+          $('pgDesignProcessL2Name') ? $('pgDesignProcessL2Name').value : ''
+        );
+        return state.processDesign.taxonomy;
+      }
+      try {
+        var taxonomy = await api('/api/process-design/process-taxonomy');
+        state.processDesign.taxonomy = taxonomy || { items: [], l1Options: [] };
+        state.processDesign.taxonomyLoaded = true;
+        state.processDesign.taxonomyError = null;
+      } catch (error) {
+        state.processDesign.taxonomy = { items: [], l1Options: [] };
+        state.processDesign.taxonomyLoaded = false;
+        state.processDesign.taxonomyError = error;
+      }
+      renderProcessDesignTaxonomyOptions();
+      return state.processDesign.taxonomy;
+    }
+
+    function assertProcessDesignTaxonomySelection() {
+      var items = processDesignTaxonomyItems();
+      var l1Name = $('pgDesignProcessL1Name') ? $('pgDesignProcessL1Name').value.trim() : '';
+      var l2Name = $('pgDesignProcessL2Name') ? $('pgDesignProcessL2Name').value.trim() : '';
+      if (!items.length) throw new Error('请先导入已有流程映射关系后再选择 L1/L2');
+      if (!l1Name) throw new Error('请选择已有 L1 能力域');
+      if (!l2Name) throw new Error('请选择已有 L2 业务能力');
+      var matched = items.some(function(item) {
+        return String(item.l1_name || '').trim() === l1Name && String(item.l2_name || '').trim() === l2Name;
+      });
+      if (!matched) throw new Error('L1/L2 必须从已有映射关系中选择，暂不开放新增能力域或业务能力');
+    }
+
     async function renderProcessDesignWorkspace(options) {
       options = options || {};
       try {
+        await loadProcessDesignTaxonomy({ force: options.force });
         var data = options.summaryData || await api('/api/process-design/summary');
         state.processDesign.summary = data;
         var summary = data.summary || {};
@@ -2575,8 +2659,7 @@
     }
 
     function resetProcessDesignProcessForm() {
-      setInputValue('pgDesignProcessL1Name', '');
-      setInputValue('pgDesignProcessL2Name', '');
+      renderProcessDesignTaxonomyOptions('', '');
       setInputValue('pgDesignProcessL3Name', '');
       setInputValue('pgDesignProcessCode', '');
       setInputValue('pgDesignProcessType', 'new');
@@ -2686,6 +2769,7 @@
     }
 
     function processDesignProcessPayload() {
+      assertProcessDesignTaxonomySelection();
       return {
         l1_name: $('pgDesignProcessL1Name') ? $('pgDesignProcessL1Name').value : '',
         l2_name: $('pgDesignProcessL2Name') ? $('pgDesignProcessL2Name').value : '',
@@ -2804,7 +2888,7 @@
         var editing = processDesignEditing('process', process.id);
         return '<div class="' + (editing ? 'process-design-list-item editing' : 'process-design-list-item') + '" data-process-design-edit="process" data-process-design-id="' + escapeHtml(process.id || '') + '">' +
           '<div><strong>' + safeText((index + 1) + '. ' + (process.l3_name || '未命名流程')) + (editing ? ' · 编辑中' : '') + '</strong><span>' +
-            safeText([process.process_code, process.l1_name, process.l2_name].filter(Boolean).join(' / ') || '能力和流程域待补') +
+            safeText([process.process_code, process.l1_name, process.l2_name].filter(Boolean).join(' / ') || '能力域和业务能力待补') +
             ' · 类型：' + safeText(process.process_type || 'new') +
             (process.description ? ' · 说明：' + safeText(process.description) : '') +
           '</span></div><div class="process-design-item-actions">' +
@@ -2999,8 +3083,7 @@
       var process = (detail.processes || []).find(function(item) { return Number(item.id) === Number(processId); });
       if (!process) return;
       state.processDesign.editing = { type: 'process', id: Number(processId) };
-      setInputValue('pgDesignProcessL1Name', process.l1_name || '');
-      setInputValue('pgDesignProcessL2Name', process.l2_name || '');
+      renderProcessDesignTaxonomyOptions(process.l1_name || '', process.l2_name || '');
       setInputValue('pgDesignProcessL3Name', process.l3_name || '');
       setInputValue('pgDesignProcessCode', process.process_code || '');
       setInputValue('pgDesignProcessType', process.process_type || 'new');
@@ -8661,6 +8744,11 @@
     if (document.getElementById('saveProcessDesignProcessBtn')) {
       document.getElementById('saveProcessDesignProcessBtn').addEventListener('click', function() {
         runPageTask(function() { return saveProcessDesignProcessFromWizard(); }, '流程保存失败');
+      });
+    }
+    if (document.getElementById('pgDesignProcessL1Name')) {
+      document.getElementById('pgDesignProcessL1Name').addEventListener('change', function(event) {
+        renderProcessDesignTaxonomyOptions(event.target.value, '');
       });
     }
     if (document.getElementById('saveProcessDesignBehaviorBtn')) {
