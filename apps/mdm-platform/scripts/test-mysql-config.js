@@ -48,6 +48,7 @@ for (const required of [
   'CREATE TABLE IF NOT EXISTS process_governance_quality_case_events',
   'CREATE TABLE IF NOT EXISTS process_mapping_records',
   'CREATE TABLE IF NOT EXISTS process_mapping_todos',
+  'CREATE TABLE IF NOT EXISTS process_import_fingerprints',
   'CREATE TABLE IF NOT EXISTS process_mapping_todo_events',
   'document_name VARCHAR(255)',
   'mapping_diff_report MEDIUMTEXT',
@@ -58,6 +59,8 @@ for (const required of [
   'risk_level VARCHAR(16) NOT NULL',
   'finding_key VARCHAR(160) NOT NULL',
   'todo_key VARCHAR(180) NOT NULL',
+  'fingerprint VARCHAR(64) NULL',
+  "scope ENUM('quality','mapping') NOT NULL",
   'issue_type VARCHAR(64)',
   'definition_status VARCHAR(64)',
   'normalized_note TEXT',
@@ -75,7 +78,8 @@ assert.ok(!schema.includes('sqlite_master'), 'MySQL schema must not use SQLite c
 assert.ok(!schema.includes('PRAGMA'), 'MySQL schema must not use SQLite PRAGMA');
 const processGovernanceStatements = splitSqlStatements(schema).filter(statement => {
   const normalized = statement.replace(/\s+/g, ' ');
-  return normalized.includes('CREATE TABLE IF NOT EXISTS process_');
+  return normalized.includes('CREATE TABLE IF NOT EXISTS process_') &&
+    !normalized.includes('CREATE TABLE IF NOT EXISTS process_design_');
 });
 assert.ok(
   processGovernanceStatements.every(statement => !statement.includes('REFERENCES users(')),
@@ -100,5 +104,6 @@ const initScript = readFileSync(path.join(__dirname, 'init-mysql-schema.js'), 'u
 assert.ok(initScript.includes('2026-06-16-process-input-baseline-review'), 'init script should record input baseline review schema migration');
 assert.ok(initScript.includes('2026-06-16-process-governance-read-model'), 'init script should record process governance read model schema migration');
 assert.ok(initScript.includes('2026-06-17-identity-rbac-read-model'), 'init script should record identity/RBAC schema migration');
+assert.ok(initScript.includes('2026-07-01-process-governance-close-gate-fingerprints'), 'init script should record process governance close gate fingerprint migration');
 
 console.log('MySQL config checks passed');

@@ -50,8 +50,8 @@
 
 | 脚本 | 作用 | 副作用 |
 |---|---|---|
-| `init-mysql-schema.js` | 初始化 MySQL 中已迁移的平台 schema，当前包含身份/RBAC、输入基线问题复核、流程治理读模型/待办、数据地图字段域、术语治理、旧映射审批、冲突治理、通用待办和平台通用审计表 | 写 MySQL，不写仓库真源 |
-| `import-process-governance-mysql.js` | 将 `docs/company-sankey-data.json` 导入 MySQL 流程治理读模型，可用 `--a1-source` 显式补充 A1 Markdown | 写 MySQL 流程治理读模型、源文件、MDM 要求、证据和交互链表，不写流程输入基线 |
+| `init-mysql-schema.js` | 初始化 MySQL 中已迁移的平台 schema，当前包含身份/RBAC、输入基线问题复核、流程治理读模型/待办、关闭指纹卡口、数据地图字段域、术语治理、旧映射审批、冲突治理、通用待办和平台通用审计表 | 写 MySQL，不写仓库真源 |
+| `import-process-governance-mysql.js` | 将 `docs/company-sankey-data.json` 导入 MySQL 流程治理读模型，可用 `--a1-source` 显式补充 A1 Markdown、用 `--quality-findings` 导入质量问题 JSON | 写 MySQL 流程治理读模型、源文件、MDM 要求、证据、交互链、质量问题、映射待办和导入指纹快照，不写流程输入基线 |
 | `smoke-process-governance-mysql.js` | 可选真实 MySQL 端到端 smoke：初始化、导入、读回 Sankey | 缺少 `MYSQL_HOST`、`MYSQL_USER`、`MYSQL_DATABASE` 时跳过；不读取 `MDM_DB_PATH` |
 | `smoke-data-map-mysql.js` | 可选真实 MySQL 端到端 smoke：初始化、写入 Data Map context、字段、黄金源并读回 | 缺少 `MYSQL_HOST`、`MYSQL_USER`、`MYSQL_DATABASE` 时跳过；不读取 `MDM_DB_PATH` |
 | `import-process-input-baseline-review-mysql.js` | 将 `artifacts/process-input-baseline-review/<run-id>` 导入 MDM 输入基线问题复核表 | 写 MySQL `process_input_baseline_review_*` 表 |
@@ -69,13 +69,14 @@
 | `sync-organization-structure.js` | 从组织真源同步部门、岗位、人员到 MDM 结构 | 写当前数据库 |
 | `sync-process-governance-org.js` | 为流程治理模块同步组织口径 | 写当前数据库 |
 | `import-process-governance.js` | 迁移过渡期导入 `docs/company-sankey-data.json` 到遗留本地库 | 写当前数据库；后续由 MySQL 导入替代 |
-| `import-process-governance-mysql.js` | 导入 `docs/company-sankey-data.json` 到 MySQL 流程治理读模型 | 写 MySQL；不读取 `MDM_DB_PATH` |
+| `import-process-governance-mysql.js` | 导入 `docs/company-sankey-data.json` 到 MySQL 流程治理读模型；支持 `--quality-findings <json>` 记录本批次质量问题指纹 | 写 MySQL；不读取 `MDM_DB_PATH` |
 | `check-process-governance.js` | 检查当前数据库中的流程治理快照 | 只读 |
 | `lib/processGovernanceImport.js` | 流程治理导入共享实现 | 被导入脚本和测试调用 |
 | `test-process-governance-mysql-repository.js` | 验证流程治理 MySQL 读模型 repository 可替换活动快照并读回 Sankey、A1、源文件、MDM 要求、证据和交互链数据 | 使用 fake MySQL pool，只读仓库；不切换现有 Express 路由 |
-| `test-process-governance-mysql-import.js` | 验证 `docs/company-sankey-data.json` 形态可转成 MySQL 读模型 bundle，并包含源文件、MDM 要求、证据和显式 A1 Markdown 数据 | 使用 fake repository，只读仓库 |
+| `test-process-governance-mysql-import.js` | 验证 `docs/company-sankey-data.json` 形态可转成 MySQL 读模型 bundle，并包含源文件、MDM 要求、证据、显式 A1 Markdown、质量问题和映射待办指纹数据 | 使用 fake repository，只读仓库 |
 | `test-process-governance-mysql-smoke.js` | 验证真实 MySQL smoke 的跳过条件和可注入执行路径 | 使用 fake pool/repository，只读仓库 |
 | `test-process-governance-sankey-mysql-api.js` | 验证 `PROCESS_GOVERNANCE_READ_MODEL=mysql` 时流程治理只读接口读取 MySQL repository | 覆盖 `/snapshots`、`/current`、`/sankey`、`/a1`、`/source-files`、`/mdm-requirements`、`/evidence`、`/chains`；使用 fake repository，默认不开启该切换 |
+| `test-process-governance-close-gate-mysql-api.js` | 验证质量问题和映射待办关闭前必须通过 MySQL 最新导入批次指纹卡口，且“不是问题”豁免必须填写原因 | 使用 fake repository 和 fake MySQL 身份 repository，不连接真实库 |
 | `test-process-design-mysql-api.js` | 验证 `PROCESS_GOVERNANCE_READ_MODEL=mysql` 时 `/api/process-design/*` 使用 MySQL 路由，不加载 `server/db.js`，并覆盖草稿、步骤、表单、字段、证据、提交、评审、发布路径 | 使用 fake process-design repository 和 fake MySQL 身份 repository，不连接真实库 |
 | `test-process-governance-issue-pool-mysql-permission-api.js` | 验证统一问题池详情、点位动作、关闭/重开和术语待办均通过 MySQL 身份、角色、部门和权限判断，越权请求不会进入写仓储；当前 `test:process-governance-issue-pool` 只纳入 MySQL/fake-repo 路径和前端入口检查 | 使用 fake issue-pool repository 和 fake MySQL 身份 repository，不连接真实库 |
 | `test-process-input-baseline-review-mysql.js` | 验证 MDM 输入基线问题复核 MySQL repository 的导入、查询和结构化决策保存 | 使用 fake MySQL pool，只读仓库 |

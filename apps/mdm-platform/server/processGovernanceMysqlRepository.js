@@ -19,6 +19,41 @@ function cleanText(value) {
   return String(value || '').replace(/<br\s*\/?>/gi, ' ').replace(/\s+/g, ' ').trim();
 }
 
+function buildIssueFingerprint(item = {}) {
+  // MySQL质量问题当前没有 finding_type/l3_key 列，使用 dept_name + finding_key + area
+  // 映射待办使用 dept_name + l3_name + a1_code + todo_type；缺失时按稳定 key 回退。
+  const parts = [
+    item.dept_code || item.dept_name || '',
+    item.l3_key || item.node_key || item.l3_name || item.finding_key || item.todo_key || '',
+    item.a1_code || '',
+    item.finding_type || item.todo_type || item.area || ''
+  ];
+  const raw = parts.map(part => String(part).trim().toLowerCase()).join('\u0001');
+  return crypto.createHash('sha256').update(raw).digest('hex');
+}
+
+function statusError(statusCode, message) {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  return error;
+}
+
+async function executeIgnoringDuplicateColumn(pool, sql) {
+  try {
+    await pool.execute(sql);
+  } catch (error) {
+    if (error && (error.code === 'ER_DUP_FIELDNAME' || /Duplicate column name/i.test(String(error.message || '')))) {
+      return;
+    }
+    throw error;
+  }
+}
+
+async function ensureProcessGovernanceCloseGateSchema(pool) {
+  await executeIgnoringDuplicateColumn(pool, 'ALTER TABLE process_governance_quality_findings ADD COLUMN fingerprint VARCHAR(64) NULL');
+  await executeIgnoringDuplicateColumn(pool, 'ALTER TABLE process_mapping_todos ADD COLUMN fingerprint VARCHAR(64) NULL');
+}
+
 function stableKey(prefix, parts) {
   const hash = crypto.createHash('sha1')
     .update(parts.map(part => cleanText(part)).join('|'))
@@ -81,6 +116,21 @@ function normalizeChainStatus(value) {
 function normalizeProcessStatus(value) {
   const status = cleanText(value);
   return ['纳入', '排除', '待复核'].includes(status) ? status : '待复核';
+}
+
+function normalizeQualitySeverity(value) {
+  const severity = cleanText(value).toUpperCase();
+  return ['BLOCK', 'WARN', 'INFO'].includes(severity) ? severity : 'WARN';
+}
+
+function normalizeMappingTodoType(value) {
+  const todoType = cleanText(value);
+  return ['dept_confirm', 'verification', 'adjustment', 'cross_dept', 'evidence'].includes(todoType) ? todoType : 'verification';
+}
+
+function normalizePriority(value, fallback = 'medium') {
+  const priority = cleanText(value).toLowerCase();
+  return ['high', 'medium', 'low'].includes(priority) ? priority : fallback;
 }
 
 function normalizeRefType(value) {
@@ -229,6 +279,55 @@ function normalizeEvidenceRef(ref) {
     citation,
     note: cleanText(ref.note || ref.description) || null
   };
+}
+
+function normalizeQualityFindingImport(item) {
+  const raw = item || {};
+  const row = {
+    severity: normalizeQualitySeverity(raw.severity),
+    area: cleanText(raw.area || 'GENERAL') || 'GENERAL',
+    source_file: cleanText(raw.source_file || raw.sourceFile || raw.file) || 'unknown',
+    source_line: Number(raw.source_line || raw.sourceLine || raw.line || 0) || null,
+    message: cleanText(raw.message) || '未命名质量问题',
+    suggestion: cleanText(raw.suggestion) || null,
+    dept_name: cleanText(raw.dept_name || raw.deptName || raw.dept) || null,
+    finding_key: cleanText(raw.finding_key || raw.findingKey) || stableKey('quality', [
+      raw.severity,
+      raw.area,
+      raw.source_file || raw.sourceFile || raw.file,
+      raw.source_line || raw.sourceLine || raw.line,
+      raw.message,
+      raw.suggestion
+    ])
+  };
+  row.fingerprint = raw.fingerprint || buildIssueFingerprint(row);
+  return row;
+}
+
+function normalizeMappingTodoImport(item) {
+  const raw = item || {};
+  const row = {
+    todo_key: cleanText(raw.todo_key || raw.todoKey) || stableKey('maptodo', [
+      raw.todo_type || raw.todoType,
+      raw.dept_name || raw.deptName || raw.source_dept || raw.sourceDept,
+      raw.target_dept_name || raw.targetDeptName || raw.target_dept || raw.targetDept,
+      raw.l3_name || raw.l3Name,
+      raw.a1_code || raw.a1Code
+    ]),
+    mapping_record_id: Number(raw.mapping_record_id || raw.mappingRecordId || 0) || null,
+    todo_type: normalizeMappingTodoType(raw.todo_type || raw.todoType),
+    dept_name: cleanText(raw.dept_name || raw.deptName || raw.source_dept || raw.sourceDept) || null,
+    target_dept_name: cleanText(raw.target_dept_name || raw.targetDeptName || raw.target_dept || raw.targetDept) || null,
+    l3_name: cleanText(raw.l3_name || raw.l3Name) || null,
+    a1_code: cleanText(raw.a1_code || raw.a1Code) || null,
+    source_file: cleanText(raw.source_file || raw.sourceFile) || null,
+    source_line: Number(raw.source_line || raw.sourceLine || 0) || null,
+    message: cleanText(raw.message) || '未命名流程映射待办',
+    suggestion: cleanText(raw.suggestion) || null,
+    priority: normalizePriority(raw.priority)
+  };
+  row.fingerprint = raw.fingerprint || buildIssueFingerprint(row);
+  return row;
 }
 
 function summarizeRisks(risks) {
@@ -397,6 +496,7 @@ function makeProcessGovernanceMysqlRepository(pool) {
       for (const statement of splitSqlStatements(mdmMysqlSchemaSql())) {
         await pool.execute(statement);
       }
+      await ensureProcessGovernanceCloseGateSchema(pool);
     },
 
     async replaceActiveReadModel(bundle = {}) {
@@ -570,7 +670,194 @@ function makeProcessGovernanceMysqlRepository(pool) {
         );
       }
 
+      const importBatchId = String(snapshotId);
+      const qualityFingerprintItems = asArray(bundle.qualityFindings || bundle.quality_findings).map(normalizeQualityFindingImport);
+      for (const finding of qualityFingerprintItems) {
+        await pool.execute(
+          `INSERT INTO process_governance_quality_findings
+            (snapshot_id, severity, area, source_file, source_line, message, suggestion, dept_name, finding_key, fingerprint)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            snapshotId,
+            finding.severity,
+            finding.area,
+            finding.source_file,
+            finding.source_line,
+            finding.message,
+            finding.suggestion,
+            finding.dept_name,
+            finding.finding_key,
+            finding.fingerprint
+          ]
+        );
+      }
+      if (qualityFingerprintItems.length) {
+        await this.recordImportFingerprints(importBatchId, 'quality', qualityFingerprintItems);
+      }
+      const mappingFingerprintItems = asArray(bundle.mappingTodos || bundle.mapping_todos).map(normalizeMappingTodoImport);
+      for (const todo of mappingFingerprintItems) {
+        const [existingRows] = await pool.execute(
+          'SELECT id, status FROM process_mapping_todos WHERE todo_key=? LIMIT 1',
+          [todo.todo_key]
+        );
+        const existing = existingRows[0] || null;
+        if (existing) {
+          await pool.execute(
+            `UPDATE process_mapping_todos
+             SET mapping_record_id=?,
+                 latest_snapshot_id=?,
+                 dept_name=?,
+                 target_dept_name=?,
+                 l3_name=?,
+                 a1_code=?,
+                 source_file=?,
+                 source_line=?,
+                 message=?,
+                 suggestion=?,
+                 fingerprint=?,
+                 priority=CASE WHEN priority IS NULL OR priority='' THEN ? ELSE priority END,
+                 updated_at=CURRENT_TIMESTAMP
+             WHERE id=?`,
+            [
+              todo.mapping_record_id,
+              snapshotId,
+              todo.dept_name,
+              todo.target_dept_name,
+              todo.l3_name,
+              todo.a1_code,
+              todo.source_file,
+              todo.source_line,
+              todo.message,
+              todo.suggestion,
+              todo.fingerprint,
+              todo.priority,
+              existing.id
+            ]
+          );
+          await this.addMappingTodoEvent(existing.id, 'import_seen', bundle.imported_by || bundle.importedBy || null, '导入再次发现该流程映射待办', {
+            snapshot_id: snapshotId,
+            previous_status: existing.status,
+            fingerprint: todo.fingerprint
+          });
+        } else {
+          const [todoResult] = await pool.execute(
+            `INSERT INTO process_mapping_todos
+              (todo_key, mapping_record_id, todo_type, first_snapshot_id, latest_snapshot_id, dept_name,
+               target_dept_name, l3_name, a1_code, source_file, source_line, message, suggestion,
+               fingerprint, status, priority)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', ?)`,
+            [
+              todo.todo_key,
+              todo.mapping_record_id,
+              todo.todo_type,
+              snapshotId,
+              snapshotId,
+              todo.dept_name,
+              todo.target_dept_name,
+              todo.l3_name,
+              todo.a1_code,
+              todo.source_file,
+              todo.source_line,
+              todo.message,
+              todo.suggestion,
+              todo.fingerprint,
+              todo.priority
+            ]
+          );
+          await this.addMappingTodoEvent(todoResult.insertId, 'import_created', bundle.imported_by || bundle.importedBy || null, '导入创建流程映射待办', {
+            snapshot_id: snapshotId,
+            todo_type: todo.todo_type,
+            fingerprint: todo.fingerprint
+          });
+        }
+      }
+      if (mappingFingerprintItems.length) {
+        await this.recordImportFingerprints(importBatchId, 'mapping', mappingFingerprintItems);
+      }
+
       return { snapshot_id: snapshotId };
+    },
+
+    async recordImportFingerprints(importBatchId, scope, items = []) {
+      const safeScope = String(scope || '').trim();
+      if (!['quality', 'mapping'].includes(safeScope)) {
+        throw new Error(`Unsupported process import fingerprint scope: ${scope}`);
+      }
+      const batchId = String(importBatchId || '').trim();
+      if (!batchId) throw new Error('Process import fingerprint batch id is required');
+      const fingerprints = [...new Set(asArray(items).map(buildIssueFingerprint).filter(Boolean))];
+      await pool.execute('DELETE FROM process_import_fingerprints WHERE import_batch_id=? AND scope=?', [batchId, safeScope]);
+      for (const fingerprint of fingerprints) {
+        await pool.execute(
+          'INSERT INTO process_import_fingerprints (import_batch_id, scope, fingerprint) VALUES (?, ?, ?)',
+          [batchId, safeScope, fingerprint]
+        );
+      }
+      return { import_batch_id: batchId, scope: safeScope, count: fingerprints.length };
+    },
+
+    async latestImportFingerprintBatch(scope) {
+      const safeScope = String(scope || '').trim();
+      if (!['quality', 'mapping'].includes(safeScope)) {
+        throw new Error(`Unsupported process import fingerprint scope: ${scope}`);
+      }
+      const [rows] = await pool.execute(
+        `SELECT import_batch_id
+         FROM process_import_fingerprints
+         WHERE scope=?
+         ORDER BY created_at DESC, id DESC
+         LIMIT 1`,
+        [safeScope]
+      );
+      return rows[0] && rows[0].import_batch_id || null;
+    },
+
+    async importFingerprintExists(importBatchId, scope, fingerprint) {
+      const [rows] = await pool.execute(
+        `SELECT 1 AS found
+         FROM process_import_fingerprints
+         WHERE import_batch_id=? AND scope=? AND fingerprint=?
+         LIMIT 1`,
+        [String(importBatchId || ''), String(scope || ''), String(fingerprint || '')]
+      );
+      return Boolean(rows[0] && rows[0].found);
+    },
+
+    async assertLatestImportResolved(scope, item, payload = {}) {
+      if (!item) throw statusError(404, '待关闭事项不存在');
+      const safeScope = String(scope || '').trim();
+      if (!['quality', 'mapping'].includes(safeScope)) {
+        throw new Error(`Unsupported process import fingerprint scope: ${scope}`);
+      }
+      const fromState = payload.from_status || item.status || '';
+      if (payload.resolution === 'not_an_issue') {
+        const reason = cleanText(payload.reason);
+        if (!reason) throw statusError(400, '说明这条核验项不是问题时，问题原因不能为空');
+        return {
+          action: 'close',
+          from_state: fromState,
+          to_state: 'closed',
+          resolution: 'not_an_issue',
+          reason,
+          actor_user_id: payload.actor_user_id || null,
+          actor_person_id: personIdFromPayload(payload, payload.actor_user_id)
+        };
+      }
+
+      const latestBatchId = await this.latestImportFingerprintBatch(safeScope);
+      if (!latestBatchId) throw statusError(409, '尚无重新导入记录，无法关闭');
+      const fingerprint = item.fingerprint || buildIssueFingerprint(item);
+      const stillExists = await this.importFingerprintExists(latestBatchId, safeScope, fingerprint);
+      if (stillExists) throw statusError(409, '该问题在最新快照中仍然存在，请回源修改源文件后重新导入');
+      return {
+        action: 'close',
+        from_state: fromState,
+        to_state: 'closed',
+        import_batch_id: latestBatchId,
+        fingerprint,
+        actor_user_id: payload.actor_user_id || null,
+        actor_person_id: personIdFromPayload(payload, payload.actor_user_id)
+      };
     },
 
     async listSnapshots() {
@@ -1045,6 +1332,7 @@ function makeProcessGovernanceMysqlRepository(pool) {
       );
       await this.addQualityCaseEvent(caseId, 'closed', payload.actor_user_id, payload.note, {
         from_status: payload.from_status,
+        ...(payload.close_gate || {}),
         actor_person_id: personIdFromPayload(payload, payload.actor_user_id)
       });
       return this.qualityCaseWithEvents(caseId);
@@ -1292,6 +1580,7 @@ function makeProcessGovernanceMysqlRepository(pool) {
       );
       await this.addMappingTodoEvent(todoId, 'closed', payload.actor_user_id, payload.note, {
         from_status: payload.from_status,
+        ...(payload.close_gate || {}),
         actor_person_id: personIdFromPayload(payload, payload.actor_user_id)
       });
       return this.mappingTodoWithEvents(todoId);
@@ -1398,5 +1687,7 @@ function makeProcessGovernanceMysqlRepository(pool) {
 }
 
 module.exports = {
+  buildIssueFingerprint,
+  ensureProcessGovernanceCloseGateSchema,
   makeProcessGovernanceMysqlRepository
 };
