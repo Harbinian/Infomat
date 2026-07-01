@@ -10,6 +10,9 @@ process.env.MDM_IDENTITY_READ_MODEL = 'mysql';
 const auth = require('../server/auth');
 const processDesignRouter = require('../server/routes/processDesignMysql');
 const { mdmMysqlSchemaSql } = require('../server/mysqlSchema');
+const { BASE_PERMISSIONS, ROLE_GUIDES } = require('../server/roleDefinitions');
+
+const VERIFIED_EVIDENCE_MESSAGE = '发布需至少 1 条已核验(verified)证据。';
 
 function listen(app) {
   return new Promise(resolve => {
@@ -50,7 +53,8 @@ function makeFakeRepository() {
     field: null,
     evidence: null,
     reviewTask: null,
-    version: null
+    version: null,
+    events: []
   };
   const calls = [];
   function outcome() {
@@ -64,12 +68,25 @@ function makeFakeRepository() {
         forms: state.form ? 1 : 0,
         fields: state.field ? 1 : 0,
         evidence: state.evidence ? 1 : 0,
-        publishableEvidence: state.evidence ? 1 : 0,
+        publishableEvidence: state.evidence && state.evidence.status === 'verified' ? 1 : 0,
+        verifiedEvidence: state.evidence && state.evidence.status === 'verified' ? 1 : 0,
         risks: 0
       }
     };
   }
+  function publishable() {
+    return Boolean(
+      state.draft &&
+      state.draft.l1_status === 'confirmed' &&
+      state.draft.l2_status === 'confirmed' &&
+      state.draft.l3_name &&
+      state.step &&
+      state.evidence &&
+      state.evidence.status === 'verified'
+    );
+  }
   return {
+    state,
     calls,
     async summary() {
       calls.push('summary');
@@ -131,8 +148,9 @@ function makeFakeRepository() {
         evidence: state.evidence ? [state.evidence] : [],
         risks: [],
         reviewTasks: state.reviewTask ? [state.reviewTask] : [],
-        events: [],
-        outcome: outcome()
+        events: state.events,
+        outcome: outcome(),
+        publishable: publishable()
       };
     },
     async updateDraft(draft, body) {
@@ -172,12 +190,18 @@ function makeFakeRepository() {
     },
     async createEvidence(draft, body, actorUserId) {
       calls.push('createEvidence');
-      state.evidence = { id: 501, draft_id: draft.id, evidence_type: body.evidence_type, description: body.description, maturity: '可支撑发布', created_by: actorUserId };
+      state.evidence = { id: 501, draft_id: draft.id, evidence_type: body.evidence_type, description: body.description, maturity: '可支撑发布', status: 'pending_review', created_by: actorUserId };
       return state.evidence;
     },
     async updateEvidence(draft, evidenceId, body) {
       calls.push('updateEvidence');
       state.evidence = { ...state.evidence, id: evidenceId, ...body };
+      if (Object.prototype.hasOwnProperty.call(body, 'status')) {
+        state.events.push({
+          event_type: 'evidence_status_change',
+          payload: { from_status: 'pending_review', to_status: body.status }
+        });
+      }
       return state.evidence;
     },
     async buildRisks() {
@@ -210,9 +234,77 @@ function makeFakeRepository() {
     },
     async publishDraft(draft) {
       calls.push('publishDraft');
+      if (!publishable()) {
+        const error = new Error(VERIFIED_EVIDENCE_MESSAGE);
+        error.statusCode = 409;
+        error.payload = { error: '校验失败', details: [VERIFIED_EVIDENCE_MESSAGE] };
+        throw error;
+      }
       state.version = { id: 701, draft_id: draft.id, version_no: 'PD-101-v1' };
       state.draft = { ...draft, status: 'published' };
+      state.events.push({
+        event_type: 'publish',
+        payload: { verified_evidence_count: 1, l1l2l3_confirmed: true, step_count: 1 }
+      });
       return { draft: state.draft, version: state.version, outcome: outcome() };
+    }
+  };
+}
+
+function makeValidationPool({ steps = [], forms = [], fieldsByForm = {}, evidence = [] } = {}) {
+  return {
+    async execute(sql, params = []) {
+      const normalized = sql.replace(/\s+/g, ' ').trim();
+      if (normalized.includes('FROM process_design_steps WHERE draft_id=?')) return [steps, undefined];
+      if (normalized.includes('FROM process_design_forms WHERE draft_id=?')) return [forms, undefined];
+      if (normalized.includes('FROM process_design_form_fields WHERE form_id=?')) return [fieldsByForm[Number(params[0])] || [], undefined];
+      if (normalized.includes('FROM process_design_evidence WHERE draft_id=?')) return [evidence, undefined];
+      throw new Error(`Unhandled validation SQL: ${normalized}`);
+    }
+  };
+}
+
+function makePublishValidationFixture(evidence) {
+  return makeValidationPool({
+    steps: [{ id: 1, output_result: '形成记录' }],
+    forms: [{ id: 2, archive_rule: '按项目归档' }],
+    fieldsByForm: {
+      2: [{ id: 3, field_type: '文本', data_object: '客户需求' }]
+    },
+    evidence
+  });
+}
+
+function makeEvidenceStatusMigrationPool() {
+  const state = {
+    migrations: new Set(),
+    rows: [
+      { id: 1, maturity: '可支撑发布', status: 'pending_review' },
+      { id: 2, maturity: '发布前需补', status: 'pending_review' },
+      { id: 3, maturity: '可支撑发布', status: 'source_missing' }
+    ],
+    backfillRuns: 0
+  };
+  return {
+    state,
+    async execute(sql, params = []) {
+      const normalized = sql.replace(/\s+/g, ' ').trim();
+      if (normalized.startsWith('ALTER TABLE process_design_evidence ADD COLUMN status')) return [[], undefined];
+      if (normalized.startsWith('SELECT migration_key FROM schema_migrations WHERE migration_key=?')) {
+        return [state.migrations.has(params[0]) ? [{ migration_key: params[0] }] : [], undefined];
+      }
+      if (normalized.startsWith("UPDATE process_design_evidence SET status='verified'")) {
+        state.backfillRuns += 1;
+        state.rows.forEach(row => {
+          if (row.status === 'pending_review' && row.maturity === '可支撑发布') row.status = 'verified';
+        });
+        return [{ affectedRows: 1 }, undefined];
+      }
+      if (normalized.startsWith('INSERT INTO schema_migrations')) {
+        state.migrations.add(params[0]);
+        return [{ affectedRows: 1 }, undefined];
+      }
+      throw new Error(`Unhandled migration SQL: ${normalized}`);
     }
   };
 }
@@ -225,10 +317,50 @@ async function main() {
   assert.ok(indexSource.includes("process.env.PROCESS_GOVERNANCE_READ_MODEL === 'mysql' ? 'processDesignMysql' : 'processDesign'"), 'server must select MySQL process design route under MySQL process governance mode');
   assert.ok(mdmMysqlSchemaSql().includes('CREATE TABLE IF NOT EXISTS process_design_drafts'), 'MySQL schema must include process design drafts');
   assert.ok(mdmMysqlSchemaSql().includes('CREATE TABLE IF NOT EXISTS process_design_versions'), 'MySQL schema must include process design versions');
+  assert.ok(
+    mdmMysqlSchemaSql().includes("status ENUM('verified','pending_review','source_missing','ocr_extracted_not_confirmed','review_only') NOT NULL DEFAULT 'pending_review'"),
+    'process_design_evidence must carry evidence status enum'
+  );
+  assert.ok(routeSource.includes("status='verified'"), 'publish gate must check evidence.status=verified');
+  assert.ok(routeSource.includes('verified_evidence_count'), 'publish event payload must include verified_evidence_count');
+  assert.ok(routeSource.includes('evidence_status_change'), 'evidence status updates must be recorded as events');
+  assert.ok(routeSource.includes('publishable'), 'draft detail must expose publishable');
+  assert.ok(BASE_PERMISSIONS.processEvidenceVerify, 'permission matrix must register process_evidence:verify');
+  assert.ok(
+    ROLE_GUIDES.find(role => role.code === 'data_quality').permissions.some(permission => permission.code === 'process_evidence:verify'),
+    'data_quality must be allowed to verify process design evidence'
+  );
+
+  const validationDraft = { id: 101, l1_name: '经营管理', l2_name: '客户管理', l3_name: '客户需求变更处理', l1_status: 'confirmed', l2_status: 'confirmed' };
+  const pendingEvidenceRepo = processDesignRouter.makeProcessDesignMysqlRepository(makePublishValidationFixture([
+    { id: 501, status: 'pending_review', maturity: '可支撑发布', source_anchor: '第3项' }
+  ]));
+  const pendingEvidenceDetails = await pendingEvidenceRepo.publishValidationDetails(validationDraft);
+  assert.ok(pendingEvidenceDetails.includes(VERIFIED_EVIDENCE_MESSAGE), 'maturity must not satisfy publish gate without verified status');
+
+  const verifiedEvidenceRepo = processDesignRouter.makeProcessDesignMysqlRepository(makePublishValidationFixture([
+    { id: 501, status: 'verified', maturity: '可提交审核', source_anchor: '第3项' }
+  ]));
+  const verifiedEvidenceDetails = await verifiedEvidenceRepo.publishValidationDetails(validationDraft);
+  assert.ok(!verifiedEvidenceDetails.includes(VERIFIED_EVIDENCE_MESSAGE), 'verified evidence must satisfy publish gate even when maturity is only guidance');
+  assert.ok(!verifiedEvidenceDetails.some(message => message.includes('可支撑发布')), 'maturity must not appear in publish blocking messages');
+
+  const unconfirmedDraftDetails = await verifiedEvidenceRepo.publishValidationDetails({ ...validationDraft, l1_status: 'needs_review' });
+  assert.ok(unconfirmedDraftDetails.some(message => message.includes('L1')), 'confirmed L1/L2 gate must remain active');
+
+  const migrationPool = makeEvidenceStatusMigrationPool();
+  await processDesignRouter.ensureProcessDesignEvidenceStatusSchema(migrationPool);
+  assert.strictEqual(migrationPool.state.rows[0].status, 'verified');
+  assert.strictEqual(migrationPool.state.rows[1].status, 'pending_review');
+  assert.strictEqual(migrationPool.state.rows[2].status, 'source_missing');
+  migrationPool.state.rows[0].status = 'pending_review';
+  await processDesignRouter.ensureProcessDesignEvidenceStatusSchema(migrationPool);
+  assert.strictEqual(migrationPool.state.rows[0].status, 'pending_review', 'repeat migration must not overwrite manual status decisions');
+  assert.strictEqual(migrationPool.state.backfillRuns, 1, 'evidence status backfill should run once per migration key');
 
   const permissionsByUser = new Map([
     [10, ['process_governance:submit']],
-    [20, ['process_governance:review']],
+    [20, ['process_governance:review', 'process_evidence:verify']],
     [99, ['admin:access']]
   ]);
   const rolesByUser = new Map([
@@ -285,6 +417,7 @@ async function main() {
 
     const detail = await request(baseUrl, 'submitter', '/api/process-design/drafts/101');
     assert.strictEqual(detail.res.status, 200);
+    assert.strictEqual(detail.body.publishable, false);
 
     const classification = await request(baseUrl, 'submitter', '/api/process-design/drafts/101', {
       method: 'PUT',
@@ -333,6 +466,7 @@ async function main() {
       body: JSON.stringify({ evidence_type: '会议纪要', description: '首次周例会确认', source_name: '周例会纪要', source_anchor: '第3项', confirmer: '业务联系人' })
     });
     assert.strictEqual(evidence.res.status, 201);
+    assert.strictEqual(evidence.body.status, 'pending_review');
 
     const evidenceUpdate = await request(baseUrl, 'submitter', '/api/process-design/evidence/501', {
       method: 'PUT',
@@ -359,12 +493,38 @@ async function main() {
     });
     assert.strictEqual(decision.res.status, 200);
 
+    const publishPendingEvidence = await request(baseUrl, 'reviewer', '/api/process-design/drafts/101/publish', {
+      method: 'POST',
+      body: JSON.stringify({ note: '发布' })
+    });
+    assert.strictEqual(publishPendingEvidence.res.status, 409);
+    assert.ok((publishPendingEvidence.body.details || []).includes(VERIFIED_EVIDENCE_MESSAGE));
+
+    const unauthorizedVerify = await request(baseUrl, 'submitter', '/api/process-design/evidence/501', {
+      method: 'PUT',
+      body: JSON.stringify({ status: 'verified' })
+    });
+    assert.strictEqual(unauthorizedVerify.res.status, 403);
+
+    const authorizedVerify = await request(baseUrl, 'reviewer', '/api/process-design/evidence/501', {
+      method: 'PUT',
+      body: JSON.stringify({ status: 'verified' })
+    });
+    assert.strictEqual(authorizedVerify.res.status, 200, JSON.stringify(authorizedVerify.body));
+    assert.strictEqual(authorizedVerify.body.status, 'verified');
+    assert.ok(fakeRepo.state.events.some(event => event.event_type === 'evidence_status_change' && event.payload.to_status === 'verified'));
+
+    const detailAfterVerify = await request(baseUrl, 'submitter', '/api/process-design/drafts/101');
+    assert.strictEqual(detailAfterVerify.res.status, 200);
+    assert.strictEqual(detailAfterVerify.body.publishable, true);
+
     const publish = await request(baseUrl, 'reviewer', '/api/process-design/drafts/101/publish', {
       method: 'POST',
       body: JSON.stringify({ note: '发布' })
     });
     assert.strictEqual(publish.res.status, 200);
     assert.strictEqual(publish.body.version.version_no, 'PD-101-v1');
+    assert.ok(fakeRepo.state.events.some(event => event.event_type === 'publish' && event.payload.verified_evidence_count >= 1));
 
     [
       'createDraft',

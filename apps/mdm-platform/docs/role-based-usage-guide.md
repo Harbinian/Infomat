@@ -333,6 +333,8 @@ draft -> submitted -> dept_reviewed -> cross_confirmed -> fields_confirmed -> fi
 6. 通过会推进到下一节点；驳回会退回草稿，并要求按字段写明原因。
 7. 终审完成后，管理员发布。
 
+发布门槛以证据状态为准：草稿必须至少有 1 条 `status='verified'` 的证据，且 L1/L2/L3 已确认、至少有 1 个实际步骤。`maturity` 保留为页面完成度提示，不再作为发布准入条件。把证据状态改为 `verified` 需要 `process_evidence:verify` 权限；草稿详情中的 `publishable` 字段可直接用于显示是否可发布。
+
 注意：第 3 步如果存在未解决的 error 字段冲突，会被自动阻断，需要先处理冲突。
 
 新增流程必须遵守两个边界：

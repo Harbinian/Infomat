@@ -50,6 +50,7 @@ for (const required of [
   'CREATE TABLE IF NOT EXISTS process_mapping_todos',
   'CREATE TABLE IF NOT EXISTS process_import_fingerprints',
   'CREATE TABLE IF NOT EXISTS process_mapping_todo_events',
+  "status ENUM('verified','pending_review','source_missing','ocr_extracted_not_confirmed','review_only') NOT NULL DEFAULT 'pending_review'",
   'document_name VARCHAR(255)',
   'mapping_diff_report MEDIUMTEXT',
   'source_label VARCHAR(512)',
@@ -105,5 +106,7 @@ assert.ok(initScript.includes('2026-06-16-process-input-baseline-review'), 'init
 assert.ok(initScript.includes('2026-06-16-process-governance-read-model'), 'init script should record process governance read model schema migration');
 assert.ok(initScript.includes('2026-06-17-identity-rbac-read-model'), 'init script should record identity/RBAC schema migration');
 assert.ok(initScript.includes('2026-07-01-process-governance-close-gate-fingerprints'), 'init script should record process governance close gate fingerprint migration');
+assert.ok(initScript.includes('ensureProcessDesignEvidenceStatusSchema'), 'init script should ensure process design evidence status migration');
+assert.ok(initScript.includes('2026-07-01-process-design-evidence-status'), 'init script should record process design evidence status migration');
 
 console.log('MySQL config checks passed');

@@ -15,6 +15,10 @@ const DEPT_CREATE_ROLES = new Set(['submitter', 'business_contact']);
 const FIELD_STATUSES = new Set(['suggested', 'business_confirmed', 'data_governed', 'published', 'retired']);
 const DRAFT_STATUSES = new Set(['draft', 'submitted', 'under_review', 'needs_changes', 'approved', 'published', 'rejected']);
 const CLASSIFICATION_STATUSES = new Set(['unclassified', 'needs_review', 'confirmed']);
+const EVIDENCE_STATUSES = new Set(['verified', 'pending_review', 'source_missing', 'ocr_extracted_not_confirmed', 'review_only']);
+const PROCESS_EVIDENCE_VERIFY_PERMISSION = 'process_evidence:verify';
+const EVIDENCE_STATUS_MIGRATION_KEY = '2026-07-01-process-design-evidence-status';
+const VERIFIED_EVIDENCE_MESSAGE = '发布需至少 1 条已核验(verified)证据。';
 
 let repositoryFactory = null;
 let repositoryPromise = null;
@@ -83,6 +87,30 @@ async function mysqlQuery(pool, sql, params = []) {
 async function mysqlRun(pool, sql, params = []) {
   const [result] = await pool.execute(sql, params);
   return result;
+}
+
+async function executeIgnoringDuplicateColumn(pool, sql) {
+  try {
+    await pool.execute(sql);
+  } catch (error) {
+    if (error && (error.code === 'ER_DUP_FIELDNAME' || /Duplicate column name/i.test(String(error.message || '')))) return;
+    throw error;
+  }
+}
+
+async function ensureProcessDesignEvidenceStatusSchema(pool) {
+  await executeIgnoringDuplicateColumn(pool, `ALTER TABLE process_design_evidence ADD COLUMN status ENUM('verified','pending_review','source_missing','ocr_extracted_not_confirmed','review_only') NOT NULL DEFAULT 'pending_review'`);
+  const [migration] = await mysqlQuery(pool, 'SELECT migration_key FROM schema_migrations WHERE migration_key=?', [EVIDENCE_STATUS_MIGRATION_KEY]);
+  if (migration) return;
+
+  // Migration fallback only: old maturity='可支撑发布' records remain publishable after migration,
+  // but this does not prove the evidence was manually verified under the new status model.
+  await mysqlRun(pool, "UPDATE process_design_evidence SET status='verified' WHERE status='pending_review' AND maturity='可支撑发布'");
+  await mysqlRun(pool, `
+    INSERT INTO schema_migrations (migration_key)
+    VALUES (?)
+    ON DUPLICATE KEY UPDATE applied_at=applied_at
+  `, [EVIDENCE_STATUS_MIGRATION_KEY]);
 }
 
 function makeProcessDesignMysqlRepository(pool) {
@@ -198,7 +226,7 @@ function makeProcessDesignMysqlRepository(pool) {
         WHERE f.draft_id=?
       `, [draftId]),
       mysqlQuery(pool, 'SELECT COUNT(*) AS count FROM process_design_evidence WHERE draft_id=?', [draftId]),
-      mysqlQuery(pool, "SELECT COUNT(*) AS count FROM process_design_evidence WHERE draft_id=? AND maturity='可支撑发布'", [draftId])
+      mysqlQuery(pool, "SELECT COUNT(*) AS count FROM process_design_evidence WHERE draft_id=? AND status='verified'", [draftId])
     ]);
     const risks = (await buildRisks(draftId)).length;
     return {
@@ -207,7 +235,29 @@ function makeProcessDesignMysqlRepository(pool) {
       fields: Number(fields.count || 0),
       evidence: Number(evidence.count || 0),
       publishableEvidence: Number(publishableEvidence.count || 0),
+      verifiedEvidence: Number(publishableEvidence.count || 0),
       risks
+    };
+  }
+
+  async function publishReadiness(draft) {
+    const [steps, evidence] = await Promise.all([
+      loadSteps(draft.id),
+      loadEvidence(draft.id)
+    ]);
+    const l1l2l3Confirmed = Boolean(
+      text(draft.l1_name) &&
+      text(draft.l2_name) &&
+      text(draft.l3_name) &&
+      draft.l1_status === 'confirmed' &&
+      draft.l2_status === 'confirmed'
+    );
+    const verifiedEvidenceCount = evidence.filter(item => item.status === 'verified').length;
+    return {
+      verifiedEvidenceCount,
+      l1l2l3Confirmed,
+      stepCount: steps.length,
+      publishable: verifiedEvidenceCount >= 1 && l1l2l3Confirmed && steps.length >= 1
     };
   }
 
@@ -230,7 +280,7 @@ function makeProcessDesignMysqlRepository(pool) {
       });
     }
     for (const evidence of await loadEvidence(draftId)) {
-      if (evidence.maturity !== '可支撑发布') risks.push({ object_type: 'evidence', object_id: evidence.id, message: '这个依据还不够支撑正式发布。', status: 'open' });
+      if (evidence.status !== 'verified') risks.push({ object_type: 'evidence', object_id: evidence.id, message: '这条证据还没有完成核验。', status: 'open' });
     }
     const stored = await mysqlQuery(pool, `
       SELECT object_type, object_id, message, status
@@ -262,7 +312,7 @@ function makeProcessDesignMysqlRepository(pool) {
     const evidence = await loadEvidence(draft.id);
     if (!evidence.length) details.push('发布前至少需要 1 条证据。');
     if (evidence.length > 0 && !evidence.some(item => text(item.source_anchor))) details.push('发布前还需补 1 条来源锚点。');
-    if (!evidence.some(item => item.maturity === '可支撑发布')) details.push('发布前至少需要 1 条可支撑发布的证据。');
+    if (!evidence.some(item => item.status === 'verified')) details.push(VERIFIED_EVIDENCE_MESSAGE);
     return Array.from(new Set(details));
   }
 
@@ -403,11 +453,13 @@ function makeProcessDesignMysqlRepository(pool) {
     loadReviewTasks,
     buildRisks,
     getCounts,
+    publishReadiness,
     publishValidationDetails,
     outcomeForDraft,
     async detail(draftId) {
       const draft = await getDraft(draftId);
       if (!draft) return null;
+      const readiness = await publishReadiness(draft);
       return {
         draft,
         steps: await loadSteps(draftId),
@@ -416,7 +468,8 @@ function makeProcessDesignMysqlRepository(pool) {
         risks: await buildRisks(draftId),
         reviewTasks: await loadReviewTasks(draftId),
         events: await loadEvents(draftId),
-        outcome: await outcomeForDraft(draft)
+        outcome: await outcomeForDraft(draft),
+        publishable: readiness.publishable
       };
     },
     async createDraft(body, actorUserId, targetDeptId, proxyDeptId) {
@@ -595,35 +648,51 @@ function makeProcessDesignMysqlRepository(pool) {
       const result = await mysqlRun(pool, `
         INSERT INTO process_design_evidence
           (draft_id, object_type, object_id, evidence_type, description, source_name, source_anchor,
-           confirmer, record_time, missing_reason, expected_provider, expected_at, maturity, created_by)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           confirmer, record_time, missing_reason, expected_provider, expected_at, maturity, status, created_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         draft.id, objectType, body.object_id ? Number(body.object_id) : draft.id,
         text(body.evidence_type), text(body.description), optionalText(body.source_name),
         optionalText(body.source_anchor), optionalText(body.confirmer), optionalText(body.record_time),
         optionalText(body.missing_reason), optionalText(body.expected_provider), optionalText(body.expected_at),
-        maturity, actorUserId
+        maturity, 'pending_review', actorUserId
       ]);
       await addEvent(draft.id, 'evidence_added', actorUserId, `已补充证据说明：${text(body.evidence_type)}`);
       return await getById('process_design_evidence', result.insertId);
     },
     async updateEvidence(draft, evidenceId, body, actorUserId) {
       const current = await getById('process_design_evidence', evidenceId);
+      if (!current) throw httpError(404, '证据不存在');
       const merged = { ...current, ...(body || {}) };
       const fields = ['object_type', 'object_id', 'evidence_type', 'description', 'source_name', 'source_anchor', 'confirmer', 'record_time', 'missing_reason', 'expected_provider', 'expected_at'];
       const sets = [];
       const params = [];
+      let nextStatus = null;
       fields.forEach(field => {
         if (Object.prototype.hasOwnProperty.call(body, field)) {
           sets.push(`${field}=?`);
           params.push(field === 'object_id' ? (body[field] ? Number(body[field]) : null) : (field === 'object_type' || field === 'evidence_type' || field === 'description' ? text(body[field]) : optionalText(body[field])));
         }
       });
+      if (Object.prototype.hasOwnProperty.call(body, 'status')) {
+        nextStatus = text(body.status);
+        if (!EVIDENCE_STATUSES.has(nextStatus)) {
+          throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'status', message: '证据状态无效' }] });
+        }
+        sets.push('status=?');
+        params.push(nextStatus);
+      }
       sets.push('maturity=?');
       params.push(evidenceMaturity(merged));
       sets.push('updated_at=CURRENT_TIMESTAMP');
       await mysqlRun(pool, `UPDATE process_design_evidence SET ${sets.join(', ')} WHERE id=?`, [...params, evidenceId]);
       await addEvent(draft.id, 'evidence_updated', actorUserId, '已更新证据说明');
+      if (nextStatus && nextStatus !== current.status) {
+        await addEvent(draft.id, 'evidence_status_change', actorUserId, '已更新证据核验状态', {
+          from_status: current.status || 'pending_review',
+          to_status: nextStatus
+        });
+      }
       return await getById('process_design_evidence', evidenceId);
     },
     async submitDraft(draft, note, actorUserId) {
@@ -661,7 +730,10 @@ function makeProcessDesignMysqlRepository(pool) {
     },
     async publishDraft(draft, note, actorUserId) {
       const details = await publishValidationDetails(draft);
-      if (details.length) throw httpError(422, '校验失败', { error: '校验失败', details });
+      if (details.length) {
+        throw httpError(details.includes(VERIFIED_EVIDENCE_MESSAGE) ? 409 : 422, '校验失败', { error: '校验失败', details });
+      }
+      const readiness = await publishReadiness(draft);
       const [countRow] = await mysqlQuery(pool, 'SELECT COUNT(*) AS count FROM process_design_versions WHERE draft_id=?', [draft.id]);
       const versionNo = `PD-${draft.id}-v${Number(countRow.count || 0) + 1}`;
       const result = await mysqlRun(pool, `
@@ -679,7 +751,12 @@ function makeProcessDesignMysqlRepository(pool) {
       `, [actorUserId, draft.id]);
       const version = await getById('process_design_versions', result.insertId);
       await projectPublishedVersionToProcessMap(await getDraft(draft.id), version);
-      await addEvent(draft.id, 'published', actorUserId, optionalText(note) || '已发布流程版本', { version_no: versionNo });
+      await addEvent(draft.id, 'publish', actorUserId, optionalText(note) || '已发布流程版本', {
+        version_no: versionNo,
+        verified_evidence_count: readiness.verifiedEvidenceCount,
+        l1l2l3_confirmed: true,
+        step_count: readiness.stepCount
+      });
       const publishedDraft = await getDraft(draft.id);
       return { draft: publishedDraft, version, outcome: await outcomeForDraft(publishedDraft) };
     }
@@ -787,6 +864,12 @@ async function assertCanReview(req, repo, draft) {
   throw httpError(403, '无权审核该流程草稿');
 }
 
+async function assertCanVerifyEvidenceStatus(req) {
+  const perms = await currentPermSet(req);
+  if (perms.has('*:*') || perms.has('admin:access') || perms.has(PROCESS_EVIDENCE_VERIFY_PERMISSION)) return;
+  throw httpError(403, '无权核验证据状态');
+}
+
 router.get('/summary', requireAuth, (req, res) => runAction(res, async () => {
   const repo = await repository();
   const roleCodes = await currentRoleCodes(req);
@@ -892,6 +975,9 @@ router.put('/evidence/:id', requireAuth, (req, res) => runAction(res, async () =
   const repo = await repository();
   const draft = await repo.getDraftByEvidence(req.params.id);
   await assertCanEditDraft(req, repo, draft);
+  if (Object.prototype.hasOwnProperty.call(req.body || {}, 'status') && text(req.body.status) === 'verified') {
+    await assertCanVerifyEvidenceStatus(req);
+  }
   res.json(await repo.updateEvidence(draft, Number(req.params.id), req.body || {}, req.session.userId));
 }));
 
@@ -940,5 +1026,6 @@ router.post('/drafts/:id/publish', requireAuth, (req, res) => runAction(res, asy
 router.setProcessDesignRepositoryFactory = setProcessDesignRepositoryFactory;
 router.resetProcessDesignRepositoryFactory = resetProcessDesignRepositoryFactory;
 router.makeProcessDesignMysqlRepository = makeProcessDesignMysqlRepository;
+router.ensureProcessDesignEvidenceStatusSchema = ensureProcessDesignEvidenceStatusSchema;
 
 module.exports = router;

@@ -902,10 +902,12 @@ CREATE TABLE IF NOT EXISTS process_design_evidence (
   expected_provider VARCHAR(255) NULL,
   expected_at VARCHAR(128) NULL,
   maturity VARCHAR(64) NOT NULL DEFAULT '可保存草稿',
+  status ENUM('verified','pending_review','source_missing','ocr_extracted_not_confirmed','review_only') NOT NULL DEFAULT 'pending_review',
   created_by BIGINT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_process_design_evidence_draft (draft_id),
+  INDEX idx_process_design_evidence_status (status),
   CHECK (object_type IN ('process','step','form','field')),
   CONSTRAINT fk_process_design_evidence_draft FOREIGN KEY (draft_id)
     REFERENCES process_design_drafts(id) ON DELETE CASCADE
