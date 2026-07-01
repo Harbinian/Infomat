@@ -722,6 +722,13 @@
     .process-design-detail-grid strong, .process-design-list-item strong { display: block; color: #233044; font-size: 13px; }
     .process-design-detail-grid span, .process-design-list-item span { display: block; margin-top: 3px; color: var(--text-muted); font-size: 12px; line-height: 1.45; }
     .process-design-mini-list { display: grid; gap: 6px; }
+    .process-design-inline-list {
+      display: grid; gap: 8px; padding: 10px; border: 1px solid #eadfd4; border-radius: 8px; background: rgba(255,253,248,0.78);
+    }
+    .process-design-inline-list h3 {
+      margin: 0; display: flex; align-items: center; justify-content: space-between; gap: 10px; color: #233044; font-size: 13px;
+    }
+    .process-design-inline-list .empty { padding: 14px; text-align: left; border: 1px dashed var(--border); border-radius: 6px; background: rgba(251,246,233,0.52); }
     .pg-section { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--border); }
     .pg-section.pg-overview-section { margin-top: 0; padding-top: 0; border-top: 0; }
     .pg-hidden { display: none !important; }
@@ -1708,6 +1715,10 @@
             <div class="process-design-actions process-design-step-panel pg-hidden" data-process-design-step-panel="terms">
               <button type="button" class="btn secondary" id="saveProcessDesignTermBtn">保存术语</button>
             </div>
+            <div class="process-design-inline-list process-design-step-panel pg-hidden" data-process-design-step-panel="terms" id="pgDesignTermList">
+              <h3>已添加术语 <span class="pg-status">0 条</span></h3>
+              <div class="empty">保存术语后会显示在这里，可继续新增下一条。</div>
+            </div>
             <div class="process-design-detail process-design-step-panel pg-hidden" data-process-design-step-panel="preview" id="pgDesignDraftDetail">
               <div class="empty">选择或保存草稿后继续补制度、术语、业务行为、附表和证据。</div>
             </div>
@@ -1721,6 +1732,10 @@
             </div>
             <div class="process-design-actions process-design-step-panel pg-hidden" data-process-design-step-panel="behavior">
               <button type="button" class="btn secondary" id="saveProcessDesignProcessBtn">保存流程</button>
+            </div>
+            <div class="process-design-inline-list process-design-step-panel pg-hidden" data-process-design-step-panel="behavior" id="pgDesignProcessList">
+              <h3>已添加流程 <span class="pg-status">0 条</span></h3>
+              <div class="empty">保存流程后会显示在这里，一个制度可以继续新增多个流程。</div>
             </div>
             <div class="process-design-form process-design-step-panel pg-hidden" data-process-design-step-panel="behavior" id="pgDesignStepForm">
               <label>所属流程<select id="pgDesignStepProcessSelect"><option value="">请先保存流程</option></select></label>
@@ -1744,6 +1759,10 @@
             </div>
             <div class="process-design-actions process-design-step-panel pg-hidden" data-process-design-step-panel="behavior">
               <button type="button" class="btn secondary" id="saveProcessDesignBehaviorDetailBtn">保存行为详情</button>
+            </div>
+            <div class="process-design-inline-list process-design-step-panel pg-hidden" data-process-design-step-panel="behavior" id="pgDesignBehaviorList">
+              <h3>已添加业务行为 <span class="pg-status">0 条</span></h3>
+              <div class="empty">保存步骤后会显示业务行为，可继续为同一流程或其它流程新增行为。</div>
             </div>
             <div class="process-design-form process-design-step-panel pg-hidden" data-process-design-step-panel="handoff" id="pgDesignHandoffForm">
               <label>跨部门行为<select id="pgDesignHandoffStepSelect"><option value="">请先保存步骤</option></select></label>
@@ -2527,6 +2546,7 @@
         })
       });
       if ($('pgDesignTermName')) $('pgDesignTermName').value = '';
+      if ($('pgDesignTermAppliesTo')) $('pgDesignTermAppliesTo').value = '';
       if ($('pgDesignTermDefinition')) $('pgDesignTermDefinition').value = '';
       showToast('术语已保存');
       await loadProcessDesignDraftDetail(draftId);
@@ -2548,6 +2568,7 @@
         })
       });
       if ($('pgDesignProcessL3Name')) $('pgDesignProcessL3Name').value = '';
+      if ($('pgDesignProcessCode')) $('pgDesignProcessCode').value = '';
       if ($('pgDesignProcessDescription')) $('pgDesignProcessDescription').value = '';
       showToast('流程已保存');
       await loadProcessDesignDraftDetail(draftId);
@@ -2593,6 +2614,47 @@
       if (current) select.value = current;
     }
 
+    function renderProcessDesignInlineList(id, title, items, renderItem, emptyText) {
+      var wrap = $(id);
+      if (!wrap) return;
+      var rows = items || [];
+      wrap.innerHTML = '<h3>' + safeText(title) + ' <span class="pg-status">' + safeText(rows.length) + ' 条</span></h3>' +
+        '<div class="process-design-mini-list">' +
+          (rows.length ? rows.map(renderItem).join('') : '<div class="empty">' + safeText(emptyText) + '</div>') +
+        '</div>';
+    }
+
+    function renderProcessDesignInlineLists(detail) {
+      detail = detail || {};
+      var terms = detail.terms || [];
+      var processes = detail.processes || [];
+      var steps = detail.steps || [];
+      renderProcessDesignInlineList('pgDesignTermList', '已添加术语', terms, function(term, index) {
+        return '<div class="process-design-list-item"><strong>' + safeText((index + 1) + '. ' + (term.term_name || '未命名术语')) + '</strong><span>' +
+          '定义：' + safeText(term.definition || '待补') +
+          (term.applies_to ? ' · 适用位置：' + safeText(term.applies_to) : '') +
+        '</span></div>';
+      }, '还没有术语。保存后可继续新增下一条。');
+      renderProcessDesignInlineList('pgDesignProcessList', '已添加流程', processes, function(process, index) {
+        return '<div class="process-design-list-item"><strong>' + safeText((index + 1) + '. ' + (process.l3_name || '未命名流程')) + '</strong><span>' +
+          safeText([process.process_code, process.l1_name, process.l2_name].filter(Boolean).join(' / ') || '能力和流程域待补') +
+          ' · 类型：' + safeText(process.process_type || 'new') +
+          (process.description ? ' · 说明：' + safeText(process.description) : '') +
+        '</span></div>';
+      }, '还没有流程。一个制度可以保存多个流程。');
+      renderProcessDesignInlineList('pgDesignBehaviorList', '已添加业务行为', steps, function(step, index) {
+        var process = processes.find(function(item) { return Number(item.id) === Number(step.process_id); }) || {};
+        var behavior = step.behaviorDetail || {};
+        return '<div class="process-design-list-item"><strong>' + safeText((index + 1) + '. ' + (step.step_name || '未命名业务行为')) + '</strong><span>' +
+          '所属流程：' + safeText(process.l3_name || '待归属') +
+          ' · 执行角色：' + safeText(step.actor_role || '待补') +
+          ' · 审批：' + safeText(behavior.requires_approval ? '是' : '否') +
+          ' · 跨部门：' + safeText(behavior.is_cross_department ? '是' : '否') +
+          ' · 输出：' + safeText(step.output_result || behavior.delivery_object || '待补') +
+        '</span></div>';
+      }, '还没有业务行为。保存步骤后可继续新增下一条。');
+    }
+
     function renderProcessDesignDraftDetail(detail) {
       detail = detail || {};
       var draft = detail.draft || detail;
@@ -2618,6 +2680,7 @@
       processDesignSelectOptions('pgDesignFieldFormSelect', forms, function(form) { return form.form_name || ('表单 #' + form.id); });
       processDesignSelectOptions('pgDesignTableFormSelect', forms, function(form) { return form.form_name || ('表单 #' + form.id); });
       processDesignSelectOptions('pgDesignTableFieldTableSelect', tables, function(table) { return (table.table_kind === 'detail' ? '明细表 · ' : '主表 · ') + (table.table_name || ('附表 #' + table.id)); });
+      renderProcessDesignInlineLists(detail);
       if ($('pgDesignProcessName')) $('pgDesignProcessName').value = draft.process_name || $('pgDesignProcessName').value || '';
       if ($('pgDesignL1Name')) $('pgDesignL1Name').value = draft.l1_name || '';
       if ($('pgDesignL2Name')) $('pgDesignL2Name').value = draft.l2_name || '';
@@ -2694,6 +2757,10 @@
           output_result: $('pgDesignStepOutputResult') ? $('pgDesignStepOutputResult').value : ''
         })
       });
+      if ($('pgDesignStepName')) $('pgDesignStepName').value = '';
+      if ($('pgDesignStepActorRole')) $('pgDesignStepActorRole').value = '';
+      if ($('pgDesignStepInputMaterials')) $('pgDesignStepInputMaterials').value = '';
+      if ($('pgDesignStepOutputResult')) $('pgDesignStepOutputResult').value = '';
       showToast('步骤已保存');
       return await loadProcessDesignDraftDetail(draftId);
     }
