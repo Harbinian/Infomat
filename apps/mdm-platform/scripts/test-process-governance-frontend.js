@@ -36,26 +36,89 @@ assert.ok(html.includes('开始确认'), 'process governance should offer plain 
 assert.ok(html.includes('pg-guidance-deferred'), 'process governance guidance controls should be visually deferred until a governance object is selected');
 assert.ok(html.includes('看本部门有哪些问题') && html.includes('确认关闭'), 'workflow guidance should still explain the existing-process closure path');
 assert.ok(html.includes('id="pgDesignWizard"'), 'document structured output should show a design wizard');
+assert.ok(
+  !html.includes('id="pgDesignProcessName"'),
+  'document structured output should not expose an internal draft name input'
+);
+assert.ok(
+  html.includes('<label>制度名称<input id="pgDesignDocumentTitle"'),
+  'document structured output should use制度名称 as the single visible document title field'
+);
+assert.ok(
+  html.indexOf('<label>制度编号<input id="pgDesignDocumentNo"') < html.indexOf('<label>制度名称<input id="pgDesignDocumentTitle"'),
+  '制度说明 should place制度编号 before制度名称'
+);
+[
+  'id="pgDesignPlannedEdition"',
+  'id="pgDesignCurrentEdition"',
+  'id="pgDesignPublishEffect"'
+].forEach(needle => assert.ok(html.includes(needle), `制度说明 should expose readonly edition field ${needle}`));
+assert.ok(html.includes('与已有制度/流程/表单的关系'), '承继关系 should be renamed to a plain external relationship description');
+assert.ok(!html.includes('承继关系<textarea id="pgDesignInheritanceRelation"'), '制度说明 should not keep the ambiguous承继关系 label');
+[
+  'function lookupProcessDesignDocumentNo',
+  '/api/process-design/documents/lookup',
+  'id="pgDesignDocumentLookupStatus"',
+  'id="createProcessDesignNextEditionDraftBtn"',
+  '创建下一版次草稿',
+  '进行中的制度草稿',
+  '历史版次',
+  'data-process-design-version-open',
+  'confirm_complete_rewrite',
+  '完整重写'
+].forEach(needle => assert.ok(html.includes(needle), `document edition frontend should include ${needle}`));
+assert.ok(
+  html.includes('var draftPayload = existingDraftId && currentDraft.base_version_id'),
+  'next-edition drafts should omit locked document identity from draft update payload'
+);
+assert.ok(
+  html.includes("process_name: $('pgDesignDocumentTitle') ? $('pgDesignDocumentTitle').value : ''"),
+  'document structured output should derive the backend draft title from制度名称'
+);
+assert.ok(
+  !html.includes('<label>流程名称<input id="pgDesignProcessName"'),
+  'document structured output draft title must not be labeled as流程名称'
+);
+assert.ok(
+  !html.includes("classificationPayload.l3_name = $('pgDesignProcessName').value;"),
+  'document structured output draft title must not be copied into L3流程'
+);
 [
   '制度说明',
-  '目的范围',
   '术语',
   '流程与行为',
   '跨部门承接',
   '附表结构',
+  '字段清单',
   '提交审核',
   '结构化预览',
   'Markdown 草案'
 ].forEach(label => {
   assert.ok(html.includes(label), `document structured output 9-node progress should include ${label}`);
 });
+const wizardStepsStart = html.indexOf('const PROCESS_DESIGN_WIZARD_STEPS = [');
+const wizardStepsEnd = html.indexOf('];', wizardStepsStart);
+const wizardStepsSnippet = html.slice(wizardStepsStart, wizardStepsEnd);
+assert.strictEqual(
+  (wizardStepsSnippet.match(/key: '/g) || []).length,
+  9,
+  'document structured output progress should keep exactly 9 nodes'
+);
+assert.ok(
+  !html.includes("{ key: 'profile', label: '目的范围' }"),
+  'document structured output should merge purpose/scope into制度说明 instead of showing a separate目的范围 node'
+);
+assert.ok(
+  html.indexOf("{ key: 'behavior', label: '流程与行为' }") < html.indexOf("{ key: 'terms', label: '术语' }"),
+  'document structured output should collect流程与行为 before术语 because term applies_to depends on L3/A1 positions'
+);
 [
   'draft',
-  'profile',
   'terms',
   'behavior',
   'handoff',
   'tables',
+  'fields',
   'evidence',
   'preview',
   'markdown'
@@ -63,6 +126,10 @@ assert.ok(html.includes('id="pgDesignWizard"'), 'document structured output shou
   assert.ok(html.includes(`key: '${step}'`) || html.includes(`data-process-design-step-panel="${step}"`), `document structured output should define node ${step}`);
   assert.ok(html.includes(`data-process-design-step-panel="${step}"`), `document structured output should isolate panel ${step}`);
 });
+assert.ok(
+  !html.includes(`data-process-design-step-panel="profile"`),
+  'document profile fields should not live in a separate profile step panel'
+);
 [
   'id="pgDesignStepProgress"',
   'id="pgDesignPrevStepBtn"',
@@ -70,7 +137,7 @@ assert.ok(html.includes('id="pgDesignWizard"'), 'document structured output shou
   'function processDesignWizardStepIndex',
   'function renderProcessDesignStepProgress',
   'function goProcessDesignWizardStep',
-  'id="pgDesignDocumentProfileForm"',
+  'data-process-design-step-panel="draft" id="pgDesignDocumentProfileForm"',
   'id="pgDesignTermForm"',
   'id="pgDesignProcessForm"',
   'id="pgDesignBehaviorDetailForm"',
@@ -85,14 +152,44 @@ assert.ok(html.includes('id="pgDesignWizard"'), 'document structured output shou
   '/form-tables/',
   '/markdown'
 ].forEach(needle => assert.ok(html.includes(needle), `document structured output should include ${needle}`));
+assert.ok(html.includes('id="saveProcessDesignDraftBtn">保存制度说明</button>'), 'document structured output should save the merged intro node as制度说明');
+assert.ok(!html.includes('id="saveProcessDesignDocumentProfileBtn">保存目的范围</button>'), 'merged制度说明 node should not expose a separate目的范围 save button');
+assert.ok(html.includes('var existingDraftId = currentProcessDesignDraftId();'), 'merged制度说明 save should detect an existing draft');
+assert.ok(html.includes("existingDraftId ? '/api/process-design/drafts/' + encodeURIComponent(existingDraftId) : '/api/process-design/drafts'"), 'merged制度说明 save should update existing drafts instead of always creating a new one');
+assert.ok(html.includes('data-process-design-draft-delete'), 'document structured output should expose delete buttons for editable drafts');
+assert.ok(html.includes('async function deleteProcessDesignDraft'), 'document structured output should implement draft deletion');
+assert.ok(html.includes("'/api/process-design/drafts/' + encodeURIComponent(draftId)") && html.includes("method: 'DELETE'"), 'document structured output should delete drafts through the process-design API');
+assert.ok(html.includes('确认删除这条制度结构草稿'), 'document structured output should confirm before deleting a draft');
+assert.ok(html.includes('function validateProcessDesignDraftPayload'), 'merged制度说明 save should validate required fields before calling the drafts API');
+assert.ok(!html.includes('id="pgDesignReason"'), '制度说明 should not show the temporary why-new field');
+assert.ok(!html.includes('id="pgDesignBasisDescription"'), '制度说明 should not show the temporary basis description field');
+assert.ok(!html.includes('请填写为什么新增'), '制度说明 validation should not require the removed why-new field');
+assert.ok(!html.includes('请填写依据说明'), '制度说明 validation should not require the removed basis description field');
+assert.ok(html.includes('请填写制度编号'), '制度说明 validation should require制度编号 before saving');
+assert.ok(html.includes('function formatApiErrorMessage'), 'API validation errors should be flattened into readable messages');
+assert.ok(html.includes('error.details && error.details.length'), 'process design save failures should include backend 422 detail messages');
+assert.ok(html.includes("if ($('pgDesignSaveStatus')) $('pgDesignSaveStatus').textContent = errorMessage;"), 'process design save failure should replace the saving status with the real error');
 assert.ok(html.includes('process-design-step-panel pg-hidden'), 'document structured output should hide inactive step panels instead of showing one long page');
 assert.ok(!html.includes("const PROCESS_DESIGN_WIZARD_STEPS = ['draft', 'steps', 'forms', 'fields', 'submit', 'preview'];"), 'document structured output must not regress to the old 6-node new-process wizard');
 assert.ok(html.includes('class="outcome-card"'), 'process governance should render reusable outcome feedback cards');
 assert.ok(html.includes('/api/process-design/summary'), 'process governance should load process design summary');
 assert.ok(html.includes('/api/process-design/process-taxonomy'), 'process design should load L1/L2 options from existing mapping relationships');
+assert.ok(html.includes('taxonomyScopeKey:null'), 'process design L1/L2 cache should track the current department scope');
+assert.ok(html.includes('function currentProcessDesignTaxonomyScopeKey'), 'process design should compute a department-scoped taxonomy cache key');
+assert.ok(
+  html.includes('state.processDesign.taxonomyLoaded && state.processDesign.taxonomyScopeKey === scopeKey'),
+  'process design should reload L1/L2 options when the logged-in department changes'
+);
+assert.ok(
+  html.includes('state.processDesign.taxonomyScopeKey = scopeKey'),
+  'process design should store the department scope after loading L1/L2 options'
+);
 assert.ok(html.includes('/api/process-design/drafts'), 'process governance should create process design drafts through API');
 assert.ok(html.includes('<select id="pgDesignProcessL1Name"'), 'process design L1 should be selected from existing mapping relationships in the process node');
 assert.ok(html.includes('<select id="pgDesignProcessL2Name"'), 'process design L2 should be selected from existing mapping relationships in the process node');
+assert.ok(!html.includes('id="pgDesignProcessCode"'), 'process design should not expose a manual process code input');
+assert.ok(!html.includes('process_code: $(\'pgDesignProcessCode\')'), 'process design payload should not submit manual process_code');
+assert.ok(html.includes('流程编号由系统自动生成'), 'process design should explain that procedure codes are system-generated');
 assert.ok(html.includes('id="pgDesignRelatedDepartments"'), 'process design should collect related departments on the draft');
 assert.ok(html.includes('function refreshProcessDesignCatalogOptions'), 'process design should have a catalog refresh hook for late-loaded departments');
 assert.ok(html.includes('refreshProcessDesignCatalogOptions();'), 'process design should refresh department enum options after catalog data loads');
@@ -113,6 +210,7 @@ assert.ok(!html.includes('L2 业务域<input id="pgDesignProcessL2Name"'), 'proc
   'id="pgDesignIsCrossDepartment"',
   '<select id="pgDesignFieldType"',
   '<select id="pgDesignEvidenceType"',
+  '<select id="pgDesignEvidenceStatus"',
   "actor_role: $('pgDesignStepActorRole')",
   "requires_approval: $('pgDesignRequiresApproval')",
   "is_cross_department: $('pgDesignIsCrossDepartment')",

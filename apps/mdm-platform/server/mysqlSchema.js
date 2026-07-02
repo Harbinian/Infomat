@@ -341,6 +341,9 @@ CREATE TABLE IF NOT EXISTS process_a1_items (
   snapshot_id BIGINT NOT NULL,
   a1_code VARCHAR(128) NULL,
   dept_name VARCHAR(128) NULL,
+  document_no VARCHAR(128) NULL,
+  document_title VARCHAR(255) NULL,
+  document_edition VARCHAR(16) NULL,
   l3_name VARCHAR(512) NULL,
   behavior TEXT NOT NULL,
   execution_role VARCHAR(255) NULL,
@@ -353,6 +356,7 @@ CREATE TABLE IF NOT EXISTS process_a1_items (
   INDEX idx_process_a1_items_snapshot (snapshot_id),
   INDEX idx_process_a1_items_dept (dept_name),
   INDEX idx_process_a1_items_code (a1_code),
+  INDEX idx_process_a1_items_document (document_no, document_edition),
   CONSTRAINT fk_process_a1_items_snapshot FOREIGN KEY (snapshot_id)
     REFERENCES process_governance_snapshots(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -547,6 +551,9 @@ CREATE TABLE IF NOT EXISTS process_mapping_records (
   dept_name VARCHAR(128) NULL,
   domain_name VARCHAR(128) NULL,
   l2_name VARCHAR(255) NULL,
+  document_no VARCHAR(128) NULL,
+  document_title VARCHAR(255) NULL,
+  document_edition VARCHAR(16) NULL,
   l3_name VARCHAR(512) NOT NULL,
   a1_code VARCHAR(128) NULL,
   behavior TEXT NULL,
@@ -563,6 +570,7 @@ CREATE TABLE IF NOT EXISTS process_mapping_records (
   UNIQUE KEY uq_process_mapping_records_key (mapping_key),
   INDEX idx_process_mapping_records_type (record_type),
   INDEX idx_process_mapping_records_dept (dept_name),
+  INDEX idx_process_mapping_records_document (document_no, document_edition),
   INDEX idx_process_mapping_records_latest_snapshot (latest_snapshot_id),
   CHECK (record_type IN ('l3','a1')),
   CHECK (status IN ('active','source_missing','published','archived')),
@@ -791,8 +799,34 @@ CREATE TABLE IF NOT EXISTS process_governance_term_tasks (
   CONSTRAINT fk_term_tasks_point FOREIGN KEY (point_id) REFERENCES process_governance_issue_points(point_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS process_design_documents (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  document_no VARCHAR(128) NOT NULL,
+  document_title VARCHAR(255) NOT NULL,
+  owning_department_id BIGINT NOT NULL,
+  current_edition VARCHAR(16) NULL,
+  current_version_id BIGINT NULL,
+  status VARCHAR(32) NOT NULL DEFAULT 'active',
+  created_by BIGINT NULL,
+  updated_by BIGINT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_process_design_documents_no (document_no),
+  INDEX idx_process_design_documents_dept (owning_department_id, status),
+  INDEX idx_process_design_documents_current_version (current_version_id),
+  CHECK (status IN ('active','retired')),
+  CONSTRAINT fk_process_design_documents_dept FOREIGN KEY (owning_department_id)
+    REFERENCES departments(id) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS process_design_drafts (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  document_id BIGINT NOT NULL,
+  document_no VARCHAR(128) NOT NULL,
+  document_title VARCHAR(255) NOT NULL,
+  planned_edition VARCHAR(16) NOT NULL,
+  base_version_id BIGINT NULL,
+  active_document_no VARCHAR(128) NULL,
   process_name VARCHAR(255) NOT NULL,
   reason TEXT NOT NULL,
   basis_type VARCHAR(128) NOT NULL,
@@ -815,11 +849,15 @@ CREATE TABLE IF NOT EXISTS process_design_drafts (
   published_at TIMESTAMP NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_process_design_drafts_active_document_no (active_document_no),
+  INDEX idx_process_design_drafts_document (document_id, status),
   INDEX idx_process_design_drafts_dept (department_id, status),
   INDEX idx_process_design_drafts_creator (created_by, status),
   CHECK (l1_status IN ('unclassified','needs_review','confirmed')),
   CHECK (l2_status IN ('unclassified','needs_review','confirmed')),
   CHECK (status IN ('draft','submitted','under_review','needs_changes','approved','published','rejected')),
+  CONSTRAINT fk_process_design_drafts_document FOREIGN KEY (document_id)
+    REFERENCES process_design_documents(id) ON DELETE RESTRICT,
   CONSTRAINT fk_process_design_drafts_department FOREIGN KEY (department_id)
     REFERENCES departments(id) ON DELETE RESTRICT,
   CONSTRAINT fk_process_design_drafts_proxy_department FOREIGN KEY (proxy_department_id)
@@ -830,7 +868,7 @@ CREATE TABLE IF NOT EXISTS process_design_document_profiles (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
   draft_id BIGINT NOT NULL,
   document_title VARCHAR(255) NOT NULL,
-  document_no VARCHAR(128) NULL,
+  document_no VARCHAR(128) NOT NULL,
   purpose TEXT NOT NULL,
   scope TEXT NOT NULL,
   inheritance_relation TEXT NULL,
@@ -862,7 +900,7 @@ CREATE TABLE IF NOT EXISTS process_design_terms (
 CREATE TABLE IF NOT EXISTS process_design_processes (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
   draft_id BIGINT NOT NULL,
-  process_code VARCHAR(128) NULL,
+  process_code VARCHAR(128) NOT NULL,
   process_type VARCHAR(32) NOT NULL DEFAULT 'new',
   l1_name VARCHAR(255) NOT NULL,
   l2_name VARCHAR(255) NOT NULL,
@@ -873,6 +911,7 @@ CREATE TABLE IF NOT EXISTS process_design_processes (
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_process_design_processes_draft (draft_id, sort_order),
+  UNIQUE KEY uq_process_design_processes_code (process_code),
   CHECK (process_type IN ('new','inherit','handoff','adjustment')),
   CONSTRAINT fk_process_design_processes_draft FOREIGN KEY (draft_id)
     REFERENCES process_design_drafts(id) ON DELETE CASCADE
@@ -1100,6 +1139,10 @@ CREATE TABLE IF NOT EXISTS process_design_events (
 CREATE TABLE IF NOT EXISTS process_design_versions (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
   draft_id BIGINT NOT NULL,
+  document_id BIGINT NOT NULL,
+  document_no VARCHAR(128) NOT NULL,
+  document_title VARCHAR(255) NOT NULL,
+  edition VARCHAR(16) NOT NULL,
   version_no VARCHAR(128) NOT NULL,
   department_id BIGINT NOT NULL,
   l1_name VARCHAR(255) NOT NULL,
@@ -1108,15 +1151,24 @@ CREATE TABLE IF NOT EXISTS process_design_versions (
   content_json JSON NOT NULL,
   published_by BIGINT NULL,
   published_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  effective_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  supersedes_version_id BIGINT NULL,
   status VARCHAR(32) NOT NULL DEFAULT 'published',
   UNIQUE KEY uq_process_design_versions_no (version_no),
+  UNIQUE KEY uq_process_design_versions_document_edition (document_no, edition),
   INDEX idx_process_design_versions_draft (draft_id),
-  CHECK (status IN ('published','retired')),
+  INDEX idx_process_design_versions_document (document_id, status),
+  CHECK (status IN ('published','superseded','retired')),
   CONSTRAINT fk_process_design_versions_draft FOREIGN KEY (draft_id)
     REFERENCES process_design_drafts(id) ON DELETE RESTRICT,
+  CONSTRAINT fk_process_design_versions_document FOREIGN KEY (document_id)
+    REFERENCES process_design_documents(id) ON DELETE RESTRICT,
+  CONSTRAINT fk_process_design_versions_supersedes FOREIGN KEY (supersedes_version_id)
+    REFERENCES process_design_versions(id) ON DELETE SET NULL,
   CONSTRAINT fk_process_design_versions_department FOREIGN KEY (department_id)
     REFERENCES departments(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 
 CREATE TABLE IF NOT EXISTS terminology_term_types (
   code VARCHAR(64) PRIMARY KEY,

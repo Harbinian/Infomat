@@ -27,6 +27,7 @@ const EVIDENCE_TYPES = new Set(['制度条款', '表单样例', '访谈记录', 
 const EVIDENCE_STATUSES = new Set(['verified', 'pending_review', 'source_missing', 'ocr_extracted_not_confirmed', 'review_only']);
 const PROCESS_EVIDENCE_VERIFY_PERMISSION = 'process_evidence:verify';
 const EVIDENCE_STATUS_MIGRATION_KEY = '2026-07-01-process-design-evidence-status';
+const EDITION_SCHEMA_MIGRATION_KEY = '2026-07-02-process-design-document-editions';
 const VERIFIED_EVIDENCE_MESSAGE = '发布需至少 1 条已核验(verified)证据。';
 const REPO_ROOT = path.resolve(__dirname, '../../../..');
 
@@ -57,6 +58,53 @@ function text(value) {
 function optionalText(value) {
   const cleaned = text(value);
   return cleaned || null;
+}
+
+function formatProcedureCode(draftId, sequence) {
+  return `PROCEDURE-${Number(draftId)}-${String(Number(sequence) || 1).padStart(3, '0')}`;
+}
+
+function editionToNumber(edition) {
+  const value = text(edition).toUpperCase();
+  if (!/^[A-Z]+$/.test(value)) return 0;
+  return value.split('').reduce((sum, ch) => sum * 26 + (ch.charCodeAt(0) - 64), 0);
+}
+
+function numberToEdition(number) {
+  let value = Number(number || 0);
+  if (!Number.isInteger(value) || value < 1) return 'A';
+  let result = '';
+  while (value > 0) {
+    value -= 1;
+    result = String.fromCharCode(65 + (value % 26)) + result;
+    value = Math.floor(value / 26);
+  }
+  return result;
+}
+
+function nextEdition(currentEdition) {
+  return numberToEdition(editionToNumber(currentEdition) + 1);
+}
+
+function editionLabel(edition) {
+  const value = text(edition).toUpperCase();
+  return value ? `${value}版` : 'A版';
+}
+
+function documentVersionNo(documentNo, edition) {
+  return `${text(documentNo)}-${text(edition).toUpperCase()}`;
+}
+
+function markdownFileSafe(value) {
+  return text(value).replace(/[\\/:*?"<>|]/g, '_');
+}
+
+function parseProcedureSequence(processCode, draftId) {
+  const prefix = `PROCEDURE-${Number(draftId)}-`;
+  const value = text(processCode);
+  if (!value.startsWith(prefix)) return 0;
+  const sequence = Number(value.slice(prefix.length));
+  return Number.isInteger(sequence) && sequence > 0 ? sequence : 0;
 }
 
 function hasWhitespace(value) {
@@ -253,6 +301,7 @@ function publicDraft(row) {
   if (!row) return null;
   return {
     ...row,
+    planned_edition: row.planned_edition || 'A',
     related_departments: parseJsonArray(row.related_departments_json),
     involves_other_departments: Boolean(row.involves_other_departments)
   };
@@ -313,11 +362,15 @@ function markdownList(items, renderItem) {
 function processDesignMarkdown(detail) {
   const draft = detail.draft || {};
   const profile = detail.documentProfile || {};
-  const title = text(profile.document_title) || text(draft.process_name) || '未命名制度';
+  const documentNo = text(draft.document_no) || text(profile.document_no) || '待定';
+  const edition = text(draft.planned_edition) || text(detail.version && detail.version.edition) || 'A';
+  const title = text(draft.document_title) || text(profile.document_title) || text(draft.process_name) || '未命名制度';
   const lines = [
-    `# ${title}`,
+    `# ${documentNo} ${title} ${editionLabel(edition)}`,
     '',
-    `- 制度编号：${text(profile.document_no) || '待定'}`,
+    `- 制度编号：${documentNo}`,
+    `- 制度名称：${title}`,
+    `- 版次：${editionLabel(edition)}`,
     `- 对应流程数：${(detail.processes || []).length || 0}`,
     '',
     '## 目的',
@@ -326,7 +379,7 @@ function processDesignMarkdown(detail) {
     '## 范围',
     text(profile.scope) || '待填写',
     '',
-    '## 承继关系',
+    '## 与已有制度/流程/表单的关系',
     text(profile.inheritance_relation) || '待填写',
     '',
     '## 术语',
@@ -393,6 +446,104 @@ async function executeIgnoringDuplicateColumn(pool, sql) {
   }
 }
 
+async function executeIgnoringDuplicateKey(pool, sql) {
+  try {
+    await pool.execute(sql);
+  } catch (error) {
+    if (error && (
+      error.code === 'ER_DUP_KEYNAME'
+      || error.code === 'ER_DUP_INDEX'
+      || /Duplicate key name/i.test(String(error.message || ''))
+    )) return;
+    throw error;
+  }
+}
+
+async function executeIgnoringDuplicateCheck(pool, sql) {
+  try {
+    await pool.execute(sql);
+  } catch (error) {
+    if (error && (
+      error.code === 'ER_FK_DUP_NAME'
+      || error.code === 'ER_DUP_KEYNAME'
+      || /Duplicate check constraint name/i.test(String(error.message || ''))
+      || /already exists/i.test(String(error.message || ''))
+    )) return;
+    throw error;
+  }
+}
+
+async function dropProcessDesignVersionStatusChecks(pool) {
+  const checks = await mysqlQuery(pool, `
+    SELECT tc.CONSTRAINT_NAME
+    FROM information_schema.TABLE_CONSTRAINTS tc
+    JOIN information_schema.CHECK_CONSTRAINTS cc
+      ON cc.CONSTRAINT_SCHEMA=tc.CONSTRAINT_SCHEMA
+     AND cc.CONSTRAINT_NAME=tc.CONSTRAINT_NAME
+    WHERE tc.CONSTRAINT_SCHEMA=DATABASE()
+      AND tc.TABLE_NAME='process_design_versions'
+      AND tc.CONSTRAINT_TYPE='CHECK'
+      AND cc.CHECK_CLAUSE LIKE '%retired%'
+      AND cc.CHECK_CLAUSE NOT LIKE '%superseded%'
+  `);
+  for (const row of checks) {
+    await pool.execute(`ALTER TABLE process_design_versions DROP CHECK \`${row.CONSTRAINT_NAME}\``);
+  }
+}
+
+async function ensureProcessDesignEditionSchema(pool) {
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS process_design_documents (
+      id BIGINT AUTO_INCREMENT PRIMARY KEY,
+      document_no VARCHAR(128) NOT NULL,
+      document_title VARCHAR(255) NOT NULL,
+      owning_department_id BIGINT NOT NULL,
+      current_edition VARCHAR(16) NULL,
+      current_version_id BIGINT NULL,
+      status VARCHAR(32) NOT NULL DEFAULT 'active',
+      created_by BIGINT NULL,
+      updated_by BIGINT NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      UNIQUE KEY uq_process_design_documents_no (document_no),
+      INDEX idx_process_design_documents_dept (owning_department_id, status),
+      INDEX idx_process_design_documents_current_version (current_version_id),
+      CHECK (status IN ('active','retired'))
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  await executeIgnoringDuplicateColumn(pool, 'ALTER TABLE process_design_drafts ADD COLUMN document_id BIGINT NULL');
+  await executeIgnoringDuplicateColumn(pool, 'ALTER TABLE process_design_drafts ADD COLUMN document_no VARCHAR(128) NULL');
+  await executeIgnoringDuplicateColumn(pool, 'ALTER TABLE process_design_drafts ADD COLUMN document_title VARCHAR(255) NULL');
+  await executeIgnoringDuplicateColumn(pool, 'ALTER TABLE process_design_drafts ADD COLUMN planned_edition VARCHAR(16) NULL');
+  await executeIgnoringDuplicateColumn(pool, 'ALTER TABLE process_design_drafts ADD COLUMN base_version_id BIGINT NULL');
+  await executeIgnoringDuplicateColumn(pool, 'ALTER TABLE process_design_drafts ADD COLUMN active_document_no VARCHAR(128) NULL');
+  await executeIgnoringDuplicateKey(pool, 'ALTER TABLE process_design_drafts ADD UNIQUE KEY uq_process_design_drafts_active_document_no (active_document_no)');
+  await executeIgnoringDuplicateKey(pool, 'ALTER TABLE process_design_drafts ADD INDEX idx_process_design_drafts_document (document_id, status)');
+  await executeIgnoringDuplicateColumn(pool, 'ALTER TABLE process_design_versions ADD COLUMN document_id BIGINT NULL');
+  await executeIgnoringDuplicateColumn(pool, 'ALTER TABLE process_design_versions ADD COLUMN document_no VARCHAR(128) NULL');
+  await executeIgnoringDuplicateColumn(pool, 'ALTER TABLE process_design_versions ADD COLUMN document_title VARCHAR(255) NULL');
+  await executeIgnoringDuplicateColumn(pool, 'ALTER TABLE process_design_versions ADD COLUMN edition VARCHAR(16) NULL');
+  await executeIgnoringDuplicateColumn(pool, 'ALTER TABLE process_design_versions ADD COLUMN effective_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP');
+  await executeIgnoringDuplicateColumn(pool, 'ALTER TABLE process_design_versions ADD COLUMN supersedes_version_id BIGINT NULL');
+  await executeIgnoringDuplicateKey(pool, 'ALTER TABLE process_design_versions ADD UNIQUE KEY uq_process_design_versions_document_edition (document_no, edition)');
+  await executeIgnoringDuplicateKey(pool, 'ALTER TABLE process_design_versions ADD INDEX idx_process_design_versions_document (document_id, status)');
+  await dropProcessDesignVersionStatusChecks(pool);
+  await executeIgnoringDuplicateCheck(pool, "ALTER TABLE process_design_versions ADD CONSTRAINT chk_process_design_versions_status CHECK (status IN ('published','superseded','retired'))");
+  await executeIgnoringDuplicateColumn(pool, 'ALTER TABLE process_mapping_records ADD COLUMN document_no VARCHAR(128) NULL');
+  await executeIgnoringDuplicateColumn(pool, 'ALTER TABLE process_mapping_records ADD COLUMN document_title VARCHAR(255) NULL');
+  await executeIgnoringDuplicateColumn(pool, 'ALTER TABLE process_mapping_records ADD COLUMN document_edition VARCHAR(16) NULL');
+  await executeIgnoringDuplicateKey(pool, 'ALTER TABLE process_mapping_records ADD INDEX idx_process_mapping_records_document (document_no, document_edition)');
+  await executeIgnoringDuplicateColumn(pool, 'ALTER TABLE process_a1_items ADD COLUMN document_no VARCHAR(128) NULL');
+  await executeIgnoringDuplicateColumn(pool, 'ALTER TABLE process_a1_items ADD COLUMN document_title VARCHAR(255) NULL');
+  await executeIgnoringDuplicateColumn(pool, 'ALTER TABLE process_a1_items ADD COLUMN document_edition VARCHAR(16) NULL');
+  await executeIgnoringDuplicateKey(pool, 'ALTER TABLE process_a1_items ADD INDEX idx_process_a1_items_document (document_no, document_edition)');
+  await mysqlRun(pool, `
+    INSERT INTO schema_migrations (migration_key)
+    VALUES (?)
+    ON DUPLICATE KEY UPDATE applied_at=applied_at
+  `, [EDITION_SCHEMA_MIGRATION_KEY]);
+}
+
 async function ensureProcessDesignEvidenceStatusSchema(pool) {
   await executeIgnoringDuplicateColumn(pool, `ALTER TABLE process_design_evidence ADD COLUMN status ENUM('verified','pending_review','source_missing','ocr_extracted_not_confirmed','review_only') NOT NULL DEFAULT 'pending_review'`);
   const [migration] = await mysqlQuery(pool, 'SELECT migration_key FROM schema_migrations WHERE migration_key=?', [EVIDENCE_STATUS_MIGRATION_KEY]);
@@ -409,6 +560,39 @@ function makeProcessDesignMysqlRepository(pool) {
   async function getById(table, id) {
     const [row] = await mysqlQuery(pool, `SELECT * FROM ${table} WHERE id=?`, [id]);
     return row || null;
+  }
+
+  async function getDocumentByNo(documentNo) {
+    const [row] = await mysqlQuery(pool, 'SELECT * FROM process_design_documents WHERE document_no=?', [text(documentNo)]);
+    return row || null;
+  }
+
+  async function getDocumentById(documentId) {
+    const [row] = await mysqlQuery(pool, 'SELECT * FROM process_design_documents WHERE id=?', [documentId]);
+    return row || null;
+  }
+
+  async function getCurrentVersionForDocument(documentId) {
+    const [row] = await mysqlQuery(pool, `
+      SELECT *
+      FROM process_design_versions
+      WHERE document_id=? AND status='published'
+      ORDER BY effective_at DESC, id DESC
+      LIMIT 1
+    `, [documentId]);
+    return row || null;
+  }
+
+  async function getActiveDraftForDocumentNo(documentNo) {
+    const [row] = await mysqlQuery(pool, `
+      SELECT *
+      FROM process_design_drafts
+      WHERE document_no=?
+        AND status IN ('draft','submitted','under_review','needs_changes','approved')
+      ORDER BY updated_at DESC, id DESC
+      LIMIT 1
+    `, [text(documentNo)]);
+    return publicDraft(row);
   }
 
   async function addEvent(draftId, eventType, actorUserId, note, payload) {
@@ -430,6 +614,12 @@ function makeProcessDesignMysqlRepository(pool) {
   async function loadProcesses(draftId) {
     const rows = await mysqlQuery(pool, 'SELECT * FROM process_design_processes WHERE draft_id=? ORDER BY sort_order, id', [draftId]);
     return rows.map(publicProcess);
+  }
+
+  async function nextProcedureCode(draftId) {
+    const rows = await mysqlQuery(pool, 'SELECT process_code FROM process_design_processes WHERE draft_id=?', [draftId]);
+    const maxSequence = rows.reduce((max, row) => Math.max(max, parseProcedureSequence(row.process_code, draftId)), 0);
+    return formatProcedureCode(draftId, maxSequence + 1);
   }
 
   async function loadBehaviorDetail(stepId) {
@@ -739,6 +929,8 @@ function makeProcessDesignMysqlRepository(pool) {
     if (!processes.length) details.push('发布前至少需要 1 个制度流程。');
     if (processes.some(process => !text(process.l1_name) || !text(process.l2_name) || !text(process.l3_name))) details.push('发布前每个制度流程都要写清 L1、L2 和 L3。');
     const profile = await loadDocumentProfile(draft.id);
+    if (!text(draft.document_no)) details.push('发布前还需填写制度编号。');
+    if (!text(draft.document_title || draft.process_name)) details.push('发布前还需填写制度名称。');
     if (!profile || !text(profile.document_title)) details.push('发布前还需填写制度名称。');
     if (!profile || !text(profile.purpose)) details.push('发布前还需填写制度目的。');
     if (!profile || !text(profile.scope)) details.push('发布前还需填写制度范围。');
@@ -771,7 +963,7 @@ function makeProcessDesignMysqlRepository(pool) {
   async function outcomeForDraft(draft) {
     const counts = await getCounts(draft.id);
     const formed = [];
-    if (draft.process_name) formed.push('1 条流程草稿');
+    if (draft.process_name) formed.push('1 条制度结构草稿');
     if (counts.processes) formed.push(`${counts.processes} 个制度流程`);
     if (counts.steps) formed.push(`${counts.steps} 个业务行为`);
     if (counts.forms) formed.push(`${counts.forms} 个在线表单`);
@@ -787,7 +979,7 @@ function makeProcessDesignMysqlRepository(pool) {
         ? '当前内容已经发布为数据库流程地图版本'
         : draft.status === 'submitted'
           ? '当前内容可以等待审核或继续补充材料'
-          : '当前内容可以保存草稿或提交部门内审',
+          : '当前内容可以保存制度说明或提交部门内审',
       missing,
       next: draft.status === 'published' ? '查看成果预览' : missing.length ? '继续补齐发布前缺项' : '提交审核或发布',
       counts
@@ -795,15 +987,69 @@ function makeProcessDesignMysqlRepository(pool) {
   }
 
   async function versionContent(draft) {
+    const profile = await loadDocumentProfile(draft.id);
+    const diff = await editionDiffForDraft(draft);
     return {
+      document_no: draft.document_no,
+      document_title: draft.document_title || draft.process_name,
+      edition: draft.planned_edition,
+      supersedes_version_id: draft.base_version_id || null,
+      version_status: 'published',
+      edition_diff: diff,
       draft,
-      documentProfile: await loadDocumentProfile(draft.id),
+      documentProfile: profile,
       terms: await loadTerms(draft.id),
       processes: await loadProcesses(draft.id),
       steps: activeSteps(await loadSteps(draft.id)),
       forms: await loadForms(draft.id),
       evidence: await loadEvidence(draft.id)
     };
+  }
+
+  function namesFromRows(rows, fields) {
+    const values = new Set();
+    for (const row of rows || []) {
+      for (const field of fields) {
+        const value = text(row && row[field]);
+        if (value) values.add(value);
+      }
+    }
+    return values;
+  }
+
+  function missingNames(baseRows, currentRows, fields) {
+    const current = namesFromRows(currentRows, fields);
+    return [...namesFromRows(baseRows, fields)].filter(value => !current.has(value));
+  }
+
+  async function editionDiffForDraft(draft) {
+    if (!draft || !draft.base_version_id) {
+      return {
+        base_edition: null,
+        planned_edition: text(draft && draft.planned_edition) || 'A',
+        missing: { processes: [], steps: [], forms: [] }
+      };
+    }
+    const baseVersion = await getById('process_design_versions', draft.base_version_id);
+    const content = parseJsonObject(baseVersion && baseVersion.content_json) || {};
+    const baseForms = content.forms || [];
+    const currentForms = await loadForms(draft.id);
+    return {
+      base_version_id: draft.base_version_id,
+      base_edition: text(baseVersion && baseVersion.edition) || null,
+      planned_edition: text(draft.planned_edition) || null,
+      missing: {
+        processes: missingNames(content.processes || [], await loadProcesses(draft.id), ['l3_name']),
+        steps: missingNames(content.steps || [], activeSteps(await loadSteps(draft.id)), ['step_name']),
+        forms: missingNames(baseForms, currentForms, ['form_name'])
+      }
+    };
+  }
+
+  async function archiveSupersededProjection(versionId) {
+    if (!versionId) return;
+    const sourceFile = `process_design_versions:${versionId}`;
+    await mysqlRun(pool, "UPDATE process_mapping_records SET status='archived' WHERE source_file=? AND status='published'", [sourceFile]);
   }
 
   async function projectPublishedVersionToProcessMap(draft, version) {
@@ -822,10 +1068,15 @@ function makeProcessDesignMysqlRepository(pool) {
       const l3Key = `process-design:${version.id}:process:${process.id}`;
       await mysqlRun(pool, `
         INSERT INTO process_mapping_records
-          (mapping_key, record_type, first_snapshot_id, latest_snapshot_id, dept_name, l2_name, l3_name, source_file, status)
-        VALUES (?, 'l3', ?, ?, ?, ?, ?, ?, 'published')
+          (mapping_key, record_type, first_snapshot_id, latest_snapshot_id, dept_name, l2_name,
+           document_no, document_title, document_edition, l3_name, source_file, status)
+        VALUES (?, 'l3', ?, ?, ?, ?, ?, ?, ?, ?, ?, 'published')
         ON DUPLICATE KEY UPDATE latest_snapshot_id=VALUES(latest_snapshot_id), status='published'
-      `, [l3Key, snapshot.id, snapshot.id, draft.department_name, process.l2_name, process.l3_name, sourceFile]);
+      `, [
+        l3Key, snapshot.id, snapshot.id, draft.department_name, process.l2_name,
+        version.document_no || draft.document_no, version.document_title || draft.document_title,
+        version.edition || draft.planned_edition, process.l3_name, sourceFile
+      ]);
       const [l3Record] = await mysqlQuery(pool, 'SELECT id FROM process_mapping_records WHERE mapping_key=?', [l3Key]);
       const processSteps = steps.filter(step => Number(step.process_id) === Number(process.id));
       for (let index = 0; index < processSteps.length; index += 1) {
@@ -837,11 +1088,16 @@ function makeProcessDesignMysqlRepository(pool) {
         await mysqlRun(pool, 'UPDATE process_design_steps SET a1_code=?, updated_at=CURRENT_TIMESTAMP WHERE id=?', [a1Code, step.id]);
         const result = await mysqlRun(pool, `
           INSERT INTO process_a1_items
-            (snapshot_id, a1_code, dept_name, l3_name, behavior, execution_role, approval_type,
+            (snapshot_id, a1_code, dept_name, document_no, document_title, document_edition,
+             l3_name, behavior, execution_role, approval_type,
              input_source_dept, output_target_dept, suggested_systems, verification_note, source_file)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
-          snapshot.id, a1Code, draft.department_name, process.l3_name, step.step_name,
+          snapshot.id, a1Code, draft.department_name,
+          version.document_no || draft.document_no,
+          version.document_title || draft.document_title,
+          version.edition || draft.planned_edition,
+          process.l3_name, step.step_name,
           step.actor_role || null, approvalType,
           step.input_materials || text(behaviorDetail.precondition) || null, outputTarget, JSON.stringify([]),
           '由文档结构化输出发布', sourceFile
@@ -849,14 +1105,19 @@ function makeProcessDesignMysqlRepository(pool) {
         await mysqlRun(pool, `
           INSERT INTO process_mapping_records
             (mapping_key, record_type, first_snapshot_id, latest_snapshot_id, parent_record_id, latest_a1_item_id,
-             dept_name, l2_name, l3_name, a1_code, behavior, execution_role, approval_type,
+             dept_name, l2_name, document_no, document_title, document_edition,
+             l3_name, a1_code, behavior, execution_role, approval_type,
              input_source_dept, output_target_dept, suggested_systems, verification_note, source_file, status)
-          VALUES (?, 'a1', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'published')
+          VALUES (?, 'a1', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'published')
           ON DUPLICATE KEY UPDATE latest_snapshot_id=VALUES(latest_snapshot_id), status='published'
         `, [
           `process-design:${version.id}:step:${step.id}`, snapshot.id, snapshot.id,
           l3Record && l3Record.id || null, result.insertId, draft.department_name,
-          process.l2_name, process.l3_name, a1Code, step.step_name, step.actor_role || null,
+          process.l2_name,
+          version.document_no || draft.document_no,
+          version.document_title || draft.document_title,
+          version.edition || draft.planned_edition,
+          process.l3_name, a1Code, step.step_name, step.actor_role || null,
           approvalType, step.input_materials || text(behaviorDetail.precondition) || null,
           outputTarget, JSON.stringify([]), '由文档结构化输出发布', sourceFile
         ]);
@@ -868,8 +1129,18 @@ function makeProcessDesignMysqlRepository(pool) {
     const draft = await getDraft(draftId);
     if (!draft) return null;
     const readiness = await publishReadiness(draft);
+    const document = draft.document_id ? await getDocumentById(draft.document_id) : null;
+    const versions = document ? await mysqlQuery(pool, `
+      SELECT *
+      FROM process_design_versions
+      WHERE document_id=?
+      ORDER BY effective_at DESC, id DESC
+    `, [document.id]) : [];
     return {
       draft,
+      document,
+      versions,
+      editionDiff: await editionDiffForDraft(draft),
       documentProfile: await loadDocumentProfile(draftId),
       terms: await loadTerms(draftId),
       processes: await loadProcesses(draftId),
@@ -885,6 +1156,73 @@ function makeProcessDesignMysqlRepository(pool) {
   }
 
   return {
+    async lookupDocument(documentNo) {
+      const normalizedNo = text(documentNo);
+      const document = await getDocumentByNo(normalizedNo);
+      if (!document) {
+        return {
+          exists: false,
+          document_no: normalizedNo,
+          next_edition: 'A',
+          can_create: true,
+          can_create_next: false,
+          active_draft: null,
+          current_version: null,
+          message: '该制度编号可用，可创建 A版草稿'
+        };
+      }
+      const [currentVersion, activeDraft] = await Promise.all([
+        getCurrentVersionForDocument(document.id),
+        getActiveDraftForDocumentNo(normalizedNo)
+      ]);
+      const currentEdition = text(document.current_edition) || text(currentVersion && currentVersion.edition) || null;
+      return {
+        exists: true,
+        document,
+        document_no: normalizedNo,
+        current_version: currentVersion,
+        current_edition: currentEdition,
+        next_edition: currentEdition ? nextEdition(currentEdition) : 'A',
+        active_draft: activeDraft,
+        can_create: !activeDraft && !currentVersion,
+        can_create_next: Boolean(currentVersion && !activeDraft),
+        message: activeDraft ? '该制度编号已有进行中草稿' : (currentVersion ? '该制度编号可创建下一版次' : '该制度编号可创建 A版草稿')
+      };
+    },
+    async createNextEditionDraft(documentId, actorUserId, targetDeptId) {
+      const document = await getDocumentById(documentId);
+      if (!document) throw httpError(404, '制度不存在');
+      const activeDraft = await getActiveDraftForDocumentNo(document.document_no);
+      if (activeDraft) {
+        throw httpError(409, '该制度编号已有进行中草稿', {
+          error: '该制度编号已有进行中草稿',
+          active_draft: activeDraft
+        });
+      }
+      const currentVersion = await getCurrentVersionForDocument(document.id);
+      if (!currentVersion) throw httpError(409, '该制度还没有当前有效版次，请先创建 A版草稿');
+      const plannedEdition = nextEdition(text(document.current_edition) || currentVersion.edition);
+      const result = await mysqlRun(pool, `
+        INSERT INTO process_design_drafts
+          (document_id, document_no, document_title, planned_edition, base_version_id, active_document_no,
+           process_name, reason, basis_type, basis_description, involves_other_departments,
+           related_departments_json, department_id, l1_status, l2_status, created_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?, '', '现场实际', '', 0, ?, ?, 'unclassified', 'unclassified', ?)
+      `, [
+        document.id, document.document_no, document.document_title, plannedEdition, currentVersion.id, document.document_no,
+        document.document_title, jsonArray([]), targetDeptId || document.owning_department_id, actorUserId
+      ]);
+      await addEvent(result.insertId, 'draft_created', actorUserId, `已创建 ${editionLabel(plannedEdition)} 完整重写草稿`, {
+        document_no: document.document_no,
+        planned_edition: plannedEdition,
+        base_version_id: currentVersion.id
+      });
+      const draft = await getDraft(result.insertId);
+      return { ...draft, outcome: await outcomeForDraft(draft) };
+    },
+    async editionDiff(draft) {
+      return await editionDiffForDraft(draft);
+    },
     async listProcessTaxonomy(scope = {}) {
       const departmentNames = Array.isArray(scope.departmentNames)
         ? scope.departmentNames.map(name => text(name)).filter(Boolean)
@@ -912,17 +1250,20 @@ function makeProcessDesignMysqlRepository(pool) {
       const params = [];
       let whereSql = 'WHERE 1=1';
       let draftWhereSql = 'WHERE 1=1';
+      let versionWhereSql = 'WHERE 1=1';
       if (departmentIds) {
         if (!departmentIds.length) return { summary: { totalDrafts: 0, publishedVersions: 0, byStatus: {} }, drafts: [] };
         const markers = departmentIds.map(() => '?').join(',');
         whereSql += ` AND department_id IN (${markers})`;
         draftWhereSql += ` AND d.department_id IN (${markers})`;
+        versionWhereSql += ` AND v.department_id IN (${markers})`;
         params.push(...departmentIds);
       }
       const rows = await mysqlQuery(pool, `
         SELECT status, COUNT(*) AS count
         FROM process_design_drafts
         ${whereSql}
+          AND status <> 'published'
         GROUP BY status
       `, params);
       const byStatus = {};
@@ -931,18 +1272,31 @@ function makeProcessDesignMysqlRepository(pool) {
       const [publishedRow] = await mysqlQuery(pool, `
         SELECT COUNT(*) AS count
         FROM process_design_versions v
-        JOIN process_design_drafts d ON d.id=v.draft_id
-        ${draftWhereSql}
+        ${versionWhereSql}
       `, params);
       const drafts = await mysqlQuery(pool, `
-        SELECT d.id, d.process_name, d.status, d.l1_name, d.l2_name, d.l3_name, dept.name AS department_name, d.updated_at
+        SELECT d.id, d.process_name, d.document_no, d.document_title, d.planned_edition,
+               doc.current_edition, d.base_version_id, d.status, d.l1_name, d.l2_name, d.l3_name,
+               dept.name AS department_name, d.updated_at
         FROM process_design_drafts d
+        LEFT JOIN process_design_documents doc ON doc.id=d.document_id
         LEFT JOIN departments dept ON dept.id=d.department_id
         ${draftWhereSql}
+          AND d.status <> 'published'
         ORDER BY d.updated_at DESC, d.id DESC
         LIMIT 20
       `, params);
-      return { summary: { totalDrafts, publishedVersions: Number(publishedRow.count || 0), byStatus }, drafts };
+      const versions = await mysqlQuery(pool, `
+        SELECT v.id, v.draft_id, v.document_id, v.document_no, v.document_title, v.edition,
+               v.version_no, v.status, v.effective_at, v.published_at,
+               dept.name AS department_name
+        FROM process_design_versions v
+        LEFT JOIN departments dept ON dept.id=v.department_id
+        ${versionWhereSql}
+        ORDER BY v.effective_at DESC, v.id DESC
+        LIMIT 20
+      `, params);
+      return { summary: { totalDrafts, publishedVersions: Number(publishedRow.count || 0), byStatus }, drafts, versions };
     },
     async departmentExists(departmentId) {
       if (!departmentId) return false;
@@ -960,6 +1314,7 @@ function makeProcessDesignMysqlRepository(pool) {
     getDraftByFormTableField,
     getDraftByField,
     getDraftByEvidence,
+    getDocumentById,
     loadDocumentProfile,
     loadTerms,
     loadProcesses,
@@ -977,20 +1332,51 @@ function makeProcessDesignMysqlRepository(pool) {
     async markdownForDraft(draftId) {
       const detail = await detailForDraft(draftId);
       if (!detail) return null;
-      const draftTitle = text(detail.documentProfile && detail.documentProfile.document_title) || text(detail.draft.process_name) || `process-design-${draftId}`;
+      const draftTitle = text(detail.draft.document_title) || text(detail.documentProfile && detail.documentProfile.document_title) || text(detail.draft.process_name) || `process-design-${draftId}`;
+      const documentNo = text(detail.draft.document_no) || text(detail.documentProfile && detail.documentProfile.document_no) || `draft-${draftId}`;
+      const edition = text(detail.draft.planned_edition) || 'A';
       return {
-        filename: `${draftTitle.replace(/[\\/:*?"<>|]/g, '_')}.md`,
+        filename: `${markdownFileSafe(documentNo)}-${markdownFileSafe(draftTitle)}-${editionLabel(edition)}.md`,
         markdown: processDesignMarkdown(detail)
       };
     },
     async createDraft(body, actorUserId, targetDeptId, proxyDeptId) {
+      const documentNo = text(body.document_no);
+      const documentTitle = text(body.document_title) || text(body.process_name);
+      let document = await getDocumentByNo(documentNo);
+      if (document) {
+        const activeDraft = await getActiveDraftForDocumentNo(documentNo);
+        if (activeDraft) {
+          throw httpError(409, '该制度编号已有进行中草稿', {
+            error: '该制度编号已有进行中草稿',
+            active_draft: activeDraft
+          });
+        }
+        if (document.current_version_id) {
+          throw httpError(409, '该制度编号已发布过，请创建下一版次草稿', {
+            error: '该制度编号已发布过，请创建下一版次草稿',
+            document,
+            current_edition: document.current_edition,
+            next_edition: nextEdition(document.current_edition)
+          });
+        }
+      } else {
+        const docResult = await mysqlRun(pool, `
+          INSERT INTO process_design_documents
+            (document_no, document_title, owning_department_id, status, created_by, updated_by)
+          VALUES (?, ?, ?, 'active', ?, ?)
+        `, [documentNo, documentTitle, targetDeptId, actorUserId, actorUserId]);
+        document = await getDocumentById(docResult.insertId);
+      }
       const result = await mysqlRun(pool, `
         INSERT INTO process_design_drafts
-          (process_name, reason, basis_type, basis_description, involves_other_departments,
+          (document_id, document_no, document_title, planned_edition, base_version_id, active_document_no,
+           process_name, reason, basis_type, basis_description, involves_other_departments,
            related_departments_json, department_id, proxy_department_id, proxy_reason,
            l1_name, l2_name, l3_name, l1_status, l2_status, created_by)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, 'A', NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
+        document.id, documentNo, documentTitle, documentNo,
         text(body.process_name), text(body.reason), text(body.basis_type), text(body.basis_description),
         boolInt(body.involves_other_departments), jsonArray(body.related_departments),
         targetDeptId, proxyDeptId || null, optionalText(body.proxy_reason),
@@ -999,7 +1385,7 @@ function makeProcessDesignMysqlRepository(pool) {
         optionalText(body.l2_name) ? 'confirmed' : 'unclassified',
         actorUserId
       ]);
-      await addEvent(result.insertId, 'draft_created', actorUserId, '已创建流程草稿');
+      await addEvent(result.insertId, 'draft_created', actorUserId, '已创建制度结构草稿');
       const draft = await getDraft(result.insertId);
       return { ...draft, outcome: await outcomeForDraft(draft) };
     },
@@ -1019,6 +1405,32 @@ function makeProcessDesignMysqlRepository(pool) {
       };
       const sets = [];
       const params = [];
+      const changesDocumentIdentity = Object.prototype.hasOwnProperty.call(body, 'document_no')
+        || Object.prototype.hasOwnProperty.call(body, 'document_title');
+      if (changesDocumentIdentity) {
+        if (draft.base_version_id) throw httpError(409, '下一版次草稿的制度编号和制度名称不可修改');
+        const document = draft.document_id ? await getDocumentById(draft.document_id) : null;
+        if (document && document.current_version_id) throw httpError(409, 'A版发布后制度编号和制度名称不可修改');
+        const nextDocumentNo = text(body.document_no) || text(draft.document_no);
+        const nextDocumentTitle = text(body.document_title) || text(draft.document_title) || text(body.process_name) || text(draft.process_name);
+        const existingDocument = await getDocumentByNo(nextDocumentNo);
+        if (existingDocument && Number(existingDocument.id) !== Number(draft.document_id)) {
+          throw httpError(409, '该制度编号已存在', { error: '该制度编号已存在' });
+        }
+        if (draft.document_id) {
+          await mysqlRun(pool, `
+            UPDATE process_design_documents
+            SET document_no=?, document_title=?, updated_by=?, updated_at=CURRENT_TIMESTAMP
+            WHERE id=?
+          `, [nextDocumentNo, nextDocumentTitle, actorUserId, draft.document_id]);
+        }
+        sets.push('document_no=?', 'document_title=?', 'active_document_no=?');
+        params.push(nextDocumentNo, nextDocumentTitle, EDITABLE_DRAFT_STATUSES.has(draft.status || 'draft') ? nextDocumentNo : null);
+        if (!Object.prototype.hasOwnProperty.call(body, 'process_name')) {
+          sets.push('process_name=?');
+          params.push(nextDocumentTitle);
+        }
+      }
       Object.entries(allowed).forEach(([field, normalizer]) => {
         if (Object.prototype.hasOwnProperty.call(body, field)) {
           sets.push(`${field}=?`);
@@ -1050,10 +1462,20 @@ function makeProcessDesignMysqlRepository(pool) {
       if (sets.length) {
         sets.push('updated_at=CURRENT_TIMESTAMP');
         await mysqlRun(pool, `UPDATE process_design_drafts SET ${sets.join(', ')} WHERE id=?`, [...params, draft.id]);
-        await addEvent(draft.id, 'draft_updated', actorUserId, '已更新流程草稿');
+        await addEvent(draft.id, 'draft_updated', actorUserId, '已更新制度结构草稿');
       }
       const updated = await getDraft(draft.id);
       return { ...updated, outcome: await outcomeForDraft(updated) };
+    },
+    async deleteDraft(draft) {
+      await mysqlRun(pool, 'DELETE FROM process_design_drafts WHERE id=?', [draft.id]);
+      if (draft.document_id && !draft.base_version_id) {
+        const document = await getDocumentById(draft.document_id);
+        if (document && !document.current_version_id) {
+          await mysqlRun(pool, 'DELETE FROM process_design_documents WHERE id=?', [draft.document_id]);
+        }
+      }
+      return { deleted: true, id: Number(draft.id) };
     },
     async saveDocumentProfile(draft, body, actorUserId) {
       await mysqlRun(pool, `
@@ -1068,10 +1490,10 @@ function makeProcessDesignMysqlRepository(pool) {
           inheritance_relation=VALUES(inheritance_relation),
           updated_at=CURRENT_TIMESTAMP
       `, [
-        draft.id, text(body.document_title), optionalText(body.document_no), text(body.purpose),
+        draft.id, text(draft.document_title) || text(body.document_title), text(draft.document_no) || text(body.document_no), text(body.purpose),
         text(body.scope), optionalText(body.inheritance_relation), actorUserId
       ]);
-      await addEvent(draft.id, 'document_profile_saved', actorUserId, '已保存制度目的、范围和承继关系');
+      await addEvent(draft.id, 'document_profile_saved', actorUserId, '已保存制度说明');
       return await loadDocumentProfile(draft.id);
     },
     async createTerm(draft, body, actorUserId) {
@@ -1108,12 +1530,13 @@ function makeProcessDesignMysqlRepository(pool) {
     async createProcess(draft, body, actorUserId) {
       const processType = PROCESS_TYPES.has(text(body.process_type)) ? text(body.process_type) : 'new';
       const [orderRow] = await mysqlQuery(pool, 'SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_order FROM process_design_processes WHERE draft_id=?', [draft.id]);
+      const procedureCode = await nextProcedureCode(draft.id);
       const result = await mysqlRun(pool, `
         INSERT INTO process_design_processes
           (draft_id, process_code, process_type, l1_name, l2_name, l3_name, description, sort_order, created_by)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
-        draft.id, optionalText(body.process_code), processType,
+        draft.id, procedureCode, processType,
         text(body.l1_name), text(body.l2_name), text(body.l3_name),
         optionalText(body.description), body.sort_order ? Number(body.sort_order) : Number(orderRow.next_order || 1), actorUserId
       ]);
@@ -1126,10 +1549,10 @@ function makeProcessDesignMysqlRepository(pool) {
       const processType = PROCESS_TYPES.has(text(body.process_type)) ? text(body.process_type) : 'new';
       await mysqlRun(pool, `
         UPDATE process_design_processes
-        SET process_code=?, process_type=?, l1_name=?, l2_name=?, l3_name=?, description=?, updated_at=CURRENT_TIMESTAMP
+        SET process_type=?, l1_name=?, l2_name=?, l3_name=?, description=?, updated_at=CURRENT_TIMESTAMP
         WHERE id=?
       `, [
-        optionalText(body.process_code), processType, text(body.l1_name), text(body.l2_name), text(body.l3_name),
+        processType, text(body.l1_name), text(body.l2_name), text(body.l3_name),
         optionalText(body.description), processId
       ]);
       await addEvent(draft.id, 'process_updated', actorUserId, `已修改流程：${text(body.l3_name)}`, objectEventPayload('process', processId, text(body.l3_name), 'updated'));
@@ -1539,31 +1962,85 @@ function makeProcessDesignMysqlRepository(pool) {
       await addEvent(task.draft_id, `review_${decision}`, actorUserId, optionalText(note) || '已处理审核任务');
       return { draft: await getDraft(task.draft_id), reviewTask: await getById('process_design_review_tasks', task.id) };
     },
-    async publishDraft(draft, note, actorUserId) {
+    async publishDraft(draft, note, actorUserId, options = {}) {
+      if (pool && typeof pool.getConnection === 'function' && !options.__tx) {
+        const connection = await pool.getConnection();
+        try {
+          await connection.beginTransaction();
+          const txRepo = makeProcessDesignMysqlRepository(connection);
+          const txDraft = await txRepo.getDraft(draft.id);
+          const result = await txRepo.publishDraft(txDraft || draft, note, actorUserId, { ...options, __tx: true });
+          await connection.commit();
+          return result;
+        } catch (error) {
+          await connection.rollback().catch(() => {});
+          throw error;
+        } finally {
+          connection.release();
+        }
+      }
       const details = await publishValidationDetails(draft);
       if (details.length) {
         throw httpError(details.includes(VERIFIED_EVIDENCE_MESSAGE) ? 409 : 422, '校验失败', { error: '校验失败', details });
       }
+      if (draft.base_version_id && !options.confirm_complete_rewrite) {
+        throw httpError(409, '发布下一版次前请确认新版已完整重写', {
+          error: '发布下一版次前请确认新版已完整重写',
+          edition_diff: await editionDiffForDraft(draft)
+        });
+      }
       const readiness = await publishReadiness(draft);
-      const [countRow] = await mysqlQuery(pool, 'SELECT COUNT(*) AS count FROM process_design_versions WHERE draft_id=?', [draft.id]);
-      const versionNo = `PD-${draft.id}-v${Number(countRow.count || 0) + 1}`;
+      const document = draft.document_id ? await getDocumentById(draft.document_id) : null;
+      if (!document) throw httpError(409, '制度主档不存在，不能发布');
+      const currentVersion = await getCurrentVersionForDocument(document.id);
+      const expectedEdition = currentVersion ? nextEdition(currentVersion.edition) : 'A';
+      const plannedEdition = text(draft.planned_edition) || expectedEdition;
+      if (plannedEdition !== expectedEdition) {
+        throw httpError(409, '制度版次不连续，不能跳号', {
+          error: '制度版次不连续，不能跳号',
+          expected_edition: expectedEdition,
+          planned_edition: plannedEdition
+        });
+      }
+      if (currentVersion && Number(draft.base_version_id || 0) !== Number(currentVersion.id)) {
+        throw httpError(409, '当前有效版次已变化，请重新创建下一版次草稿');
+      }
+      const versionNo = documentVersionNo(draft.document_no, plannedEdition);
+      const content = await versionContent(draft);
+      content.version_status = 'published';
       const result = await mysqlRun(pool, `
         INSERT INTO process_design_versions
-          (draft_id, version_no, department_id, l1_name, l2_name, l3_name, content_json, published_by)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          (draft_id, document_id, document_no, document_title, edition, version_no,
+           department_id, l1_name, l2_name, l3_name, content_json, published_by,
+           effective_at, supersedes_version_id, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, 'published')
       `, [
-        draft.id, versionNo, draft.department_id, draft.l1_name, draft.l2_name, draft.l3_name,
-        JSON.stringify(await versionContent(draft)), actorUserId
+        draft.id, document.id, draft.document_no, draft.document_title || draft.process_name,
+        plannedEdition, versionNo, draft.department_id, draft.l1_name || '', draft.l2_name || '', draft.l3_name || '',
+        JSON.stringify(content), actorUserId, currentVersion && currentVersion.id || null
       ]);
+      if (currentVersion) {
+        await mysqlRun(pool, "UPDATE process_design_versions SET status='superseded' WHERE id=?", [currentVersion.id]);
+        await archiveSupersededProjection(currentVersion.id);
+      }
       await mysqlRun(pool, `
         UPDATE process_design_drafts
-        SET status='published', published_by=?, published_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP
+        SET status='published', active_document_no=NULL, published_by=?, published_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP
         WHERE id=?
       `, [actorUserId, draft.id]);
+      await mysqlRun(pool, `
+        UPDATE process_design_documents
+        SET document_title=?, current_edition=?, current_version_id=?, updated_by=?, updated_at=CURRENT_TIMESTAMP
+        WHERE id=?
+      `, [draft.document_title || draft.process_name, plannedEdition, result.insertId, actorUserId, document.id]);
       const version = await getById('process_design_versions', result.insertId);
       await projectPublishedVersionToProcessMap(await getDraft(draft.id), version);
       await addEvent(draft.id, 'publish', actorUserId, optionalText(note) || '已发布流程版本', {
         version_no: versionNo,
+        document_no: draft.document_no,
+        document_title: draft.document_title || draft.process_name,
+        edition: plannedEdition,
+        supersedes_version_id: currentVersion && currentVersion.id || null,
         verified_evidence_count: readiness.verifiedEvidenceCount,
         l1l2l3_confirmed: readiness.processesConfirmed,
         step_count: readiness.stepCount
@@ -1593,7 +2070,12 @@ function evidenceMaturity(payload) {
 async function repository() {
   if (repositoryFactory) return await repositoryFactory();
   if (!repositoryPromise) {
-    repositoryPromise = Promise.resolve(makeProcessDesignMysqlRepository(mysql.createPool(mysqlConfigFromEnv())));
+    repositoryPromise = (async () => {
+      const pool = mysql.createPool(mysqlConfigFromEnv());
+      await ensureProcessDesignEditionSchema(pool);
+      await ensureProcessDesignEvidenceStatusSchema(pool);
+      return makeProcessDesignMysqlRepository(pool);
+    })();
   }
   return await repositoryPromise;
 }
@@ -1638,10 +2120,9 @@ async function authorizedDepartmentIds(req, roleCodes) {
 
 function draftRequiredErrors(body) {
   const required = [
-    ['process_name', '流程名称不能为空'],
-    ['reason', '为什么新增不能为空'],
-    ['basis_type', '依据类型不能为空'],
-    ['basis_description', '依据说明不能为空']
+    ['document_no', '制度编号不能为空'],
+    ['process_name', '制度名称不能为空'],
+    ['basis_type', '依据类型不能为空']
   ];
   const errors = required.filter(([field]) => !text(body[field])).map(([field, message]) => ({ field, message }));
   if (!Object.prototype.hasOwnProperty.call(body, 'involves_other_departments')) {
@@ -1651,13 +2132,13 @@ function draftRequiredErrors(body) {
 }
 
 async function assertCanViewDraft(req, repo, draft) {
-  if (!draft) throw httpError(404, '流程草稿不存在');
+  if (!draft) throw httpError(404, '制度结构草稿不存在');
   const roleCodes = await currentRoleCodes(req);
   if (await canWorkAcrossDepartments(req, roleCodes)) return roleCodes;
   if (Number(draft.created_by || 0) === Number(req.session.userId)) return roleCodes;
   const deptIds = await authorizedDepartmentIds(req, roleCodes);
   if (deptIds && deptIds.has(Number(draft.department_id))) return roleCodes;
-  throw httpError(403, '无权查看该流程草稿');
+  throw httpError(403, '无权查看该制度结构草稿');
 }
 
 async function assertCanEditDraft(req, repo, draft) {
@@ -1666,7 +2147,7 @@ async function assertCanEditDraft(req, repo, draft) {
   if (await canWorkAcrossDepartments(req, roleCodes)) return roleCodes;
   if (Number(draft.created_by || 0) === Number(req.session.userId)) return roleCodes;
   if (hasRole(roleCodes, new Set([...DEPT_CREATE_ROLES, ...REVIEW_ROLES]))) return roleCodes;
-  throw httpError(403, '无权维护该流程草稿');
+  throw httpError(403, '无权维护该制度结构草稿');
 }
 
 async function assertCanEditDraftContent(req, repo, draft) {
@@ -1680,7 +2161,7 @@ async function assertCanEditDraftContent(req, repo, draft) {
 async function assertCanReview(req, repo, draft) {
   const roleCodes = await assertCanViewDraft(req, repo, draft);
   if (await canWorkAcrossDepartments(req, roleCodes) || hasRole(roleCodes, REVIEW_ROLES)) return roleCodes;
-  throw httpError(403, '无权审核该流程草稿');
+  throw httpError(403, '无权审核该制度结构草稿');
 }
 
 async function assertCanVerifyEvidenceStatus(req) {
@@ -1730,6 +2211,39 @@ router.get('/process-taxonomy', requireAuth, (req, res) => runAction(res, async 
   res.json(await repo.listProcessTaxonomy(await currentDepartmentTaxonomyScope(req)));
 }));
 
+async function canMaintainDocument(req, document) {
+  const roleCodes = await currentRoleCodes(req);
+  if (await canWorkAcrossDepartments(req, roleCodes)) return true;
+  const allowed = await authorizedDepartmentIds(req, roleCodes);
+  return Boolean(allowed && document && allowed.has(Number(document.owning_department_id)));
+}
+
+router.get('/documents/lookup', requireAuth, (req, res) => runAction(res, async () => {
+  const repo = await repository();
+  const documentNo = text(req.query && req.query.document_no);
+  if (!documentNo) throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'document_no', message: '制度编号不能为空' }] });
+  const result = await repo.lookupDocument(documentNo);
+  if (result.exists && !(await canMaintainDocument(req, result.document))) {
+    return res.json({
+      exists: true,
+      accessible: false,
+      can_create: false,
+      can_create_next: false,
+      document_no: documentNo,
+      message: '该制度编号已存在，不属于当前可维护范围。'
+    });
+  }
+  res.json({ accessible: true, ...result });
+}));
+
+router.post('/documents/:id/drafts', requireAuth, (req, res) => runAction(res, async () => {
+  const repo = await repository();
+  const document = await repo.getDocumentById(req.params.id);
+  if (!document) throw httpError(404, '制度不存在');
+  if (!(await canMaintainDocument(req, document))) throw httpError(403, '无权维护该制度');
+  res.status(201).json(await repo.createNextEditionDraft(document.id, req.session.userId, document.owning_department_id));
+}));
+
 router.post('/drafts', requireAuth, (req, res) => runAction(res, async () => {
   const repo = await repository();
   const roleCodes = await currentRoleCodes(req);
@@ -1741,13 +2255,13 @@ router.post('/drafts', requireAuth, (req, res) => runAction(res, async () => {
   const requestedDeptId = req.body.department_id ? Number(req.body.department_id) : null;
   const sessionDeptId = req.session.departmentId ? Number(req.session.departmentId) : null;
   const targetDeptId = requestedDeptId || sessionDeptId;
-  if (!targetDeptId && !canCrossDept) throw httpError(400, '请先维护人员组织信息后再创建流程草稿');
+  if (!targetDeptId && !canCrossDept) throw httpError(400, '请先维护人员组织信息后再创建制度结构草稿');
   if (!await repo.departmentExists(targetDeptId)) errors.push({ field: 'department_id', message: '所属部门不存在' });
   if (!canCrossDept) {
     if (requestedDeptId && requestedDeptId !== sessionDeptId) throw httpError(403, '普通填报人只能为本人部门创建流程');
     const allowed = await authorizedDepartmentIds(req, roleCodes);
     if (!allowed || !allowed.has(Number(targetDeptId))) throw httpError(403, '无权为该部门创建流程');
-    if (!hasRole(roleCodes, new Set([...DEPT_CREATE_ROLES, ...REVIEW_ROLES]))) throw httpError(403, '无权创建流程草稿');
+    if (!hasRole(roleCodes, new Set([...DEPT_CREATE_ROLES, ...REVIEW_ROLES]))) throw httpError(403, '无权创建制度结构草稿');
   } else if (requestedDeptId && sessionDeptId && requestedDeptId !== sessionDeptId && !text(req.body.proxy_reason)) {
     errors.push({ field: 'proxy_reason', message: '管理员或信息化负责人代建时必须填写代建原因' });
   }
@@ -1772,6 +2286,13 @@ router.put('/drafts/:id', requireAuth, (req, res) => runAction(res, async () => 
   const taxonomyErrors = await taxonomyValidationDetails(repo, req.body || {}, await taxonomyScopeForDepartmentId(draft.department_id));
   if (taxonomyErrors.length) throw httpError(422, '校验失败', { error: '校验失败', details: taxonomyErrors });
   res.json(await repo.updateDraft(draft, req.body || {}, req.session.userId));
+}));
+
+router.delete('/drafts/:id', requireAuth, (req, res) => runAction(res, async () => {
+  const repo = await repository();
+  const draft = await repo.getDraft(req.params.id);
+  await assertCanEditDraftContent(req, repo, draft);
+  res.json(await repo.deleteDraft(draft, req.session.userId));
 }));
 
 router.put('/drafts/:id/document-profile', requireAuth, (req, res) => runAction(res, async () => {
@@ -1824,6 +2345,7 @@ router.post('/drafts/:id/processes', requireAuth, (req, res) => runAction(res, a
   await assertCanEditDraftContent(req, repo, draft);
   const body = req.body || {};
   const details = [];
+  assertNoManualNumber(body, 'process_code', '流程编号');
   if (!text(body.l1_name)) details.push({ field: 'l1_name', message: 'L1 能力不能为空' });
   if (!text(body.l2_name)) details.push({ field: 'l2_name', message: 'L2 业务能力不能为空' });
   if (!text(body.l3_name)) details.push({ field: 'l3_name', message: 'L3 流程不能为空' });
@@ -1839,6 +2361,7 @@ router.put('/processes/:id', requireAuth, (req, res) => runAction(res, async () 
   await assertCanEditDraftContent(req, repo, draft);
   const body = req.body || {};
   const details = [];
+  assertNoManualNumber(body, 'process_code', '流程编号');
   if (!text(body.l1_name)) details.push({ field: 'l1_name', message: 'L1 能力不能为空' });
   if (!text(body.l2_name)) details.push({ field: 'l2_name', message: 'L2 业务能力不能为空' });
   if (!text(body.l3_name)) details.push({ field: 'l3_name', message: 'L3 流程不能为空' });
@@ -1860,7 +2383,7 @@ router.get('/drafts/:id/markdown', requireAuth, (req, res) => runAction(res, asy
   const draft = await repo.getDraft(req.params.id);
   await assertCanViewDraft(req, repo, draft);
   const result = await repo.markdownForDraft(draft.id);
-  if (!result) throw httpError(404, '流程草稿不存在');
+  if (!result) throw httpError(404, '制度结构草稿不存在');
   res.json(result);
 }));
 
@@ -2029,6 +2552,13 @@ router.get('/drafts/:id/risks', requireAuth, (req, res) => runAction(res, async 
   res.json({ summary: { total: items.length }, items });
 }));
 
+router.get('/drafts/:id/edition-diff', requireAuth, (req, res) => runAction(res, async () => {
+  const repo = await repository();
+  const draft = await repo.getDraft(req.params.id);
+  await assertCanViewDraft(req, repo, draft);
+  res.json(await repo.editionDiff(draft));
+}));
+
 router.get('/drafts/:id/outcome-preview', requireAuth, (req, res) => runAction(res, async () => {
   const repo = await repository();
   const draft = await repo.getDraft(req.params.id);
@@ -2060,12 +2590,13 @@ router.post('/drafts/:id/publish', requireAuth, (req, res) => runAction(res, asy
   const repo = await repository();
   const draft = await repo.getDraft(req.params.id);
   await assertCanReview(req, repo, draft);
-  res.json(await repo.publishDraft(draft, req.body && req.body.note, req.session.userId));
+  res.json(await repo.publishDraft(draft, req.body && req.body.note, req.session.userId, req.body || {}));
 }));
 
 router.setProcessDesignRepositoryFactory = setProcessDesignRepositoryFactory;
 router.resetProcessDesignRepositoryFactory = resetProcessDesignRepositoryFactory;
 router.makeProcessDesignMysqlRepository = makeProcessDesignMysqlRepository;
+router.ensureProcessDesignEditionSchema = ensureProcessDesignEditionSchema;
 router.ensureProcessDesignEvidenceStatusSchema = ensureProcessDesignEvidenceStatusSchema;
 
 module.exports = router;
