@@ -46,6 +46,9 @@ async function request(baseUrl, userKey, routePath, options = {}) {
 function makeFakeRepository() {
   const state = {
     draft: null,
+    drafts: new Map(),
+    document: null,
+    versions: [],
     documentProfile: null,
     terms: [],
     processes: [],
@@ -68,8 +71,8 @@ function makeFakeRepository() {
   function outcome() {
     const activeSteps = state.steps.filter(step => step.status !== 'voided');
     return {
-      formed: '已形成 1 条流程草稿',
-      current: '当前内容可以保存草稿或提交部门内审',
+      formed: '已形成 1 条制度结构草稿',
+      current: '当前内容可以保存制度说明或提交部门内审',
       missing: [],
       next: '提交审核或发布',
       counts: {
@@ -85,15 +88,62 @@ function makeFakeRepository() {
   }
   return {
     calls,
+    state,
     setDraftStatus(status) {
       state.draft = { ...state.draft, status };
+      if (state.draft && state.draft.id) state.drafts.set(Number(state.draft.id), state.draft);
     },
     async summary() {
       calls.push('summary');
+      const activeDrafts = Array.from(state.drafts.values()).filter(draft => draft && draft.status !== 'published');
       return {
-        summary: { totalDrafts: state.draft ? 1 : 0, publishedVersions: state.version ? 1 : 0, byStatus: state.draft ? { [state.draft.status]: 1 } : {} },
-        drafts: state.draft ? [{ id: state.draft.id, process_name: state.draft.process_name, status: state.draft.status }] : []
+        summary: {
+          totalDrafts: activeDrafts.length,
+          publishedVersions: state.versions.length,
+          byStatus: activeDrafts.reduce((result, draft) => {
+            result[draft.status] = (result[draft.status] || 0) + 1;
+            return result;
+          }, {})
+        },
+        drafts: activeDrafts.map(draft => ({
+          id: draft.id,
+          process_name: draft.process_name,
+          document_no: draft.document_no,
+          document_title: draft.document_title,
+          planned_edition: draft.planned_edition,
+          status: draft.status
+        })),
+        versions: state.versions.slice().reverse()
       };
+    },
+    async lookupDocument(documentNo) {
+      calls.push('lookupDocument');
+      if (!state.document || state.document.document_no !== documentNo) {
+        return {
+          exists: false,
+          document_no: documentNo,
+          next_edition: 'A',
+          can_create: true,
+          message: '该制度编号可用，可创建 A版草稿'
+        };
+      }
+      const activeDraft = Array.from(state.drafts.values()).find(draft => draft.document_no === documentNo && ['draft', 'needs_changes', 'submitted', 'under_review', 'approved'].includes(draft.status));
+      const currentVersion = state.versions.find(version => version.status === 'published' && version.document_no === documentNo) || null;
+      return {
+        exists: true,
+        document: state.document,
+        current_version: currentVersion,
+        current_edition: state.document.current_edition || null,
+        next_edition: currentVersion ? 'B' : 'A',
+        active_draft: activeDraft || null,
+        can_create: !activeDraft,
+        can_create_next: Boolean(currentVersion && !activeDraft),
+        message: activeDraft ? '该制度编号已有进行中草稿' : '该制度编号可创建下一版次'
+      };
+    },
+    async getDocumentById(documentId) {
+      calls.push('getDocumentById');
+      return state.document && Number(state.document.id) === Number(documentId) ? state.document : null;
     },
     async departmentExists(departmentId) {
       calls.push('departmentExists');
@@ -108,9 +158,25 @@ function makeFakeRepository() {
     },
     async createDraft(body, actorUserId, targetDeptId) {
       calls.push('createDraft');
+      state.document = state.document || {
+        id: 801,
+        document_no: body.document_no,
+        document_title: body.document_title || body.process_name,
+        owning_department_id: targetDeptId,
+        status: 'active',
+        current_edition: null,
+        current_version_id: null,
+        created_by: actorUserId
+      };
       state.draft = {
         id: 101,
         process_name: body.process_name,
+        document_id: state.document.id,
+        document_no: body.document_no,
+        document_title: body.document_title || body.process_name,
+        planned_edition: 'A',
+        current_edition: null,
+        base_version_id: null,
         reason: body.reason,
         basis_type: body.basis_type,
         basis_description: body.basis_description,
@@ -124,11 +190,46 @@ function makeFakeRepository() {
         status: 'draft',
         created_by: actorUserId
       };
+      state.drafts.set(state.draft.id, state.draft);
+      return { ...state.draft, outcome: outcome() };
+    },
+    async createNextEditionDraft(documentId, actorUserId, targetDeptId) {
+      calls.push('createNextEditionDraft');
+      if (!state.document || Number(state.document.id) !== Number(documentId)) {
+        const error = new Error('制度不存在');
+        error.statusCode = 404;
+        throw error;
+      }
+      const currentVersion = state.versions.find(version => version.status === 'published' && Number(version.document_id) === Number(documentId));
+      state.draft = {
+        id: 102,
+        process_name: state.document.document_title,
+        document_id: state.document.id,
+        document_no: state.document.document_no,
+        document_title: state.document.document_title,
+        planned_edition: 'B',
+        current_edition: state.document.current_edition,
+        base_version_id: currentVersion && currentVersion.id,
+        reason: '',
+        basis_type: '现场实际',
+        basis_description: '',
+        involves_other_departments: false,
+        related_departments: [],
+        related_departments_json: JSON.stringify([]),
+        department_id: targetDeptId || state.document.owning_department_id,
+        department_name: '经营发展部',
+        l1_status: 'unclassified',
+        l2_status: 'unclassified',
+        status: 'draft',
+        created_by: actorUserId
+      };
+      state.drafts.set(state.draft.id, state.draft);
+      state.documentProfile = null;
       return { ...state.draft, outcome: outcome() };
     },
     async getDraft(id) {
       calls.push(`getDraft:${id}`);
-      return Number(id) === 101 ? state.draft : null;
+      return state.drafts.get(Number(id)) || null;
     },
     async getDraftByStep() {
       calls.push('getDraftByStep');
@@ -166,20 +267,27 @@ function makeFakeRepository() {
       calls.push('getDraftByEvidence');
       return state.draft;
     },
-    async detail() {
+    async detail(draftArg = state.draft) {
       calls.push('detail');
+      const draft = typeof draftArg === 'number' ? state.drafts.get(Number(draftArg)) : draftArg;
+      const draftId = Number((draft || state.draft || {}).id);
+      const terms = state.terms.filter(item => Number(item.draft_id) === draftId);
+      const processes = state.processes.filter(item => Number(item.draft_id) === draftId);
+      const steps = state.steps.filter(item => Number(item.draft_id) === draftId);
       return {
-        draft: state.draft,
-        documentProfile: state.documentProfile,
-        terms: state.terms,
-        processes: state.processes,
-        steps: state.steps.map(step => ({
+        draft: state.drafts.get(draftId) || state.draft,
+        document: state.document,
+        documentProfile: state.documentProfile && Number(state.documentProfile.draft_id) === draftId ? state.documentProfile : null,
+        versions: state.versions,
+        terms,
+        processes,
+        steps: steps.map(step => ({
           ...step,
           behaviorDetail: state.behaviorDetails.get(step.id) || null,
           handoffs: state.handoffs.filter(handoff => handoff.step_id === step.id)
         })),
-        forms: state.form ? [{ ...state.form, fields: state.field ? [state.field] : [], tables: state.table ? [{ ...state.table, fields: state.tableField ? [state.tableField] : [] }] : [] }] : [],
-        evidence: state.evidence ? [state.evidence] : [],
+        forms: state.form && Number(state.form.draft_id) === draftId ? [{ ...state.form, fields: state.field ? [state.field] : [], tables: state.table ? [{ ...state.table, fields: state.tableField ? [state.tableField] : [] }] : [] }] : [],
+        evidence: state.evidence && Number(state.evidence.draft_id) === draftId ? [state.evidence] : [],
         risks: [],
         reviewTasks: state.reviewTask ? [state.reviewTask] : [],
         events: [],
@@ -189,15 +297,36 @@ function makeFakeRepository() {
     async updateDraft(draft, body) {
       calls.push('updateDraft');
       state.draft = { ...draft, ...body };
+      state.drafts.set(Number(state.draft.id), state.draft);
       return { ...state.draft, outcome: outcome() };
+    },
+    async deleteDraft(draft) {
+      calls.push('deleteDraft');
+      const deletedId = Number(draft.id);
+      state.drafts.delete(deletedId);
+      state.draft = null;
+      if (state.document && !state.document.current_version_id) state.document = null;
+      state.documentProfile = null;
+      state.terms = [];
+      state.processes = [];
+      state.steps = [];
+      state.behaviorDetails.clear();
+      state.handoffs = [];
+      state.form = null;
+      state.table = null;
+      state.tableField = null;
+      state.field = null;
+      state.evidence = null;
+      state.reviewTask = null;
+      return { deleted: true, id: deletedId };
     },
     async saveDocumentProfile(draft, body, actorUserId) {
       calls.push('saveDocumentProfile');
       state.documentProfile = {
         id: 151,
         draft_id: draft.id,
-        document_title: body.document_title,
-        document_no: body.document_no || null,
+        document_title: draft.document_title || body.document_title,
+        document_no: draft.document_no || body.document_no || null,
         purpose: body.purpose,
         scope: body.scope,
         inheritance_relation: body.inheritance_relation,
@@ -236,13 +365,14 @@ function makeFakeRepository() {
     },
     async createProcess(draft, body, actorUserId) {
       calls.push('createProcess');
+      const draftProcesses = state.processes.filter(process => Number(process.draft_id) === Number(draft.id));
       const process = {
         id: 181 + state.processes.length,
         draft_id: draft.id,
         l1_name: body.l1_name,
         l2_name: body.l2_name,
         l3_name: body.l3_name,
-        process_code: body.process_code || null,
+        process_code: `PROCEDURE-${draft.id}-${String(draftProcesses.length + 1).padStart(3, '0')}`,
         process_type: body.process_type || 'new',
         created_by: actorUserId
       };
@@ -254,7 +384,6 @@ function makeFakeRepository() {
       const index = state.processes.findIndex(process => Number(process.id) === Number(processId));
       state.processes[index] = {
         ...state.processes[index],
-        process_code: body.process_code || null,
         process_type: body.process_type || 'new',
         l1_name: body.l1_name,
         l2_name: body.l2_name,
@@ -458,15 +587,59 @@ function makeFakeRepository() {
     },
     async publishDraft(draft) {
       calls.push('publishDraft');
-      state.version = { id: 701, draft_id: draft.id, version_no: 'PD-101-v1' };
+      const options = arguments[3] || {};
+      if (draft.base_version_id && !options.confirm_complete_rewrite) {
+        const error = new Error('发布下一版次前请确认新版已完整重写');
+        error.statusCode = 409;
+        error.payload = { error: error.message, edition_diff: await this.editionDiff(draft) };
+        throw error;
+      }
+      if (draft.base_version_id) {
+        state.versions = state.versions.map(version => Number(version.id) === Number(draft.base_version_id) ? { ...version, status: 'superseded' } : version);
+      }
+      const version = {
+        id: 701 + state.versions.length,
+        draft_id: draft.id,
+        document_id: draft.document_id,
+        document_no: draft.document_no,
+        document_title: draft.document_title,
+        edition: draft.planned_edition,
+        version_no: `${draft.document_no}-${draft.planned_edition}`,
+        status: 'published',
+        supersedes_version_id: draft.base_version_id || null
+      };
+      state.versions.push(version);
+      state.version = version;
+      state.document = {
+        ...state.document,
+        current_edition: version.edition,
+        current_version_id: version.id
+      };
       state.draft = { ...draft, status: 'published' };
+      state.drafts.set(Number(state.draft.id), state.draft);
       return { draft: state.draft, version: state.version, outcome: outcome() };
+    },
+    async editionDiff(draft) {
+      calls.push('editionDiff');
+      if (!draft.base_version_id) {
+        return { base_edition: null, planned_edition: draft.planned_edition || 'A', missing: { processes: [], steps: [], forms: [] } };
+      }
+      return {
+        base_edition: 'A',
+        planned_edition: draft.planned_edition || 'B',
+        missing: {
+          processes: ['客户需求变更受理'],
+          steps: ['确认技术影响'],
+          forms: ['需求变更单']
+        }
+      };
     },
     async markdownForDraft() {
       calls.push('markdownForDraft');
+      const draft = state.draft || {};
       return {
-        filename: '客户需求变更处理.md',
-        markdown: '# 客户需求变更处理\n\n## 目的\n统一客户需求变更入口\n\n## 附表结构\n- 主表：需求变更主表'
+        filename: `${draft.document_no || 'CX-ZD-001'}-${draft.document_title || '客户需求变更管理制度'}-${draft.planned_edition || 'A'}版.md`,
+        markdown: `# ${draft.document_no || 'CX-ZD-001'} ${draft.document_title || '客户需求变更管理制度'} ${draft.planned_edition || 'A'}版\n\n## 目的\n统一客户需求变更入口\n\n## 附表结构\n- 主表：需求变更主表`
       };
     }
   };
@@ -479,7 +652,35 @@ async function main() {
   const indexSource = fs.readFileSync(path.join(__dirname, '../server/index.js'), 'utf8');
   assert.ok(indexSource.includes("process.env.PROCESS_GOVERNANCE_READ_MODEL === 'mysql' ? 'processDesignMysql' : 'processDesign'"), 'server must select MySQL process design route under MySQL process governance mode');
   assert.ok(mdmMysqlSchemaSql().includes('CREATE TABLE IF NOT EXISTS process_design_drafts'), 'MySQL schema must include process design drafts');
+  assert.ok(mdmMysqlSchemaSql().includes('CREATE TABLE IF NOT EXISTS process_design_documents'), 'MySQL schema must include process design documents');
   assert.ok(mdmMysqlSchemaSql().includes('CREATE TABLE IF NOT EXISTS process_design_versions'), 'MySQL schema must include process design versions');
+  assert.ok(mdmMysqlSchemaSql().includes('UNIQUE KEY uq_process_design_documents_no (document_no)'), '制度编号 must be company-wide unique');
+  assert.ok(mdmMysqlSchemaSql().includes('document_no VARCHAR(128) NOT NULL'), 'drafts and versions must persist document_no from draft stage');
+  assert.ok(mdmMysqlSchemaSql().includes('planned_edition VARCHAR(16) NOT NULL'), 'drafts must persist backend-generated planned edition');
+  assert.ok(mdmMysqlSchemaSql().includes('edition VARCHAR(16) NOT NULL'), 'versions must persist backend-generated edition');
+  assert.ok(mdmMysqlSchemaSql().includes('UNIQUE KEY uq_process_design_versions_document_edition (document_no, edition)'), 'document_no + edition must be unique');
+  assert.ok(mdmMysqlSchemaSql().includes('document_edition VARCHAR(16) NULL'), 'process projections must carry document edition');
+  assert.ok(
+    mdmMysqlSchemaSql().includes("status ENUM('verified','pending_review','source_missing','ocr_extracted_not_confirmed','review_only') NOT NULL DEFAULT 'pending_review'"),
+    'process_design_evidence must carry evidence status enum'
+  );
+  assert.ok(mdmMysqlSchemaSql().includes('process_code VARCHAR(128) NOT NULL'), 'process design procedure code must be required');
+  assert.ok(mdmMysqlSchemaSql().includes('UNIQUE KEY uq_process_design_processes_code (process_code)'), 'process design procedure code must be unique');
+  assert.ok(routeSource.includes('FROM process_mapping_records r'), 'process taxonomy should read L1/L2 from MySQL process_mapping_records');
+  assert.ok(routeSource.includes('currentDepartmentTaxonomyScope'), 'process taxonomy API should scope options to current department');
+  assert.ok(routeSource.includes('PROCEDURE-'), 'process design route should generate Procedure business codes');
+  assert.ok(routeSource.includes("assertNoManualNumber(body, 'process_code', '流程编号')"), 'process design route should reject manual process codes');
+  assert.ok(routeSource.includes("router.delete('/drafts/:id'"), 'process design route should allow deleting editable drafts');
+  assert.ok(routeSource.includes("status='verified'"), 'publish gate must check evidence.status=verified');
+  assert.ok(routeSource.includes('verified_evidence_count'), 'publish event payload must include verified_evidence_count');
+  assert.ok(routeSource.includes('ensureProcessDesignEvidenceStatusSchema'), 'schema init should expose evidence status migration');
+  assert.ok(routeSource.includes("router.get('/documents/lookup'"), 'process design route should expose document number lookup');
+  assert.ok(routeSource.includes("router.post('/documents/:id/drafts'"), 'process design route should expose next-edition draft creation');
+  assert.ok(routeSource.includes('doc.current_edition'), 'draft summary should read current edition from document master');
+  assert.ok(!routeSource.includes('d.current_edition'), 'draft table must not be queried for current edition');
+  assert.ok(routeSource.includes('function nextEdition'), 'route should generate A/B/C/AA editions server-side');
+  assert.ok(routeSource.includes('confirm_complete_rewrite'), 'B/C publish should require complete rewrite confirmation');
+  assert.ok(routeSource.includes('superseded'), 'publishing a new edition should supersede the previous current edition');
   [
     'process_design_document_profiles',
     'process_design_processes',
@@ -539,10 +740,58 @@ async function main() {
     const summary = await request(baseUrl, 'submitter', '/api/process-design/summary');
     assert.strictEqual(summary.res.status, 200);
 
+    const lookupBeforeCreate = await request(baseUrl, 'submitter', '/api/process-design/documents/lookup?document_no=CX-ZD-001');
+    assert.strictEqual(lookupBeforeCreate.res.status, 200, JSON.stringify(lookupBeforeCreate.body));
+    assert.strictEqual(lookupBeforeCreate.body.exists, false);
+    assert.strictEqual(lookupBeforeCreate.body.next_edition, 'A');
+    assert.ok(lookupBeforeCreate.body.can_create, 'new document number should allow A edition draft creation');
+
+    const invalidDraft = await request(baseUrl, 'submitter', '/api/process-design/drafts', {
+      method: 'POST',
+      body: JSON.stringify({
+        reason: '业务需要形成统一入口',
+        basis_type: '会议 / 访谈',
+        basis_description: '项目例会提出',
+        involves_other_departments: false
+      })
+    });
+    assert.strictEqual(invalidDraft.res.status, 422);
+    assert.ok(
+      invalidDraft.body.details.some(detail => detail.field === 'process_name' && detail.message === '制度名称不能为空'),
+      'draft title validation should use制度名称 copy'
+    );
+    assert.ok(
+      invalidDraft.body.details.some(detail => detail.field === 'document_no' && detail.message === '制度编号不能为空'),
+      'draft creation should require制度编号 from the draft stage'
+    );
+
+    const draftWithoutReasonAndBasisDescription = await request(baseUrl, 'submitter', '/api/process-design/drafts', {
+      method: 'POST',
+      body: JSON.stringify({
+        document_no: 'CX-ZD-TDD',
+        document_title: '制度说明精简字段验证',
+        process_name: '制度说明精简字段验证',
+        basis_type: '会议 / 访谈',
+        involves_other_departments: false
+      })
+    });
+    assert.strictEqual(
+      draftWithoutReasonAndBasisDescription.res.status,
+      201,
+      '制度说明 should save without 为什么新增 or 依据说明'
+    );
+    const deleteDraft = await request(baseUrl, 'submitter', '/api/process-design/drafts/101', { method: 'DELETE' });
+    assert.strictEqual(deleteDraft.res.status, 200, JSON.stringify(deleteDraft.body));
+    assert.deepStrictEqual(deleteDraft.body, { deleted: true, id: 101 });
+    const summaryAfterDraftDelete = await request(baseUrl, 'submitter', '/api/process-design/summary');
+    assert.strictEqual(summaryAfterDraftDelete.body.summary.totalDrafts, 0, 'deleted process design draft should leave the draft list');
+
     const draft = await request(baseUrl, 'submitter', '/api/process-design/drafts', {
       method: 'POST',
       body: JSON.stringify({
-        process_name: '客户需求变更处理',
+        document_no: 'CX-ZD-001',
+        document_title: '客户需求变更管理制度',
+        process_name: '客户需求变更管理制度',
         reason: '业务需要形成统一入口',
         basis_type: '会议 / 访谈',
         basis_description: '项目例会提出',
@@ -552,6 +801,13 @@ async function main() {
     });
     assert.strictEqual(draft.res.status, 201, JSON.stringify(draft.body));
     assert.strictEqual(draft.body.id, 101);
+    assert.strictEqual(draft.body.document_no, 'CX-ZD-001');
+    assert.strictEqual(draft.body.planned_edition, 'A');
+
+    const lookupWithActiveDraft = await request(baseUrl, 'submitter', '/api/process-design/documents/lookup?document_no=CX-ZD-001');
+    assert.strictEqual(lookupWithActiveDraft.res.status, 200, JSON.stringify(lookupWithActiveDraft.body));
+    assert.strictEqual(lookupWithActiveDraft.body.active_draft.id, 101);
+    assert.strictEqual(lookupWithActiveDraft.body.can_create, false);
 
     const detail = await request(baseUrl, 'submitter', '/api/process-design/drafts/101');
     assert.strictEqual(detail.res.status, 200);
@@ -611,12 +867,40 @@ async function main() {
     assert.strictEqual(invalidProcess.res.status, 422, JSON.stringify(invalidProcess.body));
     assert.ok(JSON.stringify(invalidProcess.body).includes('已有映射关系'), 'process L1/L2 must come from existing mapping relationships');
 
+    const manualProcessCode = await request(baseUrl, 'submitter', '/api/process-design/drafts/101/processes', {
+      method: 'POST',
+      body: JSON.stringify({
+        l1_name: '市场开发与客户合同治理',
+        l2_name: '客户合同评审管理',
+        l3_name: '客户需求变更处理',
+        process_code: 'L3-SAL-001',
+        process_type: 'new'
+      })
+    });
+    assert.strictEqual(manualProcessCode.res.status, 422, JSON.stringify(manualProcessCode.body));
+    assert.ok(JSON.stringify(manualProcessCode.body).includes('自动生成'), 'manual process code should be rejected');
+
     const processA = await request(baseUrl, 'submitter', '/api/process-design/drafts/101/processes', {
       method: 'POST',
       body: JSON.stringify({ l1_name: '市场开发与客户合同治理', l2_name: '客户合同评审管理', l3_name: '客户需求变更处理', process_type: 'new' })
     });
     assert.strictEqual(processA.res.status, 201, JSON.stringify(processA.body));
     assert.strictEqual(processA.body.id, 181);
+    assert.strictEqual(processA.body.process_code, 'PROCEDURE-101-001');
+    assert.ok(!String(processA.body.process_code).startsWith('L3'), 'procedure code should not use the frontend L3 label');
+
+    const manualProcessCodeUpdate = await request(baseUrl, 'submitter', '/api/process-design/processes/181', {
+      method: 'PUT',
+      body: JSON.stringify({
+        l1_name: '市场开发与客户合同治理',
+        l2_name: '客户合同评审管理',
+        l3_name: '客户需求变更受理',
+        process_code: 'L3-SAL-009',
+        process_type: 'adjustment'
+      })
+    });
+    assert.strictEqual(manualProcessCodeUpdate.res.status, 422, JSON.stringify(manualProcessCodeUpdate.body));
+    assert.ok(JSON.stringify(manualProcessCodeUpdate.body).includes('自动生成'), 'manual process code update should be rejected');
 
     const invalidProcessUpdate = await request(baseUrl, 'submitter', '/api/process-design/processes/181', {
       method: 'PUT',
@@ -624,7 +908,6 @@ async function main() {
         l1_name: '市场开发与客户合同治理',
         l2_name: '新增业务能力',
         l3_name: '客户需求变更受理',
-        process_code: 'L3-SAL-001',
         process_type: 'adjustment'
       })
     });
@@ -637,19 +920,20 @@ async function main() {
         l1_name: '市场开发与客户合同治理',
         l2_name: '客户合同评审管理',
         l3_name: '客户需求变更受理',
-        process_code: 'L3-SAL-001',
         process_type: 'adjustment',
         description: '受理并登记客户需求变更'
       })
     });
     assert.strictEqual(processUpdate.res.status, 200, JSON.stringify(processUpdate.body));
     assert.strictEqual(processUpdate.body.l3_name, '客户需求变更受理');
+    assert.strictEqual(processUpdate.body.process_code, 'PROCEDURE-101-001');
 
     const processB = await request(baseUrl, 'submitter', '/api/process-design/drafts/101/processes', {
       method: 'POST',
       body: JSON.stringify({ l1_name: '产品设计全生命周期管理', l2_name: '设计更改管理', l3_name: '技术影响评估', process_type: 'handoff' })
     });
     assert.strictEqual(processB.res.status, 201, JSON.stringify(processB.body));
+    assert.strictEqual(processB.body.process_code, 'PROCEDURE-101-002');
 
     const processC = await request(baseUrl, 'submitter', '/api/process-design/drafts/101/processes', {
       method: 'POST',
@@ -904,6 +1188,8 @@ async function main() {
     const markdown = await request(baseUrl, 'submitter', '/api/process-design/drafts/101/markdown');
     assert.strictEqual(markdown.res.status, 200);
     assert.ok(String(markdown.body.markdown || '').includes('## 目的'), 'markdown export should include purpose section');
+    assert.ok(String(markdown.body.markdown || '').includes('CX-ZD-001 客户需求变更管理制度 A版'), 'markdown title should include document number, title and edition');
+    assert.strictEqual(markdown.body.filename, 'CX-ZD-001-客户需求变更管理制度-A版.md');
 
     const preview = await request(baseUrl, 'submitter', '/api/process-design/drafts/101/outcome-preview');
     assert.strictEqual(preview.res.status, 200);
@@ -926,10 +1212,62 @@ async function main() {
       body: JSON.stringify({ note: '发布' })
     });
     assert.strictEqual(publish.res.status, 200);
-    assert.strictEqual(publish.body.version.version_no, 'PD-101-v1');
+    assert.strictEqual(publish.body.version.version_no, 'CX-ZD-001-A');
+    assert.strictEqual(publish.body.version.document_no, 'CX-ZD-001');
+    assert.strictEqual(publish.body.version.document_title, '客户需求变更管理制度');
+    assert.strictEqual(publish.body.version.edition, 'A');
+    assert.strictEqual(publish.body.version.status, 'published');
+
+    const lookupAfterPublish = await request(baseUrl, 'submitter', '/api/process-design/documents/lookup?document_no=CX-ZD-001');
+    assert.strictEqual(lookupAfterPublish.res.status, 200, JSON.stringify(lookupAfterPublish.body));
+    assert.strictEqual(lookupAfterPublish.body.current_version.edition, 'A');
+    assert.strictEqual(lookupAfterPublish.body.next_edition, 'B');
+    assert.ok(lookupAfterPublish.body.can_create_next, 'published A edition should allow B edition creation when no active draft exists');
+
+    const nextDraft = await request(baseUrl, 'submitter', '/api/process-design/documents/801/drafts', {
+      method: 'POST',
+      body: JSON.stringify({})
+    });
+    assert.strictEqual(nextDraft.res.status, 201, JSON.stringify(nextDraft.body));
+    assert.strictEqual(nextDraft.body.id, 102);
+    assert.strictEqual(nextDraft.body.document_no, 'CX-ZD-001');
+    assert.strictEqual(nextDraft.body.document_title, '客户需求变更管理制度');
+    assert.strictEqual(nextDraft.body.planned_edition, 'B');
+    assert.strictEqual(nextDraft.body.base_version_id, 701);
+
+    const nextDetail = await request(baseUrl, 'submitter', '/api/process-design/drafts/102');
+    assert.strictEqual(nextDetail.res.status, 200, JSON.stringify(nextDetail.body));
+    assert.strictEqual(nextDetail.body.processes.length, 0, 'B edition draft should not copy A edition processes');
+    assert.strictEqual(nextDetail.body.steps.length, 0, 'B edition draft should not copy A edition behaviors');
+    assert.strictEqual(nextDetail.body.forms.length, 0, 'B edition draft should not copy A edition forms');
+
+    const editionDiff = await request(baseUrl, 'submitter', '/api/process-design/drafts/102/edition-diff');
+    assert.strictEqual(editionDiff.res.status, 200, JSON.stringify(editionDiff.body));
+    assert.deepStrictEqual(editionDiff.body.missing.processes, ['客户需求变更受理']);
+
+    const publishNextWithoutConfirm = await request(baseUrl, 'reviewer', '/api/process-design/drafts/102/publish', {
+      method: 'POST',
+      body: JSON.stringify({ note: '发布B版' })
+    });
+    assert.strictEqual(publishNextWithoutConfirm.res.status, 409, JSON.stringify(publishNextWithoutConfirm.body));
+    assert.ok(JSON.stringify(publishNextWithoutConfirm.body).includes('完整重写'), 'B/C edition publish must ask the publisher to confirm complete rewrite');
+
+    const publishNext = await request(baseUrl, 'reviewer', '/api/process-design/drafts/102/publish', {
+      method: 'POST',
+      body: JSON.stringify({ note: '发布B版', confirm_complete_rewrite: true })
+    });
+    assert.strictEqual(publishNext.res.status, 200, JSON.stringify(publishNext.body));
+    assert.strictEqual(publishNext.body.version.version_no, 'CX-ZD-001-B');
+    assert.strictEqual(publishNext.body.version.edition, 'B');
+    assert.strictEqual(publishNext.body.version.supersedes_version_id, 701);
+    assert.strictEqual(fakeRepo.state.versions.find(version => version.edition === 'A').status, 'superseded');
 
     [
       'createDraft',
+      'deleteDraft',
+      'lookupDocument',
+      'createNextEditionDraft',
+      'editionDiff',
       'saveDocumentProfile',
       'createTerm',
       'updateTerm',

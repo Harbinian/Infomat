@@ -1,0 +1,1422 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://infomat.local/docs/contracts/document-structured-output.schema.json",
+  "title": "文档结构化输出标准 Schema",
+  "description": "用于统一制度、流程、表单、字段、证据和待确认问题的结构化输出合同。该合同不替代 docs/norms/ 流程输入基线，也不替代组织真源。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "draft",
+    "document_profile",
+    "processes",
+    "steps",
+    "evidence_catalog"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "document-structured-output-v1",
+      "description": "当前合同版本。"
+    },
+    "generated_at": {
+      "type": "string",
+      "description": "结构化输出生成时间，建议使用 ISO 8601 字符串。"
+    },
+    "draft": {
+      "$ref": "#/$defs/draft"
+    },
+    "document_profile": {
+      "$ref": "#/$defs/documentProfile"
+    },
+    "terms": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/term"
+      },
+      "default": []
+    },
+    "processes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/process"
+      }
+    },
+    "steps": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/step"
+      }
+    },
+    "behavior_details": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/behaviorDetail"
+      },
+      "default": []
+    },
+    "cross_dept_handoffs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/crossDeptHandoff"
+      },
+      "default": []
+    },
+    "forms": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/form"
+      },
+      "default": []
+    },
+    "form_tables": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/formTable"
+      },
+      "default": []
+    },
+    "form_table_fields": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/formTableField"
+      },
+      "default": []
+    },
+    "form_fields": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/formField"
+      },
+      "default": []
+    },
+    "evidence_catalog": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/evidence"
+      }
+    },
+    "mdm_requirement_catalog": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/mdmRequirement"
+      },
+      "default": []
+    },
+    "pending_issues": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/pendingIssue"
+      },
+      "default": []
+    },
+    "structure_block_projection": {
+      "$ref": "#/$defs/structureBlockProjection"
+    },
+    "markdown_draft": {
+      "type": "string",
+      "description": "面向人工复核的 Markdown 草案，仅为输出物，不作为字段解析主责。"
+    }
+  },
+  "$defs": {
+    "recordRef": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "integer"
+        }
+      ]
+    },
+    "nullableString": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "stringList": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "evidenceRefs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true,
+      "default": []
+    },
+    "department": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "department_name"
+      ],
+      "properties": {
+        "department_id": {
+          "$ref": "#/$defs/recordRef"
+        },
+        "department_code": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "department_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "domain": {
+          "$ref": "#/$defs/nullableString"
+        }
+      }
+    },
+    "basisType": {
+      "enum": [
+        "现场实际",
+        "制度 / 规程",
+        "表单 / 台账",
+        "会议 / 访谈",
+        "暂无证据"
+      ]
+    },
+    "draftStatus": {
+      "enum": [
+        "draft",
+        "submitted",
+        "under_review",
+        "needs_changes",
+        "approved",
+        "published",
+        "rejected"
+      ]
+    },
+    "edition": {
+      "type": "string",
+      "pattern": "^[A-Z]+$",
+      "description": "制度版次，由系统按 A、B、...、Z、AA、AB 自动生成。"
+    },
+    "versionStatus": {
+      "enum": [
+        "published",
+        "superseded",
+        "retired"
+      ]
+    },
+    "processType": {
+      "enum": [
+        "new",
+        "inherit",
+        "handoff",
+        "adjustment"
+      ]
+    },
+    "processSystem": {
+      "enum": [
+        "",
+        "OA",
+        "MES",
+        "PLM",
+        "ERP"
+      ]
+    },
+    "stepStatus": {
+      "enum": [
+        "active",
+        "voided"
+      ]
+    },
+    "handoffStatus": {
+      "enum": [
+        "pending_return",
+        "returned",
+        "pending_review",
+        "confirmed"
+      ]
+    },
+    "formStatus": {
+      "enum": [
+        "draft",
+        "submitted",
+        "published",
+        "retired"
+      ]
+    },
+    "tableKind": {
+      "enum": [
+        "main",
+        "detail"
+      ]
+    },
+    "fieldType": {
+      "enum": [
+        "文本",
+        "数字",
+        "日期",
+        "金额",
+        "枚举",
+        "布尔",
+        "部门",
+        "人员",
+        "附件"
+      ]
+    },
+    "fieldStatus": {
+      "enum": [
+        "suggested",
+        "business_confirmed",
+        "data_governed",
+        "published",
+        "retired"
+      ]
+    },
+    "evidenceType": {
+      "enum": [
+        "制度条款",
+        "表单样例",
+        "访谈记录",
+        "会议纪要",
+        "流程图",
+        "台账记录",
+        "暂无证据"
+      ]
+    },
+    "evidenceStatus": {
+      "enum": [
+        "verified",
+        "pending_review",
+        "source_missing",
+        "ocr_extracted_not_confirmed",
+        "review_only"
+      ]
+    },
+    "evidenceObjectType": {
+      "enum": [
+        "draft",
+        "document_profile",
+        "term",
+        "process",
+        "step",
+        "behavior_detail",
+        "handoff",
+        "form",
+        "form_table",
+        "form_table_field",
+        "form_field",
+        "evidence",
+        "mdm_requirement"
+      ]
+    },
+    "draft": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "document_no",
+        "document_title",
+        "planned_edition",
+        "process_name",
+        "basis_type",
+        "department"
+      ],
+      "properties": {
+        "draft_ref": {
+          "$ref": "#/$defs/recordRef"
+        },
+        "document_no": {
+          "type": "string",
+          "minLength": 1
+        },
+        "document_title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "planned_edition": {
+          "$ref": "#/$defs/edition"
+        },
+        "current_edition": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "base_version_ref": {
+          "$ref": "#/$defs/recordRef"
+        },
+        "process_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "basis_type": {
+          "$ref": "#/$defs/basisType"
+        },
+        "basis_description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "involves_other_departments": {
+          "type": "boolean",
+          "default": false
+        },
+        "related_departments": {
+          "$ref": "#/$defs/stringList"
+        },
+        "department": {
+          "$ref": "#/$defs/department"
+        },
+        "l1_name": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "l1_status": {
+          "enum": [
+            "unclassified",
+            "needs_review",
+            "confirmed"
+          ]
+        },
+        "l2_name": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "l2_status": {
+          "enum": [
+            "unclassified",
+            "needs_review",
+            "confirmed"
+          ]
+        },
+        "l3_name": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "status": {
+          "$ref": "#/$defs/draftStatus"
+        }
+      },
+      "x-mysql": {
+        "table": "process_design_drafts"
+      },
+      "x-ui": {
+        "section": "draft",
+        "ids": [
+          "pgDesignDocumentNo",
+          "pgDesignDocumentTitle",
+          "pgDesignPlannedEdition",
+          "pgDesignCurrentEdition",
+          "pgDesignPublishEffect",
+          "pgDesignBasisType",
+          "pgDesignInvolvesOtherDepartments",
+          "pgDesignRelatedDepartments"
+        ]
+      }
+    },
+    "documentProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "document_no",
+        "document_title",
+        "purpose",
+        "scope"
+      ],
+      "properties": {
+        "profile_ref": {
+          "$ref": "#/$defs/recordRef"
+        },
+        "draft_ref": {
+          "$ref": "#/$defs/recordRef"
+        },
+        "document_title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "document_no": {
+          "type": "string",
+          "minLength": 1
+        },
+        "purpose": {
+          "type": "string",
+          "minLength": 1
+        },
+        "scope": {
+          "type": "string",
+          "minLength": 1
+        },
+        "inheritance_relation": {
+          "$ref": "#/$defs/nullableString"
+        }
+      },
+      "x-mysql": {
+        "table": "process_design_document_profiles"
+      },
+      "x-ui": {
+        "section": "draft",
+        "ids": [
+          "pgDesignDocumentTitle",
+          "pgDesignDocumentNo",
+          "pgDesignPurpose",
+          "pgDesignScope",
+          "pgDesignInheritanceRelation"
+        ]
+      }
+    },
+    "term": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "term_name",
+        "definition"
+      ],
+      "properties": {
+        "term_ref": {
+          "$ref": "#/$defs/recordRef"
+        },
+        "draft_ref": {
+          "$ref": "#/$defs/recordRef"
+        },
+        "term_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "definition": {
+          "type": "string",
+          "minLength": 1
+        },
+        "applies_to": {
+          "$ref": "#/$defs/nullableString"
+        }
+      },
+      "x-mysql": {
+        "table": "process_design_terms"
+      },
+      "x-ui": {
+        "section": "terms",
+        "ids": [
+          "pgDesignTermName",
+          "pgDesignTermAppliesTo",
+          "pgDesignTermDefinition"
+        ]
+      }
+    },
+    "process": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "process_ref",
+        "process_type",
+        "l1_name",
+        "l2_name",
+        "l3_name"
+      ],
+      "properties": {
+        "process_ref": {
+          "$ref": "#/$defs/recordRef"
+        },
+        "draft_ref": {
+          "$ref": "#/$defs/recordRef"
+        },
+        "process_code": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "l3_key": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "process_type": {
+          "$ref": "#/$defs/processType"
+        },
+        "l1_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "l2_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "l3_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "owner": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "system": {
+          "$ref": "#/$defs/processSystem"
+        },
+        "evidence_refs": {
+          "$ref": "#/$defs/evidenceRefs"
+        }
+      },
+      "x-mysql": {
+        "table": "process_design_processes"
+      },
+      "x-structure-block": {
+        "target": "l3_catalog",
+        "key_field": "l3_key"
+      },
+      "x-ui": {
+        "section": "behavior",
+        "ids": [
+          "pgDesignProcessL1Name",
+          "pgDesignProcessL2Name",
+          "pgDesignProcessL3Name",
+          "pgDesignProcessType",
+          "pgDesignProcessDescription"
+        ]
+      }
+    },
+    "step": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "step_ref",
+        "process_ref",
+        "step_name"
+      ],
+      "properties": {
+        "step_ref": {
+          "$ref": "#/$defs/recordRef"
+        },
+        "draft_ref": {
+          "$ref": "#/$defs/recordRef"
+        },
+        "process_ref": {
+          "$ref": "#/$defs/recordRef"
+        },
+        "a1_code": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "step_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "actor_role": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "timing": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "input_materials": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "output_result": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "entry": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "system": {
+          "$ref": "#/$defs/processSystem"
+        },
+        "status": {
+          "$ref": "#/$defs/stepStatus"
+        },
+        "evidence_refs": {
+          "$ref": "#/$defs/evidenceRefs"
+        }
+      },
+      "x-mysql": {
+        "table": "process_design_steps"
+      },
+      "x-structure-block": {
+        "target": "a1_catalog",
+        "key_field": "a1_code"
+      },
+      "x-ui": {
+        "section": "behavior",
+        "ids": [
+          "pgDesignStepProcessSelect",
+          "pgDesignStepName",
+          "pgDesignStepActorRole",
+          "pgDesignStepInputMaterials",
+          "pgDesignStepOutputResult"
+        ]
+      }
+    },
+    "behaviorDetail": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "step_ref"
+      ],
+      "properties": {
+        "detail_ref": {
+          "$ref": "#/$defs/recordRef"
+        },
+        "step_ref": {
+          "$ref": "#/$defs/recordRef"
+        },
+        "precondition": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "trigger_scene": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "execution_standard": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "delivery_object": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "requires_approval": {
+          "type": "boolean",
+          "default": false
+        },
+        "approval_note": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "is_cross_department": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "x-mysql": {
+        "table": "process_design_behavior_details"
+      },
+      "x-ui": {
+        "section": "behavior",
+        "ids": [
+          "pgDesignRequiresApproval",
+          "pgDesignIsCrossDepartment",
+          "pgDesignPrecondition",
+          "pgDesignTriggerScene",
+          "pgDesignExecutionStandard",
+          "pgDesignDeliveryObject",
+          "pgDesignApprovalNote"
+        ]
+      }
+    },
+    "crossDeptHandoff": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "step_ref",
+        "target_department"
+      ],
+      "properties": {
+        "handoff_ref": {
+          "$ref": "#/$defs/recordRef"
+        },
+        "step_ref": {
+          "$ref": "#/$defs/recordRef"
+        },
+        "target_department": {
+          "type": "string",
+          "minLength": 1
+        },
+        "target_process_code": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "target_process_name": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "target_behavior_code": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "target_behavior_name": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "handoff_standard": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "status": {
+          "$ref": "#/$defs/handoffStatus"
+        }
+      },
+      "x-mysql": {
+        "table": "process_design_cross_dept_handoffs"
+      },
+      "x-ui": {
+        "section": "handoff",
+        "ids": [
+          "pgDesignHandoffStepSelect",
+          "pgDesignHandoffTargetDepartment",
+          "pgDesignHandoffStandard"
+        ]
+      }
+    },
+    "form": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "form_ref",
+        "form_name"
+      ],
+      "properties": {
+        "form_ref": {
+          "$ref": "#/$defs/recordRef"
+        },
+        "draft_ref": {
+          "$ref": "#/$defs/recordRef"
+        },
+        "step_ref": {
+          "$ref": "#/$defs/recordRef"
+        },
+        "form_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "archive_rule": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "status": {
+          "$ref": "#/$defs/formStatus"
+        },
+        "evidence_refs": {
+          "$ref": "#/$defs/evidenceRefs"
+        }
+      },
+      "x-mysql": {
+        "table": "process_design_forms"
+      },
+      "x-ui": {
+        "section": "tables",
+        "ids": [
+          "pgDesignFormStepSelect",
+          "pgDesignFormName",
+          "pgDesignFormDescription",
+          "pgDesignFormArchiveRule"
+        ]
+      }
+    },
+    "formTable": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "table_ref",
+        "form_ref",
+        "table_kind",
+        "table_name"
+      ],
+      "properties": {
+        "table_ref": {
+          "$ref": "#/$defs/recordRef"
+        },
+        "form_ref": {
+          "$ref": "#/$defs/recordRef"
+        },
+        "table_kind": {
+          "$ref": "#/$defs/tableKind"
+        },
+        "table_no": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "table_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "$ref": "#/$defs/nullableString"
+        }
+      },
+      "x-mysql": {
+        "table": "process_design_form_tables"
+      },
+      "x-ui": {
+        "section": "tables",
+        "ids": [
+          "pgDesignTableFormSelect",
+          "pgDesignTableKind",
+          "pgDesignTableName",
+          "pgDesignTableDescription"
+        ]
+      }
+    },
+    "formTableField": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "table_field_ref",
+        "table_ref",
+        "field_name"
+      ],
+      "properties": {
+        "table_field_ref": {
+          "$ref": "#/$defs/recordRef"
+        },
+        "table_ref": {
+          "$ref": "#/$defs/recordRef"
+        },
+        "field_no": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "field_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "field_type": {
+          "$ref": "#/$defs/fieldType"
+        },
+        "required": {
+          "type": "boolean",
+          "default": false
+        },
+        "description": {
+          "$ref": "#/$defs/nullableString"
+        }
+      },
+      "x-mysql": {
+        "table": "process_design_form_table_fields"
+      },
+      "x-ui": {
+        "section": "tables",
+        "ids": [
+          "pgDesignTableFieldTableSelect",
+          "pgDesignTableFieldName",
+          "pgDesignTableFieldType",
+          "pgDesignTableFieldRequired",
+          "pgDesignTableFieldDescription"
+        ]
+      }
+    },
+    "formField": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "field_ref",
+        "form_ref",
+        "field_name_cn"
+      ],
+      "properties": {
+        "field_ref": {
+          "$ref": "#/$defs/recordRef"
+        },
+        "form_ref": {
+          "$ref": "#/$defs/recordRef"
+        },
+        "field_name_cn": {
+          "type": "string",
+          "minLength": 1
+        },
+        "field_name_en": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "data_object": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "field_type": {
+          "$ref": "#/$defs/fieldType"
+        },
+        "enum_options": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/stringList"
+            },
+            {
+              "$ref": "#/$defs/nullableString"
+            }
+          ]
+        },
+        "evidence_note": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "status": {
+          "$ref": "#/$defs/fieldStatus"
+        },
+        "evidence_refs": {
+          "$ref": "#/$defs/evidenceRefs"
+        }
+      },
+      "x-mysql": {
+        "table": "process_design_form_fields"
+      },
+      "x-ui": {
+        "section": "tables",
+        "ids": [
+          "pgDesignFieldFormSelect",
+          "pgDesignFieldNameCn",
+          "pgDesignFieldNameEn",
+          "pgDesignFieldDataObject",
+          "pgDesignFieldType",
+          "pgDesignFieldEvidenceNote"
+        ]
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidence_ref",
+        "object_type",
+        "evidence_type",
+        "description",
+        "status"
+      ],
+      "properties": {
+        "evidence_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "draft_ref": {
+          "$ref": "#/$defs/recordRef"
+        },
+        "object_type": {
+          "$ref": "#/$defs/evidenceObjectType"
+        },
+        "object_ref": {
+          "$ref": "#/$defs/recordRef"
+        },
+        "evidence_type": {
+          "$ref": "#/$defs/evidenceType"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_name": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "source_anchor": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "source_file": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "locator": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "locate_method": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "confirmer": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "record_time": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "missing_reason": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "expected_provider": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "expected_at": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "maturity": {
+          "enum": [
+            "可保存草稿",
+            "发布前需补",
+            "可提交审核",
+            "可支撑发布"
+          ]
+        },
+        "status": {
+          "$ref": "#/$defs/evidenceStatus"
+        }
+      },
+      "x-mysql": {
+        "table": "process_design_evidence"
+      },
+      "x-structure-block": {
+        "target": "evidence_catalog",
+        "key_field": "evidence_ref"
+      },
+      "x-ui": {
+        "section": "evidence",
+        "ids": [
+          "pgDesignEvidenceType",
+          "pgDesignEvidenceStatus",
+          "pgDesignEvidenceSourceName",
+          "pgDesignEvidenceConfirmer",
+          "pgDesignEvidenceRecordTime",
+          "pgDesignEvidenceDescription",
+          "pgDesignEvidenceSourceAnchor"
+        ]
+      }
+    },
+    "mdmRequirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "object",
+        "requirement"
+      ],
+      "properties": {
+        "requirement_ref": {
+          "$ref": "#/$defs/recordRef"
+        },
+        "object": {
+          "type": "string",
+          "minLength": 1
+        },
+        "key_fields": {
+          "$ref": "#/$defs/stringList"
+        },
+        "owner_dept": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "requirement": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidence_refs": {
+          "$ref": "#/$defs/evidenceRefs"
+        }
+      },
+      "x-structure-block": {
+        "target": "mdm_requirement_catalog",
+        "key_field": "object"
+      }
+    },
+    "pendingIssue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stable_key",
+        "structured_object_type",
+        "structured_object_key",
+        "target_block",
+        "target_field",
+        "evidence_status",
+        "issue_type",
+        "question_for_user"
+      ],
+      "properties": {
+        "stable_key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "department": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "document_name": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "structured_object_type": {
+          "$ref": "#/$defs/evidenceObjectType"
+        },
+        "structured_object_key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "target_block": {
+          "enum": [
+            "meta",
+            "document_profile",
+            "terms",
+            "l3_catalog",
+            "a1_catalog",
+            "behavior_details",
+            "cross_dept_handoffs",
+            "forms",
+            "form_tables",
+            "form_table_fields",
+            "form_fields",
+            "evidence_catalog",
+            "mdm_requirement_catalog"
+          ]
+        },
+        "target_field": {
+          "type": "string",
+          "minLength": 1
+        },
+        "current_value": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "source_file": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "source_anchor": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "source_excerpt": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "evidence_status": {
+          "$ref": "#/$defs/evidenceStatus"
+        },
+        "issue_type": {
+          "enum": [
+            "来源证据不足",
+            "原文定义不足",
+            "L3 结构待确认",
+            "A1 行为待确认",
+            "角色责任待确认",
+            "跨部门承接待确认",
+            "系统落位待确认",
+            "表单字段待确认",
+            "主数据需求待确认",
+            "OCR/抽取待复核"
+          ]
+        },
+        "question_for_user": {
+          "type": "string",
+          "minLength": 1
+        },
+        "suggested_handler": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "allowed_actions": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "补来源",
+              "修改源文件后重新导入",
+              "不是问题",
+              "转交",
+              "专项确认"
+            ]
+          },
+          "uniqueItems": true,
+          "default": []
+        },
+        "user_decision": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "user_reason": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "user_note": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "next_step": {
+          "$ref": "#/$defs/nullableString"
+        }
+      }
+    },
+    "structureBlockProjection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "meta",
+        "l3_catalog",
+        "a1_catalog",
+        "evidence_catalog",
+        "mdm_requirement_catalog"
+      ],
+      "properties": {
+        "meta": {
+          "$ref": "#/$defs/structureBlockMeta"
+        },
+        "l3_catalog": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/l3CatalogItem"
+          }
+        },
+        "a1_catalog": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/a1CatalogItem"
+          }
+        },
+        "evidence_catalog": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidenceCatalogItem"
+          }
+        },
+        "mdm_requirement_catalog": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/mdmRequirementCatalogItem"
+          }
+        }
+      }
+    },
+    "structureBlockMeta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "document_no",
+        "document_title",
+        "document_edition",
+        "dept_name",
+        "parser_schema_version"
+      ],
+      "properties": {
+        "document_no": {
+          "type": "string",
+          "minLength": 1
+        },
+        "document_title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "document_edition": {
+          "$ref": "#/$defs/edition"
+        },
+        "document_version_status": {
+          "$ref": "#/$defs/versionStatus"
+        },
+        "dept_code": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "dept_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "domain": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "maintainer": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "version": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "status": {
+          "enum": [
+            "draft",
+            "pending_review",
+            "verified",
+            "retired"
+          ]
+        },
+        "parser_schema_version": {
+          "const": 1
+        }
+      }
+    },
+    "l3CatalogItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "l1",
+        "l2",
+        "l3_key",
+        "l3_name"
+      ],
+      "properties": {
+        "l1": {
+          "type": "string",
+          "minLength": 1
+        },
+        "l2": {
+          "type": "string",
+          "minLength": 1
+        },
+        "l3_key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "l3_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "document_no": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "document_title": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "document_edition": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "system": {
+          "$ref": "#/$defs/processSystem"
+        },
+        "owner": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "evidence_refs": {
+          "$ref": "#/$defs/evidenceRefs"
+        }
+      }
+    },
+    "a1CatalogItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "a1_code",
+        "l3_key",
+        "behavior"
+      ],
+      "properties": {
+        "a1_code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "l3_key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "behavior": {
+          "type": "string",
+          "minLength": 1
+        },
+        "document_no": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "document_title": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "document_edition": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "role": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "entry": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "system": {
+          "$ref": "#/$defs/processSystem"
+        },
+        "evidence_refs": {
+          "$ref": "#/$defs/evidenceRefs"
+        }
+      }
+    },
+    "evidenceCatalogItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "status"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_type": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "source_file": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "locator": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "locate_method": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "status": {
+          "$ref": "#/$defs/evidenceStatus"
+        }
+      }
+    },
+    "mdmRequirementCatalogItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "object"
+      ],
+      "properties": {
+        "object": {
+          "type": "string",
+          "minLength": 1
+        },
+        "key_fields": {
+          "$ref": "#/$defs/stringList"
+        },
+        "owner_dept": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "requirement": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "evidence_refs": {
+          "$ref": "#/$defs/evidenceRefs"
+        }
+      }
+    }
+  }
+}

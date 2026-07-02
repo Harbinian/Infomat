@@ -4,6 +4,11 @@ const { mysqlConfigFromEnv, redactMysqlConfig } = require('../server/mysqlConfig
 const { mdmMysqlSchemaSql, splitSqlStatements } = require('../server/mysqlSchema');
 const { seedDefaultTerminologyTermTypes } = require('../server/terminologyMysqlRepository');
 const { migrateLegacyIdentityToPersonIdentity } = require('../server/identityMysqlRepository');
+const { ensureProcessGovernanceCloseGateSchema } = require('../server/processGovernanceMysqlRepository');
+const {
+  ensureProcessDesignEditionSchema,
+  ensureProcessDesignEvidenceStatusSchema
+} = require('../server/routes/processDesignMysql');
 
 async function columnExists(pool, tableName, columnName) {
   const [rows] = await pool.execute(
@@ -47,6 +52,49 @@ async function dropCheckConstraints(pool, tableName) {
   }
 }
 
+function formatProcedureCode(draftId, sequence) {
+  return `PROCEDURE-${Number(draftId)}-${String(Number(sequence) || 1).padStart(3, '0')}`;
+}
+
+function parseProcedureSequence(processCode, draftId) {
+  const prefix = `PROCEDURE-${Number(draftId)}-`;
+  const value = String(processCode || '').trim();
+  if (!value.startsWith(prefix)) return 0;
+  const sequence = Number(value.slice(prefix.length));
+  return Number.isInteger(sequence) && sequence > 0 ? sequence : 0;
+}
+
+async function ensureProcessDesignProcedureCodes(pool) {
+  const [rows] = await pool.execute(`
+    SELECT id, draft_id, process_code
+    FROM process_design_processes
+    ORDER BY draft_id, sort_order, id
+  `);
+  const nextByDraft = new Map();
+  const seenCodes = new Set();
+  for (const row of rows) {
+    const sequence = parseProcedureSequence(row.process_code, row.draft_id);
+    if (sequence > 0 && !seenCodes.has(String(row.process_code))) {
+      nextByDraft.set(Number(row.draft_id), Math.max(nextByDraft.get(Number(row.draft_id)) || 0, sequence));
+      seenCodes.add(String(row.process_code));
+      continue;
+    }
+    let nextSequence = (nextByDraft.get(Number(row.draft_id)) || 0) + 1;
+    let nextCode = formatProcedureCode(row.draft_id, nextSequence);
+    while (seenCodes.has(nextCode)) {
+      nextSequence += 1;
+      nextCode = formatProcedureCode(row.draft_id, nextSequence);
+    }
+    nextByDraft.set(Number(row.draft_id), nextSequence);
+    seenCodes.add(nextCode);
+    await pool.execute('UPDATE process_design_processes SET process_code=? WHERE id=?', [nextCode, row.id]);
+  }
+  await pool.execute('ALTER TABLE process_design_processes MODIFY process_code VARCHAR(128) NOT NULL');
+  if (!await indexExists(pool, 'process_design_processes', 'uq_process_design_processes_code')) {
+    await pool.execute('ALTER TABLE process_design_processes ADD UNIQUE KEY uq_process_design_processes_code (process_code)');
+  }
+}
+
 async function ensureDocumentStructuredOutputV2(pool) {
   if (!await columnExists(pool, 'process_design_steps', 'process_id')) {
     await pool.execute('ALTER TABLE process_design_steps ADD COLUMN process_id BIGINT NULL AFTER draft_id');
@@ -78,7 +126,7 @@ async function ensureDocumentStructuredOutputV2(pool) {
   await pool.execute(`
     INSERT INTO process_design_processes
       (draft_id, process_code, process_type, l1_name, l2_name, l3_name, description, sort_order, created_by)
-    SELECT d.id, NULL, 'inherit',
+    SELECT d.id, CONCAT('PROCEDURE-', d.id, '-001'), 'inherit',
            COALESCE(NULLIF(d.l1_name, ''), '待确认L1'),
            COALESCE(NULLIF(d.l2_name, ''), '待确认L2'),
            COALESCE(NULLIF(d.l3_name, ''), d.process_name),
@@ -88,6 +136,7 @@ async function ensureDocumentStructuredOutputV2(pool) {
       SELECT 1 FROM process_design_processes p WHERE p.draft_id=d.id
     )
   `);
+  await ensureProcessDesignProcedureCodes(pool);
   await pool.execute(`
     UPDATE process_design_steps s
     JOIN (
@@ -126,7 +175,10 @@ async function main() {
     for (const statement of splitSqlStatements(mdmMysqlSchemaSql())) {
       await pool.execute(statement);
     }
+    await ensureProcessGovernanceCloseGateSchema(pool);
     await ensureDocumentStructuredOutputV2(pool);
+    await ensureProcessDesignEditionSchema(pool);
+    await ensureProcessDesignEvidenceStatusSchema(pool);
     await migrateLegacyIdentityToPersonIdentity(pool);
     await seedDefaultTerminologyTermTypes(pool);
     for (const migrationKey of [
@@ -139,9 +191,11 @@ async function main() {
       '2026-06-18-mapping-approval-domain',
       '2026-06-18-conflict-todo-domain',
       '2026-06-18-version-activity-domain',
+      '2026-07-01-process-governance-close-gate-fingerprints',
       '2026-07-01-document-structured-output',
       '2026-07-01-document-structured-output-v2',
-      '2026-07-01-document-structured-output-editing'
+      '2026-07-01-document-structured-output-editing',
+      '2026-07-01-process-design-evidence-status'
     ]) {
       await pool.execute(
         `INSERT INTO schema_migrations (migration_key)
