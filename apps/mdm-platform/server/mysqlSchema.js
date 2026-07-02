@@ -826,9 +826,62 @@ CREATE TABLE IF NOT EXISTS process_design_drafts (
     REFERENCES departments(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS process_design_document_profiles (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  draft_id BIGINT NOT NULL,
+  document_title VARCHAR(255) NOT NULL,
+  document_no VARCHAR(128) NULL,
+  purpose TEXT NOT NULL,
+  scope TEXT NOT NULL,
+  inheritance_relation TEXT NULL,
+  created_by BIGINT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_process_design_document_profiles_draft (draft_id),
+  INDEX idx_process_design_document_profiles_no (document_no),
+  CONSTRAINT fk_process_design_document_profiles_draft FOREIGN KEY (draft_id)
+    REFERENCES process_design_drafts(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS process_design_terms (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  draft_id BIGINT NOT NULL,
+  term_name VARCHAR(255) NOT NULL,
+  definition TEXT NOT NULL,
+  applies_to VARCHAR(255) NULL,
+  sort_order INT NOT NULL DEFAULT 1,
+  created_by BIGINT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_process_design_terms_draft (draft_id, sort_order),
+  UNIQUE KEY uq_process_design_terms_name (draft_id, term_name),
+  CONSTRAINT fk_process_design_terms_draft FOREIGN KEY (draft_id)
+    REFERENCES process_design_drafts(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS process_design_processes (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  draft_id BIGINT NOT NULL,
+  process_code VARCHAR(128) NULL,
+  process_type VARCHAR(32) NOT NULL DEFAULT 'new',
+  l1_name VARCHAR(255) NOT NULL,
+  l2_name VARCHAR(255) NOT NULL,
+  l3_name VARCHAR(255) NOT NULL,
+  description TEXT NULL,
+  sort_order INT NOT NULL DEFAULT 1,
+  created_by BIGINT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_process_design_processes_draft (draft_id, sort_order),
+  CHECK (process_type IN ('new','inherit','handoff','adjustment')),
+  CONSTRAINT fk_process_design_processes_draft FOREIGN KEY (draft_id)
+    REFERENCES process_design_drafts(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS process_design_steps (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
   draft_id BIGINT NOT NULL,
+  process_id BIGINT NOT NULL,
   step_name VARCHAR(255) NOT NULL,
   actor_role VARCHAR(255) NULL,
   timing VARCHAR(255) NULL,
@@ -838,13 +891,62 @@ CREATE TABLE IF NOT EXISTS process_design_steps (
   related_departments TEXT NULL,
   basis TEXT NULL,
   a1_code VARCHAR(128) NULL,
+  status VARCHAR(32) NOT NULL DEFAULT 'active',
+  void_reason TEXT NULL,
+  voided_by BIGINT NULL,
+  voided_at TIMESTAMP NULL,
   sort_order INT NOT NULL DEFAULT 1,
   created_by BIGINT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_process_design_steps_draft (draft_id, sort_order),
+  INDEX idx_process_design_steps_process (process_id, sort_order),
+  INDEX idx_process_design_steps_status (draft_id, status, sort_order),
+  CHECK (status IN ('active','voided')),
   CONSTRAINT fk_process_design_steps_draft FOREIGN KEY (draft_id)
-    REFERENCES process_design_drafts(id) ON DELETE CASCADE
+    REFERENCES process_design_drafts(id) ON DELETE CASCADE,
+  CONSTRAINT fk_process_design_steps_process FOREIGN KEY (process_id)
+    REFERENCES process_design_processes(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS process_design_behavior_details (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  step_id BIGINT NOT NULL,
+  precondition TEXT NULL,
+  trigger_scene TEXT NULL,
+  execution_standard TEXT NULL,
+  delivery_object TEXT NULL,
+  requires_approval TINYINT NOT NULL DEFAULT 0,
+  approval_note TEXT NULL,
+  is_cross_department TINYINT NOT NULL DEFAULT 0,
+  created_by BIGINT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_process_design_behavior_details_step (step_id),
+  CONSTRAINT fk_process_design_behavior_details_step FOREIGN KEY (step_id)
+    REFERENCES process_design_steps(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS process_design_cross_dept_handoffs (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  step_id BIGINT NOT NULL,
+  target_department VARCHAR(255) NOT NULL,
+  target_process_code VARCHAR(128) NULL,
+  target_process_name VARCHAR(255) NULL,
+  target_behavior_code VARCHAR(128) NULL,
+  target_behavior_name VARCHAR(255) NULL,
+  handoff_standard TEXT NULL,
+  status VARCHAR(32) NOT NULL DEFAULT 'pending_return',
+  returned_by BIGINT NULL,
+  returned_at TIMESTAMP NULL,
+  sort_order INT NOT NULL DEFAULT 1,
+  created_by BIGINT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_process_design_handoffs_step (step_id, sort_order),
+  CHECK (status IN ('pending_return','returned','pending_review','confirmed')),
+  CONSTRAINT fk_process_design_handoffs_step FOREIGN KEY (step_id)
+    REFERENCES process_design_steps(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS process_design_forms (
@@ -865,6 +967,40 @@ CREATE TABLE IF NOT EXISTS process_design_forms (
     REFERENCES process_design_drafts(id) ON DELETE CASCADE,
   CONSTRAINT fk_process_design_forms_step FOREIGN KEY (step_id)
     REFERENCES process_design_steps(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS process_design_form_tables (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  form_id BIGINT NOT NULL,
+  table_kind VARCHAR(32) NOT NULL DEFAULT 'main',
+  table_no VARCHAR(128) NULL,
+  table_name VARCHAR(255) NOT NULL,
+  description TEXT NULL,
+  sort_order INT NOT NULL DEFAULT 1,
+  created_by BIGINT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_process_design_form_tables_form (form_id, sort_order),
+  CHECK (table_kind IN ('main','detail')),
+  CONSTRAINT fk_process_design_form_tables_form FOREIGN KEY (form_id)
+    REFERENCES process_design_forms(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS process_design_form_table_fields (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  form_table_id BIGINT NOT NULL,
+  field_no VARCHAR(128) NULL,
+  field_name VARCHAR(255) NOT NULL,
+  field_type VARCHAR(128) NULL,
+  is_required TINYINT NOT NULL DEFAULT 0,
+  description TEXT NULL,
+  sort_order INT NOT NULL DEFAULT 1,
+  created_by BIGINT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_process_design_table_fields_table (form_table_id, sort_order),
+  CONSTRAINT fk_process_design_table_fields_table FOREIGN KEY (form_table_id)
+    REFERENCES process_design_form_tables(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS process_design_form_fields (
