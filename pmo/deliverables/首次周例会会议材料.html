@@ -1,0 +1,469 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>信息化的第一步——制造信息</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#0b1f4a;--blue:#1f5fbf;--cyan:#0e9ab8;--green:#21835b;
+  --gold:#b88322;--red:#b83a3a;--ink:#172033;--muted:#5a6678;
+  --bg:#f5f7fb;--card:#fff;--line:#dbe3ef;--soft:#eef4ff;
+}
+html{scroll-behavior:smooth;scroll-padding-top:64px}
+body{font-family:"Microsoft YaHei","PingFang SC","Source Han Sans SC",Arial,sans-serif;background:var(--bg);color:var(--ink);line-height:1.72;font-size:18px;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+nav{position:fixed;z-index:50;inset:0 0 auto 0;min-height:58px;background:rgba(11,31,74,.97);color:#fff;display:flex;align-items:center;justify-content:space-between;gap:18px;padding:9px clamp(16px,3vw,36px);box-shadow:0 6px 22px rgba(11,31,74,.18)}
+.brand{font-weight:900;font-size:14px;white-space:nowrap}
+.navlinks{display:flex;gap:5px;overflow-x:auto;scrollbar-width:none}
+.navlinks::-webkit-scrollbar{display:none}
+.navlinks a{font-size:13px;color:rgba(255,255,255,.76);padding:6px 11px;border-radius:7px;white-space:nowrap}
+.navlinks a:hover{background:rgba(255,255,255,.13);color:#fff}
+.cover{min-height:100vh;background:linear-gradient(135deg,#061735 0%,#113a82 52%,#0f7b96 100%);display:grid;grid-template-columns:minmax(0,1.28fr) minmax(300px,.72fr);gap:38px;align-items:center;padding:92px clamp(22px,7vw,98px) 54px;color:#fff;position:relative;overflow:hidden}
+.cover:before{content:"";position:absolute;inset:auto 0 0 0;height:18px;background:linear-gradient(90deg,var(--cyan),var(--gold),var(--green))}
+.kicker{display:inline-flex;width:fit-content;border:1px solid rgba(255,255,255,.28);background:rgba(255,255,255,.1);border-radius:7px;padding:6px 13px;color:#cfe7ff;font-size:13px;font-weight:800;margin-bottom:18px}
+h1{font-size:clamp(36px,5vw,62px);line-height:1.14;letter-spacing:0;margin-bottom:16px}
+.lead{max-width:780px;color:rgba(255,255,255,.82);font-size:clamp(17px,1.45vw,21px);margin-bottom:24px}
+.cover-line{max-width:800px;border-left:4px solid #64d4ed;background:rgba(255,255,255,.1);border-radius:8px;padding:15px 18px;font-size:16px;color:#eef8ff}
+.chips{display:flex;flex-wrap:wrap;gap:10px;margin:26px 0}
+.chip{border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.11);border-radius:8px;padding:11px 13px;min-width:128px}
+.chip small{display:block;color:rgba(255,255,255,.6);font-size:11px;margin-bottom:2px}
+.chip b{display:block;font-size:16px}
+.hero-card{border:1px solid rgba(255,255,255,.2);background:rgba(4,16,42,.5);border-radius:8px;padding:18px;box-shadow:0 24px 70px rgba(0,0,0,.22)}
+.diagram-title{font-size:18px;font-weight:900;margin-bottom:14px;color:#fff}
+.cover-flow{display:grid;gap:9px;margin-bottom:13px}
+.flow-node{position:relative;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);border-radius:7px;padding:11px 12px}
+.flow-node:not(:last-child):after{content:"";position:absolute;left:18px;bottom:-10px;width:2px;height:10px;background:#64d4ed}
+.flow-node b{display:block;color:#fff;font-size:16px;margin-bottom:3px}
+.flow-node span{display:block;color:#bfefff;font-size:14px}
+.cover-entries{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+.entry{border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.08);border-radius:7px;padding:10px 8px;text-align:center}
+.entry b{display:block;color:#fff;font-size:14px;margin-bottom:4px}
+.entry span{display:block;color:#9be4f7;font-size:12px}
+.page{padding:78px clamp(20px,4vw,76px) 56px}
+.sec{min-height:calc(100vh - 64px);display:flex;flex-direction:column;justify-content:center;margin-bottom:70px;scroll-margin-top:64px}
+.sec-head{display:flex;align-items:flex-start;gap:13px;margin-bottom:22px}
+.num{width:40px;height:40px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;flex:none}
+h2{font-size:clamp(26px,2.75vw,38px);line-height:1.25;color:var(--navy);letter-spacing:0;margin-bottom:4px}
+.sub{font-size:17px;color:var(--muted)}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:18px 20px;box-shadow:0 2px 8px rgba(16,33,71,.04);min-width:0}
+.card h3{font-size:19px;color:var(--navy);margin-bottom:8px}
+.card p,.card li{font-size:17px;color:var(--muted)}
+.card ul{padding-left:18px}
+.note{border:1px solid #bed0ef;border-left:4px solid var(--blue);background:#eef5ff;border-radius:8px;padding:15px 18px;margin-bottom:14px;color:#1b4388}
+.note strong{display:block;color:#173f81;margin-bottom:5px}
+.warn{border-color:#f0d8a6;border-left-color:var(--gold);background:#fff8ea;color:#704b0b}
+.warn strong{color:#7a510b}
+.ok{border-color:#b9dfca;border-left-color:var(--green);background:#effaf4;color:#1d5a3f}
+.ok strong{color:#1d6b4a}
+.danger{border-color:#e7bbbb;border-left-color:var(--red);background:#fff1f1;color:#873030}
+.danger strong{color:#963333}
+.tagrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.tag{display:inline-flex;border-radius:7px;background:#edf3ff;color:#214d96;font-size:12px;font-weight:900;padding:5px 10px}
+.statement{font-size:22px;line-height:1.75;color:#263346;background:#fff;border:1px solid var(--line);border-radius:8px;padding:26px 28px;margin-bottom:16px}
+.plain-list{display:grid;gap:10px}
+.plain-list li{list-style:none;background:#fff;border:1px solid var(--line);border-left:4px solid var(--cyan);border-radius:8px;padding:12px 14px;color:var(--muted)}
+.plain-list li:nth-child(2){border-left-color:var(--green)}
+.plain-list li:nth-child(3){border-left-color:var(--gold)}
+.plain-list li:nth-child(4){border-left-color:var(--blue)}
+.plain-list li:nth-child(5){border-left-color:var(--red)}
+.plain-list li:nth-child(6){border-left-color:#7b61c8}
+.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:14px}
+.metric{background:#fff;border:1px solid var(--line);border-radius:8px;padding:15px 16px;border-top:4px solid var(--blue)}
+.metric:nth-child(2){border-top-color:var(--cyan)}
+.metric:nth-child(3){border-top-color:var(--green)}
+.metric:nth-child(4){border-top-color:var(--gold)}
+.metric b{display:block;color:var(--navy);font-size:28px;line-height:1.1}
+.metric span{display:block;color:var(--muted);font-size:16px;margin-top:5px}
+.toolgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.tool{background:#fff;border:1px solid var(--line);border-radius:8px;overflow:hidden;box-shadow:0 8px 26px rgba(16,33,71,.06);min-width:0}
+.tool-title{display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid var(--line);padding:15px 17px}
+.tool-title h3{font-size:19px;color:var(--navy)}
+.badge{font-size:12px;color:#fff;background:var(--blue);border-radius:7px;padding:4px 9px;font-weight:900;white-space:nowrap}
+.badge.cyan{background:var(--cyan)}.badge.green{background:var(--green)}
+.screen{height:220px;background:#101a32;padding:12px}
+.gantt,.board,.mdm{height:100%;border-radius:7px;overflow:hidden;background:#f8fafc;border:1px solid rgba(255,255,255,.18)}
+.gantt{display:grid;grid-template-columns:38% 62%}
+.tree{background:#fff;border-right:1px solid #dbe3ef;padding:11px}
+.tree i{display:block;height:10px;border-radius:6px;background:#dbeafe;margin:9px 0}
+.tree i:nth-child(2n){width:78%;background:#d8f3f7}.tree i:nth-child(3n){width:92%;background:#f6e7bd}
+.bars{position:relative;background:linear-gradient(90deg,#e6edf7 0 1px,transparent 1px) 0 0/36px 100%,#f8fafc}
+.bar{position:absolute;left:var(--x);top:var(--y);width:var(--w);height:13px;border-radius:7px;background:var(--c);box-shadow:0 1px 3px rgba(16,33,71,.2)}
+.board{padding:12px}
+.board-top{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:12px}
+.board-kpi{height:42px;background:#fff;border:1px solid #dfe7f2;border-radius:7px;padding:5px}
+.board-kpi b{display:block;color:#0b1f4a;font-size:17px;line-height:1}.board-kpi span{display:block;color:#6d7788;font-size:9px;margin-top:2px}
+.board-row{height:19px;background:#fff;border-left:4px solid var(--blue);border-radius:5px;margin-bottom:7px}
+.board-row:nth-child(2){border-left-color:var(--gold)}.board-row:nth-child(3){border-left-color:var(--red)}.board-row:nth-child(4){border-left-color:#7b61c8}.board-row:nth-child(5){border-left-color:var(--green)}
+.mdm{display:grid;grid-template-columns:34% 1fr;gap:10px;padding:10px}
+.mdm-side,.mdm-main{background:#fff;border:1px solid #dfe7f2;border-radius:7px;padding:9px}
+.mdm-role{height:22px;border-radius:5px;background:#dbeafe;margin-bottom:7px}
+.mdm-role:nth-child(2){background:#d8f3f7}.mdm-role:nth-child(3){background:#f6e7bd}.mdm-role:nth-child(4){background:#e7f5ec}
+.mdm-main{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.mdm-tile{border:1px solid #dfe7f2;border-left:4px solid var(--blue);border-radius:6px;background:#fafcff;padding:7px}
+.mdm-tile:nth-child(2){border-left-color:var(--cyan)}
+.mdm-tile:nth-child(3){border-left-color:var(--gold)}
+.mdm-tile:nth-child(4){border-left-color:var(--green)}
+.mdm-tile b{display:block;color:#0b1f4a;font-size:12px;margin-bottom:5px}
+.mdm-tile i{display:block;height:7px;border-radius:4px;background:#e5edf7;margin-top:5px}
+.tool-body{padding:16px 18px}
+.tool-body p,.tool-body li{font-size:14px;color:var(--muted)}
+.tool-body ul{padding-left:17px;margin-top:8px}
+.panel{background:#fff;border:1px solid var(--line);border-radius:8px;padding:18px 20px}
+.panel h3{font-size:20px;color:var(--navy);margin-bottom:9px}
+.panel p,.panel li{font-size:17px;color:var(--muted)}
+.panel ul{padding-left:18px}
+.process{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-top:14px}
+.step{background:#fff;border:1px solid var(--line);border-radius:8px;padding:14px;text-align:center;min-height:112px}
+.step b{display:inline-flex;width:28px;height:28px;border-radius:50%;background:var(--blue);color:#fff;align-items:center;justify-content:center;margin-bottom:8px}
+.step span{display:block;font-size:14px;color:var(--muted)}
+.orgbox{background:#fff;border:1px solid var(--line);border-radius:8px;padding:18px;box-shadow:0 2px 8px rgba(16,33,71,.04);overflow:hidden}
+.org-top{max-width:560px;margin:0 auto 16px;background:var(--navy);color:#fff;border-radius:8px;padding:14px 18px;text-align:center;border-left:6px solid #60a5fa}
+.org-top b,.org-office b{display:block;font-size:18px;margin-bottom:4px}
+.org-top span,.org-office span{display:block;font-size:13px;color:rgba(255,255,255,.78)}
+.org-office{background:var(--blue);color:#fff;border-radius:8px;padding:14px 18px;text-align:center;margin-bottom:14px}
+.org-subgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:16px}
+.org-sub{border-radius:8px;padding:12px;border:1px solid var(--line);background:#f8fbff}
+.org-sub:nth-child(1){border-left:4px solid var(--green)}
+.org-sub:nth-child(2){border-left:4px solid #7b61c8}
+.org-sub:nth-child(3){border-left:4px solid var(--gold)}
+.org-sub b{display:block;color:var(--navy);font-size:15px;margin-bottom:5px}
+.org-sub span{display:block;color:var(--muted);font-size:13px}
+.org-groups{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.org-group{border:1px solid var(--line);border-radius:8px;background:#fff;overflow:hidden;min-width:0}
+.org-group h3{color:#fff;font-size:15px;padding:10px 11px;margin:0;background:var(--blue)}
+.org-group:nth-child(1) h3{background:var(--gold)}
+.org-group:nth-child(2) h3{background:#7b61c8}
+.org-group:nth-child(3) h3{background:var(--green)}
+.org-group:nth-child(4) h3{background:var(--blue)}
+.org-group:nth-child(5) h3{background:var(--cyan)}
+.org-group:nth-child(6) h3{background:var(--red)}
+.org-group div{padding:11px}
+.org-group p{font-size:13px;color:var(--muted);margin-bottom:7px}
+.org-group strong{color:var(--ink)}
+.workgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.work-card{background:#fff;border:1px solid var(--line);border-radius:8px;padding:16px 17px;box-shadow:0 2px 8px rgba(16,33,71,.04);border-top:4px solid var(--gold);min-width:0}
+.work-card:nth-child(2){border-top-color:#7b61c8}
+.work-card:nth-child(3){border-top-color:var(--green)}
+.work-card:nth-child(4){border-top-color:var(--blue)}
+.work-card:nth-child(5){border-top-color:var(--green)}
+.work-card:nth-child(6){border-top-color:var(--red)}
+.work-card:nth-child(7){border-top-color:var(--blue)}
+.work-card h3{font-size:18px;color:var(--navy);margin-bottom:10px}
+.work-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-bottom:12px}
+.work-stat{background:#f6f9fe;border:1px solid #e1e9f5;border-radius:7px;padding:8px;text-align:center}
+.work-stat b{display:block;color:var(--navy);font-size:20px;line-height:1}
+.work-stat span{display:block;color:var(--muted);font-size:11px;margin-top:4px}
+.work-meta{font-size:13px;color:var(--muted);margin-bottom:10px}
+.work-card ul{padding-left:17px}
+.work-card li{font-size:14px;color:var(--muted);margin-bottom:5px}
+.timeline{position:relative;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:14px}
+.timeline:before{content:"";position:absolute;left:4%;right:4%;top:23px;height:2px;background:#dbe3ef}
+.mile{position:relative;background:#fff;border:1px solid var(--line);border-radius:8px;padding:15px 14px 13px;box-shadow:0 2px 8px rgba(16,33,71,.04);min-width:0}
+.mile:before{content:"";position:absolute;top:17px;left:14px;width:13px;height:13px;border-radius:50%;background:var(--blue);box-shadow:0 0 0 4px #eef5ff}
+.mile time{display:block;color:var(--blue);font-weight:900;font-size:13px;padding-left:23px;margin-bottom:8px}
+.mile b{display:block;color:var(--navy);font-size:15px;margin-bottom:5px}
+.mile span{display:block;color:var(--muted);font-size:13px}
+.tablewrap{background:#fff;border:1px solid var(--line);border-radius:8px;overflow-x:auto;box-shadow:0 12px 34px rgba(16,33,71,.08);min-height:calc(100vh - 136px);display:flex;align-items:center;width:100%;padding:22px;margin:34px 0 76px;scroll-margin-top:82px;break-before:page;break-after:page;break-inside:avoid;page-break-before:always;page-break-after:always;page-break-inside:avoid}
+table{width:100%;border-collapse:collapse;font-size:18px;line-height:1.72;min-width:1060px}
+th{background:var(--navy);color:#fff;text-align:left;padding:17px 20px;white-space:nowrap;font-size:18px}
+td{padding:17px 20px;border-bottom:1px solid var(--line);color:#3f4b5f;vertical-align:top}
+tbody tr:nth-child(odd) td{background:#fff}
+tbody tr:nth-child(even) td{background:#f3f7fc}
+tbody tr:hover td{background:#eef5ff}
+tr:last-child td{border-bottom:0}
+.vote{font-weight:900;color:var(--blue);white-space:nowrap}
+.vote-framework{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.vote-card{background:#fff;border:1px solid var(--line);border-radius:8px;padding:16px 17px;box-shadow:0 2px 8px rgba(16,33,71,.04);border-top:4px solid var(--blue);min-width:0}
+.vote-card:nth-child(3n+1){border-top-color:var(--gold)}
+.vote-card:nth-child(3n+2){border-top-color:var(--green)}
+.vote-card:nth-child(3n+3){border-top-color:var(--cyan)}
+.vote-title{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px}
+.vote-title .vote{display:inline-flex;align-items:center;justify-content:center;background:#eef5ff;border:1px solid #d8e7fb;border-radius:7px;padding:5px 8px;font-size:13px}
+.vote-title h3{font-size:17px;color:var(--navy);margin:2px 0 0}
+.vote-card p{font-size:14px;color:var(--muted);margin-bottom:9px}
+.vote-card p strong{color:var(--ink)}
+.vote-levels{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0}
+.vote-level{background:#f8fbff;border:1px solid #e1e9f5;border-radius:7px;padding:10px;min-width:0}
+.vote-level b{display:block;color:var(--navy);font-size:13px;margin-bottom:5px}
+.vote-level span{display:block;color:var(--muted);font-size:13px;line-height:1.55}
+.vote-result{background:#fffaf0;border:1px solid #f2ddb3;border-radius:7px;padding:9px 10px;color:#75521b;font-size:13px}
+.close{font-size:19px;line-height:1.8;background:var(--navy);color:#edf6ff;border-radius:8px;padding:22px 24px;margin-top:16px}
+footer{padding:16px;text-align:center;background:#fff;border-top:1px solid var(--line);color:#687386;font-size:13px}
+@media(max-width:980px){
+  .cover,.grid2,.grid3,.toolgrid,.org-groups,.workgrid,.vote-framework{grid-template-columns:1fr}
+  .grid4,.metrics,.process,.org-subgrid,.timeline{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .timeline:before{display:none}
+  .sec{min-height:auto;padding:30px 0}
+}
+@media(max-width:640px){
+  nav{align-items:flex-start;flex-direction:column;gap:8px;padding:10px 14px}
+  .navlinks{width:100%;padding-bottom:2px}
+  .navlinks a{font-size:12px;padding:5px 8px}
+  .page{padding-top:98px}
+  .cover{padding-top:112px}
+  .grid4,.metrics,.process,.org-subgrid,.timeline{grid-template-columns:1fr}
+  .screen{height:186px}
+  .chip{min-width:calc(50% - 5px)}
+  .statement{font-size:17px;padding:18px}
+  .work-stats{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .vote-levels{grid-template-columns:1fr}
+}
+
+.week-card{background:#fff;border:1px solid var(--line);border-radius:8px;padding:16px 18px;border-top:4px solid var(--blue);box-shadow:0 2px 8px rgba(16,33,71,.04);min-width:0}
+.week-card:nth-child(2){border-top-color:var(--cyan)}.week-card:nth-child(3){border-top-color:var(--green)}.week-card:nth-child(4){border-top-color:var(--gold)}.week-card:nth-child(5){border-top-color:var(--red)}.week-card:nth-child(6){border-top-color:#7b61c8}
+.week-card h3{font-size:20px;color:var(--navy);margin-bottom:8px}.week-card p,.week-card li{font-size:17px;color:var(--muted)}.week-card ul{padding-left:18px}
+.script-box{font-size:18px;line-height:1.8;color:#27364b;background:#fff;border:1px solid var(--line);border-left:5px solid var(--cyan);border-radius:8px;padding:20px 22px;margin-bottom:14px}
+.script-box p{margin-bottom:10px}.script-box p:last-child{margin-bottom:0}
+.pathway{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:9px;margin-top:14px}
+.pathway .step{min-height:126px}
+.kv{display:grid;grid-template-columns:180px 1fr;border-bottom:1px solid var(--line);font-size:16px}.kv:last-child{border-bottom:0}.kv b{background:#f4f7fb;color:var(--navy);padding:11px 13px}.kv span{color:var(--muted);padding:11px 13px}
+@media(max-width:980px){.pathway{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:640px){.pathway{grid-template-columns:1fr}.kv{grid-template-columns:1fr}.kv b{border-bottom:1px solid var(--line)}}
+@media print{
+  nav{display:none}
+  body{background:#fff;font-size:14px}
+  .cover,.sec{min-height:auto;page-break-after:always}
+  .page{padding:24px}
+  .tablewrap{min-height:auto;break-before:auto;break-after:auto;page-break-before:auto;page-break-after:auto}
+}
+</style>
+</head>
+<body>
+<nav aria-label="会议材料目录">
+  <div class="brand">昌兴复材 · 信息化的第一步——制造信息</div>
+  <div class="navlinks">
+    <a href="#cover">封面</a>
+    <a href="#s1">为什么开</a>
+    <a href="#s2">今天做什么</a>
+    <a href="#s3">现状</a>
+    <a href="#s4">标准信息</a>
+    <a href="#s5">MDM草稿</a>
+    <a href="#s6">草稿标准</a>
+    <a href="#s7">信息卡</a>
+    <a href="#s8">填不出来</a>
+    <a href="#s9">行动项</a>
+    <a href="#s10">会后跟踪</a>
+  </div>
+</nav>
+
+<section class="cover" id="cover">
+  <div>
+    <div class="kicker">首次 PMO 周例会 | 2026-07-02 至 2026-07-08 | 周四开会</div>
+    <h1>信息化的第一步——制造信息</h1>
+    <p class="lead">制造标准信息，是信息化的第一步。</p>
+    <div class="chips">
+      <div class="chip"><small>会议定位</small><b>破冰与推进</b></div>
+      <div class="chip"><small>本周动作</small><b>从一张表开始，把业务事实变成标准信息</b></div>
+      <div class="chip"><small>时间基线</small><b>周四至下周三滚动跟踪</b></div>
+      <div class="chip"><small>会后处理</small><b>PMO 台账跟踪 + 现有入口补录</b></div>
+    </div>
+    <div class="cover-line">制造信息不是编造材料，是把事实、影响、材料缺口和下一步动作记成统一口径。不评价部门，不翻旧账。</div>
+  </div>
+  <aside class="hero-card" aria-label="首次周例会推进闭环">
+    <div class="diagram-title">首次周例会推进闭环</div>
+    <div class="cover-flow">
+      <div class="flow-node"><b>把业务事实说清</b><span></span></div>
+      <div class="flow-node"><b>把责任边界说清</b><span></span></div>
+      <div class="flow-node"><b>把字段证据说清</b><span></span></div>
+      <div class="flow-node"><b>把会后去向说清</b><span></span></div>
+    </div>
+  </aside>
+</section>
+
+<main class="page">
+  <section class="sec" id="s1">
+    <div class="sec-head"><div class="num">1</div><div><h2>今天为什么开会</h2><div class="sub">先把业务事实做成标准信息。</div></div></div>
+    <div class="script-box">
+      <p>信息化的第一步不是买系统，也不是先画大图，而是制造标准信息。这里说的制造信息，不是编造材料，是把制度、表单、台账和现场做法里的事实整理成统一口径：这件事叫什么，谁负责，按什么做，结果留下什么，交给谁。</p>
+      <p>首次周例会只做一件事：让每个部门交出第一批标准信息样本。说得清的今天就记下来，说不清的先标成待确认，缺材料的先记成材料缺口。</p>
+    </div>
+    <div class="grid3">
+      <article class="week-card"><h3>术语不用管</h3><p>WBS、阶段门、主数据、L3、A1，PMO 会翻译成标准信息项。</p></article>
+      <article class="week-card"><h3>历史旧账不翻</h3><p>主动说出来的流程问题、数据问题和边界问题，按治理事项处理。</p></article>
+      <article class="week-card"><h3>不用一次定稿</h3><p>本周先交第一版标准信息。证据、表述和责任边界后面可以补。</p></article>
+    </div>
+  </section>
+
+  <section class="sec" id="s2">
+    <div class="sec-head"><div class="num">2</div><div><h2>今天每个部门只做三件事</h2><div class="sub">先做出一批能继续补的标准信息。</div></div></div>
+    <div class="grid3">
+      <article class="week-card"><h3>1. 确认接口人</h3><p>写清楚本周谁负责收材料、问问题、反馈进展。只需要一个人能对接，不需要一个人扛全部。</p></article>
+      <article class="week-card"><h3>2. 填一张标准信息输入卡</h3><p>至少写一条当前困难、一条流程问题、一类基础信息、一条双轨风险。写不成完整句子就写关键词。</p></article>
+      <article class="week-card"><h3>3. 保存一张标准信息草稿</h3><p>现场环境支持就先在 MDM 保存；不支持就先填输入卡，补证据的事 PMO 后面帮着做。</p></article>
+    </div>
+    <div class="note ok" style="margin-top:14px"><strong>填不出来正常</strong>找不到制度、说不清责任、不确定字段名称，都写成“待补事项”。今天先把业务事实留下来，后面再慢慢补成标准信息。</div>
+  </section>
+
+  <section class="sec" id="s3">
+    <div class="sec-head"><div class="num">3</div><div><h2>为什么资料多，但还不是标准信息</h2><div class="sub">标准信息至少要说清：谁做、做什么、交给谁、留下什么证据。</div></div></div>
+    <div class="metrics">
+      <div class="metric"><b>408</b><span>资料目录</span></div>
+      <div class="metric"><b>918</b><span>各类文件</span></div>
+      <div class="metric"><b>236</b><span>还不能直接落系统的流程</span></div>
+      <div class="metric"><b>160</b><span>能看懂但暂不能自动化的流程</span></div>
+    </div>
+    <div class="note" style="margin-top:14px"><strong>统计口径</strong>以上为当前初筛数据，用于说明治理工作量，不作为部门评价依据。具体明细以后续 PMO 台账和受控源文件为准。</div>
+    <div class="tablewrap" style="margin-top:14px">
+      <table>
+        <thead><tr><th>现状问题</th><th>对部门意味着什么</th><th>真实例子</th><th>不处理会导致什么</th></tr></thead>
+        <tbody>
+          <tr><td>责任对象写得太泛</td><td>原文写“有关部门”“相关责任人”，会上就会问：到底找谁？谁拍板？</td><td>财务部《GLTX-CW-02-A资产管理程序》§5.2.7 写到，盘点后要提出整改措施，并“会同有关部门对相关责任人提出具体处理意见”。原文没说“有关部门”是哪几个，也没说责任人由谁确认。</td><td>盘盈盘亏一出来，资产归口、财务、使用部门都可能等别人先表态。后续也很难形成明确处理项，只能卡在“等确认”。</td></tr>
+          <tr><td>参与范围说不清</td><td>原文写“多部门、多专业”，但不列名单，发起人就不知道该拉谁一起评估。</td><td>工程技术部《GLG1201产品设计和开发管理规则》§5.5.4 和 §5.5.5 写到，更改涉及多部门、多专业时，组织相关部门、专业判别和评估。原文没列哪些变化必须找哪些部门、哪些专业参加。</td><td>设计更改发起后，少拉一个专业，后面就可能有人说“这个更改没让我们评估”。到系统里会变成会签对象不全，流程退回重走。</td></tr>
+          <tr><td>异常处理没闭环</td><td>原文只写“通知相关部门处理”，没有说通知谁、多久处理完、处理完谁确认。</td><td>物资保障部《GLTX-WZ-02-A工具量具管理程序》§5.2.1 写到，验收发现不合格工具时，“应及时通知相关部门处理”。原文没写相关部门是谁，也没写隔离、退换、复验或关闭凭证。</td><td>仓库发现不合格工具后，采购、申请人、技术员可能都以为别人会处理。系统只能发一个模糊提醒，工具是否隔离、是否退换、能不能再入库都说不清。</td></tr>
+          <tr><td>问题跟踪缺关闭标准</td><td>原文有“谁跟踪”，但没写“谁验收解决”。问题就容易一直显示处理中。</td><td>项目管理部《交付组管理流程》写到，问题汇总到关键件问题跟踪表后，分配给对应项目助理，由主管项目助理跟踪解决并反馈进度；附表里有“希望解决时间”“问题责任部门”“负责人”“跟踪项目助理”。原文没写问题解决后由谁验收、用什么证据关闭、逾期怎么升级。</td><td>关键件卡住时，大家知道有人在跟，但不知道什么时候算解决。台账里会堆出一批“处理中”的事项，PMO 很难判断哪个真逾期、哪个已经办完。</td></tr>
+          <tr><td>时间和交接物不踏实</td><td>原文写“及时做好交接”，但没说几天内交、交什么、谁签收。</td><td>行政人事部《GLTX-XZ-05-A岗位变动管理规定》§5 和流程 6 写到，调动员工应及时做好工作交接；流程 6 只写“通知调动人员本人办理工作交接”，记录表单栏为空。原文没说账号、资料、在办事项、台账由谁交给谁，也没说交接期限。</td><td>员工调岗后，原岗位资料、系统权限、未办事项可能还留在个人手里。旧部门说人已经调走，新部门说材料没接到，最后变成线下追人。</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="sec" id="s4">
+    <div class="sec-head"><div class="num">4</div><div><h2>制造标准信息，到底解决什么</h2><div class="sub">先解决四件事：谁做、做什么、用什么证据、做完交给谁。</div></div></div>
+    <div class="grid2">
+      <div class="panel"><h3>为什么要结构化</h3><p>文档结构化不是重排 Word 或抄材料。它是在制造标准信息：把制度、表单、台账、流程图里的内容拆成流程、字段、责任和证据，后面才好核处理项、权限、接口、验收。</p></div>
+      <div class="panel"><h3>标准信息能怎样</h3><ul><li>每个判断都能回到原文证据，减少口头争议。</li><li>流程、字段、责任和接口可以继续往下核。</li><li>PMO 可以按问题池、责任池和行动项推进，减少漏项和反复沟通。</li><li>已确认能进 MDM 的内容，再补到现有入口里。</li></ul></div>
+    </div>
+    <div class="tablewrap" style="margin-top:14px">
+      <table>
+        <thead><tr><th>基础工作</th><th>要制造哪类标准信息</th><th>后面影响什么</th></tr></thead>
+        <tbody>
+          <tr><td>流程治理</td><td>把一件事从谁发起、谁审核、谁执行、谁确认、结果交给谁说清楚。</td><td>蓝图设计、流程优化、系统功能范围、处理项和审批节点。</td></tr>
+          <tr><td>数据治理</td><td>把常用台账、字段、编号、主数据对象、维护部门说清楚。</td><td>数据标准、导入模板、接口字段、主数据维护责任。</td></tr>
+          <tr><td>证据治理</td><td>把每个判断能回到哪份制度规范、哪张表单、哪条台账说清楚。</td><td>需求评审、争议处理、上线验收、后续审计。</td></tr>
+          <tr><td>责任治理</td><td>把谁填、谁审、谁维护、谁接收、谁升级说清楚。</td><td>权限设计、角色工作台、行动项跟踪、责任池。</td></tr>
+          <tr><td>问题治理</td><td>把说不清、责任边界暂不清晰、缺材料、跨部门卡住的问题编号跟踪。</td><td>PMO 周会、风险升级、整改闭环。</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note" style="margin-top:14px"><strong>合格制度要写到什么程度</strong>合格制度是标准信息的原料。按照当前文档结构化模型，制度至少要能拆出制度说明、术语、流程与行为、跨部门承接、附表结构、字段和证据。下面这张表作为会后查阅标准，现场只讲“谁做、做什么、证据在哪、交给谁”。</div>
+    <div class="tablewrap" style="margin-top:14px">
+      <table>
+        <thead><tr><th>合格制度要写清什么</th><th>标准信息怎么形成</th><th>写到什么程度才算够</th></tr></thead>
+        <tbody>
+          <tr><td>这份制度叫什么、编号是什么、管到哪里。</td><td>形成制度名称、制度编号、目的、范围和承继关系。</td><td>名称唯一，范围能说清适用部门、业务场景和被替代或引用的制度。</td></tr>
+          <tr><td>关键术语是什么意思。</td><td>形成术语清单，并标明术语适用位置。</td><td>业务人员读完知道同一个词在本制度里指什么，不靠各自理解。</td></tr>
+          <tr><td>管的是哪几条流程。</td><td>对应到 L1 能力域、L2 业务能力和 L3 流程。</td><td>每条流程能看出起点、终点、业务边界，不把一堆动作揉成一句话。</td></tr>
+          <tr><td>每一步谁来做、拿什么来做、做完交什么。</td><td>拆成 A1 业务行为，记录执行角色、输入材料、输出结果。</td><td>每个行为能分配给具体角色，能形成处理项或检查项。</td></tr>
+          <tr><td>什么情况下要审核、审批、会签或确认。</td><td>记录审批要求、前置条件、触发场景和执行标准。</td><td>写清谁看、看什么、通过后产生什么结果，不只写“按规定审批”。</td></tr>
+          <tr><td>涉及其他部门时，谁交给谁、交什么、怎么确认。</td><td>形成跨部门承接记录和承接标准。</td><td>能看出来源部门、接收部门、交接物、时限和确认方式。</td></tr>
+          <tr><td>用哪些表单、台账和附表。</td><td>形成表单、主表、明细表和归档规则。</td><td>表单用途、填写要求、归档位置、留存要求能落到实际记录。</td></tr>
+          <tr><td>表单里有哪些字段，字段从哪来、谁维护。</td><td>形成字段中文名、字段类型、数据对象和字段证据说明。</td><td>字段不只是一个栏位名，还能说清填写口径、来源和维护责任。</td></tr>
+          <tr><td>每个判断能回到哪里核对。</td><td>形成证据类型、来源名称、来源位置、确认人和记录时间。</td><td>能回到制度条款、表单位置、台账记录、流程图或会议记录，不靠口头解释。</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="sec" id="s5">
+    <div class="sec-head"><div class="num">5</div><div><h2>MDM 今天只保存第一批草稿</h2><div class="sub">MDM 是现有承接入口，不是现场争论答案。</div></div></div>
+    <div class="script-box">
+      <p>MDM 的菜单以后再看，今天只走最短路径：打开地址，用自己工号登录，进角色工作台，点“我现在该做什么”，到流程治理里保存一张标准信息草稿。</p>
+      <p>如果现场环境暂时走不到这一步，就先填输入卡，不把它说成系统问题。草稿保存后也不定责、不改制度，只是把口头说法先留住，后面再补证据、补责任、补字段口径。</p>
+    </div>
+    <div class="pathway">
+      <div class="step"><b>1</b><span>打开 PMO 通知里的 MDM 地址</span></div>
+      <div class="step"><b>2</b><span>用工号和一次性初始密码登录</span></div>
+      <div class="step"><b>3</b><span>先看角色工作台</span></div>
+      <div class="step"><b>4</b><span>点击“我现在该做什么”</span></div>
+      <div class="step"><b>5</b><span>进入流程治理 / 文档结构化输出</span></div>
+      <div class="step"><b>6</b><span>填写并保存第一张标准信息草稿</span></div>
+    </div>
+    <div class="toolgrid" style="margin-top:14px">
+      <article class="tool"><div class="tool-title"><h3>角色工作台</h3><span class="badge">先看入口</span></div><div class="screen"><div class="mdm"><div class="mdm-side"><div class="mdm-role"></div><div class="mdm-role"></div><div class="mdm-role"></div><div class="mdm-role"></div></div><div class="mdm-main"><div class="mdm-tile"><b>当前身份</b><i></i><i></i></div><div class="mdm-tile"><b>当前部门</b><i></i><i></i></div><div class="mdm-tile"><b>今天优先</b><i></i><i></i></div><div class="mdm-tile"><b>我现在该做什么</b><i></i><i></i></div></div></div></div><div class="tool-body"><p>登录后先看“我现在该做什么”，不用自己猜下一步。</p></div></article>
+      <article class="tool"><div class="tool-title"><h3>流程治理</h3><span class="badge cyan">保存草稿</span></div><div class="screen"><div class="board"><div class="board-top"><div class="board-kpi"><b>说</b><span>制度说明</span></div><div class="board-kpi"><b>做</b><span>流程行为</span></div><div class="board-kpi"><b>表</b><span>表单字段</span></div><div class="board-kpi"><b>证</b><span>证据位置</span></div></div><div class="board-row"></div><div class="board-row"></div><div class="board-row"></div><div class="board-row"></div></div></div><div class="tool-body"><p>把今天说出的流程问题和制度缺口，先存成可继续完善的标准信息草稿。</p></div></article>
+      <article class="tool"><div class="tool-title"><h3>现有入口</h3><span class="badge green">确认后再录</span></div><div class="screen"><div class="gantt"><div class="tree"><i></i><i></i><i></i><i></i><i></i></div><div class="bars"><i class="bar" style="--x:8%;--y:28px;--w:38%;--c:#1f5fbf"></i><i class="bar" style="--x:18%;--y:62px;--w:48%;--c:#0e9ab8"></i><i class="bar" style="--x:38%;--y:96px;--w:42%;--c:#21835b"></i><i class="bar" style="--x:55%;--y:130px;--w:30%;--c:#b88322"></i></div></div></div><div class="tool-body"><p>PMO 整理后，只有已确认能承接的事项，才补录到 MDM 现有入口。</p></div></article>
+    </div>
+  </section>
+
+  <section class="sec" id="s6">
+    <div class="sec-head"><div class="num">6</div><div><h2>第一张标准信息草稿最低填写标准</h2><div class="sub">先让别人看得懂、查得到、接得上。</div></div></div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>字段</th><th>最低填写要求</th><th>示例</th></tr></thead>
+        <tbody>
+          <tr><td>流程名称</td><td>写一个真实业务事项。</td><td>工具量具不合格处理</td></tr>
+          <tr><td>为什么新增</td><td>写为什么现在说不清，或者为什么需要补。</td><td>制度只写通知相关部门处理，未写谁处理、怎么关闭。</td></tr>
+          <tr><td>依据类型</td><td>有制度选制度，有表单选表单，只有现场做法就选现场实际。</td><td>制度</td></tr>
+          <tr><td>依据说明</td><td>写文件编号、名称、条款或来源；暂时没有就写暂缺原因。</td><td>GLTX-WZ-02-A《工具量具管理程序》§5.2.1</td></tr>
+          <tr><td>第一步怎么做</td><td>写谁先做什么。</td><td>仓库验收发现不合格工具并记录。</td></tr>
+          <tr><td>输出结果</td><td>写做完留下什么。</td><td>不合格工具处理记录或退换货凭证。</td></tr>
+          <tr><td>暂缺证据说明</td><td>证据没带到现场时，写清后续要补什么。</td><td>待补验收记录样表和退换货凭证样例。</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="sec" id="s7">
+    <div class="sec-head"><div class="num">7</div><div><h2>现场填第一张标准信息输入卡</h2><div class="sub">空白项不是失败，是还没制造完成的信息。</div></div></div>
+    <div class="grid2">
+      <div class="panel">
+        <h3>填写口径</h3>
+        <div class="kv"><b>部门名称</b><span>写部门全称。</span></div>
+        <div class="kv"><b>接口人</b><span>写本周负责收材料、问问题、反馈进展的人。</span></div>
+        <div class="kv"><b>当前困难</b><span>用一句话说明目前最影响推进的一件事。</span></div>
+        <div class="kv"><b>流程问题</b><span>写一个流程断点，例如等谁确认、重复录入、表单版本不一、交接不清。</span></div>
+        <div class="kv"><b>基础信息准备</b><span>写一类已有或需要补的台账、字段、编号、清单或表单。</span></div>
+        <div class="kv"><b>双轨风险</b><span>写一个可能导致“系统一套、线下一套”的场景。</span></div>
+      </div>
+      <div class="panel">
+        <h3>现场示例</h3>
+        <div class="kv"><b>当前困难</b><span>现有台账字段不统一，汇总时需要反复确认。</span></div>
+        <div class="kv"><b>流程问题</b><span>申请、审核、确认之间没有统一交接记录。</span></div>
+        <div class="kv"><b>基础信息</b><span>人员岗位清单、部门职责说明、常用业务台账。</span></div>
+        <div class="kv"><b>双轨风险</b><span>基础数据不统一，系统上线后仍保留线下表格。</span></div>
+        <div class="kv"><b>需 PMO 协调</b><span>明确跨部门交接时由谁确认最终版本。</span></div>
+        <div class="kv"><b>本周交付</b><span>部门接口人清单、现有台账样例。</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="s8">
+    <div class="sec-head"><div class="num">8</div><div><h2>填不出来怎么办</h2><div class="sub">填不出来的内容，也是一条待制造的信息。</div></div></div>
+    <div class="grid2">
+      <div class="panel"><h3>现场可以这样写</h3><ul><li>找不到制度，写“材料缺口”，PMO 帮追来源。</li><li>不知道谁负责，写“责任边界待确认”。</li><li>不确定是不是本部门，写“需 PMO 协调确认”。</li><li>不知道字段叫什么，先写业务叫法，后面再统一字段名称。</li><li>只知道线下做法，先写实际做法，再补制度依据。</li></ul></div>
+      <div class="panel"><h3>PMO 现场处理</h3><ul><li>部门暂时说不清楚，登记为待确认，请部门推荐可能了解情况的人。</li><li>部门说历史问题，符合条件先进责任池。</li><li>部门说没有材料，登记材料缺口，找可替代证据。</li><li>部门说不是本部门负责，先记录事实和影响，不现场争论归属。</li><li>部门只讲感受，帮忙翻译为事实、影响和下一步。</li></ul></div>
+    </div>
+    <div class="note ok" style="margin-top:14px"><strong>提交后不定责，不改制度</strong>不要求大家在 MDM 里找一个不存在的按钮。先由 PMO 放进行动项台账、责任池、材料缺口清单或后续访谈清单。能进 MDM 现有入口的，再由 MDM 工作组确认后补录；不能进的，就留在 PMO 台账里继续跟，直到它能变成可核对的标准信息。</div>
+  </section>
+
+  <section class="sec" id="s9">
+    <div class="sec-head"><div class="num">9</div><div><h2>本周行动项</h2><div class="sub">本次从 2026-07-02 开始排，按周四至下周三跟踪。</div></div></div>
+    <div class="note"><strong>时间口径</strong>本次周例会从 2026-07-02 开始排，项目周报统计窗口和行动项跟踪周期统一为 2026-07-02 至 2026-07-08。后续周例会固定周四召开，周三 13:00 前收议题材料。本周不追求一次解决所有问题，先把第一批标准信息做出来。</div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>编号</th><th>行动项</th><th>责任方</th><th>截止时间</th><th>交付物 / 完成标准</th></tr></thead>
+        <tbody>
+          <tr><td>W-A01</td><td>发布本周周例会安排和参会范围</td><td>PMO</td><td>会前</td><td>会议通知；参会人知道何时开会、谁参加、会上要制造哪类标准信息。</td></tr>
+          <tr><td>W-A02</td><td>补齐启动会基础信息和启动日期口径说明</td><td>PMO、张琇雅</td><td>本周</td><td>日期口径说明、签到/会签补充信息。</td></tr>
+          <tr><td>W-A03</td><td>确认并试运行周会、风险、问题、变更、责任池模板</td><td>PMO</td><td>2026-07-02</td><td>模板包和使用说明；每类事项知道进哪个表、怎么关闭。</td></tr>
+          <tr><td>W-A04</td><td>确认各部门接口人和反馈机制</td><td>PMO、各部门</td><td>2026-07-02</td><td>部门接口人清单；每个部门至少有一个可联络接口人。</td></tr>
+          <tr><td>W-A05</td><td>完成调研范围与对象清单确认</td><td>信息化项目组、各工作组</td><td>2026-07-02</td><td>清单包含部门、联系人、访谈对象、调研主题和确认人。</td></tr>
+          <tr><td>W-A06</td><td>完成调研模板与访谈提纲初稿</td><td>信息化项目组、PMO</td><td>2026-07-06</td><td>模板覆盖流程、数据、接口、责任、问题和证据来源，能沉淀成标准信息。</td></tr>
+          <tr><td>W-A07</td><td>明确核心系统采购包初始边界冻结的执行标准或暂缓原因</td><td>信息化项目组、PMO</td><td>2026-07-04</td><td>未补齐前不进入 G0 放行结论。</td></tr>
+          <tr><td>W-A08</td><td>明确组织/部门/岗位/人员标准信息草案的输入资料和评审方式</td><td>MDM 工作组</td><td>2026-07-07</td><td>草案覆盖编码、属性、状态、维护责任和适用场景。</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="sec" id="s10">
+    <div class="sec-head"><div class="num">10</div><div><h2>会后怎么跟踪</h2><div class="sub">今天留下的是一批标准信息的半成品。</div></div></div>
+    <div class="grid3">
+      <article class="week-card"><h3>行动项台账</h3><p>责任人、截止时间、交付物和状态进入 PMO 周会跟踪，避免信息停在口头。</p></article>
+      <article class="week-card"><h3>责任池</h3><p>历史问题、责任边界不清和跨部门争议先放入责任池，不在会上硬定归属。</p></article>
+      <article class="week-card"><h3>材料缺口清单</h3><p>缺制度、缺表单、缺台账、缺截图的事项，先记清楚来源和补充责任。</p></article>
+      <article class="week-card"><h3>制度或表单待补说明</h3><p>原文没写清的地方，先形成待补说明，不直接改成系统功能需求。</p></article>
+      <article class="week-card"><h3>后续访谈清单</h3><p>现场说不清、需要找人的内容，转成访谈对象和补证据任务。</p></article>
+      <article class="week-card"><h3>MDM 现有入口</h3><p>只有已确认能承接的事项，才补录到当前已有页面；不把未设计功能写成承诺。</p></article>
+    </div>
+  </section>
+
+</main>
+<footer>沈阳昌兴复材航空科技有限责任公司 · 数字化底座项目首次周例会 · 会议材料</footer>
+</body>
+</html>
