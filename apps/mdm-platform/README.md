@@ -12,7 +12,7 @@
 
 `apps/mdm-platform/` 只负责 MDM 平台应用本身：Express 路由、MySQL 目标 schema、单文件前端、应用内脚本和平台使用说明。
 
-不在本目录维护流程原始真源、PMO 驾驶舱或仓库级数据转换脚本：
+不在本目录维护流程输入基线、PMO 驾驶舱或仓库级数据转换脚本：
 
 - 流程输入基线：`docs/norms/{部门}部门-能力-流程-系统映射关系.md`
 - 组织真源：`docs/organization/组织架构和部门职责.md`
@@ -181,7 +181,8 @@ npm run smoke:process-governance-mysql
 - `MDM_IDENTITY_READ_MODEL=mysql` 目前切换登录、`/api/org/session`、`/api/org/me`、本人密码状态、本人改密、管理员用户/部门/权限读写接口、`/api/roles` 角色读写接口、通用 `requirePermission` 权限中间件、角色工作台身份读取、流程治理 MySQL 分支权限判断、流程设计 MySQL 路由权限判断、治理活跃热力图管理视图权限判断、字段台账查看/创建/维护中的身份权限判断，以及字段黄金源维护/确认中的身份权限判断。`auth.js` / `access.js` 已提供 MySQL-aware 异步权限、角色码、用户和部门读取 helper；后续业务路由接入时应优先复用这些 helper。
 - `/api/import-rbac/*` 批量写入仍是遗留本地库实现；在 `MDM_IDENTITY_READ_MODEL=mysql` 下会显式拒绝，直到对应导入写入链路迁到 MySQL。
 - 当前前端主入口为统一问题池 `/api/process-governance/issue-pool/*`；旧输入基线问题复核 `/api/process-governance/input-baseline-review/*` 保留为导入、复核和过渡 API。问题识别批次通过 `npm run import:process-input-baseline-review -- --review-run artifacts/process-input-baseline-review/<run-id>` 导入 MySQL。
-- 新增流程在 `PROCESS_GOVERNANCE_READ_MODEL=mysql` 下使用 `/api/process-design/*` 的 MySQL 路由完成草稿、步骤、表单、字段、证据、审核和发布；发布不反向修改 `docs/norms/`。发布卡口以至少 1 条 `process_design_evidence.status='verified'` 为准，`maturity` 只作为前端完成度提示；草稿详情返回 `publishable` 供前端展示是否可发布。
+- 文档结构化输出位于 `流程治理 -> 文档结构化输出`，稳定地址为 `#/processGovernance?view=documentStructure`，在 `总览` 后、`待确认问题` 前。该页面在 `PROCESS_GOVERNANCE_READ_MODEL=mysql` 下使用 `/api/process-design/*` 的 MySQL 路由完成制度说明、目的范围、术语、流程与业务行为、跨部门承接、附表结构、证据、Markdown 草案、审核和发布；`/api/process-design/process-taxonomy` 从 MySQL 流程治理读模型 `process_mapping_records` 读取 L1 能力域和 L2 业务能力，并按当前用户本部门过滤。`process_mapping_records` 由 `docs/company-sankey-data.json` 的 `processMappings` 导入，必须先运行 `node scripts/parse-sankey-data.mjs` 生成快照，再运行 `import-process-governance-mysql.js` 刷新 MySQL。前端只允许在流程明细中级联选择本部门既有 L1/L2 组合，后端也会拒绝临时新增或跨部门套用的 L1/L2；是否需要审批、是否跨部门、字段类型和证据类型使用固定选项。发布不反向修改 `docs/norms/`。发布卡口以至少 1 条 `process_design_evidence.status='verified'` 为准，`maturity` 只作为前端完成度提示；草稿详情返回 `publishable` 供前端展示是否可发布。
+- 文档结构化输出前端按 9 个节点分步呈现：制度说明、目的范围、术语、流程与行为、跨部门承接、附表结构、提交审核、结构化预览、Markdown 草案。页面每次只显示当前节点，术语、流程和业务行为支持列表编辑、取消编辑、删除或作废，不把所有录入表单铺在同一页。
 - `npm run test:mainline` 用于验证“流程治理 -> 字段台账 -> 主数据对象 -> 权限 -> 导入导出”主线，详见 `docs/plans/流程治理字段台账主线稳定性检查.md`。
 - 不直接运行会删除共享数据库的旧式测试逻辑。
 - `seed-demo-data.js` 和 `setup-mdm-project-users.js` 需要显式环境变量才可运行。
@@ -192,3 +193,7 @@ npm run smoke:process-governance-mysql
 - 流程输入基线为 `docs/norms/{部门}部门-能力-流程-系统映射关系.md`。
 - 快照来源为 `docs/company-sankey-data.json`。
 - PMO 静态驾驶舱仍通过 parser 和内嵌快照运行。
+- 指导意见默认隐藏；打开待确认问题只聚焦当前治理对象，不自动展开指导意见。只有已有指导意见被主动刷新、创建或响应时，才显示对应区域。
+- 统一问题池前端按 `display_status` 做视觉引导：待确认项优先展示；已提交待审核、等待协同/裁决和已完成项用不同状态标签与卡片颜色区分；已提交或已完成不等于关闭，默认不抢占“当前优先”。问题提交后，详情页只展示处理记录和下一步入口，不再让上传者在同页重复提交审核动作。
+- 统一问题池详情页的 `在哪发现` 固定展示源文件编号、制度或表单名称、大概位置、业务流程和业务行为；能定位制度或表单源文件锚点时优先显示原文位置。流程输入基线里的条款号必须能在制度或表单源文件中核到才显示为原文条款；条款号对不上但摘录能在源文件中找到时，显示摘录所在原文段落并标明残留问题；不能定位时才回退到流程输入基线并标明残留问题。
+- `npm run test:process-governance-issue-pool` 覆盖统一问题池 MySQL 权限、前端钩子和来源解析；其中来源解析会防止 `GLTX-XM-08-A` 这类制度编号被误挂到 `GLTX-XM-08-A-01` 表单。

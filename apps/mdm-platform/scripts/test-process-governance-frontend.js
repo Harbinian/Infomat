@@ -25,22 +25,110 @@ assert.ok(html.includes("key: 'inputBaselineReview'"), 'process governance shoul
 assert.ok(html.includes("key: 'quality'"), 'process governance should expose a direct task entry for closure work');
 assert.ok(html.includes("key: 'map'"), 'process governance should expose a direct task entry for map lookup');
 assert.ok(html.includes("key: 'newProcess'"), 'process governance should expose a direct task entry for creating a new process');
+assert.ok(html.includes("key: 'documentStructure', label: '文档结构化输出'"), 'process governance should expose document structured output as a stable subtab after overview');
+assert.ok(html.indexOf("key: 'overview', label: '总览'") < html.indexOf("key: 'documentStructure', label: '文档结构化输出'"), 'document structured output should appear immediately after overview');
+assert.ok(html.indexOf("key: 'documentStructure', label: '文档结构化输出'") < html.indexOf("key: 'inputBaselineReview', label: '待确认问题'"), 'document structured output should appear before pending issue confirmation');
+assert.ok(html.includes("documentStructure: 'documentStructure'"), 'document structured output should be addressable by view=documentStructure');
+assert.ok(html.includes("if (route && route.pgWorkspace === 'new') return 'documentStructure';"), 'legacy workspace=new links should resolve to document structured output');
+assert.ok(html.includes('data-pg-view="documentStructure"'), 'document structured output workspace should be controlled by the process governance subtab router');
+assert.ok(html.includes("if (taskKey === 'newProcess') return '#/processGovernance?view=documentStructure';"), 'workflow task entry should open the stable document structured output route');
 assert.ok(html.includes('开始确认'), 'process governance should offer plain first-action copy for issue confirmation');
 assert.ok(html.includes('pg-guidance-deferred'), 'process governance guidance controls should be visually deferred until a governance object is selected');
 assert.ok(html.includes('看本部门有哪些问题') && html.includes('确认关闭'), 'workflow guidance should still explain the existing-process closure path');
-assert.ok(html.includes('id="pgDesignWizard"'), 'new process creation should show a design wizard');
-['流程说明', '实际步骤', '在线表单', '字段与证据', '提交审核', '成果预览'].forEach(label => {
-  assert.ok(html.includes(label), `new process wizard should include step ${label}`);
+assert.ok(html.includes('id="pgDesignWizard"'), 'document structured output should show a design wizard');
+[
+  '制度说明',
+  '目的范围',
+  '术语',
+  '流程与行为',
+  '跨部门承接',
+  '附表结构',
+  '提交审核',
+  '结构化预览',
+  'Markdown 草案'
+].forEach(label => {
+  assert.ok(html.includes(label), `document structured output 9-node progress should include ${label}`);
 });
+[
+  'draft',
+  'profile',
+  'terms',
+  'behavior',
+  'handoff',
+  'tables',
+  'evidence',
+  'preview',
+  'markdown'
+].forEach(step => {
+  assert.ok(html.includes(`key: '${step}'`) || html.includes(`data-process-design-step-panel="${step}"`), `document structured output should define node ${step}`);
+  assert.ok(html.includes(`data-process-design-step-panel="${step}"`), `document structured output should isolate panel ${step}`);
+});
+[
+  'id="pgDesignStepProgress"',
+  'id="pgDesignPrevStepBtn"',
+  'id="pgDesignNextStepBtn"',
+  'function processDesignWizardStepIndex',
+  'function renderProcessDesignStepProgress',
+  'function goProcessDesignWizardStep',
+  'id="pgDesignDocumentProfileForm"',
+  'id="pgDesignTermForm"',
+  'id="pgDesignProcessForm"',
+  'id="pgDesignBehaviorDetailForm"',
+  'id="pgDesignHandoffForm"',
+  'id="pgDesignFormTableForm"',
+  'id="pgDesignTableFieldForm"',
+  'id="pgDesignMarkdownPreview"',
+  '/document-profile',
+  '/terms',
+  '/behavior-detail',
+  '/cross-dept-handoffs',
+  '/form-tables/',
+  '/markdown'
+].forEach(needle => assert.ok(html.includes(needle), `document structured output should include ${needle}`));
+assert.ok(html.includes('process-design-step-panel pg-hidden'), 'document structured output should hide inactive step panels instead of showing one long page');
+assert.ok(!html.includes("const PROCESS_DESIGN_WIZARD_STEPS = ['draft', 'steps', 'forms', 'fields', 'submit', 'preview'];"), 'document structured output must not regress to the old 6-node new-process wizard');
 assert.ok(html.includes('class="outcome-card"'), 'process governance should render reusable outcome feedback cards');
 assert.ok(html.includes('/api/process-design/summary'), 'process governance should load process design summary');
+assert.ok(html.includes('/api/process-design/process-taxonomy'), 'process design should load L1/L2 options from existing mapping relationships');
 assert.ok(html.includes('/api/process-design/drafts'), 'process governance should create process design drafts through API');
+assert.ok(html.includes('<select id="pgDesignProcessL1Name"'), 'process design L1 should be selected from existing mapping relationships in the process node');
+assert.ok(html.includes('<select id="pgDesignProcessL2Name"'), 'process design L2 should be selected from existing mapping relationships in the process node');
+assert.ok(html.includes('id="pgDesignRelatedDepartments"'), 'process design should collect related departments on the draft');
+assert.ok(html.includes('function refreshProcessDesignCatalogOptions'), 'process design should have a catalog refresh hook for late-loaded departments');
+assert.ok(html.includes('refreshProcessDesignCatalogOptions();'), 'process design should refresh department enum options after catalog data loads');
+assert.ok(!html.includes('L1 能力<input id="pgDesignProcessL1Name"'), 'process design should not allow free text L1 input');
+assert.ok(!html.includes('L2 业务域<input id="pgDesignProcessL2Name"'), 'process design should not allow free text L2 input');
+[
+  'function loadProcessDesignTaxonomy',
+  'function renderProcessDesignTaxonomyOptions',
+  'function assertProcessDesignTaxonomySelection',
+  'PROCESS_DESIGN_FIELD_TYPES',
+  'PROCESS_DESIGN_EVIDENCE_TYPES',
+  'id="pgDesignStepActorRole"',
+  'id="pgDesignPrecondition"',
+  'id="pgDesignTriggerScene"',
+  'id="pgDesignExecutionStandard"',
+  'id="pgDesignDeliveryObject"',
+  'id="pgDesignRequiresApproval"',
+  'id="pgDesignIsCrossDepartment"',
+  '<select id="pgDesignFieldType"',
+  '<select id="pgDesignEvidenceType"',
+  "actor_role: $('pgDesignStepActorRole')",
+  "requires_approval: $('pgDesignRequiresApproval')",
+  "is_cross_department: $('pgDesignIsCrossDepartment')",
+  '暂不开放新增能力域或业务能力',
+  '本部门已有映射关系'
+].forEach(needle => assert.ok(html.includes(needle), `process design frontend should include ${needle}`));
 [
   'function loadProcessDesignDraftDetail',
+  'function saveProcessDesignBehaviorFromWizard',
   'function saveProcessDesignStepFromWizard',
   'function saveProcessDesignFormFromWizard',
+  'function saveProcessDesignFormTableFromWizard',
+  'function saveProcessDesignTableFieldFromWizard',
   'function saveProcessDesignFieldFromWizard',
   'function saveProcessDesignEvidenceFromWizard',
+  'function exportProcessDesignMarkdownFromWizard',
   'function submitProcessDesignDraftFromWizard',
   'function publishProcessDesignDraftFromWizard',
   'function renderProcessDesignDraftDetail',
@@ -52,14 +140,18 @@ assert.ok(html.includes('/api/process-design/drafts'), 'process governance shoul
   '/risks',
   '/outcome-preview',
   '/submit',
+  '/markdown',
   '/api/process-design/review-tasks/',
   '/decision',
   '/publish',
   'data-process-design-draft-open',
-  'id="saveProcessDesignStepBtn"',
+  'id="saveProcessDesignBehaviorBtn"',
   'id="saveProcessDesignFormBtn"',
+  'id="saveProcessDesignFormTableBtn"',
+  'id="saveProcessDesignTableFieldBtn"',
   'id="saveProcessDesignFieldBtn"',
   'id="saveProcessDesignEvidenceBtn"',
+  'id="exportProcessDesignMarkdownBtn"',
   'id="submitProcessDesignDraftBtn"',
   'id="publishProcessDesignDraftBtn"'
 ].forEach(needle => assert.ok(html.includes(needle), `process design frontend should include ${needle}`));
@@ -76,10 +168,10 @@ assert.ok(html.includes('function processGovernanceLoadKey(view, filters)'), 'pr
 assert.ok(html.includes('async function loadProcessGovernanceView(view, options)'), 'process governance should lazy-load the active subtab view');
 assert.ok(html.includes('function renderProcessGovernanceView(view, payload, route)'), 'process governance should render one loaded governance view at a time');
 assert.ok(html.includes('function clearProcessGovernanceViewCache(reason)'), 'process governance should clear session-only caches when scope changes');
-['总览', '待确认问题', '流程图谱', '证据来源', '映射工作', '治理闭环'].forEach(label => {
+['总览', '文档结构化输出', '待确认问题', '流程图谱', '证据来源', '映射工作', '治理闭环'].forEach(label => {
   assert.ok(html.includes(label), `process governance should include subtab ${label}`);
 });
-['overview', 'inputBaselineReview', 'map', 'evidence', 'mapping', 'quality'].forEach(view => {
+['overview', 'documentStructure', 'inputBaselineReview', 'map', 'evidence', 'mapping', 'quality'].forEach(view => {
   assert.ok(html.includes(`data-pg-view="${view}"`), `process governance should assign sections to ${view}`);
 });
 assert.ok(html.includes('/api/process-governance/sankey'), 'process governance sankey API should be called');
@@ -116,6 +208,23 @@ assert.ok(html.includes('function renderProcessGovernancePriorityIssue'), 'proce
   'related_entity_type',
   'related_entity_id'
 ].forEach(needle => assert.ok(html.includes(needle), `guidance binding should include stable object hook ${needle}`));
+const activeObjectFocusStart = html.indexOf('function setActiveGovernanceObjectFocus');
+const activeObjectFocusEnd = html.indexOf('function guidanceStatusText', activeObjectFocusStart);
+const activeObjectFocusSnippet = html.slice(activeObjectFocusStart, activeObjectFocusEnd);
+assert.ok(activeObjectFocusStart >= 0 && activeObjectFocusEnd > activeObjectFocusStart, 'active governance object focus helper should be extractable');
+assert.ok(html.includes('async function refreshGuidanceContextForActiveObject()'), 'active-object guidance refresh helper should be defined');
+assert.ok(
+  !activeObjectFocusSnippet.includes('refreshGuidanceContextForActiveObject();'),
+  'selecting a governance object should not automatically show guidance controls'
+);
+assert.ok(
+  html.includes('function clearGuidanceContextView'),
+  'guidance controls should have a helper that hides the empty guidance area'
+);
+assert.ok(
+  !activeObjectFocusSnippet.includes('loadGuidanceForActiveObject'),
+  'active object focus should not call the removed guidance loader name'
+);
 const inputBaselineSectionStart = html.indexOf('id="pgInputBaselineReviewSection"');
 const inputBaselineSectionEnd = html.indexOf('id="pgSourceCoverageSection"', inputBaselineSectionStart);
 const inputBaselineSection = html.slice(inputBaselineSectionStart, inputBaselineSectionEnd);
