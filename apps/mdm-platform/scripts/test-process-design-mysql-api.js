@@ -532,9 +532,9 @@ function makeFakeRepository() {
         id: 301,
         draft_id: draft.id,
         step_id: body.step_id ? Number(body.step_id) : null,
-        form_code: 'FM-CX-ZD-001-A-001',
+        form_code: 'FM-CX-ZD-001-001-A',
         form_name: body.form_name,
-        main_table_code: 'FM-CX-ZD-001-A-001-M',
+        main_table_code: 'FM-CX-ZD-001-M001-A',
         main_table_name: body.main_table_name || '主表',
         archive_location: body.archive_location || null,
         retention_period: body.retention_period || null,
@@ -556,8 +556,8 @@ function makeFakeRepository() {
         id: 351,
         form_id: formId,
         table_kind: 'detail',
-        table_no: 'FM-CX-ZD-001-A-001-D',
-        table_code: 'FM-CX-ZD-001-A-001-D',
+        table_no: 'FM-CX-ZD-001-D001-A',
+        table_code: 'FM-CX-ZD-001-D001-A',
         table_name: body.table_name,
         created_by: actorUserId
       };
@@ -572,8 +572,8 @@ function makeFakeRepository() {
         form_table_id: structureKind === 'main' ? null : tableId,
         structure_kind: structureKind,
         field_name: body.field_name,
-        field_no: structureKind === 'main' ? 'FM-CX-ZD-001-A-001-M-001' : 'FM-CX-ZD-001-A-001-D-001',
-        field_code: structureKind === 'main' ? 'FM-CX-ZD-001-A-001-M-001' : 'FM-CX-ZD-001-A-001-D-001',
+        field_no: structureKind === 'main' ? 'FM-CX-ZD-001-M001-A-001' : 'FM-CX-ZD-001-D001-A-001',
+        field_code: structureKind === 'main' ? 'FM-CX-ZD-001-M001-A-001' : 'FM-CX-ZD-001-D001-A-001',
         field_type: body.field_type,
         required: Boolean(body.required),
         enum_options: body.enum_options || null,
@@ -698,6 +698,140 @@ function makeFakeRepository() {
   };
 }
 
+async function assertFormNumberingUsesSequenceBeforeEdition() {
+  const queries = [];
+  const state = {
+    forms: [{ id: 300, draft_id: 101, form_code: 'FM-CX-ZD-001-001-A', main_table_code: 'FM-CX-ZD-001-M001-A' }],
+    tables: [],
+    fields: [],
+    nextFormId: 301,
+    nextTableId: 351,
+    nextFieldId: 361
+  };
+  const pool = {
+    async execute(sql, params = []) {
+      queries.push({ sql, params });
+      if (sql.includes('SELECT form_code FROM process_design_forms')) {
+        return [state.forms.filter(form => Number(form.draft_id) === Number(params[0])).map(form => ({ form_code: form.form_code }))];
+      }
+      if (sql.includes('SELECT id, status FROM process_design_steps')) {
+        return [[{ id: params[0], status: 'active' }]];
+      }
+      if (sql.includes('INSERT INTO process_design_forms')) {
+        const id = state.nextFormId++;
+        state.forms.push({
+          id,
+          draft_id: params[0],
+          step_id: params[1],
+          form_code: params[2],
+          form_name: params[3],
+          main_table_code: params[4],
+          main_table_name: params[5],
+          created_by: params[11]
+        });
+        return [{ insertId: id }];
+      }
+      if (sql.includes('SELECT * FROM process_design_forms WHERE id=?')) {
+        return [[state.forms.find(form => Number(form.id) === Number(params[0]))].filter(Boolean)];
+      }
+      if (sql.includes("SELECT * FROM process_design_form_tables WHERE form_id=? AND table_kind='main'")) {
+        return [state.tables.filter(table => Number(table.form_id) === Number(params[0]) && table.table_kind === 'main')];
+      }
+      if (sql.includes("SELECT id FROM process_design_form_tables WHERE form_id=? AND table_kind='detail'")) {
+        return [state.tables.filter(table => Number(table.form_id) === Number(params[0]) && table.table_kind === 'detail').map(table => ({ id: table.id }))];
+      }
+      if (sql.includes('INSERT INTO process_design_form_tables')) {
+        const id = state.nextTableId++;
+        state.tables.push({
+          id,
+          form_id: params[0],
+          table_kind: sql.includes("'detail'") ? 'detail' : 'main',
+          table_no: params[1],
+          table_code: params[2],
+          table_name: params[3],
+          created_by: params[4]
+        });
+        return [{ insertId: id }];
+      }
+      if (sql.includes('SELECT * FROM process_design_form_tables WHERE id=?')) {
+        return [[state.tables.find(table => Number(table.id) === Number(params[0]))].filter(Boolean)];
+      }
+      if (sql.includes('SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_order FROM process_design_form_table_fields')) {
+        const maxOrder = state.fields
+          .filter(field => Number(field.form_table_id) === Number(params[0]) && field.structure_kind === params[1])
+          .reduce((max, field) => Math.max(max, Number(field.sort_order || 0)), 0);
+        return [[{ next_order: maxOrder + 1 }]];
+      }
+      if (sql.includes('SELECT field_code FROM process_design_form_table_fields')) {
+        return [state.fields
+          .filter(field => Number(field.form_table_id) === Number(params[0]) && field.structure_kind === params[1])
+          .map(field => ({ field_code: field.field_code }))];
+      }
+      if (sql.includes('INSERT INTO process_design_form_table_fields')) {
+        const id = state.nextFieldId++;
+        state.fields.push({
+          id,
+          form_table_id: params[0],
+          structure_kind: params[1],
+          field_no: params[2],
+          field_code: params[3],
+          field_name: params[4],
+          field_type: params[5],
+          enum_options: params[6],
+          is_required: params[7],
+          description: params[8],
+          sort_order: params[9],
+          created_by: params[10]
+        });
+        return [{ insertId: id }];
+      }
+      if (sql.includes('SELECT * FROM process_design_form_table_fields WHERE id=?')) {
+        return [[state.fields.find(field => Number(field.id) === Number(params[0]))].filter(Boolean)];
+      }
+      if (sql.includes('INSERT INTO process_design_events')) {
+        return [{ insertId: 1 }];
+      }
+      return [[]];
+    }
+  };
+  const repo = processDesignRouter.makeProcessDesignMysqlRepository(pool);
+  const draft = { id: 101, document_no: 'CX-ZD-001', planned_edition: 'A' };
+
+  assert.strictEqual(await repo.nextFormCode(draft), 'FM-CX-ZD-001-002-A');
+  const createdForm = await repo.createForm(draft, {
+    step_id: 202,
+    form_name: '需求变更单',
+    main_table_name: '需求变更主表'
+  }, 10);
+  assert.strictEqual(createdForm.form_code, 'FM-CX-ZD-001-002-A');
+  assert.strictEqual(createdForm.main_table_code, 'FM-CX-ZD-001-M002-A');
+  const mainField = await repo.createFormTableField(draft, createdForm.id, {
+    structure_kind: 'main',
+    field_name: '客户名称',
+    field_type: '文本',
+    required: true
+  }, 10);
+  assert.strictEqual(mainField.field_code, 'FM-CX-ZD-001-M002-A-001');
+  const detailTable = await repo.createFormTable(draft, createdForm.id, { table_name: '变更字段明细' }, 10);
+  assert.strictEqual(detailTable.table_code, 'FM-CX-ZD-001-D002-A');
+  const detailField = await repo.createFormTableField(draft, detailTable.id, {
+    structure_kind: 'detail',
+    field_name: '变更字段',
+    field_type: '文本',
+    required: true
+  }, 10);
+  assert.strictEqual(detailField.field_code, 'FM-CX-ZD-001-D002-A-001');
+  assert.strictEqual(
+    await repo.nextFieldCode({ id: 351, table_code: 'FM-CX-ZD-001-M001-A' }, 'main'),
+    'FM-CX-ZD-001-M001-A-001'
+  );
+  assert.strictEqual(
+    await repo.nextFieldCode({ id: 352, table_code: 'FM-CX-ZD-001-D001-A' }, 'detail'),
+    'FM-CX-ZD-001-D001-A-001'
+  );
+  assert.ok(queries.length >= 3, 'numbering test should use real MySQL repository methods');
+}
+
 async function main() {
   const routeSource = fs.readFileSync(path.join(__dirname, '../server/routes/processDesignMysql.js'), 'utf8');
   assert.ok(!routeSource.includes("require('../db')"), 'process design MySQL route must not load server/db.js');
@@ -764,6 +898,7 @@ async function main() {
   });
   assert.ok(mdmMysqlSchemaSql().includes('status VARCHAR(32) NOT NULL DEFAULT'), 'process design steps must keep active/voided status');
   assert.ok(mdmMysqlSchemaSql().includes('void_reason TEXT NULL'), 'process design steps must keep void reason');
+  await assertFormNumberingUsesSequenceBeforeEdition();
 
   const permissionsByUser = new Map([
     [10, ['process_governance:submit']],
@@ -1181,8 +1316,8 @@ async function main() {
       })
     });
     assert.strictEqual(form.res.status, 201);
-    assert.strictEqual(form.body.form_code, 'FM-CX-ZD-001-A-001');
-    assert.strictEqual(form.body.main_table_code, 'FM-CX-ZD-001-A-001-M');
+    assert.strictEqual(form.body.form_code, 'FM-CX-ZD-001-001-A');
+    assert.strictEqual(form.body.main_table_code, 'FM-CX-ZD-001-M001-A');
     assert.strictEqual(form.body.main_table_name, '需求变更主表');
     assert.strictEqual(form.body.archive_location, '资料室');
 
@@ -1197,11 +1332,11 @@ async function main() {
       body: JSON.stringify({ structure_kind: 'main', field_name: '客户名称', field_type: '文本', required: true, description: '填写客户名称' })
     });
     assert.strictEqual(mainField.res.status, 201, JSON.stringify(mainField.body));
-    assert.strictEqual(mainField.body.field_code, 'FM-CX-ZD-001-A-001-M-001');
+    assert.strictEqual(mainField.body.field_code, 'FM-CX-ZD-001-M001-A-001');
 
     const manualTableNo = await request(baseUrl, 'submitter', '/api/process-design/forms/301/tables', {
       method: 'POST',
-      body: JSON.stringify({ table_no: 'FM-CX-ZD-001-A-001-D', table_name: '需求变更明细表' })
+      body: JSON.stringify({ table_no: 'FM-CX-ZD-001-D001-A', table_name: '需求变更明细表' })
     });
     assert.strictEqual(manualTableNo.res.status, 422, JSON.stringify(manualTableNo.body));
 
@@ -1211,11 +1346,11 @@ async function main() {
     });
     assert.strictEqual(table.res.status, 201, JSON.stringify(table.body));
     assert.strictEqual(table.body.table_name, '变更字段明细');
-    assert.strictEqual(table.body.table_code, 'FM-CX-ZD-001-A-001-D');
+    assert.strictEqual(table.body.table_code, 'FM-CX-ZD-001-D001-A');
 
     const manualFieldNo = await request(baseUrl, 'submitter', '/api/process-design/form-tables/351/fields', {
       method: 'POST',
-      body: JSON.stringify({ field_no: 'FM-CX-ZD-001-A-001-D-001', field_name: '变更字段', field_type: '文本', required: true, description: '填写变更字段' })
+      body: JSON.stringify({ field_no: 'FM-CX-ZD-001-D001-A-001', field_name: '变更字段', field_type: '文本', required: true, description: '填写变更字段' })
     });
     assert.strictEqual(manualFieldNo.res.status, 422, JSON.stringify(manualFieldNo.body));
 
@@ -1236,7 +1371,7 @@ async function main() {
       body: JSON.stringify({ structure_kind: 'detail', field_name: '变更字段', field_type: '枚举', enum_options: '名称,地址', required: true, description: '填写变更字段' })
     });
     assert.strictEqual(tableField.res.status, 201, JSON.stringify(tableField.body));
-    assert.strictEqual(tableField.body.field_code, 'FM-CX-ZD-001-A-001-D-001');
+    assert.strictEqual(tableField.body.field_code, 'FM-CX-ZD-001-D001-A-001');
 
     const invalidEvidenceType = await request(baseUrl, 'submitter', '/api/process-design/drafts/101/evidence', {
       method: 'POST',

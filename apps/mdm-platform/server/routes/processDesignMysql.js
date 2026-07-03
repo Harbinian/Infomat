@@ -92,11 +92,17 @@ function pad3(sequence) {
 function formatFormCode(draft, sequence) {
   const documentNo = text(draft && draft.document_no) || 'UNSET';
   const edition = text(draft && draft.planned_edition).toUpperCase() || 'A';
-  return `FM-${documentNo}-${edition}-${pad3(sequence)}`;
+  return `FM-${documentNo}-${pad3(sequence)}-${edition}`;
 }
 
 function formatFormStructureCode(formCode, structureKind) {
-  return `${text(formCode)}-${structureKind === 'detail' ? 'D' : 'M'}`;
+  const value = text(formCode);
+  const marker = structureKind === 'detail' ? 'D' : 'M';
+  const nextMatch = value.match(/^FM-(.+)-([0-9]{3})-([A-Z]+)$/);
+  if (nextMatch) return `FM-${nextMatch[1]}-${marker}${nextMatch[2]}-${nextMatch[3]}`;
+  const legacyMatch = value.match(/^FM-(.+)-([A-Z]+)-([0-9]{3})$/);
+  if (legacyMatch) return `FM-${legacyMatch[1]}-${marker}${legacyMatch[3]}-${legacyMatch[2]}`;
+  return `${value}-${marker}`;
 }
 
 function formatFieldCode(structureCode, sequence) {
@@ -149,10 +155,18 @@ function parseProcedureSequence(processCode, draftId) {
 function parseFormSequence(formCode, draft) {
   const documentNo = text(draft && draft.document_no) || 'UNSET';
   const edition = text(draft && draft.planned_edition).toUpperCase() || 'A';
-  const prefix = `FM-${documentNo}-${edition}-`;
   const value = text(formCode);
-  if (!value.startsWith(prefix)) return 0;
-  const sequence = Number(value.slice(prefix.length));
+  const prefix = `FM-${documentNo}-`;
+  const suffix = `-${edition}`;
+  let sequence = 0;
+  if (value.startsWith(prefix) && value.endsWith(suffix)) {
+    sequence = Number(value.slice(prefix.length, -suffix.length));
+  }
+  if (!sequence) {
+    const legacyPrefix = `FM-${documentNo}-${edition}-`;
+    if (!value.startsWith(legacyPrefix)) return 0;
+    sequence = Number(value.slice(legacyPrefix.length));
+  }
   return Number.isInteger(sequence) && sequence > 0 ? sequence : 0;
 }
 
@@ -1960,7 +1974,7 @@ function makeProcessDesignMysqlRepository(pool) {
       return await getById('process_design_form_tables', result.insertId);
     },
     async nextFieldCode(table, structureKind) {
-      const structureCode = text(table.table_code) || text(table.table_no) || formatFormStructureCode('FM-UNSET-A-001', structureKind);
+      const structureCode = text(table.table_code) || text(table.table_no) || formatFormStructureCode('FM-UNSET-001-A', structureKind);
       const rows = await mysqlQuery(pool, 'SELECT field_code FROM process_design_form_table_fields WHERE form_table_id=? AND structure_kind=?', [table.id, structureKind]);
       const maxSequence = rows.reduce((max, row) => Math.max(max, parseFieldSequence(row.field_code, structureCode)), 0);
       return formatFieldCode(structureCode, maxSequence + 1);
