@@ -928,7 +928,7 @@
         "table": "process_design_form_table_fields"
       },
       "x-ui": {
-        "section": "tables",
+        "section": "fields",
         "ids": [
           "pgDesignFieldFormSelect",
           "pgDesignFieldStructureKind",
@@ -936,7 +936,8 @@
           "pgDesignFieldType",
           "pgDesignFieldRequired",
           "pgDesignFieldEnumOptions",
-          "pgDesignFieldDescription"
+          "pgDesignFieldDescription",
+          "pgDesignFieldList"
         ]
       }
     },
