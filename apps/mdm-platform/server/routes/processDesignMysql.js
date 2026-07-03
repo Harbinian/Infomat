@@ -354,6 +354,13 @@ async function appendProcessTaxonomyValidation(repo, body, details, scope) {
   details.push(...await taxonomyValidationDetails(repo, body, scope));
 }
 
+function processBodyWithDraftTaxonomy(draft, body) {
+  const payload = { ...(body || {}) };
+  if (!text(payload.l1_name)) payload.l1_name = text(draft && draft.l1_name);
+  if (!text(payload.l2_name)) payload.l2_name = text(draft && draft.l2_name);
+  return payload;
+}
+
 function publicDraft(row) {
   if (!row) return null;
   return {
@@ -1724,6 +1731,8 @@ function makeProcessDesignMysqlRepository(pool) {
     },
     async createProcess(draft, body, actorUserId) {
       const processType = PROCESS_TYPES.has(text(body.process_type)) ? text(body.process_type) : 'new';
+      const l1Name = text(body.l1_name) || text(draft.l1_name);
+      const l2Name = text(body.l2_name) || text(draft.l2_name);
       const [orderRow] = await mysqlQuery(pool, 'SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_order FROM process_design_processes WHERE draft_id=?', [draft.id]);
       const procedureCode = await nextProcedureCode(draft.id);
       const result = await mysqlRun(pool, `
@@ -1732,7 +1741,7 @@ function makeProcessDesignMysqlRepository(pool) {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         draft.id, procedureCode, processType,
-        text(body.l1_name), text(body.l2_name), text(body.l3_name),
+        l1Name, l2Name, text(body.l3_name),
         optionalText(body.description), body.sort_order ? Number(body.sort_order) : Number(orderRow.next_order || 1), actorUserId
       ]);
       await addEvent(draft.id, 'process_added', actorUserId, `已补充流程：${text(body.l3_name)}`, objectEventPayload('process', result.insertId, text(body.l3_name), 'added'));
@@ -1742,12 +1751,14 @@ function makeProcessDesignMysqlRepository(pool) {
       const current = await getById('process_design_processes', processId);
       if (!current || Number(current.draft_id) !== Number(draft.id)) throw httpError(404, '流程不存在');
       const processType = PROCESS_TYPES.has(text(body.process_type)) ? text(body.process_type) : 'new';
+      const l1Name = text(body.l1_name) || text(draft.l1_name);
+      const l2Name = text(body.l2_name) || text(draft.l2_name);
       await mysqlRun(pool, `
         UPDATE process_design_processes
         SET process_type=?, l1_name=?, l2_name=?, l3_name=?, description=?, updated_at=CURRENT_TIMESTAMP
         WHERE id=?
       `, [
-        processType, text(body.l1_name), text(body.l2_name), text(body.l3_name),
+        processType, l1Name, l2Name, text(body.l3_name),
         optionalText(body.description), processId
       ]);
       await addEvent(draft.id, 'process_updated', actorUserId, `已修改流程：${text(body.l3_name)}`, objectEventPayload('process', processId, text(body.l3_name), 'updated'));
@@ -2688,7 +2699,7 @@ router.post('/drafts/:id/processes', requireAuth, (req, res) => runAction(res, a
   const repo = await repository();
   const draft = await repo.getDraft(req.params.id);
   await assertCanEditDraftContent(req, repo, draft);
-  const body = req.body || {};
+  const body = processBodyWithDraftTaxonomy(draft, req.body || {});
   const details = [];
   assertNoManualNumber(body, 'process_code', '流程编号');
   if (!text(body.l1_name)) details.push({ field: 'l1_name', message: 'L1 能力不能为空' });
@@ -2704,7 +2715,7 @@ router.put('/processes/:id', requireAuth, (req, res) => runAction(res, async () 
   const repo = await repository();
   const draft = await repo.getDraftByProcess(req.params.id);
   await assertCanEditDraftContent(req, repo, draft);
-  const body = req.body || {};
+  const body = processBodyWithDraftTaxonomy(draft, req.body || {});
   const details = [];
   assertNoManualNumber(body, 'process_code', '流程编号');
   if (!text(body.l1_name)) details.push({ field: 'l1_name', message: 'L1 能力不能为空' });

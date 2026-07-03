@@ -430,6 +430,8 @@
           "pgDesignPlannedEdition",
           "pgDesignCurrentEdition",
           "pgDesignPublishEffect",
+          "pgDesignDraftL1Name",
+          "pgDesignDraftL2Name",
           "pgDesignBasisType",
           "pgDesignInvolvesOtherDepartments",
           "pgDesignRelatedDepartments"
@@ -480,6 +482,8 @@
         "ids": [
           "pgDesignDocumentTitle",
           "pgDesignDocumentNo",
+          "pgDesignDraftL1Name",
+          "pgDesignDraftL2Name",
           "pgDesignPurpose",
           "pgDesignScope",
           "pgDesignInheritanceRelation"
@@ -585,8 +589,6 @@
       "x-ui": {
         "section": "behavior",
         "ids": [
-          "pgDesignProcessL1Name",
-          "pgDesignProcessL2Name",
           "pgDesignProcessL3Name",
           "pgDesignProcessType",
           "pgDesignProcessDescription"

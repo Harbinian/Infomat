@@ -194,8 +194,14 @@ assert.ok(
   'process design should store the department scope after loading L1/L2 options'
 );
 assert.ok(html.includes('/api/process-design/drafts'), 'process governance should create process design drafts through API');
-assert.ok(html.includes('<select id="pgDesignProcessL1Name"'), 'process design L1 should be selected from existing mapping relationships in the process node');
-assert.ok(html.includes('<select id="pgDesignProcessL2Name"'), 'process design L2 should be selected from existing mapping relationships in the process node');
+assert.ok(html.includes('<select id="pgDesignDraftL1Name"'), 'process design L1 should be selected under document profile');
+assert.ok(html.includes('<select id="pgDesignDraftL2Name"'), 'process design L2 should be selected under document profile');
+assert.ok(html.includes("l1_name: $('pgDesignDraftL1Name')"), 'document profile save should persist draft-level L1');
+assert.ok(html.includes("l2_name: $('pgDesignDraftL2Name')"), 'document profile save should persist draft-level L2');
+assert.ok(!html.includes('<select id="pgDesignProcessL1Name"'), 'process node should not render a second L1 selector');
+assert.ok(!html.includes('<select id="pgDesignProcessL2Name"'), 'process node should not render a second L2 selector');
+assert.ok(!html.includes("l1_name: $('pgDesignProcessL1Name')"), 'process payload should not read L1 from process node');
+assert.ok(!html.includes("l2_name: $('pgDesignProcessL2Name')"), 'process payload should not read L2 from process node');
 assert.ok(!html.includes('id="pgDesignProcessCode"'), 'process design should not expose a manual process code input');
 assert.ok(!html.includes('process_code: $(\'pgDesignProcessCode\')'), 'process design payload should not submit manual process_code');
 assert.ok(html.includes('流程编号由系统自动生成'), 'process design should explain that procedure codes are system-generated');
@@ -272,6 +278,9 @@ assert.ok(!html.includes('L2 业务域<input id="pgDesignProcessL2Name"'), 'proc
   'data-process-design-draft-open',
   'id="saveProcessDesignBehaviorBtn"',
   'id="saveProcessDesignFormBtn"',
+  'data-process-design-form-edit',
+  'function fillProcessDesignFormForEdit',
+  'function editProcessDesignForm',
   'id="createProcessDesignDetailTableBtn"',
   'id="deleteProcessDesignDetailTableBtn"',
   'id="saveProcessDesignFieldBtn"',
