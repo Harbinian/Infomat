@@ -952,11 +952,13 @@ async function main() {
 
     const processA = await request(baseUrl, 'submitter', '/api/process-design/drafts/101/processes', {
       method: 'POST',
-      body: JSON.stringify({ l1_name: '市场开发与客户合同治理', l2_name: '客户合同评审管理', l3_name: '客户需求变更处理', process_type: 'new' })
+      body: JSON.stringify({ l3_name: '客户需求变更处理', process_type: 'new' })
     });
     assert.strictEqual(processA.res.status, 201, JSON.stringify(processA.body));
     assert.strictEqual(processA.body.id, 181);
     assert.strictEqual(processA.body.process_code, 'PROCEDURE-101-001');
+    assert.strictEqual(processA.body.l1_name, '市场开发与客户合同治理');
+    assert.strictEqual(processA.body.l2_name, '客户合同评审管理');
     assert.ok(!String(processA.body.process_code).startsWith('L3'), 'procedure code should not use the frontend L3 label');
 
     const manualProcessCodeUpdate = await request(baseUrl, 'submitter', '/api/process-design/processes/181', {
@@ -987,8 +989,6 @@ async function main() {
     const processUpdate = await request(baseUrl, 'submitter', '/api/process-design/processes/181', {
       method: 'PUT',
       body: JSON.stringify({
-        l1_name: '市场开发与客户合同治理',
-        l2_name: '客户合同评审管理',
         l3_name: '客户需求变更受理',
         process_type: 'adjustment',
         description: '受理并登记客户需求变更'
@@ -996,6 +996,8 @@ async function main() {
     });
     assert.strictEqual(processUpdate.res.status, 200, JSON.stringify(processUpdate.body));
     assert.strictEqual(processUpdate.body.l3_name, '客户需求变更受理');
+    assert.strictEqual(processUpdate.body.l1_name, '市场开发与客户合同治理');
+    assert.strictEqual(processUpdate.body.l2_name, '客户合同评审管理');
     assert.strictEqual(processUpdate.body.process_code, 'PROCEDURE-101-001');
 
     const processB = await request(baseUrl, 'submitter', '/api/process-design/drafts/101/processes', {
