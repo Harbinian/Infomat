@@ -19,6 +19,22 @@ function cleanText(value) {
   return String(value || '').replace(/<br\s*\/?>/gi, ' ').replace(/\s+/g, ' ').trim();
 }
 
+async function executeIgnoringDuplicateColumn(pool, sql) {
+  try {
+    await pool.execute(sql);
+  } catch (error) {
+    if (error && (error.code === 'ER_DUP_FIELDNAME' || /Duplicate column name/i.test(String(error.message || '')))) {
+      return;
+    }
+    throw error;
+  }
+}
+
+async function ensureProcessGovernanceCloseGateSchema(pool) {
+  await executeIgnoringDuplicateColumn(pool, 'ALTER TABLE process_governance_quality_findings ADD COLUMN fingerprint VARCHAR(64) NULL');
+  await executeIgnoringDuplicateColumn(pool, 'ALTER TABLE process_mapping_todos ADD COLUMN fingerprint VARCHAR(64) NULL');
+}
+
 function stableKey(prefix, parts) {
   const hash = crypto.createHash('sha1')
     .update(parts.map(part => cleanText(part)).join('|'))
@@ -1398,5 +1414,6 @@ function makeProcessGovernanceMysqlRepository(pool) {
 }
 
 module.exports = {
-  makeProcessGovernanceMysqlRepository
+  makeProcessGovernanceMysqlRepository,
+  ensureProcessGovernanceCloseGateSchema
 };

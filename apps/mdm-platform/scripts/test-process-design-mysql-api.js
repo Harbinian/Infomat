@@ -79,7 +79,7 @@ function makeFakeRepository() {
         steps: activeSteps.length,
         processes: state.processes.length,
         forms: state.form ? 1 : 0,
-        fields: (state.field ? 1 : 0) + (state.tableField ? 1 : 0),
+        fields: (state.mainField ? 1 : 0) + (state.detailField ? 1 : 0),
         evidence: state.evidence ? 1 : 0,
         publishableEvidence: state.evidence ? 1 : 0,
         risks: 0
@@ -93,13 +93,17 @@ function makeFakeRepository() {
       state.draft = { ...state.draft, status };
       if (state.draft && state.draft.id) state.drafts.set(Number(state.draft.id), state.draft);
     },
-    async summary() {
+    async summary(departmentIds, documentNo) {
       calls.push('summary');
-      const activeDrafts = Array.from(state.drafts.values()).filter(draft => draft && draft.status !== 'published');
+      const documentFilter = String(documentNo || '').trim();
+      const activeDrafts = Array.from(state.drafts.values()).filter(draft =>
+        draft && draft.status !== 'published' && (!documentFilter || draft.document_no === documentFilter)
+      );
+      const versions = state.versions.filter(version => !documentFilter || version.document_no === documentFilter);
       return {
         summary: {
           totalDrafts: activeDrafts.length,
-          publishedVersions: state.versions.length,
+          publishedVersions: versions.length,
           byStatus: activeDrafts.reduce((result, draft) => {
             result[draft.status] = (result[draft.status] || 0) + 1;
             return result;
@@ -111,9 +115,9 @@ function makeFakeRepository() {
           document_no: draft.document_no,
           document_title: draft.document_title,
           planned_edition: draft.planned_edition,
-          status: draft.status
-        })),
-        versions: state.versions.slice().reverse()
+            status: draft.status
+          })),
+        versions: versions.slice().reverse()
       };
     },
     async lookupDocument(documentNo) {
@@ -154,6 +158,21 @@ function makeFakeRepository() {
       return {
         items: state.taxonomy,
         l1Options: ['市场开发与客户合同治理', '产品设计全生命周期管理']
+      };
+    },
+    async listFieldTypes() {
+      calls.push('listFieldTypes');
+      return [
+        { code: 'text', name: '文本' },
+        { code: 'qrcode', name: '二维码' }
+      ];
+    },
+    async listRosterRolesByDepartment(departmentId) {
+      calls.push('listRosterRolesByDepartment');
+      return {
+        department_id: Number(departmentId),
+        department_name: Number(departmentId) === 2 ? '工程技术部' : '经营发展部',
+        roles: Number(departmentId) === 2 ? ['资料管理员', '工艺员'] : ['销售内勤']
       };
     },
     async createDraft(body, actorUserId, targetDeptId) {
@@ -286,7 +305,12 @@ function makeFakeRepository() {
           behaviorDetail: state.behaviorDetails.get(step.id) || null,
           handoffs: state.handoffs.filter(handoff => handoff.step_id === step.id)
         })),
-        forms: state.form && Number(state.form.draft_id) === draftId ? [{ ...state.form, fields: state.field ? [state.field] : [], tables: state.table ? [{ ...state.table, fields: state.tableField ? [state.tableField] : [] }] : [] }] : [],
+        forms: state.form && Number(state.form.draft_id) === draftId ? [{
+          ...state.form,
+          fields: state.mainField ? [state.mainField] : [],
+          main_fields: state.mainField ? [state.mainField] : [],
+          tables: state.table ? [{ ...state.table, fields: state.detailField ? [state.detailField] : [] }] : []
+        }] : [],
         evidence: state.evidence && Number(state.evidence.draft_id) === draftId ? [state.evidence] : [],
         risks: [],
         reviewTasks: state.reviewTask ? [state.reviewTask] : [],
@@ -315,7 +339,8 @@ function makeFakeRepository() {
       state.form = null;
       state.table = null;
       state.tableField = null;
-      state.field = null;
+      state.mainField = null;
+      state.detailField = null;
       state.evidence = null;
       state.reviewTask = null;
       return { deleted: true, id: deletedId };
@@ -503,7 +528,21 @@ function makeFakeRepository() {
     },
     async createForm(draft, body, actorUserId) {
       calls.push('createForm');
-      state.form = { id: 301, draft_id: draft.id, step_id: body.step_id ? Number(body.step_id) : null, form_name: body.form_name, archive_rule: body.archive_rule || null, created_by: actorUserId };
+      state.form = {
+        id: 301,
+        draft_id: draft.id,
+        step_id: body.step_id ? Number(body.step_id) : null,
+        form_code: 'FM-CX-ZD-001-A-001',
+        form_name: body.form_name,
+        main_table_code: 'FM-CX-ZD-001-A-001-M',
+        main_table_name: body.main_table_name || '主表',
+        archive_location: body.archive_location || null,
+        retention_period: body.retention_period || null,
+        responsible_department_id: body.responsible_department_id || null,
+        responsible_department_name: body.responsible_department_name || null,
+        responsible_role: body.responsible_role || null,
+        created_by: actorUserId
+      };
       return state.form;
     },
     async updateForm(draft, formId, body) {
@@ -516,36 +555,50 @@ function makeFakeRepository() {
       state.table = {
         id: 351,
         form_id: formId,
-        table_kind: body.table_kind,
-        table_no: body.table_kind === 'detail' ? 'MX-001' : 'ZB-001',
+        table_kind: 'detail',
+        table_no: 'FM-CX-ZD-001-A-001-D',
+        table_code: 'FM-CX-ZD-001-A-001-D',
         table_name: body.table_name,
-        description: body.description || null,
         created_by: actorUserId
       };
       return state.table;
     },
     async createFormTableField(draft, tableId, body, actorUserId) {
       calls.push('createFormTableField');
-      state.tableField = {
-        id: 361,
-        form_table_id: tableId,
+      const structureKind = body.structure_kind || 'detail';
+      const field = {
+        id: structureKind === 'main' ? 361 : 362,
+        form_id: structureKind === 'main' ? tableId : state.form && state.form.id,
+        form_table_id: structureKind === 'main' ? null : tableId,
+        structure_kind: structureKind,
         field_name: body.field_name,
-        field_no: 'F-001',
+        field_no: structureKind === 'main' ? 'FM-CX-ZD-001-A-001-M-001' : 'FM-CX-ZD-001-A-001-D-001',
+        field_code: structureKind === 'main' ? 'FM-CX-ZD-001-A-001-M-001' : 'FM-CX-ZD-001-A-001-D-001',
         field_type: body.field_type,
         required: Boolean(body.required),
+        enum_options: body.enum_options || null,
         created_by: actorUserId
       };
+      if (structureKind === 'main') state.mainField = field;
+      else state.detailField = field;
+      state.tableField = field;
+      return field;
+    },
+    async updateFormTableField(draft, fieldId, body) {
+      calls.push('updateFormTableField');
+      const target = Number(fieldId) === Number(state.mainField && state.mainField.id) ? 'mainField' : 'detailField';
+      state[target] = {
+        ...state[target],
+        id: Number(fieldId),
+        ...body
+      };
+      state.tableField = state[target];
       return state.tableField;
     },
-    async createField(draft, formId, body, actorUserId) {
-      calls.push('createField');
-      state.field = { id: 401, form_id: formId, field_name_cn: body.field_name_cn, data_object: body.data_object || null, status: 'suggested', created_by: actorUserId };
-      return state.field;
-    },
-    async updateField(draft, fieldId, body) {
-      calls.push('updateField');
-      state.field = { ...state.field, id: fieldId, ...body };
-      return state.field;
+    async deleteFormTableField(draft, fieldId) {
+      calls.push('deleteFormTableField');
+      state.deletedFieldId = Number(fieldId);
+      return { ok: true };
     },
     async createEvidence(draft, body, actorUserId) {
       calls.push('createEvidence');
@@ -666,6 +719,18 @@ async function main() {
   );
   assert.ok(mdmMysqlSchemaSql().includes('process_code VARCHAR(128) NOT NULL'), 'process design procedure code must be required');
   assert.ok(mdmMysqlSchemaSql().includes('UNIQUE KEY uq_process_design_processes_code (process_code)'), 'process design procedure code must be unique');
+  assert.ok(mdmMysqlSchemaSql().includes('form_code VARCHAR(160) NULL'), 'forms must persist system-generated form code');
+  assert.ok(mdmMysqlSchemaSql().includes('main_table_code VARCHAR(180) NULL'), 'forms must persist hidden main table code');
+  assert.ok(mdmMysqlSchemaSql().includes('main_table_name VARCHAR(255) NULL'), 'forms must persist editable main table name');
+  assert.ok(mdmMysqlSchemaSql().includes("archive_location ENUM('部门自行保存','资料室') NULL"), 'forms must persist archive location enum');
+  assert.ok(mdmMysqlSchemaSql().includes("retention_period ENUM('1年','3年','10年','永久') NULL"), 'forms must persist retention period enum');
+  assert.ok(mdmMysqlSchemaSql().includes('responsible_department_id BIGINT NULL'), 'forms must persist archive responsible department');
+  assert.ok(mdmMysqlSchemaSql().includes('responsible_role VARCHAR(255) NULL'), 'forms must persist archive responsible roster role');
+  assert.ok(mdmMysqlSchemaSql().includes('CREATE TABLE IF NOT EXISTS process_design_field_types'), 'schema must include process design field type dictionary');
+  assert.ok(mdmMysqlSchemaSql().includes('二维码'), 'field type dictionary seed must include QR code type');
+  assert.ok(mdmMysqlSchemaSql().includes("structure_kind ENUM('main','detail') NOT NULL"), 'unified table fields must distinguish main/detail structures');
+  assert.ok(mdmMysqlSchemaSql().includes('field_code VARCHAR(220) NULL'), 'fields must persist hidden generated field code');
+  assert.ok(mdmMysqlSchemaSql().includes('enum_options TEXT NULL'), 'fields must persist enum options');
   assert.ok(routeSource.includes('FROM process_mapping_records r'), 'process taxonomy should read L1/L2 from MySQL process_mapping_records');
   assert.ok(routeSource.includes('currentDepartmentTaxonomyScope'), 'process taxonomy API should scope options to current department');
   assert.ok(routeSource.includes('PROCEDURE-'), 'process design route should generate Procedure business codes');
@@ -674,6 +739,11 @@ async function main() {
   assert.ok(routeSource.includes("status='verified'"), 'publish gate must check evidence.status=verified');
   assert.ok(routeSource.includes('verified_evidence_count'), 'publish event payload must include verified_evidence_count');
   assert.ok(routeSource.includes('ensureProcessDesignEvidenceStatusSchema'), 'schema init should expose evidence status migration');
+  assert.ok(routeSource.includes('ensureProcessDesignFormStructureSchema'), 'schema init should expose form structure migration');
+  assert.ok(routeSource.includes("router.get('/field-types'"), 'process design route should expose field type dictionary');
+  assert.ok(routeSource.includes("router.get('/departments/:id/roster-roles'"), 'process design route should expose roster-derived department roles');
+  assert.ok(routeSource.includes('FM-'), 'process design route should generate form and field codes with FM prefix');
+  assert.ok(routeSource.includes('ENGINEERING_ARCHIVE_ROOM_DEPARTMENT_NAME'), 'archive room default department should be explicit');
   assert.ok(routeSource.includes("router.get('/documents/lookup'"), 'process design route should expose document number lookup');
   assert.ok(routeSource.includes("router.post('/documents/:id/drafts'"), 'process design route should expose next-edition draft creation');
   assert.ok(routeSource.includes('doc.current_edition'), 'draft summary should read current edition from document master');
@@ -1082,62 +1152,89 @@ async function main() {
     });
     assert.strictEqual(activeBehaviorDetail.res.status, 200, JSON.stringify(activeBehaviorDetail.body));
 
+    const fieldTypes = await request(baseUrl, 'submitter', '/api/process-design/field-types');
+    assert.strictEqual(fieldTypes.res.status, 200, JSON.stringify(fieldTypes.body));
+    assert.ok(fieldTypes.body.items.some(item => item.name === '二维码'), 'field type dictionary should include QR code');
+
+    const rosterRoles = await request(baseUrl, 'submitter', '/api/process-design/departments/2/roster-roles');
+    assert.strictEqual(rosterRoles.res.status, 200, JSON.stringify(rosterRoles.body));
+    assert.ok(rosterRoles.body.roles.includes('资料管理员'), 'roster roles should come from department roster positions');
+
+    const formWithoutStep = await request(baseUrl, 'submitter', '/api/process-design/drafts/101/forms', {
+      method: 'POST',
+      body: JSON.stringify({ form_name: '无业务行为表单', main_table_name: '主表' })
+    });
+    assert.strictEqual(formWithoutStep.res.status, 422, JSON.stringify(formWithoutStep.body));
+
     const form = await request(baseUrl, 'submitter', '/api/process-design/drafts/101/forms', {
       method: 'POST',
-      body: JSON.stringify({ form_name: '需求变更单', archive_rule: '按项目归档' })
+      body: JSON.stringify({
+        step_id: 202,
+        form_name: '需求变更单',
+        main_table_name: '需求变更主表',
+        archive_location: '资料室',
+        retention_period: '10年',
+        responsible_department_id: 2,
+        responsible_role: '资料管理员'
+      })
     });
     assert.strictEqual(form.res.status, 201);
+    assert.strictEqual(form.body.form_code, 'FM-CX-ZD-001-A-001');
+    assert.strictEqual(form.body.main_table_code, 'FM-CX-ZD-001-A-001-M');
+    assert.strictEqual(form.body.main_table_name, '需求变更主表');
+    assert.strictEqual(form.body.archive_location, '资料室');
 
     const formUpdate = await request(baseUrl, 'submitter', '/api/process-design/forms/301', {
       method: 'PUT',
-      body: JSON.stringify({ status: 'submitted' })
+      body: JSON.stringify({ retention_period: '永久', responsible_role: '资料管理员' })
     });
     assert.strictEqual(formUpdate.res.status, 200);
 
+    const mainField = await request(baseUrl, 'submitter', '/api/process-design/forms/301/fields', {
+      method: 'POST',
+      body: JSON.stringify({ structure_kind: 'main', field_name: '客户名称', field_type: '文本', required: true, description: '填写客户名称' })
+    });
+    assert.strictEqual(mainField.res.status, 201, JSON.stringify(mainField.body));
+    assert.strictEqual(mainField.body.field_code, 'FM-CX-ZD-001-A-001-M-001');
+
     const manualTableNo = await request(baseUrl, 'submitter', '/api/process-design/forms/301/tables', {
       method: 'POST',
-      body: JSON.stringify({ table_kind: 'main', table_no: 'ZB-001', table_name: '需求变更主表', description: '记录变更主信息' })
+      body: JSON.stringify({ table_no: 'FM-CX-ZD-001-A-001-D', table_name: '需求变更明细表' })
     });
     assert.strictEqual(manualTableNo.res.status, 422, JSON.stringify(manualTableNo.body));
 
     const table = await request(baseUrl, 'submitter', '/api/process-design/forms/301/tables', {
       method: 'POST',
-      body: JSON.stringify({ table_kind: 'main', table_name: '需求变更主表', description: '记录变更主信息' })
+      body: JSON.stringify({ table_name: '变更字段明细' })
     });
     assert.strictEqual(table.res.status, 201, JSON.stringify(table.body));
-    assert.strictEqual(table.body.table_name, '需求变更主表');
-    assert.strictEqual(table.body.table_no, 'ZB-001');
+    assert.strictEqual(table.body.table_name, '变更字段明细');
+    assert.strictEqual(table.body.table_code, 'FM-CX-ZD-001-A-001-D');
 
     const manualFieldNo = await request(baseUrl, 'submitter', '/api/process-design/form-tables/351/fields', {
       method: 'POST',
-      body: JSON.stringify({ field_no: 'F-001', field_name: '客户名称', field_type: '文本', required: true, description: '填写客户名称' })
+      body: JSON.stringify({ field_no: 'FM-CX-ZD-001-A-001-D-001', field_name: '变更字段', field_type: '文本', required: true, description: '填写变更字段' })
     });
     assert.strictEqual(manualFieldNo.res.status, 422, JSON.stringify(manualFieldNo.body));
 
     const invalidFieldType = await request(baseUrl, 'submitter', '/api/process-design/form-tables/351/fields', {
       method: 'POST',
-      body: JSON.stringify({ field_name: '客户名称', field_type: '随便写', required: true, description: '填写客户名称' })
+      body: JSON.stringify({ field_name: '变更字段', field_type: '随便写', required: true, description: '填写变更字段' })
     });
     assert.strictEqual(invalidFieldType.res.status, 422, JSON.stringify(invalidFieldType.body));
 
     const whitespaceField = await request(baseUrl, 'submitter', '/api/process-design/form-tables/351/fields', {
       method: 'POST',
-      body: JSON.stringify({ field_name: '客户 名称', field_type: '文本', required: true, description: '填写客户名称' })
+      body: JSON.stringify({ field_name: '变更 字段', field_type: '文本', required: true, description: '填写变更字段' })
     });
     assert.strictEqual(whitespaceField.res.status, 422, JSON.stringify(whitespaceField.body));
 
     const tableField = await request(baseUrl, 'submitter', '/api/process-design/form-tables/351/fields', {
       method: 'POST',
-      body: JSON.stringify({ field_name: '客户名称', field_type: '文本', required: true, description: '填写客户名称' })
+      body: JSON.stringify({ structure_kind: 'detail', field_name: '变更字段', field_type: '枚举', enum_options: '名称,地址', required: true, description: '填写变更字段' })
     });
     assert.strictEqual(tableField.res.status, 201, JSON.stringify(tableField.body));
-    assert.strictEqual(tableField.body.field_no, 'F-001');
-
-    const field = await request(baseUrl, 'submitter', '/api/process-design/forms/301/fields', {
-      method: 'POST',
-      body: JSON.stringify({ field_name_cn: '变更原因', data_object: '客户需求', field_type: '文本' })
-    });
-    assert.strictEqual(field.res.status, 201);
+    assert.strictEqual(tableField.body.field_code, 'FM-CX-ZD-001-A-001-D-001');
 
     const invalidEvidenceType = await request(baseUrl, 'submitter', '/api/process-design/drafts/101/evidence', {
       method: 'POST',
@@ -1145,11 +1242,12 @@ async function main() {
     });
     assert.strictEqual(invalidEvidenceType.res.status, 422, JSON.stringify(invalidEvidenceType.body));
 
-    const fieldUpdate = await request(baseUrl, 'submitter', '/api/process-design/form-fields/401', {
+    const fieldUpdate = await request(baseUrl, 'submitter', '/api/process-design/form-table-fields/362', {
       method: 'PUT',
-      body: JSON.stringify({ status: 'business_confirmed' })
+      body: JSON.stringify({ description: '字段口径已确认' })
     });
-    assert.strictEqual(fieldUpdate.res.status, 200);
+    assert.strictEqual(fieldUpdate.res.status, 200, JSON.stringify(fieldUpdate.body));
+    assert.strictEqual(fieldUpdate.body.description, '字段口径已确认');
 
     const evidence = await request(baseUrl, 'submitter', '/api/process-design/drafts/101/evidence', {
       method: 'POST',
@@ -1175,7 +1273,13 @@ async function main() {
     const activeStepDetail = detailAfterStructure.body.steps.find(row => row.status !== 'voided');
     assert.strictEqual(activeStepDetail.process_id, 182);
     assert.strictEqual(activeStepDetail.behaviorDetail.execution_standard, '3 个工作日内确认影响范围');
-    assert.strictEqual(detailAfterStructure.body.forms[0].tables[0].fields[0].field_name, '客户名称');
+    assert.strictEqual(detailAfterStructure.body.forms[0].main_fields[0].field_name, '客户名称');
+    assert.strictEqual(detailAfterStructure.body.forms[0].tables[0].fields[0].field_name, '变更字段');
+
+    const fieldDelete = await request(baseUrl, 'submitter', '/api/process-design/form-table-fields/362', {
+      method: 'DELETE'
+    });
+    assert.strictEqual(fieldDelete.res.status, 200, JSON.stringify(fieldDelete.body));
 
     fakeRepo.setDraftStatus('submitted');
     const readonlyTermUpdate = await request(baseUrl, 'submitter', '/api/process-design/terms/161', {
@@ -1262,6 +1366,22 @@ async function main() {
     assert.strictEqual(publishNext.body.version.supersedes_version_id, 701);
     assert.strictEqual(fakeRepo.state.versions.find(version => version.edition === 'A').status, 'superseded');
 
+    fakeRepo.state.versions.push({
+      id: 999,
+      draft_id: 199,
+      document_id: 899,
+      document_no: 'CX-ZD-OTHER',
+      document_title: '其他制度',
+      edition: 'A',
+      version_no: 'CX-ZD-OTHER-A',
+      status: 'published'
+    });
+    const filteredSummary = await request(baseUrl, 'submitter', '/api/process-design/summary?document_no=CX-ZD-001');
+    assert.strictEqual(filteredSummary.res.status, 200, JSON.stringify(filteredSummary.body));
+    assert.strictEqual(filteredSummary.body.summary.publishedVersions, 2, 'document summary should count only matching document versions');
+    assert.ok(filteredSummary.body.versions.length >= 2, 'document summary should include matching history versions');
+    assert.ok(filteredSummary.body.versions.every(version => version.document_no === 'CX-ZD-001'), 'document history should be filtered by document_no');
+
     [
       'createDraft',
       'deleteDraft',
@@ -1284,7 +1404,8 @@ async function main() {
       'createForm',
       'createFormTable',
       'createFormTableField',
-      'createField',
+      'updateFormTableField',
+      'deleteFormTableField',
       'createEvidence',
       'markdownForDraft',
       'submitDraft',

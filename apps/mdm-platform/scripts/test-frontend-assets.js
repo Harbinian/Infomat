@@ -103,7 +103,6 @@ async function main() {
     '文档结构化输出',
     'id="pgDesignWizard"',
     '制度说明',
-    '目的范围',
     '术语',
     '流程与行为',
     '跨部门承接',
