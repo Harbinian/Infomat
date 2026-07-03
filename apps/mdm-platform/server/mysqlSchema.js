@@ -980,7 +980,15 @@ CREATE TABLE IF NOT EXISTS process_design_forms (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
   draft_id BIGINT NOT NULL,
   step_id BIGINT NULL,
+  form_code VARCHAR(160) NULL,
   form_name VARCHAR(255) NOT NULL,
+  main_table_code VARCHAR(180) NULL,
+  main_table_name VARCHAR(255) NULL,
+  archive_location ENUM('部门自行保存','资料室') NULL,
+  retention_period ENUM('1年','3年','10年','永久') NULL,
+  responsible_department_id BIGINT NULL,
+  responsible_department_name VARCHAR(255) NULL,
+  responsible_role VARCHAR(255) NULL,
   description TEXT NULL,
   archive_rule TEXT NULL,
   status VARCHAR(32) NOT NULL DEFAULT 'draft',
@@ -1001,6 +1009,7 @@ CREATE TABLE IF NOT EXISTS process_design_form_tables (
   form_id BIGINT NOT NULL,
   table_kind VARCHAR(32) NOT NULL DEFAULT 'main',
   table_no VARCHAR(128) NULL,
+  table_code VARCHAR(180) NULL,
   table_name VARCHAR(255) NOT NULL,
   description TEXT NULL,
   sort_order INT NOT NULL DEFAULT 1,
@@ -1016,9 +1025,12 @@ CREATE TABLE IF NOT EXISTS process_design_form_tables (
 CREATE TABLE IF NOT EXISTS process_design_form_table_fields (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
   form_table_id BIGINT NOT NULL,
+  structure_kind ENUM('main','detail') NOT NULL,
   field_no VARCHAR(128) NULL,
+  field_code VARCHAR(220) NULL,
   field_name VARCHAR(255) NOT NULL,
   field_type VARCHAR(128) NULL,
+  enum_options TEXT NULL,
   is_required TINYINT NOT NULL DEFAULT 0,
   description TEXT NULL,
   sort_order INT NOT NULL DEFAULT 1,
@@ -1028,6 +1040,18 @@ CREATE TABLE IF NOT EXISTS process_design_form_table_fields (
   INDEX idx_process_design_table_fields_table (form_table_id, sort_order),
   CONSTRAINT fk_process_design_table_fields_table FOREIGN KEY (form_table_id)
     REFERENCES process_design_form_tables(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS process_design_field_types (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  code VARCHAR(64) NOT NULL,
+  name VARCHAR(128) NOT NULL COMMENT '字段类型名称，默认含二维码',
+  sort_order INT NOT NULL DEFAULT 1,
+  is_active TINYINT NOT NULL DEFAULT 1,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_process_design_field_types_code (code),
+  UNIQUE KEY uq_process_design_field_types_name (name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS process_design_form_fields (

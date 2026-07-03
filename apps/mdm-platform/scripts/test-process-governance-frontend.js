@@ -49,10 +49,13 @@ assert.ok(
   '制度说明 should place制度编号 before制度名称'
 );
 [
-  'id="pgDesignPlannedEdition"',
-  'id="pgDesignCurrentEdition"',
-  'id="pgDesignPublishEffect"'
-].forEach(needle => assert.ok(html.includes(needle), `制度说明 should expose readonly edition field ${needle}`));
+  'id="pgDesignPlannedEditionValue"',
+  'id="pgDesignCurrentEditionValue"',
+  'id="pgDesignPublishEffectValue"'
+].forEach(needle => assert.ok(html.includes(needle), `制度说明 should expose system field display ${needle}`));
+assert.ok(!html.includes('<input id="pgDesignPlannedEdition"'), '拟发布版次 should not be rendered as an input');
+assert.ok(!html.includes('<input id="pgDesignCurrentEdition"'), '当前有效版次 should not be rendered as an input');
+assert.ok(!html.includes('<input id="pgDesignPublishEffect"'), '发布后处理 should not be rendered as an input');
 assert.ok(html.includes('与已有制度/流程/表单的关系'), '承继关系 should be renamed to a plain external relationship description');
 assert.ok(!html.includes('承继关系<textarea id="pgDesignInheritanceRelation"'), '制度说明 should not keep the ambiguous承继关系 label');
 [
@@ -63,6 +66,10 @@ assert.ok(!html.includes('承继关系<textarea id="pgDesignInheritanceRelation"
   '创建下一版次草稿',
   '进行中的制度草稿',
   '历史版次',
+  '/api/process-design/summary?document_no=',
+  'function renderProcessDesignVersionHistory',
+  '输入制度编号后显示该制度的历史版次',
+  '当前状态不可删除',
   'data-process-design-version-open',
   'confirm_complete_rewrite',
   '完整重写'
@@ -143,7 +150,7 @@ assert.ok(
   'id="pgDesignBehaviorDetailForm"',
   'id="pgDesignHandoffForm"',
   'id="pgDesignFormTableForm"',
-  'id="pgDesignTableFieldForm"',
+  'id="pgDesignFieldForm"',
   'id="pgDesignMarkdownPreview"',
   '/document-profile',
   '/terms',
@@ -160,6 +167,8 @@ assert.ok(html.includes('data-process-design-draft-delete'), 'document structure
 assert.ok(html.includes('async function deleteProcessDesignDraft'), 'document structured output should implement draft deletion');
 assert.ok(html.includes("'/api/process-design/drafts/' + encodeURIComponent(draftId)") && html.includes("method: 'DELETE'"), 'document structured output should delete drafts through the process-design API');
 assert.ok(html.includes('确认删除这条制度结构草稿'), 'document structured output should confirm before deleting a draft');
+assert.ok(html.includes("formatApiErrorMessage(error, '制度结构草稿删除失败"), 'document structured output should turn draft delete failures into readable messages');
+assert.ok(html.includes("showToast(errorMessage, 'error')"), 'document structured output should show a visible draft delete failure toast');
 assert.ok(html.includes('function validateProcessDesignDraftPayload'), 'merged制度说明 save should validate required fields before calling the drafts API');
 assert.ok(!html.includes('id="pgDesignReason"'), '制度说明 should not show the temporary why-new field');
 assert.ok(!html.includes('id="pgDesignBasisDescription"'), '制度说明 should not show the temporary basis description field');
@@ -191,6 +200,24 @@ assert.ok(!html.includes('id="pgDesignProcessCode"'), 'process design should not
 assert.ok(!html.includes('process_code: $(\'pgDesignProcessCode\')'), 'process design payload should not submit manual process_code');
 assert.ok(html.includes('流程编号由系统自动生成'), 'process design should explain that procedure codes are system-generated');
 assert.ok(html.includes('id="pgDesignRelatedDepartments"'), 'process design should collect related departments on the draft');
+assert.ok(html.includes('id="pgDesignRelatedDepartments"') && html.includes('data-process-design-related-departments'), 'process design related departments should render a checkbox group');
+assert.ok(!html.includes('<select id="pgDesignRelatedDepartments"'), 'process design related departments should not be a multiselect box');
+assert.ok(!html.includes('<input id="pgDesignRelatedDepartments"'), 'process design related departments should not be a free text input');
+assert.ok(html.includes('type="checkbox"') && html.includes('data-process-design-related-department-option'), 'process design related departments should use checkboxes for multi-select');
+assert.ok(html.includes("PROCESS_DESIGN_ALL_COMPANY_RELATED_DEPARTMENT = '全公司'"), 'process design related departments should include an all-company option');
+assert.ok(html.includes('function renderProcessDesignRelatedDepartmentOptions'), 'process design should render department enum options from loaded departments');
+assert.ok(
+  html.includes('querySelectorAll(\'[data-process-design-related-department-option]:checked\')'),
+  'process design should read all checked related department checkboxes'
+);
+assert.ok(
+  html.includes('return selected.filter(function(item) { return allowed.indexOf(item) !== -1; });'),
+  'process design should keep multiple concrete department selections when all-company is not selected'
+);
+assert.ok(
+  html.includes('syncProcessDesignAllCompanyRelatedDepartmentState'),
+  'process design should collapse all-company department selection to a single value'
+);
 assert.ok(html.includes('function refreshProcessDesignCatalogOptions'), 'process design should have a catalog refresh hook for late-loaded departments');
 assert.ok(html.includes('refreshProcessDesignCatalogOptions();'), 'process design should refresh department enum options after catalog data loads');
 assert.ok(!html.includes('L1 能力<input id="pgDesignProcessL1Name"'), 'process design should not allow free text L1 input');
@@ -245,14 +272,47 @@ assert.ok(!html.includes('L2 业务域<input id="pgDesignProcessL2Name"'), 'proc
   'data-process-design-draft-open',
   'id="saveProcessDesignBehaviorBtn"',
   'id="saveProcessDesignFormBtn"',
-  'id="saveProcessDesignFormTableBtn"',
-  'id="saveProcessDesignTableFieldBtn"',
+  'id="createProcessDesignDetailTableBtn"',
+  'id="deleteProcessDesignDetailTableBtn"',
   'id="saveProcessDesignFieldBtn"',
+  'data-process-design-field-delete',
+  'data-process-design-field-move',
   'id="saveProcessDesignEvidenceBtn"',
   'id="exportProcessDesignMarkdownBtn"',
   'id="submitProcessDesignDraftBtn"',
   'id="publishProcessDesignDraftBtn"'
 ].forEach(needle => assert.ok(html.includes(needle), `process design frontend should include ${needle}`));
+[
+  '表单编号保存后自动生成',
+  '主表名称',
+  '归档位置',
+  '部门自行保存',
+  '资料室',
+  '留存周期',
+  '1年',
+  '3年',
+  '10年',
+  '永久',
+  '归档责任部门',
+  '归档责任角色',
+  '套用默认归档责任',
+  '新增明细表',
+  '明细表名称',
+  '新增主表字段',
+  '新增明细字段'
+].forEach(needle => assert.ok(html.includes(needle), `process design form structure should include ${needle}`));
+[
+  'id="pgDesignFormDescription"',
+  'id="pgDesignFormArchiveRule"',
+  'id="pgDesignTableName"',
+  'id="pgDesignTableDescription"',
+  'id="pgDesignTableFieldForm"',
+  'id="pgDesignFieldNameCn"',
+  'id="pgDesignFieldNameEn"',
+  'id="pgDesignFieldDataObject"'
+].forEach(needle => assert.ok(!html.includes(needle), `process design form structure should remove old control ${needle}`));
+assert.ok(html.includes('/api/process-design/field-types'), 'process design form fields should load field types from API');
+assert.ok(html.includes('/roster-roles'), 'process design archive responsible role should load roster-derived roles');
 assert.ok(html.includes('function renderProcessDesignWorkspace'), 'process governance should render new process design workspace');
 assert.ok(html.includes('function renderProcessDesignOutcomeCard'), 'process governance should render outcome feedback from real counts');
 assert.ok(html.includes('id="pgSubtabs"'), 'process governance should expose a subtab navigation container');

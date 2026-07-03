@@ -85,7 +85,7 @@ assertEnum('versionStatus', ['published', 'superseded', 'retired']);
 
 assertEnum('processType', ['new', 'inherit', 'handoff', 'adjustment']);
 assertEnum('processSystem', ['', 'OA', 'MES', 'PLM', 'ERP']);
-assertEnum('fieldType', ['文本', '数字', '日期', '金额', '枚举', '布尔', '部门', '人员', '附件']);
+assertEnum('fieldType', ['文本', '长文本', '数字', '日期', '日期时间', '金额', '枚举', '布尔', '部门', '人员', '文件编号', '签名', '图片', '附件', '二维码']);
 assertEnum('evidenceType', ['制度条款', '表单样例', '访谈记录', '会议纪要', '流程图', '台账记录', '暂无证据']);
 assertEnum('evidenceStatus', ['verified', 'pending_review', 'source_missing', 'ocr_extracted_not_confirmed', 'review_only']);
 
