@@ -54,6 +54,8 @@ MDM_ADMIN_PASSWORD=你的管理员密码
 
 平台不会自动创建新的默认管理员。当前固定管理员账号是 `ADMIN001`，密码来自本机私有 env 文件。脚本不会在仓库中保存密码、Cookie 或本地数据库。
 
+重启服务和执行 `npm run init:mysql` 只补齐缺失的 MySQL 身份结构，不会覆盖已经存在账号的密码或首次改密状态。如果某个账号曾在历史问题中被旧密码覆盖，管理员需要为该账号重新重置一次密码。
+
 全新 clone 或另一台设备拉取后，如需重建 MySQL schema 和平台基线，先确认固定 MySQL 容器和 `scripts/infomat-services.local.env` 已准备好，再在 `apps/mdm-platform/` 下执行：
 
 ```powershell
