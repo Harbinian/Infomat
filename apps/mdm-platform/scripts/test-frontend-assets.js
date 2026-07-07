@@ -208,6 +208,9 @@ async function main() {
   assert.ok(!html.includes('init1234'), 'frontend must not expose or submit a fixed default password');
   assert.ok(!html.includes('000000'), 'frontend must not expose or describe 000000 as a first-login password');
   assert.ok(!html.includes('value="ADMIN001"'), 'login page must not prefill the default admin employee number');
+  assert.ok(html.includes('placeholder="至少10位，包含字母和数字"'), 'password dialog should show the server password length and composition policy');
+  assert.ok(html.includes("if (newPw.length < 10) { showPasswordError('新密码至少10位'); return; }"), 'password dialog should validate the same minimum length as the server policy');
+  assert.ok(!html.includes('至少6位'), 'password dialog must not show stale 6-character password guidance');
   assert.ok(html.includes('function escapeHtml'), 'frontend should expose a shared HTML escaping helper');
   assert.ok(html.includes('function safeText'), 'frontend should route service-provided display text through escaping');
   assert.ok(!html.includes('系统最忙'), 'frontend copy should avoid evaluative system wording');

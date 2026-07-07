@@ -118,6 +118,11 @@ function makePersonPool() {
         return [[person && account ? personAccountRow(person, account) : null].filter(Boolean), undefined];
       }
 
+      if (normalizedSql === 'SELECT person_id FROM person WHERE person_id=?') {
+        const person = state.persons.find(row => row.person_id === params[0]);
+        return [[person ? { person_id: person.person_id } : null].filter(Boolean), undefined];
+      }
+
       if (normalizedSql === 'SELECT role_id FROM person_roles WHERE person_id=?') {
         return [state.personRoles.filter(row => row.person_id === params[0]).map(row => ({ role_id: row.role_id })), undefined];
       }
@@ -243,11 +248,39 @@ function makeMigrationPool() {
     return person;
   }
 
+  function upsertAccountFromLegacyUser(user, options = {}) {
+    const person = ensurePerson(user);
+    let account = state.accounts.find(row => row.person_id === person.person_id || row.login_name === user.employee_no);
+    if (!account) {
+      account = {
+        account_id: person.person_id + 5000,
+        person_id: person.person_id,
+        login_name: user.employee_no,
+        password_hash: user.password_hash,
+        must_change_password: user.must_change_password,
+        account_status: 'active'
+      };
+      state.accounts.push(account);
+    } else {
+      account.login_name = user.employee_no;
+      account.account_status = 'active';
+      if (options.overwritePassword) {
+        account.password_hash = user.password_hash;
+        account.must_change_password = user.must_change_password;
+      }
+    }
+    return account;
+  }
+
   return {
     state,
     async execute(sql, params = []) {
       state.statements.push({ sql, params });
       const normalizedSql = sql.replace(/\s+/g, ' ').trim();
+
+      if (normalizedSql.includes('FROM information_schema.columns') || normalizedSql.includes('FROM information_schema.statistics')) {
+        return [[{ found: 1 }], undefined];
+      }
 
       if (normalizedSql.startsWith('CREATE TABLE') || normalizedSql.startsWith('ALTER TABLE')) {
         return [[], undefined];
@@ -259,18 +292,10 @@ function makeMigrationPool() {
       }
 
       if (normalizedSql.startsWith('INSERT INTO user_accounts')) {
+        const overwritePassword = normalizedSql.includes('password_hash=VALUES(password_hash)') ||
+          normalizedSql.includes('must_change_password=VALUES(must_change_password)');
         for (const user of state.users) {
-          const person = ensurePerson(user);
-          if (!state.accounts.some(account => account.person_id === person.person_id)) {
-            state.accounts.push({
-              account_id: person.person_id + 5000,
-              person_id: person.person_id,
-              login_name: user.employee_no,
-              password_hash: user.password_hash,
-              must_change_password: user.must_change_password,
-              account_status: 'active'
-            });
-          }
+          upsertAccountFromLegacyUser(user, { overwritePassword });
         }
         return [{ affectedRows: state.accounts.length }, undefined];
       }
@@ -328,6 +353,21 @@ async function main() {
   await makeIdentityMysqlRepository(migrationPool).initSchema();
   assert.deepStrictEqual(migrationPool.state.persons.map(person => person.employee_no), ['A001', 'A002']);
   assert.deepStrictEqual(migrationPool.state.accounts.map(account => account.login_name), ['A001', 'A002']);
+  const changedAccount = migrationPool.state.accounts.find(account => account.login_name === 'A002');
+  const changedPasswordHash = hashPassword('ChangedLeaderPass123456!');
+  changedAccount.password_hash = changedPasswordHash;
+  changedAccount.must_change_password = 0;
+  await makeIdentityMysqlRepository(migrationPool).initSchema();
+  assert.strictEqual(
+    migrationPool.state.accounts.find(account => account.login_name === 'A002').password_hash,
+    changedPasswordHash,
+    'schema init must not overwrite an existing account password with the legacy users password'
+  );
+  assert.strictEqual(
+    migrationPool.state.accounts.find(account => account.login_name === 'A002').must_change_password,
+    0,
+    'schema init must not reset an existing account first-login password state'
+  );
   const migratedOwner = migrationPool.state.persons.find(person => person.employee_no === 'A001');
   const ownerRole = migrationPool.state.roles.find(role => role.role_code === 'owner');
   assert.ok(
