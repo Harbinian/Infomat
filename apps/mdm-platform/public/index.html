@@ -2291,7 +2291,7 @@
       </div>
       <div style="margin-bottom:12px;">
         <label style="display:block;margin-bottom:4px;">新密码</label>
-        <input type="password" id="newPassword" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;" placeholder="至少6位">
+        <input type="password" id="newPassword" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;" placeholder="至少10位，包含字母和数字">
       </div>
       <div style="margin-bottom:16px;">
         <label style="display:block;margin-bottom:4px;">确认新密码</label>
@@ -11286,7 +11286,7 @@
       var newPw = document.getElementById('newPassword').value;
       var confirm = document.getElementById('confirmPassword').value;
 
-      if (newPw.length < 6) { showPasswordError('新密码至少6位'); return; }
+      if (newPw.length < 10) { showPasswordError('新密码至少10位'); return; }
       if (newPw !== confirm) { showPasswordError('两次新密码不一致'); return; }
 
       fetch('/api/org/me/password', {

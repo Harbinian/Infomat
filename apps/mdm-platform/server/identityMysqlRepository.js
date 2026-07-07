@@ -366,8 +366,6 @@ async function migrateLegacyIdentityToPersonIdentity(pool) {
     JOIN person p ON p.employee_no = u.employee_no
     ON DUPLICATE KEY UPDATE
       login_name=VALUES(login_name),
-      password_hash=VALUES(password_hash),
-      must_change_password=VALUES(must_change_password),
       account_status='active',
       updated_at=CURRENT_TIMESTAMP
   `);
