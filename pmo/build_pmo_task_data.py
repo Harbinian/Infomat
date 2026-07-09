@@ -31,6 +31,7 @@ BASE_FIELD_MAP = [
     ("里程碑", "milestone"),
     ("里程碑例外原因", "milestoneOverrideReason"),
     ("交付物", "deliverable"),
+    ("受控交付物编号", "deliverableId"),
     ("备注", "notes"),
 ]
 
