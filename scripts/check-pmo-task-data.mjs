@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const root = process.cwd();
@@ -10,6 +10,7 @@ const files = {
   rootManifest: 'pmo/pmo-source-manifest.json',
   appManifest: 'pmo/gantt-react/public/pmo-source-manifest.json'
 };
+const activePmoBuildScript = 'pmo/build_pmo_task_data.py';
 
 function readText(relativePath) {
   return readFileSync(resolve(root, relativePath), 'utf8');
@@ -52,12 +53,25 @@ const manifestHash = compareTextHash(files.rootManifest, files.appManifest);
 
 const tasks = readJson(files.rootTasks);
 const manifest = readJson(files.rootManifest);
+const deprecatedPmoInputs = [
+  'pmo/信息化项目_Project_H5最终执行版_导入表.xlsx',
+  'pmo/信息化项目_Project_H5最终执行版_导入表_旧版备份.xlsx',
+  'pmo/信息化项目组项目管理表.mpp',
+  'pmo/信息化项目.csv',
+  'pmo/md_to_xlsx.py',
+];
 
 assert(Array.isArray(tasks), `${files.rootTasks} must be a JSON array`);
 assert(tasks.length > 0, `${files.rootTasks} must contain at least one task`);
+assert(existsSync(resolve(root, activePmoBuildScript)), `${activePmoBuildScript} must exist as the PMO Markdown truth-source builder`);
+assert(!existsSync(resolve(root, 'pmo/convert_xlsx.py')), 'pmo/convert_xlsx.py has been renamed because it no longer reads XLSX');
 assert(
   manifest?.taskSummary?.recordCount === tasks.length,
   `manifest taskSummary.recordCount (${manifest?.taskSummary?.recordCount}) must equal task count (${tasks.length})`
+);
+assert(
+  manifest?.standardGovernance?.generatedBy === activePmoBuildScript,
+  `manifest standardGovernance.generatedBy must be ${activePmoBuildScript}, got ${manifest?.standardGovernance?.generatedBy}`
 );
 assert(
   Array.isArray(manifest.serviceOutputs) &&
@@ -65,6 +79,10 @@ assert(
     manifest.serviceOutputs.includes('gantt-react/public/tasks.json'),
   'manifest serviceOutputs must list both PMO task outputs'
 );
+assert(!manifest.legacyInput, 'manifest must not expose legacyInput for removed XLSX/MPP files');
+for (const relativePath of deprecatedPmoInputs) {
+  assert(!existsSync(resolve(root, relativePath)), `${relativePath} has been retired and must not exist`);
+}
 
 const kickoffTask = tasks.find((task) => task.name === '项目启动会召开');
 assert(kickoffTask, 'tasks must include 项目启动会召开');

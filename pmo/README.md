@@ -4,20 +4,21 @@
 
 ## 当前真源
 
-甘特图和 PMO 看板任务数据已切换为 Markdown 真源。XLSX 只保留为历史导入/备份口径，不再作为默认维护入口。
+甘特图和 PMO 看板任务数据已切换为 Markdown 真源。历史 XLSX / MPP / CSV 任务导入文件已废弃，不再保留或读取。
 
 | 项目 | 当前口径 |
 |------|----------|
 | 计划管控真源 | `pmo/信息化项目_计划管控真源.md` |
 | WBS结构真源 | `pmo/信息化项目_WBS结构真源.md` |
+| 执行标准真源 | `pmo/信息化项目_执行标准真源.md` |
 | 工作平衡 | `pmo/信息化项目_工作平衡.md` |
 | 工作开展原则 | `pmo/信息化项目_工作开展原则.md` |
-| 任务数 | 467 |
-| 字段数 | 45 |
+| 任务数 | 516 |
+| 字段数 | 53 |
 | 项目周期 | 2026-06-16 至 2028-02-15 |
-| 里程碑数量 | 46 |
-| H5 重点展示任务 | 214 |
-| 关键路径控制任务 | 75 |
+| 里程碑数量 | 47 |
+| H5 重点展示任务 | 251 |
+| 关键路径控制任务 | 112 |
 
 `pmo-source-manifest.json` 会同步写入 `pmo/gantt-react/public/pmo-source-manifest.json`，供甘特图/PMO 看板服务识别当前真源组合。
 
@@ -62,7 +63,7 @@ http://localhost:5174/#/procedure-dashboard
 4. 在 `pmo/` 下运行：
 
 ```bash
-python convert_xlsx.py
+python build_pmo_task_data.py
 ```
 
 脚本会同时写入：
@@ -71,11 +72,10 @@ python convert_xlsx.py
 |------|------|
 | `pmo/tasks.json` | PMO 根目录备份数据 |
 | `pmo/gantt-react/public/tasks.json` | React 应用实际读取的数据 |
-| `pmo/信息化项目.csv` | 运行转换脚本后的排查用中间 CSV，不作为当前真源维护入口 |
 | `pmo/pmo-source-manifest.json` | PMO 真源清单 |
 | `pmo/gantt-react/public/pmo-source-manifest.json` | React 服务可读取的真源清单 |
 
-运行完成后应看到 `Wrote 467 tasks from 信息化项目_计划管控真源.md`。如任务数变化，应先确认 MD 真源是否确实发生增删。
+运行完成后应看到 `Wrote 516 tasks from 信息化项目_计划管控真源.md`。如任务数变化，应先确认 MD 真源是否确实发生增删。
 
 可在仓库根目录运行以下命令，确认 PMO 根目录备份数据与 React 应用实际读取数据同源：
 
@@ -90,7 +90,9 @@ npm run test:pmo-task-data
 | 字段组 | 字段 |
 |--------|------|
 | 基础展示字段 | `id`、`wbs`、`name`、`type`、`duration`、`start`、`finish`、`predecessors`、`resources`、`department`、`vendor`、`reviewer`、`risk`、`milestone`、`deliverable`、`notes` |
-| 执行管控字段 | `viewCategory`、`phaseGateNo`、`isCriticalControl`、`versionControlObject`、`changeLevel`、`integrationStartCondition`、`isH5Focus`、`phaseGateName`、`releaseRule`、`contractPaymentControl`、`h5DiagnosticRule`、`executionNote` |
+| 执行管控字段 | `viewCategory`、`phaseGateNo`、`isCriticalControl`、`versionControlObject`、`changeLevel`、`integrationStartCondition`、`isH5Focus`、`phaseGateName`、`releaseRule`、`contractPaymentControl`、`h5DiagnosticRule`、`executionNote`、`milestoneOverrideReason` |
+| 执行标准字段 | `executionStandardId`、`inputMaterialList`、`checklistId`、`completionCriteria`、`evidenceRequirements`、`standardGapFlag`、`standardDeferredReason` |
+| 执行标准缺口治理字段 | `requiresExecutionStandard`、`standardsGapBucket`、`standardsGapReasons`、`standardsGapPriorityScore`、`suggestedStandardId`、`suggestedAction` |
 
 ## Console 与已知问题
 
@@ -116,13 +118,13 @@ pmo/
 │   └── page-snapshots/
 ├── tasks.json
 ├── pmo-source-manifest.json
-├── convert_xlsx.py
+├── build_pmo_task_data.py
 ├── pmo-gantt-known-issues.md
 ├── PMO项目计划管控体系建设方案_V1.md
 ├── WBS评审记录_V1.md
 ├── 信息化项目_计划管控真源.md
 ├── 信息化项目_WBS结构真源.md
+├── 信息化项目_执行标准真源.md
 ├── 信息化项目_工作平衡.md
-├── 信息化项目_工作开展原则.md
-└── 信息化项目_Project_H5最终执行版_导入表.xlsx
+└── 信息化项目_工作开展原则.md
 ```

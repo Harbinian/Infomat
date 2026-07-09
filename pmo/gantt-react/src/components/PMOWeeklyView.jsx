@@ -14,9 +14,16 @@ function getWeekRange(date) {
   return { monday, sunday };
 }
 
-export default function PMOWeeklyView({ deliverables, phaseGates, tasks, pmoDate, onSelectDeliverable }) {
+function numberValue(value) {
+  return Number.isFinite(Number(value)) ? Number(value) : 0;
+}
+
+export default function PMOWeeklyView({ deliverables, phaseGates, tasks, pmoDate, projectGovernance, onSelectDeliverable }) {
   const date = useMemo(() => pmoDate || new Date(), [pmoDate]);
   const { monday, sunday } = useMemo(() => getWeekRange(date), [date]);
+  const projectGovernanceData = projectGovernance?.data || null;
+  const governanceSummary = projectGovernanceData?.summary || {};
+  const governanceDepartments = Array.isArray(projectGovernanceData?.departments) ? projectGovernanceData.departments : [];
 
   const weekAB = useMemo(() => deliverables.filter(deliverable => {
     if (!deliverable.plannedFinish || (deliverable.deliverableLevel !== 'A' && deliverable.deliverableLevel !== 'B')) return false;
@@ -71,6 +78,73 @@ export default function PMOWeeklyView({ deliverables, phaseGates, tasks, pmoDate
     </table>
   );
 
+  const renderGovernanceSection = () => (
+    <div className="pmo-section pmo-governance-section">
+      <h3>1. 项目治理闭环</h3>
+      {!projectGovernanceData ? (
+        <p className="empty-text">项目治理快照未生成</p>
+      ) : (
+        <>
+          <div className="pmo-governance-meta">
+            <span>生成日期：{projectGovernanceData.generatedDate || '-'}</span>
+            <span>范围：{projectGovernanceData.scope?.departments?.join('、') || '双部门样板'}</span>
+          </div>
+          <div className="pmo-governance-summary">
+            <div className="pmo-governance-metric">
+              <span className="metric-value">{numberValue(governanceSummary.inputBaselineOpen)}</span>
+              <span className="metric-label">输入基线待确认</span>
+            </div>
+            <div className="pmo-governance-metric">
+              <span className="metric-value">{numberValue(governanceSummary.qualityBlock)}</span>
+              <span className="metric-label">质量 BLOCK</span>
+            </div>
+            <div className="pmo-governance-metric">
+              <span className="metric-value">{numberValue(governanceSummary.fieldLedgerGap)}</span>
+              <span className="metric-label">字段台账缺口</span>
+            </div>
+            <div className="pmo-governance-metric">
+              <span className="metric-value">{numberValue(governanceSummary.goldSourceConfirmation)}</span>
+              <span className="metric-label">待确认黄金源</span>
+            </div>
+            <div className="pmo-governance-metric">
+              <span className="metric-value">{numberValue(governanceSummary.overdue)}</span>
+              <span className="metric-label">超期事项</span>
+            </div>
+          </div>
+          <table className="dlv-table">
+            <thead>
+              <tr>
+                <th>部门</th>
+                <th>最终确认人</th>
+                <th>输入基线</th>
+                <th>BLOCK/WARN</th>
+                <th>字段缺口</th>
+                <th>黄金源</th>
+                <th>超期</th>
+                <th>下一步</th>
+              </tr>
+            </thead>
+            <tbody>
+              {governanceDepartments.map(row => (
+                <tr key={row.department}>
+                  <td>{row.department}</td>
+                  <td>{row.confirmPerson || '-'}</td>
+                  <td>{numberValue(row.inputBaselineOpen)}</td>
+                  <td>{numberValue(row.qualityBlock)} / {numberValue(row.qualityWarn)}</td>
+                  <td>{numberValue(row.fieldLedgerGap)}</td>
+                  <td>{numberValue(row.goldSourceConfirmation)}</td>
+                  <td>{numberValue(row.overdue)}</td>
+                  <td className="dlv-task" title={row.nextStep}>{row.nextStep || '-'}</td>
+                </tr>
+              ))}
+              {governanceDepartments.length === 0 && <tr><td colSpan={8} className="empty-row">无</td></tr>}
+            </tbody>
+          </table>
+        </>
+      )}
+    </div>
+  );
+
   return (
     <div className="pmo-weekly-view">
       <div className="pmo-header">
@@ -97,18 +171,20 @@ export default function PMOWeeklyView({ deliverables, phaseGates, tasks, pmoDate
         </div>
       </div>
 
+      {renderGovernanceSection()}
+
       <div className="pmo-section">
-        <h3>1. 本周应完成的 A/B 类交付物 ({weekAB.length})</h3>
+        <h3>2. 本周应完成的 A/B 类交付物 ({weekAB.length})</h3>
         {renderDeliverableTable(weekAB, false)}
       </div>
 
       <div className="pmo-section">
-        <h3>2. 已延期的 A/B 类交付物 ({overdueAB.length})</h3>
+        <h3>3. 已延期的 A/B 类交付物 ({overdueAB.length})</h3>
         {renderDeliverableTable(overdueAB, true)}
       </div>
 
       <div className="pmo-section">
-        <h3>3. 阶段门缺失交付物 ({gateMissing.length})</h3>
+        <h3>4. 阶段门缺失交付物 ({gateMissing.length})</h3>
         {gateMissing.length > 0 ? (
           <div className="gate-missing-list">
             {gateMissing.map(gate => (
@@ -128,7 +204,7 @@ export default function PMOWeeklyView({ deliverables, phaseGates, tasks, pmoDate
       </div>
 
       <div className="pmo-section">
-        <h3>4. 高风险任务 ({highRiskTasks.length})</h3>
+        <h3>5. 高风险任务 ({highRiskTasks.length})</h3>
         {highRiskTasks.length > 0 ? (
           <table className="dlv-table">
             <thead>

@@ -288,7 +288,7 @@ function buildSummary(rows, previousSummary = {}) {
     criticalControlCount: rows.filter(row => row['是否关键路径控制'] === '是').length,
     h5FocusCount: rows.filter(row => row['是否H5重点展示'] === '是').length,
     wbsSourceFile: '信息化项目_WBS结构真源.md',
-    previousGeneratedFrom: previousSummary.previousGeneratedFrom || '信息化项目_Project_H5最终执行版_导入表.xlsx'
+    previousGeneratedFrom: previousSummary.previousGeneratedFrom || 'Markdown 真源；历史 XLSX/MPP/CSV 已废弃'
   };
 }
 

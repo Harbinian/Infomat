@@ -1,6 +1,9 @@
 const assert = require('assert');
 
-const { makeProcessGovernanceMysqlRepository } = require('../server/processGovernanceMysqlRepository');
+const {
+  buildIssueFingerprint,
+  makeProcessGovernanceMysqlRepository
+} = require('../server/processGovernanceMysqlRepository');
 
 function limitFromSql(normalizedSql, fallback = 500) {
   const match = normalizedSql.match(/\bLIMIT\s+(\d+)\b/i);
@@ -24,6 +27,7 @@ function makeFakePool() {
     mappingRecords: [],
     mappingTodos: [],
     mappingTodoEvents: [],
+    importFingerprints: [],
     statements: [],
     nextSnapshotId: 1
   };
@@ -39,7 +43,7 @@ function makeFakePool() {
         throw error;
       }
 
-      if (normalizedSql.startsWith('CREATE TABLE')) return [[], undefined];
+      if (normalizedSql.startsWith('CREATE TABLE') || normalizedSql.startsWith('ALTER TABLE')) return [[], undefined];
 
       if (normalizedSql === "UPDATE process_governance_snapshots SET status='archived' WHERE status='active'") {
         for (const snapshot of state.snapshots) {
@@ -223,6 +227,123 @@ function makeFakePool() {
         const [snapshot_id, name, status, breaks_json, source_report] = params;
         state.chains.push({ snapshot_id, name, status, breaks_json, source_report, id: state.chains.length + 1 });
         return [{ affectedRows: 1 }, undefined];
+      }
+
+      if (normalizedSql.includes('INSERT INTO process_governance_quality_findings')) {
+        const [
+          snapshot_id,
+          severity,
+          area,
+          source_file,
+          source_line,
+          message,
+          suggestion,
+          dept_name,
+          finding_key,
+          fingerprint
+        ] = params;
+        state.qualityFindings.push({
+          id: state.qualityFindings.length + 1,
+          snapshot_id,
+          severity,
+          area,
+          source_file,
+          source_line,
+          message,
+          suggestion,
+          dept_name,
+          finding_key,
+          fingerprint,
+          imported_at: '2026-06-16 00:00:00'
+        });
+        return [{ insertId: state.qualityFindings.length, affectedRows: 1 }, undefined];
+      }
+
+      if (normalizedSql.includes('SELECT id, status FROM process_mapping_todos WHERE todo_key=?')) {
+        const [todoKey] = params;
+        const item = state.mappingTodos.find(row => row.todo_key === todoKey);
+        return [item ? [{ id: item.id, status: item.status }] : [], undefined];
+      }
+
+      if (normalizedSql.includes('INSERT INTO process_mapping_todos')) {
+        const [
+          todo_key,
+          mapping_record_id,
+          todo_type,
+          first_snapshot_id,
+          latest_snapshot_id,
+          dept_name,
+          target_dept_name,
+          l3_name,
+          a1_code,
+          source_file,
+          source_line,
+          message,
+          suggestion,
+          fingerprint,
+          priority
+        ] = params;
+        const row = {
+          id: state.mappingTodos.length + 1,
+          todo_key,
+          mapping_record_id,
+          todo_type,
+          first_snapshot_id,
+          latest_snapshot_id,
+          dept_name,
+          target_dept_name,
+          l3_name,
+          a1_code,
+          source_file,
+          source_line,
+          message,
+          suggestion,
+          fingerprint,
+          status: 'open',
+          priority,
+          owner_user_id: null,
+          owner_dept_id: null
+        };
+        state.mappingTodos.push(row);
+        return [{ insertId: row.id, affectedRows: 1 }, undefined];
+      }
+
+      if (normalizedSql.startsWith('DELETE FROM process_import_fingerprints')) {
+        const [import_batch_id, scope] = params;
+        state.importFingerprints = state.importFingerprints.filter(item => item.import_batch_id !== import_batch_id || item.scope !== scope);
+        return [{ affectedRows: 1 }, undefined];
+      }
+
+      if (normalizedSql.startsWith('INSERT INTO process_import_fingerprints')) {
+        const [import_batch_id, scope, fingerprint] = params;
+        state.importFingerprints.push({
+          id: state.importFingerprints.length + 1,
+          import_batch_id,
+          scope,
+          fingerprint,
+          created_at: `2026-06-16 00:00:${String(state.importFingerprints.length + 1).padStart(2, '0')}`
+        });
+        return [{ affectedRows: 1 }, undefined];
+      }
+
+      if (normalizedSql.includes('FROM process_import_fingerprints') && normalizedSql.includes('ORDER BY created_at DESC')) {
+        const [scope] = params;
+        const rows = state.importFingerprints
+          .filter(item => item.scope === scope)
+          .sort((left, right) => right.id - left.id)
+          .slice(0, 1)
+          .map(item => ({ import_batch_id: item.import_batch_id }));
+        return [rows, undefined];
+      }
+
+      if (normalizedSql.includes('FROM process_import_fingerprints') && normalizedSql.includes('fingerprint=?')) {
+        const [import_batch_id, scope, fingerprint] = params;
+        const found = state.importFingerprints.some(item =>
+          item.import_batch_id === import_batch_id &&
+          item.scope === scope &&
+          item.fingerprint === fingerprint
+        );
+        return [found ? [{ found: 1 }] : [], undefined];
       }
 
       if (
@@ -573,8 +694,14 @@ function makeFakePool() {
           rows = rows.filter(item => item.id === params[0]);
         } else {
           let paramIndex = 0;
-          if (normalizedSql.includes('t.todo_type=?')) rows = rows.filter(item => item.todo_type === params[paramIndex++]);
-          if (normalizedSql.includes('t.status=?')) rows = rows.filter(item => item.status === params[paramIndex++]);
+          if (normalizedSql.includes('t.todo_type=?')) {
+            const todoType = params[paramIndex++];
+            rows = rows.filter(item => item.todo_type === todoType);
+          }
+          if (normalizedSql.includes('t.status=?')) {
+            const status = params[paramIndex++];
+            rows = rows.filter(item => item.status === status);
+          }
           if (normalizedSql.includes('(t.dept_name=? OR t.target_dept_name=?)')) {
             const dept = params[paramIndex];
             rows = rows.filter(item => item.dept_name === dept || item.target_dept_name === dept);
@@ -793,21 +920,40 @@ async function main() {
           source_report: 'docs/reports/cross-dept.md'
         }
       ]
-    }
+    },
+    qualityFindings: [
+      {
+        severity: 'WARN',
+        area: 'source',
+        source_file: 'docs/norms/经营发展部.md',
+        source_line: 32,
+        message: '来源文件待复核',
+        suggestion: '补充原文位置',
+        dept_name: '经营发展部',
+        finding_key: 'quality-source-imported'
+      }
+    ],
+    mappingTodos: [
+      {
+        todo_key: 'todo-imported-verification',
+        todo_type: 'verification',
+        dept_name: '经营发展部',
+        l3_name: '销售订单评审和执行管理',
+        a1_code: 'JY-L3-01-A1-001',
+        source_file: 'docs/norms/经营发展部.md',
+        message: '核验提醒：核对技术条款输入',
+        suggestion: '回到制度或表单源文件确认。'
+      }
+    ]
   });
 
-  pool.state.qualityFindings.push({
-    id: 1,
-    snapshot_id: 1,
-    severity: 'WARN',
-    area: 'source',
-    source_file: 'docs/norms/经营发展部.md',
-    source_line: 32,
-    message: '来源文件待复核',
-    suggestion: '补充原文位置',
-    dept_name: '经营发展部',
-    imported_at: '2026-06-16 00:00:00'
-  });
+  assert.strictEqual(pool.state.qualityFindings.length, 1);
+  assert.strictEqual(pool.state.qualityFindings[0].fingerprint.length, 64);
+  assert.strictEqual(pool.state.mappingTodos.length, 1);
+  assert.strictEqual(pool.state.mappingTodos[0].fingerprint.length, 64);
+  assert.strictEqual(pool.state.importFingerprints.filter(item => item.scope === 'quality').length, 1);
+  assert.strictEqual(pool.state.importFingerprints.filter(item => item.scope === 'mapping').length, 1);
+
   pool.state.qualityCases.push({
     id: 11,
     finding_key: 'quality-source-001',
@@ -852,6 +998,46 @@ async function main() {
     owner_user_id: null,
     owner_dept_id: null
   });
+
+  pool.state.importFingerprints = [];
+  const qualityFingerprint = buildIssueFingerprint(pool.state.qualityCases[0]);
+  assert.strictEqual(qualityFingerprint.length, 64);
+  await assert.rejects(
+    () => repo.assertLatestImportResolved('quality', pool.state.qualityCases[0], { from_status: 'source_resolved' }),
+    /尚无重新导入记录/
+  );
+  await repo.recordImportFingerprints('batch-quality-001', 'quality', [pool.state.qualityCases[0]]);
+  await assert.rejects(
+    () => repo.assertLatestImportResolved('quality', pool.state.qualityCases[0], { from_status: 'source_resolved' }),
+    /仍然存在/
+  );
+  await repo.recordImportFingerprints('batch-quality-002', 'quality', [{ ...pool.state.qualityCases[0], finding_key: 'quality-source-002' }]);
+  const qualityCloseGate = await repo.assertLatestImportResolved('quality', pool.state.qualityCases[0], { from_status: 'source_resolved', actor_user_id: 1 });
+  assert.strictEqual(qualityCloseGate.import_batch_id, 'batch-quality-002');
+  assert.strictEqual(qualityCloseGate.fingerprint, qualityFingerprint);
+  assert.strictEqual(qualityCloseGate.action, 'close');
+  const notIssueCloseGate = await repo.assertLatestImportResolved('quality', pool.state.qualityCases[0], {
+    from_status: 'source_resolved',
+    resolution: 'not_an_issue',
+    reason: '核验项不适用于该来源'
+  });
+  assert.strictEqual(notIssueCloseGate.resolution, 'not_an_issue');
+  assert.strictEqual(notIssueCloseGate.reason, '核验项不适用于该来源');
+  await assert.rejects(
+    () => repo.assertLatestImportResolved('quality', pool.state.qualityCases[0], { from_status: 'source_resolved', resolution: 'not_an_issue' }),
+    /问题原因不能为空/
+  );
+
+  const mappingFingerprint = buildIssueFingerprint(pool.state.mappingTodos[0]);
+  await repo.recordImportFingerprints('batch-mapping-001', 'mapping', [pool.state.mappingTodos[0]]);
+  await assert.rejects(
+    () => repo.assertLatestImportResolved('mapping', pool.state.mappingTodos[0], { from_status: 'source_resolved' }),
+    /仍然存在/
+  );
+  await repo.recordImportFingerprints('batch-mapping-002', 'mapping', [{ ...pool.state.mappingTodos[0], todo_key: 'todo-cross-002', a1_code: 'JY-L3-01-A1-002' }]);
+  const mappingCloseGate = await repo.assertLatestImportResolved('mapping', pool.state.mappingTodos[0], { from_status: 'source_resolved', actor_user_id: 1 });
+  assert.strictEqual(mappingCloseGate.import_batch_id, 'batch-mapping-002');
+  assert.strictEqual(mappingCloseGate.fingerprint, mappingFingerprint);
 
   const firstSankey = await repo.getActiveSankey();
   assert.deepStrictEqual(firstSankey.systems, ['ERP', 'OA']);

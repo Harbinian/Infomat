@@ -5,6 +5,8 @@ export const DELIVERABLE_STATUSES = ['未提交', '编制中', '已提交', '待
 const STATUS_ORDER = Object.fromEntries(DELIVERABLE_STATUSES.map((status, index) => [status, index]));
 const LEVEL_ORDER = { A: 1, B: 2, C: 3, D: 4 };
 const RISK_ORDER = { 高: 1, 中: 2, 低: 3 };
+export const STANDARD_GAP_BUCKETS = ['必须补', '自动可补', '合理暂缓', '需拆分后补', '人工复核'];
+export const ACTIONABLE_STANDARD_GAP_BUCKETS = ['必须补', '自动可补', '需拆分后补', '人工复核'];
 
 export const DELIVERABLE_ACTIONS = {
   draft: {
@@ -280,12 +282,47 @@ function isOverdue(deliverable, referenceDate) {
   return finish < referenceDate;
 }
 
+function hasBoundExecutionStandard(task) {
+  const standardId = String(task.executionStandardId || '').trim();
+  return Boolean(standardId && standardId !== '暂缓');
+}
+
+export function getExecutionStandardDiagnostics(task) {
+  if (task?.standardsGapBucket) {
+    if (!ACTIONABLE_STANDARD_GAP_BUCKETS.includes(task.standardsGapBucket)) return [];
+    return [...new Set([task.standardsGapBucket, ...(task.standardsGapReasons || [])])];
+  }
+  if (!task || task.isSummary || task.isMilestone) return [];
+
+  const diagnostics = [];
+  const standardId = String(task.executionStandardId || '').trim();
+  const deferredReason = String(task.standardDeferredReason || '').trim();
+  const isDeferred = standardId === '暂缓' || String(task.standardGapFlag || '').trim() === '暂缓';
+  const hasStandard = hasBoundExecutionStandard(task);
+
+  if (!hasStandard && !isDeferred) diagnostics.push('缺标准');
+  if (task.risk === '高' && !hasStandard) diagnostics.push('高风险缺标准');
+  if (task.isCriticalControl === '是' && !hasStandard) diagnostics.push('关键路径缺标准');
+  if (isDeferred && !deferredReason) diagnostics.push('暂缓原因缺失');
+
+  return [...new Set(diagnostics)];
+}
+
+export function isExecutionStandardGap(task) {
+  if (task?.standardsGapBucket) return ACTIONABLE_STANDARD_GAP_BUCKETS.includes(task.standardsGapBucket);
+  return getExecutionStandardDiagnostics(task).length > 0;
+}
+
 export function createDashboardCardIntents({ tasks = [], deliverables = [], phaseGates = [], pmoDate = new Date() }) {
   const referenceDate = coerceDate(pmoDate) || new Date();
   const normalTasks = tasks.filter(task => !task.isSummary && !task.isMilestone);
   const summaryTasks = tasks.filter(task => task.isSummary);
   const milestones = tasks.filter(task => task.isMilestone);
   const highRiskTasks = tasks.filter(task => task.risk === '高');
+  const standardGapTasks = tasks.filter(task => isExecutionStandardGap(task));
+  const highRiskStandardGapTasks = standardGapTasks.filter(task => task.risk === '高');
+  const criticalStandardGapTasks = standardGapTasks.filter(task => task.isCriticalControl === '是');
+  const phaseGateStandardGapTasks = standardGapTasks.filter(task => task.phaseGateNo || task.phaseGateName);
   const aLevel = deliverables.filter(deliverable => deliverable.deliverableLevel === 'A');
   const bLevel = deliverables.filter(deliverable => deliverable.deliverableLevel === 'B');
   const overdue = deliverables.filter(deliverable => isOverdue(deliverable, referenceDate));
@@ -298,6 +335,10 @@ export function createDashboardCardIntents({ tasks = [], deliverables = [], phas
     { key: 'summaryTasks', value: summaryTasks.length, label: '摘要任务', target: { page: 'pmo', pmoView: 'tasks', taskFilters: { taskKind: 'summary' } } },
     { key: 'milestones', value: milestones.length, label: '里程碑', target: { page: 'pmo', pmoView: 'tasks', taskFilters: { milestone: 'yes' } } },
     { key: 'highRiskTasks', value: highRiskTasks.length, label: '高风险任务', target: { page: 'pmo', pmoView: 'tasks', taskFilters: { risk: '高' } }, highlight: true },
+    { key: 'standardGap', value: standardGapTasks.length, label: '执行标准缺口', target: { page: 'pmo', pmoView: 'standard-governance' }, highlight: standardGapTasks.length > 0 },
+    { key: 'standardGapHighRisk', value: highRiskStandardGapTasks.length, label: '高风险缺标准', target: { page: 'pmo', pmoView: 'standard-governance', standardBucket: '必须补' }, highlight: highRiskStandardGapTasks.length > 0 },
+    { key: 'standardGapCritical', value: criticalStandardGapTasks.length, label: '关键控制缺标准', target: { page: 'pmo', pmoView: 'standard-governance', standardBucket: '必须补' }, highlight: criticalStandardGapTasks.length > 0 },
+    { key: 'standardGapGate', value: phaseGateStandardGapTasks.length, label: '阶段门缺标准', target: { page: 'pmo', pmoView: 'standard-governance', standardBucket: '必须补' }, highlight: phaseGateStandardGapTasks.length > 0 },
     { key: 'deliverableTotal', value: deliverables.length, label: '交付物总数', target: { page: 'pmo', pmoView: 'deliverables', ledgerFilters: {} } },
     { key: 'aLevelDeliverables', value: aLevel.length, label: 'A类交付物', target: { page: 'pmo', pmoView: 'deliverables', ledgerFilters: { level: 'A' } }, cls: 'stat-a' },
     { key: 'bLevelDeliverables', value: bLevel.length, label: 'B类交付物', target: { page: 'pmo', pmoView: 'deliverables', ledgerFilters: { level: 'B' } }, cls: 'stat-b' },

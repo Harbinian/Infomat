@@ -6,6 +6,7 @@
  *   node scripts/import-process-governance-mysql.js --snapshot docs/company-sankey-data.json
  */
 const assert = require('assert');
+const fs = require('fs');
 const path = require('path');
 const mysql = require('mysql2/promise');
 const { mysqlConfigFromEnv, redactMysqlConfig } = require('../server/mysqlConfig');
@@ -19,6 +20,7 @@ function parseArgs(argv) {
   const args = {
     snapshot: path.join(REPO_ROOT, 'docs', 'company-sankey-data.json'),
     a1Sources: [],
+    qualityFindings: null,
     note: 'Imported from process governance Sankey snapshot'
   };
 
@@ -32,6 +34,10 @@ function parseArgs(argv) {
       args.a1Sources.push(path.resolve(REPO_ROOT, argv[++index] || ''));
     } else if (arg.startsWith('--a1-source=')) {
       args.a1Sources.push(path.resolve(REPO_ROOT, arg.slice('--a1-source='.length)));
+    } else if (arg === '--quality-findings') {
+      args.qualityFindings = path.resolve(REPO_ROOT, argv[++index] || '');
+    } else if (arg.startsWith('--quality-findings=')) {
+      args.qualityFindings = path.resolve(REPO_ROOT, arg.slice('--quality-findings='.length));
     } else if (arg === '--note') {
       args.note = argv[++index] || '';
     } else if (arg.startsWith('--note=')) {
@@ -41,7 +47,7 @@ function parseArgs(argv) {
     } else if (arg.startsWith('--imported-by=')) {
       args.importedBy = Number(arg.slice('--imported-by='.length)) || null;
     } else if (arg === '--help' || arg === '-h') {
-      console.log('Usage: node scripts/import-process-governance-mysql.js --snapshot docs/company-sankey-data.json [--a1-source docs/norms/...md] [--note "..."] [--imported-by 1]');
+      console.log('Usage: node scripts/import-process-governance-mysql.js --snapshot docs/company-sankey-data.json [--a1-source docs/norms/...md] [--quality-findings findings.json] [--note "..."] [--imported-by 1]');
       process.exit(0);
     } else {
       throw new Error(`Unknown argument: ${arg}`);
@@ -49,6 +55,12 @@ function parseArgs(argv) {
   }
 
   return args;
+}
+
+function loadQualityFindings(filePath) {
+  if (!filePath) return [];
+  const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  return Array.isArray(parsed.findings) ? parsed.findings : [];
 }
 
 async function main() {
@@ -63,6 +75,7 @@ async function main() {
       repository,
       sourceJsonPath: args.snapshot,
       a1MarkdownPaths: args.a1Sources,
+      qualityFindings: loadQualityFindings(args.qualityFindings),
       importedBy: args.importedBy,
       note: args.note
     });

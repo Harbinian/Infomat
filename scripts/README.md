@@ -14,10 +14,14 @@
 | `check-engineering-source-manifest.mjs` | 校验工程技术部源文件清单中的 canonical 缺口和外部待确认索引仍与仓库现状一致 | `docs/reports/2026-06-11-engineering-source-manifest.md`、外部参考待确认目录 | 只读校验 |
 | `check-norms-source-manifest.mjs` | 校验部门流程输入基线清单与合同部门、`docs/norms` canonical 三件套一致 | `docs/contracts/dcm-bbm-contract.json`、`docs/norms/`、两份 source manifest 报告 | 只读校验 |
 | `check-pmo-task-data.mjs` | 校验 PMO 根目录备份数据与 React 应用读取数据同源同 hash | `pmo/tasks.json`、`pmo/gantt-react/public/tasks.json`、两份 PMO source manifest | 只读校验 |
+| `check-pmo-execution-standards.mjs` | 校验 PMO 执行标准真源、WBS 1.2 执行级样板、WBS 3 标准绑定和 H5 诊断契约 | `pmo/信息化项目_执行标准真源.md`、WBS/计划管控真源、PMO 前端源码 | 只读校验 |
+| `check-pmo-standard-gap-operations.mjs` | 校验 PMO 执行标准缺口分桶、优先级队列、建议动作和标准治理 H5 入口 | PMO 任务数据、source manifest、执行标准真源、PMO 前端源码 | 只读校验 |
 | `check-pmo-wbs-semantic-depth.mjs` | 校验 PMO WBS 语义补组后不再保留二级叶子任务，并确认父级日期覆盖子任务 | `pmo/tasks.json` | 只读校验 |
 | `check-source-manifest-hashes.mjs` | 校验公司级快照里的 sourceManifest 文件大小和 SHA256 仍匹配磁盘源文件 | `docs/company-sankey-data.json`、`sourceManifest.files` 中登记的源文件 | 只读校验 |
+| `build-project-governance-report.mjs` | 生成双部门项目治理周报，并输出 PMO 周会页可读取的 JSON 快照 | 输入基线问题待办、DCM/BBM 质量报告、可选角色工作台快照 | 写入 `docs/reports/project-governance-weekly-report.md` 和 `pmo/gantt-react/public/project-governance-weekly-report.json` |
+| `test-project-governance-report.mjs` | 校验项目治理周报 Markdown、JSON 快照和 PMO 消费契约 | 周报脚本、PMO 周会页源码、临时角色工作台夹具 | 只读校验，临时输出写入系统临时目录 |
 | `sync-process-governance-mainline.mjs` | 串起流程治理主线同步、检查和 MDM 快照导入 | 流程输入基线、PMO 驾驶舱、MDM 平台脚本；迁移过渡期的遗留本地库必须显式隔离 | 会运行 parser，并调用 MDM 平台同步 / 导入脚本 |
-| `test-process-governance-mainline.mjs` | 聚合仓库级流程治理主线只读校验 | 根级主线检查脚本 | 依次运行合约、PMO 数据、部门域、source manifest 和 PMO 任务数据校验 |
+| `test-process-governance-mainline.mjs` | 聚合仓库级流程治理主线只读校验 | 根级主线检查脚本 | 依次运行合约、项目治理升级、PMO 数据、部门域、source manifest 和 PMO 任务数据校验 |
 | `test-process-governance-mainline-contract.mjs` | 仓库级流程治理主线契约测试 | `package.json`、`docs/company-sankey-data.json`、仓库级脚本 | 只读校验 |
 | `test-parse-sankey-structure-block.mjs` | 校验流程治理结构块 v1 的 parser 优先读取、hybrid 合并、系统枚举、证据状态和 A1→L3 引用约束 | 内置临时夹具 | 只读校验 |
 | `test-document-structured-output-schema.mjs` | 校验文档结构化输出标准 schema 与前端字段、MySQL process_design 表、制度编号/版次字段、MySQL 路由枚举和结构块 parser 关键约束一致 | `docs/contracts/document-structured-output.schema.json`、MDM 前端、MySQL schema、MySQL 路由、结构块 parser | 只读校验 |
@@ -43,8 +47,13 @@ npm run test:parse-sankey-structure-block
 npm run test:document-structured-output-schema
 npm run verify:norms-source-mapping
 npm run test:pmo-task-data
+npm run test:pmo-execution-standards
+npm run test:pmo-standard-gap-operations
 npm run test:pmo-wbs-semantic-depth
 npm run test:source-manifest-hashes
+npm run build:pmo-task-data
+npm run governance:weekly-report
+npm run test:project-governance-upgrade
 npm run test:process-evidence-skill
 npm run test:process-input-baseline-review
 npm run test:ocr-source

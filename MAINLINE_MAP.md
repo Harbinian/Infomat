@@ -102,7 +102,7 @@ pmo/信息化项目_WBS结构真源.md
 pmo/信息化项目_工作平衡.md
 pmo/信息化项目_工作开展原则.md
   ↓
-pmo/convert_xlsx.py
+pmo/build_pmo_task_data.py
   ↓
 pmo/tasks.json
 pmo/pmo-source-manifest.json
@@ -115,7 +115,7 @@ pmo/gantt-react/
 规则：
 
 - PMO Markdown 是项目计划当前维护入口。
-- XLSX 只作历史导入或备份口径，除非 PMO README 另行更新。
+- 历史 XLSX / MPP / CSV 任务导入文件已废弃，不作为当前输入、不再保留或读取。
 - `pmo/gantt-react/public/tasks.json` 是 React 应用消费数据，不是手工维护真源。
 
 ## 6. AI 协作与历史方案主线
