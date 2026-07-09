@@ -14,6 +14,7 @@ import OverdueDeliverables from './components/OverdueDeliverables';
 import PMOWeeklyView from './components/PMOWeeklyView';
 import DeliverableDetail from './components/DeliverableDetail';
 import TaskLedger from './components/TaskLedger';
+import StandardGapOperationsView from './components/StandardGapOperationsView';
 import { buildTaskTree, applyFilters, normalizeTasks, analyzeTasks, computeProjectRange, formatDate, parseDate, filterTasksByExpansion } from './utils/dateUtils';
 import { normalizeDeliverables, loadDeliverableStatusOverrides } from './utils/deliverableUtils.js';
 import { buildPhaseGates } from './utils/phaseGateUtils.js';
@@ -30,6 +31,7 @@ const PMO_VIEW_LABELS = [
   { key: 'tasks', label: '任务清单' },
   { key: 'deliverables', label: '交付物台账' },
   { key: 'phasegates', label: '阶段门' },
+  { key: 'standard-governance', label: '标准治理' },
   { key: 'thisweek', label: '本周交付物' },
   { key: 'overdue', label: '延期交付物' },
 ];
@@ -77,6 +79,24 @@ const loadDeliverableFsApi = import.meta.env.DEV
     error.status = 404;
     throw error;
   };
+
+async function loadProjectGovernanceSnapshot() {
+  try {
+    const response = await fetch('project-governance-weekly-report.json', { cache: 'no-store' });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return {
+      status: 'ready',
+      data: await response.json(),
+      error: null,
+    };
+  } catch (error) {
+    return {
+      status: 'missing',
+      data: null,
+      error: error.message || '项目治理快照未生成',
+    };
+  }
+}
 
 function openEvidenceDatabase() {
   return new Promise((resolve, reject) => {
@@ -152,14 +172,20 @@ export default function App() {
   const [ledgerFilters, setLedgerFilters] = useState({});
   const [ledgerSort, setLedgerSort] = useState({ key: 'plannedFinish', direction: 'asc' });
   const [taskFilters, setTaskFilters] = useState({});
+  const [standardBucket, setStandardBucket] = useState('all');
   const [localTransitions, setLocalTransitions] = useState({});
+  const [projectGovernance, setProjectGovernance] = useState({ status: 'loading', data: null, error: null });
 
   const loadProjectData = useCallback(async ({ showLoading = false } = {}) => {
     if (showLoading) setLoading(true);
     try {
-      const response = await fetch('tasks.json');
+      const [response, projectGovernanceSnapshot] = await Promise.all([
+        fetch('tasks.json'),
+        loadProjectGovernanceSnapshot(),
+      ]);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
+      setProjectGovernance(projectGovernanceSnapshot);
       setRawTasks(data);
       const normalized = normalizeTasks(data);
       computeProjectRange(normalized);
@@ -403,6 +429,7 @@ export default function App() {
       if (target.ledgerFilters) setLedgerFilters(target.ledgerFilters);
       if (target.gateStatus) setLedgerFilters(prev => ({ ...prev, gateStatus: target.gateStatus }));
       if (target.taskFilters) setTaskFilters(target.taskFilters);
+      if (target.standardBucket) setStandardBucket(target.standardBucket);
     }
   }, [handlePageChange, handleViewChange]);
 
@@ -432,6 +459,14 @@ export default function App() {
         }
       });
   }, [loadProjectData]);
+
+  const handleOpenStandardTask = useCallback((task) => {
+    setTaskFilters({
+      standardGap: 'yes',
+      search: task?.wbs || task?.name || '',
+    });
+    setPmoView('tasks');
+  }, []);
 
   const subtitle = useMemo(() => {
     if (!allTasks.length) return '';
@@ -475,14 +510,16 @@ export default function App() {
         />;
       case 'phasegates':
         return <PhaseGateView phaseGates={phaseGates} gateStatusFilter={ledgerFilters.gateStatus} />;
+      case 'standard-governance':
+        return <StandardGapOperationsView tasks={allTasks} bucket={standardBucket} onOpenTask={handleOpenStandardTask} />;
       case 'thisweek':
         return <ThisWeekDeliverables deliverables={deliverablesWithEvidence} pmoDate={pmoDate} onSelectDeliverable={handleSelectDeliverable} />;
       case 'overdue':
         return <OverdueDeliverables deliverables={deliverablesWithEvidence} pmoDate={pmoDate} onSelectDeliverable={handleSelectDeliverable} />;
       case 'pmo':
-        return <PMOWeeklyView deliverables={deliverablesWithEvidence} phaseGates={phaseGates} tasks={allTasks} pmoDate={pmoDate} onSelectDeliverable={handleSelectDeliverable} />;
+        return <PMOWeeklyView deliverables={deliverablesWithEvidence} phaseGates={phaseGates} tasks={allTasks} pmoDate={pmoDate} projectGovernance={projectGovernance} onSelectDeliverable={handleSelectDeliverable} />;
       default:
-        return <PMOWeeklyView deliverables={deliverablesWithEvidence} phaseGates={phaseGates} tasks={allTasks} pmoDate={pmoDate} onSelectDeliverable={handleSelectDeliverable} />;
+        return <PMOWeeklyView deliverables={deliverablesWithEvidence} phaseGates={phaseGates} tasks={allTasks} pmoDate={pmoDate} projectGovernance={projectGovernance} onSelectDeliverable={handleSelectDeliverable} />;
     }
   };
 
@@ -538,7 +575,7 @@ export default function App() {
           <PMODatePicker pmoDate={pmoDate} onDateChange={setPmoDate} projectStart={projectStart} />
           <div className="pmo-view-tabs">
             {PMO_VIEW_LABELS.map(item => (
-              <button key={item.key} className={pmoView === item.key ? 'active' : ''} onClick={() => { setPmoView(item.key); if (item.key !== 'phasegates') setLedgerFilters(prev => { if (!prev.gateStatus) return prev; const next = { ...prev }; delete next.gateStatus; return next; }); }} type="button">
+              <button key={item.key} className={pmoView === item.key ? 'active' : ''} onClick={() => { setPmoView(item.key); if (item.key === 'standard-governance') setStandardBucket('all'); if (item.key !== 'phasegates') setLedgerFilters(prev => { if (!prev.gateStatus) return prev; const next = { ...prev }; delete next.gateStatus; return next; }); }} type="button">
                 {item.label}
               </button>
             ))}

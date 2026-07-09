@@ -7,7 +7,8 @@ const {
   sourceManifestFiles,
   normalizeSourceFile,
   normalizeMdmRequirement,
-  normalizeEvidenceRef
+  normalizeEvidenceRef,
+  normalizeQualityFinding
 } = require('./processGovernanceImport');
 
 const DEPT_DOMAIN = new Map([
@@ -31,6 +32,12 @@ function asArray(value) {
 
 function cleanCell(value) {
   return String(value || '').replace(/<br\s*\/?>/gi, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function stableImportKey(prefix, parts) {
+  const raw = parts.map(part => cleanCell(part)).join('|');
+  const hash = crypto.createHash('sha1').update(raw).digest('hex').slice(0, 16);
+  return `${prefix}-${hash}`;
 }
 
 function nodeName(node) {
@@ -86,6 +93,13 @@ function normalizeConfirmStatus(value) {
   if (text.includes('待确认') || text.includes('待处理')) return 'pending';
   if (text.includes('已确认') || text.includes('已映射')) return 'confirmed';
   return text ? 'pending' : 'pending';
+}
+
+function mappingTodoKey(todoType, row) {
+  if (todoType === 'cross_dept') {
+    return stableImportKey('maptodo', [todoType, row.source_dept, row.target_dept, row.a1_code]);
+  }
+  return stableImportKey('maptodo', [todoType, row.dept_name, row.l3_name, row.a1_code]);
 }
 
 function normalizeRiskLevel(value) {
@@ -207,6 +221,56 @@ function summarizeEvidenceRefs(items) {
   return { total: items.length, byType };
 }
 
+function summarizeQualityFindings(findings) {
+  const summary = { BLOCK: 0, WARN: 0, INFO: 0 };
+  for (const finding of findings) {
+    summary[finding.severity] = (summary[finding.severity] || 0) + 1;
+  }
+  return summary;
+}
+
+function buildMappingTodos(a1Items, crossDept) {
+  const todos = [];
+  for (const row of a1Items) {
+    if (!cleanCell(row.verification_note)) continue;
+    todos.push({
+      todo_key: mappingTodoKey('verification', row),
+      todo_type: 'verification',
+      dept_name: row.dept_name || null,
+      l3_name: row.l3_name || null,
+      a1_code: row.a1_code || null,
+      source_file: row.source_file || null,
+      message: `核验提醒：${row.verification_note}`,
+      suggestion: '回到制度或表单源文件确认 A1 核验提醒，整改后重新导入 MDM。'
+    });
+  }
+
+  for (const risk of asArray(crossDept && crossDept.risks)) {
+    if (normalizeConfirmStatus(risk.status) === 'confirmed') continue;
+    const sourceDept = risk.source || risk.source_dept || null;
+    const targetDept = risk.target || risk.target_dept || null;
+    const a1Code = risk.a1 || risk.a1_code || null;
+    const todo = {
+      source_dept: sourceDept,
+      target_dept: targetDept,
+      a1_code: a1Code
+    };
+    todos.push({
+      todo_key: mappingTodoKey('cross_dept', todo),
+      todo_type: 'cross_dept',
+      dept_name: sourceDept,
+      target_dept_name: targetDept,
+      a1_code: a1Code,
+      source_file: risk.source_report || crossDept.source || null,
+      message: risk.desc || risk.description || `${sourceDept || '来源部门'} 到 ${targetDept || '目标部门'} 的跨部门衔接待确认`,
+      suggestion: '回到制度或表单源文件确认跨部门输入输出是否已有接收流程，整改后重新导入 MDM。',
+      priority: normalizeRiskLevel(risk.risk) === 'high' ? 'high' : 'medium'
+    });
+  }
+
+  return dedupeByKey(todos, 'todo_key');
+}
+
 function loadProcessGovernanceMysqlBundle(sourceJsonPath, options = {}) {
   const sourceText = fs.readFileSync(sourceJsonPath, 'utf8');
   const data = JSON.parse(sourceText);
@@ -220,6 +284,8 @@ function loadProcessGovernanceMysqlBundle(sourceJsonPath, options = {}) {
   const sourceFiles = dedupeByKey(sourceManifestFiles(data).map(normalizeSourceFile), 'file_key');
   const mdmRequirements = dedupeByKey(asArray(data.mdmRequirements).map(normalizeMdmRequirement), 'requirement_key');
   const evidenceRefs = dedupeByKey(asArray(data.evidenceRefs).map(normalizeEvidenceRef), 'ref_key');
+  const qualityFindings = asArray(options.qualityFindings || options.quality_findings).map(normalizeQualityFinding);
+  const mappingTodos = buildMappingTodos(a1Items, crossDept);
 
   return {
     source_json_path: sourceJsonPath,
@@ -232,7 +298,9 @@ function loadProcessGovernanceMysqlBundle(sourceJsonPath, options = {}) {
       crossDept: crossDept.stats,
       sourceFiles: summarizeSourceFiles(sourceFiles),
       mdmRequirements: summarizeMdmRequirements(mdmRequirements),
-      evidenceRefs: summarizeEvidenceRefs(evidenceRefs)
+      evidenceRefs: summarizeEvidenceRefs(evidenceRefs),
+      quality: summarizeQualityFindings(qualityFindings),
+      mappingTodos: { total: mappingTodos.length }
     },
     nodes: normalizeNodes(data),
     links: normalizeLinks(data, nodeTypes),
@@ -240,12 +308,14 @@ function loadProcessGovernanceMysqlBundle(sourceJsonPath, options = {}) {
     sourceFiles,
     mdmRequirements,
     evidenceRefs,
+    qualityFindings,
+    mappingTodos,
     crossDept
   };
 }
 
-async function importProcessGovernanceMysqlSnapshot({ repository, sourceJsonPath, a1MarkdownPaths = [], importedBy = null, note = null }) {
-  const bundle = loadProcessGovernanceMysqlBundle(sourceJsonPath, { a1MarkdownPaths, importedBy, note });
+async function importProcessGovernanceMysqlSnapshot({ repository, sourceJsonPath, a1MarkdownPaths = [], qualityFindings = [], importedBy = null, note = null }) {
+  const bundle = loadProcessGovernanceMysqlBundle(sourceJsonPath, { a1MarkdownPaths, qualityFindings, importedBy, note });
   await repository.initSchema();
   const result = await repository.replaceActiveReadModel(bundle);
   return { ...result, bundle };

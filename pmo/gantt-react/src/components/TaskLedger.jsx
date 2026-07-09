@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { applyFilters, formatDate, parseDate } from '../utils/dateUtils';
+import { getExecutionStandardDiagnostics, isExecutionStandardGap } from '../utils/deliverableWorkflow';
 
 const TASK_FILTER_DEFAULTS = {
   year: 'all',
@@ -12,6 +13,7 @@ const TASK_FILTER_DEFAULTS = {
   search: '',
   wbsDepth: 'all',
   taskKind: 'all',
+  standardGap: 'all',
 };
 
 function compareWbs(a, b) {
@@ -30,6 +32,22 @@ function describeType(task) {
   return '普通';
 }
 
+function describeExecutionStandard(task) {
+  const standardId = String(task.executionStandardId || '').trim();
+  const deferredReason = String(task.standardDeferredReason || '').trim();
+  const diagnostics = getExecutionStandardDiagnostics(task);
+  if (task.standardsGapBucket && task.standardsGapBucket !== '合理暂缓') {
+    const suggested = task.suggestedStandardId ? `：${task.suggestedStandardId}` : '';
+    return `${task.standardsGapBucket}${suggested}`;
+  }
+  if (task.standardsGapBucket === '合理暂缓') {
+    return deferredReason ? `暂缓：${deferredReason}` : '合理暂缓';
+  }
+  if (standardId && standardId !== '暂缓') return standardId;
+  if (standardId === '暂缓') return deferredReason ? `暂缓：${deferredReason}` : '暂缓未说明';
+  return diagnostics.length ? diagnostics.join('、') : '-';
+}
+
 export default function TaskLedger({ tasks = [], filters = {} }) {
   const mergedFilters = useMemo(
     () => ({ ...TASK_FILTER_DEFAULTS, ...filters }),
@@ -38,7 +56,11 @@ export default function TaskLedger({ tasks = [], filters = {} }) {
 
   const filtered = useMemo(() => {
     if (!tasks.length) return [];
-    return applyFilters(tasks, mergedFilters, 'all');
+    let result = applyFilters(tasks, mergedFilters, 'all');
+    if (mergedFilters.standardGap === 'yes') {
+      result = result.filter(task => isExecutionStandardGap(task));
+    }
+    return result;
   }, [tasks, mergedFilters]);
 
   const sorted = useMemo(
@@ -50,7 +72,8 @@ export default function TaskLedger({ tasks = [], filters = {} }) {
     const highRisk = sorted.filter(t => t.risk === '高').length;
     const milestones = sorted.filter(t => t.isMilestone).length;
     const summaryTasks = sorted.filter(t => t.isSummary).length;
-    return { highRisk, milestones, summaryTasks };
+    const standardGap = sorted.filter(t => isExecutionStandardGap(t)).length;
+    return { highRisk, milestones, summaryTasks, standardGap };
   }, [sorted]);
 
   const activeFilterChips = useMemo(() => {
@@ -61,6 +84,7 @@ export default function TaskLedger({ tasks = [], filters = {} }) {
     }
     if (mergedFilters.milestone === 'yes') chips.push('里程碑');
     if (mergedFilters.risk && mergedFilters.risk !== 'all') chips.push(`风险=${mergedFilters.risk}`);
+    if (mergedFilters.standardGap === 'yes') chips.push('执行标准缺口');
     return chips;
   }, [mergedFilters]);
 
@@ -70,6 +94,7 @@ export default function TaskLedger({ tasks = [], filters = {} }) {
         <h3>任务清单 ({sorted.length})</h3>
         <span className="task-ledger-meta">
           {summary.highRisk > 0 && <span className="risk-text">高风险 {summary.highRisk}</span>}
+          {summary.standardGap > 0 && <span className="standard-gap-text">执行标准缺口 {summary.standardGap}</span>}
           {summary.milestones > 0 && <span>里程碑 {summary.milestones}</span>}
           {summary.summaryTasks > 0 && <span>摘要 {summary.summaryTasks}</span>}
           {activeFilterChips.length > 0 && (
@@ -89,6 +114,7 @@ export default function TaskLedger({ tasks = [], filters = {} }) {
                 <th>责任部门</th>
                 <th>类型</th>
                 <th>风险</th>
+                <th>执行标准</th>
                 <th>计划开始</th>
                 <th>计划完成</th>
                 <th>工期</th>
@@ -99,13 +125,14 @@ export default function TaskLedger({ tasks = [], filters = {} }) {
               {sorted.map(task => (
                 <tr
                   key={task.nodeKey || task.id || task.wbs}
-                  className={`dlv-row ${task.risk === '高' ? 'dlv-high-risk' : ''} ${task.isMilestone ? 'type-milestone' : ''} ${task.isSummary ? 'type-summary' : ''}`}
+                  className={`dlv-row ${task.risk === '高' ? 'dlv-high-risk' : ''} ${task.isMilestone ? 'type-milestone' : ''} ${task.isSummary ? 'type-summary' : ''} ${isExecutionStandardGap(task) ? 'standard-gap-row' : ''}`}
                 >
                   <td className="dlv-wbs">{task.normalizedWbs || task.wbs}</td>
                   <td className="dlv-name" title={task.name}>{task.name}</td>
                   <td>{task.department || '-'}</td>
                   <td>{describeType(task)}</td>
                   <td><span className={`dlv-risk risk-${task.risk || '低'}`}>{task.risk || '低'}</span></td>
+                  <td className="dlv-task standard-cell" title={describeExecutionStandard(task)}>{describeExecutionStandard(task)}</td>
                   <td>{formatDate(parseDate(task.start))}</td>
                   <td>{formatDate(parseDate(task.finish))}</td>
                   <td>{task.duration || '-'}</td>

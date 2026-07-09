@@ -4,7 +4,7 @@
 
 ## 当前真源
 
-页面运行时读取 `public/tasks.json`。该文件不手工维护，由 `pmo/convert_xlsx.py` 从 Markdown 真源生成。
+页面运行时读取 `public/tasks.json`。该文件不手工维护，由 `pmo/build_pmo_task_data.py` 从 Markdown 真源生成。
 
 | 真源 | 作用 |
 |---|---|
@@ -13,7 +13,7 @@
 | `../信息化项目_工作平衡.md` | 人员分配、例会把关机制和高压窗口 |
 | `../信息化项目_工作开展原则.md` | PMO 推进原则、协同边界和闭环规则 |
 
-`public/pmo-source-manifest.json` 是服务侧真源清单，记录上述四份 MD 的入口和摘要。XLSX 文件仅作为历史导入/备份口径。
+`public/pmo-source-manifest.json` 是服务侧真源清单，记录上述四份 MD 的入口和摘要。历史 XLSX / MPP / CSV 任务导入文件已废弃，不作为当前输入、不再保留或读取。
 
 ## 数据更新
 
@@ -23,7 +23,7 @@
 4. 回到 `pmo/` 目录运行：
 
 ```bash
-python convert_xlsx.py
+python build_pmo_task_data.py
 ```
 
 脚本会写入：
@@ -34,7 +34,7 @@ python convert_xlsx.py
 | `public/tasks.json` | 本应用实际读取的任务数据 |
 | `public/pmo-source-manifest.json` | 本应用可读取的 PMO 真源清单 |
 
-运行完成后应看到 `Wrote 467 tasks from 信息化项目_计划管控真源.md`。
+运行完成后应看到 `Wrote 516 tasks from 信息化项目_计划管控真源.md`。
 
 ## 开发命令
 

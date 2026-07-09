@@ -26,6 +26,7 @@ const GATE_DELIVERABLE_NAMES = [
 
 const MAINLINE_WBS_PREFIXES = ['3', '4', '5', '6', '7', '8', '9', '10'];
 const loadFsApi = import.meta.env?.DEV ? () => import('./deliverableFsApi.js') : null;
+const DLV_ID = /^DLV-\d{3}$/;
 
 function compactMatchText(value) {
   return String(value || '').toLowerCase().replace(/[^\p{Script=Han}a-z0-9]/gu, '');
@@ -139,8 +140,10 @@ export function normalizeDeliverables(normalizedTasks) {
     const deliverableType = classifyDeliverableType(task);
     const deliverableLevel = classifyDeliverableLevel(task, deliverableType);
 
+    const generatedDeliverableId = `DLV-${String(counter).padStart(3, '0')}`;
+    const controlledDeliverableId = String(task.deliverableId || '').trim();
     deliverables.push({
-      deliverableId: `DLV-${String(counter).padStart(3, '0')}`,
+      deliverableId: DLV_ID.test(controlledDeliverableId) ? controlledDeliverableId : generatedDeliverableId,
       taskId: task.originalId ?? task.id,
       taskName: task.name,
       originalWbs: task.originalWbs || task.wbs,

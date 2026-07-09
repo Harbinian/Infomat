@@ -48,6 +48,23 @@ function runAsyncAction(res, action) {
   });
 }
 
+function knownStatusError(res, error) {
+  if (error && error.statusCode) {
+    res.status(error.statusCode).json({ error: error.message });
+    return true;
+  }
+  return false;
+}
+
+async function closeGateOrSend(res, repo, scope, item, payload) {
+  try {
+    return await repo.assertLatestImportResolved(scope, item, payload);
+  } catch (error) {
+    if (knownStatusError(res, error)) return null;
+    throw error;
+  }
+}
+
 async function inputBaselineReviewRepository() {
   if (inputBaselineReviewRepositoryFactory) {
     return await inputBaselineReviewRepositoryFactory();
@@ -1815,39 +1832,32 @@ router.post('/quality-cases/:id/close', requireAuth, (req, res) => {
       if (qualityCase.status !== 'source_resolved') {
         return res.status(409).json({ error: '只有重新质检未再出现的问题单才能关闭' });
       }
-      const note = String(req.body.note || '').trim();
+      const resolution = String(req.body.resolution || '').trim();
+      const reason = String(req.body.reason || '').trim();
+      if (resolution === 'not_an_issue' && !reason) {
+        return res.status(400).json({ error: '说明这条核验项不是问题时，问题原因不能为空' });
+      }
+      const note = String(req.body.note || (resolution === 'not_an_issue' ? reason : '')).trim();
       if (!note) return res.status(400).json({ error: '关闭说明不能为空' });
+      const closeGate = await closeGateOrSend(res, repo, 'quality', qualityCase, {
+        actor_user_id: req.session.userId,
+        note,
+        resolution,
+        reason,
+        from_status: qualityCase.status
+      });
+      if (!closeGate) return null;
       return res.json(await repo.closeQualityCase(qualityCase.id, {
         actor_user_id: req.session.userId,
         note,
-        from_status: qualityCase.status
+        from_status: qualityCase.status,
+        resolution,
+        reason,
+        close_gate: closeGate
       }));
     });
   }
-  return runDbAction(res, () => {
-    const qualityCase = loadQualityCase(parseCaseId(req));
-    if (!qualityCase) return res.status(404).json({ error: '问题单不存在' });
-    if (!canCloseQualityCase(req)) return res.status(403).json({ error: '权限不足' });
-    if (qualityCase.status !== 'source_resolved') {
-      return res.status(409).json({ error: '只有重新质检未再出现的问题单才能关闭' });
-    }
-    const note = String(req.body.note || '').trim();
-    if (!note) return res.status(400).json({ error: '关闭说明不能为空' });
-
-    db.prepare(`
-      UPDATE process_governance_quality_cases
-      SET status='closed',
-          closed_by=?,
-          closed_at=CURRENT_TIMESTAMP,
-          closure_note=?,
-          updated_at=CURRENT_TIMESTAMP
-      WHERE id=?
-    `).run(req.session.userId, note, qualityCase.id);
-    addQualityCaseEvent(qualityCase.id, 'closed', req.session.userId, note, {
-      from_status: qualityCase.status
-    });
-    return sendCaseWithEvents(res, qualityCase.id);
-  });
+  return res.status(503).json({ error: '关闭卡口仅支持 MySQL' });
 });
 
 router.post('/quality-cases/:id/reopen', requireAuth, (req, res) => {
@@ -2444,39 +2454,32 @@ router.post('/mapping-todos/:id/close', requireAuth, (req, res) => {
       if (todo.status !== 'source_resolved') {
         return res.status(409).json({ error: '只有重新导入后未再出现的映射待办才能关闭' });
       }
-      const note = String(req.body.note || '').trim();
+      const resolution = String(req.body.resolution || '').trim();
+      const reason = String(req.body.reason || '').trim();
+      if (resolution === 'not_an_issue' && !reason) {
+        return res.status(400).json({ error: '说明这条核验项不是问题时，问题原因不能为空' });
+      }
+      const note = String(req.body.note || (resolution === 'not_an_issue' ? reason : '')).trim();
       if (!note) return res.status(400).json({ error: '关闭说明不能为空' });
+      const closeGate = await closeGateOrSend(res, repo, 'mapping', todo, {
+        actor_user_id: req.session.userId,
+        note,
+        resolution,
+        reason,
+        from_status: todo.status
+      });
+      if (!closeGate) return null;
       return res.json(await repo.closeMappingTodo(todo.id, {
         actor_user_id: req.session.userId,
         note,
-        from_status: todo.status
+        from_status: todo.status,
+        resolution,
+        reason,
+        close_gate: closeGate
       }));
     });
   }
-  return runDbAction(res, () => {
-    const todo = loadMappingTodo(Number(req.params.id || 0));
-    if (!todo) return res.status(404).json({ error: '映射待办不存在' });
-    if (!canCloseMappingTodo(req)) return res.status(403).json({ error: '权限不足' });
-    if (todo.status !== 'source_resolved') {
-      return res.status(409).json({ error: '只有重新导入后未再出现的映射待办才能关闭' });
-    }
-    const note = String(req.body.note || '').trim();
-    if (!note) return res.status(400).json({ error: '关闭说明不能为空' });
-
-    db.prepare(`
-      UPDATE process_mapping_todos
-      SET status='closed',
-          closed_by=?,
-          closed_at=CURRENT_TIMESTAMP,
-          closure_note=?,
-          updated_at=CURRENT_TIMESTAMP
-      WHERE id=?
-    `).run(req.session.userId, note, todo.id);
-    addMappingTodoEvent(todo.id, 'closed', req.session.userId, note, {
-      from_status: todo.status
-    });
-    return sendMappingTodoWithEvents(res, todo.id);
-  });
+  return res.status(503).json({ error: '关闭卡口仅支持 MySQL' });
 });
 
 router.post('/mapping-todos/:id/reopen', requireAuth, (req, res) => {

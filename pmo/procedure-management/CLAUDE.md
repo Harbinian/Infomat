@@ -48,7 +48,7 @@ python -m http.server 8080
 | `../信息化项目_工作平衡.md` | 人员分配、例会把关机制和高压窗口 |
 | `../信息化项目_工作开展原则.md` | PMO 推进原则、协同边界和闭环规则 |
 
-修改上述 PMO 项目真源后，应在 `pmo/` 下运行 `python convert_xlsx.py`，将数据输入 `gantt-react/public/tasks.json` 和 `gantt-react/public/pmo-source-manifest.json`。
+修改上述 PMO 项目真源后，应在 `pmo/` 下运行 `python build_pmo_task_data.py`，将数据输入 `gantt-react/public/tasks.json` 和 `gantt-react/public/pmo-source-manifest.json`。
 
 ## 数据更新流程
 
