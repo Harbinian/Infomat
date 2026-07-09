@@ -1,8 +1,8 @@
 # 文档结构化输出标准 Schema
 
-> 状态：标准合同  
-> 生效日期：2026-07-02  
-> 机器合同：`docs/contracts/document-structured-output.schema.json`  
+> 状态：标准合同
+> 生效日期：2026-07-02
+> 机器合同：`docs/contracts/document-structured-output.schema.json`
 > 回归命令：`npm run test:document-structured-output-schema`
 
 ## 1. 定位

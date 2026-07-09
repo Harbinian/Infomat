@@ -22,12 +22,33 @@ const HANDOFF_STATUSES = new Set(['pending_return', 'returned', 'pending_review'
 const PROCESS_TYPES = new Set(['new', 'inherit', 'handoff', 'adjustment']);
 const EDITABLE_DRAFT_STATUSES = new Set(['draft', 'needs_changes']);
 const BASIS_TYPES = new Set(['现场实际', '制度 / 规程', '表单 / 台账', '会议 / 访谈', '暂无证据']);
-const FIELD_TYPES = new Set(['文本', '数字', '日期', '金额', '枚举', '布尔', '部门', '人员', '附件']);
+const DEFAULT_PROCESS_DESIGN_FIELD_TYPES = [
+  ['text', '文本'],
+  ['long_text', '长文本'],
+  ['number', '数字'],
+  ['amount', '金额'],
+  ['date', '日期'],
+  ['datetime', '日期时间'],
+  ['enum', '枚举'],
+  ['boolean', '布尔'],
+  ['department', '部门'],
+  ['person', '人员'],
+  ['file_no', '文件编号'],
+  ['signature', '签名'],
+  ['image', '图片'],
+  ['attachment', '附件'],
+  ['qrcode', '二维码']
+];
+const FIELD_TYPES = new Set(DEFAULT_PROCESS_DESIGN_FIELD_TYPES.map(([, name]) => name));
+const ARCHIVE_LOCATIONS = new Set(['部门自行保存', '资料室']);
+const RETENTION_PERIODS = new Set(['1年', '3年', '10年', '永久']);
 const EVIDENCE_TYPES = new Set(['制度条款', '表单样例', '访谈记录', '会议纪要', '流程图', '台账记录', '暂无证据']);
 const EVIDENCE_STATUSES = new Set(['verified', 'pending_review', 'source_missing', 'ocr_extracted_not_confirmed', 'review_only']);
 const PROCESS_EVIDENCE_VERIFY_PERMISSION = 'process_evidence:verify';
 const EVIDENCE_STATUS_MIGRATION_KEY = '2026-07-01-process-design-evidence-status';
 const EDITION_SCHEMA_MIGRATION_KEY = '2026-07-02-process-design-document-editions';
+const FORM_STRUCTURE_SCHEMA_MIGRATION_KEY = '2026-07-03-process-design-form-structure';
+const ENGINEERING_ARCHIVE_ROOM_DEPARTMENT_NAME = '工程技术部';
 const VERIFIED_EVIDENCE_MESSAGE = '发布需至少 1 条已核验(verified)证据。';
 const REPO_ROOT = path.resolve(__dirname, '../../../..');
 
@@ -62,6 +83,30 @@ function optionalText(value) {
 
 function formatProcedureCode(draftId, sequence) {
   return `PROCEDURE-${Number(draftId)}-${String(Number(sequence) || 1).padStart(3, '0')}`;
+}
+
+function pad3(sequence) {
+  return String(Number(sequence) || 1).padStart(3, '0');
+}
+
+function formatFormCode(draft, sequence) {
+  const documentNo = text(draft && draft.document_no) || 'UNSET';
+  const edition = text(draft && draft.planned_edition).toUpperCase() || 'A';
+  return `FM-${documentNo}-${pad3(sequence)}-${edition}`;
+}
+
+function formatFormStructureCode(formCode, structureKind) {
+  const value = text(formCode);
+  const marker = structureKind === 'detail' ? 'D' : 'M';
+  const nextMatch = value.match(/^FM-(.+)-([0-9]{3})-([A-Z]+)$/);
+  if (nextMatch) return `FM-${nextMatch[1]}-${marker}${nextMatch[2]}-${nextMatch[3]}`;
+  const legacyMatch = value.match(/^FM-(.+)-([A-Z]+)-([0-9]{3})$/);
+  if (legacyMatch) return `FM-${legacyMatch[1]}-${marker}${legacyMatch[3]}-${legacyMatch[2]}`;
+  return `${value}-${marker}`;
+}
+
+function formatFieldCode(structureCode, sequence) {
+  return `${text(structureCode)}-${pad3(sequence)}`;
 }
 
 function editionToNumber(edition) {
@@ -102,6 +147,32 @@ function markdownFileSafe(value) {
 function parseProcedureSequence(processCode, draftId) {
   const prefix = `PROCEDURE-${Number(draftId)}-`;
   const value = text(processCode);
+  if (!value.startsWith(prefix)) return 0;
+  const sequence = Number(value.slice(prefix.length));
+  return Number.isInteger(sequence) && sequence > 0 ? sequence : 0;
+}
+
+function parseFormSequence(formCode, draft) {
+  const documentNo = text(draft && draft.document_no) || 'UNSET';
+  const edition = text(draft && draft.planned_edition).toUpperCase() || 'A';
+  const value = text(formCode);
+  const prefix = `FM-${documentNo}-`;
+  const suffix = `-${edition}`;
+  let sequence = 0;
+  if (value.startsWith(prefix) && value.endsWith(suffix)) {
+    sequence = Number(value.slice(prefix.length, -suffix.length));
+  }
+  if (!sequence) {
+    const legacyPrefix = `FM-${documentNo}-${edition}-`;
+    if (!value.startsWith(legacyPrefix)) return 0;
+    sequence = Number(value.slice(legacyPrefix.length));
+  }
+  return Number.isInteger(sequence) && sequence > 0 ? sequence : 0;
+}
+
+function parseFieldSequence(fieldCode, structureCode) {
+  const prefix = `${text(structureCode)}-`;
+  const value = text(fieldCode);
   if (!value.startsWith(prefix)) return 0;
   const sequence = Number(value.slice(prefix.length));
   return Number.isInteger(sequence) && sequence > 0 ? sequence : 0;
@@ -297,6 +368,13 @@ async function appendProcessTaxonomyValidation(repo, body, details, scope) {
   details.push(...await taxonomyValidationDetails(repo, body, scope));
 }
 
+function processBodyWithDraftTaxonomy(draft, body) {
+  const payload = { ...(body || {}) };
+  if (!text(payload.l1_name)) payload.l1_name = text(draft && draft.l1_name);
+  if (!text(payload.l2_name)) payload.l2_name = text(draft && draft.l2_name);
+  return payload;
+}
+
 function publicDraft(row) {
   if (!row) return null;
   return {
@@ -410,16 +488,22 @@ function processDesignMarkdown(detail) {
     '',
     '## 附表结构',
     markdownList(detail.forms || [], form => {
+      const mainFields = markdownList(form.main_fields || form.fields || [], field => `  - ${text(field.field_code) || text(field.field_no) || '未编号'} ${text(field.field_name)}：${text(field.field_type) || '待定'}${field.required ? '，必填' : ''}${text(field.enum_options) ? `，选项：${text(field.enum_options)}` : ''}${text(field.description) ? `，${text(field.description)}` : ''}`);
       const tables = markdownList(form.tables || [], table => {
-        const fields = markdownList(table.fields || [], field => `    - ${text(field.field_no) || '未编号'} ${text(field.field_name)}：${text(field.field_type) || '待定'}${field.required ? '，必填' : ''}${text(field.description) ? `，${text(field.description)}` : ''}`);
+        const fields = markdownList(table.fields || [], field => `    - ${text(field.field_code) || text(field.field_no) || '未编号'} ${text(field.field_name)}：${text(field.field_type) || '待定'}${field.required ? '，必填' : ''}${text(field.enum_options) ? `，选项：${text(field.enum_options)}` : ''}${text(field.description) ? `，${text(field.description)}` : ''}`);
         return [
-          `  - ${table.table_kind === 'detail' ? '明细表' : '主表'}：${text(table.table_no) || '未编号'} ${text(table.table_name)}`,
+          `  - 明细表：${text(table.table_code) || text(table.table_no) || '未编号'} ${text(table.table_name)}`,
           fields
         ].join('\n');
       });
       return [
-        `### ${text(form.form_name)}`,
-        `- 归档规则：${text(form.archive_rule) || '待填写'}`,
+        `### ${text(form.form_code) || '未编号'} ${text(form.form_name)}`,
+        `- 关联业务行为：${text(form.step_id) || '待填写'}`,
+        `- 归档位置：${text(form.archive_location) || '待填写'}`,
+        `- 留存周期：${text(form.retention_period) || '待填写'}`,
+        `- 归档责任：${text(form.responsible_department_name) || '待填写'} / ${text(form.responsible_role) || '待填写'}`,
+        `- 主表：${text(form.main_table_code) || '未编号'} ${text(form.main_table_name) || '主表'}`,
+        mainFields,
         tables
       ].join('\n');
     })
@@ -556,6 +640,49 @@ async function ensureProcessDesignEvidenceStatusSchema(pool) {
   `, [EVIDENCE_STATUS_MIGRATION_KEY]);
 }
 
+async function ensureProcessDesignFormStructureSchema(pool) {
+  await executeIgnoringDuplicateColumn(pool, 'ALTER TABLE process_design_forms ADD COLUMN form_code VARCHAR(160) NULL');
+  await executeIgnoringDuplicateColumn(pool, 'ALTER TABLE process_design_forms ADD COLUMN main_table_code VARCHAR(180) NULL');
+  await executeIgnoringDuplicateColumn(pool, 'ALTER TABLE process_design_forms ADD COLUMN main_table_name VARCHAR(255) NULL');
+  await executeIgnoringDuplicateColumn(pool, "ALTER TABLE process_design_forms ADD COLUMN archive_location ENUM('部门自行保存','资料室') NULL");
+  await executeIgnoringDuplicateColumn(pool, "ALTER TABLE process_design_forms ADD COLUMN retention_period ENUM('1年','3年','10年','永久') NULL");
+  await executeIgnoringDuplicateColumn(pool, 'ALTER TABLE process_design_forms ADD COLUMN responsible_department_id BIGINT NULL');
+  await executeIgnoringDuplicateColumn(pool, 'ALTER TABLE process_design_forms ADD COLUMN responsible_department_name VARCHAR(255) NULL');
+  await executeIgnoringDuplicateColumn(pool, 'ALTER TABLE process_design_forms ADD COLUMN responsible_role VARCHAR(255) NULL');
+  await executeIgnoringDuplicateKey(pool, 'ALTER TABLE process_design_forms ADD INDEX idx_process_design_forms_code (draft_id, form_code)');
+  await executeIgnoringDuplicateColumn(pool, 'ALTER TABLE process_design_form_tables ADD COLUMN table_code VARCHAR(180) NULL');
+  await executeIgnoringDuplicateColumn(pool, "ALTER TABLE process_design_form_table_fields ADD COLUMN structure_kind ENUM('main','detail') NOT NULL DEFAULT 'detail'");
+  await executeIgnoringDuplicateColumn(pool, 'ALTER TABLE process_design_form_table_fields ADD COLUMN field_code VARCHAR(220) NULL');
+  await executeIgnoringDuplicateColumn(pool, 'ALTER TABLE process_design_form_table_fields ADD COLUMN enum_options TEXT NULL');
+  await executeIgnoringDuplicateKey(pool, 'ALTER TABLE process_design_form_table_fields ADD INDEX idx_process_design_table_fields_kind (form_table_id, structure_kind, sort_order)');
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS process_design_field_types (
+      id BIGINT AUTO_INCREMENT PRIMARY KEY,
+      code VARCHAR(64) NOT NULL,
+      name VARCHAR(128) NOT NULL,
+      sort_order INT NOT NULL DEFAULT 1,
+      is_active TINYINT NOT NULL DEFAULT 1,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      UNIQUE KEY uq_process_design_field_types_code (code),
+      UNIQUE KEY uq_process_design_field_types_name (name)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  for (let index = 0; index < DEFAULT_PROCESS_DESIGN_FIELD_TYPES.length; index += 1) {
+    const [code, name] = DEFAULT_PROCESS_DESIGN_FIELD_TYPES[index];
+    await mysqlRun(pool, `
+      INSERT INTO process_design_field_types (code, name, sort_order)
+      VALUES (?, ?, ?)
+      ON DUPLICATE KEY UPDATE name=VALUES(name), sort_order=VALUES(sort_order), is_active=1
+    `, [code, name, index + 1]);
+  }
+  await mysqlRun(pool, `
+    INSERT INTO schema_migrations (migration_key)
+    VALUES (?)
+    ON DUPLICATE KEY UPDATE applied_at=applied_at
+  `, [FORM_STRUCTURE_SCHEMA_MIGRATION_KEY]);
+}
+
 function makeProcessDesignMysqlRepository(pool) {
   async function getById(table, id) {
     const [row] = await mysqlQuery(pool, `SELECT * FROM ${table} WHERE id=?`, [id]);
@@ -651,7 +778,7 @@ function makeProcessDesignMysqlRepository(pool) {
   }
 
   async function loadFormTables(formId) {
-    const tables = await mysqlQuery(pool, 'SELECT * FROM process_design_form_tables WHERE form_id=? ORDER BY sort_order, id', [formId]);
+    const tables = await mysqlQuery(pool, "SELECT * FROM process_design_form_tables WHERE form_id=? AND table_kind='detail' ORDER BY sort_order, id", [formId]);
     const result = [];
     for (const table of tables) {
       result.push({ ...table, fields: await loadFormTableFields(table.id) });
@@ -659,12 +786,26 @@ function makeProcessDesignMysqlRepository(pool) {
     return result;
   }
 
+  async function loadMainFields(formId) {
+    const rows = await mysqlQuery(pool, `
+      SELECT ftf.*
+      FROM process_design_form_table_fields ftf
+      JOIN process_design_form_tables ft ON ft.id=ftf.form_table_id
+      WHERE ft.form_id=?
+        AND ft.table_kind='main'
+        AND ftf.structure_kind='main'
+      ORDER BY ftf.sort_order, ftf.id
+    `, [formId]);
+    return rows.map(publicFormTableField);
+  }
+
   async function loadForms(draftId) {
     const forms = await mysqlQuery(pool, 'SELECT * FROM process_design_forms WHERE draft_id=? ORDER BY id', [draftId]);
     const result = [];
     for (const form of forms) {
-      const fields = await mysqlQuery(pool, 'SELECT * FROM process_design_form_fields WHERE form_id=? ORDER BY sort_order, id', [form.id]);
-      result.push({ ...form, fields, tables: await loadFormTables(form.id) });
+      const legacyFields = await mysqlQuery(pool, 'SELECT * FROM process_design_form_fields WHERE form_id=? ORDER BY sort_order, id', [form.id]);
+      const mainFields = await loadMainFields(form.id);
+      result.push({ ...form, fields: mainFields, main_fields: mainFields, legacy_fields: legacyFields, tables: await loadFormTables(form.id) });
     }
     return result;
   }
@@ -880,14 +1021,22 @@ function makeProcessDesignMysqlRepository(pool) {
       }
     }
     for (const form of await loadForms(draftId)) {
-      if (!text(form.archive_rule)) risks.push({ object_type: 'form', object_id: form.id, message: '表单没有归档规则。', status: 'open' });
-      if (!(form.tables || []).length) risks.push({ object_type: 'form_table', object_id: form.id, message: '这个表单还没有设置主表或明细表结构。', status: 'open' });
+      if (!text(form.step_id)) risks.push({ object_type: 'form', object_id: form.id, message: '表单没有指向业务行为。', status: 'open' });
+      if (!text(form.form_code)) risks.push({ object_type: 'form', object_id: form.id, message: '表单没有系统编号。', status: 'open' });
+      if (!text(form.main_table_name)) risks.push({ object_type: 'form', object_id: form.id, message: '表单没有主表名称。', status: 'open' });
+      if (!text(form.archive_location)) risks.push({ object_type: 'form', object_id: form.id, message: '表单没有选择归档位置。', status: 'open' });
+      if (!text(form.retention_period)) risks.push({ object_type: 'form', object_id: form.id, message: '表单没有选择留存周期。', status: 'open' });
+      if (!text(form.responsible_department_name) || !text(form.responsible_role)) risks.push({ object_type: 'form', object_id: form.id, message: '表单没有设置归档责任部门和角色。', status: 'open' });
+      if (!(form.main_fields || []).length) risks.push({ object_type: 'form_table', object_id: form.id, message: '这个表单的主表还没有设置字段。', status: 'open' });
       (form.tables || []).forEach(table => {
+        if (!text(table.table_name)) risks.push({ object_type: 'form_table', object_id: table.id, message: '这个明细表没有名称。', status: 'open' });
         if (!(table.fields || []).length) risks.push({ object_type: 'form_table', object_id: table.id, message: '这个附表还没有设置字段。', status: 'open' });
       });
-      form.fields.forEach(field => {
+      [
+        ...(form.main_fields || []),
+        ...(form.tables || []).flatMap(table => table.fields || [])
+      ].forEach(field => {
         if (field.field_type === '枚举' && !text(field.enum_options)) risks.push({ object_type: 'field', object_id: field.id, message: '这个字段要从固定选项里选，但选项还没列出来。', status: 'open' });
-        if (!text(field.data_object)) risks.push({ object_type: 'field', object_id: field.id, message: '这个字段还没有说明属于哪个数据对象。', status: 'open' });
       });
     }
     for (const evidence of await loadEvidence(draftId)) {
@@ -945,13 +1094,21 @@ function makeProcessDesignMysqlRepository(pool) {
     }
     const forms = await loadForms(draft.id);
     const fields = forms.flatMap(form => [
-      ...(form.fields || []),
+      ...(form.main_fields || []),
       ...(form.tables || []).flatMap(table => table.fields || [])
     ]);
     if (!fields.length) details.push('发布前至少需要 1 个字段。');
-    if (forms.some(form => !text(form.archive_rule))) details.push('发布前在线表单需要归档规则。');
-    if (forms.some(form => !(form.tables || []).length)) details.push('发布前每个在线表单至少需要 1 个主表或明细表。');
-    if (forms.some(form => (form.tables || []).some(table => !(table.fields || []).length))) details.push('发布前每个附表至少需要 1 个字段。');
+    const activeStepIds = new Set(steps.map(step => Number(step.id)));
+    if (forms.some(form => !activeStepIds.has(Number(form.step_id)))) details.push('发布前每个在线表单都必须指向未作废的业务行为。');
+    if (forms.some(form => !text(form.form_code))) details.push('发布前每个在线表单都需要系统生成表单编号。');
+    if (forms.some(form => !text(form.form_name))) details.push('发布前每个在线表单都需要表单名称。');
+    if (forms.some(form => !text(form.main_table_name))) details.push('发布前每个在线表单都需要主表名称。');
+    if (forms.some(form => !text(form.archive_location))) details.push('发布前在线表单需要选择归档位置。');
+    if (forms.some(form => !text(form.retention_period))) details.push('发布前在线表单需要选择留存周期。');
+    if (forms.some(form => !text(form.responsible_department_name) || !text(form.responsible_role))) details.push('发布前在线表单需要设置归档责任部门和角色。');
+    if (forms.some(form => !(form.main_fields || []).length)) details.push('发布前每个在线表单的主表至少需要 1 个字段。');
+    if (forms.some(form => (form.tables || []).some(table => !text(table.table_name)))) details.push('发布前每个明细表都需要名称。');
+    if (forms.some(form => (form.tables || []).some(table => !(table.fields || []).length))) details.push('发布前每个明细表至少需要 1 个字段。');
     if (fields.some(field => field.field_type === '枚举' && !text(field.enum_options))) details.push('发布前枚举字段需要列出固定选项。');
     const evidence = await loadEvidence(draft.id);
     if (!evidence.length) details.push('发布前至少需要 1 条证据。');
@@ -1246,8 +1403,58 @@ function makeProcessDesignMysqlRepository(pool) {
       `, departmentNames);
       return buildProcessTaxonomyPayload(rows);
     },
-    async summary(departmentIds) {
+    async listFieldTypes() {
+      const rows = await mysqlQuery(pool, `
+        SELECT code, name, sort_order
+        FROM process_design_field_types
+        WHERE is_active=1
+        ORDER BY sort_order, id
+      `);
+      return rows.map(row => ({ code: row.code, name: row.name, sort_order: row.sort_order }));
+    },
+    async listRosterRolesByDepartment(departmentId) {
+      const department = await getById('departments', Number(departmentId));
+      const roleNames = new Set();
+      try {
+        const rows = await mysqlQuery(pool, `
+          SELECT DISTINCT pos.position_name
+          FROM person p
+          JOIN person_position_assignment ppa ON ppa.person_id=p.person_id
+          JOIN position pos ON pos.position_id=ppa.position_id
+          WHERE p.current_department_id=?
+            AND p.status='active'
+            AND ppa.status='active'
+            AND pos.status='active'
+            AND pos.position_name IS NOT NULL
+            AND pos.position_name <> ''
+          ORDER BY pos.position_name
+        `, [Number(departmentId)]);
+        rows.forEach(row => roleNames.add(text(row.position_name)));
+      } catch (error) {
+        if (!/doesn.t exist|Unknown table|Unknown column|ER_NO_SUCH_TABLE|ER_BAD_FIELD_ERROR/i.test(String(error && (error.message || error.code) || ''))) {
+          throw error;
+        }
+      }
+      if (!roleNames.size) {
+        const users = await mysqlQuery(pool, `
+          SELECT DISTINCT post
+          FROM users
+          WHERE department_id=?
+            AND post IS NOT NULL
+            AND post <> ''
+          ORDER BY post
+        `, [Number(departmentId)]);
+        users.forEach(row => roleNames.add(text(row.post)));
+      }
+      return {
+        department_id: Number(departmentId),
+        department_name: department && department.name || null,
+        roles: [...roleNames].filter(Boolean).sort((left, right) => left.localeCompare(right, 'zh-CN'))
+      };
+    },
+    async summary(departmentIds, documentNo) {
       const params = [];
+      const versionParams = [];
       let whereSql = 'WHERE 1=1';
       let draftWhereSql = 'WHERE 1=1';
       let versionWhereSql = 'WHERE 1=1';
@@ -1258,6 +1465,15 @@ function makeProcessDesignMysqlRepository(pool) {
         draftWhereSql += ` AND d.department_id IN (${markers})`;
         versionWhereSql += ` AND v.department_id IN (${markers})`;
         params.push(...departmentIds);
+        versionParams.push(...departmentIds);
+      }
+      const documentNoFilter = text(documentNo);
+      if (documentNoFilter) {
+        whereSql += ' AND document_no=?';
+        draftWhereSql += ' AND d.document_no=?';
+        versionWhereSql += ' AND v.document_no=?';
+        params.push(documentNoFilter);
+        versionParams.push(documentNoFilter);
       }
       const rows = await mysqlQuery(pool, `
         SELECT status, COUNT(*) AS count
@@ -1273,7 +1489,7 @@ function makeProcessDesignMysqlRepository(pool) {
         SELECT COUNT(*) AS count
         FROM process_design_versions v
         ${versionWhereSql}
-      `, params);
+      `, versionParams);
       const drafts = await mysqlQuery(pool, `
         SELECT d.id, d.process_name, d.document_no, d.document_title, d.planned_edition,
                doc.current_edition, d.base_version_id, d.status, d.l1_name, d.l2_name, d.l3_name,
@@ -1295,7 +1511,7 @@ function makeProcessDesignMysqlRepository(pool) {
         ${versionWhereSql}
         ORDER BY v.effective_at DESC, v.id DESC
         LIMIT 20
-      `, params);
+      `, versionParams);
       return { summary: { totalDrafts, publishedVersions: Number(publishedRow.count || 0), byStatus }, drafts, versions };
     },
     async departmentExists(departmentId) {
@@ -1529,6 +1745,8 @@ function makeProcessDesignMysqlRepository(pool) {
     },
     async createProcess(draft, body, actorUserId) {
       const processType = PROCESS_TYPES.has(text(body.process_type)) ? text(body.process_type) : 'new';
+      const l1Name = text(body.l1_name) || text(draft.l1_name);
+      const l2Name = text(body.l2_name) || text(draft.l2_name);
       const [orderRow] = await mysqlQuery(pool, 'SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_order FROM process_design_processes WHERE draft_id=?', [draft.id]);
       const procedureCode = await nextProcedureCode(draft.id);
       const result = await mysqlRun(pool, `
@@ -1537,7 +1755,7 @@ function makeProcessDesignMysqlRepository(pool) {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         draft.id, procedureCode, processType,
-        text(body.l1_name), text(body.l2_name), text(body.l3_name),
+        l1Name, l2Name, text(body.l3_name),
         optionalText(body.description), body.sort_order ? Number(body.sort_order) : Number(orderRow.next_order || 1), actorUserId
       ]);
       await addEvent(draft.id, 'process_added', actorUserId, `已补充流程：${text(body.l3_name)}`, objectEventPayload('process', result.insertId, text(body.l3_name), 'added'));
@@ -1547,12 +1765,14 @@ function makeProcessDesignMysqlRepository(pool) {
       const current = await getById('process_design_processes', processId);
       if (!current || Number(current.draft_id) !== Number(draft.id)) throw httpError(404, '流程不存在');
       const processType = PROCESS_TYPES.has(text(body.process_type)) ? text(body.process_type) : 'new';
+      const l1Name = text(body.l1_name) || text(draft.l1_name);
+      const l2Name = text(body.l2_name) || text(draft.l2_name);
       await mysqlRun(pool, `
         UPDATE process_design_processes
         SET process_type=?, l1_name=?, l2_name=?, l3_name=?, description=?, updated_at=CURRENT_TIMESTAMP
         WHERE id=?
       `, [
-        processType, text(body.l1_name), text(body.l2_name), text(body.l3_name),
+        processType, l1Name, l2Name, text(body.l3_name),
         optionalText(body.description), processId
       ]);
       await addEvent(draft.id, 'process_updated', actorUserId, `已修改流程：${text(body.l3_name)}`, objectEventPayload('process', processId, text(body.l3_name), 'updated'));
@@ -1726,101 +1946,192 @@ function makeProcessDesignMysqlRepository(pool) {
       }
       return await getById('process_design_cross_dept_handoffs', handoffId);
     },
+    async nextFormCode(draft) {
+      const rows = await mysqlQuery(pool, 'SELECT form_code FROM process_design_forms WHERE draft_id=?', [draft.id]);
+      const maxSequence = rows.reduce((max, row) => Math.max(max, parseFormSequence(row.form_code, draft)), 0);
+      return formatFormCode(draft, maxSequence + 1);
+    },
+    async archiveDepartmentName(departmentId) {
+      if (!departmentId) return null;
+      const department = await getById('departments', Number(departmentId));
+      return department && department.name || null;
+    },
+    async assertFormStep(draft, stepId) {
+      const [step] = await mysqlQuery(pool, 'SELECT id, status FROM process_design_steps WHERE id=? AND draft_id=?', [Number(stepId), draft.id]);
+      if (!step) throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'step_id', message: '表单必须指向本制度草稿内的业务行为' }] });
+      if ((step.status || 'active') !== 'active') throw httpError(409, '关联业务行为已作废，请先改挂表单');
+      return step;
+    },
+    async ensureMainFormTable(form, actorUserId) {
+      const [existing] = await mysqlQuery(pool, "SELECT * FROM process_design_form_tables WHERE form_id=? AND table_kind='main' ORDER BY id LIMIT 1", [form.id]);
+      if (existing) return existing;
+      const mainTableCode = text(form.main_table_code) || formatFormStructureCode(form.form_code, 'main');
+      const result = await mysqlRun(pool, `
+        INSERT INTO process_design_form_tables
+          (form_id, table_kind, table_no, table_code, table_name, description, sort_order, created_by)
+        VALUES (?, 'main', ?, ?, ?, NULL, 1, ?)
+      `, [form.id, mainTableCode, mainTableCode, text(form.main_table_name) || '主表', actorUserId || form.created_by || null]);
+      return await getById('process_design_form_tables', result.insertId);
+    },
+    async nextFieldCode(table, structureKind) {
+      const structureCode = text(table.table_code) || text(table.table_no) || formatFormStructureCode('FM-UNSET-001-A', structureKind);
+      const rows = await mysqlQuery(pool, 'SELECT field_code FROM process_design_form_table_fields WHERE form_table_id=? AND structure_kind=?', [table.id, structureKind]);
+      const maxSequence = rows.reduce((max, row) => Math.max(max, parseFieldSequence(row.field_code, structureCode)), 0);
+      return formatFieldCode(structureCode, maxSequence + 1);
+    },
     async createForm(draft, body, actorUserId) {
       const stepId = body.step_id ? Number(body.step_id) : null;
-      if (stepId) {
-        const [step] = await mysqlQuery(pool, 'SELECT id FROM process_design_steps WHERE id=? AND draft_id=?', [stepId, draft.id]);
-        if (!step) throw httpError(400, '表单关联的步骤不存在');
-      }
+      if (!stepId) throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'step_id', message: '表单必须指向业务行为' }] });
+      await this.assertFormStep(draft, stepId);
+      assertNoManualNumber(body || {}, 'form_code', '表单编号');
+      if (Object.prototype.hasOwnProperty.call(body || {}, 'archive_location')) assertEnum(body || {}, 'archive_location', ARCHIVE_LOCATIONS, '归档位置', { optional: true });
+      if (Object.prototype.hasOwnProperty.call(body || {}, 'retention_period')) assertEnum(body || {}, 'retention_period', RETENTION_PERIODS, '留存周期', { optional: true });
+      const formCode = await this.nextFormCode(draft);
+      const mainTableCode = formatFormStructureCode(formCode, 'main');
+      const responsibleDepartmentId = body.responsible_department_id ? Number(body.responsible_department_id) : null;
+      const responsibleDepartmentName = optionalText(body.responsible_department_name) || await this.archiveDepartmentName(responsibleDepartmentId);
       const result = await mysqlRun(pool, `
-        INSERT INTO process_design_forms (draft_id, step_id, form_name, description, archive_rule, created_by)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `, [draft.id, stepId, text(body.form_name), optionalText(body.description), optionalText(body.archive_rule), actorUserId]);
+        INSERT INTO process_design_forms
+          (draft_id, step_id, form_code, form_name, main_table_code, main_table_name,
+           archive_location, retention_period, responsible_department_id, responsible_department_name,
+           responsible_role, description, archive_rule, created_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?)
+      `, [
+        draft.id, stepId, formCode, text(body.form_name), mainTableCode,
+        text(body.main_table_name) || '主表', optionalText(body.archive_location),
+        optionalText(body.retention_period), responsibleDepartmentId, responsibleDepartmentName,
+        optionalText(body.responsible_role), actorUserId
+      ]);
+      await this.ensureMainFormTable(await getById('process_design_forms', result.insertId), actorUserId);
       await addEvent(draft.id, 'form_added', actorUserId, `已补充在线表单：${text(body.form_name)}`);
       return await getById('process_design_forms', result.insertId);
     },
     async updateForm(draft, formId, body, actorUserId) {
-      const fields = ['form_name', 'description', 'archive_rule', 'status'];
+      const fields = ['form_name', 'main_table_name', 'archive_location', 'retention_period', 'responsible_role', 'status'];
       const sets = [];
       const params = [];
+      if (Object.prototype.hasOwnProperty.call(body || {}, 'form_code')) assertNoManualNumber(body || {}, 'form_code', '表单编号');
+      if (Object.prototype.hasOwnProperty.call(body || {}, 'archive_location')) assertEnum(body || {}, 'archive_location', ARCHIVE_LOCATIONS, '归档位置', { optional: true });
+      if (Object.prototype.hasOwnProperty.call(body || {}, 'retention_period')) assertEnum(body || {}, 'retention_period', RETENTION_PERIODS, '留存周期', { optional: true });
+      if (Object.prototype.hasOwnProperty.call(body || {}, 'step_id')) {
+        const stepId = Number(body.step_id || 0);
+        await this.assertFormStep(draft, stepId);
+        sets.push('step_id=?');
+        params.push(stepId);
+      }
+      if (Object.prototype.hasOwnProperty.call(body || {}, 'responsible_department_id')) {
+        const responsibleDepartmentId = body.responsible_department_id ? Number(body.responsible_department_id) : null;
+        sets.push('responsible_department_id=?');
+        params.push(responsibleDepartmentId);
+        sets.push('responsible_department_name=?');
+        params.push(optionalText(body.responsible_department_name) || await this.archiveDepartmentName(responsibleDepartmentId));
+      }
       fields.forEach(field => {
         if (Object.prototype.hasOwnProperty.call(body, field)) {
           sets.push(`${field}=?`);
-          params.push(field === 'form_name' || field === 'status' ? text(body[field]) : optionalText(body[field]));
+          params.push(field === 'form_name' || field === 'main_table_name' || field === 'status' ? text(body[field]) : optionalText(body[field]));
         }
       });
       if (sets.length) {
         sets.push('updated_at=CURRENT_TIMESTAMP');
         await mysqlRun(pool, `UPDATE process_design_forms SET ${sets.join(', ')} WHERE id=?`, [...params, formId]);
+        const form = await getById('process_design_forms', formId);
+        const [mainTable] = await mysqlQuery(pool, "SELECT id FROM process_design_form_tables WHERE form_id=? AND table_kind='main' ORDER BY id LIMIT 1", [formId]);
+        if (mainTable && Object.prototype.hasOwnProperty.call(body || {}, 'main_table_name')) {
+          await mysqlRun(pool, 'UPDATE process_design_form_tables SET table_name=?, updated_at=CURRENT_TIMESTAMP WHERE id=?', [text(body.main_table_name) || '主表', mainTable.id]);
+        } else if (!mainTable && form) {
+          await this.ensureMainFormTable(form, actorUserId);
+        }
         await addEvent(draft.id, 'form_updated', actorUserId, '已更新在线表单');
       }
       return await getById('process_design_forms', formId);
     },
     async createFormTable(draft, formId, body, actorUserId) {
-      const tableKind = TABLE_KINDS.has(text(body.table_kind)) ? text(body.table_kind) : 'main';
-      const [orderRow] = await mysqlQuery(pool, 'SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_order FROM process_design_form_tables WHERE form_id=?', [formId]);
-      const tableNo = `${tableKind === 'detail' ? 'MX' : 'ZB'}-${String(Number(orderRow.next_order || 1)).padStart(3, '0')}`;
+      const form = await getById('process_design_forms', formId);
+      if (!form || Number(form.draft_id) !== Number(draft.id)) throw httpError(404, '表单不存在');
+      const [existing] = await mysqlQuery(pool, "SELECT id FROM process_design_form_tables WHERE form_id=? AND table_kind='detail' LIMIT 1", [formId]);
+      if (existing) throw httpError(409, '一个表单只能创建一个明细表');
+      assertNoManualNumber(body || {}, 'table_code', '表编号');
+      const tableCode = formatFormStructureCode(form.form_code, 'detail');
       const result = await mysqlRun(pool, `
         INSERT INTO process_design_form_tables
-          (form_id, table_kind, table_no, table_name, description, sort_order, created_by)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `, [
-        formId, tableKind, tableNo, text(body.table_name),
-        optionalText(body.description), body.sort_order ? Number(body.sort_order) : Number(orderRow.next_order || 1), actorUserId
-      ]);
-      await addEvent(draft.id, 'form_table_added', actorUserId, `已补充附表：${text(body.table_name)}`);
+          (form_id, table_kind, table_no, table_code, table_name, description, sort_order, created_by)
+        VALUES (?, 'detail', ?, ?, ?, NULL, 2, ?)
+      `, [formId, tableCode, tableCode, text(body.table_name), actorUserId]);
+      await addEvent(draft.id, 'form_table_added', actorUserId, `已补充明细表：${text(body.table_name)}`);
       return await getById('process_design_form_tables', result.insertId);
     },
     async updateFormTable(draft, tableId, body, actorUserId) {
       assertNoManualNumber(body || {}, 'table_no', '表编号');
-      const fields = ['table_name', 'description'];
+      assertNoManualNumber(body || {}, 'table_code', '表编号');
+      const fields = ['table_name'];
       const sets = [];
       const params = [];
       fields.forEach(field => {
         if (Object.prototype.hasOwnProperty.call(body, field)) {
           sets.push(`${field}=?`);
-          params.push(field === 'table_name' ? text(body[field]) : optionalText(body[field]));
+          params.push(text(body[field]));
         }
       });
-      if (Object.prototype.hasOwnProperty.call(body, 'table_kind')) {
-        const tableKind = text(body.table_kind);
-        if (!TABLE_KINDS.has(tableKind)) throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'table_kind', message: '附表类型无效' }] });
-        sets.push('table_kind=?');
-        params.push(tableKind);
+      if (Object.prototype.hasOwnProperty.call(body, 'table_kind') && text(body.table_kind) && text(body.table_kind) !== 'detail') {
+        throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'table_kind', message: '当前只允许维护明细表' }] });
       }
       if (sets.length) {
         sets.push('updated_at=CURRENT_TIMESTAMP');
         await mysqlRun(pool, `UPDATE process_design_form_tables SET ${sets.join(', ')} WHERE id=?`, [...params, tableId]);
-        await addEvent(draft.id, 'form_table_updated', actorUserId, '已更新附表结构');
+        await addEvent(draft.id, 'form_table_updated', actorUserId, '已更新明细表结构');
       }
       return await getById('process_design_form_tables', tableId);
     },
     async createFormTableField(draft, tableId, body, actorUserId) {
-      const [orderRow] = await mysqlQuery(pool, 'SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_order FROM process_design_form_table_fields WHERE form_table_id=?', [tableId]);
-      const fieldNo = `F-${String(Number(orderRow.next_order || 1)).padStart(3, '0')}`;
+      const structureKind = text(body.structure_kind) === 'main' ? 'main' : 'detail';
+      let table = null;
+      if (structureKind === 'main') {
+        const form = await getById('process_design_forms', tableId);
+        if (!form || Number(form.draft_id) !== Number(draft.id)) throw httpError(404, '表单不存在');
+        table = await this.ensureMainFormTable(form, actorUserId);
+      } else {
+        table = await getById('process_design_form_tables', tableId);
+        if (!table || text(table.table_kind) !== 'detail') throw httpError(404, '明细表不存在，请先创建明细表');
+        const form = await getById('process_design_forms', table.form_id);
+        if (!form || Number(form.draft_id) !== Number(draft.id)) throw httpError(404, '表单不存在');
+      }
+      if (text(body.field_type) === '枚举' && !text(body.enum_options)) {
+        throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'enum_options', message: '枚举字段需要填写选项' }] });
+      }
+      const [orderRow] = await mysqlQuery(pool, 'SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_order FROM process_design_form_table_fields WHERE form_table_id=? AND structure_kind=?', [table.id, structureKind]);
+      const fieldCode = await this.nextFieldCode(table, structureKind);
       const result = await mysqlRun(pool, `
         INSERT INTO process_design_form_table_fields
-          (form_table_id, field_no, field_name, field_type, is_required, description, sort_order, created_by)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          (form_table_id, structure_kind, field_no, field_code, field_name, field_type, enum_options, is_required, description, sort_order, created_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
-        tableId, fieldNo, text(body.field_name), text(body.field_type),
-        boolInt(body.required), optionalText(body.description),
+        table.id, structureKind, fieldCode, fieldCode, text(body.field_name), text(body.field_type),
+        optionalText(body.enum_options), boolInt(body.required), optionalText(body.description),
         body.sort_order ? Number(body.sort_order) : Number(orderRow.next_order || 1), actorUserId
       ]);
-      await addEvent(draft.id, 'form_table_field_added', actorUserId, `已补充附表字段：${text(body.field_name)}`);
+      await addEvent(draft.id, 'form_table_field_added', actorUserId, `已补充表单字段：${text(body.field_name)}`);
       return publicFormTableField(await getById('process_design_form_table_fields', result.insertId));
     },
     async updateFormTableField(draft, fieldId, body, actorUserId) {
       assertNoManualNumber(body || {}, 'field_no', '字段编号');
+      assertNoManualNumber(body || {}, 'field_code', '字段编号');
       assertNoWhitespaceFields(body || {}, ['field_name']);
       if (Object.prototype.hasOwnProperty.call(body || {}, 'field_type')) assertEnum(body || {}, 'field_type', FIELD_TYPES, '字段类型');
-      const fields = ['field_name', 'field_type', 'description'];
+      const current = await getById('process_design_form_table_fields', fieldId);
+      if (!current) throw httpError(404, '字段不存在');
+      const mergedFieldType = Object.prototype.hasOwnProperty.call(body || {}, 'field_type') ? text(body.field_type) : text(current.field_type);
+      const mergedEnumOptions = Object.prototype.hasOwnProperty.call(body || {}, 'enum_options') ? text(body.enum_options) : text(current.enum_options);
+      if (mergedFieldType === '枚举' && !mergedEnumOptions) {
+        throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'enum_options', message: '枚举字段需要填写选项' }] });
+      }
+      const fields = ['field_name', 'field_type', 'description', 'enum_options'];
       const sets = [];
       const params = [];
       fields.forEach(field => {
         if (Object.prototype.hasOwnProperty.call(body, field)) {
           sets.push(`${field}=?`);
-          params.push(field === 'field_name' ? text(body[field]) : optionalText(body[field]));
+          params.push(field === 'field_name' || field === 'field_type' ? text(body[field]) : optionalText(body[field]));
         }
       });
       if (Object.prototype.hasOwnProperty.call(body, 'required')) {
@@ -1830,8 +2141,54 @@ function makeProcessDesignMysqlRepository(pool) {
       if (sets.length) {
         sets.push('updated_at=CURRENT_TIMESTAMP');
         await mysqlRun(pool, `UPDATE process_design_form_table_fields SET ${sets.join(', ')} WHERE id=?`, [...params, fieldId]);
-        await addEvent(draft.id, 'form_table_field_updated', actorUserId, '已更新附表字段');
+        await addEvent(draft.id, 'form_table_field_updated', actorUserId, '已更新表单字段');
       }
+      return publicFormTableField(await getById('process_design_form_table_fields', fieldId));
+    },
+    async deleteForm(draft, formId, actorUserId) {
+      await mysqlRun(pool, 'DELETE FROM process_design_forms WHERE id=? AND draft_id=?', [Number(formId), draft.id]);
+      await addEvent(draft.id, 'form_deleted', actorUserId, '已删除在线表单');
+      return { deleted: true, id: Number(formId) };
+    },
+    async deleteFormTable(draft, tableId, actorUserId) {
+      const table = await getById('process_design_form_tables', tableId);
+      if (!table) throw httpError(404, '明细表不存在');
+      if (table.table_kind !== 'detail') throw httpError(409, '主表结构不能删除');
+      await mysqlRun(pool, 'DELETE FROM process_design_form_tables WHERE id=?', [Number(tableId)]);
+      await addEvent(draft.id, 'form_table_deleted', actorUserId, '已删除明细表');
+      return { deleted: true, id: Number(tableId) };
+    },
+    async deleteFormTableField(draft, fieldId, actorUserId) {
+      await mysqlRun(pool, 'DELETE FROM process_design_form_table_fields WHERE id=?', [Number(fieldId)]);
+      await addEvent(draft.id, 'form_table_field_deleted', actorUserId, '已删除表单字段');
+      return { deleted: true, id: Number(fieldId) };
+    },
+    async moveFormTableField(draft, fieldId, direction, actorUserId) {
+      const current = await getById('process_design_form_table_fields', fieldId);
+      if (!current) throw httpError(404, '字段不存在');
+      const table = await getById('process_design_form_tables', current.form_table_id);
+      if (!table) throw httpError(404, '表结构不存在');
+      const form = await getById('process_design_forms', table.form_id);
+      if (!form || Number(form.draft_id) !== Number(draft.id)) throw httpError(404, '表单不存在');
+      const rows = await mysqlQuery(
+        'SELECT id, sort_order FROM process_design_form_table_fields WHERE form_table_id=? AND structure_kind=? ORDER BY sort_order, id',
+        [current.form_table_id, current.structure_kind]
+      );
+      for (let index = 0; index < rows.length; index += 1) {
+        const nextOrder = index + 1;
+        if (Number(rows[index].sort_order || 0) !== nextOrder) {
+          await mysqlRun(pool, 'UPDATE process_design_form_table_fields SET sort_order=? WHERE id=?', [nextOrder, rows[index].id]);
+          rows[index].sort_order = nextOrder;
+        }
+      }
+      const currentIndex = rows.findIndex(row => Number(row.id) === Number(fieldId));
+      const targetIndex = direction === 'down' ? currentIndex + 1 : currentIndex - 1;
+      if (currentIndex < 0 || targetIndex < 0 || targetIndex >= rows.length) {
+        return publicFormTableField(await getById('process_design_form_table_fields', fieldId));
+      }
+      await mysqlRun(pool, 'UPDATE process_design_form_table_fields SET sort_order=?, updated_at=CURRENT_TIMESTAMP WHERE id=?', [targetIndex + 1, rows[currentIndex].id]);
+      await mysqlRun(pool, 'UPDATE process_design_form_table_fields SET sort_order=?, updated_at=CURRENT_TIMESTAMP WHERE id=?', [currentIndex + 1, rows[targetIndex].id]);
+      await addEvent(draft.id, 'form_table_field_updated', actorUserId, '已调整表单字段顺序');
       return publicFormTableField(await getById('process_design_form_table_fields', fieldId));
     },
     async createField(draft, formId, body, actorUserId) {
@@ -2074,6 +2431,7 @@ async function repository() {
       const pool = mysql.createPool(mysqlConfigFromEnv());
       await ensureProcessDesignEditionSchema(pool);
       await ensureProcessDesignEvidenceStatusSchema(pool);
+      await ensureProcessDesignFormStructureSchema(pool);
       return makeProcessDesignMysqlRepository(pool);
     })();
   }
@@ -2203,12 +2561,24 @@ router.get('/summary', requireAuth, (req, res) => runAction(res, async () => {
   if (!await canWorkAcrossDepartments(req, roleCodes)) {
     deptIds = Array.from(await authorizedDepartmentIds(req, roleCodes) || []);
   }
-  res.json(await repo.summary(deptIds));
+  res.json(await repo.summary(deptIds, req.query && req.query.document_no));
 }));
 
 router.get('/process-taxonomy', requireAuth, (req, res) => runAction(res, async () => {
   const repo = await repository();
   res.json(await repo.listProcessTaxonomy(await currentDepartmentTaxonomyScope(req)));
+}));
+
+router.get('/field-types', requireAuth, (req, res) => runAction(res, async () => {
+  const repo = await repository();
+  res.json({ items: await repo.listFieldTypes() });
+}));
+
+router.get('/departments/:id/roster-roles', requireAuth, (req, res) => runAction(res, async () => {
+  const repo = await repository();
+  const departmentId = Number(req.params.id);
+  if (!departmentId) throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'department_id', message: '归档责任部门无效' }] });
+  res.json(await repo.listRosterRolesByDepartment(departmentId));
 }));
 
 async function canMaintainDocument(req, document) {
@@ -2343,7 +2713,7 @@ router.post('/drafts/:id/processes', requireAuth, (req, res) => runAction(res, a
   const repo = await repository();
   const draft = await repo.getDraft(req.params.id);
   await assertCanEditDraftContent(req, repo, draft);
-  const body = req.body || {};
+  const body = processBodyWithDraftTaxonomy(draft, req.body || {});
   const details = [];
   assertNoManualNumber(body, 'process_code', '流程编号');
   if (!text(body.l1_name)) details.push({ field: 'l1_name', message: 'L1 能力不能为空' });
@@ -2359,7 +2729,7 @@ router.put('/processes/:id', requireAuth, (req, res) => runAction(res, async () 
   const repo = await repository();
   const draft = await repo.getDraftByProcess(req.params.id);
   await assertCanEditDraftContent(req, repo, draft);
-  const body = req.body || {};
+  const body = processBodyWithDraftTaxonomy(draft, req.body || {});
   const details = [];
   assertNoManualNumber(body, 'process_code', '流程编号');
   if (!text(body.l1_name)) details.push({ field: 'l1_name', message: 'L1 能力不能为空' });
@@ -2462,7 +2832,11 @@ router.post('/drafts/:id/forms', requireAuth, (req, res) => runAction(res, async
   const repo = await repository();
   const draft = await repo.getDraft(req.params.id);
   await assertCanEditDraftContent(req, repo, draft);
-  if (!text(req.body.form_name)) throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'form_name', message: '表单名称不能为空' }] });
+  const details = [];
+  if (!Number(req.body && req.body.step_id || 0)) details.push({ field: 'step_id', message: '表单必须指向业务行为' });
+  if (!text(req.body && req.body.form_name)) details.push({ field: 'form_name', message: '表单名称不能为空' });
+  if (!text(req.body && req.body.main_table_name)) details.push({ field: 'main_table_name', message: '主表名称不能为空' });
+  if (details.length) throw httpError(422, '校验失败', { error: '校验失败', details });
   res.status(201).json(await repo.createForm(draft, req.body || {}, req.session.userId));
 }));
 
@@ -2478,8 +2852,9 @@ router.post('/forms/:id/tables', requireAuth, (req, res) => runAction(res, async
   const draft = await repo.getDraftByForm(req.params.id);
   await assertCanEditDraftContent(req, repo, draft);
   assertNoManualNumber(req.body || {}, 'table_no', '表编号');
-  assertEnum(req.body || {}, 'table_kind', TABLE_KINDS, '附表类型');
-  if (!text(req.body && req.body.table_name)) throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'table_name', message: '附表名称不能为空' }] });
+  assertNoManualNumber(req.body || {}, 'table_code', '表编号');
+  if (text(req.body && req.body.table_kind) && text(req.body.table_kind) !== 'detail') throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'table_kind', message: '当前只允许创建明细表' }] });
+  if (!text(req.body && req.body.table_name)) throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'table_name', message: '明细表名称不能为空' }] });
   res.status(201).json(await repo.createFormTable(draft, Number(req.params.id), req.body || {}, req.session.userId));
 }));
 
@@ -2495,10 +2870,12 @@ router.post('/form-tables/:id/fields', requireAuth, (req, res) => runAction(res,
   const draft = await repo.getDraftByFormTable(req.params.id);
   await assertCanEditDraftContent(req, repo, draft);
   assertNoManualNumber(req.body || {}, 'field_no', '字段编号');
+  assertNoManualNumber(req.body || {}, 'field_code', '字段编号');
   assertNoWhitespaceFields(req.body || {}, ['field_name']);
+  if (text(req.body && req.body.structure_kind) && text(req.body.structure_kind) !== 'detail') throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'structure_kind', message: '明细表接口只能新增明细字段' }] });
   assertEnum(req.body || {}, 'field_type', FIELD_TYPES, '字段类型');
-  if (!text(req.body && req.body.field_name)) throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'field_name', message: '附表字段名称不能为空' }] });
-  res.status(201).json(await repo.createFormTableField(draft, Number(req.params.id), req.body || {}, req.session.userId));
+  if (!text(req.body && req.body.field_name)) throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'field_name', message: '明细字段名称不能为空' }] });
+  res.status(201).json(await repo.createFormTableField(draft, Number(req.params.id), { ...(req.body || {}), structure_kind: 'detail' }, req.session.userId));
 }));
 
 router.put('/form-table-fields/:id', requireAuth, (req, res) => runAction(res, async () => {
@@ -2512,10 +2889,41 @@ router.post('/forms/:id/fields', requireAuth, (req, res) => runAction(res, async
   const repo = await repository();
   const draft = await repo.getDraftByForm(req.params.id);
   await assertCanEditDraftContent(req, repo, draft);
-  assertNoWhitespaceFields(req.body || {}, ['field_name_cn', 'field_name_en', 'data_object']);
+  assertNoManualNumber(req.body || {}, 'field_no', '字段编号');
+  assertNoManualNumber(req.body || {}, 'field_code', '字段编号');
+  assertNoWhitespaceFields(req.body || {}, ['field_name']);
   assertEnum(req.body || {}, 'field_type', FIELD_TYPES, '字段类型');
-  if (!text(req.body.field_name_cn)) throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'field_name_cn', message: '中文字段名不能为空' }] });
-  res.status(201).json(await repo.createField(draft, Number(req.params.id), req.body || {}, req.session.userId));
+  if (!text(req.body && req.body.field_name)) throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'field_name', message: '主表字段名称不能为空' }] });
+  res.status(201).json(await repo.createFormTableField(draft, Number(req.params.id), { ...(req.body || {}), structure_kind: 'main' }, req.session.userId));
+}));
+
+router.delete('/forms/:id', requireAuth, (req, res) => runAction(res, async () => {
+  const repo = await repository();
+  const draft = await repo.getDraftByForm(req.params.id);
+  await assertCanEditDraftContent(req, repo, draft);
+  res.json(await repo.deleteForm(draft, Number(req.params.id), req.session.userId));
+}));
+
+router.delete('/form-tables/:id', requireAuth, (req, res) => runAction(res, async () => {
+  const repo = await repository();
+  const draft = await repo.getDraftByFormTable(req.params.id);
+  await assertCanEditDraftContent(req, repo, draft);
+  res.json(await repo.deleteFormTable(draft, Number(req.params.id), req.session.userId));
+}));
+
+router.delete('/form-table-fields/:id', requireAuth, (req, res) => runAction(res, async () => {
+  const repo = await repository();
+  const draft = await repo.getDraftByFormTableField(req.params.id);
+  await assertCanEditDraftContent(req, repo, draft);
+  res.json(await repo.deleteFormTableField(draft, Number(req.params.id), req.session.userId));
+}));
+
+router.put('/form-table-fields/:id/order', requireAuth, (req, res) => runAction(res, async () => {
+  const repo = await repository();
+  const draft = await repo.getDraftByFormTableField(req.params.id);
+  await assertCanEditDraftContent(req, repo, draft);
+  const direction = text(req.body && req.body.direction) === 'down' ? 'down' : 'up';
+  res.json(await repo.moveFormTableField(draft, Number(req.params.id), direction, req.session.userId));
 }));
 
 router.put('/form-fields/:id', requireAuth, (req, res) => runAction(res, async () => {
@@ -2598,5 +3006,6 @@ router.resetProcessDesignRepositoryFactory = resetProcessDesignRepositoryFactory
 router.makeProcessDesignMysqlRepository = makeProcessDesignMysqlRepository;
 router.ensureProcessDesignEditionSchema = ensureProcessDesignEditionSchema;
 router.ensureProcessDesignEvidenceStatusSchema = ensureProcessDesignEvidenceStatusSchema;
+router.ensureProcessDesignFormStructureSchema = ensureProcessDesignFormStructureSchema;
 
 module.exports = router;

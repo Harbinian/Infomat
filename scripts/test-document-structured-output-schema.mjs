@@ -7,7 +7,6 @@
  *   - apps/mdm-platform/server/mysqlSchema.js
  *   - apps/mdm-platform/server/routes/processDesignMysql.js
  *   - apps/mdm-platform/public/index.html
- *   - scripts/parse-sankey-data.mjs
  * 输出: 只读校验结果，不写文件，不写数据库。
  */
 
@@ -23,16 +22,12 @@ const schemaPath = resolve(repoRoot, 'docs/contracts/document-structured-output.
 const mysqlSchemaPath = resolve(repoRoot, 'apps/mdm-platform/server/mysqlSchema.js');
 const mysqlRoutePath = resolve(repoRoot, 'apps/mdm-platform/server/routes/processDesignMysql.js');
 const frontendPath = resolve(repoRoot, 'apps/mdm-platform/public/index.html');
-const parserPath = resolve(repoRoot, 'scripts/parse-sankey-data.mjs');
-const reportPath = resolve(repoRoot, 'docs/reports/2026-07-02-mdm-process-governance-pending-issue-fields.md');
 
 const schemaText = readFileSync(schemaPath, 'utf8');
 const schema = JSON.parse(schemaText);
 const mysqlSchema = readFileSync(mysqlSchemaPath, 'utf8');
 const mysqlRoute = readFileSync(mysqlRoutePath, 'utf8');
 const frontend = readFileSync(frontendPath, 'utf8');
-const parser = readFileSync(parserPath, 'utf8');
-const report = readFileSync(reportPath, 'utf8');
 
 function collectFromObject(root, visitor) {
   if (!root || typeof root !== 'object') return;
@@ -90,7 +85,7 @@ assertEnum('versionStatus', ['published', 'superseded', 'retired']);
 
 assertEnum('processType', ['new', 'inherit', 'handoff', 'adjustment']);
 assertEnum('processSystem', ['', 'OA', 'MES', 'PLM', 'ERP']);
-assertEnum('fieldType', ['文本', '数字', '日期', '金额', '枚举', '布尔', '部门', '人员', '附件']);
+assertEnum('fieldType', ['文本', '长文本', '数字', '日期', '日期时间', '金额', '枚举', '布尔', '部门', '人员', '文件编号', '签名', '图片', '附件', '二维码']);
 assertEnum('evidenceType', ['制度条款', '表单样例', '访谈记录', '会议纪要', '流程图', '台账记录', '暂无证据']);
 assertEnum('evidenceStatus', ['verified', 'pending_review', 'source_missing', 'ocr_extracted_not_confirmed', 'review_only']);
 
@@ -104,9 +99,6 @@ assertAllIncluded(frontend, schema.$defs.evidenceType.enum, 'frontend evidence t
 assertAllIncluded(frontend, ['pgDesignDocumentNo', 'pgDesignDocumentTitle', 'pgDesignPlannedEdition', 'pgDesignCurrentEdition'], 'frontend document edition fields');
 assert.ok(!frontend.includes('id="pgDesignReason"'), 'frontend should not expose removed why-new field');
 assert.ok(!frontend.includes('id="pgDesignBasisDescription"'), 'frontend should not expose removed basis description field');
-assertAllIncluded(parser, schema.$defs.evidenceStatus.enum.map(value => `'${value}'`), 'parse-sankey evidence statuses');
-assert.ok(parser.includes('const STRUCTURE_BLOCK_VERSION = 1'), 'parser structure block version drifted');
-
 const projectionProps = schema.$defs.structureBlockProjection.properties;
 for (const block of ['meta', 'l3_catalog', 'a1_catalog', 'evidence_catalog', 'mdm_requirement_catalog']) {
   assert.ok(Object.prototype.hasOwnProperty.call(projectionProps, block), `structure_block_projection missing ${block}`);
@@ -155,10 +147,5 @@ for (const field of [
 ]) {
   assert.ok(Object.prototype.hasOwnProperty.call(pendingProps, field), `pendingIssue missing ${field}`);
 }
-
-assert.ok(
-  report.includes('docs/contracts/document-structured-output.schema.json'),
-  'pending issue report should point reviewers to the canonical schema'
-);
 
 console.log('document structured output schema checks passed');

@@ -100,16 +100,34 @@ async function main() {
     '工作组组长看到本工作组有跨部门衔接风险时',
     '项目组长看到本部门有跨部门衔接风险时',
     'function renderProcessGovernance()',
-    'id="pgWorkspaceChoices"',
-    '治理已有流程',
-    '创建新流程',
-    'id="pgExistingWizard"',
+    '文档结构化输出',
     'id="pgDesignWizard"',
+    '制度说明',
+    '术语',
+    '流程与行为',
+    '跨部门承接',
+    '附表结构',
+    '结构化预览',
+    'Markdown 草案',
     'class="outcome-card"',
     '/api/process-design/summary',
     '/api/process-design/drafts',
+    '/api/process-design/drafts/',
+    '/document-profile',
+    '/terms',
+    '/behavior-detail',
+    '/cross-dept-handoffs',
+    '/form-tables/',
+    '/markdown',
     'function renderProcessDesignWorkspace',
     'function renderProcessDesignOutcomeCard',
+    'function saveProcessDesignDocumentProfileFromWizard',
+    'function saveProcessDesignTermFromWizard',
+    'function saveProcessDesignBehaviorDetailFromWizard',
+    'function saveProcessDesignHandoffFromWizard',
+    'function saveProcessDesignFormTableFromWizard',
+    'function saveProcessDesignTableFieldFromWizard',
+    'function exportProcessDesignMarkdownFromWizard',
     'id="pgSubtabs"',
     'function processGovernanceViewFromRoute(route)',
     'function renderProcessGovernanceSubtabs(activeView)',
@@ -122,6 +140,7 @@ async function main() {
     'function renderProcessGovernanceView(view, payload, route)',
     'function clearProcessGovernanceViewCache(reason)',
     'data-pg-view="overview"',
+    'data-pg-view="documentStructure"',
     'data-pg-view="inputBaselineReview"',
     'data-pg-view="map"',
     'data-pg-view="evidence"',
@@ -132,6 +151,7 @@ async function main() {
     'function renderInputBaselineReviewDetailPage',
     '待确认的问题',
     '总览',
+    '文档结构化输出',
     '待确认问题',
     '流程图谱',
     '证据来源',
@@ -188,6 +208,9 @@ async function main() {
   assert.ok(!html.includes('init1234'), 'frontend must not expose or submit a fixed default password');
   assert.ok(!html.includes('000000'), 'frontend must not expose or describe 000000 as a first-login password');
   assert.ok(!html.includes('value="ADMIN001"'), 'login page must not prefill the default admin employee number');
+  assert.ok(html.includes('placeholder="至少10位，包含字母和数字"'), 'password dialog should show the server password length and composition policy');
+  assert.ok(html.includes("if (newPw.length < 10) { showPasswordError('新密码至少10位'); return; }"), 'password dialog should validate the same minimum length as the server policy');
+  assert.ok(!html.includes('至少6位'), 'password dialog must not show stale 6-character password guidance');
   assert.ok(html.includes('function escapeHtml'), 'frontend should expose a shared HTML escaping helper');
   assert.ok(html.includes('function safeText'), 'frontend should route service-provided display text through escaping');
   assert.ok(!html.includes('系统最忙'), 'frontend copy should avoid evaluative system wording');

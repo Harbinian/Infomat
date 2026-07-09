@@ -253,14 +253,40 @@
     "fieldType": {
       "enum": [
         "文本",
+        "长文本",
         "数字",
         "日期",
+        "日期时间",
         "金额",
         "枚举",
         "布尔",
         "部门",
         "人员",
-        "附件"
+        "文件编号",
+        "签名",
+        "图片",
+        "附件",
+        "二维码"
+      ]
+    },
+    "archiveLocation": {
+      "enum": [
+        "部门自行保存",
+        "资料室"
+      ]
+    },
+    "retentionPeriod": {
+      "enum": [
+        "1年",
+        "3年",
+        "10年",
+        "永久"
+      ]
+    },
+    "fieldStructureKind": {
+      "enum": [
+        "main",
+        "detail"
       ]
     },
     "fieldStatus": {
@@ -404,6 +430,8 @@
           "pgDesignPlannedEdition",
           "pgDesignCurrentEdition",
           "pgDesignPublishEffect",
+          "pgDesignDraftL1Name",
+          "pgDesignDraftL2Name",
           "pgDesignBasisType",
           "pgDesignInvolvesOtherDepartments",
           "pgDesignRelatedDepartments"
@@ -454,6 +482,8 @@
         "ids": [
           "pgDesignDocumentTitle",
           "pgDesignDocumentNo",
+          "pgDesignDraftL1Name",
+          "pgDesignDraftL2Name",
           "pgDesignPurpose",
           "pgDesignScope",
           "pgDesignInheritanceRelation"
@@ -559,8 +589,6 @@
       "x-ui": {
         "section": "behavior",
         "ids": [
-          "pgDesignProcessL1Name",
-          "pgDesignProcessL2Name",
           "pgDesignProcessL3Name",
           "pgDesignProcessType",
           "pgDesignProcessDescription"
@@ -742,7 +770,10 @@
       "additionalProperties": false,
       "required": [
         "form_ref",
-        "form_name"
+        "step_ref",
+        "form_code",
+        "form_name",
+        "main_table_name"
       ],
       "properties": {
         "form_ref": {
@@ -754,14 +785,34 @@
         "step_ref": {
           "$ref": "#/$defs/recordRef"
         },
+        "form_code": {
+          "type": "string",
+          "minLength": 1
+        },
         "form_name": {
           "type": "string",
           "minLength": 1
         },
-        "description": {
+        "main_table_code": {
           "$ref": "#/$defs/nullableString"
         },
-        "archive_rule": {
+        "main_table_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "archive_location": {
+          "$ref": "#/$defs/archiveLocation"
+        },
+        "retention_period": {
+          "$ref": "#/$defs/retentionPeriod"
+        },
+        "responsible_department_ref": {
+          "$ref": "#/$defs/recordRef"
+        },
+        "responsible_department_name": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "responsible_role": {
           "$ref": "#/$defs/nullableString"
         },
         "status": {
@@ -779,8 +830,11 @@
         "ids": [
           "pgDesignFormStepSelect",
           "pgDesignFormName",
-          "pgDesignFormDescription",
-          "pgDesignFormArchiveRule"
+          "pgDesignMainTableName",
+          "pgDesignArchiveLocation",
+          "pgDesignRetentionPeriod",
+          "pgDesignResponsibleDept",
+          "pgDesignResponsibleRole"
         ]
       }
     },
@@ -806,12 +860,12 @@
         "table_no": {
           "$ref": "#/$defs/nullableString"
         },
+        "table_code": {
+          "$ref": "#/$defs/nullableString"
+        },
         "table_name": {
           "type": "string",
           "minLength": 1
-        },
-        "description": {
-          "$ref": "#/$defs/nullableString"
         }
       },
       "x-mysql": {
@@ -820,10 +874,10 @@
       "x-ui": {
         "section": "tables",
         "ids": [
-          "pgDesignTableFormSelect",
-          "pgDesignTableKind",
-          "pgDesignTableName",
-          "pgDesignTableDescription"
+          "pgDesignDetailFormSelect",
+          "pgDesignDetailTableName",
+          "createProcessDesignDetailTableBtn",
+          "deleteProcessDesignDetailTableBtn"
         ]
       }
     },
@@ -833,6 +887,7 @@
       "required": [
         "table_field_ref",
         "table_ref",
+        "structure_kind",
         "field_name"
       ],
       "properties": {
@@ -842,7 +897,13 @@
         "table_ref": {
           "$ref": "#/$defs/recordRef"
         },
+        "structure_kind": {
+          "$ref": "#/$defs/fieldStructureKind"
+        },
         "field_no": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "field_code": {
           "$ref": "#/$defs/nullableString"
         },
         "field_name": {
@@ -851,6 +912,9 @@
         },
         "field_type": {
           "$ref": "#/$defs/fieldType"
+        },
+        "enum_options": {
+          "$ref": "#/$defs/nullableString"
         },
         "required": {
           "type": "boolean",
@@ -864,13 +928,16 @@
         "table": "process_design_form_table_fields"
       },
       "x-ui": {
-        "section": "tables",
+        "section": "fields",
         "ids": [
-          "pgDesignTableFieldTableSelect",
-          "pgDesignTableFieldName",
-          "pgDesignTableFieldType",
-          "pgDesignTableFieldRequired",
-          "pgDesignTableFieldDescription"
+          "pgDesignFieldFormSelect",
+          "pgDesignFieldStructureKind",
+          "pgDesignFieldName",
+          "pgDesignFieldType",
+          "pgDesignFieldRequired",
+          "pgDesignFieldEnumOptions",
+          "pgDesignFieldDescription",
+          "pgDesignFieldList"
         ]
       }
     },
@@ -926,15 +993,8 @@
         "table": "process_design_form_fields"
       },
       "x-ui": {
-        "section": "tables",
-        "ids": [
-          "pgDesignFieldFormSelect",
-          "pgDesignFieldNameCn",
-          "pgDesignFieldNameEn",
-          "pgDesignFieldDataObject",
-          "pgDesignFieldType",
-          "pgDesignFieldEvidenceNote"
-        ]
+        "section": "legacy-reference",
+        "ids": []
       }
     },
     "evidence": {
