@@ -1,0 +1,1043 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>信息化项目周例会会议材料（2026-07-10 暂定）</title>
+  <style>
+    :root {
+      --ink: #1f2933;
+      --muted: #607080;
+      --line: #d9e2ec;
+      --page: #f6f8f4;
+      --card: #ffffff;
+      --teal: #0f766e;
+      --teal-soft: #e6f4f1;
+      --green: #166534;
+      --green-soft: #eaf7ef;
+      --amber: #b45309;
+      --amber-soft: #fff4de;
+      --indigo: #3730a3;
+      --indigo-soft: #eef2ff;
+      --red: #b42318;
+      --red-soft: #fff0ed;
+      --steel: #2f4858;
+      --violet: #6d28d9;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      scroll-padding-top: 74px;
+    }
+
+    body {
+      margin: 0;
+      background: var(--page);
+      color: var(--ink);
+      font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", Arial, sans-serif;
+      font-size: 16px;
+      line-height: 1.7;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      min-height: 64px;
+      padding: 10px clamp(16px, 4vw, 56px);
+      background: rgba(255, 255, 255, 0.94);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(16px);
+    }
+
+    .brand {
+      display: flex;
+      flex-direction: column;
+      min-width: 190px;
+      font-weight: 800;
+      color: var(--steel);
+      letter-spacing: 0;
+    }
+
+    .brand span {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .nav {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .nav::-webkit-scrollbar {
+      display: none;
+    }
+
+    .nav a {
+      flex: 0 0 auto;
+      padding: 7px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--steel);
+      background: #fff;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .hero {
+      padding: clamp(28px, 5vw, 64px) clamp(16px, 5vw, 72px) 28px;
+    }
+
+    .hero-inner {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr);
+      gap: 22px;
+      align-items: stretch;
+      max-width: 1360px;
+      margin: 0 auto;
+    }
+
+    .hero-main,
+    .hero-side,
+    .section,
+    .card,
+    .table-card,
+    .action-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--card);
+      box-shadow: 0 10px 30px rgba(47, 72, 88, 0.07);
+    }
+
+    .hero-main {
+      padding: clamp(24px, 4vw, 48px);
+      border-top: 6px solid var(--teal);
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      width: fit-content;
+      margin-bottom: 18px;
+      padding: 5px 10px;
+      border-radius: 8px;
+      background: var(--teal-soft);
+      color: var(--teal);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    h1 {
+      margin: 0;
+      max-width: 920px;
+      color: var(--ink);
+      font-size: clamp(32px, 5vw, 58px);
+      line-height: 1.15;
+      letter-spacing: 0;
+    }
+
+    .lead {
+      max-width: 860px;
+      margin: 18px 0 0;
+      color: var(--muted);
+      font-size: clamp(17px, 2vw, 22px);
+    }
+
+    .hero-side {
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      border-top: 6px solid var(--amber);
+    }
+
+    .side-title {
+      color: var(--steel);
+      font-weight: 900;
+      font-size: 18px;
+    }
+
+    .meta-grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .meta {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      background: #fbfcfd;
+    }
+
+    .meta small {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 3px;
+    }
+
+    .meta strong {
+      display: block;
+      color: var(--ink);
+      font-size: 16px;
+      line-height: 1.45;
+    }
+
+    .boundary {
+      margin-top: 4px;
+      padding: 14px;
+      border-radius: 8px;
+      border: 1px solid #f4c7c3;
+      background: var(--red-soft);
+      color: #7a271a;
+      font-weight: 700;
+    }
+
+    main {
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 0 clamp(16px, 5vw, 72px) 64px;
+    }
+
+    .section {
+      margin-top: 26px;
+      padding: clamp(20px, 3vw, 34px);
+      scroll-margin-top: 80px;
+    }
+
+    .section-head {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      margin-bottom: 18px;
+    }
+
+    .number {
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 42px;
+      height: 42px;
+      border-radius: 8px;
+      background: var(--steel);
+      color: #fff;
+      font-weight: 900;
+      font-size: 18px;
+    }
+
+    h2 {
+      margin: 0;
+      color: var(--ink);
+      font-size: clamp(24px, 3vw, 36px);
+      letter-spacing: 0;
+    }
+
+    .section-head p,
+    .intro {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 17px;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin: 18px 0;
+    }
+
+    .card {
+      padding: 18px;
+      min-width: 0;
+    }
+
+    .card h3 {
+      margin: 0 0 8px;
+      color: var(--steel);
+      font-size: 19px;
+      line-height: 1.35;
+    }
+
+    .card p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .card.ok {
+      border-left: 5px solid var(--green);
+      background: var(--green-soft);
+    }
+
+    .card.work {
+      border-left: 5px solid var(--teal);
+      background: var(--teal-soft);
+    }
+
+    .card.risk {
+      border-left: 5px solid var(--amber);
+      background: var(--amber-soft);
+    }
+
+    .table-card {
+      margin-top: 16px;
+      overflow: hidden;
+    }
+
+    .table-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--line);
+      background: #fbfcfd;
+      color: var(--steel);
+      font-weight: 900;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      width: fit-content;
+      padding: 4px 9px;
+      border-radius: 8px;
+      background: var(--indigo-soft);
+      color: var(--indigo);
+      font-size: 12px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .scroll-table {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 920px;
+    }
+
+    th,
+    td {
+      padding: 13px 14px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      color: var(--steel);
+      background: #eef3f5;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+
+    td {
+      color: #415260;
+      font-size: 14px;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      white-space: nowrap;
+      padding: 3px 8px;
+      border-radius: 8px;
+      color: var(--teal);
+      background: var(--teal-soft);
+      font-weight: 900;
+      font-size: 12px;
+    }
+
+    .not-fact {
+      color: var(--red);
+      font-weight: 800;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .step {
+      position: relative;
+      min-width: 0;
+      padding: 18px 16px;
+      border: 1px solid var(--line);
+      border-top: 5px solid var(--teal);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .step:nth-child(2) {
+      border-top-color: var(--green);
+    }
+
+    .step:nth-child(3) {
+      border-top-color: var(--amber);
+    }
+
+    .step:nth-child(4) {
+      border-top-color: var(--indigo);
+    }
+
+    .step:nth-child(5) {
+      border-top-color: var(--violet);
+    }
+
+    .step b {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      color: #fff;
+      background: var(--steel);
+      font-size: 14px;
+    }
+
+    .step h3 {
+      margin: 0 0 8px;
+      font-size: 17px;
+      color: var(--ink);
+      line-height: 1.35;
+    }
+
+    .step p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .topic-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .topic {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-width: 0;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .topic h3 {
+      margin: 0;
+      color: var(--steel);
+      font-size: 17px;
+      line-height: 1.35;
+    }
+
+    .topic p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .date-chip {
+      margin-top: auto;
+      padding: 8px 10px;
+      border-radius: 8px;
+      color: var(--amber);
+      background: var(--amber-soft);
+      font-weight: 900;
+      font-size: 13px;
+    }
+
+    .confirm-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .confirm {
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcfd;
+    }
+
+    .confirm h3 {
+      margin: 0 0 6px;
+      color: var(--steel);
+      font-size: 17px;
+    }
+
+    .confirm p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .action-card {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 13px;
+      padding: 18px;
+      min-width: 0;
+    }
+
+    .action-id {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 60px;
+      height: 34px;
+      border-radius: 8px;
+      color: #fff;
+      background: var(--teal);
+      font-weight: 900;
+      font-size: 13px;
+    }
+
+    .action-card:nth-child(2) .action-id {
+      background: var(--green);
+    }
+
+    .action-card:nth-child(3) .action-id {
+      background: var(--amber);
+    }
+
+    .action-card:nth-child(4) .action-id {
+      background: var(--indigo);
+    }
+
+    .action-card:nth-child(5) .action-id {
+      background: var(--violet);
+    }
+
+    .action-card:nth-child(6) .action-id {
+      background: var(--red);
+    }
+
+    .action-card:nth-child(7) .action-id {
+      background: var(--steel);
+    }
+
+    .action-card h3 {
+      margin: 0 0 6px;
+      color: var(--ink);
+      font-size: 18px;
+      line-height: 1.35;
+    }
+
+    .action-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 0 0 8px;
+    }
+
+    .action-meta span {
+      padding: 3px 8px;
+      border-radius: 8px;
+      background: #eef3f5;
+      color: var(--steel);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .action-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .close-note {
+      margin-top: 18px;
+      padding: 18px;
+      border: 1px solid #c7d7fe;
+      border-left: 5px solid var(--indigo);
+      border-radius: 8px;
+      background: var(--indigo-soft);
+      color: #312e81;
+      font-weight: 800;
+    }
+
+    footer {
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 0 clamp(16px, 5vw, 72px) 42px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media (max-width: 1120px) {
+      .hero-inner,
+      .summary-grid,
+      .confirm-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .flow,
+      .topic-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 760px) {
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .brand {
+        min-width: 0;
+      }
+
+      .nav {
+        width: 100%;
+      }
+
+      .hero {
+        padding-top: 20px;
+      }
+
+      .hero-main,
+      .hero-side,
+      .section {
+        padding: 18px;
+      }
+
+      .section-head {
+        flex-direction: column;
+      }
+
+      .flow,
+      .topic-grid,
+      .actions {
+        grid-template-columns: 1fr;
+      }
+
+      .action-card {
+        grid-template-columns: 1fr;
+      }
+
+      h1 {
+        font-size: 30px;
+      }
+    }
+
+    @media print {
+      .topbar {
+        position: static;
+      }
+
+      body {
+        background: #fff;
+      }
+
+      .section,
+      .hero-main,
+      .hero-side,
+      .card,
+      .table-card,
+      .action-card {
+        box-shadow: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#top">
+      信息化项目周例会
+      <span>2026-07-10 暂定会议材料</span>
+    </a>
+    <nav class="nav" aria-label="页面导航">
+      <a href="#review">上周回顾</a>
+      <a href="#start">本周启动</a>
+      <a href="#next">下周行动</a>
+    </nav>
+  </header>
+
+  <section id="top" class="hero">
+    <div class="hero-inner">
+      <div class="hero-main">
+        <span class="eyebrow">调研资料专题会议启动会</span>
+        <h1>先培训，再启动具体调研资料工作</h1>
+        <p class="lead">本次会议只抓三件事：上周行动项是否具备启动条件，本周如何培训并启动五类专题资料收集，下周哪些行动项必须形成资料、缺口、责任人和下一步访谈对象。</p>
+      </div>
+      <aside class="hero-side" aria-label="会议基本信息">
+        <div class="side-title">会议基本信息</div>
+        <div class="meta-grid">
+          <div class="meta">
+            <small>会议时间</small>
+            <strong>2026-07-10，暂定</strong>
+          </div>
+          <div class="meta">
+            <small>参会范围</small>
+            <strong>信息化项目管理工作室、信息化项目组、MDM 工作组、数据质量工作组、各专项工作组、相关部门接口人</strong>
+          </div>
+          <div class="meta">
+            <small>材料依据</small>
+            <strong>DLV-004、DLV-006、DLV-058、DLV-901 至 DLV-905、PMO 当前任务基线</strong>
+          </div>
+        </div>
+        <div class="boundary">本次不写成事实：资料已正式下发、部门已回执、调研会议已召开、评审已经通过。</div>
+      </aside>
+    </div>
+  </section>
+
+  <main>
+    <section id="review" class="section">
+      <div class="section-head">
+        <span class="number">一</span>
+        <div>
+          <h2>上周行动项回顾</h2>
+          <p>上周重点是把调研启动前的范围、模板、资料清单、日程和评审口径补到可执行状态，不把准备材料误说成已闭环。</p>
+        </div>
+      </div>
+
+      <div class="summary-grid">
+        <article class="card ok">
+          <h3>已形成输入</h3>
+          <p>DLV-004 已通过，可作为五类专题调研范围输入；DLV-058 已通过，可作为核心采购包边界输入。</p>
+        </article>
+        <article class="card work">
+          <h3>已提交可执行版</h3>
+          <p>DLV-901 至 DLV-905 均已提交，能支撑培训、资料回执、日程安排、评审整改和组织人员标准评审。</p>
+        </article>
+        <article class="card risk">
+          <h3>仍需补证</h3>
+          <p>资料下发、部门回执、会议邀请、参会确认、评审结论都要等真实证据补齐后再写入后续材料。</p>
+        </article>
+      </div>
+
+      <div class="table-card">
+        <div class="table-title">
+          上周行动项处理口径
+          <span class="pill">按可确认事实回顾</span>
+        </div>
+        <div class="scroll-table">
+          <table>
+            <thead>
+              <tr>
+                <th>上周行动项</th>
+                <th>当前结果</th>
+                <th>会议处置</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>W-A01 发布周例会安排和参会范围</td>
+                <td>DLV-006 已形成首次周例会材料，作为本周回顾依据；本次会议时间调整为 2026-07-10 暂定。</td>
+                <td>会上只确认本次资料专题启动节奏，不追溯首次会场组织细节。</td>
+              </tr>
+              <tr>
+                <td>W-A02 补齐启动会基础信息和启动日期口径说明</td>
+                <td>本次输出物未形成新的启动会补证材料。</td>
+                <td>不作为资料专题启动阻断项；如需补证，由 PMO 另入启动会资料台账。</td>
+              </tr>
+              <tr>
+                <td>W-A03 确认并试运行周会、风险、问题、变更、责任池模板</td>
+                <td>DLV-901 至 DLV-904 已把资料缺口、问题、整改、会议输出的登记口径补齐。</td>
+                <td>本次会议按这些表格口径登记，不现场另造模板。</td>
+              </tr>
+              <tr>
+                <td>W-A04 确认各部门接口人和反馈机制</td>
+                <td>DLV-004 已锁定调研对象范围，但仍存在联系人待指定项；DLV-902 和 DLV-903 已把待指定联系人放入后续跟踪。</td>
+                <td>本次会议必须请各部门确认资料回执接口人。</td>
+              </tr>
+              <tr>
+                <td>W-A05 完成调研范围与对象清单确认</td>
+                <td><span class="status">已关闭</span> DLV-004 已通过，可作为后续调研范围输入。</td>
+                <td>后续只处理范围变更或补充对象。</td>
+              </tr>
+              <tr>
+                <td>W-A06 完成调研模板与访谈提纲初稿</td>
+                <td>DLV-901 已提交可执行评审版，覆盖流程、系统、数据、接口、问题、证据和访谈记录。</td>
+                <td>本次会议先培训如何使用模板，再按专题启动资料准备。</td>
+              </tr>
+              <tr>
+                <td>W-A07 明确核心系统采购包初始边界冻结的执行标准或暂缓原因</td>
+                <td><span class="status">已关闭</span> DLV-058 已通过，可作为核心采购包边界输入。</td>
+                <td>本次会议不展开采购包技术评审。</td>
+              </tr>
+              <tr>
+                <td>W-A08 明确组织/部门/岗位/人员标准信息草案的输入资料和评审方式</td>
+                <td>DLV-905 已提交可执行评审版，明确来源优先级、评审矩阵、数据质量检查和例外处理。</td>
+                <td>本次会议将组织人员标准纳入资料专题的基础资料要求。</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-title">
+          本周延期交付物状态
+          <span class="pill">已提交，不等于已闭环</span>
+        </div>
+        <div class="scroll-table">
+          <table>
+            <thead>
+              <tr>
+                <th>交付物</th>
+                <th>当前状态</th>
+                <th>可用于本次会议的内容</th>
+                <th>不能替代的内容</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>DLV-901 调研模板与访谈提纲</td>
+                <td><span class="status">已提交</span></td>
+                <td>培训各专题怎么提问、怎么记录、怎么形成证据。</td>
+                <td class="not-fact">不代表访谈已经完成。</td>
+              </tr>
+              <tr>
+                <td>DLV-902 调研资料清单</td>
+                <td><span class="status">已提交</span></td>
+                <td>统一资料下发、回执、缺口登记和异常升级口径。</td>
+                <td class="not-fact">不代表资料已经下发或回执。</td>
+              </tr>
+              <tr>
+                <td>DLV-903 调研日程表</td>
+                <td><span class="status">已提交</span></td>
+                <td>提供五类专题拟排期和会议包检查规则。</td>
+                <td class="not-fact">不代表会议邀请已经发出或参会人已经确认。</td>
+              </tr>
+              <tr>
+                <td>DLV-904 调研计划评审纪要</td>
+                <td><span class="status">已提交</span></td>
+                <td>提供评审前置检查、结论口径、整改闭环和放行动作。</td>
+                <td class="not-fact">不代表评审已经召开或通过。</td>
+              </tr>
+              <tr>
+                <td>DLV-905 组织人员标准草案</td>
+                <td><span class="status">已提交</span></td>
+                <td>提供组织、部门、岗位、人员、项目角色的资料评审口径。</td>
+                <td class="not-fact">不改变组织真源和花名册事实。</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="start" class="section">
+      <div class="section-head">
+        <span class="number">二</span>
+        <div>
+          <h2>本周要启动的工作</h2>
+          <p>本周只启动一件主线工作：调研资料相关专题会议。启动顺序固定为先培训，再启动具体工作。</p>
+        </div>
+      </div>
+
+      <div class="flow">
+        <article class="step">
+          <b>1</b>
+          <h3>培训调研模板</h3>
+          <p>用 DLV-901 说明访谈只问业务事实：谁做、做什么、用什么资料、交给谁、留下什么证据。</p>
+        </article>
+        <article class="step">
+          <b>2</b>
+          <h3>培训资料回执</h3>
+          <p>用 DLV-902 说明资料是否存在、资料位置、版本、可否提供样例、责任人和缺口说明。</p>
+        </article>
+        <article class="step">
+          <b>3</b>
+          <h3>培训会议排期</h3>
+          <p>用 DLV-903 说明会前材料、资料准备、记录人和会后动作，不把说明会写成结论确认。</p>
+        </article>
+        <article class="step">
+          <b>4</b>
+          <h3>培训评审整改</h3>
+          <p>用 DLV-904 说明通过、有条件通过、退回补充、暂缓决策的判断口径。</p>
+        </article>
+        <article class="step">
+          <b>5</b>
+          <h3>培训组织人员标准</h3>
+          <p>用 DLV-905 说明来源优先级和待确认处理，基础资料不混同权限角色。</p>
+        </article>
+      </div>
+
+      <div class="topic-grid">
+        <article class="topic">
+          <h3>数据与主数据现状调研</h3>
+          <p>启动主数据对象清单收集。对象包括组织、岗位、人员、物料、供应商、客户、项目、财务科目等。</p>
+          <div class="date-chip">2026-07-13 前形成对象清单或缺口说明</div>
+        </article>
+        <article class="topic">
+          <h3>PLM 现状调研</h3>
+          <p>启动图文档、EBOM、设计变更和质量追溯资料准备，工程技术部、质量管理部等参与。</p>
+          <div class="date-chip">2026-07-13 前形成资料清单或缺口说明</div>
+        </article>
+        <article class="topic">
+          <h3>MES/低代码平台现状调研</h3>
+          <p>启动生产计划、派工、报工、质量闭环和现场资源资料准备。</p>
+          <div class="date-chip">2026-07-13 前形成执行资料或缺口说明</div>
+        </article>
+        <article class="topic">
+          <h3>ERP/OA 现状调研</h3>
+          <p>启动 ERP U8 模块、OA 流程、采购计划、库存和财务资料准备。</p>
+          <div class="date-chip">2026-07-13 前形成模块清单或缺口说明</div>
+        </article>
+        <article class="topic">
+          <h3>基础设施与 IT 资源现状调研</h3>
+          <p>启动服务器、存储、虚拟化、网络、安全域、机房和供应商资料准备。</p>
+          <div class="date-chip">2026-07-13 前形成资源清单或缺口说明</div>
+        </article>
+      </div>
+
+      <div class="confirm-grid">
+        <article class="confirm">
+          <h3>确认资料回执接口人</h3>
+          <p>每个专题至少有部门或工作组接口人；能实名则实名。未确认时写入待指定清单。</p>
+        </article>
+        <article class="confirm">
+          <h3>确认资料回执截止</h3>
+          <p>首批资料或缺口说明原则上 2026-07-13 前返回；不能返回时必须说明原因和可替代证据。</p>
+        </article>
+        <article class="confirm">
+          <h3>确认专题会议排期</h3>
+          <p>五类专题先按 DLV-903 拟排期推进，PMO 可根据参会确认调整，但要留下原因和责任人。</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="next" class="section">
+      <div class="section-head">
+        <span class="number">三</span>
+        <div>
+          <h2>下周行动项</h2>
+          <p>下周跟踪周期按 2026-07-13 至 2026-07-17 执行。判断标准不是开了几场会，而是资料、缺口、责任人和下一步访谈对象是否清楚。</p>
+        </div>
+      </div>
+
+      <div class="actions">
+        <article class="action-card">
+          <span class="action-id">N-A01</span>
+          <div>
+            <h3>汇总五类专题首批资料回执</h3>
+            <div class="action-meta">
+              <span>PMO</span>
+              <span>信息化项目组</span>
+              <span>2026-07-13</span>
+            </div>
+            <p>每个专题至少形成已提供、部分提供、需审批、无资料、待确认状态之一，并有责任方。</p>
+          </div>
+        </article>
+        <article class="action-card">
+          <span class="action-id">N-A02</span>
+          <div>
+            <h3>完成首批资料收集节点</h3>
+            <div class="action-meta">
+              <span>各专题工作组</span>
+              <span>2026-07-13</span>
+            </div>
+            <p>数据与主数据对象清单、PLM 图文档资料、生产计划与执行资料、ERP U8 模块清单、基础设施资源清单分别形成文件或缺口说明。</p>
+          </div>
+        </article>
+        <article class="action-card">
+          <span class="action-id">N-A03</span>
+          <div>
+            <h3>组织第二轮专题访谈</h3>
+            <div class="action-meta">
+              <span>信息化项目组</span>
+              <span>各专题工作组</span>
+              <span>2026-07-14 至 2026-07-15</span>
+            </div>
+            <p>编码规则与模板、EBOM 与变更流程、现场报工与质量闭环、MRP/采购/生产计划差距、网络拓扑与安全域形成访谈纪要或待补问题。</p>
+          </div>
+        </article>
+        <article class="action-card">
+          <span class="action-id">N-A04</span>
+          <div>
+            <h3>盘点来源系统、接口、责任和数据流向</h3>
+            <div class="action-meta">
+              <span>信息化项目组</span>
+              <span>MDM 工作组</span>
+              <span>2026-07-16 至 2026-07-17</span>
+            </div>
+            <p>主数据来源和维护责任、PLM 接口、ERP 数据流向、现场资源和问题管理、机房动力环境形成清单或风险项。</p>
+          </div>
+        </article>
+        <article class="action-card">
+          <span class="action-id">N-A05</span>
+          <div>
+            <h3>召开调研计划回看与评审</h3>
+            <div class="action-meta">
+              <span>信息化项目管理工作室</span>
+              <span>PMO</span>
+              <span>2026-07-16</span>
+            </div>
+            <p>按 DLV-904 形成通过、有条件通过、退回补充或暂缓决策结论；问题进入整改清单。</p>
+          </div>
+        </article>
+        <article class="action-card">
+          <span class="action-id">N-A06</span>
+          <div>
+            <h3>推进组织人员标准业务评审和修订确认</h3>
+            <div class="action-meta">
+              <span>MDM 工作组</span>
+              <span>数据质量工作组</span>
+              <span>2026-07-16</span>
+            </div>
+            <p>DLV-905 的争议项、待确认项、修订项进入清单；不把待确认事实写成正式口径。</p>
+          </div>
+        </article>
+        <article class="action-card">
+          <span class="action-id">N-A07</span>
+          <div>
+            <h3>建立资料缺口和会议输出跟踪台账</h3>
+            <div class="action-meta">
+              <span>PMO</span>
+              <span>信息化项目组</span>
+              <span>2026-07-17</span>
+            </div>
+            <p>DLV-902 的资料缺口、DLV-903 的日程调整、DLV-904 的整改项能互相追溯。</p>
+          </div>
+        </article>
+      </div>
+
+      <div class="close-note">下周会上只看三类结果：资料是否回来、缺口是否说清、下一步谁负责。没有资料也可以接受，但必须写明没有资料的原因、影响和补救路径。</div>
+    </section>
+  </main>
+
+  <footer>
+    本 H5 页面由同目录 Markdown 会议材料整理生成，只作为会议材料展示，不替代 PMO 计划真源、受控交付物正本或正式评审结论。
+  </footer>
+</body>
+</html>
