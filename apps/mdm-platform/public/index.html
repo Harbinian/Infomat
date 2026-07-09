@@ -742,6 +742,13 @@
     .process-design-form label { display: grid; gap: 5px; font-size: 12px; color: var(--text-muted); }
     .process-design-form .wide { grid-column: 1 / -1; }
     .process-design-form input, .process-design-form textarea, .process-design-form select { min-width: 0; }
+    .process-design-system-field {
+      display: grid; gap: 5px; min-height: 54px; padding: 9px 10px;
+      border: 1px solid #eadfd4; border-radius: 8px; background: #fffdf8;
+      color: var(--text-muted); font-size: 12px;
+    }
+    .process-design-system-field strong { color: var(--text-main); font-size: 13px; font-weight: 600; }
+    .process-design-system-field.wide { grid-column: 1 / -1; }
     .process-design-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
     .process-design-detail { display: grid; gap: 12px; margin-top: 12px; }
     .process-design-detail-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
@@ -760,6 +767,14 @@
     .process-design-item-actions {
       display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end;
     }
+    .process-design-field-list {
+      display: grid; gap: 6px; margin-top: 8px;
+    }
+    .process-design-field-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 6px 8px; border: 1px solid #eadfd4; border-radius: 6px; background: #fffaf0;
+    }
+    .process-design-field-row span { margin-top: 0; }
     .process-design-detail-grid strong, .process-design-list-item strong { display: block; color: #233044; font-size: 13px; }
     .process-design-detail-grid span, .process-design-list-item span { display: block; margin-top: 3px; color: var(--text-muted); font-size: 12px; line-height: 1.45; }
     .process-design-mini-list { display: grid; gap: 6px; }
@@ -1734,12 +1749,16 @@
             <div class="process-design-form process-design-step-panel" data-process-design-step-panel="draft" id="pgDesignDocumentProfileForm">
               <label>制度编号<input id="pgDesignDocumentNo" placeholder="例如：CX-ZD-001"></label>
               <label>制度名称<input id="pgDesignDocumentTitle" placeholder="例如：客户资料变更管理制度"></label>
-              <label>拟发布版次<input id="pgDesignPlannedEdition" readonly placeholder="保存后自动生成"></label>
-              <label>当前有效版次<input id="pgDesignCurrentEdition" readonly placeholder="尚未发布"></label>
-              <label class="wide">发布后处理<input id="pgDesignPublishEffect" readonly value="发布即生效；发布下一版次时，上一版自动标记为已替代"></label>
+              <div class="process-design-system-field" data-ui-id="pgDesignPlannedEdition"><span>拟发布版次</span><strong id="pgDesignPlannedEditionValue">保存后自动生成</strong></div>
+              <div class="process-design-system-field" data-ui-id="pgDesignCurrentEdition"><span>当前有效版次</span><strong id="pgDesignCurrentEditionValue">尚未发布</strong></div>
+              <div class="process-design-system-field wide" data-ui-id="pgDesignPublishEffect"><span>发布后处理</span><strong id="pgDesignPublishEffectValue">发布即生效；发布下一版次时，上一版自动标记为已替代</strong></div>
+              <label>L1 能力域<select id="pgDesignDraftL1Name"><option value="">正在读取已有能力域</option></select></label>
+              <label>L2 业务能力<select id="pgDesignDraftL2Name"><option value="">请先选择 L1 能力域</option></select></label>
               <label>依据类型<select id="pgDesignBasisType"><option value="现场实际">现场实际</option><option value="制度 / 规程">制度 / 规程</option><option value="表单 / 台账">表单 / 台账</option><option value="会议 / 访谈">会议 / 访谈</option><option value="暂无证据">暂无证据</option></select></label>
               <label>是否涉及其他部门<select id="pgDesignInvolvesOtherDepartments"><option value="false">否</option><option value="true">是</option></select></label>
-              <label>涉及其他部门<input id="pgDesignRelatedDepartments" placeholder="多个部门用顿号或逗号分隔"></label>
+              <div class="wide" id="pgDesignRelatedDepartments" data-process-design-related-departments>
+                <span class="pg-status">选择“全公司”表示包含所有部门；也可以勾选多个具体部门。</span>
+              </div>
               <div class="wide notice" id="pgDesignDocumentLookupStatus">输入制度编号后会校验是否可创建 A版或下一版次。</div>
               <label class="wide">目的<textarea id="pgDesignPurpose" rows="2" placeholder="说明制度要解决什么问题"></textarea></label>
               <label class="wide">范围<textarea id="pgDesignScope" rows="2" placeholder="说明适用部门、流程、对象或场景"></textarea></label>
@@ -1768,11 +1787,9 @@
               <div class="empty">选择草稿或保存制度说明后继续补术语、业务行为、附表和证据。</div>
             </div>
             <div class="process-design-form process-design-step-panel pg-hidden" data-process-design-step-panel="behavior" id="pgDesignProcessForm">
-              <label>L1 能力域<select id="pgDesignProcessL1Name"><option value="">正在读取已有能力域</option></select></label>
-              <label>L2 业务能力<select id="pgDesignProcessL2Name"><option value="">请先选择 L1 能力域</option></select></label>
               <label>L3 流程<input id="pgDesignProcessL3Name" placeholder="例如：客户需求变更处理"></label>
               <label>流程类型<select id="pgDesignProcessType"><option value="new">新增流程</option><option value="inherit">承继流程</option><option value="handoff">跨部门承接流程</option><option value="adjustment">调整流程</option></select></label>
-              <div class="wide notice">流程编号由系统自动生成，保存后会显示在下方流程列表中。</div>
+              <div class="wide notice">流程编号由系统自动生成；L1/L2 取自制度说明，后续流程默认沿用。</div>
               <label class="wide">流程说明<textarea id="pgDesignProcessDescription" rows="2" placeholder="说明这个流程对应的业务边界"></textarea></label>
             </div>
             <div class="notice process-design-step-panel pg-hidden" data-process-design-step-panel="behavior" data-process-design-taxonomy-notice>暂不开放新增能力域或业务能力；请从本部门已有映射关系中选择 L1/L2。</div>
@@ -1816,43 +1833,50 @@
               <button type="button" class="btn secondary" id="saveProcessDesignHandoffBtn">保存跨部门承接</button>
             </div>
             <div class="process-design-form process-design-step-panel pg-hidden" data-process-design-step-panel="tables" id="pgDesignFormForm">
-              <label>关联步骤<select id="pgDesignFormStepSelect"><option value="">不关联具体步骤</option></select></label>
+              <label>关联业务行为<select id="pgDesignFormStepSelect"><option value="">请选择业务行为</option></select></label>
+              <label>表单编号<span class="process-design-system-value" id="pgDesignFormCodePreview">表单编号保存后自动生成</span></label>
               <label>表单名称<input id="pgDesignFormName" placeholder="例如：客户资料变更申请单"></label>
-              <label class="wide">表单说明<textarea id="pgDesignFormDescription" rows="2" placeholder="说明表单用途和填写要求"></textarea></label>
-              <label class="wide">归档规则<textarea id="pgDesignFormArchiveRule" rows="2" placeholder="说明归档位置、留存周期或责任人"></textarea></label>
+              <label>主表名称<input id="pgDesignMainTableName" placeholder="例如：客户资料变更主表" value="主表"></label>
+              <label>归档位置<select id="pgDesignArchiveLocation"><option value="">请选择</option><option value="部门自行保存">部门自行保存</option><option value="资料室">资料室</option></select></label>
+              <label>留存周期<select id="pgDesignRetentionPeriod"><option value="">请选择</option><option value="1年">1年</option><option value="3年">3年</option><option value="10年">10年</option><option value="永久">永久</option></select></label>
+              <label>归档责任部门<select id="pgDesignResponsibleDept"><option value="">请选择部门</option></select></label>
+              <label>归档责任角色<select id="pgDesignResponsibleRole"><option value="">请选择部门后加载</option></select></label>
             </div>
             <div class="process-design-actions process-design-step-panel pg-hidden" data-process-design-step-panel="tables">
               <button type="button" class="btn secondary" id="saveProcessDesignFormBtn">保存表单</button>
+              <button type="button" class="btn secondary" id="applyProcessDesignArchiveDefaultsBtn">套用默认归档责任</button>
             </div>
             <div class="process-design-form process-design-step-panel pg-hidden" data-process-design-step-panel="tables" id="pgDesignFormTableForm">
-              <label>所属表单<select id="pgDesignTableFormSelect"><option value="">请先保存表单</option></select></label>
-              <label>附表类型<select id="pgDesignTableKind"><option value="main">主表</option><option value="detail">明细表</option></select></label>
-              <label>表名<input id="pgDesignTableName" placeholder="例如：客户资料变更主表"></label>
-              <label class="wide">附表说明<textarea id="pgDesignTableDescription" rows="2" placeholder="说明主表或明细表记录什么"></textarea></label>
+              <label>所属表单<select id="pgDesignDetailFormSelect"><option value="">请先保存表单</option></select></label>
+              <label>明细表名称<input id="pgDesignDetailTableName" placeholder="例如：变更字段明细"></label>
             </div>
             <div class="process-design-actions process-design-step-panel pg-hidden" data-process-design-step-panel="tables">
-              <button type="button" class="btn secondary" id="saveProcessDesignFormTableBtn">保存附表</button>
+              <button type="button" class="btn secondary" id="createProcessDesignDetailTableBtn">新增明细表</button>
+              <button type="button" class="btn secondary" id="deleteProcessDesignDetailTableBtn">删除明细表</button>
             </div>
-            <div class="process-design-form process-design-step-panel pg-hidden" data-process-design-step-panel="fields" id="pgDesignTableFieldForm">
-              <label>所属附表<select id="pgDesignTableFieldTableSelect"><option value="">请先保存附表</option></select></label>
-              <label>字段名称<input id="pgDesignTableFieldName" data-no-space-field="true" placeholder="例如：客户名称"></label>
-              <label>字段类型<select id="pgDesignTableFieldType"><option value="文本">文本</option><option value="数字">数字</option><option value="日期">日期</option><option value="金额">金额</option><option value="枚举">枚举</option><option value="布尔">布尔</option><option value="部门">部门</option><option value="人员">人员</option><option value="附件">附件</option></select></label>
-              <label>是否必填<select id="pgDesignTableFieldRequired"><option value="true">是</option><option value="false">否</option></select></label>
-              <label class="wide">字段说明<textarea id="pgDesignTableFieldDescription" rows="2" placeholder="说明字段来源、填写规则或口径"></textarea></label>
+            <div class="process-design-inline-list process-design-step-panel pg-hidden" data-process-design-step-panel="tables" id="pgDesignFormList">
+              <h3>已保存表单 <span class="pg-status">0 条</span></h3>
+              <div class="empty">保存表单后会显示在这里，可继续修改附表结构。</div>
             </div>
             <div class="process-design-actions process-design-step-panel pg-hidden" data-process-design-step-panel="fields">
-              <button type="button" class="btn secondary" id="saveProcessDesignTableFieldBtn">保存附表字段</button>
+              <button type="button" class="btn secondary" id="addProcessDesignMainFieldBtn">新增主表字段</button>
+              <button type="button" class="btn secondary" id="addProcessDesignDetailFieldBtn">新增明细字段</button>
             </div>
             <div class="process-design-form process-design-step-panel pg-hidden" data-process-design-step-panel="fields" id="pgDesignFieldForm">
               <label>所属表单<select id="pgDesignFieldFormSelect"><option value="">请先保存表单</option></select></label>
-              <label>字段中文名<input id="pgDesignFieldNameCn" data-no-space-field="true" placeholder="例如：客户统一社会信用代码"></label>
-              <label>字段英文名<input id="pgDesignFieldNameEn" data-no-space-field="true" placeholder="例如：customer_credit_code"></label>
-              <label>数据对象<input id="pgDesignFieldDataObject" data-no-space-field="true" placeholder="例如：客户"></label>
-              <label>字段类型<select id="pgDesignFieldType"><option value="文本">文本</option><option value="数字">数字</option><option value="日期">日期</option><option value="金额">金额</option><option value="枚举">枚举</option><option value="布尔">布尔</option><option value="部门">部门</option><option value="人员">人员</option><option value="附件">附件</option></select></label>
-              <label class="wide">字段证据说明<textarea id="pgDesignFieldEvidenceNote" rows="2" placeholder="说明字段来源、维护责任或校验依据"></textarea></label>
+              <label>字段归属<select id="pgDesignFieldStructureKind"><option value="main">主表</option><option value="detail">明细表</option></select></label>
+              <label>字段名称<input id="pgDesignFieldName" data-no-space-field="true" placeholder="例如：客户名称"></label>
+              <label>字段类型<select id="pgDesignFieldType"><option value="">加载字段类型中</option></select></label>
+              <label>是否必填<select id="pgDesignFieldRequired"><option value="true">是</option><option value="false">否</option></select></label>
+              <label class="wide">枚举选项<input id="pgDesignFieldEnumOptions" placeholder="字段类型为枚举时填写，例如：新增,变更,取消"></label>
+              <label class="wide">字段说明<textarea id="pgDesignFieldDescription" rows="2" placeholder="说明填写规则或口径"></textarea></label>
             </div>
             <div class="process-design-actions process-design-step-panel pg-hidden" data-process-design-step-panel="fields">
               <button type="button" class="btn secondary" id="saveProcessDesignFieldBtn">保存字段</button>
+            </div>
+            <div class="process-design-inline-list process-design-step-panel pg-hidden" data-process-design-step-panel="fields" id="pgDesignFieldList">
+              <h3>已保存字段 <span class="pg-status">0 条</span></h3>
+              <div class="empty">保存字段后会显示在这里，可继续新增下一条或回填修改。</div>
             </div>
             <div class="process-design-form process-design-step-panel pg-hidden" data-process-design-step-panel="evidence" id="pgDesignEvidenceForm">
               <label>证据类型<select id="pgDesignEvidenceType"><option value="制度条款">制度条款</option><option value="表单样例">表单样例</option><option value="访谈记录">访谈记录</option><option value="会议纪要">会议纪要</option><option value="流程图">流程图</option><option value="台账记录">台账记录</option><option value="暂无证据">暂无证据</option></select></label>
@@ -2267,7 +2291,7 @@
       </div>
       <div style="margin-bottom:12px;">
         <label style="display:block;margin-bottom:4px;">新密码</label>
-        <input type="password" id="newPassword" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;" placeholder="至少6位">
+        <input type="password" id="newPassword" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;" placeholder="至少10位，包含字母和数字">
       </div>
       <div style="margin-bottom:16px;">
         <label style="display:block;margin-bottom:4px;">确认新密码</label>
@@ -2282,7 +2306,7 @@
 
   <script>
     // ===== State & Utilities =====
-    const state = { user:null, departments:[], capabilities:[], processes:[], termProcesses:[], termTypes:[], mappings:[], dataMapContexts:[], dataMapFields:[], todos:[], conflicts:[], terms:[], currentRoute:null, currentView:'roleWorkbench', activeMapping:null, activeConflict:null, pollTimer:null, isEditing:false, activeReview:null, activeCapReview:null, activeProcReview:null, pgSelectedDept:'', pgEvidenceFocus:null, pgActiveGuidance:null, pgActiveGovernanceObject:null, pgSourceCoverageData:null, pgTaskSummary:null, pgIssueActionResult:null, pgAssignablePersons:null, pgViewCache:{}, pgViewRequests:{}, pgWorkspace:'existing', processDesign:{ summary:null, draft:null, activeStep:'draft', taxonomy:null, taxonomyLoaded:false, taxonomyScopeKey:null, taxonomyError:null, documentLookup:null }, processGovernanceRenderRequestId:0, pageWorkflow:null, pageWorkflowRequestId:0, roleWorkbench:{ mode:'todo', data:null, selectedNode:null }, activity:{ roleWorkbench:null, dashboard:null, dashboardUsers:[] } };
+    const state = { user:null, departments:[], capabilities:[], processes:[], termProcesses:[], termTypes:[], mappings:[], dataMapContexts:[], dataMapFields:[], todos:[], conflicts:[], terms:[], currentRoute:null, currentView:'roleWorkbench', activeMapping:null, activeConflict:null, pollTimer:null, isEditing:false, activeReview:null, activeCapReview:null, activeProcReview:null, pgSelectedDept:'', pgEvidenceFocus:null, pgActiveGuidance:null, pgActiveGovernanceObject:null, pgSourceCoverageData:null, pgTaskSummary:null, pgIssueActionResult:null, pgAssignablePersons:null, pgViewCache:{}, pgViewRequests:{}, pgWorkspace:'existing', processDesign:{ summary:null, draft:null, activeStep:'draft', taxonomy:null, taxonomyLoaded:false, taxonomyScopeKey:null, taxonomyError:null, documentLookup:null, fieldTypes:[], rosterRolesByDepartment:{} }, processGovernanceRenderRequestId:0, pageWorkflow:null, pageWorkflowRequestId:0, roleWorkbench:{ mode:'todo', data:null, selectedNode:null }, activity:{ roleWorkbench:null, dashboard:null, dashboardUsers:[] } };
     const SOURCE_COVERAGE_VISIBLE_LIMIT = 20;
     const PROCESS_GOVERNANCE_QUALITY_VISIBLE_LIMIT = 80;
     const PROCESS_DESIGN_FIELD_TYPES = ['文本', '长文本', '数值', '金额', '数量', '日期', '日期时间', '是/否', '枚举', '人员', '部门', '附件'];
@@ -2333,6 +2357,7 @@
       { key: 'preview', label: '结构化预览' },
       { key: 'markdown', label: 'Markdown 草案' }
     ];
+    const PROCESS_DESIGN_ALL_COMPANY_RELATED_DEPARTMENT = '全公司';
 
     function processGovernanceViewFromRoute(route) {
       if (route && route.pgWorkspace === 'new') return 'documentStructure';
@@ -2485,8 +2510,8 @@
 
     function renderProcessDesignTaxonomyOptions(selectedL1, selectedL2) {
       var items = processDesignTaxonomyItems();
-      var l1Select = $('pgDesignProcessL1Name');
-      var l2Select = $('pgDesignProcessL2Name');
+      var l1Select = $('pgDesignDraftL1Name');
+      var l2Select = $('pgDesignDraftL2Name');
       var notice = document.querySelector('[data-process-design-taxonomy-notice]');
       var l1Options = state.processDesign && state.processDesign.taxonomy && state.processDesign.taxonomy.l1Options || uniqueProcessDesignTaxonomyValues(items, 'l1_name');
       selectedL1 = String(selectedL1 || '').trim();
@@ -2523,8 +2548,8 @@
       var scopeKey = currentProcessDesignTaxonomyScopeKey();
       if (state.processDesign.taxonomyLoaded && state.processDesign.taxonomyScopeKey === scopeKey && !options.force) {
         renderProcessDesignTaxonomyOptions(
-          $('pgDesignProcessL1Name') ? $('pgDesignProcessL1Name').value : '',
-          $('pgDesignProcessL2Name') ? $('pgDesignProcessL2Name').value : ''
+          $('pgDesignDraftL1Name') ? $('pgDesignDraftL1Name').value : '',
+          $('pgDesignDraftL2Name') ? $('pgDesignDraftL2Name').value : ''
         );
         return state.processDesign.taxonomy;
       }
@@ -2546,8 +2571,8 @@
 
     function assertProcessDesignTaxonomySelection() {
       var items = processDesignTaxonomyItems();
-      var l1Name = $('pgDesignProcessL1Name') ? $('pgDesignProcessL1Name').value.trim() : '';
-      var l2Name = $('pgDesignProcessL2Name') ? $('pgDesignProcessL2Name').value.trim() : '';
+      var l1Name = $('pgDesignDraftL1Name') ? $('pgDesignDraftL1Name').value.trim() : '';
+      var l2Name = $('pgDesignDraftL2Name') ? $('pgDesignDraftL2Name').value.trim() : '';
       if (!items.length) throw new Error('请先导入本部门已有流程映射关系后再选择 L1/L2');
       if (!l1Name) throw new Error('请选择已有 L1 能力域');
       if (!l2Name) throw new Error('请选择已有 L2 业务能力');
@@ -2557,11 +2582,68 @@
       if (!matched) throw new Error('L1/L2 必须从本部门已有映射关系中选择，暂不开放新增能力域或业务能力');
     }
 
+    function processDesignDepartmentNames() {
+      return (state.departments || [])
+        .map(function(dept) { return String(dept && dept.name || '').trim(); })
+        .filter(Boolean)
+        .filter(function(name, index, rows) { return rows.indexOf(name) === index; })
+        .sort(function(left, right) { return left.localeCompare(right, 'zh-CN'); });
+    }
+
+    function normalizeProcessDesignRelatedDepartments(values) {
+      var selected = (values || [])
+        .map(function(item) { return String(item || '').trim(); })
+        .filter(Boolean)
+        .filter(function(item, index, rows) { return rows.indexOf(item) === index; });
+      if (selected.indexOf(PROCESS_DESIGN_ALL_COMPANY_RELATED_DEPARTMENT) !== -1) {
+        return [PROCESS_DESIGN_ALL_COMPANY_RELATED_DEPARTMENT];
+      }
+      var allowed = processDesignDepartmentNames();
+      return selected.filter(function(item) { return allowed.indexOf(item) !== -1; });
+    }
+
+    function renderProcessDesignRelatedDepartmentOptions(selectedValues) {
+      var container = $('pgDesignRelatedDepartments');
+      if (!container) return;
+      var currentChecked = Array.from(container.querySelectorAll('[data-process-design-related-department-option]:checked')).map(function(option) { return option.value; });
+      var selected = normalizeProcessDesignRelatedDepartments(selectedValues || currentChecked);
+      var options = [PROCESS_DESIGN_ALL_COMPANY_RELATED_DEPARTMENT].concat(processDesignDepartmentNames());
+      container.innerHTML = '<span class="pg-status">选择“全公司”表示包含所有部门；也可以勾选多个具体部门。</span>' + options.map(function(name) {
+        var isSelected = selected.indexOf(name) !== -1 ? ' checked' : '';
+        var label = name === PROCESS_DESIGN_ALL_COMPANY_RELATED_DEPARTMENT ? name + '（包含所有部门）' : name;
+        return '<label class="checkline"><input type="checkbox" data-process-design-related-department-option value="' + escapeHtml(name) + '"' + isSelected + '> ' + safeText(label) + '</label>';
+      }).join('');
+      syncProcessDesignRelatedDepartmentsState(processDesignDraftEditable());
+    }
+
+    function syncProcessDesignRelatedDepartmentsState(editable) {
+      var container = $('pgDesignRelatedDepartments');
+      if (!container) return;
+      var canEdit = editable === undefined ? processDesignDraftEditable() : Boolean(editable);
+      var involves = $('pgDesignInvolvesOtherDepartments') ? $('pgDesignInvolvesOtherDepartments').value === 'true' : false;
+      var allCompanyChecked = Boolean(container.querySelector('[data-process-design-related-department-option][value="' + CSS.escape(PROCESS_DESIGN_ALL_COMPANY_RELATED_DEPARTMENT) + '"]:checked'));
+      container.querySelectorAll('[data-process-design-related-department-option]').forEach(function(option) {
+        var isAllCompany = option.value === PROCESS_DESIGN_ALL_COMPANY_RELATED_DEPARTMENT;
+        option.disabled = !canEdit || !involves || (allCompanyChecked && !isAllCompany);
+        if (allCompanyChecked && !isAllCompany) option.checked = false;
+      });
+      if (!involves) {
+        container.querySelectorAll('[data-process-design-related-department-option]').forEach(function(option) { option.checked = false; });
+      }
+    }
+
+    function syncProcessDesignAllCompanyRelatedDepartmentState() {
+      var selected = processDesignRelatedDepartmentsInput();
+      renderProcessDesignRelatedDepartmentOptions(selected);
+    }
+
     function refreshProcessDesignCatalogOptions() {
       renderProcessDesignTaxonomyOptions(
-        $('pgDesignProcessL1Name') ? $('pgDesignProcessL1Name').value : '',
-        $('pgDesignProcessL2Name') ? $('pgDesignProcessL2Name').value : ''
+        $('pgDesignDraftL1Name') ? $('pgDesignDraftL1Name').value : '',
+        $('pgDesignDraftL2Name') ? $('pgDesignDraftL2Name').value : ''
       );
+      renderProcessDesignRelatedDepartmentOptions();
+      renderProcessDesignDepartmentOptions();
     }
 
     function renderProcessDesignDocumentLookup(result) {
@@ -2578,11 +2660,11 @@
         return;
       }
       status.textContent = result.message || (result.exists ? '该制度编号已存在' : '该制度编号可用，可创建 A版草稿');
-      if ($('pgDesignPlannedEdition') && result.next_edition && !currentProcessDesignDraftId()) {
-        $('pgDesignPlannedEdition').value = result.next_edition + '版';
+      if ($('pgDesignPlannedEditionValue') && result.next_edition && !currentProcessDesignDraftId()) {
+        $('pgDesignPlannedEditionValue').textContent = result.next_edition + '版';
       }
-      if ($('pgDesignCurrentEdition')) {
-        $('pgDesignCurrentEdition').value = result.current_edition ? result.current_edition + '版' : '尚未发布';
+      if ($('pgDesignCurrentEditionValue')) {
+        $('pgDesignCurrentEditionValue').textContent = result.current_edition ? result.current_edition + '版' : '尚未发布';
       }
       if (nextBtn && result.can_create_next && result.document && result.document.id) {
         nextBtn.classList.remove('pg-hidden');
@@ -2595,11 +2677,13 @@
       if (!documentNo) {
         state.processDesign.documentLookup = null;
         renderProcessDesignDocumentLookup(null);
+        await renderProcessDesignVersionHistory();
         return null;
       }
       var result = await api('/api/process-design/documents/lookup?document_no=' + encodeURIComponent(documentNo));
       state.processDesign.documentLookup = result;
       renderProcessDesignDocumentLookup(result);
+      renderProcessDesignVersionHistory();
       return result;
     }
 
@@ -2645,27 +2729,13 @@
                   '<span>' + safeText((draft.planned_edition ? draft.planned_edition + '版' : 'A版') + ' · ' + (draft.status || 'draft') + ' · ' + (draft.department_name || '')) + '</span>' +
                   '<div class="process-design-item-actions">' +
                     '<button type="button" class="btn secondary" data-process-design-draft-open="' + escapeHtml(draft.id || '') + '">打开草稿</button>' +
-                    (canDeleteDraft ? '<button type="button" class="btn secondary" data-process-design-draft-delete="' + escapeHtml(draft.id || '') + '">删除草稿</button>' : '') +
+                    (canDeleteDraft ? '<button type="button" class="btn secondary" data-process-design-draft-delete="' + escapeHtml(draft.id || '') + '">删除草稿</button>' : '<span class="pg-status">当前状态不可删除</span>') +
                   '</div>' +
                 '</div>';
               }).join('')
             : '<strong>进行中的制度草稿</strong><div class="empty">暂无制度结构草稿</div>';
         }
-        if ($('pgDesignVersionList')) {
-          var versions = data.versions || [];
-          $('pgDesignVersionList').innerHTML = versions.length
-            ? '<strong>历史版次</strong>' + versions.slice(0, 8).map(function(version) {
-                var statusText = version.status === 'published' ? '当前有效' : (version.status === 'superseded' ? '已替代' : version.status);
-                return '<div class="process-design-list-item">' +
-                  '<strong>' + safeText((version.document_no || '') + ' ' + (version.document_title || '') + ' ' + (version.edition || '') + '版') + '</strong>' +
-                  '<span>' + safeText(statusText) + ' · ' + safeText(version.department_name || '') + '</span>' +
-                  '<div class="process-design-item-actions">' +
-                    '<button type="button" class="btn secondary" data-process-design-version-open="' + escapeHtml(version.draft_id || '') + '">结构化预览</button>' +
-                  '</div>' +
-                '</div>';
-              }).join('')
-            : '<strong>历史版次</strong><div class="empty">暂无发布版次</div>';
-        }
+        await renderProcessDesignVersionHistory();
         renderProcessDesignStepProgress();
       } catch (error) {
         if ($('pgDesignSummaryMeta')) $('pgDesignSummaryMeta').textContent = '文档结构化输出暂不可用';
@@ -2679,9 +2749,51 @@
       }
     }
 
+    function currentProcessDesignDocumentNo() {
+      var inputValue = $('pgDesignDocumentNo') ? String($('pgDesignDocumentNo').value || '').trim() : '';
+      if (inputValue) return inputValue;
+      var detail = processDesignCurrentDetail();
+      var draft = detail.draft || detail;
+      var profile = detail.documentProfile || {};
+      if (draft && draft.document_no) return String(draft.document_no || '').trim();
+      if (profile && profile.document_no) return String(profile.document_no || '').trim();
+      var lookup = state.processDesign && state.processDesign.documentLookup || null;
+      return lookup && lookup.document_no ? String(lookup.document_no || '').trim() : '';
+    }
+
+    async function renderProcessDesignVersionHistory() {
+      var target = $('pgDesignVersionList');
+      if (!target) return;
+      var documentNo = currentProcessDesignDocumentNo();
+      if (!documentNo) {
+        target.innerHTML = '<strong>历史版次</strong><div class="empty">输入制度编号后显示该制度的历史版次</div>';
+        return;
+      }
+      target.innerHTML = '<strong>历史版次</strong><div class="empty">正在读取 ' + safeText(documentNo) + ' 的历史版次...</div>';
+      try {
+        var data = await api('/api/process-design/summary?document_no=' + encodeURIComponent(documentNo));
+        var versions = data.versions || [];
+        target.innerHTML = versions.length
+          ? '<strong>历史版次 · ' + safeText(documentNo) + '</strong>' + versions.slice(0, 8).map(function(version) {
+              var statusText = version.status === 'published' ? '当前有效' : (version.status === 'superseded' ? '已替代' : version.status);
+              return '<div class="process-design-list-item">' +
+                '<strong>' + safeText((version.document_no || '') + ' ' + (version.document_title || '') + ' ' + (version.edition || '') + '版') + '</strong>' +
+                '<span>' + safeText(statusText) + ' · ' + safeText(version.department_name || '') + '</span>' +
+                '<div class="process-design-item-actions">' +
+                  '<button type="button" class="btn secondary" data-process-design-version-open="' + escapeHtml(version.draft_id || '') + '">结构化预览</button>' +
+                '</div>' +
+              '</div>';
+            }).join('')
+          : '<strong>历史版次 · ' + safeText(documentNo) + '</strong><div class="empty">该制度编号暂无发布版次</div>';
+      } catch (error) {
+        target.innerHTML = '<strong>历史版次</strong><div class="empty">' + safeText(error.message || '制度历史版次加载失败') + '</div>';
+      }
+    }
+
     function processDesignRelatedDepartmentsInput() {
-      var raw = $('pgDesignRelatedDepartments') ? $('pgDesignRelatedDepartments').value : '';
-      return raw.split(/[、,，;；]/).map(function(item) { return item.trim(); }).filter(Boolean);
+      var container = $('pgDesignRelatedDepartments');
+      if (!container) return [];
+      return normalizeProcessDesignRelatedDepartments(Array.from(container.querySelectorAll('[data-process-design-related-department-option]:checked')).map(function(option) { return option.value; }));
     }
 
     async function saveProcessDesignDraftFromWizard() {
@@ -2695,7 +2807,11 @@
         basis_type: $('pgDesignBasisType') ? $('pgDesignBasisType').value : '现场实际',
         basis_description: currentDraft.basis_description || '',
         involves_other_departments: $('pgDesignInvolvesOtherDepartments') ? $('pgDesignInvolvesOtherDepartments').value === 'true' : false,
-        related_departments: processDesignRelatedDepartmentsInput()
+        related_departments: $('pgDesignInvolvesOtherDepartments') && $('pgDesignInvolvesOtherDepartments').value === 'true' ? processDesignRelatedDepartmentsInput() : [],
+        l1_name: $('pgDesignDraftL1Name') ? $('pgDesignDraftL1Name').value : '',
+        l1_status: $('pgDesignDraftL1Name') && $('pgDesignDraftL1Name').value ? 'confirmed' : 'unclassified',
+        l2_name: $('pgDesignDraftL2Name') ? $('pgDesignDraftL2Name').value : '',
+        l2_status: $('pgDesignDraftL2Name') && $('pgDesignDraftL2Name').value ? 'confirmed' : 'unclassified'
       };
       var profilePayload = processDesignDocumentProfilePayload();
       var validationErrors = validateProcessDesignDraftPayload(payload, profilePayload);
@@ -2714,29 +2830,15 @@
               basis_type: payload.basis_type,
               basis_description: payload.basis_description,
               involves_other_departments: payload.involves_other_departments,
-              related_departments: payload.related_departments
+              related_departments: payload.related_departments,
+              l1_name: payload.l1_name,
+              l1_status: payload.l1_status,
+              l2_name: payload.l2_name,
+              l2_status: payload.l2_status
             }
           : payload;
         var result = await api(draftUrl, { method: existingDraftId ? 'PUT' : 'POST', body: JSON.stringify(draftPayload) });
         var draftId = existingDraftId || result.id || result.draft && result.draft.id;
-        var classificationPayload = {};
-        if ($('pgDesignL1Name') && $('pgDesignL1Name').value) {
-          classificationPayload.l1_name = $('pgDesignL1Name').value;
-          classificationPayload.l1_status = 'confirmed';
-        }
-        if ($('pgDesignL2Name') && $('pgDesignL2Name').value) {
-          classificationPayload.l2_name = $('pgDesignL2Name').value;
-          classificationPayload.l2_status = 'confirmed';
-        }
-        if ($('pgDesignL3Name') && $('pgDesignL3Name').value) {
-          classificationPayload.l3_name = $('pgDesignL3Name').value;
-        }
-        if (draftId && Object.keys(classificationPayload).length) {
-          result = await api('/api/process-design/drafts/' + encodeURIComponent(draftId), {
-            method: 'PUT',
-            body: JSON.stringify(classificationPayload)
-          });
-        }
         state.processDesign.draft = result;
         await saveProcessDesignDocumentProfileFromWizard(draftId || result.id || result.draft && result.draft.id, { silent: true, skipReload: true, payload: profilePayload });
         if ($('pgDesignSaveStatus')) $('pgDesignSaveStatus').textContent = '制度说明已保存';
@@ -2759,29 +2861,41 @@
       draftId = Number(draftId || 0);
       if (!draftId) return null;
       if (!confirm('确认删除这条制度结构草稿？草稿中的流程、业务行为、术语、表单和证据也会一并删除。')) return null;
-      var result = await api('/api/process-design/drafts/' + encodeURIComponent(draftId), { method: 'DELETE' });
-      if (currentProcessDesignDraftId() === draftId) {
-        state.processDesign.draft = null;
-        state.processDesign.editing = null;
-        resetProcessDesignTermForm();
-        resetProcessDesignProcessForm();
-        resetProcessDesignBehaviorForm();
-        state.processDesign.documentLookup = null;
-        ['pgDesignDocumentTitle', 'pgDesignDocumentNo', 'pgDesignPlannedEdition', 'pgDesignCurrentEdition', 'pgDesignPurpose', 'pgDesignScope', 'pgDesignInheritanceRelation'].forEach(function(id) {
-          setInputValue(id, '');
-        });
-        renderProcessDesignDocumentLookup(null);
-        if ($('pgDesignDraftDetail')) $('pgDesignDraftDetail').innerHTML = '<div class="empty">选择草稿或保存制度说明后继续补术语、业务行为、附表和证据。</div>';
+      try {
+        var result = await api('/api/process-design/drafts/' + encodeURIComponent(draftId), { method: 'DELETE' });
+        if (currentProcessDesignDraftId() === draftId) {
+          state.processDesign.draft = null;
+          state.processDesign.editing = null;
+          resetProcessDesignTermForm();
+          resetProcessDesignProcessForm();
+          resetProcessDesignBehaviorForm();
+          state.processDesign.documentLookup = null;
+          ['pgDesignDocumentTitle', 'pgDesignDocumentNo', 'pgDesignPurpose', 'pgDesignScope', 'pgDesignInheritanceRelation', 'pgDesignDraftL1Name', 'pgDesignDraftL2Name'].forEach(function(id) {
+            setInputValue(id, '');
+          });
+          setInputValue('pgDesignInvolvesOtherDepartments', 'false');
+          renderProcessDesignRelatedDepartmentOptions([]);
+          setProcessDesignSystemValue('pgDesignPlannedEditionValue', '保存后自动生成');
+          setProcessDesignSystemValue('pgDesignCurrentEditionValue', '尚未发布');
+          renderProcessDesignDocumentLookup(null);
+          if ($('pgDesignDraftDetail')) $('pgDesignDraftDetail').innerHTML = '<div class="empty">选择草稿或保存制度说明后继续补术语、业务行为、附表和证据。</div>';
+        }
+        showToast('制度结构草稿已删除');
+        await renderProcessDesignWorkspace({ force: true });
+        return result;
+      } catch (error) {
+        var errorMessage = formatApiErrorMessage(error, '制度结构草稿删除失败，请确认 MDM 服务已启动后重试');
+        showToast(errorMessage, 'error');
+        return null;
       }
-      showToast('制度结构草稿已删除');
-      await renderProcessDesignWorkspace({ force: true });
-      return result;
     }
 
     function processDesignDocumentProfilePayload() {
       return {
         document_title: $('pgDesignDocumentTitle') ? $('pgDesignDocumentTitle').value : '',
         document_no: $('pgDesignDocumentNo') ? $('pgDesignDocumentNo').value : '',
+        l1_name: $('pgDesignDraftL1Name') ? $('pgDesignDraftL1Name').value : '',
+        l2_name: $('pgDesignDraftL2Name') ? $('pgDesignDraftL2Name').value : '',
         purpose: $('pgDesignPurpose') ? $('pgDesignPurpose').value : '',
         scope: $('pgDesignScope') ? $('pgDesignScope').value : '',
         inheritance_relation: $('pgDesignInheritanceRelation') ? $('pgDesignInheritanceRelation').value : ''
@@ -2792,6 +2906,8 @@
       var errors = [];
       if (!String(payload.document_no || '').trim()) errors.push('请填写制度编号');
       if (!String(payload.process_name || '').trim()) errors.push('请填写制度名称');
+      if (!String(payload.l1_name || '').trim()) errors.push('请选择 L1 能力域');
+      if (!String(payload.l2_name || '').trim()) errors.push('请选择 L2 业务能力');
       if (!String(payload.basis_type || '').trim()) errors.push('请选择依据类型');
       if (payload.involves_other_departments && !(payload.related_departments || []).length) errors.push('请填写涉及其他部门');
       if (!String(profilePayload.purpose || '').trim()) errors.push('请填写目的');
@@ -2832,6 +2948,11 @@
       if (el) el.value = value === null || value === undefined ? '' : value;
     }
 
+    function setProcessDesignSystemValue(id, value) {
+      var el = $(id);
+      if (el) el.textContent = value === null || value === undefined || value === '' ? '待系统生成' : value;
+    }
+
     function resetProcessDesignTermForm() {
       setInputValue('pgDesignTermName', '');
       setInputValue('pgDesignTermAppliesTo', '');
@@ -2839,7 +2960,6 @@
     }
 
     function resetProcessDesignProcessForm() {
-      renderProcessDesignTaxonomyOptions('', '');
       setInputValue('pgDesignProcessL3Name', '');
       setInputValue('pgDesignProcessType', 'new');
       setInputValue('pgDesignProcessDescription', '');
@@ -2860,15 +2980,41 @@
       setInputValue('pgDesignApprovalNote', '');
     }
 
+    function resetProcessDesignFormStructureInputs() {
+      setProcessDesignSystemValue('pgDesignFormCodePreview', '表单编号保存后自动生成');
+      setInputValue('pgDesignFormStepSelect', '');
+      setInputValue('pgDesignFormName', '');
+      setInputValue('pgDesignMainTableName', '主表');
+      setInputValue('pgDesignArchiveLocation', '');
+      setInputValue('pgDesignRetentionPeriod', '');
+      setInputValue('pgDesignResponsibleDept', '');
+      renderProcessDesignResponsibleRoles([], '');
+      setInputValue('pgDesignDetailFormSelect', '');
+      setInputValue('pgDesignDetailTableName', '');
+      setInputValue('pgDesignFieldFormSelect', '');
+      setInputValue('pgDesignFieldStructureKind', 'main');
+      resetProcessDesignFieldInputs();
+    }
+
+    function resetProcessDesignFieldInputs() {
+      setInputValue('pgDesignFieldName', '');
+      setInputValue('pgDesignFieldRequired', 'true');
+      setInputValue('pgDesignFieldEnumOptions', '');
+      setInputValue('pgDesignFieldDescription', '');
+      renderProcessDesignFieldTypeOptions('文本');
+    }
+
     function resetProcessDesignFormForType(type) {
       if (type === 'term') resetProcessDesignTermForm();
       if (type === 'process') resetProcessDesignProcessForm();
       if (type === 'step') resetProcessDesignBehaviorForm();
+      if (type === 'form') resetProcessDesignFormStructureInputs();
+      if (type === 'field') resetProcessDesignFieldInputs();
     }
 
     function processDesignEditLabel(editing) {
       if (!editing) return '';
-      var labels = { term: '术语编辑中', process: '流程编辑中', step: '业务行为编辑中' };
+      var labels = { term: '术语编辑中', process: '流程编辑中', step: '业务行为编辑中', form: '表单编辑中', field: '字段编辑中' };
       return labels[editing.type] || '编辑中';
     }
 
@@ -2881,6 +3027,10 @@
       if ($('saveProcessDesignTermBtn')) $('saveProcessDesignTermBtn').textContent = editing && editing.type === 'term' ? '保存术语修改' : '保存术语';
       if ($('saveProcessDesignProcessBtn')) $('saveProcessDesignProcessBtn').textContent = editing && editing.type === 'process' ? '保存流程修改' : '保存流程';
       if ($('saveProcessDesignBehaviorBtn')) $('saveProcessDesignBehaviorBtn').textContent = editing && editing.type === 'step' ? '保存业务行为修改' : '保存业务行为';
+      if ($('saveProcessDesignFormBtn')) $('saveProcessDesignFormBtn').textContent = editing && editing.type === 'form' ? '保存表单修改' : '保存表单';
+      if ($('saveProcessDesignFieldBtn')) $('saveProcessDesignFieldBtn').textContent = editing && editing.type === 'field' ? '保存字段修改' : '保存字段';
+      if ($('pgDesignFieldFormSelect')) $('pgDesignFieldFormSelect').disabled = !editable || Boolean(editing && editing.type === 'field');
+      if ($('pgDesignFieldStructureKind')) $('pgDesignFieldStructureKind').disabled = !editable || Boolean(editing && editing.type === 'field');
       if ($('cancelProcessDesignEditBtn')) $('cancelProcessDesignEditBtn').disabled = !editable;
       if ($('newProcessDesignItemBtn')) $('newProcessDesignItemBtn').disabled = !editable;
     }
@@ -2892,6 +3042,7 @@
       document.querySelectorAll('#pgDesignWizard input, #pgDesignWizard textarea, #pgDesignWizard select').forEach(function(el) {
         el.disabled = !editable;
       });
+      syncProcessDesignRelatedDepartmentsState(editable);
       [
         'saveProcessDesignDraftBtn',
         'saveProcessDesignDocumentProfileBtn',
@@ -2900,8 +3051,11 @@
         'saveProcessDesignBehaviorBtn',
         'saveProcessDesignHandoffBtn',
         'saveProcessDesignFormBtn',
-        'saveProcessDesignFormTableBtn',
-        'saveProcessDesignTableFieldBtn',
+        'applyProcessDesignArchiveDefaultsBtn',
+        'createProcessDesignDetailTableBtn',
+        'deleteProcessDesignDetailTableBtn',
+        'addProcessDesignMainFieldBtn',
+        'addProcessDesignDetailFieldBtn',
         'saveProcessDesignFieldBtn',
         'saveProcessDesignEvidenceBtn',
         'submitProcessDesignDraftBtn'
@@ -2948,10 +3102,7 @@
     }
 
     function processDesignProcessPayload() {
-      assertProcessDesignTaxonomySelection();
       return {
-        l1_name: $('pgDesignProcessL1Name') ? $('pgDesignProcessL1Name').value : '',
-        l2_name: $('pgDesignProcessL2Name') ? $('pgDesignProcessL2Name').value : '',
         l3_name: $('pgDesignProcessL3Name') ? $('pgDesignProcessL3Name').value : '',
         process_type: $('pgDesignProcessType') ? $('pgDesignProcessType').value : 'new',
         description: $('pgDesignProcessDescription') ? $('pgDesignProcessDescription').value : ''
@@ -3009,17 +3160,99 @@
       var current = select.value;
       var placeholderById = {
         pgDesignStepProcessSelect: '请先保存流程',
-        pgDesignFormStepSelect: '不关联具体步骤',
+        pgDesignFormStepSelect: '请选择业务行为',
         pgDesignHandoffStepSelect: '请选择跨部门行为',
         pgDesignFieldFormSelect: '请先保存表单',
-        pgDesignTableFormSelect: '请先保存表单',
-        pgDesignTableFieldTableSelect: '请先保存附表'
+        pgDesignDetailFormSelect: '请先保存表单'
       };
       select.innerHTML = '<option value="">' + (placeholderById[id] || '请选择') + '</option>' +
         (items || []).map(function(item) {
           return '<option value="' + escapeHtml(item.id || '') + '">' + safeText(getLabel(item)) + '</option>';
         }).join('');
       if (current) select.value = current;
+    }
+
+    function renderProcessDesignDepartmentOptions(selectedId) {
+      var select = $('pgDesignResponsibleDept');
+      if (!select) return;
+      var current = selectedId || select.value || '';
+      select.innerHTML = '<option value="">请选择部门</option>' + (state.departments || []).map(function(dept) {
+        return '<option value="' + escapeHtml(dept.id || '') + '">' + safeText(dept.name || dept.department_name || '') + '</option>';
+      }).join('');
+      if (current) select.value = String(current);
+    }
+
+    function renderProcessDesignFieldTypeOptions(selectedType) {
+      var select = $('pgDesignFieldType');
+      if (!select) return;
+      var current = selectedType || select.value || '';
+      var types = state.processDesign.fieldTypes && state.processDesign.fieldTypes.length
+        ? state.processDesign.fieldTypes
+        : [
+            { name: '文本' }, { name: '长文本' }, { name: '数字' }, { name: '金额' },
+            { name: '日期' }, { name: '日期时间' }, { name: '枚举' }, { name: '布尔' },
+            { name: '部门' }, { name: '人员' }, { name: '文件编号' }, { name: '签名' },
+            { name: '图片' }, { name: '附件' }, { name: '二维码' }
+          ];
+      select.innerHTML = types.map(function(item) {
+        return '<option value="' + escapeHtml(item.name || '') + '">' + safeText(item.name || '') + '</option>';
+      }).join('');
+      select.value = current || '文本';
+    }
+
+    async function loadProcessDesignFieldTypes() {
+      if (state.processDesign.fieldTypes && state.processDesign.fieldTypes.length) {
+        renderProcessDesignFieldTypeOptions();
+        return state.processDesign.fieldTypes;
+      }
+      var result = await api('/api/process-design/field-types');
+      state.processDesign.fieldTypes = result.items || [];
+      renderProcessDesignFieldTypeOptions();
+      return state.processDesign.fieldTypes;
+    }
+
+    function renderProcessDesignResponsibleRoles(roles, selectedRole) {
+      var select = $('pgDesignResponsibleRole');
+      if (!select) return;
+      var current = selectedRole || select.value || '';
+      select.innerHTML = '<option value="">请选择角色</option>' + (roles || []).map(function(role) {
+        return '<option value="' + escapeHtml(role || '') + '">' + safeText(role || '') + '</option>';
+      }).join('');
+      if (current) select.value = current;
+    }
+
+    async function loadProcessDesignRosterRoles(departmentId, selectedRole) {
+      var safeDepartmentId = Number(departmentId || 0);
+      if (!safeDepartmentId) {
+        renderProcessDesignResponsibleRoles([], selectedRole);
+        return [];
+      }
+      if (!state.processDesign.rosterRolesByDepartment[safeDepartmentId]) {
+        state.processDesign.rosterRolesByDepartment[safeDepartmentId] = await api('/api/process-design/departments/' + encodeURIComponent(safeDepartmentId) + '/roster-roles');
+      }
+      var roles = state.processDesign.rosterRolesByDepartment[safeDepartmentId].roles || [];
+      renderProcessDesignResponsibleRoles(roles, selectedRole);
+      return roles;
+    }
+
+    function findDepartmentIdByName(name) {
+      var target = String(name || '').trim();
+      var dept = (state.departments || []).find(function(item) {
+        return String(item.name || item.department_name || '').trim() === target;
+      });
+      return dept && dept.id || '';
+    }
+
+    async function applyProcessDesignArchiveDefaults() {
+      var draft = currentProcessDesignDraft();
+      var location = $('pgDesignArchiveLocation') ? $('pgDesignArchiveLocation').value : '';
+      var departmentId = location === '资料室'
+        ? findDepartmentIdByName('工程技术部')
+        : (draft.department_id || (state.user && state.user.department_id) || '');
+      if (departmentId && $('pgDesignResponsibleDept')) {
+        $('pgDesignResponsibleDept').value = String(departmentId);
+        await loadProcessDesignRosterRoles(departmentId, '');
+      }
     }
 
     function renderProcessDesignInlineList(id, title, items, renderItem, emptyText) {
@@ -3032,6 +3265,37 @@
         '</div>';
     }
 
+    function processDesignSavedFields(detail) {
+      return (detail && detail.forms || []).flatMap(function(form) {
+        var mainFields = (form.main_fields || form.fields || []).map(function(field) {
+          return Object.assign({}, field, {
+            form_id: form.id,
+            form_name: form.form_name,
+            form_code: form.form_code,
+            structure_kind: 'main',
+            structure_label: '主表',
+            structure_name: form.main_table_name || '主表',
+            structure_code: form.main_table_code || ''
+          });
+        });
+        var detailFields = (form.tables || []).flatMap(function(table) {
+          return (table.fields || []).map(function(field) {
+            return Object.assign({}, field, {
+              form_id: form.id,
+              form_name: form.form_name,
+              form_code: form.form_code,
+              form_table_id: table.id,
+              structure_kind: 'detail',
+              structure_label: '明细表',
+              structure_name: table.table_name || '明细表',
+              structure_code: table.table_code || table.table_no || ''
+            });
+          });
+        });
+        return mainFields.concat(detailFields);
+      });
+    }
+
     function renderProcessDesignInlineLists(detail) {
       detail = detail || {};
       var terms = detail.terms || [];
@@ -3039,6 +3303,7 @@
       var steps = detail.steps || [];
       var activeSteps = steps.filter(function(step) { return (step.status || 'active') !== 'voided'; });
       var forms = detail.forms || [];
+      var fields = processDesignSavedFields(detail);
       var editable = processDesignDraftEditable(detail);
       function itemActionButton(type, id, label, attr, extra) {
         var disabled = editable ? '' : ' disabled';
@@ -3096,6 +3361,36 @@
             (step.void_reason ? ' · 作废原因：' + safeText(step.void_reason) : '') +
           '</span></div><div class="process-design-item-actions">' + actions + '</div></div>';
       }, '还没有业务行为。保存步骤后可继续新增下一条。');
+      renderProcessDesignInlineList('pgDesignFormList', '已保存表单', forms, function(form, index) {
+        var editing = processDesignEditing('form', form.id);
+        var mainFields = form.main_fields || form.fields || [];
+        var detailTable = (form.tables || [])[0] || null;
+        return '<div class="' + (editing ? 'process-design-list-item editing' : 'process-design-list-item') + '" data-process-design-form-edit="' + escapeHtml(form.id || '') + '">' +
+          '<div><strong>' + safeText((index + 1) + '. ' + (form.form_code || '未编号') + ' ' + (form.form_name || '未命名表单')) + (editing ? ' · 编辑中' : '') + '</strong><span>' +
+            '主表：' + safeText(form.main_table_name || '主表') +
+            ' · 主表字段：' + safeText(mainFields.length) +
+            ' · 明细表：' + safeText(detailTable ? (detailTable.table_name || '未命名明细表') : '未创建') +
+            ' · 归档：' + safeText([form.archive_location, form.retention_period, form.responsible_department_name, form.responsible_role].filter(Boolean).join(' / ') || '待补') +
+          '</span></div><div class="process-design-item-actions">' +
+            '<button type="button" class="btn secondary" data-process-design-form-edit="' + escapeHtml(form.id || '') + '"' + (editable ? '' : ' disabled') + '>编辑表单</button>' +
+            '<button type="button" class="btn secondary" data-process-design-form-delete="' + escapeHtml(form.id || '') + '"' + (editable ? '' : ' disabled') + '>删除表单</button>' +
+          '</div></div>';
+      }, '还没有表单。保存表单后会显示在这里，可继续修改附表结构。');
+      renderProcessDesignInlineList('pgDesignFieldList', '已保存字段', fields, function(field, index) {
+        var editing = processDesignEditing('field', field.id);
+        var actions = '<button type="button" class="btn secondary" data-process-design-field-edit="' + escapeHtml(field.id || '') + '"' + (editable ? '' : ' disabled') + '>编辑字段</button>' +
+          '<button type="button" class="btn secondary" data-process-design-field-move="' + escapeHtml(field.id || '') + '" data-process-design-field-direction="up"' + (editable ? '' : ' disabled') + '>上移</button>' +
+          '<button type="button" class="btn secondary" data-process-design-field-move="' + escapeHtml(field.id || '') + '" data-process-design-field-direction="down"' + (editable ? '' : ' disabled') + '>下移</button>' +
+          '<button type="button" class="btn secondary" data-process-design-field-delete="' + escapeHtml(field.id || '') + '"' + (editable ? '' : ' disabled') + '>删除字段</button>';
+        return '<div class="' + (editing ? 'process-design-list-item editing' : 'process-design-list-item') + '" data-process-design-field-edit="' + escapeHtml(field.id || '') + '">' +
+          '<div><strong>' + safeText((index + 1) + '. ' + (field.field_code || '未编号') + ' ' + (field.field_name || '未命名字段')) + (editing ? ' · 编辑中' : '') + '</strong><span>' +
+            '表单：' + safeText(field.form_name || '未命名表单') +
+            ' · 归属：' + safeText(field.structure_label || '') + ' ' + safeText(field.structure_name || '') +
+            ' · 类型：' + safeText(field.field_type || '文本') +
+            ' · 必填：' + safeText(field.required ? '是' : '否') +
+            (field.enum_options ? ' · 选项：' + safeText(field.enum_options) : '') +
+          '</span></div><div class="process-design-item-actions">' + actions + '</div></div>';
+      }, '还没有字段。保存字段后会显示在这里，可继续新增下一条或回填修改。');
       updateProcessDesignEditChrome();
     }
 
@@ -3118,21 +3413,21 @@
         return result;
       }, []);
       var tableFieldCount = tables.reduce(function(total, table) { return total + ((table.fields || []).length); }, 0);
+      var mainFieldCount = forms.reduce(function(total, form) { return total + ((form.main_fields || form.fields || []).length); }, 0);
       processDesignSelectOptions('pgDesignStepProcessSelect', processes, function(process) { return process.l3_name || ('流程 #' + process.id); });
       processDesignSelectOptions('pgDesignFormStepSelect', activeSteps, function(step) { return step.step_name || ('步骤 #' + step.id); });
       processDesignSelectOptions('pgDesignHandoffStepSelect', activeSteps, function(step) { return step.step_name || ('步骤 #' + step.id); });
       processDesignSelectOptions('pgDesignFieldFormSelect', forms, function(form) { return form.form_name || ('表单 #' + form.id); });
-      processDesignSelectOptions('pgDesignTableFormSelect', forms, function(form) { return form.form_name || ('表单 #' + form.id); });
-      processDesignSelectOptions('pgDesignTableFieldTableSelect', tables, function(table) { return (table.table_kind === 'detail' ? '明细表 · ' : '主表 · ') + (table.table_name || ('附表 #' + table.id)); });
+      processDesignSelectOptions('pgDesignDetailFormSelect', forms, function(form) { return form.form_name || ('表单 #' + form.id); });
+      renderProcessDesignDepartmentOptions();
+      renderProcessDesignFieldTypeOptions();
       renderProcessDesignInlineLists(detail);
       applyProcessDesignReadOnlyState(detail);
-      if ($('pgDesignL1Name')) $('pgDesignL1Name').value = draft.l1_name || '';
-      if ($('pgDesignL2Name')) $('pgDesignL2Name').value = draft.l2_name || '';
-      if ($('pgDesignL3Name')) $('pgDesignL3Name').value = draft.l3_name || '';
+      renderProcessDesignTaxonomyOptions(draft.l1_name || '', draft.l2_name || '');
       if ($('pgDesignDocumentTitle')) $('pgDesignDocumentTitle').value = draft.document_title || profile.document_title || draft.process_name || $('pgDesignDocumentTitle').value || '';
       if ($('pgDesignDocumentNo')) $('pgDesignDocumentNo').value = draft.document_no || profile.document_no || '';
-      if ($('pgDesignPlannedEdition')) $('pgDesignPlannedEdition').value = (draft.planned_edition || 'A') + '版';
-      if ($('pgDesignCurrentEdition')) $('pgDesignCurrentEdition').value = draft.current_edition ? draft.current_edition + '版' : (detail.document && detail.document.current_edition ? detail.document.current_edition + '版' : '尚未发布');
+      setProcessDesignSystemValue('pgDesignPlannedEditionValue', (draft.planned_edition || 'A') + '版');
+      setProcessDesignSystemValue('pgDesignCurrentEditionValue', draft.current_edition ? draft.current_edition + '版' : (detail.document && detail.document.current_edition ? detail.document.current_edition + '版' : '尚未发布'));
       renderProcessDesignDocumentLookup({
         exists: Boolean(draft.document_id),
         document: detail.document || { id: draft.document_id },
@@ -3141,6 +3436,11 @@
         message: draft.base_version_id ? '正在维护下一版次完整重写草稿' : '正在维护 A版草稿',
         can_create_next: false
       });
+      renderProcessDesignVersionHistory();
+      setInputValue('pgDesignBasisType', draft.basis_type || '现场实际');
+      setInputValue('pgDesignInvolvesOtherDepartments', draft.involves_other_departments ? 'true' : 'false');
+      renderProcessDesignRelatedDepartmentOptions(draft.related_departments || []);
+      syncProcessDesignRelatedDepartmentsState(processDesignDraftEditable(detail));
       if ($('pgDesignPurpose')) $('pgDesignPurpose').value = profile.purpose || '';
       if ($('pgDesignScope')) $('pgDesignScope').value = profile.scope || '';
       if ($('pgDesignInheritanceRelation')) $('pgDesignInheritanceRelation').value = profile.inheritance_relation || '';
@@ -3156,7 +3456,7 @@
         ['术语', terms.length],
         ['表单', forms.length],
         ['附表', tables.length],
-        ['字段', forms.reduce(function(total, form) { return total + ((form.fields || []).length); }, 0) + tableFieldCount],
+        ['字段', mainFieldCount + tableFieldCount],
         ['跨部门承接', handoffCount],
         ['证据', evidence.length]
       ];
@@ -3180,8 +3480,33 @@
           '</span></div>';
         }).join('') : '<div class="empty">还没有业务行为</div>') +
         (forms.length ? forms.map(function(form) {
-          var tableText = (form.tables || []).map(function(table) { return (table.table_kind === 'detail' ? '明细表' : '主表') + ' ' + (table.table_no || '') + ' ' + (table.table_name || '') + '（字段 ' + ((table.fields || []).length) + '）'; }).join('；');
-          return '<div class="process-design-list-item"><strong>' + safeText(form.form_name) + '</strong><span>归档：' + safeText(form.archive_rule || '待补') + ' · 附表：' + safeText(tableText || '待补') + '</span></div>';
+          var mainFields = form.main_fields || form.fields || [];
+          var tableText = (form.tables || []).map(function(table) {
+            return '明细表 ' + (table.table_code || table.table_no || '') + ' ' + (table.table_name || '') + '（字段 ' + ((table.fields || []).length) + '）';
+          }).join('；');
+          var fieldRows = mainFields.map(function(field) {
+            return { kind: '主表', field: field };
+          }).concat((form.tables || []).flatMap(function(table) {
+            return (table.fields || []).map(function(field) { return { kind: '明细表', field: field }; });
+          })).map(function(item) {
+            var field = item.field || {};
+            return '<div class="process-design-field-row"><span>' +
+              safeText(item.kind + '字段：' + (field.field_name || '未命名字段') + ' / ' + (field.field_type || '未设类型')) +
+              '</span><div class="process-design-item-actions">' +
+              '<button type="button" class="btn secondary" data-process-design-field-move="' + escapeHtml(field.id || '') + '" data-process-design-field-direction="up">上移</button>' +
+              '<button type="button" class="btn secondary" data-process-design-field-move="' + escapeHtml(field.id || '') + '" data-process-design-field-direction="down">下移</button>' +
+              '<button type="button" class="btn secondary" data-process-design-field-delete="' + escapeHtml(field.id || '') + '">删除字段</button>' +
+              '</div></div>';
+          }).join('');
+          return '<div class="process-design-list-item"><div><strong>' + safeText((form.form_code || '未编号') + ' ' + (form.form_name || '未命名表单')) + '</strong><span>' +
+            '业务行为：' + safeText(form.step_id || '待关联') +
+            ' · 主表：' + safeText((form.main_table_code || '') + ' ' + (form.main_table_name || '主表')) +
+            '（字段 ' + safeText(mainFields.length) + '）' +
+            ' · 归档：' + safeText([form.archive_location, form.retention_period, form.responsible_department_name, form.responsible_role].filter(Boolean).join(' / ') || '待补') +
+            ' · 明细：' + safeText(tableText || '未创建') +
+          '</span>' + (fieldRows ? '<div class="process-design-field-list">' + fieldRows + '</div>' : '') + '</div><div class="process-design-item-actions">' +
+            '<button type="button" class="btn secondary" data-process-design-form-delete="' + escapeHtml(form.id || '') + '">删除表单</button>' +
+          '</div></div>';
         }).join('') : '<div class="empty">还没有表单和附表结构</div>') +
         (risks.length ? '<div class="process-design-list-item"><strong>风险提示</strong><span>' + safeText(risks.map(function(risk) { return risk.message || risk.risk_type; }).join('；')) + '</span></div>' : '') +
       '</div>';
@@ -3273,7 +3598,6 @@
       var process = (detail.processes || []).find(function(item) { return Number(item.id) === Number(processId); });
       if (!process) return;
       state.processDesign.editing = { type: 'process', id: Number(processId) };
-      renderProcessDesignTaxonomyOptions(process.l1_name || '', process.l2_name || '');
       setInputValue('pgDesignProcessL3Name', process.l3_name || '');
       setInputValue('pgDesignProcessType', process.process_type || 'new');
       setInputValue('pgDesignProcessDescription', process.description || '');
@@ -3354,76 +3678,199 @@
       return await loadProcessDesignDraftDetail(draftId);
     }
 
+    async function fillProcessDesignFormForEdit(form) {
+      if (!form) return;
+      setProcessDesignSystemValue('pgDesignFormCodePreview', form.form_code || '待系统生成');
+      setInputValue('pgDesignFormStepSelect', form.step_id || '');
+      setInputValue('pgDesignFormName', form.form_name || '');
+      setInputValue('pgDesignMainTableName', form.main_table_name || '主表');
+      setInputValue('pgDesignArchiveLocation', form.archive_location || '');
+      setInputValue('pgDesignRetentionPeriod', form.retention_period || '');
+      setInputValue('pgDesignResponsibleDept', form.responsible_department_id || '');
+      await loadProcessDesignRosterRoles(form.responsible_department_id || '', form.responsible_role || '');
+    }
+
+    async function editProcessDesignForm(formId) {
+      if (!processDesignDraftEditable()) return;
+      var detail = processDesignCurrentDetail();
+      var form = (detail.forms || []).find(function(item) { return Number(item.id) === Number(formId); });
+      if (!form) return;
+      state.processDesign.editing = { type: 'form', id: Number(formId) };
+      await fillProcessDesignFormForEdit(form);
+      goProcessDesignWizardStep('tables');
+      renderProcessDesignInlineLists(detail);
+      updateProcessDesignEditChrome();
+    }
+
+    function processDesignFormPayload() {
+      return {
+        step_id: $('pgDesignFormStepSelect') ? $('pgDesignFormStepSelect').value : '',
+        form_name: $('pgDesignFormName') ? $('pgDesignFormName').value : '',
+        main_table_name: $('pgDesignMainTableName') ? $('pgDesignMainTableName').value : '',
+        archive_location: $('pgDesignArchiveLocation') ? $('pgDesignArchiveLocation').value : '',
+        retention_period: $('pgDesignRetentionPeriod') ? $('pgDesignRetentionPeriod').value : '',
+        responsible_department_id: $('pgDesignResponsibleDept') ? $('pgDesignResponsibleDept').value : '',
+        responsible_role: $('pgDesignResponsibleRole') ? $('pgDesignResponsibleRole').value : ''
+      };
+    }
+
     async function saveProcessDesignFormFromWizard() {
       var draftId = currentProcessDesignDraftId();
-      if (!draftId) throw new Error('请先保存流程草稿');
-      await api('/api/process-design/drafts/' + encodeURIComponent(draftId) + '/forms', {
-        method: 'POST',
-        body: JSON.stringify({
-          step_id: $('pgDesignFormStepSelect') ? $('pgDesignFormStepSelect').value : '',
-          form_name: $('pgDesignFormName') ? $('pgDesignFormName').value : '',
-          description: $('pgDesignFormDescription') ? $('pgDesignFormDescription').value : '',
-          archive_rule: $('pgDesignFormArchiveRule') ? $('pgDesignFormArchiveRule').value : ''
-        })
+      if (!draftId) throw new Error('请先保存制度结构草稿');
+      var editing = state.processDesign && state.processDesign.editing || null;
+      var isEditing = editing && editing.type === 'form';
+      await api(isEditing
+        ? '/api/process-design/forms/' + encodeURIComponent(editing.id)
+        : '/api/process-design/drafts/' + encodeURIComponent(draftId) + '/forms', {
+        method: isEditing ? 'PUT' : 'POST',
+        body: JSON.stringify(processDesignFormPayload())
       });
-      showToast('表单已保存');
+      showToast(isEditing ? '表单修改已保存' : '表单已保存');
+      resetProcessDesignFormStructureInputs();
+      state.processDesign.editing = null;
       return await loadProcessDesignDraftDetail(draftId);
     }
 
-    async function saveProcessDesignFormTableFromWizard() {
+    async function createProcessDesignDetailTableFromWizard() {
       var draftId = currentProcessDesignDraftId();
-      var formId = $('pgDesignTableFormSelect') ? Number($('pgDesignTableFormSelect').value || 0) : 0;
+      var formId = $('pgDesignDetailFormSelect') ? Number($('pgDesignDetailFormSelect').value || 0) : 0;
       if (!draftId) throw new Error('请先保存制度结构草稿');
       if (!formId) throw new Error('请先选择所属表单');
       await api('/api/process-design/forms/' + encodeURIComponent(formId) + '/tables', {
         method: 'POST',
         body: JSON.stringify({
-          table_kind: $('pgDesignTableKind') ? $('pgDesignTableKind').value : 'main',
-          table_name: $('pgDesignTableName') ? $('pgDesignTableName').value : '',
-          description: $('pgDesignTableDescription') ? $('pgDesignTableDescription').value : ''
+          table_name: $('pgDesignDetailTableName') ? $('pgDesignDetailTableName').value : ''
         })
       });
-      showToast('附表已保存');
+      showToast('明细表已创建');
+      setInputValue('pgDesignDetailTableName', '');
+      return await loadProcessDesignDraftDetail(draftId);
+    }
+
+    async function saveProcessDesignFormTableFromWizard() {
+      return await createProcessDesignDetailTableFromWizard();
+    }
+
+    function selectedProcessDesignForm() {
+      var detail = processDesignCurrentDetail();
+      var formId = $('pgDesignFieldFormSelect') ? Number($('pgDesignFieldFormSelect').value || 0) : 0;
+      return (detail.forms || []).find(function(form) { return Number(form.id) === formId; }) || null;
+    }
+
+    function processDesignFieldPayload() {
+      return {
+        structure_kind: $('pgDesignFieldStructureKind') ? $('pgDesignFieldStructureKind').value : 'main',
+        field_name: $('pgDesignFieldName') ? $('pgDesignFieldName').value : '',
+        field_type: $('pgDesignFieldType') ? $('pgDesignFieldType').value : '',
+        required: $('pgDesignFieldRequired') ? $('pgDesignFieldRequired').value === 'true' : true,
+        enum_options: $('pgDesignFieldEnumOptions') ? $('pgDesignFieldEnumOptions').value : '',
+        description: $('pgDesignFieldDescription') ? $('pgDesignFieldDescription').value : ''
+      };
+    }
+
+    function fillProcessDesignFieldForEdit(field) {
+      if (!field) return;
+      setInputValue('pgDesignFieldFormSelect', field.form_id || '');
+      setInputValue('pgDesignFieldStructureKind', field.structure_kind || 'main');
+      setInputValue('pgDesignFieldName', field.field_name || '');
+      renderProcessDesignFieldTypeOptions(field.field_type || '文本');
+      setInputValue('pgDesignFieldRequired', field.required ? 'true' : 'false');
+      setInputValue('pgDesignFieldEnumOptions', field.enum_options || '');
+      setInputValue('pgDesignFieldDescription', field.description || '');
+    }
+
+    function editProcessDesignField(fieldId) {
+      if (!processDesignDraftEditable()) return;
+      var detail = processDesignCurrentDetail();
+      var field = processDesignSavedFields(detail).find(function(item) { return Number(item.id) === Number(fieldId); });
+      if (!field) return;
+      state.processDesign.editing = { type: 'field', id: Number(fieldId) };
+      fillProcessDesignFieldForEdit(field);
+      goProcessDesignWizardStep('fields');
+      renderProcessDesignInlineLists(detail);
+      updateProcessDesignEditChrome();
+    }
+
+    function prepareProcessDesignNewField(structureKind) {
+      state.processDesign.editing = null;
+      resetProcessDesignFieldInputs();
+      setInputValue('pgDesignFieldStructureKind', structureKind || 'main');
+      renderProcessDesignInlineLists(processDesignCurrentDetail());
+      updateProcessDesignEditChrome();
+    }
+
+    async function deleteProcessDesignDetailTableFromWizard() {
+      var draftId = currentProcessDesignDraftId();
+      var formId = $('pgDesignDetailFormSelect') ? Number($('pgDesignDetailFormSelect').value || 0) : 0;
+      if (!draftId) throw new Error('请先保存制度结构草稿');
+      if (!formId) throw new Error('请先选择所属表单');
+      var detail = processDesignCurrentDetail();
+      var form = (detail.forms || []).find(function(item) { return Number(item.id) === formId; });
+      var table = form && (form.tables || [])[0];
+      if (!table) throw new Error('这个表单还没有明细表');
+      if (!confirm('确认删除这个明细表？明细字段会一并删除。')) return;
+      await api('/api/process-design/form-tables/' + encodeURIComponent(table.id), { method: 'DELETE' });
+      showToast('明细表已删除');
+      return await loadProcessDesignDraftDetail(draftId);
+    }
+
+    async function deleteProcessDesignForm(formId) {
+      var draftId = currentProcessDesignDraftId();
+      if (!draftId || !formId) return;
+      if (!confirm('确认删除这个表单？主表字段、明细表和明细字段会一并删除。')) return;
+      await api('/api/process-design/forms/' + encodeURIComponent(formId), { method: 'DELETE' });
+      showToast('表单已删除');
       return await loadProcessDesignDraftDetail(draftId);
     }
 
     async function saveProcessDesignTableFieldFromWizard() {
-      var draftId = currentProcessDesignDraftId();
-      var tableId = $('pgDesignTableFieldTableSelect') ? Number($('pgDesignTableFieldTableSelect').value || 0) : 0;
-      if (!draftId) throw new Error('请先保存制度结构草稿');
-      if (!tableId) throw new Error('请先选择所属附表');
-      validateProcessDesignNoSpaceFields(['pgDesignTableFieldName']);
-      await api('/api/process-design/form-tables/' + encodeURIComponent(tableId) + '/fields', {
-        method: 'POST',
-        body: JSON.stringify({
-          field_name: $('pgDesignTableFieldName') ? $('pgDesignTableFieldName').value : '',
-          field_type: $('pgDesignTableFieldType') ? $('pgDesignTableFieldType').value : '',
-          required: $('pgDesignTableFieldRequired') ? $('pgDesignTableFieldRequired').value === 'true' : false,
-          description: $('pgDesignTableFieldDescription') ? $('pgDesignTableFieldDescription').value : ''
-        })
-      });
-      showToast('附表字段已保存');
-      return await loadProcessDesignDraftDetail(draftId);
+      return await saveProcessDesignFieldFromWizard();
     }
 
     async function saveProcessDesignFieldFromWizard() {
       var draftId = currentProcessDesignDraftId();
       var formId = $('pgDesignFieldFormSelect') ? Number($('pgDesignFieldFormSelect').value || 0) : 0;
-      if (!draftId) throw new Error('请先保存流程草稿');
+      var structureKind = $('pgDesignFieldStructureKind') ? $('pgDesignFieldStructureKind').value : 'main';
+      var form = selectedProcessDesignForm();
+      if (!draftId) throw new Error('请先保存制度结构草稿');
       if (!formId) throw new Error('请先选择所属表单');
-      validateProcessDesignNoSpaceFields(['pgDesignFieldNameCn', 'pgDesignFieldNameEn', 'pgDesignFieldDataObject']);
-      await api('/api/process-design/forms/' + encodeURIComponent(formId) + '/fields', {
-        method: 'POST',
-        body: JSON.stringify({
-          field_name_cn: $('pgDesignFieldNameCn') ? $('pgDesignFieldNameCn').value : '',
-          field_name_en: $('pgDesignFieldNameEn') ? $('pgDesignFieldNameEn').value : '',
-          data_object: $('pgDesignFieldDataObject') ? $('pgDesignFieldDataObject').value : '',
-          field_type: $('pgDesignFieldType') ? $('pgDesignFieldType').value : '',
-          evidence_note: $('pgDesignFieldEvidenceNote') ? $('pgDesignFieldEvidenceNote').value : ''
-        })
+      validateProcessDesignNoSpaceFields(['pgDesignFieldName']);
+      var editing = state.processDesign && state.processDesign.editing || null;
+      var isEditing = editing && editing.type === 'field';
+      var endpoint = '/api/process-design/forms/' + encodeURIComponent(formId) + '/fields';
+      if (structureKind === 'detail') {
+        var detailTable = form && (form.tables || [])[0];
+        if (!detailTable) throw new Error('请先创建明细表，再新增明细字段');
+        endpoint = '/api/process-design/form-tables/' + encodeURIComponent(detailTable.id) + '/fields';
+      }
+      await api(isEditing ? '/api/process-design/form-table-fields/' + encodeURIComponent(editing.id) : endpoint, {
+        method: isEditing ? 'PUT' : 'POST',
+        body: JSON.stringify(processDesignFieldPayload())
       });
-      showToast('字段已保存');
+      showToast(isEditing ? '字段修改已保存' : '字段已保存，可继续录入下一条');
+      resetProcessDesignFieldInputs();
+      state.processDesign.editing = null;
       return await loadProcessDesignDraftDetail(draftId);
+    }
+
+    async function deleteProcessDesignField(fieldId) {
+      var draftId = currentProcessDesignDraftId();
+      if (!draftId || !fieldId) return;
+      if (!confirm('确认删除这个字段？')) return;
+      await api('/api/process-design/form-table-fields/' + encodeURIComponent(fieldId), { method: 'DELETE' });
+      showToast('字段已删除');
+      await loadProcessDesignDraftDetail(draftId);
+    }
+
+    async function moveProcessDesignField(fieldId, direction) {
+      var draftId = currentProcessDesignDraftId();
+      if (!draftId || !fieldId) return;
+      await api('/api/process-design/form-table-fields/' + encodeURIComponent(fieldId) + '/order', {
+        method: 'PUT',
+        body: JSON.stringify({ direction: direction === 'down' ? 'down' : 'up' })
+      });
+      showToast('字段顺序已调整');
+      await loadProcessDesignDraftDetail(draftId);
     }
 
     async function saveProcessDesignEvidenceFromWizard() {
@@ -5172,6 +5619,7 @@
       if ($('dataMapContextDept')) fillSelect($('dataMapContextDept'), state.departments);
       if ($('procDept')) fillSelect($('procDept'), state.departments);
       refreshProcessDesignCatalogOptions();
+      try { await loadProcessDesignFieldTypes(); } catch (error) { renderProcessDesignFieldTypeOptions(); }
       if ($('procCap')) fillSelect($('procCap'), state.capabilities, 'name');
       await loadTermGovernanceProcesses();
 
@@ -7240,7 +7688,7 @@
         if (pointAction === 'confirm' && issueEl) {
           state.pgIssueActionResult = { issueId: issueEl.dataset.pgRecordId || '', status: 'waiting_department_review' };
         }
-        showToast(pointAction === 'confirm' ? '已提交，进入部门审核' : '处理结果已提交');
+        showToast(pointAction === 'confirm' ? '确认结果已提交' : '处理结果已提交');
         return refreshIssueDetailAfterAction();
       }).catch(function(error) {
         showToast(error.message || '确认结果提交失败', 'error');
@@ -8896,6 +9344,47 @@
         selectProcessGovernanceEvidence(evidenceRow.dataset.pgL3 || '', evidenceRow.dataset.pgA1 || '', evidenceRow.dataset.pgRecordId || '');
         return;
       }
+      var processDesignFieldDelete = event.target.closest('[data-process-design-field-delete]');
+      if (processDesignFieldDelete) {
+        event.preventDefault();
+        runPageTask(function() {
+          return deleteProcessDesignField(processDesignFieldDelete.dataset.processDesignFieldDelete || '');
+        }, '字段删除失败');
+        return;
+      }
+      var processDesignFieldMove = event.target.closest('[data-process-design-field-move]');
+      if (processDesignFieldMove) {
+        event.preventDefault();
+        runPageTask(function() {
+          return moveProcessDesignField(
+            processDesignFieldMove.dataset.processDesignFieldMove || '',
+            processDesignFieldMove.dataset.processDesignFieldDirection || ''
+          );
+        }, '字段顺序调整失败');
+        return;
+      }
+      var processDesignFieldEdit = event.target.closest('[data-process-design-field-edit]');
+      if (processDesignFieldEdit) {
+        event.preventDefault();
+        editProcessDesignField(processDesignFieldEdit.dataset.processDesignFieldEdit || '');
+        return;
+      }
+      var processDesignFormDelete = event.target.closest('[data-process-design-form-delete]');
+      if (processDesignFormDelete) {
+        event.preventDefault();
+        runPageTask(function() {
+          return deleteProcessDesignForm(processDesignFormDelete.dataset.processDesignFormDelete || '');
+        }, '表单删除失败');
+        return;
+      }
+      var processDesignFormEdit = event.target.closest('[data-process-design-form-edit]');
+      if (processDesignFormEdit) {
+        event.preventDefault();
+        runPageTask(function() {
+          return editProcessDesignForm(processDesignFormEdit.dataset.processDesignFormEdit || '');
+        }, '表单编辑加载失败');
+        return;
+      }
       var processDesignDelete = event.target.closest('[data-process-design-delete]');
       if (processDesignDelete) {
         event.preventDefault();
@@ -9208,6 +9697,16 @@
         runPageTask(function() { return lookupProcessDesignDocumentNo(); }, '制度编号校验失败');
       });
     }
+    if (document.getElementById('pgDesignInvolvesOtherDepartments')) {
+      document.getElementById('pgDesignInvolvesOtherDepartments').addEventListener('change', function() {
+        syncProcessDesignRelatedDepartmentsState(processDesignDraftEditable());
+      });
+    }
+    if (document.getElementById('pgDesignRelatedDepartments')) {
+      document.getElementById('pgDesignRelatedDepartments').addEventListener('change', function() {
+        syncProcessDesignAllCompanyRelatedDepartmentState();
+      });
+    }
     if (document.getElementById('createProcessDesignNextEditionDraftBtn')) {
       document.getElementById('createProcessDesignNextEditionDraftBtn').addEventListener('click', function() {
         runPageTask(function() { return createProcessDesignNextEditionDraft(); }, '下一版次草稿创建失败');
@@ -9223,8 +9722,8 @@
         runPageTask(function() { return saveProcessDesignProcessFromWizard(); }, '流程保存失败');
       });
     }
-    if (document.getElementById('pgDesignProcessL1Name')) {
-      document.getElementById('pgDesignProcessL1Name').addEventListener('change', function(event) {
+    if (document.getElementById('pgDesignDraftL1Name')) {
+      document.getElementById('pgDesignDraftL1Name').addEventListener('change', function(event) {
         renderProcessDesignTaxonomyOptions(event.target.value, '');
       });
     }
@@ -9243,19 +9742,65 @@
         runPageTask(function() { return saveProcessDesignFormFromWizard(); }, '表单保存失败');
       });
     }
-    if (document.getElementById('saveProcessDesignFormTableBtn')) {
-      document.getElementById('saveProcessDesignFormTableBtn').addEventListener('click', function() {
-        runPageTask(function() { return saveProcessDesignFormTableFromWizard(); }, '附表保存失败');
+    if (document.getElementById('applyProcessDesignArchiveDefaultsBtn')) {
+      document.getElementById('applyProcessDesignArchiveDefaultsBtn').addEventListener('click', function() {
+        runPageTask(function() { return applyProcessDesignArchiveDefaults(); }, '归档责任套用失败');
       });
     }
-    if (document.getElementById('saveProcessDesignTableFieldBtn')) {
-      document.getElementById('saveProcessDesignTableFieldBtn').addEventListener('click', function() {
-        runPageTask(function() { return saveProcessDesignTableFieldFromWizard(); }, '附表字段保存失败');
+    if (document.getElementById('pgDesignResponsibleDept')) {
+      document.getElementById('pgDesignResponsibleDept').addEventListener('change', function(event) {
+        runPageTask(function() { return loadProcessDesignRosterRoles(event.target.value, ''); }, '归档责任角色加载失败');
+      });
+    }
+    if (document.getElementById('createProcessDesignDetailTableBtn')) {
+      document.getElementById('createProcessDesignDetailTableBtn').addEventListener('click', function() {
+        runPageTask(function() { return createProcessDesignDetailTableFromWizard(); }, '明细表创建失败');
+      });
+    }
+    if (document.getElementById('deleteProcessDesignDetailTableBtn')) {
+      document.getElementById('deleteProcessDesignDetailTableBtn').addEventListener('click', function() {
+        runPageTask(function() { return deleteProcessDesignDetailTableFromWizard(); }, '明细表删除失败');
+      });
+    }
+    if (document.getElementById('addProcessDesignMainFieldBtn')) {
+      document.getElementById('addProcessDesignMainFieldBtn').addEventListener('click', function() {
+        prepareProcessDesignNewField('main');
+      });
+    }
+    if (document.getElementById('addProcessDesignDetailFieldBtn')) {
+      document.getElementById('addProcessDesignDetailFieldBtn').addEventListener('click', function() {
+        prepareProcessDesignNewField('detail');
       });
     }
     if (document.getElementById('saveProcessDesignFieldBtn')) {
       document.getElementById('saveProcessDesignFieldBtn').addEventListener('click', function() {
         runPageTask(function() { return saveProcessDesignFieldFromWizard(); }, '字段保存失败');
+      });
+    }
+    if (document.getElementById('pgDesignDraftDetail')) {
+      document.getElementById('pgDesignDraftDetail').addEventListener('click', function(event) {
+        var formDeleteButton = event.target.closest('[data-process-design-form-delete]');
+        if (formDeleteButton) {
+          event.preventDefault();
+          event.stopPropagation();
+          runPageTask(function() { return deleteProcessDesignForm(formDeleteButton.dataset.processDesignFormDelete); }, '表单删除失败');
+          return;
+        }
+        var deleteButton = event.target.closest('[data-process-design-field-delete]');
+        if (deleteButton) {
+          event.preventDefault();
+          event.stopPropagation();
+          runPageTask(function() { return deleteProcessDesignField(deleteButton.dataset.processDesignFieldDelete); }, '字段删除失败');
+          return;
+        }
+        var moveButton = event.target.closest('[data-process-design-field-move]');
+        if (moveButton) {
+          event.preventDefault();
+          event.stopPropagation();
+          runPageTask(function() {
+            return moveProcessDesignField(moveButton.dataset.processDesignFieldMove, moveButton.dataset.processDesignFieldDirection);
+          }, '字段顺序调整失败');
+        }
       });
     }
     if (document.getElementById('saveProcessDesignEvidenceBtn')) {
@@ -10741,7 +11286,7 @@
       var newPw = document.getElementById('newPassword').value;
       var confirm = document.getElementById('confirmPassword').value;
 
-      if (newPw.length < 6) { showPasswordError('新密码至少6位'); return; }
+      if (newPw.length < 10) { showPasswordError('新密码至少10位'); return; }
       if (newPw !== confirm) { showPasswordError('两次新密码不一致'); return; }
 
       fetch('/api/org/me/password', {

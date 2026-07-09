@@ -35,6 +35,7 @@
     "test:input-baseline-review-mysql": "node scripts/test-input-baseline-review-mysql.mjs",
     "test:process-input-baseline-review": "npm run test:process-input-baseline-review-workflow && npm run test:input-baseline-review-mysql",
     "test:sankey-preview-status": "node scripts/test-sankey-preview-status.mjs",
+    "test:document-structured-output-schema": "node scripts/test-document-structured-output-schema.mjs",
     "test:process-evidence-evolution": "node .agents/skills/process-evidence-mapping/scripts/test-evolution-workflow.mjs",
     "test:process-evidence-skill": "node scripts/test-process-evidence-skill.mjs",
     "test:process-governance-mainline": "node scripts/test-process-governance-mainline.mjs",
