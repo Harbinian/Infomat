@@ -12,7 +12,10 @@
     "test:writeback": "node ../scripts/smoke-writeback.mjs",
     "test:plugin": "node ../scripts/smoke-plugin-endpoints.mjs",
     "test:hmr": "node ../scripts/smoke-hmr.mjs",
-    "test:milestone-rules": "node ../scripts/smoke-milestone-rules.mjs"
+    "test:task-owner": "node ../scripts/smoke-task-owner.mjs",
+    "test:milestone-rules": "node ../scripts/smoke-milestone-rules.mjs",
+    "test:pmo-week-range": "node ../scripts/smoke-pmo-week-range.mjs",
+    "test:weekly-issue-ledger": "node ../scripts/smoke-weekly-issue-ledger.mjs"
   },
   "dependencies": {
     "gray-matter": "^4.0.3",

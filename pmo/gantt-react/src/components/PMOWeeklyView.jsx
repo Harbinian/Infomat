@@ -1,18 +1,5 @@
 import { useMemo } from 'react';
-import { formatDate, parseDate } from '../utils/dateUtils';
-
-function getWeekRange(date) {
-  const current = new Date(date);
-  const day = current.getDay();
-  const diffToMonday = day === 0 ? -6 : 1 - day;
-  const monday = new Date(current);
-  monday.setDate(current.getDate() + diffToMonday);
-  monday.setHours(0, 0, 0, 0);
-  const sunday = new Date(monday);
-  sunday.setDate(monday.getDate() + 6);
-  sunday.setHours(23, 59, 59, 999);
-  return { monday, sunday };
-}
+import { formatDate, getPmoDeliveryWeekRange, parseDate } from '../utils/dateUtils';
 
 function numberValue(value) {
   return Number.isFinite(Number(value)) ? Number(value) : 0;
@@ -20,7 +7,7 @@ function numberValue(value) {
 
 export default function PMOWeeklyView({ deliverables, phaseGates, tasks, pmoDate, projectGovernance, onSelectDeliverable }) {
   const date = useMemo(() => pmoDate || new Date(), [pmoDate]);
-  const { monday, sunday } = useMemo(() => getWeekRange(date), [date]);
+  const { start: weekStart, end: weekEnd } = useMemo(() => getPmoDeliveryWeekRange(date), [date]);
   const projectGovernanceData = projectGovernance?.data || null;
   const governanceSummary = projectGovernanceData?.summary || {};
   const governanceDepartments = Array.isArray(projectGovernanceData?.departments) ? projectGovernanceData.departments : [];
@@ -28,8 +15,8 @@ export default function PMOWeeklyView({ deliverables, phaseGates, tasks, pmoDate
   const weekAB = useMemo(() => deliverables.filter(deliverable => {
     if (!deliverable.plannedFinish || (deliverable.deliverableLevel !== 'A' && deliverable.deliverableLevel !== 'B')) return false;
     const finish = parseDate(deliverable.plannedFinish);
-    return finish && finish >= monday && finish <= sunday;
-  }), [deliverables, monday, sunday]);
+    return finish && finish >= weekStart && finish <= weekEnd;
+  }), [deliverables, weekStart, weekEnd]);
 
   const overdueAB = useMemo(() => deliverables.filter(deliverable => {
     if (!deliverable.plannedFinish || (deliverable.deliverableLevel !== 'A' && deliverable.deliverableLevel !== 'B')) return false;
@@ -149,7 +136,7 @@ export default function PMOWeeklyView({ deliverables, phaseGates, tasks, pmoDate
     <div className="pmo-weekly-view">
       <div className="pmo-header">
         <h2>PMO 周会管控视图</h2>
-        <span className="pmo-date">{formatDate(monday)} - {formatDate(sunday)}</span>
+        <span className="pmo-date">{formatDate(weekStart)} - {formatDate(weekEnd)}</span>
       </div>
 
       <div className="pmo-summary-cards">

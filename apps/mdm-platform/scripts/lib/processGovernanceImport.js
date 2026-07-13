@@ -896,7 +896,7 @@ function syncMappingWorkspace(db, snapshotId, parsedA1Rows, crossDept, importedB
         a1_code: row.a1_code,
         source_file: row.source_file,
         message: `核验提醒：${row.verification_note}`,
-        suggestion: '回源确认 A1 核验提醒，整改后重新导入 MDM。'
+        suggestion: '回到制度或表单源文件确认 A1 核验提醒，整改后重新导入 MDM。'
       }, importedBy, currentTodoKeys);
     }
   }
@@ -915,7 +915,7 @@ function syncMappingWorkspace(db, snapshotId, parsedA1Rows, crossDept, importedB
       a1_code: a1Code,
       source_file: crossDeptSource.source || null,
       message: risk.desc || risk.description || `${sourceDept || '来源部门'} 到 ${targetDept || '目标部门'} 的跨部门衔接待确认`,
-      suggestion: '回源确认跨部门输入输出是否已有接收流程，整改后重新导入 MDM。',
+      suggestion: '回到制度或表单源文件确认跨部门输入输出是否已有接收流程，整改后重新导入 MDM。',
       priority: normalizeRiskLevel(risk.risk) === 'high' ? 'high' : 'medium'
     }, importedBy, currentTodoKeys);
   }

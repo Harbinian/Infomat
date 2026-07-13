@@ -60,6 +60,20 @@ export function formatDate(date) {
   return `${y}-${m}-${d}`;
 }
 
+export function getPmoDeliveryWeekRange(date) {
+  const current = date instanceof Date && !Number.isNaN(date.getTime()) ? new Date(date) : new Date();
+  const daysSinceThursday = (current.getDay() + 3) % 7;
+  const start = new Date(current);
+  start.setDate(current.getDate() - daysSinceThursday);
+  start.setHours(0, 0, 0, 0);
+
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  end.setHours(23, 59, 59, 999);
+
+  return { start, end };
+}
+
 export function getTotalMonths() {
   return (PROJECT_END.getFullYear() - PROJECT_START.getFullYear()) * 12
     + (PROJECT_END.getMonth() - PROJECT_START.getMonth()) + 1;

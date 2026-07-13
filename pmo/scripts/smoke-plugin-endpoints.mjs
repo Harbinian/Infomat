@@ -12,6 +12,7 @@ const fixturePath = path.join(deliverablesDir, 'DLV-200-端点测试.md');
 const runtimeRoot = path.resolve(root, '../../artifacts/pmo/deliverables/test-plugin-endpoints');
 const requireFromApp = createRequire(path.join(root, 'package.json'));
 const { createServer } = await import(pathToFileURL(requireFromApp.resolve('vite')).href);
+const { pmoDeliverablesPlugin } = await import(pathToFileURL(path.join(root, 'plugins/pmoDeliverablesPlugin.js')).href);
 
 fs.writeFileSync(fixturePath, `---
 deliverableId: DLV-200
@@ -118,4 +119,63 @@ try {
   await fsp.rm(fixturePath, { force: true });
   await fsp.rm(path.join(deliverablesDir, '_history', 'DLV-200'), { recursive: true, force: true });
   await fsp.rm(runtimeRoot, { recursive: true, force: true });
+}
+
+const duplicateRoot = path.resolve(root, '../../artifacts/pmo/deliverables/test-duplicate-upload');
+const duplicateDeliverablesDir = path.join(duplicateRoot, 'deliverables');
+const duplicateRuntimeRoot = path.join(duplicateRoot, 'runtime');
+const duplicateBody = title => `---
+deliverableId: DLV-201
+title: ${title}
+status: 未提交
+deliverableType: 方案规范类
+deliverableLevel: B
+department: 测试部门
+plannedFinish: 2026-06-05
+workflowHistory: []
+---
+# ${title}
+`;
+
+await fsp.rm(duplicateRoot, { recursive: true, force: true });
+await fsp.mkdir(duplicateDeliverablesDir, { recursive: true });
+await fsp.writeFile(path.join(duplicateDeliverablesDir, 'DLV-201-正本A.md'), duplicateBody('正本A'), 'utf8');
+await fsp.writeFile(path.join(duplicateDeliverablesDir, 'DLV-201-正本B.md'), duplicateBody('正本B'), 'utf8');
+
+const duplicateServer = await createServer({
+  configFile: false,
+  root,
+  server: { host: '127.0.0.1', port: 0, strictPort: false },
+  logLevel: 'silent',
+  plugins: [pmoDeliverablesPlugin({
+    deliverablesDir: duplicateDeliverablesDir,
+    runtimeRoot: duplicateRuntimeRoot,
+  })],
+});
+
+try {
+  await duplicateServer.listen();
+  const address = duplicateServer.httpServer.address();
+  const port = typeof address === 'object' ? address.port : 5173;
+  const base = `http://127.0.0.1:${port}/api/pmo/deliverables`;
+  const form = new FormData();
+  form.append('file', new File(['# 上传正文\n'], 'upload.md', { type: 'text/markdown' }));
+  const duplicateUpload = await fetch(`${base}/DLV-201/upload`, { method: 'POST', body: form });
+  const duplicateJson = await duplicateUpload.json();
+  assert.equal(duplicateUpload.status, 409);
+  assert.equal(duplicateJson.error.code, 'DUPLICATE_DELIVERABLE');
+  assert.deepEqual(
+    fs.readdirSync(duplicateDeliverablesDir).filter(name => name.startsWith('DLV-201-')).sort(),
+    ['DLV-201-正本A.md', 'DLV-201-正本B.md'],
+    'duplicate upload must not create another canonical markdown file',
+  );
+  assert.equal(
+    fs.existsSync(path.join(duplicateRuntimeRoot, '_history', 'DLV-201')),
+    false,
+    'duplicate upload must not archive evidence before the canonical conflict is resolved',
+  );
+  console.log('结果: 重复正本上传冲突保护通过');
+} finally {
+  await duplicateServer.close();
+  await fsp.rm(duplicateRoot, { recursive: true, force: true });
 }

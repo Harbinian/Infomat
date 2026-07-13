@@ -1,40 +1,27 @@
 import { useMemo } from 'react';
-import { formatDate, parseDate } from '../utils/dateUtils';
-
-function getWeekRange(date) {
-  const current = new Date(date);
-  const day = current.getDay();
-  const diffToMonday = day === 0 ? -6 : 1 - day;
-  const monday = new Date(current);
-  monday.setDate(current.getDate() + diffToMonday);
-  monday.setHours(0, 0, 0, 0);
-  const sunday = new Date(monday);
-  sunday.setDate(monday.getDate() + 6);
-  sunday.setHours(23, 59, 59, 999);
-  return { monday, sunday };
-}
+import { formatDate, getPmoDeliveryWeekRange, parseDate } from '../utils/dateUtils';
 
 export default function ThisWeekDeliverables({ deliverables, pmoDate, onSelectDeliverable }) {
   const date = useMemo(() => pmoDate || new Date(), [pmoDate]);
-  const { monday, sunday } = useMemo(() => getWeekRange(date), [date]);
+  const { start: weekStart, end: weekEnd } = useMemo(() => getPmoDeliveryWeekRange(date), [date]);
 
   const weekDeliverables = useMemo(() => {
     return deliverables.filter(deliverable => {
       if (!deliverable.plannedFinish) return false;
       const finish = parseDate(deliverable.plannedFinish);
-      return finish && finish >= monday && finish <= sunday;
+      return finish && finish >= weekStart && finish <= weekEnd;
     }).sort((a, b) => {
       const order = { A: 0, B: 1, C: 2, D: 3 };
       return (order[a.deliverableLevel] ?? 2) - (order[b.deliverableLevel] ?? 2);
     });
-  }, [deliverables, monday, sunday]);
+  }, [deliverables, weekStart, weekEnd]);
 
   const highPriority = weekDeliverables.filter(d => d.deliverableLevel === 'A' || d.deliverableLevel === 'B' || d.taskRisk === '高');
 
   if (weekDeliverables.length === 0) {
     return (
       <div className="empty-view">
-        <h3>本周交付物 ({formatDate(monday)} - {formatDate(sunday)})</h3>
+        <h3>本周交付物 ({formatDate(weekStart)} - {formatDate(weekEnd)})</h3>
         <p>本周暂无计划完成的交付物</p>
       </div>
     );
@@ -43,7 +30,7 @@ export default function ThisWeekDeliverables({ deliverables, pmoDate, onSelectDe
   return (
     <div className="thisweek-view">
       <div className="week-header">
-        <h3>本周交付物 ({formatDate(monday)} - {formatDate(sunday)})</h3>
+        <h3>本周交付物 ({formatDate(weekStart)} - {formatDate(weekEnd)})</h3>
         <span className="week-count">共 {weekDeliverables.length} 项，重点 {highPriority.length} 项</span>
       </div>
       <div className="dlv-table-wrap">

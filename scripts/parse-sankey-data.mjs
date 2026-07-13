@@ -12,6 +12,7 @@
 import { createHash } from 'crypto';
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'fs';
 import { basename, dirname, extname, join, relative, resolve } from 'path';
+import { pathToFileURL } from 'url';
 import { classifySourceBoundary, sourceBoundaryFromCitation } from './source-boundary-rules.mjs';
 
 const NORMS = resolve(import.meta.dirname || '.', '..', 'docs', 'norms');
@@ -21,6 +22,25 @@ const CROSS_DEPT_REPORT = resolve(NORMS, '流程治理', '跨部门完整性检�
 const CROSS_CHAIN_REPORT = resolve(NORMS, '流程治理', '跨部门流程识别报告.md');
 const DASHBOARD_PATH = resolve(NORMS, '..', '..', 'pmo', 'procedure-management', 'dashboard.html');
 const ORGANIZATION_SOURCE = resolve(NORMS, '..', 'organization', '组织架构和部门职责.md');
+const STRUCTURE_BLOCK_VERSION = 1;
+const STRUCTURE_ARRAY_SECTIONS = new Set([
+  'l3_catalog',
+  'a1_catalog',
+  'evidence_catalog',
+  'mdm_requirement_catalog',
+]);
+const ALLOWED_PROCESS_SYSTEMS = new Set(['OA', 'MES', 'PLM', 'ERP']);
+const ALLOWED_EVIDENCE_STATUSES = new Set([
+  'verified',
+  'pending_review',
+  'source_missing',
+  'ocr_extracted_not_confirmed',
+  'review_only',
+]);
+const STRUCTURED_A1_CODE_PATTERNS = [
+  /^[A-Z]{2}-L3-\d{2}-A\d{2}$/,
+  /^A1-[A-Z0-9]+(?:-[A-Z0-9]+)*-\d{2,3}-\d{2}$/,
+];
 
 function parseOrganizationDomainMap(text) {
   const blockMatch = text.match(/```([\s\S]*?)```/);
@@ -273,10 +293,10 @@ function buildSourceManifest(mappingFiles, mdmRequirementFiles) {
 
   addFile(ORGANIZATION_SOURCE, '全公司', {
     assetType: 'organization_source',
-    fileNo: '组织真源',
+    fileNo: '组织口径',
     revision: '?',
     status: '纳入',
-    reason: '部门清单与部门到域映射真源',
+    reason: '部门清单与部门到域映射依据',
   });
 
   for (const file of mappingFiles) {
@@ -286,7 +306,7 @@ function buildSourceManifest(mappingFiles, mdmRequirementFiles) {
       fileNo: '流程映射文档',
       revision: '?',
       status: '纳入',
-      reason: '部门 DCM/BBM 结构化映射真源',
+      reason: '部门 DCM/BBM 流程输入基线',
     });
   }
 
@@ -414,6 +434,505 @@ function parseMarkdownTables(text) {
   }
   flush();
   return tables;
+}
+
+function stripYamlComment(line) {
+  let quote = '';
+  let escaped = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (quote && ch === '\\') {
+      escaped = true;
+      continue;
+    }
+    if ((ch === '"' || ch === "'") && !quote) {
+      quote = ch;
+      continue;
+    }
+    if (quote && ch === quote) {
+      quote = '';
+      continue;
+    }
+    if (!quote && ch === '#') {
+      return line.slice(0, i);
+    }
+  }
+  return line;
+}
+
+function splitYamlInlineArray(value) {
+  const items = [];
+  let current = '';
+  let quote = '';
+  let escaped = false;
+  for (const ch of value) {
+    if (escaped) {
+      current += ch;
+      escaped = false;
+      continue;
+    }
+    if (quote && ch === '\\') {
+      current += ch;
+      escaped = true;
+      continue;
+    }
+    if ((ch === '"' || ch === "'") && !quote) {
+      quote = ch;
+      current += ch;
+      continue;
+    }
+    if (quote && ch === quote) {
+      quote = '';
+      current += ch;
+      continue;
+    }
+    if (!quote && ch === ',') {
+      items.push(current.trim());
+      current = '';
+      continue;
+    }
+    current += ch;
+  }
+  if (current.trim()) items.push(current.trim());
+  return items;
+}
+
+function unquoteYamlValue(value) {
+  const trimmed = String(value || '').trim();
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1);
+  }
+  return trimmed;
+}
+
+function parseYamlValue(rawValue) {
+  const value = stripYamlComment(String(rawValue || '')).trim();
+  if (!value) return '';
+  if (value === '[]') return [];
+  if (value.startsWith('[') && value.endsWith(']')) {
+    const inner = value.slice(1, -1).trim();
+    if (!inner) return [];
+    return splitYamlInlineArray(inner).map(unquoteYamlValue).filter(Boolean);
+  }
+  const scalar = unquoteYamlValue(value);
+  if (/^\d+$/.test(scalar)) return Number(scalar);
+  return scalar;
+}
+
+function assignYamlPair(target, text, context) {
+  const match = text.match(/^([A-Za-z0-9_]+):(?:\s*(.*))?$/);
+  if (!match) {
+    throw new Error(`流程治理结构块 v1 解析失败：${context} 行不是 key: value 格式`);
+  }
+  target[match[1]] = parseYamlValue(match[2] || '');
+}
+
+function parseStructureBlockYaml(rawYaml) {
+  const root = {};
+  let section = '';
+  let currentItem = null;
+
+  for (const rawLine of String(rawYaml || '').split(/\r?\n/)) {
+    const withoutComment = stripYamlComment(rawLine);
+    if (!withoutComment.trim()) continue;
+
+    const indent = withoutComment.match(/^\s*/)[0].length;
+    const line = withoutComment.trim();
+
+    if (indent === 0) {
+      const match = line.match(/^([A-Za-z0-9_]+):(?:\s*(.*))?$/);
+      if (!match) continue;
+      section = match[1];
+      currentItem = null;
+      const inlineValue = parseYamlValue(match[2] || '');
+      if (STRUCTURE_ARRAY_SECTIONS.has(section)) {
+        root[section] = Array.isArray(inlineValue) ? inlineValue : [];
+      } else {
+        root[section] = inlineValue === '' ? {} : inlineValue;
+      }
+      continue;
+    }
+
+    if (!section) continue;
+
+    if (STRUCTURE_ARRAY_SECTIONS.has(section)) {
+      if (!Array.isArray(root[section])) root[section] = [];
+      if (line.startsWith('- ')) {
+        currentItem = {};
+        root[section].push(currentItem);
+        const inlinePair = line.slice(2).trim();
+        if (inlinePair) assignYamlPair(currentItem, inlinePair, section);
+        continue;
+      }
+      if (!currentItem) {
+        throw new Error(`流程治理结构块 v1 解析失败：${section} 缺少列表项起始行`);
+      }
+      assignYamlPair(currentItem, line, section);
+      continue;
+    }
+
+    if (typeof root[section] !== 'object' || Array.isArray(root[section])) {
+      root[section] = {};
+    }
+    assignYamlPair(root[section], line, section);
+  }
+
+  return root;
+}
+
+function extractProcessGovernanceStructureBlock(text) {
+  const match = String(text || '').match(/^\uFEFF?---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
+  if (!match) return null;
+
+  const data = parseStructureBlockYaml(match[1]);
+  if (Number(data.meta?.parser_schema_version) !== STRUCTURE_BLOCK_VERSION) return null;
+  return data;
+}
+
+function normalizeStructuredSystems(rawSystem, context) {
+  const systems = splitS1(String(rawSystem || ''))
+    .flatMap(normalizeSystem)
+    .map(system => String(system || '').trim())
+    .filter(Boolean)
+    .map(system => system.toUpperCase());
+
+  for (const system of systems) {
+    if (system === 'MDM' || !ALLOWED_PROCESS_SYSTEMS.has(system)) {
+      throw new Error(`${context} 的 system 只能为 OA/MES/PLM/ERP 或留空，禁止写入 ${system || '空值'}`);
+    }
+  }
+  return systems;
+}
+
+function normalizeEvidenceRefs(rawRefs) {
+  if (Array.isArray(rawRefs)) return rawRefs.map(ref => String(ref).trim()).filter(Boolean);
+  if (!rawRefs) return [];
+  return [String(rawRefs).trim()].filter(Boolean);
+}
+
+function requireStructuredField(item, field, context) {
+  const value = String(item?.[field] || '').trim();
+  if (!value) throw new Error(`流程治理结构块 v1 缺少 ${context}.${field}`);
+  return value;
+}
+
+function buildStructuredEvidenceCatalog(rows) {
+  const catalog = [];
+  const seen = new Set();
+  for (const row of rows || []) {
+    const id = requireStructuredField(row, 'id', 'evidence_catalog');
+    if (seen.has(id)) throw new Error(`流程治理结构块 v1 evidence_catalog id 重复：${id}`);
+    seen.add(id);
+    const status = requireStructuredField(row, 'status', `evidence_catalog.${id}`);
+    if (!ALLOWED_EVIDENCE_STATUSES.has(status)) {
+      throw new Error(`流程治理结构块 v1 evidence_catalog.${id}.status 必须为 §5.2 五状态之一：${status}`);
+    }
+    catalog.push({
+      id,
+      sourceType: String(row.source_type || '').trim(),
+      sourceFile: String(row.source_file || '').trim(),
+      locator: String(row.locator || '').trim(),
+      locateMethod: String(row.locate_method || '').trim(),
+      status,
+    });
+  }
+  return catalog;
+}
+
+function resolveStructuredEvidence(refs, evidenceById, context) {
+  const items = [];
+  for (const ref of refs) {
+    const evidence = evidenceById.get(ref);
+    if (!evidence) throw new Error(`流程治理结构块 v1 悬空证据引用：${context} 引用了不存在的 evidence_refs ${ref}`);
+    items.push(evidence);
+  }
+  return items;
+}
+
+function parseProcessGovernanceStructureBlock(text, { sourceFile = '', fallbackDeptName = '' } = {}) {
+  const data = extractProcessGovernanceStructureBlock(text);
+  if (!data) return null;
+
+  const meta = data.meta || {};
+  const dept = String(meta.dept_name || fallbackDeptName || '').trim();
+  if (!dept) throw new Error('流程治理结构块 v1 缺少 meta.dept_name');
+
+  const evidenceCatalog = buildStructuredEvidenceCatalog(data.evidence_catalog || []);
+  const evidenceById = new Map(evidenceCatalog.map(item => [item.id, item]));
+  const l3ByKey = new Map();
+
+  const mappings = (data.l3_catalog || []).map((item, index) => {
+    const l3Key = requireStructuredField(item, 'l3_key', `l3_catalog[${index}]`);
+    if (l3ByKey.has(l3Key)) throw new Error(`流程治理结构块 v1 l3_key 重复：${l3Key}`);
+    const l3Name = requireStructuredField(item, 'l3_name', `l3_catalog.${l3Key}`);
+    const evidenceRefs = normalizeEvidenceRefs(item.evidence_refs);
+    const evidenceItems = resolveStructuredEvidence(evidenceRefs, evidenceById, `l3_catalog.${l3Key}`);
+    const mapping = {
+      dept,
+      l1: String(item.l1 || '').trim(),
+      l2: String(item.l2 || '').trim(),
+      l3: l3Name,
+      l3Key,
+      owner: String(item.owner || '').trim(),
+      systems: normalizeStructuredSystems(item.system, `l3_catalog.${l3Key}`),
+      evidenceRefs,
+      evidenceItems,
+      sourceFile,
+      structureBlockVersion: STRUCTURE_BLOCK_VERSION,
+    };
+    l3ByKey.set(l3Key, mapping);
+    return mapping;
+  });
+
+  const a1Entries = (data.a1_catalog || []).map((item, index) => {
+    const a1Code = requireStructuredField(item, 'a1_code', `a1_catalog[${index}]`);
+    const l3Key = requireStructuredField(item, 'l3_key', `a1_catalog.${a1Code}`);
+    const matched = l3ByKey.get(l3Key);
+    if (!matched) {
+      throw new Error(`流程治理结构块 v1 悬空 A1：a1_catalog.${a1Code}.l3_key 未在 l3_catalog 找到：${l3Key}`);
+    }
+    const evidenceRefs = normalizeEvidenceRefs(item.evidence_refs);
+    return {
+      dept,
+      l3Key,
+      l3Name: matched.l3,
+      l2Name: matched.l2,
+      a1Code,
+      a1Name: requireStructuredField(item, 'behavior', `a1_catalog.${a1Code}`),
+      role: String(item.role || '').trim(),
+      entry: String(item.entry || '').trim(),
+      systems: normalizeStructuredSystems(item.system, `a1_catalog.${a1Code}`),
+      evidenceRefs,
+      evidenceItems: resolveStructuredEvidence(evidenceRefs, evidenceById, `a1_catalog.${a1Code}`),
+      sourceFile,
+      structureBlockVersion: STRUCTURE_BLOCK_VERSION,
+    };
+  });
+
+  const mdmRequirements = (data.mdm_requirement_catalog || []).map((item, index) => {
+    const object = requireStructuredField(item, 'object', `mdm_requirement_catalog[${index}]`);
+    const evidenceRefs = normalizeEvidenceRefs(item.evidence_refs);
+    return {
+      dept,
+      masterDataObject: object,
+      sourceL2: '',
+      keyFields: Array.isArray(item.key_fields) ? item.key_fields.join('、') : String(item.key_fields || '').trim(),
+      responsibleDept: String(item.owner_dept || '').trim(),
+      systemBoundary: '',
+      governanceRequirement: String(item.requirement || '').trim(),
+      evidenceRefs,
+      evidenceItems: resolveStructuredEvidence(evidenceRefs, evidenceById, `mdm_requirement_catalog.${object}`),
+      sourceFile,
+      structureBlockVersion: STRUCTURE_BLOCK_VERSION,
+    };
+  });
+
+  return {
+    sourceMode: 'structure-block-v1',
+    meta,
+    mappings,
+    a1Entries,
+    mdmRequirements,
+    evidenceCatalog,
+    diagnostics: {
+      l3Headings: mappings.length,
+      a1Tables: data.a1_catalog?.length ? 1 : 0,
+      a1Rows: a1Entries.length,
+      rejectedHeaders: 0,
+    },
+  };
+}
+
+function parseLegacyProcessGovernanceDocument({ text, sourceFile = '', fallbackDeptName = '', diagnostics = null } = {}) {
+  const legacyDiagnostics = diagnostics || { l3Headings: 0, a1Tables: 0, a1Rows: 0, rejectedHeaders: 0 };
+  return {
+    sourceMode: 'legacy-markdown',
+    mappings: parseMappingTable(text).map(item => ({ ...item, dept: fallbackDeptName, sourceFile })),
+    a1Entries: parseA1Section(text, legacyDiagnostics).map(item => ({ dept: fallbackDeptName, sourceFile, ...item })),
+    mdmRequirements: [],
+    evidenceCatalog: [],
+    diagnostics: legacyDiagnostics,
+  };
+}
+
+function mergeStructuredAndLegacyProcessGovernance({ structured, legacy }) {
+  const structuredL3Keys = new Set(structured.mappings.map(item => item.l3Key).filter(Boolean));
+  const structuredL3ByName = new Map(
+    structured.mappings
+      .filter(item => item.l3)
+      .map(item => [normalizeProcessName(item.l3), item])
+  );
+  const structuredA1Codes = new Set(structured.a1Entries.map(item => item.a1Code).filter(Boolean));
+  const hybridWarnings = [];
+
+  const legacyMappings = legacy.mappings.filter(item => {
+    const l3Key = String(item.l3Key || '').trim();
+    const matchedByKey = l3Key && structuredL3Keys.has(l3Key);
+    const matchedByName = !l3Key && structuredL3ByName.get(normalizeProcessName(item.l3));
+    if (!matchedByKey && !matchedByName) return true;
+
+    const matched = matchedByName || structured.mappings.find(row => row.l3Key === l3Key);
+    hybridWarnings.push(`structured 覆盖 legacy L3：${l3Key || item.l3}（structured=${matched?.l3Key || matched?.l3 || ''}）`);
+    return false;
+  });
+
+  const legacyA1Entries = legacy.a1Entries.filter(item => {
+    const a1Code = String(item.a1Code || '').trim();
+    if (!a1Code || !structuredA1Codes.has(a1Code)) return true;
+
+    hybridWarnings.push(`structured 覆盖 legacy A1：${a1Code}`);
+    return false;
+  });
+
+  const hadLegacyRows = legacy.mappings.length > 0 || legacy.a1Entries.length > 0;
+  if (!hadLegacyRows) return structured;
+
+  return {
+    sourceMode: 'hybrid',
+    meta: structured.meta,
+    mappings: [...structured.mappings, ...legacyMappings],
+    a1Entries: [...structured.a1Entries, ...legacyA1Entries],
+    mdmRequirements: structured.mdmRequirements,
+    evidenceCatalog: structured.evidenceCatalog,
+    diagnostics: {
+      l3Headings: structured.diagnostics.l3Headings + legacy.diagnostics.l3Headings,
+      a1Tables: structured.diagnostics.a1Tables + legacy.diagnostics.a1Tables,
+      a1Rows: structured.diagnostics.a1Rows + legacy.diagnostics.a1Rows,
+      rejectedHeaders: legacy.diagnostics.rejectedHeaders,
+    },
+    hybridWarnings,
+  };
+}
+
+function parseProcessGovernanceDocument({ text, sourceFile = '', fallbackDeptName = '', diagnostics = null } = {}) {
+  const structured = parseProcessGovernanceStructureBlock(text, { sourceFile, fallbackDeptName });
+  const legacy = parseLegacyProcessGovernanceDocument({ text, sourceFile, fallbackDeptName, diagnostics });
+  if (structured) return mergeStructuredAndLegacyProcessGovernance({ structured, legacy });
+  return legacy;
+}
+
+function structuredEvidenceSummary(evidenceRefs = [], evidenceItems = []) {
+  const statuses = Array.from(new Set(
+    (evidenceItems || [])
+      .map(item => String(item.status || '').trim())
+      .filter(Boolean)
+  ));
+  return {
+    evidenceRefs: Array.from(new Set((evidenceRefs || []).map(ref => String(ref).trim()).filter(Boolean))),
+    evidenceStatuses: statuses,
+    hasUnverifiedEvidence: statuses.some(status => status !== 'verified'),
+  };
+}
+
+function mergeNodeMetadata(target, extra) {
+  const current = target || {
+    evidenceRefs: [],
+    evidenceStatuses: [],
+    hasUnverifiedEvidence: false,
+    processRefs: [],
+  };
+  current.evidenceRefs = Array.from(new Set([...current.evidenceRefs, ...(extra.evidenceRefs || [])]));
+  current.evidenceStatuses = Array.from(new Set([...current.evidenceStatuses, ...(extra.evidenceStatuses || [])]));
+  current.hasUnverifiedEvidence = current.hasUnverifiedEvidence || Boolean(extra.hasUnverifiedEvidence);
+  current.processRefs.push(...(extra.processRefs || []));
+  return current;
+}
+
+function buildNodeMetadata(allMappings, allA1) {
+  const metadata = new Map();
+
+  for (const row of allMappings) {
+    if (!Array.isArray(row.evidenceItems) || row.evidenceItems.length === 0) continue;
+    const summary = structuredEvidenceSummary(row.evidenceRefs, row.evidenceItems);
+    metadata.set(row.l3, mergeNodeMetadata(metadata.get(row.l3), {
+      ...summary,
+      processRefs: [{
+        type: 'L3',
+        dept: row.dept,
+        l3Key: row.l3Key || '',
+        source: 'structured',
+      }],
+    }));
+  }
+
+  for (const row of allA1) {
+    if (!Array.isArray(row.evidenceItems) || row.evidenceItems.length === 0) continue;
+    const summary = structuredEvidenceSummary(row.evidenceRefs, row.evidenceItems);
+    metadata.set(row.a1Name, mergeNodeMetadata(metadata.get(row.a1Name), {
+      ...summary,
+      processRefs: [{
+        type: 'A1',
+        dept: row.dept,
+        l3Key: row.l3Key || '',
+        a1Code: row.a1Code || '',
+        source: 'structured',
+      }],
+    }));
+  }
+
+  return metadata;
+}
+
+function isStructuredA1Code(value) {
+  const code = String(value || '').trim();
+  return STRUCTURED_A1_CODE_PATTERNS.some(pattern => pattern.test(code));
+}
+
+function validateStructuredGlobalRecords({ allMappings, allA1 }) {
+  const errors = [];
+  const l3Keys = new Map();
+  const a1Codes = new Map();
+
+  for (const row of allMappings) {
+    if (!row.structureBlockVersion || !row.l3Key) continue;
+    const owner = `${row.sourceFile || row.dept}:${row.l3}`;
+    if (l3Keys.has(row.l3Key)) {
+      errors.push(`l3_key 全域重复：${row.l3Key}，位置 ${l3Keys.get(row.l3Key)} 与 ${owner}`);
+    } else {
+      l3Keys.set(row.l3Key, owner);
+    }
+  }
+
+  for (const row of allA1) {
+    if (!row.structureBlockVersion || !row.a1Code) continue;
+    const owner = `${row.sourceFile || row.dept}:${row.a1Name}`;
+    if (a1Codes.has(row.a1Code)) {
+      errors.push(`a1_code 全域重复：${row.a1Code}，位置 ${a1Codes.get(row.a1Code)} 与 ${owner}`);
+    } else {
+      a1Codes.set(row.a1Code, owner);
+    }
+    if (!isStructuredA1Code(row.a1Code)) {
+      errors.push(`a1_code 不符合全域规则：${row.a1Code}，位置 ${owner}`);
+    }
+  }
+
+  if (errors.length) {
+    throw new Error(`流程治理结构块 v1 全域校验失败：\n- ${errors.join('\n- ')}`);
+  }
+}
+
+function buildParserMeta(departmentParsers) {
+  const departments = departmentParsers.map(item => ({
+    dept: item.dept,
+    dept_code: item.deptCode || '',
+    source: item.source,
+    parser_schema_version: item.parserSchemaVersion || null,
+    sourceFile: item.sourceFile,
+  }));
+  return {
+    parser_schema_version: STRUCTURE_BLOCK_VERSION,
+    structured_departments: departments.filter(item => item.source === 'structured').length,
+    hybrid_departments: departments.filter(item => item.source === 'hybrid').length,
+    legacy_departments: departments.filter(item => item.source === 'legacy').length,
+    departments,
+  };
 }
 
 function looksLikeA1Header(header) {
@@ -800,7 +1319,32 @@ function buildEvidenceRefs(allMappings, allA1, mdmRequirements) {
     refs.push(ref);
   }
 
+  function addStructuredEvidence(refType, row, evidence) {
+    const sourceFile = evidence.sourceFile || row.sourceFile || `docs/norms/${row.dept}部门-能力-流程-系统映射关系.md`;
+    const citation = evidence.locator || '';
+    const boundary = sourceBoundaryFromCitation(`${sourceFile} ${citation}`);
+    add({
+      refType,
+      dept: row.dept,
+      l3Name: row.l3 || row.l3Name || '',
+      a1Code: row.a1Code || '',
+      masterDataObject: row.masterDataObject || '',
+      evidenceId: evidence.id,
+      evidenceStatus: evidence.status,
+      evidenceType: evidence.sourceType || '结构块证据',
+      sourceFile,
+      citation,
+      locateMethod: evidence.locateMethod || '',
+      note: '流程治理结构块 v1 证据引用',
+      ...boundary,
+    });
+  }
+
   for (const row of allMappings) {
+    if (Array.isArray(row.evidenceItems) && row.evidenceItems.length > 0) {
+      for (const evidence of row.evidenceItems) addStructuredEvidence('L3', row, evidence);
+      continue;
+    }
     const boundary = sourceBoundaryFromCitation(row.evidenceCitation || row.sourceFile || '');
     add({
       refType: 'L3',
@@ -817,6 +1361,10 @@ function buildEvidenceRefs(allMappings, allA1, mdmRequirements) {
   }
 
   for (const row of allA1) {
+    if (Array.isArray(row.evidenceItems) && row.evidenceItems.length > 0) {
+      for (const evidence of row.evidenceItems) addStructuredEvidence('A1', row, evidence);
+      continue;
+    }
     const boundary = sourceBoundaryFromCitation(row.evidenceCitation || row.sourceFile || '');
     add({
       refType: 'A1',
@@ -833,6 +1381,10 @@ function buildEvidenceRefs(allMappings, allA1, mdmRequirements) {
   }
 
   for (const row of mdmRequirements) {
+    if (Array.isArray(row.evidenceItems) && row.evidenceItems.length > 0) {
+      for (const evidence of row.evidenceItems) addStructuredEvidence('MDM', row, evidence);
+      continue;
+    }
     const boundary = classifySourceBoundary({ path: row.sourceFile, citation: 'MDM建设要求' });
     add({
       refType: 'MDM',
@@ -849,6 +1401,37 @@ function buildEvidenceRefs(allMappings, allA1, mdmRequirements) {
   }
 
   return refs;
+}
+
+function buildProcessMappings(allMappings) {
+  const seen = new Set();
+  const rows = [];
+  for (const row of allMappings) {
+    const dept = String(row.dept || '').trim();
+    const l1 = String(row.l1 || '').trim();
+    const l2 = String(row.l2 || '').trim();
+    const l3 = String(row.l3 || '').trim();
+    if (!dept || !l1 || !l2 || !l3) continue;
+    const key = `${dept}\n${l3}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const evidenceSummary = Array.isArray(row.evidenceItems) && row.evidenceItems.length > 0
+      ? structuredEvidenceSummary(row.evidenceRefs, row.evidenceItems)
+      : {};
+    rows.push({
+      dept,
+      l1,
+      l2,
+      l3,
+      l3Key: row.l3Key || '',
+      systems: Array.isArray(row.systems) ? row.systems : [],
+      sourceFile: row.sourceFile || `docs/norms/${dept}部门-能力-流程-系统映射关系.md`,
+      evidenceCitation: row.evidenceCitation || '',
+      ...evidenceSummary,
+    });
+  }
+  return rows.sort((left, right) => [left.dept, left.l1, left.l2, left.l3].join('|')
+    .localeCompare([right.dept, right.l1, right.l2, right.l3].join('|'), 'zh-CN'));
 }
 
 function extractReportMetric(text, label, fallback = 0) {
@@ -1039,6 +1622,8 @@ function printA1Diagnostics(perDeptDiagnostics, allMappings, allA1) {
 function main() {
   const allMappings = []; // { dept, l1, l2, l3, systems }
   const allA1 = [];       // { dept, l3Name, a1Name }
+  const structuredMdmRequirements = [];
+  const departmentParsers = [];
   const perDeptDiagnostics = [];
   const diagnoseA1 = process.argv.includes('--diagnose-a1');
 
@@ -1060,20 +1645,59 @@ function main() {
     }
 
     const deptName = file.replace('部门-能力-流程-系统映射关系.md', '');
-    const mappings = parseMappingTable(text);
     const diagnostics = { l3Headings: 0, a1Tables: 0, a1Rows: 0, rejectedHeaders: 0 };
-    const a1Entries = parseA1Section(text, diagnostics);
+    const parsed = parseProcessGovernanceDocument({
+      text,
+      sourceFile: `docs/norms/${file}`,
+      fallbackDeptName: deptName,
+      diagnostics,
+    });
 
-    for (const m of mappings) {
-      allMappings.push({ ...m, dept: deptName, sourceFile: `docs/norms/${file}` });
+    allMappings.push(...parsed.mappings);
+    allA1.push(...parsed.a1Entries);
+    structuredMdmRequirements.push(...parsed.mdmRequirements);
+    if (parsed.sourceMode === 'structure-block-v1') {
+      departmentParsers.push({
+        dept: deptName,
+        deptCode: parsed.meta?.dept_code || '',
+        source: 'structured',
+        parserSchemaVersion: parsed.meta?.parser_schema_version || STRUCTURE_BLOCK_VERSION,
+        sourceFile: `docs/norms/${file}`,
+      });
+    } else if (parsed.sourceMode === 'hybrid') {
+      for (const warning of parsed.hybridWarnings || []) {
+        console.error(`[WARN] ${deptName} ${warning}`);
+      }
+      departmentParsers.push({
+        dept: deptName,
+        deptCode: parsed.meta?.dept_code || '',
+        source: 'hybrid',
+        parserSchemaVersion: parsed.meta?.parser_schema_version || STRUCTURE_BLOCK_VERSION,
+        sourceFile: `docs/norms/${file}`,
+      });
+    } else {
+      console.error(`[WARN] ${deptName} 未提供结构块(schema v1)，回退旧 Markdown 解析，存在漂移风险。`);
+      departmentParsers.push({
+        dept: deptName,
+        deptCode: '',
+        source: 'legacy',
+        parserSchemaVersion: null,
+        sourceFile: `docs/norms/${file}`,
+      });
     }
-    for (const a of a1Entries) {
-      allA1.push({ dept: deptName, sourceFile: `docs/norms/${file}`, ...a });
-    }
-    perDeptDiagnostics.push({ dept: deptName, mappings: mappings.length, ...diagnostics });
+    perDeptDiagnostics.push({ dept: deptName, mappings: parsed.mappings.length, ...parsed.diagnostics });
   }
+  console.error(
+    `[INFO] 流程输入基线解析路径汇总：structured=${departmentParsers.filter(item => item.source === 'structured').length}, ` +
+    `hybrid=${departmentParsers.filter(item => item.source === 'hybrid').length}, ` +
+    `legacy=${departmentParsers.filter(item => item.source === 'legacy').length}, total=${departmentParsers.length}`
+  );
 
-  const mdmRequirements = buildMdmRequirements(mdmRequirementFiles);
+  const mdmRequirements = [
+    ...structuredMdmRequirements,
+    ...buildMdmRequirements(mdmRequirementFiles),
+  ];
+  validateStructuredGlobalRecords({ allMappings, allA1 });
   const evidenceRefs = buildEvidenceRefs(allMappings, allA1, mdmRequirements);
   const sourceManifest = buildSourceManifest(files, mdmRequirementFiles);
 
@@ -1204,10 +1828,12 @@ function main() {
   }
 
   const a1Matched = countMatchedA1(allA1, allMappings);
+  const nodeMetadata = buildNodeMetadata(allMappings, allA1);
 
   const finalData = {
     snapshotDate: new Date().toISOString().slice(0, 10),
-    nodes: Array.from(allNodes).map(name => ({ name })),
+    meta: buildParserMeta(departmentParsers),
+    nodes: Array.from(allNodes).map(name => ({ name, ...(nodeMetadata.get(name) || {}) })),
     links: Array.from(merged2.values()),
     systems: (() => {
       function looksLikeSystemName(name) {
@@ -1243,6 +1869,7 @@ function main() {
       departmentsEmpty: Object.keys(DEPT_DOMAIN).length - deptsWithData.size,
     },
     sourceManifest,
+    processMappings: buildProcessMappings(allMappings),
     mdmRequirements,
     evidenceRefs,
   };
@@ -1306,4 +1933,14 @@ function main() {
   }
 }
 
-main();
+export {
+  buildNodeMetadata,
+  buildParserMeta,
+  parseProcessGovernanceDocument,
+  parseProcessGovernanceStructureBlock,
+  validateStructuredGlobalRecords,
+};
+
+if (import.meta.url === pathToFileURL(process.argv[1] || '').href) {
+  main();
+}

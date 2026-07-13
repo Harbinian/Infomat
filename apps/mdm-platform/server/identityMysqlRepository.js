@@ -731,6 +731,10 @@ function makeIdentityMysqlRepository(pool) {
       return await first(pool, 'SELECT * FROM departments WHERE id=?', [departmentId]);
     },
 
+    async getDepartmentByName(departmentName) {
+      return await first(pool, 'SELECT * FROM departments WHERE name=?', [departmentName]);
+    },
+
     async createDepartment(payload = {}) {
       return await withOptionalTransaction(async executor => {
         let result;

@@ -32,6 +32,27 @@ const ignoredFiles = new Set([
   'pmo/echarts.min.js'
 ]);
 
+const userFacingProcessGovernanceFiles = new Set([
+  'apps/mdm-platform/public/index.html'
+]);
+
+const processIssueCardGuidanceFiles = new Set([
+  'AGENTS.md',
+  '.agents/skills/process-evidence-mapping/SKILL.md',
+  'apps/mdm-platform/docs/role-based-usage-guide.md'
+]);
+
+const processIssueCardBannedTerms = [
+  '回' + '源',
+  '固定' + '原因',
+  '原输出' + '目标部门',
+  '需要补充' + '依据',
+  '建议' + '修订',
+  '请再' + '确认',
+  '存在不同' + '意见',
+  '术语' + '真源'
+];
+
 function toRepoPath(filePath) {
   return filePath.replace(/\\/g, '/');
 }
@@ -54,6 +75,8 @@ for (const relativeFile of [...new Set([...trackedFiles, ...untrackedFiles])]) {
   if (ignoredPathParts.some(part => repoPath.startsWith(part))) continue;
   if (ignoredFiles.has(repoPath)) continue;
 
+  if (!userFacingProcessGovernanceFiles.has(repoPath)) continue;
+
   for (const term of bannedTerms) {
     if (repoPath.includes(term)) {
       violations.push(`${repoPath}:path: ${term}`);
@@ -69,6 +92,14 @@ for (const relativeFile of [...new Set([...trackedFiles, ...untrackedFiles])]) {
     for (const term of bannedTerms) {
       if (line.includes(term)) {
         violations.push(`${repoPath}:${index + 1}: ${term}`);
+      }
+    }
+
+    if (processIssueCardGuidanceFiles.has(repoPath)) {
+      for (const term of processIssueCardBannedTerms) {
+        if (line.includes(term)) {
+          violations.push(`${repoPath}:${index + 1}: process issue card wording: ${term}`);
+        }
       }
     }
   });

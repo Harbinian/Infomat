@@ -1,0 +1,2776 @@
+const express = require('express');
+const multer = require('multer');
+const mammoth = require('mammoth');
+const path = require('path');
+const fs = require('fs');
+const os = require('os');
+const crypto = require('crypto');
+const { TextDecoder } = require('util');
+
+const app = express();
+const PORT = Number(process.env.STRUCTURED_OUTPUT_PORT || process.env.PORT || 3001);
+const upload = multer({ storage: multer.memoryStorage() });
+
+const schemaPath = path.join(__dirname, '..', '..', 'docs', 'contracts', 'document-structured-output.schema.json');
+const STANDARD_SCHEMA = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
+const ROSTER_PATH = path.join(__dirname, '..', '..', 'docs', 'organization', '花名册.md');
+
+const ENUMS = {
+  basisType: ['现场实际', '制度 / 规程', '表单 / 台账', '会议 / 访谈', '暂无证据'],
+  processType: ['new', 'inherit', 'handoff', 'adjustment'],
+  processSystem: ['', 'OA', 'MES', 'PLM', 'ERP'],
+  stepStatus: ['active', 'voided'],
+  handoffStatus: ['pending_return', 'returned', 'pending_review', 'confirmed'],
+  formStatus: ['draft', 'submitted', 'published', 'retired'],
+  archiveLocation: ['部门自行保存', '资料室'],
+  retentionPeriod: ['1年', '3年', '10年', '永久'],
+  fieldStructureKind: ['main', 'detail'],
+  tableKind: ['main', 'detail'],
+  fieldType: ['文本', '长文本', '数字', '日期', '日期时间', '金额', '枚举', '布尔', '部门', '人员', '文件编号', '签名', '图片', '附件', '二维码'],
+  fieldStatus: ['suggested', 'business_confirmed', 'data_governed', 'published', 'retired'],
+  evidenceType: ['制度条款', '表单样例', '访谈记录', '会议纪要', '流程图', '台账记录', '暂无证据'],
+  evidenceStatus: ['verified', 'pending_review', 'source_missing', 'ocr_extracted_not_confirmed', 'review_only'],
+  evidenceObjectType: ['draft', 'document_profile', 'term', 'process', 'step', 'behavior_detail', 'handoff', 'form', 'form_table', 'form_table_field', 'form_field', 'evidence', 'mdm_requirement'],
+  maturity: ['可保存草稿', '发布前需补', '可提交审核', '可支撑发布'],
+  lStatus: ['unclassified', 'needs_review', 'confirmed'],
+  departments: [
+    { department_name: '全公司', domain: '全公司' },
+    { department_name: '公司领导', domain: '公司领导' },
+    { department_name: '工程技术部', domain: '总经理直辖' },
+    { department_name: '质量管理部', domain: '总经理直辖' },
+    { department_name: '财务部', domain: '总经理直辖' },
+    { department_name: '行政人事部', domain: '经营副总' },
+    { department_name: '经营发展部', domain: '经营副总' },
+    { department_name: '物资保障部', domain: '经营副总' },
+    { department_name: '项目管理部', domain: '生产副总' },
+    { department_name: '复材车间', domain: '生产副总' },
+    { department_name: '运维安环部', domain: '生产副总' }
+  ]
+};
+
+const COMPANY_LEADERSHIP_DEPARTMENT = '公司领导';
+const COMPANY_LEADERSHIP_ROLES = ['董事长', '总经理', '副总经理'];
+
+const SECTION_LABELS = [
+  '目的', '目标', '设立原因',
+  '范围', '适用范围',
+  '依据', '引用文件', '引用标准',
+  '术语和定义', '术语与定义', '术语', '定义',
+  '职责', '权限',
+  '职责分工',
+  '工作流程', '操作步骤', '业务流程', '管理流程', '工作程序', '申请流程', '操作流程', '审批流程',
+  '核心流程及要求', '核心流程', '流程及要求', '流程要求', '办理流程', '实施流程', '流程', '程序', '规定', '管理内容',
+  '相关流程', '流程图', '流程图示', '流程图说明', 'Visio', 'VISIO',
+  '相关部门', '涉及部门', '协作部门',
+  '表单与记录', '相关记录', '表单', '表格', '规定表格', '记录', '记录控制',
+  '附则', '附件'
+];
+
+const WORKFLOW_VERBS = [
+  '提交', '填写', '审核', '审批', '批准', '确认', '备案', '归档', '保存',
+  '登记', '更新', '维护', '校验', '检查', '复核', '发起', '接收',
+  '通知', '汇总', '编制', '编写', '形成', '输出', '移交', '承接', '提出',
+  '组织', '召开', '反馈', '启动', '报送', '跟踪', '监控', '协调',
+  '制定', '制订', '验证', '分析', '调查', '采取', '隔离', '传递',
+  '关联', '落实', '审查', '签字', '提请', '指定', '提供',
+  '验收', '评估', '评选', '修订', '推广', '出具', '审议'
+];
+
+const FIELD_LEXICON = {
+  triggerVerbs: ['收到', '接到', '发现', '发生', '出现', '识别', '下发', '提出', '反馈'],
+  triggerObjects: ['通知', '问题', '不合格', '偏差', '故障', '投诉', '反馈', '需求', '变更', '风险', '异常', '申请', '指令'],
+  preconditionVerbs: ['审核', '审批', '批准', '确认'],
+  inputVerbs: ['提交', '提供', '随附', '附', '附上', '依据', '接收', '收到', '填写', '上传', '导入'],
+  outputVerbs: ['形成', '出具', '生成', '输出', '归档', '保存', '关闭', '更新', '记录', '答复', '反馈', '报送', '发放', '发布', '传递', '移交'],
+  materialNouns: ['申请单', '申请表', '报告', '通知单', '通知', '清单', '计划', '记录', '台账', '资料', '材料', '证明文件', '证据', '表单', '文件', '图纸'],
+  outputNouns: ['报告', '通知单', '通知', '清单', '计划', '记录', '台账', '资料', '材料', '证明文件', '证据', '表单', '文件', '结果', '结论', '数据库', '状态', '意见', '答复']
+};
+
+const EXPLICIT_BEHAVIOR_FIELDS = [
+  { key: 'actor_role', labels: ['执行角色'] },
+  { key: 'trigger_scene', labels: ['触发场景'] },
+  { key: 'precondition', labels: ['前置条件'] },
+  { key: 'input_materials', labels: ['输入材料', '输入'] },
+  { key: 'output_result', labels: ['输出结果', '输出'] },
+  { key: 'execution_standard', labels: ['执行标准'] }
+];
+
+const MAPPING_FILES_DIR = path.join(__dirname, '..', '..', 'docs', 'norms');
+let processMappingCatalogCache = null;
+let rosterRoleCatalogCache = null;
+
+const DEEPSEEK_TIMEOUT_MS = Number(process.env.STRUCTURED_OUTPUT_DEEPSEEK_TIMEOUT_MS || 8000);
+const DEEPSEEK_MAX_RETRIES = Number(process.env.STRUCTURED_OUTPUT_DEEPSEEK_MAX_RETRIES || 1);
+const DEEPSEEK_CIRCUIT_OPEN_MS = Number(process.env.STRUCTURED_OUTPUT_DEEPSEEK_CIRCUIT_OPEN_MS || 30000);
+const DEEPSEEK_SUGGESTION_BATCH_SIZE = Math.max(Number(process.env.STRUCTURED_OUTPUT_DEEPSEEK_SUGGESTION_BATCH_SIZE || 18), 1);
+const DEEPSEEK_SUGGESTION_TIMEOUT_MS = Math.max(Number(process.env.STRUCTURED_OUTPUT_DEEPSEEK_SUGGESTION_TIMEOUT_MS || DEEPSEEK_TIMEOUT_MS), 1000);
+const DEEPSEEK_SUGGESTION_MAX_RETRIES = Math.max(Number(process.env.STRUCTURED_OUTPUT_DEEPSEEK_SUGGESTION_MAX_RETRIES || 0), 0);
+const DEEPSEEK_SUGGESTION_TOTAL_MS = Math.max(Number(process.env.STRUCTURED_OUTPUT_DEEPSEEK_SUGGESTION_TOTAL_MS || 45000), 1000);
+const deepSeekRuntime = {
+  lastAvailable: null,
+  lastFailureCategory: null,
+  circuitOpenUntil: 0,
+  mockSuggestionIndex: 0
+};
+
+function firstText(...values) {
+  for (const value of values) {
+    if (value !== null && value !== undefined && String(value).trim()) return String(value).trim();
+  }
+  return '';
+}
+
+function loadClaudeSettingsEnv() {
+  const configDir = process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude');
+  const settingsPath = path.join(configDir, 'settings.json');
+  try {
+    const parsed = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+    return parsed && typeof parsed.env === 'object' ? parsed.env : {};
+  } catch (_) {
+    return {};
+  }
+}
+
+function looksLikeDeepSeekAnthropic(env) {
+  const joined = [
+    env.ANTHROPIC_BASE_URL,
+    env.ANTHROPIC_MODEL,
+    env.ANTHROPIC_DEFAULT_SONNET_MODEL,
+    env.ANTHROPIC_DEFAULT_OPUS_MODEL,
+    env.ANTHROPIC_DEFAULT_HAIKU_MODEL
+  ].filter(Boolean).join(' ');
+  return /deepseek/i.test(joined);
+}
+
+function inferDeepSeekApiStyle(apiUrl, forcedStyle) {
+  if (forcedStyle === 'anthropic' || forcedStyle === 'chat') return forcedStyle;
+  if (/\/anthropic(?:\/|$)/i.test(apiUrl) || /\/v1\/messages(?:\?|$)/i.test(apiUrl)) return 'anthropic';
+  return 'chat';
+}
+
+function deepSeekConfig() {
+  if (process.env.STRUCTURED_OUTPUT_MOCK_DEEPSEEK) {
+    return { configured: true, style: 'mock', source: 'mock' };
+  }
+
+  if (process.env.STRUCTURED_OUTPUT_DEEPSEEK_ENABLED === '1' && firstText(process.env.DEEPSEEK_API_KEY)) {
+    const apiUrl = firstText(process.env.DEEPSEEK_API_URL) || 'https://api.deepseek.com/chat/completions';
+    return {
+      configured: true,
+      source: 'env',
+      style: inferDeepSeekApiStyle(apiUrl, process.env.STRUCTURED_OUTPUT_DEEPSEEK_API_STYLE),
+      apiKey: firstText(process.env.DEEPSEEK_API_KEY),
+      apiUrl,
+      model: firstText(process.env.DEEPSEEK_MODEL) || 'deepseek-chat'
+    };
+  }
+
+  const settingsEnv = loadClaudeSettingsEnv();
+  const anthropicEnv = {
+    ...settingsEnv,
+    ANTHROPIC_AUTH_TOKEN: firstText(process.env.ANTHROPIC_AUTH_TOKEN) || settingsEnv.ANTHROPIC_AUTH_TOKEN,
+    ANTHROPIC_API_KEY: firstText(process.env.ANTHROPIC_API_KEY) || settingsEnv.ANTHROPIC_API_KEY,
+    ANTHROPIC_BASE_URL: firstText(process.env.ANTHROPIC_BASE_URL) || settingsEnv.ANTHROPIC_BASE_URL,
+    ANTHROPIC_MODEL: firstText(process.env.ANTHROPIC_MODEL) || settingsEnv.ANTHROPIC_MODEL,
+    ANTHROPIC_DEFAULT_SONNET_MODEL: firstText(process.env.ANTHROPIC_DEFAULT_SONNET_MODEL) || settingsEnv.ANTHROPIC_DEFAULT_SONNET_MODEL,
+    ANTHROPIC_DEFAULT_OPUS_MODEL: firstText(process.env.ANTHROPIC_DEFAULT_OPUS_MODEL) || settingsEnv.ANTHROPIC_DEFAULT_OPUS_MODEL,
+    ANTHROPIC_DEFAULT_HAIKU_MODEL: firstText(process.env.ANTHROPIC_DEFAULT_HAIKU_MODEL) || settingsEnv.ANTHROPIC_DEFAULT_HAIKU_MODEL
+  };
+  const anthropicKey = firstText(anthropicEnv.ANTHROPIC_AUTH_TOKEN, anthropicEnv.ANTHROPIC_API_KEY);
+  const anthropicBaseUrl = firstText(anthropicEnv.ANTHROPIC_BASE_URL);
+  const anthropicModel = firstText(
+    anthropicEnv.ANTHROPIC_MODEL,
+    anthropicEnv.ANTHROPIC_DEFAULT_SONNET_MODEL,
+    anthropicEnv.ANTHROPIC_DEFAULT_OPUS_MODEL,
+    anthropicEnv.ANTHROPIC_DEFAULT_HAIKU_MODEL
+  );
+  if (anthropicKey && anthropicBaseUrl && anthropicModel && looksLikeDeepSeekAnthropic(anthropicEnv)) {
+    return {
+      configured: true,
+      source: 'cc-switch',
+      style: 'anthropic',
+      apiKey: anthropicKey,
+      apiUrl: anthropicBaseUrl,
+      model: anthropicModel
+    };
+  }
+
+  return { configured: false, style: 'none', source: 'none' };
+}
+
+function anthropicMessagesUrl(apiUrl) {
+  let url = String(apiUrl || '').replace(/\/+$/, '');
+  if (!url) return 'https://api.deepseek.com/anthropic/v1/messages?beta=true';
+  if (/\/v1\/messages(?:\?|$)/i.test(url)) return url.includes('?') ? url : `${url}?beta=true`;
+  if (/\/v1$/i.test(url)) url = `${url}/messages`;
+  else url = `${url}/v1/messages`;
+  return url.includes('?') ? url : `${url}?beta=true`;
+}
+
+function deepSeekRequestUrl(config) {
+  return config.style === 'anthropic' ? anthropicMessagesUrl(config.apiUrl) : config.apiUrl;
+}
+
+function deepSeekHeaders(config) {
+  const base = { 'content-type': 'application/json' };
+  if (config.style === 'anthropic') {
+    return {
+      ...base,
+      'anthropic-version': '2023-06-01',
+      'x-api-key': config.apiKey,
+      authorization: `Bearer ${config.apiKey}`
+    };
+  }
+  return { ...base, authorization: `Bearer ${config.apiKey}` };
+}
+
+function deepSeekRequestBody(config, prompt, maxTokens) {
+  if (config.style === 'anthropic') {
+    return {
+      model: config.model,
+      max_tokens: maxTokens,
+      temperature: 0,
+      messages: [{ role: 'user', content: prompt }]
+    };
+  }
+  return {
+    model: config.model,
+    temperature: 0,
+    response_format: { type: 'json_object' },
+    messages: [{ role: 'user', content: prompt }]
+  };
+}
+
+function textFromDeepSeekPayload(config, payload) {
+  if (config.style !== 'anthropic') return payload?.choices?.[0]?.message?.content || '';
+  if (typeof payload?.content === 'string') return payload.content;
+  if (Array.isArray(payload?.content)) {
+    return payload.content
+      .map(block => typeof block === 'string' ? block : block?.text || '')
+      .filter(Boolean)
+      .join('\n');
+  }
+  return payload?.completion || '';
+}
+
+function parseJsonObjectText(content) {
+  const text = String(content || '').trim();
+  if (!text) throw new Error('empty response');
+  try {
+    return JSON.parse(text);
+  } catch (_) {
+    const unfenced = text.replace(/^```(?:json)?/i, '').replace(/```$/i, '').trim();
+    if (unfenced !== text) return JSON.parse(unfenced);
+    const match = text.match(/\{[\s\S]*\}/);
+    if (match) return JSON.parse(match[0]);
+    throw _;
+  }
+}
+
+function sessionId() {
+  return `sess_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+}
+
+function requestId(value) {
+  return value || `req_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+}
+
+function createEmptyDocument() {
+  return {
+    schema_version: 'document-structured-output-v2',
+    generated_at: new Date().toISOString(),
+    draft: {
+      draft_ref: null,
+      document_no: '',
+      document_title: '',
+      planned_edition: 'A',
+      current_edition: null,
+      base_version_ref: null,
+      process_name: '',
+      reason: '',
+      basis_type: '制度 / 规程',
+      basis_description: '',
+      involves_other_departments: false,
+      related_departments: [],
+      department: { department_name: '', department_code: null, department_id: null, domain: null },
+      l1_name: null,
+      l1_status: 'unclassified',
+      l2_name: null,
+      l2_status: 'unclassified',
+      l3_name: null,
+      status: 'draft'
+    },
+    document_profile: {
+      profile_ref: null,
+      draft_ref: null,
+      document_title: '',
+      document_no: '',
+      purpose: '',
+      scope: '',
+      inheritance_relation: null
+    },
+    terms: [],
+    processes: [],
+    steps: [],
+    behavior_details: [],
+    step_transitions: [],
+    cross_dept_handoffs: [],
+    forms: [],
+    form_tables: [],
+    form_table_fields: [],
+    form_fields: [],
+    evidence_catalog: [],
+    mdm_requirement_catalog: [],
+    pending_issues: [],
+    structure_block_projection: createEmptyProjection(),
+    markdown_draft: ''
+  };
+}
+
+function createEmptyProjection() {
+  return {
+    meta: {
+      document_no: '',
+      document_title: '',
+      document_edition: 'A',
+      document_version_status: null,
+      dept_code: null,
+      dept_name: '',
+      domain: null,
+      maintainer: null,
+      version: '1.0.0',
+      status: 'draft',
+      parser_schema_version: 1
+    },
+    l3_catalog: [],
+    a1_catalog: [],
+    evidence_catalog: [],
+    mdm_requirement_catalog: []
+  };
+}
+
+function decodeTextBuffer(buffer) {
+  if (!buffer || !buffer.length) return '';
+  if (buffer[0] === 0xef && buffer[1] === 0xbb && buffer[2] === 0xbf) {
+    return buffer.slice(3).toString('utf8');
+  }
+  const utf8Text = buffer.toString('utf8');
+  const replacementCount = (utf8Text.match(/\uFFFD/g) || []).length;
+  if (replacementCount === 0) return utf8Text;
+  try {
+    return new TextDecoder('gb18030').decode(buffer);
+  } catch (_) {
+    return utf8Text;
+  }
+}
+
+function normalizeLine(line) {
+  return String(line || '').replace(/\u3000/g, ' ').trim();
+}
+
+function stripNumbering(line) {
+  return normalizeLine(line).replace(/^(?:第?[一二三四五六七八九十百]+[章节条]?|[0-9]+(?:\.[0-9]+)*|[（(]?[0-9]+[)）]|[（(][一二三四五六七八九十百]+[)）])\s*[、.．:：)）-]?\s*/, '');
+}
+
+function isSectionHeading(line) {
+  const stripped = stripNumbering(line);
+  return SECTION_LABELS.some(label => stripped === label || stripped.startsWith(`${label}:`) || stripped.startsWith(`${label}：`));
+}
+
+function findSectionLine(lines, labels) {
+  for (let i = 0; i < lines.length; i += 1) {
+    const stripped = stripNumbering(lines[i]);
+    for (const label of labels) {
+      if (stripped === label || stripped.startsWith(`${label}:`) || stripped.startsWith(`${label}：`)) {
+        return { index: i, label, stripped };
+      }
+    }
+  }
+  return null;
+}
+
+function extractLabeledBlock(text, labels) {
+  const lines = String(text || '').replace(/\r\n?/g, '\n').split('\n');
+  const found = findSectionLine(lines, labels);
+  if (!found) return null;
+
+  const inlineValue = found.stripped.replace(found.label, '').replace(/^[：:\s]+/, '').trim();
+  const block = [];
+  if (inlineValue) block.push(inlineValue);
+
+  for (let i = found.index + 1; i < lines.length; i += 1) {
+    const line = normalizeLine(lines[i]);
+    if (!line) {
+      if (block.length) block.push('');
+      continue;
+    }
+    const strippedLine = stripNumbering(line);
+    if (['术语和定义', '术语与定义'].includes(found.label) && ['术语', '定义'].includes(strippedLine)) {
+      block.push(line);
+      continue;
+    }
+    if (isSectionHeading(line)) break;
+    block.push(line);
+  }
+
+  return block.join('\n').replace(/\n{3,}/g, '\n\n').trim() || null;
+}
+
+function extractLabeledBlocks(text, labels) {
+  const lines = String(text || '').replace(/\r\n?/g, '\n').split('\n');
+  const blocks = [];
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const stripped = stripNumbering(lines[i]);
+    const label = labels.find(item => stripped === item || stripped.startsWith(`${item}:`) || stripped.startsWith(`${item}：`));
+    if (!label) continue;
+
+    const inlineValue = stripped.replace(label, '').replace(/^[：:\s]+/, '').trim();
+    const block = [];
+    if (inlineValue) block.push(inlineValue);
+
+    for (let j = i + 1; j < lines.length; j += 1) {
+      const line = normalizeLine(lines[j]);
+      if (!line) {
+        if (block.length) block.push('');
+        continue;
+      }
+      if (isSectionHeading(line)) break;
+      block.push(line);
+    }
+
+    const value = block.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+    if (value) blocks.push({ label, block: value });
+  }
+
+  return blocks;
+}
+
+function sourceAnchorFor(text, sourceText) {
+  const lines = String(text || '').replace(/\r\n?/g, '\n').split('\n');
+  const needle = String(sourceText || '').trim();
+  const lineIndex = lines.findIndex(line => normalizeLine(line).includes(needle));
+  if (lineIndex >= 0) return `第 ${lineIndex + 1} 行`;
+  const fragments = needle.split(/\r?\n/).map(normalizeLine).filter(Boolean);
+  for (const fragment of fragments) {
+    const fragmentIndex = lines.findIndex(line => normalizeLine(line).includes(fragment));
+    if (fragmentIndex >= 0) return `第 ${fragmentIndex + 1} 行`;
+  }
+  return '原文片段';
+}
+
+function addSource(fieldSources, fieldOrigins, pathKey, text, sourceText, sourceName) {
+  if (!pathKey || !sourceText) return;
+  fieldSources[pathKey] = {
+    source_name: sourceName || null,
+    source_anchor: sourceAnchorFor(text, sourceText),
+    source_text: String(sourceText).trim()
+  };
+  fieldOrigins[pathKey] = 'auto';
+}
+
+function addExternalSource(fieldSources, fieldOrigins, pathKey, sourceText, sourceName, sourceAnchor, origin = 'auto') {
+  if (!pathKey || !sourceText) return;
+  fieldSources[pathKey] = {
+    source_name: sourceName || null,
+    source_anchor: sourceAnchor || '来源文件',
+    source_text: String(sourceText).trim()
+  };
+  fieldOrigins[pathKey] = origin;
+}
+
+function addWarning(fieldWarnings, pathKey, warning) {
+  if (!pathKey || !warning) return;
+  fieldWarnings[pathKey] = warning;
+}
+
+function markDefault(fieldOrigins, pathKey) {
+  if (!fieldOrigins[pathKey]) fieldOrigins[pathKey] = 'default';
+}
+
+function setValue(data, pathKey, value) {
+  const parts = pathKey.split('.');
+  let target = data;
+  for (let i = 0; i < parts.length - 1; i += 1) {
+    const part = parts[i];
+    if (target[part] == null) target[part] = {};
+    target = target[part];
+  }
+  target[parts[parts.length - 1]] = value;
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function isPunctuationOnly(value) {
+  return /^[\s\-—–_()（）【】\[\]{}:：;；,.，。/\\|]+$/.test(String(value || ''));
+}
+
+function isValidKeyValue(label, value, options = {}) {
+  const normalized = normalizeLine(value).replace(/^["“”'‘’]+|["“”'‘’]+$/g, '');
+  if (!normalized || isPunctuationOnly(normalized)) return false;
+  if (/^□/.test(normalized)) return false;
+  if (labelsEqual(normalized, label)) return false;
+  if (options.pattern && !options.pattern.test(normalized)) return false;
+  if (options.reject && options.reject.test(normalized)) return false;
+  return true;
+}
+
+function labelsEqual(value, label) {
+  return normalizeLine(value).replace(/\s/g, '') === normalizeLine(label).replace(/\s/g, '');
+}
+
+function extractKeyValue(text, labels, options = {}) {
+  const lines = String(text || '').replace(/\r\n?/g, '\n').split('\n');
+  const nonEmpty = lines
+    .map((line, index) => ({ line: normalizeLine(line), index }))
+    .filter(item => item.line);
+
+  for (const item of nonEmpty) {
+    for (const label of labels) {
+      const match = item.line.match(new RegExp(`(?:^|\\s)${escapeRegExp(label)}\\s*[：:]\\s*(.+)$`));
+      if (!match) continue;
+      const value = normalizeLine(match[1]);
+      if (!isValidKeyValue(label, value, options)) continue;
+      return { value, sourceText: item.line, lineIndex: item.index };
+    }
+  }
+
+  for (let i = 0; i < nonEmpty.length - 1; i += 1) {
+    const item = nonEmpty[i];
+    for (const label of labels) {
+      if (!labelsEqual(item.line, label)) continue;
+      const next = nonEmpty[i + 1];
+      const value = normalizeLine(next.line);
+      if (!isValidKeyValue(label, value, options)) continue;
+      return { value, sourceText: `${item.line}\n${next.line}`, lineIndex: item.index };
+    }
+  }
+  return null;
+}
+
+function normalizeDepartment(value) {
+  const raw = normalizeLine(value);
+  if (!raw) return { department_name: '', department_code: null, department_id: null, domain: null };
+  const found = ENUMS.departments.find(item => raw.includes(item.department_name) || item.department_name.includes(raw));
+  const departmentName = found?.department_name || raw;
+  return {
+    department_name: departmentName,
+    department_code: null,
+    department_id: null,
+    domain: found?.domain || null
+  };
+}
+
+function splitList(value) {
+  return String(value || '')
+    .split(/[,，、;；\s/]+/)
+    .map(item => item.trim())
+    .filter(Boolean);
+}
+
+function flattenBlock(block) {
+  return String(block || '').replace(/\s*\n\s*/g, ' ').trim();
+}
+
+function parseMarkdownRow(line) {
+  const trimmed = normalizeLine(line);
+  if (!trimmed.startsWith('|') || !trimmed.endsWith('|')) return null;
+  if (/^\|\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)+\|$/.test(trimmed)) return null;
+  return trimmed.slice(1, -1).split('|').map(cell => normalizeLine(cell));
+}
+
+function decodeHtmlEntity(value) {
+  return String(value || '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+}
+
+function htmlText(fragment) {
+  return normalizeLine(decodeHtmlEntity(String(fragment || '')
+    .replace(/<\/p>\s*<p[^>]*>/gi, ' ')
+    .replace(/<br\s*\/?>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')));
+}
+
+function compactLabel(value) {
+  return normalizeLine(value).replace(/\s+/g, '');
+}
+
+function normalizeTableTitle(value) {
+  return compactLabel(value);
+}
+
+function extractHtmlTables(html) {
+  const tables = [];
+  const source = String(html || '');
+  for (const tableMatch of source.matchAll(/<table\b[\s\S]*?<\/table>/gi)) {
+    const rows = [];
+    for (const rowMatch of tableMatch[0].matchAll(/<tr\b[\s\S]*?<\/tr>/gi)) {
+      const cells = [];
+      for (const cellMatch of rowMatch[0].matchAll(/<(?:td|th)\b([^>]*)>([\s\S]*?)<\/(?:td|th)>/gi)) {
+        const attrs = cellMatch[1] || '';
+        const colSpan = Number((attrs.match(/\bcolspan=["']?(\d+)/i) || [])[1] || 1);
+        const rowSpan = Number((attrs.match(/\browspan=["']?(\d+)/i) || [])[1] || 1);
+        cells.push({
+          text: htmlText(cellMatch[2]),
+          colSpan: Number.isFinite(colSpan) && colSpan > 0 ? colSpan : 1,
+          rowSpan: Number.isFinite(rowSpan) && rowSpan > 0 ? rowSpan : 1
+        });
+      }
+      if (cells.some(cell => cell.text)) rows.push(cells);
+    }
+    if (rows.length) tables.push({ rows, text: rows.map(row => row.map(cell => cell.text).filter(Boolean).join(' | ')).join('\n') });
+  }
+  return tables;
+}
+
+function normalizeRoleToken(value) {
+  return normalizeLine(value).replace(/[\s/／\\\-—–_·,，、()（）]/g, '');
+}
+
+function loadRosterRoleCatalog() {
+  if (rosterRoleCatalogCache) return rosterRoleCatalogCache;
+  const catalog = {
+    available: false,
+    pairs: new Set(),
+    departments: new Set(),
+    positions: new Set(),
+    rolesByDepartment: {}
+  };
+  if (!fs.existsSync(ROSTER_PATH)) {
+    rosterRoleCatalogCache = catalog;
+    return catalog;
+  }
+
+  const rolesByDepartment = new Map();
+  const lines = fs.readFileSync(ROSTER_PATH, 'utf8').replace(/\r\n?/g, '\n').split('\n');
+  let headers = null;
+  for (const line of lines) {
+    const row = parseMarkdownRow(line);
+    if (!row) continue;
+    if (row.some(cell => /^-+$/.test(cell))) continue;
+    if (row.includes('姓名') && row.includes('部门')) {
+      headers = row;
+      continue;
+    }
+    if (!headers) continue;
+    const value = name => {
+      const index = headers.indexOf(name);
+      return index >= 0 ? normalizeLine(row[index]) : '';
+    };
+    const department = value('部门');
+    const position = value('职务') || value('岗位');
+    if (!department || !position) continue;
+    const deptToken = normalizeRoleToken(department);
+    const positionToken = normalizeRoleToken(position);
+    if (!deptToken || !positionToken) continue;
+    catalog.departments.add(deptToken);
+    catalog.positions.add(positionToken);
+    catalog.pairs.add(`${deptToken}${positionToken}`);
+    catalog.pairs.add(`${department}${position}`);
+    if (!rolesByDepartment.has(department)) rolesByDepartment.set(department, new Set());
+    rolesByDepartment.get(department).add(position);
+  }
+  if (!rolesByDepartment.has(COMPANY_LEADERSHIP_DEPARTMENT)) {
+    rolesByDepartment.set(COMPANY_LEADERSHIP_DEPARTMENT, new Set());
+  }
+  for (const role of COMPANY_LEADERSHIP_ROLES) {
+    const roleToken = normalizeRoleToken(role);
+    if (!roleToken) continue;
+    catalog.departments.add(normalizeRoleToken(COMPANY_LEADERSHIP_DEPARTMENT));
+    catalog.positions.add(roleToken);
+    catalog.pairs.add(`${normalizeRoleToken(COMPANY_LEADERSHIP_DEPARTMENT)}${roleToken}`);
+    catalog.pairs.add(`${COMPANY_LEADERSHIP_DEPARTMENT}${role}`);
+    rolesByDepartment.get(COMPANY_LEADERSHIP_DEPARTMENT).add(role);
+  }
+  catalog.available = catalog.pairs.size > 0;
+  catalog.rolesByDepartment = Object.fromEntries(
+    Array.from(rolesByDepartment.entries())
+      .sort(([left], [right]) => left.localeCompare(right, 'zh-CN'))
+      .map(([department, positions]) => [
+        department,
+        Array.from(positions).sort((left, right) => left.localeCompare(right, 'zh-CN'))
+      ])
+  );
+  rosterRoleCatalogCache = catalog;
+  return catalog;
+}
+
+function publicEnums() {
+  return {
+    ...ENUMS,
+    rosterRolesByDepartment: loadRosterRoleCatalog().rolesByDepartment || {}
+  };
+}
+
+function splitActorRoleValues(actorRole) {
+  return String(actorRole || '')
+    .split(/(?:、|,|，|\/|／|或|及|和)/)
+    .map(normalizeLine)
+    .filter(Boolean);
+}
+
+function rosterPositionsForDepartment(catalog, department) {
+  return Array.isArray(catalog.rolesByDepartment?.[department]) ? catalog.rolesByDepartment[department] : [];
+}
+
+function findRosterDepartment(value, catalog) {
+  const token = normalizeRoleToken(value);
+  return Object.keys(catalog.rolesByDepartment || {})
+    .sort((left, right) => right.length - left.length)
+    .find(department => token.startsWith(normalizeRoleToken(department)));
+}
+
+function actorMatchesDepartmentPosition(value, department, catalog) {
+  const token = normalizeRoleToken(value);
+  const deptToken = normalizeRoleToken(department);
+  const positions = rosterPositionsForDepartment(catalog, department).map(position => normalizeRoleToken(position));
+  if (!token || !deptToken || !positions.length) return false;
+  return positions.some(positionToken => token === positionToken || token === `${deptToken}${positionToken}`);
+}
+
+function checkActorAgainstRoster(actorRole, expectedDepartment = '') {
+  const role = normalizeLine(actorRole);
+  if (!role) return null;
+  const catalog = loadRosterRoleCatalog();
+  if (!catalog.available) {
+    return '当前未读取到花名册，执行角色需要人工核对。';
+  }
+
+  const values = splitActorRoleValues(role);
+  const invalid = [];
+  const outsideDepartment = [];
+  for (const value of values.length ? values : [role]) {
+    const token = normalizeRoleToken(value);
+    if (!token) continue;
+    if (expectedDepartment) {
+      const valueDepartment = findRosterDepartment(value, catalog);
+      if (valueDepartment && valueDepartment !== expectedDepartment) {
+        outsideDepartment.push(value);
+        continue;
+      }
+      if (actorMatchesDepartmentPosition(value, expectedDepartment, catalog)) continue;
+      invalid.push(value);
+      continue;
+    }
+    if (catalog.pairs.has(token)) continue;
+    let matchedPair = false;
+    for (const pair of catalog.pairs) {
+      if (token.includes(pair)) {
+        matchedPair = true;
+        break;
+      }
+    }
+    if (matchedPair) continue;
+    invalid.push(value);
+  }
+  if (outsideDepartment.length) {
+    return '这个执行角色不属于当前归口部门，请核对是否应改为本部门岗位，或作为跨部门流转处理。';
+  }
+  if (!invalid.length) return null;
+  if (expectedDepartment) return '花名册里没有找到当前归口部门下的这个职务，请核对制度原文是否写清。';
+  return '花名册里没有找到这个执行角色对应的部门+职务，请核对制度原文是否写清。';
+}
+
+function applyActorRoleWarnings(data, context) {
+  const expectedDepartment = data.draft?.department?.department_name || '';
+  data.steps.forEach((step, index) => {
+    const message = checkActorAgainstRoster(step.actor_role, expectedDepartment);
+    if (!message) return;
+    addWarning(context.fieldWarnings, `steps.${index}.actor_role`, {
+      value: step.actor_role,
+      message
+    });
+  });
+}
+
+function loadProcessMappingCatalog() {
+  if (processMappingCatalogCache) return processMappingCatalogCache;
+  const catalog = [];
+  if (!fs.existsSync(MAPPING_FILES_DIR)) {
+    processMappingCatalogCache = catalog;
+    return catalog;
+  }
+  const files = fs.readdirSync(MAPPING_FILES_DIR)
+    .filter(name => name.endsWith('映射关系.md'))
+    .map(name => path.join(MAPPING_FILES_DIR, name));
+
+  for (const filePath of files) {
+    const sourceName = path.relative(path.join(__dirname, '..', '..'), filePath).replace(/\\/g, '/');
+    const lines = fs.readFileSync(filePath, 'utf8').replace(/\r\n?/g, '\n').split('\n');
+    let header = null;
+    for (let i = 0; i < lines.length; i += 1) {
+      const row = parseMarkdownRow(lines[i]);
+      if (!row) continue;
+      if (row.some(cell => cell.includes('部门')) && row.some(cell => cell.includes('业务流程'))) {
+        header = row;
+        continue;
+      }
+      if (!header) continue;
+      const indexOf = keyword => header.findIndex(cell => cell.includes(keyword));
+      const deptIndex = indexOf('部门');
+      const l1Index = indexOf('能力域');
+      const l2Index = indexOf('业务能力');
+      const l3Index = indexOf('业务流程');
+      const evidenceIndex = indexOf('制度依据');
+      const systemIndex = indexOf('应用系统');
+      if ([deptIndex, l1Index, l2Index, l3Index, evidenceIndex].some(index => index < 0)) continue;
+      const department = row[deptIndex];
+      const l1 = row[l1Index];
+      const l2 = row[l2Index];
+      const l3 = row[l3Index];
+      const evidence = row[evidenceIndex];
+      if (!department || !l1 || !l2 || !l3 || !evidence || department.includes('部门（D1）')) continue;
+      catalog.push({
+        department,
+        l1,
+        l2,
+        l3,
+        evidence,
+        system: systemIndex >= 0 ? row[systemIndex] : '',
+        sourceName,
+        sourceAnchor: `第 ${i + 1} 行`,
+        sourceText: lines[i].trim()
+      });
+    }
+  }
+  processMappingCatalogCache = catalog;
+  return catalog;
+}
+
+function normalizeForMatch(value) {
+  return normalizeLine(value)
+    .replace(/[《》「」"'“”‘’（）()\s\-—–_]/g, '')
+    .replace(/管理程序|管理规定|管理制度|程序文件/g, '')
+    .toLowerCase();
+}
+
+function buildSourceHints(...values) {
+  const hints = [];
+  for (const value of values) {
+    if (!value) continue;
+    const raw = String(value);
+    hints.push(raw);
+    raw.split(/[\\/]+/).forEach(part => {
+      if (!part) return;
+      hints.push(part);
+      hints.push(part.replace(/\.[^.]+$/, ''));
+    });
+  }
+  return [...new Set(hints.map(item => normalizeLine(item)).filter(Boolean))];
+}
+
+function parseEvidenceDocumentInfo(evidence) {
+  const text = normalizeLine(evidence);
+  const titleMatch = text.match(/《([^》]+)》/);
+  const title = titleMatch ? normalizeLine(titleMatch[1]) : '';
+  const beforeTitle = titleMatch ? text.slice(0, titleMatch.index) : text;
+  const codeMatch = beforeTitle.match(/[A-Z]{2,}(?:\/[A-Z]{2,})?(?:-[A-Z0-9]+)+(?:\/[A-Z])?/);
+  if (!codeMatch) return { documentNo: '', plannedEdition: '', documentTitle: title };
+
+  let code = codeMatch[0];
+  let plannedEdition = '';
+  const slashEdition = code.match(/\/([A-Z])$/);
+  if (slashEdition) {
+    plannedEdition = slashEdition[1];
+    code = code.slice(0, -2);
+  } else {
+    const parts = code.split('-');
+    const last = parts[parts.length - 1];
+    if (/^[A-Z]$/.test(last) && parts.length > 2) {
+      plannedEdition = last;
+      code = parts.slice(0, -1).join('-');
+    }
+  }
+
+  return {
+    documentNo: code.replace(/\//g, ''),
+    plannedEdition,
+    documentTitle: title
+  };
+}
+
+function documentCodeTail(documentNo) {
+  const parts = String(documentNo || '').replace(/\//g, '-').split('-').filter(Boolean);
+  if (parts.length < 2) return '';
+  return parts.slice(-2).join('-');
+}
+
+function countOccurrences(haystack, needle) {
+  const source = String(haystack || '').toLowerCase();
+  const target = String(needle || '').toLowerCase();
+  if (!target) return 0;
+  let count = 0;
+  let index = source.indexOf(target);
+  while (index >= 0) {
+    count += 1;
+    index = source.indexOf(target, index + target.length);
+  }
+  return count;
+}
+
+function scoreMappingEntry(entry, data, text, context = {}) {
+  const d = data.draft;
+  const title = d.document_title || '';
+  const documentNo = d.document_no || '';
+  const edition = d.planned_edition || '';
+  const fullNo = documentNo && edition ? `${documentNo}-${edition}` : documentNo;
+  const evidenceInfo = parseEvidenceDocumentInfo(entry.evidence);
+  const sourceHints = context.sourceHints || [];
+  const normalizedHints = sourceHints.map(normalizeForMatch).filter(Boolean);
+  let score = 0;
+  if (fullNo && entry.evidence.includes(fullNo)) score += 100;
+  if (documentNo && entry.evidence.includes(documentNo)) score += 60;
+  if (title && entry.evidence.includes(`《${title}》`)) score += 50;
+  if (evidenceInfo.documentNo && normalizedHints.some(hint => hint.includes(normalizeForMatch(evidenceInfo.documentNo)))) score += 100;
+  if (evidenceInfo.documentTitle && normalizedHints.some(hint => hint.includes(normalizeForMatch(evidenceInfo.documentTitle)))) score += 50;
+  const codeTail = documentCodeTail(evidenceInfo.documentNo);
+  const codeTailHits = countOccurrences(text, codeTail);
+  if (codeTailHits > 0) score += Math.min(70, 20 + codeTailHits * 10);
+  if (title && normalizeForMatch(entry.l2) && normalizeForMatch(title).includes(normalizeForMatch(entry.l2))) score += 25;
+  if (title && normalizeForMatch(entry.l2) && normalizeForMatch(entry.l2).includes(normalizeForMatch(title))) score += 25;
+  if (d.department.department_name && entry.department === d.department.department_name) score += 15;
+  if (entry.evidence && text.includes(entry.evidence.split('；')[0])) score += 5;
+  return score;
+}
+
+function applyProcessMapping(data, text, context) {
+  const catalog = loadProcessMappingCatalog();
+  let best = null;
+  let bestScore = 0;
+  for (const entry of catalog) {
+    const score = scoreMappingEntry(entry, data, text, context);
+    if (score > bestScore) {
+      best = entry;
+      bestScore = score;
+    }
+  }
+  if (!best || bestScore < 50) return null;
+  const d = data.draft;
+  const evidenceInfo = parseEvidenceDocumentInfo(best.evidence);
+  if (!d.document_no && evidenceInfo.documentNo) d.document_no = evidenceInfo.documentNo;
+  if (!d.planned_edition && evidenceInfo.plannedEdition) d.planned_edition = evidenceInfo.plannedEdition;
+  if (!d.document_title && evidenceInfo.documentTitle) d.document_title = evidenceInfo.documentTitle;
+  if (data.document_profile) {
+    if (!data.document_profile.document_no && d.document_no) data.document_profile.document_no = d.document_no;
+    if (!data.document_profile.document_title && d.document_title) data.document_profile.document_title = d.document_title;
+  }
+  d.department = normalizeDepartment(best.department || d.department.department_name);
+  d.l1_name = best.l1;
+  d.l1_status = 'confirmed';
+  d.l2_name = best.l2;
+  d.l2_status = 'confirmed';
+  d.l3_name = best.l3;
+  d.process_name = best.l3;
+  const sourcePaths = [
+    'draft.document_no',
+    'draft.document_title',
+    'draft.planned_edition',
+    'document_profile.document_no',
+    'document_profile.document_title',
+    'draft.department.department_name',
+    'draft.l1_name',
+    'draft.l2_name',
+    'draft.l3_name',
+    'draft.process_name'
+  ];
+  sourcePaths.forEach(pathKey => {
+    if (getValue(data, pathKey)) {
+      addExternalSource(context.fieldSources, context.fieldOrigins, pathKey, best.sourceText, best.sourceName, best.sourceAnchor, 'external_reference');
+    }
+  });
+  return best;
+}
+
+function inferActorRole(clause) {
+  const normalized = normalizeLine(clause).replace(/^经(?=[^，。；;]{1,30}(?:审核|审批|批准|确认)后)/, '');
+  if (WORKFLOW_VERBS.some(verb => normalized.startsWith(verb))) return null;
+  const passive = normalized.match(/^由([一-鿿A-Za-z0-9（）()、]{2,30}?)(?:会同[^，,。；;]+)?(?:在[^，,。；;]+)?(?:规范|及时|定期|集中|正式)?(?:提交|反馈|编制|编写|填写|登记|归档|备案|发起|接收|更新|维护|组织|通知|汇总|复核|保存|启动|报送|跟踪|监控|协调|制定|制订|验证|分析|调查|采取|隔离|传递|关联|落实|审查|签字|提请|指定|提供|验收|评估|评选|修订|推广)/);
+  if (passive) {
+    const actor = passive[1].replace(/[，,。；;：:]+$/, '').trim();
+    if (!/^(部门|各部门|公司|全体员工|员工)$/.test(actor) && /(部|部门|人|员|组|者|负责人|经理|主管|领导|内勤|专员|中心|车间|班组)$/.test(actor)) return actor;
+  }
+  const passiveObject = normalized.match(/^.+?由([一-鿿A-Za-z0-9（）()、]{2,30}?)(?:在[^，,。；;]+)?(?:提交|反馈|编制|编写|填写|登记|归档|备案|发起|接收|更新|维护|组织|通知|汇总|复核|保存|启动|报送|跟踪|监控|协调|制定|制订|验证|分析|调查|采取|隔离|传递|关联|落实|审查|签字|提请|指定|提供|验收|评估|评选|修订|推广)/);
+  if (passiveObject) {
+    const actor = passiveObject[1].replace(/[，,。；;：:]+$/, '').trim();
+    if (!/^(部门|各部门|公司|全体员工|员工)$/.test(actor) && /(部|部门|人|员|组|者|负责人|经理|主管|领导|内勤|专员|中心|车间|班组)$/.test(actor)) return actor;
+  }
+  const objectReview = normalized.match(/^([一-鿿A-Za-z0-9（）()、]{2,20}?(?:小组|委员会|部门))对.+?[，,](?:评选|评估|审核|审议|确认|形成|出具)/);
+  if (objectReview) return objectReview[1].trim();
+  const explicit = normalized.match(/^([一-鿿A-Za-z0-9（）()、]{2,20}?)(?:需|应|须|应当)?(?:按[^，,。；;]{1,16})?(?:向[^，,。；;]{1,24})?(?:规范|及时|定期|集中|正式)?(?:提交|审核|审批|批准|确认|编制|编写|填写|登记|归档|备案|发起|接收|更新|维护|校验|检查|完成|组织|通知|汇总|复核|判定|保存|启动|报送|跟踪|监控|协调|制定|制订|验证|分析|调查|采取|隔离|传递|关联|落实|审查|签字|提请|指定|提供|验收|评估|评选|修订|推广)/);
+  if (explicit) {
+    const actor = explicit[1].replace(/[，,。；;：:]+$/, '').trim();
+    if (!/^(部门|各部门|公司|全体员工|员工)$/.test(actor) && /(部|部门|人|员|组|者|负责人|经理|主管|领导|内勤|专员|中心|车间|班组)$/.test(actor)) return actor;
+  }
+  const department = ENUMS.departments.find(item => normalized.startsWith(item.department_name));
+  if (department && firstVerbIndex(normalized) >= department.department_name.length) return department.department_name;
+  const match = normalized.match(/^([一-鿿A-Za-z0-9（）()、]{2,30}?)(?:负责(?!人)|提交|审核|审批|批准|确认|编制|编写|填写|登记|归档|备案|发起|接收|更新|维护|校验|检查|完成|组织|通知|汇总|复核|判定|保存|制定|制订|验证|分析|调查|采取|隔离|传递|关联|落实|审查|签字|提请|指定|提供)/);
+  if (!match) return null;
+  const actor = match[1].replace(/[，,。；;：:]+$/, '').trim();
+  return /(部|部门|人|员|组|者|负责人|经理|主管|领导|内勤|专员|中心|车间|班组)$/.test(actor) ? actor : null;
+}
+
+function firstVerbIndex(text) {
+  let best = -1;
+  for (const verb of WORKFLOW_VERBS) {
+    const idx = String(text || '').indexOf(verb);
+    if (idx >= 0 && (best < 0 || idx < best)) best = idx;
+  }
+  return best;
+}
+
+function cleanClause(raw) {
+  return normalizeLine(raw)
+    .replace(/^经(?=[^，。；;]{1,30}(?:审核|审批|批准|确认)后)/, '')
+    .replace(/后$/, '')
+    .replace(/完成$/, '')
+    .replace(/[。；;，,]+$/, '')
+    .trim();
+}
+
+function quotedFormName(value) {
+  const match = String(value || '').match(/《([^》]{2,60}?(?:单|表|申请表|申报表|记录|报告|台账))》/);
+  return match ? match[1].trim() : null;
+}
+
+function cleanWorkflowStepText(segment) {
+  const text = cleanClause(segment);
+  const formName = quotedFormName(text);
+  if (formName && /填写/.test(text) && (/(?:^|[，,；;])\s*\d+\s*个工作日内/.test(text) || /附表\s*\d+/.test(text))) {
+    return `填写《${formName}》`;
+  }
+  return text;
+}
+
+function isNonExecutableSegment(segment) {
+  const text = normalizeLine(segment).replace(/^[-•]\s*/, '');
+  if (!text) return true;
+  if (/^(?:[^，,。；;]{1,12})?(?:包括|包含|含).{2,160}[、，,]/.test(text)) return true;
+  if (isLikelyWorkflowSubheading(text)) return true;
+  if (/^(?:若|如|如果).{2,120}(?:情况|情形|时|后)?$/.test(text) && extractTriggerScene(text)) return true;
+  if (/^经(?!营|办).{1,80}(?:审核|审批|批准|确认|通过).{0,24}(?:的|后)?$/.test(text) && !/(?:提交|形成|出具|保存|反馈|报送|归档)/.test(text)) return true;
+  if (/^(?:[^，,。；;]{0,20})?在收到.{1,40}(?:通知|指令|反馈|申请)$/.test(text)) return true;
+  if (/^(?:[^，,。；;]{0,20})?在接收.{1,40}$/.test(text)) return true;
+  if (/仅围绕|等核心事项|高效传递|流程高效衔接/.test(text)) return true;
+  if (/^(?:确保|保障).{2,60}$/.test(text)) return true;
+  if (/公司鼓励|鼓励全体员工|倡导|鼓励常态化|态度/.test(text)) return true;
+  if (/^(?:公司|全体员工|员工)(?:应|需|可|鼓励|主动|常态化)/.test(text)) return true;
+  if (/^各部门应按季度主动组织提案工作/.test(text)) return true;
+  if (/^由部门集中提交/.test(text)) return true;
+  if (/^(?:当|在).{2,80}(?:后|时)?$/.test(text) && extractTriggerScene(text)) return true;
+  if (/^经.{2,60}(?:审核|审批|批准|确认)(?:后)?$/.test(text)) return true;
+  if (/^经.{0,60}(?:审核|审批|批准|确认)通过的.{1,40}$/.test(text)) return true;
+  if (/^若发现.{2,100}(?:情况|情形|问题)$/.test(text)) return true;
+  if (/^随附.{2,80}(?:资料|材料|证明文件|证据|文件)$/.test(text)) return true;
+  if (/^在\d+\s*个?\s*(?:工作日|日历日|小时|个月|年)内(?:反馈|报送|提交|完成).{1,40}$/.test(text)) return true;
+  if (/^(?:当|对|对于).{2,80}时$/.test(text)) return true;
+  if (/^(?:对于|关于|对).{2,60}(?:故障|问题|事项|情况|情形)$/.test(text)) return true;
+  if (/^(?:各部门|部门)(?:应|需|可|主动|按季度|定期).{0,24}(?:工作|活动|建议)$/.test(text)) return true;
+  if (/^[一-鿿A-Za-z0-9（）()、]{2,30}?对.+的(?:项目|事项|对象)$/.test(text)) return true;
+  return false;
+}
+
+function isWorkflowSubheading(normalized, stripped, hasNumbering) {
+  if (!stripped || /[。；;，,]/.test(stripped) || quotedFormName(stripped)) return false;
+  const startsWithAction = /^(?:通知|确认|反馈|提交|填写|审核|审批|归档|保存|登记|更新|维护|校验|检查|复核|发起|接收|汇总|编制|编写|形成|输出|组织|召开|启动|报送|跟踪|制定|制订|验证|分析|调查|采取|隔离|传递|落实|审查|签字|提供|验收|评估|评选|修订|推广|出具)/.test(stripped);
+  if (stripped.length > 12) return false;
+  if (stripped === '表单填写') return true;
+  if (stripped.includes('与')) return true;
+  if (/管理$/.test(stripped)) return true;
+  if (/(?:通知|确认|反馈|要求|说明|流程)$/.test(stripped) && !startsWithAction) return true;
+  return false;
+}
+
+function isLikelyWorkflowSubheading(segment) {
+  const text = stripNumbering(segment).replace(/^[-•]\s*/, '');
+  if (!text || text.length > 18) return false;
+  if (/[，,。；;：:]/.test(text) || quotedFormName(text)) return false;
+  if (/^(?:申请人|相关人员|航达人员|理化检测团队|理化检测负责人|责任单位|业务主管|双方)/.test(text)) return false;
+  if (WORKFLOW_VERBS.some(verb => text.startsWith(verb))) return false;
+  const verbHits = WORKFLOW_VERBS.filter(verb => text.includes(verb)).length;
+  if (verbHits >= 2) return false;
+  if (/(?:流程|管理|要求|说明)$/.test(text)) return true;
+  return /(?:通知|反馈|审批|填写|确认)$/.test(text) && verbHits === 1;
+}
+
+function splitWorkflowSentence(line) {
+  const raw = normalizeLine(line)
+    .replace(/^[-•]\s*/, '')
+    .replace(/^[（(]?\d+[)）]?\s*[.、．)）]\s*/, '');
+  if (!raw) return [];
+
+  const steps = [];
+  const sentences = raw.split(/。/).map(normalizeLine).filter(Boolean);
+  for (const rawSentence of sentences) {
+    const sentence = cleanClause(rawSentence);
+    if (!sentence) continue;
+    const firstActor = /^经[^，,。；;]{1,60}(?:审核|审批|批准|确认)后/.test(rawSentence) ? null : inferActorRole(sentence);
+    const segments = sentence
+      .split(/，|；|;/)
+      .flatMap(part => part.split(/并|且/))
+      .map(cleanClause)
+      .filter(Boolean);
+
+    for (const segment of segments) {
+      if (isNonExecutableSegment(segment)) continue;
+      const actor = inferActorRole(segment);
+      const verbAt = firstVerbIndex(segment);
+      if (verbAt < 0) continue;
+      const cleanedText = cleanWorkflowStepText(segment);
+      if (!cleanedText) continue;
+      if (actor) {
+        steps.push({ text: cleanedText, actor, sourceText: rawSentence });
+        continue;
+      }
+      if (firstActor && verbAt === 0) {
+        steps.push({ text: cleanWorkflowStepText(`${firstActor}${segment}`), actor: firstActor, sourceText: rawSentence });
+        continue;
+      }
+      steps.push({ text: cleanedText, actor: null, sourceText: rawSentence });
+    }
+  }
+  return steps;
+}
+
+function extractInputMaterials(text) {
+  const source = String(text || '');
+  if (!FIELD_LEXICON.inputVerbs.some(verb => source.includes(verb))) return null;
+  const values = collectFieldObjects(source, FIELD_LEXICON.materialNouns);
+  return joinFieldValues(values);
+}
+
+function extractOutputResult(text) {
+  const source = String(text || '');
+  if (!FIELD_LEXICON.outputVerbs.some(verb => source.includes(verb))) return null;
+  const values = [];
+  for (const clause of fieldClauses(source)) {
+    if (!FIELD_LEXICON.outputVerbs.some(verb => clause.includes(verb))) continue;
+    values.push(...collectFieldObjects(clause, FIELD_LEXICON.outputNouns));
+  }
+  return joinFieldValues(values);
+}
+
+function fieldClauses(text) {
+  return String(text || '')
+    .split(/[，,。；;]/)
+    .map(cleanClause)
+    .filter(Boolean);
+}
+
+function joinFieldValues(values) {
+  const unique = [];
+  for (const value of values.map(normalizeLine).filter(Boolean)) {
+    if (value.length > 80) continue;
+    if (!unique.includes(value)) unique.push(value);
+  }
+  return unique.length ? unique.join('；') : null;
+}
+
+function collectFieldObjects(text, nounSuffixes) {
+  const source = String(text || '');
+  const values = [];
+  for (const match of source.matchAll(/《([^》]{2,80})》/g)) {
+    values.push(`《${match[1].trim()}》`);
+  }
+  const nounAlternation = nounSuffixes.map(escapeRegExp).join('|');
+  const objectPattern = new RegExp(`([\\u4e00-\\u9fa5A-Za-z0-9（）()、-]{2,40}(?:${nounAlternation}))`, 'g');
+  for (const match of source.matchAll(objectPattern)) {
+    const value = normalizeLine(match[1])
+      .replace(/^(?:和|及|与|并|或|其|的)+/, '')
+      .replace(/^(?:完整的|相关|有关|客观|书面)+(?=[\u4e00-\u9fa5A-Za-z0-9《])/, match[0].startsWith('客观') ? '客观' : '');
+    if (value && !values.includes(value)) values.push(value);
+  }
+  return values;
+}
+
+function extractTriggerScene(text) {
+  const source = String(text || '');
+  const verbs = FIELD_LEXICON.triggerVerbs.join('|');
+  const pattern = new RegExp(`(?:当|在)?([^，,。；;]{0,40}(?:${verbs})[^，,。；;]{0,60}?)(?:后|时|，|,|。|；|;|$)`);
+  const match = source.match(pattern);
+  if (!match) return null;
+  const value = normalizeLine(match[1]).replace(/^(?:当|在)/, '').replace(/[后时]$/, '');
+  if (!FIELD_LEXICON.triggerObjects.some(noun => value.includes(noun))) return null;
+  return value || null;
+}
+
+function extractPrecondition(text) {
+  const source = String(text || '');
+  const patterns = [
+    /经([^，,。；;]{1,50}?(?:审核|审批|批准|确认)(?:[^，,。；;]{0,20})?)后?/,
+    /(获得[^，,。；;]{1,40}?(?:审核|审批|批准|确认))/,
+    /((?:完成|满足|具备)[^，,。；;]{1,50}?(?:后|条件|要求|资料|材料))/,
+    /(未[^，,。；;]{1,50}?不得[^，,。；;]{0,40})/
+  ];
+  for (const pattern of patterns) {
+    const match = source.match(pattern);
+    if (match) return normalizeLine(match[1]).replace(/[，,。；;]+$/, '') || null;
+  }
+  return null;
+}
+
+function detectApproval(text) {
+  return /审核|审批|批准|复核|确认/.test(String(text || ''));
+}
+
+function detectCrossDepartment(step, ownDept, relatedDepartments) {
+  const text = [step.step_name, step.actor_role].filter(Boolean).join(' ');
+  return relatedDepartments.some(dept => dept && text.includes(dept) && dept !== ownDept);
+}
+
+function extractExecutionStandard(text) {
+  const source = String(text || '');
+  const match = source.match(/依据([^。；;，,]+?(?:创新性|战略契合度|预期效益|可行性|风险)[^。；;]*?)等标准/);
+  return match ? `${match[1].trim()}等标准` : null;
+}
+
+function extractFillInstruction(text) {
+  const lines = String(text || '').replace(/\r\n?/g, '\n').split('\n').map(normalizeLine);
+  const start = lines.findIndex(line => compactLabel(line) === '填表说明');
+  if (start < 0) return null;
+  const parts = [];
+  for (const line of lines.slice(start, start + 5)) {
+    if (!line) continue;
+    parts.push(line);
+  }
+  return parts.join('\n') || null;
+}
+
+function extractExecutionStandardInfo(sourceText, step, fullText) {
+  const standard = extractExecutionStandard(sourceText);
+  if (standard) return { value: standard, sourceText };
+  const formName = quotedFormName(step?.step_name || '') || quotedFormName(sourceText || '');
+  if (formName && /填写/.test(step?.step_name || sourceText || '')) {
+    return {
+      value: `按《${formName}》填表说明执行；建议继续完善具体填写标准。`,
+      sourceText: extractFillInstruction(fullText) || sourceText || step?.step_name || ''
+    };
+  }
+  const lexiconStandard = extractLexiconExecutionStandard(sourceText);
+  if (lexiconStandard) return { value: lexiconStandard, sourceText };
+  return { value: null, sourceText: null };
+}
+
+function extractLexiconExecutionStandard(text) {
+  const values = [];
+  for (const clause of fieldClauses(text)) {
+    if (/(?:\d+\s*个?\s*(?:工作日|日历日)|\d+\s*(?:小时|个月|年))内/.test(clause)) {
+      values.push(clause);
+      continue;
+    }
+    if (/保存[^，,。；;]*(?:材料|记录|报告|表|单|文件|证据|资料)/.test(clause)) {
+      values.push(clause);
+      continue;
+    }
+    if (/(?:应|必须|不得|按|依据|符合|规定格式|连续验证)/.test(clause) && clause.length <= 120) {
+      values.push(clause);
+    }
+  }
+  return joinFieldValues(values);
+}
+
+function isTermHeader(value) {
+  const label = compactLabel(value);
+  return ['术语', '术语名称', '名词术语'].includes(label);
+}
+
+function isDefinitionHeader(value) {
+  return compactLabel(value) === '定义';
+}
+
+function isSequenceHeader(value) {
+  return ['序号', '编号', 'NO', 'No'].includes(compactLabel(value));
+}
+
+function shouldSkipTermName(value) {
+  const text = normalizeLine(value);
+  const label = compactLabel(text);
+  if (!text) return true;
+  if (/^\d+$/.test(text)) return true;
+  return isTermHeader(text) || isDefinitionHeader(text) || isSequenceHeader(text) || ['术语和定义', '术语与定义'].includes(label);
+}
+
+function extractTermsFromTables(context, text) {
+  const terms = [];
+  for (const table of context.sourceTables || []) {
+    if (!table.rows?.length) continue;
+    const headerIndex = table.rows.findIndex(row => row.some(cell => isTermHeader(cell.text)) && row.some(cell => isDefinitionHeader(cell.text)));
+    if (headerIndex < 0) continue;
+    const header = table.rows[headerIndex];
+    const termIndex = header.findIndex(cell => isTermHeader(cell.text));
+    const definitionIndex = header.findIndex(cell => isDefinitionHeader(cell.text));
+    if (termIndex < 0 || definitionIndex < 0 || termIndex === definitionIndex) continue;
+    for (const row of table.rows.slice(headerIndex + 1)) {
+      const termName = normalizeLine(row[termIndex]?.text);
+      const definition = normalizeLine(row[definitionIndex]?.text);
+      if (shouldSkipTermName(termName) || !definition) continue;
+      if (terms.some(term => term.term_name === termName)) continue;
+      const index = terms.length;
+      terms.push({
+        term_ref: `term_${index + 1}`,
+        draft_ref: null,
+        term_name: termName,
+        definition,
+        applies_to: null
+      });
+      const sourceText = row.map(cell => cell.text).filter(Boolean).join('\n');
+      addSource(context.fieldSources, context.fieldOrigins, `terms.${index}.term_name`, text, sourceText, context.sourceName);
+      addSource(context.fieldSources, context.fieldOrigins, `terms.${index}.definition`, text, sourceText, context.sourceName);
+    }
+  }
+  return terms;
+}
+
+function extractTerms(text, context) {
+  const tableTerms = extractTermsFromTables(context, text);
+  if (tableTerms.length) return tableTerms;
+
+  const terms = [];
+  const block = extractLabeledBlock(text, ['术语和定义', '术语与定义', '术语', '定义']);
+  if (!block) return terms;
+  const patterns = [
+    /[（(](\d+)[)）]\s*(.+?)[：:]\s*(.+?)(?=\r?\n[（(]\d+[)）]|\r?\n\r?\n|$)/g,
+    /^(\d+)[.、)）]\s*(.+?)[：:]\s*(.+?)$/gm
+  ];
+  for (const pattern of patterns) {
+    for (const match of block.matchAll(pattern)) {
+      const termName = match[2].trim();
+      if (terms.some(term => term.term_name === termName)) continue;
+      const index = terms.length;
+      terms.push({
+        term_ref: `term_${index + 1}`,
+        draft_ref: null,
+        term_name: termName,
+        definition: match[3].trim(),
+        applies_to: null
+      });
+      const sourceText = `${termName}：${match[3].trim()}`;
+      addSource(context.fieldSources, context.fieldOrigins, `terms.${index}.term_name`, text, sourceText, context.sourceName);
+      addSource(context.fieldSources, context.fieldOrigins, `terms.${index}.definition`, text, sourceText, context.sourceName);
+    }
+  }
+  if (terms.length) return terms;
+
+  const lines = block
+    .replace(/\r\n?/g, '\n')
+    .split('\n')
+    .map(normalizeLine)
+    .filter(Boolean)
+    .filter(line => !shouldSkipTermName(line));
+
+  function isTermName(line) {
+    if (shouldSkipTermName(line)) return false;
+    if (!line || line.length > 30) return false;
+    if (/[。；;，,：:？?]/.test(line)) return false;
+    if (/^(第?\d+|[一二三四五六七八九十]+)\s*[章节条]/.test(line)) return false;
+    return /[\u4e00-\u9fa5A-Za-z]/.test(line);
+  }
+
+  for (let i = 0; i < lines.length - 1; i += 1) {
+    const termName = lines[i];
+    if (!isTermName(termName)) continue;
+    const definitionParts = [];
+    for (let j = i + 1; j < lines.length; j += 1) {
+      if (j > i + 1 && isTermName(lines[j])) break;
+      definitionParts.push(lines[j]);
+      if (/[。；;]$/.test(lines[j])) break;
+    }
+    const definition = definitionParts.join('');
+    if (!definition || isTermName(definition)) continue;
+    if (terms.some(term => term.term_name === termName)) continue;
+    const index = terms.length;
+    terms.push({
+      term_ref: `term_${index + 1}`,
+      draft_ref: null,
+      term_name: termName,
+      definition,
+      applies_to: null
+    });
+    const sourceText = `${termName}\n${definition}`;
+    addSource(context.fieldSources, context.fieldOrigins, `terms.${index}.term_name`, text, sourceText, context.sourceName);
+    addSource(context.fieldSources, context.fieldOrigins, `terms.${index}.definition`, text, sourceText, context.sourceName);
+  }
+  return terms;
+}
+
+function cleanExplicitBehaviorValue(value, options = {}) {
+  const trailingPattern = options.stripTrailingColon ? /[：:。；;]+$/ : /[。；;]+$/;
+  return normalizeLine(value).replace(trailingPattern, '').trim();
+}
+
+function parseExplicitBehaviorStart(line) {
+  const sourceText = normalizeLine(line);
+  const match = sourceText.match(/^(?:业务行为|行为)\s*(?:编号\s*)?(?:[A-Za-z0-9一二三四五六七八九十百._-]+)?\s*[：:]\s*(.*)$/);
+  if (!match) return null;
+  const stepName = cleanExplicitBehaviorValue(match[1], { stripTrailingColon: true });
+  if (!stepName) return null;
+  return { stepName, sourceText };
+}
+
+function parseExplicitBehaviorField(line) {
+  const sourceText = normalizeLine(line);
+  for (const field of EXPLICIT_BEHAVIOR_FIELDS) {
+    for (const label of field.labels) {
+      const match = sourceText.match(new RegExp(`^${escapeRegExp(label)}\\s*[：:]\\s*(.*)$`));
+      if (!match) continue;
+      return {
+        key: field.key,
+        value: cleanExplicitBehaviorValue(match[1]),
+        sourceText
+      };
+    }
+  }
+  return null;
+}
+
+function normalizeExplicitActorRole(value) {
+  return String(value || '')
+    .split(/[\/／]/)
+    .map(part => normalizeLine(part)
+      .replace(/\s*[—–－-]+\s*/g, '')
+      .replace(/\s+/g, ''))
+    .filter(Boolean)
+    .join(' / ');
+}
+
+function extractExplicitBehaviorBlocks(text) {
+  const blocks = [];
+  const lines = String(text || '').replace(/\r\n?/g, '\n').split('\n');
+  let current = null;
+
+  const finishCurrent = () => {
+    if (current?.stepName && current.seenFields.size > 0) {
+      blocks.push({
+        stepName: current.stepName,
+        values: current.values,
+        sources: current.sources
+      });
+    }
+    current = null;
+  };
+
+  for (const line of lines) {
+    const normalized = normalizeLine(line);
+    if (!normalized) continue;
+
+    const behavior = parseExplicitBehaviorStart(normalized);
+    if (behavior) {
+      finishCurrent();
+      current = {
+        stepName: behavior.stepName,
+        values: {},
+        sources: { step_name: behavior.sourceText },
+        seenFields: new Set()
+      };
+      continue;
+    }
+
+    if (!current) continue;
+    const field = parseExplicitBehaviorField(normalized);
+    if (field) {
+      current.seenFields.add(field.key);
+      if (!Object.prototype.hasOwnProperty.call(current.values, field.key) || field.value) {
+        current.values[field.key] = field.key === 'actor_role'
+          ? normalizeExplicitActorRole(field.value)
+          : field.value || null;
+        current.sources[field.key] = field.sourceText;
+      }
+      if (current.seenFields.size === EXPLICIT_BEHAVIOR_FIELDS.length) finishCurrent();
+      continue;
+    }
+
+    if (/^\d+(?:\.\d+)+\s*\S/.test(normalized) || isSectionHeading(normalized)) {
+      finishCurrent();
+    }
+  }
+
+  finishCurrent();
+  return blocks;
+}
+
+function extractWorkflowSteps(text, context) {
+  const workflowLabels = [
+    '工作流程', '操作步骤', '业务流程', '管理流程', '工作程序',
+    '申请流程', '操作流程', '审批流程', '核心流程及要求', '核心流程',
+    '流程及要求', '流程要求', '办理流程', '实施流程', '规定', '管理内容', '程序'
+  ];
+  const blocks = extractLabeledBlocks(text, workflowLabels);
+  if (!blocks.length) return [];
+  const groupedSteps = [];
+  for (const entry of blocks) {
+    const group = { label: entry.label, block: entry.block, steps: [] };
+    const explicitBlocks = extractExplicitBehaviorBlocks(entry.block);
+    if (explicitBlocks.length) {
+      group.steps = explicitBlocks.map(block => ({
+        text: block.stepName,
+        actor: block.values.actor_role || null,
+        sourceText: block.sources.step_name,
+        explicit: block
+      }));
+      groupedSteps.push(group);
+      continue;
+    }
+    let skipLetterList = false;
+    for (const line of entry.block.replace(/\r\n?/g, '\n').split('\n')) {
+      const normalized = normalizeLine(line);
+      if (!normalized) continue;
+      if (/^\s*\d+\.\d+/.test(normalized)) skipLetterList = false;
+      if (/下列|以下|包括/.test(normalized) && /[:：]$/.test(normalized)) {
+        skipLetterList = true;
+        continue;
+      }
+      if (skipLetterList && /^[a-zA-Z][)）]\s*/.test(normalized)) continue;
+      const stripped = stripNumbering(normalized);
+      if (!stripped || isSectionHeading(normalized)) continue;
+      const hasNumbering = /^\s*(?:[（(]?(?:\d+(?:\.\d+)*|[一二三四五六七八九十]+)[)）]?|第?[一二三四五六七八九十]+)\s*[.、．)）]/.test(normalized);
+      if (isWorkflowSubheading(normalized, stripped, hasNumbering)) continue;
+      const hasWorkflowVerb = WORKFLOW_VERBS.some(verb => stripped.includes(verb));
+      if (!hasNumbering && !hasWorkflowVerb) continue;
+      for (const piece of splitWorkflowSentence(stripped)) {
+        if (!piece.text || piece.text.length > 160) continue;
+        group.steps.push(piece);
+      }
+    }
+    if (group.steps.length) groupedSteps.push(group);
+  }
+
+  const steps = [];
+  const processGroups = [];
+  const duplicateCounts = new Map();
+  const baseProcessName = context.workflowProcessBaseName || '';
+  groupedSteps.forEach((group, groupIndex) => {
+    const processRef = `proc_${groupIndex + 1}`;
+    const label = group.label || `流程 ${groupIndex + 1}`;
+    let l3Name = groupedSteps.length > 1
+      ? [baseProcessName, label].filter(Boolean).join(' - ')
+      : (baseProcessName || label);
+    const seen = duplicateCounts.get(l3Name) || 0;
+    duplicateCounts.set(l3Name, seen + 1);
+    if (seen > 0) l3Name = `${l3Name}（${seen + 1}）`;
+    processGroups.push({ process_ref: processRef, l3_name: l3Name, label, sourceText: group.block });
+
+    for (const piece of group.steps) {
+      const index = steps.length;
+      const fieldSourceText = piece.sourceText || piece.text;
+      const explicitValues = piece.explicit?.values || null;
+      const step = {
+        step_ref: `step_${index + 1}`,
+        draft_ref: null,
+        process_ref: processRef,
+        step_type: 'action',
+        a1_code: null,
+        step_name: piece.text,
+        actor_role: piece.actor,
+        timing: null,
+        input_materials: explicitValues ? explicitValues.input_materials || null : extractInputMaterials(fieldSourceText),
+        output_result: explicitValues ? explicitValues.output_result || null : extractOutputResult(fieldSourceText),
+        entry: null,
+        system: '',
+        status: 'active',
+        evidence_refs: ['EV-DOC-001']
+      };
+      steps.push(step);
+      const explicitSources = piece.explicit?.sources || {};
+      addSource(context.fieldSources, context.fieldOrigins, `steps.${index}.step_name`, text, explicitSources.step_name || piece.sourceText, context.sourceName);
+      if (step.actor_role) {
+        addSource(context.fieldSources, context.fieldOrigins, `steps.${index}.actor_role`, text, explicitSources.actor_role || piece.sourceText, context.sourceName);
+      }
+      if (step.input_materials) {
+        addSource(context.fieldSources, context.fieldOrigins, `steps.${index}.input_materials`, text, explicitSources.input_materials || fieldSourceText, context.sourceName);
+      }
+      if (step.output_result) {
+        addSource(context.fieldSources, context.fieldOrigins, `steps.${index}.output_result`, text, explicitSources.output_result || fieldSourceText, context.sourceName);
+      }
+      if (piece.explicit) {
+        if (!context.explicitBehaviorDetails) context.explicitBehaviorDetails = {};
+        context.explicitBehaviorDetails[index] = {
+          precondition: explicitValues.precondition || null,
+          trigger_scene: explicitValues.trigger_scene || null,
+          execution_standard: explicitValues.execution_standard || null,
+          sources: explicitSources
+        };
+      }
+    }
+  });
+  context.workflowProcessGroups = processGroups;
+  return steps;
+}
+
+function parseRetentionPeriod(value) {
+  const text = String(value || '');
+  if (/永久|长期/.test(text)) return '永久';
+  const match = text.match(/保存\s*(\d+)\s*年|(\d+)\s*年/);
+  if (!match) return null;
+  const period = `${match[1] || match[2]}年`;
+  return ENUMS.retentionPeriod.includes(period) ? period : null;
+}
+
+function parseArchiveLocation(value) {
+  const text = String(value || '');
+  if (text.includes('资料室')) return '资料室';
+  if (/归档|保存|留存/.test(text)) return '部门自行保存';
+  return null;
+}
+
+function parseResponsibleDepartment(value, ownDept) {
+  const text = String(value || '');
+  const found = ENUMS.departments.find(item => text.includes(item.department_name));
+  return found?.department_name || ownDept || null;
+}
+
+function parseResponsibleRole(value) {
+  const text = String(value || '');
+  const match = text.match(/由([^，。；;\n\r]{2,30}?)(?:填写|编制|登记|维护|归档|保存|提交|负责)/);
+  return match ? match[1].trim() : null;
+}
+
+function cleanFormName(value) {
+  return normalizeLine(value).replace(/[《》]/g, '').trim();
+}
+
+function extractForms(text, context, ownDept) {
+  const formBlock = extractLabeledBlock(text, ['表单与记录', '相关记录', '表单', '表格', '规定表格', '记录']);
+  const forms = [];
+  if (!formBlock) return forms;
+  const seen = new Set();
+  const patterns = [
+    /([A-Z]{1,8}[-A-Z0-9]*[-\u4e00-\u9fa5A-Z0-9]*)?《([^》]{2,50}?(?:计划书|报告|方案|单|表|台账|记录|卡|册|登记簿|明细表|汇总表|申请表|审批表|验收单|入库单|出库单))》([^。\n\r]*)/g,
+    /([一-鿿A-Za-z0-9（）()]{2,50}?(?:计划书|报告|方案|单|表|台账|记录|卡|册|登记簿|明细表|汇总表|申请表|审批表|验收单|入库单|出库单))\s*(?:[-—–－]|如|包含|包括|见|用于|是)([^。\n\r]*)/g
+  ];
+  for (const pattern of patterns) {
+    for (const match of formBlock.matchAll(pattern)) {
+      const tableNo = pattern === patterns[0] ? (match[1] || '').trim() : null;
+      const name = cleanFormName(pattern === patterns[0] ? match[2] : match[1]);
+      const tail = (pattern === patterns[0] ? match[3] : match[2]) || '';
+      if (seen.has(name)) continue;
+      seen.add(name);
+      const formCode = tableNo || `FORM-${String(forms.length + 1).padStart(3, '0')}`;
+      const form = {
+        form_ref: `form_${forms.length + 1}`,
+        draft_ref: null,
+        step_ref: 'step_1',
+        form_code: formCode,
+        form_name: name,
+        main_table_code: null,
+        main_table_name: `${name}主表`,
+        archive_location: parseArchiveLocation(tail),
+        retention_period: parseRetentionPeriod(tail),
+        responsible_department_ref: null,
+        responsible_department_name: parseResponsibleDepartment(tail, ownDept),
+        responsible_role: parseResponsibleRole(tail),
+        status: 'draft',
+        evidence_refs: ['EV-DOC-001']
+      };
+      forms.push(form);
+      const index = forms.length - 1;
+      const sourceText = `${tableNo || ''}《${name}》${tail}`.trim();
+      addSource(context.fieldSources, context.fieldOrigins, `forms.${index}.form_name`, text, sourceText, context.sourceName);
+      addSource(context.fieldSources, context.fieldOrigins, `forms.${index}.form_code`, text, sourceText, context.sourceName);
+      addSource(context.fieldSources, context.fieldOrigins, `forms.${index}.main_table_name`, text, sourceText, context.sourceName);
+      if (form.archive_location) addSource(context.fieldSources, context.fieldOrigins, `forms.${index}.archive_location`, text, sourceText, context.sourceName);
+      if (form.retention_period) addSource(context.fieldSources, context.fieldOrigins, `forms.${index}.retention_period`, text, sourceText, context.sourceName);
+      if (form.responsible_department_name) addSource(context.fieldSources, context.fieldOrigins, `forms.${index}.responsible_department_name`, text, sourceText, context.sourceName);
+      if (form.responsible_role) addSource(context.fieldSources, context.fieldOrigins, `forms.${index}.responsible_role`, text, sourceText, context.sourceName);
+    }
+  }
+  return forms;
+}
+
+function extractFields(text, forms, context) {
+  const fields = [];
+  const seen = new Set();
+  function addField(form, name, sourceText, note = null) {
+    const fieldName = normalizeLine(name);
+    if (!form || !fieldName) return;
+    const key = `${form.form_ref}:${fieldName}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    const index = fields.length;
+    fields.push({
+      field_ref: `field_${index + 1}`,
+      draft_ref: null,
+      form_ref: form.form_ref,
+      field_name_cn: fieldName,
+      field_name_en: null,
+      data_object: null,
+      field_type: '文本',
+      enum_options: null,
+      evidence_note: note,
+      status: 'suggested',
+      evidence_refs: ['EV-DOC-001']
+    });
+    addSource(context.fieldSources, context.fieldOrigins, `form_fields.${index}.field_name_cn`, text, sourceText || fieldName, context.sourceName);
+  }
+
+  for (const match of String(text || '').matchAll(/包含字段[：:]\s*([^\n\r]+)/g)) {
+    for (const name of splitList(match[1])) {
+      addField(forms[0], name, match[0]);
+    }
+  }
+
+  const lines = String(text || '').replace(/\r\n?/g, '\n').split('\n').map((line, index) => ({ line: normalizeLine(line), index }));
+  const nonEmpty = lines.filter(item => item.line);
+  const titleIndexes = forms.map(form => {
+    const titleIndex = nonEmpty.findIndex(item => item.line === form.form_name);
+    return { form, titleIndex };
+  }).filter(item => item.titleIndex >= 0);
+
+  function isFieldName(line, formNames) {
+    if (!line || line.length > 32) return false;
+    if (formNames.includes(line)) return false;
+    if (/^[A-Z]{2,}[-A-Z0-9]+/.test(line)) return false;
+    if (/^□|^（|^\(|^第?\d+|^\d/.test(line)) return false;
+    if (/[。；;：:？?]/.test(line)) return false;
+    if (/签字|日期|编号$|项目编号|完成时间|责任人$/.test(line)) return false;
+    if (!/[\u4e00-\u9fa5]/.test(line)) return false;
+    return true;
+  }
+
+  const formNames = forms.map(form => form.form_name);
+  for (let i = 0; i < titleIndexes.length; i += 1) {
+    const current = titleIndexes[i];
+    const end = i < titleIndexes.length - 1 ? titleIndexes[i + 1].titleIndex : nonEmpty.length;
+    for (let j = current.titleIndex + 1; j < end; j += 1) {
+      const line = nonEmpty[j].line;
+      if (!isFieldName(line, formNames)) continue;
+      const next = nonEmpty[j + 1]?.line || '';
+      const note = next && !isFieldName(next, formNames) && next.length <= 80 ? next : null;
+      addField(current.form, line, line, note);
+    }
+  }
+  return fields;
+}
+
+function likelyDetailTableTitle(value) {
+  const title = normalizeTableTitle(value);
+  return title.length >= 4 && /(名单|明细表|明细清单|清单)$/.test(title);
+}
+
+function likelyDetailFieldName(value) {
+  const fieldName = normalizeLine(value);
+  if (!fieldName || fieldName.length > 24) return false;
+  if (/^[A-Z]{2,}[-A-Z0-9]+/.test(fieldName)) return false;
+  if (/^□|^（|^\(|^第?\d+|^\d/.test(fieldName)) return false;
+  if (/[。；;：:？?]/.test(fieldName)) return false;
+  if (!/[\u4e00-\u9fa5]/.test(fieldName)) return false;
+  return true;
+}
+
+function detectDetailTables(forms, context) {
+  if (!forms.length) return [];
+  const details = [];
+  for (const table of context.sourceTables || []) {
+    const rows = table.rows || [];
+    for (let index = 0; index < rows.length - 1; index += 1) {
+      const row = rows[index];
+      const titleCells = row.filter(cell => cell.text);
+      if (titleCells.length !== 1 || !likelyDetailTableTitle(titleCells[0].text)) continue;
+      const fieldCells = rows[index + 1]
+        .filter(cell => likelyDetailFieldName(cell.text))
+        .map(cell => ({ fieldName: normalizeLine(cell.text), sourceText: cell.text }));
+      if (fieldCells.length < 2) continue;
+      const title = normalizeTableTitle(titleCells[0].text);
+      if (details.some(item => item.table_name === title)) continue;
+      details.push({
+        form_ref: forms[0].form_ref,
+        table_name: title,
+        sourceText: titleCells[0].text,
+        fields: fieldCells
+      });
+    }
+  }
+  return details;
+}
+
+function buildFormTables(forms, fields, context, text) {
+  const formTables = [];
+  const tableFields = [];
+  const detailTables = detectDetailTables(forms, context);
+  const detailTitleNames = new Set(detailTables.map(table => normalizeTableTitle(table.table_name)));
+  const detailFieldNames = new Set(detailTables.flatMap(table => table.fields.map(field => normalizeTableTitle(field.fieldName))));
+  forms.forEach((form, index) => {
+    const tableRef = `table_${index + 1}`;
+    formTables.push({
+      table_ref: tableRef,
+      form_ref: form.form_ref,
+      table_kind: 'main',
+      table_no: null,
+      table_code: form.main_table_code || null,
+      table_name: form.main_table_name || `${form.form_name || '未命名表单'}主表`
+    });
+    addSource(context.fieldSources, context.fieldOrigins, `form_tables.${index}.table_name`, text, form.form_name || '', context.sourceName);
+    fields
+      .filter(field => field.form_ref === form.form_ref)
+      .filter(field => {
+        const name = normalizeTableTitle(field.field_name_cn);
+        return !detailTitleNames.has(name) && !detailFieldNames.has(name);
+      })
+      .forEach(field => {
+        const fieldIndex = tableFields.length;
+        tableFields.push({
+          table_field_ref: `table_field_${fieldIndex + 1}`,
+          table_ref: tableRef,
+          structure_kind: 'main',
+          field_no: null,
+          field_code: null,
+          field_name: field.field_name_cn,
+          field_type: field.field_type || '文本',
+          required: false,
+          description: field.evidence_note || null
+        });
+        addSource(context.fieldSources, context.fieldOrigins, `form_table_fields.${fieldIndex}.field_name`, text, field.field_name_cn, context.sourceName);
+      });
+  });
+  for (const detail of detailTables) {
+    const tableIndex = formTables.length;
+    const tableRef = `table_${tableIndex + 1}`;
+    formTables.push({
+      table_ref: tableRef,
+      form_ref: detail.form_ref,
+      table_kind: 'detail',
+      table_no: null,
+      table_code: null,
+      table_name: detail.table_name
+    });
+    addSource(context.fieldSources, context.fieldOrigins, `form_tables.${tableIndex}.table_name`, text, detail.sourceText || detail.table_name, context.sourceName);
+    for (const field of detail.fields) {
+      const fieldIndex = tableFields.length;
+      tableFields.push({
+        table_field_ref: `table_field_${fieldIndex + 1}`,
+        table_ref: tableRef,
+        structure_kind: 'detail',
+        field_no: null,
+        field_code: null,
+        field_name: field.fieldName,
+        field_type: '文本',
+        required: false,
+        description: null
+      });
+      addSource(context.fieldSources, context.fieldOrigins, `form_table_fields.${fieldIndex}.field_name`, text, field.sourceText || field.fieldName, context.sourceName);
+    }
+  }
+  return { formTables, tableFields };
+}
+
+function buildProjection(data) {
+  const d = data.draft;
+  const evidenceCatalog = data.evidence_catalog.map(item => ({
+    id: item.evidence_ref,
+    source_type: item.evidence_type || null,
+    source_file: item.source_file || item.source_name || null,
+    locator: item.locator || item.source_anchor || null,
+    locate_method: item.locate_method || null,
+    status: item.status || 'pending_review'
+  }));
+  const l3KeyByProcessRef = new Map();
+  const l3Catalog = data.processes.map((process, index) => {
+    const l3Key = process.l3_key || process.process_code || `${d.document_no || 'DOC'}.L3.${String(index + 1).padStart(3, '0')}`;
+    l3KeyByProcessRef.set(process.process_ref, l3Key);
+    return {
+      l1: process.l1_name || '',
+      l2: process.l2_name || '',
+      l3_key: l3Key,
+      l3_name: process.l3_name || '',
+      document_no: d.document_no || null,
+      document_title: d.document_title || null,
+      document_edition: d.planned_edition || 'A',
+      system: process.system || '',
+      owner: process.owner || null,
+      evidence_refs: process.evidence_refs || []
+    };
+  });
+  const a1Catalog = data.steps.map((step, index) => ({
+    a1_code: step.a1_code || `${d.document_no || 'DOC'}-A1-DRAFT-${String(index + 1).padStart(3, '0')}`,
+    l3_key: l3KeyByProcessRef.get(step.process_ref) || l3Catalog[0]?.l3_key || '',
+    behavior: step.step_name || '',
+    document_no: d.document_no || null,
+    document_title: d.document_title || null,
+    document_edition: d.planned_edition || 'A',
+    role: step.actor_role || null,
+    entry: step.entry || null,
+    system: step.system || '',
+    evidence_refs: step.evidence_refs || []
+  }));
+  return {
+    meta: {
+      document_no: d.document_no || '',
+      document_title: d.document_title || '',
+      document_edition: d.planned_edition || 'A',
+      document_version_status: null,
+      dept_code: d.department.department_code || null,
+      dept_name: d.department.department_name || '',
+      domain: d.department.domain || null,
+      maintainer: null,
+      version: '1.0.0',
+      status: d.status || 'draft',
+      parser_schema_version: 1
+    },
+    l3_catalog: l3Catalog,
+    a1_catalog: a1Catalog,
+    evidence_catalog: evidenceCatalog,
+    mdm_requirement_catalog: data.mdm_requirement_catalog.map(item => ({
+      object: item.object,
+      key_fields: item.key_fields || [],
+      owner_dept: item.owner_dept || null,
+      requirement: item.requirement || null,
+      evidence_refs: item.evidence_refs || []
+    }))
+  };
+}
+
+function buildMarkdownDraft(data) {
+  const lines = [
+    `# ${data.draft.document_title || '未命名制度'}`,
+    '',
+    `- 制度编号：${data.draft.document_no || '待补'}`,
+    `- 版次：${data.draft.planned_edition || 'A'}`,
+    `- 归口部门：${data.draft.department.department_name || '待补'}`,
+    '',
+    '## 目的',
+    data.document_profile.purpose || '待补',
+    '',
+    '## 适用范围',
+    data.document_profile.scope || '待补',
+    '',
+    '## 流程步骤'
+  ];
+  data.steps.forEach((step, index) => lines.push(`${index + 1}. ${step.step_name || '待补'}`));
+  return lines.join('\n');
+}
+
+function safeMockDeepSeekValues() {
+  if (!process.env.STRUCTURED_OUTPUT_MOCK_DEEPSEEK) return [];
+  try {
+    const parsed = JSON.parse(process.env.STRUCTURED_OUTPUT_MOCK_DEEPSEEK);
+    return Array.isArray(parsed.field_values) ? parsed.field_values : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function safeMockDeepSeekPayload() {
+  if (!process.env.STRUCTURED_OUTPUT_MOCK_DEEPSEEK) return null;
+  try {
+    return JSON.parse(process.env.STRUCTURED_OUTPUT_MOCK_DEEPSEEK);
+  } catch (_) {
+    return null;
+  }
+}
+
+function isDeepSeekConfigured() {
+  return deepSeekConfig().configured;
+}
+
+function isDeepSeekCircuitOpen() {
+  return Date.now() < deepSeekRuntime.circuitOpenUntil;
+}
+
+function recordDeepSeekSuccess() {
+  deepSeekRuntime.lastAvailable = true;
+  deepSeekRuntime.lastFailureCategory = null;
+  deepSeekRuntime.circuitOpenUntil = 0;
+}
+
+function recordDeepSeekFailure(category, options = {}) {
+  deepSeekRuntime.lastAvailable = false;
+  deepSeekRuntime.lastFailureCategory = category || 'unavailable';
+  if (options.openCircuit !== false) {
+    deepSeekRuntime.circuitOpenUntil = Date.now() + DEEPSEEK_CIRCUIT_OPEN_MS;
+  }
+}
+
+function batchesOf(items, size) {
+  const batches = [];
+  for (let index = 0; index < items.length; index += size) batches.push(items.slice(index, index + size));
+  return batches;
+}
+
+function deepSeekHealthSummary() {
+  const configured = isDeepSeekConfigured();
+  const circuitOpen = isDeepSeekCircuitOpen();
+  return {
+    configured,
+    available: configured && !circuitOpen && deepSeekRuntime.lastAvailable !== false,
+    lastFailureCategory: deepSeekRuntime.lastFailureCategory,
+    circuitOpen
+  };
+}
+
+function categoryFromMockError(errorCode) {
+  if (errorCode === 'timeout') return 'timeout';
+  if (errorCode === 'http_429') return 'rate_limited';
+  if (errorCode === 'http_500' || errorCode === 'http_503') return 'server_error';
+  if (errorCode === 'invalid_json') return 'invalid_response';
+  return 'unavailable';
+}
+
+function categoryFromStatus(status) {
+  if (status === 429) return 'rate_limited';
+  if (status >= 500) return 'server_error';
+  return 'request_failed';
+}
+
+function categoryFromError(error) {
+  if (error?.name === 'AbortError' || /timeout/i.test(error?.message || '')) return 'timeout';
+  if (error?.category) return error.category;
+  return 'unavailable';
+}
+
+function nextMockSuggestionPayload() {
+  const parsed = safeMockDeepSeekPayload();
+  if (!parsed) return { field_suggestions: [] };
+  if (Array.isArray(parsed.suggestion_sequence)) {
+    const index = Math.min(deepSeekRuntime.mockSuggestionIndex, parsed.suggestion_sequence.length - 1);
+    deepSeekRuntime.mockSuggestionIndex += 1;
+    return parsed.suggestion_sequence[index] || { field_suggestions: [] };
+  }
+  return { field_suggestions: Array.isArray(parsed.field_suggestions) ? parsed.field_suggestions : [] };
+}
+
+function normalizeSuggestionItem(item, targetPaths, text) {
+  if (!item || typeof item !== 'object') return null;
+  const pathKey = normalizeLine(item.path || item.field_path || item.fieldPath || item.field || item['字段路径']);
+  const suggestion = normalizeLine(item.suggestion || item.hint || item.advice || item.fill_suggestion || item['填报建议'] || item['建议']);
+  if (!pathKey || !targetPaths.has(pathKey) || !suggestion) return null;
+  if (isLowValueSuggestion(pathKey, suggestion, targetPaths.get(pathKey))) return null;
+  const result = { suggestion };
+  const sourceText = normalizeLine(item.source_text || item.sourceText || item.source || item.reference_text || item['参考原文'] || item['原文依据']);
+  if (sourceText && String(text || '').includes(sourceText)) {
+    result.source_text = sourceText;
+    result.source_anchor = sourceAnchorFor(text, sourceText);
+  }
+  return result;
+}
+
+function isLowValueSuggestion(pathKey, suggestion, target) {
+  const text = String(suggestion || '').trim();
+  const label = target?.label || fieldSuggestionLabel(pathKey);
+  if (text.length < 10) return true;
+  if (/^(请|建议)?(填写|补充|完善)(该|此|本)?(字段|内容|信息|说明|要求|标准|结果|材料|条件|场景)[。.!！]?$/.test(text)) return true;
+  if (new RegExp(`^(请|建议)?(填写|补充|完善)(该|此|本)?${label}[。.!！]?$`).test(text)) return true;
+  if (/^(请|建议)?(填写|补充|完善).{0,4}(相关|对应|必要|具体)(内容|信息|说明)[。.!！]?$/.test(text)) return true;
+  if (/(制度编号|制度名称|文件编号|文件名称|章节标题)/.test(text) && /(trigger_scene|precondition|input_materials|output_result|execution_standard)$/.test(pathKey)) return true;
+  if (/本制度(的)?(编号|名称|标题)/.test(text)) return true;
+  const context = target?.context || '';
+  const contextWords = Array.from(new Set((context.match(/《[^》]+》|[\u4e00-\u9fa5]{2,}/g) || [])
+    .map(item => item.replace(/[《》]/g, ''))
+    .filter(item => item.length >= 2 && !['业务行为', '执行角色', '相关原文', '所属表单', '所属表格', '字段名称', '字段类型', '字段位置', '来源', '流程正文', '主表', '明细表'].includes(item))));
+  if (contextWords.length && !contextWords.some(word => text.includes(word) || hasContextFragment(text, word))) {
+    const usefulBusinessWords = ['材料', '表单', '记录', '结果', '结论', '会议', '评审', '部门', '角色', '时点', '周期', '条件', '标准', '维度', '归档', '反馈', '提交'];
+    if (!usefulBusinessWords.some(word => text.includes(word))) return true;
+  }
+  return false;
+}
+
+function hasContextFragment(text, contextWord) {
+  const clean = String(contextWord || '').replace(/[^\u4e00-\u9fa5A-Za-z0-9]/g, '');
+  if (clean.length < 4) return false;
+  const blocked = new Set(['业务', '行为', '执行', '角色', '相关', '原文', '填写', '提交', '审核', '审批', '确认', '是否', '需要', '进行', '负责']);
+  for (let length = Math.min(6, clean.length); length >= 2; length -= 1) {
+    for (let index = 0; index <= clean.length - length; index += 1) {
+      const fragment = clean.slice(index, index + length);
+      if (blocked.has(fragment)) continue;
+      if (text.includes(fragment)) return true;
+    }
+  }
+  return false;
+}
+
+function normalizeSuggestionItems(parsed) {
+  if (!parsed || typeof parsed !== 'object') return [];
+  const list = Array.isArray(parsed)
+    ? parsed
+    : parsed.field_suggestions
+      || parsed.fieldSuggestions
+      || parsed.suggestions
+      || parsed.items
+      || parsed.data?.field_suggestions
+      || parsed.data?.fieldSuggestions;
+  if (Array.isArray(list)) return list;
+  const keyed = parsed.field_suggestions || parsed.fieldSuggestions || parsed.suggestions;
+  if (keyed && typeof keyed === 'object') {
+    return Object.entries(keyed).map(([pathKey, value]) => {
+      if (typeof value === 'string') return { path: pathKey, suggestion: value };
+      return { path: pathKey, ...value };
+    });
+  }
+  return [];
+}
+
+function hasSuggestionPayload(parsed) {
+  if (!parsed || typeof parsed !== 'object') return false;
+  if (Array.isArray(parsed)) return true;
+  return Array.isArray(parsed.field_suggestions)
+    || Array.isArray(parsed.fieldSuggestions)
+    || Array.isArray(parsed.suggestions)
+    || Array.isArray(parsed.items)
+    || Array.isArray(parsed.data?.field_suggestions)
+    || Array.isArray(parsed.data?.fieldSuggestions)
+    || (parsed.field_suggestions && typeof parsed.field_suggestions === 'object')
+    || (parsed.fieldSuggestions && typeof parsed.fieldSuggestions === 'object')
+    || (parsed.suggestions && typeof parsed.suggestions === 'object');
+}
+
+function normalizeValueItems(parsed) {
+  if (!parsed || typeof parsed !== 'object') return [];
+  const list = Array.isArray(parsed)
+    ? parsed
+    : parsed.field_values
+      || parsed.fieldValues
+      || parsed.values
+      || parsed.items
+      || parsed.data?.field_values
+      || parsed.data?.fieldValues;
+  return Array.isArray(list) ? list : [];
+}
+
+function getValue(data, pathKey) {
+  return pathKey.split('.').reduce((target, part) => target == null ? undefined : target[part], data);
+}
+
+function isFilledValue(value) {
+  if (Array.isArray(value)) return value.length > 0;
+  return value !== null && value !== undefined && String(value).trim() !== '';
+}
+
+function fieldSuggestionLabel(pathKey) {
+  if (/behavior_details\.\d+\.trigger_scene$/.test(pathKey)) return '触发场景';
+  if (/behavior_details\.\d+\.precondition$/.test(pathKey)) return '前置条件';
+  if (/steps\.\d+\.input_materials$/.test(pathKey)) return '输入材料';
+  if (/steps\.\d+\.output_result$/.test(pathKey)) return '输出结果';
+  if (/behavior_details\.\d+\.execution_standard$/.test(pathKey)) return '执行标准';
+  if (/forms\.\d+\.responsible_role$/.test(pathKey)) return '填写角色';
+  if (/forms\.\d+\.form_code$/.test(pathKey)) return '编号';
+  if (/forms\.\d+\.form_name$/.test(pathKey)) return '名称';
+  if (/forms\.\d+\.main_table_name$/.test(pathKey)) return '主表名称';
+  if (/form_table_fields\.\d+\.field_name$/.test(pathKey)) return '字段名称';
+  if (/form_table_fields\.\d+\.description$/.test(pathKey)) return '字段说明';
+  return '字段';
+}
+
+function targetContextForPath(data, pathKey) {
+  const stepMatch = pathKey.match(/^steps\.(\d+)\./);
+  if (stepMatch) {
+    const step = data.steps?.[Number(stepMatch[1])] || {};
+    const detail = data.behavior_details?.[Number(stepMatch[1])] || {};
+    return [
+      step.step_name ? `业务行为：${step.step_name}` : '',
+      step.actor_role ? `执行角色：${step.actor_role}` : '',
+      detail.execution_standard ? `已写执行标准：${detail.execution_standard}` : '',
+      step.evidence_refs?.length ? `来源：流程正文` : ''
+    ].filter(Boolean).join('；');
+  }
+  const behaviorMatch = pathKey.match(/^behavior_details\.(\d+)\./);
+  if (behaviorMatch) {
+    const index = Number(behaviorMatch[1]);
+    const step = data.steps?.[index] || {};
+    const detail = data.behavior_details?.[index] || {};
+    return [
+      step.step_name ? `业务行为：${step.step_name}` : '',
+      step.actor_role ? `执行角色：${step.actor_role}` : '',
+      detail.source_text ? `相关原文：${detail.source_text}` : ''
+    ].filter(Boolean).join('；');
+  }
+  const formMatch = pathKey.match(/^forms\.(\d+)\./);
+  if (formMatch) {
+    const form = data.forms?.[Number(formMatch[1])] || {};
+    return [
+      form.form_name ? `表单或记录：${form.form_name}` : '',
+      form.form_code ? `编号：${form.form_code}` : '',
+      form.responsible_department_name ? `形成部门：${form.responsible_department_name}` : ''
+    ].filter(Boolean).join('；');
+  }
+  const fieldMatch = pathKey.match(/^form_table_fields\.(\d+)\./);
+  if (fieldMatch) {
+    const field = data.form_table_fields?.[Number(fieldMatch[1])] || {};
+    const table = data.form_tables?.find(item => item.table_ref === field.table_ref) || {};
+    const form = data.forms?.find(item => item.form_ref === table.form_ref) || {};
+    return [
+      form.form_name ? `所属表单：${form.form_name}` : '',
+      table.table_name ? `所属表格：${table.table_name}` : '',
+      field.field_name ? `字段名称：${field.field_name}` : '',
+      field.field_type ? `字段类型：${field.field_type}` : '',
+      field.structure_kind ? `字段位置：${field.structure_kind === 'detail' ? '明细表' : '主表'}` : ''
+    ].filter(Boolean).join('；');
+  }
+  return '';
+}
+
+function buildFieldSuggestionTargets(data) {
+  const paths = [];
+  (data.steps || []).forEach((_, index) => {
+    paths.push(`steps.${index}.input_materials`);
+    paths.push(`steps.${index}.output_result`);
+  });
+  (data.behavior_details || []).forEach((_, index) => {
+    paths.push(`behavior_details.${index}.trigger_scene`);
+    paths.push(`behavior_details.${index}.precondition`);
+    paths.push(`behavior_details.${index}.execution_standard`);
+  });
+  (data.forms || []).forEach((_, index) => {
+    paths.push(`forms.${index}.form_code`);
+    paths.push(`forms.${index}.form_name`);
+    paths.push(`forms.${index}.main_table_name`);
+    paths.push(`forms.${index}.responsible_role`);
+  });
+  (data.form_table_fields || []).forEach((_, index) => {
+    paths.push(`form_table_fields.${index}.field_name`);
+    paths.push(`form_table_fields.${index}.description`);
+  });
+  return paths
+    .filter(pathKey => !isFilledValue(getValue(data, pathKey)))
+    .map(pathKey => ({ path: pathKey, label: fieldSuggestionLabel(pathKey), context: targetContextForPath(data, pathKey) }));
+}
+
+function buildSuggestionPrompt(text, targets) {
+  const targetLines = targets.map(item => {
+    const context = item.context ? `；上下文：${item.context}` : '';
+    return `- ${item.path}：${item.label}${context}`;
+  }).join('\n');
+  return [
+    '你是制度结构化填写辅助员，只帮助用户判断空字段应该补什么，不生成字段值。',
+    '根据给定制度全文和字段上下文，为空字段写简短填报建议。',
+    '要求：',
+    '1. suggestion 必须围绕该字段上下文写，不能只说“填写该字段”“补充相关内容”。',
+    '2. 只告诉用户应该补充哪一类业务信息，不替用户填具体字段值。',
+    '3. 只写一条建议，不做制度质量判断，不写原因，不写制度原文未写清、识别失败、模型、接口、schema、JSON、置信度。',
+    '4. 不要把制度编号、制度名称、章节标题当成触发场景、前置条件、输入材料、输出结果或执行标准。',
+    '5. source_text 如填写，必须逐字来自制度全文；找不到可省略。',
+    '6. 每个字段最多返回一条建议；只输出一个 JSON 对象，不输出 Markdown、解释文字或代码块。',
+    '7. 返回内容必须是：{"field_suggestions":[{"path":"","suggestion":"","source_text":""}]}',
+    '',
+    '空字段清单：',
+    targetLines,
+    '',
+    '制度全文：',
+    text
+  ].join('\n');
+}
+
+async function requestDeepSeekSuggestionItems(text, targets, options = {}) {
+  if (!targets.length) return [];
+  const config = deepSeekConfig();
+  if (!config.configured) return [];
+  if (isDeepSeekCircuitOpen()) {
+    recordDeepSeekFailure('circuit_open', { openCircuit: false });
+    return [];
+  }
+
+  if (process.env.STRUCTURED_OUTPUT_MOCK_DEEPSEEK) {
+    const payload = nextMockSuggestionPayload();
+    if (payload?.error) {
+      recordDeepSeekFailure(categoryFromMockError(payload.error));
+      return [];
+    }
+    recordDeepSeekSuccess();
+    return Array.isArray(payload?.field_suggestions) ? payload.field_suggestions : [];
+  }
+
+  const prompt = buildSuggestionPrompt(text, targets);
+  const maxTokens = Math.min(6000, 600 + targets.length * 180);
+  let lastCategory = 'unavailable';
+  const deadline = options.deadline || 0;
+  const maxRetries = Number.isFinite(options.maxRetries) ? options.maxRetries : DEEPSEEK_SUGGESTION_MAX_RETRIES;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+    const remainingMs = deadline ? deadline - Date.now() : DEEPSEEK_SUGGESTION_TIMEOUT_MS;
+    if (remainingMs <= 300) return [];
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), Math.min(DEEPSEEK_SUGGESTION_TIMEOUT_MS, remainingMs));
+    try {
+      const response = await fetch(deepSeekRequestUrl(config), {
+        method: 'POST',
+        signal: controller.signal,
+        headers: deepSeekHeaders(config),
+        body: JSON.stringify(deepSeekRequestBody(config, prompt, maxTokens))
+      });
+      clearTimeout(timer);
+      if (!response.ok) {
+        lastCategory = categoryFromStatus(response.status);
+        if (attempt < maxRetries && response.status >= 500 && (!deadline || Date.now() < deadline - 300)) continue;
+        recordDeepSeekFailure(lastCategory);
+        return [];
+      }
+      const payload = await response.json();
+      const content = textFromDeepSeekPayload(config, payload);
+      if (!content) {
+        recordDeepSeekFailure('invalid_response');
+        return [];
+      }
+      const parsed = parseJsonObjectText(content);
+      const suggestions = normalizeSuggestionItems(parsed);
+      if (!hasSuggestionPayload(parsed)) {
+        recordDeepSeekFailure('invalid_response', { openCircuit: false });
+        if (attempt < maxRetries && (!deadline || Date.now() < deadline - 300)) continue;
+        return [];
+      }
+      recordDeepSeekSuccess();
+      return suggestions;
+    } catch (error) {
+      clearTimeout(timer);
+      lastCategory = categoryFromError(error);
+      if (attempt < maxRetries && lastCategory !== 'invalid_response' && (!deadline || Date.now() < deadline - 300)) continue;
+    }
+  }
+  recordDeepSeekFailure(lastCategory);
+  return [];
+}
+
+async function buildFieldSuggestions(data, text) {
+  const targets = buildFieldSuggestionTargets(data);
+  const targetPaths = new Map(targets.map(item => [item.path, item]));
+  const deadline = Date.now() + DEEPSEEK_SUGGESTION_TOTAL_MS;
+  const items = [];
+  for (const targetBatch of batchesOf(targets, DEEPSEEK_SUGGESTION_BATCH_SIZE)) {
+    if (Date.now() >= deadline - 300) break;
+    items.push(...await requestDeepSeekSuggestionItems(text, targetBatch, { deadline }));
+  }
+  const suggestions = {};
+  for (const item of items) {
+    const pathKey = normalizeLine(item?.path);
+    const suggestion = normalizeSuggestionItem(item, targetPaths, text);
+    if (!suggestion || suggestions[pathKey]) continue;
+    suggestions[pathKey] = suggestion;
+  }
+  return suggestions;
+}
+
+async function requestDeepSeekValues(text) {
+  if (process.env.STRUCTURED_OUTPUT_MOCK_DEEPSEEK) return safeMockDeepSeekValues();
+  const config = deepSeekConfig();
+  if (!config.configured) return [];
+
+  const prompt = [
+    '你只从给定原文中抽取单一明确值。',
+    '每个字段最多给一个值；没有把握返回空数组。',
+    '返回 JSON：{"field_values":[{"path":"","value":"","source_text":""}]}',
+    'source_text 必须逐字来自原文。',
+    '',
+    text.slice(0, 12000)
+  ].join('\n');
+
+  try {
+    const response = await fetch(deepSeekRequestUrl(config), {
+      method: 'POST',
+      headers: deepSeekHeaders(config),
+      body: JSON.stringify(deepSeekRequestBody(config, prompt, 1000))
+    });
+    if (!response.ok) return [];
+    const payload = await response.json();
+    const content = textFromDeepSeekPayload(config, payload);
+    if (!content) return [];
+    const parsed = parseJsonObjectText(content);
+    return normalizeValueItems(parsed);
+  } catch (_) {
+    return [];
+  }
+}
+
+function applyExtractedValue(data, item, context, text) {
+  if (!item || typeof item !== 'object') return;
+  const sourceText = String(item.source_text || '').trim();
+  const value = typeof item.value === 'string' ? item.value.trim() : item.value;
+  if (!sourceText || !value || !String(text).includes(sourceText)) return;
+  if (item.path === 'mdm_requirement_catalog.0.object') {
+    data.mdm_requirement_catalog = [{
+      requirement_ref: 'mdm_req_1',
+      object: String(value),
+      key_fields: [],
+      owner_dept: null,
+      requirement: '由制度原文明确提出',
+      evidence_refs: ['EV-DOC-001']
+    }];
+    addSource(context.fieldSources, context.fieldOrigins, 'mdm_requirement_catalog.0.object', text, sourceText, context.sourceName);
+  }
+}
+
+async function applyDeepSeekValues(data, text, context) {
+  const values = await requestDeepSeekValues(text);
+  const firstByPath = new Map();
+  for (const item of values) {
+    if (!item || !item.path || firstByPath.has(item.path)) continue;
+    firstByPath.set(item.path, item);
+  }
+  for (const item of firstByPath.values()) {
+    applyExtractedValue(data, item, context, text);
+  }
+}
+
+function statsFrom(data) {
+  return {
+    processes: (data.processes || []).length,
+    steps: (data.steps || []).length,
+    behaviorDetails: (data.behavior_details || []).length,
+    handoffs: (data.cross_dept_handoffs || []).length,
+    forms: (data.forms || []).length,
+    tables: (data.form_tables || []).length,
+    tableFields: (data.form_table_fields || []).length,
+    fields: (data.form_fields || []).length,
+    evidence: (data.evidence_catalog || []).length,
+    mdmRequirements: (data.mdm_requirement_catalog || []).length,
+    terms: (data.terms || []).length
+  };
+}
+
+async function extractFromText(rawText, options = {}) {
+  const text = rawText || '';
+  const data = createEmptyDocument();
+  const context = {
+    sourceName: options.sourceName || null,
+    sourceHints: buildSourceHints(options.sourceName, options.sourcePath),
+    sourceTables: Array.isArray(options.sourceTables) ? options.sourceTables : [],
+    fieldSources: {},
+    fieldOrigins: {},
+    fieldWarnings: {},
+    fieldSuggestions: {}
+  };
+  const d = data.draft;
+
+  for (const [pathKey, labels, fieldOptions] of [
+    ['draft.document_no', ['文件编号', '文档编号', '制度编号', '编号'], { pattern: /^[A-Z]{2,10}(?:-[A-Z0-9]+)+$/ }],
+    ['draft.document_title', ['文件名称', '文档名称', '制度名称', '标题'], { reject: /^(程序文件|管理文件|文件名称)$/ }],
+    ['draft.planned_edition', ['版次', '版本', '版号'], { pattern: /^[A-Z]+$/ }],
+    ['draft.department.department_name', ['发文部门', '责任部门', '所属部门', '归口部门', '主管部门'], {}]
+  ]) {
+    const found = extractKeyValue(text, labels, fieldOptions || {});
+    if (found) {
+      if (pathKey === 'draft.department.department_name') {
+        d.department = normalizeDepartment(found.value);
+      } else {
+        setValue(data, pathKey, found.value);
+      }
+      addSource(context.fieldSources, context.fieldOrigins, pathKey, text, found.sourceText, context.sourceName);
+    }
+  }
+  if (!d.process_name) d.process_name = d.document_title || '';
+  markDefault(context.fieldOrigins, 'draft.basis_type');
+
+  const relatedDept = extractKeyValue(text, ['相关部门', '涉及部门', '协作部门']);
+  const relatedDeptText = relatedDept?.value || flattenBlock(extractLabeledBlock(text, ['相关部门', '涉及部门', '协作部门']));
+  d.related_departments = splitList(relatedDeptText).filter(dept => dept !== d.department.department_name);
+  d.involves_other_departments = d.related_departments.length > 0;
+  if (relatedDept) addSource(context.fieldSources, context.fieldOrigins, 'draft.related_departments', text, relatedDept.sourceText, context.sourceName);
+
+  const purposeBlock = extractLabeledBlock(text, ['目的', '目标', '设立原因']);
+  const purposeText = flattenBlock(purposeBlock);
+  if (purposeText) {
+    d.reason = purposeText;
+    addSource(context.fieldSources, context.fieldOrigins, 'draft.reason', text, purposeBlock, context.sourceName);
+    addSource(context.fieldSources, context.fieldOrigins, 'document_profile.purpose', text, purposeBlock, context.sourceName);
+  }
+
+  const scopeBlock = extractLabeledBlock(text, ['范围', '适用范围']);
+  const scopeText = flattenBlock(scopeBlock);
+  if (scopeText) {
+    addSource(context.fieldSources, context.fieldOrigins, 'document_profile.scope', text, scopeBlock, context.sourceName);
+  }
+
+  const basisBlock = extractLabeledBlock(text, ['依据', '引用文件', '引用标准']);
+  const basisText = flattenBlock(basisBlock);
+  if (basisText) {
+    d.basis_description = basisText;
+    d.basis_type = ENUMS.basisType.find(value => basisText.includes(value)) || '制度 / 规程';
+    addSource(context.fieldSources, context.fieldOrigins, 'draft.basis_description', text, basisBlock, context.sourceName);
+    addSource(context.fieldSources, context.fieldOrigins, 'draft.basis_type', text, basisBlock, context.sourceName);
+  }
+
+  data.document_profile = {
+    profile_ref: null,
+    draft_ref: null,
+    document_title: d.document_title,
+    document_no: d.document_no,
+    purpose: d.reason || '',
+    scope: scopeText || '',
+    inheritance_relation: null
+  };
+  if (d.document_title) addSource(context.fieldSources, context.fieldOrigins, 'document_profile.document_title', text, d.document_title, context.sourceName);
+  if (d.document_no) addSource(context.fieldSources, context.fieldOrigins, 'document_profile.document_no', text, d.document_no, context.sourceName);
+
+  const mapping = applyProcessMapping(data, text, context);
+  data.terms = extractTerms(text, context);
+  context.workflowProcessBaseName = d.l3_name || d.process_name || d.document_title || '';
+  data.steps = extractWorkflowSteps(text, context);
+  data.forms = extractForms(text, context, d.department.department_name);
+  data.form_fields = extractFields(text, data.forms, context);
+  const { formTables, tableFields } = buildFormTables(data.forms, data.form_fields, context, text);
+  data.form_tables = formTables;
+  data.form_table_fields = tableFields;
+
+  if (data.steps.length > 0 || mapping) {
+    const l3Name = d.l3_name || d.process_name || d.document_title || '';
+    const workflowProcessGroups = context.workflowProcessGroups?.length
+      ? context.workflowProcessGroups
+      : [{ process_ref: 'proc_1', l3_name: l3Name, sourceText: d.process_name || d.document_title }];
+    data.processes = workflowProcessGroups.map((group, index) => ({
+      process_ref: group.process_ref || `proc_${index + 1}`,
+      draft_ref: null,
+      process_code: null,
+      l3_key: d.document_no ? `${d.document_no}.L3.${String(index + 1).padStart(3, '0')}` : null,
+      process_type: d.base_version_ref ? 'inherit' : 'new',
+      l1_name: d.l1_name || '',
+      l2_name: d.l2_name || '',
+      l3_name: group.l3_name || l3Name,
+      description: d.reason || null,
+      owner: d.department.department_name || null,
+      system: mapping?.system?.split(/[、,，/]/).map(item => item.trim()).filter(Boolean)[0] || '',
+      evidence_refs: ['EV-DOC-001']
+    }));
+    if (!d.l3_name) d.l3_name = l3Name || null;
+    data.processes.forEach((process, index) => {
+      if (mapping) {
+        addExternalSource(context.fieldSources, context.fieldOrigins, `processes.${index}.l1_name`, mapping.sourceText, mapping.sourceName, mapping.sourceAnchor, 'external_reference');
+        addExternalSource(context.fieldSources, context.fieldOrigins, `processes.${index}.l2_name`, mapping.sourceText, mapping.sourceName, mapping.sourceAnchor, 'external_reference');
+        addExternalSource(context.fieldSources, context.fieldOrigins, `processes.${index}.l3_name`, mapping.sourceText, mapping.sourceName, mapping.sourceAnchor, 'external_reference');
+        addExternalSource(context.fieldSources, context.fieldOrigins, `processes.${index}.system`, mapping.sourceText, mapping.sourceName, mapping.sourceAnchor, 'external_reference');
+      } else {
+        addSource(context.fieldSources, context.fieldOrigins, `processes.${index}.l3_name`, text, workflowProcessGroups[index]?.sourceText || process.l3_name, context.sourceName);
+      }
+    });
+  }
+
+  data.behavior_details = data.steps.map((step, index) => {
+    const sourceText = context.fieldSources[`steps.${index}.step_name`]?.source_text || step.step_name;
+    const explicitDetail = context.explicitBehaviorDetails?.[index] || null;
+    const executionStandardInfo = explicitDetail
+      ? {
+          value: explicitDetail.execution_standard,
+          sourceText: explicitDetail.sources?.execution_standard || null
+        }
+      : extractExecutionStandardInfo(sourceText, step, text);
+    const executionStandard = executionStandardInfo.value;
+    const precondition = explicitDetail ? explicitDetail.precondition : extractPrecondition(sourceText);
+    const triggerScene = explicitDetail ? explicitDetail.trigger_scene : extractTriggerScene(sourceText);
+    const detail = {
+      detail_ref: `detail_${index + 1}`,
+      step_ref: step.step_ref,
+      precondition,
+      trigger_scene: triggerScene,
+      execution_standard: executionStandard,
+      delivery_object: step.output_result || null,
+      requires_approval: detectApproval(step.step_name),
+      approval_note: detectApproval(step.step_name) ? step.step_name : null,
+      is_cross_department: detectCrossDepartment(step, d.department.department_name, d.related_departments)
+    };
+    if (precondition) {
+      addSource(
+        context.fieldSources,
+        context.fieldOrigins,
+        `behavior_details.${index}.precondition`,
+        text,
+        explicitDetail?.sources?.precondition || sourceText,
+        context.sourceName
+      );
+    }
+    if (triggerScene) {
+      addSource(
+        context.fieldSources,
+        context.fieldOrigins,
+        `behavior_details.${index}.trigger_scene`,
+        text,
+        explicitDetail?.sources?.trigger_scene || sourceText,
+        context.sourceName
+      );
+    }
+    if (executionStandard) {
+      addSource(context.fieldSources, context.fieldOrigins, `behavior_details.${index}.execution_standard`, text, executionStandardInfo.sourceText || sourceText || executionStandard, context.sourceName);
+    }
+    return detail;
+  });
+
+  data.cross_dept_handoffs = d.related_departments.map((dept, index) => ({
+    handoff_ref: `handoff_${index + 1}`,
+    step_ref: data.steps.find(step => [step.step_name, step.actor_role].filter(Boolean).join(' ').includes(dept))?.step_ref || data.steps[data.steps.length - 1]?.step_ref || 'step_1',
+    target_department: dept,
+    target_process_code: null,
+    target_process_name: null,
+    target_behavior_code: null,
+    target_behavior_name: null,
+    handoff_standard: null,
+    status: 'pending_review'
+  }));
+
+  if (text.trim()) {
+    data.evidence_catalog.push({
+      evidence_ref: 'EV-DOC-001',
+      draft_ref: null,
+      object_type: 'draft',
+      object_ref: d.document_no || d.document_title || null,
+      evidence_type: d.basis_type === '表单 / 台账' ? '表单样例' : '制度条款',
+      description: '导入制度文件中的原文片段。',
+      source_name: options.sourceName || d.document_title || null,
+      source_anchor: '导入文件',
+      source_file: options.sourceName || null,
+      locator: '导入文件',
+      locate_method: 'template_text',
+      confirmer: null,
+      record_time: null,
+      missing_reason: null,
+      expected_provider: d.department.department_name || null,
+      expected_at: null,
+      maturity: '可保存草稿',
+      status: 'pending_review'
+    });
+  }
+
+  if (options.includeDeepSeekValues) await applyDeepSeekValues(data, text, context);
+  context.fieldSuggestions = {};
+  applyActorRoleWarnings(data, context);
+  data.pending_issues = [];
+  data.structure_block_projection = buildProjection(data);
+  data.markdown_draft = buildMarkdownDraft(data);
+  data.generated_at = new Date().toISOString();
+
+  return {
+    data,
+    fieldSources: context.fieldSources,
+    fieldOrigins: context.fieldOrigins,
+    fieldWarnings: context.fieldWarnings,
+    fieldSuggestions: context.fieldSuggestions,
+    stats: statsFrom(data)
+  };
+}
+
+async function sourceFromUpload(file) {
+  const ext = path.extname(file.originalname).toLowerCase();
+  if (ext === '.docx') {
+    const [rawTextResult, htmlResult] = await Promise.all([
+      mammoth.extractRawText({ buffer: file.buffer }),
+      mammoth.convertToHtml({ buffer: file.buffer })
+    ]);
+    return {
+      text: rawTextResult.value,
+      tables: extractHtmlTables(htmlResult.value)
+    };
+  }
+  if (ext === '.txt' || ext === '.md') return { text: decodeTextBuffer(file.buffer), tables: [] };
+  throw new Error(`不支持的格式: ${ext}。请上传 .docx / .txt / .md`);
+}
+
+async function textFromUpload(file) {
+  return (await sourceFromUpload(file)).text;
+}
+
+app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.json({ limit: '10mb' }));
+
+app.post('/api/session', (_req, res) => {
+  res.json({ sessionId: sessionId() });
+});
+
+app.post('/api/upload', upload.single('file'), async (req, res) => {
+  try {
+    const sid = req.body.sessionId || req.headers['x-session-id'];
+    const rid = requestId(req.body.requestId || req.headers['x-request-id']);
+    if (!sid) return res.status(400).json({ error: '缺少 sessionId' });
+    if (!req.file) return res.status(400).json({ error: '未收到文件' });
+
+    const source = await sourceFromUpload(req.file);
+    const rawText = source.text;
+    if (!rawText.trim()) return res.status(400).json({ error: '文档内容为空' });
+
+    const result = await extractFromText(rawText, {
+      sourceName: req.file.originalname,
+      sourcePath: req.body.sourcePath || req.file.originalname,
+      sourceTables: source.tables
+    });
+    res.json({
+      sessionId: sid,
+      requestId: rid,
+      documentName: req.file.originalname,
+      data: result.data,
+      fieldSources: result.fieldSources,
+      fieldOrigins: result.fieldOrigins,
+      fieldWarnings: result.fieldWarnings,
+      fieldSuggestions: result.fieldSuggestions,
+      enums: publicEnums(),
+      stats: result.stats
+    });
+  } catch (error) {
+    res.status(500).json({ error: '文件整理失败', detail: error.message });
+  }
+});
+
+app.post('/api/suggestions', upload.single('file'), async (req, res) => {
+  try {
+    const sid = req.body.sessionId || req.headers['x-session-id'];
+    const rid = requestId(req.body.requestId || req.headers['x-request-id']);
+    if (!sid) return res.status(400).json({ error: '缺少 sessionId' });
+    if (!req.file) return res.status(400).json({ error: '未收到文件' });
+    const data = JSON.parse(req.body.data || '{}');
+    const rawText = await textFromUpload(req.file);
+    if (!rawText.trim()) return res.status(400).json({ error: '文档内容为空' });
+    const fieldSuggestions = await buildFieldSuggestions(data, rawText);
+    res.json({
+      sessionId: sid,
+      requestId: rid,
+      fieldSuggestions
+    });
+  } catch (error) {
+    res.status(500).json({ error: '填报建议生成失败', detail: error.message });
+  }
+});
+
+app.post('/api/paste', async (req, res) => {
+  try {
+    const sid = req.body.sessionId || req.headers['x-session-id'];
+    const rid = requestId(req.body.requestId || req.headers['x-request-id']);
+    if (!sid) return res.status(400).json({ error: '缺少 sessionId' });
+    const text = req.body.text || '';
+    if (!text.trim()) return res.status(400).json({ error: '内容为空' });
+    const result = await extractFromText(text, { sourceName: '粘贴文本' });
+    res.json({
+      sessionId: sid,
+      requestId: rid,
+      documentName: '粘贴文本',
+      data: result.data,
+      fieldSources: result.fieldSources,
+      fieldOrigins: result.fieldOrigins,
+      fieldWarnings: result.fieldWarnings,
+      fieldSuggestions: result.fieldSuggestions,
+      enums: publicEnums(),
+      stats: result.stats
+    });
+  } catch (error) {
+    res.status(500).json({ error: '内容整理失败', detail: error.message });
+  }
+});
+
+app.all(['/api/data', '/api/export'], (_req, res) => {
+  res.status(404).json({ error: '当前工具不保存页面内容，请在当前页面导出结构化文件。' });
+});
+
+app.get('/api/schema', (_req, res) => res.json(STANDARD_SCHEMA));
+app.get('/api/enums', (_req, res) => res.json(publicEnums()));
+app.get('/api/health', (_req, res) => {
+  res.json({
+    status: 'ok',
+    service: 'structured-output-service',
+    port: PORT,
+    uptime: process.uptime(),
+    deepseek: deepSeekHealthSummary()
+  });
+});
+app.get('*', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`structured-output-service listening on http://localhost:${PORT}`);
+    console.log('stateless: request data is not stored');
+  });
+}
+
+module.exports = {
+  app,
+  createEmptyDocument,
+  decodeTextBuffer,
+  extractFromText,
+  buildProjection,
+  statsFrom
+};
