@@ -12,7 +12,7 @@ description: >
 
 当需要改进本技能本身时，先使用 `references/evolution-cases.jsonl` 和问题识别批次产物生成演进提案。运行 `.agents/skills/process-evidence-mapping/scripts/generate-evolution-proposal.mjs`，输出只能写入 `artifacts/process-evolution/<run-id>/evolution-proposal.md`。
 
-演进评测只判断技能质量、待确认解释质量和测试缺口。待确认 JSON、向量召回、OCR 结果、人工待办和 `evolution-proposal.md` 都只能生成提案，不得自动修改已确认流程映射、PMO 页面、MDM 接口或技能文件。任何 DCM/BBM 入库仍必须按“受控入库”逐条回源核验。
+演进评测只判断技能质量、待确认解释质量和测试缺口。待确认 JSON、向量召回、OCR 结果、人工待办和 `evolution-proposal.md` 都只能生成提案，不得自动修改已确认流程映射、PMO 页面、MDM 接口或技能文件。任何 DCM/BBM 入库仍必须按“受控入库”逐条回到制度、表单或原始 PDF/图片位置核验。
 
 ### 1. 仓库上下文
 
@@ -150,7 +150,7 @@ description: >
 
 **输入**：待办项、原始制度条款/表格/签批栏/流程图/OCR 原图位置、当前已确认流程映射。
 
-**动作**：逐条回源核验。确认后才更新 DCM 主表、同一 Markdown 内的 BBM/A1、流程图 Markdown、MDM 建设要求或 Sankey 数据。正式 DCM/BBM 仍遵守原列结构、证据依据、跨部门受控传递规则和系统落位规则。OCR 项只能在核验原 PDF/图片后入库。
+**动作**：逐条回到制度、表单、流程图或原始 PDF/图片位置核验。确认后才更新 DCM 主表、同一 Markdown 内的 BBM/A1、流程图 Markdown、MDM 建设要求或 Sankey 数据。正式 DCM/BBM 仍遵守原列结构、证据依据、跨部门受控传递规则和系统落位规则。OCR 项只能在核验原 PDF/图片后入库。
 
 **输出**：受控变更后的已确认流程映射、必要的变更说明、从待办 Markdown 删除的已处理项。
 

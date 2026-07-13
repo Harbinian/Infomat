@@ -8,8 +8,9 @@ import {
   statSync,
   writeFileSync,
 } from 'node:fs';
-import { dirname, join, relative, resolve } from 'node:path';
+import { basename, dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseProcessGovernanceStructureBlock } from './parse-sankey-data.mjs';
 import { sourceBoundaryFromCitation } from './source-boundary-rules.mjs';
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
@@ -824,6 +825,16 @@ function validateSystems({ findings, contract, raw, area, file, line, label }) {
 function parseMappingDoc(file, contract) {
   const text = readFileSync(file, 'utf8');
   const lines = text.split(/\r?\n/);
+  let structured = null;
+  let structuredError = null;
+  try {
+    structured = parseProcessGovernanceStructureBlock(text, {
+      sourceFile: rel(file, ROOT),
+      fallbackDeptName: basename(file).replace('部门-能力-流程-系统映射关系.md', ''),
+    });
+  } catch (e) {
+    structuredError = e;
+  }
   const mainTables = [];
   const a1Tables = [];
   let inBbm = false;
@@ -855,7 +866,15 @@ function parseMappingDoc(file, contract) {
     }
   }
 
-  return { text, lines, mainTables, a1Tables, hasBbm: /##\s*业务行为（A1）映射/.test(text) };
+  return {
+    text,
+    lines,
+    mainTables,
+    a1Tables,
+    hasBbm: structured ? structured.a1Entries.length > 0 : /##\s*业务行为（A1）映射/.test(text),
+    structured,
+    structuredError,
+  };
 }
 
 function checkOrganization(findings, contract, root) {
@@ -970,6 +989,18 @@ function checkDeliverables(findings, contract, root) {
 }
 
 function checkDcmTable(findings, contract, file, dept, parsed) {
+  if (parsed.structuredError) {
+    addFinding(findings, 'BLOCK', 'DCM', file, 1, `流程治理结构块解析失败: ${parsed.structuredError.message}`, '修正 frontmatter 结构块后再运行质检。');
+    return { l3Set: new Set(), l3Rows: 0, mappings: [] };
+  }
+  if (parsed.structured) {
+    const mappings = parsed.structured.mappings.map(row => ({ l2: row.l2, l3: row.l3 }));
+    return {
+      l3Set: new Set(parsed.structured.mappings.map(row => row.l3)),
+      l3Rows: parsed.structured.mappings.length,
+      mappings,
+    };
+  }
   if (!parsed.mainTables.length) {
     addFinding(findings, 'BLOCK', 'DCM', file, 1, '未找到 DCM 主映射表', '主表必须包含 部门（D1）/能力域（L1）/业务能力（L2）/业务流程（L3）/应用系统（S1）。');
     return { l3Set: new Set(), l3Rows: 0, mappings: [] };
@@ -1179,6 +1210,8 @@ function checkControlledTransferEvidence(findings, contract, file, row, record) 
 }
 
 function checkBbmTables(findings, contract, file, dept, parsed, dcmMappings) {
+  if (parsed.structuredError) return { a1Rows: 0 };
+  if (parsed.structured) return { a1Rows: parsed.structured.a1Entries.length };
   if (!parsed.hasBbm) {
     addFinding(findings, 'WARN', 'BBM', file, 1, '未找到 业务行为（A1）映射章节', 'BBM 应并入标准映射文档，而不是另建旁路文件。');
     return { a1Rows: 0 };

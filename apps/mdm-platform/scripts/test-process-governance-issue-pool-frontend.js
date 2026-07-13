@@ -21,7 +21,12 @@ const issuePoolSnippet = issuePoolStart >= 0 && issuePoolEnd > issuePoolStart
   '需要我协同',
   '等待别人',
   '待最终裁决',
+  '已完成',
+  '已提交，待审核',
+  '等待协同',
+  '等待裁决',
   '今天没有需要你处理的问题',
+  '本队列已处理完',
   '数据正在准备，请稍后查看',
   '数据准备失败，请联系流程治理负责人',
   '业务行为',
@@ -38,8 +43,19 @@ const issuePoolSnippet = issuePoolStart >= 0 && issuePoolEnd > issuePoolStart
   'function issueSourcePositionDisplay',
   'function issueSourcePositionFallback',
   '来源依据不足：未标注可核对段落号',
+  '源文件编号',
+  '制度或表单名称',
+  '大概位置',
+  "facts['业务流程']",
+  "facts['业务行为']",
   'pg-issue-stepper',
   'pg-issue-next-action',
+  'pg-issue-achievement',
+  'pg-issue-card--actionable',
+  'pg-issue-card--submitted',
+  'pg-issue-card--waiting',
+  'pg-issue-card--done',
+  'pg-issue-point-readonly',
   'pg-issue-side-nav',
   'pg-issue-side-nav-rail',
   '.pg-issue-side-nav.is-floating',
@@ -51,6 +67,7 @@ const issuePoolSnippet = issuePoolStart >= 0 && issuePoolEnd > issuePoolStart
   'function renderIssueDecisionCards',
   'function renderIssueHandlingControls',
   'function renderIssueReasonCards',
+  'function renderIssuePointReadonly',
   'function renderIssueTermsNotice',
   '确认业务行为',
   '回到制度或表单源文件查看',
@@ -67,6 +84,13 @@ const issuePoolSnippet = issuePoolStart >= 0 && issuePoolEnd > issuePoolStart
   '制度或表单原文',
   '缺少制度或表单原文摘录，本问题不能确认。',
   'function renderIssueOriginalEvidence',
+  'function renderIssueDocumentStructureCard',
+  '结构化字段确认',
+  '结构化对象',
+  '待确认字段',
+  '当前值',
+  '请你确认',
+  'evidence.document_structure',
   '制度或表单原文已经写清楚',
   '这不是受控传递事项',
   '不属于本部门处理范围',
@@ -78,6 +102,10 @@ const issuePoolSnippet = issuePoolStart >= 0 && issuePoolEnd > issuePoolStart
   '提交协同意见',
   '提交工作室意见',
   '提交 MDM 裁决',
+  '查看处理记录',
+  '继续确认下一条',
+  '查看需要我审核',
+  '这一步已经提交，处理记录在下方',
   'data-issue-point-reason',
   'data-issue-point-submit',
   'data-issue-point-action',
@@ -88,6 +116,13 @@ const issuePoolSnippet = issuePoolStart >= 0 && issuePoolEnd > issuePoolStart
   'data-issue-term-answer',
   'data-issue-term-decision',
   'function issuePointActionForStatus',
+  'function issueDisplayStatus',
+  'function issueCardClassName',
+  'function issueSortWeight',
+  'function sortProcessGovernanceIssuesForDisplay',
+  'function processGovernanceFirstActionableIssue',
+  'function issuePrimaryActionLabel',
+  'function renderIssueAchievementBanner',
   'function submitIssuePointAction',
   'function submitIssueComment',
   'function closeOrReopenIssue',
@@ -108,7 +143,7 @@ const issuePoolSnippet = issuePoolStart >= 0 && issuePoolEnd > issuePoolStart
   '/answer',
   '/decision',
   '请选择处理结论',
-  '确认结果已提交'
+  '已提交，进入部门审核'
 ].forEach(needle => assert.ok(html.includes(needle), `missing issue pool frontend hook ${needle}`));
 
 assert.ok(
@@ -117,6 +152,32 @@ assert.ok(
   'issue card side navigation should track scroll and resize'
 );
 assert.ok(issuePoolSnippet.includes("requestAnimationFrame(function()"), 'issue card side navigation should throttle scroll updates');
+const priorityIssueStart = issuePoolSnippet.indexOf('function renderProcessGovernancePriorityIssue');
+const priorityIssueEnd = issuePoolSnippet.indexOf('function updateProcessGovernanceTaskEntries', priorityIssueStart);
+const priorityIssueSnippet = priorityIssueStart >= 0 && priorityIssueEnd > priorityIssueStart
+  ? issuePoolSnippet.slice(priorityIssueStart, priorityIssueEnd)
+  : '';
+assert.ok(
+  priorityIssueSnippet.includes('processGovernanceFirstActionableIssue(data)'),
+  'priority issue should use the first actionable issue, not submitted or completed cards'
+);
+assert.ok(
+  issuePoolSnippet.includes('sortProcessGovernanceIssuesForDisplay(items)'),
+  'issue list should sort submitted and completed cards behind actionable work'
+);
+assert.ok(
+  issuePoolSnippet.includes('renderIssuePoints(detail.points || [], issue)'),
+  'issue detail should pass issue status into point rendering'
+);
+assert.ok(
+  issuePoolSnippet.includes("var issueStatus = String(issue && issue.display_status || '')") &&
+  issuePoolSnippet.includes("issueStatus !== 'waiting_my_action'"),
+  'submitted or waiting issue details should render points as read-only instead of repeat action forms'
+);
+assert.ok(
+  !issuePoolSnippet.includes("showToast('确认结果已提交')"),
+  'confirmation success should use closed-loop wording instead of the old generic toast'
+);
 
 assert.ok(!html.includes('mapping todo'), 'frontend should not expose mapping todo wording');
 assert.ok(!html.includes('quality case'), 'frontend should not expose quality case wording');

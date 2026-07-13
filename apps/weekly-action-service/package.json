@@ -1,0 +1,11 @@
+{
+  "name": "weekly-action-service",
+  "version": "1.0.0",
+  "description": "PMO weekly meeting action item service",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node scripts/test-service-contract.js"
+  },
+  "license": "ISC"
+}

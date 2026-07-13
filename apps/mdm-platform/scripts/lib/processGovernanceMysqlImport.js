@@ -271,6 +271,104 @@ function buildMappingTodos(a1Items, crossDept) {
   return dedupeByKey(todos, 'todo_key');
 }
 
+function normalizeProcessMapping(item) {
+  const raw = item || {};
+  const deptName = cleanCell(raw.dept_name || raw.deptName || raw.dept);
+  const l3Name = cleanCell(raw.l3_name || raw.l3Name || raw.l3);
+  if (!deptName || !l3Name) return null;
+  const systems = asArray(raw.suggested_systems || raw.suggestedSystems || raw.systems)
+    .map(cleanCell)
+    .filter(Boolean);
+  const recordType = cleanCell(raw.record_type || raw.recordType).toLowerCase() === 'a1' ? 'a1' : 'l3';
+  const a1Code = cleanCell(raw.a1_code || raw.a1Code);
+  return {
+    mapping_key: cleanCell(raw.mapping_key || raw.mappingKey) ||
+      stableImportKey(recordType, recordType === 'a1' ? [deptName, l3Name, a1Code] : [deptName, l3Name]),
+    parent_mapping_key: cleanCell(raw.parent_mapping_key || raw.parentMappingKey) || null,
+    record_type: recordType,
+    dept_name: deptName,
+    domain_name: cleanCell(raw.domain_name || raw.domainName || raw.l1_name || raw.l1Name || raw.l1) || null,
+    l2_name: cleanCell(raw.l2_name || raw.l2Name || raw.l2) || null,
+    l3_name: l3Name,
+    a1_code: a1Code || null,
+    behavior: cleanCell(raw.behavior || raw.a1Name || raw.a1_name) || null,
+    execution_role: cleanCell(raw.execution_role || raw.executionRole || raw.role) || null,
+    approval_type: cleanCell(raw.approval_type || raw.approvalType) || null,
+    input_source_dept: cleanCell(raw.input_source_dept || raw.inputSourceDept) || null,
+    output_target_dept: cleanCell(raw.output_target_dept || raw.outputTargetDept) || null,
+    suggested_systems: systems,
+    verification_note: cleanCell(raw.verification_note || raw.verificationNote) || null,
+    source_file: cleanCell(raw.source_file || raw.sourceFile) || null,
+    status: cleanCell(raw.status) || 'active'
+  };
+}
+
+function buildMappingRecords(data, a1Items) {
+  const l3Records = [];
+  const l3ByKey = new Map();
+
+  for (const item of asArray(data.processMappings || data.process_mappings || data.mappingRecords || data.mapping_records)) {
+    const record = normalizeProcessMapping(item);
+    if (!record) continue;
+    if (record.record_type === 'a1') continue;
+    l3Records.push(record);
+    l3ByKey.set(`${record.dept_name}|${record.l3_name}`, record);
+  }
+
+  if (!l3Records.length) {
+    for (const node of normalizeNodes(data).filter(item => item.node_type === 'l3')) {
+      const record = normalizeProcessMapping({
+        dept: node.dept_name,
+        l1: node.domain_name,
+        l2: node.parent_key,
+        l3: node.name,
+        sourceFile: node.source_file
+      });
+      if (!record) continue;
+      l3Records.push(record);
+      l3ByKey.set(`${record.dept_name}|${record.l3_name}`, record);
+    }
+  }
+
+  const a1Records = [];
+  for (const item of asArray(a1Items)) {
+    const deptName = cleanCell(item.dept_name || item.deptName || item.dept);
+    const l3Name = cleanCell(item.l3_name || item.l3Name);
+    const a1Code = cleanCell(item.a1_code || item.a1Code);
+    if (!deptName || !l3Name || !a1Code) continue;
+    let parent = l3ByKey.get(`${deptName}|${l3Name}`);
+    if (!parent) {
+      parent = normalizeProcessMapping({
+        dept: deptName,
+        l3: l3Name,
+        sourceFile: item.source_file || item.sourceFile
+      });
+      if (parent) {
+        l3Records.push(parent);
+        l3ByKey.set(`${parent.dept_name}|${parent.l3_name}`, parent);
+      }
+    }
+    const record = normalizeProcessMapping({
+      ...item,
+      record_type: 'a1',
+      parent_mapping_key: parent && parent.mapping_key,
+      domain_name: parent && parent.domain_name,
+      l2_name: parent && parent.l2_name,
+      l3_name: l3Name,
+      a1_code: a1Code
+    });
+    if (record) a1Records.push(record);
+  }
+
+  return dedupeByKey([...l3Records, ...a1Records], 'mapping_key');
+}
+
+function summarizeMappingRecords(items) {
+  const byType = { l3: 0, a1: 0 };
+  for (const item of items) byType[item.record_type] = (byType[item.record_type] || 0) + 1;
+  return { total: items.length, byType };
+}
+
 function loadProcessGovernanceMysqlBundle(sourceJsonPath, options = {}) {
   const sourceText = fs.readFileSync(sourceJsonPath, 'utf8');
   const data = JSON.parse(sourceText);
@@ -285,6 +383,7 @@ function loadProcessGovernanceMysqlBundle(sourceJsonPath, options = {}) {
   const mdmRequirements = dedupeByKey(asArray(data.mdmRequirements).map(normalizeMdmRequirement), 'requirement_key');
   const evidenceRefs = dedupeByKey(asArray(data.evidenceRefs).map(normalizeEvidenceRef), 'ref_key');
   const qualityFindings = asArray(options.qualityFindings || options.quality_findings).map(normalizeQualityFinding);
+  const mappingRecords = buildMappingRecords(data, a1Items);
   const mappingTodos = buildMappingTodos(a1Items, crossDept);
 
   return {
@@ -300,11 +399,13 @@ function loadProcessGovernanceMysqlBundle(sourceJsonPath, options = {}) {
       mdmRequirements: summarizeMdmRequirements(mdmRequirements),
       evidenceRefs: summarizeEvidenceRefs(evidenceRefs),
       quality: summarizeQualityFindings(qualityFindings),
+      mappingRecords: summarizeMappingRecords(mappingRecords),
       mappingTodos: { total: mappingTodos.length }
     },
     nodes: normalizeNodes(data),
     links: normalizeLinks(data, nodeTypes),
     a1Items,
+    mappingRecords,
     sourceFiles,
     mdmRequirements,
     evidenceRefs,

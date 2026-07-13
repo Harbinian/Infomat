@@ -18,6 +18,6 @@
 ## 使用边界
 
 1. 技能可以指导 AI 协作流程，但不能替代 `REPOSITORY_BOUNDARY.md`、`DIRECTORY_OWNERSHIP.md` 和 `MAINLINE_MAP.md`。
-2. 修改技能前，确认是否也需要同步 `.claude/skills/` 中的兼容副本。
+2. 修改技能前，确认根目录 `AGENTS.md` / `CODEX.md` 是否需要同步说明触发场景。
 3. 不在本目录放项目生成物、截图、运行日志或临时数据。
 4. 新增技能时，写清适用场景、输入、输出和不适用边界。

@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { applyFilters, formatDate, parseDate } from '../utils/dateUtils';
 import { getExecutionStandardDiagnostics, isExecutionStandardGap } from '../utils/deliverableWorkflow';
+import { resolveTaskOwner } from '../utils/taskOwnerUtils';
 
 const TASK_FILTER_DEFAULTS = {
   year: 'all',
@@ -112,6 +113,7 @@ export default function TaskLedger({ tasks = [], filters = {} }) {
                 <th>WBS</th>
                 <th>任务名称</th>
                 <th>责任部门</th>
+                <th>责任人</th>
                 <th>类型</th>
                 <th>风险</th>
                 <th>执行标准</th>
@@ -130,6 +132,7 @@ export default function TaskLedger({ tasks = [], filters = {} }) {
                   <td className="dlv-wbs">{task.normalizedWbs || task.wbs}</td>
                   <td className="dlv-name" title={task.name}>{task.name}</td>
                   <td>{task.department || '-'}</td>
+                  <td>{resolveTaskOwner(task)}</td>
                   <td>{describeType(task)}</td>
                   <td><span className={`dlv-risk risk-${task.risk || '低'}`}>{task.risk || '低'}</span></td>
                   <td className="dlv-task standard-cell" title={describeExecutionStandard(task)}>{describeExecutionStandard(task)}</td>

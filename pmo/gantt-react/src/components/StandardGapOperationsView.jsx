@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { formatDate, parseDate } from '../utils/dateUtils.js';
 import { ACTIONABLE_STANDARD_GAP_BUCKETS, STANDARD_GAP_BUCKETS, isExecutionStandardGap } from '../utils/deliverableWorkflow.js';
 
@@ -23,11 +23,10 @@ function describeType(task) {
 }
 
 export default function StandardGapOperationsView({ tasks = [], bucket = 'all', onOpenTask }) {
-  const [activeBucket, setActiveBucket] = useState(bucket || 'all');
-
-  useEffect(() => {
-    setActiveBucket(bucket || 'all');
-  }, [bucket]);
+  const propBucket = bucket || 'all';
+  const [bucketState, setBucketState] = useState(() => ({ propBucket, activeBucket: propBucket }));
+  const activeBucket = bucketState.propBucket === propBucket ? bucketState.activeBucket : propBucket;
+  const setActiveBucket = (nextBucket) => setBucketState({ propBucket, activeBucket: nextBucket });
 
   const metrics = useMemo(() => {
     const requires = tasks.filter(task => task.requiresExecutionStandard);

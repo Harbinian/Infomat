@@ -1,6 +1,6 @@
 # AGENTS.md
 
-AI 助手在本项目协作时的补充约定(与 CLAUDE.md 配套)。
+Codex 在本项目协作时的根入口规则。
 
 ## 项目当前阶段
 
@@ -11,11 +11,28 @@ AI 助手在本项目协作时的补充约定(与 CLAUDE.md 配套)。
 
 开始任何跨目录任务前,先读取:
 
+- `CODEX.md`:Codex 协作方式、执行纪律、验证和交付要求。
 - `REPOSITORY_BOUNDARY.md`:仓库放什么、不放什么。
 - `DIRECTORY_OWNERSHIP.md`:各目录责任、真源、可改规则和禁止事项。
 - `MAINLINE_MAP.md`:流程治理、字段台账、MDM、PMO 与脚本之间的数据流。
 
 如果任务跨越资料、应用、PMO 展示、脚本或 AI 工作区,先确认主责资产,不要顺手移动文件或重排目录。
+
+## 代码与文档同步规则
+
+- 每次代码、脚本、接口、数据库结构、前端行为或启动命令发生变化,必须同步更新对应文档。
+- 文档同步范围按影响面确定:目录 README、目录 `AGENTS.md`、根 `CODEX.md`、`docs/glossary.md`、接口/运行说明、测试说明、PMO 或 MDM 使用手册。
+- 如果代码变化不需要文档更新,最终说明必须写清"无需同步文档"的理由。
+- 新增术语、新缩写或改变既有术语含义时,必须同步更新 `docs/glossary.md`。
+- 不允许只改代码而让说明文档、启动命令、真源关系或验证入口停留在旧口径。
+
+## 目录级 AGENTS.md 设置规则
+
+- 不是每个文件夹都需要 `AGENTS.md`; 目录级 `AGENTS.md` 只放在有独立真源、生成副作用、运行命令、验证口径或禁止事项的关键目录。
+- 关键目录必须有目录级 `AGENTS.md`:可运行应用、PMO 展示/插件、流程输入基线、仓库级脚本、受控交付物、AI 工作区样例。
+- 纯报告、归档、样例、说明性架构目录默认使用 README; 只有当它们开始承载可执行命令、写回真源或独立验证规则时,再新增 `AGENTS.md`。
+- 当前目录级入口包括 `apps/mdm-platform/AGENTS.md`、`apps/structured-output-service/AGENTS.md`、`apps/weekly-action-service/AGENTS.md`、`pmo/AGENTS.md`、`pmo/procedure-management/AGENTS.md`、`pmo/gantt-react/AGENTS.md`、`pmo/deliverables/AGENTS.md`、`docs/norms/AGENTS.md`、`docs/Demo/AGENTS.md` 和 `scripts/AGENTS.md`。
+- 新增、删除或调整目录级 `AGENTS.md` 时,必须同步更新 `DIRECTORY_OWNERSHIP.md`、相关目录 README 和 `docs/architecture/context-management.md`; 涉及新术语时同步 `docs/glossary.md`。
 
 ## 沟通与命名约定
 
@@ -47,7 +64,15 @@ AI 助手在本项目协作时的补充约定(与 CLAUDE.md 配套)。
 - 角色桑基图层级固定为:角色 → 业务能力 → L3流程 → A1业务行为 → 处理入口。点击任一节点后,右侧必须显示对应事项、样例解释和可执行入口。
 - 默认视角为"待办优先";切换到"全量职责"后展示该角色全部职责链路。
 - `/api/org/me` 应返回当前用户全部 RBAC 角色编码/名称;`GET /api/role-workbench?mode=todo|all` 返回角色、工作流步骤、桑基数据、待办、样例说明和跳转目标。
-- 变更 MDM 角色工作台后,优先回归: `npm run test:frontend`、`npm run test:project-roles`、`npm run test:process-governance`、`npm run test:mainline`。如新增或调整工作台接口,同步覆盖 `npm run test:role-workbench`。
+- 变更 MDM 角色工作台后,在 `apps/mdm-platform/` 下优先回归: `npm run test:frontend`、`npm run test:project-roles`、`npm run test:process-governance`、`npm run test:mainline`。如新增或调整工作台接口,同步覆盖 `npm run test:role-workbench`。
+
+## MDM 流程治理问题卡口径
+
+- 问题卡面向业务人员,只写用户能照着做的句子。禁用内部简称;统一说"回到制度或表单源文件查看""修改源文件后重新导入""问题原因"。
+- "在哪发现"不得暴露 Markdown、中间 JSON、抽取脚本产物等文件名。能定位原文时写制度或表单源文件名和段落、页码、表格位置;暂时只能定位到流程治理输入基线时,必须明说这是残留问题,尚未定位到制度或表单原文段落。
+- 处理区分三层:处理结论用于判断核验项是否成立;处理方式只能是"修改制度或表单源文件后重新导入"或"说明这条核验项不是问题";问题原因只在用户选择"不是问题"时出现。
+- "当前问题卡缺少来源证据"表示卡片证据链不足;"制度或表单原文没写清"表示源文件本身需要完善。两者不能混写,也不能和问题原因枚举混写。
+- 打开问题卡时不得预设补依据、改制度、再确认、分歧意见等审核意见标签。处理历史必须显示用户名和时间戳。
 
 ## 静态资产
 
@@ -56,11 +81,11 @@ AI 助手在本项目协作时的补充约定(与 CLAUDE.md 配套)。
 - `docs/norms/` 下的部门桑基图页面使用本目录内的 `docs/norms/echarts.min.js`，必须引用 `<script src="echarts.min.js"></script>`，禁止写成 `../echarts.min.js`。
 - `apps/mdm-platform/public/` 下的 MDM 前端页面使用本目录内的 `echarts.min.js`,必须引用 `<script src="echarts.min.js"></script>`。
 
-## 数据真源
+## 数据边界
 
 - **部门→域映射**:`docs/organization/组织架构和部门职责.md` 是真源。任何脚本/页面里的 `DEPT_DOMAIN` 硬编码都必须跟它一致(注意:是"直**辖**"域,不是"直**属**"域)。
   - 总经理直辖:工程技术部 / 质量管理部 / 财务部
   - 经营副总:行政人事部 / 经营发展部 / 物资保障部
   - 生产副总:项目管理部 / 复材车间 / 运维安环部
-- **流程数据**:`docs/norms/{部门}部门-能力-流程-系统映射关系.md` 是原始来源,由 `scripts/parse-sankey-data.mjs` 解析并直接注入 PMO 驾驶舱 HTML 的 `<script id="sankey-data">` 标签。
-  - 新增 / 改 norms 文件后必须跑 `node scripts/parse-sankey-data.mjs`,驾驶舱才会显示新数据。
+- **流程输入基线**:`docs/norms/{部门}部门-能力-流程-系统映射关系.md` 是已确认流程映射输入基线;由 `scripts/parse-sankey-data.mjs` 解析并直接注入 PMO 驾驶舱 HTML 的 `<script id="sankey-data">` 标签。制度、表单证据定位另按源文件和条款/页码/表格位置处理。
+  - 新增 / 修改流程输入基线后必须跑 `node scripts/parse-sankey-data.mjs`,驾驶舱才会显示新数据。

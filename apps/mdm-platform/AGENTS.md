@@ -98,7 +98,22 @@
 
 如未来 MDM 平台迁移到 Flask、SQL Server、Vue/Vite 或其他技术栈，应先更新本文件和相关设计文档，再按新架构执行。
 
-## 7. 输出要求
+## 7. 文档同步
+
+MDM 平台的代码、接口、数据库结构、权限逻辑、前端交互、启动命令或测试命令发生变化时，必须同步检查并更新相关文档。
+
+优先检查：
+
+- `README.md`
+- 本文件
+- `docs/role-based-usage-guide.md`
+- `scripts/README.md`
+- 根目录 `CODEX.md` / `AGENTS.md`
+- `docs/glossary.md`
+
+如果确认无需同步文档，最终交付说明必须写明原因。新增术语、新缩写或改变既有术语含义时，必须同步更新 `docs/glossary.md`。
+
+## 8. 输出要求
 
 完成后说明：
 

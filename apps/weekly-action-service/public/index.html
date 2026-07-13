@@ -1,0 +1,691 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PMO 周会行动项</title>
+  <style>
+    :root {
+      --paper: #f5f1e8;
+      --panel: #fffdf8;
+      --ink: #24313a;
+      --muted: #66737c;
+      --line: #d8d0c2;
+      --red: #8e3327;
+      --red-soft: #f1dfdc;
+      --green: #49796b;
+      --green-soft: #dfece7;
+      --blue: #375f7d;
+      --blue-soft: #e0eaf1;
+      --gold: #9a732d;
+      --gold-soft: #f1e5c8;
+      --shadow: 0 12px 28px rgba(43, 40, 34, .09);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+      letter-spacing: 0;
+    }
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+    .topbar {
+      background: #2d3d45;
+      color: #fff;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      box-shadow: var(--shadow);
+    }
+    .brand {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 220px;
+    }
+    .brand strong { font-size: 20px; }
+    .brand span { color: #d8e1e5; font-size: 13px; }
+    .week-picker {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .week-pill {
+      border: 1px solid rgba(255,255,255,.22);
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: #fff;
+      background: rgba(255,255,255,.08);
+      min-height: 38px;
+    }
+    .week-picker input {
+      min-height: 38px;
+      border: 1px solid rgba(255,255,255,.28);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--ink);
+      padding: 6px 10px;
+    }
+    .main {
+      width: min(1520px, 100%);
+      margin: 0 auto;
+      padding: 20px;
+      display: grid;
+      gap: 16px;
+    }
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(160px, 1fr));
+      gap: 12px;
+    }
+    .metric {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px 16px;
+      display: grid;
+      gap: 8px;
+    }
+    .metric span { color: var(--muted); font-size: 13px; }
+    .metric strong { font-size: 28px; line-height: 1; }
+    .metric.active strong { color: var(--blue); }
+    .metric.blocked strong { color: var(--red); }
+    .metric.closed strong { color: var(--green); }
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(340px, 420px) 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .panel-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      background: #fbf8f0;
+    }
+    .panel-header h2 {
+      margin: 0;
+      font-size: 16px;
+    }
+    .form {
+      padding: 16px;
+      display: grid;
+      gap: 12px;
+    }
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    label {
+      display: grid;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--ink);
+      padding: 9px 10px;
+      min-height: 38px;
+      outline: none;
+    }
+    textarea {
+      min-height: 76px;
+      resize: vertical;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(55, 95, 125, .14);
+    }
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .btn {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      min-height: 38px;
+      padding: 8px 12px;
+      background: #fff;
+      color: var(--ink);
+    }
+    .btn.primary {
+      border-color: var(--blue);
+      background: var(--blue);
+      color: #fff;
+      font-weight: 700;
+    }
+    .btn.danger {
+      border-color: var(--red);
+      color: var(--red);
+      background: var(--red-soft);
+    }
+    .hint {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .filters {
+      padding: 12px 16px;
+      display: grid;
+      grid-template-columns: 150px 150px 1fr auto;
+      gap: 10px;
+      border-bottom: 1px solid var(--line);
+      background: #fff;
+      align-items: center;
+    }
+    .table-wrap {
+      width: 100%;
+      overflow: auto;
+      max-height: calc(100vh - 280px);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 1180px;
+      background: #fff;
+    }
+    th, td {
+      border-bottom: 1px solid #ebe5da;
+      padding: 10px;
+      vertical-align: top;
+      text-align: left;
+      font-size: 13px;
+    }
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: #f6efe2;
+      color: #4b5860;
+      white-space: nowrap;
+    }
+    td select, td input, td textarea {
+      min-width: 120px;
+      font-size: 13px;
+    }
+    td textarea { min-height: 56px; }
+    .title-cell input { min-width: 230px; }
+    .wide-cell textarea { min-width: 240px; }
+    .status-open { background: var(--blue-soft); color: var(--blue); }
+    .status-doing { background: var(--gold-soft); color: var(--gold); }
+    .status-blocked { background: var(--red-soft); color: var(--red); }
+    .status-closed { background: var(--green-soft); color: var(--green); }
+    .type-strip {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(120px, 1fr));
+      gap: 10px;
+    }
+    .type-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      display: grid;
+      gap: 6px;
+    }
+    .type-card strong { font-size: 14px; }
+    .type-card span { color: var(--muted); font-size: 12px; }
+    .empty {
+      padding: 40px 20px;
+      text-align: center;
+      color: var(--muted);
+    }
+    .toast {
+      position: fixed;
+      right: 20px;
+      bottom: 20px;
+      background: #263941;
+      color: #fff;
+      border-radius: 8px;
+      padding: 10px 14px;
+      box-shadow: var(--shadow);
+      opacity: 0;
+      transform: translateY(8px);
+      transition: .18s ease;
+      pointer-events: none;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    @media (max-width: 980px) {
+      .topbar { align-items: flex-start; flex-direction: column; }
+      .week-picker { justify-content: flex-start; }
+      .summary { grid-template-columns: repeat(2, minmax(140px, 1fr)); }
+      .workspace { grid-template-columns: 1fr; }
+      .filters { grid-template-columns: 1fr; }
+      .type-strip { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <strong>PMO 周会行动项</strong>
+        <span>3002 · 每周例会行动项、风险、问题、变更和责任池事项</span>
+      </div>
+      <div class="week-picker">
+        <span class="week-pill" id="weekLabel">周会周期</span>
+        <input type="date" id="weekDate">
+        <button class="btn" id="todayButton" type="button">回到本周</button>
+      </div>
+    </header>
+
+    <main class="main">
+      <section class="summary" aria-label="周会事项摘要">
+        <div class="metric active"><span>未关闭</span><strong id="activeCount">0</strong></div>
+        <div class="metric blocked"><span>需升级</span><strong id="blockedCount">0</strong></div>
+        <div class="metric closed"><span>已关闭</span><strong id="closedCount">0</strong></div>
+        <div class="metric"><span>本周期总数</span><strong id="totalCount">0</strong></div>
+      </section>
+
+      <section class="type-strip" id="typeStrip"></section>
+
+      <section class="workspace">
+        <section class="panel">
+          <div class="panel-header">
+            <h2>现场登记</h2>
+          </div>
+          <form class="form" id="itemForm">
+            <div class="form-row">
+              <label>事项类型
+                <select id="typeInput"></select>
+              </label>
+              <label>截止日期
+                <input type="date" id="dueInput">
+              </label>
+            </div>
+            <label>事项内容
+              <input id="titleInput" required placeholder="例如：完成本周会议纪要并明确责任人">
+            </label>
+            <div class="form-row">
+              <label>责任方
+                <input id="ownerInput" value="PMO">
+              </label>
+              <label>来源
+                <input id="sourceInput" value="周会现场">
+              </label>
+            </div>
+            <label>关联对象
+              <input id="relatedInput" placeholder="可填写 WBS、交付物编号或会议议题">
+            </label>
+            <label>关闭标准
+              <textarea id="closeCriteriaInput"></textarea>
+            </label>
+            <label>备注
+              <textarea id="noteInput"></textarea>
+            </label>
+            <div class="btn-row">
+              <button class="btn primary" type="submit">登记事项</button>
+              <button class="btn" id="resetButton" type="button">清空输入</button>
+            </div>
+            <div class="hint">数据保存到 3002 本机台账。3002 不写回 PMO 计划真源，也不改任务数据。</div>
+          </form>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h2>行动项台账</h2>
+            <span class="hint" id="visibleCount">当前 0 项</span>
+          </div>
+          <div class="filters">
+            <select id="typeFilter"></select>
+            <select id="statusFilter">
+              <option value="active">未关闭</option>
+              <option value="all">全部状态</option>
+            </select>
+            <input id="searchInput" placeholder="搜索事项、责任方、来源或关联对象">
+            <button class="btn" id="refreshButton" type="button">刷新</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>类型</th>
+                  <th>事项</th>
+                  <th>责任方</th>
+                  <th>截止日期</th>
+                  <th>状态</th>
+                  <th>来源</th>
+                  <th>关联对象</th>
+                  <th>关闭标准</th>
+                  <th>关闭证据</th>
+                  <th>延期原因</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="itemBody">
+                <tr><td class="empty" colspan="11">正在读取台账</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+    </main>
+  </div>
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const state = {
+      types: [],
+      statuses: [],
+      week: null,
+      items: [],
+      filter: { type: 'all', status: 'active', q: '' }
+    };
+
+    const els = {
+      weekLabel: document.getElementById('weekLabel'),
+      weekDate: document.getElementById('weekDate'),
+      todayButton: document.getElementById('todayButton'),
+      typeStrip: document.getElementById('typeStrip'),
+      typeInput: document.getElementById('typeInput'),
+      dueInput: document.getElementById('dueInput'),
+      titleInput: document.getElementById('titleInput'),
+      ownerInput: document.getElementById('ownerInput'),
+      sourceInput: document.getElementById('sourceInput'),
+      relatedInput: document.getElementById('relatedInput'),
+      closeCriteriaInput: document.getElementById('closeCriteriaInput'),
+      noteInput: document.getElementById('noteInput'),
+      itemForm: document.getElementById('itemForm'),
+      resetButton: document.getElementById('resetButton'),
+      typeFilter: document.getElementById('typeFilter'),
+      statusFilter: document.getElementById('statusFilter'),
+      searchInput: document.getElementById('searchInput'),
+      refreshButton: document.getElementById('refreshButton'),
+      itemBody: document.getElementById('itemBody'),
+      visibleCount: document.getElementById('visibleCount'),
+      activeCount: document.getElementById('activeCount'),
+      blockedCount: document.getElementById('blockedCount'),
+      closedCount: document.getElementById('closedCount'),
+      totalCount: document.getElementById('totalCount'),
+      toast: document.getElementById('toast')
+    };
+
+    function toast(message) {
+      els.toast.textContent = message;
+      els.toast.classList.add('show');
+      window.clearTimeout(toast.timer);
+      toast.timer = window.setTimeout(() => els.toast.classList.remove('show'), 2200);
+    }
+
+    async function api(path, options = {}) {
+      const response = await fetch(path, {
+        ...options,
+        headers: {
+          'content-type': 'application/json; charset=utf-8',
+          ...(options.headers || {})
+        }
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || '操作没有完成');
+      return payload;
+    }
+
+    function option(label, value) {
+      const item = document.createElement('option');
+      item.value = value;
+      item.textContent = label;
+      return item;
+    }
+
+    function typeByKey(key) {
+      return state.types.find(item => item.key === key) || state.types[0] || {};
+    }
+
+    function statusByKey(key) {
+      return state.statuses.find(item => item.key === key) || state.statuses[0] || {};
+    }
+
+    function todayText() {
+      const date = new Date();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${date.getFullYear()}-${month}-${day}`;
+    }
+
+    function resetDraft() {
+      const firstType = state.types[0] || {};
+      els.typeInput.value = firstType.key || 'action';
+      els.dueInput.value = todayText();
+      els.titleInput.value = '';
+      els.ownerInput.value = 'PMO';
+      els.sourceInput.value = '周会现场';
+      els.relatedInput.value = '';
+      els.closeCriteriaInput.value = firstType.closeRule || '';
+      els.noteInput.value = '';
+    }
+
+    function populateControls() {
+      els.typeInput.innerHTML = '';
+      state.types.forEach(type => els.typeInput.appendChild(option(type.label, type.key)));
+      els.typeFilter.innerHTML = '';
+      els.typeFilter.appendChild(option('全部类型', 'all'));
+      state.types.forEach(type => els.typeFilter.appendChild(option(type.label, type.key)));
+      els.statusFilter.innerHTML = '';
+      els.statusFilter.appendChild(option('未关闭', 'active'));
+      els.statusFilter.appendChild(option('全部状态', 'all'));
+      state.statuses.forEach(status => els.statusFilter.appendChild(option(status.label, status.key)));
+      resetDraft();
+    }
+
+    function renderTypeStrip(summary) {
+      els.typeStrip.innerHTML = '';
+      state.types.forEach(type => {
+        const card = document.createElement('div');
+        card.className = 'type-card';
+        const count = summary?.byType?.[type.key] || 0;
+        card.innerHTML = `<strong>${type.label} · ${count}</strong><span>${type.closeRule}</span>`;
+        els.typeStrip.appendChild(card);
+      });
+    }
+
+    function renderSummary(summary) {
+      els.activeCount.textContent = summary?.active || 0;
+      els.blockedCount.textContent = summary?.blocked || 0;
+      els.closedCount.textContent = summary?.closed || 0;
+      els.totalCount.textContent = summary?.total || 0;
+      renderTypeStrip(summary);
+    }
+
+    function rowInput(value, name, itemId, type = 'text') {
+      const input = document.createElement(type === 'textarea' ? 'textarea' : 'input');
+      if (type !== 'textarea') input.type = type;
+      input.value = value || '';
+      input.dataset.name = name;
+      input.dataset.id = itemId;
+      return input;
+    }
+
+    function rowSelect(value, name, itemId, options, className = '') {
+      const select = document.createElement('select');
+      select.dataset.name = name;
+      select.dataset.id = itemId;
+      select.className = className;
+      options.forEach(item => select.appendChild(option(item.label, item.key)));
+      select.value = value;
+      return select;
+    }
+
+    function cell(child, className = '') {
+      const td = document.createElement('td');
+      if (className) td.className = className;
+      td.appendChild(child);
+      return td;
+    }
+
+    function statusClass(status) {
+      return `status-${status || 'open'}`;
+    }
+
+    function renderRows() {
+      els.itemBody.innerHTML = '';
+      els.visibleCount.textContent = `当前 ${state.items.length} 项`;
+      if (!state.items.length) {
+        const row = document.createElement('tr');
+        row.innerHTML = '<td class="empty" colspan="11">当前周期没有匹配事项</td>';
+        els.itemBody.appendChild(row);
+        return;
+      }
+      state.items.forEach(item => {
+        const row = document.createElement('tr');
+        const statusSelect = rowSelect(item.status, 'status', item.id, state.statuses, statusClass(item.status));
+        statusSelect.addEventListener('change', () => {
+          statusSelect.className = statusClass(statusSelect.value);
+        });
+        row.append(
+          cell(rowSelect(item.type, 'type', item.id, state.types)),
+          cell(rowInput(item.title, 'title', item.id), 'title-cell'),
+          cell(rowInput(item.owner, 'owner', item.id)),
+          cell(rowInput(item.dueDate, 'dueDate', item.id, 'date')),
+          cell(statusSelect),
+          cell(rowInput(item.source, 'source', item.id)),
+          cell(rowInput(item.related, 'related', item.id)),
+          cell(rowInput(item.closeCriteria, 'closeCriteria', item.id, 'textarea'), 'wide-cell'),
+          cell(rowInput(item.closeEvidence, 'closeEvidence', item.id, 'textarea'), 'wide-cell'),
+          cell(rowInput(item.delayReason, 'delayReason', item.id, 'textarea'), 'wide-cell')
+        );
+        const actions = document.createElement('td');
+        const save = document.createElement('button');
+        save.className = 'btn';
+        save.type = 'button';
+        save.textContent = '保存';
+        save.addEventListener('click', () => saveRow(item.id));
+        const remove = document.createElement('button');
+        remove.className = 'btn danger';
+        remove.type = 'button';
+        remove.textContent = '删除';
+        remove.addEventListener('click', () => removeItem(item.id));
+        actions.append(save, document.createTextNode(' '), remove);
+        row.appendChild(actions);
+        els.itemBody.appendChild(row);
+      });
+    }
+
+    async function loadMeta(dateValue) {
+      const query = dateValue ? `?date=${encodeURIComponent(dateValue)}` : '';
+      const meta = await api(`/api/meta${query}`);
+      state.types = meta.issueTypes || [];
+      state.statuses = meta.statuses || [];
+      state.week = meta.currentWeek;
+      els.weekLabel.textContent = state.week.label;
+      els.weekDate.value = dateValue || todayText();
+      populateControls();
+    }
+
+    async function loadItems() {
+      const params = new URLSearchParams({
+        weekId: state.week?.weekId || '',
+        type: state.filter.type,
+        status: state.filter.status,
+        q: state.filter.q
+      });
+      const result = await api(`/api/items?${params.toString()}`);
+      state.week = result.week;
+      state.items = result.items || [];
+      els.weekLabel.textContent = state.week.label;
+      renderSummary(result.summary || {});
+      renderRows();
+    }
+
+    async function createItem(event) {
+      event.preventDefault();
+      const type = typeByKey(els.typeInput.value);
+      const payload = {
+        weekId: state.week.weekId,
+        type: els.typeInput.value,
+        title: els.titleInput.value,
+        owner: els.ownerInput.value,
+        dueDate: els.dueInput.value,
+        source: els.sourceInput.value,
+        related: els.relatedInput.value,
+        closeCriteria: els.closeCriteriaInput.value || type.closeRule,
+        note: els.noteInput.value
+      };
+      await api('/api/items', { method: 'POST', body: JSON.stringify(payload) });
+      resetDraft();
+      await loadItems();
+      toast('事项已登记');
+    }
+
+    function draftFromRow(itemId) {
+      const fields = Array.from(document.querySelectorAll(`[data-id="${CSS.escape(itemId)}"]`));
+      return Object.fromEntries(fields.map(field => [field.dataset.name, field.value]));
+    }
+
+    async function saveRow(itemId) {
+      await api(`/api/items/${encodeURIComponent(itemId)}`, { method: 'PUT', body: JSON.stringify(draftFromRow(itemId)) });
+      await loadItems();
+      toast('事项已保存');
+    }
+
+    async function removeItem(itemId) {
+      if (!confirm('删除后无法在页面恢复，确认删除这条事项？')) return;
+      await api(`/api/items/${encodeURIComponent(itemId)}`, { method: 'DELETE' });
+      await loadItems();
+      toast('事项已删除');
+    }
+
+    async function changeWeek(dateValue) {
+      await loadMeta(dateValue);
+      await loadItems();
+    }
+
+    els.typeInput.addEventListener('change', () => {
+      els.closeCriteriaInput.value = typeByKey(els.typeInput.value).closeRule || '';
+    });
+    els.itemForm.addEventListener('submit', createItem);
+    els.resetButton.addEventListener('click', resetDraft);
+    els.todayButton.addEventListener('click', () => changeWeek(todayText()).catch(error => toast(error.message)));
+    els.weekDate.addEventListener('change', event => changeWeek(event.target.value).catch(error => toast(error.message)));
+    els.refreshButton.addEventListener('click', () => loadItems().catch(error => toast(error.message)));
+    els.typeFilter.addEventListener('change', event => {
+      state.filter.type = event.target.value;
+      loadItems().catch(error => toast(error.message));
+    });
+    els.statusFilter.addEventListener('change', event => {
+      state.filter.status = event.target.value;
+      loadItems().catch(error => toast(error.message));
+    });
+    els.searchInput.addEventListener('input', event => {
+      state.filter.q = event.target.value;
+      window.clearTimeout(els.searchInput.timer);
+      els.searchInput.timer = window.setTimeout(() => loadItems().catch(error => toast(error.message)), 180);
+    });
+
+    loadMeta(todayText())
+      .then(loadItems)
+      .catch(error => toast(error.message));
+  </script>
+</body>
+</html>

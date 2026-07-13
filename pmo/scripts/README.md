@@ -15,6 +15,9 @@
 | `smoke-hmr.mjs` | PMO 前端开发热更新相关 smoke 检查 |
 | `smoke-milestone-rules.mjs` | PMO 甘特图里程碑判定 smoke 检查，防止 `10/20/30工作日` 被误判为 `0工作日` |
 | `smoke-plugin-endpoints.mjs` | PMO 插件端点 smoke 检查 |
+| `smoke-pmo-week-range.mjs` | PMO 本周交付物周期 smoke 检查，锁定周四至下周三口径 |
+| `smoke-task-owner.mjs` | PMO 任务清单责任人映射 smoke 检查 |
+| `smoke-weekly-issue-ledger.mjs` | PMO 周会事项台账 smoke 检查，锁定五类模板、关闭标准和建议生成 |
 | `smoke-writeback.mjs` | PMO 写回流程 smoke 检查 |
 | `regroup-wbs-semantic.mjs` | 按语义工作包补齐 PMO WBS 二级摘要层，并同步计划/WBS Markdown 真源 |
 

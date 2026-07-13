@@ -219,6 +219,101 @@ function normalizeA1Item(item) {
   };
 }
 
+function normalizeSystemsJson(value) {
+  const systems = (Array.isArray(value) ? value : parseJsonArray(value))
+    .map(cleanText)
+    .filter(Boolean);
+  return systems.length ? JSON.stringify(systems) : null;
+}
+
+function normalizeMappingRecordImport(item) {
+  const raw = item || {};
+  const recordType = cleanText(raw.record_type || raw.recordType).toLowerCase() === 'a1' ? 'a1' : 'l3';
+  const deptName = cleanText(raw.dept_name || raw.deptName || raw.dept) || null;
+  const l3Name = cleanText(raw.l3_name || raw.l3Name || raw.l3);
+  const a1Code = cleanText(raw.a1_code || raw.a1Code) || null;
+  if (!l3Name) return null;
+  const status = cleanText(raw.status) || 'active';
+  return {
+    mapping_key: cleanText(raw.mapping_key || raw.mappingKey) ||
+      stableKey(recordType, recordType === 'a1' ? [deptName, l3Name, a1Code] : [deptName, l3Name]),
+    parent_mapping_key: cleanText(raw.parent_mapping_key || raw.parentMappingKey) || null,
+    record_type: recordType,
+    parent_record_id: Number(raw.parent_record_id || raw.parentRecordId || 0) || null,
+    latest_a1_item_id: Number(raw.latest_a1_item_id || raw.latestA1ItemId || 0) || null,
+    dept_name: deptName,
+    domain_name: cleanText(raw.domain_name || raw.domainName || raw.l1_name || raw.l1Name || raw.l1) || null,
+    l2_name: cleanText(raw.l2_name || raw.l2Name || raw.l2) || null,
+    l3_name: l3Name,
+    a1_code: a1Code,
+    behavior: cleanText(raw.behavior || raw.a1Name || raw.a1_name) || null,
+    execution_role: cleanText(raw.execution_role || raw.executionRole || raw.role) || null,
+    approval_type: cleanText(raw.approval_type || raw.approvalType) || null,
+    input_source_dept: cleanText(raw.input_source_dept || raw.inputSourceDept) || null,
+    output_target_dept: cleanText(raw.output_target_dept || raw.outputTargetDept) || null,
+    suggested_systems: normalizeSystemsJson(raw.suggested_systems || raw.suggestedSystems || raw.systems),
+    verification_note: cleanText(raw.verification_note || raw.verificationNote) || null,
+    source_file: cleanText(raw.source_file || raw.sourceFile) || null,
+    status: ['active', 'source_missing', 'published', 'archived'].includes(status) ? status : 'active'
+  };
+}
+
+async function syncMappingRecordImport(pool, snapshotId, record) {
+  await pool.execute(
+    `INSERT INTO process_mapping_records
+      (mapping_key, record_type, first_snapshot_id, latest_snapshot_id, parent_record_id, latest_a1_item_id,
+       dept_name, domain_name, l2_name, l3_name, a1_code, behavior, execution_role, approval_type,
+       input_source_dept, output_target_dept, suggested_systems, verification_note, source_file, status)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE
+       latest_snapshot_id=VALUES(latest_snapshot_id),
+       parent_record_id=VALUES(parent_record_id),
+       latest_a1_item_id=VALUES(latest_a1_item_id),
+       dept_name=VALUES(dept_name),
+       domain_name=VALUES(domain_name),
+       l2_name=VALUES(l2_name),
+       l3_name=VALUES(l3_name),
+       a1_code=VALUES(a1_code),
+       behavior=VALUES(behavior),
+       execution_role=VALUES(execution_role),
+       approval_type=VALUES(approval_type),
+       input_source_dept=VALUES(input_source_dept),
+       output_target_dept=VALUES(output_target_dept),
+       suggested_systems=VALUES(suggested_systems),
+       verification_note=VALUES(verification_note),
+       source_file=VALUES(source_file),
+       status=CASE WHEN status='published' THEN status ELSE VALUES(status) END,
+       updated_at=CURRENT_TIMESTAMP`,
+    [
+      record.mapping_key,
+      record.record_type,
+      snapshotId,
+      snapshotId,
+      record.parent_record_id,
+      record.latest_a1_item_id,
+      record.dept_name,
+      record.domain_name,
+      record.l2_name,
+      record.l3_name,
+      record.a1_code,
+      record.behavior,
+      record.execution_role,
+      record.approval_type,
+      record.input_source_dept,
+      record.output_target_dept,
+      record.suggested_systems,
+      record.verification_note,
+      record.source_file,
+      record.status
+    ]
+  );
+  const [rows] = await pool.execute(
+    'SELECT id FROM process_mapping_records WHERE mapping_key=? LIMIT 1',
+    [record.mapping_key]
+  );
+  return rows[0] && rows[0].id || null;
+}
+
 function normalizeSourceFile(file) {
   const filePath = cleanText(file.file_path || file.filePath || file.path);
   if (!filePath) return null;
@@ -552,8 +647,9 @@ function makeProcessGovernanceMysqlRepository(pool) {
         );
       }
 
+      const a1ItemIds = new Map();
       for (const item of asArray(bundle.a1Items || bundle.a1_items).map(normalizeA1Item).filter(row => row.behavior)) {
-        await pool.execute(
+        const [a1Result] = await pool.execute(
           `INSERT INTO process_a1_items
             (snapshot_id, a1_code, dept_name, l3_name, behavior, execution_role, approval_type,
              input_source_dept, output_target_dept, suggested_systems, verification_note, source_file)
@@ -573,6 +669,40 @@ function makeProcessGovernanceMysqlRepository(pool) {
             item.source_file
           ]
         );
+        if (a1Result && a1Result.insertId) {
+          a1ItemIds.set(stableKey('a1', [item.dept_name, item.l3_name, item.a1_code]), a1Result.insertId);
+        }
+      }
+
+      const mappingRecordIds = new Map();
+      const currentMappingKeys = new Set();
+      const mappingRecordImports = asArray(bundle.mappingRecords || bundle.mapping_records)
+        .map(normalizeMappingRecordImport)
+        .filter(Boolean)
+        .sort((left, right) => (left.record_type === right.record_type ? 0 : left.record_type === 'l3' ? -1 : 1));
+      for (const record of mappingRecordImports) {
+        if (record.record_type === 'a1') {
+          const parentKey = record.parent_mapping_key || stableKey('l3', [record.dept_name, record.l3_name]);
+          record.parent_record_id = mappingRecordIds.get(parentKey) || record.parent_record_id || null;
+          record.latest_a1_item_id = a1ItemIds.get(stableKey('a1', [record.dept_name, record.l3_name, record.a1_code])) ||
+            record.latest_a1_item_id ||
+            null;
+        }
+        const recordId = await syncMappingRecordImport(pool, snapshotId, record);
+        if (recordId) mappingRecordIds.set(record.mapping_key, recordId);
+        currentMappingKeys.add(record.mapping_key);
+      }
+      if (currentMappingKeys.size) {
+        const [activeMappingRows] = await pool.execute(
+          "SELECT id, mapping_key FROM process_mapping_records WHERE status='active'"
+        );
+        for (const row of activeMappingRows) {
+          if (currentMappingKeys.has(row.mapping_key)) continue;
+          await pool.execute(
+            "UPDATE process_mapping_records SET status='source_missing', latest_snapshot_id=?, updated_at=CURRENT_TIMESTAMP WHERE id=?",
+            [snapshotId, row.id]
+          );
+        }
       }
 
       for (const file of asArray(bundle.sourceFiles || bundle.source_files).map(normalizeSourceFile).filter(Boolean)) {
@@ -695,6 +825,13 @@ function makeProcessGovernanceMysqlRepository(pool) {
         await this.recordImportFingerprints(importBatchId, 'quality', qualityFingerprintItems);
       }
       const mappingFingerprintItems = asArray(bundle.mappingTodos || bundle.mapping_todos).map(normalizeMappingTodoImport);
+      for (const todo of mappingFingerprintItems) {
+        if (todo.mapping_record_id) continue;
+        const recordKey = todo.a1_code
+          ? stableKey('a1', [todo.dept_name, todo.l3_name, todo.a1_code])
+          : stableKey('l3', [todo.dept_name, todo.l3_name]);
+        todo.mapping_record_id = mappingRecordIds.get(recordKey) || null;
+      }
       for (const todo of mappingFingerprintItems) {
         const [existingRows] = await pool.execute(
           'SELECT id, status FROM process_mapping_todos WHERE todo_key=? LIMIT 1',

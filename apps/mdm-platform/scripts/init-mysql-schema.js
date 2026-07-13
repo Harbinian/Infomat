@@ -7,7 +7,8 @@ const { migrateLegacyIdentityToPersonIdentity } = require('../server/identityMys
 const { ensureProcessGovernanceCloseGateSchema } = require('../server/processGovernanceMysqlRepository');
 const {
   ensureProcessDesignEditionSchema,
-  ensureProcessDesignEvidenceStatusSchema
+  ensureProcessDesignEvidenceStatusSchema,
+  ensureProcessDesignStepTransitionSchema
 } = require('../server/routes/processDesignMysql');
 
 async function columnExists(pool, tableName, columnName) {
@@ -179,6 +180,7 @@ async function main() {
     await ensureDocumentStructuredOutputV2(pool);
     await ensureProcessDesignEditionSchema(pool);
     await ensureProcessDesignEvidenceStatusSchema(pool);
+    await ensureProcessDesignStepTransitionSchema(pool);
     await migrateLegacyIdentityToPersonIdentity(pool);
     await seedDefaultTerminologyTermTypes(pool);
     for (const migrationKey of [
@@ -195,7 +197,8 @@ async function main() {
       '2026-07-01-document-structured-output',
       '2026-07-01-document-structured-output-v2',
       '2026-07-01-document-structured-output-editing',
-      '2026-07-01-process-design-evidence-status'
+      '2026-07-01-process-design-evidence-status',
+      '2026-07-07-process-design-step-transitions'
     ]) {
       await pool.execute(
         `INSERT INTO schema_migrations (migration_key)
