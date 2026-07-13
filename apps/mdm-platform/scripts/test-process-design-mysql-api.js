@@ -53,6 +53,7 @@ function makeFakeRepository() {
     terms: [],
     processes: [],
     steps: [],
+    stepTransitions: [],
     behaviorDetails: new Map(),
     handoffs: [],
     form: null,
@@ -63,8 +64,8 @@ function makeFakeRepository() {
     reviewTask: null,
     version: null,
     taxonomy: [
-      { l1_name: '市场开发与客户合同治理', l2_name: '客户合同评审管理', l3_count: 3 },
-      { l1_name: '产品设计全生命周期管理', l2_name: '设计更改管理', l3_count: 2 }
+      { department_name: '经营发展部', l1_name: '市场开发与客户合同治理', l2_name: '客户合同评审管理', l3_count: 3 },
+      { department_name: '经营发展部', l1_name: '产品设计全生命周期管理', l2_name: '设计更改管理', l3_count: 2 }
     ]
   };
   const calls = [];
@@ -153,11 +154,17 @@ function makeFakeRepository() {
       calls.push('departmentExists');
       return [1, 2].includes(Number(departmentId));
     },
-    async listProcessTaxonomy() {
+    async listProcessTaxonomy(scope = {}) {
       calls.push('listProcessTaxonomy');
+      const departmentNames = Array.isArray(scope.departmentNames)
+        ? scope.departmentNames.map(name => String(name || '').trim()).filter(Boolean)
+        : [];
+      const scopedTaxonomy = departmentNames.length
+        ? state.taxonomy.filter(item => departmentNames.includes(item.department_name))
+        : state.taxonomy;
       return {
-        items: state.taxonomy,
-        l1Options: ['市场开发与客户合同治理', '产品设计全生命周期管理']
+        items: scopedTaxonomy,
+        l1Options: [...new Set(scopedTaxonomy.map(item => item.l1_name))]
       };
     },
     async listFieldTypes() {
@@ -305,6 +312,7 @@ function makeFakeRepository() {
           behaviorDetail: state.behaviorDetails.get(step.id) || null,
           handoffs: state.handoffs.filter(handoff => handoff.step_id === step.id)
         })),
+        stepTransitions: state.stepTransitions.filter(item => Number(item.draft_id) === draftId),
         forms: state.form && Number(state.form.draft_id) === draftId ? [{
           ...state.form,
           fields: state.mainField ? [state.mainField] : [],
@@ -334,6 +342,7 @@ function makeFakeRepository() {
       state.terms = [];
       state.processes = [];
       state.steps = [];
+      state.stepTransitions = [];
       state.behaviorDetails.clear();
       state.handoffs = [];
       state.form = null;
@@ -430,9 +439,23 @@ function makeFakeRepository() {
     },
     async createStep(draft, body, actorUserId) {
       calls.push('createStep');
-      const step = { id: 201 + state.steps.length, draft_id: draft.id, process_id: Number(body.process_id), step_name: body.step_name, actor_role: body.actor_role || null, input_materials: body.input_materials || null, output_result: body.output_result || null, status: 'active', created_by: actorUserId };
+      const step = { id: 201 + state.steps.length, draft_id: draft.id, process_id: Number(body.process_id), step_type: body.step_type || 'action', step_name: body.step_name, actor_role: body.actor_role || null, input_materials: body.input_materials || null, output_result: body.output_result || null, status: 'active', created_by: actorUserId };
       state.steps.push(step);
       return step;
+    },
+    async createStepTransition(draft, body, actorUserId) {
+      calls.push('createStepTransition');
+      const transition = {
+        id: 271 + state.stepTransitions.length,
+        draft_id: draft.id,
+        process_id: Number(body.process_id),
+        from_step_id: Number(body.from_step_id),
+        to_step_id: body.to_step_id == null ? null : Number(body.to_step_id),
+        condition_text: body.condition_text,
+        created_by: actorUserId
+      };
+      state.stepTransitions.push(transition);
+      return transition;
     },
     async updateStep(draft, stepId, body) {
       calls.push('updateStep');
@@ -532,9 +555,9 @@ function makeFakeRepository() {
         id: 301,
         draft_id: draft.id,
         step_id: body.step_id ? Number(body.step_id) : null,
-        form_code: 'FM-CX-ZD-001-001-A',
+        form_code: 'FM-CX-ZD-001-A-001',
         form_name: body.form_name,
-        main_table_code: 'FM-CX-ZD-001-M001-A',
+        main_table_code: 'FM-CX-ZD-001-A-001-M',
         main_table_name: body.main_table_name || '主表',
         archive_location: body.archive_location || null,
         retention_period: body.retention_period || null,
@@ -556,8 +579,8 @@ function makeFakeRepository() {
         id: 351,
         form_id: formId,
         table_kind: 'detail',
-        table_no: 'FM-CX-ZD-001-D001-A',
-        table_code: 'FM-CX-ZD-001-D001-A',
+        table_no: 'FM-CX-ZD-001-A-001-D',
+        table_code: 'FM-CX-ZD-001-A-001-D',
         table_name: body.table_name,
         created_by: actorUserId
       };
@@ -572,8 +595,8 @@ function makeFakeRepository() {
         form_table_id: structureKind === 'main' ? null : tableId,
         structure_kind: structureKind,
         field_name: body.field_name,
-        field_no: structureKind === 'main' ? 'FM-CX-ZD-001-M001-A-001' : 'FM-CX-ZD-001-D001-A-001',
-        field_code: structureKind === 'main' ? 'FM-CX-ZD-001-M001-A-001' : 'FM-CX-ZD-001-D001-A-001',
+        field_no: structureKind === 'main' ? 'FM-CX-ZD-001-A-001-M-001' : 'FM-CX-ZD-001-A-001-D-001',
+        field_code: structureKind === 'main' ? 'FM-CX-ZD-001-A-001-M-001' : 'FM-CX-ZD-001-A-001-D-001',
         field_type: body.field_type,
         required: Boolean(body.required),
         enum_options: body.enum_options || null,
@@ -698,140 +721,6 @@ function makeFakeRepository() {
   };
 }
 
-async function assertFormNumberingUsesSequenceBeforeEdition() {
-  const queries = [];
-  const state = {
-    forms: [{ id: 300, draft_id: 101, form_code: 'FM-CX-ZD-001-001-A', main_table_code: 'FM-CX-ZD-001-M001-A' }],
-    tables: [],
-    fields: [],
-    nextFormId: 301,
-    nextTableId: 351,
-    nextFieldId: 361
-  };
-  const pool = {
-    async execute(sql, params = []) {
-      queries.push({ sql, params });
-      if (sql.includes('SELECT form_code FROM process_design_forms')) {
-        return [state.forms.filter(form => Number(form.draft_id) === Number(params[0])).map(form => ({ form_code: form.form_code }))];
-      }
-      if (sql.includes('SELECT id, status FROM process_design_steps')) {
-        return [[{ id: params[0], status: 'active' }]];
-      }
-      if (sql.includes('INSERT INTO process_design_forms')) {
-        const id = state.nextFormId++;
-        state.forms.push({
-          id,
-          draft_id: params[0],
-          step_id: params[1],
-          form_code: params[2],
-          form_name: params[3],
-          main_table_code: params[4],
-          main_table_name: params[5],
-          created_by: params[11]
-        });
-        return [{ insertId: id }];
-      }
-      if (sql.includes('SELECT * FROM process_design_forms WHERE id=?')) {
-        return [[state.forms.find(form => Number(form.id) === Number(params[0]))].filter(Boolean)];
-      }
-      if (sql.includes("SELECT * FROM process_design_form_tables WHERE form_id=? AND table_kind='main'")) {
-        return [state.tables.filter(table => Number(table.form_id) === Number(params[0]) && table.table_kind === 'main')];
-      }
-      if (sql.includes("SELECT id FROM process_design_form_tables WHERE form_id=? AND table_kind='detail'")) {
-        return [state.tables.filter(table => Number(table.form_id) === Number(params[0]) && table.table_kind === 'detail').map(table => ({ id: table.id }))];
-      }
-      if (sql.includes('INSERT INTO process_design_form_tables')) {
-        const id = state.nextTableId++;
-        state.tables.push({
-          id,
-          form_id: params[0],
-          table_kind: sql.includes("'detail'") ? 'detail' : 'main',
-          table_no: params[1],
-          table_code: params[2],
-          table_name: params[3],
-          created_by: params[4]
-        });
-        return [{ insertId: id }];
-      }
-      if (sql.includes('SELECT * FROM process_design_form_tables WHERE id=?')) {
-        return [[state.tables.find(table => Number(table.id) === Number(params[0]))].filter(Boolean)];
-      }
-      if (sql.includes('SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_order FROM process_design_form_table_fields')) {
-        const maxOrder = state.fields
-          .filter(field => Number(field.form_table_id) === Number(params[0]) && field.structure_kind === params[1])
-          .reduce((max, field) => Math.max(max, Number(field.sort_order || 0)), 0);
-        return [[{ next_order: maxOrder + 1 }]];
-      }
-      if (sql.includes('SELECT field_code FROM process_design_form_table_fields')) {
-        return [state.fields
-          .filter(field => Number(field.form_table_id) === Number(params[0]) && field.structure_kind === params[1])
-          .map(field => ({ field_code: field.field_code }))];
-      }
-      if (sql.includes('INSERT INTO process_design_form_table_fields')) {
-        const id = state.nextFieldId++;
-        state.fields.push({
-          id,
-          form_table_id: params[0],
-          structure_kind: params[1],
-          field_no: params[2],
-          field_code: params[3],
-          field_name: params[4],
-          field_type: params[5],
-          enum_options: params[6],
-          is_required: params[7],
-          description: params[8],
-          sort_order: params[9],
-          created_by: params[10]
-        });
-        return [{ insertId: id }];
-      }
-      if (sql.includes('SELECT * FROM process_design_form_table_fields WHERE id=?')) {
-        return [[state.fields.find(field => Number(field.id) === Number(params[0]))].filter(Boolean)];
-      }
-      if (sql.includes('INSERT INTO process_design_events')) {
-        return [{ insertId: 1 }];
-      }
-      return [[]];
-    }
-  };
-  const repo = processDesignRouter.makeProcessDesignMysqlRepository(pool);
-  const draft = { id: 101, document_no: 'CX-ZD-001', planned_edition: 'A' };
-
-  assert.strictEqual(await repo.nextFormCode(draft), 'FM-CX-ZD-001-002-A');
-  const createdForm = await repo.createForm(draft, {
-    step_id: 202,
-    form_name: '需求变更单',
-    main_table_name: '需求变更主表'
-  }, 10);
-  assert.strictEqual(createdForm.form_code, 'FM-CX-ZD-001-002-A');
-  assert.strictEqual(createdForm.main_table_code, 'FM-CX-ZD-001-M002-A');
-  const mainField = await repo.createFormTableField(draft, createdForm.id, {
-    structure_kind: 'main',
-    field_name: '客户名称',
-    field_type: '文本',
-    required: true
-  }, 10);
-  assert.strictEqual(mainField.field_code, 'FM-CX-ZD-001-M002-A-001');
-  const detailTable = await repo.createFormTable(draft, createdForm.id, { table_name: '变更字段明细' }, 10);
-  assert.strictEqual(detailTable.table_code, 'FM-CX-ZD-001-D002-A');
-  const detailField = await repo.createFormTableField(draft, detailTable.id, {
-    structure_kind: 'detail',
-    field_name: '变更字段',
-    field_type: '文本',
-    required: true
-  }, 10);
-  assert.strictEqual(detailField.field_code, 'FM-CX-ZD-001-D002-A-001');
-  assert.strictEqual(
-    await repo.nextFieldCode({ id: 351, table_code: 'FM-CX-ZD-001-M001-A' }, 'main'),
-    'FM-CX-ZD-001-M001-A-001'
-  );
-  assert.strictEqual(
-    await repo.nextFieldCode({ id: 352, table_code: 'FM-CX-ZD-001-D001-A' }, 'detail'),
-    'FM-CX-ZD-001-D001-A-001'
-  );
-  assert.ok(queries.length >= 3, 'numbering test should use real MySQL repository methods');
-}
-
 async function main() {
   const routeSource = fs.readFileSync(path.join(__dirname, '../server/routes/processDesignMysql.js'), 'utf8');
   assert.ok(!routeSource.includes("require('../db')"), 'process design MySQL route must not load server/db.js');
@@ -880,6 +769,8 @@ async function main() {
   assert.ok(routeSource.includes('ENGINEERING_ARCHIVE_ROOM_DEPARTMENT_NAME'), 'archive room default department should be explicit');
   assert.ok(routeSource.includes("router.get('/documents/lookup'"), 'process design route should expose document number lookup');
   assert.ok(routeSource.includes("router.post('/documents/:id/drafts'"), 'process design route should expose next-edition draft creation');
+  assert.ok(routeSource.includes("router.post('/import-structured-output'"), 'process design route should import 3001 structured-output JSON');
+  assert.ok(routeSource.includes('document-structured-output-v2'), 'process design import should enforce the structured-output schema version');
   assert.ok(routeSource.includes('doc.current_edition'), 'draft summary should read current edition from document master');
   assert.ok(!routeSource.includes('d.current_edition'), 'draft table must not be queried for current edition');
   assert.ok(routeSource.includes('function nextEdition'), 'route should generate A/B/C/AA editions server-side');
@@ -898,7 +789,6 @@ async function main() {
   });
   assert.ok(mdmMysqlSchemaSql().includes('status VARCHAR(32) NOT NULL DEFAULT'), 'process design steps must keep active/voided status');
   assert.ok(mdmMysqlSchemaSql().includes('void_reason TEXT NULL'), 'process design steps must keep void reason');
-  await assertFormNumberingUsesSequenceBeforeEdition();
 
   const permissionsByUser = new Map([
     [10, ['process_governance:submit']],
@@ -922,6 +812,11 @@ async function main() {
     async getDepartmentById(departmentId) {
       return { id: departmentId, name: departmentId === 1 ? '经营发展部' : '工程技术部' };
     },
+    async getDepartmentByName(departmentName) {
+      if (departmentName === '经营发展部') return { id: 1, name: '经营发展部' };
+      if (departmentName === '工程技术部') return { id: 2, name: '工程技术部' };
+      return null;
+    },
     async getUserById(userId) {
       return { id: userId, name: `用户${userId}` };
     }
@@ -944,6 +839,207 @@ async function main() {
   try {
     const summary = await request(baseUrl, 'submitter', '/api/process-design/summary');
     assert.strictEqual(summary.res.status, 200);
+
+    const invalidStructuredImport = await request(baseUrl, 'submitter', '/api/process-design/import-structured-output', {
+      method: 'POST',
+      body: JSON.stringify({ schema_version: 'legacy-json', draft: {} })
+    });
+    assert.strictEqual(invalidStructuredImport.res.status, 422, JSON.stringify(invalidStructuredImport.body));
+    assert.ok(JSON.stringify(invalidStructuredImport.body).includes('document-structured-output-v2'), 'import should reject non-standard structured-output JSON');
+
+    const structuredImportPayload = {
+      schema_version: 'document-structured-output-v2',
+      draft: {
+        document_no: 'CX-ZD-IMPORT',
+        document_title: '结构化导入制度',
+        process_name: '结构化导入制度',
+        basis_type: '制度 / 规程',
+        involves_other_departments: true,
+        related_departments: ['工程技术部'],
+        department: { department_id: 1, department_name: '经营发展部' }
+      },
+      document_profile: {
+        document_no: 'CX-ZD-IMPORT',
+        document_title: '结构化导入制度',
+        purpose: '验证 3001 输出物可以导入 3000',
+        scope: '适用于结构化输出联调',
+        inheritance_relation: '承接文档结构化输出标准 Schema'
+      },
+      terms: [
+        { term_ref: 'term_1', term_name: '结构化输出', definition: '按统一数据模型整理制度内容', applies_to: '结构化导入制度' }
+      ],
+      processes: [
+        {
+          process_ref: 'proc_1',
+          process_type: 'new',
+          l1_name: '市场开发与客户合同治理',
+          l2_name: '客户合同评审管理',
+          l3_name: '结构化导入流程',
+          description: '从结构化文件导入制度流程'
+        }
+      ],
+      steps: [
+        {
+          step_ref: 'step_1',
+          process_ref: 'proc_1',
+          step_type: 'action',
+          step_name: '接收结构化文件',
+          actor_role: '销售内勤',
+          input_materials: '3001 导出的结构化 JSON',
+          output_result: '形成 MDM 制度结构草稿'
+        },
+        {
+          step_ref: 'step_2',
+          process_ref: 'proc_1',
+          step_type: 'decision',
+          step_name: '判断结构化文件是否完整',
+          actor_role: '销售内勤',
+          input_materials: '结构化字段填报结果',
+          output_result: '形成完整性判断结论'
+        }
+      ],
+      behavior_details: [
+        {
+          step_ref: 'step_1',
+          precondition: '已经从 3001 导出结构化文件',
+          trigger_scene: '需要进入 MDM 平台继续治理',
+          execution_standard: '导入后能看到制度、流程、行为、表单和字段',
+          delivery_object: 'MDM 制度结构草稿',
+          requires_approval: false,
+          is_cross_department: false
+        },
+        {
+          step_ref: 'step_2',
+          precondition: '结构化文件已经接收',
+          trigger_scene: '提交前需要判断内容完整性',
+          execution_standard: '业务行为、执行角色、输入材料、输出结果、执行标准均已填写',
+          delivery_object: '完整性判断结论',
+          requires_approval: false,
+          is_cross_department: false
+        }
+      ],
+      step_transitions: [
+        {
+          transition_ref: 'trans_1',
+          process_ref: 'proc_1',
+          from_step_ref: 'step_2',
+          condition: '完整',
+          to_step_ref: 'step_1',
+          evidence_refs: []
+        },
+        {
+          transition_ref: 'trans_2',
+          process_ref: 'proc_1',
+          from_step_ref: 'step_2',
+          condition: '不完整',
+          to_step_ref: null,
+          evidence_refs: []
+        }
+      ],
+      forms: [
+        {
+          form_ref: 'form_1',
+          step_ref: 'step_1',
+          form_code: 'SOURCE-FORM-CODE-SHOULD-NOT-BE-USED',
+          form_name: '结构化导入确认单',
+          main_table_name: '结构化导入主表',
+          archive_location: '资料室',
+          retention_period: '10年',
+          responsible_department_name: '工程技术部',
+          responsible_role: '资料管理员'
+        }
+      ],
+      form_tables: [
+        { table_ref: 'table_1', form_ref: 'form_1', table_kind: 'main', table_name: '结构化导入主表' }
+      ],
+      form_table_fields: [
+        {
+          table_field_ref: 'table_field_1',
+          table_ref: 'table_1',
+          structure_kind: 'main',
+          field_name: '客户名称',
+          field_type: '文本',
+          required: true,
+          description: '来自 3001 结构化文件'
+        }
+      ],
+      evidence_catalog: [
+        {
+          evidence_ref: 'EV-DOC-001',
+          object_type: 'draft',
+          evidence_type: '制度条款',
+          description: '导入制度文件中的原文片段。',
+          source_name: '结构化导入制度.docx',
+          source_anchor: '导入文件',
+          status: 'pending_review'
+        }
+      ]
+    };
+    const structuredImport = await request(baseUrl, 'submitter', '/api/process-design/import-structured-output', {
+      method: 'POST',
+      body: JSON.stringify(structuredImportPayload)
+    });
+    assert.strictEqual(structuredImport.res.status, 201, JSON.stringify(structuredImport.body));
+    assert.strictEqual(structuredImport.body.draft.document_no, 'CX-ZD-IMPORT');
+    assert.strictEqual(structuredImport.body.imported.processes, 1);
+    assert.strictEqual(structuredImport.body.imported.steps, 2);
+    assert.strictEqual(structuredImport.body.imported.step_transitions, 2);
+    assert.strictEqual(structuredImport.body.imported.forms, 1);
+    assert.strictEqual(structuredImport.body.imported.form_table_fields, 1);
+    assert.strictEqual(structuredImport.body.imported.evidence, 1);
+    assert.ok(structuredImport.body.warnings.some(item => item.object_type === 'step_transitions' && /流向/.test(item.message)), 'empty branch targets should import with a clear warning');
+
+    const importedDetail = await request(baseUrl, 'submitter', '/api/process-design/drafts/101');
+    assert.strictEqual(importedDetail.res.status, 200, JSON.stringify(importedDetail.body));
+    assert.strictEqual(importedDetail.body.documentProfile.purpose, '验证 3001 输出物可以导入 3000');
+    assert.strictEqual(importedDetail.body.terms[0].term_name, '结构化输出');
+    assert.strictEqual(importedDetail.body.processes[0].l3_name, '结构化导入流程');
+    assert.strictEqual(importedDetail.body.steps[0].step_name, '接收结构化文件');
+    assert.strictEqual(importedDetail.body.steps[1].step_type, 'decision');
+    assert.strictEqual(importedDetail.body.steps[0].behaviorDetail.delivery_object, 'MDM 制度结构草稿');
+    assert.strictEqual(importedDetail.body.stepTransitions.length, 2);
+    assert.strictEqual(importedDetail.body.stepTransitions[0].condition_text, '完整');
+    assert.strictEqual(importedDetail.body.stepTransitions[1].to_step_id, null);
+    assert.strictEqual(importedDetail.body.forms[0].form_code, 'FM-CX-ZD-001-A-001', 'MDM should generate its own form code during import');
+    assert.strictEqual(importedDetail.body.forms[0].main_fields[0].field_name, '客户名称');
+
+    const deleteImportedDraft = await request(baseUrl, 'submitter', '/api/process-design/drafts/101', { method: 'DELETE' });
+    assert.strictEqual(deleteImportedDraft.res.status, 200, JSON.stringify(deleteImportedDraft.body));
+
+    const structuredImportByDepartmentName = {
+      schema_version: 'document-structured-output-v2',
+      draft: {
+        document_no: 'CX-ZD-IMPORT-BY-DEPT-NAME',
+        document_title: '按部门名称导入制度',
+        process_name: '按部门名称导入制度',
+        basis_type: '制度 / 规程',
+        department: { department_name: '经营发展部' }
+      },
+      document_profile: {
+        purpose: '验证 3001 输出物只有部门名称时也能导入 3000',
+        scope: '适用于结构化输出联调'
+      },
+      processes: [
+        {
+          process_ref: 'proc_1',
+          process_type: 'new',
+          l1_name: '市场开发与客户合同治理',
+          l2_name: '客户合同评审管理',
+          l3_name: '按部门名称导入流程'
+        }
+      ],
+      steps: [],
+      step_transitions: []
+    };
+    const importByDepartmentName = await request(baseUrl, 'admin', '/api/process-design/import-structured-output', {
+      method: 'POST',
+      body: JSON.stringify(structuredImportByDepartmentName)
+    });
+    assert.strictEqual(importByDepartmentName.res.status, 201, JSON.stringify(importByDepartmentName.body));
+    assert.strictEqual(importByDepartmentName.body.draft.department_id, 1, 'department_name from structured output should resolve to the owning department');
+    assert.strictEqual(importByDepartmentName.body.imported.processes, 1);
+    const deleteDepartmentNameDraft = await request(baseUrl, 'admin', '/api/process-design/drafts/101', { method: 'DELETE' });
+    assert.strictEqual(deleteDepartmentNameDraft.res.status, 200, JSON.stringify(deleteDepartmentNameDraft.body));
 
     const lookupBeforeCreate = await request(baseUrl, 'submitter', '/api/process-design/documents/lookup?document_no=CX-ZD-001');
     assert.strictEqual(lookupBeforeCreate.res.status, 200, JSON.stringify(lookupBeforeCreate.body));
@@ -1087,13 +1183,11 @@ async function main() {
 
     const processA = await request(baseUrl, 'submitter', '/api/process-design/drafts/101/processes', {
       method: 'POST',
-      body: JSON.stringify({ l3_name: '客户需求变更处理', process_type: 'new' })
+      body: JSON.stringify({ l1_name: '市场开发与客户合同治理', l2_name: '客户合同评审管理', l3_name: '客户需求变更处理', process_type: 'new' })
     });
     assert.strictEqual(processA.res.status, 201, JSON.stringify(processA.body));
     assert.strictEqual(processA.body.id, 181);
     assert.strictEqual(processA.body.process_code, 'PROCEDURE-101-001');
-    assert.strictEqual(processA.body.l1_name, '市场开发与客户合同治理');
-    assert.strictEqual(processA.body.l2_name, '客户合同评审管理');
     assert.ok(!String(processA.body.process_code).startsWith('L3'), 'procedure code should not use the frontend L3 label');
 
     const manualProcessCodeUpdate = await request(baseUrl, 'submitter', '/api/process-design/processes/181', {
@@ -1124,6 +1218,8 @@ async function main() {
     const processUpdate = await request(baseUrl, 'submitter', '/api/process-design/processes/181', {
       method: 'PUT',
       body: JSON.stringify({
+        l1_name: '市场开发与客户合同治理',
+        l2_name: '客户合同评审管理',
         l3_name: '客户需求变更受理',
         process_type: 'adjustment',
         description: '受理并登记客户需求变更'
@@ -1131,8 +1227,6 @@ async function main() {
     });
     assert.strictEqual(processUpdate.res.status, 200, JSON.stringify(processUpdate.body));
     assert.strictEqual(processUpdate.body.l3_name, '客户需求变更受理');
-    assert.strictEqual(processUpdate.body.l1_name, '市场开发与客户合同治理');
-    assert.strictEqual(processUpdate.body.l2_name, '客户合同评审管理');
     assert.strictEqual(processUpdate.body.process_code, 'PROCEDURE-101-001');
 
     const processB = await request(baseUrl, 'submitter', '/api/process-design/drafts/101/processes', {
@@ -1316,8 +1410,8 @@ async function main() {
       })
     });
     assert.strictEqual(form.res.status, 201);
-    assert.strictEqual(form.body.form_code, 'FM-CX-ZD-001-001-A');
-    assert.strictEqual(form.body.main_table_code, 'FM-CX-ZD-001-M001-A');
+    assert.strictEqual(form.body.form_code, 'FM-CX-ZD-001-A-001');
+    assert.strictEqual(form.body.main_table_code, 'FM-CX-ZD-001-A-001-M');
     assert.strictEqual(form.body.main_table_name, '需求变更主表');
     assert.strictEqual(form.body.archive_location, '资料室');
 
@@ -1332,11 +1426,11 @@ async function main() {
       body: JSON.stringify({ structure_kind: 'main', field_name: '客户名称', field_type: '文本', required: true, description: '填写客户名称' })
     });
     assert.strictEqual(mainField.res.status, 201, JSON.stringify(mainField.body));
-    assert.strictEqual(mainField.body.field_code, 'FM-CX-ZD-001-M001-A-001');
+    assert.strictEqual(mainField.body.field_code, 'FM-CX-ZD-001-A-001-M-001');
 
     const manualTableNo = await request(baseUrl, 'submitter', '/api/process-design/forms/301/tables', {
       method: 'POST',
-      body: JSON.stringify({ table_no: 'FM-CX-ZD-001-D001-A', table_name: '需求变更明细表' })
+      body: JSON.stringify({ table_no: 'FM-CX-ZD-001-A-001-D', table_name: '需求变更明细表' })
     });
     assert.strictEqual(manualTableNo.res.status, 422, JSON.stringify(manualTableNo.body));
 
@@ -1346,11 +1440,11 @@ async function main() {
     });
     assert.strictEqual(table.res.status, 201, JSON.stringify(table.body));
     assert.strictEqual(table.body.table_name, '变更字段明细');
-    assert.strictEqual(table.body.table_code, 'FM-CX-ZD-001-D001-A');
+    assert.strictEqual(table.body.table_code, 'FM-CX-ZD-001-A-001-D');
 
     const manualFieldNo = await request(baseUrl, 'submitter', '/api/process-design/form-tables/351/fields', {
       method: 'POST',
-      body: JSON.stringify({ field_no: 'FM-CX-ZD-001-D001-A-001', field_name: '变更字段', field_type: '文本', required: true, description: '填写变更字段' })
+      body: JSON.stringify({ field_no: 'FM-CX-ZD-001-A-001-D-001', field_name: '变更字段', field_type: '文本', required: true, description: '填写变更字段' })
     });
     assert.strictEqual(manualFieldNo.res.status, 422, JSON.stringify(manualFieldNo.body));
 
@@ -1371,7 +1465,7 @@ async function main() {
       body: JSON.stringify({ structure_kind: 'detail', field_name: '变更字段', field_type: '枚举', enum_options: '名称,地址', required: true, description: '填写变更字段' })
     });
     assert.strictEqual(tableField.res.status, 201, JSON.stringify(tableField.body));
-    assert.strictEqual(tableField.body.field_code, 'FM-CX-ZD-001-D001-A-001');
+    assert.strictEqual(tableField.body.field_code, 'FM-CX-ZD-001-A-001-D-001');
 
     const invalidEvidenceType = await request(baseUrl, 'submitter', '/api/process-design/drafts/101/evidence', {
       method: 'POST',

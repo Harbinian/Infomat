@@ -11,11 +11,12 @@
     "document_profile",
     "processes",
     "steps",
+    "step_transitions",
     "evidence_catalog"
   ],
   "properties": {
     "schema_version": {
-      "const": "document-structured-output-v1",
+      "const": "document-structured-output-v2",
       "description": "当前合同版本。"
     },
     "generated_at": {
@@ -51,6 +52,13 @@
       "type": "array",
       "items": {
         "$ref": "#/$defs/behaviorDetail"
+      },
+      "default": []
+    },
+    "step_transitions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/stepTransition"
       },
       "default": []
     },
@@ -220,6 +228,12 @@
         "MES",
         "PLM",
         "ERP"
+      ]
+    },
+    "stepType": {
+      "enum": [
+        "action",
+        "decision"
       ]
     },
     "stepStatus": {
@@ -430,8 +444,6 @@
           "pgDesignPlannedEdition",
           "pgDesignCurrentEdition",
           "pgDesignPublishEffect",
-          "pgDesignDraftL1Name",
-          "pgDesignDraftL2Name",
           "pgDesignBasisType",
           "pgDesignInvolvesOtherDepartments",
           "pgDesignRelatedDepartments"
@@ -482,8 +494,6 @@
         "ids": [
           "pgDesignDocumentTitle",
           "pgDesignDocumentNo",
-          "pgDesignDraftL1Name",
-          "pgDesignDraftL2Name",
           "pgDesignPurpose",
           "pgDesignScope",
           "pgDesignInheritanceRelation"
@@ -589,6 +599,8 @@
       "x-ui": {
         "section": "behavior",
         "ids": [
+          "pgDesignProcessL1Name",
+          "pgDesignProcessL2Name",
           "pgDesignProcessL3Name",
           "pgDesignProcessType",
           "pgDesignProcessDescription"
@@ -601,6 +613,7 @@
       "required": [
         "step_ref",
         "process_ref",
+        "step_type",
         "step_name"
       ],
       "properties": {
@@ -612,6 +625,9 @@
         },
         "process_ref": {
           "$ref": "#/$defs/recordRef"
+        },
+        "step_type": {
+          "$ref": "#/$defs/stepType"
         },
         "a1_code": {
           "$ref": "#/$defs/nullableString"
@@ -713,6 +729,53 @@
           "pgDesignExecutionStandard",
           "pgDesignDeliveryObject",
           "pgDesignApprovalNote"
+        ]
+      }
+    },
+    "stepTransition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "transition_ref",
+        "process_ref",
+        "from_step_ref",
+        "condition"
+      ],
+      "properties": {
+        "transition_ref": {
+          "$ref": "#/$defs/recordRef"
+        },
+        "process_ref": {
+          "$ref": "#/$defs/recordRef"
+        },
+        "from_step_ref": {
+          "$ref": "#/$defs/recordRef"
+        },
+        "condition": {
+          "type": "string",
+          "minLength": 1
+        },
+        "to_step_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/recordRef"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "evidence_refs": {
+          "$ref": "#/$defs/evidenceRefs"
+        }
+      },
+      "x-mysql": {
+        "table": "process_design_step_transitions"
+      },
+      "x-ui": {
+        "section": "behavior",
+        "ids": [
+          "pgDesignStepTransitionList"
         ]
       }
     },
@@ -928,7 +991,7 @@
         "table": "process_design_form_table_fields"
       },
       "x-ui": {
-        "section": "fields",
+        "section": "tables",
         "ids": [
           "pgDesignFieldFormSelect",
           "pgDesignFieldStructureKind",
@@ -936,8 +999,7 @@
           "pgDesignFieldType",
           "pgDesignFieldRequired",
           "pgDesignFieldEnumOptions",
-          "pgDesignFieldDescription",
-          "pgDesignFieldList"
+          "pgDesignFieldDescription"
         ]
       }
     },

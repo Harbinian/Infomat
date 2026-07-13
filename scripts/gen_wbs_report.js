@@ -1,0 +1,447 @@
+const fs = require("fs");
+const {
+  Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+  Header, Footer, AlignmentType, HeadingLevel, BorderStyle,
+  WidthType, ShadingType, PageNumber, PageBreak, LevelFormat
+} = require("docx");
+
+// ── helpers ──────────────────────────────────────────────────────
+const CW = 9026; // A4 content width (11906 - 2×1440 margins)
+const border = { style: BorderStyle.SINGLE, size: 1, color: "AAAAAA" };
+const borders = { top: border, bottom: border, left: border, right: border };
+const cellMargins = { top: 60, bottom: 60, left: 100, right: 100 };
+const headerShading = { fill: "F0F0F0", type: ShadingType.CLEAR };
+
+function p(text, opts = {}) {
+  const runs = [];
+  if (typeof text === "string") {
+    runs.push(new TextRun({ text, ...opts }));
+  } else if (Array.isArray(text)) {
+    text.forEach(t => runs.push(typeof t === "string" ? new TextRun({ text: t }) : new TextRun(t)));
+  }
+  return new Paragraph({
+    spacing: { after: 120, line: 360 },
+    children: runs,
+    ...(opts.paragraphOpts || {}),
+  });
+}
+
+function h1(text) {
+  return new Paragraph({
+    heading: HeadingLevel.HEADING_1,
+    spacing: { before: 360, after: 200 },
+    children: [new TextRun({ text, font: "Microsoft YaHei", size: 32, bold: true })],
+  });
+}
+
+function h2(text) {
+  return new Paragraph({
+    heading: HeadingLevel.HEADING_2,
+    spacing: { before: 280, after: 160 },
+    children: [new TextRun({ text, font: "Microsoft YaHei", size: 28, bold: true })],
+  });
+}
+
+function h3(text) {
+  return new Paragraph({
+    heading: HeadingLevel.HEADING_3,
+    spacing: { before: 200, after: 120 },
+    children: [new TextRun({ text, font: "Microsoft YaHei", size: 24, bold: true })],
+  });
+}
+
+function bullet(text, ref = "bullets") {
+  return new Paragraph({
+    numbering: { reference: ref, level: 0 },
+    spacing: { after: 80, line: 340 },
+    children: [new TextRun({ text, size: 21 })],
+  });
+}
+
+function numbered(text, ref = "nums") {
+  return new Paragraph({
+    numbering: { reference: ref, level: 0 },
+    spacing: { after: 80, line: 340 },
+    children: [new TextRun({ text, size: 21 })],
+  });
+}
+
+function emptyLine() {
+  return new Paragraph({ spacing: { after: 80 }, children: [] });
+}
+
+function makeRow(cells, widths, isHeader = false) {
+  return new TableRow({
+    children: cells.map((cellText, i) => {
+      const children = typeof cellText === "string"
+        ? [new Paragraph({
+            spacing: { after: 40, line: 320 },
+            children: [new TextRun({ text: cellText, size: 20, bold: isHeader, font: isHeader ? "Microsoft YaHei" : undefined })],
+          })]
+        : cellText;
+      return new TableCell({
+        borders,
+        width: { size: widths[i], type: WidthType.DXA },
+        margins: cellMargins,
+        shading: isHeader ? headerShading : undefined,
+        children,
+      });
+    }),
+  });
+}
+
+function makeTable(headers, rows, colWidths) {
+  return new Table({
+    width: { size: CW, type: WidthType.DXA },
+    columnWidths: colWidths,
+    rows: [
+      makeRow(headers, colWidths, true),
+      ...rows.map(r => makeRow(r, colWidths, false)),
+    ],
+  });
+}
+
+// ── content ───────────────────────────────────────────────────────
+
+const doc = new Document({
+  styles: {
+    default: {
+      document: {
+        run: { font: "Microsoft YaHei", size: 21 },
+        paragraph: { spacing: { line: 360 } },
+      },
+    },
+    paragraphStyles: [
+      {
+        id: "Heading1", name: "Heading 1", basedOn: "Normal", next: "Normal", quickFormat: true,
+        run: { size: 32, bold: true, font: "Microsoft YaHei" },
+        paragraph: { spacing: { before: 360, after: 200 }, outlineLevel: 0 },
+      },
+      {
+        id: "Heading2", name: "Heading 2", basedOn: "Normal", next: "Normal", quickFormat: true,
+        run: { size: 28, bold: true, font: "Microsoft YaHei" },
+        paragraph: { spacing: { before: 280, after: 160 }, outlineLevel: 1 },
+      },
+      {
+        id: "Heading3", name: "Heading 3", basedOn: "Normal", next: "Normal", quickFormat: true,
+        run: { size: 24, bold: true, font: "Microsoft YaHei" },
+        paragraph: { spacing: { before: 200, after: 120 }, outlineLevel: 2 },
+      },
+    ],
+  },
+  numbering: {
+    config: [
+      {
+        reference: "bullets",
+        levels: [{ level: 0, format: LevelFormat.BULLET, text: "•", alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 720, hanging: 360 } } } }],
+      },
+      {
+        reference: "nums",
+        levels: [{ level: 0, format: LevelFormat.DECIMAL, text: "%1.", alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 720, hanging: 360 } } } }],
+      },
+    ],
+  },
+  sections: [{
+    properties: {
+      page: {
+        size: { width: 11906, height: 16838 },
+        margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 },
+      },
+    },
+    headers: {
+      default: new Header({
+        children: [new Paragraph({
+          alignment: AlignmentType.RIGHT,
+          children: [new TextRun({ text: "信息化项目 WBS 优化调整报告  |  V1.0（建议稿）", size: 16, color: "999999" })],
+        })],
+      }),
+    },
+    footers: {
+      default: new Footer({
+        children: [new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [
+            new TextRun({ text: "沈阳昌兴复材航空科技有限责任公司  |  第 ", size: 16, color: "999999" }),
+            new TextRun({ children: [PageNumber.CURRENT], size: 16, color: "999999" }),
+            new TextRun({ text: " 页", size: 16, color: "999999" }),
+          ],
+        })],
+      }),
+    },
+    children: [
+      // ═══ 封面 ═══
+      emptyLine(), emptyLine(), emptyLine(), emptyLine(),
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 200 },
+        children: [new TextRun({ text: "信息化项目 WBS 优化调整报告", size: 44, bold: true, font: "Microsoft YaHei" })],
+      }),
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 120 },
+        children: [new TextRun({ text: "关于吸收总经理全域转型规划建议的执行调整方案", size: 28, color: "555555", font: "Microsoft YaHei" })],
+      }),
+      emptyLine(), emptyLine(),
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 80 },
+        children: [new TextRun({ text: "版本：V1.0（建议稿）", size: 22, color: "666666" })],
+      }),
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 80 },
+        children: [new TextRun({ text: "日期：2026 年 7 月 6 日", size: 22, color: "666666" })],
+      }),
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 80 },
+        children: [new TextRun({ text: "沈阳昌兴复材航空科技有限责任公司", size: 22, color: "666666" })],
+      }),
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 360 },
+        children: [new TextRun({ text: "信息化项目管理工作室（PMO）", size: 22, color: "666666" })],
+      }),
+      new Paragraph({ children: [new PageBreak()] }),
+
+      // ═══ 建议批示 ═══
+      p("建议批示", { bold: true, size: 24, font: "Microsoft YaHei" }),
+      p("同意在不调整第一阶段重点工作的前提下，将总经理规划中的经营目标、航空复材场景、质量准入要求、订单成本诉求和长期运营机制纳入总体蓝图、需求清单、验收用例和后续优化池；新增方向按变更评估办理，不直接挤占当前阶段资源。"),
+      emptyLine(),
+
+      // ═══ 一、调整背景 ═══
+      h1("一、调整背景"),
+      p("我们是做碳纤维预浸料成型、给大飞机配套结构件的企业。总经理在《民机供应链数字化全域转型总体规划》中提的方向，背后其实是一个很朴素的问题：一个主机厂来审核，我们能不能把每个零件的批次、每道工序的工艺参数、每次 NDT 探伤的结果，从系统里拉出来而不是靠人翻纸。"),
+      p("这个问题拆开了是五个：客户来审厂能不能过、一笔订单到底挣不挣钱、车间现场不看纸质流程卡能不能管得住、外协和供应商的质量能不能管起来、系统上线三年以后还有没有人负责运行。"),
+      p("现有项目文件在另一个层面运行：WBS 怎么拆、谁负责、什么时间交、阶段门怎么设、RACI 怎么画。这些是 PMO 每天在盯的东西。"),
+      p("两边不冲突，但需要对齐。前面定下来的项目节奏不动，但在蓝图还没冻结的窗口期，把总经理关心的东西补进去——不是往任务表里塞需求，而是让蓝图、需求文档和验收用例能够回答上面那五个问题。"),
+      p("这次调整形成三类结论："),
+      numbered("第一阶段重点工作保持不变"),
+      numbered("总经理的目标和细节要求纳入蓝图、需求和评审材料"),
+      numbered("对当前任务结构提出优化建议，由 PMO 统一更新任务表、Project、H5 看板和阶段门材料"),
+      emptyLine(),
+
+      // ═══ 二、依据文件与判断口径 ═══
+      h1("二、依据文件与判断口径"),
+      makeTable(
+        ["资料", "在本报告中的作用"],
+        [
+          ["《沈阳昌兴复合材料制造民机供应链数字化全域转型总体规划（正式版）》", "战略目标、业务场景和管理要求来源。其尾部提示部分内容可能由 AI 生成，本报告只吸收能落地、能验证、能转成任务的内容。"],
+          ["《信息化项目_WBS结构真源》", "当前编号、层级和一级主线结构依据；本报告不擅自改变一级主线数量（现为 10 条、516 节点）。"],
+          ["《信息化项目_计划管控真源》", "排程、责任、交付物、阶段门、看板字段和联调条件的执行依据。"],
+          ["《信息化项目_工作开展原则》", "项目推进方法依据。核心一条：口头要求必须进任务表、阶段门或合同附件，这是本报告所有建议的底线。"],
+          ["《信息化项目_工作平衡》", "近期人力压力和采购发布窗口约束依据，7-8 月只做草案、预算和条件确认。"],
+          ["《信息化项目_执行标准真源》", "任务完成判定、证据要求和评审检查的标准来源（当前 19 项执行标准）。"],
+        ],
+        [2800, 6226],
+      ),
+      emptyLine(),
+      p("基本判断干脆一点：总经理的材料讲企业往哪飞，项目文件讲这一步怎么落。两个不能互相替代，但也不能各写各的。后续每一项从规划里吸收的内容，都必须能在任务表、阶段门、看板字段或合同附件里找到位置。"),
+      emptyLine(),
+
+      // ═══ 三、总体调整结论 ═══
+      h1("三、总体调整结论"),
+      p(`按“第一阶段不变、目标口径补强、细节要求入表、扩展事项入池”来走。`),
+      emptyLine(),
+      numbered("第一阶段 10 条主线不动。启动治理（WBS 1）、现状调研、总体蓝图、主数据梳理（WBS 3/4）、招采草案（WBS 2）、基础资源准备（WBS 5），该干嘛干嘛。"),
+      numbered("总经理的五类目标——客户准入、订单利润、现场透明、供应链协同、长期运营——写入总体蓝图和阶段验收口径。简单说就是不能把项目做成"买一堆系统装完拉倒"。"),
+      numbered("复材制造的行业特点要进需求清单。铺层怎么管、固化曲线怎么记录、热压罐班次怎么排、NDT 报告怎么关联零件批次、图纸版本怎么防错、外协工序的料怎么追——这些是我们要解决的问题，不是通用车间管理能覆盖的。先作为场景和指标纳入需求文档，不一定马上开新的采购包。"),
+      numbered("SRM、CRM、智能排产、工资联动、仿真打通等方向进后续池。条件成熟再走变更评估，不往一期里塞。"),
+      numbered("516 个 WBS 节点编号不重排。在现有主线下补充交付物、检查项和验收用例。PMO 的 H5 看板、阶段门和执行标准体系已经搭好框架，这些增量能直接挂上去。"),
+      emptyLine(),
+
+      // ═══ 四、第一阶段不变 ═══
+      h1("四、第一阶段不变：哪些事不动"),
+      p("总经理规划里也说了先标准、先基础、先把经营看清楚。这个方向和当前项目的启动、调研、蓝图、主数据、ERP/OA、PLM 和底座准备不矛盾。"),
+      p("以下六项不变："),
+      makeTable(
+        ["不变项", "说明"],
+        [
+          ["一级主线不变", "仍保持 10 条一级主线（WBS 1-10），不新增第 11 条，不因规划材料重排编号。"],
+          ["第一阶段工作重心不变", "启动治理、现状摸底、总体蓝图、主数据规则、核心采购边界、基础条件核查、需求冻结准备。"],
+          ["近期采购节奏不变", "7-8 月只做草案、预算测算、市场摸底和现场条件确认；正式发布等 PLM/ERP-OA/MES 需求门完成。"],
+          ["主数据口径不变", "现阶段重点是对象、规则、责任、版本和质量口径沉淀，不往大平台方向解释。"],
+          ["联调启动原则不变", "跨系统联调（WBS 9）必须通过 9.0.8 联调启动评审，环境、数据、接口、备份、访问和冒烟测试都到位才能启动。"],
+          ["一期不扩到重应用", "SRM、CRM、智能排产、薪酬联动等先登记和评估，不作为当前阶段硬交付。"],
+        ],
+        [2200, 6826],
+      ),
+      emptyLine(),
+
+      // ═══ 五、总经理战略目标的吸收方式 ═══
+      h1("五、总经理战略目标的吸收方式"),
+      p("总经理提的目标不能原文堆进任务表。得换成项目组能执行、业务部门能配合、供应商能交付、领导回来能验收的东西。"),
+      makeTable(
+        ["领导关注", "落到项目里的实际动作", "PMO 管控机制"],
+        [
+          [
+            "客户准入：主机厂和适航当局来审的时候，每个零件从预浸料批次到铺层到固化到 NDT 到交付，全链路数据能查得到",
+            "MES/QMS、联调和总体验收中增加"审核资料包"场景：批次追溯、NDT 报告、不合格品处理、发货记录。",
+            "纳入 WBS 8 和 WBS 9 的验收用例；STD-GEN-001 证据要求覆盖。",
+          ],
+          [
+            "订单利润看清：不光看总收入，单架次、单产品线、外协工序的利润要能算",
+            "ERP/OA（WBS 7）、MES 报工（WBS 8）、设备能耗和驾驶舱（WBS 10）中建立成本来源清单。先定口径，再谈自动取数。",
+            "财务部、经营发展部、复材车间三方 RACI 确认；纳入 WBS 7 交付物。",
+          ],
+          [
+            "车间过程透明：固化炉今天在跑哪个件、热压罐还剩几个班次、在制品卡在哪道工序，不用去现场问",
+            "MES 需求中补固化炉和热压罐的排程/参数/异常、工位终端、条码追溯、在制品和良率看板。",
+            "复材车间为需求 Owner（A），MES 工作组（范秋南组）为执行方（R）。",
+          ],
+          [
+            "上下游协同：来料预浸料的批次和保质期、外协工序的进度和质量，逐步纳入统一管理",
+            "短期先把供应商、批次、来料质量和外协字段纳入主数据（WBS 3）；SRM 进后续池。",
+            "物资保障部（佟浩）提供资料；MDM 工作组（张广懿组）定口径。",
+          ],
+          [
+            "长期运行：系统上线三年后还要有人管数据、管权限、管备份、管改进",
+            "在组织保障、运维制度、数据责任和 PMO 周会中固化。",
+            "PMO 周会跟踪；数据质量工作组（池炳辉/范秋南组）从 7 月开始介入。",
+          ],
+        ],
+        [2600, 3400, 3026],
+      ),
+      emptyLine(),
+
+      // ═══ 六、细节把控 ═══
+      h1("六、细节把控"),
+      h2("6.1 数据与基础规则"),
+      p("第一阶段先把谁维护、什么规则、在哪个系统生效、什么时候冻结搞清楚。物料号、BOM、工艺路线、零件版本、预浸料批次、供应商、客户、设备、工装、人员——每一项都要有责任部门、按 RACI 落到人、有版本记录。"),
+      p(""数据中台"在一期不写成新建大平台。先建规则表、字段口径、数据来源和质量检查办法。MDM 工作组（张广懿组）当前做的就是这件事，这次要确认的是把成本对象和复材相关的字段也纳进口径清单。"),
+
+      h2("6.2 经营与成本"),
+      p("别一上来就承诺"自动算清所有利润"。第一阶段先确定成本项和数据来源：设备折旧、车间电费、固化能耗、人工工时、辅料、检测、外协、库存资金占用。系统建设时逐步接入这些字段。"),
+      p("经营看板（WBS 10）以后是给总经理用的，前提是取到的数靠得住。页面可以晚点做，成本口径不能等到上线了再回头补。"),
+
+      h2("6.3 复材制造现场"),
+      p("MES 需求得写清楚我们造的是什么。不是通用机加工车间，是碳纤维预浸料裁切、铺叠、封装、固化、脱模、NDT、修整这条线。现场端的核心诉求很简单：少打字、少重复确认、系统出了问题不能把产线卡死。"),
+      p("固化炉和热压罐是最金贵的资源。它们的排程、工艺曲线记录、异常报警、班次利用率，是 MES 需求和驾驶舱指标里绕不开的东西。"),
+      p("工资联动暂不做一期承诺。先踏踏实实把工时采集和报工数据留痕做起来。等行政人事部把计件规则和审批边界定清楚了，再评估是否联动薪酬。"),
+
+      h2("6.4 质量与适航"),
+      p("质量管理部面临的不是"把流程画闭环"的问题，是"审核员来的时候能不能把证据链拉出来"。建议新增或强化这些交付检查：来料检验（含预浸料保质期和存储条件）、过程检验（含固化曲线和工艺参数偏差）、成品检验、不合格品处理（NCR）、NDT 报告、批次追溯报告、质量审核资料包。"),
+      p(""一键输出审核资料"这个说法在正式文件里改写为"按审核目录自动生成或汇总材料"。给供应商留余地，也给验收留证据。"),
+
+      h2("6.5 基础环境与仿真"),
+      p("总经理提到的 VDI、HPC 和仿真平台，当前 WBS 5（基础设施与 AI 运行环境）已经覆盖了服务器、虚拟化、AI/GPU、Fluent 环境、备份和安全。VDI/HPC 先走需求评估和技术方案比选（方嵩荐/刘洪雨组），不影响已定的采购节奏。"),
+      p("仿真结果直接推到工位操作屏上是值得追的方向，但要等 PLM（池炳辉组）、工艺（工程技术部）、MES（范秋南组）、设备数据和权限体系都稳了再搞。短期在蓝图里先把接口场景和数据字段定义清楚。"),
+
+      h2("6.6 组织与制度"),
+      p("总经理提的专职团队和数据考核是系统能不能长期跑下去的关键。第一阶段先靠现有信息化工作组（司人字（2026）63 号）和执行架构运作，把各部门的数据责任人明确下来。等项目进入上线和运维移交阶段，再看要不要成立常设部门。"),
+      p("考核从数据完整率、问题关闭率、关键流程按时处理率这些基础指标做起。不用一上来就搞复杂的 KPI 体系。"),
+      emptyLine(),
+
+      // ═══ 七、当前 WBS 优化方案 ═══
+      h1("七、当前 WBS 优化方案"),
+      p("编号不动。在 10 条主线内补内容。逻辑就四句：目标进蓝图，场景进需求，证据进验收，扩展方向进后续池。"),
+      makeTable(
+        ["当前主线", "建议优化", "不改变的边界"],
+        [
+          ["WBS 1 项目启动与总体蓝图", "蓝图增加"总经理目标对齐表""第一阶段范围不变确认单""复材重点场景清单""后续需求池"。", "不改启动、调研和蓝图评审节奏。"],
+          ["WBS 2 招采合同与供应商管理", "采购文件增加航空复材适配、低维护成本、接口开放、数据可追溯、验收证据等评分项。", "不把品牌禁忌写成排他条款。"],
+          ["WBS 3 数据标准与主数据治理", "补充客户、供应商、预浸料批次、质量标准、成本项、设备能耗等对象和字段责任归属。", "仍以规则和责任为主，不承诺一次性清洗历史数据。"],
+          ["WBS 4 MDM 建设准备", "把"数据中台"落成规则中心、字段口径、版本台账、质量检查和纠正通知机制。", "不直接扩大为完整平台上线。"],
+          ["WBS 5 基础设施与 AI 运行环境", "增加 VDI/HPC、涉密资料隔离、仿真算力、备份恢复和安全边界评估。", "不提前发布采购，不压缩需求冻结前置。"],
+          ["WBS 6 PLM 基础深化", "加强图文档分级、版本管理、EBOM/PBOM/MBOM、工艺文件模板和仿真结果接口预研。", "不在一期承诺设计仿真到工位的全自动闭环。"],
+          ["WBS 7 ERP/OA 补强", "补充订单成本口径、库存条码、采购计划、生产计划、统一待办和审批入口。", "不把 ERP 扩容误写成新建大型系统。"],
+          ["WBS 8 MES 建设", "突出固化炉和热压罐的排程/参数/异常、工位终端、条码追溯、NDT、在制品和现场看板。", "薪酬联动、智能排产、完整 QMS 列入后续评估。"],
+          ["WBS 9 全系统集成联调", "增加"订单-工艺-生产-质量-成本"穿透测试用例。", "联调仍以 9.0.8 评审通过为前提。"],
+          ["WBS 10 AI 应用与总体验收", "总经理驾驶舱拆成指标清单、来源系统、责任部门、更新频率和取数规则。", "先保证指标可信，再做页面。"],
+        ],
+        [2000, 3600, 3426],
+      ),
+      emptyLine(),
+
+      // ═══ 八、建议新增或调整的任务项 ═══
+      h1("八、建议新增或调整的任务项"),
+      p("具体编号由 PMO 按现有 WBS 规则确认。"),
+      makeTable(
+        ["建议位置", "任务或交付物", "目的", "建议执行方"],
+        [
+          ["WBS 1.3", "总经理规划目标对齐表", "客户准入、订单利润、现场透明、供应链协同、长期运营五类目标写入总体蓝图", "刘春含/曲明盛"],
+          ["WBS 1.3", "第一阶段范围不变确认单", "明确哪些本期做、哪些只登记，防止会后范围失控", "刘春含"],
+          ["WBS 1.3", "复材关键业务场景清单", "预浸料裁切到铺叠到固化到 NDT 到外协到能耗，统一收口", "范秋南/纪鹏飞"],
+          ["WBS 2", "采购评分口径补充", "行业适配、可运维、低总成本、接口开放、国产化可控写成合理评分项", "方嵩荐/曲明盛"],
+          ["WBS 3/4", "成本对象与数据来源表", "明确订单利润需要哪些字段、数据从哪取", "张广懿/李雪"],
+          ["WBS 5", "VDI/HPC 需求评估", "判断虚拟桌面、仿真算力、涉密隔离放一期还是后续", "方嵩荐/刘洪雨"],
+          ["WBS 6", "图文档与工艺资料分级规则", "保护涉密资料，防版本错用", "池炳辉/常云龙"],
+          ["WBS 7", "订单基础成本归集方案", "支撑单订单、产品线和外协成本核算", "李雪/财务部"],
+          ["WBS 8", "复材现场采集需求包", "覆盖固化炉和热压罐参数、工位操作、条码追溯、NDT 和异常处理", "范秋南/王潇"],
+          ["WBS 8", "工时采集与薪酬边界说明", "可采集的数据和暂不联动的内容说清楚，避免一期过度承诺", "范秋南/行政人事部"],
+          ["WBS 9", "跨系统穿透测试场景包", "从订单跑到成本：一条链路走通", "张广懿/各工作组长"],
+          ["WBS 10", "总经理经营看板指标字典", "营收、毛利、订单利润、设备利用率、现金流、库存资金、能耗等指标定义和数据来源", "张广懿/李雪"],
+          ["后续需求池", "SRM、CRM、智能排产、QMS 深化", "承接总经理规划扩展方向", "PMO 登记跟踪"],
+        ],
+        [1100, 2200, 3700, 2026],
+      ),
+      emptyLine(),
+
+      // ═══ 九、后续需求池建议 ═══
+      h1("九、后续需求池建议"),
+      makeTable(
+        ["方向", "价值", "为什么暂不纳入一期", "建议时点"],
+        [
+          ["SRM 供应商协同", "来料预浸料批次、外协交期和供应商质量能管起来", "当前主线是项目招采和内部系统基础，业务 SRM 需要采购、质量、仓储协同成熟", "第三阶段或后续变更"],
+          ["CRM 客户项目管理", "核心客户台账、报价和交付预警", "项目未设 CRM 主线，需先确认销售/项目管理的流程归属", "蓝图确认后评估"],
+          ["智能排产", "固化炉和热压罐是最紧的瓶颈资源，排产优化直接关系到交付能力", "需要稳定的订单、工艺、设备产能和约束数据", "MES 稳定运行后"],
+          ["工资自动核算", "减少手工统计工时", "涉及计件规则、劳动合规和审批链，不应由 MES 单独担", "先采集工时，后评估联动"],
+          ["HPC 与 MES 打通", "仿真结果指导现场工艺参数调整", "需要 PLM、工艺、权限和现场终端共同成熟", "PLM/MES 稳定后"],
+          ["专职运营组织", "上线后有人管数据、管权限、管改进", "当前可用信息化工作组+数据责任人承接，常设机构需结合编制和授权", "上线前运维移交阶段"],
+        ],
+        [1800, 2400, 2800, 2026],
+      ),
+      emptyLine(),
+
+      // ═══ 十、风险与控制 ═══
+      h1("十、风险与控制"),
+      makeTable(
+        ["风险", "具体表现", "怎么控制"],
+        [
+          ["范围失控", "战略目标被理解成马上加系统、马上采购、马上上线", "每个新增想法先归类：本期交付、蓝图预留、后续评估、暂不纳入。PMO 周会逐项过。"],
+          ["采购合规风险", "写"不用某品牌"变成排他条款", "改成可解释的评分项：适配性、运维成本、接口开放、交付案例和安全要求。曲明盛/池炳辉把关采购模板。"],
+          ["数据口径过大", ""数据中台"被理解成独立大平台", "一期只写规则、字段、来源、版本和质量检查。张广懿负责口径收束。"],
+          ["业务部门抵触", "签字怕背锅，录入怕加活", "阶段性确认不是无限责任。历史问题先治理不追责。给选择题不给开放题。"],
+          ["供应商借机模糊范围", "中标前承诺很满，中标后变更很多", "所有新增场景进技术附件、验收用例和责任边界。口头承诺一律不算。"],
+          ["看板先行数据滞后", "大屏先做出来了，指标取的是手工数", "经营看板先定义指标字典和数据来源，再做页面。"],
+        ],
+        [1800, 3200, 4026],
+      ),
+      emptyLine(),
+
+      // ═══ 十一、建议决策事项 ═══
+      h1("十一、建议决策事项"),
+      p("建议项目决策组（组长马成文、执行副组长李洪哲、副组长刘春含）对以下事项形成会议纪要或批示："),
+      emptyLine(),
+      numbered("同意第一阶段重点工作保持不变，不因总经理规划建议调整现有 10 条主线、关键节点和近期采购节奏。"),
+      numbered("同意将总经理战略目标纳入总体蓝图和后续评审材料，重点体现客户准入、订单利润、现场透明、质量审核和长期运营。"),
+      numbered("同意 PMO 建立后续需求池，将 SRM、CRM、智能排产、薪酬联动、HPC 深度集成等事项单独登记和评估。"),
+      numbered("同意在现有任务结构中补充交付物、检查项和验收场景，由 PMO 统一更新任务表、Project、H5 看板和阶段门材料。更新后运行 build_pmo_task_data.py 同步数据。"),
+      numbered("同意正式采购材料中采用"适配性、总成本、可运维、可集成、安全可控"等评分口径。"),
+      emptyLine(),
+
+      // ═══ 十二、结尾 ═══
+      h1("十二、结尾"),
+      p("我们造的是碳纤维零件，要装在飞机上的。一个预浸料批次搞错了、一条固化曲线没记录、一次 NDT 报告对不上零件号，看起来是信息化的事，归根到底是适航的事，是交付的事，是客户下次还给不给我们订单的事。"),
+      p("总经理看到的是这些。我们每天盯任务表、盯阶段门、盯 RACI，也是为这些。"),
+      p("所以第一阶段不能跳过去。先把规则、现状、责任、接口、采购边界这五件事夯实了，后面要查批次能查到、要算成本能算清、要过审核能拿出证据——这些才是真交付。"),
+      p("后续每一项从规划里吸收的内容，都得能落到任务表、阶段门、看板字段或合同附件里。落不下去的东西，写得再好也是一页纸。"),
+      emptyLine(),
+
+      // 分隔线
+      new Paragraph({
+        border: { bottom: { style: BorderStyle.SINGLE, size: 1, color: "CCCCCC", space: 8 } },
+        spacing: { before: 200, after: 80 },
+        children: [],
+      }),
+      p("本报告经评审后，作为总体蓝图编制、需求冻结、招采技术附件和后续计划优化的输入文件。", { italics: true, color: "666666", size: 20 }),
+    ],
+  }],
+});
+
+// ── write ────────────────────────────────────────────────────────
+const outPath = "E:/CA001/Infomat/信息化项目WBS优化调整报告_V1.0.docx";
+Packer.toBuffer(doc).then(buf => {
+  fs.writeFileSync(outPath, buf);
+  console.log("Wrote " + outPath + " (" + (buf.length / 1024).toFixed(1) + " KB)");
+});

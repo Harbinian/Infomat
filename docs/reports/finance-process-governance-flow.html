@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>财务部流程治理过程说明</title>
+  <style>
+    :root {
+      --paper: #fbf7ef;
+      --ink: #24211c;
+      --muted: #6f6659;
+      --line: #d8ccba;
+      --red: #9d3f30;
+      --sage: #68795f;
+      --blue: #506f86;
+      --gold: #a87822;
+      --white: #fffdf8;
+      --soft: #f0eadf;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+      color: var(--ink);
+      background: var(--paper);
+      line-height: 1.68;
+    }
+
+    main {
+      width: min(1120px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: 34px 0 48px;
+    }
+
+    header {
+      border-bottom: 2px solid var(--red);
+      padding: 28px 0 24px;
+      margin-bottom: 26px;
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--red);
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(28px, 4vw, 46px);
+      line-height: 1.16;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      max-width: 900px;
+      margin: 14px 0 0;
+      color: var(--muted);
+      font-size: 16px;
+    }
+
+    section {
+      padding: 26px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: 22px;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 0 0 8px;
+      font-size: 17px;
+      letter-spacing: 0;
+    }
+
+    .lead {
+      max-width: 920px;
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .lane-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .lane {
+      background: var(--white);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 18px;
+      min-height: 180px;
+    }
+
+    .lane h3 {
+      color: var(--red);
+    }
+
+    .lane p {
+      margin: 0 0 10px;
+      color: var(--muted);
+    }
+
+    .lane p:last-child { margin-bottom: 0; }
+
+    .people {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .person {
+      background: var(--white);
+      border: 1px solid var(--line);
+      border-left: 5px solid var(--sage);
+      border-radius: 8px;
+      padding: 15px;
+      min-height: 132px;
+    }
+
+    .person:nth-child(2n) { border-left-color: var(--blue); }
+    .person:nth-child(3n) { border-left-color: var(--gold); }
+    .person.key { border-left-color: var(--red); }
+
+    .person .name {
+      font-weight: 800;
+      font-size: 18px;
+    }
+
+    .person .role {
+      margin: 3px 0 8px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .person p {
+      margin: 0;
+      font-size: 14px;
+    }
+
+    .flow {
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: 96px minmax(0, 1fr);
+      gap: 0 18px;
+    }
+
+    .flow-row { display: contents; }
+
+    .step-no {
+      position: relative;
+      padding-top: 5px;
+      color: var(--red);
+      font-weight: 800;
+      font-size: 15px;
+    }
+
+    .step-no::after {
+      content: "";
+      position: absolute;
+      top: 33px;
+      left: 21px;
+      width: 2px;
+      height: calc(100% + 16px);
+      background: var(--line);
+    }
+
+    .flow-row:last-child .step-no::after { display: none; }
+
+    .flow-body {
+      margin-bottom: 18px;
+      padding: 16px 18px;
+      background: var(--white);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    .flow-body p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .action-line {
+      margin-top: 10px;
+      display: grid;
+      grid-template-columns: 148px minmax(0, 1fr);
+      gap: 10px;
+      font-size: 14px;
+    }
+
+    .action-line b {
+      color: var(--ink);
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .branch {
+      background: var(--soft);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 14px;
+    }
+
+    .branch b {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--red);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 16px;
+      background: var(--white);
+      border: 1px solid var(--line);
+    }
+
+    th, td {
+      text-align: left;
+      vertical-align: top;
+      border-bottom: 1px solid var(--line);
+      padding: 12px 14px;
+      font-size: 14px;
+    }
+
+    th {
+      color: var(--ink);
+      background: var(--soft);
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    tr:last-child td { border-bottom: 0; }
+
+    .boundary {
+      margin-top: 16px;
+      padding: 18px;
+      background: var(--white);
+      border: 1px solid var(--line);
+      border-left: 6px solid var(--red);
+      border-radius: 8px;
+    }
+
+    .boundary p {
+      margin: 0 0 10px;
+    }
+
+    .boundary p:last-child { margin-bottom: 0; }
+
+    .outcome-list {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .outcome {
+      padding: 15px;
+      background: var(--white);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    .outcome b {
+      color: var(--sage);
+    }
+
+    footer {
+      padding-top: 22px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media (max-width: 860px) {
+      main { width: min(100% - 28px, 1120px); }
+      .lane-grid, .people, .split, .outcome-list { grid-template-columns: 1fr; }
+      .flow { grid-template-columns: 1fr; }
+      .step-no { padding: 0 0 6px; }
+      .step-no::after { display: none; }
+      .action-line {
+        grid-template-columns: 1fr;
+        gap: 2px;
+      }
+      table {
+        display: block;
+        overflow-x: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <p class="eyebrow">流程治理说明页</p>
+      <h1>财务部流程治理过程说明</h1>
+      <p class="subtitle">本页说明财务部流程治理的业务隔离原则。流程分为两条线：跨部门业务和本部门业务。发起人负责创建新流程或确认 AI 识别出的流程问题，部门长负责业务逻辑审核，数据质量和 MDM 完整性检查在后置环节完成。</p>
+    </header>
+
+    <section aria-labelledby="principle">
+      <h2 id="principle">业务隔离原则</h2>
+      <p class="lead">流程治理先判断业务是否跨部门。跨部门业务必须经过目标部门承接确认；本部门业务不走目标部门承接链。两条线都不能让部门长代替发起人整理材料，也不能让 MDM 或管理员代替业务部门确认业务事实。</p>
+      <div class="lane-grid">
+        <article class="lane">
+          <h3>一、跨部门业务</h3>
+          <p>财务部发起人创建新流程或确认 AI 识别出的流程问题，结果先交给财务部部门长李雪审核业务逻辑。</p>
+          <p>李雪审核后，由李新潮做数据质量检查，再交给目标部门业务对接人承接确认。以工程技术部为例，目标部门要把承接动作关联到自己的某个业务行为。</p>
+        </article>
+        <article class="lane">
+          <h3>二、本部门业务</h3>
+          <p>如果流程只发生在财务部内部，发起人创建或确认流程问题后，直接进入李雪的业务逻辑审核。</p>
+          <p>李雪审核后由李新潮做数据质量检查，再由张广懿检查流程完整性和数据口径，确认放行。不需要目标部门承接。</p>
+        </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="people">
+      <h2 id="people">人名、角色和动作</h2>
+      <div class="people">
+        <article class="person">
+          <div class="name">刘佳</div>
+          <div class="role">财务部业务对接人 / 发起人示例</div>
+          <p>创建财务部新流程，或确认 AI 识别出的财务流程问题；补充来源、业务动作、字段和证据。</p>
+        </article>
+        <article class="person key">
+          <div class="name">李雪</div>
+          <div class="role">财务部部门长 / 业务逻辑审核人</div>
+          <p>审核财务部发起结果的业务逻辑，判断是否成立、是否需要跨部门承接、是否可以进入质量检查。</p>
+        </article>
+        <article class="person">
+          <div class="name">李新潮</div>
+          <div class="role">数据质量检查人 / data_quality</div>
+          <p>在李雪完成业务逻辑审核后，检查字段完整性、数据质量、来源口径和可复核性。</p>
+        </article>
+        <article class="person">
+          <div class="name">常云龙</div>
+          <div class="role">工程技术部业务对接人示例</div>
+          <p>在池炳辉确认需要工程技术部承接后，确认是否存在对应业务行为和合格承接动作；没有动作时补充流程或动作。</p>
+        </article>
+        <article class="person">
+          <div class="name">池炳辉</div>
+          <div class="role">工程技术部业务负责人示例</div>
+          <p>先确认工程技术部是否需要承接财务部提出的跨部门业务关系；不需要承接时形成业务逻辑冲突。</p>
+        </article>
+        <article class="person key">
+          <div class="name">张广懿</div>
+          <div class="role">MDM 负责人 / 最终完整性和口径检查人</div>
+          <p>在前置业务、质量、承接、冲突和术语字段问题都处理完后，检查流程完整性和数据口径，最后确认放行。</p>
+        </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="cross">
+      <h2 id="cross">跨部门业务线</h2>
+      <p class="lead">以下以“财务部流程需要工程技术部承接某个业务行为”为例。关键点是：发起部门先提出和确认，目标部门只确认自己的承接动作，冲突和术语字段问题分流处理。</p>
+
+      <div class="flow">
+        <div class="flow-row">
+          <div class="step-no">步骤 1</div>
+          <div class="flow-body">
+            <h3>财务部发起人创建或确认流程问题</h3>
+            <p>刘佳作为财务部业务对接人，创建一条新流程，或打开 AI 识别出的流程问题，确认这个问题确实来自财务业务场景。</p>
+            <div class="action-line"><b>动作</b><span>补充财务部源文件、业务动作、字段、触发条件和输出对象。</span></div>
+            <div class="action-line"><b>产出</b><span>形成一条待审核的财务流程治理结果。</span></div>
+          </div>
+        </div>
+
+        <div class="flow-row">
+          <div class="step-no">步骤 2</div>
+          <div class="flow-body">
+            <h3>财务部部门长审核业务逻辑</h3>
+            <p>李雪收到刘佳提交的结果后，审核业务逻辑是否成立，判断这条流程是否属于财务部发起，是否需要工程技术部承接。</p>
+            <div class="action-line"><b>动作</b><span>通过、驳回或要求刘佳补充业务证据。</span></div>
+            <div class="action-line"><b>产出</b><span>业务逻辑审核结论。只有通过后才进入数据质量检查。</span></div>
+          </div>
+        </div>
+
+        <div class="flow-row">
+          <div class="step-no">步骤 3</div>
+          <div class="flow-body">
+            <h3>李新潮做数据质量检查</h3>
+            <p>李新潮检查财务部提交内容中的字段、术语、来源证据、维护责任和数据质量问题，确认材料是否可以进入目标部门承接。</p>
+            <div class="action-line"><b>动作</b><span>检查字段完整性、口径一致性、来源可追溯性和问题描述是否可执行。</span></div>
+            <div class="action-line"><b>产出</b><span>质量检查通过，或退回财务部业务对接人补充。</span></div>
+          </div>
+        </div>
+
+        <div class="flow-row">
+          <div class="step-no">步骤 4</div>
+          <div class="flow-body">
+            <h3>目标部门业务负责人先判断是否需要承接</h3>
+            <p>池炳辉作为工程技术部业务负责人示例，先判断工程技术部是否需要承接财务部提出的跨部门业务关系。这一步在常云龙确认承接动作之前发生。</p>
+            <div class="split">
+              <div class="branch">
+                <b>需要承接</b>
+                系统给常云龙创建待办，由常云龙确认是否存在可直接关联的承接动作。
+              </div>
+              <div class="branch">
+                <b>不需要承接</b>
+                这不是普通退回，而是业务逻辑冲突，需要进入冲突处理。
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flow-row">
+          <div class="step-no">步骤 5</div>
+          <div class="flow-body">
+            <h3>目标部门业务对接人确认承接动作是否存在</h3>
+            <p>池炳辉确认需要承接后，常云龙收到承接待办。他要把财务部输出结果关联到工程技术部的某个业务行为，并确认承接动作是否存在、是否合格。</p>
+            <div class="split">
+              <div class="branch">
+                <b>承接动作存在且合格</b>
+                常云龙提交承接确认，结果返回财务部，由财务部业务负责人继续后续工作。
+              </div>
+              <div class="branch">
+                <b>承接动作不存在</b>
+                常云龙补充对应流程或业务动作，也可以提交已有制度、表单、台账等证据；补充后再提交承接确认。
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flow-row">
+          <div class="step-no">步骤 6</div>
+          <div class="flow-body">
+            <h3>问题分流：业务冲突和术语字段质疑分开处理</h3>
+            <p>池炳辉判断工程技术部不需要承接时，形成业务逻辑冲突。目标部门如果不是否定承接关系，而是对术语、字段、口径提出质疑，则不是业务承接冲突，而是术语或字段治理问题。</p>
+            <div class="action-line"><b>业务逻辑冲突</b><span>记录为目标部门业务负责人确认不需要承接，需要后续协调或升级。</span></div>
+            <div class="action-line"><b>术语字段质疑</b><span>给发起部门业务对接人刘佳创建术语治理待办，要求解释或修正术语、字段和口径。</span></div>
+          </div>
+        </div>
+
+        <div class="flow-row">
+          <div class="step-no">步骤 7</div>
+          <div class="flow-body">
+            <h3>承接结果返回财务部继续处理</h3>
+            <p>当工程技术部承接动作存在且合格，或常云龙补充流程、动作和证据后，承接结果返回财务部。财务部业务负责人继续处理后续业务逻辑，必要时让刘佳补充说明。</p>
+            <div class="action-line"><b>动作</b><span>确认承接链条可继续，或指出承接结果仍不能支撑财务业务逻辑。</span></div>
+            <div class="action-line"><b>产出</b><span>跨部门承接关系闭环，进入 MDM 最终检查。</span></div>
+          </div>
+        </div>
+
+        <div class="flow-row">
+          <div class="step-no">步骤 8</div>
+          <div class="flow-body">
+            <h3>张广懿做最终完整性和数据口径检查</h3>
+            <p>前面的业务审核、数据质量检查、目标部门承接、冲突分流和术语字段治理都处理完后，张广懿作为 MDM 负责人检查流程完整性和数据口径。</p>
+            <div class="action-line"><b>动作</b><span>检查 L3、A1、字段、来源、承接关系、冲突处理记录和数据口径是否完整一致。</span></div>
+            <div class="action-line"><b>产出</b><span>确认放行，跨部门流程治理闭环。</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="inside">
+      <h2 id="inside">本部门业务线</h2>
+      <p class="lead">本部门业务只在财务部内部闭环，不创建目标部门承接任务。它仍然要经过发起人确认、李雪业务逻辑审核、李新潮数据质量检查、张广懿最终放行。</p>
+
+      <div class="flow">
+        <div class="flow-row">
+          <div class="step-no">步骤 1</div>
+          <div class="flow-body">
+            <h3>财务部发起人创建或确认问题</h3>
+            <p>刘佳创建财务部内部流程，或确认 AI 识别出的财务部内部流程问题。</p>
+            <div class="action-line"><b>产出</b><span>形成待审核的财务部内部流程治理结果。</span></div>
+          </div>
+        </div>
+
+        <div class="flow-row">
+          <div class="step-no">步骤 2</div>
+          <div class="flow-body">
+            <h3>李雪审核业务逻辑</h3>
+            <p>李雪判断流程动作、责任、来源和财务业务逻辑是否成立。未成立时退回刘佳补充。</p>
+            <div class="action-line"><b>产出</b><span>业务逻辑审核通过或退回补正。</span></div>
+          </div>
+        </div>
+
+        <div class="flow-row">
+          <div class="step-no">步骤 3</div>
+          <div class="flow-body">
+            <h3>李新潮检查数据质量</h3>
+            <p>李新潮检查字段、术语、来源证据和数据质量。如果术语或字段不清楚，给刘佳创建术语治理待办。</p>
+            <div class="action-line"><b>产出</b><span>数据质量检查通过，或产生术语字段待办。</span></div>
+          </div>
+        </div>
+
+        <div class="flow-row">
+          <div class="step-no">步骤 4</div>
+          <div class="flow-body">
+            <h3>张广懿最终检查并放行</h3>
+            <p>张广懿检查流程完整性和数据口径。通过后，本部门流程治理闭环。</p>
+            <div class="action-line"><b>产出</b><span>财务部本部门流程治理结果确认放行。</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="matrix">
+      <h2 id="matrix">动作矩阵</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>人员</th>
+            <th>角色</th>
+            <th>关键动作</th>
+            <th>边界</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>刘佳</td>
+            <td>财务部业务对接人 / 发起人示例</td>
+            <td>创建新流程；确认 AI 识别问题；补充来源证据；确认目标部门承接结果；处理术语治理待办。</td>
+            <td>不替李雪审核业务逻辑，不替目标部门确认承接。</td>
+          </tr>
+          <tr>
+            <td>李雪</td>
+            <td>财务部部门长 / 业务逻辑审核人</td>
+            <td>审核财务部发起结果的业务逻辑，判断是否需要跨部门承接。</td>
+            <td>不作为流程发起人替刘佳整理材料。</td>
+          </tr>
+          <tr>
+            <td>李新潮</td>
+            <td>数据质量检查人</td>
+            <td>检查字段完整性、术语口径、数据质量和来源可追溯性。</td>
+            <td>不替部门长判断业务逻辑，不替 MDM 最终放行。</td>
+          </tr>
+          <tr>
+            <td>常云龙</td>
+            <td>工程技术部业务对接人示例</td>
+            <td>在池炳辉确认需要承接后，确认工程技术部是否存在直接关联的业务行为和合格承接动作；没有动作时补充流程、动作或证据。</td>
+            <td>不判断工程技术部是否需要承接；只处理承接动作是否存在、是否合格。</td>
+          </tr>
+          <tr>
+            <td>池炳辉</td>
+            <td>工程技术部业务负责人示例</td>
+            <td>先确认工程技术部是否需要承接财务部提出的跨部门业务关系。</td>
+            <td>确认不需要承接时形成业务逻辑冲突，不按普通退回处理。</td>
+          </tr>
+          <tr>
+            <td>张广懿</td>
+            <td>MDM 负责人</td>
+            <td>检查流程完整性、承接链、冲突处理记录和数据口径，最终确认放行。</td>
+            <td>只在前置事项处理完后放行，不直接替业务部门补业务事实。</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section aria-labelledby="rules">
+      <h2 id="rules">关键规则</h2>
+      <div class="boundary">
+        <p><strong>发起和审核隔离：</strong>发起人负责创建新流程或确认 AI 识别问题；部门长负责审核业务逻辑。部门长不是发起人。</p>
+        <p><strong>业务和质量隔离：</strong>李雪审核业务逻辑后，李新潮再检查数据质量。赵襄璇不作为财务部数据质量检查人。</p>
+        <p><strong>发起部门和目标部门隔离：</strong>财务部提出跨部门业务关系；目标部门业务负责人先判断是否需要承接，目标部门业务对接人再确认或补充承接动作。</p>
+        <p><strong>目标部门先判定是否承接：</strong>跨部门业务先由目标部门业务负责人确认是否需要承接；需要承接时，才给目标部门业务对接人创建待办。</p>
+        <p><strong>承接动作不存在的处理：</strong>目标部门业务对接人确认没有承接动作时，由他补充流程、动作或已有证据，补充后再提交承接确认。</p>
+        <p><strong>冲突分流：</strong>目标部门业务负责人确认不需要承接，是业务逻辑冲突；对术语或字段提出质疑，则给发起部门业务对接人创建术语治理待办。</p>
+        <p><strong>最终放行：</strong>所有业务、承接、冲突、术语字段问题处理完后，张广懿检查流程完整性和数据口径，最后确认放行。</p>
+      </div>
+    </section>
+
+    <section aria-labelledby="outcome">
+      <h2 id="outcome">闭环后的状态</h2>
+      <div class="outcome-list">
+        <div class="outcome"><b>跨部门业务：</b>财务部发起结果、李雪审核结论、李新潮质量检查、目标部门是否承接判断、承接动作确认、返回财务部继续处理和张广懿放行均有记录。</div>
+        <div class="outcome"><b>本部门业务：</b>财务部内部流程无需目标部门承接，但仍保留发起、业务审核、质量检查和 MDM 放行记录。</div>
+        <div class="outcome"><b>冲突清晰：</b>目标部门业务负责人确认不需要承接时进入业务逻辑冲突；术语字段质疑进入术语治理待办，不混在同一种问题里。</div>
+        <div class="outcome"><b>责任清晰：</b>每个人只处理自己职责内的动作，系统通过待办把下一步交给正确的人。</div>
+      </div>
+    </section>
+
+    <footer>
+      本页为流程治理过程说明，不替代组织真源、流程输入基线、PMO 驾驶舱或 MDM 平台数据。
+    </footer>
+  </main>
+</body>
+</html>

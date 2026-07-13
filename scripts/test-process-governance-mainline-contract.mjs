@@ -13,6 +13,15 @@ assert.ok(Array.isArray(data.links), 'company snapshot should keep links');
 assert.ok(Array.isArray(data.systems), 'company snapshot should keep systems');
 assert.ok(data.stats && Number(data.stats.mappings) > 0, 'company snapshot should keep stats');
 assert.ok(data.crossDept && Array.isArray(data.crossDept.risks), 'company snapshot should keep crossDept risks');
+assert.ok(Array.isArray(data.processMappings), 'company snapshot should expose processMappings for MySQL import');
+assert.ok(
+  data.processMappings.some(item => item.dept && item.l1 && item.l2 && item.l3 && item.sourceFile),
+  'processMappings should preserve department scoped L1/L2/L3 source rows'
+);
+assert.ok(
+  data.processMappings.every(item => !['总经理直辖域', '经营域', '生产域'].includes(item.l1)),
+  'processMappings.l1 should be capability domains, not organization domains'
+);
 
 assert.ok(data.sourceManifest && Array.isArray(data.sourceManifest.files), 'sourceManifest.files should exist');
 assert.ok(data.sourceManifest.files.length > 0, 'sourceManifest.files should not be empty');

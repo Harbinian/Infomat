@@ -1,4 +1,11 @@
+const fs = require('fs');
+const path = require('path');
+const zlib = require('zlib');
 const { mdmMysqlSchemaSql, splitSqlStatements } = require('./mysqlSchema');
+
+const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
+const mappingEvidenceCache = new Map();
+const sourceDocumentParagraphCache = new Map();
 
 const QUEUE_DEFINITIONS = [
   ['waiting_my_action', '需要我确认'],
@@ -22,6 +29,7 @@ const POINT_OPTIONS = {
 };
 
 const MISSING_ORIGINAL_EVIDENCE_TEXT = '缺少制度或表单原文摘录，本问题不能确认。';
+const CONTROLLED_BUSINESS_ACTIONS = ['修改制度或表单源文件后重新导入', '说明这条核验项不是问题'];
 
 function asArray(value) {
   return Array.isArray(value) ? value : [];
@@ -86,7 +94,7 @@ function parseSourceDocuments(rawValue) {
     .map(piece => {
       const [fileNo, filePath] = String(piece || '').split('||');
       return {
-        file_no: inferSourceFileNo(fileNo, filePath),
+        file_no: inferDocumentSourceFileNo(fileNo, filePath),
         file_path: cleanText(filePath),
         document_name: fileNameFromSource(filePath)
       };
@@ -100,8 +108,62 @@ function uniqueNonEmpty(values) {
 
 function inferSourceFileNo(...values) {
   const text = values.map(cleanText).filter(Boolean).join(' ').replace(/\\/g, '/').toUpperCase();
-  const match = text.match(/\b([A-Z]{2,8}(?:[-_][A-Z0-9]{2,12}){1,5}|[A-Z]{2,8}\d{2,12})\b/);
+  const match = text.match(/\b([A-Z]{2,8}(?:[-_][A-Z0-9]{1,12}){1,5}|[A-Z]{2,8}\d{2,12})\b/);
   return match ? match[1].replace(/_/g, '-') : '';
+}
+
+function inferSourceFileNos(value) {
+  const text = cleanText(value).replace(/\\/g, '/').toUpperCase();
+  return [...text.matchAll(/\b([A-Z]{2,8}(?:[-_][A-Z0-9]{1,12}){1,5}|[A-Z]{2,8}\d{2,12})\b/g)]
+    .map(match => match[1].replace(/_/g, '-'));
+}
+
+function moreSpecificSourceFileNo(values) {
+  return inferSourceFileNos(values)
+    .sort((left, right) => {
+      const partDiff = right.split('-').length - left.split('-').length;
+      if (partDiff) return partDiff;
+      return right.length - left.length;
+    })[0] || '';
+}
+
+function inferDocumentSourceFileNo(fileNo, filePath) {
+  const declaredNo = inferSourceFileNo(fileNo);
+  const pathNo = moreSpecificSourceFileNo(filePath);
+  if (pathNo && declaredNo && pathNo.startsWith(`${declaredNo}-`)) return pathNo;
+  return pathNo || declaredNo;
+}
+
+function normalizeSourceFileNo(value) {
+  return cleanText(value)
+    .toUpperCase()
+    .replace(/[\\/_]+/g, '-')
+    .replace(/\s+/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+function hasOnlyRevisionSuffix(base, expanded) {
+  if (!base || !expanded.startsWith(`${base}-`)) return false;
+  const suffix = expanded.slice(base.length + 1).split('-').filter(Boolean);
+  return suffix.length === 1 && /^[A-Z]$/.test(suffix[0]);
+}
+
+function sourceFileNoMatches(expected, actual) {
+  const left = normalizeSourceFileNo(expected);
+  const right = normalizeSourceFileNo(actual);
+  if (!left || !right) return false;
+  return left === right || hasOnlyRevisionSuffix(left, right) || hasOnlyRevisionSuffix(right, left);
+}
+
+function expectedSourceFileNoForRow(row = {}) {
+  return cleanText(row.mapping_source_file_no)
+    || inferSourceFileNo(
+      row.evidence_source_anchor,
+      row.evidence_source_label,
+      row.evidence_source_file,
+      row.evidence_document_name
+    );
 }
 
 function readableList(values, emptyText) {
@@ -111,20 +173,302 @@ function readableList(values, emptyText) {
   return `${uniqueValues.slice(0, 4).join('；')}；另有${uniqueValues.length - 4}个来源文件`;
 }
 
+function sourcePositionTextFromAnchor(sourceAnchor, sourceLabel) {
+  const text = cleanText(`${sourceAnchor || ''} ${sourceLabel || ''}`);
+  if (!text) return '';
+  const parts = [];
+  const clause = text.match(/§\s*([0-9]+(?:\.[0-9]+)*)/)?.[1] || text.match(/第\s*([0-9]+(?:\.[0-9]+)*)\s*条/)?.[1];
+  if (clause) parts.push(`第${clause}条`);
+  const page = text.match(/\bpage\s*=?\s*(\d+)\b/i)?.[1] || text.match(/第?(\d+)页/)?.[1];
+  if (page) parts.push(`第${page}页`);
+  const paragraph = text.match(/第?\s*(\d+)\s*段/)?.[1] || text.match(/\bP(\d+)\b/i)?.[1];
+  if (paragraph) parts.push(`第${paragraph}段附近`);
+  const table = text.match(/(?:表格?|table)\s*([A-Za-z0-9._-]+)/i)?.[1] || text.match(/\b(T\d+)\b/i)?.[1];
+  if (table) parts.push(/^T\d+$/i.test(table) ? table.replace(/^T/i, '表') : `表${table}`);
+  return uniqueNonEmpty(parts).join('；');
+}
+
+function extractClauseNumber(sourceAnchor, sourceLabel) {
+  const text = cleanText(`${sourceAnchor || ''} ${sourceLabel || ''}`);
+  return text.match(/§\s*([0-9]+(?:\.[0-9]+)*)/)?.[1] || text.match(/第\s*([0-9]+(?:\.[0-9]+)*)\s*条/)?.[1] || '';
+}
+
+function escapeRegExp(value) {
+  return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function normalizeForEvidenceMatch(value) {
+  return cleanText(value).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+}
+
+function decodeXmlEntities(value) {
+  return String(value || '')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, '&');
+}
+
+function readZipEntry(buffer, entryName) {
+  const eocdSignature = 0x06054b50;
+  const centralSignature = 0x02014b50;
+  const localSignature = 0x04034b50;
+  const minOffset = Math.max(0, buffer.length - 0xffff - 22);
+  let eocdOffset = -1;
+  for (let offset = buffer.length - 22; offset >= minOffset; offset -= 1) {
+    if (buffer.readUInt32LE(offset) === eocdSignature) {
+      eocdOffset = offset;
+      break;
+    }
+  }
+  if (eocdOffset < 0) return null;
+  const entryCount = buffer.readUInt16LE(eocdOffset + 10);
+  let offset = buffer.readUInt32LE(eocdOffset + 16);
+  for (let index = 0; index < entryCount && offset < buffer.length; index += 1) {
+    if (buffer.readUInt32LE(offset) !== centralSignature) return null;
+    const compressionMethod = buffer.readUInt16LE(offset + 10);
+    const compressedSize = buffer.readUInt32LE(offset + 20);
+    const nameLength = buffer.readUInt16LE(offset + 28);
+    const extraLength = buffer.readUInt16LE(offset + 30);
+    const commentLength = buffer.readUInt16LE(offset + 32);
+    const localHeaderOffset = buffer.readUInt32LE(offset + 42);
+    const name = buffer.slice(offset + 46, offset + 46 + nameLength).toString('utf8');
+    if (name === entryName) {
+      if (buffer.readUInt32LE(localHeaderOffset) !== localSignature) return null;
+      const localNameLength = buffer.readUInt16LE(localHeaderOffset + 26);
+      const localExtraLength = buffer.readUInt16LE(localHeaderOffset + 28);
+      const dataOffset = localHeaderOffset + 30 + localNameLength + localExtraLength;
+      const compressed = buffer.slice(dataOffset, dataOffset + compressedSize);
+      if (compressionMethod === 0) return compressed;
+      if (compressionMethod === 8) return zlib.inflateRawSync(compressed);
+      return null;
+    }
+    offset += 46 + nameLength + extraLength + commentLength;
+  }
+  return null;
+}
+
+function paragraphsFromDocxBuffer(buffer) {
+  const documentXml = readZipEntry(buffer, 'word/document.xml');
+  if (!documentXml) return [];
+  return documentXml.toString('utf8')
+    .split(/<\/w:p>/)
+    .map(paragraphXml => [...paragraphXml.matchAll(/<w:t\b[^>]*>([\s\S]*?)<\/w:t>/g)]
+      .map(match => decodeXmlEntities(match[1]))
+      .join('')
+      .replace(/\s+/g, ' ')
+      .trim())
+    .filter(Boolean);
+}
+
+function resolveSourceDocumentPath(sourceFile) {
+  const raw = String(sourceFile || '').trim();
+  if (!raw || isIntermediateMappingSource(raw)) return '';
+  const resolved = path.resolve(path.isAbsolute(raw) ? raw : path.join(REPO_ROOT, raw));
+  const repoRoot = REPO_ROOT.toLowerCase();
+  const normalized = resolved.toLowerCase();
+  if (normalized !== repoRoot && !normalized.startsWith(`${repoRoot}${path.sep}`)) return '';
+  return fs.existsSync(resolved) ? resolved : '';
+}
+
+function readSourceDocumentParagraphs(sourceFile) {
+  const resolved = resolveSourceDocumentPath(sourceFile);
+  if (!resolved) return [];
+  if (sourceDocumentParagraphCache.has(resolved)) return sourceDocumentParagraphCache.get(resolved);
+  let paragraphs = [];
+  try {
+    if (/\.docx$/i.test(resolved)) {
+      paragraphs = paragraphsFromDocxBuffer(fs.readFileSync(resolved));
+    } else if (/\.(txt|md)$/i.test(resolved)) {
+      paragraphs = fs.readFileSync(resolved, 'utf8').split(/\r?\n/).map(cleanText).filter(Boolean);
+    }
+  } catch {
+    paragraphs = [];
+  }
+  sourceDocumentParagraphCache.set(resolved, paragraphs);
+  return paragraphs;
+}
+
+function sourceContainsClause(paragraphs, sourceAnchor, sourceLabel) {
+  const clause = extractClauseNumber(sourceAnchor, sourceLabel);
+  if (!clause) return true;
+  const clausePattern = clause.split('.').map(escapeRegExp).join('[\\.．]');
+  const text = paragraphs.join('\n');
+  return new RegExp(`(^|[^0-9])(?:§\\s*)?${clausePattern}([^0-9]|$)|第\\s*${clausePattern}\\s*条`).test(text);
+}
+
+function closestSourcePosition(paragraphs, matchIndex) {
+  let section = '';
+  let subsection = '';
+  for (let index = matchIndex; index >= 0; index -= 1) {
+    const text = paragraphs[index];
+    if (!subsection && /^（[0-9一二三四五六七八九十]+）/.test(text)) {
+      subsection = text;
+    }
+    if (/^[0-9]+(?:[\.．][0-9]+)*(?:\s+|(?=[^\d.．]))\S+/.test(text)) {
+      section = text;
+      break;
+    }
+  }
+  return subsection || section || '原文摘录附近';
+}
+
+function verifyMappingEvidenceAgainstSource(row = {}, sourceDocuments = sourceDocumentsFromRow(row)) {
+  const excerpt = cleanText(row.mapping_source_excerpt);
+  if (!excerpt) return { verified: false, reason: 'missing_excerpt' };
+  const needle = normalizeForEvidenceMatch(excerpt);
+  if (needle.length < 6) return { verified: false, reason: 'short_excerpt' };
+  for (const document of sourceDocuments) {
+    const paragraphs = readSourceDocumentParagraphs(document.file_path);
+    if (!paragraphs.length) continue;
+    const matchIndex = paragraphs.findIndex(paragraph => {
+      const normalized = normalizeForEvidenceMatch(paragraph);
+      return normalized.includes(needle) || (normalized.length >= 8 && needle.includes(normalized));
+    });
+    if (matchIndex < 0) continue;
+    const anchorFound = sourceContainsClause(paragraphs, row.mapping_source_anchor, row.mapping_source_label);
+    const filePath = resolveSourceDocumentPath(document.file_path) || document.file_path || '';
+    return {
+      verified: true,
+      raw_text: paragraphs[matchIndex],
+      position: closestSourcePosition(paragraphs, matchIndex),
+      source_file: filePath,
+      document_name: document.document_name || fileNameFromSource(document.file_path),
+      source_anchor: row.mapping_source_anchor || row.mapping_source_label || '',
+      anchor_found: anchorFound
+    };
+  }
+  return { verified: false, reason: 'excerpt_not_found' };
+}
+
+function resolveMappingSourcePath(sourceFile) {
+  const raw = String(sourceFile || '').trim();
+  if (!raw || !/\.md$/i.test(raw)) return '';
+  const resolved = path.resolve(path.isAbsolute(raw) ? raw : path.join(REPO_ROOT, raw));
+  const root = `${REPO_ROOT}${path.sep}`.toLowerCase();
+  const normalized = `${resolved}${path.sep}`.toLowerCase();
+  return normalized.startsWith(root) || resolved.toLowerCase() === REPO_ROOT.toLowerCase() ? resolved : '';
+}
+
+function parseMarkdownTableRow(line) {
+  const trimmed = String(line || '').trim();
+  if (!trimmed.startsWith('|') || !trimmed.endsWith('|')) return null;
+  return trimmed.slice(1, -1).split('|').map(cell => cleanText(cell));
+}
+
+function isMarkdownSeparator(cells) {
+  return cells && cells.length > 0 && cells.every(cell => /^:?-{3,}:?$/.test(String(cell || '').trim()));
+}
+
+function valueFromMarkdownRow(row, ...names) {
+  for (const name of names) {
+    if (row[name]) return row[name];
+  }
+  const key = Object.keys(row).find(matchKey => names.some(name => matchKey.includes(name)));
+  return key ? row[key] || '' : '';
+}
+
+function cleanSourceAnchor(value) {
+  return cleanText(value)
+    .replace(/[“"].*?[”"]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function quotedSourceExcerpt(...values) {
+  for (const value of values) {
+    const text = String(value || '');
+    const match = text.match(/[“"]([^”"]+)[”"]/);
+    if (match && cleanText(match[1])) return cleanText(match[1]);
+  }
+  return '';
+}
+
+function readMappingEvidenceByCode(sourceFile) {
+  const resolved = resolveMappingSourcePath(sourceFile);
+  if (!resolved || !fs.existsSync(resolved)) return new Map();
+  if (mappingEvidenceCache.has(resolved)) return mappingEvidenceCache.get(resolved);
+
+  const evidenceByCode = new Map();
+  let headers = null;
+  for (const line of fs.readFileSync(resolved, 'utf8').split(/\r?\n/)) {
+    const cells = parseMarkdownTableRow(line);
+    if (!cells || isMarkdownSeparator(cells)) continue;
+    if (cells.some(cell => /A1|业务行为/.test(cell)) && cells.some(cell => /制度依据|执行角色依据/.test(cell))) {
+      headers = cells;
+      continue;
+    }
+    if (!headers || cells.length < headers.length) continue;
+    const row = Object.fromEntries(headers.map((header, index) => [header, cells[index] || '']));
+    const a1Code = valueFromMarkdownRow(row, '业务行为（A1）编号', 'A1编号');
+    const behavior = valueFromMarkdownRow(row, '业务行为（A1）', '业务行为');
+    if (!a1Code && !behavior) continue;
+
+    const systemSource = valueFromMarkdownRow(row, '制度依据');
+    const roleSource = valueFromMarkdownRow(row, '执行角色依据');
+    const triggerSource = valueFromMarkdownRow(row, '触发情景依据');
+    const conditionSource = valueFromMarkdownRow(row, '前置条件依据');
+    const standardSource = valueFromMarkdownRow(row, '验收标准依据');
+    const sourceAnchor = cleanSourceAnchor(systemSource || roleSource || triggerSource || conditionSource || standardSource);
+    if (!sourceAnchor) continue;
+
+    const item = {
+      source_anchor: sourceAnchor,
+      source_label: sourceAnchor,
+      source_file_no: inferSourceFileNo(sourceAnchor),
+      source_excerpt: quotedSourceExcerpt(roleSource, triggerSource, systemSource, conditionSource, standardSource)
+    };
+    if (a1Code) evidenceByCode.set(cleanText(a1Code), item);
+    if (behavior) evidenceByCode.set(`behavior:${cleanText(behavior)}`, item);
+  }
+  mappingEvidenceCache.set(resolved, evidenceByCode);
+  return evidenceByCode;
+}
+
+function enrichRowWithMappingEvidence(row = {}) {
+  if (cleanText(row.evidence_source_anchor) || cleanText(row.evidence_raw_text)) return row;
+  const evidence = readMappingEvidenceByCode(row.source_file || row.record_source_file || '')
+    .get(cleanText(row.a1_code))
+    || readMappingEvidenceByCode(row.source_file || row.record_source_file || '').get(`behavior:${cleanText(row.behavior || row.a1_name)}`);
+  if (!evidence) return row;
+  return {
+    ...row,
+    mapping_source_anchor: evidence.source_anchor,
+    mapping_source_label: evidence.source_label,
+    mapping_source_file_no: evidence.source_file_no,
+    mapping_source_excerpt: evidence.source_excerpt,
+    mapping_source_file: row.source_file || row.record_source_file || ''
+  };
+}
+
 function sourceDocumentsFromRow(row = {}) {
   const evidenceFile = cleanText(row.evidence_source_file);
   const evidenceName = cleanText(row.evidence_document_name) || fileNameFromSource(evidenceFile);
-  const evidenceAnchor = cleanText(row.evidence_source_anchor || row.evidence_source_label);
+  const evidenceAnchor = cleanText(row.evidence_source_anchor || row.evidence_source_label || row.mapping_source_anchor || row.mapping_source_label);
+  const evidenceFileNo = inferSourceFileNo(evidenceAnchor, evidenceFile, evidenceName);
+  const manifestDocuments = parseSourceDocuments(row.source_documents || row.sourceDocuments);
+  const matchedManifestDocuments = evidenceFileNo
+    ? manifestDocuments
+        .filter(document => sourceFileNoMatches(evidenceFileNo, document.file_no))
+        .map(document => ({
+          ...document,
+          file_no: evidenceFileNo,
+          document_name: document.document_name || fileNameFromSource(document.file_path)
+        }))
+    : [];
   const evidenceDocuments = evidenceFile || evidenceName || evidenceAnchor
     ? [{
-        file_no: inferSourceFileNo(evidenceAnchor, evidenceFile, evidenceName),
+        file_no: evidenceFileNo,
         file_path: evidenceFile,
         document_name: evidenceName || '制度或表单源文件未识别'
       }]
     : [];
-  const documents = evidenceDocuments.length
+  const documents = matchedManifestDocuments.length
+    ? matchedManifestDocuments
+    : evidenceDocuments.length
     ? evidenceDocuments
-    : parseSourceDocuments(row.source_documents || row.sourceDocuments);
+    : manifestDocuments;
   const sourceFile = row.source_file || row.sourceFile || '';
   if (!evidenceDocuments.length && sourceFile && !isIntermediateMappingSource(sourceFile)) {
     documents.unshift({
@@ -144,7 +488,7 @@ function sourceDocumentsFromRow(row = {}) {
 
 function isIntermediateMappingSource(sourceFile) {
   const text = String(sourceFile || '').replace(/\\/g, '/');
-  return !text || /\.md\b/i.test(text) || /process[-_]input[-_]baseline|mapping[_-]diff|company-sankey|artifacts/i.test(text);
+  return !text || /\.md\b/i.test(text) || /\/_extracted\//i.test(text) || /process[-_]input[-_]baseline|mapping[_-]diff|company-sankey|artifacts/i.test(text);
 }
 
 function sourcePositionText(sourceFile, sourceLine) {
@@ -166,6 +510,7 @@ function businessSourceInfo(row = {}) {
   const sourceFile = row.source_file || row.sourceFile || '';
   const sourceLine = Number(row.source_line || row.sourceLine || 0);
   const sourceDocuments = sourceDocumentsFromRow(row);
+  const evidencePosition = sourcePositionTextFromAnchor(row.evidence_source_anchor, row.evidence_source_label);
   const documentNo = readableList(
     sourceDocuments.map(document => document.file_no),
     '源文件编号未随输入基线入库'
@@ -174,6 +519,36 @@ function businessSourceInfo(row = {}) {
     sourceDocuments.map(document => document.document_name || fileNameFromSource(document.file_path)),
     '制度或表单源文件未识别'
   );
+  if (evidencePosition) {
+    const evidenceRequired = Number(row.evidence_required || 0) === 1;
+    return {
+      documentNo,
+      documentName,
+      position: evidencePosition,
+      residualIssue: evidenceRequired && !cleanText(row.evidence_raw_text || row.mapping_source_excerpt)
+        ? '残留问题：已定位源文件和位置，但缺少可核对的制度或表单原文摘录。'
+        : ''
+    };
+  }
+  if (cleanText(row.mapping_source_anchor || row.mapping_source_label || row.mapping_source_excerpt)) {
+    const verifiedMappingEvidence = verifyMappingEvidenceAgainstSource(row, sourceDocuments);
+    if (verifiedMappingEvidence.verified) {
+      return {
+        documentNo,
+        documentName,
+        position: verifiedMappingEvidence.position,
+        residualIssue: verifiedMappingEvidence.anchor_found
+          ? ''
+          : `残留问题：流程输入基线标注为 ${cleanText(row.mapping_source_anchor || row.mapping_source_label)}，但未在制度或表单源文件中核到对应条款；本卡按原文摘录所在段落定位。`
+      };
+    }
+    return {
+      documentNo,
+      documentName,
+      position: '来源依据不足：未在制度或表单源文件中核到对应段落',
+      residualIssue: '残留问题：流程输入基线提供了来源线索，但尚未定位到制度或表单原文段落。'
+    };
+  }
   if (isIntermediateMappingSource(sourceFile)) {
     const inputBaselinePosition = sourcePositionText(sourceFile, sourceLine);
     return {
@@ -273,6 +648,7 @@ function pointTypeForSource(row) {
   const todoType = String(row.todo_type || '').trim();
   const message = `${row.message || ''} ${row.suggestion || ''} ${row.verification_note || ''}`;
   if (todoType === 'cross_dept') return 'cross_department';
+  if (/受控传递|跨部门|输出给哪个部门|输入来源|输出目标|交接|移交|承接|流转/.test(message)) return 'controlled_transfer';
   if (todoType === 'evidence' || /证据/.test(message)) return 'evidence_gap';
   if (todoType === 'adjustment' || /结构|L1|L2|流程/.test(message)) return 'process_structure';
   if (/系统|落位|应用/.test(message)) return 'system_landing';
@@ -295,6 +671,145 @@ function pointTitle(pointType) {
     terminology: '术语统一'
   };
   return labels[pointType] || '待确认问题';
+}
+
+function suggestedSystemsText(row = {}) {
+  const systems = parseJsonArray(row.suggested_systems || row.suggestedSystems)
+    .map(cleanText)
+    .filter(Boolean);
+  if (systems.length) return systems.join('、');
+  return cleanText(row.suggested_systems || row.suggestedSystems || row.system || '');
+}
+
+function documentStructureObjectKey(row = {}) {
+  return cleanText(row.a1_code) || cleanText(row.l3_key) || cleanText(row.l3_name) || cleanText(row.todo_key) || cleanText(row.mapping_key);
+}
+
+function currentStructuredValue(row = {}, pointType) {
+  const targetDept = cleanText(row.target_dept_name || row.output_target_dept);
+  switch (pointType) {
+    case 'owner_role':
+      return cleanText(row.execution_role || row.owner || row.owner_dept_name) || '待确认';
+    case 'system_landing':
+      return suggestedSystemsText(row) || '待确认';
+    case 'cross_department':
+      return targetDept || '待确认';
+    case 'controlled_transfer':
+      return targetDept || cleanText(row.message) || '待确认';
+    case 'process_structure':
+      return cleanText(row.l3_name || row.l2_name || row.l1_name) || '待确认';
+    case 'data_object':
+      return cleanText(row.data_object || row.message) || '待确认';
+    case 'evidence_gap':
+      return cleanText(row.evidence_status || row.verification_status || row.source_file || row.document_name) || '待确认';
+    case 'terminology':
+      return cleanText(row.term_text || row.message || row.behavior) || '待确认';
+    default:
+      return cleanText(row.verification_note || row.message || row.suggestion) || '待确认';
+  }
+}
+
+function documentStructureSpec(row = {}, pointType, sourceExcerpt = '') {
+  const a1Name = cleanText(row.behavior || row.a1_name || row.message || row.l3_name) || '这条业务行为';
+  const l3Name = cleanText(row.l3_name) || '当前流程';
+  const objectKey = documentStructureObjectKey(row);
+  const currentValue = currentStructuredValue(row, pointType);
+  const base = {
+    structured_object_key: objectKey,
+    current_value: currentValue,
+    source_excerpt: sourceExcerpt || '',
+    allowed_actions: CONTROLLED_BUSINESS_ACTIONS,
+    next_step: '先看来源，再核原文；问题成立时修改制度或表单源文件后重新导入，不成立时说明原因。'
+  };
+  if (pointType === 'owner_role') {
+    return {
+      ...base,
+      structured_object_type: 'A1 业务行为',
+      target_block: 'a1_catalog',
+      target_field: 'role',
+      issue_type: '角色责任待确认',
+      question_for_user: `请确认“${a1Name}”的执行角色“${currentValue}”是否足够具体，能否作为 a1_catalog.role 进入正式结构块。`
+    };
+  }
+  if (pointType === 'completion_standard') {
+    return {
+      ...base,
+      structured_object_type: 'A1 业务行为',
+      target_block: 'a1_catalog',
+      target_field: 'entry',
+      issue_type: 'A1 行为待确认',
+      question_for_user: `请确认“${a1Name}”的处理入口、输入输出和完成标准是否写清，能否进入正式结构块。`
+    };
+  }
+  if (pointType === 'controlled_transfer' || pointType === 'cross_department') {
+    return {
+      ...base,
+      structured_object_type: '跨部门承接',
+      target_block: 'a1_catalog',
+      target_field: 'output_result',
+      issue_type: '跨部门承接待确认',
+      question_for_user: `请确认“${a1Name}”是否需要跨部门承接，承接部门、交付物和承接标准是否写清。`
+    };
+  }
+  if (pointType === 'process_structure') {
+    return {
+      ...base,
+      structured_object_type: 'L3 流程',
+      target_block: 'l3_catalog',
+      target_field: 'l3_name',
+      issue_type: 'L3 结构待确认',
+      question_for_user: `请确认“${l3Name}”的 L1/L2/L3 归属、粒度和流程边界是否可以进入正式结构块。`
+    };
+  }
+  if (pointType === 'system_landing') {
+    const isA1 = Boolean(cleanText(row.a1_code));
+    return {
+      ...base,
+      structured_object_type: isA1 ? 'A1 业务行为' : 'L3 流程',
+      target_block: isA1 ? 'a1_catalog' : 'l3_catalog',
+      target_field: 'system',
+      issue_type: '系统落位待确认',
+      question_for_user: `请确认“${isA1 ? a1Name : l3Name}”建议落位到“${currentValue}”是否准确；这里只确认落位关系，不评价系统重要性。`
+    };
+  }
+  if (pointType === 'data_object') {
+    return {
+      ...base,
+      structured_object_type: '主数据需求',
+      target_block: 'mdm_requirement_catalog',
+      target_field: 'object',
+      issue_type: '主数据需求待确认',
+      question_for_user: `请确认“${currentValue}”是否有原文或字段台账依据，能否作为待确认主数据需求继续治理。`
+    };
+  }
+  if (pointType === 'evidence_gap') {
+    return {
+      ...base,
+      structured_object_type: '证据',
+      target_block: 'evidence_catalog',
+      target_field: 'locator',
+      issue_type: '来源证据不足',
+      question_for_user: '请确认这条问题是否已经能回到制度、表单、台账、流程图、条款、页码或表格位置。'
+    };
+  }
+  if (pointType === 'terminology') {
+    return {
+      ...base,
+      structured_object_type: '术语',
+      target_block: 'evidence_catalog',
+      target_field: 'source_file',
+      issue_type: '术语待确认',
+      question_for_user: `请确认“${currentValue}”在制度中的含义、适用位置和来源依据是否写清。`
+    };
+  }
+  return {
+    ...base,
+    structured_object_type: cleanText(row.a1_code) ? 'A1 业务行为' : 'L3 流程',
+    target_block: cleanText(row.a1_code) ? 'a1_catalog' : 'l3_catalog',
+    target_field: cleanText(row.a1_code) ? 'behavior' : 'l3_name',
+    issue_type: '文档结构化字段待确认',
+    question_for_user: `请确认“${a1Name}”是否可以进入正式文档结构化输出。`
+  };
 }
 
 function issueKeyForSource(row) {
@@ -370,22 +885,26 @@ function issueShape(row, batchId) {
 
 function pointShape(row, issueId) {
   const pointType = pointTypeForSource(row);
-  const rawText = cleanText(row.evidence_raw_text);
+  const sourceDocuments = sourceDocumentsFromRow(row);
+  const verifiedMappingEvidence = cleanText(row.evidence_raw_text)
+    ? { verified: false }
+    : verifyMappingEvidenceAgainstSource(row, sourceDocuments);
+  const rawText = cleanText(row.evidence_raw_text || verifiedMappingEvidence.raw_text);
   const evidenceRequired = Number(row.evidence_required || 0) === 1;
   const originalEvidence = rawText
     ? {
         can_confirm: true,
         raw_text: rawText,
-        source_label: row.evidence_source_label || row.evidence_source_anchor || '',
-        source_anchor: row.evidence_source_anchor || '',
-        source_file: row.evidence_source_file || '',
-        document_name: row.evidence_document_name || '',
+        source_label: row.evidence_source_label || row.evidence_source_anchor || verifiedMappingEvidence.position || '',
+        source_anchor: row.evidence_source_anchor || verifiedMappingEvidence.source_anchor || '',
+        source_file: row.evidence_source_file || verifiedMappingEvidence.source_file || '',
+        document_name: row.evidence_document_name || verifiedMappingEvidence.document_name || '',
         review_run_id: row.evidence_run_id || '',
         review_item_id: row.evidence_review_item_id || '',
         stable_key: row.evidence_stable_key || '',
-        evidence_status: row.evidence_status || '',
-        verification_status: row.verification_status || '',
-        allowed_downstream_use: row.allowed_downstream_use || ''
+        evidence_status: row.evidence_status || (verifiedMappingEvidence.verified ? 'source_excerpt_verified' : ''),
+        verification_status: row.verification_status || (verifiedMappingEvidence.verified && !verifiedMappingEvidence.anchor_found ? 'source_verified_anchor_mismatch' : ''),
+        allowed_downstream_use: row.allowed_downstream_use || (verifiedMappingEvidence.verified ? 'review_only' : '')
       }
     : {
         can_confirm: !evidenceRequired,
@@ -404,7 +923,7 @@ function pointShape(row, issueId) {
     point_key: pointKeyForSource(row, pointType),
     point_type: pointType,
     title: pointTitle(pointType),
-    prompt_text: row.suggestion || row.message || '请确认这个问题点的处理结论。',
+    prompt_text: documentStructureSpec(row, pointType, rawText).question_for_user,
     enum_options_json: json(POINT_OPTIONS[pointType] || POINT_OPTIONS.completion_standard),
     evidence_json: json({
       source_file: row.source_file || '',
@@ -419,6 +938,7 @@ function pointShape(row, issueId) {
       l3_name: row.l3_name || '',
       a1_code: row.a1_code || '',
       source_ref_id: row.todo_id || row.record_id || row.id || null,
+      document_structure: documentStructureSpec(row, pointType, rawText),
       ...originalEvidence
     }),
     requires_mdm_decision: ['process_structure', 'system_landing', 'data_object', 'terminology'].includes(pointType) ? 1 : 0,
@@ -645,6 +1165,7 @@ function makeSqliteProcessGovernanceIssuePoolRepository(db) {
         t.status AS todo_status,
         t.priority,
         t.due_date,
+        COALESCE(t.latest_snapshot_id, r.latest_snapshot_id) AS source_snapshot_id,
         1 AS evidence_required,
         (
           SELECT e.raw_text
@@ -727,7 +1248,7 @@ function makeSqliteProcessGovernanceIssuePoolRepository(db) {
       ${where}
       ORDER BY t.id IS NULL, CASE t.priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END, r.dept_name, r.l3_name, r.a1_code, r.id
       LIMIT 1000
-    `).all(...params);
+    `).all(...params).map(enrichRowWithMappingEvidence);
   }
 
   return {
@@ -1120,7 +1641,7 @@ function makeProcessGovernanceIssuePoolRepository(pool) {
       where += ' AND (r.dept_name=? OR t.dept_name=? OR t.target_dept_name=?)';
       params.push(departmentName, departmentName, departmentName);
     }
-    return await mysqlQuery(pool, `
+    const rows = await mysqlQuery(pool, `
       SELECT
         r.id AS record_id,
         r.mapping_key,
@@ -1147,6 +1668,7 @@ function makeProcessGovernanceIssuePoolRepository(pool) {
         t.status AS todo_status,
         t.priority,
         t.due_date,
+        COALESCE(t.latest_snapshot_id, r.latest_snapshot_id) AS source_snapshot_id,
         1 AS evidence_required,
         (
           SELECT e.raw_text
@@ -1230,6 +1752,30 @@ function makeProcessGovernanceIssuePoolRepository(pool) {
       ORDER BY t.id IS NULL, CASE t.priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END, r.dept_name, r.l3_name, r.a1_code, r.id
       LIMIT 1000
     `, params);
+    const enrichedRows = rows.map(enrichRowWithMappingEvidence);
+    for (const row of enrichedRows) {
+      const fileNo = expectedSourceFileNoForRow(row);
+      if (!fileNo || !row.source_snapshot_id) continue;
+      const fileNoUpper = normalizeSourceFileNo(fileNo);
+      const documents = await mysqlQuery(pool, `
+        SELECT file_no, file_path
+        FROM process_source_files
+        WHERE snapshot_id=?
+          AND COALESCE(process_status, '') <> '排除'
+          AND (
+            UPPER(REPLACE(REPLACE(COALESCE(file_no, ''), '_', '-'), '/', '-'))=?
+            OR UPPER(REPLACE(REPLACE(COALESCE(file_path, ''), '_', '-'), '/', '-')) LIKE CONCAT('%', ?, '%')
+          )
+        ORDER BY file_path
+        LIMIT 20
+      `, [row.source_snapshot_id, fileNoUpper, fileNoUpper]);
+      const document = documents.find(item => sourceFileNoMatches(fileNo, inferDocumentSourceFileNo(item.file_no, item.file_path)));
+      if (document && document.file_path) {
+        const currentDocuments = cleanText(row.source_documents);
+        row.source_documents = `${fileNo}||${document.file_path}${currentDocuments ? `;;${currentDocuments}` : ''}`;
+      }
+    }
+    return enrichedRows;
   }
 
   return {

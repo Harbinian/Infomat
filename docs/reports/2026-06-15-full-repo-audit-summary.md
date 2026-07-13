@@ -20,7 +20,8 @@
 
 - 当前阶段主线为“流程地图与数据地图梳理与沉淀”，分析对象是流程而非具体应用系统。
 - 真源/快照/展示的主链路：
-  - `docs/organization/组织架构和部门职责.md` + `docs/norms/*部门-能力-流程-系统映射关系.md`（真源）
+  - `docs/organization/组织架构和部门职责.md`（组织真源）
+  - `docs/norms/*部门-能力-流程-系统映射关系.md`（流程输入基线）
   - → `scripts/parse-sankey-data.mjs`
   - → `docs/company-sankey-data.json`（快照）
   - → `pmo/procedure-management/dashboard.html`（展示副本，内嵌 `#sankey-data`）
@@ -152,7 +153,7 @@
 1. **`docs/contracts` 已成为执行资产，但边界文件/目录责任未明示**  
    - 现状：`docs/contracts/README.md` 低估使用方范围，且 `DIRECTORY_OWNERSHIP.md` 未将其列为明确子目录责任。  
 
-2. **质检报告默认写回 `docs/norms/_quality-report.md`，与“真源目录不放报告”口径冲突**  
+2. **质检报告默认写回 `docs/norms/_quality-report.md`，与“流程输入基线目录不放报告”口径冲突**  
    - 现状：`scripts/check-dcm-bbm.mjs` 默认输出到 `docs/norms/_quality-report.md`。  
    - 风险：真源目录混入生成型报告，易被误当上下文或真源补充。  
 
@@ -201,7 +202,7 @@
 - 安全策略：`apps/mdm-platform/server/index.js`、`apps/mdm-platform/server/passwordPolicy.js`、`apps/mdm-platform/server/routes/org.js`、`apps/mdm-platform/server/routes/mappings.js`、`apps/mdm-platform/public/index.html`  
 - 运行隔离：`scripts/sync-process-governance-mainline.mjs`、`apps/mdm-platform/server/dbConfig.js`、`apps/mdm-platform/scripts/sync-process-governance-org.js`  
 - PMO 写回：`pmo/gantt-react/plugins/pmoDeliverablesPlugin.js`  
-- 真源缺口：`docs/norms/流程治理/跨部门完整性检查报告.md`、`docs/company-sankey-data.json`  
+- 流程输入基线缺口：`docs/norms/流程治理/跨部门完整性检查报告.md`、`docs/company-sankey-data.json`  
 - DB/迁移与约束：`apps/mdm-platform/server/db.js`、`apps/mdm-platform/server/routes/conflicts.js`、`apps/mdm-platform/server/routes/fieldEntries.js`、`apps/mdm-platform/server/codeEngine.js`  
 - 可移植性：`scripts/merge_norms.py`、`scripts/render_gantt_h5_png.mjs`、`scripts/generate_digital_project_gantt_8k.py`  
 - 批量改写脚本：`scripts/parse-sankey-data.mjs`、`scripts/normalize-norms-sankey-h5.mjs`  

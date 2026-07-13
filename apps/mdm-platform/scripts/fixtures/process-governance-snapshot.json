@@ -19,6 +19,16 @@
     { "source": "销售订单评审和执行管理", "target": "ERP", "value": 1 }
   ],
   "systems": ["ERP", "OA"],
+  "processMappings": [
+    {
+      "dept": "经营发展部",
+      "l1": "市场开发与客户合同治理",
+      "l2": "项目合同评审执行管理",
+      "l3": "销售订单评审和执行管理",
+      "systems": ["OA", "ERP"],
+      "sourceFile": "docs/norms/经营发展部部门-能力-流程-系统映射关系.md"
+    }
+  ],
   "stats": {
     "mappings": 1,
     "a1": 1,

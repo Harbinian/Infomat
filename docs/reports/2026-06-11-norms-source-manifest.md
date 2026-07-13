@@ -1,4 +1,4 @@
-# 流程映射真源清单
+# 流程输入基线清单
 
 > 日期：2026-06-11  
 > 范围：`docs/organization/组织架构和部门职责.md`、`docs/contracts/dcm-bbm-contract.json`、`docs/norms/` canonical 交付物。  
@@ -10,7 +10,7 @@
 |---|---|
 | `docs/organization/组织架构和部门职责.md` | 部门清单、组织编码、部门职责和部门到域映射真源 |
 | `docs/contracts/dcm-bbm-contract.json` | DCM/BBM 质检脚本读取的部门与规则合同 |
-| `docs/norms/{部门}部门-能力-流程-系统映射关系.md` | 部门 DCM/BBM 标准映射真源 |
+| `docs/norms/{部门}部门-能力-流程-系统映射关系.md` | 部门 DCM/BBM 流程输入基线 |
 | `docs/norms/{部门}能力层与MDM建设要求.md` | 部门 MDM 建设要求配套说明 |
 | `docs/norms/{部门}部门能力流程系统桑基图.html` | 部门静态桑基图交付物 |
 
@@ -28,7 +28,7 @@
 | 复材车间 | 生产域 | 已有 | 已有 | 已有 | 覆盖 |
 | 运维安环部 | 生产域 | 已有 | 已有 | 已有 | 覆盖 |
 
-当前 `docs/norms/` 已有 9 个部门标准映射 Markdown，9 组 canonical 部门交付物均已覆盖。工程技术部在组织真源和合同中存在，已建立保守版标准映射 Markdown、能力层与 MDM 建设要求说明，部门桑基图已统一为已确认流程映射审核稿口径。
+当前 `docs/norms/` 已有 9 个部门标准映射 Markdown，9 组 canonical 部门交付物均已覆盖。工程技术部在组织文件和合同中存在，已建立保守版标准映射 Markdown、能力层与 MDM 建设要求说明，部门桑基图已统一为已确认流程映射审核稿口径。
 
 ## 3. 待复核口径
 

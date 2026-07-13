@@ -11,6 +11,7 @@
 | ADR | 主题 | 状态 |
 |---|---|---|
 | `0001-repo-structure-and-artifacts.md` | 仓库结构与生成物策略 | Accepted |
+| `0002-codex-collaboration-and-doc-sync.md` | Codex 协作入口与代码文档同步 | Accepted |
 
 ## 2. 何时新增 ADR
 

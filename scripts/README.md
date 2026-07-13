@@ -31,6 +31,8 @@
 | `start-infomat-services.ps1` | 固定启动 MDM、PMO 和项目 MySQL | 固定合同、本机私有 env、Docker 容器 `infomat-input-baseline-review-mysql` | 按固定环境启动服务，不修改仓库真源 |
 | `smoke-infomat-services.mjs` | 固定配置下检查 MDM/PMO 是否可用 | 固定合同、本机私有 env、运行中的服务 | 只读检查，输出会隐藏密码 |
 | `test-infomat-services-config.mjs` | 防止启动配置再次漂移 | 固定合同、启动脚本、冒烟脚本、`.gitignore` | 只读校验 |
+| `generate-weekly-action-personnel-snapshot.mjs` | 从信息化项目人员角色映射和花名册生成 3002 只读人员快照 | `docs/organization/信息化项目人员角色映射.md`、`docs/organization/花名册.md` | 默认写 `artifacts/weekly-actions/personnel-snapshot.json`；不修改组织真源、PMO 真源、SQLite 或 MySQL |
+| `test-weekly-action-personnel-snapshot.mjs` | 校验 3002 人员快照生成、花名册一致性和待补人员警告 | 组织人员映射、花名册、临时输出目录 | 只读校验，临时输出写入系统临时目录 |
 
 常用命令：
 
@@ -57,6 +59,8 @@ npm run test:project-governance-upgrade
 npm run test:process-evidence-skill
 npm run test:process-input-baseline-review
 npm run test:ocr-source
+npm run generate:weekly-action-personnel -- --generated-by "<name>"
+npm run test:weekly-action-personnel
 $env:MDM_DB_PATH='apps/mdm-platform/data/<target>.db'; npm run sync:process-governance
 ```
 

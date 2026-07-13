@@ -5,7 +5,7 @@
 
 ## 一、审计口径
 
-本次只做一致性识别和遗漏检查，未修改 `docs/norms/` 真源。审计过程中运行了 `scripts/check-dcm-bbm.mjs --no-fail`，该脚本会重写生成型文件 `docs/norms/_quality-report.md`；本报告将其视为质检输出，不视为制度或映射真源。
+本次只做一致性识别和遗漏检查，未修改 `docs/norms/` 流程输入基线。审计过程中运行了 `scripts/check-dcm-bbm.mjs --no-fail`，该脚本会重写生成型文件 `docs/norms/_quality-report.md`；本报告将其视为质检输出，不视为制度或流程输入基线。
 
 - **制度原文/附件**：各 `{部门}业务资料/` 下文件，排除 `~$` Office 临时文件、`_extracted/` 抽取缓存和辅助脚本。
 - **DCM 映射**：`{部门}部门-能力-流程-系统映射关系.md` 中的 `部门（D1）→ 能力域（L1）→ 业务能力（L2）→ 业务流程（L3）→ 应用系统（S1）` 主表。

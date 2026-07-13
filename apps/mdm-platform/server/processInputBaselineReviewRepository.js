@@ -81,7 +81,7 @@ function uniqueTerms(values) {
 function roleDefinitionStatus(roleName, sourceText = '') {
   const name = String(roleName || '').trim();
   const text = String(sourceText || '');
-  if (!name) return '待回源确认';
+  if (!name) return '待核对来源文件';
   if (LEADER_ROLE_EXCEPTIONS.has(name)) return '原文明确';
   if (DEPARTMENT_OR_OFFICE_NAMES.includes(name)) return '原文明确';
   if (DEPARTMENT_OR_OFFICE_NAMES.some(prefix => name.startsWith(prefix) && name.length > prefix.length)) {

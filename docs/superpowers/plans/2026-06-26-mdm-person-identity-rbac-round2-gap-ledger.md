@@ -2,7 +2,8 @@
 
 > 日期：2026-06-26
 > 范围：`apps/mdm-platform/` 与本计划目录。
-> 边界：本轮只审查和计划，不修改 `docs/norms/`、PMO 真源、PMO 驾驶舱或流程源文件。
+> 边界：本轮只审查和计划，不修改 `docs/norms/` 流程输入基线。
+> 同时不修改 PMO 真源、PMO 驾驶舱或流程源文件。
 
 ## Baseline Verification
 

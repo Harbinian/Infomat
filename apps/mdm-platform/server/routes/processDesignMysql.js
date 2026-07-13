@@ -7,7 +7,8 @@ const {
   requireAuth,
   getUserEffectivePermissionsAsync,
   getUserRoleCodesAsync,
-  getDepartmentByIdAsync
+  getDepartmentByIdAsync,
+  getDepartmentByNameAsync
 } = require('../auth');
 const { mysqlConfigFromEnv } = require('../mysqlConfig');
 
@@ -20,6 +21,7 @@ const CLASSIFICATION_STATUSES = new Set(['unclassified', 'needs_review', 'confir
 const TABLE_KINDS = new Set(['main', 'detail']);
 const HANDOFF_STATUSES = new Set(['pending_return', 'returned', 'pending_review', 'confirmed']);
 const PROCESS_TYPES = new Set(['new', 'inherit', 'handoff', 'adjustment']);
+const STEP_TYPES = new Set(['action', 'decision']);
 const EDITABLE_DRAFT_STATUSES = new Set(['draft', 'needs_changes']);
 const BASIS_TYPES = new Set(['现场实际', '制度 / 规程', '表单 / 台账', '会议 / 访谈', '暂无证据']);
 const DEFAULT_PROCESS_DESIGN_FIELD_TYPES = [
@@ -48,6 +50,8 @@ const PROCESS_EVIDENCE_VERIFY_PERMISSION = 'process_evidence:verify';
 const EVIDENCE_STATUS_MIGRATION_KEY = '2026-07-01-process-design-evidence-status';
 const EDITION_SCHEMA_MIGRATION_KEY = '2026-07-02-process-design-document-editions';
 const FORM_STRUCTURE_SCHEMA_MIGRATION_KEY = '2026-07-03-process-design-form-structure';
+const STEP_TRANSITION_SCHEMA_MIGRATION_KEY = '2026-07-07-process-design-step-transitions';
+const STRUCTURED_OUTPUT_SCHEMA_VERSION = 'document-structured-output-v2';
 const ENGINEERING_ARCHIVE_ROOM_DEPARTMENT_NAME = '工程技术部';
 const VERIFIED_EVIDENCE_MESSAGE = '发布需至少 1 条已核验(verified)证据。';
 const REPO_ROOT = path.resolve(__dirname, '../../../..');
@@ -92,17 +96,11 @@ function pad3(sequence) {
 function formatFormCode(draft, sequence) {
   const documentNo = text(draft && draft.document_no) || 'UNSET';
   const edition = text(draft && draft.planned_edition).toUpperCase() || 'A';
-  return `FM-${documentNo}-${pad3(sequence)}-${edition}`;
+  return `FM-${documentNo}-${edition}-${pad3(sequence)}`;
 }
 
 function formatFormStructureCode(formCode, structureKind) {
-  const value = text(formCode);
-  const marker = structureKind === 'detail' ? 'D' : 'M';
-  const nextMatch = value.match(/^FM-(.+)-([0-9]{3})-([A-Z]+)$/);
-  if (nextMatch) return `FM-${nextMatch[1]}-${marker}${nextMatch[2]}-${nextMatch[3]}`;
-  const legacyMatch = value.match(/^FM-(.+)-([A-Z]+)-([0-9]{3})$/);
-  if (legacyMatch) return `FM-${legacyMatch[1]}-${marker}${legacyMatch[3]}-${legacyMatch[2]}`;
-  return `${value}-${marker}`;
+  return `${text(formCode)}-${structureKind === 'detail' ? 'D' : 'M'}`;
 }
 
 function formatFieldCode(structureCode, sequence) {
@@ -155,18 +153,10 @@ function parseProcedureSequence(processCode, draftId) {
 function parseFormSequence(formCode, draft) {
   const documentNo = text(draft && draft.document_no) || 'UNSET';
   const edition = text(draft && draft.planned_edition).toUpperCase() || 'A';
+  const prefix = `FM-${documentNo}-${edition}-`;
   const value = text(formCode);
-  const prefix = `FM-${documentNo}-`;
-  const suffix = `-${edition}`;
-  let sequence = 0;
-  if (value.startsWith(prefix) && value.endsWith(suffix)) {
-    sequence = Number(value.slice(prefix.length, -suffix.length));
-  }
-  if (!sequence) {
-    const legacyPrefix = `FM-${documentNo}-${edition}-`;
-    if (!value.startsWith(legacyPrefix)) return 0;
-    sequence = Number(value.slice(legacyPrefix.length));
-  }
+  if (!value.startsWith(prefix)) return 0;
+  const sequence = Number(value.slice(prefix.length));
   return Number.isInteger(sequence) && sequence > 0 ? sequence : 0;
 }
 
@@ -238,6 +228,107 @@ function jsonArray(value) {
   if (Array.isArray(value)) return JSON.stringify(value.map(item => text(item)).filter(Boolean));
   const single = text(value);
   return single ? JSON.stringify([single]) : JSON.stringify([]);
+}
+
+function arrayItems(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function firstText(...values) {
+  for (const value of values) {
+    const cleaned = text(value);
+    if (cleaned) return cleaned;
+  }
+  return '';
+}
+
+function hasOwn(object, field) {
+  return Object.prototype.hasOwnProperty.call(object || {}, field);
+}
+
+function structuredOutputData(body) {
+  const data = body && body.schema_version ? body : body && body.data;
+  return data && typeof data === 'object' ? data : null;
+}
+
+function enumValue(value, allowed, fallback) {
+  const cleaned = text(value);
+  if (!cleaned) return fallback;
+  return allowed.has(cleaned) ? cleaned : fallback;
+}
+
+function structuredOutputDraftPayload(data) {
+  const draft = data && data.draft || {};
+  const profile = data && data.document_profile || {};
+  const meta = data && data.structure_block_projection && data.structure_block_projection.meta || {};
+  const relatedDepartments = arrayItems(draft.related_departments).map(item => text(item)).filter(Boolean);
+  const documentNo = firstText(draft.document_no, profile.document_no, meta.document_no);
+  const documentTitle = firstText(profile.document_title, draft.document_title, draft.process_name, meta.document_title);
+  const payload = {
+    document_no: documentNo,
+    document_title: documentTitle,
+    process_name: firstText(draft.process_name, documentTitle),
+    reason: text(draft.reason),
+    basis_type: enumValue(draft.basis_type, BASIS_TYPES, '制度 / 规程'),
+    basis_description: text(draft.basis_description),
+    involves_other_departments: hasOwn(draft, 'involves_other_departments') ? Boolean(draft.involves_other_departments) : relatedDepartments.length > 0,
+    related_departments: relatedDepartments
+  };
+  if (text(draft.l1_name)) payload.l1_name = text(draft.l1_name);
+  if (text(draft.l2_name)) payload.l2_name = text(draft.l2_name);
+  if (text(draft.l3_name)) payload.l3_name = text(draft.l3_name);
+  return payload;
+}
+
+function structuredOutputProfilePayload(data, draftPayload) {
+  const profile = data && data.document_profile || {};
+  return {
+    document_no: firstText(profile.document_no, draftPayload.document_no),
+    document_title: firstText(profile.document_title, draftPayload.document_title, draftPayload.process_name),
+    purpose: text(profile.purpose),
+    scope: text(profile.scope),
+    inheritance_relation: optionalText(profile.inheritance_relation)
+  };
+}
+
+function refKey(value, fallback) {
+  return text(value) || fallback;
+}
+
+function fieldTypeName(value) {
+  const cleaned = text(value);
+  if (FIELD_TYPES.has(cleaned)) return cleaned;
+  const aliases = { '数值': '数字', '数量': '数字', '是/否': '布尔' };
+  return aliases[cleaned] || '文本';
+}
+
+function importCounts() {
+  return {
+    terms: 0,
+    processes: 0,
+    steps: 0,
+    step_transitions: 0,
+    behavior_details: 0,
+    cross_dept_handoffs: 0,
+    forms: 0,
+    form_tables: 0,
+    form_table_fields: 0,
+    evidence: 0
+  };
+}
+
+function pushImportWarning(warnings, objectType, index, message) {
+  warnings.push({ object_type: objectType, index, message });
+}
+
+function evidenceObjectTarget(item, maps, fallbackProcessId) {
+  const objectType = text(item && item.object_type);
+  const objectRef = text(item && (item.object_ref || item.process_ref || item.step_ref || item.form_ref || item.table_field_ref || item.field_ref));
+  if (objectType === 'process' && maps.processes.has(objectRef)) return { object_type: 'process', object_id: maps.processes.get(objectRef) };
+  if ((objectType === 'step' || objectType === 'behavior_detail') && maps.steps.has(objectRef)) return { object_type: 'step', object_id: maps.steps.get(objectRef) };
+  if (objectType === 'form' && maps.forms.has(objectRef)) return { object_type: 'form', object_id: maps.forms.get(objectRef) };
+  if ((objectType === 'field' || objectType === 'form_table_field' || objectType === 'form_field') && maps.fields.has(objectRef)) return { object_type: 'field', object_id: maps.fields.get(objectRef) };
+  return { object_type: 'process', object_id: fallbackProcessId || null };
 }
 
 function splitMarkdownRow(line) {
@@ -368,13 +459,6 @@ async function appendProcessTaxonomyValidation(repo, body, details, scope) {
   details.push(...await taxonomyValidationDetails(repo, body, scope));
 }
 
-function processBodyWithDraftTaxonomy(draft, body) {
-  const payload = { ...(body || {}) };
-  if (!text(payload.l1_name)) payload.l1_name = text(draft && draft.l1_name);
-  if (!text(payload.l2_name)) payload.l2_name = text(draft && draft.l2_name);
-  return payload;
-}
-
 function publicDraft(row) {
   if (!row) return null;
   return {
@@ -400,6 +484,14 @@ function publicProcess(row) {
 
 function publicHandoff(row) {
   return row || null;
+}
+
+function publicStepTransition(row) {
+  if (!row) return null;
+  return {
+    ...row,
+    evidence_refs: parseJsonArray(row.evidence_refs_json)
+  };
 }
 
 function activeSteps(steps) {
@@ -683,6 +775,43 @@ async function ensureProcessDesignFormStructureSchema(pool) {
   `, [FORM_STRUCTURE_SCHEMA_MIGRATION_KEY]);
 }
 
+async function ensureProcessDesignStepTransitionSchema(pool) {
+  await executeIgnoringDuplicateColumn(pool, "ALTER TABLE process_design_steps ADD COLUMN step_type VARCHAR(32) NOT NULL DEFAULT 'action' AFTER process_id");
+  await pool.execute("UPDATE process_design_steps SET step_type='action' WHERE step_type IS NULL OR step_type=''");
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS process_design_step_transitions (
+      id BIGINT AUTO_INCREMENT PRIMARY KEY,
+      draft_id BIGINT NOT NULL,
+      process_id BIGINT NOT NULL,
+      from_step_id BIGINT NOT NULL,
+      condition_text VARCHAR(255) NOT NULL,
+      to_step_id BIGINT NULL,
+      evidence_refs_json JSON NULL,
+      sort_order INT NOT NULL DEFAULT 1,
+      created_by BIGINT NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      INDEX idx_process_design_step_transitions_draft (draft_id, sort_order),
+      INDEX idx_process_design_step_transitions_process (process_id, from_step_id),
+      CONSTRAINT fk_process_design_step_transitions_draft FOREIGN KEY (draft_id)
+        REFERENCES process_design_drafts(id) ON DELETE CASCADE,
+      CONSTRAINT fk_process_design_step_transitions_process FOREIGN KEY (process_id)
+        REFERENCES process_design_processes(id) ON DELETE CASCADE,
+      CONSTRAINT fk_process_design_step_transitions_from_step FOREIGN KEY (from_step_id)
+        REFERENCES process_design_steps(id) ON DELETE CASCADE,
+      CONSTRAINT fk_process_design_step_transitions_to_step FOREIGN KEY (to_step_id)
+        REFERENCES process_design_steps(id) ON DELETE SET NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  await executeIgnoringDuplicateKey(pool, 'ALTER TABLE process_design_step_transitions ADD INDEX idx_process_design_step_transitions_draft (draft_id, sort_order)');
+  await executeIgnoringDuplicateKey(pool, 'ALTER TABLE process_design_step_transitions ADD INDEX idx_process_design_step_transitions_process (process_id, from_step_id)');
+  await mysqlRun(pool, `
+    INSERT INTO schema_migrations (migration_key)
+    VALUES (?)
+    ON DUPLICATE KEY UPDATE applied_at=applied_at
+  `, [STEP_TRANSITION_SCHEMA_MIGRATION_KEY]);
+}
+
 function makeProcessDesignMysqlRepository(pool) {
   async function getById(table, id) {
     const [row] = await mysqlQuery(pool, `SELECT * FROM ${table} WHERE id=?`, [id]);
@@ -770,6 +899,23 @@ function makeProcessDesignMysqlRepository(pool) {
       });
     }
     return result;
+  }
+
+  async function loadStepTransitions(draftId) {
+    const rows = await mysqlQuery(pool, `
+      SELECT t.*,
+             fromStep.step_name AS from_step_name,
+             fromStep.step_type AS from_step_type,
+             toStep.step_name AS to_step_name,
+             process.l3_name AS process_name
+      FROM process_design_step_transitions t
+      JOIN process_design_steps fromStep ON fromStep.id=t.from_step_id
+      LEFT JOIN process_design_steps toStep ON toStep.id=t.to_step_id
+      LEFT JOIN process_design_processes process ON process.id=t.process_id
+      WHERE t.draft_id=?
+      ORDER BY t.process_id, t.sort_order, t.id
+    `, [draftId]);
+    return rows.map(publicStepTransition);
   }
 
   async function loadFormTableFields(tableId) {
@@ -1158,6 +1304,7 @@ function makeProcessDesignMysqlRepository(pool) {
       terms: await loadTerms(draft.id),
       processes: await loadProcesses(draft.id),
       steps: activeSteps(await loadSteps(draft.id)),
+      stepTransitions: await loadStepTransitions(draft.id),
       forms: await loadForms(draft.id),
       evidence: await loadEvidence(draft.id)
     };
@@ -1302,6 +1449,7 @@ function makeProcessDesignMysqlRepository(pool) {
       terms: await loadTerms(draftId),
       processes: await loadProcesses(draftId),
       steps: await loadSteps(draftId),
+      stepTransitions: await loadStepTransitions(draftId),
       forms: await loadForms(draftId),
       evidence: await loadEvidence(draftId),
       risks: await buildRisks(draftId),
@@ -1745,8 +1893,6 @@ function makeProcessDesignMysqlRepository(pool) {
     },
     async createProcess(draft, body, actorUserId) {
       const processType = PROCESS_TYPES.has(text(body.process_type)) ? text(body.process_type) : 'new';
-      const l1Name = text(body.l1_name) || text(draft.l1_name);
-      const l2Name = text(body.l2_name) || text(draft.l2_name);
       const [orderRow] = await mysqlQuery(pool, 'SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_order FROM process_design_processes WHERE draft_id=?', [draft.id]);
       const procedureCode = await nextProcedureCode(draft.id);
       const result = await mysqlRun(pool, `
@@ -1755,7 +1901,7 @@ function makeProcessDesignMysqlRepository(pool) {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         draft.id, procedureCode, processType,
-        l1Name, l2Name, text(body.l3_name),
+        text(body.l1_name), text(body.l2_name), text(body.l3_name),
         optionalText(body.description), body.sort_order ? Number(body.sort_order) : Number(orderRow.next_order || 1), actorUserId
       ]);
       await addEvent(draft.id, 'process_added', actorUserId, `已补充流程：${text(body.l3_name)}`, objectEventPayload('process', result.insertId, text(body.l3_name), 'added'));
@@ -1765,14 +1911,12 @@ function makeProcessDesignMysqlRepository(pool) {
       const current = await getById('process_design_processes', processId);
       if (!current || Number(current.draft_id) !== Number(draft.id)) throw httpError(404, '流程不存在');
       const processType = PROCESS_TYPES.has(text(body.process_type)) ? text(body.process_type) : 'new';
-      const l1Name = text(body.l1_name) || text(draft.l1_name);
-      const l2Name = text(body.l2_name) || text(draft.l2_name);
       await mysqlRun(pool, `
         UPDATE process_design_processes
         SET process_type=?, l1_name=?, l2_name=?, l3_name=?, description=?, updated_at=CURRENT_TIMESTAMP
         WHERE id=?
       `, [
-        processType, l1Name, l2Name, text(body.l3_name),
+        processType, text(body.l1_name), text(body.l2_name), text(body.l3_name),
         optionalText(body.description), processId
       ]);
       await addEvent(draft.id, 'process_updated', actorUserId, `已修改流程：${text(body.l3_name)}`, objectEventPayload('process', processId, text(body.l3_name), 'updated'));
@@ -1793,14 +1937,15 @@ function makeProcessDesignMysqlRepository(pool) {
       const processId = Number(body.process_id || 0);
       const [processRow] = await mysqlQuery(pool, 'SELECT id FROM process_design_processes WHERE id=? AND draft_id=?', [processId, draft.id]);
       if (!processRow) throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'process_id', message: '业务行为必须归属一个制度流程' }] });
+      const stepType = STEP_TYPES.has(text(body.step_type)) ? text(body.step_type) : 'action';
       const [orderRow] = await mysqlQuery(pool, 'SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_order FROM process_design_steps WHERE draft_id=? AND process_id=?', [draft.id, processId]);
       const result = await mysqlRun(pool, `
         INSERT INTO process_design_steps
-          (draft_id, process_id, step_name, actor_role, timing, input_materials, output_result, need_confirmation,
+          (draft_id, process_id, step_type, step_name, actor_role, timing, input_materials, output_result, need_confirmation,
            related_departments, basis, sort_order, created_by)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
-        draft.id, processId, text(body.step_name), optionalText(body.actor_role), optionalText(body.timing),
+        draft.id, processId, stepType, text(body.step_name), optionalText(body.actor_role), optionalText(body.timing),
         optionalText(body.input_materials), optionalText(body.output_result), boolInt(body.need_confirmation),
         optionalText(body.related_departments), optionalText(body.basis),
         body.sort_order ? Number(body.sort_order) : Number(orderRow.next_order || 1), actorUserId
@@ -1832,12 +1977,48 @@ function makeProcessDesignMysqlRepository(pool) {
         sets.push('need_confirmation=?');
         params.push(boolInt(body.need_confirmation));
       }
+      if (Object.prototype.hasOwnProperty.call(body, 'step_type')) {
+        sets.push('step_type=?');
+        params.push(STEP_TYPES.has(text(body.step_type)) ? text(body.step_type) : 'action');
+      }
       if (sets.length) {
         sets.push('updated_at=CURRENT_TIMESTAMP');
         await mysqlRun(pool, `UPDATE process_design_steps SET ${sets.join(', ')} WHERE id=?`, [...params, stepId]);
         await addEvent(draft.id, 'step_updated', actorUserId, `已修改业务行为：${text(body.step_name) || text(current.step_name)}`, objectEventPayload('step', stepId, text(body.step_name) || text(current.step_name), 'updated'));
       }
       return await getById('process_design_steps', stepId);
+    },
+    async createStepTransition(draft, body, actorUserId) {
+      const processId = Number(body.process_id || 0);
+      const fromStepId = Number(body.from_step_id || 0);
+      const toStepId = body.to_step_id == null ? null : Number(body.to_step_id || 0);
+      const [fromStep] = await mysqlQuery(pool, 'SELECT id, draft_id, process_id, step_type FROM process_design_steps WHERE id=? AND draft_id=?', [fromStepId, draft.id]);
+      if (!fromStep || Number(fromStep.process_id) !== processId || text(fromStep.step_type) !== 'decision') {
+        throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'from_step_id', message: '判断分支必须从同一流程内的判断节点发出' }] });
+      }
+      if (toStepId) {
+        const [toStep] = await mysqlQuery(pool, 'SELECT id, process_id FROM process_design_steps WHERE id=? AND draft_id=?', [toStepId, draft.id]);
+        if (!toStep || Number(toStep.process_id) !== processId) {
+          throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'to_step_id', message: '判断分支流向必须属于同一流程' }] });
+        }
+      }
+      const [processRow] = await mysqlQuery(pool, 'SELECT id FROM process_design_processes WHERE id=? AND draft_id=?', [processId, draft.id]);
+      if (!processRow) throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'process_id', message: '判断分支必须归属同一制度流程' }] });
+      if (!text(body.condition_text)) {
+        throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'condition_text', message: '判断分支必须填写条件' }] });
+      }
+      const [orderRow] = await mysqlQuery(pool, 'SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_order FROM process_design_step_transitions WHERE draft_id=? AND process_id=?', [draft.id, processId]);
+      const result = await mysqlRun(pool, `
+        INSERT INTO process_design_step_transitions
+          (draft_id, process_id, from_step_id, condition_text, to_step_id, evidence_refs_json, sort_order, created_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        draft.id, processId, fromStepId, text(body.condition_text), toStepId || null,
+        JSON.stringify(arrayItems(body.evidence_refs).map(item => text(item)).filter(Boolean)),
+        body.sort_order ? Number(body.sort_order) : Number(orderRow.next_order || 1), actorUserId
+      ]);
+      await addEvent(draft.id, 'step_transition_added', actorUserId, `已导入判断分支：${text(body.condition_text)}`, objectEventPayload('step_transition', result.insertId, text(body.condition_text), 'added'));
+      return await getById('process_design_step_transitions', result.insertId);
     },
     async saveBehaviorDetail(draft, stepId, body, actorUserId) {
       const step = await getById('process_design_steps', stepId);
@@ -1974,7 +2155,7 @@ function makeProcessDesignMysqlRepository(pool) {
       return await getById('process_design_form_tables', result.insertId);
     },
     async nextFieldCode(table, structureKind) {
-      const structureCode = text(table.table_code) || text(table.table_no) || formatFormStructureCode('FM-UNSET-001-A', structureKind);
+      const structureCode = text(table.table_code) || text(table.table_no) || formatFormStructureCode('FM-UNSET-A-001', structureKind);
       const rows = await mysqlQuery(pool, 'SELECT field_code FROM process_design_form_table_fields WHERE form_table_id=? AND structure_kind=?', [table.id, structureKind]);
       const maxSequence = rows.reduce((max, row) => Math.max(max, parseFieldSequence(row.field_code, structureCode)), 0);
       return formatFieldCode(structureCode, maxSequence + 1);
@@ -2432,6 +2613,7 @@ async function repository() {
       await ensureProcessDesignEditionSchema(pool);
       await ensureProcessDesignEvidenceStatusSchema(pool);
       await ensureProcessDesignFormStructureSchema(pool);
+      await ensureProcessDesignStepTransitionSchema(pool);
       return makeProcessDesignMysqlRepository(pool);
     })();
   }
@@ -2554,6 +2736,20 @@ async function taxonomyScopeForDepartmentId(departmentId) {
   return { departmentNames: departmentName ? [departmentName] : [] };
 }
 
+function structuredOutputDepartmentName(data) {
+  const draft = data && data.draft || {};
+  const department = draft.department || {};
+  const profile = data && data.document_profile || {};
+  const meta = data && data.structure_block_projection && data.structure_block_projection.meta || {};
+  return firstText(
+    draft.department_name,
+    department.department_name,
+    department.name,
+    profile.department_name,
+    meta.dept_name
+  );
+}
+
 router.get('/summary', requireAuth, (req, res) => runAction(res, async () => {
   const repo = await repository();
   const roleCodes = await currentRoleCodes(req);
@@ -2588,6 +2784,386 @@ async function canMaintainDocument(req, document) {
   return Boolean(allowed && document && allowed.has(Number(document.owning_department_id)));
 }
 
+async function structuredImportTargetDepartment(req, repo, data, roleCodes) {
+  const draft = data && data.draft || {};
+  let requestedDeptId = Number(draft.department_id || draft.department && draft.department.department_id || 0) || null;
+  const requestedDeptName = structuredOutputDepartmentName(data);
+  if (!requestedDeptId && requestedDeptName) {
+    const department = await getDepartmentByNameAsync(requestedDeptName);
+    if (!department) {
+      throw httpError(422, '校验失败', {
+        error: '校验失败',
+        details: [{ field: 'department.department_name', message: '结构化文件中的归口部门不存在' }]
+      });
+    }
+    requestedDeptId = Number(department.id || department.department_id || 0) || null;
+  }
+  const sessionDeptId = req.session.departmentId ? Number(req.session.departmentId) : null;
+  const targetDeptId = requestedDeptId || sessionDeptId;
+  const canCrossDept = await canWorkAcrossDepartments(req, roleCodes);
+  if (!targetDeptId) throw httpError(400, '请先维护人员组织信息后再导入结构化文件');
+  if (!await repo.departmentExists(targetDeptId)) {
+    throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'department_id', message: '所属部门不存在' }] });
+  }
+  if (!canCrossDept) {
+    if (requestedDeptId && requestedDeptId !== sessionDeptId) throw httpError(403, '普通填报人只能为本人部门导入制度结构草稿');
+    const allowed = await authorizedDepartmentIds(req, roleCodes);
+    if (!allowed || !allowed.has(Number(targetDeptId))) throw httpError(403, '无权为该部门导入制度结构草稿');
+    if (!hasRole(roleCodes, new Set([...DEPT_CREATE_ROLES, ...REVIEW_ROLES]))) throw httpError(403, '无权导入制度结构草稿');
+  }
+  return {
+    targetDeptId,
+    proxyDeptId: canCrossDept && requestedDeptId && sessionDeptId && requestedDeptId !== sessionDeptId ? sessionDeptId : null
+  };
+}
+
+function structuredOutputProcessRows(data, draftPayload) {
+  const rows = arrayItems(data && data.processes);
+  if (rows.length) return rows;
+  if (text(draftPayload.l1_name) || text(draftPayload.l2_name) || text(draftPayload.l3_name)) {
+    return [{
+      process_ref: 'proc_1',
+      process_type: 'new',
+      l1_name: draftPayload.l1_name,
+      l2_name: draftPayload.l2_name,
+      l3_name: draftPayload.l3_name,
+      description: null
+    }];
+  }
+  return [];
+}
+
+async function validateStructuredOutputProcesses(repo, processRows, scope) {
+  const details = [];
+  for (let index = 0; index < processRows.length; index += 1) {
+    const process = processRows[index] || {};
+    if (!firstText(process.l1_name, process.l2_name, process.l3_name)) continue;
+    if (!text(process.l1_name)) details.push({ field: `processes.${index}.l1_name`, message: '请选择已有 L1 能力域' });
+    if (!text(process.l2_name)) details.push({ field: `processes.${index}.l2_name`, message: '请选择已有 L2 业务能力' });
+    if (!text(process.l3_name)) details.push({ field: `processes.${index}.l3_name`, message: 'L3 流程不能为空' });
+    if (text(process.l1_name) && text(process.l2_name)) {
+      const taxonomyErrors = await taxonomyValidationDetails(repo, process, scope);
+      taxonomyErrors.forEach(error => details.push({ ...error, field: `processes.${index}.${error.field}` }));
+    }
+  }
+  return details;
+}
+
+async function createStructuredImportDraft(req, repo, data, draftPayload, target) {
+  const lookup = await repo.lookupDocument(draftPayload.document_no);
+  if (lookup && lookup.exists && !(await canMaintainDocument(req, lookup.document))) {
+    throw httpError(403, '该制度编号已存在，不属于当前可维护范围。');
+  }
+  if (lookup && lookup.active_draft) {
+    throw httpError(409, '该制度编号已有进行中草稿', {
+      error: '该制度编号已有进行中草稿',
+      active_draft: lookup.active_draft
+    });
+  }
+  if (lookup && lookup.current_version && lookup.document && lookup.document.id) {
+    const result = await repo.createNextEditionDraft(lookup.document.id, req.session.userId, target.targetDeptId);
+    const draft = result.draft || result;
+    const updatePayload = {
+      process_name: draftPayload.process_name,
+      reason: draftPayload.reason,
+      basis_type: draftPayload.basis_type,
+      basis_description: draftPayload.basis_description,
+      involves_other_departments: draftPayload.involves_other_departments,
+      related_departments: draftPayload.related_departments,
+      l1_name: draftPayload.l1_name,
+      l2_name: draftPayload.l2_name,
+      l3_name: draftPayload.l3_name
+    };
+    return await repo.updateDraft(draft, updatePayload, req.session.userId);
+  }
+  return await repo.createDraft({
+    ...draftPayload,
+    department_id: target.targetDeptId,
+    proxy_reason: target.proxyDeptId ? '导入结构化输出文件' : null
+  }, req.session.userId, target.targetDeptId, target.proxyDeptId);
+}
+
+async function importStructuredOutput(req, repo, body) {
+  const data = structuredOutputData(body);
+  if (!data || text(data.schema_version) !== STRUCTURED_OUTPUT_SCHEMA_VERSION) {
+    throw httpError(422, '校验失败', {
+      error: '校验失败',
+      details: [{ field: 'schema_version', message: `结构化文件必须使用 ${STRUCTURED_OUTPUT_SCHEMA_VERSION}` }]
+    });
+  }
+  const roleCodes = await currentRoleCodes(req);
+  const target = await structuredImportTargetDepartment(req, repo, data, roleCodes);
+  const draftPayload = structuredOutputDraftPayload(data);
+  const details = draftRequiredErrors(draftPayload);
+  const taxonomyScope = await taxonomyScopeForDepartmentId(target.targetDeptId);
+  details.push(...await taxonomyValidationDetails(repo, draftPayload, taxonomyScope));
+  const processRows = structuredOutputProcessRows(data, draftPayload);
+  details.push(...await validateStructuredOutputProcesses(repo, processRows, taxonomyScope));
+  if (details.length) throw httpError(422, '校验失败', { error: '校验失败', details });
+
+  let created = await createStructuredImportDraft(req, repo, data, draftPayload, target);
+  let draft = created.draft || created;
+  const counts = importCounts();
+  const warnings = [];
+  const maps = {
+    processes: new Map(),
+    steps: new Map(),
+    stepRows: new Map(),
+    forms: new Map(),
+    tables: new Map(),
+    fields: new Map()
+  };
+
+  const profilePayload = structuredOutputProfilePayload(data, draftPayload);
+  if (profilePayload.purpose && profilePayload.scope) {
+    await repo.saveDocumentProfile(draft, profilePayload, req.session.userId);
+  } else if (profilePayload.purpose || profilePayload.scope || profilePayload.inheritance_relation) {
+    pushImportWarning(warnings, 'document_profile', 0, '制度目的和适用范围不完整，已先导入草稿，请在页面补齐制度说明。');
+  }
+
+  for (let index = 0; index < arrayItems(data.terms).length; index += 1) {
+    const term = data.terms[index] || {};
+    if (!text(term.term_name) || !text(term.definition)) {
+      pushImportWarning(warnings, 'terms', index, '术语名称或定义为空，未导入该术语。');
+      continue;
+    }
+    await repo.createTerm(draft, {
+      term_name: term.term_name,
+      definition: term.definition,
+      applies_to: optionalText(term.applies_to)
+    }, req.session.userId);
+    counts.terms += 1;
+  }
+
+  const processRefFallbacks = [];
+  for (let index = 0; index < processRows.length; index += 1) {
+    const process = processRows[index] || {};
+    if (!firstText(process.l1_name, process.l2_name, process.l3_name)) continue;
+    const createdProcess = await repo.createProcess(draft, {
+      l1_name: process.l1_name,
+      l2_name: process.l2_name,
+      l3_name: process.l3_name,
+      process_type: enumValue(process.process_type, PROCESS_TYPES, 'new'),
+      description: optionalText(process.description)
+    }, req.session.userId);
+    const key = refKey(process.process_ref, `process:${index}`);
+    maps.processes.set(key, createdProcess.id);
+    processRefFallbacks.push({ key, id: createdProcess.id });
+    counts.processes += 1;
+  }
+
+  const stepRefFallbacks = [];
+  for (let index = 0; index < arrayItems(data.steps).length; index += 1) {
+    const step = data.steps[index] || {};
+    const processId = maps.processes.get(text(step.process_ref)) || processRefFallbacks[0] && processRefFallbacks[0].id;
+    if (!processId || !text(step.step_name)) {
+      pushImportWarning(warnings, 'steps', index, '业务行为缺少所属流程或行为名称，未导入该行为。');
+      continue;
+    }
+    const stepType = STEP_TYPES.has(text(step.step_type)) ? text(step.step_type) : 'action';
+    const createdStep = await repo.createStep(draft, {
+      process_id: processId,
+      step_type: stepType,
+      step_name: step.step_name,
+      actor_role: optionalText(step.actor_role),
+      timing: optionalText(step.timing),
+      input_materials: optionalText(step.input_materials),
+      output_result: optionalText(step.output_result),
+      need_confirmation: false
+    }, req.session.userId);
+    const key = refKey(step.step_ref, `step:${index}`);
+    maps.steps.set(key, createdStep.id);
+    maps.stepRows.set(key, { id: createdStep.id, processId, stepType });
+    stepRefFallbacks.push({ key, id: createdStep.id });
+    counts.steps += 1;
+  }
+
+  for (let index = 0; index < arrayItems(data.behavior_details).length; index += 1) {
+    const detail = data.behavior_details[index] || {};
+    const stepId = maps.steps.get(text(detail.step_ref));
+    if (!stepId) {
+      pushImportWarning(warnings, 'behavior_details', index, '业务行为详情找不到对应行为，未导入该详情。');
+      continue;
+    }
+    await repo.saveBehaviorDetail(draft, stepId, {
+      precondition: optionalText(detail.precondition),
+      trigger_scene: optionalText(detail.trigger_scene),
+      execution_standard: optionalText(detail.execution_standard),
+      delivery_object: optionalText(detail.delivery_object),
+      requires_approval: Boolean(detail.requires_approval),
+      approval_note: optionalText(detail.approval_note),
+      is_cross_department: Boolean(detail.is_cross_department)
+    }, req.session.userId);
+    counts.behavior_details += 1;
+  }
+
+  for (let index = 0; index < arrayItems(data.step_transitions).length; index += 1) {
+    const transition = data.step_transitions[index] || {};
+    const fromRow = maps.stepRows.get(text(transition.from_step_ref));
+    if (!fromRow || !text(transition.condition)) {
+      pushImportWarning(warnings, 'step_transitions', index, '判断分支缺少判断节点或条件，未导入该分支。');
+      continue;
+    }
+    if (fromRow.stepType !== 'decision') {
+      pushImportWarning(warnings, 'step_transitions', index, '判断分支只能从判断节点发出，未导入该分支。');
+      continue;
+    }
+    const declaredProcessId = maps.processes.get(text(transition.process_ref));
+    if (declaredProcessId && Number(declaredProcessId) !== Number(fromRow.processId)) {
+      pushImportWarning(warnings, 'step_transitions', index, '判断分支声明的流程和来源判断节点不一致，已按来源判断节点所在流程导入。');
+    }
+    let toStepId = null;
+    if (text(transition.to_step_ref)) {
+      const toRow = maps.stepRows.get(text(transition.to_step_ref));
+      if (toRow && Number(toRow.processId) === Number(fromRow.processId)) {
+        toStepId = toRow.id;
+      } else {
+        pushImportWarning(warnings, 'step_transitions', index, '判断分支流向不在同一流程，已按未补流向导入。');
+      }
+    } else {
+      pushImportWarning(warnings, 'step_transitions', index, '判断分支缺少流向步骤，已导入分支条件，请在详情中补齐流向。');
+    }
+    await repo.createStepTransition(draft, {
+      process_id: fromRow.processId,
+      from_step_id: fromRow.id,
+      condition_text: transition.condition,
+      to_step_id: toStepId,
+      evidence_refs: transition.evidence_refs
+    }, req.session.userId);
+    counts.step_transitions += 1;
+  }
+
+  for (let index = 0; index < arrayItems(data.cross_dept_handoffs).length; index += 1) {
+    const handoff = data.cross_dept_handoffs[index] || {};
+    const stepId = maps.steps.get(text(handoff.step_ref));
+    if (!stepId || !text(handoff.target_department)) {
+      pushImportWarning(warnings, 'cross_dept_handoffs', index, '跨部门承接缺少对应行为或承接部门，未导入该承接。');
+      continue;
+    }
+    await repo.createHandoff(draft, stepId, {
+      target_department: handoff.target_department,
+      handoff_standard: optionalText(handoff.handoff_standard)
+    }, req.session.userId);
+    counts.cross_dept_handoffs += 1;
+  }
+
+  for (let index = 0; index < arrayItems(data.forms).length; index += 1) {
+    const form = data.forms[index] || {};
+    const stepId = maps.steps.get(text(form.step_ref)) || stepRefFallbacks[0] && stepRefFallbacks[0].id;
+    if (!stepId || !text(form.form_name)) {
+      pushImportWarning(warnings, 'forms', index, '表单缺少对应业务行为或表单名称，未导入该表单。');
+      continue;
+    }
+    const createdForm = await repo.createForm(draft, {
+      step_id: stepId,
+      form_name: form.form_name,
+      main_table_name: firstText(form.main_table_name, '主表'),
+      archive_location: enumValue(form.archive_location, ARCHIVE_LOCATIONS, null),
+      retention_period: enumValue(form.retention_period, RETENTION_PERIODS, null),
+      responsible_department_name: optionalText(form.responsible_department_name),
+      responsible_role: optionalText(form.responsible_role)
+    }, req.session.userId);
+    maps.forms.set(refKey(form.form_ref, `form:${index}`), createdForm.id);
+    counts.forms += 1;
+  }
+
+  for (let index = 0; index < arrayItems(data.form_tables).length; index += 1) {
+    const table = data.form_tables[index] || {};
+    const formId = maps.forms.get(text(table.form_ref));
+    if (!formId) {
+      pushImportWarning(warnings, 'form_tables', index, '表结构找不到对应表单，未导入该表结构。');
+      continue;
+    }
+    const tableKey = refKey(table.table_ref, `table:${index}`);
+    if (text(table.table_kind) === 'detail') {
+      if (!text(table.table_name)) {
+        pushImportWarning(warnings, 'form_tables', index, '明细表缺少表名，未导入该明细表。');
+        continue;
+      }
+      const createdTable = await repo.createFormTable(draft, formId, { table_name: table.table_name }, req.session.userId);
+      maps.tables.set(tableKey, { id: createdTable.id, structure_kind: 'detail' });
+      counts.form_tables += 1;
+    } else {
+      maps.tables.set(tableKey, { id: formId, structure_kind: 'main' });
+    }
+  }
+
+  const sourceTableFields = arrayItems(data.form_table_fields);
+  for (let index = 0; index < sourceTableFields.length; index += 1) {
+    const field = sourceTableFields[index] || {};
+    let tableTarget = maps.tables.get(text(field.table_ref));
+    if (!tableTarget && text(field.structure_kind) === 'main' && maps.forms.size === 1) {
+      tableTarget = { id: Array.from(maps.forms.values())[0], structure_kind: 'main' };
+    }
+    if (!tableTarget || !text(field.field_name)) {
+      pushImportWarning(warnings, 'form_table_fields', index, '字段缺少对应表结构或字段名称，未导入该字段。');
+      continue;
+    }
+    const structureKind = text(field.structure_kind) === 'detail' ? 'detail' : tableTarget.structure_kind;
+    const createdField = await repo.createFormTableField(draft, tableTarget.id, {
+      structure_kind: structureKind,
+      field_name: field.field_name,
+      field_type: fieldTypeName(field.field_type),
+      enum_options: optionalText(field.enum_options),
+      required: Boolean(field.required),
+      description: optionalText(field.description)
+    }, req.session.userId);
+    maps.fields.set(refKey(field.table_field_ref, `table_field:${index}`), createdField.id);
+    counts.form_table_fields += 1;
+  }
+
+  if (!sourceTableFields.length) {
+    for (let index = 0; index < arrayItems(data.form_fields).length; index += 1) {
+      const field = data.form_fields[index] || {};
+      const formId = maps.forms.get(text(field.form_ref));
+      if (!formId || !text(field.field_name_cn)) {
+        pushImportWarning(warnings, 'form_fields', index, '字段缺少对应表单或字段名称，未导入该字段。');
+        continue;
+      }
+      const createdField = await repo.createFormTableField(draft, formId, {
+        structure_kind: 'main',
+        field_name: field.field_name_cn,
+        field_type: fieldTypeName(field.field_type),
+        enum_options: optionalText(field.enum_options),
+        required: Boolean(field.required),
+        description: optionalText(field.evidence_note)
+      }, req.session.userId);
+      maps.fields.set(refKey(field.field_ref, `field:${index}`), createdField.id);
+      counts.form_table_fields += 1;
+    }
+  }
+
+  const fallbackProcessId = processRefFallbacks[0] && processRefFallbacks[0].id || draft.id;
+  for (let index = 0; index < arrayItems(data.evidence_catalog).length; index += 1) {
+    const evidence = data.evidence_catalog[index] || {};
+    if (!text(evidence.description)) {
+      pushImportWarning(warnings, 'evidence_catalog', index, '证据说明为空，未导入该证据。');
+      continue;
+    }
+    const targetObject = evidenceObjectTarget(evidence, maps, fallbackProcessId);
+    await repo.createEvidence(draft, {
+      ...targetObject,
+      evidence_type: enumValue(evidence.evidence_type, EVIDENCE_TYPES, '制度条款'),
+      description: evidence.description,
+      source_name: optionalText(evidence.source_name || evidence.source_file),
+      source_anchor: optionalText(evidence.source_anchor || evidence.locator),
+      confirmer: optionalText(evidence.confirmer),
+      record_time: optionalText(evidence.record_time),
+      missing_reason: optionalText(evidence.missing_reason),
+      expected_provider: optionalText(evidence.expected_provider),
+      expected_at: optionalText(evidence.expected_at)
+    }, req.session.userId);
+    if (text(evidence.status) && text(evidence.status) !== 'pending_review') {
+      pushImportWarning(warnings, 'evidence_catalog', index, '证据已按待核验导入，核验状态需要在 MDM 中重新确认。');
+    }
+    counts.evidence += 1;
+  }
+
+  const detail = await repo.detail(draft.id);
+  draft = detail && detail.draft || draft;
+  return { draft, imported: counts, warnings, detail };
+}
+
 router.get('/documents/lookup', requireAuth, (req, res) => runAction(res, async () => {
   const repo = await repository();
   const documentNo = text(req.query && req.query.document_no);
@@ -2604,6 +3180,12 @@ router.get('/documents/lookup', requireAuth, (req, res) => runAction(res, async 
     });
   }
   res.json({ accessible: true, ...result });
+}));
+
+router.post('/import-structured-output', requireAuth, (req, res) => runAction(res, async () => {
+  const repo = await repository();
+  const result = await importStructuredOutput(req, repo, req.body || {});
+  res.status(201).json(result);
 }));
 
 router.post('/documents/:id/drafts', requireAuth, (req, res) => runAction(res, async () => {
@@ -2713,7 +3295,7 @@ router.post('/drafts/:id/processes', requireAuth, (req, res) => runAction(res, a
   const repo = await repository();
   const draft = await repo.getDraft(req.params.id);
   await assertCanEditDraftContent(req, repo, draft);
-  const body = processBodyWithDraftTaxonomy(draft, req.body || {});
+  const body = req.body || {};
   const details = [];
   assertNoManualNumber(body, 'process_code', '流程编号');
   if (!text(body.l1_name)) details.push({ field: 'l1_name', message: 'L1 能力不能为空' });
@@ -2729,7 +3311,7 @@ router.put('/processes/:id', requireAuth, (req, res) => runAction(res, async () 
   const repo = await repository();
   const draft = await repo.getDraftByProcess(req.params.id);
   await assertCanEditDraftContent(req, repo, draft);
-  const body = processBodyWithDraftTaxonomy(draft, req.body || {});
+  const body = req.body || {};
   const details = [];
   assertNoManualNumber(body, 'process_code', '流程编号');
   if (!text(body.l1_name)) details.push({ field: 'l1_name', message: 'L1 能力不能为空' });
@@ -3007,5 +3589,6 @@ router.makeProcessDesignMysqlRepository = makeProcessDesignMysqlRepository;
 router.ensureProcessDesignEditionSchema = ensureProcessDesignEditionSchema;
 router.ensureProcessDesignEvidenceStatusSchema = ensureProcessDesignEvidenceStatusSchema;
 router.ensureProcessDesignFormStructureSchema = ensureProcessDesignFormStructureSchema;
+router.ensureProcessDesignStepTransitionSchema = ensureProcessDesignStepTransitionSchema;
 
 module.exports = router;

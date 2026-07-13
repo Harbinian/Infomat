@@ -43,7 +43,7 @@
 1. Markdown Round
    - 新增本计划文档，明确范围、风险、执行顺序和验收口径。
    - 根目录 `input-baseline-review-service` 仅作为临时工具，不作为正式 MDM 入口继续强化。
-   - 本阶段不改 `docs/norms` 真源，不改脚本。
+   - 本阶段不改 `docs/norms` 流程输入基线，不改脚本。
 
 2. Failing Tests First
    - 增加待确认预览测试：默认输出不得落到 `docs/norms`。

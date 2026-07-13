@@ -909,6 +909,7 @@ CREATE TABLE IF NOT EXISTS process_design_steps (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
   draft_id BIGINT NOT NULL,
   process_id BIGINT NOT NULL,
+  step_type VARCHAR(32) NOT NULL DEFAULT 'action',
   step_name VARCHAR(255) NOT NULL,
   actor_role VARCHAR(255) NULL,
   timing VARCHAR(255) NULL,
@@ -929,11 +930,36 @@ CREATE TABLE IF NOT EXISTS process_design_steps (
   INDEX idx_process_design_steps_draft (draft_id, sort_order),
   INDEX idx_process_design_steps_process (process_id, sort_order),
   INDEX idx_process_design_steps_status (draft_id, status, sort_order),
+  CHECK (step_type IN ('action','decision')),
   CHECK (status IN ('active','voided')),
   CONSTRAINT fk_process_design_steps_draft FOREIGN KEY (draft_id)
     REFERENCES process_design_drafts(id) ON DELETE CASCADE,
   CONSTRAINT fk_process_design_steps_process FOREIGN KEY (process_id)
     REFERENCES process_design_processes(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS process_design_step_transitions (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  draft_id BIGINT NOT NULL,
+  process_id BIGINT NOT NULL,
+  from_step_id BIGINT NOT NULL,
+  condition_text VARCHAR(255) NOT NULL,
+  to_step_id BIGINT NULL,
+  evidence_refs_json JSON NULL,
+  sort_order INT NOT NULL DEFAULT 1,
+  created_by BIGINT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_process_design_step_transitions_draft (draft_id, sort_order),
+  INDEX idx_process_design_step_transitions_process (process_id, from_step_id),
+  CONSTRAINT fk_process_design_step_transitions_draft FOREIGN KEY (draft_id)
+    REFERENCES process_design_drafts(id) ON DELETE CASCADE,
+  CONSTRAINT fk_process_design_step_transitions_process FOREIGN KEY (process_id)
+    REFERENCES process_design_processes(id) ON DELETE CASCADE,
+  CONSTRAINT fk_process_design_step_transitions_from_step FOREIGN KEY (from_step_id)
+    REFERENCES process_design_steps(id) ON DELETE CASCADE,
+  CONSTRAINT fk_process_design_step_transitions_to_step FOREIGN KEY (to_step_id)
+    REFERENCES process_design_steps(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS process_design_behavior_details (

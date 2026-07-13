@@ -23,7 +23,7 @@
 - PMO 驾驶舱：`pmo/procedure-management/dashboard.html`
 - MDM 平台：`apps/mdm-platform/`
 
-修改上述真源时，应按对应目录的 README、CLAUDE.md 或 AGENTS.md 执行验证。
+修改上述真源时，应按对应目录的 README 或 AGENTS.md 执行验证。
 
 ## 3. 命名规则
 

@@ -1,0 +1,109 @@
+# CODEX.md
+
+本文件是 Infomat 仓库的 Codex 协作说明。Codex 执行任务时,先遵守根目录 `AGENTS.md`,再按本文件确认执行纪律、文档同步和验证口径。
+
+## 当前工作阶段
+
+仓库当前处于"流程地图与数据地图的梳理与沉淀"阶段。默认分析对象是流程、数据、组织职责和项目资料,不是具体应用系统。
+
+MDM 平台保留为后续承接应用。除非用户明确要求进入 MDM 平台开发,不要把流程输入基线、PMO 展示或业务资料写入平台源码。
+
+## 启动上下文
+
+跨目录任务开始前按顺序读取:
+
+1. `AGENTS.md`
+2. `CODEX.md`
+3. `REPOSITORY_BOUNDARY.md`
+4. `DIRECTORY_OWNERSHIP.md`
+5. `MAINLINE_MAP.md`
+6. 任务相关目录下的 `README.md` / `AGENTS.md`
+
+历史计划、历史 specs、审计报告只能用于追溯,不能覆盖当前边界文件。若历史材料和当前边界冲突,以根目录执行规则为准。
+
+## 执行纪律
+
+- 先确认资产类型:资料、PMO 展示、MDM 应用、仓库脚本、AI 协作配置或历史归档。
+- 先找真源,再改派生文件。PMO 驾驶舱、JSON 快照和 MDM 导入数据都不是流程输入基线。
+- 脏工作区中只改本次任务相关文件,不回滚、不整理用户已有改动。
+- 修改前说明正在改什么；完成后说明改了什么、为什么改、怎么验证。
+- 可运行验证优先于口头判断。不能运行验证时,说明原因和剩余风险。
+
+## 代码变更必须同步文档
+
+任何代码、脚本、接口、数据库结构、前端交互、启动命令或测试命令变化,都必须同步检查并更新文档。
+
+同步范围包括但不限于:
+
+- 所在目录 `README.md` 和 `AGENTS.md`
+- 根目录 `README.md`、`AGENTS.md`、`CODEX.md`
+- `docs/glossary.md`
+- `apps/mdm-platform/docs/role-based-usage-guide.md`
+- `scripts/README.md`
+- PMO 真源、交付物说明或使用手册
+
+如果确认无需更新文档,最终交付说明必须写明原因。引入新术语、新缩写或改变术语含义时,必须同步更新 `docs/glossary.md`。
+
+## 目录级 AGENTS.md
+
+目录级 `AGENTS.md` 只放在有独立真源、生成副作用、运行命令、验证口径或禁止事项的关键目录。新增或调整目录级 `AGENTS.md` 时,同步更新 `DIRECTORY_OWNERSHIP.md`、相关 README 和 `docs/architecture/context-management.md`。
+
+当前应优先读取的目录级入口包括:
+
+- `apps/mdm-platform/AGENTS.md`
+- `apps/structured-output-service/AGENTS.md`
+- `apps/weekly-action-service/AGENTS.md`
+- `pmo/AGENTS.md`
+- `pmo/procedure-management/AGENTS.md`
+- `pmo/gantt-react/AGENTS.md`
+- `pmo/deliverables/AGENTS.md`
+- `docs/norms/AGENTS.md`
+- `docs/Demo/AGENTS.md`
+- `scripts/AGENTS.md`
+
+## 常用验证
+
+流程地图数据变化:
+
+```powershell
+node scripts/parse-sankey-data.mjs
+node scripts/check-dashboard-data.mjs
+```
+
+PMO 任务数据变化:
+
+```powershell
+cd pmo
+python build_pmo_task_data.py
+cd ..
+npm run test:pmo-task-data
+```
+
+MDM / PMO 本地联动:
+
+```powershell
+npm run start:infomat-services
+npm run smoke:infomat-services
+```
+
+MDM 代码变化按影响面选择:
+
+```powershell
+npm --prefix apps/mdm-platform run test:frontend
+npm --prefix apps/mdm-platform run test:project-roles
+npm --prefix apps/mdm-platform run test:process-governance
+npm --prefix apps/mdm-platform run test:mainline
+npm --prefix apps/mdm-platform run test:role-workbench
+```
+
+## 交付口径
+
+最终回复应包含:
+
+- 本次修改目标。
+- 实际修改或删除的文件。
+- 文档同步结果。
+- 验证命令和结果。
+- 未验证项、残留风险或需要用户决策的事项。
+
+不要只回复"已完成"。

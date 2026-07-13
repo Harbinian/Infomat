@@ -82,6 +82,7 @@ function assertMainlineSyncRequiresExplicitDbPath() {
 const checks = [
   ['禁用术语', 'apps/mdm-platform/scripts/test-no-banned-terminology.js'],
   ['脚本边界合约', assertSourceContract],
+  ['流程治理结构块解析', 'scripts/test-parse-sankey-structure-block.mjs'],
   ['主线同步数据库路径保护', assertMainlineSyncRequiresExplicitDbPath],
   ['主线合约', 'scripts/test-process-governance-mainline-contract.mjs'],
   ['项目治理升级', ['npm', 'run', 'test:project-governance-upgrade']],
