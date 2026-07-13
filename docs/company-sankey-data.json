@@ -1,8 +1,9 @@
 {
-  "snapshotDate": "2026-07-01",
+  "snapshotDate": "2026-07-13",
   "meta": {
     "parser_schema_version": 1,
     "structured_departments": 0,
+    "hybrid_departments": 0,
     "legacy_departments": 9,
     "departments": [
       {
@@ -48182,9 +48183,9 @@
         "assetType": "procedure",
         "fileNo": "待分配编号",
         "revision": "?",
-        "size": 99898,
-        "mtime": "2026-06-05T07:42:18.280Z",
-        "sha256": "c9c367a6033a9044598a7964036331072392b9d7f4686568ab34ffe9d54ec985",
+        "size": 99509,
+        "mtime": "2026-07-06T06:35:03.967Z",
+        "sha256": "0cd465fa5ef6af8c434a4b9bec36765718edbf10331f9b45ccdbeda7ef5a3368",
         "leafDir": "昌兴程序/SYCXQMS-M2-04 管理评审程序",
         "status": "纳入",
         "reason": "纳入源文件覆盖清单，用于流程治理证据追溯",
@@ -48956,9 +48957,9 @@
         "assetType": "procedure",
         "fileNo": "待分配编号",
         "revision": "?",
-        "size": 74223,
-        "mtime": "2026-06-05T07:42:18.418Z",
-        "sha256": "b9458d15aebea674521e1ee4c63cb7ff63d3ed4db30d412660aa13df5632d83d",
+        "size": 77548,
+        "mtime": "2026-07-06T06:34:08.262Z",
+        "sha256": "d993f2985e1098702a8e89c684430a2815a6d3b6b427838530b522222082c51e",
         "leafDir": "昌兴程序/SYCXQMS-P5-10 不合格品控制管理程序",
         "status": "纳入",
         "reason": "纳入源文件覆盖清单，用于流程治理证据追溯",
