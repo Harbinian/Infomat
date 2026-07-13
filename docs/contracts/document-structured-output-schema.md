@@ -1,7 +1,7 @@
 # 文档结构化输出标准 Schema
 
 > 状态：标准合同  
-> 生效日期：2026-07-02  
+> 生效日期：2026-07-07  
 > 机器合同：`docs/contracts/document-structured-output.schema.json`  
 > 回归命令：`npm run test:document-structured-output-schema`
 
@@ -21,12 +21,13 @@
 
 | 顶层字段 | 含义 | 当前承接 |
 |---|---|---|
-| `schema_version` | 固定为 `document-structured-output-v1` | schema 合同 |
+| `schema_version` | 固定为 `document-structured-output-v2` | schema 合同 |
 | `draft` | 制度结构草稿 | `process_design_drafts` |
 | `document_profile` | 制度编号、制度名称、目的、范围、与已有制度/流程/表单的关系 | `process_design_document_profiles` |
 | `terms` | 术语和定义 | `process_design_terms` |
 | `processes` | L3 流程骨架 | `process_design_processes`；可投影到 `l3_catalog` |
-| `steps` | A1 业务行为 | `process_design_steps`；可投影到 `a1_catalog` |
+| `steps` | A1 业务行为和判断节点；`step_type=action` 表示普通业务行为，`step_type=decision` 表示判断节点 | `process_design_steps`；可投影到 `a1_catalog` |
+| `step_transitions` | 判断分支；只允许同一流程内从判断节点发出，`to_step_ref` 可为空表示未补流向 | `process_design_step_transitions` |
 | `behavior_details` | 行为边界、审批、执行标准 | `process_design_behavior_details` |
 | `cross_dept_handoffs` | 跨部门承接关系 | `process_design_cross_dept_handoffs` |
 | `forms` | 表单 | `process_design_forms` |
@@ -47,8 +48,9 @@
 | `edition` | 大写字母序列，如 `A`、`B`、`AA` |
 | `version_status` | `published`、`superseded`、`retired` |
 | `process_type` | `new`、`inherit`、`handoff`、`adjustment` |
+| `step_type` | `action`、`decision` |
 | `system` | 空值、`OA`、`MES`、`PLM`、`ERP` |
-| `field_type` | `文本`、`数字`、`日期`、`金额`、`枚举`、`布尔`、`部门`、`人员`、`附件` |
+| `field_type` | `文本`、`长文本`、`数字`、`日期`、`日期时间`、`金额`、`枚举`、`布尔`、`部门`、`人员`、`文件编号`、`签名`、`图片`、`附件`、`二维码` |
 | `evidence_type` | `制度条款`、`表单样例`、`访谈记录`、`会议纪要`、`流程图`、`台账记录`、`暂无证据` |
 | `evidence.status` | `verified`、`pending_review`、`source_missing`、`ocr_extracted_not_confirmed`、`review_only` |
 
@@ -60,6 +62,7 @@
 |---|---|---|
 | `processes[]` | `l3_catalog[]` | `l3_key` 是结构块稳定键；当前页面可先用 `process_ref` 承接，投影前必须补齐 `l3_key`；投影携带制度编号、制度名称和版次 |
 | `steps[]` | `a1_catalog[]` | `a1_code` 是结构块稳定键；投影前必须能找到所属 `l3_key`；投影携带制度编号、制度名称和版次 |
+| `step_transitions[]` | 暂不投影到结构块 v1 | 3000 保存并在详情只读展示，用于记录判断节点的多分支出口 |
 | `evidence_catalog[]` | `evidence_catalog[]` | `status` 必须使用证据五状态 |
 | `mdm_requirement_catalog[]` | `mdm_requirement_catalog[]` | 只能来自字段台账或已核验证据，不从字段名直接推断 |
 | `pending_issues[]` | 不直接进入结构块 | 用来驱动人工确认和回源整改 |
@@ -70,13 +73,14 @@
 |---|---|
 | MySQL `process_design_processes` 当前没有独立 `owner`、`system`、`evidence_refs` 列 | schema 先作为标准字段保留；未落库时可从证据或导出投影阶段补齐 |
 | MySQL `process_design_steps` 当前没有独立 `entry`、`system`、`evidence_refs` 列 | schema 先作为 A1 投影字段保留；缺失时生成 `pending_issues` |
+| `step_transitions.to_step_ref` 可为空 | 3000 导入时保留为空流向并返回 warning，详情页展示为“未补流向” |
 | MySQL `process_design_evidence.object_type` 当前只覆盖部分对象 | schema 以文档结构对象为准，平台承接时可继续映射到现有对象类型 |
 | `mdm_requirement_catalog` 当前没有独立 MySQL 表 | schema 保留标准结构，避免主数据需求散落在自由文本里 |
 | 外部制度引用关系当前为自由文本 | 页面要求写明制度编号、版次和制度名称；本轮不新增引用明细接口 |
 
 ## 6. 使用方式
 
-1. 模型或脚本输出文档结构化结果时，先满足 `document-structured-output.schema.json`。
+1. 模型或脚本输出文档结构化结果时，先满足 `document-structured-output.schema.json`，`schema_version` 必须是 `document-structured-output-v2`。
 2. 页面和 MySQL 只作为承接实现，字段缺口应回写为 `pending_issues`，不要让模型自行补结论；新字母版次必须完整重写，不复制旧版内容。
 3. 要交给流程地图 parser 时，生成 `structure_block_projection`，并确保 `parser_schema_version=1`、证据引用不悬空。
 4. 发布下一版次后，只把当前有效版次投影到默认流程图谱和 A1 视图，旧版保留为历史追溯。

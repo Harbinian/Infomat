@@ -1,0 +1,2289 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>文档结构化输出辅助工具</title>
+<style>
+:root {
+  --mdm-bg: #efe7d5;
+  --mdm-bg-deep: #e6dcc1;
+  --mdm-surface: #f7f1e0;
+  --mdm-surface-2: #fbf6e9;
+  --mdm-line: rgba(58, 46, 31, 0.16);
+  --mdm-line-soft: rgba(58, 46, 31, 0.08);
+  --mdm-text: #2a2014;
+  --mdm-soft: #7a6a56;
+  --mdm-accent: #b25638;
+  --mdm-accent-hover: #8f3f2c;
+  --mdm-sage: #6f7d4e;
+  --mdm-mist: #4a6b7e;
+  --mdm-gold: #9a7a30;
+  --page: var(--mdm-bg);
+  --surface: var(--mdm-surface-2);
+  --line: var(--mdm-line);
+  --text: var(--mdm-text);
+  --soft: var(--mdm-soft);
+  --green: #4f7f55;
+  --red: #b91c1c;
+  --blue: var(--mdm-accent);
+  --blue-soft: #fff7e8;
+  --manual: #8b5cf6;
+  --imported: #8b806f;
+  --auto: var(--mdm-sage);
+  --warning: var(--mdm-gold);
+  --shadow: 0 4px 12px rgba(58, 46, 31, 0.06);
+  --radius: 8px;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  color: var(--text);
+  background: var(--page);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+}
+button, input, textarea, select { font: inherit; }
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: rgba(247, 241, 224, 0.94);
+  border-bottom: 1px solid var(--line);
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.brand { display: flex; flex-direction: column; gap: 2px; min-width: 220px; }
+.brand strong { font-size: 18px; }
+.brand span { color: var(--soft); font-size: 12px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.btn {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text);
+  background: var(--surface);
+  padding: 8px 12px;
+  cursor: pointer;
+  min-height: 36px;
+}
+.btn:hover { border-color: var(--blue); background: var(--blue-soft); }
+.btn.primary { color: #fff; background: var(--blue); border-color: var(--blue); }
+.btn.warn { color: var(--red); border-color: rgba(214, 66, 66, 0.45); }
+.btn:disabled { cursor: not-allowed; opacity: 0.62; }
+.file-input { display: none; }
+.layout {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 18px 24px 32px;
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 16px;
+}
+.side, .editor { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+.side { padding: 16px; align-self: start; position: sticky; top: 74px; }
+.status-wrap { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+.completion-pie {
+  position: relative;
+  width: 108px;
+  height: 108px;
+  border-radius: 50%;
+  background: conic-gradient(var(--green) 0deg, var(--red) 0deg);
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+.completion-pie::after {
+  content: "";
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: var(--surface);
+  position: absolute;
+}
+.pie-label {
+  position: absolute;
+  z-index: 1;
+  font-weight: 700;
+  font-size: 13px;
+  text-align: center;
+}
+.status-copy { color: var(--soft); font-size: 13px; line-height: 1.6; }
+.work-status {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  margin: 0 0 14px;
+  padding: 10px;
+  border: 1px solid rgba(178, 86, 56, 0.28);
+  border-radius: 8px;
+  background: #fff7e8;
+}
+.work-status[hidden] { display: none; }
+.work-spinner {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 3px solid rgba(178, 86, 56, 0.2);
+  border-top-color: var(--blue);
+  animation: spin .9s linear infinite;
+}
+.work-status strong { display: block; font-size: 13px; margin-bottom: 2px; }
+.work-status span { display: block; color: var(--soft); font-size: 12px; line-height: 1.5; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.nav { display: flex; flex-direction: column; gap: 6px; }
+.nav button {
+  width: 100%;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  text-align: left;
+  padding: 9px 10px;
+  cursor: pointer;
+  color: var(--soft);
+}
+.nav button.active { background: var(--blue-soft); color: var(--blue); font-weight: 700; }
+.drop-zone {
+  border: 1px dashed var(--blue);
+  border-radius: 8px;
+  background: var(--blue-soft);
+  color: var(--blue);
+  padding: 12px;
+  margin-top: 14px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.drop-zone strong { display: block; font-size: 14px; }
+.drop-zone.dragging { background: #f6faf2; border-color: var(--green); color: var(--green); }
+.drop-zone.busy {
+  border-style: solid;
+  border-color: rgba(178, 86, 56, 0.42);
+  background: #fff8ef;
+  color: var(--blue);
+}
+.editor { min-height: 680px; padding: 0; overflow: hidden; }
+.section-head {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.section-head h2 { margin: 0; font-size: 20px; }
+.section-head p { margin: 4px 0 0; color: var(--soft); font-size: 13px; }
+.section-body { padding: 18px 20px 24px; }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.grid.one { grid-template-columns: 1fr; }
+.group {
+  border-top: 1px solid var(--line);
+  padding-top: 18px;
+  margin-top: 20px;
+}
+.group:first-child { border-top: 0; padding-top: 0; margin-top: 0; }
+.group-title { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
+.group-title h3 { margin: 0; font-size: 15px; }
+.row-list { display: flex; flex-direction: column; gap: 12px; }
+.record {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: #fffdf8;
+}
+.record-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  color: var(--soft);
+  font-size: 13px;
+}
+.process-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+  background: #fffaf0;
+}
+.process-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.process-card-head h3 { margin: 0; font-size: 16px; }
+.process-card-head p { margin: 4px 0 0; color: var(--soft); font-size: 13px; }
+.process-actions,
+.step-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.process-collapsed-summary {
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  color: var(--ink);
+  background: #fffdf8;
+}
+.transition-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.transition-table th,
+.transition-table td {
+  border-bottom: 1px solid var(--line);
+  padding: 8px;
+  text-align: left;
+  vertical-align: top;
+}
+.field {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: #fffdf8;
+}
+.field.missing { border-color: var(--red); box-shadow: 0 0 0 2px rgba(214, 66, 66, 0.08); }
+.field.manual { border-left: 4px solid var(--manual); }
+.field.auto { border-left: 4px solid var(--auto); }
+.field.imported { border-left: 4px solid var(--imported); }
+.field.external_reference { border-left: 4px solid var(--blue); }
+.readonly-value {
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px;
+  background: #f8f2e7;
+  color: var(--ink);
+}
+.readonly-value.empty { color: var(--soft); }
+.field label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 7px;
+}
+.required { color: var(--red); }
+.origin {
+  margin-left: auto;
+  color: var(--soft);
+  font-size: 12px;
+  font-weight: 500;
+}
+.field input, .field textarea, .field select {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  min-height: 36px;
+  padding: 8px;
+  background: #fffaf1;
+}
+.field textarea { min-height: 84px; resize: vertical; }
+.source {
+  margin-top: 8px;
+  border-top: 1px dashed var(--line);
+  padding-top: 8px;
+}
+.source summary { cursor: pointer; color: var(--blue); font-size: 12px; font-weight: 700; }
+.source p { margin: 6px 0 0; color: var(--soft); font-size: 12px; white-space: pre-wrap; }
+.warning {
+  margin-top: 8px;
+  border: 1px solid rgba(154, 122, 48, 0.34);
+  border-left: 4px solid var(--warning);
+  border-radius: 6px;
+  background: #fffaf0;
+  color: #4a4036;
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.external-role-value {
+  margin-top: 8px;
+  border: 1px solid rgba(154, 122, 48, 0.24);
+  border-radius: 6px;
+  background: #fff7e2;
+  color: #5a4426;
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.role-picker {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+}
+.field-suggestion {
+  margin-top: 8px;
+  border: 1px solid rgba(111, 125, 78, 0.28);
+  border-left: 4px solid var(--mdm-sage);
+  border-radius: 6px;
+  background: #f8fbf1;
+  color: #455038;
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.suggestion-source {
+  margin-top: 6px;
+  border-top: 1px dashed rgba(111, 125, 78, 0.32);
+  padding-top: 6px;
+}
+.suggestion-source summary {
+  cursor: pointer;
+  color: var(--mdm-mist);
+  font-weight: 700;
+}
+.suggestion-source p {
+  margin: 5px 0 0;
+  color: var(--soft);
+  white-space: pre-wrap;
+}
+.table-wrap {
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fffdf8;
+}
+.fields-table {
+  width: 100%;
+  min-width: 940px;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+}
+.fields-table th,
+.fields-table td {
+  border-bottom: 1px solid var(--mdm-line-soft);
+  border-right: 1px solid var(--mdm-line-soft);
+  padding: 8px;
+  vertical-align: top;
+}
+.fields-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--mdm-surface);
+  color: var(--soft);
+  text-align: left;
+  white-space: nowrap;
+  font-weight: 700;
+}
+.fields-table th:last-child,
+.fields-table td:last-child { border-right: 0; }
+.fields-table tr:last-child td { border-bottom: 0; }
+.fields-table td.missing-cell { background: #fff7ed; box-shadow: inset 3px 0 0 var(--red); }
+.table-control {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fffaf1;
+  min-height: 34px;
+  padding: 7px 8px;
+}
+.table-control.textarea {
+  min-height: 54px;
+  resize: vertical;
+}
+.table-source summary { cursor: pointer; color: var(--blue); font-size: 12px; font-weight: 700; margin-top: 6px; }
+.table-source p { margin: 4px 0 0; color: var(--soft); white-space: pre-wrap; }
+.form-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 8px;
+  border: 1px solid var(--mdm-line-soft);
+  border-radius: 8px;
+  background: rgba(251, 246, 233, 0.72);
+}
+.table-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 8px;
+  border: 1px solid var(--mdm-line-soft);
+  border-radius: 8px;
+  background: rgba(251, 246, 233, 0.72);
+}
+.form-selector button,
+.table-selector button {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fffdf8;
+  color: var(--soft);
+  padding: 7px 10px;
+  cursor: pointer;
+  min-height: 34px;
+}
+.form-selector button.active,
+.table-selector button.active {
+  border-color: rgba(178, 86, 56, 0.48);
+  background: #fff7e8;
+  color: var(--blue);
+  font-weight: 700;
+}
+.table-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+.empty {
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  padding: 24px;
+  color: var(--soft);
+  text-align: center;
+  background: #fffdf8;
+}
+.busy-placeholder {
+  min-height: 240px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 32px;
+}
+.busy-panel {
+  width: min(480px, 100%);
+  border: 1px solid rgba(178, 86, 56, 0.24);
+  border-radius: 8px;
+  background: #fff7e8;
+  padding: 18px;
+}
+.busy-panel .work-spinner { margin: 0 auto 10px; }
+.busy-panel strong { display: block; margin-bottom: 6px; }
+.busy-panel p { margin: 0; color: var(--soft); line-height: 1.7; }
+.toast {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  border-radius: 8px;
+  background: #172033;
+  color: #fff;
+  padding: 11px 14px;
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity .2s, transform .2s;
+  z-index: 40;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+@media (max-width: 980px) {
+  .layout { grid-template-columns: 1fr; padding: 12px; }
+  .side { position: static; }
+  .grid { grid-template-columns: 1fr; }
+  .role-picker { grid-template-columns: 1fr; }
+  .topbar { align-items: flex-start; flex-direction: column; }
+  .actions { justify-content: flex-start; }
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <strong>文档结构化输出辅助工具</strong>
+    <span>导入制度文件后，在本页直接补充和修改</span>
+    <span>Deepseek-V4-Pro 1M上下文模型辅助生成</span>
+  </div>
+  <div class="actions">
+    <button class="btn" type="button" id="importDocButton">导入制度文件</button>
+    <button class="btn" type="button" id="importStructButton">导入结构化文件</button>
+    <button class="btn primary" type="button" id="exportButton">导出结构化文件</button>
+    <button class="btn warn" type="button" id="clearButton">清空页面</button>
+    <input class="file-input" type="file" id="documentInput" accept=".docx,.txt,.md">
+    <input class="file-input" type="file" id="structuredInput" accept=".json,application/json">
+  </div>
+</header>
+
+<main class="layout">
+  <aside class="side">
+    <div class="status-wrap">
+      <div class="completion-pie" id="completionPie"><div class="pie-label" id="pieLabel">待导入</div></div>
+      <div class="status-copy" id="statusCopy">导入文件后，绿色表示已经可以结构化的必填内容，红色表示还需要补充。</div>
+    </div>
+    <div class="work-status" id="workStatus" hidden aria-live="polite">
+      <div class="work-spinner" aria-hidden="true"></div>
+      <div>
+        <strong id="workStatusTitle">正在整理制度文件</strong>
+        <span id="workStatusDetail">请稍候，页面会在整理完成后自动填充。</span>
+      </div>
+    </div>
+    <nav class="nav" aria-label="结构化输出区块">
+      <button type="button" class="active" data-section="basic">基本信息</button>
+      <button type="button" data-section="profile">目的与范围</button>
+      <button type="button" data-section="terms">术语定义</button>
+      <button type="button" data-section="steps">流程步骤</button>
+      <button type="button" data-section="forms">表单与记录</button>
+      <button type="button" data-section="export">导出结构化文件</button>
+    </nav>
+    <div class="drop-zone" id="dropZone">
+      <strong>拖入制度文件</strong>
+      <span>也可以拖入结构化文件继续修改</span>
+    </div>
+  </aside>
+
+  <section class="editor">
+    <div class="section-head">
+      <div>
+        <h2 id="sectionTitle">基本信息</h2>
+        <p id="sectionHint">先导入制度文件，系统会把能整理出来的内容填到这里。</p>
+      </div>
+      <button class="btn" type="button" id="addButton" hidden>新增一项</button>
+    </div>
+    <div class="section-body" id="sectionBody">
+      <div class="empty">请先导入制度文件或结构化文件。</div>
+    </div>
+  </section>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const sections = {
+  basic: { title: '基本信息', hint: '确认制度名称、编号、归口部门和依据类型。' },
+  profile: { title: '目的与范围', hint: '目的和适用范围来自标准模板章节，可以直接修改。' },
+  terms: { title: '术语定义', hint: '术语来自制度中的术语章节。' },
+  steps: { title: '流程步骤', hint: '流程正文会按明确业务行为填充到可编辑步骤。' },
+  forms: { title: '表单与记录', hint: '表单、记录和字段是第一版重点整理内容。' },
+  export: { title: '导出结构化文件', hint: '导出的文件只包含当前页面中的结构化内容。' }
+};
+
+let sessionId = '';
+let currentRequestId = '';
+let docData = null;
+let fieldSources = {};
+let fieldOrigins = {};
+let fieldWarnings = {};
+let fieldSuggestions = {};
+let rosterRolesByDepartment = {};
+let activeFormRef = '';
+let activeTableRef = '';
+let activeSection = 'basic';
+let hasPageContent = false;
+let isWorking = false;
+let isSuggesting = false;
+let workTimers = [];
+const collapsedProcessRefs = new Set();
+
+const DEPARTMENT_OPTIONS = [
+  { value: '', label: '请选择' },
+  { value: '全公司', label: '全公司', domain: '全公司' },
+  { value: '公司领导', label: '公司领导', domain: '公司领导' },
+  { value: '工程技术部', label: '工程技术部', domain: '总经理直辖' },
+  { value: '质量管理部', label: '质量管理部', domain: '总经理直辖' },
+  { value: '财务部', label: '财务部', domain: '总经理直辖' },
+  { value: '行政人事部', label: '行政人事部', domain: '经营副总' },
+  { value: '经营发展部', label: '经营发展部', domain: '经营副总' },
+  { value: '物资保障部', label: '物资保障部', domain: '经营副总' },
+  { value: '项目管理部', label: '项目管理部', domain: '生产副总' },
+  { value: '复材车间', label: '复材车间', domain: '生产副总' },
+  { value: '运维安环部', label: '运维安环部', domain: '生产副总' }
+];
+
+const FIELD_TYPE_OPTIONS = ['文本', '长文本', '数字', '日期', '日期时间', '金额', '枚举', { value: '布尔', label: '是/否' }, '部门', '人员', '文件编号', '签名', '图片', '附件', '二维码'];
+
+const importDocButton = document.getElementById('importDocButton');
+const importStructButton = document.getElementById('importStructButton');
+const exportButton = document.getElementById('exportButton');
+const clearButton = document.getElementById('clearButton');
+const documentInput = document.getElementById('documentInput');
+const structuredInput = document.getElementById('structuredInput');
+const sectionBody = document.getElementById('sectionBody');
+const addButton = document.getElementById('addButton');
+const dropZone = document.getElementById('dropZone');
+const workStatus = document.getElementById('workStatus');
+const workStatusTitle = document.getElementById('workStatusTitle');
+const workStatusDetail = document.getElementById('workStatusDetail');
+
+importDocButton.addEventListener('click', () => {
+  if (!isWorking) documentInput.click();
+});
+importStructButton.addEventListener('click', () => {
+  if (!isWorking) structuredInput.click();
+});
+exportButton.addEventListener('click', exportStructuredFile);
+clearButton.addEventListener('click', clearPage);
+documentInput.addEventListener('change', event => {
+  importDocumentFile(event.target.files[0]);
+  event.target.value = '';
+});
+structuredInput.addEventListener('change', event => {
+  importStructuredFile(event.target.files[0]);
+  event.target.value = '';
+});
+addButton.addEventListener('click', addItemForActiveSection);
+['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+  window.addEventListener(eventName, handleFileDrag, true);
+});
+
+function isFileDrag(event) {
+  return Array.from(event.dataTransfer?.types || []).includes('Files');
+}
+
+function routeDroppedFile(file) {
+  if (isWorking) {
+    toast('正在整理上一份文件，请稍候。');
+    return;
+  }
+  if (/\.json$/i.test(file.name)) importStructuredFile(file);
+  else importDocumentFile(file);
+}
+
+function handleFileDrag(event) {
+  if (!isFileDrag(event)) return;
+  event.preventDefault();
+  event.stopPropagation();
+  if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
+
+  if (event.type === 'dragenter' || event.type === 'dragover') {
+    dropZone.classList.toggle('dragging', dropZone.contains(event.target));
+    return;
+  }
+  dropZone.classList.remove('dragging');
+  if (event.type === 'drop') {
+    const file = event.dataTransfer?.files && event.dataTransfer.files[0];
+    if (file) routeDroppedFile(file);
+  }
+}
+
+document.querySelectorAll('.nav button').forEach(button => {
+  button.addEventListener('click', () => {
+    activeSection = button.dataset.section;
+    document.querySelectorAll('.nav button').forEach(item => item.classList.toggle('active', item === button));
+    render();
+  });
+});
+
+window.addEventListener('beforeunload', event => {
+  if (!hasPageContent) return;
+  event.preventDefault();
+  event.returnValue = '刷新后当前内容将清空，请先导出结构化文件。';
+});
+
+init();
+
+async function init() {
+  const response = await fetch('/api/session', { method: 'POST' });
+  const payload = await response.json();
+  sessionId = payload.sessionId;
+  try {
+    const enumsResponse = await fetch('/api/enums');
+    if (enumsResponse.ok) applyEnums(await enumsResponse.json());
+  } catch (_) {
+    rosterRolesByDepartment = {};
+  }
+}
+
+function toast(message) {
+  const el = document.getElementById('toast');
+  el.textContent = message;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2600);
+}
+
+function clearWorkTimers() {
+  workTimers.forEach(timer => clearTimeout(timer));
+  workTimers = [];
+}
+
+function setWorkMessage(title, detail) {
+  workStatusTitle.textContent = title;
+  workStatusDetail.textContent = detail;
+  document.getElementById('pieLabel').textContent = '整理中';
+  document.getElementById('completionPie').style.background = 'conic-gradient(var(--blue) 0deg 360deg)';
+  document.getElementById('statusCopy').textContent = detail;
+  if (sectionBody.querySelector('.busy-panel')) renderBusyPlaceholder();
+}
+
+function scheduleWorkMessage(delayMs, title, detail, requestId) {
+  workTimers.push(setTimeout(() => {
+    if (!isWorking || requestId !== currentRequestId) return;
+    setWorkMessage(title, detail);
+  }, delayMs));
+}
+
+function setSuggestionMessage(title, detail) {
+  workStatusTitle.textContent = title;
+  workStatusDetail.textContent = detail;
+}
+
+function scheduleSuggestionMessage(delayMs, title, detail, requestId) {
+  workTimers.push(setTimeout(() => {
+    if (!isSuggesting || requestId !== currentRequestId) return;
+    setSuggestionMessage(title, detail);
+  }, delayMs));
+}
+
+function setImportControlsDisabled(disabled) {
+  importDocButton.disabled = disabled;
+  importStructButton.disabled = disabled;
+  exportButton.disabled = disabled;
+  clearButton.disabled = disabled;
+  addButton.disabled = disabled;
+}
+
+function renderBusyPlaceholder() {
+  sectionBody.innerHTML = '';
+  const placeholder = div('busy-placeholder');
+  const panel = div('busy-panel');
+  const spinner = div('work-spinner');
+  spinner.setAttribute('aria-hidden', 'true');
+  const title = document.createElement('strong');
+  title.textContent = workStatusTitle.textContent;
+  const detail = document.createElement('p');
+  detail.textContent = workStatusDetail.textContent;
+  panel.append(spinner, title, detail);
+  placeholder.appendChild(panel);
+  sectionBody.appendChild(placeholder);
+}
+
+function beginImportWork(file, requestId) {
+  clearWorkTimers();
+  isWorking = true;
+  workStatus.hidden = false;
+  dropZone.classList.add('busy');
+  document.body.setAttribute('aria-busy', 'true');
+  setImportControlsDisabled(true);
+  addButton.hidden = true;
+  const fileName = file?.name ? `已收到“${file.name}”。` : '已收到文件。';
+  setWorkMessage('正在整理制度文件', `${fileName}正在提取章节、流程和表单。`);
+  render();
+  scheduleWorkMessage(6000, '正在整理流程和表单', '文件较大时需要一点时间，请保持当前页面打开。', requestId);
+  scheduleWorkMessage(16000, '正在生成填报建议', '正在为还空着的字段准备填写提示，完成后会自动填到页面旁边。', requestId);
+}
+
+function finishImportWork(requestId) {
+  if (requestId && requestId !== currentRequestId) return;
+  clearWorkTimers();
+  isWorking = false;
+  workStatus.hidden = true;
+  dropZone.classList.remove('busy', 'dragging');
+  document.body.removeAttribute('aria-busy');
+  setImportControlsDisabled(false);
+}
+
+function beginSuggestionWork(requestId) {
+  clearWorkTimers();
+  isSuggesting = true;
+  workStatus.hidden = false;
+  setSuggestionMessage('页面已可编辑，正在补充填报建议', '可以先检查和修改页面内容，建议会自动出现在空白字段旁边。');
+  scheduleSuggestionMessage(7000, '正在查看流程步骤里的空白项', '页面可以继续编辑，已填写的字段不会被建议覆盖。', requestId);
+  scheduleSuggestionMessage(18000, '正在查看表单字段说明', '表单字段较多时会多花一点时间，请保持当前页面打开。', requestId);
+}
+
+function finishSuggestionWork(requestId) {
+  if (requestId && requestId !== currentRequestId) return;
+  clearWorkTimers();
+  isSuggesting = false;
+  workStatus.hidden = true;
+}
+
+function suggestionsForEmptyFields(suggestions = {}) {
+  const filtered = {};
+  for (const [path, suggestion] of Object.entries(suggestions || {})) {
+    if (!isFilled(getValue(path))) filtered[path] = suggestion;
+  }
+  return filtered;
+}
+
+function appendUploadSourcePath(body, file) {
+  const sourcePath = file?.webkitRelativePath || file?.name || '';
+  if (sourcePath) body.append('sourcePath', sourcePath);
+}
+
+async function requestFieldSuggestions(file, requestId) {
+  if (!file || !docData || requestId !== currentRequestId) return;
+  beginSuggestionWork(requestId);
+  const body = new FormData();
+  body.append('sessionId', sessionId);
+  body.append('requestId', requestId);
+  body.append('data', JSON.stringify(docData));
+  body.append('file', file);
+  try {
+    const response = await fetch('/api/suggestions', { method: 'POST', headers: { 'x-session-id': sessionId }, body });
+    const payload = await response.json();
+    if (payload.requestId && payload.requestId !== currentRequestId) return;
+    if (response.ok) {
+      const nextSuggestions = suggestionsForEmptyFields(payload.fieldSuggestions || {});
+      fieldSuggestions = { ...fieldSuggestions, ...nextSuggestions };
+      render();
+      if (Object.keys(nextSuggestions).length) toast('填报建议已补充到空白字段旁边');
+    }
+  } catch (_) {
+    toast('页面已可编辑，部分填报建议稍后可重新导入生成。');
+  } finally {
+    finishSuggestionWork(requestId);
+  }
+}
+
+async function importDocumentFile(file) {
+  if (!file) return;
+  if (isWorking) {
+    toast('正在整理上一份文件，请稍候。');
+    return;
+  }
+  if (!sessionId) await init();
+  const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  currentRequestId = requestId;
+  beginImportWork(file, requestId);
+  const body = new FormData();
+  body.append('sessionId', sessionId);
+  body.append('requestId', requestId);
+  body.append('file', file);
+  appendUploadSourcePath(body, file);
+  let shouldRequestSuggestions = false;
+  try {
+    const response = await fetch('/api/upload', { method: 'POST', headers: { 'x-session-id': sessionId }, body });
+    const payload = await response.json();
+    if (payload.requestId && payload.requestId !== currentRequestId) return;
+    if (!response.ok) {
+      toast(payload.error || '文件整理失败');
+      return;
+    }
+    applyEnums(payload.enums || {});
+    docData = ensureDocument(payload.data);
+    fieldSources = payload.fieldSources || {};
+    fieldOrigins = payload.fieldOrigins || {};
+    fieldWarnings = payload.fieldWarnings || {};
+    fieldSuggestions = payload.fieldSuggestions || {};
+    activeFormRef = '';
+    activeTableRef = '';
+    collapsedProcessRefs.clear();
+    hasPageContent = true;
+    activeSection = 'basic';
+    setActiveNav();
+    toast('制度文件已整理到页面');
+    shouldRequestSuggestions = true;
+  } catch (_) {
+    toast('文件整理失败，请重新导入。');
+  } finally {
+    finishImportWork(requestId);
+    render();
+  }
+  if (shouldRequestSuggestions) requestFieldSuggestions(file, requestId);
+}
+
+function importStructuredFile(file) {
+  if (!file) return;
+  if (isWorking) {
+    toast('正在整理上一份文件，请稍候。');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const parsed = JSON.parse(String(reader.result || '{}'));
+      if (!parsed || parsed.schema_version !== 'document-structured-output-v2') {
+        throw new Error('结构化文件必须使用 document-structured-output-v2');
+      }
+      docData = ensureDocument(parsed);
+      fieldSources = {};
+      fieldOrigins = importedOrigins(docData);
+      fieldWarnings = {};
+      fieldSuggestions = {};
+      activeFormRef = '';
+      activeTableRef = '';
+      collapsedProcessRefs.clear();
+      hasPageContent = true;
+      activeSection = 'basic';
+      setActiveNav();
+      render();
+      toast('结构化文件已导入');
+    } catch (_) {
+      toast('结构化文件无法读取');
+    }
+  };
+  reader.readAsText(file, 'utf-8');
+}
+
+function setActiveNav() {
+  document.querySelectorAll('.nav button').forEach(item => item.classList.toggle('active', item.dataset.section === activeSection));
+}
+
+function ensureDocument(data) {
+  const base = {
+    schema_version: 'document-structured-output-v2',
+    generated_at: new Date().toISOString(),
+    draft: {
+      draft_ref: null,
+      document_no: '',
+      document_title: '',
+      planned_edition: 'A',
+      current_edition: null,
+      base_version_ref: null,
+      process_name: '',
+      reason: '',
+      basis_type: '制度 / 规程',
+      basis_description: '',
+      involves_other_departments: false,
+      related_departments: [],
+      department: { department_name: '', department_code: null, department_id: null, domain: null },
+      l1_name: null,
+      l1_status: 'unclassified',
+      l2_name: null,
+      l2_status: 'unclassified',
+      l3_name: null,
+      status: 'draft'
+    },
+    document_profile: { profile_ref: null, draft_ref: null, document_title: '', document_no: '', purpose: '', scope: '', inheritance_relation: null },
+    terms: [],
+    processes: [],
+    steps: [],
+    behavior_details: [],
+    step_transitions: [],
+    cross_dept_handoffs: [],
+    forms: [],
+    form_tables: [],
+    form_table_fields: [],
+    form_fields: [],
+    evidence_catalog: [],
+    mdm_requirement_catalog: [],
+    pending_issues: [],
+    structure_block_projection: { meta: {}, l3_catalog: [], a1_catalog: [], evidence_catalog: [], mdm_requirement_catalog: [] },
+    markdown_draft: ''
+  };
+  const merged = deepMerge(base, data || {});
+  merged.draft.department = deepMerge(base.draft.department, merged.draft.department || {});
+  merged.document_profile.document_no = merged.draft.document_no || merged.document_profile.document_no || '';
+  merged.document_profile.document_title = merged.draft.document_title || merged.document_profile.document_title || '';
+  for (const key of ['terms', 'processes', 'steps', 'behavior_details', 'step_transitions', 'cross_dept_handoffs', 'forms', 'form_tables', 'form_table_fields', 'form_fields', 'evidence_catalog', 'mdm_requirement_catalog', 'pending_issues']) {
+    if (!Array.isArray(merged[key])) merged[key] = [];
+  }
+  merged.schema_version = 'document-structured-output-v2';
+  merged.steps.forEach(step => {
+    if (!['action', 'decision'].includes(step.step_type)) step.step_type = 'action';
+  });
+  return merged;
+}
+
+function deepMerge(base, patch) {
+  const result = Array.isArray(base) ? [...base] : { ...base };
+  for (const [key, value] of Object.entries(patch || {})) {
+    if (value && typeof value === 'object' && !Array.isArray(value) && base[key] && typeof base[key] === 'object' && !Array.isArray(base[key])) {
+      result[key] = deepMerge(base[key], value);
+    } else {
+      result[key] = value;
+    }
+  }
+  return result;
+}
+
+function importedOrigins(data) {
+  const origins = {};
+  walkValues(data, '', path => { origins[path] = 'imported'; });
+  return origins;
+}
+
+function walkValues(value, prefix, visit) {
+  if (value == null) return;
+  if (typeof value !== 'object') {
+    if (prefix) visit(prefix);
+    return;
+  }
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => walkValues(item, prefix ? `${prefix}.${index}` : String(index), visit));
+    return;
+  }
+  for (const key of Object.keys(value)) {
+    walkValues(value[key], prefix ? `${prefix}.${key}` : key, visit);
+  }
+}
+
+function getValue(path) {
+  return path.split('.').reduce((target, part) => target == null ? undefined : target[part], docData);
+}
+
+function setValue(path, value) {
+  const parts = path.split('.');
+  let target = docData;
+  for (let i = 0; i < parts.length - 1; i += 1) {
+    const part = parts[i];
+    if (target[part] == null) target[part] = {};
+    target = target[part];
+  }
+  target[parts[parts.length - 1]] = value;
+  syncRelatedTableValue(path, value);
+  if (/^(?:steps\.\d+\.(?:process_ref|step_type)|step_transitions\.\d+\.(?:from_step_ref|to_step_ref))$/.test(path)) cleanStepTransitions();
+  if (path === 'draft.department.department_name') {
+    const found = DEPARTMENT_OPTIONS.find(item => item.value === value);
+    docData.draft.department.domain = found?.domain || null;
+    if (docData.processes[0] && !docData.processes[0].owner) docData.processes[0].owner = value;
+  }
+  if (path === 'draft.document_no') setLinkedValue('document_profile.document_no', value);
+  if (path === 'draft.document_title') setLinkedValue('document_profile.document_title', value);
+  fieldOrigins[path] = 'manual';
+  if (fieldWarnings[path]) delete fieldWarnings[path];
+  if (fieldSuggestions[path]) delete fieldSuggestions[path];
+  hasPageContent = true;
+  updateCompletion();
+  if (shouldRerenderAfterValueChange(path)) render();
+}
+
+function setLinkedValue(path, value) {
+  const parts = path.split('.');
+  let target = docData;
+  for (let i = 0; i < parts.length - 1; i += 1) {
+    const part = parts[i];
+    if (target[part] == null) target[part] = {};
+    target = target[part];
+  }
+  target[parts[parts.length - 1]] = value;
+  fieldOrigins[path] = 'manual';
+  if (fieldWarnings[path]) delete fieldWarnings[path];
+  if (fieldSuggestions[path]) delete fieldSuggestions[path];
+}
+
+function syncRelatedTableValue(path, value) {
+  const formMatch = path.match(/^forms\.(\d+)\.main_table_name$/);
+  if (formMatch) {
+    const form = docData.forms[Number(formMatch[1])];
+    const tableIndex = docData.form_tables.findIndex(item => item.form_ref === form?.form_ref && item.table_kind === 'main');
+    if (tableIndex >= 0) setLinkedValue(`form_tables.${tableIndex}.table_name`, value);
+  }
+  const tableNameMatch = path.match(/^form_tables\.(\d+)\.table_name$/);
+  const tableKindMatch = path.match(/^form_tables\.(\d+)\.table_kind$/);
+  const tableIndex = tableNameMatch ? Number(tableNameMatch[1]) : tableKindMatch ? Number(tableKindMatch[1]) : -1;
+  if (tableIndex >= 0) {
+    const table = docData.form_tables[tableIndex];
+    if (table?.table_kind === 'main') {
+      const formIndex = docData.forms.findIndex(item => item.form_ref === table.form_ref);
+      if (formIndex >= 0) setLinkedValue(`forms.${formIndex}.main_table_name`, table.table_name || '');
+    }
+  }
+}
+
+function isFilled(value) {
+  if (Array.isArray(value)) return value.length > 0;
+  return value !== null && value !== undefined && String(value).trim() !== '';
+}
+
+function applyEnums(enums = {}) {
+  if (enums.rosterRolesByDepartment && typeof enums.rosterRolesByDepartment === 'object') {
+    rosterRolesByDepartment = enums.rosterRolesByDepartment;
+  }
+}
+
+function rosterDepartmentOptions() {
+  const options = [...DEPARTMENT_OPTIONS];
+  const known = new Set(options.map(item => item.value).filter(Boolean));
+  Object.keys(rosterRolesByDepartment || {})
+    .filter(Boolean)
+    .sort((left, right) => left.localeCompare(right, 'zh-CN'))
+    .forEach(department => {
+      if (!known.has(department)) options.push({ value: department, label: department });
+    });
+  return options;
+}
+
+function currentDocumentDepartment() {
+  return docData?.draft?.department?.department_name || '';
+}
+
+function processDepartmentForStep(index) {
+  const step = docData?.steps?.[index];
+  const process = docData?.processes?.find(item => item.process_ref === step?.process_ref);
+  return process?.owner || currentDocumentDepartment();
+}
+
+function formDepartment(index) {
+  return docData?.forms?.[index]?.responsible_department_name || currentDocumentDepartment();
+}
+
+function shouldRerenderAfterValueChange(path) {
+  return path === 'draft.department.department_name' ||
+    /^processes\.\d+\.owner$/.test(path) ||
+    /^forms\.\d+\.responsible_department_name$/.test(path) ||
+    /^steps\.\d+\.process_ref$/.test(path);
+}
+
+function actorRoleDepartmentOptions(ownDepartment = currentDocumentDepartment(), missingDepartmentLabel = '先确认归口部门') {
+  const department = ownDepartment || '';
+  const options = [{ value: '', label: department ? '请选择部门' : missingDepartmentLabel }];
+  if (department) options.push({ value: department, label: department });
+  if (department !== '全公司') options.push({ value: '全公司', label: '全公司' });
+  return options;
+}
+
+function rosterPositions(department) {
+  return Array.isArray(rosterRolesByDepartment?.[department]) ? rosterRolesByDepartment[department] : [];
+}
+
+function parseActorRole(value, ownDepartment = currentDocumentDepartment()) {
+  const text = String(value || '').trim();
+  if (!text) return { department: '', position: '' };
+  if (ownDepartment && rosterPositions(ownDepartment).includes(text)) {
+    return { department: ownDepartment, position: text };
+  }
+  const departments = rosterDepartmentOptions()
+    .map(item => item.value)
+    .filter(Boolean)
+    .sort((left, right) => right.length - left.length);
+  const department = departments.find(item => text === item || text.startsWith(item));
+  if (department) {
+    const rest = text.slice(department.length).trim();
+    const position = rosterPositions(department).includes(rest) ? rest : '';
+    return { department, position };
+  }
+  const matches = Object.entries(rosterRolesByDepartment || {})
+    .filter(([, positions]) => Array.isArray(positions) && positions.includes(text));
+  if (matches.length === 1) return { department: matches[0][0], position: text };
+  return { department: '', position: '' };
+}
+
+function actorRoleMatchesPicker(value, parsed, ownDepartment = currentDocumentDepartment()) {
+  return Boolean(
+    value &&
+    ownDepartment &&
+    (
+      (parsed.department === ownDepartment && parsed.position && rosterPositions(ownDepartment).includes(parsed.position)) ||
+      (parsed.department === '全公司' && !parsed.position)
+    )
+  );
+}
+
+function combineActorRole(department, position) {
+  if (department && position) return `${department}${position}`;
+  return department || position || '';
+}
+
+function refreshActorRolePositionOptions(positionSelect, department, selectedPosition = '', ownDepartment = currentDocumentDepartment(), missingDepartmentLabel = '先确认归口部门') {
+  const positions = department && department !== '全公司' ? rosterPositions(department) : [];
+  const position = positions.includes(selectedPosition) ? selectedPosition : '';
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = !ownDepartment
+    ? missingDepartmentLabel
+    : department === '全公司'
+      ? '全公司无需选择岗位'
+      : '请选择岗位';
+  placeholder.selected = !position;
+  positionSelect.replaceChildren(placeholder);
+  positions.forEach(item => {
+    const option = document.createElement('option');
+    option.value = item;
+    option.textContent = item;
+    option.selected = item === position;
+    positionSelect.appendChild(option);
+  });
+  positionSelect.disabled = !department || department === '全公司';
+}
+
+function shortSuggestionContext(value) {
+  const text = String(value || '').replace(/\s+/g, ' ').trim();
+  return text.length > 32 ? `${text.slice(0, 32)}...` : text;
+}
+
+function fillSuggestionForPath(path) {
+  const stepMatch = path.match(/^(steps|behavior_details)\.(\d+)\./);
+  const stepName = stepMatch ? shortSuggestionContext(docData?.steps?.[Number(stepMatch[2])]?.step_name) : '';
+  const stepPrefix = stepName ? `围绕“${stepName}”，` : '';
+  const formMatch = path.match(/^forms\.(\d+)\./);
+  const formName = formMatch ? shortSuggestionContext(docData?.forms?.[Number(formMatch[1])]?.form_name) : '';
+  const formPrefix = formName ? `“${formName}”` : '这张表';
+  const fieldMatch = path.match(/^form_table_fields\.(\d+)\./);
+  const fieldName = fieldMatch ? shortSuggestionContext(docData?.form_table_fields?.[Number(fieldMatch[1])]?.field_name) : '';
+  const fieldPrefix = fieldName ? `“${fieldName}”` : '这个字段';
+  if (/\.trigger_scene$/.test(path)) return `${stepPrefix}补充这一动作在什么业务情形下开始。`;
+  if (/\.precondition$/.test(path)) return `${stepPrefix}补充开始前必须具备的材料、状态或上一环节结果。`;
+  if (/\.input_materials$/.test(path)) return `${stepPrefix}补充执行时要使用的表单、材料或记录。`;
+  if (/\.output_result$/.test(path)) return `${stepPrefix}补充完成后形成的表单、记录、结论或通知。`;
+  if (/\.execution_standard$/.test(path)) return `${stepPrefix}补充判断这一步是否完成的标准、时限或评价维度。`;
+  if (/\.form_code$/.test(path)) return `补充${formPrefix}在制度中列明的编号。`;
+  if (/\.form_name$/.test(path)) return '补充表单或记录的正式名称。';
+  if (/\.main_table_name$/.test(path)) return `补充${formPrefix}对应的主表名称，可沿用表单名称。`;
+  if (/form_tables\.\d+\.table_name$/.test(path)) return `补充${formPrefix}的表头名称，可沿用表单名称或制度里的表格标题。`;
+  if (/\.responsible_role$/.test(path)) return `补充${formPrefix}的形成或填写岗位。`;
+  if (/form_table_fields\.\d+\.field_name$/.test(path)) return '补充表单里的字段名称。';
+  if (/form_table_fields\.\d+\.description$/.test(path)) return `补充${fieldPrefix}的含义、填写口径、选项或格式要求。`;
+  return '';
+}
+
+function deepSeekSuggestionForPath(path) {
+  const suggestion = fieldSuggestions[path];
+  return suggestion && suggestion.suggestion ? suggestion : null;
+}
+
+function appendFillSuggestion(target, path, value, force = false) {
+  if (!force && isFilled(value)) return;
+  const deepSeekSuggestion = deepSeekSuggestionForPath(path);
+  const suggestion = deepSeekSuggestion?.suggestion || fillSuggestionForPath(path);
+  if (!suggestion) return;
+  const el = document.createElement('div');
+  el.className = 'field-suggestion';
+  el.textContent = `填报建议：${suggestion}`;
+  if (deepSeekSuggestion?.source_text) {
+    const source = document.createElement('details');
+    source.className = 'suggestion-source';
+    const summary = document.createElement('summary');
+    summary.textContent = '查看参考原文';
+    const text = document.createElement('p');
+    text.textContent = [deepSeekSuggestion.source_anchor, deepSeekSuggestion.source_text].filter(Boolean).join('\n');
+    source.append(summary, text);
+    el.appendChild(source);
+  }
+  target.appendChild(el);
+}
+
+function requiredPaths() {
+  const paths = [
+    'draft.document_no',
+    'draft.document_title',
+    'draft.planned_edition',
+    'draft.basis_type',
+    'draft.department.department_name',
+    'document_profile.purpose',
+    'document_profile.scope'
+  ];
+  (docData?.steps || []).forEach((_, i) => {
+    paths.push(`steps.${i}.process_ref`);
+    paths.push(`steps.${i}.step_type`);
+    paths.push(`steps.${i}.step_name`);
+    paths.push(`steps.${i}.actor_role`);
+    paths.push(`steps.${i}.input_materials`);
+    paths.push(`steps.${i}.output_result`);
+    paths.push(`behavior_details.${i}.execution_standard`);
+  });
+  (docData?.forms || []).forEach((_, i) => paths.push(`forms.${i}.form_code`, `forms.${i}.form_name`, `forms.${i}.main_table_name`));
+  (docData?.form_tables || []).forEach((_, i) => paths.push(`form_tables.${i}.table_name`));
+  (docData?.form_table_fields || []).forEach((_, i) => paths.push(`form_table_fields.${i}.field_name`));
+  return paths;
+}
+
+function completionState() {
+  if (!docData) return { green: 0, red: 1, total: 1, done: false };
+  const paths = requiredPaths();
+  const green = paths.filter(path => isFilled(getValue(path))).length;
+  const red = Math.max(paths.length - green, 0);
+  return { green, red, total: paths.length || 1, done: red === 0 };
+}
+
+function updateCompletion() {
+  if (isWorking) return;
+  const state = completionState();
+  const deg = Math.round((state.green / state.total) * 360);
+  const pie = document.getElementById('completionPie');
+  pie.style.background = `conic-gradient(var(--green) 0deg ${deg}deg, var(--red) ${deg}deg 360deg)`;
+  document.getElementById('pieLabel').textContent = state.done ? '可导出' : '继续补充';
+  document.getElementById('statusCopy').textContent = state.done
+    ? '必填内容已经可以结构化。仍可继续完善可选内容。'
+    : '红色对应还需要补充的必填内容，请在字段位置直接修改。';
+}
+
+function originLabel(path) {
+  const origin = fieldOrigins[path];
+  if (origin === 'manual') return '手动填写';
+  if (origin === 'imported') return '导入内容';
+  if (origin === 'auto') return '自动填充';
+  if (origin === 'external_reference') return '映射来源';
+  if (origin === 'default') return '默认值';
+  return '';
+}
+
+function render() {
+  const meta = sections[activeSection];
+  document.getElementById('sectionTitle').textContent = meta.title;
+  document.getElementById('sectionHint').textContent = meta.hint;
+  if (isWorking) {
+    addButton.hidden = true;
+    renderBusyPlaceholder();
+    return;
+  }
+  addButton.hidden = !['terms', 'steps', 'forms'].includes(activeSection) || !docData;
+  updateCompletion();
+  if (!docData) {
+    sectionBody.innerHTML = '<div class="empty">请先导入制度文件或结构化文件。</div>';
+    return;
+  }
+  const renderers = {
+    basic: renderBasic,
+    profile: renderProfile,
+    terms: renderTerms,
+    steps: renderSteps,
+    forms: renderForms,
+    export: renderExport
+  };
+  sectionBody.innerHTML = '';
+  sectionBody.appendChild(renderers[activeSection]());
+}
+
+function field(path, label, options = {}) {
+  const wrapper = document.createElement('div');
+  const required = options.required || requiredPaths().includes(path);
+  const value = getValue(path);
+  wrapper.className = `field ${required && !isFilled(value) ? 'missing' : ''} ${fieldOrigins[path] || ''}`.trim();
+
+  const labelEl = document.createElement('label');
+  labelEl.innerHTML = `${label}${required ? '<span class="required">*</span>' : ''}<span class="origin">${originLabel(path)}</span>`;
+  wrapper.appendChild(labelEl);
+
+  let input;
+  if (options.type === 'textarea') {
+    input = document.createElement('textarea');
+    input.value = value || '';
+  } else if (options.type === 'select') {
+    input = document.createElement('select');
+    for (const item of options.options || []) {
+      const optionValue = typeof item === 'object' ? item.value : item;
+      const optionLabel = typeof item === 'object' ? item.label : item;
+      const option = document.createElement('option');
+      option.value = optionValue;
+      option.textContent = optionLabel;
+      option.selected = String(optionValue) === String(value ?? '');
+      input.appendChild(option);
+    }
+  } else {
+    input = document.createElement('input');
+    input.value = value || '';
+  }
+  const readValue = event => options.parse ? options.parse(event.target.value) : event.target.value;
+  input.addEventListener('input', event => setValue(path, readValue(event)));
+  input.addEventListener('change', event => setValue(path, readValue(event)));
+  wrapper.appendChild(input);
+
+  const source = fieldSources[path];
+  if (source) {
+    const details = document.createElement('details');
+    details.className = 'source';
+    details.innerHTML = `<summary>查看依据</summary><p>${escapeHtml(source.source_anchor || '')}\n${escapeHtml(source.source_text || '')}</p>`;
+    wrapper.appendChild(details);
+  }
+  const warning = fieldWarnings[path];
+  if (warning) {
+    const warningEl = document.createElement('div');
+    warningEl.className = 'warning';
+    warningEl.textContent = warning.message || '需要核对。';
+    wrapper.appendChild(warningEl);
+  }
+  if (options.type !== 'select') appendFillSuggestion(wrapper, path, value);
+  return wrapper;
+}
+
+function readonlyMappingField(path, label) {
+  const wrapper = document.createElement('div');
+  const value = getValue(path);
+  wrapper.className = `field readonly-mapping ${fieldOrigins[path] || ''}`.trim();
+
+  const labelEl = document.createElement('label');
+  labelEl.innerHTML = `${label}<span class="origin">${originLabel(path) || '等待匹配'}</span>`;
+  wrapper.appendChild(labelEl);
+
+  const valueEl = document.createElement('div');
+  valueEl.className = `readonly-value ${isFilled(value) ? '' : 'empty'}`.trim();
+  valueEl.textContent = isFilled(value) ? value : '未匹配到流程映射';
+  wrapper.appendChild(valueEl);
+
+  const source = fieldSources[path];
+  if (source) {
+    const details = document.createElement('details');
+    details.className = 'source';
+    details.innerHTML = `<summary>查看依据</summary><p>${escapeHtml(source.source_anchor || '')}\n${escapeHtml(source.source_text || '')}</p>`;
+    wrapper.appendChild(details);
+  }
+  const warning = fieldWarnings[path];
+  if (warning) {
+    const warningEl = document.createElement('div');
+    warningEl.className = 'warning';
+    warningEl.textContent = warning.message || '需要核对。';
+    wrapper.appendChild(warningEl);
+  }
+  return wrapper;
+}
+
+function tableCell(path, options = {}) {
+  const cell = document.createElement('td');
+  const required = options.required || requiredPaths().includes(path);
+  const value = getValue(path);
+  if (required && !isFilled(value)) cell.classList.add('missing-cell');
+
+  let input;
+  if (options.type === 'textarea') {
+    input = document.createElement('textarea');
+    input.value = value || '';
+    input.className = 'table-control textarea';
+  } else if (options.type === 'select') {
+    input = document.createElement('select');
+    input.className = 'table-control';
+    for (const item of options.options || []) {
+      const optionValue = typeof item === 'object' ? item.value : item;
+      const optionLabel = typeof item === 'object' ? item.label : item;
+      const option = document.createElement('option');
+      option.value = optionValue;
+      option.textContent = optionLabel;
+      option.selected = String(optionValue) === String(value ?? '');
+      input.appendChild(option);
+    }
+  } else {
+    input = document.createElement('input');
+    input.value = value || '';
+    input.className = 'table-control';
+  }
+  const readValue = event => options.parse ? options.parse(event.target.value) : event.target.value;
+  input.addEventListener('input', event => setValue(path, readValue(event)));
+  input.addEventListener('change', event => setValue(path, readValue(event)));
+  cell.appendChild(input);
+
+  const source = fieldSources[path];
+  if (source) {
+    const details = document.createElement('details');
+    details.className = 'table-source';
+    details.innerHTML = `<summary>查看依据</summary><p>${escapeHtml(source.source_anchor || '')}\n${escapeHtml(source.source_text || '')}</p>`;
+    cell.appendChild(details);
+  }
+  const warning = fieldWarnings[path];
+  if (warning) {
+    const warningEl = document.createElement('div');
+    warningEl.className = 'warning';
+    warningEl.textContent = warning.message || '需要核对。';
+    cell.appendChild(warningEl);
+  }
+  if (options.type !== 'select') appendFillSuggestion(cell, path, value);
+  return cell;
+}
+
+function ensureActiveFormRef() {
+  if (!docData?.forms?.length) {
+    activeFormRef = '';
+    return null;
+  }
+  const selected = docData.forms.find(form => form.form_ref === activeFormRef);
+  if (selected) return selected;
+  activeFormRef = docData.forms[0].form_ref;
+  return docData.forms[0];
+}
+
+function blankFormTable(form) {
+  const index = docData.form_tables.length + 1;
+  const formTables = tablesForForm(form);
+  const isFirstTable = formTables.length === 0;
+  return {
+    table_ref: `table_${index}`,
+    form_ref: form.form_ref,
+    table_kind: isFirstTable ? 'main' : 'detail',
+    table_no: null,
+    table_code: isFirstTable ? (form.main_table_code || null) : null,
+    table_name: isFirstTable ? (form.main_table_name || '') : ''
+  };
+}
+
+function tablesForForm(form) {
+  if (!form) return [];
+  return docData.form_tables.filter(item => item.form_ref === form.form_ref);
+}
+
+function ensureActiveTable(form) {
+  if (!form) return null;
+  let table = docData.form_tables.find(item => item.form_ref === form.form_ref && item.table_ref === activeTableRef);
+  if (!table) {
+    const formTables = tablesForForm(form);
+    if (formTables.length) {
+      table = formTables.find(item => item.table_kind === 'main') || formTables[0];
+    } else {
+      table = blankFormTable(form);
+      docData.form_tables.push(table);
+    }
+    activeTableRef = table.table_ref;
+  }
+  return table;
+}
+
+function fieldsForActiveForm() {
+  const form = ensureActiveFormRef();
+  const table = ensureActiveTable(form);
+  const tableIndex = table ? docData.form_tables.findIndex(item => item.table_ref === table.table_ref) : -1;
+  if (!form || !table || tableIndex < 0) return { form: null, table: null, tableIndex: -1, rows: [] };
+  const rows = docData.form_table_fields
+    .map((fieldItem, index) => ({ fieldItem, index }))
+    .filter(item => item.fieldItem.table_ref === table.table_ref);
+  return { form, table, tableIndex, rows };
+}
+
+function renderFormSelector(activeForm) {
+  const selector = div('form-selector');
+  docData.forms.forEach((form, index) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = form.form_ref === activeForm?.form_ref ? 'active' : '';
+    button.textContent = `${form.form_name || `表单 ${index + 1}`}`;
+    button.title = form.form_code || '';
+    button.addEventListener('click', () => {
+      activeFormRef = form.form_ref;
+      activeTableRef = '';
+      render();
+    });
+    selector.appendChild(button);
+  });
+  return selector;
+}
+
+function renderTableSelector(form, activeTable) {
+  const selector = div('table-selector');
+  tablesForForm(form).forEach((table, index) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = table.table_ref === activeTable?.table_ref ? 'active' : '';
+    button.textContent = table.table_name || `表 ${index + 1}`;
+    button.title = table.table_code || '';
+    button.addEventListener('click', () => {
+      activeTableRef = table.table_ref;
+      render();
+    });
+    selector.appendChild(button);
+  });
+  return selector;
+}
+
+function renderActiveTableEditor(activeFields) {
+  const grid = div('grid');
+  grid.append(
+    field(`form_tables.${activeFields.tableIndex}.table_kind`, '表类型', { type: 'select', options: [{ value: 'main', label: '主表' }, { value: 'detail', label: '明细表' }], required: false }),
+    field(`form_tables.${activeFields.tableIndex}.table_code`, '表编号', { required: false }),
+    field(`form_tables.${activeFields.tableIndex}.table_name`, '表头名称')
+  );
+  return grid;
+}
+
+function renderBasic() {
+  const root = div('grid');
+  root.append(
+    field('draft.document_no', '制度编号'),
+    field('draft.document_title', '制度名称'),
+    field('draft.planned_edition', '版次'),
+    field('draft.department.department_name', '归口部门', { type: 'select', options: DEPARTMENT_OPTIONS }),
+    field('draft.basis_type', '依据类型', { type: 'select', options: ['制度 / 规程', '表单 / 台账', '会议 / 访谈', '现场实际', '暂无证据'] })
+  );
+  return root;
+}
+
+function renderProfile() {
+  const root = div('grid one');
+  root.append(
+    field('document_profile.purpose', '目的', { type: 'textarea' }),
+    field('document_profile.scope', '适用范围', { type: 'textarea' }),
+    field('draft.basis_description', '依据说明', { type: 'textarea' })
+  );
+  return root;
+}
+
+function renderTerms() {
+  const root = div('row-list');
+  if (!docData.terms.length) root.appendChild(empty('还没有术语定义，可按需要新增。'));
+  docData.terms.forEach((_, i) => {
+    const item = record(`术语 ${i + 1}`, () => removeArrayItem('terms', i));
+    const grid = div('grid');
+    grid.append(field(`terms.${i}.term_name`, '术语名称'), field(`terms.${i}.definition`, '定义', { type: 'textarea' }));
+    item.appendChild(grid);
+    root.appendChild(item);
+  });
+  return root;
+}
+
+function rolePickerField(path, label, ownDepartment, options = {}) {
+  const value = getValue(path);
+  const missingDepartmentLabel = options.missingDepartmentLabel || '先确认归口部门';
+  const parsed = parseActorRole(value, ownDepartment);
+  const selectedDepartment = parsed.department === ownDepartment || parsed.department === '全公司' ? parsed.department : '';
+  const wrapper = document.createElement('div');
+  wrapper.className = `field ${fieldOrigins[path] || ''}`.trim();
+
+  const labelEl = document.createElement('label');
+  labelEl.innerHTML = `${label}<span class="origin">${originLabel(path)}</span>`;
+  wrapper.appendChild(labelEl);
+
+  const picker = div('role-picker');
+  const departmentSelect = document.createElement('select');
+  departmentSelect.className = 'role-department-select';
+  for (const item of actorRoleDepartmentOptions(ownDepartment, missingDepartmentLabel)) {
+    const option = document.createElement('option');
+    option.value = item.value;
+    option.textContent = item.label;
+    option.selected = item.value === selectedDepartment;
+    departmentSelect.appendChild(option);
+  }
+
+  const positionSelect = document.createElement('select');
+  positionSelect.className = 'role-position-select';
+  refreshActorRolePositionOptions(positionSelect, selectedDepartment, parsed.position, ownDepartment, missingDepartmentLabel);
+
+  departmentSelect.addEventListener('change', () => {
+    const department = departmentSelect.value;
+    refreshActorRolePositionOptions(positionSelect, department, '', ownDepartment, missingDepartmentLabel);
+    setValue(path, combineActorRole(department, ''));
+    render();
+  });
+  positionSelect.addEventListener('change', () => {
+    setValue(path, combineActorRole(departmentSelect.value, positionSelect.value));
+    render();
+  });
+
+  picker.append(departmentSelect, positionSelect);
+  wrapper.appendChild(picker);
+
+  if (value && !actorRoleMatchesPicker(value, parsed, ownDepartment)) {
+    const importedValue = document.createElement('div');
+    importedValue.className = 'external-role-value';
+    importedValue.textContent = `当前导入内容：${value}`;
+    wrapper.appendChild(importedValue);
+  }
+
+  const source = fieldSources[path];
+  if (source) {
+    const details = document.createElement('details');
+    details.className = 'source';
+    details.innerHTML = `<summary>查看依据</summary><p>${escapeHtml(source.source_anchor || '')}\n${escapeHtml(source.source_text || '')}</p>`;
+    wrapper.appendChild(details);
+  }
+  const warning = fieldWarnings[path];
+  if (warning) {
+    const warningEl = document.createElement('div');
+    warningEl.className = 'warning';
+    warningEl.textContent = warning.message || '需要核对。';
+    wrapper.appendChild(warningEl);
+  }
+  return wrapper;
+}
+
+function actorRoleField(index) {
+  return rolePickerField(`steps.${index}.actor_role`, '执行角色', processDepartmentForStep(index), {
+    missingDepartmentLabel: '先确认归口部门'
+  });
+}
+
+function formResponsibleRoleField(index) {
+  return rolePickerField(`forms.${index}.responsible_role`, '填写角色', formDepartment(index), {
+    missingDepartmentLabel: '先确认形成部门'
+  });
+}
+
+function processOptions() {
+  return docData.processes.map((process, index) => ({
+    value: process.process_ref,
+    label: process.l3_name || `流程 ${index + 1}`
+  }));
+}
+
+function stepsForProcess(processRef) {
+  return docData.steps
+    .map((step, index) => ({ step, index }))
+    .filter(item => item.step.process_ref === processRef);
+}
+
+function stepCoreComplete(index) {
+  const step = docData.steps[index] || {};
+  const detail = docData.behavior_details[index] || {};
+  return [
+    step.step_name,
+    step.actor_role,
+    step.input_materials,
+    step.output_result,
+    detail.execution_standard
+  ].every(isFilled);
+}
+
+function processCoreComplete(processRef) {
+  const rows = stepsForProcess(processRef);
+  return rows.length > 0 && rows.every(row => stepCoreComplete(row.index));
+}
+
+function processSummaryText(processRef) {
+  const rows = stepsForProcess(processRef);
+  const decisionCount = rows.filter(row => row.step.step_type === 'decision').length;
+  const transitions = (docData.step_transitions || []).filter(item => item.process_ref === processRef);
+  const missingTargets = transitions.filter(item => !item.to_step_ref).length;
+  return `业务行为 ${rows.length} 个；判断节点 ${decisionCount} 个；判断分支 ${transitions.length} 条；未补流向 ${missingTargets} 条；核心字段${processCoreComplete(processRef) ? '已完成' : '待补'}`;
+}
+
+function toggleProcessCollapse(processRef) {
+  if (!processCoreComplete(processRef)) return;
+  if (collapsedProcessRefs.has(processRef)) collapsedProcessRefs.delete(processRef);
+  else collapsedProcessRefs.add(processRef);
+  render();
+}
+
+function stepOptionsForProcess(processRef, decisionOnly = false) {
+  return [{ value: '', label: '暂不选择' }].concat(
+    stepsForProcess(processRef)
+      .filter(item => !decisionOnly || item.step.step_type === 'decision')
+      .map(item => ({
+        value: item.step.step_ref,
+        label: item.step.step_name || `${item.step.step_type === 'decision' ? '判断节点' : '业务行为'} ${item.index + 1}`
+      }))
+  );
+}
+
+function renderStepTransitions(processRef) {
+  const group = div('group');
+  group.appendChild(title('判断分支'));
+  const rows = (docData.step_transitions || [])
+    .map((transition, index) => ({ transition, index }))
+    .filter(item => item.transition.process_ref === processRef);
+  if (!rows.length) {
+    group.appendChild(empty('还没有判断分支。'));
+    return group;
+  }
+  const wrap = div('table-wrap');
+  const table = document.createElement('table');
+  table.className = 'transition-table';
+  table.innerHTML = '<thead><tr><th>判断节点</th><th>条件</th><th>流向步骤</th><th>操作</th></tr></thead>';
+  const body = document.createElement('tbody');
+  rows.forEach(({ index: i }) => {
+    const row = document.createElement('tr');
+    row.append(
+      tableCell(`step_transitions.${i}.from_step_ref`, { type: 'select', options: stepOptionsForProcess(processRef, true), parse: value => value || null, required: false }),
+      tableCell(`step_transitions.${i}.condition`, { required: false }),
+      tableCell(`step_transitions.${i}.to_step_ref`, { type: 'select', options: stepOptionsForProcess(processRef, false), parse: value => value || null, required: false })
+    );
+    const action = document.createElement('td');
+    const remove = document.createElement('button');
+    remove.className = 'btn';
+    remove.type = 'button';
+    remove.textContent = '删除';
+    remove.addEventListener('click', () => removeArrayItem('step_transitions', i));
+    action.appendChild(remove);
+    row.appendChild(action);
+    body.appendChild(row);
+  });
+  table.appendChild(body);
+  wrap.appendChild(table);
+  group.appendChild(wrap);
+  return group;
+}
+
+function renderSteps() {
+  const root = div('row-list');
+  if (!docData.processes.length) docData.processes.push(blankProcess());
+  docData.processes.forEach((process, processIndex) => {
+    const processRef = process.process_ref;
+    const card = div('process-card');
+    const head = div('process-card-head');
+    const copy = document.createElement('div');
+    copy.innerHTML = `<h3>${escapeHtml(process.l3_name || `流程 ${processIndex + 1}`)}</h3><p>${escapeHtml(processSummaryText(processRef))}</p>`;
+    const actions = div('process-actions');
+    const collapse = document.createElement('button');
+    collapse.className = 'btn';
+    collapse.type = 'button';
+    collapse.textContent = collapsedProcessRefs.has(processRef) ? '展开流程' : '折叠流程';
+    collapse.disabled = !processCoreComplete(processRef);
+    collapse.addEventListener('click', () => toggleProcessCollapse(processRef));
+    const addAction = document.createElement('button');
+    addAction.className = 'btn';
+    addAction.type = 'button';
+    addAction.textContent = '新增业务行为';
+    addAction.addEventListener('click', () => addStepForProcess(processRef, 'action'));
+    const addDecision = document.createElement('button');
+    addDecision.className = 'btn';
+    addDecision.type = 'button';
+    addDecision.textContent = '新增判断节点';
+    addDecision.addEventListener('click', () => addStepForProcess(processRef, 'decision'));
+    const addTransition = document.createElement('button');
+    addTransition.className = 'btn';
+    addTransition.type = 'button';
+    addTransition.textContent = '新增判断分支';
+    addTransition.addEventListener('click', () => addTransitionForProcess(processRef));
+    actions.append(collapse, addAction, addDecision, addTransition);
+    head.append(copy, actions);
+    card.appendChild(head);
+
+    if (collapsedProcessRefs.has(processRef) && processCoreComplete(processRef)) {
+      const summary = div('process-collapsed-summary');
+      summary.textContent = processSummaryText(processRef);
+      card.appendChild(summary);
+      root.appendChild(card);
+      return;
+    }
+
+    const processGrid = div('grid');
+    processGrid.append(
+      readonlyMappingField(`processes.${processIndex}.l1_name`, '能力域'),
+      readonlyMappingField(`processes.${processIndex}.l2_name`, '业务能力'),
+      field(`processes.${processIndex}.l3_name`, '业务流程', { required: false }),
+      field(`processes.${processIndex}.owner`, '归口部门', { type: 'select', options: DEPARTMENT_OPTIONS, required: false })
+    );
+    card.appendChild(processGrid);
+
+    const stepRows = stepsForProcess(processRef);
+    if (!stepRows.length) card.appendChild(empty('这条流程还没有业务行为或判断节点。'));
+    stepRows.forEach(({ index: i }, localIndex) => {
+      if (!docData.behavior_details[i]) docData.behavior_details[i] = blankBehaviorDetail(i);
+      const item = record(`${docData.steps[i].step_type === 'decision' ? '判断节点' : '业务行为'} ${localIndex + 1}`, () => removeArrayItem('steps', i));
+      const stepActions = div('step-actions');
+      const up = document.createElement('button');
+      up.className = 'btn';
+      up.type = 'button';
+      up.textContent = '上移';
+      up.disabled = localIndex === 0;
+      up.addEventListener('click', () => moveStepWithinProcess(i, -1));
+      const down = document.createElement('button');
+      down.className = 'btn';
+      down.type = 'button';
+      down.textContent = '下移';
+      down.disabled = localIndex === stepRows.length - 1;
+      down.addEventListener('click', () => moveStepWithinProcess(i, 1));
+      stepActions.append(up, down);
+      item.appendChild(stepActions);
+      const grid = div('grid');
+      grid.append(
+        field(`steps.${i}.process_ref`, '所属流程', { type: 'select', options: processOptions() }),
+        field(`steps.${i}.step_type`, '步骤类型', { type: 'select', options: [{ value: 'action', label: '业务行为' }, { value: 'decision', label: '判断节点' }] }),
+        field(`steps.${i}.step_name`, '业务行为', { type: 'textarea' }),
+        actorRoleField(i),
+        field(`behavior_details.${i}.trigger_scene`, '触发场景', { type: 'textarea', required: false }),
+        field(`behavior_details.${i}.precondition`, '前置条件', { type: 'textarea', required: false }),
+        field(`steps.${i}.input_materials`, '输入材料'),
+        field(`steps.${i}.output_result`, '输出结果'),
+        field(`behavior_details.${i}.execution_standard`, '执行标准', { type: 'textarea', required: false })
+      );
+      item.appendChild(grid);
+      card.appendChild(item);
+    });
+    card.appendChild(renderStepTransitions(processRef));
+    root.appendChild(card);
+  });
+  return root;
+}
+
+function renderForms() {
+  const root = div('row-list');
+  const forms = div('group');
+  forms.appendChild(title('表单与记录'));
+  if (!docData.forms.length) forms.appendChild(empty('还没有表单或记录，可按制度内容补充。'));
+  docData.forms.forEach((_, i) => {
+    const item = record(`表单 ${i + 1}`, () => removeForm(i));
+    const grid = div('grid');
+    grid.append(
+      field(`forms.${i}.form_code`, '编号'),
+      field(`forms.${i}.form_name`, '名称'),
+      field(`forms.${i}.main_table_name`, '主表名称'),
+      field(`forms.${i}.archive_location`, '归档位置', { type: 'select', options: ['', '部门自行保存', '资料室'], required: false }),
+      field(`forms.${i}.retention_period`, '保管期限', { type: 'select', options: ['', '1年', '3年', '10年', '永久'], required: false }),
+      field(`forms.${i}.responsible_department_name`, '形成部门', { type: 'select', options: DEPARTMENT_OPTIONS, required: false }),
+      formResponsibleRoleField(i)
+    );
+    item.appendChild(grid);
+    forms.appendChild(item);
+  });
+  root.appendChild(forms);
+
+  const fields = div('group');
+  fields.appendChild(title('表格字段'));
+  const activeFields = fieldsForActiveForm();
+  if (!docData.forms.length) {
+    fields.appendChild(empty('请先新增表单，再补充字段。'));
+  } else {
+    fields.appendChild(renderFormSelector(activeFields.form));
+    fields.appendChild(renderTableSelector(activeFields.form, activeFields.table));
+    fields.appendChild(renderActiveTableEditor(activeFields));
+    const actions = div('table-actions');
+    const addTable = document.createElement('button');
+    addTable.className = 'btn';
+    addTable.type = 'button';
+    addTable.textContent = '新增表';
+    addTable.addEventListener('click', addTableForActiveForm);
+    const addField = document.createElement('button');
+    addField.className = 'btn';
+    addField.type = 'button';
+    addField.textContent = '新增字段';
+    addField.addEventListener('click', addFieldForActiveForm);
+    actions.appendChild(addTable);
+    actions.appendChild(addField);
+    fields.appendChild(actions);
+  }
+  if (docData.forms.length && !activeFields.rows.length) fields.appendChild(empty('当前表单还没有字段，可按表单内容补充。'));
+  if (activeFields.rows.length) {
+    const wrap = div('table-wrap');
+    const table = document.createElement('table');
+    table.className = 'fields-table';
+    table.innerHTML = '<thead><tr><th>字段位置</th><th>字段名称<span class="required">*</span></th><th>字段类型</th><th>是否必填</th><th>字段说明</th><th>操作</th></tr></thead>';
+    const body = document.createElement('tbody');
+    activeFields.rows.forEach(({ index: i }) => {
+      const row = document.createElement('tr');
+      row.append(
+        tableCell(`form_table_fields.${i}.structure_kind`, { type: 'select', options: [{ value: 'main', label: '主表' }, { value: 'detail', label: '明细表' }], required: false }),
+        tableCell(`form_table_fields.${i}.field_name`),
+        tableCell(`form_table_fields.${i}.field_type`, { type: 'select', options: FIELD_TYPE_OPTIONS, required: false }),
+        tableCell(`form_table_fields.${i}.required`, { type: 'select', options: [{ value: false, label: '否' }, { value: true, label: '是' }], parse: value => value === 'true', required: false }),
+        tableCell(`form_table_fields.${i}.description`, { type: 'textarea', required: false })
+      );
+      const action = document.createElement('td');
+      const remove = document.createElement('button');
+      remove.className = 'btn';
+      remove.type = 'button';
+      remove.textContent = '删除';
+      remove.addEventListener('click', () => removeArrayItem('form_table_fields', i));
+      action.appendChild(remove);
+      row.appendChild(action);
+      body.appendChild(row);
+    });
+    table.appendChild(body);
+    wrap.appendChild(table);
+    fields.appendChild(wrap);
+  }
+  root.appendChild(fields);
+  return root;
+}
+
+function renderMaster() {
+  const root = div('row-list');
+  if (!docData.mdm_requirement_catalog.length) root.appendChild(empty('还没有明确的主数据对象，可按原文补充。'));
+  docData.mdm_requirement_catalog.forEach((_, i) => {
+    const item = record(`对象 ${i + 1}`, () => removeArrayItem('mdm_requirement_catalog', i));
+    const grid = div('grid');
+    grid.append(
+      field(`mdm_requirement_catalog.${i}.object`, '对象名称'),
+      field(`mdm_requirement_catalog.${i}.owner_dept`, '维护部门'),
+      field(`mdm_requirement_catalog.${i}.requirement`, '治理要求', { type: 'textarea' })
+    );
+    item.appendChild(grid);
+    root.appendChild(item);
+  });
+  return root;
+}
+
+function renderHandoffs() {
+  const root = div('row-list');
+  if (!docData.cross_dept_handoffs.length) root.appendChild(empty('还没有跨部门流转内容，可按原文补充。'));
+  docData.cross_dept_handoffs.forEach((_, i) => {
+    const item = record(`流转 ${i + 1}`, () => removeArrayItem('cross_dept_handoffs', i));
+    const grid = div('grid');
+    grid.append(
+      field(`cross_dept_handoffs.${i}.target_department`, '承接部门'),
+      field(`cross_dept_handoffs.${i}.target_process_name`, '承接流程'),
+      field(`cross_dept_handoffs.${i}.target_behavior_name`, '承接业务行为'),
+      field(`cross_dept_handoffs.${i}.handoff_standard`, '承接标准', { type: 'textarea' })
+    );
+    item.appendChild(grid);
+    root.appendChild(item);
+  });
+  return root;
+}
+
+function renderExport() {
+  const root = div('grid one');
+  const state = completionState();
+  const box = document.createElement('div');
+  box.className = 'empty';
+  box.textContent = state.done
+    ? '必填内容已经可以结构化。可以继续完善，也可以导出结构化文件。'
+    : '还有必填内容需要补充。也可以先导出当前成果，后续继续完善。';
+  root.appendChild(box);
+  const button = document.createElement('button');
+  button.className = 'btn primary';
+  button.textContent = '导出结构化文件';
+  button.addEventListener('click', exportStructuredFile);
+  root.appendChild(button);
+  return root;
+}
+
+function addItemForActiveSection() {
+  if (!docData) return;
+  if (activeSection === 'terms') docData.terms.push({ term_ref: `term_${docData.terms.length + 1}`, draft_ref: null, term_name: '', definition: '', applies_to: null });
+  if (activeSection === 'steps') {
+    addProcess();
+    return;
+  }
+  if (activeSection === 'forms') {
+    const form = blankForm();
+    docData.forms.push(form);
+    const table = blankFormTable(form);
+    docData.form_tables.push(table);
+    activeFormRef = form.form_ref;
+    activeTableRef = table.table_ref;
+    docData.form_table_fields.push(blankTableField(table.table_ref));
+  }
+  hasPageContent = true;
+  render();
+}
+
+function addProcess() {
+  if (!docData) return;
+  const process = blankProcess();
+  docData.processes.push(process);
+  hasPageContent = true;
+  render();
+}
+
+function addStepForProcess(processRef, stepType = 'action') {
+  const step = blankStep(processRef, stepType);
+  docData.steps.push(step);
+  docData.behavior_details.push(blankBehaviorDetail(docData.steps.length - 1));
+  collapsedProcessRefs.delete(processRef);
+  hasPageContent = true;
+  render();
+}
+
+function addTransitionForProcess(processRef) {
+  const transitionRef = `trans_${docData.step_transitions.length + 1}`;
+  const decision = stepsForProcess(processRef).find(item => item.step.step_type === 'decision')?.step;
+  docData.step_transitions.push({
+    transition_ref: transitionRef,
+    process_ref: processRef,
+    from_step_ref: decision?.step_ref || null,
+    condition: '',
+    to_step_ref: null,
+    evidence_refs: []
+  });
+  collapsedProcessRefs.delete(processRef);
+  hasPageContent = true;
+  render();
+}
+
+function normalizeStepTransitions(data) {
+  if (!data) return;
+  const steps = Array.isArray(data.steps) ? data.steps : [];
+  const stepsByRef = new Map(steps.map(step => [step.step_ref, step]));
+  data.step_transitions = (Array.isArray(data.step_transitions) ? data.step_transitions : [])
+    .map(transition => {
+      const next = {
+        transition_ref: transition.transition_ref,
+        process_ref: transition.process_ref,
+        from_step_ref: transition.from_step_ref || null,
+        condition: transition.condition || '',
+        to_step_ref: transition.to_step_ref || null,
+        evidence_refs: Array.isArray(transition.evidence_refs) ? transition.evidence_refs : []
+      };
+      const fromStep = stepsByRef.get(next.from_step_ref);
+      if (!fromStep) return next;
+      next.process_ref = fromStep.process_ref;
+      if (fromStep.step_type !== 'decision') return null;
+      if (next.to_step_ref) {
+        const toStep = stepsByRef.get(next.to_step_ref);
+        if (!toStep || toStep.process_ref !== fromStep.process_ref) next.to_step_ref = null;
+      }
+      return next;
+    })
+    .filter(Boolean);
+}
+
+function cleanStepTransitions() {
+  normalizeStepTransitions(docData);
+}
+
+function moveStepWithinProcess(index, direction) {
+  const step = docData.steps[index];
+  if (!step) return;
+  const rows = stepsForProcess(step.process_ref);
+  const localIndex = rows.findIndex(item => item.index === index);
+  const target = rows[localIndex + direction];
+  if (!target) return;
+  const detail = docData.behavior_details[index];
+  docData.steps[index] = docData.steps[target.index];
+  docData.steps[target.index] = step;
+  docData.behavior_details[index] = docData.behavior_details[target.index];
+  docData.behavior_details[target.index] = detail;
+  hasPageContent = true;
+  render();
+}
+
+function addTableForActiveForm() {
+  if (!docData?.forms?.length) return;
+  const form = ensureActiveFormRef();
+  if (!form) return;
+  const table = blankFormTable(form);
+  docData.form_tables.push(table);
+  activeTableRef = table.table_ref;
+  docData.form_table_fields.push(blankTableField(table.table_ref));
+  hasPageContent = true;
+  render();
+}
+
+function addFieldForActiveForm() {
+  if (!docData?.forms?.length) return;
+  const activeFields = fieldsForActiveForm();
+  if (!activeFields.table) return;
+  docData.form_table_fields.push(blankTableField(activeFields.table.table_ref));
+  hasPageContent = true;
+  render();
+}
+
+function removeForm(index) {
+  const form = docData.forms[index];
+  if (!form) return;
+  const tableRefs = docData.form_tables
+    .filter(table => table.form_ref === form.form_ref)
+    .map(table => table.table_ref);
+  docData.forms.splice(index, 1);
+  docData.form_tables = docData.form_tables.filter(table => table.form_ref !== form.form_ref);
+  docData.form_table_fields = docData.form_table_fields.filter(fieldItem => !tableRefs.includes(fieldItem.table_ref));
+  if (activeFormRef === form.form_ref) activeFormRef = '';
+  if (tableRefs.includes(activeTableRef)) activeTableRef = '';
+  hasPageContent = true;
+  render();
+}
+
+function removeArrayItem(key, index) {
+  if (key === 'steps') {
+    const step = docData.steps[index];
+    if (step) {
+      docData.step_transitions = docData.step_transitions.filter(transition =>
+        transition.from_step_ref !== step.step_ref && transition.to_step_ref !== step.step_ref
+      );
+    }
+  }
+  docData[key].splice(index, 1);
+  if (key === 'steps') docData.behavior_details.splice(index, 1);
+  if (key === 'processes') {
+    const validProcessRefs = new Set(docData.processes.map(process => process.process_ref));
+    docData.steps = docData.steps.filter(step => validProcessRefs.has(step.process_ref));
+    docData.step_transitions = docData.step_transitions.filter(transition => validProcessRefs.has(transition.process_ref));
+  }
+  cleanStepTransitions();
+  hasPageContent = true;
+  render();
+}
+
+function blankProcess() {
+  const index = docData.processes.length + 1;
+  return { process_ref: `proc_${index}`, draft_ref: null, process_code: null, l3_key: null, process_type: 'new', l1_name: docData.draft.l1_name || '', l2_name: docData.draft.l2_name || '', l3_name: docData.draft.l3_name || `流程 ${index}`, description: null, owner: docData.draft.department.department_name || '', system: '', evidence_refs: [] };
+}
+
+function blankStep(processRef = docData.processes[0]?.process_ref || 'proc_1', stepType = 'action') {
+  return { step_ref: `step_${docData.steps.length + 1}`, draft_ref: null, process_ref: processRef, step_type: stepType, a1_code: null, step_name: '', actor_role: '', timing: null, input_materials: '', output_result: '', entry: null, system: '', status: 'active', evidence_refs: [] };
+}
+
+function blankBehaviorDetail(index) {
+  const step = docData.steps[index];
+  return { detail_ref: `detail_${index + 1}`, step_ref: step?.step_ref || `step_${index + 1}`, precondition: '', trigger_scene: '', execution_standard: '', delivery_object: '', requires_approval: false, approval_note: '', is_cross_department: false };
+}
+
+function blankForm() {
+  const index = docData.forms.length + 1;
+  return { form_ref: `form_${index}`, draft_ref: null, step_ref: docData.steps[0]?.step_ref || 'step_1', form_code: '', form_name: '', main_table_code: null, main_table_name: '', archive_location: null, retention_period: null, responsible_department_ref: null, responsible_department_name: '', responsible_role: '', status: 'draft', evidence_refs: [] };
+}
+
+function structureKindForTable(tableRef) {
+  const table = docData.form_tables.find(item => item.table_ref === tableRef);
+  return table?.table_kind === 'detail' ? 'detail' : 'main';
+}
+
+function blankTableField(tableRef) {
+  const resolvedTableRef = tableRef || docData.form_tables[0]?.table_ref || 'table_1';
+  return { table_field_ref: `table_field_${docData.form_table_fields.length + 1}`, table_ref: resolvedTableRef, structure_kind: structureKindForTable(resolvedTableRef), field_no: null, field_code: null, field_name: '', field_type: '文本', required: false, description: '' };
+}
+
+function normalizeForStructuredExport(data) {
+  const copy = JSON.parse(JSON.stringify(data));
+  copy.schema_version = 'document-structured-output-v2';
+  if (!Array.isArray(copy.step_transitions)) copy.step_transitions = [];
+  normalizeStepTransitions(copy);
+  copy.document_profile = copy.document_profile || {};
+  copy.document_profile.document_no = copy.draft?.document_no || copy.document_profile.document_no || '';
+  copy.document_profile.document_title = copy.draft?.document_title || copy.document_profile.document_title || '';
+  if (copy.structure_block_projection?.meta && !copy.structure_block_projection.meta.document_version_status) {
+    copy.structure_block_projection.meta.document_version_status = 'published';
+  }
+  pruneEmptyRecordRefs(copy);
+  return copy;
+}
+
+function pruneEmptyRecordRefs(value) {
+  if (!value || typeof value !== 'object') return;
+  if (Array.isArray(value)) {
+    value.forEach(pruneEmptyRecordRefs);
+    return;
+  }
+  for (const key of Object.keys(value)) {
+    if (value[key] === null && key.endsWith('_ref') && key !== 'to_step_ref') {
+      delete value[key];
+    } else {
+      pruneEmptyRecordRefs(value[key]);
+    }
+  }
+}
+
+function exportStructuredFile() {
+  if (!docData) {
+    toast('请先导入制度文件或结构化文件');
+    return;
+  }
+  if (completionState().red > 0) {
+    const ok = confirm('还有必填内容需要补充。现在导出的结构化文件可以保存阶段性成果，导入 3000 后仍需继续完善。');
+    if (!ok) return;
+  }
+  const data = JSON.stringify(normalizeForStructuredExport(docData), null, 2);
+  const blob = new Blob([data], { type: 'application/json;charset=utf-8' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  const name = docData.draft.document_no || docData.draft.document_title || 'structured-output';
+  link.download = `${safeFileName(name)}.json`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+  toast('结构化文件已导出');
+}
+
+function clearPage() {
+  if (hasPageContent && !confirm('清空后当前页面内容将无法恢复。')) return;
+  currentRequestId = '';
+  clearWorkTimers();
+  isWorking = false;
+  isSuggesting = false;
+  workStatus.hidden = true;
+  dropZone.classList.remove('busy', 'dragging');
+  document.body.removeAttribute('aria-busy');
+  setImportControlsDisabled(false);
+  docData = null;
+  fieldSources = {};
+  fieldOrigins = {};
+  fieldWarnings = {};
+  fieldSuggestions = {};
+  activeFormRef = '';
+  activeTableRef = '';
+  collapsedProcessRefs.clear();
+  hasPageContent = false;
+  render();
+}
+
+function safeFileName(value) {
+  return String(value || 'structured-output').replace(/[\\/:*?"<>|]/g, '_').slice(0, 80);
+}
+
+function div(className) {
+  const el = document.createElement('div');
+  el.className = className;
+  return el;
+}
+
+function title(text) {
+  const wrap = div('group-title');
+  const h = document.createElement('h3');
+  h.textContent = text;
+  wrap.appendChild(h);
+  return wrap;
+}
+
+function empty(text) {
+  const el = div('empty');
+  el.textContent = text;
+  return el;
+}
+
+function record(label, onRemove) {
+  const item = div('record');
+  const head = div('record-head');
+  const span = document.createElement('span');
+  span.textContent = label;
+  const remove = document.createElement('button');
+  remove.className = 'btn';
+  remove.type = 'button';
+  remove.textContent = '删除';
+  remove.addEventListener('click', onRemove);
+  head.append(span, remove);
+  item.appendChild(head);
+  return item;
+}
+
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+</script>
+</body>
+</html>

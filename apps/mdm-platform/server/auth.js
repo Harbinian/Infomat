@@ -277,6 +277,19 @@ async function getDepartmentByIdAsync(departmentId) {
   return db.prepare('SELECT * FROM departments WHERE id=?').get(departmentId) || null;
 }
 
+async function getDepartmentByNameAsync(departmentName) {
+  const name = String(departmentName || '').trim();
+  if (!name) return null;
+  if (useMysqlIdentityReadModel()) {
+    const repo = await identityRepository();
+    if (typeof repo.getDepartmentByName !== 'function') return null;
+    return await repo.getDepartmentByName(name);
+  }
+
+  const db = require('./db');
+  return db.prepare('SELECT * FROM departments WHERE name=?').get(name) || null;
+}
+
 function requirePermission(permCode) {
   return (req, res, next) => {
     if (!req.session || !req.session.userId) return res.status(401).json({ error: '未登录' });
@@ -406,6 +419,7 @@ module.exports = {
   getUserRoleCodesAsync,
   getUserByIdAsync,
   getDepartmentByIdAsync,
+  getDepartmentByNameAsync,
   isAdmin,
   stripInternalIds,
   send401,

@@ -100,10 +100,16 @@ async function main() {
     '工作组组长看到本工作组有跨部门衔接风险时',
     '项目组长看到本部门有跨部门衔接风险时',
     'function renderProcessGovernance()',
-    'id="pgWorkspaceChoices"',
-    '治理已有流程',
-    '创建新流程',
-    'id="pgExistingWizard"',
+    'data-workflow-actions-title',
+    'function renderProcessGovernanceWorkflowActions',
+    '你现在要处理什么？',
+    'data-pg-task-entry',
+    "key: 'inputBaselineReview'",
+    "key: 'quality'",
+    "key: 'map'",
+    "key: 'newProcess'",
+    '看本部门有哪些问题',
+    '文档结构化输出',
     'id="pgDesignWizard"',
     'class="outcome-card"',
     '/api/process-design/summary',
@@ -298,6 +304,25 @@ async function main() {
     'authenticated startup should render the current hash route before loading broad dashboard data'
   );
   assert.ok(html.includes('function loadAllSafely'), 'broad data loading should not block hash-route rendering');
+  assert.ok(html.includes('function isUnauthorizedError'), 'frontend should identify unauthorized errors with a shared helper');
+  assert.ok(html.includes('function handleUnauthorized'), 'frontend should centralize unauthorized session handling');
+  assert.ok(html.includes('handleUnauthorized(path, silentUnauthorized);'), 'API helper should stop the authenticated app loop on 401');
+  const pollingSnippetStart = html.indexOf('async function loadCurrentListData()');
+  const pollingSnippet = html.slice(pollingSnippetStart, pollingSnippetStart + 900);
+  assert.ok(
+    pollingSnippet.includes("if (tab === 'dashboard') { await loadMappings(); await renderDashboard(); return; }"),
+    'polling should refresh dashboard widgets only when dashboard is the active tab'
+  );
+  assert.ok(
+    pollingSnippet.includes("if (tab === 'processGovernance') return;"),
+    'polling should not call dashboard APIs while process governance subtabs are active'
+  );
+  const dashboardRenderStart = html.indexOf('async function renderDashboard()');
+  const dashboardRenderSnippet = html.slice(dashboardRenderStart, dashboardRenderStart + 1000);
+  assert.ok(
+    dashboardRenderSnippet.includes('if (isUnauthorizedError(e)) return;'),
+    'dashboard rendering should stop immediately after the first unauthorized API response'
+  );
   assert.ok(html.includes('links.length === 0'), 'role workbench sankey should handle empty-link data without drawing a broken chart');
   assert.ok(html.includes('暂无职责链路数据'), 'role workbench sankey should show a clear empty state when no links exist');
   const assignDialogStart = html.indexOf('async function openAssignOwnerDialog');
@@ -311,6 +336,9 @@ async function main() {
   assert.ok(html.includes('initial_password'), 'user management should display the one-time password returned by the server');
   assert.ok(!html.includes("showToast('账号已入库，首次登录密码：'"), 'user create must not show the initial password in a toast');
   assert.ok(!html.includes("showToast(result && result.initial_password ? '首次登录密码：'"), 'password reset must not show the initial password in a toast');
+  assert.ok(html.includes('placeholder="至少10位，包含字母和数字"'), 'password dialog should show the server password length and composition policy');
+  assert.ok(html.includes("if (newPw.length < 10) { showPasswordError('新密码至少10位'); return; }"), 'password dialog should validate the same minimum length as the server policy');
+  assert.ok(!html.includes('至少6位'), 'password dialog must not show stale 6-character password guidance');
   assert.ok(
     html.includes("var listHash = '#/' + (params.tab || 'dashboard');") &&
       html.includes("location.hash = listHash + (queryString ? '?' + queryString : '');"),

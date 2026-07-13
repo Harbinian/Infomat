@@ -2,6 +2,8 @@
 
 `pmo/` 目录包含三个同级项目管理入口：流程地图驾驶舱、React 甘特图和 PMO 管控看板。
 
+修改 PMO 目录内代码、脚本、页面、数据生成逻辑或交付物工作流前先读 `AGENTS.md`。相关行为变化必须同步更新 README、目录 `AGENTS.md` 或 PMO 真源说明。
+
 ## 当前真源
 
 甘特图和 PMO 看板任务数据已切换为 Markdown 真源。历史 XLSX / MPP / CSV 任务导入文件已废弃，不再保留或读取。
@@ -14,7 +16,7 @@
 | 工作平衡 | `pmo/信息化项目_工作平衡.md` |
 | 工作开展原则 | `pmo/信息化项目_工作开展原则.md` |
 | 任务数 | 516 |
-| 字段数 | 53 |
+| 字段数 | 43 |
 | 项目周期 | 2026-06-16 至 2028-02-15 |
 | 里程碑数量 | 47 |
 | H5 重点展示任务 | 251 |
@@ -46,6 +48,10 @@ npm run dev
 ```
 
 开发模式默认访问 `http://localhost:5174`，顶部可在“甘特图 / PMO看板 / 流程地图”之间切换。
+
+PMO 看板内的“周会事项”页签用于首次周例会 W-A03 模板试运行，登记行动项、风险、问题、变更和责任池事项。该页签数据保存在浏览器本地，不回写 PMO Markdown 真源或 `tasks.json`。
+
+独立周会行动项服务在 `apps/weekly-action-service/`，默认端口 `3002`。它用于周会行动项的服务端本机运行台账，适合多人访问同一套本机记录；该服务同样不回写 PMO Markdown 真源或 `tasks.json`。
 
 流程地图驾驶舱的独立路由为：
 
@@ -94,6 +100,8 @@ npm run test:pmo-task-data
 | 执行标准字段 | `executionStandardId`、`inputMaterialList`、`checklistId`、`completionCriteria`、`evidenceRequirements`、`standardGapFlag`、`standardDeferredReason` |
 | 执行标准缺口治理字段 | `requiresExecutionStandard`、`standardsGapBucket`、`standardsGapReasons`、`standardsGapPriorityScore`、`suggestedStandardId`、`suggestedAction` |
 
+任务真源可使用 `受控交付物编号` 指定 `deliverableId`。该字段用于把计划任务绑定到既定 `DLV-XXX-*.md` 正本，避免自动生成编号与已有受控交付物冲突；未填写时仍按任务顺序自动生成交付物编号。
+
 ## Console 与已知问题
 
 Console 中来自 Chrome 扩展、React 开发提示的日志不作为代码缺陷处理。
@@ -104,12 +112,13 @@ Console 中来自 Chrome 扩展、React 开发提示的日志不作为代码缺�
 
 ```text
 pmo/
-├── CLAUDE.md
+├── AGENTS.md
 ├── README.md
 ├── procedure-management/
 │   ├── dashboard.html
-│   └── CLAUDE.md
+│   └── AGENTS.md
 ├── gantt-react/
+│   ├── AGENTS.md
 │   ├── README.md
 │   ├── public/tasks.json
 │   ├── public/pmo-source-manifest.json

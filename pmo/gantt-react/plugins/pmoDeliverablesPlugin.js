@@ -41,6 +41,24 @@ function idFromFileName(fileName) {
   return match ? `DLV-${match[1]}` : '';
 }
 
+function duplicateFileNamesFor(id, deliverablesDir = DELIVERABLES_DIR) {
+  if (!fs.existsSync(deliverablesDir)) return [];
+  const fileNames = fs.readdirSync(deliverablesDir, { withFileTypes: true })
+    .filter(entry => entry.isFile() && isDeliverableMarkdown(entry.name) && idFromFileName(entry.name) === id)
+    .map(entry => entry.name)
+    .sort((left, right) => left.localeCompare(right, 'zh-Hans-CN'));
+  return fileNames.length > 1 ? fileNames : [];
+}
+
+function assertNoDuplicateDeliverable(id, deliverablesDir = DELIVERABLES_DIR) {
+  const duplicates = duplicateFileNamesFor(id, deliverablesDir);
+  if (!duplicates.length) return;
+  throw new DeliverableFsError(
+    'DUPLICATE_DELIVERABLE',
+    `${id} 存在多份正本,请先保留唯一正本: ${duplicates.join(', ')}`,
+  );
+}
+
 function timestampForFile(date = new Date()) {
   return date.toISOString().replace(/[:.]/g, '-');
 }
@@ -67,7 +85,7 @@ function errorJson(res, statusCode, code, message, extra = {}) {
 
 function statusFromError(error) {
   if (error?.code === 'SCHEMA_INVALID' || error?.code === 'PARSE_FRONT_MATTER') return 400;
-  if (error?.code === 'WRITE_CONFLICT') return 409;
+  if (error?.code === 'WRITE_CONFLICT' || error?.code === 'DUPLICATE_DELIVERABLE') return 409;
   if (error?.code === 'UPLOAD_TOO_LARGE' || error?.code === 'UPLOAD_UNSUPPORTED_EXT') return 400;
   if (error?.code === 'CONVERTER_FAILED' || error?.code === 'STATUS_TRANSITION_DENIED') return 422;
   return 500;
@@ -310,6 +328,7 @@ export function pmoDeliverablesPlugin({
 
   const findItem = id => {
     refresh();
+    assertNoDuplicateDeliverable(id, deliverablesDir);
     return cache.get(id);
   };
 

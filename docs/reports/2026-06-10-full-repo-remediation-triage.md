@@ -55,7 +55,7 @@
 | 第 4 层 | `docs/HardwareResearch/` 缺少基础设施知识库目录说明 | 已确认 | 第四批小片已补 README，不触碰既有正文改动 |
 | 第 4 层 | `docs/integration/` 缺少集成方案目录说明 | 已确认 | 第四批小片已补 README |
 | 第 4 层 | `docs/meetings/` 缺少会议记录目录说明 | 已确认 | 第四批小片已补 README |
-| 第 4 层 | `docs/norms/` 缺少面向人的真源目录说明 | 已确认 | 第四批小片已补 README，不移动 norms 文件 |
+| 第 4 层 | `docs/norms/` 缺少面向人的流程输入基线目录说明 | 已确认 | 第四批小片已补 README，不移动 norms 文件 |
 | 第 4 层 | `docs/organization/` 缺少组织真源目录说明 | 已确认 | 第四批小片已补 README |
 | 第 4 层 | `docs/plans/` 缺少计划文档目录说明 | 已确认 | 第四批小片已补 README |
 | 第 4 层 | `docs/reports/` 缺少审计报告目录说明 | 已确认 | 第四批小片已补 README，不迁移报告 |
@@ -88,7 +88,7 @@
 
 - `todos`、`conflicts`、`processGovernance` 等业务流写接口。
 - 工程技术部映射补全。
-- PMO 驾驶舱、`docs/norms` 真源内容和大目录迁移。
+- PMO 驾驶舱、`docs/norms` 流程输入基线内容和大目录迁移。
 - 前端单文件拆分、安全头、限流、session store。
 
 ## 4. 工作区状态提示
@@ -127,8 +127,8 @@
 - 第三批先做只读校验收敛：`check-dashboard-data.mjs` 从 `跨部门完整性检查报告.md` 解析统计值，并与 `docs/company-sankey-data.json.crossDept`、PMO 内嵌 `#cross-dept-data` 比对；不改流程输入基线和生成快照。
 - 第三批继续补跨部门来源新鲜度口径：新增并落地 `docs/reports/2026-06-11-cross-dept-source-freshness-proposal.md`，`parse-sankey-data.mjs` 已把两份跨部门报告来源指纹写入 `crossDept.sourceReports`，`check-dashboard-data.mjs` 已比对磁盘报告 hash、公司级 JSON 和 PMO 内嵌数据。
 - 第三批继续补真源缺口审计：新增 `docs/reports/2026-06-10-process-truth-gap-audit.md`，确认工程技术部缺少 canonical 映射文件、`综合管理部` 属于待确认口径残留；不补写 norms、不重新生成 JSON。
-- 第三批继续补历史部门/外部实体口径：更新 `docs/norms/流程治理/过时部门名称追踪表.md`，将 `综合管理部` 登记为待确认项，区分沈飞民机外部实体线索和昌兴制度旧称线索；确认前不自动归并到当前组织真源。
-- 第三批继续补流程映射真源清单：新增 `docs/reports/2026-06-11-norms-source-manifest.md`，按组织真源和 DCM/BBM 合同登记 9 个部门、8 组 canonical 交付物和工程技术部缺口；新增 `docs/reports/2026-06-11-engineering-source-manifest.md`，登记工程技术部 source manifest 初版和外部待确认资料；新增 `scripts/check-norms-source-manifest.mjs`、`scripts/check-engineering-source-manifest.mjs`、`npm run test:norms-source-manifest` 和 `npm run test:engineering-source-manifest`，校验合同、三件套、工程技术部缺口和 47 个待确认源索引仍与仓库现状一致；当前协作提示已对齐 `复材车间` 口径，未来如拆分一、二车间需先改组织真源和合同；不改 `docs/norms/`。
+- 第三批继续补历史部门/外部实体口径：更新 `docs/norms/流程治理/过时部门名称追踪表.md`，将 `综合管理部` 登记为待确认项，区分沈飞民机外部实体线索和昌兴制度旧称线索；确认前不自动归并到当前组织口径。
+- 第三批继续补流程输入基线清单：新增 `docs/reports/2026-06-11-norms-source-manifest.md`，按组织口径和 DCM/BBM 合同登记 9 个部门、8 组 canonical 交付物和工程技术部缺口；新增 `docs/reports/2026-06-11-engineering-source-manifest.md`，登记工程技术部 source manifest 初版和外部待确认资料；新增 `scripts/check-norms-source-manifest.mjs`、`scripts/check-engineering-source-manifest.mjs`、`npm run test:norms-source-manifest` 和 `npm run test:engineering-source-manifest`，校验合同、三件套、工程技术部缺口和 47 个待确认源索引仍与仓库现状一致；当前协作提示已对齐 `复材车间` 口径，未来如拆分一、二车间需先改组织文件和合同；不改 `docs/norms/`。
 - 第三批继续补部门域口径红线：新增 `scripts/check-dept-domain-mapping.mjs` 和 `npm run test:dept-domain-mapping`，从 `docs/organization/组织架构和部门职责.md` 解析三组部门，并校验 `docs/contracts/dcm-bbm-contract.json` 一致；`scripts/parse-sankey-data.mjs` 已移除部门到域硬编码，改为从组织真源读取，并在 `sourceManifest` 记录组织真源 hash。
 - 第三批继续补 sourceManifest 指纹红线：新增 `scripts/check-source-manifest-hashes.mjs` 和 `npm run test:source-manifest-hashes`，逐项校验 `docs/company-sankey-data.json.sourceManifest.files` 中登记的源文件路径、大小和 SHA256 仍匹配磁盘。
 - 第四批先做导航止血：修正根 README、PMO README、PMO CLAUDE 和流程驾驶舱 CLAUDE 中不存在的甘特入口、截图、旧文档和手工 JSON 替换说明；不移动静态资产或大体积资料。
@@ -165,7 +165,7 @@
 
 1. 第三批优先处理工程技术部流程输入基线缺口与待确认承接确认：按 `docs/reports/2026-06-11-engineering-source-attribution-checklist.md` 确认是否存在独立制度包或部门资料目录；对沈飞民机侧科技创新部、沈飞民机侧数字工程部和集成研发业务域待确认材料逐项确认外部来源、适用范围、版本和昌兴侧承接证据；确认前不生成工程技术部 DCM/BBM。
 2. 第三批继续补工程技术部 canonical 三件套：在昌兴侧承接证据和独立制度来源确认后，再新增 `工程技术部部门-能力-流程-系统映射关系.md`、`工程技术部能力层与MDM建设要求.md` 和部门桑基图，并运行 `node scripts/parse-sankey-data.mjs`、`npm run test:process-governance-mainline`、`node scripts/check-dcm-bbm.mjs --no-fail`。
-3. 第三批再处理跨部门风险计算口径：当前已校验报告 hash 和快照一致，下一步是减少从报告 Markdown 反推风险数据的依赖，逐步让 parser 从组织真源和部门映射真源直接计算缺口。
+3. 第三批再处理跨部门风险计算口径：当前已校验报告 hash 和快照一致，下一步是减少从报告 Markdown 反推风险数据的依赖，逐步让 parser 从组织口径和部门流程输入基线直接计算缺口。
 4. 第四批处理仓库边界执行项：大体积资料迁移、重复 `echarts.min.js` 归并、PMO 历史文件收口等仍只按迁移提案推进，执行前单独评估影响，不和流程输入基线补齐混做。
 5. 第二批 MDM 安全边界暂不作为默认下一步：已完成的权限、目录、session、默认口令、角色口径红线继续保留；除非重新恢复 MDM 平台开发，否则只处理明确复现的安全缺陷或审计脚本发现的问题。
 6. 第五批长期架构债继续延后：前端拆分、测试框架统一、大脚本拆分、编码流水号事务化和冲突检测性能治理，等流程输入基线和主线校验稳定后再开。

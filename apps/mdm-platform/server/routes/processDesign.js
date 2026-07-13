@@ -263,9 +263,7 @@ async function ensureLocalUser(req, departmentId) {
 function draftRequiredErrors(body) {
   const required = [
     ['process_name', '流程名称不能为空'],
-    ['reason', '为什么新增不能为空'],
-    ['basis_type', '依据类型不能为空'],
-    ['basis_description', '依据说明不能为空']
+    ['basis_type', '依据类型不能为空']
   ];
   const errors = required
     .filter(([field]) => !text(body[field]))

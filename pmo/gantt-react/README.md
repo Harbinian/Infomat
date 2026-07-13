@@ -2,6 +2,8 @@
 
 基于 React + Vite 的交付物驱动项目管控看板，从甘特图升级为 PMO 周会可用工具。
 
+修改本应用前先读 `AGENTS.md`。涉及代码、插件、数据字段、前端行为、启动命令或测试命令变化时，必须同步更新本 README 或 `AGENTS.md`。
+
 ## 快速开始
 
 ```bash
@@ -17,7 +19,11 @@ npm run preview
 
 `public/tasks.json` 由 `pmo/信息化项目_计划管控真源.md` 通过 `pmo/build_pmo_task_data.py` 生成。页面实际读取 `public/tasks.json`，同时保留 `pmo/tasks.json` 作为 PMO 根目录备份。
 
-当前任务数为 516，字段数为 53。生成脚本会保留基础甘特字段，并附带阶段门、关键路径控制、H5 重点展示、合同/付款控制口径、执行标准缺口分桶和优先级队列等执行管控字段。
+当前任务数为 516，字段数为 43。生成脚本会保留基础甘特字段，并附带阶段门、关键路径控制、H5 重点展示、合同/付款控制口径、执行标准缺口分桶和优先级队列等执行管控字段。
+
+任务清单中的“责任人”由前端按 `pmo/信息化项目_工作平衡.md` 的工作组负责人口径派生，不回写 `public/tasks.json`。
+
+任务真源中的 `受控交付物编号` 会生成 `deliverableId`。交付物台账优先使用该显式编号与 `pmo/deliverables/DLV-XXX-*.md` 正本匹配；未填写时继续按任务顺序自动生成编号。
 
 服务侧同步读取/提供 `public/pmo-source-manifest.json`，用于标识当前 PMO 真源组合：
 
@@ -35,7 +41,7 @@ npm run preview
 2. 如调整 WBS 编号/层级，同步修改 `pmo/信息化项目_WBS结构真源.md`。
 3. 如调整人员或推进机制，同步修改 `pmo/信息化项目_工作平衡.md`、`pmo/信息化项目_工作开展原则.md`。
 4. 在 `pmo/` 下运行 `python build_pmo_task_data.py`。
-5. 脚本同时写入 `pmo/tasks.json`、`pmo/gantt-react/public/tasks.json` 和 `pmo/gantt-react/public/pmo-source-manifest.json`。
+5. 脚本同时写入 `pmo/tasks.json`、`pmo/pmo-source-manifest.json`、`pmo/gantt-react/public/tasks.json` 和 `pmo/gantt-react/public/pmo-source-manifest.json`。
 6. 刷新浏览器。
 
 运行完成后应看到 `Wrote 516 tasks from 信息化项目_计划管控真源.md`。如任务数发生变化，先确认 MD 真源是否确实增删任务。
@@ -55,7 +61,7 @@ npm run preview
 | POST | `/api/pmo/deliverables/:id/transition` |
 | POST | `/api/pmo/deliverables/:id/upload`(支持 .md / .docx / .xlsx) |
 
-启动时扫描所有 `DLV-XXX-*.md`,解析失败、字段缺失或同 DLV 多份时只在 console.warn 提示并跳过,不阻塞 dev server。
+启动时扫描所有 `DLV-XXX-*.md`,解析失败、字段缺失或同 DLV 多份时只在 console.warn 提示并跳过,不阻塞 dev server。同 DLV 多份正本时,该编号的读取、写回、状态流转和上传接口返回 409,需先保留唯一 Markdown 正本后再操作。
 
 ### 测试
 
@@ -64,6 +70,9 @@ npm run test:frontmatter
 npm run test:writeback
 npm run test:plugin
 npm run test:hmr
+npm run test:task-owner
+npm run test:pmo-week-range
+npm run test:weekly-issue-ledger
 ```
 
 ## Console 口径
@@ -78,13 +87,18 @@ npm run test:hmr
 | 视图 | 说明 |
 |------|------|
 | 全部任务 | 甘特图 + 任务树 (收起 WBS 时进度条联动隐藏) |
-| 任务清单 | PMO 看板内的任务明细表,按 WBS 排序,支持任务类型/里程碑/风险筛选 |
+| 任务清单 | PMO 看板内的任务明细表,按 WBS 排序,展示责任部门和责任人,支持任务类型/里程碑/风险筛选 |
 | 交付物台账 | 所有交付物表格，支持等级/类型/部门/月份/状态筛选 |
 | 阶段门 | 8个阶段门卡片，区分已满足/疑似匹配/缺失 |
 | 标准治理 | 执行标准覆盖率快照、缺口分桶和高风险缺标准优先队列 |
-| 本周交付物 | 基于 PMO 观察日期的本周到期交付物 |
+| 周会事项 | 行动项、风险、问题、变更和责任池事项的模板试运行台账；浏览器本地保存，不回写 PMO 真源 |
+| 本周交付物 | 基于 PMO 观察日期的周四至下周三到期交付物 |
 | 延期交付物 | 已延期交付物和分级建议动作 |
-| PMO周会 | 本周A/B、延期A/B、阶段门缺失、高风险任务四块视图 |
+| PMO周会 | 周四至下周三 A/B、延期A/B、阶段门缺失、高风险任务四块视图 |
+
+## 周会事项台账
+
+“周会事项”页签用于首次周例会 W-A03 的模板试运行。页面固定五类去向：行动项台账、风险台账、问题台账、变更台账和责任池；每类都显示关闭标准。现场登记和建议登记记录保存在当前浏览器 `localStorage`，用于会中试跑和会后整理，不替代 PMO Markdown 真源、交付物正本或 MDM 正式台账。
 
 ## 阶段门规则
 

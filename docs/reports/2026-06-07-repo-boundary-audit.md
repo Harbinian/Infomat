@@ -80,7 +80,8 @@
 
 ### F3 `docs/` 同时承担真源、方案、样例、外部参考和历史计划
 
-`docs/norms/` 和 `docs/organization/` 是当前强真源；`docs/superpowers/` 是历史计划；`docs/integration/` 是方案；`docs/screenshots/`、`docs/samples/` 是证据与样例；`docs/U8SoftHelp/`、`docs/外部参考/` 是外部资料。
+`docs/organization/` 是当前组织真源。
+`docs/norms/` 承载流程输入基线；`docs/superpowers/` 是历史计划；`docs/integration/` 是方案；`docs/screenshots/`、`docs/samples/` 是证据与样例；`docs/U8SoftHelp/`、`docs/外部参考/` 是外部资料。
 
 影响：
 
@@ -89,7 +90,8 @@
 
 建议：
 
-- 用 `DIRECTORY_OWNERSHIP.md` 明确 `docs/norms/`、`docs/organization/` 才是当前流程治理强真源。
+- 用 `DIRECTORY_OWNERSHIP.md` 明确 `docs/norms/` 是流程输入基线。
+- 用 `DIRECTORY_OWNERSHIP.md` 明确 `docs/organization/` 是组织真源。
 - 新增 `docs/reports/` 和后续 `docs/architecture/`，让审计报告和架构说明有固定位置。
 
 ### F4 `pmo/` 内部同时包含真源、应用和生成物

@@ -4,7 +4,7 @@
 
 ## 1. 复试范围
 
-本次只复试 `2026-06-11-new-norms-business-materials-audit.md` 中标记为“无法直接读取”的新增资料，不修改 `docs/norms/` 原文件，不更新部门映射真源。
+本次只复试 `2026-06-11-new-norms-business-materials-audit.md` 中标记为“无法直接读取”的新增资料，不修改 `docs/norms/` 原文件，不更新部门流程输入基线。
 
 覆盖目录：
 

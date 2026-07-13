@@ -15,6 +15,7 @@ import PMOWeeklyView from './components/PMOWeeklyView';
 import DeliverableDetail from './components/DeliverableDetail';
 import TaskLedger from './components/TaskLedger';
 import StandardGapOperationsView from './components/StandardGapOperationsView';
+import WeeklyIssueLedger from './components/WeeklyIssueLedger';
 import { buildTaskTree, applyFilters, normalizeTasks, analyzeTasks, computeProjectRange, formatDate, parseDate, filterTasksByExpansion } from './utils/dateUtils';
 import { normalizeDeliverables, loadDeliverableStatusOverrides } from './utils/deliverableUtils.js';
 import { buildPhaseGates } from './utils/phaseGateUtils.js';
@@ -28,6 +29,7 @@ const EVIDENCE_DB_NAME = 'pmo-deliverable-evidence-db';
 const EVIDENCE_STORE_NAME = 'evidenceFiles';
 const PMO_VIEW_LABELS = [
   { key: 'pmo', label: 'PMO周会' },
+  { key: 'weekly-issues', label: '周会事项' },
   { key: 'tasks', label: '任务清单' },
   { key: 'deliverables', label: '交付物台账' },
   { key: 'phasegates', label: '阶段门' },
@@ -497,6 +499,8 @@ export default function App() {
     switch (pmoView) {
       case 'tasks':
         return <TaskLedger tasks={allTasks} filters={taskFilters} />;
+      case 'weekly-issues':
+        return <WeeklyIssueLedger tasks={allTasks} deliverables={deliverablesWithEvidence} phaseGates={phaseGates} pmoDate={pmoDate} />;
       case 'deliverables':
         return <DeliverableLedger
           deliverables={deliverablesWithEvidence}

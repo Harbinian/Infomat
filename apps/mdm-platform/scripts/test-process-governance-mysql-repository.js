@@ -121,7 +121,84 @@ function makeFakePool() {
           source_file,
           id: state.a1Items.length + 1
         });
-        return [{ affectedRows: 1 }, undefined];
+        return [{ affectedRows: 1, insertId: state.a1Items.length }, undefined];
+      }
+
+      if (normalizedSql.includes('INSERT INTO process_mapping_records')) {
+        const [
+          mapping_key,
+          record_type,
+          first_snapshot_id,
+          latest_snapshot_id,
+          parent_record_id,
+          latest_a1_item_id,
+          dept_name,
+          domain_name,
+          l2_name,
+          l3_name,
+          a1_code,
+          behavior,
+          execution_role,
+          approval_type,
+          input_source_dept,
+          output_target_dept,
+          suggested_systems,
+          verification_note,
+          source_file,
+          status
+        ] = params;
+        let row = state.mappingRecords.find(item => item.mapping_key === mapping_key);
+        if (!row) {
+          row = {
+            id: state.mappingRecords.length + 1,
+            mapping_key,
+            record_type,
+            first_snapshot_id,
+            status: status || 'active'
+          };
+          state.mappingRecords.push(row);
+        }
+        Object.assign(row, {
+          latest_snapshot_id,
+          parent_record_id,
+          latest_a1_item_id,
+          dept_name,
+          domain_name,
+          l2_name,
+          l3_name,
+          a1_code,
+          behavior,
+          execution_role,
+          approval_type,
+          input_source_dept,
+          output_target_dept,
+          suggested_systems,
+          verification_note,
+          source_file,
+          status: row.status === 'published' ? row.status : (status || 'active')
+        });
+        return [{ affectedRows: 1, insertId: row.id }, undefined];
+      }
+
+      if (normalizedSql === "SELECT id FROM process_mapping_records WHERE mapping_key=? LIMIT 1") {
+        const row = state.mappingRecords.find(item => item.mapping_key === params[0]);
+        return [[row ? { id: row.id } : null].filter(Boolean), undefined];
+      }
+
+      if (normalizedSql === "SELECT id, mapping_key FROM process_mapping_records WHERE status='active'") {
+        return [state.mappingRecords
+          .filter(item => item.status === 'active')
+          .map(item => ({ id: item.id, mapping_key: item.mapping_key })), undefined];
+      }
+
+      if (normalizedSql === "UPDATE process_mapping_records SET status='source_missing', latest_snapshot_id=?, updated_at=CURRENT_TIMESTAMP WHERE id=?") {
+        const [latest_snapshot_id, id] = params;
+        const row = state.mappingRecords.find(item => item.id === id);
+        if (row) {
+          row.status = 'source_missing';
+          row.latest_snapshot_id = latest_snapshot_id;
+        }
+        return [{ affectedRows: row ? 1 : 0 }, undefined];
       }
 
       if (normalizedSql.includes('INSERT INTO process_source_files')) {
@@ -671,9 +748,18 @@ function makeFakePool() {
       if (normalizedSql.includes('FROM process_mapping_records')) {
         let rows = [...state.mappingRecords];
         let paramIndex = 0;
-        if (normalizedSql.includes('r.record_type=?')) rows = rows.filter(item => item.record_type === params[paramIndex++]);
-        if (normalizedSql.includes('r.status=?')) rows = rows.filter(item => item.status === params[paramIndex++]);
-        if (normalizedSql.includes('r.dept_name=?')) rows = rows.filter(item => item.dept_name === params[paramIndex++]);
+        if (/\br\.record_type\s*=\s*\?/.test(normalizedSql)) {
+          const recordType = params[paramIndex++];
+          rows = rows.filter(item => item.record_type === recordType);
+        }
+        if (/\br\.status\s*=\s*\?/.test(normalizedSql)) {
+          const status = params[paramIndex++];
+          rows = rows.filter(item => item.status === status);
+        }
+        if (/\br\.dept_name\s*=\s*\?/.test(normalizedSql)) {
+          const deptName = params[paramIndex++];
+          rows = rows.filter(item => item.dept_name === deptName);
+        }
         if (normalizedSql.includes('GROUP BY r.record_type, r.status')) {
           const grouped = new Map();
           for (const item of rows) {
@@ -804,6 +890,36 @@ async function main() {
     links: [
       { source: '经营发展部', target: '销售订单评审和执行管理', value: 1, edge_type: 'dept_l2', source_file: 'docs/norms/经营发展部部门-能力-流程-系统映射关系.md' },
       { source: '销售订单评审和执行管理', target: 'ERP', value: '1.5', edge_type: 'l3_system' }
+    ],
+    mappingRecords: [
+      {
+        mapping_key: 'l3-taxonomy-001',
+        record_type: 'l3',
+        dept_name: '经营发展部',
+        domain_name: '市场开发与客户合同治理',
+        l2_name: '项目合同评审执行管理',
+        l3_name: '销售订单评审和执行管理',
+        suggested_systems: ['OA', 'ERP'],
+        source_file: 'docs/norms/经营发展部部门-能力-流程-系统映射关系.md'
+      },
+      {
+        mapping_key: 'a1-taxonomy-001',
+        parent_mapping_key: 'l3-taxonomy-001',
+        record_type: 'a1',
+        dept_name: '经营发展部',
+        domain_name: '市场开发与客户合同治理',
+        l2_name: '项目合同评审执行管理',
+        l3_name: '销售订单评审和执行管理',
+        a1_code: 'JY-L3-01-A1-001',
+        behavior: '接收订单并组织评审',
+        execution_role: '合同管理员',
+        approval_type: '审批',
+        input_source_dept: '项目管理部',
+        output_target_dept: '工程技术部',
+        suggested_systems: ['OA', 'ERP'],
+        verification_note: '核对技术条款输入',
+        source_file: 'docs/norms/经营发展部部门-能力-流程-系统映射关系.md'
+      }
     ],
     a1Items: [
       {
@@ -949,6 +1065,13 @@ async function main() {
 
   assert.strictEqual(pool.state.qualityFindings.length, 1);
   assert.strictEqual(pool.state.qualityFindings[0].fingerprint.length, 64);
+  assert.strictEqual(pool.state.mappingRecords.length, 2);
+  const importedL3Record = pool.state.mappingRecords.find(item => item.record_type === 'l3');
+  const importedA1Record = pool.state.mappingRecords.find(item => item.record_type === 'a1');
+  assert.strictEqual(importedL3Record.domain_name, '市场开发与客户合同治理');
+  assert.strictEqual(importedL3Record.l2_name, '项目合同评审执行管理');
+  assert.strictEqual(importedA1Record.parent_record_id, importedL3Record.id);
+  assert.strictEqual(importedA1Record.domain_name, '市场开发与客户合同治理');
   assert.strictEqual(pool.state.mappingTodos.length, 1);
   assert.strictEqual(pool.state.mappingTodos[0].fingerprint.length, 64);
   assert.strictEqual(pool.state.importFingerprints.filter(item => item.scope === 'quality').length, 1);
@@ -1121,8 +1244,10 @@ async function main() {
   assert.strictEqual(assignedCase.events[0].event_type, 'assigned');
 
   const workspace = await repo.getMappingWorkspace({ type: 'a1', canViewAll: true });
-  assert.strictEqual(workspace.summary.byType.a1, 1);
-  assert.deepStrictEqual(workspace.items[0].suggested_systems, ['OA', 'ERP']);
+  assert.ok(workspace.summary.byType.a1 >= 1);
+  const workspaceImportedA1 = workspace.items.find(item => item.mapping_key === 'a1-taxonomy-001');
+  assert.strictEqual(workspaceImportedA1.domain_name, '市场开发与客户合同治理');
+  assert.deepStrictEqual(workspaceImportedA1.suggested_systems, ['OA', 'ERP']);
 
   const todos = await repo.getMappingTodos({ type: 'cross_dept', canViewAll: true });
   assert.strictEqual(todos.summary.byType.cross_dept, 1);

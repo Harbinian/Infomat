@@ -577,7 +577,7 @@ function qualityCaseWorkItem(row) {
     sourceLine: row.source_line,
     status: row.status,
     currentStatus: row.status,
-    nextStep: row.suggestion || '回源核验并提交整改结论',
+    nextStep: row.suggestion || '回到来源文件核验并提交整改结论',
     department: row.dept_name || row.owner_dept_name || null,
     ownerDept: row.owner_dept_name || null,
     responsiblePerson: row.owner_dept_name ? fallbackConfirmPerson(row.owner_dept_name) : fallbackConfirmPerson(row.dept_name),
@@ -652,7 +652,7 @@ function mappingTodoWorkItem(row) {
     dueDate: row.due_date || null,
     target: `#/processGovernance?view=mappingTodos&todo=${row.id}`,
     actionLabel: '查看映射待办',
-    sample: row.suggestion || '先核对来源映射关系，回源整改后重新导入。',
+    sample: row.suggestion || '先核对来源映射关系，修改源文件后重新导入。',
     a1Code: row.a1_code || null,
     source: row.source_file || '流程映射工作库',
     targetDept: row.target_dept_name || row.dept_name || null,
@@ -738,7 +738,7 @@ function inputBaselineReviewWorkItem(row, runId) {
     area: row.issue_type || null,
     status: row.decision || row.status || 'not_reviewed',
     currentStatus: row.decision || row.status || 'not_reviewed',
-    nextStep: row.suggested_action || '回源核验并记录复核结论',
+    nextStep: row.suggested_action || '回到来源文件核验并记录复核结论',
     responsiblePerson: row.owner || fallbackConfirmPerson(department),
     confirmPerson: row.owner || fallbackConfirmPerson(department),
     sourceLine: row.source_anchor || null,
@@ -776,7 +776,7 @@ function pmoReviewGateWorkItems(roleCodes, currentDepartmentName) {
     dueDate: null,
     target: '#/processGovernance?view=qualityCases',
     actionLabel: '更新治理周报',
-    sample: '核对新增、关闭、超期、字段台账和待确认黄金源进度；未完成回源核验的事项继续留在问题池。',
+    sample: '核对新增、关闭、超期、字段台账和待确认黄金源进度；未完成来源文件核验的事项继续留在问题池。',
     source: 'PMO治理节奏',
     department,
     responsiblePerson: fallbackConfirmPerson(department),
@@ -802,7 +802,7 @@ function sampleForTodo(type) {
   if (type === 'conflict_resolution') return '先查看双方字段说明和消费场景，再提交协调意见。';
   if (type === 'terminology') return '先确认术语适用范围，再补充定义和禁用说法。';
   if (type === 'process_quality') return '先打开流程治理闭环视图，定位来源文件、整改建议和当前责任人。';
-  if (type === 'process_mapping_todo') return '先打开流程映射待办，确认 L3/A1 和来源文件，再决定是否回源整改。';
+  if (type === 'process_mapping_todo') return '先打开流程映射待办，确认 L3/A1 和来源文件，再决定是否修改源文件。';
   return '先确认事项来源、责任部门和截止时间，再记录处理结论。';
 }
 

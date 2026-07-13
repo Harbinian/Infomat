@@ -6,7 +6,7 @@
 
 **Architecture:** 新增平台侧统一问题池 read model，输入基线问题识别、已确认流程映射核验、跨部门风险、质量检查和术语提示都作为来源输入；前端只读取问题池摘要、队列和单卡详情，不在打开页面时实时解析 Markdown 或跨多表拼装。问题卡以 A1 业务行为为上下文容器，问题点按类型流转，但审批链上的所有人都能看到完整 5W2H、证据、意见、历史和裁决。
 
-**Tech Stack:** Express.js、MySQL、单文件前端 `apps/mdm-platform/public/index.html`、现有 `processGovernance` 路由与 MySQL repository、现有平台测试脚本。`docs/norms` 保持基线真源，不由本计划直接回写。
+**Tech Stack:** Express.js、MySQL、单文件前端 `apps/mdm-platform/public/index.html`、现有 `processGovernance` 路由与 MySQL repository、现有平台测试脚本。`docs/norms` 保持流程输入基线，不由本计划直接回写。
 
 ---
 
@@ -1578,7 +1578,7 @@ Performance:
 | 后续审核覆盖前序意见 | 事件流水 append-only，不做覆盖更新 |
 | MDM 工作组越权解释业务术语 | 术语待办先发给部门长或授权账户作答，再由 MDM 裁决 |
 | 普通用户误触发数据准备 | 生成路由仅授权角色可用 |
-| `docs/norms` 被 MDM 自动回写 | 本计划只产生回写建议，不直接改真源 |
+| `docs/norms` 被 MDM 自动回写 | 本计划只产生回写建议，不直接改流程输入基线 |
 
 ---
 

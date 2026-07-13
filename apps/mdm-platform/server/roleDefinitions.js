@@ -94,7 +94,7 @@ const ROLE_GUIDES = [
     firstEntry: { label: '本组治理事项', target: '#/processGovernance' },
     workflow: ['查看本组待办', '分派成员处理', '协调跨部门衔接', '复核闭环结果'],
     sample: '工作组组长看到本工作组有跨部门衔接风险时，先进入流程治理详情，确认输入来源、输出目标和本组责任人。',
-    pitfall: '不要只把事项转给成员；需要确认成员处理后是否回源整改、重新导入并形成闭环状态。',
+    pitfall: '不要只把事项转给成员；需要确认成员处理后是否已修改源文件、重新导入并形成闭环状态。',
     doneCriteria: '本工作组事项有责任人、有处理状态，跨部门衔接风险有确认或升级记录。',
     permissions: [
       BASE_PERMISSIONS.dataViewDepartment,

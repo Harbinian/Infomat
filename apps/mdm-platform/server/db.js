@@ -955,6 +955,68 @@ CREATE INDEX IF NOT EXISTS idx_process_quality_cases_dept ON process_governance_
 CREATE INDEX IF NOT EXISTS idx_process_quality_cases_latest_snapshot ON process_governance_quality_cases(latest_snapshot_id);
 CREATE INDEX IF NOT EXISTS idx_process_quality_case_events_case ON process_governance_quality_case_events(case_id, id);
 
+CREATE TABLE IF NOT EXISTS process_input_baseline_review_runs (
+  run_id TEXT PRIMARY KEY,
+  review_run_path TEXT NOT NULL,
+  issue_count INTEGER NOT NULL DEFAULT 0,
+  embedding_status TEXT NOT NULL DEFAULT 'missing',
+  embedding_model TEXT NOT NULL DEFAULT '',
+  mapping_diff_report TEXT,
+  imported_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS process_input_baseline_review_items (
+  run_id TEXT NOT NULL REFERENCES process_input_baseline_review_runs(run_id) ON DELETE CASCADE,
+  stable_key TEXT NOT NULL,
+  review_item_id TEXT NOT NULL DEFAULT '',
+  department TEXT NOT NULL DEFAULT '',
+  document_name TEXT NOT NULL DEFAULT '',
+  source_file TEXT NOT NULL DEFAULT '',
+  source_anchor TEXT NOT NULL DEFAULT '',
+  issue_type TEXT NOT NULL DEFAULT '',
+  content TEXT NOT NULL,
+  mapping_location TEXT,
+  suggested_action TEXT,
+  definition_status TEXT NOT NULL DEFAULT '',
+  owner TEXT NOT NULL DEFAULT '',
+  display_order INTEGER NOT NULL DEFAULT 0,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (run_id, stable_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_process_input_baseline_review_items_group
+ON process_input_baseline_review_items(department, document_name, issue_type);
+
+CREATE TABLE IF NOT EXISTS process_input_baseline_review_excerpts (
+  run_id TEXT NOT NULL,
+  stable_key TEXT NOT NULL,
+  chunk_id TEXT NOT NULL,
+  source_anchor TEXT NOT NULL DEFAULT '',
+  source_label TEXT NOT NULL DEFAULT '',
+  raw_text TEXT NOT NULL,
+  evidence_status TEXT NOT NULL DEFAULT 'needs_review',
+  verification_status TEXT NOT NULL DEFAULT 'unverified',
+  allowed_downstream_use TEXT NOT NULL DEFAULT 'review_only',
+  display_order INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (run_id, stable_key, chunk_id),
+  FOREIGN KEY (run_id, stable_key)
+    REFERENCES process_input_baseline_review_items(run_id, stable_key) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS process_input_baseline_review_decisions (
+  run_id TEXT NOT NULL,
+  stable_key TEXT NOT NULL,
+  decision TEXT NOT NULL DEFAULT '',
+  evidence_status TEXT NOT NULL DEFAULT 'not_reviewed',
+  issue_type TEXT NOT NULL DEFAULT '',
+  definition_status TEXT NOT NULL DEFAULT '',
+  note TEXT,
+  decided_by_person_id INTEGER,
+  decided_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (run_id, stable_key)
+);
+
 CREATE TABLE IF NOT EXISTS process_source_files (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   snapshot_id INTEGER NOT NULL REFERENCES process_governance_snapshots(id) ON DELETE CASCADE,

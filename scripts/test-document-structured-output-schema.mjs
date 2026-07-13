@@ -74,8 +74,8 @@ function assertAllIncluded(text, values, context) {
 }
 
 assert.equal(schema.$schema, 'https://json-schema.org/draft/2020-12/schema');
-assert.equal(schema.properties.schema_version.const, 'document-structured-output-v1');
-for (const field of ['schema_version', 'draft', 'document_profile', 'processes', 'steps', 'evidence_catalog']) {
+assert.equal(schema.properties.schema_version.const, 'document-structured-output-v2');
+for (const field of ['schema_version', 'draft', 'document_profile', 'processes', 'steps', 'step_transitions', 'evidence_catalog']) {
   assert.ok(schema.required.includes(field), `top-level required missing ${field}`);
 }
 for (const field of ['document_no', 'document_title', 'planned_edition']) {
@@ -90,7 +90,8 @@ assertEnum('versionStatus', ['published', 'superseded', 'retired']);
 
 assertEnum('processType', ['new', 'inherit', 'handoff', 'adjustment']);
 assertEnum('processSystem', ['', 'OA', 'MES', 'PLM', 'ERP']);
-assertEnum('fieldType', ['文本', '数字', '日期', '金额', '枚举', '布尔', '部门', '人员', '附件']);
+assertEnum('stepType', ['action', 'decision']);
+assertEnum('fieldType', ['文本', '长文本', '数字', '日期', '日期时间', '金额', '枚举', '布尔', '部门', '人员', '文件编号', '签名', '图片', '附件', '二维码']);
 assertEnum('evidenceType', ['制度条款', '表单样例', '访谈记录', '会议纪要', '流程图', '台账记录', '暂无证据']);
 assertEnum('evidenceStatus', ['verified', 'pending_review', 'source_missing', 'ocr_extracted_not_confirmed', 'review_only']);
 
@@ -104,6 +105,14 @@ assertAllIncluded(frontend, schema.$defs.evidenceType.enum, 'frontend evidence t
 assertAllIncluded(frontend, ['pgDesignDocumentNo', 'pgDesignDocumentTitle', 'pgDesignPlannedEdition', 'pgDesignCurrentEdition'], 'frontend document edition fields');
 assert.ok(!frontend.includes('id="pgDesignReason"'), 'frontend should not expose removed why-new field');
 assert.ok(!frontend.includes('id="pgDesignBasisDescription"'), 'frontend should not expose removed basis description field');
+assert.ok(schema.$defs.step.required.includes('step_type'), 'step schema should require action/decision node type');
+assert.ok(schema.$defs.stepTransition, 'schema should define step transition objects for decision branches');
+assert.ok(schema.properties.step_transitions.items.$ref === '#/$defs/stepTransition', 'top-level step_transitions should use the transition definition');
+for (const field of ['transition_ref', 'process_ref', 'from_step_ref', 'condition', 'to_step_ref', 'evidence_refs']) {
+  assert.ok(Object.prototype.hasOwnProperty.call(schema.$defs.stepTransition.properties, field), `stepTransition missing ${field}`);
+}
+assert.ok(mysqlSchema.includes('CREATE TABLE IF NOT EXISTS process_design_step_transitions'), 'MySQL schema should persist decision branch transitions');
+assert.ok(frontend.includes('判断分支'), 'MDM frontend should display imported decision branches');
 assertAllIncluded(parser, schema.$defs.evidenceStatus.enum.map(value => `'${value}'`), 'parse-sankey evidence statuses');
 assert.ok(parser.includes('const STRUCTURE_BLOCK_VERSION = 1'), 'parser structure block version drifted');
 

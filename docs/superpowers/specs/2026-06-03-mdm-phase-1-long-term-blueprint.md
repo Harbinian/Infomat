@@ -7,7 +7,7 @@
 
 本蓝图属于 MDM 一期交付物。它不要求一期完成 ERP、MES、OA、PLM 的全部联调，但要求在一期内明确主数据域、待确认黄金源、接口路线、数据质量机制和后续里程碑。
 
-当前真源仍保留在 `docs/norms/`、`docs/organization/组织架构和部门职责.md` 和 parser 生成的 `docs/company-sankey-data.json`。MDM 在一期内先承接只读快照、字段台账关联和校验能力，不抢跑替代 PMO 静态驾驶舱。
+当前流程输入基线仍保留在 `docs/norms/`，组织口径仍以 `docs/organization/组织架构和部门职责.md` 为准，parser 生成的 `docs/company-sankey-data.json` 仍是消费快照。MDM 在一期内先承接只读快照、字段台账关联和校验能力，不抢跑替代 PMO 静态驾驶舱。
 
 ## 2. 待确认主数据域
 

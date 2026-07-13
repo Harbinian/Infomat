@@ -57,6 +57,16 @@ async function main() {
   assert.strictEqual(bundle.a1Items.length, 1);
   assert.strictEqual(bundle.a1Items[0].a1_code, 'JY-L3-01-A1-001');
   assert.deepStrictEqual(bundle.a1Items[0].suggested_systems, ['OA', 'ERP']);
+  assert.strictEqual(bundle.mappingRecords.length, 2);
+  const l3Record = bundle.mappingRecords.find(item => item.record_type === 'l3');
+  const a1Record = bundle.mappingRecords.find(item => item.record_type === 'a1');
+  assert.strictEqual(l3Record.dept_name, '经营发展部');
+  assert.strictEqual(l3Record.domain_name, '市场开发与客户合同治理');
+  assert.strictEqual(l3Record.l2_name, '项目合同评审执行管理');
+  assert.strictEqual(l3Record.l3_name, '销售订单评审和执行管理');
+  assert.strictEqual(a1Record.parent_mapping_key, l3Record.mapping_key);
+  assert.strictEqual(a1Record.domain_name, '市场开发与客户合同治理');
+  assert.strictEqual(a1Record.l2_name, '项目合同评审执行管理');
   assert.strictEqual(bundle.sourceFiles.length, 2);
   assert.strictEqual(bundle.sourceFiles[0].file_no, 'GLTX-JY-23');
   assert.strictEqual(bundle.sourceFiles[1].process_status, '排除');
@@ -95,6 +105,7 @@ async function main() {
   assert.strictEqual(repo.replacedBundle.sourceFiles.length, 2);
   assert.strictEqual(repo.replacedBundle.mdmRequirements.length, 1);
   assert.strictEqual(repo.replacedBundle.evidenceRefs.length, 3);
+  assert.strictEqual(repo.replacedBundle.mappingRecords.length, 2);
   assert.strictEqual(repo.replacedBundle.qualityFindings.length, 1);
   assert.strictEqual(repo.replacedBundle.mappingTodos.length, 2);
   assert.strictEqual(result.snapshot_id, 42);

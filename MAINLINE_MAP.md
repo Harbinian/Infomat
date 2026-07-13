@@ -2,13 +2,17 @@
 
 > 状态：执行规则  
 > 生效日期：2026-06-07  
-> 目的：说明 MDM 主线、PMO 主线、资料真源和脚本工具之间的数据流关系，防止误把展示副本当真源。
+> 目的：说明 MDM 主线、PMO 主线、流程输入基线、组织真源和脚本工具之间的数据流关系，防止误把展示副本当维护入口。
 
 ## 1. 当前阶段主线
 
 当前仓库处于“流程地图与数据地图的梳理与沉淀”阶段。此阶段分析对象是流程，不是具体应用系统。
 
-MDM 平台开发暂时搁置，保留为后续承接平台。PMO 驾驶舱是当前流程地图展示入口。资料真源仍在 `docs/`。
+MDM 平台开发暂时搁置，保留为后续承接平台。PMO 驾驶舱是当前流程地图展示入口。
+
+组织真源在 `docs/organization/`。
+信息化项目人员角色映射在 `docs/organization/信息化项目人员角色映射.md`。
+流程映射以 `docs/norms/` 下的流程输入基线为准。
 
 ## 2. 流程治理主线
 
@@ -30,12 +34,36 @@ apps/mdm-platform 流程治理快照导入
 
 规则：
 
-- `docs/norms/` 是流程数据原始来源。
+- `docs/norms/{部门}部门-能力-流程-系统映射关系.md` 是流程输入基线。
 - `docs/company-sankey-data.json` 是 parser 生成快照。
-- `pmo/procedure-management/dashboard.html` 是展示副本，不是流程输入基线来源。
+- `pmo/procedure-management/dashboard.html` 是展示副本，不是流程输入基线维护入口。
 - `apps/mdm-platform` 只在导入快照后承接结构化查看和后续治理，不反向覆盖 `docs/norms/`。
 
-## 3. 字段台账与主数据主线
+## 3. 组织与项目人员映射主线
+
+```text
+docs/organization/花名册.md
+docs/organization/组织架构和部门职责.md
+pmo/信息化项目_工作平衡.md
+  ↓
+人工治理与来源标注
+  ↓
+docs/organization/信息化项目人员角色映射.md
+  ↓
+只读选择 / 派生快照
+  ↓
+apps/weekly-action-service (3002)
+```
+
+规则：
+
+- `花名册.md` 是人员、工号、部门、岗位资料来源。
+- `组织架构和部门职责.md` 是信息化工作组和项目执行架构来源。
+- `信息化项目人员角色映射.md` 只收已经进入信息化项目运行链条的人，不复制全量花名册。
+- 项目材料有名但花名册未匹配时，映射行保留，人员匹配状态标为 `花名册待补`，不根据角色猜测部门或岗位。
+- 3002 可以只读使用映射或派生快照，并在事项上保存人员快照和审计记录；不能写回花名册、组织真源、PMO Markdown 真源或 MDM 数据库。
+
+## 4. 字段台账与主数据主线
 
 ```text
 业务流程（L3）/ 业务行为（A1）
@@ -59,9 +87,11 @@ field_identities
 - 主数据对象沉淀前必须确认维护部门、审批部门、消费系统和权限边界。
 - MDM 本身也作为“主数据治理与数据地图承接能力”管理，当前补充流程见 `docs/norms/流程治理/MDM治理承接流程.md`。该流程先按信息化工作组 / MDM 工作组项目执行架构承接，不伪造常设部门归属，不作为应用系统（S1）写入 DCM/BBM。
 
-## 4. MDM 平台主线
+## 5. MDM 平台主线
 
 ```text
+docs/contracts/document-structured-output.schema.json
+  ↓
 apps/mdm-platform/server/db.js
   ↓
 apps/mdm-platform/server/routes/*
@@ -93,8 +123,9 @@ npm run test:mainline
 - 运行态数据库不是仓库真源。
 - 平台脚本只服务 MDM 时留在 `apps/mdm-platform/scripts/`。
 - 跨资料、跨 PMO、跨 app 的脚本进入仓库级 `scripts/`。
+- 文档结构化输出字段、证据状态、待确认问题字段和结构块投影以 `docs/contracts/document-structured-output.schema.json` 为标准合同；它约束平台承接和导出格式，不反向覆盖 `docs/norms/`。
 
-## 5. PMO 项目管理主线
+## 6. PMO 项目管理主线
 
 ```text
 pmo/信息化项目_计划管控真源.md
@@ -117,29 +148,33 @@ pmo/gantt-react/
 - PMO Markdown 是项目计划当前维护入口。
 - 历史 XLSX / MPP / CSV 任务导入文件已废弃，不作为当前输入、不再保留或读取。
 - `pmo/gantt-react/public/tasks.json` 是 React 应用消费数据，不是手工维护真源。
+- `apps/weekly-action-service/` 是 3002 周会行动项运行台账服务，默认写入 `artifacts/weekly-actions/`；它不回写 PMO Markdown 真源、`tasks.json` 或 MDM 数据库。
 
-## 6. AI 协作与历史方案主线
+## 7. AI 协作与历史方案主线
 
 ```text
 docs/superpowers/specs/*
 docs/superpowers/plans/*
 .planning/*
 .agents/*
-.claude/*
+AGENTS.md
+CODEX.md
 ```
 
 规则：
 
 - `docs/superpowers/` 用于追溯历史设计和计划，不作为当前执行真源。
-- `.agents/` 和 `.claude/` 是 AI 协作配置，不放项目生成物。
+- `AGENTS.md` 和 `CODEX.md` 是 Codex 当前协作入口。
+- `.agents/` 是 Codex 可用的项目技能和提示材料，不放项目生成物。
 - 历史方案如与当前边界文件冲突，以 `REPOSITORY_BOUNDARY.md`、`DIRECTORY_OWNERSHIP.md` 和本文件为准。
+- 代码、脚本、接口、数据库结构、前端行为、启动命令或测试命令变化时，必须同步更新对应文档。
 
 ## 7. 禁止的跨线操作
 
 | 禁止操作 | 原因 | 正确做法 |
 |---|---|---|
 | 改 MDM 时顺手改 `docs/norms/` | 平台代码和流程输入基线混线 | 先确认是否是资料变更任务 |
-| 改 PMO 驾驶舱时手工重造流程数据 | 展示副本会偏离 parser 真源 | 修改 `docs/norms/` 后运行 parser |
+| 改 PMO 驾驶舱时手工重造流程数据 | 展示副本会偏离流程输入基线 | 修改流程输入基线后运行 parser |
 | 跑测试时写共享 `platform.db` | 会污染平台本地状态 | 使用 `MDM_DB_PATH` 隔离数据库 |
 | 整理文档时移动 `apps/mdm-platform/` | 运行系统路径被脚本和说明引用 | 先写迁移计划和验证命令 |
 | 把截图、zip、解包目录作为证据长期提交 | 检索噪音高，容易误导 AI | 放入 `artifacts/` 或精选到 `docs/samples/` |
