@@ -289,7 +289,7 @@ function buildRoleGroups(roleCodes) {
   return {
     roles,
     roleGroups: [
-      { key: 'project', label: '项目工作角色', roles: roles.filter(role => role.group === 'project') },
+      { key: 'project', label: '项目治理角色', roles: roles.filter(role => role.group === 'project') },
       { key: 'basic', label: '基础权限角色', roles: roles.filter(role => role.group === 'basic') }
     ]
   };

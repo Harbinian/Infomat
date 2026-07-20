@@ -722,6 +722,28 @@ function makeFakeRepository() {
 }
 
 async function main() {
+  assert.doesNotThrow(() => processDesignRouter.assertWorkRoleBindingsSupported({ schema_version: 'document-structured-output-v2' }), 'legacy v2 without work_role_bindings should remain supported');
+  assert.doesNotThrow(() => processDesignRouter.assertWorkRoleBindingsSupported({ schema_version: 'document-structured-output-v2', work_role_bindings: [] }), 'empty work_role_bindings should remain supported');
+  assert.doesNotThrow(
+    () => processDesignRouter.assertWorkRoleBindingsSupported({
+      schema_version: 'document-structured-output-v2',
+      structure_block_projection: { work_role_bindings: [] }
+    }),
+    'empty projected work_role_bindings should remain supported'
+  );
+  assert.throws(
+    () => processDesignRouter.assertWorkRoleBindingsSupported({ schema_version: 'document-structured-output-v2', work_role_bindings: [{}] }),
+    error => error && error.statusCode === 422 && error.payload?.code === 'WORK_ROLE_BINDINGS_UNSUPPORTED',
+    'non-empty work_role_bindings should be rejected explicitly'
+  );
+  assert.throws(
+    () => processDesignRouter.assertWorkRoleBindingsSupported({
+      schema_version: 'document-structured-output-v2',
+      structure_block_projection: { work_role_bindings: [{}] }
+    }),
+    error => error && error.statusCode === 422 && error.payload?.code === 'WORK_ROLE_BINDINGS_UNSUPPORTED',
+    'non-empty projected work_role_bindings should be rejected explicitly'
+  );
   const routeSource = fs.readFileSync(path.join(__dirname, '../server/routes/processDesignMysql.js'), 'utf8');
   assert.ok(!routeSource.includes("require('../db')"), 'process design MySQL route must not load server/db.js');
   assert.ok(!routeSource.includes('better-sqlite3'), 'process design MySQL route must not use better-sqlite3');
@@ -823,7 +845,11 @@ async function main() {
   }));
 
   const fakeRepo = makeFakeRepository();
-  processDesignRouter.setProcessDesignRepositoryFactory(() => fakeRepo);
+  let repositoryFactoryCalls = 0;
+  processDesignRouter.setProcessDesignRepositoryFactory(() => {
+    repositoryFactoryCalls += 1;
+    return fakeRepo;
+  });
 
   const app = express();
   app.use(express.json());
@@ -973,8 +999,77 @@ async function main() {
           source_anchor: '导入文件',
           status: 'pending_review'
         }
-      ]
+      ],
+      work_role_bindings: []
     };
+    const repositoryCallsBeforeUnsupportedImport = fakeRepo.calls.length;
+    const repositoryFactoryCallsBeforeUnsupportedImport = repositoryFactoryCalls;
+    const unsupportedWorkRoleBindingsImport = await request(baseUrl, 'submitter', '/api/process-design/import-structured-output', {
+      method: 'POST',
+      body: JSON.stringify({
+        ...structuredImportPayload,
+        work_role_bindings: [
+          {
+            step_ref: 'step_1',
+            source_role_text: '销售内勤',
+            work_role_id: 'WR-SALES-001'
+          }
+        ]
+      })
+    });
+    assert.strictEqual(unsupportedWorkRoleBindingsImport.res.status, 422, JSON.stringify(unsupportedWorkRoleBindingsImport.body));
+    assert.strictEqual(unsupportedWorkRoleBindingsImport.body.code, 'WORK_ROLE_BINDINGS_UNSUPPORTED');
+    assert.strictEqual(unsupportedWorkRoleBindingsImport.body.error, '校验失败');
+    assert.ok(
+      unsupportedWorkRoleBindingsImport.body.details.some(detail => detail.field === 'work_role_bindings' && /当前 MDM 尚不承接工作角色绑定/.test(detail.message)),
+      'unsupported work role bindings should return a business-readable explanation'
+    );
+    assert.deepStrictEqual(
+      fakeRepo.calls.slice(repositoryCallsBeforeUnsupportedImport),
+      [],
+      'unsupported work role bindings should be rejected before any repository read or write'
+    );
+    assert.strictEqual(
+      repositoryFactoryCalls,
+      repositoryFactoryCallsBeforeUnsupportedImport,
+      'unsupported work role bindings should be rejected before repository initialization'
+    );
+    assert.strictEqual(fakeRepo.state.draft, null, 'unsupported work role bindings must not create a draft');
+
+    const repositoryCallsBeforeUnsupportedProjectionImport = fakeRepo.calls.length;
+    const repositoryFactoryCallsBeforeUnsupportedProjectionImport = repositoryFactoryCalls;
+    const unsupportedProjectedWorkRoleBindingsImport = await request(baseUrl, 'submitter', '/api/process-design/import-structured-output', {
+      method: 'POST',
+      body: JSON.stringify({
+        ...structuredImportPayload,
+        work_role_bindings: [],
+        structure_block_projection: {
+          ...(structuredImportPayload.structure_block_projection || {}),
+          work_role_bindings: [
+            {
+              binding_ref: 'WRB-PROJECTION-001',
+              process_ref: 'proc_1',
+              step_ref: 'step_1',
+              work_role_code: 'WR-0001'
+            }
+          ]
+        }
+      })
+    });
+    assert.strictEqual(unsupportedProjectedWorkRoleBindingsImport.res.status, 422, JSON.stringify(unsupportedProjectedWorkRoleBindingsImport.body));
+    assert.strictEqual(unsupportedProjectedWorkRoleBindingsImport.body.code, 'WORK_ROLE_BINDINGS_UNSUPPORTED');
+    assert.deepStrictEqual(
+      fakeRepo.calls.slice(repositoryCallsBeforeUnsupportedProjectionImport),
+      [],
+      'unsupported projected work role bindings should be rejected before any repository read or write'
+    );
+    assert.strictEqual(
+      repositoryFactoryCalls,
+      repositoryFactoryCallsBeforeUnsupportedProjectionImport,
+      'unsupported projected work role bindings should be rejected before repository initialization'
+    );
+    assert.strictEqual(fakeRepo.state.draft, null, 'unsupported projected work role bindings must not create a draft');
+
     const structuredImport = await request(baseUrl, 'submitter', '/api/process-design/import-structured-output', {
       method: 'POST',
       body: JSON.stringify(structuredImportPayload)

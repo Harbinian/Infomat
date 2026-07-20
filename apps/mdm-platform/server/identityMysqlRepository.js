@@ -51,7 +51,7 @@ function shouldFallbackFromPersonIdentity(error) {
 }
 
 function baseRoleError() {
-  const error = new Error('人员至少需要一个基础权限角色，项目工作角色不能单独分配');
+  const error = new Error('人员至少需要一个基础权限角色，项目治理角色不能单独分配');
   error.statusCode = 400;
   return error;
 }

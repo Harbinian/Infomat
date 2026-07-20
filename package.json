@@ -38,6 +38,8 @@
     "test:sankey-preview-status": "node scripts/test-sankey-preview-status.mjs",
     "test:parse-sankey-structure-block": "node scripts/test-parse-sankey-structure-block.mjs",
     "test:document-structured-output-schema": "node scripts/test-document-structured-output-schema.mjs",
+    "build:work-role-data": "node scripts/build-work-role-data.mjs",
+    "test:work-role-contract": "node scripts/test-work-role-contract.mjs",
     "start:weekly-actions": "npm --prefix apps/weekly-action-service start",
     "test:weekly-action-service": "npm --prefix apps/weekly-action-service test",
     "test:process-evidence-evolution": "node .agents/skills/process-evidence-mapping/scripts/test-evolution-workflow.mjs",

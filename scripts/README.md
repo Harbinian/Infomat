@@ -25,6 +25,8 @@
 | `test-process-governance-mainline-contract.mjs` | 仓库级流程治理主线契约测试 | `package.json`、`docs/company-sankey-data.json`、仓库级脚本 | 只读校验 |
 | `test-parse-sankey-structure-block.mjs` | 校验流程治理结构块 v1 的 parser 优先读取、hybrid 合并、系统枚举、证据状态和 A1→L3 引用约束 | 内置临时夹具 | 只读校验 |
 | `test-document-structured-output-schema.mjs` | 校验文档结构化输出标准 schema 与前端字段、MySQL process_design 表、制度编号/版次字段、MySQL 路由枚举和结构块 parser 关键约束一致 | `docs/contracts/document-structured-output.schema.json`、MDM 前端、MySQL schema、MySQL 路由、结构块 parser | 只读校验 |
+| `build-work-role-data.mjs` | 从行政人事工作角色真源生成结构化输出服务可只读消费的工作角色快照；先完整校验角色引用和花名册“部门 + 岗位”，成功后才原子替换输出 | `docs/organization/工作角色目录与岗位映射.md`、`docs/organization/花名册.md` | 写入 `docs/work-role-data.json`；不修改花名册、流程输入基线、数据库或应用 |
+| `test-work-role-contract.mjs` | 校验 v2 可选工作角色关系、L3/A1/confirmed 约束、行政人事空目录、花名册岗位核验、快照形状和失败不覆盖 | 工作角色合同、组织真源、花名册、生成快照和临时夹具 | 只读校验；临时夹具写入系统临时目录 |
 | `infomat-services.config.json` | MDM、PMO、MySQL 固定启动合同 | 固定端口、固定 MySQL 用户/库、固定读模型 | 非敏感配置真源 |
 | `infomat-service-config.mjs` | 读取固定启动合同并合成本机运行环境 | `infomat-services.config.json`、本机 `infomat-services.local.env` | 供启动和冒烟脚本复用 |
 | `repair-infomat-mysql-container.ps1` | 将本机历史 MySQL 容器对齐到固定启动合同 | 固定合同、本机私有 env、Docker 容器状态 | 只修复本机 Docker 运行态，不写仓库真源 |
@@ -47,6 +49,8 @@ npm run test:engineering-source-manifest
 npm run test:norms-source-manifest
 npm run test:parse-sankey-structure-block
 npm run test:document-structured-output-schema
+npm run build:work-role-data
+npm run test:work-role-contract
 npm run verify:norms-source-mapping
 npm run test:pmo-task-data
 npm run test:pmo-execution-standards
@@ -65,6 +69,23 @@ $env:MDM_DB_PATH='apps/mdm-platform/data/<target>.db'; npm run sync:process-gove
 ```
 
 `parse-sankey-data.mjs` 支持部门渐进迁移：单个部门文件存在 `meta.parser_schema_version: 1` 且提供 `l3_catalog` 时优先解析结构块；若正文仍有旧 Markdown DCM/A1 表格，则同一 L3/A1 由结构块覆盖，legacy 中未覆盖的剩余项继续进入快照，部门记录为 `source: hybrid` 并输出覆盖 warning。未提供结构块的部门继续走旧 Markdown 表格/标题解析，并在 stderr 打印 `[WARN] {部门} 未提供结构块(schema v1)，回退旧 Markdown 解析，存在漂移风险。`。生成的 `docs/company-sankey-data.json` 保留既有 `nodes`、`links`、`stats`、`processMappings`、`evidenceRefs` 等字段，并新增 `meta.departments[]` 记录各部门 `source: structured|hybrid|legacy`。
+
+## 工作角色快照
+
+行政人事部在 `docs/organization/工作角色目录与岗位映射.md` 维护正式工作角色、岗位映射和原文角色别名。首次启用时三张表为空，不能为了让页面出现选项而自动生成工作角色编码。更新真源或花名册岗位后运行：
+
+```powershell
+npm run build:work-role-data
+npm run test:work-role-contract
+```
+
+快照顶层合同固定为 `schemaVersion=work-role-data-v1`、`generatedAt`、`sourceHash`、`workRoles`、`workRolePositionMappings`、`workRoleAliases`。角色记录保留定义、生效起止和制定依据；岗位映射保留生效起止和确认依据；别名保留确认依据。三类记录的 `status` 都只允许 `draft|active|retired`。生成器只读花名册并精确核对“部门 + 岗位”：不一致行只能保留为 `draft`，`active` / `retired` 会硬失败。它在全部校验通过后才原子替换 `docs/work-role-data.json`，失败时保留旧快照。测试夹具可通过脚本的 `--source`、`--roster`、`--out` 和 `--generated-at` 参数指定，但正式生成使用固定默认路径。
+
+### 流程工作角色绑定输入
+
+流程治理结构块中的 `work_role_bindings` 继续引用同一结构块的 `evidence_catalog`。旧 Markdown 基线若需独立录入，必须在同一个“工作角色绑定”章节内同时提供两张受控表：绑定表固定使用 `binding_ref`、`process_ref`、`step_ref`、`participant_department`、`source_role_text`、`work_role_code`、`participation_type`、`status`、`evidence_refs`、`confirmation_basis`；“工作角色绑定证据”表固定使用 `evidence_ref`、`source_file`、`locator`、`source_excerpt`、`locate_method`、`status`。绑定表的 `evidence_refs` 只能引用同章节证据表，不能借用结构块或其他章节的证据编号。
+
+`confirmed` 关系必须填写原文角色文本、行政人事确认依据和证据引用；证据必须为 `verified`、能定位到源文件具体位置、包含原文摘录，且 `locate_method` 不能包含 OCR。`proposed` 只保留为候选并输出 warning。confirmed 关系若存在悬空证据、待确认/OCR 证据、无效流程或行为引用、无正式工作角色、无参与部门岗位映射、生效期不符或重复 L3 owner，解析器会聚合错误并在写入公司快照前退出非零；有效 retired 角色或岗位映射只作为历史关系保留并输出 warning。
 
 ## MDM / PMO 固定启动合同
 

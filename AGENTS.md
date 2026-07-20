@@ -58,7 +58,7 @@ Codex 在本项目协作时的根入口规则。
 - MDM / PMO 本地联动启动使用仓库根目录固定入口：`npm run start:infomat-services` 和 `npm run smoke:infomat-services`。固定启动合同在 `scripts/infomat-services.config.json`，本机密码放在 `scripts/infomat-services.local.env`。
 - 固定 MySQL 容器缺失时,先运行 `npm run repair:infomat-mysql`,再运行启动和烟测。不要临时改 MySQL 端口或绕过固定合同；启动脚本会先校验 person 身份 schema 和 `ADMIN001` 管理员权限,端口监听不等于 MDM 可用。
 - 登录后默认第一屏为 `roleWorkbench`。首屏必须让用户知道自己该干什么:顶部显示当前身份、当前部门、今天优先处理事项数;左侧第一块固定为"我现在该做什么",列出 1 到 3 个下一步动作。
-- 角色分组保持为"项目工作角色 / 基础权限角色"。项目工作角色至少覆盖 `it_lead`、`project_lead`、`business_contact`、`data_quality`、`decision_group`;基础权限角色保留 `submitter`、`owner`、`reviewer`、`admin`。
+- 角色分组保持为"项目治理角色 / 基础权限角色"。项目治理角色至少覆盖 `it_lead`、`project_lead`、`business_contact`、`data_quality`、`decision_group`;基础权限角色保留 `submitter`、`owner`、`reviewer`、`admin`。底层 `role_group='project'` 和既有编码保持兼容，不得与流程工作角色混用。
 - 多角色用户默认合并展示为"我的工作台",事项和角色卡片要能看出来源角色。
 - "角色使用说明"中,每个角色必须包含:角色目标、第一步入口、典型样例、常见误区、完成标准。样例使用真实业务口吻,但不要写死敏感数据。
 - 角色桑基图层级固定为:角色 → 业务能力 → L3流程 → A1业务行为 → 处理入口。点击任一节点后,右侧必须显示对应事项、样例解释和可执行入口。

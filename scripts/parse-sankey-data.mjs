@@ -1,5 +1,6 @@
 /**
  * 从 norms 目录下的部门映射文件解析全域映射表 + A1 行为明细，
+ * 并只读 docs/work-role-data.json 合并正式工作角色目录和已确认流程绑定，
  * 生成流程地图驾驶舱使用的数据快照。
  *
  * 用法: node scripts/parse-sankey-data.mjs
@@ -22,10 +23,12 @@ const CROSS_DEPT_REPORT = resolve(NORMS, '流程治理', '跨部门完整性检�
 const CROSS_CHAIN_REPORT = resolve(NORMS, '流程治理', '跨部门流程识别报告.md');
 const DASHBOARD_PATH = resolve(NORMS, '..', '..', 'pmo', 'procedure-management', 'dashboard.html');
 const ORGANIZATION_SOURCE = resolve(NORMS, '..', 'organization', '组织架构和部门职责.md');
+const WORK_ROLE_DATA_PATH = resolve(NORMS, '..', 'work-role-data.json');
 const STRUCTURE_BLOCK_VERSION = 1;
 const STRUCTURE_ARRAY_SECTIONS = new Set([
   'l3_catalog',
   'a1_catalog',
+  'work_role_bindings',
   'evidence_catalog',
   'mdm_requirement_catalog',
 ]);
@@ -41,6 +44,36 @@ const STRUCTURED_A1_CODE_PATTERNS = [
   /^[A-Z]{2}-L3-\d{2}-A\d{2}$/,
   /^A1-[A-Z0-9]+(?:-[A-Z0-9]+)*-\d{2,3}-\d{2}$/,
 ];
+const WORK_ROLE_BINDING_FIELDS = [
+  'binding_ref',
+  'process_ref',
+  'step_ref',
+  'participant_department',
+  'source_role_text',
+  'work_role_code',
+  'participation_type',
+  'status',
+  'evidence_refs',
+  'confirmation_basis',
+];
+const WORK_ROLE_BINDING_EVIDENCE_FIELDS = [
+  'evidence_ref',
+  'source_file',
+  'locator',
+  'source_excerpt',
+  'locate_method',
+  'status',
+];
+const WORK_ROLE_PARTICIPATION_TYPES = new Set([
+  'owner',
+  'initiator',
+  'executor',
+  'reviewer',
+  'approver',
+  'collaborator',
+  'provider',
+  'receiver',
+]);
 
 function parseOrganizationDomainMap(text) {
   const blockMatch = text.match(/```([\s\S]*?)```/);
@@ -436,6 +469,390 @@ function parseMarkdownTables(text) {
   return tables;
 }
 
+function workRoleBindingSections(text) {
+  const lines = String(text || '').split(/\r?\n/);
+  const sections = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const heading = lines[index].match(/^(#{2,6})\s+(.+)$/);
+    if (!heading || !cleanMarkdownCell(heading[2]).includes('工作角色绑定')) continue;
+
+    const level = heading[1].length;
+    let end = lines.length;
+    for (let cursor = index + 1; cursor < lines.length; cursor += 1) {
+      const nextHeading = lines[cursor].match(/^(#{2,6})\s+(.+)$/);
+      if (nextHeading && nextHeading[1].length <= level) {
+        end = cursor;
+        break;
+      }
+    }
+    sections.push(lines.slice(index + 1, end).join('\n'));
+    index = end - 1;
+  }
+
+  return sections;
+}
+
+function parseIndependentWorkRoleBindingRows(text, sourceFile) {
+  const rows = [];
+  const errors = [];
+  for (const section of workRoleBindingSections(text)) {
+    const tables = parseMarkdownTables(section).map(table => ({
+      ...table,
+      normalizedHeaders: table.headers.map(header => cleanMarkdownCell(header).replace(/`/g, '')),
+    }));
+    const evidenceCatalog = [];
+    const seenEvidenceRefs = new Set();
+
+    for (const table of tables) {
+      const headers = table.normalizedHeaders;
+      if (!headers.includes('evidence_ref')) continue;
+      const missingFields = WORK_ROLE_BINDING_EVIDENCE_FIELDS.filter(field => !headers.includes(field));
+      if (missingFields.length > 0) {
+        errors.push(`${sourceFile} 工作角色绑定证据表缺少字段：${missingFields.join(', ')}`);
+        continue;
+      }
+      const indexes = new Map(WORK_ROLE_BINDING_EVIDENCE_FIELDS.map(field => [field, headers.indexOf(field)]));
+      for (const row of table.rows) {
+        const values = Object.fromEntries(WORK_ROLE_BINDING_EVIDENCE_FIELDS.map(field => [
+          field,
+          normalizeBindingNullableValue(row[indexes.get(field)]) || '',
+        ]));
+        const evidenceRef = values.evidence_ref;
+        if (WORK_ROLE_BINDING_EVIDENCE_FIELDS.some(field => !values[field])) {
+          errors.push(`${sourceFile} 工作角色绑定证据 ${evidenceRef || '(missing evidence_ref)'} 存在空字段`);
+          continue;
+        }
+        if (seenEvidenceRefs.has(evidenceRef)) {
+          errors.push(`${sourceFile} 工作角色绑定证据 evidence_ref 重复：${evidenceRef}`);
+          continue;
+        }
+        if (!ALLOWED_EVIDENCE_STATUSES.has(values.status)) {
+          errors.push(`${sourceFile} 工作角色绑定证据 ${evidenceRef} status 无效：${values.status}`);
+          continue;
+        }
+        seenEvidenceRefs.add(evidenceRef);
+        evidenceCatalog.push({
+          id: evidenceRef,
+          sourceFile: values.source_file,
+          locator: values.locator,
+          sourceExcerpt: values.source_excerpt,
+          locateMethod: values.locate_method,
+          status: values.status,
+        });
+      }
+    }
+
+    for (const table of tables) {
+      const headers = table.normalizedHeaders;
+      if (!headers.includes('binding_ref')) continue;
+      const missingFields = WORK_ROLE_BINDING_FIELDS.filter(field => !headers.includes(field));
+      if (missingFields.length > 0) {
+        errors.push(`${sourceFile} 工作角色绑定表缺少字段：${missingFields.join(', ')}`);
+        continue;
+      }
+      const indexes = new Map(WORK_ROLE_BINDING_FIELDS.map(field => [field, headers.indexOf(field)]));
+
+      for (const row of table.rows) {
+        const item = { sourceFile, bindingSource: 'markdown-table', bindingEvidenceCatalog: evidenceCatalog };
+        for (const field of WORK_ROLE_BINDING_FIELDS) {
+          item[field] = cleanMarkdownCell(row[indexes.get(field)]);
+        }
+        rows.push(item);
+      }
+    }
+  }
+  return { rows, errors };
+}
+
+function normalizeBindingEvidenceRefs(value) {
+  if (Array.isArray(value)) {
+    return Array.from(new Set(value.map(item => String(item || '').trim()).filter(Boolean)));
+  }
+  const raw = cleanMarkdownCell(value).replace(/^\[/, '').replace(/\]$/, '').trim();
+  if (!raw || /^[-—–]+$/.test(raw)) return [];
+  return Array.from(new Set(raw.split(/[、，,;；]/).map(item => item.trim()).filter(Boolean)));
+}
+
+function isLocatableConfirmedEvidence(evidence, { requireSourceExcerpt = false } = {}) {
+  if (!evidence || evidence.status !== 'verified') return false;
+  const sourceFile = cleanMarkdownCell(evidence.sourceFile);
+  const locator = cleanMarkdownCell(evidence.locator);
+  const locateMethod = cleanMarkdownCell(evidence.locateMethod);
+  const sourceExcerpt = cleanMarkdownCell(evidence.sourceExcerpt);
+  if (!sourceFile || !locator || !locateMethod) return false;
+  if (requireSourceExcerpt && !sourceExcerpt) return false;
+  if (/ocr/i.test(locateMethod)) return false;
+  return !/(?:待定位|待确认|待补|未定位|暂无|unknown|tbd)/i.test(`${sourceFile} ${locator} ${sourceExcerpt}`);
+}
+
+function normalizeBindingNullableValue(value) {
+  if (value === null || value === undefined) return null;
+  const cleaned = cleanMarkdownCell(value);
+  if (!cleaned || /^[-—–]+$/.test(cleaned) || ['null', 'none'].includes(cleaned.toLowerCase())) return null;
+  return cleaned;
+}
+
+function normalizeBindingDepartment(value) {
+  let raw = value;
+  if (typeof raw === 'string' && raw.trim().startsWith('{') && raw.trim().endsWith('}')) {
+    raw = parseYamlValue(raw);
+  }
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    raw = { department_name: cleanMarkdownCell(raw) };
+  }
+
+  const departmentName = cleanMarkdownCell(raw.department_name);
+  if (!departmentName || !DEPT_DOMAIN[departmentName]) return null;
+  const department = { department_name: departmentName };
+  for (const field of ['department_id', 'department_code', 'domain']) {
+    const fieldValue = raw[field];
+    if (fieldValue !== null && fieldValue !== undefined && String(fieldValue).trim()) {
+      department[field] = fieldValue;
+    }
+  }
+  return department;
+}
+
+function sameProcessMapping(left, right) {
+  if (!left || !right) return false;
+  if (left.l3Key && right.l3Key) return left.l3Key === right.l3Key;
+  return left.dept === right.dept && left.l3 === right.l3;
+}
+
+function resolveBindingProcess(processRef, mappings) {
+  const ref = String(processRef || '').trim();
+  if (!ref) return null;
+  return mappings.find(item => item.l3Key === ref)
+    || mappings.find(item => item.l3 === ref)
+    || null;
+}
+
+function resolveBindingStep(stepRef, a1Entries) {
+  const ref = String(stepRef || '').trim();
+  if (!ref) return null;
+  return a1Entries.find(item => item.a1Code === ref) || null;
+}
+
+function normalizeConfirmedWorkRoleBindings({ rows, mappings, a1Entries, evidenceCatalog, sourceFile }) {
+  const results = [];
+  const warnings = [];
+  const errors = [];
+  const seenBindingRefs = new Set();
+  const structuredEvidenceById = new Map((evidenceCatalog || []).map(item => [item.id, item]));
+
+  function reject(row, reason, { blocking = true } = {}) {
+    const bindingRef = cleanMarkdownCell(row && row.binding_ref) || '(missing binding_ref)';
+    const message = `${bindingRef} 未进入 processRoleBindings：${reason}`;
+    (blocking ? errors : warnings).push(message);
+  }
+
+  for (const row of rows || []) {
+    const status = cleanMarkdownCell(row && row.status);
+    if (status !== 'confirmed') {
+      reject(
+        row,
+        status === 'proposed' ? 'status=proposed 仅作为候选关系' : `status 无效：${status || '(missing)'}`,
+        { blocking: status !== 'proposed' },
+      );
+      continue;
+    }
+
+    const bindingRef = cleanMarkdownCell(row.binding_ref);
+    const processRef = cleanMarkdownCell(row.process_ref);
+    const stepRef = normalizeBindingNullableValue(row.step_ref);
+    const participantDepartment = normalizeBindingDepartment(row.participant_department);
+    const sourceRoleText = normalizeBindingNullableValue(row.source_role_text);
+    const workRoleCode = cleanMarkdownCell(row.work_role_code);
+    const participationType = cleanMarkdownCell(row.participation_type);
+    const evidenceRefs = normalizeBindingEvidenceRefs(row.evidence_refs);
+    const confirmationBasis = normalizeBindingNullableValue(row.confirmation_basis);
+    const isMarkdownTableBinding = row.bindingSource === 'markdown-table';
+    const evidenceById = isMarkdownTableBinding
+      ? new Map((row.bindingEvidenceCatalog || []).map(item => [item.id, item]))
+      : structuredEvidenceById;
+
+    if (!bindingRef || seenBindingRefs.has(bindingRef)) {
+      reject(row, bindingRef ? 'binding_ref 重复' : '缺少 binding_ref');
+      continue;
+    }
+    if (!processRef || !sourceRoleText || !workRoleCode || !participantDepartment || !WORK_ROLE_PARTICIPATION_TYPES.has(participationType)) {
+      reject(row, '必填字段、参与类型或参与部门无效');
+      continue;
+    }
+    if (!confirmationBasis || evidenceRefs.length === 0) {
+      reject(row, 'confirmed 关系缺少 confirmation_basis 或 evidence_refs');
+      continue;
+    }
+    if (evidenceRefs.some(ref => !evidenceById.has(ref))) {
+      reject(row, 'evidence_refs 存在悬空引用');
+      continue;
+    }
+    if (evidenceRefs.some(ref => !isLocatableConfirmedEvidence(evidenceById.get(ref), {
+      requireSourceExcerpt: isMarkdownTableBinding,
+    }))) {
+      reject(row, 'confirmed 关系只能引用 status=verified 且可定位的证据，OCR/待复核证据不能使用');
+      continue;
+    }
+
+    const process = resolveBindingProcess(processRef, mappings);
+    if (!process) {
+      reject(row, `process_ref 未引用当前基线中的 L3：${processRef}`);
+      continue;
+    }
+    if (stepRef === null && participationType !== 'owner') {
+      reject(row, 'L3 关系只能使用 owner');
+      continue;
+    }
+    if (stepRef !== null) {
+      if (participationType === 'owner') {
+        reject(row, 'A1 关系不能使用 owner');
+        continue;
+      }
+      const step = resolveBindingStep(stepRef, a1Entries);
+      const stepProcess = step && (step.l3Key
+        ? mappings.find(item => item.l3Key === step.l3Key)
+        : resolveA1Mapping(step, mappings));
+      if (!step || !sameProcessMapping(process, stepProcess)) {
+        reject(row, `step_ref 未引用 process_ref 下的 A1：${stepRef}`);
+        continue;
+      }
+    }
+
+    seenBindingRefs.add(bindingRef);
+    results.push({
+      binding_ref: bindingRef,
+      process_ref: processRef,
+      step_ref: stepRef,
+      participant_department: participantDepartment,
+      source_role_text: sourceRoleText,
+      work_role_code: workRoleCode,
+      participation_type: participationType,
+      status: 'confirmed',
+      evidence_refs: evidenceRefs,
+      confirmation_basis: confirmationBasis,
+      sourceFile: row.sourceFile || sourceFile || '',
+      processKey: `${process.dept}\n${process.l3Key || normalizeProcessName(process.l3)}`,
+    });
+  }
+
+  return { bindings: results, warnings, errors };
+}
+
+function readWorkRoleData(filePath = WORK_ROLE_DATA_PATH) {
+  if (!existsSync(filePath)) throw new Error(`工作角色快照不存在：${filePath}`);
+  const data = JSON.parse(readFileSync(filePath, 'utf-8'));
+  if (data.schemaVersion !== 'work-role-data-v1') {
+    throw new Error(`工作角色快照 schemaVersion 无效：${data.schemaVersion || '(missing)'}`);
+  }
+  if (!Array.isArray(data.workRoles) || !Array.isArray(data.workRolePositionMappings)) {
+    throw new Error('工作角色快照缺少 workRoles 或 workRolePositionMappings 数组');
+  }
+  return data;
+}
+
+function isCurrentlyEffective(record, asOfDate) {
+  const start = cleanMarkdownCell(record && record.effective_from);
+  const end = cleanMarkdownCell(record && record.effective_to);
+  return Boolean(start && start <= asOfDate && (!end || end >= asOfDate));
+}
+
+function isValidRetiredPeriod(record, asOfDate) {
+  const start = cleanMarkdownCell(record && record.effective_from);
+  const end = cleanMarkdownCell(record && record.effective_to);
+  return Boolean(start && end && start <= end && end <= asOfDate);
+}
+
+function effectivePeriodsOverlap(left, right, asOfDate) {
+  const leftStart = cleanMarkdownCell(left && left.effective_from);
+  const rightStart = cleanMarkdownCell(right && right.effective_from);
+  const leftEnd = cleanMarkdownCell(left && left.effective_to) || asOfDate;
+  const rightEnd = cleanMarkdownCell(right && right.effective_to) || asOfDate;
+  if (!leftStart || !rightStart || leftStart > leftEnd || rightStart > rightEnd) return false;
+  return leftStart <= rightEnd && rightStart <= leftEnd;
+}
+
+function buildProcessRoleBindings(bindings, workRoleData, { asOfDate = new Date().toISOString().slice(0, 10) } = {}) {
+  const rolesByCode = new Map(
+    (workRoleData.workRoles || [])
+      .map(item => [cleanMarkdownCell(item && item.work_role_code), item])
+      .filter(([code]) => code)
+  );
+  const positionMappings = workRoleData.workRolePositionMappings || [];
+  const seenBindingRefs = new Set();
+  const confirmedOwners = new Set();
+  const results = [];
+  const warnings = [];
+  const errors = [];
+
+  function reject(binding, reason) {
+    errors.push(`${binding.binding_ref || '(missing binding_ref)'} 未进入 processRoleBindings：${reason}`);
+  }
+
+  for (const binding of bindings || []) {
+    if (seenBindingRefs.has(binding.binding_ref)) {
+      reject(binding, 'binding_ref 全域重复');
+      continue;
+    }
+
+    const role = rolesByCode.get(binding.work_role_code);
+    if (!role || role.status === 'draft') {
+      reject(binding, role ? '工作角色仍为 draft，不能形成 confirmed 关系' : `工作角色引用不存在：${binding.work_role_code}`);
+      continue;
+    }
+
+    const departmentName = cleanMarkdownCell(binding.participant_department && binding.participant_department.department_name);
+    const matchingMappings = positionMappings.filter(mapping => (
+      cleanMarkdownCell(mapping && mapping.work_role_code) === binding.work_role_code
+      && cleanMarkdownCell(mapping && mapping.department_name) === departmentName
+    ));
+    if (matchingMappings.length === 0) {
+      reject(binding, `工作角色在参与部门没有岗位映射：${departmentName}`);
+      continue;
+    }
+
+    const activeMapping = matchingMappings.find(mapping => mapping.status === 'active' && isCurrentlyEffective(mapping, asOfDate));
+    const activeRelation = role.status === 'active' && isCurrentlyEffective(role, asOfDate) && Boolean(activeMapping);
+    const retiredMappings = matchingMappings.filter(mapping => mapping.status === 'retired' && isValidRetiredPeriod(mapping, asOfDate));
+    const retiredRoleRelation = role.status === 'retired'
+      && isValidRetiredPeriod(role, asOfDate)
+      && matchingMappings.some(mapping => mapping.status !== 'draft' && effectivePeriodsOverlap(role, mapping, asOfDate));
+    const retiredMappingRelation = role.status === 'active'
+      && retiredMappings.some(mapping => effectivePeriodsOverlap(role, mapping, asOfDate));
+    const historicalRelation = retiredRoleRelation || retiredMappingRelation;
+
+    if (!activeRelation && !historicalRelation) {
+      reject(binding, `角色或参与部门岗位映射在 ${asOfDate} 未生效`);
+      continue;
+    }
+
+    if (binding.step_ref === null && binding.participation_type === 'owner') {
+      const ownerKey = binding.processKey || binding.process_ref;
+      if (confirmedOwners.has(ownerKey)) {
+        reject(binding, `正式流程已有 confirmed owner：${binding.process_ref}`);
+        continue;
+      }
+      confirmedOwners.add(ownerKey);
+    }
+    seenBindingRefs.add(binding.binding_ref);
+    results.push(binding);
+    if (historicalRelation && !activeRelation) {
+      warnings.push(`${binding.binding_ref} 使用 retired 工作角色或岗位映射，仅作为历史关系保留`);
+    }
+  }
+
+  const normalized = results
+    .sort((left, right) => [left.sourceFile, left.process_ref, left.step_ref || '', left.binding_ref].join('|')
+      .localeCompare([right.sourceFile, right.process_ref, right.step_ref || '', right.binding_ref].join('|'), 'zh-CN'))
+    .map(({ sourceFile, processKey, ...binding }) => binding);
+  return { bindings: normalized, warnings, errors };
+}
+
+function assertNoWorkRoleBindingErrors(errors) {
+  if (!Array.isArray(errors) || errors.length === 0) return;
+  throw new Error(`工作角色绑定校验失败（${errors.length} 项）：\n- ${errors.join('\n- ')}`);
+}
+
 function stripYamlComment(line) {
   let quote = '';
   let escaped = false;
@@ -515,11 +932,28 @@ function unquoteYamlValue(value) {
 function parseYamlValue(rawValue) {
   const value = stripYamlComment(String(rawValue || '')).trim();
   if (!value) return '';
+  if (value === 'null' || value === '~') return null;
   if (value === '[]') return [];
   if (value.startsWith('[') && value.endsWith(']')) {
     const inner = value.slice(1, -1).trim();
     if (!inner) return [];
     return splitYamlInlineArray(inner).map(unquoteYamlValue).filter(Boolean);
+  }
+  if (value.startsWith('{') && value.endsWith('}')) {
+    try {
+      return JSON.parse(value);
+    } catch {
+      const result = {};
+      const inner = value.slice(1, -1).trim();
+      for (const pair of splitYamlInlineArray(inner)) {
+        const separator = pair.indexOf(':');
+        if (separator === -1) continue;
+        const key = unquoteYamlValue(pair.slice(0, separator).trim());
+        if (!key) continue;
+        result[key] = parseYamlValue(pair.slice(separator + 1));
+      }
+      return result;
+    }
   }
   const scalar = unquoteYamlValue(value);
   if (/^\d+$/.test(scalar)) return Number(scalar);
@@ -538,6 +972,8 @@ function parseStructureBlockYaml(rawYaml) {
   const root = {};
   let section = '';
   let currentItem = null;
+  let currentItemNestedKey = '';
+  let currentItemNestedIndent = -1;
 
   for (const rawLine of String(rawYaml || '').split(/\r?\n/)) {
     const withoutComment = stripYamlComment(rawLine);
@@ -551,6 +987,8 @@ function parseStructureBlockYaml(rawYaml) {
       if (!match) continue;
       section = match[1];
       currentItem = null;
+      currentItemNestedKey = '';
+      currentItemNestedIndent = -1;
       const inlineValue = parseYamlValue(match[2] || '');
       if (STRUCTURE_ARRAY_SECTIONS.has(section)) {
         root[section] = Array.isArray(inlineValue) ? inlineValue : [];
@@ -566,6 +1004,8 @@ function parseStructureBlockYaml(rawYaml) {
       if (!Array.isArray(root[section])) root[section] = [];
       if (line.startsWith('- ')) {
         currentItem = {};
+        currentItemNestedKey = '';
+        currentItemNestedIndent = -1;
         root[section].push(currentItem);
         const inlinePair = line.slice(2).trim();
         if (inlinePair) assignYamlPair(currentItem, inlinePair, section);
@@ -574,6 +1014,19 @@ function parseStructureBlockYaml(rawYaml) {
       if (!currentItem) {
         throw new Error(`流程治理结构块 v1 解析失败：${section} 缺少列表项起始行`);
       }
+      if (currentItemNestedKey && indent > currentItemNestedIndent) {
+        assignYamlPair(currentItem[currentItemNestedKey], line, `${section}.${currentItemNestedKey}`);
+        continue;
+      }
+      const nestedMatch = line.match(/^([A-Za-z0-9_]+):\s*$/);
+      if (nestedMatch && nestedMatch[1] === 'participant_department') {
+        currentItemNestedKey = nestedMatch[1];
+        currentItemNestedIndent = indent;
+        currentItem[currentItemNestedKey] = {};
+        continue;
+      }
+      currentItemNestedKey = '';
+      currentItemNestedIndent = -1;
       assignYamlPair(currentItem, line, section);
       continue;
     }
@@ -741,6 +1194,11 @@ function parseProcessGovernanceStructureBlock(text, { sourceFile = '', fallbackD
     a1Entries,
     mdmRequirements,
     evidenceCatalog,
+    rawWorkRoleBindings: (data.work_role_bindings || []).map(item => ({
+      ...item,
+      sourceFile,
+      bindingSource: 'structure-block-v1',
+    })),
     diagnostics: {
       l3Headings: mappings.length,
       a1Tables: data.a1_catalog?.length ? 1 : 0,
@@ -758,6 +1216,7 @@ function parseLegacyProcessGovernanceDocument({ text, sourceFile = '', fallbackD
     a1Entries: parseA1Section(text, legacyDiagnostics).map(item => ({ dept: fallbackDeptName, sourceFile, ...item })),
     mdmRequirements: [],
     evidenceCatalog: [],
+    rawWorkRoleBindings: [],
     diagnostics: legacyDiagnostics,
   };
 }
@@ -801,6 +1260,7 @@ function mergeStructuredAndLegacyProcessGovernance({ structured, legacy }) {
     a1Entries: [...structured.a1Entries, ...legacyA1Entries],
     mdmRequirements: structured.mdmRequirements,
     evidenceCatalog: structured.evidenceCatalog,
+    rawWorkRoleBindings: structured.rawWorkRoleBindings,
     diagnostics: {
       l3Headings: structured.diagnostics.l3Headings + legacy.diagnostics.l3Headings,
       a1Tables: structured.diagnostics.a1Tables + legacy.diagnostics.a1Tables,
@@ -814,8 +1274,26 @@ function mergeStructuredAndLegacyProcessGovernance({ structured, legacy }) {
 function parseProcessGovernanceDocument({ text, sourceFile = '', fallbackDeptName = '', diagnostics = null } = {}) {
   const structured = parseProcessGovernanceStructureBlock(text, { sourceFile, fallbackDeptName });
   const legacy = parseLegacyProcessGovernanceDocument({ text, sourceFile, fallbackDeptName, diagnostics });
-  if (structured) return mergeStructuredAndLegacyProcessGovernance({ structured, legacy });
-  return legacy;
+  const parsed = structured ? mergeStructuredAndLegacyProcessGovernance({ structured, legacy }) : legacy;
+  const independentBindings = parseIndependentWorkRoleBindingRows(text, sourceFile);
+  const bindingRows = [
+    ...(parsed.rawWorkRoleBindings || []),
+    ...independentBindings.rows,
+  ];
+  const normalizedBindings = normalizeConfirmedWorkRoleBindings({
+    rows: bindingRows,
+    mappings: parsed.mappings,
+    a1Entries: parsed.a1Entries,
+    evidenceCatalog: parsed.evidenceCatalog,
+    sourceFile,
+  });
+  const { rawWorkRoleBindings, ...publicParsed } = parsed;
+  return {
+    ...publicParsed,
+    processRoleBindings: normalizedBindings.bindings,
+    workRoleBindingWarnings: normalizedBindings.warnings,
+    workRoleBindingErrors: [...independentBindings.errors, ...normalizedBindings.errors],
+  };
 }
 
 function structuredEvidenceSummary(evidenceRefs = [], evidenceItems = []) {
@@ -1622,6 +2100,8 @@ function printA1Diagnostics(perDeptDiagnostics, allMappings, allA1) {
 function main() {
   const allMappings = []; // { dept, l1, l2, l3, systems }
   const allA1 = [];       // { dept, l3Name, a1Name }
+  const allProcessRoleBindings = [];
+  const allWorkRoleBindingErrors = [];
   const structuredMdmRequirements = [];
   const departmentParsers = [];
   const perDeptDiagnostics = [];
@@ -1655,7 +2135,12 @@ function main() {
 
     allMappings.push(...parsed.mappings);
     allA1.push(...parsed.a1Entries);
+    allProcessRoleBindings.push(...parsed.processRoleBindings);
+    allWorkRoleBindingErrors.push(...(parsed.workRoleBindingErrors || []).map(error => `${deptName} ${error}`));
     structuredMdmRequirements.push(...parsed.mdmRequirements);
+    for (const warning of parsed.workRoleBindingWarnings || []) {
+      console.error(`[WARN] ${deptName} ${warning}`);
+    }
     if (parsed.sourceMode === 'structure-block-v1') {
       departmentParsers.push({
         dept: deptName,
@@ -1697,6 +2182,13 @@ function main() {
     ...structuredMdmRequirements,
     ...buildMdmRequirements(mdmRequirementFiles),
   ];
+  const workRoleData = readWorkRoleData();
+  const processRoleBindingResult = buildProcessRoleBindings(allProcessRoleBindings, workRoleData);
+  for (const warning of processRoleBindingResult.warnings) {
+    console.error(`[WARN] ${warning}`);
+  }
+  allWorkRoleBindingErrors.push(...processRoleBindingResult.errors);
+  assertNoWorkRoleBindingErrors(allWorkRoleBindingErrors);
   validateStructuredGlobalRecords({ allMappings, allA1 });
   const evidenceRefs = buildEvidenceRefs(allMappings, allA1, mdmRequirements);
   const sourceManifest = buildSourceManifest(files, mdmRequirementFiles);
@@ -1870,6 +2362,9 @@ function main() {
     },
     sourceManifest,
     processMappings: buildProcessMappings(allMappings),
+    workRoles: workRoleData.workRoles,
+    workRolePositionMappings: workRoleData.workRolePositionMappings,
+    processRoleBindings: processRoleBindingResult.bindings,
     mdmRequirements,
     evidenceRefs,
   };
@@ -1934,10 +2429,13 @@ function main() {
 }
 
 export {
+  assertNoWorkRoleBindingErrors,
   buildNodeMetadata,
   buildParserMeta,
+  buildProcessRoleBindings,
   parseProcessGovernanceDocument,
   parseProcessGovernanceStructureBlock,
+  readWorkRoleData,
   validateStructuredGlobalRecords,
 };
 

@@ -90,9 +90,11 @@ npm run smoke:infomat-services
 
 ```powershell
 npm run test:document-structured-output-schema
+npm run build:work-role-data
+npm run test:work-role-contract
 ```
 
-本地文档结构化输出辅助服务在 [apps/structured-output-service](apps/structured-output-service/README.md)，默认端口 `3001`。该服务只在当前页面辅助填充和编辑结构化输出，支持文件拖入和结构化文件导入；可只读消费流程映射用于页面预填，并只读消费花名册用于执行角色核对；用户主动导出结构化文件；它不保存用户内容，也不写回流程输入基线或花名册。
+本地文档结构化输出辅助服务在 [apps/structured-output-service](apps/structured-output-service/README.md)，默认端口 `3001`。该服务只在当前页面辅助填充和编辑结构化输出，支持文件拖入和结构化文件导入；可只读消费流程映射、花名册岗位候选和 `docs/work-role-data.json`，但始终保留制度原文称谓，自动匹配最多形成 `proposed`；用户主动导出结构化文件；它不保存用户内容，也不写回流程输入基线、花名册或工作角色真源。
 
 PMO 周会行动项服务在 [apps/weekly-action-service](apps/weekly-action-service/README.md)，默认端口 `3002`。该服务用于登记和跟踪每周例会行动项、风险、问题、变更和责任池事项，数据保存到服务端本机运行台账；它不写回 PMO Markdown 真源、`tasks.json` 或 MDM 数据库。
 
@@ -112,5 +114,5 @@ node scripts/parse-sankey-data.mjs
 ```
 脚本会直接注入 `pmo/procedure-management/dashboard.html` 的 `#sankey-data` 标签,刷新/重新双击即可看到最新数据。
 
-**部门→域映射**以 `docs/organization/组织架构和部门职责.md` 为准(总经理直辖:工程技术部/质量管理部/财务部;经营副总:行政人事部/经营发展部/物资保障部;生产副总:项目管理部/复材一车间/复材二车间/运维安环部)。
+**部门→域映射**以 `docs/organization/组织架构和部门职责.md` 为准(总经理直辖:工程技术部/质量管理部/财务部;经营副总:行政人事部/经营发展部/物资保障部;生产副总:项目管理部/复材车间/运维安环部)。
 

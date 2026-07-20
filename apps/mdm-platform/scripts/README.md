@@ -33,7 +33,7 @@
 | `npm run smoke:data-map-mysql` | 可选真实 MySQL 冒烟：初始化 schema、写入 Data Map context、字段和黄金源并读回 | 只有设置 `MYSQL_HOST`、`MYSQL_USER`、`MYSQL_DATABASE` 时写 MySQL；否则跳过 |
 | `npm run test:mappings` | 旧映射审批 MySQL 定向回归 | 等同 `npm run test:mappings-mysql`；不连接真实库 |
 | `npm run test:conflicts` | 冲突治理 MySQL 定向回归 | 等同 `npm run test:conflicts-mysql`；不连接真实库 |
-| `npm run test:project-roles` | 项目工作角色访问边界 | 迁移过渡期使用隔离遗留本地库，测试结束清理 |
+| `npm run test:project-roles` | 项目治理角色访问边界 | 迁移过渡期使用隔离遗留本地库，测试结束清理 |
 | `npm run test:frontend` | 前端静态资产和关键脚本片段 | 只读 |
 
 ## 2. 安全和审计脚本
