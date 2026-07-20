@@ -321,7 +321,7 @@ async function main() {
     ['it_lead', 'project_lead', 'workgroup_lead', 'business_contact', 'data_quality', 'decision_group', 'submitter', 'owner', 'reviewer', 'admin']
       .forEach(code => assert(allRoleCodes.includes(code), `工作台缺少角色说明: ${code}`));
     const projectGroup = todoWorkbench.body.roleGroups.find(group => group.key === 'project');
-    assert(projectGroup && projectGroup.roles.some(role => role.code === 'workgroup_lead'), '工作组组长应归入项目工作角色');
+    assert(projectGroup && projectGroup.roles.some(role => role.code === 'workgroup_lead'), '工作组组长应归入项目治理角色');
 
     const sankey = todoWorkbench.body.sankey;
     assert(sankey && sankey.nodes.length > 0 && sankey.links.length > 0, '角色桑基图不应为空');
@@ -369,7 +369,7 @@ async function main() {
     workgroupOwnedRoles.forEach(assertRoleGuide);
     assert(workgroupWorkbench.body.workItems.some(item => item.type === 'process_quality'), '工作组组长应看到本工作组流程质量问题');
     assert(workgroupWorkbench.body.workItems.some(item => item.type === 'process_mapping_todo'), '工作组组长应看到本工作组流程映射待办');
-    assert(workgroupWorkbench.body.nextActions.some(item => item.roleCode === 'workgroup_lead' || item.roleCode === 'business_contact' || item.roleCode === 'data_quality'), '工作组组长下一步应关联项目工作角色');
+    assert(workgroupWorkbench.body.nextActions.some(item => item.roleCode === 'workgroup_lead' || item.roleCode === 'business_contact' || item.roleCode === 'data_quality'), '工作组组长下一步应关联项目治理角色');
 
     console.log('Role workbench API test passed');
   } finally {

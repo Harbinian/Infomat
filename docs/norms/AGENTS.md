@@ -12,6 +12,7 @@
 - `{部门}能力层与MDM建设要求.md`
 - `{部门}部门能力流程系统桑基图.html`
 - 业务行为（A1）映射、审批流、跨部门输入输出、应用系统（S1）字段
+- 已确认工作角色绑定及其独立证据表
 - `pmo/procedure-management/dashboard.html` 内嵌 sankey-data
 
 从仓库根目录运行：
@@ -38,6 +39,8 @@ node ../../scripts/verify-norms-source-mapping.mjs
 - 应用系统（S1）只能是 `OA`、`MES`、`PLM`、`ERP` 或留空；`MDM` 不得作为应用系统（S1）。
 - 业务行为（A1）必须并入标准映射文档，不得另建 `{部门}A1业务行为映射关系.md` 或 `{部门}部门能力流程行为系统桑基图.html`。
 - 证据字段应能拆解为源文件编号、制度或表单名称、条款/表格/摘录等“大概位置”；`verify-norms-source-mapping.mjs` 只读核验这些锚点，不自动改写流程输入基线。
+- 工作角色候选和待确认关系不得写入流程输入基线。结构块 `work_role_bindings` 只允许 `confirmed`；旧 Markdown 录入必须在同一“工作角色绑定”章节同时维护“工作角色绑定证据”表，字段合同见 `scripts/README.md`。
+- 已确认工作角色关系必须引用有效 L3/A1、行政人事正式角色及参与部门岗位映射，并有 `verified`、可定位、非 OCR 的证据和流程责任部门确认依据。任一正式关系无效时，`parse-sankey-data.mjs` 必须在写公司快照前非零退出。
 - 新增或修改本目录下的部门桑基图 HTML 时，ECharts 必须引用同目录 `echarts.min.js`；禁止写成 `../echarts.min.js`。
 
 ## 报告处理

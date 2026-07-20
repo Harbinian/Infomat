@@ -319,6 +319,116 @@ button, input, textarea, select { font: inherit; }
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 8px;
 }
+.work-role-group {
+  margin-top: 14px;
+  border: 1px solid rgba(74, 107, 126, 0.22);
+  border-radius: 8px;
+  padding: 12px;
+  background: #fbf8ef;
+}
+.work-role-group .group-title { margin-bottom: 8px; }
+.work-role-group-copy {
+  margin: 0 0 10px;
+  color: var(--soft);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.work-role-list { display: flex; flex-direction: column; gap: 10px; }
+.work-role-entry {
+  border: 1px solid var(--mdm-line-soft);
+  border-radius: 8px;
+  padding: 10px;
+  background: #fffdf8;
+}
+.work-role-entry-head,
+.work-role-adder-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+  color: var(--soft);
+  font-size: 13px;
+}
+.work-role-adder {
+  margin-top: 10px;
+  border: 1px dashed rgba(74, 107, 126, 0.34);
+  border-radius: 8px;
+  padding: 10px;
+  background: #fffaf1;
+}
+.work-role-adder-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.work-role-adder-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+}
+.work-role-adder-grid input,
+.work-role-adder-grid select {
+  width: 100%;
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px;
+  background: #fffdf8;
+}
+.work-role-adder-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+.work-role-empty {
+  border: 1px dashed var(--line);
+  border-radius: 7px;
+  padding: 10px;
+  color: var(--soft);
+  background: #fffdf8;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.work-role-context {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 9px;
+  background: #f8f2e7;
+  color: var(--soft);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.evidence-choice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  max-height: 180px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px;
+  background: #fffaf1;
+}
+.evidence-choice {
+  display: grid !important;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: start !important;
+  gap: 7px !important;
+  margin: 0 !important;
+  font-weight: 500 !important;
+  line-height: 1.45;
+}
+.evidence-choice input { width: auto; min-height: auto; margin-top: 2px; }
+.work-role-warning {
+  margin-top: 8px;
+  color: #765b20;
+  font-size: 12px;
+  line-height: 1.5;
+}
 .field-suggestion {
   margin-top: 8px;
   border: 1px solid rgba(111, 125, 78, 0.28);
@@ -480,6 +590,7 @@ button, input, textarea, select { font: inherit; }
   .side { position: static; }
   .grid { grid-template-columns: 1fr; }
   .role-picker { grid-template-columns: 1fr; }
+  .work-role-adder-grid { grid-template-columns: 1fr; }
   .topbar { align-items: flex-start; flex-direction: column; }
   .actions { justify-content: flex-start; }
 }
@@ -563,6 +674,9 @@ let fieldOrigins = {};
 let fieldWarnings = {};
 let fieldSuggestions = {};
 let rosterRolesByDepartment = {};
+let workRoles = [];
+let workRolesByDepartment = {};
+let workRoleParticipationTypes = [];
 let activeFormRef = '';
 let activeTableRef = '';
 let activeSection = 'basic';
@@ -571,6 +685,7 @@ let isWorking = false;
 let isSuggesting = false;
 let workTimers = [];
 const collapsedProcessRefs = new Set();
+const importedConfirmedWorkRoleRefs = new Set();
 
 const DEPARTMENT_OPTIONS = [
   { value: '', label: '请选择' },
@@ -588,6 +703,19 @@ const DEPARTMENT_OPTIONS = [
 ];
 
 const FIELD_TYPE_OPTIONS = ['文本', '长文本', '数字', '日期', '日期时间', '金额', '枚举', { value: '布尔', label: '是/否' }, '部门', '人员', '文件编号', '签名', '图片', '附件', '二维码'];
+const DEFAULT_WORK_ROLE_PARTICIPATION_TYPES = [
+  { value: 'initiator', label: '发起' },
+  { value: 'executor', label: '执行' },
+  { value: 'reviewer', label: '审核' },
+  { value: 'approver', label: '批准' },
+  { value: 'collaborator', label: '协同' },
+  { value: 'provider', label: '提供' },
+  { value: 'receiver', label: '接收' }
+];
+const WORK_ROLE_STATUS_OPTIONS = [
+  { value: 'proposed', label: '待确认' },
+  { value: 'confirmed', label: '已确认' }
+];
 
 const importDocButton = document.getElementById('importDocButton');
 const importStructButton = document.getElementById('importStructButton');
@@ -678,6 +806,9 @@ async function init() {
     if (enumsResponse.ok) applyEnums(await enumsResponse.json());
   } catch (_) {
     rosterRolesByDepartment = {};
+    workRoles = [];
+    workRolesByDepartment = {};
+    workRoleParticipationTypes = [];
   }
 }
 
@@ -848,6 +979,7 @@ async function importDocumentFile(file) {
       return;
     }
     applyEnums(payload.enums || {});
+    importedConfirmedWorkRoleRefs.clear();
     docData = ensureDocument(payload.data);
     fieldSources = payload.fieldSources || {};
     fieldOrigins = payload.fieldOrigins || {};
@@ -883,6 +1015,10 @@ function importStructuredFile(file) {
       if (!parsed || parsed.schema_version !== 'document-structured-output-v2') {
         throw new Error('结构化文件必须使用 document-structured-output-v2');
       }
+      importedConfirmedWorkRoleRefs.clear();
+      (Array.isArray(parsed.work_role_bindings) ? parsed.work_role_bindings : [])
+        .filter(binding => binding?.status === 'confirmed' && binding.binding_ref)
+        .forEach(binding => importedConfirmedWorkRoleRefs.add(binding.binding_ref));
       docData = ensureDocument(parsed);
       fieldSources = {};
       fieldOrigins = importedOrigins(docData);
@@ -938,6 +1074,7 @@ function ensureDocument(data) {
     steps: [],
     behavior_details: [],
     step_transitions: [],
+    work_role_bindings: [],
     cross_dept_handoffs: [],
     forms: [],
     form_tables: [],
@@ -953,14 +1090,38 @@ function ensureDocument(data) {
   merged.draft.department = deepMerge(base.draft.department, merged.draft.department || {});
   merged.document_profile.document_no = merged.draft.document_no || merged.document_profile.document_no || '';
   merged.document_profile.document_title = merged.draft.document_title || merged.document_profile.document_title || '';
-  for (const key of ['terms', 'processes', 'steps', 'behavior_details', 'step_transitions', 'cross_dept_handoffs', 'forms', 'form_tables', 'form_table_fields', 'form_fields', 'evidence_catalog', 'mdm_requirement_catalog', 'pending_issues']) {
+  for (const key of ['terms', 'processes', 'steps', 'behavior_details', 'step_transitions', 'work_role_bindings', 'cross_dept_handoffs', 'forms', 'form_tables', 'form_table_fields', 'form_fields', 'evidence_catalog', 'mdm_requirement_catalog', 'pending_issues']) {
     if (!Array.isArray(merged[key])) merged[key] = [];
   }
+  merged.work_role_bindings = merged.work_role_bindings.map((binding, index) => normalizeWorkRoleBinding(binding, index));
   merged.schema_version = 'document-structured-output-v2';
   merged.steps.forEach(step => {
     if (!['action', 'decision'].includes(step.step_type)) step.step_type = 'action';
   });
   return merged;
+}
+
+function normalizeWorkRoleBinding(binding, index = 0) {
+  const source = binding && typeof binding === 'object' && !Array.isArray(binding) ? binding : {};
+  const participantDepartment = typeof source.participant_department === 'string'
+    ? { department_name: source.participant_department }
+    : source.participant_department && typeof source.participant_department === 'object' && !Array.isArray(source.participant_department)
+      ? { ...source.participant_department, department_name: source.participant_department.department_name || '' }
+      : { department_name: '' };
+  const stepRef = source.step_ref === undefined || source.step_ref === null || source.step_ref === '' ? null : source.step_ref;
+  return {
+    ...source,
+    binding_ref: source.binding_ref || `work_role_binding_${index + 1}`,
+    process_ref: source.process_ref || '',
+    step_ref: stepRef,
+    participant_department: participantDepartment,
+    source_role_text: source.source_role_text || '',
+    work_role_code: source.work_role_code || '',
+    participation_type: source.participation_type || (stepRef === null ? 'owner' : 'executor'),
+    status: source.status === 'confirmed' ? 'confirmed' : 'proposed',
+    evidence_refs: Array.isArray(source.evidence_refs) ? [...source.evidence_refs] : [],
+    confirmation_basis: source.confirmation_basis ?? null
+  };
 }
 
 function deepMerge(base, patch) {
@@ -1010,6 +1171,7 @@ function setValue(path, value) {
   }
   target[parts[parts.length - 1]] = value;
   syncRelatedTableValue(path, value);
+  syncWorkRoleBindingTarget(path, value);
   if (/^(?:steps\.\d+\.(?:process_ref|step_type)|step_transitions\.\d+\.(?:from_step_ref|to_step_ref))$/.test(path)) cleanStepTransitions();
   if (path === 'draft.department.department_name') {
     const found = DEPARTMENT_OPTIONS.find(item => item.value === value);
@@ -1059,6 +1221,22 @@ function syncRelatedTableValue(path, value) {
   }
 }
 
+function syncWorkRoleBindingTarget(path, value) {
+  const participantDepartmentMatch = path.match(/^work_role_bindings\.(\d+)\.participant_department\.department_name$/);
+  if (participantDepartmentMatch) {
+    const binding = docData.work_role_bindings[Number(participantDepartmentMatch[1])];
+    if (binding) binding.participant_department = { department_name: value };
+    return;
+  }
+  const stepProcessMatch = path.match(/^steps\.(\d+)\.process_ref$/);
+  if (!stepProcessMatch) return;
+  const step = docData.steps[Number(stepProcessMatch[1])];
+  if (!step) return;
+  docData.work_role_bindings
+    .filter(binding => binding.step_ref === step.step_ref)
+    .forEach(binding => { binding.process_ref = value; });
+}
+
 function isFilled(value) {
   if (Array.isArray(value)) return value.length > 0;
   return value !== null && value !== undefined && String(value).trim() !== '';
@@ -1068,6 +1246,126 @@ function applyEnums(enums = {}) {
   if (enums.rosterRolesByDepartment && typeof enums.rosterRolesByDepartment === 'object') {
     rosterRolesByDepartment = enums.rosterRolesByDepartment;
   }
+  if (Array.isArray(enums.workRoles)) {
+    workRoles = enums.workRoles.map(normalizeWorkRoleOption).filter(item => item.work_role_code);
+  }
+  if (enums.workRolesByDepartment && typeof enums.workRolesByDepartment === 'object') {
+    workRolesByDepartment = Object.fromEntries(
+      Object.entries(enums.workRolesByDepartment).map(([department, roles]) => [
+        department,
+        Array.isArray(roles) ? roles.map(normalizeWorkRoleOption).filter(item => item.work_role_code) : []
+      ])
+    );
+  }
+  if (Array.isArray(enums.workRoleParticipationTypes)) {
+    workRoleParticipationTypes = enums.workRoleParticipationTypes.map(normalizeParticipationTypeOption).filter(item => item.value && item.value !== 'owner');
+  }
+}
+
+function normalizeWorkRoleOption(item) {
+  if (typeof item === 'string') {
+    return { work_role_code: item, work_role_name: item, status: 'active' };
+  }
+  const source = item && typeof item === 'object' ? item : {};
+  return {
+    ...source,
+    work_role_code: source.work_role_code || source.code || '',
+    work_role_name: source.work_role_name || source.name || source.work_role_code || source.code || '',
+    status: source.status || 'active'
+  };
+}
+
+function isSelectableWorkRole(role) {
+  return Boolean(role && role.status === 'active' && role.is_effective !== false);
+}
+
+function normalizeParticipationTypeOption(item) {
+  if (typeof item === 'string') {
+    const fallback = DEFAULT_WORK_ROLE_PARTICIPATION_TYPES.find(option => option.value === item);
+    return { value: item, label: fallback?.label || item };
+  }
+  const source = item && typeof item === 'object' ? item : {};
+  const value = source.value || source.code || source.participation_type || '';
+  const fallback = DEFAULT_WORK_ROLE_PARTICIPATION_TYPES.find(option => option.value === value);
+  return { value, label: source.label || source.name || fallback?.label || value };
+}
+
+function participationTypeOptions(currentValue = '') {
+  const configured = workRoleParticipationTypes.length ? workRoleParticipationTypes : DEFAULT_WORK_ROLE_PARTICIPATION_TYPES;
+  const options = configured.filter(item => item.value !== 'owner').map(item => ({ ...item }));
+  if (currentValue && !options.some(item => item.value === currentValue)) {
+    options.unshift({ value: currentValue, label: currentValue === 'owner' ? '流程负责人（不适用于业务行为）' : currentValue });
+  }
+  return options;
+}
+
+function workRoleDepartmentOptions(currentDepartment = '') {
+  const options = rosterDepartmentOptions();
+  const known = new Set(options.map(item => item.value));
+  Object.keys(workRolesByDepartment || {})
+    .filter(Boolean)
+    .sort((left, right) => left.localeCompare(right, 'zh-CN'))
+    .forEach(department => {
+      if (!known.has(department)) {
+        options.push({ value: department, label: department });
+        known.add(department);
+      }
+    });
+  if (currentDepartment && !known.has(currentDepartment)) options.push({ value: currentDepartment, label: currentDepartment });
+  return options;
+}
+
+function workRoleByCode(code) {
+  return allWorkRoles().find(item => item.work_role_code === code) || null;
+}
+
+function allWorkRoles() {
+  const byCode = new Map();
+  [...workRoles, ...Object.values(workRolesByDepartment || {}).flat()].forEach(role => {
+    if (role?.work_role_code && !byCode.has(role.work_role_code)) byCode.set(role.work_role_code, role);
+  });
+  return [...byCode.values()];
+}
+
+function workRolesForDepartment(department) {
+  if (!department) return allWorkRoles();
+  const mapped = Array.isArray(workRolesByDepartment?.[department]) ? workRolesByDepartment[department] : [];
+  const companyWide = department === '全公司' || !Array.isArray(workRolesByDepartment?.['全公司'])
+    ? []
+    : workRolesByDepartment['全公司'];
+  const byCode = new Map();
+  [...mapped, ...companyWide].forEach(role => {
+    if (role?.work_role_code && !byCode.has(role.work_role_code)) byCode.set(role.work_role_code, role);
+  });
+  return [...byCode.values()];
+}
+
+function workRoleSelectOptions(department, currentCode = '') {
+  const roles = workRolesForDepartment(department);
+  const hasActiveCatalog = allWorkRoles().some(isSelectableWorkRole);
+  const placeholder = !hasActiveCatalog
+    ? '等待行政人事部发布角色目录'
+    : department && !roles.length
+      ? '当前部门暂无可用工作角色'
+      : '请选择正式工作角色';
+  const options = [{ value: '', label: placeholder }];
+  roles.forEach(role => {
+    const suffix = role.status === 'retired' ? '（已停用）' : !isSelectableWorkRole(role) ? '（未生效）' : '';
+    options.push({
+      value: role.work_role_code,
+      label: `${role.work_role_name || role.work_role_code}（${role.work_role_code}）${suffix}`,
+      disabled: !isSelectableWorkRole(role) && role.work_role_code !== currentCode
+    });
+  });
+  if (currentCode && !options.some(item => item.value === currentCode)) {
+    const current = workRoleByCode(currentCode);
+    options.push({
+      value: currentCode,
+      label: current ? `${current.work_role_name || currentCode}（${currentCode}，当前部门未映射）` : `导入的工作角色（${currentCode}）`,
+      disabled: false
+    });
+  }
+  return options;
 }
 
 function rosterDepartmentOptions() {
@@ -1100,7 +1398,9 @@ function shouldRerenderAfterValueChange(path) {
   return path === 'draft.department.department_name' ||
     /^processes\.\d+\.owner$/.test(path) ||
     /^forms\.\d+\.responsible_department_name$/.test(path) ||
-    /^steps\.\d+\.process_ref$/.test(path);
+    /^steps\.\d+\.process_ref$/.test(path) ||
+    /^work_role_bindings\.\d+\.(?:work_role_code|status)$/.test(path) ||
+    /^work_role_bindings\.\d+\.participant_department\.department_name$/.test(path);
 }
 
 function actorRoleDepartmentOptions(ownDepartment = currentDocumentDepartment(), missingDepartmentLabel = '先确认归口部门') {
@@ -1336,6 +1636,7 @@ function field(path, label, options = {}) {
       option.value = optionValue;
       option.textContent = optionLabel;
       option.selected = String(optionValue) === String(value ?? '');
+      option.disabled = Boolean(typeof item === 'object' && item.disabled);
       input.appendChild(option);
     }
   } else {
@@ -1343,6 +1644,7 @@ function field(path, label, options = {}) {
     input.value = value || '';
   }
   const readValue = event => options.parse ? options.parse(event.target.value) : event.target.value;
+  input.disabled = Boolean(options.disabled);
   input.addEventListener('input', event => setValue(path, readValue(event)));
   input.addEventListener('change', event => setValue(path, readValue(event)));
   wrapper.appendChild(input);
@@ -1417,6 +1719,7 @@ function tableCell(path, options = {}) {
       option.value = optionValue;
       option.textContent = optionLabel;
       option.selected = String(optionValue) === String(value ?? '');
+      option.disabled = Boolean(typeof item === 'object' && item.disabled);
       input.appendChild(option);
     }
   } else {
@@ -1650,9 +1953,26 @@ function rolePickerField(path, label, ownDepartment, options = {}) {
 }
 
 function actorRoleField(index) {
-  return rolePickerField(`steps.${index}.actor_role`, '执行角色', processDepartmentForStep(index), {
-    missingDepartmentLabel: '先确认归口部门'
-  });
+  const wrapper = field(`steps.${index}.actor_role`, '制度原文中的角色/岗位称谓', { type: 'textarea' });
+  const department = processDepartmentForStep(index);
+  const positions = department ? rosterPositions(department) : [];
+  if (positions.length) {
+    const details = document.createElement('details');
+    details.className = 'source';
+    const summary = document.createElement('summary');
+    summary.textContent = `查看${department}花名册岗位候选（仅供核对）`;
+    const copy = document.createElement('p');
+    copy.textContent = `${positions.join('、')}\n候选不会写回制度原文，也不会自动成为正式工作角色。`;
+    details.append(summary, copy);
+    wrapper.appendChild(details);
+    return wrapper;
+  }
+  const note = div('work-role-warning');
+  note.textContent = department
+    ? '当前归口部门暂无花名册岗位候选；请按制度原文保留称谓。'
+    : '先确认归口部门后可查看花名册岗位候选；候选不会写回制度原文。';
+  wrapper.appendChild(note);
+  return wrapper;
 }
 
 function formResponsibleRoleField(index) {
@@ -1755,6 +2075,411 @@ function renderStepTransitions(processRef) {
   return group;
 }
 
+function workRoleBindingDepartment(binding) {
+  return binding?.participant_department?.department_name || '';
+}
+
+function workRoleBindingsForTarget(processRef, stepRef = null) {
+  return (docData.work_role_bindings || [])
+    .map((binding, index) => ({ binding, index }))
+    .filter(item => stepRef === null
+      ? item.binding.process_ref === processRef && item.binding.step_ref === null
+      : item.binding.step_ref === stepRef);
+}
+
+function nextWorkRoleBindingRef() {
+  const existing = new Set((docData.work_role_bindings || []).map(binding => binding.binding_ref));
+  let index = 1;
+  while (existing.has(`wrb_${index}`)) index += 1;
+  return `wrb_${index}`;
+}
+
+function workRoleLabel(code) {
+  const role = workRoleByCode(code);
+  return role ? `${role.work_role_name || code}（${code}）` : code || '未选择工作角色';
+}
+
+function workRoleParticipationLabel(value) {
+  if (value === 'owner') return '流程负责人';
+  return participationTypeOptions(value).find(item => item.value === value)?.label || value || '未选择参与方式';
+}
+
+function evidenceChoiceLabel(evidence) {
+  const location = evidence.source_anchor || evidence.locator || evidence.source_file || evidence.source_name || '';
+  const description = evidence.description || '';
+  const excerpt = String(evidence.source_excerpt || '').trim();
+  const text = [location, description, excerpt].filter(Boolean).join('｜') || evidence.evidence_ref;
+  return text.length > 90 ? `${text.slice(0, 90)}…` : text;
+}
+
+function bindingEvidenceField(index, disabled = false) {
+  const path = `work_role_bindings.${index}.evidence_refs`;
+  const selected = Array.isArray(getValue(path)) ? getValue(path) : [];
+  const wrapper = div('field');
+  const label = document.createElement('label');
+  label.textContent = '原文依据';
+  wrapper.appendChild(label);
+
+  const catalog = Array.isArray(docData.evidence_catalog) ? docData.evidence_catalog : [];
+  const choices = catalog
+    .filter(item => item?.evidence_ref)
+    .map(item => ({ value: item.evidence_ref, label: evidenceChoiceLabel(item) }));
+  selected.filter(Boolean).forEach(ref => {
+    if (!choices.some(item => item.value === ref)) choices.push({ value: ref, label: `导入的依据（${ref}）` });
+  });
+  if (!choices.length) {
+    const message = div('work-role-empty');
+    message.textContent = '当前结构化文件还没有可选择的原文依据。工作角色可以先作为待确认项保存。';
+    wrapper.appendChild(message);
+    return wrapper;
+  }
+
+  const list = div('evidence-choice-list');
+  const choiceInputs = [];
+  choices.forEach(choice => {
+    const choiceLabel = document.createElement('label');
+    choiceLabel.className = 'evidence-choice';
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.value = choice.value;
+    checkbox.checked = selected.includes(choice.value);
+    checkbox.disabled = disabled;
+    const copy = document.createElement('span');
+    copy.textContent = choice.label;
+    checkbox.addEventListener('change', () => {
+      const next = choiceInputs.filter(item => item.checkbox.checked).map(item => item.value);
+      setValue(path, next);
+    });
+    choiceInputs.push({ value: choice.value, checkbox });
+    choiceLabel.append(checkbox, copy);
+    list.appendChild(choiceLabel);
+  });
+  wrapper.appendChild(list);
+  if (!disabled) {
+    const note = div('work-role-warning');
+    note.textContent = '请先核对所选依据的位置和原文摘录；将绑定设为已确认时，所选非 OCR 依据会一并标记为已核验。';
+    wrapper.appendChild(note);
+  }
+  return wrapper;
+}
+
+function sourceRoleBindingEligibilityProblem(sourceRoleText) {
+  const value = String(sourceRoleText || '').trim();
+  if (/^(?:申请人|当前处理人|本人|经办人|全体员工|全体人员|全公司人员|所有员工)$/.test(value)) return '场景身份不能建立固定工作角色绑定';
+  if (/^(?:客户|供应商|银行|外部机构|第三方|承包商|承揽方)(?:$|代表$|联系人$|单位$)/.test(value)) return '外部参与方不能建立内部工作角色绑定';
+  if (/^(?:有关部门|相关部门|各部门|各单位|相关单位|使用单位|责任单位|业务部门|所属部门|班组)(?:负责人|人员|代表)?$/.test(value)) return '集体称谓不能直接建立工作角色绑定';
+  return '';
+}
+
+function structuralProblemsForWorkRoleBinding(index) {
+  const binding = docData.work_role_bindings[index];
+  if (!binding) return ['绑定内容不存在'];
+  const problems = [];
+  const participationTypes = ['owner', ...DEFAULT_WORK_ROLE_PARTICIPATION_TYPES.map(item => item.value)];
+  if (docData.work_role_bindings.some((item, otherIndex) => otherIndex !== index && item.binding_ref === binding.binding_ref)) problems.push('绑定编号重复');
+  if (!String(binding.binding_ref || '').trim()) problems.push('绑定编号未填写');
+  const process = docData.processes.find(item => item.process_ref === binding.process_ref);
+  const step = binding.step_ref === null ? null : docData.steps.find(item => item.step_ref === binding.step_ref);
+  const department = workRoleBindingDepartment(binding);
+  if (!process) problems.push('所属业务流程不存在');
+  if (binding.step_ref !== null && !step) problems.push('所属业务行为不存在');
+  if (step && step.process_ref !== binding.process_ref) problems.push('业务行为不属于所选业务流程');
+  if (!participationTypes.includes(binding.participation_type)) problems.push('参与方式无效');
+  if (binding.step_ref === null && binding.participation_type !== 'owner') problems.push('流程层只能使用流程负责人');
+  if (binding.step_ref !== null && binding.participation_type === 'owner') problems.push('业务行为不能使用流程负责人');
+  if (!department) problems.push('参与部门未填写');
+  else if (!workRoleDepartmentOptions().some(item => item.value === department)) problems.push('参与部门不在当前组织目录');
+  if (!String(binding.source_role_text || '').trim()) problems.push('制度原文称谓未填写');
+  const eligibilityProblem = sourceRoleBindingEligibilityProblem(binding.source_role_text);
+  if (eligibilityProblem) problems.push(eligibilityProblem);
+  if (!/^WR-\d{4}$/.test(String(binding.work_role_code || ''))) problems.push('正式工作角色编码无效');
+  if (!['proposed', 'confirmed'].includes(binding.status)) problems.push('处理状态无效');
+  if (!Array.isArray(binding.evidence_refs)) problems.push('原文依据格式无效');
+  else if (new Set(binding.evidence_refs).size !== binding.evidence_refs.length) problems.push('原文依据存在重复引用');
+  return problems;
+}
+
+function markWorkRoleEvidenceVerified(binding) {
+  for (const ref of binding?.evidence_refs || []) {
+    const evidence = docData.evidence_catalog.find(item => item.evidence_ref === ref);
+    if (!evidence || evidence.status === 'ocr_extracted_not_confirmed' || /ocr/i.test(String(evidence.locate_method || ''))) continue;
+    evidence.status = 'verified';
+  }
+}
+
+function confirmationProblemsForWorkRoleBinding(index, { allowEvidenceVerification = false } = {}) {
+  const binding = docData.work_role_bindings[index];
+  if (!binding) return ['绑定内容不存在'];
+  const problems = structuralProblemsForWorkRoleBinding(index);
+  const department = workRoleBindingDepartment(binding);
+  const role = workRoleByCode(binding.work_role_code);
+  const mappedRoles = workRolesForDepartment(department);
+  const importedRetiredHistory = binding.status === 'confirmed' && importedConfirmedWorkRoleRefs.has(binding.binding_ref) && role?.status === 'retired';
+  if (!role) problems.push('正式工作角色未发布');
+  else if (!isSelectableWorkRole(role) && !importedRetiredHistory) problems.push('正式工作角色当前未生效');
+  if (binding.work_role_code && !mappedRoles.some(item => item.work_role_code === binding.work_role_code) && !importedRetiredHistory) problems.push('参与部门尚无有效岗位映射');
+  if (!Array.isArray(binding.evidence_refs) || !binding.evidence_refs.length) problems.push('原文依据未选择');
+  else {
+    const evidenceItems = binding.evidence_refs.map(ref => docData.evidence_catalog.find(item => item.evidence_ref === ref));
+    if (evidenceItems.some(item => !item)) problems.push('原文依据无法定位');
+    else if (evidenceItems.some(item =>
+      !(item.source_file || item.source_name) ||
+      !(item.locator || item.source_anchor) ||
+      !String(item.source_excerpt || '').trim() ||
+      !String(item.locate_method || '').trim()
+    )) problems.push('原文依据缺少源文件、位置、原文摘录或抽取方式');
+    else if (evidenceItems.some(item => item.status === 'ocr_extracted_not_confirmed' || /ocr/i.test(String(item.locate_method || '')))) problems.push('OCR 原文依据只能待复核，不能形成正式绑定');
+    else if (!allowEvidenceVerification && evidenceItems.some(item => item.status !== 'verified')) problems.push('原文依据尚未人工核验');
+    else if (!evidenceItems.some(item =>
+      (item.object_type === 'work_role_binding' && item.object_ref === binding.binding_ref) ||
+      (binding.step_ref !== null && item.object_type === 'step' && item.object_ref === binding.step_ref) ||
+      (binding.step_ref === null && item.object_type === 'process' && item.object_ref === binding.process_ref)
+    )) problems.push('原文依据未关联到当前流程或业务行为');
+  }
+  if (!String(binding.confirmation_basis || '').trim()) problems.push('确认依据未填写');
+  if (binding.step_ref === null) {
+    const hasOtherConfirmedOwner = docData.work_role_bindings.some((item, otherIndex) =>
+      otherIndex !== index && item.process_ref === binding.process_ref && item.step_ref === null && item.participation_type === 'owner' && item.status === 'confirmed'
+    );
+    if (hasOtherConfirmedOwner) problems.push('该流程已经有一名已确认负责人');
+  }
+  return problems;
+}
+
+function workRoleStatusField(index) {
+  const path = `work_role_bindings.${index}.status`;
+  const value = getValue(path) || 'proposed';
+  const wrapper = div('field');
+  const label = document.createElement('label');
+  label.textContent = '处理状态';
+  const select = document.createElement('select');
+  WORK_ROLE_STATUS_OPTIONS.forEach(item => {
+    const option = document.createElement('option');
+    option.value = item.value;
+    option.textContent = item.label;
+    option.selected = item.value === value;
+    select.appendChild(option);
+  });
+  select.addEventListener('change', () => {
+    if (select.value === 'confirmed') {
+      const problems = confirmationProblemsForWorkRoleBinding(index, { allowEvidenceVerification: true });
+      if (problems.length) {
+        select.value = value;
+        toast(`暂不能确认：${problems[0]}`);
+        return;
+      }
+      markWorkRoleEvidenceVerified(docData.work_role_bindings[index]);
+    }
+    if (select.value !== 'confirmed') importedConfirmedWorkRoleRefs.delete(docData.work_role_bindings[index]?.binding_ref);
+    setValue(path, select.value);
+  });
+  wrapper.append(label, select);
+  if (value !== 'confirmed') {
+    const problems = confirmationProblemsForWorkRoleBinding(index);
+    if (problems.length) {
+      const warning = div('work-role-warning');
+      warning.textContent = `转为已确认前还需：${problems.join('、')}。`;
+      wrapper.appendChild(warning);
+    }
+  }
+  return wrapper;
+}
+
+function renderWorkRoleEntry(binding, index, processRef, stepRef) {
+  const entry = div('work-role-entry');
+  const locked = binding.status === 'confirmed';
+  const head = div('work-role-entry-head');
+  const copy = document.createElement('strong');
+  copy.textContent = `${workRoleParticipationLabel(binding.participation_type)}｜${workRoleLabel(binding.work_role_code)}`;
+  const remove = document.createElement('button');
+  remove.className = 'btn';
+  remove.type = 'button';
+  remove.textContent = '删除绑定';
+  remove.disabled = locked;
+  if (locked) remove.title = '先将处理状态改为待确认，再删除绑定';
+  remove.addEventListener('click', () => removeWorkRoleBinding(index));
+  head.append(copy, remove);
+  entry.appendChild(head);
+
+  const context = div('work-role-context');
+  const process = docData.processes.find(item => item.process_ref === processRef);
+  const step = stepRef === null ? null : docData.steps.find(item => item.step_ref === stepRef);
+  context.textContent = step
+    ? `绑定到业务行为：${step.step_name || '未命名业务行为'}；所属业务流程：${process?.l3_name || '未命名业务流程'}`
+    : `绑定到业务流程：${process?.l3_name || '未命名业务流程'}`;
+
+  const department = workRoleBindingDepartment(binding);
+  const grid = div('grid');
+  grid.append(
+    field(`work_role_bindings.${index}.participant_department.department_name`, '参与部门', { type: 'select', options: workRoleDepartmentOptions(department), required: false, disabled: locked }),
+    field(`work_role_bindings.${index}.source_role_text`, '制度原文中的角色/岗位称谓', { type: 'textarea', required: false, disabled: locked }),
+    field(`work_role_bindings.${index}.work_role_code`, '正式工作角色', { type: 'select', options: workRoleSelectOptions(department, binding.work_role_code), required: false, disabled: locked }),
+    stepRef === null
+      ? (() => {
+          const wrapper = div('field');
+          const label = document.createElement('label');
+          label.textContent = '参与方式';
+          const value = div('readonly-value');
+          value.textContent = '流程负责人';
+          wrapper.append(label, value);
+          return wrapper;
+        })()
+      : field(`work_role_bindings.${index}.participation_type`, '参与方式', { type: 'select', options: participationTypeOptions(binding.participation_type), required: false, disabled: locked }),
+    workRoleStatusField(index),
+    field(`work_role_bindings.${index}.confirmation_basis`, '确认依据', { type: 'textarea', required: false, disabled: locked }),
+    bindingEvidenceField(index, locked)
+  );
+  entry.append(context, grid);
+  if (locked) {
+    const note = div('work-role-warning');
+    note.textContent = '已确认绑定需先改为待确认，才能调整内容或删除。';
+    entry.appendChild(note);
+  }
+  return entry;
+}
+
+function renderWorkRoleAdder(processRef, stepRef = null) {
+  const process = docData.processes.find(item => item.process_ref === processRef);
+  const step = stepRef === null ? null : docData.steps.find(item => item.step_ref === stepRef);
+  const adder = div('work-role-adder');
+  const head = div('work-role-adder-head');
+  const heading = document.createElement('strong');
+  heading.textContent = stepRef === null ? '添加流程负责人工作角色' : '添加参与工作角色';
+  head.appendChild(heading);
+  adder.appendChild(head);
+
+  if (!allWorkRoles().some(isSelectableWorkRole)) {
+    const message = div('work-role-empty');
+    message.textContent = '等待行政人事部发布角色目录。制度原文称谓和依据仍会保留，可先继续整理其他流程内容。';
+    adder.appendChild(message);
+    return adder;
+  }
+
+  const grid = div('work-role-adder-grid');
+  const departmentLabel = document.createElement('label');
+  departmentLabel.textContent = '参与部门';
+  const departmentSelect = document.createElement('select');
+  const defaultDepartment = process?.owner || currentDocumentDepartment();
+  workRoleDepartmentOptions(defaultDepartment).forEach(item => {
+    const option = document.createElement('option');
+    option.value = item.value;
+    option.textContent = item.label;
+    option.selected = item.value === defaultDepartment;
+    departmentSelect.appendChild(option);
+  });
+  departmentLabel.appendChild(departmentSelect);
+
+  const sourceLabel = document.createElement('label');
+  sourceLabel.textContent = '制度原文中的角色/岗位称谓';
+  const sourceInput = document.createElement('input');
+  sourceInput.value = step?.actor_role || '';
+  sourceInput.placeholder = '保持制度原文称谓，不按正式角色名称改写';
+  sourceLabel.appendChild(sourceInput);
+
+  const roleLabel = document.createElement('label');
+  roleLabel.textContent = '正式工作角色';
+  const roleSelect = document.createElement('select');
+  roleLabel.appendChild(roleSelect);
+
+  let participationSelect = null;
+  if (stepRef !== null) {
+    const participationLabel = document.createElement('label');
+    participationLabel.textContent = '参与方式';
+    participationSelect = document.createElement('select');
+    participationTypeOptions('executor').forEach(item => {
+      const option = document.createElement('option');
+      option.value = item.value;
+      option.textContent = item.label;
+      option.selected = item.value === 'executor';
+      participationSelect.appendChild(option);
+    });
+    participationLabel.appendChild(participationSelect);
+    grid.append(departmentLabel, sourceLabel, roleLabel, participationLabel);
+  } else {
+    grid.append(departmentLabel, sourceLabel, roleLabel);
+  }
+
+  const actions = div('work-role-adder-actions');
+  const add = document.createElement('button');
+  add.className = 'btn';
+  add.type = 'button';
+  add.textContent = stepRef === null ? '添加负责人绑定' : '添加参与绑定';
+  const refreshAddState = () => {
+    add.disabled = !departmentSelect.value || !sourceInput.value.trim() || !roleSelect.value;
+  };
+  const refreshRoleOptions = () => {
+    roleSelect.replaceChildren();
+    workRoleSelectOptions(departmentSelect.value).forEach(item => {
+      const option = document.createElement('option');
+      option.value = item.value;
+      option.textContent = item.label;
+      option.disabled = Boolean(item.disabled);
+      roleSelect.appendChild(option);
+    });
+    refreshAddState();
+  };
+  departmentSelect.addEventListener('change', refreshRoleOptions);
+  roleSelect.addEventListener('change', refreshAddState);
+  sourceInput.addEventListener('input', refreshAddState);
+  add.addEventListener('click', () => {
+    const role = workRoleByCode(roleSelect.value);
+    if (!isSelectableWorkRole(role)) {
+      toast('请选择已经生效的正式工作角色');
+      return;
+    }
+    const eligibilityProblem = sourceRoleBindingEligibilityProblem(sourceInput.value);
+    if (eligibilityProblem) {
+      toast(eligibilityProblem);
+      return;
+    }
+    const inheritedEvidenceRefs = Array.isArray(step?.evidence_refs)
+      ? step.evidence_refs
+      : Array.isArray(process?.evidence_refs) ? process.evidence_refs : [];
+    docData.work_role_bindings.push(normalizeWorkRoleBinding({
+      binding_ref: nextWorkRoleBindingRef(),
+      process_ref: processRef,
+      step_ref: stepRef,
+      participant_department: { department_name: departmentSelect.value },
+      source_role_text: sourceInput.value.trim(),
+      work_role_code: roleSelect.value,
+      participation_type: stepRef === null ? 'owner' : participationSelect?.value || 'executor',
+      status: 'proposed',
+      evidence_refs: [...inheritedEvidenceRefs],
+      confirmation_basis: null
+    }, docData.work_role_bindings.length));
+    hasPageContent = true;
+    render();
+  });
+  refreshRoleOptions();
+  actions.appendChild(add);
+  adder.append(grid, actions);
+  return adder;
+}
+
+function renderWorkRoleBindings(processRef, stepRef = null) {
+  const group = div('work-role-group');
+  group.appendChild(title(stepRef === null ? '流程负责人工作角色' : '参与工作角色'));
+  const copy = document.createElement('p');
+  copy.className = 'work-role-group-copy';
+  copy.textContent = stepRef === null
+    ? '这里记录业务流程的正式负责人工作角色；归口部门仍保留在上方，二者不是同一概念。'
+    : '可为同一业务行为添加多个工作角色，并分别确认发起、执行、审核、批准、协同、提供或接收责任。';
+  group.appendChild(copy);
+
+  const rows = workRoleBindingsForTarget(processRef, stepRef);
+  if (rows.length) {
+    const list = div('work-role-list');
+    rows.forEach(({ binding, index }) => list.appendChild(renderWorkRoleEntry(binding, index, processRef, stepRef)));
+    group.appendChild(list);
+  } else {
+    const message = div('work-role-empty');
+    message.textContent = stepRef === null ? '尚未绑定流程负责人工作角色。' : '尚未绑定参与工作角色。';
+    group.appendChild(message);
+  }
+  if (stepRef !== null || rows.length === 0) group.appendChild(renderWorkRoleAdder(processRef, stepRef));
+  return group;
+}
+
 function renderSteps() {
   const root = div('row-list');
   if (!docData.processes.length) docData.processes.push(blankProcess());
@@ -1806,6 +2531,7 @@ function renderSteps() {
       field(`processes.${processIndex}.owner`, '归口部门', { type: 'select', options: DEPARTMENT_OPTIONS, required: false })
     );
     card.appendChild(processGrid);
+    card.appendChild(renderWorkRoleBindings(processRef, null));
 
     const stepRows = stepsForProcess(processRef);
     if (!stepRows.length) card.appendChild(empty('这条流程还没有业务行为或判断节点。'));
@@ -1840,6 +2566,7 @@ function renderSteps() {
         field(`behavior_details.${i}.execution_standard`, '执行标准', { type: 'textarea', required: false })
       );
       item.appendChild(grid);
+      item.appendChild(renderWorkRoleBindings(processRef, docData.steps[i].step_ref));
       card.appendChild(item);
     });
     card.appendChild(renderStepTransitions(processRef));
@@ -2117,12 +2844,21 @@ function removeForm(index) {
 }
 
 function removeArrayItem(key, index) {
+  let removedProcessRef = null;
+  let removedProcessStepRefs = [];
+  if (key === 'processes') {
+    removedProcessRef = docData.processes[index]?.process_ref || null;
+    removedProcessStepRefs = docData.steps
+      .filter(step => step.process_ref === removedProcessRef)
+      .map(step => step.step_ref);
+  }
   if (key === 'steps') {
     const step = docData.steps[index];
     if (step) {
       docData.step_transitions = docData.step_transitions.filter(transition =>
         transition.from_step_ref !== step.step_ref && transition.to_step_ref !== step.step_ref
       );
+      docData.work_role_bindings = docData.work_role_bindings.filter(binding => binding.step_ref !== step.step_ref);
     }
   }
   docData[key].splice(index, 1);
@@ -2131,8 +2867,19 @@ function removeArrayItem(key, index) {
     const validProcessRefs = new Set(docData.processes.map(process => process.process_ref));
     docData.steps = docData.steps.filter(step => validProcessRefs.has(step.process_ref));
     docData.step_transitions = docData.step_transitions.filter(transition => validProcessRefs.has(transition.process_ref));
+    docData.work_role_bindings = docData.work_role_bindings.filter(binding =>
+      binding.process_ref !== removedProcessRef && !removedProcessStepRefs.includes(binding.step_ref)
+    );
   }
   cleanStepTransitions();
+  hasPageContent = true;
+  render();
+}
+
+function removeWorkRoleBinding(index) {
+  if (!Array.isArray(docData.work_role_bindings) || !docData.work_role_bindings[index]) return;
+  importedConfirmedWorkRoleRefs.delete(docData.work_role_bindings[index].binding_ref);
+  docData.work_role_bindings.splice(index, 1);
   hasPageContent = true;
   render();
 }
@@ -2170,6 +2917,14 @@ function normalizeForStructuredExport(data) {
   const copy = JSON.parse(JSON.stringify(data));
   copy.schema_version = 'document-structured-output-v2';
   if (!Array.isArray(copy.step_transitions)) copy.step_transitions = [];
+  if (!Array.isArray(copy.work_role_bindings)) copy.work_role_bindings = [];
+  copy.work_role_bindings = copy.work_role_bindings.map((binding, index) => normalizeWorkRoleBinding(binding, index));
+  copy.structure_block_projection = copy.structure_block_projection && typeof copy.structure_block_projection === 'object'
+    ? copy.structure_block_projection
+    : {};
+  copy.structure_block_projection.work_role_bindings = copy.work_role_bindings
+    .filter(binding => binding.status === 'confirmed')
+    .map(binding => JSON.parse(JSON.stringify(binding)));
   normalizeStepTransitions(copy);
   copy.document_profile = copy.document_profile || {};
   copy.document_profile.document_no = copy.draft?.document_no || copy.document_profile.document_no || '';
@@ -2188,7 +2943,8 @@ function pruneEmptyRecordRefs(value) {
     return;
   }
   for (const key of Object.keys(value)) {
-    if (value[key] === null && key.endsWith('_ref') && key !== 'to_step_ref') {
+    const isWorkRoleStepRef = key === 'step_ref' && 'binding_ref' in value && 'work_role_code' in value;
+    if (value[key] === null && key.endsWith('_ref') && key !== 'to_step_ref' && !isWorkRoleStepRef) {
       delete value[key];
     } else {
       pruneEmptyRecordRefs(value[key]);
@@ -2196,9 +2952,31 @@ function pruneEmptyRecordRefs(value) {
   }
 }
 
+function firstInvalidConfirmedWorkRoleBinding() {
+  return (docData?.work_role_bindings || [])
+    .map((binding, index) => ({ binding, problems: binding.status === 'confirmed' ? confirmationProblemsForWorkRoleBinding(index) : [] }))
+    .find(item => item.problems.length) || null;
+}
+
+function firstInvalidWorkRoleBinding() {
+  return (docData?.work_role_bindings || [])
+    .map((binding, index) => ({ binding, problems: structuralProblemsForWorkRoleBinding(index) }))
+    .find(item => item.problems.length) || null;
+}
+
 function exportStructuredFile() {
   if (!docData) {
     toast('请先导入制度文件或结构化文件');
+    return;
+  }
+  const invalidBinding = firstInvalidWorkRoleBinding();
+  if (invalidBinding) {
+    toast(`工作角色绑定未通过校验：${invalidBinding.problems[0]}`);
+    return;
+  }
+  const invalidConfirmedBinding = firstInvalidConfirmedWorkRoleBinding();
+  if (invalidConfirmedBinding) {
+    toast(`已确认工作角色绑定未通过校验：${invalidConfirmedBinding.problems[0]}`);
     return;
   }
   if (completionState().red > 0) {
@@ -2227,6 +3005,7 @@ function clearPage() {
   document.body.removeAttribute('aria-busy');
   setImportControlsDisabled(false);
   docData = null;
+  importedConfirmedWorkRoleRefs.clear();
   fieldSources = {};
   fieldOrigins = {};
   fieldWarnings = {};

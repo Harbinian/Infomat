@@ -11,9 +11,11 @@
 | 资料类型 | 当前入口 | 说明 |
 |---|---|---|
 | 部门到域映射 | `docs/organization/组织架构和部门职责.md` | 脚本和页面中的部门域口径必须与这里一致。 |
+| 工作角色与岗位映射 | `docs/organization/工作角色目录与岗位映射.md` | 行政人事部维护正式角色目录、生命周期、花名册岗位映射和原文别名；流程候选不能反向覆盖。 |
 | 流程输入基线 | `docs/norms/{部门}部门-能力-流程-系统映射关系.md` | PMO 驾驶舱和 MDM 流程治理快照都不反向作为维护入口；问题卡证据另定位制度/表单源文件。 |
 | 跨部门完整性报告 | `docs/norms/流程治理/跨部门完整性检查报告.md` | 当前作为跨部门风险校验输入之一，后续仍需减少从报告反推数据的依赖。 |
 | 流程展示快照 | `docs/company-sankey-data.json` | 由 `scripts/parse-sankey-data.mjs` 生成，供 PMO 驾驶舱和后续平台承接使用，不手工维护。 |
+| 工作角色只读快照 | `docs/work-role-data.json` | 由 `scripts/build-work-role-data.mjs` 从行政人事真源生成，不含人员名单，不手工维护。 |
 | 文档结构化输出 schema | `docs/contracts/document-structured-output.schema.json` | 统一 MDM 文档结构化页面、MySQL 承接表、待确认问题和结构块投影的数据模型，不替代流程输入基线。 |
 | 术语表 | `docs/glossary.md` | 术语查询脚本读取这里，新术语仍应回写到本文件。 |
 | 上下文管理 | `docs/architecture/context-management.md` | 说明项目资料上下文分层、读取顺序和历史材料使用规则。 |
@@ -23,7 +25,7 @@
 | 路径 | 职责 | 修改规则 |
 |---|---|---|
 | `docs/norms/` | 制度/表单源文件材料、流程输入基线和部门桑基图资产 | 改流程输入基线后运行 `node scripts/parse-sankey-data.mjs`。 |
-| `docs/organization/` | 组织架构和部门职责真源 | 部门或域发生变化时先改这里，再同步脚本和页面口径。 |
+| `docs/organization/` | 组织架构、部门职责、人员、工作角色和岗位映射真源 | 部门、域、工作角色或岗位映射发生变化时先改这里，再生成只读快照并同步消费方。 |
 | `docs/reports/` | 审计、测试、稳定化和阶段总结报告 | 新增仓库审查或整改报告放这里，不散放根目录。 |
 | `docs/architecture/` | 长期架构和上下文说明 | 解释结构、模块关系和执行规则，不替代 ADR。 |
 | `docs/adr/` | 长期架构决策记录 | 只记录已接受的决策，不写临时计划。 |

@@ -25,7 +25,7 @@
 |---|---|---|---|---|
 | `apps/` | 可运行应用集合 | 子目录 README | 新应用必须有独立 README、运行命令和数据边界 | 不放业务资料原件 |
 | `apps/mdm-platform/` | MDM 平台源码 | `package.json`、`server/`、`public/`、`scripts/` | 平台功能、平台测试、平台维护脚本在此修改 | 不放 PMO 甘特图、流程制度原文、历史方案 |
-| `apps/structured-output-service/` | 文档结构化输出辅助服务 | `package.json`、`server.js`、`public/`、`scripts/` | 按 `docs/contracts/document-structured-output.schema.json` 提供无状态编辑、文件拖入、结构化文件导入导出和当前页原文依据查看；可只读读取流程映射做预填，可只读读取花名册做执行角色核对 | 不保存用户内容，不写回 `docs/norms/` 或花名册，不替代 MDM 平台发布流程 |
+| `apps/structured-output-service/` | 文档结构化输出辅助服务 | `package.json`、`server.js`、`public/`、`scripts/` | 按 `docs/contracts/document-structured-output.schema.json` 提供无状态编辑、文件拖入、结构化文件导入导出和当前页原文依据查看；可只读读取流程映射、花名册和 `docs/work-role-data.json` 做候选提示 | 不保存用户内容，不写回 `docs/norms/`、花名册或工作角色真源，不替代受控发布流程 |
 | `apps/weekly-action-service/` | PMO 周会行动项服务 | `package.json`、`server.js`、`public/`、`scripts/` | 提供 3002 周会行动项登记、跟踪、关闭证据和延期原因维护；默认写入 `artifacts/weekly-actions/` 运行台账 | 不写回 PMO Markdown 真源、`tasks.json` 或 MDM 数据库；不把浏览器本地保存作为台账 |
 | `apps/mdm-platform/server/` | MDM 后端实现 | Express 路由、MySQL 目标 schema 与历史 SQLite 待迁移实现 | 修改时同步平台测试 | 不直接依赖 PMO 页面内嵌数据 |
 | `apps/mdm-platform/public/` | MDM 前端 | 单文件前端和静态资源 | 仅放平台运行所需前端资源 | 不放 PMO 驾驶舱截图 |
@@ -39,8 +39,8 @@
 | 路径 | 责任 | 入口/接口 | 可修改规则 | 禁止事项 |
 |---|---|---|---|---|
 | `docs/` | 资料、说明、方案沉淀 | 子目录分工 | 文档按资产类型进入子目录 | 不放本地生成物 |
-| `docs/norms/` | 流程输入基线、制度/表单源文件材料、部门桑基图资产 | 部门映射 Markdown、制度/表单源文件 | 新增或修改流程输入基线后运行流程地图 parser | 不放临时报告、截图、运行日志 |
-| `docs/organization/` | 组织架构、部门职责、人员资料和项目角色映射真源 | `组织架构和部门职责.md`、`花名册.md`、`信息化项目人员角色映射.md` | 部门到域映射变化必须先改这里；信息化项目运行角色以映射文件承接花名册与项目材料关系 | 不在页面、脚本或运行台账里另造部门、人员或项目角色口径 |
+| `docs/norms/` | 流程输入基线、制度/表单源文件材料、部门桑基图资产 | 部门映射 Markdown、制度/表单源文件 | 新增或修改流程输入基线后运行流程地图 parser；工作角色只写 confirmed 绑定并同步维护受控证据表 | 不放候选工作角色绑定、临时报告、截图、运行日志 |
+| `docs/organization/` | 组织架构、部门职责、人员资料、工作角色和项目治理角色映射真源 | `组织架构和部门职责.md`、`花名册.md`、`工作角色目录与岗位映射.md`、`信息化项目人员角色映射.md` | 部门到域映射变化必须先改这里；工作角色由行政人事部维护并映射花名册岗位；项目治理角色映射继续承接项目材料关系 | 不在页面、脚本或运行台账里另造部门、人员、工作角色或项目治理角色口径 |
 | `docs/contracts/` | 自动化校验合同 | 合同 README、JSON 合同 | 可修改校验规则和执行契约 | 不写业务流程正文，不替代流程输入基线或组织真源 |
 | `docs/integration/` | 集成和主数据治理方案 | 方案文档 | 可沉淀接口、主数据、系统协同方案 | 不作为当前流程输入基线 |
 | `docs/samples/` | 最小样例 | 样例 README 或文件名 | 只保留可复现、可说明格式的样例 | 不堆放完整生成输出 |
@@ -65,7 +65,7 @@
 | 路径 | 责任 | 输入 | 输出 | 修改规则 |
 |---|---|---|---|---|
 | `scripts/` | 跨 app / 跨资料的仓库级自动化 | 由脚本和 `scripts/README.md` 声明 | 由脚本和 `scripts/README.md` 声明 | 修改前读取 `scripts/AGENTS.md`; 脚本必须说明输入、输出、是否写文件、是否改数据库 |
-| `scripts/parse-sankey-data.mjs` | 流程地图解析与注入 | `docs/norms/`、`docs/organization/` | `docs/company-sankey-data.json`、PMO 驾驶舱内嵌数据 | 修改后必须验证 PMO 驾驶舱数据 |
+| `scripts/parse-sankey-data.mjs` | 流程地图解析与注入 | `docs/norms/`、`docs/organization/`、`docs/work-role-data.json` | `docs/company-sankey-data.json`、PMO 驾驶舱内嵌数据 | 修改后必须验证 PMO 驾驶舱数据；只发布 confirmed 工作角色绑定 |
 | `scripts/check-dashboard-data.mjs` | 驾驶舱数据检查 | PMO 驾驶舱 / JSON | 检查输出 | 只做校验，不改流程输入基线或组织真源 |
 | `scripts/glossary.mjs` | 术语表查询 | `docs/glossary.md` | 查询输出 | 新术语仍应写入术语表 |
 

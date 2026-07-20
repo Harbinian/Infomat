@@ -14,6 +14,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 const schemaPath = path.join(__dirname, '..', '..', 'docs', 'contracts', 'document-structured-output.schema.json');
 const STANDARD_SCHEMA = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
 const ROSTER_PATH = path.join(__dirname, '..', '..', 'docs', 'organization', '花名册.md');
+const WORK_ROLE_DATA_PATH = path.join(__dirname, '..', '..', 'docs', 'work-role-data.json');
 
 const ENUMS = {
   basisType: ['现场实际', '制度 / 规程', '表单 / 台账', '会议 / 访谈', '暂无证据'],
@@ -30,7 +31,8 @@ const ENUMS = {
   fieldStatus: ['suggested', 'business_confirmed', 'data_governed', 'published', 'retired'],
   evidenceType: ['制度条款', '表单样例', '访谈记录', '会议纪要', '流程图', '台账记录', '暂无证据'],
   evidenceStatus: ['verified', 'pending_review', 'source_missing', 'ocr_extracted_not_confirmed', 'review_only'],
-  evidenceObjectType: ['draft', 'document_profile', 'term', 'process', 'step', 'behavior_detail', 'handoff', 'form', 'form_table', 'form_table_field', 'form_field', 'evidence', 'mdm_requirement'],
+  evidenceObjectType: ['draft', 'document_profile', 'term', 'process', 'step', 'behavior_detail', 'handoff', 'form', 'form_table', 'form_table_field', 'form_field', 'evidence', 'mdm_requirement', 'work_role_binding'],
+  workRoleParticipationTypes: ['owner', 'initiator', 'executor', 'reviewer', 'approver', 'collaborator', 'provider', 'receiver'],
   maturity: ['可保存草稿', '发布前需补', '可提交审核', '可支撑发布'],
   lStatus: ['unclassified', 'needs_review', 'confirmed'],
   departments: [
@@ -98,6 +100,7 @@ const EXPLICIT_BEHAVIOR_FIELDS = [
 const MAPPING_FILES_DIR = path.join(__dirname, '..', '..', 'docs', 'norms');
 let processMappingCatalogCache = null;
 let rosterRoleCatalogCache = null;
+let workRoleCatalogCache = null;
 
 const DEEPSEEK_TIMEOUT_MS = Number(process.env.STRUCTURED_OUTPUT_DEEPSEEK_TIMEOUT_MS || 8000);
 const DEEPSEEK_MAX_RETRIES = Number(process.env.STRUCTURED_OUTPUT_DEEPSEEK_MAX_RETRIES || 1);
@@ -321,6 +324,7 @@ function createEmptyDocument() {
     form_fields: [],
     evidence_catalog: [],
     mdm_requirement_catalog: [],
+    work_role_bindings: [],
     pending_issues: [],
     structure_block_projection: createEmptyProjection(),
     markdown_draft: ''
@@ -345,7 +349,8 @@ function createEmptyProjection() {
     l3_catalog: [],
     a1_catalog: [],
     evidence_catalog: [],
-    mdm_requirement_catalog: []
+    mdm_requirement_catalog: [],
+    work_role_bindings: []
   };
 }
 
@@ -703,10 +708,110 @@ function loadRosterRoleCatalog() {
   return catalog;
 }
 
+function isEffectiveWorkRoleRecord(record, today = new Date().toISOString().slice(0, 10)) {
+  if (!record || record.status !== 'active') return false;
+  if (record.effective_from && record.effective_from > today) return false;
+  if (record.effective_to && record.effective_to < today) return false;
+  return true;
+}
+
+function loadWorkRoleCatalog() {
+  if (workRoleCatalogCache) return workRoleCatalogCache;
+  const empty = {
+    available: false,
+    schemaVersion: 'work-role-data-v1',
+    workRoles: [],
+    workRolePositionMappings: [],
+    workRoleAliases: [],
+    workRolesByDepartment: {},
+    roleByCode: new Map()
+  };
+  if (!fs.existsSync(WORK_ROLE_DATA_PATH)) {
+    workRoleCatalogCache = empty;
+    return empty;
+  }
+
+  try {
+    const source = JSON.parse(fs.readFileSync(WORK_ROLE_DATA_PATH, 'utf8'));
+    const workRoles = (Array.isArray(source.workRoles) ? source.workRoles : [])
+      .filter(item => item && item.work_role_code && item.work_role_name)
+      .map(item => {
+        const role = {
+          work_role_code: normalizeLine(item.work_role_code),
+          work_role_name: normalizeLine(item.work_role_name),
+          definition: normalizeLine(item.definition) || null,
+          status: normalizeLine(item.status) || 'draft',
+          effective_from: item.effective_from || null,
+          effective_to: item.effective_to || null
+        };
+        return { ...role, is_effective: isEffectiveWorkRoleRecord(role) };
+      });
+    const roleByCode = new Map(workRoles.map(item => [item.work_role_code, item]));
+    const mappings = (Array.isArray(source.workRolePositionMappings) ? source.workRolePositionMappings : [])
+      .filter(item => item && roleByCode.has(normalizeLine(item.work_role_code)))
+      .map(item => {
+        const mapping = {
+          work_role_code: normalizeLine(item.work_role_code),
+          department_name: normalizeLine(item.department_name),
+          position_name: normalizeLine(item.position_name),
+          status: normalizeLine(item.status) || 'draft',
+          effective_from: item.effective_from || null,
+          effective_to: item.effective_to || null
+        };
+        return { ...mapping, is_effective: isEffectiveWorkRoleRecord(mapping) };
+      });
+    const aliases = (Array.isArray(source.workRoleAliases) ? source.workRoleAliases : [])
+      .filter(item => item && roleByCode.has(normalizeLine(item.work_role_code)))
+      .map(item => ({
+        source_role_text: normalizeLine(item.source_role_text),
+        work_role_code: normalizeLine(item.work_role_code),
+        department_name: normalizeLine(item.department_name),
+        status: normalizeLine(item.status) || 'active'
+      }));
+    const byDepartment = new Map();
+    for (const mapping of mappings) {
+      const role = roleByCode.get(mapping.work_role_code);
+      if (!role?.is_effective || !mapping.is_effective || !mapping.department_name) continue;
+      if (!byDepartment.has(mapping.department_name)) byDepartment.set(mapping.department_name, new Map());
+      const departmentRoles = byDepartment.get(mapping.department_name);
+      if (!departmentRoles.has(role.work_role_code)) {
+        departmentRoles.set(role.work_role_code, { ...role, position_names: [] });
+      }
+      const item = departmentRoles.get(role.work_role_code);
+      if (mapping.position_name && !item.position_names.includes(mapping.position_name)) item.position_names.push(mapping.position_name);
+    }
+    const workRolesByDepartment = Object.fromEntries(
+      Array.from(byDepartment.entries())
+        .sort(([left], [right]) => left.localeCompare(right, 'zh-CN'))
+        .map(([department, roles]) => [
+          department,
+          Array.from(roles.values()).sort((left, right) => left.work_role_code.localeCompare(right.work_role_code))
+        ])
+    );
+    workRoleCatalogCache = {
+      available: workRoles.some(item => item.is_effective),
+      schemaVersion: source.schemaVersion || 'work-role-data-v1',
+      workRoles,
+      workRolePositionMappings: mappings,
+      workRoleAliases: aliases,
+      workRolesByDepartment,
+      roleByCode
+    };
+    return workRoleCatalogCache;
+  } catch (_) {
+    workRoleCatalogCache = empty;
+    return empty;
+  }
+}
+
 function publicEnums() {
+  const workRoleCatalog = loadWorkRoleCatalog();
   return {
     ...ENUMS,
-    rosterRolesByDepartment: loadRosterRoleCatalog().rolesByDepartment || {}
+    rosterRolesByDepartment: loadRosterRoleCatalog().rolesByDepartment || {},
+    workRoles: workRoleCatalog.workRoles,
+    workRolesByDepartment: workRoleCatalog.workRolesByDepartment,
+    workRoleDataVersion: workRoleCatalog.schemaVersion
   };
 }
 
@@ -741,7 +846,7 @@ function checkActorAgainstRoster(actorRole, expectedDepartment = '') {
   if (!role) return null;
   const catalog = loadRosterRoleCatalog();
   if (!catalog.available) {
-    return '当前未读取到花名册，执行角色需要人工核对。';
+    return '当前未读取到花名册，原文角色对应的候选岗位需要人工核对。';
   }
 
   const values = splitActorRoleValues(role);
@@ -772,11 +877,11 @@ function checkActorAgainstRoster(actorRole, expectedDepartment = '') {
     invalid.push(value);
   }
   if (outsideDepartment.length) {
-    return '这个执行角色不属于当前归口部门，请核对是否应改为本部门岗位，或作为跨部门流转处理。';
+    return '原文中的这个角色称谓可能不属于当前归口部门，请核对参与部门或作为跨部门流转处理。';
   }
   if (!invalid.length) return null;
-  if (expectedDepartment) return '花名册里没有找到当前归口部门下的这个职务，请核对制度原文是否写清。';
-  return '花名册里没有找到这个执行角色对应的部门+职务，请核对制度原文是否写清。';
+  if (expectedDepartment) return '花名册里没有找到当前归口部门下的同名候选岗位，请核对制度原文；岗位同名也不代表工作角色已经确认。';
+  return '花名册里没有找到这个原文角色对应的候选部门和岗位，请核对制度原文。';
 }
 
 function applyActorRoleWarnings(data, context) {
@@ -789,6 +894,184 @@ function applyActorRoleWarnings(data, context) {
       message
     });
   });
+}
+
+function roleDepartmentName(sourceRoleText, fallbackDepartment) {
+  const text = normalizeLine(sourceRoleText);
+  const candidates = [
+    ...ENUMS.departments.map(item => item.department_name),
+    ...Object.keys(loadWorkRoleCatalog().workRolesByDepartment || {})
+  ].filter(Boolean).sort((left, right) => right.length - left.length);
+  return candidates.find(department => text.includes(department)) || normalizeLine(fallbackDepartment);
+}
+
+function roleTextKind(sourceRoleText) {
+  const value = normalizeLine(sourceRoleText);
+  if (!value) return 'empty';
+  if (/(?:→|->|\/|／|、|，|,|；|;|与|及|和)/.test(value)) return 'multiple';
+  if (/^(?:申请人|当前处理人|本人|经办人|全体员工|全体人员|全公司人员|所有员工)$/.test(value)) return 'contextual';
+  if (/^(?:客户|供应商|银行|外部机构|第三方|承包商|承揽方)(?:$|代表$|联系人$|单位$)/.test(value)) return 'external';
+  if (/^(?:有关部门|相关部门|各部门|各单位|相关单位|使用单位|责任单位|业务部门|所属部门|班组)(?:负责人|人员|代表)?$/.test(value)) return 'collective';
+  return 'candidate';
+}
+
+function inferWorkRoleParticipationType(step) {
+  const text = normalizeLine([step?.step_name, step?.actor_role].filter(Boolean).join(' '));
+  if (/批准|审批|签发|核准/.test(text)) return 'approver';
+  if (/审核|复核|校对|核对|评审/.test(text)) return 'reviewer';
+  if (/发起|申请|提出/.test(text)) return 'initiator';
+  if (/提供|报送|提交资料|传递/.test(text)) return 'provider';
+  if (/接收|承接|收取/.test(text)) return 'receiver';
+  if (/协同|协作|配合|会签/.test(text)) return 'collaborator';
+  return 'executor';
+}
+
+function activeWorkRoleCandidates(sourceRoleText, departmentName) {
+  const catalog = loadWorkRoleCatalog();
+  if (!catalog.available) return [];
+  const sourceToken = normalizeRoleToken(sourceRoleText);
+  const departmentToken = normalizeRoleToken(departmentName);
+  if (!sourceToken) return [];
+  const matchingCodes = new Set();
+  const activeMappings = catalog.workRolePositionMappings.filter(mapping =>
+    mapping.is_effective &&
+    (!departmentName || mapping.department_name === departmentName || mapping.department_name === '全公司')
+  );
+  const rolesAvailableInDepartment = new Set(activeMappings.map(mapping => mapping.work_role_code));
+
+  for (const role of catalog.workRoles) {
+    if (!role.is_effective || !rolesAvailableInDepartment.has(role.work_role_code)) continue;
+    const roleToken = normalizeRoleToken(role.work_role_name);
+    if (sourceToken === roleToken || (departmentToken && sourceToken === `${departmentToken}${roleToken}`)) {
+      matchingCodes.add(role.work_role_code);
+    }
+  }
+  for (const alias of catalog.workRoleAliases) {
+    if (alias.status !== 'active' || !rolesAvailableInDepartment.has(alias.work_role_code)) continue;
+    if (alias.department_name && departmentName && alias.department_name !== departmentName && alias.department_name !== '全公司') continue;
+    const aliasToken = normalizeRoleToken(alias.source_role_text);
+    if (sourceToken === aliasToken || (departmentToken && sourceToken === `${departmentToken}${aliasToken}`)) {
+      matchingCodes.add(alias.work_role_code);
+    }
+  }
+  for (const mapping of activeMappings) {
+    const positionToken = normalizeRoleToken(mapping.position_name);
+    if (!positionToken) continue;
+    if (sourceToken === positionToken || (departmentToken && sourceToken === `${departmentToken}${positionToken}`)) {
+      matchingCodes.add(mapping.work_role_code);
+    }
+  }
+  return Array.from(matchingCodes)
+    .map(code => catalog.roleByCode.get(code))
+    .filter(Boolean);
+}
+
+function roleIssueStableKey(data, step, sourceRoleText) {
+  const source = [
+    data.draft?.department?.department_name,
+    data.draft?.document_no || data.draft?.document_title,
+    step.process_ref,
+    step.step_ref,
+    sourceRoleText,
+    'work_role_bindings'
+  ].join('|');
+  return `work-role-${crypto.createHash('sha256').update(source).digest('hex').slice(0, 20)}`;
+}
+
+function addRoleEvidenceAndReviewItems(data, context) {
+  const bindings = [];
+  const issues = [];
+  const processesByRef = new Map((data.processes || []).map(item => [item.process_ref, item]));
+  for (const [index, step] of (data.steps || []).entries()) {
+    const sourceRoleText = normalizeLine(step.actor_role);
+    if (!sourceRoleText) continue;
+    const fieldPath = `steps.${index}.actor_role`;
+    const source = context.fieldSources[fieldPath] || {};
+    const evidenceRef = `EV-ROLE-${String(index + 1).padStart(3, '0')}`;
+    const participantDepartmentName = roleDepartmentName(
+      sourceRoleText,
+      processesByRef.get(step.process_ref)?.owner || data.draft?.department?.department_name || ''
+    );
+    data.evidence_catalog.push({
+      evidence_ref: evidenceRef,
+      draft_ref: null,
+      object_type: 'step',
+      object_ref: step.step_ref,
+      evidence_type: '制度条款',
+      description: `制度原文中的角色或岗位称谓：${sourceRoleText}`,
+      source_name: source.source_name || data.draft?.document_title || null,
+      source_anchor: source.source_anchor || null,
+      source_file: source.source_name || null,
+      source_excerpt: source.source_text || sourceRoleText,
+      locator: source.source_anchor || null,
+      locate_method: context.fieldOrigins[fieldPath] === 'external_reference' ? 'external_reference' : 'template_text',
+      confirmer: null,
+      record_time: null,
+      missing_reason: null,
+      expected_provider: participantDepartmentName || null,
+      expected_at: null,
+      maturity: '可保存草稿',
+      status: 'pending_review'
+    });
+    step.evidence_refs = Array.from(new Set([...(step.evidence_refs || []), evidenceRef]));
+
+    const kind = roleTextKind(sourceRoleText);
+    const candidates = kind === 'candidate'
+      ? activeWorkRoleCandidates(sourceRoleText, participantDepartmentName)
+      : [];
+    if (candidates.length === 1) {
+      bindings.push({
+        binding_ref: `wr_binding_${bindings.length + 1}`,
+        process_ref: step.process_ref,
+        step_ref: step.step_ref,
+        participant_department: normalizeDepartment(participantDepartmentName),
+        source_role_text: sourceRoleText,
+        work_role_code: candidates[0].work_role_code,
+        participation_type: inferWorkRoleParticipationType(step),
+        status: 'proposed',
+        evidence_refs: [evidenceRef],
+        confirmation_basis: null
+      });
+    }
+
+    const issueReason = kind === 'multiple'
+      ? '原文在同一字段中包含多个角色，需要逐个确认参与类型。'
+      : kind === 'contextual'
+        ? '这是随流程实例变化的场景身份，不应直接登记为固定工作角色。'
+        : kind === 'external'
+          ? '这是外部参与方，不应直接登记为内部工作角色。'
+          : kind === 'collective'
+            ? '这是组织或集体称谓，需要确认是否存在可映射岗位的正式工作角色。'
+            : candidates.length === 1
+              ? `系统只提出候选 ${candidates[0].work_role_code}，仍需流程责任部门确认。`
+              : candidates.length > 1
+                ? '原文可对应多个正式工作角色，需要人工选择。'
+                : '尚未找到行政人事部已发布且在参与部门具有有效岗位映射的工作角色。';
+    issues.push({
+      stable_key: roleIssueStableKey(data, step, sourceRoleText),
+      department: participantDepartmentName || null,
+      document_name: data.draft?.document_title || null,
+      structured_object_type: 'step',
+      structured_object_key: String(step.a1_code || step.step_ref),
+      target_block: 'work_role_bindings',
+      target_field: 'work_role_code',
+      current_value: sourceRoleText,
+      source_file: source.source_name || null,
+      source_anchor: source.source_anchor || null,
+      source_excerpt: source.source_text || sourceRoleText,
+      evidence_status: 'pending_review',
+      issue_type: '角色责任待确认',
+      question_for_user: `${issueReason} 请核对这个业务行为应由哪个工作角色以何种方式参与。`,
+      suggested_handler: '流程责任部门与行政人事部',
+      allowed_actions: ['专项确认', '不是问题'],
+      user_decision: null,
+      user_reason: null,
+      user_note: null,
+      next_step: '先核对制度原文，再由流程责任部门确认绑定；角色目录或岗位映射缺失时交行政人事部维护。'
+    });
+  }
+  data.work_role_bindings = bindings;
+  data.pending_issues = issues;
 }
 
 function loadProcessMappingCatalog() {
@@ -1915,6 +2198,20 @@ function buildProjection(data) {
     l3_catalog: l3Catalog,
     a1_catalog: a1Catalog,
     evidence_catalog: evidenceCatalog,
+    work_role_bindings: (data.work_role_bindings || [])
+      .filter(item => item.status === 'confirmed')
+      .map(item => ({
+        binding_ref: item.binding_ref,
+        process_ref: item.process_ref,
+        step_ref: item.step_ref == null ? null : item.step_ref,
+        participant_department: item.participant_department,
+        source_role_text: item.source_role_text || null,
+        work_role_code: item.work_role_code,
+        participation_type: item.participation_type,
+        status: 'confirmed',
+        evidence_refs: item.evidence_refs || [],
+        confirmation_basis: item.confirmation_basis
+      })),
     mdm_requirement_catalog: data.mdm_requirement_catalog.map(item => ({
       object: item.object,
       key_fields: item.key_fields || [],
@@ -2414,6 +2711,7 @@ function statsFrom(data) {
     tableFields: (data.form_table_fields || []).length,
     fields: (data.form_fields || []).length,
     evidence: (data.evidence_catalog || []).length,
+    workRoleBindings: (data.work_role_bindings || []).length,
     mdmRequirements: (data.mdm_requirement_catalog || []).length,
     terms: (data.terms || []).length
   };
@@ -2622,7 +2920,7 @@ async function extractFromText(rawText, options = {}) {
   if (options.includeDeepSeekValues) await applyDeepSeekValues(data, text, context);
   context.fieldSuggestions = {};
   applyActorRoleWarnings(data, context);
-  data.pending_issues = [];
+  addRoleEvidenceAndReviewItems(data, context);
   data.structure_block_projection = buildProjection(data);
   data.markdown_draft = buildMarkdownDraft(data);
   data.generated_at = new Date().toISOString();

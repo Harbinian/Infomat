@@ -12,6 +12,7 @@
 |---|---|---|
 | `0001-repo-structure-and-artifacts.md` | 仓库结构与生成物策略 | Accepted |
 | `0002-codex-collaboration-and-doc-sync.md` | Codex 协作入口与代码文档同步 | Accepted |
+| `0003-work-role-governance-and-process-binding.md` | 工作角色治理、岗位映射与流程绑定 | Accepted |
 
 ## 2. 何时新增 ADR
 

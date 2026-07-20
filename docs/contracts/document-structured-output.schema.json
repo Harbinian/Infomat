@@ -48,6 +48,14 @@
         "$ref": "#/$defs/step"
       }
     },
+    "work_role_bindings": {
+      "type": "array",
+      "description": "L3 流程负责人或 A1 参与角色与行政人事部正式工作角色的候选/确认关系。该字段为 v2 向后兼容扩展。",
+      "items": {
+        "$ref": "#/$defs/workRoleBinding"
+      },
+      "default": []
+    },
     "behavior_details": {
       "type": "array",
       "items": {
@@ -345,6 +353,7 @@
         "form_table",
         "form_table_field",
         "form_field",
+        "work_role_binding",
         "evidence",
         "mdm_requirement"
       ]
@@ -678,6 +687,163 @@
           "pgDesignStepOutputResult"
         ]
       }
+    },
+    "workRoleBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "binding_ref",
+        "process_ref",
+        "step_ref",
+        "participant_department",
+        "source_role_text",
+        "work_role_code",
+        "participation_type",
+        "status",
+        "evidence_refs",
+        "confirmation_basis"
+      ],
+      "properties": {
+        "binding_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "process_ref": {
+          "$ref": "#/$defs/recordRef"
+        },
+        "step_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/recordRef"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "participant_department": {
+          "$ref": "#/$defs/department"
+        },
+        "source_role_text": {
+          "type": "string",
+          "minLength": 1
+        },
+        "work_role_code": {
+          "type": "string",
+          "pattern": "^WR-[0-9]{4}$"
+        },
+        "participation_type": {
+          "enum": [
+            "owner",
+            "initiator",
+            "executor",
+            "reviewer",
+            "approver",
+            "collaborator",
+            "provider",
+            "receiver"
+          ]
+        },
+        "status": {
+          "enum": [
+            "proposed",
+            "confirmed"
+          ]
+        },
+        "evidence_refs": {
+          "$ref": "#/$defs/evidenceRefs"
+        },
+        "confirmation_basis": {
+          "$ref": "#/$defs/nullableString"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "step_ref": {
+                "type": "null"
+              }
+            },
+            "required": [
+              "step_ref"
+            ]
+          },
+          "then": {
+            "properties": {
+              "participation_type": {
+                "const": "owner"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "step_ref": {
+                "not": {
+                  "type": "null"
+                }
+              }
+            },
+            "required": [
+              "step_ref"
+            ]
+          },
+          "then": {
+            "properties": {
+              "participation_type": {
+                "not": {
+                  "const": "owner"
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "confirmed"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "confirmation_basis": {
+                "type": "string",
+                "minLength": 1
+              },
+              "evidence_refs": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              }
+            }
+          }
+        }
+      ]
+    },
+    "confirmedWorkRoleBinding": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/workRoleBinding"
+        },
+        {
+          "properties": {
+            "status": {
+              "const": "confirmed"
+            }
+          }
+        }
+      ]
     },
     "behaviorDetail": {
       "type": "object",
@@ -1099,6 +1265,9 @@
         "source_file": {
           "$ref": "#/$defs/nullableString"
         },
+        "source_excerpt": {
+          "$ref": "#/$defs/nullableString"
+        },
         "locator": {
           "$ref": "#/$defs/nullableString"
         },
@@ -1224,6 +1393,7 @@
             "terms",
             "l3_catalog",
             "a1_catalog",
+            "work_role_bindings",
             "behavior_details",
             "cross_dept_handoffs",
             "forms",
@@ -1327,6 +1497,14 @@
           "items": {
             "$ref": "#/$defs/a1CatalogItem"
           }
+        },
+        "work_role_bindings": {
+          "type": "array",
+          "description": "仅投影已经行政人事确认的工作角色关系。",
+          "items": {
+            "$ref": "#/$defs/confirmedWorkRoleBinding"
+          },
+          "default": []
         },
         "evidence_catalog": {
           "type": "array",

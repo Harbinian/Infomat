@@ -251,6 +251,30 @@ function structuredOutputData(body) {
   return data && typeof data === 'object' ? data : null;
 }
 
+function hasNonEmptyWorkRoleBindings(data) {
+  const values = [
+    data && data.work_role_bindings,
+    data && data.structure_block_projection && data.structure_block_projection.work_role_bindings
+  ];
+  return values.some(value => {
+    if (Array.isArray(value)) return value.length > 0;
+    if (value && typeof value === 'object') return Object.keys(value).length > 0;
+    return Boolean(text(value));
+  });
+}
+
+function assertWorkRoleBindingsSupported(data) {
+  if (text(data && data.schema_version) !== STRUCTURED_OUTPUT_SCHEMA_VERSION || !hasNonEmptyWorkRoleBindings(data)) return;
+  throw httpError(422, '校验失败', {
+    code: 'WORK_ROLE_BINDINGS_UNSUPPORTED',
+    error: '校验失败',
+    details: [{
+      field: 'work_role_bindings',
+      message: '当前 MDM 尚不承接工作角色绑定。请保留原结构化文件，并在 3001 继续整理；待 MDM 承接能力上线后再导入。'
+    }]
+  });
+}
+
 function enumValue(value, allowed, fallback) {
   const cleaned = text(value);
   if (!cleaned) return fallback;
@@ -3183,6 +3207,7 @@ router.get('/documents/lookup', requireAuth, (req, res) => runAction(res, async 
 }));
 
 router.post('/import-structured-output', requireAuth, (req, res) => runAction(res, async () => {
+  assertWorkRoleBindingsSupported(structuredOutputData(req.body || {}));
   const repo = await repository();
   const result = await importStructuredOutput(req, repo, req.body || {});
   res.status(201).json(result);
@@ -3590,5 +3615,6 @@ router.ensureProcessDesignEditionSchema = ensureProcessDesignEditionSchema;
 router.ensureProcessDesignEvidenceStatusSchema = ensureProcessDesignEvidenceStatusSchema;
 router.ensureProcessDesignFormStructureSchema = ensureProcessDesignFormStructureSchema;
 router.ensureProcessDesignStepTransitionSchema = ensureProcessDesignStepTransitionSchema;
+router.assertWorkRoleBindingsSupported = assertWorkRoleBindingsSupported;
 
 module.exports = router;

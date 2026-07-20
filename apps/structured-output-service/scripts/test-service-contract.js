@@ -294,6 +294,13 @@ function runFrontendWorkflowProbe(enums) {
   const probeCode = `
 ${match[1]}
 rosterRolesByDepartment = ${JSON.stringify(enums.rosterRolesByDepartment || {})};
+workRoles = [
+  { work_role_code: 'WR-0001', work_role_name: '付款经办角色', status: 'active', is_effective: true },
+  { work_role_code: 'WR-0002', work_role_name: '历史复核角色', status: 'retired', is_effective: false }
+];
+workRolesByDepartment = {
+  '财务部': [{ work_role_code: 'WR-0001', work_role_name: '付款经办角色', status: 'active', is_effective: true, position_names: ['会计员'] }]
+};
 docData = ensureDocument({
   schema_version: 'document-structured-output-v2',
   draft: {
@@ -334,7 +341,19 @@ docData = ensureDocument({
   ],
   form_table_fields: [
     { table_field_ref: 'table_field_1', table_ref: 'table_1', structure_kind: 'main', field_no: null, field_code: null, field_name: '审批结果', field_type: '文本', required: true, description: '记录审批结果' }
-  ]
+  ],
+  evidence_catalog: [
+    { evidence_ref: 'EV-ROLE-001', object_type: 'step', object_ref: 'step_finance_action', evidence_type: '制度条款', description: '制度原文中的角色或岗位称谓：财务部会计员', source_name: '财务制度.docx', source_anchor: '第 3 页第 2 条', source_file: '财务制度.docx', source_excerpt: '财务部会计员提交付款资料', locator: '第 3 页第 2 条', locate_method: 'template_text', status: 'verified' },
+    { evidence_ref: 'EV-ROLE-002', object_type: 'step', object_ref: 'step_quality_action', evidence_type: '制度条款', description: '制度原文中的角色或岗位称谓：质量复核员', source_name: '质量制度.docx', source_anchor: '第 2 页第 1 条', source_file: '质量制度.docx', source_excerpt: '质量复核员复核资料', locator: '第 2 页第 1 条', locate_method: 'template_text', status: 'verified' }
+  ],
+  work_role_bindings: [
+    { binding_ref: 'wrb_confirmed', process_ref: 'proc_finance', step_ref: 'step_finance_action', participant_department: { department_name: '财务部' }, source_role_text: '财务部会计员', work_role_code: 'WR-0001', participation_type: 'executor', status: 'confirmed', evidence_refs: ['EV-ROLE-001'], confirmation_basis: '财务部已确认该业务行为责任' }
+  ],
+  structure_block_projection: {
+    work_role_bindings: [
+      { binding_ref: 'stale_proposed', process_ref: 'proc_finance', step_ref: 'step_finance_action', participant_department: { department_name: '财务部' }, source_role_text: '财务部会计员', work_role_code: 'WR-0001', participation_type: 'executor', status: 'proposed', evidence_refs: ['EV-ROLE-001'], confirmation_basis: null }
+    ]
+  }
 });
 const financeOptions = actorRoleDepartmentOptions(processDepartmentForStep(0)).map(item => item.value);
 const qualityOptions = actorRoleDepartmentOptions(processDepartmentForStep(2)).map(item => item.value);
@@ -342,6 +361,48 @@ const leaderOptions = actorRoleDepartmentOptions(processDepartmentForStep(3)).ma
 const formOptions = actorRoleDepartmentOptions(formDepartment(0), '先确认形成部门').map(item => item.value);
 const exported = normalizeForStructuredExport(docData);
 const reimported = ensureDocument(exported);
+const validConfirmedProblems = confirmationProblemsForWorkRoleBinding(0);
+docData.evidence_catalog.push({ evidence_ref: 'EV-PENDING-001', object_type: 'step', object_ref: 'step_finance_action', evidence_type: '制度条款', description: '待人工核验的角色证据', source_name: '财务制度.docx', source_anchor: '第 4 页第 1 条', source_file: '财务制度.docx', source_excerpt: '财务部会计员复核付款资料', locator: '第 4 页第 1 条', locate_method: 'template_text', status: 'pending_review' });
+const pendingEvidenceBinding = normalizeWorkRoleBinding({
+  binding_ref: 'wrb_pending_evidence', process_ref: 'proc_finance', step_ref: 'step_finance_action',
+  participant_department: { department_name: '财务部' }, source_role_text: '财务部会计员', work_role_code: 'WR-0001',
+  participation_type: 'reviewer', status: 'proposed', evidence_refs: ['EV-PENDING-001'], confirmation_basis: '财务部人工确认'
+}, 1);
+docData.work_role_bindings.push(pendingEvidenceBinding);
+const pendingEvidenceProblems = confirmationProblemsForWorkRoleBinding(1);
+const pendingEvidenceConfirmProblems = confirmationProblemsForWorkRoleBinding(1, { allowEvidenceVerification: true });
+markWorkRoleEvidenceVerified(pendingEvidenceBinding);
+const verifiedAfterManualConfirmation = docData.evidence_catalog.find(item => item.evidence_ref === 'EV-PENDING-001')?.status;
+docData.work_role_bindings.pop();
+const invalidSceneBinding = normalizeWorkRoleBinding({
+  binding_ref: 'wrb_invalid_scene', process_ref: 'proc_finance', step_ref: 'step_finance_action',
+  participant_department: { department_name: '财务部' }, source_role_text: '申请人', work_role_code: 'WR-0001',
+  participation_type: 'initiator', status: 'confirmed', evidence_refs: ['EV-ROLE-001'], confirmation_basis: '测试'
+}, 1);
+docData.work_role_bindings.push(invalidSceneBinding);
+const invalidSceneProblems = confirmationProblemsForWorkRoleBinding(1);
+const firstInvalidRef = firstInvalidConfirmedWorkRoleBinding()?.binding.binding_ref || null;
+const firstInvalidStructuralRef = firstInvalidWorkRoleBinding()?.binding.binding_ref || null;
+docData.work_role_bindings.pop();
+docData.evidence_catalog.push({ evidence_ref: 'EV-OCR-001', object_type: 'step', object_ref: 'step_finance_action', evidence_type: '制度条款', description: 'OCR 角色证据', source_name: '扫描件.pdf', source_anchor: '第 1 页', source_file: '扫描件.pdf', source_excerpt: '财务部会计员', locator: '第 1 页', locate_method: 'ocr', status: 'ocr_extracted_not_confirmed' });
+const ocrBinding = normalizeWorkRoleBinding({
+  binding_ref: 'wrb_ocr', process_ref: 'proc_finance', step_ref: 'step_finance_action',
+  participant_department: { department_name: '财务部' }, source_role_text: '财务部会计员', work_role_code: 'WR-0001',
+  participation_type: 'executor', status: 'confirmed', evidence_refs: ['EV-OCR-001'], confirmation_basis: '测试'
+}, 1);
+docData.work_role_bindings.push(ocrBinding);
+const ocrProblems = confirmationProblemsForWorkRoleBinding(1);
+docData.work_role_bindings.pop();
+const retiredHistoryBinding = normalizeWorkRoleBinding({
+  binding_ref: 'wrb_retired_history', process_ref: 'proc_quality', step_ref: 'step_quality_action',
+  participant_department: { department_name: '质量管理部' }, source_role_text: '质量复核员', work_role_code: 'WR-0002',
+  participation_type: 'reviewer', status: 'confirmed', evidence_refs: ['EV-ROLE-002'], confirmation_basis: '历史确认记录'
+}, 1);
+docData.work_role_bindings.push(retiredHistoryBinding);
+importedConfirmedWorkRoleRefs.add('wrb_retired_history');
+const retiredHistoryProblems = confirmationProblemsForWorkRoleBinding(1);
+docData.work_role_bindings.pop();
+importedConfirmedWorkRoleRefs.delete('wrb_retired_history');
 globalThis.__workflowProbe = {
   financeOptions,
   qualityOptions,
@@ -358,6 +419,18 @@ globalThis.__workflowProbe = {
   financeStepOptions: stepOptionsForProcess('proc_finance').map(item => item.value),
   exportedTransitions: exported.step_transitions.map(item => ({ ref: item.transition_ref, process: item.process_ref, from: item.from_step_ref, to: item.to_step_ref })),
   exportedSchemaVersion: exported.schema_version,
+  exportedWorkRoleBindings: exported.work_role_bindings,
+  projectedWorkRoleBindings: exported.structure_block_projection.work_role_bindings,
+  reimportedWorkRoleBindings: reimported.work_role_bindings,
+  validConfirmedProblems,
+  pendingEvidenceProblems,
+  pendingEvidenceConfirmProblems,
+  verifiedAfterManualConfirmation,
+  invalidSceneProblems,
+  ocrProblems,
+  firstInvalidRef,
+  firstInvalidStructuralRef,
+  retiredHistoryProblems,
   reimportedProcessCount: reimported.processes.length,
   reimportedLeaderRole: reimported.steps.find(step => step.step_ref === 'step_leader_action')?.actor_role,
   reimportedFormRole: reimported.forms[0]?.responsible_role,
@@ -417,6 +490,10 @@ async function run() {
     assert.equal(health.deepseek.configured, true, 'mocked DeepSeek should be treated as configured');
     assert.equal(JSON.stringify(health).includes('DEEPSEEK_API_KEY'), false, 'health must not expose API key names or values');
     const serviceEnums = await (await fetch(`${baseUrl}/api/enums`)).json();
+    assert.ok(schema.properties.work_role_bindings, 'v2 schema should expose optional work role bindings');
+    assert.ok(Array.isArray(serviceEnums.workRoles), 'service enums should expose the formal work role catalog');
+    assert.ok(serviceEnums.workRolesByDepartment && typeof serviceEnums.workRolesByDepartment === 'object', 'service enums should expose work roles by department');
+    assert.deepEqual(serviceEnums.workRoleParticipationTypes, ['owner', 'initiator', 'executor', 'reviewer', 'approver', 'collaborator', 'provider', 'receiver']);
     assert.ok(serviceEnums.departments?.some(item => item.department_name === '全公司'), 'service enums should include all-company execution scope');
     assert.ok(serviceEnums.departments?.some(item => item.department_name === '公司领导'), 'service enums should expose company leadership as an execution department');
     assert.ok(serviceEnums.rosterRolesByDepartment?.['经营发展部']?.includes('计划员'), 'service enums should expose roster positions by department');
@@ -443,6 +520,18 @@ async function run() {
     assert.ok(workflowProbe.financeStepOptions.includes('step_finance_action'), 'decision branch options should include same-process action steps');
     assert.equal(workflowProbe.financeStepOptions.includes('step_business_action'), false, 'decision branch options must not include steps from another process');
     assert.equal(workflowProbe.exportedSchemaVersion, 'document-structured-output-v2', 'workflow export should preserve v2 schema');
+    assert.equal(workflowProbe.exportedWorkRoleBindings.length, 1, 'workflow export should preserve work role bindings');
+    assert.deepEqual(workflowProbe.projectedWorkRoleBindings, workflowProbe.exportedWorkRoleBindings.filter(item => item.status === 'confirmed'), 'projection must be rebuilt from confirmed top-level bindings only');
+    assert.equal(workflowProbe.reimportedWorkRoleBindings[0].binding_ref, 'wrb_confirmed', 'work role binding should survive export and reimport');
+    assert.deepEqual(workflowProbe.validConfirmedProblems, [], 'valid confirmed work role binding should pass hard validation');
+    assert.ok(workflowProbe.pendingEvidenceProblems.includes('原文依据尚未人工核验'), 'unverified evidence should block an already-confirmed binding at export');
+    assert.deepEqual(workflowProbe.pendingEvidenceConfirmProblems, [], 'explicit manual confirmation may verify locatable non-OCR evidence');
+    assert.equal(workflowProbe.verifiedAfterManualConfirmation, 'verified', 'manual binding confirmation should mark selected non-OCR evidence verified');
+    assert.ok(workflowProbe.invalidSceneProblems.includes('场景身份不能建立固定工作角色绑定'), 'scenario identities must not become work role bindings');
+    assert.ok(workflowProbe.ocrProblems.includes('OCR 原文依据只能待复核，不能形成正式绑定'), 'OCR evidence must not support a confirmed work role binding');
+    assert.equal(workflowProbe.firstInvalidRef, 'wrb_invalid_scene', 'export guard should identify the first invalid confirmed binding');
+    assert.equal(workflowProbe.firstInvalidStructuralRef, 'wrb_invalid_scene', 'export guard should reject structurally invalid proposed or confirmed bindings');
+    assert.deepEqual(workflowProbe.retiredHistoryProblems, [], 'imported confirmed retired roles should remain displayable as history');
     assert.ok(workflowProbe.exportedTransitions.some(item => item.ref === 'trans_in_process' && item.to === 'step_finance_action'), 'same-process branch should keep its target');
     assert.ok(workflowProbe.exportedTransitions.some(item => item.ref === 'trans_cross_process' && item.to === null), 'cross-process branch target should be cleared before export');
     assert.ok(workflowProbe.exportedTransitions.some(item => item.ref === 'trans_missing_target' && item.to === null), 'blank branch target should remain exportable');
@@ -505,6 +594,8 @@ async function run() {
     assertRequiredFields(schema, data);
     assert.equal(data.schema_version, 'document-structured-output-v2', 'standard upload should produce v2 structured output');
     assert.ok(Array.isArray(data.step_transitions), 'v2 output should include decision branch transitions');
+    assert.ok(Array.isArray(data.work_role_bindings), 'v2 output should include the optional work role binding collection');
+    assert.ok(data.work_role_bindings.every(item => item.status === 'proposed'), 'automatic role matching must never create confirmed bindings');
     assert.ok(data.steps.every(step => step.step_type === 'action'), 'auto-extracted workflow steps should default to action nodes');
     assert.equal(result.stats && Object.prototype.hasOwnProperty.call(result.stats, 'textLen'), false, 'stats must not expose source text length');
     assert.equal(data.document_profile.purpose, '规范客户资料变更的申请、审核和归档。');
@@ -528,10 +619,19 @@ async function run() {
     assert.equal(data.cross_dept_handoffs[0].target_department, '财务部');
     assert.equal(data.behavior_details.length, data.steps.length, 'each step needs behavior detail scaffold');
     assert.ok(data.evidence_catalog.length >= 1, 'source text should create a pending evidence record');
+    const roleEvidence = data.evidence_catalog.find(item => item.evidence_ref?.startsWith('EV-ROLE-'));
+    assert.ok(roleEvidence, 'source actor text should create a dedicated evidence record');
+    assert.ok(roleEvidence.source_excerpt, 'role evidence should retain the exact source excerpt in exported data');
+    assert.ok(data.pending_issues.some(item => item.target_block === 'work_role_bindings' && item.issue_type === '角色责任待确认'), 'unconfirmed source roles should create business-facing work role review items');
+    assert.ok(data.steps.filter(step => step.actor_role).every(step => step.evidence_refs.some(ref => ref.startsWith('EV-ROLE-'))), 'every source actor should reference its dedicated evidence record');
+    const roleEvidenceItems = data.evidence_catalog.filter(item => String(item.evidence_ref || '').startsWith('EV-ROLE-'));
+    assert.ok(roleEvidenceItems.length > 0, 'source roles should be exported as dedicated evidence records');
+    assert.ok(roleEvidenceItems.every(item => item.source_file && item.locator && item.source_excerpt && item.locate_method), 'role evidence should preserve source file, precise locator, excerpt, and extraction method');
     assert.equal(data.mdm_requirement_catalog.some(item => item.object === '不存在的供应商主数据'), false, 'DeepSeek values without exact source text must be dropped');
     assert.equal(data.structure_block_projection.meta.parser_schema_version, 1);
     assert.equal(data.structure_block_projection.l3_catalog.length, data.processes.length);
     assert.equal(data.structure_block_projection.a1_catalog.length, data.steps.length);
+    assert.deepEqual(data.structure_block_projection.work_role_bindings, [], 'proposed work role bindings must not enter the confirmed projection');
     assert.equal(data.forms[0].form_name, '客户资料变更申请单');
     assert.equal(data.forms[0].retention_period, '3年');
     assert.equal(data.forms[0].responsible_department_name, '经营发展部');
@@ -927,21 +1027,17 @@ async function run() {
     assert.ok(frontend.includes('form_tables.${activeFields.tableIndex}.table_name'), 'table header name should bind to form_tables, not only the form summary');
     assert.ok(frontend.includes("table_name: isFirstTable ? (form.main_table_name || '') : ''"), 'new detail tables should start with an empty editable header instead of copying the main table name');
     assert.ok(frontend.includes('structureKindForTable(tableRef)'), 'new fields should inherit the selected table structure kind');
-    assert.ok(frontend.includes('actorRoleField'), 'execution role should be chosen from roster controls');
-    assert.ok(frontend.includes('role-department-select'), 'execution role should expose a department selector');
-    assert.ok(frontend.includes('role-position-select'), 'execution role should expose a roster position selector');
-    assert.ok(frontend.includes('actorRoleDepartmentOptions'), 'execution role department choices should be isolated to the document department');
-    assert.ok(frontend.includes('processDepartmentForStep(index)'), 'business behavior role choices should read the current process owner selected by the user');
+    assert.ok(frontend.includes('actorRoleField'), 'source role text should have a dedicated field');
+    assert.ok(frontend.includes("field(`steps.${index}.actor_role`, '制度原文中的角色/岗位称谓', { type: 'textarea' })"), 'source role text must remain free text instead of a roster selector');
+    assert.ok(frontend.includes('花名册岗位候选（仅供核对）'), 'roster positions should only be shown as read-only candidate hints');
+    assert.ok(frontend.includes('候选不会写回制度原文，也不会自动成为正式工作角色'), 'candidate hints must disclose that they do not confirm work roles');
+    assert.ok(frontend.includes('processDepartmentForStep(index)'), 'candidate hints should use the current process department context');
     assert.ok(frontend.includes('formResponsibleRoleField(i)'), 'form and record role choices should read the current form department selected by the user');
     assert.ok(frontend.includes('shouldRerenderAfterValueChange(path)'), 'manual department changes should rebuild dependent role pickers immediately');
     assert.equal(frontend.includes("field(`forms.${i}.responsible_role`, '填写角色'"), false, 'form responsible role must not be a disconnected free-text field');
     assert.ok(frontend.includes("{ value: '全公司', label: '全公司' }"), 'execution role department choices should include all-company scope');
-    assert.ok(frontend.includes('actorRoleDepartmentOptions(ownDepartment, missingDepartmentLabel)'), 'execution role selector must use the current local department context');
-    assert.ok(frontend.includes('function refreshActorRolePositionOptions'), 'execution role position choices should be rebuilt after department changes');
-    assert.ok(frontend.includes('positionSelect.replaceChildren(placeholder)'), 'execution role position dropdown must discard stale positions from another department');
-    assert.ok(frontend.includes("refreshActorRolePositionOptions(positionSelect, department, '', ownDepartment, missingDepartmentLabel)"), 'changing execution role department should clear any previous position');
-    assert.ok(frontend.includes("positionSelect.disabled = !department || department === '全公司'"), 'all-company execution scope should not expose department positions');
-    assert.ok(frontend.includes('external-role-value'), 'outside-department imported roles should be shown as values to review, not selectable choices');
+    assert.ok(frontend.includes('rolePickerField(`forms.${index}.responsible_role`'), 'the legacy roster picker should remain limited to form responsible roles');
+    assert.ok(frontend.includes('firstInvalidConfirmedWorkRoleBinding'), 'export must hard-block invalid confirmed work role bindings');
     assert.ok(frontend.includes('fillSuggestionForPath'), 'empty cells should show business fill suggestions');
     assert.ok(frontend.includes('fieldSuggestions'), 'frontend should render DeepSeek suggestions before generic suggestions');
     assert.ok(frontend.includes("fetch('/api/suggestions'"), 'frontend should request DeepSeek suggestions after the page is already filled');

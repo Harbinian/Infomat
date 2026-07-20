@@ -7,8 +7,10 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
+  assertNoWorkRoleBindingErrors,
   buildNodeMetadata,
   buildParserMeta,
+  buildProcessRoleBindings,
   parseProcessGovernanceDocument,
   validateStructuredGlobalRecords,
 } from './parse-sankey-data.mjs';
@@ -106,6 +108,7 @@ function parse(text) {
   );
 
   assert.deepEqual(parsed.mdmRequirements, []);
+  assert.deepEqual(parsed.processRoleBindings, []);
   assert.equal(parsed.evidenceCatalog[2].status, 'pending_review');
   assert.doesNotThrow(() => validateStructuredGlobalRecords({
     allMappings: parsed.mappings,
@@ -161,6 +164,205 @@ function parse(text) {
       },
     ],
   });
+}
+
+{
+  const structuredWithBindings = STRUCTURED_BASELINE.replace(
+    'evidence_catalog:',
+    `work_role_bindings:
+  - binding_ref: WRB-QM-OWNER
+    process_ref: QM.CTRL.001
+    step_ref: null
+    participant_department:
+      department_name: 质量管理部
+    source_role_text: 质量负责人
+    work_role_code: WR-0001
+    participation_type: owner
+    status: confirmed
+    evidence_refs: [EV-QM-002]
+    confirmation_basis: 行政人事确认单 HR-001
+  - binding_ref: WRB-QM-PROPOSED
+    process_ref: QM.CTRL.001
+    step_ref: A1-QM-CTRL-001-01
+    participant_department: {department_name: 质量管理部}
+    source_role_text: 操作工
+    work_role_code: WR-0003
+    participation_type: executor
+    status: proposed
+    evidence_refs: [EV-QM-002]
+    confirmation_basis:
+  - binding_ref: WRB-QM-NO-EVIDENCE
+    process_ref: QM.CTRL.001
+    step_ref: A1-QM-CTRL-001-01
+    participant_department: {department_name: 质量管理部}
+    source_role_text: 操作工
+    work_role_code: WR-0003
+    participation_type: executor
+    status: confirmed
+    evidence_refs: []
+    confirmation_basis: 行政人事确认单 HR-002
+  - binding_ref: WRB-QM-BAD-PROCESS
+    process_ref: QM.MISSING.001
+    step_ref: null
+    participant_department: {department_name: 质量管理部}
+    source_role_text: 质量负责人
+    work_role_code: WR-0001
+    participation_type: owner
+    status: confirmed
+    evidence_refs: [EV-QM-002]
+    confirmation_basis: 行政人事确认单 HR-003
+  - binding_ref: WRB-QM-BAD-EVIDENCE
+    process_ref: QM.CTRL.001
+    step_ref: A1-QM-CTRL-001-01
+    participant_department: {department_name: 质量管理部}
+    source_role_text: 操作工
+    work_role_code: WR-0003
+    participation_type: executor
+    status: confirmed
+    evidence_refs: [EV-MISSING]
+    confirmation_basis: 行政人事确认单 HR-004
+  - binding_ref: WRB-QM-PENDING-EVIDENCE
+    process_ref: QM.CTRL.001
+    step_ref: A1-QM-CTRL-001-01
+    participant_department: {department_name: 质量管理部}
+    source_role_text: 操作工
+    work_role_code: WR-0003
+    participation_type: executor
+    status: confirmed
+    evidence_refs: [EV-QM-003]
+    confirmation_basis: 行政人事确认单 HR-004A
+  - binding_ref: WRB-QM-OCR-EVIDENCE
+    process_ref: QM.CTRL.001
+    step_ref: A1-QM-CTRL-001-01
+    participant_department: {department_name: 质量管理部}
+    source_role_text: 操作工
+    work_role_code: WR-0003
+    participation_type: executor
+    status: confirmed
+    evidence_refs: [EV-QM-OCR]
+    confirmation_basis: 行政人事确认单 HR-004B
+  - binding_ref: WRB-QM-MISSING-SOURCE-ROLE
+    process_ref: QM.CTRL.001
+    step_ref: A1-QM-CTRL-001-01
+    participant_department: {department_name: 质量管理部}
+    source_role_text:
+    work_role_code: WR-0003
+    participation_type: executor
+    status: confirmed
+    evidence_refs: [EV-QM-002]
+    confirmation_basis: 行政人事确认单 HR-004C
+
+evidence_catalog:`
+  ).replace(
+    '\nmdm_requirement_catalog: []',
+    `
+  - id: EV-QM-OCR
+    source_type: institution
+    source_file: QM-OCR-001.pdf
+    locator: "第2页 OCR 摘录"
+    locate_method: ocr
+    status: verified
+
+mdm_requirement_catalog: []`
+  ) + `
+
+## 工作角色绑定
+
+| binding_ref | process_ref | step_ref | participant_department | source_role_text | work_role_code | participation_type | status | evidence_refs | confirmation_basis |
+|---|---|---|---|---|---|---|---|---|---|
+| WRB-QM-INSPECTOR | QM.CTRL.001 | A1-QM-CTRL-001-02 | 质量管理部 | 检验员 | WR-0002 | executor | confirmed | EV-QM-TABLE-001 | 行政人事确认单 HR-005 |
+| WRB-QM-TABLE-PROPOSED | QM.CTRL.001 | A1-QM-CTRL-001-02 | 质量管理部 | 检验员 | WR-0002 | executor | proposed | EV-QM-TABLE-001 | - |
+| WRB-QM-UNKNOWN-ROLE | QM.CTRL.001 | A1-QM-CTRL-001-01 | 质量管理部 | 操作工 | WR-9999 | executor | confirmed | EV-QM-TABLE-001 | 行政人事确认单 HR-006 |
+| WRB-QM-RETIRED-ROLE | QM.CTRL.001 | A1-QM-CTRL-001-01 | 质量管理部 | 历史操作工 | WR-0003 | executor | confirmed | EV-QM-TABLE-001 | 行政人事确认单 HR-007 |
+| WRB-QM-NO-MAPPING | QM.CTRL.001 | A1-QM-CTRL-001-01 | 质量管理部 | 临时操作工 | WR-0004 | executor | confirmed | EV-QM-TABLE-001 | 行政人事确认单 HR-008 |
+| WRB-QM-FUTURE | QM.CTRL.001 | A1-QM-CTRL-001-01 | 质量管理部 | 后续操作工 | WR-0005 | executor | confirmed | EV-QM-TABLE-001 | 行政人事确认单 HR-009 |
+| WRB-QM-RETIRED-MAPPING | QM.CTRL.001 | A1-QM-CTRL-001-01 | 质量管理部 | 历史检验员 | WR-0006 | executor | confirmed | EV-QM-TABLE-001 | 行政人事确认单 HR-010 |
+| WRB-QM-TABLE-STRUCTURE-EVIDENCE | QM.CTRL.001 | A1-QM-CTRL-001-01 | 质量管理部 | 操作工 | WR-0003 | executor | confirmed | EV-QM-002 | 行政人事确认单 HR-011 |
+
+### 工作角色绑定证据
+
+| evidence_ref | source_file | locator | source_excerpt | locate_method | status |
+|---|---|---|---|---|---|
+| EV-QM-TABLE-001 | QM-BD-034 首件检验申请单.xlsx | 表头签批栏 | 检验员执行检验并填写判定结果 | table_cell | verified |
+`;
+
+  const parsed = parse(structuredWithBindings);
+  assert.deepEqual(
+    parsed.processRoleBindings.map(item => item.binding_ref),
+    [
+      'WRB-QM-OWNER',
+      'WRB-QM-INSPECTOR',
+      'WRB-QM-UNKNOWN-ROLE',
+      'WRB-QM-RETIRED-ROLE',
+      'WRB-QM-NO-MAPPING',
+      'WRB-QM-FUTURE',
+      'WRB-QM-RETIRED-MAPPING',
+    ]
+  );
+  assert.deepEqual(parsed.processRoleBindings[0], {
+    binding_ref: 'WRB-QM-OWNER',
+    process_ref: 'QM.CTRL.001',
+    step_ref: null,
+    participant_department: { department_name: '质量管理部' },
+    source_role_text: '质量负责人',
+    work_role_code: 'WR-0001',
+    participation_type: 'owner',
+    status: 'confirmed',
+    evidence_refs: ['EV-QM-002'],
+    confirmation_basis: '行政人事确认单 HR-001',
+    sourceFile: SOURCE_FILE,
+    processKey: '质量管理部\nQM.CTRL.001',
+  });
+  assert.match(parsed.workRoleBindingWarnings.join('\n'), /WRB-QM-PROPOSED[\s\S]*WRB-QM-TABLE-PROPOSED/);
+  assert.match(
+    parsed.workRoleBindingErrors.join('\n'),
+    /NO-EVIDENCE[\s\S]*BAD-PROCESS[\s\S]*BAD-EVIDENCE[\s\S]*PENDING-EVIDENCE[\s\S]*OCR-EVIDENCE[\s\S]*MISSING-SOURCE-ROLE[\s\S]*TABLE-STRUCTURE-EVIDENCE/,
+  );
+  assert.throws(
+    () => assertNoWorkRoleBindingErrors(parsed.workRoleBindingErrors),
+    /工作角色绑定校验失败（7 项）/,
+    'invalid confirmed bindings must make the parser main path fail instead of being silently omitted',
+  );
+
+  const duplicateOwnerFromAnotherSource = {
+    ...parsed.processRoleBindings[0],
+    binding_ref: 'WRB-QM-OWNER-OTHER-SOURCE',
+    sourceFile: 'docs/norms/另一部门-能力-流程-系统映射关系.md',
+  };
+  const processRoleBindingResult = buildProcessRoleBindings([
+    ...parsed.processRoleBindings,
+    duplicateOwnerFromAnotherSource,
+  ], {
+    schemaVersion: 'work-role-data-v1',
+    workRoles: [
+      { work_role_code: 'WR-0001', work_role_name: '质量流程负责人', status: 'active', effective_from: '2026-01-01', effective_to: null },
+      { work_role_code: 'WR-0002', work_role_name: '质量检验执行人', status: 'active', effective_from: '2026-01-01', effective_to: null },
+      { work_role_code: 'WR-0003', work_role_name: '历史生产操作执行人', status: 'retired', effective_from: '2025-01-01', effective_to: '2026-06-30' },
+      { work_role_code: 'WR-0004', work_role_name: '无岗位映射角色', status: 'active', effective_from: '2026-01-01', effective_to: null },
+      { work_role_code: 'WR-0005', work_role_name: '未来生效角色', status: 'active', effective_from: '2027-01-01', effective_to: null },
+      { work_role_code: 'WR-0006', work_role_name: '历史岗位映射角色', status: 'active', effective_from: '2025-01-01', effective_to: null },
+    ],
+    workRolePositionMappings: [
+      { work_role_code: 'WR-0001', department_name: '质量管理部', position_name: '质量主管', status: 'active', effective_from: '2026-01-01', effective_to: null },
+      { work_role_code: 'WR-0002', department_name: '质量管理部', position_name: '检验员', status: 'active', effective_from: '2026-01-01', effective_to: null },
+      { work_role_code: 'WR-0003', department_name: '质量管理部', position_name: '历史操作工', status: 'retired', effective_from: '2025-01-01', effective_to: '2026-06-30' },
+      { work_role_code: 'WR-0005', department_name: '质量管理部', position_name: '后续操作工', status: 'active', effective_from: '2027-01-01', effective_to: null },
+      { work_role_code: 'WR-0006', department_name: '质量管理部', position_name: '历史检验员', status: 'retired', effective_from: '2025-06-01', effective_to: '2026-06-30' },
+    ],
+  }, {
+    asOfDate: '2026-07-16',
+  });
+  assert.deepEqual(
+    processRoleBindingResult.bindings.map(item => item.binding_ref).sort(),
+    ['WRB-QM-OWNER', 'WRB-QM-INSPECTOR', 'WRB-QM-RETIRED-ROLE', 'WRB-QM-RETIRED-MAPPING'].sort(),
+    'company snapshot should keep current confirmed bindings and valid retired history only',
+  );
+  assert.match(processRoleBindingResult.warnings.join('\n'), /RETIRED-ROLE[\s\S]*RETIRED-MAPPING/);
+  assert.match(
+    processRoleBindingResult.errors.join('\n'),
+    /UNKNOWN-ROLE[\s\S]*NO-MAPPING[\s\S]*FUTURE[\s\S]*OWNER-OTHER-SOURCE/,
+  );
+  assert.throws(() => assertNoWorkRoleBindingErrors(processRoleBindingResult.errors), /工作角色绑定校验失败（4 项）/);
 }
 
 assert.throws(
@@ -251,6 +453,49 @@ assert.throws(
   assert.equal(legacy.sourceMode, 'legacy-markdown');
   assert.equal(legacy.mappings.length, 1);
   assert.deepEqual(legacy.mappings[0].systems, ['OA']);
+  assert.deepEqual(legacy.processRoleBindings, []);
+}
+
+{
+  const legacyWithBindingTable = `${LEGACY_BASELINE}
+
+## 工作角色绑定
+
+| binding_ref | process_ref | step_ref | participant_department | source_role_text | work_role_code | participation_type | status | evidence_refs | confirmation_basis |
+|---|---|---|---|---|---|---|---|---|---|
+| WRB-QM-LEGACY-OWNER | 质量目标制定与分解 | - | 质量管理部 | 质量负责人 | WR-0001 | owner | confirmed | QM-ZD-012#4.2 | 行政人事确认单 HR-007 |
+
+### 工作角色绑定证据
+
+| evidence_ref | source_file | locator | source_excerpt | locate_method | status |
+|---|---|---|---|---|---|
+| QM-ZD-012#4.2 | QM-ZD-012 质量目标管理制度.pdf | 第4.2条 / 第3页 | 质量负责人组织制定并分解质量目标 | manual_clause | verified |
+`;
+  const parsed = parse(legacyWithBindingTable);
+  assert.deepEqual(parsed.processRoleBindings.map(item => ({
+    binding_ref: item.binding_ref,
+    process_ref: item.process_ref,
+    step_ref: item.step_ref,
+    evidence_refs: item.evidence_refs,
+  })), [
+    {
+      binding_ref: 'WRB-QM-LEGACY-OWNER',
+      process_ref: '质量目标制定与分解',
+      step_ref: null,
+      evidence_refs: ['QM-ZD-012#4.2'],
+    },
+  ]);
+  assert.deepEqual(parsed.workRoleBindingErrors, []);
+
+  const withoutBindingEvidence = parse(legacyWithBindingTable.replace(
+    /\n### 工作角色绑定证据[\s\S]*$/,
+    '',
+  ));
+  assert.deepEqual(withoutBindingEvidence.processRoleBindings, []);
+  assert.match(
+    withoutBindingEvidence.workRoleBindingErrors.join('\n'),
+    /WRB-QM-LEGACY-OWNER[\s\S]*evidence_refs 存在悬空引用/,
+  );
 }
 
 {

@@ -12,12 +12,14 @@ MDM 平台开发暂时搁置，保留为后续承接平台。PMO 驾驶舱是当
 
 组织真源在 `docs/organization/`。
 信息化项目人员角色映射在 `docs/organization/信息化项目人员角色映射.md`。
+正式工作角色与花名册岗位映射在 `docs/organization/工作角色目录与岗位映射.md`。
 流程映射以 `docs/norms/` 下的流程输入基线为准。
 
 ## 2. 流程治理主线
 
 ```text
 docs/organization/组织架构和部门职责.md
+docs/organization/工作角色目录与岗位映射.md
 docs/norms/{部门}部门-能力-流程-系统映射关系.md
 docs/norms/流程治理/*.md
   ↓
@@ -38,6 +40,36 @@ apps/mdm-platform 流程治理快照导入
 - `docs/company-sankey-data.json` 是 parser 生成快照。
 - `pmo/procedure-management/dashboard.html` 是展示副本，不是流程输入基线维护入口。
 - `apps/mdm-platform` 只在导入快照后承接结构化查看和后续治理，不反向覆盖 `docs/norms/`。
+
+## 2.1 工作角色治理主线
+
+```text
+制度/表单原文中的角色称谓
+  ↓ 文档结构化输出：保留原文、证据和 proposed 关系
+docs/organization/工作角色目录与岗位映射.md
+docs/organization/花名册.md
+  ↓ 行政人事部确认角色目录和岗位映射
+流程责任部门确认 L3/A1 绑定
+  ↓
+docs/norms/{部门}部门-能力-流程-系统映射关系.md
+  仅登记 confirmed 工作角色绑定
+  ↓
+scripts/build-work-role-data.mjs
+scripts/parse-sankey-data.mjs
+  ↓
+docs/work-role-data.json
+docs/company-sankey-data.json
+  ↓
+后续 MDM / MySQL 派生承接
+```
+
+规则：
+
+- 工作角色不是人员、花名册岗位、部门、原文角色称谓或 RBAC 角色。
+- 行政人事部管理角色编码、名称、生命周期、岗位映射和原文别名；流程责任部门确认具体流程绑定。
+- 自动抽取和岗位同名只形成候选，不生成正式编码或 `confirmed` 关系。
+- `docs/work-role-data.json` 和公司流程快照是生成物，不手工维护、不反写行政人事或流程真源。
+- 申请人、当前处理人、全体员工等场景身份及外部参与方不建立内部工作角色绑定。
 
 ## 3. 组织与项目人员映射主线
 
@@ -124,6 +156,7 @@ npm run test:mainline
 - 平台脚本只服务 MDM 时留在 `apps/mdm-platform/scripts/`。
 - 跨资料、跨 PMO、跨 app 的脚本进入仓库级 `scripts/`。
 - 文档结构化输出字段、证据状态、待确认问题字段和结构块投影以 `docs/contracts/document-structured-output.schema.json` 为标准合同；它约束平台承接和导出格式，不反向覆盖 `docs/norms/`。
+- 当前 MDM 不持久化 `work_role_bindings`；非空关系导入必须返回 `WORK_ROLE_BINDINGS_UNSUPPORTED`，避免静默丢失。行政人事目录和受控试点稳定后，再建设 MySQL 派生表和变更申请能力。
 
 ## 6. PMO 项目管理主线
 

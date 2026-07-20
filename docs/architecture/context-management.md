@@ -75,6 +75,8 @@
 - `docs/Demo/`
 - `scripts/`
 
+`docs/norms/AGENTS.md` 还负责已确认工作角色绑定的局部卡口：候选不得写入基线，旧 Markdown 绑定必须同时维护受控证据表，任一无效 `confirmed` 关系会阻断公司快照生成。
+
 ## 6. 历史材料使用
 
 `docs/superpowers/`、`docs/reports/` 和 `docs/archives/` 中可能保留旧路径、旧命令或旧工具名称。使用时只取可追溯事实，不把历史文件当当前执行入口。

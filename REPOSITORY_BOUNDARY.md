@@ -42,7 +42,9 @@ Infomat 是一个信息化治理工作仓库，不是单一源码仓库。它允
 | 数据类型 | 当前入口 | 禁止误判 |
 |---|---|---|
 | 部门到域映射 | `docs/organization/组织架构和部门职责.md` | 不从页面硬编码、截图或 MDM 临时库反推 |
+| 工作角色目录与岗位映射 | `docs/organization/工作角色目录与岗位映射.md` | 由行政人事部受控维护；不从原文称谓、岗位同名、人员或 RBAC 角色自动生成正式口径 |
 | 流程输入基线 | `docs/norms/{部门}部门-能力-流程-系统映射关系.md` | 只作为已确认流程映射输入基线；PMO 驾驶舱 HTML 不是维护入口；问题卡证据另定位制度/表单源文件 |
+| 工作角色只读快照 | `docs/work-role-data.json` | 只由 `scripts/build-work-role-data.mjs` 生成，不手工维护、不包含人员名单 |
 | PMO 流程地图展示 | `pmo/procedure-management/dashboard.html` 内嵌 `#sankey-data` | 不绕过 `scripts/parse-sankey-data.mjs` 手工重造数据 |
 | PMO 项目计划 | `pmo/信息化项目_计划管控真源.md` 和 `pmo/信息化项目_WBS结构真源.md` | 不把 XLSX 备份当默认维护入口 |
 | MDM 平台源码 | `apps/mdm-platform/server/`、`public/`、`scripts/` | 不把流程治理资料直接写进平台源码 |

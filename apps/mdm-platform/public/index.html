@@ -1332,7 +1332,7 @@
             <div class="activity-detail" id="roleWorkbenchActivityDetail">点击日期查看当天动作摘要。</div>
           </div>
           <div class="wb-group">
-            <h3>项目工作角色</h3>
+            <h3>项目治理角色</h3>
             <div class="wb-work-list" id="roleWorkbenchProjectRoles"></div>
           </div>
           <div class="wb-group">
@@ -10655,7 +10655,7 @@
           '</div>' +
           '<div id="userManagementEditor"></div>' +
           '<div class="table-container"><table class="data-table">' +
-            '<thead><tr><th>工号</th><th>姓名</th><th>部门</th><th>岗位</th><th>基础角色</th><th>项目工作角色</th><th>状态</th><th>创建时间</th><th>操作</th></tr></thead>' +
+            '<thead><tr><th>工号</th><th>姓名</th><th>部门</th><th>岗位</th><th>基础角色</th><th>项目治理角色</th><th>状态</th><th>创建时间</th><th>操作</th></tr></thead>' +
             '<tbody id="userManagementTableBody"></tbody>' +
           '</table></div>' +
         '</div>';
@@ -10728,7 +10728,7 @@
       var projectChecks = projectRoles.map(function(role) {
         var checked = currentCodes.indexOf(role.role_code) >= 0 ? ' checked' : '';
         return '<label><input type="checkbox" data-project-role-id="' + Number(role.role_id) + '"' + checked + '><span>' + safeText(role.role_name) + ' <span class="tag">' + safeText(role.role_code) + '</span></span></label>';
-      }).join('') || '<div class="empty" style="padding:12px;">暂无项目工作角色</div>';
+      }).join('') || '<div class="empty" style="padding:12px;">暂无项目治理角色</div>';
 
       document.getElementById('userManagementEditor').innerHTML =
         '<div class="user-management-form">' +
@@ -10741,7 +10741,7 @@
           '</div>' +
           '<div class="user-role-groups">' +
             '<label>基础权限角色<select id="userEditorBasicRole">' + basicOptions + '</select></label>' +
-            '<div><label>项目工作角色</label><div class="role-check-list" id="userEditorProjectRoles">' + projectChecks + '</div></div>' +
+            '<div><label>项目治理角色</label><div class="role-check-list" id="userEditorProjectRoles">' + projectChecks + '</div></div>' +
           '</div>' +
           '<div class="entity-form-actions">' +
             '<button class="btn secondary" onclick="cancelUserEditor()">取消</button>' +

@@ -16,7 +16,7 @@
 | `dcm-bbm-contract.json` | `scripts/check-dcm-bbm.mjs` | `docs/norms/`、`docs/organization/组织架构和部门职责.md`、`pmo/procedure-management/dashboard.html` | 默认报告 `docs/reports/dcm-bbm-quality-report.md` | `node scripts/check-dcm-bbm.mjs --no-fail` | 定义 DCM/BBM 质检的路径、术语、允许系统、交付物命名、表头、证据类型和 HTML 检查规则 |
 | `dcm-bbm-contract.json` | `scripts/check-norms-source-manifest.mjs` | `docs/reports/2026-06-11-norms-source-manifest.md`、`docs/norms/` | 只读校验输出 | `npm run test:norms-source-manifest` | 校验合同部门、域口径和 canonical 三件套覆盖状态一致 |
 | `dcm-bbm-contract.json` | `scripts/check-dept-domain-mapping.mjs` | `docs/organization/组织架构和部门职责.md`、`scripts/parse-sankey-data.mjs` | 只读校验输出 | `npm run test:dept-domain-mapping` | 校验部门到域映射来自组织真源且与合同一致 |
-| `document-structured-output.schema.json` | `scripts/test-document-structured-output-schema.mjs`、文档结构化输出后续导出/校验脚本 | `apps/mdm-platform/public/index.html`、`apps/mdm-platform/server/mysqlSchema.js`、`apps/mdm-platform/server/routes/processDesignMysql.js`、`scripts/parse-sankey-data.mjs` | 只读校验输出 | `npm run test:document-structured-output-schema` | 统一制度编号、制度版次、制度草稿、流程、业务行为、表单字段、证据、待确认问题和结构块投影的数据模型 |
+| `document-structured-output.schema.json` | `scripts/test-document-structured-output-schema.mjs`、文档结构化输出导出/校验脚本 | `apps/structured-output-service/`、`apps/mdm-platform/`、`scripts/parse-sankey-data.mjs` | 只读校验输出 | `npm run test:document-structured-output-schema`、`npm run test:work-role-contract` | 统一制度、流程、行为、工作角色绑定、表单字段、证据、待确认问题和结构块投影的数据模型；工作角色正式目录仍以组织真源为准 |
 
 ## 2. 修改规则
 

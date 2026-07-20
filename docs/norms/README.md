@@ -19,7 +19,15 @@
 
 部门业务资料子目录用于承载各部门制度/表单源文件材料和整理过程，不替代流程输入基线。
 
-部门流程输入基线 Markdown 可在文件头使用“流程治理结构块 v1”。`parse-sankey-data.mjs` 会优先读取该结构块中的 `meta`、`l3_catalog`、`a1_catalog`、`evidence_catalog` 和可选 `mdm_requirement_catalog`；正文旧 Markdown 表格中未被结构块覆盖的 L3/A1 会继续合并进入快照，部门解析来源标记为 `hybrid`。未放结构块的部门会继续走旧 Markdown 解析，并输出回退告警。结构块内的应用系统只允许 `OA`、`MES`、`PLM`、`ERP` 或留空，禁止把 `MDM` 写成应用系统。
+部门流程输入基线 Markdown 可在文件头使用“流程治理结构块 v1”。`parse-sankey-data.mjs` 会优先读取该结构块中的 `meta`、`l3_catalog`、`a1_catalog`、`evidence_catalog`、可选 `work_role_bindings` 和 `mdm_requirement_catalog`；正文旧 Markdown 表格中未被结构块覆盖的 L3/A1 会继续合并进入快照，部门解析来源标记为 `hybrid`。未放结构块的部门会继续走旧 Markdown 解析，并输出回退告警。结构块内的应用系统只允许 `OA`、`MES`、`PLM`、`ERP` 或留空，禁止把 `MDM` 写成应用系统。
+
+工作角色绑定是独立受控关系，不扩宽 DCM/BBM 主表：
+
+- 只有经过行政人事部角色/岗位映射确认和流程责任部门绑定确认的 `confirmed` 关系才能写入基线；候选、待确认项和自动匹配结果不得写入。
+- 结构块绑定引用同一结构块的 `evidence_catalog`。
+- 旧 Markdown 基线必须在同一“工作角色绑定”章节同时维护“工作角色绑定证据”表；绑定表与证据表的固定字段见 `../../scripts/README.md` 的“流程工作角色绑定输入”。
+- 证据必须为 `verified`，包含源文件、条款/页码/表格定位、原文摘录和抽取方式；OCR 或待复核证据不能支撑正式绑定。
+- 无效正式绑定会让 parser 在更新 `docs/company-sankey-data.json` 前非零退出，不能降级为普通告警。
 
 ## 2. 修改流程
 
@@ -69,5 +77,6 @@ node ../../scripts/verify-norms-source-mapping.mjs
 1. 新增部门映射时，先确认 `docs/organization/组织架构和部门职责.md` 中的部门名称。
 2. 修改 A1 业务行为、跨部门输入输出或应用系统字段后，重新生成公司级快照。
 3. 修改证据字段或“在哪发现”展示口径后，运行 `node scripts/verify-norms-source-mapping.mjs`，确认源文件编号、制度或表单名称、大概位置、业务流程、业务行为可追溯。
-4. 处理 `_quality-report.md` 或原文-映射表核验报告中的 `BLOCK` 前，优先回到流程输入基线和源文件修正源头。
-5. 只修改静态 HTML 时，确认 ECharts 引用仍为本目录相对路径。
+4. 新增或修改工作角色绑定时，确认正式角色/岗位映射已发布、绑定证据表可定位且非 OCR，再运行 parser 与结构块测试；不得为通过校验临时造 `WR-*` 编码。
+5. 处理 `_quality-report.md` 或原文-映射表核验报告中的 `BLOCK` 前，优先回到流程输入基线和源文件修正源头。
+6. 只修改静态 HTML 时，确认 ECharts 引用仍为本目录相对路径。
