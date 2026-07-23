@@ -120,6 +120,7 @@
 | 判断节点 | Decision Step | 文档结构化输出 `steps[]` 中的一种步骤，`step_type=decision`；它仍按业务行为字段填报执行角色、触发场景、前置条件、输入材料、输出结果和执行标准，用来承载人工确认的条件判断 |
 | 判断分支 | Step Transition | 文档结构化输出 `step_transitions[]` 中的同流程流向关系，从判断节点发出，记录条件、目标步骤和证据引用；目标步骤可暂时为空，表示未补流向 |
 | 原文角色称谓 | Source Role Text | 制度、表单或流程图中原样出现的岗位、身份、组织或参与方称谓，文档结构化输出保存在 `steps.actor_role` 和角色证据中；它是待核验事实，不等同正式工作角色 |
+| 岗位参与草稿 | Position Participation Draft | 流程未固化时按“参与部门 + 花名册岗位 + 参与方式”记录的当前实际参与关系，保存在候选工作角色关系的 `source_position_name` 中；它只能保持 `proposed`，不分配 `WR-*`，不进入正式投影，流程固化后再按稳定责任归并为正式工作角色 |
 | 工作角色 | Work Role | 对流程所需业务责任的稳定分类，由行政人事部统一管理名称、编码、生命周期及与花名册岗位的多对多映射；工作角色不直接绑定人员，也不授予 RBAC 权限 |
 | 工作角色绑定 | Work Role Binding | L3 流程或 A1 业务行为与正式工作角色之间的参与关系，包含参与部门、参与类型、证据、候选/确认状态和确认依据；流程责任部门确认具体绑定，只有 `confirmed` 关系可进入正式投影 |
 | 项目治理角色 | Project Governance Role | MDM 中 `role_group='project'` 的现有 RBAC/职责引导角色，例如 `it_lead`、`project_lead`、`business_contact`；原用户口径“项目工作角色”改用本名称，与流程工作角色隔离，底层编码保持兼容 |

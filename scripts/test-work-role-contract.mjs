@@ -57,10 +57,16 @@ function validateBindingCollection(bindings, { projection = false } = {}) {
       throw new Error('A1 binding must not use owner');
     }
     if (binding.status === 'confirmed') {
+      if (!/^WR-[0-9]{4}$/.test(String(binding.work_role_code || ''))) {
+        throw new Error('confirmed binding needs formal work_role_code');
+      }
       if (!String(binding.confirmation_basis || '').trim()) throw new Error('confirmed binding needs confirmation_basis');
       if (!Array.isArray(binding.evidence_refs) || binding.evidence_refs.length === 0) {
         throw new Error('confirmed binding needs evidence_refs');
       }
+    }
+    if (!String(binding.source_position_name || '').trim() && !/^WR-[0-9]{4}$/.test(String(binding.work_role_code || ''))) {
+      throw new Error('binding needs source_position_name or formal work_role_code');
     }
     if (projection && binding.status !== 'confirmed') throw new Error('projection accepts confirmed bindings only');
 
@@ -95,7 +101,9 @@ assert.deepEqual(bindingDef.required, [
 assert.equal(bindingDef.properties.participant_department.$ref, '#/$defs/department');
 assert.equal(bindingDef.properties.source_role_text.type, 'string');
 assert.equal(bindingDef.properties.source_role_text.minLength, 1);
-assert.equal(bindingDef.properties.work_role_code.pattern, '^WR-[0-9]{4}$');
+assert.equal(bindingDef.properties.source_position_name.$ref, '#/$defs/nullableString');
+assert.equal(bindingDef.properties.work_role_code.anyOf[0].pattern, '^WR-[0-9]{4}$');
+assert.equal(bindingDef.properties.work_role_code.anyOf[1].type, 'null');
 assert.deepEqual(bindingDef.properties.participation_type.enum, [
   'owner',
   'initiator',
@@ -113,6 +121,7 @@ assert.equal(l3Rule.then.properties.participation_type.const, 'owner');
 const a1Rule = findConditional(bindingDef, properties => properties.step_ref?.not?.type === 'null');
 assert.equal(a1Rule.then.properties.participation_type.not.const, 'owner');
 const confirmedRule = findConditional(bindingDef, properties => properties.status?.const === 'confirmed');
+assert.equal(confirmedRule.then.properties.work_role_code.pattern, '^WR-[0-9]{4}$');
 assert.equal(confirmedRule.then.properties.confirmation_basis.type, 'string');
 assert.equal(confirmedRule.then.properties.confirmation_basis.minLength, 1);
 assert.equal(confirmedRule.then.properties.evidence_refs.minItems, 1);
@@ -146,7 +155,13 @@ const proposedExecutor = {
   evidence_refs: ['EV-2'],
   confirmation_basis: null,
 };
-validateBindingCollection([confirmedOwner, proposedExecutor]);
+const proposedPositionExecutor = {
+  ...proposedExecutor,
+  binding_ref: 'BIND-A1-POSITION',
+  source_position_name: '会计员',
+  work_role_code: null,
+};
+validateBindingCollection([confirmedOwner, proposedExecutor, proposedPositionExecutor]);
 assert.throws(() => validateBindingCollection([confirmedOwner, { ...confirmedOwner }]), /duplicate binding_ref/);
 assert.throws(
   () => validateBindingCollection([confirmedOwner, { ...confirmedOwner, binding_ref: 'BIND-L3-2' }]),
@@ -155,6 +170,8 @@ assert.throws(
 assert.throws(() => validateBindingCollection([{ ...confirmedOwner, participation_type: 'executor' }]), /L3 binding/);
 assert.throws(() => validateBindingCollection([{ ...proposedExecutor, participation_type: 'owner' }]), /A1 binding/);
 assert.throws(() => validateBindingCollection([{ ...confirmedOwner, evidence_refs: [] }]), /needs evidence_refs/);
+assert.throws(() => validateBindingCollection([{ ...proposedPositionExecutor, status: 'confirmed' }]), /formal work_role_code/);
+assert.throws(() => validateBindingCollection([{ ...proposedPositionExecutor, source_position_name: null }]), /source_position_name or formal work_role_code/);
 assert.throws(() => validateBindingCollection([proposedExecutor], { projection: true }), /confirmed bindings only/);
 
 const parsedCanonical = parseWorkRoleSource(workRoleSource, parseRoster(rosterSource));
