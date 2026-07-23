@@ -227,8 +227,217 @@ button, input, textarea, select { font: inherit; }
   border: 1px dashed var(--line);
   border-radius: 8px;
   padding: 10px;
-  color: var(--ink);
+  color: var(--text);
   background: #fffdf8;
+}
+.process-meta-panel,
+.step-support-panel {
+  margin-bottom: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fffdf8;
+}
+.process-meta-panel > summary,
+.step-support-panel > summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 11px 12px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+}
+.process-meta-panel > summary::-webkit-details-marker,
+.step-support-panel > summary::-webkit-details-marker { display: none; }
+.process-meta-panel > summary::after,
+.step-support-panel > summary::after {
+  content: "展开";
+  float: right;
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 600;
+}
+.process-meta-panel[open] > summary::after,
+.step-support-panel[open] > summary::after { content: "收起"; }
+.process-meta-panel-body,
+.step-support-panel-body {
+  border-top: 1px solid var(--line);
+  padding: 12px;
+}
+.step-workbench {
+  display: grid;
+  grid-template-columns: minmax(250px, 310px) minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+.step-list-panel {
+  position: sticky;
+  top: 86px;
+  align-self: start;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: #f8f2e7;
+}
+.step-list-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 9px;
+}
+.step-list-summary div {
+  border: 1px solid var(--mdm-line-soft);
+  border-radius: 6px;
+  padding: 7px 5px;
+  background: #fffdf8;
+  text-align: center;
+}
+.step-list-summary strong {
+  display: block;
+  color: var(--text);
+  font-size: 15px;
+}
+.step-list-summary span {
+  color: var(--soft);
+  font-size: 11px;
+}
+.step-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.step-filter-bar button {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fffdf8;
+  color: var(--soft);
+  padding: 5px 8px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.step-filter-bar button.active {
+  border-color: rgba(178, 86, 56, 0.48);
+  background: #fff7e8;
+  color: var(--blue);
+  font-weight: 700;
+}
+.step-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 62vh;
+  overflow: auto;
+  padding-right: 3px;
+}
+.step-list-item {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #fffdf8;
+  color: var(--text);
+  padding: 8px;
+  cursor: pointer;
+  text-align: left;
+}
+.step-list-item:hover { border-color: rgba(178, 86, 56, 0.48); }
+.step-list-item.active {
+  border-color: var(--blue);
+  box-shadow: inset 3px 0 0 var(--blue);
+  background: #fff7e8;
+}
+.step-list-item-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.step-index {
+  min-width: 26px;
+  color: var(--soft);
+  font-size: 11px;
+  font-weight: 700;
+}
+.step-type-badge,
+.step-duplicate-badge {
+  border-radius: 999px;
+  padding: 2px 6px;
+  font-size: 10px;
+  white-space: nowrap;
+}
+.step-type-badge { color: var(--mdm-mist); background: #edf3f5; }
+.step-type-badge.decision { color: #765b20; background: #fff2c7; }
+.step-duplicate-badge { margin-left: auto; color: #8a3f2b; background: #fbe2d7; }
+.step-list-name {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-height: 1.45;
+  font-size: 12px;
+  font-weight: 700;
+}
+.step-list-status {
+  margin-top: 5px;
+  color: var(--soft);
+  font-size: 11px;
+}
+.step-list-status.complete { color: var(--green); }
+.step-list-footer {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+.step-list-footer .btn { flex: 1; padding: 6px 8px; min-height: 32px; font-size: 12px; }
+.step-editor {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fffdf8;
+  overflow: hidden;
+}
+.step-editor-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border-bottom: 1px solid var(--line);
+  background: #fffaf0;
+}
+.step-editor-head h4 { margin: 0; font-size: 15px; }
+.step-editor-head p { margin: 5px 0 0; color: var(--soft); font-size: 12px; line-height: 1.5; }
+.step-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.step-editor-actions .btn { min-height: 32px; padding: 6px 9px; font-size: 12px; }
+.step-editor-body { padding: 12px; }
+.step-fill-guide {
+  margin-bottom: 12px;
+  border-left: 4px solid var(--mdm-sage);
+  border-radius: 6px;
+  background: #f8fbf1;
+  color: #455038;
+  padding: 9px 10px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.step-editor-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.step-wide { grid-column: 1 / -1; }
+.step-filter-empty {
+  border: 1px dashed var(--line);
+  border-radius: 7px;
+  padding: 16px 10px;
+  color: var(--soft);
+  background: #fffdf8;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.6;
 }
 .transition-table {
   width: 100%;
@@ -589,6 +798,11 @@ button, input, textarea, select { font: inherit; }
   .layout { grid-template-columns: 1fr; padding: 12px; }
   .side { position: static; }
   .grid { grid-template-columns: 1fr; }
+  .step-workbench { grid-template-columns: 1fr; }
+  .step-list-panel { position: static; }
+  .step-list { max-height: 360px; }
+  .step-editor-grid { grid-template-columns: 1fr; }
+  .step-wide { grid-column: auto; }
   .role-picker { grid-template-columns: 1fr; }
   .work-role-adder-grid { grid-template-columns: 1fr; }
   .topbar { align-items: flex-start; flex-direction: column; }
@@ -661,7 +875,7 @@ const sections = {
   basic: { title: '基本信息', hint: '确认制度名称、编号、归口部门和依据类型。' },
   profile: { title: '目的与范围', hint: '目的和适用范围来自标准模板章节，可以直接修改。' },
   terms: { title: '术语定义', hint: '术语来自制度中的术语章节。' },
-  steps: { title: '流程步骤', hint: '流程正文会按明确业务行为填充到可编辑步骤。' },
+  steps: { title: '流程步骤', hint: '从左侧步骤清单选择一项，按业务顺序补齐谁来做、何时触发、输入、规则和输出。' },
   forms: { title: '表单与记录', hint: '表单、记录和字段是第一版重点整理内容。' },
   export: { title: '导出结构化文件', hint: '导出的文件只包含当前页面中的结构化内容。' }
 };
@@ -686,6 +900,9 @@ let isSuggesting = false;
 let workTimers = [];
 const collapsedProcessRefs = new Set();
 const importedConfirmedWorkRoleRefs = new Set();
+const activeStepRefsByProcess = new Map();
+const stepFiltersByProcess = new Map();
+const stepListScrollTopByProcess = new Map();
 
 const DEPARTMENT_OPTIONS = [
   { value: '', label: '请选择' },
@@ -988,6 +1205,7 @@ async function importDocumentFile(file) {
     activeFormRef = '';
     activeTableRef = '';
     collapsedProcessRefs.clear();
+    resetStepWorkbenchState();
     hasPageContent = true;
     activeSection = 'basic';
     setActiveNav();
@@ -1027,6 +1245,7 @@ function importStructuredFile(file) {
       activeFormRef = '';
       activeTableRef = '';
       collapsedProcessRefs.clear();
+      resetStepWorkbenchState();
       hasPageContent = true;
       activeSection = 'basic';
       setActiveNav();
@@ -1041,6 +1260,12 @@ function importStructuredFile(file) {
 
 function setActiveNav() {
   document.querySelectorAll('.nav button').forEach(item => item.classList.toggle('active', item.dataset.section === activeSection));
+}
+
+function resetStepWorkbenchState() {
+  activeStepRefsByProcess.clear();
+  stepFiltersByProcess.clear();
+  stepListScrollTopByProcess.clear();
 }
 
 function ensureDocument(data) {
@@ -1161,7 +1386,8 @@ function getValue(path) {
   return path.split('.').reduce((target, part) => target == null ? undefined : target[part], docData);
 }
 
-function setValue(path, value) {
+function setValue(path, value, options = {}) {
+  const previousValue = getValue(path);
   const parts = path.split('.');
   let target = docData;
   for (let i = 0; i < parts.length - 1; i += 1) {
@@ -1173,6 +1399,12 @@ function setValue(path, value) {
   syncRelatedTableValue(path, value);
   syncWorkRoleBindingTarget(path, value);
   if (/^(?:steps\.\d+\.(?:process_ref|step_type)|step_transitions\.\d+\.(?:from_step_ref|to_step_ref))$/.test(path)) cleanStepTransitions();
+  const movedStepMatch = path.match(/^steps\.(\d+)\.process_ref$/);
+  if (movedStepMatch) {
+    const step = docData.steps[Number(movedStepMatch[1])];
+    if (previousValue && activeStepRefsByProcess.get(previousValue) === step?.step_ref) activeStepRefsByProcess.delete(previousValue);
+    if (value && step?.step_ref) activeStepRefsByProcess.set(value, step.step_ref);
+  }
   if (path === 'draft.department.department_name') {
     const found = DEPARTMENT_OPTIONS.find(item => item.value === value);
     docData.draft.department.domain = found?.domain || null;
@@ -1185,7 +1417,7 @@ function setValue(path, value) {
   if (fieldSuggestions[path]) delete fieldSuggestions[path];
   hasPageContent = true;
   updateCompletion();
-  if (shouldRerenderAfterValueChange(path)) render();
+  if (options.rerender !== false && shouldRerenderAfterValueChange(path)) render();
 }
 
 function setLinkedValue(path, value) {
@@ -1398,7 +1630,8 @@ function shouldRerenderAfterValueChange(path) {
   return path === 'draft.department.department_name' ||
     /^processes\.\d+\.owner$/.test(path) ||
     /^forms\.\d+\.responsible_department_name$/.test(path) ||
-    /^steps\.\d+\.process_ref$/.test(path) ||
+    /^steps\.\d+\.(?:process_ref|step_type|step_name|actor_role|input_materials|output_result)$/.test(path) ||
+    /^behavior_details\.\d+\.execution_standard$/.test(path) ||
     /^work_role_bindings\.\d+\.(?:work_role_code|status)$/.test(path) ||
     /^work_role_bindings\.\d+\.participant_department\.department_name$/.test(path);
 }
@@ -1494,6 +1727,7 @@ function fillSuggestionForPath(path) {
   if (/\.precondition$/.test(path)) return `${stepPrefix}补充开始前必须具备的材料、状态或上一环节结果。`;
   if (/\.input_materials$/.test(path)) return `${stepPrefix}补充执行时要使用的表单、材料或记录。`;
   if (/\.output_result$/.test(path)) return `${stepPrefix}补充完成后形成的表单、记录、结论或通知。`;
+  if (/\.timing$/.test(path)) return `${stepPrefix}补充制度明确的办理时限、频次或完成节点；原文未规定时可留空。`;
   if (/\.execution_standard$/.test(path)) return `${stepPrefix}补充判断这一步是否完成的标准、时限或评价维度。`;
   if (/\.form_code$/.test(path)) return `补充${formPrefix}在制度中列明的编号。`;
   if (/\.form_name$/.test(path)) return '补充表单或记录的正式名称。';
@@ -1596,6 +1830,11 @@ function render() {
     return;
   }
   addButton.hidden = !['terms', 'steps', 'forms'].includes(activeSection) || !docData;
+  addButton.textContent = {
+    terms: '新增术语',
+    steps: '新增流程',
+    forms: '新增表单'
+  }[activeSection] || '新增一项';
   updateCompletion();
   if (!docData) {
     sectionBody.innerHTML = '<div class="empty">请先导入制度文件或结构化文件。</div>';
@@ -1644,9 +1883,16 @@ function field(path, label, options = {}) {
     input.value = value || '';
   }
   const readValue = event => options.parse ? options.parse(event.target.value) : event.target.value;
+  const writeValue = (event, rerender) => {
+    const nextValue = readValue(event);
+    setValue(path, nextValue, { rerender });
+    wrapper.classList.toggle('missing', required && !isFilled(nextValue));
+    const origin = wrapper.querySelector('.origin');
+    if (origin) origin.textContent = originLabel(path);
+  };
   input.disabled = Boolean(options.disabled);
-  input.addEventListener('input', event => setValue(path, readValue(event)));
-  input.addEventListener('change', event => setValue(path, readValue(event)));
+  input.addEventListener('input', event => writeValue(event, false));
+  input.addEventListener('change', event => writeValue(event, true));
   wrapper.appendChild(input);
 
   const source = fieldSources[path];
@@ -1728,8 +1974,13 @@ function tableCell(path, options = {}) {
     input.className = 'table-control';
   }
   const readValue = event => options.parse ? options.parse(event.target.value) : event.target.value;
-  input.addEventListener('input', event => setValue(path, readValue(event)));
-  input.addEventListener('change', event => setValue(path, readValue(event)));
+  const writeValue = (event, rerender) => {
+    const nextValue = readValue(event);
+    setValue(path, nextValue, { rerender });
+    cell.classList.toggle('missing-cell', required && !isFilled(nextValue));
+  };
+  input.addEventListener('input', event => writeValue(event, false));
+  input.addEventListener('change', event => writeValue(event, true));
   cell.appendChild(input);
 
   const source = fieldSources[path];
@@ -1952,8 +2203,8 @@ function rolePickerField(path, label, ownDepartment, options = {}) {
   return wrapper;
 }
 
-function actorRoleField(index) {
-  const wrapper = field(`steps.${index}.actor_role`, '制度原文中的角色/岗位称谓', { type: 'textarea' });
+function actorRoleField(index, label = '制度原文中的角色/岗位称谓') {
+  const wrapper = field(`steps.${index}.actor_role`, label, { type: 'textarea' });
   const department = processDepartmentForStep(index);
   const positions = department ? rosterPositions(department) : [];
   if (positions.length) {
@@ -1994,16 +2245,40 @@ function stepsForProcess(processRef) {
     .filter(item => item.step.process_ref === processRef);
 }
 
+const STEP_CORE_FIELD_LABELS = [
+  { path: index => `steps.${index}.step_name`, label: '业务行为' },
+  { path: index => `steps.${index}.actor_role`, label: '执行角色' },
+  { path: index => `steps.${index}.input_materials`, label: '输入材料' },
+  { path: index => `behavior_details.${index}.execution_standard`, label: '执行标准' },
+  { path: index => `steps.${index}.output_result`, label: '输出结果' }
+];
+
+function stepMissingFields(index) {
+  return STEP_CORE_FIELD_LABELS
+    .filter(item => !isFilled(getValue(item.path(index))))
+    .map(item => item.label);
+}
+
 function stepCoreComplete(index) {
-  const step = docData.steps[index] || {};
-  const detail = docData.behavior_details[index] || {};
-  return [
-    step.step_name,
-    step.actor_role,
-    step.input_materials,
-    step.output_result,
-    detail.execution_standard
-  ].every(isFilled);
+  return stepMissingFields(index).length === 0;
+}
+
+function normalizedDuplicateStepName(value) {
+  return String(value || '').replace(/\s+/g, '').trim();
+}
+
+function duplicateStepCounts(processRef) {
+  const counts = new Map();
+  stepsForProcess(processRef).forEach(({ step }) => {
+    const key = normalizedDuplicateStepName(step.step_name);
+    if (key) counts.set(key, (counts.get(key) || 0) + 1);
+  });
+  return counts;
+}
+
+function duplicateCountForStep(step, counts) {
+  const key = normalizedDuplicateStepName(step?.step_name);
+  return key ? counts.get(key) || 0 : 0;
 }
 
 function processCoreComplete(processRef) {
@@ -2016,11 +2291,13 @@ function processSummaryText(processRef) {
   const decisionCount = rows.filter(row => row.step.step_type === 'decision').length;
   const transitions = (docData.step_transitions || []).filter(item => item.process_ref === processRef);
   const missingTargets = transitions.filter(item => !item.to_step_ref).length;
-  return `业务行为 ${rows.length} 个；判断节点 ${decisionCount} 个；判断分支 ${transitions.length} 条；未补流向 ${missingTargets} 条；核心字段${processCoreComplete(processRef) ? '已完成' : '待补'}`;
+  const incompleteCount = rows.filter(row => !stepCoreComplete(row.index)).length;
+  const duplicateCounts = duplicateStepCounts(processRef);
+  const duplicateRows = rows.filter(row => duplicateCountForStep(row.step, duplicateCounts) > 1).length;
+  return `步骤 ${rows.length} 个；待补 ${incompleteCount} 个；疑似重复 ${duplicateRows} 个；判断节点 ${decisionCount} 个；判断分支 ${transitions.length} 条；未补流向 ${missingTargets} 条`;
 }
 
 function toggleProcessCollapse(processRef) {
-  if (!processCoreComplete(processRef)) return;
   if (collapsedProcessRefs.has(processRef)) collapsedProcessRefs.delete(processRef);
   else collapsedProcessRefs.add(processRef);
   render();
@@ -2480,96 +2757,326 @@ function renderWorkRoleBindings(processRef, stepRef = null) {
   return group;
 }
 
+function stepRowsForCurrentFilter(processRef) {
+  const filter = stepFiltersByProcess.get(processRef) || 'all';
+  const rows = stepsForProcess(processRef);
+  const duplicates = duplicateStepCounts(processRef);
+  if (filter === 'incomplete') return rows.filter(row => !stepCoreComplete(row.index));
+  if (filter === 'complete') return rows.filter(row => stepCoreComplete(row.index));
+  if (filter === 'duplicates') return rows.filter(row => duplicateCountForStep(row.step, duplicates) > 1);
+  return rows;
+}
+
+function selectedStepRowForProcess(processRef, filteredRows = stepRowsForCurrentFilter(processRef)) {
+  if (!filteredRows.length) return null;
+  const selectedRef = activeStepRefsByProcess.get(processRef);
+  const selected = filteredRows.find(row => row.step.step_ref === selectedRef);
+  if (selected) return selected;
+  const first = filteredRows.find(row => !stepCoreComplete(row.index)) || filteredRows[0];
+  activeStepRefsByProcess.set(processRef, first.step.step_ref);
+  return first;
+}
+
+function selectStepForProcess(processRef, stepRef) {
+  activeStepRefsByProcess.set(processRef, stepRef);
+  collapsedProcessRefs.delete(processRef);
+  render();
+}
+
+function setStepFilterForProcess(processRef, filter) {
+  stepFiltersByProcess.set(processRef, filter);
+  activeStepRefsByProcess.delete(processRef);
+  render();
+}
+
+function stepActionButton(label, onClick, disabled = false, extraClass = '') {
+  const button = document.createElement('button');
+  button.className = `btn ${extraClass}`.trim();
+  button.type = 'button';
+  button.textContent = label;
+  button.disabled = disabled;
+  button.addEventListener('click', onClick);
+  return button;
+}
+
+function renderStepNavigator(processRef, filteredRows, selectedRow) {
+  const allRows = stepsForProcess(processRef);
+  const duplicates = duplicateStepCounts(processRef);
+  const incompleteCount = allRows.filter(row => !stepCoreComplete(row.index)).length;
+  const completeCount = allRows.length - incompleteCount;
+  const duplicateRows = allRows.filter(row => duplicateCountForStep(row.step, duplicates) > 1).length;
+  const panel = div('step-list-panel');
+  panel.dataset.processRef = processRef;
+
+  const summary = div('step-list-summary');
+  [
+    { value: allRows.length, label: '全部步骤' },
+    { value: incompleteCount, label: '需要补充' },
+    { value: duplicateRows, label: '疑似重复' }
+  ].forEach(item => {
+    const cell = document.createElement('div');
+    const value = document.createElement('strong');
+    value.textContent = String(item.value);
+    const label = document.createElement('span');
+    label.textContent = item.label;
+    cell.append(value, label);
+    summary.appendChild(cell);
+  });
+  panel.appendChild(summary);
+
+  const filter = stepFiltersByProcess.get(processRef) || 'all';
+  const filterBar = div('step-filter-bar');
+  [
+    { value: 'all', label: `全部 ${allRows.length}` },
+    { value: 'incomplete', label: `待补 ${incompleteCount}` },
+    { value: 'duplicates', label: `疑似重复 ${duplicateRows}` },
+    { value: 'complete', label: `已完成 ${completeCount}` }
+  ].forEach(item => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = item.value === filter ? 'active' : '';
+    button.textContent = item.label;
+    button.addEventListener('click', () => setStepFilterForProcess(processRef, item.value));
+    filterBar.appendChild(button);
+  });
+  panel.appendChild(filterBar);
+
+  const list = div('step-list');
+  list.addEventListener('scroll', () => stepListScrollTopByProcess.set(processRef, list.scrollTop));
+  if (!filteredRows.length) {
+    const noRows = div('step-filter-empty');
+    noRows.textContent = '当前筛选下没有步骤。可切换筛选或新增业务行为。';
+    list.appendChild(noRows);
+  }
+  const selectedRef = selectedRow?.step.step_ref || '';
+  filteredRows.forEach(row => {
+    const localIndex = allRows.findIndex(item => item.step.step_ref === row.step.step_ref);
+    const missing = stepMissingFields(row.index);
+    const duplicateCount = duplicateCountForStep(row.step, duplicates);
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `step-list-item ${row.step.step_ref === selectedRef ? 'active' : ''}`.trim();
+    button.dataset.stepRef = row.step.step_ref;
+    button.setAttribute('aria-current', row.step.step_ref === selectedRef ? 'true' : 'false');
+
+    const head = div('step-list-item-head');
+    const index = document.createElement('span');
+    index.className = 'step-index';
+    index.textContent = String(localIndex + 1).padStart(2, '0');
+    const type = document.createElement('span');
+    type.className = `step-type-badge ${row.step.step_type === 'decision' ? 'decision' : ''}`.trim();
+    type.textContent = row.step.step_type === 'decision' ? '判断' : '行为';
+    head.append(index, type);
+    if (duplicateCount > 1) {
+      const duplicate = document.createElement('span');
+      duplicate.className = 'step-duplicate-badge';
+      duplicate.textContent = `同名 × ${duplicateCount}`;
+      head.appendChild(duplicate);
+    }
+
+    const name = div('step-list-name');
+    name.textContent = row.step.step_name || '未填写业务行为';
+    const status = div(`step-list-status ${missing.length ? '' : 'complete'}`.trim());
+    status.textContent = missing.length ? `待补 ${missing.length} 项` : '核心字段已完成';
+    button.append(head, name, status);
+    button.addEventListener('click', () => selectStepForProcess(processRef, row.step.step_ref));
+    list.appendChild(button);
+  });
+  panel.appendChild(list);
+
+  const selectedPosition = allRows.findIndex(row => row.step.step_ref === selectedRef);
+  const rowsAfterSelection = selectedPosition >= 0
+    ? allRows.slice(selectedPosition + 1).concat(allRows.slice(0, selectedPosition))
+    : allRows;
+  const nextIncomplete = rowsAfterSelection.find(row => !stepCoreComplete(row.index));
+  const footer = div('step-list-footer');
+  footer.appendChild(stepActionButton(
+    '下一项待补',
+    () => selectStepForProcess(processRef, nextIncomplete.step.step_ref),
+    !nextIncomplete
+  ));
+  panel.appendChild(footer);
+
+  const savedScrollTop = stepListScrollTopByProcess.get(processRef) || 0;
+  requestAnimationFrame(() => {
+    list.scrollTop = savedScrollTop;
+    const active = list.querySelector('.step-list-item.active');
+    if (!active) return;
+    const listRect = list.getBoundingClientRect();
+    const activeRect = active.getBoundingClientRect();
+    if (activeRect.top < listRect.top) list.scrollTop -= listRect.top - activeRect.top;
+    else if (activeRect.bottom > listRect.bottom) list.scrollTop += activeRect.bottom - listRect.bottom;
+  });
+  return panel;
+}
+
+function collapsiblePanel(summaryText, content, options = {}) {
+  const details = document.createElement('details');
+  details.className = options.className || 'step-support-panel';
+  details.open = Boolean(options.open);
+  const summary = document.createElement('summary');
+  summary.textContent = summaryText;
+  const body = div(options.bodyClassName || 'step-support-panel-body');
+  body.appendChild(content);
+  details.append(summary, body);
+  return details;
+}
+
+function renderSelectedStepEditor(processRef, filteredRows, selectedRow) {
+  if (!selectedRow) {
+    const noSelection = div('step-filter-empty');
+    noSelection.textContent = '当前筛选下没有可编辑步骤。';
+    return noSelection;
+  }
+
+  const allRows = stepsForProcess(processRef);
+  const rowPosition = allRows.findIndex(row => row.step.step_ref === selectedRow.step.step_ref);
+  const filteredPosition = filteredRows.findIndex(row => row.step.step_ref === selectedRow.step.step_ref);
+  const index = selectedRow.index;
+  if (!docData.behavior_details[index]) docData.behavior_details[index] = blankBehaviorDetail(index);
+  const missing = stepMissingFields(index);
+  const duplicateCount = duplicateCountForStep(selectedRow.step, duplicateStepCounts(processRef));
+  const editor = div('step-editor');
+
+  const head = div('step-editor-head');
+  const copy = document.createElement('div');
+  const heading = document.createElement('h4');
+  heading.textContent = `第 ${rowPosition + 1} 步｜${selectedRow.step.step_type === 'decision' ? '判断节点' : '业务行为'}`;
+  const status = document.createElement('p');
+  const statusParts = [missing.length ? `还需补充：${missing.join('、')}` : '核心字段已完成'];
+  if (duplicateCount > 1) statusParts.push(`存在 ${duplicateCount} 个同名步骤，请核对是否重复`);
+  status.textContent = statusParts.join('；');
+  copy.append(heading, status);
+
+  const actions = div('step-editor-actions');
+  const previous = filteredRows[filteredPosition - 1];
+  const next = filteredRows[filteredPosition + 1];
+  actions.append(
+    stepActionButton('上一项', () => selectStepForProcess(processRef, previous.step.step_ref), !previous),
+    stepActionButton('下一项', () => selectStepForProcess(processRef, next.step.step_ref), !next),
+    stepActionButton('上移', () => moveStepWithinProcess(index, -1), rowPosition === 0),
+    stepActionButton('下移', () => moveStepWithinProcess(index, 1), rowPosition === allRows.length - 1),
+    stepActionButton('删除当前步骤', () => {
+      const name = selectedRow.step.step_name || `第 ${rowPosition + 1} 步`;
+      if (!confirm(`确认删除“${name}”？删除后需重新导入原文件才能恢复。`)) return;
+      removeArrayItem('steps', index);
+    }, false, 'warn')
+  );
+  head.append(copy, actions);
+  editor.appendChild(head);
+
+  const body = div('step-editor-body');
+  const guide = div('step-fill-guide');
+  guide.textContent = selectedRow.step.step_type === 'decision'
+    ? '先说明由谁判断、判断什么，再到下方“判断分支”填写条件和流向。字段顺序：③何时触发 → ④开始前有什么 → ⑤谁来做 → ⑥具体做什么 → ⑦怎样算完成 → ⑧交付什么。'
+    : '按业务顺序填写：③何时触发 → ④开始前有什么 → ⑤谁来做 → ⑥具体做什么 → ⑦怎样算完成 → ⑧交付什么。没有原文依据的内容可以留空。';
+  body.appendChild(guide);
+
+  const grid = div('step-editor-grid');
+  const typeField = field(`steps.${index}.step_type`, '步骤类型', {
+    type: 'select',
+    options: [{ value: 'action', label: '业务行为' }, { value: 'decision', label: '判断节点' }]
+  });
+  const nameField = field(`steps.${index}.step_name`, '⑥具体做什么（业务行为）', { type: 'textarea' });
+  nameField.classList.add('step-wide');
+  const actor = actorRoleField(index, '⑤每一步谁来做（制度原文称谓）');
+  actor.classList.add('step-wide');
+  const trigger = field(`behavior_details.${index}.trigger_scene`, '③何时触发（触发场景）', { type: 'textarea', required: false });
+  const precondition = field(`behavior_details.${index}.precondition`, '④开始前有什么（前置条件）', { type: 'textarea', required: false });
+  const input = field(`steps.${index}.input_materials`, '④需要哪些材料（输入材料）', { type: 'textarea' });
+  const timing = field(`steps.${index}.timing`, '⑦办理时限（如有）', { required: false });
+  const standard = field(`behavior_details.${index}.execution_standard`, '⑦怎样才算按要求完成（执行标准）', { type: 'textarea', required: false });
+  standard.classList.add('step-wide');
+  const output = field(`steps.${index}.output_result`, '⑧最终交付什么（输出结果）', { type: 'textarea' });
+  output.classList.add('step-wide');
+  grid.append(typeField, nameField, actor, trigger, precondition, input, timing, standard, output);
+  body.appendChild(grid);
+
+  const roleCount = workRoleBindingsForTarget(processRef, selectedRow.step.step_ref).length;
+  body.appendChild(collapsiblePanel(
+    `参与岗位与工作角色（${roleCount} 条，按需填写）`,
+    renderWorkRoleBindings(processRef, selectedRow.step.step_ref)
+  ));
+  const moveSettings = div('grid');
+  moveSettings.appendChild(field(`steps.${index}.process_ref`, '所属流程', { type: 'select', options: processOptions() }));
+  body.appendChild(collapsiblePanel('更多设置', moveSettings));
+  editor.appendChild(body);
+  return editor;
+}
+
+function renderProcessMetaPanel(process, processIndex) {
+  const processRef = process.process_ref;
+  const content = document.createDocumentFragment();
+  const processGrid = div('grid');
+  processGrid.append(
+    readonlyMappingField(`processes.${processIndex}.l1_name`, '能力域'),
+    readonlyMappingField(`processes.${processIndex}.l2_name`, '业务能力'),
+    field(`processes.${processIndex}.l3_name`, '业务流程', { required: false }),
+    field(`processes.${processIndex}.owner`, '归口部门', { type: 'select', options: DEPARTMENT_OPTIONS, required: false })
+  );
+  content.append(processGrid, renderWorkRoleBindings(processRef, null));
+  const owner = process.owner || '未填写归口部门';
+  return collapsiblePanel(`流程信息与负责人｜${owner}`, content, {
+    className: 'process-meta-panel',
+    bodyClassName: 'process-meta-panel-body'
+  });
+}
+
 function renderSteps() {
   const root = div('row-list');
   if (!docData.processes.length) docData.processes.push(blankProcess());
   docData.processes.forEach((process, processIndex) => {
     const processRef = process.process_ref;
+    const processStepRows = stepsForProcess(processRef);
     const card = div('process-card');
     const head = div('process-card-head');
     const copy = document.createElement('div');
     copy.innerHTML = `<h3>${escapeHtml(process.l3_name || `流程 ${processIndex + 1}`)}</h3><p>${escapeHtml(processSummaryText(processRef))}</p>`;
     const actions = div('process-actions');
-    const collapse = document.createElement('button');
-    collapse.className = 'btn';
-    collapse.type = 'button';
-    collapse.textContent = collapsedProcessRefs.has(processRef) ? '展开流程' : '折叠流程';
-    collapse.disabled = !processCoreComplete(processRef);
-    collapse.addEventListener('click', () => toggleProcessCollapse(processRef));
-    const addAction = document.createElement('button');
-    addAction.className = 'btn';
-    addAction.type = 'button';
-    addAction.textContent = '新增业务行为';
-    addAction.addEventListener('click', () => addStepForProcess(processRef, 'action'));
-    const addDecision = document.createElement('button');
-    addDecision.className = 'btn';
-    addDecision.type = 'button';
-    addDecision.textContent = '新增判断节点';
-    addDecision.addEventListener('click', () => addStepForProcess(processRef, 'decision'));
-    const addTransition = document.createElement('button');
-    addTransition.className = 'btn';
-    addTransition.type = 'button';
-    addTransition.textContent = '新增判断分支';
-    addTransition.addEventListener('click', () => addTransitionForProcess(processRef));
+    const collapse = stepActionButton(
+      collapsedProcessRefs.has(processRef) ? '展开流程' : '折叠流程',
+      () => toggleProcessCollapse(processRef)
+    );
+    const addAction = stepActionButton('新增业务行为', () => addStepForProcess(processRef, 'action'));
+    const addDecision = stepActionButton('新增判断节点', () => addStepForProcess(processRef, 'decision'));
+    const hasDecision = processStepRows.some(row => row.step.step_type === 'decision');
+    const addTransition = stepActionButton('新增判断分支', () => addTransitionForProcess(processRef), !hasDecision);
+    if (!hasDecision) addTransition.title = '先新增或设置一个判断节点';
     actions.append(collapse, addAction, addDecision, addTransition);
     head.append(copy, actions);
     card.appendChild(head);
 
-    if (collapsedProcessRefs.has(processRef) && processCoreComplete(processRef)) {
+    if (collapsedProcessRefs.has(processRef)) {
       const summary = div('process-collapsed-summary');
-      summary.textContent = processSummaryText(processRef);
+      summary.textContent = `${processSummaryText(processRef)}。展开后可继续补充。`;
       card.appendChild(summary);
       root.appendChild(card);
       return;
     }
 
-    const processGrid = div('grid');
-    processGrid.append(
-      readonlyMappingField(`processes.${processIndex}.l1_name`, '能力域'),
-      readonlyMappingField(`processes.${processIndex}.l2_name`, '业务能力'),
-      field(`processes.${processIndex}.l3_name`, '业务流程', { required: false }),
-      field(`processes.${processIndex}.owner`, '归口部门', { type: 'select', options: DEPARTMENT_OPTIONS, required: false })
-    );
-    card.appendChild(processGrid);
-    card.appendChild(renderWorkRoleBindings(processRef, null));
+    card.appendChild(renderProcessMetaPanel(process, processIndex));
+    if (!processStepRows.length) {
+      card.appendChild(empty('这条流程还没有业务行为或判断节点。请从上方新增。'));
+      root.appendChild(card);
+      return;
+    }
 
-    const stepRows = stepsForProcess(processRef);
-    if (!stepRows.length) card.appendChild(empty('这条流程还没有业务行为或判断节点。'));
-    stepRows.forEach(({ index: i }, localIndex) => {
-      if (!docData.behavior_details[i]) docData.behavior_details[i] = blankBehaviorDetail(i);
-      const item = record(`${docData.steps[i].step_type === 'decision' ? '判断节点' : '业务行为'} ${localIndex + 1}`, () => removeArrayItem('steps', i));
-      const stepActions = div('step-actions');
-      const up = document.createElement('button');
-      up.className = 'btn';
-      up.type = 'button';
-      up.textContent = '上移';
-      up.disabled = localIndex === 0;
-      up.addEventListener('click', () => moveStepWithinProcess(i, -1));
-      const down = document.createElement('button');
-      down.className = 'btn';
-      down.type = 'button';
-      down.textContent = '下移';
-      down.disabled = localIndex === stepRows.length - 1;
-      down.addEventListener('click', () => moveStepWithinProcess(i, 1));
-      stepActions.append(up, down);
-      item.appendChild(stepActions);
-      const grid = div('grid');
-      grid.append(
-        field(`steps.${i}.process_ref`, '所属流程', { type: 'select', options: processOptions() }),
-        field(`steps.${i}.step_type`, '步骤类型', { type: 'select', options: [{ value: 'action', label: '业务行为' }, { value: 'decision', label: '判断节点' }] }),
-        field(`steps.${i}.step_name`, '业务行为', { type: 'textarea' }),
-        actorRoleField(i),
-        field(`behavior_details.${i}.trigger_scene`, '触发场景', { type: 'textarea', required: false }),
-        field(`behavior_details.${i}.precondition`, '前置条件', { type: 'textarea', required: false }),
-        field(`steps.${i}.input_materials`, '输入材料'),
-        field(`steps.${i}.output_result`, '输出结果'),
-        field(`behavior_details.${i}.execution_standard`, '执行标准', { type: 'textarea', required: false })
-      );
-      item.appendChild(grid);
-      item.appendChild(renderWorkRoleBindings(processRef, docData.steps[i].step_ref));
-      card.appendChild(item);
-    });
-    card.appendChild(renderStepTransitions(processRef));
+    const filteredRows = stepRowsForCurrentFilter(processRef);
+    const selectedRow = selectedStepRowForProcess(processRef, filteredRows);
+    const workbench = div('step-workbench');
+    workbench.append(
+      renderStepNavigator(processRef, filteredRows, selectedRow),
+      renderSelectedStepEditor(processRef, filteredRows, selectedRow)
+    );
+    card.appendChild(workbench);
+
+    const transitions = (docData.step_transitions || []).filter(item => item.process_ref === processRef);
+    const selectedIsDecision = selectedRow?.step.step_type === 'decision';
+    card.appendChild(collapsiblePanel(
+      `判断分支（${transitions.length} 条）`,
+      renderStepTransitions(processRef),
+      { open: selectedIsDecision || transitions.length > 0 }
+    ));
     root.appendChild(card);
   });
   return root;
@@ -2739,6 +3246,8 @@ function addStepForProcess(processRef, stepType = 'action') {
   const step = blankStep(processRef, stepType);
   docData.steps.push(step);
   docData.behavior_details.push(blankBehaviorDetail(docData.steps.length - 1));
+  activeStepRefsByProcess.set(processRef, step.step_ref);
+  stepFiltersByProcess.set(processRef, 'all');
   collapsedProcessRefs.delete(processRef);
   hasPageContent = true;
   render();
@@ -2791,6 +3300,28 @@ function cleanStepTransitions() {
   normalizeStepTransitions(docData);
 }
 
+function remapStepIndexedStore(store, indexMapper) {
+  const remapped = {};
+  for (const [path, value] of Object.entries(store || {})) {
+    const match = path.match(/^(steps|behavior_details)\.(\d+)(\..+)?$/);
+    if (!match) {
+      remapped[path] = value;
+      continue;
+    }
+    const nextIndex = indexMapper(Number(match[2]));
+    if (nextIndex === null || nextIndex === undefined) continue;
+    remapped[`${match[1]}.${nextIndex}${match[3] || ''}`] = value;
+  }
+  return remapped;
+}
+
+function remapStepIndexedMetadata(indexMapper) {
+  fieldSources = remapStepIndexedStore(fieldSources, indexMapper);
+  fieldOrigins = remapStepIndexedStore(fieldOrigins, indexMapper);
+  fieldWarnings = remapStepIndexedStore(fieldWarnings, indexMapper);
+  fieldSuggestions = remapStepIndexedStore(fieldSuggestions, indexMapper);
+}
+
 function moveStepWithinProcess(index, direction) {
   const step = docData.steps[index];
   if (!step) return;
@@ -2803,6 +3334,11 @@ function moveStepWithinProcess(index, direction) {
   docData.steps[target.index] = step;
   docData.behavior_details[index] = docData.behavior_details[target.index];
   docData.behavior_details[target.index] = detail;
+  remapStepIndexedMetadata(currentIndex => {
+    if (currentIndex === index) return target.index;
+    if (currentIndex === target.index) return index;
+    return currentIndex;
+  });
   hasPageContent = true;
   render();
 }
@@ -2846,6 +3382,8 @@ function removeForm(index) {
 function removeArrayItem(key, index) {
   let removedProcessRef = null;
   let removedProcessStepRefs = [];
+  let removedStepRef = null;
+  let nextStepRef = null;
   if (key === 'processes') {
     removedProcessRef = docData.processes[index]?.process_ref || null;
     removedProcessStepRefs = docData.steps
@@ -2855,6 +3393,10 @@ function removeArrayItem(key, index) {
   if (key === 'steps') {
     const step = docData.steps[index];
     if (step) {
+      removedStepRef = step.step_ref;
+      const rows = stepsForProcess(step.process_ref);
+      const localIndex = rows.findIndex(row => row.index === index);
+      nextStepRef = rows[localIndex + 1]?.step.step_ref || rows[localIndex - 1]?.step.step_ref || null;
       docData.step_transitions = docData.step_transitions.filter(transition =>
         transition.from_step_ref !== step.step_ref && transition.to_step_ref !== step.step_ref
       );
@@ -2862,7 +3404,18 @@ function removeArrayItem(key, index) {
     }
   }
   docData[key].splice(index, 1);
-  if (key === 'steps') docData.behavior_details.splice(index, 1);
+  if (key === 'steps') {
+    docData.behavior_details.splice(index, 1);
+    remapStepIndexedMetadata(currentIndex => {
+      if (currentIndex === index) return null;
+      return currentIndex > index ? currentIndex - 1 : currentIndex;
+    });
+    for (const [processRef, activeRef] of activeStepRefsByProcess.entries()) {
+      if (activeRef !== removedStepRef) continue;
+      if (nextStepRef) activeStepRefsByProcess.set(processRef, nextStepRef);
+      else activeStepRefsByProcess.delete(processRef);
+    }
+  }
   if (key === 'processes') {
     const validProcessRefs = new Set(docData.processes.map(process => process.process_ref));
     docData.steps = docData.steps.filter(step => validProcessRefs.has(step.process_ref));
@@ -3013,6 +3566,7 @@ function clearPage() {
   activeFormRef = '';
   activeTableRef = '';
   collapsedProcessRefs.clear();
+  resetStepWorkbenchState();
   hasPageContent = false;
   render();
 }

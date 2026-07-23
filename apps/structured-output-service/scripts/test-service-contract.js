@@ -315,7 +315,7 @@ docData = ensureDocument({
     { process_ref: 'proc_business', draft_ref: null, process_code: null, l3_key: null, process_type: 'new', l1_name: '', l2_name: '', l3_name: '经营承接流程', description: null, owner: '经营发展部', system: '', evidence_refs: [] }
   ],
   steps: [
-    { step_ref: 'step_finance_action', draft_ref: null, process_ref: 'proc_finance', step_type: 'action', a1_code: null, step_name: '财务部提交付款资料', actor_role: '财务部会计员', timing: null, input_materials: '付款申请', output_result: '付款资料', entry: null, system: '', status: 'active', evidence_refs: [] },
+    { step_ref: 'step_finance_action', draft_ref: null, process_ref: 'proc_finance', step_type: 'action', a1_code: null, step_name: '财务部提交付款资料', actor_role: '财务部会计员', timing: '2个工作日', input_materials: '付款申请', output_result: '付款资料', entry: null, system: '', status: 'active', evidence_refs: [] },
     { step_ref: 'step_finance_decision', draft_ref: null, process_ref: 'proc_finance', step_type: 'decision', a1_code: null, step_name: '是否需要领导审批', actor_role: '财务部副部长', timing: null, input_materials: '付款资料', output_result: '审批判断', entry: null, system: '', status: 'active', evidence_refs: [] },
     { step_ref: 'step_quality_action', draft_ref: null, process_ref: 'proc_quality', step_type: 'action', a1_code: null, step_name: '质量管理部复核资料', actor_role: '质量管理部主管', timing: null, input_materials: '付款资料', output_result: '复核意见', entry: null, system: '', status: 'active', evidence_refs: [] },
     { step_ref: 'step_leader_action', draft_ref: null, process_ref: 'proc_leader', step_type: 'action', a1_code: null, step_name: '总经理审批重大事项', actor_role: '公司领导总经理', timing: null, input_materials: '审批材料', output_result: '审批意见', entry: null, system: '', status: 'active', evidence_refs: [] },
@@ -432,6 +432,7 @@ globalThis.__workflowProbe = {
   firstInvalidStructuralRef,
   retiredHistoryProblems,
   reimportedProcessCount: reimported.processes.length,
+  reimportedFinanceTiming: reimported.steps.find(step => step.step_ref === 'step_finance_action')?.timing,
   reimportedLeaderRole: reimported.steps.find(step => step.step_ref === 'step_leader_action')?.actor_role,
   reimportedFormRole: reimported.forms[0]?.responsible_role,
   reimportedFieldName: reimported.form_table_fields[0]?.field_name
@@ -536,6 +537,7 @@ async function run() {
     assert.ok(workflowProbe.exportedTransitions.some(item => item.ref === 'trans_cross_process' && item.to === null), 'cross-process branch target should be cleared before export');
     assert.ok(workflowProbe.exportedTransitions.some(item => item.ref === 'trans_missing_target' && item.to === null), 'blank branch target should remain exportable');
     assert.equal(workflowProbe.reimportedProcessCount, 4, 'reimport should preserve split process cards');
+    assert.equal(workflowProbe.reimportedFinanceTiming, '2个工作日', 'step timing should survive export and reimport');
     assert.equal(workflowProbe.reimportedLeaderRole, '公司领导总经理', 'reimport should preserve leadership actor role');
     assert.equal(workflowProbe.reimportedFormRole, '经营发展部计划员', 'reimport should preserve form responsible role');
     assert.equal(workflowProbe.reimportedFieldName, '审批结果', 'reimport should preserve form table fields');
@@ -1028,7 +1030,8 @@ async function run() {
     assert.ok(frontend.includes("table_name: isFirstTable ? (form.main_table_name || '') : ''"), 'new detail tables should start with an empty editable header instead of copying the main table name');
     assert.ok(frontend.includes('structureKindForTable(tableRef)'), 'new fields should inherit the selected table structure kind');
     assert.ok(frontend.includes('actorRoleField'), 'source role text should have a dedicated field');
-    assert.ok(frontend.includes("field(`steps.${index}.actor_role`, '制度原文中的角色/岗位称谓', { type: 'textarea' })"), 'source role text must remain free text instead of a roster selector');
+    assert.ok(frontend.includes("function actorRoleField(index, label = '制度原文中的角色/岗位称谓')"), 'source role field should keep the business-facing default label');
+    assert.ok(frontend.includes("field(`steps.${index}.actor_role`, label, { type: 'textarea' })"), 'source role text must remain free text instead of a roster selector');
     assert.ok(frontend.includes('花名册岗位候选（仅供核对）'), 'roster positions should only be shown as read-only candidate hints');
     assert.ok(frontend.includes('候选不会写回制度原文，也不会自动成为正式工作角色'), 'candidate hints must disclose that they do not confirm work roles');
     assert.ok(frontend.includes('processDepartmentForStep(index)'), 'candidate hints should use the current process department context');
@@ -1071,6 +1074,16 @@ async function run() {
     assert.ok(frontend.includes('新增判断分支'), 'each process should let users add decision branches');
     assert.ok(frontend.includes('toggleProcessCollapse'), 'frontend should support process-level collapse');
     assert.ok(frontend.includes('process-collapsed-summary'), 'collapsed processes should render a readable summary');
+    assert.ok(frontend.includes('activeStepRefsByProcess'), 'large processes should keep one active step per process');
+    assert.ok(frontend.includes('step-workbench'), 'steps should render in a master-detail workbench instead of one expanded form per row');
+    assert.ok(frontend.includes('step-list-panel'), 'the workbench should provide a bounded step navigator');
+    assert.ok(frontend.includes('stepRowsForCurrentFilter'), 'users should be able to filter the step navigator');
+    assert.ok(frontend.includes('stepMissingFields'), 'the workbench should summarize each step completion state');
+    assert.ok(frontend.includes('疑似重复'), 'duplicate step names should be flagged for human review');
+    assert.ok(frontend.includes('下一项待补'), 'users should be able to jump to the next incomplete step');
+    assert.ok(frontend.includes('⑦办理时限（如有）'), 'the step editor should expose the existing timing field');
+    assert.ok(frontend.includes('remapStepIndexedMetadata'), 'moving or deleting a step should keep indexed evidence and suggestions aligned');
+    assert.equal(frontend.includes('collapse.disabled = !processCoreComplete(processRef)'), false, 'users should be able to fold an incomplete process');
     assert.equal(frontend.includes('localStorage'), false, 'frontend must not restore from browser storage');
     assert.equal(frontend.includes('sessionStorage'), false, 'frontend must not restore from browser storage');
   });
