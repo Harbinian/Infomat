@@ -362,6 +362,17 @@ const formOptions = actorRoleDepartmentOptions(formDepartment(0), '先确认形�
 const exported = normalizeForStructuredExport(docData);
 const reimported = ensureDocument(exported);
 const validConfirmedProblems = confirmationProblemsForWorkRoleBinding(0);
+const positionDraftBinding = normalizeWorkRoleBinding({
+  binding_ref: 'wrb_position_draft', process_ref: 'proc_finance', step_ref: 'step_finance_action',
+  participant_department: { department_name: '财务部' }, source_role_text: '财务部会计员', source_position_name: '会计员', work_role_code: null,
+  participation_type: 'executor', status: 'proposed', evidence_refs: ['EV-ROLE-001'], confirmation_basis: null
+}, 1);
+docData.work_role_bindings.push(positionDraftBinding);
+const positionDraftStructuralProblems = structuralProblemsForWorkRoleBinding(1);
+const positionDraftConfirmationProblems = confirmationProblemsForWorkRoleBinding(1);
+const positionDraftExport = normalizeForStructuredExport(docData);
+const positionDraftReimport = ensureDocument(positionDraftExport);
+docData.work_role_bindings.pop();
 docData.evidence_catalog.push({ evidence_ref: 'EV-PENDING-001', object_type: 'step', object_ref: 'step_finance_action', evidence_type: '制度条款', description: '待人工核验的角色证据', source_name: '财务制度.docx', source_anchor: '第 4 页第 1 条', source_file: '财务制度.docx', source_excerpt: '财务部会计员复核付款资料', locator: '第 4 页第 1 条', locate_method: 'template_text', status: 'pending_review' });
 const pendingEvidenceBinding = normalizeWorkRoleBinding({
   binding_ref: 'wrb_pending_evidence', process_ref: 'proc_finance', step_ref: 'step_finance_action',
@@ -423,6 +434,11 @@ globalThis.__workflowProbe = {
   projectedWorkRoleBindings: exported.structure_block_projection.work_role_bindings,
   reimportedWorkRoleBindings: reimported.work_role_bindings,
   validConfirmedProblems,
+  positionDraftStructuralProblems,
+  positionDraftConfirmationProblems,
+  exportedPositionDraft: positionDraftExport.work_role_bindings.find(item => item.binding_ref === 'wrb_position_draft'),
+  projectedPositionDraft: positionDraftExport.structure_block_projection.work_role_bindings.find(item => item.binding_ref === 'wrb_position_draft') || null,
+  reimportedPositionDraft: positionDraftReimport.work_role_bindings.find(item => item.binding_ref === 'wrb_position_draft'),
   pendingEvidenceProblems,
   pendingEvidenceConfirmProblems,
   verifiedAfterManualConfirmation,
@@ -525,6 +541,12 @@ async function run() {
     assert.deepEqual(workflowProbe.projectedWorkRoleBindings, workflowProbe.exportedWorkRoleBindings.filter(item => item.status === 'confirmed'), 'projection must be rebuilt from confirmed top-level bindings only');
     assert.equal(workflowProbe.reimportedWorkRoleBindings[0].binding_ref, 'wrb_confirmed', 'work role binding should survive export and reimport');
     assert.deepEqual(workflowProbe.validConfirmedProblems, [], 'valid confirmed work role binding should pass hard validation');
+    assert.deepEqual(workflowProbe.positionDraftStructuralProblems, [], 'a roster position should remain exportable before the process is solidified');
+    assert.ok(workflowProbe.positionDraftConfirmationProblems.includes('流程尚未固化为正式工作角色'), 'position draft must not become a confirmed work role binding');
+    assert.equal(workflowProbe.exportedPositionDraft.source_position_name, '会计员', 'position draft should preserve the selected roster position');
+    assert.equal(workflowProbe.exportedPositionDraft.work_role_code, null, 'position draft must not invent a formal work role code');
+    assert.equal(workflowProbe.projectedPositionDraft, null, 'position draft must not enter the confirmed structure projection');
+    assert.equal(workflowProbe.reimportedPositionDraft.source_position_name, '会计员', 'position draft should survive export and reimport');
     assert.ok(workflowProbe.pendingEvidenceProblems.includes('原文依据尚未人工核验'), 'unverified evidence should block an already-confirmed binding at export');
     assert.deepEqual(workflowProbe.pendingEvidenceConfirmProblems, [], 'explicit manual confirmation may verify locatable non-OCR evidence');
     assert.equal(workflowProbe.verifiedAfterManualConfirmation, 'verified', 'manual binding confirmation should mark selected non-OCR evidence verified');
@@ -1034,6 +1056,9 @@ async function run() {
     assert.ok(frontend.includes("field(`steps.${index}.actor_role`, label, { type: 'textarea' })"), 'source role text must remain free text instead of a roster selector');
     assert.ok(frontend.includes('花名册岗位候选（仅供核对）'), 'roster positions should only be shown as read-only candidate hints');
     assert.ok(frontend.includes('候选不会写回制度原文，也不会自动成为正式工作角色'), 'candidate hints must disclose that they do not confirm work roles');
+    assert.ok(frontend.includes('当前参与岗位（流程草拟期）'), 'work role editor should allow a roster position during process drafting');
+    assert.ok(frontend.includes('流程固化后再选择正式工作角色'), 'work role editor should explain the later formal role transition');
+    assert.ok(frontend.includes('source_position_name'), 'position draft should be stored separately from the original role wording and formal role code');
     assert.ok(frontend.includes('processDepartmentForStep(index)'), 'candidate hints should use the current process department context');
     assert.ok(frontend.includes('formResponsibleRoleField(i)'), 'form and record role choices should read the current form department selected by the user');
     assert.ok(frontend.includes('shouldRerenderAfterValueChange(path)'), 'manual department changes should rebuild dependent role pickers immediately');

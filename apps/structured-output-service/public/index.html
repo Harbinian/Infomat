@@ -1341,7 +1341,8 @@ function normalizeWorkRoleBinding(binding, index = 0) {
     step_ref: stepRef,
     participant_department: participantDepartment,
     source_role_text: source.source_role_text || '',
-    work_role_code: source.work_role_code || '',
+    source_position_name: source.source_position_name || null,
+    work_role_code: source.work_role_code || null,
     participation_type: source.participation_type || (stepRef === null ? 'owner' : 'executor'),
     status: source.status === 'confirmed' ? 'confirmed' : 'proposed',
     evidence_refs: Array.isArray(source.evidence_refs) ? [...source.evidence_refs] : [],
@@ -1576,7 +1577,7 @@ function workRoleSelectOptions(department, currentCode = '') {
   const roles = workRolesForDepartment(department);
   const hasActiveCatalog = allWorkRoles().some(isSelectableWorkRole);
   const placeholder = !hasActiveCatalog
-    ? '等待行政人事部发布角色目录'
+    ? '流程固化后再选择正式工作角色'
     : department && !roles.length
       ? '当前部门暂无可用工作角色'
       : '请选择正式工作角色';
@@ -1596,6 +1597,21 @@ function workRoleSelectOptions(department, currentCode = '') {
       label: current ? `${current.work_role_name || currentCode}（${currentCode}，当前部门未映射）` : `导入的工作角色（${currentCode}）`,
       disabled: false
     });
+  }
+  return options;
+}
+
+function rosterPositionSelectOptions(department, currentPosition = '') {
+  const positions = rosterPositions(department);
+  const options = [{
+    value: '',
+    label: department
+      ? positions.length ? '请选择当前参与岗位' : '当前部门暂无花名册岗位'
+      : '先选择参与部门'
+  }];
+  positions.forEach(position => options.push({ value: position, label: position }));
+  if (currentPosition && !positions.includes(currentPosition)) {
+    options.push({ value: currentPosition, label: `导入的岗位（${currentPosition}，请核对）` });
   }
   return options;
 }
@@ -1632,7 +1648,7 @@ function shouldRerenderAfterValueChange(path) {
     /^forms\.\d+\.responsible_department_name$/.test(path) ||
     /^steps\.\d+\.(?:process_ref|step_type|step_name|actor_role|input_materials|output_result)$/.test(path) ||
     /^behavior_details\.\d+\.execution_standard$/.test(path) ||
-    /^work_role_bindings\.\d+\.(?:work_role_code|status)$/.test(path) ||
+    /^work_role_bindings\.\d+\.(?:source_position_name|work_role_code|status)$/.test(path) ||
     /^work_role_bindings\.\d+\.participant_department\.department_name$/.test(path);
 }
 
@@ -2376,6 +2392,12 @@ function workRoleLabel(code) {
   return role ? `${role.work_role_name || code}（${code}）` : code || '未选择工作角色';
 }
 
+function workRoleBindingLabel(binding) {
+  if (binding?.work_role_code) return workRoleLabel(binding.work_role_code);
+  const position = String(binding?.source_position_name || '').trim();
+  return position ? `岗位：${position}（流程待固化）` : '未选择岗位或工作角色';
+}
+
 function workRoleParticipationLabel(value) {
   if (value === 'owner') return '流程负责人';
   return participationTypeOptions(value).find(item => item.value === value)?.label || value || '未选择参与方式';
@@ -2467,9 +2489,17 @@ function structuralProblemsForWorkRoleBinding(index) {
   if (!department) problems.push('参与部门未填写');
   else if (!workRoleDepartmentOptions().some(item => item.value === department)) problems.push('参与部门不在当前组织目录');
   if (!String(binding.source_role_text || '').trim()) problems.push('制度原文称谓未填写');
-  const eligibilityProblem = sourceRoleBindingEligibilityProblem(binding.source_role_text);
-  if (eligibilityProblem) problems.push(eligibilityProblem);
-  if (!/^WR-\d{4}$/.test(String(binding.work_role_code || ''))) problems.push('正式工作角色编码无效');
+  const sourcePositionName = String(binding.source_position_name || '').trim();
+  const workRoleCode = String(binding.work_role_code || '').trim();
+  if (!sourcePositionName && !workRoleCode) problems.push('当前参与岗位或正式工作角色至少选择一项');
+  if (sourcePositionName && binding.status !== 'confirmed' && department && !rosterPositions(department).includes(sourcePositionName)) {
+    problems.push('当前参与岗位不在所选部门花名册');
+  }
+  if (workRoleCode) {
+    const eligibilityProblem = sourceRoleBindingEligibilityProblem(binding.source_role_text);
+    if (eligibilityProblem) problems.push(eligibilityProblem);
+    if (!/^WR-\d{4}$/.test(workRoleCode)) problems.push('正式工作角色编码无效');
+  }
   if (!['proposed', 'confirmed'].includes(binding.status)) problems.push('处理状态无效');
   if (!Array.isArray(binding.evidence_refs)) problems.push('原文依据格式无效');
   else if (new Set(binding.evidence_refs).size !== binding.evidence_refs.length) problems.push('原文依据存在重复引用');
@@ -2489,10 +2519,11 @@ function confirmationProblemsForWorkRoleBinding(index, { allowEvidenceVerificati
   if (!binding) return ['绑定内容不存在'];
   const problems = structuralProblemsForWorkRoleBinding(index);
   const department = workRoleBindingDepartment(binding);
-  const role = workRoleByCode(binding.work_role_code);
+  const role = binding.work_role_code ? workRoleByCode(binding.work_role_code) : null;
   const mappedRoles = workRolesForDepartment(department);
   const importedRetiredHistory = binding.status === 'confirmed' && importedConfirmedWorkRoleRefs.has(binding.binding_ref) && role?.status === 'retired';
-  if (!role) problems.push('正式工作角色未发布');
+  if (!binding.work_role_code) problems.push('流程尚未固化为正式工作角色');
+  else if (!role) problems.push('正式工作角色未发布');
   else if (!isSelectableWorkRole(role) && !importedRetiredHistory) problems.push('正式工作角色当前未生效');
   if (binding.work_role_code && !mappedRoles.some(item => item.work_role_code === binding.work_role_code) && !importedRetiredHistory) problems.push('参与部门尚无有效岗位映射');
   if (!Array.isArray(binding.evidence_refs) || !binding.evidence_refs.length) problems.push('原文依据未选择');
@@ -2526,6 +2557,7 @@ function confirmationProblemsForWorkRoleBinding(index, { allowEvidenceVerificati
 function workRoleStatusField(index) {
   const path = `work_role_bindings.${index}.status`;
   const value = getValue(path) || 'proposed';
+  const binding = docData.work_role_bindings[index];
   const wrapper = div('field');
   const label = document.createElement('label');
   label.textContent = '处理状态';
@@ -2535,6 +2567,7 @@ function workRoleStatusField(index) {
     option.value = item.value;
     option.textContent = item.label;
     option.selected = item.value === value;
+    option.disabled = item.value === 'confirmed' && !binding?.work_role_code;
     select.appendChild(option);
   });
   select.addEventListener('change', () => {
@@ -2552,11 +2585,17 @@ function workRoleStatusField(index) {
   });
   wrapper.append(label, select);
   if (value !== 'confirmed') {
-    const problems = confirmationProblemsForWorkRoleBinding(index);
-    if (problems.length) {
+    if (!binding?.work_role_code) {
       const warning = div('work-role-warning');
-      warning.textContent = `转为已确认前还需：${problems.join('、')}。`;
+      warning.textContent = '当前按岗位记录；流程固化并选择正式工作角色后才能转为已确认。';
       wrapper.appendChild(warning);
+    } else {
+      const problems = confirmationProblemsForWorkRoleBinding(index);
+      if (problems.length) {
+        const warning = div('work-role-warning');
+        warning.textContent = `转为已确认前还需：${problems.join('、')}。`;
+        wrapper.appendChild(warning);
+      }
     }
   }
   return wrapper;
@@ -2567,7 +2606,7 @@ function renderWorkRoleEntry(binding, index, processRef, stepRef) {
   const locked = binding.status === 'confirmed';
   const head = div('work-role-entry-head');
   const copy = document.createElement('strong');
-  copy.textContent = `${workRoleParticipationLabel(binding.participation_type)}｜${workRoleLabel(binding.work_role_code)}`;
+  copy.textContent = `${workRoleParticipationLabel(binding.participation_type)}｜${workRoleBindingLabel(binding)}`;
   const remove = document.createElement('button');
   remove.className = 'btn';
   remove.type = 'button';
@@ -2590,7 +2629,8 @@ function renderWorkRoleEntry(binding, index, processRef, stepRef) {
   grid.append(
     field(`work_role_bindings.${index}.participant_department.department_name`, '参与部门', { type: 'select', options: workRoleDepartmentOptions(department), required: false, disabled: locked }),
     field(`work_role_bindings.${index}.source_role_text`, '制度原文中的角色/岗位称谓', { type: 'textarea', required: false, disabled: locked }),
-    field(`work_role_bindings.${index}.work_role_code`, '正式工作角色', { type: 'select', options: workRoleSelectOptions(department, binding.work_role_code), required: false, disabled: locked }),
+    field(`work_role_bindings.${index}.source_position_name`, '当前参与岗位（流程草拟期）', { type: 'select', options: rosterPositionSelectOptions(department, binding.source_position_name), required: false, disabled: locked }),
+    field(`work_role_bindings.${index}.work_role_code`, '正式工作角色（流程固化后）', { type: 'select', options: workRoleSelectOptions(department, binding.work_role_code), required: false, disabled: locked }),
     stepRef === null
       ? (() => {
           const wrapper = div('field');
@@ -2618,19 +2658,18 @@ function renderWorkRoleEntry(binding, index, processRef, stepRef) {
 function renderWorkRoleAdder(processRef, stepRef = null) {
   const process = docData.processes.find(item => item.process_ref === processRef);
   const step = stepRef === null ? null : docData.steps.find(item => item.step_ref === stepRef);
+  const hasActiveCatalog = allWorkRoles().some(isSelectableWorkRole);
   const adder = div('work-role-adder');
   const head = div('work-role-adder-head');
   const heading = document.createElement('strong');
-  heading.textContent = stepRef === null ? '添加流程负责人工作角色' : '添加参与工作角色';
+  heading.textContent = stepRef === null ? '添加负责人岗位或工作角色' : '添加参与岗位或工作角色';
   head.appendChild(heading);
   adder.appendChild(head);
-
-  if (!allWorkRoles().some(isSelectableWorkRole)) {
-    const message = div('work-role-empty');
-    message.textContent = '等待行政人事部发布角色目录。制度原文称谓和依据仍会保留，可先继续整理其他流程内容。';
-    adder.appendChild(message);
-    return adder;
-  }
+  const guidance = div('work-role-empty');
+  guidance.textContent = hasActiveCatalog
+    ? '流程草拟期可以先按岗位记录；流程固化后再选择正式工作角色并完成确认。'
+    : '正式工作角色目录尚未发布。请先按部门和花名册岗位记录实际参与情况，流程固化后再转换为正式工作角色。';
+  adder.appendChild(guidance);
 
   const grid = div('work-role-adder-grid');
   const departmentLabel = document.createElement('label');
@@ -2653,9 +2692,15 @@ function renderWorkRoleAdder(processRef, stepRef = null) {
   sourceInput.placeholder = '保持制度原文称谓，不按正式角色名称改写';
   sourceLabel.appendChild(sourceInput);
 
+  const positionLabel = document.createElement('label');
+  positionLabel.textContent = '当前参与岗位（流程草拟期）';
+  const positionSelect = document.createElement('select');
+  positionLabel.appendChild(positionSelect);
+
   const roleLabel = document.createElement('label');
-  roleLabel.textContent = '正式工作角色';
+  roleLabel.textContent = '正式工作角色（流程固化后）';
   const roleSelect = document.createElement('select');
+  roleSelect.disabled = !hasActiveCatalog;
   roleLabel.appendChild(roleSelect);
 
   let participationSelect = null;
@@ -2671,18 +2716,28 @@ function renderWorkRoleAdder(processRef, stepRef = null) {
       participationSelect.appendChild(option);
     });
     participationLabel.appendChild(participationSelect);
-    grid.append(departmentLabel, sourceLabel, roleLabel, participationLabel);
+    grid.append(departmentLabel, sourceLabel, positionLabel, roleLabel, participationLabel);
   } else {
-    grid.append(departmentLabel, sourceLabel, roleLabel);
+    grid.append(departmentLabel, sourceLabel, positionLabel, roleLabel);
   }
 
   const actions = div('work-role-adder-actions');
   const add = document.createElement('button');
   add.className = 'btn';
   add.type = 'button';
-  add.textContent = stepRef === null ? '添加负责人绑定' : '添加参与绑定';
+  add.textContent = stepRef === null ? '添加负责人记录' : '添加参与记录';
   const refreshAddState = () => {
-    add.disabled = !departmentSelect.value || !sourceInput.value.trim() || !roleSelect.value;
+    add.disabled = !departmentSelect.value || !sourceInput.value.trim() || (!positionSelect.value && !roleSelect.value);
+  };
+  const refreshPositionOptions = () => {
+    positionSelect.replaceChildren();
+    rosterPositionSelectOptions(departmentSelect.value).forEach(item => {
+      const option = document.createElement('option');
+      option.value = item.value;
+      option.textContent = item.label;
+      positionSelect.appendChild(option);
+    });
+    refreshAddState();
   };
   const refreshRoleOptions = () => {
     roleSelect.replaceChildren();
@@ -2695,16 +2750,25 @@ function renderWorkRoleAdder(processRef, stepRef = null) {
     });
     refreshAddState();
   };
-  departmentSelect.addEventListener('change', refreshRoleOptions);
+  departmentSelect.addEventListener('change', () => {
+    refreshPositionOptions();
+    refreshRoleOptions();
+  });
+  positionSelect.addEventListener('change', refreshAddState);
   roleSelect.addEventListener('change', refreshAddState);
   sourceInput.addEventListener('input', refreshAddState);
   add.addEventListener('click', () => {
-    const role = workRoleByCode(roleSelect.value);
-    if (!isSelectableWorkRole(role)) {
+    const roleCode = roleSelect.value;
+    const role = roleCode ? workRoleByCode(roleCode) : null;
+    if (roleCode && !isSelectableWorkRole(role)) {
       toast('请选择已经生效的正式工作角色');
       return;
     }
-    const eligibilityProblem = sourceRoleBindingEligibilityProblem(sourceInput.value);
+    if (!roleCode && !positionSelect.value) {
+      toast('请选择当前参与岗位');
+      return;
+    }
+    const eligibilityProblem = roleCode ? sourceRoleBindingEligibilityProblem(sourceInput.value) : '';
     if (eligibilityProblem) {
       toast(eligibilityProblem);
       return;
@@ -2718,7 +2782,8 @@ function renderWorkRoleAdder(processRef, stepRef = null) {
       step_ref: stepRef,
       participant_department: { department_name: departmentSelect.value },
       source_role_text: sourceInput.value.trim(),
-      work_role_code: roleSelect.value,
+      source_position_name: positionSelect.value || null,
+      work_role_code: roleCode || null,
       participation_type: stepRef === null ? 'owner' : participationSelect?.value || 'executor',
       status: 'proposed',
       evidence_refs: [...inheritedEvidenceRefs],
@@ -2727,6 +2792,7 @@ function renderWorkRoleAdder(processRef, stepRef = null) {
     hasPageContent = true;
     render();
   });
+  refreshPositionOptions();
   refreshRoleOptions();
   actions.appendChild(add);
   adder.append(grid, actions);
@@ -2735,12 +2801,12 @@ function renderWorkRoleAdder(processRef, stepRef = null) {
 
 function renderWorkRoleBindings(processRef, stepRef = null) {
   const group = div('work-role-group');
-  group.appendChild(title(stepRef === null ? '流程负责人工作角色' : '参与工作角色'));
+  group.appendChild(title(stepRef === null ? '流程负责人岗位与工作角色' : '参与岗位与工作角色'));
   const copy = document.createElement('p');
   copy.className = 'work-role-group-copy';
   copy.textContent = stepRef === null
-    ? '这里记录业务流程的正式负责人工作角色；归口部门仍保留在上方，二者不是同一概念。'
-    : '可为同一业务行为添加多个工作角色，并分别确认发起、执行、审核、批准、协同、提供或接收责任。';
+    ? '流程草拟期先记录负责人岗位；流程固化后再选择正式负责人工作角色。归口部门与负责人责任不是同一概念。'
+    : '流程草拟期可按岗位记录多个参与者和参与方式；流程固化后再归并为正式工作角色。';
   group.appendChild(copy);
 
   const rows = workRoleBindingsForTarget(processRef, stepRef);
@@ -2750,7 +2816,7 @@ function renderWorkRoleBindings(processRef, stepRef = null) {
     group.appendChild(list);
   } else {
     const message = div('work-role-empty');
-    message.textContent = stepRef === null ? '尚未绑定流程负责人工作角色。' : '尚未绑定参与工作角色。';
+    message.textContent = stepRef === null ? '尚未记录流程负责人岗位或工作角色。' : '尚未记录参与岗位或工作角色。';
     group.appendChild(message);
   }
   if (stepRef !== null || rows.length === 0) group.appendChild(renderWorkRoleAdder(processRef, stepRef));
