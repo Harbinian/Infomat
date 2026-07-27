@@ -47,7 +47,7 @@ function splitMarkdownRow(line) {
 function parseExistingRows(markdown) {
   const rows = new Map();
   for (const line of markdown.split(/\r?\n/)) {
-    if (!line.startsWith('| IBR-')) continue;
+    if (!/^\| (?:IBR|DSO)-/.test(line)) continue;
     const cells = splitMarkdownRow(line);
     if (cells.length < HEADERS.length) continue;
     const status = cells[7] || '';
@@ -62,8 +62,9 @@ function parseExistingRows(markdown) {
 
 function unresolvedItems(items, mappingText) {
   const byKey = new Map();
-  for (const item of items) {
-    if (!item || !item.id || !TODO_TYPES.includes(item.issue_type)) continue;
+  for (const sourceItem of items) {
+    if (!sourceItem || !TODO_TYPES.includes(sourceItem.issue_type)) continue;
+    const item = normalizeItem(sourceItem);
     if (mappingCovers(mappingText, item.content)) continue;
     byKey.set(item.stable_key || item.id, item);
   }
@@ -73,6 +74,24 @@ function unresolvedItems(items, mappingText) {
       if (typeDiff) return typeDiff;
       return `${a.source_file}${a.content}`.localeCompare(`${b.source_file}${b.content}`, 'zh-Hans-CN');
     });
+}
+
+function normalizeItem(item) {
+  if (item.id && item.content) return item;
+  const stableKey = String(item.stable_key || '').trim();
+  return {
+    id: `DSO-${stableKey.toUpperCase()}`,
+    stable_key: stableKey,
+    department: item.department || '',
+    source_file: item.source_file || '',
+    source_anchor: item.source_anchor || '',
+    issue_type: item.issue_type,
+    content: item.current_value || item.source_excerpt || item.question_for_user || '',
+    mapping_location: `${item.target_block || ''}.${item.target_field || ''}`.replace(/^\./, ''),
+    suggested_action: item.next_step || item.question_for_user || '',
+    status: item.user_decision || '待处理',
+    owner: item.suggested_handler || '待部门确认',
+  };
 }
 
 function sourceLabel(item) {
@@ -97,7 +116,7 @@ function buildMarkdown(items, existingRows) {
   const lines = [
     '# 输入基线问题待办',
     '',
-    '> 该文件只保留未解决待确认问题，不作为流程输入基线；解决一条后直接删除该条。追溯依赖原始待确认 JSON、已确认流程映射变更记录和 git 历史。',
+    '> 该文件由 document-structured-output-v2 的 pending_issues 派生，只保留未解决问题，不作为流程输入基线或机器合同。',
     '',
     `问题类型固定为：${TODO_TYPES.join('、')}。`,
     '',
@@ -135,8 +154,9 @@ function main() {
   requireArg(args, 'mapping');
   requireArg(args, 'todo');
 
-  const reviewItems = readJson(args.reviewItems);
-  if (!Array.isArray(reviewItems)) throw new Error('--review items must point to a JSON array');
+  const payload = readJson(args.reviewItems);
+  const reviewItems = Array.isArray(payload) ? payload : payload.pending_issues;
+  if (!Array.isArray(reviewItems)) throw new Error('--review-items must point to an array or a document-structured-output-v2 object');
   const mappingText = fs.existsSync(args.mapping) ? fs.readFileSync(args.mapping, 'utf8') : '';
   const oldMarkdown = fs.existsSync(args.todo) ? fs.readFileSync(args.todo, 'utf8') : '';
   const existingRows = parseExistingRows(oldMarkdown);

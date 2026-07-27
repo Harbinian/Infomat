@@ -1,30 +1,27 @@
 #!/usr/bin/env node
 /**
- * Regression checks for the process-evidence-mapping skill document.
- *
- * Usage: node scripts/test-process-evidence-skill.mjs
+ * Regression checks for the process-evidence-mapping skill contract.
  */
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
-const skillPath = resolve(root, '.agents/skills/process-evidence-mapping/SKILL.md');
+const skillDir = resolve(root, '.agents/skills/process-evidence-mapping');
+const skillPath = join(skillDir, 'SKILL.md');
 const skill = readFileSync(skillPath, 'utf8');
 
 const expectedSteps = [
   '仓库上下文',
-  '源文件清单',
-  '可读性判断/OCR',
-  'Evidence Chunks',
-  'Embedding 检索',
-  '输入基线解读',
-  '角色抽取',
-  '对象链',
-  '输入基线问题',
-  '待确认待办 Markdown',
-  '当前映射差异审计',
-  '受控入库',
+  '源文件清单与可读性门',
+  '证据切块',
+  '可选语义检索',
+  '通用流程与行为候选',
+  '角色与对象链',
+  '编译 document-structured-output-v2',
+  '待确认问题与差异审计',
+  '派生人工视图',
+  '人工确认与发布边界',
   '验证与报告',
 ];
 
@@ -44,16 +41,43 @@ for (const [index, step] of expectedSteps.entries()) {
   }
 }
 
-assert.ok(skill.includes('docs/norms/流程治理/输入基线问题待办.md'), 'skill should name the input baseline review todo markdown path');
-assert.ok(skill.includes('qwen3-embedding:latest'), 'skill should document the default embedding model');
-assert.ok(skill.includes('1024'), 'skill should document embedding dimensions');
-assert.ok(skill.includes('ocr_extracted_not_confirmed'), 'skill should keep OCR evidence status boundary');
-assert.ok(skill.includes('allowed_downstream_use=review_only'), 'skill should keep review-only reviewItem boundary');
-assert.ok(skill.includes('不得直接填写 `审批类型`、`输入来源部门`、`输出目标部门`'), 'skill should forbid reviewItem-to-formal field promotion');
+for (const required of [
+  'document-structured-output-v2.json',
+  'docs/contracts/document-structured-output.schema.json',
+  'blocked_unreadable',
+  'evidence_status=pending_review',
+  'pending_issues[]',
+  '不得自动生成 `verified` 证据',
+  '不得默认写入',
+  'validate-document-structured-output-v2.mjs',
+  'npm run test:process-evidence-evolution',
+]) {
+  assert.ok(skill.includes(required), `SKILL.md should include ${required}`);
+}
 
-const vectorBoundary = skill.indexOf('## Vectorization Boundary');
-const ocrBoundary = skill.indexOf('## OCR Boundary');
-assert.equal(vectorBoundary, -1, 'skill should not keep old standalone Vectorization Boundary section');
-assert.equal(ocrBoundary, -1, 'skill should not keep old standalone OCR Boundary section');
+function textFiles(dir) {
+  const files = [];
+  for (const name of readdirSync(dir)) {
+    const target = join(dir, name);
+    if (statSync(target).isDirectory()) files.push(...textFiles(target));
+    else if (/\.(?:md|mjs|py|ya?ml|jsonl?)$/i.test(name)) files.push(target);
+  }
+  return files;
+}
+
+const forbiddenRecognitionAcronym = new RegExp(['o', 'c', 'r'].join(''), 'i');
+for (const file of textFiles(skillDir)) {
+  const content = readFileSync(file, 'utf8');
+  assert.equal(
+    forbiddenRecognitionAcronym.test(content),
+    false,
+    `process-evidence-mapping must not contain image-to-text recognition paths: ${file}`,
+  );
+}
+
+const workflow = readFileSync(join(skillDir, 'scripts/run-process-input-baseline-review-workflow.mjs'), 'utf8');
+for (const financeSpecific of ['工资总额', '盈亏处理', '废品损失', '财务成本核算管理程序']) {
+  assert.equal(workflow.includes(financeSpecific), false, `generic workflow must not hard-code ${financeSpecific}`);
+}
 
 console.log('Process evidence skill structure checks passed');

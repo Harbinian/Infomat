@@ -21,10 +21,9 @@ const TYPE_ORDER = new Map([
   ['角色待确认', 3],
   ['审批链待确认', 4],
   ['受控传递待确认', 5],
-  ['OCR待复核', 6],
-  ['验收标准待补', 7],
-  ['归档要求待补', 8],
-  ['系统落位待确认', 9],
+  ['验收标准待补', 6],
+  ['归档要求待补', 7],
+  ['系统落位待确认', 8],
 ]);
 
 function itemFromReviewItem({ department, type, reviewItem, content, action, mappingText, owner }) {
@@ -44,7 +43,7 @@ function itemFromReviewItem({ department, type, reviewItem, content, action, map
   });
   return {
     ...item,
-    evidence_status: reviewItem.evidence_status || 'needs_review',
+    evidence_status: reviewItem.evidence_status || 'pending_review',
     verification_status: reviewItem.verification_status || 'unverified',
     allowed_downstream_use: 'review_only',
     source_boundary_flag: reviewItem.source_boundary_flag || '',
@@ -158,7 +157,7 @@ function buildItems(documentReviewItem, roleBook, objectChains, mappingText) {
   for (const role of roleBook.roles || []) {
     if (mappingCovers(mappingText, role.name)) continue;
     if (role.name === department) continue;
-    if (['财务部成本会计', '有关部门'].includes(role.name) || ['needs_review', 'context_inferred'].includes(role.confidence)) {
+    if (role.name && role.name !== department && ['pending_review', 'context_inferred'].includes(role.confidence)) {
       const item = itemFromReviewItem({
         department,
         type: '角色待确认',
@@ -173,7 +172,7 @@ function buildItems(documentReviewItem, roleBook, objectChains, mappingText) {
   }
 
   for (const chain of objectChains.chains || []) {
-    if (chain.chain_type === 'approval_reviewItem' && /审核|审批|批准/.test((chain.actions || []).join(' '))) {
+    if (chain.chain_type === 'approval_candidate' && /审核|审批|批准/.test((chain.actions || []).join(' '))) {
       const item = itemFromReviewItem({
         department,
         type: '审批链待确认',
@@ -209,7 +208,7 @@ function writeReport(filePath, items, embeddingManifest, mappingPath) {
     '- 待确认结果只用于发现缺口，不能替代已确认流程映射。',
     '- 相似度仅用于待确认排序，不是证据强度。',
     `- ${embeddingUsed ? '本轮已使用向量检索召回待确认证据，但仍需回源核验。' : '本轮未使用向量检索，已降级为关键词/规则抽取。'}`,
-    '- 所有待确认默认 `evidence_status=reviewItem`、`allowed_downstream_use=review_only`。',
+    '- 所有候选默认 `evidence_status=pending_review`、`allowed_downstream_use=review_only`。',
     '',
     '## Embedding Manifest',
     '',

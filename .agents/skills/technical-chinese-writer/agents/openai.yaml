@@ -1,0 +1,6 @@
+interface:
+  display_name: "中文技术文档受控写作"
+  short_description: "审校中文技术与业务文档，保持事实、责任、术语和时序不变"
+  default_prompt: "使用 $technical-chinese-writer 审校以下中文技术文档，保持事实、责任、术语、条件和时序不变。"
+policy:
+  allow_implicit_invocation: true

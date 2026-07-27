@@ -8,10 +8,18 @@ export const TODO_TYPES = [
   '角色待确认',
   '审批链待确认',
   '受控传递待确认',
-  'OCR待复核',
   '验收标准待补',
   '归档要求待补',
   '系统落位待确认',
+  '来源证据不足',
+  '原文定义不足',
+  'L3 结构待确认',
+  'A1 行为待确认',
+  '角色责任待确认',
+  '跨部门承接待确认',
+  '表单字段待确认',
+  '主数据需求待确认',
+  '抽取结果待复核',
 ];
 
 export function parseArgs(argv, defaults = {}) {
@@ -116,7 +124,7 @@ export function evidenceFromChunk(chunk) {
     source_anchor: sourceAnchor(chunk),
     source_excerpt: chunk?.raw_text || '',
     chunk_id: chunk?.chunk_id || '',
-    evidence_status: 'needs_review',
+    evidence_status: 'pending_review',
     verification_status: 'unverified',
     review_required: true,
     allowed_downstream_use: 'review_only',

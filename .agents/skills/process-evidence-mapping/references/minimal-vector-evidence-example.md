@@ -1,6 +1,7 @@
 # Minimal Vector Evidence Example
 
-Use this as a regression example when vector retrieval suggests object aliases or approval/transfer facts.
+Use this regression example when retrieval suggests object aliases, approval or
+handoff facts.
 
 ## Source Fragments
 
@@ -15,19 +16,20 @@ Use this as a regression example when vector retrieval suggests object aliases o
 各部门于每月3日前反馈绩效评分数据。
 ```
 
-## Vector Retrieval ReviewItem
+## Retrieval Candidate
 
 ```json
 {
   "query": "绩效结果 评分表 核算结果",
-  "retrieved_reviewItems": [
+  "retrieved_candidates": [
     {
       "chunk_id": "GLTX-JY-05#5.2",
       "raw_text": "经营发展部编制公司月度综合打分表...",
       "retrieval_score": 0.86,
-      "claim_reviewItem": "绩效结果可能与公司月度综合打分表相关",
-      "evidence_status": "needs_review",
-      "review_required": true
+      "candidate_claim": "绩效结果可能与公司月度综合打分表相关",
+      "evidence_status": "pending_review",
+      "review_required": true,
+      "allowed_downstream_use": "review_only"
     }
   ]
 }
@@ -37,30 +39,24 @@ Use this as a regression example when vector retrieval suggests object aliases o
 
 | Item | Status | Reason |
 |---|---|---|
-| `综合打分表` and `公司月度综合打分表` | confirmed | Attachment title and clause object match |
-| `绩效结果` equals `公司月度综合打分表` | reviewItem | Similar wording only; no explicit same-object source |
-| `核算结果` equals `公司月度综合打分表` | no_evidence | The phrase does not appear in the sample source |
-| Approval type for `公司月度综合打分表` | confirmed as `多级审批` | Same output object has `编制 -> 校对 -> 批准` |
-| Input from `各部门` | reviewItem/needs decomposition | `反馈绩效评分数据` is a transfer clue, but `各部门` is a generic group and should be decomposed or confirmed |
-| Output to company leader | not an output department | Approver is an approval actor, not an output target department |
+| `综合打分表` and `公司月度综合打分表` | verified | Attachment title and clause object match |
+| `绩效结果` equals `公司月度综合打分表` | pending_review | Similar wording only |
+| `核算结果` equals `公司月度综合打分表` | source_missing | Phrase is absent |
+| Approval chain for `公司月度综合打分表` | pending_review | Same object shows prepare, check and approve, but human confirmation is still required |
+| Input from `各部门` | pending_review | Transfer clue exists, but the generic group needs confirmation |
+| Output to company leader | not a handoff | Approver is not an output department |
 
 ## Wrong Handling
 
-- Do not merge `绩效结果` and `公司月度综合打分表` because the vectors are close.
-- Do not write company leader as `输出目标部门` just because the leader approves.
-- Do not set approval type from an abstract action such as `确认`.
-- Do not map source-company departments into current departments by semantic similarity.
+- Do not merge objects because vectors are close.
+- Do not write an approver as an output department.
+- Do not set an approval conclusion from an abstract action.
+- Do not map source-company departments by semantic similarity.
 
-## Correct A1 Notes
+## Expected v2 Result
 
-```text
-对象别名待确认：
-“绩效结果” ↔ “公司月度综合打分表”：向量召回待确认；未见同一表单/同一字段/上下文指代证据，待确认。
-
-审批类型：
-公司月度综合打分表：原文链路为“编制 -> 校对 -> 批准”，同一输出物存在多个控制节点，可标“多级审批”。
-
-跨部门输入：
-“各部门 -> 经营发展部”仅为待确认受控传递线索。需记录对象“绩效评分数据”和动作“反馈”，并确认是否允许泛称“各部门”或需拆解到具体部门。
-```
-
+- Evidence enters `evidence_catalog[]` with `status=pending_review`.
+- Candidate fields enter `processes[]`, `steps[]` or `behavior_details[]`.
+- Unresolved object, approval and handoff facts enter `pending_issues[]`.
+- `cross_dept_handoffs[]` stays empty until the concrete object and both parties
+  are confirmed.

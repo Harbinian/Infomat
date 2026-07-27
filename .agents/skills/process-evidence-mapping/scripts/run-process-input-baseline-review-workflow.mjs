@@ -2,12 +2,10 @@
 /**
  * Run the review-only process input baseline review workflow.
  */
-import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import {
   ensureDir,
-  makeReviewItemItem,
   parseArgs,
   readJson,
   readJsonl,
@@ -20,7 +18,7 @@ import {
 const SCRIPT_DIR = path.dirname(new URL(import.meta.url).pathname).replace(/^\/([A-Za-z]:)/, '$1');
 const REPO_ROOT = path.resolve(SCRIPT_DIR, '../../../..');
 const EMBEDDING_CONFIG = path.join(REPO_ROOT, '.agents', 'skills', 'process-evidence-mapping', 'references', 'ollama-embedding-config.json');
-const VISUAL_EXTS = new Set(['.pdf', '.png', '.jpg', '.jpeg', '.tif', '.tiff']);
+const IMAGE_EXTS = new Set(['.png', '.jpg', '.jpeg', '.tif', '.tiff', '.bmp', '.gif', '.webp']);
 
 function repoResolve(value) {
   return path.resolve(REPO_ROOT, value);
@@ -57,24 +55,24 @@ function writeSkippedEmbeddingManifest({ chunksPath, vectorsPath, manifestPath, 
     role: config.role || 'review_evidence_retrieval_only',
     source_hash: sha1File(chunksPath),
     similarity_policy: 'similarity is review ranking only, not evidence strength',
-    default_evidence_status: 'needs_review',
+    default_evidence_status: 'pending_review',
     allowed_downstream_use: 'review_only',
   });
   writeJsonl(vectorsPath, []);
 }
 
-function aggregateRetrieval({ chunksPath, vectorsPath, reviewEvidencePath, manifest }) {
+function aggregateRetrieval({ chunksPath, vectorsPath, reviewEvidencePath, manifest, department }) {
   if (manifest.status !== 'embedded') {
     writeJsonl(reviewEvidencePath, []);
     return;
   }
 
   const queries = [
-    '工时调整 情况说明 车间主任 定额员 经营发展部长 审核',
-    '行政人事部 工资总额 明细费用 发至 财务部门',
-    '盈亏处理 审批权限 审核批准 责任者赔偿',
-    '废品损失 退回复材车间 生产成本 红字冲回',
-    '相关报表 财务部 存档 保存年限30年',
+    `${department} 业务流程 起点 终点 输入 输出`,
+    '编制 提交 审核 批准 发布 交付物',
+    '跨部门 提交 移交 接收 反馈 承接标准',
+    '表单 台账 字段 记录 签批栏',
+    '归档 保存 留存 完成标准 验收',
   ];
 
   const all = [];
@@ -94,45 +92,29 @@ function aggregateRetrieval({ chunksPath, vectorsPath, reviewEvidencePath, manif
   writeJsonl(reviewEvidencePath, all);
 }
 
-function appendOcrReviewItems({ outDir, mappingItemsPath, department }) {
-  const items = readJson(mappingItemsPath);
-  const reviewPath = path.join(outDir, 'ocr', 'review-required.jsonl');
-  if (fs.existsSync(reviewPath)) {
-    for (const record of readJsonl(reviewPath)) {
-      items.push(makeReviewItemItem({
-        department,
-        sourceFile: record.source_file || '',
-        sourceAnchor: record.page_id || record.block_id || '',
-        issueType: 'OCR待复核',
-        content: `OCR待复核：${record.source_file || ''} ${record.review_reason || record.reason || '需要回到原图/PDF核验'}`,
-        mappingLocation: 'OCR待确认未进入已确认流程映射',
-        suggestedAction: '回到原PDF/图片位置核验；不得只看OCR文本入库。',
-        owner: '资料责任人/流程治理负责人',
-      }));
-    }
+function assertReadableSources(sourceManifestPath) {
+  const sources = readJsonl(sourceManifestPath);
+  if (!sources.length) {
+    throw new Error('没有发现可直接读取的受支持源文件。请提供文本型制度、表单、台账或可提取文本的 PDF。');
   }
+  const blocked = sources.filter((source) => ['blocked_unreadable', 'failed'].includes(source.extraction_status));
+  if (!blocked.length) return;
+  const labels = blocked.map((source) => source.source_file).filter(Boolean).slice(0, 8);
+  throw new Error(`存在不可直接读取的来源，工作流已阻断：${labels.join('；')}。请由资料责任人提供可读取原件或经人工确认的文字版。`);
+}
 
-  const needsOcrChunks = readJsonl(path.join(outDir, 'chunks.jsonl')).filter((chunk) => chunk.extraction_quality === 'needs_ocr');
-  for (const chunk of needsOcrChunks) {
-    items.push(makeReviewItemItem({
-      department,
-      sourceFile: chunk.source_file || '',
-      sourceAnchor: chunk.clause || chunk.table_id || chunk.chunk_id || '',
-      issueType: 'OCR待复核',
-      content: `OCR待复核：${chunk.source_file || ''} ${chunk.raw_text || '低可读页面/视觉证据'}`,
-      mappingLocation: '低可读chunk未进入已确认流程映射',
-      suggestedAction: '补OCR或人工读取原图后再判断是否进入输入基线问题。',
-      owner: '资料责任人/流程治理负责人',
-    }));
+function assertArtifactPath(targetPath, label) {
+  const artifactsRoot = path.resolve(REPO_ROOT, 'artifacts');
+  const resolved = path.resolve(targetPath);
+  const relative = path.relative(artifactsRoot, resolved);
+  if (relative.startsWith('..') || path.isAbsolute(relative)) {
+    throw new Error(`${label} must stay under artifacts/: ${resolved}`);
   }
-
-  writeJson(mappingItemsPath, items);
 }
 
 function main() {
   const args = parseArgs(process.argv, {
     out: path.join('artifacts', 'process-input-baseline-review', new Date().toISOString().replace(/[:.]/g, '-')),
-    todo: path.join('docs', 'norms', '流程治理', '输入基线问题待办.md'),
   });
   requireArg(args, 'input');
   requireArg(args, 'department');
@@ -140,9 +122,14 @@ function main() {
 
   const inputPath = repoResolve(args.input);
   const outDir = repoResolve(args.out);
-  const todoPath = repoResolve(args.todo);
+  const todoPath = repoResolve(args.todo || path.join(args.out, 'pending-issues.md'));
   const mappingPath = repoResolve(args.mapping);
+  assertArtifactPath(outDir, 'workflow output');
+  assertArtifactPath(todoPath, 'pending issue markdown');
   ensureDir(outDir);
+  if (IMAGE_EXTS.has(path.extname(inputPath).toLowerCase())) {
+    throw new Error('图片来源不进入本技能。请提供可直接读取的源文件或经资料责任人确认的文字版。');
+  }
 
   const sourceManifestPath = path.join(outDir, 'source_manifest.jsonl');
   const chunksPath = path.join(outDir, 'chunks.jsonl');
@@ -155,14 +142,7 @@ function main() {
   const objectChainsPath = path.join(outDir, 'object_chains.json');
   const diffReportPath = path.join(outDir, 'mapping_diff_report.md');
   const mappingItemsPath = path.join(outDir, 'mapping_diff_items.json');
-
-  if (VISUAL_EXTS.has(path.extname(inputPath).toLowerCase()) && !args.noOcr) {
-    runNode([
-      'scripts/ocr-source.mjs',
-      '--input', inputPath,
-      '--out', path.join(outDir, 'ocr'),
-    ], { noFail: true });
-  }
+  const structuredOutputPath = path.join(outDir, 'document-structured-output-v2.json');
 
   const chunkArgs = [
     '.agents/skills/process-evidence-mapping/scripts/extract-evidence-chunks.mjs',
@@ -176,6 +156,7 @@ function main() {
   if (args.deferExt) chunkArgs.push('--defer-ext', args.deferExt);
   if (args.deferReason) chunkArgs.push('--defer-reason', args.deferReason);
   runNode(chunkArgs, { inherit: false });
+  assertReadableSources(sourceManifestPath);
 
   if (args.noEmbedding) {
     writeSkippedEmbeddingManifest({
@@ -198,6 +179,7 @@ function main() {
       vectorsPath,
       reviewEvidencePath,
       manifest: readJson(embeddingManifestPath),
+      department: args.department,
     });
   }
 
@@ -234,21 +216,32 @@ function main() {
     '--items', mappingItemsPath,
   ]);
 
-  appendOcrReviewItems({
-    outDir,
-    mappingItemsPath,
-    department: args.department,
-  });
+  runNode([
+    '.agents/skills/process-evidence-mapping/scripts/compile-document-structured-output-v2.mjs',
+    '--document', documentReviewItemPath,
+    '--roles', roleReviewItemsPath,
+    '--objects', objectChainsPath,
+    '--issues', mappingItemsPath,
+    '--chunks', chunksPath,
+    '--department', args.department,
+    '--out', structuredOutputPath,
+  ]);
+
+  runNode([
+    '.agents/skills/process-evidence-mapping/scripts/validate-document-structured-output-v2.mjs',
+    '--input', structuredOutputPath,
+  ]);
 
   runNode([
     '.agents/skills/process-evidence-mapping/scripts/update-input-baseline-review-todo-md.mjs',
-    '--review-items', mappingItemsPath,
+    '--review-items', structuredOutputPath,
     '--mapping', mappingPath,
     '--todo', todoPath,
   ]);
 
   console.error(`input_baseline_review_workflow_out=${outDir}`);
   console.error(`input_baseline_review_todo=${todoPath}`);
+  console.error(`document_structured_output_v2=${structuredOutputPath}`);
 }
 
 try {

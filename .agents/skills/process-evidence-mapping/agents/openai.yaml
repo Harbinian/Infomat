@@ -1,7 +1,7 @@
 interface:
   display_name: "流程证据映射"
-  short_description: "递归证据清单、向量待确认召回到 DCM/BBM/H5"
+  short_description: "可读源证据到 document-structured-output-v2 草稿"
   brand_color: "#7A3418"
-  default_prompt: "使用 $process-evidence-mapping，递归挖掘部门资料到叶子目录，把制度原文、流程图、表单、台账和映射关系统一纳入 DCM/BBM/H5 证据链；可用本地 Ollama 向量模型召回待确认证据，但相似度不能替代原文核验。"
+  default_prompt: "使用 $process-evidence-mapping，只处理可直接读取的制度、流程、表单和台账，生成可追溯的 document-structured-output-v2 草稿与待确认问题；不可读来源直接阻断，相似度不能替代原文核验，技能不得自动发布。"
 policy:
   allow_implicit_invocation: true

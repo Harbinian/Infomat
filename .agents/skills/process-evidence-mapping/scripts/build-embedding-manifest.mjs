@@ -141,7 +141,7 @@ async function main() {
           embedding,
           embedding_model: config.model,
           embedding_dimensions: embedding.length,
-          evidence_status: 'needs_review',
+          evidence_status: 'pending_review',
           verification_status: 'unverified',
           review_required: true,
           allowed_downstream_use: 'review_only',

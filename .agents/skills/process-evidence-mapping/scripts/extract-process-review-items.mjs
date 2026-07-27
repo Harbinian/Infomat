@@ -4,7 +4,6 @@
  */
 import {
   evidenceFromChunk,
-  findChunk,
   parseArgs,
   requireArg,
   readJsonl,
@@ -33,132 +32,6 @@ function reviewItemWithContent(content, chunk, extra = {}) {
     ...evidenceFromChunk(chunk),
     ...extra,
   };
-}
-
-function financeOutput(args, chunks) {
-  const chunk511 = findChunk(chunks, ['5.1.1', '工时定额'], { all: true });
-  const chunk512 = findChunk(chunks, ['情况说明', '经营发展部长'], { all: true });
-  const chunk522 = findChunk(chunks, ['行政人事部', '发至财务部门'], { all: true });
-  const chunk541 = findChunk(chunks, ['确定成本核算对象']) || findChunk(chunks, ['成本核算对象']);
-  const chunk543Material = findChunk(chunks, ['全月平均法']) || findChunk(chunks, ['材料采用实际成本核算']);
-  const chunk544 = findChunk(chunks, ['具体产品的成本核算']) || findChunk(chunks, ['生产订单']);
-  const chunkGainLoss = findChunk(chunks, ['盈亏处理']) || findChunk(chunks, ['必须查明原因', '审批权限'], { all: true });
-  const chunkScrap = findChunk(chunks, ['废品损失']);
-  const chunkArchive = findChunk(chunks, ['保存年限30年']) || findChunk(chunks, ['存档']);
-  const chunkAnalysis = findChunk(chunks, ['成本费用分析']);
-  const sourceFile = chunks.find((chunk) => chunk.source_file)?.source_file || args.input || '';
-
-  return {
-    department: args.department,
-    source_file: sourceFile,
-    generated_at: new Date().toISOString(),
-    policy: {
-      evidence_status: 'needs_review',
-      verification_status: 'unverified',
-      allowed_downstream_use: 'review_only',
-      similarity_is_ranking_only: true,
-      formal_mapping_requires_source_verification: true,
-    },
-    capability_review_items: [
-      reviewItem('成本核算管理', chunk511 || chunk544, {
-        rationale: '制度名称、目的和5.x条款集中指向生产成本管理和产品成本核算。',
-      }),
-    ],
-    process_review_items: [
-      reviewItem('生产成本定额管理与指标分解', chunk511, {
-        current_mapping_hint: '可能已覆盖为现有L3，需与当前映射比对。',
-      }),
-      reviewItem('生产成本事中控制', chunk512, {
-        current_mapping_hint: '工时调整链需单独复核是否只是协同审批，不宜直接当作财务输出部门结论。',
-      }),
-      reviewItem('产品成本核算基础管理', chunk522, {
-        current_mapping_hint: '工资明细传递是受控传递待确认，应保留源锚。',
-      }),
-      reviewItem('月度产品成本核算与成本结转', chunk541 || chunk544, {
-        current_mapping_hint: '当前财务部映射中已有相近L3，待确认用于校验A1完整性。',
-      }),
-      reviewItem('成本费用核算分析', chunkAnalysis, {
-        current_mapping_hint: '当前财务部映射中已有相近L3，待确认用于校验分析行为和验收标准。',
-      }),
-    ],
-    behavior_review_items: [
-      reviewItem('接收行政人事部工资总额及明细费用', chunk522, {
-        object_review_item: '人工工时统计、工资总额及明细费用',
-        review_note: '只能作为受控传递待确认，不能直接输出正式来源/目标部门字段。',
-      }),
-      reviewItem('归集直接材料成本（全月平均法）', chunk543Material, {
-        object_review_item: '材料出库单列表、直接材料成本',
-      }),
-      reviewItem('归集直接人工成本并按工时分摊', findChunk(chunks, ['生产成本-直接人工', '分配率'], { all: true }) || chunk522, {
-        object_review_item: '人工工时、工资明细、直接人工成本分摊表',
-      }),
-      reviewItem('归集制造费用并按工时分摊', findChunk(chunks, ['制造费用', '人工工时'], { all: true }) || chunk544, {
-        object_review_item: '制造费用明细、制造费用分摊表',
-      }),
-      reviewItem('处理盘盈盘亏', chunkGainLoss, {
-        object_review_item: '原材料、燃料、备品备件、半成品等盈亏处理',
-        review_note: '原文为“盈亏处理”，待确认名称按财务核算语言暂归并为盘盈盘亏，需人工确认。',
-      }),
-      reviewItem('处理废品损失', chunkScrap, {
-        object_review_item: '废品损失',
-      }),
-      reviewItem('归档成本核算报表', chunkArchive, {
-        object_review_item: '相关报表',
-      }),
-    ],
-    approval_chain_reviews: [
-      reviewItemWithContent(
-        '工时调整链：车间工人填写情况说明 → 车间主任审核 → 定额员审核 → 经营发展部长审核后修改',
-        chunk512,
-        {
-          chain_roles: ['车间工人', '车间主任', '定额员', '经营发展部长'],
-          review_note: '待确认审批链不得直接写为财务部A1审批类型，需确认财务部是否参与该节点。',
-        },
-      ),
-      reviewItemWithContent(
-        '盈亏处理需查明原因，按照规定审批权限报有关部门审核批准',
-        chunkGainLoss,
-        {
-          chain_roles: ['有关部门'],
-          review_note: '原文未展开部门和权限层级，只能形成审批链待确认。',
-        },
-      ),
-    ],
-    controlled_transfer_reviews: [
-      reviewItemWithContent(
-        '行政人事部将各车间生产工人工资总额及其明细费用发至财务部门',
-        chunk522,
-        {
-          transfer_object: '工资总额及明细费用',
-          review_note: '这是受控传递待确认；正式字段需回源核验后再填写。',
-        },
-      ),
-      reviewItemWithContent(
-        '工程技术部提供技术方案、BOM单；经营发展部制定工时定额用于订单成本预测',
-        chunk511,
-        {
-          transfer_object: '技术方案、BOM单、工时定额',
-          review_note: '存在跨部门输入待确认，但不能凭相似度或上下文直接写入正式部门字段。',
-        },
-      ),
-    ],
-    archive_review_items: [
-      reviewItemWithContent('相关报表由财务部负责存档，保存年限30年。', chunkArchive, {
-        retention_period: '30年',
-        review_note: '归档要求需补入对应A1验收/归档字段前先核验原文位置。',
-      }),
-    ],
-    acceptance_gap_review_items: [
-      reviewItemWithContent('成本核算报表、成本分摊表、废品损失处理等最终成果缺少可验收标准拆解。', chunkArchive || chunkScrap, {
-        review_note: '待确认缺口，不等于正式验收标准。',
-      }),
-    ],
-  };
-}
-
-function hasFinanceSignal(args, chunks) {
-  if (args.department === '财务部') return true;
-  return chunks.some((chunk) => /GLTX-CW-01|财务成本核算管理程序/.test(`${chunk.source_file || ''}\n${chunk.source_file_name || ''}`));
 }
 
 function cleanTitle(value) {
@@ -313,7 +186,7 @@ function genericOutput(args, chunks) {
     source_file: representativeChunks[0]?.source_file || args.input || '',
     generated_at: new Date().toISOString(),
     policy: {
-      evidence_status: 'needs_review',
+      evidence_status: 'pending_review',
       verification_status: 'unverified',
       allowed_downstream_use: 'review_only',
       similarity_is_ranking_only: true,
@@ -336,9 +209,7 @@ function main() {
   requireArg(args, 'out');
 
   const chunks = readJsonl(args.chunks);
-  const output = hasFinanceSignal(args, chunks)
-    ? financeOutput(args, chunks)
-    : genericOutput(args, chunks);
+  const output = genericOutput(args, chunks);
 
   writeJson(args.out, output);
   console.error(`process_review_items=${output.process_review_items.length} out=${args.out}`);

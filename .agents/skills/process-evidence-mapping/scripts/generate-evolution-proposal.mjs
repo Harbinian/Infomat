@@ -99,10 +99,18 @@ function issueClass(issueType) {
     角色待确认: '证据不足',
     审批链待确认: '证据不足',
     受控传递待确认: '证据不足',
-    OCR待复核: '证据不足',
     验收标准待补: '规则缺失',
     归档要求待补: '规则缺失',
     系统落位待确认: '规则缺失',
+    来源证据不足: '证据不足',
+    原文定义不足: '规则缺失',
+    'L3 结构待确认': '漏判',
+    'A1 行为待确认': '漏判',
+    角色责任待确认: '证据不足',
+    跨部门承接待确认: '证据不足',
+    表单字段待确认: '规则缺失',
+    主数据需求待确认: '规则缺失',
+    抽取结果待复核: '证据不足',
   };
   return mapping[issueType] || '测试缺失';
 }
@@ -138,7 +146,7 @@ function buildProposal({ cases, reviewRun, reviewItems, embeddingManifest, diffR
   const lines = [
     '# 流程证据映射技能演进提案',
     '',
-    '> 边界：只生成提案，不自动修改已确认流程映射、PMO 页面、MDM 接口或技能文件。任何 DCM/BBM 入库仍必须逐条回源核验。',
+    '> 边界：只生成提案，不自动修改已确认流程映射、PMO 页面、MDM 接口或技能文件。正式结构块投影仍必须逐条回源核验并完成人工确认。',
     '',
     '## 输入概览',
     '',
@@ -178,8 +186,8 @@ function buildProposal({ cases, reviewRun, reviewItems, embeddingManifest, diffR
         item.stable_key || item.id || '(无稳定键)',
         item.issue_type || '(未标注)',
         issueClass(item.issue_type),
-        item.content || item.issue_content || '',
-        item.suggested_action || '',
+        item.content || item.issue_content || item.current_value || item.question_for_user || '',
+        item.suggested_action || item.next_step || item.question_for_user || '',
       ])),
       '',
     );
@@ -225,9 +233,12 @@ const cases = readJsonLines(args.cases);
 cases.forEach(validateCase);
 
 const reviewRun = args.reviewRun;
-const reviewItems = reviewRun
-  ? readJson(join(reviewRun, 'mapping_diff_items.json'), [])
-  : [];
+const structuredOutput = reviewRun
+  ? readJson(join(reviewRun, 'document-structured-output-v2.json'), null)
+  : null;
+const reviewItems = Array.isArray(structuredOutput?.pending_issues)
+  ? structuredOutput.pending_issues
+  : (reviewRun ? readJson(join(reviewRun, 'mapping_diff_items.json'), []) : []);
 const embeddingManifest = reviewRun
   ? readJson(join(reviewRun, 'embedding_manifest.json'), null)
   : null;

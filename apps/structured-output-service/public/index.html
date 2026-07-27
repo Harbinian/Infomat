@@ -1323,6 +1323,10 @@ function ensureDocument(data) {
   merged.steps.forEach(step => {
     if (!['action', 'decision'].includes(step.step_type)) step.step_type = 'action';
   });
+  normalizeStepTransitions(merged);
+  merged.steps
+    .filter(step => step.step_type === 'decision')
+    .forEach(step => ensureDecisionTransition(step.process_ref, step.step_ref, merged));
   return merged;
 }
 
@@ -1387,8 +1391,53 @@ function getValue(path) {
   return path.split('.').reduce((target, part) => target == null ? undefined : target[part], docData);
 }
 
+function transitionHasBusinessContent(transition) {
+  return Boolean(String(transition?.condition || '').trim() || transition?.to_step_ref);
+}
+
+function nextTransitionRef(data = docData) {
+  const existing = new Set((data?.step_transitions || []).map(item => item.transition_ref));
+  let index = 1;
+  while (existing.has(`trans_${index}`)) index += 1;
+  return `trans_${index}`;
+}
+
+function ensureDecisionTransition(processRef, stepRef, data = docData) {
+  if (!data || !stepRef) return null;
+  if (!Array.isArray(data.step_transitions)) data.step_transitions = [];
+  const existing = data.step_transitions.find(item => item.from_step_ref === stepRef);
+  if (existing) return existing;
+  const transition = {
+    transition_ref: nextTransitionRef(data),
+    process_ref: processRef,
+    from_step_ref: stepRef,
+    condition: '',
+    to_step_ref: null,
+    evidence_refs: []
+  };
+  data.step_transitions.push(transition);
+  return transition;
+}
+
+function prepareStepTypeChange(path, previousValue, nextValue) {
+  const match = path.match(/^steps\.(\d+)\.step_type$/);
+  if (!match || previousValue === nextValue) return true;
+  const step = docData.steps[Number(match[1])];
+  if (!step) return true;
+  if (previousValue === 'decision' && nextValue === 'action') {
+    const branches = (docData.step_transitions || []).filter(item => item.from_step_ref === step.step_ref);
+    if (branches.some(transitionHasBusinessContent)) {
+      const accepted = confirm('改回业务行为会删除当前判断节点已经填写的分支条件和流向。确认继续吗？');
+      if (!accepted) return false;
+    }
+    docData.step_transitions = (docData.step_transitions || []).filter(item => item.from_step_ref !== step.step_ref);
+  }
+  return true;
+}
+
 function setValue(path, value, options = {}) {
   const previousValue = getValue(path);
+  if (!prepareStepTypeChange(path, previousValue, value)) return false;
   const parts = path.split('.');
   let target = docData;
   for (let i = 0; i < parts.length - 1; i += 1) {
@@ -1397,6 +1446,11 @@ function setValue(path, value, options = {}) {
     target = target[part];
   }
   target[parts[parts.length - 1]] = value;
+  const stepTypeMatch = path.match(/^steps\.(\d+)\.step_type$/);
+  if (stepTypeMatch && value === 'decision') {
+    const step = docData.steps[Number(stepTypeMatch[1])];
+    ensureDecisionTransition(step?.process_ref, step?.step_ref);
+  }
   syncRelatedTableValue(path, value);
   syncWorkRoleBindingTarget(path, value);
   if (/^(?:steps\.\d+\.(?:process_ref|step_type)|step_transitions\.\d+\.(?:from_step_ref|to_step_ref))$/.test(path)) cleanStepTransitions();
@@ -1419,6 +1473,7 @@ function setValue(path, value, options = {}) {
   hasPageContent = true;
   updateCompletion();
   if (options.rerender !== false && shouldRerenderAfterValueChange(path)) render();
+  return true;
 }
 
 function setLinkedValue(path, value) {
@@ -1647,6 +1702,7 @@ function shouldRerenderAfterValueChange(path) {
     /^processes\.\d+\.owner$/.test(path) ||
     /^forms\.\d+\.responsible_department_name$/.test(path) ||
     /^steps\.\d+\.(?:process_ref|step_type|step_name|actor_role|input_materials|output_result)$/.test(path) ||
+    /^step_transitions\.\d+\.to_step_ref$/.test(path) ||
     /^behavior_details\.\d+\.execution_standard$/.test(path) ||
     /^work_role_bindings\.\d+\.(?:source_position_name|work_role_code|status)$/.test(path) ||
     /^work_role_bindings\.\d+\.participant_department\.department_name$/.test(path);
@@ -1901,7 +1957,10 @@ function field(path, label, options = {}) {
   const readValue = event => options.parse ? options.parse(event.target.value) : event.target.value;
   const writeValue = (event, rerender) => {
     const nextValue = readValue(event);
-    setValue(path, nextValue, { rerender });
+    if (setValue(path, nextValue, { rerender }) === false) {
+      event.target.value = getValue(path) ?? '';
+      return;
+    }
     wrapper.classList.toggle('missing', required && !isFilled(nextValue));
     const origin = wrapper.querySelector('.origin');
     if (origin) origin.textContent = originLabel(path);
@@ -1992,7 +2051,10 @@ function tableCell(path, options = {}) {
   const readValue = event => options.parse ? options.parse(event.target.value) : event.target.value;
   const writeValue = (event, rerender) => {
     const nextValue = readValue(event);
-    setValue(path, nextValue, { rerender });
+    if (setValue(path, nextValue, { rerender }) === false) {
+      event.target.value = getValue(path) ?? '';
+      return;
+    }
     cell.classList.toggle('missing-cell', required && !isFilled(nextValue));
   };
   input.addEventListener('input', event => writeValue(event, false));
@@ -2330,41 +2392,68 @@ function stepOptionsForProcess(processRef, decisionOnly = false) {
   );
 }
 
-function renderStepTransitions(processRef) {
+function renderStepTransitions(processRef, stepRef = null) {
   const group = div('group');
-  group.appendChild(title('判断分支'));
+  if (!stepRef) group.appendChild(title('判断分支'));
   const rows = (docData.step_transitions || [])
     .map((transition, index) => ({ transition, index }))
-    .filter(item => item.transition.process_ref === processRef);
+    .filter(item =>
+      item.transition.process_ref === processRef &&
+      (!stepRef || item.transition.from_step_ref === stepRef)
+    );
   if (!rows.length) {
     group.appendChild(empty('还没有判断分支。'));
-    return group;
+  } else {
+    const wrap = div('table-wrap');
+    const table = document.createElement('table');
+    table.className = 'transition-table';
+    table.innerHTML = stepRef
+      ? '<thead><tr><th>判断条件或结果</th><th>流向步骤</th><th>操作</th></tr></thead>'
+      : '<thead><tr><th>判断节点</th><th>条件</th><th>流向步骤</th><th>操作</th></tr></thead>';
+    const body = document.createElement('tbody');
+    rows.forEach(({ index: i }) => {
+      const row = document.createElement('tr');
+      if (!stepRef) {
+        row.appendChild(tableCell(`step_transitions.${i}.from_step_ref`, {
+          type: 'select',
+          options: stepOptionsForProcess(processRef, true),
+          parse: value => value || null,
+          required: false
+        }));
+      }
+      row.append(
+        tableCell(`step_transitions.${i}.condition`, { required: false }),
+        tableCell(`step_transitions.${i}.to_step_ref`, {
+          type: 'select',
+          options: stepOptionsForProcess(processRef, false),
+          parse: value => value || null,
+          required: false
+        })
+      );
+      const action = document.createElement('td');
+      const remove = document.createElement('button');
+      remove.className = 'btn';
+      remove.type = 'button';
+      remove.textContent = '删除';
+      remove.addEventListener('click', () => removeArrayItem('step_transitions', i));
+      action.appendChild(remove);
+      row.appendChild(action);
+      body.appendChild(row);
+    });
+    table.appendChild(body);
+    wrap.appendChild(table);
+    group.appendChild(wrap);
   }
-  const wrap = div('table-wrap');
-  const table = document.createElement('table');
-  table.className = 'transition-table';
-  table.innerHTML = '<thead><tr><th>判断节点</th><th>条件</th><th>流向步骤</th><th>操作</th></tr></thead>';
-  const body = document.createElement('tbody');
-  rows.forEach(({ index: i }) => {
-    const row = document.createElement('tr');
-    row.append(
-      tableCell(`step_transitions.${i}.from_step_ref`, { type: 'select', options: stepOptionsForProcess(processRef, true), parse: value => value || null, required: false }),
-      tableCell(`step_transitions.${i}.condition`, { required: false }),
-      tableCell(`step_transitions.${i}.to_step_ref`, { type: 'select', options: stepOptionsForProcess(processRef, false), parse: value => value || null, required: false })
-    );
-    const action = document.createElement('td');
-    const remove = document.createElement('button');
-    remove.className = 'btn';
-    remove.type = 'button';
-    remove.textContent = '删除';
-    remove.addEventListener('click', () => removeArrayItem('step_transitions', i));
-    action.appendChild(remove);
-    row.appendChild(action);
-    body.appendChild(row);
-  });
-  table.appendChild(body);
-  wrap.appendChild(table);
-  group.appendChild(wrap);
+  if (stepRef) {
+    const actions = div('table-actions');
+    const add = document.createElement('button');
+    add.className = 'btn';
+    add.type = 'button';
+    add.textContent = '新增判断分支';
+    add.addEventListener('click', () => addTransitionForStep(processRef, stepRef));
+    actions.appendChild(add);
+    group.appendChild(actions);
+  }
   return group;
 }
 
@@ -3034,7 +3123,7 @@ function renderSelectedStepEditor(processRef, filteredRows, selectedRow) {
   const body = div('step-editor-body');
   const guide = div('step-fill-guide');
   guide.textContent = selectedRow.step.step_type === 'decision'
-    ? '先说明由谁判断、判断什么，再到下方“判断分支”填写条件和流向。字段顺序：③何时触发 → ④开始前有什么 → ⑤谁来做 → ⑥具体做什么 → ⑦怎样算完成 → ⑧交付什么。'
+    ? '先说明由谁判断、判断什么，再在本步骤下方填写判断条件和流向。字段顺序：③何时触发 → ④开始前有什么 → ⑤谁来做 → ⑥具体做什么 → ⑦怎样算完成 → ⑧交付什么。'
     : '按业务顺序填写：③何时触发 → ④开始前有什么 → ⑤谁来做 → ⑥具体做什么 → ⑦怎样算完成 → ⑧交付什么。没有原文依据的内容可以留空。';
   body.appendChild(guide);
 
@@ -3057,6 +3146,16 @@ function renderSelectedStepEditor(processRef, filteredRows, selectedRow) {
   output.classList.add('step-wide');
   grid.append(typeField, nameField, actor, trigger, precondition, input, timing, standard, output);
   body.appendChild(grid);
+
+  if (selectedRow.step.step_type === 'decision') {
+    ensureDecisionTransition(processRef, selectedRow.step.step_ref);
+    const branchCount = (docData.step_transitions || []).filter(item => item.from_step_ref === selectedRow.step.step_ref).length;
+    body.appendChild(collapsiblePanel(
+      `判断分支（${branchCount} 条）`,
+      renderStepTransitions(processRef, selectedRow.step.step_ref),
+      { open: true, className: 'step-support-panel decision-branches-inline' }
+    ));
+  }
 
   const roleCount = workRoleBindingsForTarget(processRef, selectedRow.step.step_ref).length;
   body.appendChild(collapsiblePanel(
@@ -3105,10 +3204,7 @@ function renderSteps() {
     );
     const addAction = stepActionButton('新增业务行为', () => addStepForProcess(processRef, 'action'));
     const addDecision = stepActionButton('新增判断节点', () => addStepForProcess(processRef, 'decision'));
-    const hasDecision = processStepRows.some(row => row.step.step_type === 'decision');
-    const addTransition = stepActionButton('新增判断分支', () => addTransitionForProcess(processRef), !hasDecision);
-    if (!hasDecision) addTransition.title = '先新增或设置一个判断节点';
-    actions.append(collapse, addAction, addDecision, addTransition);
+    actions.append(collapse, addAction, addDecision);
     head.append(copy, actions);
     card.appendChild(head);
 
@@ -3136,13 +3232,6 @@ function renderSteps() {
     );
     card.appendChild(workbench);
 
-    const transitions = (docData.step_transitions || []).filter(item => item.process_ref === processRef);
-    const selectedIsDecision = selectedRow?.step.step_type === 'decision';
-    card.appendChild(collapsiblePanel(
-      `判断分支（${transitions.length} 条）`,
-      renderStepTransitions(processRef),
-      { open: selectedIsDecision || transitions.length > 0 }
-    ));
     root.appendChild(card);
   });
   return root;
@@ -3312,6 +3401,7 @@ function addStepForProcess(processRef, stepType = 'action') {
   const step = blankStep(processRef, stepType);
   docData.steps.push(step);
   docData.behavior_details.push(blankBehaviorDetail(docData.steps.length - 1));
+  if (stepType === 'decision') ensureDecisionTransition(processRef, step.step_ref);
   activeStepRefsByProcess.set(processRef, step.step_ref);
   stepFiltersByProcess.set(processRef, 'all');
   collapsedProcessRefs.delete(processRef);
@@ -3319,13 +3409,17 @@ function addStepForProcess(processRef, stepType = 'action') {
   render();
 }
 
-function addTransitionForProcess(processRef) {
-  const transitionRef = `trans_${docData.step_transitions.length + 1}`;
-  const decision = stepsForProcess(processRef).find(item => item.step.step_type === 'decision')?.step;
+function addTransitionForStep(processRef, stepRef) {
+  const decision = docData.steps.find(step =>
+    step.step_ref === stepRef &&
+    step.process_ref === processRef &&
+    step.step_type === 'decision'
+  );
+  if (!decision) return;
   docData.step_transitions.push({
-    transition_ref: transitionRef,
+    transition_ref: nextTransitionRef(),
     process_ref: processRef,
-    from_step_ref: decision?.step_ref || null,
+    from_step_ref: decision.step_ref,
     condition: '',
     to_step_ref: null,
     evidence_refs: []
@@ -3333,6 +3427,17 @@ function addTransitionForProcess(processRef) {
   collapsedProcessRefs.delete(processRef);
   hasPageContent = true;
   render();
+}
+
+function addTransitionForProcess(processRef) {
+  const selectedRef = activeStepRefsByProcess.get(processRef);
+  const selectedDecision = docData.steps.find(step =>
+    step.step_ref === selectedRef &&
+    step.process_ref === processRef &&
+    step.step_type === 'decision'
+  );
+  const decision = selectedDecision || stepsForProcess(processRef).find(item => item.step.step_type === 'decision')?.step;
+  if (decision) addTransitionForStep(processRef, decision.step_ref);
 }
 
 function normalizeStepTransitions(data) {
@@ -3350,7 +3455,7 @@ function normalizeStepTransitions(data) {
         evidence_refs: Array.isArray(transition.evidence_refs) ? transition.evidence_refs : []
       };
       const fromStep = stepsByRef.get(next.from_step_ref);
-      if (!fromStep) return next;
+      if (!fromStep) return null;
       next.process_ref = fromStep.process_ref;
       if (fromStep.step_type !== 'decision') return null;
       if (next.to_step_ref) {
@@ -3505,7 +3610,7 @@ function removeWorkRoleBinding(index) {
 
 function blankProcess() {
   const index = docData.processes.length + 1;
-  return { process_ref: `proc_${index}`, draft_ref: null, process_code: null, l3_key: null, process_type: 'new', l1_name: docData.draft.l1_name || '', l2_name: docData.draft.l2_name || '', l3_name: docData.draft.l3_name || `流程 ${index}`, description: null, owner: docData.draft.department.department_name || '', system: '', evidence_refs: [] };
+  return { process_ref: `proc_${index}`, draft_ref: null, process_code: null, l3_key: null, process_type: 'new', l1_name: docData.draft.l1_name || '待确认', l2_name: docData.draft.l2_name || '待确认', l3_name: docData.draft.l3_name || `流程 ${index}`, description: null, owner: docData.draft.department.department_name || '', system: '', evidence_refs: [] };
 }
 
 function blankStep(processRef = docData.processes[0]?.process_ref || 'proc_1', stepType = 'action') {
@@ -3532,25 +3637,137 @@ function blankTableField(tableRef) {
   return { table_field_ref: `table_field_${docData.form_table_fields.length + 1}`, table_ref: resolvedTableRef, structure_kind: structureKindForTable(resolvedTableRef), field_no: null, field_code: null, field_name: '', field_type: '文本', required: false, description: '' };
 }
 
+function ensurePendingClassificationIssues(data) {
+  if (!Array.isArray(data.pending_issues)) data.pending_issues = [];
+  (data.processes || []).forEach((process, index) => {
+    for (const [fieldName, fieldLabel] of [['l1_name', '能力域'], ['l2_name', '业务能力']]) {
+      if (!String(process[fieldName] || '').trim()) process[fieldName] = '待确认';
+      if (process[fieldName] !== '待确认') continue;
+      const exists = data.pending_issues.some(issue =>
+        issue.structured_object_type === 'process' &&
+        issue.structured_object_key === String(process.process_ref) &&
+        issue.target_field === fieldName
+      );
+      if (exists) continue;
+      data.pending_issues.push({
+        stable_key: `process-classification-${safeFileName(process.process_ref || index + 1)}-${fieldName}`,
+        department: data.draft?.department?.department_name || null,
+        document_name: data.draft?.document_title || null,
+        structured_object_type: 'process',
+        structured_object_key: String(process.process_ref || `proc_${index + 1}`),
+        target_block: 'l3_catalog',
+        target_field: fieldName,
+        current_value: '待确认',
+        source_file: null,
+        source_anchor: null,
+        source_excerpt: process.l3_name || null,
+        evidence_status: 'pending_review',
+        issue_type: 'L3 结构待确认',
+        question_for_user: `请确认业务流程“${process.l3_name || `流程 ${index + 1}`}”所属的${fieldLabel}。`,
+        suggested_handler: '流程责任部门',
+        allowed_actions: ['专项确认'],
+        user_decision: null,
+        user_reason: null,
+        user_note: null,
+        next_step: `由流程责任部门确认${fieldLabel}后更新结构化文件。`
+      });
+    }
+  });
+}
+
+function buildProjectionForExport(data) {
+  const draft = data.draft || {};
+  const l3KeyByProcessRef = new Map();
+  const l3Catalog = (data.processes || []).map((process, index) => {
+    const l3Key = process.l3_key || process.process_code || `${draft.document_no || 'DOC'}.L3.${String(index + 1).padStart(3, '0')}`;
+    l3KeyByProcessRef.set(process.process_ref, l3Key);
+    return {
+      l1: process.l1_name || '待确认',
+      l2: process.l2_name || '待确认',
+      l3_key: l3Key,
+      l3_name: process.l3_name || `流程 ${index + 1}`,
+      document_no: draft.document_no || null,
+      document_title: draft.document_title || null,
+      document_edition: draft.planned_edition || 'A',
+      system: process.system || '',
+      owner: process.owner || null,
+      evidence_refs: Array.isArray(process.evidence_refs) ? process.evidence_refs : []
+    };
+  });
+  return {
+    meta: {
+      document_no: draft.document_no || '',
+      document_title: draft.document_title || '',
+      document_edition: draft.planned_edition || 'A',
+      document_version_status: 'published',
+      dept_code: draft.department?.department_code || null,
+      dept_name: draft.department?.department_name || '',
+      domain: draft.department?.domain || null,
+      maintainer: null,
+      version: '1.0.0',
+      status: draft.status || 'draft',
+      parser_schema_version: 1
+    },
+    l3_catalog: l3Catalog,
+    a1_catalog: (data.steps || []).map((step, index) => ({
+      a1_code: step.a1_code || `${draft.document_no || 'DOC'}-A1-DRAFT-${String(index + 1).padStart(3, '0')}`,
+      l3_key: l3KeyByProcessRef.get(step.process_ref) || l3Catalog[0]?.l3_key || '',
+      behavior: step.step_name || '',
+      document_no: draft.document_no || null,
+      document_title: draft.document_title || null,
+      document_edition: draft.planned_edition || 'A',
+      role: step.actor_role || null,
+      entry: step.entry || null,
+      system: step.system || '',
+      evidence_refs: Array.isArray(step.evidence_refs) ? step.evidence_refs : []
+    })),
+    evidence_catalog: (data.evidence_catalog || []).map(item => ({
+      id: item.evidence_ref,
+      source_type: item.evidence_type || null,
+      source_file: item.source_file || item.source_name || null,
+      locator: item.locator || item.source_anchor || null,
+      locate_method: item.locate_method || null,
+      status: item.status || 'pending_review'
+    })),
+    work_role_bindings: (data.work_role_bindings || [])
+      .filter(binding => binding.status === 'confirmed')
+      .map(binding => ({
+        binding_ref: binding.binding_ref,
+        process_ref: binding.process_ref,
+        step_ref: binding.step_ref == null ? null : binding.step_ref,
+        participant_department: binding.participant_department,
+        source_role_text: binding.source_role_text || null,
+        source_position_name: binding.source_position_name || null,
+        work_role_code: binding.work_role_code,
+        participation_type: binding.participation_type,
+        status: 'confirmed',
+        evidence_refs: Array.isArray(binding.evidence_refs) ? binding.evidence_refs : [],
+        confirmation_basis: binding.confirmation_basis
+      })),
+    mdm_requirement_catalog: (data.mdm_requirement_catalog || []).map(item => ({
+      object: item.object,
+      key_fields: Array.isArray(item.key_fields) ? item.key_fields : [],
+      owner_dept: item.owner_dept || null,
+      requirement: item.requirement || null,
+      evidence_refs: Array.isArray(item.evidence_refs) ? item.evidence_refs : []
+    }))
+  };
+}
+
 function normalizeForStructuredExport(data) {
   const copy = JSON.parse(JSON.stringify(data));
   copy.schema_version = 'document-structured-output-v2';
   if (!Array.isArray(copy.step_transitions)) copy.step_transitions = [];
   if (!Array.isArray(copy.work_role_bindings)) copy.work_role_bindings = [];
   copy.work_role_bindings = copy.work_role_bindings.map((binding, index) => normalizeWorkRoleBinding(binding, index));
-  copy.structure_block_projection = copy.structure_block_projection && typeof copy.structure_block_projection === 'object'
-    ? copy.structure_block_projection
-    : {};
-  copy.structure_block_projection.work_role_bindings = copy.work_role_bindings
-    .filter(binding => binding.status === 'confirmed')
-    .map(binding => JSON.parse(JSON.stringify(binding)));
+  ensurePendingClassificationIssues(copy);
+  copy.structure_block_projection = buildProjectionForExport(copy);
   normalizeStepTransitions(copy);
   copy.document_profile = copy.document_profile || {};
   copy.document_profile.document_no = copy.draft?.document_no || copy.document_profile.document_no || '';
   copy.document_profile.document_title = copy.draft?.document_title || copy.document_profile.document_title || '';
-  if (copy.structure_block_projection?.meta && !copy.structure_block_projection.meta.document_version_status) {
-    copy.structure_block_projection.meta.document_version_status = 'published';
-  }
+  if (!String(copy.draft?.basis_description || '').trim()) delete copy.draft.basis_description;
+  (copy.form_fields || []).forEach(field => delete field.draft_ref);
   pruneEmptyRecordRefs(copy);
   return copy;
 }
@@ -3563,7 +3780,8 @@ function pruneEmptyRecordRefs(value) {
   }
   for (const key of Object.keys(value)) {
     const isWorkRoleStepRef = key === 'step_ref' && 'binding_ref' in value && 'work_role_code' in value;
-    if (value[key] === null && key.endsWith('_ref') && key !== 'to_step_ref' && !isWorkRoleStepRef) {
+    const isEmptyOptionalReference = value[key] === null && (key.endsWith('_ref') || key === 'department_id');
+    if (isEmptyOptionalReference && key !== 'to_step_ref' && !isWorkRoleStepRef) {
       delete value[key];
     } else {
       pruneEmptyRecordRefs(value[key]);
@@ -3583,7 +3801,63 @@ function firstInvalidWorkRoleBinding() {
     .find(item => item.problems.length) || null;
 }
 
-function exportStructuredFile() {
+function decisionBranchWarnings(data) {
+  const warnings = [];
+  const transitions = Array.isArray(data.step_transitions) ? data.step_transitions : [];
+  for (const step of (data.steps || []).filter(item => item.step_type === 'decision')) {
+    const branches = transitions.filter(item => item.from_step_ref === step.step_ref);
+    if (branches.length < 2) warnings.push(`判断节点“${step.step_name || step.step_ref}”少于两条分支`);
+    branches.forEach((branch, index) => {
+      const condition = String(branch.condition || '').trim();
+      if (!condition) warnings.push(`判断节点“${step.step_name || step.step_ref}”的第 ${index + 1} 条分支未填写条件`);
+      if (/xx|待定|有问题|无问题|情况变化|方式变化/i.test(condition)) {
+        warnings.push(`判断节点“${step.step_name || step.step_ref}”的条件“${condition}”无法直接执行`);
+      }
+      if (!branch.to_step_ref) warnings.push(`判断节点“${step.step_name || step.step_ref}”的第 ${index + 1} 条分支未选择流向`);
+    });
+  }
+  return warnings;
+}
+
+function contractErrorFieldLabel(error, data) {
+  const path = String(error?.path || '/');
+  const missing = error?.params?.missingProperty;
+  const resolvedPath = missing ? `${path.replace(/\/$/, '')}/${missing}` : path;
+  const processMatch = resolvedPath.match(/^\/processes\/(\d+)\/(l1_name|l2_name|l3_name)$/);
+  if (processMatch) {
+    const labels = { l1_name: '能力域', l2_name: '业务能力', l3_name: '业务流程' };
+    const process = data.processes?.[Number(processMatch[1])];
+    return `流程“${process?.l3_name || Number(processMatch[1]) + 1}”的${labels[processMatch[2]]}`;
+  }
+  const draftLabels = {
+    document_no: '制度编号',
+    document_title: '制度名称',
+    process_name: '业务流程',
+    basis_type: '依据类型',
+    basis_description: '依据说明',
+    department: '归口部门'
+  };
+  const draftMatch = resolvedPath.match(/^\/draft\/([^/]+)/);
+  if (draftMatch) return draftLabels[draftMatch[1]] || `基本信息 ${draftMatch[1]}`;
+  const fieldMatch = resolvedPath.match(/^\/form_table_fields\/(\d+)\/field_name$/);
+  if (fieldMatch) return `表格字段 ${Number(fieldMatch[1]) + 1} 的字段名称`;
+  return resolvedPath === '/' ? '结构化文件' : resolvedPath.replaceAll('/', ' / ');
+}
+
+async function validateBeforeExport(data) {
+  const response = await fetch('/api/validate', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json; charset=utf-8',
+      ...(sessionId ? { 'x-session-id': sessionId } : {})
+    },
+    body: JSON.stringify({ data })
+  });
+  if (!response.ok) throw new Error('标准合同校验服务不可用');
+  return response.json();
+}
+
+async function exportStructuredFile() {
   if (!docData) {
     toast('请先导入制度文件或结构化文件');
     return;
@@ -3602,7 +3876,26 @@ function exportStructuredFile() {
     const ok = confirm('还有必填内容需要补充。现在导出的结构化文件可以保存阶段性成果，导入 3000 后仍需继续完善。');
     if (!ok) return;
   }
-  const data = JSON.stringify(normalizeForStructuredExport(docData), null, 2);
+  let exportData = normalizeForStructuredExport(docData);
+  const branchWarnings = decisionBranchWarnings(exportData);
+  if (branchWarnings.length) {
+    const accepted = confirm(`判断分支仍有 ${branchWarnings.length} 项需要核对。第一项：${branchWarnings[0]}。确认保存当前阶段性成果吗？`);
+    if (!accepted) return;
+  }
+  let validation;
+  try {
+    validation = await validateBeforeExport(exportData);
+  } catch (error) {
+    toast(error.message || '导出前校验失败');
+    return;
+  }
+  if (!validation.valid) {
+    const firstError = validation.errors?.[0] || {};
+    toast(`无法导出：${contractErrorFieldLabel(firstError, exportData)}${firstError.message ? ` ${firstError.message}` : ''}`);
+    return;
+  }
+  if (validation.data) exportData = validation.data;
+  const data = JSON.stringify(exportData, null, 2);
   const blob = new Blob([data], { type: 'application/json;charset=utf-8' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);

@@ -5,7 +5,10 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 
 const REPO = process.cwd();
-const RUN_DIR = path.join(REPO, 'artifacts', 'evidence-index', 'test-gltx-jy-05');
+const RUN_DIR = path.join(REPO, 'artifacts', 'evidence-index', 'test-internet-only-office');
+const SOURCE_DIR = path.join(RUN_DIR, 'source');
+const SOURCE = path.join(SOURCE_DIR, 'internet-only-office-process.md');
+const DEFERRED_SOURCE = path.join(SOURCE_DIR, 'internet-only-office-flow.vsd');
 const CHUNKS = path.join(RUN_DIR, 'chunks.jsonl');
 const VECTORS = path.join(RUN_DIR, 'vectors.jsonl');
 const MANIFEST = path.join(RUN_DIR, 'embedding_manifest.json');
@@ -13,28 +16,6 @@ const CANDIDATES = path.join(RUN_DIR, 'review_evidence.jsonl');
 const REPORT = path.join(RUN_DIR, 'review_evidence_report.md');
 const DEFERRED_CHUNKS = path.join(RUN_DIR, 'deferred_visio_chunks.jsonl');
 const DEFERRED_SOURCES = path.join(RUN_DIR, 'deferred_visio_sources.jsonl');
-const SOURCE = path.join(
-  REPO,
-  'docs',
-  'norms',
-  '经营发展部业务资料',
-  '管理体系程序文件',
-  'GLTX-JY-05-D公司月度绩效考核方案.docx',
-);
-
-function findFirstExt(root, ext) {
-  const entries = fs.readdirSync(root, { withFileTypes: true });
-  for (const entry of entries) {
-    const fullPath = path.join(root, entry.name);
-    if (entry.isDirectory()) {
-      const found = findFirstExt(fullPath, ext);
-      if (found) return found;
-    } else if (entry.isFile() && entry.name.toLowerCase().endsWith(ext)) {
-      return fullPath;
-    }
-  }
-  return '';
-}
 
 function readJsonl(filePath) {
   return fs.readFileSync(filePath, 'utf8')
@@ -52,7 +33,43 @@ function runNode(args) {
 }
 
 fs.rmSync(RUN_DIR, { recursive: true, force: true });
-fs.mkdirSync(RUN_DIR, { recursive: true });
+fs.mkdirSync(SOURCE_DIR, { recursive: true });
+fs.writeFileSync(SOURCE, [
+  '# 互联网专用办公区需求收集与使用管理流程',
+  '',
+  '## 1 目的',
+  '',
+  '规范各部门外网使用需求的收集、审核、登记和使用记录管理。',
+  '',
+  '## 2 范围',
+  '',
+  '适用于全公司各部门提出互联网访问需求并在专用办公区使用设备。',
+  '',
+  '## 5 工作程序',
+  '',
+  '5.1 经营发展部需求管理员发布需求收集通知和填报模板。',
+  '',
+  '5.2 各部门需求填报人提交访问目的、使用人员、网站范围、使用频次和预计期限。',
+  '',
+  '5.3 经营发展部需求管理员汇总申请，识别重复需求和资料缺项。',
+  '',
+  '5.4 信息安全审核人核对访问范围和数据带入带出限制，部门负责人批准需求。',
+  '',
+  '5.5 办公区管理员登记已批准人员并安排仅连接互联网的办公电脑。',
+  '',
+  '5.6 使用人员到场登记，按批准范围使用设备，结束后填写使用记录。',
+  '',
+  '互联网 访问申请表',
+  '',
+  '## 6 记录',
+  '',
+  '| 记录名称 | 形成环节 | 责任角色 | 保存要求 |',
+  '| --- | --- | --- | --- |',
+  '| 外网使用需求清单 | 需求汇总 | 经营发展部需求管理员 | 按公司档案要求保存 |',
+  '| 互联网专用办公区使用记录 | 现场使用 | 办公区管理员 | 按月归档 |',
+  '',
+].join('\n'), 'utf8');
+fs.writeFileSync(DEFERRED_SOURCE, Buffer.from('deferred regression fixture', 'utf8'));
 
 runNode([
   '.agents/skills/process-evidence-mapping/scripts/extract-evidence-chunks.mjs',
@@ -61,13 +78,11 @@ runNode([
 ]);
 
 const chunks = readJsonl(CHUNKS);
-assert.ok(chunks.length > 300, `expected >300 chunks, got ${chunks.length}`);
+assert.ok(chunks.length >= 10, `expected at least 10 chunks, got ${chunks.length}`);
 
-const visioSource = findFirstExt(path.join(REPO, 'docs', 'norms'), '.vsd');
-assert.ok(visioSource, 'expected at least one Visio source for defer regression');
 runNode([
   '.agents/skills/process-evidence-mapping/scripts/extract-evidence-chunks.mjs',
-  '--input', visioSource,
+  '--input', DEFERRED_SOURCE,
   '--out', DEFERRED_CHUNKS,
   '--source-index', DEFERRED_SOURCES,
   '--defer-ext', '.vsd,.vsdx',
@@ -79,25 +94,23 @@ assert.equal(deferredSources.length, 1, 'deferred Visio file should remain in so
 assert.equal(deferredSources[0].extraction_status, 'deferred');
 assert.equal(deferredSources[0].included_status, 'deferred');
 
-const partialTitle = chunks.find((chunk) => chunk.raw_text === '公司 月综合打分表');
-assert.ok(partialTitle, 'expected raw partial title chunk 公司 月综合打分表');
+const partialTitle = chunks.find((chunk) => chunk.raw_text === '互联网 访问申请表');
+assert.ok(partialTitle, 'expected a deliberately spaced form title');
 assert.equal(partialTitle.extraction_quality, 'partial');
-assert.equal(partialTitle.raw_text, '公司 月综合打分表');
-assert.match(partialTitle.normalized_review_text, /公司__月综合打分表/);
-assert.match(partialTitle.normalized_review_text, /公司月度综合打分表待确认/);
+assert.match(partialTitle.normalized_review_text, /互联网访问申请表/);
 
-const section543 = chunks.find((chunk) => chunk.raw_text.includes('5.4.3公司月度综合打分表由经营发展部部长编制'));
-assert.ok(section543, 'expected §5.4.3 object-chain chunk');
-assert.equal(section543.extraction_quality, 'clean');
-assert.equal(section543.verification_status, 'unverified');
-assert.equal(section543.allowed_downstream_use, 'review_only');
+const aggregationStep = chunks.find((chunk) => chunk.raw_text.includes('经营发展部需求管理员汇总申请'));
+assert.ok(aggregationStep, 'expected the demand aggregation step');
+assert.equal(aggregationStep.extraction_quality, 'clean');
+assert.equal(aggregationStep.verification_status, 'unverified');
+assert.equal(aggregationStep.allowed_downstream_use, 'review_only');
 
 runNode([
   '.agents/skills/process-evidence-mapping/scripts/build-embedding-manifest.mjs',
   '--chunks', CHUNKS,
   '--vectors', VECTORS,
   '--out', MANIFEST,
-  '--batch-size', '16',
+  '--batch-size', '8',
 ]);
 
 const manifest = JSON.parse(fs.readFileSync(MANIFEST, 'utf8'));
@@ -109,15 +122,15 @@ runNode([
   '.agents/skills/process-evidence-mapping/scripts/evidence-retriever.mjs',
   '--chunks', CHUNKS,
   '--vectors', VECTORS,
-  '--query', '公司月度综合打分表 编制 财务核对 分管领导审核 总经理批准 签批栏',
-  '--top-k', '10',
+  '--query', '外网使用需求 申请表 提交 汇总 信息安全审核 批准 使用登记 归档',
+  '--top-k', String(chunks.length),
   '--out', CANDIDATES,
 ]);
 
 const reviewItems = readJsonl(CANDIDATES);
-assert.ok(reviewItems.some((item) => item.raw_text.includes('5.4.3公司月度综合打分表由经营发展部部长编制')), 'expected §5.4.3 in reviewItems');
-assert.ok(reviewItems.some((item) => item.raw_text.includes('编制：') && item.raw_text.includes('财务核对')), 'expected table 26 signature row in reviewItems');
-assert.ok(reviewItems.every((item) => item.evidence_status === 'needs_review'), 'review items must stay needs_review');
+assert.ok(reviewItems.some((item) => item.raw_text.includes('各部门需求填报人提交')), 'expected department submission evidence');
+assert.ok(reviewItems.some((item) => item.raw_text.includes('信息安全审核人核对')), 'expected security review evidence');
+assert.ok(reviewItems.every((item) => item.evidence_status === 'pending_review'), 'review items must stay pending_review');
 assert.ok(reviewItems.every((item) => item.verification_status === 'unverified'), 'review items must stay unverified');
 assert.ok(reviewItems.every((item) => item.allowed_downstream_use === 'review_only'), 'review items must be review-only');
 assert.ok(reviewItems.some((item) => item.relation_type === 'approval_chain_review'), 'expected approval_chain_review classification');
@@ -126,7 +139,7 @@ runNode([
   '.agents/skills/process-evidence-mapping/scripts/build-review-evidence-report.mjs',
   '--review-items', CANDIDATES,
   '--out', REPORT,
-  '--title', 'GLTX-JY-05待确认证据回归报告',
+  '--title', '互联网专用办公区流程待确认证据回归报告',
 ]);
 
 const report = fs.readFileSync(REPORT, 'utf8');

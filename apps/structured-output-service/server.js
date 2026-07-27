@@ -6,6 +6,7 @@ const fs = require('fs');
 const os = require('os');
 const crypto = require('crypto');
 const { TextDecoder } = require('util');
+const Ajv2020 = require('ajv/dist/2020');
 
 const app = express();
 const PORT = Number(process.env.STRUCTURED_OUTPUT_PORT || process.env.PORT || 3001);
@@ -13,6 +14,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 const schemaPath = path.join(__dirname, '..', '..', 'docs', 'contracts', 'document-structured-output.schema.json');
 const STANDARD_SCHEMA = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
+const validateStandardDocument = new Ajv2020({ allErrors: true, strict: false }).compile(STANDARD_SCHEMA);
 const ROSTER_PATH = path.join(__dirname, '..', '..', 'docs', 'organization', '花名册.md');
 const WORK_ROLE_DATA_PATH = path.join(__dirname, '..', '..', 'docs', 'work-role-data.json');
 
@@ -292,10 +294,9 @@ function createEmptyDocument() {
       process_name: '',
       reason: '',
       basis_type: '制度 / 规程',
-      basis_description: '',
       involves_other_departments: false,
       related_departments: [],
-      department: { department_name: '', department_code: null, department_id: null, domain: null },
+      department: { department_name: '', department_code: null, domain: null },
       l1_name: null,
       l1_status: 'unclassified',
       l2_name: null,
@@ -367,6 +368,16 @@ function decodeTextBuffer(buffer) {
   } catch (_) {
     return utf8Text;
   }
+}
+
+function normalizeUploadedFileName(value) {
+  const original = String(value || '');
+  if (!original) return original;
+  const decoded = Buffer.from(original, 'latin1').toString('utf8');
+  if (!decoded || decoded.includes('\uFFFD')) return original;
+  const originalCjk = (original.match(/[\u4e00-\u9fa5]/g) || []).length;
+  const decodedCjk = (decoded.match(/[\u4e00-\u9fa5]/g) || []).length;
+  return decodedCjk > originalCjk ? decoded : original;
 }
 
 function normalizeLine(line) {
@@ -445,7 +456,11 @@ function extractLabeledBlocks(text, labels) {
     }
 
     const value = block.join('\n').replace(/\n{3,}/g, '\n\n').trim();
-    if (value) blocks.push({ label, block: value });
+    if (value) blocks.push({
+      label,
+      block: value,
+      lineOffset: inlineValue ? i : i + 1
+    });
   }
 
   return blocks;
@@ -464,11 +479,11 @@ function sourceAnchorFor(text, sourceText) {
   return '原文片段';
 }
 
-function addSource(fieldSources, fieldOrigins, pathKey, text, sourceText, sourceName) {
+function addSource(fieldSources, fieldOrigins, pathKey, text, sourceText, sourceName, sourceAnchor = null) {
   if (!pathKey || !sourceText) return;
   fieldSources[pathKey] = {
     source_name: sourceName || null,
-    source_anchor: sourceAnchorFor(text, sourceText),
+    source_anchor: sourceAnchor || sourceAnchorFor(text, sourceText),
     source_text: String(sourceText).trim()
   };
   fieldOrigins[pathKey] = 'auto';
@@ -557,13 +572,12 @@ function extractKeyValue(text, labels, options = {}) {
 
 function normalizeDepartment(value) {
   const raw = normalizeLine(value);
-  if (!raw) return { department_name: '', department_code: null, department_id: null, domain: null };
+  if (!raw) return { department_name: '', department_code: null, domain: null };
   const found = ENUMS.departments.find(item => raw.includes(item.department_name) || item.department_name.includes(raw));
   const departmentName = found?.department_name || raw;
   return {
     department_name: departmentName,
     department_code: null,
-    department_id: null,
     domain: found?.domain || null
   };
 }
@@ -1072,6 +1086,122 @@ function addRoleEvidenceAndReviewItems(data, context) {
   }
   data.work_role_bindings = bindings;
   data.pending_issues = issues;
+}
+
+function addClassificationReviewItems(data, context) {
+  for (const [index, process] of (data.processes || []).entries()) {
+    const source = context.fieldSources[`processes.${index}.l3_name`] || {};
+    for (const [fieldName, fieldLabel] of [['l1_name', '能力域'], ['l2_name', '业务能力']]) {
+      if (normalizeLine(process[fieldName]) !== '待确认') continue;
+      const stableSource = [
+        data.draft?.document_no || data.draft?.document_title,
+        process.process_ref,
+        fieldName
+      ].join('|');
+      data.pending_issues.push({
+        stable_key: `process-classification-${crypto.createHash('sha256').update(stableSource).digest('hex').slice(0, 20)}`,
+        department: data.draft?.department?.department_name || null,
+        document_name: data.draft?.document_title || null,
+        structured_object_type: 'process',
+        structured_object_key: String(process.process_ref),
+        target_block: 'l3_catalog',
+        target_field: fieldName,
+        current_value: '待确认',
+        source_file: source.source_name || context.sourceName || null,
+        source_anchor: source.source_anchor || null,
+        source_excerpt: source.source_text || process.l3_name,
+        evidence_status: 'pending_review',
+        issue_type: 'L3 结构待确认',
+        question_for_user: `请确认业务流程“${process.l3_name}”所属的${fieldLabel}。`,
+        suggested_handler: '流程责任部门',
+        allowed_actions: ['专项确认'],
+        user_decision: null,
+        user_reason: null,
+        user_note: null,
+        next_step: `由流程责任部门确认${fieldLabel}后更新结构化文件。`
+      });
+    }
+  }
+}
+
+function resolveSchemaNode(schema, rootSchema = STANDARD_SCHEMA) {
+  if (!schema?.$ref) return schema || {};
+  const segments = schema.$ref.replace(/^#\//, '').split('/').map(segment => segment.replace(/~1/g, '/').replace(/~0/g, '~'));
+  return segments.reduce((node, segment) => node?.[segment], rootSchema) || {};
+}
+
+function schemaAllowsNull(schema) {
+  const resolved = resolveSchemaNode(schema);
+  if (resolved.type === 'null') return true;
+  if (Array.isArray(resolved.type) && resolved.type.includes('null')) return true;
+  return [...(resolved.anyOf || []), ...(resolved.oneOf || [])].some(option => schemaAllowsNull(option));
+}
+
+function schemaMinLength(schema) {
+  const resolved = resolveSchemaNode(schema);
+  if (Number.isFinite(resolved.minLength)) return resolved.minLength;
+  const options = [...(resolved.anyOf || []), ...(resolved.oneOf || [])];
+  return options.reduce((maximum, option) => Math.max(maximum, schemaMinLength(option)), 0);
+}
+
+function schemaAllowsEmptyString(schema) {
+  const resolved = resolveSchemaNode(schema);
+  if (resolved.const === '') return true;
+  if (Array.isArray(resolved.enum)) return resolved.enum.includes('');
+  if (resolved.type === 'string') return !Number.isFinite(resolved.minLength) || resolved.minLength === 0;
+  if (Array.isArray(resolved.type) && resolved.type.includes('string')) {
+    return !Number.isFinite(resolved.minLength) || resolved.minLength === 0;
+  }
+  return [...(resolved.anyOf || []), ...(resolved.oneOf || [])].some(option => schemaAllowsEmptyString(option));
+}
+
+function normalizeOptionalContractValues(value, schema) {
+  const resolved = resolveSchemaNode(schema);
+  if (Array.isArray(value)) {
+    const itemSchema = resolved.items || {};
+    value.forEach(item => normalizeOptionalContractValues(item, itemSchema));
+    return value;
+  }
+  if (!value || typeof value !== 'object') return value;
+
+  const required = new Set(resolved.required || []);
+  for (const key of Object.keys(value)) {
+    const propertySchema = resolved.properties?.[key];
+    if (!propertySchema) {
+      if (resolved.additionalProperties === false) delete value[key];
+      continue;
+    }
+    const propertyValue = value[key];
+    if (propertyValue === null && !required.has(key) && !schemaAllowsNull(propertySchema)) {
+      delete value[key];
+      continue;
+    }
+    if (
+      propertyValue === '' &&
+      !required.has(key) &&
+      (schemaMinLength(propertySchema) > 0 || !schemaAllowsEmptyString(propertySchema))
+    ) {
+      delete value[key];
+      continue;
+    }
+    normalizeOptionalContractValues(propertyValue, propertySchema);
+  }
+  return value;
+}
+
+function contractValidationResult(data) {
+  const valid = validateStandardDocument(data);
+  return {
+    valid: Boolean(valid),
+    errors: valid
+      ? []
+      : (validateStandardDocument.errors || []).map(error => ({
+          path: error.instancePath || '/',
+          keyword: error.keyword,
+          message: error.message || '不符合标准合同',
+          params: error.params || {}
+        }))
+  };
 }
 
 function loadProcessMappingCatalog() {
@@ -1723,25 +1853,52 @@ function normalizeExplicitActorRole(value) {
     .join(' / ');
 }
 
-function extractExplicitBehaviorBlocks(text) {
+function parseExplicitWorkflowStage(line) {
+  const sourceText = normalizeLine(line);
+  const match = sourceText.match(/^阶段\s*([一二三四五六七八九十百0-9]+)\s*[：:]\s*(.+)$/);
+  if (!match) return null;
+  const stageName = cleanExplicitBehaviorValue(match[2], { stripTrailingColon: true });
+  if (!stageName) return null;
+  return {
+    label: `阶段${match[1]}`,
+    stageName,
+    sourceText
+  };
+}
+
+function extractExplicitBehaviorBlocks(text, lineOffset = 0) {
   const blocks = [];
   const lines = String(text || '').replace(/\r\n?/g, '\n').split('\n');
   let current = null;
+  let currentStage = null;
 
   const finishCurrent = () => {
     if (current?.stepName && current.seenFields.size > 0) {
       blocks.push({
         stepName: current.stepName,
         values: current.values,
-        sources: current.sources
+        sources: current.sources,
+        sourceAnchors: current.sourceAnchors,
+        stage: current.stage
       });
     }
     current = null;
   };
 
-  for (const line of lines) {
+  for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
+    const line = lines[lineIndex];
     const normalized = normalizeLine(line);
     if (!normalized) continue;
+
+    const stage = parseExplicitWorkflowStage(normalized);
+    if (stage) {
+      finishCurrent();
+      currentStage = {
+        ...stage,
+        sourceAnchor: `第 ${lineOffset + lineIndex + 1} 行`
+      };
+      continue;
+    }
 
     const behavior = parseExplicitBehaviorStart(normalized);
     if (behavior) {
@@ -1750,6 +1907,8 @@ function extractExplicitBehaviorBlocks(text) {
         stepName: behavior.stepName,
         values: {},
         sources: { step_name: behavior.sourceText },
+        sourceAnchors: { step_name: `第 ${lineOffset + lineIndex + 1} 行` },
+        stage: currentStage,
         seenFields: new Set()
       };
       continue;
@@ -1764,6 +1923,7 @@ function extractExplicitBehaviorBlocks(text) {
           ? normalizeExplicitActorRole(field.value)
           : field.value || null;
         current.sources[field.key] = field.sourceText;
+        current.sourceAnchors[field.key] = `第 ${lineOffset + lineIndex + 1} 行`;
       }
       if (current.seenFields.size === EXPLICIT_BEHAVIOR_FIELDS.length) finishCurrent();
       continue;
@@ -1789,15 +1949,32 @@ function extractWorkflowSteps(text, context) {
   const groupedSteps = [];
   for (const entry of blocks) {
     const group = { label: entry.label, block: entry.block, steps: [] };
-    const explicitBlocks = extractExplicitBehaviorBlocks(entry.block);
+    const explicitBlocks = extractExplicitBehaviorBlocks(entry.block, entry.lineOffset || 0);
     if (explicitBlocks.length) {
-      group.steps = explicitBlocks.map(block => ({
+      const toStep = block => ({
         text: block.stepName,
         actor: block.values.actor_role || null,
         sourceText: block.sources.step_name,
         explicit: block
-      }));
-      groupedSteps.push(group);
+      });
+      const stageKeys = Array.from(new Set(explicitBlocks.map(block => block.stage?.sourceText).filter(Boolean)));
+      const canSplitByStage = stageKeys.length >= 2 && explicitBlocks.every(block => block.stage?.sourceText);
+      if (canSplitByStage) {
+        for (const stageKey of stageKeys) {
+          const stageBlocks = explicitBlocks.filter(block => block.stage.sourceText === stageKey);
+          const stage = stageBlocks[0].stage;
+          groupedSteps.push({
+            label: stage.sourceText,
+            processName: stage.stageName,
+            block: stageBlocks.map(block => Object.values(block.sources).filter(Boolean).join('\n')).join('\n'),
+            sourceText: stage.sourceText,
+            steps: stageBlocks.map(toStep)
+          });
+        }
+      } else {
+        group.steps = explicitBlocks.map(toStep);
+        groupedSteps.push(group);
+      }
       continue;
     }
     let skipLetterList = false;
@@ -1831,13 +2008,13 @@ function extractWorkflowSteps(text, context) {
   groupedSteps.forEach((group, groupIndex) => {
     const processRef = `proc_${groupIndex + 1}`;
     const label = group.label || `流程 ${groupIndex + 1}`;
-    let l3Name = groupedSteps.length > 1
+    let l3Name = group.processName || (groupedSteps.length > 1
       ? [baseProcessName, label].filter(Boolean).join(' - ')
-      : (baseProcessName || label);
+      : (baseProcessName || label));
     const seen = duplicateCounts.get(l3Name) || 0;
     duplicateCounts.set(l3Name, seen + 1);
     if (seen > 0) l3Name = `${l3Name}（${seen + 1}）`;
-    processGroups.push({ process_ref: processRef, l3_name: l3Name, label, sourceText: group.block });
+    processGroups.push({ process_ref: processRef, l3_name: l3Name, label, sourceText: group.sourceText || group.block });
 
     for (const piece of group.steps) {
       const index = steps.length;
@@ -1861,15 +2038,16 @@ function extractWorkflowSteps(text, context) {
       };
       steps.push(step);
       const explicitSources = piece.explicit?.sources || {};
-      addSource(context.fieldSources, context.fieldOrigins, `steps.${index}.step_name`, text, explicitSources.step_name || piece.sourceText, context.sourceName);
+      const explicitAnchors = piece.explicit?.sourceAnchors || {};
+      addSource(context.fieldSources, context.fieldOrigins, `steps.${index}.step_name`, text, explicitSources.step_name || piece.sourceText, context.sourceName, explicitAnchors.step_name);
       if (step.actor_role) {
-        addSource(context.fieldSources, context.fieldOrigins, `steps.${index}.actor_role`, text, explicitSources.actor_role || piece.sourceText, context.sourceName);
+        addSource(context.fieldSources, context.fieldOrigins, `steps.${index}.actor_role`, text, explicitSources.actor_role || piece.sourceText, context.sourceName, explicitAnchors.actor_role);
       }
       if (step.input_materials) {
-        addSource(context.fieldSources, context.fieldOrigins, `steps.${index}.input_materials`, text, explicitSources.input_materials || fieldSourceText, context.sourceName);
+        addSource(context.fieldSources, context.fieldOrigins, `steps.${index}.input_materials`, text, explicitSources.input_materials || fieldSourceText, context.sourceName, explicitAnchors.input_materials);
       }
       if (step.output_result) {
-        addSource(context.fieldSources, context.fieldOrigins, `steps.${index}.output_result`, text, explicitSources.output_result || fieldSourceText, context.sourceName);
+        addSource(context.fieldSources, context.fieldOrigins, `steps.${index}.output_result`, text, explicitSources.output_result || fieldSourceText, context.sourceName, explicitAnchors.output_result);
       }
       if (piece.explicit) {
         if (!context.explicitBehaviorDetails) context.explicitBehaviorDetails = {};
@@ -1877,7 +2055,8 @@ function extractWorkflowSteps(text, context) {
           precondition: explicitValues.precondition || null,
           trigger_scene: explicitValues.trigger_scene || null,
           execution_standard: explicitValues.execution_standard || null,
-          sources: explicitSources
+          sources: explicitSources,
+          sourceAnchors: explicitAnchors
         };
       }
     }
@@ -2011,7 +2190,7 @@ function extractFields(text, forms, context) {
     if (/^[A-Z]{2,}[-A-Z0-9]+/.test(line)) return false;
     if (/^□|^（|^\(|^第?\d+|^\d/.test(line)) return false;
     if (/[。；;：:？?]/.test(line)) return false;
-    if (/签字|日期|编号$|项目编号|完成时间|责任人$/.test(line)) return false;
+    if (/^(?:签字|签名|日期|编号|项目编号|完成时间|责任人)$/.test(line)) return false;
     if (!/[\u4e00-\u9fa5]/.test(line)) return false;
     return true;
   }
@@ -2812,8 +2991,8 @@ async function extractFromText(rawText, options = {}) {
       process_code: null,
       l3_key: d.document_no ? `${d.document_no}.L3.${String(index + 1).padStart(3, '0')}` : null,
       process_type: d.base_version_ref ? 'inherit' : 'new',
-      l1_name: d.l1_name || '',
-      l2_name: d.l2_name || '',
+      l1_name: d.l1_name || '待确认',
+      l2_name: d.l2_name || '待确认',
       l3_name: group.l3_name || l3Name,
       description: d.reason || null,
       owner: d.department.department_name || null,
@@ -2863,7 +3042,8 @@ async function extractFromText(rawText, options = {}) {
         `behavior_details.${index}.precondition`,
         text,
         explicitDetail?.sources?.precondition || sourceText,
-        context.sourceName
+        context.sourceName,
+        explicitDetail?.sourceAnchors?.precondition
       );
     }
     if (triggerScene) {
@@ -2873,11 +3053,20 @@ async function extractFromText(rawText, options = {}) {
         `behavior_details.${index}.trigger_scene`,
         text,
         explicitDetail?.sources?.trigger_scene || sourceText,
-        context.sourceName
+        context.sourceName,
+        explicitDetail?.sourceAnchors?.trigger_scene
       );
     }
     if (executionStandard) {
-      addSource(context.fieldSources, context.fieldOrigins, `behavior_details.${index}.execution_standard`, text, executionStandardInfo.sourceText || sourceText || executionStandard, context.sourceName);
+      addSource(
+        context.fieldSources,
+        context.fieldOrigins,
+        `behavior_details.${index}.execution_standard`,
+        text,
+        executionStandardInfo.sourceText || sourceText || executionStandard,
+        context.sourceName,
+        explicitDetail?.sourceAnchors?.execution_standard
+      );
     }
     return detail;
   });
@@ -2921,9 +3110,11 @@ async function extractFromText(rawText, options = {}) {
   context.fieldSuggestions = {};
   applyActorRoleWarnings(data, context);
   addRoleEvidenceAndReviewItems(data, context);
+  addClassificationReviewItems(data, context);
   data.structure_block_projection = buildProjection(data);
   data.markdown_draft = buildMarkdownDraft(data);
   data.generated_at = new Date().toISOString();
+  normalizeOptionalContractValues(data, STANDARD_SCHEMA);
 
   return {
     data,
@@ -2969,19 +3160,20 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
     if (!sid) return res.status(400).json({ error: '缺少 sessionId' });
     if (!req.file) return res.status(400).json({ error: '未收到文件' });
 
-    const source = await sourceFromUpload(req.file);
+    const normalizedFileName = normalizeUploadedFileName(req.file.originalname);
+    const source = await sourceFromUpload({ ...req.file, originalname: normalizedFileName });
     const rawText = source.text;
     if (!rawText.trim()) return res.status(400).json({ error: '文档内容为空' });
 
     const result = await extractFromText(rawText, {
-      sourceName: req.file.originalname,
-      sourcePath: req.body.sourcePath || req.file.originalname,
+      sourceName: normalizedFileName,
+      sourcePath: req.body.sourcePath || normalizedFileName,
       sourceTables: source.tables
     });
     res.json({
       sessionId: sid,
       requestId: rid,
-      documentName: req.file.originalname,
+      documentName: normalizedFileName,
       data: result.data,
       fieldSources: result.fieldSources,
       fieldOrigins: result.fieldOrigins,
@@ -3038,6 +3230,18 @@ app.post('/api/paste', async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: '内容整理失败', detail: error.message });
   }
+});
+
+app.post('/api/validate', (req, res) => {
+  const data = req.body?.data;
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    return res.status(400).json({ error: '缺少待校验的结构化文件内容' });
+  }
+  const normalizedData = normalizeOptionalContractValues(JSON.parse(JSON.stringify(data)), STANDARD_SCHEMA);
+  return res.json({
+    ...contractValidationResult(normalizedData),
+    data: normalizedData
+  });
 });
 
 app.all(['/api/data', '/api/export'], (_req, res) => {

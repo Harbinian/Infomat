@@ -1,0 +1,6 @@
+interface:
+  display_name: "中文 Humanizer（显式调用）"
+  short_description: "仅在用户点名时清理中文套话、重复和夸张表达"
+  default_prompt: "使用 $humanizer-zh 对以下非受控中文内容进行轻量文风清理，不得补造或改变事实。"
+policy:
+  allow_implicit_invocation: false

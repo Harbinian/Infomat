@@ -96,7 +96,23 @@ async function postTextSuggestions(sessionId, text, data, requestId = `req_sugge
 async function withService(env, fn) {
   const child = spawn(process.execPath, ['server.js'], {
     cwd: appRoot,
-    env: { ...process.env, STRUCTURED_OUTPUT_PORT: port, ...env },
+    env: {
+      ...process.env,
+      STRUCTURED_OUTPUT_MOCK_DEEPSEEK: '',
+      STRUCTURED_OUTPUT_DEEPSEEK_ENABLED: '',
+      DEEPSEEK_API_KEY: '',
+      DEEPSEEK_API_URL: '',
+      DEEPSEEK_MODEL: '',
+      ANTHROPIC_AUTH_TOKEN: '',
+      ANTHROPIC_API_KEY: '',
+      ANTHROPIC_BASE_URL: '',
+      ANTHROPIC_MODEL: '',
+      ANTHROPIC_DEFAULT_SONNET_MODEL: '',
+      ANTHROPIC_DEFAULT_OPUS_MODEL: '',
+      ANTHROPIC_DEFAULT_HAIKU_MODEL: '',
+      STRUCTURED_OUTPUT_PORT: port,
+      ...env
+    },
     stdio: ['ignore', 'pipe', 'pipe']
   });
   let stderr = '';
@@ -275,7 +291,7 @@ function runFrontendWorkflowProbe(enums) {
       createObjectURL() { return 'blob:structured-output-test'; },
       revokeObjectURL() {}
     },
-    confirm() { return true; },
+    confirm() { return context.__confirmResult !== false; },
     fetch: async url => ({
       ok: true,
       json: async () => String(url).includes('/api/enums') ? enums : { sessionId: 'frontend-probe' }
@@ -306,7 +322,14 @@ docData = ensureDocument({
   draft: {
     document_no: 'TEST-WORKFLOW',
     document_title: '业务流程回归测试',
+    process_name: '业务流程回归测试',
     department: { department_name: '财务部' }
+  },
+  document_profile: {
+    document_no: 'TEST-WORKFLOW',
+    document_title: '业务流程回归测试',
+    purpose: '验证流程拆分和判断分支编辑。',
+    scope: '适用于结构化输出服务回归测试。'
   },
   processes: [
     { process_ref: 'proc_finance', draft_ref: null, process_code: null, l3_key: null, process_type: 'new', l1_name: '', l2_name: '', l3_name: '财务发起流程', description: null, owner: '', system: '', evidence_refs: [] },
@@ -361,6 +384,21 @@ const leaderOptions = actorRoleDepartmentOptions(processDepartmentForStep(3)).ma
 const formOptions = actorRoleDepartmentOptions(formDepartment(0), '先确认形成部门').map(item => item.value);
 const exported = normalizeForStructuredExport(docData);
 const reimported = ensureDocument(exported);
+setValue('steps.2.step_type', 'decision', { rerender: false });
+const autoBranchCount = docData.step_transitions.filter(item => item.from_step_ref === 'step_quality_action').length;
+const autoBranchFromStep = docData.step_transitions.find(item => item.from_step_ref === 'step_quality_action')?.from_step_ref || null;
+setValue('steps.2.step_type', 'decision', { rerender: false });
+const repeatedDecisionBranchCount = docData.step_transitions.filter(item => item.from_step_ref === 'step_quality_action').length;
+const autoBranchIndex = docData.step_transitions.findIndex(item => item.from_step_ref === 'step_quality_action');
+setValue(\`step_transitions.\${autoBranchIndex}.condition\`, '需要补充资料', { rerender: false });
+setValue(\`step_transitions.\${autoBranchIndex}.to_step_ref\`, 'step_quality_action', { rerender: false });
+globalThis.__confirmResult = false;
+const protectedTypeChangeAccepted = setValue('steps.2.step_type', 'action', { rerender: false });
+const protectedTypeAfterCancel = docData.steps[2].step_type;
+const protectedBranchCount = docData.step_transitions.filter(item => item.from_step_ref === 'step_quality_action').length;
+globalThis.__confirmResult = true;
+const confirmedTypeChangeAccepted = setValue('steps.2.step_type', 'action', { rerender: false });
+const branchesAfterConfirmedChange = docData.step_transitions.filter(item => item.from_step_ref === 'step_quality_action').length;
 const validConfirmedProblems = confirmationProblemsForWorkRoleBinding(0);
 const positionDraftBinding = normalizeWorkRoleBinding({
   binding_ref: 'wrb_position_draft', process_ref: 'proc_finance', step_ref: 'step_finance_action',
@@ -428,6 +466,7 @@ globalThis.__workflowProbe = {
   leaderRole: combineActorRole('公司领导', '总经理'),
   formRole: combineActorRole('经营发展部', '计划员'),
   financeStepOptions: stepOptionsForProcess('proc_finance').map(item => item.value),
+  transitionTargetRerendersSummary: shouldRerenderAfterValueChange('step_transitions.0.to_step_ref'),
   exportedTransitions: exported.step_transitions.map(item => ({ ref: item.transition_ref, process: item.process_ref, from: item.from_step_ref, to: item.to_step_ref })),
   exportedSchemaVersion: exported.schema_version,
   exportedWorkRoleBindings: exported.work_role_bindings,
@@ -451,7 +490,16 @@ globalThis.__workflowProbe = {
   reimportedFinanceTiming: reimported.steps.find(step => step.step_ref === 'step_finance_action')?.timing,
   reimportedLeaderRole: reimported.steps.find(step => step.step_ref === 'step_leader_action')?.actor_role,
   reimportedFormRole: reimported.forms[0]?.responsible_role,
-  reimportedFieldName: reimported.form_table_fields[0]?.field_name
+  reimportedFieldName: reimported.form_table_fields[0]?.field_name,
+  autoBranchCount,
+  autoBranchFromStep,
+  repeatedDecisionBranchCount,
+  protectedTypeChangeAccepted,
+  protectedTypeAfterCancel,
+  protectedBranchCount,
+  confirmedTypeChangeAccepted,
+  branchesAfterConfirmedChange,
+  exportedDocument: exported
 };
 `;
   vm.runInContext(probeCode, context, { filename: 'frontend-workflow-probe.js' });
@@ -563,6 +611,17 @@ async function run() {
     assert.equal(workflowProbe.reimportedLeaderRole, '公司领导总经理', 'reimport should preserve leadership actor role');
     assert.equal(workflowProbe.reimportedFormRole, '经营发展部计划员', 'reimport should preserve form responsible role');
     assert.equal(workflowProbe.reimportedFieldName, '审批结果', 'reimport should preserve form table fields');
+    assert.equal(workflowProbe.autoBranchCount, 1, 'switching an action to a decision should create one blank branch');
+    assert.equal(workflowProbe.autoBranchFromStep, 'step_quality_action', 'the automatic branch should stay fixed to the current decision');
+    assert.equal(workflowProbe.repeatedDecisionBranchCount, 1, 'repeated selection and rendering should not duplicate the automatic branch');
+    assert.equal(workflowProbe.transitionTargetRerendersSummary, true, 'choosing a branch target should refresh the process summary');
+    assert.equal(workflowProbe.protectedTypeChangeAccepted, false, 'filled branches should be protected when a decision is changed back to an action');
+    assert.equal(workflowProbe.protectedTypeAfterCancel, 'decision', 'canceling branch removal should keep the decision type');
+    assert.equal(workflowProbe.protectedBranchCount, 1, 'canceling branch removal should keep the filled branch');
+    assert.equal(workflowProbe.confirmedTypeChangeAccepted, true, 'confirmed branch removal should allow the type change');
+    assert.equal(workflowProbe.branchesAfterConfirmedChange, 0, 'confirmed type change should remove the old decision branches');
+    const frontendExportValidation = await postJson('/api/validate', { data: workflowProbe.exportedDocument });
+    assert.equal(frontendExportValidation.valid, true, `frontend-normalized export should pass the canonical schema: ${JSON.stringify(frontendExportValidation.errors || [])}`);
 
     const session = await postJson('/api/session', {});
     const sample = [
@@ -765,6 +824,45 @@ async function run() {
     assert.ok(multiProcessData.steps.some(step => step.process_ref === applicationProcess.process_ref && step.step_name.includes('填写《车辆使用申请单》')), 'application steps should belong to the application process');
     assert.ok(multiProcessData.steps.some(step => step.process_ref === approvalProcess.process_ref && step.step_name.includes('审核用车必要性')), 'approval steps should belong to the approval process');
     assert.equal(multiProcessData.step_transitions.length, 0, 'document extraction should not infer decision branches automatically');
+
+    const internetSamplePath = path.join(repoRoot, 'docs/samples/互联网专用办公区需求收集与使用管理程序-3001填报测试.md');
+    const internetSample = fs.readFileSync(internetSamplePath, 'utf8');
+    const internetFileName = '互联网专用办公区需求收集与使用管理程序-3001填报测试.md';
+    const internetResult = await postTextUpload(session.sessionId, internetSample, internetFileName);
+    const internetData = internetResult.data;
+    assert.equal(internetData.processes.length, 3, 'three stage headings with explicit behaviors should create three processes');
+    assert.deepEqual(
+      internetData.processes.map(process => internetData.steps.filter(step => step.process_ref === process.process_ref).length),
+      [4, 3, 8],
+      'the one-time and daily behaviors should stay in their own processes'
+    );
+    for (const processName of ['公司级需求收集与联合评审', '办公区建设与启用', '日常预约、使用与关闭']) {
+      assert.ok(internetData.processes.some(process => process.l3_name.includes(processName)), `stage process should keep ${processName}`);
+    }
+    assert.ok(internetData.processes.every(process => process.l1_name === '待确认' && process.l2_name === '待确认'), 'unclassified process levels should remain contract-valid pending values');
+    assert.equal(Object.prototype.hasOwnProperty.call(internetData.draft.department, 'department_id'), false, 'missing optional department references should be omitted');
+    assert.equal(Object.prototype.hasOwnProperty.call(internetData.draft, 'basis_description'), false, 'missing optional basis descriptions should be omitted');
+    assert.ok(internetData.pending_issues.some(issue => issue.target_field === 'l1_name'), 'pending process classification should stay visible as a review issue');
+    assert.ok(internetData.pending_issues.some(issue => issue.target_field === 'l2_name'), 'pending business capability classification should stay visible as a review issue');
+    const internetFields = internetData.form_table_fields.map(field => field.field_name);
+    for (const fieldName of ['业务流程', '使用日期', '预约单号', '终端编号']) {
+      assert.ok(internetFields.includes(fieldName), `internet sample should keep form field ${fieldName}`);
+    }
+    for (const removedField of ['批准场景', '本次办理目标']) {
+      assert.equal(internetFields.includes(removedField), false, `internet sample should not create removed field ${removedField}`);
+    }
+    assert.equal(internetResult.documentName, internetFileName, 'Chinese upload filename should stay readable');
+    assert.ok(internetData.evidence_catalog.every(item => !item.source_file || item.source_file === internetFileName), 'evidence should keep the UTF-8 upload filename');
+    assert.ok(internetData.pending_issues.every(item => !item.source_file || item.source_file === internetFileName), 'pending issues should keep the UTF-8 upload filename');
+    const firstDemandManagerIndex = internetData.steps.findIndex(step => step.step_name === '发布互联网使用需求调查');
+    const repeatedDemandManagerIndex = internetData.steps.findIndex(step => step.step_name === '检查需求完整性');
+    assert.notEqual(
+      internetResult.fieldSources[`steps.${firstDemandManagerIndex}.actor_role`].source_anchor,
+      internetResult.fieldSources[`steps.${repeatedDemandManagerIndex}.actor_role`].source_anchor,
+      'repeated actor text should anchor to its own behavior block'
+    );
+    const internetValidation = await postJson('/api/validate', { data: internetData }, session.sessionId);
+    assert.equal(internetValidation.valid, true, `internet sample export should pass the canonical schema: ${JSON.stringify(internetValidation.errors || [])}`);
 
     const intellectualPropertySample = [
       '制度编号：GLTX-GC-01',
@@ -1097,6 +1195,11 @@ async function run() {
     assert.ok(frontend.includes('step_type'), 'frontend should distinguish action and decision nodes');
     assert.ok(frontend.includes('新增判断节点'), 'each process should let users add decision nodes');
     assert.ok(frontend.includes('新增判断分支'), 'each process should let users add decision branches');
+    assert.ok(frontend.includes('ensureDecisionTransition'), 'switching to a decision should create exactly one initial branch');
+    assert.ok(frontend.includes('decision-branches-inline'), 'decision branches should render inside the current step editor');
+    assert.ok(frontend.includes('改回业务行为会删除当前判断节点已经填写的分支条件和流向'), 'filled branches should be protected before changing back to an action');
+    assert.ok(frontend.includes("fetch('/api/validate'"), 'export should run the canonical schema preflight');
+    assert.ok(frontend.includes('decisionBranchWarnings'), 'export should warn about incomplete or vague decision branches');
     assert.ok(frontend.includes('toggleProcessCollapse'), 'frontend should support process-level collapse');
     assert.ok(frontend.includes('process-collapsed-summary'), 'collapsed processes should render a readable summary');
     assert.ok(frontend.includes('activeStepRefsByProcess'), 'large processes should keep one active step per process');

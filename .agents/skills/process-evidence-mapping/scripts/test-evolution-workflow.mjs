@@ -30,28 +30,29 @@ rmSync(reviewRunDir, { recursive: true, force: true });
 mkdirSync(reviewRunDir, { recursive: true });
 
 writeFileSync(
-  join(reviewRunDir, 'mapping_diff_items.json'),
+  join(reviewRunDir, 'document-structured-output-v2.json'),
   JSON.stringify(
-    [
-      {
-        stable_key: 'test-review-item-missing-a1',
-        department: '经营发展部',
-        source_anchor: 'GLTX-JY-05-D §5.4.3',
-        issue_type: '待确认A1',
-        content: '编制/核算公司月度综合打分表',
-        current_mapping_location: 'JY-L3-04',
-        suggested_action: '回源核验后补充对象链说明',
-      },
-      {
-        stable_key: 'test-review-item-transfer',
-        department: '经营发展部',
-        source_anchor: 'GLTX-JY-05-D §5.4.4',
-        issue_type: '受控传递待确认',
-        content: '各部门反馈绩效评分数据至经营发展部',
-        current_mapping_location: 'JY-L3-04',
-        suggested_action: '确认泛称部门是否允许拆分',
-      },
-    ],
+    {
+      schema_version: 'document-structured-output-v2',
+      pending_issues: [
+        {
+          stable_key: 'test-review-item-missing-a1',
+          department: '经营发展部',
+          source_anchor: 'GLTX-JY-05-D §5.4.3',
+          issue_type: 'A1 行为待确认',
+          current_value: '编制/核算公司月度综合打分表',
+          question_for_user: '请确认该行为边界。',
+        },
+        {
+          stable_key: 'test-review-item-transfer',
+          department: '经营发展部',
+          source_anchor: 'GLTX-JY-05-D §5.4.4',
+          issue_type: '跨部门承接待确认',
+          current_value: '各部门反馈绩效评分数据至经营发展部',
+          question_for_user: '请确认具体交付物与承接部门。',
+        },
+      ],
+    },
     null,
     2,
   ),
@@ -136,8 +137,8 @@ for (const required of [
   'GLTX-JY-05-object-chain',
   'minimal-vector-similarity-boundary',
   'review-run-classification',
-  '待确认A1',
-  '受控传递待确认',
+  'A1 行为待确认',
+  '跨部门承接待确认',
   '本轮未使用向量检索',
   '应补规则',
   '应补测试',
@@ -163,7 +164,7 @@ const skill = readFileSync(join(skillDir, 'SKILL.md'), 'utf8');
 assert.ok(skill.includes('技能演进评测'), 'SKILL.md should document the skill evolution loop');
 assert.ok(skill.includes('evolution-cases.jsonl'), 'SKILL.md should name evolution-cases.jsonl');
 assert.ok(skill.includes('evolution-proposal.md'), 'SKILL.md should name evolution-proposal.md');
-assert.ok(skill.includes('不得自动修改已确认流程映射'), 'SKILL.md should forbid automatic formal mapping edits');
+assert.ok(skill.includes('不得自动修改流程输入基线'), 'SKILL.md should forbid automatic formal mapping edits');
 assert.ok(skill.includes('npm run test:process-evidence-evolution'), 'SKILL.md verification should include evolution test');
 
 console.log('Process evidence evolution workflow checks passed');
