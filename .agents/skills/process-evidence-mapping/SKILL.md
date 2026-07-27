@@ -1,171 +1,238 @@
 ---
 name: process-evidence-mapping
 description: >
-  Use for Infomat process-governance work when turning制度、规程、表单、台账、流程图、PDF/图片和OCR待确认 into a controlled evidence chain: source inventory, OCR review, evidence chunks, local embedding retrieval, reviewItem interpretation, role extraction, object chains, reviewItem mapping todo Markdown, mapping diff audit, and source-verified DCM/BBM entry.
+  Use for Infomat process-governance work when turning directly readable
+  制度、规程、表单、台账、流程图和文本型 PDF into a traceable
+  document-structured-output-v2 review draft with evidence, process and behavior
+  candidates, business-facing pending issues, schema validation and a strict
+  human-controlled publication boundary.
 ---
 
 # Process Evidence Mapping
 
-本技能只服务 `docs/norms` 流程治理。分析对象是流程和证据链，不是应用系统。执行者必须按下面顺序从上到下完成；待确认 JSON 留在 `artifacts/`，人工处理面板写入 `docs/norms/流程治理/输入基线问题待办.md`。
+本技能只服务 Infomat 流程证据梳理。分析对象是业务流程、业务行为和证据链，不是应用系统。
+
+唯一机器主产物是
+`artifacts/process-input-baseline-review/<run-id>/document-structured-output-v2.json`，
+字段合同以 `docs/contracts/document-structured-output.schema.json` 为准。
+`document_review_items.json`、`role_review_items.json`、`object_chains.json` 和
+`mapping_diff_items.json` 只允许作为兼容性中间产物；Markdown 只允许作为 v2
+`pending_issues[]` 的派生视图。
+
+## 强制边界
+
+- 只处理能够直接读取文字、表格或节点文本的源文件。
+- 图片、扫描件、无文本 PDF 和无法直接提取内容的页面一律阻断。
+- 严禁执行图像转文字、文字识别、自动抄录或根据画面猜测内容。
+- 阻断来源必须进入 `source_manifest.jsonl`，状态为
+  `blocked_unreadable`；资料责任人提供可读取原件或经人工确认的文字版后才能重跑。
+- 自动抽取只能形成 `pending_review` 候选；`verified` 必须由人工回到可直接读取的
+  原文位置确认。
+- 技能不得写数据库，不得写回 `docs/norms/`，不得自动生成正式结构块投影，不得
+  自动发布 DCM/BBM。
 
 ## 技能演进评测
 
-当需要改进本技能本身时，先使用 `references/evolution-cases.jsonl` 和问题识别批次产物生成演进提案。运行 `.agents/skills/process-evidence-mapping/scripts/generate-evolution-proposal.mjs`，输出只能写入 `artifacts/process-evolution/<run-id>/evolution-proposal.md`。
+改进本技能前，先运行：
 
-演进评测只判断技能质量、待确认解释质量和测试缺口。待确认 JSON、向量召回、OCR 结果、人工待办和 `evolution-proposal.md` 都只能生成提案，不得自动修改已确认流程映射、PMO 页面、MDM 接口或技能文件。任何 DCM/BBM 入库仍必须按“受控入库”逐条回到制度、表单或原始 PDF/图片位置核验。
+```powershell
+node .agents/skills/process-evidence-mapping/scripts/generate-evolution-proposal.mjs `
+  --cases .agents/skills/process-evidence-mapping/references/evolution-cases.jsonl `
+  --review-run artifacts/process-input-baseline-review/<run-id> `
+  --out artifacts/process-evolution/<evolution-run-id>
+```
+
+演进提案只评测技能规则、待确认解释和测试缺口。它不得自动修改流程输入基线、
+PMO 页面、MDM 接口或技能文件。技能文件只有在用户明确要求改进时才可修改。
+提案文件固定为 `artifacts/process-evolution/<run-id>/evolution-proposal.md`。
 
 ### 1. 仓库上下文
 
-**输入**：用户任务、当前仓库根目录、相关部门名称、目标制度或资料目录。
+**输入**：用户任务、仓库根目录、部门、目标制度或资料目录。
 
-**动作**：先读取 `REPOSITORY_BOUNDARY.md`、`DIRECTORY_OWNERSHIP.md`、`MAINLINE_MAP.md`、`docs/norms/CLAUDE.md`、`docs/organization/组织架构和部门职责.md`。确认真源边界：流程输入基线是 `docs/norms/{部门}部门-能力-流程-系统映射关系.md`，待确认结果不是流程输入基线。
+**动作**：读取根 `AGENTS.md`、`CODEX.md`、`REPOSITORY_BOUNDARY.md`、
+`DIRECTORY_OWNERSHIP.md`、`MAINLINE_MAP.md`、`docs/norms/AGENTS.md`、
+`docs/norms/README.md` 和 `docs/organization/组织架构和部门职责.md`。先确认主责
+资产、真源、只读边界和部门名称。
 
-**输出**：本轮处理范围、主责资产、可改文件、禁止触碰目录、部门到域映射口径。
+**输出**：处理范围、可改资产、只读资产、部门口径和验证入口。
 
-**不得做**：不得把 PMO、MDM 前端、应用系统选型或临时 `artifacts/` 结果当作流程输入基线；不得移动资料目录或顺手重排仓库。
+**不得做**：不得把 PMO、MDM 页面、临时 artifacts 或历史报告当流程输入基线；
+不得顺手移动资料或重排目录。
 
-**下一步条件**：仓库边界和主责资产明确后，进入源文件清单。
+**下一步条件**：主责资产和只读边界明确后进入源文件清单。
 
-### 2. 源文件清单
+### 2. 源文件清单与可读性门
 
-**输入**：部门资料目录、单个制度文件或用户指定的文件清单。
+**输入**：用户指定的制度、规程、表单、台账、文本型 PDF、可直接读取节点文本的
+流程图或资料目录。
 
-**动作**：递归到最深叶子目录，列出所有可达文件和空/不可读目录。记录文件路径、文件名、文件号、版次、文件类型、大小/修改时间、正文哈希、表格数/图示数、处理状态、处理理由、source_company、source_org_name、source_boundary_flag。输入基线问题识别流水线默认使用 `run-process-input-baseline-review-workflow.mjs` 生成 `source_manifest.jsonl`；批量源清单可先用 `extract-evidence-chunks.mjs` 生成 source index。
+**动作**：递归到叶子目录，运行
+`extract-evidence-chunks.mjs` 生成 `source_manifest.jsonl`。记录路径、文件号、
+版次、类型、大小、时间、正文哈希、处理状态、处理理由、来源公司和组织边界。对
+图片、扫描件、无文本 PDF、转换失败和空来源直接阻断。
 
-**输出**：`artifacts/.../source_manifest.jsonl`，以及需要 OCR、转换或人工复核的源文件清单。
+**输出**：`source_manifest.jsonl`、`chunks.jsonl`、`chunking_warnings.md`。
+每个来源必须是 `chunked`、`excluded`、`deferred`、`failed` 或
+`blocked_unreadable` 之一；存在后两种状态时本轮停止。
 
-**不得做**：不得只看高层文件夹就命名能力或流程；不得把外部参考、历史模板、生成物、`_extracted/`、临时文件直接纳入已确认流程映射。
+**不得做**：不得静默跳过不可读来源；不得从文件名、目录名或不可读画面推断流程
+事实；不得调用任何图像转文字工具。
 
-**下一步条件**：每个源文件至少有纳入、排除、待复核之一的处理状态后，进入可读性判断/OCR。
+**下一步条件**：所有纳入来源均可直接读取且能定位原文后进入证据切块。
 
-### 3. 可读性判断/OCR
+### 3. 证据切块
 
-**输入**：源文件清单、PDF、图片、低可读页面、抽取失败或 `extraction_quality=needs_ocr` 的来源。
+**输入**：通过可读性门的源文件和 `source_manifest.jsonl`。
 
-**动作**：对 PDF、图片和低可读页面固定进入 OCR 判断，复用 `scripts/ocr-source.mjs`。OCR 输出写入 `artifacts/ocr/<run-id>/` 或输入基线问题识别工作流的 `artifacts/process-input-baseline-review/<run-id>/ocr/`。OCR 记录必须保留 source path/hash、页块、文本、置信度、工具版本、`review_required`、`evidence_status=ocr_extracted_not_confirmed`。
+**动作**：按条款、标题下段落组、表格行、表单字段组、签批栏、台账字段、可直接
+读取的流程节点/边和附件标题切块。保留 `source_file`、`doc_no`、`version`、
+`source_anchor`、`raw_text`、`normalized_review_text`、`artifact_type`、
+`extraction_quality`、`chunk_hash` 和来源边界字段。
 
-**输出**：OCR manifest、raw/json/markdown 结果、`review-required.jsonl`、待确认待办中的 `OCR待复核` 项。
+**输出**：可追溯 `chunks.jsonl`。默认
+`evidence_status=pending_review`、`verification_status=unverified`、
+`allowed_downstream_use=review_only`。
 
-**不得做**：不得只看 OCR 文本入库；不得让 OCR 文本直接形成 L3、A1、审批链、输入部门、输出部门或系统落位结论。
+**不得做**：不得修正 `raw_text`；不得把搜索修复提示当原文；不得让 `partial`、
+`failed` 或 `blocked_unreadable` 内容支撑正式字段。
 
-**下一步条件**：可读文本和 OCR 待复核项都被标记后，进入 evidence chunks。
+**下一步条件**：每个候选能回到可直接读取的源文件位置后进入可选检索。
 
-### 4. Evidence Chunks
+### 4. 可选语义检索
 
-**输入**：可读源文件、OCR 待复核文本、源文件清单。
+**输入**：`chunks.jsonl` 和本地 embedding 配置。
 
-**动作**：运行 `.agents/skills/process-evidence-mapping/scripts/extract-evidence-chunks.mjs`。按证据单元切 chunk：条款、标题下段落组、表格行、表单字段组、签批栏、台账字段、流程节点/边、附件标题。每个 chunk 保留 `source_file`、doc_no、version、source anchor、`raw_text`、`normalized_text`、`normalized_review_text`、artifact_type、extraction_quality、chunk_hash、review status。
+**动作**：需要扩大召回时，使用 `qwen3-embedding:latest`、1024 维本地向量，
+检索流程边界、对象、角色、审批、跨部门交接、表单字段、归档和完成标准。模型不可
+用时降级为关键词/规则抽取并记录 `embedding_manifest.status=skipped`。
 
-**输出**：`chunks.jsonl`、`chunking_warnings.md`。所有 chunk 默认 `evidence_status=reviewItem`、`verification_status=unverified`、`allowed_downstream_use=review_only`。
+**输出**：`embedding_manifest.json`、`vectors.jsonl`、
+`review_evidence.jsonl`。召回结果保持 `pending_review/review_only`。
 
-**不得做**：不得修正 `raw_text`；不得把 `normalized_review_text` 当原文引用；不得引用 `partial` 或 `needs_ocr` chunk 作为正式证据。
+**不得做**：不得把相似度当证据强度；不得用相似度确认 L3、A1、对象同一性、
+审批、跨部门承接、正式工作角色或系统落位。
 
-**下一步条件**：chunk 可追溯到原文位置后，进入 embedding 检索。
+**下一步条件**：召回结果已保持候选状态或已明确降级后进入通用候选抽取。
 
-### 5. Embedding 检索
+### 5. 通用流程与行为候选
 
-**输入**：`chunks.jsonl`、本地 embedding 配置、检索问题清单。
+**输入**：`chunks.jsonl`、可选 `review_evidence.jsonl` 和部门上下文。
 
-**动作**：默认使用本地 Ollama：provider `ollama`，endpoint `http://127.0.0.1:11434/api/embed`，model `qwen3-embedding:latest`，dimensions `1024`。运行 `build-embedding-manifest.mjs` 生成 `embedding_manifest.json` 和 vectors；manifest 必须记录模型、维度、chunking rule、source hash。再用 `evidence-retriever.mjs` 召回审批链、受控传递、对象别名、归档保存、角色参与等待确认证据。若 Ollama 或模型不可用，降级为关键词/规则抽取，并在报告和待办中标明本轮未使用向量检索。
+**动作**：运行 `extract-process-review-items.mjs`。从制度标题、职责、工作程序、
+动作词和对象词形成 L3/A1 候选；抽取器必须面向所有部门使用同一套通用规则，不得
+在核心脚本中硬编码财务、经营或其他部门的专用结论。
 
-**输出**：`embedding_manifest.json`、`vectors.jsonl`、`review_evidence.jsonl`、待确认证据报告。所有向量结果保持 `evidence_status=reviewItem` 和 `allowed_downstream_use=review_only`。
+**输出**：`document_review_items.json`，包含能力、L3、A1、审批、承接、归档和
+完成标准候选。
 
-**不得做**：不得把相似度当证据强度；不得用向量相似度直接判断 L3/A1、对象同一性、审批类型、输入输出部门、MDM 归属或系统落位。
+**不得做**：不得把候选直接认定为已确认流程；不得补写原文没有的流程起止、角色、
+输入、输出、完成标准或系统。
 
-**下一步条件**：检索结果已标记为待确认或已明确降级后，进入输入基线解读。
+**下一步条件**：L3/A1 候选均有原文锚点后进入角色和对象链。
 
-### 6. 输入基线解读
+### 6. 角色与对象链
 
-**输入**：`chunks.jsonl`、`review_evidence.jsonl`、源文件清单、当前部门。
+**输入**：`chunks.jsonl` 和流程/行为候选。
 
-**动作**：运行 `extract-process-review-items.mjs`，生成制度输入基线解读：待确认能力、待确认 L3、待确认 A1、审批链待确认、受控传递待确认、归档/保存待确认、验收标准缺口。待确认名称可以规范化，但必须保留原文锚点和待确认说明。
+**动作**：运行 `extract-role-review-items.mjs` 与
+`build-object-chains.mjs`。保留原文角色称谓，按对象串联编制、提交、审核、
+批准、接收、反馈、归档等动作。
 
-**输出**：`document_review_items.json`。该 JSON 是机器可读待确认，不是已确认流程映射。
+**输出**：`role_review_items.json`、`object_chains.json`。
 
-**不得做**：不得把输入基线解读直接写入部门已确认流程映射；不得直接填写 `审批类型`、`输入来源部门`、`输出目标部门`；不得省略来源文件/条款。
+**不得做**：不得把原文角色直接变成正式 `WR-*`；不得把审批人当输出部门；不得
+把“相关部门”自动映射到具体部门；不得把同标题下的不同对象强行合并。
 
-**下一步条件**：待确认流程和待确认行为有来源锚点后，进入角色抽取。
+**下一步条件**：角色和对象链均保留原文锚点后编译 v2。
 
-### 7. 角色抽取
+### 7. 编译 document-structured-output-v2
 
-**输入**：`chunks.jsonl`、输入基线解读、部门上下文。
+**输入**：流程候选、角色候选、对象链、差异候选和 `chunks.jsonl`。
 
-**动作**：运行 `extract-role-review-items.mjs`，抽取部门、岗位、审批身份、数据提供方、数据接收方、协同角色。区分主责部门、执行角色、发起角色、审核角色、批准角色、数据提供角色、协同角色。角色来自原文时标明原文明确；来自上下文时标明待确认。
+**动作**：运行 `compile-document-structured-output-v2.mjs`，生成当前标准合同。
+至少输出 `draft`、`document_profile`、`processes[]`、`steps[]`、
+`behavior_details[]`、`step_transitions[]`、`evidence_catalog[]` 和
+`pending_issues[]`。未知必填值只能使用明确的“待确认”占位并同步生成待确认问题。
 
-**输出**：`role_review_items.json`，即角色簿待确认。
+每项 A1 至少检查执行角色、触发场景、前置条件、输入材料、动作、输出结果、执行
+标准和证据。缺任何一项都必须进入同一 A1 的 `pending_issues[]`。
 
-**不得做**：不得把审批角色误写成输出部门；不得把“有关部门”“相关部门”自动映射到当前组织部门；不得把外部客户、供应商、银行直接塞入输入/输出部门字段。
+**输出**：`document-structured-output-v2.json`。
 
-**下一步条件**：角色簿覆盖制度中出现的关键角色后，进入对象链。
+**不得做**：不得自动生成 `verified` 证据；不得自动生成 `confirmed` 工作角色；
+不得因为“相关部门”或交接动词自动创建 `cross_dept_handoffs[]`；不得输出正式
+`structure_block_projection`。
 
-### 8. 对象链
+**下一步条件**：v2 实例通过标准 Schema 和引用完整性校验后进入问题视图。
 
-**输入**：`chunks.jsonl`、`role_review_items.json`、输入基线解读。
+### 8. 待确认问题与差异审计
 
-**动作**：运行 `build-object-chains.mjs`。以具体对象为中心串联动作，例如申请单、情况说明、工资明细、BOM、报表、台账、废品损失、盈亏处理事项。动作从原文动词和签批栏抽取：填写、编制、汇总、提交、校对、核对、审核、审批、批准、发布、通报、归档。
+**输入**：v2 候选、当前部门已确认流程映射。
 
-**输出**：`object_chains.json`，包含对象、动作链、相关角色、来源锚点和问题类型。
+**动作**：对比候选与当前映射，所有问题必须包含 `stable_key`、
+`structured_object_type`、`structured_object_key`、`target_block`、
+`target_field`、`evidence_status`、`issue_type`、`question_for_user` 和来源锚点。
+问题类型使用标准合同枚举；抽取失败但来源可读时使用 `抽取结果待复核`，不可读来源
+在第 2 步已经阻断，不生成猜测性问题。
 
-**不得做**：不得因为同在一个标题下就合并不同对象；不得把对象链里的“审核/批准”直接变成正式审批字段；不得把对象别名当作已确认同一对象。
+**输出**：v2 `pending_issues[]` 和兼容性 `mapping_diff_report.md`。
 
-**下一步条件**：关键对象至少有来源动作链或明确待补后，进入输入基线问题。
+**不得做**：不得把待确认问题写入正式 DCM/BBM；不得把系统落位写成系统评价或
+选型建议；不得把“未命中”解释为业务不存在。
 
-### 9. 输入基线问题
+**下一步条件**：待确认问题均能定位到对象、字段和来源后生成派生视图。
 
-**输入**：`document_review_items.json`、`role_review_items.json`、`object_chains.json`、当前已确认流程映射。
+### 9. 派生人工视图
 
-**动作**：把输入基线解读、角色簿和对象链汇总成可审计待确认问题。问题类型固定为：`待确认L3`、`待确认A1`、`角色待确认`、`审批链待确认`、`受控传递待确认`、`OCR待复核`、`验收标准待补`、`归档要求待补`、`系统落位待确认`。稳定键由部门、来源文件、条款、问题类型、问题内容 hash 生成。
+**输入**：v2 `pending_issues[]`。
 
-**输出**：`artifacts/.../mapping_diff_items.json` 的前置待确认问题集合。
+**动作**：运行 `update-input-baseline-review-todo-md.mjs`，在同一
+`artifacts/process-input-baseline-review/<run-id>/` 下生成
+`pending-issues.md`。
 
-**不得做**：不得把待确认问题写进正式 DCM/BBM；不得把待确认系统落位说成系统选型建议；不得把相似命中说成已覆盖。
+**输出**：仅供人工阅读的未解决问题清单。
 
-**下一步条件**：待确认问题具备稳定键和问题类型后，进入待确认待办 Markdown。
+**不得做**：不得把 Markdown 当机器合同、流程输入基线或长期真源；不得默认写入
+`docs/norms/流程治理/`。
 
-### 10. 待确认待办 Markdown
+**下一步条件**：人工阅读视图与 v2 问题数量一致后进入人工确认边界。
 
-**输入**：待确认问题 JSON、当前已确认流程映射、现有 `docs/norms/流程治理/输入基线问题待办.md`。
+### 10. 人工确认与发布边界
 
-**动作**：运行 `update-input-baseline-review-todo-md.mjs`。待确认结果分两层保存：机器可读 JSON 留在 `artifacts/`，人工处理清单写入 `docs/norms/流程治理/输入基线问题待办.md`。Markdown 待办只保留当前未解决待确认问题；解决一条就删除一条。新待确认按稳定键去重，已确认流程映射已覆盖的待确认不再写入。
+**输入**：v2 草稿、源文件、流程责任部门意见、必要的接收部门和行政人事部确认。
 
-**输出**：只含未解决项的待确认待办 Markdown。每条必须包含编号、部门、来源文件/条款、问题类型、问题内容、当前映射位置、建议动作、处理状态、负责人/确认对象。
+**动作**：业务人员在 3001/3000 或受控评审流程中确认字段。跨部门承接必须确认
+具体交付物、接收部门、交接动作、承接标准和目标流程/行为；正式工作角色必须由
+行政人事目录和流程责任部门共同确认；证据必须有来源、位置、摘录、确认人和时间。
 
-**不得做**：不得在待办里长期堆积“已解决”；不得把待办当流程输入基线；不得靠待办替代原始待确认 JSON、已确认流程映射变更记录和 git 历史。
+**输出**：经人工确认的 v2 草稿，后续由受控发布流程生成结构块投影。
 
-**下一步条件**：人工处理面板生成后，进入当前映射差异审计。
+**不得做**：技能本身不得写数据库、写回流程输入基线、分配正式角色编码、代替
+接收部门确认或触发正式发布。
 
-### 11. 当前映射差异审计
+**下一步条件**：所有发布必填项和逐对象证据通过人工确认后，才可进入独立发布流程。
 
-**输入**：当前部门已确认流程映射、待确认问题 JSON、待确认待办 Markdown。
+### 11. 验证与报告
 
-**动作**：运行 `diff-review-items-with-mapping.mjs`。对比问题内容与当前 `{部门}部门-能力-流程-系统映射关系.md`：已被已确认流程映射覆盖的待确认关闭；仍未覆盖的待确认保留到待办；人工删除但未被已确认流程映射覆盖的待确认下轮重新出现。审计报告必须写明 embedding 是否使用、source hash、待确认数量和边界声明。
+**输入**：技能文件、脚本、v2 输出和派生视图。
 
-**输出**：`mapping_diff_report.md`、更新后的 `mapping_diff_items.json` 和待办 Markdown。
+**动作**：至少运行：
 
-**不得做**：不得把“未命中待确认”解释为业务不存在；不得为了消除待办而模糊改写已确认流程映射；不得在审计报告里给出没有原文核验的肯定结论。
+```powershell
+npm run test:process-evidence-skill
+npm run test:process-evidence-evolution
+npm run test:process-input-baseline-review-workflow
+npm run test:document-structured-output-schema
+node .agents/skills/process-evidence-mapping/scripts/test-vector-pipeline.mjs
+```
 
-**下一步条件**：差异项清晰后，进入受控入库。
+工作流还必须自动执行
+`validate-document-structured-output-v2.mjs --input <v2-json>`。
 
-### 12. 受控入库
+**输出**：测试结果、v2 输出路径、阻断来源、检索降级、待确认数量和未覆盖风险。
 
-**输入**：待办项、原始制度条款/表格/签批栏/流程图/OCR 原图位置、当前已确认流程映射。
+**不得做**：不得把测试通过说成业务已确认；不得隐藏不可读来源或检索降级；不得
+声称已正式发布，除非独立受控发布流程确实完成。
 
-**动作**：逐条回到制度、表单、流程图或原始 PDF/图片位置核验。确认后才更新 DCM 主表、同一 Markdown 内的 BBM/A1、流程图 Markdown、MDM 建设要求或 Sankey 数据。正式 DCM/BBM 仍遵守原列结构、证据依据、跨部门受控传递规则和系统落位规则。OCR 项只能在核验原 PDF/图片后入库。
-
-**输出**：受控变更后的已确认流程映射、必要的变更说明、从待办 Markdown 删除的已处理项。
-
-**不得做**：不得批量把待确认 JSON 自动写入已确认流程映射；不得绕过原文核验；不得把 MDM 写成 应用系统（S1）；不得对 OA/MES/ERP/PLM 作“最忙、主用、承载最多”等评价。
-
-**下一步条件**：已确认流程映射已更新或确认暂不入库后，进入验证与报告。
-
-### 13. 验证与报告
-
-**输入**：变更后的技能、脚本、待确认输出、已确认流程映射、待办 Markdown。
-
-**动作**：至少运行 `npm run test:process-evidence-skill`、`npm run test:process-evidence-evolution`、`npm run test:process-input-baseline-review`、`npm run test:ocr-source`、`.agents/skills/process-evidence-mapping/scripts/test-vector-pipeline.mjs`（若本地 Ollama 不可用则记录降级原因）、`npm run test:process-governance-mainline`、`node scripts/check-dcm-bbm.mjs --no-fail`、`node scripts/audit-a1-transfer-evidence.mjs --no-write`。需要刷新 Sankey 时再运行 `node scripts/parse-sankey-data.mjs`。
-
-**输出**：测试结果、输入基线问题识别工作流输出路径、待办 Markdown 路径、未验证或降级项、下一步人工确认清单。
-
-**不得做**：不得声称待确认已正式入库，除非已完成受控入库和验证；不得隐藏 OCR/embedding 降级；不得把未跑的测试说成已通过。
-
-**下一步条件**：验证完成后向用户报告本轮完成项、失败项和待人工确认项。
+**下一步条件**：验证通过后向用户报告修改、文档同步、测试和剩余风险。

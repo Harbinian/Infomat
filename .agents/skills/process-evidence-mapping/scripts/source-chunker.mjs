@@ -201,7 +201,7 @@ function main() {
       file_size: stat.size,
       modified_time: stat.mtime.toISOString(),
       extraction_status: TEXT_EXTENSIONS.has(ext) ? 'text_read' : 'unsupported',
-      included_status: 'needs_review',
+      included_status: 'pending_review',
       included_reason: 'Chunked for retrieval review only; inclusion still requires source verification.',
     };
     Object.assign(sourceBase, sourceBoundaryFields(sourceBase));
@@ -235,7 +235,7 @@ function main() {
       source_company: '',
       source_org_name: '',
       retrieval_method: 'chunking',
-      evidence_status: 'needs_review',
+      evidence_status: 'pending_review',
       review_required: true,
       review_reason: 'Retrieval chunk only; verify original source before using in mapping.',
       content_hash: contentHash,

@@ -63,7 +63,7 @@ function relationLabel(type) {
 function statusLine(records) {
   const counts = new Map();
   for (const record of records) {
-    const key = `${record.evidence_status || 'needs_review'} / ${record.verification_status || 'unverified'} / ${record.allowed_downstream_use || 'review_only'}`;
+    const key = `${record.evidence_status || 'pending_review'} / ${record.verification_status || 'unverified'} / ${record.allowed_downstream_use || 'review_only'}`;
     counts.set(key, (counts.get(key) || 0) + 1);
   }
   return [...counts.entries()].map(([key, count]) => `- ${key}: ${count}`).join('\n');
@@ -94,7 +94,7 @@ function main() {
     '',
     '- `raw_text` 保留抽取原文，不自动修正缺字、空格或模板占位。',
     '- `normalized_review_text` 只用于检索提示，不能作为正式证据原句。',
-    '- `needs_review/unverified/review_only` 不得进入正式 DCM/BBM/H5 链路。',
+    '- `pending_review/unverified/review_only` 只能进入 document-structured-output-v2 草稿，不能进入正式结构块投影。',
     '- 未命中不等于确认不存在，只能形成“当前源覆盖下未见证据，待补”。',
     '',
   ];
@@ -108,7 +108,7 @@ function main() {
         item.rank,
         relationLabel(item.relation_type),
         item.extraction_quality || 'clean',
-        `${item.evidence_status || 'needs_review'} / ${item.verification_status || 'unverified'}`,
+        `${item.evidence_status || 'pending_review'} / ${item.verification_status || 'unverified'}`,
         `${item.source_file || ''} ${item.source_anchor || ''}`.trim(),
         item.retrieval_score ?? '',
         shorten(item.raw_text),

@@ -140,7 +140,7 @@ async function main() {
       retrieval_score: Number(item.score.toFixed(6)),
       relation_type: classifyRelation(args.query, item.chunk.raw_text, item.chunk),
       extraction_quality: item.chunk.extraction_quality || 'clean',
-      evidence_status: 'needs_review',
+      evidence_status: 'pending_review',
       verification_status: item.chunk.verification_status || 'unverified',
       review_required: true,
       review_reason: 'Vector retrieval result; verify original source before mapping use.',

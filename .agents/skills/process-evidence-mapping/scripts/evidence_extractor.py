@@ -18,7 +18,8 @@ from xml.etree import ElementTree
 
 
 TEXT_EXTENSIONS = {".md", ".txt", ".csv", ".json", ".html", ".htm"}
-SUPPORTED_EXTENSIONS = TEXT_EXTENSIONS | {".docx", ".doc", ".xlsx", ".xls", ".pdf", ".vsd", ".vsdx"}
+IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".gif", ".webp"}
+SUPPORTED_EXTENSIONS = TEXT_EXTENSIONS | IMAGE_EXTENSIONS | {".docx", ".doc", ".xlsx", ".xls", ".pdf", ".vsd", ".vsdx"}
 SKIP_DIRS = {".git", "node_modules", "artifacts", "test-results", "__pycache__", "_extracted", "流程治理"}
 GENERATED_FILE_PATTERNS = [
     re.compile(r".*部门-能力-流程-系统映射关系\.md$"),
@@ -93,22 +94,19 @@ def looks_heading(text: str) -> bool:
 
 def normalized_review_text(raw: str) -> str:
     reviewItems: list[str] = []
-    if re.search(r"公司\s+月综合打分表", raw) or "公司_月综合打分表" in raw or "公司__月综合打分表" in raw:
-        reviewItems.append("公司__月综合打分表")
-        reviewItems.append("公司月度综合打分表待确认")
     if "__" in raw:
         reviewItems.append(raw.replace("__", "_"))
-    if re.search(r"[\u4e00-\u9fff]\s{2,}[\u4e00-\u9fff]", raw):
-        reviewItems.append(re.sub(r"\s{2,}", "", raw))
+    if re.search(r"[\u4e00-\u9fff]\s+[\u4e00-\u9fff]", raw):
+        compact = re.sub(r"(?<=[\u4e00-\u9fff])\s+(?=[\u4e00-\u9fff])", "", raw)
+        if compact != raw:
+            reviewItems.append(compact)
     return " / ".join(dict.fromkeys(reviewItem for reviewItem in reviewItems if reviewItem))
 
 
 def extraction_quality(raw: str, status: str = "clean") -> str:
-    if status in {"failed", "needs_ocr"}:
+    if status in {"failed", "blocked_unreadable"}:
         return status
     if normalized_review_text(raw):
-        return "partial"
-    if "__" in raw or re.search(r"[\u4e00-\u9fff]\s+月综合打分表", raw):
         return "partial"
     return "clean"
 
@@ -130,7 +128,7 @@ def base_source(file_path: Path, repo: Path, extraction_status: str) -> dict:
         "file_size": stat.st_size,
         "modified_time": stat.st_mtime,
         "extraction_status": extraction_status,
-        "included_status": "needs_review",
+        "included_status": "pending_review",
         "included_reason": "Chunked for retrieval review only; inclusion still requires source verification.",
     }
 
@@ -164,7 +162,7 @@ def chunk_record(source: dict, raw: str, artifact_type: str, index: str, **extra
         "extraction_method": extra.get("extraction_method", source.get("extraction_method", "python")),
         "extraction_quality": quality,
         "retrieval_method": "chunking",
-        "evidence_status": "needs_review",
+        "evidence_status": "pending_review",
         "verification_status": "unverified",
         "review_required": True,
         "review_reason": "Retrieval chunk only; verify original source before using in mapping.",
@@ -174,12 +172,9 @@ def chunk_record(source: dict, raw: str, artifact_type: str, index: str, **extra
 
 
 def form_name_from_text(text: str) -> str:
-    if "公司月度综合打分表" in text or "公司__月综合打分表" in text or "公司 月综合打分表" in text:
-        return "公司月度综合打分表"
-    if "工作任务调整申请单" in text:
-        return "工作任务调整申请单"
-    if "经营发展部绩效评分表" in text:
-        return "经营发展部绩效评分表"
+    candidate = text.strip().strip("《》").strip()
+    if len(candidate) <= 80 and re.search(r"(?:表|单|清单|台账|记录)$", candidate):
+        return candidate
     return ""
 
 
@@ -399,13 +394,14 @@ def extract_pdf(file_path: Path, repo: Path) -> tuple[dict, list[dict], list[str
                         paragraph_id=f"page-{page_index}",
                         extraction_method="pdfplumber",
                     ))
-            if total_text == 0 and total_images > 0:
-                source["extraction_status"] = "needs_ocr"
-                raw = f"待OCR/人工目视: {source['source_file']} pages={len(pdf.pages)} image_pages={total_images}"
-                chunk = chunk_record(source, raw, "ocr", "OCR0001", extraction_method="pdfplumber")
-                chunk["extraction_quality"] = "needs_ocr"
-                chunks.append(chunk)
-                warnings.append(f"needs_ocr: {source['source_file']}")
+            if total_text == 0:
+                source["extraction_status"] = "blocked_unreadable"
+                source["included_status"] = "blocked"
+                source["included_reason"] = "No directly readable text; provide a machine-readable source."
+                warnings.append(
+                    f"blocked_unreadable: {source['source_file']} "
+                    f"pages={len(pdf.pages)} image_pages={total_images}"
+                )
     except Exception as error:
         source["extraction_status"] = "failed"
         warnings.append(f"failed pdf: {source['source_file']} - {error}")
@@ -495,6 +491,11 @@ def defer_source(file_path: Path, repo: Path, reason: str) -> tuple[dict, list[d
 
 def extract_file(file_path: Path, repo: Path, temp_dir: Path) -> tuple[dict, list[dict], list[str]]:
     ext = file_path.suffix.lower()
+    if ext in IMAGE_EXTENSIONS:
+        source = base_source(file_path, repo, "blocked_unreadable")
+        source["included_status"] = "blocked"
+        source["included_reason"] = "Image sources are not directly readable by this skill."
+        return source, [], [f"blocked_unreadable: {source['source_file']} image source"]
     try:
         if ext in TEXT_EXTENSIONS:
             return extract_text_file(file_path, repo)
