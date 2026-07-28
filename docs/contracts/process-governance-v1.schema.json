@@ -1,0 +1,696 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://infomat.local/contracts/process-governance-v1.schema.json",
+  "title": "Infomat 单流程结构化文件规则 v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "export_meta",
+    "process",
+    "reference_materials",
+    "behaviors",
+    "flow_relations",
+    "data_objects",
+    "cross_department_handoffs",
+    "internal_process_calls",
+    "forms",
+    "terms"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "process-governance-v1"
+    },
+    "export_meta": {
+      "$ref": "#/$defs/exportMeta"
+    },
+    "process": {
+      "$ref": "#/$defs/process"
+    },
+    "reference_materials": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/referenceMaterial"
+      },
+      "default": []
+    },
+    "behaviors": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/behavior"
+      },
+      "default": []
+    },
+    "flow_relations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/flowRelation"
+      },
+      "default": []
+    },
+    "data_objects": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/dataObject"
+      },
+      "default": []
+    },
+    "cross_department_handoffs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/crossDepartmentHandoff"
+      },
+      "default": []
+    },
+    "internal_process_calls": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/internalProcessCall"
+      },
+      "default": []
+    },
+    "forms": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/formOrRecord"
+      },
+      "default": []
+    },
+    "terms": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/term"
+      },
+      "default": []
+    },
+    "migration": {
+      "$ref": "#/$defs/migration"
+    }
+  },
+  "$defs": {
+    "technicalRef": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+    },
+    "nullableTechnicalRef": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/technicalRef"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "nullableString": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "technicalRefList": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/technicalRef"
+      },
+      "uniqueItems": true,
+      "default": []
+    },
+    "exportMeta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "package_ref",
+        "exported_at",
+        "initiating_department",
+        "compiler"
+      ],
+      "properties": {
+        "package_ref": {
+          "$ref": "#/$defs/technicalRef"
+        },
+        "exported_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "initiating_department": {
+          "type": "string"
+        },
+        "compiler": {
+          "type": "string"
+        }
+      }
+    },
+    "process": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "process_ref",
+        "process_name",
+        "owning_department",
+        "purpose",
+        "scope",
+        "capability_domain",
+        "business_capability",
+        "classification_status"
+      ],
+      "properties": {
+        "process_ref": {
+          "$ref": "#/$defs/technicalRef"
+        },
+        "process_name": {
+          "type": "string"
+        },
+        "owning_department": {
+          "type": "string"
+        },
+        "purpose": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string"
+        },
+        "capability_domain": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "business_capability": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "classification_status": {
+          "enum": [
+            "unclassified",
+            "needs_review",
+            "confirmed"
+          ]
+        }
+      }
+    },
+    "referenceMaterial": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "material_ref",
+        "material_type",
+        "material_name",
+        "document_no",
+        "version",
+        "file_sha256",
+        "readable_text",
+        "provider_department",
+        "provider_name",
+        "as_of_date"
+      ],
+      "properties": {
+        "material_ref": {
+          "$ref": "#/$defs/technicalRef"
+        },
+        "material_type": {
+          "enum": [
+            "",
+            "现有制度",
+            "表单或记录",
+            "现行业务操作说明",
+            "会议或访谈",
+            "其他参考材料"
+          ]
+        },
+        "material_name": {
+          "type": "string"
+        },
+        "document_no": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "version": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "file_sha256": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[a-fA-F0-9]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "readable_text": {
+          "type": "string"
+        },
+        "provider_department": {
+          "type": "string"
+        },
+        "provider_name": {
+          "type": "string"
+        },
+        "as_of_date": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date"
+        }
+      }
+    },
+    "workRole": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "behavior_ref",
+        "work_role_code",
+        "role_duty",
+        "work_role_name",
+        "assignment_status"
+      ],
+      "properties": {
+        "behavior_ref": {
+          "$ref": "#/$defs/technicalRef"
+        },
+        "work_role_code": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "role_duty": {
+          "enum": [
+            "",
+            "发起",
+            "办理",
+            "审核",
+            "批准",
+            "判断",
+            "发送",
+            "接收",
+            "会签"
+          ]
+        },
+        "work_role_name": {
+          "type": "string"
+        },
+        "assignment_status": {
+          "enum": [
+            "pending_assignment",
+            "assigned"
+          ]
+        }
+      }
+    },
+    "behavior": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "behavior_ref",
+        "node_type",
+        "behavior_name",
+        "current_actor_role",
+        "trigger",
+        "precondition",
+        "input_description",
+        "timing",
+        "completion_standard",
+        "output_description",
+        "input_data_refs",
+        "output_data_refs",
+        "work_role",
+        "countersign_all_required",
+        "countersign_target_departments"
+      ],
+      "properties": {
+        "behavior_ref": {
+          "$ref": "#/$defs/technicalRef"
+        },
+        "node_type": {
+          "enum": [
+            "",
+            "action",
+            "decision",
+            "parallel_split",
+            "parallel_join"
+          ]
+        },
+        "behavior_name": {
+          "type": "string"
+        },
+        "current_actor_role": {
+          "type": "string"
+        },
+        "trigger": {
+          "type": "string"
+        },
+        "precondition": {
+          "type": "string"
+        },
+        "input_description": {
+          "type": "string"
+        },
+        "timing": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "completion_standard": {
+          "type": "string"
+        },
+        "output_description": {
+          "type": "string"
+        },
+        "input_data_refs": {
+          "$ref": "#/$defs/technicalRefList"
+        },
+        "output_data_refs": {
+          "$ref": "#/$defs/technicalRefList"
+        },
+        "work_role": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/workRole"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "countersign_all_required": {
+          "type": "boolean",
+          "default": false
+        },
+        "countersign_target_departments": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true,
+          "default": []
+        }
+      }
+    },
+    "flowRelation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "relation_ref",
+        "relation_type",
+        "from_behavior_ref",
+        "to_behavior_ref",
+        "condition",
+        "join_mode"
+      ],
+      "properties": {
+        "relation_ref": {
+          "$ref": "#/$defs/technicalRef"
+        },
+        "relation_type": {
+          "enum": [
+            "",
+            "sequence",
+            "condition",
+            "loop",
+            "parallel"
+          ]
+        },
+        "from_behavior_ref": {
+          "$ref": "#/$defs/nullableTechnicalRef"
+        },
+        "to_behavior_ref": {
+          "$ref": "#/$defs/nullableTechnicalRef"
+        },
+        "condition": {
+          "type": "string"
+        },
+        "join_mode": {
+          "enum": [
+            "",
+            "all"
+          ]
+        }
+      }
+    },
+    "dataObject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "data_ref",
+        "data_name",
+        "description",
+        "governance_status",
+        "produced_by_behavior_ref",
+        "consumed_by_behavior_refs"
+      ],
+      "properties": {
+        "data_ref": {
+          "$ref": "#/$defs/technicalRef"
+        },
+        "data_name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "governance_status": {
+          "const": "candidate"
+        },
+        "produced_by_behavior_ref": {
+          "$ref": "#/$defs/nullableTechnicalRef"
+        },
+        "consumed_by_behavior_refs": {
+          "$ref": "#/$defs/technicalRefList"
+        }
+      }
+    },
+    "crossDepartmentHandoff": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "handoff_ref",
+        "source_department",
+        "target_department",
+        "send_behavior_ref",
+        "receive_behavior_ref",
+        "input_data_ref",
+        "returned_data_ref",
+        "requested_matter",
+        "trigger_condition",
+        "completion_standard",
+        "target_process_ref",
+        "target_process_name",
+        "target_behavior_ref",
+        "target_behavior_name",
+        "return_behavior_ref"
+      ],
+      "properties": {
+        "handoff_ref": {
+          "$ref": "#/$defs/technicalRef"
+        },
+        "source_department": {
+          "type": "string"
+        },
+        "target_department": {
+          "type": "string"
+        },
+        "send_behavior_ref": {
+          "$ref": "#/$defs/nullableTechnicalRef"
+        },
+        "receive_behavior_ref": {
+          "$ref": "#/$defs/nullableTechnicalRef"
+        },
+        "input_data_ref": {
+          "$ref": "#/$defs/nullableTechnicalRef"
+        },
+        "returned_data_ref": {
+          "$ref": "#/$defs/nullableTechnicalRef"
+        },
+        "requested_matter": {
+          "type": "string"
+        },
+        "trigger_condition": {
+          "type": "string"
+        },
+        "completion_standard": {
+          "type": "string"
+        },
+        "target_process_ref": {
+          "$ref": "#/$defs/nullableTechnicalRef"
+        },
+        "target_process_name": {
+          "type": "string"
+        },
+        "target_behavior_ref": {
+          "$ref": "#/$defs/nullableTechnicalRef"
+        },
+        "target_behavior_name": {
+          "type": "string"
+        },
+        "return_behavior_ref": {
+          "$ref": "#/$defs/nullableTechnicalRef"
+        }
+      }
+    },
+    "internalProcessCall": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "call_ref",
+        "caller_behavior_ref",
+        "target_process_ref",
+        "target_process_name",
+        "input_data_refs",
+        "output_data_refs",
+        "return_behavior_ref"
+      ],
+      "properties": {
+        "call_ref": {
+          "$ref": "#/$defs/technicalRef"
+        },
+        "caller_behavior_ref": {
+          "$ref": "#/$defs/nullableTechnicalRef"
+        },
+        "target_process_ref": {
+          "$ref": "#/$defs/nullableTechnicalRef"
+        },
+        "target_process_name": {
+          "type": "string"
+        },
+        "input_data_refs": {
+          "$ref": "#/$defs/technicalRefList"
+        },
+        "output_data_refs": {
+          "$ref": "#/$defs/technicalRefList"
+        },
+        "return_behavior_ref": {
+          "$ref": "#/$defs/nullableTechnicalRef"
+        }
+      }
+    },
+    "formItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "item_ref",
+        "item_name",
+        "item_type",
+        "required",
+        "instructions"
+      ],
+      "properties": {
+        "item_ref": {
+          "$ref": "#/$defs/technicalRef"
+        },
+        "item_name": {
+          "type": "string"
+        },
+        "item_type": {
+          "type": "string"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "instructions": {
+          "type": "string"
+        }
+      }
+    },
+    "formArea": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "area_ref",
+        "area_type",
+        "area_title",
+        "items"
+      ],
+      "properties": {
+        "area_ref": {
+          "$ref": "#/$defs/technicalRef"
+        },
+        "area_type": {
+          "enum": [
+            "",
+            "基本信息",
+            "明细清单"
+          ]
+        },
+        "area_title": {
+          "type": "string"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/formItem"
+          },
+          "default": []
+        }
+      }
+    },
+    "formOrRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "form_ref",
+        "behavior_ref",
+        "form_name",
+        "form_no",
+        "areas"
+      ],
+      "properties": {
+        "form_ref": {
+          "$ref": "#/$defs/technicalRef"
+        },
+        "behavior_ref": {
+          "$ref": "#/$defs/nullableTechnicalRef"
+        },
+        "form_name": {
+          "type": "string"
+        },
+        "form_no": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "areas": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/formArea"
+          },
+          "default": []
+        }
+      }
+    },
+    "term": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "term_ref",
+        "term_name",
+        "definition"
+      ],
+      "properties": {
+        "term_ref": {
+          "$ref": "#/$defs/technicalRef"
+        },
+        "term_name": {
+          "type": "string"
+        },
+        "definition": {
+          "type": "string"
+        }
+      }
+    },
+    "migration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_schema_version",
+        "source_process_ref",
+        "source_process_count"
+      ],
+      "properties": {
+        "source_schema_version": {
+          "type": "string"
+        },
+        "source_process_ref": {
+          "$ref": "#/$defs/nullableTechnicalRef"
+        },
+        "source_process_count": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    }
+  }
+}

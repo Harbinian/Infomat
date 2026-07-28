@@ -3,20 +3,57 @@ const multer = require('multer');
 const mammoth = require('mammoth');
 const path = require('path');
 const fs = require('fs');
-const os = require('os');
 const crypto = require('crypto');
+const { execFileSync } = require('child_process');
 const { TextDecoder } = require('util');
 const Ajv2020 = require('ajv/dist/2020');
 
 const app = express();
 const PORT = Number(process.env.STRUCTURED_OUTPUT_PORT || process.env.PORT || 3001);
-const upload = multer({ storage: multer.memoryStorage() });
+const HOST = process.env.STRUCTURED_OUTPUT_HOST || '0.0.0.0';
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: MAX_UPLOAD_BYTES,
+    files: 1
+  }
+});
+const cytoscapeBrowserPath = require.resolve('cytoscape/dist/cytoscape.min.js');
 
 const schemaPath = path.join(__dirname, '..', '..', 'docs', 'contracts', 'document-structured-output.schema.json');
 const STANDARD_SCHEMA = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
 const validateStandardDocument = new Ajv2020({ allErrors: true, strict: false }).compile(STANDARD_SCHEMA);
+const processGovernanceSchemaPath = path.join(__dirname, '..', '..', 'docs', 'contracts', 'process-governance-v1.schema.json');
+const PROCESS_GOVERNANCE_SCHEMA_SOURCE = fs.readFileSync(processGovernanceSchemaPath);
+const PROCESS_GOVERNANCE_SCHEMA = JSON.parse(PROCESS_GOVERNANCE_SCHEMA_SOURCE.toString('utf8'));
+const PROCESS_GOVERNANCE_SCHEMA_DIGEST = crypto
+  .createHash('sha256')
+  .update(PROCESS_GOVERNANCE_SCHEMA_SOURCE)
+  .digest('hex');
+const validateProcessGovernanceDocument = new Ajv2020({
+  allErrors: true,
+  strict: false,
+  validateFormats: false
+}).compile(PROCESS_GOVERNANCE_SCHEMA);
 const ROSTER_PATH = path.join(__dirname, '..', '..', 'docs', 'organization', '花名册.md');
 const WORK_ROLE_DATA_PATH = path.join(__dirname, '..', '..', 'docs', 'work-role-data.json');
+const REPO_ROOT = path.join(__dirname, '..', '..');
+
+function repositoryCommit() {
+  try {
+    return execFileSync('git', ['rev-parse', 'HEAD'], {
+      cwd: REPO_ROOT,
+      encoding: 'utf8',
+      windowsHide: true,
+      stdio: ['ignore', 'pipe', 'ignore']
+    }).trim();
+  } catch (_) {
+    return 'unknown';
+  }
+}
+
+const APP_COMMIT = repositoryCommit();
 
 const ENUMS = {
   basisType: ['现场实际', '制度 / 规程', '表单 / 台账', '会议 / 访谈', '暂无证据'],
@@ -35,6 +72,7 @@ const ENUMS = {
   evidenceStatus: ['verified', 'pending_review', 'source_missing', 'ocr_extracted_not_confirmed', 'review_only'],
   evidenceObjectType: ['draft', 'document_profile', 'term', 'process', 'step', 'behavior_detail', 'handoff', 'form', 'form_table', 'form_table_field', 'form_field', 'evidence', 'mdm_requirement', 'work_role_binding'],
   workRoleParticipationTypes: ['owner', 'initiator', 'executor', 'reviewer', 'approver', 'collaborator', 'provider', 'receiver'],
+  workRoleDuties: ['发起', '办理', '审核', '批准', '判断', '发送', '接收', '会签'],
   maturity: ['可保存草稿', '发布前需补', '可提交审核', '可支撑发布'],
   lStatus: ['unclassified', 'needs_review', 'confirmed'],
   departments: [
@@ -103,178 +141,6 @@ const MAPPING_FILES_DIR = path.join(__dirname, '..', '..', 'docs', 'norms');
 let processMappingCatalogCache = null;
 let rosterRoleCatalogCache = null;
 let workRoleCatalogCache = null;
-
-const DEEPSEEK_TIMEOUT_MS = Number(process.env.STRUCTURED_OUTPUT_DEEPSEEK_TIMEOUT_MS || 8000);
-const DEEPSEEK_MAX_RETRIES = Number(process.env.STRUCTURED_OUTPUT_DEEPSEEK_MAX_RETRIES || 1);
-const DEEPSEEK_CIRCUIT_OPEN_MS = Number(process.env.STRUCTURED_OUTPUT_DEEPSEEK_CIRCUIT_OPEN_MS || 30000);
-const DEEPSEEK_SUGGESTION_BATCH_SIZE = Math.max(Number(process.env.STRUCTURED_OUTPUT_DEEPSEEK_SUGGESTION_BATCH_SIZE || 18), 1);
-const DEEPSEEK_SUGGESTION_TIMEOUT_MS = Math.max(Number(process.env.STRUCTURED_OUTPUT_DEEPSEEK_SUGGESTION_TIMEOUT_MS || DEEPSEEK_TIMEOUT_MS), 1000);
-const DEEPSEEK_SUGGESTION_MAX_RETRIES = Math.max(Number(process.env.STRUCTURED_OUTPUT_DEEPSEEK_SUGGESTION_MAX_RETRIES || 0), 0);
-const DEEPSEEK_SUGGESTION_TOTAL_MS = Math.max(Number(process.env.STRUCTURED_OUTPUT_DEEPSEEK_SUGGESTION_TOTAL_MS || 45000), 1000);
-const deepSeekRuntime = {
-  lastAvailable: null,
-  lastFailureCategory: null,
-  circuitOpenUntil: 0,
-  mockSuggestionIndex: 0
-};
-
-function firstText(...values) {
-  for (const value of values) {
-    if (value !== null && value !== undefined && String(value).trim()) return String(value).trim();
-  }
-  return '';
-}
-
-function loadClaudeSettingsEnv() {
-  const configDir = process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude');
-  const settingsPath = path.join(configDir, 'settings.json');
-  try {
-    const parsed = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
-    return parsed && typeof parsed.env === 'object' ? parsed.env : {};
-  } catch (_) {
-    return {};
-  }
-}
-
-function looksLikeDeepSeekAnthropic(env) {
-  const joined = [
-    env.ANTHROPIC_BASE_URL,
-    env.ANTHROPIC_MODEL,
-    env.ANTHROPIC_DEFAULT_SONNET_MODEL,
-    env.ANTHROPIC_DEFAULT_OPUS_MODEL,
-    env.ANTHROPIC_DEFAULT_HAIKU_MODEL
-  ].filter(Boolean).join(' ');
-  return /deepseek/i.test(joined);
-}
-
-function inferDeepSeekApiStyle(apiUrl, forcedStyle) {
-  if (forcedStyle === 'anthropic' || forcedStyle === 'chat') return forcedStyle;
-  if (/\/anthropic(?:\/|$)/i.test(apiUrl) || /\/v1\/messages(?:\?|$)/i.test(apiUrl)) return 'anthropic';
-  return 'chat';
-}
-
-function deepSeekConfig() {
-  if (process.env.STRUCTURED_OUTPUT_MOCK_DEEPSEEK) {
-    return { configured: true, style: 'mock', source: 'mock' };
-  }
-
-  if (process.env.STRUCTURED_OUTPUT_DEEPSEEK_ENABLED === '1' && firstText(process.env.DEEPSEEK_API_KEY)) {
-    const apiUrl = firstText(process.env.DEEPSEEK_API_URL) || 'https://api.deepseek.com/chat/completions';
-    return {
-      configured: true,
-      source: 'env',
-      style: inferDeepSeekApiStyle(apiUrl, process.env.STRUCTURED_OUTPUT_DEEPSEEK_API_STYLE),
-      apiKey: firstText(process.env.DEEPSEEK_API_KEY),
-      apiUrl,
-      model: firstText(process.env.DEEPSEEK_MODEL) || 'deepseek-chat'
-    };
-  }
-
-  const settingsEnv = loadClaudeSettingsEnv();
-  const anthropicEnv = {
-    ...settingsEnv,
-    ANTHROPIC_AUTH_TOKEN: firstText(process.env.ANTHROPIC_AUTH_TOKEN) || settingsEnv.ANTHROPIC_AUTH_TOKEN,
-    ANTHROPIC_API_KEY: firstText(process.env.ANTHROPIC_API_KEY) || settingsEnv.ANTHROPIC_API_KEY,
-    ANTHROPIC_BASE_URL: firstText(process.env.ANTHROPIC_BASE_URL) || settingsEnv.ANTHROPIC_BASE_URL,
-    ANTHROPIC_MODEL: firstText(process.env.ANTHROPIC_MODEL) || settingsEnv.ANTHROPIC_MODEL,
-    ANTHROPIC_DEFAULT_SONNET_MODEL: firstText(process.env.ANTHROPIC_DEFAULT_SONNET_MODEL) || settingsEnv.ANTHROPIC_DEFAULT_SONNET_MODEL,
-    ANTHROPIC_DEFAULT_OPUS_MODEL: firstText(process.env.ANTHROPIC_DEFAULT_OPUS_MODEL) || settingsEnv.ANTHROPIC_DEFAULT_OPUS_MODEL,
-    ANTHROPIC_DEFAULT_HAIKU_MODEL: firstText(process.env.ANTHROPIC_DEFAULT_HAIKU_MODEL) || settingsEnv.ANTHROPIC_DEFAULT_HAIKU_MODEL
-  };
-  const anthropicKey = firstText(anthropicEnv.ANTHROPIC_AUTH_TOKEN, anthropicEnv.ANTHROPIC_API_KEY);
-  const anthropicBaseUrl = firstText(anthropicEnv.ANTHROPIC_BASE_URL);
-  const anthropicModel = firstText(
-    anthropicEnv.ANTHROPIC_MODEL,
-    anthropicEnv.ANTHROPIC_DEFAULT_SONNET_MODEL,
-    anthropicEnv.ANTHROPIC_DEFAULT_OPUS_MODEL,
-    anthropicEnv.ANTHROPIC_DEFAULT_HAIKU_MODEL
-  );
-  if (anthropicKey && anthropicBaseUrl && anthropicModel && looksLikeDeepSeekAnthropic(anthropicEnv)) {
-    return {
-      configured: true,
-      source: 'cc-switch',
-      style: 'anthropic',
-      apiKey: anthropicKey,
-      apiUrl: anthropicBaseUrl,
-      model: anthropicModel
-    };
-  }
-
-  return { configured: false, style: 'none', source: 'none' };
-}
-
-function anthropicMessagesUrl(apiUrl) {
-  let url = String(apiUrl || '').replace(/\/+$/, '');
-  if (!url) return 'https://api.deepseek.com/anthropic/v1/messages?beta=true';
-  if (/\/v1\/messages(?:\?|$)/i.test(url)) return url.includes('?') ? url : `${url}?beta=true`;
-  if (/\/v1$/i.test(url)) url = `${url}/messages`;
-  else url = `${url}/v1/messages`;
-  return url.includes('?') ? url : `${url}?beta=true`;
-}
-
-function deepSeekRequestUrl(config) {
-  return config.style === 'anthropic' ? anthropicMessagesUrl(config.apiUrl) : config.apiUrl;
-}
-
-function deepSeekHeaders(config) {
-  const base = { 'content-type': 'application/json' };
-  if (config.style === 'anthropic') {
-    return {
-      ...base,
-      'anthropic-version': '2023-06-01',
-      'x-api-key': config.apiKey,
-      authorization: `Bearer ${config.apiKey}`
-    };
-  }
-  return { ...base, authorization: `Bearer ${config.apiKey}` };
-}
-
-function deepSeekRequestBody(config, prompt, maxTokens) {
-  if (config.style === 'anthropic') {
-    return {
-      model: config.model,
-      max_tokens: maxTokens,
-      temperature: 0,
-      messages: [{ role: 'user', content: prompt }]
-    };
-  }
-  return {
-    model: config.model,
-    temperature: 0,
-    response_format: { type: 'json_object' },
-    messages: [{ role: 'user', content: prompt }]
-  };
-}
-
-function textFromDeepSeekPayload(config, payload) {
-  if (config.style !== 'anthropic') return payload?.choices?.[0]?.message?.content || '';
-  if (typeof payload?.content === 'string') return payload.content;
-  if (Array.isArray(payload?.content)) {
-    return payload.content
-      .map(block => typeof block === 'string' ? block : block?.text || '')
-      .filter(Boolean)
-      .join('\n');
-  }
-  return payload?.completion || '';
-}
-
-function parseJsonObjectText(content) {
-  const text = String(content || '').trim();
-  if (!text) throw new Error('empty response');
-  try {
-    return JSON.parse(text);
-  } catch (_) {
-    const unfenced = text.replace(/^```(?:json)?/i, '').replace(/```$/i, '').trim();
-    if (unfenced !== text) return JSON.parse(unfenced);
-    const match = text.match(/\{[\s\S]*\}/);
-    if (match) return JSON.parse(match[0]);
-    throw _;
-  }
-}
-
-function sessionId() {
-  return `sess_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
-}
 
 function requestId(value) {
   return value || `req_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
@@ -368,6 +234,36 @@ function decodeTextBuffer(buffer) {
   } catch (_) {
     return utf8Text;
   }
+}
+
+function createEmptyProcessGovernanceDocument() {
+  return {
+    schema_version: 'process-governance-v1',
+    export_meta: {
+      package_ref: `package_${crypto.randomBytes(8).toString('hex')}`,
+      exported_at: new Date().toISOString(),
+      initiating_department: '',
+      compiler: ''
+    },
+    process: {
+      process_ref: `process_${crypto.randomBytes(8).toString('hex')}`,
+      process_name: '',
+      owning_department: '',
+      purpose: '',
+      scope: '',
+      capability_domain: null,
+      business_capability: null,
+      classification_status: 'unclassified'
+    },
+    reference_materials: [],
+    behaviors: [],
+    flow_relations: [],
+    data_objects: [],
+    cross_department_handoffs: [],
+    internal_process_calls: [],
+    forms: [],
+    terms: []
+  };
 }
 
 function normalizeUploadedFileName(value) {
@@ -1198,10 +1094,113 @@ function contractValidationResult(data) {
       : (validateStandardDocument.errors || []).map(error => ({
           path: error.instancePath || '/',
           keyword: error.keyword,
-          message: error.message || '不符合标准合同',
+          message: error.message || '不符合统一结构规则',
           params: error.params || {}
         }))
   };
+}
+
+function processGovernanceValidationResult(data) {
+  const schemaValid = validateProcessGovernanceDocument(data);
+  const errors = schemaValid
+    ? []
+    : (validateProcessGovernanceDocument.errors || []).map(error => ({
+        path: error.instancePath || '/',
+        keyword: error.keyword,
+        message: error.message || '不符合单流程结构规则',
+        params: error.params || {}
+      }));
+
+  const addError = (pathKey, message, params = {}) => {
+    errors.push({ path: pathKey, keyword: 'localReference', message, params });
+  };
+  const uniqueRefs = (items, key, basePath) => {
+    const seen = new Set();
+    (Array.isArray(items) ? items : []).forEach((item, index) => {
+      const value = item?.[key];
+      if (!value) return;
+      if (seen.has(value)) addError(`${basePath}/${index}/${key}`, `技术标识 ${value} 在当前文件中重复`, { ref: value });
+      seen.add(value);
+    });
+    return seen;
+  };
+  const requireLocalRef = (set, value, pathKey, label) => {
+    if (value && !set.has(value)) addError(pathKey, `${label} ${value} 不在当前文件中`, { ref: value });
+  };
+
+  const behaviors = Array.isArray(data?.behaviors) ? data.behaviors : [];
+  const flowRelations = Array.isArray(data?.flow_relations) ? data.flow_relations : [];
+  const dataObjects = Array.isArray(data?.data_objects) ? data.data_objects : [];
+  const handoffs = Array.isArray(data?.cross_department_handoffs) ? data.cross_department_handoffs : [];
+  const internalCalls = Array.isArray(data?.internal_process_calls) ? data.internal_process_calls : [];
+  const forms = Array.isArray(data?.forms) ? data.forms : [];
+
+  const behaviorRefs = uniqueRefs(behaviors, 'behavior_ref', '/behaviors');
+  const dataRefs = uniqueRefs(dataObjects, 'data_ref', '/data_objects');
+  uniqueRefs(flowRelations, 'relation_ref', '/flow_relations');
+  uniqueRefs(handoffs, 'handoff_ref', '/cross_department_handoffs');
+  uniqueRefs(internalCalls, 'call_ref', '/internal_process_calls');
+  uniqueRefs(forms, 'form_ref', '/forms');
+  uniqueRefs(data?.reference_materials, 'material_ref', '/reference_materials');
+  uniqueRefs(data?.terms, 'term_ref', '/terms');
+
+  behaviors.forEach((behavior, index) => {
+    (behavior?.input_data_refs || []).forEach((ref, refIndex) => {
+      requireLocalRef(dataRefs, ref, `/behaviors/${index}/input_data_refs/${refIndex}`, '输入数据标识');
+    });
+    (behavior?.output_data_refs || []).forEach((ref, refIndex) => {
+      requireLocalRef(dataRefs, ref, `/behaviors/${index}/output_data_refs/${refIndex}`, '输出数据标识');
+    });
+    if (behavior?.work_role) {
+      requireLocalRef(behaviorRefs, behavior.work_role.behavior_ref, `/behaviors/${index}/work_role/behavior_ref`, '工作角色绑定的业务行为');
+      if (behavior.work_role.behavior_ref !== behavior.behavior_ref) {
+        addError(`/behaviors/${index}/work_role/behavior_ref`, '工作角色必须绑定当前业务行为', {
+          expected: behavior.behavior_ref,
+          actual: behavior.work_role.behavior_ref
+        });
+      }
+    }
+  });
+
+  flowRelations.forEach((relation, index) => {
+    requireLocalRef(behaviorRefs, relation?.from_behavior_ref, `/flow_relations/${index}/from_behavior_ref`, '起点业务行为');
+    requireLocalRef(behaviorRefs, relation?.to_behavior_ref, `/flow_relations/${index}/to_behavior_ref`, '终点业务行为');
+  });
+
+  dataObjects.forEach((dataObject, index) => {
+    requireLocalRef(behaviorRefs, dataObject?.produced_by_behavior_ref, `/data_objects/${index}/produced_by_behavior_ref`, '数据产生行为');
+    (dataObject?.consumed_by_behavior_refs || []).forEach((ref, refIndex) => {
+      requireLocalRef(behaviorRefs, ref, `/data_objects/${index}/consumed_by_behavior_refs/${refIndex}`, '数据使用行为');
+    });
+  });
+
+  handoffs.forEach((handoff, index) => {
+    requireLocalRef(behaviorRefs, handoff?.send_behavior_ref, `/cross_department_handoffs/${index}/send_behavior_ref`, '发送行为');
+    requireLocalRef(dataRefs, handoff?.input_data_ref, `/cross_department_handoffs/${index}/input_data_ref`, '承接输入数据');
+    requireLocalRef(dataRefs, handoff?.returned_data_ref, `/cross_department_handoffs/${index}/returned_data_ref`, '承接返回数据');
+    requireLocalRef(behaviorRefs, handoff?.return_behavior_ref, `/cross_department_handoffs/${index}/return_behavior_ref`, '主流程恢复行为');
+  });
+
+  internalCalls.forEach((call, index) => {
+    requireLocalRef(behaviorRefs, call?.caller_behavior_ref, `/internal_process_calls/${index}/caller_behavior_ref`, '调用行为');
+    requireLocalRef(behaviorRefs, call?.return_behavior_ref, `/internal_process_calls/${index}/return_behavior_ref`, '返回后的恢复行为');
+    (call?.input_data_refs || []).forEach((ref, refIndex) => {
+      requireLocalRef(dataRefs, ref, `/internal_process_calls/${index}/input_data_refs/${refIndex}`, '调用输入数据');
+    });
+    (call?.output_data_refs || []).forEach((ref, refIndex) => {
+      requireLocalRef(dataRefs, ref, `/internal_process_calls/${index}/output_data_refs/${refIndex}`, '调用输出数据');
+    });
+  });
+
+  forms.forEach((form, formIndex) => {
+    requireLocalRef(behaviorRefs, form?.behavior_ref, `/forms/${formIndex}/behavior_ref`, '表单对应行为');
+    uniqueRefs(form?.areas, 'area_ref', `/forms/${formIndex}/areas`);
+    (form?.areas || []).forEach((area, areaIndex) => {
+      uniqueRefs(area?.items, 'item_ref', `/forms/${formIndex}/areas/${areaIndex}/items`);
+    });
+  });
+
+  return { valid: errors.length === 0, errors };
 }
 
 function loadProcessMappingCatalog() {
@@ -2421,462 +2420,8 @@ function buildMarkdownDraft(data) {
   return lines.join('\n');
 }
 
-function safeMockDeepSeekValues() {
-  if (!process.env.STRUCTURED_OUTPUT_MOCK_DEEPSEEK) return [];
-  try {
-    const parsed = JSON.parse(process.env.STRUCTURED_OUTPUT_MOCK_DEEPSEEK);
-    return Array.isArray(parsed.field_values) ? parsed.field_values : [];
-  } catch (_) {
-    return [];
-  }
-}
-
-function safeMockDeepSeekPayload() {
-  if (!process.env.STRUCTURED_OUTPUT_MOCK_DEEPSEEK) return null;
-  try {
-    return JSON.parse(process.env.STRUCTURED_OUTPUT_MOCK_DEEPSEEK);
-  } catch (_) {
-    return null;
-  }
-}
-
-function isDeepSeekConfigured() {
-  return deepSeekConfig().configured;
-}
-
-function isDeepSeekCircuitOpen() {
-  return Date.now() < deepSeekRuntime.circuitOpenUntil;
-}
-
-function recordDeepSeekSuccess() {
-  deepSeekRuntime.lastAvailable = true;
-  deepSeekRuntime.lastFailureCategory = null;
-  deepSeekRuntime.circuitOpenUntil = 0;
-}
-
-function recordDeepSeekFailure(category, options = {}) {
-  deepSeekRuntime.lastAvailable = false;
-  deepSeekRuntime.lastFailureCategory = category || 'unavailable';
-  if (options.openCircuit !== false) {
-    deepSeekRuntime.circuitOpenUntil = Date.now() + DEEPSEEK_CIRCUIT_OPEN_MS;
-  }
-}
-
-function batchesOf(items, size) {
-  const batches = [];
-  for (let index = 0; index < items.length; index += size) batches.push(items.slice(index, index + size));
-  return batches;
-}
-
-function deepSeekHealthSummary() {
-  const configured = isDeepSeekConfigured();
-  const circuitOpen = isDeepSeekCircuitOpen();
-  return {
-    configured,
-    available: configured && !circuitOpen && deepSeekRuntime.lastAvailable !== false,
-    lastFailureCategory: deepSeekRuntime.lastFailureCategory,
-    circuitOpen
-  };
-}
-
-function categoryFromMockError(errorCode) {
-  if (errorCode === 'timeout') return 'timeout';
-  if (errorCode === 'http_429') return 'rate_limited';
-  if (errorCode === 'http_500' || errorCode === 'http_503') return 'server_error';
-  if (errorCode === 'invalid_json') return 'invalid_response';
-  return 'unavailable';
-}
-
-function categoryFromStatus(status) {
-  if (status === 429) return 'rate_limited';
-  if (status >= 500) return 'server_error';
-  return 'request_failed';
-}
-
-function categoryFromError(error) {
-  if (error?.name === 'AbortError' || /timeout/i.test(error?.message || '')) return 'timeout';
-  if (error?.category) return error.category;
-  return 'unavailable';
-}
-
-function nextMockSuggestionPayload() {
-  const parsed = safeMockDeepSeekPayload();
-  if (!parsed) return { field_suggestions: [] };
-  if (Array.isArray(parsed.suggestion_sequence)) {
-    const index = Math.min(deepSeekRuntime.mockSuggestionIndex, parsed.suggestion_sequence.length - 1);
-    deepSeekRuntime.mockSuggestionIndex += 1;
-    return parsed.suggestion_sequence[index] || { field_suggestions: [] };
-  }
-  return { field_suggestions: Array.isArray(parsed.field_suggestions) ? parsed.field_suggestions : [] };
-}
-
-function normalizeSuggestionItem(item, targetPaths, text) {
-  if (!item || typeof item !== 'object') return null;
-  const pathKey = normalizeLine(item.path || item.field_path || item.fieldPath || item.field || item['字段路径']);
-  const suggestion = normalizeLine(item.suggestion || item.hint || item.advice || item.fill_suggestion || item['填报建议'] || item['建议']);
-  if (!pathKey || !targetPaths.has(pathKey) || !suggestion) return null;
-  if (isLowValueSuggestion(pathKey, suggestion, targetPaths.get(pathKey))) return null;
-  const result = { suggestion };
-  const sourceText = normalizeLine(item.source_text || item.sourceText || item.source || item.reference_text || item['参考原文'] || item['原文依据']);
-  if (sourceText && String(text || '').includes(sourceText)) {
-    result.source_text = sourceText;
-    result.source_anchor = sourceAnchorFor(text, sourceText);
-  }
-  return result;
-}
-
-function isLowValueSuggestion(pathKey, suggestion, target) {
-  const text = String(suggestion || '').trim();
-  const label = target?.label || fieldSuggestionLabel(pathKey);
-  if (text.length < 10) return true;
-  if (/^(请|建议)?(填写|补充|完善)(该|此|本)?(字段|内容|信息|说明|要求|标准|结果|材料|条件|场景)[。.!！]?$/.test(text)) return true;
-  if (new RegExp(`^(请|建议)?(填写|补充|完善)(该|此|本)?${label}[。.!！]?$`).test(text)) return true;
-  if (/^(请|建议)?(填写|补充|完善).{0,4}(相关|对应|必要|具体)(内容|信息|说明)[。.!！]?$/.test(text)) return true;
-  if (/(制度编号|制度名称|文件编号|文件名称|章节标题)/.test(text) && /(trigger_scene|precondition|input_materials|output_result|execution_standard)$/.test(pathKey)) return true;
-  if (/本制度(的)?(编号|名称|标题)/.test(text)) return true;
-  const context = target?.context || '';
-  const contextWords = Array.from(new Set((context.match(/《[^》]+》|[\u4e00-\u9fa5]{2,}/g) || [])
-    .map(item => item.replace(/[《》]/g, ''))
-    .filter(item => item.length >= 2 && !['业务行为', '执行角色', '相关原文', '所属表单', '所属表格', '字段名称', '字段类型', '字段位置', '来源', '流程正文', '主表', '明细表'].includes(item))));
-  if (contextWords.length && !contextWords.some(word => text.includes(word) || hasContextFragment(text, word))) {
-    const usefulBusinessWords = ['材料', '表单', '记录', '结果', '结论', '会议', '评审', '部门', '角色', '时点', '周期', '条件', '标准', '维度', '归档', '反馈', '提交'];
-    if (!usefulBusinessWords.some(word => text.includes(word))) return true;
-  }
-  return false;
-}
-
-function hasContextFragment(text, contextWord) {
-  const clean = String(contextWord || '').replace(/[^\u4e00-\u9fa5A-Za-z0-9]/g, '');
-  if (clean.length < 4) return false;
-  const blocked = new Set(['业务', '行为', '执行', '角色', '相关', '原文', '填写', '提交', '审核', '审批', '确认', '是否', '需要', '进行', '负责']);
-  for (let length = Math.min(6, clean.length); length >= 2; length -= 1) {
-    for (let index = 0; index <= clean.length - length; index += 1) {
-      const fragment = clean.slice(index, index + length);
-      if (blocked.has(fragment)) continue;
-      if (text.includes(fragment)) return true;
-    }
-  }
-  return false;
-}
-
-function normalizeSuggestionItems(parsed) {
-  if (!parsed || typeof parsed !== 'object') return [];
-  const list = Array.isArray(parsed)
-    ? parsed
-    : parsed.field_suggestions
-      || parsed.fieldSuggestions
-      || parsed.suggestions
-      || parsed.items
-      || parsed.data?.field_suggestions
-      || parsed.data?.fieldSuggestions;
-  if (Array.isArray(list)) return list;
-  const keyed = parsed.field_suggestions || parsed.fieldSuggestions || parsed.suggestions;
-  if (keyed && typeof keyed === 'object') {
-    return Object.entries(keyed).map(([pathKey, value]) => {
-      if (typeof value === 'string') return { path: pathKey, suggestion: value };
-      return { path: pathKey, ...value };
-    });
-  }
-  return [];
-}
-
-function hasSuggestionPayload(parsed) {
-  if (!parsed || typeof parsed !== 'object') return false;
-  if (Array.isArray(parsed)) return true;
-  return Array.isArray(parsed.field_suggestions)
-    || Array.isArray(parsed.fieldSuggestions)
-    || Array.isArray(parsed.suggestions)
-    || Array.isArray(parsed.items)
-    || Array.isArray(parsed.data?.field_suggestions)
-    || Array.isArray(parsed.data?.fieldSuggestions)
-    || (parsed.field_suggestions && typeof parsed.field_suggestions === 'object')
-    || (parsed.fieldSuggestions && typeof parsed.fieldSuggestions === 'object')
-    || (parsed.suggestions && typeof parsed.suggestions === 'object');
-}
-
-function normalizeValueItems(parsed) {
-  if (!parsed || typeof parsed !== 'object') return [];
-  const list = Array.isArray(parsed)
-    ? parsed
-    : parsed.field_values
-      || parsed.fieldValues
-      || parsed.values
-      || parsed.items
-      || parsed.data?.field_values
-      || parsed.data?.fieldValues;
-  return Array.isArray(list) ? list : [];
-}
-
 function getValue(data, pathKey) {
   return pathKey.split('.').reduce((target, part) => target == null ? undefined : target[part], data);
-}
-
-function isFilledValue(value) {
-  if (Array.isArray(value)) return value.length > 0;
-  return value !== null && value !== undefined && String(value).trim() !== '';
-}
-
-function fieldSuggestionLabel(pathKey) {
-  if (/behavior_details\.\d+\.trigger_scene$/.test(pathKey)) return '触发场景';
-  if (/behavior_details\.\d+\.precondition$/.test(pathKey)) return '前置条件';
-  if (/steps\.\d+\.input_materials$/.test(pathKey)) return '输入材料';
-  if (/steps\.\d+\.output_result$/.test(pathKey)) return '输出结果';
-  if (/behavior_details\.\d+\.execution_standard$/.test(pathKey)) return '执行标准';
-  if (/forms\.\d+\.responsible_role$/.test(pathKey)) return '填写角色';
-  if (/forms\.\d+\.form_code$/.test(pathKey)) return '编号';
-  if (/forms\.\d+\.form_name$/.test(pathKey)) return '名称';
-  if (/forms\.\d+\.main_table_name$/.test(pathKey)) return '主表名称';
-  if (/form_table_fields\.\d+\.field_name$/.test(pathKey)) return '字段名称';
-  if (/form_table_fields\.\d+\.description$/.test(pathKey)) return '字段说明';
-  return '字段';
-}
-
-function targetContextForPath(data, pathKey) {
-  const stepMatch = pathKey.match(/^steps\.(\d+)\./);
-  if (stepMatch) {
-    const step = data.steps?.[Number(stepMatch[1])] || {};
-    const detail = data.behavior_details?.[Number(stepMatch[1])] || {};
-    return [
-      step.step_name ? `业务行为：${step.step_name}` : '',
-      step.actor_role ? `执行角色：${step.actor_role}` : '',
-      detail.execution_standard ? `已写执行标准：${detail.execution_standard}` : '',
-      step.evidence_refs?.length ? `来源：流程正文` : ''
-    ].filter(Boolean).join('；');
-  }
-  const behaviorMatch = pathKey.match(/^behavior_details\.(\d+)\./);
-  if (behaviorMatch) {
-    const index = Number(behaviorMatch[1]);
-    const step = data.steps?.[index] || {};
-    const detail = data.behavior_details?.[index] || {};
-    return [
-      step.step_name ? `业务行为：${step.step_name}` : '',
-      step.actor_role ? `执行角色：${step.actor_role}` : '',
-      detail.source_text ? `相关原文：${detail.source_text}` : ''
-    ].filter(Boolean).join('；');
-  }
-  const formMatch = pathKey.match(/^forms\.(\d+)\./);
-  if (formMatch) {
-    const form = data.forms?.[Number(formMatch[1])] || {};
-    return [
-      form.form_name ? `表单或记录：${form.form_name}` : '',
-      form.form_code ? `编号：${form.form_code}` : '',
-      form.responsible_department_name ? `形成部门：${form.responsible_department_name}` : ''
-    ].filter(Boolean).join('；');
-  }
-  const fieldMatch = pathKey.match(/^form_table_fields\.(\d+)\./);
-  if (fieldMatch) {
-    const field = data.form_table_fields?.[Number(fieldMatch[1])] || {};
-    const table = data.form_tables?.find(item => item.table_ref === field.table_ref) || {};
-    const form = data.forms?.find(item => item.form_ref === table.form_ref) || {};
-    return [
-      form.form_name ? `所属表单：${form.form_name}` : '',
-      table.table_name ? `所属表格：${table.table_name}` : '',
-      field.field_name ? `字段名称：${field.field_name}` : '',
-      field.field_type ? `字段类型：${field.field_type}` : '',
-      field.structure_kind ? `字段位置：${field.structure_kind === 'detail' ? '明细表' : '主表'}` : ''
-    ].filter(Boolean).join('；');
-  }
-  return '';
-}
-
-function buildFieldSuggestionTargets(data) {
-  const paths = [];
-  (data.steps || []).forEach((_, index) => {
-    paths.push(`steps.${index}.input_materials`);
-    paths.push(`steps.${index}.output_result`);
-  });
-  (data.behavior_details || []).forEach((_, index) => {
-    paths.push(`behavior_details.${index}.trigger_scene`);
-    paths.push(`behavior_details.${index}.precondition`);
-    paths.push(`behavior_details.${index}.execution_standard`);
-  });
-  (data.forms || []).forEach((_, index) => {
-    paths.push(`forms.${index}.form_code`);
-    paths.push(`forms.${index}.form_name`);
-    paths.push(`forms.${index}.main_table_name`);
-    paths.push(`forms.${index}.responsible_role`);
-  });
-  (data.form_table_fields || []).forEach((_, index) => {
-    paths.push(`form_table_fields.${index}.field_name`);
-    paths.push(`form_table_fields.${index}.description`);
-  });
-  return paths
-    .filter(pathKey => !isFilledValue(getValue(data, pathKey)))
-    .map(pathKey => ({ path: pathKey, label: fieldSuggestionLabel(pathKey), context: targetContextForPath(data, pathKey) }));
-}
-
-function buildSuggestionPrompt(text, targets) {
-  const targetLines = targets.map(item => {
-    const context = item.context ? `；上下文：${item.context}` : '';
-    return `- ${item.path}：${item.label}${context}`;
-  }).join('\n');
-  return [
-    '你是制度结构化填写辅助员，只帮助用户判断空字段应该补什么，不生成字段值。',
-    '根据给定制度全文和字段上下文，为空字段写简短填报建议。',
-    '要求：',
-    '1. suggestion 必须围绕该字段上下文写，不能只说“填写该字段”“补充相关内容”。',
-    '2. 只告诉用户应该补充哪一类业务信息，不替用户填具体字段值。',
-    '3. 只写一条建议，不做制度质量判断，不写原因，不写制度原文未写清、识别失败、模型、接口、schema、JSON、置信度。',
-    '4. 不要把制度编号、制度名称、章节标题当成触发场景、前置条件、输入材料、输出结果或执行标准。',
-    '5. source_text 如填写，必须逐字来自制度全文；找不到可省略。',
-    '6. 每个字段最多返回一条建议；只输出一个 JSON 对象，不输出 Markdown、解释文字或代码块。',
-    '7. 返回内容必须是：{"field_suggestions":[{"path":"","suggestion":"","source_text":""}]}',
-    '',
-    '空字段清单：',
-    targetLines,
-    '',
-    '制度全文：',
-    text
-  ].join('\n');
-}
-
-async function requestDeepSeekSuggestionItems(text, targets, options = {}) {
-  if (!targets.length) return [];
-  const config = deepSeekConfig();
-  if (!config.configured) return [];
-  if (isDeepSeekCircuitOpen()) {
-    recordDeepSeekFailure('circuit_open', { openCircuit: false });
-    return [];
-  }
-
-  if (process.env.STRUCTURED_OUTPUT_MOCK_DEEPSEEK) {
-    const payload = nextMockSuggestionPayload();
-    if (payload?.error) {
-      recordDeepSeekFailure(categoryFromMockError(payload.error));
-      return [];
-    }
-    recordDeepSeekSuccess();
-    return Array.isArray(payload?.field_suggestions) ? payload.field_suggestions : [];
-  }
-
-  const prompt = buildSuggestionPrompt(text, targets);
-  const maxTokens = Math.min(6000, 600 + targets.length * 180);
-  let lastCategory = 'unavailable';
-  const deadline = options.deadline || 0;
-  const maxRetries = Number.isFinite(options.maxRetries) ? options.maxRetries : DEEPSEEK_SUGGESTION_MAX_RETRIES;
-
-  for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
-    const remainingMs = deadline ? deadline - Date.now() : DEEPSEEK_SUGGESTION_TIMEOUT_MS;
-    if (remainingMs <= 300) return [];
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), Math.min(DEEPSEEK_SUGGESTION_TIMEOUT_MS, remainingMs));
-    try {
-      const response = await fetch(deepSeekRequestUrl(config), {
-        method: 'POST',
-        signal: controller.signal,
-        headers: deepSeekHeaders(config),
-        body: JSON.stringify(deepSeekRequestBody(config, prompt, maxTokens))
-      });
-      clearTimeout(timer);
-      if (!response.ok) {
-        lastCategory = categoryFromStatus(response.status);
-        if (attempt < maxRetries && response.status >= 500 && (!deadline || Date.now() < deadline - 300)) continue;
-        recordDeepSeekFailure(lastCategory);
-        return [];
-      }
-      const payload = await response.json();
-      const content = textFromDeepSeekPayload(config, payload);
-      if (!content) {
-        recordDeepSeekFailure('invalid_response');
-        return [];
-      }
-      const parsed = parseJsonObjectText(content);
-      const suggestions = normalizeSuggestionItems(parsed);
-      if (!hasSuggestionPayload(parsed)) {
-        recordDeepSeekFailure('invalid_response', { openCircuit: false });
-        if (attempt < maxRetries && (!deadline || Date.now() < deadline - 300)) continue;
-        return [];
-      }
-      recordDeepSeekSuccess();
-      return suggestions;
-    } catch (error) {
-      clearTimeout(timer);
-      lastCategory = categoryFromError(error);
-      if (attempt < maxRetries && lastCategory !== 'invalid_response' && (!deadline || Date.now() < deadline - 300)) continue;
-    }
-  }
-  recordDeepSeekFailure(lastCategory);
-  return [];
-}
-
-async function buildFieldSuggestions(data, text) {
-  const targets = buildFieldSuggestionTargets(data);
-  const targetPaths = new Map(targets.map(item => [item.path, item]));
-  const deadline = Date.now() + DEEPSEEK_SUGGESTION_TOTAL_MS;
-  const items = [];
-  for (const targetBatch of batchesOf(targets, DEEPSEEK_SUGGESTION_BATCH_SIZE)) {
-    if (Date.now() >= deadline - 300) break;
-    items.push(...await requestDeepSeekSuggestionItems(text, targetBatch, { deadline }));
-  }
-  const suggestions = {};
-  for (const item of items) {
-    const pathKey = normalizeLine(item?.path);
-    const suggestion = normalizeSuggestionItem(item, targetPaths, text);
-    if (!suggestion || suggestions[pathKey]) continue;
-    suggestions[pathKey] = suggestion;
-  }
-  return suggestions;
-}
-
-async function requestDeepSeekValues(text) {
-  if (process.env.STRUCTURED_OUTPUT_MOCK_DEEPSEEK) return safeMockDeepSeekValues();
-  const config = deepSeekConfig();
-  if (!config.configured) return [];
-
-  const prompt = [
-    '你只从给定原文中抽取单一明确值。',
-    '每个字段最多给一个值；没有把握返回空数组。',
-    '返回 JSON：{"field_values":[{"path":"","value":"","source_text":""}]}',
-    'source_text 必须逐字来自原文。',
-    '',
-    text.slice(0, 12000)
-  ].join('\n');
-
-  try {
-    const response = await fetch(deepSeekRequestUrl(config), {
-      method: 'POST',
-      headers: deepSeekHeaders(config),
-      body: JSON.stringify(deepSeekRequestBody(config, prompt, 1000))
-    });
-    if (!response.ok) return [];
-    const payload = await response.json();
-    const content = textFromDeepSeekPayload(config, payload);
-    if (!content) return [];
-    const parsed = parseJsonObjectText(content);
-    return normalizeValueItems(parsed);
-  } catch (_) {
-    return [];
-  }
-}
-
-function applyExtractedValue(data, item, context, text) {
-  if (!item || typeof item !== 'object') return;
-  const sourceText = String(item.source_text || '').trim();
-  const value = typeof item.value === 'string' ? item.value.trim() : item.value;
-  if (!sourceText || !value || !String(text).includes(sourceText)) return;
-  if (item.path === 'mdm_requirement_catalog.0.object') {
-    data.mdm_requirement_catalog = [{
-      requirement_ref: 'mdm_req_1',
-      object: String(value),
-      key_fields: [],
-      owner_dept: null,
-      requirement: '由制度原文明确提出',
-      evidence_refs: ['EV-DOC-001']
-    }];
-    addSource(context.fieldSources, context.fieldOrigins, 'mdm_requirement_catalog.0.object', text, sourceText, context.sourceName);
-  }
-}
-
-async function applyDeepSeekValues(data, text, context) {
-  const values = await requestDeepSeekValues(text);
-  const firstByPath = new Map();
-  for (const item of values) {
-    if (!item || !item.path || firstByPath.has(item.path)) continue;
-    firstByPath.set(item.path, item);
-  }
-  for (const item of firstByPath.values()) {
-    applyExtractedValue(data, item, context, text);
-  }
 }
 
 function statsFrom(data) {
@@ -3106,7 +2651,6 @@ async function extractFromText(rawText, options = {}) {
     });
   }
 
-  if (options.includeDeepSeekValues) await applyDeepSeekValues(data, text, context);
   context.fieldSuggestions = {};
   applyActorRoleWarnings(data, context);
   addRoleEvidenceAndReviewItems(data, context);
@@ -3142,22 +2686,37 @@ async function sourceFromUpload(file) {
   throw new Error(`不支持的格式: ${ext}。请上传 .docx / .txt / .md`);
 }
 
-async function textFromUpload(file) {
-  return (await sourceFromUpload(file)).text;
+function referenceMaterialFromSource({ sourceName, rawText, fileBuffer = null, parsedData = null }) {
+  const basisType = parsedData?.draft?.basis_type;
+  const extension = path.extname(sourceName || '').toLowerCase();
+  const materialType = basisType === '表单 / 台账'
+    ? '表单或记录'
+    : extension === '.txt' || extension === '.md'
+      ? '现行业务操作说明'
+      : '现有制度';
+  return {
+    material_ref: `material_${crypto.randomBytes(8).toString('hex')}`,
+    material_type: materialType,
+    material_name: sourceName || '',
+    document_no: parsedData?.draft?.document_no || null,
+    version: parsedData?.draft?.planned_edition || null,
+    file_sha256: fileBuffer ? crypto.createHash('sha256').update(fileBuffer).digest('hex') : null,
+    readable_text: rawText || '',
+    provider_department: '',
+    provider_name: '',
+    as_of_date: null
+  };
 }
 
+app.get('/vendor/cytoscape.min.js', (_req, res) => {
+  res.type('application/javascript').sendFile(cytoscapeBrowserPath);
+});
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json({ limit: '10mb' }));
 
-app.post('/api/session', (_req, res) => {
-  res.json({ sessionId: sessionId() });
-});
-
 app.post('/api/upload', upload.single('file'), async (req, res) => {
   try {
-    const sid = req.body.sessionId || req.headers['x-session-id'];
     const rid = requestId(req.body.requestId || req.headers['x-request-id']);
-    if (!sid) return res.status(400).json({ error: '缺少 sessionId' });
     if (!req.file) return res.status(400).json({ error: '未收到文件' });
 
     const normalizedFileName = normalizeUploadedFileName(req.file.originalname);
@@ -3171,7 +2730,6 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
       sourceTables: source.tables
     });
     res.json({
-      sessionId: sid,
       requestId: rid,
       documentName: normalizedFileName,
       data: result.data,
@@ -3179,6 +2737,12 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
       fieldOrigins: result.fieldOrigins,
       fieldWarnings: result.fieldWarnings,
       fieldSuggestions: result.fieldSuggestions,
+      referenceMaterial: referenceMaterialFromSource({
+        sourceName: normalizedFileName,
+        rawText,
+        fileBuffer: req.file.buffer,
+        parsedData: result.data
+      }),
       enums: publicEnums(),
       stats: result.stats
     });
@@ -3187,36 +2751,13 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
   }
 });
 
-app.post('/api/suggestions', upload.single('file'), async (req, res) => {
-  try {
-    const sid = req.body.sessionId || req.headers['x-session-id'];
-    const rid = requestId(req.body.requestId || req.headers['x-request-id']);
-    if (!sid) return res.status(400).json({ error: '缺少 sessionId' });
-    if (!req.file) return res.status(400).json({ error: '未收到文件' });
-    const data = JSON.parse(req.body.data || '{}');
-    const rawText = await textFromUpload(req.file);
-    if (!rawText.trim()) return res.status(400).json({ error: '文档内容为空' });
-    const fieldSuggestions = await buildFieldSuggestions(data, rawText);
-    res.json({
-      sessionId: sid,
-      requestId: rid,
-      fieldSuggestions
-    });
-  } catch (error) {
-    res.status(500).json({ error: '填报建议生成失败', detail: error.message });
-  }
-});
-
 app.post('/api/paste', async (req, res) => {
   try {
-    const sid = req.body.sessionId || req.headers['x-session-id'];
     const rid = requestId(req.body.requestId || req.headers['x-request-id']);
-    if (!sid) return res.status(400).json({ error: '缺少 sessionId' });
     const text = req.body.text || '';
     if (!text.trim()) return res.status(400).json({ error: '内容为空' });
     const result = await extractFromText(text, { sourceName: '粘贴文本' });
     res.json({
-      sessionId: sid,
       requestId: rid,
       documentName: '粘贴文本',
       data: result.data,
@@ -3224,6 +2765,11 @@ app.post('/api/paste', async (req, res) => {
       fieldOrigins: result.fieldOrigins,
       fieldWarnings: result.fieldWarnings,
       fieldSuggestions: result.fieldSuggestions,
+      referenceMaterial: referenceMaterialFromSource({
+        sourceName: '粘贴文本',
+        rawText: text,
+        parsedData: result.data
+      }),
       enums: publicEnums(),
       stats: result.stats
     });
@@ -3237,6 +2783,17 @@ app.post('/api/validate', (req, res) => {
   if (!data || typeof data !== 'object' || Array.isArray(data)) {
     return res.status(400).json({ error: '缺少待校验的结构化文件内容' });
   }
+  const schemaVersion = data.schema_version;
+  if (schemaVersion === 'process-governance-v1') {
+    const normalizedData = JSON.parse(JSON.stringify(data));
+    return res.json({
+      ...processGovernanceValidationResult(normalizedData),
+      data: normalizedData
+    });
+  }
+  if (schemaVersion !== 'document-structured-output-v2') {
+    return res.status(400).json({ error: `不支持的结构化文件版本: ${schemaVersion || '未提供'}` });
+  }
   const normalizedData = normalizeOptionalContractValues(JSON.parse(JSON.stringify(data)), STANDARD_SCHEMA);
   return res.json({
     ...contractValidationResult(normalizedData),
@@ -3248,22 +2805,53 @@ app.all(['/api/data', '/api/export'], (_req, res) => {
   res.status(404).json({ error: '当前工具不保存页面内容，请在当前页面导出结构化文件。' });
 });
 
-app.get('/api/schema', (_req, res) => res.json(STANDARD_SCHEMA));
+app.get('/api/schema', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  if (req.query.version === 'document-structured-output-v2') return res.json(STANDARD_SCHEMA);
+  res.set('X-Infomat-Schema-Digest', PROCESS_GOVERNANCE_SCHEMA_DIGEST);
+  return res.json(PROCESS_GOVERNANCE_SCHEMA);
+});
+app.get('/api/template', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const version = req.query.version || 'process-governance-v1';
+  if (version !== 'process-governance-v1') {
+    return res.status(400).json({ error: `不支持的空白模板版本: ${version}` });
+  }
+  return res.json({
+    app_commit: APP_COMMIT,
+    schema_version: 'process-governance-v1',
+    schema_digest: PROCESS_GOVERNANCE_SCHEMA_DIGEST,
+    data: createEmptyProcessGovernanceDocument()
+  });
+});
 app.get('/api/enums', (_req, res) => res.json(publicEnums()));
 app.get('/api/health', (_req, res) => {
+  res.set('Cache-Control', 'no-store');
   res.json({
     status: 'ok',
     service: 'structured-output-service',
+    app_commit: APP_COMMIT,
+    schema_version: 'process-governance-v1',
+    schema_digest: PROCESS_GOVERNANCE_SCHEMA_DIGEST,
     port: PORT,
-    uptime: process.uptime(),
-    deepseek: deepSeekHealthSummary()
+    host: HOST,
+    uptime: process.uptime()
   });
+});
+app.use((error, _req, res, next) => {
+  if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
+    return res.status(413).json({ error: '文件超过10MB，未读取任何内容。' });
+  }
+  if (error instanceof multer.MulterError) {
+    return res.status(400).json({ error: '文件上传失败', detail: error.message });
+  }
+  return next(error);
 });
 app.get('*', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
 if (require.main === module) {
-  app.listen(PORT, () => {
-    console.log(`structured-output-service listening on http://localhost:${PORT}`);
+  app.listen(PORT, HOST, () => {
+    console.log(`structured-output-service listening on http://${HOST}:${PORT}`);
     console.log('stateless: request data is not stored');
   });
 }
@@ -3271,8 +2859,11 @@ if (require.main === module) {
 module.exports = {
   app,
   createEmptyDocument,
+  createEmptyProcessGovernanceDocument,
   decodeTextBuffer,
   extractFromText,
   buildProjection,
-  statsFrom
+  statsFrom,
+  APP_COMMIT,
+  PROCESS_GOVERNANCE_SCHEMA_DIGEST
 };

@@ -22,7 +22,7 @@ Infomat 是航空复材制造领域的信息化资料与工具仓库，包含：
 
 - `apps/`：可运行应用
   - `apps/mdm-platform/`：MDM 平台（Express + MySQL 目标形态 + 原生前端；SQLite 仅作历史/待迁移实现说明）
-  - `apps/structured-output-service/`：文档结构化输出辅助服务（本地 3001，按标准合同提供无状态编辑和结构化文件导入导出）
+  - `apps/structured-output-service/`：单流程治理编制工具（局域网 3001，按统一结构规则提供无状态编辑和结构化文件导入导出）
   - `apps/weekly-action-service/`：PMO 周会行动项服务（本地 3002，保存每周例会行动项运行台账）
 - `docs/`：资料、说明、方案与沉淀
   - `docs/samples/`：必要样例（用于复现、格式示例与对齐）
@@ -94,7 +94,7 @@ npm run build:work-role-data
 npm run test:work-role-contract
 ```
 
-本地文档结构化输出辅助服务在 [apps/structured-output-service](apps/structured-output-service/README.md)，默认端口 `3001`。该服务只在当前页面辅助填充和编辑结构化输出，支持文件拖入和结构化文件导入；可只读消费流程映射、花名册岗位候选和 `docs/work-role-data.json`，但始终保留制度原文称谓，自动匹配最多形成 `proposed`；用户主动导出结构化文件；它不保存用户内容，也不写回流程输入基线、花名册或工作角色真源。
+单流程治理编制工具在 [apps/structured-output-service](apps/structured-output-service/README.md)，默认监听`0.0.0.0:3001`，公司局域网用户通过`http://<服务器局域网IP>:3001`直接使用。该工具只在当前页面内存中编制一条流程，支持空白新建、历史JSON迁移、花名册岗位选择、主表和明细表填写、只读流程图预览及单流程JSON导入导出。页面不提供编制参考材料入口，不保存用户内容，不写回流程输入基线、花名册或工作角色真源，也不依赖DeepSeek、结构化填报助手或认证网关。
 
 PMO 周会行动项服务在 [apps/weekly-action-service](apps/weekly-action-service/README.md)，默认端口 `3002`。该服务用于登记和跟踪每周例会行动项、风险、问题、变更和责任池事项，数据保存到服务端本机运行台账；它不写回 PMO Markdown 真源、`tasks.json` 或 MDM 数据库。
 
