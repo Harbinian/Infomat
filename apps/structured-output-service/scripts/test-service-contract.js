@@ -498,11 +498,11 @@ function testProcessDiagramModel() {
   const decisionNode = model.nodes.find(node => node.classes.includes('node-decision'));
   const splitNode = model.nodes.find(node => node.classes.includes('node-parallel-split'));
   const joinNode = model.nodes.find(node => node.classes.includes('node-parallel-join'));
-  assert.match(actionNode.data.label, /岗位：会计员/);
-  assert.match(decisionNode.data.label, /×.*判断材料/);
-  assert.match(decisionNode.data.label, /岗位：法务/);
-  assert.match(splitNode.data.label, /＋.*并行办理/);
-  assert.match(joinNode.data.label, /执行信息：历史未收录岗位/);
+  assert.match(actionNode.data.rawLabel, /岗位：会计员/);
+  assert.match(decisionNode.data.rawLabel, /×.*判断材料/);
+  assert.match(decisionNode.data.rawLabel, /岗位：法务/);
+  assert.match(splitNode.data.rawLabel, /＋.*并行办理/);
+  assert.match(joinNode.data.rawLabel, /执行信息：历史未收录岗位/);
   assert.ok(model.nodes.some(node =>
     node.classes.includes('countersign-badge') && node.data.label === '会签×2'
   ));
@@ -515,9 +515,9 @@ function testProcessDiagramModel() {
   assert.ok(internalCallNode);
   assert.equal(internalCallNode.data.laneKey, decisionNode.data.laneKey, 'an internal call stays in the caller department lane');
   assert.ok(model.edges.some(edge => edge.classes.includes('relation-sequence')));
-  assert.ok(model.edges.some(edge => edge.classes.includes('relation-condition') && /材料齐全/.test(edge.data.label)));
-  assert.ok(model.edges.some(edge => edge.classes.includes('relation-loop') && /材料不齐全/.test(edge.data.label)));
-  assert.ok(model.edges.some(edge => edge.classes.includes('relation-parallel') && /全部分支完成后汇合/.test(edge.data.label)));
+  assert.ok(model.edges.some(edge => edge.classes.includes('relation-condition') && /材料齐全/.test(edge.data.rawLabel)));
+  assert.ok(model.edges.some(edge => edge.classes.includes('relation-loop') && /材料不齐全/.test(edge.data.rawLabel)));
+  assert.ok(model.edges.some(edge => edge.classes.includes('relation-parallel') && /全部分支完成后汇合/.test(edge.data.rawLabel)));
   assert.ok(model.edges.some(edge => edge.classes.includes('message-flow') && edge.data.focusKind === 'handoff'));
   assert.ok(model.edges.some(edge => edge.classes.includes('return-message-flow') && edge.data.focusKind === 'handoff'));
   assert.ok(model.edges.some(edge => edge.classes.includes('internal-return-edge') && edge.data.focusKind === 'call'));
@@ -573,6 +573,138 @@ function testProcessDiagramModel() {
   const invalidHandoffModel = buildGraphModel(invalidHandoff, { departmentOrder });
   assert.equal(invalidHandoffModel.edges.some(edge => edge.classes.includes('message-flow')), false);
   assert.ok(invalidHandoffModel.unresolvedItems.some(item => /有效的发送行为/.test(item.message)));
+
+  const readabilityDraft = createDraft({
+    behaviors: [
+      makeBehavior(
+        'behavior_compile_report',
+        '编制管理评审报告（含评审结论、改进决定、资源需求）',
+        'action',
+        '财务部会计员'
+      ),
+      makeBehavior(
+        'behavior_review_report',
+        '审核管理评审报告',
+        'decision',
+        '财务部财务负责人'
+      ),
+      makeBehavior(
+        'behavior_approve_report',
+        '批准管理评审报告',
+        'decision',
+        '财务部财务负责人'
+      )
+    ],
+    flow_relations: [
+      {
+        relation_ref: 'relation_compile_to_review',
+        relation_type: 'sequence',
+        from_behavior_ref: 'behavior_compile_report',
+        to_behavior_ref: 'behavior_review_report',
+        condition: '',
+        join_mode: ''
+      },
+      {
+        relation_ref: 'relation_review_to_approve',
+        relation_type: 'condition',
+        from_behavior_ref: 'behavior_review_report',
+        to_behavior_ref: 'behavior_approve_report',
+        condition: '报告内容完整，数据准确，意见合理。',
+        join_mode: ''
+      },
+      {
+        relation_ref: 'relation_review_to_compile',
+        relation_type: 'loop',
+        from_behavior_ref: 'behavior_review_report',
+        to_behavior_ref: 'behavior_compile_report',
+        condition: '报告内容不完整，数据不准确，意见不合理。',
+        join_mode: ''
+      },
+      {
+        relation_ref: 'relation_approve_to_compile',
+        relation_type: 'loop',
+        from_behavior_ref: 'behavior_approve_report',
+        to_behavior_ref: 'behavior_compile_report',
+        condition: '报告内容不完整，数据不准确，意见不合理。',
+        join_mode: ''
+      }
+    ],
+    cross_department_handoffs: [],
+    internal_process_calls: []
+  });
+  const readabilityBefore = JSON.stringify(readabilityDraft);
+  const readabilityModel = buildGraphModel(readabilityDraft, { departmentOrder });
+  assert.equal(
+    JSON.stringify(readabilityDraft),
+    readabilityBefore,
+    'display wrapping and route allocation must not modify the imported process JSON'
+  );
+  assert.equal(readabilityModel.reviewCount, 0, 'explicit internal loops must not produce relation type review items');
+  const readabilityNodes = readabilityModel.nodes.filter(node => node.classes.includes('behavior-node'));
+  readabilityNodes.forEach(node => {
+    assert.equal(
+      node.data.label.replace(/\n/g, ''),
+      node.data.rawLabel.replace(/\n/g, ''),
+      'display-only line breaks must preserve every node label character'
+    );
+    assert.ok(node.data.labelHeight <= node.data.nodeHeight, 'the wrapped node label must fit inside the node height');
+    assert.ok(node.data.textMaxWidth < node.data.nodeWidth, 'the wrapped node label must fit inside the node width');
+  });
+  const longActionNode = readabilityNodes.find(node => node.data.focusRef === 'behavior_compile_report');
+  assert.ok(longActionNode.data.labelLineCount >= 3, 'continuous long Chinese names must wrap onto multiple lines');
+  const readabilityRelations = readabilityModel.edges.filter(edge => edge.data.focusKind === 'relation');
+  readabilityRelations.forEach(edge => {
+    assert.equal(
+      edge.data.label.replace(/\n/g, ''),
+      edge.data.rawLabel.replace(/\n/g, ''),
+      'display-only line breaks must preserve every relation label character'
+    );
+    assert.ok(edge.data.labelWidth <= 220, 'relation labels must use the agreed maximum width');
+  });
+  const trackedReadabilityRelations = readabilityRelations.filter(edge =>
+    ['relation_review_to_approve', 'relation_review_to_compile', 'relation_approve_to_compile']
+      .includes(edge.data.focusRef)
+  );
+  assert.equal(
+    new Set(trackedReadabilityRelations.map(edge => edge.data.routeTrackKey)).size,
+    trackedReadabilityRelations.length,
+    'the decision branch and two return paths must use separately identifiable tracks'
+  );
+  const readabilityLoops = readabilityRelations.filter(edge => edge.classes.includes('relation-loop'));
+  assert.equal(new Set(readabilityLoops.map(edge => edge.data.routeOffset)).size, 2);
+  assert.ok(readabilityLoops.every(edge => edge.data.routePlacement === 'lower'));
+  assert.ok(
+    readabilityModel.layout.rankPositions[1] - readabilityModel.layout.rankPositions[0] >= 440,
+    'adjacent diagram ranks must leave at least the minimum safe gap'
+  );
+  assert.equal(
+    readabilityModel.layout.collisions.length,
+    0,
+    'the screenshot regression model must not contain node, label, or route-track collisions'
+  );
+
+  const cycleDraft = JSON.parse(JSON.stringify(readabilityDraft));
+  cycleDraft.flow_relations[2].relation_type = 'condition';
+  cycleDraft.flow_relations[3].relation_type = 'condition';
+  const cycleBefore = JSON.stringify(cycleDraft);
+  const cycleModel = buildGraphModel(cycleDraft, { departmentOrder });
+  assert.equal(JSON.stringify(cycleDraft), cycleBefore, 'cycle review must not rewrite relation types or source JSON');
+  assert.equal(cycleModel.reviewCount, 4);
+  assert.ok(cycleModel.reviewItems.every(item =>
+    item.focusKind === 'relation'
+      && item.message === '该关系与其他非回路关系形成闭环；如果这是退回前序行为，请选择“流程内部回路”。'
+  ));
+  assert.equal(
+    new Set(cycleModel.nodes
+      .filter(node => node.classes.includes('behavior-node'))
+      .map(node => `${node.position.x}:${node.position.y}`)).size,
+    3,
+    'nodes in a non-loop cycle group must retain deterministic distinct positions'
+  );
+  assert.ok(
+    cycleModel.nodes.find(node => node.data.focusRef === 'behavior_compile_report').position.x
+      < cycleModel.nodes.find(node => node.data.focusRef === 'behavior_review_report').position.x
+  );
 
   const complexDepartments = [
     ['财务部', '会计员'],
@@ -669,6 +801,27 @@ function testProcessDiagramModel() {
     new Set(complexBehaviorNodes.map(node => `${node.position.x}:${node.position.y}`)).size,
     complexBehaviorNodes.length,
     'the representative 40-behavior flow must not overlap behavior nodes'
+  );
+  const behaviorBounds = complexBehaviorNodes.map(node => ({
+    id: node.data.id,
+    x1: node.position.x - node.data.nodeWidth / 2,
+    x2: node.position.x + node.data.nodeWidth / 2,
+    y1: node.position.y - node.data.nodeHeight / 2,
+    y2: node.position.y + node.data.nodeHeight / 2
+  }));
+  behaviorBounds.forEach((left, leftIndex) => {
+    behaviorBounds.slice(leftIndex + 1).forEach(right => {
+      const overlaps = left.x1 < right.x2
+        && left.x2 > right.x1
+        && left.y1 < right.y2
+        && left.y2 > right.y1;
+      assert.equal(overlaps, false, `${left.id} and ${right.id} must have separate node boundaries`);
+    });
+  });
+  assert.equal(
+    complexModel.layout.collisions.length,
+    0,
+    'the representative 40-behavior flow must keep nodes, labels, and route tracks separate'
   );
 }
 
@@ -824,6 +977,8 @@ async function testFrontendContract() {
   assert.ok(html.includes('展开查看'));
   assert.ok(html.includes('适应画布'));
   assert.ok(html.includes('重置视图'));
+  assert.ok(html.includes('当前已聚焦流程开头，点击“适应画布”查看完整流程'));
+  assert.ok(html.includes('该关系与其他非回路关系形成闭环；如果这是退回前序行为，请选择“流程内部回路”。'));
   assert.ok(html.includes('let diagramExampleExpanded = false'));
   assert.ok(html.includes('let diagramExpanded = false'));
   assert.equal(html.includes('显示数据对象'), false);
@@ -836,6 +991,12 @@ async function testFrontendContract() {
   assert.match(diagramSource, /name:\s*'preset'/);
   assert.ok(diagramSource.includes('lane-header-node'));
   assert.ok(diagramSource.includes('countersign-badge'));
+  assert.ok(diagramSource.includes('const EDGE_LABEL_MAX_WIDTH = 220'));
+  assert.ok(diagramSource.includes('const MIN_COLUMN_GAP = 440'));
+  assert.ok(diagramSource.includes('const FULL_VIEW_MIN_ZOOM = 0.6'));
+  assert.ok(diagramSource.includes("'text-overflow-wrap': 'anywhere'"));
+  assert.ok(diagramSource.includes("'control-point-distances': 'data(controlPointDistance)'"));
+  assert.match(diagramSource, /minZoom:\s*0\.03/);
   assert.ok(diagramSource.includes("'curve-style': 'taxi'"));
   assert.ok(diagramSource.includes("'source-arrow-fill': 'hollow'"));
   assert.ok(diagramSource.includes("'target-arrow-fill': 'hollow'"));

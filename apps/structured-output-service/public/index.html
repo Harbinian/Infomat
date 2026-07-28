@@ -1879,13 +1879,16 @@
         namedBehaviorCount,
         localEdgeCount: 0,
         unresolvedItems: [],
-        unresolvedCount: 0
+        unresolvedCount: 0,
+        reviewItems: [],
+        reviewCount: 0
       };
     }
 
     function previewStatus(model) {
       if (!model.namedBehaviorCount) return { label: '待填写行为', className: 'waiting' };
       if (model.unresolvedCount) return { label: `有 ${model.unresolvedCount} 项未显示`, className: 'warning' };
+      if (model.reviewCount) return { label: `有 ${model.reviewCount} 项关系待核对`, className: 'warning' };
       return { label: '可查看', className: 'ready' };
     }
 
@@ -2003,8 +2006,8 @@
     }
 
     function renderDiagramWarnings(model) {
-      if (!model.unresolvedItems.length) return '';
-      return `
+      const relationReviewMessage = '该关系与其他非回路关系形成闭环；如果这是退回前序行为，请选择“流程内部回路”。';
+      const unresolvedWarnings = model.unresolvedItems.length ? `
         <div class="diagram-warning-list" aria-label="未显示项目">
           <strong>有 ${model.unresolvedCount} 项内容无法绘制，请返回文字编制补齐：</strong>
           ${model.unresolvedItems.map(item => `
@@ -2015,7 +2018,20 @@
               data-focus-ref="${escapeAttribute(item.focusRef)}"
             >${escapeHtml(item.message)}</button>
           `).join('')}
-        </div>`;
+        </div>` : '';
+      const relationReviews = model.reviewItems?.length ? `
+        <div class="diagram-warning-list" aria-label="关系类型请核对">
+          <strong>关系类型请核对（不影响导出）：</strong>
+          ${model.reviewItems.map(item => `
+            <button
+              class="diagram-warning-button"
+              data-action="focus-editor"
+              data-focus-kind="${escapeAttribute(item.focusKind)}"
+              data-focus-ref="${escapeAttribute(item.focusRef)}"
+            >${escapeHtml(item.message || relationReviewMessage)}</button>
+          `).join('')}
+        </div>` : '';
+      return `${unresolvedWarnings}${relationReviews}`;
     }
 
     function renderDiagramPanel(model) {
@@ -2055,6 +2071,9 @@
             ${renderDiagramLegend()}
             ${importedNotice}
             ${relationNotice}
+            <div class="diagram-notice" id="diagramViewportNotice" role="status" hidden>
+              当前已聚焦流程开头，点击“适应画布”查看完整流程
+            </div>
             <div
               class="diagram-canvas"
               id="processDiagramCanvas"
@@ -2091,7 +2110,11 @@
           container,
           documentData: data,
           departmentOrder: actorDepartments(),
-          onFocus: focusEditorItem
+          onFocus: focusEditorItem,
+          onViewportModeChange(viewport) {
+            const notice = document.getElementById('diagramViewportNotice');
+            if (notice) notice.hidden = viewport?.mode !== 'start';
+          }
         });
       } catch (error) {
         container.hidden = true;
