@@ -21,9 +21,15 @@
   const UNKNOWN_DEPARTMENT_LANE = '__unknown_department__';
   const LANE_HEADER_WIDTH = 190;
   const LANE_MIN_HEIGHT = 154;
-  const LANE_SLOT_GAP = 126;
-  const COLUMN_GAP = 290;
+  const LANE_NODE_GAP = 36;
+  const LANE_VERTICAL_PADDING = 28;
+  const EDGE_LABEL_MAX_WIDTH = 220;
+  const MIN_COLUMN_GAP = 440;
+  const COLUMN_LABEL_CLEARANCE = 48;
+  const ROUTE_TRACK_GAP = 24;
+  const FULL_VIEW_MIN_ZOOM = 0.6;
   const POOL_TITLE_HEIGHT = 52;
+  const RELATION_CYCLE_REVIEW_MESSAGE = '该关系与其他非回路关系形成闭环；如果这是退回前序行为，请选择“流程内部回路”。';
 
   function text(value) {
     return value == null ? '' : String(value).trim();
@@ -39,6 +45,106 @@
 
   function graphRef(prefix, index, value) {
     return `${prefix}:${index}:${text(value) || 'missing-ref'}`;
+  }
+
+  function characterUnits(character) {
+    return /^[\u0000-\u00ff]$/.test(character) ? 0.56 : 1;
+  }
+
+  function wrapDisplayText(value, maxUnits) {
+    const rawLabel = value == null ? '' : String(value);
+    if (!rawLabel) {
+      return {
+        rawLabel,
+        label: '',
+        lineCount: 0,
+        maxLineUnits: 0
+      };
+    }
+    const lines = [];
+    rawLabel.split('\n').forEach(paragraph => {
+      if (!paragraph) {
+        lines.push('');
+        return;
+      }
+      let current = '';
+      let currentUnits = 0;
+      Array.from(paragraph).forEach(character => {
+        const units = characterUnits(character);
+        if (current && currentUnits + units > maxUnits) {
+          lines.push(current);
+          current = character;
+          currentUnits = units;
+          return;
+        }
+        current += character;
+        currentUnits += units;
+      });
+      lines.push(current);
+    });
+    return {
+      rawLabel,
+      label: lines.join('\n'),
+      lineCount: lines.length,
+      maxLineUnits: Math.max(
+        0,
+        ...lines.map(line => Array.from(line).reduce((sum, character) => sum + characterUnits(character), 0))
+      )
+    };
+  }
+
+  function nodeDisplayMetrics(rawLabel, nodeKind) {
+    const diamond = nodeKind === 'decision'
+      || nodeKind === 'parallel-split'
+      || nodeKind === 'parallel-join';
+    const external = nodeKind === 'external';
+    const internal = nodeKind === 'internal';
+    const maxUnits = diamond ? 11 : external ? 19 : internal ? 16 : 15;
+    const wrapped = wrapDisplayText(rawLabel, maxUnits);
+    const lineHeight = external ? 17 : 18;
+    const verticalPadding = diamond ? 0 : external ? 34 : 30;
+    const measuredTextWidth = Math.ceil(wrapped.maxLineUnits * (external ? 10.5 : 12));
+    const measuredTextHeight = wrapped.lineCount * lineHeight;
+    if (diamond) {
+      const textMaxWidth = Math.max(132, measuredTextWidth);
+      const labelHeight = measuredTextHeight + 14;
+      return {
+        ...wrapped,
+        nodeWidth: Math.ceil(Math.max(276, textMaxWidth / 0.46)),
+        nodeHeight: Math.ceil(Math.max(190, labelHeight / 0.42)),
+        textMaxWidth,
+        labelWidth: textMaxWidth,
+        labelHeight,
+        lineHeight,
+        verticalPadding: 14
+      };
+    }
+    const baseWidth = external ? 286 : internal ? 238 : 232;
+    const baseHeight = external ? 132 : internal ? 96 : 90;
+    const textMaxWidth = Math.max(1, Math.min(
+      external ? 254 : internal ? 206 : 204,
+      Math.max(measuredTextWidth, external ? 160 : 132)
+    ));
+    return {
+      ...wrapped,
+      nodeWidth: baseWidth,
+      nodeHeight: Math.max(baseHeight, measuredTextHeight + verticalPadding),
+      textMaxWidth,
+      labelWidth: textMaxWidth,
+      labelHeight: measuredTextHeight + verticalPadding,
+      lineHeight,
+      verticalPadding
+    };
+  }
+
+  function edgeDisplayMetrics(rawLabel) {
+    const wrapped = wrapDisplayText(rawLabel, 18);
+    const measuredWidth = Math.ceil(wrapped.maxLineUnits * 11 + 12);
+    return {
+      ...wrapped,
+      labelWidth: wrapped.lineCount ? Math.min(EDGE_LABEL_MAX_WIDTH, Math.max(72, measuredWidth)) : 0,
+      labelHeight: wrapped.lineCount ? wrapped.lineCount * 16 + 8 : 0
+    };
   }
 
   function relationLabel(relation) {
@@ -119,36 +225,120 @@
     return 'pending';
   }
 
-  function calculateRanks(nodeIds, relations, orderById) {
-    const rankById = new Map(nodeIds.map(id => [id, 0]));
+  function analyzeRelationGraph(nodeIds, relations, orderById) {
+    const nonLoopRelations = relations
+      .filter(item => item.relation.relation_type !== 'loop')
+      .sort((left, right) => left.index - right.index);
     const outgoing = new Map(nodeIds.map(id => [id, []]));
-    const indegree = new Map(nodeIds.map(id => [id, 0]));
+    nonLoopRelations.forEach(item => outgoing.get(item.sourceId)?.push(item));
+    outgoing.forEach(entries => entries.sort((left, right) => left.index - right.index));
 
-    relations
-      .filter(item => item.relation.relation_type !== 'loop' && item.sourceId !== item.targetId)
-      .forEach(item => {
-        outgoing.get(item.sourceId)?.push(item.targetId);
-        indegree.set(item.targetId, (indegree.get(item.targetId) || 0) + 1);
-      });
+    let nextIndex = 0;
+    const indexById = new Map();
+    const lowLinkById = new Map();
+    const stack = [];
+    const onStack = new Set();
+    const components = [];
 
-    const queue = nodeIds
-      .filter(id => indegree.get(id) === 0)
-      .sort((left, right) => orderById.get(left) - orderById.get(right));
-    const processed = new Set();
-    while (queue.length) {
-      const current = queue.shift();
-      if (processed.has(current)) continue;
-      processed.add(current);
-      (outgoing.get(current) || []).forEach(target => {
-        rankById.set(target, Math.max(rankById.get(target) || 0, (rankById.get(current) || 0) + 1));
-        indegree.set(target, (indegree.get(target) || 0) - 1);
-        if (indegree.get(target) === 0) {
-          queue.push(target);
-          queue.sort((left, right) => orderById.get(left) - orderById.get(right));
+    function visit(nodeId) {
+      indexById.set(nodeId, nextIndex);
+      lowLinkById.set(nodeId, nextIndex);
+      nextIndex += 1;
+      stack.push(nodeId);
+      onStack.add(nodeId);
+      (outgoing.get(nodeId) || []).forEach(item => {
+        const targetId = item.targetId;
+        if (!indexById.has(targetId)) {
+          visit(targetId);
+          lowLinkById.set(nodeId, Math.min(lowLinkById.get(nodeId), lowLinkById.get(targetId)));
+        } else if (onStack.has(targetId)) {
+          lowLinkById.set(nodeId, Math.min(lowLinkById.get(nodeId), indexById.get(targetId)));
         }
       });
+      if (lowLinkById.get(nodeId) !== indexById.get(nodeId)) return;
+      const component = [];
+      while (stack.length) {
+        const member = stack.pop();
+        onStack.delete(member);
+        component.push(member);
+        if (member === nodeId) break;
+      }
+      component.sort((left, right) => orderById.get(left) - orderById.get(right));
+      components.push(component);
     }
-    return rankById;
+
+    [...nodeIds]
+      .sort((left, right) => orderById.get(left) - orderById.get(right))
+      .forEach(nodeId => {
+        if (!indexById.has(nodeId)) visit(nodeId);
+      });
+
+    components.sort((left, right) => orderById.get(left[0]) - orderById.get(right[0]));
+    const componentByNode = new Map();
+    components.forEach((component, componentIndex) => {
+      component.forEach(nodeId => componentByNode.set(nodeId, componentIndex));
+    });
+    const cyclicComponents = new Set();
+    components.forEach((component, componentIndex) => {
+      if (component.length > 1) cyclicComponents.add(componentIndex);
+    });
+    nonLoopRelations.forEach(item => {
+      if (item.sourceId === item.targetId) cyclicComponents.add(componentByNode.get(item.sourceId));
+    });
+    const reviewRelationIndexes = new Set(
+      nonLoopRelations
+        .filter(item => {
+          const sourceComponent = componentByNode.get(item.sourceId);
+          return sourceComponent === componentByNode.get(item.targetId)
+            && cyclicComponents.has(sourceComponent);
+        })
+        .map(item => item.index)
+    );
+
+    const componentOutgoing = new Map(components.map((_component, index) => [index, new Set()]));
+    const componentIndegree = new Map(components.map((_component, index) => [index, 0]));
+    nonLoopRelations.forEach(item => {
+      const sourceComponent = componentByNode.get(item.sourceId);
+      const targetComponent = componentByNode.get(item.targetId);
+      if (sourceComponent === targetComponent || componentOutgoing.get(sourceComponent).has(targetComponent)) return;
+      componentOutgoing.get(sourceComponent).add(targetComponent);
+      componentIndegree.set(targetComponent, componentIndegree.get(targetComponent) + 1);
+    });
+    const componentRank = new Map(components.map((_component, index) => [index, 0]));
+    const componentOrder = index => orderById.get(components[index][0]);
+    const queue = [...componentIndegree.entries()]
+      .filter(([, indegree]) => indegree === 0)
+      .map(([componentIndex]) => componentIndex)
+      .sort((left, right) => componentOrder(left) - componentOrder(right));
+    while (queue.length) {
+      const componentIndex = queue.shift();
+      [...componentOutgoing.get(componentIndex)]
+        .sort((left, right) => componentOrder(left) - componentOrder(right))
+        .forEach(targetComponent => {
+          componentRank.set(
+            targetComponent,
+            Math.max(
+              componentRank.get(targetComponent),
+              componentRank.get(componentIndex) + components[componentIndex].length
+            )
+          );
+          componentIndegree.set(targetComponent, componentIndegree.get(targetComponent) - 1);
+          if (componentIndegree.get(targetComponent) === 0) {
+            queue.push(targetComponent);
+            queue.sort((left, right) => componentOrder(left) - componentOrder(right));
+          }
+        });
+    }
+    const rankById = new Map();
+    components.forEach((component, componentIndex) => {
+      component.forEach((nodeId, localIndex) => {
+        rankById.set(nodeId, componentRank.get(componentIndex) + localIndex);
+      });
+    });
+    return {
+      rankById,
+      reviewRelationIndexes
+    };
   }
 
   function buildLaneOrder(usedLaneKeys, owningDepartment, departmentOrder) {
@@ -173,6 +363,189 @@
     return laneKey;
   }
 
+  function allocateRelationRoutes(validRelations, behaviorRecordById, rankById) {
+    const outgoingCount = new Map();
+    const endpointCount = new Map();
+    validRelations.forEach(item => {
+      outgoingCount.set(item.sourceId, (outgoingCount.get(item.sourceId) || 0) + 1);
+      const endpointKey = `${item.sourceId}->${item.targetId}`;
+      endpointCount.set(endpointKey, (endpointCount.get(endpointKey) || 0) + 1);
+    });
+    const trackStateByBucket = new Map();
+    const laneReserves = new Map();
+
+    validRelations
+      .sort((left, right) => left.index - right.index)
+      .forEach(item => {
+        const sourceRecord = behaviorRecordById.get(item.sourceId);
+        const targetRecord = behaviorRecordById.get(item.targetId);
+        const sourceRank = rankById.get(item.sourceId) || 0;
+        const targetRank = rankById.get(item.targetId) || 0;
+        const endpointKey = `${item.sourceId}->${item.targetId}`;
+        const sourceNodeType = text(sourceRecord?.behavior?.node_type);
+        const branchSource = (sourceNodeType === 'decision' || sourceNodeType === 'parallel_split')
+          && (outgoingCount.get(item.sourceId) || 0) > 1;
+        const backward = targetRank <= sourceRank;
+        const crossesRanks = targetRank - sourceRank > 1;
+        const duplicateRoute = (endpointCount.get(endpointKey) || 0) > 1;
+        const routePlacement = item.relation.relation_type === 'loop' || backward
+          ? 'lower'
+          : branchSource || crossesRanks || duplicateRoute
+            ? 'upper'
+            : 'direct';
+        const labelDisplay = edgeDisplayMetrics(relationLabel(item.relation));
+        const sameLane = sourceRecord?.node.data.laneKey === targetRecord?.node.data.laneKey;
+        let routeSlot = 0;
+        let routeOffset = 0;
+        let routeBucket = 'direct';
+        if (routePlacement !== 'direct') {
+          routeBucket = `${routePlacement}:${sameLane ? sourceRecord.node.data.laneKey : 'cross-lane'}`;
+          const state = trackStateByBucket.get(routeBucket) || {
+            count: 0,
+            nextOffset: 0
+          };
+          routeSlot = state.count + 1;
+          const sourceHalfHeight = (sourceRecord?.node.data.nodeHeight || 90) / 2;
+          const targetHalfHeight = (targetRecord?.node.data.nodeHeight || 90) / 2;
+          const baseClearance = Math.max(sourceHalfHeight, targetHalfHeight) + 42;
+          routeOffset = Math.max(
+            baseClearance + labelDisplay.labelHeight / 2,
+            state.nextOffset + labelDisplay.labelHeight / 2
+          );
+          state.count = routeSlot;
+          state.nextOffset = routeOffset + labelDisplay.labelHeight / 2 + ROUTE_TRACK_GAP;
+          trackStateByBucket.set(routeBucket, state);
+          if (sameLane) {
+            const laneKey = sourceRecord.node.data.laneKey;
+            const reserve = laneReserves.get(laneKey) || { upper: 0, lower: 0 };
+            reserve[routePlacement] = Math.max(
+              reserve[routePlacement],
+              routeOffset + labelDisplay.labelHeight / 2 + ROUTE_TRACK_GAP
+            );
+            laneReserves.set(laneKey, reserve);
+          }
+        }
+        item.route = {
+          placement: routePlacement,
+          slot: routeSlot,
+          offset: Math.ceil(routeOffset),
+          bucket: routeBucket,
+          trackKey: `${routeBucket}:${routeSlot}:${item.index}`,
+          labelDisplay
+        };
+      });
+    return laneReserves;
+  }
+
+  function relationEdge(item, behaviorRecordById, reviewRelationIndexes) {
+    const sourceNode = behaviorRecordById.get(item.sourceId).node;
+    const targetNode = behaviorRecordById.get(item.targetId).node;
+    const route = item.route;
+    const sourcePosition = sourceNode.position;
+    const targetPosition = targetNode.position;
+    const deltaX = targetPosition.x - sourcePosition.x;
+    const deltaY = targetPosition.y - sourcePosition.y;
+    const length = Math.max(1, Math.hypot(deltaX, deltaY));
+    const normalX = -deltaY / length;
+    const normalY = deltaX / length;
+    const desiredVerticalDirection = route.placement === 'upper' ? -1 : 1;
+    const normalDirection = normalY === 0 ? (deltaX >= 0 ? 1 : -1) : Math.sign(normalY);
+    const signedOffset = route.placement === 'direct'
+      ? 0
+      : route.offset * desiredVerticalDirection / normalDirection;
+    const labelCenter = {
+      x: (sourcePosition.x + targetPosition.x) / 2 + normalX * signedOffset,
+      y: (sourcePosition.y + targetPosition.y) / 2 + normalY * signedOffset
+    };
+    const labelBounds = route.labelDisplay.labelWidth
+      ? {
+          x1: labelCenter.x - route.labelDisplay.labelWidth / 2,
+          x2: labelCenter.x + route.labelDisplay.labelWidth / 2,
+          y1: labelCenter.y - route.labelDisplay.labelHeight / 2,
+          y2: labelCenter.y + route.labelDisplay.labelHeight / 2
+        }
+      : null;
+    const edge = {
+      group: 'edges',
+      classes: [
+        'flow-edge',
+        `relation-${item.relation.relation_type}`,
+        route.placement !== 'direct' ? `route-${route.placement}` : '',
+        reviewRelationIndexes.has(item.index) ? 'relation-review' : ''
+      ].filter(Boolean).join(' '),
+      data: {
+        id: graphRef('relation', item.index, item.relationRef),
+        source: item.sourceId,
+        target: item.targetId,
+        label: route.labelDisplay.label,
+        rawLabel: route.labelDisplay.rawLabel,
+        labelWidth: route.labelDisplay.labelWidth,
+        labelHeight: route.labelDisplay.labelHeight,
+        labelLineCount: route.labelDisplay.lineCount,
+        labelBounds,
+        routePlacement: route.placement,
+        routeSlot: route.slot,
+        routeOffset: route.offset,
+        routeTrackKey: route.trackKey,
+        controlPointDistance: Math.round(signedOffset * 2),
+        needsRelationReview: reviewRelationIndexes.has(item.index),
+        focusKind: 'relation',
+        focusRef: item.relationRef
+      }
+    };
+    return edge;
+  }
+
+  function elementBounds(node) {
+    if (!node?.position || !node?.data?.nodeWidth || !node?.data?.nodeHeight) return null;
+    return {
+      id: node.data.id,
+      x1: node.position.x - node.data.nodeWidth / 2,
+      x2: node.position.x + node.data.nodeWidth / 2,
+      y1: node.position.y - node.data.nodeHeight / 2,
+      y2: node.position.y + node.data.nodeHeight / 2
+    };
+  }
+
+  function rectanglesOverlap(left, right) {
+    return left.x1 < right.x2
+      && left.x2 > right.x1
+      && left.y1 < right.y2
+      && left.y2 > right.y1;
+  }
+
+  function findLayoutCollisions(positionedNodes, localEdges) {
+    const collisions = [];
+    const nodeBounds = positionedNodes.map(elementBounds).filter(Boolean);
+    nodeBounds.forEach((left, leftIndex) => {
+      nodeBounds.slice(leftIndex + 1).forEach(right => {
+        if (rectanglesOverlap(left, right)) collisions.push(`node:${left.id}:${right.id}`);
+      });
+    });
+    const labelRecords = localEdges
+      .filter(edge => edge.data.labelBounds)
+      .map(edge => ({
+        edge,
+        bounds: edge.data.labelBounds
+      }));
+    labelRecords.forEach(({ edge, bounds }) => {
+      nodeBounds.forEach(nodeBoundsItem => {
+        if (nodeBoundsItem.id === edge.data.source || nodeBoundsItem.id === edge.data.target) return;
+        if (rectanglesOverlap(bounds, nodeBoundsItem)) {
+          collisions.push(`label-node:${edge.data.id}:${nodeBoundsItem.id}`);
+        }
+      });
+    });
+    labelRecords.forEach((left, leftIndex) => {
+      labelRecords.slice(leftIndex + 1).forEach(right => {
+        if (rectanglesOverlap(left.bounds, right.bounds)) {
+          collisions.push(`label:${left.edge.data.id}:${right.edge.data.id}`);
+        }
+      });
+    });
+    return collisions;
+  }
+
   function buildGraphModel(documentData, options = {}) {
     const data = documentData && typeof documentData === 'object' ? documentData : {};
     const owningDepartment = text(data.process?.owning_department);
@@ -185,7 +558,9 @@
     const backgrounds = [];
     const edges = [];
     const unresolvedItems = [];
+    const reviewItems = [];
     const behaviorNodeByRef = new Map();
+    const behaviorRecordById = new Map();
     const behaviorRecords = [];
     const orderById = new Map();
     let namedBehaviorCount = 0;
@@ -198,12 +573,23 @@
       if (text(behavior.behavior_name)) namedBehaviorCount += 1;
       const nodeType = text(behavior.node_type);
       const placement = actorPlacement(behavior.current_actor_role, departmentOrder);
+      const rawLabel = behaviorLabel(behavior, placement);
+      const display = nodeDisplayMetrics(rawLabel, behaviorClass(nodeType));
       const node = {
         group: 'nodes',
         classes: `behavior-node node-${behaviorClass(nodeType)}`,
         data: {
           id: graphId,
-          label: behaviorLabel(behavior, placement),
+          label: display.label,
+          rawLabel: display.rawLabel,
+          nodeWidth: display.nodeWidth,
+          nodeHeight: display.nodeHeight,
+          textMaxWidth: display.textMaxWidth,
+          labelWidth: display.labelWidth,
+          labelHeight: display.labelHeight,
+          labelLineCount: display.lineCount,
+          labelLineHeight: display.lineHeight,
+          labelVerticalPadding: display.verticalPadding,
           detail: NODE_TYPES.has(nodeType) ? nodeType : '节点类型待判断',
           focusKind: 'behavior',
           focusRef: behaviorRef,
@@ -214,7 +600,9 @@
           layoutOrder: index
         }
       };
-      behaviorRecords.push({ node, behavior, index, placement });
+      const record = { node, behavior, index, placement };
+      behaviorRecords.push(record);
+      behaviorRecordById.set(graphId, record);
       orderById.set(graphId, index);
     });
 
@@ -241,25 +629,22 @@
       const targetId = behaviorNodeByRef.get(toRef);
       validRelations.push({ relation, index, relationRef, sourceId, targetId });
       localEdgeCount += 1;
-      edges.push({
-        group: 'edges',
-        classes: `flow-edge relation-${relation.relation_type}`,
-        data: {
-          id: graphRef('relation', index, relationRef),
-          source: sourceId,
-          target: targetId,
-          label: relationLabel(relation),
-          focusKind: 'relation',
-          focusRef: relationRef
-        }
-      });
     });
 
-    const rankById = calculateRanks(
+    const graphAnalysis = analyzeRelationGraph(
       behaviorRecords.map(record => record.node.data.id),
       validRelations,
       orderById
     );
+    const rankById = graphAnalysis.rankById;
+    validRelations.forEach(item => {
+      if (!graphAnalysis.reviewRelationIndexes.has(item.index)) return;
+      reviewItems.push({
+        focusKind: 'relation',
+        focusRef: item.relationRef,
+        message: RELATION_CYCLE_REVIEW_MESSAGE
+      });
+    });
     behaviorRecords.forEach(record => {
       record.node.data.layoutRank = rankById.get(record.node.data.id) || 0;
       nodes.push(record.node);
@@ -280,12 +665,23 @@
         return;
       }
       const callNodeId = graphRef('call', index, callRef);
+      const rawLabel = internalCallLabel(call);
+      const display = nodeDisplayMetrics(rawLabel, 'internal');
       const callNode = {
         group: 'nodes',
         classes: 'internal-call-node',
         data: {
           id: callNodeId,
-          label: internalCallLabel(call),
+          label: display.label,
+          rawLabel: display.rawLabel,
+          nodeWidth: display.nodeWidth,
+          nodeHeight: display.nodeHeight,
+          textMaxWidth: display.textMaxWidth,
+          labelWidth: display.labelWidth,
+          labelHeight: display.labelHeight,
+          labelLineCount: display.lineCount,
+          labelLineHeight: display.lineHeight,
+          labelVerticalPadding: display.verticalPadding,
           detail: '由MDM平台正式功能维护',
           focusKind: 'call',
           focusRef: callRef,
@@ -297,6 +693,7 @@
       };
       internalCallRecords.push({ node: callNode, index });
       nodes.push(callNode);
+      const callOutDisplay = edgeDisplayMetrics('调用内部流程');
       edges.push({
         group: 'edges',
         classes: 'flow-edge internal-call-edge',
@@ -304,7 +701,11 @@
           id: graphRef('call-out', index, callRef),
           source: callerNodeId,
           target: callNodeId,
-          label: '调用内部流程',
+          label: callOutDisplay.label,
+          rawLabel: callOutDisplay.rawLabel,
+          labelWidth: callOutDisplay.labelWidth,
+          labelHeight: callOutDisplay.labelHeight,
+          labelLineCount: callOutDisplay.lineCount,
           focusKind: 'call',
           focusRef: callRef
         }
@@ -317,6 +718,7 @@
           message: `内部流程调用${index + 1}的返回箭头未显示：返回位置没有对应当前流程中的业务行为。`
         });
       } else if (returnRef) {
+        const callReturnDisplay = edgeDisplayMetrics('调用完成后返回');
         edges.push({
           group: 'edges',
           classes: 'flow-edge internal-call-edge internal-return-edge',
@@ -324,7 +726,11 @@
             id: graphRef('call-return', index, callRef),
             source: callNodeId,
             target: behaviorNodeByRef.get(returnRef),
-            label: '调用完成后返回',
+            label: callReturnDisplay.label,
+            rawLabel: callReturnDisplay.rawLabel,
+            labelWidth: callReturnDisplay.labelWidth,
+            labelHeight: callReturnDisplay.labelHeight,
+            labelLineCount: callReturnDisplay.lineCount,
             focusKind: 'call',
             focusRef: callRef
           }
@@ -332,6 +738,11 @@
       }
     });
 
+    const laneRouteReserves = allocateRelationRoutes(
+      validRelations,
+      behaviorRecordById,
+      rankById
+    );
     const positionedNodes = [...behaviorRecords.map(record => record.node), ...internalCallRecords.map(record => record.node)];
     const laneKeys = buildLaneOrder(
       positionedNodes.map(node => node.data.laneKey),
@@ -339,21 +750,62 @@
       departmentOrder
     );
     const maxRank = Math.max(0, ...positionedNodes.map(node => node.data.layoutRank || 0));
-    const laneBodyWidth = Math.max(860, (maxRank + 1) * COLUMN_GAP + 180);
+    const rankHalfWidths = Array.from({ length: maxRank + 1 }, (_value, rank) => {
+      const halfWidths = positionedNodes
+        .filter(node => (node.data.layoutRank || 0) === rank)
+        .map(node => (node.data.nodeWidth || 188) / 2);
+      return Math.max(94, ...halfWidths);
+    });
+    const rankPositions = [];
+    rankPositions[0] = LANE_HEADER_WIDTH + 48 + rankHalfWidths[0];
+    for (let rank = 1; rank <= maxRank; rank += 1) {
+      const centerGap = Math.max(
+        MIN_COLUMN_GAP,
+        rankHalfWidths[rank - 1]
+          + rankHalfWidths[rank]
+          + EDGE_LABEL_MAX_WIDTH
+          + COLUMN_LABEL_CLEARANCE
+      );
+      rankPositions[rank] = rankPositions[rank - 1] + centerGap;
+    }
+    const lastRankX = rankPositions[maxRank] || rankPositions[0];
+    const laneBodyWidth = Math.max(
+      860,
+      lastRankX + rankHalfWidths[maxRank] + 96 - LANE_HEADER_WIDTH
+    );
     const poolWidth = LANE_HEADER_WIDTH + laneBodyWidth;
     let laneTop = POOL_TITLE_HEIGHT + 18;
     const laneMetadata = [];
 
     laneKeys.forEach((laneKey, laneIndex) => {
       const laneNodes = positionedNodes.filter(node => node.data.laneKey === laneKey);
-      const countsByRank = new Map();
+      const nodesByRank = new Map();
       laneNodes.forEach(node => {
         const rank = node.data.layoutRank || 0;
-        countsByRank.set(rank, (countsByRank.get(rank) || 0) + 1);
+        if (!nodesByRank.has(rank)) nodesByRank.set(rank, []);
+        nodesByRank.get(rank).push(node);
       });
-      const maxSlots = Math.max(1, ...countsByRank.values());
-      const laneHeight = Math.max(LANE_MIN_HEIGHT, maxSlots * LANE_SLOT_GAP + 36);
+      nodesByRank.forEach(rankNodes =>
+        rankNodes.sort((left, right) => left.data.layoutOrder - right.data.layoutOrder)
+      );
+      const stackHeightByRank = new Map();
+      nodesByRank.forEach((rankNodes, rank) => {
+        stackHeightByRank.set(
+          rank,
+          rankNodes.reduce((sum, node) => sum + (node.data.nodeHeight || 90), 0)
+            + Math.max(0, rankNodes.length - 1) * LANE_NODE_GAP
+        );
+      });
+      const contentHeight = Math.max(90, ...stackHeightByRank.values());
+      const routeReserve = laneRouteReserves.get(laneKey) || { upper: 0, lower: 0 };
+      const upperReserve = routeReserve.upper || 0;
+      const lowerReserve = routeReserve.lower || 0;
+      const laneHeight = Math.max(
+        LANE_MIN_HEIGHT,
+        upperReserve + contentHeight + lowerReserve + LANE_VERTICAL_PADDING * 2
+      );
       const laneCenterY = laneTop + laneHeight / 2;
+      const contentCenterY = laneTop + upperReserve + LANE_VERTICAL_PADDING + contentHeight / 2;
       const laneLabel = laneDisplayName(laneKey);
       laneMetadata.push({
         key: laneKey,
@@ -361,7 +813,10 @@
         index: laneIndex,
         top: laneTop,
         height: laneHeight,
-        centerY: laneCenterY
+        centerY: laneCenterY,
+        contentCenterY,
+        upperRouteReserve: upperReserve,
+        lowerRouteReserve: lowerReserve
       });
       backgrounds.push({
         group: 'nodes',
@@ -391,24 +846,39 @@
           y: laneCenterY
         }
       });
-
-      const nodesByRank = new Map();
-      laneNodes.forEach(node => {
-        const rank = node.data.layoutRank || 0;
-        if (!nodesByRank.has(rank)) nodesByRank.set(rank, []);
-        nodesByRank.get(rank).push(node);
+      backgrounds.push({
+        group: 'nodes',
+        classes: 'lane-focus-anchor-node',
+        data: {
+          id: `lane-focus-anchor:${laneIndex}`,
+          width: LANE_HEADER_WIDTH,
+          height: 36
+        },
+        position: {
+          x: LANE_HEADER_WIDTH / 2,
+          y: laneCenterY
+        }
       });
+
       nodesByRank.forEach((rankNodes, rank) => {
-        rankNodes.sort((left, right) => left.data.layoutOrder - right.data.layoutOrder);
-        rankNodes.forEach((node, slotIndex) => {
+        const stackHeight = stackHeightByRank.get(rank);
+        let nodeTop = contentCenterY - stackHeight / 2;
+        rankNodes.forEach(node => {
+          const nodeHeight = node.data.nodeHeight || 90;
           node.position = {
-            x: LANE_HEADER_WIDTH + 150 + rank * COLUMN_GAP,
-            y: laneCenterY + (slotIndex - (rankNodes.length - 1) / 2) * LANE_SLOT_GAP
+            x: rankPositions[rank],
+            y: nodeTop + nodeHeight / 2
           };
+          nodeTop += nodeHeight + LANE_NODE_GAP;
         });
       });
       laneTop += laneHeight;
     });
+
+    const localRelationEdges = validRelations.map(item =>
+      relationEdge(item, behaviorRecordById, graphAnalysis.reviewRelationIndexes)
+    );
+    edges.push(...localRelationEdges);
 
     const poolHeight = Math.max(POOL_TITLE_HEIGHT, laneTop);
     backgrounds.unshift({
@@ -440,14 +910,14 @@
           focusRef: text(record.behavior.behavior_ref)
         },
         position: {
-          x: record.node.position.x + (record.behavior.node_type === 'decision' ? 62 : 86),
-          y: record.node.position.y - (record.behavior.node_type === 'decision' ? 58 : 47)
+          x: record.node.position.x + record.node.data.nodeWidth / 2 - 28,
+          y: record.node.position.y - record.node.data.nodeHeight / 2 + 8
         }
       });
     });
     nodes.push(...countersignBadges);
 
-    let externalItemIndex = 0;
+    let externalTop = poolHeight + 58;
     items(data.cross_department_handoffs).forEach((handoff, index) => {
       const handoffRef = text(handoff.handoff_ref);
       const sendRef = text(handoff.send_behavior_ref);
@@ -462,18 +932,29 @@
         return;
       }
       const externalNodeId = graphRef('handoff', index, handoffRef);
-      const externalY = poolHeight + 102 + externalItemIndex * 164;
+      const rawLabel = handoffLabel(handoff);
+      const display = nodeDisplayMetrics(rawLabel, 'external');
+      const externalY = externalTop + display.nodeHeight / 2;
       const externalX = Math.max(
-        LANE_HEADER_WIDTH + 170,
-        Math.min(poolWidth - 150, sendNode.position.x + 230)
+        LANE_HEADER_WIDTH + display.nodeWidth / 2 + 24,
+        Math.min(poolWidth - display.nodeWidth / 2 - 24, sendNode.position.x + 260)
       );
-      externalItemIndex += 1;
+      externalTop += display.nodeHeight + 48;
       nodes.push({
         group: 'nodes',
         classes: 'external-node handoff-node',
         data: {
           id: externalNodeId,
-          label: handoffLabel(handoff),
+          label: display.label,
+          rawLabel: display.rawLabel,
+          nodeWidth: display.nodeWidth,
+          nodeHeight: display.nodeHeight,
+          textMaxWidth: display.textMaxWidth,
+          labelWidth: display.labelWidth,
+          labelHeight: display.labelHeight,
+          labelLineCount: display.lineCount,
+          labelLineHeight: display.lineHeight,
+          labelVerticalPadding: display.verticalPadding,
           detail: '流程泳道区域外',
           focusKind: 'handoff',
           focusRef: handoffRef
@@ -483,6 +964,7 @@
           y: externalY
         }
       });
+      const handoffOutDisplay = edgeDisplayMetrics('跨部门承接');
       edges.push({
         group: 'edges',
         classes: 'message-flow handoff-edge',
@@ -490,7 +972,11 @@
           id: graphRef('handoff-out', index, handoffRef),
           source: sendNodeId,
           target: externalNodeId,
-          label: '跨部门承接',
+          label: handoffOutDisplay.label,
+          rawLabel: handoffOutDisplay.rawLabel,
+          labelWidth: handoffOutDisplay.labelWidth,
+          labelHeight: handoffOutDisplay.labelHeight,
+          labelLineCount: handoffOutDisplay.lineCount,
           focusKind: 'handoff',
           focusRef: handoffRef
         }
@@ -503,6 +989,7 @@
           message: `跨部门承接${index + 1}的返回箭头未显示：恢复位置没有对应当前流程中的业务行为。`
         });
       } else if (returnRef) {
+        const handoffReturnDisplay = edgeDisplayMetrics('承接完成后返回');
         edges.push({
           group: 'edges',
           classes: 'message-flow return-message-flow',
@@ -510,13 +997,22 @@
             id: graphRef('handoff-return', index, handoffRef),
             source: externalNodeId,
             target: behaviorNodeByRef.get(returnRef),
-            label: '承接完成后返回',
+            label: handoffReturnDisplay.label,
+            rawLabel: handoffReturnDisplay.rawLabel,
+            labelWidth: handoffReturnDisplay.labelWidth,
+            labelHeight: handoffReturnDisplay.labelHeight,
+            labelLineCount: handoffReturnDisplay.lineCount,
             focusKind: 'handoff',
             focusRef: handoffRef
           }
         });
       }
     });
+
+    const layoutNodes = nodes.filter(node =>
+      node.position && Number.isFinite(node.data.nodeWidth) && Number.isFinite(node.data.nodeHeight)
+    );
+    const layoutCollisions = findLayoutCollisions(layoutNodes, localRelationEdges);
 
     return {
       nodes,
@@ -528,6 +1024,24 @@
       localEdgeCount,
       unresolvedItems,
       unresolvedCount: unresolvedItems.length,
+      reviewItems,
+      reviewCount: reviewItems.length,
+      layout: {
+        rankPositions,
+        routeTracks: localRelationEdges.map(edge => ({
+          relationRef: edge.data.focusRef,
+          placement: edge.data.routePlacement,
+          slot: edge.data.routeSlot,
+          offset: edge.data.routeOffset,
+          trackKey: edge.data.routeTrackKey,
+          labelBounds: edge.data.labelBounds
+        })),
+        collisions: layoutCollisions
+      },
+      viewportSuggestion: {
+        fullViewMinZoom: FULL_VIEW_MIN_ZOOM,
+        initialRankMax: 1
+      },
       pool: {
         width: poolWidth,
         height: poolHeight
@@ -549,6 +1063,7 @@
           'font-size': 12,
           'font-weight': 700,
           'text-wrap': 'wrap',
+          'text-overflow-wrap': 'anywhere',
           'text-max-width': 150,
           'text-valign': 'center',
           'text-halign': 'center',
@@ -557,6 +1072,18 @@
           'border-width': 1,
           'overlay-opacity': 0,
           events: 'no',
+          'z-index': 0,
+          'z-index-compare': 'manual'
+        }
+      },
+      {
+        selector: '.lane-focus-anchor-node',
+        style: {
+          width: 'data(width)',
+          height: 'data(height)',
+          opacity: 0,
+          events: 'no',
+          'overlay-opacity': 0,
           'z-index': 0,
           'z-index-compare': 'manual'
         }
@@ -591,8 +1118,8 @@
       {
         selector: '.behavior-node, .internal-call-node, .external-node',
         style: {
-          width: 188,
-          height: 82,
+          width: 'data(nodeWidth)',
+          height: 'data(nodeHeight)',
           shape: 'round-rectangle',
           'background-color': '#fffaf0',
           'border-color': '#8c3f33',
@@ -603,7 +1130,8 @@
           'font-size': 12,
           'font-weight': 600,
           'text-wrap': 'wrap',
-          'text-max-width': 164,
+          'text-overflow-wrap': 'anywhere',
+          'text-max-width': 'data(textMaxWidth)',
           'text-valign': 'center',
           'text-halign': 'center',
           'overlay-opacity': 0,
@@ -614,22 +1142,16 @@
       {
         selector: '.node-decision',
         style: {
-          width: 152,
-          height: 122,
           shape: 'diamond',
-          'background-color': '#f5e5df',
-          'text-max-width': 100
+          'background-color': '#f5e5df'
         }
       },
       {
         selector: '.node-parallel-split, .node-parallel-join',
         style: {
-          width: 158,
-          height: 122,
           shape: 'diamond',
           'background-color': '#f3e7ca',
-          'border-color': '#9b783d',
-          'text-max-width': 105
+          'border-color': '#9b783d'
         }
       },
       {
@@ -651,24 +1173,18 @@
       {
         selector: '.internal-call-node',
         style: {
-          width: 214,
-          height: 92,
           'border-width': 5,
           'border-color': '#52665a',
-          'background-color': '#e5eadf',
-          'text-max-width': 182
+          'background-color': '#e5eadf'
         }
       },
       {
         selector: '.external-node',
         style: {
-          width: 254,
-          height: 132,
           'border-style': 'dashed',
           'border-width': 2,
           'border-color': '#526973',
           'background-color': '#e7edef',
-          'text-max-width': 224,
           'font-size': 11
         }
       },
@@ -714,7 +1230,8 @@
           'font-size': 10,
           'font-weight': 600,
           'text-wrap': 'wrap',
-          'text-max-width': 180,
+          'text-overflow-wrap': 'anywhere',
+          'text-max-width': 'data(labelWidth)',
           'text-background-color': '#fffdf8',
           'text-background-opacity': 0.96,
           'text-background-padding': 3,
@@ -733,10 +1250,27 @@
         }
       },
       {
-        selector: '.relation-loop, .internal-return-edge',
+        selector: '.route-upper, .route-lower',
         style: {
           'curve-style': 'unbundled-bezier',
-          'control-point-distances': -112,
+          'control-point-distances': 'data(controlPointDistance)',
+          'control-point-weights': 0.5
+        }
+      },
+      {
+        selector: '.relation-loop',
+        style: {
+          'line-style': 'solid',
+          'line-color': '#8c3f33',
+          'target-arrow-color': '#8c3f33',
+          color: '#7b2f27'
+        }
+      },
+      {
+        selector: '.internal-return-edge',
+        style: {
+          'curve-style': 'unbundled-bezier',
+          'control-point-distances': -126,
           'control-point-weights': 0.5,
           'line-style': 'solid',
           'line-color': '#8c3f33',
@@ -801,20 +1335,34 @@
     ];
   }
 
-  function showInitialViewport(cy) {
+  function showInitialViewport(cy, model) {
     cy.resize();
-    const laneHeaders = cy.nodes('.lane-header-node');
+    cy.fit(undefined, 34);
+    const fullFitZoom = cy.zoom();
+    if (fullFitZoom >= (model.viewportSuggestion?.fullViewMinZoom || FULL_VIEW_MIN_ZOOM)) {
+      return {
+        mode: 'full',
+        fullFitZoom
+      };
+    }
+    const laneHeaders = cy.nodes('.lane-focus-anchor-node');
     const firstColumns = cy.nodes('.behavior-node, .internal-call-node').filter(node =>
-      Number(node.data('layoutRank')) <= 1
+      Number(node.data('layoutRank')) <= (model.viewportSuggestion?.initialRankMax ?? 1)
     );
     const initialElements = laneHeaders.union(firstColumns);
     if (initialElements.length) {
       cy.fit(initialElements, 28);
       const renderedBox = initialElements.renderedBoundingBox();
       cy.panBy({ x: 28 - renderedBox.x1, y: 0 });
-    } else {
-      cy.fit(undefined, 34);
+      return {
+        mode: 'start',
+        fullFitZoom
+      };
     }
+    return {
+      mode: 'full',
+      fullFitZoom
+    };
   }
 
   function mount(options) {
@@ -840,7 +1388,7 @@
       boxSelectionEnabled: false,
       userPanningEnabled: true,
       userZoomingEnabled: true,
-      minZoom: 0.16,
+      minZoom: 0.03,
       maxZoom: 1.8
     });
     cy.on('tap', '.behavior-node, .internal-call-node, .external-node, .countersign-badge, edge', event => {
@@ -850,7 +1398,10 @@
       if (focusKind && typeof options.onFocus === 'function') options.onFocus(focusKind, focusRef);
     });
     cy.ready(() => {
-      showInitialViewport(cy);
+      const viewport = showInitialViewport(cy, model);
+      if (typeof options.onViewportModeChange === 'function') {
+        options.onViewportModeChange(viewport);
+      }
     });
     return {
       cy,
@@ -858,9 +1409,21 @@
       fit() {
         cy.resize();
         cy.fit(undefined, 34);
+        const viewport = {
+          mode: 'full',
+          fullFitZoom: cy.zoom()
+        };
+        if (typeof options.onViewportModeChange === 'function') {
+          options.onViewportModeChange(viewport);
+        }
+        return viewport;
       },
       reset() {
-        showInitialViewport(cy);
+        const viewport = showInitialViewport(cy, model);
+        if (typeof options.onViewportModeChange === 'function') {
+          options.onViewportModeChange(viewport);
+        }
+        return viewport;
       },
       destroy() {
         cy.destroy();
