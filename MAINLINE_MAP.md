@@ -119,6 +119,38 @@ field_identities
 - 主数据对象沉淀前必须确认维护部门、审批部门、消费系统和权限边界。
 - MDM 本身也作为“主数据治理与数据地图承接能力”管理，当前补充流程见 `docs/norms/流程治理/MDM治理承接流程.md`。该流程先按信息化工作组 / MDM 工作组项目执行架构承接，不伪造常设部门归属，不作为应用系统（S1）写入 DCM/BBM。
 
+## 4.1 3001单流程编制主线
+
+```text
+空白新建 / process-governance-v1 JSON / 历史v2结构化JSON
+  ↓
+apps/structured-output-service（3001，仅当前页面内存）
+  ├─ 只读 docs/organization/花名册.md 岗位目录
+  └─ 页面不接收编制参考材料
+  ↓
+docs/contracts/process-governance-v1.schema.json
+  ↓
+未审核-发起部门-流程名称-导出时间.json
+  ↓
+Codex预审和PMO线下审核（审核材料与JSON分开）
+  ↓
+PMO批准后由业务部门线下领取JSON
+  ↓
+3000重构完成后由业务部门人员手工上传
+```
+
+规则：
+
+- 公司局域网用户通过`http://<服务器局域网IP>:3001`直接进入3001，不经过DeepSeek、结构化填报助手或认证网关。
+- 3001一份JSON只编制一个流程。历史v2文件含多条流程时，在当前页面拆成候选并逐一导出。
+- 3001通过本服务`/api/enums`只读仓库花名册岗位，不调用3000、数据库或会话。岗位只表示当前执行岗位，不生成正式工作角色。
+- 新建流程的`reference_materials`为空；页面不新增、展示或编辑参考材料。导入JSON中已有的历史参考材料只在内存中保留并随再次导出带回。
+- 表单与记录在独立工作区按“表单或记录—主表／明细表结构—填写项”编制。JSON继续使用`forms[].areas[].items[]`，不增加页面状态或图形字段。
+- 3001不保存草稿、不记录审核状态，也不通过API、数据库、队列、回调、共享会话或轮询与3000通信。
+- `process-governance-v1`只保存流程编制内容和单文件技术引用，不保存Codex预审意见、PMO审核意见或批准标记。
+- 未经PMO线下批准的3001导出结果不得进入3000；当前3000尚不支持新的单流程文件格式。
+- 3001后端保留确定性文档解析器用于历史迁移和回归测试，但页面不再提供参考材料解析入口。模型辅助填报能力已经移除；3001的启动、访问、新建、导入、校验和导出均不依赖DeepSeek或任何辅助服务。
+
 ## 5. MDM 平台主线
 
 ```text
@@ -155,7 +187,8 @@ npm run test:mainline
 - 运行态数据库不是仓库真源。
 - 平台脚本只服务 MDM 时留在 `apps/mdm-platform/scripts/`。
 - 跨资料、跨 PMO、跨 app 的脚本进入仓库级 `scripts/`。
-- 文档结构化输出字段、证据状态、待确认问题字段和结构块投影以 `docs/contracts/document-structured-output.schema.json` 为标准合同；它约束平台承接和导出格式，不反向覆盖 `docs/norms/`。
+- 文档结构化输出字段、证据状态、待确认问题字段和结构块投影以 `docs/contracts/document-structured-output.schema.json` 中的结构规则为准；该文件约束平台承接和导出格式，不反向覆盖 `docs/norms/`。
+- `process-governance-v1`是3001采用的单流程文件格式，不是当前3000支持的导入格式；3000完成流程治理重构前，两者不得直接联调或转换落库。
 - 当前 MDM 不持久化 `work_role_bindings`；非空关系导入必须返回 `WORK_ROLE_BINDINGS_UNSUPPORTED`，避免静默丢失。行政人事目录和受控试点稳定后，再建设 MySQL 派生表和变更申请能力。
 
 ## 6. PMO 项目管理主线

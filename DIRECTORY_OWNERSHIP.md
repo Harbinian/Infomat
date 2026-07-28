@@ -25,7 +25,7 @@
 |---|---|---|---|---|
 | `apps/` | 可运行应用集合 | 子目录 README | 新应用必须有独立 README、运行命令和数据边界 | 不放业务资料原件 |
 | `apps/mdm-platform/` | MDM 平台源码 | `package.json`、`server/`、`public/`、`scripts/` | 平台功能、平台测试、平台维护脚本在此修改 | 不放 PMO 甘特图、流程制度原文、历史方案 |
-| `apps/structured-output-service/` | 文档结构化输出辅助服务 | `package.json`、`server.js`、`public/`、`scripts/` | 按 `docs/contracts/document-structured-output.schema.json` 提供无状态编辑、文件拖入、结构化文件导入导出和当前页原文依据查看；可只读读取流程映射、花名册和 `docs/work-role-data.json` 做候选提示 | 不保存用户内容，不写回 `docs/norms/`、花名册或工作角色真源，不替代受控发布流程 |
+| `apps/structured-output-service/` | 局域网单流程治理编制工具 | `package.json`、`server.js`、`public/`、`scripts/` | 默认监听`0.0.0.0:3001`供公司局域网用户直接访问；按 `docs/contracts/process-governance-v1.schema.json` 导出单流程未审核JSON；`document-structured-output-v2`只用于确定性解析和历史导入；可只读读取流程映射、花名册和 `docs/work-role-data.json` 做候选提示 | 不保存用户内容，不写回 `docs/norms/`、花名册或工作角色真源，不依赖DeepSeek、结构化填报助手或认证网关，不替代受控发布流程 |
 | `apps/weekly-action-service/` | PMO 周会行动项服务 | `package.json`、`server.js`、`public/`、`scripts/` | 提供 3002 周会行动项登记、跟踪、关闭证据和延期原因维护；默认写入 `artifacts/weekly-actions/` 运行台账 | 不写回 PMO Markdown 真源、`tasks.json` 或 MDM 数据库；不把浏览器本地保存作为台账 |
 | `apps/mdm-platform/server/` | MDM 后端实现 | Express 路由、MySQL 目标 schema 与历史 SQLite 待迁移实现 | 修改时同步平台测试 | 不直接依赖 PMO 页面内嵌数据 |
 | `apps/mdm-platform/public/` | MDM 前端 | 单文件前端和静态资源 | 仅放平台运行所需前端资源 | 不放 PMO 驾驶舱截图 |
