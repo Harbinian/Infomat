@@ -263,6 +263,21 @@
     .preview-ready-callout p { color: #2f472b; font-weight: 700; }
 
     .diagram-section { overflow: visible; }
+    body.diagram-overlay-open { overflow: hidden; }
+    .diagram-section.diagram-expanded {
+      position: fixed;
+      inset: 12px;
+      z-index: 90;
+      margin: 0;
+      overflow: auto;
+      background: #fffaf0;
+      box-shadow: 0 26px 80px rgba(37, 31, 23, 0.34);
+    }
+
+    .diagram-section.diagram-expanded .diagram-canvas {
+      height: max(520px, calc(100vh - 350px));
+    }
+
     .diagram-toolbar {
       display: flex;
       align-items: flex-start;
@@ -274,6 +289,229 @@
     .diagram-toolbar h2 { margin: 0 0 5px; font-family: "SimSun", serif; font-size: 22px; }
     .diagram-toolbar p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.65; }
     .diagram-controls { display: flex; flex-wrap: wrap; gap: 8px; }
+    .diagram-legend-shell {
+      margin-bottom: 12px;
+      padding: 12px 14px;
+      border: 1px solid #bcae90;
+      border-radius: 10px;
+      background: #fbf5e9;
+    }
+
+    .diagram-legend-head {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .diagram-legend-list {
+      display: grid;
+      flex: 1;
+      grid-template-columns: repeat(7, minmax(112px, 1fr));
+      gap: 10px;
+    }
+
+    .diagram-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      color: #3f403b;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .diagram-legend-copy { min-width: 0; }
+    .diagram-legend-copy strong, .diagram-legend-copy small { display: block; }
+    .diagram-legend-copy strong { color: #35362f; font-size: 12px; }
+    .diagram-legend-copy small { margin-top: 2px; color: #6b685f; font-size: 10px; }
+    .legend-symbol {
+      position: relative;
+      display: inline-flex;
+      flex: 0 0 auto;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 24px;
+      border: 2px solid #8c3f33;
+      color: #7b2f27;
+      background: #fffaf0;
+      font-size: 15px;
+      font-weight: 800;
+    }
+
+    .legend-symbol.action { border-radius: 7px; }
+    .legend-symbol.decision, .legend-symbol.parallel {
+      width: 23px;
+      height: 23px;
+      margin: 0 6px;
+      transform: rotate(45deg);
+      border-radius: 1px;
+      background: #f5e5df;
+    }
+
+    .legend-symbol.parallel {
+      border-color: #8a6a30;
+      color: #6f5223;
+      background: #f3e7ca;
+    }
+
+    .legend-symbol.decision > span, .legend-symbol.parallel > span { transform: rotate(-45deg); }
+    .legend-symbol.call {
+      border-width: 4px;
+      border-color: #52665a;
+      border-radius: 7px;
+      background: #e5eadf;
+    }
+
+    .legend-symbol.pending {
+      border-style: dashed;
+      border-color: #746f64;
+      background: #f4f0e7;
+    }
+
+    .legend-symbol.flow, .legend-symbol.handoff {
+      width: 42px;
+      height: 18px;
+      border: 0;
+      background: transparent;
+    }
+
+    .legend-symbol.flow::before, .legend-symbol.handoff::before {
+      content: "";
+      position: absolute;
+      left: 1px;
+      right: 8px;
+      top: 8px;
+      border-top: 2px solid #5b625d;
+    }
+
+    .legend-symbol.flow::after {
+      content: "";
+      position: absolute;
+      right: 0;
+      top: 4px;
+      border-top: 5px solid transparent;
+      border-bottom: 5px solid transparent;
+      border-left: 9px solid #5b625d;
+    }
+
+    .legend-symbol.handoff::before { border-top: 2px dashed #526973; }
+    .legend-symbol.handoff::after {
+      content: "";
+      position: absolute;
+      right: 1px;
+      top: 4px;
+      width: 8px;
+      height: 8px;
+      border-top: 2px solid #526973;
+      border-right: 2px solid #526973;
+      transform: rotate(45deg);
+    }
+
+    .diagram-reading-tip {
+      margin: 10px 0 0;
+      padding-top: 9px;
+      border-top: 1px solid rgba(188, 174, 144, 0.7);
+      color: #514834;
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.55;
+    }
+
+    .diagram-legend-example {
+      margin-top: 10px;
+      padding: 11px;
+      border: 1px dashed #bcae90;
+      border-radius: 8px;
+      background: #fffdf8;
+    }
+
+    .diagram-legend-example[hidden] { display: none; }
+    .diagram-legend-example > p { margin: 0 0 9px; color: #666158; font-size: 11px; }
+    .legend-example-flow {
+      display: grid;
+      grid-template-columns: minmax(92px, 1fr) 48px minmax(110px, 1fr) 58px minmax(130px, 1.25fr);
+      align-items: center;
+      gap: 8px;
+      max-width: 760px;
+    }
+
+    .legend-example-step { min-width: 0; text-align: center; }
+    .legend-example-department {
+      display: block;
+      margin-bottom: 4px;
+      color: #6f695d;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .legend-example-node {
+      display: flex;
+      min-height: 42px;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 9px;
+      border: 2px solid #8c3f33;
+      border-radius: 7px;
+      color: #3c3d37;
+      background: #fffaf0;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .legend-example-node.decision {
+      width: 64px;
+      height: 64px;
+      min-height: 0;
+      margin: 0 auto;
+      padding: 7px;
+      border-radius: 1px;
+      transform: rotate(45deg);
+      background: #f5e5df;
+    }
+
+    .legend-example-node.decision span { transform: rotate(-45deg); }
+    .legend-example-node.handoff {
+      border-style: dashed;
+      border-color: #526973;
+      background: #e7edef;
+    }
+
+    .legend-example-arrow {
+      position: relative;
+      height: 22px;
+    }
+
+    .legend-example-arrow::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 8px;
+      top: 10px;
+      border-top: 2px solid #5b625d;
+    }
+
+    .legend-example-arrow::after {
+      content: "";
+      position: absolute;
+      right: 0;
+      top: 6px;
+      border-top: 5px solid transparent;
+      border-bottom: 5px solid transparent;
+      border-left: 9px solid #5b625d;
+    }
+
+    .legend-example-arrow.message::before { border-top: 2px dashed #526973; }
+    .legend-example-arrow.message::after {
+      top: 6px;
+      width: 8px;
+      height: 8px;
+      border: 0;
+      border-top: 2px solid #526973;
+      border-right: 2px solid #526973;
+      transform: rotate(45deg);
+    }
+
     .diagram-notice {
       margin-bottom: 12px;
       padding: 10px 13px;
@@ -666,6 +904,17 @@
       .preview-ready-callout { padding: 12px 0 0; border-top: 1px solid #aab7a4; border-left: 0; }
       .diagram-controls .button { flex: 1; }
       .diagram-canvas { height: min(420px, 58vh); }
+      .diagram-section.diagram-expanded { inset: 6px; }
+      .diagram-section.diagram-expanded .diagram-canvas {
+        height: max(420px, calc(100vh - 430px));
+      }
+      .diagram-legend-head { flex-direction: column; }
+      .diagram-legend-list { grid-template-columns: repeat(2, minmax(130px, 1fr)); width: 100%; }
+      .legend-example-flow {
+        grid-template-columns: minmax(92px, 1fr) 34px minmax(100px, 1fr) 34px minmax(116px, 1fr);
+        min-width: 540px;
+      }
+      .diagram-legend-example { overflow-x: auto; }
       .record-workbench, .form-workbench { grid-template-columns: 1fr; }
       .record-selector, .form-sidebar {
         position: static;
@@ -784,6 +1033,8 @@
     let rosterRolesByDepartment = {};
     let rosterLoadState = 'loading';
     let diagramView = null;
+    let diagramExampleExpanded = false;
+    let diagramExpanded = false;
     let focusClearTimer = null;
     const openedPreviewProcesses = new Set();
 
@@ -1613,12 +1864,18 @@
     }
 
     function currentDiagramModel(data = currentDocument()) {
-      if (window.ProcessDiagram?.buildGraphModel) return window.ProcessDiagram.buildGraphModel(data);
+      if (window.ProcessDiagram?.buildGraphModel) {
+        return window.ProcessDiagram.buildGraphModel(data, {
+          departmentOrder: actorDepartments()
+        });
+      }
       const namedBehaviorCount = (data?.behaviors || []).filter(item => text(item.behavior_name).trim()).length;
       return {
         nodes: [],
+        backgrounds: [],
         edges: [],
         elements: [],
+        lanes: [],
         namedBehaviorCount,
         localEdgeCount: 0,
         unresolvedItems: [],
@@ -1657,7 +1914,7 @@
               data-action="switch-tab"
               data-tab="diagram"
             >
-              流程图预览
+              跨职能流程图预览
               <span class="tab-status ${status.className}" id="diagramTabStatus">${escapeHtml(status.label)}</span>
             </button>
           </div>
@@ -1670,12 +1927,77 @@
       return `
         <div class="preview-guidance">
           <div>
-            <strong>什么时候可以查看流程图</strong>
-            <p>填写至少一个“业务行为或节点名称”后即可查看流程图。只有补充明确的“流程关系”后才会显示箭头，系统不会按录入顺序自动连线。</p>
+            <strong>什么时候可以查看跨职能流程图</strong>
+            <p>填写至少一个“业务行为名称”后即可查看流程图。只有补充明确的“流程关系”后才会显示箭头，系统不会按录入顺序自动连线。</p>
           </div>
           <div class="preview-ready-callout" id="previewReadyCallout"${showReady ? '' : ' hidden'}>
-            <p>流程图预览已可查看。请检查判断分支、回路、并行关系以及跨部门承接是否表达正确。</p>
-            <button class="button secondary small" data-action="view-diagram">查看流程图</button>
+            <p>跨职能流程图预览已可查看。请检查判断分支、回路、并行关系以及跨部门承接是否表达正确。</p>
+            <button class="button secondary small" data-action="view-diagram">查看跨职能流程图</button>
+          </div>
+        </div>`;
+    }
+
+    function renderDiagramLegend() {
+      const exampleButtonLabel = diagramExampleExpanded ? '收起图例示例' : '查看图例示例';
+      return `
+        <div class="diagram-legend-shell" aria-label="跨职能流程图图例">
+          <div class="diagram-legend-head">
+            <div class="diagram-legend-list" role="list">
+              <div class="diagram-legend-item" role="listitem">
+                <span class="legend-symbol action" aria-hidden="true"></span>
+                <span class="diagram-legend-copy"><strong>业务行为</strong><small>部门或岗位完成工作</small></span>
+              </div>
+              <div class="diagram-legend-item" role="listitem">
+                <span class="legend-symbol decision" aria-hidden="true"><span>×</span></span>
+                <span class="diagram-legend-copy"><strong>判断</strong><small>按条件选择去向</small></span>
+              </div>
+              <div class="diagram-legend-item" role="listitem">
+                <span class="legend-symbol parallel" aria-hidden="true"><span>＋</span></span>
+                <span class="diagram-legend-copy"><strong>并行</strong><small>同时开始或汇合</small></span>
+              </div>
+              <div class="diagram-legend-item" role="listitem">
+                <span class="legend-symbol flow" aria-hidden="true"></span>
+                <span class="diagram-legend-copy"><strong>流程关系</strong><small>本流程下一步</small></span>
+              </div>
+              <div class="diagram-legend-item" role="listitem">
+                <span class="legend-symbol handoff" aria-hidden="true"></span>
+                <span class="diagram-legend-copy"><strong>跨部门承接</strong><small>进入其他部门承接流程</small></span>
+              </div>
+              <div class="diagram-legend-item" role="listitem">
+                <span class="legend-symbol call" aria-hidden="true"></span>
+                <span class="diagram-legend-copy"><strong>内部流程调用</strong><small>调用本部门另一流程</small></span>
+              </div>
+              <div class="diagram-legend-item" role="listitem">
+                <span class="legend-symbol pending" aria-hidden="true"></span>
+                <span class="diagram-legend-copy"><strong>类型待判断</strong><small>尚未确认节点类型</small></span>
+              </div>
+            </div>
+            <button
+              class="button small"
+              data-action="toggle-diagram-example"
+              aria-expanded="${diagramExampleExpanded}"
+              aria-controls="diagramLegendExample"
+            >${exampleButtonLabel}</button>
+          </div>
+          <p class="diagram-reading-tip">先看泳道确认责任部门，再沿实线箭头从左向右阅读；虚线箭头表示跨部门承接。</p>
+          <div class="diagram-legend-example" id="diagramLegendExample"${diagramExampleExpanded ? '' : ' hidden'}>
+            <p>以下仅为读图示例，使用BPMN 2.0.2图形子集，不属于当前流程。</p>
+            <div class="legend-example-flow" aria-label="提交材料、判断材料是否齐全、跨部门承接办理的三步示例">
+              <div class="legend-example-step">
+                <span class="legend-example-department">发起部门泳道</span>
+                <span class="legend-example-node">提交材料</span>
+              </div>
+              <span class="legend-example-arrow" aria-hidden="true"></span>
+              <div class="legend-example-step">
+                <span class="legend-example-department">发起部门泳道</span>
+                <span class="legend-example-node decision"><span>×<br>材料齐全？</span></span>
+              </div>
+              <span class="legend-example-arrow message" aria-hidden="true"></span>
+              <div class="legend-example-step">
+                <span class="legend-example-department">承接部门泳道外</span>
+                <span class="legend-example-node handoff">承接部门<br>办理事项</span>
+              </div>
+            </div>
           </div>
         </div>`;
     }
@@ -1700,8 +2022,8 @@
       if (!model.namedBehaviorCount) {
         return `
           <div class="diagram-empty">
-            <h2>尚不能生成流程图预览</h2>
-            <p>请先在“文字编制”中填写至少一个业务行为或节点名称。填写名称后可以查看节点；补充明确的流程关系后才会显示箭头。</p>
+            <h2>尚不能生成跨职能流程图预览</h2>
+            <p>请先在“文字编制”中填写至少一个业务行为名称。填写名称后可以查看节点；补充明确的流程关系后才会显示箭头。</p>
             <button class="button primary" data-action="return-editor">返回文字编制</button>
           </div>`;
       }
@@ -1712,26 +2034,32 @@
         ? '<div class="diagram-notice warning">当前只能看到业务行为节点；本流程尚无明确流程关系，因此行为节点之间没有箭头。</div>'
         : '';
       return `
-        <section class="section diagram-section">
+        <section class="section diagram-section${diagramExpanded ? ' diagram-expanded' : ''}">
           <div class="section-body">
             <div class="diagram-toolbar">
               <div>
-                <h2>${escapeHtml(currentDocument().process.process_name || '未命名流程')}</h2>
-                <p>流程图根据当前文字内容生成。流程较长时，页面从起点开始显示。用户可以拖动画布查看后续内容，也可以点击“适应画布”查看全图。流程图不提供直接编排功能。</p>
+                <h2>${escapeHtml(currentDocument().process.process_name || '未命名流程')} · 跨职能流程图预览</h2>
+                <p>每条横向泳道代表执行部门，节点第二行显示执行岗位。图形只根据明确关系生成；用户可以平移、缩放和点击定位，但不能在图中编排流程。</p>
               </div>
               <div class="diagram-controls">
                 <button class="button small" data-action="fit-diagram">适应画布</button>
                 <button class="button small" data-action="reset-diagram">重置视图</button>
+                <button
+                  class="button small"
+                  data-action="toggle-diagram-expanded"
+                  aria-pressed="${diagramExpanded}"
+                >${diagramExpanded ? '退出展开' : '展开查看'}</button>
                 <button class="button small" data-action="return-editor">返回文字编制</button>
               </div>
             </div>
+            ${renderDiagramLegend()}
             ${importedNotice}
             ${relationNotice}
             <div
               class="diagram-canvas"
               id="processDiagramCanvas"
               role="img"
-              aria-label="当前流程的只读流程图。点击节点或箭头可以返回对应的文字编制位置。"
+              aria-label="当前流程的只读跨职能流程图。横向泳道表示执行部门，点击节点或箭头可以返回对应的文字编制位置。"
             ></div>
             <div class="diagram-failure" id="diagramFailure" role="alert"></div>
             ${renderDiagramWarnings(model)}
@@ -1762,6 +2090,7 @@
         diagramView = window.ProcessDiagram.mount({
           container,
           documentData: data,
+          departmentOrder: actorDepartments(),
           onFocus: focusEditorItem
         });
       } catch (error) {
@@ -1776,6 +2105,7 @@
     function setActiveWorkspaceTab(tab) {
       if (!currentDocument()) return;
       activeWorkspaceTab = tab === 'diagram' ? 'diagram' : 'editor';
+      if (activeWorkspaceTab === 'editor') diagramExpanded = false;
       if (activeWorkspaceTab === 'diagram') {
         const model = currentDiagramModel();
         if (model.namedBehaviorCount) openedPreviewProcesses.add(currentProcessKey());
@@ -1788,6 +2118,7 @@
         showStatus('部门内调用仅用于预览，请在MDM平台正式功能中维护。');
         return;
       }
+      diagramExpanded = false;
       activeWorkspaceTab = 'editor';
       activeEditorSection = 'process';
       if (focusKind === 'behavior') {
@@ -1832,6 +2163,7 @@
     function selectInitialTabAfterImport() {
       const model = currentDiagramModel();
       resetEditorNavigation(model.namedBehaviorCount ? 'process' : 'basic');
+      diagramExpanded = false;
       activeWorkspaceTab = model.namedBehaviorCount ? 'diagram' : 'editor';
       if (model.namedBehaviorCount) openedPreviewProcesses.add(currentProcessKey());
     }
@@ -2233,10 +2565,16 @@
     function render() {
       destroyDiagram();
       const data = currentDocument();
+      document.body.classList.toggle(
+        'diagram-overlay-open',
+        Boolean(data && activeWorkspaceTab === 'diagram' && diagramExpanded)
+      );
       document.getElementById('exportButton').disabled = busy || !data;
       document.getElementById('clearButton').disabled = busy || !data;
       updateCandidateBar();
       if (!data) {
+        diagramExpanded = false;
+        document.body.classList.remove('diagram-overlay-open');
         activeWorkspaceTab = 'editor';
         workspace.innerHTML = `<div class="empty">
           <h2>从一条空白流程开始</h2>
@@ -2316,6 +2654,7 @@
         candidates = [{ data: normalizeV1(data), dirty: false, origin: 'new' }];
         currentIndex = 0;
         activeWorkspaceTab = 'editor';
+        diagramExpanded = false;
         resetEditorNavigation('basic');
         openedPreviewProcesses.clear();
         clearStatus();
@@ -2332,6 +2671,7 @@
       candidates = [];
       currentIndex = 0;
       activeWorkspaceTab = 'editor';
+      diagramExpanded = false;
       resetEditorNavigation('basic');
       openedPreviewProcesses.clear();
       clearStatus();
@@ -2497,6 +2837,14 @@
       }
       if (action === 'fit-diagram') return diagramView?.fit();
       if (action === 'reset-diagram') return diagramView?.reset();
+      if (action === 'toggle-diagram-example') {
+        diagramExampleExpanded = !diagramExampleExpanded;
+        return render();
+      }
+      if (action === 'toggle-diagram-expanded') {
+        diagramExpanded = !diagramExpanded;
+        return render();
+      }
       if (action === 'focus-editor') return focusEditorItem(element.dataset.focusKind, element.dataset.focusRef);
       if (action === 'edit-linked-handoff') return focusEditorItem('handoff', element.dataset.ref);
       if (!currentDocument()) return;
@@ -2949,6 +3297,12 @@
       protectedAction = null;
       closeProtectedModal();
       if (action) action();
+    });
+
+    window.addEventListener('keydown', event => {
+      if (event.key !== 'Escape' || !diagramExpanded) return;
+      diagramExpanded = false;
+      render();
     });
 
     window.addEventListener('beforeunload', event => {

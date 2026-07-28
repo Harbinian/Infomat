@@ -392,11 +392,13 @@ async function testApi() {
 
 function testProcessDiagramModel() {
   const draft = createDraft();
-  const makeBehavior = (ref, name, nodeType) => {
+  const departmentOrder = ['公司领导', '行政人事部', '经营发展部', '财务部'];
+  const makeBehavior = (ref, name, nodeType, actorRole = '财务部会计员') => {
     const behavior = JSON.parse(JSON.stringify(draft.behaviors[0]));
     behavior.behavior_ref = ref;
     behavior.behavior_name = name;
     behavior.node_type = nodeType;
+    behavior.current_actor_role = actorRole;
     behavior.work_role.behavior_ref = ref;
     behavior.work_role.work_role_name = `${name}行为的办理角色`;
     behavior.work_role.role_duty = '办理';
@@ -404,10 +406,12 @@ function testProcessDiagramModel() {
   };
   draft.behaviors = [
     makeBehavior('behavior_action', '提交申请', 'action'),
-    makeBehavior('behavior_decision', '判断材料', 'decision'),
-    makeBehavior('behavior_split', '并行办理', 'parallel_split'),
-    makeBehavior('behavior_join', '汇总结果', 'parallel_join')
+    makeBehavior('behavior_decision', '判断材料', 'decision', '经营发展部法务'),
+    makeBehavior('behavior_split', '并行办理', 'parallel_split', '全公司'),
+    makeBehavior('behavior_join', '汇总结果', 'parallel_join', '历史未收录岗位')
   ];
+  draft.behaviors[0].countersign_all_required = true;
+  draft.behaviors[0].countersign_target_departments = ['工程技术部', '质量管理部'];
   draft.flow_relations = [
     {
       relation_ref: 'relation_sequence',
@@ -478,24 +482,51 @@ function testProcessDiagramModel() {
   }];
 
   const before = JSON.stringify(draft);
-  const model = buildGraphModel(draft);
+  const model = buildGraphModel(draft, { departmentOrder });
   assert.equal(JSON.stringify(draft), before, 'diagram generation must not mutate the process document');
   assert.equal(model.namedBehaviorCount, 4);
   assert.equal(model.localEdgeCount, 4);
   assert.equal(model.unresolvedCount, 1);
   assert.match(model.unresolvedItems[0].message, /关系类型、终点/);
-  assert.ok(model.nodes.some(node => node.classes.includes('node-action')));
-  assert.ok(model.nodes.some(node => node.classes.includes('node-decision')));
-  assert.ok(model.nodes.some(node => node.classes.includes('node-parallel-split')));
-  assert.ok(model.nodes.some(node => node.classes.includes('node-parallel-join')));
-  assert.ok(model.nodes.some(node => node.classes.includes('handoff-node') && /待明确/.test(node.data.label)));
-  assert.ok(model.nodes.some(node => node.classes.includes('internal-call-node')));
+  assert.deepEqual(
+    model.lanes.map(lane => lane.label),
+    ['财务部', '经营发展部', '全公司通用', '执行部门待明确'],
+    'the owning department must be first and unrecognized actor values must keep a separate lane'
+  );
+  assert.equal(model.backgrounds.filter(node => node.classes.includes('lane-header-node')).length, 4);
+  const actionNode = model.nodes.find(node => node.classes.includes('node-action'));
+  const decisionNode = model.nodes.find(node => node.classes.includes('node-decision'));
+  const splitNode = model.nodes.find(node => node.classes.includes('node-parallel-split'));
+  const joinNode = model.nodes.find(node => node.classes.includes('node-parallel-join'));
+  assert.match(actionNode.data.label, /岗位：会计员/);
+  assert.match(decisionNode.data.label, /×.*判断材料/);
+  assert.match(decisionNode.data.label, /岗位：法务/);
+  assert.match(splitNode.data.label, /＋.*并行办理/);
+  assert.match(joinNode.data.label, /执行信息：历史未收录岗位/);
+  assert.ok(model.nodes.some(node =>
+    node.classes.includes('countersign-badge') && node.data.label === '会签×2'
+  ));
+  assert.ok(actionNode.position.x < decisionNode.position.x, 'explicit local relations must determine left-to-right rank');
+  assert.ok(model.pool.width > 0 && model.pool.height > 0);
+  const handoffNode = model.nodes.find(node => node.classes.includes('handoff-node'));
+  assert.ok(handoffNode && /待明确/.test(handoffNode.data.label));
+  assert.ok(handoffNode.position.y > model.pool.height, 'cross-department handoffs must stay outside the swimlane area');
+  const internalCallNode = model.nodes.find(node => node.classes.includes('internal-call-node'));
+  assert.ok(internalCallNode);
+  assert.equal(internalCallNode.data.laneKey, decisionNode.data.laneKey, 'an internal call stays in the caller department lane');
   assert.ok(model.edges.some(edge => edge.classes.includes('relation-sequence')));
   assert.ok(model.edges.some(edge => edge.classes.includes('relation-condition') && /材料齐全/.test(edge.data.label)));
   assert.ok(model.edges.some(edge => edge.classes.includes('relation-loop') && /材料不齐全/.test(edge.data.label)));
   assert.ok(model.edges.some(edge => edge.classes.includes('relation-parallel') && /全部分支完成后汇合/.test(edge.data.label)));
-  assert.ok(model.edges.some(edge => edge.classes.includes('return-edge') && edge.data.focusKind === 'handoff'));
-  assert.ok(model.edges.some(edge => edge.classes.includes('return-edge') && edge.data.focusKind === 'call'));
+  assert.ok(model.edges.some(edge => edge.classes.includes('message-flow') && edge.data.focusKind === 'handoff'));
+  assert.ok(model.edges.some(edge => edge.classes.includes('return-message-flow') && edge.data.focusKind === 'handoff'));
+  assert.ok(model.edges.some(edge => edge.classes.includes('internal-return-edge') && edge.data.focusKind === 'call'));
+  const repeatModel = buildGraphModel(draft, { departmentOrder });
+  assert.deepEqual(
+    model.nodes.filter(node => node.position).map(node => ({ id: node.data.id, position: node.position })),
+    repeatModel.nodes.filter(node => node.position).map(node => ({ id: node.data.id, position: node.position })),
+    'the preset swimlane layout must be deterministic'
+  );
 
   const noRelations = createDraft({
     behaviors: [
@@ -506,12 +537,139 @@ function testProcessDiagramModel() {
     cross_department_handoffs: [],
     internal_process_calls: []
   });
-  const noRelationModel = buildGraphModel(noRelations);
-  assert.equal(noRelationModel.nodes.length, 2);
+  const noRelationModel = buildGraphModel(noRelations, { departmentOrder });
+  const noRelationBehaviorNodes = noRelationModel.nodes.filter(node => node.classes.includes('behavior-node'));
+  assert.equal(noRelationBehaviorNodes.length, 2);
   assert.equal(noRelationModel.edges.length, 0, 'behavior input order must never create inferred arrows');
-  assert.ok(noRelationModel.nodes.some(node =>
+  assert.equal(
+    noRelationBehaviorNodes[0].position.x,
+    noRelationBehaviorNodes[1].position.x,
+    'unrelated behavior nodes must share a rank instead of implying sequence by horizontal position'
+  );
+  assert.ok(noRelationBehaviorNodes.some(node =>
     node.classes.includes('node-pending') && /节点类型待判断/.test(node.data.label)
   ));
+  assert.ok(noRelationModel.backgrounds.some(node => node.classes.includes('lane-body-node')));
+
+  const invalidHandoff = createDraft({
+    cross_department_handoffs: [{
+      handoff_ref: 'handoff_invalid_sender',
+      source_department: '财务部',
+      target_department: '经营发展部',
+      send_behavior_ref: 'behavior_missing',
+      receive_behavior_ref: null,
+      input_data_ref: null,
+      returned_data_ref: null,
+      requested_matter: '确认合同信息',
+      trigger_condition: '',
+      completion_standard: '',
+      target_process_ref: null,
+      target_process_name: '',
+      target_behavior_ref: null,
+      target_behavior_name: '',
+      return_behavior_ref: null
+    }]
+  });
+  const invalidHandoffModel = buildGraphModel(invalidHandoff, { departmentOrder });
+  assert.equal(invalidHandoffModel.edges.some(edge => edge.classes.includes('message-flow')), false);
+  assert.ok(invalidHandoffModel.unresolvedItems.some(item => /有效的发送行为/.test(item.message)));
+
+  const complexDepartments = [
+    ['财务部', '会计员'],
+    ['经营发展部', '法务'],
+    ['工程技术部', '技术员'],
+    ['质量管理部', '检验员'],
+    ['物资保障部', '计划员'],
+    ['项目管理部', '项目管理员']
+  ];
+  const complexBehaviors = Array.from({ length: 40 }, (_, index) => {
+    const sequence = index + 1;
+    const nodeType = sequence === 8
+      ? 'decision'
+      : sequence === 14
+        ? 'parallel_split'
+        : sequence === 19
+          ? 'parallel_join'
+          : 'action';
+    const [department, position] = complexDepartments[index % complexDepartments.length];
+    const behavior = makeBehavior(
+      `behavior_complex_${sequence}`,
+      `代表性复杂流程行为${sequence}`,
+      nodeType,
+      `${department}${position}`
+    );
+    behavior.countersign_all_required = sequence === 30;
+    behavior.countersign_target_departments = sequence === 30 ? ['工程技术部', '质量管理部', '财务部'] : [];
+    return behavior;
+  });
+  const complexRelations = complexBehaviors.slice(0, -1).map((behavior, index) => {
+    const relationType = behavior.node_type === 'decision'
+      ? 'condition'
+      : behavior.node_type === 'parallel_split'
+        ? 'parallel'
+        : 'sequence';
+    return {
+      relation_ref: `relation_complex_${index + 1}`,
+      relation_type: relationType,
+      from_behavior_ref: behavior.behavior_ref,
+      to_behavior_ref: complexBehaviors[index + 1].behavior_ref,
+      condition: relationType === 'condition' ? '资料完整' : '',
+      join_mode: relationType === 'parallel' ? 'all' : ''
+    };
+  });
+  complexRelations.push({
+    relation_ref: 'relation_complex_loop',
+    relation_type: 'loop',
+    from_behavior_ref: 'behavior_complex_28',
+    to_behavior_ref: 'behavior_complex_8',
+    condition: '复核不通过',
+    join_mode: ''
+  });
+  const complexDraft = createDraft({
+    behaviors: complexBehaviors,
+    flow_relations: complexRelations,
+    cross_department_handoffs: [{
+      handoff_ref: 'handoff_complex',
+      source_department: '项目管理部',
+      target_department: '行政人事部',
+      send_behavior_ref: 'behavior_complex_18',
+      receive_behavior_ref: null,
+      input_data_ref: null,
+      returned_data_ref: null,
+      requested_matter: '确认人员安排',
+      trigger_condition: '进入跨部门确认环节',
+      completion_standard: '返回确认结果',
+      target_process_ref: null,
+      target_process_name: '人员安排确认流程',
+      target_behavior_ref: null,
+      target_behavior_name: '确认人员安排',
+      return_behavior_ref: 'behavior_complex_19'
+    }],
+    internal_process_calls: [{
+      call_ref: 'call_complex',
+      caller_behavior_ref: 'behavior_complex_25',
+      target_process_ref: null,
+      target_process_name: '部门内部复核流程',
+      input_data_refs: [],
+      output_data_refs: [],
+      return_behavior_ref: 'behavior_complex_26'
+    }]
+  });
+  const complexModel = buildGraphModel(complexDraft, {
+    departmentOrder: complexDepartments.map(([department]) => department)
+  });
+  const complexBehaviorNodes = complexModel.nodes.filter(node => node.classes.includes('behavior-node'));
+  assert.equal(complexBehaviorNodes.length, 40);
+  assert.equal(complexModel.lanes.length, 6);
+  assert.equal(complexModel.unresolvedCount, 0);
+  assert.ok(complexModel.edges.some(edge => edge.classes.includes('relation-loop')));
+  assert.ok(complexModel.edges.some(edge => edge.classes.includes('message-flow')));
+  assert.ok(complexModel.nodes.some(node => node.data.label === '会签×3'));
+  assert.equal(
+    new Set(complexBehaviorNodes.map(node => `${node.position.x}:${node.position.y}`)).size,
+    complexBehaviorNodes.length,
+    'the representative 40-behavior flow must not overlap behavior nodes'
+  );
 }
 
 async function testFrontendContract() {
@@ -651,17 +809,39 @@ async function testFrontendContract() {
   assert.equal(html.includes('data-action="add-call"'), false);
   assert.equal(html.includes('data-action="remove-call"'), false);
   assert.ok(html.includes('文字编制'));
-  assert.ok(html.includes('流程图预览'));
-  assert.ok(html.includes('什么时候可以查看流程图'));
+  assert.ok(html.includes('跨职能流程图预览'));
+  assert.ok(html.includes('什么时候可以查看跨职能流程图'));
   assert.ok(html.includes('系统不会按录入顺序自动连线'));
   assert.ok(html.includes('该图根据导入内容生成，仅用于核对，不代表已经审核'));
   assert.ok(html.includes('有 ${model.unresolvedCount} 项内容无法绘制'));
+  ['业务行为', '判断', '并行', '流程关系', '跨部门承接', '内部流程调用', '类型待判断']
+    .forEach(label => assert.ok(html.includes(`<strong>${label}</strong>`), `diagram legend must include ${label}`));
+  assert.ok(html.includes('先看泳道确认责任部门，再沿实线箭头从左向右阅读；虚线箭头表示跨部门承接。'));
+  assert.ok(html.includes('查看图例示例'));
+  assert.ok(html.includes('BPMN 2.0.2图形子集'));
+  assert.ok(html.includes('data-action="toggle-diagram-example"'));
+  assert.ok(html.includes('data-action="toggle-diagram-expanded"'));
+  assert.ok(html.includes('展开查看'));
+  assert.ok(html.includes('适应画布'));
+  assert.ok(html.includes('重置视图'));
+  assert.ok(html.includes('let diagramExampleExpanded = false'));
+  assert.ok(html.includes('let diagramExpanded = false'));
+  assert.equal(html.includes('显示数据对象'), false);
   assert.ok(html.includes('selectInitialTabAfterImport();'));
   assert.ok(html.includes("activeEditorSection = 'process'"));
   assert.ok(html.includes('<script src="/vendor/cytoscape.min.js"></script>'));
   assert.ok(html.includes('<script src="process-diagram.js"></script>'));
   assert.match(diagramSource, /autoungrabify:\s*true/);
   assert.match(diagramSource, /buildGraphModel/);
+  assert.match(diagramSource, /name:\s*'preset'/);
+  assert.ok(diagramSource.includes('lane-header-node'));
+  assert.ok(diagramSource.includes('countersign-badge'));
+  assert.ok(diagramSource.includes("'curve-style': 'taxi'"));
+  assert.ok(diagramSource.includes("'source-arrow-fill': 'hollow'"));
+  assert.ok(diagramSource.includes("'target-arrow-fill': 'hollow'"));
+  assert.ok(diagramSource.includes("'line-style': 'solid'"));
+  assert.equal(diagramSource.includes('data_objects'), false, 'the main diagram must not render data objects');
+  assert.equal(/bpmn(?:-js)?|BPMN XML/i.test(diagramSource), false, 'the preview must not add a BPMN engine or XML');
   assert.equal(/https?:\/\//.test(diagramSource), false, 'diagram runtime must not depend on a CDN');
   assert.ok(serverSource.includes("app.get('/vendor/cytoscape.min.js'"));
   assert.equal(/\/api\/suggestions/.test(html), false);
