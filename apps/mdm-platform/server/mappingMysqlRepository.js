@@ -441,7 +441,7 @@ function makeMappingMysqlRepository(pool) {
       if (step === 5) {
         await pool.execute(
           'UPDATE mdm_mapping_records SET status=?, current_step=?, updated_at=CURRENT_TIMESTAMP WHERE id=?',
-          ['published', 5, mappingId]
+          ['final_reviewed', 5, mappingId]
         );
         return { ok: true };
       }

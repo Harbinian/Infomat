@@ -79,21 +79,21 @@ function makePool() {
 (async () => {
   const repo = makeGovernanceGuidanceMysqlRepository(makePool());
 
-  const delegateList = await repo.listGuidanceForPerson(601, new Set(['guidance:respond']));
+  const delegateList = await repo.listGuidanceForPerson(601, new Set(['governance:draft-department']));
   assert.strictEqual(delegateList.length, 1, 'active delegate should see delegated guidance in the list');
   assert.strictEqual(delegateList[0].guidanceActions.canRespond, true, 'active delegate can respond when permission allows');
 
-  const outsiderList = await repo.listGuidanceForPerson(777, new Set(['guidance:respond']));
+  const outsiderList = await repo.listGuidanceForPerson(777, new Set(['governance:draft-department']));
   assert.strictEqual(outsiderList.length, 0, 'unrelated person should not see guidance list rows');
 
-  const delegateDetail = await repo.getGuidanceDetail(77, 601, new Set(['guidance:respond']));
+  const delegateDetail = await repo.getGuidanceDetail(77, 601, new Set(['governance:draft-department']));
   assert.ok(delegateDetail, 'active delegate should see guidance detail');
   assert.strictEqual(delegateDetail.guidanceActions.canRespond, true);
 
-  const outsiderDetail = await repo.getGuidanceDetail(77, 777, new Set(['guidance:respond']));
+  const outsiderDetail = await repo.getGuidanceDetail(77, 777, new Set(['governance:draft-department']));
   assert.strictEqual(outsiderDetail, null, 'unrelated person should not read guidance detail by id');
 
-  const globalDetail = await repo.getGuidanceDetail(77, 999, new Set(['process_governance:view_global']));
+  const globalDetail = await repo.getGuidanceDetail(77, 999, new Set(['governance:read-global']));
   assert.ok(globalDetail, 'global viewer should see guidance detail');
 
   console.log('Guidance visibility MySQL repository test passed');

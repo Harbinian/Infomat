@@ -86,13 +86,14 @@ async function main() {
 
   const repo = makeFakeDataMapRepository();
   setDataMapRepositoryFactory(async () => repo);
+  let effectivePermissions = new Set([
+    'governance:read-department',
+    'governance:draft-department'
+  ]);
   auth.setIdentityRepositoryFactory(async () => ({
     async getUserEffectivePermissions(userId) {
       assert.strictEqual(userId, 42);
-      return { permSet: new Set(), fieldConstraints: {} };
-    },
-    async getUserRoleCodes(userId, legacyRole) {
-      return [{ code: legacyRole, name: '基础角色' }, { code: 'owner', name: '业务负责人' }].filter(role => role.code);
+      return { permSet: effectivePermissions, fieldConstraints: {} };
     }
   }));
 
@@ -100,9 +101,9 @@ async function main() {
   app.use(express.json());
   app.use((req, res, next) => {
     req.session = {
+      personId: 42,
       userId: 42,
-      userRole: 'submitter',
-      userName: '字段 owner',
+      userName: '字段治理人员',
       departmentId: 9
     };
     next();
@@ -136,6 +137,11 @@ async function main() {
     assert.strictEqual(upsertBody.authoritative_system, 'CRM');
     assert.strictEqual(upsertBody.confirmed, 0);
 
+    effectivePermissions = new Set([
+      'governance:read-department',
+      'governance:review-department',
+      'governance:record-department-decision'
+    ]);
     const confirmRes = await fetch(`${baseUrl}/api/field-identities/20/confirm`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

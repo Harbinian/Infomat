@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const { requireAuth, getUserEffectivePermissionsAsync } = require('../auth');
-const { getEffectiveRoleCodesAsync } = require('../access');
 const { dataMapRepository } = require('../dataMapMysqlRepository');
 
 function handleError(res, error) {
@@ -17,16 +16,28 @@ function runAction(res, action) {
   return action().catch(error => handleError(res, error));
 }
 
-async function isAdmin(req) {
+async function permissionSet(req) {
   const { permSet } = await getUserEffectivePermissionsAsync(req.session.userId);
-  return permSet.has('admin:access') || permSet.has('*:*');
+  return permSet;
 }
 
-async function canMaintainIdentity(req, field, identity, context) {
-  if (await isAdmin(req)) return true;
-  if (identity && Number(identity.owner_user_id || 0) === Number(req.session.userId || 0)) return true;
-  const roleCodes = await getEffectiveRoleCodesAsync(req);
-  return roleCodes.has('owner') && Number(context && context.dept_id || 0) === Number(req.session.departmentId || 0);
+async function canViewIdentity(req, context) {
+  const permissions = await permissionSet(req);
+  if (permissions.has('governance:read-global')) return true;
+  return permissions.has('governance:read-department') &&
+    Number(context && context.dept_id || 0) === Number(req.session.departmentId || 0);
+}
+
+async function canMaintainIdentity(req, context) {
+  const permissions = await permissionSet(req);
+  return permissions.has('governance:draft-department') &&
+    Number(context && context.dept_id || 0) === Number(req.session.departmentId || 0);
+}
+
+async function canConfirmIdentity(req, context) {
+  const permissions = await permissionSet(req);
+  return permissions.has('governance:review-department') &&
+    Number(context && context.dept_id || 0) === Number(req.session.departmentId || 0);
 }
 
 async function fieldScope(repo, fieldId) {
@@ -38,8 +49,9 @@ async function fieldScope(repo, fieldId) {
 router.get('/field/:fieldEntryId', requireAuth, (req, res) => {
   return runAction(res, async () => {
     const repo = await dataMapRepository();
-    const { field } = await fieldScope(repo, req.params.fieldEntryId);
+    const { field, context } = await fieldScope(repo, req.params.fieldEntryId);
     if (!field) return res.status(404).json({ error: '字段不存在' });
+    if (!await canViewIdentity(req, context)) return res.status(403).json({ error: '无权查看该字段身份' });
     const identity = await repo.getFieldIdentity(req.params.fieldEntryId);
     res.json(identity || {});
   });
@@ -51,8 +63,8 @@ router.put('/:fieldEntryId', requireAuth, (req, res) => {
     const { field, context } = await fieldScope(repo, req.params.fieldEntryId);
     if (!field) return res.status(404).json({ error: '字段不存在' });
     const existing = await repo.getFieldIdentity(req.params.fieldEntryId);
-    if (!await canMaintainIdentity(req, field, existing, context)) {
-      return res.status(403).json({ error: '仅字段 owner、本部门 owner 或管理员可维护黄金源信息' });
+    if (!await canMaintainIdentity(req, context)) {
+      return res.status(403).json({ error: '只能由部门主对接人维护本部门黄金源信息' });
     }
     res.json(await repo.upsertFieldIdentity(req.params.fieldEntryId, req.body));
   });
@@ -65,8 +77,8 @@ router.post('/:fieldEntryId/confirm', requireAuth, (req, res) => {
     if (!field) return res.status(404).json({ error: '字段不存在' });
     const existing = await repo.getFieldIdentity(req.params.fieldEntryId);
     if (!existing) return res.status(404).json({ error: '字段身份不存在' });
-    if (!await canMaintainIdentity(req, field, existing, context)) {
-      return res.status(403).json({ error: '仅字段 owner、本部门 owner 或管理员可确认权威系统' });
+    if (!await canConfirmIdentity(req, context)) {
+      return res.status(403).json({ error: '只能由部门MDM审核员确认本部门权威系统' });
     }
     const identity = await repo.confirmFieldIdentity(req.params.fieldEntryId, req.body, req.session.userId);
     if (!identity) return res.status(404).json({ error: '字段身份不存在' });

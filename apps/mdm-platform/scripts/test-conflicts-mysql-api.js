@@ -163,23 +163,31 @@ async function main() {
       assert.strictEqual(userId, 42);
       return {
         permSet: new Set([
-          'admin:access',
-          'data:view_all',
-          'conflict:manage',
-          'conflict:escalate',
-          'conflict:final_decide_escalated'
+          'governance:read-global',
+          'governance:assign-work',
+          'governance:structure-gate',
+          'governance:handle-assigned-conflict',
+          'governance:escalate-conflict',
+          'governance:decide-escalation'
         ]),
         fieldConstraints: {}
       };
     },
-    async getUserRoleCodes(userId, legacyRole) {
-      return [{ code: legacyRole || 'admin', name: 'Admin' }];
+    async getUserRoleCodes(userId) {
+      return Number(userId) === 77
+        ? [{ code: 'data_conflict_handler', name: '数据冲突处理人' }]
+        : [{ code: 'mdm_lead', name: 'MDM工作组组长' }];
     },
     async getDepartmentById(id) {
       return { id, name: id === 9 ? 'Sales' : 'Finance' };
     },
     async getUserById(id) {
-      return { id, name: id === 42 ? 'Admin' : 'Assignee', department_id: id === 77 ? 10 : 9 };
+      return {
+        id,
+        personId: id,
+        name: id === 42 ? 'MDM工作组组长' : '数据冲突处理人',
+        department_id: id === 77 ? 10 : 9
+      };
     }
   }));
 
@@ -187,9 +195,9 @@ async function main() {
   app.use(express.json());
   app.use((req, res, next) => {
     req.session = {
+      personId: 42,
       userId: 42,
-      userRole: 'admin',
-      userName: 'Admin',
+      userName: 'MDM工作组组长',
       departmentId: 9
     };
     next();

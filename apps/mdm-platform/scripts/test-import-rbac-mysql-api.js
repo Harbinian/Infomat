@@ -21,23 +21,33 @@ function closeServer(server) {
 async function main() {
   const auth = require('../server/auth');
   const importRbacRouter = require('../server/routes/importRbac');
-
-  let permissionChecks = 0;
-  auth.setIdentityRepositoryFactory(async () => ({
-    async getUserEffectivePermissions(userId) {
-      assert.strictEqual(userId, 42);
-      permissionChecks += 1;
-      return { permSet: new Set(['admin:access']), fieldConstraints: {} };
+  const repository = {
+    async validateSession(session) {
+      return {
+        valid: true,
+        user: {
+          personId: session.personId,
+          accountId: session.accountId,
+          authVersion: session.authVersion,
+          personName: '管理员',
+          current_department_id: 9,
+          must_change_password: false
+        }
+      };
+    },
+    async getUserEffectivePermissions() {
+      return { permSet: new Set(['identity:read']), fieldConstraints: {} };
     }
-  }));
+  };
+  auth.setIdentityRepositoryFactory(async () => repository);
 
   const app = express();
   app.use((req, res, next) => {
     req.session = {
-      userId: 42,
-      userName: '管理员',
-      userRole: 'admin',
-      departmentId: 9
+      personId: 42,
+      accountId: 142,
+      authVersion: 7,
+      destroy(callback) { callback(); }
     };
     next();
   });
@@ -45,16 +55,16 @@ async function main() {
 
   const server = await listen(app);
   const baseUrl = `http://127.0.0.1:${server.address().port}`;
-
   try {
-    for (const path of ['/user-roles', '/role-permissions', '/full']) {
-      const res = await fetch(`${baseUrl}/api/import-rbac${path}`, { method: 'POST' });
-      const body = await res.json();
-      assert.strictEqual(res.status, 501, `${path}: ${JSON.stringify(body)}`);
-      assert.strictEqual(body.error, 'RBAC 批量导入 MySQL 迁移未完成');
+    for (const method of ['GET', 'POST']) {
+      for (const routePath of ['/templates/full', '/user-roles', '/role-permissions', '/full']) {
+        const response = await fetch(`${baseUrl}/api/import-rbac${routePath}`, { method });
+        const body = await response.json();
+        assert.strictEqual(response.status, 410, `${method} ${routePath}: ${JSON.stringify(body)}`);
+        assert.strictEqual(body.code, 'LEGACY_IDENTITY_API_RETIRED');
+      }
     }
-    assert.strictEqual(permissionChecks, 3);
-    console.log('Import RBAC MySQL guard test passed');
+    console.log('Retired RBAC batch import API test passed');
   } finally {
     await closeServer(server);
     auth.resetIdentityRepositoryFactory();
@@ -65,10 +75,7 @@ main().catch(error => {
   console.error(error);
   process.exitCode = 1;
 }).finally(() => {
-  if (previousReadModel === undefined) {
-    delete process.env.MDM_IDENTITY_READ_MODEL;
-  } else {
-    process.env.MDM_IDENTITY_READ_MODEL = previousReadModel;
-  }
+  if (previousReadModel === undefined) delete process.env.MDM_IDENTITY_READ_MODEL;
+  else process.env.MDM_IDENTITY_READ_MODEL = previousReadModel;
   cleanupDb({ ignoreErrors: true });
 });

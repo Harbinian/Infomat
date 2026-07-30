@@ -1117,11 +1117,13 @@ function makeSqliteProcessGovernanceIssuePoolRepository(db) {
     const deptName = row.dept_name || row.primary_dept_name || '';
     const targetDept = row.target_dept_name || row.output_target_dept || '';
     const rows = [
-      ['business_owner', deptName, 'business_contact', 1, '确认业务事实'],
-      ['department_reviewer', deptName, 'project_lead', 0, '审核确认意见'],
-      ['mdm_decider', null, 'decision_group', 0, '最终裁决']
+      ['department_drafter', deptName, 'department_contact', 1, '补充并提交部门材料'],
+      ['department_reviewer', deptName, 'department_mdm_reviewer', 1, '审核并记录部门决定'],
+      ['mdm_gate', null, 'mdm_lead', 0, '检查结构、证据和责任链']
     ];
-    if (targetDept) rows.splice(1, 0, ['collaborator', targetDept, 'business_contact', 1, '协同确认']);
+    if (targetDept) {
+      rows.splice(2, 0, ['related_department_reviewer', targetDept, 'department_mdm_reviewer', 1, '记录相关部门决定']);
+    }
     rows.forEach(([participantType, participantDept, roleCode, canAct, actionLabel]) => {
       sqliteRun(db, `
         INSERT INTO process_governance_issue_participants
@@ -1620,11 +1622,13 @@ function makeProcessGovernanceIssuePoolRepository(pool) {
     const deptName = row.dept_name || row.primary_dept_name || '';
     const targetDept = row.target_dept_name || row.output_target_dept || '';
     const rows = [
-      ['business_owner', deptName, 'business_contact', 1, '确认业务事实'],
-      ['department_reviewer', deptName, 'project_lead', 0, '审核确认意见'],
-      ['mdm_decider', null, 'decision_group', 0, '最终裁决']
+      ['department_drafter', deptName, 'department_contact', 1, '补充并提交部门材料'],
+      ['department_reviewer', deptName, 'department_mdm_reviewer', 1, '审核并记录部门决定'],
+      ['mdm_gate', null, 'mdm_lead', 0, '检查结构、证据和责任链']
     ];
-    if (targetDept) rows.splice(1, 0, ['collaborator', targetDept, 'business_contact', 1, '协同确认']);
+    if (targetDept) {
+      rows.splice(2, 0, ['related_department_reviewer', targetDept, 'department_mdm_reviewer', 1, '记录相关部门决定']);
+    }
     for (const [participantType, participantDept, roleCode, canAct, actionLabel] of rows) {
       await mysqlRun(pool, `
         INSERT INTO process_governance_issue_participants

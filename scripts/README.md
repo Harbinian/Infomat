@@ -87,7 +87,7 @@ npm run test:work-role-contract
 
 `confirmed` 关系必须填写原文角色文本、行政人事确认依据和证据引用；证据必须为 `verified`、能定位到源文件具体位置、包含原文摘录，且 `locate_method` 不能包含 OCR。`proposed` 只保留为候选并输出 warning。confirmed 关系若存在悬空证据、待确认/OCR 证据、无效流程或行为引用、无正式工作角色、无参与部门岗位映射、生效期不符或重复 L3 owner，解析器会聚合错误并在写入公司快照前退出非零；有效 retired 角色或岗位映射只作为历史关系保留并输出 warning。
 
-## MDM / PMO 固定启动合同
+## MDM / PMO 固定启动配置
 
 MDM 和 PMO 的仓库根目录启动入口：
 
@@ -116,7 +116,7 @@ MYSQL_PASSWORD=你的项目 MySQL 密码
 MDM_ADMIN_PASSWORD=你的管理员密码
 ```
 
-`start-infomat-services.ps1` 使用固定合同启动服务，并在启动前刷新 3000/5173 上的 MDM/PMO 进程。非敏感配置放在 `infomat-services.config.json`，本机密码放在 `infomat-services.local.env`。
+`start-infomat-services.ps1` 使用固定配置启动服务，并在启动前刷新3000和5173端口上的MDM、PMO进程。非敏感配置放在 `infomat-services.config.json`，本机密码放在 `infomat-services.local.env`。
 
 如果固定 MySQL 容器不存在，先运行：
 
@@ -135,8 +135,17 @@ npm run smoke:infomat-services
 | MDM | `http://127.0.0.1:3000` 可访问 |
 | PMO | 本机 `http://127.0.0.1:5173` 可访问；同事使用 `http://<本机局域网IP>:5173` |
 | MySQL | Docker 容器 `infomat-input-baseline-review-mysql` 通过 `localhost:3307` 提供服务 |
-| 权限数据 | `npm run smoke:infomat-services` 显示 `ADMIN001 / 系统管理员 / admin` |
+| 权限数据 | `npm run smoke:infomat-services` 显示`ADMIN001`有效账号、`admin`固定角色和当前治理模型版本 |
 | 私有密码 | `scripts/infomat-services.local.env` 包含 `MYSQL_PASSWORD` 和 `MDM_ADMIN_PASSWORD` |
+
+3000现有身份库首次切换到固定RBAC/RACI模型前，在`apps/mdm-platform/`执行：
+
+```powershell
+npm run migrate:rbac-raci-v2:dry-run
+npm run migrate:rbac-raci-v2:apply
+```
+
+迁移只自动保留受控`ADMIN001`管理员，其他旧账号停用，旧角色不自动映射。回滚和补偿必须使用迁移返回的批次编号，完整步骤见`apps/mdm-platform/docs/RBAC-RACI-Migration-Runbook.md`。空身份库使用`npm run bootstrap:admin`，检测到已有身份数据后会拒绝重复初始化。
 
 输入基线问题复核正式入口在 MDM 平台：
 

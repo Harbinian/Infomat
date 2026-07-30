@@ -70,8 +70,8 @@ function makeApp() {
   app.use(express.json());
   app.use((req, res, next) => {
     req.session = {
+      personId: 42,
       userId: 42,
-      userRole: 'owner',
       userName: '本地会话姓名',
       departmentId: 900
     };
@@ -94,19 +94,21 @@ async function main() {
     roleWorkbenchRouter.setIdentityRepositoryFactory(async () => ({
       async getCurrentUserPayload(session) {
         currentPayloadCalls += 1;
-        assert(session.userId === 42, 'MySQL 身份仓储应接收当前会话用户');
+        assert(session.personId === 42, 'MySQL 身份仓储应接收当前会话人员');
         return {
           id: 42,
           name: 'MySQL 身份用户',
-          role: 'owner',
           departmentId: 900,
           departmentName: 'MySQL 经营发展部',
           rbacRoles: [
-            { code: 'business_contact', name: '业务对接人' },
-            { code: 'data_quality', name: '数据质量员' }
+            { code: 'department_contact', name: '部门主对接人' }
           ],
-          roleCodes: ['business_contact', 'data_quality'],
-          permissions: ['data:view_all']
+          roleCodes: ['department_contact'],
+          permissions: [
+            'governance:read-department',
+            'governance:draft-department',
+            'governance:submit-department'
+          ]
         };
       }
     }));
@@ -119,17 +121,15 @@ async function main() {
     assert(currentPayloadCalls > 0, '角色工作台应调用 MySQL 身份仓储');
     assert(res.body.user.name === 'MySQL 身份用户', '用户姓名应来自 MySQL 身份读模型');
     assert(res.body.user.departmentName === 'MySQL 经营发展部', '部门名称应来自 MySQL 身份读模型');
-    assert(res.body.user.roleCodes.includes('business_contact'), '应返回 MySQL 身份读模型的业务对接人角色');
-    assert(res.body.user.roleCodes.includes('data_quality'), '应返回 MySQL 身份读模型的数据质量员角色');
-    assert(res.body.roles.some(role => role.code === 'business_contact' && role.owned), '业务对接人应标记为当前拥有角色');
-    assert(res.body.roles.some(role => role.code === 'data_quality' && role.owned), '数据质量员应标记为当前拥有角色');
+    assert(res.body.user.roleCodes.includes('department_contact'), '应返回 MySQL 身份读模型的部门主对接人角色');
+    assert(res.body.roles.some(role => role.code === 'department_contact' && role.owned), '部门主对接人应标记为当前拥有角色');
     assert(
       res.body.workItems.some(item => item.type === 'process_quality' && item.title.includes('本部门流程治理问题')),
       '非管理层角色工作台应看到本部门流程治理问题'
     );
     assert(
       !res.body.workItems.some(item => item.type === 'process_quality' && item.title.includes('跨部门流程治理问题')),
-      '非管理层角色工作台不应因 data:view_all 看到跨部门流程治理问题'
+      '部门主对接人不应看到跨部门流程治理问题'
     );
 
     console.log('Role workbench MySQL identity API test passed');

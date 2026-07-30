@@ -76,7 +76,13 @@ async function request(routePath, options = {}, cookie = '') {
     if (token) headers['X-CSRF-Token'] = token;
   }
   const res = await fetch(`${BASE_URL}${routePath}`, { ...requestOptions, headers });
-  const body = await res.json().catch(async () => ({ raw: await res.text() }));
+  const raw = await res.text();
+  let body;
+  try {
+    body = raw ? JSON.parse(raw) : {};
+  } catch {
+    body = { raw };
+  }
   return { res, body };
 }
 
@@ -150,7 +156,27 @@ async function runMasterDataObjectSmoke() {
     assert.ok(orgList.body.rows.some(row => row.org_unit_code === 'OU-DEP-ENG'));
 
     const leadershipPersonList = await request('/api/persons?search=100000', {}, cookie);
-    assert.strictEqual(leadershipPersonList.res.status, 200, JSON.stringify(leadershipPersonList.body));
+    assert.strictEqual(
+      leadershipPersonList.res.status,
+      404,
+      '旧 SQLite 人员接口必须退出 3000 运行时'
+    );
+
+    const legacyIdentityWrite = await request('/api/org/users', {
+      method: 'POST',
+      body: JSON.stringify({ employee_no: 'LEGACY001', name: '旧接口账号' })
+    }, cookie);
+    assert.strictEqual(legacyIdentityWrite.res.status, 410, JSON.stringify(legacyIdentityWrite.body));
+    assert.strictEqual(legacyIdentityWrite.body.code, 'LEGACY_IDENTITY_API_RETIRED');
+
+    const fixedModel = await request('/api/rbac/model', {}, cookie);
+    assert.strictEqual(fixedModel.res.status, 200, JSON.stringify(fixedModel.body));
+    assert.strictEqual(fixedModel.body.roles.length, 7);
+    assert.strictEqual(fixedModel.body.permissions.length, 19);
+
+    console.log('[mainline] retired personnel identity runtime smoke passed');
+    return;
+
     const leaderPerson = leadershipPersonList.body.rows.find(row => row.employee_no === '100000');
     assert.ok(leaderPerson, 'person list should include synchronized leadership person');
     assert.strictEqual(leaderPerson.position_code, 'POS-CXF-CEO');

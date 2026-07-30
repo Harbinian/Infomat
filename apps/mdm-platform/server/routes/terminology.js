@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { requireAuth, requirePermission, getDepartmentByIdAsync } = require('../auth');
-const { hasGlobalViewAsync, isAdminAsync, validateAction } = require('../access');
+const { hasGlobalViewAsync, validateAction } = require('../access');
 const {
   resetTerminologyRepositoryFactory,
   setTerminologyRepositoryFactory,
@@ -54,18 +54,16 @@ async function validateTermTypeCode(repo, res, code) {
 }
 
 async function validateGovernableProcess(req, res, repo, processId) {
-  const globalManager = await isAdminAsync(req);
   if (Number.isNaN(processId)) {
     res.status(400).json({ error: '业务流程不合法' });
     return false;
   }
   if (!processId) {
-    if (globalManager) return true;
     res.status(400).json({ error: '请选择本部门映射关系线上的业务流程' });
     return false;
   }
 
-  const process = await repo.getProcess(processId, await terminologyScope(req, { canViewAll: globalManager }));
+  const process = await repo.getProcess(processId, await terminologyScope(req, { canViewAll: false }));
   if (process) return true;
 
   if (!await repo.processExists(processId)) {
@@ -80,7 +78,7 @@ async function validateGovernableProcess(req, res, repo, processId) {
 router.get('/processes', requireAuth, (req, res) => {
   return runAction(res, async () => {
     const repo = await terminologyRepository();
-    res.json(await repo.listProcesses(await terminologyScope(req, { canViewAll: await isAdminAsync(req) })));
+    res.json(await repo.listProcesses(await terminologyScope(req, { canViewAll: await hasGlobalViewAsync(req) })));
   });
 });
 
@@ -101,7 +99,7 @@ router.get('/', requireAuth, (req, res) => {
   });
 });
 
-router.post('/', requireAuth, (req, res) => {
+router.post('/', requireAuth, requirePermission('governance:draft-department'), (req, res) => {
   return runAction(res, async () => {
     const repo = await terminologyRepository();
     const termTypeCode = normalizeTermTypeCode(req.body.term_type_code);
@@ -121,13 +119,13 @@ router.post('/', requireAuth, (req, res) => {
   });
 });
 
-router.put('/:id', requireAuth, (req, res) => {
+router.put('/:id', requireAuth, requirePermission('governance:draft-department'), (req, res) => {
   return runAction(res, async () => {
     const repo = await terminologyRepository();
     const existing = await repo.getTerm(req.params.id);
     if (!existing) return res.status(404).json({ error: '术语不存在' });
-    if (!await isAdminAsync(req) && (Number(existing.created_by || 0) !== Number(req.session.userId) || existing.status !== 'pending')) {
-      return res.status(403).json({ error: '仅创建人可修改待审术语，或由管理员维护术语' });
+    if (Number(existing.process_owner_dept_id || 0) !== Number(req.session.departmentId || 0) || existing.status !== 'pending') {
+      return res.status(403).json({ error: '部门主对接人只能修改本部门待审术语' });
     }
     const termTypeCode = normalizeTermTypeCode(req.body.term_type_code);
     if (!await validateTermTypeCode(repo, res, termTypeCode)) return;
@@ -147,19 +145,31 @@ router.put('/:id', requireAuth, (req, res) => {
   });
 });
 
-router.post('/:id/review', requirePermission('admin:access'), (req, res) => {
+router.post('/:id/review', requireAuth, requirePermission('governance:review-department'), (req, res) => {
   return runAction(res, async () => {
     if (!validateAction(req.body.action)) {
       return res.status(400).json({ error: '不支持的审核操作' });
     }
-    await (await terminologyRepository()).reviewTerm(req.params.id, req.body.action, req.session.userId);
+    const repo = await terminologyRepository();
+    const existing = await repo.getTerm(req.params.id);
+    if (!existing) return res.status(404).json({ error: '术语不存在' });
+    if (Number(existing.process_owner_dept_id || 0) !== Number(req.session.departmentId || 0)) {
+      return res.status(403).json({ error: '部门MDM审核员只能审核本部门术语' });
+    }
+    await repo.reviewTerm(req.params.id, req.body.action, req.session.userId);
     res.json({ success: true });
   });
 });
 
-router.delete('/:id', requireAuth, requirePermission('admin:access'), (req, res) => {
+router.delete('/:id', requireAuth, requirePermission('governance:draft-department'), (req, res) => {
   return runAction(res, async () => {
-    const deleted = await (await terminologyRepository()).deleteTerm(req.params.id);
+    const repo = await terminologyRepository();
+    const existing = await repo.getTerm(req.params.id);
+    if (!existing) return res.status(404).json({ error: '术语不存在' });
+    if (Number(existing.process_owner_dept_id || 0) !== Number(req.session.departmentId || 0) || existing.status !== 'pending') {
+      return res.status(403).json({ error: '部门主对接人只能删除本部门待审术语' });
+    }
+    const deleted = await repo.deleteTerm(req.params.id);
     if (!deleted) return res.status(404).json({ error: '术语不存在' });
     res.json({ success: true });
   });

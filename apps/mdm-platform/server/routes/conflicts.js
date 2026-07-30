@@ -3,7 +3,8 @@ const router = express.Router();
 const {
   requireAuth,
   getUserByIdAsync,
-  getUserEffectivePermissionsAsync
+  getUserEffectivePermissionsAsync,
+  getUserRoleCodesAsync
 } = require('../auth');
 const {
   conflictRepository,
@@ -33,36 +34,44 @@ function sendRepositoryResult(res, result, successBody = { success: true }) {
 }
 
 async function permissionSet(req) {
-  if (!req.session || !req.session.userId) return new Set();
-  const { permSet } = await getUserEffectivePermissionsAsync(req.session.userId);
+  const personId = req.session && (req.session.personId || req.session.userId);
+  if (!personId) return new Set();
+  const { permSet } = await getUserEffectivePermissionsAsync(personId);
   return permSet;
 }
 
 async function requestHasAnyPermission(req, permissionCodes) {
   const perms = await permissionSet(req);
-  return perms.has('*:*') || permissionCodes.some(code => perms.has(code));
+  return permissionCodes.some(code => perms.has(code));
 }
 
 async function canViewAllConflicts(req) {
-  return await requestHasAnyPermission(req, ['data:view_all', 'admin:access']);
+  return await requestHasAnyPermission(req, ['governance:read-global']);
 }
 
 async function canManageGeneralConflict(req) {
-  return await requestHasAnyPermission(req, ['conflict:manage', 'review:approve', 'admin:access']);
+  return await requestHasAnyPermission(req, ['governance:handle-assigned-conflict']);
 }
 
 async function canEscalateConflict(req) {
-  return await requestHasAnyPermission(req, ['conflict:escalate', 'conflict:manage', 'review:approve', 'admin:access']);
+  return await requestHasAnyPermission(req, ['governance:escalate-conflict']);
 }
 
 async function canDecideEscalatedConflict(req) {
-  return await requestHasAnyPermission(req, ['conflict:final_decide_escalated', 'review:approve', 'admin:access']);
+  return await requestHasAnyPermission(req, ['governance:decide-escalation']);
 }
 
 async function conflictScope(req) {
+  const perms = await permissionSet(req);
+  let mode = 'none';
+  if (perms.has('governance:read-global')) mode = 'global';
+  else if (perms.has('governance:read-assigned-context')) mode = 'assigned';
+  else if (perms.has('governance:read-escalated-context')) mode = 'escalated';
+  else if (perms.has('governance:read-department')) mode = 'department';
   return {
-    canViewAll: await canViewAllConflicts(req),
-    userId: req.session.userId,
+    mode,
+    canViewAll: mode === 'global',
+    userId: req.session.personId || req.session.userId,
     departmentId: req.session.departmentId || null
   };
 }
@@ -70,10 +79,16 @@ async function conflictScope(req) {
 async function conflictActor(req, extra = {}) {
   return {
     actor_user_id: req.session.userId,
+    actor_person_id: req.session.personId || req.session.userId,
     actor_dept_id: req.session.departmentId || null,
-    canManageAll: await requestHasAnyPermission(req, ['admin:access']),
+    canManageAll: false,
     ...extra
   };
+}
+
+async function assertConflictHandlerAssignee(personId) {
+  const roleCodes = new Set((await getUserRoleCodesAsync(personId)).map(role => role.code || role.role_code));
+  return roleCodes.has('data_conflict_handler');
 }
 
 function conflictTypeFromQuery(req) {
@@ -101,7 +116,9 @@ router.get('/stats', requireAuth, (req, res) => {
 
 router.post('/detect', requireAuth, (req, res) => {
   return runAction(res, async () => {
-    if (!await canManageGeneralConflict(req)) return res.status(403).json({ error: '权限不足' });
+    if (!await requestHasAnyPermission(req, ['governance:quality-audit', 'governance:structure-gate'])) {
+      return res.status(403).json({ error: '权限不足' });
+    }
     const repo = await conflictRepository();
     return res.json(await repo.detectConflicts({
       field_name_cn: req.query.field_name_cn || null
@@ -120,9 +137,12 @@ router.get('/:id', requireAuth, (req, res) => {
 
 router.post('/:id/assign', requireAuth, (req, res) => {
   return runAction(res, async () => {
-    if (!await canManageGeneralConflict(req)) return res.status(403).json({ error: '无冲突处理权限' });
+    if (!await requestHasAnyPermission(req, ['governance:assign-work'])) return res.status(403).json({ error: '无任务分派权限' });
     const repo = await conflictRepository();
     const assignee = await getUserByIdAsync(req.body && req.body.assignee_user_id);
+    if (!assignee || !await assertConflictHandlerAssignee(assignee.personId || assignee.id)) {
+      return res.status(422).json({ error: '只能分派给当前有效的数据冲突处理人' });
+    }
     const result = await repo.assignConflict(req.params.id, conflictTypeFromQuery(req), await conflictActor(req, {
       assignee_user_id: req.body && req.body.assignee_user_id,
       assignee_dept_id: assignee ? assignee.department_id : null
@@ -133,9 +153,12 @@ router.post('/:id/assign', requireAuth, (req, res) => {
 
 router.put('/:id/assign', requireAuth, (req, res) => {
   return runAction(res, async () => {
-    if (!await canManageGeneralConflict(req)) return res.status(403).json({ error: '无冲突处理权限' });
+    if (!await requestHasAnyPermission(req, ['governance:assign-work'])) return res.status(403).json({ error: '无任务分派权限' });
     const repo = await conflictRepository();
     const assignee = await getUserByIdAsync(req.body && req.body.assignee_user_id);
+    if (!assignee || !await assertConflictHandlerAssignee(assignee.personId || assignee.id)) {
+      return res.status(422).json({ error: '只能分派给当前有效的数据冲突处理人' });
+    }
     const result = await repo.reassignConflict(req.params.id, conflictTypeFromQuery(req), await conflictActor(req, {
       assignee_user_id: req.body && req.body.assignee_user_id,
       assignee_dept_id: assignee ? assignee.department_id : null
@@ -168,7 +191,8 @@ router.post('/:id/final-decide', requireAuth, (req, res) => {
     }
     const result = await repo.finalDecideConflict(req.params.id, type, await conflictActor(req, {
       resolution: req.body && req.body.resolution,
-      adopted_value: req.body && req.body.adopted_value
+      adopted_value: req.body && req.body.adopted_value,
+      requireAssignment: conflict.status !== 'escalated'
     }));
     return sendRepositoryResult(res, result);
   });
@@ -178,6 +202,14 @@ router.post('/:id/escalate', requireAuth, (req, res) => {
   return runAction(res, async () => {
     if (!await canEscalateConflict(req)) return res.status(403).json({ error: '无冲突升级权限' });
     const repo = await conflictRepository();
+    if (!await requestHasAnyPermission(req, ['governance:assign-work'])) {
+      const assignedConflict = await repo.getConflict(req.params.id, conflictTypeFromQuery(req), {
+        mode: 'assigned',
+        canViewAll: false,
+        userId: req.session.personId || req.session.userId
+      });
+      if (!assignedConflict) return res.status(403).json({ error: '只能升级本人当前被分派的冲突' });
+    }
     const result = await repo.escalateConflict(req.params.id, conflictTypeFromQuery(req), await conflictActor(req));
     return sendRepositoryResult(res, result);
   });
@@ -185,7 +217,7 @@ router.post('/:id/escalate', requireAuth, (req, res) => {
 
 router.post('/:id/reopen', requireAuth, (req, res) => {
   return runAction(res, async () => {
-    if (!await canManageGeneralConflict(req) && !await canDecideEscalatedConflict(req)) {
+    if (!await requestHasAnyPermission(req, ['governance:assign-work'])) {
       return res.status(403).json({ error: '无冲突重开权限' });
     }
     const repo = await conflictRepository();
@@ -196,7 +228,7 @@ router.post('/:id/reopen', requireAuth, (req, res) => {
 
 router.post('/:id/archive', requireAuth, (req, res) => {
   return runAction(res, async () => {
-    if (!await requestHasAnyPermission(req, ['admin:access'])) return res.status(403).json({ error: '仅管理员可归档' });
+    if (!await requestHasAnyPermission(req, ['governance:structure-gate'])) return res.status(403).json({ error: '无冲突归档权限' });
     const repo = await conflictRepository();
     const result = await repo.archiveConflict(req.params.id, conflictTypeFromQuery(req), await conflictActor(req));
     return sendRepositoryResult(res, result);
@@ -215,7 +247,8 @@ router.post('/:id/resolve', requireAuth, (req, res) => {
     }
     const result = await repo.resolveFieldConflict(req.params.id, await conflictActor(req, {
       resolution: req.body && req.body.resolution,
-      adopted_value: req.body && req.body.adopted_value
+      adopted_value: req.body && req.body.adopted_value,
+      requireAssignment: conflict.status !== 'escalated'
     }));
     return sendRepositoryResult(res, result);
   });
@@ -232,7 +265,8 @@ router.post('/term/:id/resolve', requireAuth, (req, res) => {
       return res.status(403).json({ error: '无一般冲突处理权限' });
     }
     const result = await repo.resolveTermConflict(req.params.id, await conflictActor(req, {
-      resolution: req.body && req.body.resolution
+      resolution: req.body && req.body.resolution,
+      requireAssignment: conflict.status !== 'escalated'
     }));
     return sendRepositoryResult(res, result);
   });

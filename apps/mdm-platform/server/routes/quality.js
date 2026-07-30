@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const { requireAuth } = require('../auth');
+const { requireAuth, getUserEffectivePermissionsAsync } = require('../auth');
 const { dataMapRepository } = require('../dataMapMysqlRepository');
 
 function handleDbError(res, error) {
@@ -32,8 +32,17 @@ router.get('/dashboard', requireAuth, (req, res) => {
 
 router.get('/field-identities/progress', requireAuth, async (req, res) => {
   try {
+    const personId = req.session.personId || req.session.userId;
+    const { permSet } = await getUserEffectivePermissionsAsync(personId);
+    let scope = null;
+    if (permSet.has('governance:read-global')) {
+      scope = {};
+    } else if (permSet.has('governance:read-department') && req.session.departmentId) {
+      scope = { departmentId: req.session.departmentId };
+    }
+    if (!scope) return res.status(403).json({ error: '无权查看字段身份质量进度' });
     const repo = await dataMapRepository();
-    res.json(await repo.fieldIdentityProgress());
+    res.json(await repo.fieldIdentityProgress(scope));
   } catch (e) { handleDbError(res, e); }
 });
 

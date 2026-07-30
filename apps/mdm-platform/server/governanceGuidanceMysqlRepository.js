@@ -1,4 +1,5 @@
 const { mdmMysqlSchemaSql, splitSqlStatements } = require('./mysqlSchema');
+const { permissionSetHas } = require('./roleDefinitions');
 
 async function rows(pool, sql, params = []) {
   const [result] = await pool.execute(sql, params);
@@ -75,7 +76,7 @@ function makeGuidanceCode(now = new Date()) {
 
 function permissionsHas(permissions, permCode) {
   const permSet = permissions instanceof Set ? permissions : new Set(permissions || []);
-  return permSet.has('*:*') || permSet.has(permCode);
+  return permissionSetHas(permSet, permCode);
 }
 
 function makeGovernanceGuidanceMysqlRepository(pool) {
@@ -149,9 +150,7 @@ function makeGovernanceGuidanceMysqlRepository(pool) {
   }
 
   async function canViewGuidance(guidance, personId, permissions = new Set()) {
-    if (permissionsHas(permissions, '*:*') ||
-        permissionsHas(permissions, 'process_governance:view_global') ||
-        permissionsHas(permissions, 'admin:access')) return true;
+    if (permissionsHas(permissions, 'governance:read-global')) return true;
     if (Number(guidance.current_handler_person_id) === Number(personId)) return true;
     if (Number(guidance.final_responsible_person_id) === Number(personId)) return true;
     if (Number(guidance.created_by_person_id) === Number(personId)) return true;
@@ -328,9 +327,7 @@ function makeGovernanceGuidanceMysqlRepository(pool) {
     },
 
     async listGuidanceForPerson(personId, permissions = new Set(), filters = {}) {
-      const canViewGlobal = permissions.has('*:*') ||
-        permissions.has('process_governance:view_global') ||
-        permissions.has('admin:access');
+      const canViewGlobal = permissionsHas(permissions, 'governance:read-global');
       const params = [];
       const conditions = [];
       if (!canViewGlobal) {

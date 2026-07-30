@@ -80,10 +80,13 @@ async function main() {
   auth.setIdentityRepositoryFactory(async () => ({
     async getUserEffectivePermissions(userId) {
       assert.strictEqual(userId, 42);
-      return { permSet: new Set(['admin:access']), fieldConstraints: {} };
-    },
-    async getUserRoleCodes() {
-      return [{ code: 'admin', name: '管理员' }];
+      return {
+        permSet: new Set([
+          'governance:read-department',
+          'governance:draft-department'
+        ]),
+        fieldConstraints: {}
+      };
     }
   }));
 
@@ -91,9 +94,9 @@ async function main() {
   app.use(express.json());
   app.use((req, res, next) => {
     req.session = {
+      personId: 42,
       userId: 42,
-      userRole: 'admin',
-      userName: '数据地图管理员',
+      userName: '部门主对接人',
       departmentId: 8
     };
     next();

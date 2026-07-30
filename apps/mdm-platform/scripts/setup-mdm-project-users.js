@@ -1,10 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 
-if (process.env.ALLOW_PROJECT_USER_SETUP !== 'true') {
-  console.error('setup-mdm-project-users.js uses project-roster scope. Set ALLOW_PROJECT_USER_SETUP=true to run it intentionally.');
-  process.exit(1);
-}
+console.error('LEGACY_ACCOUNT_SCRIPT_RETIRED：项目名单脚本不得创建或授权3000账号。');
+process.exit(1);
 
 const db = require('../server/db');
 const { hashPassword } = require('../server/auth');

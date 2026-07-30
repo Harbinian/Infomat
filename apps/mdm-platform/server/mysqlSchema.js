@@ -74,14 +74,15 @@ CREATE TABLE IF NOT EXISTS user_accounts (
   login_name VARCHAR(128) NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
   must_change_password TINYINT NOT NULL DEFAULT 0,
-  account_status VARCHAR(32) NOT NULL DEFAULT 'active',
+  account_status VARCHAR(32) NOT NULL DEFAULT 'pending_activation',
+  auth_version BIGINT NOT NULL DEFAULT 1,
   last_login_at TIMESTAMP NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uq_user_accounts_person (person_id),
   UNIQUE KEY uq_user_accounts_login (login_name),
   INDEX idx_user_accounts_status (account_status),
-  CHECK (account_status IN ('active','locked','disabled'))
+  CHECK (account_status IN ('pending_activation','active','locked','disabled'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS roles (
@@ -91,7 +92,10 @@ CREATE TABLE IF NOT EXISTS roles (
   description TEXT NULL,
   parent_role_id BIGINT NULL,
   is_system TINYINT NOT NULL DEFAULT 0,
-  role_group VARCHAR(32) NOT NULL DEFAULT 'basic',
+  role_group VARCHAR(32) NOT NULL DEFAULT 'mdm',
+  status VARCHAR(32) NOT NULL DEFAULT 'active',
+  model_version VARCHAR(64) NULL,
+  is_core TINYINT NOT NULL DEFAULT 0,
   protected_core TINYINT NOT NULL DEFAULT 0,
   permissions_json MEDIUMTEXT NULL,
   created_by BIGINT NULL,
@@ -100,7 +104,9 @@ CREATE TABLE IF NOT EXISTS roles (
   UNIQUE KEY uq_roles_code (role_code),
   INDEX idx_roles_parent (parent_role_id),
   INDEX idx_roles_group (role_group),
-  CHECK (role_group IN ('basic','project','custom'))
+  INDEX idx_roles_status (status),
+  CHECK (role_group IN ('system','mdm','legacy')),
+  CHECK (status IN ('active','legacy','retired'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS permissions (
@@ -146,12 +152,151 @@ CREATE TABLE IF NOT EXISTS person_roles (
   person_role_id BIGINT AUTO_INCREMENT PRIMARY KEY,
   person_id BIGINT NOT NULL,
   role_id BIGINT NOT NULL,
+  scope_type VARCHAR(32) NOT NULL DEFAULT 'global',
+  scope_department_id BIGINT NULL,
+  authorization_basis TEXT NULL,
+  effective_from DATE NULL,
+  effective_to DATE NULL,
+  assignment_status VARCHAR(32) NOT NULL DEFAULT 'active',
   assigned_by_person_id BIGINT NULL,
+  revoked_by_person_id BIGINT NULL,
+  revoked_at TIMESTAMP NULL,
+  revocation_reason TEXT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uq_person_roles_person_role (person_id, role_id),
   INDEX idx_person_roles_person (person_id),
   INDEX idx_person_roles_role (role_id),
-  INDEX idx_person_roles_assigned_by (assigned_by_person_id)
+  INDEX idx_person_roles_scope (scope_type, scope_department_id),
+  INDEX idx_person_roles_effective (assignment_status, effective_from, effective_to),
+  INDEX idx_person_roles_assigned_by (assigned_by_person_id),
+  CHECK (scope_type IN ('global','department')),
+  CHECK (assignment_status IN ('active','revoked','expired'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS identity_access_events (
+  event_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  event_type VARCHAR(64) NOT NULL,
+  actor_person_id BIGINT NULL,
+  target_person_id BIGINT NULL,
+  account_id BIGINT NULL,
+  person_role_id BIGINT NULL,
+  reason TEXT NULL,
+  payload_json JSON NULL,
+  migration_batch_id VARCHAR(64) NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_identity_access_events_target (target_person_id, created_at),
+  INDEX idx_identity_access_events_actor (actor_person_id, created_at),
+  INDEX idx_identity_access_events_batch (migration_batch_id, created_at),
+  CHECK (event_type IN (
+    'account_created','account_activated','account_enabled','account_disabled',
+    'account_locked','password_reset','password_changed','department_changed',
+    'role_assigned','role_revoked','migration_applied','migration_compensated'
+  ))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS identity_migration_batches (
+  batch_id VARCHAR(64) PRIMARY KEY,
+  model_version VARCHAR(64) NOT NULL,
+  mode VARCHAR(32) NOT NULL,
+  status VARCHAR(32) NOT NULL,
+  preflight_json JSON NULL,
+  result_json JSON NULL,
+  started_by_person_id BIGINT NULL,
+  started_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  completed_at TIMESTAMP NULL,
+  CHECK (mode IN ('dry_run','apply','rollback')),
+  CHECK (status IN ('running','completed','failed','rolled_back'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS identity_migration_account_backup (
+  batch_id VARCHAR(64) NOT NULL,
+  account_id BIGINT NOT NULL,
+  person_id BIGINT NOT NULL,
+  account_status VARCHAR(32) NOT NULL,
+  auth_version BIGINT NOT NULL,
+  must_change_password TINYINT NOT NULL,
+  PRIMARY KEY (batch_id, account_id),
+  INDEX idx_identity_migration_account_person (batch_id, person_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS identity_migration_role_backup (
+  batch_id VARCHAR(64) NOT NULL,
+  person_role_id BIGINT NOT NULL,
+  person_id BIGINT NOT NULL,
+  role_id BIGINT NOT NULL,
+  scope_type VARCHAR(32) NOT NULL,
+  scope_department_id BIGINT NULL,
+  authorization_basis TEXT NULL,
+  effective_from DATE NULL,
+  effective_to DATE NULL,
+  assignment_status VARCHAR(32) NOT NULL,
+  revoked_by_person_id BIGINT NULL,
+  revoked_at TIMESTAMP NULL,
+  revocation_reason TEXT NULL,
+  PRIMARY KEY (batch_id, person_role_id),
+  INDEX idx_identity_migration_role_person (batch_id, person_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS identity_migration_role_model_backup (
+  batch_id VARCHAR(128) NOT NULL,
+  role_id BIGINT NOT NULL,
+  role_code VARCHAR(100) NOT NULL,
+  role_name VARCHAR(100) NOT NULL,
+  description TEXT NULL,
+  parent_role_id BIGINT NULL,
+  is_system TINYINT NOT NULL,
+  role_group VARCHAR(32) NOT NULL,
+  status VARCHAR(32) NOT NULL,
+  model_version VARCHAR(64) NULL,
+  is_core TINYINT NOT NULL,
+  protected_core TINYINT NOT NULL,
+  PRIMARY KEY (batch_id, role_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS identity_migration_permission_backup (
+  batch_id VARCHAR(128) NOT NULL,
+  perm_id BIGINT NOT NULL,
+  perm_code VARCHAR(150) NOT NULL,
+  resource VARCHAR(80) NOT NULL,
+  action VARCHAR(80) NOT NULL,
+  description TEXT NULL,
+  is_dangerous TINYINT NOT NULL,
+  default_scope VARCHAR(32) NOT NULL,
+  protected_core TINYINT NOT NULL,
+  field_constraints JSON NULL,
+  PRIMARY KEY (batch_id, perm_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS identity_migration_role_permission_backup (
+  batch_id VARCHAR(128) NOT NULL,
+  role_id BIGINT NOT NULL,
+  perm_id BIGINT NOT NULL,
+  effect VARCHAR(16) NOT NULL,
+  PRIMARY KEY (batch_id, role_id, perm_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS governance_decision_records (
+  decision_record_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  subject_domain VARCHAR(32) NOT NULL,
+  subject_type VARCHAR(128) NOT NULL,
+  subject_id VARCHAR(128) NOT NULL,
+  subject_version VARCHAR(128) NOT NULL,
+  department_id BIGINT NOT NULL,
+  accountable_person_id BIGINT NOT NULL,
+  recorded_by_person_id BIGINT NOT NULL,
+  decision VARCHAR(32) NOT NULL,
+  decision_basis TEXT NOT NULL,
+  evidence_reference TEXT NULL,
+  decided_at TIMESTAMP NOT NULL,
+  supersedes_decision_record_id BIGINT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_governance_decision_subject (
+    subject_domain, subject_type, subject_id, subject_version, department_id, created_at
+  ),
+  INDEX idx_governance_decision_accountable (accountable_person_id, created_at),
+  INDEX idx_governance_decision_recorder (recorded_by_person_id, created_at),
+  CHECK (subject_domain IN ('process','data','term')),
+  CHECK (decision IN ('approved','returned','rejected'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS process_governance_guidance (

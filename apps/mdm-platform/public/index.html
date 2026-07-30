@@ -1270,7 +1270,7 @@
     <section class="login" id="loginBox">
       <form id="loginForm">
         <h2>登录系统</h2>
-        <div class="form-group"><label>工号<input id="employeeNo" autocomplete="username"></label></div>
+        <div class="form-group"><label>登录名<input id="employeeNo" autocomplete="username"></label></div>
         <div class="form-group"><label>密码<input id="password" type="password" autocomplete="current-password"></label></div>
         <button class="btn primary" id="loginBtn" type="submit" style="width: 100%; height: 36px; margin-top: 8px;">登录</button>
         <div class="notice" id="loginMsg" style="text-align: center; margin-top: 16px; background: transparent; border: none;"></div>
@@ -1279,23 +1279,20 @@
 
     <div id="appContent" style="display: none;">
       <nav class="tabs" id="tabs">
-        <button class="tab on" data-tab="roleWorkbench" data-roles="submitter,owner,reviewer,admin">角色工作台</button>
-        <button class="tab" data-tab="dashboard" data-roles="submitter,owner,reviewer,admin">统计看板</button>
-        <button class="tab" data-tab="roleGuide" data-roles="submitter,owner,reviewer,admin">角色使用说明</button>
-        <button class="tab" data-tab="mySubmissions" data-roles="submitter,admin">报送管理</button>
-        <button class="tab" data-tab="dataMap" data-roles="submitter,owner,reviewer,admin">数据地图</button>
-        <button class="tab" data-tab="capabilities" data-roles="admin">能力与流程申报</button>
-        <button class="tab" data-tab="businessMap" data-roles="owner,reviewer,admin">业务地图</button>
-        <button class="tab" data-tab="processGovernance" data-roles="submitter,owner,reviewer,admin,project_lead,workgroup_lead,business_contact,data_quality,it_lead,decision_group">流程治理</button>
-        <button class="tab" data-tab="todos" data-roles="submitter,owner,reviewer,admin">待办收到</button>
-        <button class="tab" data-tab="reviews" data-roles="submitter,owner,reviewer,admin">评审记录</button>
-        <button class="tab" data-tab="terms" data-roles="submitter,owner,reviewer,admin">术语词典</button>
-        <button class="tab" data-tab="conflicts" data-roles="reviewer,admin">冲突管理</button>
-        <button class="tab" data-tab="orgUnits" data-roles="submitter,owner,reviewer,admin">组织架构</button>
-        <button class="tab" data-tab="persons" data-roles="submitter,owner,reviewer,admin">人员管理</button>
-        <button class="tab" data-tab="products" data-roles="submitter,owner,reviewer,admin">产品主数据</button>
-        <button class="tab" data-tab="quality" data-roles="reviewer,admin">数据质量</button>
-        <button class="tab" data-tab="rbac" data-roles="admin">角色权限</button>
+        <button class="tab on" data-tab="roleWorkbench">角色工作台</button>
+        <button class="tab" data-tab="dashboard" data-permissions="governance:read-global,governance:read-department,governance:read-assigned-context,governance:read-escalated-context">统计看板</button>
+        <button class="tab" data-tab="roleGuide">角色与责任</button>
+        <button class="tab" data-tab="mySubmissions" data-permissions="governance:draft-department,governance:submit-department">报送管理</button>
+        <button class="tab" data-tab="dataMap" data-permissions="governance:read-global,governance:read-department,governance:read-assigned-context">数据地图</button>
+        <button class="tab" data-tab="processGovernance" data-permissions="governance:read-global,governance:read-department,governance:read-assigned-context,governance:read-escalated-context">流程治理</button>
+        <button class="tab" data-tab="todos" data-permissions="governance:assign-work,governance:draft-department,governance:review-department,governance:quality-audit">待办收到</button>
+        <button class="tab" data-tab="reviews" data-permissions="governance:submit-department,governance:review-department,governance:structure-gate,governance:quality-audit">评审记录</button>
+        <button class="tab" data-tab="terms" data-permissions="governance:read-global,governance:read-department">术语词典</button>
+        <button class="tab" data-tab="conflicts" data-permissions="governance:read-global,governance:read-assigned-context,governance:read-escalated-context">冲突管理</button>
+        <button class="tab" data-tab="orgUnits" data-permissions="identity:read,governance:read-global,governance:read-department">组织架构</button>
+        <button class="tab" data-tab="products" data-permissions="governance:read-global,governance:read-department">产品主数据</button>
+        <button class="tab" data-tab="quality" data-permissions="governance:read-global,governance:read-department,governance:quality-audit">数据质量</button>
+        <button class="tab" data-tab="rbac" data-permissions="identity:manage-account">账号与授权</button>
       </nav>
 
       <!-- Role Workbench -->
@@ -1448,8 +1445,8 @@
       <section class="panel" id="roleGuide">
         <div class="role-guide-header">
           <div>
-            <h2>角色使用说明</h2>
-            <p>每个角色都包含角色目标、第一步入口、典型样例、常见误区和完成标准。当前账号拥有的角色会自动高亮。</p>
+            <h2>角色与责任</h2>
+            <p>查看固定角色、权限、RACI责任和当前账号不能执行某项操作的原因。本页内容由版本化治理模型生成，只读。</p>
           </div>
         </div>
         <div class="notice role-guide-current" id="roleGuideCurrent">正在识别当前角色...</div>
@@ -1465,6 +1462,8 @@
             <div class="role-guide-flow">进入角色工作台后，左侧“我现在该做什么”会给出 1 到 3 个下一步动作。</div>
           </article>
         </div>
+        <div id="roleGuideUnavailable" style="margin-top:24px;"></div>
+        <div id="roleGuideRaci" style="margin-top:24px;"></div>
       </section>
 
       <!-- My Submissions -->
@@ -2221,16 +2220,13 @@
         <div id="goldenSourceChart" class="chart" style="height:300px"></div>
       </section>
 
-      <!-- RBAC: Role & Permission Management -->
+      <!-- Fixed RBAC / RACI administration -->
       <section class="panel" id="rbac">
         <div class="rbac-shell">
           <div class="rbac-side">
-            <div class="rbac-nav-item active" data-panel="userManagement">用户管理</div>
-            <div class="rbac-nav-item" data-panel="roleList">角色列表</div>
-            <div class="rbac-nav-item" data-panel="permMatrix">权限矩阵</div>
-            <div class="rbac-nav-item" data-panel="userRoles">用户角色分配</div>
-            <div class="rbac-nav-item" data-panel="userRolesOverview">用户角色一览</div>
-            <div class="rbac-nav-item" data-panel="batchImport">批量导入</div>
+            <div class="rbac-nav-item active" data-panel="userManagement">账号管理</div>
+            <div class="rbac-nav-item" data-panel="roleList">角色与责任</div>
+            <div class="rbac-nav-item" data-panel="auditEvents">访问审计</div>
           </div>
           <div style="flex:1;" id="rbacPanel"></div>
         </div>
@@ -4065,12 +4061,12 @@
 
     function hasAdminAccess() {
       var perms = (state.user && state.user.permissions) || [];
-      return !!(state.user && (state.user.role === 'admin' || perms.indexOf('admin:access') >= 0 || perms.indexOf('*:*') >= 0));
+      return perms.indexOf('identity:manage-account') >= 0;
     }
 
     function hasPermission(permissionCode) {
       var perms = (state.user && state.user.permissions) || [];
-      return perms.indexOf('*:*') >= 0 || perms.indexOf(permissionCode) >= 0;
+      return perms.indexOf(permissionCode) >= 0;
     }
 
     function activeGovernanceObject() {
@@ -4708,13 +4704,7 @@
     }
 
     function canViewManagedActivityClient() {
-      var user = state.user || {};
-      var roles = new Set([user.role].concat(user.roleCodes || []).filter(Boolean));
-      var permissions = new Set(user.permissions || []);
-      return permissions.has('*:*') ||
-        permissions.has('admin:access') ||
-        permissions.has('data:view_all') ||
-        ['admin', 'it_lead', 'project_lead', 'data_quality'].some(function(code) { return roles.has(code); });
+      return hasPermission('governance:read-global') || hasPermission('identity:read-audit');
     }
 
     async function loadDashboardActivity() {
@@ -4973,22 +4963,17 @@
     window.addEventListener('scroll', scheduleDetailStickyTableHeader, true);
     window.addEventListener('resize', scheduleDetailStickyTableHeader);
 
-    // ===== Role-based nav =====
+    // ===== Permission-based navigation =====
     function applyRoleVisibility() {
       if (!state.user) return;
-      var role = state.user.role;
-      var currentRoleCodes = roleCodesOfCurrentUser();
-      document.querySelectorAll('.tab[data-roles]').forEach(function(tab) {
-        var roles = tab.dataset.roles.split(',');
-        var visible = roles.some(function(code) { return currentRoleCodes.indexOf(code) !== -1; });
+      var currentPermissions = (state.user.permissions || []);
+      document.querySelectorAll('.tab[data-permissions]').forEach(function(tab) {
+        var required = String(tab.dataset.permissions || '').split(',').filter(Boolean);
+        var visible = required.some(function(code) { return currentPermissions.indexOf(code) !== -1; });
         tab.style.display = visible ? '' : 'none';
       });
-      var defaultTabs = { submitter: 'roleWorkbench', owner: 'roleWorkbench', reviewer: 'roleWorkbench', admin: 'roleWorkbench' };
-      var defaultTab = defaultTabs[role] || 'dashboard';
       if (!location.hash || location.hash === '#') {
-        var defaultTabEl = document.querySelector('.tab[data-tab="' + defaultTab + '"]');
-        if (defaultTabEl && defaultTabEl.style.display !== 'none') { location.hash = '#/' + defaultTab; }
-        else { location.hash = '#/dashboard'; }
+        location.hash = '#/roleWorkbench';
       }
     }
 
@@ -5000,13 +4985,7 @@
     }
 
     function canViewAllProcessGovernanceClient() {
-      var user = state.user || {};
-      var roles = new Set(roleCodesOfCurrentUser());
-      var permissions = new Set(user.permissions || []);
-      return permissions.has('*:*') ||
-        permissions.has('admin:access') ||
-        permissions.has('process_governance:view_all') ||
-        ['admin', 'decision_group', 'it_lead'].some(function(code) { return roles.has(code); });
+      return hasPermission('governance:read-global');
     }
 
     function currentUserDepartmentName() {
@@ -5035,9 +5014,10 @@
           '<li><strong>角色目标：</strong>' + safeText(role.goal) + '</li>' +
           '<li><strong>第一步入口：</strong>' + safeText(role.firstEntry && role.firstEntry.label) + '</li>' +
           '<li><strong>典型样例：</strong>' + safeText(role.sample) + '</li>' +
-          '<li><strong>常见误区：</strong>' + safeText(role.pitfall) + '</li>' +
+          '<li><strong>明确禁止：</strong>' + safeText(role.pitfall) + '</li>' +
           '<li><strong>完成标准：</strong>' + safeText(role.doneCriteria) + '</li>' +
         '</ul>' +
+        '<div class="role-guide-flow">固定权限：' + safeText((role.permissions || []).join('、') || '无') + '</div>' +
         '<div class="role-guide-flow">建议顺序：' + safeText((role.workflow || []).join(' → ')) + '</div>' +
       '</article>';
     }
@@ -5063,17 +5043,45 @@
 
     async function renderRoleGuide() {
       try {
-        var data = state.roleWorkbench.data || await api('/api/role-workbench?mode=all');
+        var data = await api('/api/rbac/model');
         var codes = roleCodesOfCurrentUser();
+        (data.roles || []).forEach(function(role) { role.owned = codes.indexOf(role.code) >= 0; });
         var currentEl = $('roleGuideCurrent');
         if (currentEl) {
           var ownedNames = (data.roles || []).filter(function(role) { return role.owned; }).map(function(role) { return role.name; });
           currentEl.textContent = ownedNames.length
-            ? '当前账号角色：' + ownedNames.join(' / ') + '。请优先查看已高亮的说明卡片。'
-            : '当前账号角色：' + codes.join(' / ') + '。请联系管理员检查项目角色配置。';
+            ? '当前账号角色：' + ownedNames.join(' / ') + '；治理模型版本：' + data.modelVersion + '。'
+            : '当前账号没有有效的固定MDM工作角色，请联系管理员检查角色授权依据和有效期。';
         }
         var grid = $('roleGuideGrid');
         if (grid) grid.innerHTML = (data.roles || []).map(renderRoleGuideCard).join('');
+        var permissionReasons = [
+          ['governance:draft-department', '起草或修改部门材料', '当前账号没有本部门材料起草权限'],
+          ['governance:submit-department', '提交部门材料', '当前账号没有本部门材料提交权限'],
+          ['governance:review-department', '审核或退回部门材料', '当前账号不是本部门MDM审核员'],
+          ['governance:record-department-decision', '记录部门负责人决定', '当前账号不是本部门MDM审核员；即使已授权，部门最终责任人缺失时仍会被阻止'],
+          ['governance:handle-assigned-conflict', '处理数据或术语冲突', '当前账号没有冲突处理权限；有权限时也只能处理明确分派给本人的事项'],
+          ['governance:decide-escalation', '决定重大争议', '当前账号不是项目决策组成员；项目决策组也只能处理已升级事项'],
+          ['governance:publish', '发布治理版本', '当前账号不是MDM工作组组长；有权限时仍须通过部门决定、阻断问题、结构和版本检查'],
+          ['identity:manage-account', '创建、启用或停用账号', '当前账号不是MDM系统管理员']
+        ].filter(function(item) { return !hasPermission(item[0]); });
+        var unavailable = $('roleGuideUnavailable');
+        if (unavailable) {
+          unavailable.innerHTML = '<h3>当前按钮不可用的原因</h3><div class="notice"><ul>' +
+            permissionReasons.map(function(item) {
+              return '<li><strong>' + safeText(item[1]) + '：</strong>' + safeText(item[2]) + '（' + safeText(item[0]) + '）</li>';
+            }).join('') + '</ul><p>账号状态、数据范围、对象状态、任务关系或责任证据不满足时，服务端还会返回对应的具体阻止原因。</p></div>';
+        }
+        var raci = $('roleGuideRaci');
+        if (raci) {
+          raci.innerHTML = '<h3>RACI责任矩阵</h3><div class="table-container"><table class="data-table"><thead><tr><th>治理活动</th><th>R：执行</th><th>A：最终负责</th><th>C：参与</th><th>I：知悉</th></tr></thead><tbody>' +
+            (data.activities || []).map(function(activity) {
+              return '<tr><td>' + safeText(activity.name) + '</td><td>' + safeText((activity.responsible || []).join('、')) +
+                '</td><td>' + safeText((activity.accountable || []).join('、')) + '</td><td>' +
+                safeText((activity.consulted || []).join('、') || '-') + '</td><td>' +
+                safeText((activity.informed || []).join('、') || '-') + '</td></tr>';
+            }).join('') + '</tbody></table></div>';
+        }
       } catch (error) {
         var fallback = $('roleGuideCurrent');
         if (fallback) fallback.textContent = error.message || '角色说明加载失败';
@@ -5492,7 +5500,7 @@
       } catch (error) {
         console.warn('当前用户资料补全失败，继续使用登录返回资料', error);
       }
-      $('sessionUserName').textContent = state.user.name + ' · ' + state.user.role;
+      $('sessionUserName').textContent = state.user.name + ' · ' + ((state.user.roleNames || state.user.roleCodes || []).join(' / ') || '未分配有效角色');
       showApp();
       applyRoleVisibility();
       applyPermissionControlledActions();
@@ -5506,9 +5514,9 @@
     }
 
     async function login() {
-      if (!$('employeeNo').value.trim() || !$('password').value) { $('loginMsg').textContent = '请填写工号和密码'; return; }
+      if (!$('employeeNo').value.trim() || !$('password').value) { $('loginMsg').textContent = '请填写登录名和密码'; return; }
       try {
-        var user = await api('/api/org/login', { method:'POST', body:JSON.stringify({ employee_no:$('employeeNo').value, password:$('password').value }) });
+        var user = await api('/api/org/login', { method:'POST', body:JSON.stringify({ loginName:$('employeeNo').value, password:$('password').value }) });
         csrfToken = '';
         await activateAuthenticatedApp(user, { checkPassword: true });
       } catch (error) {
@@ -5595,7 +5603,7 @@
     }
 
     function renderCapsAndProcs() {
-      var canDelete = hasAdminAccess();
+      var canDelete = hasPermission('governance:draft-department');
       $('capRows').innerHTML = state.capabilities.map(function(row) {
         var rowId = Number(row.id);
         return '<tr style="cursor:pointer;" onclick="renderCapPreview(' + rowId + ');' +
@@ -5789,7 +5797,7 @@
     async function loadMySubmissions() {
       await loadMappings();
       var mappings = state.mappings;
-      if (state.user && state.user.role === 'submitter') {
+      if (hasPermission('governance:read-department') && !hasPermission('governance:read-global')) {
         mappings = mappings.filter(function(m) { return m.submitted_by === state.user.id; });
       }
       mappings.sort(function(a, b) { return String(b.created_at).localeCompare(String(a.created_at)); });
@@ -5801,7 +5809,7 @@
       }
       container.innerHTML = '<div class="table-container"><table><thead><tr><th>ID</th><th>流程</th><th>部门</th><th>状态</th><th>提交时间</th><th>操作</th></tr></thead><tbody>' + mappings.map(function(row) {
         var rowId = Number(row.id);
-        return '<tr><td>' + rowId + '</td><td>' + safeText(row.process_name) + '</td><td>' + safeText(row.owner_dept_name) + '</td><td>' + statusTag(row.status) + '</td><td>' + safeText(row.submitted_at || row.created_at) + '</td><td><button class="btn secondary" onclick="navigateTo(\'detail\',{tab:\'mySubmissions\',type:\'mapping\',id:' + rowId + '})">查看</button>' + (row.status === 'draft' ? '<button class="btn primary" style="margin-left:4px;" onclick="submitMapping(' + rowId + ')">提交</button>' : '') + (hasAdminAccess() && row.status === 'draft' ? ' <a href="#" onclick="deleteMapping(' + rowId + ');return false" style="color:#e53935;margin-left:4px;">删除</a>' : '') + '</td></tr>';
+        return '<tr><td>' + rowId + '</td><td>' + safeText(row.process_name) + '</td><td>' + safeText(row.owner_dept_name) + '</td><td>' + statusTag(row.status) + '</td><td>' + safeText(row.submitted_at || row.created_at) + '</td><td><button class="btn secondary" onclick="navigateTo(\'detail\',{tab:\'mySubmissions\',type:\'mapping\',id:' + rowId + '})">查看</button>' + (hasPermission('governance:submit-department') && row.status === 'draft' ? '<button class="btn primary" style="margin-left:4px;" onclick="submitMapping(' + rowId + ')">提交</button>' : '') + (hasPermission('governance:draft-department') && row.status === 'draft' ? ' <a href="#" onclick="deleteMapping(' + rowId + ');return false" style="color:#e53935;margin-left:4px;">删除</a>' : '') + '</td></tr>';
       }).join('') + '</tbody></table></div>';
     }
 
@@ -5830,11 +5838,13 @@
     function renderTodosList() {
       var container = $('todoRows');
       if (!container) return;
-      var canDelete = hasAdminAccess();
+      var canDelete = hasPermission('governance:structure-gate');
 
       if (state.todos.length === 0) {
-        var hints = { submitter: '去 <a href="#/mySubmissions">我的报送</a> 查看提交状态', owner: '暂无待审核事项', reviewer: '暂无待办', admin: '暂无待办' };
-        container.innerHTML = '<tr><td colspan="7" class="empty">暂无待办事项' + (state.user ? ' · ' + (hints[state.user.role] || '') : '') + '</td></tr>';
+        var hint = hasPermission('governance:submit-department')
+          ? ' · 去 <a href="#/mySubmissions">报送管理</a> 查看提交状态'
+          : '';
+        container.innerHTML = '<tr><td colspan="7" class="empty">暂无待办事项' + hint + '</td></tr>';
         return;
       }
 
@@ -5918,9 +5928,15 @@
       state.terms = terms;
       $('termRows').innerHTML = terms.map(function(row) {
         var rowId = Number(row.id);
-        var actions = hasAdminAccess()
-          ? '<button class="btn success" onclick="reviewTerm(' + rowId + ',\'approve\')">通过</button> <button class="btn danger" style="margin-left: 8px;" onclick="reviewTerm(' + rowId + ',\'reject\')">驳回</button> <a href="#" onclick="deleteTerm(' + rowId + ');return false" style="color:#e53935;margin-left:8px;">删除</a>'
-          : '-';
+        var termActions = [];
+        if (hasPermission('governance:review-department')) {
+          termActions.push('<button class="btn success" onclick="reviewTerm(' + rowId + ',\'approve\')">通过</button>');
+          termActions.push('<button class="btn danger" onclick="reviewTerm(' + rowId + ',\'reject\')">驳回</button>');
+        }
+        if (hasPermission('governance:draft-department') && row.status === 'pending') {
+          termActions.push('<a href="#" onclick="deleteTerm(' + rowId + ');return false" style="color:#e53935;">删除</a>');
+        }
+        var actions = termActions.join(' ') || '-';
         return '<tr><td>' + rowId + '</td><td>' + safeText(row.term_type_name || row.term_type_code || '名词') + '</td><td>' + safeText(row.term) + '</td><td>' + safeText(row.definition) + '</td><td>' + safeText(row.scope) + '</td><td>' + statusTag(row.status) + '</td><td>' + actions + '</td></tr>';
       }).join('') || '<tr><td colspan="7" class="empty">暂无数据</td></tr>';
       renderActionMetrics();
@@ -5957,9 +5973,9 @@
         state.conflictStats = { coordinating: 0, escalated: 0, silenced: 0, resolved: 0, resolvedThisMonth: 0 };
       }
 
-      // Show/hide silenced tab for admins
+      // Silenced conflicts are global governance history.
       var slink = $('silencedTabLink');
-      if (slink) slink.style.display = (state.user && state.user.role === 'admin') ? '' : 'none';
+      if (slink) slink.style.display = hasPermission('governance:read-global') ? '' : 'none';
 
       if (conflictTab === 'silenced') {
         var query = new URLSearchParams();
@@ -6031,14 +6047,13 @@
         $('metricFields').textContent = groups.flat().length;
       }).catch(function(error) { if (!isUnauthorizedError(error)) console.warn('字段统计加载失败', error); });
 
-      // Quick-action cards per role
-      var role = state.user ? state.user.role : '';
+      // Quick-action cards are permission driven.
       var quickActions = '';
-      if (role === 'submitter') {
+      if (hasPermission('governance:submit-department')) {
         quickActions = '<div class="notice" style="border-left-color: var(--accent);">快捷操作：<a onclick="navigateTo(\'list\',{tab:\'mySubmissions\'})">我的报送</a> · <a onclick="navigateTo(\'list\',{tab:\'todos\'})">待办 (' + pendingTodos + ')</a></div>';
-      } else if (role === 'owner') {
+      } else if (hasPermission('governance:review-department')) {
         quickActions = '<div class="notice" style="border-left-color: var(--accent);">快捷操作：<a onclick="navigateTo(\'list\',{tab:\'todos\'})">待审核 (' + pendingTodos + ')</a></div>';
-      } else if (role === 'reviewer') {
+      } else if (hasPermission('governance:handle-assigned-conflict') || hasPermission('governance:decide-escalation')) {
         quickActions = '<div class="notice" style="border-left-color: var(--accent);">快捷操作：<a onclick="navigateTo(\'list\',{tab:\'conflicts\'})">未解决冲突 (' + pendingConflicts + ')</a> · <a onclick="navigateTo(\'list\',{tab:\'todos\'})">待办 (' + pendingTodos + ')</a></div>';
       }
       var actionArea = $('dashboardActions');
@@ -9795,16 +9810,15 @@
           { label: `流程映射 #${detail.id}` },
         ]);
 
-        const role = state.user?.role;
         const status = detail.status;
 
         // Determine available actions
         let actionHtml = '';
-        if ((role === 'owner' || role === 'reviewer' || role === 'admin') && ['submitted','dept_reviewed','cross_confirmed','fields_confirmed'].includes(status)) {
+        if (hasPermission('governance:review-department') && ['submitted','dept_reviewed','cross_confirmed','fields_confirmed'].includes(status)) {
           actionHtml = `<button class="btn success" id="detailApprove">通过</button>
                     <button class="btn danger" id="detailReject">驳回</button>`;
         }
-        if (role === 'admin' && status === 'final_reviewed') {
+        if (hasPermission('governance:publish') && status === 'final_reviewed') {
           actionHtml = `<button class="btn primary" id="detailPublish">发布</button>`;
         }
 
@@ -9914,7 +9928,11 @@
         ]);
 
         const container = $('detailContent');
-        const isReviewer = ['reviewer', 'admin'].includes(state.user?.role);
+        const canHandleAssignedConflict = hasPermission('governance:handle-assigned-conflict');
+        const canEscalateConflict = hasPermission('governance:escalate-conflict');
+        const canDecideEscalation = hasPermission('governance:decide-escalation');
+        const canAssignConflict = hasPermission('governance:assign-work');
+        const canArchiveConflict = hasPermission('governance:structure-gate');
 
         // Check if current user is an assignee
         const myAssignment = (detail.assignmentHistory || []).find(function(a) {
@@ -9936,20 +9954,23 @@
 
         // Action buttons
         let actionHtml = '';
-        if (isAssignee && !iSubmitted && detail.status === 'coordinating') {
+        if (canHandleAssignedConflict && isAssignee && !iSubmitted && detail.status === 'coordinating') {
           actionHtml += '<button class="btn primary" id="submitPositionBtn">提交立场</button>';
         }
-        if (isReviewer && detail.bothSubmitted && detail.status === 'coordinating') {
+        if (canHandleAssignedConflict && isAssignee && detail.bothSubmitted && detail.status === 'coordinating') {
           actionHtml += '<button class="btn success" id="finalDecideBtn">终裁</button>';
         }
-        if (isReviewer && detail.status === 'coordinating') {
+        if (canEscalateConflict && (isAssignee || canAssignConflict) && detail.status === 'coordinating') {
           actionHtml += '<button class="btn secondary" id="escalateNowBtn">提前升级</button>';
         }
-        if (isReviewer && detail.status === 'resolved') {
+        if (canAssignConflict && detail.status === 'resolved') {
           actionHtml += '<button class="btn danger" id="reopenBtn">重开</button>';
         }
-        if (state.user?.role === 'admin' && detail.status === 'resolved') {
+        if (canArchiveConflict && detail.status === 'resolved') {
           actionHtml += '<button class="btn secondary" id="archiveBtn">归档</button>';
+        }
+        if (canDecideEscalation && detail.status === 'escalated') {
+          actionHtml += '<button class="btn success" id="finalDecideBtn">决定升级事项</button>';
         }
 
         var statusLabels = { pending: '待处理', silenced: '已静默', coordinating: '协调中', escalated: '已升级', resolved: '已解决', rejected: '已驳回', archived: '已归档' };
@@ -10044,7 +10065,7 @@
 
       // Escalation
       if (detail.escalated) {
-        events.push({ time: detail.deadline, text: '协调超期，自动升级至 reviewer', icon: '🚨' });
+        events.push({ time: detail.deadline, text: '协调超期，已升级至项目决策组', icon: '🚨' });
       }
 
       // Resolution
@@ -10340,7 +10361,7 @@
     async function handleManualEscalate(conflictId, conflictType) {
       var confirmed = await showConfirm({
         title: '确认升级',
-        message: '将冲突提前升级至 reviewer 终裁，无需等待截止日期。确认？',
+        message: '将冲突提前升级至项目决策组，无需等待截止日期。确认？',
         confirmLabel: '升级',
         confirmClass: 'danger',
       });
@@ -10415,7 +10436,7 @@
           '<a href="#" onclick="navigateTo(\'detail\',{tab:\'persons\',type:\'person\',id:\'' + escHtml(r.employee_no) + '\'});return false">详情</a>' +
           '<a href="#" onclick="navigateTo(\'form\',{tab:\'persons\',type:\'person\',id:\'' + escHtml(r.employee_no) + '\',action:\'edit\'});return false" style="margin-left:8px;">编辑</a>' +
           (r.status === 'draft' ? '<a href="#" onclick="activatePerson(\'' + escHtml(r.employee_no) + '\');return false" style="margin-left:8px;">激活</a>' : '') +
-          (hasAdminAccess() ? '<a href="#" onclick="deletePerson(\'' + escHtml(r.employee_no) + '\');return false" style="color:#e53935;margin-left:8px;">删除</a>' : '') + '</td></tr>';
+          '</td></tr>';
       }).join('') || '<tr><td colspan="9" style="text-align:center">暂无数据</td></tr>';
     }
 
@@ -10451,9 +10472,9 @@
       document.getElementById('pfTableBody').innerHTML = (data.rows || []).map(function(r) {
         return '<tr><td><code>' + escHtml(r.product_family_code) + '</code></td><td>' + escHtml(r.model_name) + '</td><td>' + escHtml(r.model_code) + '</td><td>' + escHtml(r.class_major) + '</td><td>' + escHtml(r.product_type || '-') + '</td><td>' + escHtml(r.status) + '</td><td>' +
           '<a href="#" onclick="navigateTo(\'detail\',{tab:\'products\',type:\'productFamily\',id:\'' + escHtml(r.product_family_code) + '\'});return false">详情</a>' +
-          '<a href="#" onclick="navigateTo(\'form\',{tab:\'products\',type:\'productFamily\',id:\'' + escHtml(r.product_family_code) + '\',action:\'edit\'});return false" style="margin-left:8px;">编辑</a>' +
-          (r.status === 'draft' ? '<a href="#" onclick="activatePf(\'' + escHtml(r.product_family_code) + '\');return false" style="margin-left:8px;">激活</a>' : '') +
-          (hasAdminAccess() ? '<a href="#" onclick="deletePf(\'' + escHtml(r.product_family_code) + '\');return false" style="color:#e53935;margin-left:8px;">删除</a>' : '') + '</td></tr>';
+          (hasPermission('governance:draft-department') ? '<a href="#" onclick="navigateTo(\'form\',{tab:\'products\',type:\'productFamily\',id:\'' + escHtml(r.product_family_code) + '\',action:\'edit\'});return false" style="margin-left:8px;">编辑</a>' : '') +
+          (hasPermission('governance:draft-department') && r.status === 'draft' ? '<a href="#" onclick="activatePf(\'' + escHtml(r.product_family_code) + '\');return false" style="margin-left:8px;">激活</a>' : '') +
+          (hasPermission('governance:draft-department') ? '<a href="#" onclick="deletePf(\'' + escHtml(r.product_family_code) + '\');return false" style="color:#e53935;margin-left:8px;">删除</a>' : '') + '</td></tr>';
       }).join('') || '<tr><td colspan="7" style="text-align:center">暂无产品族</td></tr>';
     }
 
@@ -10474,10 +10495,10 @@
       document.getElementById('prodTableBody').innerHTML = (data.rows || []).map(function(r) {
         return '<tr><td><code>' + escHtml(r.product_code) + '</code></td><td>' + escHtml(r.model_name || '-') + '</td><td>' + escHtml(r.revision || '-') + '</td><td>' + escHtml(r.class_mid || '-') + '</td><td>' + escHtml(r.class_minor || '-') + '</td><td><span class="badge">' + escHtml(r.lifecycle_state) + '</span></td><td>' +
           '<a href="#" onclick="navigateTo(\'detail\',{tab:\'products\',type:\'product\',id:\'' + escHtml(r.product_code) + '\'});return false">详情</a>' +
-          '<a href="#" onclick="navigateTo(\'form\',{tab:\'products\',type:\'product\',id:\'' + escHtml(r.product_code) + '\',action:\'edit\'});return false" style="margin-left:8px;">编辑</a>' +
-          (r.lifecycle_state === 'draft' ? '<a href="#" onclick="releaseProduct(\'' + escHtml(r.product_code) + '\');return false" style="margin-left:8px;">发布</a> ' : '') +
-          (r.lifecycle_state === 'released' ? '<a href="#" onclick="obsoleteProduct(\'' + escHtml(r.product_code) + '\');return false" style="margin-left:8px;">废止</a>' : '') +
-          (hasAdminAccess() ? '<a href="#" onclick="deleteProduct(\'' + escHtml(r.product_code) + '\');return false" style="color:#e53935;margin-left:8px;">删除</a>' : '') + '</td></tr>';
+          (hasPermission('governance:draft-department') ? '<a href="#" onclick="navigateTo(\'form\',{tab:\'products\',type:\'product\',id:\'' + escHtml(r.product_code) + '\',action:\'edit\'});return false" style="margin-left:8px;">编辑</a>' : '') +
+          (hasPermission('governance:publish') && r.lifecycle_state === 'draft' ? '<a href="#" onclick="releaseProduct(\'' + escHtml(r.product_code) + '\');return false" style="margin-left:8px;">发布</a> ' : '') +
+          (hasPermission('governance:publish') && r.lifecycle_state === 'released' ? '<a href="#" onclick="obsoleteProduct(\'' + escHtml(r.product_code) + '\');return false" style="margin-left:8px;">废止</a>' : '') +
+          (hasPermission('governance:draft-department') ? '<a href="#" onclick="deleteProduct(\'' + escHtml(r.product_code) + '\');return false" style="color:#e53935;margin-left:8px;">删除</a>' : '') + '</td></tr>';
       }).join('') || '<tr><td colspan="7" style="text-align:center">暂无产品</td></tr>';
     }
 
@@ -10561,6 +10582,7 @@
 
     // ===== RBAC: Role & Permission Management =====
 
+    (function retiredRbacUi() {
     var rbacPanel = 'userManagement';
     var userManagementData = [];
     var userManagementRoles = [];
@@ -11144,6 +11166,504 @@
         }
         document.getElementById('importResult').innerHTML = html;
       });
+    }
+    });
+
+    // ===== Fixed RBAC / RACI administration =====
+
+    var rbacPanel = 'userManagement';
+    var identityAccounts = [];
+    var identityDepartments = [];
+    var identityModel = null;
+    var identitySearch = '';
+    var identityDepartmentFilter = '';
+
+    document.querySelectorAll('.rbac-nav-item').forEach(function(item) {
+      item.addEventListener('click', function() {
+        document.querySelectorAll('.rbac-nav-item').forEach(function(nav) { nav.classList.remove('active'); });
+        this.classList.add('active');
+        rbacPanel = this.dataset.panel;
+        renderRbacPanel();
+      });
+    });
+
+    function renderRbacPanel() {
+      if (rbacPanel === 'roleList') renderFixedAccessModel();
+      else if (rbacPanel === 'auditEvents') renderIdentityAudit();
+      else renderIdentityAccounts();
+    }
+
+    function dateInputValue(value) {
+      return value ? String(value).slice(0, 10) : '';
+    }
+
+    function currentDateInputValue() {
+      return new Date().toISOString().slice(0, 10);
+    }
+
+    function assignmentIsCurrentlyEffective(assignment) {
+      var today = currentDateInputValue();
+      return assignment.status === 'active' &&
+        assignment.roleStatus === 'active' &&
+        dateInputValue(assignment.effectiveFrom) <= today &&
+        (!assignment.effectiveTo || dateInputValue(assignment.effectiveTo) >= today);
+    }
+
+    function accountStatusLabel(status) {
+      return {
+        pending_activation: '待启用',
+        active: '已启用',
+        locked: '已锁定',
+        disabled: '已停用'
+      }[status] || '无账号';
+    }
+
+    function assignmentBadges(account) {
+      var assignments = (account.roleAssignments || []).filter(assignmentIsCurrentlyEffective);
+      if (!assignments.length) return '<span class="tag red">无有效角色</span>';
+      return '<div class="role-badges">' + assignments.map(function(assignment) {
+        return '<span class="tag">' + safeText(assignment.roleName || assignment.roleCode) + '</span>';
+      }).join('') + '</div>';
+    }
+
+    async function loadIdentitySources() {
+      var results = await Promise.all([
+        api('/api/org/accounts'),
+        api('/api/rbac/model'),
+        api('/api/org/departments')
+      ]);
+      identityAccounts = results[0] || [];
+      identityModel = results[1] || { roles: [], permissions: [], activities: [] };
+      identityDepartments = results[2] || [];
+    }
+
+    async function renderIdentityAccounts() {
+      var panel = document.getElementById('rbacPanel');
+      panel.innerHTML = '<div class="empty">正在读取账号与授权...</div>';
+      try {
+        await loadIdentitySources();
+        renderIdentityAccountShell();
+      } catch (error) {
+        panel.innerHTML = '<div class="empty">' + safeText(error.message || '账号与授权加载失败') + '</div>';
+      }
+    }
+
+    function renderIdentityAccountShell() {
+      var panel = document.getElementById('rbacPanel');
+      var departmentOptions = '<option value="">全部部门</option>' + identityDepartments.map(function(department) {
+        var selected = String(department.id) === String(identityDepartmentFilter) ? ' selected' : '';
+        return '<option value="' + Number(department.id) + '"' + selected + '>' + safeText(department.name) + '</option>';
+      }).join('');
+      panel.innerHTML =
+        '<div class="user-management-head">' +
+          '<div><h3>账号管理</h3><p>管理员手工创建待启用账号，并分别记录角色授权和账号生命周期。系统不提供自助注册或批量开户。</p></div>' +
+          '<button class="btn primary" onclick="showIdentityAccountEditor()">手工创建账号</button>' +
+        '</div>' +
+        '<div class="user-management-filters">' +
+          '<label>搜索<input id="identityAccountSearch" value="' + safeText(identitySearch) + '" placeholder="登录名 / 工号 / 姓名" oninput="applyIdentityAccountFilters()"></label>' +
+          '<label>部门<select id="identityDepartmentFilter" onchange="applyIdentityAccountFilters()">' + departmentOptions + '</select></label>' +
+          '<button class="btn secondary" onclick="renderIdentityAccounts()">刷新</button>' +
+        '</div>' +
+        '<div id="identityAccountEditor"></div>' +
+        '<div class="table-container"><table class="data-table">' +
+          '<thead><tr><th>登录名</th><th>工号</th><th>姓名</th><th>部门</th><th>有效角色</th><th>账号状态</th><th>认证版本</th><th>操作</th></tr></thead>' +
+          '<tbody id="identityAccountRows"></tbody>' +
+        '</table></div>';
+      renderIdentityAccountRows();
+    }
+
+    function applyIdentityAccountFilters() {
+      identitySearch = String(document.getElementById('identityAccountSearch')?.value || '').trim().toLowerCase();
+      identityDepartmentFilter = document.getElementById('identityDepartmentFilter')?.value || '';
+      renderIdentityAccountRows();
+    }
+
+    function renderIdentityAccountRows() {
+      var body = document.getElementById('identityAccountRows');
+      if (!body) return;
+      var accounts = identityAccounts.filter(function(account) {
+        var searchText = [account.login_name, account.employee_no, account.person_name, account.department_name]
+          .join(' ').toLowerCase();
+        return (!identitySearch || searchText.indexOf(identitySearch) >= 0) &&
+          (!identityDepartmentFilter || String(account.current_department_id) === String(identityDepartmentFilter));
+      });
+      if (!accounts.length) {
+        body.innerHTML = '<tr><td colspan="8" class="empty">暂无匹配账号</td></tr>';
+        return;
+      }
+      body.innerHTML = accounts.map(function(account) {
+        var lifecycleActions = '';
+        if (account.account_status === 'pending_activation') {
+          lifecycleActions += '<button class="btn primary" onclick="runIdentityLifecycle(' + Number(account.person_id) + ',\'activate\')">启用</button>';
+        } else if (account.account_status === 'active') {
+          lifecycleActions += '<button class="btn secondary" onclick="runIdentityLifecycle(' + Number(account.person_id) + ',\'disable\')">停用</button>';
+        } else if (account.account_status === 'disabled' || account.account_status === 'locked') {
+          lifecycleActions += '<button class="btn primary" onclick="runIdentityLifecycle(' + Number(account.person_id) + ',\'enable\')">' +
+            (account.account_status === 'locked' ? '解锁' : '重新启用') + '</button>';
+        }
+        if (account.account_id) {
+          lifecycleActions += '<button class="btn secondary" onclick="runIdentityLifecycle(' + Number(account.person_id) + ',\'reset-password\')">重置密码</button>';
+        }
+        return '<tr>' +
+          '<td>' + safeText(account.login_name || '-') + '</td>' +
+          '<td>' + safeText(account.employee_no) + '</td>' +
+          '<td>' + safeText(account.person_name) + '</td>' +
+          '<td>' + safeText(account.department_name || '未绑定') + '</td>' +
+          '<td>' + assignmentBadges(account) + '</td>' +
+          '<td><span class="tag">' + safeText(accountStatusLabel(account.account_status)) + '</span></td>' +
+          '<td>' + safeText(account.auth_version || '-') + '</td>' +
+          '<td><div class="user-management-actions">' +
+            '<button class="btn secondary" onclick="showIdentityAccountEditor(' + Number(account.person_id) + ')">维护人员</button>' +
+            '<button class="btn secondary" onclick="showIdentityRoleAssignments(' + Number(account.person_id) + ')">授权记录</button>' +
+            lifecycleActions +
+          '</div></td>' +
+        '</tr>';
+      }).join('');
+    }
+
+    function identityDepartmentOptions(selectedId) {
+      return identityDepartments.map(function(department) {
+        return '<option value="' + Number(department.id) + '"' +
+          (Number(selectedId) === Number(department.id) ? ' selected' : '') + '>' +
+          safeText(department.name) + '</option>';
+      }).join('');
+    }
+
+    function identityRoleChecks(roles, checkedCodes) {
+      return roles.map(function(role) {
+        var checked = checkedCodes.indexOf(role.code) >= 0 ? ' checked' : '';
+        return '<label><input type="checkbox" data-identity-role="' + safeText(role.code) + '"' + checked + '>' +
+          '<span>' + safeText(role.name) + ' <span class="tag">' + safeText(role.code) + '</span></span></label>';
+      }).join('');
+    }
+
+    function showIdentityAccountEditor(personId) {
+      var account = identityAccounts.find(function(item) { return Number(item.person_id) === Number(personId); }) || null;
+      var departmentRoles = (identityModel.roles || []).filter(function(role) {
+        return role.code === 'department_contact' || role.code === 'department_mdm_reviewer';
+      });
+      var roles = account ? departmentRoles : (identityModel.roles || []);
+      var checkedCodes = account
+        ? (account.roleAssignments || []).filter(assignmentIsCurrentlyEffective).map(function(item) { return item.roleCode; })
+        : [];
+      var editor = document.getElementById('identityAccountEditor');
+      editor.innerHTML =
+        '<div class="user-management-form">' +
+          '<div><h3>' + (account ? '维护人员基本信息' : '创建待启用账号') + '</h3>' +
+            '<p class="notice">' + (account
+              ? '部门发生变化时，必须填写变更原因，并选择至少一个新部门角色。旧部门角色由系统自动撤销。'
+              : '创建后账号保持待启用。管理员明确启用时，系统才生成并显示一次性临时密码。') + '</p></div>' +
+          '<div class="user-management-grid">' +
+            (!account ? '<label>登录名<input id="identityLoginName"></label>' : '') +
+            '<label>工号<input id="identityEmployeeNo" value="' + safeText(account && account.employee_no) + '"' + (account ? ' disabled' : '') + '></label>' +
+            '<label>姓名<input id="identityPersonName" value="' + safeText(account && account.person_name) + '"></label>' +
+            '<label>部门<select id="identityDepartmentId">' + identityDepartmentOptions(account && account.current_department_id) + '</select></label>' +
+          '</div>' +
+          '<div><label>' + (account ? '新部门角色安排（仅在变更部门时生效）' : '初始MDM工作角色') + '</label>' +
+            '<div class="role-check-list" id="identityRoleChecks">' + identityRoleChecks(roles, checkedCodes) + '</div></div>' +
+          '<div class="user-management-grid" style="margin-top:12px;">' +
+            '<label>授权或变更依据<input id="identityAuthorizationBasis" placeholder="会议决定、书面授权或任务单号"></label>' +
+            '<label>生效日期<input id="identityEffectiveFrom" type="date" value="' + currentDateInputValue() + '"></label>' +
+            '<label>失效日期（可选）<input id="identityEffectiveTo" type="date"></label>' +
+          '</div>' +
+          '<div class="entity-form-actions">' +
+            '<button class="btn secondary" onclick="closeIdentityAccountEditor()">取消</button>' +
+            '<button class="btn primary" onclick="saveIdentityAccount(' + (account ? Number(account.person_id) : 'null') + ')">' +
+              (account ? '保存人员信息' : '创建待启用账号') + '</button>' +
+          '</div>' +
+        '</div>';
+    }
+
+    function closeIdentityAccountEditor() {
+      var editor = document.getElementById('identityAccountEditor');
+      if (editor) editor.innerHTML = '';
+    }
+
+    function selectedIdentityRoleAssignments(departmentId) {
+      var authorizationBasis = String(document.getElementById('identityAuthorizationBasis')?.value || '').trim();
+      var effectiveFrom = document.getElementById('identityEffectiveFrom')?.value || '';
+      var effectiveTo = document.getElementById('identityEffectiveTo')?.value || '';
+      return Array.from(document.querySelectorAll('#identityRoleChecks [data-identity-role]:checked')).map(function(input) {
+        return {
+          roleCode: input.dataset.identityRole,
+          scopeDepartmentId: Number(departmentId),
+          authorizationBasis: authorizationBasis,
+          effectiveFrom: effectiveFrom,
+          effectiveTo: effectiveTo || null
+        };
+      });
+    }
+
+    async function saveIdentityAccount(personId) {
+      var name = String(document.getElementById('identityPersonName')?.value || '').trim();
+      var departmentId = Number(document.getElementById('identityDepartmentId')?.value || 0);
+      var assignments = selectedIdentityRoleAssignments(departmentId);
+      var authorizationBasis = String(document.getElementById('identityAuthorizationBasis')?.value || '').trim();
+      if (!name || !departmentId) {
+        showToast('姓名和部门均为必填', 'error');
+        return;
+      }
+      try {
+        if (!personId) {
+          var loginName = String(document.getElementById('identityLoginName')?.value || '').trim();
+          var employeeNo = String(document.getElementById('identityEmployeeNo')?.value || '').trim();
+          if (!loginName || !employeeNo || !assignments.length || !authorizationBasis) {
+            showToast('登录名、工号、至少一个角色和授权依据均为必填', 'error');
+            return;
+          }
+          await api('/api/org/accounts', {
+            method: 'POST',
+            body: JSON.stringify({
+              loginName: loginName,
+              employeeNo: employeeNo,
+              name: name,
+              departmentId: departmentId,
+              roleAssignments: assignments,
+              reason: '管理员手工创建待启用账号'
+            })
+          });
+          showToast('待启用账号已创建');
+        } else {
+          var current = identityAccounts.find(function(item) { return Number(item.person_id) === Number(personId); });
+          var changingDepartment = Number(current.current_department_id) !== departmentId;
+          if (changingDepartment && (!assignments.length || !authorizationBasis)) {
+            showToast('变更部门时必须选择新部门角色并填写变更依据', 'error');
+            return;
+          }
+          await api('/api/org/accounts/' + Number(personId), {
+            method: 'PATCH',
+            body: JSON.stringify({
+              name: name,
+              departmentId: departmentId,
+              roleAssignments: changingDepartment ? assignments : undefined,
+              changeReason: changingDepartment ? authorizationBasis : undefined
+            })
+          });
+          showToast(changingDepartment ? '部门和部门角色已更新' : '人员姓名已更新');
+        }
+        await renderIdentityAccounts();
+      } catch (error) {
+        showToast(error.message || '账号信息保存失败', 'error');
+      }
+    }
+
+    function showOneTimePassword(password) {
+      var editor = document.getElementById('identityAccountEditor');
+      if (!editor || !password) return;
+      editor.innerHTML =
+        '<div class="notice initial-password-notice">' +
+          '<strong>一次性临时密码</strong>' +
+          '<p>只在本次响应中显示。请通过线下安全渠道交给账号本人；关闭或刷新后无法再次查看。</p>' +
+          '<code style="display:inline-block;margin:8px 0;padding:6px 10px;background:#fff;border:1px solid var(--border);border-radius:4px;">' + safeText(password) + '</code>' +
+          '<div><button class="btn secondary" onclick="closeIdentityAccountEditor()">我已安全记录</button></div>' +
+        '</div>';
+    }
+
+    async function requestIdentityOperationInput(options) {
+      var suffix = String(Date.now()) + String(Math.floor(Math.random() * 10000));
+      var reasonId = 'identityOperationReason' + suffix;
+      var disableId = 'identityOperationDisable' + suffix;
+      var confirmed = await showConfirm({
+        title: options.title,
+        message: '<label style="display:flex;flex-direction:column;gap:8px;">原因或依据' +
+          '<textarea id="' + reasonId + '" rows="3" placeholder="' + safeText(options.placeholder || '请填写可追溯的原因或依据') + '"></textarea></label>' +
+          (options.allowDisableAccount
+            ? '<label style="display:flex;align-items:flex-start;gap:8px;margin-top:12px;"><input id="' + disableId + '" type="checkbox">如果这是最后一个有效角色，同时停用账号</label>'
+            : ''),
+        confirmLabel: options.confirmLabel || '确认',
+        confirmClass: options.confirmClass || 'primary',
+        allowHtml: true
+      });
+      if (!confirmed) return null;
+      return {
+        reason: String(document.getElementById(reasonId)?.value || '').trim(),
+        disableAccount: Boolean(document.getElementById(disableId)?.checked)
+      };
+    }
+
+    async function runIdentityLifecycle(personId, action) {
+      var labels = {
+        activate: '首次启用',
+        enable: '重新启用或解锁',
+        disable: '停用',
+        'reset-password': '重置密码'
+      };
+      var input = await requestIdentityOperationInput({
+        title: labels[action],
+        confirmLabel: labels[action],
+        confirmClass: action === 'disable' ? 'danger' : 'primary'
+      });
+      if (!input) return;
+      if (action === 'disable' && !input.reason) {
+        showToast('停用账号必须填写原因', 'error');
+        return;
+      }
+      try {
+        var result = await api('/api/org/accounts/' + Number(personId) + '/' + action, {
+          method: 'POST',
+          body: JSON.stringify({ reason: input.reason })
+        });
+        await loadIdentitySources();
+        renderIdentityAccountShell();
+        showToast(labels[action] + '已完成');
+        showOneTimePassword(result.initialPassword);
+      } catch (error) {
+        showToast(error.message || labels[action] + '失败', 'error');
+      }
+    }
+
+    function showIdentityRoleAssignments(personId) {
+      var account = identityAccounts.find(function(item) { return Number(item.person_id) === Number(personId); });
+      if (!account) return;
+      var rows = (account.roleAssignments || []).map(function(assignment) {
+        var revoke = assignment.status === 'active'
+          ? '<button class="btn secondary" onclick="revokeIdentityRole(' + Number(personId) + ',' + Number(assignment.assignmentId) + ')">撤销</button>'
+          : '-';
+        return '<tr>' +
+          '<td>' + safeText(assignment.roleName || assignment.roleCode) + '</td>' +
+          '<td>' + safeText(assignment.scopeDepartmentName || assignment.scopeType) + '</td>' +
+          '<td>' + safeText(assignment.authorizationBasis) + '</td>' +
+          '<td>' + safeText(dateInputValue(assignment.effectiveFrom)) + ' 至 ' + safeText(dateInputValue(assignment.effectiveTo) || '长期') + '</td>' +
+          '<td>' + safeText(assignment.status) + '</td><td>' + revoke + '</td>' +
+        '</tr>';
+      }).join('') || '<tr><td colspan="6" class="empty">尚无授权记录</td></tr>';
+      var roleOptions = (identityModel.roles || []).map(function(role) {
+        return '<option value="' + safeText(role.code) + '">' + safeText(role.name) + ' · ' + safeText(role.code) + '</option>';
+      }).join('');
+      document.getElementById('identityAccountEditor').innerHTML =
+        '<div class="user-management-form">' +
+          '<div><h3>' + safeText(account.person_name) + '的角色授权</h3><p>角色授权只追加或撤销，不覆盖历史记录。</p></div>' +
+          '<div class="table-container"><table class="data-table"><thead><tr><th>角色</th><th>范围</th><th>授权依据</th><th>有效期</th><th>状态</th><th>操作</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+          '<div class="user-management-grid">' +
+            '<label>新增角色<select id="identityGrantRole">' + roleOptions + '</select></label>' +
+            '<label>授权依据<input id="identityGrantBasis" placeholder="必填"></label>' +
+            '<label>生效日期<input id="identityGrantFrom" type="date" value="' + currentDateInputValue() + '"></label>' +
+            '<label>失效日期（可选）<input id="identityGrantTo" type="date"></label>' +
+          '</div>' +
+          '<div class="entity-form-actions">' +
+            '<button class="btn secondary" onclick="closeIdentityAccountEditor()">关闭</button>' +
+            '<button class="btn primary" onclick="grantIdentityRole(' + Number(personId) + ')">授予角色</button>' +
+          '</div>' +
+        '</div>';
+    }
+
+    async function grantIdentityRole(personId) {
+      var account = identityAccounts.find(function(item) { return Number(item.person_id) === Number(personId); });
+      var payload = {
+        roleCode: document.getElementById('identityGrantRole')?.value || '',
+        scopeDepartmentId: Number(account && account.current_department_id || 0),
+        authorizationBasis: String(document.getElementById('identityGrantBasis')?.value || '').trim(),
+        effectiveFrom: document.getElementById('identityGrantFrom')?.value || '',
+        effectiveTo: document.getElementById('identityGrantTo')?.value || null
+      };
+      if (!payload.authorizationBasis || !payload.effectiveFrom) {
+        showToast('授权依据和生效日期均为必填', 'error');
+        return;
+      }
+      try {
+        await api('/api/org/accounts/' + Number(personId) + '/role-assignments', {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
+        await loadIdentitySources();
+        showIdentityRoleAssignments(personId);
+        renderIdentityAccountRows();
+        showToast('角色授权已记录');
+      } catch (error) {
+        showToast(error.message || '角色授权失败', 'error');
+      }
+    }
+
+    async function revokeIdentityRole(personId, assignmentId) {
+      var input = await requestIdentityOperationInput({
+        title: '撤销角色授权',
+        confirmLabel: '撤销',
+        confirmClass: 'danger',
+        allowDisableAccount: true
+      });
+      if (!input) return;
+      if (!input.reason) {
+        showToast('撤销角色必须填写原因', 'error');
+        return;
+      }
+      try {
+        await api('/api/org/accounts/' + Number(personId) + '/role-assignments/' + Number(assignmentId) + '/revoke', {
+          method: 'POST',
+          body: JSON.stringify({ reason: input.reason, disableAccount: input.disableAccount })
+        });
+        await loadIdentitySources();
+        showIdentityRoleAssignments(personId);
+        renderIdentityAccountRows();
+        showToast('角色授权已撤销');
+      } catch (error) {
+        showToast(error.message || '撤销角色失败', 'error');
+      }
+    }
+
+    async function renderFixedAccessModel() {
+      var panel = document.getElementById('rbacPanel');
+      panel.innerHTML = '<div class="empty">正在读取固定治理模型...</div>';
+      try {
+        identityModel = identityModel || await api('/api/rbac/model');
+        var roles = (identityModel.roles || []).map(function(role) {
+          var permissionItems = (role.permissions || []).map(function(code) {
+            var permission = (identityModel.permissions || []).find(function(item) { return item.code === code; });
+            return '<li><code>' + safeText(code) + '</code>：' + safeText(permission && permission.description) + '</li>';
+          }).join('');
+          return '<article class="role-guide-card">' +
+            '<div class="role-guide-title"><h3>' + safeText(role.name) + '</h3><span class="tag">' + safeText(role.code) + '</span></div>' +
+            '<p>' + safeText(role.description) + '</p><p><strong>明确禁止：</strong>' + safeText(role.pitfall) + '</p>' +
+            '<ul>' + permissionItems + '</ul></article>';
+        }).join('');
+        var activities = (identityModel.activities || []).map(function(activity) {
+          return '<tr><td>' + safeText(activity.name) + '</td>' +
+            '<td>' + safeText((activity.responsible || []).join('、')) + '</td>' +
+            '<td>' + safeText((activity.accountable || []).join('、')) + '</td>' +
+            '<td>' + safeText((activity.consulted || []).join('、') || '-') + '</td>' +
+            '<td>' + safeText((activity.informed || []).join('、') || '-') + '</td></tr>';
+        }).join('');
+        panel.innerHTML =
+          '<div class="user-management-head"><div><h3>角色与责任</h3><p>模型版本：' + safeText(identityModel.modelVersion) +
+          '。核心角色、权限包和RACI由版本化清单固化，本页只读。</p></div></div>' +
+          '<div class="role-guide-grid">' + roles + '</div>' +
+          '<h3 style="margin-top:24px;">RACI责任矩阵</h3>' +
+          '<div class="table-container"><table class="data-table"><thead><tr><th>治理活动</th><th>R：执行</th><th>A：最终负责</th><th>C：参与</th><th>I：知悉</th></tr></thead><tbody>' +
+          activities + '</tbody></table></div>';
+      } catch (error) {
+        panel.innerHTML = '<div class="empty">' + safeText(error.message || '固定治理模型加载失败') + '</div>';
+      }
+    }
+
+    async function renderIdentityAudit() {
+      var panel = document.getElementById('rbacPanel');
+      panel.innerHTML = '<div class="empty">正在读取访问审计...</div>';
+      try {
+        var events = await api('/api/org/accounts/audit-events?limit=200');
+        var labels = {
+          account_created: '创建账号',
+          account_activated: '首次启用',
+          account_enabled: '重新启用',
+          account_disabled: '停用账号',
+          account_unlocked: '解锁账号',
+          password_reset: '重置密码',
+          password_changed: '修改密码',
+          department_changed: '变更部门',
+          role_assigned: '授予角色',
+          role_revoked: '撤销角色',
+          login_succeeded: '登录成功'
+        };
+        var rows = events.map(function(event) {
+          return '<tr><td>' + safeText(event.created_at) + '</td><td>' + safeText(labels[event.event_type] || event.event_type) +
+            '</td><td>' + safeText(event.actor_name || '系统') + '</td><td>' + safeText(event.target_name || '-') +
+            '</td><td>' + safeText(event.reason || '-') + '</td><td>' + safeText(event.migration_batch_id || '-') + '</td></tr>';
+        }).join('') || '<tr><td colspan="6" class="empty">暂无审计记录</td></tr>';
+        panel.innerHTML =
+          '<div class="user-management-head"><div><h3>访问审计</h3><p>记录开户、启停、密码、部门和角色授权事件；不记录明文密码或密码散列。</p></div></div>' +
+          '<div class="table-container"><table class="data-table"><thead><tr><th>时间</th><th>事件</th><th>操作人</th><th>对象</th><th>原因或依据</th><th>迁移批次</th></tr></thead><tbody>' +
+          rows + '</tbody></table></div>';
+      } catch (error) {
+        panel.innerHTML = '<div class="empty">' + safeText(error.message || '访问审计加载失败') + '</div>';
+      }
     }
 
     // --- Password Management ---

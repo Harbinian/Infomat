@@ -3,7 +3,6 @@ const multer = require('multer');
 const ExcelJS = require('exceljs');
 const router = express.Router();
 const { requireAuth, getUserEffectivePermissionsAsync } = require('../auth');
-const { getEffectiveRoleCodesAsync } = require('../access');
 const { dataMapRepository } = require('../dataMapMysqlRepository');
 
 const upload = multer({
@@ -60,10 +59,8 @@ function handleError(res, error) {
 
 async function canImportForContext(req, context) {
   const { permSet } = await getUserEffectivePermissionsAsync(req.session.userId);
-  if (permSet.has('admin:access') || permSet.has('*:*')) return true;
-  const roleCodes = await getEffectiveRoleCodesAsync(req);
   const sameDepartment = Number(context.dept_id || 0) === Number(req.session.departmentId || 0);
-  return sameDepartment && (roleCodes.has('submitter') || roleCodes.has('owner'));
+  return sameDepartment && permSet.has('governance:draft-department');
 }
 
 router.post('/field-entries', requireAuth, handleUpload, async (req, res) => {

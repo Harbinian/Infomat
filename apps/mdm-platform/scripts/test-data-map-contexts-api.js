@@ -35,6 +35,18 @@ function makeFakeDataMapRepository() {
       owner_user_id: 42,
       status: 'active',
       created_by: 42
+    }, {
+      id: 11,
+      context_id: 11,
+      mapping_id: 11,
+      context_key: 'ctx-other',
+      context_type: 'process',
+      title: '其他部门字段上下文',
+      dept_id: 10,
+      dept_name: '工程技术部',
+      owner_user_id: 77,
+      status: 'active',
+      created_by: 77
     }],
     calls: []
   };
@@ -77,15 +89,31 @@ function makeFakeDataMapRepository() {
 async function main() {
   const repo = makeFakeDataMapRepository();
   setDataMapRepositoryFactory(async () => repo);
+  let currentPersonId = 42;
   auth.setIdentityRepositoryFactory(async () => ({
-    async getUserEffectivePermissions(userId) {
-      if (userId === 42) return { permSet: new Set(['admin:access']), fieldConstraints: {} };
-      if (userId === 43) return { permSet: new Set(['data:view_department', 'mapping:create']), fieldConstraints: {} };
-      throw new Error(`unexpected user id ${userId}`);
-    },
-    async getUserRoleCodes(userId, legacyRole) {
-      if (userId === 43) return [{ code: legacyRole, name: '基础角色' }, { code: 'business_contact', name: '业务对接人' }];
-      return [{ code: legacyRole, name: '基础角色' }, { code: 'admin', name: '管理员' }].filter(role => role.code);
+    async getUserEffectivePermissions(personId) {
+      if (personId === 42) {
+        return {
+          permSet: new Set([
+            'identity:read',
+            'identity:manage-account',
+            'identity:assign-role',
+            'identity:read-audit',
+            'governance:read-global'
+          ]),
+          fieldConstraints: {}
+        };
+      }
+      if (personId === 43) {
+        return {
+          permSet: new Set([
+            'governance:read-department',
+            'governance:draft-department'
+          ]),
+          fieldConstraints: {}
+        };
+      }
+      throw new Error(`unexpected person id ${personId}`);
     }
   }));
 
@@ -93,9 +121,9 @@ async function main() {
   app.use(express.json());
   app.use((req, res, next) => {
     req.session = {
-      userId: 42,
-      userRole: 'admin',
-      userName: '数据地图管理员',
+      personId: currentPersonId,
+      userId: currentPersonId,
+      userName: currentPersonId === 42 ? '数据地图管理员' : '部门主对接人',
       departmentId: 9
     };
     next();
@@ -112,7 +140,7 @@ async function main() {
     assert.strictEqual(listBody[0].mapping_id, 10);
     assert.strictEqual(listBody[0].context_id, 10);
 
-    const createRes = await fetch(`${baseUrl}/api/data-map/contexts`, {
+    const adminCreateRes = await fetch(`${baseUrl}/api/data-map/contexts`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -125,65 +153,52 @@ async function main() {
         a1_code: 'A1-009'
       })
     });
-    const createBody = await createRes.json();
-    assert.strictEqual(createRes.status, 201, JSON.stringify(createBody));
-    assert.strictEqual(createBody.mapping_id, createBody.context_id);
+    const adminCreateBody = await adminCreateRes.json();
+    assert.strictEqual(adminCreateRes.status, 403, JSON.stringify(adminCreateBody));
 
-    const updateRes = await fetch(`${baseUrl}/api/data-map/contexts/${createBody.id}`, {
+    currentPersonId = 43;
+    const contactListRes = await fetch(`${baseUrl}/api/data-map/contexts`);
+    const contactListBody = await contactListRes.json();
+    assert.strictEqual(contactListRes.status, 200, JSON.stringify(contactListBody));
+    assert.deepStrictEqual(contactListBody.map(row => row.id), [10], '部门主对接人只能读取本部门数据地图');
+
+    const contactCreate = await fetch(`${baseUrl}/api/data-map/contexts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        context_key: 'ctx-contact-own-dept',
+        context_type: 'process',
+        title: '部门主对接人本部门字段上下文',
+        dept_id: 9,
+        dept_name: '经营发展部'
+      })
+    });
+    const contactBody = await contactCreate.json();
+    assert.strictEqual(contactCreate.status, 201, JSON.stringify(contactBody));
+    assert.strictEqual(contactBody.dept_id, 9);
+
+    const updateRes = await fetch(`${baseUrl}/api/data-map/contexts/${contactBody.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: '供应商字段上下文更新', status: 'active' })
+      body: JSON.stringify({ title: '本部门字段上下文更新', status: 'active' })
     });
     const updateBody = await updateRes.json();
     assert.strictEqual(updateRes.status, 200, JSON.stringify(updateBody));
-    assert.strictEqual(updateBody.title, '供应商字段上下文更新');
+    assert.strictEqual(updateBody.title, '本部门字段上下文更新');
 
-    const contactApp = express();
-    contactApp.use(express.json());
-    contactApp.use((req, res, next) => {
-      req.session = {
-        userId: 43,
-        userRole: 'submitter',
-        userName: '经营业务对接人',
-        departmentId: 9
-      };
-      next();
+    const crossDeptCreate = await fetch(`${baseUrl}/api/data-map/contexts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        context_key: 'ctx-contact-cross-dept',
+        context_type: 'process',
+        title: '部门主对接人跨部门字段上下文',
+        dept_id: 10,
+        dept_name: '工程技术部'
+      })
     });
-    contactApp.use('/api/data-map', dataMapRouter);
-    const contactServer = await listen(contactApp);
-    const contactBaseUrl = `http://127.0.0.1:${contactServer.address().port}`;
-    try {
-      const contactCreate = await fetch(`${contactBaseUrl}/api/data-map/contexts`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          context_key: 'ctx-contact-own-dept',
-          context_type: 'process',
-          title: '业务对接人本部门字段上下文',
-          dept_id: 9,
-          dept_name: '经营发展部'
-        })
-      });
-      const contactBody = await contactCreate.json();
-      assert.strictEqual(contactCreate.status, 201, JSON.stringify(contactBody));
-      assert.strictEqual(contactBody.dept_id, 9);
-
-      const crossDeptCreate = await fetch(`${contactBaseUrl}/api/data-map/contexts`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          context_key: 'ctx-contact-cross-dept',
-          context_type: 'process',
-          title: '业务对接人跨部门字段上下文',
-          dept_id: 10,
-          dept_name: '工程技术部'
-        })
-      });
-      const crossDeptBody = await crossDeptCreate.json();
-      assert.strictEqual(crossDeptCreate.status, 403, JSON.stringify(crossDeptBody));
-    } finally {
-      await closeServer(contactServer);
-    }
+    const crossDeptBody = await crossDeptCreate.json();
+    assert.strictEqual(crossDeptCreate.status, 403, JSON.stringify(crossDeptBody));
 
     assert.ok(repo.state.calls.some(call => call[0] === 'createContext'), 'contexts route should create through Data Map repository');
     console.log('Data Map contexts API test passed');

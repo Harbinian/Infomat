@@ -41,18 +41,19 @@ async function main() {
       identityCalls.permissions += 1;
       assert.strictEqual(userId, 42);
       return {
-        permSet: new Set(['data:view_all', 'process_quality:manage']),
+        permSet: new Set([
+          'governance:read-global',
+          'governance:assign-work',
+          'governance:structure-gate',
+          'governance:publish'
+        ]),
         fieldConstraints: {}
       };
     },
     async getUserRoleCodes(userId, legacyRole) {
       identityCalls.roles += 1;
       assert.strictEqual(userId, 42);
-      return [
-        { code: legacyRole, name: '基础角色' },
-        { code: 'data_quality', name: '数据质量员' },
-        { code: 'it_lead', name: 'IT负责人' }
-      ].filter(role => role.code);
+      return [{ code: 'mdm_lead', name: 'MDM工作组组长' }];
     },
     async getUserById(userId) {
       identityCalls.users += 1;
@@ -134,8 +135,8 @@ async function main() {
   app.use(express.json());
   app.use((req, res, next) => {
     req.session = {
+      personId: 42,
       userId: 42,
-      userRole: 'owner',
       userName: 'MySQL 会话用户',
       departmentId: 601
     };
@@ -176,7 +177,6 @@ async function main() {
     assert.ok(mappingAssignPayload, '应调用映射待办分派 MySQL 仓储');
 
     assert.ok(identityCalls.permissions > 0, '权限判断应读取 MySQL 身份仓储');
-    assert.ok(identityCalls.roles > 0, '角色判断应读取 MySQL 身份仓储');
     assert.ok(identityCalls.users > 0, '责任人校验应读取 MySQL 身份仓储');
     assert.ok(identityCalls.departments > 0, '部门校验应读取 MySQL 身份仓储');
 

@@ -13,6 +13,7 @@ const {
   getDepartmentByIdAsync
 } = require('../auth');
 const { mysqlConfigFromEnv } = require('../mysqlConfig');
+const { permissionSetHas } = require('../roleDefinitions');
 const {
   loadReviewRunBundle: loadProcessReviewRunBundle,
   makeProcessInputBaselineReviewRepository,
@@ -531,42 +532,18 @@ const MAPPING_RECORD_STATUSES = new Set(['active', 'source_missing', 'published'
 const MAPPING_TODO_TYPES = new Set(['dept_confirm', 'verification', 'adjustment', 'cross_dept', 'evidence']);
 const MAPPING_TODO_STATUSES = new Set(['open', 'assigned', 'rectifying', 'submitted', 'source_resolved', 'closed', 'reopened', 'accepted']);
 const USER_SET_MAPPING_TODO_STATUSES = new Set(['open', 'assigned', 'rectifying', 'submitted', 'reopened']);
-const PROCESS_GOVERNANCE_GLOBAL_ROLES = ['admin', 'decision_group', 'it_lead'];
-const DEPARTMENT_CONFIRM_ROLES = ['project_lead', 'workgroup_lead', 'business_contact', 'data_quality', 'submitter', 'owner', 'reviewer'];
-
-function getCurrentRoleCodes(req) {
-  if (!req.session || !req.session.userId) return [];
-  const rows = db.prepare(`
-    SELECT r.role_code AS code
-    FROM user_roles ur
-    JOIN roles r ON ur.role_id = r.role_id
-    WHERE ur.user_id=?
-  `).all(req.session.userId);
-  const codes = new Set(rows.map(row => row.code));
-  if (req.session.userRole) codes.add(req.session.userRole);
-  return Array.from(codes);
-}
-
-function requestHasQualityRole(req, roleCodes) {
-  if (!req.session || !req.session.userId) return false;
-  const current = getCurrentRoleCodes(req);
-  return roleCodes.some(code => current.includes(code));
-}
-
 function requestHasAnyPermission(req, permissionCodes) {
   if (!req.session || !req.session.userId) return false;
   const { permSet } = getUserEffectivePermissions(req.session.userId);
-  return permSet.has('*:*') || permissionCodes.some(code => permSet.has(code));
+  return permissionCodes.some(code => permissionSetHas(permSet, code));
 }
 
 function canViewAllProcessGovernance(req) {
-  return requestHasAnyPermission(req, ['admin:access', 'process_governance:view_all']) ||
-    requestHasQualityRole(req, PROCESS_GOVERNANCE_GLOBAL_ROLES);
+  return requestHasAnyPermission(req, ['governance:read-global']);
 }
 
 async function canViewAllProcessGovernanceAsync(req) {
-  return await requestHasAnyPermissionAsync(req, ['admin:access', 'process_governance:view_all']) ||
-    await requestHasQualityRoleAsync(req, PROCESS_GOVERNANCE_GLOBAL_ROLES);
+  return await requestHasAnyPermissionAsync(req, ['governance:read-global']);
 }
 
 function currentDepartmentName(req) {
@@ -578,6 +555,7 @@ function currentDepartmentName(req) {
 
 function canAccessDepartmentQualityCase(req, qualityCase) {
   if (!qualityCase || !req.session || !req.session.userId) return false;
+  if (!requestHasAnyPermission(req, ['governance:read-department'])) return false;
   const departmentName = currentDepartmentName(req);
   if (qualityCase.dept_name) return !!departmentName && qualityCase.dept_name === departmentName;
   return Number(qualityCase.owner_user_id || 0) === Number(req.session.userId || 0) ||
@@ -586,6 +564,7 @@ function canAccessDepartmentQualityCase(req, qualityCase) {
 
 function canAccessDepartmentMappingTodo(req, todo) {
   if (!todo || !req.session || !req.session.userId) return false;
+  if (!requestHasAnyPermission(req, ['governance:read-department'])) return false;
   const departmentName = currentDepartmentName(req);
   if (todo.dept_name || todo.target_dept_name) {
     return !!departmentName && (todo.dept_name === departmentName || todo.target_dept_name === departmentName);
@@ -596,6 +575,7 @@ function canAccessDepartmentMappingTodo(req, todo) {
 
 async function canAccessDepartmentQualityCaseAsync(req, qualityCase) {
   if (!qualityCase || !req.session || !req.session.userId) return false;
+  if (!await requestHasAnyPermissionAsync(req, ['governance:read-department'])) return false;
   const departmentName = await currentDepartmentNameAsync(req);
   if (qualityCase.dept_name) return !!departmentName && qualityCase.dept_name === departmentName;
   return Number(qualityCase.owner_user_id || 0) === Number(req.session.userId || 0) ||
@@ -604,6 +584,7 @@ async function canAccessDepartmentQualityCaseAsync(req, qualityCase) {
 
 async function canAccessDepartmentMappingTodoAsync(req, todo) {
   if (!todo || !req.session || !req.session.userId) return false;
+  if (!await requestHasAnyPermissionAsync(req, ['governance:read-department'])) return false;
   const departmentName = await currentDepartmentNameAsync(req);
   if (todo.dept_name || todo.target_dept_name) {
     return !!departmentName && (todo.dept_name === departmentName || todo.target_dept_name === departmentName);
@@ -633,15 +614,18 @@ function canViewAllQualityCases(req) {
 }
 
 function canManageQualityCase(req, qualityCase) {
-  if (canViewAllProcessGovernance(req)) return true;
-  if (!canAccessDepartmentQualityCase(req, qualityCase)) return false;
-  return requestHasAnyPermission(req, ['process_quality:manage', 'review:approve']) ||
-    requestHasQualityRole(req, DEPARTMENT_CONFIRM_ROLES);
+  if (requestHasAnyPermission(req, ['governance:quality-audit'])) return true;
+  return canAccessDepartmentQualityCase(req, qualityCase) &&
+    requestHasAnyPermission(req, ['governance:draft-department', 'governance:submit-department']);
+}
+
+function canAssignQualityCase(req, qualityCase) {
+  return requestHasAnyPermission(req, ['governance:assign-work']) ||
+    canManageQualityCase(req, qualityCase);
 }
 
 function canCloseQualityCase(req) {
-  return canViewAllProcessGovernance(req) ||
-    requestHasAnyPermission(req, ['process_quality:close']);
+  return requestHasAnyPermission(req, ['governance:quality-audit']);
 }
 
 function canViewAllMappingTodos(req) {
@@ -649,35 +633,25 @@ function canViewAllMappingTodos(req) {
 }
 
 function canManageMappingTodo(req, todo) {
-  if (canViewAllProcessGovernance(req)) return true;
-  if (!canAccessDepartmentMappingTodo(req, todo)) return false;
-  return requestHasAnyPermission(req, ['process_mapping:manage', 'review:approve']) ||
-    requestHasQualityRole(req, DEPARTMENT_CONFIRM_ROLES);
+  if (requestHasAnyPermission(req, ['governance:assign-work'])) return true;
+  return canAccessDepartmentMappingTodo(req, todo) &&
+    requestHasAnyPermission(req, ['governance:draft-department', 'governance:submit-department', 'governance:review-department']);
 }
 
 function canCloseMappingTodo(req) {
-  return canViewAllProcessGovernance(req) ||
-    requestHasAnyPermission(req, ['process_mapping:close']);
+  return requestHasAnyPermission(req, ['governance:structure-gate']);
 }
 
 async function getCurrentRoleCodesAsync(req) {
   if (!req.session || !req.session.userId) return [];
-  const rows = await getUserRoleCodesAsync(req.session.userId, req.session.userRole);
-  const codes = new Set((rows || []).map(row => row.code || row.role_code).filter(Boolean));
-  if (req.session.userRole) codes.add(req.session.userRole);
-  return Array.from(codes);
-}
-
-async function requestHasQualityRoleAsync(req, roleCodes) {
-  if (!req.session || !req.session.userId) return false;
-  const current = await getCurrentRoleCodesAsync(req);
-  return roleCodes.some(code => current.includes(code));
+  const rows = await getUserRoleCodesAsync(req.session.userId);
+  return Array.from(new Set((rows || []).map(row => row.code || row.role_code).filter(Boolean)));
 }
 
 async function requestHasAnyPermissionAsync(req, permissionCodes) {
   if (!req.session || !req.session.userId) return false;
   const { permSet } = await getUserEffectivePermissionsAsync(req.session.userId);
-  return permSet.has('*:*') || permissionCodes.some(code => permSet.has(code));
+  return permissionCodes.some(code => permissionSetHas(permSet, code));
 }
 
 async function currentDepartmentNameAsync(req) {
@@ -715,19 +689,7 @@ function canAccessInputBaselineReviewItem(reviewItem, departmentName) {
   return !!reviewItem && !!departmentName && reviewItem.department === departmentName;
 }
 
-function sessionHasAnyRole(req, roleCodes) {
-  if (!req.session) return false;
-  const current = new Set();
-  if (req.session.userRole) current.add(req.session.userRole);
-  if (Array.isArray(req.session.roleCodes)) {
-    req.session.roleCodes.forEach(code => current.add(code));
-  }
-  return roleCodes.some(code => current.has(code));
-}
-
 async function canViewAllInputBaselineReviewsAsync(req) {
-  if (sessionHasAnyRole(req, PROCESS_GOVERNANCE_GLOBAL_ROLES)) return true;
-  if (req.session && ['submitter', 'owner', 'reviewer'].includes(req.session.userRole)) return false;
   return await canViewAllProcessGovernanceAsync(req);
 }
 
@@ -741,15 +703,18 @@ async function canViewAllQualityCasesAsync(req) {
 }
 
 async function canManageQualityCaseAsync(req, qualityCase) {
-  if (await canViewAllProcessGovernanceAsync(req)) return true;
-  if (!await canAccessDepartmentQualityCaseAsync(req, qualityCase)) return false;
-  return await requestHasAnyPermissionAsync(req, ['process_quality:manage', 'review:approve']) ||
-    await requestHasQualityRoleAsync(req, DEPARTMENT_CONFIRM_ROLES);
+  if (await requestHasAnyPermissionAsync(req, ['governance:quality-audit'])) return true;
+  return await canAccessDepartmentQualityCaseAsync(req, qualityCase) &&
+    await requestHasAnyPermissionAsync(req, ['governance:draft-department', 'governance:submit-department']);
+}
+
+async function canAssignQualityCaseAsync(req, qualityCase) {
+  return await requestHasAnyPermissionAsync(req, ['governance:assign-work']) ||
+    await canManageQualityCaseAsync(req, qualityCase);
 }
 
 async function canCloseQualityCaseAsync(req) {
-  return await canViewAllProcessGovernanceAsync(req) ||
-    await requestHasAnyPermissionAsync(req, ['process_quality:close']);
+  return await requestHasAnyPermissionAsync(req, ['governance:quality-audit']);
 }
 
 async function canViewAllMappingTodosAsync(req) {
@@ -757,15 +722,13 @@ async function canViewAllMappingTodosAsync(req) {
 }
 
 async function canManageMappingTodoAsync(req, todo) {
-  if (await canViewAllProcessGovernanceAsync(req)) return true;
-  if (!await canAccessDepartmentMappingTodoAsync(req, todo)) return false;
-  return await requestHasAnyPermissionAsync(req, ['process_mapping:manage', 'review:approve']) ||
-    await requestHasQualityRoleAsync(req, DEPARTMENT_CONFIRM_ROLES);
+  if (await requestHasAnyPermissionAsync(req, ['governance:assign-work'])) return true;
+  return await canAccessDepartmentMappingTodoAsync(req, todo) &&
+    await requestHasAnyPermissionAsync(req, ['governance:draft-department', 'governance:submit-department', 'governance:review-department']);
 }
 
 async function canCloseMappingTodoAsync(req) {
-  return await canViewAllProcessGovernanceAsync(req) ||
-    await requestHasAnyPermissionAsync(req, ['process_mapping:close']);
+  return await requestHasAnyPermissionAsync(req, ['governance:structure-gate']);
 }
 
 function mapIssueQueues(rows) {
@@ -779,8 +742,7 @@ function mapIssueQueues(rows) {
 }
 
 async function canGenerateIssuePoolAsync(req) {
-  if (await requestHasAnyPermissionAsync(req, ['process_governance:generate_issue_pool', 'admin:access'])) return true;
-  return await requestHasQualityRoleAsync(req, ['admin', 'it_lead', 'decision_group']);
+  return await requestHasAnyPermissionAsync(req, ['governance:quality-audit', 'governance:structure-gate']);
 }
 
 async function issuePoolActor(req) {
@@ -788,7 +750,7 @@ async function issuePoolActor(req) {
   return {
     actorUserId: req.session && req.session.userId || null,
     actorDeptName: await currentDepartmentNameAsync(req),
-    actorRoleCode: roleCodes[0] || req.session && req.session.userRole || ''
+    actorRoleCode: roleCodes[0] || ''
   };
 }
 
@@ -817,32 +779,33 @@ async function canAccessIssuePoolDetailAsync(req, detail) {
 }
 
 async function canDepartmentActOnIssuePoolAsync(req, detail) {
-  if (await canViewAllProcessGovernanceAsync(req)) return true;
   if (!await canAccessIssuePoolDetailAsync(req, detail)) return false;
-  return await requestHasAnyPermissionAsync(req, ['process_governance:submit', 'process_governance:review']) ||
-    await requestHasQualityRoleAsync(req, DEPARTMENT_CONFIRM_ROLES);
+  return await requestHasAnyPermissionAsync(req, [
+    'governance:draft-department',
+    'governance:submit-department',
+    'governance:review-department'
+  ]);
 }
 
 async function canReviewIssuePoolAsync(req, detail) {
-  if (await canViewAllProcessGovernanceAsync(req)) return true;
   if (!await canAccessIssuePoolDetailAsync(req, detail)) return false;
-  return await requestHasAnyPermissionAsync(req, ['process_governance:review']) ||
-    await requestHasQualityRoleAsync(req, ['project_lead', 'workgroup_lead', 'data_quality', 'owner', 'reviewer']);
+  return await requestHasAnyPermissionAsync(req, ['governance:review-department']);
 }
 
 async function canDecideIssuePoolAsync(req) {
-  return await requestHasAnyPermissionAsync(req, ['admin:access']) ||
-    await requestHasQualityRoleAsync(req, ['admin', 'it_lead', 'decision_group']);
+  return await requestHasAnyPermissionAsync(req, ['governance:decide-escalation']);
 }
 
 async function canCloseIssuePoolAsync(req, detail) {
-  if (await canViewAllProcessGovernanceAsync(req)) return true;
+  if (await requestHasAnyPermissionAsync(req, ['governance:structure-gate'])) return true;
   return await canReviewIssuePoolAsync(req, detail);
 }
 
 async function canApplyIssuePoolPointActionAsync(req, detail, actionName) {
   if (['mdm-decision', 'studio-review'].includes(actionName)) {
-    return await canDecideIssuePoolAsync(req);
+    return actionName === 'mdm-decision'
+      ? await canDecideIssuePoolAsync(req)
+      : await requestHasAnyPermissionAsync(req, ['governance:structure-gate']);
   }
   if (actionName === 'review') {
     return await canReviewIssuePoolAsync(req, detail);
@@ -1659,7 +1622,7 @@ router.post('/quality-cases/:id/assign', requireAuth, (req, res) => {
       if (!repo) return null;
       const qualityCase = await repo.getQualityCase(parseCaseId(req));
       if (!qualityCase) return res.status(404).json({ error: '问题单不存在' });
-      if (!await canManageQualityCaseAsync(req, qualityCase)) return res.status(403).json({ error: '权限不足' });
+      if (!await canAssignQualityCaseAsync(req, qualityCase)) return res.status(403).json({ error: '权限不足' });
       if (qualityCase.status === 'closed') return res.status(409).json({ error: '已关闭问题单不能分派' });
 
       const ownerUserId = req.body.owner_user_id ? Number(req.body.owner_user_id) : null;
@@ -1680,7 +1643,7 @@ router.post('/quality-cases/:id/assign', requireAuth, (req, res) => {
   return runDbAction(res, () => {
     const qualityCase = loadQualityCase(parseCaseId(req));
     if (!qualityCase) return res.status(404).json({ error: '问题单不存在' });
-    if (!canManageQualityCase(req, qualityCase)) return res.status(403).json({ error: '权限不足' });
+    if (!canAssignQualityCase(req, qualityCase)) return res.status(403).json({ error: '权限不足' });
     if (qualityCase.status === 'closed') return res.status(409).json({ error: '已关闭问题单不能分派' });
 
     const ownerUserId = req.body.owner_user_id ? Number(req.body.owner_user_id) : null;
@@ -2584,6 +2547,9 @@ router.get('/input-baseline-review/runs/:runId/review-items', requireAuth, (req,
 
 router.put('/input-baseline-review/runs/:runId/review-items/:stableKey/review', requireAuth, (req, res) => {
   return runAsyncAction(res, async () => {
+    if (!await requestHasAnyPermissionAsync(req, ['governance:structure-gate', 'governance:review-department'])) {
+      return res.status(403).json({ error: '无权复核流程输入问题' });
+    }
     const safeId = safeRunId(req.params.runId);
     if (!safeId) return res.status(400).json({ error: '问题识别批次编号无效' });
     const stableKey = String(req.params.stableKey || '').trim();

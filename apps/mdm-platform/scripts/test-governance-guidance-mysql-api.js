@@ -36,7 +36,11 @@ async function main() {
     async getUserEffectivePermissions(personId) {
       assert.strictEqual(personId, 701);
       return {
-        permSet: new Set(allowCreate ? ['guidance:create', 'process_governance:view_global'] : ['admin:access']),
+        permSet: new Set(
+          allowCreate
+            ? ['governance:assign-work', 'governance:read-global']
+            : ['identity:manage-account', 'governance:read-global']
+        ),
         fieldConstraints: {}
       };
     }
@@ -63,8 +67,8 @@ async function main() {
       userId: 701,
       personId: 701,
       accountId: 8801,
-      userName: '公司领导',
-      userRole: 'decision_group',
+      userName: 'MDM工作组组长',
+      userRole: 'mdm_lead',
       departmentId: 1
     };
     next();

@@ -5,6 +5,7 @@ const assert = require('assert');
 const mysql = require('mysql2/promise');
 const { mysqlConfigFromEnv, redactMysqlConfig } = require('../server/mysqlConfig');
 const { makeIdentityMysqlRepository } = require('../server/identityMysqlRepository');
+const { ACCESS_MODEL_VERSION } = require('../server/roleDefinitions');
 
 const repoRoot = path.resolve(__dirname, '..', '..', '..');
 
@@ -54,19 +55,38 @@ async function main() {
     assert.ok(roleCodes.includes('admin'), `${adminEmployeeNo} lacks admin role`);
 
     const { permSet } = await repo.getUserEffectivePermissions(admin.personId);
-    assert.ok(permSet.has('admin:access'), `${adminEmployeeNo} lacks admin:access`);
-    assert.ok(permSet.has('*:*'), `${adminEmployeeNo} lacks *:*`);
+    for (const permission of [
+      'identity:read',
+      'identity:manage-account',
+      'identity:assign-role',
+      'identity:read-audit',
+      'governance:read-global'
+    ]) {
+      assert.ok(permSet.has(permission), `${adminEmployeeNo} lacks ${permission}`);
+    }
+    for (const forbidden of [
+      '*:*',
+      'admin:access',
+      'governance:draft-department',
+      'governance:review-department',
+      'governance:record-department-decision',
+      'governance:publish'
+    ]) {
+      assert.equal(permSet.has(forbidden), false, `${adminEmployeeNo} must not have ${forbidden}`);
+    }
+    assert.equal(admin.accountStatus, 'active', `${adminEmployeeNo} account is not active`);
 
     console.log(JSON.stringify({
       mysql: redactMysqlConfig(mysqlConfigFromEnv(env)),
+      governanceModelVersion: ACCESS_MODEL_VERSION,
       admin: {
         employeeNo: adminEmployeeNo,
         personId: admin.personId,
         roleCodes,
-        permissions: ['admin:access', '*:*']
+        permissions: Array.from(permSet).sort()
       }
     }, null, 2));
-    console.log('Admin permission MySQL contract passed');
+    console.log('Fixed administrator permission MySQL contract passed');
   } finally {
     await pool.end();
   }

@@ -77,24 +77,11 @@ function publicTodo(row) {
 }
 
 function scopeClause(scope = {}) {
-  if (scope.canManageAll) return { sql: '', params: [] };
-  const clauses = [];
-  const params = [];
-  const roleCodes = scope.roleCodes || new Set();
-  if (roleCodes.has('owner') && scope.departmentId) {
-    clauses.push('t.to_dept_id=?');
-    params.push(scope.departmentId);
+  if (scope.canViewAll) return { sql: '', params: [] };
+  if (scope.canViewDepartment && scope.departmentId) {
+    return { sql: ' AND t.to_dept_id=?', params: [scope.departmentId] };
   }
-  if (roleCodes.has('reviewer')) {
-    clauses.push('t.type IN (?, ?, ?)');
-    params.push('field_confirm', 'gold_source', 'conflict_resolution');
-  }
-  if (roleCodes.has('submitter')) {
-    clauses.push('t.type IN (?, ?)');
-    params.push('general', 'terminology');
-  }
-  if (clauses.length === 0) return { sql: ' AND 1=0', params: [] };
-  return { sql: ` AND (${clauses.join(' OR ')})`, params };
+  return { sql: ' AND 1=0', params: [] };
 }
 
 function makeTodoMysqlRepository(pool) {

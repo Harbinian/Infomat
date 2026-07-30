@@ -2,8 +2,7 @@ const express = require('express');
 const router = express.Router();
 const {
   requireAuth,
-  getUserEffectivePermissionsAsync,
-  getUserRoleCodesAsync
+  getUserEffectivePermissionsAsync
 } = require('../auth');
 const {
   auditRepository,
@@ -11,22 +10,12 @@ const {
   setAuditRepositoryFactory
 } = require('../auditMysqlRepository');
 
-const MANAGER_ROLE_CODES = new Set(['admin', 'it_lead', 'project_lead', 'data_quality']);
 const ALLOWED_SCOPES = new Set(['me', 'team', 'all']);
 const ALLOWED_DAYS = new Set([90, 180, 365]);
 
-async function roleCodesForUserAsync(userId, legacyRole) {
-  const rows = await getUserRoleCodesAsync(userId, legacyRole);
-  const codes = new Set((rows || []).map(row => row.code || row.role_code).filter(Boolean));
-  if (legacyRole) codes.add(legacyRole);
-  return codes;
-}
-
 async function canViewManagedActivityAsync(req) {
   const { permSet } = await getUserEffectivePermissionsAsync(req.session.userId);
-  if (permSet.has('*:*') || permSet.has('admin:access') || permSet.has('data:view_all')) return true;
-  const roleCodes = await roleCodesForUserAsync(req.session.userId, req.session.userRole);
-  return Array.from(roleCodes).some(code => MANAGER_ROLE_CODES.has(code));
+  return permSet.has('governance:read-global') || permSet.has('identity:read-audit');
 }
 
 function parseDays(value) {

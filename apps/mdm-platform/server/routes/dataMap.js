@@ -21,19 +21,19 @@ function runAction(res, action) {
   return action().catch(error => handleError(res, error));
 }
 
-async function canManageDataMap(req) {
+async function canViewAllDataMap(req) {
   const { permSet } = await getUserEffectivePermissionsAsync(req.session.userId);
-  return permSet.has('admin:access') || permSet.has('*:*') || permSet.has('data:view_all');
+  return permSet.has('governance:read-global');
 }
 
-async function canCreateOwnDepartmentContext(req, payload = {}) {
-  if (await canManageDataMap(req)) return true;
-  const { getUserRoleCodesAsync } = require('../auth');
-  const roles = await getUserRoleCodesAsync(req.session.userId, req.session.userRole);
-  const roleCodes = new Set((roles || []).map(role => role.code || role.role_code).filter(Boolean));
-  if (req.session.userRole) roleCodes.add(req.session.userRole);
-  const canCreate = roleCodes.has('submitter') || roleCodes.has('business_contact');
-  if (!canCreate) return false;
+async function canViewOwnDepartmentDataMap(req) {
+  const { permSet } = await getUserEffectivePermissionsAsync(req.session.userId);
+  return permSet.has('governance:read-department') && Boolean(req.session.departmentId);
+}
+
+async function canDraftOwnDepartmentContext(req, payload = {}) {
+  const { permSet } = await getUserEffectivePermissionsAsync(req.session.userId);
+  if (!permSet.has('governance:draft-department')) return false;
   const sessionDeptId = Number(req.session.departmentId || 0);
   const requestedDeptId = Number(payload.dept_id || sessionDeptId || 0);
   return !!sessionDeptId && requestedDeptId === sessionDeptId;
@@ -43,25 +43,19 @@ router.get('/contexts', requireAuth, (req, res) => {
   return runAction(res, async () => {
     const repo = await dataMapRepository();
     const contexts = await repo.listContexts();
-    if (await canManageDataMap(req)) return res.json(contexts);
+    if (await canViewAllDataMap(req)) return res.json(contexts);
+    if (!await canViewOwnDepartmentDataMap(req)) return res.status(403).json({ error: '无权查看数据地图' });
     const departmentId = Number(req.session.departmentId || 0);
-    const userId = Number(req.session.userId || 0);
-    res.json(contexts.filter(context =>
-      Number(context.dept_id || 0) === departmentId ||
-      Number(context.owner_user_id || 0) === userId ||
-      Number(context.created_by || 0) === userId
-    ));
+    res.json(contexts.filter(context => Number(context.dept_id || 0) === departmentId));
   });
 });
 
 router.post('/contexts', requireAuth, (req, res) => {
   return runAction(res, async () => {
-    if (!await canCreateOwnDepartmentContext(req, req.body)) {
+    if (!await canDraftOwnDepartmentContext(req, req.body)) {
       return res.status(403).json({ error: '无权创建数据地图上下文' });
     }
-    if (!await canManageDataMap(req)) {
-      req.body = { ...req.body, dept_id: req.session.departmentId };
-    }
+    req.body = { ...req.body, dept_id: req.session.departmentId };
     const repo = await dataMapRepository();
     const context = await repo.createContext(req.body, req.session.userId);
     res.status(201).json(context);
@@ -73,12 +67,10 @@ router.get('/contexts/:id', requireAuth, (req, res) => {
     const repo = await dataMapRepository();
     const context = await repo.getContext(req.params.id);
     if (!context) return res.status(404).json({ error: '数据地图上下文不存在' });
-    if (!await canManageDataMap(req)) {
+    if (!await canViewAllDataMap(req)) {
       const departmentId = Number(req.session.departmentId || 0);
-      const userId = Number(req.session.userId || 0);
-      const canView = Number(context.dept_id || 0) === departmentId ||
-        Number(context.owner_user_id || 0) === userId ||
-        Number(context.created_by || 0) === userId;
+      const canView = await canViewOwnDepartmentDataMap(req) &&
+        Number(context.dept_id || 0) === departmentId;
       if (!canView) return res.status(403).json({ error: '无权查看该数据地图上下文' });
     }
     res.json(context);
@@ -87,10 +79,12 @@ router.get('/contexts/:id', requireAuth, (req, res) => {
 
 router.put('/contexts/:id', requireAuth, (req, res) => {
   return runAction(res, async () => {
-    if (!await canManageDataMap(req)) {
-      return res.status(403).json({ error: '无权维护数据地图上下文' });
-    }
     const repo = await dataMapRepository();
+    const existing = await repo.getContext(req.params.id);
+    if (!existing) return res.status(404).json({ error: '数据地图上下文不存在' });
+    if (!await canDraftOwnDepartmentContext(req, { dept_id: existing.dept_id })) {
+      return res.status(403).json({ error: '只能维护本人部门的数据地图上下文' });
+    }
     const context = await repo.updateContext(req.params.id, req.body, req.session.userId);
     if (!context) return res.status(404).json({ error: '数据地图上下文不存在' });
     res.json(context);
