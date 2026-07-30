@@ -35,19 +35,21 @@ async function main() {
       assert.strictEqual(userId, 1);
       return {
         permSet: new Set([
-          'admin:access',
-          'data:view_all',
-          'process_quality:manage',
-          'process_quality:close',
-          'process_mapping:manage',
-          'process_mapping:close'
+          'governance:read-global',
+          'governance:assign-work',
+          'governance:structure-gate',
+          'governance:publish',
+          'governance:quality-audit'
         ]),
         fieldConstraints: {}
       };
     },
-    async getUserRoleCodes(userId, legacyRole) {
+    async getUserRoleCodes(userId) {
       assert.strictEqual(userId, 1);
-      return [{ code: legacyRole || 'admin', name: '管理员' }, { code: 'admin', name: '管理员' }];
+      return [
+        { code: 'mdm_lead', name: 'MDM工作组组长' },
+        { code: 'data_quality_auditor', name: '数据质量审计人' }
+      ];
     },
     async getDepartmentById(id) {
       return { id, name: '经营发展部' };
@@ -388,7 +390,7 @@ async function main() {
   const app = express();
   app.use(express.json());
   app.use((req, res, next) => {
-    req.session = { userId: 1, userName: '系统管理员', userRole: 'admin', departmentId: 8 };
+    req.session = { personId: 1, userId: 1, userName: '治理测试人员', departmentId: 8 };
     next();
   });
   app.use('/api/process-governance', processGovernanceRouter);

@@ -63,19 +63,63 @@ async function main() {
     const personRolesTable = await first(pool, "SHOW TABLES LIKE 'person_roles'");
     assert.ok(personRolesTable, 'person_roles table is missing');
 
+    for (const [tableName, columnName] of [
+      ['departments', 'final_responsible_person_id'],
+      ['user_accounts', 'auth_version'],
+      ['user_accounts', 'must_change_password'],
+      ['roles', 'status'],
+      ['roles', 'role_group'],
+      ['roles', 'model_version'],
+      ['roles', 'is_core'],
+      ['person_roles', 'scope_type'],
+      ['person_roles', 'scope_department_id'],
+      ['person_roles', 'authorization_basis'],
+      ['person_roles', 'effective_from'],
+      ['person_roles', 'effective_to'],
+      ['person_roles', 'assignment_status'],
+      ['person_roles', 'revocation_reason']
+    ]) {
+      assert.ok(
+        await first(
+          pool,
+          'SELECT 1 AS found FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name=? AND column_name=?',
+          [tableName, columnName]
+        ),
+        `${tableName}.${columnName} is missing`
+      );
+    }
+
+    for (const tableName of [
+      'identity_access_events',
+      'governance_decision_records',
+      'identity_migration_batches',
+      'identity_migration_account_backup',
+      'identity_migration_role_backup'
+    ]) {
+      assert.ok(
+        await first(pool, 'SELECT 1 AS found FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name=?', [tableName]),
+        `${tableName} table is missing`
+      );
+    }
+
     const coverage = await first(pool, `
       SELECT
-        (SELECT COUNT(*) FROM users) AS legacy_users,
+        (SELECT COUNT(*) FROM person) AS persons,
+        (SELECT COUNT(*) FROM user_accounts) AS accounts,
         (SELECT COUNT(*)
-         FROM users u
-         JOIN person p ON p.employee_no=u.employee_no) AS migrated_persons,
+         FROM user_accounts ua
+         LEFT JOIN person p ON p.person_id=ua.person_id
+         WHERE p.person_id IS NULL) AS orphan_accounts,
         (SELECT COUNT(*)
-         FROM users u
-         JOIN person p ON p.employee_no=u.employee_no
-         JOIN user_accounts ua ON ua.person_id=p.person_id AND ua.login_name=u.employee_no) AS migrated_accounts
+         FROM person_roles pr
+         LEFT JOIN person p ON p.person_id=pr.person_id
+         LEFT JOIN roles r ON r.role_id=pr.role_id
+         WHERE p.person_id IS NULL OR r.role_id IS NULL) AS orphan_role_assignments
     `);
-    assert.equal(Number(coverage.migrated_persons), Number(coverage.legacy_users), 'legacy users are not fully covered by person');
-    assert.equal(Number(coverage.migrated_accounts), Number(coverage.legacy_users), 'legacy users are not fully covered by user_accounts');
+    assert.ok(Number(coverage.persons) > 0, 'person table is empty');
+    assert.ok(Number(coverage.accounts) > 0, 'user_accounts table is empty');
+    assert.equal(Number(coverage.orphan_accounts), 0, 'user_accounts contains orphan person references');
+    assert.equal(Number(coverage.orphan_role_assignments), 0, 'person_roles contains orphan references');
 
     console.log(JSON.stringify({
       mysql: redactMysqlConfig(mysqlConfigFromEnv(env)),
@@ -83,7 +127,9 @@ async function main() {
         personCurrentDepartment: true,
         personDepartmentIndex: true,
         userAccounts: true,
-        personRoles: true
+        personRoles: true,
+        fixedRbacRaci: true,
+        responsibilityEvidence: true
       },
       coverage
     }, null, 2));

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const ExcelJS = require('exceljs');
-const { requireAuth } = require('../auth');
+const { requireAuth, getUserEffectivePermissionsAsync } = require('../auth');
 const { dataMapRepository } = require('../dataMapMysqlRepository');
 
 function jsonListText(value) {
@@ -21,14 +21,26 @@ function identitySystem(identity) {
   return identity.authoritative_system_name || identity.authoritative_system || '';
 }
 
+async function exportScope(req) {
+  const personId = req.session.personId || req.session.userId;
+  const { permSet } = await getUserEffectivePermissionsAsync(personId);
+  if (permSet.has('governance:read-global')) return {};
+  if (permSet.has('governance:read-department') && req.session.departmentId) {
+    return { departmentId: req.session.departmentId };
+  }
+  return null;
+}
+
 router.get('/excel', requireAuth, async (req, res) => {
   try {
+    const scope = await exportScope(req);
+    if (!scope) return res.status(403).json({ error: '无权导出治理数据' });
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'MDM 平台';
     workbook.created = new Date();
 
     const repo = await dataMapRepository();
-    const data = await repo.exportFieldLedger();
+    const data = await repo.exportFieldLedger(scope);
     const fields = data.fields || [];
     const identities = data.identities || [];
 

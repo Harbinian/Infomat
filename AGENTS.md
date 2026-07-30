@@ -75,16 +75,19 @@ Codex 在本项目协作时的根入口规则。
 
 ## MDM 角色工作台约定
 
-- MDM 前端主责资产在 `apps/mdm-platform/`。调整登录后首页、角色工作台、项目角色或 RBAC 接口时,不要改 `docs/norms/`、PMO 驾驶舱或流程输入基线。
-- MDM / PMO 本地联动启动使用仓库根目录固定入口：`npm run start:infomat-services` 和 `npm run smoke:infomat-services`。固定启动合同在 `scripts/infomat-services.config.json`，本机密码放在 `scripts/infomat-services.local.env`。
-- 固定 MySQL 容器缺失时,先运行 `npm run repair:infomat-mysql`,再运行启动和烟测。不要临时改 MySQL 端口或绕过固定合同；启动脚本会先校验 person 身份 schema 和 `ADMIN001` 管理员权限,端口监听不等于 MDM 可用。
+- MDM 前端主责资产在 `apps/mdm-platform/`。调整登录后首页、角色工作台、MDM工作角色或 RBAC 接口时,不要改 `docs/norms/`、PMO 驾驶舱或流程输入基线。
+- MDM / PMO 本地联动启动使用仓库根目录固定入口：`npm run start:infomat-services` 和 `npm run smoke:infomat-services`。固定启动配置在 `scripts/infomat-services.config.json`，本机密码放在 `scripts/infomat-services.local.env`。
+- 固定 MySQL 容器缺失时,先运行 `npm run repair:infomat-mysql`,再运行启动和烟测。不要临时改 MySQL 端口或绕过固定配置；启动脚本会先校验 person 身份 schema 和 `ADMIN001` 管理员权限,端口监听不等于 MDM 可用。
 - 登录后默认第一屏为 `roleWorkbench`。首屏必须让用户知道自己该干什么:顶部显示当前身份、当前部门、今天优先处理事项数;左侧第一块固定为"我现在该做什么",列出 1 到 3 个下一步动作。
-- 角色分组保持为"项目治理角色 / 基础权限角色"。项目治理角色至少覆盖 `it_lead`、`project_lead`、`business_contact`、`data_quality`、`decision_group`;基础权限角色保留 `submitter`、`owner`、`reviewer`、`admin`。底层 `role_group='project'` 和既有编码保持兼容，不得与流程工作角色混用。
+- 固定治理模型版本为`rbac-raci-v2-2026-07-30`。角色只允许`admin`、`mdm_lead`、`department_contact`、`department_mdm_reviewer`、`data_conflict_handler`、`data_quality_auditor`和`decision_group`;管理页面只读,不提供自定义角色、角色继承、通配权限或权限矩阵编辑。
+- `submitter`、`owner`、`reviewer`、`it_lead`、`project_lead`、`workgroup_lead`、`business_contact`、`data_quality`和其他非固定角色只保留为`retired`历史数据,不产生有效权限,也不自动映射到新角色。
+- 正式身份链路为`person -> user_accounts -> person_roles`。普通账号只能由`admin`手工创建、授权和启用;`admin`对治理材料全局只读,不得执行审核、确认、修改或发布等业务写操作。
+- 部门角色只能作用于人员所属部门;部门最终负责人只从`departments.final_responsible_person_id`读取,不得按姓名、岗位、职务或历史常量推测。
 - 多角色用户默认合并展示为"我的工作台",事项和角色卡片要能看出来源角色。
 - "角色使用说明"中,每个角色必须包含:角色目标、第一步入口、典型样例、常见误区、完成标准。样例使用真实业务口吻,但不要写死敏感数据。
 - 角色桑基图层级固定为:角色 → 业务能力 → L3流程 → A1业务行为 → 处理入口。点击任一节点后,右侧必须显示对应事项、样例解释和可执行入口。
 - 默认视角为"待办优先";切换到"全量职责"后展示该角色全部职责链路。
-- `/api/org/me` 应返回当前用户全部 RBAC 角色编码/名称;`GET /api/role-workbench?mode=todo|all` 返回角色、工作流步骤、桑基数据、待办、样例说明和跳转目标。
+- `/api/org/me` 应返回人员、账号、部门、全部有效MDM工作角色、权限、数据范围和治理模型版本;`GET /api/role-workbench?mode=todo|all` 返回角色、工作流步骤、桑基数据、待办、样例说明和跳转目标。
 - 变更 MDM 角色工作台后,在 `apps/mdm-platform/` 下优先回归: `npm run test:frontend`、`npm run test:project-roles`、`npm run test:process-governance`、`npm run test:mainline`。如新增或调整工作台接口,同步覆盖 `npm run test:role-workbench`。
 
 ## MDM 流程治理问题卡口径

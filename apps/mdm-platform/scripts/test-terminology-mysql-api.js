@@ -147,13 +147,14 @@ async function main() {
   const repo = makeFakeTerminologyRepository();
   terminologyRouter.setTerminologyRepositoryFactory(async () => repo);
 
+  let effectivePermissions = new Set([
+    'governance:read-department',
+    'governance:draft-department'
+  ]);
   auth.setIdentityRepositoryFactory(async () => ({
     async getUserEffectivePermissions(userId) {
       assert.strictEqual(userId, 42);
-      return { permSet: new Set(['admin:access', 'data:view_all']), fieldConstraints: {} };
-    },
-    async getUserRoleCodes(userId, legacyRole) {
-      return [{ code: legacyRole || 'admin', name: '管理员' }, { code: 'admin', name: '管理员' }];
+      return { permSet: effectivePermissions, fieldConstraints: {} };
     },
     async getDepartmentById(departmentId) {
       return { id: departmentId, name: departmentId === 9 ? '经营发展部' : '未知部门' };
@@ -164,9 +165,9 @@ async function main() {
   app.use(express.json());
   app.use((req, res, next) => {
     req.session = {
+      personId: 42,
       userId: 42,
-      userRole: 'admin',
-      userName: '术语管理员',
+      userName: '术语治理人员',
       departmentId: 9
     };
     next();
@@ -180,7 +181,7 @@ async function main() {
     const processesRes = await fetch(`${baseUrl}/api/terminology/processes`);
     const processesBody = await processesRes.json();
     assert.strictEqual(processesRes.status, 200, JSON.stringify(processesBody));
-    assert.deepStrictEqual(processesBody.map(row => row.id), [31, 32]);
+    assert.deepStrictEqual(processesBody.map(row => row.id), [31]);
 
     const typesRes = await fetch(`${baseUrl}/api/terminology/types`);
     const typesBody = await typesRes.json();
@@ -225,6 +226,11 @@ async function main() {
     const updateBody = await updateRes.json();
     assert.strictEqual(updateRes.status, 200, JSON.stringify(updateBody));
 
+    effectivePermissions = new Set([
+      'governance:read-department',
+      'governance:review-department',
+      'governance:record-department-decision'
+    ]);
     const reviewRes = await fetch(`${baseUrl}/api/terminology/${createBody.id}/review`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -233,7 +239,28 @@ async function main() {
     const reviewBody = await reviewRes.json();
     assert.strictEqual(reviewRes.status, 200, JSON.stringify(reviewBody));
 
-    const deleteRes = await fetch(`${baseUrl}/api/terminology/${createBody.id}`, { method: 'DELETE' });
+    effectivePermissions = new Set([
+      'governance:read-department',
+      'governance:draft-department'
+    ]);
+    const deleteApprovedRes = await fetch(`${baseUrl}/api/terminology/${createBody.id}`, { method: 'DELETE' });
+    const deleteApprovedBody = await deleteApprovedRes.json();
+    assert.strictEqual(deleteApprovedRes.status, 403, JSON.stringify(deleteApprovedBody));
+
+    const removableRes = await fetch(`${baseUrl}/api/terminology`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        term: '待删除术语',
+        term_type_code: 'noun',
+        definition: '仅用于删除路径验证',
+        process_id: 31
+      })
+    });
+    const removableBody = await removableRes.json();
+    assert.strictEqual(removableRes.status, 200, JSON.stringify(removableBody));
+
+    const deleteRes = await fetch(`${baseUrl}/api/terminology/${removableBody.id}`, { method: 'DELETE' });
     const deleteBody = await deleteRes.json();
     assert.strictEqual(deleteRes.status, 200, JSON.stringify(deleteBody));
 

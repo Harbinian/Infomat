@@ -11,7 +11,10 @@ process.env.MDM_DB_QUIET = '1';
 const reviewArtifactsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdm-input-baseline-review-api-'));
 const reviewRunDir = path.join(reviewArtifactsDir, 'review-run-001');
 const previousArtifactsDir = process.env.PROCESS_INPUT_BASELINE_REVIEW_ARTIFACTS_DIR;
+const previousIdentityReadModel = process.env.MDM_IDENTITY_READ_MODEL;
 process.env.PROCESS_INPUT_BASELINE_REVIEW_ARTIFACTS_DIR = reviewArtifactsDir;
+process.env.MDM_IDENTITY_READ_MODEL = 'mysql';
+const auth = require('../server/auth');
 
 function writeReviewItemFixture() {
   fs.mkdirSync(reviewRunDir, { recursive: true });
@@ -154,6 +157,19 @@ async function main() {
 
   const fakeRepo = createFakeRepository();
   processGovernanceRouter.setInputBaselineReviewRepositoryFactory(() => fakeRepo);
+  auth.setIdentityRepositoryFactory(async () => ({
+    async getUserEffectivePermissions(personId) {
+      const permissionsByPerson = {
+        1: ['governance:read-department', 'governance:review-department', 'governance:record-department-decision'],
+        2: ['identity:read', 'identity:manage-account', 'identity:assign-role', 'identity:read-audit', 'governance:read-global'],
+        3: ['governance:read-global', 'governance:assign-work', 'governance:structure-gate', 'governance:publish']
+      };
+      return {
+        permSet: new Set(permissionsByPerson[Number(personId)] || []),
+        fieldConstraints: {}
+      };
+    }
+  }));
 
   const app = express();
   app.use(express.json());
@@ -165,9 +181,11 @@ async function main() {
       leadership: '公司领导'
     };
     const departmentName = departmentNameMap[rawDepartmentName] || rawDepartmentName;
-    const userRole = req.headers['x-test-role'] || 'owner';
+    const userRole = req.headers['x-test-role'] || 'department_mdm_reviewer';
+    const personId = userRole === 'admin' ? 2 : (userRole === 'mdm_lead' ? 3 : 1);
     req.session = {
-      userId: 1,
+      personId,
+      userId: personId,
       userName: '系统管理员',
       userRole,
       roleCodes: [userRole],
@@ -314,9 +332,24 @@ async function main() {
       })
     });
     const adminCrossDeptSaveBody = await adminCrossDeptSaveRes.json();
-    assert.strictEqual(adminCrossDeptSaveRes.status, 200, JSON.stringify(adminCrossDeptSaveBody));
-    assert.strictEqual(adminCrossDeptSaveBody.reviewItem.department, '财务部');
-    assert.strictEqual(adminCrossDeptSaveBody.review.reviewer, '系统管理员');
+    assert.strictEqual(adminCrossDeptSaveRes.status, 403, JSON.stringify(adminCrossDeptSaveBody));
+    assert.strictEqual(adminCrossDeptSaveBody.error, '无权复核流程输入问题');
+
+    const leadCrossDeptSaveRes = await fetch(`${baseUrl}/api/process-governance/input-baseline-review/runs/review-run-001/review-items/review-item-fin-001/review`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'x-test-role': 'mdm_lead', 'x-test-department': 'leadership' },
+      body: JSON.stringify({
+        decision: 'confirm_issue',
+        evidence_status: 'source_verified',
+        issue_type: 'missing_delivery',
+        definition_status: 'source_definition_insufficient',
+        normalized_note: 'MDM工作组组长完成结构与证据复核。'
+      })
+    });
+    const leadCrossDeptSaveBody = await leadCrossDeptSaveRes.json();
+    assert.strictEqual(leadCrossDeptSaveRes.status, 200, JSON.stringify(leadCrossDeptSaveBody));
+    assert.strictEqual(leadCrossDeptSaveBody.reviewItem.department, '财务部');
+    assert.strictEqual(leadCrossDeptSaveBody.review.reviewer, '系统管理员');
 
     processGovernanceRouter.setInputBaselineReviewRepositoryFactory(() => ({
       async listRuns() {
@@ -339,6 +372,7 @@ async function main() {
   } finally {
     await closeServer(server);
     processGovernanceRouter.resetInputBaselineReviewRepositoryFactory();
+    auth.resetIdentityRepositoryFactory();
   }
 }
 
@@ -350,6 +384,11 @@ main().catch(error => {
     delete process.env.PROCESS_INPUT_BASELINE_REVIEW_ARTIFACTS_DIR;
   } else {
     process.env.PROCESS_INPUT_BASELINE_REVIEW_ARTIFACTS_DIR = previousArtifactsDir;
+  }
+  if (previousIdentityReadModel === undefined) {
+    delete process.env.MDM_IDENTITY_READ_MODEL;
+  } else {
+    process.env.MDM_IDENTITY_READ_MODEL = previousIdentityReadModel;
   }
   fs.rmSync(reviewArtifactsDir, { recursive: true, force: true });
   cleanupDb({ ignoreErrors: true });

@@ -82,12 +82,28 @@ async function main() {
   setDataMapRepositoryFactory(async () => repo);
   auth.setIdentityRepositoryFactory(async () => ({
     async getUserEffectivePermissions(userId) {
-      if (Number(userId) === 1) return { permSet: new Set(['admin:access']), fieldConstraints: {} };
+      if (Number(userId) === 1) {
+        return {
+          permSet: new Set([
+            'identity:read',
+            'identity:manage-account',
+            'identity:assign-role',
+            'identity:read-audit',
+            'governance:read-global'
+          ]),
+          fieldConstraints: {}
+        };
+      }
+      if ([42, 99].includes(Number(userId))) {
+        return {
+          permSet: new Set([
+            'governance:read-department',
+            'governance:draft-department'
+          ]),
+          fieldConstraints: {}
+        };
+      }
       return { permSet: new Set(), fieldConstraints: {} };
-    },
-    async getUserRoleCodes(userId, legacyRole) {
-      if (Number(userId) === 42) return [{ code: legacyRole || 'submitter', name: '报送人' }];
-      return [{ code: legacyRole || 'submitter', name: '报送人' }];
     }
   }));
 
@@ -97,9 +113,9 @@ async function main() {
     const userId = Number(req.get('x-test-user-id') || 0);
     if (userId) {
       req.session = {
+        personId: userId,
         userId,
-        userRole: userId === 1 ? 'admin' : 'submitter',
-        userName: userId === 1 ? '系统管理员' : '业务报送人',
+        userName: userId === 1 ? 'MDM系统管理员' : '部门主对接人',
         departmentId: userId === 99 ? 2 : 1
       };
     }
@@ -118,13 +134,8 @@ async function main() {
       ['供应商', '供应商唯一编码', '供应商编码', 'supplier_code', '编码', 'ERP, SRM', '批量']
     ]), 1);
     const adminBody = await adminImport.json();
-    assert.strictEqual(adminImport.status, 200, JSON.stringify(adminBody));
-    assert.strictEqual(adminBody.imported, 1);
-    assert.strictEqual(adminBody.context_id, 10);
-    assert.strictEqual(repo.state.fields[0].field_name_cn, '供应商编码');
-    assert.deepStrictEqual(repo.state.fields[0].consume_systems, ['ERP', 'SRM']);
-    assert.strictEqual(repo.state.fields[0].submitted_by, 1);
-    assert.strictEqual(repo.state.batches[0].row_count, 1);
+    assert.strictEqual(adminImport.status, 403, JSON.stringify(adminBody));
+    assert.strictEqual(repo.state.fields.length, 0, 'MDM系统管理员不得写入字段台账');
 
     const submitterImport = await upload(baseUrl, 10, await workbookBlob([
       ['供应商', '供应商主数据说明', '供应商名称', 'supplier_name', '文本', 'ERP', '实时']
@@ -132,7 +143,9 @@ async function main() {
     const submitterBody = await submitterImport.json();
     assert.strictEqual(submitterImport.status, 200, JSON.stringify(submitterBody));
     assert.strictEqual(submitterBody.imported, 1);
-    assert.strictEqual(repo.state.fields[1].submitted_by, 42);
+    assert.strictEqual(repo.state.fields[0].field_name_cn, '供应商名称');
+    assert.strictEqual(repo.state.fields[0].submitted_by, 42);
+    assert.strictEqual(repo.state.batches[0].row_count, 1);
 
     const otherDeptImport = await upload(baseUrl, 10, await workbookBlob([
       ['供应商', '无权导入', '供应商状态', 'supplier_status', '文本', 'ERP', '实时']
@@ -141,12 +154,12 @@ async function main() {
 
     const missingHeaderImport = await upload(baseUrl, 10, await workbookBlob([
       ['供应商', '缺表头']
-    ], ['数据对象', '中文字段名']), 1);
+    ], ['数据对象', '中文字段名']), 42);
     const missingHeaderBody = await missingHeaderImport.json();
     assert.strictEqual(missingHeaderImport.status, 400);
     assert.ok(missingHeaderBody.error.includes('缺少表头'));
 
-    const noFile = await upload(baseUrl, 10, null, 1);
+    const noFile = await upload(baseUrl, 10, null, 42);
     const noFileBody = await noFile.json();
     assert.strictEqual(noFile.status, 400);
     assert.strictEqual(noFileBody.error, '缺少 Excel 文件');

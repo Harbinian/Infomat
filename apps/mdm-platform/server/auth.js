@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const mysql = require('mysql2/promise');
 const { mysqlConfigFromEnv } = require('./mysqlConfig');
 const { makeIdentityMysqlRepository } = require('./identityMysqlRepository');
+const { permissionSetHas } = require('./roleDefinitions');
 let identityRepoPromise = null;
 let identityRepositoryFactory = null;
 const inFlightPasswordChecks = new Map();
@@ -42,10 +43,43 @@ function verifyPasswordAsync(password, hash) {
 }
 
 function requireAuth(req, res, next) {
-  if (!req.session || !req.session.userId) {
+  if (!req.session || (!req.session.personId && !req.session.userId)) {
     return res.status(401).json({ error: '未登录' });
   }
-  next();
+  if (!useMysqlIdentityReadModel() || !req.session.accountId || !req.session.authVersion) {
+    return next();
+  }
+  return identityRepository()
+    .then(repo => {
+      if (typeof repo.validateSession !== 'function') return { valid: true };
+      return repo.validateSession(req.session);
+    })
+    .then(result => {
+      if (!result || !result.valid) {
+        return req.session.destroy(() => {
+          res.status(401).json({
+            error: '账号状态或授权已经变化，请重新登录',
+            code: 'SESSION_AUTHORIZATION_CHANGED'
+          });
+        });
+      }
+      req.identity = result.user;
+      attachRequestIdentityCompatibility(req, result.user);
+      if (result.user.must_change_password && !isPasswordChangeBootstrapRequest(req)) {
+        return res.status(403).json({
+          error: '首次登录必须先修改密码',
+          code: 'PASSWORD_CHANGE_REQUIRED'
+        });
+      }
+      return next();
+    })
+    .catch(error => {
+      console.error(error);
+      return res.status(503).json({
+        error: '身份服务暂不可用',
+        code: 'IDENTITY_SERVICE_UNAVAILABLE'
+      });
+    });
 }
 
 function requireRole(...roles) {
@@ -83,7 +117,7 @@ function send422(res, errors) {
 function isAdmin(req) {
   if (!req.session || !req.session.userId) return false;
   const { permSet } = getUserEffectivePermissions(req.session.userId);
-  return permSet.has('admin:access') || permSet.has('*:*');
+  return permSet.has('identity:manage-account');
 }
 
 const INTERNAL_ID_FIELDS = [
@@ -277,6 +311,34 @@ async function getDepartmentByIdAsync(departmentId) {
   return db.prepare('SELECT * FROM departments WHERE id=?').get(departmentId) || null;
 }
 
+function attachRequestIdentityCompatibility(req, user = {}) {
+  if (!req.session) return;
+  const compatibilityValues = {
+    userId: user.personId || user.person_id || null,
+    userName: user.personName || user.person_name || user.name || '',
+    departmentId: user.current_department_id || user.department_id || null
+  };
+  for (const [key, value] of Object.entries(compatibilityValues)) {
+    if (Object.prototype.hasOwnProperty.call(req.session, key)) continue;
+    Object.defineProperty(req.session, key, {
+      configurable: true,
+      enumerable: false,
+      value
+    });
+  }
+}
+
+function isPasswordChangeBootstrapRequest(req) {
+  const path = String(req.originalUrl || req.url || '').split('?')[0];
+  return [
+    '/api/org/me',
+    '/api/org/session',
+    '/api/org/logout',
+    '/api/org/me/password-status',
+    '/api/org/me/password'
+  ].includes(path);
+}
+
 async function getDepartmentByNameAsync(departmentName) {
   const name = String(departmentName || '').trim();
   if (!name) return null;
@@ -292,39 +354,81 @@ async function getDepartmentByNameAsync(departmentName) {
 
 function requirePermission(permCode) {
   return (req, res, next) => {
-    if (!req.session || !req.session.userId) return res.status(401).json({ error: '未登录' });
+    const checkPermission = () => {
+      if (!req.session || (!req.session.personId && !req.session.userId)) {
+        return res.status(401).json({ error: '未登录' });
+      }
+      const personId = req.session.personId || req.session.userId;
 
-    if (useMysqlIdentityReadModel()) {
-      return getUserEffectivePermissionsAsync(req.session.userId)
+      if (useMysqlIdentityReadModel()) {
+        return getUserEffectivePermissionsAsync(personId)
+          .then(({ permSet, fieldConstraints }) => {
+            if (!permissionSetHas(permSet, permCode)) {
+              return res.status(403).json({ error: '权限不足' });
+            }
+            req.effectivePermissions = permSet;
+            req.effectiveFieldConstraints = fieldConstraints;
+            const readonlyViolation = readonlyWriteViolation(req, permCode, fieldConstraints);
+            if (readonlyViolation.length > 0) {
+              return res.status(403).json({ error: '字段只读，不允许写入', readonly_fields: readonlyViolation });
+            }
+            return next();
+          })
+          .catch(error => {
+            console.error(error);
+            return res.status(503).json({ error: '身份 MySQL 读取模型不可用' });
+          });
+      }
+
+      const { permSet, fieldConstraints } = getUserEffectivePermissions(personId);
+      if (!permissionSetHas(permSet, permCode)) {
+        return res.status(403).json({ error: '权限不足' });
+      }
+      req.effectivePermissions = permSet;
+      req.effectiveFieldConstraints = fieldConstraints;
+      const readonlyViolation = readonlyWriteViolation(req, permCode, fieldConstraints);
+      if (readonlyViolation.length > 0) {
+        return res.status(403).json({ error: '字段只读，不允许写入', readonly_fields: readonlyViolation });
+      }
+      return next();
+    };
+    if (useMysqlIdentityReadModel() && !req.identity) {
+      return requireAuth(req, res, checkPermission);
+    }
+    return checkPermission();
+  };
+}
+
+function requireAnyPermission(...permCodes) {
+  return (req, res, next) => {
+    const checkPermissions = () => {
+      if (!req.session || (!req.session.personId && !req.session.userId)) {
+        return res.status(401).json({ error: '未登录' });
+      }
+      const check = useMysqlIdentityReadModel()
+        ? getUserEffectivePermissionsAsync(req.session.personId)
+        : Promise.resolve(getUserEffectivePermissions(req.session.userId));
+      return check
         .then(({ permSet, fieldConstraints }) => {
-          if (!permSet.has(permCode) && !permSet.has('*:*')) {
+          if (!permCodes.some(code => permissionSetHas(permSet, code))) {
             return res.status(403).json({ error: '权限不足' });
           }
           req.effectivePermissions = permSet;
           req.effectiveFieldConstraints = fieldConstraints;
-          const readonlyViolation = readonlyWriteViolation(req, permCode, fieldConstraints);
-          if (readonlyViolation.length > 0) {
-            return res.status(403).json({ error: '字段只读，不允许写入', readonly_fields: readonlyViolation });
-          }
           return next();
         })
         .catch(error => {
           console.error(error);
-          return res.status(503).json({ error: '身份 MySQL 读取模型不可用' });
+          return res.status(503).json({
+            error: '身份服务暂不可用',
+            code: 'IDENTITY_SERVICE_UNAVAILABLE'
+          });
         });
+    };
+    if (useMysqlIdentityReadModel() && !req.identity) {
+      return requireAuth(req, res, checkPermissions);
     }
-
-    const { permSet, fieldConstraints } = getUserEffectivePermissions(req.session.userId);
-    if (!permSet.has(permCode) && !permSet.has('*:*')) {
-      return res.status(403).json({ error: '权限不足' });
-    }
-    req.effectivePermissions = permSet;
-    req.effectiveFieldConstraints = fieldConstraints;
-    const readonlyViolation = readonlyWriteViolation(req, permCode, fieldConstraints);
-    if (readonlyViolation.length > 0) {
-      return res.status(403).json({ error: '字段只读，不允许写入', readonly_fields: readonlyViolation });
-    }
-    next();
+    return checkPermissions();
   };
 }
 
@@ -334,11 +438,9 @@ function readonlyWriteViolation(req, permCode, fieldConstraints) {
 
   const constraints = fieldConstraints || {};
   const readonly = new Set();
-  for (const code of [permCode, '*:*']) {
-    const fc = constraints[code];
-    if (fc && Array.isArray(fc.readonly)) {
-      fc.readonly.forEach(field => readonly.add(field));
-    }
+  const fc = constraints[permCode];
+  if (fc && Array.isArray(fc.readonly)) {
+    fc.readonly.forEach(field => readonly.add(field));
   }
   if (readonly.size === 0) return [];
 
@@ -388,7 +490,7 @@ function applyFieldConstraints(resourceType) {
       // Find constraints that match this resourceType
       const relevantConstraints = {};
       for (const [permCode, fc] of Object.entries(constraints)) {
-        if (permCode === '*:*' || permCode.startsWith(resourceType + ':')) {
+        if (permCode.startsWith(resourceType + ':')) {
           if (fc.exclude) {
             relevantConstraints.exclude = [...(relevantConstraints.exclude || []), ...fc.exclude];
           }
@@ -413,6 +515,7 @@ module.exports = {
   requireRole,
   requireDataPermission,
   requirePermission,
+  requireAnyPermission,
   applyFieldConstraints,
   getUserEffectivePermissions,
   getUserEffectivePermissionsAsync,

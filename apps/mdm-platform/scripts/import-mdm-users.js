@@ -1,4 +1,7 @@
 // 导入 MDM 参与人员: 读取 Excel 并写入 users 表
+console.error('LEGACY_ACCOUNT_SCRIPT_RETIRED：Excel名单脚本不得创建3000账号。');
+process.exit(1);
+
 const ExcelJS = require('exceljs');
 const db = require('../server/db');
 const { hashPassword } = require('../server/auth');

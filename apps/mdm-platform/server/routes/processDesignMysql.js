@@ -5,16 +5,13 @@ const mysql = require('mysql2/promise');
 const router = express.Router();
 const {
   requireAuth,
+  requirePermission,
   getUserEffectivePermissionsAsync,
-  getUserRoleCodesAsync,
   getDepartmentByIdAsync,
   getDepartmentByNameAsync
 } = require('../auth');
 const { mysqlConfigFromEnv } = require('../mysqlConfig');
 
-const PROJECT_WIDE_ROLES = new Set(['admin', 'it_lead']);
-const REVIEW_ROLES = new Set(['admin', 'it_lead', 'reviewer', 'owner', 'data_quality', 'decision_group']);
-const DEPT_CREATE_ROLES = new Set(['submitter', 'business_contact']);
 const FIELD_STATUSES = new Set(['suggested', 'business_confirmed', 'data_governed', 'published', 'retired']);
 const DRAFT_STATUSES = new Set(['draft', 'submitted', 'under_review', 'needs_changes', 'approved', 'published', 'rejected']);
 const CLASSIFICATION_STATUSES = new Set(['unclassified', 'needs_review', 'confirmed']);
@@ -46,7 +43,6 @@ const ARCHIVE_LOCATIONS = new Set(['部门自行保存', '资料室']);
 const RETENTION_PERIODS = new Set(['1年', '3年', '10年', '永久']);
 const EVIDENCE_TYPES = new Set(['制度条款', '表单样例', '访谈记录', '会议纪要', '流程图', '台账记录', '暂无证据']);
 const EVIDENCE_STATUSES = new Set(['verified', 'pending_review', 'source_missing', 'ocr_extracted_not_confirmed', 'review_only']);
-const PROCESS_EVIDENCE_VERIFY_PERMISSION = 'process_evidence:verify';
 const EVIDENCE_STATUS_MIGRATION_KEY = '2026-07-01-process-design-evidence-status';
 const EDITION_SCHEMA_MIGRATION_KEY = '2026-07-02-process-design-document-editions';
 const FORM_STRUCTURE_SCHEMA_MIGRATION_KEY = '2026-07-03-process-design-form-structure';
@@ -1287,6 +1283,95 @@ function makeProcessDesignMysqlRepository(pool) {
     return Array.from(new Set(details));
   }
 
+  async function publicationGovernanceReadiness(draft) {
+    const subjectVersion = text(draft.planned_edition) || 'A';
+    const requiredDepartments = [];
+    const missingDepartments = [];
+    const ownerDepartment = (await mysqlQuery(pool, `
+      SELECT id, name, final_responsible_person_id
+      FROM departments
+      WHERE id=? AND status='active'
+      LIMIT 1
+    `, [draft.department_id]))[0];
+    if (ownerDepartment) requiredDepartments.push(ownerDepartment);
+    else missingDepartments.push(`部门ID ${draft.department_id}`);
+
+    for (const departmentName of parseJsonArray(draft.related_departments)) {
+      const department = (await mysqlQuery(pool, `
+        SELECT id, name, final_responsible_person_id
+        FROM departments
+        WHERE name=? AND status='active'
+        LIMIT 1
+      `, [departmentName]))[0];
+      if (!department) {
+        missingDepartments.push(departmentName);
+      } else if (!requiredDepartments.some(item => Number(item.id) === Number(department.id))) {
+        requiredDepartments.push(department);
+      }
+    }
+
+    const incompleteDepartments = [];
+    for (const department of requiredDepartments) {
+      if (!department.final_responsible_person_id) {
+        incompleteDepartments.push({
+          departmentId: Number(department.id),
+          departmentName: department.name,
+          reason: '部门尚未配置最终责任人'
+        });
+        continue;
+      }
+      const decision = (await mysqlQuery(pool, `
+        SELECT decision, accountable_person_id, decided_at
+        FROM governance_decision_records
+        WHERE subject_domain='process'
+          AND subject_type='process_design_draft'
+          AND subject_id=?
+          AND subject_version=?
+          AND department_id=?
+        ORDER BY created_at DESC, decision_record_id DESC
+        LIMIT 1
+      `, [String(draft.id), subjectVersion, department.id]))[0];
+      if (
+        !decision ||
+        decision.decision !== 'approved' ||
+        Number(decision.accountable_person_id) !== Number(department.final_responsible_person_id)
+      ) {
+        incompleteDepartments.push({
+          departmentId: Number(department.id),
+          departmentName: department.name,
+          reason: !decision
+            ? '尚未记录部门决定'
+            : decision.decision !== 'approved'
+              ? '最新部门决定不是同意'
+              : '部门最终责任人已经变化，需要重新记录决定'
+        });
+      }
+    }
+
+    const [blockingRisk] = await mysqlQuery(pool, `
+      SELECT COUNT(*) AS count
+      FROM process_design_risks
+      WHERE draft_id=? AND status IN ('open','needs_fix')
+    `, [draft.id]);
+
+    return {
+      subjectDomain: 'process',
+      subjectType: 'process_design_draft',
+      subjectId: String(draft.id),
+      subjectVersion,
+      requiredDepartments: requiredDepartments.map(item => ({
+        departmentId: Number(item.id),
+        departmentName: item.name
+      })),
+      missingDepartments,
+      incompleteDepartments,
+      blockingIssueCount: Number(blockingRisk && blockingRisk.count || 0),
+      ready: missingDepartments.length === 0 &&
+        incompleteDepartments.length === 0 &&
+        Number(blockingRisk && blockingRisk.count || 0) === 0
+    };
+  }
+
   async function outcomeForDraft(draft) {
     const counts = await getCounts(draft.id);
     const formed = [];
@@ -1607,17 +1692,6 @@ function makeProcessDesignMysqlRepository(pool) {
           throw error;
         }
       }
-      if (!roleNames.size) {
-        const users = await mysqlQuery(pool, `
-          SELECT DISTINCT post
-          FROM users
-          WHERE department_id=?
-            AND post IS NOT NULL
-            AND post <> ''
-          ORDER BY post
-        `, [Number(departmentId)]);
-        users.forEach(row => roleNames.add(text(row.post)));
-      }
       return {
         department_id: Number(departmentId),
         department_name: department && department.name || null,
@@ -1715,6 +1789,7 @@ function makeProcessDesignMysqlRepository(pool) {
     getCounts,
     publishReadiness,
     publishValidationDetails,
+    publicationGovernanceReadiness,
     outcomeForDraft,
     detail: detailForDraft,
     async markdownForDraft(draftId) {
@@ -2499,7 +2574,7 @@ function makeProcessDesignMysqlRepository(pool) {
       `, [actorUserId, draft.id]);
       const taskResult = await mysqlRun(pool, `
         INSERT INTO process_design_review_tasks (draft_id, task_type, assignee_role, created_by)
-        VALUES (?, 'department_review', 'reviewer', ?)
+        VALUES (?, 'department_review', 'department_mdm_reviewer', ?)
       `, [draft.id, actorUserId]);
       await addEvent(draft.id, 'submitted', actorUserId, optionalText(note) || '已提交审核');
       const updated = await getDraft(draft.id);
@@ -2544,6 +2619,16 @@ function makeProcessDesignMysqlRepository(pool) {
       const details = await publishValidationDetails(draft);
       if (details.length) {
         throw httpError(details.includes(VERIFIED_EVIDENCE_MESSAGE) ? 409 : 422, '校验失败', { error: '校验失败', details });
+      }
+      const governanceReadiness = await publicationGovernanceReadiness(draft);
+      if (!governanceReadiness.ready) {
+        const responsibilityIncomplete = governanceReadiness.missingDepartments.length > 0 ||
+          governanceReadiness.incompleteDepartments.length > 0;
+        throw httpError(409, responsibilityIncomplete ? '责任链不完整，不能发布' : '阻断问题尚未关闭，不能发布', {
+          error: responsibilityIncomplete ? '责任链不完整，不能发布' : '阻断问题尚未关闭，不能发布',
+          code: responsibilityIncomplete ? 'RESPONSIBILITY_CHAIN_INCOMPLETE' : 'PUBLISH_BLOCKED',
+          governanceReadiness
+        });
       }
       if (draft.base_version_id && !options.confirm_complete_rewrite) {
         throw httpError(409, '发布下一版次前请确认新版已完整重写', {
@@ -2654,29 +2739,20 @@ function resetProcessDesignRepositoryFactory() {
   repositoryPromise = null;
 }
 
-async function currentRoleCodes(req) {
-  const rows = await getUserRoleCodesAsync(req.session.userId, req.session.userRole);
-  const codes = new Set((rows || []).map(row => row.code || row.role_code).filter(Boolean));
-  if (req.session.userRole) codes.add(req.session.userRole);
-  return codes;
-}
-
 async function currentPermSet(req) {
   const { permSet } = await getUserEffectivePermissionsAsync(req.session.userId);
   return permSet || new Set();
 }
 
-function hasRole(roleCodes, allowed) {
-  return Array.from(roleCodes).some(code => allowed.has(code));
+async function hasCurrentPermission(req, permissionCode) {
+  return (await currentPermSet(req)).has(permissionCode);
 }
 
-async function canWorkAcrossDepartments(req, roleCodes) {
-  const perms = await currentPermSet(req);
-  return perms.has('*:*') || perms.has('admin:access') || hasRole(roleCodes, PROJECT_WIDE_ROLES);
+async function canViewAcrossDepartments(req) {
+  return await hasCurrentPermission(req, 'governance:read-global');
 }
 
-async function authorizedDepartmentIds(req, roleCodes) {
-  if (await canWorkAcrossDepartments(req, roleCodes)) return null;
+async function authorizedDepartmentIds(req) {
   const ids = new Set();
   if (req.session.departmentId) ids.add(Number(req.session.departmentId));
   return ids;
@@ -2697,50 +2773,54 @@ function draftRequiredErrors(body) {
 
 async function assertCanViewDraft(req, repo, draft) {
   if (!draft) throw httpError(404, '制度结构草稿不存在');
-  const roleCodes = await currentRoleCodes(req);
-  if (await canWorkAcrossDepartments(req, roleCodes)) return roleCodes;
-  if (Number(draft.created_by || 0) === Number(req.session.userId)) return roleCodes;
-  const deptIds = await authorizedDepartmentIds(req, roleCodes);
-  if (deptIds && deptIds.has(Number(draft.department_id))) return roleCodes;
+  if (await canViewAcrossDepartments(req)) return;
+  const deptIds = await authorizedDepartmentIds(req);
+  if (deptIds.has(Number(draft.department_id)) && await hasCurrentPermission(req, 'governance:read-department')) return;
   throw httpError(403, '无权查看该制度结构草稿');
 }
 
 async function assertCanEditDraft(req, repo, draft) {
-  const roleCodes = await assertCanViewDraft(req, repo, draft);
+  await assertCanViewDraft(req, repo, draft);
   if (draft.status === 'published') throw httpError(409, '已发布流程不能直接修改草稿');
-  if (await canWorkAcrossDepartments(req, roleCodes)) return roleCodes;
-  if (Number(draft.created_by || 0) === Number(req.session.userId)) return roleCodes;
-  if (hasRole(roleCodes, new Set([...DEPT_CREATE_ROLES, ...REVIEW_ROLES]))) return roleCodes;
+  const deptIds = await authorizedDepartmentIds(req);
+  if (
+    deptIds.has(Number(draft.department_id)) &&
+    await hasCurrentPermission(req, 'governance:draft-department')
+  ) return;
   throw httpError(403, '无权维护该制度结构草稿');
 }
 
 async function assertCanEditDraftContent(req, repo, draft) {
-  const roleCodes = await assertCanEditDraft(req, repo, draft);
+  await assertCanEditDraft(req, repo, draft);
   if (!EDITABLE_DRAFT_STATUSES.has(draft.status || 'draft')) {
     throw httpError(409, '当前状态只读，需要退回修改或新建变更版本');
   }
-  return roleCodes;
 }
 
 async function assertCanReview(req, repo, draft) {
-  const roleCodes = await assertCanViewDraft(req, repo, draft);
-  if (await canWorkAcrossDepartments(req, roleCodes) || hasRole(roleCodes, REVIEW_ROLES)) return roleCodes;
+  await assertCanViewDraft(req, repo, draft);
+  const deptIds = await authorizedDepartmentIds(req);
+  if (
+    deptIds.has(Number(draft.department_id)) &&
+    await hasCurrentPermission(req, 'governance:review-department')
+  ) return;
   throw httpError(403, '无权审核该制度结构草稿');
 }
 
 async function assertCanVerifyEvidenceStatus(req) {
   const perms = await currentPermSet(req);
-  if (perms.has('*:*') || perms.has('admin:access') || perms.has(PROCESS_EVIDENCE_VERIFY_PERMISSION)) return;
+  if (perms.has('governance:structure-gate')) return;
   throw httpError(403, '无权核验证据状态');
 }
 
 async function assertCanReturnHandoff(req, repo, draft, handoff) {
   if (!handoff) throw httpError(404, '跨部门承接不存在');
-  const roleCodes = await currentRoleCodes(req);
-  if (await canWorkAcrossDepartments(req, roleCodes)) return roleCodes;
+  if (!await hasCurrentPermission(req, 'governance:draft-department')) {
+    throw httpError(403, '跨部门承接结果只能由承接部门主对接人回写');
+  }
   const department = req.session.departmentId ? await getDepartmentByIdAsync(req.session.departmentId) : null;
   const departmentName = department && (department.name || department.department_name);
-  if (departmentName && text(departmentName) === text(handoff.target_department)) return roleCodes;
+  if (departmentName && text(departmentName) === text(handoff.target_department)) return;
   throw httpError(403, '跨部门承接结果只能由承接部门回写');
 }
 
@@ -2776,10 +2856,9 @@ function structuredOutputDepartmentName(data) {
 
 router.get('/summary', requireAuth, (req, res) => runAction(res, async () => {
   const repo = await repository();
-  const roleCodes = await currentRoleCodes(req);
   let deptIds = null;
-  if (!await canWorkAcrossDepartments(req, roleCodes)) {
-    deptIds = Array.from(await authorizedDepartmentIds(req, roleCodes) || []);
+  if (!await canViewAcrossDepartments(req)) {
+    deptIds = Array.from(await authorizedDepartmentIds(req));
   }
   res.json(await repo.summary(deptIds, req.query && req.query.document_no));
 }));
@@ -2802,13 +2881,12 @@ router.get('/departments/:id/roster-roles', requireAuth, (req, res) => runAction
 }));
 
 async function canMaintainDocument(req, document) {
-  const roleCodes = await currentRoleCodes(req);
-  if (await canWorkAcrossDepartments(req, roleCodes)) return true;
-  const allowed = await authorizedDepartmentIds(req, roleCodes);
-  return Boolean(allowed && document && allowed.has(Number(document.owning_department_id)));
+  if (!await hasCurrentPermission(req, 'governance:draft-department')) return false;
+  const allowed = await authorizedDepartmentIds(req);
+  return Boolean(document && allowed.has(Number(document.owning_department_id)));
 }
 
-async function structuredImportTargetDepartment(req, repo, data, roleCodes) {
+async function structuredImportTargetDepartment(req, repo, data) {
   const draft = data && data.draft || {};
   let requestedDeptId = Number(draft.department_id || draft.department && draft.department.department_id || 0) || null;
   const requestedDeptName = structuredOutputDepartmentName(data);
@@ -2824,20 +2902,17 @@ async function structuredImportTargetDepartment(req, repo, data, roleCodes) {
   }
   const sessionDeptId = req.session.departmentId ? Number(req.session.departmentId) : null;
   const targetDeptId = requestedDeptId || sessionDeptId;
-  const canCrossDept = await canWorkAcrossDepartments(req, roleCodes);
   if (!targetDeptId) throw httpError(400, '请先维护人员组织信息后再导入结构化文件');
   if (!await repo.departmentExists(targetDeptId)) {
     throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'department_id', message: '所属部门不存在' }] });
   }
-  if (!canCrossDept) {
-    if (requestedDeptId && requestedDeptId !== sessionDeptId) throw httpError(403, '普通填报人只能为本人部门导入制度结构草稿');
-    const allowed = await authorizedDepartmentIds(req, roleCodes);
-    if (!allowed || !allowed.has(Number(targetDeptId))) throw httpError(403, '无权为该部门导入制度结构草稿');
-    if (!hasRole(roleCodes, new Set([...DEPT_CREATE_ROLES, ...REVIEW_ROLES]))) throw httpError(403, '无权导入制度结构草稿');
-  }
+  if (!await hasCurrentPermission(req, 'governance:draft-department')) throw httpError(403, '无权导入制度结构草稿');
+  if (requestedDeptId && requestedDeptId !== sessionDeptId) throw httpError(403, '部门主对接人只能为本人部门导入制度结构草稿');
+  const allowed = await authorizedDepartmentIds(req);
+  if (!allowed.has(Number(targetDeptId))) throw httpError(403, '无权为该部门导入制度结构草稿');
   return {
     targetDeptId,
-    proxyDeptId: canCrossDept && requestedDeptId && sessionDeptId && requestedDeptId !== sessionDeptId ? sessionDeptId : null
+    proxyDeptId: null
   };
 }
 
@@ -2915,8 +2990,7 @@ async function importStructuredOutput(req, repo, body) {
       details: [{ field: 'schema_version', message: `结构化文件必须使用 ${STRUCTURED_OUTPUT_SCHEMA_VERSION}` }]
     });
   }
-  const roleCodes = await currentRoleCodes(req);
-  const target = await structuredImportTargetDepartment(req, repo, data, roleCodes);
+  const target = await structuredImportTargetDepartment(req, repo, data);
   const draftPayload = structuredOutputDraftPayload(data);
   const details = draftRequiredErrors(draftPayload);
   const taxonomyScope = await taxonomyScopeForDepartmentId(target.targetDeptId);
@@ -3223,29 +3297,23 @@ router.post('/documents/:id/drafts', requireAuth, (req, res) => runAction(res, a
 
 router.post('/drafts', requireAuth, (req, res) => runAction(res, async () => {
   const repo = await repository();
-  const roleCodes = await currentRoleCodes(req);
   const errors = draftRequiredErrors(req.body || {});
   if (text(req.body && req.body.basis_type) && !BASIS_TYPES.has(text(req.body.basis_type))) {
     errors.push({ field: 'basis_type', message: '依据类型必须从系统选项中选择' });
   }
-  const canCrossDept = await canWorkAcrossDepartments(req, roleCodes);
   const requestedDeptId = req.body.department_id ? Number(req.body.department_id) : null;
   const sessionDeptId = req.session.departmentId ? Number(req.session.departmentId) : null;
   const targetDeptId = requestedDeptId || sessionDeptId;
-  if (!targetDeptId && !canCrossDept) throw httpError(400, '请先维护人员组织信息后再创建制度结构草稿');
+  if (!targetDeptId) throw httpError(400, '请先维护人员组织信息后再创建制度结构草稿');
   if (!await repo.departmentExists(targetDeptId)) errors.push({ field: 'department_id', message: '所属部门不存在' });
-  if (!canCrossDept) {
-    if (requestedDeptId && requestedDeptId !== sessionDeptId) throw httpError(403, '普通填报人只能为本人部门创建流程');
-    const allowed = await authorizedDepartmentIds(req, roleCodes);
-    if (!allowed || !allowed.has(Number(targetDeptId))) throw httpError(403, '无权为该部门创建流程');
-    if (!hasRole(roleCodes, new Set([...DEPT_CREATE_ROLES, ...REVIEW_ROLES]))) throw httpError(403, '无权创建制度结构草稿');
-  } else if (requestedDeptId && sessionDeptId && requestedDeptId !== sessionDeptId && !text(req.body.proxy_reason)) {
-    errors.push({ field: 'proxy_reason', message: '管理员或信息化负责人代建时必须填写代建原因' });
-  }
+  if (!await hasCurrentPermission(req, 'governance:draft-department')) throw httpError(403, '无权创建制度结构草稿');
+  if (requestedDeptId && requestedDeptId !== sessionDeptId) throw httpError(403, '部门主对接人只能为本人部门创建流程');
+  const allowed = await authorizedDepartmentIds(req);
+  if (!allowed.has(Number(targetDeptId))) throw httpError(403, '无权为该部门创建流程');
   errors.push(...await taxonomyValidationDetails(repo, req.body || {}, await taxonomyScopeForDepartmentId(targetDeptId)));
   if (errors.length) throw httpError(422, '校验失败', { error: '校验失败', details: errors });
   await getDepartmentByIdAsync(targetDeptId);
-  const draft = await repo.createDraft(req.body, req.session.userId, targetDeptId, requestedDeptId && sessionDeptId && requestedDeptId !== sessionDeptId ? sessionDeptId : null);
+  const draft = await repo.createDraft(req.body, req.session.userId, targetDeptId, null);
   res.status(201).json(draft);
 }));
 
@@ -3581,7 +3649,7 @@ router.get('/drafts/:id/outcome-preview', requireAuth, (req, res) => runAction(r
   res.json({ draft, outcome: await repo.outcomeForDraft(draft), counts: await repo.getCounts(draft.id), risks: await repo.buildRisks(draft.id) });
 }));
 
-router.post('/drafts/:id/submit', requireAuth, (req, res) => runAction(res, async () => {
+router.post('/drafts/:id/submit', requireAuth, requirePermission('governance:submit-department'), (req, res) => runAction(res, async () => {
   const repo = await repository();
   const draft = await repo.getDraft(req.params.id);
   await assertCanEditDraftContent(req, repo, draft);
@@ -3601,10 +3669,10 @@ router.post('/review-tasks/:id/decision', requireAuth, (req, res) => runAction(r
   res.json(await repo.decideReviewTask(task, decision, req.body.note, req.session.userId));
 }));
 
-router.post('/drafts/:id/publish', requireAuth, (req, res) => runAction(res, async () => {
+router.post('/drafts/:id/publish', requireAuth, requirePermission('governance:publish'), (req, res) => runAction(res, async () => {
   const repo = await repository();
   const draft = await repo.getDraft(req.params.id);
-  await assertCanReview(req, repo, draft);
+  await assertCanViewDraft(req, repo, draft);
   res.json(await repo.publishDraft(draft, req.body && req.body.note, req.session.userId, req.body || {}));
 }));
 

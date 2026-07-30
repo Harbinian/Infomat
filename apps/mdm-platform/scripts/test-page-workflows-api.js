@@ -94,8 +94,8 @@ function seedData() {
     VALUES (?, ?, '业务')
   `).run(`${TEST_PREFIX}工程技术部`, `${TEST_PREFIX}DEPT_B`).lastInsertRowid;
 
-  const submitterId = createUser(`${TEST_PREFIX}SUB`, '报送用户', deptId, 'submitter', ['business_contact']);
-  createUser(`${TEST_PREFIX}ADMIN`, '管理员用户', deptId, 'admin', ['admin', 'it_lead']);
+  const submitterId = createUser(`${TEST_PREFIX}SUB`, '报送用户', deptId, 'submitter', ['department_contact']);
+  createUser(`${TEST_PREFIX}ADMIN`, '管理员用户', deptId, 'admin', ['admin', 'mdm_lead']);
 
   const capId = db.prepare(`
     INSERT INTO capabilities (name, level, owner_dept_id, status)
@@ -163,13 +163,13 @@ async function runMysqlIdentityPageWorkflowCollisionRegression() {
   auth.setIdentityRepositoryFactory(async () => ({
     async getUserEffectivePermissions(userId) {
       assert(userId === 43, `权限读取用户应为 43，实际 ${userId}`);
-      return { permSet: new Set(['admin:access']), fieldConstraints: {} };
+      return { permSet: new Set(['governance:read-global']), fieldConstraints: {} };
     },
     async getUserRoleCodes(userId) {
       assert(userId === 43, `角色读取用户应为 43，实际 ${userId}`);
       return [
         { code: 'admin', name: '管理员' },
-        { code: 'it_lead', name: '信息化负责人' }
+        { code: 'mdm_lead', name: 'MDM工作组组长' }
       ];
     },
     async getDepartmentById(departmentId) {
@@ -198,7 +198,7 @@ async function runMysqlIdentityPageWorkflowCollisionRegression() {
     const body = await response.json();
     assert(response.status === 200, `MySQL 身份页面工作流失败: ${response.status} ${JSON.stringify(body)}`);
     assert(body.user.departmentName === '经营发展部', `页面工作流应返回 MySQL 身份部门，实际 ${body.user.departmentName}`);
-    assert(body.user.roleCodes.includes('it_lead'), '页面工作流应返回 MySQL 身份角色');
+    assert(body.user.roleCodes.includes('mdm_lead'), '页面工作流应返回 MySQL 身份角色');
   } finally {
     await closeServer(server);
     auth.resetIdentityRepositoryFactory();
@@ -245,7 +245,7 @@ async function main() {
 
     const roleGuide = await request('GET', '/api/page-workflows?tab=roleGuide&view=list', null, submitterCookie);
     assert(roleGuide.status === 200, `角色使用说明工作流失败: ${roleGuide.status}`);
-    assert(roleGuide.body.page.title === '角色使用说明', `角色使用说明不应返回其他页面标题: ${roleGuide.body.page.title}`);
+    assert(roleGuide.body.page.title === '角色与责任', `角色与责任页面不应返回其他页面标题: ${roleGuide.body.page.title}`);
 
     const detail = await request(
       'GET',

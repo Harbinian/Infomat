@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const { requireAuth, getUserEffectivePermissionsAsync } = require('../auth');
-const { getEffectiveRoleCodesAsync } = require('../access');
 const { dataMapRepository } = require('../dataMapMysqlRepository');
 
 function handleError(res, error) {
@@ -20,27 +19,23 @@ function runAction(res, action) {
   return action().catch(error => handleError(res, error));
 }
 
-async function isAdmin(req) {
+async function permissionSet(req) {
   const { permSet } = await getUserEffectivePermissionsAsync(req.session.userId);
-  return permSet.has('admin:access') || permSet.has('*:*');
+  return permSet;
 }
 
-async function canUseContext(req, context) {
+async function canViewContext(req, context) {
   if (!context) return false;
-  if (await isAdmin(req)) return true;
-  const roleCodes = await getEffectiveRoleCodesAsync(req);
+  const permissions = await permissionSet(req);
+  if (permissions.has('governance:read-global')) return true;
   const sameDepartment = Number(context.dept_id || 0) === Number(req.session.departmentId || 0);
-  const ownsContext = Number(context.owner_user_id || 0) === Number(req.session.userId || 0);
-  const createdContext = Number(context.created_by || 0) === Number(req.session.userId || 0);
-  return createdContext || ownsContext || (sameDepartment && (roleCodes.has('owner') || roleCodes.has('submitter')));
+  return sameDepartment && permissions.has('governance:read-department');
 }
 
-async function canEditField(req, field, context) {
-  if (await isAdmin(req)) return true;
-  const roleCodes = await getEffectiveRoleCodesAsync(req);
+async function canEditField(req, context) {
+  const permissions = await permissionSet(req);
   const sameDepartment = Number(context && context.dept_id || 0) === Number(req.session.departmentId || 0);
-  if (roleCodes.has('owner') && sameDepartment) return true;
-  return roleCodes.has('submitter') && Number(field.submitted_by || 0) === Number(req.session.userId || 0);
+  return sameDepartment && permissions.has('governance:draft-department');
 }
 
 function contextIdFromPayload(payload = {}) {
@@ -52,7 +47,7 @@ router.get('/mapping/:contextId', requireAuth, (req, res) => {
     const repo = await dataMapRepository();
     const context = await repo.getContext(req.params.contextId);
     if (!context) return res.status(404).json({ error: '数据地图上下文不存在' });
-    if (!await canUseContext(req, context)) return res.status(403).json({ error: '无权查看该字段台账' });
+    if (!await canViewContext(req, context)) return res.status(403).json({ error: '无权查看该字段台账' });
     res.json(await repo.getFieldsByContext(context.id));
   });
 });
@@ -64,7 +59,7 @@ router.post('/', requireAuth, (req, res) => {
     const repo = await dataMapRepository();
     const context = await repo.getContext(contextId);
     if (!context) return res.status(404).json({ error: '数据地图上下文不存在' });
-    if (!await canUseContext(req, context)) return res.status(403).json({ error: '无权维护该字段台账' });
+    if (!await canEditField(req, context)) return res.status(403).json({ error: '只能维护本人部门的字段台账' });
     const field = await repo.createField({ ...req.body, context_id: contextId }, req.session.userId);
     res.json(field);
   });
@@ -76,8 +71,8 @@ router.put('/:id', requireAuth, (req, res) => {
     const field = await repo.getField(req.params.id);
     if (!field) return res.status(404).json({ error: '字段不存在' });
     const context = await repo.getContext(field.context_id);
-    if (!await canEditField(req, field, context)) {
-      return res.status(403).json({ error: '仅字段报送人、本部门 owner 或管理员可修改字段' });
+    if (!await canEditField(req, context)) {
+      return res.status(403).json({ error: '只能由部门主对接人修改本部门字段' });
     }
     const updated = await repo.updateField(req.params.id, req.body, req.session.userId);
     if (!updated) return res.status(404).json({ error: '字段不存在' });
@@ -91,8 +86,8 @@ router.delete('/:id', requireAuth, (req, res) => {
     const field = await repo.getField(req.params.id);
     if (!field) return res.status(404).json({ error: '字段不存在' });
     const context = await repo.getContext(field.context_id);
-    if (!await canEditField(req, field, context)) {
-      return res.status(403).json({ error: '仅字段报送人、本部门 owner 或管理员可删除字段' });
+    if (!await canEditField(req, context)) {
+      return res.status(403).json({ error: '只能由部门主对接人删除本部门字段' });
     }
     const deleted = await repo.deleteField(req.params.id, req.session.userId);
     if (!deleted) return res.status(404).json({ error: '字段不存在' });

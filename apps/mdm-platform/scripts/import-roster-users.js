@@ -169,6 +169,9 @@ function ensureDepartment(name, cache, createdDepartments, database = db) {
 }
 
 function syncRosterToMdm(options = {}) {
+  if (process.env.MDM_ALLOW_LEGACY_TEST_MODE !== '1') {
+    throw new Error('LEGACY_ACCOUNT_SCRIPT_RETIRED：花名册脚本不得创建3000账号，请由管理员在账号管理页面手工开户。');
+  }
   const database = options.db || db;
   const rosterPath = path.resolve(options.rosterPath || process.env.MDM_ROSTER_PATH || DEFAULT_ROSTER_PATH);
   const dryRun = options.dryRun !== undefined ? options.dryRun : process.env.MDM_ROSTER_DRY_RUN === '1';

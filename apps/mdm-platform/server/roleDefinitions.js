@@ -1,3 +1,5 @@
+const ACCESS_MODEL_VERSION = 'rbac-raci-v2-2026-07-30';
+
 function perm(code, resource, action, description, options = {}) {
   return Object.assign([code, resource, action, description], {
     code,
@@ -5,271 +7,365 @@ function perm(code, resource, action, description, options = {}) {
     action,
     description,
     isDangerous: Boolean(options.isDangerous),
-    defaultScope: options.defaultScope || 'self_task',
+    defaultScope: options.defaultScope || 'department',
     protectedCore: options.protectedCore !== false
   });
 }
 
 const BASE_PERMISSIONS = {
-  dashboard: perm('dashboard:view', 'dashboard', 'view', '查看统计看板', { defaultScope: 'department' }),
-  mappingRead: perm('mapping:read', 'mapping', 'read', '查看业务映射', { defaultScope: 'department' }),
-  mappingCreate: perm('mapping:create', 'mapping', 'create', '创建业务映射', { defaultScope: 'department' }),
-  mappingUpdate: perm('mapping:update', 'mapping', 'update', '更新业务映射', { defaultScope: 'department' }),
-  mappingSubmit: perm('mapping:submit', 'mapping', 'submit', '提交业务映射', { defaultScope: 'self_task' }),
-  reviewApprove: perm('review:approve', 'review', 'approve', '审核批准', { defaultScope: 'department' }),
-  conflictManage: perm('conflict:manage', 'conflict', 'manage', '处理一般冲突', { defaultScope: 'department' }),
-  conflictResolve: perm('conflict:resolve', 'conflict', 'resolve', '冲突解决', { defaultScope: 'department' }),
-  conflictEscalate: perm('conflict:escalate', 'conflict', 'escalate', '升级冲突', { defaultScope: 'department' }),
-  conflictFinal: perm('conflict:final_decide_escalated', 'conflict', 'final_decide_escalated', '处理升级后的冲突', { defaultScope: 'global' }),
-  todosManage: perm('todos:manage', 'todos', 'manage', '管理待办', { defaultScope: 'department' }),
-  dataViewAll: perm('data:view_all', 'data', 'view_all', '查看全部信息', { defaultScope: 'global' }),
-  dataViewDepartment: perm('data:view_department', 'data', 'view_department', '查看本部门信息', { defaultScope: 'department' }),
-  processGovernanceViewGlobal: perm('process_governance:view_global', 'process_governance', 'view_global', '查看全局流程治理材料', { defaultScope: 'global' }),
-  processGovernanceViewDepartment: perm('process_governance:view_department', 'process_governance', 'view_department', '查看本部门流程治理材料', { defaultScope: 'department' }),
-  processGovernanceSubmit: perm('process_governance:submit', 'process_governance', 'submit', '提交流程治理材料', { defaultScope: 'department' }),
-  processGovernanceReview: perm('process_governance:review', 'process_governance', 'review', '复核流程治理材料', { defaultScope: 'department' }),
-  processEvidenceVerify: perm('process_evidence:verify', 'process_evidence', 'verify', '核验增量流程证据状态', { defaultScope: 'department' }),
-  guidanceCreate: perm('guidance:create', 'guidance', 'create', '形成管理层指导意见', { defaultScope: 'global' }),
-  guidanceRespond: perm('guidance:respond', 'guidance', 'respond', '响应本部门指导意见', { defaultScope: 'department' }),
-  guidanceDelegate: perm('guidance:delegate', 'guidance', 'delegate', '维护指导意见响应代理授权', { isDangerous: true, defaultScope: 'department' }),
-  guidanceFinalConfirm: perm('guidance:final_confirm', 'guidance', 'final_confirm', '确认重大指导意见闭环', { isDangerous: true, defaultScope: 'department' }),
-  majorChangeAdvise: perm('major_change:advise', 'major_change', 'advise', '提出重大变更建议', { defaultScope: 'global' }),
-  qualityManage: perm('quality:manage', 'quality', 'manage', '维护数据质量事项', { defaultScope: 'department' }),
-  rbacManage: perm('rbac:manage', 'rbac', 'manage', '维护角色与权限', { isDangerous: true, defaultScope: 'global' }),
-  accountManage: perm('account:manage', 'account', 'manage', '维护登录账号', { isDangerous: true, defaultScope: 'global' }),
-  personManage: perm('person:manage', 'person', 'manage', '维护人员主数据', { isDangerous: true, defaultScope: 'global' }),
-  positionManage: perm('position:manage', 'position', 'manage', '维护岗位任职', { isDangerous: true, defaultScope: 'global' }),
-  roleAdmin: perm('admin:access', 'admin', 'access', '访问管理功能', { isDangerous: true, defaultScope: 'global' })
+  identityRead: perm('identity:read', 'identity', 'read', '查看账号、角色和责任配置', {
+    defaultScope: 'global'
+  }),
+  identityManageAccount: perm('identity:manage-account', 'identity', 'manage-account', '创建、启用、停用和维护账号', {
+    isDangerous: true,
+    defaultScope: 'global'
+  }),
+  identityAssignRole: perm('identity:assign-role', 'identity', 'assign-role', '授予和撤销MDM工作角色', {
+    isDangerous: true,
+    defaultScope: 'global'
+  }),
+  identityReadAudit: perm('identity:read-audit', 'identity', 'read-audit', '查看账号和授权审计记录', {
+    defaultScope: 'global'
+  }),
+  governanceReadGlobal: perm('governance:read-global', 'governance', 'read-global', '查看全公司治理材料', {
+    defaultScope: 'global'
+  }),
+  governanceReadDepartment: perm('governance:read-department', 'governance', 'read-department', '查看本部门治理材料'),
+  governanceReadAssignedContext: perm('governance:read-assigned-context', 'governance', 'read-assigned-context', '查看本人被分派事项及必要上下文', {
+    defaultScope: 'self_task'
+  }),
+  governanceReadEscalatedContext: perm('governance:read-escalated-context', 'governance', 'read-escalated-context', '查看已升级重大争议及必要上下文', {
+    defaultScope: 'self_task'
+  }),
+  governanceDraftDepartment: perm('governance:draft-department', 'governance', 'draft-department', '起草和修改本部门治理材料'),
+  governanceSubmitDepartment: perm('governance:submit-department', 'governance', 'submit-department', '提交本部门治理材料'),
+  governanceReviewDepartment: perm('governance:review-department', 'governance', 'review-department', '审核和退回本部门治理材料'),
+  governanceRecordDepartmentDecision: perm(
+    'governance:record-department-decision',
+    'governance',
+    'record-department-decision',
+    '记录部门负责人已经在线下作出的决定',
+    { isDangerous: true }
+  ),
+  governanceAssignWork: perm('governance:assign-work', 'governance', 'assign-work', '分派治理事项', {
+    defaultScope: 'global'
+  }),
+  governanceStructureGate: perm('governance:structure-gate', 'governance', 'structure-gate', '检查结构、证据和责任链', {
+    defaultScope: 'global'
+  }),
+  governancePublish: perm('governance:publish', 'governance', 'publish', '发布流程地图、数据地图和术语治理版本', {
+    isDangerous: true,
+    defaultScope: 'global'
+  }),
+  governanceQualityAudit: perm('governance:quality-audit', 'governance', 'quality-audit', '形成数据质量审计发现和整改要求', {
+    defaultScope: 'global'
+  }),
+  governanceHandleAssignedConflict: perm(
+    'governance:handle-assigned-conflict',
+    'governance',
+    'handle-assigned-conflict',
+    '处理本人被分派的数据或术语冲突',
+    { defaultScope: 'self_task' }
+  ),
+  governanceEscalateConflict: perm('governance:escalate-conflict', 'governance', 'escalate-conflict', '提请升级治理争议', {
+    defaultScope: 'self_task'
+  }),
+  governanceDecideEscalation: perm('governance:decide-escalation', 'governance', 'decide-escalation', '决定已升级的重大争议', {
+    isDangerous: true,
+    defaultScope: 'self_task'
+  })
 };
+
+// Transitional aliases let existing business routes move to the fixed model without
+// granting the retired administrator business-write bypass.
+const PERMISSION_ALIASES = Object.freeze({
+  'dashboard:view': ['governance:read-department', 'governance:read-global'],
+  'data:view_all': ['governance:read-global'],
+  'data:view_department': ['governance:read-department'],
+  'mapping:read': ['governance:read-department', 'governance:read-global'],
+  'mapping:create': ['governance:draft-department'],
+  'mapping:update': ['governance:draft-department'],
+  'mapping:submit': ['governance:submit-department'],
+  'review:approve': ['governance:review-department'],
+  'process_governance:view_global': ['governance:read-global'],
+  'process_governance:view_all': ['governance:read-global'],
+  'process_governance:view_department': ['governance:read-department'],
+  'process_governance:submit': ['governance:submit-department'],
+  'process_governance:review': ['governance:review-department'],
+  'process_evidence:verify': ['governance:structure-gate'],
+  'process_quality:manage': ['governance:quality-audit'],
+  'process_mapping:manage': ['governance:assign-work'],
+  'process_mapping:close': ['governance:structure-gate'],
+  'guidance:create': ['governance:assign-work', 'governance:quality-audit'],
+  'guidance:respond': ['governance:draft-department'],
+  'guidance:delegate': ['governance:record-department-decision'],
+  'guidance:final_confirm': ['governance:record-department-decision'],
+  'conflict:manage': ['governance:handle-assigned-conflict'],
+  'conflict:resolve': ['governance:handle-assigned-conflict'],
+  'conflict:escalate': ['governance:escalate-conflict'],
+  'conflict:final_decide_escalated': ['governance:decide-escalation'],
+  'quality:manage': ['governance:quality-audit'],
+  'todos:manage': [
+    'governance:assign-work',
+    'governance:submit-department',
+    'governance:review-department',
+    'governance:handle-assigned-conflict'
+  ],
+  'rbac:manage': ['identity:assign-role'],
+  'account:manage': ['identity:manage-account'],
+  'person:manage': ['identity:manage-account'],
+  'position:manage': ['identity:manage-account']
+});
+
+const LEGACY_ROLE_CODES = Object.freeze([
+  'submitter',
+  'owner',
+  'reviewer',
+  'it_lead',
+  'project_lead',
+  'workgroup_lead',
+  'business_contact',
+  'data_quality'
+]);
 
 const ROLE_GUIDES = [
   {
-    code: 'it_lead',
-    name: '信息化负责人',
-    group: 'project',
-    description: '查看全局阻塞，协调一般冲突，并升级需决策事项',
-    goal: '保证流程、字段、冲突和跨部门事项能持续向前推进。',
-    firstEntry: { label: '全局阻塞事项', target: '#/conflicts' },
-    workflow: ['查看全局阻塞', '协调一般冲突', '升级需决策事项', '跟踪闭环'],
-    sample: '信息化负责人看到字段口径协调超过约定时间后，先查看冲突双方说明，再决定继续协调或升级给项目决策组。',
-    pitfall: '不要直接替业务部门认定字段口径；先确认流程场景、字段消费方和维护责任。',
-    doneCriteria: '阻塞事项有负责人、有处理结论、有下一步记录。',
+    code: 'admin',
+    name: 'MDM系统管理员',
+    group: 'system',
+    description: '维护账号、角色授权和访问审计，并只读查看治理材料',
+    goal: '保证3000的账号入口、授权记录和审计记录可用。',
+    firstEntry: { label: '账号与授权', target: '#/rbac' },
+    workflow: ['手工创建待启用账号', '记录角色授权依据', '启用或停用账号', '检查访问审计'],
+    sample: '管理员收到已确认的账号开通信息后，录入人员、部门和MDM工作角色，记录授权依据，再明确启用账号。',
+    pitfall: '管理员不能审核、确认、修改或发布流程、数据和术语治理内容。',
+    doneCriteria: '账号状态、部门、有效角色、授权依据和审计记录一致。',
     permissions: [
-      BASE_PERMISSIONS.dataViewAll,
-      BASE_PERMISSIONS.dashboard,
-      BASE_PERMISSIONS.mappingRead,
-      BASE_PERMISSIONS.processEvidenceVerify,
-      BASE_PERMISSIONS.conflictManage,
-      BASE_PERMISSIONS.conflictResolve,
-      BASE_PERMISSIONS.conflictEscalate,
-      BASE_PERMISSIONS.todosManage
+      BASE_PERMISSIONS.identityRead,
+      BASE_PERMISSIONS.identityManageAccount,
+      BASE_PERMISSIONS.identityAssignRole,
+      BASE_PERMISSIONS.identityReadAudit,
+      BASE_PERMISSIONS.governanceReadGlobal
     ]
   },
   {
-    code: 'project_lead',
-    name: '项目组长',
-    group: 'project',
-    description: '推进本部门流程、字段和跨部门衔接事项',
-    goal: '让本部门流程梳理、字段确认和跨部门衔接按节奏完成。',
-    firstEntry: { label: '本部门进度', target: '#/processGovernance' },
-    workflow: ['查看本部门进度', '分派阻塞事项', '复核跨部门衔接', '推进提交'],
-    sample: '项目组长看到本部门有跨部门衔接风险时，先进入流程治理详情，确认输入来源和输出目标是否缺接收流程。',
-    pitfall: '不要只看待办数量；跨部门输入输出没有闭环时，需要回到 A1 业务行为确认。',
-    doneCriteria: '本部门待办清零或有明确责任人，跨部门风险有确认状态。',
+    code: 'mdm_lead',
+    name: 'MDM工作组组长',
+    group: 'mdm',
+    description: '分派治理事项，检查结构、证据和责任链，并发布治理版本',
+    goal: '在业务责任已经明确的前提下，使流程地图、数据地图和术语版本具备发布条件。',
+    firstEntry: { label: '治理工作台', target: '#/roleWorkbench' },
+    workflow: ['查看全局治理事项', '分派处理任务', '检查结构与证据', '确认责任链后发布'],
+    sample: 'MDM工作组组长发布数据地图前，检查所需部门决定、阻断问题和版本检查结果是否完整。',
+    pitfall: 'MDM工作组组长不能代替部门负责人确认业务事实，也不能直接改写部门材料。',
+    doneCriteria: '发布版本具备完整责任证据、结构检查结果和版本记录。',
     permissions: [
-      BASE_PERMISSIONS.dataViewDepartment,
-      BASE_PERMISSIONS.dashboard,
-      BASE_PERMISSIONS.mappingRead,
-      BASE_PERMISSIONS.reviewApprove,
-      BASE_PERMISSIONS.processEvidenceVerify,
-      BASE_PERMISSIONS.todosManage
+      BASE_PERMISSIONS.governanceReadGlobal,
+      BASE_PERMISSIONS.governanceAssignWork,
+      BASE_PERMISSIONS.governanceStructureGate,
+      BASE_PERMISSIONS.governancePublish,
+      BASE_PERMISSIONS.governanceEscalateConflict
     ]
   },
   {
-    code: 'workgroup_lead',
-    name: '工作组组长',
-    group: 'project',
-    description: '组织本工作组成员处理流程治理、跨部门衔接和待办闭环',
-    goal: '把本工作组的任务拆给成员，盯住跨部门输入输出和整改闭环。',
-    firstEntry: { label: '本组治理事项', target: '#/processGovernance' },
-    workflow: ['查看本组待办', '分派成员处理', '协调跨部门衔接', '复核闭环结果'],
-    sample: '工作组组长看到本工作组有跨部门衔接风险时，先进入流程治理详情，确认输入来源、输出目标和本组责任人。',
-    pitfall: '不要只把事项转给成员；需要确认成员处理后是否已修改源文件、重新导入并形成闭环状态。',
-    doneCriteria: '本工作组事项有责任人、有处理状态，跨部门衔接风险有确认或升级记录。',
+    code: 'department_contact',
+    name: '部门主对接人',
+    group: 'mdm',
+    description: '起草、修改、提交和整改本部门治理材料',
+    goal: '将本部门确认的流程、数据和术语事实整理为可审核材料。',
+    firstEntry: { label: '本部门治理事项', target: '#/processGovernance' },
+    workflow: ['补充本部门材料', '处理整改事项', '检查内容完整性', '提交部门审核'],
+    sample: '部门主对接人根据制度、表单和业务人员说明补充流程材料，再提交部门MDM审核员审核。',
+    pitfall: '主对接人负责组织和整理，不能代替部门负责人作出最终业务决定。',
+    doneCriteria: '本部门材料已提交，缺失信息和暂不能确认事项均有明确记录。',
     permissions: [
-      BASE_PERMISSIONS.dataViewDepartment,
-      BASE_PERMISSIONS.dashboard,
-      BASE_PERMISSIONS.mappingRead,
-      BASE_PERMISSIONS.reviewApprove,
-      BASE_PERMISSIONS.processEvidenceVerify,
-      BASE_PERMISSIONS.todosManage
+      BASE_PERMISSIONS.governanceReadDepartment,
+      BASE_PERMISSIONS.governanceDraftDepartment,
+      BASE_PERMISSIONS.governanceSubmitDepartment
     ]
   },
   {
-    code: 'business_contact',
-    name: '业务对接人',
-    group: 'project',
-    description: '确认流程范围，补充字段台账，并处理部门待办',
-    goal: '把真实业务动作、字段和流程节点补充到平台里。',
-    firstEntry: { label: '报送管理', target: '#/mySubmissions' },
-    workflow: ['确认流程范围', '补字段台账', '处理部门待办', '提交确认'],
-    sample: '业务对接人收到字段确认待办后，先打开 A1 业务行为，确认字段是否确实在该流程中产生或消费。',
-    pitfall: '不要只填字段名称；需要同时说明数据对象、消费系统、同步方式和对应 A1。',
-    doneCriteria: '流程映射和字段台账可被审核人复核，相关待办已处理或说明原因。',
+    code: 'department_mdm_reviewer',
+    name: '部门MDM审核员',
+    group: 'mdm',
+    description: '审核本部门材料，并记录部门负责人已经在线下作出的决定',
+    goal: '保证部门材料符合要求，并使部门最终责任可以追溯。',
+    firstEntry: { label: '部门审核事项', target: '#/roleWorkbench' },
+    workflow: ['检查本部门材料', '退回或提交确认', '记录部门负责人决定', '核对跨部门确认'],
+    sample: '部门负责人在线下确认流程事实后，部门MDM审核员在3000记录决定、依据和决定时间。',
+    pitfall: '审核员只能记录已经作出的决定，不能把个人判断写成部门负责人决定。',
+    doneCriteria: '审核结果、部门负责人、决定依据和记录人均可追溯。',
     permissions: [
-      BASE_PERMISSIONS.dataViewDepartment,
-      BASE_PERMISSIONS.dashboard,
-      BASE_PERMISSIONS.mappingRead,
-      BASE_PERMISSIONS.mappingCreate,
-      BASE_PERMISSIONS.mappingUpdate,
-      BASE_PERMISSIONS.mappingSubmit,
-      BASE_PERMISSIONS.todosManage
+      BASE_PERMISSIONS.governanceReadDepartment,
+      BASE_PERMISSIONS.governanceReviewDepartment,
+      BASE_PERMISSIONS.governanceRecordDepartmentDecision
     ]
   },
   {
-    code: 'data_quality',
-    name: '数据质量员',
-    group: 'project',
-    description: '检查字段完整性，确认黄金源，并处理字段冲突',
-    goal: '让字段台账可复核、可追溯，并逐步形成黄金源判断。',
+    code: 'data_conflict_handler',
+    name: '数据冲突处理人',
+    group: 'mdm',
+    description: '处理本人被明确分派的数据或术语冲突，并提请升级',
+    goal: '形成可供相关部门确认或项目决策组判断的冲突证据。',
+    firstEntry: { label: '已分派冲突', target: '#/conflicts' },
+    workflow: ['查看被分派事项', '核对双方材料', '记录协调过程', '解决或提请升级'],
+    sample: '数据冲突处理人只查看本人被分派的冲突及相关上下文，并记录各部门意见和未决分歧。',
+    pitfall: '拥有冲突处理角色不代表可以查看或处理全部冲突。',
+    doneCriteria: '冲突已有协调记录、部门确认结果或明确升级记录。',
+    permissions: [
+      BASE_PERMISSIONS.governanceReadAssignedContext,
+      BASE_PERMISSIONS.governanceHandleAssignedConflict,
+      BASE_PERMISSIONS.governanceEscalateConflict
+    ]
+  },
+  {
+    code: 'data_quality_auditor',
+    name: '数据质量审计人',
+    group: 'mdm',
+    description: '检查数据治理信息并形成审计发现和整改要求',
+    goal: '识别数据完整性、准确性和一致性问题，并跟踪整改证据。',
     firstEntry: { label: '数据质量', target: '#/quality' },
-    workflow: ['检查字段完整性', '确认黄金源', '处理字段冲突', '标记质量问题'],
-    sample: '数据质量员发现同一字段存在不同待确认黄金源时，先查看字段台账和消费系统，再发起冲突协调。',
-    pitfall: '不要因为流程建议落位就直接认定黄金源；黄金源必须按字段确认。',
-    doneCriteria: '字段完整性、待确认黄金源和冲突处理状态都有记录。',
+    workflow: ['查看全局数据治理信息', '记录审计发现', '提出整改要求', '复核整改证据'],
+    sample: '数据质量审计人发现字段来源缺少证据时，记录具体字段、问题依据和整改要求。',
+    pitfall: '审计人不能替部门修改源数据，也不能发布数据地图。',
+    doneCriteria: '审计结论有依据，整改事项有责任部门、处理状态和复核记录。',
     permissions: [
-      BASE_PERMISSIONS.dataViewDepartment,
-      BASE_PERMISSIONS.dashboard,
-      BASE_PERMISSIONS.mappingRead,
-      BASE_PERMISSIONS.qualityManage,
-      BASE_PERMISSIONS.processEvidenceVerify,
-      BASE_PERMISSIONS.conflictManage,
-      BASE_PERMISSIONS.todosManage
+      BASE_PERMISSIONS.governanceReadGlobal,
+      BASE_PERMISSIONS.governanceQualityAudit
     ]
   },
   {
     code: 'decision_group',
     name: '项目决策组',
-    group: 'project',
-    description: '查看升级事项，阅读争议链路，并形成终裁记录',
-    goal: '处理需要项目层面拍板的升级事项。',
+    group: 'mdm',
+    description: '决定已经升级的重大跨部门争议',
+    goal: '处理常规协调无法解决且已具备完整证据的重大争议。',
     firstEntry: { label: '升级事项', target: '#/conflicts' },
-    workflow: ['查看升级事项', '阅读争议链路', '作出终裁', '形成处理记录'],
-    sample: '项目决策组收到升级冲突后，先看 A1、字段台账和双方意见，再给出终裁结论和后续责任人。',
-    pitfall: '不要只看字段名就决策；必须确认该字段在哪个流程行为中产生、维护和消费。',
-    doneCriteria: '升级事项已有终裁结论，处理记录可追溯。',
+    workflow: ['查看已升级事项', '核对争议证据', '形成决定', '记录后续责任'],
+    sample: '项目决策组只处理已经升级的事项，并根据受影响部门意见、流程事实和数据证据形成决定。',
+    pitfall: '项目决策组不处理日常编辑、部门审核、版本发布或账号管理。',
+    doneCriteria: '升级事项已有决定、依据、影响范围和后续责任记录。',
     permissions: [
-      BASE_PERMISSIONS.dataViewAll,
-      BASE_PERMISSIONS.processGovernanceViewGlobal,
-      BASE_PERMISSIONS.dashboard,
-      BASE_PERMISSIONS.mappingRead,
-      BASE_PERMISSIONS.guidanceCreate,
-      BASE_PERMISSIONS.majorChangeAdvise,
-      BASE_PERMISSIONS.conflictFinal,
-      BASE_PERMISSIONS.todosManage
-    ]
-  },
-  {
-    code: 'submitter',
-    name: '报送人',
-    group: 'basic',
-    description: '提交业务数据和流程映射',
-    goal: '把本人负责的流程映射和字段台账提交给后续角色审核。',
-    firstEntry: { label: '报送管理', target: '#/mySubmissions' },
-    workflow: ['确认流程映射', '补字段台账', '提交审批'],
-    sample: '报送人新增字段时，先确认字段属于哪个数据对象，再补中文名、英文名、字段类型和消费系统。',
-    pitfall: '不要把业务说明只写在备注里；结构化字段必须补齐。',
-    doneCriteria: '草稿已提交，字段台账至少满足审核所需信息。',
-    permissions: [
-      BASE_PERMISSIONS.dataViewDepartment,
-      BASE_PERMISSIONS.dashboard,
-      BASE_PERMISSIONS.mappingRead,
-      BASE_PERMISSIONS.mappingCreate,
-      BASE_PERMISSIONS.mappingUpdate,
-      BASE_PERMISSIONS.mappingSubmit,
-      BASE_PERMISSIONS.processGovernanceSubmit
-    ]
-  },
-  {
-    code: 'owner',
-    name: '业务负责人',
-    group: 'basic',
-    description: '管理所属部门业务数据',
-    goal: '确认本部门流程和字段口径，并推动跨部门确认。',
-    firstEntry: { label: '待办收到', target: '#/todos' },
-    workflow: ['清理部门待办', '核字段口径', '确认跨部门输入输出'],
-    sample: '业务负责人收到黄金源确认待办后，先看字段消费方，再判断维护部门和待确认权威系统。',
-    pitfall: '不要只确认本部门视角；跨部门输入输出也要一起看。',
-    doneCriteria: '本部门待办已有处理记录，字段口径明确。',
-    permissions: [
-      BASE_PERMISSIONS.dataViewDepartment,
-      BASE_PERMISSIONS.dashboard,
-      BASE_PERMISSIONS.mappingRead,
-      BASE_PERMISSIONS.reviewApprove,
-      BASE_PERMISSIONS.processGovernanceViewDepartment,
-      BASE_PERMISSIONS.processEvidenceVerify,
-      BASE_PERMISSIONS.guidanceRespond,
-      BASE_PERMISSIONS.guidanceDelegate,
-      BASE_PERMISSIONS.guidanceFinalConfirm,
-      BASE_PERMISSIONS.todosManage
-    ]
-  },
-  {
-    code: 'reviewer',
-    name: '审核员',
-    group: 'basic',
-    description: '审核业务流程和映射',
-    goal: '发现阻断问题，推动流程映射和字段台账进入可发布状态。',
-    firstEntry: { label: '冲突管理', target: '#/conflicts' },
-    workflow: ['处理阻断冲突', '复核评审记录', '推进审批节点'],
-    sample: '审核员驳回字段台账时，应写明具体字段和驳回原因，方便报送人定向修正。',
-    pitfall: '不要只写笼统意见；需要把问题落到字段、流程或 A1。',
-    doneCriteria: '审核动作有意见，阻断事项进入协调或解决状态。',
-    permissions: [
-      BASE_PERMISSIONS.dataViewDepartment,
-      BASE_PERMISSIONS.dashboard,
-      BASE_PERMISSIONS.mappingRead,
-      BASE_PERMISSIONS.reviewApprove,
-      BASE_PERMISSIONS.processGovernanceReview,
-      BASE_PERMISSIONS.processEvidenceVerify,
-      BASE_PERMISSIONS.conflictManage,
-      BASE_PERMISSIONS.todosManage
-    ]
-  },
-  {
-    code: 'admin',
-    name: '管理员',
-    group: 'basic',
-    description: '维护角色、权限和基础主数据',
-    goal: '保持平台账号、权限、基础数据和发布动作可用。',
-    firstEntry: { label: '角色权限', target: '#/rbac' },
-    workflow: ['确认权限边界', '维护基础数据', '处理发布类动作'],
-    sample: '管理员新增账号后，应同时检查基础角色和项目角色，确保用户进入页面能看到自己的工作流。',
-    pitfall: '不要只改用户基础角色；项目角色缺失时，工作台无法按真实分工引导。',
-    doneCriteria: '用户、角色、权限和基础数据状态一致。',
-    permissions: [
-      BASE_PERMISSIONS.dataViewAll,
-      BASE_PERMISSIONS.processGovernanceViewGlobal,
-      BASE_PERMISSIONS.dashboard,
-      BASE_PERMISSIONS.mappingRead,
-      BASE_PERMISSIONS.rbacManage,
-      BASE_PERMISSIONS.processEvidenceVerify,
-      BASE_PERMISSIONS.accountManage,
-      BASE_PERMISSIONS.personManage,
-      BASE_PERMISSIONS.positionManage,
-      BASE_PERMISSIONS.roleAdmin
+      BASE_PERMISSIONS.governanceReadEscalatedContext,
+      BASE_PERMISSIONS.governanceDecideEscalation
     ]
   }
 ];
 
+const RACI_ACTIVITIES = Object.freeze([
+  {
+    activityCode: 'identity.lifecycle',
+    domain: 'identity',
+    name: '账号及角色生命周期',
+    responsible: ['admin'],
+    accountable: ['admin'],
+    consulted: [],
+    informed: ['account_holder'],
+    requiredPermissions: ['identity:manage-account', 'identity:assign-role'],
+    scopeRule: 'global',
+    evidenceRule: '账号和授权操作必须写入访问审计记录'
+  },
+  {
+    activityCode: 'department.material.prepare',
+    domain: 'governance',
+    name: '部门流程、数据和术语材料起草',
+    responsible: ['department_contact'],
+    accountable: ['department_final_responsible_person'],
+    consulted: ['department_mdm_reviewer', 'business_expert'],
+    informed: ['mdm_lead'],
+    requiredPermissions: ['governance:draft-department', 'governance:submit-department'],
+    scopeRule: 'own_department',
+    evidenceRule: '部门负责人由departments.final_responsible_person_id确定'
+  },
+  {
+    activityCode: 'department.decision.record',
+    domain: 'governance',
+    name: '记录部门决定及跨部门确认',
+    responsible: ['department_mdm_reviewer'],
+    accountable: ['department_final_responsible_person'],
+    consulted: ['department_contact', 'related_department_reviewer'],
+    informed: ['mdm_lead'],
+    requiredPermissions: ['governance:record-department-decision'],
+    scopeRule: 'own_department',
+    evidenceRule: '必须记录决定、依据、决定时间和系统确认的最终责任人'
+  },
+  {
+    activityCode: 'department.material.correct',
+    domain: 'governance',
+    name: '部门材料整改',
+    responsible: ['department_contact'],
+    accountable: ['department_final_responsible_person'],
+    consulted: ['department_mdm_reviewer', 'data_quality_auditor'],
+    informed: ['mdm_lead'],
+    requiredPermissions: ['governance:draft-department'],
+    scopeRule: 'own_department',
+    evidenceRule: '整改结果保留变更和复核记录'
+  },
+  {
+    activityCode: 'data.quality.audit',
+    domain: 'data',
+    name: '数据质量审计结论',
+    responsible: ['data_quality_auditor'],
+    accountable: ['data_quality_auditor'],
+    consulted: ['department_contact', 'department_mdm_reviewer'],
+    informed: ['mdm_lead', 'department_final_responsible_person'],
+    requiredPermissions: ['governance:quality-audit'],
+    scopeRule: 'global_read_audit_write',
+    evidenceRule: '审计结论必须记录依据和整改要求'
+  },
+  {
+    activityCode: 'governance.conflict.coordinate',
+    domain: 'governance',
+    name: '普通冲突协调',
+    responsible: ['data_conflict_handler'],
+    accountable: ['affected_department_final_responsible_person'],
+    consulted: ['department_mdm_reviewer', 'data_quality_auditor'],
+    informed: ['mdm_lead'],
+    requiredPermissions: ['governance:handle-assigned-conflict'],
+    scopeRule: 'assigned_conflict_only',
+    evidenceRule: '每个受影响部门分别记录决定'
+  },
+  {
+    activityCode: 'governance.conflict.escalated-decision',
+    domain: 'governance',
+    name: '重大争议升级决策',
+    responsible: ['data_conflict_handler', 'mdm_lead'],
+    accountable: ['decision_group'],
+    consulted: ['affected_department_final_responsible_person', 'department_mdm_reviewer'],
+    informed: ['department_contact'],
+    requiredPermissions: ['governance:decide-escalation'],
+    scopeRule: 'escalated_conflict_only',
+    evidenceRule: '事项必须已经升级并具备争议证据'
+  },
+  {
+    activityCode: 'governance.version.publish',
+    domain: 'governance',
+    name: '流程地图、数据地图和术语版本发布',
+    responsible: ['mdm_lead'],
+    accountable: ['mdm_lead'],
+    consulted: ['department_mdm_reviewer', 'data_quality_auditor'],
+    informed: ['decision_group', 'admin'],
+    requiredPermissions: ['governance:publish'],
+    scopeRule: 'global',
+    evidenceRule: '所需部门决定完整、阻断问题关闭、结构和版本检查通过'
+  }
+]);
+
 const PROJECT_ROLE_DEFINITIONS = ROLE_GUIDES
-  .filter(role => role.group === 'project')
+  .filter(role => role.group === 'mdm')
   .map(role => ({
     roleCode: role.code,
     roleName: role.name,
     description: role.description,
     permissions: role.permissions || []
   }));
+
+function permissionSetHas(permSet, requestedCode) {
+  if (!permSet || !requestedCode) return false;
+  if (permSet.has(requestedCode)) return true;
+  const aliases = PERMISSION_ALIASES[requestedCode] || [];
+  return aliases.some(code => permSet.has(code));
+}
 
 function ensureProjectRoles(db, assignedBy = null) {
   const insertPermission = db.prepare(`
@@ -291,18 +387,66 @@ function ensureProjectRoles(db, assignedBy = null) {
     SELECT ?, perm_id FROM permissions WHERE perm_code=?
   `);
 
-  for (const role of PROJECT_ROLE_DEFINITIONS) {
+  for (const role of ROLE_GUIDES) {
     for (const permission of role.permissions) insertPermission.run(...permission);
-    upsertRole.run(role.roleCode, role.roleName, role.description, assignedBy);
-    const row = roleByCode.get(role.roleCode);
+    upsertRole.run(role.code, role.name, role.description, assignedBy);
+    const row = roleByCode.get(role.code);
     db.prepare('DELETE FROM role_permissions WHERE role_id=?').run(row.role_id);
     for (const [permCode] of role.permissions) linkPermission.run(row.role_id, permCode);
   }
+
+  for (const roleCode of LEGACY_ROLE_CODES) {
+    const row = roleByCode.get(roleCode);
+    if (row) db.prepare('DELETE FROM role_permissions WHERE role_id=?').run(row.role_id);
+  }
+}
+
+function getAccessModel() {
+  const permissions = [];
+  const seen = new Set();
+  for (const role of ROLE_GUIDES) {
+    for (const permission of role.permissions || []) {
+      if (seen.has(permission.code)) continue;
+      seen.add(permission.code);
+      permissions.push({
+        code: permission.code,
+        resource: permission.resource,
+        action: permission.action,
+        description: permission.description,
+        defaultScope: permission.defaultScope,
+        isDangerous: permission.isDangerous
+      });
+    }
+  }
+  return {
+    modelVersion: ACCESS_MODEL_VERSION,
+    roles: ROLE_GUIDES.map(role => ({
+      code: role.code,
+      name: role.name,
+      group: role.group,
+      description: role.description,
+      goal: role.goal,
+      firstEntry: role.firstEntry,
+      workflow: role.workflow,
+      sample: role.sample,
+      pitfall: role.pitfall,
+      doneCriteria: role.doneCriteria,
+      permissions: (role.permissions || []).map(permission => permission.code)
+    })),
+    permissions,
+    activities: RACI_ACTIVITIES.map(activity => ({ ...activity }))
+  };
 }
 
 module.exports = {
+  ACCESS_MODEL_VERSION,
   BASE_PERMISSIONS,
-  ROLE_GUIDES,
+  LEGACY_ROLE_CODES,
+  PERMISSION_ALIASES,
   PROJECT_ROLE_DEFINITIONS,
-  ensureProjectRoles
+  RACI_ACTIVITIES,
+  ROLE_GUIDES,
+  ensureProjectRoles,
+  getAccessModel,
+  permissionSetHas
 };

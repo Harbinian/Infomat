@@ -736,11 +736,16 @@ function makeDataMapMysqlRepository(pool) {
       return affectedRows(result) > 0 ? await this.getFieldIdentity(fieldId) : null;
     },
 
-    async fieldIdentityProgress() {
+    async fieldIdentityProgress(scope = {}) {
+      const departmentId = scope.departmentId ? Number(scope.departmentId) : null;
       const overall = await first(
         pool,
         `SELECT COUNT(*) AS total, SUM(CASE WHEN confirmed=1 THEN 1 ELSE 0 END) AS confirmed
-         FROM data_map_field_identities`
+         FROM data_map_field_identities fi
+         JOIN data_map_fields f ON fi.field_id = f.id
+         JOIN data_map_contexts c ON f.context_id = c.id
+         WHERE (? IS NULL OR c.dept_id=?)`,
+        [departmentId, departmentId]
       ) || { total: 0, confirmed: 0 };
       const byDomain = await rows(
         pool,
@@ -749,9 +754,12 @@ function makeDataMapMysqlRepository(pool) {
                 SUM(CASE WHEN fi.confirmed=1 THEN 1 ELSE 0 END) AS confirmed
          FROM data_map_field_identities fi
          JOIN data_map_fields f ON fi.field_id = f.id
+         JOIN data_map_contexts c ON f.context_id = c.id
          LEFT JOIN data_map_objects o ON f.object_id = o.id
+         WHERE (? IS NULL OR c.dept_id=?)
          GROUP BY o.object_name_cn
-         ORDER BY o.object_name_cn`
+         ORDER BY o.object_name_cn`,
+        [departmentId, departmentId]
       );
       const total = Number(overall.total || 0);
       const confirmed = Number(overall.confirmed || 0);
@@ -788,8 +796,11 @@ function makeDataMapMysqlRepository(pool) {
       return { id: insertId(result) };
     },
 
-    async exportFieldLedger() {
-      const contexts = await this.listContexts();
+    async exportFieldLedger(scope = {}) {
+      const departmentId = scope.departmentId ? Number(scope.departmentId) : null;
+      const contexts = (await this.listContexts()).filter(context =>
+        !departmentId || Number(context.dept_id || 0) === departmentId
+      );
       const fields = [];
       for (const context of contexts) {
         const contextFields = await this.getFieldsByContext(context.id);
@@ -797,6 +808,11 @@ function makeDataMapMysqlRepository(pool) {
           const identity = await this.getFieldIdentity(field.id);
           fields.push({
             ...field,
+            context_id: context.id,
+            context_key: context.context_key,
+            context_title: context.title,
+            dept_id: context.dept_id,
+            dept_name: context.dept_name,
             process_name: context.title,
             l3_name: context.l3_name,
             system_name: field.system_name || consumerSystemsFromLinks(field.system_links || [])[0] || '',

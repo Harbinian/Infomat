@@ -54,6 +54,9 @@ function tableCount(database, tableName, where = '1=1') {
 }
 
 function setupLocalBaseline(env = process.env) {
+  if (env.MDM_ALLOW_LEGACY_TEST_MODE !== '1') {
+    throw new Error('LEGACY_ACCOUNT_SCRIPT_RETIRED：SQLite账号基线仅允许在隔离测试模式使用。');
+  }
   assertAdminEnv(env);
 
   runExistingScript('init-db.js', env);

@@ -19,28 +19,31 @@ const PAGE_DEFINITIONS = {
     doneCriteria: '高优先级事项已有明确入口，管理视图和处理页面能互相跳转。',
     target: '#/dashboard',
     roles: {
-      it_lead: { title: '查看全局阻塞和冲突概览', target: '#/conflicts', actionLabel: '查看冲突' },
-      project_lead: { title: '查看本部门进度和待办压力', target: '#/processGovernance', actionLabel: '查看流程治理' },
-      workgroup_lead: { title: '查看本工作组待办和跨部门衔接', target: '#/processGovernance', actionLabel: '查看流程治理' },
-      business_contact: { title: '查看本人报送和待办状态', target: '#/mySubmissions', actionLabel: '查看报送' },
-      data_quality: { title: '查看字段台账和质量进度', target: '#/quality', actionLabel: '查看数据质量' },
-      admin: { title: '查看平台发布和权限维护入口', target: '#/rbac', actionLabel: '查看角色权限' }
+      mdm_lead: { title: '查看全局治理事项和发布条件', target: '#/processGovernance', actionLabel: '查看流程治理' },
+      department_contact: { title: '查看本部门报送和整改事项', target: '#/mySubmissions', actionLabel: '查看报送' },
+      department_mdm_reviewer: { title: '查看本部门待审核和责任记录', target: '#/todos', actionLabel: '查看待办' },
+      data_conflict_handler: { title: '查看本人被分派的冲突', target: '#/conflicts', actionLabel: '查看冲突' },
+      data_quality_auditor: { title: '查看全局质量发现和整改进度', target: '#/quality', actionLabel: '查看数据质量' },
+      decision_group: { title: '查看已升级重大争议', target: '#/conflicts', actionLabel: '查看升级事项' },
+      admin: { title: '查看账号授权和访问审计', target: '#/rbac', actionLabel: '查看账号与授权' }
     }
   },
   roleGuide: {
-    title: '角色使用说明',
-    subtitle: '先确认自己的角色，再按第一步入口进入对应工作流。',
-    workflow: ['确认当前角色', '阅读角色目标', '找到第一步入口', '按完成标准复核'],
-    sample: '看到自己同时拥有多个角色时，先看已高亮的角色卡片，再回到角色工作台处理最靠前的事项。',
-    pitfall: '不要只看角色名称；需要一起看角色目标、第一步入口、典型样例、常见误区和完成标准。',
-    doneCriteria: '当前账号拥有的角色已识别，用户能从角色说明回到正确处理入口。',
+    title: '角色与责任',
+    subtitle: '先确认有效角色、权限范围和RACI责任，再进入对应工作流。',
+    workflow: ['确认当前有效角色', '查看固定权限和责任边界', '核对按钮不可用原因', '进入处理入口'],
+    sample: '多角色账号先查看当前有效角色，再根据事项范围和责任关系进入对应处理入口。',
+    pitfall: '角色权限只表示最多能做什么；对象状态、任务关系和责任证据仍会限制具体操作。',
+    doneCriteria: '用户理解自己的权限上限、责任范围和当前事项可执行条件。',
     target: '#/roleGuide',
     roles: {
-      business_contact: { title: '查看业务对接人的入口和完成标准', target: '#/roleGuide', actionLabel: '查看角色说明' },
-      workgroup_lead: { title: '查看工作组组长的分派和闭环标准', target: '#/roleGuide', actionLabel: '查看角色说明' },
-      data_quality: { title: '查看数据质量员的处理边界', target: '#/roleGuide', actionLabel: '查看角色说明' },
-      owner: { title: '查看业务负责人的待办处理口径', target: '#/roleGuide', actionLabel: '查看角色说明' },
-      admin: { title: '查看管理员和项目角色边界', target: '#/roleGuide', actionLabel: '查看角色说明' }
+      department_contact: { title: '查看部门主对接人的起草和提交边界', target: '#/roleGuide', actionLabel: '查看角色与责任' },
+      department_mdm_reviewer: { title: '查看部门审核和记录决定的边界', target: '#/roleGuide', actionLabel: '查看角色与责任' },
+      mdm_lead: { title: '查看任务分派、结构检查和发布条件', target: '#/roleGuide', actionLabel: '查看角色与责任' },
+      data_conflict_handler: { title: '查看已分派冲突的处理边界', target: '#/roleGuide', actionLabel: '查看角色与责任' },
+      data_quality_auditor: { title: '查看质量审计人的只读和整改边界', target: '#/roleGuide', actionLabel: '查看角色与责任' },
+      decision_group: { title: '查看重大争议决定边界', target: '#/roleGuide', actionLabel: '查看角色与责任' },
+      admin: { title: '查看管理员只管身份、不管业务的边界', target: '#/roleGuide', actionLabel: '查看角色与责任' }
     }
   },
   mySubmissions: {
@@ -152,16 +155,15 @@ const PAGE_DEFINITIONS = {
     target: '#/quality'
   },
   rbac: {
-    title: '角色权限',
-    subtitle: '维护角色、权限矩阵、用户角色和批量导入。',
-    workflow: ['确认权限边界', '维护角色或权限', '分配用户角色', '复核工作台入口'],
-    sample: '新增账号或角色后，应同时检查基础角色和项目角色，确保用户能看到自己的工作流。',
-    pitfall: '不要只改用户基础角色；项目角色缺失时，工作台无法按真实分工引导。',
-    doneCriteria: '用户、角色、权限和基础数据状态一致。',
+    title: '账号与授权',
+    subtitle: '管理员手工维护账号生命周期和固定MDM工作角色授权。',
+    workflow: ['创建待启用账号', '记录角色授权依据和有效期', '明确启用或停用', '检查访问审计'],
+    sample: '管理员收到确认后的账号信息，创建待启用账号、记录角色授权依据，再明确启用并线下交付一次性临时密码。',
+    pitfall: '管理员不能编辑固定权限矩阵，也不能借管理员身份审核、修改或发布业务内容。',
+    doneCriteria: '人员、账号、部门、有效角色、授权依据和访问审计一致。',
     target: '#/rbac',
     roles: {
-      admin: { title: '维护角色权限和用户分配', target: '#/rbac', actionLabel: '进入角色权限' },
-      it_lead: { title: '复核项目角色边界', target: '#/rbac', actionLabel: '查看角色权限' }
+      admin: { title: '维护账号生命周期和固定角色授权', target: '#/rbac', actionLabel: '进入账号与授权' }
     }
   }
 };
@@ -344,8 +346,8 @@ router.get('/', requireAuth, (req, res) => {
     const roleCodes = currentRoles.map(role => role.code || role.role_code).filter(Boolean);
     const ownedRoles = ROLE_GUIDES.filter(role => roleCodes.includes(role.code));
     const { permSet } = await getUserEffectivePermissionsAsync(req.session.userId);
-    const canViewAll = permSet.has('data:view_all') || permSet.has('admin:access') || permSet.has('*:*') || roleCodes.includes('admin');
-    const canDecideEscalated = permSet.has('conflict:final_decide_escalated') || permSet.has('*:*') || roleCodes.includes('decision_group');
+    const canViewAll = permSet.has('governance:read-global');
+    const canDecideEscalated = permSet.has('governance:decide-escalation');
     const counts = {
       pendingTodos: pendingTodos(req, canViewAll),
       escalatedConflicts: escalatedConflictCount(canDecideEscalated)

@@ -27,10 +27,10 @@ function closeServer(server) {
 
 function sessionForUser(userKey) {
   const sessions = {
-    dept: { userId: 10, userRole: 'submitter', userName: '项目管理部确认人', departmentId: 1 },
-    other: { userId: 20, userRole: 'submitter', userName: '财务部确认人', departmentId: 2 },
-    reviewer: { userId: 30, userRole: 'reviewer', userName: '项目管理部复核人', departmentId: 1 },
-    global: { userId: 99, userRole: 'decision_group', userName: '决策组成员', departmentId: 3 }
+    dept: { personId: 10, userId: 10, userName: '项目管理部主对接人', departmentId: 1 },
+    other: { personId: 20, userId: 20, userName: '财务部主对接人', departmentId: 2 },
+    reviewer: { personId: 30, userId: 30, userName: '项目管理部MDM审核员', departmentId: 1 },
+    global: { personId: 99, userId: 99, userName: '项目决策组成员', departmentId: 3 }
   };
   return sessions[userKey] || sessions.dept;
 }
@@ -61,16 +61,16 @@ async function main() {
 
   const identityCalls = { permissions: 0, roles: 0, departments: 0 };
   const permissionsByUser = new Map([
-    [10, ['process_governance:submit']],
-    [20, ['process_governance:submit']],
-    [30, ['process_governance:review']],
-    [99, ['admin:access', 'process_governance:view_all']]
+    [10, ['governance:read-department', 'governance:draft-department', 'governance:submit-department']],
+    [20, ['governance:read-department', 'governance:draft-department', 'governance:submit-department']],
+    [30, ['governance:read-department', 'governance:review-department', 'governance:record-department-decision']],
+    [99, ['governance:read-escalated-context', 'governance:decide-escalation']]
   ]);
   const rolesByUser = new Map([
-    [10, [{ code: 'submitter', name: '提交人' }, { code: 'business_contact', name: '业务联系人' }]],
-    [20, [{ code: 'submitter', name: '提交人' }]],
-    [30, [{ code: 'reviewer', name: '复核人' }]],
-    [99, [{ code: 'decision_group', name: '决策组' }]]
+    [10, [{ code: 'department_contact', name: '部门主对接人' }]],
+    [20, [{ code: 'department_contact', name: '部门主对接人' }]],
+    [30, [{ code: 'department_mdm_reviewer', name: '部门MDM审核员' }]],
+    [99, [{ code: 'decision_group', name: '项目决策组' }]]
   ]);
   const departments = new Map([
     [1, { id: 1, name: '项目管理部' }],
@@ -107,8 +107,8 @@ async function main() {
     },
     points: [{ point_id: 1001, issue_id: 101, point_type: 'responsibility' }],
     participants: [
-      { issue_id: 101, dept_name: '项目管理部', role_code: 'business_contact' },
-      { issue_id: 101, dept_name: '工程技术部', role_code: 'collaborator' }
+      { issue_id: 101, dept_name: '项目管理部', role_code: 'department_contact' },
+      { issue_id: 101, dept_name: '工程技术部', role_code: 'department_mdm_reviewer' }
     ],
     events: [],
     termTasks: [{

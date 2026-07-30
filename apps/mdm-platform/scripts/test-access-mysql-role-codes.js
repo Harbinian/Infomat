@@ -17,14 +17,12 @@ async function main() {
 
   let roleCodeReads = 0;
   auth.setIdentityRepositoryFactory(async () => ({
-    async getUserRoleCodes(userId, legacyRole) {
+    async getUserRoleCodes(userId) {
       roleCodeReads += 1;
       assert.strictEqual(userId, 42);
-      assert.strictEqual(legacyRole, 'submitter');
       return [
-        { code: 'owner', name: '业务负责人' },
-        { role_code: 'reviewer', role_name: '审核员' },
-        { code: 'submitter', name: '提交人' }
+        { code: 'department_contact', name: '部门主对接人' },
+        { role_code: 'department_mdm_reviewer', role_name: '部门MDM审核员' }
       ];
     }
   }));
@@ -32,12 +30,11 @@ async function main() {
   try {
     const codes = await access.getEffectiveRoleCodesAsync({
       session: {
-        userId: 42,
-        userRole: 'submitter'
+        personId: 42
       }
     });
 
-    assert.deepStrictEqual(Array.from(codes).sort(), ['owner', 'reviewer', 'submitter']);
+    assert.deepStrictEqual(Array.from(codes).sort(), ['department_contact', 'department_mdm_reviewer']);
     assert.strictEqual(roleCodeReads, 1);
 
     const anonymousCodes = await access.getEffectiveRoleCodesAsync({});

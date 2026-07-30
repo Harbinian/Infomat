@@ -4,6 +4,7 @@ const { requireAuth } = require('../auth');
 const { mysqlConfigFromEnv } = require('../mysqlConfig');
 const { makeIdentityMysqlRepository } = require('../identityMysqlRepository');
 const { makeGovernanceGuidanceMysqlRepository } = require('../governanceGuidanceMysqlRepository');
+const { permissionSetHas } = require('../roleDefinitions');
 
 const router = express.Router();
 
@@ -79,7 +80,7 @@ function requireGuidancePermission(permCode) {
     try {
       const repo = await identityRepository();
       const { permSet, fieldConstraints } = await repo.getUserEffectivePermissions(personId);
-      if (!permSet.has(permCode) && !permSet.has('*:*')) {
+      if (!permissionSetHas(permSet, permCode)) {
         return res.status(403).json({ error: '权限不足' });
       }
       req.effectivePermissions = permSet;

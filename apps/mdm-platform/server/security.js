@@ -30,7 +30,7 @@ function issueCsrfToken(req, res) {
 function csrfProtection(req, res, next) {
   if (SAFE_METHODS.has(req.method)) return next();
   if (CSRF_EXEMPT_PATHS.has(req.path)) return next();
-  if (!req.session || !req.session.userId) return next();
+  if (!req.session || (!req.session.personId && !req.session.userId)) return next();
 
   const expected = ensureCsrfSecret(req);
   const actual = req.get('X-CSRF-Token');
@@ -41,8 +41,10 @@ function csrfProtection(req, res, next) {
 }
 
 function loginKey(req) {
-  const employeeNo = String(req.body && req.body.employee_no || 'unknown');
-  return `${req.ip}:${employeeNo}`;
+  const loginName = String(
+    req.body && (req.body.loginName || req.body.employee_no) || 'unknown'
+  );
+  return `${req.ip}:${loginName}`;
 }
 
 function loginRateLimit(req, res, next) {

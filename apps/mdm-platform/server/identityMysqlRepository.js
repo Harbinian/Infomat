@@ -1,5 +1,9 @@
 const { mdmMysqlSchemaSql, splitSqlStatements } = require('./mysqlSchema');
-const { ROLE_GUIDES } = require('./roleDefinitions');
+const { ACCESS_MODEL_VERSION } = require('./roleDefinitions');
+const {
+  ensureRbacRaciV2Schema,
+  seedFixedAccessModel
+} = require('./rbacRaciMysqlMigration');
 
 async function rows(pool, sql, params = []) {
   const [result] = await pool.execute(sql, params);
@@ -21,8 +25,6 @@ function parseJsonObject(value, fallback = {}) {
     return fallback;
   }
 }
-
-const BASIC_ROLE_CODES = new Set(['submitter', 'owner', 'reviewer', 'admin']);
 
 function normalizeRoleIds(roleIds) {
   if (!Array.isArray(roleIds)) return [];
@@ -50,17 +52,18 @@ function shouldFallbackFromPersonIdentity(error) {
   ].includes(code) || /Unknown (table|column)|doesn.t exist|Duplicate column name|Unhandled SQL .*person|Unhandled SQL .*user_accounts|Unhandled SQL .*person_roles|Unhandled SQL .*roles|Unhandled SQL .*permissions|Unhandled SQL .*role_permissions/i.test(message);
 }
 
-function baseRoleError() {
-  const error = new Error('人员至少需要一个基础权限角色，项目治理角色不能单独分配');
-  error.statusCode = 400;
+function sessionPersonId(session = {}) {
+  return Number(session.personId || 0) || null;
+}
+
+function legacyIdentityWriteError() {
+  const error = new Error('旧身份写接口已停用，请使用 /api/org/accounts');
+  error.code = 'LEGACY_IDENTITY_API_RETIRED';
+  error.statusCode = 410;
   return error;
 }
 
-function sessionPersonId(session = {}) {
-  return Number(session.personId || session.userId || 0) || null;
-}
-
-function normalizePersonUser(row = {}, fallbackRole = 'submitter') {
+function normalizePersonUser(row = {}) {
   const personId = Number(row.person_id || row.id || 0) || null;
   const accountId = Number(row.account_id || 0) || null;
   return {
@@ -76,22 +79,20 @@ function normalizePersonUser(row = {}, fallbackRole = 'submitter') {
     department_id: row.current_department_id || row.department_id || null,
     current_department_id: row.current_department_id || row.department_id || null,
     departmentName: row.department_name || row.dept_name || null,
-    role: row.role || fallbackRole || 'submitter',
+    role: row.role || null,
+    accountStatus: row.account_status || null,
+    authVersion: Number(row.auth_version || 0),
     post: row.post || row.position_name || null
   };
 }
 
-function roleCodesToCompatibleRole(roleCodes = [], fallbackRole = 'submitter') {
-  const baseRole = roleCodes.find(code => BASIC_ROLE_CODES.has(code));
-  if (baseRole) return baseRole;
-  return BASIC_ROLE_CODES.has(fallbackRole) ? fallbackRole : 'submitter';
+function roleCodesToCompatibleRole(roleCodes = []) {
+  return roleCodes[0] || null;
 }
 
 function deriveDataScopes(user = {}, permissions = []) {
   const scopes = new Set();
-  if (permissions.includes('*:*') ||
-      permissions.includes('process_governance:view_global') ||
-      permissions.includes('data:view_all')) {
+  if (permissions.includes('governance:read-global')) {
     scopes.add('global');
   }
   const departmentId = user.department_id || user.current_department_id || user.departmentId;
@@ -100,17 +101,6 @@ function deriveDataScopes(user = {}, permissions = []) {
   if (personId) scopes.add(`person:${personId}`);
   return Array.from(scopes);
 }
-
-const DEPARTMENT_FINAL_RESPONSIBLE_PEOPLE = [
-  ['行政人事部', '陈娟'],
-  ['经营发展部', '刘春含'],
-  ['物资保障部', '刘洪雨'],
-  ['质量管理部', '曲明盛'],
-  ['工程技术部', '池炳辉'],
-  ['复材车间', '王潇'],
-  ['财务部', '李雪'],
-  ['项目管理部', '范秋南']
-];
 
 async function executeIfSupported(pool, sql, params = []) {
   try {
@@ -170,67 +160,11 @@ function normalizePermissionDefinition(permission = {}) {
 }
 
 async function ensureMysqlRbacMetadataColumns(pool) {
-  const alterations = [
-    "ALTER TABLE roles ADD COLUMN role_group VARCHAR(32) NOT NULL DEFAULT 'basic'",
-    'ALTER TABLE roles ADD COLUMN protected_core TINYINT NOT NULL DEFAULT 0',
-    'ALTER TABLE permissions ADD COLUMN is_dangerous TINYINT NOT NULL DEFAULT 0',
-    "ALTER TABLE permissions ADD COLUMN default_scope VARCHAR(64) NOT NULL DEFAULT 'self_task'",
-    'ALTER TABLE permissions ADD COLUMN protected_core TINYINT NOT NULL DEFAULT 0'
-  ];
-
-  for (const statement of alterations) {
-    await executeIfSupported(pool, statement);
-  }
+  await ensureRbacRaciV2Schema(pool);
 }
 
 async function ensureMysqlBuiltInRolesAndPermissions(pool) {
-  await ensureMysqlRbacMetadataColumns(pool);
-
-  for (const role of ROLE_GUIDES) {
-    await executeIfSupported(pool, `
-      INSERT INTO roles (role_code, role_name, description, is_system, role_group, protected_core)
-      VALUES (?, ?, ?, 1, ?, 1)
-      ON DUPLICATE KEY UPDATE
-        role_name=VALUES(role_name),
-        description=VALUES(description),
-        is_system=1,
-        role_group=VALUES(role_group),
-        protected_core=1,
-        updated_at=CURRENT_TIMESTAMP
-    `, [role.code, role.name, role.description || null, role.group || 'basic']);
-
-    for (const permission of role.permissions || []) {
-      const normalized = normalizePermissionDefinition(permission);
-      if (!normalized.code) continue;
-      await executeIfSupported(pool, `
-        INSERT INTO permissions (perm_code, resource, action, description, is_dangerous, default_scope, protected_core)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-        ON DUPLICATE KEY UPDATE
-          resource=VALUES(resource),
-          action=VALUES(action),
-          description=VALUES(description),
-          is_dangerous=VALUES(is_dangerous),
-          default_scope=VALUES(default_scope),
-          protected_core=VALUES(protected_core)
-      `, [
-        normalized.code,
-        normalized.resource,
-        normalized.action,
-        normalized.description,
-        normalized.isDangerous,
-        normalized.defaultScope,
-        normalized.protectedCore
-      ]);
-
-      await executeIfSupported(pool, `
-        INSERT IGNORE INTO role_permissions (role_id, perm_id, effect)
-        SELECT r.role_id, p.perm_id, 'allow'
-        FROM roles r
-        JOIN permissions p ON p.perm_code=?
-        WHERE r.role_code=?
-      `, [normalized.code, role.code]);
-    }
-  }
+  await seedFixedAccessModel(pool);
 }
 
 const PERSON_BUSINESS_COLUMNS = [
@@ -347,6 +281,8 @@ async function migrateLegacyBusinessUsersToPersons(pool) {
 
 async function migrateLegacyIdentityToPersonIdentity(pool) {
   await ensureMysqlPersonIdentityColumns(pool);
+  await ensureMysqlRbacMetadataColumns(pool);
+  const adminEmployeeNo = String(process.env.MDM_ADMIN_EMPLOYEE_NO || 'ADMIN001').trim();
 
   await pool.execute(`
     INSERT INTO person (employee_no, person_name, current_department_id, employment_status, status, created_at)
@@ -361,14 +297,14 @@ async function migrateLegacyIdentityToPersonIdentity(pool) {
 
   await pool.execute(`
     INSERT INTO user_accounts (person_id, login_name, password_hash, must_change_password, account_status)
-    SELECT p.person_id, u.employee_no, u.password_hash, u.must_change_password, 'active'
+    SELECT p.person_id, u.employee_no, u.password_hash, u.must_change_password,
+           CASE WHEN u.employee_no=? THEN 'active' ELSE 'pending_activation' END
     FROM users u
     JOIN person p ON p.employee_no = u.employee_no
     ON DUPLICATE KEY UPDATE
       login_name=VALUES(login_name),
-      account_status='active',
       updated_at=CURRENT_TIMESTAMP
-  `);
+  `, [adminEmployeeNo]);
 
   await pool.execute(`
     INSERT IGNORE INTO person_roles (person_id, role_id, assigned_by_person_id)
@@ -388,82 +324,47 @@ async function migrateLegacyIdentityToPersonIdentity(pool) {
     JOIN roles r ON r.role_code = u.role
   `);
 
-  await pool.execute(`
-    INSERT IGNORE INTO person_roles (person_id, role_id)
-    SELECT p.person_id, r.role_id
-    FROM person p
-    JOIN roles r ON r.role_code='submitter'
-    WHERE NOT EXISTS (
-      SELECT 1
-      FROM person_roles pr
-      JOIN roles br ON pr.role_id = br.role_id
-      WHERE pr.person_id = p.person_id
-        AND br.role_code IN ('submitter','owner','reviewer','admin')
-    )
-  `);
-
-  for (const [departmentName, personName] of DEPARTMENT_FINAL_RESPONSIBLE_PEOPLE) {
-    await executeIfSupported(pool, `
-      UPDATE departments d
-      JOIN person p ON p.person_name=?
-      SET d.final_responsible_person_id=p.person_id
-      WHERE d.name=?
-        AND d.final_responsible_person_id IS NULL
-    `, [personName, departmentName]);
-  }
-
   await migrateLegacyBusinessUsersToPersons(pool);
 }
 
 function makeIdentityMysqlRepository(pool) {
   async function getUserRoleCodes(userId, legacyRole) {
-    let assignedRoles;
-    try {
-      assignedRoles = await rows(pool, `
-        SELECT r.role_code as code, r.role_name as name
-        FROM person_roles pr
-        JOIN roles r ON pr.role_id = r.role_id
-        WHERE pr.person_id=?
-        ORDER BY r.is_system DESC, r.role_code
-      `, [userId]);
-    } catch (error) {
-      if (!shouldFallbackFromPersonIdentity(error)) throw error;
-      assignedRoles = await rows(pool, `
-        SELECT r.role_code as code, r.role_name as name
-        FROM user_roles ur
-        JOIN roles r ON ur.role_id = r.role_id
-        WHERE ur.user_id=?
-        ORDER BY r.is_system DESC, r.role_code
-      `, [userId]);
-    }
-
-    if (legacyRole && !assignedRoles.some(role => role.code === legacyRole)) {
-      const legacy = await first(pool, 'SELECT role_code AS code, role_name AS name FROM roles WHERE role_code=?', [legacyRole]);
-      if (legacy) assignedRoles.unshift(legacy);
-    }
-
-    return assignedRoles;
+    return await rows(pool, `
+      SELECT r.role_code AS code, r.role_name AS name,
+             pr.person_role_id AS assignmentId,
+             pr.scope_type AS scopeType,
+             pr.scope_department_id AS scopeDepartmentId,
+             pr.authorization_basis AS authorizationBasis,
+             pr.effective_from AS effectiveFrom,
+             pr.effective_to AS effectiveTo
+      FROM person_roles pr
+      JOIN roles r ON pr.role_id = r.role_id
+      WHERE pr.person_id=?
+        AND r.status='active'
+        AND r.model_version=?
+        AND pr.assignment_status='active'
+        AND pr.authorization_basis IS NOT NULL
+        AND pr.effective_from IS NOT NULL
+        AND (pr.effective_from IS NULL OR pr.effective_from<=CURRENT_DATE)
+        AND (pr.effective_to IS NULL OR pr.effective_to>=CURRENT_DATE)
+      ORDER BY r.role_group, r.role_code
+    `, [userId, ACCESS_MODEL_VERSION]);
   }
 
   async function getDirectRoleIds(userId) {
-    try {
-      const person = await first(pool, 'SELECT person_id FROM person WHERE person_id=?', [userId]);
-      const directRoles = (await rows(pool, 'SELECT role_id FROM person_roles WHERE person_id=?', [userId]))
-        .map(role => role.role_id);
-      if (person) return directRoles;
-    } catch (error) {
-      if (!shouldFallbackFromPersonIdentity(error)) throw error;
-    }
-
-    const legacyDirectRoles = (await rows(pool, 'SELECT role_id FROM user_roles WHERE user_id=?', [userId]))
-      .map(role => role.role_id);
-
-    if (legacyDirectRoles.length > 0) return legacyDirectRoles;
-
-    const user = await first(pool, 'SELECT role FROM users WHERE id=?', [userId]);
-    if (!user || !user.role) return [];
-    const fallbackRole = await first(pool, 'SELECT role_id FROM roles WHERE role_code=?', [user.role]);
-    return fallbackRole ? [fallbackRole.role_id] : [];
+    return (await rows(pool, `
+      SELECT pr.role_id
+      FROM person_roles pr
+      JOIN roles r ON r.role_id=pr.role_id
+      WHERE pr.person_id=?
+        AND r.status='active'
+        AND r.model_version=?
+        AND pr.assignment_status='active'
+        AND pr.authorization_basis IS NOT NULL
+        AND pr.effective_from IS NOT NULL
+        AND (pr.effective_from IS NULL OR pr.effective_from<=CURRENT_DATE)
+        AND (pr.effective_to IS NULL OR pr.effective_to>=CURRENT_DATE)
+    `, [userId, ACCESS_MODEL_VERSION])).map(role => role.role_id);
   }
 
   async function collectRoleAndAncestors(roleIds, executor = pool) {
@@ -537,52 +438,6 @@ function makeIdentityMysqlRepository(pool) {
     }
   }
 
-  async function getRolesByIds(roleIds, executor = pool) {
-    const ids = normalizeRoleIds(roleIds);
-    if (ids.length === 0) return [];
-    const placeholders = ids.map(() => '?').join(',');
-    return await rows(executor, `
-      SELECT role_id, role_code, role_name
-      FROM roles
-      WHERE role_id IN (${placeholders})
-      ORDER BY is_system DESC, role_code
-    `, ids);
-  }
-
-  async function getRoleIdByCode(roleCode, executor = pool) {
-    if (!roleCode) return null;
-    const role = await first(executor, 'SELECT role_id FROM roles WHERE role_code=?', [roleCode]);
-    return role ? role.role_id : null;
-  }
-
-  async function chooseCompatibleRole(requestedRole, roleIds, fallbackRole, executor = pool) {
-    if (BASIC_ROLE_CODES.has(requestedRole)) return requestedRole;
-
-    const allRoleIds = await collectRoleAndAncestors(normalizeRoleIds(roleIds), executor);
-    const roles = await getRolesByIds(allRoleIds, executor);
-    const basicRole = roles.find(role => BASIC_ROLE_CODES.has(role.role_code));
-    if (basicRole) return basicRole.role_code;
-
-    if (BASIC_ROLE_CODES.has(fallbackRole)) return fallbackRole;
-    return 'submitter';
-  }
-
-  async function syncUserRoles(userId, roleIds, compatibleRole, assignedBy, executor = pool) {
-    const ids = new Set(normalizeRoleIds(roleIds));
-    const compatibleRoleId = await getRoleIdByCode(compatibleRole, executor);
-    if (compatibleRoleId) ids.add(compatibleRoleId);
-    if (ids.size === 0) return;
-
-    await executor.execute('DELETE FROM user_roles WHERE user_id=?', [userId]);
-    for (const roleId of ids) {
-      await executor.execute('INSERT IGNORE INTO user_roles (user_id, role_id, assigned_by) VALUES (?, ?, ?)', [
-        userId,
-        roleId,
-        assignedBy || null
-      ]);
-    }
-  }
-
   async function getPersonAccountByLogin(loginName) {
     const row = await first(pool, `
       SELECT
@@ -599,6 +454,7 @@ function makeIdentityMysqlRepository(pool) {
         ua.password_hash,
         ua.must_change_password,
         ua.account_status,
+        ua.auth_version,
         d.name AS department_name
       FROM user_accounts ua
       JOIN person p ON ua.person_id = p.person_id
@@ -627,6 +483,7 @@ function makeIdentityMysqlRepository(pool) {
         ua.password_hash,
         ua.must_change_password,
         ua.account_status,
+        ua.auth_version,
         d.name AS department_name
       FROM person p
       LEFT JOIN user_accounts ua ON ua.person_id = p.person_id
@@ -662,28 +519,6 @@ function makeIdentityMysqlRepository(pool) {
     }
   }
 
-  async function syncPersonRoles(personId, roleIds, compatibleRole, assignedByPersonId, executor = pool, options = {}) {
-    const ids = new Set(normalizeRoleIds(roleIds));
-    if (compatibleRole) {
-      const compatibleRoleId = await getRoleIdByCode(compatibleRole, executor);
-      if (compatibleRoleId) ids.add(compatibleRoleId);
-    }
-
-    const roles = await getRolesByIds(Array.from(ids), executor);
-    const hasBaseRole = roles.some(role => BASIC_ROLE_CODES.has(role.role_code));
-    if (options.requireExplicitBaseRole && !hasBaseRole) throw baseRoleError();
-    if (ids.size === 0) throw baseRoleError();
-
-    await executor.execute('DELETE FROM person_roles WHERE person_id=?', [personId]);
-    for (const roleId of ids) {
-      await executor.execute('INSERT IGNORE INTO person_roles (person_id, role_id, assigned_by_person_id) VALUES (?, ?, ?)', [
-        personId,
-        roleId,
-        assignedByPersonId || null
-      ]);
-    }
-  }
-
   async function departmentPath(departmentId, parentId, executor = pool) {
     let path = `/${departmentId}/`;
     if (parentId) {
@@ -700,25 +535,41 @@ function makeIdentityMysqlRepository(pool) {
       }
       await ensureMysqlPersonIdentityColumns(pool);
       await ensureMysqlBuiltInRolesAndPermissions(pool);
-      await migrateLegacyIdentityToPersonIdentity(pool);
+    },
+
+    async getUserByLoginName(loginName) {
+      return await getPersonAccountByLogin(loginName);
     },
 
     async getUserByEmployeeNo(employeeNo) {
-      try {
-        return await getPersonAccountByLogin(employeeNo);
-      } catch (error) {
-        if (!shouldFallbackFromPersonIdentity(error)) throw error;
-        return await first(pool, 'SELECT * FROM users WHERE employee_no=?', [employeeNo]);
-      }
+      return await getPersonAccountByLogin(employeeNo);
     },
 
     async getUserById(userId) {
-      try {
-        return await getPersonAccountByPersonId(userId);
-      } catch (error) {
-        if (!shouldFallbackFromPersonIdentity(error)) throw error;
-        return await first(pool, 'SELECT * FROM users WHERE id=?', [userId]);
+      return await getPersonAccountByPersonId(userId);
+    },
+
+    async validateSession(session = {}) {
+      const personId = sessionPersonId(session);
+      if (!personId) return { valid: false, reason: 'missing_person' };
+      const user = await getPersonAccountByPersonId(personId);
+      if (!user || user.accountStatus !== 'active' || user.status !== 'active') {
+        return { valid: false, reason: 'account_inactive' };
       }
+      if (!session.accountId || Number(session.accountId) !== Number(user.accountId)) {
+        return { valid: false, reason: 'account_changed' };
+      }
+      if (!session.authVersion || Number(session.authVersion) !== Number(user.authVersion)) {
+        return { valid: false, reason: 'authorization_changed' };
+      }
+      return { valid: true, user };
+    },
+
+    async recordSuccessfulLogin(personId) {
+      await pool.execute(
+        'UPDATE user_accounts SET last_login_at=CURRENT_TIMESTAMP WHERE person_id=? AND account_status=\'active\'',
+        [personId]
+      );
     },
 
     getUserRoleCodes,
@@ -853,58 +704,43 @@ function makeIdentityMysqlRepository(pool) {
     },
 
     async listUsers() {
-      try {
-        const personRows = await rows(pool, `
-          SELECT p.person_id AS id, p.person_id, p.person_name AS name, p.employee_no,
-                 p.current_department_id AS department_id, NULL AS post,
-                 p.created_at, d.name AS dept_name
-          FROM person p
-          LEFT JOIN departments d ON p.current_department_id = d.id
-          ORDER BY p.employee_no
-        `);
-        return personRows.map(row => normalizePersonUser(row));
-      } catch (error) {
-        if (!shouldFallbackFromPersonIdentity(error)) throw error;
-      }
-      return await rows(pool, `
-        SELECT u.id, u.name, u.employee_no, u.department_id, u.post, u.role, u.created_at, d.name as dept_name
-        FROM users u
-        LEFT JOIN departments d ON u.department_id = d.id
-        ORDER BY u.employee_no
+      const personRows = await rows(pool, `
+        SELECT p.person_id AS id, p.person_id, p.person_name AS name, p.employee_no,
+               p.current_department_id AS department_id, NULL AS post,
+               p.created_at, p.status, d.name AS dept_name,
+               ua.account_id, ua.login_name, ua.account_status, ua.auth_version,
+               ua.must_change_password
+        FROM person p
+        LEFT JOIN departments d ON p.current_department_id = d.id
+        LEFT JOIN user_accounts ua ON ua.person_id=p.person_id
+        ORDER BY p.employee_no
       `);
+      return personRows.map(row => normalizePersonUser(row));
     },
 
     async listUserRoleSummaries() {
-      let userRows;
-      try {
-        userRows = await rows(pool, `
-          SELECT p.person_id AS id, p.person_id, p.person_name AS name, p.employee_no,
-                 NULL AS post, p.current_department_id AS department_id, p.created_at,
-                 d.name as dept_name,
-                 COALESCE(GROUP_CONCAT(r.role_code), '') as rbac_role_codes,
-                 COALESCE(GROUP_CONCAT(r.role_name), '') as rbac_role_names
-          FROM person p
-          LEFT JOIN departments d ON p.current_department_id = d.id
-          LEFT JOIN person_roles pr ON p.person_id = pr.person_id
-          LEFT JOIN roles r ON pr.role_id = r.role_id
-          GROUP BY p.person_id
-          ORDER BY p.employee_no
-        `);
-      } catch (error) {
-        if (!shouldFallbackFromPersonIdentity(error)) throw error;
-        userRows = await rows(pool, `
-          SELECT u.id, u.name, u.employee_no, u.post, u.role, u.department_id, u.created_at,
-                 d.name as dept_name,
-                 COALESCE(GROUP_CONCAT(r.role_code), '') as rbac_role_codes,
-                 COALESCE(GROUP_CONCAT(r.role_name), '') as rbac_role_names
-          FROM users u
-          LEFT JOIN departments d ON u.department_id = d.id
-          LEFT JOIN user_roles ur ON u.id = ur.user_id
-          LEFT JOIN roles r ON ur.role_id = r.role_id
-          GROUP BY u.id
-          ORDER BY u.employee_no
-        `);
-      }
+      const userRows = await rows(pool, `
+        SELECT p.person_id AS id, p.person_id, p.person_name AS name, p.employee_no,
+               NULL AS post, p.current_department_id AS department_id, p.created_at,
+               d.name AS dept_name, ua.account_status,
+               COALESCE(GROUP_CONCAT(
+                 CASE WHEN r.status='active' AND pr.assignment_status='active'
+                   THEN r.role_code ELSE NULL END
+                 ORDER BY r.role_code
+               ), '') AS rbac_role_codes,
+               COALESCE(GROUP_CONCAT(
+                 CASE WHEN r.status='active' AND pr.assignment_status='active'
+                   THEN r.role_name ELSE NULL END
+                 ORDER BY r.role_code
+               ), '') AS rbac_role_names
+        FROM person p
+        LEFT JOIN departments d ON p.current_department_id = d.id
+        LEFT JOIN user_accounts ua ON ua.person_id=p.person_id
+        LEFT JOIN person_roles pr ON p.person_id = pr.person_id
+        LEFT JOIN roles r ON pr.role_id = r.role_id
+        GROUP BY p.person_id, ua.account_status
+        ORDER BY p.employee_no
+      `);
       return userRows.map(user => ({
         id: user.id,
         personId: user.person_id || user.id,
@@ -913,33 +749,38 @@ function makeIdentityMysqlRepository(pool) {
         department_id: user.department_id,
         dept_name: user.dept_name || null,
         post: user.post,
-        role: user.role,
+        role: null,
+        account_status: user.account_status || null,
         created_at: user.created_at,
         rbac_role_codes: user.rbac_role_codes || '',
         rbac_role_names: user.rbac_role_names || ''
       }));
     },
 
-    async listAssignableUsers() {
-      let userRows;
-      try {
-        userRows = await rows(pool, `
-          SELECT p.person_id AS id, p.person_id, p.person_name AS name,
-                 p.current_department_id AS department_id, d.name AS dept_name
-          FROM person p
-          LEFT JOIN departments d ON p.current_department_id = d.id
-          WHERE p.status='active'
-          ORDER BY d.name, p.person_name
-        `);
-      } catch (error) {
-        if (!shouldFallbackFromPersonIdentity(error)) throw error;
-        userRows = await rows(pool, `
-          SELECT u.id, u.name, u.department_id, d.name AS dept_name
-          FROM users u
-          LEFT JOIN departments d ON u.department_id = d.id
-          ORDER BY d.name, u.name
-        `);
-      }
+    async listAssignableUsers(filters = {}) {
+      const roleCode = String(filters.roleCode || '').trim();
+      const roleJoin = roleCode ? `
+        JOIN person_roles pr ON pr.person_id=p.person_id
+          AND pr.assignment_status='active'
+          AND pr.authorization_basis IS NOT NULL
+          AND pr.effective_from<=CURRENT_DATE
+          AND (pr.effective_to IS NULL OR pr.effective_to>=CURRENT_DATE)
+        JOIN roles r ON r.role_id=pr.role_id
+          AND r.role_code=?
+          AND r.status='active'
+          AND r.model_version=?
+        JOIN user_accounts ua ON ua.person_id=p.person_id
+          AND ua.account_status='active'
+      ` : '';
+      const userRows = await rows(pool, `
+        SELECT p.person_id AS id, p.person_id, p.person_name AS name,
+               p.current_department_id AS department_id, d.name AS dept_name
+        FROM person p
+        ${roleJoin}
+        LEFT JOIN departments d ON p.current_department_id = d.id
+        WHERE p.status='active'
+        ORDER BY d.name, p.person_name
+      `, roleCode ? [roleCode, ACCESS_MODEL_VERSION] : []);
       return userRows.map(user => ({
         id: user.id,
         personId: user.person_id || user.id,
@@ -950,24 +791,16 @@ function makeIdentityMysqlRepository(pool) {
     },
 
     async getAssignedRoles(userId) {
-      try {
-        return await rows(pool, `
-          SELECT r.role_id, r.role_code, r.role_name, r.is_system
-          FROM person_roles pr
-          JOIN roles r ON pr.role_id = r.role_id
-          WHERE pr.person_id=?
-          ORDER BY r.is_system DESC, r.role_code
-        `, [userId]);
-      } catch (error) {
-        if (!shouldFallbackFromPersonIdentity(error)) throw error;
-        return await rows(pool, `
-          SELECT r.role_id, r.role_code, r.role_name, r.is_system
-          FROM user_roles ur
-          JOIN roles r ON ur.role_id = r.role_id
-          WHERE ur.user_id=?
-          ORDER BY r.is_system DESC, r.role_code
-        `, [userId]);
-      }
+      return await rows(pool, `
+        SELECT r.role_id, r.role_code, r.role_name, r.is_system, r.status,
+               pr.person_role_id, pr.scope_type, pr.scope_department_id,
+               pr.authorization_basis, pr.effective_from, pr.effective_to,
+               pr.assignment_status, pr.revocation_reason
+        FROM person_roles pr
+        JOIN roles r ON pr.role_id = r.role_id
+        WHERE pr.person_id=?
+        ORDER BY r.status, r.role_group, r.role_code
+      `, [userId]);
     },
 
     async getPermissionsGrouped() {
@@ -981,26 +814,14 @@ function makeIdentityMysqlRepository(pool) {
     },
 
     async listRoles() {
-      try {
-        return await rows(pool, `
-          SELECT r.*,
-            (SELECT role_name FROM roles pr WHERE pr.role_id = r.parent_role_id) as parent_role_name,
-            (SELECT COUNT(*) FROM role_permissions WHERE role_id = r.role_id) as perm_count,
-            (SELECT COUNT(*) FROM person_roles WHERE role_id = r.role_id) as user_count
-          FROM roles r
-          ORDER BY r.is_system DESC, r.role_code
-        `);
-      } catch (error) {
-        if (!shouldFallbackFromPersonIdentity(error)) throw error;
-        return await rows(pool, `
-          SELECT r.*,
-            (SELECT role_name FROM roles pr WHERE pr.role_id = r.parent_role_id) as parent_role_name,
-            (SELECT COUNT(*) FROM role_permissions WHERE role_id = r.role_id) as perm_count,
-            (SELECT COUNT(*) FROM user_roles WHERE role_id = r.role_id) as user_count
-          FROM roles r
-          ORDER BY r.is_system DESC, r.role_code
-        `);
-      }
+      return await rows(pool, `
+        SELECT r.*,
+          (SELECT role_name FROM roles pr WHERE pr.role_id = r.parent_role_id) AS parent_role_name,
+          (SELECT COUNT(*) FROM role_permissions WHERE role_id = r.role_id) AS perm_count,
+          (SELECT COUNT(*) FROM person_roles WHERE role_id = r.role_id AND assignment_status='active') AS user_count
+        FROM roles r
+        ORDER BY FIELD(r.status, 'active', 'legacy', 'retired'), r.role_group, r.role_code
+      `);
     },
 
     async getRoleDetail(roleId) {
@@ -1034,26 +855,15 @@ function makeIdentityMysqlRepository(pool) {
         parentId = parent ? parent.parent_role_id : null;
       }
 
-      let users;
-      try {
-        users = await rows(pool, `
-          SELECT p.person_id AS id, p.person_id, p.person_name AS name, p.employee_no,
-                 p.current_department_id AS department_id, NULL AS post, d.name as dept_name
-          FROM person_roles pr
-          JOIN person p ON pr.person_id = p.person_id
-          LEFT JOIN departments d ON p.current_department_id = d.id
-          WHERE pr.role_id=?
-        `, [roleId]);
-      } catch (error) {
-        if (!shouldFallbackFromPersonIdentity(error)) throw error;
-        users = await rows(pool, `
-          SELECT u.id, u.name, u.employee_no, u.department_id, u.post, d.name as dept_name
-          FROM user_roles ur
-          JOIN users u ON ur.user_id = u.id
-          LEFT JOIN departments d ON u.department_id = d.id
-          WHERE ur.role_id=?
-        `, [roleId]);
-      }
+      const users = await rows(pool, `
+        SELECT p.person_id AS id, p.person_id, p.person_name AS name, p.employee_no,
+               p.current_department_id AS department_id, NULL AS post, d.name AS dept_name,
+               pr.assignment_status, pr.scope_type, pr.scope_department_id
+        FROM person_roles pr
+        JOIN person p ON pr.person_id = p.person_id
+        LEFT JOIN departments d ON p.current_department_id = d.id
+        WHERE pr.role_id=?
+      `, [roleId]);
 
       return { ...role, permissions: [...ownPerms, ...inheritedPerms], users };
     },
@@ -1113,13 +923,7 @@ function makeIdentityMysqlRepository(pool) {
       if (!role) return { deleted: false, reason: 'missing' };
       if (role.is_system) return { deleted: false, reason: 'system' };
 
-      let userCount;
-      try {
-        userCount = await first(pool, 'SELECT COUNT(*) as cnt FROM person_roles WHERE role_id=?', [roleId]);
-      } catch (error) {
-        if (!shouldFallbackFromPersonIdentity(error)) throw error;
-        userCount = await first(pool, 'SELECT COUNT(*) as cnt FROM user_roles WHERE role_id=?', [roleId]);
-      }
+      const userCount = await first(pool, 'SELECT COUNT(*) as cnt FROM person_roles WHERE role_id=?', [roleId]);
       if (Number(userCount && userCount.cnt || 0) > 0) {
         return { deleted: false, reason: 'assigned', count: Number(userCount.cnt) };
       }
@@ -1158,242 +962,81 @@ function makeIdentityMysqlRepository(pool) {
       const personId = sessionPersonId(session);
       if (!personId) return null;
 
-      try {
-        const user = await getPersonAccountByPersonId(personId);
-        if (!user) return null;
-
-        const rbacRoles = await getUserRoleCodes(user.personId, session.userRole);
-        const roleCodes = rbacRoles.map(role => role.code);
-        const { permSet } = await getUserEffectivePermissions(user.personId);
-        const compatibleRole = roleCodesToCompatibleRole(roleCodes, session.userRole);
-        const permissions = Array.from(permSet);
-        const positions = await listPersonPositions(user.personId);
-
-        return {
-          id: user.personId,
-          personId: user.personId,
-          accountId: user.accountId || session.accountId || null,
-          employeeNo: user.employeeNo,
-          personName: user.personName || session.userName || '',
-          name: user.personName || session.userName || '',
-          role: compatibleRole,
-          departmentId: user.department_id || null,
-          departmentName: user.departmentName || null,
-          positions,
-          rbacRoles,
-          roleCodes,
-          permissions,
-          dataScopes: deriveDataScopes(user, permissions)
-        };
-      } catch (error) {
-        if (!shouldFallbackFromPersonIdentity(error)) throw error;
-      }
-
-      const user = await first(pool, `
-        SELECT u.id, u.name, u.employee_no, u.department_id, d.name AS department_name, u.post, u.role
-        FROM users u
-        LEFT JOIN departments d ON u.department_id = d.id
-        WHERE u.id=?
-        LIMIT 1
-      `, [personId]);
+      const user = await getPersonAccountByPersonId(personId);
       if (!user) return null;
-
-      const { permSet } = await getUserEffectivePermissions(user.id);
-      const rbacRoles = await getUserRoleCodes(user.id, user.role || session.userRole);
+      const rbacRoles = await getUserRoleCodes(user.personId);
+      const roleCodes = rbacRoles.map(role => role.code);
+      const { permSet } = await getUserEffectivePermissions(user.personId);
+      const permissions = Array.from(permSet);
+      const positions = await listPersonPositions(user.personId);
 
       return {
-        id: user.id,
-        personId: user.id,
-        accountId: session.accountId || null,
-        employeeNo: user.employee_no,
-        personName: user.name || session.userName || '',
-        name: user.name || session.userName || '',
-        role: user.role || session.userRole || 'submitter',
+        id: user.personId,
+        personId: user.personId,
+        accountId: user.accountId || session.accountId || null,
+        employeeNo: user.employeeNo,
+        personName: user.personName || session.userName || '',
+        name: user.personName || session.userName || '',
+        role: roleCodesToCompatibleRole(roleCodes),
+        accountStatus: user.accountStatus,
+        authVersion: user.authVersion,
         departmentId: user.department_id || null,
-        departmentName: user.department_name || null,
-        positions: [],
+        departmentName: user.departmentName || null,
+        department: user.department_id ? {
+          id: user.department_id,
+          name: user.departmentName || null
+        } : null,
+        positions,
         rbacRoles,
-        roleCodes: rbacRoles.map(role => role.code),
-        permissions: Array.from(permSet),
-      dataScopes: deriveDataScopes(user, Array.from(permSet))
-    };
+        roleAssignments: rbacRoles,
+        roleCodes,
+        permissions,
+        dataScopes: deriveDataScopes(user, permissions),
+        governanceModelVersion: ACCESS_MODEL_VERSION
+      };
     },
 
     async getPasswordStatus(userId) {
-      let user;
-      try {
-        user = await first(pool, 'SELECT must_change_password FROM user_accounts WHERE person_id=?', [userId]);
-      } catch (error) {
-        if (!shouldFallbackFromPersonIdentity(error)) throw error;
-        user = await first(pool, 'SELECT must_change_password FROM users WHERE id=?', [userId]);
-      }
+      const user = await first(pool, 'SELECT must_change_password FROM user_accounts WHERE person_id=?', [userId]);
       if (!user) return null;
       return { is_default_password: Boolean(user.must_change_password) };
     },
 
     async getPasswordCredential(userId) {
-      try {
-        const credential = await first(pool, `
-          SELECT p.employee_no, ua.password_hash
-          FROM user_accounts ua
-          JOIN person p ON ua.person_id = p.person_id
-          WHERE ua.person_id=?
-        `, [userId]);
-        if (credential) return credential;
-      } catch (error) {
-        if (!shouldFallbackFromPersonIdentity(error)) throw error;
-      }
-      return await first(pool, 'SELECT employee_no, password_hash FROM users WHERE id=?', [userId]);
+      return await first(pool, `
+        SELECT p.employee_no, ua.password_hash
+        FROM user_accounts ua
+        JOIN person p ON ua.person_id = p.person_id
+        WHERE ua.person_id=?
+      `, [userId]);
     },
 
     async updateOwnPassword(userId, passwordHash) {
-      let result;
-      try {
-        result = await pool.execute('UPDATE user_accounts SET password_hash=?, must_change_password=0 WHERE person_id=?', [passwordHash, userId]);
-      } catch (error) {
-        if (!shouldFallbackFromPersonIdentity(error)) throw error;
-        result = await pool.execute('UPDATE users SET password_hash=?, must_change_password=0 WHERE id=?', [passwordHash, userId]);
-      }
+      const result = await pool.execute(
+        'UPDATE user_accounts SET password_hash=?, must_change_password=0, auth_version=auth_version+1 WHERE person_id=?',
+        [passwordHash, userId]
+      );
+      await pool.execute(`
+        INSERT INTO identity_access_events (event_type, actor_person_id, target_person_id, reason)
+        VALUES ('password_changed', ?, ?, '用户修改本人密码')
+      `, [userId, userId]);
       return affectedRows(result) > 0;
     },
 
     async createUser(payload = {}) {
-      return await withOptionalTransaction(async executor => {
-        try {
-          const compatibleRole = await chooseCompatibleRole(payload.role, payload.role_ids, 'submitter', executor);
-          const personResult = await executor.execute(
-            'INSERT INTO person (person_name, employee_no, current_department_id, employment_status, status) VALUES (?, ?, ?, ?, ?)',
-            [
-              payload.name,
-              payload.employee_no,
-              payload.department_id || null,
-              payload.employment_status || 'active',
-              payload.status || 'active'
-            ]
-          );
-          const personId = insertId(personResult);
-          await executor.execute(
-            'INSERT INTO user_accounts (person_id, login_name, password_hash, must_change_password, account_status) VALUES (?, ?, ?, ?, ?)',
-            [
-              personId,
-              payload.login_name || payload.employee_no,
-              payload.password_hash,
-              payload.must_change_password ? 1 : 0,
-              payload.account_status || 'active'
-            ]
-          );
-          await syncPersonRoles(personId, payload.role_ids, compatibleRole, payload.assigned_by, executor);
-          return { id: personId, personId, role: compatibleRole };
-        } catch (error) {
-          if (!shouldFallbackFromPersonIdentity(error)) throw error;
-        }
-
-        const compatibleRole = await chooseCompatibleRole(payload.role, payload.role_ids, 'submitter', executor);
-        const result = await executor.execute(
-          'INSERT INTO users (name, employee_no, department_id, post, role, password_hash, must_change_password) VALUES (?, ?, ?, ?, ?, ?, ?)',
-          [
-            payload.name,
-            payload.employee_no,
-            payload.department_id || null,
-            payload.post || null,
-            compatibleRole,
-            payload.password_hash,
-            payload.must_change_password ? 1 : 0
-          ]
-        );
-        const id = insertId(result);
-        await syncUserRoles(id, payload.role_ids, compatibleRole, payload.assigned_by, executor);
-        return { id, role: compatibleRole };
-      });
+      throw legacyIdentityWriteError();
     },
 
     async updateUser(userId, payload = {}) {
-      return await withOptionalTransaction(async executor => {
-        try {
-          const existing = await getPersonAccountByPersonId(userId, executor);
-          if (!existing) return false;
-
-          const compatibleRole = await chooseCompatibleRole(payload.role, payload.role_ids, existing.role, executor);
-          const result = await executor.execute(
-            'UPDATE person SET person_name=?, current_department_id=?, updated_at=CURRENT_TIMESTAMP WHERE person_id=?',
-            [
-              payload.name || existing.personName || existing.name,
-              Object.prototype.hasOwnProperty.call(payload, 'department_id') ? payload.department_id || null : existing.department_id || null,
-              userId
-            ]
-          );
-          if (Array.isArray(payload.role_ids)) {
-            await syncPersonRoles(userId, payload.role_ids, compatibleRole, payload.assigned_by, executor);
-          }
-          return affectedRows(result) > 0;
-        } catch (error) {
-          if (!shouldFallbackFromPersonIdentity(error)) throw error;
-        }
-
-        const existing = await first(executor, 'SELECT * FROM users WHERE id=?', [userId]);
-        if (!existing) return false;
-
-        const compatibleRole = await chooseCompatibleRole(payload.role, payload.role_ids, existing.role, executor);
-        const result = await executor.execute(
-          'UPDATE users SET name=?, department_id=?, post=?, role=? WHERE id=?',
-          [
-            payload.name || existing.name,
-            Object.prototype.hasOwnProperty.call(payload, 'department_id') ? payload.department_id || null : existing.department_id || null,
-            Object.prototype.hasOwnProperty.call(payload, 'post') ? payload.post || null : existing.post || null,
-            compatibleRole,
-            userId
-          ]
-        );
-        if (Array.isArray(payload.role_ids)) {
-          await syncUserRoles(userId, payload.role_ids, compatibleRole, payload.assigned_by, executor);
-        }
-        return affectedRows(result) > 0;
-      });
+      throw legacyIdentityWriteError();
     },
 
     async resetUserPassword(userId, passwordHash, mustChangePassword) {
-      let result;
-      try {
-        result = await pool.execute('UPDATE user_accounts SET password_hash=?, must_change_password=? WHERE person_id=?', [
-          passwordHash,
-          mustChangePassword ? 1 : 0,
-          userId
-        ]);
-      } catch (error) {
-        if (!shouldFallbackFromPersonIdentity(error)) throw error;
-        result = await pool.execute('UPDATE users SET password_hash=?, must_change_password=? WHERE id=?', [
-          passwordHash,
-          mustChangePassword ? 1 : 0,
-          userId
-        ]);
-      }
-      return affectedRows(result) > 0;
+      throw legacyIdentityWriteError();
     },
 
     async replaceUserRoles(userId, roleIds, assignedBy) {
-      return await withOptionalTransaction(async executor => {
-        try {
-          const existing = await getPersonAccountByPersonId(userId, executor);
-          if (!existing) return false;
-
-          const roles = await getRolesByIds(normalizeRoleIds(roleIds), executor);
-          const basicRole = roles.find(role => BASIC_ROLE_CODES.has(role.role_code));
-          if (!basicRole) throw baseRoleError();
-
-          await syncPersonRoles(userId, roleIds, basicRole.role_code, assignedBy, executor, { requireExplicitBaseRole: true });
-          return true;
-        } catch (error) {
-          if (!shouldFallbackFromPersonIdentity(error)) throw error;
-        }
-
-        const existing = await first(executor, 'SELECT * FROM users WHERE id=?', [userId]);
-        if (!existing) return false;
-
-        const compatibleRole = await chooseCompatibleRole(null, roleIds, existing.role, executor);
-        await syncUserRoles(userId, roleIds, compatibleRole, assignedBy, executor);
-        const result = await executor.execute('UPDATE users SET role=? WHERE id=?', [compatibleRole, userId]);
-        return affectedRows(result) > 0;
-      });
+      throw legacyIdentityWriteError();
     },
 
     getUserEffectivePermissions

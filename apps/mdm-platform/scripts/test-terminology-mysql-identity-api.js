@@ -45,7 +45,6 @@ function makeFakeTerminologyRepository() {
       return visible.find(process => Number(process.id) === Number(processId)) || null;
     },
     async processExists(processId) {
-      state.calls.push(['processExists', Number(processId)]);
       return state.processes.some(process => Number(process.id) === Number(processId));
     },
     async listTermTypes() {
@@ -54,12 +53,14 @@ function makeFakeTerminologyRepository() {
     async getTermType(code) {
       return code === 'noun' ? { code, name: '名词' } : null;
     },
-    async createTerm(payload, actorUserId) {
-      state.calls.push(['createTerm', payload, actorUserId]);
+    async createTerm(payload, actorPersonId) {
+      state.calls.push(['createTerm', payload, actorPersonId]);
+      const process = state.processes.find(row => Number(row.id) === Number(payload.process_id));
       const term = {
         id: state.nextId++,
         ...payload,
-        created_by: actorUserId,
+        process_owner_dept_id: process.owner_dept_id,
+        created_by: actorPersonId,
         status: 'pending'
       };
       state.terms.push(term);
@@ -67,39 +68,58 @@ function makeFakeTerminologyRepository() {
     },
     async listTerms(filters) {
       state.calls.push(['listTerms', filters]);
-      return state.terms;
+      return filters.canViewAll
+        ? state.terms
+        : state.terms.filter(term => Number(term.process_owner_dept_id) === Number(filters.departmentId));
     },
     async getTerm(id) {
       return state.terms.find(term => Number(term.id) === Number(id)) || null;
+    },
+    async updateTerm(id, payload) {
+      const term = await this.getTerm(id);
+      if (!term) return null;
+      Object.assign(term, payload);
+      return term;
+    },
+    async reviewTerm(id, action, actorPersonId) {
+      const term = await this.getTerm(id);
+      if (!term) return null;
+      term.status = action === 'approve' ? 'approved' : 'returned';
+      term.reviewed_by = actorPersonId;
+      return term;
+    },
+    async deleteTerm(id) {
+      const index = state.terms.findIndex(term => Number(term.id) === Number(id));
+      if (index < 0) return false;
+      state.terms.splice(index, 1);
+      return true;
     }
   };
 }
 
-async function main() {
-  assert.strictEqual(
-    typeof auth.setIdentityRepositoryFactory,
-    'function',
-    'auth should allow MySQL identity repository injection'
-  );
-  assert.strictEqual(
-    typeof terminologyRouter.setTerminologyRepositoryFactory,
-    'function',
-    'terminology should allow MySQL terminology repository injection'
-  );
+async function requestJson(baseUrl, path, options) {
+  const response = await fetch(`${baseUrl}${path}`, options);
+  const body = await response.json();
+  return { response, body };
+}
 
+async function main() {
+  assert.strictEqual(typeof auth.setIdentityRepositoryFactory, 'function');
+  assert.strictEqual(typeof terminologyRouter.setTerminologyRepositoryFactory, 'function');
+
+  let effectivePermissions = new Set([
+    'governance:read-department',
+    'governance:draft-department'
+  ]);
   let permissionCalls = 0;
   auth.setIdentityRepositoryFactory(async () => ({
-    async getUserEffectivePermissions(userId) {
+    async getUserEffectivePermissions(personId) {
       permissionCalls += 1;
-      assert.strictEqual(userId, 42);
-      return { permSet: new Set(['*:*']), fieldConstraints: {} };
-    },
-    async getUserRoleCodes(userId, legacyRole) {
-      assert.strictEqual(userId, 42);
-      return [{ code: legacyRole || 'admin', name: '管理员' }];
+      assert.strictEqual(personId, 42);
+      return { permSet: effectivePermissions, fieldConstraints: {} };
     },
     async getDepartmentById(id) {
-      return { id, name: '会话部门' };
+      return { id, name: Number(id) === 8 ? '会话部门' : '其他部门' };
     }
   }));
 
@@ -110,9 +130,9 @@ async function main() {
   app.use(express.json());
   app.use((req, res, next) => {
     req.session = {
+      personId: 42,
       userId: 42,
-      userRole: 'submitter',
-      userName: 'MySQL 身份管理员',
+      userName: '测试人员',
       departmentId: 8
     };
     next();
@@ -123,33 +143,78 @@ async function main() {
   const baseUrl = `http://127.0.0.1:${server.address().port}`;
 
   try {
-    const processRes = await fetch(`${baseUrl}/api/terminology/processes`);
-    const processBody = await processRes.json();
-    assert.strictEqual(processRes.status, 200, JSON.stringify(processBody));
-    assert.deepStrictEqual(
-      processBody.map(row => row.id).sort((a, b) => a - b),
-      [10, 11],
-      'MySQL 身份管理员应能看到全部术语治理流程'
-    );
+    let result = await requestJson(baseUrl, '/api/terminology/processes');
+    assert.strictEqual(result.response.status, 200, JSON.stringify(result.body));
+    assert.deepStrictEqual(result.body.map(row => row.id), [10], '部门主对接人只能看到本部门流程');
 
-    const createGlobalRes = await fetch(`${baseUrl}/api/terminology`, {
+    result = await requestJson(baseUrl, '/api/terminology', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        term: '全局术语',
-        term_type_code: 'noun',
-        definition: '不绑定具体流程的全局术语'
-      })
+      body: JSON.stringify({ term: '缺少流程', term_type_code: 'noun', definition: '测试' })
     });
-    const createGlobalBody = await createGlobalRes.json();
-    assert.strictEqual(createGlobalRes.status, 200, JSON.stringify(createGlobalBody));
-    assert.ok(createGlobalBody.id);
-    assert.ok(permissionCalls > 0, '术语路由管理员判断应读取 MySQL 身份权限');
-    assert.ok(
-      terminologyRepo.state.calls.some(call => call[0] === 'createTerm'),
-      '术语创建应通过 MySQL terminology repository'
+    assert.strictEqual(result.response.status, 400, JSON.stringify(result.body));
+
+    result = await requestJson(baseUrl, '/api/terminology', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ term: '跨部门术语', term_type_code: 'noun', definition: '测试', process_id: 11 })
+    });
+    assert.strictEqual(result.response.status, 403, JSON.stringify(result.body));
+
+    result = await requestJson(baseUrl, '/api/terminology', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ term: '本部门术语', term_type_code: 'noun', definition: '测试', process_id: 10 })
+    });
+    assert.strictEqual(result.response.status, 200, JSON.stringify(result.body));
+    const termId = result.body.id;
+
+    result = await requestJson(baseUrl, `/api/terminology/${termId}/review`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'approve' })
+    });
+    assert.strictEqual(result.response.status, 403, '部门主对接人不能审核术语');
+
+    effectivePermissions = new Set([
+      'governance:read-department',
+      'governance:review-department'
+    ]);
+    result = await requestJson(baseUrl, `/api/terminology/${termId}/review`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'approve' })
+    });
+    assert.strictEqual(result.response.status, 200, JSON.stringify(result.body));
+
+    result = await requestJson(baseUrl, `/api/terminology/${termId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ term: '审核员修改', term_type_code: 'noun', definition: '测试', process_id: 10 })
+    });
+    assert.strictEqual(result.response.status, 403, '部门MDM审核员不能修改术语源数据');
+
+    effectivePermissions = new Set([
+      'governance:read-global',
+      'governance:quality-audit'
+    ]);
+    result = await requestJson(baseUrl, '/api/terminology/processes');
+    assert.strictEqual(result.response.status, 200, JSON.stringify(result.body));
+    assert.deepStrictEqual(
+      result.body.map(row => row.id).sort((a, b) => a - b),
+      [10, 11],
+      '质量审计人可全局读取术语治理上下文'
     );
 
+    result = await requestJson(baseUrl, '/api/terminology', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ term: '审计人修改', term_type_code: 'noun', definition: '测试', process_id: 10 })
+    });
+    assert.strictEqual(result.response.status, 403, '质量审计人不能修改术语源数据');
+
+    assert.ok(permissionCalls > 0, '术语路由应读取 MySQL 身份权限');
+    assert.ok(terminologyRepo.state.calls.some(call => call[0] === 'createTerm'));
     console.log('Terminology MySQL identity API test passed');
   } finally {
     await closeServer(server);

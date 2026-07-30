@@ -197,7 +197,17 @@ async function checkMdm(summary, fixedEnv, mdmBaseUrl) {
 
   const health = await requireJson(`${mdmBaseUrl}/api/health`);
   assert.equal(health.body.status, 'ok', 'MDM health endpoint did not return ok');
-  addCheck(summary, 'MDM health', { status: health.body.status });
+  assert.equal(health.body.identityModel, 'person', 'MDM health identity model is not person');
+  assert.equal(
+    health.body.governanceModelVersion,
+    'rbac-raci-v2-2026-07-30',
+    'MDM health governance model version is stale'
+  );
+  addCheck(summary, 'MDM health', {
+    status: health.body.status,
+    identityModel: health.body.identityModel,
+    governanceModelVersion: health.body.governanceModelVersion
+  });
 
   const login = await requireJson(`${mdmBaseUrl}/api/org/login`, {
     method: 'POST',
@@ -210,20 +220,45 @@ async function checkMdm(summary, fixedEnv, mdmBaseUrl) {
     employee_no: adminEmployeeNo,
     personId: login.body.personId || login.body.id || null,
     user: login.body.name || null,
-    role: login.body.role || null
+    governanceModelVersion: login.body.governanceModelVersion || null
   });
 
   const authedHeaders = { Cookie: cookie };
   const me = await requireJson(`${mdmBaseUrl}/api/org/me`, { headers: authedHeaders });
   assert.equal(me.body.id > 0, true, 'MDM /api/org/me did not return a valid user');
   const permissions = new Set(me.body.permissions || []);
-  assert.ok(permissions.has('admin:access'), 'MDM /api/org/me admin user lacks admin:access');
-  assert.ok(permissions.has('*:*'), 'MDM /api/org/me admin user lacks *:*');
+  for (const permission of [
+    'identity:read',
+    'identity:manage-account',
+    'identity:assign-role',
+    'identity:read-audit',
+    'governance:read-global'
+  ]) {
+    assert.ok(permissions.has(permission), `MDM /api/org/me admin user lacks ${permission}`);
+  }
+  for (const forbidden of [
+    '*:*',
+    'admin:access',
+    'governance:draft-department',
+    'governance:review-department',
+    'governance:record-department-decision',
+    'governance:publish'
+  ]) {
+    assert.equal(permissions.has(forbidden), false, `MDM admin must not have ${forbidden}`);
+  }
+  assert.deepEqual(me.body.roleCodes, ['admin'], 'MDM administrator should only retain the fixed admin role after migration');
+  assert.ok((me.body.dataScopes || []).includes('global'), 'MDM administrator lacks global read scope');
+  assert.equal(
+    me.body.governanceModelVersion,
+    'rbac-raci-v2-2026-07-30',
+    'MDM /api/org/me governance model version is stale'
+  );
   addCheck(summary, 'MDM current user', {
     displayName: me.body.name || null,
-    role: me.body.role || null,
     roles: me.body.roleCodes || [],
-    permissions: ['admin:access', '*:*']
+    permissions: Array.from(permissions).sort(),
+    dataScopes: me.body.dataScopes || [],
+    governanceModelVersion: me.body.governanceModelVersion
   });
 
   const departments = await requireJson(`${mdmBaseUrl}/api/org/departments`, { headers: authedHeaders });
@@ -231,15 +266,47 @@ async function checkMdm(summary, fixedEnv, mdmBaseUrl) {
   assert.ok(departmentCount > 0, 'MDM departments are empty');
   addCheck(summary, 'MDM departments', { count: departmentCount });
 
-  const users = await requireJson(`${mdmBaseUrl}/api/org/users`, { headers: authedHeaders });
-  const userCount = countRows(users.body);
-  assert.ok(userCount > 0, 'MDM users are empty');
-  addCheck(summary, 'MDM users', { count: userCount });
+  const accounts = await requireJson(`${mdmBaseUrl}/api/org/accounts`, { headers: authedHeaders });
+  const accountCount = countRows(accounts.body);
+  assert.ok(accountCount > 0, 'MDM accounts are empty');
+  addCheck(summary, 'MDM accounts', { count: accountCount });
 
-  const roles = await requireJson(`${mdmBaseUrl}/api/roles`, { headers: authedHeaders });
-  const roleCount = countRows(roles.body);
-  assert.ok(roleCount > 0, 'MDM roles are empty');
-  addCheck(summary, 'MDM roles', { count: roleCount });
+  const rbacModel = await requireJson(`${mdmBaseUrl}/api/rbac/model`, { headers: authedHeaders });
+  assert.equal(rbacModel.body.modelVersion, 'rbac-raci-v2-2026-07-30');
+  assert.equal(countRows(rbacModel.body.roles), 7, 'MDM fixed role count is not 7');
+  assert.equal(countRows(rbacModel.body.permissions), 19, 'MDM fixed permission count is not 19');
+  assert.equal(countRows(rbacModel.body.activities), 8, 'MDM RACI activity count is not 8');
+  addCheck(summary, 'MDM fixed RBAC/RACI model', {
+    modelVersion: rbacModel.body.modelVersion,
+    roles: countRows(rbacModel.body.roles),
+    permissions: countRows(rbacModel.body.permissions),
+    activities: countRows(rbacModel.body.activities)
+  });
+
+  const csrf = await requireJson(`${mdmBaseUrl}/api/csrf-token`, { headers: authedHeaders });
+  const deniedBusinessWrite = await request(`${mdmBaseUrl}/api/governance/decision-records`, {
+    method: 'POST',
+    headers: {
+      ...authedHeaders,
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': csrf.body.csrfToken
+    },
+    body: JSON.stringify({
+      departmentId: me.body.departmentId,
+      subjectDomain: 'process',
+      subjectType: 'smoke',
+      subjectId: 'admin-read-only-check',
+      subjectVersion: '1',
+      decision: 'approved',
+      decisionBasis: 'smoke'
+    })
+  });
+  assert.equal(
+    deniedBusinessWrite.response.status,
+    403,
+    `MDM administrator business write should return 403: ${deniedBusinessWrite.text}`
+  );
+  addCheck(summary, 'MDM administrator business-write boundary', { status: 403 });
 
   const workbench = await requireJson(`${mdmBaseUrl}/api/role-workbench?mode=todo`, { headers: authedHeaders });
   addCheck(summary, 'MDM role workbench', {

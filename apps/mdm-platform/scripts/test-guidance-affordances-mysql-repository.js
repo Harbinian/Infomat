@@ -40,7 +40,7 @@ function makePool(status = 'pending_response') {
   const pendingRepo = makeGovernanceGuidanceMysqlRepository(makePool('pending_response'));
   const pendingList = await pendingRepo.listGuidanceForPerson(
     501,
-    new Set(['guidance:respond', 'guidance:final_confirm'])
+    new Set(['governance:draft-department', 'governance:record-department-decision'])
   );
   const pendingActions = pendingList[0].guidanceActions;
   assert.strictEqual(pendingActions.canRespond, true, 'final responsible person can respond while pending');
@@ -53,7 +53,7 @@ function makePool(status = 'pending_response') {
   const confirmRepo = makeGovernanceGuidanceMysqlRepository(makePool('pending_final_confirm'));
   const confirmList = await confirmRepo.listGuidanceForPerson(
     501,
-    new Set(['guidance:respond', 'guidance:final_confirm'])
+    new Set(['governance:draft-department', 'governance:record-department-decision'])
   );
   assert.strictEqual(confirmList[0].guidanceActions.canRespond, false);
   assert.strictEqual(confirmList[0].guidanceActions.canFinalConfirm, true);
@@ -61,7 +61,7 @@ function makePool(status = 'pending_response') {
   const objectedRepo = makeGovernanceGuidanceMysqlRepository(makePool('objected'));
   const objectedList = await objectedRepo.listGuidanceForPerson(
     501,
-    new Set(['guidance:respond', 'guidance:final_confirm'])
+    new Set(['governance:draft-department', 'governance:record-department-decision'])
   );
   assert.strictEqual(objectedList[0].guidanceActions.canRespond, true, 'objected guidance can be answered again');
   assert.strictEqual(objectedList[0].guidanceActions.canClarify, false, 'objected guidance should not open clarify again');
@@ -69,7 +69,7 @@ function makePool(status = 'pending_response') {
 
   const adminList = await confirmRepo.listGuidanceForPerson(
     999,
-    new Set(['admin:access', 'process_governance:view_global'])
+    new Set(['identity:manage-account', 'governance:read-global'])
   );
   assert.strictEqual(adminList[0].guidanceActions.canRespond, false);
   assert.strictEqual(adminList[0].guidanceActions.canFinalConfirm, false);

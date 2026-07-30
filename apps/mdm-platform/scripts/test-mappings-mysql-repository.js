@@ -297,6 +297,8 @@ async function main() {
   assert.deepStrictEqual(reviewed, { ok: true });
 
   await repo.reviewMapping(created.id, { step: 5, action: 'approve', opinion: '终审通过', actor_user_id: 42, canManageAll: true });
+  assert.strictEqual((await repo.getMapping(created.id, { canViewAll: true })).status, 'final_reviewed');
+  assert.deepStrictEqual(await repo.publishMapping(created.id, 42), { ok: true });
   assert.strictEqual((await repo.getMapping(created.id, { canViewAll: true })).status, 'published');
 
   const draft = await repo.createMapping({

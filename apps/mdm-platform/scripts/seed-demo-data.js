@@ -5,10 +5,8 @@
  * Idempotent — skips records that already exist.
  * Run: node scripts/seed-demo-data.js
  */
-if (process.env.ALLOW_DEMO_SEED !== 'true') {
-  console.error('seed-demo-data.js is demo-only. Set ALLOW_DEMO_SEED=true to run it intentionally.');
-  process.exit(1);
-}
+console.error('LEGACY_ACCOUNT_SCRIPT_RETIRED：演示脚本不得创建3000账号。');
+process.exit(1);
 
 const db = require('../server/db');
 const { hashPassword } = require('../server/auth');

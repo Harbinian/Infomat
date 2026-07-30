@@ -25,10 +25,10 @@ function closeServer(server) {
 
 function sessionForUser(key) {
   const sessions = {
-    submitter: { userId: 10, userRole: 'submitter', userName: '经营填报人', departmentId: 1 },
-    targetDept: { userId: 30, userRole: 'submitter', userName: '工程承接人', departmentId: 2 },
-    reviewer: { userId: 20, userRole: 'reviewer', userName: '流程审核人', departmentId: 1 },
-    admin: { userId: 99, userRole: 'admin', userName: '流程管理员', departmentId: 2 }
+    submitter: { personId: 10, userId: 10, userName: '经营部门主对接人', departmentId: 1 },
+    targetDept: { personId: 30, userId: 30, userName: '工程部门主对接人', departmentId: 2 },
+    reviewer: { personId: 20, userId: 20, userName: '部门MDM审核员', departmentId: 1 },
+    mdmLead: { personId: 99, userId: 99, userName: 'MDM工作组组长', departmentId: 2 }
   };
   return sessions[key] || sessions.submitter;
 }
@@ -813,16 +813,16 @@ async function main() {
   assert.ok(mdmMysqlSchemaSql().includes('void_reason TEXT NULL'), 'process design steps must keep void reason');
 
   const permissionsByUser = new Map([
-    [10, ['process_governance:submit']],
-    [30, ['process_governance:submit']],
-    [20, ['process_governance:review']],
-    [99, ['admin:access']]
+    [10, ['governance:read-department', 'governance:draft-department', 'governance:submit-department']],
+    [30, ['governance:read-department', 'governance:draft-department', 'governance:submit-department']],
+    [20, ['governance:read-department', 'governance:review-department', 'governance:record-department-decision']],
+    [99, ['governance:read-global', 'governance:assign-work', 'governance:structure-gate', 'governance:publish']]
   ]);
   const rolesByUser = new Map([
-    [10, [{ code: 'submitter' }, { code: 'business_contact' }]],
-    [30, [{ code: 'submitter' }, { code: 'business_contact' }]],
-    [20, [{ code: 'reviewer' }, { code: 'data_quality' }]],
-    [99, [{ code: 'admin' }, { code: 'it_lead' }]]
+    [10, [{ code: 'department_contact' }]],
+    [30, [{ code: 'department_contact' }]],
+    [20, [{ code: 'department_mdm_reviewer' }]],
+    [99, [{ code: 'mdm_lead' }]]
   ]);
   auth.setIdentityRepositoryFactory(async () => ({
     async getUserEffectivePermissions(userId) {
@@ -840,7 +840,7 @@ async function main() {
       return null;
     },
     async getUserById(userId) {
-      return { id: userId, name: `用户${userId}` };
+      return { id: userId, personId: userId, name: `用户${userId}` };
     }
   }));
 
@@ -1126,14 +1126,14 @@ async function main() {
       steps: [],
       step_transitions: []
     };
-    const importByDepartmentName = await request(baseUrl, 'admin', '/api/process-design/import-structured-output', {
+    const importByDepartmentName = await request(baseUrl, 'submitter', '/api/process-design/import-structured-output', {
       method: 'POST',
       body: JSON.stringify(structuredImportByDepartmentName)
     });
     assert.strictEqual(importByDepartmentName.res.status, 201, JSON.stringify(importByDepartmentName.body));
     assert.strictEqual(importByDepartmentName.body.draft.department_id, 1, 'department_name from structured output should resolve to the owning department');
     assert.strictEqual(importByDepartmentName.body.imported.processes, 1);
-    const deleteDepartmentNameDraft = await request(baseUrl, 'admin', '/api/process-design/drafts/101', { method: 'DELETE' });
+    const deleteDepartmentNameDraft = await request(baseUrl, 'submitter', '/api/process-design/drafts/101', { method: 'DELETE' });
     assert.strictEqual(deleteDepartmentNameDraft.res.status, 200, JSON.stringify(deleteDepartmentNameDraft.body));
 
     const lookupBeforeCreate = await request(baseUrl, 'submitter', '/api/process-design/documents/lookup?document_no=CX-ZD-001');
@@ -1637,7 +1637,7 @@ async function main() {
     });
     assert.strictEqual(decision.res.status, 200);
 
-    const publish = await request(baseUrl, 'reviewer', '/api/process-design/drafts/101/publish', {
+    const publish = await request(baseUrl, 'mdmLead', '/api/process-design/drafts/101/publish', {
       method: 'POST',
       body: JSON.stringify({ note: '发布' })
     });
@@ -1675,14 +1675,14 @@ async function main() {
     assert.strictEqual(editionDiff.res.status, 200, JSON.stringify(editionDiff.body));
     assert.deepStrictEqual(editionDiff.body.missing.processes, ['客户需求变更受理']);
 
-    const publishNextWithoutConfirm = await request(baseUrl, 'reviewer', '/api/process-design/drafts/102/publish', {
+    const publishNextWithoutConfirm = await request(baseUrl, 'mdmLead', '/api/process-design/drafts/102/publish', {
       method: 'POST',
       body: JSON.stringify({ note: '发布B版' })
     });
     assert.strictEqual(publishNextWithoutConfirm.res.status, 409, JSON.stringify(publishNextWithoutConfirm.body));
     assert.ok(JSON.stringify(publishNextWithoutConfirm.body).includes('完整重写'), 'B/C edition publish must ask the publisher to confirm complete rewrite');
 
-    const publishNext = await request(baseUrl, 'reviewer', '/api/process-design/drafts/102/publish', {
+    const publishNext = await request(baseUrl, 'mdmLead', '/api/process-design/drafts/102/publish', {
       method: 'POST',
       body: JSON.stringify({ note: '发布B版', confirm_complete_rewrite: true })
     });

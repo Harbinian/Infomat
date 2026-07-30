@@ -19,12 +19,7 @@ const WORKBENCH_CACHE_TTL_MS = 15 * 1000;
 const roleGroupsCache = new Map();
 const workbenchResponseCache = new Map();
 let processContextBundleCache = null;
-const PROCESS_GOVERNANCE_GLOBAL_ROLES = new Set(['admin', 'decision_group', 'it_lead']);
-const PMO_REVIEW_GATE_ROLES = new Set(['project_lead', 'it_lead', 'decision_group']);
-const SAMPLE_DEPARTMENT_CONFIRMERS = {
-  工程技术部: '池炳辉',
-  项目管理部: '范秋南'
-};
+const PMO_REVIEW_GATE_ROLES = new Set(['mdm_lead']);
 
 const TODO_TYPE_LABELS = {
   field_confirm: '字段确认',
@@ -289,8 +284,8 @@ function buildRoleGroups(roleCodes) {
   return {
     roles,
     roleGroups: [
-      { key: 'project', label: '项目治理角色', roles: roles.filter(role => role.group === 'project') },
-      { key: 'basic', label: '基础权限角色', roles: roles.filter(role => role.group === 'basic') }
+      { key: 'system', label: '系统管理角色', roles: roles.filter(role => role.group === 'system') },
+      { key: 'mdm', label: 'MDM工作角色', roles: roles.filter(role => role.group === 'mdm') }
     ]
   };
 }
@@ -385,10 +380,7 @@ function governanceTypeForItem(item) {
 }
 
 function fallbackConfirmPerson(departmentName) {
-  if (departmentName && SAMPLE_DEPARTMENT_CONFIRMERS[departmentName]) {
-    return SAMPLE_DEPARTMENT_CONFIRMERS[departmentName];
-  }
-  return '待明确确认人';
+  return departmentName ? '责任人信息未随事项返回' : '责任部门未明确';
 }
 
 function normalizeWorkItem(item, defaults = {}) {
@@ -555,8 +547,8 @@ function loadTodos(req, canViewAll) {
     currentStatus: row.status || 'pending',
     nextStep: sampleForTodo(row.type),
     department: row.to_dept_name || row.from_dept_name || null,
-    responsiblePerson: row.to_dept_name ? fallbackConfirmPerson(row.to_dept_name) : '流程治理负责人',
-    confirmPerson: row.to_dept_name ? fallbackConfirmPerson(row.to_dept_name) : '流程治理负责人'
+    responsiblePerson: fallbackConfirmPerson(row.to_dept_name),
+    confirmPerson: fallbackConfirmPerson(row.to_dept_name)
   }));
 }
 
@@ -565,7 +557,7 @@ function qualityCaseWorkItem(row) {
     id: `process-quality-case:${row.id}`,
     type: 'process_quality',
     title: `${row.severity}：${row.message}`,
-    roleHint: 'data_quality',
+    roleHint: 'department_contact',
     urgency: row.priority === 'high' || row.severity === 'BLOCK' ? 'high' : 'medium',
     dueDate: row.due_date || null,
     target: `#/processGovernance?view=qualityCases&case=${row.id}`,
@@ -637,9 +629,8 @@ async function loadProcessQualityFindingsAsync(req, canViewAll, currentDepartmen
 }
 
 function roleHintForMappingTodo(row) {
-  if (row.todo_type === 'verification' || row.todo_type === 'evidence' || row.todo_type === 'adjustment') return 'business_contact';
-  if (row.todo_type === 'cross_dept' || row.todo_type === 'dept_confirm') return 'workgroup_lead';
-  return 'business_contact';
+  if (row.todo_type === 'cross_dept' || row.todo_type === 'dept_confirm') return 'department_mdm_reviewer';
+  return 'department_contact';
 }
 
 function mappingTodoWorkItem(row) {
@@ -725,7 +716,7 @@ function inputBaselineReviewWorkItem(row, runId) {
     type: 'input_baseline_issue',
     governanceType: 'input_baseline_issue',
     title: `${TODO_TYPE_LABELS.input_baseline_issue}：${row.content || row.document_name || stableKey}`,
-    roleHint: 'business_contact',
+    roleHint: 'department_contact',
     urgency: 'medium',
     dueDate: row.due_date || null,
     target,
@@ -771,7 +762,7 @@ function pmoReviewGateWorkItems(roleCodes, currentDepartmentName) {
     type: 'pmo_review_gate',
     governanceType: 'pmo_review_gate',
     title: `PMO治理评审：更新${department}闭环状态`,
-    roleHint: roleCodes.includes('decision_group') ? 'decision_group' : 'project_lead',
+    roleHint: 'mdm_lead',
     urgency: 'medium',
     dueDate: null,
     target: '#/processGovernance?view=qualityCases',
@@ -787,13 +778,10 @@ function pmoReviewGateWorkItems(roleCodes, currentDepartmentName) {
 }
 
 function roleHintForTodo(type) {
-  if (type === 'field_confirm') return 'business_contact';
-  if (type === 'gold_source') return 'data_quality';
-  if (type === 'conflict_resolution') return 'data_quality';
-  if (type === 'terminology') return 'business_contact';
-  if (type === 'process_quality') return 'data_quality';
-  if (type === 'process_mapping_todo') return 'business_contact';
-  return 'project_lead';
+  if (type === 'field_confirm' || type === 'gold_source') return 'department_mdm_reviewer';
+  if (type === 'conflict_resolution') return 'data_conflict_handler';
+  if (type === 'terminology' || type === 'process_quality' || type === 'process_mapping_todo') return 'department_contact';
+  return 'mdm_lead';
 }
 
 function sampleForTodo(type) {
@@ -847,8 +835,7 @@ function loadEscalatedConflicts(canDecideEscalated) {
 }
 
 function fallbackActions(ownedRoles) {
-  const roles = ownedRoles.length ? ownedRoles : ROLE_GUIDES.filter(role => role.code === 'submitter');
-  return roles.slice(0, 3).map(role => ({
+  return ownedRoles.slice(0, 3).map(role => ({
     title: `${role.name}：${role.workflow[0]}`,
     roleCode: role.code,
     target: role.firstEntry.target,
@@ -859,8 +846,7 @@ function fallbackActions(ownedRoles) {
 }
 
 function guidanceItemsForRoles(ownedRoles) {
-  const roles = ownedRoles.length ? ownedRoles : ROLE_GUIDES.filter(role => role.code === 'submitter');
-  return roles.map(role => normalizeWorkItem({
+  return ownedRoles.map(role => normalizeWorkItem({
     id: `guide:${role.code}`,
     type: 'guidance',
     title: `${role.name}：${role.workflow[0] || role.firstEntry.label}`,
@@ -889,6 +875,31 @@ function buildNextActions(workItems, ownedRoles) {
     priority: item.urgency || 'medium'
   }));
   return actionItems.length ? actionItems : fallbackActions(ownedRoles);
+}
+
+function canActOnWorkbenchItem(item, permSet) {
+  const type = item && item.type;
+  if (type === 'escalated_conflict') return permSet.has('governance:decide-escalation');
+  if (type === 'conflict_resolution') return permSet.has('governance:handle-assigned-conflict');
+  if (type === 'process_quality') {
+    return permSet.has('governance:quality-audit') ||
+      permSet.has('governance:structure-gate') ||
+      permSet.has('governance:draft-department');
+  }
+  if (type === 'input_baseline_issue') {
+    return permSet.has('governance:structure-gate') ||
+      permSet.has('governance:review-department') ||
+      permSet.has('governance:draft-department');
+  }
+  if (type === 'process_mapping_todo' || type === 'pmo_review_gate') {
+    return permSet.has('governance:assign-work') ||
+      permSet.has('governance:structure-gate') ||
+      permSet.has('governance:review-department') ||
+      permSet.has('governance:draft-department');
+  }
+  return permSet.has('governance:assign-work') ||
+    permSet.has('governance:review-department') ||
+    permSet.has('governance:draft-department');
 }
 
 function buildSankey(activeRoles, contexts, workItems) {
@@ -988,11 +999,8 @@ router.get('/', requireAuth, (req, res) => {
     const { roles, roleGroups } = buildRoleGroupsCached(roleCodes);
     const ownedRoles = roles.filter(role => role.owned);
     const permSet = identity.permSet;
-    const canViewAll = permSet.has('*:*') ||
-      permSet.has('admin:access') ||
-      permSet.has('process_governance:view_all') ||
-      roleCodes.some(code => PROCESS_GOVERNANCE_GLOBAL_ROLES.has(code));
-    const canDecideEscalated = permSet.has('conflict:final_decide_escalated') || permSet.has('*:*') || roleCodes.includes('admin');
+    const canViewAll = permSet.has('governance:read-global');
+    const canDecideEscalated = permSet.has('governance:decide-escalation');
     const currentDepartmentName = identity.user.departmentName;
     const cacheKey = workbenchResponseCacheKey({ mode, identity, roleCodes, permSet });
     const body = await getOrBuildWorkbenchResponse(cacheKey, async () => {
@@ -1003,12 +1011,13 @@ router.get('/', requireAuth, (req, res) => {
         loadInputBaselineReviewIssuesAsync(canViewAll, currentDepartmentName),
         Promise.resolve().then(() => loadEscalatedConflicts(canDecideEscalated))
       ]);
-      const activeRoles = ownedRoles.length ? ownedRoles : roles.filter(role => role.code === req.session.userRole);
+      const activeRoles = ownedRoles;
       const pmoReviewGates = pmoReviewGateWorkItems(roleCodes, currentDepartmentName);
-      const pendingWorkItems = normalizeWorkItems(
+      const visibleWorkItems = normalizeWorkItems(
         [...escalated, ...inputBaselineIssues, ...qualityFindings, ...mappingTodos, ...todos, ...pmoReviewGates],
         { department: currentDepartmentName }
       );
+      const pendingWorkItems = visibleWorkItems.filter(item => canActOnWorkbenchItem(item, permSet));
       const guidanceItems = guidanceItemsForRoles(activeRoles);
       const workItems = mode === 'all' ? [...pendingWorkItems, ...guidanceItems] : pendingWorkItems;
       const contexts = loadProcessContexts(mode, pendingWorkItems, {

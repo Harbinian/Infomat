@@ -65,17 +65,19 @@ async function main() {
   roleWorkbenchRouter.setIdentityRepositoryFactory(async () => ({
     async getCurrentUserPayload(session) {
       return {
-        id: session.userId,
+        id: session.personId,
         name: 'MySQL 工作台用户',
-        role: 'owner',
         departmentId: 601,
         departmentName: 'MySQL 经营发展部',
         rbacRoles: [
-          { code: 'data_quality', name: '数据质量员' },
-          { code: 'business_contact', name: '业务对接人' }
+          { code: 'department_contact', name: '部门主对接人' }
         ],
-        roleCodes: ['data_quality', 'business_contact'],
-        permissions: ['data:view_all']
+        roleCodes: ['department_contact'],
+        permissions: [
+          'governance:read-department',
+          'governance:draft-department',
+          'governance:submit-department'
+        ]
       };
     }
   }));
@@ -185,8 +187,8 @@ async function main() {
   app.use(express.json());
   app.use((req, res, next) => {
     req.session = {
+      personId: 42,
       userId: 42,
-      userRole: 'owner',
       userName: '本地会话用户',
       departmentId: 601
     };

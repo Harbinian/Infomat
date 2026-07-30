@@ -1,46 +1,52 @@
 const db = require('./db');
 const { getUserEffectivePermissions, getUserEffectivePermissionsAsync, getUserRoleCodesAsync } = require('./auth');
+const { permissionSetHas } = require('./roleDefinitions');
 
 function isAdmin(req) {
-  if (!req.session || !req.session.userId) return false;
-  const { permSet } = getUserEffectivePermissions(req.session.userId);
-  return permSet.has('admin:access') || permSet.has('*:*');
+  const personId = req.session && (req.session.personId || req.session.userId);
+  if (!personId) return false;
+  const { permSet } = getUserEffectivePermissions(personId);
+  return permSet.has('identity:manage-account');
 }
 
 async function isAdminAsync(req) {
-  if (!req.session || !req.session.userId) return false;
-  const { permSet } = await getUserEffectivePermissionsAsync(req.session.userId);
-  return permSet.has('admin:access') || permSet.has('*:*');
+  const personId = req.session && (req.session.personId || req.session.userId);
+  if (!personId) return false;
+  const { permSet } = await getUserEffectivePermissionsAsync(personId);
+  return permSet.has('identity:manage-account');
 }
 
 function hasGlobalView(req) {
-  if (!req.session || !req.session.userId) return false;
-  const { permSet } = getUserEffectivePermissions(req.session.userId);
-  return permSet.has('data:view_all') || permSet.has('admin:access') || permSet.has('*:*');
+  const personId = req.session && (req.session.personId || req.session.userId);
+  if (!personId) return false;
+  const { permSet } = getUserEffectivePermissions(personId);
+  return permissionSetHas(permSet, 'governance:read-global');
 }
 
 async function hasGlobalViewAsync(req) {
-  if (!req.session || !req.session.userId) return false;
-  const { permSet } = await getUserEffectivePermissionsAsync(req.session.userId);
-  return permSet.has('data:view_all') || permSet.has('admin:access') || permSet.has('*:*');
+  const personId = req.session && (req.session.personId || req.session.userId);
+  if (!personId) return false;
+  const { permSet } = await getUserEffectivePermissionsAsync(personId);
+  return permissionSetHas(permSet, 'governance:read-global');
 }
 
 function isReviewerOrAdmin(req) {
-  if (!req.session || !req.session.userId) return false;
-  const { permSet } = getUserEffectivePermissions(req.session.userId);
-  return permSet.has('admin:access') || permSet.has('review:approve') || permSet.has('*:*');
+  const personId = req.session && (req.session.personId || req.session.userId);
+  if (!personId) return false;
+  const { permSet } = getUserEffectivePermissions(personId);
+  return permissionSetHas(permSet, 'governance:review-department');
 }
 
 async function isReviewerOrAdminAsync(req) {
-  if (!req.session || !req.session.userId) return false;
-  const { permSet } = await getUserEffectivePermissionsAsync(req.session.userId);
-  return permSet.has('admin:access') || permSet.has('review:approve') || permSet.has('*:*');
+  const personId = req.session && (req.session.personId || req.session.userId);
+  if (!personId) return false;
+  const { permSet } = await getUserEffectivePermissionsAsync(personId);
+  return permissionSetHas(permSet, 'governance:review-department');
 }
 
 function getEffectiveRoleCodes(req) {
   const codes = new Set();
   if (!req.session || !req.session.userId) return codes;
-  if (req.session.userRole) codes.add(req.session.userRole);
   const rows = db.prepare(`
     SELECT r.role_code
     FROM user_roles ur
@@ -55,9 +61,8 @@ function getEffectiveRoleCodes(req) {
 
 async function getEffectiveRoleCodesAsync(req) {
   const codes = new Set();
-  if (!req.session || !req.session.userId) return codes;
-  if (req.session.userRole) codes.add(req.session.userRole);
-  const roles = await getUserRoleCodesAsync(req.session.userId, req.session.userRole);
+  if (!req.session || (!req.session.personId && !req.session.userId)) return codes;
+  const roles = await getUserRoleCodesAsync(req.session.personId || req.session.userId);
   for (const role of roles) {
     const code = role.code || role.role_code;
     if (code) codes.add(code);
@@ -143,13 +148,11 @@ async function canViewMappingAsync(req, mappingId) {
 
 function canUseTodo(req, todo) {
   if (!todo) return false;
-  if (isAdmin(req)) return true;
   return Boolean(todo.to_dept_id && req.session.departmentId && todo.to_dept_id === req.session.departmentId);
 }
 
 async function canUseTodoAsync(req, todo) {
   if (!todo) return false;
-  if (await isAdminAsync(req)) return true;
   return Boolean(todo.to_dept_id && req.session.departmentId && todo.to_dept_id === req.session.departmentId);
 }
 

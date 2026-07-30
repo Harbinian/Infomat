@@ -143,7 +143,7 @@ function makeFakeMappingRepository() {
         return { ok: true };
       }
       if (Number(payload.step) === 5) {
-        mapping.status = 'published';
+        mapping.status = 'final_reviewed';
         mapping.current_step = 5;
         return { ok: true };
       }
@@ -183,13 +183,20 @@ async function main() {
 
   const repo = makeFakeMappingRepository();
   mappingsRouter.setMappingRepositoryFactory(async () => repo);
+  mappingsRouter.setGovernanceRepositoryFactory(async () => ({
+    async getPublicationResponsibilityReadiness() {
+      return { ready: true, missingDepartmentIds: [] };
+    }
+  }));
+  let effectivePermissions = new Set([
+    'governance:read-department',
+    'governance:draft-department',
+    'governance:submit-department'
+  ]);
   auth.setIdentityRepositoryFactory(async () => ({
     async getUserEffectivePermissions(userId) {
       assert.strictEqual(userId, 42);
-      return { permSet: new Set(['admin:access', 'data:view_all']), fieldConstraints: {} };
-    },
-    async getUserRoleCodes(userId, legacyRole) {
-      return [{ code: legacyRole || 'admin', name: '管理员' }, { code: 'submitter', name: '报送人' }];
+      return { permSet: effectivePermissions, fieldConstraints: {} };
     },
     async getDepartmentById(id) {
       return { id, name: id === 9 ? '经营发展部' : '未知部门' };
@@ -203,9 +210,9 @@ async function main() {
   app.use(express.json());
   app.use((req, res, next) => {
     req.session = {
+      personId: 42,
       userId: 42,
-      userRole: 'admin',
-      userName: '映射管理员',
+      userName: '映射治理人员',
       departmentId: 9
     };
     next();
@@ -262,6 +269,11 @@ async function main() {
     const submitBody = await submitRes.json();
     assert.strictEqual(submitRes.status, 200, JSON.stringify(submitBody));
 
+    effectivePermissions = new Set([
+      'governance:read-department',
+      'governance:review-department',
+      'governance:record-department-decision'
+    ]);
     const reviewRes = await fetch(`${baseUrl}/api/mappings/${createBody.id}/review`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -269,10 +281,6 @@ async function main() {
     });
     const reviewBody = await reviewRes.json();
     assert.strictEqual(reviewRes.status, 200, JSON.stringify(reviewBody));
-
-    const publishRes = await fetch(`${baseUrl}/api/mappings/${createBody.id}/publish`, { method: 'POST' });
-    const publishBody = await publishRes.json();
-    assert.strictEqual(publishRes.status, 200, JSON.stringify(publishBody));
 
     const rejectRes = await fetch(`${baseUrl}/api/mappings/200/reject`, {
       method: 'POST',
@@ -290,6 +298,29 @@ async function main() {
     assert.strictEqual(rejectionDetailsRes.status, 200, JSON.stringify(rejectionDetailsBody));
     assert.strictEqual(rejectionDetailsBody[0].reason, '字段说明不足');
 
+    effectivePermissions = new Set([
+      'governance:read-global',
+      'governance:assign-work',
+      'governance:structure-gate',
+      'governance:publish'
+    ]);
+    const gateRes = await fetch(`${baseUrl}/api/mappings/${createBody.id}/review`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ step: 5, action: 'approve', opinion: '结构检查通过' })
+    });
+    const gateBody = await gateRes.json();
+    assert.strictEqual(gateRes.status, 200, JSON.stringify(gateBody));
+
+    const publishRes = await fetch(`${baseUrl}/api/mappings/${createBody.id}/publish`, { method: 'POST' });
+    const publishBody = await publishRes.json();
+    assert.strictEqual(publishRes.status, 200, JSON.stringify(publishBody));
+
+    effectivePermissions = new Set([
+      'governance:read-department',
+      'governance:draft-department',
+      'governance:submit-department'
+    ]);
     const deleteRes = await fetch(`${baseUrl}/api/mappings/200`, { method: 'DELETE' });
     const deleteBody = await deleteRes.json();
     assert.strictEqual(deleteRes.status, 200, JSON.stringify(deleteBody));
@@ -302,6 +333,7 @@ async function main() {
     console.log('Mappings MySQL API test passed');
   } finally {
     await closeServer(server);
+    mappingsRouter.resetGovernanceRepositoryFactory();
     mappingsRouter.resetMappingRepositoryFactory();
     auth.resetIdentityRepositoryFactory();
   }

@@ -3,7 +3,10 @@ const express = require('express');
 const ExcelJS = require('exceljs');
 
 process.env.MDM_DB_QUIET = '1';
+const previousIdentityReadModel = process.env.MDM_IDENTITY_READ_MODEL;
+process.env.MDM_IDENTITY_READ_MODEL = 'mysql';
 
+const auth = require('../server/auth');
 const { setDataMapRepositoryFactory, resetDataMapRepositoryFactory } = require('../server/dataMapMysqlRepository');
 const exportRouter = require('../server/routes/export');
 
@@ -69,15 +72,30 @@ function makeFakeRepository() {
 async function main() {
   const repo = makeFakeRepository();
   setDataMapRepositoryFactory(async () => repo);
+  auth.setIdentityRepositoryFactory(async () => ({
+    async getUserEffectivePermissions(personId) {
+      assert.strictEqual(Number(personId), 1);
+      return {
+        permSet: new Set([
+          'identity:read',
+          'identity:manage-account',
+          'identity:assign-role',
+          'identity:read-audit',
+          'governance:read-global'
+        ]),
+        fieldConstraints: {}
+      };
+    }
+  }));
 
   const app = express();
   app.use(express.json());
   app.use((req, res, next) => {
     if (req.get('x-test-user-id')) {
       req.session = {
+        personId: Number(req.get('x-test-user-id')),
         userId: Number(req.get('x-test-user-id')),
-        userRole: 'admin',
-        userName: '系统管理员',
+        userName: 'MDM系统管理员',
         departmentId: 1
       };
     }
@@ -131,6 +149,12 @@ async function main() {
   } finally {
     await closeServer(server);
     resetDataMapRepositoryFactory();
+    auth.resetIdentityRepositoryFactory();
+    if (previousIdentityReadModel === undefined) {
+      delete process.env.MDM_IDENTITY_READ_MODEL;
+    } else {
+      process.env.MDM_IDENTITY_READ_MODEL = previousIdentityReadModel;
+    }
   }
 }
 

@@ -128,7 +128,11 @@
 | 执行岗位 | Current Execution Position | 3001编制人从仓库花名册中为当前业务行为选择的现行业务执行岗位；执行部门等于流程归口部门时属于本部门执行，不等于时属于跨部门执行。岗位只能从所选执行部门的花名册岗位中选择，具体值以“部门名称 + 岗位名称”保存到`behaviors[].current_actor_role`，“全公司通用”保存为`全公司`。执行岗位不等同正式工作角色，3001不得据此推测或生成`work_role`，也不得根据岗位名称猜测或改写花名册部门归属 |
 | 工作角色 | Work Role | 与具体业务行为或判断节点绑定的稳定业务责任分类，名称必须保留行为语义，例如“费用审核行为的审核角色”；工作角色不直接等于人员、岗位或RBAC权限，一个工作角色可以由多个岗位容纳 |
 | 工作角色绑定 | Work Role Binding | 业务行为或判断节点与工作角色之间的一对一绑定；每个行为最多一个工作角色，一个流程通过不同业务行为可以包含多个工作角色。绑定必须保存业务行为标识、职责、全称和可选正式编码，不能只保存“申请人、审核人、批准人”等孤立名称 |
-| 项目治理角色 | Project Governance Role | MDM 中 `role_group='project'` 的现有 RBAC/职责引导角色，例如 `it_lead`、`project_lead`、`business_contact`；原用户口径“项目工作角色”改用本名称，与流程工作角色隔离，底层编码保持兼容 |
+| MDM工作角色 | MDM Governance Role | 3000固定治理模型中的授权角色，包括`admin`、`mdm_lead`、`department_contact`、`department_mdm_reviewer`、`data_conflict_handler`、`data_quality_auditor`和`decision_group`；它不等同人员、岗位、正式流程工作角色`WR-*`或原文角色称谓 |
+| 部门最终负责人 | Department Final Responsible Person | 由`departments.final_responsible_person_id`明确的部门业务最终责任人；可以没有3000账号，系统不得根据姓名、职务、岗位或历史名单推测 |
+| 责任决定记录 | Governance Decision Record | `governance_decision_records`中只追加的部门决定证据，保存治理对象及版本、部门、系统确认的最终负责人、记录人、决定、依据、可选证据引用和决定时间 |
+| 授权依据 | Authorization Basis | 管理员授予MDM工作角色时必须记录的正式来源说明；它与生效日期共同决定角色授权是否有效，不能用旧角色、岗位名称或默认值代替 |
+| 访问审计事件 | Identity Access Event | `identity_access_events`中只追加的开户、启用、恢复、停用、密码重置、部门变更、角色授予和撤销记录；不得保存明文密码或密码散列 |
 | 结构化字段确认 | Structured Field Confirmation | MDM 统一问题池中的待确认问题呈现方式，把制度或流程问题映射到文档结构化输出的数据对象、目标结构块、目标字段和当前值，让用户判断该字段是否可以进入正式结构化输出，不能替代源文件修订、证据核验或流程输入基线变更 |
 | 作废业务行为 | Voided Business Behavior | 文档结构化输出中被维护人标记为不再生效的业务行为；它保留在草稿详情和事件历史中用于追溯，但不参与 Markdown、发布版本、流程图谱和 A1 投影 |
 | 附表结构 | Form Table Structure | 文档结构化输出中的表单结构，采用“表单 -> 主表 / 可选明细表 -> 字段”模型；表单必须指向未作废业务行为，主表始终存在，明细表需要先创建后新增明细字段，字段编号由系统生成且不在录入界面手填 |
@@ -271,21 +275,22 @@
 | 术语 | 英文/缩写 | 定义 |
 |------|----------|------|
 | Express.js | Express | Node.js Web 框架，MDM 平台后端基于此构建，端口 3000 |
-| better-sqlite3 | better-sqlite3 | Node.js SQLite 驱动，同步 API，支持 WAL 模式和外键约束 |
-| SQLite | SQLite | 本地文件数据库，存储路径 apps/mdm-platform/data/platform.db。单文件，不适合多进程并发 |
+| better-sqlite3 | better-sqlite3 | 遗留SQLite隔离测试使用的Node.js驱动；不属于3000正式身份或治理运行路径 |
+| SQLite | SQLite | 3000遗留测试数据库；正式身份、流程治理、数据地图和术语治理使用MySQL，不得增加SQLite运行回退 |
 | WAL | Write-Ahead Logging | SQLite 写入模式，允许并发读，提升频繁读写场景下的性能 |
 | SCD Type 2 | Slowly Changing Dimension Type 2 | 缓慢变化维度的时间变体策略，通过 effective_from/effective_to 保留历史版本 |
-| RBAC | Role-Based Access Control | 基于角色的权限控制系统，4 张表：roles → role_permissions ← permissions + user_roles |
-| 角色 | Role | roles 表记录，系统角色（is_system=1 不可删除）和自定义角色。支持 parent_role_id 自引用继承 |
-| 权限 | Permission | permissions 表记录，格式 resource:action（如 mapping:approve）。admin 拥有通配 *:* |
-| 权限码 | Permission Code | resource:action 格式的权限标识，如 mapping:create、review:approve、dashboard:view |
-| 角色继承 | Role Inheritance | 通过 parent_role_id 自引用实现，子角色递归获得父角色及所有祖先角色的权限 |
-| deny 覆盖 allow | Deny Override Allow | 权限冲突解决规则：role_permissions 按 effect 排序，deny 后处理，因此 deny 优先级高于 allow |
+| RBAC | Role-Based Access Control | 3000基于固定MDM工作角色控制“用户最多可以做什么”的授权模型；身份链路为`person -> user_accounts -> person_roles -> roles -> role_permissions -> permissions` |
+| RACI | Responsible / Accountable / Consulted / Informed | 3000治理事项中的执行、最终负责、参与和知悉关系；与RBAC共同决定当前事项由谁处理 |
+| 固定治理模型 | Fixed Governance Model | 版本化维护的十九项权限、七个MDM工作角色和八项RACI活动；页面只读，不允许自定义角色、角色继承或权限矩阵编辑 |
+| 角色 | Role | `roles`表中的MDM工作角色；只有当前模型版本且状态为`active`的七个固定角色产生权限，其他角色为`retired`历史记录 |
+| 权限 | Permission | `permissions`表中的固定动作授权；当前模型禁止`*:*`通配权限，`admin`也没有业务写权限 |
+| 权限码 | Permission Code | 当前统一使用`identity:*`和`governance:*`格式，例如`identity:assign-role`、`governance:review-department`和`governance:publish` |
+| 角色有效期 | Role Assignment Validity | `person_roles`中由授权状态、授权依据、生效日期、失效日期和范围共同确定的有效条件 |
 | 字段约束 | Field Constraints | role_permissions 表中的 JSON 字段，定义 exclude（排除）和 readonly（只读）字段列表 |
-| requirePermission | requirePermission(permCode) | RBAC 中间件，检查当前会话是否拥有指定权限，含 *:* 通配判断 |
+| requirePermission | requirePermission(permCode) | RBAC中间件，按当前MySQL身份、账号状态、`auth_version`和有效角色检查指定权限，不接受`*:*`通配 |
 | applyFieldConstraints | applyFieldConstraints(resourceType) | RBAC 中间件，在 JSON 序列化前根据生效约束剥离 exclude 字段、标记 readonly 字段 |
-| 有效权限 | Effective Permissions | 用户直接分配角色 + 所有祖先角色权限递归合并、deny 覆盖 allow 后的最终权限集 |
-| 行级可见性 | Row-Level Visibility | server/access.js 提供的过滤机制，基于 mapping_related_departments 限制用户可见的映射行 |
+| 有效权限 | Effective Permissions | 用户当前有效固定角色的权限集合；还必须继续通过数据范围、对象状态、任务关系和责任证据检查才能执行具体动作 |
+| 数据范围 | Data Scope | 用户可读取或处理的全局、本部门、本人被分派事项或已升级事项范围；部门角色不能跨部门扩大永久范围 |
 | API Key 认证 | API Key Authentication | server/integrationAuth.js 中间件，为外部系统（PLM/MES/ERP）提供基于 API Key 的集成认证 |
 | express-session | express-session | Express 中间件，基于内存会话存储的用户认证机制。V1 自建用户体系，不接 OA/统一认证 |
 | bcryptjs | bcryptjs | 密码哈希库，用于用户密码的安全存储和验证 |
@@ -303,7 +308,7 @@
 | 审批任务 | Approval Task | approval_tasks 表，审批流每一步生成对应任务记录，关联 mapping_id 和审批人 |
 | 审批历史 | Approval History | approval_history 表，审批流的完整审计轨迹，记录每一步的操作人、操作时间和操作结果 |
 | 冲突检测 | Conflict Detection | field_conflicts 和 term_conflicts 表，比对不同部门的字段定义/术语定义，标记差异 |
-| 导入导出 | Import/Export | import.js（Excel 批量导入业务数据）、importRbac.js（RBAC 批量导入）、export.js（台账/矩阵/冲突导出） |
+| 导入导出 | Import/Export | 业务字段台账仍可按权限导入导出；RBAC批量导入和批量开户已经停用，普通账号只能由管理员手工创建 |
 | 主线体检 | Mainline Stability Check | `npm run test:mainline` 执行的稳定性检查，验证流程治理、字段台账、主数据对象、权限和导入导出链路是否保持可运行 |
 | 结构块混合解析 | Hybrid Structure Parsing | `parse-sankey-data.mjs` 的流程输入基线解析模式。结构块 v1 优先，同一 L3/A1 覆盖正文旧表项，正文未覆盖项继续进入快照，部门来源记录为 `source: hybrid` |
 

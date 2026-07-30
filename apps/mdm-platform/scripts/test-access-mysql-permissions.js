@@ -14,7 +14,7 @@ async function main() {
   assert.strictEqual(typeof access.isReviewerOrAdminAsync, 'function', 'access should expose async reviewer/admin check');
   assert.strictEqual(typeof access.canUseTodoAsync, 'function', 'access should expose async todo guard');
 
-  let permissions = new Set(['admin:access']);
+  let permissions = new Set(['identity:manage-account']);
   let permissionReads = 0;
   auth.setIdentityRepositoryFactory(async () => ({
     async getUserEffectivePermissions(userId) {
@@ -24,16 +24,16 @@ async function main() {
     }
   }));
 
-  const req = { session: { userId: 42, departmentId: 7 } };
+  const req = { session: { personId: 42, departmentId: 7 } };
 
   try {
     assert.strictEqual(await access.isAdminAsync(req), true);
 
-    permissions = new Set(['data:view_all']);
+    permissions = new Set(['governance:read-global']);
     assert.strictEqual(await access.isAdminAsync(req), false);
     assert.strictEqual(await access.hasGlobalViewAsync(req), true);
 
-    permissions = new Set(['review:approve']);
+    permissions = new Set(['governance:review-department']);
     assert.strictEqual(await access.isReviewerOrAdminAsync(req), true);
 
     permissions = new Set([]);
@@ -42,10 +42,10 @@ async function main() {
     assert.strictEqual(await access.canUseTodoAsync(req, { to_dept_id: 8 }), false);
 
     permissions = new Set(['*:*']);
-    assert.strictEqual(await access.canUseTodoAsync(req, { to_dept_id: 8 }), true);
+    assert.strictEqual(await access.canUseTodoAsync(req, { to_dept_id: 8 }), false);
 
     assert.strictEqual(await access.isAdminAsync({}), false);
-    assert.ok(permissionReads >= 6);
+    assert.ok(permissionReads >= 5);
 
     console.log('Access MySQL permission helpers test passed');
   } finally {

@@ -106,7 +106,7 @@ function resultError(statusCode, error) {
   return { ok: false, statusCode, error };
 }
 
-function filterClause(alias, filters = {}, scope = {}) {
+function filterClause(alias, conflictType, filters = {}, scope = {}) {
   const params = [];
   const table = alias || 'c';
   const conditions = ['1=1'];
@@ -119,6 +119,30 @@ function filterClause(alias, filters = {}, scope = {}) {
     params.push(filters.status);
   } else if (!scope.canViewAll) {
     conditions.push(`${table}.status NOT IN ('archived','silenced')`);
+  }
+  const mode = scope.mode || (scope.canViewAll ? 'global' : 'none');
+  if (mode === 'department') {
+    conditions.push(`(${table}.dept_a=? OR ${table}.dept_b=?)`);
+    params.push(Number(scope.departmentId || 0), Number(scope.departmentId || 0));
+  } else if (mode === 'assigned') {
+    conditions.push(`EXISTS (
+      SELECT 1
+      FROM mdm_conflict_assignments assignment_scope
+      WHERE assignment_scope.conflict_id=${table}.id
+        AND assignment_scope.conflict_type=?
+        AND assignment_scope.id=(
+          SELECT MAX(latest_assignment.id)
+          FROM mdm_conflict_assignments latest_assignment
+          WHERE latest_assignment.conflict_id=${table}.id
+            AND latest_assignment.conflict_type=?
+        )
+        AND COALESCE(assignment_scope.assignee_person_id, assignment_scope.assignee_user_id)=?
+    )`);
+    params.push(conflictType, conflictType, Number(scope.userId || 0));
+  } else if (mode === 'escalated') {
+    conditions.push(`${table}.status='escalated'`);
+  } else if (mode !== 'global') {
+    conditions.push('1=0');
   }
   return { sql: conditions.join(' AND '), params };
 }
@@ -229,12 +253,10 @@ function makeConflictMysqlRepository(pool) {
   async function conflictAssignments(conflictId, conflictType) {
     return await rows(
       pool,
-      `SELECT ca.*, COALESCE(p.person_name, u.name) AS assignee_name, COALESCE(ap.person_name, au.name) AS assigned_by_name
+      `SELECT ca.*, p.person_name AS assignee_name, ap.person_name AS assigned_by_name
        FROM mdm_conflict_assignments ca
        LEFT JOIN person p ON p.person_id = COALESCE(ca.assignee_person_id, ca.assignee_user_id)
-       LEFT JOIN users u ON u.id = ca.assignee_user_id
        LEFT JOIN person ap ON ap.person_id = COALESCE(ca.assigned_by_person_id, ca.assigned_by)
-       LEFT JOIN users au ON au.id = ca.assigned_by
        WHERE ca.conflict_id=? AND ca.conflict_type=?
        ORDER BY ca.created_at DESC, ca.id DESC`,
       [conflictId, conflictType]
@@ -244,10 +266,9 @@ function makeConflictMysqlRepository(pool) {
   async function coordinationHistory(conflictId, conflictType) {
     return await rows(
       pool,
-      `SELECT cch.*, COALESCE(p.person_name, u.name) AS assignee_name
+      `SELECT cch.*, p.person_name AS assignee_name
        FROM mdm_conflict_coordination_history cch
        LEFT JOIN person p ON p.person_id = COALESCE(cch.assignee_person_id, cch.assignee_user_id)
-       LEFT JOIN users u ON u.id = cch.assignee_user_id
        WHERE cch.conflict_id=? AND cch.conflict_type=?
        ORDER BY cch.created_at DESC, cch.id DESC`,
       [conflictId, conflictType]
@@ -303,7 +324,7 @@ function makeConflictMysqlRepository(pool) {
     async listConflicts(filters = {}, scope = {}) {
       const type = filters.type || '';
       if (type === 'field') {
-        const fieldFilter = filterClause('fc', filters, scope);
+        const fieldFilter = filterClause('fc', 'field', filters, scope);
         return (await rows(
           pool,
           `SELECT fc.*, fc.field_id_a AS field_entry_a_id, fc.field_id_b AS field_entry_b_id,
@@ -320,7 +341,7 @@ function makeConflictMysqlRepository(pool) {
         )).map(publicFieldConflict);
       }
       if (type === 'term') {
-        const termFilter = filterClause('tc', filters, scope);
+        const termFilter = filterClause('tc', 'term', filters, scope);
         return (await rows(
           pool,
           `SELECT tc.*, 'term' AS conflict_type
@@ -337,7 +358,7 @@ function makeConflictMysqlRepository(pool) {
     },
 
     async conflictStats(scope = {}) {
-      const conflicts = await this.listConflicts({}, { ...scope, canViewAll: true });
+      const conflicts = await this.listConflicts({}, scope);
       const byStatus = {};
       for (const conflict of conflicts) {
         byStatus[conflict.status] = (byStatus[conflict.status] || 0) + 1;
@@ -359,6 +380,18 @@ function makeConflictMysqlRepository(pool) {
       if (!conflict) return null;
       if (!scope.canViewAll && !scope.status && ['archived', 'silenced'].includes(conflict.status)) return null;
       const assignments = await conflictAssignments(conflictId, conflictType);
+      const mode = scope.mode || (scope.canViewAll ? 'global' : 'none');
+      if (mode === 'department' && ![conflict.dept_a, conflict.dept_b].some(id => Number(id) === Number(scope.departmentId))) {
+        return null;
+      }
+      if (mode === 'assigned') {
+        const currentAssignment = assignments[0];
+        if (!currentAssignment || Number(currentAssignment.assignee_person_id || currentAssignment.assignee_user_id) !== Number(scope.userId)) {
+          return null;
+        }
+      }
+      if (mode === 'escalated' && conflict.status !== 'escalated') return null;
+      if (!['global', 'department', 'assigned', 'escalated'].includes(mode)) return null;
       const history = await coordinationHistory(conflictId, conflictType);
       const submitted = new Set(history.map(row => Number(row.assignee_person_id || row.assignee_user_id)).filter(Boolean));
       const assigned = new Set(assignments.map(row => Number(row.assignee_person_id || row.assignee_user_id)).filter(Boolean));
@@ -546,7 +579,11 @@ function makeConflictMysqlRepository(pool) {
       if (!conflict) return resultError(404, '冲突不存在');
       if (conflict.status !== 'coordinating') return resultError(409, '仅协调中状态可提交协调结果');
       const assignments = await conflictAssignments(conflictId, conflictType);
-      if (assignments.length > 0 && !payload.canManageAll && !assignments.some(row => Number(row.assignee_person_id || row.assignee_user_id) === Number(actorPersonId))) {
+      const currentAssignment = assignments[0];
+      if (
+        !payload.canManageAll &&
+        (!currentAssignment || Number(currentAssignment.assignee_person_id || currentAssignment.assignee_user_id) !== Number(actorPersonId))
+      ) {
         return resultError(403, '仅已指派协调人可提交协调结果');
       }
       await pool.execute(
@@ -563,6 +600,14 @@ function makeConflictMysqlRepository(pool) {
       if (!['coordinating', 'escalated', 'resolved'].includes(conflict.status)) {
         return resultError(409, '仅协调中或已升级状态可终裁');
       }
+      if (payload.requireAssignment) {
+        const assignments = await conflictAssignments(conflictId, conflictType);
+        const currentAssignment = assignments[0];
+        const actorPersonId = personIdFromPayload(payload, payload.actor_user_id);
+        if (!currentAssignment || Number(currentAssignment.assignee_person_id || currentAssignment.assignee_user_id) !== Number(actorPersonId)) {
+          return resultError(403, '只能处理本人当前被分派的冲突');
+        }
+      }
       const table = conflictType === 'term' ? 'mdm_term_conflicts' : 'mdm_field_conflicts';
       const result = await pool.execute(
         `UPDATE ${table}
@@ -571,16 +616,6 @@ function makeConflictMysqlRepository(pool) {
         [nullableText(payload.resolution), payload.actor_user_id || null, conflictId]
       );
       if (affectedRows(result) === 0) return resultError(404, '冲突不存在');
-      if (conflictType === 'field' && payload.adopted_value && conflict.conflict_field === 'authoritative_system') {
-        for (const fieldId of [conflict.field_entry_a_id, conflict.field_entry_b_id].filter(Boolean)) {
-          await pool.execute(
-            `UPDATE data_map_field_identities
-             SET authoritative_system_name=?, confirmed=1, confirmed_by=?, confirmed_at=CURRENT_TIMESTAMP, status='confirmed', updated_at=CURRENT_TIMESTAMP
-             WHERE field_id=?`,
-            [payload.adopted_value, payload.actor_user_id || null, fieldId]
-          );
-        }
-      }
       return { ok: true };
     },
 

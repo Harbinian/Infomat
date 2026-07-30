@@ -50,6 +50,17 @@ MDM 平台保留为后续承接应用。除非用户明确要求进入 MDM 平�
 
 3000 的持久化数据迁移必须有备份、回滚或补偿和迁移后核对。3001 只能在当前页面内存中迁移历史 JSON,不得为兼容旧数据增加持久化能力或与 3000 通信。无法安全迁移的内容必须明确阻塞并给出保住、导出或人工处理数据的办法,不得静默丢弃。
 
+## 3000 固定身份、RBAC 与 RACI
+
+3000当前治理模型版本为`rbac-raci-v2-2026-07-30`。正式身份链路固定为`person -> user_accounts -> person_roles`;运行时不得回退到`users/user_roles`或SQLite人员接口。
+
+- 普通账号只能由MDM系统管理员通过`/api/org/accounts`手工创建、授权和启用。禁止自助注册、批量开户和RBAC批量导入。
+- 固定角色、权限包和RACI由`apps/mdm-platform/server/roleDefinitions.js`及测试固化,管理页面只读。
+- `admin`只管理账号、角色授权和访问审计,并对治理材料全局只读;不得审核、确认、修改或发布业务内容。
+- 部门最终负责人只从`departments.final_responsible_person_id`读取,不得根据姓名、岗位、职务或历史常量推测。
+- 角色、部门或账号状态变化必须递增`auth_version`,使旧会话立即失效。
+- 现有库升级必须先执行`npm run migrate:rbac-raci-v2:dry-run`,再按`apps/mdm-platform/docs/RBAC-RACI-Migration-Runbook.md`执行、回滚或补偿。
+
 ## 目录级 AGENTS.md
 
 目录级 `AGENTS.md` 只放在有独立真源、生成副作用、运行命令、验证口径或禁止事项的关键目录。新增或调整目录级 `AGENTS.md` 时,同步更新 `DIRECTORY_OWNERSHIP.md`、相关 README 和 `docs/architecture/context-management.md`。

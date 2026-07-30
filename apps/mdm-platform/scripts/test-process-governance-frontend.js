@@ -6,11 +6,11 @@ const vm = require('vm');
 const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
 
 assert.ok(html.includes('data-tab="processGovernance"'), 'process governance tab should exist');
-const processGovernanceTab = html.match(/<button class="tab" data-tab="processGovernance" data-roles="([^"]+)">流程治理<\/button>/);
-assert.ok(processGovernanceTab, 'process governance tab should declare role visibility');
+const processGovernanceTab = html.match(/<button class="tab" data-tab="processGovernance" data-permissions="([^"]+)">流程治理<\/button>/);
+assert.ok(processGovernanceTab, 'process governance tab should declare permission visibility');
 assert.ok(
-  processGovernanceTab[1].split(',').includes('submitter'),
-  'process governance tab should be visible to submitters because every department member must confirm their own DCM/BBM results'
+  processGovernanceTab[1].split(',').includes('governance:read-department'),
+  'process governance tab should be visible to department-scoped governance roles'
 );
 assert.ok(html.includes('id="processGovernancePanel"'), 'process governance panel should exist');
 assert.ok(!html.includes('id="pgTaskEntryPanel"'), 'process governance main area should not duplicate task-entry cards from the workflow sidebar');
@@ -425,7 +425,11 @@ assert.ok(html.includes('id="pgQualityRows"'), 'process governance should render
 assert.ok(html.includes('id="pgQualityCaseRows"'), 'process governance should render governance case rows');
 assert.ok(html.includes('id="pgMappingWorkspaceRows"'), 'process governance should render mapping workspace rows');
 assert.ok(html.includes('id="pgMappingTodoRows"'), 'process governance should render mapping todo rows');
-assert.ok(html.includes('var currentRoleCodes = roleCodesOfCurrentUser()'), 'role visibility should use all current role codes, not only the legacy base role');
+assert.ok(
+  html.includes("document.querySelectorAll('.tab[data-permissions]')") &&
+    html.includes('var currentPermissions = (state.user.permissions || [])'),
+  'navigation visibility should use current effective permissions'
+);
 assert.ok(html.includes('function canViewAllProcessGovernanceClient()'), 'process governance should have a client-side global-scope guard');
 assert.ok(html.includes('function ensureProcessGovernanceDepartmentScope()'), 'process governance should force non-management users into their own department scope');
 assert.ok(html.includes("var currentUser = await api('/api/org/me')"), 'authenticated app activation should hydrate the full current user profile');

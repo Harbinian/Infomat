@@ -3,7 +3,7 @@ const mysql = require('mysql2/promise');
 const { mysqlConfigFromEnv, redactMysqlConfig } = require('../server/mysqlConfig');
 const { mdmMysqlSchemaSql, splitSqlStatements } = require('../server/mysqlSchema');
 const { seedDefaultTerminologyTermTypes } = require('../server/terminologyMysqlRepository');
-const { migrateLegacyIdentityToPersonIdentity } = require('../server/identityMysqlRepository');
+const { seedFixedAccessModel } = require('../server/rbacRaciMysqlMigration');
 const { ensureProcessGovernanceCloseGateSchema } = require('../server/processGovernanceMysqlRepository');
 const {
   ensureProcessDesignEditionSchema,
@@ -181,7 +181,7 @@ async function main() {
     await ensureProcessDesignEditionSchema(pool);
     await ensureProcessDesignEvidenceStatusSchema(pool);
     await ensureProcessDesignStepTransitionSchema(pool);
-    await migrateLegacyIdentityToPersonIdentity(pool);
+    await seedFixedAccessModel(pool);
     await seedDefaultTerminologyTermTypes(pool);
     for (const migrationKey of [
       '2026-06-29-person-identity-schema-contract',
@@ -198,7 +198,8 @@ async function main() {
       '2026-07-01-document-structured-output-v2',
       '2026-07-01-document-structured-output-editing',
       '2026-07-01-process-design-evidence-status',
-      '2026-07-07-process-design-step-transitions'
+      '2026-07-07-process-design-step-transitions',
+      '2026-07-30-rbac-raci-v2-model'
     ]) {
       await pool.execute(
         `INSERT INTO schema_migrations (migration_key)

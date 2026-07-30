@@ -1,14 +1,16 @@
 const assert = require('assert');
 const express = require('express');
+const auth = require('../server/auth');
+const {
+  setDataMapRepositoryFactory,
+  resetDataMapRepositoryFactory
+} = require('../server/dataMapMysqlRepository');
+const fieldIdentitiesRouter = require('../server/routes/fieldIdentities');
 const { cleanupDb } = require('./testHelpers/isolatedDb');
 
 process.env.MDM_DB_QUIET = '1';
 const previousReadModel = process.env.MDM_IDENTITY_READ_MODEL;
 process.env.MDM_IDENTITY_READ_MODEL = 'mysql';
-
-const db = require('../server/db');
-const auth = require('../server/auth');
-const fieldIdentitiesRouter = require('../server/routes/fieldIdentities');
 
 function listen(app) {
   return new Promise(resolve => {
@@ -22,67 +24,47 @@ function closeServer(server) {
   });
 }
 
-function seedFieldIdentityScope() {
-  const ownerDeptId = db.prepare('INSERT INTO departments (name, code) VALUES (?, ?)').run('字段属主部门', 'FIELDOWNER').lastInsertRowid;
-  db.prepare(`
-    INSERT INTO users (id, name, employee_no, department_id, post, role, password_hash)
-    VALUES (42, 'MySQL 身份用户', 'MYSQL042', ?, '字段 owner', 'submitter', 'hash')
-  `).run(ownerDeptId);
-  const submitterId = db.prepare(`
-    INSERT INTO users (name, employee_no, department_id, post, role, password_hash)
-    VALUES ('字段报送人', 'SUB043', ?, '报送人', 'submitter', 'hash')
-  `).run(ownerDeptId).lastInsertRowid;
-  const capabilityId = db.prepare(`
-    INSERT INTO capabilities (name, level, owner_dept_id, status)
-    VALUES ('黄金源治理能力', 'L1', ?, 'pending')
-  `).run(ownerDeptId).lastInsertRowid;
-  const processId = db.prepare(`
-    INSERT INTO processes (name, capability_id, owner_dept_id, status)
-    VALUES ('黄金源治理流程', ?, ?, 'pending')
-  `).run(capabilityId, ownerDeptId).lastInsertRowid;
-  const mappingId = db.prepare(`
-    INSERT INTO mappings (process_id, owner_dept_id, status, submitted_by, current_step)
-    VALUES (?, ?, 'published', ?, 5)
-  `).run(processId, ownerDeptId, submitterId).lastInsertRowid;
-  const fieldId = db.prepare(`
-    INSERT INTO field_entries (mapping_id, field_name_cn, field_name_en, data_object, field_type, submitted_by)
-    VALUES (?, '客户名称', 'customer_name', '客户', '文本', ?)
-  `).run(mappingId, submitterId).lastInsertRowid;
-
-  return { ownerDeptId, fieldId };
-}
-
 async function main() {
-  assert.strictEqual(
-    typeof auth.setIdentityRepositoryFactory,
-    'function',
-    'auth should allow MySQL identity repository injection'
-  );
-
-  let permissionCalls = 0;
-  let roleCalls = 0;
-  auth.setIdentityRepositoryFactory(async () => ({
-    async getUserEffectivePermissions(userId) {
-      permissionCalls += 1;
-      assert.strictEqual(userId, 42);
-      return { permSet: new Set(), fieldConstraints: {} };
+  let permissions = new Set([
+    'governance:read-department',
+    'governance:draft-department'
+  ]);
+  let identity = null;
+  const repository = {
+    async getField(fieldId) {
+      return Number(fieldId) === 101 ? { id: 101, context_id: 51 } : null;
     },
-    async getUserRoleCodes(userId, legacyRole) {
-      roleCalls += 1;
-      assert.strictEqual(userId, 42);
-      return [{ code: legacyRole, name: '基础角色' }, { code: 'owner', name: '业务负责人' }].filter(role => role.code);
+    async getContext(contextId) {
+      return Number(contextId) === 51 ? { id: 51, dept_id: 9 } : null;
+    },
+    async getFieldIdentity() {
+      return identity;
+    },
+    async upsertFieldIdentity(fieldId, payload) {
+      identity = { id: 201, field_entry_id: Number(fieldId), ...payload, confirmed: 0 };
+      return identity;
+    },
+    async confirmFieldIdentity(fieldId, payload, actorPersonId) {
+      assert.strictEqual(actorPersonId, 42);
+      identity = { ...identity, ...payload, field_entry_id: Number(fieldId), confirmed: 1, confirmed_by: actorPersonId };
+      return identity;
+    }
+  };
+  setDataMapRepositoryFactory(async () => repository);
+  auth.setIdentityRepositoryFactory(async () => ({
+    async getUserEffectivePermissions(personId) {
+      assert.strictEqual(personId, 42);
+      return { permSet: new Set(permissions), fieldConstraints: {} };
     }
   }));
 
-  const seed = seedFieldIdentityScope();
   const app = express();
   app.use(express.json());
   app.use((req, res, next) => {
     req.session = {
+      personId: 42,
       userId: 42,
-      userRole: 'submitter',
-      userName: 'MySQL 身份用户',
-      departmentId: seed.ownerDeptId
+      departmentId: 9
     };
     next();
   });
@@ -90,42 +72,60 @@ async function main() {
 
   const server = await listen(app);
   const baseUrl = `http://127.0.0.1:${server.address().port}`;
-
   try {
-    const upsertRes = await fetch(`${baseUrl}/api/field-identities/${seed.fieldId}`, {
+    const upsertRes = await fetch(`${baseUrl}/api/field-identities/101`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        authority_system_options: ['CRM', 'ERP'],
         authoritative_system: 'CRM',
-        maintain_dept_id: seed.ownerDeptId,
-        confirmed: false,
-        note: 'MySQL 身份 owner 维护黄金源'
+        maintain_dept_id: 9,
+        note: '部门主对接人维护'
       })
     });
-    const upsertBody = await upsertRes.json();
-    assert.strictEqual(upsertRes.status, 200, JSON.stringify(upsertBody));
-    assert.strictEqual(upsertBody.success, true);
+    const upsert = await upsertRes.json();
+    assert.strictEqual(upsertRes.status, 200, JSON.stringify(upsert));
+    assert.strictEqual(upsert.authoritative_system, 'CRM');
 
-    const confirmRes = await fetch(`${baseUrl}/api/field-identities/${seed.fieldId}/confirm`, {
+    const contactConfirmRes = await fetch(`${baseUrl}/api/field-identities/101/confirm`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ authoritative_system: 'CRM' })
     });
-    const confirmBody = await confirmRes.json();
-    assert.strictEqual(confirmRes.status, 200, JSON.stringify(confirmBody));
-    assert.strictEqual(confirmBody.success, true);
+    assert.strictEqual(contactConfirmRes.status, 403);
 
-    const row = db.prepare('SELECT * FROM field_identities WHERE field_entry_id=?').get(seed.fieldId);
-    assert.strictEqual(row.authoritative_system, 'CRM');
-    assert.strictEqual(row.confirmed, 1);
-    assert.strictEqual(row.confirmed_by, 42);
-    assert.ok(permissionCalls > 0, '字段身份权限判断应读取 MySQL 身份权限');
-    assert.ok(roleCalls > 0, '字段身份 owner 角色判断应读取 MySQL 身份角色');
+    permissions = new Set([
+      'governance:read-department',
+      'governance:review-department'
+    ]);
+    const reviewerWriteRes = await fetch(`${baseUrl}/api/field-identities/101`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ authoritative_system: 'ERP' })
+    });
+    assert.strictEqual(reviewerWriteRes.status, 403);
 
-    console.log('Field identities MySQL identity API test passed');
+    const confirmRes = await fetch(`${baseUrl}/api/field-identities/101/confirm`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ authoritative_system: 'CRM' })
+    });
+    const confirmed = await confirmRes.json();
+    assert.strictEqual(confirmRes.status, 200, JSON.stringify(confirmed));
+    assert.strictEqual(confirmed.identity.confirmed, 1);
+    assert.strictEqual(confirmed.identity.confirmed_by, 42);
+
+    permissions = new Set(['governance:read-global']);
+    const auditorWriteRes = await fetch(`${baseUrl}/api/field-identities/101`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ authoritative_system: 'ERP' })
+    });
+    assert.strictEqual(auditorWriteRes.status, 403);
+
+    console.log('Field identities fixed role separation API test passed');
   } finally {
     await closeServer(server);
+    resetDataMapRepositoryFactory();
     auth.resetIdentityRepositoryFactory();
   }
 }
@@ -134,10 +134,7 @@ main().catch(error => {
   console.error(error);
   process.exitCode = 1;
 }).finally(() => {
-  if (previousReadModel === undefined) {
-    delete process.env.MDM_IDENTITY_READ_MODEL;
-  } else {
-    process.env.MDM_IDENTITY_READ_MODEL = previousReadModel;
-  }
+  if (previousReadModel === undefined) delete process.env.MDM_IDENTITY_READ_MODEL;
+  else process.env.MDM_IDENTITY_READ_MODEL = previousReadModel;
   cleanupDb({ ignoreErrors: true });
 });

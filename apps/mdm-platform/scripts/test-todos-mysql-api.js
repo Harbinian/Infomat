@@ -97,13 +97,15 @@ async function main() {
 
   const repo = makeFakeTodoRepository();
   todosRouter.setTodoRepositoryFactory(async () => repo);
+  let effectivePermissions = new Set([
+    'governance:read-global',
+    'governance:assign-work',
+    'governance:structure-gate'
+  ]);
   auth.setIdentityRepositoryFactory(async () => ({
     async getUserEffectivePermissions(userId) {
       assert.strictEqual(userId, 42);
-      return { permSet: new Set(['admin:access', 'data:view_all']), fieldConstraints: {} };
-    },
-    async getUserRoleCodes(userId, legacyRole) {
-      return [{ code: legacyRole || 'admin', name: 'Admin' }, { code: 'owner', name: 'Owner' }];
+      return { permSet: effectivePermissions, fieldConstraints: {} };
     }
   }));
 
@@ -111,9 +113,9 @@ async function main() {
   app.use(express.json());
   app.use((req, res, next) => {
     req.session = {
+      personId: 42,
       userId: 42,
-      userRole: 'admin',
-      userName: 'Admin',
+      userName: '治理人员',
       departmentId: 10
     };
     next();
@@ -148,11 +150,20 @@ async function main() {
     assert.strictEqual(res.status, 200, JSON.stringify(body));
     assert.ok(body.id);
 
+    effectivePermissions = new Set([
+      'governance:read-department',
+      'governance:draft-department'
+    ]);
     res = await fetch(`${baseUrl}/api/todos/${body.id}/done`, { method: 'POST' });
     let doneBody = await res.json();
     assert.strictEqual(res.status, 200, JSON.stringify(doneBody));
     assert.strictEqual(doneBody.success, true);
 
+    effectivePermissions = new Set([
+      'governance:read-global',
+      'governance:assign-work',
+      'governance:structure-gate'
+    ]);
     res = await fetch(`${baseUrl}/api/todos/${body.id}`, { method: 'DELETE' });
     const deleteBody = await res.json();
     assert.strictEqual(res.status, 200, JSON.stringify(deleteBody));

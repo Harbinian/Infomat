@@ -10,11 +10,12 @@
 
 | 命令 | 覆盖范围 | 副作用 |
 |---|---|---|
+| `npm run test:rbac-raci-v2` | 固定十九项权限、七个MDM工作角色、八项RACI、账号接口、会话失效、迁移和空库初始化约束 | 使用fake repository和源码约束检查，不连接真实库 |
 | `npm run test:security` | 安全专项：默认口令、历史口令审计、写接口盘点、越权路由红线 | 迁移过渡期使用隔离遗留本地库，测试结束清理 |
-| `npm run test:mainline` | MDM 主线：组织同步、角色工作台、流程治理、导入导出、项目角色 | 迁移过渡期使用隔离遗留本地库，测试结束清理 |
+| `npm run test:mainline` | MDM主线：组织结构、固定RBAC/RACI、角色工作台、人员身份、流程治理、数据地图、字段、术语、冲突、待办和导入导出 | MySQL路径使用fake pool/repository；遗留测试只使用隔离本地库并在结束后清理 |
 | `npm run test:process-governance` | 流程治理 MySQL 读模型、MySQL 导入/冒烟、Sankey API、MySQL 身份权限、输入基线问题复核、文档结构化输出、统一问题池、前端挂钩和字段引用 | 正式口径为 MySQL-only；当前入口使用 fake MySQL pool / fake repository，不连接真实库，不纳入遗留 SQLite 服务器/仓储测试 |
 | `npm run test:process-design` | 文档结构化输出 API、MySQL schema、制度主档、制度编号校验、A/B/AA 版次生成、下一版次完整重写草稿、制度 profile、术语、草稿级 L1/L2 既有映射枚举校验、流程明细、行为详情、跨部门承接回写、附表结构、字段新增/修改/删除/排序、自动编号、字段空格校验、证据状态核验、Markdown 草案导出、发布替代链路，以及术语/流程/业务行为编辑、删除、作废和只读状态 | 使用 fake process-design repository 和 fake MySQL 身份 repository，不连接真实库 |
-| `npm run test:identity-mysql` | 身份/RBAC MySQL 模型：repository 契约、登录、会话、本人改密、管理员用户/部门/权限读写路由、角色读写路由、通用权限中间件、access 权限 helper 和 RBAC 导入混写保护验证 | 使用 fake MySQL pool 和 fake repository，不连接真实库；默认不开启该切换 |
+| `npm run test:identity-mysql` | `person/user_accounts/person_roles`身份链路、登录、会话、本人改密、固定角色只读接口、通用权限中间件、范围helper和旧RBAC导入拒绝 | 使用fake MySQL pool和fake repository，不连接真实库 |
 | `npm run test:access-mysql` | 验证 `access.js` 中角色码读取、管理员判断、全局查看、复核权限和待办处理判断的 MySQL-aware 异步 helper | 使用 fake repository，不连接真实库 |
 | `npm run test:role-workbench-mysql` | 角色工作台在 `MDM_IDENTITY_READ_MODEL=mysql` 下从 MySQL 身份读模型读取当前用户、角色、部门和权限；在 `PROCESS_GOVERNANCE_READ_MODEL=mysql` 下从流程治理 MySQL repository 读取质量问题和映射待办 | 使用 fake repository，不连接真实库 |
 | `npm run test:activity` | 治理活跃热力图 API：本人/部门/全量视图、权限边界、治理动作来源汇总，以及 `MDM_IDENTITY_READ_MODEL=mysql` 下的管理视图权限判断 | 使用 fake repository，不连接真实库 |
@@ -33,7 +34,7 @@
 | `npm run smoke:data-map-mysql` | 可选真实 MySQL 冒烟：初始化 schema、写入 Data Map context、字段和黄金源并读回 | 只有设置 `MYSQL_HOST`、`MYSQL_USER`、`MYSQL_DATABASE` 时写 MySQL；否则跳过 |
 | `npm run test:mappings` | 旧映射审批 MySQL 定向回归 | 等同 `npm run test:mappings-mysql`；不连接真实库 |
 | `npm run test:conflicts` | 冲突治理 MySQL 定向回归 | 等同 `npm run test:conflicts-mysql`；不连接真实库 |
-| `npm run test:project-roles` | 项目治理角色访问边界 | 迁移过渡期使用隔离遗留本地库，测试结束清理 |
+| `npm run test:project-roles` | 七个固定MDM工作角色、管理员业务只读、旧角色退休和无通配权限约束 | 源码和固定模型只读检查 |
 | `npm run test:frontend` | 前端静态资产和关键脚本片段 | 只读 |
 
 ## 2. 安全和审计脚本
@@ -51,16 +52,21 @@
 
 | 脚本 | 作用 | 副作用 |
 |---|---|---|
-| `init-mysql-schema.js` | 初始化 MySQL 中已迁移的平台 schema，当前包含身份/RBAC、输入基线问题复核、流程治理读模型/待办、文档结构化输出制度主档和版次表、数据地图字段域、术语治理、旧映射审批、冲突治理、通用待办和平台通用审计表 | 写 MySQL，不写仓库真源 |
+| `init-mysql-schema.js` | 初始化MySQL schema，包含固定身份/RBAC字段、访问审计、责任记录、迁移备份、流程治理、数据地图、字段、术语、冲突、待办和平台审计表；不覆盖现有账号密码或状态 | 写MySQL结构，不写仓库真源 |
+| `bootstrap-admin.js` | 仅在空身份库创建一次受控`ADMIN001`管理员入口；已有人员、账号或有效管理员时拒绝 | 写MySQL；一次性临时密码只在响应中显示 |
+| `migrate-rbac-raci-v2.js --dry-run` | 盘点人员、账号、部门、角色、重复标识、孤立关系、缺失部门和缺失最终负责人 | 只读MySQL |
+| `migrate-rbac-raci-v2.js --apply` | 备份身份授权数据，写入固定模型，仅保留`ADMIN001`管理员，停用其他旧账号并清除旧会话 | 写MySQL；执行前必须先dry-run |
+| `migrate-rbac-raci-v2.js --rollback` | 在迁移后尚无新授权事件时按批次恢复账号、角色、权限和授权关系 | 写MySQL；必须指定迁移批次 |
+| `migrate-rbac-raci-v2.js --compensate` | 已发生新授权事件后按批次补偿撤销迁移影响，不覆盖后续真实审计 | 写MySQL；必须指定迁移批次 |
 | `import-process-governance-mysql.js` | 将 `docs/company-sankey-data.json` 导入 MySQL 流程治理读模型，可用 `--a1-source` 显式补充 A1 Markdown | 写 MySQL 流程治理读模型、源文件、MDM 要求、证据和交互链表，不写流程输入基线 |
 | `smoke-process-governance-mysql.js` | 可选真实 MySQL 端到端 smoke：初始化、导入、读回 Sankey | 缺少 `MYSQL_HOST`、`MYSQL_USER`、`MYSQL_DATABASE` 时跳过；不读取 `MDM_DB_PATH` |
 | `smoke-data-map-mysql.js` | 可选真实 MySQL 端到端 smoke：初始化、写入 Data Map context、字段、黄金源并读回 | 缺少 `MYSQL_HOST`、`MYSQL_USER`、`MYSQL_DATABASE` 时跳过；不读取 `MDM_DB_PATH` |
 | `import-process-input-baseline-review-mysql.js` | 将 `artifacts/process-input-baseline-review/<run-id>` 导入 MDM 输入基线问题复核表 | 写 MySQL `process_input_baseline_review_*` 表 |
 | `init-db.js` | 历史本地库初始化入口，迁移完成前仅服务遗留测试链 | 写 `data/platform.db` 或 `MDM_DB_PATH` 指定库 |
-| `setup-local-baseline.js` | 从现有 schema 初始化、组织真源同步和环境变量管理员 RBAC 绑定重建本地基础数据 | 迁移过渡期写隔离遗留本地库；不导入花名册账号、不保存密码 |
-| `seed-demo-data.js` | 填充演示数据 | 写当前数据库，运行前确认目标库 |
-| `setup-mdm-project-users.js` | 建立项目角色账号 | 写当前数据库；需要显式环境变量允许执行 |
-| `import-mdm-users.js` | 从 Excel 花名册导入平台用户 | 写当前数据库；新账号生成一次性初始密码并标记首次登录改密 |
+| `setup-local-baseline.js` | 历史本地库测试基线入口，不是正式账号初始化入口 | 只允许隔离遗留测试；不得用于正式开户 |
+| `seed-demo-data.js` | 历史演示数据入口；账号写入已拒绝 | 不得用于正式开户 |
+| `setup-mdm-project-users.js` | 已退休的项目角色批量开户入口 | 执行即拒绝，不写账号 |
+| `import-mdm-users.js`、`import-roster-users.js` | 已退休的Excel/花名册批量开户入口 | 执行即拒绝，不写账号 |
 | `check-escalations.js` | 检查 MySQL 冲突治理记录中已超期的协调中冲突，并通过 `conflictMysqlRepository` 升级 | 写 MySQL 冲突治理和待办表，不读取 `MDM_DB_PATH` |
 
 ## 4. 流程治理承接脚本
@@ -81,9 +87,9 @@
 | `test-process-governance-issue-pool-mysql-permission-api.js` | 验证统一问题池详情、点位动作、关闭/重开和术语待办均通过 MySQL 身份、角色、部门和权限判断，越权请求不会进入写仓储；当前 `test:process-governance-issue-pool` 只纳入 MySQL/fake-repo 路径和前端入口检查 | 使用 fake issue-pool repository 和 fake MySQL 身份 repository，不连接真实库 |
 | `test-process-input-baseline-review-mysql.js` | 验证 MDM 输入基线问题复核 MySQL repository 的导入、查询和结构化决策保存 | 使用 fake MySQL pool，只读仓库 |
 | `test-process-input-baseline-review-api.js` | 验证 MDM 正式输入基线问题复核 API 保存结构化字段、以后端会话写 reviewer、内部抽取锚点不显示给业务用户，也不误显示为页码或原文段落号 | 使用 fake repository 和临时待确认目录 |
-| `test-identity-mysql-repository.js` | 验证身份/RBAC MySQL repository 可读取用户、部门、登录凭据、角色、角色详情、角色权限矩阵、继承权限、字段约束、本人改密状态、管理员用户列表、部门列表、权限清单、管理员写入和角色写入 | 使用 fake MySQL pool，不连接真实库 |
-| `test-org-me-mysql-api.js` | 验证 `MDM_IDENTITY_READ_MODEL=mysql` 时登录、`/api/org/me`、`/api/org/session`、本人密码状态、本人改密、管理员用户/部门/权限读写接口走 MySQL repository | 使用 fake repository，不连接真实库 |
-| `test-roles-mysql-api.js` | 验证 `MDM_IDENTITY_READ_MODEL=mysql` 时 `/api/roles`、`/api/roles/:id`、`/api/roles/:id/permissions` 读取 MySQL repository，角色创建、更新、删除和权限替换不回落 SQLite | 使用 fake repository，不连接真实库 |
+| `test-identity-mysql-repository.js` | 验证人员、账号、当前有效角色、权限、范围和`auth_version`会话校验只读取MySQL身份链路 | 使用fake MySQL pool，不连接真实库 |
+| `test-org-me-mysql-api.js` | 验证登录和`/api/org/me`返回人员、账号、部门、全部有效角色、权限、数据范围和模型版本 | 使用fake repository，不连接真实库 |
+| `test-roles-mysql-api.js` | 验证固定角色模型可读，角色、权限和矩阵写请求返回`CORE_GOVERNANCE_MODEL_READ_ONLY` | 使用fake repository，不连接真实库 |
 | `test-auth-mysql-permission.js` | 验证 `MDM_IDENTITY_READ_MODEL=mysql` 时通用 `requirePermission` 从 MySQL repository 取权限和字段约束 | 使用 fake repository，不连接真实库 |
 | `test-access-mysql-role-codes.js` | 验证 `MDM_IDENTITY_READ_MODEL=mysql` 时 `access.js` 可通过异步 helper 从 MySQL 身份读模型读取角色码 | 使用 fake repository，不连接真实库 |
 | `test-access-mysql-permissions.js` | 验证 `MDM_IDENTITY_READ_MODEL=mysql` 时 `access.js` 的管理员、全局查看、复核权限和待办处理判断可通过异步 helper 读取 MySQL 权限 | 使用 fake repository，不连接真实库 |

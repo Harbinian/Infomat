@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const { requireAuth } = require('./auth');
 const { securityHeaders, csrfProtection, issueCsrfToken } = require('./security');
+const { ACCESS_MODEL_VERSION } = require('./roleDefinitions');
 
 function resolveSessionSecret(env) {
   if (env.SESSION_SECRET) return env.SESSION_SECRET;
@@ -14,6 +15,10 @@ function resolveSessionSecret(env) {
 const app = express();
 const PORT = process.env.PORT || 3000;
 const SESSION_SECRET = resolveSessionSecret(process.env);
+if (process.env.NODE_ENV === 'production' &&
+    String(process.env.MDM_IDENTITY_READ_MODEL || '').toLowerCase() !== 'mysql') {
+  throw new Error('3000 production runtime requires MDM_IDENTITY_READ_MODEL=mysql');
+}
 
 app.use(securityHeaders);
 app.use(express.static(path.join(__dirname, '../public')));
@@ -42,7 +47,10 @@ function registerRouteIfExists(basePath, routeName) {
   }
 }
 
+registerRouteIfExists('/api/org/accounts', 'accounts');
 registerRouteIfExists('/api/org', 'org');
+registerRouteIfExists('/api/rbac', 'rbac');
+registerRouteIfExists('/api/governance', 'governance');
 registerRouteIfExists('/api/systems', 'systems');
 registerRouteIfExists('/api/capabilities', 'capabilities');
 registerRouteIfExists('/api/processes', 'processes');
@@ -64,7 +72,9 @@ registerRouteIfExists('/api/role-workbench', 'roleWorkbench');
 registerRouteIfExists('/api/page-workflows', 'pageWorkflows');
 registerRouteIfExists('/api/org-units', 'orgUnit');
 registerRouteIfExists('/api/positions', 'position');
-registerRouteIfExists('/api/persons', 'person');
+if (process.env.MDM_ALLOW_LEGACY_TEST_MODE === '1') {
+  registerRouteIfExists('/api/persons', 'person');
+}
 registerRouteIfExists('/api/product-families', 'productFamily');
 registerRouteIfExists('/api/products', 'product');
 registerRouteIfExists('/api/class-nodes', 'classNode');
@@ -77,7 +87,7 @@ registerRouteIfExists('/api/import-rbac', 'importRbac');
 registerRouteIfExists('/api/activity', 'activity');
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok' });
+  res.json({ status: 'ok', identityModel: 'person', governanceModelVersion: ACCESS_MODEL_VERSION });
 });
 
 app.listen(PORT, () => {

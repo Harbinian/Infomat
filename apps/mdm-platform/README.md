@@ -5,8 +5,12 @@
 如果你想知道平台现在到底能做什么、每个角色应该怎么用，请先看：
 
 - [MDM 平台角色化使用手册](docs/role-based-usage-guide.md)
+- [权限与RACI说明](docs/Permission-RACI.md)
+- [RBAC/RACI迁移手册](docs/RBAC-RACI-Migration-Runbook.md)
+- [产品需求](PRD.md)
+- [技术规格](Tech-Spec.md)
 
-这份手册按角色、页面、流程和当前限制说明现有能力，比下面的模块清单更适合开发者走读和演示。
+角色手册按角色说明实际操作；权限、接口、数据结构和迁移边界以对应受控说明为准。
 
 ## 边界和入口
 
@@ -20,6 +24,20 @@
 - 仓库级脚本：根目录 `scripts/`
 
 开发 MDM 代码前先读 [AGENTS.md](AGENTS.md)。执行、调整或新增应用内脚本前先读 [scripts/README.md](scripts/README.md)。
+
+## 当前身份与权限模型
+
+3000是内部治理平台，不提供自助注册、批量开户或RBAC导入。普通账号只能由MDM系统管理员手工创建、授权和启用。
+
+- 模型版本：`rbac-raci-v2-2026-07-30`
+- 唯一身份链路：`person -> user_accounts -> person_roles`
+- 固定角色：`admin`、`mdm_lead`、`department_contact`、`department_mdm_reviewer`、`data_conflict_handler`、`data_quality_auditor`、`decision_group`
+- 固定角色、权限包和RACI只读，不提供自定义角色或权限矩阵编辑。
+- `admin`管理身份并全局只读治理材料，没有业务审核、确认、修改或发布权限。
+- 部门最终负责人以`departments.final_responsible_person_id`为准，可以没有3000账号。
+- 正式流程工作角色`WR-*`、岗位、人员身份和MDM工作角色互不替代。
+
+旧`submitter`、`owner`、`reviewer`、`it_lead`、`project_lead`、`workgroup_lead`、`business_contact`、`data_quality`以及其他非固定角色在迁移后只保留历史，不再产生有效权限。
 
 ## 快速启动
 
@@ -56,7 +74,7 @@ MDM_ADMIN_PASSWORD=你的管理员密码
 
 重启服务和执行 `npm run init:mysql` 只补齐缺失的 MySQL 身份结构，不会覆盖已经存在账号的密码或首次改密状态。如果某个账号曾在历史问题中被旧密码覆盖，管理员需要为该账号重新重置一次密码。
 
-全新 clone 或另一台设备拉取后，如需重建 MySQL schema 和平台基线，先确认固定 MySQL 容器和 `scripts/infomat-services.local.env` 已准备好，再在 `apps/mdm-platform/` 下执行：
+全新空数据库先初始化MySQL schema，再执行一次受控管理员初始化。检测到已有人员、账号或有效管理员时，初始化会拒绝重复执行：
 
 ```powershell
 cd E:\CA001\Infomat
@@ -74,16 +92,19 @@ $env:MDM_ADMIN_EMPLOYEE_NO = "ADMIN001"
 cd apps\mdm-platform
 npm install
 npm run init:mysql
-npm run setup:local-baseline
+npm run bootstrap:admin
 ```
 
-`npm run init:mysql` 会初始化 MySQL schema 中已迁移的身份/RBAC、输入基线问题复核、流程治理读模型、数据地图字段域、术语治理、旧映射审批、冲突治理、通用待办和平台通用审计表。`npm run setup:local-baseline` 仍是迁移过渡期的幂等基线入口，会：
+`npm run init:mysql`只补齐MySQL结构，不覆盖现有账号密码、状态或角色。`npm run bootstrap:admin`只允许在空身份库执行一次，创建受控`ADMIN001`管理入口；临时密码只在本次响应中显示。
 
-- 初始化遗留本地 schema 和系统角色/权限。
-- 从 `docs/organization/组织架构和部门职责.md` 同步组织架构、领导岗位和对应人员。
-- 仅为 `MDM_ADMIN_EMPLOYEE_NO` 指定的管理员创建/补齐 `admin` RBAC 角色。
+已有数据库升级前必须先执行：
 
-默认基线不导入花名册账号或项目账号，避免把本机登录账号状态当成仓库真源。确需导入花名册用户时，先确认口令策略和数据边界，再单独运行对应导入脚本。
+```powershell
+npm run migrate:rbac-raci-v2:dry-run
+npm run migrate:rbac-raci-v2:apply
+```
+
+迁移只自动保留现有受控`ADMIN001`管理员；其他账号停用，旧角色不自动映射。管理员必须依据权威名单逐项重新授权并启用。完整步骤见[迁移手册](docs/RBAC-RACI-Migration-Runbook.md)。
 
 迁移完成前，如需运行仍依赖遗留本地库的测试，可通过隔离路径避免写默认运行态文件：
 
@@ -126,6 +147,9 @@ npm run test:import
 npm run test:user-password-scripts
 npm run test:password-audit
 npm run test:frontend
+npm run test:rbac-raci-v2
+npm run test:project-roles
+npm run test:role-workbench
 npm run test:local-baseline
 npm run test:security
 npm run test:mainline
@@ -143,11 +167,13 @@ npm run test:versions-mysql
 npm run test:activity-mysql
 npm run test:role-workbench-mysql
 npm run init:mysql
+npm run migrate:rbac-raci-v2:dry-run
+npm run migrate:rbac-raci-v2:apply
 npm run smoke:data-map-mysql
 npm run import:process-input-baseline-review -- --review-run artifacts/process-input-baseline-review/<run-id>
 ```
 
-`npm run test:security` 已包含批量用户脚本口令红线：项目账号脚本和 Excel 用户导入脚本不得硬编码固定初始密码，新建账号必须标记首次登录改密。
+历史批量开户脚本已改为拒绝执行。新账号只能通过管理员接口创建为待启用状态；管理员明确启用时系统生成一次性临时密码，并要求首次登录改密。
 
 如需只读检查历史库中是否仍有旧固定口令账号，可运行：
 
@@ -180,8 +206,8 @@ npm run smoke:process-governance-mysql
 - 旧映射审批已切换到 MySQL：`/api/mappings` 通过 `mappingMysqlRepository` 访问 `mdm_mapping_*` 表，保留旧审批 API 形状；字段台账仍以 Data Map context 为正式归属，映射详情不再读取 SQLite `field_entries`、`field_identities`、`terms`、`change_set` 或 `version_log`。
 - 冲突治理和通用待办已切换到 MySQL：`/api/conflicts` 通过 `conflictMysqlRepository` 访问 `mdm_field_conflicts`、`mdm_term_conflicts`、`mdm_conflict_*` 和 `mdm_todos`；字段冲突检测读取 Data Map 字段域，术语冲突检测读取 `terminology_terms`。`/api/todos` 通过 `todoMysqlRepository` 访问 `mdm_todos` 和 `mdm_todo_events`，不再混用 SQLite 写入和 MySQL 读取。
 - 平台通用版本和活动热力图已切换到 MySQL：`/api/versions` 通过 `auditMysqlRepository` 访问 `mdm_change_sets` 和 `mdm_version_log`；`/api/activity/heatmap` 从流程治理事件、映射审批历史、版本记录、术语、冲突和通用待办 MySQL 表汇总，不再读取 SQLite `change_set`、`version_log`、`terms`、`term_conflicts`、`field_conflicts` 或 `todos`。
-- `MDM_IDENTITY_READ_MODEL=mysql` 目前切换登录、`/api/org/session`、`/api/org/me`、本人密码状态、本人改密、管理员用户/部门/权限读写接口、`/api/roles` 角色读写接口、通用 `requirePermission` 权限中间件、角色工作台身份读取、流程治理 MySQL 分支权限判断、流程设计 MySQL 路由权限判断、治理活跃热力图管理视图权限判断、字段台账查看/创建/维护中的身份权限判断，以及字段黄金源维护/确认中的身份权限判断。`auth.js` / `access.js` 已提供 MySQL-aware 异步权限、角色码、用户和部门读取 helper；部门可按 ID 或名称读取，后续业务路由接入时应优先复用这些 helper。
-- `/api/import-rbac/*` 批量写入仍是遗留本地库实现；在 `MDM_IDENTITY_READ_MODEL=mysql` 下会显式拒绝，直到对应导入写入链路迁到 MySQL。
+- `MDM_IDENTITY_READ_MODEL=mysql`是正式身份路径。登录、`/api/org/me`、账号生命周期、固定角色模型、角色工作台、流程治理、流程设计、数据地图、字段台账、术语、冲突、待办和发布检查均从`person/user_accounts/person_roles`读取当前身份。运行时不再从`users/user_roles`或SQLite人员接口补齐身份。
+- `/api/org/accounts`是唯一普通账号写入口。旧`/api/org/users*`写操作和`/api/import-rbac/*`批量写入返回`410 LEGACY_IDENTITY_API_RETIRED`；角色矩阵写操作返回`405 CORE_GOVERNANCE_MODEL_READ_ONLY`。
 - 当前前端主入口为统一问题池 `/api/process-governance/issue-pool/*`；旧输入基线问题复核 `/api/process-governance/input-baseline-review/*` 保留为导入、复核和过渡 API。问题识别批次通过 `npm run import:process-input-baseline-review -- --review-run artifacts/process-input-baseline-review/<run-id>` 导入 MySQL。统一问题池短期不新增数据库列，待确认结构化字段先放在 `process_governance_issue_points.evidence_json.document_structure`，包含结构化对象、目标结构块、目标字段、当前值、给用户的问题和允许动作。
 - 文档结构化输出位于 `流程治理 -> 文档结构化输出`，稳定地址为 `#/processGovernance?view=documentStructure`，在 `总览` 后、`待确认问题` 前。该页面在 `PROCESS_GOVERNANCE_READ_MODEL=mysql` 下使用 `/api/process-design/*` 的 MySQL 路由完成制度说明（制度编号、制度名称、拟发布版次、当前有效版次、依据类型、目的、范围和与已有制度/流程/表单的关系）、术语、流程与业务行为、跨部门承接、附表结构、证据、Markdown 草案、审核和发布；制度编号全公司唯一，版次由系统按 `A -> B -> ... -> Z -> AA` 自动生成，用户不能手填或跳号。编号输入后会立即校验：不存在时创建 A 版；已存在且本部门可维护时创建下一版次完整重写草稿；已有进行中草稿时打开原草稿。发布下一版次会把上一版标记为已替代，默认流程图谱和 A1 只展示当前有效版次。`/api/process-design/process-taxonomy` 从 MySQL 流程治理读模型 `process_mapping_records` 读取 L1 能力域和 L2 业务能力，并按当前用户本部门过滤。`process_mapping_records` 由 `docs/company-sankey-data.json` 的 `processMappings` 导入，必须先运行 `node scripts/parse-sankey-data.mjs` 生成快照，再运行 `import-process-governance-mysql.js` 刷新 MySQL。前端只允许在流程明细中级联选择本部门既有 L1/L2 组合，后端也会拒绝临时新增或跨部门套用的 L1/L2；流程编号由后端按 `PROCEDURE-{草稿ID}-{三位序号}` 自动生成，作为 `process_design_processes.process_code` 的唯一业务编号入库，前端只展示不手填，`L3` 只表示流程层级和名称。是否需要审批、是否跨部门和证据类型使用固定选项；字段类型从 `/api/process-design/field-types` 字典读取，默认含文本、长文本、数字、金额、日期、日期时间、枚举、布尔、部门、人员、文件编号、签名、图片、附件和二维码。发布不反向修改 `docs/norms/`。发布卡口以至少 1 条 `process_design_evidence.status='verified'` 为准，`maturity` 只作为前端完成度提示；草稿详情返回 `publishable` 供前端展示是否可发布。
 - 文档结构化输出页面支持导入 `apps/structured-output-service` 在 3001 端口导出的 `document-structured-output-v2` JSON。前端按钮为“导入结构化文件”，接口为 `POST /api/process-design/import-structured-output`。导入时 3000 只读取用户选择的 JSON 文件，不反向调用 3001 服务；结构化文件只带归口部门名称时，3000 会按 MDM 组织表解析部门 ID，再沿用 MDM 权限、部门范围、L1/L2 既有映射校验，以及 MDM 自己的制度草稿、流程、表单和字段编号生成规则。第一里程碑暂不持久化工作角色绑定：顶层 `work_role_bindings` 或 `structure_block_projection.work_role_bindings` 任一非空，都会在任何写入前返回 `422 WORK_ROLE_BINDINGS_UNSUPPORTED`；旧 v2 文件和两处均为空的文件保持原行为，禁止静默忽略。导入会保存多流程、`step_type=decision` 判断节点和 `step_transitions` 判断分支；`to_step_ref` 为空时保留为空流向并返回 warning，详情页只读展示“判断分支”。本轮 3000 不提供分支编辑器。导入证据默认仍需在 MDM 中核验后才能满足发布卡口。

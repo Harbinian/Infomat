@@ -19,10 +19,10 @@ async function main() {
   const guidanceRouter = require('../server/routes/governanceGuidance');
   const events = [];
   const permissionsByPerson = new Map([
-    [701, new Set(['guidance:create', 'process_governance:view_global'])],
-    [501, new Set(['guidance:respond', 'guidance:final_confirm'])],
-    [601, new Set(['guidance:respond'])],
-    [999, new Set(['admin:access', 'process_governance:view_global', 'guidance:final_confirm'])]
+    [701, new Set(['governance:assign-work', 'governance:read-global'])],
+    [501, new Set(['governance:draft-department', 'governance:record-department-decision'])],
+    [601, new Set(['governance:draft-department'])],
+    [999, new Set(['identity:manage-account', 'governance:read-global'])]
   ]);
 
   let sessionPersonId = 701;
@@ -85,7 +85,7 @@ async function main() {
   const app = express();
   app.use(express.json());
   app.use((req, res, next) => {
-    req.session = { userId: sessionPersonId, personId: sessionPersonId, userRole: 'owner' };
+    req.session = { userId: sessionPersonId, personId: sessionPersonId, userRole: 'department_contact' };
     next();
   });
   app.use('/api/process-governance/guidance', guidanceRouter);
