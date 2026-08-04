@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <title>组织数字化参与度十六维分型模型</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", "Source Han Sans SC", sans-serif;
+      background: #e8edf3;
+      color: #173b61;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-width: 0;
+      background: #e8edf3;
+    }
+
+    body {
+      padding: 20px;
+    }
+
+    .toolbar {
+      width: min(100%, 1600px);
+      margin: 0 auto 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      color: #173b61;
+    }
+
+    .toolbar__title {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .toolbar__actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .button {
+      appearance: none;
+      border: 1px solid #b8c7d7;
+      border-radius: 7px;
+      background: #ffffff;
+      color: #173b61;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 38px;
+      padding: 7px 14px;
+      font: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 1.4;
+      text-decoration: none;
+    }
+
+    .button:hover {
+      background: #f4f7fa;
+    }
+
+    .button:focus-visible {
+      outline: 3px solid rgba(47, 139, 202, 0.35);
+      outline-offset: 2px;
+    }
+
+    .sheet {
+      width: min(100%, 1600px);
+      margin: 0 auto;
+      overflow: hidden;
+      background: #ffffff;
+      box-shadow: 0 8px 30px rgba(20, 48, 74, 0.14);
+    }
+
+    .sheet object {
+      display: block;
+      width: 100%;
+      height: auto;
+      aspect-ratio: 2 / 3;
+      border: 0;
+    }
+
+    .fallback {
+      margin: 0;
+      padding: 24px;
+      text-align: center;
+    }
+
+    @media (max-width: 640px) {
+      body {
+        padding: 8px;
+      }
+
+      .toolbar {
+        margin-bottom: 8px;
+      }
+
+      .toolbar__title {
+        width: 100%;
+        font-size: 16px;
+      }
+
+      .toolbar__actions {
+        width: 100%;
+      }
+
+      .button {
+        flex: 1 1 140px;
+      }
+
+      .sheet {
+        box-shadow: none;
+      }
+    }
+
+    @page {
+      margin: 8mm;
+    }
+
+    @media print {
+      html,
+      body {
+        background: #ffffff;
+      }
+
+      body {
+        padding: 0;
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+      }
+
+      .toolbar {
+        display: none;
+      }
+
+      .sheet {
+        width: 100%;
+        margin: 0;
+        box-shadow: none;
+        break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="toolbar" aria-label="预览操作">
+    <h1 class="toolbar__title">组织数字化参与度十六维分型模型</h1>
+    <div class="toolbar__actions">
+      <a class="button" href="./组织数字化参与度十六维分型模型.svg" download>下载SVG</a>
+      <button class="button" type="button" onclick="window.print()">打印或另存为PDF</button>
+    </div>
+  </header>
+
+  <main class="sheet">
+    <object
+      data="./组织数字化参与度十六维分型模型.svg"
+      type="image/svg+xml"
+      aria-label="组织数字化参与度十六维分型模型信息图">
+      <p class="fallback">
+        浏览器未能显示SVG。请
+        <a href="./组织数字化参与度十六维分型模型.svg">直接打开SVG文件</a>。
+      </p>
+    </object>
+  </main>
+</body>
+</html>

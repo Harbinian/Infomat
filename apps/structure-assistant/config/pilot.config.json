@@ -1,0 +1,62 @@
+{
+  "assistant": {
+    "host": "0.0.0.0",
+    "port": 3003,
+    "gatewayPort": 3004,
+    "structuredToolBaseUrl": "http://127.0.0.1:3001"
+  },
+  "security": {
+    "sessionHours": 8,
+    "maxUploadBytes": 10485760,
+    "maxModelInputChars": 240000,
+    "loginWindowMinutes": 15,
+    "loginMaxAttempts": 5
+  },
+  "deepseek": {
+    "baseUrl": "https://api.deepseek.com",
+    "fillModel": "deepseek-v4-flash",
+    "reviewModel": "deepseek-v4-pro",
+    "fillMaxTokens": 8192,
+    "reviewMaxTokens": 8192,
+    "requestTimeoutMs": 120000,
+    "lowBalanceCny": 20
+  },
+  "accounts": [
+    {
+      "id": "zgy",
+      "username": "zhangguangyi",
+      "displayName": "张广懿",
+      "department": "信息化项目组",
+      "role": "admin",
+      "passwordHashEnv": "STRUCTURE_ASSISTANT_PASSWORD_ZGY_HASH",
+      "apiKeyEnv": "DEEPSEEK_API_KEY_ZGY"
+    },
+    {
+      "id": "dingshuo",
+      "username": "dingshuo",
+      "displayName": "丁硕",
+      "department": "信息化项目组",
+      "role": "user",
+      "passwordHashEnv": "STRUCTURE_ASSISTANT_PASSWORD_DINGSHUO_HASH",
+      "apiKeyEnv": "DEEPSEEK_API_KEY_DINGSHUO"
+    },
+    {
+      "id": "engineering",
+      "username": "engineering-pilot",
+      "displayName": "工程技术部试点人员",
+      "department": "工程技术部",
+      "role": "user",
+      "passwordHashEnv": "STRUCTURE_ASSISTANT_PASSWORD_ENGINEERING_HASH",
+      "apiKeyEnv": "DEEPSEEK_API_KEY_ENGINEERING"
+    },
+    {
+      "id": "hr",
+      "username": "hr-pilot",
+      "displayName": "行政人事部试点人员",
+      "department": "行政人事部",
+      "role": "user",
+      "passwordHashEnv": "STRUCTURE_ASSISTANT_PASSWORD_HR_HASH",
+      "apiKeyEnv": "DEEPSEEK_API_KEY_HR"
+    }
+  ]
+}

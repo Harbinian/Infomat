@@ -10,7 +10,8 @@ const {
   getUserEffectivePermissionsAsync,
   getUserRoleCodesAsync,
   getUserByIdAsync,
-  getDepartmentByIdAsync
+  getDepartmentByIdAsync,
+  getDepartmentByNameAsync
 } = require('../auth');
 const { mysqlConfigFromEnv } = require('../mysqlConfig');
 const { permissionSetHas } = require('../roleDefinitions');
@@ -752,6 +753,122 @@ async function issuePoolActor(req) {
     actorDeptName: await currentDepartmentNameAsync(req),
     actorRoleCode: roleCodes[0] || ''
   };
+}
+
+function issuePoolStatusError(statusCode, message) {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  return error;
+}
+
+async function applyCrossDeptHandoffPointAction(req, detail, actionName) {
+  const point = (detail.points || []).find(item => Number(item.point_id) === Number(req.params.pointId));
+  if (!point || point.point_type !== 'handoff_acceptance') return null;
+  const processDesign = require('./processDesignMysql');
+  const repo = await processDesign.getProcessDesignRepository();
+  const handoffId = Number(detail.issue && detail.issue.source_ref_id || 0);
+  const handoff = await repo.getHandoffContext(handoffId);
+  if (!handoff) throw issuePoolStatusError(404, '跨部门承接不存在');
+  const roleCodes = await processDesign.currentProcessDesignRoleCodes(req);
+  if (roleCodes.has('admin')) throw issuePoolStatusError(403, '管理员对治理材料只读，不能执行承接业务写入');
+  const department = await processDesign.currentProcessDesignDepartment(req);
+  const selectedOption = String(req.body.selected_option || req.body.selectedOption || '').trim();
+  const decisionBasis = String(req.body.decision_basis || req.body.note || '').trim();
+
+  if (handoff.status === 'pending_assignment') {
+    if (!roleCodes.has('mdm_lead') || actionName !== 'studio-review') {
+      throw issuePoolStatusError(403, '当前承接待办应由MDM工作组组长分派责任部门');
+    }
+    const actor = processDesign.processDesignHandoffActor(req, roleCodes, department, 'mdm_lead');
+    await processDesign.assertProcessDesignHandoffParticipant(repo, handoff, actor);
+    const departmentId = Number(req.body.department_id || 0);
+    const departmentName = String(req.body.department_name || '').trim();
+    const assignedDepartment = departmentId
+      ? await getDepartmentByIdAsync(departmentId)
+      : departmentName
+        ? await getDepartmentByNameAsync(departmentName)
+        : null;
+    if (!assignedDepartment) throw issuePoolStatusError(422, '请填写3000中的有效责任部门');
+    return await repo.assignHandoffCounterparty(handoff, {
+      id: Number(assignedDepartment.id || assignedDepartment.department_id),
+      name: String(assignedDepartment.name || assignedDepartment.department_name || '').trim()
+    }, actor);
+  }
+
+  if (handoff.status === 'pending_counterparty_detail') {
+    if (!roleCodes.has('department_contact') || actionName !== 'collaborate') {
+      throw issuePoolStatusError(403, '当前承接待办应由外部门主对接人补充实际承接内容');
+    }
+    const actor = processDesign.processDesignHandoffActor(req, roleCodes, department, 'department_contact');
+    await processDesign.assertProcessDesignHandoffParticipant(repo, handoff, actor);
+    if (!department || Number(department.id) !== Number(handoff.counterparty_department_id)) {
+      throw issuePoolStatusError(403, '部门主对接人只能补充本部门实际承接内容');
+    }
+    const response = {
+      counterparty_process_ref: req.body.counterparty_process_ref,
+      counterparty_process_name: req.body.counterparty_process_name,
+      counterparty_behavior_ref: req.body.counterparty_behavior_ref,
+      counterparty_behavior_name: req.body.counterparty_behavior_name,
+      transfer_data_ref: req.body.transfer_data_ref,
+      transfer_data_name: req.body.transfer_data_name,
+      requested_matter: req.body.requested_matter,
+      completion_standard: req.body.completion_standard,
+      returned_data_ref: req.body.returned_data_ref,
+      returned_data_name: req.body.returned_data_name
+    };
+    if (!String(response.counterparty_process_name || '').trim()) throw issuePoolStatusError(422, '本部门对应流程不能为空');
+    if (!String(response.counterparty_behavior_name || '').trim()) throw issuePoolStatusError(422, '本部门对应业务行为不能为空');
+    if (!String(response.completion_standard || handoff.completion_standard || '').trim()) throw issuePoolStatusError(422, '完成标准不能为空');
+    return await repo.saveHandoffCounterpartyResponse(handoff, response, actor);
+  }
+
+  if (['pending_origin_review', 'pending_counterparty_scope', 'pending_counterparty_review'].includes(handoff.status)) {
+    if (!roleCodes.has('department_mdm_reviewer') || actionName !== 'review') {
+      throw issuePoolStatusError(403, '当前承接待办应由对应部门MDM审核员记录本部门决定');
+    }
+    const actor = processDesign.processDesignHandoffActor(req, roleCodes, department, 'department_mdm_reviewer');
+    await processDesign.assertProcessDesignHandoffParticipant(repo, handoff, actor);
+    const isOrigin = department && Number(department.id) === Number(handoff.origin_department_id);
+    const isCounterparty = department && Number(department.id) === Number(handoff.counterparty_department_id);
+    if (handoff.status === 'pending_origin_review' && !isOrigin) throw issuePoolStatusError(403, '当前应由归口部门审核候选关系');
+    if (handoff.status !== 'pending_origin_review' && !isCounterparty) throw issuePoolStatusError(403, '当前应由外部门记录审核决定');
+    const decision = /不属于本部门|不需要/.test(selectedOption)
+      ? 'not_required'
+      : /退回/.test(selectedOption)
+        ? 'returned'
+        : /争议|拒绝/.test(selectedOption)
+          ? 'rejected'
+          : 'approved';
+    if (!decisionBasis) throw issuePoolStatusError(422, '部门决定必须填写事实依据');
+    const finalResponsiblePersonId = isOrigin
+      ? handoff.origin_final_responsible_person_id
+      : handoff.counterparty_final_responsible_person_id;
+    if (!finalResponsiblePersonId) throw issuePoolStatusError(409, '部门尚未配置最终责任人，不能记录部门决定');
+    return await repo.recordHandoffDepartmentDecision(handoff, {
+      id: Number(department.id),
+      name: department.name,
+      final_responsible_person_id: Number(finalResponsiblePersonId)
+    }, {
+      decision,
+      decision_basis: decisionBasis,
+      evidence_reference: req.body.evidence_reference
+    }, actor);
+  }
+
+  if (['pending_structure_gate', 'returned', 'escalated'].includes(handoff.status)) {
+    if (!roleCodes.has('mdm_lead') || actionName !== 'studio-review') {
+      throw issuePoolStatusError(403, '当前承接待办应由MDM工作组组长执行结构卡口');
+    }
+    const actor = processDesign.processDesignHandoffActor(req, roleCodes, department, 'mdm_lead');
+    await processDesign.assertProcessDesignHandoffParticipant(repo, handoff, actor);
+    const action = /退回/.test(selectedOption)
+      ? 'returned'
+      : /争议|裁决/.test(selectedOption)
+        ? 'escalated'
+        : 'confirmed';
+    return await repo.runHandoffStructureGate(handoff, { action, note: decisionBasis }, actor);
+  }
+  throw issuePoolStatusError(409, '当前承接状态不能通过问题池继续处理');
 }
 
 function issuePoolRelatedDepartments(detail) {
@@ -1909,6 +2026,13 @@ function registerIssuePoolPointAction(actionName, routeName) {
       if (!detail || !detail.issue) return res.status(404).json({ error: '问题点不存在' });
       if (!await canApplyIssuePoolPointActionAsync(req, detail, actionName)) {
         return res.status(403).json({ error: '当前账户不能处理这个问题点' });
+      }
+      try {
+        const handoffResult = await applyCrossDeptHandoffPointAction(req, detail, actionName);
+        if (handoffResult) return res.json(handoffResult);
+      } catch (error) {
+        if (error && error.statusCode) return res.status(error.statusCode).json({ error: error.message });
+        throw error;
       }
       const result = await repo.applyPointAction(Number(req.params.pointId || 0), {
         action: actionName,

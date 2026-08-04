@@ -200,7 +200,7 @@ async function checkMdm(summary, fixedEnv, mdmBaseUrl) {
   assert.equal(health.body.identityModel, 'person', 'MDM health identity model is not person');
   assert.equal(
     health.body.governanceModelVersion,
-    'rbac-raci-v2-2026-07-30',
+    'rbac-raci-v3-2026-07-31',
     'MDM health governance model version is stale'
   );
   addCheck(summary, 'MDM health', {
@@ -250,7 +250,7 @@ async function checkMdm(summary, fixedEnv, mdmBaseUrl) {
   assert.ok((me.body.dataScopes || []).includes('global'), 'MDM administrator lacks global read scope');
   assert.equal(
     me.body.governanceModelVersion,
-    'rbac-raci-v2-2026-07-30',
+    'rbac-raci-v3-2026-07-31',
     'MDM /api/org/me governance model version is stale'
   );
   addCheck(summary, 'MDM current user', {
@@ -272,10 +272,10 @@ async function checkMdm(summary, fixedEnv, mdmBaseUrl) {
   addCheck(summary, 'MDM accounts', { count: accountCount });
 
   const rbacModel = await requireJson(`${mdmBaseUrl}/api/rbac/model`, { headers: authedHeaders });
-  assert.equal(rbacModel.body.modelVersion, 'rbac-raci-v2-2026-07-30');
+  assert.equal(rbacModel.body.modelVersion, 'rbac-raci-v3-2026-07-31');
   assert.equal(countRows(rbacModel.body.roles), 7, 'MDM fixed role count is not 7');
   assert.equal(countRows(rbacModel.body.permissions), 19, 'MDM fixed permission count is not 19');
-  assert.equal(countRows(rbacModel.body.activities), 8, 'MDM RACI activity count is not 8');
+  assert.equal(countRows(rbacModel.body.activities), 11, 'MDM RACI activity count is not 11');
   addCheck(summary, 'MDM fixed RBAC/RACI model', {
     modelVersion: rbacModel.body.modelVersion,
     roles: countRows(rbacModel.body.roles),
@@ -312,6 +312,55 @@ async function checkMdm(summary, fixedEnv, mdmBaseUrl) {
   addCheck(summary, 'MDM role workbench', {
     roles: countRows(workbench.body.roles || []),
     todos: countRows(workbench.body.todos || [])
+  });
+
+  const processDrafts = await requireJson(
+    `${mdmBaseUrl}/api/process-design/drafts?limit=100`,
+    { headers: authedHeaders }
+  );
+  const processHandoffs = await requireJson(
+    `${mdmBaseUrl}/api/process-design/cross-dept-handoffs?limit=200`,
+    { headers: authedHeaders }
+  );
+  const handoffConflicts = await requireJson(
+    `${mdmBaseUrl}/api/process-design/handoff-conflicts?limit=200`,
+    { headers: authedHeaders }
+  );
+  addCheck(summary, 'MDM unified process governance queues', {
+    drafts: countRows(processDrafts.body.items || []),
+    handoffs: countRows(processHandoffs.body.items || []),
+    conflicts: countRows(handoffConflicts.body.items || [])
+  });
+
+  const editorPage = await request(`${mdmBaseUrl}/process-governance-editor/index.html`);
+  assert.equal(editorPage.response.ok, true, `MDM process editor page returned ${editorPage.response.status}`);
+  assert.ok(editorPage.text.includes('单流程治理编制工作台'), 'MDM process editor page is not the 3001-style workbench');
+  assert.ok(editorPage.text.includes('跨职能流程图预览'), 'MDM process editor is missing the cross-functional diagram');
+  assert.ok(editorPage.text.includes('结构化学习评分'), 'MDM process editor is missing the structure score');
+  const editorSchema = await requireJson(`${mdmBaseUrl}/api/process-design/editor/schema`, { headers: authedHeaders });
+  assert.equal(
+    editorSchema.body.properties?.schema_version?.const,
+    'process-governance-v2',
+    'MDM process editor schema version is stale'
+  );
+  const editorTemplate = await requireJson(
+    `${mdmBaseUrl}/api/process-design/editor/template?version=process-governance-v2`,
+    { headers: authedHeaders }
+  );
+  const editorValidation = await requireJson(`${mdmBaseUrl}/api/process-design/editor/validate`, {
+    method: 'POST',
+    headers: {
+      ...authedHeaders,
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': csrf.body.csrfToken
+    },
+    body: JSON.stringify({ data: editorTemplate.body.data })
+  });
+  assert.equal(editorValidation.body.valid, true, 'MDM process editor empty template failed technical validation');
+  addCheck(summary, 'MDM 3001-style process editor', {
+    page: editorPage.response.status,
+    schemaVersion: editorTemplate.body.schema_version,
+    technicalValidation: editorValidation.body.valid
   });
 
   const currentProcess = await requireJson(`${mdmBaseUrl}/api/process-governance/current`, { headers: authedHeaders });

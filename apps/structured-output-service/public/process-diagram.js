@@ -158,14 +158,20 @@
   }
 
   function handoffLabel(handoff) {
-    const targetProcess = text(handoff.target_process_name);
-    const targetBehavior = text(handoff.target_behavior_name);
+    const direction = handoff.handoff_direction === 'inbound_prerequisite'
+      ? 'inbound_prerequisite'
+      : 'outbound_followup';
+    const targetProcess = text(handoff.counterparty_process_name || handoff.target_process_name);
+    const targetBehavior = text(handoff.counterparty_behavior_name || handoff.target_behavior_name);
     const target = [targetProcess, targetBehavior].filter(Boolean).join(' / ') || '待明确';
+    const externalDepartment = direction === 'inbound_prerequisite'
+      ? text(handoff.source_department)
+      : text(handoff.target_department);
     return [
-      '跨部门承接',
-      `承接部门：${text(handoff.target_department) || '待明确'}`,
-      `目标流程或行为：${target}`,
-      `承接事项：${text(handoff.requested_matter) || '待明确'}`
+      direction === 'inbound_prerequisite' ? '跨部门前置输入' : '跨部门后续承接',
+      `外部门：${externalDepartment || '待在MDM平台明确'}`,
+      `外部门流程或行为：${target}`,
+      `数据或事项：${text(handoff.requested_matter) || '待明确'}`
     ].join('\n');
   }
 
@@ -920,14 +926,17 @@
     let externalTop = poolHeight + 58;
     items(data.cross_department_handoffs).forEach((handoff, index) => {
       const handoffRef = text(handoff.handoff_ref);
-      const sendRef = text(handoff.send_behavior_ref);
-      const sendNodeId = behaviorNodeByRef.get(sendRef);
-      const sendNode = behaviorRecords.find(record => record.node.data.id === sendNodeId)?.node;
-      if (!sendNodeId || !sendNode) {
+      const direction = handoff.handoff_direction === 'inbound_prerequisite'
+        ? 'inbound_prerequisite'
+        : 'outbound_followup';
+      const anchorRef = text(handoff.anchor_behavior_ref || handoff.send_behavior_ref);
+      const anchorNodeId = behaviorNodeByRef.get(anchorRef);
+      const anchorNode = behaviorRecords.find(record => record.node.data.id === anchorNodeId)?.node;
+      if (!anchorNodeId || !anchorNode) {
         unresolvedItems.push({
           focusKind: 'handoff',
           focusRef: handoffRef,
-          message: `跨部门承接${index + 1}未显示：请指定有效的发送行为。`
+          message: `跨部门承接${index + 1}未显示：请指定有效的本流程关联行为。`
         });
         return;
       }
@@ -937,7 +946,10 @@
       const externalY = externalTop + display.nodeHeight / 2;
       const externalX = Math.max(
         LANE_HEADER_WIDTH + display.nodeWidth / 2 + 24,
-        Math.min(poolWidth - display.nodeWidth / 2 - 24, sendNode.position.x + 260)
+        Math.min(
+          poolWidth - display.nodeWidth / 2 - 24,
+          anchorNode.position.x + (direction === 'inbound_prerequisite' ? -260 : 260)
+        )
       );
       externalTop += display.nodeHeight + 48;
       nodes.push({
@@ -964,14 +976,16 @@
           y: externalY
         }
       });
-      const handoffOutDisplay = edgeDisplayMetrics('跨部门承接');
+      const handoffOutDisplay = edgeDisplayMetrics(
+        direction === 'inbound_prerequisite' ? '外部门提供前置输入' : '交由外部门承接'
+      );
       edges.push({
         group: 'edges',
         classes: 'message-flow handoff-edge',
         data: {
           id: graphRef('handoff-out', index, handoffRef),
-          source: sendNodeId,
-          target: externalNodeId,
+          source: direction === 'inbound_prerequisite' ? externalNodeId : anchorNodeId,
+          target: direction === 'inbound_prerequisite' ? anchorNodeId : externalNodeId,
           label: handoffOutDisplay.label,
           rawLabel: handoffOutDisplay.rawLabel,
           labelWidth: handoffOutDisplay.labelWidth,
@@ -981,7 +995,9 @@
           focusRef: handoffRef
         }
       });
-      const returnRef = text(handoff.return_behavior_ref);
+      const returnRef = direction === 'outbound_followup' && handoff.requires_return
+        ? text(handoff.resume_behavior_ref || handoff.return_behavior_ref)
+        : '';
       if (returnRef && !behaviorNodeByRef.has(returnRef)) {
         unresolvedItems.push({
           focusKind: 'handoff',

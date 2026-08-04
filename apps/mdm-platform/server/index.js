@@ -67,6 +67,7 @@ registerRouteIfExists('/api/export', 'export');
 registerRouteIfExists('/api/views', 'views');
 registerRouteIfExists('/api/process-governance/guidance', 'governanceGuidance');
 registerRouteIfExists('/api/process-governance', 'processGovernance');
+registerRouteIfExists('/api/process-design/editor', 'processDesignEditor');
 registerRouteIfExists('/api/process-design', process.env.PROCESS_GOVERNANCE_READ_MODEL === 'mysql' ? 'processDesignMysql' : 'processDesign');
 registerRouteIfExists('/api/role-workbench', 'roleWorkbench');
 registerRouteIfExists('/api/page-workflows', 'pageWorkflows');

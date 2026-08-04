@@ -526,6 +526,18 @@
     .role-guide-card ul { margin: 0; padding-left: 18px; color: var(--text-main); }
     .role-guide-card li { margin: 8px 0; }
     .role-guide-card strong { font-weight: 600; }
+    .role-guide-shell { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 20px; align-items: start; }
+    .role-guide-list { display: grid; gap: 8px; position: sticky; top: 84px; }
+    .role-guide-list button { width: 100%; text-align: left; padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); cursor: pointer; }
+    .role-guide-list button.on { border-color: var(--accent); background: var(--focus-ring); }
+    .role-guide-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .role-guide-detail-grid > div { padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+    .pg-story-chain { display: grid; grid-template-columns: repeat(7, minmax(120px, 1fr)); gap: 8px; padding: 0; margin: 16px 0; list-style: none; overflow-x: auto; }
+    .pg-story-chain li { min-width: 120px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+    .pg-story-chain li.completed { border-color: var(--success); }
+    .pg-story-chain li.branched { border-color: var(--warning); border-style: dashed; }
+    .pg-story-chain li.current { border-color: var(--accent); box-shadow: 0 0 0 2px var(--focus-ring); }
+    .pg-story-chain span { display: block; margin-top: 8px; color: var(--text-muted); font-size: 12px; }
     .role-guide-flow { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 13px; }
     .activity-card {
       border: 1px solid var(--border);
@@ -778,6 +790,13 @@
     .process-design-detail-grid strong, .process-design-list-item strong { display: block; color: #233044; font-size: 13px; }
     .process-design-detail-grid span, .process-design-list-item span { display: block; margin-top: 3px; color: var(--text-muted); font-size: 12px; line-height: 1.45; }
     .process-design-mini-list { display: grid; gap: 6px; }
+    .process-governance-editor-frame {
+      display: block;
+      width: 100%;
+      min-height: 760px;
+      border: 0;
+      background: transparent;
+    }
     .process-design-inline-list {
       display: grid; gap: 8px; padding: 10px; border: 1px solid #eadfd4; border-radius: 8px; background: rgba(255,253,248,0.78);
     }
@@ -1179,6 +1198,9 @@
       .action-metrics { grid-template-columns: 1fr; }
       .role-guide-header { flex-direction: column; gap: 12px; }
       .role-guide-grid { grid-template-columns: 1fr; }
+      .role-guide-shell { grid-template-columns: 1fr; }
+      .role-guide-list { position: static; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .role-guide-detail-grid { grid-template-columns: 1fr; }
       .role-workbench { height: auto; overflow: visible; }
       .role-workbench.on { display: block; }
       .role-workbench-top, .role-workbench-left, .role-workbench-main, .role-workbench-right { display: block; border: 0; }
@@ -1279,7 +1301,7 @@
 
     <div id="appContent" style="display: none;">
       <nav class="tabs" id="tabs">
-        <button class="tab on" data-tab="roleWorkbench">角色工作台</button>
+        <button class="tab on" data-tab="roleWorkbench">我的工作台</button>
         <button class="tab" data-tab="dashboard" data-permissions="governance:read-global,governance:read-department,governance:read-assigned-context,governance:read-escalated-context">统计看板</button>
         <button class="tab" data-tab="roleGuide">角色与责任</button>
         <button class="tab" data-tab="mySubmissions" data-permissions="governance:draft-department,governance:submit-department">报送管理</button>
@@ -1450,17 +1472,11 @@
           </div>
         </div>
         <div class="notice role-guide-current" id="roleGuideCurrent">正在识别当前角色...</div>
-        <div class="role-guide-grid" id="roleGuideGrid">
-          <article class="role-guide-card">
-            <div class="role-guide-title"><h3>样例参考</h3><span class="tag">example</span></div>
-            <ul>
-              <li><strong>典型样例：</strong>业务对接人收到字段确认待办后，先打开 A1 业务行为，确认字段是否确实在该流程中产生或消费。</li>
-              <li><strong>典型样例：</strong>数据质量员发现同一字段存在不同待确认黄金源时，先查看字段台账和消费系统，再发起冲突协调。</li>
-              <li><strong>典型样例：</strong>工作组组长看到本工作组有跨部门衔接风险时，先进入流程治理详情，确认输入来源、输出目标和本组责任人。</li>
-              <li><strong>典型样例：</strong>项目组长看到本部门有跨部门衔接风险时，先进入流程治理详情，确认输入来源和输出目标是否缺接收流程。</li>
-            </ul>
-            <div class="role-guide-flow">进入角色工作台后，左侧“我现在该做什么”会给出 1 到 3 个下一步动作。</div>
-          </article>
+        <div class="role-guide-shell">
+          <nav class="role-guide-list" id="roleGuideList" aria-label="固定角色列表"></nav>
+          <div id="roleGuideGrid">
+            <article class="role-guide-card"><div class="empty">正在读取角色说明...</div></article>
+          </div>
         </div>
         <div id="roleGuideUnavailable" style="margin-top:24px;"></div>
         <div id="roleGuideRaci" style="margin-top:24px;"></div>
@@ -1670,19 +1686,21 @@
       <!-- Process Governance -->
       <section class="panel" id="processGovernancePanel">
         <div class="toolbar">
-          <h2>流程治理</h2>
+          <div>
+            <h2>流程治理统一入口</h2>
+            <p class="muted">在同一入口完成单流程编制、跨部门承接和承接冲突处理。3001仍可独立使用，导出的v1/v2文件均可导入本页。</p>
+          </div>
           <div class="toolbar-right">
-            <select id="pgRiskFilter" style="width: 140px; height: 36px; padding: 0 12px;">
+            <select id="pgRiskFilter" hidden style="width: 140px; height: 36px; padding: 0 12px;">
               <option value="">全部风险</option>
               <option value="high">高风险</option>
               <option value="medium">中风险</option>
               <option value="low">低风险</option>
             </select>
-            <button class="btn secondary" id="pgCreateGuidanceBtn" data-permission="guidance:create" data-requires-governance-object="true" data-disabled-reason="请先选择一个流程治理对象">形成指导意见</button>
             <button class="btn secondary" id="refreshProcessGovernanceBtn">刷新</button>
           </div>
         </div>
-        <div class="pg-guidance-strip pg-guidance-deferred" id="pgGuidanceContext">
+        <div class="pg-guidance-strip pg-guidance-deferred" id="pgGuidanceContext" hidden>
           <span data-guidance-field="finalResponsiblePerson">最终响应责任人：<b id="pgGuidanceFinalResponsiblePerson">—</b></span>
           <span data-guidance-field="currentHandlerPerson">当前处理人：<b id="pgGuidanceCurrentHandlerPerson">—</b></span>
           <span data-guidance-field="delegatePerson">代理处理人：<b id="pgGuidanceDelegatePerson">—</b></span>
@@ -1696,7 +1714,7 @@
             <button class="btn secondary" id="pgFinalConfirmGuidanceBtn" data-permission="guidance:final_confirm" data-requires-guidance-state="pending_final_confirm" data-requires-responsibility="finalResponsible">确认闭环</button>
           </div>
         </div>
-        <div class="pg-guidance-workspace pg-guidance-deferred" id="pgGuidanceWorkspace" aria-label="指导意见工作台">
+        <div class="pg-guidance-workspace pg-guidance-deferred" id="pgGuidanceWorkspace" aria-label="指导意见工作台" hidden>
           <div class="pg-guidance-list" id="pgGuidanceList" role="list"></div>
           <article class="pg-guidance-detail" id="pgGuidanceDetailPanel">
             <div class="pg-guidance-detail-head">
@@ -1728,18 +1746,55 @@
             <button type="button" class="btn secondary" id="pgClearDeptScopeBtn">查看全公司</button>
           </div>
         </div>
-        <div class="pg-section pg-document-structure-section" id="pgNewProcessWorkspace" data-pg-view="documentStructure">
-          <div class="pg-wizard" id="pgDesignWizard">
-            <div class="pg-section-hd"><h2>文档结构化输出</h2><span class="pg-status" id="pgDesignSummaryMeta"></span></div>
-            <div class="pg-wizard-steps process-design-step-progress" id="pgDesignStepProgress" aria-label="文档结构化输出节点进度">
+        <div class="pg-section pg-document-structure-section" id="pgNewProcessWorkspace" data-pg-view="editor">
+          <iframe
+            class="process-governance-editor-frame"
+            id="pgProcessGovernanceEditorFrame"
+            src="about:blank"
+            data-src="/process-governance-editor/index.html"
+            title="单流程治理编制工作台"
+          ></iframe>
+          <div class="pg-wizard" id="pgDesignWizard" hidden aria-hidden="true">
+            <div class="pg-section-hd"><h2>单流程编制</h2><span class="pg-status" id="pgDesignSummaryMeta"></span></div>
+            <div class="pg-wizard-steps process-design-step-progress" id="pgDesignStepProgress" aria-label="单流程编制节点进度">
             </div>
             <div class="process-design-step-actions">
-              <button type="button" class="btn secondary" id="importProcessDesignStructuredOutputBtn">导入结构化文件</button>
+              <button type="button" class="btn secondary" id="importProcessDesignStructuredOutputBtn">预览并审核导入3001文件</button>
               <input type="file" id="processDesignStructuredOutputInput" accept=".json,application/json" style="display:none">
               <button type="button" class="btn secondary" id="pgDesignPrevStepBtn">上一步</button>
               <span class="pg-status" id="pgDesignStepCounter"></span>
               <button type="button" class="btn secondary" id="pgDesignNextStepBtn">下一步</button>
             </div>
+            <div class="process-design-form pg-hidden" id="pgDesignImportReviewPanel">
+              <div class="wide notice" id="pgDesignImportReviewSummary">尚未选择3001结构化文件。</div>
+              <label class="wide">审核依据<textarea id="pgDesignImportDecisionBasis" rows="3" placeholder="写明本次核对的来源、范围和部门审核结论"></textarea></label>
+              <div class="wide process-design-actions">
+                <button type="button" class="btn primary" id="approveProcessDesignStructuredOutputBtn">确认审核导入</button>
+                <button type="button" class="btn secondary" id="cancelProcessDesignStructuredOutputBtn">取消</button>
+              </div>
+            </div>
+            <div class="process-design-form pg-hidden" id="pgHandoffVoidReasonPanel">
+              <div class="wide notice">
+                <strong>需要说明承接作废原因</strong>
+                <div id="pgHandoffVoidReasonMessage" style="margin-top:6px;"></div>
+              </div>
+              <label class="wide">作废原因<textarea id="pgHandoffVoidReasonText" rows="3" placeholder="说明为什么本次修订不再保留该承接，以及依据是什么"></textarea></label>
+              <div class="wide process-design-actions">
+                <button type="button" class="btn primary" id="pgHandoffVoidReasonRetryBtn">填写原因并重新保存</button>
+                <button type="button" class="btn secondary" id="pgHandoffVoidReasonCancelBtn">取消</button>
+              </div>
+            </div>
+            <details class="process-design-detail" id="pgCanonicalJsonEditor" style="margin-bottom:16px;">
+              <summary><strong>单流程治理JSON</strong> <span class="pg-status" id="pgCanonicalRevision">尚未选择草稿</span></summary>
+              <div class="notice" style="margin:12px 0;">这里保存的是process-governance-v2完整内容。可粘贴3001导出的v1/v2 JSON；保存和导出统一为v2。浏览器不会持久化草稿。</div>
+              <textarea id="pgCanonicalJsonText" rows="18" spellcheck="false" style="width:100%;font-family:Consolas,monospace;" placeholder="选择草稿后载入，或通过“预览并审核导入3001文件”创建治理投影"></textarea>
+              <div class="process-design-actions" style="margin-top:12px;">
+                <button type="button" class="btn secondary" id="pgLoadCanonicalJsonBtn">重新载入</button>
+                <button type="button" class="btn primary" id="pgSaveCanonicalJsonBtn">保存草稿</button>
+                <button type="button" class="btn secondary" id="pgExportCanonicalJsonBtn">导出备份</button>
+                <span class="pg-status" id="pgCanonicalSaveStatus"></span>
+              </div>
+            </details>
             <div id="pgDesignOutcome" class="outcome-card"></div>
             <div class="notice pg-hidden" id="pgDesignReadOnlyNotice">当前状态只读，需要退回修改或新建变更版本</div>
             <div class="process-design-actions pg-hidden" id="pgDesignEditActions">
@@ -1891,6 +1946,42 @@
             <div class="process-design-actions process-design-step-panel pg-hidden" data-process-design-step-panel="markdown">
               <button type="button" class="btn secondary" id="exportProcessDesignMarkdownBtn">导出 Markdown 草案</button>
             </div>
+          </div>
+        </div>
+        <div class="pg-section" id="pgHandoffQueueSection" data-pg-view="handoffs">
+          <div class="pg-section-hd">
+            <div>
+              <h2>跨部门承接待办</h2>
+              <p class="muted">待办直接来自承接状态、当前角色、部门和参与关系。管理员可以查看记录，但不能执行业务动作。</p>
+            </div>
+            <button type="button" class="btn secondary" id="pgRefreshHandoffQueueBtn">刷新</button>
+          </div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead><tr><th>流程</th><th>承接关系</th><th>双方部门</th><th>当前步骤</th><th>下一责任角色</th><th>操作</th></tr></thead>
+              <tbody id="pgHandoffQueueRows"><tr><td colspan="6" class="empty">正在读取跨部门承接待办...</td></tr></tbody>
+            </table>
+          </div>
+          <div class="process-design-detail" id="pgHandoffStoryPanel" style="margin-top:20px;">
+            <div class="empty">选择一条承接待办后查看故事链。</div>
+          </div>
+        </div>
+        <div class="pg-section" id="pgHandoffConflictSection" data-pg-view="conflicts">
+          <div class="pg-section-hd">
+            <div>
+              <h2>承接冲突待办</h2>
+              <p class="muted">部门明确拒绝或MDM结构卡口提请争议处理后进入本队列。退回补充仍属于原承接故事链，不自动形成冲突。</p>
+            </div>
+            <button type="button" class="btn secondary" id="pgRefreshHandoffConflictBtn">刷新</button>
+          </div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead><tr><th>流程</th><th>双方部门</th><th>冲突状态</th><th>处理人</th><th>更新时间</th><th>操作</th></tr></thead>
+              <tbody id="pgHandoffConflictRows"><tr><td colspan="6" class="empty">正在读取承接冲突待办...</td></tr></tbody>
+            </table>
+          </div>
+          <div class="process-design-detail" id="pgHandoffConflictDetail" style="margin-top:20px;">
+            <div class="empty">选择一条承接冲突后查看双方立场、证据、协调方案和决定记录。</div>
           </div>
         </div>
         <div class="pg-section pg-overview-section" data-pg-view="overview">
@@ -2225,7 +2316,7 @@
         <div class="rbac-shell">
           <div class="rbac-side">
             <div class="rbac-nav-item active" data-panel="userManagement">账号管理</div>
-            <div class="rbac-nav-item" data-panel="roleList">角色与责任</div>
+            <div class="rbac-nav-item" data-panel="visibleTabs">角色可见标签</div>
             <div class="rbac-nav-item" data-panel="auditEvents">访问审计</div>
           </div>
           <div style="flex:1;" id="rbacPanel"></div>
@@ -2296,46 +2387,29 @@
 
   <script>
     // ===== State & Utilities =====
-    const state = { user:null, departments:[], capabilities:[], processes:[], termProcesses:[], termTypes:[], mappings:[], dataMapContexts:[], dataMapFields:[], todos:[], conflicts:[], terms:[], currentRoute:null, currentView:'roleWorkbench', activeMapping:null, activeConflict:null, pollTimer:null, isEditing:false, activeReview:null, activeCapReview:null, activeProcReview:null, pgSelectedDept:'', pgEvidenceFocus:null, pgActiveGuidance:null, pgActiveGovernanceObject:null, pgSourceCoverageData:null, pgTaskSummary:null, pgIssueActionResult:null, pgAssignablePersons:null, pgViewCache:{}, pgViewRequests:{}, pgWorkspace:'existing', processDesign:{ summary:null, draft:null, activeStep:'draft', taxonomy:null, taxonomyLoaded:false, taxonomyScopeKey:null, taxonomyError:null, documentLookup:null, fieldTypes:[], rosterRolesByDepartment:{} }, processGovernanceRenderRequestId:0, pageWorkflow:null, pageWorkflowRequestId:0, roleWorkbench:{ mode:'todo', data:null, selectedNode:null }, activity:{ roleWorkbench:null, dashboard:null, dashboardUsers:[] } };
+    const state = { user:null, departments:[], capabilities:[], processes:[], termProcesses:[], termTypes:[], mappings:[], dataMapContexts:[], dataMapFields:[], todos:[], conflicts:[], terms:[], currentRoute:null, currentView:'roleWorkbench', activeMapping:null, activeConflict:null, pollTimer:null, isEditing:false, activeReview:null, activeCapReview:null, activeProcReview:null, pgSelectedDept:'', pgEvidenceFocus:null, pgActiveGuidance:null, pgActiveGovernanceObject:null, pgSourceCoverageData:null, pgTaskSummary:null, pgIssueActionResult:null, pgAssignablePersons:null, pgViewCache:{}, pgViewRequests:{}, pgWorkspace:'editor', pgSelectedHandoffId:null, pgSelectedHandoffConflictId:null, processDesign:{ summary:null, draft:null, activeStep:'draft', taxonomy:null, taxonomyLoaded:false, taxonomyScopeKey:null, taxonomyError:null, documentLookup:null, fieldTypes:[], rosterRolesByDepartment:{}, canonicalRevision:null, canonicalHash:null, canonicalDirty:false, voidedHandoffReasons:{}, pendingVoidedHandoffRef:null, voidReasonRetryMode:null }, processGovernanceRenderRequestId:0, pageWorkflow:null, pageWorkflowRequestId:0, roleWorkbench:{ mode:'todo', data:null, selectedNode:null }, activity:{ roleWorkbench:null, dashboard:null, dashboardUsers:[] } };
     const SOURCE_COVERAGE_VISIBLE_LIMIT = 20;
     const PROCESS_GOVERNANCE_QUALITY_VISIBLE_LIMIT = 80;
     const PROCESS_DESIGN_FIELD_TYPES = ['文本', '长文本', '数值', '金额', '数量', '日期', '日期时间', '是/否', '枚举', '人员', '部门', '附件'];
     const PROCESS_DESIGN_EVIDENCE_TYPES = ['制度条款', '表单样例', '台账记录', '流程图', '会议纪要', '访谈记录', '系统截图', 'OCR待复核', '其他'];
     const PROCESS_GOVERNANCE_SUBTABS = [
-      { key: 'overview', label: '总览' },
-      { key: 'documentStructure', label: '文档结构化输出' },
-      { key: 'inputBaselineReview', label: '待确认问题' },
-      { key: 'map', label: '流程图谱' },
-      { key: 'evidence', label: '证据来源' },
-      { key: 'mapping', label: '映射工作' },
-      { key: 'quality', label: '治理闭环' }
+      { key: 'editor', label: '流程编制' },
+      { key: 'handoffs', label: '跨部门承接待办' },
+      { key: 'conflicts', label: '承接冲突待办' }
     ];
     const PROCESS_GOVERNANCE_VIEW_ALIASES = {
-      overview: 'overview',
-      documentStructure: 'documentStructure',
-      newProcess: 'documentStructure',
-      inputBaselineReview: 'inputBaselineReview',
-      map: 'map',
-      processMap: 'map',
-      evidence: 'evidence',
-      sourceCoverage: 'evidence',
-      mdmRequirements: 'evidence',
-      mapping: 'mapping',
-      mappingWorkspace: 'mapping',
-      mappingTodos: 'mapping',
-      quality: 'quality',
-      qualityCases: 'quality'
+      editor: 'editor',
+      newProcess: 'editor',
+      documentStructure: 'editor',
+      handoffs: 'handoffs',
+      conflicts: 'conflicts'
     };
     const PROCESS_GOVERNANCE_VIEW_PRODUCTS = {
-      overview: { label: '总览', load: loadProcessGovernanceOverviewView, render: renderProcessGovernanceOverviewView },
-      documentStructure: { label: '文档结构化输出', load: loadProcessGovernanceDocumentStructureView, render: renderProcessGovernanceDocumentStructureView },
-      inputBaselineReview: { label: '待确认问题', load: loadProcessGovernanceInputBaselineReviewView, render: renderProcessGovernanceInputBaselineReviewView },
-      map: { label: '流程图谱', load: loadProcessGovernanceMapView, render: renderProcessGovernanceMapView },
-      evidence: { label: '证据来源', load: loadProcessGovernanceEvidenceView, render: renderProcessGovernanceEvidenceView },
-      mapping: { label: '映射工作', load: loadProcessGovernanceMappingView, render: renderProcessGovernanceMappingView },
-      quality: { label: '治理闭环', load: loadProcessGovernanceQualityView, render: renderProcessGovernanceQualityView }
+      editor: { label: '流程编制', load: loadUnifiedProcessEditorView, render: renderUnifiedProcessEditorView },
+      handoffs: { label: '跨部门承接待办', load: loadHandoffQueueView, render: renderHandoffQueueView },
+      conflicts: { label: '承接冲突待办', load: loadHandoffConflictQueueView, render: renderHandoffConflictQueueView }
     };
-    const PROCESS_GOVERNANCE_GUIDANCE_VIEWS = new Set(['inputBaselineReview', 'map', 'evidence', 'mapping', 'quality']);
+    const PROCESS_GOVERNANCE_GUIDANCE_VIEWS = new Set();
     const PROCESS_DESIGN_WIZARD_STEPS = [
       { key: 'draft', label: '制度说明' },
       { key: 'behavior', label: '流程与行为' },
@@ -2350,9 +2424,9 @@
     const PROCESS_DESIGN_ALL_COMPANY_RELATED_DEPARTMENT = '全公司';
 
     function processGovernanceViewFromRoute(route) {
-      if (route && route.pgWorkspace === 'new') return 'documentStructure';
+      if (route && PROCESS_GOVERNANCE_VIEW_PRODUCTS[route.pgWorkspace]) return route.pgWorkspace;
       var rawView = route && (route.pgView || route.qualityView);
-      return PROCESS_GOVERNANCE_VIEW_ALIASES[rawView] || 'overview';
+      return PROCESS_GOVERNANCE_VIEW_ALIASES[rawView] || 'editor';
     }
 
     function processGovernanceGuidanceEnabledForView(view) {
@@ -2360,8 +2434,8 @@
     }
 
     function processGovernanceSubtabHash(view) {
-      if (view === 'overview') return '#/processGovernance';
-      return '#/processGovernance?view=' + encodeURIComponent(view);
+      if (view === 'editor') return '#/processGovernance';
+      return '#/processGovernance?workspace=' + encodeURIComponent(view);
     }
 
     function renderProcessGovernanceSubtabs(activeView) {
@@ -2373,7 +2447,13 @@
       }).join('');
       container.querySelectorAll('[data-pg-subtab]').forEach(function(button) {
         button.addEventListener('click', function() {
-          var nextView = button.dataset.pgSubtab || 'overview';
+          var nextView = button.dataset.pgSubtab || 'editor';
+          if (
+            activeView === 'editor' &&
+            nextView !== 'editor' &&
+            state.processDesign.canonicalDirty &&
+            !confirm('当前单流程治理JSON尚未保存。放弃修改并切换工作区吗？')
+          ) return;
           location.hash = processGovernanceSubtabHash(nextView);
         });
       });
@@ -2383,8 +2463,9 @@
       document.querySelectorAll('#processGovernancePanel [data-pg-view]').forEach(function(section) {
         section.classList.toggle('pg-hidden', section.dataset.pgView !== activeView);
       });
-      if (activeView === 'map' && pgSankeyResizeHandler) {
-        setTimeout(pgSankeyResizeHandler, 0);
+      var editorFrame = $('pgProcessGovernanceEditorFrame');
+      if (activeView === 'editor' && editorFrame && editorFrame.dataset.src && editorFrame.getAttribute('src') === 'about:blank') {
+        editorFrame.setAttribute('src', editorFrame.dataset.src);
       }
     }
 
@@ -2393,21 +2474,12 @@
       var textEl = document.getElementById('pgCurrentScopeText');
       var clearBtn = document.getElementById('pgClearDeptScopeBtn');
       if (!container || !textEl) return;
-      if (!state.pgSelectedDept || state.pgWorkspace !== 'existing') {
-        container.hidden = true;
-        textEl.textContent = '';
-        return;
-      }
-      container.hidden = false;
-      if (clearBtn) clearBtn.hidden = !canViewAllProcessGovernanceClient();
-      var suffix = activeView === 'map'
-        ? '图谱、A1 明细和跨部门风险已按该部门过滤。'
-        : (canViewAllProcessGovernanceClient() ? '当前页继承了这个部门范围，切回全公司后可查看全部数据。' : '当前页只显示本部门可确认范围。');
-      textEl.textContent = '当前范围：' + state.pgSelectedDept + '。' + suffix;
+      container.hidden = true;
+      textEl.textContent = '';
     }
 
     function processGovernanceWorkspaceFromRoute(route) {
-      return 'existing';
+      return processGovernanceViewFromRoute(route);
     }
 
     function renderProcessGovernanceWorkspaceChoices(activeWorkspace) {
@@ -2446,6 +2518,448 @@
 
     function renderProcessGovernanceDocumentStructureView(payload) {
       renderProcessDesignWorkspace({ summaryData: payload });
+    }
+
+    async function loadUnifiedProcessEditorView() {
+      var values = await Promise.all([
+        api('/api/process-design/summary'),
+        api('/api/process-design/drafts?limit=100')
+      ]);
+      return { summaryData: values[0], canonicalDrafts: values[1] };
+    }
+
+    function renderUnifiedProcessEditorView(payload) {
+      renderProcessDesignWorkspace({ summaryData: payload && payload.summaryData || payload });
+    }
+
+    function handoffVoidReasonsPayload() {
+      return Object.keys(state.processDesign.voidedHandoffReasons || {}).map(function(handoffRef) {
+        return {
+          handoff_ref: handoffRef,
+          reason: state.processDesign.voidedHandoffReasons[handoffRef]
+        };
+      }).filter(function(item) {
+        return item.handoff_ref && item.reason;
+      });
+    }
+
+    function hideHandoffVoidReasonPanel(options) {
+      options = options || {};
+      if ($('pgHandoffVoidReasonPanel')) $('pgHandoffVoidReasonPanel').classList.add('pg-hidden');
+      if ($('pgHandoffVoidReasonText')) $('pgHandoffVoidReasonText').value = '';
+      state.processDesign.pendingVoidedHandoffRef = null;
+      state.processDesign.voidReasonRetryMode = null;
+      if (options.clearReasons) state.processDesign.voidedHandoffReasons = {};
+    }
+
+    function showHandoffVoidReasonPanel(handoffRef, retryMode) {
+      if (!handoffRef) return;
+      state.processDesign.pendingVoidedHandoffRef = handoffRef;
+      state.processDesign.voidReasonRetryMode = retryMode;
+      if ($('pgHandoffVoidReasonMessage')) {
+        $('pgHandoffVoidReasonMessage').textContent = '承接标识：' + handoffRef + '。该承接已有治理记录，系统会保留历史并把当前修订标记为作废。';
+      }
+      if ($('pgHandoffVoidReasonText')) {
+        $('pgHandoffVoidReasonText').value = state.processDesign.voidedHandoffReasons[handoffRef] || '';
+      }
+      if ($('pgHandoffVoidReasonRetryBtn')) {
+        $('pgHandoffVoidReasonRetryBtn').textContent = retryMode === 'import'
+          ? '填写原因并重新审核导入'
+          : '填写原因并重新保存';
+      }
+      if ($('pgHandoffVoidReasonPanel')) $('pgHandoffVoidReasonPanel').classList.remove('pg-hidden');
+    }
+
+    async function retryWithHandoffVoidReason() {
+      var handoffRef = state.processDesign.pendingVoidedHandoffRef;
+      var reason = $('pgHandoffVoidReasonText') ? $('pgHandoffVoidReasonText').value.trim() : '';
+      if (!handoffRef) throw new Error('没有需要作废的承接记录');
+      if (!reason) throw new Error('请填写承接作废原因');
+      state.processDesign.voidedHandoffReasons[handoffRef] = reason;
+      var retryMode = state.processDesign.voidReasonRetryMode;
+      hideHandoffVoidReasonPanel();
+      return retryMode === 'import'
+        ? approveProcessDesignStructuredOutputImport()
+        : saveCanonicalJsonDraft();
+    }
+
+    async function loadCanonicalJsonForDraft(draftId, options) {
+      options = options || {};
+      draftId = Number(draftId || currentProcessDesignDraftId() || 0);
+      if (!draftId) {
+        if ($('pgCanonicalRevision')) $('pgCanonicalRevision').textContent = '尚未选择草稿';
+        if ($('pgCanonicalJsonText')) $('pgCanonicalJsonText').value = '';
+        return null;
+      }
+      if (!options.force && state.processDesign.canonicalDirty) {
+        if (!confirm('当前单流程治理JSON尚未保存。放弃修改并重新载入吗？')) return null;
+      }
+      var content = await api('/api/process-design/drafts/' + encodeURIComponent(draftId) + '/content');
+      state.processDesign.canonicalRevision = Number(content.revision || 0);
+      state.processDesign.canonicalHash = content.content_hash || '';
+      state.processDesign.canonicalDirty = false;
+      hideHandoffVoidReasonPanel({ clearReasons: true });
+      if ($('pgCanonicalJsonText')) $('pgCanonicalJsonText').value = JSON.stringify(content.document, null, 2);
+      if ($('pgCanonicalRevision')) {
+        $('pgCanonicalRevision').textContent = 'v2 · 修订 ' + state.processDesign.canonicalRevision + ' · 来源：' + safeText(content.source || '草稿');
+      }
+      if ($('pgCanonicalSaveStatus')) $('pgCanonicalSaveStatus').textContent = '';
+      return content;
+    }
+
+    async function saveCanonicalJsonDraft() {
+      var draftId = currentProcessDesignDraftId();
+      if (!draftId) throw new Error('请先选择或创建流程草稿');
+      var parsed;
+      try {
+        parsed = JSON.parse($('pgCanonicalJsonText').value);
+      } catch (error) {
+        throw new Error('单流程治理JSON不是有效JSON，请检查括号、逗号和引号');
+      }
+      if ($('pgCanonicalSaveStatus')) $('pgCanonicalSaveStatus').textContent = '正在保存...';
+      try {
+        var result = await api('/api/process-design/drafts/' + encodeURIComponent(draftId) + '/content', {
+          method: 'PUT',
+          body: JSON.stringify({
+            expected_revision: Number(state.processDesign.canonicalRevision || 0),
+            content: parsed,
+            voided_handoffs: handoffVoidReasonsPayload()
+          })
+        });
+        state.processDesign.canonicalRevision = Number(result.revision || 0);
+        state.processDesign.canonicalHash = result.content_hash || '';
+        state.processDesign.canonicalDirty = false;
+        $('pgCanonicalJsonText').value = JSON.stringify(result.document, null, 2);
+        if ($('pgCanonicalRevision')) $('pgCanonicalRevision').textContent = 'v2 · 修订 ' + state.processDesign.canonicalRevision;
+        if ($('pgCanonicalSaveStatus')) $('pgCanonicalSaveStatus').textContent = result.changed ? '草稿已保存' : '内容未变化';
+        hideHandoffVoidReasonPanel({ clearReasons: true });
+        showToast(result.changed ? '单流程治理JSON草稿已保存' : '内容未变化');
+        return result;
+      } catch (error) {
+        if (error && error.code === 'DRAFT_REVISION_CONFLICT') {
+          if ($('pgCanonicalSaveStatus')) $('pgCanonicalSaveStatus').textContent = '草稿已被其他人员修改，请重新载入';
+        } else if (error && error.code === 'HANDOFF_VOID_REASON_REQUIRED') {
+          showHandoffVoidReasonPanel(error.handoff_ref, 'canonical');
+          if ($('pgCanonicalSaveStatus')) $('pgCanonicalSaveStatus').textContent = '请填写承接作废原因后重新保存';
+        } else if ($('pgCanonicalSaveStatus')) {
+          $('pgCanonicalSaveStatus').textContent = formatApiErrorMessage(error, '保存失败');
+        }
+        throw error;
+      }
+    }
+
+    function exportCanonicalJsonDraft() {
+      var draftId = currentProcessDesignDraftId();
+      if (!draftId) throw new Error('请先选择流程草稿');
+      if (state.processDesign.canonicalDirty) throw new Error('请先保存当前修改，再导出备份');
+      var link = document.createElement('a');
+      link.href = '/api/process-design/drafts/' + encodeURIComponent(draftId) + '/export';
+      link.download = '';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    }
+
+    async function loadHandoffQueueView() {
+      return await api('/api/process-design/cross-dept-handoffs?limit=200');
+    }
+
+    function renderHandoffQueueView(payload, route) {
+      var rows = payload && payload.items || [];
+      if ($('pgHandoffQueueRows')) {
+        $('pgHandoffQueueRows').innerHTML = rows.map(function(item) {
+          return '<tr><td>' + safeText(item.process_name || item.document_no || '-') + '</td>' +
+            '<td><strong>' + safeText(item.handoff_ref || item.id) + '</strong><br><span class="muted">' +
+            safeText(item.requested_matter || item.transfer_data_name || item.anchor_behavior_name || '-') + '</span></td>' +
+            '<td>' + safeText((item.origin_department || '-') + ' → ' + (item.counterparty_department || '-')) + '</td>' +
+            '<td>' + statusTag(item.status) + '<br><span class="muted">' + safeText(item.current_stage && item.current_stage.name) + '</span></td>' +
+            '<td>' + safeText(item.next_responsible_role || '-') + '</td>' +
+            '<td><button type="button" class="btn secondary" onclick="showHandoffStory(' + Number(item.id) + ')">故事链</button> ' +
+            (item.can_act ? '<button type="button" class="btn primary" onclick="handleHandoffAction(' + Number(item.id) + ',\'' + safeText(item.status) + '\')">处理</button>' : '') +
+            '</td></tr>';
+        }).join('') || '<tr><td colspan="6" class="empty">当前没有可见的跨部门承接待办</td></tr>';
+      }
+      if (route && route.handoffId) state.pgSelectedHandoffId = Number(route.handoffId);
+      if (state.pgSelectedHandoffId) showHandoffStory(state.pgSelectedHandoffId);
+    }
+
+    function handoffEventLabel(type) {
+      var labels = {
+        handoff_candidate_created: '生成承接候选',
+        counterparty_assigned: '分派责任部门',
+        department_decision_recorded: '记录部门决定',
+        handoff_returned: '退回上一责任步骤',
+        counterparty_detail_completed: '补充实际承接内容',
+        structure_gate_returned: '结构卡口退回',
+        structure_gate_confirmed: '结构卡口通过',
+        conflict_opened: '创建承接冲突',
+        conflict_assigned: '分派冲突处理人',
+        conflict_proposal_recorded: '记录协调方案',
+        conflict_proposal_accepted: '部门接受协调方案',
+        conflict_proposal_rejected: '部门不接受协调方案',
+        conflict_escalated: '提请项目决策',
+        conflict_decided: '项目决策完成'
+      };
+      return labels[type] || type;
+    }
+
+    async function showHandoffStory(handoffId) {
+      state.pgSelectedHandoffId = Number(handoffId);
+      var panel = $('pgHandoffStoryPanel');
+      if (panel) panel.innerHTML = '<div class="empty">正在读取承接故事链...</div>';
+      try {
+        var story = await api('/api/process-design/cross-dept-handoffs/' + encodeURIComponent(handoffId) + '/story');
+        var milestones = (story.milestones || []).map(function(item) {
+          return '<li class="' + safeText(item.state) + '"><strong>' + safeText(item.stage_name) + '</strong>' +
+            '<span>责任角色：' + safeText(item.responsible_role || '流程已结束') + ' · ' +
+            safeText(item.state === 'completed'
+              ? '已完成'
+              : item.state === 'current'
+                ? '当前步骤'
+                : item.state === 'branched'
+                  ? '已转入冲突分支'
+                  : '待开始') + '</span></li>';
+        }).join('');
+        var nextActions = (story.next_actions || []).map(function(item) {
+          var responsibility = [
+            item.responsible_role ? '责任角色：' + item.responsible_role : '',
+            item.department_name ? '责任部门：' + item.department_name : '',
+            item.handler_person_name ? '处理人：' + item.handler_person_name : ''
+          ].filter(Boolean).join('；');
+          return '<li>' + safeText(responsibility || '当前步骤没有待处理责任人') +
+            (item.can_act ? '；当前账号可以处理' : '') + '</li>';
+        }).join('');
+        var events = (story.events || []).map(function(event) {
+          return '<tr><td>' + safeText(event.created_at) + '</td><td>' + safeText(handoffEventLabel(event.event_type)) +
+            '</td><td>' + safeText(event.actor_person_name || event.actor_role_code || '系统') +
+            '</td><td>' + safeText(event.actor_department_name || '-') + '</td><td>' + safeText(event.basis_text || '-') + '</td></tr>';
+        }).join('') || '<tr><td colspan="5" class="empty">尚无处理事件</td></tr>';
+        panel.innerHTML = '<div class="pg-section-hd"><div><h3>' + safeText(story.handoff && story.handoff.handoff_ref || '承接故事链') +
+          '</h3><p>当前步骤：' + safeText(story.current_stage && story.current_stage.name) + '</p></div></div>' +
+          '<ol class="pg-story-chain">' + milestones + '</ol>' +
+          '<div class="notice"><strong>下一步责任</strong><ul>' + (nextActions || '<li>流程已结束</li>') + '</ul></div>' +
+          (story.conflict ? '<div class="notice">关联承接冲突：' + safeText(story.conflict.id) + ' · ' + safeText(story.conflict.status) + '</div>' : '') +
+          '<div class="table-container"><table class="data-table"><thead><tr><th>时间</th><th>事件</th><th>处理人</th><th>部门</th><th>依据</th></tr></thead><tbody>' + events + '</tbody></table></div>';
+      } catch (error) {
+        if (panel) panel.innerHTML = '<div class="empty">' + safeText(error.message || '故事链加载失败') + '</div>';
+      }
+    }
+
+    function governanceActionEditor(title, fieldsHtml, submitHandler) {
+      return '<form class="process-design-detail" id="pgGovernanceActionEditor" onsubmit="' + submitHandler + '">' +
+        '<div class="pg-section-hd"><div><h3>' + safeText(title) + '</h3><p>必填项完整后才能提交，服务端仍会校验角色、部门和当前状态。</p></div></div>' +
+        '<div class="form-grid">' + fieldsHtml + '</div>' +
+        '<div class="form-actions"><button type="submit" class="btn primary">提交处理</button> ' +
+        '<button type="button" class="btn secondary" onclick="this.closest(\'form\').remove()">取消</button></div>' +
+        '<div class="form-error" data-governance-action-error></div></form>';
+    }
+
+    async function handleHandoffAction(handoffId, status) {
+      await showHandoffStory(handoffId);
+      var panel = $('pgHandoffStoryPanel');
+      if (!panel) return;
+      var fields = '';
+      var title = '处理承接待办';
+      if (status === 'pending_assignment') {
+        title = '分派责任部门';
+        fields = '<label>责任部门ID<input type="number" min="1" name="department_id" required></label>';
+      } else if (status === 'pending_counterparty_detail') {
+        title = '补充实际承接内容';
+        fields = '<label>本部门对应流程<input name="counterparty_process_name" required></label>' +
+          '<label>本部门对应业务行为<input name="counterparty_behavior_name" required></label>' +
+          '<label class="wide">完成标准<textarea name="completion_standard" rows="3" required></textarea></label>';
+      } else if (status === 'pending_structure_gate' || status === 'returned') {
+        title = 'MDM结构卡口';
+        fields = '<label>处理结论<select name="action" required><option value="">请选择</option>' +
+          '<option value="confirmed">确认通过</option><option value="returned">退回上一责任步骤</option>' +
+          '<option value="escalated">提请争议处理</option></select></label>' +
+          '<label class="wide">处理依据或退回说明<textarea name="note" rows="3" required></textarea></label>';
+      } else {
+        title = '部门审核';
+        fields = '<label>部门决定<select name="decision" required><option value="">请选择</option>' +
+          '<option value="approved">确认</option><option value="returned">退回上一责任步骤</option>' +
+          '<option value="rejected">明确拒绝并创建冲突</option></select></label>' +
+          '<label class="wide">决定依据<textarea name="decision_basis" rows="3" required></textarea></label>';
+      }
+      var existing = $('pgGovernanceActionEditor');
+      if (existing) existing.remove();
+      panel.insertAdjacentHTML('beforeend', governanceActionEditor(
+        title,
+        fields,
+        'submitHandoffAction(event,' + Number(handoffId) + ',\'' + safeText(status) + '\')'
+      ));
+      $('pgGovernanceActionEditor').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    async function submitHandoffAction(event, handoffId, status) {
+      event.preventDefault();
+      var form = event.currentTarget;
+      var url = '/api/process-design/cross-dept-handoffs/' + encodeURIComponent(handoffId);
+      var method = 'POST';
+      var body = {};
+      if (status === 'pending_assignment') {
+        url += '/assign-counterparty';
+        body.department_id = Number(form.elements.department_id.value);
+      } else if (status === 'pending_counterparty_detail') {
+        method = 'PUT';
+        url += '/counterparty-response';
+        body.counterparty_process_name = form.elements.counterparty_process_name.value.trim();
+        body.counterparty_behavior_name = form.elements.counterparty_behavior_name.value.trim();
+        body.completion_standard = form.elements.completion_standard.value.trim();
+      } else if (status === 'pending_structure_gate' || status === 'returned') {
+        url += '/structure-gate';
+        body.action = form.elements.action.value;
+        body.note = form.elements.note.value.trim();
+      } else {
+        url += '/department-decision';
+        body.decision = form.elements.decision.value;
+        body.decision_basis = form.elements.decision_basis.value.trim();
+      }
+      var errorBox = form.querySelector('[data-governance-action-error]');
+      if (errorBox) errorBox.textContent = '';
+      try {
+        await api(url, { method: method, body: JSON.stringify(body) });
+      } catch (error) {
+        if (errorBox) errorBox.textContent = error.message || '承接待办处理失败';
+        return;
+      }
+      showToast('承接待办已处理');
+      state.pgViewCache = {};
+      await loadProcessGovernanceView('handoffs', { route: parseHash(), force: true });
+      await showHandoffStory(handoffId);
+    }
+
+    async function loadHandoffConflictQueueView() {
+      return await api('/api/process-design/handoff-conflicts?limit=200');
+    }
+
+    function renderHandoffConflictQueueView(payload, route) {
+      var rows = payload && payload.items || [];
+      if ($('pgHandoffConflictRows')) {
+        $('pgHandoffConflictRows').innerHTML = rows.map(function(item) {
+          return '<tr><td>' + safeText(item.process_name || item.document_no || '-') + '<br><span class="muted">' + safeText(item.handoff_ref || '-') + '</span></td>' +
+            '<td>' + safeText((item.origin_department || '-') + ' ↔ ' + (item.counterparty_department || '-')) + '</td>' +
+            '<td>' + statusTag(item.status) + '</td><td>' + safeText(item.assigned_handler_name || '待分派') + '</td>' +
+            '<td>' + safeText(item.updated_at || '-') + '</td><td><button type="button" class="btn secondary" onclick="showHandoffConflictDetail(' +
+            Number(item.id) + ')">详情</button> ' + (item.can_act ? '<button type="button" class="btn primary" onclick="handleHandoffConflictAction(' +
+            Number(item.id) + ',\'' + safeText(item.status) + '\')">处理</button>' : '') + '</td></tr>';
+        }).join('') || '<tr><td colspan="6" class="empty">当前没有可见的承接冲突待办</td></tr>';
+      }
+      if (route && route.handoffConflictId) state.pgSelectedHandoffConflictId = Number(route.handoffConflictId);
+      if (state.pgSelectedHandoffConflictId) showHandoffConflictDetail(state.pgSelectedHandoffConflictId);
+    }
+
+    async function showHandoffConflictDetail(conflictId) {
+      state.pgSelectedHandoffConflictId = Number(conflictId);
+      var payload = await loadHandoffConflictQueueView();
+      var item = (payload.items || []).find(function(row) { return Number(row.id) === Number(conflictId); });
+      var panel = $('pgHandoffConflictDetail');
+      if (!item) {
+        if (panel) panel.innerHTML = '<div class="empty">承接冲突不存在或当前账号无权查看</div>';
+        return null;
+      }
+      panel.innerHTML = '<h3>' + safeText(item.process_name || '承接冲突') + '</h3>' +
+        '<dl class="detail-grid"><dt>冲突原因</dt><dd>' + safeText(item.opened_reason) + '</dd>' +
+        '<dt>归口部门立场</dt><dd>' + safeText(item.origin_position || '待记录') + '</dd>' +
+        '<dt>外部门立场</dt><dd>' + safeText(item.counterparty_position || '待记录') + '</dd>' +
+        '<dt>协调方案</dt><dd>' + safeText(item.proposal_text || '待记录') + '</dd>' +
+        '<dt>双方确认</dt><dd>' + safeText((item.origin_confirmation || '待确认') + ' / ' + (item.counterparty_confirmation || '待确认')) + '</dd>' +
+        '<dt>项目决定</dt><dd>' + safeText(item.decision || '尚未提请或尚未决定') + '</dd>' +
+        '<dt>决定依据</dt><dd>' + safeText(item.decision_basis || '-') + '</dd></dl>' +
+        '<button type="button" class="btn secondary" onclick="showHandoffStory(' + Number(item.handoff_id) + ')">查看完整承接故事链</button>';
+      return item;
+    }
+
+    async function handleHandoffConflictAction(conflictId, status) {
+      var item = await showHandoffConflictDetail(conflictId);
+      var panel = $('pgHandoffConflictDetail');
+      if (!panel || !item) return;
+      var fields = '';
+      var title = '处理承接冲突';
+      if (status === 'pending_assignment') {
+        title = '分派冲突处理人';
+        fields = '<label>冲突处理人人员ID<input type="number" min="1" name="handler_person_id" required></label>';
+      } else if (status === 'coordinating') {
+        title = '记录双方立场和协调方案';
+        fields = '<label class="wide">归口部门立场<textarea name="origin_position" rows="3" required></textarea></label>' +
+          '<label class="wide">外部门立场<textarea name="counterparty_position" rows="3" required></textarea></label>' +
+          '<label class="wide">协调方案<textarea name="proposal_text" rows="4" required></textarea></label>' +
+          '<label class="wide">协调证据（每行一条）<textarea name="evidence" rows="4" required></textarea></label>';
+      } else if (status === 'pending_department_confirmation') {
+        if (item.action_role === 'data_conflict_handler') {
+          title = '提请项目决策';
+          fields = '<div class="wide notice">至少一个部门不接受协调方案。冲突处理人只能提请项目决策组处理。</div>' +
+            '<label class="wide">提请依据<textarea name="basis" rows="3" required></textarea></label>';
+        } else {
+          title = '部门确认协调方案';
+          fields = '<label>处理结论<select name="confirmation_action" required><option value="">请选择</option>' +
+            '<option value="accepted">接受协调方案</option><option value="rejected">不接受协调方案</option></select></label>' +
+            '<label class="wide">确认依据<textarea name="basis" rows="3" required></textarea></label>';
+        }
+      } else if (status === 'pending_decision') {
+        title = '项目决策';
+        fields = '<label>项目决定<select name="decision" required><option value="">请选择</option>' +
+          '<option value="continue_handoff">继续承接</option><option value="not_required">认定无需承接</option>' +
+          '<option value="return_revision">退回修订</option></select></label>' +
+          '<label class="wide">决定依据<textarea name="basis" rows="3" required></textarea></label>';
+      } else {
+        return;
+      }
+      var existing = $('pgGovernanceActionEditor');
+      if (existing) existing.remove();
+      panel.insertAdjacentHTML('beforeend', governanceActionEditor(
+        title,
+        fields,
+        'submitHandoffConflictAction(event,' + Number(conflictId) + ',\'' + safeText(status) + '\')'
+      ));
+      $('pgGovernanceActionEditor').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    async function submitHandoffConflictAction(event, conflictId, status) {
+      event.preventDefault();
+      var form = event.currentTarget;
+      var url = '/api/process-design/handoff-conflicts/' + encodeURIComponent(conflictId);
+      var body = {};
+      if (status === 'pending_assignment') {
+        body.handler_person_id = Number(form.elements.handler_person_id.value);
+        url += '/assign';
+      } else if (status === 'coordinating') {
+        body.origin_position = form.elements.origin_position.value.trim();
+        body.counterparty_position = form.elements.counterparty_position.value.trim();
+        body.proposal_text = form.elements.proposal_text.value.trim();
+        body.evidence = form.elements.evidence.value.split(/\r?\n/).map(function(item) { return item.trim(); }).filter(Boolean);
+        url += '/proposal';
+      } else if (status === 'pending_department_confirmation') {
+        if (!form.elements.confirmation_action) {
+          url += '/escalate';
+          body.basis = form.elements.basis.value.trim();
+        } else {
+          url += '/department-confirmation';
+          body.confirmation = form.elements.confirmation_action.value;
+          body.basis = form.elements.basis.value.trim();
+        }
+      } else if (status === 'pending_decision') {
+        url += '/decision';
+        body.decision = form.elements.decision.value;
+        body.basis = form.elements.basis.value.trim();
+      } else {
+        return;
+      }
+      var errorBox = form.querySelector('[data-governance-action-error]');
+      if (errorBox) errorBox.textContent = '';
+      try {
+        await api(url, {
+          method: status === 'coordinating' ? 'PUT' : 'POST',
+          body: JSON.stringify(body)
+        });
+      } catch (error) {
+        if (errorBox) errorBox.textContent = error.message || '承接冲突处理失败';
+        return;
+      }
+      showToast('承接冲突已处理');
+      state.pgViewCache = {};
+      await loadProcessGovernanceView('conflicts', { route: parseHash(), force: true });
+      await showHandoffConflictDetail(conflictId);
     }
 
     function processDesignWizardStepIndex(stepKey) {
@@ -2805,25 +3319,95 @@
       } catch (error) {
         throw new Error('结构化文件不是有效 JSON');
       }
-      if (!payload || payload.schema_version !== 'document-structured-output-v2') {
-        throw new Error('结构化文件必须使用 document-structured-output-v2');
+      if (!payload || ['process-governance-v1', 'process-governance-v2'].indexOf(payload.schema_version) < 0) {
+        throw new Error('3001结构化文件必须使用 process-governance-v1 或 process-governance-v2');
       }
-      if ($('pgDesignSaveStatus')) $('pgDesignSaveStatus').textContent = '正在导入结构化文件...';
+      if ($('pgDesignSaveStatus')) $('pgDesignSaveStatus').textContent = '正在执行服务端预览校验...';
       try {
-        var result = await api('/api/process-design/import-structured-output', {
+        var preview = await api('/api/process-design/import-structured-output/preview', {
           method: 'POST',
-          body: JSON.stringify(payload)
+          body: JSON.stringify({ data: payload })
+        });
+        var summary = preview.summary || {};
+        var warningCount = (preview.governance_warnings || []).length;
+        var previewMessage = [
+          '流程：' + (summary.process_name || '未命名流程'),
+          '归口部门：' + (summary.owning_department || '未明确'),
+          '业务行为：' + (summary.behavior_count || 0) + ' 条',
+          '跨部门承接：' + (summary.handoff_count || 0) + ' 条',
+          '治理提示：' + warningCount + ' 项'
+        ].join('；');
+        var canApprove = roleCodesOfCurrentUser().indexOf('department_mdm_reviewer') >= 0;
+        state.processDesign.pendingStructuredImport = { payload: payload, preview: preview, fileName: file.name || '' };
+        if ($('pgDesignImportReviewSummary')) {
+          $('pgDesignImportReviewSummary').textContent = previewMessage + (canApprove
+            ? '。请核对后填写审核依据。'
+            : '。当前账号只能预览，请由归口部门MDM审核员执行审核导入。');
+        }
+        if ($('pgDesignImportDecisionBasis')) {
+          $('pgDesignImportDecisionBasis').value = '';
+          $('pgDesignImportDecisionBasis').disabled = !canApprove;
+        }
+        if ($('approveProcessDesignStructuredOutputBtn')) $('approveProcessDesignStructuredOutputBtn').disabled = !canApprove;
+        if ($('pgDesignImportReviewPanel')) $('pgDesignImportReviewPanel').classList.remove('pg-hidden');
+        if (!canApprove) {
+          if ($('pgDesignSaveStatus')) $('pgDesignSaveStatus').textContent = '预览通过；请由归口部门MDM审核员执行审核导入';
+          return preview;
+        }
+        if ($('pgDesignSaveStatus')) $('pgDesignSaveStatus').textContent = '预览通过，尚未写入3000';
+        return preview;
+      } catch (error) {
+        var errorMessage = formatApiErrorMessage(error, '结构化文件导入失败');
+        if ($('pgDesignSaveStatus')) $('pgDesignSaveStatus').textContent = errorMessage;
+        if (error && typeof error === 'object') {
+          error.message = errorMessage;
+          throw error;
+        }
+        throw new Error(errorMessage);
+      }
+    }
+
+    function cancelProcessDesignStructuredOutputImport() {
+      state.processDesign.pendingStructuredImport = null;
+      hideHandoffVoidReasonPanel({ clearReasons: true });
+      if ($('pgDesignImportDecisionBasis')) $('pgDesignImportDecisionBasis').value = '';
+      if ($('pgDesignImportReviewPanel')) $('pgDesignImportReviewPanel').classList.add('pg-hidden');
+      if ($('pgDesignSaveStatus')) $('pgDesignSaveStatus').textContent = '已取消审核导入，3000未写入';
+    }
+
+    async function approveProcessDesignStructuredOutputImport() {
+      var pending = state.processDesign.pendingStructuredImport;
+      if (!pending || !pending.preview || !pending.payload) throw new Error('请先选择3001文件并完成预览');
+      if (roleCodesOfCurrentUser().indexOf('department_mdm_reviewer') < 0) throw new Error('当前账号只能预览，不能审核导入');
+      var decisionBasis = $('pgDesignImportDecisionBasis') ? $('pgDesignImportDecisionBasis').value.trim() : '';
+      if (!decisionBasis) throw new Error('请填写审核依据');
+      if ($('pgDesignSaveStatus')) $('pgDesignSaveStatus').textContent = '正在复核内容哈希并原子写入...';
+      try {
+        var result = await api('/api/process-design/import-structured-output/approve', {
+          method: 'POST',
+          body: JSON.stringify({
+            data: pending.payload,
+            preview_hash: pending.preview.content_hash,
+            decision_basis: decisionBasis,
+            voided_handoffs: handoffVoidReasonsPayload()
+          })
         });
         var draftId = result && result.draft && result.draft.id || result && result.detail && result.detail.draft && result.detail.draft.id;
         await renderProcessDesignWorkspace({ force: true });
         if (draftId) await loadProcessDesignDraftDetail(draftId);
         state.processDesign.activeStep = 'preview';
         renderProcessDesignStepProgress();
-        var warningCount = result && result.warnings && result.warnings.length || 0;
-        if ($('pgDesignSaveStatus')) $('pgDesignSaveStatus').textContent = warningCount ? '结构化文件已导入，有 ' + warningCount + ' 项需要补齐' : '结构化文件已导入';
-        showToast(warningCount ? '结构化文件已导入，请查看需补齐项' : '结构化文件已导入');
+        var warningCount = result && result.governance_warnings && result.governance_warnings.length || 0;
+        if ($('pgDesignSaveStatus')) $('pgDesignSaveStatus').textContent = warningCount ? '已审核导入，并形成 ' + warningCount + ' 项治理提示' : '结构化文件已审核导入';
+        showToast(warningCount ? '已审核导入，跨部门缺口已进入治理待办' : '结构化文件已审核导入');
+        hideHandoffVoidReasonPanel({ clearReasons: true });
+        cancelProcessDesignStructuredOutputImport();
+        if ($('pgDesignSaveStatus')) $('pgDesignSaveStatus').textContent = warningCount ? '已审核导入，并形成 ' + warningCount + ' 项治理提示' : '结构化文件已审核导入';
         return result;
       } catch (error) {
+        if (error && error.code === 'HANDOFF_VOID_REASON_REQUIRED') {
+          showHandoffVoidReasonPanel(error.handoff_ref, 'import');
+        }
         var errorMessage = formatApiErrorMessage(error, '结构化文件导入失败');
         if ($('pgDesignSaveStatus')) $('pgDesignSaveStatus').textContent = errorMessage;
         if (error && typeof error === 'object') {
@@ -3156,6 +3740,22 @@
       });
     }
 
+    function processDesignHandoffStatusLabel(status) {
+      return ({
+        pending_assignment: '待分派责任部门',
+        pending_origin_review: '待归口部门审核',
+        pending_counterparty_scope: '待外部门确认范围',
+        pending_counterparty_detail: '待外部门补充',
+        pending_counterparty_review: '待外部门审核',
+        pending_structure_gate: '待结构卡口',
+        confirmed: '已确认',
+        closed_not_required: '依据决定关闭',
+        returned: '已退回',
+        rejected: '已拒绝',
+        escalated: '争议处理中'
+      })[String(status || '')] || String(status || '待处理');
+    }
+
     async function saveProcessDesignProcessFromWizard() {
       var draftId = currentProcessDesignDraftId();
       if (!draftId) throw new Error('请先保存制度结构草稿');
@@ -3454,7 +4054,15 @@
           var process = processes.find(function(item) { return Number(item.id) === Number(step.process_id); }) || {};
           var behavior = step.behaviorDetail || {};
           var stepTypeLabel = step.step_type === 'decision' ? '判断节点' : '业务行为';
-          var handoffText = (step.handoffs || []).map(function(handoff) { return (handoff.target_process_code || '待编号') + ' ' + (handoff.target_process_name || '') + ' / ' + (handoff.target_behavior_name || ''); }).join('；');
+          var handoffText = (step.handoffs || []).map(function(handoff) {
+            var direction = handoff.handoff_direction === 'inbound_prerequisite' ? '前置输入' : '后续承接';
+            var counterparty = handoff.handoff_direction === 'inbound_prerequisite'
+              ? handoff.source_department
+              : handoff.target_department;
+            var processName = handoff.counterparty_process_name || handoff.target_process_name || '待补对应流程';
+            var behaviorName = handoff.counterparty_behavior_name || handoff.target_behavior_name || '待补对应行为';
+            return direction + ' · ' + (counterparty || '待明确责任部门') + ' · ' + processName + ' / ' + behaviorName + ' · ' + processDesignHandoffStatusLabel(handoff.status);
+          }).join('；');
           return '<div class="process-design-list-item"><strong>' + safeText(stepTypeLabel + '：' + step.step_name) + '</strong><span>' +
             '流程：' + safeText(process.l3_name || '待归属') + ' · ' +
             safeText(step.actor_role || '执行角色待补') + ' · 标准：' + safeText(behavior.execution_standard || '待补') +
@@ -3506,6 +4114,13 @@
     async function loadProcessDesignDraftDetail(draftId) {
       var safeDraftId = Number(draftId || 0);
       if (!safeDraftId) return null;
+      var currentId = currentProcessDesignDraftId();
+      if (
+        currentId &&
+        Number(currentId) !== safeDraftId &&
+        state.processDesign.canonicalDirty &&
+        !confirm('当前单流程治理JSON尚未保存。放弃修改并切换草稿吗？')
+      ) return null;
       var detail = await api('/api/process-design/drafts/' + encodeURIComponent(safeDraftId));
       var risks = await api('/api/process-design/drafts/' + encodeURIComponent(safeDraftId) + '/risks');
       var preview = await api('/api/process-design/drafts/' + encodeURIComponent(safeDraftId) + '/outcome-preview');
@@ -3513,6 +4128,11 @@
       detail.outcome = preview.outcome || detail.outcome;
       state.processDesign.draft = detail;
       renderProcessDesignDraftDetail(detail);
+      try {
+        await loadCanonicalJsonForDraft(safeDraftId, { force: true });
+      } catch (error) {
+        if ($('pgCanonicalSaveStatus')) $('pgCanonicalSaveStatus').textContent = error.message || '单流程治理JSON加载失败';
+      }
       return detail;
     }
 
@@ -4799,7 +5419,14 @@
         if (res.status === 401) {
           handleUnauthorized(path, silentUnauthorized);
         }
-        throw { status: res.status, message: body.error || 'HTTP ' + res.status, details: body.details };
+        var errorBody = body && typeof body === 'object' ? body : {};
+        throw {
+          ...errorBody,
+          status: res.status,
+          code: errorBody.code,
+          message: errorBody.error || 'HTTP ' + res.status,
+          details: errorBody.details
+        };
       }
       return body;
     }
@@ -4826,7 +5453,7 @@
 
     // ===== Tag rendering =====
     function statusTag(status) {
-      const map = { draft:'草稿', submitted:'已提交', dept_reviewed:'部门内审', cross_confirmed:'跨部门确认', fields_confirmed:'字段确认', final_reviewed:'终审', published:'已发布', pending:'待处理', done:'已完成', resolved:'已解决', rejected:'已驳回', approved:'已通过', blocked:'阻断', coordinating:'协调中', archived:'已归档' };
+      const map = { draft:'草稿', submitted:'已提交', dept_reviewed:'部门内审', cross_confirmed:'跨部门确认', fields_confirmed:'字段确认', final_reviewed:'终审', published:'已发布', pending:'待处理', done:'已完成', resolved:'已解决', rejected:'已驳回', approved:'已通过', blocked:'阻断', coordinating:'协调中', archived:'已归档', pending_assignment:'待分派', pending_origin_review:'待归口部门审核', pending_counterparty_scope:'待外部门确认范围', pending_counterparty_detail:'待外部门补充', pending_counterparty_review:'待外部门审核', pending_structure_gate:'待结构卡口', conflict_open:'承接冲突处理中', pending_department_confirmation:'待双方部门确认', pending_decision:'待项目决策', returned_for_revision:'已退回修订', confirmed:'已确认', closed:'已关闭', closed_not_required:'确认无需承接', returned:'已退回', escalated:'争议处理中' };
       const cls = /published|approved|done|resolved/.test(status) ? 'green' : /blocked|rejected|error/.test(status) ? 'red' : /pending|submitted|coordinating/.test(status) ? 'amber' : '';
       return '<span class="tag ' + cls + '">' + safeText(map[status] || status) + '</span>';
     }
@@ -4940,7 +5567,7 @@
       }
       if (!hash) return { view: 'list', tab: 'roleWorkbench' };
       var parts = hash.split('/');
-      if (parts.length === 1) return { view: 'list', tab: parts[0], query: query, pgView: query.view, qualityView: query.view, pgWorkspace: query.workspace, finding: query.finding, caseId: query.case, mappingTodoId: query.todo, inputBaselineReviewKey: query.reviewItem, issueQueue: query.queue, issueId: query.issue };
+      if (parts.length === 1) return { view: 'list', tab: parts[0], query: query, pgView: query.view, qualityView: query.view, pgWorkspace: query.workspace, handoffId: query.handoff, handoffConflictId: query.conflict, finding: query.finding, caseId: query.case, mappingTodoId: query.todo, inputBaselineReviewKey: query.reviewItem, issueQueue: query.queue, issueId: query.issue };
       if (parts[0] === 'processes' && parts.length >= 3) {
         return { view: 'detail', tab: 'processes', type: 'process', id: parts[2] };
       }
@@ -4960,18 +5587,55 @@
     window.addEventListener('hashchange', function() {
       renderRouteFromHash();
     });
+    window.addEventListener('beforeunload', function(event) {
+      if (!state.processDesign.canonicalDirty) return;
+      event.preventDefault();
+      event.returnValue = '';
+    });
+    window.addEventListener('message', function(event) {
+      if (event.origin !== window.location.origin) return;
+      var frame = $('pgProcessGovernanceEditorFrame');
+      if (!frame || event.source !== frame.contentWindow || !event.data) return;
+      if (event.data.type === 'mdm-process-editor-state') {
+        state.processDesign.canonicalDirty = Boolean(event.data.dirty);
+      }
+      if (event.data.type === 'mdm-process-editor-height') {
+        var height = Math.max(760, Math.min(Number(event.data.height || 0), 12000));
+        frame.style.height = height + 'px';
+      }
+    });
     window.addEventListener('scroll', scheduleDetailStickyTableHeader, true);
     window.addEventListener('resize', scheduleDetailStickyTableHeader);
 
     // ===== Permission-based navigation =====
     function applyRoleVisibility() {
       if (!state.user) return;
+      var roleCodes = roleCodesOfCurrentUser();
+      var modelRoles = identityModel && identityModel.roles || [];
+      var visibleTabCodes = new Set();
+      modelRoles.filter(function(role) {
+        return roleCodes.indexOf(role.code) >= 0;
+      }).forEach(function(role) {
+        (role.visibleTabs || []).forEach(function(tab) { visibleTabCodes.add(tab.code); });
+      });
+      if (visibleTabCodes.size) {
+        document.querySelectorAll('#tabs .tab[data-tab]').forEach(function(tab) {
+          tab.style.display = visibleTabCodes.has(tab.dataset.tab) ? '' : 'none';
+        });
+      } else {
       var currentPermissions = (state.user.permissions || []);
       document.querySelectorAll('.tab[data-permissions]').forEach(function(tab) {
         var required = String(tab.dataset.permissions || '').split(',').filter(Boolean);
         var visible = required.some(function(code) { return currentPermissions.indexOf(code) !== -1; });
         tab.style.display = visible ? '' : 'none';
       });
+      }
+      if (!identityModel) {
+        api('/api/rbac/model').then(function(model) {
+          identityModel = model;
+          applyRoleVisibility();
+        }).catch(function() {});
+      }
       if (!location.hash || location.hash === '#') {
         location.hash = '#/roleWorkbench';
       }
@@ -5008,17 +5672,38 @@
     }
 
     function renderRoleGuideCard(role) {
-      return '<article class="role-guide-card' + (role.owned ? ' current' : '') + '" data-role-guide-card="' + safeText(role.code) + '">' +
+      var permissionLabels = (role.permissions || []).map(function(code) {
+        var permission = identityModel && (identityModel.permissions || []).find(function(item) { return item.code === code; });
+        return permission && permission.description || code;
+      });
+      var visibleTabs = (role.visibleTabs || []).map(function(tab) { return tab.name; });
+      var roleItems = state.roleWorkbench && state.roleWorkbench.data && state.roleWorkbench.data.items || [];
+      var currentTodos = roleItems.filter(function(item) {
+        return item.roleCode === role.code || item.role_code === role.code || (item.sourceRoles || []).indexOf(role.code) >= 0;
+      });
+      var raci = (role.raciResponsibilities || []).map(function(item) {
+        var marks = [];
+        if (item.raci && item.raci.responsible) marks.push('R');
+        if (item.raci && item.raci.accountable) marks.push('A');
+        if (item.raci && item.raci.consulted) marks.push('C');
+        if (item.raci && item.raci.informed) marks.push('I');
+        return item.name + '（' + marks.join('/') + '）';
+      });
+      return '<article class="role-guide-card current" data-role-guide-card="' + safeText(role.code) + '">' +
         '<div class="role-guide-title"><h3>' + safeText(role.name) + '</h3><span class="tag">' + safeText(role.code) + '</span></div>' +
-        '<ul>' +
-          '<li><strong>角色目标：</strong>' + safeText(role.goal) + '</li>' +
-          '<li><strong>第一步入口：</strong>' + safeText(role.firstEntry && role.firstEntry.label) + '</li>' +
-          '<li><strong>典型样例：</strong>' + safeText(role.sample) + '</li>' +
-          '<li><strong>明确禁止：</strong>' + safeText(role.pitfall) + '</li>' +
-          '<li><strong>完成标准：</strong>' + safeText(role.doneCriteria) + '</li>' +
-        '</ul>' +
-        '<div class="role-guide-flow">固定权限：' + safeText((role.permissions || []).join('、') || '无') + '</div>' +
-        '<div class="role-guide-flow">建议顺序：' + safeText((role.workflow || []).join(' → ')) + '</div>' +
+        '<p>' + safeText(role.description) + '</p>' +
+        '<div class="role-guide-detail-grid">' +
+          '<div><strong>角色目标</strong><p>' + safeText(role.goal) + '</p></div>' +
+          '<div><strong>第一步入口</strong><p><button type="button" class="btn secondary" onclick="openWorkbenchTarget(\'' + safeText(role.firstEntry && role.firstEntry.target) + '\')">' + safeText(role.firstEntry && role.firstEntry.label) + '</button></p></div>' +
+          '<div><strong>可见功能标签</strong><p>' + safeText(visibleTabs.join('、') || '无') + '</p></div>' +
+          '<div><strong>当前待办</strong><p>' + safeText(currentTodos.length ? currentTodos.length + '项，进入第一步入口查看' : '当前没有来自该角色的待办') + '</p></div>' +
+          '<div><strong>允许动作</strong><p>' + safeText(permissionLabels.join('；') || '只读查看') + '</p></div>' +
+          '<div><strong>禁止事项</strong><p>' + safeText(role.pitfall) + '</p></div>' +
+          '<div><strong>RACI责任</strong><p>' + safeText(raci.join('；') || '无固定RACI活动') + '</p></div>' +
+          '<div><strong>典型故事</strong><p>' + safeText(role.sample) + '</p></div>' +
+          '<div><strong>完成标准</strong><p>' + safeText(role.doneCriteria) + '</p></div>' +
+        '</div>' +
+        '<div class="role-guide-flow">处理顺序：' + safeText((role.workflow || []).join(' → ')) + '</div>' +
       '</article>';
     }
 
@@ -5044,6 +5729,7 @@
     async function renderRoleGuide() {
       try {
         var data = await api('/api/rbac/model');
+        identityModel = data;
         var codes = roleCodesOfCurrentUser();
         (data.roles || []).forEach(function(role) { role.owned = codes.indexOf(role.code) >= 0; });
         var currentEl = $('roleGuideCurrent');
@@ -5054,7 +5740,37 @@
             : '当前账号没有有效的固定MDM工作角色，请联系管理员检查角色授权依据和有效期。';
         }
         var grid = $('roleGuideGrid');
-        if (grid) grid.innerHTML = (data.roles || []).map(renderRoleGuideCard).join('');
+        var selectedCode = state.roleGuideSelectedRoleCode;
+        if (!selectedCode || !(data.roles || []).some(function(role) { return role.code === selectedCode; })) {
+          selectedCode = (data.roles || []).find(function(role) { return role.owned; }) && (data.roles || []).find(function(role) { return role.owned; }).code ||
+            (data.roles && data.roles[0] && data.roles[0].code);
+        }
+        state.roleGuideSelectedRoleCode = selectedCode;
+        function renderSelectedRole() {
+          var selected = (data.roles || []).find(function(role) { return role.code === state.roleGuideSelectedRoleCode; });
+          if (grid) grid.innerHTML = selected ? renderRoleGuideCard(selected) : '<div class="empty">没有可显示的固定角色</div>';
+          var list = $('roleGuideList');
+          if (list) {
+            list.querySelectorAll('[data-role-guide-select]').forEach(function(button) {
+              button.classList.toggle('on', button.dataset.roleGuideSelect === state.roleGuideSelectedRoleCode);
+            });
+          }
+        }
+        var list = $('roleGuideList');
+        if (list) {
+          list.innerHTML = (data.roles || []).map(function(role) {
+            return '<button type="button" data-role-guide-select="' + safeText(role.code) + '">' +
+              '<strong>' + safeText(role.name) + '</strong><br><span class="muted">' +
+              safeText(role.owned ? '当前账号已拥有' : role.description) + '</span></button>';
+          }).join('');
+          list.querySelectorAll('[data-role-guide-select]').forEach(function(button) {
+            button.addEventListener('click', function() {
+              state.roleGuideSelectedRoleCode = button.dataset.roleGuideSelect;
+              renderSelectedRole();
+            });
+          });
+        }
+        renderSelectedRole();
         var permissionReasons = [
           ['governance:draft-department', '起草或修改部门材料', '当前账号没有本部门材料起草权限'],
           ['governance:submit-department', '提交部门材料', '当前账号没有本部门材料提交权限'],
@@ -7267,6 +7983,12 @@
 
     function issueDecisionHelp(option, pointType) {
       var text = String(option || '');
+      if (pointType === 'handoff_acceptance') {
+        if (/确认承接/.test(text)) return '含义：本部门确认提供前置输入或接收后续事项，随后补齐对应流程、行为、数据和完成标准。';
+        if (/不属于本部门/.test(text)) return '含义：本部门说明不承担该交界事项，并写明事实依据；另一部门的决定仍需由其本人记录。';
+        if (/退回补充/.test(text)) return '含义：当前交界对象、触发条件或完成标准不足，退回归口部门补充。';
+        if (/争议处理/.test(text)) return '含义：双方对责任范围存在明确争议，提请被分派的冲突处理人或决策组处理。';
+      }
       if (/裁决|协调|判断/.test(text)) return '含义：你认为单靠本部门不能定，需要进入对应工作组处理。';
       if (/不适用|不涉及|不需要|暂不/.test(text)) return '含义：这条核验项不是当前业务行为的问题，需要选择问题原因。';
       if (/当前问题卡缺少来源证据/.test(text)) return '含义：这张问题卡还没有给出足够的源文件、段落、页码或表单记录，先补证明材料或来源位置。';
@@ -7312,6 +8034,24 @@
       '</div>' +
       renderIssueReasonCards(pointId) +
       '<div class="pg-inline-help">处理说明只能选择固定方式：要么修改制度或表单源文件后重新导入，要么说明这条核验项不是问题。</div>';
+    }
+
+    function renderHandoffAcceptanceControls(point) {
+      var pointId = point.point_id || '';
+      var step = String(point.current_step || '');
+      if (step === 'pending_assignment') {
+        return '<label class="field">责任部门名称<input data-handoff-department-name="' + escapeHtml(pointId) + '" placeholder="填写3000组织架构中的完整部门名称"></label>' +
+          '<div class="pg-inline-help">MDM工作组组长只负责分派，不能替业务部门确认承接。</div>';
+      }
+      if (step === 'pending_counterparty_detail') {
+        return '<div class="pg-issue-handling-grid">' +
+          '<label class="field">本部门对应流程<input data-handoff-process-name="' + escapeHtml(pointId) + '" placeholder="填写实际进入的流程"></label>' +
+          '<label class="field">本部门对应业务行为<input data-handoff-behavior-name="' + escapeHtml(pointId) + '" placeholder="填写实际承接或产生输入的行为"></label>' +
+          '<label class="field">传递数据名称<input data-handoff-data-name="' + escapeHtml(pointId) + '" placeholder="没有固定数据时可留空"></label>' +
+          '<label class="field">完成标准<input data-handoff-completion-standard="' + escapeHtml(pointId) + '" placeholder="说明做到什么程度算完成"></label>' +
+        '</div>';
+      }
+      return '<label class="field">决定或卡口依据<textarea data-handoff-decision-basis="' + escapeHtml(pointId) + '" rows="3" placeholder="写明核对事实、来源和决定依据"></textarea></label>';
     }
 
     function renderIssueReasonCards(pointId) {
@@ -7406,7 +8146,11 @@
     function renderIssuePoints(points, issue) {
       if (!points.length) return '<div class="empty">暂无问题点。</div>';
       var issueStatus = String(issue && issue.display_status || '');
-      var readonly = issueStatus && issueStatus !== 'waiting_my_action';
+      var hasActionableHandoff = points.some(function(point) {
+        return point.point_type === 'handoff_acceptance'
+          && ['confirmed', 'closed_not_required', 'rejected'].indexOf(String(point.current_step || '')) < 0;
+      });
+      var readonly = issueStatus && issueStatus !== 'waiting_my_action' && !hasActionableHandoff;
       return '<div class="pg-issue-points">' + points.map(function(point) {
         var pointId = point.point_id || '';
         var evidence = point.evidence || {};
@@ -7422,9 +8166,9 @@
           renderIssueOriginalEvidence(point) +
           (readonly ? renderIssuePointReadonly(point, issueStatus) :
           renderIssueDecisionCards(point) +
-          renderIssueHandlingControls(point) +
+          (point.point_type === 'handoff_acceptance' ? renderHandoffAcceptanceControls(point) : renderIssueHandlingControls(point)) +
           '<div class="input-baseline-review-detail-actions">' +
-            '<button type="button" class="btn primary" data-issue-point-submit="' + escapeHtml(pointId) + '" data-issue-point-action="' + escapeHtml(pointAction.action) + '" data-issue-point-submit-label="' + escapeHtml(pointAction.label) + '"' + (blockedReason ? ' disabled' : '') + '>' + safeText(pointAction.label) + '</button>' +
+            '<button type="button" class="btn primary" data-issue-point-submit="' + escapeHtml(pointId) + '" data-issue-point-type="' + escapeHtml(point.point_type || '') + '" data-issue-point-action="' + escapeHtml(pointAction.action) + '" data-issue-point-submit-label="' + escapeHtml(pointAction.label) + '"' + (blockedReason ? ' disabled' : '') + '>' + safeText(pointAction.label) + '</button>' +
           '</div>') +
         '</div>';
       }).join('') + '</div>';
@@ -7609,9 +8353,22 @@
       var selectedOption = optionEl ? optionEl.value : '';
       var handlingMethod = methodEl ? methodEl.value : '';
       var handlingReason = reasonEl ? reasonEl.value : '';
+      var pointType = button.dataset.issuePointType || '';
+      var isHandoffAcceptance = pointType === 'handoff_acceptance';
       if (!selectedOption) return showToast('请选择处理结论', 'error');
-      if (!handlingMethod) return showToast('请选择处理方式', 'error');
-      if (handlingMethod === 'not_issue' && !handlingReason) return showToast('请选择问题原因', 'error');
+      if (!isHandoffAcceptance && !handlingMethod) return showToast('请选择处理方式', 'error');
+      if (!isHandoffAcceptance && handlingMethod === 'not_issue' && !handlingReason) return showToast('请选择问题原因', 'error');
+      var handoffDepartmentEl = container.querySelector('[data-handoff-department-name="' + CSS.escape(pointId) + '"]');
+      var handoffProcessEl = container.querySelector('[data-handoff-process-name="' + CSS.escape(pointId) + '"]');
+      var handoffBehaviorEl = container.querySelector('[data-handoff-behavior-name="' + CSS.escape(pointId) + '"]');
+      var handoffDataEl = container.querySelector('[data-handoff-data-name="' + CSS.escape(pointId) + '"]');
+      var handoffStandardEl = container.querySelector('[data-handoff-completion-standard="' + CSS.escape(pointId) + '"]');
+      var handoffBasisEl = container.querySelector('[data-handoff-decision-basis="' + CSS.escape(pointId) + '"]');
+      if (isHandoffAcceptance && handoffDepartmentEl && !handoffDepartmentEl.value.trim()) return showToast('请填写责任部门名称', 'error');
+      if (isHandoffAcceptance && handoffProcessEl && !handoffProcessEl.value.trim()) return showToast('请填写本部门对应流程', 'error');
+      if (isHandoffAcceptance && handoffBehaviorEl && !handoffBehaviorEl.value.trim()) return showToast('请填写本部门对应业务行为', 'error');
+      if (isHandoffAcceptance && handoffStandardEl && !handoffStandardEl.value.trim()) return showToast('请填写完成标准', 'error');
+      if (isHandoffAcceptance && handoffBasisEl && !handoffBasisEl.value.trim()) return showToast('请填写决定或卡口依据', 'error');
       button.disabled = true;
       button.textContent = '提交中...';
       var pointAction = button.dataset.issuePointAction || 'confirm';
@@ -7621,7 +8378,13 @@
         body: JSON.stringify({
           selected_option: selectedOption,
           handling_method: handlingMethod,
-          handling_reason: handlingReason
+          handling_reason: handlingReason,
+          department_name: handoffDepartmentEl ? handoffDepartmentEl.value.trim() : '',
+          counterparty_process_name: handoffProcessEl ? handoffProcessEl.value.trim() : '',
+          counterparty_behavior_name: handoffBehaviorEl ? handoffBehaviorEl.value.trim() : '',
+          transfer_data_name: handoffDataEl ? handoffDataEl.value.trim() : '',
+          completion_standard: handoffStandardEl ? handoffStandardEl.value.trim() : '',
+          decision_basis: handoffBasisEl ? handoffBasisEl.value.trim() : ''
         })
       }).then(function() {
         var issueEl = container.querySelector('.pg-issue-detail');
@@ -8644,65 +9407,27 @@
     }
 
     function renderProcessGovernanceView(view, payload, route) {
-      var product = PROCESS_GOVERNANCE_VIEW_PRODUCTS[view] || PROCESS_GOVERNANCE_VIEW_PRODUCTS.overview;
+      var product = PROCESS_GOVERNANCE_VIEW_PRODUCTS[view] || PROCESS_GOVERNANCE_VIEW_PRODUCTS.editor;
       renderProcessGovernanceScopeNotice(view);
       product.render(payload || {}, route || parseHash());
     }
 
     function setProcessGovernanceViewLoading(view) {
-      if (view === 'overview') {
-        document.getElementById('pgSnapshotMeta').textContent = '正在加载流程治理总览...';
-      } else if (view === 'documentStructure') {
-        if (document.getElementById('pgDesignSummaryMeta')) document.getElementById('pgDesignSummaryMeta').textContent = '正在加载结构化输出...';
-      } else if (view === 'inputBaselineReview') {
-        setProcessGovernanceInputBaselineReviewLoading();
-      } else if (view === 'map') {
-        document.getElementById('pgMapMeta').textContent = '正在加载流程图谱...';
-        document.getElementById('pgSankeyChart').innerHTML = '<div class="empty">正在加载流程图谱...</div>';
-        document.getElementById('pgA1Rows').innerHTML = '<tr><td colspan="7" class="empty">正在加载 A1 明细...</td></tr>';
-        document.getElementById('pgRiskRows').innerHTML = '<tr><td colspan="7" class="empty">正在加载跨部门风险...</td></tr>';
-      } else if (view === 'evidence') {
-        document.getElementById('pgSourceCoverageRows').innerHTML = '<tr><td colspan="7" class="empty">正在加载源文件覆盖...</td></tr>';
-        document.getElementById('pgMdmRequirementRows').innerHTML = '<tr><td colspan="7" class="empty">正在加载待确认主数据对象...</td></tr>';
-        document.getElementById('pgEvidenceRows').innerHTML = '<tr><td colspan="8" class="empty">正在加载证据链...</td></tr>';
-      } else if (view === 'mapping') {
-        document.getElementById('pgMappingWorkspaceRows').innerHTML = '<tr><td colspan="8" class="empty">正在加载映射工作库...</td></tr>';
-        document.getElementById('pgMappingTodoRows').innerHTML = '<tr><td colspan="8" class="empty">正在加载流程映射待办...</td></tr>';
-      } else if (view === 'quality') {
-        document.getElementById('pgQualityRows').innerHTML = '<tr><td colspan="7" class="empty">正在加载质量问题...</td></tr>';
-        document.getElementById('pgQualityCaseRows').innerHTML = '<tr><td colspan="8" class="empty">正在加载治理问题单...</td></tr>';
-      }
+      if (view === 'editor' && $('pgDesignSummaryMeta')) $('pgDesignSummaryMeta').textContent = '正在加载单流程编制草稿...';
+      if (view === 'handoffs' && $('pgHandoffQueueRows')) $('pgHandoffQueueRows').innerHTML = '<tr><td colspan="6" class="empty">正在读取跨部门承接待办...</td></tr>';
+      if (view === 'conflicts' && $('pgHandoffConflictRows')) $('pgHandoffConflictRows').innerHTML = '<tr><td colspan="6" class="empty">正在读取承接冲突待办...</td></tr>';
     }
 
     function setProcessGovernanceViewError(view, error) {
       var message = error && error.message || '流程治理数据暂不可用';
-      if (view === 'overview') {
-        document.getElementById('pgSnapshotMeta').textContent = message;
-      } else if (view === 'documentStructure') {
-        if (document.getElementById('pgDesignSummaryMeta')) document.getElementById('pgDesignSummaryMeta').textContent = message;
-      } else if (view === 'inputBaselineReview') {
-        setProcessGovernanceInputBaselineReviewError('待确认问题加载失败，请刷新流程治理');
-      } else if (view === 'map') {
-        document.getElementById('pgMapMeta').textContent = '';
-        document.getElementById('pgSankeyChart').innerHTML = '<div class="empty">' + safeText(message) + '</div>';
-        document.getElementById('pgA1Rows').innerHTML = '<tr><td colspan="7" class="empty">暂无 A1 明细</td></tr>';
-        document.getElementById('pgRiskRows').innerHTML = '<tr><td colspan="7" class="empty">暂无跨部门风险项</td></tr>';
-      } else if (view === 'evidence') {
-        document.getElementById('pgSourceCoverageRows').innerHTML = '<tr><td colspan="7" class="empty">暂无源文件覆盖记录</td></tr>';
-        document.getElementById('pgMdmRequirementRows').innerHTML = '<tr><td colspan="7" class="empty">暂无待确认主数据对象</td></tr>';
-        document.getElementById('pgEvidenceRows').innerHTML = '<tr><td colspan="8" class="empty">暂无证据链记录</td></tr>';
-      } else if (view === 'mapping') {
-        document.getElementById('pgMappingWorkspaceRows').innerHTML = '<tr><td colspan="8" class="empty">暂无映射工作库记录</td></tr>';
-        document.getElementById('pgMappingTodoRows').innerHTML = '<tr><td colspan="8" class="empty">暂无流程映射待办</td></tr>';
-      } else if (view === 'quality') {
-        document.getElementById('pgQualityRows').innerHTML = '<tr><td colspan="7" class="empty">暂无质量问题</td></tr>';
-        document.getElementById('pgQualityCaseRows').innerHTML = '<tr><td colspan="8" class="empty">暂无治理问题单</td></tr>';
-      }
+      if (view === 'editor' && $('pgDesignSummaryMeta')) $('pgDesignSummaryMeta').textContent = message;
+      if (view === 'handoffs' && $('pgHandoffQueueRows')) $('pgHandoffQueueRows').innerHTML = '<tr><td colspan="6" class="empty">' + safeText(message) + '</td></tr>';
+      if (view === 'conflicts' && $('pgHandoffConflictRows')) $('pgHandoffConflictRows').innerHTML = '<tr><td colspan="6" class="empty">' + safeText(message) + '</td></tr>';
     }
 
     async function loadProcessGovernanceView(view, options) {
       options = options || {};
-      var product = PROCESS_GOVERNANCE_VIEW_PRODUCTS[view] || PROCESS_GOVERNANCE_VIEW_PRODUCTS.overview;
+      var product = PROCESS_GOVERNANCE_VIEW_PRODUCTS[view] || PROCESS_GOVERNANCE_VIEW_PRODUCTS.editor;
       var route = options.route || parseHash();
       var filters = processGovernanceViewFilters(view);
       var cacheKey = processGovernanceLoadKey(view, filters);
@@ -9538,6 +10263,65 @@
             input.value = '';
           }
         }, '结构化文件导入失败');
+      });
+    }
+    if (document.getElementById('approveProcessDesignStructuredOutputBtn')) {
+      document.getElementById('approveProcessDesignStructuredOutputBtn').addEventListener('click', function(event) {
+        event.preventDefault();
+        runPageTask(function() { return approveProcessDesignStructuredOutputImport(); }, '结构化文件审核导入失败');
+      });
+    }
+    if (document.getElementById('cancelProcessDesignStructuredOutputBtn')) {
+      document.getElementById('cancelProcessDesignStructuredOutputBtn').addEventListener('click', function(event) {
+        event.preventDefault();
+        cancelProcessDesignStructuredOutputImport();
+      });
+    }
+    if ($('pgCanonicalJsonText')) {
+      $('pgCanonicalJsonText').addEventListener('input', function() {
+        state.processDesign.canonicalDirty = true;
+        if ($('pgCanonicalSaveStatus')) $('pgCanonicalSaveStatus').textContent = '有未保存修改';
+      });
+    }
+    if ($('pgLoadCanonicalJsonBtn')) {
+      $('pgLoadCanonicalJsonBtn').addEventListener('click', function() {
+        runPageTask(function() { return loadCanonicalJsonForDraft(null, { force: false }); }, '单流程治理JSON载入失败');
+      });
+    }
+    if ($('pgSaveCanonicalJsonBtn')) {
+      $('pgSaveCanonicalJsonBtn').addEventListener('click', function() {
+        runPageTask(function() { return saveCanonicalJsonDraft(); }, '单流程治理JSON保存失败');
+      });
+    }
+    if ($('pgHandoffVoidReasonRetryBtn')) {
+      $('pgHandoffVoidReasonRetryBtn').addEventListener('click', function() {
+        runPageTask(function() { return retryWithHandoffVoidReason(); }, '承接作废原因保存失败');
+      });
+    }
+    if ($('pgHandoffVoidReasonCancelBtn')) {
+      $('pgHandoffVoidReasonCancelBtn').addEventListener('click', function() {
+        hideHandoffVoidReasonPanel({ clearReasons: true });
+      });
+    }
+    if ($('pgExportCanonicalJsonBtn')) {
+      $('pgExportCanonicalJsonBtn').addEventListener('click', function() {
+        try {
+          exportCanonicalJsonDraft();
+        } catch (error) {
+          showToast(error.message || '单流程治理JSON导出失败', 'error');
+        }
+      });
+    }
+    if ($('pgRefreshHandoffQueueBtn')) {
+      $('pgRefreshHandoffQueueBtn').addEventListener('click', function() {
+        state.pgViewCache = {};
+        runPageTask(function() { return loadProcessGovernanceView('handoffs', { route: parseHash(), force: true }); }, '跨部门承接待办刷新失败');
+      });
+    }
+    if ($('pgRefreshHandoffConflictBtn')) {
+      $('pgRefreshHandoffConflictBtn').addEventListener('click', function() {
+        state.pgViewCache = {};
+        runPageTask(function() { return loadProcessGovernanceView('conflicts', { route: parseHash(), force: true }); }, '承接冲突待办刷新失败');
       });
     }
     if (document.getElementById('cancelProcessDesignEditBtn')) {
@@ -11188,7 +11972,7 @@
     });
 
     function renderRbacPanel() {
-      if (rbacPanel === 'roleList') renderFixedAccessModel();
+      if (rbacPanel === 'visibleTabs') renderRoleVisibleTabs();
       else if (rbacPanel === 'auditEvents') renderIdentityAudit();
       else renderIdentityAccounts();
     }
@@ -11332,9 +12116,33 @@
     function identityRoleChecks(roles, checkedCodes) {
       return roles.map(function(role) {
         var checked = checkedCodes.indexOf(role.code) >= 0 ? ' checked' : '';
-        return '<label><input type="checkbox" data-identity-role="' + safeText(role.code) + '"' + checked + '>' +
+        return '<label><input type="checkbox" data-identity-role="' + safeText(role.code) + '"' + checked + ' onchange="renderIdentityVisibleTabPreview()">' +
           '<span>' + safeText(role.name) + ' <span class="tag">' + safeText(role.code) + '</span></span></label>';
       }).join('');
+    }
+
+    function roleVisibleTabUnion(roleCodes) {
+      var result = new Map();
+      (identityModel && identityModel.roles || []).filter(function(role) {
+        return roleCodes.indexOf(role.code) >= 0;
+      }).forEach(function(role) {
+        (role.visibleTabs || []).forEach(function(tab) {
+          if (!result.has(tab.code)) result.set(tab.code, { ...tab, reasons: [] });
+          result.get(tab.code).reasons.push(role.name + '：' + tab.reason);
+        });
+      });
+      return Array.from(result.values());
+    }
+
+    function renderIdentityVisibleTabPreview() {
+      var preview = $('identityVisibleTabPreview');
+      if (!preview) return;
+      var codes = Array.from(document.querySelectorAll('#identityRoleChecks [data-identity-role]:checked'))
+        .map(function(input) { return input.dataset.identityRole; });
+      var tabs = roleVisibleTabUnion(codes);
+      preview.innerHTML = '<strong>所选角色可见标签并集</strong><p>' +
+        safeText(tabs.map(function(tab) { return tab.name; }).join('、') || '尚未选择角色') +
+        '</p><span class="muted">这里只预览固定模型结果，不提供按账号自定义；服务端权限仍会独立校验。</span>';
     }
 
     function showIdentityAccountEditor(personId) {
@@ -11361,6 +12169,7 @@
           '</div>' +
           '<div><label>' + (account ? '新部门角色安排（仅在变更部门时生效）' : '初始MDM工作角色') + '</label>' +
             '<div class="role-check-list" id="identityRoleChecks">' + identityRoleChecks(roles, checkedCodes) + '</div></div>' +
+          '<div class="notice" id="identityVisibleTabPreview"></div>' +
           '<div class="user-management-grid" style="margin-top:12px;">' +
             '<label>授权或变更依据<input id="identityAuthorizationBasis" placeholder="会议决定、书面授权或任务单号"></label>' +
             '<label>生效日期<input id="identityEffectiveFrom" type="date" value="' + currentDateInputValue() + '"></label>' +
@@ -11372,6 +12181,7 @@
               (account ? '保存人员信息' : '创建待启用账号') + '</button>' +
           '</div>' +
         '</div>';
+      renderIdentityVisibleTabPreview();
     }
 
     function closeIdentityAccountEditor() {
@@ -11535,16 +12345,32 @@
           '<div><h3>' + safeText(account.person_name) + '的角色授权</h3><p>角色授权只追加或撤销，不覆盖历史记录。</p></div>' +
           '<div class="table-container"><table class="data-table"><thead><tr><th>角色</th><th>范围</th><th>授权依据</th><th>有效期</th><th>状态</th><th>操作</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
           '<div class="user-management-grid">' +
-            '<label>新增角色<select id="identityGrantRole">' + roleOptions + '</select></label>' +
+            '<label>新增角色<select id="identityGrantRole" onchange="renderGrantVisibleTabPreview(' + Number(personId) + ')">' + roleOptions + '</select></label>' +
             '<label>授权依据<input id="identityGrantBasis" placeholder="必填"></label>' +
             '<label>生效日期<input id="identityGrantFrom" type="date" value="' + currentDateInputValue() + '"></label>' +
             '<label>失效日期（可选）<input id="identityGrantTo" type="date"></label>' +
           '</div>' +
+          '<div class="notice" id="identityGrantVisibleTabPreview"></div>' +
           '<div class="entity-form-actions">' +
             '<button class="btn secondary" onclick="closeIdentityAccountEditor()">关闭</button>' +
             '<button class="btn primary" onclick="grantIdentityRole(' + Number(personId) + ')">授予角色</button>' +
           '</div>' +
         '</div>';
+      renderGrantVisibleTabPreview(personId);
+    }
+
+    function renderGrantVisibleTabPreview(personId) {
+      var account = identityAccounts.find(function(item) { return Number(item.person_id) === Number(personId); });
+      var codes = (account && account.roleAssignments || []).filter(assignmentIsCurrentlyEffective)
+        .map(function(item) { return item.roleCode; });
+      var selected = $('identityGrantRole') && $('identityGrantRole').value;
+      if (selected && codes.indexOf(selected) < 0) codes.push(selected);
+      var tabs = roleVisibleTabUnion(codes);
+      if ($('identityGrantVisibleTabPreview')) {
+        $('identityGrantVisibleTabPreview').innerHTML = '<strong>授权后可见标签并集</strong><p>' +
+          safeText(tabs.map(function(tab) { return tab.name; }).join('、') || '无') +
+          '</p><span class="muted">标签可见性不替代服务端权限校验。</span>';
+      }
     }
 
     async function grantIdentityRole(personId) {
@@ -11631,6 +12457,36 @@
           activities + '</tbody></table></div>';
       } catch (error) {
         panel.innerHTML = '<div class="empty">' + safeText(error.message || '固定治理模型加载失败') + '</div>';
+      }
+    }
+
+    async function renderRoleVisibleTabs(selectedRoleCode) {
+      var panel = $('rbacPanel');
+      panel.innerHTML = '<div class="empty">正在读取角色可见标签...</div>';
+      try {
+        identityModel = identityModel || await api('/api/rbac/model');
+        var roles = identityModel.roles || [];
+        var selected = roles.find(function(role) { return role.code === selectedRoleCode; }) || roles[0];
+        var options = roles.map(function(role) {
+          return '<option value="' + safeText(role.code) + '"' + (selected && role.code === selected.code ? ' selected' : '') + '>' +
+            safeText(role.name) + ' · ' + safeText(role.code) + '</option>';
+        }).join('');
+        var rows = (selected && selected.visibleTabs || []).map(function(tab) {
+          return '<tr><td><strong>' + safeText(tab.name) + '</strong><br><span class="muted">' + safeText(tab.code) +
+            '</span></td><td>' + safeText(tab.access) + '</td><td>' + safeText(tab.reason) + '</td></tr>';
+        }).join('') || '<tr><td colspan="3" class="empty">该角色没有可见标签</td></tr>';
+        panel.innerHTML =
+          '<div class="user-management-head"><div><h3>角色可见标签</h3><p>模型版本：' + safeText(identityModel.modelVersion) +
+          '。选择角色后只读查看固定标签及权限原因；不提供按角色或按账号自定义。</p></div></div>' +
+          '<label style="display:block;max-width:420px;margin-bottom:16px;">选择角色<select id="visibleTabRoleSelect">' + options + '</select></label>' +
+          '<div class="notice">标签可见性用于减少无关入口，不替代服务端角色、部门、参与关系和对象状态校验。</div>' +
+          '<div class="table-container"><table class="data-table"><thead><tr><th>顶部功能标签</th><th>访问方式</th><th>权限依据</th></tr></thead><tbody>' +
+          rows + '</tbody></table></div>';
+        $('visibleTabRoleSelect').addEventListener('change', function(event) {
+          renderRoleVisibleTabs(event.target.value);
+        });
+      } catch (error) {
+        panel.innerHTML = '<div class="empty">' + safeText(error.message || '角色可见标签加载失败') + '</div>';
       }
     }
 

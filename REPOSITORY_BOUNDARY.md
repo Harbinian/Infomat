@@ -13,7 +13,7 @@ Infomat 是一个信息化治理工作仓库，不是单一源码仓库。它允
 | 资产类型 | 说明 | 主要位置 |
 |---|---|---|
 | 信息化资料库 | 制度、流程地图、数据地图、组织架构、方案文档 | `docs/` |
-| 可运行系统 | MDM 平台、文档结构化输出辅助服务、PMO 周会行动项服务及其测试和维护脚本 | `apps/` |
+| 可运行系统 | MDM 平台、文档结构化输出辅助服务、MDM-AI助手、PMO 周会行动项服务及其测试和维护脚本 | `apps/` |
 | PMO / 项目管理展示工具 | 流程地图驾驶舱、甘特图、项目管理页面、交付物工作台 | `pmo/` |
 | 仓库级脚本工具 | 跨资料、跨页面、跨 app 的解析、注入、生成、校验脚本 | `scripts/` |
 | AI 协作工作区 | Codex 入口规则、Agent 技能和历史计划 | `AGENTS.md`、`CODEX.md`、`.agents/`、`docs/superpowers/` |
@@ -27,7 +27,7 @@ Infomat 是一个信息化治理工作仓库，不是单一源码仓库。它允
 - 当前仍需运行或验证的应用源码。
 - 由组织真源、流程输入基线或 PMO 计划入口生成展示页面所需的仓库级脚本。
 - 经过确认需要长期追溯的审计报告、设计记录、ADR 和迁移方案。
-- 用于复现格式和契约的最小样例。
+- 用于复现格式和校验规则的最小样例。
 
 ### 不应放入
 
@@ -59,6 +59,7 @@ Infomat 是一个信息化治理工作仓库，不是单一源码仓库。它允
 | 修改流程/能力/系统映射 | `docs/norms/`，再运行 `scripts/parse-sankey-data.mjs` | `apps/mdm-platform/server/` |
 | 修改流程地图驾驶舱样式或展示 | `pmo/procedure-management/` | `docs/norms/` 流程输入基线和源文件材料 |
 | 修改 MDM 平台能力 | `apps/mdm-platform/` | `pmo/`、`docs/superpowers/` |
+| 修改AI结构化填报试点 | `apps/structure-assistant/`；如需读取3001结构规则再联动`apps/structured-output-service/` | `docs/norms/`流程输入基线、3000、PMO驾驶舱 |
 | 修改 PMO 周会行动项服务 | `apps/weekly-action-service/` | PMO Markdown 真源、`pmo/tasks.json`、MDM 数据库 |
 | 修改项目甘特图或 PMO 看板 | `pmo/` | `apps/mdm-platform/` |
 | 增加仓库级转换或校验 | `scripts/` | app 内部测试脚本，除非脚本只服务该 app |

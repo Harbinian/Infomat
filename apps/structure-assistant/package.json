@@ -1,0 +1,19 @@
+{
+  "name": "infomat-structure-assistant",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MDM-AI助手：集中部署的3001结构化填报与独立结构预审应用",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node scripts/test-service-contract.js",
+    "hash-password": "node scripts/hash-password.js",
+    "smoke:models": "node scripts/live-model-smoke.js",
+    "dev:browser-fixture": "node scripts/start-browser-smoke-fixture.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "mammoth": "^1.8.0",
+    "multer": "^2.1.1"
+  }
+}

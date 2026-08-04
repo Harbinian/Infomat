@@ -2,7 +2,7 @@
 
 本目录放仓库级自动化脚本：输入通常跨 `docs/`、`pmo/` 或 `apps/mdm-platform/`，输出也可能回写生成快照或校验报告。只服务单个应用的脚本应留在对应应用目录，例如 `apps/mdm-platform/scripts/`。
 
-修改本目录脚本前先读 `AGENTS.md`。涉及命令、输入、输出、副作用、启动合同或验证口径变化时，必须同步更新本 README。
+修改本目录脚本前先读 `AGENTS.md`。涉及命令、输入、输出、副作用、启动规则或验证口径变化时，必须同步更新本 README。
 
 ## 当前主线入口
 
@@ -10,29 +10,32 @@
 |---|---|---|---|
 | `parse-sankey-data.mjs` | 从部门流程输入基线生成公司级桑基数据，并注入 PMO 流程驾驶舱；若文件头存在流程治理结构块 v1，则优先读取结构块，并将正文 legacy 中未被覆盖的 L3/A1 合并为 hybrid 解析结果；同时输出 `processMappings` 供 MySQL 导入保留部门内 L1/L2/L3 枚举 | `docs/norms/`、`docs/organization/组织架构和部门职责.md`、跨部门报告 | 写入 `docs/company-sankey-data.json` 和 `pmo/procedure-management/dashboard.html` |
 | `check-dashboard-data.mjs` | 校验公司级快照、PMO 内嵌数据、跨部门报告派生统计和报告来源指纹一致 | `docs/company-sankey-data.json`、`pmo/procedure-management/dashboard.html`、`docs/norms/流程治理/跨部门完整性检查报告.md` | 只读校验 |
-| `check-dept-domain-mapping.mjs` | 校验 DCM/BBM 合同与组织真源一致，并确认 parser 从组织真源读取部门到域映射 | `docs/organization/组织架构和部门职责.md`、`docs/contracts/dcm-bbm-contract.json`、`scripts/parse-sankey-data.mjs` | 只读校验 |
+| `check-dept-domain-mapping.mjs` | 校验 DCM/BBM 规则文件与组织真源一致，并确认 parser 从组织真源读取部门到域映射 | `docs/organization/组织架构和部门职责.md`、`docs/contracts/dcm-bbm-contract.json`、`scripts/parse-sankey-data.mjs` | 只读校验 |
 | `check-engineering-source-manifest.mjs` | 校验工程技术部源文件清单中的 canonical 缺口和外部待确认索引仍与仓库现状一致 | `docs/reports/2026-06-11-engineering-source-manifest.md`、外部参考待确认目录 | 只读校验 |
-| `check-norms-source-manifest.mjs` | 校验部门流程输入基线清单与合同部门、`docs/norms` canonical 三件套一致 | `docs/contracts/dcm-bbm-contract.json`、`docs/norms/`、两份 source manifest 报告 | 只读校验 |
+| `check-norms-source-manifest.mjs` | 校验部门流程输入基线清单与规则文件中的部门、`docs/norms`标准三件套一致 | `docs/contracts/dcm-bbm-contract.json`、`docs/norms/`、两份 source manifest 报告 | 只读校验 |
 | `check-pmo-task-data.mjs` | 校验 PMO 根目录备份数据与 React 应用读取数据同源同 hash | `pmo/tasks.json`、`pmo/gantt-react/public/tasks.json`、两份 PMO source manifest | 只读校验 |
-| `check-pmo-execution-standards.mjs` | 校验 PMO 执行标准真源、WBS 1.2 执行级样板、WBS 3 标准绑定和 H5 诊断契约 | `pmo/信息化项目_执行标准真源.md`、WBS/计划管控真源、PMO 前端源码 | 只读校验 |
+| `check-pmo-execution-standards.mjs` | 校验 PMO 执行标准真源、WBS 1.2 执行级样板、WBS 3 标准绑定和H5诊断规则 | `pmo/信息化项目_执行标准真源.md`、WBS/计划管控真源、PMO 前端源码 | 只读校验 |
 | `check-pmo-standard-gap-operations.mjs` | 校验 PMO 执行标准缺口分桶、优先级队列、建议动作和标准治理 H5 入口 | PMO 任务数据、source manifest、执行标准真源、PMO 前端源码 | 只读校验 |
 | `check-pmo-wbs-semantic-depth.mjs` | 校验 PMO WBS 语义补组后不再保留二级叶子任务，并确认父级日期覆盖子任务 | `pmo/tasks.json` | 只读校验 |
 | `check-source-manifest-hashes.mjs` | 校验公司级快照里的 sourceManifest 文件大小和 SHA256 仍匹配磁盘源文件 | `docs/company-sankey-data.json`、`sourceManifest.files` 中登记的源文件 | 只读校验 |
 | `build-project-governance-report.mjs` | 生成双部门项目治理周报，并输出 PMO 周会页可读取的 JSON 快照 | 输入基线问题待办、DCM/BBM 质量报告、可选角色工作台快照 | 写入 `docs/reports/project-governance-weekly-report.md` 和 `pmo/gantt-react/public/project-governance-weekly-report.json` |
-| `test-project-governance-report.mjs` | 校验项目治理周报 Markdown、JSON 快照和 PMO 消费契约 | 周报脚本、PMO 周会页源码、临时角色工作台夹具 | 只读校验，临时输出写入系统临时目录 |
+| `test-project-governance-report.mjs` | 校验项目治理周报 Markdown、JSON快照和PMO读取规则 | 周报脚本、PMO 周会页源码、临时角色工作台夹具 | 只读校验，临时输出写入系统临时目录 |
 | `sync-process-governance-mainline.mjs` | 串起流程治理主线同步、检查和 MDM 快照导入 | 流程输入基线、PMO 驾驶舱、MDM 平台脚本；迁移过渡期的遗留本地库必须显式隔离 | 会运行 parser，并调用 MDM 平台同步 / 导入脚本 |
 | `test-process-governance-mainline.mjs` | 聚合仓库级流程治理主线只读校验 | 根级主线检查脚本 | 依次运行合约、项目治理升级、PMO 数据、部门域、source manifest 和 PMO 任务数据校验 |
-| `test-process-governance-mainline-contract.mjs` | 仓库级流程治理主线契约测试 | `package.json`、`docs/company-sankey-data.json`、仓库级脚本 | 只读校验 |
+| `test-process-governance-mainline-contract.mjs` | 仓库级流程治理主线一致性测试 | `package.json`、`docs/company-sankey-data.json`、仓库级脚本 | 只读校验 |
 | `test-parse-sankey-structure-block.mjs` | 校验流程治理结构块 v1 的 parser 优先读取、hybrid 合并、系统枚举、证据状态和 A1→L3 引用约束 | 内置临时夹具 | 只读校验 |
 | `test-document-structured-output-schema.mjs` | 校验文档结构化输出标准 schema 与前端字段、MySQL process_design 表、制度编号/版次字段、MySQL 路由枚举和结构块 parser 关键约束一致 | `docs/contracts/document-structured-output.schema.json`、MDM 前端、MySQL schema、MySQL 路由、结构块 parser | 只读校验 |
 | `build-work-role-data.mjs` | 从行政人事工作角色真源生成结构化输出服务可只读消费的工作角色快照；先完整校验角色引用和花名册“部门 + 岗位”，成功后才原子替换输出 | `docs/organization/工作角色目录与岗位映射.md`、`docs/organization/花名册.md` | 写入 `docs/work-role-data.json`；不修改花名册、流程输入基线、数据库或应用 |
-| `test-work-role-contract.mjs` | 校验 v2 可选工作角色关系、L3/A1/confirmed 约束、行政人事空目录、花名册岗位核验、快照形状和失败不覆盖 | 工作角色合同、组织真源、花名册、生成快照和临时夹具 | 只读校验；临时夹具写入系统临时目录 |
-| `infomat-services.config.json` | MDM、PMO、MySQL 固定启动合同 | 固定端口、固定 MySQL 用户/库、固定读模型 | 非敏感配置真源 |
-| `infomat-service-config.mjs` | 读取固定启动合同并合成本机运行环境 | `infomat-services.config.json`、本机 `infomat-services.local.env` | 供启动和冒烟脚本复用 |
-| `repair-infomat-mysql-container.ps1` | 将本机历史 MySQL 容器对齐到固定启动合同 | 固定合同、本机私有 env、Docker 容器状态 | 只修复本机 Docker 运行态，不写仓库真源 |
-| `start-infomat-services.ps1` | 固定启动 MDM、PMO 和项目 MySQL | 固定合同、本机私有 env、Docker 容器 `infomat-input-baseline-review-mysql` | 按固定环境启动服务，不修改仓库真源 |
-| `smoke-infomat-services.mjs` | 固定配置下检查 MDM/PMO 是否可用 | 固定合同、本机私有 env、运行中的服务 | 只读检查，输出会隐藏密码 |
-| `test-infomat-services-config.mjs` | 防止启动配置再次漂移 | 固定合同、启动脚本、冒烟脚本、`.gitignore` | 只读校验 |
+| `test-work-role-contract.mjs` | 校验 v2 可选工作角色关系、L3/A1/confirmed 约束、行政人事空目录、花名册岗位核验、快照形状和失败不覆盖 | 工作角色结构规则、组织真源、花名册、生成快照和临时夹具 | 只读校验；临时夹具写入系统临时目录 |
+| `infomat-services.config.json` | MDM、PMO、MySQL固定启动配置 | 固定端口、固定MySQL用户和数据库、固定读模型 | 非敏感配置真源 |
+| `infomat-service-config.mjs` | 读取固定启动配置并合成本机运行环境 | `infomat-services.config.json`、本机 `infomat-services.local.env` | 供启动和冒烟脚本复用 |
+| `repair-infomat-mysql-container.ps1` | 将本机历史MySQL容器调整为固定启动配置 | 固定配置、本机私有env、Docker容器状态 | 只修复本机Docker运行态，不写仓库真源 |
+| `start-infomat-services.ps1` | 固定启动MDM、PMO和项目MySQL | 固定配置、本机私有env、Docker容器`infomat-input-baseline-review-mysql` | 按固定环境启动服务，不修改仓库真源 |
+| `smoke-infomat-services.mjs` | 固定配置下检查MDM和PMO是否可用 | 固定配置、本机私有env、运行中的服务 | 只读检查，输出会隐藏密码 |
+| `test-infomat-services-config.mjs` | 防止启动配置再次漂移 | 固定配置、启动脚本、冒烟脚本、`.gitignore` | 只读校验 |
+| `start-structure-pilot.ps1` | 在工作区干净、测试通过和HTTPS配置齐全时启动MDM-AI助手及其认证网关 | `apps/structure-assistant/config/pilot.config.json`、本机`structure-pilot.local.env`、同一Git提交、已独立运行的3001 | 只启停本机3003/3004；检查但不停止、重绑或代管3001；不拉取代码、不写业务真源 |
+| `smoke-structure-pilot.mjs` | 登录独立试点并检查版本、模板、结构校验、本人余额和试点可选网关 | 本机试点秘密、运行中的HTTPS服务 | 只读烟测，不调用付费模型，不输出密码或API Key |
+| `test-structure-pilot-config.mjs` | 防止四账号、端口、模型和固定启动入口漂移 | 助手固定配置、根`package.json`和试点脚本 | 只读校验 |
 | `generate-weekly-action-personnel-snapshot.mjs` | 从信息化项目人员角色映射和花名册生成 3002 只读人员快照 | `docs/organization/信息化项目人员角色映射.md`、`docs/organization/花名册.md` | 默认写 `artifacts/weekly-actions/personnel-snapshot.json`；不修改组织真源、PMO 真源、SQLite 或 MySQL |
 | `test-weekly-action-personnel-snapshot.mjs` | 校验 3002 人员快照生成、花名册一致性和待补人员警告 | 组织人员映射、花名册、临时输出目录 | 只读校验，临时输出写入系统临时目录 |
 
@@ -43,6 +46,9 @@ npm run start:infomat-services
 npm run smoke:infomat-services
 npm run repair:infomat-mysql
 npm run test:infomat-services-config
+npm run verify:structure-pilot
+npm run start:structure-pilot
+npm run smoke:structure-pilot
 npm run test:process-governance-mainline
 npm run test:dept-domain-mapping
 npm run test:engineering-source-manifest
@@ -79,7 +85,7 @@ npm run build:work-role-data
 npm run test:work-role-contract
 ```
 
-快照顶层合同固定为 `schemaVersion=work-role-data-v1`、`generatedAt`、`sourceHash`、`workRoles`、`workRolePositionMappings`、`workRoleAliases`。角色记录保留定义、生效起止和制定依据；岗位映射保留生效起止和确认依据；别名保留确认依据。三类记录的 `status` 都只允许 `draft|active|retired`。生成器只读花名册并精确核对“部门 + 岗位”：不一致行只能保留为 `draft`，`active` / `retired` 会硬失败。它在全部校验通过后才原子替换 `docs/work-role-data.json`，失败时保留旧快照。测试夹具可通过脚本的 `--source`、`--roster`、`--out` 和 `--generated-at` 参数指定，但正式生成使用固定默认路径。
+快照顶层结构固定为 `schemaVersion=work-role-data-v1`、`generatedAt`、`sourceHash`、`workRoles`、`workRolePositionMappings`、`workRoleAliases`。角色记录保留定义、生效起止和制定依据；岗位映射保留生效起止和确认依据；别名保留确认依据。三类记录的 `status` 都只允许 `draft|active|retired`。生成器只读花名册并精确核对“部门 + 岗位”：不一致行只能保留为 `draft`，`active` / `retired` 会硬失败。它在全部校验通过后才原子替换 `docs/work-role-data.json`，失败时保留旧快照。测试夹具可通过脚本的 `--source`、`--roster`、`--out` 和 `--generated-at` 参数指定，但正式生成使用固定默认路径。
 
 ### 流程工作角色绑定输入
 
@@ -147,6 +153,28 @@ npm run migrate:rbac-raci-v2:apply
 
 迁移只自动保留受控`ADMIN001`管理员，其他旧账号停用，旧角色不自动映射。回滚和补偿必须使用迁移返回的批次编号，完整步骤见`apps/mdm-platform/docs/RBAC-RACI-Migration-Runbook.md`。空身份库使用`npm run bootstrap:admin`，检测到已有身份数据后会拒绝重复初始化。
 
+## AI结构化填报试点固定启动
+
+试点固定配置位于`apps/structure-assistant/config/pilot.config.json`。本机密码哈希、DeepSeek API Key、HTTPS证书路径和会话密钥放在被Git忽略的`scripts/structure-pilot.local.env`。
+
+```powershell
+npm run verify:structure-pilot
+npm run start:structure-pilot
+npm run smoke:structure-pilot
+```
+
+固定端口：
+
+| 服务 | 监听 |
+|---|---|
+| 独立3001 | `0.0.0.0:3001`，公司局域网用户直接访问；由3001自身启动入口管理 |
+| MDM-AI助手 | HTTPS `0.0.0.0:3003` |
+| 独立试点的可选网关 | HTTPS `0.0.0.0:3004`，不是3001的访问前置条件 |
+
+`start-structure-pilot.ps1`不执行`git pull`。脚本先拒绝存在未提交修改的工作区，再运行3001结构规则测试、助手测试和固定配置测试，确认独立3001可达后，只重启3003和3004。该脚本不得停止、重绑或启动3001。局域网用户始终通过服务器局域网地址直接使用3001。
+
+`smoke-structure-pilot.mjs`需要`STRUCTURE_ASSISTANT_SMOKE_BASE_URL`、烟测账号和密码；使用私有CA时还需`STRUCTURE_ASSISTANT_SMOKE_CA_PATH`。该脚本不调用模型。四账号实际模型烟测由管理员显式设置`STRUCTURE_ASSISTANT_LIVE_SMOKE_CONFIRM=YES`后运行`npm --prefix apps/structure-assistant run smoke:models`，会产生实际Token费用。
+
 输入基线问题复核正式入口在 MDM 平台：
 
 ```bash
@@ -172,7 +200,7 @@ npm run review:mysql:serve
 
 | 脚本 | 作用 | 输入 | 输出 / 副作用 |
 |---|---|---|---|
-| `check-dcm-bbm.mjs` | 校验 DCM/BBM 合同、部门映射、跨部门证据和驾驶舱数据；已识别流程治理结构块 v1 的 L3/A1 计数 | `docs/contracts/dcm-bbm-contract.json`、`docs/norms/`、PMO 驾驶舱 | 默认写 `docs/reports/dcm-bbm-quality-report.md`；`--report=...` 可覆盖，`--no-fail` 可用于主线容错 |
+| `check-dcm-bbm.mjs` | 校验DCM/BBM规则、部门映射、跨部门证据和驾驶舱数据；已识别流程治理结构块v1的L3/A1计数 | `docs/contracts/dcm-bbm-contract.json`、`docs/norms/`、PMO驾驶舱 | 默认写 `docs/reports/dcm-bbm-quality-report.md`；`--report=...` 可覆盖，`--no-fail` 可用于主线容错 |
 | `verify-norms-source-mapping.mjs` | 只读盘点 `docs/norms` 源文件和部门映射表，核验 DCM/BBM 证据字段能否回到源文件编号、制度或表单名称、条款/表格/摘录位置 | `docs/contracts/dcm-bbm-contract.json`、`docs/norms/` | 写 `docs/reports/{日期}-norms-source-mapping-verification.md` 和 `artifacts/norms-source-mapping-verify/<run-id>/`，不写数据库，不修改映射基线 |
 | `audit-a1-transfer-evidence.mjs` | 审计 A1 跨部门输入 / 输出证据 | `docs/contracts/dcm-bbm-contract.json`、`docs/norms/` | 默认写 `docs/reports/{日期}-a1-transfer-evidence-audit.md`；`--no-write` 可只读运行 |
 | `ocr-source.mjs` | 对扫描 PDF 和图片源文件生成 OCR 待确认证据中间件；PaddleOCR 不可用时登记待复核 | `docs/norms/` 或指定文件/目录下的 PDF/图片 | 默认写 `artifacts/ocr/<run-id>/`；可显式写 `build/ocr/`，但不生成流程结论 |
@@ -188,7 +216,7 @@ npm run review:mysql:serve
 | `input-baseline-review-core.mjs` | 输入基线问题复核 MySQL schema、原文匹配、高亮和仓库方法 | 待确认 JSON、`chunks.jsonl`、MySQL pool | 供导入脚本、服务和测试复用 |
 | `test-process-evidence-skill.mjs` | 校验 process-evidence-mapping 技能是否按固定执行顺序重写，且包含 OCR、embedding、待确认待办边界 | `.agents/skills/process-evidence-mapping/SKILL.md` | 只读校验 |
 | `.agents/skills/process-evidence-mapping/scripts/test-input-baseline-review-workflow.mjs` | 用 GLTX-CW-01 回归输入基线解读、角色簿、对象链、差异报告和待确认待办 Markdown | 财务部 GLTX-CW-01 制度和当前财务部映射 | 写入被忽略的 `artifacts/process-input-baseline-review/test-gltx-cw-01/` |
-| `test-input-baseline-review-mysql.mjs` | 校验 MySQL 表结构、原文高亮、对比色按钮和服务页面契约 | 测试问题识别批次夹具 | 写入被忽略的 `artifacts/process-input-baseline-review/test-input-baseline-review-mysql/` |
+| `test-input-baseline-review-mysql.mjs` | 校验MySQL表结构、原文高亮、对比色按钮和服务页面约定 | 测试问题识别批次夹具 | 写入被忽略的 `artifacts/process-input-baseline-review/test-input-baseline-review-mysql/` |
 | `glossary.mjs` | 查询仓库术语表 | `docs/glossary.md` | 只读查询 |
 
 ## 局部或历史工具
