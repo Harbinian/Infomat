@@ -40,7 +40,7 @@ Codex 在本项目协作时的根入口规则。
 - 不是每个文件夹都需要 `AGENTS.md`; 目录级 `AGENTS.md` 只放在有独立真源、生成副作用、运行命令、验证口径或禁止事项的关键目录。
 - 关键目录必须有目录级 `AGENTS.md`:可运行应用、PMO 展示/插件、流程输入基线、仓库级脚本、受控交付物、AI 工作区样例。
 - 纯报告、归档、样例、说明性架构目录默认使用 README; 只有当它们开始承载可执行命令、写回真源或独立验证规则时,再新增 `AGENTS.md`。
-- 当前目录级入口包括 `apps/mdm-platform/AGENTS.md`、`apps/structured-output-service/AGENTS.md`、`apps/weekly-action-service/AGENTS.md`、`pmo/AGENTS.md`、`pmo/procedure-management/AGENTS.md`、`pmo/gantt-react/AGENTS.md`、`pmo/deliverables/AGENTS.md`、`docs/norms/AGENTS.md`、`docs/Demo/AGENTS.md` 和 `scripts/AGENTS.md`。
+- 当前目录级入口包括 `apps/mdm-platform/AGENTS.md`、`apps/structured-output-service/AGENTS.md`、`apps/structure-assistant/AGENTS.md`、`apps/weekly-action-service/AGENTS.md`、`pmo/AGENTS.md`、`pmo/procedure-management/AGENTS.md`、`pmo/gantt-react/AGENTS.md`、`pmo/deliverables/AGENTS.md`、`docs/norms/AGENTS.md`、`docs/Demo/AGENTS.md` 和 `scripts/AGENTS.md`。
 - 新增、删除或调整目录级 `AGENTS.md` 时,必须同步更新 `DIRECTORY_OWNERSHIP.md`、相关目录 README 和 `docs/architecture/context-management.md`; 涉及新术语时同步 `docs/glossary.md`。
 
 ## 沟通与命名约定
@@ -60,6 +60,7 @@ Codex 在本项目协作时的根入口规则。
 - 行为句优先按“触发条件或时间 + 主体 + 动作 + 对象 + 依据或结果”表达。主体、条件、审批阶段、系统边界或结果责任发生变化时，重新写明主体并拆句；人员、部门和系统的动作不得混写。
 - 术语和规则冲突时，依次采用受控原文或用户确认口径、项目术语表和合同、当前文档定义、技能通用解释。首次出现且目标读者可能不理解的术语应作必要解释；不得为了避免重复而替换标准术语。
 - 制度原文、合同条款、会议原话、编号、数据、参数、字段、路径、错误码和机器可读内容不得改写。需要解释时，在原文外另写说明。
+- 除采购、劳动、客户等真实业务合同外，不用“合同”或“契约”指代 Schema、接口、配置或测试。面向管理人员和业务人员统一使用“结构规则”“接口约定”“固定配置”“版本一致性检查”等直白表述；已有文件路径、接口字段和错误码保持不变。
 - `humanizer-zh` 仅在用户明确点名时使用，不得隐式触发。两项技能同时使用时，固定顺序为“技术审校 → 受限文风清理 → 技术语义复核”；文风清理不得改变专业术语、责任主体、业务条件、处理对象、时序、输入输出和异常处理。
 - “说人话”不等于随意口语化。管理层材料要简洁明确，业务说明要让用户能够照着操作，技术文档要准确可复现，受控文件要保持正式；不得为增加“人味”引入第一人称、情绪、幽默、跑题或没有来源的具体信息。
 - 示例：不要写“进一步完善流程治理闭环，持续提升协同效能”；应写明实际动作，例如“流程负责人补齐责任人和完成时限，审核人确认后发布”。
@@ -79,7 +80,7 @@ Codex 在本项目协作时的根入口规则。
 - MDM / PMO 本地联动启动使用仓库根目录固定入口：`npm run start:infomat-services` 和 `npm run smoke:infomat-services`。固定启动配置在 `scripts/infomat-services.config.json`，本机密码放在 `scripts/infomat-services.local.env`。
 - 固定 MySQL 容器缺失时,先运行 `npm run repair:infomat-mysql`,再运行启动和烟测。不要临时改 MySQL 端口或绕过固定配置；启动脚本会先校验 person 身份 schema 和 `ADMIN001` 管理员权限,端口监听不等于 MDM 可用。
 - 登录后默认第一屏为 `roleWorkbench`。首屏必须让用户知道自己该干什么:顶部显示当前身份、当前部门、今天优先处理事项数;左侧第一块固定为"我现在该做什么",列出 1 到 3 个下一步动作。
-- 固定治理模型版本为`rbac-raci-v2-2026-07-30`。角色只允许`admin`、`mdm_lead`、`department_contact`、`department_mdm_reviewer`、`data_conflict_handler`、`data_quality_auditor`和`decision_group`;管理页面只读,不提供自定义角色、角色继承、通配权限或权限矩阵编辑。
+- 固定治理模型版本为`rbac-raci-v3-2026-07-31`。角色只允许`admin`、`mdm_lead`、`department_contact`、`department_mdm_reviewer`、`data_conflict_handler`、`data_quality_auditor`和`decision_group`;管理页面只读,不提供自定义角色、角色继承、通配权限、权限矩阵或角色可见标签编辑。
 - `submitter`、`owner`、`reviewer`、`it_lead`、`project_lead`、`workgroup_lead`、`business_contact`、`data_quality`和其他非固定角色只保留为`retired`历史数据,不产生有效权限,也不自动映射到新角色。
 - 正式身份链路为`person -> user_accounts -> person_roles`。普通账号只能由`admin`手工创建、授权和启用;`admin`对治理材料全局只读,不得执行审核、确认、修改或发布等业务写操作。
 - 部门角色只能作用于人员所属部门;部门最终负责人只从`departments.final_responsible_person_id`读取,不得按姓名、岗位、职务或历史常量推测。
@@ -89,6 +90,18 @@ Codex 在本项目协作时的根入口规则。
 - 默认视角为"待办优先";切换到"全量职责"后展示该角色全部职责链路。
 - `/api/org/me` 应返回人员、账号、部门、全部有效MDM工作角色、权限、数据范围和治理模型版本;`GET /api/role-workbench?mode=todo|all` 返回角色、工作流步骤、桑基数据、待办、样例说明和跳转目标。
 - 变更 MDM 角色工作台后,在 `apps/mdm-platform/` 下优先回归: `npm run test:frontend`、`npm run test:project-roles`、`npm run test:process-governance`、`npm run test:mainline`。如新增或调整工作台接口,同步覆盖 `npm run test:role-workbench`。
+
+## 独立AI结构化填报试点约定
+
+- MDM-AI助手主责资产在`apps/structure-assistant/`。当前名称可以随功能范围调整，但内部目录和启动命令保持稳定。它是3001公开结构规则的独立客户端，只辅助用户遵守既定结构，不判断流程内容、部门职责或业务做法。
+- `apps/structured-output-service/`继续保持无状态，默认监听`0.0.0.0:3001`供公司局域网用户直接访问，并负责`process-governance-v1`模板和校验。3001不依赖DeepSeek、MDM-AI助手或认证网关，AI能力不得重新写入3001。
+- 独立试点启动脚本只能检查3001是否可达，不得停止、启动、重绑或代管3001。
+- MDM-AI助手和3001必须从服务器同一个已提交版本启动；正式启动拒绝脏工作区。用户电脑不保存仓库、Schema、配置或API Key。
+- 每次模型调用前后核对Git提交和结构摘要。版本变化返回`409 VERSION_CHANGED`，用户先下载当前草稿，再刷新并重新导入。
+- 材料、对话、草稿和模型答复不得写入服务端业务日志、数据库或浏览器持久化空间。只允许保存非内容类用量元数据。
+- 填报使用DeepSeek V4 Flash并关闭思考模式；独立结构预审使用DeepSeek V4 Pro并启用高强度思考。模型输出必须经过受限Patch和3001校验。
+- 硬性结构错误不能忽略；字段归位和对象拆分建议可以保持原值，但必须记录理由。预审意见不得写入正式JSON。
+- 固定验证入口为`npm run verify:structure-pilot`；正式启动和烟测入口为`npm run start:structure-pilot`、`npm run smoke:structure-pilot`。
 
 ## MDM 流程治理问题卡口径
 

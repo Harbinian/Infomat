@@ -1,13 +1,13 @@
 # 文档结构化输出标准 Schema
 
-> 状态：标准合同  
+> 状态：统一结构规则
 > 生效日期：2026-07-07  
-> 机器合同：`docs/contracts/document-structured-output.schema.json`  
+> 规则文件：`docs/contracts/document-structured-output.schema.json`
 > 回归命令：`npm run test:document-structured-output-schema`
 
 ## 1. 定位
 
-`document-structured-output.schema.json` 是文档结构化输出的统一数据模型。它把现有三处口径收敛到一份合同：
+`document-structured-output.schema.json` 是文档结构化输出的统一数据模型。它把现有三处口径收敛到一份机器可读的结构规则：
 
 | 来源 | 作用 |
 |---|---|
@@ -15,13 +15,13 @@
 | `apps/mdm-platform/server/mysqlSchema.js` | MySQL 承接表结构 |
 | `scripts/parse-sankey-data.mjs` | 流程治理结构块 v1 的 parser 约束 |
 
-该合同不替代 `docs/norms/` 流程输入基线，也不替代 `docs/organization/组织架构和部门职责.md`。
+该结构规则不替代 `docs/norms/` 流程输入基线，也不替代 `docs/organization/组织架构和部门职责.md`。
 
 ## 2. 顶层对象
 
 | 顶层字段 | 含义 | 当前承接 |
 |---|---|---|
-| `schema_version` | 固定为 `document-structured-output-v2` | schema 合同 |
+| `schema_version` | 固定为 `document-structured-output-v2` | 结构规则 |
 | `draft` | 制度结构草稿 | `process_design_drafts` |
 | `document_profile` | 制度编号、制度名称、目的、范围、与已有制度/流程/表单的关系 | `process_design_document_profiles` |
 | `terms` | 术语和定义 | `process_design_terms` |

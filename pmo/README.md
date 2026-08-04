@@ -15,6 +15,8 @@
 | 执行标准真源 | `pmo/信息化项目_执行标准真源.md` |
 | 工作平衡 | `pmo/信息化项目_工作平衡.md` |
 | 工作开展原则 | `pmo/信息化项目_工作开展原则.md` |
+| 协同工作规则 | `pmo/信息化项目_协同工作规则.md` |
+| 部门主备对接人名单 | `pmo/信息化项目_部门主备对接人名单.md` |
 | 任务数 | 516 |
 | 字段数 | 43 |
 | 项目周期 | 2026-06-16 至 2028-02-15 |
@@ -23,6 +25,12 @@
 | 关键路径控制任务 | 112 |
 
 `pmo-source-manifest.json` 会同步写入 `pmo/gantt-react/public/pmo-source-manifest.json`，供甘特图/PMO 看板服务识别当前真源组合。
+
+## PMO 分析模型
+
+`pmo/organization-dynamics/` 保存组织数字化参与度十六维分型模型的 Markdown 内容真源、可编辑 SVG、HTML 预览、16:9横屏单页PPT和使用说明。该模型用于 PMO 观察部门在结构化、透明化和责任明确化过程中的参与行为，并选择差异化治理策略；它不替代组织事实真源、PMO 计划真源或正式 DLV 交付物。
+
+PNG由 `pmo/scripts/export-organization-dynamics-png.mjs` 生成到被忽略的 `artifacts/pmo/organization-dynamics/`，不作为仓库正本。
 
 ## 交付物运行产物
 
@@ -65,8 +73,9 @@ http://localhost:5174/#/procedure-dashboard
 
 1. 修改并保存 `pmo/信息化项目_计划管控真源.md`。
 2. 如调整 WBS 编号、父子层级或排序，同步修改 `pmo/信息化项目_WBS结构真源.md`。
-3. 如调整人员安排、会议把关机制或推进规则，同步修改 `pmo/信息化项目_工作平衡.md`、`pmo/信息化项目_工作开展原则.md`。
-4. 在 `pmo/` 下运行：
+3. 如调整工作包人员分配、高压窗口或推进原则，同步修改 `pmo/信息化项目_工作平衡.md`、`pmo/信息化项目_工作开展原则.md`。
+4. 如调整部门主备岗、会议、行动项、调整、升级或完成确认规则，修改 `pmo/信息化项目_协同工作规则.md`；仅调整主备岗人员时，只修改 `pmo/信息化项目_部门主备对接人名单.md`。
+5. 在 `pmo/` 下运行：
 
 ```bash
 python build_pmo_task_data.py
@@ -117,6 +126,12 @@ pmo/
 ├── procedure-management/
 │   ├── dashboard.html
 │   └── AGENTS.md
+├── organization-dynamics/
+│   ├── README.md
+│   ├── index.html
+│   ├── 组织数字化参与度十六维分型模型.md
+│   ├── 组织数字化参与度十六维分型模型.svg
+│   └── 组织数字化参与度十六维分型模型_横屏单页.pptx
 ├── gantt-react/
 │   ├── AGENTS.md
 │   ├── README.md
@@ -135,5 +150,8 @@ pmo/
 ├── 信息化项目_WBS结构真源.md
 ├── 信息化项目_执行标准真源.md
 ├── 信息化项目_工作平衡.md
-└── 信息化项目_工作开展原则.md
+├── 信息化项目_工作开展原则.md
+├── 信息化项目_协同工作规则.md
+├── 信息化项目_部门主备对接人名单.md
+└── 信息化项目_协同工作规则_群通知.md
 ```

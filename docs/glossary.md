@@ -1,7 +1,7 @@
 # Infomat 项目术语表
 
-> 版本：V1.8
-> 更新日期：2026-07-06
+> 版本：V1.9
+> 更新日期：2026-07-31
 > 用途：为 AI 辅助开发提供统一的术语参考。按域分章，每章一张三列表。
 
 ## 使用约定
@@ -95,11 +95,15 @@
 | 客供工装 | Customer-Provided Tooling | 由顾客（如商飞、波音）提供的工艺装备，需单独建账管理 |
 | 项目决策组 | Project Steering Group | 昌兴复材数字化底座项目的最高决策机构，由公司决策层和 PMO 主管组成，对项目启动、治理授权、阶段门放行、跨部门责任边界、启动令签发等重大事项进行裁决（DLV-001 至 DLV-004 共同使用） |
 | 项目启动令 | Project Launch Order | 项目启动会表决通过后由项目决策组签发的正式授权文件，标志项目从筹备期进入启动执行期，DLV-001 表决项 V-08 的输出物 |
-| 责任池 | Responsibility Pool | 启动期与调研期对历史问题暴露的治理保护机制：历史流程、数据、跨部门边界、表单台账和历史不符合项先入池记录、分级、确认责任边界并制定治理动作；除拖期、交付物未交、材料质量过于低劣三类例外外不追责，DLV-002/DLV-003 治理原则 3 的核心机制 |
+| 责任池 | Responsibility Pool | 启动期与调研期对历史问题暴露的治理保护机制：历史流程、历史数据、跨部门边界、表单台账和历史不符合项先入池治理；新发生的拖期、交付结果未交、材料无法支撑后续工作，以及部门未保障项目时间并以“没有时间”为由造成的进度影响，不进入责任池保护 |
 | 周会事项台账 | Weekly Issue Ledger | PMO 周会试运行入口，用于把现场形成的行动项、风险、问题、变更和责任池事项登记到对应台账，并记录关闭标准；PMO 看板内页签是浏览器本地试运行数据，3002 周会行动项服务保存服务端本机运行台账，二者都不替代 PMO Markdown 真源或 MDM 正式台账 |
 | PMO 周会行动项服务 | Weekly Action Service | 独立运行在 3002 端口的 PMO 周会行动项管理服务，用于保存每周例会行动项、关闭证据和延期原因的服务端本机运行台账，不写回 PMO Markdown 真源、`tasks.json` 或 MDM 数据库 |
 | 信息化项目人员角色映射 | Project Personnel Role Mapping | `docs/organization/信息化项目人员角色映射.md` 中维护的组织人员映射层，用于把花名册人员与信息化工作组、项目执行架构和 PMO 运行材料中的项目角色对齐；它不复制全量花名册，也不替代组织真源或 PMO Markdown 真源 |
 | 项目组织 | Project Organization | 信息化项目运行中的组织单元，如信息化工作组、项目决策组、信息化项目管理工作室、MDM 工作组、PLM 工作组、MES 工作组、ERP·OA 工作组和数据质量工作组；它不同于人员所在的花名册部门 |
+| 主对接人 | Primary Department Contact | 每个部门经项目决策组确认的日常项目联系人，负责接收和传达项目信息、组织实际业务人员、跟踪行动项并反馈结果；不代替部门负责人作出部门最终业务决定 |
+| 备岗人员 | Backup Department Contact | 与主对接人共同进入信息化工作群的固定代岗人员；主对接人无法履职并完成交接后，备岗人员按同一规则承接会议、信息和行动项 |
+| 信息化工作群 | Informationization Working Group Chat | 信息化项目发布通知、行动项、调整申请和决定的正式沟通渠道；电话、当面沟通或私聊形成的执行结论需同步到该群或PMO行动台账后生效 |
+| 数据提交责任 | Department Data Submission Accountability | 数据提交部门对所提交数据的真实性、完整性和准确性负责；主对接人组织收集和提交，部门负责人确认，数据质量工作组只制定规则、核对跨部门一致性并开展抽查或审计 |
 | 任命状态 | Appointment Status | 信息化项目人员角色映射中的来源状态，表示该项目角色来自红头任命、项目执行分工、暂定安排、待确认记录或已撤销记录 |
 | 人员匹配状态 | Personnel Match Status | 信息化项目人员角色映射中用于说明项目材料中的姓名是否已经匹配到 `花名册.md` 的字段；未匹配时标为 `花名册待补`，不能根据角色猜测工号、部门或岗位 |
 | 胸卡号 | Badge Number | 外部花名册中的人员唯一标识，本仓库花名册合并时作为工号使用；重复人员按胸卡号/工号去重 |
@@ -117,19 +121,26 @@
 | 制度版次 | Document Edition | 文档结构化输出中制度的字母版次，由系统自动生成并与制度编号共同标识外部引用对象；发布下一版次后上一版保留历史追溯并从默认当前视图移出 |
 | Procedure 业务编号 | Procedure Code | 文档结构化输出中流程对象的系统生成业务编号，格式为 `PROCEDURE-{草稿ID}-{三位序号}`，写入 `process_design_processes.process_code` 并保持唯一；L3 只表示流程层级和名称，不进入编号 |
 | 文档结构化输出结构规则 | Document Structured Output Schema | 机器可读的文档结构规则，统一制度草稿、制度档案、术语、L3流程、A1业务行为、跨部门承接、表单字段、证据、主数据需求和待确认问题字段；该规则不替代流程输入基线或组织真源 |
-| 单流程结构化文件规则 | Process Governance Structure Rules | 3001导出的`process-governance-v1`文件必须遵守的结构规则；一份JSON只包含一个`process`，记录编制元数据、隐式保留的历史参考材料、业务行为、现行执行岗位、已有工作角色、流程关系、待治理数据、跨部门承接、隐式保留并只读预览的历史内部流程调用和表单主明细结构，不包含审核状态、审核意见、批准标记或正式制度关联 |
+| 单流程结构化文件规则 | Process Governance Structure Rules | 3001导出的`process-governance-v2`文件必须遵守的结构规则；一份JSON只包含一个`process`，记录编制元数据、业务行为、流程关系、待治理数据、跨部门前置输入和后续承接、历史内部流程调用及表单主明细结构，不包含可信审核状态、审核意见或批准标记。v1只作为兼容导入版本 |
+| 单流程治理JSON | Single-Process Governance JSON | MDM流程编制的完整内容真源，结构版本固定为`process-governance-v2`。MDM兼容导入3001的v1/v2文件，保存和导出统一为v2；数据库修订号用于并发校验，浏览器不持久化该内容 |
 | 跨职能流程图预览 | Cross-Functional Process Preview | 3001根据当前单流程JSON生成的只读部门泳道图。它采用BPMN 2.0.2最小图形子集：部门使用横向泳道，岗位显示在节点第二行，本流程关系使用实线实心箭头，跨部门承接使用泳道外卡片和虚线空心箭头，历史内部流程调用使用粗边框节点；图形不得推测关系、修改业务数据或把坐标和页面状态写入JSON |
-| 编制参考材料 | Compilation Reference Material | `process-governance-v1.reference_materials[]`中的历史兼容内容，用于说明流程编制时曾参考的制度、表单、操作说明、会议或访谈等材料，不等同正式制度关联或逐步骤证据。3001当前页面暂停新增、展示和编辑此内容；新建流程导出空数组，导入文件中的已有内容只在内存中隐式保留并随再次导出带回 |
+| 业务行为补充说明 | Business Behavior Description | 3001中对“具体做什么”的可选文字说明，保存于`behaviors[].behavior_description`，用于帮助PMO和部门业务人员理解实际操作；它不替代`behavior_name`中的业务行为或节点名称，不参与流程关系、工作角色绑定或流程图节点显示 |
+| MDM-AI助手 | MDM AI Assistant | 当前四人试点的页面名称；该助手集中部署在内网主机，以连续对话帮助用户依据3001现行结构梳理流程，右侧同步显示结构化结果，材料只作为可选补充。AI可以发现信息缺口、前后矛盾、字段归位不清和对象混写，但不判断流程内容，也不自动写入3001或MDM平台。以后可以随功能范围调整显示名称，内部目录和启动命令保持稳定 |
+| Infomat试点版本 | Infomat Pilot Version | 同时提供MDM-AI助手和3001的已提交Git版本；正式启动要求服务器工作区干净，用户电脑不保存版本副本。浏览器通过Git提交和结构摘要确认当前页面与服务器一致 |
+| 结构摘要 | Schema Digest | 对3001当前`process-governance-v2`结构计算的SHA-256摘要；浏览器首次进入、定时检查和每次模型调用前后均核对该值，变化时返回`VERSION_CHANGED`并阻止旧页面继续调用模型 |
+| 独立结构预审 | Independent Structural Review | 使用新的页面上下文，只依据待审JSON和当前结构规则检查必需结构、类型、枚举、引用、字段归位和对象拆分；不读取填报对话，不判断流程内容。v1导入后在内存中规范化，下载统一使用`process-governance-v2`；硬性结构错误必须修改，结构建议可以保持原值但必须记录理由，预审意见和处理记录不写入JSON |
+| 编制参考材料 | Compilation Reference Material | `process-governance-v2.reference_materials[]`中的历史兼容内容，用于说明流程编制时曾参考的制度、表单、操作说明、会议或访谈等材料，不等同正式制度关联或逐步骤证据。3001当前页面暂停新增、展示和编辑此内容；新建流程导出空数组，导入文件中的已有内容只在内存中隐式保留并随再次导出带回 |
 | 不可读来源阻断 | Unreadable Source Block | 流程证据映射技能对图片、扫描件、无文本 PDF 或转换失败来源采用的安全门：记录来源及阻断原因后停止本轮，不执行图像转文字、不猜测内容；资料责任人提供可直接读取原件或经人工确认的文字版后才能重跑 |
-| 判断节点 | Decision Step | 流程中承载条件判断的节点；3001当前结构使用`behaviors[].node_type=decision`，新增时不自动认定。判断节点应有至少两条互斥且覆盖全部结果的分支，但3001只提示，不阻止未审核草稿导出 |
-| 判断分支 | Step Transition | 文档结构化输出 `step_transitions[]` 中的同流程流向关系，从判断节点发出，记录条件、目标步骤和证据引用；目标步骤可暂时为空，表示未补流向 |
+| 判断节点 | Decision Step | 流程中承载条件判断的节点；3001当前结构使用`behaviors[].node_type=decision`，新增时不自动认定。判断节点应有至少两个互斥且覆盖全部结果的明确出口；出口可以是本流程顺序、判断分支、流程内部回路或跨部门承接。3001只提示出口是否完整，不阻止未审核草稿导出 |
+| 判断分支 | Conditional Flow | 从判断节点发出、根据判断结果进入后续办理步骤的条件流向关系。它与流程内部回路的区别是：判断分支继续往下办理，流程内部回路退回前序步骤重新处理。`process-governance-v2`使用`flow_relations[].relation_type=condition`记录条件和目标行为；历史文档结构化输出使用`step_transitions[]`记录条件、目标步骤和证据引用。目标为空表示流向仍待补充 |
+| 流程内部回路 | Internal Process Loop | 本流程内在明确触发条件下，从当前节点返回已经存在的前序业务行为或判断节点的关系；`process-governance-v2`使用`flow_relations[].relation_type=loop`记录。回路不是独立节点，也不要求固定创建在判断节点之后；审批不通过时退回前序行为，通常是判断节点的一条回路出口 |
 | 原文角色称谓 | Source Role Text | 制度、表单或流程图中原样出现的岗位、身份、组织或参与方称谓，文档结构化输出保存在 `steps.actor_role` 和角色证据中；它是待核验事实，不等同正式工作角色 |
 | 岗位参与草稿 | Position Participation Draft | 历史`document-structured-output-v2`中按参与部门、花名册岗位和参与方式记录的迁移材料；它不等同工作角色。3001当前只在每个业务行为的`current_actor_role`中保存一个执行岗位兼容值，不维护多岗位参与关系；旧文件导入时无法归并的内容保留在“旧版结构化补充信息”中 |
 | 执行岗位 | Current Execution Position | 3001编制人从仓库花名册中为当前业务行为选择的现行业务执行岗位；执行部门等于流程归口部门时属于本部门执行，不等于时属于跨部门执行。岗位只能从所选执行部门的花名册岗位中选择，具体值以“部门名称 + 岗位名称”保存到`behaviors[].current_actor_role`，“全公司通用”保存为`全公司`。执行岗位不等同正式工作角色，3001不得据此推测或生成`work_role`，也不得根据岗位名称猜测或改写花名册部门归属 |
 | 工作角色 | Work Role | 与具体业务行为或判断节点绑定的稳定业务责任分类，名称必须保留行为语义，例如“费用审核行为的审核角色”；工作角色不直接等于人员、岗位或RBAC权限，一个工作角色可以由多个岗位容纳 |
 | 工作角色绑定 | Work Role Binding | 业务行为或判断节点与工作角色之间的一对一绑定；每个行为最多一个工作角色，一个流程通过不同业务行为可以包含多个工作角色。绑定必须保存业务行为标识、职责、全称和可选正式编码，不能只保存“申请人、审核人、批准人”等孤立名称 |
-| MDM工作角色 | MDM Governance Role | 3000固定治理模型中的授权角色，包括`admin`、`mdm_lead`、`department_contact`、`department_mdm_reviewer`、`data_conflict_handler`、`data_quality_auditor`和`decision_group`；它不等同人员、岗位、正式流程工作角色`WR-*`或原文角色称谓 |
-| 部门最终负责人 | Department Final Responsible Person | 由`departments.final_responsible_person_id`明确的部门业务最终责任人；可以没有3000账号，系统不得根据姓名、职务、岗位或历史名单推测 |
+| MDM工作角色 | MDM Governance Role | MDM平台固定治理模型中的授权角色，包括`admin`、`mdm_lead`、`department_contact`、`department_mdm_reviewer`、`data_conflict_handler`、`data_quality_auditor`和`decision_group`；它不等同人员、岗位、正式流程工作角色`WR-*`或原文角色称谓 |
+| 部门最终负责人 | Department Final Responsible Person | 由`departments.final_responsible_person_id`明确的部门业务最终责任人；可以没有MDM平台账号，系统不得根据姓名、职务、岗位或历史名单推测 |
 | 责任决定记录 | Governance Decision Record | `governance_decision_records`中只追加的部门决定证据，保存治理对象及版本、部门、系统确认的最终负责人、记录人、决定、依据、可选证据引用和决定时间 |
 | 授权依据 | Authorization Basis | 管理员授予MDM工作角色时必须记录的正式来源说明；它与生效日期共同决定角色授权是否有效，不能用旧角色、岗位名称或默认值代替 |
 | 访问审计事件 | Identity Access Event | `identity_access_events`中只追加的开户、启用、恢复、停用、密码重置、部门变更、角色授予和撤销记录；不得保存明文密码或密码散列 |
@@ -137,8 +148,15 @@
 | 作废业务行为 | Voided Business Behavior | 文档结构化输出中被维护人标记为不再生效的业务行为；它保留在草稿详情和事件历史中用于追溯，但不参与 Markdown、发布版本、流程图谱和 A1 投影 |
 | 附表结构 | Form Table Structure | 文档结构化输出中的表单结构，采用“表单 -> 主表 / 可选明细表 -> 字段”模型；表单必须指向未作废业务行为，主表始终存在，明细表需要先创建后新增明细字段，字段编号由系统生成且不在录入界面手填 |
 | 归档责任 | Archive Responsibility | 文档结构化输出中表单的归档责任字段，由归档位置、留存周期、归档责任部门和归档责任角色组成；责任部门来自平台部门清单，责任角色来自所选部门花名册任岗 |
-| 文档结构化输出字段类型字典 | Document Structured Output Field Type Dictionary | MDM 文档结构化输出中表单字段类型的后端枚举表，默认包含文本、长文本、数字、金额、日期、日期时间、枚举、布尔、部门、人员、文件编号、签名、图片、附件和二维码 |
-| 跨部门承接关系 | Cross-Department Handoff | 一个部门的发送行为通过数据对象触发另一部门接收和继续处理的关系；主流程指定处理事项、触发条件、完成标准、返回输出和恢复位置。目标流程或接收行为可以暂缺，但承接部门必须明确；恢复位置不得由承接部门指定。3001允许从发送业务行为卡片创建承接，再在“跨部门承接”分区继续编辑同一条记录 |
+| 文档结构化输出字段类型字典 | Document Structured Output Field Type Dictionary | MDM文档结构化输出和3001表单填写项共同使用的标准类型清单，包含文本、长文本、数字、日期、日期时间、金额、枚举、布尔、部门、人员、文件编号、签名、图片、附件和二维码。3001必须以下拉方式提供，不允许自由填写；导入历史文件中的非标准值时保留原值并提示未收录，主动修改后只能改选标准类型 |
+| 跨部门承接关系 | Cross-Department Handoff | 一条流程在开始前需要外部门提供输入，或在本流程行为完成后需要外部门继续办理的结构化关系。每个外部门形成一条记录；3001记录事实和待明确项，MDM平台负责部门认领、双方决定、结构卡口和发布条件 |
+| 承接方向 | Handoff Direction | `inbound_prerequisite`表示外部门输入先于本流程锚点，`outbound_followup`表示本流程锚点完成后由外部门继续承接；流程图箭头必须按方向绘制 |
+| 待明确责任部门 | Needs Identification | 编制人已经发现跨部门承接，但现有材料不足以确认外部门时使用的明确状态。该状态不阻止3001导出，进入MDM平台后形成由MDM工作组组长分派的待办 |
+| 承接待办 | Handoff Acceptance Todo | MDM平台根据跨部门承接状态、当前人员角色、部门和参与关系实时生成的处理入口，用于分派、补充、审核和结构检查；待办不写入“待确认问题”，也不是第二份承接事实 |
+| 承接故事链 | Handoff Story Chain | 承接详情中的固定责任步骤和只追加事件视图，显示已完成步骤、当前步骤、下一责任角色、处理人、部门、时间、依据及退回或冲突分支，不使用百分比推测进度 |
+| 承接冲突 | Handoff Conflict | 部门明确拒绝承接或MDM结构卡口提请争议处理后形成的治理对象。冲突由MDM工作组组长分派处理人，记录双方立场、证据和协调方案；双方接受后返回结构卡口，任一方不接受时可提请项目决策组 |
+| 角色可见标签 | Role Visible Tab | 固定RBAC/RACI模型为每个MDM工作角色生成的只读顶部功能标签及权限依据。多角色账号取标签并集；标签可见性不提供自定义，也不替代服务端权限校验 |
+| 承接候选版本 | Handoff Candidate Version | 对规范化承接内容计算的SHA-256摘要，用于识别同一`handoff_ref`的内容版本、幂等导入和决定记录。内容变化时保留历史并重新审核，不覆盖原决定 |
 | 内部流程调用 | Internal Process Call | 同一部门内一个流程调用另一流程的关系，记录调用行为、目标流程、输入输出数据和返回后的恢复位置；它不属于跨部门承接，也不进入跨部门拒绝和升级机制。该关系由MDM平台正式功能维护；3001只保留和预览导入JSON中已有的历史调用，不提供新增或编辑入口 |
 | 会签行为 | Countersign Behavior | 表示指定对象确认知悉的业务行为，不表示审核、批准或承接；3001记录需要确认知悉的部门，所有应会签对象完成确认后该行为才完成。即使批准已经完成，会签未完成时流程仍未结束 |
 | 待治理数据对象 | Candidate Data Object | 3001把用户登记的输出物作为数据线索保存的对象，只记录名称、产生行为和使用行为；主数据属性、黄金源、数据责任、质量规则和共享范围留到后续数据治理确认 |
@@ -275,13 +293,13 @@
 | 术语 | 英文/缩写 | 定义 |
 |------|----------|------|
 | Express.js | Express | Node.js Web 框架，MDM 平台后端基于此构建，端口 3000 |
-| better-sqlite3 | better-sqlite3 | 遗留SQLite隔离测试使用的Node.js驱动；不属于3000正式身份或治理运行路径 |
-| SQLite | SQLite | 3000遗留测试数据库；正式身份、流程治理、数据地图和术语治理使用MySQL，不得增加SQLite运行回退 |
+| better-sqlite3 | better-sqlite3 | 遗留SQLite隔离测试使用的Node.js驱动；不属于MDM平台正式身份或治理运行路径 |
+| SQLite | SQLite | MDM平台遗留测试数据库；正式身份、流程治理、数据地图和术语治理使用MySQL，不得增加SQLite运行回退 |
 | WAL | Write-Ahead Logging | SQLite 写入模式，允许并发读，提升频繁读写场景下的性能 |
 | SCD Type 2 | Slowly Changing Dimension Type 2 | 缓慢变化维度的时间变体策略，通过 effective_from/effective_to 保留历史版本 |
-| RBAC | Role-Based Access Control | 3000基于固定MDM工作角色控制“用户最多可以做什么”的授权模型；身份链路为`person -> user_accounts -> person_roles -> roles -> role_permissions -> permissions` |
-| RACI | Responsible / Accountable / Consulted / Informed | 3000治理事项中的执行、最终负责、参与和知悉关系；与RBAC共同决定当前事项由谁处理 |
-| 固定治理模型 | Fixed Governance Model | 版本化维护的十九项权限、七个MDM工作角色和八项RACI活动；页面只读，不允许自定义角色、角色继承或权限矩阵编辑 |
+| RBAC | Role-Based Access Control | MDM平台基于固定MDM工作角色控制“用户最多可以做什么”的授权模型；身份链路为`person -> user_accounts -> person_roles -> roles -> role_permissions -> permissions` |
+| RACI | Responsible / Accountable / Consulted / Informed | MDM平台治理事项中的执行、最终负责、参与和知悉关系；与RBAC共同决定当前事项由谁处理 |
+| 固定治理模型 | Fixed Governance Model | 当前版本`rbac-raci-v3-2026-07-31`，版本化维护十九项权限、七个MDM工作角色、十一项RACI活动和角色可见标签；页面只读，不允许自定义角色、角色继承、权限矩阵或角色可见标签编辑 |
 | 角色 | Role | `roles`表中的MDM工作角色；只有当前模型版本且状态为`active`的七个固定角色产生权限，其他角色为`retired`历史记录 |
 | 权限 | Permission | `permissions`表中的固定动作授权；当前模型禁止`*:*`通配权限，`admin`也没有业务写权限 |
 | 权限码 | Permission Code | 当前统一使用`identity:*`和`governance:*`格式，例如`identity:assign-role`、`governance:review-department`和`governance:publish` |
@@ -292,18 +310,18 @@
 | 有效权限 | Effective Permissions | 用户当前有效固定角色的权限集合；还必须继续通过数据范围、对象状态、任务关系和责任证据检查才能执行具体动作 |
 | 数据范围 | Data Scope | 用户可读取或处理的全局、本部门、本人被分派事项或已升级事项范围；部门角色不能跨部门扩大永久范围 |
 | API Key 认证 | API Key Authentication | server/integrationAuth.js 中间件，为外部系统（PLM/MES/ERP）提供基于 API Key 的集成认证 |
-| express-session | express-session | Express 中间件，基于内存会话存储的用户认证机制。V1 自建用户体系，不接 OA/统一认证 |
+| express-session | express-session | Express会话中间件；MDM平台会话只保存`personId`、`accountId`和`authVersion`，显示身份和有效权限按请求重新读取 |
 | bcryptjs | bcryptjs | 密码哈希库，用于用户密码的安全存储和验证 |
 | exceljs | exceljs | Excel 读写库，用于导入导出 Excel 功能 |
 | multer | multer | Express 文件上传中间件，处理 Excel/CSV 导入时的文件接收 |
 | csv-parse | csv-parse | CSV 解析库，用于 CSV 格式的数据导入 |
 | ECharts | ECharts | 前端图表库，用于渲染桑基图和其他数据可视化 |
 | nodemon | nodemon | 开发模式文件监控工具，npm run dev 使用，文件变更时自动重启 Express 服务 |
-| 种子数据 | Seed Data | db.js 初始化时写入的系统数据：4 个默认角色（admin/reviewer/owner/submitter）及对应权限 |
+| 受控管理员初始化 | Controlled Admin Bootstrap | 仅空身份库可执行一次的`bootstrap:admin`入口；检测到人员、账号或有效管理员后拒绝重复执行 |
 | 冒烟测试 | Smoke Test | scripts/ 下手动 HTTP 请求脚本，覆盖各路由模块的基础 CRUD 和边界情况，无自动化测试框架 |
 | 动态路由注册 | Dynamic Route Registration | server/index.js 中的 registerRouteIfExists() 机制，按约定目录结构自动挂载 Express Router |
 | 内联迁移 | Inline Migration | db.js 中的数据库升级策略：通过条件 DDL（ALTER TABLE IF NOT EXISTS 模式）直接修改表结构，无独立迁移框架 |
-| 前端单文件 | Single-File Frontend | public/index.html 一个文件包含全部前端代码（HTML + CSS + 原生 JS + ECharts），无模块化/无构建 |
+| 前端静态页面 | Static Frontend | MDM平台、3001等页面使用无需构建的HTML、CSS和原生JavaScript；较独立的流程图或评分算法可以放在同目录静态脚本中，由页面直接加载 |
 | JSON 序列化过滤 | JSON Serialization Filter | applyFieldConstraints 中间件在 JSON.stringify 前剥离 exclude 字段的实现方式 |
 | 审批任务 | Approval Task | approval_tasks 表，审批流每一步生成对应任务记录，关联 mapping_id 和审批人 |
 | 审批历史 | Approval History | approval_history 表，审批流的完整审计轨迹，记录每一步的操作人、操作时间和操作结果 |
@@ -311,6 +329,11 @@
 | 导入导出 | Import/Export | 业务字段台账仍可按权限导入导出；RBAC批量导入和批量开户已经停用，普通账号只能由管理员手工创建 |
 | 主线体检 | Mainline Stability Check | `npm run test:mainline` 执行的稳定性检查，验证流程治理、字段台账、主数据对象、权限和导入导出链路是否保持可运行 |
 | 结构块混合解析 | Hybrid Structure Parsing | `parse-sankey-data.mjs` 的流程输入基线解析模式。结构块 v1 优先，同一 L3/A1 覆盖正文旧表项，正文未覆盖项继续进入快照，部门来源记录为 `source: hybrid` |
+| 结构完整性 | Structure Completeness | 3001“结构化学习评分 v1（试行）”的六项结构维度得分之和，满分100分；只反映当前JSON展示出的结构化学习成果，不代表业务事实或流程设计已经确认 |
+| 展示分 | Presentation Score | 3001将结构完整性乘以有效行为链系数后得到的试行展示分；技术阻断时最高为59分 |
+| 有效行为链 | Effective Behavior Chain | 当前单流程中由明确非回路关系形成的最长行为链；显式回路边不重复计数，孤立行为不增加最长链长度 |
+| 技术阻断 | Technical Blocker | 当前JSON无法通过解析、版本兼容、结构规则、技术引用、导出回读或内容保持检查的状态；3001继续沿用原有硬性导出阻断规则 |
+| 系统动力学评价 | System Dynamics Evaluation | 基于正式流程、运行数据和实际反馈，观察等待、积压、返工、资源压力及跨部门影响等随时间变化的行为，用于识别长期影响和提出优化方向；不等同于结构化学习评分，也不替代业务评审、审核或管理决策 |
 
 ---
 
@@ -345,7 +368,6 @@
 | 室主任 | Office Director | 经营发展部关键岗位：组织报价、盖章上传、审核交付计划调整报告、结算核对 |
 | 部长助理 | Assistant Director | 项目管理部关键岗位：起草生产状态录入内容、生成质量编号、执行分卡、批量导入 |
 | 项目助理 | Project Assistant | 项目管理部关键岗位：发起交付计划调整、打印封面及合格证、管理交付清单、处理反馈问题 |
-| RACI | Responsible / Accountable / Consulted / Informed | 跨部门协作中的职责分配矩阵，对应执行人/负责人/被咨询人/被知会人 |
 
 ---
 

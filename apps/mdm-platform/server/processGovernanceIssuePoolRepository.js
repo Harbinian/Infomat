@@ -21,6 +21,7 @@ const POINT_OPTIONS = {
   completion_standard: ['已有完成标准', '制度或表单原文缺少完成标准', '该行为不需要完成标准', '制度或表单原文没写清'],
   controlled_transfer: ['有受控传递证据', '没有受控传递证据', '需要对方部门确认', '不涉及跨部门传递'],
   cross_department: ['本部门可以确认', '需要对方部门确认', '需要工作室协调', '提交 MDM 工作组裁决'],
+  handoff_acceptance: ['分派责任部门', '确认承接', '说明不属于本部门', '退回补充', '提请争议处理'],
   process_structure: ['当前流程结构合理', '流程结构需调整', '需要补 L1/L2 口径', '提交 MDM 工作组裁决'],
   system_landing: ['当前应用落位合理', '应用落位需调整', '暂不落位系统', '需要信息化工作组判断'],
   data_object: ['数据对象已明确', '字段口径需补充', '黄金源需确认', '提交 MDM 工作组裁决'],
@@ -664,6 +665,7 @@ function pointTitle(pointType) {
     completion_standard: '完成标准待确认',
     controlled_transfer: '受控传递待确认',
     cross_department: '跨部门协同确认',
+    handoff_acceptance: '跨部门承接待办',
     process_structure: '流程结构待裁决',
     system_landing: '系统落位待裁决',
     data_object: '数据对象或字段待裁决',
@@ -741,7 +743,7 @@ function documentStructureSpec(row = {}, pointType, sourceExcerpt = '') {
       question_for_user: `请确认“${a1Name}”的处理入口、输入输出和完成标准是否写清，能否进入正式结构块。`
     };
   }
-  if (pointType === 'controlled_transfer' || pointType === 'cross_department') {
+  if (pointType === 'controlled_transfer' || pointType === 'cross_department' || pointType === 'handoff_acceptance') {
     return {
       ...base,
       structured_object_type: '跨部门承接',

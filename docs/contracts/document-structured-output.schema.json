@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://infomat.local/docs/contracts/document-structured-output.schema.json",
   "title": "文档结构化输出标准 Schema",
-  "description": "用于统一制度、流程、表单、字段、证据和待确认问题的结构化输出合同。该合同不替代 docs/norms/ 流程输入基线，也不替代组织真源。",
+  "description": "用于统一制度、流程、表单、字段、证据和待确认问题的结构化输出规则。该规则不替代 docs/norms/ 流程输入基线，也不替代组织真源。",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -17,7 +17,7 @@
   "properties": {
     "schema_version": {
       "const": "document-structured-output-v2",
-      "description": "当前合同版本。"
+      "description": "当前结构版本。"
     },
     "generated_at": {
       "type": "string",

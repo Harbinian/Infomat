@@ -863,7 +863,7 @@ CREATE TABLE IF NOT EXISTS process_governance_issue_points (
   UNIQUE KEY uq_process_governance_issue_points_key (point_key),
   INDEX idx_issue_points_issue (issue_id, point_status),
   INDEX idx_issue_points_type_status (point_type, point_status),
-  CHECK (point_type IN ('owner_role','completion_standard','controlled_transfer','cross_department','process_structure','system_landing','data_object','evidence_gap','terminology')),
+  CHECK (point_type IN ('owner_role','completion_standard','controlled_transfer','cross_department','process_structure','system_landing','data_object','evidence_gap','terminology','handoff_acceptance')),
   CHECK (point_status IN ('pending_business_confirm','pending_department_review','pending_collaboration','pending_studio_review','pending_mdm_decision','needs_more_info','accepted','not_accepted','closed')),
   CONSTRAINT fk_issue_points_issue FOREIGN KEY (issue_id) REFERENCES process_governance_issues(issue_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -974,6 +974,12 @@ CREATE TABLE IF NOT EXISTS process_design_drafts (
   l2_name VARCHAR(255) NULL,
   l2_status VARCHAR(32) NOT NULL DEFAULT 'unclassified',
   l3_name VARCHAR(255) NULL,
+  schema_version VARCHAR(64) NOT NULL DEFAULT 'process-governance-v2',
+  process_content_json MEDIUMTEXT NULL,
+  content_hash CHAR(64) NULL,
+  revision_no INT NOT NULL DEFAULT 0,
+  content_updated_by BIGINT NULL,
+  content_updated_at TIMESTAMP NULL,
   status VARCHAR(32) NOT NULL DEFAULT 'draft',
   created_by BIGINT NULL,
   submitted_by BIGINT NULL,
@@ -1034,6 +1040,7 @@ CREATE TABLE IF NOT EXISTS process_design_processes (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
   draft_id BIGINT NOT NULL,
   process_code VARCHAR(128) NOT NULL,
+  source_process_ref VARCHAR(160) NULL,
   process_type VARCHAR(32) NOT NULL DEFAULT 'new',
   l1_name VARCHAR(255) NOT NULL,
   l2_name VARCHAR(255) NOT NULL,
@@ -1045,6 +1052,7 @@ CREATE TABLE IF NOT EXISTS process_design_processes (
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_process_design_processes_draft (draft_id, sort_order),
   UNIQUE KEY uq_process_design_processes_code (process_code),
+  UNIQUE KEY uq_process_design_process_source (draft_id, source_process_ref),
   CHECK (process_type IN ('new','inherit','handoff','adjustment')),
   CONSTRAINT fk_process_design_processes_draft FOREIGN KEY (draft_id)
     REFERENCES process_design_drafts(id) ON DELETE CASCADE
@@ -1054,6 +1062,7 @@ CREATE TABLE IF NOT EXISTS process_design_steps (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
   draft_id BIGINT NOT NULL,
   process_id BIGINT NOT NULL,
+  source_behavior_ref VARCHAR(160) NULL,
   step_type VARCHAR(32) NOT NULL DEFAULT 'action',
   step_name VARCHAR(255) NOT NULL,
   actor_role VARCHAR(255) NULL,
@@ -1075,6 +1084,7 @@ CREATE TABLE IF NOT EXISTS process_design_steps (
   INDEX idx_process_design_steps_draft (draft_id, sort_order),
   INDEX idx_process_design_steps_process (process_id, sort_order),
   INDEX idx_process_design_steps_status (draft_id, status, sort_order),
+  UNIQUE KEY uq_process_design_step_source (draft_id, source_behavior_ref),
   CHECK (step_type IN ('action','decision')),
   CHECK (status IN ('active','voided')),
   CONSTRAINT fk_process_design_steps_draft FOREIGN KEY (draft_id)
@@ -1128,13 +1138,44 @@ CREATE TABLE IF NOT EXISTS process_design_behavior_details (
 CREATE TABLE IF NOT EXISTS process_design_cross_dept_handoffs (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
   step_id BIGINT NOT NULL,
+  draft_id BIGINT NULL,
+  handoff_ref VARCHAR(160) NULL,
+  handoff_direction VARCHAR(32) NOT NULL DEFAULT 'outbound_followup',
+  anchor_behavior_ref VARCHAR(160) NULL,
+  counterparty_resolution VARCHAR(32) NOT NULL DEFAULT 'identified',
+  source_department_id BIGINT NULL,
+  source_department VARCHAR(255) NULL,
+  target_department_id BIGINT NULL,
   target_department VARCHAR(255) NOT NULL,
+  transfer_data_ref VARCHAR(160) NULL,
+  transfer_data_name VARCHAR(255) NULL,
+  requested_matter TEXT NULL,
+  trigger_condition TEXT NULL,
+  completion_standard TEXT NULL,
+  counterparty_process_ref VARCHAR(160) NULL,
+  counterparty_process_name VARCHAR(255) NULL,
+  counterparty_behavior_ref VARCHAR(160) NULL,
+  counterparty_behavior_name VARCHAR(255) NULL,
+  requires_return TINYINT NOT NULL DEFAULT 0,
+  returned_data_ref VARCHAR(160) NULL,
+  returned_data_name VARCHAR(255) NULL,
+  resume_behavior_ref VARCHAR(160) NULL,
+  resume_step_id BIGINT NULL,
   target_process_code VARCHAR(128) NULL,
   target_process_name VARCHAR(255) NULL,
   target_behavior_code VARCHAR(128) NULL,
   target_behavior_name VARCHAR(255) NULL,
   handoff_standard TEXT NULL,
-  status VARCHAR(32) NOT NULL DEFAULT 'pending_return',
+  status VARCHAR(32) NOT NULL DEFAULT 'pending_origin_review',
+  source_schema_version VARCHAR(64) NULL,
+  source_process_ref VARCHAR(160) NULL,
+  source_content_hash CHAR(64) NULL,
+  candidate_version CHAR(64) NULL,
+  revision_no INT NOT NULL DEFAULT 1,
+  is_current TINYINT NOT NULL DEFAULT 1,
+  supersedes_handoff_id BIGINT NULL,
+  issue_id BIGINT NULL,
+  point_id BIGINT NULL,
   returned_by BIGINT NULL,
   returned_at TIMESTAMP NULL,
   sort_order INT NOT NULL DEFAULT 1,
@@ -1142,9 +1183,114 @@ CREATE TABLE IF NOT EXISTS process_design_cross_dept_handoffs (
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_process_design_handoffs_step (step_id, sort_order),
-  CHECK (status IN ('pending_return','returned','pending_review','confirmed')),
+  UNIQUE KEY uq_process_design_handoff_revision (draft_id, handoff_ref, revision_no),
+  INDEX idx_process_design_handoff_source (source_process_ref, handoff_ref, candidate_version),
+  INDEX idx_process_design_handoff_issue (issue_id, point_id, status),
+  CHECK (status IN (
+    'pending_assignment','pending_origin_review','pending_counterparty_scope',
+    'pending_counterparty_detail','pending_counterparty_review','pending_structure_gate',
+    'conflict_open','confirmed','closed_not_required','returned','rejected','escalated'
+  )),
   CONSTRAINT fk_process_design_handoffs_step FOREIGN KEY (step_id)
     REFERENCES process_design_steps(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS process_design_handoff_conflicts (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  handoff_id BIGINT NOT NULL,
+  status VARCHAR(48) NOT NULL DEFAULT 'pending_assignment',
+  opened_reason TEXT NOT NULL,
+  origin_position TEXT NULL,
+  counterparty_position TEXT NULL,
+  evidence_json JSON NULL,
+  proposal_text TEXT NULL,
+  assigned_handler_person_id BIGINT NULL,
+  origin_confirmation VARCHAR(32) NULL,
+  counterparty_confirmation VARCHAR(32) NULL,
+  escalated_at TIMESTAMP NULL,
+  decision VARCHAR(48) NULL,
+  decision_basis TEXT NULL,
+  closed_at TIMESTAMP NULL,
+  migration_batch_key VARCHAR(128) NULL,
+  created_by_user_id BIGINT NULL,
+  created_by_person_id BIGINT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  open_conflict_marker TINYINT GENERATED ALWAYS AS (
+    CASE
+      WHEN status IN ('pending_assignment','coordinating','pending_department_confirmation','pending_decision')
+      THEN 1
+      ELSE NULL
+    END
+  ) STORED,
+  UNIQUE KEY uq_process_design_handoff_open_conflict_v2 (handoff_id, open_conflict_marker),
+  INDEX idx_process_design_handoff_conflict_queue (status, assigned_handler_person_id, updated_at),
+  CHECK (status IN (
+    'pending_assignment','coordinating','pending_department_confirmation',
+    'pending_decision','closed','returned_for_revision'
+  )),
+  CHECK (decision IS NULL OR decision IN ('continue_handoff','not_required','return_revision')),
+  CONSTRAINT fk_process_design_handoff_conflict_handoff FOREIGN KEY (handoff_id)
+    REFERENCES process_design_cross_dept_handoffs(id) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS process_design_handoff_events (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  handoff_id BIGINT NOT NULL,
+  conflict_id BIGINT NULL,
+  event_type VARCHAR(64) NOT NULL,
+  stage_code VARCHAR(64) NULL,
+  actor_user_id BIGINT NULL,
+  actor_person_id BIGINT NULL,
+  actor_department_id BIGINT NULL,
+  actor_department_name VARCHAR(255) NULL,
+  actor_role_code VARCHAR(64) NULL,
+  basis_text TEXT NULL,
+  payload_json JSON NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_process_design_handoff_events_story (handoff_id, id),
+  INDEX idx_process_design_handoff_events_conflict (conflict_id, id),
+  CONSTRAINT fk_process_design_handoff_event_handoff FOREIGN KEY (handoff_id)
+    REFERENCES process_design_cross_dept_handoffs(id) ON DELETE RESTRICT,
+  CONSTRAINT fk_process_design_handoff_event_conflict FOREIGN KEY (conflict_id)
+    REFERENCES process_design_handoff_conflicts(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS process_design_governance_migration_backups (
+  backup_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  batch_key VARCHAR(128) NOT NULL,
+  object_type VARCHAR(64) NOT NULL,
+  object_id BIGINT NOT NULL,
+  row_json JSON NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_process_governance_migration_backup (batch_key, object_type, object_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS process_design_cross_dept_handoff_migration_backups (
+  backup_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  batch_key VARCHAR(128) NOT NULL,
+  handoff_id BIGINT NOT NULL,
+  row_json JSON NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_handoff_migration_backup (batch_key, handoff_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS process_design_structured_imports (
+  import_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  source_process_ref VARCHAR(160) NOT NULL,
+  source_schema_version VARCHAR(64) NOT NULL,
+  normalized_schema_version VARCHAR(64) NOT NULL,
+  content_hash CHAR(64) NOT NULL,
+  draft_id BIGINT NOT NULL,
+  review_basis TEXT NOT NULL,
+  normalized_json MEDIUMTEXT NOT NULL,
+  approved_by_user_id BIGINT NULL,
+  approved_by_person_id BIGINT NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_process_design_structured_import (source_process_ref, content_hash),
+  INDEX idx_process_design_structured_import_draft (draft_id, created_at),
+  CONSTRAINT fk_process_design_structured_import_draft FOREIGN KEY (draft_id)
+    REFERENCES process_design_drafts(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS process_design_forms (
@@ -1331,6 +1477,10 @@ CREATE TABLE IF NOT EXISTS process_design_versions (
   l2_name VARCHAR(255) NOT NULL,
   l3_name VARCHAR(255) NOT NULL,
   content_json JSON NOT NULL,
+  schema_version VARCHAR(64) NOT NULL DEFAULT 'process-governance-v2',
+  process_content_json MEDIUMTEXT NULL,
+  content_hash CHAR(64) NULL,
+  source_revision_no INT NULL,
   published_by BIGINT NULL,
   published_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   effective_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

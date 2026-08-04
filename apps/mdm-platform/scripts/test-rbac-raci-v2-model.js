@@ -52,7 +52,10 @@ function main() {
     model.permissions.map(item => item.code).sort(),
     expectedPermissions.slice().sort()
   );
-  assert.strictEqual(model.activities.length, 8);
+  assert.strictEqual(model.activities.length, 11);
+  model.roles.forEach(roleDefinition => {
+    assert.ok(Array.isArray(roleDefinition.visibleTabs) && roleDefinition.visibleTabs.length > 0);
+  });
 
   for (const legacyRole of LEGACY_ROLE_CODES) {
     assert.ok(!role(model, legacyRole), `${legacyRole} must not appear in the effective model`);
@@ -109,7 +112,7 @@ function main() {
   const rbacSection = html.match(/<!-- Fixed RBAC \/ RACI administration -->([\s\S]*?)<!-- Detail Page/);
   assert.ok(rbacSection, 'fixed RBAC administration section should exist');
   assert.ok(rbacSection[1].includes('账号管理'));
-  assert.ok(rbacSection[1].includes('角色与责任'));
+  assert.ok(rbacSection[1].includes('角色可见标签'));
   assert.ok(rbacSection[1].includes('访问审计'));
   assert.ok(!rbacSection[1].includes('批量导入'));
   assert.ok(!rbacSection[1].includes('权限矩阵'));

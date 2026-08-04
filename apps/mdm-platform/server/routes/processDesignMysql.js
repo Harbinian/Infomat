@@ -7,16 +7,42 @@ const {
   requireAuth,
   requirePermission,
   getUserEffectivePermissionsAsync,
+  getUserRoleCodesAsync,
   getDepartmentByIdAsync,
   getDepartmentByNameAsync
 } = require('../auth');
 const { mysqlConfigFromEnv } = require('../mysqlConfig');
+const {
+  V2: PROCESS_GOVERNANCE_SCHEMA_VERSION,
+  contentHash,
+  createEmptyProcessGovernanceDocument,
+  normalizeProcessGovernanceDocument,
+  previewProcessGovernanceDocument,
+  handoffCandidates
+} = require('../processGovernanceV2');
+const {
+  HANDOFF_STATUSES: HANDOFF_STATUS_VALUES,
+  applyCrossDeptHandoffV2
+} = require('../crossDeptHandoffV2Migration');
+const {
+  applyProcessGovernanceUnified
+} = require('../processGovernanceUnifiedMigration');
 
 const FIELD_STATUSES = new Set(['suggested', 'business_confirmed', 'data_governed', 'published', 'retired']);
 const DRAFT_STATUSES = new Set(['draft', 'submitted', 'under_review', 'needs_changes', 'approved', 'published', 'rejected']);
 const CLASSIFICATION_STATUSES = new Set(['unclassified', 'needs_review', 'confirmed']);
 const TABLE_KINDS = new Set(['main', 'detail']);
-const HANDOFF_STATUSES = new Set(['pending_return', 'returned', 'pending_review', 'confirmed']);
+const HANDOFF_STATUSES = new Set(HANDOFF_STATUS_VALUES);
+HANDOFF_STATUSES.add('conflict_open');
+const HANDOFF_STAGES = Object.freeze([
+  ['pending_assignment', '责任部门分派', 'mdm_lead'],
+  ['pending_origin_review', '归口部门审核', 'department_mdm_reviewer'],
+  ['pending_counterparty_scope', '外部门确认范围', 'department_mdm_reviewer'],
+  ['pending_counterparty_detail', '外部门补充实际承接内容', 'department_contact'],
+  ['pending_counterparty_review', '外部门审核', 'department_mdm_reviewer'],
+  ['pending_structure_gate', 'MDM结构卡口', 'mdm_lead'],
+  ['confirmed', '确认完成', null]
+]);
 const PROCESS_TYPES = new Set(['new', 'inherit', 'handoff', 'adjustment']);
 const STEP_TYPES = new Set(['action', 'decision']);
 const EDITABLE_DRAFT_STATUSES = new Set(['draft', 'needs_changes']);
@@ -904,7 +930,7 @@ function makeProcessDesignMysqlRepository(pool) {
   }
 
   async function loadHandoffs(stepId) {
-    const rows = await mysqlQuery(pool, 'SELECT * FROM process_design_cross_dept_handoffs WHERE step_id=? ORDER BY sort_order, id', [stepId]);
+    const rows = await mysqlQuery(pool, 'SELECT * FROM process_design_cross_dept_handoffs WHERE step_id=? AND is_current=1 ORDER BY sort_order, id', [stepId]);
     return rows.map(publicHandoff);
   }
 
@@ -1135,7 +1161,7 @@ function makeProcessDesignMysqlRepository(pool) {
         SELECT COUNT(*) AS count
         FROM process_design_cross_dept_handoffs h
         JOIN process_design_steps s ON s.id=h.step_id
-        WHERE s.draft_id=? AND s.status='active'
+        WHERE s.draft_id=? AND s.status='active' AND h.is_current=1
       `, [draftId])
     ]);
     const risks = (await buildRisks(draftId)).length;
@@ -1257,6 +1283,37 @@ function makeProcessDesignMysqlRepository(pool) {
     if (steps.some(step => !step.behaviorDetail || !text(step.behaviorDetail.delivery_object))) details.push('发布前每个业务行为都要写清交付对象。');
     if (steps.some(step => step.behaviorDetail && step.behaviorDetail.is_cross_department && !(step.handoffs || []).some(handoff => text(handoff.target_process_name) && text(handoff.target_behavior_name)))) {
       details.push('发布前跨部门业务行为需要由承接部门回写承接流程和承接行为。');
+    }
+    const [unfinishedHandoff] = await mysqlQuery(pool, `
+      SELECT COUNT(*) AS count
+      FROM process_design_cross_dept_handoffs handoff
+      JOIN process_design_steps step ON step.id=handoff.step_id
+      WHERE step.draft_id=?
+        AND handoff.is_current=1
+        AND handoff.status NOT IN ('confirmed','closed_not_required')
+    `, [draft.id]);
+    if (Number(unfinishedHandoff.count || 0) > 0) {
+      details.push('发布前所有当前跨部门承接关系必须确认完成，或依据双方决定关闭为不需要承接。');
+    }
+    const [unsupportedClosedHandoff] = await mysqlQuery(pool, `
+      SELECT COUNT(*) AS count
+      FROM process_design_cross_dept_handoffs handoff
+      JOIN process_design_steps step ON step.id=handoff.step_id
+      WHERE step.draft_id=?
+        AND handoff.is_current=1
+        AND handoff.status='closed_not_required'
+        AND NOT EXISTS (
+          SELECT 1
+          FROM governance_decision_records decisionRecord
+          WHERE decisionRecord.subject_domain='process'
+            AND decisionRecord.subject_type='cross_dept_handoff'
+            AND decisionRecord.subject_id=CAST(handoff.id AS CHAR)
+            AND decisionRecord.subject_version=handoff.candidate_version
+            AND decisionRecord.decision='approved'
+        )
+    `, [draft.id]);
+    if (Number(unsupportedClosedHandoff.count || 0) > 0) {
+      details.push('标记为不需要承接的关系缺少部门决定记录，不能发布。');
     }
     const forms = await loadForms(draft.id);
     const fields = forms.flatMap(form => [
@@ -1569,6 +1626,909 @@ function makeProcessDesignMysqlRepository(pool) {
     };
   }
 
+  async function getHandoffContext(handoffId) {
+    const [row] = await mysqlQuery(pool, `
+      SELECT handoff.*,
+             step.step_name AS anchor_behavior_name,
+             draft.department_id AS owning_department_id,
+             draft.status AS draft_status,
+             sourceDept.final_responsible_person_id AS source_final_responsible_person_id,
+             targetDept.final_responsible_person_id AS target_final_responsible_person_id
+      FROM process_design_cross_dept_handoffs handoff
+      JOIN process_design_steps step ON step.id=handoff.step_id
+      JOIN process_design_drafts draft ON draft.id=step.draft_id
+      LEFT JOIN departments sourceDept
+        ON sourceDept.id=handoff.source_department_id
+        OR (handoff.source_department_id IS NULL AND sourceDept.name=handoff.source_department)
+      LEFT JOIN departments targetDept
+        ON targetDept.id=handoff.target_department_id
+        OR (handoff.target_department_id IS NULL AND targetDept.name=handoff.target_department)
+      WHERE handoff.id=?
+      LIMIT 1
+    `, [handoffId]);
+    if (!row) return null;
+    const inbound = text(row.handoff_direction) === 'inbound_prerequisite';
+    return {
+      ...publicHandoff(row),
+      counterparty_department_id: inbound ? row.source_department_id : row.target_department_id,
+      counterparty_department: inbound ? row.source_department : row.target_department,
+      counterparty_final_responsible_person_id: inbound
+        ? row.source_final_responsible_person_id
+        : row.target_final_responsible_person_id,
+      origin_department_id: inbound ? row.target_department_id || row.owning_department_id : row.source_department_id || row.owning_department_id,
+      origin_department: inbound ? row.target_department : row.source_department,
+      origin_final_responsible_person_id: inbound
+        ? row.target_final_responsible_person_id
+        : row.source_final_responsible_person_id
+    };
+  }
+
+  async function addHandoffEvent(handoffId, eventType, stageCode, actor = {}, basisText, payload, conflictId = null) {
+    await mysqlRun(pool, `
+      INSERT INTO process_design_handoff_events
+        (handoff_id, conflict_id, event_type, stage_code,
+         actor_user_id, actor_person_id, actor_department_id, actor_department_name,
+         actor_role_code, basis_text, payload_json)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      handoffId,
+      conflictId || null,
+      eventType,
+      optionalText(stageCode),
+      actor.userId || null,
+      actor.personId || null,
+      actor.departmentId || null,
+      optionalText(actor.departmentName),
+      optionalText(actor.roleCode),
+      optionalText(basisText),
+      payload ? JSON.stringify(payload) : null
+    ]);
+  }
+
+  function actorCanReadHandoff(handoff, actor) {
+    const roles = new Set(arrayItems(actor && actor.roleCodes).map(item => text(item)).filter(Boolean));
+    if (roles.has('admin') || roles.has('mdm_lead')) return true;
+    const departmentId = Number(actor && actor.departmentId || 0);
+    if (
+      (roles.has('department_contact') || roles.has('department_mdm_reviewer')) &&
+      [Number(handoff.origin_department_id || 0), Number(handoff.counterparty_department_id || 0)].includes(departmentId)
+    ) return true;
+    if (
+      roles.has('data_conflict_handler') &&
+      Number(handoff.assigned_handler_person_id || 0) === Number(actor && actor.personId || 0)
+    ) return true;
+    return roles.has('decision_group') && text(handoff.conflict_status) === 'pending_decision';
+  }
+
+  function actorCanActOnHandoff(handoff, actor) {
+    const roles = new Set(arrayItems(actor && actor.roleCodes).map(item => text(item)).filter(Boolean));
+    const departmentId = Number(actor && actor.departmentId || 0);
+    const status = text(handoff && handoff.status);
+    if (roles.has('mdm_lead') && ['pending_assignment', 'pending_structure_gate', 'returned'].includes(status)) return true;
+    if (
+      roles.has('department_mdm_reviewer') &&
+      status === 'pending_origin_review' &&
+      departmentId === Number(handoff.origin_department_id || 0)
+    ) return true;
+    if (
+      roles.has('department_mdm_reviewer') &&
+      ['pending_counterparty_scope', 'pending_counterparty_review'].includes(status) &&
+      departmentId === Number(handoff.counterparty_department_id || 0)
+    ) return true;
+    return roles.has('department_contact') &&
+      status === 'pending_counterparty_detail' &&
+      departmentId === Number(handoff.counterparty_department_id || 0);
+  }
+
+  async function hasHandoffParticipant(handoff, actor) {
+    return Boolean(handoff && handoff.is_current && actorCanActOnHandoff(handoff, actor));
+  }
+
+  async function runLockedHandoffMutation(methodName, handoff, args, options = {}) {
+    if (options.__tx || typeof pool.getConnection !== 'function') return { handled: false };
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+      await mysqlQuery(
+        connection,
+        'SELECT id FROM process_design_cross_dept_handoffs WHERE id=? FOR UPDATE',
+        [handoff.id]
+      );
+      const txRepo = makeProcessDesignMysqlRepository(connection);
+      const lockedHandoff = await txRepo.getHandoffContext(handoff.id);
+      if (!lockedHandoff) throw httpError(404, '跨部门承接不存在');
+      const result = await txRepo[methodName](
+        lockedHandoff,
+        ...args,
+        { ...options, __tx: true }
+      );
+      await connection.commit();
+      return { handled: true, result };
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+  }
+
+  async function runLockedConflictMutation(methodName, conflict, args, options = {}) {
+    if (options.__tx || typeof pool.getConnection !== 'function') return { handled: false };
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+      await mysqlQuery(
+        connection,
+        'SELECT id FROM process_design_handoff_conflicts WHERE id=? FOR UPDATE',
+        [conflict.id]
+      );
+      const txRepo = makeProcessDesignMysqlRepository(connection);
+      const lockedConflict = await txRepo.getHandoffConflictContext(conflict.id);
+      if (!lockedConflict) throw httpError(404, '承接冲突不存在');
+      const result = await txRepo[methodName](
+        lockedConflict,
+        ...args,
+        { ...options, __tx: true }
+      );
+      await connection.commit();
+      return { handled: true, result };
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+  }
+
+  async function getOpenHandoffConflict(handoffId) {
+    const [row] = await mysqlQuery(pool, `
+      SELECT conflict.*,
+             handler.person_name AS assigned_handler_name
+      FROM process_design_handoff_conflicts conflict
+      LEFT JOIN person handler ON handler.person_id=conflict.assigned_handler_person_id
+      WHERE conflict.handoff_id=?
+        AND conflict.status NOT IN ('closed','returned_for_revision')
+      ORDER BY conflict.id DESC
+      LIMIT 1
+    `, [handoffId]);
+    if (!row) return null;
+    return {
+      ...row,
+      evidence: parseJsonArray(row.evidence_json)
+    };
+  }
+
+  async function getLatestHandoffConflict(handoffId) {
+    const [row] = await mysqlQuery(pool, `
+      SELECT conflict.*,
+             handler.person_name AS assigned_handler_name
+      FROM process_design_handoff_conflicts conflict
+      LEFT JOIN person handler ON handler.person_id=conflict.assigned_handler_person_id
+      WHERE conflict.handoff_id=?
+      ORDER BY conflict.id DESC
+      LIMIT 1
+    `, [handoffId]);
+    if (!row) return null;
+    return {
+      ...row,
+      evidence: parseJsonArray(row.evidence_json)
+    };
+  }
+
+  async function openHandoffConflict(handoff, reason, actor, options = {}) {
+    const transaction = await runLockedHandoffMutation(
+      'openHandoffConflict',
+      handoff,
+      [reason, actor],
+      options
+    );
+    if (transaction.handled) return transaction.result;
+    const existing = await getOpenHandoffConflict(handoff.id);
+    if (existing) return existing;
+    const initialStatus = options.initialStatus === 'pending_decision' ? 'pending_decision' : 'pending_assignment';
+    const result = await mysqlRun(pool, `
+      INSERT INTO process_design_handoff_conflicts
+        (handoff_id, status, opened_reason, created_by_user_id, created_by_person_id,
+         escalated_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `, [
+      handoff.id,
+      initialStatus,
+      text(reason),
+      actor.userId || null,
+      actor.personId || null,
+      initialStatus === 'pending_decision' ? new Date() : null
+    ]);
+    await mysqlRun(pool, `
+      UPDATE process_design_cross_dept_handoffs
+      SET status='conflict_open', updated_at=CURRENT_TIMESTAMP
+      WHERE id=? AND is_current=1
+    `, [handoff.id]);
+    await addHandoffEvent(
+      handoff.id,
+      'conflict_opened',
+      'conflict_open',
+      actor,
+      reason,
+      { conflict_status: initialStatus },
+      result.insertId
+    );
+    return await getOpenHandoffConflict(handoff.id);
+  }
+
+  async function listHandoffQueue(actor, options = {}) {
+    const limit = Math.min(Math.max(Number(options.limit || 100), 1), 200);
+    const rows = await mysqlQuery(pool, `
+      SELECT handoff.*,
+             step.step_name AS anchor_behavior_name,
+             draft.process_name,
+             draft.document_no,
+             draft.department_id AS owning_department_id,
+             originDept.id AS origin_department_id,
+             originDept.name AS origin_department,
+             counterpartyDept.id AS counterparty_department_id,
+             counterpartyDept.name AS counterparty_department,
+             conflict.id AS conflict_id,
+             conflict.status AS conflict_status,
+             conflict.assigned_handler_person_id
+      FROM process_design_cross_dept_handoffs handoff
+      JOIN process_design_steps step ON step.id=handoff.step_id
+      JOIN process_design_drafts draft ON draft.id=step.draft_id
+      LEFT JOIN departments originDept
+        ON originDept.id=CASE
+          WHEN handoff.handoff_direction='inbound_prerequisite'
+            THEN COALESCE(handoff.target_department_id, draft.department_id)
+          ELSE COALESCE(handoff.source_department_id, draft.department_id)
+        END
+      LEFT JOIN departments counterpartyDept
+        ON counterpartyDept.id=CASE
+          WHEN handoff.handoff_direction='inbound_prerequisite'
+            THEN handoff.source_department_id
+          ELSE handoff.target_department_id
+        END
+      LEFT JOIN process_design_handoff_conflicts conflict
+        ON conflict.handoff_id=handoff.id
+       AND conflict.status NOT IN ('closed','returned_for_revision')
+      WHERE handoff.is_current=1
+      ORDER BY handoff.updated_at DESC, handoff.id DESC
+      LIMIT ${limit}
+    `);
+    const visible = rows.filter(row => actorCanReadHandoff(row, actor));
+    const items = visible.map(row => ({
+      ...publicHandoff(row),
+      can_act: actorCanActOnHandoff(row, actor),
+      current_stage: handoffStage(row.status),
+      next_responsible_role: handoffStage(row.status).responsible_role
+    }));
+    return {
+      items,
+      total: items.length,
+      queue_truth: 'process_design_cross_dept_handoffs'
+    };
+  }
+
+  function handoffStage(status) {
+    if (status === 'conflict_open') {
+      return { code: 'conflict_open', name: '承接冲突处理中', responsible_role: 'data_conflict_handler' };
+    }
+    if (status === 'closed_not_required') {
+      return { code: 'closed_not_required', name: '确认无需承接', responsible_role: null };
+    }
+    if (status === 'returned') {
+      return { code: 'returned', name: '退回上一责任步骤', responsible_role: 'department_contact' };
+    }
+    const item = HANDOFF_STAGES.find(([code]) => code === status) || [status, status || '待处理', null];
+    return { code: item[0], name: item[1], responsible_role: item[2] };
+  }
+
+  function conflictStage(conflict) {
+    if (
+      text(conflict && conflict.status) === 'pending_department_confirmation' &&
+      [conflict.origin_confirmation, conflict.counterparty_confirmation].includes('rejected')
+    ) {
+      return {
+        code: 'conflict_escalation',
+        name: '协调方案未被接受，待提请项目决策',
+        responsible_role: 'data_conflict_handler'
+      };
+    }
+    const stages = {
+      pending_assignment: {
+        code: 'conflict_assignment',
+        name: '承接冲突待分派',
+        responsible_role: 'mdm_lead'
+      },
+      coordinating: {
+        code: 'conflict_coordinate',
+        name: '承接冲突协调中',
+        responsible_role: 'data_conflict_handler'
+      },
+      pending_department_confirmation: {
+        code: 'conflict_department_confirmation',
+        name: '协调方案待双方部门确认',
+        responsible_role: 'department_mdm_reviewer'
+      },
+      pending_decision: {
+        code: 'conflict_decision',
+        name: '承接冲突待项目决策',
+        responsible_role: 'decision_group'
+      }
+    };
+    return stages[text(conflict && conflict.status)] || handoffStage('conflict_open');
+  }
+
+  function nextHandoffActions(handoff, conflict, currentStage, actor) {
+    if (!currentStage.responsible_role) return [];
+    if (
+      conflict &&
+      conflict.status === 'pending_department_confirmation' &&
+      ![conflict.origin_confirmation, conflict.counterparty_confirmation].includes('rejected')
+    ) {
+      return [
+        {
+          action: currentStage.code,
+          responsible_role: currentStage.responsible_role,
+          can_act: actorCanActOnConflict(conflict, actor) &&
+            Number(actor && actor.departmentId || 0) === Number(handoff.origin_department_id || 0),
+          department_id: handoff.origin_department_id || null,
+          department_name: handoff.origin_department || null,
+          handler_person_id: null,
+          handler_person_name: null
+        },
+        {
+          action: currentStage.code,
+          responsible_role: currentStage.responsible_role,
+          can_act: actorCanActOnConflict(conflict, actor) &&
+            Number(actor && actor.departmentId || 0) === Number(handoff.counterparty_department_id || 0),
+          department_id: handoff.counterparty_department_id || null,
+          department_name: handoff.counterparty_department || null,
+          handler_person_id: null,
+          handler_person_name: null
+        }
+      ];
+    }
+    const action = {
+      action: currentStage.code,
+      responsible_role: currentStage.responsible_role,
+      can_act: conflict
+        ? actorCanActOnConflict(conflict, actor)
+        : actorCanActOnHandoff(handoff, actor),
+      department_id: null,
+      department_name: null,
+      handler_person_id: conflict && conflict.assigned_handler_person_id || null,
+      handler_person_name: conflict && conflict.assigned_handler_name || null
+    };
+    if (['pending_origin_review'].includes(handoff.status)) {
+      action.department_id = handoff.origin_department_id || null;
+      action.department_name = handoff.origin_department || null;
+    } else if ([
+      'pending_counterparty_scope',
+      'pending_counterparty_detail',
+      'pending_counterparty_review'
+    ].includes(handoff.status)) {
+      action.department_id = handoff.counterparty_department_id || null;
+      action.department_name = handoff.counterparty_department || null;
+    }
+    return [action];
+  }
+
+  async function getHandoffStory(handoffId, actor) {
+    const handoff = await getHandoffContext(handoffId);
+    if (!handoff) return null;
+    const conflict = await getOpenHandoffConflict(handoff.id);
+    const conflictContext = conflict ? {
+      ...conflict,
+      origin_department_id: handoff.origin_department_id,
+      counterparty_department_id: handoff.counterparty_department_id
+    } : null;
+    const latestConflictRecord = conflict || await getLatestHandoffConflict(handoff.id);
+    const latestConflict = latestConflictRecord ? {
+      ...latestConflictRecord,
+      origin_department_id: handoff.origin_department_id,
+      counterparty_department_id: handoff.counterparty_department_id
+    } : null;
+    const enriched = { ...handoff, ...(conflictContext ? {
+      conflict_id: conflictContext.id,
+      conflict_status: conflictContext.status,
+      assigned_handler_person_id: conflictContext.assigned_handler_person_id
+    } : {}) };
+    if (!actorCanReadHandoff(enriched, actor)) throw httpError(403, '无权查看该承接故事链');
+    const events = await mysqlQuery(pool, `
+      SELECT event.*,
+             person.person_name AS actor_person_name
+      FROM process_design_handoff_events event
+      LEFT JOIN person ON person.person_id=event.actor_person_id
+      WHERE event.handoff_id=?
+      ORDER BY event.id
+    `, [handoff.id]);
+    const currentStage = handoff.status === 'conflict_open'
+      ? conflictStage(conflictContext)
+      : handoffStage(handoff.status);
+    const lastNormalStageCode = handoff.status === 'conflict_open'
+      ? [...events].reverse().map(event => text(event.stage_code))
+        .find(stageCode => HANDOFF_STAGES.some(([code]) => code === stageCode))
+      : handoff.status;
+    const currentStageIndex = HANDOFF_STAGES.findIndex(([code]) => code === lastNormalStageCode);
+    const milestones = HANDOFF_STAGES.map(([code, name, responsibleRole], index) => ({
+      stage_code: code,
+      stage_name: name,
+      responsible_role: responsibleRole,
+      state: handoff.status === 'confirmed' || handoff.status === 'closed_not_required'
+        ? 'completed'
+        : currentStageIndex >= 0 && index < currentStageIndex
+          ? 'completed'
+          : code === lastNormalStageCode
+            ? handoff.status === 'conflict_open' ? 'branched' : 'current'
+            : 'pending'
+    }));
+    if (handoff.status === 'conflict_open') {
+      milestones.push({
+        stage_code: currentStage.code,
+        stage_name: currentStage.name,
+        responsible_role: currentStage.responsible_role,
+        state: 'current'
+      });
+    }
+    return {
+      handoff: publicHandoff(handoff),
+      current_stage: currentStage,
+      next_actions: nextHandoffActions(handoff, conflictContext, currentStage, actor),
+      milestones,
+      events: events.map(event => ({
+        ...event,
+        payload: parseJsonObject(event.payload_json)
+      })),
+      conflict: latestConflict
+    };
+  }
+
+  async function getHandoffConflictContext(conflictId) {
+    const [row] = await mysqlQuery(pool, `
+      SELECT conflict.*,
+             handoff.status AS handoff_status,
+             handoff.handoff_ref,
+             handoff.handoff_direction,
+             handoff.requested_matter,
+             handoff.transfer_data_name,
+             handoff.completion_standard,
+             draft.process_name,
+             draft.document_no,
+             CASE
+               WHEN handoff.handoff_direction='inbound_prerequisite'
+                 THEN COALESCE(handoff.target_department_id, draft.department_id)
+               ELSE COALESCE(handoff.source_department_id, draft.department_id)
+             END AS origin_department_id,
+             CASE
+               WHEN handoff.handoff_direction='inbound_prerequisite'
+                 THEN handoff.source_department_id
+               ELSE handoff.target_department_id
+             END AS counterparty_department_id,
+             originDept.name AS origin_department,
+             counterpartyDept.name AS counterparty_department,
+             handler.person_name AS assigned_handler_name
+      FROM process_design_handoff_conflicts conflict
+      JOIN process_design_cross_dept_handoffs handoff ON handoff.id=conflict.handoff_id
+      JOIN process_design_steps step ON step.id=handoff.step_id
+      JOIN process_design_drafts draft ON draft.id=step.draft_id
+      LEFT JOIN departments originDept ON originDept.id=CASE
+        WHEN handoff.handoff_direction='inbound_prerequisite'
+          THEN COALESCE(handoff.target_department_id, draft.department_id)
+        ELSE COALESCE(handoff.source_department_id, draft.department_id)
+      END
+      LEFT JOIN departments counterpartyDept ON counterpartyDept.id=CASE
+        WHEN handoff.handoff_direction='inbound_prerequisite'
+          THEN handoff.source_department_id
+        ELSE handoff.target_department_id
+      END
+      LEFT JOIN person handler ON handler.person_id=conflict.assigned_handler_person_id
+      WHERE conflict.id=?
+      LIMIT 1
+    `, [conflictId]);
+    if (!row) return null;
+    return { ...row, evidence: parseJsonArray(row.evidence_json) };
+  }
+
+  function actorCanReadConflict(conflict, actor) {
+    const roles = new Set(arrayItems(actor && actor.roleCodes).map(item => text(item)).filter(Boolean));
+    if (roles.has('admin') || roles.has('mdm_lead')) return true;
+    if (
+      roles.has('data_conflict_handler') &&
+      Number(conflict.assigned_handler_person_id || 0) === Number(actor && actor.personId || 0)
+    ) return true;
+    if (roles.has('decision_group') && conflict.status === 'pending_decision') return true;
+    const departmentId = Number(actor && actor.departmentId || 0);
+    return roles.has('department_mdm_reviewer') &&
+      [Number(conflict.origin_department_id || 0), Number(conflict.counterparty_department_id || 0)].includes(departmentId);
+  }
+
+  function actorHasGovernanceRole(actor, roleCode) {
+    return arrayItems(actor && actor.roleCodes).map(item => text(item)).includes(roleCode);
+  }
+
+  function actorCanActOnConflict(conflict, actor) {
+    if (!conflict) return false;
+    const departmentId = Number(actor && actor.departmentId || 0);
+    if (actorHasGovernanceRole(actor, 'mdm_lead') && conflict.status === 'pending_assignment') return true;
+    if (
+      actorHasGovernanceRole(actor, 'data_conflict_handler') &&
+      Number(conflict.assigned_handler_person_id || 0) === Number(actor && actor.personId || 0)
+    ) {
+      if (conflict.status === 'coordinating') return true;
+      return conflict.status === 'pending_department_confirmation' &&
+        [conflict.origin_confirmation, conflict.counterparty_confirmation].includes('rejected');
+    }
+    if (
+      actorHasGovernanceRole(actor, 'department_mdm_reviewer') &&
+      conflict.status === 'pending_department_confirmation'
+    ) {
+      return [Number(conflict.origin_department_id || 0), Number(conflict.counterparty_department_id || 0)]
+        .includes(departmentId);
+    }
+    return actorHasGovernanceRole(actor, 'decision_group') && conflict.status === 'pending_decision';
+  }
+
+  async function listHandoffConflictQueue(actor, options = {}) {
+    const limit = Math.min(Math.max(Number(options.limit || 100), 1), 200);
+    const ids = await mysqlQuery(pool, `
+      SELECT id
+      FROM process_design_handoff_conflicts
+      WHERE status NOT IN ('closed','returned_for_revision')
+      ORDER BY updated_at DESC, id DESC
+      LIMIT ${limit}
+    `);
+    const items = [];
+    for (const row of ids) {
+      const conflict = await getHandoffConflictContext(row.id);
+      if (conflict && actorCanReadConflict(conflict, actor)) {
+        const roles = new Set(arrayItems(actor && actor.roleCodes).map(item => text(item)).filter(Boolean));
+        items.push({
+          ...conflict,
+          can_act: actorCanActOnConflict(conflict, actor),
+          action_role: roles.has('data_conflict_handler') &&
+            Number(conflict.assigned_handler_person_id || 0) === Number(actor && actor.personId || 0) &&
+            (
+              conflict.status === 'coordinating' ||
+              conflict.status === 'pending_department_confirmation' &&
+                [conflict.origin_confirmation, conflict.counterparty_confirmation].includes('rejected')
+            )
+            ? 'data_conflict_handler'
+            : roles.has('department_mdm_reviewer') ? 'department_mdm_reviewer' : null
+        });
+      }
+    }
+    return {
+      items,
+      total: items.length,
+      queue_truth: 'process_design_handoff_conflicts'
+    };
+  }
+
+  async function assignHandoffConflict(conflict, handlerPersonId, actor, options = {}) {
+    const transaction = await runLockedConflictMutation(
+      'assignHandoffConflict',
+      conflict,
+      [handlerPersonId, actor],
+      options
+    );
+    if (transaction.handled) return transaction.result;
+    if (!actorHasGovernanceRole(actor, 'mdm_lead')) throw httpError(403, '只有MDM工作组组长可以分派承接冲突');
+    if (conflict.status !== 'pending_assignment') throw httpError(409, '当前承接冲突不需要分派处理人');
+    await mysqlRun(pool, `
+      UPDATE process_design_handoff_conflicts
+      SET assigned_handler_person_id=?, status='coordinating', updated_at=CURRENT_TIMESTAMP
+      WHERE id=? AND status='pending_assignment'
+    `, [handlerPersonId, conflict.id]);
+    await addHandoffEvent(
+      conflict.handoff_id,
+      'conflict_assigned',
+      'conflict_coordinate',
+      actor,
+      'MDM工作组组长已分派承接冲突处理人',
+      { assigned_handler_person_id: handlerPersonId },
+      conflict.id
+    );
+    return await getHandoffConflictContext(conflict.id);
+  }
+
+  async function saveHandoffConflictProposal(conflict, body, actor, options = {}) {
+    const transaction = await runLockedConflictMutation(
+      'saveHandoffConflictProposal',
+      conflict,
+      [body, actor],
+      options
+    );
+    if (transaction.handled) return transaction.result;
+    if (!actorHasGovernanceRole(actor, 'data_conflict_handler')) throw httpError(403, '只有冲突处理人可以记录协调方案');
+    if (Number(conflict.assigned_handler_person_id || 0) !== Number(actor && actor.personId || 0)) {
+      throw httpError(403, '只能处理本人被分派的承接冲突');
+    }
+    if (!['coordinating', 'pending_department_confirmation'].includes(conflict.status)) {
+      throw httpError(409, '当前承接冲突不接受协调方案');
+    }
+    await mysqlRun(pool, `
+      UPDATE process_design_handoff_conflicts
+      SET origin_position=?, counterparty_position=?, evidence_json=?, proposal_text=?,
+          origin_confirmation=NULL, counterparty_confirmation=NULL,
+          status='pending_department_confirmation', updated_at=CURRENT_TIMESTAMP
+      WHERE id=? AND status IN ('coordinating','pending_department_confirmation')
+    `, [
+      text(body.origin_position),
+      text(body.counterparty_position),
+      JSON.stringify(arrayItems(body.evidence)),
+      text(body.proposal_text),
+      conflict.id
+    ]);
+    await addHandoffEvent(
+      conflict.handoff_id,
+      'conflict_proposal_recorded',
+      'conflict_department_confirmation',
+      actor,
+      text(body.proposal_text),
+      {
+        origin_position: text(body.origin_position),
+        counterparty_position: text(body.counterparty_position),
+        evidence: arrayItems(body.evidence)
+      },
+      conflict.id
+    );
+    return await getHandoffConflictContext(conflict.id);
+  }
+
+  async function confirmHandoffConflictProposal(conflict, departmentId, accepted, basis, actor, options = {}) {
+    const transaction = await runLockedConflictMutation(
+      'confirmHandoffConflictProposal',
+      conflict,
+      [departmentId, accepted, basis, actor],
+      options
+    );
+    if (transaction.handled) return transaction.result;
+    if (!actorHasGovernanceRole(actor, 'department_mdm_reviewer')) {
+      throw httpError(403, '只有部门MDM审核员可以确认协调方案');
+    }
+    if (conflict.status !== 'pending_department_confirmation') {
+      throw httpError(409, '当前承接冲突不等待部门确认');
+    }
+    const isOrigin = Number(departmentId) === Number(conflict.origin_department_id);
+    const isCounterparty = Number(departmentId) === Number(conflict.counterparty_department_id);
+    if (!isOrigin && !isCounterparty) throw httpError(403, '部门审核员只能确认本部门参与的协调方案');
+    const field = isOrigin ? 'origin_confirmation' : 'counterparty_confirmation';
+    await mysqlRun(pool, `
+      UPDATE process_design_handoff_conflicts
+      SET ${field}=?, updated_at=CURRENT_TIMESTAMP
+      WHERE id=? AND status='pending_department_confirmation'
+    `, [accepted ? 'accepted' : 'rejected', conflict.id]);
+    let updated = await getHandoffConflictContext(conflict.id);
+    await addHandoffEvent(
+      conflict.handoff_id,
+      accepted ? 'conflict_proposal_accepted' : 'conflict_proposal_rejected',
+      'conflict_department_confirmation',
+      actor,
+      basis,
+      { department_id: departmentId, accepted: Boolean(accepted) },
+      conflict.id
+    );
+    if (updated.origin_confirmation === 'accepted' && updated.counterparty_confirmation === 'accepted') {
+      await mysqlRun(pool, `
+        UPDATE process_design_handoff_conflicts
+        SET status='closed', closed_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP
+        WHERE id=?
+      `, [conflict.id]);
+      await mysqlRun(pool, `
+        UPDATE process_design_cross_dept_handoffs
+        SET status='pending_structure_gate', updated_at=CURRENT_TIMESTAMP
+        WHERE id=? AND is_current=1
+      `, [conflict.handoff_id]);
+      await addHandoffEvent(
+        conflict.handoff_id,
+        'conflict_closed_by_department_consensus',
+        'pending_structure_gate',
+        actor,
+        '双方部门MDM审核员均已确认协调方案',
+        null,
+        conflict.id
+      );
+      updated = await getHandoffConflictContext(conflict.id);
+    }
+    return updated;
+  }
+
+  async function escalateHandoffConflict(conflict, basis, actor, options = {}) {
+    const transaction = await runLockedConflictMutation(
+      'escalateHandoffConflict',
+      conflict,
+      [basis, actor],
+      options
+    );
+    if (transaction.handled) return transaction.result;
+    if (!actorHasGovernanceRole(actor, 'data_conflict_handler')) throw httpError(403, '只有冲突处理人可以提请项目决策');
+    if (Number(conflict.assigned_handler_person_id || 0) !== Number(actor && actor.personId || 0)) {
+      throw httpError(403, '只能升级本人被分派的承接冲突');
+    }
+    if (conflict.status !== 'pending_department_confirmation') {
+      throw httpError(409, '当前承接冲突不等待提请项目决策');
+    }
+    if (conflict.origin_confirmation !== 'rejected' && conflict.counterparty_confirmation !== 'rejected') {
+      throw httpError(409, '至少一个部门不接受协调方案后才能提请项目决策组');
+    }
+    await mysqlRun(pool, `
+      UPDATE process_design_handoff_conflicts
+      SET status='pending_decision', escalated_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP
+      WHERE id=? AND status='pending_department_confirmation'
+    `, [conflict.id]);
+    await addHandoffEvent(
+      conflict.handoff_id,
+      'conflict_escalated',
+      'conflict_decision',
+      actor,
+      basis,
+      null,
+      conflict.id
+    );
+    return await getHandoffConflictContext(conflict.id);
+  }
+
+  async function decideHandoffConflict(conflict, decision, basis, actor, options = {}) {
+    const transaction = await runLockedConflictMutation(
+      'decideHandoffConflict',
+      conflict,
+      [decision, basis, actor],
+      options
+    );
+    if (transaction.handled) return transaction.result;
+    if (!actorHasGovernanceRole(actor, 'decision_group')) throw httpError(403, '只有项目决策组可以处理升级事项');
+    if (conflict.status !== 'pending_decision') throw httpError(409, '当前承接冲突不等待项目决策');
+    const transition = {
+      continue_handoff: ['closed', 'pending_structure_gate'],
+      not_required: ['closed', 'closed_not_required'],
+      return_revision: ['returned_for_revision', 'returned']
+    }[decision];
+    if (!transition) throw httpError(422, '项目决策结论无效');
+    await mysqlRun(pool, `
+      UPDATE process_design_handoff_conflicts
+      SET status=?, decision=?, decision_basis=?,
+          closed_at=CASE WHEN ?='closed' THEN CURRENT_TIMESTAMP ELSE closed_at END,
+          updated_at=CURRENT_TIMESTAMP
+      WHERE id=? AND status='pending_decision'
+    `, [transition[0], decision, basis, transition[0], conflict.id]);
+    await mysqlRun(pool, `
+      UPDATE process_design_cross_dept_handoffs
+      SET status=?, updated_at=CURRENT_TIMESTAMP
+      WHERE id=? AND is_current=1
+    `, [transition[1], conflict.handoff_id]);
+    await addHandoffEvent(
+      conflict.handoff_id,
+      'conflict_decided',
+      transition[1],
+      actor,
+      basis,
+      { decision },
+      conflict.id
+    );
+    return await getHandoffConflictContext(conflict.id);
+  }
+
+  async function updateHandoffIssueProjection(handoff, status, note, actor = {}) {
+    if (!handoff || !handoff.issue_id) return;
+    const mapping = {
+      pending_assignment: ['waiting_studio_review', 'pending_studio_review'],
+      pending_origin_review: ['waiting_department_review', 'pending_department_review'],
+      pending_counterparty_scope: ['waiting_department_review', 'pending_department_review'],
+      pending_counterparty_detail: ['waiting_others', 'pending_collaboration'],
+      pending_counterparty_review: ['waiting_department_review', 'pending_department_review'],
+      pending_structure_gate: ['waiting_studio_review', 'pending_studio_review'],
+      confirmed: ['completed', 'closed'],
+      closed_not_required: ['closed', 'closed'],
+      returned: ['waiting_my_action', 'needs_more_info'],
+      conflict_open: ['waiting_mdm_decision', 'pending_mdm_decision'],
+      rejected: ['closed', 'not_accepted'],
+      escalated: ['waiting_mdm_decision', 'pending_mdm_decision']
+    };
+    const [displayStatus, pointStatus] = mapping[status] || ['waiting_my_action', 'needs_more_info'];
+    await mysqlRun(pool, `
+      UPDATE process_governance_issues
+      SET display_status=?, closed_at=CASE WHEN ? IN ('completed','closed') THEN CURRENT_TIMESTAMP ELSE NULL END,
+          updated_at=CURRENT_TIMESTAMP
+      WHERE issue_id=?
+    `, [displayStatus, displayStatus, handoff.issue_id]);
+    if (handoff.point_id) {
+      await mysqlRun(pool, `
+        UPDATE process_governance_issue_points
+        SET current_step=?, point_status=?, note=COALESCE(?, note), updated_at=CURRENT_TIMESTAMP
+        WHERE point_id=?
+      `, [status, pointStatus, optionalText(note), handoff.point_id]);
+    }
+    const eventType = status === 'confirmed' || status === 'closed_not_required'
+      ? 'closed'
+      : status === 'pending_structure_gate'
+        ? 'department_reviewed'
+        : status === 'escalated'
+          ? 'mdm_decided'
+          : status === 'returned'
+            ? 'more_info_requested'
+            : 'collaboration_answered';
+    await mysqlRun(pool, `
+      INSERT INTO process_governance_issue_events
+        (issue_id, point_id, event_type, actor_user_id, actor_person_id, actor_dept_name, actor_role_code, note, payload_json)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      handoff.issue_id, handoff.point_id || null, eventType,
+      actor.userId || null, actor.personId || null, optionalText(actor.departmentName),
+      optionalText(actor.roleCode), optionalText(note), JSON.stringify({ handoff_status: status })
+    ]);
+  }
+
+  async function createHandoffIssue(draft, processRow, stepRow, candidate, handoffId, status, actor) {
+    const issueKey = `handoff-${candidate.candidate_version.slice(0, 24)}-${candidate.handoff_key_hash.slice(0, 24)}`;
+    const externalDepartment = candidate.handoff_direction === 'inbound_prerequisite'
+      ? text(candidate.source_department)
+      : text(candidate.target_department);
+    const directionLabel = candidate.handoff_direction === 'inbound_prerequisite' ? '前置输入' : '后续承接';
+    const prompt = candidate.handoff_direction === 'inbound_prerequisite'
+      ? '请确认是否提供该输入、由哪条流程和行为产生、提供什么数据，以及达到什么标准。'
+      : '请确认是否承接该事项、进入哪条流程和行为、办理什么，以及达到什么标准。';
+    const displayStatus = status === 'pending_assignment' ? 'waiting_studio_review' : 'waiting_department_review';
+    const issueResult = await mysqlRun(pool, `
+      INSERT INTO process_governance_issues
+        (issue_key, primary_dept_name, owner_dept_name, source_layer, source_type,
+         source_ref_table, source_ref_id, l1_name, l2_name, l3_name, a1_name,
+         title, what_text, why_text, where_text, who_text, when_text, how_text, how_much_text,
+         display_status, priority_score)
+      VALUES (?, ?, ?, 'procedure', 'handoff_acceptance',
+              'process_design_cross_dept_handoffs', ?, ?, ?, ?, ?,
+              ?, ?, ?, ?, ?, ?, ?, '', ?, 70)
+    `, [
+      issueKey, draft.department_name || candidate.owning_department, externalDepartment || null,
+      String(handoffId), processRow.l1_name, processRow.l2_name, processRow.l3_name,
+      stepRow.step_name, `${directionLabel}：${candidate.requested_matter || candidate.transfer_data_name || '跨部门交界对象'}`,
+      candidate.requested_matter || candidate.transfer_data_name || '待补充交界对象',
+      candidate.trigger_condition || '待补充触发条件',
+      `${candidate.source_department || '待明确部门'} → ${candidate.target_department || '待明确部门'}`,
+      externalDepartment || '待MDM工作组组长分派',
+      candidate.trigger_condition || '待补充',
+      candidate.completion_standard || '待补充完成标准',
+      displayStatus
+    ]);
+    const issueId = issueResult.insertId;
+    const pointResult = await mysqlRun(pool, `
+      INSERT INTO process_governance_issue_points
+        (issue_id, point_key, point_type, title, prompt_text, enum_options_json,
+         current_step, point_status, requires_studio_review)
+      VALUES (?, ?, 'handoff_acceptance', ?, ?, ?, ?, ?, 1)
+    `, [
+      issueId, `${issueKey}-acceptance`, `${directionLabel}承接确认`, prompt,
+      JSON.stringify(['分派责任部门', '确认承接', '说明不属于本部门', '退回补充', '提请争议处理']),
+      status, status === 'pending_assignment' ? 'pending_studio_review' : 'pending_department_review'
+    ]);
+    const pointId = pointResult.insertId;
+    const participants = [
+      ['department_reviewer', draft.department_name || candidate.owning_department, 'department_mdm_reviewer', '审核归口部门候选关系'],
+      ['studio_reviewer', null, 'mdm_lead', status === 'pending_assignment' ? '分派责任部门' : '执行结构卡口']
+    ];
+    if (externalDepartment) {
+      participants.push(
+        ['collaborator', externalDepartment, 'department_contact', '补充本部门实际承接内容'],
+        ['department_reviewer', externalDepartment, 'department_mdm_reviewer', '记录本部门审核决定']
+      );
+    }
+    for (const [participantType, departmentName, roleCode, actionLabel] of participants) {
+      await mysqlRun(pool, `
+        INSERT INTO process_governance_issue_participants
+          (issue_id, point_id, participant_type, dept_name, role_code, can_view, can_act, action_label, action_status)
+        VALUES (?, ?, ?, ?, ?, 1, 1, ?, 'waiting')
+      `, [issueId, pointId, participantType, departmentName, roleCode, actionLabel]);
+    }
+    await mysqlRun(pool, `
+      INSERT INTO process_governance_issue_events
+        (issue_id, point_id, event_type, actor_user_id, actor_person_id, actor_dept_name, actor_role_code, note, payload_json)
+      VALUES (?, ?, 'created', ?, ?, ?, 'department_mdm_reviewer', ?, ?)
+    `, [
+      issueId, pointId, actor.userId || null, actor.personId || null, optionalText(actor.departmentName),
+      '3001跨部门承接关系已审核导入并生成待办',
+      JSON.stringify({ handoff_id: handoffId, handoff_ref: candidate.handoff_ref, candidate_version: candidate.candidate_version })
+    ]);
+    return { issueId, pointId };
+  }
+
   return {
     async lookupDocument(documentNo) {
       const normalizedNo = text(documentNo);
@@ -1765,12 +2725,38 @@ function makeProcessDesignMysqlRepository(pool) {
       const [row] = await mysqlQuery(pool, 'SELECT id FROM departments WHERE id=?', [departmentId]);
       return Boolean(row);
     },
+    async personHasActiveRole(personId, roleCode) {
+      const [row] = await mysqlQuery(pool, `
+        SELECT pr.person_role_id
+        FROM person_roles pr
+        JOIN roles role ON role.role_id=pr.role_id
+        JOIN person person ON person.person_id=pr.person_id
+        WHERE pr.person_id=?
+          AND role.role_code=?
+          AND pr.status='active'
+          AND person.status='active'
+        LIMIT 1
+      `, [personId, roleCode]);
+      return Boolean(row);
+    },
     getDraft,
     getDraftByTerm,
     getDraftByProcess,
     getDraftByStep,
     getDraftByHandoff,
     getHandoff,
+    getHandoffContext,
+    hasHandoffParticipant,
+    listHandoffQueue,
+    getHandoffStory,
+    getHandoffConflictContext,
+    listHandoffConflictQueue,
+    openHandoffConflict,
+    assignHandoffConflict,
+    saveHandoffConflictProposal,
+    confirmHandoffConflictProposal,
+    escalateHandoffConflict,
+    decideHandoffConflict,
     getDraftByForm,
     getDraftByFormTable,
     getDraftByFormTableField,
@@ -1792,6 +2778,216 @@ function makeProcessDesignMysqlRepository(pool) {
     publicationGovernanceReadiness,
     outcomeForDraft,
     detail: detailForDraft,
+    async listCanonicalDrafts(departmentIds, options = {}) {
+      const limit = Math.min(Math.max(Number(options.limit || 50), 1), 200);
+      const params = [];
+      let where = 'WHERE d.status<>\'published\'';
+      if (departmentIds) {
+        if (!departmentIds.length) return [];
+        where += ` AND d.department_id IN (${departmentIds.map(() => '?').join(',')})`;
+        params.push(...departmentIds);
+      }
+      return await mysqlQuery(pool, `
+        SELECT d.id, d.document_no, d.document_title, d.process_name, d.status,
+               d.schema_version, d.content_hash, d.revision_no,
+               d.department_id, dept.name AS department_name,
+               d.content_updated_at, d.updated_at
+        FROM process_design_drafts d
+        LEFT JOIN departments dept ON dept.id=d.department_id
+        ${where}
+        ORDER BY d.updated_at DESC, d.id DESC
+        LIMIT ${limit}
+      `, params);
+    },
+    async canonicalContent(draft) {
+      if (text(draft.process_content_json)) {
+        const document = parseJsonObject(draft.process_content_json);
+        if (document && Object.keys(document).length) {
+          return {
+            source: 'draft_canonical_json',
+            schema_version: text(draft.schema_version) || PROCESS_GOVERNANCE_SCHEMA_VERSION,
+            content_hash: text(draft.content_hash) || contentHash(document),
+            revision: Number(draft.revision_no || 0),
+            document
+          };
+        }
+      }
+      const [imported] = await mysqlQuery(pool, `
+        SELECT normalized_json, normalized_schema_version, content_hash
+        FROM process_design_structured_imports
+        WHERE draft_id=?
+        ORDER BY import_id DESC
+        LIMIT 1
+      `, [draft.id]);
+      if (imported && text(imported.normalized_json)) {
+        const document = parseJsonObject(imported.normalized_json);
+        if (document && Object.keys(document).length) {
+          return {
+            source: 'structured_import',
+            schema_version: imported.normalized_schema_version,
+            content_hash: imported.content_hash,
+            revision: Number(draft.revision_no || 0),
+            document
+          };
+        }
+      }
+      const [version] = await mysqlQuery(pool, `
+        SELECT schema_version, process_content_json, content_json, content_hash, source_revision_no
+        FROM process_design_versions
+        WHERE draft_id=? OR id=?
+        ORDER BY id DESC
+        LIMIT 1
+      `, [draft.id, draft.base_version_id || 0]);
+      const versionValue = version && (version.process_content_json || version.content_json);
+      if (versionValue) {
+        const candidate = parseJsonObject(versionValue);
+        const normalized = normalizeProcessGovernanceDocument(candidate);
+        if (!normalized.errors.length) {
+          return {
+            source: version.process_content_json ? 'published_canonical_json' : 'published_version_conversion',
+            schema_version: PROCESS_GOVERNANCE_SCHEMA_VERSION,
+            content_hash: normalized.content_hash,
+            revision: Number(version.source_revision_no || draft.revision_no || 0),
+            document: normalized.document
+          };
+        }
+        return {
+          source: 'manual_conversion_required',
+          schema_version: null,
+          content_hash: null,
+          revision: Number(draft.revision_no || 0),
+          document: null,
+          errors: normalized.errors
+        };
+      }
+      return {
+        source: 'empty_template',
+        schema_version: PROCESS_GOVERNANCE_SCHEMA_VERSION,
+        content_hash: null,
+        revision: Number(draft.revision_no || 0),
+        document: createEmptyProcessGovernanceDocument({
+          process_ref: `draft_${draft.id}`,
+          process_name: draft.process_name,
+          owning_department: draft.department_name
+        })
+      };
+    },
+    async saveCanonicalContent(draft, documentInput, expectedRevision, actorUserId, options = {}) {
+      if (!options.__tx && typeof pool.getConnection === 'function') {
+        const connection = await pool.getConnection();
+        try {
+          await connection.beginTransaction();
+          const txRepo = makeProcessDesignMysqlRepository(connection);
+          const lockedDraft = await txRepo.getDraft(draft.id);
+          const result = await txRepo.saveCanonicalContent(
+            lockedDraft,
+            documentInput,
+            expectedRevision,
+            actorUserId,
+            { ...options, __tx: true }
+          );
+          await connection.commit();
+          return result;
+        } catch (error) {
+          await connection.rollback();
+          throw error;
+        } finally {
+          connection.release();
+        }
+      }
+      const expected = Number(expectedRevision);
+      if (!Number.isInteger(expected) || expected < 0) {
+        throw httpError(422, '校验失败', {
+          error: '校验失败',
+          details: [{ field: 'expected_revision', message: '保存草稿必须携带当前修订号' }]
+        });
+      }
+      const normalized = normalizeProcessGovernanceDocument(documentInput);
+      if (normalized.errors.length) {
+        throw httpError(422, '单流程治理JSON不符合结构规则', {
+          error: '单流程治理JSON不符合结构规则',
+          code: 'PROCESS_GOVERNANCE_CONTENT_INVALID',
+          details: normalized.errors
+        });
+      }
+      const currentContent = await this.canonicalContent(draft);
+      if (
+        Number(draft.revision_no || 0) === expected &&
+        currentContent.content_hash &&
+        currentContent.content_hash === normalized.content_hash
+      ) {
+        return {
+          changed: false,
+          revision: expected,
+          content_hash: normalized.content_hash,
+          schema_version: PROCESS_GOVERNANCE_SCHEMA_VERSION,
+          document: normalized.document,
+          warnings: normalized.warnings
+        };
+      }
+      const result = await mysqlRun(pool, `
+        UPDATE process_design_drafts
+        SET schema_version=?, process_content_json=?, content_hash=?,
+            revision_no=revision_no+1, content_updated_by=?,
+            content_updated_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP
+        WHERE id=? AND revision_no=?
+      `, [
+        PROCESS_GOVERNANCE_SCHEMA_VERSION,
+        JSON.stringify(normalized.document),
+        normalized.content_hash,
+        actorUserId || null,
+        draft.id,
+        expected
+      ]);
+      if (!Number(result.affectedRows || 0)) {
+        const latest = await getDraft(draft.id);
+        throw httpError(409, '草稿已被其他人员修改，请重新载入后再保存', {
+          error: '草稿已被其他人员修改，请重新载入后再保存',
+          code: 'DRAFT_REVISION_CONFLICT',
+          expected_revision: expected,
+          current_revision: Number(latest && latest.revision_no || 0),
+          actual_revision: Number(latest && latest.revision_no || 0)
+        });
+      }
+      const updated = await getDraft(draft.id);
+      const actor = options.actor || {
+        userId: actorUserId || null,
+        personId: null,
+        departmentId: draft.department_id,
+        departmentName: draft.department_name,
+        roleCodes: ['department_contact'],
+        roleCode: 'department_contact'
+      };
+      const preview = previewProcessGovernanceDocument(normalized.document);
+      await this.importProcessGovernanceCandidate(
+        preview,
+        {
+          decisionBasis: 'MDM流程治理编制保存',
+          voidedHandoffs: options.voidedHandoffs
+        },
+        actor,
+        {
+          __tx: true,
+          targetDraft: updated,
+          skipCanonicalUpdate: true,
+          skipImportAudit: true
+        }
+      );
+      await addEvent(draft.id, 'canonical_content_saved', actorUserId, '已保存单流程治理JSON草稿', {
+        schema_version: PROCESS_GOVERNANCE_SCHEMA_VERSION,
+        content_hash: normalized.content_hash,
+        revision_no: updated.revision_no
+      });
+      return {
+        changed: true,
+        revision: Number(updated.revision_no),
+        content_hash: normalized.content_hash,
+        schema_version: PROCESS_GOVERNANCE_SCHEMA_VERSION,
+        document: normalized.document,
+        warnings: normalized.warnings,
+        governance_projection: 'synced'
+      };
+    },
     async markdownForDraft(draftId) {
       const detail = await detailForDraft(draftId);
       if (!detail) return null;
@@ -2174,6 +3370,416 @@ function makeProcessDesignMysqlRepository(pool) {
       }
       return await getById('process_design_steps', stepId);
     },
+    async importProcessGovernanceCandidate(preview, review, actor, options = {}) {
+      if (!options.__tx && typeof pool.getConnection === 'function') {
+        const connection = await pool.getConnection();
+        try {
+          await connection.beginTransaction();
+          const txRepo = makeProcessDesignMysqlRepository(connection);
+          const result = await txRepo.importProcessGovernanceCandidate(
+            preview,
+            review,
+            actor,
+            { ...options, __tx: true }
+          );
+          await connection.commit();
+          return result;
+        } catch (error) {
+          await connection.rollback();
+          throw error;
+        } finally {
+          connection.release();
+        }
+      }
+
+      const document = preview.document;
+      const process = document.process || {};
+      const processRef = text(process.process_ref);
+      const contentHashValue = text(preview.content_hash);
+      const [existingImport] = await mysqlQuery(pool, `
+        SELECT *
+        FROM process_design_structured_imports
+        WHERE source_process_ref=? AND content_hash=?
+        LIMIT 1
+      `, [processRef, contentHashValue]);
+      if (existingImport && !options.skipImportAudit) {
+        await mysqlRun(pool, `
+          UPDATE process_design_drafts
+          SET schema_version=?, process_content_json=COALESCE(process_content_json, ?),
+              content_hash=COALESCE(content_hash, ?),
+              revision_no=CASE WHEN revision_no<1 THEN 1 ELSE revision_no END,
+              content_updated_by=COALESCE(content_updated_by, ?),
+              content_updated_at=COALESCE(content_updated_at, CURRENT_TIMESTAMP)
+          WHERE id=?
+        `, [
+          PROCESS_GOVERNANCE_SCHEMA_VERSION,
+          JSON.stringify(document),
+          contentHashValue,
+          actor.userId || null,
+          existingImport.draft_id
+        ]);
+        const existingDraft = await getDraft(existingImport.draft_id);
+        const existingHandoffs = await mysqlQuery(pool, `
+          SELECT *
+          FROM process_design_cross_dept_handoffs
+          WHERE draft_id=? AND source_process_ref=? AND source_content_hash=? AND is_current=1
+          ORDER BY sort_order, id
+        `, [existingImport.draft_id, processRef, contentHashValue]);
+        return {
+          idempotent: true,
+          import_id: Number(existingImport.import_id),
+          draft: existingDraft,
+          handoffs: existingHandoffs.map(publicHandoff),
+          content_hash: contentHashValue
+        };
+      }
+
+      const [owningDepartment] = await mysqlQuery(pool, `
+        SELECT id, name, final_responsible_person_id
+        FROM departments
+        WHERE name=? AND status='active'
+        LIMIT 1
+      `, [text(process.owning_department)]);
+      if (!owningDepartment) {
+        throw httpError(422, '校验失败', {
+          error: '校验失败',
+          details: [{ field: 'process.owning_department', message: '归口部门不在3000当前有效部门中' }]
+        });
+      }
+      if (Number(owningDepartment.id) !== Number(actor.departmentId)) {
+        throw httpError(403, '部门MDM审核员只能审核导入本人部门的流程');
+      }
+
+      const [latestImport] = await mysqlQuery(pool, `
+        SELECT *
+        FROM process_design_structured_imports
+        WHERE source_process_ref=?
+        ORDER BY import_id DESC
+        LIMIT 1
+        FOR UPDATE
+      `, [processRef]);
+      let draft = options.targetDraft || (latestImport ? await getDraft(latestImport.draft_id) : null);
+      if (draft && draft.status === 'published') {
+        const next = await this.createNextEditionDraft(draft.document_id, actor.userId, owningDepartment.id);
+        draft = next.draft || next;
+      }
+      if (!draft) {
+        const stableDocumentNo = `PG-${processRef}`.slice(0, 128);
+        draft = await this.createDraft({
+          document_no: stableDocumentNo,
+          document_title: text(process.process_name),
+          process_name: text(process.process_name),
+          reason: '3001结构化流程经部门审核后导入',
+          basis_type: '现场实际',
+          basis_description: text(review.decisionBasis),
+          involves_other_departments: preview.handoff_candidates.length > 0,
+          related_departments: preview.handoff_candidates.flatMap(candidate => [
+            candidate.handoff_direction === 'inbound_prerequisite'
+              ? candidate.source_department
+              : candidate.target_department
+          ]).map(text).filter(Boolean),
+          l1_name: optionalText(process.capability_domain),
+          l2_name: optionalText(process.business_capability),
+          l3_name: optionalText(process.process_name)
+        }, actor.userId, owningDepartment.id, null);
+        draft = draft.draft || draft;
+      } else if (!EDITABLE_DRAFT_STATUSES.has(draft.status || 'draft')) {
+        await mysqlRun(pool, `
+          UPDATE process_design_drafts
+          SET status='needs_changes', updated_at=CURRENT_TIMESTAMP
+          WHERE id=?
+        `, [draft.id]);
+        draft = await getDraft(draft.id);
+      }
+      await mysqlRun(pool, `
+        UPDATE process_design_drafts
+        SET l1_status=?, l2_status=?, updated_at=CURRENT_TIMESTAMP
+        WHERE id=?
+      `, [
+        text(process.classification_status) === 'confirmed' && text(process.capability_domain) ? 'confirmed' : 'unclassified',
+        text(process.classification_status) === 'confirmed' && text(process.business_capability) ? 'confirmed' : 'unclassified',
+        draft.id
+      ]);
+      if (text(process.purpose) && text(process.scope)) {
+        await this.saveDocumentProfile(draft, {
+          document_title: text(process.process_name),
+          document_no: text(draft.document_no),
+          purpose: text(process.purpose),
+          scope: text(process.scope),
+          inheritance_relation: null
+        }, actor.userId);
+      }
+
+      let [processRow] = await mysqlQuery(pool, `
+        SELECT *
+        FROM process_design_processes
+        WHERE draft_id=? AND source_process_ref=?
+        LIMIT 1
+      `, [draft.id, processRef]);
+      const processPayload = {
+        l1_name: text(process.capability_domain) || '待确认能力域',
+        l2_name: text(process.business_capability) || '待确认业务能力',
+        l3_name: text(process.process_name),
+        process_type: 'new',
+        description: `来源：${PROCESS_GOVERNANCE_SCHEMA_VERSION}；流程标识：${processRef}`
+      };
+      if (!processRow) {
+        processRow = await this.createProcess(draft, processPayload, actor.userId);
+        await mysqlRun(pool, 'UPDATE process_design_processes SET source_process_ref=? WHERE id=?', [processRef, processRow.id]);
+        processRow = await getById('process_design_processes', processRow.id);
+      } else {
+        processRow = await this.updateProcess(draft, processRow.id, processPayload, actor.userId);
+      }
+
+      const candidateAnchors = new Set(preview.handoff_candidates.map(item => text(item.anchor_behavior_ref)).filter(Boolean));
+      const stepByRef = new Map();
+      for (let index = 0; index < arrayItems(document.behaviors).length; index += 1) {
+        const behavior = document.behaviors[index] || {};
+        const behaviorRef = text(behavior.behavior_ref);
+        let [stepRow] = await mysqlQuery(pool, `
+          SELECT *
+          FROM process_design_steps
+          WHERE draft_id=? AND source_behavior_ref=?
+          LIMIT 1
+        `, [draft.id, behaviorRef]);
+        const stepPayload = {
+          process_id: processRow.id,
+          step_type: text(behavior.node_type) === 'decision' ? 'decision' : 'action',
+          step_name: text(behavior.behavior_name),
+          actor_role: optionalText(behavior.current_actor_role),
+          timing: optionalText(behavior.timing),
+          input_materials: optionalText(behavior.input_description),
+          output_result: optionalText(behavior.output_description),
+          need_confirmation: false
+        };
+        if (!stepRow) {
+          stepRow = await this.createStep(draft, stepPayload, actor.userId);
+          await mysqlRun(pool, 'UPDATE process_design_steps SET source_behavior_ref=? WHERE id=?', [behaviorRef, stepRow.id]);
+          stepRow = await getById('process_design_steps', stepRow.id);
+        } else {
+          stepRow = await this.updateStep(draft, stepRow.id, stepPayload, actor.userId);
+        }
+        stepByRef.set(behaviorRef, stepRow);
+        await this.saveBehaviorDetail(draft, stepRow.id, {
+          precondition: optionalText(behavior.precondition),
+          trigger_scene: optionalText(behavior.trigger),
+          execution_standard: optionalText(behavior.completion_standard),
+          delivery_object: optionalText(behavior.output_description),
+          requires_approval: text(behavior.node_type) === 'approval',
+          approval_note: null,
+          is_cross_department: candidateAnchors.has(behaviorRef)
+        }, actor.userId);
+      }
+
+      const importedHandoffs = [];
+      for (let index = 0; index < preview.handoff_candidates.length; index += 1) {
+        const candidate = {
+          ...preview.handoff_candidates[index],
+          owning_department: text(process.owning_department),
+          candidate_version: contentHash(preview.handoff_candidates[index]),
+          handoff_key_hash: contentHash(text(preview.handoff_candidates[index].handoff_ref))
+        };
+        const stepRow = stepByRef.get(text(candidate.anchor_behavior_ref));
+        if (!stepRow) {
+          throw httpError(422, '校验失败', {
+            error: '校验失败',
+            details: [{ field: `cross_department_handoffs.${index}.anchor_behavior_ref`, message: '本流程锚点不存在' }]
+          });
+        }
+        const inbound = candidate.handoff_direction === 'inbound_prerequisite';
+        const externalDepartmentName = inbound ? text(candidate.source_department) : text(candidate.target_department);
+        const [externalDepartment] = externalDepartmentName
+          ? await mysqlQuery(pool, `
+              SELECT id, name, final_responsible_person_id
+              FROM departments
+              WHERE name=? AND status='active'
+              LIMIT 1
+            `, [externalDepartmentName])
+          : [];
+        const sourceDepartmentId = inbound ? externalDepartment && externalDepartment.id : owningDepartment.id;
+        const targetDepartmentId = inbound ? owningDepartment.id : externalDepartment && externalDepartment.id;
+        const [previous] = await mysqlQuery(pool, `
+          SELECT *
+          FROM process_design_cross_dept_handoffs
+          WHERE draft_id=? AND handoff_ref=? AND is_current=1
+          ORDER BY revision_no DESC, id DESC
+          LIMIT 1
+          FOR UPDATE
+        `, [draft.id, text(candidate.handoff_ref)]);
+        if (previous && text(previous.candidate_version) === candidate.candidate_version) {
+          importedHandoffs.push(previous);
+          continue;
+        }
+        if (previous) {
+          await mysqlRun(pool, `
+            UPDATE process_design_cross_dept_handoffs
+            SET is_current=0, updated_at=CURRENT_TIMESTAMP
+            WHERE id=?
+          `, [previous.id]);
+          if (previous.issue_id) {
+            await mysqlRun(pool, `
+              UPDATE process_governance_issues
+              SET display_status='closed', closed_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP
+              WHERE issue_id=?
+            `, [previous.issue_id]);
+            await mysqlRun(pool, `
+              UPDATE process_governance_issue_participants
+              SET can_act=0, action_status='done', updated_at=CURRENT_TIMESTAMP
+              WHERE issue_id=?
+            `, [previous.issue_id]);
+          }
+        }
+        const initialStatus = candidate.counterparty_resolution === 'needs_identification' || !externalDepartment
+          ? 'pending_assignment'
+          : 'pending_origin_review';
+        const result = await mysqlRun(pool, `
+          INSERT INTO process_design_cross_dept_handoffs
+            (step_id, draft_id, handoff_ref, handoff_direction, anchor_behavior_ref,
+             counterparty_resolution, source_department_id, source_department,
+             target_department_id, target_department, transfer_data_ref, transfer_data_name,
+             requested_matter, trigger_condition, completion_standard,
+             counterparty_process_ref, counterparty_process_name,
+             counterparty_behavior_ref, counterparty_behavior_name,
+             requires_return, returned_data_ref, returned_data_name,
+             resume_behavior_ref, resume_step_id,
+             target_process_name, target_behavior_name, handoff_standard,
+             status, source_schema_version, source_process_ref, source_content_hash,
+             candidate_version, revision_no, is_current, supersedes_handoff_id,
+             sort_order, created_by)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)
+        `, [
+          stepRow.id, draft.id, text(candidate.handoff_ref), candidate.handoff_direction,
+          text(candidate.anchor_behavior_ref), candidate.counterparty_resolution,
+          sourceDepartmentId || null, text(candidate.source_department),
+          targetDepartmentId || null, text(candidate.target_department),
+          optionalText(candidate.transfer_data_ref), optionalText(candidate.transfer_data_name),
+          optionalText(candidate.requested_matter), optionalText(candidate.trigger_condition),
+          optionalText(candidate.completion_standard),
+          optionalText(candidate.counterparty_process_ref), optionalText(candidate.counterparty_process_name),
+          optionalText(candidate.counterparty_behavior_ref), optionalText(candidate.counterparty_behavior_name),
+          boolInt(candidate.requires_return), optionalText(candidate.returned_data_ref),
+          optionalText(candidate.returned_data_name), optionalText(candidate.resume_behavior_ref),
+          candidate.resume_behavior_ref && stepByRef.get(text(candidate.resume_behavior_ref))
+            ? stepByRef.get(text(candidate.resume_behavior_ref)).id
+            : null,
+          optionalText(candidate.counterparty_process_name), optionalText(candidate.counterparty_behavior_name),
+          optionalText(candidate.completion_standard), initialStatus,
+          text(preview.source_schema_version), processRef, contentHashValue, candidate.candidate_version,
+          previous ? Number(previous.revision_no || 1) + 1 : 1,
+          previous && previous.id || null, index + 1, actor.userId
+        ]);
+        await addHandoffEvent(
+          result.insertId,
+          'handoff_candidate_created',
+          initialStatus,
+          actor,
+          '单流程治理JSON经部门审核后生成承接治理投影',
+          {
+            handoff_ref: candidate.handoff_ref,
+            candidate_version: candidate.candidate_version,
+            source_content_hash: contentHashValue
+          }
+        );
+        importedHandoffs.push(await getById('process_design_cross_dept_handoffs', result.insertId));
+      }
+
+      const currentHandoffRefs = new Set(preview.handoff_candidates.map(candidate => text(candidate.handoff_ref)));
+      const removedHandoffs = await mysqlQuery(pool, `
+        SELECT *
+        FROM process_design_cross_dept_handoffs
+        WHERE draft_id=? AND source_process_ref=? AND is_current=1
+        FOR UPDATE
+      `, [draft.id, processRef]);
+      const voidReasons = new Map(arrayItems(review.voidedHandoffs).map(item => [
+        text(item && item.handoff_ref),
+        text(item && item.reason)
+      ]));
+      for (const removed of removedHandoffs.filter(item => !currentHandoffRefs.has(text(item.handoff_ref)))) {
+        const [decisionCount, conflictCount] = await Promise.all([
+          mysqlQuery(pool, `
+            SELECT COUNT(*) AS count
+            FROM governance_decision_records
+            WHERE subject_type='cross_dept_handoff' AND subject_id=?
+          `, [String(removed.id)]),
+          mysqlQuery(pool, 'SELECT COUNT(*) AS count FROM process_design_handoff_conflicts WHERE handoff_id=?', [removed.id])
+        ]);
+        const hasGovernanceHistory = !['pending_assignment', 'pending_origin_review'].includes(text(removed.status)) ||
+          Boolean(removed.issue_id) ||
+          Number(decisionCount[0] && decisionCount[0].count || 0) > 0 ||
+          Number(conflictCount[0] && conflictCount[0].count || 0) > 0;
+        const reason = voidReasons.get(text(removed.handoff_ref));
+        if (hasGovernanceHistory && !reason) {
+          throw httpError(409, '已有治理记录的承接不能直接删除，必须填写作废原因', {
+            error: '已有治理记录的承接不能直接删除，必须填写作废原因',
+            code: 'HANDOFF_VOID_REASON_REQUIRED',
+            handoff_ref: text(removed.handoff_ref)
+          });
+        }
+        await mysqlRun(pool, `
+          UPDATE process_design_cross_dept_handoffs
+          SET is_current=0, updated_at=CURRENT_TIMESTAMP
+          WHERE id=?
+        `, [removed.id]);
+        await addHandoffEvent(
+          removed.id,
+          'handoff_voided',
+          'voided',
+          actor,
+          reason || '编制内容已删除；该承接尚未进入部门处理',
+          { handoff_ref: removed.handoff_ref, source_content_hash: contentHashValue }
+        );
+      }
+
+      if (!options.skipCanonicalUpdate) {
+        await mysqlRun(pool, `
+          UPDATE process_design_drafts
+          SET schema_version=?, process_content_json=?, content_hash=?,
+              revision_no=revision_no+1, content_updated_by=?,
+              content_updated_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP
+          WHERE id=?
+        `, [
+          PROCESS_GOVERNANCE_SCHEMA_VERSION,
+          JSON.stringify(document),
+          contentHashValue,
+          actor.userId || null,
+          draft.id
+        ]);
+      }
+      let importResult = null;
+      if (!options.skipImportAudit) {
+        importResult = await mysqlRun(pool, `
+          INSERT INTO process_design_structured_imports
+            (source_process_ref, source_schema_version, normalized_schema_version, content_hash,
+             draft_id, review_basis, normalized_json, approved_by_user_id, approved_by_person_id)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+          processRef, text(preview.source_schema_version), PROCESS_GOVERNANCE_SCHEMA_VERSION,
+          contentHashValue, draft.id, text(review.decisionBasis), JSON.stringify(document),
+          actor.userId || null, actor.personId
+        ]);
+      }
+      await addEvent(
+        draft.id,
+        options.skipImportAudit ? 'canonical_governance_projection_synced' : 'structured_output_approved_import',
+        actor.userId,
+        options.skipImportAudit ? '单流程治理JSON已同步治理投影' : '3001结构化流程已通过部门审核并导入',
+        {
+          import_id: importResult && importResult.insertId || null,
+          source_schema_version: preview.source_schema_version,
+          normalized_schema_version: PROCESS_GOVERNANCE_SCHEMA_VERSION,
+          content_hash: contentHashValue,
+          handoff_count: importedHandoffs.length,
+          governance_warnings: preview.warnings
+        }
+      );
+      return {
+        idempotent: false,
+        import_id: importResult ? Number(importResult.insertId) : null,
+        draft: await getDraft(draft.id),
+        handoffs: importedHandoffs.map(publicHandoff),
+        content_hash: contentHashValue
+      };
+    },
     async createHandoff(draft, stepId, body, actorUserId) {
       const [orderRow] = await mysqlQuery(pool, 'SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_order FROM process_design_cross_dept_handoffs WHERE step_id=?', [stepId]);
       const result = await mysqlRun(pool, `
@@ -2183,7 +3789,7 @@ function makeProcessDesignMysqlRepository(pool) {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         stepId, text(body.target_department), null, null, null, null,
-        optionalText(body.handoff_standard), 'pending_return',
+        optionalText(body.handoff_standard), 'pending_origin_review',
         body.sort_order ? Number(body.sort_order) : Number(orderRow.next_order || 1), actorUserId
       ]);
       await addEvent(draft.id, 'cross_dept_handoff_requested', actorUserId, `已发起跨部门承接：${text(body.target_department)}`);
@@ -2193,7 +3799,7 @@ function makeProcessDesignMysqlRepository(pool) {
       await mysqlRun(pool, `
         UPDATE process_design_cross_dept_handoffs
         SET target_process_code=?, target_process_name=?, target_behavior_code=?, target_behavior_name=?,
-            status='returned', returned_by=?, returned_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP
+            status='pending_counterparty_review', returned_by=?, returned_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP
         WHERE id=?
       `, [
         optionalText(body.target_process_code), text(body.target_process_name),
@@ -2214,10 +3820,10 @@ function makeProcessDesignMysqlRepository(pool) {
         }
       });
       if (Object.prototype.hasOwnProperty.call(body, 'status')) {
-        const status = text(body.status);
-        if (!HANDOFF_STATUSES.has(status)) throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'status', message: '承接状态无效' }] });
-        sets.push('status=?');
-        params.push(status);
+        throw httpError(422, '校验失败', {
+          error: '校验失败',
+          details: [{ field: 'status', message: '承接状态只能通过承接待办动作变更' }]
+        });
       }
       if (sets.length) {
         sets.push('updated_at=CURRENT_TIMESTAMP');
@@ -2225,6 +3831,261 @@ function makeProcessDesignMysqlRepository(pool) {
         await addEvent(draft.id, 'cross_dept_handoff_updated', actorUserId, '已更新跨部门承接');
       }
       return await getById('process_design_cross_dept_handoffs', handoffId);
+    },
+    async assignHandoffCounterparty(handoff, department, actor, options = {}) {
+      const transaction = await runLockedHandoffMutation(
+        'assignHandoffCounterparty',
+        handoff,
+        [department, actor],
+        options
+      );
+      if (transaction.handled) return transaction.result;
+      if (!actorCanActOnHandoff(handoff, actor)) throw httpError(403, '当前人员不是该承接待办的可操作参与人');
+      if (handoff.status !== 'pending_assignment') throw httpError(409, '当前承接不需要分派责任部门');
+      const inbound = text(handoff.handoff_direction) === 'inbound_prerequisite';
+      const sets = inbound
+        ? 'source_department_id=?, source_department=?'
+        : 'target_department_id=?, target_department=?';
+      await mysqlRun(pool, `
+        UPDATE process_design_cross_dept_handoffs
+        SET ${sets}, counterparty_resolution='identified', status='pending_origin_review',
+            updated_at=CURRENT_TIMESTAMP
+        WHERE id=? AND is_current=1
+      `, [department.id, department.name, handoff.id]);
+      if (handoff.issue_id) {
+        for (const [participantType, roleCode, actionLabel] of [
+          ['collaborator', 'department_contact', '补充本部门实际承接内容'],
+          ['department_reviewer', 'department_mdm_reviewer', '记录本部门审核决定']
+        ]) {
+          await mysqlRun(pool, `
+            INSERT INTO process_governance_issue_participants
+              (issue_id, point_id, participant_type, dept_name, role_code, can_view, can_act, action_label, action_status)
+            VALUES (?, ?, ?, ?, ?, 1, 1, ?, 'waiting')
+          `, [handoff.issue_id, handoff.point_id || null, participantType, department.name, roleCode, actionLabel]);
+        }
+      }
+      const updated = await getHandoffContext(handoff.id);
+      await addHandoffEvent(
+        handoff.id,
+        'counterparty_assigned',
+        'pending_origin_review',
+        actor,
+        `已分派给${department.name}`,
+        { department_id: department.id, department_name: department.name }
+      );
+      await updateHandoffIssueProjection(updated, 'pending_origin_review', `已分派给${department.name}`, actor);
+      return updated;
+    },
+    async saveHandoffCounterpartyResponse(handoff, body, actor, options = {}) {
+      const transaction = await runLockedHandoffMutation(
+        'saveHandoffCounterpartyResponse',
+        handoff,
+        [body, actor],
+        options
+      );
+      if (transaction.handled) return transaction.result;
+      if (!actorCanActOnHandoff(handoff, actor)) throw httpError(403, '当前人员不是该承接待办的可操作参与人');
+      if (handoff.status !== 'pending_counterparty_detail') {
+        throw httpError(409, '当前承接不等待外部门补充实际内容');
+      }
+      const fields = {
+        counterparty_process_ref: optionalText(body.counterparty_process_ref),
+        counterparty_process_name: text(body.counterparty_process_name),
+        counterparty_behavior_ref: optionalText(body.counterparty_behavior_ref),
+        counterparty_behavior_name: text(body.counterparty_behavior_name),
+        transfer_data_ref: optionalText(body.transfer_data_ref || handoff.transfer_data_ref),
+        transfer_data_name: optionalText(body.transfer_data_name || handoff.transfer_data_name),
+        requested_matter: optionalText(body.requested_matter || handoff.requested_matter),
+        completion_standard: optionalText(body.completion_standard || handoff.completion_standard),
+        returned_data_ref: optionalText(body.returned_data_ref || handoff.returned_data_ref),
+        returned_data_name: optionalText(body.returned_data_name || handoff.returned_data_name)
+      };
+      await mysqlRun(pool, `
+        UPDATE process_design_cross_dept_handoffs
+        SET counterparty_process_ref=?, counterparty_process_name=?,
+            counterparty_behavior_ref=?, counterparty_behavior_name=?,
+            transfer_data_ref=?, transfer_data_name=?, requested_matter=?,
+            completion_standard=?, returned_data_ref=?, returned_data_name=?,
+            target_process_name=?, target_behavior_name=?,
+            status='pending_counterparty_review', returned_by=?, returned_at=CURRENT_TIMESTAMP,
+            updated_at=CURRENT_TIMESTAMP
+        WHERE id=? AND is_current=1
+      `, [
+        fields.counterparty_process_ref, fields.counterparty_process_name,
+        fields.counterparty_behavior_ref, fields.counterparty_behavior_name,
+        fields.transfer_data_ref, fields.transfer_data_name, fields.requested_matter,
+        fields.completion_standard, fields.returned_data_ref, fields.returned_data_name,
+        fields.counterparty_process_name, fields.counterparty_behavior_name,
+        actor.userId || null, handoff.id
+      ]);
+      const updated = await getHandoffContext(handoff.id);
+      await addHandoffEvent(
+        handoff.id,
+        'counterparty_detail_completed',
+        'pending_counterparty_review',
+        actor,
+        '外部门联系人已补充实际承接内容',
+        fields
+      );
+      await updateHandoffIssueProjection(updated, 'pending_counterparty_review', '外部门联系人已补充实际承接内容', actor);
+      return updated;
+    },
+    async recordHandoffDepartmentDecision(handoff, department, body, actor, options = {}) {
+      const transaction = await runLockedHandoffMutation(
+        'recordHandoffDepartmentDecision',
+        handoff,
+        [department, body, actor],
+        options
+      );
+      if (transaction.handled) return transaction.result;
+      if (!actorCanActOnHandoff(handoff, actor)) throw httpError(403, '当前人员不是该承接待办的可操作参与人');
+      const latest = (await mysqlQuery(pool, `
+        SELECT decision_record_id
+        FROM governance_decision_records
+        WHERE subject_domain='process'
+          AND subject_type='cross_dept_handoff'
+          AND subject_id=?
+          AND subject_version=?
+          AND department_id=?
+        ORDER BY decision_record_id DESC
+        LIMIT 1
+      `, [String(handoff.id), text(handoff.candidate_version), department.id]))[0];
+      const requestedDecision = text(body.decision);
+      const storedDecision = requestedDecision === 'not_required' ? 'rejected' : requestedDecision;
+      const result = await mysqlRun(pool, `
+        INSERT INTO governance_decision_records
+          (subject_domain, subject_type, subject_id, subject_version, department_id,
+           accountable_person_id, recorded_by_person_id, decision, decision_basis,
+           evidence_reference, decided_at, supersedes_decision_record_id)
+        VALUES ('process', 'cross_dept_handoff', ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)
+      `, [
+        String(handoff.id), text(handoff.candidate_version), department.id,
+        department.final_responsible_person_id, actor.personId, storedDecision,
+        text(body.decision_basis), optionalText(body.evidence_reference),
+        latest && latest.decision_record_id || null
+      ]);
+      let nextStatus = handoff.status;
+      const isOrigin = Number(department.id) === Number(handoff.origin_department_id);
+      if (requestedDecision === 'rejected' || requestedDecision === 'not_required') {
+        const conflict = await openHandoffConflict(handoff, text(body.decision_basis), actor);
+        const updatedConflictHandoff = await getHandoffContext(handoff.id);
+        await updateHandoffIssueProjection(updatedConflictHandoff, 'conflict_open', text(body.decision_basis), actor);
+        return {
+          handoff: updatedConflictHandoff,
+          decision_record_id: Number(result.insertId),
+          conflict
+        };
+      } else if (requestedDecision === 'returned') {
+        if (handoff.status === 'pending_counterparty_scope') nextStatus = 'pending_origin_review';
+        else if (handoff.status === 'pending_counterparty_review') nextStatus = 'pending_counterparty_detail';
+        else nextStatus = 'returned';
+      }
+      else if (isOrigin && handoff.status === 'pending_origin_review') nextStatus = 'pending_counterparty_scope';
+      else if (!isOrigin && handoff.status === 'pending_counterparty_scope') nextStatus = 'pending_counterparty_detail';
+      else if (!isOrigin && handoff.status === 'pending_counterparty_review') nextStatus = 'pending_structure_gate';
+      else {
+        throw httpError(409, '当前承接状态不接受该部门决定');
+      }
+      await mysqlRun(pool, `
+        UPDATE process_design_cross_dept_handoffs
+        SET status=?, updated_at=CURRENT_TIMESTAMP
+        WHERE id=? AND is_current=1
+      `, [nextStatus, handoff.id]);
+      const updated = await getHandoffContext(handoff.id);
+      await addHandoffEvent(
+        handoff.id,
+        requestedDecision === 'returned' ? 'handoff_returned' : 'department_decision_recorded',
+        nextStatus,
+        actor,
+        text(body.decision_basis),
+        {
+          department_id: department.id,
+          decision: requestedDecision,
+          decision_record_id: Number(result.insertId)
+        }
+      );
+      await updateHandoffIssueProjection(updated, nextStatus, text(body.decision_basis), actor);
+      return { handoff: updated, decision_record_id: Number(result.insertId) };
+    },
+    async runHandoffStructureGate(handoff, body, actor, options = {}) {
+      const transaction = await runLockedHandoffMutation(
+        'runHandoffStructureGate',
+        handoff,
+        [body, actor],
+        options
+      );
+      if (transaction.handled) return transaction.result;
+      if (!actorCanActOnHandoff(handoff, actor)) throw httpError(403, '当前人员不是该承接待办的可操作参与人');
+      if (handoff.status !== 'pending_structure_gate') {
+        throw httpError(409, '当前承接不等待MDM结构卡口处理');
+      }
+      const action = text(body.action);
+      if (action === 'returned') {
+        await mysqlRun(pool, "UPDATE process_design_cross_dept_handoffs SET status='pending_counterparty_review', updated_at=CURRENT_TIMESTAMP WHERE id=? AND is_current=1", [handoff.id]);
+        const updated = await getHandoffContext(handoff.id);
+        await addHandoffEvent(handoff.id, 'structure_gate_returned', 'pending_counterparty_review', actor, text(body.note), null);
+        await updateHandoffIssueProjection(updated, 'pending_counterparty_review', text(body.note), actor);
+        return updated;
+      }
+      if (action === 'escalated') {
+        const conflict = await openHandoffConflict(handoff, text(body.note) || 'MDM结构卡口提请争议处理', actor);
+        const updated = await getHandoffContext(handoff.id);
+        await updateHandoffIssueProjection(updated, 'conflict_open', text(body.note), actor);
+        return { handoff: updated, conflict };
+      }
+      const departmentIds = [handoff.origin_department_id, handoff.counterparty_department_id]
+        .map(Number).filter(Boolean);
+      const departments = departmentIds.length
+        ? await mysqlQuery(pool, `
+            SELECT id, name, final_responsible_person_id
+            FROM departments
+            WHERE id IN (${departmentIds.map(() => '?').join(',')}) AND status='active'
+          `, departmentIds)
+        : [];
+      const missing = [];
+      for (const department of departments) {
+        if (!department.final_responsible_person_id) {
+          missing.push(`${department.name}尚未配置最终责任人`);
+          continue;
+        }
+        const [decision] = await mysqlQuery(pool, `
+          SELECT decision, accountable_person_id
+          FROM governance_decision_records
+          WHERE subject_domain='process'
+            AND subject_type='cross_dept_handoff'
+            AND subject_id=?
+            AND subject_version=?
+            AND department_id=?
+          ORDER BY decision_record_id DESC
+          LIMIT 1
+        `, [String(handoff.id), text(handoff.candidate_version), department.id]);
+        if (!decision || decision.decision !== 'approved') missing.push(`${department.name}尚未形成有效同意决定`);
+        else if (Number(decision.accountable_person_id) !== Number(department.final_responsible_person_id)) {
+          missing.push(`${department.name}最终责任人已变化，需要重新记录决定`);
+        }
+      }
+      if (departments.length !== 2) missing.push('承接双方责任部门尚未完整落位');
+      if (!text(handoff.anchor_behavior_ref)) missing.push('本流程锚点未落位');
+      if (!text(handoff.transfer_data_ref) && !text(handoff.requested_matter)) missing.push('传递数据和承接事项均未说明');
+      if (!text(handoff.trigger_condition) && !text(handoff.completion_standard)) missing.push('触发条件和完成标准均未说明');
+      if (missing.length) {
+        throw httpError(409, '承接关系尚未通过结构卡口', {
+          error: '承接关系尚未通过结构卡口',
+          details: missing
+        });
+      }
+      await mysqlRun(pool, "UPDATE process_design_cross_dept_handoffs SET status='confirmed', updated_at=CURRENT_TIMESTAMP WHERE id=? AND is_current=1", [handoff.id]);
+      const updated = await getHandoffContext(handoff.id);
+      await addHandoffEvent(
+        handoff.id,
+        'structure_gate_confirmed',
+        'confirmed',
+        actor,
+        text(body.note) || '结构、证据和双方决定均已通过检查',
+        null
+      );
+      await updateHandoffIssueProjection(updated, 'confirmed', text(body.note) || '结构、证据和双方决定均已通过检查', actor);
+      return updated;
     },
     async nextFormCode(draft) {
       const rows = await mysqlQuery(pool, 'SELECT form_code FROM process_design_forms WHERE draft_id=?', [draft.id]);
@@ -2658,13 +4519,20 @@ function makeProcessDesignMysqlRepository(pool) {
       const result = await mysqlRun(pool, `
         INSERT INTO process_design_versions
           (draft_id, document_id, document_no, document_title, edition, version_no,
-           department_id, l1_name, l2_name, l3_name, content_json, published_by,
-           effective_at, supersedes_version_id, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, 'published')
+           department_id, l1_name, l2_name, l3_name, content_json,
+           schema_version, process_content_json, content_hash, source_revision_no,
+           published_by, effective_at, supersedes_version_id, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, 'published')
       `, [
         draft.id, document.id, draft.document_no, draft.document_title || draft.process_name,
         plannedEdition, versionNo, draft.department_id, draft.l1_name || '', draft.l2_name || '', draft.l3_name || '',
-        JSON.stringify(content), actorUserId, currentVersion && currentVersion.id || null
+        JSON.stringify(content),
+        text(draft.schema_version) || PROCESS_GOVERNANCE_SCHEMA_VERSION,
+        draft.process_content_json || null,
+        draft.content_hash || null,
+        Number(draft.revision_no || 0),
+        actorUserId,
+        currentVersion && currentVersion.id || null
       ]);
       if (currentVersion) {
         await mysqlRun(pool, "UPDATE process_design_versions SET status='superseded' WHERE id=?", [currentVersion.id]);
@@ -2723,6 +4591,8 @@ async function repository() {
       await ensureProcessDesignEvidenceStatusSchema(pool);
       await ensureProcessDesignFormStructureSchema(pool);
       await ensureProcessDesignStepTransitionSchema(pool);
+      await applyCrossDeptHandoffV2(pool);
+      await applyProcessGovernanceUnified(pool);
       return makeProcessDesignMysqlRepository(pool);
     })();
   }
@@ -2781,6 +4651,7 @@ async function assertCanViewDraft(req, repo, draft) {
 
 async function assertCanEditDraft(req, repo, draft) {
   await assertCanViewDraft(req, repo, draft);
+  assertAdminCannotWrite(await currentRoleCodes(req));
   if (draft.status === 'published') throw httpError(409, '已发布流程不能直接修改草稿');
   const deptIds = await authorizedDepartmentIds(req);
   if (
@@ -2799,6 +4670,7 @@ async function assertCanEditDraftContent(req, repo, draft) {
 
 async function assertCanReview(req, repo, draft) {
   await assertCanViewDraft(req, repo, draft);
+  assertAdminCannotWrite(await currentRoleCodes(req));
   const deptIds = await authorizedDepartmentIds(req);
   if (
     deptIds.has(Number(draft.department_id)) &&
@@ -2852,6 +4724,70 @@ function structuredOutputDepartmentName(data) {
     profile.department_name,
     meta.dept_name
   );
+}
+
+async function currentRoleCodes(req) {
+  const rows = await getUserRoleCodesAsync(req.session.personId || req.session.userId, req.session.role);
+  return new Set(arrayItems(rows).map(item => text(item && (item.code || item.role_code))).filter(Boolean));
+}
+
+async function currentDepartmentIdentity(req) {
+  const department = req.session.departmentId
+    ? await getDepartmentByIdAsync(Number(req.session.departmentId))
+    : null;
+  return department
+    ? { id: Number(department.id || department.department_id), name: text(department.name || department.department_name) }
+    : null;
+}
+
+function assertAdminCannotWrite(roleCodes) {
+  if (roleCodes.has('admin')) throw httpError(403, '管理员对治理材料只读，不能执行承接业务写入');
+}
+
+async function processGovernancePreview(req) {
+  const source = structuredOutputData(req.body || {});
+  const preview = previewProcessGovernanceDocument(source);
+  if (preview.errors.length) {
+    throw httpError(422, '校验失败', { error: '校验失败', details: preview.errors });
+  }
+  const department = await currentDepartmentIdentity(req);
+  const canReadGlobal = await canViewAcrossDepartments(req);
+  if (!canReadGlobal && (!department || department.name !== text(preview.document.process.owning_department))) {
+    throw httpError(403, '只能预览本人部门归口的流程');
+  }
+  return preview;
+}
+
+async function requireCurrentRole(req, expectedRole) {
+  const roleCodes = await currentRoleCodes(req);
+  assertAdminCannotWrite(roleCodes);
+  if (!roleCodes.has(expectedRole)) throw httpError(403, `当前操作仅限${expectedRole}角色`);
+  return roleCodes;
+}
+
+function handoffActor(req, roleCodes, department, roleCode) {
+  return {
+    userId: req.session.userId || null,
+    personId: req.session.personId || req.session.userId,
+    departmentId: department && department.id || null,
+    departmentName: department && department.name || null,
+    roleCodes: [...roleCodes],
+    roleCode
+  };
+}
+
+async function currentGovernanceActor(req, roleCode = null) {
+  const roleCodes = await currentRoleCodes(req);
+  const department = await currentDepartmentIdentity(req);
+  return handoffActor(req, roleCodes, department, roleCode);
+}
+
+async function assertHandoffParticipant(repo, handoff, actor) {
+  if (!handoff) throw httpError(404, '跨部门承接不存在');
+  if (!handoff.is_current) throw httpError(409, '该承接版本已被新修订替代');
+  if (!await repo.hasHandoffParticipant(handoff, actor)) {
+    throw httpError(403, '当前人员不是该承接待办的可操作参与人');
+  }
 }
 
 router.get('/summary', requireAuth, (req, res) => runAction(res, async () => {
@@ -3287,12 +5223,115 @@ router.post('/import-structured-output', requireAuth, (req, res) => runAction(re
   res.status(201).json(result);
 }));
 
+router.post('/import-structured-output/preview', requireAuth, (req, res) => runAction(res, async () => {
+  const preview = await processGovernancePreview(req);
+  res.json({
+    summary: preview.summary,
+    handoff_candidates: preview.handoff_candidates,
+    governance_warnings: preview.warnings,
+    content_hash: preview.content_hash,
+    normalized_schema_version: PROCESS_GOVERNANCE_SCHEMA_VERSION
+  });
+}));
+
+router.post('/import-structured-output/approve', requireAuth, (req, res) => runAction(res, async () => {
+  const roleCodes = await requireCurrentRole(req, 'department_mdm_reviewer');
+  const decisionBasis = text(req.body && (req.body.decision_basis || req.body.review_basis));
+  if (!decisionBasis) {
+    throw httpError(422, '校验失败', {
+      error: '校验失败',
+      details: [{ field: 'decision_basis', message: '审核依据不能为空' }]
+    });
+  }
+  const preview = await processGovernancePreview(req);
+  const expectedHash = text(req.body && (req.body.preview_hash || req.body.content_hash));
+  if (!expectedHash || expectedHash !== preview.content_hash) {
+    throw httpError(409, '预览内容已变化，请重新预览后再审核导入', {
+      error: '预览内容已变化，请重新预览后再审核导入',
+      code: 'PREVIEW_HASH_MISMATCH',
+      expected_hash: expectedHash || null,
+      actual_hash: preview.content_hash
+    });
+  }
+  const department = await currentDepartmentIdentity(req);
+  const actor = handoffActor(req, roleCodes, department, 'department_mdm_reviewer');
+  const repo = await repository();
+  const result = await repo.importProcessGovernanceCandidate(preview, {
+    decisionBasis,
+    voidedHandoffs: req.body && req.body.voided_handoffs
+  }, actor);
+  res.status(result.idempotent ? 200 : 201).json({
+    ...result,
+    governance_warnings: preview.warnings,
+    normalized_schema_version: PROCESS_GOVERNANCE_SCHEMA_VERSION
+  });
+}));
+
 router.post('/documents/:id/drafts', requireAuth, (req, res) => runAction(res, async () => {
   const repo = await repository();
   const document = await repo.getDocumentById(req.params.id);
   if (!document) throw httpError(404, '制度不存在');
   if (!(await canMaintainDocument(req, document))) throw httpError(403, '无权维护该制度');
   res.status(201).json(await repo.createNextEditionDraft(document.id, req.session.userId, document.owning_department_id));
+}));
+
+router.get('/drafts', requireAuth, (req, res) => runAction(res, async () => {
+  const repo = await repository();
+  const departmentIds = await canViewAcrossDepartments(req)
+    ? null
+    : Array.from(await authorizedDepartmentIds(req));
+  const items = await repo.listCanonicalDrafts(departmentIds, { limit: req.query && req.query.limit });
+  res.json({ items, total: items.length, schema_version: PROCESS_GOVERNANCE_SCHEMA_VERSION });
+}));
+
+router.post('/drafts/canonical', requireAuth, (req, res) => runAction(res, async () => {
+  const roleCodes = await currentRoleCodes(req);
+  assertAdminCannotWrite(roleCodes);
+  if (!roleCodes.has('department_contact')) throw httpError(403, '只有部门主对接人可以新建流程编制草稿');
+  const normalized = normalizeProcessGovernanceDocument(req.body && (req.body.content || req.body.document || req.body));
+  if (normalized.errors.length) {
+    throw httpError(422, '单流程治理JSON不符合结构规则', {
+      error: '单流程治理JSON不符合结构规则',
+      code: 'PROCESS_GOVERNANCE_CONTENT_INVALID',
+      details: normalized.errors
+    });
+  }
+  const department = await currentDepartmentIdentity(req);
+  if (!department || department.name !== text(normalized.document.process.owning_department)) {
+    throw httpError(403, '部门主对接人只能新建本人部门归口的流程');
+  }
+  const repo = await repository();
+  const process = normalized.document.process;
+  const documentNo = text(req.body && req.body.document_no) || `PG-${text(process.process_ref)}`.slice(0, 128);
+  const created = await repo.createDraft({
+    document_no: documentNo,
+    document_title: text(process.process_name),
+    process_name: text(process.process_name),
+    reason: '在MDM流程治理中编制单流程治理JSON',
+    basis_type: '现场实际',
+    basis_description: text(req.body && req.body.basis_description),
+    involves_other_departments: normalized.document.cross_department_handoffs.length > 0,
+    related_departments: normalized.document.cross_department_handoffs
+      .flatMap(item => [item.source_department, item.target_department])
+      .map(text)
+      .filter(name => name && name !== department.name),
+    l1_name: optionalText(process.capability_domain),
+    l2_name: optionalText(process.business_capability),
+    l3_name: optionalText(process.process_name)
+  }, req.session.userId, department.id, null);
+  const draft = created.draft || created;
+  const actor = await currentGovernanceActor(req, 'department_contact');
+  const saved = await repo.saveCanonicalContent(
+    draft,
+    normalized.document,
+    0,
+    req.session.userId,
+    {
+      actor,
+      voidedHandoffs: req.body && req.body.voided_handoffs
+    }
+  );
+  res.status(201).json({ draft: await repo.getDraft(draft.id), content: saved });
 }));
 
 router.post('/drafts', requireAuth, (req, res) => runAction(res, async () => {
@@ -3315,6 +5354,51 @@ router.post('/drafts', requireAuth, (req, res) => runAction(res, async () => {
   await getDepartmentByIdAsync(targetDeptId);
   const draft = await repo.createDraft(req.body, req.session.userId, targetDeptId, null);
   res.status(201).json(draft);
+}));
+
+router.get('/drafts/:id/content', requireAuth, (req, res) => runAction(res, async () => {
+  const repo = await repository();
+  const draft = await repo.getDraft(req.params.id);
+  await assertCanViewDraft(req, repo, draft);
+  const content = await repo.canonicalContent(draft);
+  if (!content.document) {
+    throw httpError(409, '该草稿不能无损转换为单流程治理JSON', {
+      error: '该草稿不能无损转换为单流程治理JSON',
+      code: 'PROCESS_GOVERNANCE_MANUAL_CONVERSION_REQUIRED',
+      object_id: Number(draft.id),
+      details: content.errors || []
+    });
+  }
+  res.json(content);
+}));
+
+router.put('/drafts/:id/content', requireAuth, (req, res) => runAction(res, async () => {
+  const repo = await repository();
+  const draft = await repo.getDraft(req.params.id);
+  await assertCanEditDraftContent(req, repo, draft);
+  const actor = await currentGovernanceActor(req, 'department_contact');
+  const result = await repo.saveCanonicalContent(
+    draft,
+    req.body && (req.body.content || req.body.document),
+    req.body && req.body.expected_revision,
+    req.session.userId,
+    {
+      actor,
+      voidedHandoffs: req.body && req.body.voided_handoffs
+    }
+  );
+  res.json(result);
+}));
+
+router.get('/drafts/:id/export', requireAuth, (req, res) => runAction(res, async () => {
+  const repo = await repository();
+  const draft = await repo.getDraft(req.params.id);
+  await assertCanViewDraft(req, repo, draft);
+  const content = await repo.canonicalContent(draft);
+  if (!content.document) throw httpError(409, '该草稿不能无损导出为单流程治理JSON');
+  const filename = `${markdownFileSafe(text(draft.document_no) || `draft-${draft.id}`)}-${PROCESS_GOVERNANCE_SCHEMA_VERSION}.json`;
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.json(content.document);
 }));
 
 router.get('/drafts/:id', requireAuth, (req, res) => runAction(res, async () => {
@@ -3468,6 +5552,136 @@ router.delete('/steps/:id', requireAuth, (req, res) => runAction(res, async () =
   }));
 }));
 
+router.get('/cross-dept-handoffs', requireAuth, (req, res) => runAction(res, async () => {
+  const repo = await repository();
+  const actor = await currentGovernanceActor(req);
+  res.json(await repo.listHandoffQueue(actor, { limit: req.query && req.query.limit }));
+}));
+
+router.get('/cross-dept-handoffs/:id/story', requireAuth, (req, res) => runAction(res, async () => {
+  const repo = await repository();
+  const actor = await currentGovernanceActor(req);
+  const story = await repo.getHandoffStory(req.params.id, actor);
+  if (!story) throw httpError(404, '跨部门承接不存在');
+  res.json(story);
+}));
+
+router.get('/handoff-conflicts', requireAuth, (req, res) => runAction(res, async () => {
+  const repo = await repository();
+  const actor = await currentGovernanceActor(req);
+  res.json(await repo.listHandoffConflictQueue(actor, { limit: req.query && req.query.limit }));
+}));
+
+router.post('/handoff-conflicts/:id/assign', requireAuth, (req, res) => runAction(res, async () => {
+  const roleCodes = await requireCurrentRole(req, 'mdm_lead');
+  const repo = await repository();
+  const conflict = await repo.getHandoffConflictContext(req.params.id);
+  if (!conflict) throw httpError(404, '承接冲突不存在');
+  if (conflict.status !== 'pending_assignment') throw httpError(409, '当前承接冲突不需要分派处理人');
+  const handlerPersonId = Number(req.body && req.body.handler_person_id || 0);
+  if (!handlerPersonId || !await repo.personHasActiveRole(handlerPersonId, 'data_conflict_handler')) {
+    throw httpError(422, '校验失败', {
+      error: '校验失败',
+      details: [{ field: 'handler_person_id', message: '冲突处理人必须是有效的数据冲突处理人' }]
+    });
+  }
+  const actor = await currentGovernanceActor(req, 'mdm_lead');
+  actor.roleCodes = [...roleCodes];
+  res.json(await repo.assignHandoffConflict(conflict, handlerPersonId, actor));
+}));
+
+router.put('/handoff-conflicts/:id/proposal', requireAuth, (req, res) => runAction(res, async () => {
+  const roleCodes = await requireCurrentRole(req, 'data_conflict_handler');
+  const repo = await repository();
+  const conflict = await repo.getHandoffConflictContext(req.params.id);
+  if (!conflict) throw httpError(404, '承接冲突不存在');
+  const actor = await currentGovernanceActor(req, 'data_conflict_handler');
+  actor.roleCodes = [...roleCodes];
+  if (Number(conflict.assigned_handler_person_id || 0) !== Number(actor.personId || 0)) {
+    throw httpError(403, '只能处理本人被分派的承接冲突');
+  }
+  if (!['coordinating', 'pending_department_confirmation'].includes(conflict.status)) {
+    throw httpError(409, '当前承接冲突不能修改协调方案');
+  }
+  const body = req.body || {};
+  const details = [];
+  if (!text(body.origin_position)) details.push({ field: 'origin_position', message: '归口部门立场不能为空' });
+  if (!text(body.counterparty_position)) details.push({ field: 'counterparty_position', message: '外部门立场不能为空' });
+  if (!text(body.proposal_text)) details.push({ field: 'proposal_text', message: '协调方案不能为空' });
+  if (!arrayItems(body.evidence).length) details.push({ field: 'evidence', message: '至少记录一条协调证据' });
+  if (details.length) throw httpError(422, '校验失败', { error: '校验失败', details });
+  res.json(await repo.saveHandoffConflictProposal(conflict, body, actor));
+}));
+
+router.post('/handoff-conflicts/:id/department-confirmation', requireAuth, (req, res) => runAction(res, async () => {
+  const roleCodes = await requireCurrentRole(req, 'department_mdm_reviewer');
+  const repo = await repository();
+  const conflict = await repo.getHandoffConflictContext(req.params.id);
+  if (!conflict) throw httpError(404, '承接冲突不存在');
+  if (conflict.status !== 'pending_department_confirmation') throw httpError(409, '当前承接冲突不等待部门确认');
+  const confirmation = text(req.body && req.body.confirmation);
+  const basis = text(req.body && req.body.basis);
+  if (!['accepted', 'rejected'].includes(confirmation) || !basis) {
+    throw httpError(422, '校验失败', {
+      error: '校验失败',
+      details: [
+        ...(!['accepted', 'rejected'].includes(confirmation)
+          ? [{ field: 'confirmation', message: '部门确认结果无效' }]
+          : []),
+        ...(!basis ? [{ field: 'basis', message: '部门确认依据不能为空' }] : [])
+      ]
+    });
+  }
+  const actor = await currentGovernanceActor(req, 'department_mdm_reviewer');
+  actor.roleCodes = [...roleCodes];
+  res.json(await repo.confirmHandoffConflictProposal(
+    conflict,
+    actor.departmentId,
+    confirmation === 'accepted',
+    basis,
+    actor
+  ));
+}));
+
+router.post('/handoff-conflicts/:id/escalate', requireAuth, (req, res) => runAction(res, async () => {
+  const roleCodes = await requireCurrentRole(req, 'data_conflict_handler');
+  const repo = await repository();
+  const conflict = await repo.getHandoffConflictContext(req.params.id);
+  if (!conflict) throw httpError(404, '承接冲突不存在');
+  const actor = await currentGovernanceActor(req, 'data_conflict_handler');
+  actor.roleCodes = [...roleCodes];
+  if (Number(conflict.assigned_handler_person_id || 0) !== Number(actor.personId || 0)) {
+    throw httpError(403, '只能升级本人被分派的承接冲突');
+  }
+  const basis = text(req.body && req.body.basis);
+  if (!basis) throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'basis', message: '提请项目决策的依据不能为空' }] });
+  res.json(await repo.escalateHandoffConflict(conflict, basis, actor));
+}));
+
+router.post('/handoff-conflicts/:id/decision', requireAuth, (req, res) => runAction(res, async () => {
+  const roleCodes = await requireCurrentRole(req, 'decision_group');
+  const repo = await repository();
+  const conflict = await repo.getHandoffConflictContext(req.params.id);
+  if (!conflict) throw httpError(404, '承接冲突不存在');
+  if (conflict.status !== 'pending_decision') throw httpError(409, '当前承接冲突不等待项目决策');
+  const decision = text(req.body && req.body.decision);
+  const basis = text(req.body && req.body.basis);
+  if (!['continue_handoff', 'not_required', 'return_revision'].includes(decision) || !basis) {
+    throw httpError(422, '校验失败', {
+      error: '校验失败',
+      details: [
+        ...(!['continue_handoff', 'not_required', 'return_revision'].includes(decision)
+          ? [{ field: 'decision', message: '项目决策结论无效' }]
+          : []),
+        ...(!basis ? [{ field: 'basis', message: '项目决策依据不能为空' }] : [])
+      ]
+    });
+  }
+  const actor = await currentGovernanceActor(req, 'decision_group');
+  actor.roleCodes = [...roleCodes];
+  res.json(await repo.decideHandoffConflict(conflict, decision, basis, actor));
+}));
+
 router.post('/steps/:id/cross-dept-handoffs', requireAuth, (req, res) => runAction(res, async () => {
   const repo = await repository();
   const draft = await repo.getDraftByStep(req.params.id);
@@ -3501,6 +5715,104 @@ router.put('/cross-dept-handoffs/:id/returned-result', requireAuth, (req, res) =
   if (!text(body.target_behavior_name)) details.push({ field: 'target_behavior_name', message: '承接业务行为不能为空' });
   if (details.length) throw httpError(422, '校验失败', { error: '校验失败', details });
   res.json(await repo.acceptHandoffReturn(draft, Number(req.params.id), body, req.session.userId));
+}));
+
+router.post('/cross-dept-handoffs/:id/assign-counterparty', requireAuth, (req, res) => runAction(res, async () => {
+  const roleCodes = await requireCurrentRole(req, 'mdm_lead');
+  const repo = await repository();
+  const handoff = await repo.getHandoffContext(req.params.id);
+  const department = await currentDepartmentIdentity(req);
+  const actor = handoffActor(req, roleCodes, department, 'mdm_lead');
+  await assertHandoffParticipant(repo, handoff, actor);
+  if (handoff.status !== 'pending_assignment') throw httpError(409, '当前承接状态不需要分派责任部门');
+  const targetDepartmentId = Number(req.body && req.body.department_id || 0);
+  if (!targetDepartmentId) {
+    throw httpError(422, '校验失败', {
+      error: '校验失败',
+      details: [{ field: 'department_id', message: '责任部门不能为空' }]
+    });
+  }
+  const targetDepartment = await getDepartmentByIdAsync(targetDepartmentId);
+  if (!targetDepartment) throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'department_id', message: '责任部门不存在' }] });
+  res.json(await repo.assignHandoffCounterparty(handoff, {
+    id: Number(targetDepartment.id || targetDepartment.department_id),
+    name: text(targetDepartment.name || targetDepartment.department_name)
+  }, actor));
+}));
+
+router.put('/cross-dept-handoffs/:id/counterparty-response', requireAuth, (req, res) => runAction(res, async () => {
+  const roleCodes = await requireCurrentRole(req, 'department_contact');
+  const repo = await repository();
+  const handoff = await repo.getHandoffContext(req.params.id);
+  const department = await currentDepartmentIdentity(req);
+  const actor = handoffActor(req, roleCodes, department, 'department_contact');
+  await assertHandoffParticipant(repo, handoff, actor);
+  if (handoff.status !== 'pending_counterparty_detail') throw httpError(409, '当前承接状态不能补充外部门承接内容');
+  if (!department || Number(department.id) !== Number(handoff.counterparty_department_id)) {
+    throw httpError(403, '部门主对接人只能补充本部门实际承接内容');
+  }
+  const body = req.body || {};
+  const details = [];
+  if (!text(body.counterparty_process_name)) details.push({ field: 'counterparty_process_name', message: '本部门对应流程不能为空' });
+  if (!text(body.counterparty_behavior_name)) details.push({ field: 'counterparty_behavior_name', message: '本部门对应业务行为不能为空' });
+  if (!text(body.requested_matter || handoff.requested_matter) && !text(body.transfer_data_ref || handoff.transfer_data_ref)) {
+    details.push({ field: 'requested_matter', message: '需要说明传递数据或承接事项' });
+  }
+  if (!text(body.completion_standard || handoff.completion_standard)) {
+    details.push({ field: 'completion_standard', message: '完成标准不能为空' });
+  }
+  if (details.length) throw httpError(422, '校验失败', { error: '校验失败', details });
+  res.json(await repo.saveHandoffCounterpartyResponse(handoff, body, actor));
+}));
+
+router.post('/cross-dept-handoffs/:id/department-decision', requireAuth, (req, res) => runAction(res, async () => {
+  const roleCodes = await requireCurrentRole(req, 'department_mdm_reviewer');
+  const repo = await repository();
+  const handoff = await repo.getHandoffContext(req.params.id);
+  const currentDepartment = await currentDepartmentIdentity(req);
+  const actor = handoffActor(req, roleCodes, currentDepartment, 'department_mdm_reviewer');
+  await assertHandoffParticipant(repo, handoff, actor);
+  const allowedStates = ['pending_origin_review', 'pending_counterparty_scope', 'pending_counterparty_review'];
+  if (!allowedStates.includes(text(handoff.status))) throw httpError(409, '当前承接状态不能记录部门决定');
+  const currentDepartmentId = currentDepartment && Number(currentDepartment.id);
+  const isOrigin = currentDepartmentId === Number(handoff.origin_department_id);
+  const isCounterparty = currentDepartmentId === Number(handoff.counterparty_department_id);
+  if (!isOrigin && !isCounterparty) throw httpError(403, '部门审核员不能代替另一部门作出决定');
+  if (handoff.status === 'pending_origin_review' && !isOrigin) throw httpError(403, '当前应由归口部门审核候选关系');
+  if (handoff.status !== 'pending_origin_review' && !isCounterparty) throw httpError(403, '当前应由外部门审核承接范围或补充结果');
+  const body = req.body || {};
+  if (!['approved', 'returned', 'rejected', 'not_required'].includes(text(body.decision))) {
+    throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'decision', message: '部门决定无效' }] });
+  }
+  if (!text(body.decision_basis)) {
+    throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'decision_basis', message: '决定依据不能为空' }] });
+  }
+  const finalResponsiblePersonId = isOrigin
+    ? handoff.origin_final_responsible_person_id
+    : handoff.counterparty_final_responsible_person_id;
+  if (!finalResponsiblePersonId) throw httpError(409, '部门尚未配置最终责任人，不能记录部门决定');
+  res.json(await repo.recordHandoffDepartmentDecision(handoff, {
+    id: currentDepartmentId,
+    name: currentDepartment.name,
+    final_responsible_person_id: Number(finalResponsiblePersonId)
+  }, body, actor));
+}));
+
+router.post('/cross-dept-handoffs/:id/structure-gate', requireAuth, (req, res) => runAction(res, async () => {
+  const roleCodes = await requireCurrentRole(req, 'mdm_lead');
+  const repo = await repository();
+  const handoff = await repo.getHandoffContext(req.params.id);
+  const department = await currentDepartmentIdentity(req);
+  const actor = handoffActor(req, roleCodes, department, 'mdm_lead');
+  await assertHandoffParticipant(repo, handoff, actor);
+  if (!['pending_structure_gate', 'returned', 'escalated'].includes(text(handoff.status))) {
+    throw httpError(409, '当前承接状态不能执行结构卡口');
+  }
+  const action = text(req.body && req.body.action) || 'confirmed';
+  if (!['confirmed', 'returned', 'escalated'].includes(action)) {
+    throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'action', message: '结构卡口结论无效' }] });
+  }
+  res.json(await repo.runHandoffStructureGate(handoff, { ...(req.body || {}), action }, actor));
 }));
 
 router.post('/drafts/:id/forms', requireAuth, (req, res) => runAction(res, async () => {
@@ -3684,5 +5996,10 @@ router.ensureProcessDesignEvidenceStatusSchema = ensureProcessDesignEvidenceStat
 router.ensureProcessDesignFormStructureSchema = ensureProcessDesignFormStructureSchema;
 router.ensureProcessDesignStepTransitionSchema = ensureProcessDesignStepTransitionSchema;
 router.assertWorkRoleBindingsSupported = assertWorkRoleBindingsSupported;
+router.getProcessDesignRepository = repository;
+router.currentProcessDesignRoleCodes = currentRoleCodes;
+router.currentProcessDesignDepartment = currentDepartmentIdentity;
+router.processDesignHandoffActor = handoffActor;
+router.assertProcessDesignHandoffParticipant = assertHandoffParticipant;
 
 module.exports = router;

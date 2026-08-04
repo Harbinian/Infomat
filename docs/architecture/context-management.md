@@ -11,7 +11,7 @@
 | 执行规则 | 规定 Codex 怎么开始任务、怎么判断边界、怎么交付 | `AGENTS.md`、`CODEX.md` |
 | 仓库边界 | 规定仓库放什么、不放什么、各目录怎么改 | `REPOSITORY_BOUNDARY.md`、`DIRECTORY_OWNERSHIP.md` |
 | 主线关系 | 规定组织真源、流程输入基线、PMO、MDM、脚本之间的数据流 | `MAINLINE_MAP.md` |
-| 机器合同 | 规定脚本、模型输出、平台承接之间的结构化数据合同 | `docs/contracts/` |
+| 机器可读校验规则 | 规定脚本、模型输出和平台承接必须遵守的数据结构 | `docs/contracts/` |
 | 资料真源 | 当前可维护的业务资料入口 | `docs/organization/`、`docs/norms/`、`pmo/*.md` |
 | 展示副本 | 由真源或脚本生成给人看的页面和 JSON | `pmo/procedure-management/dashboard.html`、`docs/company-sankey-data.json`、`pmo/tasks.json` |
 | 历史追溯 | 历史方案、历史计划、审计记录 | `docs/superpowers/`、`docs/reports/`、`docs/archives/` |
@@ -36,7 +36,7 @@
 - 部门到域映射以 `docs/organization/组织架构和部门职责.md` 为准。
 - 流程输入基线以 `docs/norms/{部门}部门-能力-流程-系统映射关系.md` 为准。
 - 流程地图驾驶舱是展示副本，不手工维护内嵌 JSON。
-- `docs/contracts/` 只定义可校验的数据合同，例如文档结构化输出 schema；合同不替代流程输入基线或组织真源。
+- `docs/contracts/` 只定义机器可读的校验规则，例如文档结构化输出结构规则；这些规则不替代流程输入基线或组织真源。
 - PMO 任务数据以 `pmo/信息化项目_计划管控真源.md`、`pmo/信息化项目_WBS结构真源.md` 和配套 PMO 真源为准。
 - MDM 平台当前是后续承接应用，不反向覆盖 `docs/norms/` 或 PMO 真源。
 
@@ -66,6 +66,7 @@
 
 - `apps/mdm-platform/`
 - `apps/structured-output-service/`
+- `apps/structure-assistant/`
 - `apps/weekly-action-service/`
 - `pmo/`
 - `pmo/procedure-management/`

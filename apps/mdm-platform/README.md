@@ -7,6 +7,10 @@
 - [MDM 平台角色化使用手册](docs/role-based-usage-guide.md)
 - [权限与RACI说明](docs/Permission-RACI.md)
 - [RBAC/RACI迁移手册](docs/RBAC-RACI-Migration-Runbook.md)
+- [单流程治理JSON、承接与冲突接口](docs/Cross-Department-Handoff-API-Contract.md)
+- [流程草稿、承接与冲突数据库结构](docs/Cross-Department-Handoff-DB-Schema.md)
+- [流程治理统一入口迁移手册](docs/Cross-Department-Handoff-Migration-Runbook.md)
+- [跨部门承接闭环测试说明](docs/Cross-Department-Handoff-Test-Plan.md)
 - [产品需求](PRD.md)
 - [技术规格](Tech-Spec.md)
 
@@ -29,7 +33,7 @@
 
 3000是内部治理平台，不提供自助注册、批量开户或RBAC导入。普通账号只能由MDM系统管理员手工创建、授权和启用。
 
-- 模型版本：`rbac-raci-v2-2026-07-30`
+- 模型版本：`rbac-raci-v3-2026-07-31`
 - 唯一身份链路：`person -> user_accounts -> person_roles`
 - 固定角色：`admin`、`mdm_lead`、`department_contact`、`department_mdm_reviewer`、`data_conflict_handler`、`data_quality_auditor`、`decision_group`
 - 固定角色、权限包和RACI只读，不提供自定义角色或权限矩阵编辑。
@@ -38,6 +42,23 @@
 - 正式流程工作角色`WR-*`、岗位、人员身份和MDM工作角色互不替代。
 
 旧`submitter`、`owner`、`reviewer`、`it_lead`、`project_lead`、`workgroup_lead`、`business_contact`、`data_quality`以及其他非固定角色在迁移后只保留历史，不再产生有效权限。
+
+## 流程治理统一入口与3001格式适配
+
+- 3001继续作为独立、无状态的单流程编制工具运行。MDM不停止、不代管、不远程读取3001，只接收用户选择的v1/v2文件。
+- MDM顶部只保留一个“流程治理”入口，内部只显示“流程编制、跨部门承接待办、承接冲突待办”。
+- “流程编制”直接显示MDM本地的3001式工作台，包含文字编制、条目侧栏、稳定排序、结构化学习评分和跨职能流程图。MDM复用相同v2结构规则，但不通过浏览器调用3001服务。
+- 部门主对接人可以新建、导入、保存草稿和提交审核；管理员只能打开已有草稿查看。导出备份不替代保存草稿。
+- MDM兼容`process-governance-v1`和`process-governance-v2`，服务端统一规范化、保存和导出为v2；3001源文件不被修改。
+- `process_design_drafts.process_content_json`是完整流程JSON真源。保存必须携带`expected_revision`，并发不一致返回`409 DRAFT_REVISION_CONFLICT`。
+- `POST /api/process-design/import-structured-output/preview`只返回摘要、承接候选、治理提示和内容哈希，不写数据库。
+- `POST /api/process-design/import-structured-output/approve`仅允许归口部门`department_mdm_reviewer`执行，并在单一MySQL事务中写入流程草稿、承接投影、参与关系、事件和导入审计。
+- `admin`对治理材料只读，执行审核导入、承接补充、部门决定或结构卡口时返回403。
+- 前置输入和后续承接统一保存在`process_design_cross_dept_handoffs`；待办直接按承接状态、角色、部门和参与关系生成，不再建立“待确认问题”第二份业务事实。
+- 承接详情使用固定故事链，不显示推测进度百分比。部门普通退回只回到上一责任步骤；明确拒绝或结构卡口提请争议处理时创建承接冲突。
+- 相同流程与内容版本重复导入返回既有对象；内容变化保留旧修订和原决定，并重新进入审核。
+- 任何当前承接未`confirmed`或未按决定关闭为`closed_not_required`时，流程不得发布。
+- 固定角色模型为每个角色返回只读`visibleTabs`。创建账号、编辑账号和授权角色时显示多角色标签并集，但菜单可见性不替代服务端权限校验。
 
 ## 快速启动
 
@@ -102,6 +123,8 @@ npm run bootstrap:admin
 ```powershell
 npm run migrate:rbac-raci-v2:dry-run
 npm run migrate:rbac-raci-v2:apply
+npm run migrate:cross-dept-handoff-v2:dry-run
+npm run migrate:cross-dept-handoff-v2:apply
 ```
 
 迁移只自动保留现有受控`ADMIN001`管理员；其他账号停用，旧角色不自动映射。管理员必须依据权威名单逐项重新授权并启用。完整步骤见[迁移手册](docs/RBAC-RACI-Migration-Runbook.md)。
@@ -190,6 +213,8 @@ node scripts/audit-fixed-default-passwords.js
 ```bash
 npm run test:mainline
 npm run test:process-governance
+npm run test:process-governance-unified
+npm run migrate:process-governance-unified:dry-run
 npm run import:process-governance-mysql
 npm run smoke:process-governance-mysql
 ```
@@ -208,10 +233,10 @@ npm run smoke:process-governance-mysql
 - 平台通用版本和活动热力图已切换到 MySQL：`/api/versions` 通过 `auditMysqlRepository` 访问 `mdm_change_sets` 和 `mdm_version_log`；`/api/activity/heatmap` 从流程治理事件、映射审批历史、版本记录、术语、冲突和通用待办 MySQL 表汇总，不再读取 SQLite `change_set`、`version_log`、`terms`、`term_conflicts`、`field_conflicts` 或 `todos`。
 - `MDM_IDENTITY_READ_MODEL=mysql`是正式身份路径。登录、`/api/org/me`、账号生命周期、固定角色模型、角色工作台、流程治理、流程设计、数据地图、字段台账、术语、冲突、待办和发布检查均从`person/user_accounts/person_roles`读取当前身份。运行时不再从`users/user_roles`或SQLite人员接口补齐身份。
 - `/api/org/accounts`是唯一普通账号写入口。旧`/api/org/users*`写操作和`/api/import-rbac/*`批量写入返回`410 LEGACY_IDENTITY_API_RETIRED`；角色矩阵写操作返回`405 CORE_GOVERNANCE_MODEL_READ_ONLY`。
-- 当前前端主入口为统一问题池 `/api/process-governance/issue-pool/*`；旧输入基线问题复核 `/api/process-governance/input-baseline-review/*` 保留为导入、复核和过渡 API。问题识别批次通过 `npm run import:process-input-baseline-review -- --review-run artifacts/process-input-baseline-review/<run-id>` 导入 MySQL。统一问题池短期不新增数据库列，待确认结构化字段先放在 `process_governance_issue_points.evidence_json.document_structure`，包含结构化对象、目标结构块、目标字段、当前值、给用户的问题和允许动作。
-- 文档结构化输出位于 `流程治理 -> 文档结构化输出`，稳定地址为 `#/processGovernance?view=documentStructure`，在 `总览` 后、`待确认问题` 前。该页面在 `PROCESS_GOVERNANCE_READ_MODEL=mysql` 下使用 `/api/process-design/*` 的 MySQL 路由完成制度说明（制度编号、制度名称、拟发布版次、当前有效版次、依据类型、目的、范围和与已有制度/流程/表单的关系）、术语、流程与业务行为、跨部门承接、附表结构、证据、Markdown 草案、审核和发布；制度编号全公司唯一，版次由系统按 `A -> B -> ... -> Z -> AA` 自动生成，用户不能手填或跳号。编号输入后会立即校验：不存在时创建 A 版；已存在且本部门可维护时创建下一版次完整重写草稿；已有进行中草稿时打开原草稿。发布下一版次会把上一版标记为已替代，默认流程图谱和 A1 只展示当前有效版次。`/api/process-design/process-taxonomy` 从 MySQL 流程治理读模型 `process_mapping_records` 读取 L1 能力域和 L2 业务能力，并按当前用户本部门过滤。`process_mapping_records` 由 `docs/company-sankey-data.json` 的 `processMappings` 导入，必须先运行 `node scripts/parse-sankey-data.mjs` 生成快照，再运行 `import-process-governance-mysql.js` 刷新 MySQL。前端只允许在流程明细中级联选择本部门既有 L1/L2 组合，后端也会拒绝临时新增或跨部门套用的 L1/L2；流程编号由后端按 `PROCEDURE-{草稿ID}-{三位序号}` 自动生成，作为 `process_design_processes.process_code` 的唯一业务编号入库，前端只展示不手填，`L3` 只表示流程层级和名称。是否需要审批、是否跨部门和证据类型使用固定选项；字段类型从 `/api/process-design/field-types` 字典读取，默认含文本、长文本、数字、金额、日期、日期时间、枚举、布尔、部门、人员、文件编号、签名、图片、附件和二维码。发布不反向修改 `docs/norms/`。发布卡口以至少 1 条 `process_design_evidence.status='verified'` 为准，`maturity` 只作为前端完成度提示；草稿详情返回 `publishable` 供前端展示是否可发布。
-- 文档结构化输出页面支持导入 `apps/structured-output-service` 在 3001 端口导出的 `document-structured-output-v2` JSON。前端按钮为“导入结构化文件”，接口为 `POST /api/process-design/import-structured-output`。导入时 3000 只读取用户选择的 JSON 文件，不反向调用 3001 服务；结构化文件只带归口部门名称时，3000 会按 MDM 组织表解析部门 ID，再沿用 MDM 权限、部门范围、L1/L2 既有映射校验，以及 MDM 自己的制度草稿、流程、表单和字段编号生成规则。第一里程碑暂不持久化工作角色绑定：顶层 `work_role_bindings` 或 `structure_block_projection.work_role_bindings` 任一非空，都会在任何写入前返回 `422 WORK_ROLE_BINDINGS_UNSUPPORTED`；旧 v2 文件和两处均为空的文件保持原行为，禁止静默忽略。导入会保存多流程、`step_type=decision` 判断节点和 `step_transitions` 判断分支；`to_step_ref` 为空时保留为空流向并返回 warning，详情页只读展示“判断分支”。本轮 3000 不提供分支编辑器。导入证据默认仍需在 MDM 中核验后才能满足发布卡口。
-- 文档结构化输出前端按 9 个节点分步呈现：制度说明、流程与行为、术语、跨部门承接、附表结构、字段清单、提交审核、结构化预览、Markdown 草案。保存制度说明前会先校验制度编号、制度名称、依据类型、目的、范围，以及涉及其他部门时的部门枚举选择；部门枚举来自平台部门清单，可多选具体部门，并额外提供“全公司”选项表示包含所有部门。页面每次只显示当前节点，可编辑制度结构草稿支持删除，已提交、审核中或已发布草稿显示不可删除原因。拟发布版次、当前有效版次和发布后处理是系统生成信息，前端用信息块展示，不作为可填写输入框。流程、业务行为和术语支持列表编辑、取消编辑、删除或作废，不把所有录入表单铺在同一页。附表结构采用“表单 -> 主表/可选明细表 -> 字段”：表单必须关联未作废业务行为；表单编号由后端按 `FM-{制度编号}-{版次}-{三位序号}` 生成；主表始终存在但只维护主表名称和主表字段；明细表需要用户先创建，最多 1 个，可连带删除明细字段；字段编号由后端按 `...-M-001` 或 `...-D-001` 生成，编辑页面不手填，字段支持删除和同表内上下调整顺序。归档规则拆成归档位置、留存周期、归档责任部门和归档责任角色，位置为“部门自行保存 / 资料室”，周期为“1年 / 3年 / 10年 / 永久”，责任角色来自所选部门花名册任岗。历史版次和进行中草稿分开展示；历史版次根据当前输入的制度编号通过 `/api/process-design/summary?document_no=...` 读取；B/C 等后续版次只带出制度编号、制度名称和拟发布版次，不复制旧版流程、行为、附表和证据。
+- 流程治理正式前端入口为`#/processGovernance`，默认进入流程编制。旧“文档结构化输出、待确认问题、流程图谱、证据来源、映射工作、治理闭环”不再提供前端入口；原表和旧接口暂留作只读历史，不作为新业务写入口。
+- 流程编制使用`public/process-governance-editor/`中的MDM本地工作台。页面按“基本信息、目的与范围、术语定义、流程步骤、表单与记录、导出检查”编制，并提供条目侧栏、稳定排序、结构评分和跨职能流程图；完整`process-governance-v2` JSON保存到MySQL，浏览器不持久化业务草稿。
+- 3001当前输出的v1/v2单流程文件均可导入MDM。导入时MDM只读取用户选择的文件，不反向调用3001服务；服务端重新校验结构、身份、部门范围和内容哈希，上传文件中的审核状态不作为凭证。
+- 跨部门承接待办和承接冲突待办均直接进入流程治理对应队列。角色工作台使用深链接跳转到承接或冲突对象；故事链展示处理人、部门、时间、依据及退回或冲突分支。
 - `npm run test:mainline` 用于验证“流程治理 -> 字段台账 -> 主数据对象 -> 权限 -> 导入导出”主线，详见 `docs/plans/流程治理字段台账主线稳定性检查.md`。
 - 不直接运行会删除共享数据库的旧式测试逻辑。
 - `seed-demo-data.js` 和 `setup-mdm-project-users.js` 需要显式环境变量才可运行。

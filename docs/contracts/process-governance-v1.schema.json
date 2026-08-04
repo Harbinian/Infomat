@@ -331,6 +331,9 @@
         "behavior_name": {
           "type": "string"
         },
+        "behavior_description": {
+          "type": "string"
+        },
         "current_actor_role": {
           "type": "string"
         },

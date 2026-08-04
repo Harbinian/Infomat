@@ -1,0 +1,460 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="1600"
+     height="2400"
+     viewBox="0 0 1600 2400"
+     role="img"
+     aria-labelledby="svg-title svg-desc"
+     font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, Source Han Sans SC, sans-serif">
+  <title id="svg-title">Organizational digital participation typology</title>
+  <desc id="svg-desc">A two-dimension, four-level matrix with sixteen types, growth paths, degradation paths, causes, and governance strategies.</desc>
+  <defs>
+    <linearGradient id="header-gradient" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#0c2f52"/>
+      <stop offset="100%" stop-color="#174f7d"/>
+    </linearGradient>
+    <linearGradient id="growth-gradient" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#edf8f1"/>
+      <stop offset="100%" stop-color="#f7fbf8"/>
+    </linearGradient>
+    <linearGradient id="degradation-gradient" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#fff3f2"/>
+      <stop offset="100%" stop-color="#fffafa"/>
+    </linearGradient>
+    <style><![CDATA[
+      .canvas-bg { fill: #eef2f6; }
+      .section-bg { fill: #ffffff; stroke: #d8e1eb; stroke-width: 2; }
+      .title-main { fill: #ffffff; font-size: 52px; font-weight: 700; letter-spacing: 2px; }
+      .title-sub { fill: #d7e6f3; font-size: 25px; font-weight: 400; }
+      .title-note { fill: #b9d1e4; font-size: 18px; font-weight: 400; }
+      .axis-chip { fill: #ffffff; fill-opacity: 0.1; stroke: #ffffff; stroke-opacity: 0.25; stroke-width: 1.5; }
+      .axis-chip-main { fill: #ffffff; font-size: 18px; font-weight: 700; }
+      .axis-chip-sub { fill: #d7e6f3; font-size: 17px; font-weight: 400; }
+      .section-title { fill: #173b61; font-size: 28px; font-weight: 700; }
+      .section-note { fill: #6b7d90; font-size: 17px; font-weight: 400; }
+      .column-header { fill: #e7f0fa; stroke: #bfd0e3; stroke-width: 1.5; }
+      .column-code { fill: #124a7a; font-size: 21px; font-weight: 700; }
+      .column-name { fill: #4f6780; font-size: 17px; font-weight: 400; }
+      .row-header { fill: #f2f4f7; stroke: #d4dce5; stroke-width: 1.5; }
+      .row-code { fill: #364b60; font-size: 27px; font-weight: 700; }
+      .row-name { fill: #66798c; font-size: 18px; font-weight: 500; }
+      .axis-caption { fill: #60758b; font-size: 18px; font-weight: 500; letter-spacing: 1px; }
+      .cell { stroke: #cbd7e4; stroke-width: 1.5; }
+      .cell-a1 { fill: #f8fbff; }
+      .cell-a2 { fill: #f2f7fd; }
+      .cell-a3 { fill: #ebf3fc; }
+      .cell-a4 { fill: #e4effb; }
+      .accent-a1 { fill: #99b9d5; }
+      .accent-a2 { fill: #6fa0c9; }
+      .accent-a3 { fill: #3e82b7; }
+      .accent-a4 { fill: #155f98; }
+      .cell-code { fill: #71859a; font-size: 14px; font-weight: 700; letter-spacing: 0.8px; }
+      .cell-name { fill: #173b61; font-size: 25px; font-weight: 700; }
+      .cell-feature { fill: #435b72; font-size: 18px; font-weight: 400; }
+      .growth-bg { fill: url(#growth-gradient); stroke: #b9dbc5; stroke-width: 2; }
+      .growth-title { fill: #176b3b; font-size: 28px; font-weight: 700; }
+      .growth-node { fill: #ffffff; stroke: #69aa7f; stroke-width: 2; }
+      .growth-node-text { fill: #205f38; font-size: 21px; font-weight: 700; }
+      .growth-arrow { stroke: #3b8f5a; stroke-width: 3; }
+      .growth-arrow-head { fill: #3b8f5a; }
+      .factor-label { fill: #47705a; font-size: 18px; font-weight: 700; }
+      .factor-text { fill: #315e45; font-size: 18px; font-weight: 500; }
+      .degradation-bg { fill: url(#degradation-gradient); stroke: #e5c0bc; stroke-width: 2; }
+      .degradation-title { fill: #a53b34; font-size: 28px; font-weight: 700; }
+      .degradation-card { fill: #ffffff; stroke: #e2c8c5; stroke-width: 1.5; }
+      .degradation-card-title { fill: #8f352f; font-size: 22px; font-weight: 700; }
+      .degradation-path { fill: #a53b34; font-size: 20px; font-weight: 700; }
+      .degradation-cause { fill: #604e4c; font-size: 17px; font-weight: 400; }
+      .degradation-line { stroke: #d27870; stroke-width: 2; }
+      .degradation-head { fill: #d27870; }
+      .causes-bg { fill: #ffffff; stroke: #d8e1eb; stroke-width: 2; }
+      .cause-card { fill: #f5f7fa; stroke: #dce3ea; stroke-width: 1.5; }
+      .cause-accent { fill: #8197ad; }
+      .cause-title { fill: #304b65; font-size: 19px; font-weight: 700; }
+      .cause-desc { fill: #5e7184; font-size: 17px; font-weight: 400; }
+      .governance-bg { fill: #ffffff; stroke: #d8e1eb; stroke-width: 2; }
+      .strategy-card { fill: #f8fafc; stroke: #d7e0e9; stroke-width: 1.5; }
+      .strategy-b1 { fill: #b84c45; }
+      .strategy-b2 { fill: #7f8c99; }
+      .strategy-b3 { fill: #3478aa; }
+      .strategy-b4 { fill: #3f8b5a; }
+      .strategy-title { fill: #253f58; font-size: 22px; font-weight: 700; }
+      .strategy-text { fill: #50667a; font-size: 18px; font-weight: 400; }
+      .purpose-bg { fill: #113653; }
+      .purpose-text { fill: #ffffff; font-size: 21px; font-weight: 500; }
+      .purpose-label { fill: #8fd0a6; font-size: 21px; font-weight: 700; }
+    ]]></style>
+  </defs>
+
+  <rect class="canvas-bg" x="0" y="0" width="1600" height="2400"/>
+
+  <g id="title-section">
+    <rect x="0" y="0" width="1600" height="220" fill="url(#header-gradient)"/>
+    <rect x="0" y="212" width="1600" height="8" fill="#2f8bca"/>
+    <text class="title-main" x="80" y="70">组织数字化参与度十六维分型模型</text>
+    <text class="title-sub" x="82" y="116">16种类型 + 成长路径 + 退化路径 + 成因与治理策略</text>
+    <text class="title-note" x="1515" y="69" text-anchor="end">PMO组织观察与差异化治理工具</text>
+
+    <rect class="axis-chip" x="80" y="146" width="665" height="46" rx="8"/>
+    <text class="axis-chip-main" x="102" y="176">横轴 A</text>
+    <text class="axis-chip-sub" x="190" y="176">结构化认知能力（A1 未理解 → A4 系统理解）</text>
+
+    <rect class="axis-chip" x="770" y="146" width="745" height="46" rx="8"/>
+    <text class="axis-chip-main" x="792" y="176">纵轴 B</text>
+    <text class="axis-chip-sub" x="880" y="176">组织参与意愿（B1 抵触防御 → B4 主动共建）</text>
+  </g>
+
+  <g id="matrix-section">
+    <rect class="section-bg" x="60" y="240" width="1480" height="880" rx="22"/>
+    <text class="section-title" x="90" y="292">核心十六维矩阵</text>
+    <text class="section-note" x="1510" y="292" text-anchor="end">二维 × 四阶：认知能力与参与意愿交叉形成16种类型</text>
+
+    <rect class="column-header" x="260" y="330" width="304" height="62" rx="9"/>
+    <text class="column-code" x="412" y="357" text-anchor="middle">A1</text>
+    <text class="column-name" x="412" y="380" text-anchor="middle">未理解</text>
+
+    <rect class="column-header" x="576" y="330" width="304" height="62" rx="9"/>
+    <text class="column-code" x="728" y="357" text-anchor="middle">A2</text>
+    <text class="column-name" x="728" y="380" text-anchor="middle">初步理解</text>
+
+    <rect class="column-header" x="892" y="330" width="304" height="62" rx="9"/>
+    <text class="column-code" x="1044" y="357" text-anchor="middle">A3</text>
+    <text class="column-name" x="1044" y="380" text-anchor="middle">基本掌握</text>
+
+    <rect class="column-header" x="1208" y="330" width="304" height="62" rx="9"/>
+    <text class="column-code" x="1360" y="357" text-anchor="middle">A4</text>
+    <text class="column-name" x="1360" y="380" text-anchor="middle">系统理解</text>
+
+    <text class="axis-caption" x="48" y="728" text-anchor="middle" transform="rotate(-90 48 728)">组织参与意愿　B1 → B4</text>
+
+    <rect class="row-header" x="85" y="415" width="155" height="140" rx="10"/>
+    <text class="row-code" x="162" y="475" text-anchor="middle">B4</text>
+    <text class="row-name" x="162" y="509" text-anchor="middle">主动共建</text>
+
+    <rect class="row-header" x="85" y="575" width="155" height="140" rx="10"/>
+    <text class="row-code" x="162" y="635" text-anchor="middle">B3</text>
+    <text class="row-name" x="162" y="669" text-anchor="middle">合作参与</text>
+
+    <rect class="row-header" x="85" y="735" width="155" height="140" rx="10"/>
+    <text class="row-code" x="162" y="795" text-anchor="middle">B2</text>
+    <text class="row-name" x="162" y="829" text-anchor="middle">被动接受</text>
+
+    <rect class="row-header" x="85" y="895" width="155" height="140" rx="10"/>
+    <text class="row-code" x="162" y="955" text-anchor="middle">B1</text>
+    <text class="row-name" x="162" y="989" text-anchor="middle">抵触防御</text>
+
+    <g id="cell-A1-B4">
+      <rect class="cell cell-a1" x="260" y="415" width="304" height="140" rx="10"/>
+      <rect class="accent-a1" x="260" y="415" width="304" height="6" rx="3"/>
+      <text class="cell-code" x="278" y="445">A1 + B4</text>
+      <text class="cell-name" x="278" y="481">④ 潜力骨干型</text>
+      <text class="cell-feature">
+        <tspan x="278" y="516">不了解方法，但有组织视角，</tspan>
+        <tspan x="278" y="541">愿意投入</tspan>
+      </text>
+    </g>
+
+    <g id="cell-A2-B4">
+      <rect class="cell cell-a2" x="576" y="415" width="304" height="140" rx="10"/>
+      <rect class="accent-a2" x="576" y="415" width="304" height="6" rx="3"/>
+      <text class="cell-code" x="594" y="445">A2 + B4</text>
+      <text class="cell-name" x="594" y="481">⑧ 转型推动型</text>
+      <text class="cell-feature" x="594" y="526">业务理解强，有改革意愿</text>
+    </g>
+
+    <g id="cell-A3-B4">
+      <rect class="cell cell-a3" x="892" y="415" width="304" height="140" rx="10"/>
+      <rect class="accent-a3" x="892" y="415" width="304" height="6" rx="3"/>
+      <text class="cell-code" x="910" y="445">A3 + B4</text>
+      <text class="cell-name" x="910" y="481">⑫ 数字化先锋型</text>
+      <text class="cell-feature" x="910" y="526">能力成熟，愿意推动落地</text>
+    </g>
+
+    <g id="cell-A4-B4">
+      <rect class="cell cell-a4" x="1208" y="415" width="304" height="140" rx="10"/>
+      <rect class="accent-a4" x="1208" y="415" width="304" height="6" rx="3"/>
+      <text class="cell-code" x="1226" y="445">A4 + B4</text>
+      <text class="cell-name" x="1226" y="481">⑯ 组织变革型</text>
+      <text class="cell-feature">
+        <tspan x="1226" y="516">理解流程是组织能力，</tspan>
+        <tspan x="1226" y="541">主动推动改革</tspan>
+      </text>
+    </g>
+
+    <g id="cell-A1-B3">
+      <rect class="cell cell-a1" x="260" y="575" width="304" height="140" rx="10"/>
+      <rect class="accent-a1" x="260" y="575" width="304" height="6" rx="3"/>
+      <text class="cell-code" x="278" y="605">A1 + B3</text>
+      <text class="cell-name" x="278" y="641">③ 学习成长型</text>
+      <text class="cell-feature" x="278" y="686">不会但愿意学习，积极投入</text>
+    </g>
+
+    <g id="cell-A2-B3">
+      <rect class="cell cell-a2" x="576" y="575" width="304" height="140" rx="10"/>
+      <rect class="accent-a2" x="576" y="575" width="304" height="6" rx="3"/>
+      <text class="cell-code" x="594" y="605">A2 + B3</text>
+      <text class="cell-name" x="594" y="641">⑦ 业务协同型</text>
+      <text class="cell-feature" x="594" y="686">可以合作，需要引导</text>
+    </g>
+
+    <g id="cell-A3-B3">
+      <rect class="cell cell-a3" x="892" y="575" width="304" height="140" rx="10"/>
+      <rect class="accent-a3" x="892" y="575" width="304" height="6" rx="3"/>
+      <text class="cell-code" x="910" y="605">A3 + B3</text>
+      <text class="cell-name" x="910" y="641">⑪ 业务伙伴型</text>
+      <text class="cell-feature" x="910" y="686">理解业务与系统连接</text>
+    </g>
+
+    <g id="cell-A4-B3">
+      <rect class="cell cell-a4" x="1208" y="575" width="304" height="140" rx="10"/>
+      <rect class="accent-a4" x="1208" y="575" width="304" height="6" rx="3"/>
+      <text class="cell-code" x="1226" y="605">A4 + B3</text>
+      <text class="cell-name" x="1226" y="641">⑮ 架构协同型</text>
+      <text class="cell-feature" x="1226" y="686">理解全局协同，参与治理</text>
+    </g>
+
+    <g id="cell-A1-B2">
+      <rect class="cell cell-a1" x="260" y="735" width="304" height="140" rx="10"/>
+      <rect class="accent-a1" x="260" y="735" width="304" height="6" rx="3"/>
+      <text class="cell-code" x="278" y="765">A1 + B2</text>
+      <text class="cell-name" x="278" y="801">② 机械执行型</text>
+      <text class="cell-feature" x="278" y="846">愿意执行，但不知道原因</text>
+    </g>
+
+    <g id="cell-A2-B2">
+      <rect class="cell cell-a2" x="576" y="735" width="304" height="140" rx="10"/>
+      <rect class="accent-a2" x="576" y="735" width="304" height="6" rx="3"/>
+      <text class="cell-code" x="594" y="765">A2 + B2</text>
+      <text class="cell-name" x="594" y="801">⑥ 任务完成型</text>
+      <text class="cell-feature" x="594" y="846">按要求完成，关注自身任务</text>
+    </g>
+
+    <g id="cell-A3-B2">
+      <rect class="cell cell-a3" x="892" y="735" width="304" height="140" rx="10"/>
+      <rect class="accent-a3" x="892" y="735" width="304" height="6" rx="3"/>
+      <text class="cell-code" x="910" y="765">A3 + B2</text>
+      <text class="cell-name" x="910" y="801">⑩ 流程执行型</text>
+      <text class="cell-feature" x="910" y="846">能力具备，但缺少主动性</text>
+    </g>
+
+    <g id="cell-A4-B2">
+      <rect class="cell cell-a4" x="1208" y="735" width="304" height="140" rx="10"/>
+      <rect class="accent-a4" x="1208" y="735" width="304" height="6" rx="3"/>
+      <text class="cell-code" x="1226" y="765">A4 + B2</text>
+      <text class="cell-name" x="1226" y="801">⑭ 资源等待型</text>
+      <text class="cell-feature">
+        <tspan x="1226" y="836">认可方向，但等待资源</tspan>
+        <tspan x="1226" y="861">和时机</tspan>
+      </text>
+    </g>
+
+    <g id="cell-A1-B1">
+      <rect class="cell cell-a1" x="260" y="895" width="304" height="140" rx="10"/>
+      <rect class="accent-a1" x="260" y="895" width="304" height="6" rx="3"/>
+      <text class="cell-code" x="278" y="925">A1 + B1</text>
+      <text class="cell-name" x="278" y="961">① 迷雾防御型</text>
+      <text class="cell-feature" x="278" y="1006">不知道，也不愿进入新方式</text>
+    </g>
+
+    <g id="cell-A2-B1">
+      <rect class="cell cell-a2" x="576" y="895" width="304" height="140" rx="10"/>
+      <rect class="accent-a2" x="576" y="895" width="304" height="6" rx="3"/>
+      <text class="cell-code" x="594" y="925">A2 + B1</text>
+      <text class="cell-name" x="594" y="961">⑤ 经验守护型</text>
+      <text class="cell-feature" x="594" y="1006">知道业务，但维护历史经验</text>
+    </g>
+
+    <g id="cell-A3-B1">
+      <rect class="cell cell-a3" x="892" y="895" width="304" height="140" rx="10"/>
+      <rect class="accent-a3" x="892" y="895" width="304" height="6" rx="3"/>
+      <text class="cell-code" x="910" y="925">A3 + B1</text>
+      <text class="cell-name" x="910" y="961">⑨ 边界博弈型</text>
+      <text class="cell-feature" x="910" y="1006">看得懂规则，但关注责任边界</text>
+    </g>
+
+    <g id="cell-A4-B1">
+      <rect class="cell cell-a4" x="1208" y="895" width="304" height="140" rx="10"/>
+      <rect class="accent-a4" x="1208" y="895" width="304" height="6" rx="3"/>
+      <text class="cell-code" x="1226" y="925">A4 + B1</text>
+      <text class="cell-name" x="1226" y="961">⑬ 战略防守型</text>
+      <text class="cell-feature">
+        <tspan x="1226" y="996">理解影响，并利用规则</tspan>
+        <tspan x="1226" y="1021">保护权力边界</tspan>
+      </text>
+    </g>
+
+    <line x1="260" y1="1080" x2="1490" y2="1080" stroke="#7f9db8" stroke-width="2"/>
+    <polygon points="1510,1080 1488,1069 1488,1091" fill="#7f9db8"/>
+    <text class="axis-caption" x="885" y="1105" text-anchor="middle">结构化认知能力　A1 → A4</text>
+  </g>
+
+  <g id="growth-section">
+    <rect class="growth-bg" x="60" y="1140" width="1480" height="250" rx="22"/>
+    <text class="growth-title" x="90" y="1186">成长路径（理想演化方向）</text>
+    <text class="section-note" x="1510" y="1186" text-anchor="end">清晰目标　｜　简单方法　｜　正向反馈　｜　价值体现　｜　组织激励</text>
+
+    <rect class="growth-node" x="100" y="1210" width="190" height="72" rx="12"/>
+    <text class="growth-node-text" x="195" y="1254" text-anchor="middle">迷雾防御型</text>
+    <line class="growth-arrow" x1="300" y1="1246" x2="328" y2="1246"/>
+    <polygon class="growth-arrow-head" points="340,1246 326,1238 326,1254"/>
+
+    <rect class="growth-node" x="342" y="1210" width="190" height="72" rx="12"/>
+    <text class="growth-node-text" x="437" y="1254" text-anchor="middle">机械执行型</text>
+    <line class="growth-arrow" x1="542" y1="1246" x2="570" y2="1246"/>
+    <polygon class="growth-arrow-head" points="582,1246 568,1238 568,1254"/>
+
+    <rect class="growth-node" x="584" y="1210" width="190" height="72" rx="12"/>
+    <text class="growth-node-text" x="679" y="1254" text-anchor="middle">任务完成型</text>
+    <line class="growth-arrow" x1="784" y1="1246" x2="812" y2="1246"/>
+    <polygon class="growth-arrow-head" points="824,1246 810,1238 810,1254"/>
+
+    <rect class="growth-node" x="826" y="1210" width="190" height="72" rx="12"/>
+    <text class="growth-node-text" x="921" y="1254" text-anchor="middle">业务伙伴型</text>
+    <line class="growth-arrow" x1="1026" y1="1246" x2="1054" y2="1246"/>
+    <polygon class="growth-arrow-head" points="1066,1246 1052,1238 1052,1254"/>
+
+    <rect class="growth-node" x="1068" y="1210" width="190" height="72" rx="12"/>
+    <text class="growth-node-text" x="1163" y="1254" text-anchor="middle">架构协同型</text>
+    <line class="growth-arrow" x1="1268" y1="1246" x2="1296" y2="1246"/>
+    <polygon class="growth-arrow-head" points="1308,1246 1294,1238 1294,1254"/>
+
+    <rect class="growth-node" x="1310" y="1210" width="190" height="72" rx="12"/>
+    <text class="growth-node-text" x="1405" y="1254" text-anchor="middle">组织变革型</text>
+
+    <text class="factor-label" x="100" y="1344">关键成功因素</text>
+    <text class="factor-text" x="260" y="1344">清晰目标　｜　简单方法　｜　正向反馈　｜　价值体现　｜　组织激励</text>
+  </g>
+
+  <g id="degradation-section">
+    <rect class="degradation-bg" x="60" y="1410" width="1480" height="330" rx="22"/>
+    <text class="degradation-title" x="90" y="1454">退化路径（组织常见倒退）</text>
+    <text class="section-note" x="1510" y="1454" text-anchor="end">能力退化　｜　意愿退化　｜　双重退化</text>
+
+    <rect class="degradation-card" x="85" y="1478" width="455" height="232" rx="14"/>
+    <rect x="85" y="1478" width="8" height="232" rx="4" fill="#bf5b53"/>
+    <text class="degradation-card-title" x="112" y="1518">能力退化</text>
+    <text class="degradation-path" x="312" y="1518" text-anchor="middle">A4 → A3 → A2 → A1</text>
+    <line x1="112" y1="1538" x2="515" y2="1538" stroke="#ead4d1" stroke-width="1.5"/>
+    <text class="degradation-cause" x="112" y="1580">• 人员流失</text>
+    <text class="degradation-cause" x="302" y="1580">• 知识未沉淀</text>
+    <text class="degradation-cause" x="112" y="1622">• 工具替代思考</text>
+    <text class="degradation-cause" x="302" y="1622">• 模型复杂度过高</text>
+
+    <rect class="degradation-card" x="573" y="1478" width="455" height="232" rx="14"/>
+    <rect x="573" y="1478" width="8" height="232" rx="4" fill="#bf5b53"/>
+    <text class="degradation-card-title" x="600" y="1518">意愿退化</text>
+    <text class="degradation-path" x="800" y="1518" text-anchor="middle">B4 → B3 → B2 → B1</text>
+    <line x1="600" y1="1538" x2="1003" y2="1538" stroke="#ead4d1" stroke-width="1.5"/>
+    <text class="degradation-cause" x="600" y="1580">• 利益受损</text>
+    <text class="degradation-cause" x="790" y="1580">• 责任暴露</text>
+    <text class="degradation-cause" x="600" y="1622">• 权力强化</text>
+    <text class="degradation-cause" x="790" y="1622">• 收益不可见</text>
+
+    <rect class="degradation-card" x="1061" y="1478" width="455" height="232" rx="14"/>
+    <rect x="1061" y="1478" width="8" height="232" rx="4" fill="#bf5b53"/>
+    <text class="degradation-card-title" x="1088" y="1518">双重退化</text>
+    <text class="degradation-path" x="1148" y="1548" text-anchor="middle">A4+B4</text>
+    <line class="degradation-line" x1="1148" y1="1556" x2="1148" y2="1564"/>
+    <polygon class="degradation-head" points="1148,1574 1141,1562 1155,1562"/>
+    <text class="degradation-path" x="1148" y="1595" text-anchor="middle">A3+B2</text>
+    <line class="degradation-line" x1="1148" y1="1603" x2="1148" y2="1611"/>
+    <polygon class="degradation-head" points="1148,1621 1141,1609 1155,1609"/>
+    <text class="degradation-path" x="1148" y="1642" text-anchor="middle">A2+B1</text>
+    <line class="degradation-line" x1="1148" y1="1650" x2="1148" y2="1658"/>
+    <polygon class="degradation-head" points="1148,1668 1141,1656 1155,1656"/>
+    <text class="degradation-path" x="1148" y="1695" text-anchor="middle">A1+B1</text>
+    <text class="degradation-cause" x="1250" y="1566">• 项目失去可信度</text>
+    <text class="degradation-cause" x="1250" y="1612">• 高层信号变化</text>
+    <text class="degradation-cause" x="1250" y="1658">• 长期没有收益反馈</text>
+  </g>
+
+  <g id="causes-section">
+    <rect class="causes-bg" x="60" y="1760" width="1480" height="250" rx="22"/>
+    <text class="section-title" x="90" y="1805">退化成因</text>
+    <text class="section-note" x="1510" y="1805" text-anchor="end">人员与组织　｜　利益与权力　｜　项目与管理　｜　方法与工具　｜　环境与战略</text>
+
+    <rect class="cause-card" x="80" y="1830" width="278" height="150" rx="12"/>
+    <rect class="cause-accent" x="80" y="1830" width="278" height="6" rx="3"/>
+    <text class="cause-title" x="219" y="1872" text-anchor="middle">人员与组织因素</text>
+    <text class="cause-desc" text-anchor="middle">
+      <tspan x="219" y="1912">人员流失导致知识</tspan>
+      <tspan x="219" y="1938">重新隐性化。</tspan>
+    </text>
+
+    <rect class="cause-card" x="374" y="1830" width="278" height="150" rx="12"/>
+    <rect class="cause-accent" x="374" y="1830" width="278" height="6" rx="3"/>
+    <text class="cause-title" x="513" y="1872" text-anchor="middle">利益与权力因素</text>
+    <text class="cause-desc" text-anchor="middle">
+      <tspan x="513" y="1912">透明化改变既有</tspan>
+      <tspan x="513" y="1938">利益结构。</tspan>
+    </text>
+
+    <rect class="cause-card" x="668" y="1830" width="278" height="150" rx="12"/>
+    <rect class="cause-accent" x="668" y="1830" width="278" height="6" rx="3"/>
+    <text class="cause-title" x="807" y="1872" text-anchor="middle">项目与管理因素</text>
+    <text class="cause-desc" text-anchor="middle">
+      <tspan x="807" y="1912">目标变化、资源不足、</tspan>
+      <tspan x="807" y="1938">推进失衡。</tspan>
+    </text>
+
+    <rect class="cause-card" x="962" y="1830" width="278" height="150" rx="12"/>
+    <rect class="cause-accent" x="962" y="1830" width="278" height="6" rx="3"/>
+    <text class="cause-title" x="1101" y="1872" text-anchor="middle">方法与工具因素</text>
+    <text class="cause-desc" text-anchor="middle">
+      <tspan x="1101" y="1912">工具复杂超过组织</tspan>
+      <tspan x="1101" y="1938">承载能力。</tspan>
+    </text>
+
+    <rect class="cause-card" x="1256" y="1830" width="278" height="150" rx="12"/>
+    <rect class="cause-accent" x="1256" y="1830" width="278" height="6" rx="3"/>
+    <text class="cause-title" x="1395" y="1872" text-anchor="middle">环境与战略因素</text>
+    <text class="cause-desc" text-anchor="middle">
+      <tspan x="1395" y="1912">战略调整导致</tspan>
+      <tspan x="1395" y="1938">优先级下降。</tspan>
+    </text>
+  </g>
+
+  <g id="governance-section">
+    <rect class="governance-bg" x="60" y="2030" width="1480" height="280" rx="22"/>
+    <text class="section-title" x="90" y="2075">治理策略</text>
+    <text class="section-note" x="1510" y="2075" text-anchor="end">防御型（B1）　｜　被动型（B2）　｜　合作型（B3）　｜　共建型（B4）</text>
+
+    <rect class="strategy-card" x="80" y="2102" width="350" height="178" rx="12"/>
+    <rect class="strategy-b1" x="80" y="2102" width="8" height="178" rx="4"/>
+    <text class="strategy-title" x="108" y="2140">防御型（B1）</text>
+    <text class="strategy-text" x="108" y="2176">• 降低风险感知</text>
+    <text class="strategy-text" x="270" y="2176">• 建立信任</text>
+    <text class="strategy-text" x="108" y="2215">• 明确边界</text>
+    <text class="strategy-text" x="270" y="2215">• 高层治理介入</text>
+
+    <rect class="strategy-card" x="446" y="2102" width="350" height="178" rx="12"/>
+    <rect class="strategy-b2" x="446" y="2102" width="8" height="178" rx="4"/>
+    <text class="strategy-title" x="474" y="2140">被动型（B2）</text>
+    <text class="strategy-text" x="474" y="2176">• 简化工具</text>
+    <text class="strategy-text" x="628" y="2176">• 明确目标</text>
+    <text class="strategy-text" x="474" y="2215">• 分阶段交付</text>
+    <text class="strategy-text" x="628" y="2215">• 快速反馈</text>
+
+    <rect class="strategy-card" x="812" y="2102" width="350" height="178" rx="12"/>
+    <rect class="strategy-b3" x="812" y="2102" width="8" height="178" rx="4"/>
+    <text class="strategy-title" x="840" y="2140">合作型（B3）</text>
+    <text class="strategy-text" x="840" y="2178">• 能力培养</text>
+    <text class="strategy-text" x="840" y="2217">• 跨部门协同</text>
+    <text class="strategy-text" x="1000" y="2217">• 共建流程</text>
+
+    <rect class="strategy-card" x="1178" y="2102" width="350" height="178" rx="12"/>
+    <rect class="strategy-b4" x="1178" y="2102" width="8" height="178" rx="4"/>
+    <text class="strategy-title" x="1206" y="2140">共建型（B4）</text>
+    <text class="strategy-text" x="1206" y="2178">• 授权赋能</text>
+    <text class="strategy-text" x="1206" y="2217">• 打造示范</text>
+    <text class="strategy-text" x="1360" y="2217">• 参与企业级治理</text>
+  </g>
+
+  <g id="purpose-section">
+    <rect class="purpose-bg" x="0" y="2330" width="1600" height="70"/>
+    <text x="800" y="2358" text-anchor="middle">
+      <tspan class="purpose-label">核心用途：</tspan>
+      <tspan class="purpose-text">观察企业数字化转型过程中，不同部门面对结构化、透明化和责任明确化时的行为变化，</tspan>
+    </text>
+    <text class="purpose-text" x="800" y="2387" text-anchor="middle">并指导PMO采取差异化治理策略。</text>
+  </g>
+</svg>

@@ -92,11 +92,13 @@
 - 不得把临时调试代码、临时账号、临时密码或本地数据提交为正式代码。
 - 涉及 RBAC 时，优先使用 `server/auth.js` 中已有的 `requireAuth`、`requirePermission`、`requireAnyPermission`、`applyFieldConstraints` 和 `server/access.js` 的范围校验能力，不得在路由中按角色名称放行，也不得为管理员增加业务写入旁路。
 - 正式身份链路固定为 `person -> user_accounts -> person_roles`。`users/user_roles`、`users.role`、`requireRole` 和 SQLite 人员接口只允许保留为隔离测试或明确的只读兼容，不得参与正式运行授权。
-- 固定治理模型版本、七个MDM工作角色、十九项权限和RACI由 `server/roleDefinitions.js` 维护，并由测试固化。管理页面只能读取，不得新增自定义角色、角色继承、通配权限或权限矩阵编辑。
+- 固定治理模型版本`rbac-raci-v3-2026-07-31`、七个MDM工作角色、十九项权限、角色可见标签和RACI由 `server/roleDefinitions.js` 维护，并由测试固化。管理页面只能读取，不得新增自定义角色、角色继承、通配权限、权限矩阵或角色可见标签编辑。
 - `admin` 只负责账号、角色授权和访问审计，并对治理材料全局只读；任何业务路由都不得因用户拥有 `admin` 角色而绕过审核、责任证据、数据范围或对象状态。
 - 部门角色只能授权到人员所属部门。部门最终负责人只从 `departments.final_responsible_person_id` 读取，不得按姓名、岗位、职务或历史常量推测。
 - 账号、角色、部门、接口字段或状态变化必须与旧数据迁移一并处理。正式迁移入口、回滚和补偿步骤见 `docs/RBAC-RACI-Migration-Runbook.md`。
 - 涉及流程治理、字段台账、术语、冲突、导入导出、通知/待办时，必须说明是否影响现有状态流转或审批链路。
+- 流程治理前端只保留流程编制、跨部门承接待办和承接冲突待办三个工作区。完整`process-governance-v2` JSON是编制内容真源，承接和待办表是治理投影；草稿保存必须校验`expected_revision`。
+- 3001继续独立运行，MDM只适配用户选择的v1/v2文件并统一保存、导出v2。MDM改造不得停止、重绑或代管3001。
 - 前端修改应延续现有 `public/index.html` 的单文件 HTML/CSS/JS 结构；除非任务明确要求，不引入构建链或 UI 框架。
 - 导入/导出相关修改必须覆盖 Excel 模板、字段校验、错误提示和权限控制。
 

@@ -17,7 +17,7 @@
 
 根目录不应继续新增临时 YAML、截图、压缩包、解包目录或一次性调查文本。历史散放的根目录 PMO YAML 已归档到 `pmo/archive/page-snapshots/2026-06-05-playwright-yaml/`。原根目录 `temp_survey.txt` 已登记后迁入 `docs/HardwareResearch/06B厂房接入民机非密园区网需求调查表_抽取文本.txt`，后续同类基础设施调查材料应直接进入对应资料目录。
 
-目录级 `AGENTS.md` 只放在有独立真源、生成副作用、运行命令、验证口径或禁止事项的关键目录。当前目录级入口为 `apps/mdm-platform/`、`apps/structured-output-service/`、`apps/weekly-action-service/`、`pmo/`、`pmo/procedure-management/`、`pmo/gantt-react/`、`pmo/deliverables/`、`docs/norms/`、`docs/Demo/` 和 `scripts/`。纯报告、归档、样例和说明性架构目录默认使用 README。
+目录级 `AGENTS.md` 只放在有独立真源、生成副作用、运行命令、验证口径或禁止事项的关键目录。当前目录级入口为 `apps/mdm-platform/`、`apps/structured-output-service/`、`apps/structure-assistant/`、`apps/weekly-action-service/`、`pmo/`、`pmo/procedure-management/`、`pmo/gantt-react/`、`pmo/deliverables/`、`docs/norms/`、`docs/Demo/` 和 `scripts/`。纯报告、归档、样例和说明性架构目录默认使用 README。
 
 ## 2. 可运行系统
 
@@ -25,7 +25,8 @@
 |---|---|---|---|---|
 | `apps/` | 可运行应用集合 | 子目录 README | 新应用必须有独立 README、运行命令和数据边界 | 不放业务资料原件 |
 | `apps/mdm-platform/` | MDM 平台源码 | `package.json`、`server/`、`public/`、`scripts/` | 平台功能、平台测试、平台维护脚本在此修改 | 不放 PMO 甘特图、流程制度原文、历史方案 |
-| `apps/structured-output-service/` | 局域网单流程治理编制工具 | `package.json`、`server.js`、`public/`、`scripts/` | 默认监听`0.0.0.0:3001`供公司局域网用户直接访问；按 `docs/contracts/process-governance-v1.schema.json` 导出单流程未审核JSON；`document-structured-output-v2`只用于确定性解析和历史导入；可只读读取流程映射、花名册和 `docs/work-role-data.json` 做候选提示 | 不保存用户内容，不写回 `docs/norms/`、花名册或工作角色真源，不依赖DeepSeek、结构化填报助手或认证网关，不替代受控发布流程 |
+| `apps/structured-output-service/` | 局域网单流程治理编制工具 | `package.json`、`server.js`、`public/`、`scripts/` | 默认监听`0.0.0.0:3001`供公司局域网用户直接访问；按 `docs/contracts/process-governance-v2.schema.json` 导出单流程未审核JSON并兼容导入v1；`document-structured-output-v2`只用于确定性解析和历史导入；可只读读取流程映射、花名册和 `docs/work-role-data.json` 做候选提示 | 不保存用户内容，不写回 `docs/norms/`、花名册或工作角色真源，不依赖DeepSeek、MDM-AI助手或认证网关，不替代受控发布流程 |
+| `apps/structure-assistant/` | MDM-AI助手，当前承载独立AI结构化填报试点 | `package.json`、`server.js`、`public/`、`lib/`、`scripts/` | 集中提供登录、材料内存读取、DeepSeek填报对话、独立结构预审和版本保护；其可选网关只属于该试点，不是3001的用户入口或运行前置条件 | 不停止、重绑或代管3001；不保存业务内容，不复制Schema，不判断流程内容，不写入3000或`docs/norms/`，不提交密钥 |
 | `apps/weekly-action-service/` | PMO 周会行动项服务 | `package.json`、`server.js`、`public/`、`scripts/` | 提供 3002 周会行动项登记、跟踪、关闭证据和延期原因维护；默认写入 `artifacts/weekly-actions/` 运行台账 | 不写回 PMO Markdown 真源、`tasks.json` 或 MDM 数据库；不把浏览器本地保存作为台账 |
 | `apps/mdm-platform/server/` | MDM 后端实现 | Express 路由、MySQL 目标 schema 与历史 SQLite 待迁移实现 | 修改时同步平台测试 | 不直接依赖 PMO 页面内嵌数据 |
 | `apps/mdm-platform/public/` | MDM 前端 | 单文件前端和静态资源 | 仅放平台运行所需前端资源 | 不放 PMO 驾驶舱截图 |
@@ -41,7 +42,7 @@
 | `docs/` | 资料、说明、方案沉淀 | 子目录分工 | 文档按资产类型进入子目录 | 不放本地生成物 |
 | `docs/norms/` | 流程输入基线、制度/表单源文件材料、部门桑基图资产 | 部门映射 Markdown、制度/表单源文件 | 新增或修改流程输入基线后运行流程地图 parser；工作角色只写 confirmed 绑定并同步维护受控证据表 | 不放候选工作角色绑定、临时报告、截图、运行日志 |
 | `docs/organization/` | 组织架构、部门职责、人员资料、工作角色和项目治理角色映射真源 | `组织架构和部门职责.md`、`花名册.md`、`工作角色目录与岗位映射.md`、`信息化项目人员角色映射.md` | 部门到域映射变化必须先改这里；工作角色由行政人事部维护并映射花名册岗位；项目治理角色映射继续承接项目材料关系 | 不在页面、脚本或运行台账里另造部门、人员、工作角色或项目治理角色口径 |
-| `docs/contracts/` | 自动化校验合同 | 合同 README、JSON 合同 | 可修改校验规则和执行契约 | 不写业务流程正文，不替代流程输入基线或组织真源 |
+| `docs/contracts/` | 自动化校验规则 | 规则说明、JSON规则文件 | 可修改校验规则和执行约定 | 不写业务流程正文，不替代流程输入基线或组织真源 |
 | `docs/integration/` | 集成和主数据治理方案 | 方案文档 | 可沉淀接口、主数据、系统协同方案 | 不作为当前流程输入基线 |
 | `docs/samples/` | 最小样例 | 样例 README 或文件名 | 只保留可复现、可说明格式的样例 | 不堆放完整生成输出 |
 | `docs/reports/` | 审计、测试、稳定化报告 | 报告日期和主题 | 新增仓库审计、稳定性检查、阶段总结 | 不放当前执行基线或真源 |

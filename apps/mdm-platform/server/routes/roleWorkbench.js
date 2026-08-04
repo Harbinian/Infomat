@@ -29,6 +29,8 @@ const TODO_TYPE_LABELS = {
   process_quality: '流程治理质量问题',
   process_mapping_todo: '流程映射待办',
   input_baseline_issue: '输入基线待确认问题',
+  cross_dept_handoff: '跨部门承接待办',
+  handoff_conflict: '承接冲突待办',
   field_ledger_gap: '字段台账补全',
   gold_source_confirmation: '待确认黄金源确认',
   pmo_review_gate: 'PMO治理评审',
@@ -40,9 +42,11 @@ const TODO_TARGETS = {
   gold_source: '#/todos',
   terminology: '#/terms',
   conflict_resolution: '#/conflicts',
-  process_quality: '#/processGovernance?view=qualityCases',
-  process_mapping_todo: '#/processGovernance?view=mappingTodos',
-  input_baseline_issue: '#/processGovernance?view=inputBaselineReview',
+  process_quality: '#/processGovernance',
+  process_mapping_todo: '#/processGovernance',
+  input_baseline_issue: '#/processGovernance',
+  cross_dept_handoff: '#/processGovernance?workspace=handoffs',
+  handoff_conflict: '#/processGovernance?workspace=conflicts',
   field_ledger_gap: '#/todos',
   gold_source_confirmation: '#/todos',
   pmo_review_gate: '#/processGovernance?view=qualityCases',
@@ -219,7 +223,8 @@ function sqliteWorkbenchIdentity(req) {
       name: req.session.userName,
       role: req.session.userRole,
       departmentId: req.session.departmentId,
-      departmentName: department && department.name || null
+      departmentName: department && department.name || null,
+      personId: req.session.personId || req.session.userId
     }
   };
 }
@@ -255,7 +260,8 @@ async function mysqlWorkbenchIdentity(req) {
       name: payload.name || req.session.userName,
       role: payload.role || req.session.userRole,
       departmentId: payload.departmentId || req.session.departmentId || null,
-      departmentName: payload.departmentName || null
+      departmentName: payload.departmentName || null,
+      personId: payload.personId || req.session.personId || payload.id || req.session.userId
     }
   };
 }
@@ -878,6 +884,7 @@ function buildNextActions(workItems, ownedRoles) {
 }
 
 function canActOnWorkbenchItem(item, permSet) {
+  if (typeof item.canAct === 'boolean') return item.canAct;
   const type = item && item.type;
   if (type === 'escalated_conflict') return permSet.has('governance:decide-escalation');
   if (type === 'conflict_resolution') return permSet.has('governance:handle-assigned-conflict');
@@ -991,6 +998,70 @@ function buildSankey(activeRoles, contexts, workItems) {
   return { nodes: Array.from(nodes.values()), links: Array.from(links.values()) };
 }
 
+async function loadDirectProcessGovernanceWorkItems(identity) {
+  if (!useMysqlProcessGovernanceReadModel()) return [];
+  try {
+    const processDesignRoutes = require('./processDesignMysql');
+    const repo = await processDesignRoutes.getProcessDesignRepository();
+    const actor = {
+      userId: identity.user.id,
+      personId: identity.user.personId || identity.user.id,
+      departmentId: identity.user.departmentId,
+      departmentName: identity.user.departmentName,
+      roleCodes: identity.roleCodes
+    };
+    const [handoffs, conflicts] = await Promise.all([
+      repo.listHandoffQueue(actor, { limit: 100 }),
+      repo.listHandoffConflictQueue(actor, { limit: 100 })
+    ]);
+    const handoffItems = (handoffs.items || []).filter(item => item.can_act).map(item => ({
+      id: `cross-dept-handoff:${item.id}`,
+      type: 'cross_dept_handoff',
+      governanceType: 'cross_dept_handoff',
+      title: `跨部门承接：${item.process_name || item.document_no || item.handoff_ref}`,
+      roleHint: item.next_responsible_role,
+      urgency: item.status === 'returned' ? 'high' : 'medium',
+      target: `#/processGovernance?workspace=handoffs&handoff=${item.id}`,
+      actionLabel: '处理承接待办',
+      sample: `当前步骤：${item.current_stage && item.current_stage.name || item.status}。打开故事链后按当前责任步骤处理。`,
+      source: item.handoff_ref,
+      department: item.counterparty_department || item.origin_department,
+      currentStatus: item.status,
+      nextStep: item.current_stage && item.current_stage.name,
+      canAct: true,
+      sourceRoles: [item.next_responsible_role].filter(Boolean)
+    }));
+    const conflictItems = (conflicts.items || []).filter(item => item.can_act).map(item => ({
+      id: `handoff-conflict:${item.id}`,
+      type: 'handoff_conflict',
+      governanceType: 'handoff_conflict',
+      title: `承接冲突：${item.process_name || item.document_no || item.handoff_ref}`,
+      roleHint: item.action_role || (item.status === 'pending_assignment'
+        ? 'mdm_lead'
+        : item.status === 'pending_decision'
+          ? 'decision_group'
+          : item.status === 'pending_department_confirmation'
+            ? 'department_mdm_reviewer'
+            : 'data_conflict_handler'),
+      urgency: item.status === 'pending_decision' ? 'high' : 'medium',
+      target: `#/processGovernance?workspace=conflicts&conflict=${item.id}`,
+      actionLabel: '处理承接冲突',
+      sample: '查看双方立场、证据和协调方案，再按当前角色完成分派、协调、部门确认或项目决策。',
+      source: item.handoff_ref,
+      department: item.counterparty_department || item.origin_department,
+      currentStatus: item.status,
+      nextStep: item.status,
+      canAct: true
+    }));
+    return [...handoffItems, ...conflictItems];
+  } catch (error) {
+    if (process.env.MDM_DB_QUIET !== '1') {
+      console.warn(`direct process governance work items unavailable: ${error.message}`);
+    }
+    return [];
+  }
+}
+
 router.get('/', requireAuth, (req, res) => {
   return runAsyncAction(res, async () => {
     const mode = req.query.mode === 'all' ? 'all' : 'todo';
@@ -1004,17 +1075,18 @@ router.get('/', requireAuth, (req, res) => {
     const currentDepartmentName = identity.user.departmentName;
     const cacheKey = workbenchResponseCacheKey({ mode, identity, roleCodes, permSet });
     const body = await getOrBuildWorkbenchResponse(cacheKey, async () => {
-      const [todos, qualityFindings, mappingTodos, inputBaselineIssues, escalated] = await Promise.all([
+      const [todos, qualityFindings, mappingTodos, inputBaselineIssues, escalated, directProcessGovernance] = await Promise.all([
         Promise.resolve().then(() => loadTodos(req, canViewAll)),
         loadProcessQualityFindingsAsync(req, canViewAll, currentDepartmentName),
         loadProcessMappingTodosAsync(req, canViewAll, currentDepartmentName),
         loadInputBaselineReviewIssuesAsync(canViewAll, currentDepartmentName),
-        Promise.resolve().then(() => loadEscalatedConflicts(canDecideEscalated))
+        Promise.resolve().then(() => loadEscalatedConflicts(canDecideEscalated)),
+        loadDirectProcessGovernanceWorkItems(identity)
       ]);
       const activeRoles = ownedRoles;
       const pmoReviewGates = pmoReviewGateWorkItems(roleCodes, currentDepartmentName);
       const visibleWorkItems = normalizeWorkItems(
-        [...escalated, ...inputBaselineIssues, ...qualityFindings, ...mappingTodos, ...todos, ...pmoReviewGates],
+        [...directProcessGovernance, ...escalated, ...inputBaselineIssues, ...qualityFindings, ...mappingTodos, ...todos, ...pmoReviewGates],
         { department: currentDepartmentName }
       );
       const pendingWorkItems = visibleWorkItems.filter(item => canActOnWorkbenchItem(item, permSet));
@@ -1048,6 +1120,8 @@ router.get('/', requireAuth, (req, res) => {
             goldSourceConfirmations: pendingWorkItems.filter(item => item.governanceType === 'gold_source_confirmation').length,
             processQuality: pendingWorkItems.filter(item => item.governanceType === 'process_quality').length,
             pmoReviewGates: pmoReviewGates.length,
+            crossDepartmentHandoffs: directProcessGovernance.filter(item => item.type === 'cross_dept_handoff').length,
+            handoffConflicts: directProcessGovernance.filter(item => item.type === 'handoff_conflict').length,
             overdue: pendingWorkItems.filter(item => item.overdue).length
           }
         },

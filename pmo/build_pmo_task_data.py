@@ -12,6 +12,8 @@ PLAN_SOURCE_MD = "信息化项目_计划管控真源.md"
 WBS_SOURCE_MD = "信息化项目_WBS结构真源.md"
 WORK_BALANCE_MD = "信息化项目_工作平衡.md"
 WORK_PRINCIPLES_MD = "信息化项目_工作开展原则.md"
+COLLABORATION_RULES_MD = "信息化项目_协同工作规则.md"
+DEPARTMENT_CONTACT_ROSTER_MD = "信息化项目_部门主备对接人名单.md"
 EXECUTION_STANDARD_MD = "信息化项目_执行标准真源.md"
 
 BASE_FIELD_MAP = [
@@ -423,6 +425,16 @@ def build_source_manifest(tasks, plan_data):
             "role": "工作开展原则",
             "path": WORK_PRINCIPLES_MD,
             "purpose": "维护 PMO 推进原则、协同边界、阶段确认和闭环规则",
+        },
+        {
+            "role": "协同工作规则",
+            "path": COLLABORATION_RULES_MD,
+            "purpose": "维护部门主备岗、会议、行动项、调整、升级和完成确认规则",
+        },
+        {
+            "role": "部门主备对接人名单",
+            "path": DEPARTMENT_CONTACT_ROSTER_MD,
+            "purpose": "维护各部门负责人、主对接人和备岗人员的当前名单",
         },
         {
             "role": "执行标准真源",

@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MDM-AI助手</title>
+  <link rel="stylesheet" href="/styles.css?v=20260729-review-preview">
+</head>
+<body>
+  <div class="page-shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">信息化项目组 · 四人试点</p>
+        <h1>MDM-AI助手</h1>
+        <p class="subtitle">直接对话梳理流程，右侧同步形成结构化结果；AI不判断流程内容是否正确。</p>
+      </div>
+      <div class="topbar-meta" id="topbarMeta" hidden>
+        <span class="version-pill" id="versionPill">版本读取中</span>
+        <span id="currentUser"></span>
+        <button class="button ghost" id="logoutButton" type="button">退出</button>
+      </div>
+    </header>
+
+    <div class="global-message" id="globalMessage" role="status" hidden></div>
+    <section class="version-alert" id="versionAlert" hidden>
+      <div>
+        <strong>版本已更新或系统进入维护状态</strong>
+        <p id="versionAlertText">请先下载当前草稿，再刷新页面。</p>
+      </div>
+      <div class="button-row">
+        <button class="button secondary" id="versionDownloadButton" type="button">下载当前草稿</button>
+        <button class="button primary" id="versionRefreshButton" type="button">刷新页面</button>
+      </div>
+    </section>
+
+    <main>
+      <section class="login-card" id="loginView">
+        <div>
+          <p class="section-kicker">集中部署</p>
+          <h2>登录后开始填报</h2>
+          <p>用户电脑不需要安装、复制或更新Infomat仓库，也不会保存接口密钥。</p>
+        </div>
+        <form id="loginForm">
+          <label>
+            用户名
+            <input id="usernameInput" name="username" autocomplete="username" required>
+          </label>
+          <label>
+            密码
+            <input id="passwordInput" name="password" type="password" autocomplete="current-password" required>
+          </label>
+          <button class="button primary wide" type="submit">登录</button>
+        </form>
+        <p class="boundary-note">输入内容会发送至DeepSeek云端API。本工具不是完全本地化模型。</p>
+      </section>
+
+      <section id="appView" hidden>
+        <nav class="tabs" aria-label="功能导航">
+          <button class="tab active" data-view="fill" type="button">对话填报</button>
+          <button class="tab" data-view="review" type="button">独立结构预审</button>
+          <button class="tab" data-view="admin" id="adminTab" type="button" hidden>试点管理</button>
+          <button class="button ghost tool-link" id="openStructuredToolButton" type="button">打开结构化工具</button>
+        </nav>
+
+        <section class="view-panel" id="fillView">
+          <div class="fill-layout">
+            <div class="main-column">
+              <section class="card conversation-card">
+                <div class="card-heading">
+                  <div>
+                    <p class="section-kicker">对话填报</p>
+                    <h2>说说这条流程是怎么发生的</h2>
+                  </div>
+                </div>
+                <p class="conversation-intro">
+                  不用先准备完整材料。AI每轮只追问一个主问题，并沿着每项业务行为继续核对执行角色、表单或记录、数据项及其来源和去向。
+                </p>
+                <div class="chat-window" id="chatMessages" aria-live="polite"></div>
+                <div class="composer">
+                  <label for="userMessageInput">回复AI</label>
+                  <textarea id="userMessageInput" rows="5" placeholder="例如：我想梳理费用报销流程。员工提交申请后，由部门负责人审核……"></textarea>
+                  <div class="composer-meta">
+                    <label class="compact-check">
+                      <input type="checkbox" id="safeInputCheck">
+                      我输入的是已授权、已脱敏的信息
+                    </label>
+                    <span>Ctrl＋Enter发送</span>
+                  </div>
+                  <div class="button-row space-between">
+                    <button class="button secondary" id="resetFillButton" type="button">开始新对话</button>
+                    <button class="button primary" id="sendTurnButton" type="button">发送</button>
+                  </div>
+                </div>
+
+                <details class="supplement-panel">
+                  <summary>
+                    <span>补充材料（可选）</span>
+                    <span class="count-badge" id="materialCount">0份文字材料</span>
+                  </summary>
+                  <div class="supplement-content">
+                    <div class="draft-json-import">
+                      <div>
+                        <strong>继续编辑已有3001格式JSON</strong>
+                        <p>
+                          可导入结构化工具导出的部分完成JSON。导入后，该文件成为当前草稿，AI从已有内容继续逐项追问；JSON不会作为文字材料重复发送。
+                        </p>
+                        <span class="draft-json-status" id="fillJsonStatus">尚未导入JSON草稿</span>
+                      </div>
+                      <label class="inline-file prominent">
+                        选择JSON草稿
+                        <input id="fillJsonInput" type="file" accept=".json,application/json">
+                      </label>
+                    </div>
+                    <p>
+                      对话说不清时，还可以补充经授权、已脱敏的文字材料。没有JSON或文字材料也可以继续对话。
+                    </p>
+                    <div class="source-grid">
+                      <label class="file-box">
+                        <span>上传文字材料</span>
+                        <small>仅限.docx、.txt、.md；不处理扫描件、图片和OCR</small>
+                        <input id="sourceFileInput" type="file" accept=".docx,.txt,.md">
+                      </label>
+                      <div>
+                        <label for="pasteSourceInput">粘贴补充说明</label>
+                        <textarea id="pasteSourceInput" rows="5" placeholder="粘贴经授权、已脱敏的文字"></textarea>
+                        <button class="button secondary" id="addPasteButton" type="button">加入本次对话</button>
+                      </div>
+                    </div>
+                    <ul class="material-list" id="materialList"></ul>
+                  </div>
+                </details>
+              </section>
+            </div>
+
+            <aside class="side-column">
+              <section class="card sticky-card preview-card">
+                <div class="card-heading">
+                  <div>
+                    <p class="section-kicker">同步形成</p>
+                    <h2>结构化输出预览</h2>
+                  </div>
+                  <span class="validation-badge" id="fillValidationBadge">待检查</span>
+                </div>
+                <div class="structured-preview" id="structuredPreview" aria-live="polite"></div>
+                <div class="preview-actions">
+                  <p>下载结果仍是未审核文件，后续需要另开独立结构预审。</p>
+                  <button class="button primary" id="downloadDraftButton" type="button">下载未经独立预审的JSON</button>
+                </div>
+                <details class="structure-progress">
+                  <summary>查看结构完成情况</summary>
+                  <div id="structureChecklist"></div>
+                  <details>
+                    <summary>查看本轮字段处置</summary>
+                    <ul class="status-list" id="fieldStatusList"></ul>
+                  </details>
+                </details>
+              </section>
+              <section class="card balance-card">
+                <span>本人DeepSeek余额</span>
+                <strong id="balanceValue">未查询</strong>
+                <button class="text-button" id="refreshBalanceButton" type="button">刷新余额</button>
+              </section>
+            </aside>
+          </div>
+        </section>
+
+        <section class="view-panel" id="reviewView" hidden>
+          <div class="workflow-strip">
+            <span class="current">1 导入3001格式JSON</span>
+            <span>2 AI独立结构预审</span>
+            <span>3 处理问题并查看预览</span>
+            <span>4 下载3001格式JSON</span>
+          </div>
+          <section class="card">
+            <div class="card-heading">
+              <div>
+                <p class="section-kicker">独立上下文</p>
+                <h2>导入待审的3001格式JSON</h2>
+                <p>预审页面不读取填报对话，只检查当前文件。处理后的JSON仍使用3001当前格式。</p>
+              </div>
+              <label class="inline-file prominent">
+                选择3001格式JSON
+                <input id="reviewJsonInput" type="file" accept=".json">
+              </label>
+            </div>
+            <div class="review-file" id="reviewFileStatus">尚未选择文件</div>
+            <button class="button primary" id="runReviewButton" type="button" disabled>开始独立结构预审</button>
+          </section>
+
+          <div class="review-workspace" id="reviewWorkspace" hidden>
+            <section class="card review-issues-card" id="reviewResultCard">
+              <div class="card-heading">
+                <div>
+                  <p class="section-kicker">逐条确认预审问题处理方式</p>
+                  <h2>结构预审问题</h2>
+                </div>
+                <span class="validation-badge" id="reviewValidationBadge">待检查</span>
+              </div>
+              <p id="reviewSummary">文件已读取。开始独立结构预审后，这里会显示需要逐条处理的问题。</p>
+              <div class="issue-list" id="reviewIssues"></div>
+              <div class="review-downloads">
+                <p id="reviewCompletionText">开始独立结构预审并处理完全部问题后，可以下载。</p>
+                <div class="button-row">
+                  <button class="button secondary" id="downloadReviewCsvButton" type="button" disabled>下载问题处理记录</button>
+                  <button class="button primary" id="downloadReviewedJsonButton" type="button" disabled>下载预审后的3001格式JSON</button>
+                </div>
+              </div>
+            </section>
+
+            <aside class="card review-preview-card" id="reviewPreviewCard">
+              <div class="card-heading">
+                <div>
+                  <p class="section-kicker">当前待审文件</p>
+                  <h2>3001输出与流程图预览</h2>
+                </div>
+                <span class="validation-badge" id="reviewFormatBadge">process-governance-v1</span>
+              </div>
+              <p class="review-output-note">这里显示正在处理的同一份JSON。预审意见和处理记录不会写入3001格式JSON。</p>
+              <div class="review-preview-tabs" role="tablist" aria-label="预审文件预览方式">
+                <button class="review-preview-tab active" type="button" data-review-preview="structure" role="tab" aria-selected="true">结构化内容</button>
+                <button class="review-preview-tab" type="button" data-review-preview="diagram" role="tab" aria-selected="false">跨职能流程图</button>
+              </div>
+
+              <section id="reviewStructurePanel">
+                <div class="structured-preview review-structured-preview" id="reviewStructuredPreview" aria-live="polite"></div>
+                <details class="json-preview">
+                  <summary>查看3001格式JSON原文</summary>
+                  <pre id="reviewJsonPreview"></pre>
+                </details>
+              </section>
+
+              <section class="review-diagram-panel" id="reviewDiagramPanel" hidden>
+                <div class="review-diagram-toolbar">
+                  <div>
+                    <strong id="reviewDiagramTitle">未命名流程 · 跨职能流程图</strong>
+                    <p>图形只根据JSON中已经明确的业务行为和关系生成，不会推测箭头或修改JSON。</p>
+                  </div>
+                  <div class="button-row">
+                    <button class="button secondary" id="fitReviewDiagramButton" type="button">适应画布</button>
+                    <button class="button secondary" id="resetReviewDiagramButton" type="button">重置视图</button>
+                    <button class="button secondary" id="expandReviewDiagramButton" type="button">展开查看</button>
+                  </div>
+                </div>
+                <div class="review-diagram-legend" aria-label="跨职能流程图图例">
+                  <span>业务行为</span>
+                  <span>判断</span>
+                  <span>并行</span>
+                  <span>实线：本流程关系</span>
+                  <span>虚线：跨部门承接</span>
+                  <span>粗边框：内部流程调用</span>
+                </div>
+                <div class="diagram-notice" id="reviewDiagramViewportNotice" role="status" hidden>当前已聚焦流程开头，点击“适应画布”查看完整流程。</div>
+                <div class="review-diagram-empty" id="reviewDiagramEmpty" hidden>
+                  当前JSON还没有已命名的业务行为，因此暂时不能生成流程图。
+                </div>
+                <div class="review-diagram-canvas" id="reviewDiagramCanvas" role="img" aria-label="当前3001格式JSON的只读跨职能流程图"></div>
+                <div class="diagram-failure" id="reviewDiagramFailure" role="alert"></div>
+                <div class="review-diagram-warnings" id="reviewDiagramWarnings"></div>
+              </section>
+            </aside>
+          </div>
+        </section>
+
+        <section class="view-panel" id="adminView" hidden>
+          <section class="card">
+            <div class="card-heading">
+              <div>
+                <p class="section-kicker">张广懿使用</p>
+                <h2>集中发布与试点状态</h2>
+              </div>
+              <button class="button secondary" id="refreshAdminButton" type="button">刷新状态</button>
+            </div>
+            <div class="admin-grid" id="adminSummary"></div>
+            <div class="maintenance-control">
+              <label class="check-line">
+                <input type="checkbox" id="maintenanceToggle">
+                开启维护状态，阻止新的模型请求
+              </label>
+              <input id="maintenanceMessage" placeholder="维护提示，例如：正在发布新版本，请先下载草稿">
+              <button class="button primary" id="saveMaintenanceButton" type="button">保存维护状态</button>
+            </div>
+          </section>
+          <section class="card">
+            <h2>四个账号余额</h2>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>账号</th>
+                    <th>接口密钥</th>
+                    <th>余额</th>
+                    <th>状态</th>
+                  </tr>
+                </thead>
+                <tbody id="adminBalanceRows"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <script src="/assets/3001/cytoscape.min.js?v=20260729-review-preview" defer></script>
+  <script src="/assets/3001/process-diagram.js?v=20260729-review-preview" defer></script>
+  <script src="/app.js?v=20260729-review-preview" defer></script>
+</body>
+</html>

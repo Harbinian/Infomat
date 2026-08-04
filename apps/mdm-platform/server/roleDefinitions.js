@@ -1,4 +1,53 @@
-const ACCESS_MODEL_VERSION = 'rbac-raci-v2-2026-07-30';
+const ACCESS_MODEL_VERSION = 'rbac-raci-v3-2026-07-31';
+
+const VISIBLE_TABS = Object.freeze({
+  roleWorkbench: {
+    code: 'roleWorkbench',
+    name: '我的工作台',
+    access: 'read',
+    reason: '汇总当前账号全部有效角色的本人待办和责任入口'
+  },
+  roleGuide: {
+    code: 'roleGuide',
+    name: '角色与责任',
+    access: 'read',
+    reason: '固定角色模型向全部已登录人员公开'
+  },
+  processGovernance: {
+    code: 'processGovernance',
+    name: '流程治理',
+    access: 'role_scoped',
+    reason: '按角色、部门和参与关系查看流程编制、跨部门承接与承接冲突'
+  },
+  dataMap: {
+    code: 'dataMap',
+    name: '数据地图',
+    access: 'role_scoped',
+    reason: '按固定治理角色授予的数据范围查看'
+  },
+  conflicts: {
+    code: 'conflicts',
+    name: '数据与术语冲突',
+    access: 'role_scoped',
+    reason: '仅查看本人被分派或已升级的非承接类冲突'
+  },
+  quality: {
+    code: 'quality',
+    name: '数据质量',
+    access: 'role_scoped',
+    reason: '数据质量审计人形成审计发现，MDM工作组组长查看治理结果'
+  },
+  rbac: {
+    code: 'rbac',
+    name: '账号与授权',
+    access: 'read_or_manage',
+    reason: '管理员维护账号与授权，其他角色不显示该标签'
+  }
+});
+
+function visibleTabs(...codes) {
+  return codes.map(code => ({ ...VISIBLE_TABS[code] })).filter(tab => tab.code);
+}
 
 function perm(code, resource, action, description, options = {}) {
   return Object.assign([code, resource, action, description], {
@@ -146,7 +195,8 @@ const ROLE_GUIDES = [
       BASE_PERMISSIONS.identityAssignRole,
       BASE_PERMISSIONS.identityReadAudit,
       BASE_PERMISSIONS.governanceReadGlobal
-    ]
+    ],
+    visibleTabs: visibleTabs('roleWorkbench', 'roleGuide', 'processGovernance', 'dataMap', 'conflicts', 'quality', 'rbac')
   },
   {
     code: 'mdm_lead',
@@ -154,9 +204,9 @@ const ROLE_GUIDES = [
     group: 'mdm',
     description: '分派治理事项，检查结构、证据和责任链，并发布治理版本',
     goal: '在业务责任已经明确的前提下，使流程地图、数据地图和术语版本具备发布条件。',
-    firstEntry: { label: '治理工作台', target: '#/roleWorkbench' },
-    workflow: ['查看全局治理事项', '分派处理任务', '检查结构与证据', '确认责任链后发布'],
-    sample: 'MDM工作组组长发布数据地图前，检查所需部门决定、阻断问题和版本检查结果是否完整。',
+    firstEntry: { label: '跨部门承接待办', target: '#/processGovernance?workspace=handoffs' },
+    workflow: ['查看全局治理事项', '分派责任部门或冲突处理人', '执行MDM结构卡口', '确认责任链后发布'],
+    sample: 'MDM工作组组长在承接故事链中核对双方部门决定和实际承接内容，通过结构卡口后确认完成。',
     pitfall: 'MDM工作组组长不能代替部门负责人确认业务事实，也不能直接改写部门材料。',
     doneCriteria: '发布版本具备完整责任证据、结构检查结果和版本记录。',
     permissions: [
@@ -165,7 +215,8 @@ const ROLE_GUIDES = [
       BASE_PERMISSIONS.governanceStructureGate,
       BASE_PERMISSIONS.governancePublish,
       BASE_PERMISSIONS.governanceEscalateConflict
-    ]
+    ],
+    visibleTabs: visibleTabs('roleWorkbench', 'roleGuide', 'processGovernance', 'dataMap', 'conflicts', 'quality')
   },
   {
     code: 'department_contact',
@@ -173,16 +224,17 @@ const ROLE_GUIDES = [
     group: 'mdm',
     description: '起草、修改、提交和整改本部门治理材料',
     goal: '将本部门确认的流程、数据和术语事实整理为可审核材料。',
-    firstEntry: { label: '本部门治理事项', target: '#/processGovernance' },
-    workflow: ['补充本部门材料', '处理整改事项', '检查内容完整性', '提交部门审核'],
-    sample: '部门主对接人根据制度、表单和业务人员说明补充流程材料，再提交部门MDM审核员审核。',
+    firstEntry: { label: '流程编制', target: '#/processGovernance?workspace=editor' },
+    workflow: ['编制或导入单流程治理JSON', '补充本部门材料', '处理外部门承接内容待办', '提交部门审核'],
+    sample: '部门主对接人导入3001生成的单流程治理JSON，核对流程内容后保存草稿并提交本部门审核。',
     pitfall: '主对接人负责组织和整理，不能代替部门负责人作出最终业务决定。',
     doneCriteria: '本部门材料已提交，缺失信息和暂不能确认事项均有明确记录。',
     permissions: [
       BASE_PERMISSIONS.governanceReadDepartment,
       BASE_PERMISSIONS.governanceDraftDepartment,
       BASE_PERMISSIONS.governanceSubmitDepartment
-    ]
+    ],
+    visibleTabs: visibleTabs('roleWorkbench', 'roleGuide', 'processGovernance', 'dataMap')
   },
   {
     code: 'department_mdm_reviewer',
@@ -190,16 +242,17 @@ const ROLE_GUIDES = [
     group: 'mdm',
     description: '审核本部门材料，并记录部门负责人已经在线下作出的决定',
     goal: '保证部门材料符合要求，并使部门最终责任可以追溯。',
-    firstEntry: { label: '部门审核事项', target: '#/roleWorkbench' },
-    workflow: ['检查本部门材料', '退回或提交确认', '记录部门负责人决定', '核对跨部门确认'],
-    sample: '部门负责人在线下确认流程事实后，部门MDM审核员在3000记录决定、依据和决定时间。',
+    firstEntry: { label: '跨部门承接待办', target: '#/processGovernance?workspace=handoffs' },
+    workflow: ['审核本部门流程草稿', '确认承接范围', '审核实际承接内容', '记录部门负责人决定'],
+    sample: '部门负责人在线下确认承接范围后，部门MDM审核员在承接故事链中记录决定、依据和决定时间。',
     pitfall: '审核员只能记录已经作出的决定，不能把个人判断写成部门负责人决定。',
     doneCriteria: '审核结果、部门负责人、决定依据和记录人均可追溯。',
     permissions: [
       BASE_PERMISSIONS.governanceReadDepartment,
       BASE_PERMISSIONS.governanceReviewDepartment,
       BASE_PERMISSIONS.governanceRecordDepartmentDecision
-    ]
+    ],
+    visibleTabs: visibleTabs('roleWorkbench', 'roleGuide', 'processGovernance', 'dataMap')
   },
   {
     code: 'data_conflict_handler',
@@ -207,16 +260,17 @@ const ROLE_GUIDES = [
     group: 'mdm',
     description: '处理本人被明确分派的数据或术语冲突，并提请升级',
     goal: '形成可供相关部门确认或项目决策组判断的冲突证据。',
-    firstEntry: { label: '已分派冲突', target: '#/conflicts' },
-    workflow: ['查看被分派事项', '核对双方材料', '记录协调过程', '解决或提请升级'],
-    sample: '数据冲突处理人只查看本人被分派的冲突及相关上下文，并记录各部门意见和未决分歧。',
+    firstEntry: { label: '承接冲突待办', target: '#/processGovernance?workspace=conflicts' },
+    workflow: ['查看本人被分派的承接冲突', '记录双方立场和证据', '提出协调方案', '组织确认或提请项目决策'],
+    sample: '冲突处理人只查看本人被分派的承接冲突，记录双方立场、证据和协调方案，再等待双方审核员确认。',
     pitfall: '拥有冲突处理角色不代表可以查看或处理全部冲突。',
     doneCriteria: '冲突已有协调记录、部门确认结果或明确升级记录。',
     permissions: [
       BASE_PERMISSIONS.governanceReadAssignedContext,
       BASE_PERMISSIONS.governanceHandleAssignedConflict,
       BASE_PERMISSIONS.governanceEscalateConflict
-    ]
+    ],
+    visibleTabs: visibleTabs('roleWorkbench', 'roleGuide', 'processGovernance', 'conflicts')
   },
   {
     code: 'data_quality_auditor',
@@ -232,7 +286,8 @@ const ROLE_GUIDES = [
     permissions: [
       BASE_PERMISSIONS.governanceReadGlobal,
       BASE_PERMISSIONS.governanceQualityAudit
-    ]
+    ],
+    visibleTabs: visibleTabs('roleWorkbench', 'roleGuide', 'dataMap', 'quality')
   },
   {
     code: 'decision_group',
@@ -240,15 +295,16 @@ const ROLE_GUIDES = [
     group: 'mdm',
     description: '决定已经升级的重大跨部门争议',
     goal: '处理常规协调无法解决且已具备完整证据的重大争议。',
-    firstEntry: { label: '升级事项', target: '#/conflicts' },
-    workflow: ['查看已升级事项', '核对争议证据', '形成决定', '记录后续责任'],
-    sample: '项目决策组只处理已经升级的事项，并根据受影响部门意见、流程事实和数据证据形成决定。',
+    firstEntry: { label: '承接冲突待办', target: '#/processGovernance?workspace=conflicts' },
+    workflow: ['查看已升级承接冲突', '核对双方立场和协调方案', '选择规定的处理结论', '记录决定依据'],
+    sample: '项目决策组只处理已经升级的承接冲突，并在继续承接、无需承接或退回修订中选择处理结论。',
     pitfall: '项目决策组不处理日常编辑、部门审核、版本发布或账号管理。',
     doneCriteria: '升级事项已有决定、依据、影响范围和后续责任记录。',
     permissions: [
       BASE_PERMISSIONS.governanceReadEscalatedContext,
       BASE_PERMISSIONS.governanceDecideEscalation
-    ]
+    ],
+    visibleTabs: visibleTabs('roleWorkbench', 'roleGuide', 'processGovernance', 'conflicts')
   }
 ];
 
@@ -336,6 +392,46 @@ const RACI_ACTIVITIES = Object.freeze([
     requiredPermissions: ['governance:decide-escalation'],
     scopeRule: 'escalated_conflict_only',
     evidenceRule: '事项必须已经升级并具备争议证据'
+  },
+  {
+    activityCode: 'process.handoff.acceptance',
+    domain: 'process',
+    name: '跨部门承接确认',
+    responsible: ['department_contact', 'department_mdm_reviewer', 'mdm_lead'],
+    accountable: ['origin_department_final_responsible_person', 'counterparty_department_final_responsible_person'],
+    consulted: ['business_expert'],
+    informed: ['admin'],
+    requiredPermissions: [
+      'governance:draft-department',
+      'governance:record-department-decision',
+      'governance:structure-gate'
+    ],
+    scopeRule: 'handoff_participant_and_department',
+    evidenceRule: '故事链必须保留步骤、处理人、部门、时间、依据和退回分支'
+  },
+  {
+    activityCode: 'process.handoff-conflict.coordinate',
+    domain: 'process',
+    name: '承接冲突协调',
+    responsible: ['data_conflict_handler'],
+    accountable: ['mdm_lead'],
+    consulted: ['origin_department_mdm_reviewer', 'counterparty_department_mdm_reviewer'],
+    informed: ['decision_group'],
+    requiredPermissions: ['governance:handle-assigned-conflict', 'governance:escalate-conflict'],
+    scopeRule: 'assigned_handoff_conflict_only',
+    evidenceRule: '双方立场、证据、协调方案和部门确认记录只追加保留'
+  },
+  {
+    activityCode: 'process.handoff-conflict.decision',
+    domain: 'process',
+    name: '承接冲突升级决策',
+    responsible: ['decision_group'],
+    accountable: ['decision_group'],
+    consulted: ['data_conflict_handler', 'affected_department_final_responsible_person'],
+    informed: ['mdm_lead', 'department_contact'],
+    requiredPermissions: ['governance:decide-escalation'],
+    scopeRule: 'escalated_handoff_conflict_only',
+    evidenceRule: '只能选择继续承接、认定无需承接或退回修订，并记录依据'
   },
   {
     activityCode: 'governance.version.publish',
@@ -431,7 +527,25 @@ function getAccessModel() {
       sample: role.sample,
       pitfall: role.pitfall,
       doneCriteria: role.doneCriteria,
-      permissions: (role.permissions || []).map(permission => permission.code)
+      permissions: (role.permissions || []).map(permission => permission.code),
+      visibleTabs: (role.visibleTabs || []).map(tab => ({ ...tab })),
+      raciResponsibilities: RACI_ACTIVITIES
+        .filter(activity => [
+          ...(activity.responsible || []),
+          ...(activity.accountable || []),
+          ...(activity.consulted || []),
+          ...(activity.informed || [])
+        ].includes(role.code))
+        .map(activity => ({
+          activityCode: activity.activityCode,
+          name: activity.name,
+          raci: {
+            responsible: (activity.responsible || []).includes(role.code),
+            accountable: (activity.accountable || []).includes(role.code),
+            consulted: (activity.consulted || []).includes(role.code),
+            informed: (activity.informed || []).includes(role.code)
+          }
+        }))
     })),
     permissions,
     activities: RACI_ACTIVITIES.map(activity => ({ ...activity }))
@@ -446,6 +560,7 @@ module.exports = {
   PROJECT_ROLE_DEFINITIONS,
   RACI_ACTIVITIES,
   ROLE_GUIDES,
+  VISIBLE_TABS,
   ensureProjectRoles,
   getAccessModel,
   permissionSetHas

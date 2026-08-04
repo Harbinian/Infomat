@@ -12,7 +12,7 @@
 
 ### `GET /api/rbac/model`
 
-返回模型版本、固定权限、七个角色、角色使用说明和八项RACI活动。
+返回模型版本、固定权限、七个角色、角色使用说明、每个角色的`visibleTabs`和十一项RACI活动。
 
 对`/api/rbac/model`发起POST、PUT、PATCH或DELETE时返回：
 

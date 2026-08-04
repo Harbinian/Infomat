@@ -52,7 +52,7 @@ MDM 平台保留为后续承接应用。除非用户明确要求进入 MDM 平�
 
 ## 3000 固定身份、RBAC 与 RACI
 
-3000当前治理模型版本为`rbac-raci-v2-2026-07-30`。正式身份链路固定为`person -> user_accounts -> person_roles`;运行时不得回退到`users/user_roles`或SQLite人员接口。
+3000当前治理模型版本为`rbac-raci-v3-2026-07-31`。正式身份链路固定为`person -> user_accounts -> person_roles`;运行时不得回退到`users/user_roles`或SQLite人员接口。流程治理顶部只保留一个入口，内部使用流程编制、跨部门承接待办和承接冲突待办三个工作区；3001继续独立运行，MDM只适配其v1/v2文件并统一保存、导出v2。
 
 - 普通账号只能由MDM系统管理员通过`/api/org/accounts`手工创建、授权和启用。禁止自助注册、批量开户和RBAC批量导入。
 - 固定角色、权限包和RACI由`apps/mdm-platform/server/roleDefinitions.js`及测试固化,管理页面只读。
@@ -69,6 +69,7 @@ MDM 平台保留为后续承接应用。除非用户明确要求进入 MDM 平�
 
 - `apps/mdm-platform/AGENTS.md`
 - `apps/structured-output-service/AGENTS.md`
+- `apps/structure-assistant/AGENTS.md`
 - `apps/weekly-action-service/AGENTS.md`
 - `pmo/AGENTS.md`
 - `pmo/procedure-management/AGENTS.md`
@@ -101,6 +102,14 @@ MDM / PMO 本地联动:
 ```powershell
 npm run start:infomat-services
 npm run smoke:infomat-services
+```
+
+AI结构化填报试点：
+
+```powershell
+npm run verify:structure-pilot
+npm run start:structure-pilot
+npm run smoke:structure-pilot
 ```
 
 MDM 代码变化按影响面选择:

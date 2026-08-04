@@ -1,15 +1,16 @@
 # pmo/scripts 说明
 
-> 状态：PMO 局部测试脚本目录  
+> 状态：PMO 局部脚本目录
 > 生效日期：2026-06-10  
-> 范围：PMO 页面、插件端点、交付物流程和前端写回相关 smoke 检查。
+> 范围：PMO 页面、插件端点、交付物流程、前端写回检查和 PMO 展示资产导出。
 
-本目录脚本只服务 PMO 应用和 PMO 局部页面。跨 `docs/`、`apps/` 和 PMO 的仓库级解析、注入、审计脚本应放在根目录 `scripts/`。
+本目录脚本只服务 PMO 应用、PMO 局部页面和 PMO 展示资产。跨 `docs/`、`apps/` 和 PMO 的仓库级解析、注入、审计脚本应放在根目录 `scripts/`。
 
 ## 当前脚本
 
 | 脚本 | 作用 |
 |---|---|
+| `export-organization-dynamics-png.mjs` | 读取组织数字化参与度模型 SVG，使用本机 Edge 或 Chrome 导出1600×2400 PNG；默认只写入被忽略的 `artifacts/` |
 | `smoke-deliverable-workflow.mjs` | 交付物工作流 smoke 检查 |
 | `smoke-frontmatter.mjs` | PMO 文档 frontmatter 检查 |
 | `smoke-hmr.mjs` | PMO 前端开发热更新相关 smoke 检查 |

@@ -5,6 +5,7 @@ const { mdmMysqlSchemaSql, splitSqlStatements } = require('../server/mysqlSchema
 const { seedDefaultTerminologyTermTypes } = require('../server/terminologyMysqlRepository');
 const { seedFixedAccessModel } = require('../server/rbacRaciMysqlMigration');
 const { ensureProcessGovernanceCloseGateSchema } = require('../server/processGovernanceMysqlRepository');
+const { applyCrossDeptHandoffV2 } = require('../server/crossDeptHandoffV2Migration');
 const {
   ensureProcessDesignEditionSchema,
   ensureProcessDesignEvidenceStatusSchema,
@@ -154,19 +155,21 @@ async function ensureDocumentStructuredOutputV2(pool) {
   if (!await constraintExists(pool, 'process_design_steps', 'fk_process_design_steps_process')) {
     await pool.execute('ALTER TABLE process_design_steps ADD CONSTRAINT fk_process_design_steps_process FOREIGN KEY (process_id) REFERENCES process_design_processes(id) ON DELETE CASCADE');
   }
-  await pool.execute('ALTER TABLE process_design_cross_dept_handoffs MODIFY target_process_name VARCHAR(255) NULL');
-  await pool.execute('ALTER TABLE process_design_cross_dept_handoffs MODIFY target_behavior_name VARCHAR(255) NULL');
-  await pool.execute("ALTER TABLE process_design_cross_dept_handoffs MODIFY status VARCHAR(32) NOT NULL DEFAULT 'pending_return'");
-  await pool.execute(`
-    UPDATE process_design_cross_dept_handoffs
-    SET status=CASE
-      WHEN target_process_name IS NOT NULL AND target_behavior_name IS NOT NULL THEN 'returned'
-      ELSE 'pending_return'
-    END
-    WHERE status NOT IN ('pending_return','returned','pending_review','confirmed')
-  `);
-  await dropCheckConstraints(pool, 'process_design_cross_dept_handoffs');
-  await pool.execute("ALTER TABLE process_design_cross_dept_handoffs ADD CONSTRAINT chk_process_design_handoff_status CHECK (status IN ('pending_return','returned','pending_review','confirmed'))");
+  if (!await columnExists(pool, 'process_design_cross_dept_handoffs', 'handoff_direction')) {
+    await pool.execute('ALTER TABLE process_design_cross_dept_handoffs MODIFY target_process_name VARCHAR(255) NULL');
+    await pool.execute('ALTER TABLE process_design_cross_dept_handoffs MODIFY target_behavior_name VARCHAR(255) NULL');
+    await pool.execute("ALTER TABLE process_design_cross_dept_handoffs MODIFY status VARCHAR(32) NOT NULL DEFAULT 'pending_return'");
+    await pool.execute(`
+      UPDATE process_design_cross_dept_handoffs
+      SET status=CASE
+        WHEN target_process_name IS NOT NULL AND target_behavior_name IS NOT NULL THEN 'returned'
+        ELSE 'pending_return'
+      END
+      WHERE status NOT IN ('pending_return','returned','pending_review','confirmed')
+    `);
+    await dropCheckConstraints(pool, 'process_design_cross_dept_handoffs');
+    await pool.execute("ALTER TABLE process_design_cross_dept_handoffs ADD CONSTRAINT chk_process_design_handoff_status CHECK (status IN ('pending_return','returned','pending_review','confirmed'))");
+  }
 }
 
 async function main() {
@@ -181,6 +184,7 @@ async function main() {
     await ensureProcessDesignEditionSchema(pool);
     await ensureProcessDesignEvidenceStatusSchema(pool);
     await ensureProcessDesignStepTransitionSchema(pool);
+    await applyCrossDeptHandoffV2(pool);
     await seedFixedAccessModel(pool);
     await seedDefaultTerminologyTermTypes(pool);
     for (const migrationKey of [
@@ -199,6 +203,7 @@ async function main() {
       '2026-07-01-document-structured-output-editing',
       '2026-07-01-process-design-evidence-status',
       '2026-07-07-process-design-step-transitions',
+      '2026-07-31-cross-dept-handoff-v2',
       '2026-07-30-rbac-raci-v2-model'
     ]) {
       await pool.execute(

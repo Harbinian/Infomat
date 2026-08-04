@@ -3,7 +3,7 @@
 Infomat 是航空复材制造领域的信息化资料与工具仓库，包含：
 
 - 资料与交付文档：业务流程、数据地图、制度体系文件、集成方案等
-- 可运行应用：MDM 平台、文档结构化输出辅助服务、PMO 周会行动项服务
+- 可运行应用：MDM 平台、文档结构化输出辅助服务、MDM-AI助手、PMO 周会行动项服务
 - 辅助工具与脚本：用于可视化、导入导出、文档生成与校验
 
 ## 仓库边界
@@ -23,13 +23,14 @@ Infomat 是航空复材制造领域的信息化资料与工具仓库，包含：
 - `apps/`：可运行应用
   - `apps/mdm-platform/`：MDM 平台（Express + MySQL 目标形态 + 原生前端；SQLite 仅作历史/待迁移实现说明）
   - `apps/structured-output-service/`：单流程治理编制工具（局域网 3001，按统一结构规则提供无状态编辑和结构化文件导入导出）
+  - `apps/structure-assistant/`：MDM-AI助手，当前为独立的四人内网浏览器试点（集中部署，调用DeepSeek云端API，单向读取3001公开结构规则；不是3001的访问入口或运行依赖）
   - `apps/weekly-action-service/`：PMO 周会行动项服务（本地 3002，保存每周例会行动项运行台账）
 - `docs/`：资料、说明、方案与沉淀
   - `docs/samples/`：必要样例（用于复现、格式示例与对齐）
   - `docs/superpowers/`：历史方案与计划（可能含旧路径，按仓库结构说明做替换）
   - `docs/norms/`：制度/表单源文件材料与部门流程输入基线（流程地图/数据地图）
   - `docs/organization/`：组织架构与部门职责（**部门→域映射的真源**）
-  - `docs/contracts/`：脚本和模型使用的机器合同，例如文档结构化输出标准 schema
+  - `docs/contracts/`：脚本和模型使用的机器可读校验规则，例如文档结构化输出结构规则
   - `pmo/procedure-management/dashboard.html`：桑基图数据内嵌于 `<script id="sankey-data">`，由 `scripts/parse-sankey-data.mjs` 直接注入
 - `pmo/`：项目管理工作室
   - `pmo/procedure-management/dashboard.html`：**流程地图驾驶舱**（单文件可双击打开，数据已内嵌于 `<script id="sankey-data">`）
@@ -51,7 +52,7 @@ Infomat 是航空复材制造领域的信息化资料与工具仓库，包含：
 ## 生成物与样例规则
 
 - 所有可再生成输出统一放到 `artifacts/`（或工具自定义输出目录），不得提交到仓库
-- 仅保留“必要样例”到 `docs/samples/`：用于说明输入输出格式、对齐契约、复现最小流程
+- 仅保留“必要样例”到 `docs/samples/`：用于说明输入输出格式、核对规则、复现最小流程
 - 禁止提交：浏览器 profile、抓取记录、临时解包目录、批量导出结果、含敏感信息的日志
 
 ## MDM 平台
@@ -94,7 +95,9 @@ npm run build:work-role-data
 npm run test:work-role-contract
 ```
 
-单流程治理编制工具在 [apps/structured-output-service](apps/structured-output-service/README.md)，默认监听`0.0.0.0:3001`，公司局域网用户通过`http://<服务器局域网IP>:3001`直接使用。该工具只在当前页面内存中编制一条流程，支持空白新建、历史JSON迁移、花名册岗位选择、主表和明细表填写、只读流程图预览及单流程JSON导入导出。页面不提供编制参考材料入口，不保存用户内容，不写回流程输入基线、花名册或工作角色真源，也不依赖DeepSeek、结构化填报助手或认证网关。
+单流程治理编制工具在 [apps/structured-output-service](apps/structured-output-service/README.md)，默认监听`0.0.0.0:3001`，公司局域网用户通过`http://<服务器局域网IP>:3001`直接使用。该工具只在当前页面内存中编制一条流程，支持空白新建、历史JSON迁移、花名册岗位选择、主表和明细表填写、只读流程图预览及单流程JSON导入导出。页面不提供编制参考材料入口，不保存用户内容，不写回流程输入基线、花名册或工作角色真源，也不依赖DeepSeek、MDM-AI助手或认证网关。
+
+MDM-AI助手在 [apps/structure-assistant](apps/structure-assistant/README.md)。它当前承载独立的四人内网结构化填报试点，由服务器集中部署，用户只使用浏览器；4个试点账号分别调用独立DeepSeek接口密钥。试点每次调用模型前后核对3001公开结构版本，不保存材料、对话、草稿或模型答复，也不自动写入3001或3000。启动或停止该试点不得影响3001，局域网用户使用3001无需经过该试点。
 
 PMO 周会行动项服务在 [apps/weekly-action-service](apps/weekly-action-service/README.md)，默认端口 `3002`。该服务用于登记和跟踪每周例会行动项、风险、问题、变更和责任池事项，数据保存到服务端本机运行台账；它不写回 PMO Markdown 真源、`tasks.json` 或 MDM 数据库。
 
