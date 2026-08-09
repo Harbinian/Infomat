@@ -10,11 +10,13 @@
 
 | 字段 | 作用 |
 |---|---|
-| `schema_version` | 当前固定为`process-governance-v2` |
-| `process_content_json` | 完整规范化v2 JSON |
+| `schema_version` | 当前固定为`process-governance-v3`；v1、v2内容迁移后统一更新为v3 |
+| `process_content_json` | 完整规范化v3 JSON |
 | `content_hash` | 规范化完整内容SHA-256 |
 | `revision_no` | 乐观并发修订号 |
 | `content_updated_by/at` | 最近内容更新人和时间 |
+
+`forms[].form_design_state`保存在`process_content_json`中，不另建表单状态列。纸质表单的主表字段和明细表字段继续保存在`forms[].areas[].items[]`；MDM不按明细分组创建物理数据库表。v1、v2迁移时只补`unspecified`，并重算`content_hash`。
 
 ## 3. 承接主表关键字段
 

@@ -107,7 +107,7 @@ function applyRestrictedPatch(input, operations) {
   }
   const result = clone(input);
   for (const operation of operations) applyOperation(result, operation);
-  if (result.schema_version !== 'process-governance-v1') {
+  if (result.schema_version !== input.schema_version) {
     throw new AppError(400, 'SCHEMA_VERSION_CHANGED', '模型不得改变结构版本。');
   }
   return result;

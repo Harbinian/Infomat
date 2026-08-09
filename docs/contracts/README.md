@@ -18,7 +18,8 @@
 | `dcm-bbm-contract.json` | `scripts/check-dept-domain-mapping.mjs` | `docs/organization/组织架构和部门职责.md`、`scripts/parse-sankey-data.mjs` | 只读校验输出 | `npm run test:dept-domain-mapping` | 校验部门到域映射来自组织真源且与规则文件一致 |
 | `document-structured-output.schema.json` | `scripts/test-document-structured-output-schema.mjs`、文档结构化输出导出/校验脚本 | `apps/structured-output-service/`、`apps/mdm-platform/`、`scripts/parse-sankey-data.mjs` | 只读校验输出 | `npm run test:document-structured-output-schema`、`npm run test:work-role-contract` | 统一制度、流程、行为、工作角色绑定、表单字段、证据、待确认问题和结构块投影的数据模型；工作角色正式目录仍以组织真源为准 |
 | `process-governance-v1.schema.json` | `apps/structured-output-service/`、`apps/mdm-platform/` | 历史3001单流程文件 | 规范化到当前版本的兼容输入 | `npm --prefix apps/structured-output-service test`、`npm --prefix apps/mdm-platform run test:process-design` | 只作为兼容导入规则；v1承接按后续承接迁移，源文件不修改 |
-| `process-governance-v2.schema.json` | `apps/structured-output-service/`、`apps/mdm-platform/` | 3001空白新建、v1兼容导入和历史v2结构化文件 | 单流程`process-governance-v2`未审核JSON | `npm --prefix apps/structured-output-service test`、`npm --prefix apps/mdm-platform run test:process-design` | 约束一份JSON只承载一个流程，并统一记录前置输入和后续承接的方向、本流程锚点、责任部门识别状态、传递内容及可选返回路径；不包含可信审核状态 |
+| `process-governance-v2.schema.json` | `apps/structured-output-service/`、`apps/mdm-platform/` | 历史v2单流程文件 | 规范化到v3的兼容输入 | `npm --prefix apps/structured-output-service test`、`npm --prefix apps/mdm-platform run test:process-design` | 保留v2承接结构，只作为兼容读取规则；源文件不修改 |
+| `process-governance-v3.schema.json` | `apps/structured-output-service/`、`apps/mdm-platform/`、`apps/structure-assistant/` | 3001空白新建、v1/v2兼容导入和v3文件 | 单流程`process-governance-v3`未审核JSON | `npm --prefix apps/structured-output-service test`、`npm --prefix apps/mdm-platform run test:process-design`、`npm --prefix apps/structure-assistant test` | 在v2基础上为每张表单增加`form_design_state`；字段仍只保存在`areas[].items[]`，主表和明细表归属仍由`area_type`表达，不生成物理数据库表或可信审核状态 |
 
 ## 2. 修改规则
 
@@ -38,11 +39,12 @@ npm run test:dept-domain-mapping
 npm run test:document-structured-output-schema
 ```
 
-5. 修改`process-governance-v1.schema.json`、`process-governance-v2.schema.json`、3001单流程导入导出映射或3000受控导入规范化逻辑后，运行：
+5. 修改任一`process-governance-v*.schema.json`、3001单流程导入导出映射、MDM受控导入规范化逻辑或AI助手结构读取逻辑后，运行：
 
 ```powershell
 npm --prefix apps/structured-output-service test
 npm --prefix apps/mdm-platform run test:process-design
+npm --prefix apps/structure-assistant test
 ```
 
 6. 规则文件可以表达检查要求，但不要在这里新增流程、部门职责或业务行为正文。

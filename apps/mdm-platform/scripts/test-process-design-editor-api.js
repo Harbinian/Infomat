@@ -28,12 +28,12 @@ async function main() {
   try {
     const schema = await request(baseUrl, '/api/process-design/editor/schema');
     assert.strictEqual(schema.status, 200);
-    assert.strictEqual(schema.body.properties.schema_version.const, 'process-governance-v2');
+    assert.strictEqual(schema.body.properties.schema_version.const, 'process-governance-v3');
 
-    const template = await request(baseUrl, '/api/process-design/editor/template?version=process-governance-v2');
+    const template = await request(baseUrl, '/api/process-design/editor/template?version=process-governance-v3');
     assert.strictEqual(template.status, 200);
-    assert.strictEqual(template.body.schema_version, 'process-governance-v2');
-    assert.strictEqual(template.body.data.schema_version, 'process-governance-v2');
+    assert.strictEqual(template.body.schema_version, 'process-governance-v3');
+    assert.strictEqual(template.body.data.schema_version, 'process-governance-v3');
 
     const valid = await request(baseUrl, '/api/process-design/editor/validate', {
       method: 'POST',

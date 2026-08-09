@@ -908,6 +908,65 @@
       min-width: 0;
     }
 
+    .form-state-badge {
+      display: inline-flex;
+      align-items: center;
+      margin-left: 6px;
+      padding: 2px 7px;
+      border-radius: 999px;
+      color: #5f4938;
+      background: #efe4cc;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .form-state-badge.current { color: #325a48; background: #dce9df; }
+    .form-state-badge.proposed { color: #33546e; background: #dce7ee; }
+    .form-state-badge.unspecified { color: #7a3e35; background: #f4ded7; }
+
+    .form-field-groups {
+      display: grid;
+      gap: 14px;
+      margin-top: 14px;
+    }
+
+    .form-field-group {
+      padding: 14px;
+      border: 1px solid #d5c7aa;
+      border-radius: 11px;
+      background: rgba(255, 253, 247, 0.88);
+    }
+
+    .form-field-group.unassigned {
+      border-color: #d3b2aa;
+      background: #fff7f2;
+    }
+
+    .form-field-group-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .form-field-list { display: grid; gap: 10px; }
+
+    .form-field-row {
+      padding: 12px;
+      border: 1px solid #dfd4bd;
+      border-radius: 9px;
+      background: #fffdf8;
+    }
+
+    .form-field-row .grid { margin-top: 10px; }
+
+    .form-primary-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
     .structure-tabs {
       display: flex;
       flex-wrap: wrap;
@@ -1421,7 +1480,7 @@
     <header class="hero">
       <div class="eyebrow">Infomat · MDM · 流程治理</div>
       <h1>单流程治理编制工作台</h1>
-      <p class="subtitle">使用与3001一致的编制方式整理一条流程。草稿保存到MDM，导入和导出统一使用 process-governance-v2。</p>
+    <p class="subtitle">使用与3001一致的编制方式整理一条流程。草稿保存到MDM，导入和导出统一使用 process-governance-v3。</p>
       <div class="actions">
         <button class="button primary" id="newProcessButton">新建流程</button>
         <select class="mdm-draft-picker" id="mdmDraftSelect" aria-label="MDM草稿"></select>
@@ -1488,7 +1547,8 @@
     ];
     const MATERIAL_TYPES = ['', '现有制度', '表单或记录', '现行业务操作说明', '会议或访谈', '其他参考材料'];
     const AREA_TYPES = ['', '基本信息', '明细清单'];
-    const EXPECTED_EXPORT_SCHEMA_VERSION = 'process-governance-v2';
+    const FORM_DESIGN_STATES = new Set(['unspecified', 'current_state', 'proposed_design']);
+    const EXPECTED_EXPORT_SCHEMA_VERSION = 'process-governance-v3';
     const EDITOR_SECTIONS = [
       { value: 'basic', label: '基本信息' },
       { value: 'profile', label: '目的与范围' },
@@ -1620,7 +1680,7 @@
     }
 
     async function fetchEmptyProcessDocument() {
-      const response = await fetch('/api/process-design/editor/template?version=process-governance-v2', { cache: 'no-store' });
+      const response = await fetch('/api/process-design/editor/template?version=process-governance-v3', { cache: 'no-store' });
       const result = await readJsonResponse(
         response,
         'MDM空白模板接口未返回结构化数据。请保持当前页面打开，待服务恢复后再次新建流程。'
@@ -1870,7 +1930,7 @@
       });
 
       const normalized = {
-        schema_version: 'process-governance-v2',
+        schema_version: 'process-governance-v3',
         export_meta: {
           package_ref: technicalRef(source.export_meta?.package_ref, 'package'),
           exported_at: Number.isNaN(Date.parse(source.export_meta?.exported_at))
@@ -1965,6 +2025,10 @@
           behavior_ref: mapBehaviorRef(form?.behavior_ref),
           form_name: text(form?.form_name),
           form_no: nullable(form?.form_no),
+          form_design_state: source.schema_version === 'process-governance-v3'
+            && FORM_DESIGN_STATES.has(form?.form_design_state)
+            ? form.form_design_state
+            : 'unspecified',
           areas: (Array.isArray(form?.areas) ? form.areas : []).map((area, areaIndex) => ({
             area_ref: technicalRef(area?.area_ref, `area${formIndex + 1}_${areaIndex + 1}`),
             area_type: AREA_TYPES.includes(area?.area_type) ? area.area_type : '',
@@ -2124,6 +2188,7 @@
               behavior_ref: stepRefMap.get(form.step_ref) || null,
               form_name: text(form.form_name),
               form_no: nullable(form.form_code),
+              form_design_state: 'unspecified',
               areas: tables.map((table, areaIndex) => ({
                 area_ref: technicalRef(table.table_ref, `area${formIndex + 1}_${areaIndex + 1}`),
                 area_type: table.table_kind === 'detail' ? '明细清单' : '基本信息',
@@ -2162,7 +2227,7 @@
         }
 
         const result = {
-          schema_version: 'process-governance-v2',
+          schema_version: 'process-governance-v3',
           export_meta: {
             package_ref: newRef('package'),
             exported_at: new Date().toISOString(),
@@ -2317,7 +2382,7 @@
       const knownValue = Boolean(normalizedValue && formItemTypes.includes(normalizedValue));
       const options = [{
         value: '',
-        label: formItemTypeLoadState === 'loading' ? '正在读取填写项类型' : '请选择填写项类型'
+        label: formItemTypeLoadState === 'loading' ? '正在读取数据类型' : '请选择数据类型'
       }].concat(formItemTypes.map(value => ({ value, label: value })));
       if (normalizedValue && !knownValue) {
         options.push({
@@ -2328,14 +2393,14 @@
         });
       }
       const unavailable = formItemTypeLoadState !== 'ready'
-        ? '<div class="inline-warning">填写项类型字典暂时不可用。工作台不会清除已有类型；字典恢复后再选择标准类型。</div>'
+        ? '<div class="inline-warning">数据类型字典暂时不可用。工作台不会清除已有类型；字典恢复后再选择标准类型。</div>'
         : '';
       const legacyWarning = formItemTypeLoadState === 'ready' && normalizedValue && !knownValue
         ? `<div class="inline-warning">当前导入值“${escapeHtml(normalizedValue)}”未被填写项类型字典收录。工作台会保留原值；如需修改，只能改选标准类型。</div>`
         : '';
       return `
         <div class="field">
-          <label>${escapeHtml('填写项类型')}</label>
+          <label>${escapeHtml('数据类型')}</label>
           <select
             data-bind="${escapeAttribute(pathKey)}"
             data-kind="text"
@@ -2344,6 +2409,49 @@
           <span class="hint">请从标准类型中选择，不允许自由填写。</span>
           ${legacyWarning}
           ${unavailable}
+        </div>`;
+    }
+
+    function formDesignStateMeta(value) {
+      if (value === 'current_state') return { label: '现状', className: 'current' };
+      if (value === 'proposed_design') return { label: '拟设计', className: 'proposed' };
+      return { label: '待确认', className: 'unspecified' };
+    }
+
+    function formDesignStateBadge(value) {
+      const meta = formDesignStateMeta(value);
+      return `<span class="form-state-badge ${meta.className}">${meta.label}</span>`;
+    }
+
+    function formItemAssignmentField(formIndex, areaIndex, itemIndex, item) {
+      const form = currentDocument().forms[formIndex];
+      const area = form.areas[areaIndex];
+      let detailNumber = 0;
+      const detailOptions = form.areas
+        .filter(candidate => candidate.area_type === '明细清单')
+        .map(candidate => {
+          detailNumber += 1;
+          return { value: candidate.area_ref, label: `${candidate.area_title || `明细表${detailNumber}`}` };
+        });
+      const selected = area.area_type === '基本信息'
+        ? 'main'
+        : area.area_type === '明细清单'
+          ? area.area_ref
+          : 'unassigned';
+      const options = [
+        { value: 'unassigned', label: '待确认' },
+        { value: 'main', label: '主表字段' },
+        ...detailOptions,
+        { value: '__new_detail__', label: '新建明细表' }
+      ];
+      const focusKey = `forms.${formIndex}.areas.${areaIndex}.items.${itemIndex}.assignment`;
+      return `
+        <div class="field">
+          <label>字段归属</label>
+          <select data-form-item-assignment data-form-index="${formIndex}" data-item-ref="${escapeAttribute(item.item_ref)}" data-focus-key="${escapeAttribute(focusKey)}">
+            ${optionHtml(options, selected)}
+          </select>
+          <span class="hint">只按纸质表单位置选择，不根据数据类型推断。</span>
         </div>`;
     }
 
@@ -3341,133 +3449,127 @@
 
     function renderForms() {
       const active = ensureActiveForm();
+      const addButtons = `
+        <div class="form-primary-actions">
+          <button class="button small" data-action="add-current-form">录入现有表单</button>
+          <button class="button small secondary" data-action="add-proposed-form">设计新建／优化表单</button>
+        </div>`;
       if (!active.form) {
         return section(
           '表单与记录',
-          '表单与记录在独立工作区中维护。新增后先编制主表，再按需要增加多张明细表。',
+          '按一张纸质表单的完整字段录入。只有新增表单后才创建空白编辑对象，工作台不会自动生成表单。',
           emptyList('当前流程没有表单或记录。'),
-          '<button class="button small" data-action="add-form">添加表单或记录</button>'
+          addButtons
         );
       }
 
-      const { form, formIndex, area, areaIndex } = active;
-      const mainAreas = form.areas.filter(item => item.area_type === '基本信息');
-      const unresolvedAreas = form.areas.filter(item => !item.area_type);
-      const structureWarnings = [];
-      if (!mainAreas.length) structureWarnings.push('当前表单尚未设置主表结构。');
-      if (mainAreas.length > 1) structureWarnings.push(`当前表单包含 ${mainAreas.length} 个主表结构，请将多余结构改为明细表。`);
-      if (unresolvedAreas.length) structureWarnings.push(`当前表单有 ${unresolvedAreas.length} 个结构尚未确认是主表还是明细表。`);
-      const warningHtml = structureWarnings.length
-        ? `<div class="form-structure-warning">${structureWarnings.map(escapeHtml).join('<br>')}工作台会保留现有内容，不会自动改写。</div>`
-        : '';
-
+      const { form, formIndex } = active;
       const formSelector = currentDocument().forms.map((item, index) => `
         <button
           class="selector-button${item.form_ref === form.form_ref ? ' active' : ''}"
           data-action="select-form"
           data-ref="${escapeAttribute(item.form_ref)}"
-        >${index + 1}. ${escapeHtml(item.form_name || '未命名表单或记录')}</button>
+        ><span>${index + 1}. ${escapeHtml(item.form_name || '未命名表单或记录')}</span>${formDesignStateBadge(item.form_design_state)}</button>
       `).join('');
 
       let detailNumber = 0;
       let mainNumber = 0;
-      const structureSelector = form.areas.map(item => {
-        let prefix = '待确认结构';
-        if (item.area_type === '基本信息') {
+      let unassignedNumber = 0;
+      const detailAreaIndices = form.areas
+        .map((area, areaIndex) => area.area_type === '明细清单' ? areaIndex : -1)
+        .filter(areaIndex => areaIndex >= 0);
+      const groups = form.areas.map((area, areaIndex) => {
+        let groupLabel = '';
+        let groupClass = '';
+        let detailPosition = -1;
+        if (area.area_type === '基本信息') {
           mainNumber += 1;
-          prefix = mainAreas.length > 1 ? `主表结构 ${mainNumber}` : '主表结构';
-        } else if (item.area_type === '明细清单') {
+          groupLabel = mainNumber === 1 ? '主表字段' : `主表字段 ${mainNumber}`;
+        } else if (area.area_type === '明细清单') {
           detailNumber += 1;
-          prefix = `明细表结构 ${detailNumber}`;
+          detailPosition = detailAreaIndices.indexOf(areaIndex);
+          groupLabel = area.area_title || `明细表${detailNumber}`;
+        } else {
+          unassignedNumber += 1;
+          groupLabel = unassignedNumber === 1 ? '字段归属待确认' : `字段归属待确认 ${unassignedNumber}`;
+          groupClass = ' unassigned';
         }
-        return `
-          <button
-            class="structure-button${item.area_ref === area?.area_ref ? ' active' : ''}"
-            data-action="select-area"
-            data-ref="${escapeAttribute(item.area_ref)}"
-          >${escapeHtml(prefix)}：${escapeHtml(item.area_title || '标题待填写')}</button>`;
-      }).join('');
-
-      const structureActions = `
-        ${mainAreas.length ? '' : `<button class="button small" data-action="add-main-area" data-form-index="${formIndex}">建立主表结构</button>`}
-        <button class="button small" data-action="add-detail-area" data-form-index="${formIndex}">添加明细表结构</button>`;
-
-      let areaEditor = emptyList('当前表单尚未建立主表或明细表结构。');
-      if (area) {
-        const kindLabel = area.area_type === '基本信息'
-          ? '主表'
-          : area.area_type === '明细清单'
-            ? '明细表'
-            : '待确认结构';
-        const formItems = area.items.map((item, itemIndex) => `
-          <div class="nested">
+        const rows = area.items.map((item, itemIndex) => `
+          <div class="form-field-row" data-focus-kind="area" data-focus-ref="${escapeAttribute(area.area_ref)}">
             <div class="item-title">
-              <strong>填写项 ${itemIndex + 1}</strong>
-              <button class="button danger small" data-action="remove-form-item" data-form-index="${formIndex}" data-area-index="${areaIndex}" data-index="${itemIndex}">删除填写项</button>
+              <strong>字段 ${itemIndex + 1}${item.item_name ? ` · ${escapeHtml(item.item_name)}` : ''}</strong>
+              <div class="item-actions">
+                <button class="button secondary small" data-action="move-form-item-up" data-form-index="${formIndex}" data-area-index="${areaIndex}" data-index="${itemIndex}" ${itemIndex === 0 ? 'disabled' : ''}>上移</button>
+                <button class="button secondary small" data-action="move-form-item-down" data-form-index="${formIndex}" data-area-index="${areaIndex}" data-index="${itemIndex}" ${itemIndex === area.items.length - 1 ? 'disabled' : ''}>下移</button>
+                <button class="button danger small" data-action="remove-form-item" data-form-index="${formIndex}" data-area-index="${areaIndex}" data-index="${itemIndex}">删除字段</button>
+              </div>
             </div>
             <div class="grid">
-              ${field(`forms.${formIndex}.areas.${areaIndex}.items.${itemIndex}.item_name`, '填写项名称')}
+              ${field(`forms.${formIndex}.areas.${areaIndex}.items.${itemIndex}.item_name`, '字段名称')}
               ${formItemTypeField(`forms.${formIndex}.areas.${areaIndex}.items.${itemIndex}.item_type`, item.item_type)}
-              ${field(`forms.${formIndex}.areas.${areaIndex}.items.${itemIndex}.required`, '是否必填', { type: 'checkbox', checkboxLabel: '此填写项必须填写' })}
+              ${formItemAssignmentField(formIndex, areaIndex, itemIndex, item)}
+              ${field(`forms.${formIndex}.areas.${areaIndex}.items.${itemIndex}.required`, '是否必填', { type: 'checkbox', checkboxLabel: '此字段必须填写' })}
               ${field(`forms.${formIndex}.areas.${areaIndex}.items.${itemIndex}.instructions`, '填写说明', { type: 'textarea', className: 'wide' })}
             </div>
           </div>`).join('');
-        areaEditor = `
-          <div class="item-card" data-focus-kind="area" data-focus-ref="${escapeAttribute(area.area_ref)}">
-            <div class="item-title">
-              <strong>${escapeHtml(kindLabel)}</strong>
-              ${area.area_type === '基本信息' ? '' : `<button class="button danger small" data-action="remove-area" data-form-index="${formIndex}" data-index="${areaIndex}">删除当前结构</button>`}
+        const detailHeader = area.area_type === '明细清单' ? `
+          <div class="form-field-group-head">
+            <strong>${escapeHtml(groupLabel)}</strong>
+            <div class="item-actions">
+              <button class="button secondary small" data-action="move-detail-area-up" data-form-index="${formIndex}" data-index="${areaIndex}" ${detailPosition <= 0 ? 'disabled' : ''}>上移明细表</button>
+              <button class="button secondary small" data-action="move-detail-area-down" data-form-index="${formIndex}" data-index="${areaIndex}" ${detailPosition === detailAreaIndices.length - 1 ? 'disabled' : ''}>下移明细表</button>
+              <button class="button danger small" data-action="remove-detail-area" data-form-index="${formIndex}" data-index="${areaIndex}">删除明细表</button>
             </div>
-            <div class="grid">
-              ${field(`forms.${formIndex}.areas.${areaIndex}.area_type`, '结构类型', {
-                type: 'select',
-                options: [
-                  { value: '', label: '待确认' },
-                  { value: '基本信息', label: '主表' },
-                  { value: '明细清单', label: '明细表' }
-                ]
-              })}
-              ${field(
-                `forms.${formIndex}.areas.${areaIndex}.area_title`,
-                area.area_type === '基本信息' ? '主表标题' : area.area_type === '明细清单' ? '明细表标题' : '结构标题'
-              )}
-            </div>
-            <div style="margin-top:12px">${formItems || emptyList(`当前${kindLabel}还没有填写项。`)}</div>
-            <button class="button small" style="margin-top:12px" data-action="add-form-item" data-form-index="${formIndex}" data-area-index="${areaIndex}">添加填写项</button>
-          </div>`;
-      }
+          </div>
+          <div class="grid">
+            ${field(`forms.${formIndex}.areas.${areaIndex}.area_title`, '明细表标题（按纸质单据填写，可暂缺）', { placeholder: `未填写时页面显示“明细表${detailNumber}”` })}
+          </div>` : `
+          <div class="form-field-group-head"><strong>${escapeHtml(groupLabel)}</strong></div>`;
+        return `
+          <section class="form-field-group${groupClass}" data-focus-kind="area" data-focus-ref="${escapeAttribute(area.area_ref)}">
+            ${detailHeader}
+            <div class="form-field-list">${rows || emptyList(`${groupLabel}中还没有字段。`)}</div>
+          </section>`;
+      }).join('');
 
       const body = `
-        ${warningHtml}
         <div class="form-workbench">
           <aside class="form-sidebar">
             ${formSelector}
-            <button class="button small" data-action="add-form">添加表单或记录</button>
+            ${addButtons}
           </aside>
           <div class="form-editor">
             <div class="item-card" data-focus-kind="form" data-focus-ref="${escapeAttribute(form.form_ref)}">
               <div class="item-title">
-                <strong>当前表单或记录</strong>
+                <strong>整张表单</strong>
                 <button class="button danger small" data-action="remove-form" data-index="${formIndex}">删除当前表单或记录</button>
               </div>
               <div class="grid">
+                ${field(`forms.${formIndex}.form_design_state`, '表单状态', {
+                  type: 'select',
+                  options: [
+                    { value: 'unspecified', label: '待确认（历史文件兼容）' },
+                    { value: 'current_state', label: '现状表单' },
+                    { value: 'proposed_design', label: '新建或优化表单' }
+                  ],
+                  hint: '工作台不会根据名称、编号或明细表数量推断。'
+                })}
                 ${field(`forms.${formIndex}.form_name`, '表单或记录名称')}
                 ${field(`forms.${formIndex}.form_no`, '表单或记录编号（如有）', { nullable: true })}
                 ${behaviorSelect(`forms.${formIndex}.behavior_ref`, '关联业务行为（可选）')}
               </div>
             </div>
-            <div class="structure-tabs">
-              ${structureSelector || '<span class="technical-note">尚未建立表结构。</span>'}
-              ${structureActions}
+            <div class="form-field-groups">
+              ${groups || emptyList('尚未录入字段。点击“添加字段”后，再明确字段属于主表还是哪张明细表。')}
             </div>
-            ${areaEditor}
+            <button class="button small" data-action="add-form-item" data-form-index="${formIndex}">添加字段</button>
           </div>
         </div>`;
       return section(
         '表单与记录',
-        '一张表单或记录包含一张主表和零到多张明细表。表单与业务行为可以关联，但不是必填项。',
+        '一次查看并录入整张纸质表单的字段。字段归属只用于整理导出JSON，不会创建数据库表；现状表单有几张明细表就保留几张。',
         body,
-        '<button class="button small" data-action="add-form">添加表单或记录</button>'
+        addButtons
       );
     }
 
@@ -4063,7 +4165,93 @@
       return removeHandoff(index);
     }
 
-    function addForm() {
+    function ensureFormArea(form, areaType) {
+      const existing = form.areas.find(area => areaType ? area.area_type === areaType : !area.area_type);
+      if (existing) return existing;
+      const area = {
+        area_ref: newRef('area'),
+        area_type: areaType || '',
+        area_title: '',
+        items: []
+      };
+      form.areas.push(area);
+      return area;
+    }
+
+    function findFormItem(form, itemRef) {
+      for (let areaIndex = 0; areaIndex < form.areas.length; areaIndex += 1) {
+        const itemIndex = form.areas[areaIndex].items.findIndex(item => item.item_ref === itemRef);
+        if (itemIndex >= 0) return { areaIndex, itemIndex, item: form.areas[areaIndex].items[itemIndex] };
+      }
+      return null;
+    }
+
+    function moveFormItemToAssignment(formIndex, itemRef, assignment) {
+      const form = currentDocument().forms[formIndex];
+      if (!form) return false;
+      const found = findFormItem(form, itemRef);
+      if (!found) return false;
+      let targetArea = null;
+      if (assignment === 'main') {
+        targetArea = ensureFormArea(form, '基本信息');
+      } else if (assignment === 'unassigned') {
+        targetArea = ensureFormArea(form, '');
+      } else if (assignment === '__new_detail__') {
+        targetArea = {
+          area_ref: newRef('area'),
+          area_type: '明细清单',
+          area_title: '',
+          items: []
+        };
+        form.areas.push(targetArea);
+      } else {
+        targetArea = form.areas.find(area => area.area_type === '明细清单' && area.area_ref === assignment);
+      }
+      if (!targetArea) return false;
+      const sourceArea = form.areas[found.areaIndex];
+      if (sourceArea.area_ref === targetArea.area_ref) return true;
+      const [item] = sourceArea.items.splice(found.itemIndex, 1);
+      targetArea.items.push(item);
+      if (!sourceArea.area_type && !sourceArea.items.length) {
+        form.areas.splice(form.areas.indexOf(sourceArea), 1);
+      }
+      activeAreaRef = targetArea.area_ref;
+      return true;
+    }
+
+    function moveFormItem(formIndex, areaIndex, itemIndex, direction) {
+      const items = currentDocument().forms[formIndex]?.areas[areaIndex]?.items;
+      const targetIndex = itemIndex + direction;
+      if (!items || targetIndex < 0 || targetIndex >= items.length) return false;
+      [items[itemIndex], items[targetIndex]] = [items[targetIndex], items[itemIndex]];
+      return true;
+    }
+
+    function moveDetailArea(formIndex, areaIndex, direction) {
+      const form = currentDocument().forms[formIndex];
+      if (!form?.areas[areaIndex] || form.areas[areaIndex].area_type !== '明细清单') return false;
+      const detailIndices = form.areas
+        .map((area, index) => area.area_type === '明细清单' ? index : -1)
+        .filter(index => index >= 0);
+      const position = detailIndices.indexOf(areaIndex);
+      const targetAreaIndex = detailIndices[position + direction];
+      if (position < 0 || targetAreaIndex == null) return false;
+      [form.areas[areaIndex], form.areas[targetAreaIndex]] = [form.areas[targetAreaIndex], form.areas[areaIndex]];
+      return true;
+    }
+
+    function removeDetailArea(formIndex, areaIndex) {
+      const form = currentDocument().forms[formIndex];
+      const area = form?.areas[areaIndex];
+      if (!area || area.area_type !== '明细清单') return false;
+      const fieldCount = area.items.length;
+      if (!window.confirm(`当前明细表包含${fieldCount}个字段。删除后，这些字段会一并删除；其他字段不受影响。确定继续吗？`)) return false;
+      form.areas.splice(areaIndex, 1);
+      if (area.area_ref === activeAreaRef) activeAreaRef = '';
+      return true;
+    }
+
+    function addForm(formDesignState) {
       const mainArea = {
         area_ref: newRef('area'),
         area_type: '基本信息',
@@ -4075,6 +4263,7 @@
         behavior_ref: null,
         form_name: '',
         form_no: null,
+        form_design_state: formDesignState,
         areas: [mainArea]
       };
       currentDocument().forms.push(form);
@@ -4238,7 +4427,8 @@
       if (action === 'add-outbound-handoff') addHandoff('outbound_followup', text(element.dataset.ref) || null);
       if (action === 'remove-linked-handoff' && !removeHandoffByRef(text(element.dataset.ref))) return;
       if (action === 'remove-handoff' && !removeHandoff(index)) return;
-      if (action === 'add-form') addForm();
+      if (action === 'add-current-form') addForm('current_state');
+      if (action === 'add-proposed-form') addForm('proposed_design');
       if (action === 'remove-form') {
         if (!window.confirm('删除当前表单或记录后，其主表、明细表和全部填写项都会一并删除。确定继续吗？')) return;
         const removed = currentDocument().forms[index];
@@ -4248,29 +4438,19 @@
           activeAreaRef = '';
         }
       }
-      if (action === 'add-main-area' || action === 'add-detail-area') {
+      if (action === 'move-detail-area-up' && !moveDetailArea(formIndex, index, -1)) return;
+      if (action === 'move-detail-area-down' && !moveDetailArea(formIndex, index, 1)) return;
+      if (action === 'remove-detail-area' && !removeDetailArea(formIndex, index)) return;
+      if (action === 'add-form-item') {
         const form = currentDocument().forms[formIndex];
         if (!form) return;
-        if (action === 'add-main-area' && form.areas.some(item => item.area_type === '基本信息')) return;
-        const area = {
-          area_ref: newRef('area'),
-          area_type: action === 'add-main-area' ? '基本信息' : '明细清单',
-          area_title: '',
-          items: []
-        };
-        form.areas.push(area);
+        const area = ensureFormArea(form, '');
+        area.items.push({ item_ref: newRef('item'), item_name: '', item_type: '', required: false, instructions: '' });
         activeAreaRef = area.area_ref;
       }
-      if (action === 'remove-area') {
-        if (!window.confirm('删除当前结构后，其中的全部填写项都会一并删除。确定继续吗？')) return;
-        const removed = currentDocument().forms[formIndex]?.areas[index];
-        currentDocument().forms[formIndex]?.areas.splice(index, 1);
-        if (removed?.area_ref === activeAreaRef) activeAreaRef = '';
-      }
-      if (action === 'add-form-item') currentDocument().forms[formIndex].areas[areaIndex].items.push({
-        item_ref: newRef('item'), item_name: '', item_type: '', required: false, instructions: ''
-      });
-      if (action === 'remove-form-item') currentDocument().forms[formIndex].areas[areaIndex].items.splice(index, 1);
+      if (action === 'move-form-item-up' && !moveFormItem(formIndex, areaIndex, index, -1)) return;
+      if (action === 'move-form-item-down' && !moveFormItem(formIndex, areaIndex, index, 1)) return;
+      if (action === 'remove-form-item') currentDocument().forms[formIndex]?.areas[areaIndex]?.items.splice(index, 1);
       if (action === 'add-term') addTerm();
       if (action === 'remove-term') currentDocument().terms.splice(index, 1);
       touch();
@@ -4477,9 +4657,13 @@
           `第${formIndex + 1}项表单记录未填写名称`,
           atField(formTarget, `forms.${formIndex}.form_name`)
         );
-        const mainCount = form.areas.filter(area => area.area_type === '基本信息').length;
-        if (!mainCount) addWarning(`${formLabel}没有主表结构`, formTarget);
-        if (mainCount > 1) addWarning(`${formLabel}包含${mainCount}个主表结构`, formTarget);
+        if (form.form_design_state === 'unspecified') {
+          addWarning(
+            `${formLabel}的表单状态待确认`,
+            atField(formTarget, `forms.${formIndex}.form_design_state`)
+          );
+        }
+        const detailCount = form.areas.filter(area => area.area_type === '明细清单').length;
         let detailIndex = 0;
         form.areas.forEach((area, areaIndex) => {
           const areaTarget = {
@@ -4488,22 +4672,28 @@
             focusRef: area.area_ref
           };
           if (area.area_type === '明细清单') detailIndex += 1;
-          const structureLabel = area.area_type === '基本信息'
-            ? '主表结构'
+          const groupLabel = area.area_type === '基本信息'
+            ? '主表字段'
             : area.area_type === '明细清单'
-              ? `明细表结构${detailIndex}`
-              : `待确认结构${areaIndex + 1}`;
-          need(
-            area.area_type,
-            `${formLabel}的${structureLabel}未选择结构类型`,
-            atField(areaTarget, `forms.${formIndex}.areas.${areaIndex}.area_type`)
-          );
-          need(
-            area.area_title,
-            `${formLabel}的${structureLabel}未填写标题`,
-            atField(areaTarget, `forms.${formIndex}.areas.${areaIndex}.area_title`)
-          );
-          if (!area.items.length) addWarning(`${formLabel}的${structureLabel}没有填写项`, areaTarget);
+              ? `明细表${detailIndex}`
+              : '待确认字段';
+          if (area.area_type === '明细清单' && detailCount > 1 && !text(area.area_title).trim()) {
+            addWarning(
+              `${formLabel}的${groupLabel}未填写明细表标题，当前多张明细表无法区分`,
+              atField(areaTarget, `forms.${formIndex}.areas.${areaIndex}.area_title`)
+            );
+          }
+          if (!area.area_type) {
+            area.items.forEach((item, itemIndex) => {
+              addWarning(
+                `${formLabel}的字段“${item.item_name || `字段${itemIndex + 1}`}”尚未确认属于主表还是哪张明细表`,
+                atField(areaTarget, `forms.${formIndex}.areas.${areaIndex}.items.${itemIndex}.assignment`)
+              );
+            });
+          }
+          if (!area.items.length && area.area_type === '明细清单') {
+            addWarning(`${formLabel}的${groupLabel}尚未录入字段`, areaTarget);
+          }
         });
       });
       data.cross_department_handoffs.forEach((item, index) => {
@@ -4888,9 +5078,9 @@
       setBusy(true, `正在读取 ${file.name}……`);
       try {
         const parsed = JSON.parse(await file.text());
-        if (parsed.schema_version === 'process-governance-v1' || parsed.schema_version === 'process-governance-v2') {
-          const migrated = parsed.schema_version === 'process-governance-v1';
-          candidates = [{ data: normalizeV1(parsed), dirty: migrated, origin: migrated ? 'v1' : 'v2' }];
+        if (['process-governance-v1', 'process-governance-v2', 'process-governance-v3'].includes(parsed.schema_version)) {
+          const migrated = parsed.schema_version !== EXPECTED_EXPORT_SCHEMA_VERSION;
+          candidates = [{ data: normalizeV1(parsed), dirty: migrated, origin: parsed.schema_version }];
         } else if (parsed.schema_version === 'document-structured-output-v2') {
           const fileSha256 = await sha256File(file);
           candidates = splitLegacyDocument(parsed, { fileName: file.name, fileSha256 })
@@ -4956,7 +5146,8 @@
         const selector = form
           ? workspace.querySelector(`[data-action="select-form"][data-ref="${CSS.escape(form.form_ref)}"]`)
           : null;
-        if (selector) selector.textContent = `${formIndex + 1}. ${form.form_name || '未命名表单或记录'}`;
+        const selectorLabel = selector?.querySelector('span:first-child');
+        if (selectorLabel) selectorLabel.textContent = `${formIndex + 1}. ${form.form_name || '未命名表单或记录'}`;
       }
       const relationMatch = target.dataset.bind.match(/^flow_relations\.(\d+)\./);
       if (relationMatch) {
@@ -4988,6 +5179,13 @@
 
     workspace.addEventListener('change', event => {
       const target = event.target;
+      if (target.matches('[data-form-item-assignment]')) {
+        const formIndex = Number(target.dataset.formIndex);
+        if (!moveFormItemToAssignment(formIndex, text(target.dataset.itemRef), target.value)) return;
+        touch();
+        render();
+        return;
+      }
       if (target.matches('[data-actor-department]')) {
         const index = Number(target.dataset.actorDepartment);
         const behavior = currentDocument()?.behaviors?.[index];
@@ -5018,7 +5216,7 @@
       if (target.matches('[data-bind]') && (
         target.dataset.bind === 'process.owning_department'
         || /^cross_department_handoffs\.\d+\.(handoff_direction|counterparty_resolution|anchor_behavior_ref|requires_return)$/.test(target.dataset.bind)
-        || /^forms\.\d+\.areas\.\d+\.area_type$/.test(target.dataset.bind)
+        || /^forms\.\d+\.form_design_state$/.test(target.dataset.bind)
         || /^forms\.\d+\.areas\.\d+\.items\.\d+\.item_type$/.test(target.dataset.bind)
       )) {
         render();

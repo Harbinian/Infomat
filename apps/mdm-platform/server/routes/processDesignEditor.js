@@ -4,18 +4,21 @@ const path = require('path');
 const Ajv2020 = require('ajv/dist/2020');
 const { requireAuth, getDepartmentByIdAsync } = require('../auth');
 const {
-  V2,
+  V3,
   createEmptyProcessGovernanceDocument
 } = require('../processGovernanceV2');
 
 const router = express.Router();
 const contractsDir = path.resolve(__dirname, '../../../../docs/contracts');
-const schemaPath = path.join(contractsDir, 'process-governance-v2.schema.json');
+const schemaPath = path.join(contractsDir, 'process-governance-v3.schema.json');
+const v2SchemaPath = path.join(contractsDir, 'process-governance-v2.schema.json');
 const v1SchemaPath = path.join(contractsDir, 'process-governance-v1.schema.json');
 const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
+const v2Schema = JSON.parse(fs.readFileSync(v2SchemaPath, 'utf8'));
 const v1Schema = JSON.parse(fs.readFileSync(v1SchemaPath, 'utf8'));
 const ajv = new Ajv2020({ allErrors: true, strict: false, validateFormats: false });
 ajv.addSchema(v1Schema);
+ajv.addSchema(v2Schema);
 const validateSchema = ajv.compile(schema);
 
 function text(value) {
@@ -149,7 +152,7 @@ router.get('/schema', requireAuth, (_req, res) => {
 
 router.get('/template', requireAuth, async (req, res, next) => {
   try {
-    if (req.query.version && req.query.version !== V2) {
+    if (req.query.version && req.query.version !== V3) {
       return res.status(400).json({ error: `不支持的空白模板版本: ${req.query.version}` });
     }
     const department = req.session.departmentId
@@ -157,7 +160,7 @@ router.get('/template', requireAuth, async (req, res, next) => {
       : null;
     const departmentName = text(department && (department.name || department.department_name));
     return res.json({
-      schema_version: V2,
+      schema_version: V3,
       data: createEmptyProcessGovernanceDocument({
         owning_department: departmentName,
         compiler: text(req.session.username || req.session.loginName)
@@ -173,8 +176,8 @@ router.post('/validate', requireAuth, (req, res) => {
   if (!data || typeof data !== 'object' || Array.isArray(data)) {
     return res.status(400).json({ error: '缺少待校验的单流程治理JSON' });
   }
-  if (text(data.schema_version) !== V2) {
-    return res.status(400).json({ error: `MDM编制工作台只校验${V2}内容` });
+  if (text(data.schema_version) !== V3) {
+    return res.status(400).json({ error: `MDM编制工作台只校验${V3}内容` });
   }
   return res.json({ ...technicalValidationResult(data), data: JSON.parse(JSON.stringify(data)) });
 });

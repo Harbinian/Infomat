@@ -123,19 +123,19 @@ field_identities
 ## 4.1 3001单流程编制主线
 
 ```text
-空白新建 / process-governance-v1 JSON / process-governance-v2 JSON / 历史结构化JSON
+空白新建 / process-governance-v1 JSON / process-governance-v2 JSON / process-governance-v3 JSON / 历史结构化JSON
   ↓
 apps/structured-output-service（3001，仅当前页面内存）
   ├─ 只读 docs/organization/花名册.md 岗位目录
   └─ 页面不接收编制参考材料
   ↓
-docs/contracts/process-governance-v2.schema.json
+docs/contracts/process-governance-v3.schema.json
   ↓
 未审核-发起部门-流程名称-导出时间.json
   ↓
 用户可以继续在3001导入，也可以在MDM“流程治理→流程编制”手工导入
   ↓
-MDM服务端重新校验并保存v2完整JSON；治理投影和审核记录由MDM生成
+MDM服务端重新校验并保存v3完整JSON；治理投影和审核记录由MDM生成
 ```
 
 规则：
@@ -144,10 +144,10 @@ MDM服务端重新校验并保存v2完整JSON；治理投影和审核记录由MD
 - 3001一份JSON只编制一个流程。历史v2文件含多条流程时，在当前页面拆成候选并逐一导出。
 - 3001通过本服务`/api/enums`只读仓库花名册岗位，不调用3000、数据库或会话。岗位只表示当前执行岗位，不生成正式工作角色。
 - 新建流程的`reference_materials`为空；页面不新增、展示或编辑参考材料。导入JSON中已有的历史参考材料只在内存中保留并随再次导出带回。
-- 表单与记录在独立工作区按“表单或记录—主表／明细表结构—填写项”编制。JSON继续使用`forms[].areas[].items[]`，不增加页面状态或图形字段。
+- 表单与记录在独立工作区按整张纸质表单展示字段。用户逐字段确认主表或具体明细表归属；JSON继续使用`forms[].areas[].items[]`，并用`form_design_state`区分现状、拟设计和历史待确认状态，不增加页面状态或图形字段。
 - 3001不保存草稿、不记录审核状态，也不通过API、数据库、队列、回调、共享会话或轮询与3000通信。
 - 3001只保存流程编制内容和单文件技术引用，不保存MDM审核意见或批准标记。
-- MDM已经支持v1/v2单流程文件。用户上传的审核状态不构成审核凭证；MDM按当前身份、部门和服务端结构校验执行保存及审核。
+- MDM支持v1、v2、v3单流程文件并统一保存v3。用户上传的审核状态不构成审核凭证；MDM按当前身份、部门和服务端结构校验执行保存及审核。
 - 3001后端保留确定性文档解析器用于历史迁移和回归测试，但页面不再提供参考材料解析入口。模型辅助填报能力已经移除；3001的启动、访问、新建、导入、校验和导出均不依赖DeepSeek或任何辅助服务。
 
 ## 4.2 独立AI结构化填报试点主线
@@ -162,11 +162,11 @@ apps/structure-assistant（MDM-AI助手，仅当前页面内存）
   ↓
 DeepSeek V4 Flash填报对话
   ↓
-未经独立预审的process-governance-v1 JSON
+未经独立预审的process-governance-v3 JSON
   ↓ 新页面、新上下文
 DeepSeek V4 Pro独立结构预审
   ↓ 用户逐条处理结构问题，同时查看3001格式内容和只读跨职能流程图
-预审后的process-governance-v1未审核JSON + 独立问题处理记录
+预审后的process-governance-v3未审核JSON + 独立问题处理记录
   ↓
 用户下载试点结果；如需继续编制，再通过局域网地址手工导入3001
 ```
@@ -218,8 +218,8 @@ npm run test:mainline
 - 运行态数据库不是仓库真源。
 - 平台脚本只服务 MDM 时留在 `apps/mdm-platform/scripts/`。
 - 跨资料、跨 PMO、跨 app 的脚本进入仓库级 `scripts/`。
-- MDM完整流程草稿以`docs/contracts/process-governance-v2.schema.json`为结构规则；兼容导入v1，保存和导出统一为v2。历史文档结构化输出字段仍以`docs/contracts/document-structured-output.schema.json`为兼容规则，两者都不反向覆盖`docs/norms/`。
-- 3001继续作为独立、无状态的单流程编制工具运行。MDM不代管3001，只读取用户选择的v1/v2文件，并在服务端重新校验后写入MySQL完整JSON和治理投影。
+- MDM完整流程草稿以`docs/contracts/process-governance-v3.schema.json`为结构规则；兼容导入v1、v2，保存和导出统一为v3。历史文档结构化输出字段仍以`docs/contracts/document-structured-output.schema.json`为兼容规则，两者都不反向覆盖`docs/norms/`。
+- 3001继续作为独立、无状态的单流程编制工具运行。MDM不代管3001，只读取用户选择的v1、v2、v3文件，并在服务端重新校验后写入MySQL完整JSON和治理投影。
 - MDM“流程治理→流程编制”使用`apps/mdm-platform/public/process-governance-editor/`中的本地编制工作台，复用3001的文字编制、稳定排序、结构评分和跨职能流程图交互。页面通过MDM本地接口读取结构规则和目录，不访问3001服务。
 - 当前 MDM 不持久化 `work_role_bindings`；非空关系导入必须返回 `WORK_ROLE_BINDINGS_UNSUPPORTED`，避免静默丢失。行政人事目录和受控试点稳定后，再建设 MySQL 派生表和变更申请能力。
 

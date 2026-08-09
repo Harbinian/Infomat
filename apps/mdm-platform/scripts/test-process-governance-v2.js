@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const {
   V2,
+  V3,
   contentHash,
   normalizeProcessGovernanceDocument,
   previewProcessGovernanceDocument
@@ -113,7 +114,7 @@ function main() {
   const sourceBefore = JSON.stringify(source);
   const normalized = normalizeProcessGovernanceDocument(source);
   assert.deepStrictEqual(normalized.errors, []);
-  assert.strictEqual(normalized.document.schema_version, V2);
+  assert.strictEqual(normalized.document.schema_version, V3);
   assert.strictEqual(normalized.document.cross_department_handoffs[0].handoff_direction, 'outbound_followup');
   assert.strictEqual(normalized.document.cross_department_handoffs[0].anchor_behavior_ref, 'behavior_1');
   assert.strictEqual(normalized.document.cross_department_handoffs[0].transfer_data_ref, 'data_1');

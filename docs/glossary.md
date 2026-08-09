@@ -121,19 +121,21 @@
 | 制度版次 | Document Edition | 文档结构化输出中制度的字母版次，由系统自动生成并与制度编号共同标识外部引用对象；发布下一版次后上一版保留历史追溯并从默认当前视图移出 |
 | Procedure 业务编号 | Procedure Code | 文档结构化输出中流程对象的系统生成业务编号，格式为 `PROCEDURE-{草稿ID}-{三位序号}`，写入 `process_design_processes.process_code` 并保持唯一；L3 只表示流程层级和名称，不进入编号 |
 | 文档结构化输出结构规则 | Document Structured Output Schema | 机器可读的文档结构规则，统一制度草稿、制度档案、术语、L3流程、A1业务行为、跨部门承接、表单字段、证据、主数据需求和待确认问题字段；该规则不替代流程输入基线或组织真源 |
-| 单流程结构化文件规则 | Process Governance Structure Rules | 3001导出的`process-governance-v2`文件必须遵守的结构规则；一份JSON只包含一个`process`，记录编制元数据、业务行为、流程关系、待治理数据、跨部门前置输入和后续承接、历史内部流程调用及表单主明细结构，不包含可信审核状态、审核意见或批准标记。v1只作为兼容导入版本 |
-| 单流程治理JSON | Single-Process Governance JSON | MDM流程编制的完整内容真源，结构版本固定为`process-governance-v2`。MDM兼容导入3001的v1/v2文件，保存和导出统一为v2；数据库修订号用于并发校验，浏览器不持久化该内容 |
+| 单流程结构化文件规则 | Process Governance Structure Rules | 3001导出的`process-governance-v3`文件必须遵守的结构规则；一份JSON只包含一个`process`，记录编制元数据、业务行为、流程关系、待治理数据、跨部门前置输入和后续承接、历史内部流程调用、表单设计状态及表单字段分组，不包含可信审核状态、审核意见或批准标记。v1、v2只作为兼容导入版本 |
+| 单流程治理JSON | Single-Process Governance JSON | MDM流程编制的完整内容真源，当前结构版本为`process-governance-v3`。MDM兼容导入3001的v1、v2、v3文件，统一保存和导出v3；数据库修订号用于并发校验，浏览器不持久化该内容 |
+| 表单设计状态 | Form Design State | `forms[].form_design_state`记录一张表单是照录现状`current_state`、新建或优化设计`proposed_design`，还是历史文件尚未确认`unspecified`。3001和MDM不得根据表单名称、编号或明细表数量推断该状态 |
+| 字段归属 | Field Assignment | 用户依据纸质表单位置确认字段属于主表还是哪张明细表。JSON不增加字段级重复归属值：主表字段保存在`area_type="基本信息"`分组，明细表字段保存在对应`area_type="明细清单"`分组；该归属只组织结构化内容，不代表创建数据库表 |
 | 跨职能流程图预览 | Cross-Functional Process Preview | 3001根据当前单流程JSON生成的只读部门泳道图。它采用BPMN 2.0.2最小图形子集：部门使用横向泳道，岗位显示在节点第二行，本流程关系使用实线实心箭头，跨部门承接使用泳道外卡片和虚线空心箭头，历史内部流程调用使用粗边框节点；图形不得推测关系、修改业务数据或把坐标和页面状态写入JSON |
 | 业务行为补充说明 | Business Behavior Description | 3001中对“具体做什么”的可选文字说明，保存于`behaviors[].behavior_description`，用于帮助PMO和部门业务人员理解实际操作；它不替代`behavior_name`中的业务行为或节点名称，不参与流程关系、工作角色绑定或流程图节点显示 |
 | MDM-AI助手 | MDM AI Assistant | 当前四人试点的页面名称；该助手集中部署在内网主机，以连续对话帮助用户依据3001现行结构梳理流程，右侧同步显示结构化结果，材料只作为可选补充。AI可以发现信息缺口、前后矛盾、字段归位不清和对象混写，但不判断流程内容，也不自动写入3001或MDM平台。以后可以随功能范围调整显示名称，内部目录和启动命令保持稳定 |
 | Infomat试点版本 | Infomat Pilot Version | 同时提供MDM-AI助手和3001的已提交Git版本；正式启动要求服务器工作区干净，用户电脑不保存版本副本。浏览器通过Git提交和结构摘要确认当前页面与服务器一致 |
-| 结构摘要 | Schema Digest | 对3001当前`process-governance-v2`结构计算的SHA-256摘要；浏览器首次进入、定时检查和每次模型调用前后均核对该值，变化时返回`VERSION_CHANGED`并阻止旧页面继续调用模型 |
-| 独立结构预审 | Independent Structural Review | 使用新的页面上下文，只依据待审JSON和当前结构规则检查必需结构、类型、枚举、引用、字段归位和对象拆分；不读取填报对话，不判断流程内容。v1导入后在内存中规范化，下载统一使用`process-governance-v2`；硬性结构错误必须修改，结构建议可以保持原值但必须记录理由，预审意见和处理记录不写入JSON |
-| 编制参考材料 | Compilation Reference Material | `process-governance-v2.reference_materials[]`中的历史兼容内容，用于说明流程编制时曾参考的制度、表单、操作说明、会议或访谈等材料，不等同正式制度关联或逐步骤证据。3001当前页面暂停新增、展示和编辑此内容；新建流程导出空数组，导入文件中的已有内容只在内存中隐式保留并随再次导出带回 |
+| 结构摘要 | Schema Digest | 对3001当前`process-governance-v3`结构计算的SHA-256摘要；浏览器首次进入、定时检查和每次模型调用前后均核对该值，变化时返回`VERSION_CHANGED`并阻止旧页面继续调用模型 |
+| 独立结构预审 | Independent Structural Review | 使用新的页面上下文，只依据待审v3 JSON和当前结构规则检查必需结构、类型、枚举、引用、字段归位和对象拆分；不读取填报对话，不判断流程内容。v1、v2文件先由3001在内存中升级并重新导出；硬性结构错误必须修改，结构建议可以保持原值但必须记录理由，预审意见和处理记录不写入JSON |
+| 编制参考材料 | Compilation Reference Material | `process-governance-v3.reference_materials[]`中的历史兼容内容，用于说明流程编制时曾参考的制度、表单、操作说明、会议或访谈等材料，不等同正式制度关联或逐步骤证据。3001当前页面暂停新增、展示和编辑此内容；新建流程导出空数组，导入文件中的已有内容只在内存中隐式保留并随再次导出带回 |
 | 不可读来源阻断 | Unreadable Source Block | 流程证据映射技能对图片、扫描件、无文本 PDF 或转换失败来源采用的安全门：记录来源及阻断原因后停止本轮，不执行图像转文字、不猜测内容；资料责任人提供可直接读取原件或经人工确认的文字版后才能重跑 |
 | 判断节点 | Decision Step | 流程中承载条件判断的节点；3001当前结构使用`behaviors[].node_type=decision`，新增时不自动认定。判断节点应有至少两个互斥且覆盖全部结果的明确出口；出口可以是本流程顺序、判断分支、流程内部回路或跨部门承接。3001只提示出口是否完整，不阻止未审核草稿导出 |
-| 判断分支 | Conditional Flow | 从判断节点发出、根据判断结果进入后续办理步骤的条件流向关系。它与流程内部回路的区别是：判断分支继续往下办理，流程内部回路退回前序步骤重新处理。`process-governance-v2`使用`flow_relations[].relation_type=condition`记录条件和目标行为；历史文档结构化输出使用`step_transitions[]`记录条件、目标步骤和证据引用。目标为空表示流向仍待补充 |
-| 流程内部回路 | Internal Process Loop | 本流程内在明确触发条件下，从当前节点返回已经存在的前序业务行为或判断节点的关系；`process-governance-v2`使用`flow_relations[].relation_type=loop`记录。回路不是独立节点，也不要求固定创建在判断节点之后；审批不通过时退回前序行为，通常是判断节点的一条回路出口 |
+| 判断分支 | Conditional Flow | 从判断节点发出、根据判断结果进入后续办理步骤的条件流向关系。它与流程内部回路的区别是：判断分支继续往下办理，流程内部回路退回前序步骤重新处理。`process-governance-v3`使用`flow_relations[].relation_type=condition`记录条件和目标行为；历史文档结构化输出使用`step_transitions[]`记录条件、目标步骤和证据引用。目标为空表示流向仍待补充 |
+| 流程内部回路 | Internal Process Loop | 本流程内在明确触发条件下，从当前节点返回已经存在的前序业务行为或判断节点的关系；`process-governance-v3`使用`flow_relations[].relation_type=loop`记录。回路不是独立节点，也不要求固定创建在判断节点之后；审批不通过时退回前序行为，通常是判断节点的一条回路出口 |
 | 原文角色称谓 | Source Role Text | 制度、表单或流程图中原样出现的岗位、身份、组织或参与方称谓，文档结构化输出保存在 `steps.actor_role` 和角色证据中；它是待核验事实，不等同正式工作角色 |
 | 岗位参与草稿 | Position Participation Draft | 历史`document-structured-output-v2`中按参与部门、花名册岗位和参与方式记录的迁移材料；它不等同工作角色。3001当前只在每个业务行为的`current_actor_role`中保存一个执行岗位兼容值，不维护多岗位参与关系；旧文件导入时无法归并的内容保留在“旧版结构化补充信息”中 |
 | 执行岗位 | Current Execution Position | 3001编制人从仓库花名册中为当前业务行为选择的现行业务执行岗位；执行部门等于流程归口部门时属于本部门执行，不等于时属于跨部门执行。岗位只能从所选执行部门的花名册岗位中选择，具体值以“部门名称 + 岗位名称”保存到`behaviors[].current_actor_role`，“全公司通用”保存为`全公司`。执行岗位不等同正式工作角色，3001不得据此推测或生成`work_role`，也不得根据岗位名称猜测或改写花名册部门归属 |

@@ -1,5 +1,5 @@
 const {
-  V2,
+  CURRENT_VERSION,
   contentHash,
   normalizeProcessGovernanceDocument
 } = require('./processGovernanceV2');
@@ -22,7 +22,7 @@ const HANDOFF_STATUSES = Object.freeze([
 ]);
 
 const DRAFT_COLUMNS = Object.freeze([
-  ['schema_version', "VARCHAR(64) NOT NULL DEFAULT 'process-governance-v2'"],
+  ['schema_version', "VARCHAR(64) NOT NULL DEFAULT 'process-governance-v3'"],
   ['process_content_json', 'MEDIUMTEXT NULL'],
   ['content_hash', 'CHAR(64) NULL'],
   ['revision_no', 'INT NOT NULL DEFAULT 0'],
@@ -31,7 +31,7 @@ const DRAFT_COLUMNS = Object.freeze([
 ]);
 
 const VERSION_COLUMNS = Object.freeze([
-  ['schema_version', "VARCHAR(64) NOT NULL DEFAULT 'process-governance-v2'"],
+  ['schema_version', "VARCHAR(64) NOT NULL DEFAULT 'process-governance-v3'"],
   ['process_content_json', 'MEDIUMTEXT NULL'],
   ['content_hash', 'CHAR(64) NULL'],
   ['source_revision_no', 'INT NULL']
@@ -351,12 +351,13 @@ function convertLegacyProcessDesignContent(legacyInput) {
       behavior_ref: stepRefs.get(Number(form.step_id)) || null,
       form_name: text(form.form_name),
       form_no: nullableText(form.form_code),
+      form_design_state: 'unspecified',
       areas
     };
   });
 
   const document = {
-    schema_version: V2,
+    schema_version: CURRENT_VERSION,
     export_meta: {
       package_ref: stableTechnicalRef('migration_package', draft.id),
       exported_at: dateTimeValue(draft.updated_at || draft.created_at),
@@ -559,7 +560,7 @@ async function buildConversionPlan(pool, draftColumns, versionColumns) {
           object_id: draftId,
           source,
           missing_fields: normalized.errors.map(error => error.field).slice(0, 20),
-          handling: '按列出的结构字段人工补齐为process-governance-v2后重新执行迁移dry-run'
+          handling: '按列出的结构字段人工补齐为process-governance-v3后重新执行迁移dry-run'
         });
       }
       break;
@@ -641,7 +642,7 @@ async function inspectProcessGovernanceUnified(pool) {
       'process_design_versions.process_content_json',
       'process_design_versions.content_json'
     ],
-    manual_handling_rule: '无法规范化为process-governance-v2时停止对象迁移，并输出对象编号和缺失字段；不得填默认业务事实。'
+    manual_handling_rule: '无法规范化为process-governance-v3时停止对象迁移，并输出对象编号和缺失字段；不得填默认业务事实。'
   };
 }
 
@@ -814,7 +815,7 @@ async function migrateCanonicalContentFromPlan(pool, conversionPlan) {
           content_updated_at=COALESCE(content_updated_at, updated_at)
       WHERE id=?
         AND (process_content_json IS NULL OR process_content_json='')
-    `, [V2, contentJson, item.content_hash, item.object_id]);
+    `, [CURRENT_VERSION, contentJson, item.content_hash, item.object_id]);
     await pool.execute(`
       UPDATE process_design_versions
       SET schema_version=?,
@@ -822,7 +823,7 @@ async function migrateCanonicalContentFromPlan(pool, conversionPlan) {
           content_hash=COALESCE(content_hash, ?),
           source_revision_no=COALESCE(source_revision_no, 1)
       WHERE draft_id=?
-    `, [V2, contentJson, item.content_hash, item.object_id]);
+    `, [CURRENT_VERSION, contentJson, item.content_hash, item.object_id]);
   }
 }
 
@@ -876,7 +877,7 @@ async function applyProcessGovernanceUnified(pool, options = {}) {
   const initialVersionColumns = await columnNames(pool, 'process_design_versions');
   const preflight = await buildConversionPlan(pool, initialDraftColumns, initialVersionColumns);
   if (preflight.manual.length) {
-    const error = new Error('存在不能无损转换为process-governance-v2的对象，迁移已在写入前停止');
+    const error = new Error('存在不能无损转换为process-governance-v3的对象，迁移已在写入前停止');
     error.code = 'PROCESS_GOVERNANCE_MANUAL_CONVERSION_REQUIRED';
     error.manual_objects = preflight.manual;
     throw error;

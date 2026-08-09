@@ -1,6 +1,7 @@
 'use strict';
 
 const { AppError } = require('./errors');
+const CURRENT_SCHEMA_VERSION = 'process-governance-v3';
 
 async function requestJson(url, options = {}, timeoutMs = 8000) {
   const controller = new AbortController();
@@ -59,7 +60,7 @@ function createStructuredToolClient({ baseUrl, appCommit, timeoutMs = 8000, requ
     const healthDigest = String(health?.schema_digest || '');
     const toolCommit = String(health?.app_commit || '');
 
-    if (health?.status !== 'ok' || schemaVersion !== 'process-governance-v1') {
+    if (health?.status !== 'ok' || schemaVersion !== CURRENT_SCHEMA_VERSION) {
       throw new AppError(503, 'STRUCTURED_TOOL_CONTRACT_UNAVAILABLE', '结构化工具当前结构规则不可用。');
     }
     if (!headerDigest || headerDigest !== healthDigest) {
@@ -88,7 +89,7 @@ function createStructuredToolClient({ baseUrl, appCommit, timeoutMs = 8000, requ
   async function template() {
     const current = await snapshot();
     const result = await request(
-      `${root}/api/template?version=process-governance-v1`,
+      `${root}/api/template?version=${CURRENT_SCHEMA_VERSION}`,
       { cache: 'no-store' },
       timeoutMs
     );

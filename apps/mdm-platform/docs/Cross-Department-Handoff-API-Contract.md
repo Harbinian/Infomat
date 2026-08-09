@@ -2,7 +2,7 @@
 
 ## 1. 适用范围
 
-本说明适用于MDM接收`process-governance-v1`或`process-governance-v2`单流程文件，以及流程草稿、承接待办、故事链和承接冲突。3001继续独立运行；MDM不调用或代管3001，只适配其文件格式。MDM不信任上传文件中的`approved`、`status`、审核人或批准人字段。
+本说明适用于MDM接收`process-governance-v1`、`process-governance-v2`或`process-governance-v3`单流程文件，以及流程草稿、承接待办、故事链和承接冲突。3001继续独立运行；MDM不调用或代管3001，只适配其文件格式。MDM不信任上传文件中的`approved`、`status`、审核人或批准人字段。
 
 所有接口要求3000有效登录会话。请求正文中的流程数据可以直接作为根对象提交，也可以放在`data`字段中。
 
@@ -12,9 +12,9 @@ MDM在`/process-governance-editor/index.html`提供本地编制工作台。页�
 
 | 方法与路径 | 用途 |
 |---|---|
-| `GET /api/process-design/editor/schema` | 返回MDM当前使用的`process-governance-v2`结构规则 |
-| `GET /api/process-design/editor/template` | 返回空白v2单流程模板，并按当前会话预填归口部门 |
-| `POST /api/process-design/editor/validate` | 校验v2 JSON结构、稳定标识和本文件技术引用；不写业务数据 |
+| `GET /api/process-design/editor/schema` | 返回MDM当前使用的`process-governance-v3`结构规则 |
+| `GET /api/process-design/editor/template` | 返回空白v3单流程模板，并按当前会话预填归口部门 |
+| `POST /api/process-design/editor/validate` | 校验v3 JSON结构、稳定标识和本文件技术引用；不写业务数据 |
 
 工作台读取MySQL岗位和填写项类型目录。保存时调用完整流程草稿接口，并携带`expected_revision`。导出备份只下载当前JSON，不改变草稿修订号和保存状态。
 
@@ -29,7 +29,7 @@ MDM在`/process-governance-editor/index.html`提供本地编制工作台。页�
 ```json
 {
   "data": {
-    "schema_version": "process-governance-v2"
+    "schema_version": "process-governance-v3"
   }
 }
 ```
@@ -50,7 +50,7 @@ MDM在`/process-governance-editor/index.html`提供本地编制工作台。页�
 | `handoff_candidates` | 规范化后的承接候选 |
 | `governance_warnings` | 外部门流程、行为、责任部门或返回路径等待治理提示 |
 | `content_hash` | 本次规范化内容的SHA-256 |
-| `normalized_schema_version` | 固定为`process-governance-v2` |
+| `normalized_schema_version` | 固定为`process-governance-v3` |
 
 预览不初始化流程设计仓库，不写MySQL。
 
@@ -65,7 +65,7 @@ MDM在`/process-governance-editor/index.html`提供本地编制工作台。页�
 ```json
 {
   "data": {
-    "schema_version": "process-governance-v2"
+    "schema_version": "process-governance-v3"
   },
   "preview_hash": "<预览返回的content_hash>",
   "decision_basis": "本部门审核依据"
@@ -88,10 +88,12 @@ MDM在`/process-governance-editor/index.html`提供本地编制工作台。页�
 | 方法与路径 | 用途 |
 |---|---|
 | `GET /api/process-design/drafts` | 按当前数据范围列出流程草稿 |
-| `POST /api/process-design/drafts/canonical` | 以v1/v2内容新建草稿，服务端统一保存为v2 |
-| `GET /api/process-design/drafts/:id/content` | 读取完整v2 JSON、修订号和来源 |
-| `PUT /api/process-design/drafts/:id/content` | 按`expected_revision`保存完整v2 JSON |
-| `GET /api/process-design/drafts/:id/export` | 导出`process-governance-v2`备份 |
+| `POST /api/process-design/drafts/canonical` | 以v1、v2或v3内容新建草稿，服务端统一保存为v3 |
+| `GET /api/process-design/drafts/:id/content` | 读取完整v3 JSON、修订号和来源 |
+| `PUT /api/process-design/drafts/:id/content` | 按`expected_revision`保存完整v3 JSON |
+| `GET /api/process-design/drafts/:id/export` | 导出`process-governance-v3`备份 |
+
+v3中每个`forms[]`对象必须包含`form_design_state`。v1、v2文件导入后，服务端只补`unspecified`并保持既有表单、区域、字段和稳定引用，不根据名称、编号或明细数量推断现状或拟设计状态。
 
 保存请求：
 
@@ -99,7 +101,7 @@ MDM在`/process-governance-editor/index.html`提供本地编制工作台。页�
 {
   "expected_revision": 3,
   "content": {
-    "schema_version": "process-governance-v2"
+    "schema_version": "process-governance-v3"
   },
   "voided_handoffs": [
     {

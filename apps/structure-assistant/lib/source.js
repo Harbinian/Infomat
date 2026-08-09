@@ -130,8 +130,8 @@ function assertDocument(value) {
   if (serialized.length > 2 * 1024 * 1024) {
     throw new AppError(413, 'DOCUMENT_TOO_LARGE', '结构化JSON超过2MB，暂不能处理。');
   }
-  if (value.schema_version !== 'process-governance-v1') {
-    throw new AppError(400, 'DOCUMENT_VERSION_UNSUPPORTED', '只支持process-governance-v1文件。');
+  if (value.schema_version !== 'process-governance-v3') {
+    throw new AppError(400, 'DOCUMENT_VERSION_UNSUPPORTED', '只支持process-governance-v3文件；v1或v2文件请先在3001中导入并重新导出。');
   }
   return JSON.parse(serialized);
 }

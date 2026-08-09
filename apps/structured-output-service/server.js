@@ -26,8 +26,10 @@ const STANDARD_SCHEMA = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
 const validateStandardDocument = new Ajv2020({ allErrors: true, strict: false }).compile(STANDARD_SCHEMA);
 const processGovernanceV1SchemaPath = path.join(__dirname, '..', '..', 'docs', 'contracts', 'process-governance-v1.schema.json');
 const processGovernanceV2SchemaPath = path.join(__dirname, '..', '..', 'docs', 'contracts', 'process-governance-v2.schema.json');
+const processGovernanceV3SchemaPath = path.join(__dirname, '..', '..', 'docs', 'contracts', 'process-governance-v3.schema.json');
 const PROCESS_GOVERNANCE_V1_SCHEMA = JSON.parse(fs.readFileSync(processGovernanceV1SchemaPath, 'utf8'));
-const PROCESS_GOVERNANCE_SCHEMA_SOURCE = fs.readFileSync(processGovernanceV2SchemaPath);
+const PROCESS_GOVERNANCE_V2_SCHEMA = JSON.parse(fs.readFileSync(processGovernanceV2SchemaPath, 'utf8'));
+const PROCESS_GOVERNANCE_SCHEMA_SOURCE = fs.readFileSync(processGovernanceV3SchemaPath);
 const PROCESS_GOVERNANCE_SCHEMA = JSON.parse(PROCESS_GOVERNANCE_SCHEMA_SOURCE.toString('utf8'));
 const PROCESS_GOVERNANCE_SCHEMA_DIGEST = crypto
   .createHash('sha256')
@@ -39,8 +41,10 @@ const processGovernanceAjv = new Ajv2020({
   validateFormats: false
 });
 processGovernanceAjv.addSchema(PROCESS_GOVERNANCE_V1_SCHEMA);
+processGovernanceAjv.addSchema(PROCESS_GOVERNANCE_V2_SCHEMA);
 const validateProcessGovernanceV1Document = processGovernanceAjv.getSchema(PROCESS_GOVERNANCE_V1_SCHEMA.$id);
-const validateProcessGovernanceDocument = processGovernanceAjv.compile(PROCESS_GOVERNANCE_SCHEMA);
+const validateProcessGovernanceV2Document = processGovernanceAjv.getSchema(PROCESS_GOVERNANCE_V2_SCHEMA.$id);
+const validateProcessGovernanceV3Document = processGovernanceAjv.compile(PROCESS_GOVERNANCE_SCHEMA);
 const ROSTER_PATH = path.join(__dirname, '..', '..', 'docs', 'organization', '花名册.md');
 const WORK_ROLE_DATA_PATH = path.join(__dirname, '..', '..', 'docs', 'work-role-data.json');
 const REPO_ROOT = path.join(__dirname, '..', '..');
@@ -243,7 +247,7 @@ function decodeTextBuffer(buffer) {
 
 function createEmptyProcessGovernanceDocument() {
   return {
-    schema_version: 'process-governance-v2',
+    schema_version: 'process-governance-v3',
     export_meta: {
       package_ref: `package_${crypto.randomBytes(8).toString('hex')}`,
       exported_at: new Date().toISOString(),
@@ -1106,9 +1110,12 @@ function contractValidationResult(data) {
 }
 
 function processGovernanceValidationResult(data) {
-  const validator = data?.schema_version === 'process-governance-v1'
-    ? validateProcessGovernanceV1Document
-    : validateProcessGovernanceDocument;
+  const validators = {
+    'process-governance-v1': validateProcessGovernanceV1Document,
+    'process-governance-v2': validateProcessGovernanceV2Document,
+    'process-governance-v3': validateProcessGovernanceV3Document
+  };
+  const validator = validators[data?.schema_version] || validateProcessGovernanceV3Document;
   const schemaValid = validator(data);
   const errors = schemaValid
     ? []
@@ -2799,7 +2806,7 @@ app.post('/api/validate', (req, res) => {
     return res.status(400).json({ error: '缺少待校验的结构化文件内容' });
   }
   const schemaVersion = data.schema_version;
-  if (schemaVersion === 'process-governance-v1' || schemaVersion === 'process-governance-v2') {
+  if (['process-governance-v1', 'process-governance-v2', 'process-governance-v3'].includes(schemaVersion)) {
     const normalizedData = JSON.parse(JSON.stringify(data));
     return res.json({
       ...processGovernanceValidationResult(normalizedData),
@@ -2824,18 +2831,19 @@ app.get('/api/schema', (req, res) => {
   res.set('Cache-Control', 'no-store');
   if (req.query.version === 'document-structured-output-v2') return res.json(STANDARD_SCHEMA);
   if (req.query.version === 'process-governance-v1') return res.json(PROCESS_GOVERNANCE_V1_SCHEMA);
+  if (req.query.version === 'process-governance-v2') return res.json(PROCESS_GOVERNANCE_V2_SCHEMA);
   res.set('X-Infomat-Schema-Digest', PROCESS_GOVERNANCE_SCHEMA_DIGEST);
   return res.json(PROCESS_GOVERNANCE_SCHEMA);
 });
 app.get('/api/template', (req, res) => {
   res.set('Cache-Control', 'no-store');
-  const version = req.query.version || 'process-governance-v2';
-  if (version !== 'process-governance-v2') {
+  const version = req.query.version || 'process-governance-v3';
+  if (version !== 'process-governance-v3') {
     return res.status(400).json({ error: `不支持的空白模板版本: ${version}` });
   }
   return res.json({
     app_commit: APP_COMMIT,
-    schema_version: 'process-governance-v2',
+    schema_version: 'process-governance-v3',
     schema_digest: PROCESS_GOVERNANCE_SCHEMA_DIGEST,
     data: createEmptyProcessGovernanceDocument()
   });
@@ -2847,7 +2855,7 @@ app.get('/api/health', (_req, res) => {
     status: 'ok',
     service: 'structured-output-service',
     app_commit: APP_COMMIT,
-    schema_version: 'process-governance-v2',
+    schema_version: 'process-governance-v3',
     schema_digest: PROCESS_GOVERNANCE_SCHEMA_DIGEST,
     port: PORT,
     host: HOST,

@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://infomat.local/contracts/process-governance-v3.schema.json",
+  "title": "Infomat 单流程结构化文件规则 v3",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "export_meta",
+    "process",
+    "reference_materials",
+    "behaviors",
+    "flow_relations",
+    "data_objects",
+    "cross_department_handoffs",
+    "internal_process_calls",
+    "forms",
+    "terms"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "process-governance-v3"
+    },
+    "export_meta": {
+      "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/exportMeta"
+    },
+    "process": {
+      "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/process"
+    },
+    "reference_materials": {
+      "type": "array",
+      "items": {
+        "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/referenceMaterial"
+      },
+      "default": []
+    },
+    "behaviors": {
+      "type": "array",
+      "items": {
+        "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/behavior"
+      },
+      "default": []
+    },
+    "flow_relations": {
+      "type": "array",
+      "items": {
+        "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/flowRelation"
+      },
+      "default": []
+    },
+    "data_objects": {
+      "type": "array",
+      "items": {
+        "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/dataObject"
+      },
+      "default": []
+    },
+    "cross_department_handoffs": {
+      "type": "array",
+      "items": {
+        "$ref": "https://infomat.local/contracts/process-governance-v2.schema.json#/$defs/crossDepartmentHandoff"
+      },
+      "default": []
+    },
+    "internal_process_calls": {
+      "type": "array",
+      "items": {
+        "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/internalProcessCall"
+      },
+      "default": []
+    },
+    "forms": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/formOrRecord"
+      },
+      "default": []
+    },
+    "terms": {
+      "type": "array",
+      "items": {
+        "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/term"
+      },
+      "default": []
+    },
+    "migration": {
+      "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/migration"
+    }
+  },
+  "$defs": {
+    "formOrRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "form_ref",
+        "behavior_ref",
+        "form_name",
+        "form_no",
+        "form_design_state",
+        "areas"
+      ],
+      "properties": {
+        "form_ref": {
+          "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/technicalRef"
+        },
+        "behavior_ref": {
+          "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/nullableTechnicalRef"
+        },
+        "form_name": {
+          "type": "string"
+        },
+        "form_no": {
+          "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/nullableString"
+        },
+        "form_design_state": {
+          "enum": [
+            "unspecified",
+            "current_state",
+            "proposed_design"
+          ]
+        },
+        "areas": {
+          "type": "array",
+          "items": {
+            "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/formArea"
+          },
+          "default": []
+        }
+      }
+    }
+  }
+}

@@ -231,11 +231,11 @@ async function main() {
   try {
     const drafts = await request(baseUrl, 'contact', '/api/process-design/drafts');
     assert.strictEqual(drafts.response.status, 200);
-    assert.strictEqual(drafts.body.schema_version, 'process-governance-v2');
+    assert.strictEqual(drafts.body.schema_version, 'process-governance-v3');
 
     const content = await request(baseUrl, 'contact', '/api/process-design/drafts/1/content');
     assert.strictEqual(content.response.status, 200);
-    assert.strictEqual(content.body.document.schema_version, 'process-governance-v2');
+    assert.strictEqual(content.body.document.schema_version, 'process-governance-v3');
     assert.strictEqual(content.body.revision, 1);
 
     const conflictSave = await request(baseUrl, 'contact', '/api/process-design/drafts/1/content', {

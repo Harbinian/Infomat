@@ -850,7 +850,7 @@ async function loadReviewFile(file) {
   state.reviewPreviewMode = 'structure';
   state.reviewDiagramExpanded = false;
   byId('reviewFileStatus').textContent =
-    `${file.name} · process-governance-v1 · ${validation.valid ? '当前硬性结构通过' : `${validation.errors.length}项硬性结构错误`}`;
+      `${file.name} · process-governance-v3 · ${validation.valid ? '当前硬性结构通过' : `${validation.errors.length}项硬性结构错误`}`;
   byId('reviewSummary').textContent =
     '文件已读取。开始独立结构预审后，这里会显示需要逐条处理的问题。';
   byId('reviewWorkspace').hidden = false;
