@@ -340,11 +340,11 @@ async function checkMdm(summary, fixedEnv, mdmBaseUrl) {
   const editorSchema = await requireJson(`${mdmBaseUrl}/api/process-design/editor/schema`, { headers: authedHeaders });
   assert.equal(
     editorSchema.body.properties?.schema_version?.const,
-    'process-governance-v2',
+    'process-governance-v3',
     'MDM process editor schema version is stale'
   );
   const editorTemplate = await requireJson(
-    `${mdmBaseUrl}/api/process-design/editor/template?version=process-governance-v2`,
+    `${mdmBaseUrl}/api/process-design/editor/template?version=process-governance-v3`,
     { headers: authedHeaders }
   );
   const editorValidation = await requireJson(`${mdmBaseUrl}/api/process-design/editor/validate`, {
