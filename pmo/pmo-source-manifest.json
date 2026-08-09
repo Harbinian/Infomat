@@ -11,21 +11,21 @@
       "path": "信息化项目_计划管控真源.md",
       "purpose": "维护任务排程、资源责任、风险交付、阶段门和执行管控字段",
       "exists": true,
-      "sha256_16": "805a5ca7e2805768"
+      "sha256_16": "1916769d6629af7d"
     },
     {
       "role": "WBS结构真源",
       "path": "信息化项目_WBS结构真源.md",
       "purpose": "维护 WBS 编号、父子层级、排序和摘要/里程碑结构",
       "exists": true,
-      "sha256_16": "2d4091df2246e19b"
+      "sha256_16": "3cf8d475232d89f8"
     },
     {
       "role": "工作平衡",
       "path": "信息化项目_工作平衡.md",
       "purpose": "维护人员分配、例会把关机制、高压窗口和调度规则",
       "exists": true,
-      "sha256_16": "9acc68595acf80ed"
+      "sha256_16": "58e5a9a8a39e2f72"
     },
     {
       "role": "工作开展原则",
@@ -46,7 +46,7 @@
       "path": "信息化项目_部门主备对接人名单.md",
       "purpose": "维护各部门负责人、主对接人和备岗人员的当前名单",
       "exists": true,
-      "sha256_16": "84a8f9b28094018a"
+      "sha256_16": "28b66f8cab9f36fb"
     },
     {
       "role": "执行标准真源",
@@ -65,7 +65,7 @@
     "recordCount": 516,
     "fieldCount": 53,
     "projectStart": "2026-06-16",
-    "projectFinish": "2028-02-15",
+    "projectFinish": "2028-02-22",
     "milestoneCount": 47,
     "criticalControlCount": 112,
     "h5FocusCount": 251
@@ -78,8 +78,8 @@
     "taskCount": 516,
     "fieldCount": 53,
     "bucketCounts": {
-      "必须补": 211,
-      "自动可补": 61,
+      "必须补": 210,
+      "自动可补": 62,
       "合理暂缓": 94,
       "需拆分后补": 53,
       "人工复核": 28

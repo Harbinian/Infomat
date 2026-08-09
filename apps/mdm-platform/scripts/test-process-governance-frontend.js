@@ -58,7 +58,7 @@ assert.ok(html.includes("event.data.type === 'mdm-process-editor-height'"), 'emb
   'record-workbench',
   '结构化学习评分',
   'moveCollectionItem',
-  '/api/process-design/editor/template?version=process-governance-v2',
+  '/api/process-design/editor/template?version=process-governance-v3',
   '/api/process-design/editor/schema',
   '/api/process-design/editor/validate'
 ].forEach(fragment => assert.ok(editorHtml.includes(fragment), `MDM 3001-style editor missing ${fragment}`));
@@ -85,7 +85,7 @@ assert.ok(!editorAdapter.includes('sessionStorage.'), 'MDM editor adapter must n
   'id="pgDesignStepProgress"',
   'id="importProcessDesignStructuredOutputBtn"',
   '预览并审核导入3001文件',
-  "['process-governance-v1', 'process-governance-v2']",
+  "['process-governance-v1', 'process-governance-v2', 'process-governance-v3']",
   'id="pgCanonicalJsonEditor"',
   'id="pgCanonicalJsonText"',
   'id="pgLoadCanonicalJsonBtn"',
@@ -99,6 +99,24 @@ assert.ok(!editorAdapter.includes('sessionStorage.'), 'MDM editor adapter must n
   'canonicalDirty',
   "window.addEventListener('beforeunload'"
 ].forEach(fragment => assert.ok(html.includes(fragment), `single-process editor missing ${fragment}`));
+
+[
+  '录入现有表单',
+  '设计新建／优化表单',
+  '主表字段',
+  '字段归属',
+  '新建明细表',
+  '明细表标题（按纸质单据填写，可暂缺）',
+  'form_design_state',
+  'data-form-item-assignment',
+  'removeDetailArea'
+].forEach(fragment => assert.ok(editorHtml.includes(fragment), `paper form editor missing ${fragment}`));
+[
+  '建立主表结构',
+  '添加明细表结构',
+  '结构类型',
+  '主表标题'
+].forEach(fragment => assert.ok(!editorHtml.includes(fragment), `database-oriented form wording remains: ${fragment}`));
 
 [
   '制度说明',

@@ -60,7 +60,7 @@ function createDocument(behaviorCount = 5) {
     relations.push(relation(index, `behavior-${index}`, `behavior-${index + 1}`));
   }
   return {
-    schema_version: 'process-governance-v2',
+    schema_version: 'process-governance-v3',
     export_meta: {
       package_ref: 'package-1',
       exported_at: '2026-07-31T00:00:00.000Z',
@@ -94,6 +94,7 @@ function createDocument(behaviorCount = 5) {
       form_ref: 'form-1',
       form_name: '评分测试表',
       form_no: null,
+      form_design_state: 'current_state',
       related_behavior_refs: behaviorCount ? ['behavior-1'] : [],
       areas: [{
         area_ref: 'area-1',
@@ -160,6 +161,45 @@ assert.equal(perfectResult.chainCoefficient, 1);
 assert.equal(perfectResult.displayScore, 100);
 assert.equal(perfectResult.grade, 'A');
 assert.equal(perfectResult.blocker, false);
+
+const formStatePendingDocument = createDocument(5);
+formStatePendingDocument.forms[0].form_design_state = 'unspecified';
+const formStatePendingResult = content(formStatePendingDocument);
+assert.ok(formStatePendingResult.dimensions.form < 10);
+assert.equal(
+  formStatePendingResult.issues.find(item => item.message.includes('表单状态待确认')).focusPath,
+  'forms.0.form_design_state'
+);
+
+const multipleDetailDocument = createDocument(5);
+multipleDetailDocument.forms[0].areas.push({
+  area_ref: 'area-detail-1',
+  area_type: '明细清单',
+  area_title: '物料明细',
+  items: [{ item_ref: 'item-detail-1', item_name: '物料编码', item_type: '文本', required: true, instructions: '' }]
+}, {
+  area_ref: 'area-detail-2',
+  area_type: '明细清单',
+  area_title: '费用明细',
+  items: [{ item_ref: 'item-detail-2', item_name: '金额', item_type: '金额', required: false, instructions: '' }]
+});
+assert.equal(content(multipleDetailDocument).dimensions.form, 10, 'multiple named detail tables must not lose points');
+multipleDetailDocument.forms[0].areas[2].area_title = '';
+assert.ok(content(multipleDetailDocument).dimensions.form < 10, 'unnamed detail tables must lose only distinction points');
+
+const unassignedFieldDocument = createDocument(5);
+unassignedFieldDocument.forms[0].areas.push({
+  area_ref: 'area-unassigned',
+  area_type: '',
+  area_title: '',
+  items: [{ item_ref: 'item-unassigned', item_name: '归属待确认字段', item_type: '文本', required: false, instructions: '' }]
+});
+const unassignedFieldResult = content(unassignedFieldDocument);
+assert.ok(unassignedFieldResult.dimensions.form < 10);
+assert.equal(
+  unassignedFieldResult.issues.find(item => item.message.includes('归属待确认')).focusPath,
+  'forms.0.areas.1.items.0.assignment'
+);
 
 const expectedCoefficients = new Map([[0, 0.8], [1, 0.8], [2, 0.85], [3, 0.9], [4, 0.95], [5, 1]]);
 expectedCoefficients.forEach((coefficient, behaviorCount) => {

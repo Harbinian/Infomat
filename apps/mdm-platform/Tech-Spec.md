@@ -26,6 +26,7 @@
 | v1/v2规范化 | `server/processGovernanceV2.js` | 结构校验、v1兼容、引用检查、治理提示和规范化内容哈希 |
 | 承接迁移 | `server/crossDeptHandoffV2Migration.js` | 盘点、备份、v2字段和状态迁移、核对与补偿 |
 | 统一入口迁移 | `server/processGovernanceUnifiedMigration.js` | 完整JSON、草稿修订、承接冲突和只追加事件的dry-run、迁移、回滚与补偿 |
+| v3表单迁移 | `server/processGovernanceV3Migration.js` | 把草稿和发布版本中的v1/v2完整JSON无损规范化为v3，补表单状态、重算摘要并按批次备份和恢复 |
 | 流程设计接口 | `server/routes/processDesignMysql.js` | 两阶段导入、事务写入、承接状态机、双方决定和发布卡口 |
 | 角色工作台 | `server/routes/roleWorkbench.js` | 直接读取承接和冲突队列，并生成统一入口深链接 |
 
@@ -95,10 +96,10 @@
 - `identity_migration_*`表保存迁移批次和恢复所需快照。
 - `process_design_cross_dept_handoffs`统一保存前置输入和后续承接，并以`handoff_ref`、候选哈希、修订号和当前标记保留历史。
 - `process_design_structured_imports`保存受控导入、审核依据、规范化JSON和内容哈希。
-- `process_design_drafts.process_content_json`保存完整v2 JSON真源；`revision_no`和`content_hash`用于乐观并发与内容核对。
+- `process_design_drafts.process_content_json`保存完整v3 JSON真源；`revision_no`和`content_hash`用于乐观并发与内容核对。
 - `process_design_handoff_conflicts`保存承接冲突当前状态和协调方案。
 - `process_design_handoff_events`只追加承接、冲突和项目决策事件。
-- 保存完整v2 JSON时，同一数据库事务同步流程、业务行为、承接候选修订和事件。投影同步失败时回滚JSON修订，不形成半套治理事实。
+- 保存完整v3 JSON时，同一数据库事务同步流程、业务行为、承接候选修订和事件。投影同步失败时回滚JSON修订，不形成半套治理事实。
 - 删除已有治理记录的承接必须提交`handoff_ref`和作废原因；历史承接只取消当前标记，不物理删除。
 
 ## 8. 接口
@@ -165,7 +166,9 @@ MDM工作组组长只能在卡口通过后发布，不能以角色权限跳过�
 
 ### 9.2 完整流程JSON与并发
 
-- MDM接受`process-governance-v1`和`process-governance-v2`，在服务端规范化后统一保存和导出v2。
+- MDM接受`process-governance-v1`、`process-governance-v2`和`process-governance-v3`，在服务端规范化后统一保存和导出v3。v1、v2表单只补`form_design_state=unspecified`，不推断现状或拟设计状态。
+- 本地流程编辑器按整张纸质表单同时渲染全部字段。字段归属变化只在`forms[].areas[].items[]`之间移动同一字段对象；字段级不保存重复归属值，MDM也不创建与主表或明细表一一对应的物理数据库表。
+- `form_design_state`允许`current_state`、`proposed_design`和兼容迁移使用的`unspecified`。主表标题不参与提示和评分；多张明细表合法；多张明细表中的空标题逐张形成可定位业务提示。
 - `process_content_json`是编制内容真源，承接及待办表是治理投影。
 - 保存请求必须携带`expected_revision`。更新语句同时匹配`id + revision_no`，不匹配时返回`409 DRAFT_REVISION_CONFLICT`。
 - 内容哈希未变化时不增加修订号；变化时增加修订并更新时间、更新人和哈希。
@@ -184,7 +187,7 @@ MDM工作组组长只能在卡口通过后发布，不能以角色权限跳过�
 
 ## 11. 兼容与迁移
 
-身份迁移见[RBAC-RACI-Migration-Runbook.md](docs/RBAC-RACI-Migration-Runbook.md)，承接迁移见[Cross-Department-Handoff-Migration-Runbook.md](docs/Cross-Department-Handoff-Migration-Runbook.md)。
+身份迁移见[RBAC-RACI-Migration-Runbook.md](docs/RBAC-RACI-Migration-Runbook.md)，承接迁移见[Cross-Department-Handoff-Migration-Runbook.md](docs/Cross-Department-Handoff-Migration-Runbook.md)，v3表单状态迁移见[Process-Governance-V3-Migration-Runbook.md](docs/Process-Governance-V3-Migration-Runbook.md)。
 
 切换原则：
 

@@ -49,7 +49,7 @@
         key: 'form',
         label: '表单结构',
         max: 10,
-        description: '检查表单名称、唯一主表、区域和填写项结构。'
+      description: '检查表单状态、字段归属、明细表区分信息和字段内容。'
       })
     ]),
     technicalChecks: Object.freeze([
@@ -673,56 +673,46 @@
           '影响表单名称子项'
         ));
 
-        const areas = Array.isArray(form.areas) ? form.areas : [];
-        const mainAreaCount = areas.filter(area => area.area_type === '基本信息').length;
-        if (mainAreaCount === 1) current += 1.5;
+        if (form.form_design_state && form.form_design_state !== 'unspecified') current += 1.5;
         else issues.push(issue(
           '表单结构',
-          mainAreaCount
-            ? `${formLabel}包含${mainAreaCount}个主表结构`
-            : `${formLabel}没有主表结构`,
-          formTarget,
-          '影响唯一主表子项'
+          `${formLabel}的表单状态待确认`,
+          fieldTarget(formTarget, `forms.${formIndex}.form_design_state`),
+          '影响表单状态子项'
         ));
 
-        const areaChecks = [];
+        const areas = Array.isArray(form.areas) ? form.areas : [];
+        const detailCount = areas.filter(area => area.area_type === '明细清单').length;
+        const assignmentChecks = [];
         areas.forEach((area, areaIndex) => {
           const areaTarget = {
             editorSection: 'forms',
             focusKind: 'area',
             focusRef: area.area_ref
           };
-          const checks = [
-            [
-              AREA_TYPES.has(area.area_type),
-              `${formLabel}的第${areaIndex + 1}个表结构未选择结构类型`,
-              `forms.${formIndex}.areas.${areaIndex}.area_type`
-            ],
-            [
-              complete(area.area_title),
-              `${formLabel}的第${areaIndex + 1}个表结构未填写标题`,
-              `forms.${formIndex}.areas.${areaIndex}.area_title`
-            ],
-            [
-              Array.isArray(area.items) && area.items.length > 0,
-              `${formLabel}的第${areaIndex + 1}个表结构没有填写项`,
-              ''
-            ]
-          ];
-          checks.forEach(([passed, message, focusPath]) => {
-            areaChecks.push(passed);
-            if (!passed) {
-              issues.push(issue(
-                '表单结构',
-                message,
-                focusPath ? fieldTarget(areaTarget, focusPath) : areaTarget,
-                '影响表结构子项'
-              ));
-            }
+          if (area.area_type === '明细清单' && detailCount > 1) {
+            const passed = complete(area.area_title);
+            assignmentChecks.push(passed);
+            if (!passed) issues.push(issue(
+              '表单结构',
+              `${formLabel}的明细表标题暂缺，当前多张明细表无法区分`,
+              fieldTarget(areaTarget, `forms.${formIndex}.areas.${areaIndex}.area_title`),
+              '影响明细表区分信息子项'
+            ));
+          }
+          (Array.isArray(area.items) ? area.items : []).forEach((item, itemIndex) => {
+            const passed = AREA_TYPES.has(area.area_type);
+            assignmentChecks.push(passed);
+            if (!passed) issues.push(issue(
+              '表单结构',
+              `${formLabel}的字段“${item.item_name || `字段${itemIndex + 1}`}”归属待确认`,
+              fieldTarget(areaTarget, `forms.${formIndex}.areas.${areaIndex}.items.${itemIndex}.assignment`),
+              '影响字段归属子项'
+            ));
           });
         });
         current += 1.5 * (
-          areaChecks.length ? areaChecks.filter(Boolean).length / areaChecks.length : 0
+          assignmentChecks.length ? assignmentChecks.filter(Boolean).length / assignmentChecks.length : 1
         );
 
         const itemChecks = [];
@@ -736,17 +726,17 @@
             const checks = [
               [
                 complete(item.item_name),
-                `${formLabel}第${areaIndex + 1}个表结构的填写项${itemIndex + 1}未填写名称`,
+                `${formLabel}的字段${itemIndex + 1}未填写名称`,
                 `forms.${formIndex}.areas.${areaIndex}.items.${itemIndex}.item_name`
               ],
               [
                 complete(item.item_type),
-                `${formLabel}第${areaIndex + 1}个表结构的填写项${itemIndex + 1}未选择类型`,
+                `${formLabel}的字段${itemIndex + 1}未选择类型`,
                 `forms.${formIndex}.areas.${areaIndex}.items.${itemIndex}.item_type`
               ],
               [
                 typeof item.required === 'boolean',
-                `${formLabel}第${areaIndex + 1}个表结构的填写项${itemIndex + 1}未明确是否必填`,
+                `${formLabel}的字段${itemIndex + 1}未明确是否必填`,
                 `forms.${formIndex}.areas.${areaIndex}.items.${itemIndex}.required`
               ]
             ];

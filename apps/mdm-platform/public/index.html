@@ -1786,7 +1786,7 @@
             </div>
             <details class="process-design-detail" id="pgCanonicalJsonEditor" style="margin-bottom:16px;">
               <summary><strong>单流程治理JSON</strong> <span class="pg-status" id="pgCanonicalRevision">尚未选择草稿</span></summary>
-              <div class="notice" style="margin:12px 0;">这里保存的是process-governance-v2完整内容。可粘贴3001导出的v1/v2 JSON；保存和导出统一为v2。浏览器不会持久化草稿。</div>
+        <div class="notice" style="margin:12px 0;">这里保存的是process-governance-v3完整内容。可粘贴3001导出的v1/v2/v3 JSON；保存和导出统一为v3。浏览器不会持久化草稿。</div>
               <textarea id="pgCanonicalJsonText" rows="18" spellcheck="false" style="width:100%;font-family:Consolas,monospace;" placeholder="选择草稿后载入，或通过“预览并审核导入3001文件”创建治理投影"></textarea>
               <div class="process-design-actions" style="margin-top:12px;">
                 <button type="button" class="btn secondary" id="pgLoadCanonicalJsonBtn">重新载入</button>
@@ -3319,8 +3319,8 @@
       } catch (error) {
         throw new Error('结构化文件不是有效 JSON');
       }
-      if (!payload || ['process-governance-v1', 'process-governance-v2'].indexOf(payload.schema_version) < 0) {
-        throw new Error('3001结构化文件必须使用 process-governance-v1 或 process-governance-v2');
+      if (!payload || ['process-governance-v1', 'process-governance-v2', 'process-governance-v3'].indexOf(payload.schema_version) < 0) {
+        throw new Error('3001结构化文件必须使用 process-governance-v1、process-governance-v2 或 process-governance-v3');
       }
       if ($('pgDesignSaveStatus')) $('pgDesignSaveStatus').textContent = '正在执行服务端预览校验...';
       try {

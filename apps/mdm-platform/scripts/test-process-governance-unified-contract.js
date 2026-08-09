@@ -17,6 +17,7 @@ const {
 } = require('../server/processGovernanceUnifiedMigration');
 const {
   V2,
+  CURRENT_VERSION,
   createEmptyProcessGovernanceDocument,
   normalizeProcessGovernanceDocument
 } = require('../server/processGovernanceV2');
@@ -199,7 +200,7 @@ async function main() {
     process_name: '测试流程',
     owning_department: '测试部门'
   });
-  assert.strictEqual(empty.schema_version, V2);
+  assert.strictEqual(empty.schema_version, CURRENT_VERSION);
   assert.deepStrictEqual(normalizeProcessGovernanceDocument(empty).errors, []);
 
   const migrated = convertLegacyProcessDesignContent({

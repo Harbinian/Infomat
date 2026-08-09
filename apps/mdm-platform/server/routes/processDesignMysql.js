@@ -13,7 +13,7 @@ const {
 } = require('../auth');
 const { mysqlConfigFromEnv } = require('../mysqlConfig');
 const {
-  V2: PROCESS_GOVERNANCE_SCHEMA_VERSION,
+  CURRENT_VERSION: PROCESS_GOVERNANCE_SCHEMA_VERSION,
   contentHash,
   createEmptyProcessGovernanceDocument,
   normalizeProcessGovernanceDocument,
@@ -2801,14 +2801,15 @@ function makeProcessDesignMysqlRepository(pool) {
     },
     async canonicalContent(draft) {
       if (text(draft.process_content_json)) {
-        const document = parseJsonObject(draft.process_content_json);
-        if (document && Object.keys(document).length) {
+        const candidate = parseJsonObject(draft.process_content_json);
+        const normalized = normalizeProcessGovernanceDocument(candidate);
+        if (!normalized.errors.length) {
           return {
             source: 'draft_canonical_json',
-            schema_version: text(draft.schema_version) || PROCESS_GOVERNANCE_SCHEMA_VERSION,
-            content_hash: text(draft.content_hash) || contentHash(document),
+            schema_version: PROCESS_GOVERNANCE_SCHEMA_VERSION,
+            content_hash: normalized.content_hash,
             revision: Number(draft.revision_no || 0),
-            document
+            document: normalized.document
           };
         }
       }
@@ -2820,14 +2821,15 @@ function makeProcessDesignMysqlRepository(pool) {
         LIMIT 1
       `, [draft.id]);
       if (imported && text(imported.normalized_json)) {
-        const document = parseJsonObject(imported.normalized_json);
-        if (document && Object.keys(document).length) {
+        const candidate = parseJsonObject(imported.normalized_json);
+        const normalized = normalizeProcessGovernanceDocument(candidate);
+        if (!normalized.errors.length) {
           return {
             source: 'structured_import',
-            schema_version: imported.normalized_schema_version,
-            content_hash: imported.content_hash,
+            schema_version: PROCESS_GOVERNANCE_SCHEMA_VERSION,
+            content_hash: normalized.content_hash,
             revision: Number(draft.revision_no || 0),
-            document
+            document: normalized.document
           };
         }
       }

@@ -259,7 +259,7 @@ async function testAssistantApi() {
     assert.equal(contextResult.response.status, 200);
     assert.equal(contextResult.response.headers.get('cache-control'), 'no-store');
     assert.equal(contextResult.body.app_commit, repoState.commit);
-    assert.equal(contextResult.body.schema_version, 'process-governance-v1');
+    assert.equal(contextResult.body.schema_version, 'process-governance-v3');
     assert.match(contextResult.body.schema_digest, /^[a-f0-9]{64}$/);
     assert.equal(Object.prototype.hasOwnProperty.call(contextResult.body, 'apiKey'), false);
     const expected = {
@@ -269,7 +269,7 @@ async function testAssistantApi() {
 
     const templateResult = await authedJson(assistantServer.baseUrl, '/api/template', auth);
     assert.equal(templateResult.response.status, 200);
-    assert.equal(templateResult.body.data.schema_version, 'process-governance-v1');
+    assert.equal(templateResult.body.data.schema_version, 'process-governance-v3');
     const draft = templateResult.body.data;
 
     const missingConsent = await authedJson(assistantServer.baseUrl, '/api/source/paste', auth, {
@@ -512,7 +512,7 @@ async function testAssistantApi() {
       assert.equal(gatewayAuth.status, 200);
       assert.equal(gatewayAuth.headers.get('cache-control'), 'no-store');
       const gatewaySchema = await gatewayAuth.json();
-      assert.equal(gatewaySchema.properties.schema_version.const, 'process-governance-v1');
+      assert.equal(gatewaySchema.properties.schema_version.const, 'process-governance-v3');
     } finally {
       await close(gatewayServer.server);
     }
@@ -524,7 +524,7 @@ async function testAssistantApi() {
 
 function testRestrictedPatch() {
   const document = {
-    schema_version: 'process-governance-v1',
+    schema_version: 'process-governance-v3',
     export_meta: {},
     process: { process_name: '' },
     reference_materials: [],

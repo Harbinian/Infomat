@@ -19,7 +19,8 @@ const processDiagramPath = path.join(appRoot, 'public', 'process-diagram.js');
 const structureScorePath = path.join(appRoot, 'public', 'structure-score.js');
 const serverPath = path.join(appRoot, 'server.js');
 const processV1SchemaPath = path.join(repoRoot, 'docs', 'contracts', 'process-governance-v1.schema.json');
-const processSchemaPath = path.join(repoRoot, 'docs', 'contracts', 'process-governance-v2.schema.json');
+const processV2SchemaPath = path.join(repoRoot, 'docs', 'contracts', 'process-governance-v2.schema.json');
+const processSchemaPath = path.join(repoRoot, 'docs', 'contracts', 'process-governance-v3.schema.json');
 const legacySchemaPath = path.join(repoRoot, 'docs', 'contracts', 'document-structured-output.schema.json');
 const { buildGraphModel } = require(processDiagramPath);
 
@@ -49,7 +50,7 @@ function createDraft(overrides = {}) {
     countersign_target_departments: []
   };
   const result = {
-    schema_version: 'process-governance-v2',
+    schema_version: 'process-governance-v3',
     export_meta: {
       package_ref: 'package_test_001',
       exported_at: '2026-07-27T08:00:00.000Z',
@@ -95,6 +96,7 @@ function createDraft(overrides = {}) {
       behavior_ref: 'behavior_apply',
       form_name: '费用报销申请单',
       form_no: null,
+      form_design_state: 'current_state',
       areas: [{
         area_ref: 'area_basic',
         area_type: '基本信息',
@@ -167,17 +169,25 @@ async function postJson(baseUrl, route, payload) {
 
 async function testSchemas() {
   const processSchema = JSON.parse(fs.readFileSync(processSchemaPath, 'utf8'));
+  const processV2Schema = JSON.parse(fs.readFileSync(processV2SchemaPath, 'utf8'));
   const processV1Schema = JSON.parse(fs.readFileSync(processV1SchemaPath, 'utf8'));
   const legacySchema = JSON.parse(fs.readFileSync(legacySchemaPath, 'utf8'));
   const processAjv = new Ajv2020({ allErrors: true, strict: false, validateFormats: false });
   processAjv.addSchema(processV1Schema);
+  processAjv.addSchema(processV2Schema);
   const processValidator = processAjv.compile(processSchema);
+  const processV2Validator = processAjv.getSchema(processV2Schema.$id);
   const processV1Validator = processAjv.getSchema(processV1Schema.$id);
   const legacyValidator = new Ajv2020({ allErrors: true, strict: false }).compile(legacySchema);
   assert.match(processSchema.properties.process.$ref, /process-governance-v1/);
   assert.equal(processV1Schema.$defs.process.type, 'object');
   assert.equal(Object.prototype.hasOwnProperty.call(processSchema.properties, 'processes'), false);
-  assert.equal(processSchema.properties.schema_version.const, 'process-governance-v2');
+  assert.equal(processSchema.properties.schema_version.const, 'process-governance-v3');
+  assert.deepEqual(processSchema.$defs.formOrRecord.properties.form_design_state.enum, [
+    'unspecified',
+    'current_state',
+    'proposed_design'
+  ]);
   assert.equal(processV1Schema.$defs.behavior.properties.behavior_description.type, 'string');
   assert.equal(
     processV1Schema.$defs.behavior.required.includes('behavior_description'),
@@ -187,12 +197,17 @@ async function testSchemas() {
   assert.equal(processValidator(createDraft()), true, JSON.stringify(processValidator.errors));
   const legacyDraftWithoutBehaviorDescription = createDraft();
   legacyDraftWithoutBehaviorDescription.schema_version = 'process-governance-v1';
+  delete legacyDraftWithoutBehaviorDescription.forms[0].form_design_state;
   delete legacyDraftWithoutBehaviorDescription.behaviors[0].behavior_description;
   assert.equal(
     processV1Validator(legacyDraftWithoutBehaviorDescription),
     true,
     'previous process-governance-v1 JSON without behavior_description must remain valid'
   );
+  const previousV2Draft = createDraft();
+  previousV2Draft.schema_version = 'process-governance-v2';
+  delete previousV2Draft.forms[0].form_design_state;
+  assert.equal(processV2Validator(previousV2Draft), true, 'process-governance-v2 must remain valid without v3 fields');
   assert.equal(typeof legacyValidator, 'function');
   assert.equal(
     processValidator(createEmptyProcessGovernanceDocument()),
@@ -241,21 +256,25 @@ async function testApi() {
     const health = await getJson(baseUrl, '/api/health');
     assert.equal(health.response.status, 200);
     assert.equal(health.body.status, 'ok');
+    assert.equal(health.body.schema_version, 'process-governance-v3');
     assert.equal(Object.prototype.hasOwnProperty.call(health.body, 'deepseek'), false);
 
     const schema = await getJson(baseUrl, '/api/schema');
-    assert.equal(schema.body.properties.schema_version.const, 'process-governance-v2');
+    assert.equal(schema.body.properties.schema_version.const, 'process-governance-v3');
     assert.equal(schema.response.headers.get('cache-control'), 'no-store');
     assert.equal(schema.response.headers.get('x-infomat-schema-digest'), PROCESS_GOVERNANCE_SCHEMA_DIGEST);
     const legacySchema = await getJson(baseUrl, '/api/schema?version=document-structured-output-v2');
     assert.equal(legacySchema.body.properties.schema_version.const, 'document-structured-output-v2');
 
-    const template = await getJson(baseUrl, '/api/template?version=process-governance-v2');
+    const previousSchema = await getJson(baseUrl, '/api/schema?version=process-governance-v2');
+    assert.equal(previousSchema.body.properties.schema_version.const, 'process-governance-v2');
+
+    const template = await getJson(baseUrl, '/api/template?version=process-governance-v3');
     assert.equal(template.response.status, 200);
     assert.equal(template.response.headers.get('cache-control'), 'no-store');
-    assert.equal(template.body.schema_version, 'process-governance-v2');
+    assert.equal(template.body.schema_version, 'process-governance-v3');
     assert.equal(template.body.schema_digest, PROCESS_GOVERNANCE_SCHEMA_DIGEST);
-    assert.equal(template.body.data.schema_version, 'process-governance-v2');
+    assert.equal(template.body.data.schema_version, 'process-governance-v3');
     assert.equal(typeof template.body.data.export_meta.package_ref, 'string');
     assert.equal(typeof template.body.data.process.process_ref, 'string');
     assert.deepEqual(template.body.data.reference_materials, []);
@@ -361,12 +380,18 @@ async function testApi() {
     const previousV1 = createDraft();
     previousV1.schema_version = 'process-governance-v1';
     delete previousV1.behaviors[0].behavior_description;
+    delete previousV1.forms[0].form_design_state;
     const previousV1Validation = await postJson(baseUrl, '/api/validate', { data: previousV1 });
     assert.equal(
       previousV1Validation.body.valid,
       true,
       'the validation API must accept previous v1 files without the optional supplemental description'
     );
+    const previousV2 = createDraft();
+    previousV2.schema_version = 'process-governance-v2';
+    delete previousV2.forms[0].form_design_state;
+    const previousV2Validation = await postJson(baseUrl, '/api/validate', { data: previousV2 });
+    assert.equal(previousV2Validation.body.valid, true, 'the validation API must continue accepting v2 files');
 
     const duplicate = createDraft();
     duplicate.behaviors.push({ ...duplicate.behaviors[0] });
@@ -890,8 +915,8 @@ async function testFrontendContract() {
 
   assert.ok(html.includes('id="newProcessButton"'));
   assert.ok(html.includes('async function fetchEmptyProcessDocument()'));
-  assert.ok(html.includes("fetch('/api/template?version=process-governance-v2', { cache: 'no-store' })"));
-  assert.ok(html.includes("const EXPECTED_EXPORT_SCHEMA_VERSION = 'process-governance-v2'"));
+  assert.ok(html.includes("fetch('/api/template?version=process-governance-v3', { cache: 'no-store' })"));
+  assert.ok(html.includes("const EXPECTED_EXPORT_SCHEMA_VERSION = 'process-governance-v3'"));
   assert.ok(html.includes('登记本行为开始前需要外部门提供的输入'));
   assert.ok(html.includes('登记本行为完成后需要外部门承接的事项'));
   assert.ok(html.includes('待在MDM平台明确责任部门'));
@@ -941,23 +966,99 @@ async function testFrontendContract() {
   assert.ok(html.includes('.next-stage-grid { grid-template-columns: 1fr; }'));
   assert.ok(html.includes('表单或记录名称'));
   assert.ok(html.includes('表单或记录编号（如有）'));
-  assert.ok(html.includes('主表结构'));
-  assert.ok(html.includes('明细表结构'));
-  assert.ok(html.includes('填写项'));
+  assert.ok(html.includes('录入现有表单'));
+  assert.ok(html.includes('设计新建／优化表单'));
+  assert.ok(html.includes('主表字段'));
+  assert.ok(html.includes('明细表标题（按纸质单据填写，可暂缺）'));
+  assert.ok(html.includes('字段归属'));
+  assert.ok(html.includes('新建明细表'));
+  assert.ok(html.includes('添加字段'));
+  assert.ok(html.includes('data-form-item-assignment'));
+  assert.ok(html.includes("form_design_state: source.schema_version === 'process-governance-v3'"));
+  assert.equal(html.includes('建立主表结构'), false);
+  assert.equal(html.includes('添加明细表结构'), false);
+  assert.equal(html.includes('结构类型'), false);
+  assert.equal(html.includes('主表标题'), false);
   assert.ok(html.includes('function formItemTypeField(pathKey, currentValue)'));
   assert.ok(html.includes('formItemTypes = Array.isArray(result.fieldType)'));
   assert.ok(html.includes('请从标准类型中选择，不允许自由填写。'));
+  assert.ok(html.includes("<label>${escapeHtml('数据类型')}</label>"));
   assert.ok(html.includes('当前类型字典未收录'));
   assert.ok(html.includes('保留当前值'));
   assert.ok(html.includes('3001会保留原值；如需修改，只能改选标准类型。'));
   assert.ok(html.includes('formItemTypeField(`forms.${formIndex}.areas.${areaIndex}.items.${itemIndex}.item_type`, item.item_type)'));
   assert.equal(
-    html.includes("field(`forms.${formIndex}.areas.${areaIndex}.items.${itemIndex}.item_type`, '填写项类型')"),
+    html.includes("field(`forms.${formIndex}.areas.${areaIndex}.items.${itemIndex}.item_type`, '数据类型')"),
     false,
     'form item type must not fall back to a free-text input'
   );
   assert.ok(html.includes('/^forms\\.\\d+\\.areas\\.\\d+\\.items\\.\\d+\\.item_type$/.test(target.dataset.bind)'));
-  assert.ok(html.includes('add-detail-area'));
+  assert.ok(html.includes('move-detail-area-up'));
+  assert.ok(html.includes('remove-detail-area'));
+  assert.ok(html.includes('当前明细表包含${fieldCount}个字段'));
+  const formHelpersStart = html.indexOf('    function ensureFormArea(form, areaType) {');
+  const formHelpersEnd = html.indexOf('    function addForm(formDesignState) {', formHelpersStart);
+  assert.ok(formHelpersStart >= 0 && formHelpersEnd > formHelpersStart);
+  const formDocument = {
+    forms: [{
+      areas: [{ area_ref: 'area-main', area_type: '基本信息', area_title: '', items: [] },
+        { area_ref: 'area-detail-a', area_type: '明细清单', area_title: '物料明细', items: [] },
+        { area_ref: 'area-detail-b', area_type: '明细清单', area_title: '费用明细', items: [] },
+        {
+          area_ref: 'area-unassigned', area_type: '', area_title: '', items: [{
+            item_ref: 'item-stable', item_name: '申请金额', item_type: '金额', required: true, instructions: '填写含税金额'
+          }]
+        }]
+    }]
+  };
+  let nextRef = 0;
+  let formConfirmResult = false;
+  let formConfirmMessage = '';
+  const formHelperContext = {
+    activeAreaRef: '',
+    currentDocument: () => formDocument,
+    newRef: prefix => `${prefix}-new-${++nextRef}`,
+    window: {
+      confirm(message) {
+        formConfirmMessage = message;
+        return formConfirmResult;
+      }
+    }
+  };
+  vm.runInNewContext(
+    `${html.slice(formHelpersStart, formHelpersEnd)}
+this.moveAssignmentForTest = moveFormItemToAssignment;
+this.moveFieldForTest = moveFormItem;
+this.moveDetailForTest = moveDetailArea;
+this.removeDetailForTest = removeDetailArea;`,
+    formHelperContext
+  );
+  const fieldBeforeMove = JSON.parse(JSON.stringify(formDocument.forms[0].areas[3].items[0]));
+  assert.equal(formHelperContext.moveAssignmentForTest(0, 'item-stable', 'area-detail-b'), true);
+  assert.deepEqual(formDocument.forms[0].areas[2].items[0], fieldBeforeMove, 'assignment changes must preserve all field content');
+  assert.equal(formDocument.forms[0].areas.some(area => area.area_ref === 'area-unassigned'), false, 'an empty pending group may be removed');
+  assert.equal(formHelperContext.moveAssignmentForTest(0, 'item-stable', '__new_detail__'), true);
+  const newDetail = formDocument.forms[0].areas.at(-1);
+  assert.equal(newDetail.area_type, '明细清单');
+  assert.equal(newDetail.area_title, '');
+  assert.equal(newDetail.items[0].item_ref, 'item-stable');
+  assert.equal(
+    formDocument.forms[0].areas.find(area => area.area_ref === 'area-detail-b').items.length,
+    0,
+    'moving the last field out must retain the empty detail table'
+  );
+  const detailRefsBeforeMove = formDocument.forms[0].areas.filter(area => area.area_type === '明细清单').map(area => area.area_ref);
+  const newDetailIndex = formDocument.forms[0].areas.indexOf(newDetail);
+  assert.equal(formHelperContext.moveDetailForTest(0, newDetailIndex, -1), true);
+  const detailRefsAfterMove = formDocument.forms[0].areas.filter(area => area.area_type === '明细清单').map(area => area.area_ref);
+  assert.deepEqual(detailRefsAfterMove, [detailRefsBeforeMove[0], detailRefsBeforeMove[2], detailRefsBeforeMove[1]]);
+  const movedDetailIndex = formDocument.forms[0].areas.findIndex(area => area.area_ref === newDetail.area_ref);
+  assert.equal(formHelperContext.removeDetailForTest(0, movedDetailIndex), false);
+  assert.match(formConfirmMessage, /包含1个字段/);
+  assert.equal(formDocument.forms[0].areas.some(area => area.area_ref === newDetail.area_ref), true, 'cancel must retain the detail table');
+  formConfirmResult = true;
+  assert.equal(formHelperContext.removeDetailForTest(0, movedDetailIndex), true);
+  assert.equal(formDocument.forms[0].areas.some(area => area.area_ref === newDetail.area_ref), false);
   assert.ok(html.includes("area_type: '基本信息'"));
   assert.ok(html.includes("area_type: table.table_kind === 'detail' ? '明细清单' : '基本信息'"));
   assert.ok(html.includes(".filter(field => field.table_ref === table.table_ref)"));
@@ -1170,7 +1271,7 @@ this.moveCollectionItemForTest = moveCollectionItem;`,
     'reordering collections must only change array order and preserve every referenced object'
   );
   const addFormFunction = html.slice(
-    html.indexOf('function addForm()'),
+    html.indexOf('function addForm(formDesignState)'),
     html.indexOf('function addTerm()')
   );
   assert.ok(addFormFunction.includes("area_type: '基本信息'"));
@@ -1178,6 +1279,7 @@ this.moveCollectionItemForTest = moveCollectionItem;`,
   assert.ok(addFormFunction.includes('items: []'));
   assert.ok(addFormFunction.includes("form_name: ''"));
   assert.ok(addFormFunction.includes('form_no: null'));
+  assert.ok(addFormFunction.includes('form_design_state: formDesignState'));
   const workspaceChangeHandler = html.slice(
     html.indexOf("workspace.addEventListener('change'"),
     html.indexOf("workspace.addEventListener('click'")
@@ -1260,7 +1362,7 @@ this.moveCollectionItemForTest = moveCollectionItem;`,
     'every cross-department handoff deletion entry must use the guarded removal flow'
   );
   const removeHandoffStart = html.indexOf('    function removeHandoff(index) {');
-  const removeHandoffEnd = html.indexOf('    function addForm()', removeHandoffStart);
+  const removeHandoffEnd = html.indexOf('    function ensureFormArea(form, areaType) {', removeHandoffStart);
   assert.ok(removeHandoffStart >= 0 && removeHandoffEnd > removeHandoffStart);
   const handoffDocument = {
     behaviors: [{ behavior_ref: 'behavior-1' }],

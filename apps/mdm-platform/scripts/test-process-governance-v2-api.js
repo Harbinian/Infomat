@@ -267,7 +267,7 @@ async function main() {
     assert.strictEqual(preview.response.status, 200, JSON.stringify(preview.body));
     assert.strictEqual(repo.state.writes, 0, 'preview must not write business data');
     assert.strictEqual(repositoryCalls, 0, 'preview must not initialize the process repository');
-    assert.strictEqual(preview.body.normalized_schema_version, 'process-governance-v2');
+    assert.strictEqual(preview.body.normalized_schema_version, 'process-governance-v3');
     assert.strictEqual(preview.body.handoff_candidates.length, 1);
 
     const forbiddenContactApprove = await request(baseUrl, 'contact', '/api/process-design/import-structured-output/approve', {

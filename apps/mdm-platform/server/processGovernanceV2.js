@@ -5,15 +5,21 @@ const Ajv2020 = require('ajv/dist/2020');
 
 const V1 = 'process-governance-v1';
 const V2 = 'process-governance-v2';
+const V3 = 'process-governance-v3';
+const CURRENT_VERSION = V3;
+const FORM_DESIGN_STATES = new Set(['unspecified', 'current_state', 'proposed_design']);
 const DIRECTIONS = new Set(['inbound_prerequisite', 'outbound_followup']);
 const RESOLUTIONS = new Set(['identified', 'needs_identification']);
 const CONTRACTS_DIR = path.resolve(__dirname, '../../../docs/contracts');
 const V1_SCHEMA = JSON.parse(fs.readFileSync(path.join(CONTRACTS_DIR, 'process-governance-v1.schema.json'), 'utf8'));
 const V2_SCHEMA = JSON.parse(fs.readFileSync(path.join(CONTRACTS_DIR, 'process-governance-v2.schema.json'), 'utf8'));
+const V3_SCHEMA = JSON.parse(fs.readFileSync(path.join(CONTRACTS_DIR, 'process-governance-v3.schema.json'), 'utf8'));
 const schemaValidator = new Ajv2020({ allErrors: true, strict: false, validateFormats: false });
 schemaValidator.addSchema(V1_SCHEMA);
+schemaValidator.addSchema(V2_SCHEMA);
 const validateV1 = schemaValidator.getSchema(V1_SCHEMA.$id);
-const validateV2 = schemaValidator.compile(V2_SCHEMA);
+const validateV2 = schemaValidator.getSchema(V2_SCHEMA.$id);
+const validateV3 = schemaValidator.compile(V3_SCHEMA);
 const UNTRUSTED_REVIEW_FIELDS = [
   'approved',
   'status',
@@ -70,7 +76,7 @@ function createEmptyProcessGovernanceDocument(options = {}) {
   const owningDepartment = text(options.owning_department);
   const processRef = text(options.process_ref) || `process_${crypto.randomBytes(8).toString('hex')}`;
   return {
-    schema_version: V2,
+    schema_version: CURRENT_VERSION,
     export_meta: {
       package_ref: text(options.package_ref) || `package_${crypto.randomBytes(8).toString('hex')}`,
       exported_at: new Date().toISOString(),
@@ -159,10 +165,10 @@ function normalizeHandoff(item, index, sourceVersion, owningDepartment, warnings
 }
 
 function validateNormalizedDocument(document) {
-  const errors = [];
+  const errors = validateV3(document) ? [] : schemaErrors(validateV3.errors);
   const process = document && document.process || {};
-  if (text(document && document.schema_version) !== V2) {
-    errors.push({ field: 'schema_version', message: `结构化文件必须规范化为${V2}` });
+  if (text(document && document.schema_version) !== CURRENT_VERSION) {
+    errors.push({ field: 'schema_version', message: `结构化文件必须规范化为${CURRENT_VERSION}` });
   }
   if (!text(process.process_ref)) errors.push({ field: 'process.process_ref', message: '流程技术标识不能为空' });
   if (!text(process.process_name)) errors.push({ field: 'process.process_name', message: '流程名称不能为空' });
@@ -211,6 +217,16 @@ function validateNormalizedDocument(document) {
 
 function governanceWarnings(document, migrationWarnings = []) {
   const warnings = [...migrationWarnings];
+  list(document.forms).forEach((form, index) => {
+    if (form.form_design_state === 'unspecified') {
+      warnings.push({
+        code: 'FORM_DESIGN_STATE_UNSPECIFIED',
+        form_ref: form.form_ref,
+        field: `forms.${index}.form_design_state`,
+        message: '表单状态尚未确认；请由业务人员确认是现状表单还是新建或优化表单。'
+      });
+    }
+  });
   list(document.cross_department_handoffs).forEach((handoff, index) => {
     const direction = handoff.handoff_direction;
     const externalDepartment = direction === 'inbound_prerequisite'
@@ -257,16 +273,16 @@ function normalizeProcessGovernanceDocument(input) {
     return { document: null, errors: [{ field: 'data', message: '结构化文件必须是JSON对象' }], warnings: [] };
   }
   const sourceVersion = text(input.schema_version);
-  if (![V1, V2].includes(sourceVersion)) {
+  if (![V1, V2, V3].includes(sourceVersion)) {
     return {
       document: null,
-      errors: [{ field: 'schema_version', message: `仅支持${V1}或${V2}` }],
+      errors: [{ field: 'schema_version', message: `仅支持${V1}、${V2}或${V3}` }],
       warnings: []
     };
   }
   const source = clone(input);
   UNTRUSTED_REVIEW_FIELDS.forEach(field => delete source[field]);
-  const validateSchema = sourceVersion === V1 ? validateV1 : validateV2;
+  const validateSchema = sourceVersion === V1 ? validateV1 : sourceVersion === V2 ? validateV2 : validateV3;
   if (!validateSchema(source)) {
     return {
       document: null,
@@ -279,7 +295,7 @@ function normalizeProcessGovernanceDocument(input) {
   const warnings = [];
   const owningDepartment = text(source.process && source.process.owning_department);
   const document = {
-    schema_version: V2,
+    schema_version: CURRENT_VERSION,
     export_meta: source.export_meta && typeof source.export_meta === 'object' ? source.export_meta : {},
     process: source.process && typeof source.process === 'object' ? source.process : {},
     reference_materials: list(source.reference_materials),
@@ -290,13 +306,18 @@ function normalizeProcessGovernanceDocument(input) {
       normalizeHandoff(item, index, sourceVersion, owningDepartment, warnings)
     ),
     internal_process_calls: list(source.internal_process_calls),
-    forms: list(source.forms),
+    forms: list(source.forms).map(form => ({
+      ...form,
+      form_design_state: sourceVersion === V3 && FORM_DESIGN_STATES.has(form && form.form_design_state)
+        ? form.form_design_state
+        : 'unspecified'
+    })),
     terms: list(source.terms)
   };
   if (source.migration && typeof source.migration === 'object') document.migration = source.migration;
-  if (sourceVersion === V1 && !document.migration) {
+  if (sourceVersion !== CURRENT_VERSION && !document.migration) {
     document.migration = {
-      source_schema_version: V1,
+      source_schema_version: sourceVersion,
       source_process_ref: nullableText(document.process && document.process.process_ref),
       source_process_count: 1
     };
@@ -338,7 +359,7 @@ function previewProcessGovernanceDocument(input) {
   return {
     ...normalized,
     summary: {
-      schema_version: V2,
+      schema_version: CURRENT_VERSION,
       source_schema_version: normalized.source_schema_version,
       process_ref: text(document.process && document.process.process_ref),
       process_name: text(document.process && document.process.process_name),
@@ -355,6 +376,8 @@ function previewProcessGovernanceDocument(input) {
 module.exports = {
   V1,
   V2,
+  V3,
+  CURRENT_VERSION,
   stableStringify,
   contentHash,
   createEmptyProcessGovernanceDocument,
