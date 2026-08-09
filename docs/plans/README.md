@@ -13,6 +13,7 @@
 | `2026-05-17-changxing-network-plan.md` | 网络规划材料 | 历史方案 |
 | `2026-05-17-changxing-requirements-questionnaire.md` | 需求调研问题清单 | 调研材料 |
 | `2026-06-29-mdm-governance-input-baseline-landing-plan.md` | MDM 治理落地计划 | 执行计划 |
+| `2026-08-09-mdm-data-flow-lifecycle-governance-development-plan.md` | MDM 数据流与生命周期治理开发计划 | 等待批量导入与首轮测试门槛 |
 | `2026-07-23-internet-only-office-governance-process-draft.md` | 全公司互联网专用办公区需求收集、建设与使用管理流程 | 待评审草案 |
 | `2026-07-24-internet-only-office-feedback-optimization-plan.md` | 互联网专用办公区流程及 3001 结构化填写优化计划 | 技术优化已完成，待业务确认 |
 | `流程治理字段台账主线稳定性检查.md` | MDM 主线稳定性检查说明 | 测试说明 |
