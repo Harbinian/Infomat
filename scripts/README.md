@@ -31,7 +31,7 @@
 | `infomat-service-config.mjs` | 读取固定启动配置并合成本机运行环境 | `infomat-services.config.json`、本机 `infomat-services.local.env` | 供启动和冒烟脚本复用 |
 | `repair-infomat-mysql-container.ps1` | 将本机历史MySQL容器调整为固定启动配置 | 固定配置、本机私有env、Docker容器状态 | 只修复本机Docker运行态，不写仓库真源 |
 | `start-infomat-services.ps1` | 固定启动MDM、PMO和项目MySQL | 固定配置、本机私有env、Docker容器`infomat-input-baseline-review-mysql` | 按固定环境启动服务，不修改仓库真源 |
-| `smoke-infomat-services.mjs` | 固定配置下检查MDM和PMO是否可用 | 固定配置、本机私有env、运行中的服务 | 只读检查，输出会隐藏密码 |
+| `smoke-infomat-services.mjs` | 固定配置下检查MDM和PMO是否可用，并核对MDM流程编辑器使用`process-governance-v3` | 固定配置、本机私有env、运行中的服务 | 只读检查，输出会隐藏密码 |
 | `test-infomat-services-config.mjs` | 防止启动配置再次漂移 | 固定配置、启动脚本、冒烟脚本、`.gitignore` | 只读校验 |
 | `start-structure-pilot.ps1` | 在工作区干净、测试通过和HTTPS配置齐全时启动MDM-AI助手及其认证网关 | `apps/structure-assistant/config/pilot.config.json`、本机`structure-pilot.local.env`、同一Git提交、已独立运行的3001 | 只启停本机3003/3004；检查但不停止、重绑或代管3001；不拉取代码、不写业务真源 |
 | `smoke-structure-pilot.mjs` | 登录独立试点并检查版本、模板、结构校验、本人余额和试点可选网关 | 本机试点秘密、运行中的HTTPS服务 | 只读烟测，不调用付费模型，不输出密码或API Key |

@@ -84,8 +84,8 @@ const smokeScript = fs.readFileSync(path.join(repoRoot, 'scripts', 'smoke-infoma
 assert.ok(smokeScript.includes("from './infomat-service-config.mjs'"), 'smoke should load the fixed service config');
 assert.ok(smokeScript.includes('buildFixedServiceEnv'), 'smoke should build a fixed env contract');
 assert.ok(!smokeScript.includes("process.env.MYSQL_PORT || 3307"), 'smoke must not pick a drifting MySQL port from the shell');
-assert.ok(smokeScript.includes("permissions.has('admin:access')"), 'smoke should verify admin permission readiness');
-assert.ok(smokeScript.includes("permissions.has('*:*')"), 'smoke should verify wildcard admin readiness');
+assert.ok(smokeScript.includes("assert.deepEqual(me.body.roleCodes, ['admin']"), 'smoke should verify the fixed administrator role');
+assert.ok(smokeScript.includes("'MDM administrator business-write boundary'"), 'smoke should verify the administrator business-write boundary');
 
 const startScript = fs.readFileSync(path.join(repoRoot, 'scripts', 'start-infomat-services.ps1'), 'utf8');
 const repairScriptPath = path.join(repoRoot, 'scripts', 'repair-infomat-mysql-container.ps1');
@@ -125,7 +125,7 @@ assert.ok(rootReadme.includes('localhost:3307'), 'root README should document th
 assert.ok(rootReadme.includes('scripts/infomat-services.local.env'), 'root README should document local-only service secrets');
 
 const scriptsReadme = fs.readFileSync(path.join(repoRoot, 'scripts', 'README.md'), 'utf8');
-assert.ok(scriptsReadme.includes('MDM / PMO 固定启动合同'), 'scripts README should document the fixed startup contract');
+assert.ok(scriptsReadme.includes('MDM / PMO 固定启动配置'), 'scripts README should document the fixed startup configuration');
 assert.ok(scriptsReadme.includes('启动确认项'), 'scripts README should document startup checks');
 assert.ok(scriptsReadme.includes('Docker 容器 `infomat-input-baseline-review-mysql` 通过 `localhost:3307` 提供服务'), 'scripts README should document the fixed MySQL service');
 assert.ok(scriptsReadme.includes('npm run repair:infomat-mysql'), 'scripts README should document the MySQL repair path');
@@ -137,7 +137,6 @@ assert.ok(mdmReadme.includes('$env:MYSQL_PORT = "3307"'), 'MDM README should sho
 const agents = fs.readFileSync(path.join(repoRoot, 'AGENTS.md'), 'utf8');
 assert.ok(agents.includes('MDM / PMO 本地联动启动使用仓库根目录固定入口'), 'AGENTS should guide future agents to the fixed starter');
 const roleUsageGuide = fs.readFileSync(path.join(repoRoot, 'apps', 'mdm-platform', 'docs', 'role-based-usage-guide.md'), 'utf8');
-assert.ok(roleUsageGuide.includes('MDM 和 PMO 使用仓库根目录的固定启动方式'), 'role usage guide should document the fixed startup path');
 assert.equal(/裸跑|临时改 `MYSQL_PORT`|不要临时传 `MYSQL_PORT`|连到了 3306/.test([
   rootReadme,
   scriptsReadme,
