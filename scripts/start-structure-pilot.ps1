@@ -6,13 +6,13 @@ $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 $assistantDir = Join-Path $repoRoot "apps\structure-assistant"
 $configPath = Join-Path $assistantDir "config\pilot.config.json"
 $localEnvPath = Join-Path $PSScriptRoot "structure-pilot.local.env"
-$config = Get-Content -Raw -LiteralPath $configPath | ConvertFrom-Json
+$config = Get-Content -Raw -Encoding UTF8 -LiteralPath $configPath | ConvertFrom-Json
 $logDir = Join-Path $env:TEMP "infomat-structure-pilot"
 
 function Import-LocalEnvFile {
   param([string]$Path)
   if (-not (Test-Path -LiteralPath $Path)) { return }
-  Get-Content -LiteralPath $Path | ForEach-Object {
+  Get-Content -Encoding UTF8 -LiteralPath $Path | ForEach-Object {
     $line = $_.Trim()
     if (-not $line -or $line.StartsWith("#")) { return }
     $splitAt = $line.IndexOf("=")

@@ -36,6 +36,11 @@ assert.equal(typeof rootPackage.scripts['smoke:structure-pilot'], 'string');
 assert.equal(typeof rootPackage.scripts['test:structure-pilot-config'], 'string');
 assert.equal(fs.existsSync(startScriptPath), true);
 assert.equal(fs.existsSync(path.join(scriptDir, 'smoke-structure-pilot.mjs')), true);
+assert.match(
+  startScript,
+  /Get-Content -Raw -Encoding UTF8 -LiteralPath \$configPath \| ConvertFrom-Json/,
+  'the Windows pilot starter must decode the tracked Chinese JSON config as UTF-8'
+);
 assert.equal(
   startScript.includes('STRUCTURED_OUTPUT_HOST'),
   false,
