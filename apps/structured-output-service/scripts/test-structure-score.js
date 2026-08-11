@@ -3,6 +3,8 @@ const {
   RULE,
   evaluateContent,
   finalize,
+  parallelStructureDetails,
+  dataFlowConsistencyDetails,
   semanticProjection,
   stableStringify
 } = require('../public/structure-score.js');
@@ -357,6 +359,36 @@ parallelDocument.flow_relations = [
 ];
 const parallelResult = content(parallelDocument);
 assert.equal(parallelResult.dimensions.relation, 20);
+let parallelDetails = parallelStructureDetails(parallelDocument);
+assert.equal(parallelDetails.splits[0].routeCount, 2);
+assert.equal(parallelDetails.joins[0].sourceCount, 2);
+const duplicateParallelRouteDocument = JSON.parse(JSON.stringify(parallelDocument));
+duplicateParallelRouteDocument.flow_relations[2].to_behavior_ref = 'behavior-3';
+parallelDetails = parallelStructureDetails(duplicateParallelRouteDocument);
+assert.equal(parallelDetails.splits[0].routeCount, 1, 'duplicate targets are one parallel route');
+const oneRouteParallelDocument = JSON.parse(JSON.stringify(parallelDocument));
+oneRouteParallelDocument.flow_relations = oneRouteParallelDocument.flow_relations.filter(item => item.relation_ref !== 'relation-3');
+parallelDetails = parallelStructureDetails(oneRouteParallelDocument);
+assert.equal(parallelDetails.splits[0].routeCount, 1);
+assert.equal(parallelDetails.splits[0].missingCount, 1);
+assert.equal(
+  content(oneRouteParallelDocument).issues.some(item => item.message === '业务行为2当前只有1条并行路线；请进入流程关系，再新增1条以本节点为起点、流向不同后续行为的并行路线'),
+  true
+);
+const returningHandoffJoinDocument = JSON.parse(JSON.stringify(parallelDocument));
+returningHandoffJoinDocument.flow_relations = returningHandoffJoinDocument.flow_relations.filter(item => item.relation_ref !== 'relation-5');
+returningHandoffJoinDocument.cross_department_handoffs = [{
+  handoff_ref: 'handoff-return',
+  handoff_direction: 'outbound_followup',
+  anchor_behavior_ref: 'behavior-4',
+  requires_return: true,
+  resume_behavior_ref: 'behavior-5'
+}];
+parallelDetails = parallelStructureDetails(returningHandoffJoinDocument);
+assert.equal(parallelDetails.joins[0].relationSourceCount, 1);
+assert.equal(parallelDetails.joins[0].handoffSourceCount, 1);
+assert.equal(parallelDetails.joins[0].sourceCount, 2);
+assert.equal(content(returningHandoffJoinDocument).dimensions.relation, 20);
 const incompleteParallelDocument = JSON.parse(JSON.stringify(parallelDocument));
 incompleteParallelDocument.behaviors[4].node_type = 'action';
 const incompleteParallelResult = content(incompleteParallelDocument);
@@ -364,6 +396,87 @@ assert.ok(incompleteParallelResult.dimensions.relation < 20);
 assert.equal(
   incompleteParallelResult.issues.some(item => item.category === '并行结构'),
   true
+);
+
+const downstreamDataDocument = createDocument(3);
+let dataFlowDetails = dataFlowConsistencyDetails(downstreamDataDocument);
+assert.equal(dataFlowDetails.issues.length, 0, 'a producer may supply an explicitly reachable downstream behavior');
+assert.equal(dataFlowDetails.isConsumerAvailable('data-1', 'behavior-2'), true);
+assert.equal(dataFlowDetails.isConsumerAvailable('data-1', 'behavior-1'), false, 'a behavior cannot consume its own output');
+
+const futureDataDocument = createDocument(3);
+futureDataDocument.data_objects[0].produced_by_behavior_ref = 'behavior-3';
+futureDataDocument.data_objects[0].consumed_by_behavior_refs = ['behavior-1'];
+dataFlowDetails = dataFlowConsistencyDetails(futureDataDocument);
+assert.equal(dataFlowDetails.issues[0].reason, 'future_data');
+assert.ok(dataFlowDetails.issues[0].message.includes('后续行为'));
+assert.ok(content(futureDataDocument).issues.some(item => item.category === '数据时序'));
+
+const selfDataDocument = createDocument(2);
+selfDataDocument.data_objects[0].consumed_by_behavior_refs = ['behavior-1'];
+assert.equal(dataFlowConsistencyDetails(selfDataDocument).issues[0].reason, 'self_consumption');
+
+const siblingDataDocument = JSON.parse(JSON.stringify(parallelDocument));
+siblingDataDocument.data_objects[0].produced_by_behavior_ref = 'behavior-3';
+siblingDataDocument.data_objects[0].consumed_by_behavior_refs = ['behavior-4'];
+assert.equal(
+  dataFlowConsistencyDetails(siblingDataDocument).issues[0].reason,
+  'unordered_data',
+  'parallel siblings cannot consume each other data'
+);
+siblingDataDocument.data_objects[0].consumed_by_behavior_refs = ['behavior-5'];
+assert.equal(
+  dataFlowConsistencyDetails(siblingDataDocument).issues.length,
+  0,
+  'a join reached from the producer may consume branch output'
+);
+
+const returnedDataDocument = createDocument(3);
+returnedDataDocument.data_objects[0].produced_by_behavior_ref = null;
+returnedDataDocument.data_objects[0].consumed_by_behavior_refs = ['behavior-2'];
+returnedDataDocument.cross_department_handoffs = [{
+  handoff_ref: 'handoff-data-return',
+  handoff_direction: 'outbound_followup',
+  anchor_behavior_ref: 'behavior-1',
+  requires_return: true,
+  returned_data_ref: 'data-1',
+  resume_behavior_ref: 'behavior-2'
+}];
+assert.equal(dataFlowConsistencyDetails(returnedDataDocument).issues.length, 0);
+returnedDataDocument.data_objects[0].consumed_by_behavior_refs = ['behavior-1'];
+assert.equal(dataFlowConsistencyDetails(returnedDataDocument).issues[0].reason, 'before_external_return');
+
+const loopDoesNotRelaxDataDocument = createDocument(2);
+loopDoesNotRelaxDataDocument.flow_relations.push(relation(2, 'behavior-2', 'behavior-1', 'loop', '退回重办'));
+loopDoesNotRelaxDataDocument.data_objects[0].produced_by_behavior_ref = 'behavior-2';
+loopDoesNotRelaxDataDocument.data_objects[0].consumed_by_behavior_refs = ['behavior-1'];
+assert.equal(dataFlowConsistencyDetails(loopDoesNotRelaxDataDocument).issues[0].reason, 'future_data');
+
+const legacyBehaviorDataDocument = createDocument(2);
+legacyBehaviorDataDocument.data_objects[0].consumed_by_behavior_refs = [];
+legacyBehaviorDataDocument.behaviors[1].input_data_refs = ['data-1'];
+dataFlowDetails = dataFlowConsistencyDetails(legacyBehaviorDataDocument);
+assert.deepEqual(dataFlowDetails.dataDetails[0].consumerRefs, ['behavior-2']);
+assert.equal(dataFlowDetails.issues.length, 0, 'legacy behavior-side references remain readable');
+
+const derivedEntryDocument = createDocument(2);
+derivedEntryDocument.behaviors[1].trigger = '';
+assert.equal(
+  content(derivedEntryDocument).issues.some(item => item.message === '业务行为2是流程入口，但未说明流程如何开始'),
+  false,
+  'a non-entry behavior derives its start from the incoming relation'
+);
+derivedEntryDocument.behaviors[0].trigger = '';
+assert.equal(
+  content(derivedEntryDocument).issues.some(item => item.message === '业务行为1是流程入口，但未说明流程如何开始'),
+  true
+);
+const invalidRelationDoesNotOrderDataDocument = createDocument(2);
+invalidRelationDoesNotOrderDataDocument.flow_relations[0].relation_type = '';
+assert.equal(
+  dataFlowConsistencyDetails(invalidRelationDoesNotOrderDataDocument).issues[0].reason,
+  'unordered_data',
+  'an incomplete relation must not establish data order'
 );
 
 const noDataOrFormDocument = createDocument(5);

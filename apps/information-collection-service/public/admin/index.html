@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>信息收集后台</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main id="loginView" class="login-shell">
+    <form id="loginForm" class="login-card">
+      <p class="eyebrow">INFORMATION COLLECTION · 4000</p>
+      <h1>信息收集后台</h1>
+      <p>设计表单、发布收集任务并查看填报结果。</p>
+      <label>工号或登录名<input name="loginName" autocomplete="username" required></label>
+      <label>密码<input name="password" type="password" autocomplete="current-password" required></label>
+      <button type="submit" class="primary">登录</button>
+      <p id="loginMessage" class="message" role="alert"></p>
+    </form>
+  </main>
+
+  <div id="appView" class="app-shell hidden">
+    <header class="topbar">
+      <div><p class="eyebrow">INFORMATION COLLECTION · 4000</p><h1>信息收集后台</h1></div>
+      <div class="identity"><span id="identityText"></span><button id="logoutButton" class="ghost">退出</button></div>
+    </header>
+    <nav class="tabs" aria-label="后台功能">
+      <button data-tab="forms" class="active">表单设计</button>
+      <button data-tab="tasks">收集任务</button>
+      <button data-tab="grants">后台权限</button>
+    </nav>
+    <p id="globalMessage" class="message" role="status"></p>
+
+    <section id="formsPanel" class="panel-grid">
+      <aside class="side-panel">
+        <div class="panel-title"><h2>表单</h2><button id="refreshForms" class="icon-button" title="刷新">↻</button></div>
+        <form id="createForm" class="stack compact">
+          <label>表单名称<input name="name" maxlength="100" required></label>
+          <label>归属部门<select name="ownerDepartmentId" required></select></label>
+          <button type="submit" class="primary">新建表单</button>
+        </form>
+        <div id="formList" class="item-list"></div>
+      </aside>
+
+      <section id="builderEmpty" class="empty-state"><h2>选择或新建表单</h2><p>发布后的结构不会改变历史任务和答卷。</p></section>
+      <section id="builder" class="workspace hidden">
+        <div class="workspace-head">
+          <div><span id="formCode" class="tag"></span><h2 id="formTitle"></h2><p id="formMeta"></p></div>
+          <div class="actions"><button id="saveDraft" class="primary">保存设计稿</button><button id="openPublish">发布任务</button></div>
+        </div>
+        <div class="builder-grid">
+          <aside class="field-list-panel">
+            <div class="panel-title"><h3>字段列表</h3><span>通过上下移动调整顺序</span></div>
+            <label>当前分区<select id="sectionSelect"></select></label>
+            <div class="inline-actions"><button id="addSection">新增分区</button><button id="renameSection">修改分区</button></div>
+            <div id="fieldList" class="item-list fields"></div>
+            <div class="field-add"><select id="newFieldType"></select><button id="addField">添加字段</button></div>
+          </aside>
+          <section class="field-editor">
+            <div id="fieldEditorEmpty" class="empty-state small"><h3>请选择字段</h3><p>左侧选择字段后，在这里编辑名称、说明和校验要求。</p></div>
+            <form id="fieldEditor" class="stack hidden">
+              <div class="panel-title"><h3>字段设置</h3><span id="fieldKey" class="mono"></span></div>
+              <label>字段名称<input name="label" maxlength="200" required></label>
+              <label>填写说明<textarea name="helpText" maxlength="500" rows="3"></textarea></label>
+              <label class="check"><input name="required" type="checkbox"> 必填</label>
+              <label id="optionsRow">选项（每行一个）<textarea name="options" rows="6"></textarea></label>
+              <div class="two-cols">
+                <label>最小值/长度<input name="min" type="number"></label>
+                <label>最大值/长度<input name="max" type="number"></label>
+              </div>
+              <div class="actions"><button type="submit" class="primary">应用字段设置</button><button type="button" id="moveUp">上移</button><button type="button" id="moveDown">下移</button><button type="button" id="removeField" class="danger">删除字段</button></div>
+            </form>
+          </section>
+        </div>
+      </section>
+    </section>
+
+    <section id="tasksPanel" class="panel-grid hidden">
+      <aside class="side-panel"><div class="panel-title"><h2>收集任务</h2><button id="refreshTasks" class="icon-button">↻</button></div><div id="taskList" class="item-list"></div></aside>
+      <section id="taskDetail" class="workspace"><div class="empty-state"><h2>选择收集任务</h2><p>查看完成情况、字段统计并导出答卷。</p></div></section>
+    </section>
+
+    <section id="grantsPanel" class="workspace hidden">
+      <div class="workspace-head"><div><h2>后台权限</h2><p>信息收集权限独立于 3000 的固定角色。</p></div><button id="refreshGrants">刷新</button></div>
+      <form id="grantForm" class="grant-form">
+        <label>人员<select name="personId" required></select></label>
+        <label>角色<select name="roleCode"><option value="collection_designer">部门设计者</option><option value="collection_admin">信息收集管理员</option></select></label>
+        <label id="grantDepartmentRow">绑定部门<select name="departmentId"></select></label>
+        <button type="submit" class="primary">授予权限</button>
+      </form>
+      <div class="table-wrap"><table><thead><tr><th>人员</th><th>角色</th><th>范围</th><th>状态</th><th>操作</th></tr></thead><tbody id="grantRows"></tbody></table></div>
+    </section>
+  </div>
+
+  <dialog id="publishDialog">
+    <form id="publishForm" class="dialog-card">
+      <div class="panel-title"><h2>发布收集任务</h2><button type="button" id="closePublish" class="icon-button">×</button></div>
+      <p>系统将固化当前表单版本和填报人员快照。发布后不能修改人员范围。</p>
+      <label>任务名称<input name="name" maxlength="150" required></label>
+      <div class="two-cols"><label>开始时间<input name="openAt" type="datetime-local" required></label><label>截止时间（可不填）<input name="dueAt" type="datetime-local"></label></div>
+      <label class="check"><input name="includeAllActive" type="checkbox"> 全体有效账号</label>
+      <label>选择部门<select name="departmentIds" multiple size="6"></select></label>
+      <label>补充指定人员<select name="personIds" multiple size="8"></select></label>
+      <div id="targetPreview" class="notice">发布前先预检查填报范围。</div>
+      <div class="actions"><button type="button" id="previewTargets">预检查</button><button type="submit" class="primary">确认发布</button></div>
+    </form>
+  </dialog>
+  <script src="app.js" defer></script>
+</body>
+</html>

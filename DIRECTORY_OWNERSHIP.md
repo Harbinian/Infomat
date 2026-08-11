@@ -17,7 +17,7 @@
 
 根目录不应继续新增临时 YAML、截图、压缩包、解包目录或一次性调查文本。历史散放的根目录 PMO YAML 已归档到 `pmo/archive/page-snapshots/2026-06-05-playwright-yaml/`。原根目录 `temp_survey.txt` 已登记后迁入 `docs/HardwareResearch/06B厂房接入民机非密园区网需求调查表_抽取文本.txt`，后续同类基础设施调查材料应直接进入对应资料目录。
 
-目录级 `AGENTS.md` 只放在有独立真源、生成副作用、运行命令、验证口径或禁止事项的关键目录。当前目录级入口为 `apps/mdm-platform/`、`apps/structured-output-service/`、`apps/structure-assistant/`、`apps/weekly-action-service/`、`pmo/`、`pmo/procedure-management/`、`pmo/gantt-react/`、`pmo/deliverables/`、`docs/norms/`、`docs/Demo/` 和 `scripts/`。纯报告、归档、样例和说明性架构目录默认使用 README。
+目录级 `AGENTS.md` 只放在有独立真源、生成副作用、运行命令、验证口径或禁止事项的关键目录。当前目录级入口为 `apps/mdm-platform/`、`apps/structured-output-service/`、`apps/structure-assistant/`、`apps/weekly-action-service/`、`apps/information-collection-service/`、`pmo/`、`pmo/procedure-management/`、`pmo/gantt-react/`、`pmo/deliverables/`、`docs/norms/`、`docs/Demo/` 和 `scripts/`。纯报告、归档、样例和说明性架构目录默认使用 README。
 
 ## 2. 可运行系统
 
@@ -28,6 +28,7 @@
 | `apps/structured-output-service/` | 局域网单流程治理编制工具 | `package.json`、`server.js`、`public/`、`scripts/` | 默认监听`0.0.0.0:3001`供公司局域网用户直接访问；按 `docs/contracts/process-governance-v3.schema.json` 导出单流程未审核JSON并兼容导入v1、v2；`document-structured-output-v2`只用于确定性解析和历史导入；可只读读取流程映射、花名册和 `docs/work-role-data.json` 做候选提示 | 不保存用户内容，不写回 `docs/norms/`、花名册或工作角色真源，不依赖DeepSeek、MDM-AI助手或认证网关，不替代受控发布流程 |
 | `apps/structure-assistant/` | MDM-AI助手，当前承载独立AI结构化填报试点 | `package.json`、`server.js`、`public/`、`lib/`、`scripts/` | 集中提供登录、材料内存读取、DeepSeek填报对话、独立结构预审和版本保护；其可选网关只属于该试点，不是3001的用户入口或运行前置条件 | 不停止、重绑或代管3001；不保存业务内容，不复制Schema，不判断流程内容，不写入3000或`docs/norms/`，不提交密钥 |
 | `apps/weekly-action-service/` | PMO 周会行动项服务 | `package.json`、`server.js`、`public/`、`scripts/` | 提供 3002 周会行动项登记、跟踪、关闭证据和延期原因维护；默认写入 `artifacts/weekly-actions/` 运行台账 | 不写回 PMO Markdown 真源、`tasks.json` 或 MDM 数据库；不把浏览器本地保存作为台账 |
+| `apps/information-collection-service/` | 内部信息表收集服务 | `package.json`、`server/`、`public/`、`scripts/`、`docs/` | 4000 管理端设计并发布收集任务，4001 填报端保存本人草稿和答卷；只读复用 `person`、`user_accounts`、`departments`，业务数据写入 `collection_*` 表，附件写入仓库外受控目录 | 不修改 MDM 身份、角色或治理业务表；不自动继承 3000 权限；不向浏览器持久化答案或附件 |
 | `apps/mdm-platform/server/` | MDM 后端实现 | Express 路由、MySQL 目标 schema 与历史 SQLite 待迁移实现 | 修改时同步平台测试 | 不直接依赖 PMO 页面内嵌数据 |
 | `apps/mdm-platform/public/` | MDM 前端 | 单文件前端和静态资源 | 仅放平台运行所需前端资源 | 不放 PMO 驾驶舱截图 |
 | `apps/mdm-platform/scripts/` | 平台内脚本和测试 | 平台数据库、平台路由 | 脚本应说明是否写数据库，测试应使用隔离库 | 不放仓库级 parser |

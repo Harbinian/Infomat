@@ -19,6 +19,7 @@
   ];
   const ALL_COMPANY_LANE = '__all_company__';
   const UNKNOWN_DEPARTMENT_LANE = '__unknown_department__';
+  const PENDING_HANDOFF_LANE = '__pending_handoff_department__';
   const LANE_HEADER_WIDTH = 190;
   const LANE_MIN_HEIGHT = 154;
   const LANE_NODE_GAP = 36;
@@ -163,16 +164,16 @@
       : 'outbound_followup';
     const targetProcess = text(handoff.counterparty_process_name || handoff.target_process_name);
     const targetBehavior = text(handoff.counterparty_behavior_name || handoff.target_behavior_name);
-    const target = [targetProcess, targetBehavior].filter(Boolean).join(' / ') || '待明确';
     const externalDepartment = direction === 'inbound_prerequisite'
       ? text(handoff.source_department)
       : text(handoff.target_department);
     return [
-      direction === 'inbound_prerequisite' ? '跨部门前置输入' : '跨部门后续承接',
-      `外部门：${externalDepartment || '待在MDM平台明确'}`,
-      `外部门流程或行为：${target}`,
-      `数据或事项：${text(handoff.requested_matter) || '待明确'}`
-    ].join('\n');
+      direction === 'inbound_prerequisite' ? '跨部门待办 · 前置输入' : '跨部门待办 · 后续承接',
+      `承接部门：${externalDepartment || '待明确'}`,
+      `办理动作：${targetBehavior || '待填写'}`,
+      `事项：${text(handoff.requested_matter) || '待填写'}`,
+      targetProcess ? `对应流程：${targetProcess}` : ''
+    ].filter(Boolean).join('\n');
   }
 
   function internalCallLabel(call) {
@@ -217,8 +218,8 @@
     const name = text(behavior.behavior_name) || '业务行为名称待填写';
     const nodeType = text(behavior.node_type);
     if (nodeType === 'decision') return `×  ${name}\n${placement.subtitle}`;
-    if (nodeType === 'parallel_split') return `＋  ${name}\n${placement.subtitle}\n同时开始`;
-    if (nodeType === 'parallel_join') return `＋  ${name}\n${placement.subtitle}\n并行汇合`;
+    if (nodeType === 'parallel_split') return `＋  ${name}\n${placement.subtitle}\n同时启动多条路线`;
+    if (nodeType === 'parallel_join') return `＋  ${name}\n${placement.subtitle}\n等待多条路线完成`;
     if (!NODE_TYPES.has(nodeType)) return `${name}\n${placement.subtitle}\n节点类型待判断`;
     return `${name}\n${placement.subtitle}`;
   }
@@ -355,17 +356,24 @@
       if (used.has(department) && !ordered.includes(department)) ordered.push(department);
     });
     [...used]
-      .filter(key => !ordered.includes(key) && key !== ALL_COMPANY_LANE && key !== UNKNOWN_DEPARTMENT_LANE)
+      .filter(key =>
+        !ordered.includes(key)
+        && key !== ALL_COMPANY_LANE
+        && key !== UNKNOWN_DEPARTMENT_LANE
+        && key !== PENDING_HANDOFF_LANE
+      )
       .sort((left, right) => left.localeCompare(right, 'zh-CN'))
       .forEach(key => ordered.push(key));
     if (used.has(ALL_COMPANY_LANE)) ordered.push(ALL_COMPANY_LANE);
     if (used.has(UNKNOWN_DEPARTMENT_LANE)) ordered.push(UNKNOWN_DEPARTMENT_LANE);
+    if (used.has(PENDING_HANDOFF_LANE)) ordered.push(PENDING_HANDOFF_LANE);
     return ordered;
   }
 
   function laneDisplayName(laneKey) {
     if (laneKey === ALL_COMPANY_LANE) return '全公司通用';
     if (laneKey === UNKNOWN_DEPARTMENT_LANE) return '执行部门待明确';
+    if (laneKey === PENDING_HANDOFF_LANE) return '承接部门待明确';
     return laneKey;
   }
 
@@ -744,12 +752,77 @@
       }
     });
 
+    const handoffRecords = [];
+    items(data.cross_department_handoffs).forEach((handoff, index) => {
+      const handoffRef = text(handoff.handoff_ref);
+      const direction = handoff.handoff_direction === 'inbound_prerequisite'
+        ? 'inbound_prerequisite'
+        : 'outbound_followup';
+      const anchorRef = text(handoff.anchor_behavior_ref || handoff.send_behavior_ref);
+      const anchorNodeId = behaviorNodeByRef.get(anchorRef);
+      const anchorRecord = behaviorRecords.find(record => record.node.data.id === anchorNodeId);
+      if (!anchorNodeId || !anchorRecord) {
+        unresolvedItems.push({
+          focusKind: 'handoff',
+          focusRef: handoffRef,
+          message: `跨部门待办${index + 1}未显示：请指定有效的本流程关联行为。`
+        });
+        return;
+      }
+      const externalDepartment = direction === 'inbound_prerequisite'
+        ? text(handoff.source_department)
+        : text(handoff.target_department);
+      const recognizedDepartment = departmentOrder.includes(externalDepartment);
+      const laneKey = recognizedDepartment ? externalDepartment : PENDING_HANDOFF_LANE;
+      const handoffNodeId = graphRef('handoff', index, handoffRef);
+      const rawLabel = handoffLabel(handoff);
+      const display = nodeDisplayMetrics(rawLabel, 'external');
+      const anchorRank = rankById.get(anchorNodeId) || 0;
+      const handoffNode = {
+        group: 'nodes',
+        classes: 'external-node handoff-node',
+        data: {
+          id: handoffNodeId,
+          label: display.label,
+          rawLabel: display.rawLabel,
+          nodeWidth: display.nodeWidth,
+          nodeHeight: display.nodeHeight,
+          textMaxWidth: display.textMaxWidth,
+          labelWidth: display.labelWidth,
+          labelHeight: display.labelHeight,
+          labelLineCount: display.lineCount,
+          labelLineHeight: display.lineHeight,
+          labelVerticalPadding: display.verticalPadding,
+          detail: recognizedDepartment ? '承接部门泳道' : '承接部门待明确',
+          focusKind: 'handoff',
+          focusRef: handoffRef,
+          laneKey,
+          laneLabel: laneDisplayName(laneKey),
+          layoutRank: direction === 'inbound_prerequisite' ? Math.max(0, anchorRank - 1) : anchorRank + 1,
+          layoutOrder: behaviorRecords.length + internalCallRecords.length + index
+        }
+      };
+      handoffRecords.push({
+        handoff,
+        index,
+        direction,
+        handoffRef,
+        anchorNodeId,
+        node: handoffNode
+      });
+      nodes.push(handoffNode);
+    });
+
     const laneRouteReserves = allocateRelationRoutes(
       validRelations,
       behaviorRecordById,
       rankById
     );
-    const positionedNodes = [...behaviorRecords.map(record => record.node), ...internalCallRecords.map(record => record.node)];
+    const positionedNodes = [
+      ...behaviorRecords.map(record => record.node),
+      ...internalCallRecords.map(record => record.node),
+      ...handoffRecords.map(record => record.node)
+    ];
     const laneKeys = buildLaneOrder(
       positionedNodes.map(node => node.data.laneKey),
       owningDepartment,
@@ -923,59 +996,9 @@
     });
     nodes.push(...countersignBadges);
 
-    let externalTop = poolHeight + 58;
-    items(data.cross_department_handoffs).forEach((handoff, index) => {
-      const handoffRef = text(handoff.handoff_ref);
-      const direction = handoff.handoff_direction === 'inbound_prerequisite'
-        ? 'inbound_prerequisite'
-        : 'outbound_followup';
-      const anchorRef = text(handoff.anchor_behavior_ref || handoff.send_behavior_ref);
-      const anchorNodeId = behaviorNodeByRef.get(anchorRef);
-      const anchorNode = behaviorRecords.find(record => record.node.data.id === anchorNodeId)?.node;
-      if (!anchorNodeId || !anchorNode) {
-        unresolvedItems.push({
-          focusKind: 'handoff',
-          focusRef: handoffRef,
-          message: `跨部门承接${index + 1}未显示：请指定有效的本流程关联行为。`
-        });
-        return;
-      }
-      const externalNodeId = graphRef('handoff', index, handoffRef);
-      const rawLabel = handoffLabel(handoff);
-      const display = nodeDisplayMetrics(rawLabel, 'external');
-      const externalY = externalTop + display.nodeHeight / 2;
-      const externalX = Math.max(
-        LANE_HEADER_WIDTH + display.nodeWidth / 2 + 24,
-        Math.min(
-          poolWidth - display.nodeWidth / 2 - 24,
-          anchorNode.position.x + (direction === 'inbound_prerequisite' ? -260 : 260)
-        )
-      );
-      externalTop += display.nodeHeight + 48;
-      nodes.push({
-        group: 'nodes',
-        classes: 'external-node handoff-node',
-        data: {
-          id: externalNodeId,
-          label: display.label,
-          rawLabel: display.rawLabel,
-          nodeWidth: display.nodeWidth,
-          nodeHeight: display.nodeHeight,
-          textMaxWidth: display.textMaxWidth,
-          labelWidth: display.labelWidth,
-          labelHeight: display.labelHeight,
-          labelLineCount: display.lineCount,
-          labelLineHeight: display.lineHeight,
-          labelVerticalPadding: display.verticalPadding,
-          detail: '流程泳道区域外',
-          focusKind: 'handoff',
-          focusRef: handoffRef
-        },
-        position: {
-          x: externalX,
-          y: externalY
-        }
-      });
+    handoffRecords.forEach(record => {
+      const { handoff, index, direction, handoffRef, anchorNodeId, node } = record;
+      const handoffNodeId = node.data.id;
       const handoffOutDisplay = edgeDisplayMetrics(
         direction === 'inbound_prerequisite' ? '外部门提供前置输入' : '交由外部门承接'
       );
@@ -984,8 +1007,8 @@
         classes: 'message-flow handoff-edge',
         data: {
           id: graphRef('handoff-out', index, handoffRef),
-          source: direction === 'inbound_prerequisite' ? externalNodeId : anchorNodeId,
-          target: direction === 'inbound_prerequisite' ? anchorNodeId : externalNodeId,
+          source: direction === 'inbound_prerequisite' ? handoffNodeId : anchorNodeId,
+          target: direction === 'inbound_prerequisite' ? anchorNodeId : handoffNodeId,
           label: handoffOutDisplay.label,
           rawLabel: handoffOutDisplay.rawLabel,
           labelWidth: handoffOutDisplay.labelWidth,
@@ -1002,7 +1025,7 @@
         unresolvedItems.push({
           focusKind: 'handoff',
           focusRef: handoffRef,
-          message: `跨部门承接${index + 1}的返回箭头未显示：恢复位置没有对应当前流程中的业务行为。`
+          message: `跨部门待办${index + 1}的返回箭头未显示：恢复位置没有对应当前流程中的业务行为。`
         });
       } else if (returnRef) {
         const handoffReturnDisplay = edgeDisplayMetrics('承接完成后返回');
@@ -1011,7 +1034,7 @@
           classes: 'message-flow return-message-flow',
           data: {
             id: graphRef('handoff-return', index, handoffRef),
-            source: externalNodeId,
+            source: handoffNodeId,
             target: behaviorNodeByRef.get(returnRef),
             label: handoffReturnDisplay.label,
             rawLabel: handoffReturnDisplay.rawLabel,

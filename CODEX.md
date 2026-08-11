@@ -71,6 +71,7 @@ MDM 平台保留为后续承接应用。除非用户明确要求进入 MDM 平�
 - `apps/structured-output-service/AGENTS.md`
 - `apps/structure-assistant/AGENTS.md`
 - `apps/weekly-action-service/AGENTS.md`
+- `apps/information-collection-service/AGENTS.md`
 - `pmo/AGENTS.md`
 - `pmo/procedure-management/AGENTS.md`
 - `pmo/gantt-react/AGENTS.md`

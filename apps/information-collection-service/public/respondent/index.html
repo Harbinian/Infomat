@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>信息填报</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main id="loginView" class="login-shell">
+    <form id="loginForm" class="login-card">
+      <p class="eyebrow">INFORMATION COLLECTION · 4001</p>
+      <h1>信息填报</h1>
+      <p>使用内部账号登录，查看分配给本人的收集任务。</p>
+      <label>工号或登录名<input name="loginName" autocomplete="username" required></label>
+      <label>密码<input name="password" type="password" autocomplete="current-password" required></label>
+      <button type="submit" class="primary">登录</button>
+      <p id="loginMessage" class="message" role="alert"></p>
+    </form>
+  </main>
+
+  <div id="appView" class="app-shell hidden">
+    <header class="topbar">
+      <div><p class="eyebrow">INFORMATION COLLECTION · 4001</p><h1>我的填报任务</h1></div>
+      <div class="identity"><span id="identityText"></span><button id="logoutButton">退出</button></div>
+    </header>
+    <p id="globalMessage" class="message" role="status"></p>
+    <main class="content-grid">
+      <aside class="task-panel">
+        <div class="panel-title"><h2>任务列表</h2><button id="refreshTasks">刷新</button></div>
+        <div id="taskList" class="task-list"></div>
+      </aside>
+      <section id="formArea" class="paper">
+        <div class="empty-state"><h2>选择一项填报任务</h2><p>草稿保存在服务器，只有执行“提交”后才计入已完成。</p></div>
+      </section>
+    </main>
+  </div>
+  <script src="app.js" defer></script>
+</body>
+</html>

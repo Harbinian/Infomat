@@ -1,0 +1,12 @@
+{
+  "admin": { "host": "127.0.0.1", "port": 4000 },
+  "respondent": { "host": "127.0.0.1", "port": 4001 },
+  "mysql": {
+    "host": "localhost",
+    "port": 3307,
+    "user": "mdm_user",
+    "database": "infomat_mdm",
+    "connectionLimit": 10
+  },
+  "fileRoot": "artifacts/information-collection/files"
+}

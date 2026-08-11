@@ -13,7 +13,7 @@ Infomat 是一个信息化治理工作仓库，不是单一源码仓库。它允
 | 资产类型 | 说明 | 主要位置 |
 |---|---|---|
 | 信息化资料库 | 制度、流程地图、数据地图、组织架构、方案文档 | `docs/` |
-| 可运行系统 | MDM 平台、文档结构化输出辅助服务、MDM-AI助手、PMO 周会行动项服务及其测试和维护脚本 | `apps/` |
+| 可运行系统 | MDM 平台、文档结构化输出辅助服务、MDM-AI助手、PMO 周会行动项服务、信息表收集服务及其测试和维护脚本 | `apps/` |
 | PMO / 项目管理展示工具 | 流程地图驾驶舱、甘特图、项目管理页面、交付物工作台 | `pmo/` |
 | 仓库级脚本工具 | 跨资料、跨页面、跨 app 的解析、注入、生成、校验脚本 | `scripts/` |
 | AI 协作工作区 | Codex 入口规则、Agent 技能和历史计划 | `AGENTS.md`、`CODEX.md`、`.agents/`、`docs/superpowers/` |
@@ -61,6 +61,7 @@ Infomat 是一个信息化治理工作仓库，不是单一源码仓库。它允
 | 修改 MDM 平台能力 | `apps/mdm-platform/` | `pmo/`、`docs/superpowers/` |
 | 修改AI结构化填报试点 | `apps/structure-assistant/`；如需读取3001结构规则再联动`apps/structured-output-service/` | `docs/norms/`流程输入基线、3000、PMO驾驶舱 |
 | 修改 PMO 周会行动项服务 | `apps/weekly-action-service/` | PMO Markdown 真源、`pmo/tasks.json`、MDM 数据库 |
+| 修改信息表收集服务 | `apps/information-collection-service/`；根级固定启动和迁移入口在 `scripts/` | MDM 治理业务表、`docs/norms/`、PMO 真源；身份表只读复用 |
 | 修改项目甘特图或 PMO 看板 | `pmo/` | `apps/mdm-platform/` |
 | 增加仓库级转换或校验 | `scripts/` | app 内部测试脚本，除非脚本只服务该 app |
 | 修改代码、脚本、接口或启动命令 | 对应主责目录代码 + 对应 README/AGENTS/使用说明/术语表 | 只改代码不改文档 |
