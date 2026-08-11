@@ -1,0 +1,27 @@
+{
+  "name": "information-collection-service",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Internal information collection service on ports 4000 and 4001",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "migrate:dry-run": "node scripts/migrate.js --dry-run",
+    "migrate:apply": "node scripts/migrate.js --apply",
+    "schema:check": "node scripts/migrate.js --check",
+    "bootstrap:admin": "node scripts/bootstrap-admin.js",
+    "smoke": "node scripts/smoke-test.js",
+    "test": "node scripts/test-contract.js"
+  },
+  "dependencies": {
+    "archiver": "^7.0.1",
+    "bcryptjs": "^2.4.3",
+    "exceljs": "^4.4.0",
+    "express": "^4.18.2",
+    "multer": "^2.1.1",
+    "mysql2": "^3.22.5"
+  },
+  "overrides": {
+    "uuid": "^11.1.0"
+  }
+}

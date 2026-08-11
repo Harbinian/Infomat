@@ -54,7 +54,13 @@
     "test:customer-file-acceptance-audit": "node scripts/test-customer-file-acceptance-audit.mjs",
     "generate:weekly-action-personnel": "node scripts/generate-weekly-action-personnel-snapshot.mjs",
     "test:weekly-action-personnel": "node scripts/test-weekly-action-personnel-snapshot.mjs",
-    "test:customer-file-sankey-labels": "node scripts/test-customer-file-sankey-labels.mjs"
+    "test:customer-file-sankey-labels": "node scripts/test-customer-file-sankey-labels.mjs",
+    "start:information-collection": "powershell -ExecutionPolicy Bypass -File scripts/start-information-collection.ps1",
+    "smoke:information-collection": "node scripts/smoke-information-collection.mjs",
+    "test:information-collection": "npm --prefix apps/information-collection-service test",
+    "migrate:information-collection:dry-run": "powershell -ExecutionPolicy Bypass -File scripts/invoke-information-collection-migration.ps1 -Mode dry-run",
+    "migrate:information-collection:apply": "powershell -ExecutionPolicy Bypass -File scripts/invoke-information-collection-migration.ps1 -Mode apply",
+    "check:information-collection-schema": "powershell -ExecutionPolicy Bypass -File scripts/invoke-information-collection-migration.ps1 -Mode check"
   },
   "repository": {
     "type": "git",

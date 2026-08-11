@@ -68,6 +68,7 @@
 - `apps/structured-output-service/`
 - `apps/structure-assistant/`
 - `apps/weekly-action-service/`
+- `apps/information-collection-service/`
 - `pmo/`
 - `pmo/procedure-management/`
 - `pmo/gantt-react/`

@@ -335,6 +335,19 @@ async function testApi() {
     assert.equal(roundTrip.forms[0].areas.filter(area => area.area_type === '基本信息').length, 1);
     assert.equal(roundTrip.forms[0].areas.filter(area => area.area_type === '明细清单').length, 2);
 
+    const historicalExternalActor = createDraft();
+    historicalExternalActor.behaviors[0].current_actor_role = '物资保障部计划员';
+    const historicalExternalActorRoundTrip = JSON.parse(JSON.stringify(historicalExternalActor));
+    const historicalExternalActorValidation = await postJson(baseUrl, '/api/validate', {
+      data: historicalExternalActorRoundTrip
+    });
+    assert.equal(historicalExternalActorValidation.body.valid, true, JSON.stringify(historicalExternalActorValidation.body.errors));
+    assert.equal(
+      historicalExternalActorValidation.body.data.behaviors[0].current_actor_role,
+      '物资保障部计划员',
+      'a historical external actor must survive validation, export, and re-import unchanged'
+    );
+
     const historicalInternalCall = createDraft();
     historicalInternalCall.internal_process_calls = [{
       call_ref: 'call_historical_preview',
@@ -585,8 +598,9 @@ function testProcessDiagramModel() {
   assert.ok(actionNode.position.x < decisionNode.position.x, 'explicit local relations must determine left-to-right rank');
   assert.ok(model.pool.width > 0 && model.pool.height > 0);
   const handoffNode = model.nodes.find(node => node.classes.includes('handoff-node'));
-  assert.ok(handoffNode && /待明确/.test(handoffNode.data.label));
-  assert.ok(handoffNode.position.y > model.pool.height, 'cross-department handoffs must stay outside the swimlane area');
+  assert.ok(handoffNode && /办理动作：待填写/.test(handoffNode.data.label));
+  assert.equal(handoffNode.data.laneKey, '经营发展部', 'a cross-department todo belongs to the receiving department lane');
+  assert.ok(handoffNode.position.y < model.pool.height, 'cross-department todos must stay inside the swimlane area');
   const internalCallNode = model.nodes.find(node => node.classes.includes('internal-call-node'));
   assert.ok(internalCallNode);
   assert.equal(internalCallNode.data.laneKey, decisionNode.data.laneKey, 'an internal call stays in the caller department lane');
@@ -651,6 +665,32 @@ function testProcessDiagramModel() {
   const invalidHandoffModel = buildGraphModel(invalidHandoff, { departmentOrder });
   assert.equal(invalidHandoffModel.edges.some(edge => edge.classes.includes('message-flow')), false);
   assert.ok(invalidHandoffModel.unresolvedItems.some(item => /有效的本流程关联行为/.test(item.message)));
+
+  const pendingDepartmentHandoff = createDraft({
+    cross_department_handoffs: [{
+      handoff_ref: 'handoff_pending_department',
+      handoff_direction: 'outbound_followup',
+      anchor_behavior_ref: 'behavior_apply',
+      counterparty_resolution: 'needs_identification',
+      source_department: '财务部',
+      target_department: '',
+      transfer_data_ref: null,
+      returned_data_ref: null,
+      requested_matter: '确认外部事项',
+      trigger_condition: '本部门行为完成后',
+      completion_standard: '返回确认结果',
+      counterparty_process_ref: null,
+      counterparty_process_name: '',
+      counterparty_behavior_ref: null,
+      counterparty_behavior_name: '处理外部事项',
+      requires_return: false,
+      resume_behavior_ref: null
+    }]
+  });
+  const pendingDepartmentModel = buildGraphModel(pendingDepartmentHandoff, { departmentOrder });
+  const pendingDepartmentNode = pendingDepartmentModel.nodes.find(node => node.classes.includes('handoff-node'));
+  assert.equal(pendingDepartmentNode.data.laneKey, '__pending_handoff_department__');
+  assert.ok(pendingDepartmentModel.lanes.some(lane => lane.label === '承接部门待明确'));
 
   const readabilityDraft = createDraft({
     behaviors: [
@@ -872,7 +912,7 @@ function testProcessDiagramModel() {
   });
   const complexBehaviorNodes = complexModel.nodes.filter(node => node.classes.includes('behavior-node'));
   assert.equal(complexBehaviorNodes.length, 40);
-  assert.equal(complexModel.lanes.length, 6);
+  assert.equal(complexModel.lanes.length, 7, 'the receiving department adds its own swimlane');
   assert.equal(complexModel.unresolvedCount, 0);
   assert.ok(complexModel.edges.some(edge => edge.classes.includes('relation-loop')));
   assert.ok(complexModel.edges.some(edge => edge.classes.includes('message-flow')));
@@ -917,8 +957,8 @@ async function testFrontendContract() {
   assert.ok(html.includes('async function fetchEmptyProcessDocument()'));
   assert.ok(html.includes("fetch('/api/template?version=process-governance-v3', { cache: 'no-store' })"));
   assert.ok(html.includes("const EXPECTED_EXPORT_SCHEMA_VERSION = 'process-governance-v3'"));
-  assert.ok(html.includes('登记本行为开始前需要外部门提供的输入'));
-  assert.ok(html.includes('登记本行为完成后需要外部门承接的事项'));
+  assert.ok(html.includes('本行为开始前由外部门提供'));
+  assert.ok(html.includes('本行为完成后交给外部门'));
   assert.ok(html.includes('待在MDM平台明确责任部门'));
   assert.ok(html.includes('async function readJsonResponse(response, nonJsonMessage)'));
   assert.ok(html.includes('3001空白模板接口未返回结构化数据'));
@@ -969,10 +1009,21 @@ async function testFrontendContract() {
   assert.ok(html.includes('录入现有表单'));
   assert.ok(html.includes('设计新建／优化表单'));
   assert.ok(html.includes('主表字段'));
-  assert.ok(html.includes('明细表标题（按纸质单据填写，可暂缺）'));
+  assert.ok(html.includes('明细表标题'));
   assert.ok(html.includes('字段归属'));
   assert.ok(html.includes('新建明细表'));
   assert.ok(html.includes('添加字段'));
+  assert.ok(html.includes('class="form-field-table"'));
+  assert.ok(html.includes('<th>序号</th>'));
+  assert.ok(html.includes('<th>字段名称</th>'));
+  assert.ok(html.includes('<th>数据类型</th>'));
+  assert.ok(html.includes('<th>必填</th>'));
+  assert.ok(html.includes('<th>填写说明</th>'));
+  assert.ok(html.includes('<th>排序</th>'));
+  assert.ok(html.includes('<th>删除</th>'));
+  assert.ok(html.includes('nextFocusPath = `forms.${formIndex}.areas.${nextAreaIndex}.items.${itemIndex}.item_name`'));
+  assert.match(html, /\.form-field-table\s*\{[\s\S]*?min-width:\s*940px/);
+  assert.match(html, /@media \(max-width: 900px\)[\s\S]*?\.form-field-row\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
   assert.ok(html.includes('data-form-item-assignment'));
   assert.ok(html.includes("form_design_state: source.schema_version === 'process-governance-v3'"));
   assert.equal(html.includes('建立主表结构'), false);
@@ -1076,9 +1127,13 @@ this.removeDetailForTest = removeDetailArea;`,
   assert.ok(html.includes('全公司通用'));
   assert.ok(html.includes('function actorDepartments()'));
   assert.ok(html.includes('selectableDepartments.forEach(department => departmentOptions.push'));
-  assert.ok(html.includes('当前为跨部门执行'));
+  assert.ok(html.includes("const selectableDepartments = ownDepartment && ownDepartment !== '全公司' ? [ownDepartment] : [];"));
+  assert.ok(html.includes('function externalActorDepartment'));
+  assert.ok(html.includes('原文件外部门：${selectedDepartment}；需改用跨部门待办（候选）'));
+  assert.ok(html.includes('data-action="open-legacy-merge"'));
+  assert.ok(html.includes('跨部门待办（候选）'));
+  assert.equal(html.includes('当前为跨部门执行'), false);
   assert.ok(html.includes('执行岗位未被所选执行部门的花名册收录'));
-  assert.equal(html.includes("parsed.department === ownDepartment || parsed.department === '全公司'"), false);
   assert.ok(html.includes('当前花名册未收录'));
   assert.ok(html.includes('data-actor-department'));
   assert.ok(html.includes('data-actor-position'));
@@ -1086,6 +1141,53 @@ this.removeDetailForTest = removeDetailArea;`,
   assert.ok(html.includes('具体做什么（补充说明，可选）'));
   assert.ok(html.includes('behaviors.${index}.behavior_description'));
   assert.ok(html.includes('不会替代业务行为名称，也不显示在流程图节点上'));
+  const externalActorStart = html.indexOf('    function externalActorDepartment(value, ownDepartment = currentExecutionDepartment()) {');
+  const externalActorEnd = html.indexOf('    function normalizeWorkRole', externalActorStart);
+  assert.ok(externalActorStart >= 0 && externalActorEnd > externalActorStart);
+  const actorPickerDocument = { process: { owning_department: '' }, behaviors: [{ current_actor_role: '' }] };
+  const actorPickerContext = {
+    text: value => value == null ? '' : String(value),
+    currentDocument: () => actorPickerDocument,
+    currentExecutionDepartment: () => actorPickerDocument.process.owning_department,
+    parseActorRole(value) {
+      const raw = String(value || '');
+      if (raw === '全公司') return { department: '全公司', position: '', known: true };
+      const department = ['财务部', '工程技术部', '质量管理部'].find(item => raw.startsWith(item)) || '';
+      return { department, position: department ? raw.slice(department.length) : '', known: Boolean(department) };
+    },
+    actorDepartments: () => ['财务部', '工程技术部', '质量管理部'],
+    rosterPositions: department => department === '财务部' ? ['会计员'] : department === '质量管理部' ? ['审核员'] : ['技术员'],
+    rosterLoadState: 'ready',
+    escapeHtml: value => String(value ?? ''),
+    escapeAttribute: value => String(value ?? ''),
+    optionHtml: (options, selected) => options.map(option => {
+      const normalized = typeof option === 'string' ? { value: option, label: option } : option;
+      return `<option value="${normalized.value}"${normalized.value === selected ? ' selected' : ''}>${normalized.label}</option>`;
+    }).join('')
+  };
+  vm.runInNewContext(
+    `${html.slice(externalActorStart, externalActorEnd)}
+this.actorRolePickerForTest = actorRolePicker;
+this.externalActorDepartmentForTest = externalActorDepartment;`,
+    actorPickerContext
+  );
+  let actorPickerMarkup = actorPickerContext.actorRolePickerForTest(0);
+  assert.match(actorPickerMarkup, /data-actor-department="0"[\s\S]*?disabled/);
+  assert.equal(actorPickerMarkup.includes('全公司通用'), false, 'department selection stays unavailable until the owner is known');
+  actorPickerDocument.process.owning_department = '财务部';
+  actorPickerMarkup = actorPickerContext.actorRolePickerForTest(0);
+  assert.ok(actorPickerMarkup.includes('财务部（本流程归口部门）'));
+  assert.ok(actorPickerMarkup.includes('全公司通用'));
+  assert.equal(actorPickerMarkup.includes('质量管理部（本流程归口部门）'), false);
+  actorPickerDocument.behaviors[0].current_actor_role = '质量管理部审核员';
+  actorPickerMarkup = actorPickerContext.actorRolePickerForTest(0);
+  assert.ok(actorPickerMarkup.includes('原文件外部门：质量管理部；需改用跨部门待办（候选）'));
+  assert.ok(actorPickerMarkup.includes('data-action="open-legacy-merge"'));
+  assert.equal(actorPickerDocument.behaviors[0].current_actor_role, '质量管理部审核员', 'rendering must preserve a historical external actor');
+  actorPickerDocument.process.owning_department = '质量管理部';
+  assert.equal(actorPickerContext.externalActorDepartmentForTest('质量管理部审核员'), '');
+  actorPickerDocument.process.owning_department = '工程技术部';
+  assert.equal(actorPickerContext.externalActorDepartmentForTest('质量管理部审核员'), '质量管理部');
   const normalizeV1Function = html.slice(
     html.indexOf('function normalizeV1(input)'),
     html.indexOf('function splitLegacyDocument')
@@ -1111,6 +1213,58 @@ this.removeDetailForTest = removeDetailArea;`,
   assert.ok(addBehaviorFunction.includes("current_actor_role: ''"));
   assert.ok(addBehaviorFunction.includes("behavior_description: ''"));
   assert.ok(addBehaviorFunction.includes('work_role: null'));
+  const flowDefaultsStart = html.indexOf('    function successorBehaviorRefs(behaviorRef, data = currentDocument()) {');
+  const flowDefaultsEnd = html.indexOf('    function externalDepartmentForHandoff(handoff) {', flowDefaultsStart);
+  const addHandoffStart = html.indexOf('    function addHandoff(direction = \'outbound_followup\', anchorBehaviorRef = null) {');
+  const addHandoffEnd = html.indexOf('    function removeRelation(index) {', addHandoffStart);
+  assert.ok(flowDefaultsStart >= 0 && flowDefaultsEnd > flowDefaultsStart);
+  assert.ok(addHandoffStart >= 0 && addHandoffEnd > addHandoffStart);
+  const handoffDefaultsDocument = {
+    export_meta: { initiating_department: '财务部' },
+    process: { owning_department: '财务部' },
+    behaviors: [
+      { behavior_ref: 'behavior-start', behavior_name: '提交申请' },
+      { behavior_ref: 'behavior-resume', behavior_name: '继续办理' }
+    ],
+    flow_relations: [{
+      relation_ref: 'relation-next',
+      relation_type: 'sequence',
+      from_behavior_ref: 'behavior-start',
+      to_behavior_ref: 'behavior-resume'
+    }],
+    cross_department_handoffs: []
+  };
+  const handoffDefaultsContext = {
+    text: value => value == null ? '' : String(value),
+    currentDocument: () => handoffDefaultsDocument,
+    newRef: () => 'handoff-new',
+    activeFlowItemKind: 'behavior',
+    activeHandoffRef: '',
+    externalDepartmentForHandoff(handoff) {
+      return handoff.handoff_direction === 'inbound_prerequisite'
+        ? handoff.source_department || ''
+        : handoff.target_department || '';
+    }
+  };
+  vm.runInNewContext(
+    `${html.slice(flowDefaultsStart, flowDefaultsEnd)}\n${html.slice(addHandoffStart, addHandoffEnd)}
+this.addHandoffForTest = addHandoff;
+this.syncHandoffDerivedFieldsForTest = syncHandoffDerivedFields;`,
+    handoffDefaultsContext
+  );
+  const newHandoff = handoffDefaultsContext.addHandoffForTest('outbound_followup', 'behavior-start');
+  assert.equal(newHandoff.source_department, '财务部');
+  assert.equal(newHandoff.anchor_behavior_ref, 'behavior-start');
+  assert.equal(newHandoff.trigger_condition, '“提交申请”完成后，系统生成跨部门待办');
+  assert.equal(handoffDefaultsContext.activeFlowItemKind, 'handoff');
+  newHandoff.target_department = '物资保障部';
+  newHandoff.requires_return = true;
+  handoffDefaultsContext.syncHandoffDerivedFieldsForTest(newHandoff, 'requires_return');
+  assert.equal(newHandoff.counterparty_resolution, 'identified');
+  assert.equal(newHandoff.resume_behavior_ref, 'behavior-resume');
+  handoffDefaultsDocument.process.owning_department = '工程技术部';
+  handoffDefaultsContext.syncHandoffDerivedFieldsForTest(newHandoff);
+  assert.equal(newHandoff.source_department, '工程技术部', 'the local side follows the owning department');
   assert.ok(html.includes('data-action="move-behavior-up"'));
   assert.ok(html.includes('data-action="move-behavior-down"'));
   assert.ok(html.includes('aria-label="上移第${behaviorIndex + 1}项业务行为"'));
@@ -1125,24 +1279,66 @@ this.removeDetailForTest = removeDetailArea;`,
   });
   assert.ok(html.includes('aria-label="流程关系列表"'));
   assert.ok(html.includes('aria-label="输出物与数据列表"'));
-  assert.ok(html.includes('aria-label="跨部门承接列表"'));
+  assert.ok(html.includes('aria-label="跨部门待办只读汇总"'));
   assert.ok(html.includes('let activeRelationRef = \'\''));
   assert.ok(html.includes('let activeDataRef = \'\''));
   assert.ok(html.includes('let activeHandoffRef = \'\''));
   assert.ok(html.includes('const active = ensureActiveRelation()'));
   assert.ok(html.includes('const active = ensureActiveDataObject()'));
-  assert.ok(html.includes('const active = ensureActiveHandoff()'));
+  assert.ok(html.includes('const active = ensureActiveFlowItem()'));
   assert.ok(html.includes('activeRelationRef = focusRef'));
   assert.ok(html.includes('activeDataRef = focusRef'));
   assert.ok(html.includes('activeHandoffRef = focusRef'));
   assert.ok(html.includes('一次只编辑一条流程关系。左侧顺序只用于整理条目，不代表流程先后关系。'));
-  assert.ok(html.includes('一次只编辑一个数据对象。'));
-  assert.ok(html.includes('一次只编辑一条跨部门承接。'));
+  assert.ok(html.includes('这里是业务行为输入和输出的唯一编辑入口。'));
+  assert.ok(html.includes('这里只集中查看，不新增、不修改。'));
+  const renderBehaviorsStart = html.indexOf('    function renderBehaviors() {');
+  const renderBehaviorsEnd = html.indexOf('    function renderRelations() {', renderBehaviorsStart);
+  const renderBehaviorsSource = html.slice(renderBehaviorsStart, renderBehaviorsEnd);
+  assert.ok(renderBehaviorsSource.includes('流程如何开始'));
+  assert.ok(html.includes('由流程关系和输出物与数据自动带出'));
+  assert.ok(renderBehaviorsSource.includes('其他开始条件（可选）'));
+  assert.ok(renderBehaviorsSource.includes('怎样算完成'));
+  assert.equal(renderBehaviorsSource.includes("field(`behaviors.${index}.input_description`"), false);
+  assert.equal(renderBehaviorsSource.includes("field(`behaviors.${index}.output_description`"), false);
+  assert.equal(renderBehaviorsSource.includes('multiData('), false, 'behavior editor must not duplicate data relationship editing');
+  assert.ok(html.includes('历史文字补充（只读）'));
+  assert.ok(html.includes('data-action="open-behavior-data"'));
+  assert.ok(html.includes('只显示产生后可到达的行为'));
+  assert.ok(html.includes("action === 'open-behavior-data'"));
   assert.ok(html.includes('function orderedSelectorRow(kind, itemRef, index, total, label, buttonLabel, activeRef)'));
   assert.ok(html.includes('${itemOrderButtons(kind, itemRef, index, total, label)}'));
   assert.ok(html.includes("moveCollectionItem('flow_relations', 'relation_ref'"));
   assert.ok(html.includes("moveCollectionItem('data_objects', 'data_ref'"));
   assert.ok(html.includes("moveCollectionItem('cross_department_handoffs', 'handoff_ref'"));
+  const syncDataLinksStart = html.indexOf('    function syncBehaviorLinksForData(item, options = {}) {');
+  const syncDataLinksEnd = html.indexOf('    function multiDepartments', syncDataLinksStart);
+  assert.ok(syncDataLinksStart >= 0 && syncDataLinksEnd > syncDataLinksStart);
+  const dataLinkDocument = {
+    behaviors: [{
+      behavior_ref: 'behavior-1', input_data_refs: ['data-1'], output_data_refs: ['data-1']
+    }, {
+      behavior_ref: 'behavior-2', input_data_refs: [], output_data_refs: []
+    }, {
+      behavior_ref: 'behavior-3', input_data_refs: [], output_data_refs: []
+    }]
+  };
+  const syncDataLinksContext = { currentDocument: () => dataLinkDocument };
+  vm.runInNewContext(
+    `${html.slice(syncDataLinksStart, syncDataLinksEnd)}\nthis.syncBehaviorLinksForDataForTest = syncBehaviorLinksForData;`,
+    syncDataLinksContext
+  );
+  const canonicalDataObject = {
+    data_ref: 'data-1',
+    produced_by_behavior_ref: 'behavior-2',
+    consumed_by_behavior_refs: ['behavior-3']
+  };
+  syncDataLinksContext.syncBehaviorLinksForDataForTest(canonicalDataObject, { producer: true });
+  assert.deepEqual(Array.from(dataLinkDocument.behaviors[1].output_data_refs), ['data-1']);
+  assert.deepEqual(Array.from(dataLinkDocument.behaviors[0].input_data_refs), ['data-1'], 'editing the producer must preserve historical consumers');
+  syncDataLinksContext.syncBehaviorLinksForDataForTest(canonicalDataObject, { consumers: true });
+  assert.deepEqual(Array.from(dataLinkDocument.behaviors[0].input_data_refs), []);
+  assert.deepEqual(Array.from(dataLinkDocument.behaviors[2].input_data_refs), ['data-1']);
   const moveBehaviorStart = html.indexOf('    function moveBehavior(behaviorRef, direction) {');
   const moveBehaviorEnd = html.indexOf('    function addRelation()', moveBehaviorStart);
   assert.ok(moveBehaviorStart >= 0 && moveBehaviorEnd > moveBehaviorStart);
@@ -1326,12 +1522,18 @@ this.moveCollectionItemForTest = moveCollectionItem;`,
     'the general system-boundary notice must not occupy the business page'
   );
   assert.equal((html.match(/DeepSeek/g) || []).length, 0, 'the business page must not mention the retired model');
-  assert.ok(html.includes('登记本行为开始前需要外部门提供的输入'));
-  assert.ok(html.includes('登记本行为完成后需要外部门承接的事项'));
-  assert.ok(html.includes('完善承接信息'));
-  assert.ok(html.includes('data-action="remove-linked-handoff"'));
-  assert.ok(html.includes('删除这条承接'));
+  assert.ok(html.includes('本行为开始前由外部门提供'));
+  assert.ok(html.includes('本行为完成后交给外部门'));
+  assert.ok(html.includes('data-action="select-flow-handoff"'));
+  assert.ok(html.includes('data-action="open-flow-handoff"'));
+  assert.ok(html.includes('删除当前待办'));
   assert.ok(html.includes('关联哪个本流程行为'));
+  const handoffSummaryStart = html.indexOf('    function renderHandoffs() {');
+  const handoffSummaryEnd = html.indexOf('    function renderForms()', handoffSummaryStart);
+  const handoffSummarySource = html.slice(handoffSummaryStart, handoffSummaryEnd);
+  assert.ok(handoffSummaryStart >= 0 && handoffSummaryEnd > handoffSummaryStart);
+  assert.equal(handoffSummarySource.includes('field(`cross_department_handoffs.'), false, 'the handoff summary must be read-only');
+  assert.equal(handoffSummarySource.includes('data-action="add-'), false, 'the handoff summary must not create a second editing entry');
   assert.ok(html.includes("addHandoff('inbound_prerequisite'"));
   assert.ok(html.includes("addHandoff('outbound_followup'"));
   assert.ok(
@@ -1339,7 +1541,7 @@ this.moveCollectionItemForTest = moveCollectionItem;`,
     'the export notice must distinguish preview from approved governance writes'
   );
   assert.ok(html.includes("removeHandoffByRef(text(element.dataset.ref))"));
-  assert.ok(html.includes('当前业务行为和其他跨部门承接不受影响'));
+  assert.ok(html.includes('当前业务行为和其他跨部门待办不受影响'));
   assert.ok(html.includes("if (action === 'remove-handoff' && !removeHandoff(index)) return;"));
   assert.ok(html.includes('data-action="focus-export-warning"'));
   assert.ok(html.includes("if (action === 'focus-export-warning') return focusExportWarning(element);"));
@@ -1400,7 +1602,7 @@ this.removeHandoffByRefForTest = removeHandoffByRef;`,
   assert.equal(handoffRemovalContext.removeHandoffByRefForTest('handoff-1'), false);
   assert.equal(handoffDocument.cross_department_handoffs.length, 2);
   assert.match(confirmMessage, /承接部门：质量管理部/);
-  assert.match(confirmMessage, /当前业务行为和其他跨部门承接不受影响/);
+  assert.match(confirmMessage, /当前业务行为和其他跨部门待办不受影响/);
   confirmResult = true;
   assert.equal(handoffRemovalContext.removeHandoffByRefForTest('handoff-1'), true);
   assert.deepEqual(
@@ -1409,6 +1611,189 @@ this.removeHandoffByRefForTest = removeHandoffByRef;`,
   );
   assert.equal(handoffRemovalContext.activeHandoffRef, 'handoff-2');
   assert.equal(handoffDocument.behaviors.length, 1);
+
+  const mergeHelpersStart = html.indexOf('    function mergeChoiceOptions(field, candidates) {');
+  const mergeHelpersEnd = html.indexOf('    function renderLegacyMergeModal() {', mergeHelpersStart);
+  assert.ok(mergeHelpersStart >= 0 && mergeHelpersEnd > mergeHelpersStart);
+  const mergeContext = {
+    text: value => value == null ? '' : String(value),
+    clone: value => JSON.parse(JSON.stringify(value)),
+    newRef: () => 'handoff-generated',
+    externalActorDepartment(value, owner) {
+      const raw = String(value || '');
+      const department = ['工程技术部', '物资保障部'].find(item => raw.startsWith(item)) || '';
+      return department && owner && department !== owner ? department : '';
+    },
+    defaultHandoffTrigger(_direction, behaviorRef, data) {
+      const behavior = data.behaviors.find(item => item.behavior_ref === behaviorRef);
+      return `“${behavior?.behavior_name || '当前本流程行为'}”完成后，系统生成跨部门待办`;
+    }
+  };
+  vm.runInNewContext(
+    `${html.slice(mergeHelpersStart, mergeHelpersEnd)}
+this.analyzeLegacyExternalBehaviorForTest = analyzeLegacyExternalBehavior;
+this.applyLegacyExternalBehaviorMergeForTest = applyLegacyExternalBehaviorMerge;`,
+    mergeContext
+  );
+  const legacyMergeDocument = {
+    process: { owning_department: '工程技术部' },
+    behaviors: [
+      { behavior_ref: 'behavior-request', behavior_name: '工程技术部技术员向物资保障部索取工艺装备序列号', current_actor_role: '工程技术部技术员', work_role: null, countersign_all_required: false, countersign_target_departments: [] },
+      { behavior_ref: 'behavior-external', behavior_name: '物资保障部向工程技术部发放工装序列号', current_actor_role: '物资保障部计划员', completion_standard: '识别工装序列号', work_role: null, countersign_all_required: false, countersign_target_departments: [] },
+      { behavior_ref: 'behavior-resume', behavior_name: '工程技术部技术员编制工艺装备申请单', current_actor_role: '工程技术部技术员', work_role: null, countersign_all_required: false, countersign_target_departments: [] }
+    ],
+    flow_relations: [
+      { relation_ref: 'relation-request', relation_type: 'sequence', from_behavior_ref: 'behavior-request', to_behavior_ref: 'behavior-external' },
+      { relation_ref: 'relation-return', relation_type: 'sequence', from_behavior_ref: 'behavior-external', to_behavior_ref: 'behavior-resume' }
+    ],
+    data_objects: [{
+      data_ref: 'data-serial',
+      data_name: '工装序列号',
+      produced_by_behavior_ref: 'behavior-external',
+      consumed_by_behavior_refs: ['behavior-external', 'behavior-resume']
+    }],
+    cross_department_handoffs: [{
+      handoff_ref: 'handoff-outbound',
+      handoff_direction: 'outbound_followup',
+      anchor_behavior_ref: 'behavior-request',
+      counterparty_resolution: 'needs_identification',
+      source_department: '工程技术部',
+      target_department: '物资保障部',
+      transfer_data_ref: null,
+      requested_matter: '工装序列号',
+      trigger_condition: '完成待办时',
+      completion_standard: '',
+      counterparty_process_ref: null,
+      counterparty_process_name: '',
+      counterparty_behavior_ref: null,
+      counterparty_behavior_name: '',
+      requires_return: false,
+      returned_data_ref: null,
+      resume_behavior_ref: null
+    }, {
+      handoff_ref: 'handoff-inbound',
+      handoff_direction: 'inbound_prerequisite',
+      anchor_behavior_ref: 'behavior-resume',
+      counterparty_resolution: 'needs_identification',
+      source_department: '物资保障部',
+      target_department: '工程技术部',
+      transfer_data_ref: 'data-serial',
+      requested_matter: '工装序列号',
+      trigger_condition: '编制申请单前',
+      completion_standard: '提供完整且唯一的工装序列号',
+      counterparty_process_ref: null,
+      counterparty_process_name: '',
+      counterparty_behavior_ref: null,
+      counterparty_behavior_name: '',
+      requires_return: false,
+      returned_data_ref: null,
+      resume_behavior_ref: null
+    }],
+    internal_process_calls: [],
+    forms: [{ form_ref: 'form-external', behavior_ref: 'behavior-external', areas: [] }]
+  };
+  const legacyMergeBefore = JSON.stringify(legacyMergeDocument);
+  const mergeAnalysis = mergeContext.analyzeLegacyExternalBehaviorForTest(legacyMergeDocument, 'behavior-external');
+  assert.deepEqual(Array.from(mergeAnalysis.blockers), []);
+  assert.equal(mergeAnalysis.senderRef, 'behavior-request');
+  assert.equal(mergeAnalysis.inboundHandoff.handoff_ref, 'handoff-inbound');
+  assert.ok(mergeAnalysis.conflicts.some(item => item.field === 'completion_standard'));
+  assert.throws(
+    () => mergeContext.applyLegacyExternalBehaviorMergeForTest(legacyMergeDocument, mergeAnalysis, {}),
+    /请先确认/
+  );
+  const mergeSelections = {
+    ...mergeAnalysis.defaults,
+    counterparty_behavior_name: '物资保障部向工程技术部发放工装序列号',
+    completion_standard: '提供完整且唯一的工装序列号'
+  };
+  const mergedLegacy = mergeContext.applyLegacyExternalBehaviorMergeForTest(
+    legacyMergeDocument,
+    mergeAnalysis,
+    mergeSelections
+  ).data;
+  assert.equal(JSON.stringify(legacyMergeDocument), legacyMergeBefore, 'legacy merge must not mutate the imported source object');
+  assert.deepEqual(mergedLegacy.behaviors.map(item => item.behavior_ref), ['behavior-request', 'behavior-resume']);
+  assert.equal(mergedLegacy.flow_relations.length, 0);
+  assert.equal(mergedLegacy.cross_department_handoffs.length, 1);
+  assert.equal(mergedLegacy.cross_department_handoffs[0].handoff_ref, 'handoff-outbound');
+  assert.equal(mergedLegacy.cross_department_handoffs[0].counterparty_resolution, 'identified');
+  assert.equal(mergedLegacy.cross_department_handoffs[0].target_department, '物资保障部');
+  assert.equal(mergedLegacy.cross_department_handoffs[0].counterparty_behavior_name, '物资保障部向工程技术部发放工装序列号');
+  assert.equal(mergedLegacy.cross_department_handoffs[0].returned_data_ref, 'data-serial');
+  assert.equal(mergedLegacy.cross_department_handoffs[0].resume_behavior_ref, 'behavior-resume');
+  assert.equal(mergedLegacy.data_objects[0].produced_by_behavior_ref, null);
+  assert.deepEqual(mergedLegacy.data_objects[0].consumed_by_behavior_refs, ['behavior-resume']);
+  assert.equal(mergedLegacy.forms[0].behavior_ref, null);
+
+  const noExistingHandoffDocument = JSON.parse(legacyMergeBefore);
+  noExistingHandoffDocument.cross_department_handoffs = [];
+  const noExistingAnalysis = mergeContext.analyzeLegacyExternalBehaviorForTest(noExistingHandoffDocument, 'behavior-external');
+  const generatedMerge = mergeContext.applyLegacyExternalBehaviorMergeForTest(
+    noExistingHandoffDocument,
+    noExistingAnalysis,
+    { ...noExistingAnalysis.defaults }
+  ).data;
+  assert.equal(generatedMerge.cross_department_handoffs.length, 1);
+  assert.equal(generatedMerge.cross_department_handoffs[0].handoff_ref, 'handoff-generated');
+
+  const blockedRoleDocument = JSON.parse(legacyMergeBefore);
+  blockedRoleDocument.behaviors[1].work_role = { behavior_ref: 'behavior-external' };
+  assert.ok(
+    mergeContext.analyzeLegacyExternalBehaviorForTest(blockedRoleDocument, 'behavior-external').blockers
+      .some(item => item.includes('正式工作角色'))
+  );
+  const blockedCountersignDocument = JSON.parse(legacyMergeBefore);
+  blockedCountersignDocument.behaviors[1].countersign_target_departments = ['质量管理部'];
+  assert.ok(
+    mergeContext.analyzeLegacyExternalBehaviorForTest(blockedCountersignDocument, 'behavior-external').blockers
+      .some(item => item.includes('会签要求'))
+  );
+  const blockedInternalCallDocument = JSON.parse(legacyMergeBefore);
+  blockedInternalCallDocument.internal_process_calls = [{
+    call_ref: 'call-external',
+    caller_behavior_ref: 'behavior-external',
+    return_behavior_ref: null
+  }];
+  assert.ok(
+    mergeContext.analyzeLegacyExternalBehaviorForTest(blockedInternalCallDocument, 'behavior-external').blockers
+      .some(item => item.includes('部门内调用'))
+  );
+  const blockedBranchDocument = JSON.parse(legacyMergeBefore);
+  blockedBranchDocument.flow_relations.push({
+    relation_ref: 'relation-extra-incoming',
+    relation_type: 'sequence',
+    from_behavior_ref: 'behavior-resume',
+    to_behavior_ref: 'behavior-external'
+  });
+  assert.ok(
+    mergeContext.analyzeLegacyExternalBehaviorForTest(blockedBranchDocument, 'behavior-external').blockers
+      .some(item => item.includes('2条前序关系'))
+  );
+  const blockedOutgoingBranchDocument = JSON.parse(legacyMergeBefore);
+  blockedOutgoingBranchDocument.flow_relations.push({
+    relation_ref: 'relation-extra-outgoing',
+    relation_type: 'sequence',
+    from_behavior_ref: 'behavior-external',
+    to_behavior_ref: 'behavior-request'
+  });
+  assert.ok(
+    mergeContext.analyzeLegacyExternalBehaviorForTest(blockedOutgoingBranchDocument, 'behavior-external').blockers
+      .some(item => item.includes('2条后续关系'))
+  );
+  const mergeCloseStart = html.indexOf('    function closeLegacyMerge() {');
+  const mergeCloseEnd = html.indexOf('    async function confirmLegacyMerge() {', mergeCloseStart);
+  const mergeCloseSource = html.slice(mergeCloseStart, mergeCloseEnd);
+  assert.ok(mergeCloseSource.includes('legacyMergeState = null'));
+  assert.ok(mergeCloseSource.includes("legacyMergeModal.classList.remove('show')"));
+  assert.equal(mergeCloseSource.includes('currentEntry().data ='), false, 'canceling the merge must not replace the current draft');
+  assert.equal(mergeCloseSource.includes('touch()'), false, 'canceling the merge must not mark the draft as changed');
+  const mergeConfirmStart = html.indexOf('    async function confirmLegacyMerge() {');
+  const mergeConfirmEnd = html.indexOf('    function handleAction(action, element) {', mergeConfirmStart);
+  const mergeConfirmSource = html.slice(mergeConfirmStart, mergeConfirmEnd);
+  assert.ok(mergeConfirmSource.indexOf('if (!result.valid)') < mergeConfirmSource.indexOf('currentEntry().data = merged.data'));
+  assert.ok(mergeConfirmSource.indexOf('const response = await fetch') < mergeConfirmSource.indexOf('currentEntry().data = merged.data'));
+  assert.ok(mergeConfirmSource.indexOf('catch (error)') > mergeConfirmSource.indexOf('currentEntry().data = merged.data'));
 
   const businessWarningsStart = html.indexOf('    function businessWarnings(data) {');
   const businessWarningsEnd = html.indexOf('    function sanitizeFilenamePart', businessWarningsStart);
@@ -1423,8 +1808,14 @@ this.removeHandoffByRefForTest = removeHandoffByRef;`,
     rosterLoadState: 'unavailable',
     text: value => value == null ? '' : String(value),
     parseActorRole: () => ({ department: '', position: '' }),
+    externalActorDepartment(value, ownDepartment) {
+      const raw = String(value || '');
+      const department = ['财务部', '工程技术部', '质量管理部', '物资保障部'].find(item => raw.startsWith(item)) || '';
+      return ownDepartment && department && department !== ownDepartment ? department : '';
+    },
     actorDepartments: () => [],
-    rosterPositions: () => []
+    rosterPositions: () => [],
+    StructureLearningScore: require(structureScorePath)
   };
   vm.runInNewContext(
     `${html.slice(businessWarningsStart, businessWarningsEnd)}
@@ -1476,6 +1867,49 @@ this.businessWarningsForTest = businessWarnings;`,
     false,
     'a loop and a forward sequence are two explicit decision outlets'
   );
+
+  const externalBehaviorDocument = createDraft();
+  externalBehaviorDocument.behaviors[0].current_actor_role = '物资保障部库管员';
+  const externalBehaviorBefore = JSON.stringify(externalBehaviorDocument);
+  const externalBehaviorWarning = Array.from(
+    businessWarningContext.businessWarningsForTest(externalBehaviorDocument)
+  ).find(item => item.message === '费用申请是旧版页面保存的外部门普通业务行为，可能与跨部门待办重复表达。请打开“归并重复表达”，确认承接动作、返回数据和恢复位置。');
+  assert.equal(externalBehaviorWarning.focusPath, 'legacy_merge');
+  assert.equal(externalBehaviorWarning.focusKind, 'behavior');
+  assert.equal(JSON.stringify(externalBehaviorDocument), externalBehaviorBefore, 'warning checks must not rewrite historical external actors');
+
+  const parallelWarningDocument = createDraft();
+  parallelWarningDocument.behaviors = [
+    completeBehavior(baseBehavior, 'behavior_split', 'parallel_split', '并行发起'),
+    completeBehavior(baseBehavior, 'behavior_route_a', 'action', '路线甲'),
+    completeBehavior(baseBehavior, 'behavior_route_b', 'action', '路线乙'),
+    completeBehavior(baseBehavior, 'behavior_join', 'parallel_join', '并行归集')
+  ];
+  parallelWarningDocument.flow_relations = [];
+  let parallelWarnings = Array.from(businessWarningContext.businessWarningsForTest(parallelWarningDocument));
+  assert.ok(parallelWarnings.some(item => item.message === '并行发起当前只有0条并行路线；请进入流程关系，再新增2条以本节点为起点、流向不同后续行为的并行路线'));
+  parallelWarningDocument.flow_relations.push({
+    relation_ref: 'relation-parallel-a', relation_type: 'parallel', from_behavior_ref: 'behavior_split', to_behavior_ref: 'behavior_route_a', condition: '', join_mode: ''
+  });
+  parallelWarnings = Array.from(businessWarningContext.businessWarningsForTest(parallelWarningDocument));
+  assert.ok(parallelWarnings.some(item => item.message === '并行发起当前只有1条并行路线；请进入流程关系，再新增1条以本节点为起点、流向不同后续行为的并行路线'));
+  parallelWarningDocument.flow_relations.push({
+    relation_ref: 'relation-parallel-b', relation_type: 'parallel', from_behavior_ref: 'behavior_split', to_behavior_ref: 'behavior_route_b', condition: '', join_mode: ''
+  }, {
+    relation_ref: 'relation-join-a', relation_type: 'parallel', from_behavior_ref: 'behavior_route_a', to_behavior_ref: 'behavior_join', condition: '', join_mode: ''
+  });
+  parallelWarnings = Array.from(businessWarningContext.businessWarningsForTest(parallelWarningDocument));
+  assert.equal(parallelWarnings.some(item => item.message.startsWith('并行发起当前只有')), false);
+  assert.ok(parallelWarnings.some(item => item.message === '并行归集当前只有1个有效来源；请补充1条以本节点为目标的并行路线，跨部门路线返回时把恢复位置设为本节点'));
+  parallelWarningDocument.cross_department_handoffs = [{
+    handoff_ref: 'handoff-return-to-join',
+    handoff_direction: 'outbound_followup',
+    anchor_behavior_ref: 'behavior_route_b',
+    requires_return: true,
+    resume_behavior_ref: 'behavior_join'
+  }];
+  parallelWarnings = Array.from(businessWarningContext.businessWarningsForTest(parallelWarningDocument));
+  assert.equal(parallelWarnings.some(item => item.message.startsWith('并行归集当前只有')), false, 'one local route plus one returning handoff is a complete join');
   assert.equal(
     warningMessages.some(message => message.includes('流程关系3为判断分支，但未填写判断条件')),
     false
@@ -1529,11 +1963,28 @@ this.businessWarningsForTest = businessWarnings;`,
   missingStartConditionDocument.behaviors[0].precondition = '';
   const missingStartConditionWarning = Array.from(
     businessWarningContext.businessWarningsForTest(missingStartConditionDocument)
-  ).find(item => item.message === '费用申请的触发条件和前置条件均为空，请至少填写一项');
-  assert.deepEqual(
-    Array.from(missingStartConditionWarning.focusPaths),
-    ['behaviors.0.trigger', 'behaviors.0.precondition']
+  ).find(item => item.message === '费用申请是流程入口，但未说明流程如何开始');
+  assert.equal(missingStartConditionWarning.focusPath, 'behaviors.0.trigger');
+
+  const futureDataWarningDocument = createDraft();
+  futureDataWarningDocument.behaviors.push(
+    completeBehavior(futureDataWarningDocument.behaviors[0], 'behavior-later', 'action', '后续生成结果')
   );
+  futureDataWarningDocument.flow_relations = [{
+    relation_ref: 'relation-later',
+    relation_type: 'sequence',
+    from_behavior_ref: 'behavior_apply',
+    to_behavior_ref: 'behavior-later',
+    condition: '',
+    join_mode: ''
+  }];
+  futureDataWarningDocument.data_objects[0].produced_by_behavior_ref = 'behavior-later';
+  futureDataWarningDocument.data_objects[0].consumed_by_behavior_refs = ['behavior_apply'];
+  const futureDataWarning = Array.from(
+    businessWarningContext.businessWarningsForTest(futureDataWarningDocument)
+  ).find(item => item.message.includes('前序行为“费用申请”不能引用'));
+  assert.equal(futureDataWarning.processSection, 'data');
+  assert.equal(futureDataWarning.focusPath, 'data_objects.0.consumed_by_behavior_refs');
 
   const handoffDecisionDocument = JSON.parse(JSON.stringify(localDecisionDocument));
   handoffDecisionDocument.behaviors = handoffDecisionDocument.behaviors.slice(0, 2);
@@ -1583,7 +2034,7 @@ this.businessWarningsForTest = businessWarnings;`,
   handoffDecisionDocument.cross_department_handoffs[0].completion_standard = '';
   const incompleteDecisionWarning = Array.from(
     businessWarningContext.businessWarningsForTest(handoffDecisionDocument)
-  ).find(item => item.message === '跨部门承接1的触发条件和完成标准均为空');
+  ).find(item => item.message === '跨部门待办（候选）1的触发条件和完成标准均为空');
   assert.equal(incompleteDecisionWarning.focusKind, 'handoff');
   assert.equal(incompleteDecisionWarning.focusRef, 'handoff-approved');
   assert.equal(incompleteDecisionWarning.focusPath, 'cross_department_handoffs.0.trigger_condition');
@@ -1608,16 +2059,17 @@ this.businessWarningsForTest = businessWarnings;`,
   assert.ok(html.includes('系统不会按录入顺序自动连线'));
   assert.ok(html.includes('该图根据导入内容生成，仅用于核对，不代表已经审核'));
   assert.ok(html.includes('有 ${model.unresolvedCount} 项内容无法绘制'));
-  ['业务行为', '判断', '并行', '流程关系', '跨部门承接', '内部流程调用', '类型待判断']
+    ['业务行为', '判断', '并行', '流程关系', '跨部门待办（候选）', '内部流程调用', '类型待判断']
     .forEach(label => assert.ok(html.includes(`<strong>${label}</strong>`), `diagram legend must include ${label}`));
-  assert.ok(html.includes('先看泳道确认责任部门，再沿实线箭头从左向右阅读；虚线箭头表示跨部门承接。带条件的前进箭头表示判断分支；标有“回路”的返回箭头表示退回前序步骤。'));
-  assert.ok(html.includes('顺序、判断分支和流程内部回路怎么选？'));
+  assert.ok(html.includes('先看泳道确认责任部门，再沿实线箭头从左向右阅读；虚线箭头表示跨部门待办（候选）。带条件的前进箭头表示判断分支；标有“回路”的返回箭头表示退回前序步骤。'));
+  assert.ok(html.includes('顺序、判断分支、流程内部回路和并行路线怎么选？'));
   assert.ok(html.includes('当前节点完成后，默认进入下一业务行为。判断节点可以用一条顺序关系表示默认继续路径，不需要填写条件。'));
   assert.ok(html.includes('需要按某个明确判断结果进入后续步骤时使用。需要填写判断条件和要去的步骤。'));
   assert.ok(html.includes('因为审核不通过、材料有误等原因，退回本流程前面已经存在的步骤重新处理。需要填写退回条件和退回位置。'));
+  assert.ok(html.includes('从并行开始节点同时启动多条办理路线时使用。并行开始至少需要2条并行路线；并行汇合至少需要2个有效来源。'));
   assert.ok(html.includes('承接顺序或判断分支的后续节点仍可以是普通业务行为。是否选择判断节点，只取决于该节点本身是否还要继续判断。'));
   assert.ok(html.includes('例：部门负责人审核报销单。审核通过 → 使用顺序关系进入财务复核；审核不通过 → 使用流程内部回路退回申请人补充材料。财务复核仍是普通业务行为。'));
-  assert.ok(html.includes('默认继续下一步选择“顺序”；按明确判断结果进入后续步骤选择“判断分支”；退回前面步骤重新处理选择“流程内部回路”。'));
+  assert.ok(html.includes('默认继续下一步选择“顺序”；按判断结果进入后续步骤选择“判断分支”；退回前序步骤选择“流程内部回路”；同时启动或汇合多条路线选择“并行路线”。'));
   assert.ok(html.includes('判断分支条件或回路触发条件（顺序关系可不填）'));
   assert.ok(html.includes('${guidance}${workbench}'));
   assert.match(html, /\.relation-guidance-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/);
@@ -1672,7 +2124,7 @@ this.businessWarningsForTest = businessWarnings;`,
   assert.ok(serverSource.includes("app.get('/vendor/cytoscape.min.js'"));
   assert.equal(/\/api\/suggestions/.test(html), false);
   assert.equal(/localStorage|sessionStorage|indexedDB|document\.cookie|sessionId|\/api\/session/.test(html), false);
-  assert.equal(html.includes('3000'), false, 'the business page must use MDM平台 instead of the port number');
+  assert.ok(html.includes('归口部门审核导入3000后，系统才生成正式待办'));
   assert.equal(diagramSource.includes('3000'), false, 'diagram guidance must use MDM平台 instead of the port number');
   assert.equal(structureScoreSource.includes('3000'), false, 'score guidance must use MDM平台 instead of the port number');
   assert.equal(/fetch\([^)]*3000|localhost:3000|127\.0\.0\.1:3000/.test(html), false);

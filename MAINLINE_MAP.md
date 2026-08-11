@@ -252,7 +252,28 @@ pmo/gantt-react/
 - `pmo/gantt-react/public/tasks.json` 是 React 应用消费数据，不是手工维护真源。
 - `apps/weekly-action-service/` 是 3002 周会行动项运行台账服务，默认写入 `artifacts/weekly-actions/`；它不回写 PMO Markdown 真源、`tasks.json` 或 MDM 数据库。
 
-## 7. AI 协作与历史方案主线
+## 7. 信息表收集主线
+
+```text
+MySQL: person -> user_accounts
+MySQL: departments
+  ↓ 只读身份与部门
+apps/information-collection-service/
+  ├─ 4000 管理端：表单设计、任务发布、完成情况、答卷和导出
+  └─ 4001 填报端：本人任务、草稿、提交、修改和附件
+  ↓
+MySQL: collection_*
+COLLECTION_FILE_ROOT（仓库外受控附件目录）
+```
+
+规则：
+
+- 4000 和 4001 由同一进程提供，但使用独立路由和独立会话 Cookie；任一端口启动失败时，进程关闭另一端口并退出。
+- 服务只读复用 `person`、`user_accounts` 和 `departments`。信息收集权限写入 `collection_app_grants`，不得自动继承 3000 的 `admin`、MDM 工作角色或部门负责人权限。
+- 表单、不可变发布版本、任务目标快照、当前答卷和历次正式提交均写入 `collection_*` 表。附件正文只写入仓库外 `COLLECTION_FILE_ROOT`，数据库只保存元数据和哈希。
+- 服务不写入 MDM 治理业务表、`docs/norms/` 或 PMO 真源。数据库迁移先执行 dry-run，再 apply 和 schema 检查。
+
+## 8. AI 协作与历史方案主线
 
 ```text
 docs/superpowers/specs/*

@@ -36,6 +36,10 @@
 | `start-structure-pilot.ps1` | 在工作区干净、测试通过和HTTPS配置齐全时启动MDM-AI助手及其认证网关 | `apps/structure-assistant/config/pilot.config.json`、本机`structure-pilot.local.env`、同一Git提交、已独立运行的3001 | 只启停本机3003/3004；检查但不停止、重绑或代管3001；不拉取代码、不写业务真源 |
 | `smoke-structure-pilot.mjs` | 登录独立试点并检查版本、模板、结构校验、本人余额和试点可选网关 | 本机试点秘密、运行中的HTTPS服务 | 只读烟测，不调用付费模型，不输出密码或API Key |
 | `test-structure-pilot-config.mjs` | 防止四账号、端口、模型和固定启动入口漂移 | 助手固定配置、根`package.json`和试点脚本 | 只读校验 |
+| `information-collection.config.json` | 固定信息表收集服务的监听地址、端口、数据库目标和附件限制 | 非敏感固定配置 | 不保存数据库密码、会话密钥或扫描命令 |
+| `start-information-collection.ps1` | 校验端口、身份结构和信息收集表后启动 4000/4001 | 固定配置、被 Git 忽略的本机环境文件、现有 MySQL | 启动本机服务；不修改 MDM 身份和治理业务表 |
+| `smoke-information-collection.mjs` | 检查两个端口健康状态、登录边界和独立 Cookie 名 | 运行中的 4000/4001 | 只读烟测，不输出凭据 |
+| `invoke-information-collection-migration.ps1` | 执行信息表收集 schema 的 dry-run、apply 或 check | 固定配置、本机数据库凭据、现有身份表 | dry-run/check 只读；apply 仅创建或升级 `collection_*` 表 |
 | `generate-weekly-action-personnel-snapshot.mjs` | 从信息化项目人员角色映射和花名册生成 3002 只读人员快照 | `docs/organization/信息化项目人员角色映射.md`、`docs/organization/花名册.md` | 默认写 `artifacts/weekly-actions/personnel-snapshot.json`；不修改组织真源、PMO 真源、SQLite 或 MySQL |
 | `test-weekly-action-personnel-snapshot.mjs` | 校验 3002 人员快照生成、花名册一致性和待补人员警告 | 组织人员映射、花名册、临时输出目录 | 只读校验，临时输出写入系统临时目录 |
 
@@ -49,6 +53,12 @@ npm run test:infomat-services-config
 npm run verify:structure-pilot
 npm run start:structure-pilot
 npm run smoke:structure-pilot
+npm run migrate:information-collection:dry-run
+npm run migrate:information-collection:apply
+npm run check:information-collection-schema
+npm run test:information-collection
+npm run start:information-collection
+npm run smoke:information-collection
 npm run test:process-governance-mainline
 npm run test:dept-domain-mapping
 npm run test:engineering-source-manifest

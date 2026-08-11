@@ -31,7 +31,7 @@
         key: 'behavior',
         label: '业务行为',
         max: 25,
-        description: '逐个检查节点类型、名称、执行岗位、触发或前置、输出结果和完成标准。'
+        description: '逐个检查节点类型、名称、执行岗位、流程入口说明和完成标准；进入条件及输入输出由流程关系和数据关系提供。'
       }),
       Object.freeze({
         key: 'relation',
@@ -43,7 +43,7 @@
         key: 'dataHandoff',
         label: '数据与承接',
         max: 20,
-        description: '数据对象占15分，跨部门承接占5分。'
+      description: '数据对象占15分，跨部门待办（候选）占5分。'
       }),
       Object.freeze({
         key: 'form',
@@ -123,10 +123,6 @@
 
   function fieldTarget(target, focusPath) {
     return { ...target, focusPath };
-  }
-
-  function fieldsTarget(target, focusPaths) {
-    return { ...target, focusPaths };
   }
 
   function chainProfile(behaviors, validRelations) {
@@ -287,6 +283,254 @@
       && (complete(item.trigger_condition) || complete(item.completion_standard));
   }
 
+  function parallelStructureDetails(documentValue) {
+    const data = documentValue && typeof documentValue === 'object' ? documentValue : {};
+    const behaviors = Array.isArray(data.behaviors) ? data.behaviors : [];
+    const relations = Array.isArray(data.flow_relations) ? data.flow_relations : [];
+    const handoffs = Array.isArray(data.cross_department_handoffs) ? data.cross_department_handoffs : [];
+    const behaviorRefs = new Set(behaviors.map(item => text(item.behavior_ref)).filter(Boolean));
+    const splitBehaviors = behaviors.filter(item => item.node_type === 'parallel_split');
+    const joinBehaviors = behaviors.filter(item => item.node_type === 'parallel_join');
+    const parallelRelations = relations.filter(relation =>
+      relation.relation_type === 'parallel'
+      && behaviorRefs.has(text(relation.from_behavior_ref))
+      && behaviorRefs.has(text(relation.to_behavior_ref))
+    );
+    const returningHandoffs = handoffs.filter(handoff =>
+      handoffDirection(handoff) === 'outbound_followup'
+      && handoff.requires_return === true
+      && behaviorRefs.has(handoffAnchorRef(handoff))
+      && behaviorRefs.has(text(handoff.resume_behavior_ref))
+    );
+    const splits = splitBehaviors.map(behavior => {
+      const routeTargets = new Set(parallelRelations
+        .filter(relation => text(relation.from_behavior_ref) === text(behavior.behavior_ref))
+        .map(relation => text(relation.to_behavior_ref)));
+      const routeCount = routeTargets.size;
+      return { behavior, routeCount, missingCount: Math.max(0, 2 - routeCount) };
+    });
+    const joins = joinBehaviors.map(behavior => {
+      const relationSources = new Set(parallelRelations
+        .filter(relation => text(relation.to_behavior_ref) === text(behavior.behavior_ref))
+        .map(relation => text(relation.from_behavior_ref)));
+      const handoffSources = new Set(returningHandoffs
+        .filter(handoff => text(handoff.resume_behavior_ref) === text(behavior.behavior_ref))
+        .map((handoff, index) => text(handoff.handoff_ref) || `handoff-${index}`));
+      const relationSourceCount = relationSources.size;
+      const handoffSourceCount = handoffSources.size;
+      const sourceCount = relationSourceCount + handoffSourceCount;
+      return {
+        behavior,
+        relationSourceCount,
+        handoffSourceCount,
+        sourceCount,
+        missingCount: Math.max(0, 2 - sourceCount)
+      };
+    });
+    return {
+      hasParallel: splitBehaviors.length > 0 || joinBehaviors.length > 0 || parallelRelations.length > 0,
+      missingSplit: parallelRelations.length > 0 && splitBehaviors.length === 0,
+      missingJoin: parallelRelations.length > 0 && joinBehaviors.length === 0,
+      splits,
+      joins
+    };
+  }
+
+  function dataFlowConsistencyDetails(documentValue) {
+    const data = documentValue && typeof documentValue === 'object' ? documentValue : {};
+    const behaviors = Array.isArray(data.behaviors) ? data.behaviors : [];
+    const relations = Array.isArray(data.flow_relations) ? data.flow_relations : [];
+    const dataObjects = Array.isArray(data.data_objects) ? data.data_objects : [];
+    const handoffs = Array.isArray(data.cross_department_handoffs) ? data.cross_department_handoffs : [];
+    const behaviorRefs = new Set(behaviors.map(item => text(item.behavior_ref)).filter(Boolean));
+    const adjacency = new Map([...behaviorRefs].map(ref => [ref, new Set()]));
+    const incomingByBehavior = new Map([...behaviorRefs].map(ref => [ref, []]));
+
+    relations.forEach(relation => {
+      const fromRef = text(relation.from_behavior_ref);
+      const toRef = text(relation.to_behavior_ref);
+      if (!['sequence', 'condition', 'parallel'].includes(relation.relation_type)) return;
+      if (!behaviorRefs.has(fromRef) || !behaviorRefs.has(toRef)) return;
+      adjacency.get(fromRef).add(toRef);
+      incomingByBehavior.get(toRef).push({ kind: 'relation', relation });
+    });
+    handoffs.forEach(handoff => {
+      const direction = handoffDirection(handoff);
+      const anchorRef = text(handoffAnchorRef(handoff));
+      const resumeRef = text(handoff.resume_behavior_ref);
+      if (direction === 'inbound_prerequisite' && behaviorRefs.has(anchorRef)) {
+        incomingByBehavior.get(anchorRef).push({ kind: 'inbound_handoff', handoff });
+      }
+      if (
+        direction === 'outbound_followup'
+        && handoff.requires_return === true
+        && behaviorRefs.has(anchorRef)
+        && behaviorRefs.has(resumeRef)
+      ) {
+        adjacency.get(anchorRef).add(resumeRef);
+        incomingByBehavior.get(resumeRef).push({ kind: 'returning_handoff', handoff });
+      }
+    });
+
+    const reachability = new Map();
+    function reachableFrom(startRef) {
+      if (reachability.has(startRef)) return reachability.get(startRef);
+      const reached = new Set();
+      const queue = [...(adjacency.get(startRef) || [])];
+      while (queue.length) {
+        const nextRef = queue.shift();
+        if (reached.has(nextRef)) continue;
+        reached.add(nextRef);
+        (adjacency.get(nextRef) || []).forEach(ref => {
+          if (!reached.has(ref)) queue.push(ref);
+        });
+      }
+      reachability.set(startRef, reached);
+      return reached;
+    }
+    const canReach = (fromRef, toRef) => behaviorRefs.has(text(fromRef))
+      && behaviorRefs.has(text(toRef))
+      && reachableFrom(text(fromRef)).has(text(toRef));
+
+    const dataDetails = dataObjects.map((item, dataIndex) => {
+      const dataRef = text(item.data_ref);
+      const canonicalProducerRef = text(item.produced_by_behavior_ref);
+      const legacyProducerRefs = behaviors
+        .filter(behavior => Array.isArray(behavior.output_data_refs) && behavior.output_data_refs.includes(dataRef))
+        .map(behavior => text(behavior.behavior_ref))
+        .filter(ref => behaviorRefs.has(ref));
+      const producerRefs = [...new Set([
+        ...(behaviorRefs.has(canonicalProducerRef) ? [canonicalProducerRef] : []),
+        ...legacyProducerRefs
+      ])];
+      const effectiveProducerRef = behaviorRefs.has(canonicalProducerRef)
+        ? canonicalProducerRef
+        : producerRefs.length === 1 ? producerRefs[0] : '';
+      const canonicalConsumerRefs = Array.isArray(item.consumed_by_behavior_refs)
+        ? item.consumed_by_behavior_refs.map(text).filter(ref => behaviorRefs.has(ref))
+        : [];
+      const legacyConsumerRefs = behaviors
+        .filter(behavior => Array.isArray(behavior.input_data_refs) && behavior.input_data_refs.includes(dataRef))
+        .map(behavior => text(behavior.behavior_ref))
+        .filter(ref => behaviorRefs.has(ref));
+      const consumerRefs = [...new Set([...canonicalConsumerRefs, ...legacyConsumerRefs])];
+      const availabilityStarts = [];
+      handoffs.forEach(handoff => {
+        const direction = handoffDirection(handoff);
+        if (
+          direction === 'inbound_prerequisite'
+          && text(handoffTransferDataRef(handoff)) === dataRef
+          && behaviorRefs.has(text(handoffAnchorRef(handoff)))
+        ) {
+          availabilityStarts.push(text(handoffAnchorRef(handoff)));
+        }
+        if (
+          direction === 'outbound_followup'
+          && handoff.requires_return === true
+          && text(handoff.returned_data_ref) === dataRef
+          && behaviorRefs.has(text(handoff.resume_behavior_ref))
+        ) {
+          availabilityStarts.push(text(handoff.resume_behavior_ref));
+        }
+      });
+      const uniqueAvailabilityStarts = [...new Set(availabilityStarts)];
+      const issues = [];
+      if (!canonicalProducerRef && producerRefs.length > 1) {
+        issues.push({
+          reason: 'multiple_legacy_producers',
+          dataRef,
+          dataIndex,
+          producerRefs,
+          consumerRef: '',
+          message: `${text(item.data_name) || `输出物与数据${dataIndex + 1}`}保留了多个历史产生行为，请在“输出物与数据”中确认唯一产生行为`
+        });
+      }
+      consumerRefs.forEach(consumerRef => {
+        let reason = '';
+        if (effectiveProducerRef) {
+          if (consumerRef === effectiveProducerRef) reason = 'self_consumption';
+          else {
+            const producerBeforeConsumer = canReach(effectiveProducerRef, consumerRef);
+            const consumerBeforeProducer = canReach(consumerRef, effectiveProducerRef);
+            if (producerBeforeConsumer && consumerBeforeProducer) reason = 'non_loop_cycle';
+            else if (consumerBeforeProducer) reason = 'future_data';
+            else if (!producerBeforeConsumer) reason = 'unordered_data';
+          }
+        } else if (uniqueAvailabilityStarts.length) {
+          const available = uniqueAvailabilityStarts.some(startRef => startRef === consumerRef || canReach(startRef, consumerRef));
+          if (!available) {
+            const consumerBeforeAvailability = uniqueAvailabilityStarts.some(startRef => canReach(consumerRef, startRef));
+            reason = consumerBeforeAvailability ? 'before_external_return' : 'unordered_external_data';
+          }
+        }
+        if (!reason) return;
+        const dataLabel = text(item.data_name) || `输出物与数据${dataIndex + 1}`;
+        const consumer = behaviors.find(behavior => text(behavior.behavior_ref) === consumerRef);
+        const producer = behaviors.find(behavior => text(behavior.behavior_ref) === effectiveProducerRef);
+        const consumerLabel = text(consumer?.behavior_name) || consumerRef;
+        const producerLabel = text(producer?.behavior_name) || effectiveProducerRef;
+        const reasonMessage = {
+          self_consumption: `${dataLabel}由“${consumerLabel}”产生，不能同时作为该行为的输入`,
+          future_data: `${dataLabel}由后续行为“${producerLabel}”产生，前序行为“${consumerLabel}”不能引用`,
+          unordered_data: `${dataLabel}的产生行为“${producerLabel}”与使用行为“${consumerLabel}”没有明确先后关系，不能跨并行路线引用`,
+          non_loop_cycle: `${dataLabel}的产生行为“${producerLabel}”与使用行为“${consumerLabel}”形成非回路循环，无法确认数据先后`,
+          before_external_return: `${dataLabel}尚未在跨部门返回位置形成，前序行为“${consumerLabel}”不能引用`,
+          unordered_external_data: `${dataLabel}的跨部门返回位置与使用行为“${consumerLabel}”没有明确先后关系，不能引用`
+        }[reason];
+        issues.push({
+          reason,
+          dataRef,
+          dataIndex,
+          producerRef: effectiveProducerRef,
+          consumerRef,
+          availabilityStarts: uniqueAvailabilityStarts,
+          message: reasonMessage
+        });
+      });
+      return {
+        data: item,
+        dataRef,
+        dataIndex,
+        canonicalProducerRef,
+        producerRefs,
+        effectiveProducerRef,
+        canonicalConsumerRefs,
+        legacyConsumerRefs,
+        consumerRefs,
+        availabilityStarts: uniqueAvailabilityStarts,
+        issues
+      };
+    });
+    const issues = dataDetails.flatMap(detail => detail.issues);
+    function consumerIssue(dataRef, behaviorRef) {
+      return dataDetails.find(detail => detail.dataRef === text(dataRef))?.issues
+        .find(item => item.consumerRef === text(behaviorRef)) || null;
+    }
+    function isConsumerAvailable(dataRef, behaviorRef) {
+      const detail = dataDetails.find(item => item.dataRef === text(dataRef));
+      if (!detail || !behaviorRefs.has(text(behaviorRef))) return false;
+      if (detail.issues.some(item => item.reason === 'multiple_legacy_producers')) return false;
+      if (consumerIssue(dataRef, behaviorRef)) return false;
+      const producerRef = detail.effectiveProducerRef;
+      if (producerRef) {
+        return producerRef !== text(behaviorRef)
+          && canReach(producerRef, text(behaviorRef))
+          && !canReach(text(behaviorRef), producerRef);
+      }
+      if (!detail.availabilityStarts.length) return true;
+      return detail.availabilityStarts.some(startRef => startRef === text(behaviorRef) || canReach(startRef, text(behaviorRef)));
+    }
+    return {
+      adjacency,
+      incomingByBehavior,
+      canReach,
+      dataDetails,
+      issues,
+      consumerIssue,
+      isConsumerAvailable
+    };
+  }
+
   function evaluateContent(documentValue, options = {}) {
     const data = documentValue && typeof documentValue === 'object' ? documentValue : {};
     const process = data.process || {};
@@ -316,8 +560,9 @@
     });
     const basicScore = 10 * (basicPassed / basicChecks.length);
 
+    const dataFlowDetails = dataFlowConsistencyDetails(data);
     let behaviorPassed = 0;
-    const behaviorTotal = Math.max(1, behaviors.length * 6);
+    const behaviorTotal = Math.max(1, behaviors.length * 5);
     if (!behaviors.length) {
       issues.push(issue(
         '业务行为',
@@ -334,6 +579,8 @@
         focusKind: 'behavior',
         focusRef: item.behavior_ref
       };
+      const isControlNode = ['parallel_split', 'parallel_join'].includes(item.node_type);
+      const hasDerivedEntry = (dataFlowDetails.incomingByBehavior.get(text(item.behavior_ref)) || []).length > 0;
       const checks = [
         [NODE_TYPES.has(item.node_type), `${label}未选择节点类型`, fieldTarget(target, `behaviors.${index}.node_type`)],
         [complete(item.behavior_name), `第${index + 1}项行为未填写名称`, fieldTarget(target, `behaviors.${index}.behavior_name`)],
@@ -343,17 +590,12 @@
           fieldTarget(target, `behaviors.${index}.current_actor_role`)
         ],
         [
-          complete(item.trigger) || complete(item.precondition),
-          `${label}的触发条件和前置条件均为空，请至少填写一项`,
-          fieldsTarget(target, [`behaviors.${index}.trigger`, `behaviors.${index}.precondition`])
+          hasDerivedEntry || complete(item.trigger),
+          `${label}是流程入口，但未说明流程如何开始`,
+          fieldTarget(target, `behaviors.${index}.trigger`)
         ],
         [
-          complete(item.output_description),
-          `${label}未填写输出结果`,
-          fieldTarget(target, `behaviors.${index}.output_description`)
-        ],
-        [
-          complete(item.completion_standard),
+          isControlNode || complete(item.completion_standard),
           `${label}未填写完成标准`,
           fieldTarget(target, `behaviors.${index}.completion_standard`)
         ]
@@ -518,31 +760,53 @@
     const loopPassed = loopRelations.filter(relation => complete(relation.condition)).length;
     const loopScore = loopRelations.length ? 2 * (loopPassed / loopRelations.length) : 2;
 
-    const splitBehaviors = behaviors.filter(item => item.node_type === 'parallel_split');
-    const joinBehaviors = behaviors.filter(item => item.node_type === 'parallel_join');
-    const parallelRelations = validRelations.filter(relation => relation.relation_type === 'parallel');
-    const hasParallel = splitBehaviors.length > 0 || joinBehaviors.length > 0 || parallelRelations.length > 0;
+    const parallelDetails = parallelStructureDetails(data);
+    const hasParallel = parallelDetails.hasParallel;
     const parallelChecks = [];
     if (hasParallel) {
-      parallelChecks.push(splitBehaviors.length > 0, joinBehaviors.length > 0);
-      splitBehaviors.forEach(item => {
-        parallelChecks.push(
-          parallelRelations.filter(relation => relation.from_behavior_ref === item.behavior_ref).length >= 2
-        );
-      });
-      joinBehaviors.forEach(item => {
-        parallelChecks.push(
-          parallelRelations.filter(relation => relation.to_behavior_ref === item.behavior_ref).length >= 2
-        );
-      });
-      if (parallelChecks.some(passed => !passed)) {
+      parallelChecks.push(!parallelDetails.missingSplit, !parallelDetails.missingJoin);
+      if (parallelDetails.missingSplit) {
         issues.push(issue(
           '并行结构',
-          '并行分支、并行汇合或并行关系尚未形成完整结构',
-          { editorSection: 'process', processSection: 'relations' },
+          '当前存在并行路线，但尚未设置“并行开始（同时启动多条路线）”节点',
+          { editorSection: 'process', processSection: 'behaviors' },
           '影响并行结构子项'
         ));
       }
+      if (parallelDetails.missingJoin) {
+        issues.push(issue(
+          '并行结构',
+          '当前存在并行路线，但尚未设置“并行汇合（等待多条路线完成）”节点',
+          { editorSection: 'process', processSection: 'behaviors' },
+          '影响并行结构子项'
+        ));
+      }
+      parallelDetails.splits.forEach(detail => {
+        const passed = detail.routeCount >= 2;
+        parallelChecks.push(passed);
+        if (!passed) {
+          const label = text(detail.behavior.behavior_name) || text(detail.behavior.behavior_ref) || '并行开始节点';
+          issues.push(issue(
+            '并行结构',
+            `${label}当前只有${detail.routeCount}条并行路线；请进入流程关系，再新增${detail.missingCount}条以本节点为起点、流向不同后续行为的并行路线`,
+            { editorSection: 'process', processSection: 'relations' },
+            '影响并行结构子项'
+          ));
+        }
+      });
+      parallelDetails.joins.forEach(detail => {
+        const passed = detail.sourceCount >= 2;
+        parallelChecks.push(passed);
+        if (!passed) {
+          const label = text(detail.behavior.behavior_name) || text(detail.behavior.behavior_ref) || '并行汇合节点';
+          issues.push(issue(
+            '并行结构',
+            `${label}当前只有${detail.sourceCount}个有效来源；请补充${detail.missingCount}条以本节点为目标的并行路线，跨部门路线返回时把恢复位置设为本节点`,
+            { editorSection: 'process', processSection: 'relations' },
+            '影响并行结构子项'
+          ));
+        }
+      });
     }
     const parallelScore = hasParallel
       ? 2 * (parallelChecks.filter(Boolean).length / parallelChecks.length)
@@ -568,10 +832,10 @@
           focusKind: 'data',
           focusRef: item.data_ref
         };
-        const producerValid = complete(item.produced_by_behavior_ref)
-          && behaviorRefs.has(item.produced_by_behavior_ref);
-        const consumerValid = Array.isArray(item.consumed_by_behavior_refs)
-          && item.consumed_by_behavior_refs.some(ref => behaviorRefs.has(ref));
+        const flowDetail = dataFlowDetails.dataDetails.find(detail => detail.data === item);
+        const producerValid = Boolean(flowDetail?.effectiveProducerRef);
+        const consumerValid = Boolean(flowDetail?.consumerRefs.length);
+        const flowValid = !flowDetail?.issues.length;
         const checks = [
           [
             complete(item.data_name),
@@ -584,14 +848,22 @@
             fieldTarget(target, `data_objects.${index}.description`)
           ],
           [
-            producerValid || consumerValid,
-            `${label}未关联产生行为或使用行为`,
+            (producerValid || consumerValid) && flowValid,
+            producerValid || consumerValid ? `${label}存在不符合流程先后顺序的数据引用` : `${label}未关联产生行为或使用行为`,
             target
           ]
         ];
         checks.forEach(([passed, message, issueTarget]) => {
           if (passed) dataPassed += 1;
           else issues.push(issue('数据对象', message, issueTarget, '影响数据对象子项'));
+        });
+        flowDetail?.issues.forEach(flowIssue => {
+          issues.push(issue(
+            '数据时序',
+            flowIssue.message,
+            fieldTarget(target, `data_objects.${index}.consumed_by_behavior_refs`),
+            '影响数据对象子项'
+          ));
         });
       });
       dataScore = 15 * (dataPassed / dataTotal);
@@ -614,33 +886,33 @@
         const checks = [
           [
             ['inbound_prerequisite', 'outbound_followup'].includes(direction),
-            `跨部门承接${index + 1}未明确前置输入或后续承接方向`,
+          `跨部门待办（候选）${index + 1}未明确前置输入或后续承接方向`,
             `cross_department_handoffs.${index}.handoff_direction`
           ],
           [
             complete(anchorRef) && behaviorRefs.has(anchorRef),
-            `跨部门承接${index + 1}未关联有效的本流程行为`,
+          `跨部门待办（候选）${index + 1}未关联有效的本流程行为`,
             `cross_department_handoffs.${index}.anchor_behavior_ref`
           ],
           [
             handoffCounterpartyResolved(item),
-            `跨部门承接${index + 1}既未明确外部门，也未标记待明确责任部门`,
+          `跨部门待办（候选）${index + 1}既未明确外部门，也未标记待明确责任部门`,
             `cross_department_handoffs.${index}.counterparty_resolution`
           ],
           [
             (complete(transferDataRef) && dataRefs.has(transferDataRef)) || complete(item.requested_matter),
-            `跨部门承接${index + 1}未说明传递数据或承接事项`,
+          `跨部门待办（候选）${index + 1}未说明传递数据或承接事项`,
             `cross_department_handoffs.${index}.requested_matter`
           ],
           [
             complete(item.trigger_condition) || complete(item.completion_standard),
-            `跨部门承接${index + 1}未填写触发条件或完成标准`,
+          `跨部门待办（候选）${index + 1}未填写触发条件或完成标准`,
             `cross_department_handoffs.${index}.trigger_condition`
           ]
         ];
         checks.forEach(([passed, message, focusPath]) => {
           if (passed) handoffPassed += 1;
-          else issues.push(issue('跨部门承接', message, fieldTarget(target, focusPath), '影响跨部门承接子项'));
+      else issues.push(issue('跨部门待办（候选）', message, fieldTarget(target, focusPath), '影响跨部门待办子项'));
         });
       });
       handoffScore = 5 * (handoffPassed / handoffTotal);
@@ -782,7 +1054,7 @@
       if (!complete(item.counterparty_process_name) || !complete(item.counterparty_behavior_name)) {
         previewIssues.push(issue(
           'MDM平台承接待办',
-          `跨部门承接${index + 1}的外部门流程或行为尚未补齐`,
+        `跨部门待办（候选）${index + 1}的外部门流程或行为尚未补齐`,
           target,
           '本期不扣分；MDM平台审核导入后由对应部门补充'
         ));
@@ -794,7 +1066,7 @@
       ) {
         previewIssues.push(issue(
           'MDM平台承接待办',
-          `跨部门承接${index + 1}已要求返回，但返回数据或本流程恢复行为尚未补齐`,
+        `跨部门待办（候选）${index + 1}已要求返回，但返回数据或本流程恢复行为尚未补齐`,
           target,
           '本期不扣分；MDM平台审核导入后继续完善'
         ));
@@ -923,6 +1195,8 @@
     chainProfile,
     chainCoefficient,
     grade,
+    parallelStructureDetails,
+    dataFlowConsistencyDetails,
     evaluateContent,
     technicalResult,
     finalize,
