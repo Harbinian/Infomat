@@ -18,6 +18,7 @@
     '公司领导'
   ];
   const ALL_COMPANY_LANE = '__all_company__';
+  const DYNAMIC_DEPARTMENT_LANE = '__dynamic_department__';
   const UNKNOWN_DEPARTMENT_LANE = '__unknown_department__';
   const PENDING_HANDOFF_LANE = '__pending_handoff_department__';
   const LANE_HEADER_WIDTH = 190;
@@ -183,15 +184,35 @@
     ].join('\n');
   }
 
-  function actorPlacement(actorRole, departmentOrder) {
-    const raw = text(actorRole);
-    if (raw === '全公司') {
+  function actorAssignmentMode(behavior) {
+    const explicit = text(behavior?.actor_assignment_mode);
+    if (['fixed_department', 'company_wide', 'dynamic_from_data'].includes(explicit)) return explicit;
+    return text(behavior?.current_actor_role) === '全公司' ? 'company_wide' : 'fixed_department';
+  }
+
+  function actorPlacement(behavior, departmentOrder, dataNameByRef) {
+    const assignmentMode = actorAssignmentMode(behavior);
+    const raw = text(behavior?.current_actor_role);
+    if (assignmentMode === 'dynamic_from_data') {
+      const dataRef = text(behavior?.actor_department_data_ref);
+      const dataName = dataNameByRef.get(dataRef) || '';
+      return {
+        laneKey: DYNAMIC_DEPARTMENT_LANE,
+        laneLabel: '运行时责任部门',
+        subtitle: dataName ? `部门：按“${dataName}”动态确定` : '部门：按前序数据动态确定',
+        recognized: Boolean(dataName),
+        raw: dataName ? `按${dataName}动态确定` : '按前序数据动态确定',
+        dynamic: true
+      };
+    }
+    if (assignmentMode === 'company_wide' || raw === '全公司') {
       return {
         laneKey: ALL_COMPANY_LANE,
         laneLabel: '全公司通用',
         subtitle: '岗位：全公司通用',
         recognized: true,
-        raw
+        raw: '全公司',
+        dynamic: false
       };
     }
     const department = departmentOrder.find(name => raw === name || raw.startsWith(name));
@@ -202,7 +223,8 @@
         laneLabel: department,
         subtitle: `岗位：${position || '待填写'}`,
         recognized: true,
-        raw
+        raw,
+        dynamic: false
       };
     }
     return {
@@ -210,7 +232,8 @@
       laneLabel: '执行部门待明确',
       subtitle: raw ? `执行信息：${raw}` : '岗位：待填写',
       recognized: false,
-      raw
+      raw,
+      dynamic: false
     };
   }
 
@@ -359,12 +382,14 @@
       .filter(key =>
         !ordered.includes(key)
         && key !== ALL_COMPANY_LANE
+        && key !== DYNAMIC_DEPARTMENT_LANE
         && key !== UNKNOWN_DEPARTMENT_LANE
         && key !== PENDING_HANDOFF_LANE
       )
       .sort((left, right) => left.localeCompare(right, 'zh-CN'))
       .forEach(key => ordered.push(key));
     if (used.has(ALL_COMPANY_LANE)) ordered.push(ALL_COMPANY_LANE);
+    if (used.has(DYNAMIC_DEPARTMENT_LANE)) ordered.push(DYNAMIC_DEPARTMENT_LANE);
     if (used.has(UNKNOWN_DEPARTMENT_LANE)) ordered.push(UNKNOWN_DEPARTMENT_LANE);
     if (used.has(PENDING_HANDOFF_LANE)) ordered.push(PENDING_HANDOFF_LANE);
     return ordered;
@@ -372,6 +397,7 @@
 
   function laneDisplayName(laneKey) {
     if (laneKey === ALL_COMPANY_LANE) return '全公司通用';
+    if (laneKey === DYNAMIC_DEPARTMENT_LANE) return '运行时责任部门';
     if (laneKey === UNKNOWN_DEPARTMENT_LANE) return '执行部门待明确';
     if (laneKey === PENDING_HANDOFF_LANE) return '承接部门待明确';
     return laneKey;
@@ -576,6 +602,17 @@
     const behaviorNodeByRef = new Map();
     const behaviorRecordById = new Map();
     const behaviorRecords = [];
+    const dataNameByRef = new Map(items(data.data_objects).map(item => [
+      text(item.data_ref),
+      text(item.data_name)
+    ]));
+    const linkedHandoffRefsByBehaviorRef = new Map();
+    items(data.cross_department_handoffs).forEach(handoff => {
+      const behaviorRef = text(handoff.counterparty_behavior_ref);
+      if (behaviorRef && !linkedHandoffRefsByBehaviorRef.has(behaviorRef)) {
+        linkedHandoffRefsByBehaviorRef.set(behaviorRef, text(handoff.handoff_ref));
+      }
+    });
     const orderById = new Map();
     let namedBehaviorCount = 0;
     let localEdgeCount = 0;
@@ -586,12 +623,13 @@
       if (behaviorRef && !behaviorNodeByRef.has(behaviorRef)) behaviorNodeByRef.set(behaviorRef, graphId);
       if (text(behavior.behavior_name)) namedBehaviorCount += 1;
       const nodeType = text(behavior.node_type);
-      const placement = actorPlacement(behavior.current_actor_role, departmentOrder);
+      const placement = actorPlacement(behavior, departmentOrder, dataNameByRef);
       const rawLabel = behaviorLabel(behavior, placement);
       const display = nodeDisplayMetrics(rawLabel, behaviorClass(nodeType));
+      const linkedHandoffRef = linkedHandoffRefsByBehaviorRef.get(behaviorRef);
       const node = {
         group: 'nodes',
-        classes: `behavior-node node-${behaviorClass(nodeType)}`,
+        classes: `behavior-node node-${behaviorClass(nodeType)}${placement.dynamic ? ' dynamic-actor-node' : ''}${linkedHandoffRef ? ' external-node linked-external-behavior' : ''}`,
         data: {
           id: graphId,
           label: display.label,
@@ -604,7 +642,11 @@
           labelLineCount: display.lineCount,
           labelLineHeight: display.lineHeight,
           labelVerticalPadding: display.verticalPadding,
-          detail: NODE_TYPES.has(nodeType) ? nodeType : '节点类型待判断',
+          detail: placement.dynamic
+            ? `运行时责任部门 · ${NODE_TYPES.has(nodeType) ? nodeType : '节点类型待判断'}`
+            : linkedHandoffRef
+            ? `跨部门行为 · ${NODE_TYPES.has(nodeType) ? nodeType : '节点类型待判断'}`
+            : NODE_TYPES.has(nodeType) ? nodeType : '节点类型待判断',
           focusKind: 'behavior',
           focusRef: behaviorRef,
           laneKey: placement.laneKey,
@@ -645,9 +687,35 @@
       localEdgeCount += 1;
     });
 
+    const linkedHandoffOrderingRelations = [];
+    items(data.cross_department_handoffs).forEach((handoff, index) => {
+      const direction = handoff.handoff_direction === 'inbound_prerequisite'
+        ? 'inbound_prerequisite'
+        : 'outbound_followup';
+      const anchorNodeId = behaviorNodeByRef.get(text(handoff.anchor_behavior_ref || handoff.send_behavior_ref));
+      const counterpartyNodeId = behaviorNodeByRef.get(text(handoff.counterparty_behavior_ref));
+      if (!anchorNodeId || !counterpartyNodeId || anchorNodeId === counterpartyNodeId) return;
+      linkedHandoffOrderingRelations.push({
+        relation: { relation_type: 'sequence' },
+        index: validRelations.length + (index * 2),
+        sourceId: direction === 'inbound_prerequisite' ? counterpartyNodeId : anchorNodeId,
+        targetId: direction === 'inbound_prerequisite' ? anchorNodeId : counterpartyNodeId
+      });
+      const resumeNodeId = direction === 'outbound_followup' && handoff.requires_return
+        ? behaviorNodeByRef.get(text(handoff.resume_behavior_ref || handoff.return_behavior_ref))
+        : null;
+      if (resumeNodeId && resumeNodeId !== counterpartyNodeId) {
+        linkedHandoffOrderingRelations.push({
+          relation: { relation_type: 'sequence' },
+          index: validRelations.length + (index * 2) + 1,
+          sourceId: counterpartyNodeId,
+          targetId: resumeNodeId
+        });
+      }
+    });
     const graphAnalysis = analyzeRelationGraph(
       behaviorRecords.map(record => record.node.data.id),
-      validRelations,
+      validRelations.concat(linkedHandoffOrderingRelations),
       orderById
     );
     const rankById = graphAnalysis.rankById;
@@ -769,16 +837,19 @@
         });
         return;
       }
+      const counterpartyRef = text(handoff.counterparty_behavior_ref);
+      const linkedBehaviorNodeId = behaviorNodeByRef.get(counterpartyRef);
+      const linkedBehaviorRecord = behaviorRecords.find(record => record.node.data.id === linkedBehaviorNodeId);
       const externalDepartment = direction === 'inbound_prerequisite'
         ? text(handoff.source_department)
         : text(handoff.target_department);
       const recognizedDepartment = departmentOrder.includes(externalDepartment);
       const laneKey = recognizedDepartment ? externalDepartment : PENDING_HANDOFF_LANE;
-      const handoffNodeId = graphRef('handoff', index, handoffRef);
+      const handoffNodeId = linkedBehaviorNodeId || graphRef('handoff', index, handoffRef);
       const rawLabel = handoffLabel(handoff);
       const display = nodeDisplayMetrics(rawLabel, 'external');
       const anchorRank = rankById.get(anchorNodeId) || 0;
-      const handoffNode = {
+      const handoffNode = linkedBehaviorRecord?.node || {
         group: 'nodes',
         classes: 'external-node handoff-node',
         data: {
@@ -808,9 +879,11 @@
         direction,
         handoffRef,
         anchorNodeId,
-        node: handoffNode
+        node: handoffNode,
+        linkedBehaviorRef: linkedBehaviorRecord ? counterpartyRef : ''
       });
-      nodes.push(handoffNode);
+      if (!linkedBehaviorRecord) nodes.push(handoffNode);
+      localEdgeCount += 1;
     });
 
     const laneRouteReserves = allocateRelationRoutes(
@@ -821,7 +894,7 @@
     const positionedNodes = [
       ...behaviorRecords.map(record => record.node),
       ...internalCallRecords.map(record => record.node),
-      ...handoffRecords.map(record => record.node)
+      ...handoffRecords.filter(record => !record.linkedBehaviorRef).map(record => record.node)
     ];
     const laneKeys = buildLaneOrder(
       positionedNodes.map(node => node.data.laneKey),
@@ -997,7 +1070,7 @@
     nodes.push(...countersignBadges);
 
     handoffRecords.forEach(record => {
-      const { handoff, index, direction, handoffRef, anchorNodeId, node } = record;
+      const { handoff, index, direction, handoffRef, anchorNodeId, node, linkedBehaviorRef } = record;
       const handoffNodeId = node.data.id;
       const handoffOutDisplay = edgeDisplayMetrics(
         direction === 'inbound_prerequisite' ? '外部门提供前置输入' : '交由外部门承接'
@@ -1014,8 +1087,8 @@
           labelWidth: handoffOutDisplay.labelWidth,
           labelHeight: handoffOutDisplay.labelHeight,
           labelLineCount: handoffOutDisplay.lineCount,
-          focusKind: 'handoff',
-          focusRef: handoffRef
+          focusKind: linkedBehaviorRef ? 'behavior' : 'handoff',
+          focusRef: linkedBehaviorRef || handoffRef
         }
       });
       const returnRef = direction === 'outbound_followup' && handoff.requires_return
@@ -1041,8 +1114,8 @@
             labelWidth: handoffReturnDisplay.labelWidth,
             labelHeight: handoffReturnDisplay.labelHeight,
             labelLineCount: handoffReturnDisplay.lineCount,
-            focusKind: 'handoff',
-            focusRef: handoffRef
+            focusKind: linkedBehaviorRef ? 'behavior' : 'handoff',
+            focusRef: linkedBehaviorRef || handoffRef
           }
         });
       }
@@ -1225,6 +1298,15 @@
           'border-color': '#526973',
           'background-color': '#e7edef',
           'font-size': 11
+        }
+      },
+      {
+        selector: '.dynamic-actor-node',
+        style: {
+          'border-style': 'dashed',
+          'border-width': 2,
+          'border-color': '#5f6f8a',
+          'background-color': '#e9edf4'
         }
       },
       {

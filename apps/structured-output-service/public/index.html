@@ -30,6 +30,7 @@
         linear-gradient(145deg, #efe4cc, var(--paper) 45%, #eee4d2);
       font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
       min-height: 100vh;
+      min-width: 1280px;
     }
 
     button, input, select, textarea { font: inherit; }
@@ -37,17 +38,50 @@
     button:disabled { cursor: not-allowed; opacity: 0.55; }
 
     .page {
-      width: min(1500px, calc(100% - 32px));
-      margin: 0 auto;
-      padding: 24px 0 48px;
+      width: 100%;
+      padding: 16px;
     }
 
-    .hero {
-      padding: 26px 30px;
+    .app-shell {
+      display: grid;
+      grid-template-columns: 300px minmax(0, 1fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .task-sidebar {
+      position: sticky;
+      top: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      height: calc(100vh - 32px);
+      padding: 18px;
+      overflow: hidden;
       border: 1px solid var(--line);
-      border-radius: 18px;
+      border-radius: 16px;
       background: rgba(250, 244, 230, 0.9);
       box-shadow: var(--shadow);
+    }
+
+    .sidebar-scroll-area {
+      display: flex;
+      flex: 1 1 auto;
+      flex-direction: column;
+      gap: 14px;
+      min-height: 0;
+      overflow-y: auto;
+      padding-right: 3px;
+      scrollbar-width: thin;
+    }
+
+    .main-column { min-width: 0; }
+
+    .sidebar-brand h1 {
+      margin: 7px 0 0;
+      font-family: "SimSun", "STSong", serif;
+      font-size: 25px;
+      line-height: 1.3;
     }
 
     .eyebrow {
@@ -58,17 +92,16 @@
       text-transform: uppercase;
     }
 
-    h1 {
-      margin: 8px 0 6px;
-      font-family: "SimSun", "STSong", serif;
-      font-size: clamp(28px, 4vw, 42px);
-      font-weight: 700;
-    }
-
-    .subtitle {
-      margin: 0;
+    .tool-badge {
+      display: inline-flex;
+      margin-top: 9px;
+      padding: 4px 8px;
+      border: 1px solid #b9aa8b;
+      border-radius: 999px;
       color: var(--muted);
-      line-height: 1.75;
+      background: rgba(255, 252, 243, 0.76);
+      font-size: 12px;
+      font-weight: 700;
     }
 
     .notice {
@@ -88,12 +121,25 @@
       line-height: 1.65;
     }
 
-    .actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 20px;
+    .sidebar-section {
+      display: grid;
+      gap: 9px;
+      padding-top: 13px;
+      border-top: 1px solid rgba(203, 189, 158, 0.72);
     }
+
+    .sidebar-section-title {
+      color: #584f40;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .sidebar-actions {
+      display: grid;
+      gap: 8px;
+    }
+
+    .sidebar-actions .button { width: 100%; }
 
     .button {
       min-height: 42px;
@@ -113,65 +159,117 @@
 
     .status {
       display: none;
-      margin-top: 14px;
       padding: 11px 14px;
       border: 1px solid var(--line);
       border-radius: 9px;
       background: var(--card);
+      font-size: 13px;
       line-height: 1.6;
+      overflow-wrap: anywhere;
     }
 
     .status.show { display: block; }
     .status.error { color: #7b2f27; border-color: #c18a7d; background: #f7e5df; }
     .status.success { color: #40543b; border-color: #91a38a; background: #e8efe4; }
 
-    .candidate-bar {
-      display: none;
-      align-items: center;
-      gap: 12px;
-      margin-top: 18px;
-      padding: 12px 14px;
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      background: var(--paper-deep);
+    .candidate-list {
+      display: grid;
+      gap: 7px;
+      max-height: min(32vh, 300px);
+      overflow-y: auto;
+      padding-right: 3px;
+      scrollbar-width: thin;
     }
 
-    .candidate-bar.show { display: flex; }
-    .candidate-bar select { min-width: min(560px, 70vw); }
-    .candidate-note { color: var(--muted); font-size: 13px; }
+    .candidate-item {
+      display: grid;
+      grid-template-columns: 27px minmax(0, 1fr);
+      gap: 8px;
+      align-items: center;
+      width: 100%;
+      min-height: 46px;
+      padding: 8px 9px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      color: var(--ink);
+      background: rgba(255, 252, 243, 0.78);
+      text-align: left;
+    }
 
-    .workspace { margin-top: 18px; }
+    .candidate-item:hover { border-color: var(--gold); }
+    .candidate-item.active {
+      border-color: var(--red);
+      background: #fff6ed;
+      box-shadow: inset 3px 0 0 var(--red);
+    }
+
+    .candidate-number {
+      display: grid;
+      place-items: center;
+      width: 25px;
+      height: 25px;
+      border-radius: 50%;
+      color: #655b4a;
+      background: var(--paper-deep);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .candidate-item.active .candidate-number { color: #fff; background: var(--red); }
+    .candidate-copy { min-width: 0; }
+    .candidate-name {
+      display: block;
+      overflow: hidden;
+      font-size: 13px;
+      font-weight: 700;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .candidate-dirty {
+      display: block;
+      margin-top: 3px;
+      color: var(--red);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .candidate-empty {
+      padding: 12px;
+      border: 1px dashed #bcae90;
+      border-radius: 9px;
+      color: var(--muted);
+      background: rgba(255, 252, 243, 0.48);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .candidate-note { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
+
+    .workspace { min-width: 0; }
     .workspace-tabs-shell {
-      position: sticky;
-      top: 0;
-      z-index: 20;
-      margin-bottom: 14px;
-      padding: 8px 0;
-      background: linear-gradient(180deg, rgba(243, 234, 215, 0.98), rgba(243, 234, 215, 0.92));
-      backdrop-filter: blur(8px);
+      margin: 0;
     }
 
     .workspace-tabs {
-      display: inline-flex;
-      gap: 4px;
-      padding: 4px;
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      background: rgba(255, 252, 243, 0.96);
-      box-shadow: 0 6px 18px rgba(76, 58, 33, 0.08);
+      display: grid;
+      gap: 7px;
     }
 
     .workspace-tab {
-      display: inline-flex;
+      display: flex;
       align-items: center;
+      justify-content: space-between;
       gap: 8px;
+      width: 100%;
       min-height: 40px;
-      padding: 8px 14px;
-      border: 0;
+      padding: 8px 10px;
+      border: 1px solid var(--line);
       border-radius: 8px;
       color: var(--muted);
-      background: transparent;
+      background: rgba(255, 252, 243, 0.78);
       font-weight: 700;
+      text-align: left;
     }
 
     .workspace-tab:hover { color: var(--ink); background: var(--paper-deep); }
@@ -239,28 +337,43 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 18px;
-      margin-bottom: 16px;
-      padding: 14px 16px;
+      gap: 12px;
+      margin-bottom: 12px;
+      padding: 9px 12px;
       border: 1px solid #b7c2b0;
-      border-left: 5px solid var(--sage);
+      border-left: 4px solid var(--sage);
       border-radius: 10px;
       background: var(--sage-soft);
     }
 
-    .preview-guidance strong { display: block; margin-bottom: 4px; color: #40543b; }
-    .preview-guidance p { margin: 0; color: #4d5b49; font-size: 13px; line-height: 1.65; }
+    .preview-guidance-copy {
+      display: flex;
+      align-items: baseline;
+      gap: 7px;
+      min-width: 0;
+    }
+
+    .preview-guidance strong { flex: 0 0 auto; color: #40543b; font-size: 13px; }
+    .preview-guidance p {
+      margin: 0;
+      overflow: hidden;
+      color: #4d5b49;
+      font-size: 13px;
+      line-height: 1.5;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
     .preview-ready-callout {
       display: flex;
       align-items: center;
-      gap: 12px;
-      max-width: 650px;
-      padding-left: 16px;
+      flex: 0 0 auto;
+      gap: 8px;
+      padding-left: 12px;
       border-left: 1px solid #aab7a4;
     }
 
     .preview-ready-callout[hidden] { display: none; }
-    .preview-ready-callout p { color: #2f472b; font-weight: 700; }
+    .preview-ready-callout span { color: #2f472b; font-size: 12px; font-weight: 700; }
 
     .diagram-section { overflow: visible; }
     body.diagram-overlay-open { overflow: hidden; }
@@ -1060,6 +1173,23 @@
     .export-warning-button {
       width: 100%;
       cursor: pointer;
+      text-align: left;
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+
+    .warning-fact,
+    .warning-suggestion {
+      display: block;
+    }
+
+    .warning-suggestion {
+      margin-top: 3px;
+      color: var(--ink);
+    }
+
+    .warning-suggestion + .warning-suggestion {
+      margin-top: 2px;
     }
 
     .next-stage-grid {
@@ -1387,14 +1517,39 @@
     }
 
     .footer-note {
-      margin-top: 18px;
-      padding: 14px 16px;
+      padding: 11px 12px;
       border: 1px solid var(--line);
       border-radius: 10px;
       color: var(--muted);
       background: rgba(250, 244, 230, 0.75);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .sidebar-completion {
+      display: grid;
+      flex: 0 0 auto;
+      gap: 8px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(203, 189, 158, 0.72);
+    }
+
+    .sidebar-danger-zone {
+      padding-top: 8px;
+      border-top: 1px dashed #c9aa9f;
+    }
+
+    .desktop-width-notice {
+      display: none;
+      margin-bottom: 12px;
+      padding: 10px 13px;
+      border: 1px solid #c49563;
+      border-left: 4px solid var(--gold);
+      border-radius: 9px;
+      color: #654a2f;
+      background: #fff2d8;
       font-size: 13px;
-      line-height: 1.7;
+      line-height: 1.55;
     }
 
     .modal-backdrop {
@@ -1420,6 +1575,12 @@
 
     .modal.merge-modal {
       width: min(820px, 100%);
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+    }
+
+    .modal.impact-modal {
+      width: min(720px, 100%);
       max-height: calc(100vh - 40px);
       overflow-y: auto;
     }
@@ -1460,115 +1621,64 @@
     .modal p { color: var(--muted); line-height: 1.7; }
     .modal-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 9px; margin-top: 20px; }
 
-    @media (max-width: 900px) {
-      .page { width: min(100% - 20px, 1500px); padding-top: 10px; }
-      .hero { padding: 20px; }
-      .field, .field.half { grid-column: 1 / -1; }
-      .section-head { flex-direction: column; }
-      .candidate-bar { align-items: stretch; flex-direction: column; }
-      .candidate-bar select { min-width: 0; }
-      .workspace-tabs { display: flex; width: 100%; }
-      .workspace-tab { flex: 1; justify-content: center; padding-inline: 8px; }
-      .preview-guidance, .preview-ready-callout, .diagram-toolbar {
-        align-items: stretch;
-        flex-direction: column;
-      }
-      .preview-ready-callout { padding: 12px 0 0; border-top: 1px solid #aab7a4; border-left: 0; }
-      .diagram-controls .button { flex: 1; }
-      .diagram-canvas { height: min(420px, 58vh); }
-      .diagram-section.diagram-expanded { inset: 6px; }
-      .diagram-section.diagram-expanded .diagram-canvas {
-        height: max(420px, calc(100vh - 430px));
-      }
-      .diagram-legend-head { flex-direction: column; }
-      .diagram-legend-list { grid-template-columns: repeat(2, minmax(130px, 1fr)); width: 100%; }
-      .legend-example-flow {
-        grid-template-columns: minmax(92px, 1fr) 34px minmax(100px, 1fr) 34px minmax(116px, 1fr);
-        min-width: 540px;
-      }
-      .diagram-legend-example { overflow-x: auto; }
-      .record-workbench, .form-workbench { grid-template-columns: 1fr; }
-      .relation-guidance-grid { grid-template-columns: 1fr; }
-      .record-selector, .form-sidebar {
-        position: static;
-        display: flex;
-        max-height: none;
-        overflow-x: auto;
-        overflow-y: hidden;
-      }
-      .form-field-table-shell { border: 0; overflow: visible; background: transparent; }
-      .form-field-table,
-      .form-field-table tbody,
-      .form-field-table tr,
-      .form-field-table th,
-      .form-field-table td { display: block; width: 100%; min-width: 0; }
-      .form-field-table { min-width: 0; }
-      .form-field-table thead { display: none; }
-      .form-field-table tbody { margin-bottom: 12px; border: 1px solid #d5c7aa; border-radius: 10px; overflow: hidden; }
-      .form-field-group-row th { border: 0; }
-      .form-field-group-head,
-      .form-field-group-title { align-items: stretch; flex-direction: column; }
-      .form-field-group-title .field { grid-template-columns: 1fr; }
-      .form-field-row {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 10px;
-        padding: 10px;
-        border-top: 1px solid #e3d9c4;
-        background: #fffdf8;
-      }
-      .form-field-row td { padding: 0; border: 0; }
-      .form-field-row td::before {
-        display: block;
-        margin-bottom: 4px;
-        color: #6f624f;
-        content: attr(data-label);
-        font-size: 12px;
-        font-weight: 700;
-      }
-      .form-field-row .form-field-instructions { grid-column: 1 / -1; }
-      .form-field-number { text-align: left; }
-      .form-field-actions { justify-content: flex-start; }
-      .form-field-group-empty td { padding: 12px; }
-      .selector-button { min-width: 180px; width: auto; }
-      .record-selector .selector-row { flex: 0 0 230px; min-width: 230px; }
-      .record-selector .selector-row .selector-button { min-width: 0; width: 100%; }
-      .role-picker { grid-template-columns: 1fr; }
-      .score-panel { padding: 14px; }
-      .score-panel-head { flex-direction: column; }
-      .score-summary-grid, .score-dimension-grid { grid-template-columns: 1fr; }
-      .score-issue-line { display: block; }
-      .score-issue-category { display: inline-block; margin-bottom: 5px; }
-      .next-stage-grid { grid-template-columns: 1fr; }
+    @media (max-width: 1279px) {
+      .desktop-width-notice { display: block; }
     }
   </style>
 </head>
 <body>
   <div class="page">
-    <header class="hero">
-      <div class="eyebrow">Infomat · 3001 · 无状态临时工具</div>
-      <h1>单流程治理编制工具</h1>
-      <p class="subtitle">直接新建流程，或导入已有结构化文件继续整理。一份导出的 JSON 只对应一个流程。</p>
-      <div class="actions">
-        <button class="button primary" id="newProcessButton">新建流程</button>
-        <button class="button" id="importJsonButton">导入结构化文件</button>
-        <button class="button secondary" id="exportButton" disabled>导出当前流程</button>
-        <button class="button danger" id="clearButton" disabled>清空当前页面</button>
+    <div class="app-shell">
+      <aside class="task-sidebar" id="taskSidebar" aria-label="3001任务栏">
+        <div class="sidebar-scroll-area">
+          <header class="sidebar-brand">
+            <div class="eyebrow">Infomat · 3001</div>
+            <h1>单流程治理编制工具</h1>
+            <span class="tool-badge">无状态临时工具</span>
+          </header>
+
+          <section class="sidebar-section" aria-labelledby="startActionsTitle">
+            <div class="sidebar-section-title" id="startActionsTitle">开始</div>
+            <div class="sidebar-actions">
+              <button class="button primary" id="newProcessButton">新建流程</button>
+              <button class="button" id="importJsonButton">导入结构化文件</button>
+            </div>
+          </section>
+
+          <section class="sidebar-section" aria-labelledby="candidateListTitle">
+            <div class="sidebar-section-title" id="candidateListTitle">当前流程</div>
+            <div class="candidate-list" id="candidateList" role="listbox" aria-label="本次打开的流程">
+              <div class="candidate-empty">尚未创建或导入流程。</div>
+            </div>
+            <p class="candidate-note" id="candidateNote">新建流程或导入结构化文件后，可以在这里切换当前流程。</p>
+          </section>
+
+          <section class="sidebar-section" aria-labelledby="workspaceViewTitle">
+            <div class="sidebar-section-title" id="workspaceViewTitle">查看方式</div>
+            <div id="workspaceViewSwitch"></div>
+          </section>
+
+          <div class="status" id="statusBox" role="status" aria-live="polite"></div>
+          <input id="jsonInput" type="file" accept=".json,application/json" hidden>
+        </div>
+
+        <div class="sidebar-completion">
+          <button class="button secondary" id="exportButton" disabled>导出当前流程</button>
+          <div class="sidebar-danger-zone">
+            <button class="button danger" id="clearButton" disabled>清空当前页面</button>
+          </div>
+          <div class="footer-note">
+            用户主动导出是唯一保存方式。页面刷新或关闭后，本次内容无法恢复；导出的草稿仍会标注“未审核”。
+          </div>
+        </div>
+      </aside>
+
+      <div class="main-column">
+        <div class="desktop-width-notice" id="desktopWidthNotice" role="note">
+          请使用宽度不低于1280px的桌面窗口。当前窗口不会自动改为移动版，可以横向滚动继续查看。
+        </div>
+        <main class="workspace" id="workspace"></main>
       </div>
-      <div class="status" id="statusBox" role="status"></div>
-      <input id="jsonInput" type="file" accept=".json,application/json" hidden>
-    </header>
-
-    <div class="candidate-bar" id="candidateBar">
-      <strong>当前候选流程</strong>
-      <select id="candidateSelect"></select>
-      <span class="candidate-note" id="candidateNote"></span>
-    </div>
-
-    <main class="workspace" id="workspace"></main>
-
-    <div class="footer-note">
-      用户主动导出是唯一保存方式。导出允许保留未补齐草稿，但文件名会统一标注“未审核”。页面刷新或关闭后，本次内容无法恢复。
     </div>
   </div>
 
@@ -1591,6 +1701,18 @@
       <div class="modal-actions">
         <button class="button" id="cancelLegacyMergeButton">取消</button>
         <button class="button primary" id="confirmLegacyMergeButton">确认归并</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="owningDepartmentChangeModal" aria-hidden="true">
+    <div class="modal impact-modal" role="dialog" aria-modal="true" aria-labelledby="owningDepartmentChangeTitle">
+      <h2 id="owningDepartmentChangeTitle">确认变更归口部门</h2>
+      <div id="owningDepartmentChangeContent"></div>
+      <div class="modal-actions">
+        <button class="button" id="cancelOwningDepartmentChangeButton">取消，保持原内容</button>
+        <button class="button secondary" id="exportBeforeOwningDepartmentChangeButton">先导出当前草稿</button>
+        <button class="button danger" id="confirmOwningDepartmentChangeButton">确认变更并重置</button>
       </div>
     </div>
   </div>
@@ -1622,6 +1744,12 @@
     const AREA_TYPES = ['', '基本信息', '明细清单'];
     const EXPECTED_EXPORT_SCHEMA_VERSION = 'process-governance-v3';
     const FORM_DESIGN_STATES = new Set(['unspecified', 'current_state', 'proposed_design']);
+    const ACTOR_ASSIGNMENT_MODES = [
+      { value: 'fixed_department', label: '固定部门和岗位' },
+      { value: 'company_wide', label: '全公司通用' },
+      { value: 'dynamic_from_data', label: '按前序数据动态确定' }
+    ];
+    const ACTOR_ASSIGNMENT_MODE_VALUES = new Set(ACTOR_ASSIGNMENT_MODES.map(item => item.value));
     const EDITOR_SECTIONS = [
       { value: 'basic', label: '基本信息' },
       { value: 'profile', label: '目的与范围' },
@@ -1651,6 +1779,7 @@
     let candidates = [];
     let currentIndex = 0;
     let protectedAction = null;
+    let protectedActionInvoker = null;
     let busy = false;
     let activeWorkspaceTab = 'editor';
     let activeEditorSection = 'basic';
@@ -1671,6 +1800,7 @@
     let diagramExpanded = false;
     let focusClearTimer = null;
     let legacyMergeState = null;
+    let owningDepartmentChangeState = null;
     let structureScoreRunId = 0;
     let structureScoreState = {
       status: 'idle',
@@ -1683,13 +1813,16 @@
 
     const workspace = document.getElementById('workspace');
     const statusBox = document.getElementById('statusBox');
-    const candidateBar = document.getElementById('candidateBar');
-    const candidateSelect = document.getElementById('candidateSelect');
+    const candidateList = document.getElementById('candidateList');
     const candidateNote = document.getElementById('candidateNote');
+    const workspaceViewSwitch = document.getElementById('workspaceViewSwitch');
     const unsavedModal = document.getElementById('unsavedModal');
     const legacyMergeModal = document.getElementById('legacyMergeModal');
     const legacyMergeContent = document.getElementById('legacyMergeContent');
     const confirmLegacyMergeButton = document.getElementById('confirmLegacyMergeButton');
+    const owningDepartmentChangeModal = document.getElementById('owningDepartmentChangeModal');
+    const owningDepartmentChangeContent = document.getElementById('owningDepartmentChangeContent');
+    const confirmOwningDepartmentChangeButton = document.getElementById('confirmOwningDepartmentChangeButton');
     const jsonInput = document.getElementById('jsonInput');
     const actionButtons = [
       document.getElementById('newProcessButton'),
@@ -1846,18 +1979,58 @@
       return parsed.department === normalizedOwner ? '' : parsed.department;
     }
 
+    function actorAssignmentMode(behavior) {
+      const explicit = text(behavior?.actor_assignment_mode).trim();
+      if (ACTOR_ASSIGNMENT_MODE_VALUES.has(explicit)) return explicit;
+      return text(behavior?.current_actor_role).trim() === '全公司'
+        ? 'company_wide'
+        : 'fixed_department';
+    }
+
+    function isDynamicActorBehavior(behavior) {
+      return actorAssignmentMode(behavior) === 'dynamic_from_data';
+    }
+
+    function counterpartyBehaviorForHandoff(handoff, data = currentDocument()) {
+      const ref = text(handoff?.counterparty_behavior_ref).trim();
+      return ref ? (data?.behaviors || []).find(item => item.behavior_ref === ref) || null : null;
+    }
+
+    function linkedHandoffsForCounterpartyBehavior(behaviorRef, data = currentDocument()) {
+      return (data?.cross_department_handoffs || [])
+        .map((handoff, handoffIndex) => ({ handoff, handoffIndex }))
+        .filter(({ handoff }) => text(handoff.counterparty_behavior_ref).trim() === behaviorRef);
+    }
+
+    function linkedHandoffForCounterpartyBehavior(behaviorRef, data = currentDocument()) {
+      const linked = linkedHandoffsForCounterpartyBehavior(behaviorRef, data);
+      return linked.length === 1 ? linked[0] : null;
+    }
+
+    function ordinaryRelationsForBehavior(behaviorRef, data = currentDocument()) {
+      return (data?.flow_relations || []).filter(relation =>
+        relation.from_behavior_ref === behaviorRef || relation.to_behavior_ref === behaviorRef
+      );
+    }
+
+    function needsLegacyExternalBehaviorMerge(behavior, data = currentDocument()) {
+      if (!behavior || !externalActorDepartment(behavior.current_actor_role, data?.process?.owning_department)) return false;
+      const linked = linkedHandoffsForCounterpartyBehavior(behavior.behavior_ref, data);
+      return linked.length !== 1 || ordinaryRelationsForBehavior(behavior.behavior_ref, data).length > 0;
+    }
+
     function actorRolePicker(index) {
-      const rawValue = text(currentDocument().behaviors[index]?.current_actor_role).trim();
+      const behavior = currentDocument().behaviors[index];
+      const rawValue = text(behavior?.current_actor_role).trim();
       const ownDepartment = currentExecutionDepartment();
       const parsed = parseActorRole(rawValue);
-      const selectableDepartments = ownDepartment && ownDepartment !== '全公司' ? [ownDepartment] : [];
       const knownDepartments = actorDepartments();
       const selectedDepartment = parsed.department === '全公司' || knownDepartments.includes(parsed.department)
         ? parsed.department
         : '';
-      const legacyExternalDepartment = externalActorDepartment(rawValue, ownDepartment);
-      const knownCurrentValue = rawValue === '全公司'
-        || Boolean(
+      const externalDepartment = externalActorDepartment(rawValue, ownDepartment);
+      const requiresMerge = needsLegacyExternalBehaviorMerge(currentDocument().behaviors[index]);
+      const knownCurrentValue = Boolean(
           rawValue
           && selectedDepartment
           && selectedDepartment !== '全公司'
@@ -1872,24 +2045,12 @@
       );
       const departmentOptions = [{
         value: '',
-        label: ownDepartment ? '请选择执行部门' : '请先填写流程归口部门'
+        label: '请选择执行部门'
       }];
-      selectableDepartments.forEach(department => departmentOptions.push({
+      knownDepartments.forEach(department => departmentOptions.push({
         value: department,
-        label: `${department}（本流程归口部门）`
+        label: department === ownDepartment ? `${department}（本流程归口部门）` : department
       }));
-      if (selectedDepartment && selectedDepartment !== '全公司' && !selectableDepartments.includes(selectedDepartment)) {
-        departmentOptions.push({
-          value: selectedDepartment,
-          label: ownDepartment
-            ? `原文件外部门：${selectedDepartment}；需改用跨部门待办（候选）`
-            : `原文件执行部门：${selectedDepartment}`
-        });
-      }
-      if (ownDepartment || selectedDepartment === '全公司') {
-        departmentOptions.push({ value: '全公司', label: '全公司通用' });
-      }
-
       const positions = selectedDepartment && selectedDepartment !== '全公司'
         ? rosterPositions(selectedDepartment)
         : [];
@@ -1912,23 +2073,21 @@
         });
       }
 
-      const legacyWarning = legacyExternalDepartment
-        ? `<div class="inline-warning">旧版页面曾将“${escapeHtml(legacyExternalDepartment)}”的办理动作保存为本流程普通业务行为，可能与跨部门待办重复表达。3001不会在导入时自动删除；请先查看归并预览，确认责任、返回数据和恢复位置后再处理。<div class="item-actions" style="margin-top:8px"><button class="button secondary small" data-action="open-legacy-merge" data-focus-key="legacy_merge" data-ref="${escapeAttribute(currentDocument().behaviors[index]?.behavior_ref)}">归并重复表达</button></div></div>`
+      const legacyWarning = requiresMerge
+        ? `<div class="inline-warning">旧版页面同时保存了外部门行为和普通流程关系，可能重复表达同一次跨部门办理。3001不会自动删除；请先查看归并预览，确认交接方向和数据去向后再处理。<div class="item-actions" style="margin-top:8px"><button class="button secondary small" data-action="open-legacy-merge" data-focus-key="legacy_merge" data-ref="${escapeAttribute(currentDocument().behaviors[index]?.behavior_ref)}">归并为单一跨部门行为</button></div></div>`
         : '';
       const rosterWarning = rawValue && !knownCurrentValue && !departmentOnlyInProgress
         ? `<div class="inline-warning">当前导入值“${escapeHtml(rawValue)}”未被现行花名册收录。3001会保留该值；如需修改，请重新选择执行部门和执行岗位。</div>`
         : '';
-      const availability = selectedDepartment === '全公司'
-        ? '<div class="inline-note">已选择“全公司通用”，无需再选择具体岗位。</div>'
-        : rosterLoadState === 'unavailable'
+      const availability = rosterLoadState === 'unavailable'
         ? '<div class="inline-warning">花名册岗位暂时不可用。3001不会清除已有执行岗位；其他内容仍可继续编制和导出。</div>'
-        : !ownDepartment
-          ? '<div class="inline-note">请先在“基本信息”中填写流程归口部门。3001只允许本流程归口部门编制业务行为；其他部门办理的事项请登记为跨部门待办（候选）。</div>'
-          : legacyExternalDepartment
-            ? '<div class="inline-note">当前仍按原文件显示。只有用户确认归并且归并后的技术引用校验通过后，3001才会更新当前页面草稿；源文件始终不变。</div>'
-            : selectedDepartment === ownDepartment
-              ? `<div class="inline-note">当前为本部门执行。执行岗位只显示“${escapeHtml(selectedDepartment)}”花名册中的岗位。</div>`
-            : '<div class="inline-note">请选择本流程归口部门的执行岗位；其他部门办理的事项请登记为跨部门待办（候选）。</div>';
+        : externalDepartment
+          ? `<div class="inline-note">当前为跨部门行为。行为名称、执行部门和执行岗位只在这里填写一次；下方跨部门关系只补充交接方向、事项、数据和返回位置。</div>`
+          : selectedDepartment && selectedDepartment === ownDepartment
+            ? `<div class="inline-note">当前为本部门执行。执行岗位显示“${escapeHtml(selectedDepartment)}”花名册中的岗位。</div>`
+            : !ownDepartment
+              ? '<div class="inline-note">可以先选择任意执行部门和岗位。填写流程归口部门后，页面会据此识别本部门行为和跨部门行为。</div>'
+              : '<div class="inline-note">请选择实际执行部门和执行岗位。</div>';
 
       return `
         <div class="field wide">
@@ -1937,14 +2096,13 @@
             <select
               data-actor-department="${index}"
               data-focus-key="behaviors.${index}.current_actor_role"
-              ${!ownDepartment ? 'disabled' : ''}
             >
               ${optionHtml(departmentOptions, selectedDepartment)}
             </select>
             <select
               data-actor-position="${index}"
               data-focus-key="behaviors.${index}.current_actor_role"
-              ${!ownDepartment || legacyExternalDepartment || !selectedDepartment || selectedDepartment === '全公司' || rosterLoadState !== 'ready' ? 'disabled' : ''}
+              ${!selectedDepartment || selectedDepartment === '全公司' || rosterLoadState !== 'ready' ? 'disabled' : ''}
             >
               ${optionHtml(positionOptions, parsed.position)}
             </select>
@@ -1953,6 +2111,64 @@
           ${rosterWarning}
           ${availability}
         </div>`;
+    }
+
+    function dynamicDepartmentDataSelect(index, behavior, flowDetails) {
+      const selectedRef = text(behavior.actor_department_data_ref).trim();
+      const values = [{ value: '', label: '请选择前序数据' }];
+      (currentDocument()?.data_objects || []).forEach((item, dataIndex) => {
+        const allowed = flowDetails.isAvailableBeforeBehavior?.(item.data_ref, behavior.behavior_ref) === true;
+        if (!allowed && item.data_ref !== selectedRef) return;
+        values.push({
+          value: item.data_ref,
+          label: `${dataIndex + 1}. ${item.data_name || '未命名数据'}${allowed ? '' : '（当前不是可用的前序数据）'}`
+        });
+      });
+      const emptyHint = values.length === 1
+        ? '<div class="inline-warning">当前没有可用于确定执行部门的前序数据。请先在“输出物与数据”中登记责任部门数据，并建立它的产生行为和流程关系。</div>'
+        : '';
+      return `
+        <div class="field wide">
+          <label>执行部门来源数据</label>
+          <select data-bind="behaviors.${index}.actor_department_data_ref" data-kind="nullable" data-focus-key="behaviors.${index}.actor_department_data_ref">
+            ${optionHtml(values, selectedRef)}
+          </select>
+          <span class="hint">只能选择本行为开始前已经产生、并可沿流程关系到达本行为的数据。数据值可以包含一个或多个责任部门。</span>
+          ${emptyHint}
+        </div>`;
+    }
+
+    function actorAssignmentEditor(index, behavior, flowDetails) {
+      const mode = actorAssignmentMode(behavior);
+      const linkedHandoffCount = linkedHandoffsForCounterpartyBehavior(behavior.behavior_ref).length;
+      const needsHandoffCleanup = linkedHandoffCount && (
+        mode !== 'fixed_department' || !externalActorDepartment(behavior.current_actor_role)
+      );
+      const cleanupWarning = needsHandoffCleanup
+        ? `<div class="field wide"><div class="inline-warning">当前行为仍关联${linkedHandoffCount}条固定跨部门关系，与所选执行主体确定方式不一致。<div class="item-actions" style="margin-top:8px"><button class="button secondary small" data-action="normalize-actor-handoffs" data-ref="${escapeAttribute(behavior.behavior_ref)}">转换为普通流程关系</button></div></div></div>`
+        : '';
+      const modeField = `
+        <div class="field wide">
+          <label>执行主体确定方式</label>
+          <select data-actor-assignment-mode="${index}" data-focus-key="behaviors.${index}.actor_assignment_mode">
+            ${optionHtml(ACTOR_ASSIGNMENT_MODES, mode)}
+          </select>
+        </div>`;
+      if (mode === 'company_wide') {
+        return `${modeField}<div class="field wide"><div class="inline-note">“全公司通用”表示该行为不归属于某个特定部门，不算跨部门，也不生成跨部门关系。</div></div>${cleanupWarning}`;
+      }
+      if (mode === 'dynamic_from_data') {
+        return `${modeField}
+          ${dynamicDepartmentDataSelect(index, behavior, flowDetails)}
+          ${field(`behaviors.${index}.actor_position_rule`, '执行岗位或责任人确定规则', {
+            type: 'textarea',
+            className: 'wide',
+            placeholder: '例如：由问题责任部门确定整改责任人',
+            hint: '运行时，每个责任部门分别确定办理岗位或责任人；责任部门尚未形成时，不得向全公司广播待办。'
+          })}
+          <div class="field wide"><div class="inline-note">该行为在设计时不算固定跨部门行为。运行时取得责任部门后，只有责任部门与流程归口部门不同时才形成跨部门办理。</div></div>${cleanupWarning}`;
+      }
+      return `${modeField}${actorRolePicker(index)}`;
     }
 
     function normalizeWorkRole(role, behaviorRef, behaviorName) {
@@ -1976,12 +2192,20 @@
         const behaviorRef = technicalRef(item?.behavior_ref, `behavior${index + 1}`);
         if (item?.behavior_ref) behaviorRefMap.set(item.behavior_ref, behaviorRef);
         const behaviorName = text(item?.behavior_name);
+        const assignmentMode = actorAssignmentMode(item);
         return {
           behavior_ref: behaviorRef,
           node_type: NODE_TYPES.some(option => option.value === item?.node_type) ? item.node_type : '',
           behavior_name: behaviorName,
           behavior_description: text(item?.behavior_description),
-          current_actor_role: text(item?.current_actor_role),
+          current_actor_role: assignmentMode === 'company_wide'
+            ? '全公司'
+            : assignmentMode === 'dynamic_from_data'
+              ? ''
+              : text(item?.current_actor_role),
+          actor_assignment_mode: assignmentMode,
+          actor_department_data_ref: nullable(item?.actor_department_data_ref),
+          actor_position_rule: text(item?.actor_position_rule),
           trigger: text(item?.trigger),
           precondition: text(item?.precondition),
           input_description: text(item?.input_description),
@@ -2014,6 +2238,7 @@
         const original = source.behaviors?.[index] || {};
         behavior.input_data_refs = list(original.input_data_refs).map(mapDataRef);
         behavior.output_data_refs = list(original.output_data_refs).map(mapDataRef);
+        behavior.actor_department_data_ref = mapDataRef(original.actor_department_data_ref);
       });
 
       const normalized = {
@@ -2224,6 +2449,9 @@
             behavior_name: text(step.step_name),
             behavior_description: '',
             current_actor_role: text(step.actor_role || selectedBinding?.source_role_text),
+            actor_assignment_mode: 'fixed_department',
+            actor_department_data_ref: null,
+            actor_position_rule: '',
             trigger: text(detail.trigger_scene),
             precondition: text(detail.precondition),
             input_description: text(step.input_materials),
@@ -2401,7 +2629,7 @@
       const entry = currentEntry();
       if (!entry) return;
       entry.dirty = true;
-      updateCandidateBar();
+      updateCandidateList();
     }
 
     function setBusy(value, message = '') {
@@ -2549,11 +2777,16 @@
     }
 
     function behaviorSelect(pathKey, label, options = {}) {
+      const selectedRef = text(getByPath(pathKey)).trim();
       const values = [{ value: '', label: options.blankLabel || '暂不指定' }]
-        .concat((currentDocument()?.behaviors || []).map((item, index) => ({
-          value: item.behavior_ref,
-          label: `${index + 1}. ${item.behavior_name || '未命名行为'}`
-        })));
+        .concat((currentDocument()?.behaviors || [])
+          .map((item, index) => ({ item, index }))
+          .filter(({ item }) => item.behavior_ref !== options.excludeRef)
+          .filter(({ item }) => !options.localOnly || !externalActorDepartment(item.current_actor_role) || item.behavior_ref === selectedRef)
+          .map(({ item, index }) => ({
+            value: item.behavior_ref,
+            label: `${index + 1}. ${item.behavior_name || '未命名行为'}${options.localOnly && externalActorDepartment(item.current_actor_role) ? '（历史跨部门关联，请调整）' : ''}`
+          })));
       return field(pathKey, label, { type: 'select', options: values, nullable: true, className: options.className || '' });
     }
 
@@ -2599,8 +2832,12 @@
           return `“${source}”完成后进入`;
         }
         const handoff = entry.handoff;
+        if (entry.kind === 'outbound_handoff') {
+          return `本流程“${relationEndpointLabel(handoff.anchor_behavior_ref, '发起行为待选择')}”完成后进入`;
+        }
         const department = externalDepartmentForHandoff(handoff) || '外部门';
-        const action = text(handoff.counterparty_behavior_name).trim()
+        const action = text(counterpartyBehaviorForHandoff(handoff)?.behavior_name).trim()
+          || text(handoff.counterparty_behavior_name).trim()
           || text(handoff.requested_matter).trim()
           || '承接事项';
         return entry.kind === 'returning_handoff'
@@ -2617,6 +2854,12 @@
         if (detail.consumerRefs.includes(behaviorRef) || detail.availabilityStarts.includes(behaviorRef)) inputs.push(label);
         if (detail.producerRefs.includes(behaviorRef)) outputs.push(label);
       });
+      const behavior = (currentDocument()?.behaviors || []).find(item => item.behavior_ref === behaviorRef);
+      if (isDynamicActorBehavior(behavior) && behavior.actor_department_data_ref) {
+        const source = (currentDocument()?.data_objects || []).find(item => item.data_ref === behavior.actor_department_data_ref);
+        const label = text(source?.data_name).trim() || '执行部门来源数据';
+        inputs.push(`${label}（用于确定执行部门）`);
+      }
       return {
         inputs: [...new Set(inputs)],
         outputs: [...new Set(outputs)]
@@ -2862,8 +3105,8 @@
       return { label: '可查看', className: 'ready' };
     }
 
-    function renderWorkspaceTabs(model) {
-      const status = previewStatus(model);
+    function renderWorkspaceTabs(model, disabled = false) {
+      const status = previewStatus(model || { namedBehaviorCount: 0, unresolvedCount: 0, reviewCount: 0 });
       const editorActive = activeWorkspaceTab === 'editor';
       const diagramActive = activeWorkspaceTab === 'diagram';
       return `
@@ -2874,18 +3117,22 @@
               id="editorTab"
               role="tab"
               aria-selected="${editorActive}"
+              aria-disabled="${disabled}"
               aria-controls="editorPanel"
               data-action="switch-tab"
               data-tab="editor"
+              ${disabled ? 'disabled' : ''}
             >文字编制</button>
             <button
               class="workspace-tab${diagramActive ? ' active' : ''}"
               id="diagramTab"
               role="tab"
               aria-selected="${diagramActive}"
+              aria-disabled="${disabled}"
               aria-controls="diagramPanel"
               data-action="switch-tab"
               data-tab="diagram"
+              ${disabled ? 'disabled' : ''}
             >
               跨职能流程图预览
               <span class="tab-status ${status.className}" id="diagramTabStatus">${escapeHtml(status.label)}</span>
@@ -2899,12 +3146,12 @@
       const showReady = model.namedBehaviorCount > 0 && !openedPreviewProcesses.has(processKey);
       return `
         <div class="preview-guidance">
-          <div>
-            <strong>什么时候可以查看跨职能流程图</strong>
+          <div class="preview-guidance-copy">
+            <strong>流程图预览：</strong>
             <p>填写至少一个“业务行为名称”后即可查看流程图。只有补充明确的“流程关系”后才会显示箭头，系统不会按录入顺序自动连线。</p>
           </div>
           <div class="preview-ready-callout" id="previewReadyCallout"${showReady ? '' : ' hidden'}>
-          <p>跨职能流程图预览已可查看。请检查判断分支、回路、并行路线以及跨部门待办（候选）是否表达正确。</p>
+            <span>已可查看</span>
             <button class="button secondary small" data-action="view-diagram">查看跨职能流程图</button>
           </div>
         </div>`;
@@ -2919,6 +3166,10 @@
               <div class="diagram-legend-item" role="listitem">
                 <span class="legend-symbol action" aria-hidden="true"></span>
                 <span class="diagram-legend-copy"><strong>业务行为</strong><small>部门或岗位完成工作</small></span>
+              </div>
+              <div class="diagram-legend-item" role="listitem">
+                <span class="legend-symbol action" style="border-style:dashed;border-color:#5f6f8a;background:#e9edf4" aria-hidden="true"></span>
+                <span class="diagram-legend-copy"><strong>动态责任部门</strong><small>由前序数据在运行时确定</small></span>
               </div>
               <div class="diagram-legend-item" role="listitem">
                 <span class="legend-symbol decision" aria-hidden="true"><span>×</span></span>
@@ -3140,8 +3391,15 @@
       } else if (focusKind === 'handoff') {
         activeEditorSection = 'process';
         activeProcessSection = 'behaviors';
-        activeFlowItemKind = 'handoff';
-        activeHandoffRef = focusRef;
+        const handoff = currentDocument()?.cross_department_handoffs?.find(item => item.handoff_ref === focusRef);
+        const counterpartyBehavior = counterpartyBehaviorForHandoff(handoff);
+        if (counterpartyBehavior) {
+          activeFlowItemKind = 'behavior';
+          activeBehaviorRef = counterpartyBehavior.behavior_ref;
+        } else {
+          activeFlowItemKind = 'handoff';
+          activeHandoffRef = focusRef;
+        }
       } else if (focusKind === 'form') {
         activeEditorSection = 'forms';
         activeFormRef = focusRef;
@@ -3254,7 +3512,11 @@
         ${field('export_meta.initiating_department', '发起部门', { type: 'select', options: [''].concat(DEPARTMENTS) })}
         ${field('export_meta.compiler', '编制人', { placeholder: '手工填写姓名' })}
         ${field('process.process_name', '流程名称', { placeholder: '不自动生成，由编制人填写' })}
-        ${field('process.owning_department', '归口部门', { type: 'select', options: [''].concat(DEPARTMENTS) })}
+        ${field('process.owning_department', '归口部门', {
+          type: 'select',
+          options: [''].concat(DEPARTMENTS),
+          hint: '归口部门是识别本部门行为和跨部门行为的基准。已有流程内容时，变更前会显示影响范围；确认后，页面重置依赖原归口部门的字段。'
+        })}
         ${field('process.capability_domain', '能力域（可选）', { nullable: true, placeholder: '不填时保持未归类' })}
         ${field('process.business_capability', '业务能力（可选）', { nullable: true, placeholder: '不填时不阻塞审核' })}
         ${field('process.classification_status', '归类状态', {
@@ -3295,14 +3557,18 @@
       const result = [];
       const placedHandoffRefs = new Set();
       data.behaviors.forEach((behavior, behaviorIndex) => {
+        const counterpartyLink = linkedHandoffForCounterpartyBehavior(behavior.behavior_ref, data);
+        if (counterpartyLink) placedHandoffRefs.add(counterpartyLink.handoff.handoff_ref);
         linkedHandoffs(behavior.behavior_ref)
+          .filter(({ handoff }) => !counterpartyBehaviorForHandoff(handoff, data))
           .filter(({ handoff }) => handoff.handoff_direction === 'inbound_prerequisite')
           .forEach(entry => {
             placedHandoffRefs.add(entry.handoff.handoff_ref);
             result.push({ kind: 'handoff', ...entry });
           });
-        result.push({ kind: 'behavior', behavior, behaviorIndex });
+        result.push({ kind: 'behavior', behavior, behaviorIndex, counterpartyLink });
         linkedHandoffs(behavior.behavior_ref)
+          .filter(({ handoff }) => !counterpartyBehaviorForHandoff(handoff, data))
           .filter(({ handoff }) => handoff.handoff_direction !== 'inbound_prerequisite')
           .forEach(entry => {
             placedHandoffRefs.add(entry.handoff.handoff_ref);
@@ -3381,19 +3647,19 @@
         .filter(handoff => handoff.anchor_behavior_ref === behavior.behavior_ref);
       return `
         <details class="nested" open>
-          <summary><strong>在此流程位置添加跨部门待办（当前${linked.length}条）</strong></summary>
-          <p class="inline-note">本部门发起动作保留为业务行为；外部门办理动作和待办信息只登记一条跨部门待办。新增后，请直接在左侧业务流程列表选择该待办继续填写。</p>
+          <summary><strong>在此流程位置添加跨部门行为（当前${linked.length}条）</strong></summary>
+          <p class="inline-note">新增后会生成一个外部门行为节点和一条跨部门关系。外部门的动作、执行部门和岗位只在该行为节点填写一次。</p>
           <div class="item-actions" style="margin-top:12px">
             <button
               class="button small"
               data-action="add-inbound-handoff"
               data-ref="${escapeAttribute(behavior.behavior_ref)}"
-            >本行为开始前由外部门提供</button>
+            >添加前置跨部门行为</button>
             <button
               class="button small"
               data-action="add-outbound-handoff"
               data-ref="${escapeAttribute(behavior.behavior_ref)}"
-            >本行为完成后交给外部门</button>
+            >添加后续跨部门行为</button>
           </div>
         </details>`;
     }
@@ -3479,7 +3745,8 @@
         item.kind === 'handoff' && item.handoff.handoff_ref === handoff.handoff_ref
       );
       const externalDepartment = externalDepartmentForHandoff(handoff) || '承接部门待明确';
-      const actionName = text(handoff.counterparty_behavior_name).trim()
+      const actionName = text(counterpartyBehaviorForHandoff(handoff)?.behavior_name).trim()
+        || text(handoff.counterparty_behavior_name).trim()
         || text(handoff.requested_matter).trim()
         || '办理动作待填写';
       const label = selector.querySelector('span:last-child');
@@ -3509,7 +3776,7 @@
               <strong>跨部门待办 ${index + 1} · ${escapeHtml(directionLabel)}</strong>
               <button class="button danger small" data-action="remove-handoff" data-index="${index}">删除当前待办</button>
             </div>
-            <div class="inline-note">本部门发起动作：${escapeHtml(behaviorLabel(item.anchor_behavior_ref))}；本流程部门：${escapeHtml(owningDepartment)}；默认触发时点：${escapeHtml(trigger)}。</div>
+            <div class="inline-note">${direction === 'inbound_prerequisite' ? '本流程接收行为' : '本部门发起动作'}：${escapeHtml(behaviorLabel(item.anchor_behavior_ref))}；本流程部门：${escapeHtml(owningDepartment)}；默认触发时点：${escapeHtml(trigger)}。</div>
             ${placementWarning}
             <div class="grid" style="margin-top:12px">
               ${field(externalDepartmentPath, direction === 'inbound_prerequisite' ? '提供输入的外部门' : '承接部门', {
@@ -3517,9 +3784,9 @@
                 options: handoffExternalDepartmentOptions(item),
                 hint: '选择后，页面自动把外部门识别状态改为“已明确”。'
               })}
-              ${field(`cross_department_handoffs.${index}.counterparty_behavior_name`, '承接部门办理动作', {
+              ${field(`cross_department_handoffs.${index}.counterparty_behavior_name`, direction === 'inbound_prerequisite' ? '提供部门办理动作' : '承接部门办理动作', {
                 placeholder: '例如：物资保障部计划员发放工装序列号',
-                hint: '这里只写外部门实际执行的动作，不要再把它新增为本流程普通业务行为。'
+                hint: '这是旧文件和外部流程引用的兼容输入。新建跨部门行为时，办理动作直接使用关联行为的名称。'
               })}
               ${field(`cross_department_handoffs.${index}.requested_matter`, '需要处理或提供的事项', {
                 type: 'textarea',
@@ -3531,7 +3798,10 @@
                 className: 'half',
                 placeholder: '写明关闭待办所需的结果或判定标准'
               })}
-              ${dataSelect(`cross_department_handoffs.${index}.transfer_data_ref`, '发给外部门的数据（可选）')}
+              ${dataSelect(
+                `cross_department_handoffs.${index}.transfer_data_ref`,
+                direction === 'inbound_prerequisite' ? '外部门提供的输入数据（可选）' : '发给外部门的数据（可选）'
+              )}
               ${direction === 'outbound_followup'
                 ? field(`cross_department_handoffs.${index}.requires_return`, '是否需要返回本流程', { type: 'checkbox', className: 'wide', checkboxLabel: '外部门完成并关闭待办后，需要返回数据并恢复本流程' })
                 : ''}
@@ -3561,10 +3831,58 @@
         </div>`;
     }
 
+    function renderLinkedHandoffFields(behavior, handoff, handoffIndex) {
+      if (!behavior || !handoff || handoffIndex < 0) return '';
+      const direction = handoff.handoff_direction === 'inbound_prerequisite'
+        ? 'inbound_prerequisite'
+        : 'outbound_followup';
+      const directionLabel = direction === 'inbound_prerequisite'
+        ? '该外部门行为完成后，本流程关联行为才能开始'
+        : '本流程关联行为完成后，启动该外部门行为';
+      const trigger = text(handoff.trigger_condition).trim()
+        || defaultHandoffTrigger(direction, handoff.anchor_behavior_ref);
+      return `
+        <details class="nested" open>
+          <summary><strong>跨部门关系（与当前行为共用一条记录）</strong></summary>
+          <div class="inline-note" style="margin-top:12px">${escapeHtml(directionLabel)}。当前行为的名称、执行部门、执行岗位和完成标准以上方行为信息为准，不在跨部门关系中重复填写。</div>
+          <div class="grid" style="margin-top:12px">
+            ${field(`cross_department_handoffs.${handoffIndex}.handoff_direction`, '交接方向', {
+              type: 'select',
+              options: [
+                { value: 'inbound_prerequisite', label: '外部门先办理，再进入本流程关联行为' },
+                { value: 'outbound_followup', label: '本流程关联行为完成后，交给外部门办理' }
+              ]
+            })}
+            ${behaviorSelect(`cross_department_handoffs.${handoffIndex}.anchor_behavior_ref`, direction === 'inbound_prerequisite' ? '本流程接收位置' : '本流程发起位置', { blankLabel: '请选择', excludeRef: behavior.behavior_ref, localOnly: true })}
+            ${field(`cross_department_handoffs.${handoffIndex}.requested_matter`, '需要处理或提供的事项', {
+              type: 'textarea',
+              className: 'half',
+              placeholder: '写清交给外部门处理什么，或需要外部门提供什么'
+            })}
+            ${dataSelect(
+              `cross_department_handoffs.${handoffIndex}.transfer_data_ref`,
+              direction === 'inbound_prerequisite' ? '外部门提供的输入数据（可选）' : '发给外部门的数据（可选）'
+            )}
+            ${direction === 'outbound_followup'
+              ? field(`cross_department_handoffs.${handoffIndex}.requires_return`, '是否需要返回本流程', { type: 'checkbox', className: 'wide', checkboxLabel: '外部门完成后，需要返回数据并从指定位置继续' })
+              : ''}
+            ${direction === 'outbound_followup' && handoff.requires_return
+              ? dataSelect(`cross_department_handoffs.${handoffIndex}.returned_data_ref`, '外部门完成后返回的数据')
+              : ''}
+            ${direction === 'outbound_followup' && handoff.requires_return
+              ? behaviorSelect(`cross_department_handoffs.${handoffIndex}.resume_behavior_ref`, '返回后本流程从哪个行为继续', { excludeRef: behavior.behavior_ref, localOnly: true })
+              : ''}
+            ${field(`cross_department_handoffs.${handoffIndex}.counterparty_process_name`, '外部门对应流程名称（如已知）')}
+          </div>
+          <div class="inline-note">触发时点由交接方向和关联位置自动确定：${escapeHtml(trigger)}。</div>
+        </details>`;
+    }
+
     function renderBehaviors() {
       const active = ensureActiveFlowItem();
       const item = active?.kind === 'behavior' ? active.behavior : null;
       const index = active?.kind === 'behavior' ? active.behaviorIndex : -1;
+      const counterpartyLink = active?.kind === 'behavior' ? active.counterpartyLink : null;
       const flowDetails = currentDataFlowDetails();
       const hasDerivedEntry = item
         ? (flowDetails.incomingByBehavior.get(item.behavior_ref) || []).length > 0
@@ -3581,7 +3899,8 @@
             if (flowItem.kind === 'handoff') {
               const handoff = flowItem.handoff;
               const externalDepartment = externalDepartmentForHandoff(handoff) || '承接部门待明确';
-              const actionName = text(handoff.counterparty_behavior_name).trim()
+              const actionName = text(counterpartyBehaviorForHandoff(handoff)?.behavior_name).trim()
+                || text(handoff.counterparty_behavior_name).trim()
                 || text(handoff.requested_matter).trim()
                 || '办理动作待填写';
               return `
@@ -3595,14 +3914,27 @@
             }
             const behavior = flowItem.behavior;
             const behaviorIndex = flowItem.behaviorIndex;
-            const legacyExternal = externalActorDepartment(behavior.current_actor_role);
+            const externalDepartment = externalActorDepartment(behavior.current_actor_role);
+            const isLinkedExternal = Boolean(flowItem.counterpartyLink);
+            const assignmentMode = actorAssignmentMode(behavior);
+            const behaviorBadge = assignmentMode === 'dynamic_from_data'
+              ? '动态责任部门行为'
+              : assignmentMode === 'company_wide'
+                ? '全公司通用行为'
+                : isLinkedExternal
+                  ? '跨部门行为'
+                  : externalDepartment
+                    ? '跨部门关系待归并'
+                    : behavior.node_type === 'action'
+                      ? '本部门行为'
+                      : '流程节点';
             return `
             <div class="selector-row">
               <button
                 class="selector-button flow-item-button${behavior.behavior_ref === item?.behavior_ref ? ' active' : ''}"
                 data-action="select-behavior"
                 data-ref="${escapeAttribute(behavior.behavior_ref)}"
-              ><span class="flow-item-badge">${legacyExternal ? '旧版重复表达' : behavior.node_type === 'action' ? '本部门行为' : '流程节点'}</span><span>${flowIndex + 1}. ${escapeHtml(behavior.behavior_name || '未命名业务行为')}</span></button>
+              ><span class="flow-item-badge">${behaviorBadge}</span><span>${flowIndex + 1}. ${escapeHtml(behavior.behavior_name || '未命名业务行为')}</span></button>
               <span class="selector-order-actions" aria-label="调整第${behaviorIndex + 1}项业务行为顺序">
                 <button
                   class="selector-order-button"
@@ -3640,7 +3972,7 @@
                 className: 'wide',
                 hint: '补充说明实际操作，供PMO和部门业务人员沟通；不会替代业务行为名称，也不显示在流程图节点上。'
               })}
-              ${actorRolePicker(index)}
+              ${actorAssignmentEditor(index, item, flowDetails)}
               ${hasDerivedEntry ? '' : field(`behaviors.${index}.trigger`, '流程如何开始', {
                 type: 'textarea',
                 className: 'half',
@@ -3669,7 +4001,11 @@
               </div>
             </details>
             ${renderLegacyBehaviorSupplement(item, hasDerivedEntry)}
-            ${renderHandoffCreationActions(item)}
+            ${counterpartyLink
+              ? renderLinkedHandoffFields(item, counterpartyLink.handoff, counterpartyLink.handoffIndex)
+              : externalActorDepartment(item.current_actor_role)
+                ? ''
+                : renderHandoffCreationActions(item)}
             ${item.work_role ? '<div class="inline-note">原文件包含与当前业务行为绑定的正式工作角色。3001会在导出时保留该内容，但本页面不新增或编辑正式工作角色。</div>' : ''}
           </div>
         </div>` : active?.kind === 'handoff'
@@ -3682,9 +4018,9 @@
         </div>`;
       return section(
         '业务流程',
-        '本部门发起动作和跨部门待办按流程位置统一显示。外部门办理动作只在跨部门待办中填写一次。',
+        '本部门行为和跨部门行为按流程位置统一显示。跨部门行为的动作、执行部门和岗位只填写一次；跨部门关系只补充交接事项、数据和返回位置。',
         body,
-        '<button class="button small" data-action="add-behavior">添加本部门业务行为或节点</button>'
+        '<button class="button small" data-action="add-behavior">添加业务行为或节点</button>'
       );
     }
 
@@ -3826,7 +4162,9 @@
         ? `<div class="handoff-summary-list" aria-label="跨部门待办只读汇总">${items.map((item, index) => {
             const directionLabel = item.handoff_direction === 'inbound_prerequisite' ? '前置输入' : '后续承接';
             const department = externalDepartmentForHandoff(item) || '承接部门待明确';
-            const actionName = text(item.counterparty_behavior_name).trim() || '办理动作待填写';
+            const actionName = text(counterpartyBehaviorForHandoff(item)?.behavior_name).trim()
+              || text(item.counterparty_behavior_name).trim()
+              || '办理动作待填写';
             const matter = text(item.requested_matter).trim() || '处理事项待填写';
             const returnSummary = item.requires_return
               ? `需要返回；恢复位置：${behaviorLabel(item.resume_behavior_ref)}`
@@ -3846,7 +4184,7 @@
         : emptyList('当前流程没有跨部门待办。请回到“业务流程”，在对应本部门行为处直接添加。');
       return section(
         '跨部门待办汇总',
-        '这里只集中查看，不新增、不修改。所有跨部门待办都在“业务流程”的唯一位置维护；归口部门审核导入3000后，系统才生成正式待办。',
+        '这里只集中查看，不新增、不修改。跨部门行为及其交接关系都在“业务流程”的同一个位置维护；归口部门审核导入3000后，系统才生成正式待办。',
         body
       );
     }
@@ -4112,6 +4450,23 @@
       return structureScoreState;
     }
 
+    function warningSuggestions(item) {
+      const suggestions = Array.isArray(item?.suggestions)
+        ? item.suggestions.map(text).filter(Boolean)
+        : [];
+      return suggestions.length
+        ? suggestions
+        : ['点击本项返回对应位置，核对并补充相关内容。'];
+    }
+
+    function renderWarningCopy(item) {
+      const suggestions = warningSuggestions(item);
+      return `<span class="warning-fact"><strong>当前情况：</strong>${escapeHtml(item.message)}</span>
+        ${suggestions.map((suggestion, index) => `
+          <span class="warning-suggestion"><strong>${suggestions.length > 1 ? `建议${index + 1}` : '建议'}：</strong>${escapeHtml(suggestion)}</span>
+        `).join('')}`;
+    }
+
     function renderStructureScoreIssues(items, title, className = 'score-issue-list', open = true) {
       if (!items.length) return '';
       return `<details class="${className}"${open ? ' open' : ''}>
@@ -4123,8 +4478,8 @@
                 class="diagram-warning-button export-warning-button"
                 data-action="focus-export-warning"
                 ${attributes}
-              >${escapeHtml(item.message)}</button>`
-            : `<span>${escapeHtml(item.message)}</span>`;
+              >${renderWarningCopy(item)}</button>`
+            : `<span>${renderWarningCopy(item)}</span>`;
           return `<li>
             <div class="score-issue-line">
               <span class="score-issue-category">${escapeHtml(item.category)}</span>
@@ -4275,7 +4630,7 @@
                   class="diagram-warning-button export-warning-button"
                   data-action="focus-export-warning"
                   ${exportWarningLocationAttributes(item)}
-                >${escapeHtml(item.message)}</button>
+                >${renderWarningCopy(item)}</button>
               </li>`).join('')}</ol>
           </div>`
         : '<div class="notice">其他提示项：当前未发现本评分之外的待确认内容。</div>';
@@ -4324,11 +4679,12 @@
       );
       document.getElementById('exportButton').disabled = busy || !data;
       document.getElementById('clearButton').disabled = busy || !data;
-      updateCandidateBar();
+      updateCandidateList();
       if (!data) {
         diagramExpanded = false;
         document.body.classList.remove('diagram-overlay-open');
         activeWorkspaceTab = 'editor';
+        workspaceViewSwitch.innerHTML = renderWorkspaceTabs(null, true);
         workspace.innerHTML = `<div class="empty">
           <h2>从一条空白流程开始</h2>
           <p>点击“新建流程”后，直接填写流程、业务行为、执行岗位、跨部门待办（候选）和数据输出。3001暂不要求提供编制参考资料，也不要求填写制度编号。</p>
@@ -4337,8 +4693,8 @@
         return;
       }
       const model = currentDiagramModel(data);
+      workspaceViewSwitch.innerHTML = renderWorkspaceTabs(model);
       workspace.innerHTML = `
-        ${renderWorkspaceTabs(model)}
         <div
           class="tab-panel"
           id="editorPanel"
@@ -4361,18 +4717,31 @@
       if (activeWorkspaceTab === 'diagram') requestAnimationFrame(mountDiagram);
     }
 
-    function updateCandidateBar() {
+    function updateCandidateList() {
       if (!candidates.length) {
-        candidateBar.classList.remove('show');
-        candidateSelect.innerHTML = '';
-        candidateNote.textContent = '';
+        candidateList.innerHTML = '<div class="candidate-empty">尚未创建或导入流程。</div>';
+        candidateNote.textContent = '新建流程或导入结构化文件后，可以在这里切换当前流程。';
         return;
       }
-      candidateBar.classList.add('show');
-      candidateSelect.innerHTML = candidates.map((item, index) => {
+      candidateList.innerHTML = candidates.map((item, index) => {
         const name = item.data.process.process_name || `未命名流程 ${index + 1}`;
-        const marker = item.dirty ? ' · 未导出修改' : '';
-        return `<option value="${index}"${index === currentIndex ? ' selected' : ''}>${escapeHtml(`${index + 1}. ${name}${marker}`)}</option>`;
+        const fullLabel = `${index + 1}. ${name}${item.dirty ? '，未导出修改' : ''}`;
+        return `
+          <button
+            class="candidate-item${index === currentIndex ? ' active' : ''}"
+            type="button"
+            role="option"
+            aria-selected="${index === currentIndex}"
+            aria-label="${escapeAttribute(fullLabel)}"
+            title="${escapeAttribute(fullLabel)}"
+            data-candidate-index="${index}"
+          >
+            <span class="candidate-number" aria-hidden="true">${index + 1}</span>
+            <span class="candidate-copy">
+              <span class="candidate-name">${escapeHtml(name)}</span>
+              ${item.dirty ? '<span class="candidate-dirty">未导出修改</span>' : ''}
+            </span>
+          </button>`;
       }).join('');
       candidateNote.textContent = candidates.length > 1
         ? `本次导入拆出 ${candidates.length} 条候选流程，请逐一检查并分别导出。`
@@ -4438,6 +4807,9 @@
         behavior_name: '',
         behavior_description: '',
         current_actor_role: '',
+        actor_assignment_mode: 'fixed_department',
+        actor_department_data_ref: null,
+        actor_position_rule: '',
         trigger: '',
         precondition: '',
         input_description: '',
@@ -4453,6 +4825,7 @@
       currentDocument().behaviors.push(behavior);
       activeFlowItemKind = 'behavior';
       activeBehaviorRef = behavior.behavior_ref;
+      return behavior;
     }
 
     function moveBehavior(behaviorRef, direction) {
@@ -4506,7 +4879,7 @@
       return dataObject;
     }
 
-    function addHandoff(direction = 'outbound_followup', anchorBehaviorRef = null) {
+    function addHandoff(direction = 'outbound_followup', anchorBehaviorRef = null, counterpartyBehaviorRef = null) {
       const normalizedDirection = direction === 'inbound_prerequisite'
         ? 'inbound_prerequisite'
         : 'outbound_followup';
@@ -4529,7 +4902,7 @@
         completion_standard: '',
         counterparty_process_ref: null,
         counterparty_process_name: '',
-        counterparty_behavior_ref: null,
+        counterparty_behavior_ref: counterpartyBehaviorRef || null,
         counterparty_behavior_name: '',
         requires_return: false,
         returned_data_ref: null,
@@ -4539,6 +4912,214 @@
       activeFlowItemKind = 'handoff';
       activeHandoffRef = handoff.handoff_ref;
       return handoff;
+    }
+
+    function addCrossDepartmentBehavior(direction, anchorBehaviorRef) {
+      const behavior = addBehavior();
+      behavior.node_type = 'action';
+      const handoff = addHandoff(direction, anchorBehaviorRef, behavior.behavior_ref);
+      if (direction === 'outbound_followup') {
+        const resumeBehaviorRef = defaultResumeBehaviorRef(anchorBehaviorRef);
+        if (resumeBehaviorRef) {
+          handoff.requires_return = true;
+          handoff.resume_behavior_ref = resumeBehaviorRef;
+        }
+      }
+      activeFlowItemKind = 'behavior';
+      activeBehaviorRef = behavior.behavior_ref;
+      activeHandoffRef = handoff.handoff_ref;
+      return { behavior, handoff };
+    }
+
+    function inferredHandoffPlacement(behaviorRef, data = currentDocument()) {
+      const incoming = (data?.flow_relations || []).filter(item => item.to_behavior_ref === behaviorRef && item.relation_type !== 'loop');
+      const outgoing = (data?.flow_relations || []).filter(item => item.from_behavior_ref === behaviorRef && item.relation_type !== 'loop');
+      if (incoming.length === 0 && outgoing.length === 1) {
+        return {
+          direction: 'inbound_prerequisite',
+          anchorBehaviorRef: outgoing[0].to_behavior_ref,
+          resumeBehaviorRef: null,
+          unambiguous: true
+        };
+      }
+      if (incoming.length === 1) {
+        return {
+          direction: 'outbound_followup',
+          anchorBehaviorRef: incoming[0].from_behavior_ref,
+          resumeBehaviorRef: outgoing.length === 1 ? outgoing[0].to_behavior_ref : null,
+          unambiguous: outgoing.length <= 1
+        };
+      }
+      return { direction: 'outbound_followup', anchorBehaviorRef: null, resumeBehaviorRef: null, unambiguous: false };
+    }
+
+    function ensureLinkedHandoffForExternalBehavior(behaviorRef, data = currentDocument(), options = {}) {
+      const behavior = (data?.behaviors || []).find(item => item.behavior_ref === behaviorRef);
+      const owner = text(data?.process?.owning_department).trim();
+      const externalDepartment = behavior ? externalActorDepartment(behavior.current_actor_role, owner) : '';
+      if (!behavior || !externalDepartment) return null;
+      const linked = linkedHandoffsForCounterpartyBehavior(behaviorRef, data);
+      if (linked.length) {
+        linked.forEach(({ handoff }) => syncHandoffDerivedFields(handoff));
+        return linked[0].handoff;
+      }
+      const placement = inferredHandoffPlacement(behaviorRef, data);
+      const handoff = addHandoff(placement.direction, placement.anchorBehaviorRef, behaviorRef);
+      if (placement.direction === 'outbound_followup' && placement.resumeBehaviorRef) {
+        handoff.requires_return = true;
+        handoff.resume_behavior_ref = placement.resumeBehaviorRef;
+      }
+      const adjacentRefs = [placement.anchorBehaviorRef, placement.resumeBehaviorRef].filter(Boolean);
+      const adjacentBehaviorsAreLocal = adjacentRefs.every(ref => {
+        const adjacent = (data.behaviors || []).find(item => item.behavior_ref === ref);
+        return adjacent && !externalActorDepartment(adjacent.current_actor_role, owner);
+      });
+      if (
+        options.convertUniqueRelations
+        && placement.unambiguous
+        && placement.anchorBehaviorRef
+        && adjacentBehaviorsAreLocal
+      ) {
+        data.flow_relations = data.flow_relations.filter(item =>
+          item.from_behavior_ref !== behaviorRef && item.to_behavior_ref !== behaviorRef
+        );
+      }
+      syncHandoffDerivedFields(handoff);
+      activeFlowItemKind = 'behavior';
+      activeBehaviorRef = behaviorRef;
+      return handoff;
+    }
+
+    function addSequenceRelationIfMissing(fromBehaviorRef, toBehaviorRef, data = currentDocument()) {
+      if (!fromBehaviorRef || !toBehaviorRef || fromBehaviorRef === toBehaviorRef) return null;
+      const existing = (data.flow_relations || []).find(item =>
+        item.from_behavior_ref === fromBehaviorRef
+        && item.to_behavior_ref === toBehaviorRef
+        && item.relation_type !== 'loop'
+      );
+      if (existing) return existing;
+      const relation = {
+        relation_ref: newRef('relation'),
+        relation_type: 'sequence',
+        from_behavior_ref: fromBehaviorRef,
+        to_behavior_ref: toBehaviorRef,
+        condition: '',
+        join_mode: ''
+      };
+      data.flow_relations.push(relation);
+      return relation;
+    }
+
+    function owningDepartmentResetSequencePairs(data) {
+      const behaviorRefs = new Set((data?.behaviors || []).map(item => text(item?.behavior_ref).trim()).filter(Boolean));
+      const existingPairs = new Set((data?.flow_relations || [])
+        .filter(item => item?.relation_type !== 'loop')
+        .map(item => `${text(item?.from_behavior_ref).trim()}\u0000${text(item?.to_behavior_ref).trim()}`));
+      const addedPairs = [];
+      const appendPair = (fromBehaviorRef, toBehaviorRef) => {
+        const fromRef = text(fromBehaviorRef).trim();
+        const toRef = text(toBehaviorRef).trim();
+        if (!behaviorRefs.has(fromRef) || !behaviorRefs.has(toRef) || fromRef === toRef) return;
+        const key = `${fromRef}\u0000${toRef}`;
+        if (existingPairs.has(key)) return;
+        existingPairs.add(key);
+        addedPairs.push({ fromBehaviorRef: fromRef, toBehaviorRef: toRef });
+      };
+      (data?.cross_department_handoffs || []).forEach(handoff => {
+        const counterpartyBehaviorRef = text(handoff?.counterparty_behavior_ref).trim();
+        if (handoff?.handoff_direction === 'inbound_prerequisite') {
+          appendPair(counterpartyBehaviorRef, handoff?.anchor_behavior_ref);
+          return;
+        }
+        appendPair(handoff?.anchor_behavior_ref, counterpartyBehaviorRef);
+        if (handoff?.requires_return) appendPair(counterpartyBehaviorRef, handoff?.resume_behavior_ref);
+      });
+      return addedPairs;
+    }
+
+    function owningDepartmentChangeImpact(data, nextDepartment) {
+      const behaviors = Array.isArray(data?.behaviors) ? data.behaviors : [];
+      const handoffs = Array.isArray(data?.cross_department_handoffs) ? data.cross_department_handoffs : [];
+      const fixedAssignments = behaviors.filter(item =>
+        actorAssignmentMode(item) === 'fixed_department'
+        && text(item?.current_actor_role).trim()
+      ).length;
+      const dynamicAssignments = behaviors.filter(item =>
+        actorAssignmentMode(item) === 'dynamic_from_data'
+        || item?.actor_department_data_ref
+        || text(item?.actor_position_rule).trim()
+      ).length;
+      const companyWideAssignments = behaviors.filter(item => actorAssignmentMode(item) === 'company_wide').length;
+      const formalWorkRoles = behaviors.filter(item => item?.work_role).length;
+      const classificationFields = [
+        data?.process?.capability_domain,
+        data?.process?.business_capability,
+        data?.process?.classification_status !== 'unclassified' ? data?.process?.classification_status : ''
+      ].filter(value => text(value).trim()).length;
+      return {
+        previousDepartment: text(data?.process?.owning_department).trim(),
+        nextDepartment: text(nextDepartment).trim(),
+        behaviorCount: behaviors.length,
+        fixedAssignments,
+        dynamicAssignments,
+        companyWideAssignments,
+        handoffCount: handoffs.length,
+        restoredSequenceCount: owningDepartmentResetSequencePairs(data).length,
+        classificationFields,
+        formalWorkRoles,
+        internalCallCount: Array.isArray(data?.internal_process_calls) ? data.internal_process_calls.length : 0
+      };
+    }
+
+    function buildOwningDepartmentResetDocument(data, nextDepartment) {
+      const next = clone(data);
+      owningDepartmentResetSequencePairs(next).forEach(pair => {
+        addSequenceRelationIfMissing(pair.fromBehaviorRef, pair.toBehaviorRef, next);
+      });
+      next.process.owning_department = text(nextDepartment).trim();
+      next.process.capability_domain = null;
+      next.process.business_capability = null;
+      next.process.classification_status = 'unclassified';
+      next.behaviors.forEach(behavior => {
+        if (actorAssignmentMode(behavior) === 'company_wide') return;
+        behavior.actor_assignment_mode = 'fixed_department';
+        behavior.current_actor_role = '';
+        behavior.actor_department_data_ref = null;
+        behavior.actor_position_rule = '';
+      });
+      next.cross_department_handoffs = [];
+      return next;
+    }
+
+    function removeCounterpartyLinksForBehavior(behaviorRef, nextActorLabel = '本流程内执行') {
+      const documentValue = currentDocument();
+      const linked = linkedHandoffsForCounterpartyBehavior(behaviorRef, documentValue);
+      if (!linked.length) return true;
+      const populated = linked.some(({ handoff }) =>
+        text(handoff.requested_matter).trim()
+        || handoff.transfer_data_ref
+        || handoff.returned_data_ref
+        || handoff.resume_behavior_ref
+        || text(handoff.counterparty_process_name).trim()
+      );
+      const message = populated
+        ? `改为“${nextActorLabel}”后，将把${linked.length}条跨部门位置转换为普通顺序关系，并删除其中的交接事项、传递数据和返回设置；当前行为、表单和数据对象不会删除。确定继续吗？`
+        : `改为“${nextActorLabel}”后，将把${linked.length}条跨部门位置转换为普通顺序关系并删除空的跨部门关系；当前行为不受影响。确定继续吗？`;
+      if (!window.confirm(message)) return false;
+      linked.forEach(({ handoff }) => {
+        if (handoff.handoff_direction === 'inbound_prerequisite') {
+          addSequenceRelationIfMissing(behaviorRef, handoff.anchor_behavior_ref, documentValue);
+          return;
+        }
+        addSequenceRelationIfMissing(handoff.anchor_behavior_ref, behaviorRef, documentValue);
+        if (handoff.requires_return && handoff.resume_behavior_ref) {
+          addSequenceRelationIfMissing(behaviorRef, handoff.resume_behavior_ref, documentValue);
+        }
+      });
+      const refs = new Set(linked.map(({ handoff }) => handoff.handoff_ref));
+      documentValue.cross_department_handoffs = documentValue.cross_department_handoffs.filter(item => !refs.has(item.handoff_ref));
+      if (refs.has(activeHandoffRef)) activeHandoffRef = '';
+      return true;
     }
 
     function syncHandoffDerivedFields(handoff, changedField = '') {
@@ -4554,6 +5135,16 @@
       } else {
         handoff.source_department = owningDepartment;
       }
+      const counterpartyBehavior = counterpartyBehaviorForHandoff(handoff);
+      const behaviorDepartment = counterpartyBehavior
+        ? externalActorDepartment(counterpartyBehavior.current_actor_role, owningDepartment)
+        : '';
+      if (counterpartyBehavior) {
+        if (direction === 'inbound_prerequisite') handoff.source_department = behaviorDepartment;
+        else handoff.target_department = behaviorDepartment;
+        handoff.counterparty_behavior_name = '';
+        handoff.completion_standard = '';
+      }
       const externalDepartment = externalDepartmentForHandoff(handoff);
       handoff.counterparty_resolution = externalDepartment ? 'identified' : 'needs_identification';
       if ((changedField === 'handoff_direction' || changedField === 'anchor_behavior_ref') && handoff.anchor_behavior_ref) {
@@ -4561,6 +5152,9 @@
       }
       if (direction === 'outbound_followup' && handoff.requires_return && !handoff.resume_behavior_ref) {
         handoff.resume_behavior_ref = defaultResumeBehaviorRef(handoff.anchor_behavior_ref);
+      }
+      if (counterpartyBehavior && handoff.anchor_behavior_ref) {
+        handoff.trigger_condition = defaultHandoffTrigger(direction, handoff.anchor_behavior_ref);
       }
     }
 
@@ -4725,7 +5319,9 @@
         window.alert(`当前业务行为被${internalCallCount}条部门内调用预览信息引用。3001不编辑部门内调用，请保留该行为，或在MDM平台处理后重新导入。`);
         return false;
       }
-      const linkedHandoffCount = currentDocument().cross_department_handoffs.filter(item => item.anchor_behavior_ref === ref).length;
+      const linkedHandoffCount = currentDocument().cross_department_handoffs.filter(item =>
+        item.anchor_behavior_ref === ref || item.counterparty_behavior_ref === ref
+      ).length;
       if (linkedHandoffCount && !window.confirm(`删除当前业务行为将同时删除${linkedHandoffCount}条关联的跨部门待办。确定继续吗？`)) {
         return false;
       }
@@ -4738,7 +5334,9 @@
         if (item.produced_by_behavior_ref === ref) item.produced_by_behavior_ref = null;
         item.consumed_by_behavior_refs = item.consumed_by_behavior_refs.filter(value => value !== ref);
       });
-      currentDocument().cross_department_handoffs = currentDocument().cross_department_handoffs.filter(item => item.anchor_behavior_ref !== ref);
+      currentDocument().cross_department_handoffs = currentDocument().cross_department_handoffs.filter(item =>
+        item.anchor_behavior_ref !== ref && item.counterparty_behavior_ref !== ref
+      );
       currentDocument().cross_department_handoffs.forEach(item => {
         if (item.resume_behavior_ref === ref) item.resume_behavior_ref = null;
       });
@@ -4759,6 +5357,13 @@
         window.alert(`当前数据被${internalCallCount}条部门内调用预览信息引用。3001不编辑部门内调用，请保留该数据，或在MDM平台处理后重新导入。`);
         return false;
       }
+      const dynamicActorCount = currentDocument().behaviors.filter(behavior =>
+        behavior.actor_department_data_ref === ref
+      ).length;
+      if (
+        dynamicActorCount
+        && !window.confirm(`当前数据用于确定${dynamicActorCount}个行为的运行时责任部门。删除后，这些行为需要重新选择责任部门来源数据。确定继续吗？`)
+      ) return false;
       currentDocument().data_objects.splice(index, 1);
       if (activeDataRef === ref) {
         activeDataRef = currentDocument().data_objects[Math.min(index, currentDocument().data_objects.length - 1)]?.data_ref || '';
@@ -4766,6 +5371,7 @@
       currentDocument().behaviors.forEach(behavior => {
         behavior.input_data_refs = behavior.input_data_refs.filter(value => value !== ref);
         behavior.output_data_refs = behavior.output_data_refs.filter(value => value !== ref);
+        if (behavior.actor_department_data_ref === ref) behavior.actor_department_data_ref = null;
       });
       currentDocument().cross_department_handoffs.forEach(handoff => {
         if (handoff.transfer_data_ref === ref) handoff.transfer_data_ref = null;
@@ -4794,18 +5400,52 @@
       const outgoingRelations = (data?.flow_relations || []).filter(item => item.from_behavior_ref === externalBehaviorRef);
       const senderRef = incomingRelations.length === 1 ? incomingRelations[0].from_behavior_ref : null;
       const outgoingResumeRef = outgoingRelations.length === 1 ? outgoingRelations[0].to_behavior_ref : null;
+      const mergeDirection = incomingRelations.length === 0 && outgoingRelations.length === 1
+        ? 'inbound_prerequisite'
+        : 'outbound_followup';
+      const anchorBehaviorRef = mergeDirection === 'inbound_prerequisite'
+        ? outgoingResumeRef
+        : senderRef;
+      const anchorBehavior = (data?.behaviors || []).find(item => item.behavior_ref === anchorBehaviorRef);
       const outboundMatches = (data?.cross_department_handoffs || []).filter(item =>
-        item.handoff_direction === 'outbound_followup'
+        senderRef
+        && item.handoff_direction === 'outbound_followup'
         && item.anchor_behavior_ref === senderRef
         && (!text(item.target_department).trim() || item.target_department === externalDepartment)
       );
       const inboundMatches = (data?.cross_department_handoffs || []).filter(item =>
-        item.handoff_direction === 'inbound_prerequisite'
+        outgoingResumeRef
+        && item.handoff_direction === 'inbound_prerequisite'
         && item.anchor_behavior_ref === outgoingResumeRef
         && (!text(item.source_department).trim() || item.source_department === externalDepartment)
       );
-      const keptHandoff = outboundMatches.length === 1 ? outboundMatches[0] : null;
+      const selfAnchoredHandoffs = (data?.cross_department_handoffs || []).filter(item =>
+        item.anchor_behavior_ref === externalBehaviorRef
+      );
+      const directCounterpartyHandoffs = (data?.cross_department_handoffs || []).filter(item =>
+        item.counterparty_behavior_ref === externalBehaviorRef
+      );
+      const legacySelfHandoff = selfAnchoredHandoffs.length === 1 ? selfAnchoredHandoffs[0] : null;
       const inboundHandoff = inboundMatches.length === 1 ? inboundMatches[0] : null;
+      const directCounterpartyHandoff = directCounterpartyHandoffs.length === 1 ? directCounterpartyHandoffs[0] : null;
+      const keptHandoff = directCounterpartyHandoff || (mergeDirection === 'inbound_prerequisite'
+        ? inboundHandoff || legacySelfHandoff
+        : (outboundMatches.length === 1 ? outboundMatches[0] : null) || legacySelfHandoff);
+      const handoffSources = [];
+      const addHandoffSource = (handoff, source) => {
+        if (!handoff || handoffSources.some(item => item.handoff.handoff_ref === handoff.handoff_ref)) return;
+        handoffSources.push({ handoff, source });
+      };
+      addHandoffSource(keptHandoff, directCounterpartyHandoff === keptHandoff
+        ? '已关联当前外部门行为'
+        : legacySelfHandoff === keptHandoff
+          ? '旧版关联待办'
+          : (mergeDirection === 'inbound_prerequisite' ? '已有前置输入' : '已有后续承接'));
+      outboundMatches.forEach(item => addHandoffSource(item, '已有后续承接'));
+      inboundMatches.forEach(item => addHandoffSource(item, '已有前置输入'));
+      selfAnchoredHandoffs.forEach(item => addHandoffSource(item, '旧版关联待办'));
+      directCounterpartyHandoffs.forEach(item => addHandoffSource(item, '已关联当前外部门行为'));
+      const handoffsToMerge = handoffSources.map(item => item.handoff);
       const producedDataRefs = (data?.data_objects || [])
         .filter(item => item.produced_by_behavior_ref === externalBehaviorRef)
         .map(item => item.data_ref);
@@ -4813,53 +5453,82 @@
       if (!behavior) blockers.push('未找到需要归并的旧版外部门行为。');
       if (!owner) blockers.push('请先填写流程归口部门，再归并重复表达。');
       if (behavior && !externalDepartment) blockers.push('无法从原文件执行岗位识别承接部门。');
-      if (incomingRelations.length !== 1) blockers.push(`当前外部门行为有${incomingRelations.length}条前序关系，无法唯一确定本部门发起行为。`);
-      if (outgoingRelations.length > 1) blockers.push(`当前外部门行为有${outgoingRelations.length}条后续关系，无法唯一确定返回位置。`);
+      if (incomingRelations.length === 0) {
+        if (outgoingRelations.length !== 1) {
+          blockers.push(`当前外部门行为没有前序关系，并且有${outgoingRelations.length}条后续关系，无法唯一确定本流程接收行为。`);
+        }
+      } else {
+        if (incomingRelations.length !== 1) blockers.push(`当前外部门行为有${incomingRelations.length}条前序关系，无法唯一确定本部门发起行为。`);
+        if (outgoingRelations.length > 1) blockers.push(`当前外部门行为有${outgoingRelations.length}条后续关系，无法唯一确定返回位置。`);
+      }
+      if (anchorBehavior && externalActorDepartment(anchorBehavior.current_actor_role, owner)) {
+        blockers.push('与当前外部门行为相邻的行为仍由外部门执行，无法唯一确定本流程关联行为。');
+      }
       if (outboundMatches.length > 1) blockers.push(`检测到${outboundMatches.length}条可能的后续承接，无法唯一确定保留记录。`);
       if (inboundMatches.length > 1) blockers.push(`检测到${inboundMatches.length}条可能的前置输入，无法唯一确定返回记录。`);
-      if (behavior?.work_role) blockers.push('当前外部门行为绑定了正式工作角色，3001不能自动转移该角色。');
-      if (behavior?.countersign_all_required || (behavior?.countersign_target_departments || []).length) {
-        blockers.push('当前外部门行为包含会签要求，跨部门待办结构不能无损保存该会签信息。');
-      }
-      const linkedCalls = (data?.internal_process_calls || []).filter(item =>
-        item.caller_behavior_ref === externalBehaviorRef || item.return_behavior_ref === externalBehaviorRef
-      );
-      if (linkedCalls.length) blockers.push(`当前外部门行为被${linkedCalls.length}条部门内调用引用，3001不能自动改写。`);
+      if (selfAnchoredHandoffs.length > 1) blockers.push(`检测到${selfAnchoredHandoffs.length}条锚定在旧版外部门行为上的待办，无法唯一确定保留记录。`);
+      if (directCounterpartyHandoffs.length > 1) blockers.push(`当前外部门行为关联了${directCounterpartyHandoffs.length}条跨部门关系，无法唯一确定保留记录。`);
+      const processRefs = [...new Set(handoffsToMerge.map(item => text(item.counterparty_process_ref).trim()).filter(Boolean))];
+      const behaviorRefs = [...new Set(handoffsToMerge
+        .map(item => text(item.counterparty_behavior_ref).trim())
+        .filter(ref => ref && ref !== externalBehaviorRef))];
+      if (processRefs.length > 1) blockers.push('待归并记录引用了不同的外部门流程，3001不能自动选择保留哪一项。');
+      if (behaviorRefs.length > 1) blockers.push('待归并记录引用了不同的外部门行为，3001不能自动选择保留哪一项。');
+      const recognizedHandoffRefs = new Set(handoffsToMerge.map(item => item.handoff_ref));
       const otherLinkedHandoffs = (data?.cross_department_handoffs || []).filter(item =>
         (item.anchor_behavior_ref === externalBehaviorRef || item.resume_behavior_ref === externalBehaviorRef)
-        && item !== keptHandoff
-        && item !== inboundHandoff
+        && !recognizedHandoffRefs.has(item.handoff_ref)
       );
       if (otherLinkedHandoffs.length) blockers.push(`当前外部门行为还被${otherLinkedHandoffs.length}条其他跨部门待办引用。`);
 
-      const resumeOptions = mergeChoiceOptions('resume_behavior_ref', [
-        { value: keptHandoff?.resume_behavior_ref, label: `已有后续承接：${behaviorLabelForData(data, keptHandoff?.resume_behavior_ref)}`, source: '已有后续承接' },
-        { value: inboundHandoff?.anchor_behavior_ref, label: `已有前置输入：${behaviorLabelForData(data, inboundHandoff?.anchor_behavior_ref)}`, source: '已有前置输入' },
-        { value: outgoingResumeRef, label: `原流程后续关系：${behaviorLabelForData(data, outgoingResumeRef)}`, source: '原流程关系' }
+      if (mergeDirection === 'inbound_prerequisite') {
+        const conflictingResumeRefs = [...new Set(handoffsToMerge
+          .map(item => text(item.resume_behavior_ref).trim())
+          .filter(ref => ref && ref !== anchorBehaviorRef))];
+        if (conflictingResumeRefs.length) {
+          blockers.push('旧版待办的恢复位置与唯一的本流程接收行为不一致，无法自动改为前置输入。');
+        }
+      }
+
+      const handoffValueCandidates = (field, labeler = value => value) => handoffSources.map(({ handoff, source }) => ({
+        value: handoff?.[field],
+        label: `${source}：${labeler(handoff?.[field])}`,
+        source
+      }));
+
+      const transferDataOptions = mergeChoiceOptions('transfer_data_ref', [
+        ...handoffValueCandidates('transfer_data_ref', value => dataLabelForData(data, value))
+          .filter(candidate => mergeDirection === 'inbound_prerequisite' || !producedDataRefs.includes(candidate.value)),
+        ...(mergeDirection === 'inbound_prerequisite'
+          ? handoffValueCandidates('returned_data_ref', value => dataLabelForData(data, value))
+          : []),
+        ...(mergeDirection === 'inbound_prerequisite'
+          ? producedDataRefs.map(ref => ({ value: ref, label: `原外部门行为产生：${dataLabelForData(data, ref)}`, source: '原外部门行为' }))
+          : [])
       ]);
-      const returnedDataOptions = mergeChoiceOptions('returned_data_ref', [
-        { value: keptHandoff?.returned_data_ref, label: `已有后续承接：${dataLabelForData(data, keptHandoff?.returned_data_ref)}`, source: '已有后续承接' },
-        { value: inboundHandoff?.transfer_data_ref, label: `已有前置输入：${dataLabelForData(data, inboundHandoff?.transfer_data_ref)}`, source: '已有前置输入' },
-        ...producedDataRefs.map(ref => ({ value: ref, label: `原外部门行为产生：${dataLabelForData(data, ref)}`, source: '原外部门行为' }))
-      ]);
+      const resumeOptions = mergeDirection === 'outbound_followup'
+        ? mergeChoiceOptions('resume_behavior_ref', [
+            ...handoffValueCandidates('resume_behavior_ref', value => behaviorLabelForData(data, value)),
+            { value: inboundHandoff?.anchor_behavior_ref, label: `已有前置输入：${behaviorLabelForData(data, inboundHandoff?.anchor_behavior_ref)}`, source: '已有前置输入' },
+            { value: outgoingResumeRef, label: `原流程后续关系：${behaviorLabelForData(data, outgoingResumeRef)}`, source: '原流程关系' }
+          ])
+        : [];
+      const returnedDataOptions = mergeDirection === 'outbound_followup'
+        ? mergeChoiceOptions('returned_data_ref', [
+            ...handoffValueCandidates('returned_data_ref', value => dataLabelForData(data, value)),
+            { value: inboundHandoff?.transfer_data_ref, label: `已有前置输入：${dataLabelForData(data, inboundHandoff?.transfer_data_ref)}`, source: '已有前置输入' },
+            ...producedDataRefs.map(ref => ({ value: ref, label: `原外部门行为产生：${dataLabelForData(data, ref)}`, source: '原外部门行为' }))
+          ])
+        : [];
       const choices = {
-        counterparty_behavior_name: mergeChoiceOptions('counterparty_behavior_name', [
-          { value: keptHandoff?.counterparty_behavior_name, label: `已有后续承接：${keptHandoff?.counterparty_behavior_name}`, source: '已有后续承接' },
-          { value: behavior?.behavior_name, label: `原外部门行为：${behavior?.behavior_name}`, source: '原外部门行为' }
-        ]),
-        requested_matter: mergeChoiceOptions('requested_matter', [
-          { value: keptHandoff?.requested_matter, label: `已有后续承接：${keptHandoff?.requested_matter}`, source: '已有后续承接' },
-          { value: inboundHandoff?.requested_matter, label: `已有前置输入：${inboundHandoff?.requested_matter}`, source: '已有前置输入' }
-        ]),
+        requested_matter: mergeChoiceOptions('requested_matter', handoffValueCandidates('requested_matter')),
+        trigger_condition: mergeChoiceOptions('trigger_condition', handoffValueCandidates('trigger_condition')),
         completion_standard: mergeChoiceOptions('completion_standard', [
-          { value: keptHandoff?.completion_standard, label: `已有后续承接：${keptHandoff?.completion_standard}`, source: '已有后续承接' },
-          { value: behavior?.completion_standard, label: `原外部门行为：${behavior?.completion_standard}`, source: '原外部门行为' },
-          { value: inboundHandoff?.completion_standard, label: `已有前置输入：${inboundHandoff?.completion_standard}`, source: '已有前置输入' }
+          ...handoffValueCandidates('completion_standard'),
+          { value: behavior?.completion_standard, label: `原外部门行为：${behavior?.completion_standard}`, source: '原外部门行为' }
         ]),
-        counterparty_process_name: mergeChoiceOptions('counterparty_process_name', [
-          { value: keptHandoff?.counterparty_process_name, label: `已有后续承接：${keptHandoff?.counterparty_process_name}`, source: '已有后续承接' },
-          { value: inboundHandoff?.counterparty_process_name, label: `已有前置输入：${inboundHandoff?.counterparty_process_name}`, source: '已有前置输入' }
-        ]),
+        counterparty_process_name: mergeChoiceOptions('counterparty_process_name', handoffValueCandidates('counterparty_process_name')),
+        transfer_data_ref: transferDataOptions,
         resume_behavior_ref: resumeOptions,
         returned_data_ref: returnedDataOptions
       };
@@ -4874,10 +5543,13 @@
         externalDepartment,
         incomingRelations,
         outgoingRelations,
+        mergeDirection,
+        anchorBehaviorRef,
         senderRef,
         outgoingResumeRef,
         keptHandoff,
         inboundHandoff,
+        handoffsToMerge,
         producedDataRefs,
         blockers,
         choices,
@@ -4912,8 +5584,10 @@
       return ({
         counterparty_behavior_name: '承接部门办理动作',
         requested_matter: '需要处理或提供的事项',
+        trigger_condition: '触发条件',
         completion_standard: '完成标准',
         counterparty_process_name: '外部门对应流程名称',
+        transfer_data_ref: '传递数据',
         resume_behavior_ref: '返回后的恢复位置',
         returned_data_ref: '返回数据'
       })[field] || field;
@@ -4923,36 +5597,42 @@
       if (analysis.blockers.length) throw new Error(analysis.blockers[0]);
       const next = clone(data);
       const externalBehaviorRef = analysis.externalBehaviorRef;
+      const externalBehavior = next.behaviors.find(item => item.behavior_ref === externalBehaviorRef);
       const existingIndex = analysis.keptHandoff
         ? next.cross_department_handoffs.findIndex(item => item.handoff_ref === analysis.keptHandoff.handoff_ref)
         : -1;
       const existing = existingIndex >= 0 ? next.cross_department_handoffs[existingIndex] : null;
-      const resumeBehaviorRef = resolvedMergeValue(analysis, selections, 'resume_behavior_ref') || null;
-      const returnedDataRef = resolvedMergeValue(analysis, selections, 'returned_data_ref') || null;
+      const isInbound = analysis.mergeDirection === 'inbound_prerequisite';
+      const transferDataRef = resolvedMergeValue(analysis, selections, 'transfer_data_ref') || null;
+      const resumeBehaviorRef = isInbound ? null : (resolvedMergeValue(analysis, selections, 'resume_behavior_ref') || null);
+      const returnedDataRef = isInbound ? null : (resolvedMergeValue(analysis, selections, 'returned_data_ref') || null);
+      const sourceHandoffs = analysis.handoffsToMerge || [];
+      const preservedProcessRef = sourceHandoffs.find(item => item.counterparty_process_ref)?.counterparty_process_ref || null;
+      const completionStandard = resolvedMergeValue(analysis, selections, 'completion_standard');
+      if (externalBehavior && completionStandard) externalBehavior.completion_standard = completionStandard;
       const handoff = {
         handoff_ref: existing?.handoff_ref || newRef('handoff'),
-        handoff_direction: 'outbound_followup',
-        anchor_behavior_ref: analysis.senderRef,
+        handoff_direction: analysis.mergeDirection,
+        anchor_behavior_ref: analysis.anchorBehaviorRef,
         counterparty_resolution: 'identified',
-        source_department: analysis.owner,
-        target_department: analysis.externalDepartment,
-        transfer_data_ref: existing?.transfer_data_ref || null,
+        source_department: isInbound ? analysis.externalDepartment : analysis.owner,
+        target_department: isInbound ? analysis.owner : analysis.externalDepartment,
+        transfer_data_ref: transferDataRef,
         requested_matter: resolvedMergeValue(analysis, selections, 'requested_matter'),
-        trigger_condition: text(existing?.trigger_condition).trim()
-          || defaultHandoffTrigger('outbound_followup', analysis.senderRef, next),
-        completion_standard: resolvedMergeValue(analysis, selections, 'completion_standard'),
-        counterparty_process_ref: existing?.counterparty_process_ref || analysis.inboundHandoff?.counterparty_process_ref || null,
+        trigger_condition: resolvedMergeValue(analysis, selections, 'trigger_condition')
+          || defaultHandoffTrigger(analysis.mergeDirection, analysis.anchorBehaviorRef, next),
+        completion_standard: '',
+        counterparty_process_ref: preservedProcessRef,
         counterparty_process_name: resolvedMergeValue(analysis, selections, 'counterparty_process_name'),
-        counterparty_behavior_ref: existing?.counterparty_behavior_ref || null,
-        counterparty_behavior_name: resolvedMergeValue(analysis, selections, 'counterparty_behavior_name'),
-        requires_return: Boolean(resumeBehaviorRef || returnedDataRef || analysis.inboundHandoff || existing?.requires_return),
+        counterparty_behavior_ref: externalBehaviorRef,
+        counterparty_behavior_name: '',
+        requires_return: isInbound
+          ? false
+          : Boolean(resumeBehaviorRef || returnedDataRef || sourceHandoffs.some(item => item.requires_return)),
         returned_data_ref: returnedDataRef,
         resume_behavior_ref: resumeBehaviorRef
       };
-      const removedHandoffRefs = new Set([
-        analysis.keptHandoff?.handoff_ref,
-        analysis.inboundHandoff?.handoff_ref
-      ].filter(Boolean));
+      const removedHandoffRefs = new Set(sourceHandoffs.map(item => item.handoff_ref));
       next.cross_department_handoffs = next.cross_department_handoffs
         .filter(item => !removedHandoffRefs.has(item.handoff_ref));
       if (existingIndex >= 0) {
@@ -4960,25 +5640,26 @@
       } else {
         next.cross_department_handoffs.push(handoff);
       }
-      next.behaviors = next.behaviors.filter(item => item.behavior_ref !== externalBehaviorRef);
       next.flow_relations = next.flow_relations.filter(item =>
         item.from_behavior_ref !== externalBehaviorRef && item.to_behavior_ref !== externalBehaviorRef
       );
-      next.data_objects.forEach(item => {
-        if (item.produced_by_behavior_ref === externalBehaviorRef) item.produced_by_behavior_ref = null;
-        item.consumed_by_behavior_refs = (item.consumed_by_behavior_refs || []).filter(ref => ref !== externalBehaviorRef);
-      });
-      next.forms.forEach(item => {
-        if (item.behavior_ref === externalBehaviorRef) item.behavior_ref = null;
-      });
-      return { data: next, handoffRef: handoff.handoff_ref };
+      return { data: next, handoffRef: handoff.handoff_ref, behaviorRef: externalBehaviorRef };
     }
 
     function renderLegacyMergeModal() {
       const analysis = legacyMergeState?.analysis;
       if (!analysis) return;
+      const isInbound = analysis.mergeDirection === 'inbound_prerequisite';
+      const directionLabel = isInbound
+        ? '本流程行为开始前，由外部门提供输入'
+        : '本流程行为完成后，交给外部门办理';
+      const anchorLabel = behaviorLabelForData(currentDocument(), analysis.anchorBehaviorRef);
+      const duplicateHandoffCount = Math.max(0, (analysis.handoffsToMerge || []).length - (analysis.keptHandoff ? 1 : 0));
+      const handoffHandling = analysis.keptHandoff
+        ? `保留并校正1条已有待办${duplicateHandoffCount ? `，删除${duplicateHandoffCount}条重复待办` : ''}`
+        : '新建1条跨部门待办';
       const blockerMarkup = analysis.blockers.length
-        ? `<div class="inline-warning"><strong>当前不能自动归并：</strong><ul>${analysis.blockers.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul></div>`
+        ? `<div class="inline-warning"><strong>当前不能自动归并：</strong><p>系统无法唯一确定交接方向、关联位置或应保留的记录。为避免误删或错误连接，请先处理以下项目：</p><ul>${analysis.blockers.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul></div>`
         : '';
       const conflicts = analysis.conflicts.length
         ? `<div class="merge-conflicts"><strong>以下原值不一致，请逐项确认：</strong>${analysis.conflicts.map(conflict => `
@@ -4991,12 +5672,15 @@
             </div>`).join('')}</div>`
         : '<div class="inline-note">检测到的原值没有冲突，确认后可以直接归并。</div>';
       legacyMergeContent.innerHTML = `
-        <p>3001只处理当前页面草稿，不修改导入的源文件。归并后仍保留本部门发起动作，外部门办理动作只保存在一条跨部门待办中。</p>
+        <p>3001只处理当前页面草稿，不修改导入的源文件。归并后保留外部门行为及其执行部门、岗位、表单和数据引用，并用一条跨部门关系连接本流程位置。</p>
         <div class="merge-summary">
-          <div class="merge-summary-item"><strong>本部门发起动作：</strong>${escapeHtml(behaviorLabelForData(currentDocument(), analysis.senderRef))}</div>
+          <div class="merge-summary-item"><strong>归并方式：</strong>${escapeHtml(directionLabel)}</div>
+          <div class="merge-summary-item"><strong>${isInbound ? '本流程接收行为' : '本部门发起动作'}：</strong>${escapeHtml(anchorLabel)}</div>
           <div class="merge-summary-item"><strong>外部门办理动作：</strong>${escapeHtml(analysis.behavior?.behavior_name || '待填写')}（${escapeHtml(analysis.externalDepartment || '承接部门待确认')}）</div>
-          <div class="merge-summary-item"><strong>返回位置：</strong>${escapeHtml(behaviorLabelForData(currentDocument(), analysis.outgoingResumeRef))}</div>
-          <div class="merge-summary-item"><strong>将删除：</strong>1项旧版外部门行为、${analysis.incomingRelations.length + analysis.outgoingRelations.length}条关联流程关系、${analysis.inboundHandoff ? 1 : 0}条重复前置输入。${analysis.affectedFormCount ? `另有${analysis.affectedFormCount}张表单会保留内容并解除行为绑定。` : ''}</div>
+          ${isInbound ? '' : `<div class="merge-summary-item"><strong>返回位置：</strong>${escapeHtml(behaviorLabelForData(currentDocument(), analysis.outgoingResumeRef))}</div>`}
+          <div class="merge-summary-item"><strong>待办处理：</strong>${escapeHtml(handoffHandling)}</div>
+          <div class="merge-summary-item"><strong>将保留：</strong>外部门行为及其${analysis.affectedFormCount ? `${analysis.affectedFormCount}张表单、` : ''}数据引用、工作角色和会签信息。</div>
+          <div class="merge-summary-item"><strong>将删除：</strong>${analysis.incomingRelations.length + analysis.outgoingRelations.length}条重复的普通流程关系；跨部门方向、数据和返回位置改由保留的跨部门关系表达。</div>
         </div>
         ${blockerMarkup}
         ${analysis.blockers.length ? '' : conflicts}`;
@@ -5040,14 +5724,169 @@
         if (!result.valid) throw new Error('归并后的技术引用校验未通过，当前草稿未修改。');
         currentEntry().data = merged.data;
         currentEntry().dirty = true;
-        activeFlowItemKind = 'handoff';
+        activeFlowItemKind = 'behavior';
         activeHandoffRef = merged.handoffRef;
-        activeBehaviorRef = state.analysis.senderRef;
+        activeBehaviorRef = merged.behaviorRef;
         closeLegacyMerge();
         render();
-        showStatus('重复表达已归并为一条跨部门待办。源文件未修改；请核对承接动作、返回数据和恢复位置。', 'success');
+        showStatus(
+          state.analysis.mergeDirection === 'inbound_prerequisite'
+            ? '已归并为一个跨部门行为和一条前置交接关系。源文件未修改；请核对输入数据和本流程接收位置。'
+            : '已归并为一个跨部门行为和一条后续交接关系。源文件未修改；请核对传递数据、返回数据和恢复位置。',
+          'success'
+        );
       } catch (error) {
         showStatus(`归并未执行：${error.message}`, 'error');
+      }
+    }
+
+    function owningDepartmentChangeNeedsConfirmation(impact) {
+      return Boolean(
+        impact.fixedAssignments
+        || impact.dynamicAssignments
+        || impact.handoffCount
+        || impact.classificationFields
+        || impact.formalWorkRoles
+        || impact.internalCallCount
+      );
+    }
+
+    function renderOwningDepartmentChangeModal() {
+      const impact = owningDepartmentChangeState?.impact;
+      if (!impact) return;
+      const previousLabel = impact.previousDepartment || '未填写';
+      const nextLabel = impact.nextDepartment || '未填写';
+      const preservedReviewItems = [
+        impact.formalWorkRoles ? `${impact.formalWorkRoles}个正式工作角色` : '',
+        impact.internalCallCount ? `${impact.internalCallCount}条历史部门内调用` : ''
+      ].filter(Boolean);
+      const actorResetItems = [
+        impact.fixedAssignments ? `清空${impact.fixedAssignments}个行为已有的固定执行部门和岗位` : '',
+        impact.dynamicAssignments ? `将${impact.dynamicAssignments}个动态责任部门设置恢复为“固定部门和岗位—未选择”` : ''
+      ].filter(Boolean);
+      const actorResetMarkup = actorResetItems.length
+        ? `<div class="merge-summary-item"><strong>执行主体：</strong>${actorResetItems.join('；')}。</div>`
+        : '';
+      const handoffResetMarkup = impact.handoffCount
+        ? `<div class="merge-summary-item"><strong>跨部门待办：</strong>删除${impact.handoffCount}条依赖原归口部门的待办记录；其中可确定两端行为的位置会还原为${impact.restoredSequenceCount}条普通顺序关系，业务行为本身不会删除。</div>`
+        : '';
+      const classificationResetMarkup = impact.classificationFields
+        ? `<div class="merge-summary-item"><strong>能力归类：</strong>能力域、业务能力和归类状态恢复为未归类，当前有${impact.classificationFields}项已填内容会被重置。</div>`
+        : '';
+      const followupItems = [
+        impact.fixedAssignments || impact.dynamicAssignments || impact.handoffCount
+          ? '从“流程步骤—业务流程”开始，逐项选择执行主体，再重新登记实际跨部门待办'
+          : '',
+        impact.classificationFields ? '回到“基本信息”重新确认能力域、业务能力和归类状态' : '',
+        preservedReviewItems.length ? `在后续审核中重新确认${preservedReviewItems.join('和')}是否仍适用` : ''
+      ].filter(Boolean);
+      owningDepartmentChangeContent.innerHTML = `
+        <p>归口部门是识别本部门行为和跨部门行为的基准。将归口部门从“${escapeHtml(previousLabel)}”改为“${escapeHtml(nextLabel)}”后，原责任判断不能继续沿用。</p>
+        <div class="merge-summary">
+          ${actorResetMarkup}
+          ${handoffResetMarkup}
+          ${classificationResetMarkup}
+          <div class="merge-summary-item"><strong>保持不变：</strong>${impact.companyWideAssignments ? `${impact.companyWideAssignments}个“全公司通用”行为、` : ''}业务行为名称和说明、流程关系、输出物与数据、表单、技术标识${preservedReviewItems.length ? `，以及${preservedReviewItems.join('和')}` : ''}。</div>
+        </div>
+        ${preservedReviewItems.length ? `<div class="inline-warning" style="margin-top:14px">${escapeHtml(preservedReviewItems.join('和'))}不会被页面改写。归口部门变更后，请在后续审核中重新确认这些保留内容是否仍适用。</div>` : ''}
+        <div class="inline-warning" style="margin-top:14px"><strong>确认后需要重新梳理：</strong>${escapeHtml(followupItems.join('；'))}。页面刷新或关闭后无法恢复本次重置前的内容；需要留存时，请先导出当前草稿。</div>
+        <div id="owningDepartmentChangeError" class="inline-warning" style="margin-top:14px;display:none" role="alert"></div>`;
+    }
+
+    function openOwningDepartmentChange(nextDepartment) {
+      const data = currentDocument();
+      if (!data) return;
+      const impact = owningDepartmentChangeImpact(data, nextDepartment);
+      if (impact.nextDepartment === impact.previousDepartment) {
+        render();
+        return;
+      }
+      if (!owningDepartmentChangeNeedsConfirmation(impact)) {
+        data.process.owning_department = impact.nextDepartment;
+        touch();
+        render();
+        return;
+      }
+      owningDepartmentChangeState = {
+        candidateIndex: currentIndex,
+        processRef: text(data?.process?.process_ref).trim(),
+        impact
+      };
+      renderOwningDepartmentChangeModal();
+      owningDepartmentChangeModal.classList.add('show');
+      owningDepartmentChangeModal.setAttribute('aria-hidden', 'false');
+      confirmOwningDepartmentChangeButton.focus();
+    }
+
+    function closeOwningDepartmentChange() {
+      owningDepartmentChangeState = null;
+      owningDepartmentChangeModal.classList.remove('show');
+      owningDepartmentChangeModal.setAttribute('aria-hidden', 'true');
+      owningDepartmentChangeContent.innerHTML = '';
+    }
+
+    function showOwningDepartmentChangeError(message) {
+      const errorBox = document.getElementById('owningDepartmentChangeError');
+      if (!errorBox) return;
+      errorBox.textContent = message;
+      errorBox.style.display = 'block';
+    }
+
+    async function confirmOwningDepartmentChange() {
+      const state = owningDepartmentChangeState;
+      const entry = currentEntry();
+      if (!state || !entry) return;
+      if (
+        state.candidateIndex !== currentIndex
+        || state.processRef !== text(entry.data?.process?.process_ref).trim()
+        || state.impact.previousDepartment !== text(entry.data?.process?.owning_department).trim()
+      ) {
+        showOwningDepartmentChangeError('当前流程已发生变化。页面没有执行重置，请取消后重新选择归口部门。');
+        return;
+      }
+      confirmOwningDepartmentChangeButton.disabled = true;
+      try {
+        const next = buildOwningDepartmentResetDocument(entry.data, state.impact.nextDepartment);
+        await ensureCompatibleValidationService('再次变更归口部门');
+        const response = await fetch('/api/validate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ data: next })
+        });
+        const result = await readJsonResponse(response, '3001校验接口未返回结构化数据。');
+        if (!response.ok) throw new Error(result.error || '校验服务不可用');
+        if (!result.valid) throw new Error('重置后的技术引用校验未通过，当前草稿保持不变。');
+        entry.data = next;
+        activeHandoffRef = '';
+        if (activeFlowItemKind === 'handoff') activeFlowItemKind = 'behavior';
+        if (!next.behaviors.some(item => item.behavior_ref === activeBehaviorRef)) {
+          activeBehaviorRef = next.behaviors[0]?.behavior_ref || '';
+        }
+        const impact = state.impact;
+        closeOwningDepartmentChange();
+        touch();
+        render();
+        const resetItems = [
+          impact.fixedAssignments + impact.dynamicAssignments
+            ? `${impact.fixedAssignments + impact.dynamicAssignments}个执行主体设置`
+            : '',
+          impact.handoffCount ? `${impact.handoffCount}条跨部门待办` : '',
+          impact.classificationFields ? '能力归类' : ''
+        ].filter(Boolean);
+        const nextStep = impact.fixedAssignments || impact.dynamicAssignments || impact.handoffCount
+          ? '请从“流程步骤—业务流程”开始重新梳理。'
+          : impact.classificationFields
+            ? '请在“基本信息”中重新确认能力归类。'
+            : '请在后续审核中确认保留内容是否仍适用。';
+        showStatus(
+          `归口部门已改为“${impact.nextDepartment || '未填写'}”。${resetItems.length ? `页面已重置${resetItems.join('、')}；` : ''}${nextStep}`,
+          'success'
+        );
+      } catch (error) {
+        showOwningDepartmentChangeError(`变更未执行：${error.message}`);
+        showStatus(`归口部门变更未执行：${error.message}`, 'error');
+      } finally {
+        confirmOwningDepartmentChangeButton.disabled = false;
       }
     }
 
@@ -5099,6 +5938,7 @@
           detail.producerRefs.includes(behaviorRef)
           || detail.consumerRefs.includes(behaviorRef)
           || detail.availabilityStarts.includes(behaviorRef)
+          || currentDocument().behaviors.find(item => item.behavior_ref === behaviorRef)?.actor_department_data_ref === detail.dataRef
         );
         activeEditorSection = 'process';
         activeProcessSection = 'data';
@@ -5106,6 +5946,14 @@
         return render();
       }
       if (action === 'open-legacy-merge') return openLegacyMerge(text(element.dataset.ref));
+      if (action === 'normalize-actor-handoffs') {
+        const behavior = currentDocument().behaviors.find(item => item.behavior_ref === text(element.dataset.ref));
+        if (!behavior) return;
+        const modeLabel = ACTOR_ASSIGNMENT_MODES.find(item => item.value === actorAssignmentMode(behavior))?.label || '当前执行主体确定方式';
+        if (!removeCounterpartyLinksForBehavior(behavior.behavior_ref, modeLabel)) return;
+        touch();
+        return render();
+      }
       if (action === 'switch-editor-section') {
         activeEditorSection = EDITOR_SECTIONS.some(item => item.value === element.dataset.section)
           ? element.dataset.section
@@ -5167,8 +6015,8 @@
       if (action === 'remove-relation' && !removeRelation(index)) return;
       if (action === 'add-data') addDataObject();
       if (action === 'remove-data' && !removeData(index)) return;
-      if (action === 'add-inbound-handoff') addHandoff('inbound_prerequisite', text(element.dataset.ref) || null);
-      if (action === 'add-outbound-handoff') addHandoff('outbound_followup', text(element.dataset.ref) || null);
+      if (action === 'add-inbound-handoff') addCrossDepartmentBehavior('inbound_prerequisite', text(element.dataset.ref) || null);
+      if (action === 'add-outbound-handoff') addCrossDepartmentBehavior('outbound_followup', text(element.dataset.ref) || null);
       if (action === 'remove-linked-handoff' && !removeHandoffByRef(text(element.dataset.ref))) return;
       if (action === 'remove-handoff' && !removeHandoff(index)) return;
       if (action === 'add-current-form') addForm('current_state');
@@ -5214,11 +6062,25 @@
 
     function businessWarnings(data) {
       const warnings = [];
-      const addWarning = (message, target = {}) => {
-        warnings.push({ message, ...target });
+      const defaultSuggestions = target => {
+        if (target.focusPath) return ['点击本项返回对应位置，补充并核对页面高亮的字段。'];
+        if (Array.isArray(target.focusPaths) && target.focusPaths.length) {
+          return ['点击本项返回对应位置，逐项核对页面高亮的字段。'];
+        }
+        return ['点击本项返回对应页面，核对并补充相关内容。'];
       };
-      const need = (value, message, target = {}) => {
-        if (!text(value).trim()) addWarning(message, target);
+      const addWarning = (message, target = {}, suggestions = []) => {
+        const normalizedSuggestions = (Array.isArray(suggestions) ? suggestions : [suggestions])
+          .map(text)
+          .filter(Boolean);
+        warnings.push({
+          message,
+          suggestions: normalizedSuggestions.length ? normalizedSuggestions : defaultSuggestions(target),
+          ...target
+        });
+      };
+      const need = (value, message, target = {}, suggestions = []) => {
+        if (!text(value).trim()) addWarning(message, target, suggestions);
       };
       const atField = (target, focusPath) => ({ ...target, focusPath });
       const atFields = (target, focusPaths) => ({ ...target, focusPaths });
@@ -5262,18 +6124,70 @@
           focusKind: 'behavior',
           focusRef: item.behavior_ref
         };
-        const actorTarget = atField(behaviorTarget, `behaviors.${index}.current_actor_role`);
+        const assignmentMode = actorAssignmentMode(item);
+        const actorTarget = atField(
+          behaviorTarget,
+          assignmentMode === 'dynamic_from_data'
+            ? `behaviors.${index}.actor_department_data_ref`
+            : assignmentMode === 'company_wide'
+              ? `behaviors.${index}.actor_assignment_mode`
+              : `behaviors.${index}.current_actor_role`
+        );
         need(item.node_type, `${label}未选择节点类型`, atField(behaviorTarget, `behaviors.${index}.node_type`));
         need(item.behavior_name, `第${index + 1}项行为未填写名称`, atField(behaviorTarget, `behaviors.${index}.behavior_name`));
-        need(item.current_actor_role, `${label}未选择执行部门`, actorTarget);
-        const externalDepartment = externalActorDepartment(item.current_actor_role, owningDepartment);
-        if (externalDepartment) {
-          addWarning(
-            `${label}是旧版页面保存的外部门普通业务行为，可能与跨部门待办重复表达。请打开“归并重复表达”，确认承接动作、返回数据和恢复位置。`,
-            atField(behaviorTarget, 'legacy_merge')
+        if (assignmentMode === 'dynamic_from_data') {
+          if (!item.actor_department_data_ref) {
+            addWarning(`${label}未选择用于确定执行部门的前序数据`, actorTarget);
+          } else if (!dataFlowDetails?.isAvailableBeforeBehavior?.(item.actor_department_data_ref, item.behavior_ref)) {
+            addWarning(
+              `${label}选择的执行部门来源数据尚未在本行为开始前形成。`,
+              actorTarget,
+              ['改选本行为开始前已经形成的数据。']
+            );
+          }
+          need(
+            item.actor_position_rule,
+            `${label}未填写办理人员确定规则`,
+            atField(behaviorTarget, `behaviors.${index}.actor_position_rule`)
           );
+        } else if (assignmentMode === 'fixed_department') {
+          need(item.current_actor_role, `${label}未选择执行部门`, actorTarget);
         }
-        if (text(item.current_actor_role).trim() && rosterLoadState === 'ready') {
+        const externalDepartment = assignmentMode === 'fixed_department'
+          ? externalActorDepartment(item.current_actor_role, owningDepartment)
+          : '';
+        const counterpartyLinks = linkedHandoffsForCounterpartyBehavior(item.behavior_ref, data);
+        if (externalDepartment && needsLegacyExternalBehaviorMerge(item, data)) {
+          addWarning(
+            `${label}仍使用普通流程关系表达跨部门交接，可能与跨部门关系重复。`,
+            atField(behaviorTarget, 'legacy_merge'),
+            ['打开“归并为单一跨部门行为”，确认交接方向和数据去向。']
+          );
+        } else if (!externalDepartment && counterpartyLinks.length) {
+          if (assignmentMode === 'company_wide') {
+            addWarning(
+              `${label}已设为全公司通用，但仍关联${counterpartyLinks.length}条跨部门关系；全公司通用不计为跨部门行为。`,
+              actorTarget,
+              [
+                '实际由固定外部门办理时，将执行主体确定方式改为“固定部门和岗位”并选择该部门。',
+                '实际属于全公司通用行为时，删除不再适用的跨部门关系。'
+              ]
+            );
+          } else if (assignmentMode === 'dynamic_from_data') {
+            addWarning(
+              `${label}已改为按前序数据动态确定责任部门，但仍关联${counterpartyLinks.length}条固定跨部门关系。`,
+              actorTarget,
+              ['将相关流程位置转换为普通顺序关系，再删除这些固定跨部门关系。']
+            );
+          } else {
+            addWarning(
+              `${label}当前未识别为外部门行为，但仍关联${counterpartyLinks.length}条跨部门关系。`,
+              actorTarget,
+              ['确认实际执行部门；确定由本部门办理后，删除不再适用的跨部门关系。']
+            );
+          }
+        }
+        if (assignmentMode === 'fixed_department' && text(item.current_actor_role).trim() && rosterLoadState === 'ready') {
           const parsedActor = parseActorRole(item.current_actor_role);
           const actorDepartmentIsKnown = actorDepartments().includes(parsedActor.department);
           const actorIsValid = item.current_actor_role === '全公司'
@@ -5320,7 +6234,11 @@
           );
           const outletCount = localBranches.length + handoffBranches.length;
           if (outletCount < 2) {
-            addWarning(`${label}当前只有${outletCount}条明确出口，判断节点至少需要2条`, behaviorTarget);
+            addWarning(
+              `${label}当前只有${outletCount}条明确出口，判断节点至少需要2条。`,
+              behaviorTarget,
+              [`补充${2 - outletCount}条具有明确去向的判断出口。`]
+            );
           }
           const defaultSequenceBranches = localBranches.filter(branch =>
             branch.relation_type === 'sequence'
@@ -5329,14 +6247,18 @@
           defaultSequenceBranches.slice(1).forEach((branch, branchIndex) => {
             const relationIndex = data.flow_relations.indexOf(branch);
             addWarning(
-              `${label}的流程关系${relationIndex + 1}形成第${branchIndex + 2}条默认继续路径，判断节点只能保留1条`,
+              `${label}的流程关系${relationIndex + 1}形成第${branchIndex + 2}条默认继续路径，判断节点只能保留1条默认继续路径。`,
               {
                 editorSection: 'process',
                 processSection: 'relations',
                 focusKind: 'relation',
                 focusRef: branch.relation_ref,
                 focusPath: `flow_relations.${relationIndex}.relation_type`
-              }
+              },
+              [
+                '需要保留该关系时，为它填写判断条件并改为“判断分支”。',
+                '不需要保留该关系时，删除该默认继续关系。'
+              ]
             );
           });
         }
@@ -5351,37 +6273,31 @@
           focusPath: item.reason === 'multiple_legacy_producers'
             ? `data_objects.${item.dataIndex}.produced_by_behavior_ref`
             : `data_objects.${item.dataIndex}.consumed_by_behavior_refs`
-        });
+        }, item.suggestions);
       });
       const parallelDetails = globalThis.StructureLearningScore?.parallelStructureDetails?.(data);
       const parallelTarget = { editorSection: 'process', processSection: 'relations' };
       if (parallelDetails?.missingSplit) {
-        addWarning('当前存在并行路线，但尚未设置“并行开始（同时启动多条路线）”节点', {
+        addWarning('当前存在并行路线，但业务流程中没有“并行开始（同时启动多条路线）”控制节点。', {
           editorSection: 'process',
           processSection: 'behaviors'
-        });
+        }, ['新增“并行开始”控制节点，并让现有并行路线从该节点发出。']);
       }
       if (parallelDetails?.missingJoin) {
-        addWarning('当前存在并行路线，但尚未设置“并行汇合（等待多条路线完成）”节点', {
+        addWarning('当前存在并行路线，但业务流程中没有“并行汇合（等待多条路线完成）”控制节点。', {
           editorSection: 'process',
           processSection: 'behaviors'
-        });
+        }, ['新增“并行汇合”控制节点，并让需要等待的并行路线进入该节点。']);
       }
       parallelDetails?.splits.forEach(detail => {
         if (!detail.missingCount) return;
-        const label = detail.behavior.behavior_name || detail.behavior.behavior_ref || '并行开始节点';
-        addWarning(
-          `${label}当前只有${detail.routeCount}条并行路线；请进入流程关系，再新增${detail.missingCount}条以本节点为起点、流向不同后续行为的并行路线`,
-          parallelTarget
-        );
+        const guidance = globalThis.StructureLearningScore?.parallelSplitGuidance?.(detail, data);
+        addWarning(guidance?.message || '并行开始节点的有效并行路线不足2条。', guidance?.target || parallelTarget, guidance?.suggestions);
       });
       parallelDetails?.joins.forEach(detail => {
         if (!detail.missingCount) return;
-        const label = detail.behavior.behavior_name || detail.behavior.behavior_ref || '并行汇合节点';
-        addWarning(
-          `${label}当前只有${detail.sourceCount}个有效来源；请补充${detail.missingCount}条以本节点为目标的并行路线，跨部门路线返回时把恢复位置设为本节点`,
-          parallelTarget
-        );
+        const guidance = globalThis.StructureLearningScore?.parallelJoinGuidance?.(detail, data);
+        addWarning(guidance?.message || '并行汇合节点的有效来源不足2个。', guidance?.target || parallelTarget, guidance?.suggestions);
       });
       if (data.behaviors.length > 1) {
         const relationsTarget = {
@@ -5393,19 +6309,56 @@
           && relation.to_behavior_ref
           && relation.relation_type !== 'loop'
         );
-        if (!localRelations.length) {
-          addWarning('多个业务行为之间尚未建立流程关系', relationsTarget);
-        } else {
-          const incoming = new Map(data.behaviors.map(item => [item.behavior_ref, 0]));
-          const outgoing = new Map(data.behaviors.map(item => [item.behavior_ref, 0]));
-          localRelations.forEach(relation => {
-            if (incoming.has(relation.to_behavior_ref)) incoming.set(relation.to_behavior_ref, incoming.get(relation.to_behavior_ref) + 1);
-            if (outgoing.has(relation.from_behavior_ref)) outgoing.set(relation.from_behavior_ref, outgoing.get(relation.from_behavior_ref) + 1);
+        const incoming = new Map(data.behaviors.map(item => [item.behavior_ref, 0]));
+        const outgoing = new Map(data.behaviors.map(item => [item.behavior_ref, 0]));
+        const transitions = localRelations.map(relation => ({
+          from: relation.from_behavior_ref,
+          to: relation.to_behavior_ref
+        }));
+          data.cross_department_handoffs.forEach(handoff => {
+            const counterpartyRef = text(handoff.counterparty_behavior_ref).trim();
+            const anchorRef = text(handoff.anchor_behavior_ref).trim();
+            if (!incoming.has(counterpartyRef) || !incoming.has(anchorRef)) return;
+            if (handoff.handoff_direction === 'inbound_prerequisite') transitions.push({ from: counterpartyRef, to: anchorRef });
+            else transitions.push({ from: anchorRef, to: counterpartyRef });
+            if (
+              handoff.handoff_direction === 'outbound_followup'
+              && handoff.requires_return
+              && incoming.has(text(handoff.resume_behavior_ref).trim())
+            ) {
+              transitions.push({ from: counterpartyRef, to: text(handoff.resume_behavior_ref).trim() });
+            }
           });
+        transitions.forEach(transition => {
+          if (incoming.has(transition.to)) incoming.set(transition.to, incoming.get(transition.to) + 1);
+          if (outgoing.has(transition.from)) outgoing.set(transition.from, outgoing.get(transition.from) + 1);
+        });
+        if (!transitions.length) {
+          addWarning(
+            `当前有${data.behaviors.length}个流程节点，但没有建立任何有效流程关系。`,
+            relationsTarget,
+            ['从流程入口开始，按实际先后顺序建立节点之间的关系。']
+          );
+        } else {
           const starts = [...incoming.values()].filter(count => count === 0).length;
           const ends = [...outgoing.values()].filter(count => count === 0).length;
-          if (starts !== 1) addWarning(`当前识别到${starts}个流程入口，应由PMO核对为唯一入口`, relationsTarget);
-          if (ends !== 1) addWarning(`当前识别到${ends}个流程出口，应由PMO核对为至少一个明确结束位置`, relationsTarget);
+          if (starts !== 1) {
+            addWarning(
+              `当前识别到${starts}个流程入口，流程应有1个明确入口。`,
+              relationsTarget,
+              ['请PMO核对未连接的起始节点，并补充关系使流程只保留1个入口。']
+            );
+          }
+          if (ends !== 1) {
+            addWarning(
+              `当前识别到${ends}个流程出口，流程应有至少1个明确结束位置。`,
+              relationsTarget,
+              [
+                '流程仍需继续时，请PMO补充末端节点之后的关系。',
+                '末端节点确实结束流程时，请PMO确认该节点是明确结束位置。'
+              ]
+            );
+          }
         }
       }
       data.flow_relations.forEach((relation, index) => {
@@ -5432,14 +6385,16 @@
         );
         if (relation.relation_type === 'condition' && !text(relation.condition).trim()) {
           addWarning(
-            `流程关系${index + 1}为判断分支，但未填写判断条件`,
-            atField(relationTarget, `flow_relations.${index}.condition`)
+            `流程关系${index + 1}已选择“判断分支”，但判断条件为空。`,
+            atField(relationTarget, `flow_relations.${index}.condition`),
+            ['填写进入目标行为必须满足的具体判断结果。']
           );
         }
         if (relation.relation_type === 'loop' && !text(relation.condition).trim()) {
           addWarning(
-            `流程关系${index + 1}为流程内部回路，但未填写回路触发条件`,
-            atField(relationTarget, `flow_relations.${index}.condition`)
+            `流程关系${index + 1}已选择“流程内部回路”，但回路触发条件为空。`,
+            atField(relationTarget, `flow_relations.${index}.condition`),
+            ['填写退回前序行为的具体触发条件。']
           );
         }
       });
@@ -5457,8 +6412,9 @@
         );
         if (form.form_design_state === 'unspecified') {
           addWarning(
-            `${formLabel}的表单状态待确认`,
-            atField(formTarget, `forms.${formIndex}.form_design_state`)
+            `${formLabel}尚未确认属于现状表单还是拟设计表单。`,
+            atField(formTarget, `forms.${formIndex}.form_design_state`),
+            ['根据实际情况，在“现状”“拟设计”中选择一项。']
           );
         }
         const detailCount = form.areas.filter(area => area.area_type === '明细清单').length;
@@ -5477,30 +6433,44 @@
               : '待确认字段';
           if (area.area_type === '明细清单' && detailCount > 1 && !text(area.area_title).trim()) {
             addWarning(
-              `${formLabel}的${groupLabel}未填写明细表标题，当前多张明细表无法区分`,
-              atField(areaTarget, `forms.${formIndex}.areas.${areaIndex}.area_title`)
+              `${formLabel}包含${detailCount}张明细表，但${groupLabel}的标题为空，当前无法区分该明细表。`,
+              atField(areaTarget, `forms.${formIndex}.areas.${areaIndex}.area_title`),
+              ['填写能够区分该明细表用途的标题。']
             );
           }
           if (!area.area_type) {
             area.items.forEach((item, itemIndex) => {
               addWarning(
-                `${formLabel}的字段“${item.item_name || `字段${itemIndex + 1}`}”尚未确认属于主表还是哪张明细表`,
-                atField(areaTarget, `forms.${formIndex}.areas.${areaIndex}.items.${itemIndex}.assignment`)
+                `${formLabel}的字段“${item.item_name || `字段${itemIndex + 1}`}”尚未确定字段归属。`,
+                atField(areaTarget, `forms.${formIndex}.areas.${areaIndex}.items.${itemIndex}.assignment`),
+                ['字段属于主表时选择“主表”；字段属于明细表时选择一张具体明细表。']
               );
             });
           }
           if (!area.items.length && area.area_type === '明细清单') {
-            addWarning(`${formLabel}的${groupLabel}尚未录入字段`, areaTarget);
+            addWarning(
+              `${formLabel}的${groupLabel}当前没有字段。`,
+              areaTarget,
+              ['该明细表确实存在时，至少录入1个字段；不需要该明细表时将其删除。']
+            );
           }
         });
       });
       data.cross_department_handoffs.forEach((item, index) => {
-        const handoffTarget = {
-          editorSection: 'process',
-          processSection: 'behaviors',
-          focusKind: 'handoff',
-          focusRef: item.handoff_ref
-        };
+        const counterpartyBehavior = counterpartyBehaviorForHandoff(item, data);
+        const handoffTarget = counterpartyBehavior
+          ? {
+              editorSection: 'process',
+              processSection: 'behaviors',
+              focusKind: 'behavior',
+              focusRef: counterpartyBehavior.behavior_ref
+            }
+          : {
+              editorSection: 'process',
+              processSection: 'behaviors',
+              focusKind: 'handoff',
+              focusRef: item.handoff_ref
+            };
         need(
           ['inbound_prerequisite', 'outbound_followup'].includes(item.handoff_direction),
           `跨部门待办（候选）${index + 1}未选择承接方向`,
@@ -5516,44 +6486,75 @@
           : item.target_department;
         if (!['identified', 'needs_identification'].includes(item.counterparty_resolution)) {
           addWarning(
-          `跨部门待办（候选）${index + 1}未选择外部门识别状态`,
-            atField(handoffTarget, `cross_department_handoffs.${index}.counterparty_resolution`)
+          `跨部门待办（候选）${index + 1}尚未说明承接部门是否明确。`,
+            atField(handoffTarget, `cross_department_handoffs.${index}.counterparty_resolution`),
+            ['根据当前事实，在“已明确承接部门”“承接部门待明确”中选择一项。']
           );
         } else if (item.counterparty_resolution === 'identified' && !text(externalDepartment).trim()) {
           addWarning(
-          `跨部门待办（候选）${index + 1}已选择“已明确外部门”，但尚未选择具体部门`,
+          `跨部门待办（候选）${index + 1}已选择“已明确承接部门”，但具体承接部门为空。`,
             atField(
               handoffTarget,
               `cross_department_handoffs.${index}.${item.handoff_direction === 'inbound_prerequisite' ? 'source_department' : 'target_department'}`
-            )
+            ),
+            ['选择实际办理该跨部门业务的部门。']
           );
         }
         if (!item.transfer_data_ref && !text(item.requested_matter).trim()) {
           addWarning(
-          `跨部门待办（候选）${index + 1}未说明跨部门交界对象`,
-            atField(handoffTarget, `cross_department_handoffs.${index}.requested_matter`)
+          `跨部门待办（候选）${index + 1}未说明跨部门交界对象。`,
+            atField(handoffTarget, `cross_department_handoffs.${index}.requested_matter`),
+            [
+              '已有结构化数据时，在“传递数据”中选择对应数据。',
+              '没有对应结构化数据时，填写承接部门具体需要办理的事项。'
+            ]
           );
         }
-        if (!text(item.trigger_condition).trim() && !text(item.completion_standard).trim()) {
+        if (
+          !text(item.trigger_condition).trim()
+          && !text(item.completion_standard).trim()
+          && !text(counterpartyBehavior?.completion_standard).trim()
+        ) {
           addWarning(
-          `跨部门待办（候选）${index + 1}的触发条件和完成标准均为空`,
-            atField(handoffTarget, `cross_department_handoffs.${index}.trigger_condition`)
+          `跨部门待办（候选）${index + 1}没有可识别的触发条件和完成标准。`,
+            atField(handoffTarget, `cross_department_handoffs.${index}.trigger_condition`),
+            ['补充不能由关联流程关系表达的触发条件，并在承接部门业务行为中填写完成标准。']
           );
         }
-        if (!text(item.counterparty_process_name).trim() || !text(item.counterparty_behavior_name).trim()) {
+        if (!text(item.counterparty_process_name).trim()) {
           addWarning(
-          `跨部门待办（候选）${index + 1}的外部门流程、行为信息尚未补齐；导入MDM平台后将形成承接待办`,
-            handoffTarget
+          `跨部门待办（候选）${index + 1}未填写承接部门流程。`,
+            handoffTarget,
+            ['当前阶段可以保留该项；导入MDM平台后，由承接部门补充对应流程。']
+          );
+        }
+        if (!counterpartyBehavior && !text(item.counterparty_behavior_name).trim()) {
+          addWarning(
+            `跨部门待办（候选）${index + 1}未填写承接部门业务行为。`,
+            handoffTarget,
+            ['填写承接部门办理该事项时执行的业务动作。']
           );
         }
         if (
           item.handoff_direction === 'outbound_followup'
           && item.requires_return
-          && (!item.returned_data_ref || !item.resume_behavior_ref)
+          && !item.returned_data_ref
         ) {
           addWarning(
-          `跨部门待办（候选）${index + 1}要求返回，但返回信息尚未补齐；导入MDM平台后继续完善`,
-            handoffTarget
+            `跨部门待办（候选）${index + 1}已设置需要返回，但未选择返回数据。`,
+            atField(handoffTarget, `cross_department_handoffs.${index}.returned_data_ref`),
+            ['选择承接部门办理完成后返回本流程的数据。']
+          );
+        }
+        if (
+          item.handoff_direction === 'outbound_followup'
+          && item.requires_return
+          && !item.resume_behavior_ref
+        ) {
+          addWarning(
+            `跨部门待办（候选）${index + 1}已设置需要返回，但未选择返回后的恢复位置。`,
+            atField(handoffTarget, `cross_department_handoffs.${index}.resume_behavior_ref`),
+            ['选择本流程收到返回结果后继续办理的行为。']
           );
         }
       });
@@ -5827,7 +6828,13 @@
         }
         const warnings = businessWarnings(entry.data);
         if (warnings.length) {
-          const preview = warnings.slice(0, 8).map((item, index) => `${index + 1}. ${item.message}`).join('\n');
+          const preview = warnings.slice(0, 8).map((item, index) => {
+            const suggestionItems = warningSuggestions(item);
+            const suggestions = suggestionItems
+              .map((suggestion, suggestionIndex) => `${suggestionItems.length > 1 ? `建议${suggestionIndex + 1}` : '建议'}：${suggestion}`)
+              .join('\n   ');
+            return `${index + 1}. 当前情况：${item.message}\n   ${suggestions}`;
+          }).join('\n');
           const more = warnings.length > 8 ? `\n另有 ${warnings.length - 8} 项。` : '';
           if (!window.confirm(`当前是未审核草稿，PMO审核前仍需补齐：\n\n${preview}${more}\n\n仍然导出当前草稿吗？`)) {
             showStatus('已取消导出，当前页面内容仍保留。');
@@ -5837,7 +6844,7 @@
         const fileName = downloadJson(entry.data);
         entry.dirty = false;
         showStatus(`已导出 ${fileName}。该文件仍是未审核结果；可以提交MDM平台预览。只有归口部门MDM审核员登录MDM平台并完成审核，且服务端复核通过后，内容才会写入治理数据。`, 'success');
-        updateCandidateBar();
+        updateCandidateList();
         return true;
       } catch (error) {
         showStatus(`导出失败：${error.message}`, 'error');
@@ -5857,11 +6864,20 @@
         render();
       }
       protectedAction = action;
+      protectedActionInvoker = document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
       unsavedModal.classList.add('show');
       unsavedModal.setAttribute('aria-hidden', 'false');
     }
 
     function closeProtectedModal() {
+      if (protectedActionInvoker?.isConnected) {
+        protectedActionInvoker.focus();
+      } else if (unsavedModal.contains(document.activeElement)) {
+        document.activeElement.blur();
+      }
+      protectedActionInvoker = null;
       unsavedModal.classList.remove('show');
       unsavedModal.setAttribute('aria-hidden', 'true');
     }
@@ -5915,15 +6931,26 @@
       if (file) importJson(file);
     });
 
-    candidateSelect.addEventListener('change', event => {
-      currentIndex = Number(event.target.value) || 0;
+    candidateList.addEventListener('click', event => {
+      const button = event.target.closest('[data-candidate-index]');
+      if (!button) return;
+      const nextIndex = Number(button.dataset.candidateIndex);
+      if (!Number.isInteger(nextIndex) || !candidates[nextIndex] || nextIndex === currentIndex) return;
+      currentIndex = nextIndex;
       selectInitialTabAfterImport();
       render();
+    });
+
+    workspaceViewSwitch.addEventListener('click', event => {
+      const button = event.target.closest('[data-action]');
+      if (!button) return;
+      handleAction(button.dataset.action, button);
     });
 
     workspace.addEventListener('input', event => {
       const target = event.target.closest('[data-bind]');
       if (!target || !currentDocument()) return;
+      if (target.dataset.bind === 'process.owning_department') return;
       const kind = target.dataset.kind;
       const value = kind === 'boolean' ? target.checked : kind === 'nullable' ? nullable(target.value) : target.value;
       setByPath(target.dataset.bind, value);
@@ -5976,12 +7003,16 @@
           updateFlowHandoffSelectorLabel(handoff);
         }
       }
-      if (target.dataset.bind === 'process.process_name') updateCandidateBar();
+      if (target.dataset.bind === 'process.process_name') updateCandidateList();
       refreshPreviewAvailability();
     });
 
     workspace.addEventListener('change', event => {
       const target = event.target;
+      if (target.matches('[data-bind="process.owning_department"]')) {
+        openOwningDepartmentChange(target.value);
+        return;
+      }
       const handoffFieldMatch = target.dataset?.bind?.match(/^cross_department_handoffs\.(\d+)\.(.+)$/);
       if (handoffFieldMatch) {
         const handoff = currentDocument()?.cross_department_handoffs?.[Number(handoffFieldMatch[1])];
@@ -5994,11 +7025,76 @@
         render();
         return;
       }
+      if (target.matches('[data-actor-assignment-mode]')) {
+        const index = Number(target.dataset.actorAssignmentMode);
+        const behavior = currentDocument()?.behaviors?.[index];
+        if (!behavior) return;
+        const previousMode = actorAssignmentMode(behavior);
+        const nextMode = ACTOR_ASSIGNMENT_MODE_VALUES.has(target.value) ? target.value : 'fixed_department';
+        if (nextMode === previousMode) return;
+        if (
+          previousMode === 'dynamic_from_data'
+          && nextMode !== 'dynamic_from_data'
+          && (behavior.actor_department_data_ref || text(behavior.actor_position_rule).trim())
+          && !window.confirm('切换执行主体确定方式后，将清空当前的执行部门来源数据和岗位确定规则。确定继续吗？')
+        ) {
+          render();
+          return;
+        }
+        const nextModeLabel = ACTOR_ASSIGNMENT_MODES.find(item => item.value === nextMode)?.label || '新的执行主体确定方式';
+        if (
+          nextMode !== 'fixed_department'
+          && !removeCounterpartyLinksForBehavior(behavior.behavior_ref, nextModeLabel)
+        ) {
+          render();
+          return;
+        }
+        behavior.actor_assignment_mode = nextMode;
+        if (nextMode === 'company_wide') {
+          behavior.current_actor_role = '全公司';
+          behavior.actor_department_data_ref = null;
+          behavior.actor_position_rule = '';
+        } else if (nextMode === 'dynamic_from_data') {
+          behavior.current_actor_role = '';
+          behavior.actor_department_data_ref = null;
+          behavior.actor_position_rule = '';
+        } else {
+          behavior.current_actor_role = '';
+          behavior.actor_department_data_ref = null;
+          behavior.actor_position_rule = '';
+        }
+        touch();
+        render();
+        return;
+      }
       if (target.matches('[data-actor-department]')) {
         const index = Number(target.dataset.actorDepartment);
         const behavior = currentDocument()?.behaviors?.[index];
         if (!behavior) return;
-        behavior.current_actor_role = combineActorRole(target.value, '');
+        const previousValue = behavior.current_actor_role;
+        const nextValue = combineActorRole(target.value, '');
+        const nextExternalDepartment = externalActorDepartment(nextValue);
+        const hasCounterpartyLink = linkedHandoffsForCounterpartyBehavior(behavior.behavior_ref).length > 0;
+        if (
+          hasCounterpartyLink
+          && !nextExternalDepartment
+          && !removeCounterpartyLinksForBehavior(
+            behavior.behavior_ref,
+            target.value ? `${target.value}固定部门` : '未选择固定部门'
+          )
+        ) {
+          behavior.current_actor_role = previousValue;
+          render();
+          return;
+        }
+        behavior.actor_assignment_mode = 'fixed_department';
+        behavior.current_actor_role = nextValue;
+        behavior.actor_department_data_ref = null;
+        behavior.actor_position_rule = '';
+        if (nextExternalDepartment) {
+          ensureLinkedHandoffForExternalBehavior(behavior.behavior_ref, currentDocument(), { convertUniqueRelations: true });
+        }
+        linkedHandoffsForCounterpartyBehavior(behavior.behavior_ref).forEach(({ handoff }) => syncHandoffDerivedFields(handoff));
         touch();
         render();
         return;
@@ -6008,7 +7104,10 @@
         const behavior = currentDocument()?.behaviors?.[index];
         const department = workspace.querySelector(`[data-actor-department="${index}"]`)?.value || '';
         if (!behavior) return;
+        behavior.actor_assignment_mode = 'fixed_department';
         behavior.current_actor_role = combineActorRole(department, target.value);
+        if (externalActorDepartment(behavior.current_actor_role)) ensureLinkedHandoffForExternalBehavior(behavior.behavior_ref);
+        linkedHandoffsForCounterpartyBehavior(behavior.behavior_ref).forEach(({ handoff }) => syncHandoffDerivedFields(handoff));
         touch();
         render();
         return;
@@ -6037,12 +7136,9 @@
           return;
         }
       }
-      if (target.matches('[data-bind]') && target.dataset.bind === 'process.owning_department') {
-        currentDocument().cross_department_handoffs.forEach(handoff => syncHandoffDerivedFields(handoff));
-      }
       if (target.matches('[data-bind]') && (
-        target.dataset.bind === 'process.owning_department'
-        || /^behaviors\.\d+\.node_type$/.test(target.dataset.bind)
+        /^behaviors\.\d+\.node_type$/.test(target.dataset.bind)
+        || /^behaviors\.\d+\.(actor_department_data_ref|actor_position_rule)$/.test(target.dataset.bind)
         || /^cross_department_handoffs\.\d+\.(handoff_direction|counterparty_resolution|anchor_behavior_ref|requires_return)$/.test(target.dataset.bind)
         || /^forms\.\d+\.form_design_state$/.test(target.dataset.bind)
         || /^forms\.\d+\.areas\.\d+\.items\.\d+\.item_type$/.test(target.dataset.bind)
@@ -6066,6 +7162,12 @@
 
     document.getElementById('cancelLegacyMergeButton').addEventListener('click', closeLegacyMerge);
     confirmLegacyMergeButton.addEventListener('click', confirmLegacyMerge);
+    document.getElementById('cancelOwningDepartmentChangeButton').addEventListener('click', () => {
+      closeOwningDepartmentChange();
+      render();
+    });
+    document.getElementById('exportBeforeOwningDepartmentChangeButton').addEventListener('click', exportCurrent);
+    confirmOwningDepartmentChangeButton.addEventListener('click', confirmOwningDepartmentChange);
 
     document.getElementById('cancelProtectedButton').addEventListener('click', () => {
       protectedAction = null;
@@ -6097,6 +7199,11 @@
 
     window.addEventListener('keydown', event => {
       if (event.key !== 'Escape') return;
+      if (owningDepartmentChangeState) {
+        closeOwningDepartmentChange();
+        render();
+        return;
+      }
       if (legacyMergeState) return closeLegacyMerge();
       if (diagramExpanded) {
         diagramExpanded = false;

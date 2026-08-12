@@ -125,7 +125,7 @@
 | 制度版次 | Document Edition | 文档结构化输出中制度的字母版次，由系统自动生成并与制度编号共同标识外部引用对象；发布下一版次后上一版保留历史追溯并从默认当前视图移出 |
 | Procedure 业务编号 | Procedure Code | 文档结构化输出中流程对象的系统生成业务编号，格式为 `PROCEDURE-{草稿ID}-{三位序号}`，写入 `process_design_processes.process_code` 并保持唯一；L3 只表示流程层级和名称，不进入编号 |
 | 文档结构化输出结构规则 | Document Structured Output Schema | 机器可读的文档结构规则，统一制度草稿、制度档案、术语、L3流程、A1业务行为、跨部门承接、表单字段、证据、主数据需求和待确认问题字段；该规则不替代流程输入基线或组织真源 |
-| 单流程结构化文件规则 | Process Governance Structure Rules | 3001导出的`process-governance-v3`文件必须遵守的结构规则；一份JSON只包含一个`process`，记录编制元数据、业务行为、流程关系、待治理数据、跨部门前置输入和后续承接、历史内部流程调用、表单设计状态及表单字段分组，不包含可信审核状态、审核意见或批准标记。v1、v2只作为兼容导入版本 |
+| 单流程结构化文件规则 | Process Governance Structure Rules | 3001导出的`process-governance-v3`文件必须遵守的结构规则；一份JSON只包含一个`process`，记录编制元数据、业务行为、执行主体确定方式、流程关系、待治理数据、跨部门前置输入和后续承接、历史内部流程调用、表单设计状态及表单字段分组，不包含可信审核状态、审核意见或批准标记。v1、v2只作为兼容导入版本；缺少可选执行主体字段的旧v3文件继续有效 |
 | 单流程治理JSON | Single-Process Governance JSON | MDM流程编制的完整内容真源，当前结构版本为`process-governance-v3`。MDM兼容导入3001的v1、v2、v3文件，统一保存和导出v3；数据库修订号用于并发校验，浏览器不持久化该内容 |
 | 表单设计状态 | Form Design State | `forms[].form_design_state`记录一张表单是照录现状`current_state`、新建或优化设计`proposed_design`，还是历史文件尚未确认`unspecified`。3001和MDM不得根据表单名称、编号或明细表数量推断该状态 |
 | 字段归属 | Field Assignment | 用户依据纸质表单位置确认字段属于主表还是哪张明细表。JSON不增加字段级重复归属值：主表字段保存在`area_type="基本信息"`分组，明细表字段保存在对应`area_type="明细清单"`分组；该归属只组织结构化内容，不代表创建数据库表 |
@@ -148,7 +148,9 @@
 | 并行汇合 | Parallel Join | 等待多条路线完成后再继续的控制节点，使用`behaviors[].node_type=parallel_join`记录。它至少需要2个有效来源；返回要求已开启且恢复位置指向该节点的跨部门承接计为1个来源 |
 | 原文角色称谓 | Source Role Text | 制度、表单或流程图中原样出现的岗位、身份、组织或参与方称谓，文档结构化输出保存在 `steps.actor_role` 和角色证据中；它是待核验事实，不等同正式工作角色 |
 | 岗位参与草稿 | Position Participation Draft | 历史`document-structured-output-v2`中按参与部门、花名册岗位和参与方式记录的迁移材料；它不等同工作角色。3001当前只在每个业务行为的`current_actor_role`中保存一个执行岗位兼容值，不维护多岗位参与关系；旧文件导入时无法归并的内容保留在“旧版结构化补充信息”中 |
-| 执行岗位 | Current Execution Position | 3001编制人从仓库花名册中为当前业务行为选择的现行业务执行岗位。新建行为只允许选择流程归口部门花名册岗位或“全公司通用”；导入历史外部门值时原样保留，并标记为旧版页面产生的重复表达。具体值仍以“部门名称 + 岗位名称”保存到`behaviors[].current_actor_role`，“全公司通用”保存为`全公司` |
+| 执行主体确定方式 | Actor Assignment Mode | 3001为每个行为记录的责任确定方式，保存于`behaviors[].actor_assignment_mode`。`fixed_department`表示固定部门和岗位，`company_wide`表示全公司通用，`dynamic_from_data`表示由前序数据在运行时确定责任部门。三种方式互斥；全公司通用不是部门，也不算跨部门 |
+| 执行岗位 | Current Execution Position | 3001在固定部门模式下从仓库花名册中为当前业务行为选择的现行业务执行岗位。执行部门可以是任意组织部门，岗位只从所选部门的花名册中选择；具体值以“部门名称 + 岗位名称”保存到`behaviors[].current_actor_role`。全公司通用和动态责任部门不使用固定岗位选择器 |
+| 动态责任部门 | Dynamic Responsible Department | 行为的责任部门不能在设计时固定，而是由本行为开始前已经形成的数据在运行时确定。3001使用`actor_department_data_ref`记录来源数据，使用`actor_position_rule`记录办理人员确定规则；设计态不预建固定跨部门待办。运行时责任部门与流程归口部门不同时才按跨部门办理，同一数据中的不同责任部门分别办理，责任部门为空时不得向全公司广播 |
 | 工作角色 | Work Role | 与具体业务行为或判断节点绑定的稳定业务责任分类，名称必须保留行为语义，例如“费用审核行为的审核角色”；工作角色不直接等于人员、岗位或RBAC权限，一个工作角色可以由多个岗位容纳 |
 | 工作角色绑定 | Work Role Binding | 业务行为或判断节点与工作角色之间的一对一绑定；每个行为最多一个工作角色，一个流程通过不同业务行为可以包含多个工作角色。绑定必须保存业务行为标识、职责、全称和可选正式编码，不能只保存“申请人、审核人、批准人”等孤立名称 |
 | MDM工作角色 | MDM Governance Role | MDM平台固定治理模型中的授权角色，包括`admin`、`mdm_lead`、`department_contact`、`department_mdm_reviewer`、`data_conflict_handler`、`data_quality_auditor`和`decision_group`；它不等同人员、岗位、正式流程工作角色`WR-*`或原文角色称谓 |
@@ -161,7 +163,7 @@
 | 附表结构 | Form Table Structure | 文档结构化输出中的表单结构，采用“表单 -> 主表 / 可选明细表 -> 字段”模型；表单必须指向未作废业务行为，主表始终存在，明细表需要先创建后新增明细字段，字段编号由系统生成且不在录入界面手填 |
 | 归档责任 | Archive Responsibility | 文档结构化输出中表单的归档责任字段，由归档位置、留存周期、归档责任部门和归档责任角色组成；责任部门来自平台部门清单，责任角色来自所选部门花名册任岗 |
 | 文档结构化输出字段类型字典 | Document Structured Output Field Type Dictionary | MDM文档结构化输出和3001表单填写项共同使用的标准类型清单，包含文本、长文本、数字、日期、日期时间、金额、枚举、布尔、部门、人员、文件编号、签名、图片、附件和二维码。3001必须以下拉方式提供，不允许自由填写；导入历史文件中的非标准值时保留原值并提示未收录，主动修改后只能改选标准类型 |
-| 跨部门待办（候选） | Cross-Department Handoff Candidate | 3001中表达外部门办理事项的唯一记录，保存在`cross_department_handoffs[]`。采用“两个动作、一条待办记录”：本部门发起动作保存在`behaviors[]`，外部门办理动作保存在`counterparty_behavior_name`，待办事项保存在`requested_matter`；不再新建外部门普通业务行为或额外顺序关系。3001只登记候选，正式待办由3000审核导入后生成 |
+| 跨部门待办（候选） | Cross-Department Handoff Candidate | 3001中表达本流程位置与固定外部门行为之间交接关系的记录，保存在`cross_department_handoffs[]`。外部门实际动作、执行部门、岗位、完成标准、表单和数据关系保存在一个`behaviors[]`对象中，交接记录用`counterparty_behavior_ref`引用它，只补充方向、锚点、交界事项、传递数据和返回关系；关联本文件行为时不重复填写`counterparty_behavior_name`。全公司通用不属于跨部门待办；动态责任部门在设计态也不预建该记录。3001只登记候选，正式待办由3000审核导入后生成 |
 | 承接方向 | Handoff Direction | `inbound_prerequisite`表示外部门输入先于本流程锚点，`outbound_followup`表示本流程锚点完成后由外部门继续承接；流程图箭头必须按方向绘制 |
 | 待明确责任部门 | Needs Identification | 编制人已经发现跨部门承接，但现有材料不足以确认外部门时使用的明确状态。该状态不阻止3001导出，进入MDM平台后形成由MDM工作组组长分派的待办 |
 | 承接待办 | Handoff Acceptance Todo | MDM平台根据跨部门承接状态、当前人员角色、部门和参与关系实时生成的处理入口，用于分派、补充、审核和结构检查；待办不写入“待确认问题”，也不是第二份承接事实 |
@@ -174,6 +176,8 @@
 | 待治理数据对象 | Candidate Data Object | 3001把用户登记的输出物作为数据线索保存的对象，只记录名称、产生行为和使用行为；主数据属性、黄金源、数据责任、质量规则和共享范围留到后续数据治理确认 |
 | 主表结构 | Main Form Structure | 3001每张表单或记录的主体填写结构，JSON沿用`areas[]`并以`area_type="基本信息"`表示。新建表单只创建一个空主表框架，不自动生成名称、编号、标题或填写项 |
 | 明细表结构 | Detail Form Structure | 3001表单或记录中可以增加零到多张的明细填写结构，JSON沿用`areas[]`并以`area_type="明细清单"`表示。不同明细表分别保存标题和`items[]`，导入迁移时不得合并 |
+| 信息收集主表 | Information Collection Main Form | 4000/4001信息收集表中每名填报人只填写一次的字段结构；一个表单可以用多个`kind="main"`分区组织主表字段，答案按稳定`fieldKey`保存在答卷根对象 |
+| 信息收集明细表 | Information Collection Detail Table | 4000/4001信息收集表中允许填报人增加多行的独立结构；每张`kind="detail"`明细表按`sectionKey`保存多条稳定`rowKey`明细行，不同明细表不得合并 |
 | 填写项 | Form Entry Item | 3001主表或明细表结构下的具体填写内容，保存在`areas[].items[]`；页面先选择表单或记录，再选择主表或某张明细表，最后编辑当前结构的填写项 |
 
 ---

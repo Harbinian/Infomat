@@ -30,6 +30,9 @@ function behavior(index, nodeType = 'action') {
     behavior_name: `业务行为${index}`,
     behavior_description: `执行第${index}项工作`,
     current_actor_role: '经营发展部部长',
+    actor_assignment_mode: 'fixed_department',
+    actor_department_data_ref: null,
+    actor_position_rule: '',
     trigger: `触发条件${index}`,
     precondition: '',
     input_description: '',
@@ -330,7 +333,10 @@ const missingConditionDocument = JSON.parse(JSON.stringify(defaultSequenceDocume
 missingConditionDocument.flow_relations[2].relation_type = 'condition';
 const missingConditionResult = content(missingConditionDocument);
 assert.equal(
-  missingConditionResult.issues.some(item => item.message === '流程关系3为判断分支，但未填写判断条件'),
+  missingConditionResult.issues.some(item =>
+    item.message === '流程关系3已选择“判断分支”，但判断条件为空。'
+    && item.suggestions.includes('填写进入目标行为必须满足的具体判断结果。')
+  ),
   true
 );
 assert.ok(missingConditionResult.dimensions.relation < 20);
@@ -372,9 +378,43 @@ parallelDetails = parallelStructureDetails(oneRouteParallelDocument);
 assert.equal(parallelDetails.splits[0].routeCount, 1);
 assert.equal(parallelDetails.splits[0].missingCount, 1);
 assert.equal(
-  content(oneRouteParallelDocument).issues.some(item => item.message === '业务行为2当前只有1条并行路线；请进入流程关系，再新增1条以本节点为起点、流向不同后续行为的并行路线'),
+  content(oneRouteParallelDocument).issues.some(item =>
+    item.message === '业务行为2当前有效并行路线为1条，规则要求至少2条。'
+    && item.suggestions.includes('新增1条从本节点流向不同后续行为的并行路线。')
+  ),
   true
 );
+const misclassifiedParallelDocument = JSON.parse(JSON.stringify(parallelDocument));
+misclassifiedParallelDocument.flow_relations.slice(1).forEach(item => {
+  item.relation_type = 'sequence';
+});
+parallelDetails = parallelStructureDetails(misclassifiedParallelDocument);
+assert.equal(parallelDetails.splits[0].routeCount, 0);
+assert.equal(parallelDetails.splits[0].sequenceRelations.length, 2);
+assert.equal(parallelDetails.joins[0].sourceCount, 0);
+assert.equal(parallelDetails.joins[0].sequenceRelations.length, 2);
+const misclassifiedParallelResult = content(misclassifiedParallelDocument);
+const splitTypeIssue = misclassifiedParallelResult.issues.find(item =>
+  item.message === '业务行为2已有2条通往“业务行为3”、“业务行为4”的顺序关系，顺序关系不计入并行路线；当前有效并行路线为0条，规则要求至少2条。'
+);
+assert.deepEqual(splitTypeIssue.suggestions, ['将通往“业务行为3”、“业务行为4”的现有顺序关系改为“并行路线”。']);
+assert.deepEqual(splitTypeIssue.focusPaths, [
+  'flow_relations.1.relation_type',
+  'flow_relations.2.relation_type'
+]);
+assert.equal(splitTypeIssue.focusRef, 'relation-2');
+assert.equal(splitTypeIssue.focusPath, 'flow_relations.1.relation_type');
+const joinTypeIssue = misclassifiedParallelResult.issues.find(item =>
+  item.message === '业务行为5已有2条来自“业务行为3”、“业务行为4”的顺序关系，顺序关系不计入并行汇合来源；当前共有0个有效来源（0条并行路线来源、0个跨部门返回来源），规则要求至少2个。'
+);
+assert.deepEqual(joinTypeIssue.suggestions, ['将“业务行为3”、“业务行为4”进入本节点的现有顺序关系改为“并行路线”。']);
+assert.deepEqual(joinTypeIssue.focusPaths, [
+  'flow_relations.3.relation_type',
+  'flow_relations.4.relation_type'
+]);
+assert.equal(joinTypeIssue.focusRef, 'relation-4');
+assert.equal(joinTypeIssue.focusPath, 'flow_relations.3.relation_type');
+assert.ok(misclassifiedParallelResult.issues.every(item => Array.isArray(item.suggestions) && item.suggestions.length));
 const returningHandoffJoinDocument = JSON.parse(JSON.stringify(parallelDocument));
 returningHandoffJoinDocument.flow_relations = returningHandoffJoinDocument.flow_relations.filter(item => item.relation_ref !== 'relation-5');
 returningHandoffJoinDocument.cross_department_handoffs = [{
@@ -403,6 +443,40 @@ let dataFlowDetails = dataFlowConsistencyDetails(downstreamDataDocument);
 assert.equal(dataFlowDetails.issues.length, 0, 'a producer may supply an explicitly reachable downstream behavior');
 assert.equal(dataFlowDetails.isConsumerAvailable('data-1', 'behavior-2'), true);
 assert.equal(dataFlowDetails.isConsumerAvailable('data-1', 'behavior-1'), false, 'a behavior cannot consume its own output');
+assert.equal(dataFlowDetails.isAvailableBeforeBehavior('data-1', 'behavior-2'), true);
+assert.equal(dataFlowDetails.isAvailableBeforeBehavior('data-1', 'behavior-1'), false);
+
+const dynamicActorDocument = createDocument(3);
+dynamicActorDocument.behaviors[2].current_actor_role = '';
+dynamicActorDocument.behaviors[2].actor_assignment_mode = 'dynamic_from_data';
+dynamicActorDocument.behaviors[2].actor_department_data_ref = 'data-1';
+dynamicActorDocument.behaviors[2].actor_position_rule = '由数据中的责任部门确定整改责任人';
+let dynamicActorResult = content(dynamicActorDocument);
+assert.equal(
+  dynamicActorResult.issues.some(item => item.message.includes('执行部门来源数据') || item.message.includes('执行岗位或责任人确定规则')),
+  false,
+  'a reachable preceding data object and assignment rule complete a dynamic actor assignment'
+);
+assert.equal(dynamicActorDocument.cross_department_handoffs.length, 0, 'a dynamic assignment is not a fixed cross-department handoff');
+
+const futureDynamicActorDocument = createDocument(3);
+futureDynamicActorDocument.behaviors[0].current_actor_role = '';
+futureDynamicActorDocument.behaviors[0].actor_assignment_mode = 'dynamic_from_data';
+futureDynamicActorDocument.behaviors[0].actor_department_data_ref = 'data-1';
+futureDynamicActorDocument.behaviors[0].actor_position_rule = '由数据中的责任部门确定整改责任人';
+futureDynamicActorDocument.data_objects[0].produced_by_behavior_ref = 'behavior-3';
+futureDynamicActorDocument.data_objects[0].consumed_by_behavior_refs = [];
+dynamicActorResult = content(futureDynamicActorDocument);
+assert.ok(dynamicActorResult.issues.some(item => item.message.includes('尚未在本行为开始前形成')));
+
+const companyWideActorDocument = createDocument(1);
+companyWideActorDocument.behaviors[0].current_actor_role = '全公司';
+companyWideActorDocument.behaviors[0].actor_assignment_mode = 'company_wide';
+assert.equal(
+  content(companyWideActorDocument).issues.some(item => item.message.includes('未选择执行部门') || item.message.includes('未选择执行岗位')),
+  false,
+  'company-wide is a complete assignment mode and is not treated as cross-department'
+);
 
 const futureDataDocument = createDocument(3);
 futureDataDocument.data_objects[0].produced_by_behavior_ref = 'behavior-3';
@@ -445,6 +519,43 @@ returnedDataDocument.cross_department_handoffs = [{
 assert.equal(dataFlowConsistencyDetails(returnedDataDocument).issues.length, 0);
 returnedDataDocument.data_objects[0].consumed_by_behavior_refs = ['behavior-1'];
 assert.equal(dataFlowConsistencyDetails(returnedDataDocument).issues[0].reason, 'before_external_return');
+
+const linkedCrossDepartmentDataDocument = createDocument(3);
+linkedCrossDepartmentDataDocument.flow_relations = [];
+linkedCrossDepartmentDataDocument.cross_department_handoffs = [{
+  handoff_ref: 'handoff-linked-external',
+  handoff_direction: 'outbound_followup',
+  anchor_behavior_ref: 'behavior-1',
+  counterparty_behavior_ref: 'behavior-2',
+  requires_return: true,
+  returned_data_ref: 'data-1',
+  resume_behavior_ref: 'behavior-3'
+}];
+linkedCrossDepartmentDataDocument.data_objects[0].produced_by_behavior_ref = 'behavior-2';
+linkedCrossDepartmentDataDocument.data_objects[0].consumed_by_behavior_refs = ['behavior-3'];
+dataFlowDetails = dataFlowConsistencyDetails(linkedCrossDepartmentDataDocument);
+assert.equal(dataFlowDetails.issues.length, 0, 'returned data produced by the linked external behavior is available after the resume point');
+assert.ok(dataFlowDetails.incomingByBehavior.get('behavior-2').some(item => item.kind === 'outbound_handoff'));
+linkedCrossDepartmentDataDocument.data_objects[0].consumed_by_behavior_refs = ['behavior-1'];
+assert.equal(
+  dataFlowConsistencyDetails(linkedCrossDepartmentDataDocument).issues[0].reason,
+  'future_data',
+  'data produced by a downstream external behavior must not be selectable by its local predecessor'
+);
+
+const linkedInboundDataDocument = createDocument(2);
+linkedInboundDataDocument.flow_relations = [];
+linkedInboundDataDocument.cross_department_handoffs = [{
+  handoff_ref: 'handoff-linked-inbound',
+  handoff_direction: 'inbound_prerequisite',
+  anchor_behavior_ref: 'behavior-2',
+  counterparty_behavior_ref: 'behavior-1',
+  requires_return: false,
+  resume_behavior_ref: null
+}];
+linkedInboundDataDocument.data_objects[0].produced_by_behavior_ref = 'behavior-1';
+linkedInboundDataDocument.data_objects[0].consumed_by_behavior_refs = ['behavior-2'];
+assert.equal(dataFlowConsistencyDetails(linkedInboundDataDocument).issues.length, 0);
 
 const loopDoesNotRelaxDataDocument = createDocument(2);
 loopDoesNotRelaxDataDocument.flow_relations.push(relation(2, 'behavior-2', 'behavior-1', 'loop', '退回重办'));

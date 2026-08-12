@@ -22,6 +22,9 @@ async function main() {
   assert.equal(respondent.response.status, 200);
   assert.equal(respondent.body.surface, 'respondent');
   assert.equal(respondent.body.port, respondentPort);
+  const session = await json(`http://${host}:${adminPort}/api/v1/auth/session`);
+  assert.equal(session.response.status, 200);
+  assert.equal(session.body.authenticated, false);
   const unauthenticated = await json(`http://${host}:${respondentPort}/api/v1/tasks`);
   assert.equal(unauthenticated.response.status, 401);
   assert.equal(unauthenticated.body.code, 'AUTH_REQUIRED');

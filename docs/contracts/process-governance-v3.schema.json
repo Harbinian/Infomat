@@ -37,7 +37,7 @@
     "behaviors": {
       "type": "array",
       "items": {
-        "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/behavior"
+        "$ref": "#/$defs/behavior"
       },
       "default": []
     },
@@ -88,6 +88,110 @@
     }
   },
   "$defs": {
+    "behavior": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "behavior_ref",
+        "node_type",
+        "behavior_name",
+        "current_actor_role",
+        "trigger",
+        "precondition",
+        "input_description",
+        "timing",
+        "completion_standard",
+        "output_description",
+        "input_data_refs",
+        "output_data_refs",
+        "work_role",
+        "countersign_all_required",
+        "countersign_target_departments"
+      ],
+      "properties": {
+        "behavior_ref": {
+          "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/technicalRef"
+        },
+        "node_type": {
+          "enum": [
+            "",
+            "action",
+            "decision",
+            "parallel_split",
+            "parallel_join"
+          ]
+        },
+        "behavior_name": {
+          "type": "string"
+        },
+        "behavior_description": {
+          "type": "string"
+        },
+        "current_actor_role": {
+          "type": "string"
+        },
+        "actor_assignment_mode": {
+          "enum": [
+            "fixed_department",
+            "company_wide",
+            "dynamic_from_data"
+          ],
+          "default": "fixed_department"
+        },
+        "actor_department_data_ref": {
+          "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/nullableTechnicalRef"
+        },
+        "actor_position_rule": {
+          "type": "string"
+        },
+        "trigger": {
+          "type": "string"
+        },
+        "precondition": {
+          "type": "string"
+        },
+        "input_description": {
+          "type": "string"
+        },
+        "timing": {
+          "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/nullableString"
+        },
+        "completion_standard": {
+          "type": "string"
+        },
+        "output_description": {
+          "type": "string"
+        },
+        "input_data_refs": {
+          "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/technicalRefList"
+        },
+        "output_data_refs": {
+          "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/technicalRefList"
+        },
+        "work_role": {
+          "anyOf": [
+            {
+              "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/workRole"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "countersign_all_required": {
+          "type": "boolean",
+          "default": false
+        },
+        "countersign_target_departments": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true,
+          "default": []
+        }
+      }
+    },
     "formOrRecord": {
       "type": "object",
       "additionalProperties": false,

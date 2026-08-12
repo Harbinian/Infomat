@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>信息收集后台</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="preview.css">
+  <link rel="stylesheet" href="details.css">
 </head>
 <body>
   <main id="loginView" class="login-shell">
@@ -46,13 +48,19 @@
       <section id="builder" class="workspace hidden">
         <div class="workspace-head">
           <div><span id="formCode" class="tag"></span><h2 id="formTitle"></h2><p id="formMeta"></p></div>
-          <div class="actions"><button id="saveDraft" class="primary">保存设计稿</button><button id="openPublish">发布任务</button></div>
+          <div class="actions"><button id="previewForm">预览表单</button><button id="saveDraft" class="primary">保存设计稿</button><button id="openPublish">发布任务</button><button id="archiveForm">归档表单</button><button id="deleteForm" class="danger">删除表单</button></div>
         </div>
         <div class="builder-grid">
           <aside class="field-list-panel">
             <div class="panel-title"><h3>字段列表</h3><span>通过上下移动调整顺序</span></div>
             <label>当前分区<select id="sectionSelect"></select></label>
-            <div class="inline-actions"><button id="addSection">新增分区</button><button id="renameSection">修改分区</button></div>
+            <div class="inline-actions"><button id="addMainSection">新增主表分区</button><button id="addDetailSection">新增明细表</button><button id="renameSection">修改名称</button></div>
+            <div id="detailSettings" class="detail-settings hidden">
+              <strong>明细行规则</strong>
+              <div class="two-cols"><label>最少行数<input id="detailMinRows" type="number" min="0" max="100"></label><label>最多行数<input id="detailMaxRows" type="number" min="1" max="100"></label></div>
+              <button id="applyDetailSettings">应用明细行规则</button>
+              <p>明细表暂不支持附件字段；每个明细表最多 100 行。</p>
+            </div>
             <div id="fieldList" class="item-list fields"></div>
             <div class="field-add"><select id="newFieldType"></select><button id="addField">添加字段</button></div>
           </aside>
@@ -104,6 +112,13 @@
       <div id="targetPreview" class="notice">发布前先预检查填报范围。</div>
       <div class="actions"><button type="button" id="previewTargets">预检查</button><button type="submit" class="primary">确认发布</button></div>
     </form>
+  </dialog>
+  <dialog id="previewDialog" class="preview-dialog">
+    <div class="dialog-card">
+      <div class="panel-title"><div><p class="eyebrow">4001 填报效果预览</p><h2 id="previewTitle">表单预览</h2></div><button type="button" id="closePreview" class="icon-button">×</button></div>
+      <div class="notice">预览内容不会保存，也不会生成收集任务或答卷。</div>
+      <div id="previewContent" class="preview-content"></div>
+    </div>
   </dialog>
   <script src="app.js" defer></script>
 </body>
