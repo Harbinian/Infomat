@@ -1160,6 +1160,12 @@ function processGovernanceValidationResult(data) {
   uniqueRefs(data?.terms, 'term_ref', '/terms');
 
   behaviors.forEach((behavior, index) => {
+    requireLocalRef(
+      dataRefs,
+      behavior?.actor_department_data_ref,
+      `/behaviors/${index}/actor_department_data_ref`,
+      '动态执行部门来源数据'
+    );
     (behavior?.input_data_refs || []).forEach((ref, refIndex) => {
       requireLocalRef(dataRefs, ref, `/behaviors/${index}/input_data_refs/${refIndex}`, '输入数据标识');
     });

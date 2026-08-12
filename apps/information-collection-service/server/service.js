@@ -81,12 +81,22 @@ function error(message, status = 400, code = 'BAD_REQUEST', details) {
 }
 
 async function canonicalizeEntityAnswers(connection, schema, answers) {
-  const normalized = { ...answers };
-  const fields = schema.sections.flatMap(section => section.fields);
-  const personFields = fields.filter(field => field.type === 'person' && normalized[field.fieldKey]);
-  const departmentFields = fields.filter(field => field.type === 'department' && normalized[field.fieldKey]);
-  const personIds = [...new Set(personFields.map(field => Number(normalized[field.fieldKey].personId)).filter(Number.isInteger))];
-  const departmentIds = [...new Set(departmentFields.map(field => Number(normalized[field.fieldKey].departmentId)).filter(Number.isInteger))];
+  const normalized = structuredClone(answers);
+  const personAnswers = [];
+  const departmentAnswers = [];
+  for (const section of schema.sections) {
+    const containers = section.kind === 'detail'
+      ? (normalized.__detailRows?.[section.sectionKey] || []).map(row => row.values)
+      : [normalized];
+    for (const values of containers) {
+      for (const field of section.fields) {
+        if (field.type === 'person' && values[field.fieldKey]) personAnswers.push({ field, values });
+        if (field.type === 'department' && values[field.fieldKey]) departmentAnswers.push({ field, values });
+      }
+    }
+  }
+  const personIds = [...new Set(personAnswers.map(({ field, values }) => Number(values[field.fieldKey].personId)).filter(Number.isInteger))];
+  const departmentIds = [...new Set(departmentAnswers.map(({ field, values }) => Number(values[field.fieldKey].departmentId)).filter(Number.isInteger))];
   const people = new Map();
   const departments = new Map();
   if (personIds.length) {
@@ -106,15 +116,15 @@ async function canonicalizeEntityAnswers(connection, schema, answers) {
     );
     for (const row of rows) departments.set(Number(row.id), row);
   }
-  for (const field of personFields) {
-    const row = people.get(Number(normalized[field.fieldKey].personId));
+  for (const { field, values } of personAnswers) {
+    const row = people.get(Number(values[field.fieldKey].personId));
     if (!row) throw error('答卷中的人员不存在或已停用', 422, 'ANSWER_PERSON_UNAVAILABLE', { fieldKey: field.fieldKey });
-    normalized[field.fieldKey] = { personId: Number(row.person_id), employeeNo: row.employee_no, personName: row.person_name };
+    values[field.fieldKey] = { personId: Number(row.person_id), employeeNo: row.employee_no, personName: row.person_name };
   }
-  for (const field of departmentFields) {
-    const row = departments.get(Number(normalized[field.fieldKey].departmentId));
+  for (const { field, values } of departmentAnswers) {
+    const row = departments.get(Number(values[field.fieldKey].departmentId));
     if (!row) throw error('答卷中的部门不存在或已停用', 422, 'ANSWER_DEPARTMENT_UNAVAILABLE', { fieldKey: field.fieldKey });
-    normalized[field.fieldKey] = { departmentId: Number(row.id), departmentName: row.name };
+    values[field.fieldKey] = { departmentId: Number(row.id), departmentName: row.name };
   }
   return normalized;
 }
@@ -271,19 +281,21 @@ function makeService({ pool, audit }) {
     }
   }
 
-  async function listForms(identity) {
+  async function listForms(identity, { includeArchived = false } = {}) {
     const params = [];
-    let scope = '';
+    const conditions = [];
     if (!isCollectionAdmin(identity)) {
       const departments = [...new Set(identity.grants.filter(g => g.roleCode === 'collection_designer').map(g => Number(g.scopeDepartmentId)))];
       if (departments.length === 0) return [];
-      scope = `WHERE f.owner_department_id IN (${departments.map(() => '?').join(',')})`;
+      conditions.push(`f.owner_department_id IN (${departments.map(() => '?').join(',')})`);
       params.push(...departments);
     }
+    if (!includeArchived) conditions.push("f.status<>'archived'");
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
     const [rows] = await pool.execute(
       `SELECT f.*, d.name AS owner_department_name
          FROM collection_forms f JOIN departments d ON d.id=f.owner_department_id
-        ${scope} ORDER BY f.updated_at DESC`,
+        ${where} ORDER BY f.updated_at DESC`,
       params
     );
     return rows.map(publicForm);
@@ -330,6 +342,46 @@ function makeService({ pool, audit }) {
     if (Number(result[0].affectedRows) !== 1) throw error('表单已被其他人员修改，请刷新后核对', 409, 'REVISION_CONFLICT');
     await audit(req, { actorPersonId: identity.personId, actionCode: 'form.save_draft', entityType: 'form', entityId: formId, ownerDepartmentId: current.owner_department_id, detail: { revision: expectedRevision + 1 } });
     return { formId, draftRevision: expectedRevision + 1, schema: checked.schema };
+  }
+
+  async function archiveForm(identity, formId, req) {
+    const current = await getForm(formId, identity);
+    if (current.status === 'archived') return { formId, status: 'archived' };
+    await pool.execute(
+      `UPDATE collection_forms
+          SET status='archived', updated_by_person_id=?, updated_at=CURRENT_TIMESTAMP
+        WHERE form_id=?`,
+      [identity.personId, formId]
+    );
+    await audit(req, { actorPersonId: identity.personId, actionCode: 'form.archive', entityType: 'form', entityId: formId, ownerDepartmentId: current.owner_department_id, detail: { previousStatus: current.status } });
+    return { formId, status: 'archived' };
+  }
+
+  async function deleteForm(identity, formId, req) {
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+      await connection.execute('SELECT form_id FROM collection_forms WHERE form_id=? FOR UPDATE', [formId]);
+      const current = await getForm(formId, identity, connection);
+      const [[history]] = await connection.execute(
+        `SELECT
+           (SELECT COUNT(*) FROM collection_form_versions WHERE form_id=?) AS version_count,
+           (SELECT COUNT(*) FROM collection_tasks WHERE form_id=?) AS task_count`,
+        [formId, formId]
+      );
+      if (Number(history.version_count) > 0 || Number(history.task_count) > 0) {
+        throw error('表单已经发布过，不能永久删除；如不再使用，请归档表单', 409, 'FORM_HAS_HISTORY');
+      }
+      await connection.execute('DELETE FROM collection_forms WHERE form_id=?', [formId]);
+      await audit(req, { actorPersonId: identity.personId, actionCode: 'form.delete', entityType: 'form', entityId: formId, ownerDepartmentId: current.owner_department_id, detail: { formCode: current.form_code, formName: current.name } }, connection);
+      await connection.commit();
+      return { formId, status: 'deleted' };
+    } catch (err) {
+      await connection.rollback();
+      throw err;
+    } finally {
+      connection.release();
+    }
   }
 
   async function listFormVersions(identity, formId) {
@@ -418,6 +470,7 @@ function makeService({ pool, audit }) {
       await connection.beginTransaction();
       await connection.execute('SELECT form_id FROM collection_forms WHERE form_id=? FOR UPDATE', [formId]);
       const form = await getForm(formId, identity, connection);
+      if (form.status === 'archived') throw error('已归档表单不能发布新任务', 409, 'FORM_ARCHIVED');
       const checked = validateFormSchema(parseJson(form.draft_schema, {}), { publish: true });
       if (checked.errors.length) throw error('表单尚不符合发布要求', 422, 'FORM_SCHEMA_INVALID', checked.errors);
       const targets = await resolveTargets(payload.audience, connection);
@@ -691,7 +744,7 @@ function makeService({ pool, audit }) {
     if (context.task.status !== 'open') throw error('当前任务不在填报时间内', 409, 'TASK_NOT_OPEN');
     if (context.submission.status === 'submitted') throw error('请先选择“修改已提交内容”', 409, 'SUBMISSION_ALREADY_SUBMITTED');
     const expectedRevision = Number(payload.expectedRevision);
-    if (expectedRevision !== context.submission.revision) throw error('答卷已在其他页面更新，请刷新后核对', 409, 'REVISION_CONFLICT');
+    if (expectedRevision !== context.submission.revision) throw error('答卷已在其他页面更新，请选择保留服务器内容或本页内容', 409, 'REVISION_CONFLICT');
     const filesByField = groupFiles(context.files);
     const checked = validateAnswers(context.schema, payload.answers, { filesByField });
     if (checked.errors.length) throw error('答卷内容不符合要求', 422, 'ANSWERS_INVALID', checked.errors);
@@ -701,7 +754,7 @@ function makeService({ pool, audit }) {
         WHERE submission_id=? AND revision=? AND status='draft'`,
       [JSON.stringify(canonicalAnswers), context.submission.submissionId, expectedRevision]
     );
-    if (Number(result[0].affectedRows) !== 1) throw error('答卷已在其他页面更新，请刷新后核对', 409, 'REVISION_CONFLICT');
+    if (Number(result[0].affectedRows) !== 1) throw error('答卷已在其他页面更新，请选择保留服务器内容或本页内容', 409, 'REVISION_CONFLICT');
     await audit(req, { actorPersonId: identity.personId, actionCode: 'submission.save', entityType: 'submission', entityId: context.submission.submissionId, ownerDepartmentId: context.task.ownerDepartmentId, detail: { revision: expectedRevision + 1 } });
     return { submissionId: context.submission.submissionId, status: 'draft', revision: expectedRevision + 1, savedAt: new Date().toISOString() };
   }
@@ -711,14 +764,14 @@ function makeService({ pool, audit }) {
     if (context.task.status !== 'open') throw error('当前任务不在填报时间内', 409, 'TASK_NOT_OPEN');
     if (context.submission.status === 'submitted') return context.submission;
     const expectedRevision = Number(payload.expectedRevision);
-    if (expectedRevision !== context.submission.revision) throw error('答卷已在其他页面更新，请刷新后核对', 409, 'REVISION_CONFLICT');
+    if (expectedRevision !== context.submission.revision) throw error('答卷已在其他页面更新，请选择保留服务器内容或本页内容', 409, 'REVISION_CONFLICT');
     const checked = validateAnswers(context.schema, context.submission.answers, { submit: true, filesByField: groupFiles(context.files) });
     if (checked.errors.length) throw error('请先补齐必填内容', 422, 'SUBMISSION_INCOMPLETE', checked.errors);
     const connection = await pool.getConnection();
     try {
       await connection.beginTransaction();
       const [[locked]] = await connection.execute('SELECT * FROM collection_submissions WHERE submission_id=? FOR UPDATE', [context.submission.submissionId]);
-      if (Number(locked.revision) !== expectedRevision) throw error('答卷已在其他页面更新，请刷新后核对', 409, 'REVISION_CONFLICT');
+      if (Number(locked.revision) !== expectedRevision) throw error('答卷已在其他页面更新，请选择保留服务器内容或本页内容', 409, 'REVISION_CONFLICT');
       if (locked.status === 'submitted') {
         await connection.rollback();
         return context.submission;
@@ -756,7 +809,7 @@ function makeService({ pool, audit }) {
         WHERE submission_id=? AND revision=? AND status='submitted'`,
       [context.submission.submissionId, expectedRevision]
     );
-    if (Number(result[0].affectedRows) !== 1) throw error('答卷已在其他页面更新，请刷新后核对', 409, 'REVISION_CONFLICT');
+    if (Number(result[0].affectedRows) !== 1) throw error('答卷已在其他页面更新，请选择保留服务器内容或本页内容', 409, 'REVISION_CONFLICT');
     await audit(req, { actorPersonId: identity.personId, actionCode: 'submission.edit', entityType: 'submission', entityId: context.submission.submissionId, ownerDepartmentId: context.task.ownerDepartmentId, detail: { revision: expectedRevision + 1 } });
     return { submissionId: context.submission.submissionId, status: 'draft', revision: expectedRevision + 1 };
   }
@@ -868,7 +921,7 @@ function makeService({ pool, audit }) {
   }
 
   return {
-    actOnTask, createForm, editSubmission, getAdminFile, getForm, getRespondentFile, getTask,
+    actOnTask, archiveForm, createForm, deleteForm, editSubmission, getAdminFile, getForm, getRespondentFile, getTask,
     grantAccess, listDirectory, listFormVersions, listForms, listGrants, listRespondentTasks,
     listSubmissions, listTasks, previewTargets, publishTask, reconcileTaskStatuses, registerFile,
     removeFile, respondentTask, revokeGrant, saveDraft, saveSubmission, submissionForFile,
@@ -895,8 +948,13 @@ function publicFile(row) {
 
 function aggregateStatistics(schema, answerRows) {
   const result = [];
-  for (const field of schema.sections.flatMap(section => section.fields)) {
-    const values = answerRows.map(answers => answers[field.fieldKey]).filter(value => value !== null && value !== undefined && value !== '');
+  for (const section of schema.sections) {
+    for (const field of section.fields) {
+    const values = (section.kind === 'detail'
+      ? answerRows.flatMap(answers => (answers.__detailRows?.[section.sectionKey] || []).map(row => row.values?.[field.fieldKey]))
+      : answerRows.map(answers => answers[field.fieldKey]))
+      .filter(value => value !== null && value !== undefined && value !== '' && !(Array.isArray(value) && value.length === 0));
+    const common = { fieldKey: field.fieldKey, sectionKey: section.sectionKey, sectionTitle: section.title, sectionKind: section.kind || 'main', unit: section.kind === 'detail' ? '项' : '份' };
     if (['single_choice', 'multiple_choice', 'boolean'].includes(field.type)) {
       const labels = new Map(field.options.map(option => [option.optionKey, option.label]));
       const counts = {};
@@ -907,17 +965,18 @@ function aggregateStatistics(schema, answerRows) {
           counts[label] = (counts[label] || 0) + 1;
         }
       }
-      result.push({ fieldKey: field.fieldKey, label: field.label, type: field.type, answered: values.length, counts });
+      result.push({ ...common, label: field.label, type: field.type, answered: values.length, counts });
     } else if (['integer', 'decimal'].includes(field.type)) {
       const numbers = values.filter(value => typeof value === 'number' && Number.isFinite(value));
       result.push({
-        fieldKey: field.fieldKey, label: field.label, type: field.type, answered: numbers.length,
+        ...common, label: field.label, type: field.type, answered: numbers.length,
         min: numbers.length ? Math.min(...numbers) : null, max: numbers.length ? Math.max(...numbers) : null,
         average: numbers.length ? numbers.reduce((sum, value) => sum + value, 0) / numbers.length : null
       });
-    } else result.push({ fieldKey: field.fieldKey, label: field.label, type: field.type, answered: values.length });
+    } else result.push({ ...common, label: field.label, type: field.type, answered: values.length });
+    }
   }
   return result;
 }
 
-module.exports = { aggregateStatistics, error, makeService, parseJson, publicFile, publicForm, publicTask, taskStatus };
+module.exports = { aggregateStatistics, canonicalizeEntityAnswers, error, makeService, parseJson, publicFile, publicForm, publicTask, taskStatus };

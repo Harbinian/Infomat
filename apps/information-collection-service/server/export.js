@@ -11,6 +11,17 @@ function safeSegment(value) {
   return String(value || '').replace(/[\x00-\x1f<>:"/\\|?*]/g, '_').trim().slice(0, 80) || '未命名';
 }
 
+function safeSheetName(value, workbook) {
+  const base = String(value || '明细表').replace(/[\[\]:*?/\\]/g, '_').trim().slice(0, 31) || '明细表';
+  let name = base;
+  let suffix = 2;
+  while (workbook.getWorksheet(name)) {
+    const tail = `-${suffix++}`;
+    name = `${base.slice(0, 31 - tail.length)}${tail}`;
+  }
+  return name;
+}
+
 function optionLabels(field, value) {
   const labels = new Map((field.options || []).map(option => [option.optionKey, option.label]));
   const values = Array.isArray(value) ? value : [value];
@@ -71,13 +82,14 @@ async function buildWorkbook(data) {
   summary.getColumn(2).width = 50;
   summary.getColumn(1).font = { bold: true };
 
-  const fields = data.schema.sections.flatMap(section => section.fields);
+  const mainFields = data.schema.sections.filter(section => section.kind !== 'detail').flatMap(section => section.fields);
+  const detailSections = data.schema.sections.filter(section => section.kind === 'detail');
   const detail = workbook.addWorksheet('答卷明细', { views: [{ state: 'frozen', ySplit: 1 }] });
   detail.columns = [
     { header: '工号', key: 'employeeNo', width: 16 }, { header: '姓名', key: 'personName', width: 16 },
     { header: '部门', key: 'departmentName', width: 20 }, { header: '状态', key: 'status', width: 14 },
     { header: '最后保存时间', key: 'lastSavedAt', width: 22 }, { header: '提交时间', key: 'submittedAt', width: 22 },
-    ...fields.map(field => ({ header: field.label, key: field.fieldKey, width: Math.min(40, Math.max(16, field.label.length * 2 + 4)) }))
+    ...mainFields.map(field => ({ header: field.label, key: field.fieldKey, width: Math.min(40, Math.max(16, field.label.length * 2 + 4)) }))
   ];
   for (const row of data.rows) {
     const answers = parseJson(row.answers_json, {});
@@ -87,12 +99,37 @@ async function buildWorkbook(data) {
       departmentName: row.department_name_snapshot || '', status: statusLabel(row.submission_status),
       lastSavedAt: row.last_saved_at || '', submittedAt: row.submitted_at || ''
     };
-    fields.forEach(field => { output[field.fieldKey] = displayAnswer(field, answers[field.fieldKey], rowFiles); });
+    mainFields.forEach(field => { output[field.fieldKey] = displayAnswer(field, answers[field.fieldKey], rowFiles); });
     detail.addRow(output);
   }
   detail.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
   detail.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF7B3F2B' } };
   detail.autoFilter = { from: 'A1', to: detail.getRow(1).getCell(detail.columnCount).address };
+
+  detailSections.forEach((section, sectionIndex) => {
+    const sheet = workbook.addWorksheet(safeSheetName(`明细${sectionIndex + 1}-${section.title}`, workbook), { views: [{ state: 'frozen', ySplit: 1 }] });
+    sheet.columns = [
+      { header: '工号', key: 'employeeNo', width: 16 }, { header: '姓名', key: 'personName', width: 16 },
+      { header: '部门', key: 'departmentName', width: 20 }, { header: '答卷状态', key: 'status', width: 14 },
+      { header: '明细行号', key: 'rowNumber', width: 12 },
+      ...section.fields.map(field => ({ header: field.label, key: field.fieldKey, width: Math.min(40, Math.max(16, field.label.length * 2 + 4)) }))
+    ];
+    for (const row of data.rows) {
+      const answers = parseJson(row.answers_json, {});
+      const rows = answers.__detailRows?.[section.sectionKey] || [];
+      rows.forEach((detailRow, rowIndex) => {
+        const output = {
+          employeeNo: row.employee_no_snapshot, personName: row.person_name_snapshot,
+          departmentName: row.department_name_snapshot || '', status: statusLabel(row.submission_status), rowNumber: rowIndex + 1
+        };
+        section.fields.forEach(field => { output[field.fieldKey] = displayAnswer(field, detailRow.values?.[field.fieldKey], []); });
+        sheet.addRow(output);
+      });
+    }
+    sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF6C8496' } };
+    sheet.autoFilter = { from: 'A1', to: sheet.getRow(1).getCell(sheet.columnCount).address };
+  });
 
   const attachmentSheet = workbook.addWorksheet('附件清单', { views: [{ state: 'frozen', ySplit: 1 }] });
   attachmentSheet.columns = [

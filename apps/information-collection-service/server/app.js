@@ -32,9 +32,9 @@ function requestContext(req, res, next) {
 }
 
 function createAudit(pool) {
-  return async function audit(req, event) {
+  return async function audit(req, event, executor = pool) {
     const detail = event.detail && typeof event.detail === 'object' ? event.detail : {};
-    await pool.execute(
+    await executor.execute(
       `INSERT INTO collection_audit_events
         (actor_person_id, action_code, entity_type, entity_id, owner_department_id, request_id, ip_address, detail_json)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -60,6 +60,10 @@ function registerAuthRoutes(app, auth, surface) {
     const identity = await auth.login(req, res);
     res.json({ identity, surface });
   }));
+  app.get('/api/v1/auth/session', asyncRoute(async (req, res) => {
+    const identity = await auth.loadSession(req);
+    res.json({ authenticated: Boolean(identity), identity, surface });
+  }));
   app.use('/api/v1', auth.requireAuth);
   app.get('/api/v1/auth/me', (req, res) => res.json({ identity: req.identity, surface }));
   app.get('/api/v1/auth/csrf-token', asyncRoute(async (req, res) => res.json({ csrfToken: await auth.issueCsrf(req) })));
@@ -82,10 +86,12 @@ function createAdminApp({ pool, config, service, audit }) {
   app.post('/api/v1/admin/grants', asyncRoute(async (req, res) => res.status(201).json({ grant: await service.grantAccess(req.identity, req.body, req) })));
   app.post('/api/v1/admin/grants/:grantId/revoke', asyncRoute(async (req, res) => res.json({ grant: await service.revokeGrant(req.identity, req.params.grantId, req) })));
 
-  app.get('/api/v1/admin/forms', asyncRoute(async (req, res) => res.json({ forms: await service.listForms(req.identity) })));
+  app.get('/api/v1/admin/forms', asyncRoute(async (req, res) => res.json({ forms: await service.listForms(req.identity, { includeArchived: req.query.includeArchived === '1' }) })));
   app.post('/api/v1/admin/forms', asyncRoute(async (req, res) => res.status(201).json({ form: await service.createForm(req.identity, req.body, req) })));
   app.get('/api/v1/admin/forms/:formId', asyncRoute(async (req, res) => res.json({ form: publicForm(await service.getForm(req.params.formId, req.identity)) })));
   app.put('/api/v1/admin/forms/:formId/draft', asyncRoute(async (req, res) => res.json(await service.saveDraft(req.identity, req.params.formId, req.body, req))));
+  app.post('/api/v1/admin/forms/:formId/archive', asyncRoute(async (req, res) => res.json({ form: await service.archiveForm(req.identity, req.params.formId, req) })));
+  app.delete('/api/v1/admin/forms/:formId', asyncRoute(async (req, res) => res.json({ form: await service.deleteForm(req.identity, req.params.formId, req) })));
   app.get('/api/v1/admin/forms/:formId/versions', asyncRoute(async (req, res) => res.json({ versions: await service.listFormVersions(req.identity, req.params.formId) })));
 
   app.post('/api/v1/admin/tasks/target-preview', asyncRoute(async (req, res) => res.json(await service.previewTargets(req.identity, req.body))));

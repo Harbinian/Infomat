@@ -20,7 +20,9 @@
 | `collection_files` | 附件元数据与安全状态 | 随机存储键唯一；正文不进 MySQL |
 | `collection_audit_events` | 授权、发布、提交、查看和导出事件 | 不保存完整答案或附件内容 |
 
-所有外键使用 `ON DELETE RESTRICT`。服务不提供物理删除接口。
+所有外键使用 `ON DELETE RESTRICT`。服务只允许删除没有 `collection_form_versions` 和 `collection_tasks` 引用的设计稿；已有发布历史的表单、任务、答卷和附件不提供物理删除接口。
+
+主表和明细表不新增关系表。`collection_forms.draft_schema` 与 `collection_form_versions.schema_json` 使用分区 `kind=main|detail` 区分结构；`collection_submissions.answers_json` 和提交快照使用 `__detailRows[sectionKey][]` 保存明细行。每条明细行包含稳定 `rowKey` 和 `values[fieldKey]`。旧 JSON 没有 `kind` 或 `__detailRows` 时仍按原主表结构读取。
 
 ## 3. 迁移
 

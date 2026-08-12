@@ -14,7 +14,7 @@
 
 `behaviors[].behavior_description`是向后兼容的可选字符串字段。旧版`process-governance-v1`没有该字段时仍符合结构规则；前端规范化导入后只在当前页面内存中补为空字符串。历史v2步骤只迁移`step_name`到`behavior_name`，不得把该名称复制到`behavior_description`。
 
-跨部门承接显示规则、并行完整性提示、业务行为字段精简、数据时序校验和表单编辑布局只改变页面呈现、业务完整性提示及现有字段的编辑方式。`process-governance-v3`、关系枚举、`/api/template`、`/api/schema`和`/api/validate`的结构保持不变，不新增JSON字段，不升级版本号，也不修改3000。现行和历史JSON不需要结构迁移；导入、导出和重新导入继续使用原结构。
+本次在`process-governance-v3.behaviors[]`增加三个可选字段：`actor_assignment_mode`、`actor_department_data_ref`和`actor_position_rule`。结构版本号、关系枚举以及`/api/template`、`/api/schema`、`/api/validate`的外层请求响应保持不变，不修改3000业务功能。旧v3文件仍符合结构规则；3001导入时根据`current_actor_role=全公司`识别全公司通用，其余旧值按固定部门和岗位处理，并在当前页面内存中补齐可选字段。
 
 ## 2. 无状态实现
 
@@ -42,17 +42,31 @@
 
 候选列表只存在当前页面运行态。切换候选时保留本次运行内的编辑结果，刷新后全部清空。
 
+页面外壳使用`app-shell`两列网格：`task-sidebar`固定300px，`main-column`使用`minmax(0, 1fr)`占满剩余宽度。页面宽度不再限制为1500px；`body`设置`min-width: 1280px`。左侧任务栏在视口内常驻并独立滚动，右侧编辑区保持`min-width: 0`，宽表格只在自身容器内滚动。
+
+`candidateList`使用带`data-candidate-index`的按钮投影当前`candidates[]`，不建立第二套候选状态。按钮显示原数组序号、流程名称和未导出标记，并通过`title`及`aria-label`保留长名称。切换按钮只更新`currentIndex`、执行既有初始分区选择并重新渲染；该过程不调用`touch()`、`protect()`或候选排序函数。
+
+`workspaceViewSwitch`位于任务栏并复用`renderWorkspaceTabs()`。没有当前流程时，两个视图按钮保持可见但禁用；存在当前流程时，按钮继续使用原`activeWorkspaceTab`、预览状态和`setActiveWorkspaceTab()`。右侧`workspace`只渲染当前标签面板，避免重复生成视图导航。
+
+`renderPreviewGuidance()`继续位于右侧文字编制面板，但改为单行提示条。提示条保留“填写业务行为名称后显示节点、填写明确流程关系后显示箭头、不得按录入顺序自动连线”三项规则；预览首次可用时显示“已可查看”和原查看入口。提示条只读取当前图形状态，不修改流程内容。
+
+全局操作仍使用原按钮标识和事件入口。新建与导入位于任务栏上部；唯一`statusBox`位于任务栏中部并保留`role="status"`和完整错误文案；导出、清空和唯一保存方式警示位于任务栏底部。DOM位置变化不得改变按钮启用条件、未保存保护或导出流程。
+
+页面只保留一个`max-width: 1279px`媒体查询，用于显示非阻断桌面窗口提示。该媒体查询不得改变网格、表单、条目侧栏、关系说明、评分卡或流程图布局；低于1280px时由页面横向滚动承载桌面布局。3001不再维护900px以下和390×844移动端行为。
+
+3000本地流程编辑器本期不修改。为后续迁移保留通用任务分组：3001的“新建／导入、候选流程、查看方式、导出／清空”可以分别映射为3000的“新建／打开／导入、草稿、查看方式、保存／提交／导出／关闭”；本期不抽取共享组件，不共享页面状态，也不增加3000通信。
+
 文字编制使用“基本信息、目的与范围、术语定义、流程步骤、表单与记录、导出检查”六个互斥分区。表单名称和业务行为名称在输入时只更新对应侧栏标签，不因控件失焦重绘整个工作区，避免连续输入时把下一个字段替换为失效节点。
 
-业务行为、流程关系、输出物与数据、跨部门承接分别通过`activeBehaviorRef`、`activeRelationRef`、`activeDataRef`和`activeHandoffRef`记录当前条目。业务流程、流程关系和输出物与数据渲染`record-workbench`：桌面端左侧`record-selector`显示条目，右侧只渲染当前条目的编辑卡；`900px`以下把侧栏移到编辑区上方并允许横向滚动。业务流程侧栏同时投影本部门行为、控制节点和跨部门待办，待办按锚点显示且没有独立排序；跨部门待办汇总页保持只读。业务行为移动只交换`behaviors[]`中的对象位置；流程关系和输出物与数据复用`moveCollectionItem()`，分别按`relation_ref`和`data_ref`定位对象。边界移动返回失败且不调用`touch()`；有效移动保持被移动条目选中，标记当前候选已修改并重新渲染。任何顺序调整都不得重建技术标识、改写对象内容或更新跨数组引用。流程图仍按明确关系计算，不得把数组顺序解释为流程先后。
+业务行为、流程关系、输出物与数据、跨部门承接分别通过`activeBehaviorRef`、`activeRelationRef`、`activeDataRef`和`activeHandoffRef`记录当前条目。业务流程、流程关系和输出物与数据渲染`record-workbench`：左侧`record-selector`显示条目，右侧只渲染当前条目的编辑卡。业务流程侧栏同时投影本部门行为、控制节点和跨部门待办，待办按锚点显示且没有独立排序；跨部门待办汇总页保持只读。业务行为移动只交换`behaviors[]`中的对象位置；流程关系和输出物与数据复用`moveCollectionItem()`，分别按`relation_ref`和`data_ref`定位对象。边界移动返回失败且不调用`touch()`；有效移动保持被移动条目选中，标记当前候选已修改并重新渲染。任何顺序调整都不得重建技术标识、改写对象内容或更新跨数组引用。流程图仍按明确关系计算，不得把数组顺序解释为流程先后。
 
-`renderRelations()`在关系侧栏和当前关系编辑卡之前固定渲染一个`aside.relation-guidance`。说明本身没有按钮、输入项或页面状态，不读取也不写入当前流程；即使`flow_relations[]`为空，说明仍与空状态同时显示。顺序、判断分支、流程内部回路和并行路线使用四列CSS Grid，`900px`以下切换为单列。右侧当前关系编辑卡只保留一条简短提示。
+`renderRelations()`在关系侧栏和当前关系编辑卡之前固定渲染一个`aside.relation-guidance`。说明本身没有按钮、输入项或页面状态，不读取也不写入当前流程；即使`flow_relations[]`为空，说明仍与空状态同时显示。顺序、判断分支、流程内部回路和并行路线保持桌面并列网格。右侧当前关系编辑卡只保留一条简短提示。
 
 ## 4. 只读跨职能流程图预览
 
 - 前端锁定使用`cytoscape@3.34.0`。服务端通过`GET /vendor/cytoscape.min.js`提供本地浏览器脚本，不使用CDN，也不暴露整个`node_modules`目录；不增加BPMN引擎或BPMN XML输出。
 - `public/process-diagram.js`把当前`process-governance-v3`内存对象转换为图形元素。转换函数接受部门目录顺序，但不得修改输入对象。
-- `behaviors[]`生成本流程节点。前端从`current_actor_role`识别执行部门和岗位：具体岗位按“部门名称 + 岗位名称”拆分，`全公司`进入“全公司通用”泳道，空值或无法识别的历史值进入“执行部门待明确”泳道。识别只用于显示，不写回原字符串。
+- `behaviors[]`生成本流程节点。`actor_assignment_mode=fixed_department`时，前端从`current_actor_role`识别执行部门和岗位；具体岗位按“部门名称 + 岗位名称”拆分，空值或无法识别的历史值进入“执行部门待明确”泳道。`actor_assignment_mode=company_wide`或历史`current_actor_role=全公司`进入“全公司通用”泳道，该泳道不代表跨部门。`actor_assignment_mode=dynamic_from_data`进入“运行时责任部门”泳道，节点副标题读取`actor_department_data_ref`对应的数据名称，但不把数据对象绘制成节点。
 - 每个参与执行的部门形成横向泳道。归口部门在已参与执行时排在第一条，其他部门按`/api/enums`返回的组织目录顺序排列；泳道由不可交互的背景节点绘制。
 - 只有关系类型、起点和终点均明确且引用有效的`flow_relations[]`才生成本流程箭头。主线层级由非回路的有效本流程关系确定；无关系节点保持相同横向层级，不能用数组顺序形成先后暗示。前端使用强连通分量识别非回路闭环，将闭环作为一个稳定分组参与层级计算，再按关系顺序为组内节点分配相邻子层级，避免拓扑排序失败后未处理节点全部落在同一位置。
 - `node_type="decision"`只表示承担条件判断的节点。承接该节点出口的目标节点不因承接判断结果而要求使用`node_type="decision"`；目标节点本身不再判断时可以继续使用`node_type="action"`。`relation_type="sequence"`可以作为判断节点的一条默认继续路径，不要求填写`condition`，但必须填写`to_behavior_ref`。`relation_type="condition"`和`relation_type="loop"`必须填写`condition`及`to_behavior_ref`；回路表示条件成立时返回本流程前序行为，不是独立节点。
@@ -63,9 +77,9 @@
 - 图形节点只读取`behavior_name`作为主标题，不读取`behavior_description`。补充说明只在文字编制中显示，避免增加主图信息密度。
 - 关系标签最大宽度为220图形单位。相邻层级中心间距取“前后节点半宽之和＋220＋48”和440中的较大值。相邻层级的单一顺序关系继续使用直角连线；多分支和跨层关系按稳定关系顺序分配上方曲线轨道；显式回路从节点区下方返回。同一方向的下一条轨道在上一条标签高度之外再增加24图形单位，泳道高度同步预留上方和下方轨道空间。
 - 非回路闭环中的关系进入`reviewItems`，提示关系类型核对并保留`focusKind: relation`和原`focusRef`。该项只影响页面提示和定位，不进入结构校验、不阻止导出、不自动改为回路，也不修改关系箭头的类型样式。
-- `cross_department_handoffs[]`为每条记录生成一个待办节点。已明确承接部门的节点放入该部门泳道，未明确时放入“承接部门待明确”泳道。`inbound_prerequisite`按待办节点到本流程锚点绘制虚线空心箭头，`outbound_followup`按本流程锚点到待办节点绘制；存在返回要求和有效恢复行为时，再从待办节点绘制虚线返回关系。
+- `cross_department_handoffs[]`存在有效`counterparty_behavior_ref`时复用对应外部门行为节点，不再生成第二个待办节点；虚线箭头按方向连接锚点与该行为，需要返回时再从该行为连接恢复位置。只有没有本文件关联行为的兼容记录才生成独立待办节点，并按承接部门或“承接部门待明确”泳道放置。
 - 导入文件中已有的`internal_process_calls[]`在调用行为所属泳道生成粗边框节点，并使用本流程实线连接。存在有效返回位置时绘制实线返回关系；点击节点只显示MDM平台维护提示。
-- 缺少有效关系端点、关系类型、发送行为或调用行为的项目进入预览问题清单，不写回原对象，也不自动补关系。主图不读取或显示`data_objects[]`、`forms[]`、完整会签部门、流程阶段和推测的开始或结束事件。
+- 缺少有效关系端点、关系类型、发送行为或调用行为的项目进入预览问题清单，不写回原对象，也不自动补关系。主图只读取动态责任部门来源数据的名称，不显示数据对象节点；`forms[]`、完整会签部门、流程阶段和推测的开始或结束事件仍不进入主图。
 - 页面HTML提供七类常驻图例、固定阅读提示和可展开的三步示例。图例示例位于画布外；图例示例状态和展开查看状态只保存在当前页面变量中。
 - Cytoscape节点设置为不可抓取。图形只允许平移、缩放、适应画布、重置视图和展开查看。业务行为、关系和跨部门承接可以定位到对应文字卡片；内部流程调用不跳转到文字编辑区。初始化和重置时先完整拟合画布：拟合缩放比例不低于0.60时保留全图，否则改为拟合泳道表头中心锚点和前两层节点并显示聚焦提示；“适应画布”不使用该阈值，始终拟合全部元素。只读预览允许缩小至0.03，以保证约40个行为的宽流程能够完整进入画布。
 - 标签选择、图形实例和计算坐标只保存在页面内存中；Schema、导入导出JSON、`/api/schema`、`/api/template`和`/api/validate`不增加图形字段。本次只改变历史JSON的显示方式，不需要数据结构迁移，但必须通过历史导入和无损往返测试。
@@ -93,6 +107,9 @@
 | 业务行为或节点名称 | `behaviors[].behavior_name` |
 | “具体做什么”可选补充说明 | `behaviors[].behavior_description` |
 | 执行部门和花名册岗位兼容值 | `behaviors[].current_actor_role` |
+| 执行主体确定方式 | `behaviors[].actor_assignment_mode` |
+| 动态责任部门来源数据 | `behaviors[].actor_department_data_ref` |
+| 办理人员确定规则 | `behaviors[].actor_position_rule` |
 | 顺序、判断、循环、并行 | `flow_relations[]` |
 | 隐式保留的已有正式工作角色 | `behaviors[].work_role` |
 | 输出及消费关系的唯一编辑入口 | `data_objects[].produced_by_behavior_ref`、`data_objects[].consumed_by_behavior_refs`，同步兼容`behaviors[].output_data_refs`和`behaviors[].input_data_refs` |
@@ -100,17 +117,17 @@
 | 隐式保留并仅供流程图预览的同部门调用 | `internal_process_calls[]` |
 | 表单或记录、主表／明细表、填写项 | `forms[].areas[].items[]` |
 
-## 7. 跨部门待办单一录入、历史归并和部门内调用预览
+## 7. 跨部门行为单一录入、历史归并和部门内调用预览
 
-- `flowItems()`把`behaviors[]`和`cross_department_handoffs[]`投影为一个业务流程列表。前置输入显示在锚点前，后续承接显示在锚点后；无效锚点的历史待办显示在列表末尾并保留原值。投影只影响页面显示，不改变数组顺序。
-- 本部门发起动作继续保存在`behaviors[]`。外部门办理动作只写入`counterparty_behavior_name`，待办事项只写入`requested_matter`；页面不为待办创建外部门普通业务行为或额外`flow_relations[]`。
-- 用户在本部门行为处新增待办时，前端生成稳定`handoff_ref`，写入`handoff_direction`、`anchor_behavior_ref`、本流程部门和默认触发时点。承接部门为空时设置`counterparty_resolution=needs_identification`；选择部门后改为`identified`。`outbound_followup`开启返回要求时，如锚点只有一个普通后续行为，则自动写入`resume_behavior_ref`。
-- `renderHandoffEditor()`只在业务流程选中待办时渲染。`renderHandoffs()`只输出只读摘要和“返回业务流程查看或编辑”按钮，不调用字段渲染函数，也不提供新增、修改或删除动作。
+- `flowItems()`把`behaviors[]`和`cross_department_handoffs[]`投影为一个业务流程列表。存在有效`counterparty_behavior_ref`时，只显示关联的外部门行为节点，不再额外显示待办节点；只有没有本文件关联行为的兼容记录才按方向显示在锚点前后。投影只影响页面显示，不改变数组顺序。
+- 所有实际业务动作都保存在`behaviors[]`。跨部门关系通过`counterparty_behavior_ref`引用外部门行为，`requested_matter`保存交界事项；本文件关联行为的`counterparty_behavior_name`保持空值，不再重复保存动作名称，也不建立额外`flow_relations[]`。
+- 用户在本部门行为处新增前置或后续跨部门行为时，前端同时生成稳定`behavior_ref`和`handoff_ref`，写入`handoff_direction`、`anchor_behavior_ref`、`counterparty_behavior_ref`、本流程部门和默认触发时点。选择外部门后，从行为的`current_actor_role`同步承接部门和识别状态；`outbound_followup`存在唯一普通后续行为时自动带出返回位置。
+- `renderLinkedHandoffFields()`在外部门行为编辑卡中只渲染方向、锚点、事项、数据和返回关系；名称、部门、岗位及完成标准沿用同卡上方行为字段。`renderHandoffEditor()`仅兼容没有本文件关联行为的历史记录。`renderHandoffs()`只输出只读摘要和定位按钮。
 - 删除待办按`handoff_ref`定位。前端先显示承接部门、处理事项及删除范围；用户取消时不触发`touch()`或重新渲染，用户确认后只从`cross_department_handoffs[]`移除当前记录。
 - 一项业务行为可以被多条`cross_department_handoffs[]`引用。删除该行为时，前端先显示关联数量；用户确认后再级联删除这些承接记录。
-- `analyzeLegacyExternalBehavior()`只分析执行部门不同于归口部门的历史普通行为。可归并条件包括：唯一前序、最多一个后续、最多一条匹配的前置输入和后续承接，并且不存在正式`work_role`、会签、`internal_process_calls[]`或其他指向该外部门行为的待办。任何条件不满足时返回明确阻塞项。
-- 归并优先保留匹配的`outbound_followup`；不存在时才新建。候选值从外部门行为、前置输入和后续承接收集，非空且不一致时生成逐字段选项。用户未选择全部冲突值前不得确认。
-- `applyLegacyExternalBehaviorMerge()`只接收深拷贝文档和用户选择：把外部门行为名称写入`counterparty_behavior_name`，把前置输入的`returned_data_ref`和后续节点写入保留待办，删除重复承接、外部门行为和连接该行为的普通关系。外部门行为产生的数据对象保留并清空`produced_by_behavior_ref`；表单和数据消费引用移除该行为引用但不删除对象内容。
+- `analyzeLegacyExternalBehavior()`只分析执行部门不同于归口部门且仍有重复普通关系或承接记录的行为。没有前序且只有一个本流程后续行为时，结果为`inbound_prerequisite`；存在唯一前序本流程行为时，结果为`outbound_followup`。多个前序或后续分支、相邻行为仍属于外部门、多个可能保留的承接记录或其他无法唯一确定方向和去向的引用形成明确阻塞项。`work_role`、会签、表单、数据和`internal_process_calls[]`因继续绑定保留行为，不再阻塞。
+- 分析函数把唯一的旧版自锚定待办纳入归并来源，不再作为“其他跨部门待办引用”阻塞。存在匹配方向的待办时优先保留；否则保留唯一自锚定待办；均不存在时才新建。候选值从外部门行为和全部待归并记录收集，传递数据、返回数据、触发条件和其他非空字段不一致时生成逐字段选项，用户未完成选择前不得确认。
+- `applyLegacyExternalBehaviorMerge()`只接收深拷贝文档和用户选择。前置输入归并时，将外部门产生或旧版返回的数据写入`transfer_data_ref`并校正为“外部门→归口部门”；后续承接归并时，将外部门行为产生的数据归入`returned_data_ref`并校正为“归口部门→外部门”。两类归并都保留外部门行为，将`counterparty_behavior_ref`指向该行为并清空重复的`counterparty_behavior_name`，只删除重复待办和连接该行为的普通关系；数据生产／使用引用、表单、工作角色、会签及内部调用保持原绑定。
 - `confirmLegacyMerge()`把归并结果提交`/api/validate`。只有返回`valid=true`后才替换当前候选并调用`touch()`；请求失败、校验失败、取消或关闭弹窗时不修改当前文档。该过程不写回用户选择的源文件。
 - 页面不渲染`internal_process_calls[]`编辑器，也不提供新增和删除动作。规范化导入和导出继续保留该数组；新建模板保持空数组。
 - 预览中的内部流程调用被点击时，前端保留流程图并显示“部门内调用请在MDM平台正式功能中维护”，不得切换到不可编辑区域。
@@ -118,9 +135,12 @@
 ## 8. 岗位、数据类型和纸质表单字段实现
 
 - `/api/enums`读取仓库`docs/organization/花名册.md`并返回`rosterRolesByDepartment`，同时返回服务端固定配置`fieldType`。该接口不调用MDM平台、数据库、认证或会话。
-- `actorRolePicker()`在`process.owning_department`为空时禁用执行部门和岗位。归口部门存在时，新选择只列出归口部门和`全公司通用`；执行岗位从`rosterRolesByDepartment[owningDepartment]`读取。
-- `externalActorDepartment()`只识别导入历史值是否属于外部门。外部门原值作为兼容选项保留，岗位选择器禁用并显示整改入口；渲染、提示和重新导出均不得改写`current_actor_role`。归口部门变化后重新执行同一识别规则。
-- 执行岗位选择器不设默认值。具体岗位保存为部门名与岗位名拼接的`current_actor_role`字符串；“全公司通用”保存为`全公司`。
+- `actorAssignmentEditor()`先渲染`actor_assignment_mode`。固定部门模式再调用`actorRolePicker()`列出全部组织部门，执行岗位从`rosterRolesByDepartment[selectedDepartment]`读取；归口部门为空时也允许选择，不设默认值。全公司通用和动态责任部门不进入部门选择器。
+- `externalActorDepartment()`只对固定部门模式的`current_actor_role`与归口部门进行比较。新选外部门时，`ensureLinkedHandoffForExternalBehavior()`创建或复用唯一交接关系；改回归口部门、全公司通用或动态责任部门时，`removeCounterpartyLinksForBehavior()`先取得用户确认，按锚点和恢复位置补齐普通顺序关系，再删除固定跨部门关系。
+- 归口部门选择器不通过通用`input`绑定直接写入草稿。`owningDepartmentChangeImpact()`先统计固定和动态执行主体、跨部门待办、能力归类、正式工作角色及历史部门内调用，并向用户显示旧值、新值、重置范围、保留范围和后续处理。用户确认后，`buildOwningDepartmentResetDocument()`在深拷贝中执行重置：清空固定执行部门和岗位，把动态责任部门恢复为未选择的固定模式，删除`cross_department_handoffs[]`，把能力归类恢复为未归类；`company_wide`行为保持不变。删除待办前，`owningDepartmentResetSequencePairs()`根据文件内有效行为引用补齐缺失的普通顺序关系。前端只有在副本通过`/api/validate`后才替换当前草稿；取消、版本不一致、服务异常或校验失败均不得修改原草稿。
+- 归口部门重置不得删除行为、普通流程关系、数据、表单、技术标识、正式`work_role`或只读`internal_process_calls[]`。确认框必须单独提示正式工作角色和历史部门内调用仍需复核，不能因3001无法编辑而静默清空。
+- 执行岗位选择器不设默认值。固定岗位保存为部门名与岗位名拼接的`current_actor_role`字符串；全公司通用保存为`全公司`；动态责任部门把`current_actor_role`保持为空，并使用`actor_department_data_ref`和`actor_position_rule`。
+- `dataFlowConsistencyDetails().isAvailableBeforeBehavior()`校验动态来源数据：数据必须存在有效产生行为或跨部门可用起点，并且沿非回路关系到达当前行为；当前行为自身、后续行为和并行兄弟路线产生的数据均不通过。
 - 规范化导入不清空未收录岗位。花名册加载失败时，岗位选择器不可修改现有值，但不影响其他编制和导出。
 - 新增业务行为的`work_role`为`null`。合法历史`work_role`经行为引用规范化后隐式保留，页面不提供新增、修改或删除入口。
 - 前端`formItemTypeField()`把`fieldType`渲染为`select`。新增或主动修改填写项时，只能选择标准值；不得回退为通用文本输入。
@@ -132,7 +152,7 @@
 - 选择“新建明细表”时创建`area_type="明细清单"`且`area_title=""`的内存分组。空标题只用顺序号显示占位；占位名称不写回JSON。
 - 字段排序只交换同一`items[]`中的完整对象。明细分组排序只交换`areas[]`中的完整明细对象，不改变`area_ref`、`item_ref`或其他引用。
 - 删除明细表复用一个确认函数，并在确认文案中显示字段数量。取消时函数返回`false`且不调用`touch()`；确认后只删除目标明细表。字段移走后保留空明细表，不自动改写现状证据。
-- 新增字段后，`handleAction()`记录字段名称的`data-bind`路径，重新渲染后聚焦该输入框。桌面端表格只在自身容器内处理宽度；`900px`以下把字段行改为两列卡片，填写说明跨两列，禁止页面级横向溢出。
+- 新增字段后，`handleAction()`记录字段名称的`data-bind`路径，重新渲染后聚焦该输入框。表格只在自身容器内处理宽度，不把字段行改为移动端卡片，也不得把表格最小宽度传递为页面级横向溢出。
 - v1、v2导入统一规范化为v3并把每张表单状态写为`unspecified`；v3合法状态原样保留。源文件只读，升级结果只存在当前页面内存。
 
 ## 8.1 业务行为精简和数据时序
@@ -166,16 +186,16 @@
 - 回路触发条件。
 - 并行开始的有效路线数量和并行汇合的有效来源数量。
 - 数据产生行为与使用行为的流程先后关系。
-- 历史外部门普通行为是否仍与跨部门待办重复表达。
+- 外部门行为是否仍用普通流程关系和承接记录重复表达同一次交接。
 - 跨流程和跨部门目标是否存在。
 - 执行岗位是否为空或仍为当前花名册未收录的历史值。
 - 表单设计状态是否待确认、字段归属是否待确认，以及多张明细表中哪一张缺少区分标题。
 
-`businessWarnings()`返回包含提示文案和定位元数据的对象。系统生成的每条提示只描述一个确定缺陷，提示模板不得使用“或”合并不同缺陷。基础字段使用`editorSection + focusPath`定位；业务行为、流程关系、数据对象、跨部门承接、表单和表结构使用`focusKind + focusRef`选择对象，再用`focusPath`定位具体字段。流程入口说明缺失时定位`trigger`；数据时序问题定位数据对象的产生行为或使用行为。执行部门和岗位选择器通过`data-focus-key`映射到`current_actor_role`，复选项通过`data-list-bind`映射到数组字段。
+`businessWarnings()`返回`message`、`suggestions[]`和定位元数据。`message`只保存系统能够确认的当前情况，`suggestions[]`至少包含1条可执行建议；多条建议按页面顺序显示，不合并为含糊句子。基础字段使用`editorSection + focusPath`定位；业务行为、流程关系、数据对象、跨部门承接、表单和表结构使用`focusKind + focusRef`选择对象，再用`focusPath`定位具体字段。流程入口说明缺失时定位`trigger`；数据时序问题定位数据对象的产生行为或使用行为。执行部门和岗位选择器通过`data-focus-key`映射到`current_actor_role`，复选项通过`data-list-bind`映射到数组字段。导出确认框使用同一组当前情况和建议，不另写一套文案。
 
-`parallelStructureDetails()`是并行完整性的唯一计数入口，供结构评分和`businessWarnings()`共同使用。并行开始按不同`to_behavior_ref`统计从该节点发出的有效`parallel`路线；并行汇合按不同`from_behavior_ref`统计流入的有效`parallel`路线，并把`requires_return=true`且`resume_behavior_ref`指向该节点的有效后续承接各计为1个来源。数量不足时提示当前数量和仍需补充的数量。
+`parallelStructureDetails()`是并行完整性的唯一计数入口，供结构评分和`businessWarnings()`共同使用。并行开始按不同`to_behavior_ref`统计从该节点发出的有效`parallel`路线；并行汇合按不同`from_behavior_ref`统计流入的有效`parallel`路线，并把`requires_return=true`且`resume_behavior_ref`指向该节点的有效后续承接各计为1个来源。计数结果同时保留与该控制节点相连、但`relation_type=sequence`的关系。`parallelSplitGuidance()`和`parallelJoinGuidance()`根据同一结果生成当前情况、建议和全部关系类型`focusPaths`：存在可改类型的顺序关系时建议修改现有关系，转换后仍不足时才补充新增建议。
 
-`dataFlowConsistencyDetails()`是数据时序的唯一判断入口。结构评分和导出检查复用同一问题列表；评分将存在时序问题的数据对象关联项判为未通过，导出检查逐条显示不阻断提示。历史不合规引用在当前页面内存中保持原值，只有用户主动修改对应数据关系时才归一该关系。
+`dataFlowConsistencyDetails()`是数据时序的唯一判断入口。有效`counterparty_behavior_ref`形成显式可达关系：前置输入为“外部门行为→本流程锚点”，后续承接为“本流程锚点→外部门行为”，需要返回时再形成“外部门行为→恢复位置”。因此外部门后续行为产生的数据不能被本流程前序行为引用。结构评分、数据选择器和导出检查复用同一问题列表；历史不合规引用在当前页面内存中保持原值，只有用户主动修改对应数据关系时才归一该关系。
 
 用户点击导出检查问题项后，前端先切换分区并选中对象，再匹配`data-bind`、`data-focus-key`和`data-list-bind`。匹配到的`input`、`select`、`textarea`获得键盘焦点、`aria-invalid="true"`和红色呼吸高亮；多个匹配控件同时高亮。不存在具体控件时才退回高亮对象卡片或分区。动画结束后移除临时样式和属性，定位过程不调用`touch()`，不得修改当前流程。系统设置`prefers-reduced-motion`时取消动画并保留静态红色外框。
 
@@ -209,9 +229,9 @@ JSON Schema结构错误和单文件技术引用错误分别提示。结构错误
 
 数据对象维度继续检查名称、说明和关联关系。第三项只有在至少存在一个有效产生或使用关系且`dataFlowConsistencyDetails()`没有该数据对象的时序问题时通过；每个时序问题另外返回“数据时序”定位项，但同一数据对象第三项最多扣一次。
 
-承接子项满分5分。没有承接时按不适用获得5分；有承接时，每条关系分别检查方向、本流程有效锚点、外部门或待明确标记、传递数据或承接事项、触发条件或完成标准。外部门流程、外部门行为、确认状态、返回路径和证据只形成治理提示。评分函数对输入对象只读，测试必须在评分前后比较规范化JSON。
+承接子项满分5分。没有承接时按不适用获得5分；有承接时，每条关系分别检查方向、本流程有效锚点、外部门或待明确标记、传递数据或承接事项、触发条件或完成标准。关联本文件外部门行为时，行为的`completion_standard`可满足完成标准检查，行为名称由`counterparty_behavior_ref`解析，不要求重复填写`counterparty_behavior_name`。外部门流程、确认状态、返回路径和证据只形成治理提示。评分函数对输入对象只读，测试必须在评分前后比较规范化JSON。
 
-评分模块返回问题的维度、文案、影响和定位元数据。页面使用现有`focusExportWarning()`定位基础字段、业务行为、流程关系、数据对象、跨部门承接、表单或表结构；无法定位具体输入控件时退回对象卡片或分区。重复的评分扣项和普通导出提示按文案及定位元数据去重。
+评分模块返回问题的维度、当前情况、`suggestions[]`、影响和定位元数据。页面使用现有`focusExportWarning()`定位基础字段、业务行为、流程关系、数据对象、跨部门承接、表单或表结构；无法定位具体输入控件时退回对象卡片或分区。重复的评分扣项和普通导出提示按文案及定位元数据去重。
 
 v2历史升级曾引入承接关系结构。服务端继续编译v1、v2和v3规则；当前默认模板和导出使用v3，v1、v2仅用于兼容导入。v1承接关系迁移为`outbound_followup`，`send_behavior_ref`映射到`anchor_behavior_ref`，`input_data_ref`映射到`transfer_data_ref`，既有目标部门、目标流程和目标行为映射到外部门字段；存在返回数据或恢复行为时设置`requires_return=true`。v1、v2表单在页面内存中补`form_design_state=unspecified`。字段冲突保留原值并产生警告，不猜测正确答案。
 
@@ -222,7 +242,7 @@ v2历史升级曾引入承接关系结构。服务端继续编译v1、v2和v3规
 1. “完成业务评审后，进入MDM平台正式编辑”说明归口部门MDM审核员在MDM平台执行预览、填写审核依据和审核导入，MDM平台复核文件内容未变化后才写入流程草稿。
 2. “后续预告：系统动力学评价”说明未来评价将结合正式流程、运行数据和实际反馈观察动态变化，并明确评价不替代业务评审、审核和管理决策。
 
-两张卡片不绑定`data-action`，不包含按钮或链接，不调用MDM平台接口，不修改`structureScoreState`、候选流程、未导出状态、JSON或浏览器持久化空间。桌面端使用两列网格；不超过900像素时改为单列。
+两张卡片不绑定`data-action`，不包含按钮或链接，不调用MDM平台接口，不修改`structureScoreState`、候选流程、未导出状态、JSON或浏览器持久化空间。卡片保持桌面两列网格，不提供移动端单列变体。
 
 ## 10. 页面参考材料暂停和DeepSeek移除
 

@@ -8,6 +8,7 @@
   const NODE_TYPES = new Set(['action', 'decision', 'parallel_split', 'parallel_join']);
   const RELATION_TYPES = new Set(['sequence', 'condition', 'loop', 'parallel']);
   const AREA_TYPES = new Set(['基本信息', '明细清单']);
+  const ACTOR_ASSIGNMENT_MODES = new Set(['fixed_department', 'company_wide', 'dynamic_from_data']);
   const PLACEHOLDER_PATTERN = /待(?:填写|补充|确认)/;
   const EXACT_PLACEHOLDER_PATTERN = /^(?:无|暂无|未知|不适用|N\/?A)$/i;
 
@@ -107,11 +108,43 @@
       .some(department => normalized.startsWith(department) && complete(normalized.slice(department.length)));
   }
 
-  function issue(category, message, target = {}, effect = '') {
+  function actorAssignmentMode(behavior) {
+    const explicit = text(behavior?.actor_assignment_mode);
+    if (ACTOR_ASSIGNMENT_MODES.has(explicit)) return explicit;
+    return text(behavior?.current_actor_role) === '全公司' ? 'company_wide' : 'fixed_department';
+  }
+
+  function defaultIssueSuggestions(category, target = {}) {
+    if (target.focusPath || (Array.isArray(target.focusPaths) && target.focusPaths.length)) {
+      return ['点击本项返回对应位置，补充并核对页面高亮的字段。'];
+    }
+    if (['行为关系', '判断出口', '回路', '并行结构'].includes(category)) {
+      return ['进入“流程步骤—流程关系”，补充并核对相关关系。'];
+    }
+    if (['数据对象', '数据时序'].includes(category)) {
+      return ['进入“流程步骤—输出物与数据”，补充并核对相关数据对象。'];
+    }
+    if (category === '表单结构') {
+      return ['进入“表单与记录”，补充并核对相关表单内容。'];
+    }
+    if (['跨部门待办（候选）', 'MDM平台承接待办'].includes(category)) {
+      return ['进入“流程步骤—业务流程”，打开关联的跨部门业务并补充待办信息。'];
+    }
+    if (category === '基础信息') {
+      return ['进入对应基本信息页面，补充页面标记的内容。'];
+    }
+    return ['点击本项返回对应位置，核对并补充相关内容。'];
+  }
+
+  function issue(category, message, target = {}, effect = '', suggestions = []) {
+    const normalizedSuggestions = (Array.isArray(suggestions) ? suggestions : [suggestions])
+      .map(text)
+      .filter(Boolean);
     return {
       category,
       message,
       effect,
+      suggestions: normalizedSuggestions.length ? normalizedSuggestions : defaultIssueSuggestions(category, target),
       editorSection: target.editorSection || '',
       processSection: target.processSection || '',
       focusKind: target.focusKind || '',
@@ -306,8 +339,19 @@
       const routeTargets = new Set(parallelRelations
         .filter(relation => text(relation.from_behavior_ref) === text(behavior.behavior_ref))
         .map(relation => text(relation.to_behavior_ref)));
+      const sequenceRelations = relations.filter(relation =>
+        relation.relation_type === 'sequence'
+        && text(relation.from_behavior_ref) === text(behavior.behavior_ref)
+        && behaviorRefs.has(text(relation.to_behavior_ref))
+        && !routeTargets.has(text(relation.to_behavior_ref))
+      );
       const routeCount = routeTargets.size;
-      return { behavior, routeCount, missingCount: Math.max(0, 2 - routeCount) };
+      return {
+        behavior,
+        routeCount,
+        missingCount: Math.max(0, 2 - routeCount),
+        sequenceRelations
+      };
     });
     const joins = joinBehaviors.map(behavior => {
       const relationSources = new Set(parallelRelations
@@ -319,12 +363,19 @@
       const relationSourceCount = relationSources.size;
       const handoffSourceCount = handoffSources.size;
       const sourceCount = relationSourceCount + handoffSourceCount;
+      const sequenceRelations = relations.filter(relation =>
+        relation.relation_type === 'sequence'
+        && text(relation.to_behavior_ref) === text(behavior.behavior_ref)
+        && behaviorRefs.has(text(relation.from_behavior_ref))
+        && !relationSources.has(text(relation.from_behavior_ref))
+      );
       return {
         behavior,
         relationSourceCount,
         handoffSourceCount,
         sourceCount,
-        missingCount: Math.max(0, 2 - sourceCount)
+        missingCount: Math.max(0, 2 - sourceCount),
+        sequenceRelations
       };
     });
     return {
@@ -333,6 +384,91 @@
       missingJoin: parallelRelations.length > 0 && joinBehaviors.length === 0,
       splits,
       joins
+    };
+  }
+
+  function quotedBehaviorLabels(relations, endpointKey, behaviors) {
+    const labelsByRef = new Map(behaviors.map(item => [text(item.behavior_ref), text(item.behavior_name) || text(item.behavior_ref)]));
+    return [...new Set(relations.map(relation => labelsByRef.get(text(relation[endpointKey]))).filter(Boolean))]
+      .map(label => `“${label}”`)
+      .join('、');
+  }
+
+  function relationTypeFocusPaths(candidateRelations, relations) {
+    return candidateRelations
+      .map(relation => relations.indexOf(relation))
+      .filter(index => index >= 0)
+      .map(index => `flow_relations.${index}.relation_type`);
+  }
+
+  function parallelSplitGuidance(detail, documentValue) {
+    const data = documentValue && typeof documentValue === 'object' ? documentValue : {};
+    const behaviors = Array.isArray(data.behaviors) ? data.behaviors : [];
+    const relations = Array.isArray(data.flow_relations) ? data.flow_relations : [];
+    const label = text(detail?.behavior?.behavior_name) || text(detail?.behavior?.behavior_ref) || '并行开始节点';
+    const candidates = Array.isArray(detail?.sequenceRelations) ? detail.sequenceRelations : [];
+    const candidateTargets = new Set(candidates.map(relation => text(relation.to_behavior_ref)).filter(Boolean));
+    const targetLabels = quotedBehaviorLabels(candidates, 'to_behavior_ref', behaviors);
+    const missingAfterConversion = Math.max(0, 2 - (Number(detail?.routeCount) + candidateTargets.size));
+    if (candidates.length) {
+      const suggestions = [`将通往${targetLabels}的现有顺序关系改为“并行路线”。`];
+      const focusPaths = relationTypeFocusPaths(candidates, relations);
+      if (missingAfterConversion) {
+        suggestions.push(`再新增${missingAfterConversion}条从本节点流向不同后续行为的并行路线。`);
+      }
+      return {
+        message: `${label}已有${candidateTargets.size}条通往${targetLabels}的顺序关系，顺序关系不计入并行路线；当前有效并行路线为${detail.routeCount}条，规则要求至少2条。`,
+        suggestions,
+        target: {
+          editorSection: 'process',
+          processSection: 'relations',
+          focusKind: 'relation',
+          focusRef: text(candidates[0]?.relation_ref),
+          focusPath: focusPaths[0] || '',
+          focusPaths
+        }
+      };
+    }
+    return {
+      message: `${label}当前有效并行路线为${detail.routeCount}条，规则要求至少2条。`,
+      suggestions: [`新增${detail.missingCount}条从本节点流向不同后续行为的并行路线。`],
+      target: { editorSection: 'process', processSection: 'relations' }
+    };
+  }
+
+  function parallelJoinGuidance(detail, documentValue) {
+    const data = documentValue && typeof documentValue === 'object' ? documentValue : {};
+    const behaviors = Array.isArray(data.behaviors) ? data.behaviors : [];
+    const relations = Array.isArray(data.flow_relations) ? data.flow_relations : [];
+    const label = text(detail?.behavior?.behavior_name) || text(detail?.behavior?.behavior_ref) || '并行汇合节点';
+    const candidates = Array.isArray(detail?.sequenceRelations) ? detail.sequenceRelations : [];
+    const candidateSources = new Set(candidates.map(relation => text(relation.from_behavior_ref)).filter(Boolean));
+    const sourceLabels = quotedBehaviorLabels(candidates, 'from_behavior_ref', behaviors);
+    const missingAfterConversion = Math.max(0, 2 - (Number(detail?.sourceCount) + candidateSources.size));
+    const sourceBreakdown = `${detail.relationSourceCount}条并行路线来源、${detail.handoffSourceCount}个跨部门返回来源`;
+    if (candidates.length) {
+      const suggestions = [`将${sourceLabels}进入本节点的现有顺序关系改为“并行路线”。`];
+      const focusPaths = relationTypeFocusPaths(candidates, relations);
+      if (missingAfterConversion) {
+        suggestions.push(`再补充${missingAfterConversion}个有效来源。`);
+      }
+      return {
+        message: `${label}已有${candidateSources.size}条来自${sourceLabels}的顺序关系，顺序关系不计入并行汇合来源；当前共有${detail.sourceCount}个有效来源（${sourceBreakdown}），规则要求至少2个。`,
+        suggestions,
+        target: {
+          editorSection: 'process',
+          processSection: 'relations',
+          focusKind: 'relation',
+          focusRef: text(candidates[0]?.relation_ref),
+          focusPath: focusPaths[0] || '',
+          focusPaths
+        }
+      };
+    }
+    return {
+      message: `${label}当前共有${detail.sourceCount}个有效来源（${sourceBreakdown}），规则要求至少2个。`,
+      suggestions: [`补充${detail.missingCount}条以本节点为目标的并行路线。`],
+      target: { editorSection: 'process', processSection: 'relations' }
     };
   }
 
@@ -357,9 +493,16 @@
     handoffs.forEach(handoff => {
       const direction = handoffDirection(handoff);
       const anchorRef = text(handoffAnchorRef(handoff));
+      const counterpartyRef = text(handoff.counterparty_behavior_ref);
       const resumeRef = text(handoff.resume_behavior_ref);
+      const hasLocalCounterparty = behaviorRefs.has(counterpartyRef) && counterpartyRef !== anchorRef;
       if (direction === 'inbound_prerequisite' && behaviorRefs.has(anchorRef)) {
         incomingByBehavior.get(anchorRef).push({ kind: 'inbound_handoff', handoff });
+        if (hasLocalCounterparty) adjacency.get(counterpartyRef).add(anchorRef);
+      }
+      if (direction === 'outbound_followup' && behaviorRefs.has(anchorRef) && hasLocalCounterparty) {
+        adjacency.get(anchorRef).add(counterpartyRef);
+        incomingByBehavior.get(counterpartyRef).push({ kind: 'outbound_handoff', handoff });
       }
       if (
         direction === 'outbound_followup'
@@ -367,7 +510,7 @@
         && behaviorRefs.has(anchorRef)
         && behaviorRefs.has(resumeRef)
       ) {
-        adjacency.get(anchorRef).add(resumeRef);
+        adjacency.get(hasLocalCounterparty ? counterpartyRef : anchorRef).add(resumeRef);
         incomingByBehavior.get(resumeRef).push({ kind: 'returning_handoff', handoff });
       }
     });
@@ -442,7 +585,8 @@
           dataIndex,
           producerRefs,
           consumerRef: '',
-          message: `${text(item.data_name) || `输出物与数据${dataIndex + 1}`}保留了多个历史产生行为，请在“输出物与数据”中确认唯一产生行为`
+          message: `${text(item.data_name) || `输出物与数据${dataIndex + 1}`}保留了${producerRefs.length}个历史产生行为，当前无法确定唯一产生行为。`,
+          suggestions: ['进入“输出物与数据”，确认并保留唯一产生行为。']
         });
       }
       consumerRefs.forEach(consumerRef => {
@@ -477,6 +621,23 @@
           before_external_return: `${dataLabel}尚未在跨部门返回位置形成，前序行为“${consumerLabel}”不能引用`,
           unordered_external_data: `${dataLabel}的跨部门返回位置与使用行为“${consumerLabel}”没有明确先后关系，不能引用`
         }[reason];
+        const reasonSuggestions = {
+          self_consumption: [`从${dataLabel}的使用行为中移除“${consumerLabel}”。`],
+          future_data: [
+            `从${dataLabel}的使用行为中移除前序行为“${consumerLabel}”。`,
+            `前序行为确实需要输入时，登记一个在“${consumerLabel}”开始前已经形成的数据。`
+          ],
+          unordered_data: [
+            `两个行为确有先后顺序时，在流程关系中补充从“${producerLabel}”到“${consumerLabel}”的可达路径。`,
+            `两个行为属于互不依赖的并行路线时，从${dataLabel}的使用行为中移除“${consumerLabel}”。`
+          ],
+          non_loop_cycle: ['先修正形成闭环的普通流程关系，再核对该数据的产生行为和使用行为。'],
+          before_external_return: [`从${dataLabel}的使用行为中移除返回位置之前的“${consumerLabel}”。`],
+          unordered_external_data: [
+            `在流程关系中建立从跨部门返回位置到“${consumerLabel}”的可达路径。`,
+            `两者没有先后依赖时，从${dataLabel}的使用行为中移除“${consumerLabel}”。`
+          ]
+        }[reason] || [];
         issues.push({
           reason,
           dataRef,
@@ -484,7 +645,8 @@
           producerRef: effectiveProducerRef,
           consumerRef,
           availabilityStarts: uniqueAvailabilityStarts,
-          message: reasonMessage
+          message: reasonMessage,
+          suggestions: reasonSuggestions
         });
       });
       return {
@@ -520,6 +682,21 @@
       if (!detail.availabilityStarts.length) return true;
       return detail.availabilityStarts.some(startRef => startRef === text(behaviorRef) || canReach(startRef, text(behaviorRef)));
     }
+    function isAvailableBeforeBehavior(dataRef, behaviorRef) {
+      const detail = dataDetails.find(item => item.dataRef === text(dataRef));
+      const normalizedBehaviorRef = text(behaviorRef);
+      if (!detail || !behaviorRefs.has(normalizedBehaviorRef)) return false;
+      if (detail.issues.some(item => item.reason === 'multiple_legacy_producers')) return false;
+      if (detail.effectiveProducerRef) {
+        return detail.effectiveProducerRef !== normalizedBehaviorRef
+          && canReach(detail.effectiveProducerRef, normalizedBehaviorRef)
+          && !canReach(normalizedBehaviorRef, detail.effectiveProducerRef);
+      }
+      if (!detail.availabilityStarts.length) return false;
+      return detail.availabilityStarts.some(startRef =>
+        startRef === normalizedBehaviorRef || canReach(startRef, normalizedBehaviorRef)
+      );
+    }
     return {
       adjacency,
       incomingByBehavior,
@@ -527,7 +704,8 @@
       dataDetails,
       issues,
       consumerIssue,
-      isConsumerAvailable
+      isConsumerAvailable,
+      isAvailableBeforeBehavior
     };
   }
 
@@ -581,13 +759,38 @@
       };
       const isControlNode = ['parallel_split', 'parallel_join'].includes(item.node_type);
       const hasDerivedEntry = (dataFlowDetails.incomingByBehavior.get(text(item.behavior_ref)) || []).length > 0;
+      const assignmentMode = actorAssignmentMode(item);
+      const actorDataRef = text(item.actor_department_data_ref);
+      let actorAssignmentPassed = false;
+      let actorAssignmentMessage = `${label}未选择执行部门`;
+      let actorAssignmentFocusPath = `behaviors.${index}.current_actor_role`;
+      if (assignmentMode === 'company_wide') {
+        actorAssignmentPassed = true;
+      } else if (assignmentMode === 'dynamic_from_data') {
+        actorAssignmentFocusPath = `behaviors.${index}.actor_department_data_ref`;
+        if (!actorDataRef || !dataRefs.has(actorDataRef)) {
+          actorAssignmentMessage = `${label}未选择用于确定执行部门的前序数据`;
+        } else if (!dataFlowDetails.isAvailableBeforeBehavior(actorDataRef, item.behavior_ref)) {
+          actorAssignmentMessage = `${label}选择的执行部门来源数据尚未在本行为开始前形成`;
+        } else if (!complete(item.actor_position_rule)) {
+          actorAssignmentMessage = `${label}未填写执行岗位或责任人确定规则`;
+          actorAssignmentFocusPath = `behaviors.${index}.actor_position_rule`;
+        } else {
+          actorAssignmentPassed = true;
+        }
+      } else {
+        actorAssignmentPassed = recognizedActor(item.current_actor_role, departments);
+        actorAssignmentMessage = complete(item.current_actor_role)
+          ? `${label}未选择执行岗位`
+          : `${label}未选择执行部门`;
+      }
       const checks = [
         [NODE_TYPES.has(item.node_type), `${label}未选择节点类型`, fieldTarget(target, `behaviors.${index}.node_type`)],
         [complete(item.behavior_name), `第${index + 1}项行为未填写名称`, fieldTarget(target, `behaviors.${index}.behavior_name`)],
         [
-          recognizedActor(item.current_actor_role, departments),
-          complete(item.current_actor_role) ? `${label}未选择执行岗位` : `${label}未选择执行部门`,
-          fieldTarget(target, `behaviors.${index}.current_actor_role`)
+          actorAssignmentPassed,
+          actorAssignmentMessage,
+          fieldTarget(target, actorAssignmentFocusPath)
         ],
         [
           hasDerivedEntry || complete(item.trigger),
@@ -645,17 +848,19 @@
       if (relation.relation_type === 'condition' && !complete(relation.condition)) {
         issues.push(issue(
           '判断出口',
-          `流程关系${index + 1}为判断分支，但未填写判断条件`,
+          `流程关系${index + 1}已选择“判断分支”，但判断条件为空。`,
           fieldTarget(target, `flow_relations.${index}.condition`),
-          '影响判断出口子项'
+          '影响判断出口子项',
+          ['填写进入目标行为必须满足的具体判断结果。']
         ));
       }
       if (relation.relation_type === 'loop' && !complete(relation.condition)) {
         issues.push(issue(
           '回路',
-          `流程关系${index + 1}为流程内部回路，但未填写回路触发条件`,
+          `流程关系${index + 1}已选择“流程内部回路”，但回路触发条件为空。`,
           fieldTarget(target, `flow_relations.${index}.condition`),
-          '影响回路子项'
+          '影响回路子项',
+          ['填写退回前序行为的具体触发条件。']
         ));
       }
     });
@@ -729,9 +934,10 @@
       if (outletCount < 2) {
         issues.push(issue(
           '判断出口',
-          `${label}当前只有${outletCount}条完整出口，判断节点至少需要2条`,
+          `${label}当前只有${outletCount}条完整出口，判断节点至少需要2条。`,
           target,
-          '影响判断出口子项'
+          '影响判断出口子项',
+          [`补充${2 - outletCount}条具有明确去向的判断出口。`]
         ));
       }
       if (defaultSequenceCount > 1) {
@@ -747,7 +953,11 @@
               focusRef: relation.relation_ref,
               focusPath: `flow_relations.${relationIndex}.relation_type`
             },
-            '影响判断出口子项'
+            '影响判断出口子项',
+            [
+              '需要保留该关系时，为它填写判断条件并改为“判断分支”。',
+              '不需要保留该关系时，删除该默认继续关系。'
+            ]
           ));
         });
       }
@@ -768,29 +978,32 @@
       if (parallelDetails.missingSplit) {
         issues.push(issue(
           '并行结构',
-          '当前存在并行路线，但尚未设置“并行开始（同时启动多条路线）”节点',
+          '当前存在并行路线，但业务流程中没有“并行开始（同时启动多条路线）”控制节点。',
           { editorSection: 'process', processSection: 'behaviors' },
-          '影响并行结构子项'
+          '影响并行结构子项',
+          ['新增“并行开始”控制节点，并让现有并行路线从该节点发出。']
         ));
       }
       if (parallelDetails.missingJoin) {
         issues.push(issue(
           '并行结构',
-          '当前存在并行路线，但尚未设置“并行汇合（等待多条路线完成）”节点',
+          '当前存在并行路线，但业务流程中没有“并行汇合（等待多条路线完成）”控制节点。',
           { editorSection: 'process', processSection: 'behaviors' },
-          '影响并行结构子项'
+          '影响并行结构子项',
+          ['新增“并行汇合”控制节点，并让需要等待的并行路线进入该节点。']
         ));
       }
       parallelDetails.splits.forEach(detail => {
         const passed = detail.routeCount >= 2;
         parallelChecks.push(passed);
         if (!passed) {
-          const label = text(detail.behavior.behavior_name) || text(detail.behavior.behavior_ref) || '并行开始节点';
+          const guidance = parallelSplitGuidance(detail, data);
           issues.push(issue(
             '并行结构',
-            `${label}当前只有${detail.routeCount}条并行路线；请进入流程关系，再新增${detail.missingCount}条以本节点为起点、流向不同后续行为的并行路线`,
-            { editorSection: 'process', processSection: 'relations' },
-            '影响并行结构子项'
+            guidance.message,
+            guidance.target,
+            '影响并行结构子项',
+            guidance.suggestions
           ));
         }
       });
@@ -798,12 +1011,13 @@
         const passed = detail.sourceCount >= 2;
         parallelChecks.push(passed);
         if (!passed) {
-          const label = text(detail.behavior.behavior_name) || text(detail.behavior.behavior_ref) || '并行汇合节点';
+          const guidance = parallelJoinGuidance(detail, data);
           issues.push(issue(
             '并行结构',
-            `${label}当前只有${detail.sourceCount}个有效来源；请补充${detail.missingCount}条以本节点为目标的并行路线，跨部门路线返回时把恢复位置设为本节点`,
-            { editorSection: 'process', processSection: 'relations' },
-            '影响并行结构子项'
+            guidance.message,
+            guidance.target,
+            '影响并行结构子项',
+            guidance.suggestions
           ));
         }
       });
@@ -819,7 +1033,11 @@
         '数据对象',
         '尚未登记结构化数据对象',
         { editorSection: 'process', processSection: 'data' },
-        '数据对象子项0分；不要为得分虚构对象'
+        '数据对象子项0分；不要为得分虚构对象',
+        [
+          '流程确有结构化输入输出时，登记实际数据对象并关联产生行为和使用行为。',
+          '流程没有结构化数据对象时，保留现状，不为提高分数虚构数据。'
+        ]
       ));
     } else {
       let dataPassed = 0;
@@ -862,7 +1080,8 @@
             '数据时序',
             flowIssue.message,
             fieldTarget(target, `data_objects.${index}.consumed_by_behavior_refs`),
-            '影响数据对象子项'
+            '影响数据对象子项',
+            flowIssue.suggestions
           ));
         });
       });
@@ -883,36 +1102,47 @@
         const direction = handoffDirection(item);
         const anchorRef = handoffAnchorRef(item);
         const transferDataRef = handoffTransferDataRef(item);
+        const counterpartyBehavior = behaviors.find(behavior =>
+          text(behavior.behavior_ref) === text(item.counterparty_behavior_ref)
+        );
         const checks = [
           [
             ['inbound_prerequisite', 'outbound_followup'].includes(direction),
-          `跨部门待办（候选）${index + 1}未明确前置输入或后续承接方向`,
-            `cross_department_handoffs.${index}.handoff_direction`
+          `跨部门待办（候选）${index + 1}未明确承接方向`,
+            `cross_department_handoffs.${index}.handoff_direction`,
+            ['根据跨部门业务在本流程中的位置，在“开始前提供”“完成后交给外部门”中选择一项。']
           ],
           [
             complete(anchorRef) && behaviorRefs.has(anchorRef),
           `跨部门待办（候选）${index + 1}未关联有效的本流程行为`,
-            `cross_department_handoffs.${index}.anchor_behavior_ref`
+            `cross_department_handoffs.${index}.anchor_behavior_ref`,
+            ['选择与该跨部门业务直接关联的本流程行为。']
           ],
           [
             handoffCounterpartyResolved(item),
-          `跨部门待办（候选）${index + 1}既未明确外部门，也未标记待明确责任部门`,
-            `cross_department_handoffs.${index}.counterparty_resolution`
+          `跨部门待办（候选）${index + 1}尚未说明承接部门是否明确`,
+            `cross_department_handoffs.${index}.counterparty_resolution`,
+            ['根据当前事实，在“已明确承接部门”“承接部门待明确”中选择一项。']
           ],
           [
             (complete(transferDataRef) && dataRefs.has(transferDataRef)) || complete(item.requested_matter),
-          `跨部门待办（候选）${index + 1}未说明传递数据或承接事项`,
-            `cross_department_handoffs.${index}.requested_matter`
+          `跨部门待办（候选）${index + 1}未说明跨部门交界对象`,
+            `cross_department_handoffs.${index}.requested_matter`,
+            [
+              '已有结构化数据时，在“传递数据”中选择对应数据。',
+              '没有对应结构化数据时，填写承接部门具体需要办理的事项。'
+            ]
           ],
           [
-            complete(item.trigger_condition) || complete(item.completion_standard),
-          `跨部门待办（候选）${index + 1}未填写触发条件或完成标准`,
-            `cross_department_handoffs.${index}.trigger_condition`
+            complete(item.trigger_condition) || complete(item.completion_standard) || complete(counterpartyBehavior?.completion_standard),
+          `跨部门待办（候选）${index + 1}没有可识别的触发条件和完成标准`,
+            `cross_department_handoffs.${index}.trigger_condition`,
+            ['补充不能由关联流程关系表达的触发条件，并在承接部门业务行为中填写完成标准。']
           ]
         ];
-        checks.forEach(([passed, message, focusPath]) => {
+        checks.forEach(([passed, message, focusPath, suggestions]) => {
           if (passed) handoffPassed += 1;
-      else issues.push(issue('跨部门待办（候选）', message, fieldTarget(target, focusPath), '影响跨部门待办子项'));
+      else issues.push(issue('跨部门待办（候选）', message, fieldTarget(target, focusPath), '影响跨部门待办子项', suggestions));
         });
       });
       handoffScore = 5 * (handoffPassed / handoffTotal);
@@ -925,7 +1155,11 @@
         '表单结构',
         '尚未登记结构化表单或记录',
         { editorSection: 'forms' },
-        '表单结构维度0分；不要为得分虚构表单'
+        '表单结构维度0分；不要为得分虚构表单',
+        [
+          '流程实际使用表单或记录时，登记真实表单及其字段。',
+          '流程没有表单或记录时，保留现状，不为提高分数虚构表单。'
+        ]
       ));
     } else {
       const perFormScores = [];
@@ -1051,24 +1285,51 @@
         focusKind: 'handoff',
         focusRef: item.handoff_ref
       };
-      if (!complete(item.counterparty_process_name) || !complete(item.counterparty_behavior_name)) {
+      const counterpartyBehavior = behaviors.find(behavior =>
+        text(behavior.behavior_ref) === text(item.counterparty_behavior_ref)
+      );
+      if (!complete(item.counterparty_process_name)) {
         previewIssues.push(issue(
           'MDM平台承接待办',
-        `跨部门待办（候选）${index + 1}的外部门流程或行为尚未补齐`,
+        `跨部门待办（候选）${index + 1}未填写承接部门流程`,
           target,
-          '本期不扣分；MDM平台审核导入后由对应部门补充'
+          '本期不扣分；MDM平台审核导入后由对应部门补充',
+          ['当前阶段可以保留该项；导入MDM平台后，由承接部门补充对应流程。']
+        ));
+      }
+      if (!counterpartyBehavior && !complete(item.counterparty_behavior_name)) {
+        previewIssues.push(issue(
+          'MDM平台承接待办',
+          `跨部门待办（候选）${index + 1}未填写承接部门业务行为`,
+          target,
+          '本期不扣分；承接部门业务行为需要继续补充',
+          ['填写承接部门办理该事项时执行的业务动作。']
         ));
       }
       if (
         direction === 'outbound_followup'
         && item.requires_return
-        && (!complete(item.returned_data_ref) || !complete(item.resume_behavior_ref))
+        && !complete(item.returned_data_ref)
       ) {
         previewIssues.push(issue(
           'MDM平台承接待办',
-        `跨部门待办（候选）${index + 1}已要求返回，但返回数据或本流程恢复行为尚未补齐`,
-          target,
-          '本期不扣分；MDM平台审核导入后继续完善'
+          `跨部门待办（候选）${index + 1}已要求返回，但未选择返回数据`,
+          fieldTarget(target, `cross_department_handoffs.${index}.returned_data_ref`),
+          '本期不扣分；返回数据需要继续补充',
+          ['选择承接部门办理完成后返回本流程的数据。']
+        ));
+      }
+      if (
+        direction === 'outbound_followup'
+        && item.requires_return
+        && !complete(item.resume_behavior_ref)
+      ) {
+        previewIssues.push(issue(
+          'MDM平台承接待办',
+          `跨部门待办（候选）${index + 1}已要求返回，但未选择返回后的恢复位置`,
+          fieldTarget(target, `cross_department_handoffs.${index}.resume_behavior_ref`),
+          '本期不扣分；返回后的恢复位置需要继续补充',
+          ['选择本流程收到返回结果后继续办理的行为。']
         ));
       }
     });
@@ -1196,6 +1457,8 @@
     chainCoefficient,
     grade,
     parallelStructureDetails,
+    parallelSplitGuidance,
+    parallelJoinGuidance,
     dataFlowConsistencyDetails,
     evaluateContent,
     technicalResult,
