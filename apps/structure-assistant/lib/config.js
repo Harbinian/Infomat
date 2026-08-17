@@ -47,6 +47,11 @@ function numberFrom(env, key, fallback) {
   return parsed;
 }
 
+function listFrom(value, fallback = []) {
+  const values = String(value || '').split(',').map(item => item.trim()).filter(Boolean);
+  return values.length ? values : [...fallback];
+}
+
 function loadRuntimeConfig(options = {}) {
   const configPath = options.configPath || DEFAULT_CONFIG_PATH;
   const fixed = JSON.parse(fs.readFileSync(configPath, 'utf8'));
@@ -59,13 +64,12 @@ function loadRuntimeConfig(options = {}) {
 
   const accounts = fixed.accounts.map(account => ({
     ...account,
-    passwordHash: env[account.passwordHashEnv] || '',
-    apiKey: env[account.apiKeyEnv] || ''
+    passwordHash: env[account.passwordHashEnv] || ''
   }));
 
   const requiredSecrets = [
     'STRUCTURE_ASSISTANT_SESSION_SECRET',
-    ...fixed.accounts.flatMap(account => [account.passwordHashEnv, account.apiKeyEnv])
+    ...fixed.accounts.map(account => account.passwordHashEnv)
   ];
   const missingSecrets = requiredSecrets.filter(key => !env[key]);
   if (strictSecrets && missingSecrets.length) {
@@ -99,11 +103,20 @@ function loadRuntimeConfig(options = {}) {
       ...fixed.deepseek,
       baseUrl: env.DEEPSEEK_BASE_URL || fixed.deepseek.baseUrl
     },
+    dsh: {
+      ...fixed.dsh,
+      nodeExecutable: env.STRUCTURE_ASSISTANT_DSH_NODE_PATH || process.execPath,
+      trustedPublicHosts: listFrom(
+        env.STRUCTURE_ASSISTANT_PUBLIC_HOSTS,
+        fixed.dsh.trustedPublicHosts
+      )
+    },
     accounts,
     runtime: {
       dir: runtimeDir,
       usageLogPath: path.join(runtimeDir, 'usage-metadata.jsonl'),
-      maintenancePath: path.join(runtimeDir, 'maintenance.json')
+      maintenancePath: path.join(runtimeDir, 'maintenance.json'),
+      dshRoot: path.join(runtimeDir, 'dsh')
     }
   };
 }

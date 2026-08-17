@@ -4,13 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>MDM-AI助手</title>
-  <link rel="stylesheet" href="/styles.css?v=20260729-review-preview">
+  <link rel="stylesheet" href="/styles.css?v=20260815-session-key">
 </head>
 <body>
   <div class="page-shell">
     <header class="topbar">
       <div>
-        <p class="eyebrow">信息化项目组 · 四人试点</p>
+        <p class="eyebrow">信息化项目组 · 五账号试点</p>
         <h1>MDM-AI助手</h1>
         <p class="subtitle">直接对话梳理流程，右侧同步形成结构化结果；AI不判断流程内容是否正确。</p>
       </div>
@@ -38,7 +38,7 @@
         <div>
           <p class="section-kicker">集中部署</p>
           <h2>登录后开始填报</h2>
-          <p>用户电脑不需要安装、复制或更新Infomat仓库，也不会保存接口密钥。</p>
+          <p>用户电脑不需要安装、复制或更新Infomat仓库。登录后，用户在当前会话中配置本人接口密钥。</p>
         </div>
         <form id="loginForm">
           <label>
@@ -55,6 +55,19 @@
       </section>
 
       <section id="appView" hidden>
+        <section class="api-key-card" id="apiKeyCard" aria-live="polite">
+          <div>
+            <p class="section-kicker">当前登录会话</p>
+            <h2>DeepSeek API Key</h2>
+            <p id="apiKeyStatusText">正在检查当前会话是否已配置接口密钥……</p>
+          </div>
+          <div class="api-key-actions">
+            <span class="key-status-badge" id="apiKeyStatusBadge">检查中</span>
+            <button class="button secondary" id="openApiKeyButton" type="button">配置Key</button>
+            <button class="button ghost" id="clearApiKeyButton" type="button" hidden>清除Key</button>
+          </div>
+        </section>
+
         <nav class="tabs" aria-label="功能导航">
           <button class="tab active" data-view="fill" type="button">对话填报</button>
           <button class="tab" data-view="review" type="button">独立结构预审</button>
@@ -213,7 +226,7 @@
                   <p class="section-kicker">当前待审文件</p>
                   <h2>3001输出与流程图预览</h2>
                 </div>
-          <span class="validation-badge" id="reviewFormatBadge">process-governance-v3</span>
+          <span class="validation-badge" id="reviewFormatBadge">process-governance-v5</span>
               </div>
               <p class="review-output-note">这里显示正在处理的同一份JSON。预审意见和处理记录不会写入3001格式JSON。</p>
               <div class="review-preview-tabs" role="tablist" aria-label="预审文件预览方式">
@@ -245,8 +258,8 @@
                   <span>业务行为</span>
                   <span>判断</span>
                   <span>并行</span>
-                  <span>实线：本流程关系</span>
-                  <span>虚线：跨部门承接</span>
+                  <span>实线：流程关系</span>
+                  <span>粗蓝线：跨部门流程关系</span>
                   <span>粗边框：内部流程调用</span>
                 </div>
                 <div class="diagram-notice" id="reviewDiagramViewportNotice" role="status" hidden>当前已聚焦流程开头，点击“适应画布”查看完整流程。</div>
@@ -279,20 +292,30 @@
               <input id="maintenanceMessage" placeholder="维护提示，例如：正在发布新版本，请先下载草稿">
               <button class="button primary" id="saveMaintenanceButton" type="button">保存维护状态</button>
             </div>
+            <div class="maintenance-control entry-mode-control">
+              <label for="entryModeSelect">统一用户入口</label>
+              <select id="entryModeSelect">
+                <option value="dsh">DSH治理工作区</option>
+                <option value="classic">经典页面（应急）</option>
+              </select>
+              <input id="entryModeReason" maxlength="300" placeholder="填写切换原因；该记录不含业务内容">
+              <button class="button primary" id="saveEntryModeButton" type="button">切换统一入口</button>
+            </div>
           </section>
           <section class="card">
-            <h2>四个账号余额</h2>
+            <h2>五个账号Key会话状态</h2>
+            <p>管理员只能查看是否存在有效Key会话和会话数量，不能查看其他账号的余额、指纹或完整Key。</p>
             <div class="table-wrap">
               <table>
                 <thead>
                   <tr>
                     <th>账号</th>
-                    <th>接口密钥</th>
-                    <th>余额</th>
-                    <th>状态</th>
+                    <th>Key状态</th>
+                    <th>有效会话数</th>
+                    <th>有效DSH实例数</th>
                   </tr>
                 </thead>
-                <tbody id="adminBalanceRows"></tbody>
+                <tbody id="adminKeyStatusRows"></tbody>
               </table>
             </div>
           </section>
@@ -301,8 +324,37 @@
     </main>
   </div>
 
-  <script src="/assets/3001/cytoscape.min.js?v=20260729-review-preview" defer></script>
-  <script src="/assets/3001/process-diagram.js?v=20260729-review-preview" defer></script>
-  <script src="/app.js?v=20260729-review-preview" defer></script>
+  <div class="modal-backdrop" id="apiKeyModal" hidden>
+    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="apiKeyModalTitle">
+      <div>
+        <p class="section-kicker">当前登录会话</p>
+        <h2 id="apiKeyModalTitle">配置本人DeepSeek API Key</h2>
+        <p>系统通过HTTPS验证Key。Key只保存在服务器内存中，退出、会话到期或服务重启后需要重新输入。</p>
+      </div>
+      <form id="apiKeyForm">
+        <label for="apiKeyInput">API Key</label>
+        <input
+          id="apiKeyInput"
+          name="api_key"
+          type="password"
+          autocomplete="off"
+          autocapitalize="none"
+          spellcheck="false"
+          maxlength="512"
+          required
+          placeholder="粘贴本人DeepSeek API Key"
+        >
+        <p class="boundary-note">提交后，页面只显示不可逆指纹，不提供完整Key查看功能。</p>
+        <div class="button-row modal-actions">
+          <button class="button ghost" id="cancelApiKeyButton" type="button">稍后输入</button>
+          <button class="button primary" type="submit">验证并用于当前会话</button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <script src="/assets/3001/cytoscape.min.js?v=20260815-session-key" defer></script>
+  <script src="/assets/3001/process-diagram.js?v=20260815-session-key" defer></script>
+  <script src="/app.js?v=20260815-session-key" defer></script>
 </body>
 </html>

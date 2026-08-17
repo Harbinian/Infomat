@@ -90,6 +90,11 @@ function Wait-Tcp {
 
 Import-LocalEnvFile -Path $localEnvPath
 
+$nodeVersion = (& node --version).Trim()
+if ($LASTEXITCODE -ne 0 -or $nodeVersion -notmatch '^v24\.') {
+  throw "MDM-AI assistant and DSH must run with Node.js 24 LTS. Current version: $nodeVersion"
+}
+
 $gitStatus = & git -C $repoRoot status --porcelain --untracked-files=all
 if ($LASTEXITCODE -ne 0) { throw "Cannot read the Infomat Git worktree." }
 if ($gitStatus) {
@@ -99,9 +104,9 @@ if ($gitStatus) {
 Require-Env -Name "STRUCTURE_ASSISTANT_SESSION_SECRET" | Out-Null
 Require-Env -Name "STRUCTURE_ASSISTANT_TLS_CERT_PATH" | Out-Null
 Require-Env -Name "STRUCTURE_ASSISTANT_TLS_KEY_PATH" | Out-Null
+Require-Env -Name "STRUCTURE_ASSISTANT_PUBLIC_HOSTS" | Out-Null
 foreach ($account in $config.accounts) {
   Require-Env -Name ([string]$account.passwordHashEnv) | Out-Null
-  Require-Env -Name ([string]$account.apiKeyEnv) | Out-Null
 }
 
 $certPath = Resolve-Path -LiteralPath (Require-Env -Name "STRUCTURE_ASSISTANT_TLS_CERT_PATH")
@@ -114,9 +119,11 @@ $env:STRUCTURE_ASSISTANT_GATEWAY_PORT = [string]$config.assistant.gatewayPort
 $env:STRUCTURED_TOOL_BASE_URL = [string]$config.assistant.structuredToolBaseUrl
 $env:STRUCTURE_ASSISTANT_ALLOW_HTTP = "0"
 $env:STRUCTURE_ASSISTANT_ALLOW_DIRTY = "0"
+$env:STRUCTURE_ASSISTANT_DSH_NODE_PATH = (Get-Command node).Source
 
 Invoke-CheckedNpm -Name "3001 structure rules tests" -Arguments @("--prefix", "apps/structured-output-service", "test")
 Invoke-CheckedNpm -Name "structure assistant tests" -Arguments @("--prefix", "apps/structure-assistant", "test")
+Invoke-CheckedNpm -Name "DSH entry compatibility gate" -Arguments @("run", "verify:dsh-entry")
 Invoke-CheckedNpm -Name "structure pilot fixed-config tests" -Arguments @("run", "test:structure-pilot-config")
 
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
@@ -125,7 +132,7 @@ $assistantPort = [int]$config.assistant.port
 $gatewayPort = [int]$config.assistant.gatewayPort
 
 Stop-Listener -Port $assistantPort -Name "structure assistant"
-Stop-Listener -Port $gatewayPort -Name "structured tool gateway"
+Stop-Listener -Port $gatewayPort -Name "DSH authenticated gateway"
 
 Wait-Tcp -HostName "127.0.0.1" -Port $structuredPort -Name "independent 3001 LAN service"
 
@@ -137,11 +144,11 @@ Start-Process -FilePath "npm.cmd" `
   -RedirectStandardError (Join-Path $logDir "structure-assistant.err.log")
 
 Wait-Tcp -HostName "127.0.0.1" -Port $assistantPort -Name "structure assistant"
-Wait-Tcp -HostName "127.0.0.1" -Port $gatewayPort -Name "structured tool gateway"
+Wait-Tcp -HostName "127.0.0.1" -Port $gatewayPort -Name "DSH authenticated gateway"
 
 $commit = (& git -C $repoRoot rev-parse HEAD).Trim()
 Write-Host "Infomat commit: $commit"
 Write-Host "Structure assistant: HTTPS port $assistantPort"
-Write-Host "Authenticated structured tool gateway: HTTPS port $gatewayPort"
+Write-Host "Authenticated DSH entry and structured tool gateway: HTTPS port $gatewayPort"
 Write-Host "Independent 3001 LAN service unchanged: $($config.assistant.structuredToolBaseUrl)"
 Write-Host "Logs: $logDir"
