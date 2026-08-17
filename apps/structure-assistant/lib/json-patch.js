@@ -9,7 +9,6 @@ const ALLOWED_ROOTS = new Set([
   'behaviors',
   'flow_relations',
   'data_objects',
-  'cross_department_handoffs',
   'internal_process_calls',
   'forms',
   'terms'

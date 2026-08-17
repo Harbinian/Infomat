@@ -1,0 +1,218 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://infomat.local/contracts/process-governance-v4.schema.json",
+  "title": "Infomat 单流程结构化文件规则 v4",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "export_meta",
+    "process",
+    "reference_materials",
+    "behaviors",
+    "flow_relations",
+    "data_objects",
+    "cross_department_handoffs",
+    "internal_process_calls",
+    "forms",
+    "terms"
+  ],
+  "properties": {
+    "schema_version": { "const": "process-governance-v4" },
+    "export_meta": { "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/exportMeta" },
+    "process": { "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/process" },
+    "reference_materials": {
+      "type": "array",
+      "items": { "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/referenceMaterial" },
+      "default": []
+    },
+    "behaviors": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/behavior" },
+      "default": []
+    },
+    "flow_relations": {
+      "type": "array",
+      "items": { "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/flowRelation" },
+      "default": []
+    },
+    "data_objects": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/dataObject" },
+      "default": []
+    },
+    "cross_department_handoffs": {
+      "type": "array",
+      "items": { "$ref": "https://infomat.local/contracts/process-governance-v2.schema.json#/$defs/crossDepartmentHandoff" },
+      "default": []
+    },
+    "internal_process_calls": {
+      "type": "array",
+      "items": { "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/internalProcessCall" },
+      "default": []
+    },
+    "forms": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/formOrRecord" },
+      "default": []
+    },
+    "terms": {
+      "type": "array",
+      "items": { "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/term" },
+      "default": []
+    },
+    "migration": { "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/migration" }
+  },
+  "$defs": {
+    "behavior": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "behavior_ref", "node_type", "behavior_name", "current_actor_role", "trigger",
+        "precondition", "input_description", "timing", "completion_standard", "output_description",
+        "work_role", "countersign_all_required", "countersign_target_departments"
+      ],
+      "properties": {
+        "behavior_ref": { "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/technicalRef" },
+        "node_type": { "enum": ["", "action", "decision", "parallel_split", "parallel_join"] },
+        "behavior_name": { "type": "string" },
+        "behavior_description": { "type": "string" },
+        "current_actor_role": { "type": "string" },
+        "actor_assignment_mode": { "enum": ["fixed_department", "company_wide", "dynamic_from_data"], "default": "fixed_department" },
+        "actor_department_data_ref": { "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/nullableTechnicalRef" },
+        "actor_position_rule": { "type": "string" },
+        "trigger": { "type": "string" },
+        "precondition": { "type": "string" },
+        "input_description": { "type": "string" },
+        "timing": { "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/nullableString" },
+        "completion_standard": { "type": "string" },
+        "output_description": { "type": "string" },
+        "work_role": {
+          "anyOf": [
+            { "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/workRole" },
+            { "type": "null" }
+          ]
+        },
+        "countersign_all_required": { "type": "boolean", "default": false },
+        "countersign_target_departments": { "type": "array", "items": { "type": "string" }, "uniqueItems": true, "default": [] }
+      }
+    },
+    "dataBehaviorLink": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["link_ref", "behavior_ref", "operation"],
+      "properties": {
+        "link_ref": { "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/technicalRef" },
+        "behavior_ref": { "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/technicalRef" },
+        "operation": { "enum": ["create", "update", "use", "pending_confirmation"] }
+      }
+    },
+    "dataSourceRelation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_ref", "source_department", "source_process_name", "source_behavior_name",
+        "source_data_name", "availability_mode", "available_from_behavior_ref"
+      ],
+      "properties": {
+        "source_ref": { "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/technicalRef" },
+        "source_department": { "type": "string" },
+        "source_process_name": { "type": "string" },
+        "source_behavior_name": { "type": "string" },
+        "source_data_name": { "type": "string" },
+        "availability_mode": { "enum": ["process_start", "at_behavior", "pending_confirmation"] },
+        "available_from_behavior_ref": { "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/nullableTechnicalRef" }
+      }
+    },
+    "dataObject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "data_ref", "data_name", "description", "governance_status", "information_type",
+        "behavior_links", "source_relations"
+      ],
+      "properties": {
+        "data_ref": { "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/technicalRef" },
+        "data_name": { "type": "string" },
+        "description": { "type": "string" },
+        "governance_status": { "const": "candidate" },
+        "information_type": {
+          "enum": [
+            "pending_confirmation", "business_information", "business_conclusion", "business_status",
+            "identifier", "file_attachment", "other_information_output"
+          ]
+        },
+        "behavior_links": { "type": "array", "items": { "$ref": "#/$defs/dataBehaviorLink" }, "default": [] },
+        "source_relations": { "type": "array", "items": { "$ref": "#/$defs/dataSourceRelation" }, "default": [] }
+      }
+    },
+    "formBehaviorLink": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["link_ref", "behavior_ref", "operations", "notes"],
+      "properties": {
+        "link_ref": { "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/technicalRef" },
+        "behavior_ref": { "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/technicalRef" },
+        "operations": {
+          "type": "array",
+          "items": { "enum": ["create", "fill", "modify", "review", "approve", "confirm", "read", "archive", "void"] },
+          "uniqueItems": true,
+          "default": []
+        },
+        "notes": { "type": "string" }
+      }
+    },
+    "fieldSourceLink": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_link_ref", "source_data_ref", "source_role"],
+      "properties": {
+        "source_link_ref": { "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/technicalRef" },
+        "source_data_ref": { "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/technicalRef" },
+        "source_role": { "enum": ["provides_value", "calculation_input", "validation_basis"] }
+      }
+    },
+    "formItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "item_ref", "item_name", "item_type", "required", "instructions", "business_data_ref",
+        "value_origin_mode", "source_links"
+      ],
+      "properties": {
+        "item_ref": { "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/technicalRef" },
+        "item_name": { "type": "string" },
+        "item_type": { "type": "string" },
+        "required": { "type": "boolean" },
+        "instructions": { "type": "string" },
+        "business_data_ref": { "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/nullableTechnicalRef" },
+        "value_origin_mode": { "enum": ["direct_current_process", "depends_on_data", "pending_confirmation"] },
+        "source_links": { "type": "array", "items": { "$ref": "#/$defs/fieldSourceLink" }, "default": [] }
+      }
+    },
+    "formArea": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["area_ref", "area_type", "area_title", "items"],
+      "properties": {
+        "area_ref": { "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/technicalRef" },
+        "area_type": { "enum": ["", "基本信息", "明细清单"] },
+        "area_title": { "type": "string" },
+        "items": { "type": "array", "items": { "$ref": "#/$defs/formItem" }, "default": [] }
+      }
+    },
+    "formOrRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["form_ref", "form_name", "form_no", "form_design_state", "behavior_links", "areas"],
+      "properties": {
+        "form_ref": { "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/technicalRef" },
+        "form_name": { "type": "string" },
+        "form_no": { "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/nullableString" },
+        "form_design_state": { "enum": ["unspecified", "current_state", "proposed_design"] },
+        "behavior_links": { "type": "array", "items": { "$ref": "#/$defs/formBehaviorLink" }, "default": [] },
+        "areas": { "type": "array", "items": { "$ref": "#/$defs/formArea" }, "default": [] }
+      }
+    }
+  }
+}

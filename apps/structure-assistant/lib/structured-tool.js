@@ -1,7 +1,7 @@
 'use strict';
 
 const { AppError } = require('./errors');
-const CURRENT_SCHEMA_VERSION = 'process-governance-v3';
+const CURRENT_SCHEMA_VERSION = 'process-governance-v5';
 
 async function requestJson(url, options = {}, timeoutMs = 8000) {
   const controller = new AbortController();

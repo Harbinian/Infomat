@@ -33,9 +33,9 @@
 | `start-infomat-services.ps1` | 固定启动MDM、PMO和项目MySQL | 固定配置、本机私有env、Docker容器`infomat-input-baseline-review-mysql` | 按固定环境启动服务，不修改仓库真源 |
 | `smoke-infomat-services.mjs` | 固定配置下检查MDM和PMO是否可用，并核对MDM流程编辑器使用`process-governance-v3` | 固定配置、本机私有env、运行中的服务 | 只读检查，输出会隐藏密码 |
 | `test-infomat-services-config.mjs` | 防止启动配置再次漂移 | 固定配置、启动脚本、冒烟脚本、`.gitignore` | 只读校验 |
-| `start-structure-pilot.ps1` | 在工作区干净、测试通过和HTTPS配置齐全时启动MDM-AI助手及其认证网关 | `apps/structure-assistant/config/pilot.config.json`、本机`structure-pilot.local.env`、同一Git提交、已独立运行的3001 | 只启停本机3003/3004；检查但不停止、重绑或代管3001；不拉取代码、不写业务真源 |
-| `smoke-structure-pilot.mjs` | 登录独立试点并检查版本、模板、结构校验、本人余额和试点可选网关 | 本机试点秘密、运行中的HTTPS服务 | 只读烟测，不调用付费模型，不输出密码或API Key |
-| `test-structure-pilot-config.mjs` | 防止四账号、端口、模型和固定启动入口漂移 | 助手固定配置、根`package.json`和试点脚本 | 只读校验 |
+| `start-structure-pilot.ps1` | 在工作区干净、测试通过和HTTPS配置齐全时启动MDM-AI助手及认证后的DSH入口 | Node.js 24、`apps/structure-assistant/config/pilot.config.json`、本机`structure-pilot.local.env`、公共Host白名单、同一Git提交、已独立运行的3001 | 只启停本机3003/3004及其DSH子进程；检查但不停止、重绑或代管3001；不拉取代码、不写业务真源 |
+| `smoke-structure-pilot.mjs` | 登录独立试点并检查版本、模板、结构校验、未预置会话Key、DSH实例、五账号非内容状态和`/structured-tool/` | 本机试点秘密、运行中的HTTPS服务 | 不调用付费模型，不输出密码、API Key、内部端口、运行令牌、工作区或案例名称 |
+| `test-structure-pilot-config.mjs` | 防止五账号、会话Key边界、端口、模型和固定启动入口漂移 | 助手固定配置、根`package.json`和试点脚本 | 只读校验 |
 | `information-collection.config.json` | 固定信息表收集服务的监听地址、端口、数据库目标和附件限制 | 非敏感固定配置 | 不保存数据库密码、会话密钥或扫描命令 |
 | `start-information-collection.ps1` | 校验端口、身份结构和信息收集表后启动 4000/4001 | 固定配置、被 Git 忽略的本机环境文件、现有 MySQL | 启动本机服务；不修改 MDM 身份和治理业务表 |
 | `smoke-information-collection.mjs` | 检查两个端口健康状态、登录边界和独立 Cookie 名 | 运行中的 4000/4001 | 只读烟测，不输出凭据 |
@@ -51,6 +51,7 @@ npm run smoke:infomat-services
 npm run repair:infomat-mysql
 npm run test:infomat-services-config
 npm run verify:structure-pilot
+npm run verify:dsh-entry
 npm run start:structure-pilot
 npm run smoke:structure-pilot
 npm run migrate:information-collection:dry-run
@@ -165,7 +166,7 @@ npm run migrate:rbac-raci-v2:apply
 
 ## AI结构化填报试点固定启动
 
-试点固定配置位于`apps/structure-assistant/config/pilot.config.json`。本机密码哈希、DeepSeek API Key、HTTPS证书路径和会话密钥放在被Git忽略的`scripts/structure-pilot.local.env`。
+试点固定配置位于`apps/structure-assistant/config/pilot.config.json`。本机登录密码哈希、HTTPS证书路径和会话密钥放在被Git忽略的`scripts/structure-pilot.local.env`。DeepSeek API Key不写入该文件，由5名用户登录后在前端分别输入。
 
 ```powershell
 npm run verify:structure-pilot
@@ -178,12 +179,14 @@ npm run smoke:structure-pilot
 | 服务 | 监听 |
 |---|---|
 | 独立3001 | `0.0.0.0:3001`，公司局域网用户直接访问；由3001自身启动入口管理 |
-| MDM-AI助手 | HTTPS `0.0.0.0:3003` |
-| 独立试点的可选网关 | HTTPS `0.0.0.0:3004`，不是3001的访问前置条件 |
+| MDM-AI助手登录与运行控制 | HTTPS `0.0.0.0:3003` |
+| 认证后的DSH治理入口 | HTTPS `0.0.0.0:3004`；同时提供`/mdm-api/*`和`/structured-tool/*` |
 
-`start-structure-pilot.ps1`不执行`git pull`。脚本先拒绝存在未提交修改的工作区，再运行3001结构规则测试、助手测试和固定配置测试，确认独立3001可达后，只重启3003和3004。该脚本不得停止、重绑或启动3001。局域网用户始终通过服务器局域网地址直接使用3001。
+`start-structure-pilot.ps1`不执行`git pull`。脚本要求Node.js 24和`STRUCTURE_ASSISTANT_PUBLIC_HOSTS`，先拒绝存在未提交修改的工作区，再运行3001结构规则测试、助手测试、固定配置测试和真实DSH兼容门禁。确认独立3001可达后，只重启3003、3004及其受控DSH子进程。该脚本不得停止、重绑或启动3001。局域网用户仍可通过服务器局域网地址直接使用3001。
 
-`smoke-structure-pilot.mjs`需要`STRUCTURE_ASSISTANT_SMOKE_BASE_URL`、烟测账号和密码；使用私有CA时还需`STRUCTURE_ASSISTANT_SMOKE_CA_PATH`。该脚本不调用模型。四账号实际模型烟测由管理员显式设置`STRUCTURE_ASSISTANT_LIVE_SMOKE_CONFIRM=YES`后运行`npm --prefix apps/structure-assistant run smoke:models`，会产生实际Token费用。
+`smoke-structure-pilot.mjs`需要`STRUCTURE_ASSISTANT_SMOKE_BASE_URL`、烟测账号和密码；使用私有CA时还需`STRUCTURE_ASSISTANT_SMOKE_CA_PATH`。该脚本启动并结束烟测会话的隔离DSH实例，检查受限治理页面和`/structured-tool/`，但不调用模型，也不要求API Key。正式发布后的模型连通性由5名用户在前端分别输入本人Key并使用合成材料验证，执行前必须显式确认实际费用；不得由管理员集中收集Key。
+
+正式环境的`STRUCTURE_ASSISTANT_PUBLIC_HOSTS`必须填写用户实际访问端口3004时使用的`主机名:端口`或`IP:端口`，多个值用英文逗号分隔。DSH固定为`@deepseek-ai/dsh@0.1.0-rc.6`，不得使用`latest`；升级前重新运行兼容门禁并单独审核。
 
 输入基线问题复核正式入口在 MDM 平台：
 

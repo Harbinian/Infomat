@@ -20,7 +20,6 @@
   const ALL_COMPANY_LANE = '__all_company__';
   const DYNAMIC_DEPARTMENT_LANE = '__dynamic_department__';
   const UNKNOWN_DEPARTMENT_LANE = '__unknown_department__';
-  const PENDING_HANDOFF_LANE = '__pending_handoff_department__';
   const LANE_HEADER_WIDTH = 190;
   const LANE_MIN_HEIGHT = 154;
   const LANE_NODE_GAP = 36;
@@ -31,6 +30,12 @@
   const ROUTE_TRACK_GAP = 24;
   const FULL_VIEW_MIN_ZOOM = 0.6;
   const POOL_TITLE_HEIGHT = 52;
+  const LANE_FONT_SIZE = 14;
+  const POOL_TITLE_FONT_SIZE = 16;
+  const NODE_FONT_SIZE = 15;
+  const EXTERNAL_NODE_FONT_SIZE = 14;
+  const BADGE_FONT_SIZE = 12;
+  const EDGE_FONT_SIZE = 13;
   const RELATION_CYCLE_REVIEW_MESSAGE = '该关系与其他非回路关系形成闭环；如果这是退回前序行为，请选择“流程内部回路”。';
 
   function text(value) {
@@ -103,29 +108,29 @@
     const internal = nodeKind === 'internal';
     const maxUnits = diamond ? 11 : external ? 19 : internal ? 16 : 15;
     const wrapped = wrapDisplayText(rawLabel, maxUnits);
-    const lineHeight = external ? 17 : 18;
-    const verticalPadding = diamond ? 0 : external ? 34 : 30;
-    const measuredTextWidth = Math.ceil(wrapped.maxLineUnits * (external ? 10.5 : 12));
+    const lineHeight = external ? 21 : 22;
+    const verticalPadding = diamond ? 0 : external ? 40 : 36;
+    const measuredTextWidth = Math.ceil(wrapped.maxLineUnits * (external ? 13.2 : 14.4));
     const measuredTextHeight = wrapped.lineCount * lineHeight;
     if (diamond) {
-      const textMaxWidth = Math.max(132, measuredTextWidth);
-      const labelHeight = measuredTextHeight + 14;
+      const textMaxWidth = Math.max(154, measuredTextWidth);
+      const labelHeight = measuredTextHeight + 16;
       return {
         ...wrapped,
-        nodeWidth: Math.ceil(Math.max(276, textMaxWidth / 0.46)),
-        nodeHeight: Math.ceil(Math.max(190, labelHeight / 0.42)),
+        nodeWidth: Math.ceil(Math.max(312, textMaxWidth / 0.46)),
+        nodeHeight: Math.ceil(Math.max(220, labelHeight / 0.42)),
         textMaxWidth,
         labelWidth: textMaxWidth,
         labelHeight,
         lineHeight,
-        verticalPadding: 14
+        verticalPadding: 16
       };
     }
-    const baseWidth = external ? 286 : internal ? 238 : 232;
-    const baseHeight = external ? 132 : internal ? 96 : 90;
+    const baseWidth = external ? 320 : internal ? 280 : 268;
+    const baseHeight = external ? 150 : internal ? 112 : 106;
     const textMaxWidth = Math.max(1, Math.min(
-      external ? 254 : internal ? 206 : 204,
-      Math.max(measuredTextWidth, external ? 160 : 132)
+      external ? 280 : internal ? 240 : 232,
+      Math.max(measuredTextWidth, external ? 180 : 150)
     ));
     return {
       ...wrapped,
@@ -140,12 +145,12 @@
   }
 
   function edgeDisplayMetrics(rawLabel) {
-    const wrapped = wrapDisplayText(rawLabel, 18);
-    const measuredWidth = Math.ceil(wrapped.maxLineUnits * 11 + 12);
+    const wrapped = wrapDisplayText(rawLabel, 16);
+    const measuredWidth = Math.ceil(wrapped.maxLineUnits * 12.7 + 16);
     return {
       ...wrapped,
-      labelWidth: wrapped.lineCount ? Math.min(EDGE_LABEL_MAX_WIDTH, Math.max(72, measuredWidth)) : 0,
-      labelHeight: wrapped.lineCount ? wrapped.lineCount * 16 + 8 : 0
+      labelWidth: wrapped.lineCount ? Math.min(EDGE_LABEL_MAX_WIDTH, Math.max(84, measuredWidth)) : 0,
+      labelHeight: wrapped.lineCount ? wrapped.lineCount * 20 + 10 : 0
     };
   }
 
@@ -157,24 +162,6 @@
       return relation.join_mode === 'all' ? '并行：全部分支完成后汇合' : '并行';
     }
     return '';
-  }
-
-  function handoffLabel(handoff) {
-    const direction = handoff.handoff_direction === 'inbound_prerequisite'
-      ? 'inbound_prerequisite'
-      : 'outbound_followup';
-    const targetProcess = text(handoff.counterparty_process_name || handoff.target_process_name);
-    const targetBehavior = text(handoff.counterparty_behavior_name || handoff.target_behavior_name);
-    const externalDepartment = direction === 'inbound_prerequisite'
-      ? text(handoff.source_department)
-      : text(handoff.target_department);
-    return [
-      direction === 'inbound_prerequisite' ? '跨部门待办 · 前置输入' : '跨部门待办 · 后续承接',
-      `承接部门：${externalDepartment || '待明确'}`,
-      `办理动作：${targetBehavior || '待填写'}`,
-      `事项：${text(handoff.requested_matter) || '待填写'}`,
-      targetProcess ? `对应流程：${targetProcess}` : ''
-    ].filter(Boolean).join('\n');
   }
 
   function internalCallLabel(call) {
@@ -384,14 +371,12 @@
         && key !== ALL_COMPANY_LANE
         && key !== DYNAMIC_DEPARTMENT_LANE
         && key !== UNKNOWN_DEPARTMENT_LANE
-        && key !== PENDING_HANDOFF_LANE
       )
       .sort((left, right) => left.localeCompare(right, 'zh-CN'))
       .forEach(key => ordered.push(key));
     if (used.has(ALL_COMPANY_LANE)) ordered.push(ALL_COMPANY_LANE);
     if (used.has(DYNAMIC_DEPARTMENT_LANE)) ordered.push(DYNAMIC_DEPARTMENT_LANE);
     if (used.has(UNKNOWN_DEPARTMENT_LANE)) ordered.push(UNKNOWN_DEPARTMENT_LANE);
-    if (used.has(PENDING_HANDOFF_LANE)) ordered.push(PENDING_HANDOFF_LANE);
     return ordered;
   }
 
@@ -399,7 +384,6 @@
     if (laneKey === ALL_COMPANY_LANE) return '全公司通用';
     if (laneKey === DYNAMIC_DEPARTMENT_LANE) return '运行时责任部门';
     if (laneKey === UNKNOWN_DEPARTMENT_LANE) return '执行部门待明确';
-    if (laneKey === PENDING_HANDOFF_LANE) return '承接部门待明确';
     return laneKey;
   }
 
@@ -410,6 +394,20 @@
       outgoingCount.set(item.sourceId, (outgoingCount.get(item.sourceId) || 0) + 1);
       const endpointKey = `${item.sourceId}->${item.targetId}`;
       endpointCount.set(endpointKey, (endpointCount.get(endpointKey) || 0) + 1);
+    });
+    const recordsByRank = new Map();
+    behaviorRecordById.forEach((record, nodeId) => {
+      const rank = rankById.get(nodeId) || 0;
+      if (!recordsByRank.has(rank)) recordsByRank.set(rank, []);
+      recordsByRank.get(rank).push(record);
+    });
+    const verticalScoreById = new Map();
+    recordsByRank.forEach(records => {
+      records.sort((left, right) => left.node.data.layoutOrder - right.node.data.layoutOrder);
+      const centerIndex = (records.length - 1) / 2;
+      records.forEach((record, index) => {
+        verticalScoreById.set(record.node.data.id, index - centerIndex);
+      });
     });
     const trackStateByBucket = new Map();
     const laneReserves = new Map();
@@ -428,11 +426,28 @@
         const backward = targetRank <= sourceRank;
         const crossesRanks = targetRank - sourceRank > 1;
         const duplicateRoute = (endpointCount.get(endpointKey) || 0) > 1;
-        const routePlacement = item.relation.relation_type === 'loop' || backward
-          ? 'lower'
-          : branchSource || crossesRanks || duplicateRoute
+        const parallelRelation = item.relation.relation_type === 'parallel';
+        const sourceVerticalScore = verticalScoreById.get(item.sourceId) || 0;
+        const targetVerticalScore = verticalScoreById.get(item.targetId) || 0;
+        const branchVerticalDelta = targetVerticalScore - sourceVerticalScore;
+        let routePlacement = 'direct';
+        if (item.relation.relation_type === 'loop' || backward) {
+          routePlacement = 'lower';
+        } else if (duplicateRoute) {
+          routePlacement = sourceVerticalScore > 0 ? 'lower' : 'upper';
+        } else if (branchSource && !parallelRelation) {
+          routePlacement = branchVerticalDelta < 0
             ? 'upper'
-            : 'direct';
+            : branchVerticalDelta > 0
+              ? 'lower'
+              : 'direct';
+        } else if (crossesRanks) {
+          routePlacement = sourceVerticalScore < 0
+            ? 'upper'
+            : sourceVerticalScore > 0
+              ? 'lower'
+              : targetVerticalScore < 0 ? 'upper' : 'lower';
+        }
         const labelDisplay = edgeDisplayMetrics(relationLabel(item.relation));
         const sameLane = sourceRecord?.node.data.laneKey === targetRecord?.node.data.laneKey;
         let routeSlot = 0;
@@ -469,6 +484,8 @@
           placement: routePlacement,
           slot: routeSlot,
           offset: Math.ceil(routeOffset),
+          forwardBranch: routePlacement !== 'direct' && branchSource && !crossesRanks && !duplicateRoute,
+          parallelOrthogonal: parallelRelation && routePlacement !== 'direct',
           bucket: routeBucket,
           trackKey: `${routeBucket}:${routeSlot}:${item.index}`,
           labelDisplay
@@ -480,6 +497,7 @@
   function relationEdge(item, behaviorRecordById, reviewRelationIndexes) {
     const sourceNode = behaviorRecordById.get(item.sourceId).node;
     const targetNode = behaviorRecordById.get(item.targetId).node;
+    const crossLane = sourceNode.data.laneKey !== targetNode.data.laneKey;
     const route = item.route;
     const sourcePosition = sourceNode.position;
     const targetPosition = targetNode.position;
@@ -493,10 +511,16 @@
     const signedOffset = route.placement === 'direct'
       ? 0
       : route.offset * desiredVerticalDirection / normalDirection;
-    const labelCenter = {
-      x: (sourcePosition.x + targetPosition.x) / 2 + normalX * signedOffset,
-      y: (sourcePosition.y + targetPosition.y) / 2 + normalY * signedOffset
-    };
+    const orthogonalTrack = route.forwardBranch || route.parallelOrthogonal;
+    const labelCenter = orthogonalTrack
+      ? {
+          x: (sourcePosition.x + targetPosition.x) / 2,
+          y: sourcePosition.y + (route.placement === 'upper' ? -route.offset : route.offset)
+        }
+      : {
+          x: (sourcePosition.x + targetPosition.x) / 2 + normalX * signedOffset,
+          y: (sourcePosition.y + targetPosition.y) / 2 + normalY * signedOffset
+        };
     const labelBounds = route.labelDisplay.labelWidth
       ? {
           x1: labelCenter.x - route.labelDisplay.labelWidth / 2,
@@ -510,6 +534,11 @@
       classes: [
         'flow-edge',
         `relation-${item.relation.relation_type}`,
+        crossLane ? 'cross-lane-relation' : '',
+        item.relation.relation_type === 'parallel'
+          ? route.placement === 'direct' ? 'parallel-straight-edge' : 'parallel-orthogonal-edge'
+          : '',
+        route.forwardBranch ? 'route-forward-branch' : '',
         route.placement !== 'direct' ? `route-${route.placement}` : '',
         reviewRelationIndexes.has(item.index) ? 'relation-review' : ''
       ].filter(Boolean).join(' '),
@@ -526,9 +555,13 @@
         routePlacement: route.placement,
         routeSlot: route.slot,
         routeOffset: route.offset,
+        taxiTurn: route.offset || 64,
+        taxiDirection: route.placement === 'upper' ? 'upward' : 'downward',
+        segmentDistances: [Math.round(signedOffset), Math.round(signedOffset)],
+        segmentWeights: [0.18, 0.82],
         routeTrackKey: route.trackKey,
-        controlPointDistance: Math.round(signedOffset * 2),
         needsRelationReview: reviewRelationIndexes.has(item.index),
+        crossLane,
         focusKind: 'relation',
         focusRef: item.relationRef
       }
@@ -606,13 +639,6 @@
       text(item.data_ref),
       text(item.data_name)
     ]));
-    const linkedHandoffRefsByBehaviorRef = new Map();
-    items(data.cross_department_handoffs).forEach(handoff => {
-      const behaviorRef = text(handoff.counterparty_behavior_ref);
-      if (behaviorRef && !linkedHandoffRefsByBehaviorRef.has(behaviorRef)) {
-        linkedHandoffRefsByBehaviorRef.set(behaviorRef, text(handoff.handoff_ref));
-      }
-    });
     const orderById = new Map();
     let namedBehaviorCount = 0;
     let localEdgeCount = 0;
@@ -626,10 +652,13 @@
       const placement = actorPlacement(behavior, departmentOrder, dataNameByRef);
       const rawLabel = behaviorLabel(behavior, placement);
       const display = nodeDisplayMetrics(rawLabel, behaviorClass(nodeType));
-      const linkedHandoffRef = linkedHandoffRefsByBehaviorRef.get(behaviorRef);
+      const crossDepartment = actorAssignmentMode(behavior) === 'fixed_department'
+        && Boolean(owningDepartment)
+        && placement.recognized
+        && placement.laneKey !== owningDepartment;
       const node = {
         group: 'nodes',
-        classes: `behavior-node node-${behaviorClass(nodeType)}${placement.dynamic ? ' dynamic-actor-node' : ''}${linkedHandoffRef ? ' external-node linked-external-behavior' : ''}`,
+        classes: `behavior-node node-${behaviorClass(nodeType)}${placement.dynamic ? ' dynamic-actor-node' : ''}${crossDepartment ? ' external-node cross-department-behavior' : ''}`,
         data: {
           id: graphId,
           label: display.label,
@@ -644,7 +673,7 @@
           labelVerticalPadding: display.verticalPadding,
           detail: placement.dynamic
             ? `运行时责任部门 · ${NODE_TYPES.has(nodeType) ? nodeType : '节点类型待判断'}`
-            : linkedHandoffRef
+            : crossDepartment
             ? `跨部门行为 · ${NODE_TYPES.has(nodeType) ? nodeType : '节点类型待判断'}`
             : NODE_TYPES.has(nodeType) ? nodeType : '节点类型待判断',
           focusKind: 'behavior',
@@ -687,35 +716,9 @@
       localEdgeCount += 1;
     });
 
-    const linkedHandoffOrderingRelations = [];
-    items(data.cross_department_handoffs).forEach((handoff, index) => {
-      const direction = handoff.handoff_direction === 'inbound_prerequisite'
-        ? 'inbound_prerequisite'
-        : 'outbound_followup';
-      const anchorNodeId = behaviorNodeByRef.get(text(handoff.anchor_behavior_ref || handoff.send_behavior_ref));
-      const counterpartyNodeId = behaviorNodeByRef.get(text(handoff.counterparty_behavior_ref));
-      if (!anchorNodeId || !counterpartyNodeId || anchorNodeId === counterpartyNodeId) return;
-      linkedHandoffOrderingRelations.push({
-        relation: { relation_type: 'sequence' },
-        index: validRelations.length + (index * 2),
-        sourceId: direction === 'inbound_prerequisite' ? counterpartyNodeId : anchorNodeId,
-        targetId: direction === 'inbound_prerequisite' ? anchorNodeId : counterpartyNodeId
-      });
-      const resumeNodeId = direction === 'outbound_followup' && handoff.requires_return
-        ? behaviorNodeByRef.get(text(handoff.resume_behavior_ref || handoff.return_behavior_ref))
-        : null;
-      if (resumeNodeId && resumeNodeId !== counterpartyNodeId) {
-        linkedHandoffOrderingRelations.push({
-          relation: { relation_type: 'sequence' },
-          index: validRelations.length + (index * 2) + 1,
-          sourceId: counterpartyNodeId,
-          targetId: resumeNodeId
-        });
-      }
-    });
     const graphAnalysis = analyzeRelationGraph(
       behaviorRecords.map(record => record.node.data.id),
-      validRelations.concat(linkedHandoffOrderingRelations),
+      validRelations,
       orderById
     );
     const rankById = graphAnalysis.rankById;
@@ -820,72 +823,6 @@
       }
     });
 
-    const handoffRecords = [];
-    items(data.cross_department_handoffs).forEach((handoff, index) => {
-      const handoffRef = text(handoff.handoff_ref);
-      const direction = handoff.handoff_direction === 'inbound_prerequisite'
-        ? 'inbound_prerequisite'
-        : 'outbound_followup';
-      const anchorRef = text(handoff.anchor_behavior_ref || handoff.send_behavior_ref);
-      const anchorNodeId = behaviorNodeByRef.get(anchorRef);
-      const anchorRecord = behaviorRecords.find(record => record.node.data.id === anchorNodeId);
-      if (!anchorNodeId || !anchorRecord) {
-        unresolvedItems.push({
-          focusKind: 'handoff',
-          focusRef: handoffRef,
-          message: `跨部门待办${index + 1}未显示：请指定有效的本流程关联行为。`
-        });
-        return;
-      }
-      const counterpartyRef = text(handoff.counterparty_behavior_ref);
-      const linkedBehaviorNodeId = behaviorNodeByRef.get(counterpartyRef);
-      const linkedBehaviorRecord = behaviorRecords.find(record => record.node.data.id === linkedBehaviorNodeId);
-      const externalDepartment = direction === 'inbound_prerequisite'
-        ? text(handoff.source_department)
-        : text(handoff.target_department);
-      const recognizedDepartment = departmentOrder.includes(externalDepartment);
-      const laneKey = recognizedDepartment ? externalDepartment : PENDING_HANDOFF_LANE;
-      const handoffNodeId = linkedBehaviorNodeId || graphRef('handoff', index, handoffRef);
-      const rawLabel = handoffLabel(handoff);
-      const display = nodeDisplayMetrics(rawLabel, 'external');
-      const anchorRank = rankById.get(anchorNodeId) || 0;
-      const handoffNode = linkedBehaviorRecord?.node || {
-        group: 'nodes',
-        classes: 'external-node handoff-node',
-        data: {
-          id: handoffNodeId,
-          label: display.label,
-          rawLabel: display.rawLabel,
-          nodeWidth: display.nodeWidth,
-          nodeHeight: display.nodeHeight,
-          textMaxWidth: display.textMaxWidth,
-          labelWidth: display.labelWidth,
-          labelHeight: display.labelHeight,
-          labelLineCount: display.lineCount,
-          labelLineHeight: display.lineHeight,
-          labelVerticalPadding: display.verticalPadding,
-          detail: recognizedDepartment ? '承接部门泳道' : '承接部门待明确',
-          focusKind: 'handoff',
-          focusRef: handoffRef,
-          laneKey,
-          laneLabel: laneDisplayName(laneKey),
-          layoutRank: direction === 'inbound_prerequisite' ? Math.max(0, anchorRank - 1) : anchorRank + 1,
-          layoutOrder: behaviorRecords.length + internalCallRecords.length + index
-        }
-      };
-      handoffRecords.push({
-        handoff,
-        index,
-        direction,
-        handoffRef,
-        anchorNodeId,
-        node: handoffNode,
-        linkedBehaviorRef: linkedBehaviorRecord ? counterpartyRef : ''
-      });
-      if (!linkedBehaviorRecord) nodes.push(handoffNode);
-      localEdgeCount += 1;
-    });
-
     const laneRouteReserves = allocateRelationRoutes(
       validRelations,
       behaviorRecordById,
@@ -893,8 +830,7 @@
     );
     const positionedNodes = [
       ...behaviorRecords.map(record => record.node),
-      ...internalCallRecords.map(record => record.node),
-      ...handoffRecords.filter(record => !record.linkedBehaviorRef).map(record => record.node)
+      ...internalCallRecords.map(record => record.node)
     ];
     const laneKeys = buildLaneOrder(
       positionedNodes.map(node => node.data.laneKey),
@@ -1069,58 +1005,6 @@
     });
     nodes.push(...countersignBadges);
 
-    handoffRecords.forEach(record => {
-      const { handoff, index, direction, handoffRef, anchorNodeId, node, linkedBehaviorRef } = record;
-      const handoffNodeId = node.data.id;
-      const handoffOutDisplay = edgeDisplayMetrics(
-        direction === 'inbound_prerequisite' ? '外部门提供前置输入' : '交由外部门承接'
-      );
-      edges.push({
-        group: 'edges',
-        classes: 'message-flow handoff-edge',
-        data: {
-          id: graphRef('handoff-out', index, handoffRef),
-          source: direction === 'inbound_prerequisite' ? handoffNodeId : anchorNodeId,
-          target: direction === 'inbound_prerequisite' ? anchorNodeId : handoffNodeId,
-          label: handoffOutDisplay.label,
-          rawLabel: handoffOutDisplay.rawLabel,
-          labelWidth: handoffOutDisplay.labelWidth,
-          labelHeight: handoffOutDisplay.labelHeight,
-          labelLineCount: handoffOutDisplay.lineCount,
-          focusKind: linkedBehaviorRef ? 'behavior' : 'handoff',
-          focusRef: linkedBehaviorRef || handoffRef
-        }
-      });
-      const returnRef = direction === 'outbound_followup' && handoff.requires_return
-        ? text(handoff.resume_behavior_ref || handoff.return_behavior_ref)
-        : '';
-      if (returnRef && !behaviorNodeByRef.has(returnRef)) {
-        unresolvedItems.push({
-          focusKind: 'handoff',
-          focusRef: handoffRef,
-          message: `跨部门待办${index + 1}的返回箭头未显示：恢复位置没有对应当前流程中的业务行为。`
-        });
-      } else if (returnRef) {
-        const handoffReturnDisplay = edgeDisplayMetrics('承接完成后返回');
-        edges.push({
-          group: 'edges',
-          classes: 'message-flow return-message-flow',
-          data: {
-            id: graphRef('handoff-return', index, handoffRef),
-            source: handoffNodeId,
-            target: behaviorNodeByRef.get(returnRef),
-            label: handoffReturnDisplay.label,
-            rawLabel: handoffReturnDisplay.rawLabel,
-            labelWidth: handoffReturnDisplay.labelWidth,
-            labelHeight: handoffReturnDisplay.labelHeight,
-            labelLineCount: handoffReturnDisplay.lineCount,
-            focusKind: linkedBehaviorRef ? 'behavior' : 'handoff',
-            focusRef: linkedBehaviorRef || handoffRef
-          }
-        });
-      }
-    });
-
     const layoutNodes = nodes.filter(node =>
       node.position && Number.isFinite(node.data.nodeWidth) && Number.isFinite(node.data.nodeHeight)
     );
@@ -1172,7 +1056,7 @@
           label: 'data(label)',
           color: '#34342f',
           'font-family': '"Microsoft YaHei", "PingFang SC", sans-serif',
-          'font-size': 12,
+          'font-size': LANE_FONT_SIZE,
           'font-weight': 700,
           'text-wrap': 'wrap',
           'text-overflow-wrap': 'anywhere',
@@ -1206,7 +1090,7 @@
           'background-color': '#e7dfce',
           'border-color': '#6f695c',
           'border-width': 1.5,
-          'font-size': 14,
+          'font-size': POOL_TITLE_FONT_SIZE,
           'text-max-width': 640,
           'z-index': 1
         }
@@ -1239,7 +1123,7 @@
           color: '#2f302b',
           label: 'data(label)',
           'font-family': '"Microsoft YaHei", "PingFang SC", sans-serif',
-          'font-size': 12,
+          'font-size': NODE_FONT_SIZE,
           'font-weight': 600,
           'text-wrap': 'wrap',
           'text-overflow-wrap': 'anywhere',
@@ -1297,7 +1181,7 @@
           'border-width': 2,
           'border-color': '#526973',
           'background-color': '#e7edef',
-          'font-size': 11
+          'font-size': EXTERNAL_NODE_FONT_SIZE
         }
       },
       {
@@ -1312,8 +1196,8 @@
       {
         selector: '.countersign-badge',
         style: {
-          width: 64,
-          height: 25,
+          width: 72,
+          height: 30,
           shape: 'round-rectangle',
           'background-color': '#8c3f33',
           'border-width': 1,
@@ -1321,7 +1205,7 @@
           color: '#ffffff',
           label: 'data(label)',
           'font-family': '"Microsoft YaHei", "PingFang SC", sans-serif',
-          'font-size': 10,
+          'font-size': BADGE_FONT_SIZE,
           'font-weight': 700,
           'text-valign': 'center',
           'text-halign': 'center',
@@ -1338,7 +1222,7 @@
           'taxi-direction': 'rightward',
           'taxi-turn': 56,
           'taxi-turn-min-distance': 18,
-          'taxi-radius': 7,
+          'taxi-radius': 0,
           'line-style': 'solid',
           'line-color': '#5b625d',
           'target-arrow-color': '#5b625d',
@@ -1348,14 +1232,14 @@
           label: 'data(label)',
           color: '#454843',
           'font-family': '"Microsoft YaHei", "PingFang SC", sans-serif',
-          'font-size': 10,
+          'font-size': EDGE_FONT_SIZE,
           'font-weight': 600,
           'text-wrap': 'wrap',
           'text-overflow-wrap': 'anywhere',
           'text-max-width': 'data(labelWidth)',
           'text-background-color': '#fffdf8',
           'text-background-opacity': 0.96,
-          'text-background-padding': 3,
+          'text-background-padding': 4,
           'text-rotation': 'none',
           'overlay-opacity': 0,
           'z-index': 10,
@@ -1371,11 +1255,49 @@
         }
       },
       {
-        selector: '.route-upper, .route-lower',
+        selector: '.cross-lane-relation',
         style: {
-          'curve-style': 'unbundled-bezier',
-          'control-point-distances': 'data(controlPointDistance)',
-          'control-point-weights': 0.5
+          width: 3,
+          'line-color': '#526973',
+          'target-arrow-color': '#526973',
+          color: '#3f5660'
+        }
+      },
+      {
+        selector: '.route-upper',
+        style: {
+          'curve-style': 'segments',
+          'segment-distances': 'data(segmentDistances)',
+          'segment-weights': 'data(segmentWeights)'
+        }
+      },
+      {
+        selector: '.route-lower',
+        style: {
+          'curve-style': 'segments',
+          'segment-distances': 'data(segmentDistances)',
+          'segment-weights': 'data(segmentWeights)'
+        }
+      },
+      {
+        selector: '.route-forward-branch',
+        style: {
+          'curve-style': 'taxi',
+          'taxi-turn': 'data(taxiTurn)',
+          'taxi-turn-min-distance': 24,
+          'taxi-radius': 0
+        }
+      },
+      {
+        selector: '.route-forward-branch.route-upper',
+        style: {
+          'taxi-direction': 'upward'
+        }
+      },
+      {
+        selector: '.route-forward-branch.route-lower',
+        style: {
+          'taxi-direction': 'downward'
         }
       },
       {
@@ -1390,9 +1312,9 @@
       {
         selector: '.internal-return-edge',
         style: {
-          'curve-style': 'unbundled-bezier',
-          'control-point-distances': -126,
-          'control-point-weights': 0.5,
+          'curve-style': 'segments',
+          'segment-distances': [-126, -126],
+          'segment-weights': [0.18, 0.82],
           'line-style': 'solid',
           'line-color': '#8c3f33',
           'target-arrow-color': '#8c3f33',
@@ -1403,9 +1325,31 @@
         selector: '.relation-parallel',
         style: {
           width: 3,
+          'curve-style': 'straight',
           'line-color': '#8a6a30',
           'target-arrow-color': '#8a6a30',
           color: '#6f5223'
+        }
+      },
+      {
+        selector: '.relation-parallel.parallel-orthogonal-edge',
+        style: {
+          'curve-style': 'taxi',
+          'taxi-turn': 'data(taxiTurn)',
+          'taxi-turn-min-distance': 24,
+          'taxi-radius': 0
+        }
+      },
+      {
+        selector: '.relation-parallel.parallel-orthogonal-edge.route-upper',
+        style: {
+          'taxi-direction': 'upward'
+        }
+      },
+      {
+        selector: '.relation-parallel.parallel-orthogonal-edge.route-lower',
+        style: {
+          'taxi-direction': 'downward'
         }
       },
       {
@@ -1415,34 +1359,6 @@
           'line-color': '#52665a',
           'target-arrow-color': '#52665a',
           color: '#405448'
-        }
-      },
-      {
-        selector: '.message-flow',
-        style: {
-          'curve-style': 'taxi',
-          'line-style': 'dashed',
-          'line-color': '#526973',
-          'source-arrow-shape': 'circle',
-          'source-arrow-fill': 'hollow',
-          'source-arrow-color': '#526973',
-          'target-arrow-shape': 'triangle',
-          'target-arrow-fill': 'hollow',
-          'target-arrow-color': '#526973',
-          color: '#3f5660'
-        }
-      },
-      {
-        selector: '.return-message-flow',
-        style: {
-          'curve-style': 'unbundled-bezier',
-          'control-point-distances': 126,
-          'control-point-weights': 0.5,
-          'line-style': 'dashed',
-          color: '#7b2f27',
-          'line-color': '#8c3f33',
-          'source-arrow-color': '#8c3f33',
-          'target-arrow-color': '#8c3f33'
         }
       },
       {

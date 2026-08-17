@@ -1,8 +1,13 @@
 'use strict';
 
+const IS_DSH_ENTRY = document.body.dataset.entryMode === 'dsh';
+const IS_CLASSIC_ROUTE = window.location.pathname === '/classic';
+
 const state = {
   user: null,
   csrfToken: '',
+  apiKeyStatus: { configured: false },
+  apiKeyBalanceWarning: false,
   context: null,
   fillDocument: null,
   fillValidation: null,
@@ -24,7 +29,14 @@ const state = {
   lockReason: null,
   downloadedAfterLock: false,
   pollTimer: null,
-  activeView: 'fill'
+  activeView: 'fill',
+  dshWorkspaceId: null,
+  dshWorkspaceRevision: 0,
+  dshWorkspaces: [],
+  dshLastSnapshot: '',
+  dshSaveInFlight: false,
+  dshConflict: false,
+  dshPollTimer: null
 };
 
 const byId = id => document.getElementById(id);
@@ -63,7 +75,10 @@ async function api(path, options = {}) {
     headers['Content-Type'] = 'application/json';
     options.body = JSON.stringify(options.json);
   }
-  const response = await fetch(path, {
+  const requestPath = IS_DSH_ENTRY && path.startsWith('/api/')
+    ? `/mdm-api${path.slice(4)}`
+    : path;
+  const response = await fetch(requestPath, {
     cache: 'no-store',
     credentials: 'same-origin',
     ...options,
@@ -84,6 +99,21 @@ async function api(path, options = {}) {
         body.code === 'MAINTENANCE_MODE' ? 'maintenance' : 'version'
       );
     }
+    if (body?.code === 'API_KEY_REQUIRED' || body?.code === 'MODEL_AUTH_FAILED') {
+      state.apiKeyStatus = {
+        configured: false,
+        invalidated: body.code === 'MODEL_AUTH_FAILED'
+      };
+      state.apiKeyBalanceWarning = false;
+      renderApiKeyStatus();
+      openApiKeyDialog();
+    }
+    if (IS_DSH_ENTRY && ['DSH_RUNTIME_REQUIRED', 'DSH_RUNTIME_RESTARTED'].includes(body?.code)) {
+      state.dshWorkspaceId = null;
+      state.dshWorkspaces = [];
+      state.dshConflict = false;
+      renderWorkspaceControl();
+    }
     const error = new Error(body?.error || `请求失败：HTTP ${response.status}`);
     error.code = body?.code || 'REQUEST_FAILED';
     error.status = response.status;
@@ -102,6 +132,9 @@ function expectedVersion() {
 function showLogin() {
   state.user = null;
   state.csrfToken = '';
+  state.apiKeyStatus = { configured: false };
+  state.apiKeyBalanceWarning = false;
+  closeApiKeyDialog();
   byId('loginView').hidden = false;
   byId('appView').hidden = true;
   byId('topbarMeta').hidden = true;
@@ -151,9 +184,12 @@ function currentDraftForDownload() {
 
 function updateActionAvailability() {
   const maintenance = Boolean(state.context?.maintenance_mode?.enabled);
-  byId('sendTurnButton').disabled = state.locked || maintenance || !state.fillDocument;
+  const modelUnavailable = !state.apiKeyStatus.configured;
+  const workspaceUnavailable = IS_DSH_ENTRY && !state.dshWorkspaceId;
+  byId('sendTurnButton').disabled = state.locked || maintenance || modelUnavailable || workspaceUnavailable || !state.fillDocument;
   byId('runReviewButton').disabled =
-    state.locked || maintenance || !state.reviewDocument;
+    state.locked || maintenance || modelUnavailable || workspaceUnavailable || !state.reviewDocument;
+  byId('refreshBalanceButton').disabled = modelUnavailable;
   byId('versionDownloadButton').disabled = !currentDraftForDownload();
   const reviewComplete = state.reviewDocument
     && state.reviewRunCompleted
@@ -161,6 +197,111 @@ function updateActionAvailability() {
     && state.reviewIssues.every(issue => state.dispositions.has(issue.id));
   byId('downloadReviewedJsonButton').disabled = !reviewComplete;
   byId('downloadReviewCsvButton').disabled = !reviewComplete;
+}
+
+function formatDateTime(value) {
+  if (!value) return '未知';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '未知';
+  return date.toLocaleString('zh-CN', { hour12: false });
+}
+
+function formatBalance(balance) {
+  if (balance?.insufficient) return '余额不足';
+  if (balance?.totalBalance == null) return '未返回人民币余额';
+  return `¥${balance.totalBalance.toFixed(2)}${balance.warning ? ' · 低于20元' : ''}`;
+}
+
+function renderApiKeyStatus() {
+  const status = state.apiKeyStatus || { configured: false };
+  const card = byId('apiKeyCard');
+  const badge = byId('apiKeyStatusBadge');
+  const text = byId('apiKeyStatusText');
+  card.classList.toggle('configured', Boolean(status.configured));
+  card.classList.toggle('warning', Boolean(status.configured && state.apiKeyBalanceWarning));
+  if (status.configured) {
+    badge.textContent = state.apiKeyBalanceWarning ? '余额偏低' : '已验证';
+    text.textContent = `${status.fingerprint} · 配置时间 ${formatDateTime(status.configured_at)} · 会话到期 ${formatDateTime(status.expires_at)}`;
+    byId('openApiKeyButton').textContent = '更换Key';
+    byId('clearApiKeyButton').hidden = false;
+  } else {
+    badge.textContent = status.invalidated ? '已失效' : '未配置';
+    text.textContent = status.invalidated
+      ? 'DeepSeek已拒绝当前Key。系统已清除该会话Key；当前JSON和页面内容仍保留，请重新配置。'
+      : '请配置本人API Key。未配置时仍可导入、编辑、校验和下载JSON，但不能发送对话或启动独立结构预审。';
+    byId('openApiKeyButton').textContent = '配置Key';
+    byId('clearApiKeyButton').hidden = true;
+    byId('balanceValue').textContent = '配置Key后可查询';
+  }
+  updateActionAvailability();
+}
+
+function openApiKeyDialog() {
+  if (!state.user) return;
+  const modal = byId('apiKeyModal');
+  const input = byId('apiKeyInput');
+  input.value = '';
+  modal.hidden = false;
+  window.requestAnimationFrame(() => input.focus());
+}
+
+function closeApiKeyDialog() {
+  const modal = byId('apiKeyModal');
+  const input = byId('apiKeyInput');
+  if (input) input.value = '';
+  if (modal) modal.hidden = true;
+}
+
+async function loadApiKeyStatus({ promptIfMissing = false } = {}) {
+  state.apiKeyStatus = await api('/api/account/api-key');
+  state.apiKeyBalanceWarning = false;
+  renderApiKeyStatus();
+  if (!state.apiKeyStatus.configured && promptIfMissing) openApiKeyDialog();
+}
+
+async function configureApiKey(event) {
+  event.preventDefault();
+  const button = event.submitter;
+  const input = byId('apiKeyInput');
+  let value = input.value;
+  setBusy(button, true, '正在验证……');
+  try {
+    const result = await api('/api/account/api-key', {
+      method: 'PUT',
+      json: { api_key: value }
+    });
+    state.apiKeyStatus = {
+      configured: result.configured,
+      fingerprint: result.fingerprint,
+      configured_at: result.configured_at,
+      expires_at: result.expires_at
+    };
+    state.apiKeyBalanceWarning = Boolean(result.balance?.warning);
+    byId('balanceValue').textContent = formatBalance(result.balance);
+    closeApiKeyDialog();
+    renderApiKeyStatus();
+    showMessage(
+      result.balance?.warning
+        ? 'API Key已用于当前登录会话，当前余额不足或低于20元，系统不会自动充值。'
+        : 'API Key已验证，仅用于当前登录会话。',
+      result.balance?.warning ? '' : 'success'
+    );
+  } finally {
+    value = '';
+    input.value = '';
+    setBusy(button, false);
+    updateActionAvailability();
+  }
+}
+
+async function clearApiKey() {
+  if (!window.confirm('清除后，本登录会话将不能继续调用模型。当前JSON和页面内容会保留。确定清除吗？')) return;
+  await api('/api/account/api-key', { method: 'DELETE', json: {} });
+  state.apiKeyStatus = { configured: false };
+  state.apiKeyBalanceWarning = false;
+  renderApiKeyStatus();
+  openApiKeyDialog();
+  showMessage('当前登录会话的API Key已清除，页面内容仍保留。', 'success');
 }
 
 async function loadContext({ initial = false } = {}) {
@@ -412,7 +553,6 @@ function renderDocumentPreview(container, documentValue, {
   const collections = [
     ['业务行为', documentValue.behaviors],
     ['流程关系', documentValue.flow_relations],
-    ['跨部门承接', documentValue.cross_department_handoffs],
     ['表单或记录', documentValue.forms],
     ['待治理数据', documentValue.data_objects],
     ['术语', documentValue.terms]
@@ -620,7 +760,6 @@ function renderChecklist() {
     ['业务行为', '/behaviors', documentValue.behaviors],
     ['流程关系', '/flow_relations', documentValue.flow_relations],
     ['待治理数据对象', '/data_objects', documentValue.data_objects],
-    ['跨部门承接', '/cross_department_handoffs', documentValue.cross_department_handoffs],
     ['内部流程调用', '/internal_process_calls', documentValue.internal_process_calls],
     ['表单或记录', '/forms', documentValue.forms],
     ['术语', '/terms', documentValue.terms]
@@ -850,7 +989,7 @@ async function loadReviewFile(file) {
   state.reviewPreviewMode = 'structure';
   state.reviewDiagramExpanded = false;
   byId('reviewFileStatus').textContent =
-      `${file.name} · process-governance-v3 · ${validation.valid ? '当前硬性结构通过' : `${validation.errors.length}项硬性结构错误`}`;
+      `${file.name} · process-governance-v5 · ${validation.valid ? '当前硬性结构通过' : `${validation.errors.length}项硬性结构错误`}`;
   byId('reviewSummary').textContent =
     '文件已读取。开始独立结构预审后，这里会显示需要逐条处理的问题。';
   byId('reviewWorkspace').hidden = false;
@@ -1047,14 +1186,19 @@ function downloadReviewRecord() {
 
 async function refreshBalance() {
   const button = byId('refreshBalanceButton');
+  if (!state.apiKeyStatus.configured) {
+    byId('balanceValue').textContent = '配置Key后可查询';
+    updateActionAvailability();
+    return;
+  }
   button.disabled = true;
   try {
     const result = await api('/api/account/balance');
-    byId('balanceValue').textContent = result.totalBalance == null
-      ? '未返回人民币余额'
-      : `¥${result.totalBalance.toFixed(2)}${result.warning ? ' · 低于20元' : ''}`;
+    state.apiKeyBalanceWarning = Boolean(result.warning);
+    byId('balanceValue').textContent = formatBalance(result);
+    renderApiKeyStatus();
   } finally {
-    button.disabled = false;
+    updateActionAvailability();
   }
 }
 
@@ -1079,15 +1223,18 @@ async function loadAdminStatus() {
   addMetric(summary, '累计模型用量', String(result.usage.totalTokens));
   byId('maintenanceToggle').checked = Boolean(result.maintenance_mode.enabled);
   byId('maintenanceMessage').value = result.maintenance_mode.message || '';
-  const rows = byId('adminBalanceRows');
+  byId('entryModeSelect').value = result.entry_mode?.mode || 'dsh';
+  byId('entryModeReason').value = '';
+  const rows = byId('adminKeyStatusRows');
   rows.replaceChildren();
-  result.balances.forEach(balance => {
+  const dshStatuses = new Map((result.account_dsh_statuses || []).map(item => [item.account_id, item]));
+  result.account_key_statuses.forEach(status => {
     const row = document.createElement('tr');
     const values = [
-      balance.displayName,
-      balance.keyConfigured ? '已配置' : '未配置',
-      balance.totalBalance == null ? '—' : `¥${balance.totalBalance.toFixed(2)}`,
-      balance.error || (balance.warning ? '余额低于20元' : balance.isAvailable ? '可用' : '不可用')
+      status.display_name,
+      status.key_configured ? '存在有效Key会话' : '未配置',
+      String(status.active_key_sessions),
+      String(dshStatuses.get(status.account_id)?.active_dsh_runtimes || 0)
     ];
     values.forEach(value => {
       const cell = document.createElement('td');
@@ -1110,18 +1257,279 @@ async function saveMaintenance() {
   showMessage(enabled ? '维护状态已开启，新的模型请求已经停止。' : '维护状态已解除。', 'success');
 }
 
+async function saveEntryMode() {
+  const mode = byId('entryModeSelect').value;
+  const reason = byId('entryModeReason').value.trim();
+  const result = await api('/api/admin/entry-mode', {
+    method: 'PUT',
+    json: { mode, reason }
+  });
+  await loadContext({ initial: false });
+  await loadAdminStatus();
+  showMessage(
+    result.entry_mode.mode === 'dsh'
+      ? '统一入口已切换为DSH治理工作区。'
+      : '统一入口已切换为经典页面；现有DSH实例不会被终止。',
+    'success'
+  );
+}
+
+function workspaceContent() {
+  return {
+    fillDocument: state.fillDocument,
+    fillValidation: state.fillValidation,
+    fillJsonFileName: state.fillJsonFileName,
+    materials: state.materials,
+    messages: state.messages,
+    fieldStatuses: [...state.fieldStatuses.entries()],
+    fillDirty: state.fillDirty,
+    reviewDocument: state.reviewDocument,
+    reviewValidation: state.reviewValidation,
+    reviewFileName: state.reviewFileName,
+    reviewIssues: state.reviewIssues,
+    dispositions: [...state.dispositions.entries()],
+    reviewRunCompleted: state.reviewRunCompleted,
+    reviewDirty: state.reviewDirty,
+    reviewPreviewMode: state.reviewPreviewMode,
+    activeView: state.activeView
+  };
+}
+
+function renderWorkspaceControl() {
+  if (!IS_DSH_ENTRY) return;
+  const select = byId('dshWorkspaceSelect');
+  const status = byId('dshWorkspaceStatus');
+  select.replaceChildren();
+  if (!state.dshWorkspaces.length) {
+    const option = document.createElement('option');
+    option.value = '';
+    option.textContent = '尚未创建治理工作区';
+    select.append(option);
+  } else {
+    state.dshWorkspaces.forEach(workspace => {
+      const option = document.createElement('option');
+      option.value = workspace.id;
+      option.textContent = `${workspace.name} · r${workspace.revision}`;
+      option.selected = workspace.id === state.dshWorkspaceId;
+      select.append(option);
+    });
+  }
+  if (state.dshConflict) {
+    status.textContent = '其他标签页已经保存新版本。当前未提交输入仍保留在本页；请重新选择当前案例以加载最新状态。';
+  } else if (state.dshWorkspaceId) {
+    const current = state.dshWorkspaces.find(item => item.id === state.dshWorkspaceId);
+    status.textContent = `${current?.name || '当前案例'} · 版本r${state.dshWorkspaceRevision} · 仅保存在当前登录会话的DSH内存中`;
+  } else {
+    status.textContent = '先输入案例名称并新建工作区。未新建时仍可读取模板、导入、校验、编辑和下载，但不能调用模型。';
+  }
+  select.disabled = !state.dshWorkspaces.length;
+  byId('reloadDshWorkspaceButton').hidden = !state.dshConflict;
+  byId('endDshWorkspaceButton').disabled = !state.dshWorkspaceId;
+  updateActionAvailability();
+}
+
+async function resetWorkspaceContent() {
+  await loadTemplate();
+  state.materials = [];
+  state.messages = [];
+  state.fieldStatuses.clear();
+  state.reviewDocument = null;
+  state.reviewValidation = null;
+  state.reviewFileName = '';
+  state.reviewIssues = [];
+  state.dispositions.clear();
+  state.reviewRunCompleted = false;
+  state.reviewDirty = false;
+  state.reviewPreviewMode = 'structure';
+  state.activeView = 'fill';
+  renderMaterials();
+  renderChatFromState();
+  renderChecklist();
+  renderStructuredPreview();
+  renderReviewIssues();
+  updateReviewCompletion();
+  selectView('fill');
+}
+
+async function applyWorkspaceState(result) {
+  state.dshWorkspaces = Array.isArray(result.workspaces) ? result.workspaces : [];
+  state.dshWorkspaceId = result.active_workspace_id || null;
+  state.dshWorkspaceRevision = Number(result.workspace?.revision || 0);
+  state.dshConflict = false;
+  const content = result.workspace?.content;
+  if (!content) {
+    await resetWorkspaceContent();
+  } else {
+    state.fillDocument = content.fillDocument || state.fillDocument;
+    state.fillValidation = content.fillValidation || null;
+    state.fillJsonFileName = String(content.fillJsonFileName || '');
+    state.materials = Array.isArray(content.materials) ? content.materials : [];
+    state.messages = Array.isArray(content.messages) ? content.messages : [];
+    state.fieldStatuses = new Map(Array.isArray(content.fieldStatuses) ? content.fieldStatuses : []);
+    state.fillDirty = Boolean(content.fillDirty);
+    state.reviewDocument = content.reviewDocument || null;
+    state.reviewValidation = content.reviewValidation || null;
+    state.reviewFileName = String(content.reviewFileName || '');
+    state.reviewIssues = Array.isArray(content.reviewIssues) ? content.reviewIssues : [];
+    state.dispositions = new Map(Array.isArray(content.dispositions) ? content.dispositions : []);
+    state.reviewRunCompleted = Boolean(content.reviewRunCompleted);
+    state.reviewDirty = Boolean(content.reviewDirty);
+    state.reviewPreviewMode = content.reviewPreviewMode === 'diagram' ? 'diagram' : 'structure';
+    state.activeView = ['fill', 'review', 'admin'].includes(content.activeView) ? content.activeView : 'fill';
+    renderMaterials();
+    renderChatFromState();
+    renderFillJsonStatus();
+    renderChecklist();
+    renderStructuredPreview();
+    renderReviewIssues();
+    updateReviewCompletion();
+    if (state.reviewDocument) renderReviewDocumentPreview();
+    selectView(state.activeView);
+  }
+  state.dshLastSnapshot = JSON.stringify(workspaceContent());
+  renderWorkspaceControl();
+}
+
+async function loadDshWorkspaceState() {
+  if (!IS_DSH_ENTRY) return;
+  await applyWorkspaceState(await api('/infomat-state'));
+}
+
+async function flushDshWorkspace(options = {}) {
+  if (!IS_DSH_ENTRY || !state.dshWorkspaceId || state.dshConflict || state.dshSaveInFlight) return;
+  const content = workspaceContent();
+  const snapshot = JSON.stringify(content);
+  if (snapshot === state.dshLastSnapshot) return;
+  state.dshSaveInFlight = true;
+  try {
+    const result = await api(`/infomat-state/workspaces/${encodeURIComponent(state.dshWorkspaceId)}`, {
+      method: 'PUT',
+      json: {
+        expected_revision: state.dshWorkspaceRevision,
+        content
+      },
+      keepalive: Boolean(options.keepalive)
+    });
+    state.dshWorkspaceRevision = Number(result.workspace?.revision || state.dshWorkspaceRevision + 1);
+    state.dshWorkspaces = result.workspaces || state.dshWorkspaces;
+    state.dshLastSnapshot = snapshot;
+    renderWorkspaceControl();
+  } catch (error) {
+    if (error.code === 'STATE_CONFLICT') {
+      state.dshConflict = true;
+      renderWorkspaceControl();
+      showMessage('其他标签页已经保存新版本。当前输入仍保留，请重新加载当前案例后再继续。', 'error');
+      return;
+    }
+    throw error;
+  } finally {
+    state.dshSaveInFlight = false;
+  }
+}
+
+async function createDshWorkspace() {
+  const input = byId('dshWorkspaceName');
+  const name = input.value.trim();
+  const result = await api('/infomat-state/workspaces', {
+    method: 'POST',
+    json: { name }
+  });
+  input.value = '';
+  state.dshWorkspaces = result.workspaces;
+  state.dshWorkspaceId = result.active_workspace_id;
+  state.dshWorkspaceRevision = Number(result.workspace?.revision || 0);
+  state.dshLastSnapshot = '';
+  state.dshConflict = false;
+  renderWorkspaceControl();
+  await flushDshWorkspace();
+  showMessage('治理工作区已创建，当前草稿已绑定到该案例。', 'success');
+}
+
+async function switchDshWorkspace(workspaceId) {
+  if (!workspaceId || workspaceId === state.dshWorkspaceId && !state.dshConflict) return;
+  await flushDshWorkspace();
+  const result = await api('/infomat-state/active', {
+    method: 'PUT',
+    json: { workspace_id: workspaceId }
+  });
+  await applyWorkspaceState(result);
+}
+
+async function reloadDshWorkspace() {
+  if (!state.dshWorkspaceId) return;
+  if (!window.confirm('重新加载会用DSH中的最新版本替换本页尚未提交的输入。确认继续吗？')) return;
+  const result = await api('/infomat-state/active', {
+    method: 'PUT',
+    json: { workspace_id: state.dshWorkspaceId }
+  });
+  await applyWorkspaceState(result);
+}
+
+async function endDshWorkspace() {
+  if (!state.dshWorkspaceId) return;
+  const current = state.dshWorkspaces.find(item => item.id === state.dshWorkspaceId);
+  if (!window.confirm(`结束“${current?.name || '当前案例'}”后，该案例的材料、对话和草稿将从当前会话内存中清除。请先下载需要保留的文件。确认继续吗？`)) return;
+  const result = await api(`/infomat-state/workspaces/${encodeURIComponent(state.dshWorkspaceId)}`, {
+    method: 'DELETE',
+    json: {}
+  });
+  await applyWorkspaceState(result);
+  showMessage('当前治理工作区已经结束。', 'success');
+}
+
+function startDshAutosave() {
+  if (!IS_DSH_ENTRY || state.dshPollTimer) return;
+  state.dshPollTimer = window.setInterval(() => {
+    flushDshWorkspace().catch(error => showMessage(error.message, 'error'));
+  }, 1000);
+}
+
+async function startDshAndEnter() {
+  const result = await api('/api/dsh/runtime', { method: 'POST', json: {} });
+  window.location.assign(result.entry_url);
+}
+
 async function initializeAuthenticated(user) {
   state.user = user;
   state.csrfToken = user.csrfToken;
-  showApp();
   await loadContext({ initial: true });
+  const shouldEnterDsh = !IS_DSH_ENTRY
+    && state.context.entry_mode === 'dsh'
+    && (!IS_CLASSIC_ROUTE || user.role !== 'admin');
+  if (shouldEnterDsh) {
+    try {
+      await startDshAndEnter();
+      return;
+    } catch (error) {
+      showMessage(`${error.message} 当前页面继续作为应急入口。`, 'error');
+    }
+  }
+  if (IS_DSH_ENTRY) {
+    try {
+      await api('/api/dsh/runtime', { method: 'POST', json: {} });
+    } catch (error) {
+      if (error.code === 'ENTRY_MODE_CLASSIC' && state.context.classic_url) {
+        window.location.assign(state.context.classic_url);
+        return;
+      }
+      throw error;
+    }
+  }
+  showApp();
   await loadTemplate();
+  if (IS_DSH_ENTRY) {
+    await loadDshWorkspaceState();
+    startDshAutosave();
+  }
+  await loadApiKeyStatus({ promptIfMissing: true });
   renderMaterials();
   resetChatDisplay();
   renderChecklist();
-  refreshBalance().catch(error => {
-    byId('balanceValue').textContent = error.message;
-  });
+  if (state.apiKeyStatus.configured) {
+    refreshBalance().catch(error => {
+      byId('balanceValue').textContent = error.message;
+    });
+  }
   state.pollTimer = window.setInterval(() => {
     loadContext({ initial: false }).catch(error => showMessage(error.message, 'error'));
   }, 30000);
@@ -1167,6 +1575,15 @@ byId('logoutButton').addEventListener('click', async () => {
   } finally {
     window.location.reload();
   }
+});
+
+byId('openApiKeyButton').addEventListener('click', openApiKeyDialog);
+byId('cancelApiKeyButton').addEventListener('click', closeApiKeyDialog);
+byId('clearApiKeyButton').addEventListener('click', () => {
+  clearApiKey().catch(error => showMessage(error.message, 'error'));
+});
+byId('apiKeyForm').addEventListener('submit', event => {
+  configureApiKey(event).catch(error => showMessage(error.message, 'error'));
 });
 
 document.querySelectorAll('.tab[data-view]').forEach(button => {
@@ -1291,6 +1708,25 @@ byId('saveMaintenanceButton').addEventListener('click', () => {
   saveMaintenance().catch(error => showMessage(error.message, 'error'));
 });
 
+byId('saveEntryModeButton').addEventListener('click', () => {
+  saveEntryMode().catch(error => showMessage(error.message, 'error'));
+});
+
+if (IS_DSH_ENTRY) {
+  byId('createDshWorkspaceButton').addEventListener('click', () => {
+    createDshWorkspace().catch(error => showMessage(error.message, 'error'));
+  });
+  byId('dshWorkspaceSelect').addEventListener('change', event => {
+    switchDshWorkspace(event.target.value).catch(error => showMessage(error.message, 'error'));
+  });
+  byId('reloadDshWorkspaceButton').addEventListener('click', () => {
+    reloadDshWorkspace().catch(error => showMessage(error.message, 'error'));
+  });
+  byId('endDshWorkspaceButton').addEventListener('click', () => {
+    endDshWorkspace().catch(error => showMessage(error.message, 'error'));
+  });
+}
+
 byId('versionDownloadButton').addEventListener('click', () => {
   try {
     const documentValue = currentDraftForDownload();
@@ -1309,6 +1745,7 @@ byId('versionRefreshButton').addEventListener('click', () => {
 });
 
 window.addEventListener('beforeunload', event => {
+  if (IS_DSH_ENTRY) void flushDshWorkspace({ keepalive: true });
   if (!state.fillDirty && !state.reviewDirty) return;
   event.preventDefault();
   event.returnValue = '';

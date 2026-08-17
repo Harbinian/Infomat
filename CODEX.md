@@ -19,6 +19,8 @@ MDM 平台保留为后续承接应用。除非用户明确要求进入 MDM 平�
 5. `MAINLINE_MAP.md`
 6. 任务相关目录下的 `README.md` / `AGENTS.md`
 
+数据治理、3001结构化编制、3000受控承接、流程地图或数据地图任务在第5步后继续读取`docs/architecture/data-governance-operating-rules.md`。
+
 历史计划、历史 specs、审计报告只能用于追溯,不能覆盖当前边界文件。若历史材料和当前边界冲突,以根目录执行规则为准。
 
 ## 执行纪律
@@ -53,6 +55,8 @@ MDM 平台保留为后续承接应用。除非用户明确要求进入 MDM 平�
 ## 3000 固定身份、RBAC 与 RACI
 
 3000当前治理模型版本为`rbac-raci-v3-2026-07-31`。正式身份链路固定为`person -> user_accounts -> person_roles`;运行时不得回退到`users/user_roles`或SQLite人员接口。流程治理顶部只保留一个入口，内部使用流程编制、跨部门承接待办和承接冲突待办三个工作区；3001继续独立运行，MDM兼容导入v1、v2和v3文件，并统一保存、导出v3。
+
+3001当前导出`process-governance-v5`，兼容导入v1至v5。v5中的跨部门状态由业务行为执行部门自动识别，流程先后使用普通流程关系，数据传递使用数据行为关系；旧交接记录只在页面内存中转换并只读归档。3000未增加v5兼容，v5文件不得描述为可直接导入3000。
 
 - 普通账号只能由MDM系统管理员通过`/api/org/accounts`手工创建、授权和启用。禁止自助注册、批量开户和RBAC批量导入。
 - 固定角色、权限包和RACI由`apps/mdm-platform/server/roleDefinitions.js`及测试固化,管理页面只读。
@@ -106,6 +110,17 @@ npm run smoke:infomat-services
 ```
 
 AI结构化填报试点：
+
+- 使用Node.js 24运行`@deepseek-ai/dsh@0.1.0-rc.6`；端口3003负责登录和运行控制，端口3004负责认证后的DSH治理工作区及`/structured-tool/`代理。
+- DSH只运行受限治理插件，不向业务用户开放编码Agent或本机文件、命令、技能、模型配置能力。
+- 一个登录会话对应一个内存型DSH实例。业务内容只能由用户主动下载，不能写入服务器文件、数据库或浏览器持久化空间。
+
+```powershell
+npm run verify:dsh-entry
+npm run verify:structure-pilot
+npm run start:structure-pilot
+npm run smoke:structure-pilot
+```
 
 ```powershell
 npm run verify:structure-pilot

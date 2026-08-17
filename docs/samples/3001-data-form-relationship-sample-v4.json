@@ -1,0 +1,154 @@
+{
+  "schema_version": "process-governance-v4",
+  "export_meta": { "package_ref": "package_v4_sample", "exported_at": "2026-08-15T08:00:00.000Z", "initiating_department": "财务部", "compiler": "3001公开样例" },
+  "process": {
+    "process_ref": "process_v4_sample",
+    "process_name": "费用申请关系编制样例",
+    "owning_department": "财务部",
+    "purpose": "演示业务行为、数据、表单和字段关系的v4编制方式",
+    "scope": "用于3001功能培训和回归核对，不代表真实制度或部门职责",
+    "capability_domain": null,
+    "business_capability": null,
+    "classification_status": "unclassified"
+  },
+  "reference_materials": [],
+  "behaviors": [
+    {
+      "behavior_ref": "behavior_submit",
+      "node_type": "action",
+      "behavior_name": "提交费用申请",
+      "behavior_description": "申请人填写申请并提交附件。",
+      "current_actor_role": "财务部会计员",
+      "actor_assignment_mode": "fixed_department",
+      "actor_department_data_ref": null,
+      "actor_position_rule": "",
+      "trigger": "发生费用申请事项时",
+      "precondition": "",
+      "input_description": "",
+      "timing": null,
+      "completion_standard": "申请字段和附件已经提交",
+      "output_description": "",
+      "work_role": null,
+      "countersign_all_required": false,
+      "countersign_target_departments": []
+    },
+    {
+      "behavior_ref": "behavior_review",
+      "node_type": "action",
+      "behavior_name": "复核费用申请",
+      "behavior_description": "复核申请内容和预算依据。",
+      "current_actor_role": "财务部会计员",
+      "actor_assignment_mode": "fixed_department",
+      "actor_department_data_ref": null,
+      "actor_position_rule": "",
+      "trigger": "",
+      "precondition": "",
+      "input_description": "",
+      "timing": null,
+      "completion_standard": "申请内容和预算依据已经复核",
+      "output_description": "",
+      "work_role": null,
+      "countersign_all_required": false,
+      "countersign_target_departments": []
+    }
+  ],
+  "flow_relations": [
+    { "relation_ref": "relation_submit_review", "relation_type": "sequence", "from_behavior_ref": "behavior_submit", "to_behavior_ref": "behavior_review", "condition": "", "join_mode": "" }
+  ],
+  "data_objects": [
+    {
+      "data_ref": "data_expense_application",
+      "data_name": "费用申请",
+      "description": "申请人提交的费用事项、金额和附件信息。",
+      "governance_status": "candidate",
+      "information_type": "business_information",
+      "behavior_links": [
+        { "link_ref": "data_link_application_create", "behavior_ref": "behavior_submit", "operation": "create" },
+        { "link_ref": "data_link_application_review_use", "behavior_ref": "behavior_review", "operation": "use" },
+        { "link_ref": "data_link_application_review_update", "behavior_ref": "behavior_review", "operation": "update" }
+      ],
+      "source_relations": []
+    },
+    {
+      "data_ref": "data_budget_balance",
+      "data_name": "预算余额",
+      "description": "用于填写和复核申请金额的预算余额信息。",
+      "governance_status": "candidate",
+      "information_type": "business_status",
+      "behavior_links": [
+        { "link_ref": "data_link_budget_submit_use", "behavior_ref": "behavior_submit", "operation": "use" },
+        { "link_ref": "data_link_budget_review_use", "behavior_ref": "behavior_review", "operation": "use" }
+      ],
+      "source_relations": [
+        { "source_ref": "data_source_budget_start", "source_department": "财务部", "source_process_name": "预算编制流程", "source_behavior_name": "发布预算", "source_data_name": "已发布预算余额", "availability_mode": "process_start", "available_from_behavior_ref": null },
+        { "source_ref": "data_source_budget_refresh", "source_department": "财务部", "source_process_name": "预算调整流程", "source_behavior_name": "生效预算调整", "source_data_name": "调整后预算余额", "availability_mode": "at_behavior", "available_from_behavior_ref": "behavior_review" }
+      ]
+    },
+    {
+      "data_ref": "data_expense_application_duplicate",
+      "data_name": "费用申请",
+      "description": "用于演示同名对象提示、删除保护和受控归并的待确认数据。",
+      "governance_status": "candidate",
+      "information_type": "pending_confirmation",
+      "behavior_links": [
+        { "link_ref": "data_link_duplicate_pending", "behavior_ref": "behavior_submit", "operation": "pending_confirmation" }
+      ],
+      "source_relations": []
+    }
+  ],
+  "cross_department_handoffs": [],
+  "internal_process_calls": [],
+  "forms": [
+    {
+      "form_ref": "form_expense_application",
+      "form_name": "费用申请单",
+      "form_no": "SAMPLE-V4-001",
+      "form_design_state": "current_state",
+      "behavior_links": [
+        { "link_ref": "form_link_submit", "behavior_ref": "behavior_submit", "operations": ["create", "fill"], "notes": "申请人创建并填写。" },
+        { "link_ref": "form_link_review", "behavior_ref": "behavior_review", "operations": ["review", "modify", "confirm", "read", "archive", "void"], "notes": "用于演示一张表单的多行为、多操作关系。" }
+      ],
+      "areas": [
+        {
+          "area_ref": "area_main",
+          "area_type": "基本信息",
+          "area_title": "费用申请基本信息",
+          "items": [
+            {
+              "item_ref": "item_amount",
+              "item_name": "申请金额",
+              "item_type": "金额",
+              "required": true,
+              "instructions": "填写本次申请金额。",
+              "business_data_ref": "data_expense_application",
+              "value_origin_mode": "depends_on_data",
+              "source_links": [
+                { "source_link_ref": "field_source_budget_value", "source_data_ref": "data_budget_balance", "source_role": "provides_value" },
+                { "source_link_ref": "field_source_budget_calculation", "source_data_ref": "data_budget_balance", "source_role": "calculation_input" },
+                { "source_link_ref": "field_source_budget_validation", "source_data_ref": "data_budget_balance", "source_role": "validation_basis" }
+              ]
+            },
+            { "item_ref": "item_reason", "item_name": "申请事由", "item_type": "长文本", "required": true, "instructions": "填写实际费用事项。", "business_data_ref": "data_expense_application", "value_origin_mode": "direct_current_process", "source_links": [] }
+          ]
+        },
+        {
+          "area_ref": "area_invoice_detail",
+          "area_type": "明细清单",
+          "area_title": "票据明细",
+          "items": [
+            { "item_ref": "item_invoice_no", "item_name": "票据号码", "item_type": "文本", "required": true, "instructions": "逐张填写票据号码。", "business_data_ref": "data_expense_application", "value_origin_mode": "direct_current_process", "source_links": [] }
+          ]
+        },
+        {
+          "area_ref": "area_cost_detail",
+          "area_type": "明细清单",
+          "area_title": "费用明细",
+          "items": [
+            { "item_ref": "item_cost_type", "item_name": "费用类型", "item_type": "文本", "required": true, "instructions": "填写费用所属类型。", "business_data_ref": "data_expense_application", "value_origin_mode": "pending_confirmation", "source_links": [] }
+          ]
+        }
+      ]
+    }
+  ],
+  "terms": []
+}

@@ -5,9 +5,10 @@ const path = require('path');
 const crypto = require('crypto');
 const { app: structuredOutputApp } = require('../../structured-output-service/server');
 const { hashPassword } = require('../lib/auth');
+const { AppError } = require('../lib/errors');
 const { repositoryState } = require('../lib/repository');
 const { createStructuredToolClient } = require('../lib/structured-tool');
-const { createAssistantRuntime, createGatewayHandler } = require('../server');
+const { createAssistantRuntime, createDshGatewayHandler } = require('../server');
 
 const repoRoot = path.join(__dirname, '..', '..', '..');
 const appRoot = path.join(__dirname, '..');
@@ -17,16 +18,16 @@ const passwordHash = hashPassword('Pilot-Browser-2026!');
 const accounts = [
   ['zgy', 'zhangguangyi', '张广懿', '信息化项目组', 'admin'],
   ['dingshuo', 'dingshuo', '丁硕', '信息化项目组', 'user'],
-  ['engineering', 'engineering-pilot', '工程技术部试点人员', '工程技术部', 'user'],
-  ['hr', 'hr-pilot', '行政人事部试点人员', '行政人事部', 'user']
-].map((item, index) => ({
+  ['engineering_rd', 'engineering-rd-pilot', '工程技术部研发', '工程技术部', 'user'],
+  ['engineering_production', 'engineering-production-pilot', '工程技术部批产', '工程技术部', 'user'],
+  ['hr', 'hr-pilot', '行政人事部', '行政人事部', 'user']
+].map(item => ({
   id: item[0],
   username: item[1],
   displayName: item[2],
   department: item[3],
   role: item[4],
-  passwordHash,
-  apiKey: `browser-fixture-key-${index + 1}`
+  passwordHash
 }));
 
 const config = {
@@ -52,18 +53,28 @@ const config = {
   },
   deepseek: {
     baseUrl: 'http://fixture.invalid',
-    fillModel: 'deepseek-v4-flash',
+    fillModel: 'deepseek-v4-pro',
     reviewModel: 'deepseek-v4-pro',
     fillMaxTokens: 8192,
     reviewMaxTokens: 8192,
     requestTimeoutMs: 1000,
     lowBalanceCny: 20
   },
+  dsh: {
+    version: '0.1.0-rc.6',
+    nodeMajor: 24,
+    maxInstances: 10,
+    startTimeoutMs: 60000,
+    stopGraceMs: 5000,
+    nodeExecutable: process.execPath,
+    trustedPublicHosts: ['127.0.0.1:3104']
+  },
   accounts,
   runtime: {
     dir: runtimeDir,
     usageLogPath: path.join(runtimeDir, 'usage-metadata.jsonl'),
-    maintenancePath: path.join(runtimeDir, 'maintenance.json')
+    maintenancePath: path.join(runtimeDir, 'maintenance.json'),
+    dshRoot: path.join(runtimeDir, 'dsh')
   }
 };
 
@@ -132,8 +143,6 @@ function fillFixtureResult(options) {
             timing: null,
             completion_standard: '',
             output_description: '',
-            input_data_refs: [],
-            output_data_refs: [],
             work_role: null,
             countersign_all_required: false,
             countersign_target_departments: []
@@ -196,9 +205,15 @@ function fillFixtureResult(options) {
           path: '/forms/-',
           value: {
             form_ref: 'form_expense_application',
-            behavior_ref: 'behavior_submit_expense',
             form_name: formName,
             form_no: formNo,
+            form_design_state: 'current_state',
+            behavior_links: [{
+              link_ref: 'form_link_submit_expense',
+              behavior_ref: 'behavior_submit_expense',
+              operations: [],
+              notes: ''
+            }],
             areas: []
           }
         }],
@@ -231,7 +246,10 @@ function fillFixtureResult(options) {
             item_name: itemName,
             item_type: itemType,
             required: /是|必填/.test(requiredText),
-            instructions
+            instructions,
+            business_data_ref: null,
+            value_origin_mode: 'pending_confirmation',
+            source_links: []
           }]
         }]
       }],
@@ -266,7 +284,10 @@ function fillFixtureResult(options) {
 
 const modelClient = {
   async completion(options) {
-    if (options.model === 'deepseek-v4-pro') {
+    if (options.apiKey === 'revoked-browser-api-key') {
+      throw new AppError(502, 'MODEL_AUTH_FAILED', '当前账号的DeepSeek接口密钥不可用。');
+    }
+    if (options.thinking === true) {
       return {
         content: JSON.stringify({
           summary: '发现1项字段归位建议；未发现硬性结构错误。',
@@ -292,12 +313,15 @@ const modelClient = {
     };
   },
   async balance(apiKey) {
-    const index = Number(apiKey.split('-').pop());
+    if (apiKey === 'invalid-browser-api-key') {
+      throw new AppError(502, 'MODEL_AUTH_FAILED', '当前账号的DeepSeek接口密钥不可用。');
+    }
+    const totalBalance = apiKey === 'low-browser-api-key' ? 10 : 199;
     return {
       isAvailable: true,
       currency: 'CNY',
-      totalBalance: 200 - index,
-      toppedUpBalance: 200 - index,
+      totalBalance,
+      toppedUpBalance: totalBalance,
       grantedBalance: 0
     };
   }
@@ -317,9 +341,13 @@ const runtime = createAssistantRuntime({
 });
 const assistantServer = runtime.app.listen(3103, '127.0.0.1');
 const gatewayServer = require('http')
-  .createServer(createGatewayHandler({
+  .createServer(createDshGatewayHandler({
     auth: runtime.auth,
-    targetBaseUrl: config.assistant.structuredToolBaseUrl
+    dshRuntimeManager: runtime.dshRuntimeManager,
+    assistantBaseUrl: 'http://127.0.0.1:3103',
+    structuredToolBaseUrl: config.assistant.structuredToolBaseUrl,
+    trustedHosts: config.dsh.trustedPublicHosts,
+    allowHttp: true
   }))
   .listen(3104, '127.0.0.1');
 
@@ -338,7 +366,9 @@ Promise.all([
   }));
 });
 
-function shutdown() {
+async function shutdown() {
+  await runtime.dshRuntimeManager.close();
+  runtime.apiKeyStore.clear();
   structuredServer.close();
   assistantServer.close();
   gatewayServer.close();

@@ -1,0 +1,618 @@
+{
+  "schema_version": "process-governance-v3",
+  "export_meta": {
+    "package_ref": "package_training_internet_20260812",
+    "exported_at": "2026-08-12T00:00:00.000Z",
+    "initiating_department": "经营发展部",
+    "compiler": "公共教学样例"
+  },
+  "process": {
+    "process_ref": "process_training_internet_daily_use",
+    "process_name": "互联网专用办公区日常预约、使用与关闭（教学样例）",
+    "owning_department": "经营发展部",
+    "purpose": "练习单流程编制、判断分支、流程内部回路、跨部门承接、数据对象和纸质表单字段填写",
+    "scope": "仅用于3001操作培训，不代表公司现行制度、正式流程或审核结论",
+    "capability_domain": null,
+    "business_capability": null,
+    "classification_status": "unclassified"
+  },
+  "reference_materials": [],
+  "behaviors": [
+    {
+      "behavior_ref": "behavior_training_submit_reservation",
+      "node_type": "action",
+      "behavior_name": "提交使用预约",
+      "behavior_description": "使用人填写预约信息并提交本部门负责人确认。",
+      "current_actor_role": "全公司",
+      "actor_assignment_mode": "company_wide",
+      "actor_department_data_ref": null,
+      "actor_position_rule": "",
+      "trigger": "使用人需要办理教学样例中的互联网访问事项时",
+      "precondition": "",
+      "input_description": "",
+      "timing": null,
+      "completion_standard": "预约信息已经填写并提交",
+      "output_description": "",
+      "input_data_refs": [],
+      "output_data_refs": [
+        "data_training_reservation"
+      ],
+      "work_role": null,
+      "countersign_all_required": false,
+      "countersign_target_departments": []
+    },
+    {
+      "behavior_ref": "behavior_training_department_confirm",
+      "node_type": "decision",
+      "behavior_name": "确认本次使用是否具有业务必要性",
+      "behavior_description": "预约单所列申请部门的负责人核对本次使用是否具有实际业务需要，并形成同意、退回补充或不同意结论。",
+      "current_actor_role": "",
+      "actor_assignment_mode": "dynamic_from_data",
+      "actor_department_data_ref": "data_training_reservation",
+      "actor_position_rule": "由预约单中的申请部门负责人确认",
+      "trigger": "",
+      "precondition": "",
+      "input_description": "",
+      "timing": null,
+      "completion_standard": "形成同意、退回补充或不同意结论",
+      "output_description": "",
+      "input_data_refs": [
+        "data_training_reservation"
+      ],
+      "output_data_refs": [
+        "data_training_department_decision"
+      ],
+      "work_role": null,
+      "countersign_all_required": false,
+      "countersign_target_departments": []
+    },
+    {
+      "behavior_ref": "behavior_training_change_check",
+      "node_type": "decision",
+      "behavior_name": "核对所选业务流程是否需要重新评审",
+      "behavior_description": "经营发展部核对网站、软件、数据类型和上传下载方式是否发生需要重新评审的变化。",
+      "current_actor_role": "经营发展部 计划员",
+      "actor_assignment_mode": "fixed_department",
+      "actor_department_data_ref": null,
+      "actor_position_rule": "",
+      "trigger": "",
+      "precondition": "",
+      "input_description": "",
+      "timing": null,
+      "completion_standard": "形成无需重新评审或需要重新评审结论",
+      "output_description": "",
+      "input_data_refs": [
+        "data_training_reservation",
+        "data_training_department_decision"
+      ],
+      "output_data_refs": [
+        "data_training_change_record"
+      ],
+      "work_role": null,
+      "countersign_all_required": false,
+      "countersign_target_departments": []
+    },
+    {
+      "behavior_ref": "behavior_training_joint_review",
+      "node_type": "action",
+      "behavior_name": "评审业务流程变更内容",
+      "behavior_description": "行政人事部核对教学样例中的保密要求，并对变化内容形成评审意见。",
+      "current_actor_role": "行政人事部 主管",
+      "actor_assignment_mode": "fixed_department",
+      "actor_department_data_ref": null,
+      "actor_position_rule": "",
+      "trigger": "",
+      "precondition": "",
+      "input_description": "",
+      "timing": null,
+      "completion_standard": "评审意见说明允许使用、退回补充、不允许使用或转专项处理",
+      "output_description": "",
+      "input_data_refs": [
+        "data_training_change_record"
+      ],
+      "output_data_refs": [
+        "data_training_review_result"
+      ],
+      "work_role": null,
+      "countersign_all_required": false,
+      "countersign_target_departments": []
+    },
+    {
+      "behavior_ref": "behavior_training_review_result",
+      "node_type": "decision",
+      "behavior_name": "处理联合评审结论",
+      "behavior_description": "经营发展部根据返回的评审意见确定进入排期、退回补充或记录未通过。",
+      "current_actor_role": "经营发展部 计划员",
+      "actor_assignment_mode": "fixed_department",
+      "actor_department_data_ref": null,
+      "actor_position_rule": "",
+      "trigger": "",
+      "precondition": "",
+      "input_description": "",
+      "timing": null,
+      "completion_standard": "评审结论已经进入对应后续路径",
+      "output_description": "",
+      "input_data_refs": [
+        "data_training_review_result"
+      ],
+      "output_data_refs": [],
+      "work_role": null,
+      "countersign_all_required": false,
+      "countersign_target_departments": []
+    },
+    {
+      "behavior_ref": "behavior_training_schedule",
+      "node_type": "action",
+      "behavior_name": "安排使用时段",
+      "behavior_description": "经营发展部根据已确认预约和可用情况安排教学样例中的使用时段。",
+      "current_actor_role": "经营发展部 计划员",
+      "actor_assignment_mode": "fixed_department",
+      "actor_department_data_ref": null,
+      "actor_position_rule": "",
+      "trigger": "",
+      "precondition": "",
+      "input_description": "",
+      "timing": null,
+      "completion_standard": "使用时段和终端编号已经明确",
+      "output_description": "",
+      "input_data_refs": [
+        "data_training_reservation"
+      ],
+      "output_data_refs": [
+        "data_training_schedule"
+      ],
+      "work_role": null,
+      "countersign_all_required": false,
+      "countersign_target_departments": []
+    },
+    {
+      "behavior_ref": "behavior_training_use",
+      "node_type": "action",
+      "behavior_name": "使用指定终端办理预约事项",
+      "behavior_description": "使用人按预约事项和安排时段完成教学样例中的操作，并记录完成或异常结果。",
+      "current_actor_role": "全公司",
+      "actor_assignment_mode": "company_wide",
+      "actor_department_data_ref": null,
+      "actor_position_rule": "",
+      "trigger": "",
+      "precondition": "",
+      "input_description": "",
+      "timing": null,
+      "completion_standard": "形成完成结果或异常报告",
+      "output_description": "",
+      "input_data_refs": [
+        "data_training_schedule"
+      ],
+      "output_data_refs": [
+        "data_training_use_result"
+      ],
+      "work_role": null,
+      "countersign_all_required": false,
+      "countersign_target_departments": []
+    },
+    {
+      "behavior_ref": "behavior_training_close_record",
+      "node_type": "action",
+      "behavior_name": "检查并关闭使用记录",
+      "behavior_description": "经营发展部登记实际时间、完成情况和异常情况，并关闭本次教学记录。",
+      "current_actor_role": "经营发展部 计划员",
+      "actor_assignment_mode": "fixed_department",
+      "actor_department_data_ref": null,
+      "actor_position_rule": "",
+      "trigger": "",
+      "precondition": "",
+      "input_description": "",
+      "timing": null,
+      "completion_standard": "使用记录完整；存在异常时已经注明移交事项",
+      "output_description": "",
+      "input_data_refs": [
+        "data_training_reservation",
+        "data_training_schedule",
+        "data_training_use_result"
+      ],
+      "output_data_refs": [
+        "data_training_closed_record"
+      ],
+      "work_role": null,
+      "countersign_all_required": false,
+      "countersign_target_departments": []
+    },
+    {
+      "behavior_ref": "behavior_training_record_rejection",
+      "node_type": "action",
+      "behavior_name": "记录未通过或转专项处理结果",
+      "behavior_description": "经营发展部记录不同意、不允许使用或转专项处理的结论，本次教学流程不进入排期。",
+      "current_actor_role": "经营发展部 计划员",
+      "actor_assignment_mode": "fixed_department",
+      "actor_department_data_ref": null,
+      "actor_position_rule": "",
+      "trigger": "",
+      "precondition": "",
+      "input_description": "",
+      "timing": null,
+      "completion_standard": "结论、依据和后续入口已经记录",
+      "output_description": "",
+      "input_data_refs": [
+        "data_training_reservation",
+        "data_training_department_decision"
+      ],
+      "output_data_refs": [
+        "data_training_rejection_record"
+      ],
+      "work_role": null,
+      "countersign_all_required": false,
+      "countersign_target_departments": []
+    }
+  ],
+  "flow_relations": [
+    {
+      "relation_ref": "relation_training_01",
+      "relation_type": "sequence",
+      "from_behavior_ref": "behavior_training_submit_reservation",
+      "to_behavior_ref": "behavior_training_department_confirm",
+      "condition": "",
+      "join_mode": ""
+    },
+    {
+      "relation_ref": "relation_training_02",
+      "relation_type": "condition",
+      "from_behavior_ref": "behavior_training_department_confirm",
+      "to_behavior_ref": "behavior_training_change_check",
+      "condition": "同意",
+      "join_mode": ""
+    },
+    {
+      "relation_ref": "relation_training_03",
+      "relation_type": "loop",
+      "from_behavior_ref": "behavior_training_department_confirm",
+      "to_behavior_ref": "behavior_training_submit_reservation",
+      "condition": "退回补充",
+      "join_mode": ""
+    },
+    {
+      "relation_ref": "relation_training_04",
+      "relation_type": "condition",
+      "from_behavior_ref": "behavior_training_department_confirm",
+      "to_behavior_ref": "behavior_training_record_rejection",
+      "condition": "不同意",
+      "join_mode": ""
+    },
+    {
+      "relation_ref": "relation_training_05",
+      "relation_type": "condition",
+      "from_behavior_ref": "behavior_training_change_check",
+      "to_behavior_ref": "behavior_training_schedule",
+      "condition": "无需重新评审",
+      "join_mode": ""
+    },
+    {
+      "relation_ref": "relation_training_06",
+      "relation_type": "condition",
+      "from_behavior_ref": "behavior_training_review_result",
+      "to_behavior_ref": "behavior_training_schedule",
+      "condition": "允许使用",
+      "join_mode": ""
+    },
+    {
+      "relation_ref": "relation_training_07",
+      "relation_type": "loop",
+      "from_behavior_ref": "behavior_training_review_result",
+      "to_behavior_ref": "behavior_training_submit_reservation",
+      "condition": "退回补充",
+      "join_mode": ""
+    },
+    {
+      "relation_ref": "relation_training_08",
+      "relation_type": "condition",
+      "from_behavior_ref": "behavior_training_review_result",
+      "to_behavior_ref": "behavior_training_record_rejection",
+      "condition": "不允许使用或转专项处理",
+      "join_mode": ""
+    },
+    {
+      "relation_ref": "relation_training_09",
+      "relation_type": "sequence",
+      "from_behavior_ref": "behavior_training_schedule",
+      "to_behavior_ref": "behavior_training_use",
+      "condition": "",
+      "join_mode": ""
+    },
+    {
+      "relation_ref": "relation_training_10",
+      "relation_type": "sequence",
+      "from_behavior_ref": "behavior_training_use",
+      "to_behavior_ref": "behavior_training_close_record",
+      "condition": "",
+      "join_mode": ""
+    }
+  ],
+  "data_objects": [
+    {
+      "data_ref": "data_training_reservation",
+      "data_name": "使用预约",
+      "description": "教学样例中的预约信息",
+      "governance_status": "candidate",
+      "produced_by_behavior_ref": "behavior_training_submit_reservation",
+      "consumed_by_behavior_refs": [
+        "behavior_training_department_confirm",
+        "behavior_training_change_check",
+        "behavior_training_schedule",
+        "behavior_training_close_record",
+        "behavior_training_record_rejection"
+      ]
+    },
+    {
+      "data_ref": "data_training_department_decision",
+      "data_name": "部门确认结论",
+      "description": "教学样例中的同意、退回补充或不同意结论",
+      "governance_status": "candidate",
+      "produced_by_behavior_ref": "behavior_training_department_confirm",
+      "consumed_by_behavior_refs": [
+        "behavior_training_change_check",
+        "behavior_training_record_rejection"
+      ]
+    },
+    {
+      "data_ref": "data_training_change_record",
+      "data_name": "流程变更记录",
+      "description": "教学样例中的网站、软件、数据类型和上传下载方式变化",
+      "governance_status": "candidate",
+      "produced_by_behavior_ref": "behavior_training_change_check",
+      "consumed_by_behavior_refs": [
+        "behavior_training_joint_review"
+      ]
+    },
+    {
+      "data_ref": "data_training_review_result",
+      "data_name": "联合评审意见",
+      "description": "教学样例中的允许、退回、不允许或转专项处理意见",
+      "governance_status": "candidate",
+      "produced_by_behavior_ref": "behavior_training_joint_review",
+      "consumed_by_behavior_refs": [
+        "behavior_training_review_result"
+      ]
+    },
+    {
+      "data_ref": "data_training_schedule",
+      "data_name": "使用安排",
+      "description": "教学样例中的使用时段和终端编号",
+      "governance_status": "candidate",
+      "produced_by_behavior_ref": "behavior_training_schedule",
+      "consumed_by_behavior_refs": [
+        "behavior_training_use",
+        "behavior_training_close_record"
+      ]
+    },
+    {
+      "data_ref": "data_training_use_result",
+      "data_name": "使用结果",
+      "description": "教学样例中的完成结果或异常报告",
+      "governance_status": "candidate",
+      "produced_by_behavior_ref": "behavior_training_use",
+      "consumed_by_behavior_refs": [
+        "behavior_training_close_record"
+      ]
+    },
+    {
+      "data_ref": "data_training_closed_record",
+      "data_name": "已关闭使用记录",
+      "description": "教学样例中的完整使用记录",
+      "governance_status": "candidate",
+      "produced_by_behavior_ref": "behavior_training_close_record",
+      "consumed_by_behavior_refs": []
+    },
+    {
+      "data_ref": "data_training_rejection_record",
+      "data_name": "未通过或专项处理记录",
+      "description": "教学样例中的未通过结论和后续处理入口",
+      "governance_status": "candidate",
+      "produced_by_behavior_ref": "behavior_training_record_rejection",
+      "consumed_by_behavior_refs": []
+    }
+  ],
+  "cross_department_handoffs": [
+    {
+      "handoff_ref": "handoff_training_hr_review",
+      "handoff_direction": "outbound_followup",
+      "anchor_behavior_ref": "behavior_training_change_check",
+      "counterparty_resolution": "identified",
+      "source_department": "经营发展部",
+      "target_department": "行政人事部",
+      "transfer_data_ref": "data_training_change_record",
+      "requested_matter": "核对教学样例中的保密要求并形成评审意见",
+      "trigger_condition": "需要重新评审",
+      "completion_standard": "返回允许使用、退回补充、不允许使用或转专项处理意见",
+      "counterparty_process_ref": null,
+      "counterparty_process_name": "",
+      "counterparty_behavior_ref": "behavior_training_joint_review",
+      "counterparty_behavior_name": "",
+      "requires_return": true,
+      "returned_data_ref": "data_training_review_result",
+      "resume_behavior_ref": "behavior_training_review_result"
+    }
+  ],
+  "internal_process_calls": [],
+  "forms": [
+    {
+      "form_ref": "form_training_reservation",
+      "behavior_ref": "behavior_training_submit_reservation",
+      "form_name": "互联网专用办公区使用预约单（教学样例）",
+      "form_no": "TRAIN-INET-01",
+      "form_design_state": "proposed_design",
+      "areas": [
+        {
+          "area_ref": "area_training_reservation_main",
+          "area_type": "基本信息",
+          "area_title": "预约基本信息",
+          "items": [
+            {
+              "item_ref": "item_training_applicant",
+              "item_name": "申请人",
+              "item_type": "人员",
+              "required": true,
+              "instructions": "教学时使用虚构人员，不填写真实敏感信息"
+            },
+            {
+              "item_ref": "item_training_department",
+              "item_name": "申请部门",
+              "item_type": "部门",
+              "required": true,
+              "instructions": "选择教学部门"
+            },
+            {
+              "item_ref": "item_training_business_process",
+              "item_name": "业务流程",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "填写本次预约对应的教学业务流程"
+            },
+            {
+              "item_ref": "item_training_use_date",
+              "item_name": "使用日期",
+              "item_type": "日期",
+              "required": true,
+              "instructions": "填写计划使用日期"
+            },
+            {
+              "item_ref": "item_training_start_time",
+              "item_name": "计划开始时间",
+              "item_type": "日期时间",
+              "required": true,
+              "instructions": "填写计划开始时间"
+            },
+            {
+              "item_ref": "item_training_duration",
+              "item_name": "预计时长",
+              "item_type": "数字",
+              "required": true,
+              "instructions": "填写预计使用时长，单位在教学时说明"
+            },
+            {
+              "item_ref": "item_training_department_opinion",
+              "item_name": "部门负责人意见",
+              "item_type": "长文本",
+              "required": false,
+              "instructions": "由教学样例中的部门负责人填写"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "form_ref": "form_training_change_record",
+      "behavior_ref": "behavior_training_change_check",
+      "form_name": "流程变更记录（教学样例）",
+      "form_no": "TRAIN-INET-02",
+      "form_design_state": "proposed_design",
+      "areas": [
+        {
+          "area_ref": "area_training_change_main",
+          "area_type": "基本信息",
+          "area_title": "变更基本信息",
+          "items": [
+            {
+              "item_ref": "item_training_change_type",
+              "item_name": "变化类型",
+              "item_type": "枚举",
+              "required": true,
+              "instructions": "教学选项包括网站、软件、数据类型、上传下载方式和其他控制要求"
+            },
+            {
+              "item_ref": "item_training_change_content",
+              "item_name": "变化内容",
+              "item_type": "长文本",
+              "required": true,
+              "instructions": "填写本次变化事实"
+            },
+            {
+              "item_ref": "item_training_change_reason",
+              "item_name": "变化原因",
+              "item_type": "长文本",
+              "required": true,
+              "instructions": "填写产生变化的原因"
+            },
+            {
+              "item_ref": "item_training_change_impact",
+              "item_name": "影响范围",
+              "item_type": "长文本",
+              "required": true,
+              "instructions": "填写影响的流程、人员或数据范围"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "form_ref": "form_training_use_record",
+      "behavior_ref": "behavior_training_close_record",
+      "form_name": "互联网专用办公区使用记录（教学样例）",
+      "form_no": "TRAIN-INET-03",
+      "form_design_state": "proposed_design",
+      "areas": [
+        {
+          "area_ref": "area_training_use_main",
+          "area_type": "基本信息",
+          "area_title": "使用记录基本信息",
+          "items": [
+            {
+              "item_ref": "item_training_reservation_no",
+              "item_name": "预约单号",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "填写教学预约单号"
+            },
+            {
+              "item_ref": "item_training_user",
+              "item_name": "使用人",
+              "item_type": "人员",
+              "required": true,
+              "instructions": "教学时使用虚构人员"
+            },
+            {
+              "item_ref": "item_training_terminal_no",
+              "item_name": "终端编号",
+              "item_type": "文本",
+              "required": true,
+              "instructions": "填写教学终端编号"
+            },
+            {
+              "item_ref": "item_training_actual_start",
+              "item_name": "实际开始时间",
+              "item_type": "日期时间",
+              "required": true,
+              "instructions": "填写实际开始时间"
+            },
+            {
+              "item_ref": "item_training_actual_end",
+              "item_name": "实际结束时间",
+              "item_type": "日期时间",
+              "required": true,
+              "instructions": "填写实际结束时间"
+            },
+            {
+              "item_ref": "item_training_completion",
+              "item_name": "完成情况",
+              "item_type": "长文本",
+              "required": true,
+              "instructions": "填写教学事项完成情况"
+            },
+            {
+              "item_ref": "item_training_exception",
+              "item_name": "异常情况",
+              "item_type": "长文本",
+              "required": false,
+              "instructions": "没有异常时留空"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "terms": [
+    {
+      "term_ref": "term_training_only",
+      "term_name": "教学样例",
+      "definition": "只用于练习3001结构化编制，不代表公司现行制度、正式流程、审核结论或系统建设决定。"
+    }
+  ]
+}

@@ -107,15 +107,29 @@ const csrf = login.body.user.csrfToken;
 const authHeaders = { Cookie: cookie };
 
 const context = await requireOk(`${baseUrl}/api/context`, { headers: authHeaders });
-assert.equal(context.body.schema_version, 'process-governance-v1');
+assert.equal(context.body.schema_version, 'process-governance-v4');
 assert.match(context.body.schema_digest, /^[a-f0-9]{64}$/);
 assert.match(context.body.app_commit, /^[a-f0-9]{40}$/);
 assert.equal(context.body.maintenance_mode.enabled, false);
+assert.equal(context.body.entry_mode, 'dsh');
+assert.equal(context.body.dsh_version, '0.1.0-rc.6');
+assert.equal(context.body.dsh_available, true);
+
+const dshRuntime = await requireOk(`${baseUrl}/api/dsh/runtime`, {
+  method: 'POST',
+  headers: { ...authHeaders, 'X-CSRF-Token': csrf },
+  body: {}
+});
+assert.equal(dshRuntime.body.status, 'running');
+assert.equal(dshRuntime.body.dsh_version, '0.1.0-rc.6');
+assert.ok(dshRuntime.body.entry_url.startsWith('https://'));
+const dshPage = await requireOk(dshRuntime.body.entry_url, { headers: authHeaders });
+assert.match(String(dshPage.body), /DSH流程与数据治理工作区/);
 
 const template = await requireOk(`${baseUrl}/api/template`, { headers: authHeaders });
 assert.equal(template.body.schema_digest, context.body.schema_digest);
 assert.equal(template.body.app_commit, context.body.app_commit);
-assert.equal(template.body.data.schema_version, 'process-governance-v1');
+assert.equal(template.body.data.schema_version, 'process-governance-v4');
 
 const validation = await requireOk(`${baseUrl}/api/document/validate`, {
   method: 'POST',
@@ -130,17 +144,23 @@ const validation = await requireOk(`${baseUrl}/api/document/validate`, {
 });
 assert.equal(validation.body.valid, true);
 
-const balance = await requireOk(`${baseUrl}/api/account/balance`, { headers: authHeaders });
-assert.equal(typeof balance.body.isAvailable, 'boolean');
+const keyStatus = await requireOk(`${baseUrl}/api/account/api-key`, { headers: authHeaders });
+assert.equal(keyStatus.body.configured, false);
+assert.equal(keyStatus.body.fingerprint, null);
+assert.equal(keyStatus.body.configured_at, null);
+assert.equal(keyStatus.body.expires_at, null);
 
 const adminStatus = await requireOk(`${baseUrl}/api/admin/status`, { headers: authHeaders });
-assert.equal(adminStatus.body.balances.length, 4);
-assert.equal(adminStatus.body.balances.every(item => item.keyConfigured), true);
-assert.equal(adminStatus.body.balances.every(item => !item.error), true);
+assert.equal(adminStatus.body.account_key_statuses.length, 5);
+assert.equal(adminStatus.body.account_key_statuses.every(item => item.key_configured === false), true);
+assert.equal(adminStatus.body.account_key_statuses.every(item => !Object.hasOwn(item, 'fingerprint')), true);
+assert.equal(Object.hasOwn(adminStatus.body, 'balances'), false);
+assert.equal(adminStatus.body.account_dsh_statuses.length, 5);
+assert.equal(adminStatus.body.account_dsh_statuses.find(item => item.account_id === 'zgy').active_dsh_runtimes, 1);
 
-const gatewaySchemaUrl = new URL('/api/schema', context.body.structured_tool_url).toString();
+const gatewaySchemaUrl = new URL('api/schema', context.body.structured_tool_url).toString();
 const gatewaySchema = await requireOk(gatewaySchemaUrl, { headers: authHeaders });
-assert.equal(gatewaySchema.body.properties.schema_version.const, 'process-governance-v1');
+assert.equal(gatewaySchema.body.properties.schema_version.const, 'process-governance-v4');
 
 const repositoryCommit = (
   await import('node:child_process')
@@ -151,17 +171,22 @@ const repositoryCommit = (
 }).trim();
 assert.equal(context.body.app_commit, repositoryCommit);
 
+await requireOk(`${baseUrl}/api/dsh/runtime`, {
+  method: 'DELETE',
+  headers: { ...authHeaders, 'X-CSRF-Token': csrf },
+  body: {}
+});
+
 console.log(JSON.stringify({
   ok: true,
   user: login.body.user.displayName,
   appCommit: context.body.app_commit,
   schemaVersion: context.body.schema_version,
   schemaDigest: context.body.schema_digest,
-  balanceAvailable: balance.body.isAvailable,
-  configuredAccountCount: adminStatus.body.balances.length,
-  lowBalanceAccounts: adminStatus.body.balances
-    .filter(item => item.warning)
-    .map(item => item.displayName),
+  configuredAccountCount: adminStatus.body.account_key_statuses
+    .filter(item => item.key_configured)
+    .length,
+  pilotAccountCount: adminStatus.body.account_key_statuses.length,
   structuredToolGateway: context.body.structured_tool_url
 }, null, 2));
 console.log('structure pilot smoke passed');

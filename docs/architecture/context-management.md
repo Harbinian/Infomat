@@ -11,6 +11,7 @@
 | 执行规则 | 规定 Codex 怎么开始任务、怎么判断边界、怎么交付 | `AGENTS.md`、`CODEX.md` |
 | 仓库边界 | 规定仓库放什么、不放什么、各目录怎么改 | `REPOSITORY_BOUNDARY.md`、`DIRECTORY_OWNERSHIP.md` |
 | 主线关系 | 规定组织真源、流程输入基线、PMO、MDM、脚本之间的数据流 | `MAINLINE_MAP.md` |
+| 数据治理工作规则 | 规定治理责任、3001/3000边界、待定状态、对象识别和信息分层 | `docs/architecture/data-governance-operating-rules.md` |
 | 机器可读校验规则 | 规定脚本、模型输出和平台承接必须遵守的数据结构 | `docs/contracts/` |
 | 资料真源 | 当前可维护的业务资料入口 | `docs/organization/`、`docs/norms/`、`pmo/*.md` |
 | 展示副本 | 由真源或脚本生成给人看的页面和 JSON | `pmo/procedure-management/dashboard.html`、`docs/company-sankey-data.json`、`pmo/tasks.json` |
@@ -26,8 +27,9 @@
 3. `REPOSITORY_BOUNDARY.md`
 4. `DIRECTORY_OWNERSHIP.md`
 5. `MAINLINE_MAP.md`
-6. 任务相关目录的 `README.md` / `AGENTS.md`
-7. 具体真源、脚本或页面文件
+6. 涉及数据治理、3001、3000、流程地图或数据地图时，读取 `docs/architecture/data-governance-operating-rules.md`
+7. 任务相关目录的 `README.md` / `AGENTS.md`
+8. 具体真源、脚本或页面文件
 
 历史报告、历史 plans/specs 只能在需要追溯来源时检索读取。历史材料与当前规则冲突时，以根目录执行规则和边界文件为准。
 

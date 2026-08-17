@@ -1,7 +1,7 @@
 # Infomat 项目术语表
 
-> 版本：V1.10
-> 更新日期：2026-08-10
+> 版本：V1.14
+> 更新日期：2026-08-15
 > 用途：为 AI 辅助开发提供统一的术语参考。按域分章，每章一张三列表。
 
 ## 使用约定
@@ -125,32 +125,34 @@
 | 制度版次 | Document Edition | 文档结构化输出中制度的字母版次，由系统自动生成并与制度编号共同标识外部引用对象；发布下一版次后上一版保留历史追溯并从默认当前视图移出 |
 | Procedure 业务编号 | Procedure Code | 文档结构化输出中流程对象的系统生成业务编号，格式为 `PROCEDURE-{草稿ID}-{三位序号}`，写入 `process_design_processes.process_code` 并保持唯一；L3 只表示流程层级和名称，不进入编号 |
 | 文档结构化输出结构规则 | Document Structured Output Schema | 机器可读的文档结构规则，统一制度草稿、制度档案、术语、L3流程、A1业务行为、跨部门承接、表单字段、证据、主数据需求和待确认问题字段；该规则不替代流程输入基线或组织真源 |
-| 单流程结构化文件规则 | Process Governance Structure Rules | 3001导出的`process-governance-v3`文件必须遵守的结构规则；一份JSON只包含一个`process`，记录编制元数据、业务行为、执行主体确定方式、流程关系、待治理数据、跨部门前置输入和后续承接、历史内部流程调用、表单设计状态及表单字段分组，不包含可信审核状态、审核意见或批准标记。v1、v2只作为兼容导入版本；缺少可选执行主体字段的旧v3文件继续有效 |
+| 单流程结构化文件规则 | Process Governance Structure Rules | 3001导出的`process-governance-v5`文件必须遵守的结构规则；一份JSON只包含一个`process`，记录编制元数据、业务行为、普通流程关系、数据行为关系、数据来源线索、历史内部流程调用、表单处理关系、字段数据关系和只读迁移记录，不包含可信审核状态、审核意见或批准标记。v1至v4只作为兼容导入版本 |
 | 单流程治理JSON | Single-Process Governance JSON | MDM流程编制的完整内容真源，当前结构版本为`process-governance-v3`。MDM兼容导入3001的v1、v2、v3文件，统一保存和导出v3；数据库修订号用于并发校验，浏览器不持久化该内容 |
 | 表单设计状态 | Form Design State | `forms[].form_design_state`记录一张表单是照录现状`current_state`、新建或优化设计`proposed_design`，还是历史文件尚未确认`unspecified`。3001和MDM不得根据表单名称、编号或明细表数量推断该状态 |
 | 字段归属 | Field Assignment | 用户依据纸质表单位置确认字段属于主表还是哪张明细表。JSON不增加字段级重复归属值：主表字段保存在`area_type="基本信息"`分组，明细表字段保存在对应`area_type="明细清单"`分组；该归属只组织结构化内容，不代表创建数据库表 |
-| 跨职能流程图预览 | Cross-Functional Process Preview | 3001根据当前单流程JSON生成的只读部门泳道图。它采用BPMN 2.0.2最小图形子集：部门使用横向泳道，岗位显示在节点第二行，本流程关系使用实线实心箭头，跨部门承接使用泳道外卡片和虚线空心箭头，历史内部流程调用使用粗边框节点；图形不得推测关系、修改业务数据或把坐标和页面状态写入JSON |
+| 跨职能流程图预览 | Cross-Functional Process Preview | 3001根据当前单流程JSON生成的只读部门泳道图。它采用BPMN 2.0.2最小图形子集：部门使用横向泳道，岗位显示在节点第二行，普通流程关系使用实线实心箭头，关系两端部门不同时自动使用跨泳道样式，历史内部流程调用使用粗边框节点；图形不得读取迁移记录推测关系、修改业务数据或把坐标和页面状态写入JSON |
 | 业务行为补充说明 | Business Behavior Description | 3001中对“具体做什么”的可选文字说明，保存于`behaviors[].behavior_description`，用于帮助PMO和部门业务人员理解实际操作；它不替代`behavior_name`中的业务行为或节点名称，不参与流程关系、工作角色绑定或流程图节点显示 |
 | 业务行为进入方式 | Business Behavior Entry | 3001中说明一个行为如何开始的信息。流程入口由编制人填写“流程如何开始”并保存于`behaviors[].trigger`；其他行为根据非回路流程关系、跨部门前置输入和返回恢复位置自动带出，不要求在行为中重复描述 |
 | 其他开始条件 | Additional Start Condition | 流程关系和输入数据不能表达的额外开始限制，继续保存于`behaviors[].precondition`。没有额外限制时留空，不用于重复描述前序行为或所需数据 |
 | 数据时序 | Data Flow Order | 数据产生位置与使用位置之间的明确流程先后关系。3001按非回路流程关系的可达性判断：数据只能供产生位置之后明确可达的行为使用；同一行为自身、明确的前序行为和并行兄弟路线不能引用，跨部门返回数据从恢复位置起可用 |
 | MDM-AI助手 | MDM AI Assistant | 当前四人试点的页面名称；该助手集中部署在内网主机，以连续对话帮助用户依据3001现行结构梳理流程，右侧同步显示结构化结果，材料只作为可选补充。AI可以发现信息缺口、前后矛盾、字段归位不清和对象混写，但不判断流程内容，也不自动写入3001或MDM平台。以后可以随功能范围调整显示名称，内部目录和启动命令保持稳定 |
 | Infomat试点版本 | Infomat Pilot Version | 同时提供MDM-AI助手和3001的已提交Git版本；正式启动要求服务器工作区干净，用户电脑不保存版本副本。浏览器通过Git提交和结构摘要确认当前页面与服务器一致 |
-| 结构摘要 | Schema Digest | 对3001当前`process-governance-v3`结构计算的SHA-256摘要；浏览器首次进入、定时检查和每次模型调用前后均核对该值，变化时返回`VERSION_CHANGED`并阻止旧页面继续调用模型 |
+| 结构摘要 | Schema Digest | 对3001当前`process-governance-v5`结构计算的SHA-256摘要；浏览器首次进入、定时检查和每次模型调用前后均核对该值，变化时返回`VERSION_CHANGED`并阻止旧页面继续调用模型 |
 | 独立结构预审 | Independent Structural Review | 使用新的页面上下文，只依据待审v3 JSON和当前结构规则检查必需结构、类型、枚举、引用、字段归位和对象拆分；不读取填报对话，不判断流程内容。v1、v2文件先由3001在内存中升级并重新导出；硬性结构错误必须修改，结构建议可以保持原值但必须记录理由，预审意见和处理记录不写入JSON |
-| 编制参考材料 | Compilation Reference Material | `process-governance-v3.reference_materials[]`中的历史兼容内容，用于说明流程编制时曾参考的制度、表单、操作说明、会议或访谈等材料，不等同正式制度关联或逐步骤证据。3001当前页面暂停新增、展示和编辑此内容；新建流程导出空数组，导入文件中的已有内容只在内存中隐式保留并随再次导出带回 |
+| 编制参考材料 | Compilation Reference Material | `process-governance-v5.reference_materials[]`中的历史兼容内容，用于说明流程编制时曾参考的制度、表单、操作说明、会议或访谈等材料，不等同正式制度关联或逐步骤证据。3001当前页面暂停新增、展示和编辑此内容；新建流程导出空数组，导入文件中的已有内容只在内存中隐式保留并随再次导出带回 |
 | 不可读来源阻断 | Unreadable Source Block | 流程证据映射技能对图片、扫描件、无文本 PDF 或转换失败来源采用的安全门：记录来源及阻断原因后停止本轮，不执行图像转文字、不猜测内容；资料责任人提供可直接读取原件或经人工确认的文字版后才能重跑 |
-| 判断节点 | Decision Step | 流程中承载条件判断的节点；3001当前结构使用`behaviors[].node_type=decision`，新增时不自动认定。判断节点应有至少两个互斥且覆盖全部结果的明确出口；出口可以是本流程顺序、判断分支、流程内部回路或跨部门承接。3001只提示出口是否完整，不阻止未审核草稿导出 |
-| 判断分支 | Conditional Flow | 从判断节点发出、根据判断结果进入后续办理步骤的条件流向关系。它与流程内部回路的区别是：判断分支继续往下办理，流程内部回路退回前序步骤重新处理。`process-governance-v3`使用`flow_relations[].relation_type=condition`记录条件和目标行为；历史文档结构化输出使用`step_transitions[]`记录条件、目标步骤和证据引用。目标为空表示流向仍待补充 |
-| 流程内部回路 | Internal Process Loop | 本流程内在明确触发条件下，从当前节点返回已经存在的前序业务行为或判断节点的关系；`process-governance-v3`使用`flow_relations[].relation_type=loop`记录。回路不是独立节点，也不要求固定创建在判断节点之后；审批不通过时退回前序行为，通常是判断节点的一条回路出口 |
+| 判断节点 | Decision Step | 流程中承载条件判断的节点；3001当前结构使用`behaviors[].node_type=decision`，新增时不自动认定。判断节点应有至少两个互斥且覆盖全部结果的明确出口；出口只能由普通流程关系中的顺序、判断分支或流程内部回路表达，目标可以是本部门或跨部门行为。3001只提示出口是否完整，不阻止未审核草稿导出 |
+| 判断分支 | Conditional Flow | 从判断节点发出、根据判断结果进入后续办理步骤的条件流向关系。它与流程内部回路的区别是：判断分支继续往下办理，流程内部回路退回前序步骤重新处理。`process-governance-v5`使用`flow_relations[].relation_type=condition`记录条件和目标行为；历史文档结构化输出使用`step_transitions[]`记录条件、目标步骤和证据引用。目标为空表示流向仍待补充 |
+| 流程内部回路 | Internal Process Loop | 本流程内在明确触发条件下，从当前节点返回已经存在的前序业务行为或判断节点的关系；`process-governance-v5`使用`flow_relations[].relation_type=loop`记录。回路不是独立节点，也不要求固定创建在判断节点之后；审批不通过时退回前序行为，通常是判断节点的一条回路出口 |
+| 嵌套循环 | Nested Loop | 一个流程内部回路的循环体中包含另一条流程内部回路。每一层循环都必须具有独立退出条件和退出去向；内层退出可以进入外层循环，最外层必须退出到循环外后续行为 |
 | 并行开始 | Parallel Split | 同时启动多条办理路线的控制节点，使用`behaviors[].node_type=parallel_split`记录。它不承担实际业务动作，至少需要2条流向不同后续行为的并行路线 |
-| 并行路线 | Parallel Route | 从并行开始节点发出或流入并行汇合节点的`flow_relations[].relation_type=parallel`关系。3001按不同目标统计并行开始路线，按不同来源统计并行汇合来源 |
-| 并行汇合 | Parallel Join | 等待多条路线完成后再继续的控制节点，使用`behaviors[].node_type=parallel_join`记录。它至少需要2个有效来源；返回要求已开启且恢复位置指向该节点的跨部门承接计为1个来源 |
+| 并行路线 | Parallel Route | 从并行开始节点发出或流入并行汇合节点的`flow_relations[].relation_type=parallel`关系。3001按不同目标统计并行开始路线，按不同来源统计并行汇合来源。任一路线在共同汇合前中止整个流程时，不得按并行通过评审 |
+| 并行汇合 | Parallel Join | 等待多条路线完成后再继续的控制节点，使用`behaviors[].node_type=parallel_join`记录。它至少需要2条普通并行路线来源；旧交接或迁移记录不计入来源 |
+| 嵌套并行 | Nested Parallel | 一条并行路线中再次出现并行开始和并行汇合。内层并行的全部路线必须先进入内层最近共同汇合，内层汇合结果再作为外层路线进入外层共同汇合 |
 | 原文角色称谓 | Source Role Text | 制度、表单或流程图中原样出现的岗位、身份、组织或参与方称谓，文档结构化输出保存在 `steps.actor_role` 和角色证据中；它是待核验事实，不等同正式工作角色 |
 | 岗位参与草稿 | Position Participation Draft | 历史`document-structured-output-v2`中按参与部门、花名册岗位和参与方式记录的迁移材料；它不等同工作角色。3001当前只在每个业务行为的`current_actor_role`中保存一个执行岗位兼容值，不维护多岗位参与关系；旧文件导入时无法归并的内容保留在“旧版结构化补充信息”中 |
 | 执行主体确定方式 | Actor Assignment Mode | 3001为每个行为记录的责任确定方式，保存于`behaviors[].actor_assignment_mode`。`fixed_department`表示固定部门和岗位，`company_wide`表示全公司通用，`dynamic_from_data`表示由前序数据在运行时确定责任部门。三种方式互斥；全公司通用不是部门，也不算跨部门 |
 | 执行岗位 | Current Execution Position | 3001在固定部门模式下从仓库花名册中为当前业务行为选择的现行业务执行岗位。执行部门可以是任意组织部门，岗位只从所选部门的花名册中选择；具体值以“部门名称 + 岗位名称”保存到`behaviors[].current_actor_role`。全公司通用和动态责任部门不使用固定岗位选择器 |
-| 动态责任部门 | Dynamic Responsible Department | 行为的责任部门不能在设计时固定，而是由本行为开始前已经形成的数据在运行时确定。3001使用`actor_department_data_ref`记录来源数据，使用`actor_position_rule`记录办理人员确定规则；设计态不预建固定跨部门待办。运行时责任部门与流程归口部门不同时才按跨部门办理，同一数据中的不同责任部门分别办理，责任部门为空时不得向全公司广播 |
+| 动态责任部门 | Dynamic Responsible Department | 行为的责任部门不能在设计时固定，而是由本行为开始前已经形成的数据在运行时确定。3001使用`actor_department_data_ref`记录来源数据，使用`actor_position_rule`记录办理人员确定规则；设计阶段不认定为固定跨部门行为。运行时责任部门与流程归口部门不同时才按跨部门办理，同一数据中的不同责任部门分别办理，责任部门为空时不得向全公司广播 |
 | 工作角色 | Work Role | 与具体业务行为或判断节点绑定的稳定业务责任分类，名称必须保留行为语义，例如“费用审核行为的审核角色”；工作角色不直接等于人员、岗位或RBAC权限，一个工作角色可以由多个岗位容纳 |
 | 工作角色绑定 | Work Role Binding | 业务行为或判断节点与工作角色之间的一对一绑定；每个行为最多一个工作角色，一个流程通过不同业务行为可以包含多个工作角色。绑定必须保存业务行为标识、职责、全称和可选正式编码，不能只保存“申请人、审核人、批准人”等孤立名称 |
 | MDM工作角色 | MDM Governance Role | MDM平台固定治理模型中的授权角色，包括`admin`、`mdm_lead`、`department_contact`、`department_mdm_reviewer`、`data_conflict_handler`、`data_quality_auditor`和`decision_group`；它不等同人员、岗位、正式流程工作角色`WR-*`或原文角色称谓 |
@@ -163,7 +165,8 @@
 | 附表结构 | Form Table Structure | 文档结构化输出中的表单结构，采用“表单 -> 主表 / 可选明细表 -> 字段”模型；表单必须指向未作废业务行为，主表始终存在，明细表需要先创建后新增明细字段，字段编号由系统生成且不在录入界面手填 |
 | 归档责任 | Archive Responsibility | 文档结构化输出中表单的归档责任字段，由归档位置、留存周期、归档责任部门和归档责任角色组成；责任部门来自平台部门清单，责任角色来自所选部门花名册任岗 |
 | 文档结构化输出字段类型字典 | Document Structured Output Field Type Dictionary | MDM文档结构化输出和3001表单填写项共同使用的标准类型清单，包含文本、长文本、数字、日期、日期时间、金额、枚举、布尔、部门、人员、文件编号、签名、图片、附件和二维码。3001必须以下拉方式提供，不允许自由填写；导入历史文件中的非标准值时保留原值并提示未收录，主动修改后只能改选标准类型 |
-| 跨部门待办（候选） | Cross-Department Handoff Candidate | 3001中表达本流程位置与固定外部门行为之间交接关系的记录，保存在`cross_department_handoffs[]`。外部门实际动作、执行部门、岗位、完成标准、表单和数据关系保存在一个`behaviors[]`对象中，交接记录用`counterparty_behavior_ref`引用它，只补充方向、锚点、交界事项、传递数据和返回关系；关联本文件行为时不重复填写`counterparty_behavior_name`。全公司通用不属于跨部门待办；动态责任部门在设计态也不预建该记录。3001只登记候选，正式待办由3000审核导入后生成 |
+| 跨部门行为 | Cross-Department Behavior | 3001中固定执行部门与流程归口部门不同的普通`behaviors[]`对象。页面根据执行部门自动显示标签，不保存“是否跨部门”字段；前后关系、返回和并行使用`flow_relations[]`，数据创建、更新和使用关系使用`data_objects[].behavior_links[]`。全公司通用不算跨部门，动态责任部门在设计阶段不认定为固定跨部门行为 |
+| 旧跨部门记录 | Legacy Cross-Department Record | v1至v4文件中`cross_department_handoffs[]`的只读迁移副本。能够唯一判断时转换为业务行为、普通流程关系和数据行为关系；不能唯一判断时保留原值和原因。v5使用`migration.legacy_cross_department_records[]`保存转换记录，该数组不参与当前流程计算、评分或图形生成 |
 | 承接方向 | Handoff Direction | `inbound_prerequisite`表示外部门输入先于本流程锚点，`outbound_followup`表示本流程锚点完成后由外部门继续承接；流程图箭头必须按方向绘制 |
 | 待明确责任部门 | Needs Identification | 编制人已经发现跨部门承接，但现有材料不足以确认外部门时使用的明确状态。该状态不阻止3001导出，进入MDM平台后形成由MDM工作组组长分派的待办 |
 | 承接待办 | Handoff Acceptance Todo | MDM平台根据跨部门承接状态、当前人员角色、部门和参与关系实时生成的处理入口，用于分派、补充、审核和结构检查；待办不写入“待确认问题”，也不是第二份承接事实 |
@@ -173,12 +176,24 @@
 | 承接候选版本 | Handoff Candidate Version | 对规范化承接内容计算的SHA-256摘要，用于识别同一`handoff_ref`的内容版本、幂等导入和决定记录。内容变化时保留历史并重新审核，不覆盖原决定 |
 | 内部流程调用 | Internal Process Call | 同一部门内一个流程调用另一流程的关系，记录调用行为、目标流程、输入输出数据和返回后的恢复位置；它不属于跨部门承接，也不进入跨部门拒绝和升级机制。该关系由MDM平台正式功能维护；3001只保留和预览导入JSON中已有的历史调用，不提供新增或编辑入口 |
 | 会签行为 | Countersign Behavior | 表示指定对象确认知悉的业务行为，不表示审核、批准或承接；3001记录需要确认知悉的部门，所有应会签对象完成确认后该行为才完成。即使批准已经完成，会签未完成时流程仍未结束 |
-| 待治理数据对象 | Candidate Data Object | 3001把用户登记的输出物作为数据线索保存的对象，只记录名称、产生行为和使用行为；主数据属性、黄金源、数据责任、质量规则和共享范围留到后续数据治理确认 |
+| 待治理数据对象 | Candidate Data Object | 3001把可结构化的信息输出登记为数据线索，记录名称、信息类型、创建更新使用关系、其他流程或外部来源线索和当前流程可用时间；主数据属性、权威源、数据责任、质量规则和共享范围留到后续数据治理确认 |
+| 数据行为关系 | Data Behavior Link | `data_objects[].behavior_links[]`中业务行为对数据执行创建、更新、使用或待确认操作的关系，是v4数据输入输出关系的唯一写入位置 |
+| 字段业务数据归属 | Field Business Data Ownership | `forms[].areas[].items[].business_data_ref`记录一个表单字段表达哪项业务数据；一个字段最多归属一个数据对象，不等同字段取值来源 |
+| 字段取值来源 | Field Value Source | `forms[].areas[].items[].source_links[]`记录字段依赖哪些数据取得值、参与计算或进行校验。`source_type=process_data`时引用本流程已登记数据；`source_type=external_system`时直接记录外部系统和来源数据名称，不关联本流程业务行为 |
 | 主表结构 | Main Form Structure | 3001每张表单或记录的主体填写结构，JSON沿用`areas[]`并以`area_type="基本信息"`表示。新建表单只创建一个空主表框架，不自动生成名称、编号、标题或填写项 |
 | 明细表结构 | Detail Form Structure | 3001表单或记录中可以增加零到多张的明细填写结构，JSON沿用`areas[]`并以`area_type="明细清单"`表示。不同明细表分别保存标题和`items[]`，导入迁移时不得合并 |
 | 信息收集主表 | Information Collection Main Form | 4000/4001信息收集表中每名填报人只填写一次的字段结构；一个表单可以用多个`kind="main"`分区组织主表字段，答案按稳定`fieldKey`保存在答卷根对象 |
 | 信息收集明细表 | Information Collection Detail Table | 4000/4001信息收集表中允许填报人增加多行的独立结构；每张`kind="detail"`明细表按`sectionKey`保存多条稳定`rowKey`明细行，不同明细表不得合并 |
 | 填写项 | Form Entry Item | 3001主表或明细表结构下的具体填写内容，保存在`areas[].items[]`；页面先选择表单或记录，再选择主表或某张明细表，最后编辑当前结构的填写项 |
+| 流程事实 | Process Fact | 描述业务当前如何执行的事实，包括现行步骤、岗位、表单、台账、系统现状和异常处理；治理结论和改进建议不得覆盖该层内容 |
+| 治理结论 | Governance Conclusion | 经有权主体确认后，对业务对象、字段、责任、来源和管理规则形成的统一结论；必须记录确认主体、依据、生效范围和版本 |
+| 改进建议 | Improvement Proposal | 对未来流程、系统或数据管理调整提出的方案；未经批准不得写成当前流程事实或已经生效的治理规则 |
+| 企业架构 | Enterprise Architecture (EA) | 从业务目标出发组织业务能力、流程、数据、应用和技术之间关系的方法。本项目第一阶段只评价业务架构和设计态数据架构；应用只记录当前支撑关系，不开展应用和技术架构评价 |
+| 业务流程管理 | Business Process Management (BPM) | 对流程的边界、业务行为、责任、关系、规则、证据、评价、发布和持续变更进行管理的方法。本项目以不可变L3流程版本为正式评价根对象 |
+| 治理评价批次 | Governance Evaluation Batch | 3000针对一个草稿修订、不可变流程版本或经批准的历史流程范围，使用固定规则版本执行的一次逐项评价；批次保留输入摘要、规则版本、结果和历史，不保存可人工修改的综合分 |
+| 发布后整改项 | Post-Release Remediation Item | 已确认存在但不影响当前流程版本正确执行、责任边界、关键控制、权限安全和重大合规的事项；必须明确责任人、期限和复核方式，并由部门审核员确认、`mdm_lead`审核后才能随本次流程发布 |
+| 能力地图工作视图 | Capability Map Work View | 3000根据已发布流程版本展示正式、待确认和未归类能力关系的治理视图；必须标明治理中状态，不等同只包含已确认关系的正式能力地图版本 |
+| 流程标准评审准备 | Process Review Readiness | 3001按固定版本`process-review-readiness-v4`对当前页面中的单流程内容执行五方面临时检查。第三方面检查业务行为逐动作可执行性，要求“具体做什么”按实际顺序写清每个动作、处理对象和结果；第五方面检查信息类型、创建更新使用关系、可用时间、来源线索、表单处理关系、字段业务数据归属和字段取值来源。检查结果不写入JSON，不保存部门确认，不形成正式评价 |
 
 ---
 
@@ -326,6 +341,9 @@
 | 有效权限 | Effective Permissions | 用户当前有效固定角色的权限集合；还必须继续通过数据范围、对象状态、任务关系和责任证据检查才能执行具体动作 |
 | 数据范围 | Data Scope | 用户可读取或处理的全局、本部门、本人被分派事项或已升级事项范围；部门角色不能跨部门扩大永久范围 |
 | API Key 认证 | API Key Authentication | server/integrationAuth.js 中间件，为外部系统（PLM/MES/ERP）提供基于 API Key 的集成认证 |
+| 会话API Key | Session-bound API Key | 用户登录MDM-AI助手后输入的本人DeepSeek API Key。服务端验证后仅在当前登录会话对应的进程内存中保存；退出、会话到期、模型认证失败或服务重启后清除。页面只显示SHA-256前12位指纹。 |
+| DSH | DeepSeek Harness | 本试点固定使用的浏览器工作区运行外壳，版本为`@deepseek-ai/dsh@0.1.0-rc.6`。业务用户只能使用受限治理插件，不能使用其原生编码、命令、文件或模型配置能力。 |
+| 治理工作区 | Governance Workspace | 当前登录会话内承载一个治理案例的内存容器。刷新页面可以恢复；退出、会话到期、运行实例结束、子进程故障或服务重启后清除。 |
 | express-session | express-session | Express会话中间件；MDM平台会话只保存`personId`、`accountId`和`authVersion`，显示身份和有效权限按请求重新读取 |
 | bcryptjs | bcryptjs | 密码哈希库，用于用户密码的安全存储和验证 |
 | exceljs | exceljs | Excel 读写库，用于导入导出 Excel 功能 |
@@ -461,6 +479,7 @@
 |------|------|--------|
 | A1 | Activity Level 1 | 业务域 |
 | A2 | Activity Level 2 | 业务域 |
+| BPM | Business Process Management | 业务域 |
 | CAPP | Computer Aided Process Planning | 业务域 |
 | CSM | Consumable / Supplies | 主数据域 |
 | CTL | Cutting Tool | 主数据域 |
@@ -471,6 +490,7 @@
 | EBOM | Engineering Bill of Material | 业务域 |
 | ECN | Engineering Change Notice | 主数据域 |
 | ECR | Engineering Change Request | 主数据域 |
+| EA | Enterprise Architecture | 业务域 |
 | EHS | Environment, Health, Safety | EHS/运维安环域 |
 | EQP | Equipment | 主数据域 |
 | ERP | Enterprise Resource Planning | 业务域 |

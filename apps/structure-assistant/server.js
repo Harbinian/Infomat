@@ -13,9 +13,12 @@ const { createAuth } = require('./lib/auth');
 const { repositoryState, assertDeployableRepository } = require('./lib/repository');
 const { createMaintenanceStore } = require('./lib/maintenance');
 const { createUsageLog } = require('./lib/usage-log');
+const { createApiKeyStore, normalizeApiKey } = require('./lib/api-key-store');
 const { createStructuredToolClient, assertExpectedVersion } = require('./lib/structured-tool');
 const { applyRestrictedPatch } = require('./lib/json-patch');
 const { createDeepSeekClient } = require('./lib/deepseek');
+const { createDshRuntimeManager } = require('./lib/dsh-runtime-manager');
+const { createDshLauncher } = require('./lib/dsh-launcher');
 const {
   normalizePriorFieldStatuses,
   runFillTurn,
@@ -68,6 +71,17 @@ function gatewayUrl(req, config) {
   return `${protocol}://${formattedHost}:${config.assistant.gatewayPort}/`;
 }
 
+function structuredToolGatewayUrl(req, config) {
+  return new URL('structured-tool/', gatewayUrl(req, config)).href;
+}
+
+function classicUrl(req, config) {
+  const protocol = config.security.allowHttp ? 'http' : 'https';
+  const hostname = String(req.hostname || 'localhost').replace(/^\[|\]$/g, '');
+  const formattedHost = hostname.includes(':') ? `[${hostname}]` : hostname;
+  return `${protocol}://${formattedHost}:${config.assistant.port}/classic`;
+}
+
 function safeValidation(validation) {
   return {
     valid: Boolean(validation?.valid),
@@ -81,6 +95,23 @@ function createAssistantRuntime(options = {}) {
   const appCommit = options.appCommit || repoState.commit;
   const maintenance = options.maintenance || createMaintenanceStore(config.runtime.maintenancePath);
   const usageLog = options.usageLog || createUsageLog(config.runtime.usageLogPath);
+  const apiKeyStore = options.apiKeyStore || createApiKeyStore();
+  const dshRuntimeManager = options.dshRuntimeManager || createDshRuntimeManager({
+    version: config.dsh.version,
+    maxInstances: config.dsh.maxInstances,
+    launcher: options.dshLauncher || createDshLauncher({
+      appRoot: config.appRoot,
+      repoRoot: config.repoRoot,
+      runtimeRoot: config.runtime.dshRoot,
+      version: config.dsh.version,
+      nodeMajor: config.dsh.nodeMajor,
+      nodeExecutable: config.dsh.nodeExecutable,
+      startTimeoutMs: config.dsh.startTimeoutMs,
+      stopGraceMs: config.dsh.stopGraceMs,
+      trustedHosts: config.dsh.trustedPublicHosts
+    })
+  });
+  const dshVersion = String(config.dsh?.version || '0.1.0-rc.6');
   const structuredTool = options.structuredTool || createStructuredToolClient({
     baseUrl: config.assistant.structuredToolBaseUrl,
     appCommit
@@ -157,10 +188,12 @@ function createAssistantRuntime(options = {}) {
 
   app.use('/api', auth.requireAuth);
 
-  app.post('/api/auth/logout', auth.requireCsrf, (req, res) => {
+  app.post('/api/auth/logout', auth.requireCsrf, asyncRoute(async (req, res) => {
+    apiKeyStore.remove(req.authPayload);
+    await dshRuntimeManager?.stop(req.authPayload);
     auth.logout(req, res);
     res.json({ ok: true });
-  });
+  }));
 
   app.get('/api/context', asyncRoute(async (req, res) => {
     const current = await structuredTool.snapshot();
@@ -169,13 +202,45 @@ function createAssistantRuntime(options = {}) {
       schema_version: current.schemaVersion,
       schema_digest: current.schemaDigest,
       maintenance_mode: maintenance.read(),
+      entry_mode: maintenance.readEntryMode().mode,
+      dsh_version: dshVersion,
+      dsh_available: Boolean(dshRuntimeManager),
+      classic_url: classicUrl(req, config),
       structured_tool: current.structuredTool,
-      structured_tool_url: gatewayUrl(req, config),
+      structured_tool_url: structuredToolGatewayUrl(req, config),
       models: {
         fill: config.deepseek.fillModel,
         review: config.deepseek.reviewModel
       }
     });
+  }));
+
+  app.get('/api/dsh/runtime', asyncRoute(async (req, res) => {
+    if (!dshRuntimeManager) {
+      throw new AppError(503, 'DSH_START_FAILED', 'DSH运行管理器尚未启用。');
+    }
+    const status = dshRuntimeManager.refreshPublicStatus
+      ? await dshRuntimeManager.refreshPublicStatus(req.authPayload)
+      : dshRuntimeManager.publicStatus(req.authPayload);
+    res.json(status);
+  }));
+
+  app.post('/api/dsh/runtime', auth.requireCsrf, asyncRoute(async (req, res) => {
+    if (!dshRuntimeManager) {
+      throw new AppError(503, 'DSH_START_FAILED', 'DSH运行管理器尚未启用。');
+    }
+    if (maintenance.readEntryMode().mode === 'classic') {
+      throw new AppError(409, 'ENTRY_MODE_CLASSIC', '当前统一入口已切换为经典页面。');
+    }
+    const status = await dshRuntimeManager.start(req.authPayload);
+    res.json({ ...status, entry_url: gatewayUrl(req, config) });
+  }));
+
+  app.delete('/api/dsh/runtime', auth.requireCsrf, asyncRoute(async (req, res) => {
+    if (!dshRuntimeManager) {
+      throw new AppError(503, 'DSH_START_FAILED', 'DSH运行管理器尚未启用。');
+    }
+    res.json(await dshRuntimeManager.stop(req.authPayload));
   }));
 
   app.get('/api/template', asyncRoute(async (_req, res) => {
@@ -187,6 +252,73 @@ function createAssistantRuntime(options = {}) {
       data: current.data
     });
   }));
+
+  function requireApiKey(req) {
+    const entry = apiKeyStore.get(req.authPayload);
+    if (!entry) {
+      throw new AppError(
+        428,
+        'API_KEY_REQUIRED',
+        '请先配置并验证本人DeepSeek API Key，再使用AI对话或独立结构预审。'
+      );
+    }
+    return entry.apiKey;
+  }
+
+  async function readBalanceAllowingInsufficient(apiKey) {
+    try {
+      return await modelClient.balance(apiKey);
+    } catch (error) {
+      if (error?.code !== 'MODEL_BALANCE_INSUFFICIENT') throw error;
+      return {
+        isAvailable: false,
+        currency: 'CNY',
+        totalBalance: null,
+        toppedUpBalance: null,
+        grantedBalance: null,
+        insufficient: true
+      };
+    }
+  }
+
+  function publicBalance(balance) {
+    return {
+      ...balance,
+      warning: balance.isAvailable === false
+        || (balance.totalBalance != null && balance.totalBalance < config.deepseek.lowBalanceCny)
+    };
+  }
+
+  app.get('/api/account/api-key', (req, res) => {
+    res.json(apiKeyStore.publicStatus(req.authPayload));
+  });
+
+  app.put('/api/account/api-key', auth.requireCsrf, asyncRoute(async (req, res) => {
+    const apiKey = normalizeApiKey(req.body?.api_key);
+    let balance;
+    try {
+      balance = await readBalanceAllowingInsufficient(apiKey);
+    } catch (error) {
+      if (error?.code === 'MODEL_AUTH_FAILED') {
+        throw new AppError(
+          400,
+          'API_KEY_VERIFICATION_FAILED',
+          '输入的DeepSeek API Key未通过验证，当前会话原有Key未更改。'
+        );
+      }
+      throw error;
+    }
+    apiKeyStore.bind(req.authPayload, apiKey);
+    res.json({
+      ...apiKeyStore.publicStatus(req.authPayload),
+      balance: publicBalance(balance)
+    });
+  }));
+
+  app.delete('/api/account/api-key', auth.requireCsrf, (req, res) => {
+    apiKeyStore.remove(req.authPayload);
+    res.json(apiKeyStore.publicStatus(req.authPayload));
+  });
 
   app.post('/api/source/upload', auth.requireCsrf, upload.single('file'), asyncRoute(async (req, res) => {
     assertSourceConfirmation(req.body);
@@ -266,13 +398,13 @@ function createAssistantRuntime(options = {}) {
     const priorFieldStatuses = normalizePriorFieldStatuses(req.body?.field_statuses);
     const userMessage = String(req.body?.user_message || '').trim().slice(0, 10000);
     if (!userMessage) throw new AppError(400, 'USER_MESSAGE_REQUIRED', '请输入本轮需要补充的信息。');
-    if (!req.user.apiKey) throw new AppError(503, 'ACCOUNT_KEY_MISSING', '当前账号尚未配置DeepSeek接口密钥。');
+    const apiKey = requireApiKey(req);
 
     let result;
     try {
       result = await runFillTurn({
         client: modelClient,
-        apiKey: req.user.apiKey,
+        apiKey,
         model: config.deepseek.fillModel,
         maxTokens: config.deepseek.fillMaxTokens,
         requestId: rid,
@@ -300,6 +432,7 @@ function createAssistantRuntime(options = {}) {
         validationValid: true
       });
     } catch (error) {
+      if (error?.code === 'MODEL_AUTH_FAILED') apiKeyStore.remove(req.authPayload);
       logModelOperation({
         req,
         rid,
@@ -327,14 +460,14 @@ function createAssistantRuntime(options = {}) {
     const rid = requestId(req.headers['x-request-id']);
     const current = await guardedSnapshot(req.body);
     const document = assertDocument(req.body?.document);
-    if (!req.user.apiKey) throw new AppError(503, 'ACCOUNT_KEY_MISSING', '当前账号尚未配置DeepSeek接口密钥。');
+    const apiKey = requireApiKey(req);
     const validation = await structuredTool.validate(document);
 
     let result;
     try {
       result = await runIndependentReview({
         client: modelClient,
-        apiKey: req.user.apiKey,
+        apiKey,
         model: config.deepseek.reviewModel,
         maxTokens: config.deepseek.reviewMaxTokens,
         requestId: rid,
@@ -357,6 +490,7 @@ function createAssistantRuntime(options = {}) {
         validationValid: validation.valid
       });
     } catch (error) {
+      if (error?.code === 'MODEL_AUTH_FAILED') apiKeyStore.remove(req.authPayload);
       logModelOperation({
         req,
         rid,
@@ -435,12 +569,15 @@ function createAssistantRuntime(options = {}) {
   }));
 
   app.get('/api/account/balance', asyncRoute(async (req, res) => {
-    if (!req.user.apiKey) throw new AppError(503, 'ACCOUNT_KEY_MISSING', '当前账号尚未配置DeepSeek接口密钥。');
-    const balance = await modelClient.balance(req.user.apiKey);
-    res.json({
-      ...balance,
-      warning: balance.totalBalance != null && balance.totalBalance < config.deepseek.lowBalanceCny
-    });
+    const apiKey = requireApiKey(req);
+    let balance;
+    try {
+      balance = await readBalanceAllowingInsufficient(apiKey);
+    } catch (error) {
+      if (error?.code === 'MODEL_AUTH_FAILED') apiKeyStore.remove(req.authPayload);
+      throw error;
+    }
+    res.json(publicBalance(balance));
   }));
 
   app.get('/api/admin/status', auth.requireAdmin, asyncRoute(async (_req, res) => {
@@ -454,33 +591,6 @@ function createAssistantRuntime(options = {}) {
         message: error.message
       };
     }
-    const balances = await Promise.all(config.accounts.map(async account => {
-      if (!account.apiKey) {
-        return {
-          accountId: account.id,
-          displayName: account.displayName,
-          keyConfigured: false,
-          error: '接口密钥未配置'
-        };
-      }
-      try {
-        const balance = await modelClient.balance(account.apiKey);
-        return {
-          accountId: account.id,
-          displayName: account.displayName,
-          keyConfigured: true,
-          ...balance,
-          warning: balance.totalBalance != null && balance.totalBalance < config.deepseek.lowBalanceCny
-        };
-      } catch (error) {
-        return {
-          accountId: account.id,
-          displayName: account.displayName,
-          keyConfigured: true,
-          error: error.message
-        };
-      }
-    }));
     res.json({
       app_commit: appCommit,
       repository_clean_at_startup: repoState.clean,
@@ -489,11 +599,13 @@ function createAssistantRuntime(options = {}) {
       structured_tool: current?.structuredTool || null,
       context_error: contextError,
       maintenance_mode: maintenance.read(),
+      entry_mode: maintenance.readEntryMode(),
       models: {
         fill: config.deepseek.fillModel,
         review: config.deepseek.reviewModel
       },
-      balances,
+      account_key_statuses: apiKeyStore.accountStatuses(config.accounts),
+      account_dsh_statuses: dshRuntimeManager?.accountStatuses(config.accounts) || [],
       usage: usageLog.summarize()
     });
   }));
@@ -508,6 +620,23 @@ function createAssistantRuntime(options = {}) {
     });
     res.json({ maintenance_mode: state });
   }));
+
+  app.put('/api/admin/entry-mode', auth.requireAdmin, auth.requireCsrf, (req, res) => {
+    const mode = String(req.body?.mode || '').trim();
+    const reason = String(req.body?.reason || '').trim();
+    if (!['dsh', 'classic'].includes(mode)) {
+      throw new AppError(400, 'ENTRY_MODE_INVALID', '入口模式只能是dsh或classic。');
+    }
+    if (!reason) {
+      throw new AppError(400, 'ENTRY_MODE_REASON_REQUIRED', '请填写入口切换原因。');
+    }
+    const state = maintenance.writeEntryMode({
+      mode,
+      reason,
+      changedBy: req.user.id
+    });
+    res.json({ entry_mode: state });
+  });
 
   app.use('/api', (req, res) => {
     res.status(404).json({ error: '接口不存在。', code: 'API_NOT_FOUND' });
@@ -551,6 +680,8 @@ function createAssistantRuntime(options = {}) {
     repoState,
     maintenance,
     usageLog,
+    apiKeyStore,
+    dshRuntimeManager,
     structuredTool,
     modelClient
   };
@@ -607,6 +738,169 @@ function createGatewayHandler({ auth, targetBaseUrl }) {
   };
 }
 
+function isLoopbackTarget(target) {
+  return ['127.0.0.1', 'localhost', '::1'].includes(target.hostname);
+}
+
+function gatewayError(res, status, code, message) {
+  if (res.headersSent) {
+    res.destroy();
+    return;
+  }
+  res.writeHead(status, {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Cache-Control': 'no-store',
+    'X-Content-Type-Options': 'nosniff'
+  });
+  res.end(JSON.stringify({ error: message, code }));
+}
+
+function trustedAuthority(value, trustedHosts) {
+  try {
+    const authority = new URL(`http://${String(value || '').trim()}`).host.toLowerCase();
+    return trustedHosts.some(entry => (
+      new URL(`http://${String(entry || '').trim()}`).host.toLowerCase() === authority
+    ));
+  } catch (_) {
+    return false;
+  }
+}
+
+function proxyLocalRequest(req, res, options) {
+  const target = options.target;
+  const transport = target.protocol === 'https:' ? https : http;
+  const headers = { ...req.headers };
+  for (const header of [
+    'authorization',
+    'connection',
+    'host',
+    'origin',
+    'proxy-authorization',
+    'proxy-connection',
+    'x-forwarded-for',
+    'x-forwarded-host',
+    'x-forwarded-proto',
+    'x-infomat-dsh-runtime'
+  ]) delete headers[header];
+  if (!options.forwardCookie) delete headers.cookie;
+  if (options.runtimeToken) headers['x-infomat-dsh-runtime'] = options.runtimeToken;
+  headers.host = options.hostHeader || target.host;
+
+  const proxy = transport.request({
+    protocol: target.protocol,
+    hostname: target.hostname,
+    port: target.port,
+    method: req.method,
+    path: options.path,
+    headers,
+    rejectUnauthorized: target.protocol !== 'https:' || !isLoopbackTarget(target)
+  }, proxyResponse => {
+    const responseHeaders = { ...proxyResponse.headers };
+    if (!options.forwardSetCookie) delete responseHeaders['set-cookie'];
+    delete responseHeaders.connection;
+    responseHeaders['cache-control'] = 'no-store';
+    responseHeaders['x-content-type-options'] = 'nosniff';
+    res.writeHead(proxyResponse.statusCode || 502, responseHeaders);
+    proxyResponse.pipe(res);
+  });
+  proxy.on('error', options.onError);
+  req.pipe(proxy);
+}
+
+function createDshGatewayHandler(options) {
+  const {
+    auth,
+    dshRuntimeManager,
+    allowHttp = false
+  } = options;
+  const assistantTarget = new URL(options.assistantBaseUrl);
+  const structuredTarget = new URL(options.structuredToolBaseUrl);
+  if (!isLoopbackTarget(assistantTarget) || !isLoopbackTarget(structuredTarget)) {
+    throw new AppError(500, 'INVALID_GATEWAY_TARGET', 'DSH网关只能转发到本机服务。');
+  }
+  const trustedHosts = (options.trustedHosts || []).map(value => String(value).trim()).filter(Boolean);
+  if (!trustedHosts.length) {
+    throw new AppError(500, 'INVALID_CONFIGURATION', '必须配置DSH统一入口的公共Host。');
+  }
+
+  return (req, res) => {
+    const authenticated = auth.authenticateRequest(req);
+    if (!authenticated) {
+      gatewayError(res, 401, 'AUTH_REQUIRED', '请先登录MDM-AI助手。');
+      return;
+    }
+    if (!trustedAuthority(req.headers.host, trustedHosts)) {
+      gatewayError(res, 403, 'DSH_HOST_REJECTED', '当前访问地址不在DSH入口允许范围内。');
+      return;
+    }
+    const origin = String(req.headers.origin || '').trim();
+    if (origin) {
+      try {
+        const parsedOrigin = new URL(origin);
+        const expectedProtocol = allowHttp ? 'http:' : 'https:';
+        if (parsedOrigin.protocol !== expectedProtocol || !trustedAuthority(parsedOrigin.host, trustedHosts)) {
+          throw new Error('untrusted origin');
+        }
+      } catch (_) {
+        gatewayError(res, 403, 'DSH_ORIGIN_REJECTED', '页面来源校验失败，请从统一入口重新打开。');
+        return;
+      }
+    }
+
+    const requestUrl = new URL(req.url || '/', 'http://gateway.local');
+    const pathname = requestUrl.pathname;
+    const suffix = requestUrl.search;
+    if (pathname === '/mdm-api' || pathname.startsWith('/mdm-api/')) {
+      const upstreamPath = `${pathname.replace(/^\/mdm-api/, '/api')}${suffix}`;
+      if (
+        ['/api/fill/turn', '/api/review/run'].includes(upstreamPath.split('?')[0])
+        && !dshRuntimeManager.getRuntimeTarget(authenticated.payload)
+      ) {
+        gatewayError(res, 409, 'DSH_RUNTIME_REQUIRED', '当前DSH工作区尚未启动或已经结束。');
+        return;
+      }
+      proxyLocalRequest(req, res, {
+        target: assistantTarget,
+        path: upstreamPath,
+        forwardCookie: true,
+        forwardSetCookie: true,
+        hostHeader: req.headers.host,
+        onError: () => gatewayError(res, 502, 'DSH_RUNTIME_RESTARTED', 'MDM-AI助手连接已重启，请重新打开页面。')
+      });
+      return;
+    }
+    if (pathname === '/structured-tool' || pathname.startsWith('/structured-tool/')) {
+      const upstreamPath = `${pathname.replace(/^\/structured-tool/, '') || '/'}${suffix}`;
+      proxyLocalRequest(req, res, {
+        target: structuredTarget,
+        path: upstreamPath,
+        forwardCookie: false,
+        forwardSetCookie: false,
+        onError: () => gatewayError(res, 502, 'STRUCTURED_TOOL_UNAVAILABLE', '结构化工具暂时不可用。')
+      });
+      return;
+    }
+
+    const runtime = dshRuntimeManager.getRuntimeTarget(authenticated.payload);
+    if (!runtime) {
+      gatewayError(res, 409, 'DSH_RUNTIME_REQUIRED', '当前DSH工作区尚未启动或已经结束。');
+      return;
+    }
+    const dshTarget = new URL(`http://127.0.0.1:${runtime.port}`);
+    proxyLocalRequest(req, res, {
+      target: dshTarget,
+      path: `${pathname}${suffix}`,
+      runtimeToken: runtime.runtimeToken,
+      forwardCookie: false,
+      forwardSetCookie: false,
+      onError: () => {
+        void dshRuntimeManager.stop(authenticated.payload);
+        gatewayError(res, 502, 'DSH_RUNTIME_RESTARTED', 'DSH工作区已重启，请返回统一入口重新进入。');
+      }
+    });
+  };
+}
+
 function createServer(protocol, tlsOptions, handler) {
   return protocol === 'https' ? https.createServer(tlsOptions, handler) : http.createServer(handler);
 }
@@ -650,26 +944,38 @@ async function start() {
   const runtime = createAssistantRuntime({ config, repoState, appCommit: repoState.commit });
   await runtime.structuredTool.snapshot();
   const assistantServer = createServer(protocol, tlsOptions, runtime.app);
-  const gatewayServer = createServer(protocol, tlsOptions, createGatewayHandler({
+  const gatewayServer = createServer(protocol, tlsOptions, createDshGatewayHandler({
     auth: runtime.auth,
-    targetBaseUrl: config.assistant.structuredToolBaseUrl
+    dshRuntimeManager: runtime.dshRuntimeManager,
+    assistantBaseUrl: `${protocol}://127.0.0.1:${config.assistant.port}`,
+    structuredToolBaseUrl: config.assistant.structuredToolBaseUrl,
+    trustedHosts: config.dsh.trustedPublicHosts,
+    allowHttp: config.security.allowHttp
   }));
   await listen(assistantServer, config.assistant.port, config.assistant.host);
   try {
     await listen(gatewayServer, config.assistant.gatewayPort, config.assistant.host);
   } catch (error) {
+    await runtime.dshRuntimeManager.close();
     await new Promise(resolve => assistantServer.close(resolve));
     throw error;
   }
 
   console.log(`structure-assistant listening on ${protocol}://${config.assistant.host}:${config.assistant.port}`);
-  console.log(`structured-tool gateway listening on ${protocol}://${config.assistant.host}:${config.assistant.gatewayPort}`);
+  console.log(`DSH authenticated gateway listening on ${protocol}://${config.assistant.host}:${config.assistant.gatewayPort}`);
   console.log(`Infomat commit ${repoState.commit}`);
   console.log('business content persistence: disabled');
 
+  let shutdownPromise = null;
   const shutdown = () => {
-    assistantServer.close();
-    gatewayServer.close();
+    if (shutdownPromise) return shutdownPromise;
+    runtime.apiKeyStore.clear();
+    shutdownPromise = Promise.all([
+      runtime.dshRuntimeManager.close(),
+      new Promise(resolve => assistantServer.close(resolve)),
+      new Promise(resolve => gatewayServer.close(resolve))
+    ]);
+    return shutdownPromise;
   };
   process.once('SIGINT', shutdown);
   process.once('SIGTERM', shutdown);
@@ -687,5 +993,6 @@ if (require.main === module) {
 module.exports = {
   createAssistantRuntime,
   createGatewayHandler,
+  createDshGatewayHandler,
   start
 };

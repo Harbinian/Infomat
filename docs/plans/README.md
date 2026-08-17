@@ -14,6 +14,10 @@
 | `2026-05-17-changxing-requirements-questionnaire.md` | 需求调研问题清单 | 调研材料 |
 | `2026-06-29-mdm-governance-input-baseline-landing-plan.md` | MDM 治理落地计划 | 执行计划 |
 | `2026-08-09-mdm-data-flow-lifecycle-governance-development-plan.md` | MDM 数据流与生命周期治理开发计划 | 等待批量导入与首轮测试门槛 |
+| `2026-08-13-ea-bpm-governance-evaluation-design/` | 3000 EA/BPM治理评价与3001评审准备设计包 | 3001四方面前端已实现；3000正式治理评价仍等待G-01至G-06 |
+| `2026-08-15-3001-process-governance-v4-upgrade/` | 3001输出物、数据、表单、字段与业务行为关系升级 | v4结构、兼容迁移、页面、AI助手和验收真源 |
+| `2026-08-12-3001-process-authoring-rollout-execution-plan.md` | 3001流程结构化编制推广与执行计划 | V1.1按四轮编制和两级推广门槛执行，未满足门槛时顺延 |
+| `2026-08-12-3001-pilot-action-register.md` | 3001首轮样板行动项台账 | V1.1分别记录事项状态、流程阶段、四轮交接和推广门槛 |
 | `2026-07-23-internet-only-office-governance-process-draft.md` | 全公司互联网专用办公区需求收集、建设与使用管理流程 | 待评审草案 |
 | `2026-07-24-internet-only-office-feedback-optimization-plan.md` | 互联网专用办公区流程及 3001 结构化填写优化计划 | 技术优化已完成，待业务确认 |
 | `流程治理字段台账主线稳定性检查.md` | MDM 主线稳定性检查说明 | 测试说明 |

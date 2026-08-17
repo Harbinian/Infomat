@@ -1,0 +1,108 @@
+{
+  "schema_version": "process-governance-v3",
+  "export_meta": {
+    "package_ref": "package_review_readiness_sequence_20260813",
+    "exported_at": "2026-08-13T00:00:00.000Z",
+    "initiating_department": "经营发展部",
+    "compiler": "流程评审准备测试样例"
+  },
+  "process": {
+    "process_ref": "process_review_readiness_sequence",
+    "process_name": "顺序流程评审准备测试样例",
+    "owning_department": "经营发展部",
+    "purpose": "验证流程基本信息、唯一入口、业务行为完成标准和顺序关系检查",
+    "scope": "仅用于3001规则开发和回归测试，不代表公司现行流程或审核结论",
+    "capability_domain": null,
+    "business_capability": null,
+    "classification_status": "unclassified"
+  },
+  "reference_materials": [],
+  "behaviors": [
+    {
+      "behavior_ref": "behavior_sequence_receive",
+      "node_type": "action",
+      "behavior_name": "接收办理申请",
+      "behavior_description": "测试人员提交一项脱敏申请，计划员确认申请已经进入办理范围。",
+      "current_actor_role": "经营发展部 计划员",
+      "actor_assignment_mode": "fixed_department",
+      "actor_department_data_ref": null,
+      "actor_position_rule": "",
+      "trigger": "收到完整的测试申请时",
+      "precondition": "",
+      "input_description": "",
+      "timing": null,
+      "completion_standard": "测试申请已经登记并进入核对环节",
+      "output_description": "",
+      "input_data_refs": [],
+      "output_data_refs": [],
+      "work_role": null,
+      "countersign_all_required": false,
+      "countersign_target_departments": []
+    },
+    {
+      "behavior_ref": "behavior_sequence_check",
+      "node_type": "action",
+      "behavior_name": "核对申请内容",
+      "behavior_description": "计划员核对测试申请中的必要信息。",
+      "current_actor_role": "经营发展部 计划员",
+      "actor_assignment_mode": "fixed_department",
+      "actor_department_data_ref": null,
+      "actor_position_rule": "",
+      "trigger": "",
+      "precondition": "",
+      "input_description": "",
+      "timing": null,
+      "completion_standard": "必要信息已经逐项核对",
+      "output_description": "",
+      "input_data_refs": [],
+      "output_data_refs": [],
+      "work_role": null,
+      "countersign_all_required": false,
+      "countersign_target_departments": []
+    },
+    {
+      "behavior_ref": "behavior_sequence_close",
+      "node_type": "action",
+      "behavior_name": "记录办理结果",
+      "behavior_description": "计划员记录测试申请的办理结果并结束本次测试流程。",
+      "current_actor_role": "经营发展部 计划员",
+      "actor_assignment_mode": "fixed_department",
+      "actor_department_data_ref": null,
+      "actor_position_rule": "",
+      "trigger": "",
+      "precondition": "",
+      "input_description": "",
+      "timing": null,
+      "completion_standard": "办理结果已经记录，测试流程结束",
+      "output_description": "",
+      "input_data_refs": [],
+      "output_data_refs": [],
+      "work_role": null,
+      "countersign_all_required": false,
+      "countersign_target_departments": []
+    }
+  ],
+  "flow_relations": [
+    {
+      "relation_ref": "relation_sequence_01",
+      "relation_type": "sequence",
+      "from_behavior_ref": "behavior_sequence_receive",
+      "to_behavior_ref": "behavior_sequence_check",
+      "condition": "",
+      "join_mode": ""
+    },
+    {
+      "relation_ref": "relation_sequence_02",
+      "relation_type": "sequence",
+      "from_behavior_ref": "behavior_sequence_check",
+      "to_behavior_ref": "behavior_sequence_close",
+      "condition": "",
+      "join_mode": ""
+    }
+  ],
+  "data_objects": [],
+  "cross_department_handoffs": [],
+  "internal_process_calls": [],
+  "forms": [],
+  "terms": []
+}

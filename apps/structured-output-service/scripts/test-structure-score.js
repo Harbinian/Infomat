@@ -1,9 +1,14 @@
 const assert = require('node:assert/strict');
 const {
   RULE,
+  REVIEW_READINESS,
+  behaviorExecutabilityDetails,
   evaluateContent,
+  evaluateReviewReadiness,
   finalize,
   parallelStructureDetails,
+  loopExitDetails,
+  parallelRouteSafetyDetails,
   dataFlowConsistencyDetails,
   semanticProjection,
   stableStringify
@@ -28,7 +33,7 @@ function behavior(index, nodeType = 'action') {
     behavior_ref: `behavior-${index}`,
     node_type: nodeType,
     behavior_name: `业务行为${index}`,
-    behavior_description: `执行第${index}项工作`,
+    behavior_description: `经办人核对第${index}项业务资料，登记处理结果并提交下一岗位。`,
     current_actor_role: '经营发展部部长',
     actor_assignment_mode: 'fixed_department',
     actor_department_data_ref: null,
@@ -93,7 +98,6 @@ function createDocument(behaviorCount = 5) {
       produced_by_behavior_ref: behaviorCount ? 'behavior-1' : null,
       consumed_by_behavior_refs: behaviorCount > 1 ? ['behavior-2'] : behaviorCount ? ['behavior-1'] : []
     }],
-    cross_department_handoffs: [],
     internal_process_calls: [],
     forms: [{
       form_ref: 'form-1',
@@ -136,7 +140,7 @@ function passingTechnical() {
   };
 }
 
-assert.equal(RULE.label, '结构化学习评分 v1（试行）');
+assert.equal(RULE.label, '结构化学习评分 v2（process-governance-v5）');
 assert.equal(
   RULE.dimensions.reduce((sum, item) => sum + item.max, 0),
   100,
@@ -147,6 +151,134 @@ assert.equal(
   15,
   'technical checks must total 15'
 );
+assert.equal(REVIEW_READINESS.id, 'process-review-readiness-v5');
+assert.deepEqual(
+  REVIEW_READINESS.aspects.map(item => item.label),
+  [
+    '流程目的、范围和结束边界',
+    'A1业务行为和责任角色',
+    '业务行为逐动作可执行性',
+    '条件分支、退回和跨部门流转',
+    '表单、业务对象和数据输入输出'
+  ]
+);
+assert.ok(
+  REVIEW_READINESS.aspects.find(item => item.key === 'routing').confirmations
+    .includes('嵌套循环的每一层都必须有明确退出条件和退出去向；内层退出可以进入外层，最外层必须退出到循环外。')
+);
+assert.ok(
+  REVIEW_READINESS.aspects.find(item => item.key === 'routing').confirmations
+    .includes('并行路线必须全部进入同一个并行汇合；任一路线可能在汇合前中止整个流程时，不得使用并行。')
+);
+
+const executableBehaviorDocument = createDocument(2);
+const executableBehaviorBefore = JSON.stringify(executableBehaviorDocument);
+assert.equal(behaviorExecutabilityDetails(executableBehaviorDocument).issues.length, 0);
+assert.equal(
+  JSON.stringify(executableBehaviorDocument),
+  executableBehaviorBefore,
+  'behavior executability review must not mutate JSON'
+);
+
+const missingBehaviorDescriptionDocument = createDocument(1);
+missingBehaviorDescriptionDocument.behaviors[0].behavior_description = '';
+assert.equal(
+  behaviorExecutabilityDetails(missingBehaviorDescriptionDocument).issues[0].reason,
+  'missing_description'
+);
+
+const abstractBehaviorDescriptionDocument = createDocument(2);
+abstractBehaviorDescriptionDocument.behaviors[0].behavior_description = '确保报销可以完成';
+abstractBehaviorDescriptionDocument.behaviors[1].behavior_description = '保证数据真实性、合理性';
+assert.deepEqual(
+  behaviorExecutabilityDetails(abstractBehaviorDescriptionDocument).issues.map(item => item.reason),
+  ['abstract_qualitative_description', 'abstract_qualitative_description']
+);
+
+const noConcreteActionDocument = createDocument(1);
+noConcreteActionDocument.behaviors[0].behavior_description = '加强报销过程管理';
+assert.equal(
+  behaviorExecutabilityDetails(noConcreteActionDocument).issues[0].reason,
+  'no_concrete_action'
+);
+
+const controlNodeDescriptionDocument = createDocument(3);
+controlNodeDescriptionDocument.behaviors[0].node_type = 'decision';
+controlNodeDescriptionDocument.behaviors[0].behavior_description = '';
+controlNodeDescriptionDocument.behaviors[1].node_type = 'parallel_split';
+controlNodeDescriptionDocument.behaviors[1].behavior_description = '';
+assert.equal(
+  behaviorExecutabilityDetails(controlNodeDescriptionDocument).issues.length,
+  0,
+  'control nodes do not perform business actions and must not require action descriptions'
+);
+
+const reviewReadinessDocument = createDocument(3);
+const reviewReadinessBefore = JSON.stringify(reviewReadinessDocument);
+const reviewReadiness = evaluateReviewReadiness(reviewReadinessDocument, {
+  technical: passingTechnical(),
+  businessIssues: [{
+    message: '未填写流程目的',
+    editorSection: 'profile',
+    focusPath: 'process.purpose'
+  }, {
+    message: '业务行为2未选择执行岗位',
+    editorSection: 'process',
+    processSection: 'behaviors',
+    focusPath: 'behaviors.1.current_actor_role'
+  }, {
+    message: '业务行为3未填写“具体做什么”',
+    editorSection: 'process',
+    processSection: 'behaviors',
+    focusPath: 'behaviors.2.behavior_description',
+    reviewAspect: 'behaviorExecutability'
+  }, {
+    message: '流程关系2已选择流程内部回路但未填写条件',
+    editorSection: 'process',
+    processSection: 'relations',
+    focusPath: 'flow_relations.1.condition'
+  }, {
+    message: '测试表的字段归属待确认',
+    editorSection: 'forms',
+    focusPath: 'forms.0.areas.0.items.0.assignment'
+  }]
+});
+assert.equal(JSON.stringify(reviewReadinessDocument), reviewReadinessBefore, 'review readiness must not mutate JSON');
+assert.equal(reviewReadiness.operationStatus, 'prompt');
+assert.equal(reviewReadiness.operationLabel, '有业务提示，可以下载');
+assert.equal(reviewReadiness.businessIssueCount, 5);
+assert.deepEqual(reviewReadiness.aspects.map(item => item.issueCount), [1, 1, 1, 1, 1]);
+
+const reviewReady = evaluateReviewReadiness(reviewReadinessDocument, {
+  technical: passingTechnical(),
+  businessIssues: []
+});
+assert.equal(reviewReady.operationStatus, 'ready');
+assert.equal(reviewReady.operationLabel, '可下载并提交部门核对');
+assert.equal(reviewReady.aspects.every(item => item.status === 'confirmation_required'), true);
+
+const reviewBlocked = evaluateReviewReadiness(reviewReadinessDocument, {
+  technical: { ...passingTechnical(), blocker: true },
+  technicalIssues: [{
+    category: '技术结构',
+    message: '流程关系引用的目标行为不存在',
+    editorSection: 'process',
+    processSection: 'relations',
+    focusPath: 'flow_relations.0.to_behavior_ref'
+  }]
+});
+assert.equal(reviewBlocked.operationStatus, 'blocker');
+assert.equal(reviewBlocked.operationLabel, '存在结构错误');
+assert.equal(reviewBlocked.aspects.find(item => item.key === 'routing').status, 'blocker');
+
+const emptyReviewDocument = createDocument(1);
+emptyReviewDocument.data_objects = [];
+emptyReviewDocument.forms = [];
+const dataFormAspect = evaluateReviewReadiness(emptyReviewDocument, {
+  technical: passingTechnical(),
+  businessIssues: []
+}).aspects.find(item => item.key === 'dataForm');
+assert.ok(dataFormAspect.applicabilityNote.includes('不要为满足检查补造内容'));
 
 const perfectDocument = createDocument(5);
 const perfectBeforeScore = JSON.stringify(perfectDocument);
@@ -259,76 +391,6 @@ assert.equal(
 );
 assert.equal(defaultSequenceDocument.behaviors[2].node_type, 'action');
 
-const handoffDecisionDocument = createDocument(2);
-handoffDecisionDocument.behaviors[1].node_type = 'decision';
-handoffDecisionDocument.behaviors[1].behavior_name = '部门审核';
-handoffDecisionDocument.flow_relations = [
-  relation(1, 'behavior-1', 'behavior-2'),
-  relation(2, 'behavior-2', 'behavior-1', 'loop', '审核不通过')
-];
-handoffDecisionDocument.cross_department_handoffs = [{
-  handoff_ref: 'handoff-1',
-  handoff_direction: 'outbound_followup',
-  anchor_behavior_ref: 'behavior-2',
-  counterparty_resolution: 'identified',
-  source_department: '经营发展部',
-  target_department: '公司领导',
-  transfer_data_ref: 'data-1',
-  returned_data_ref: 'data-1',
-  requested_matter: '提交审核结果',
-  trigger_condition: '审核通过',
-  completion_standard: '公司领导完成承接',
-  counterparty_process_ref: null,
-  counterparty_process_name: '',
-  counterparty_behavior_ref: null,
-  counterparty_behavior_name: '',
-  requires_return: false,
-  resume_behavior_ref: null
-}];
-const handoffDecisionResult = content(handoffDecisionDocument);
-assert.equal(handoffDecisionResult.dimensions.relation, 20);
-assert.equal(
-  handoffDecisionResult.issues.some(item => item.message.includes('部门审核当前只有')),
-  false,
-  'a complete handoff may serve as a decision outlet'
-);
-assert.equal(handoffDecisionResult.dimensions.dataHandoff, 20);
-assert.equal(
-  handoffDecisionResult.previewIssues.some(item => item.category === 'MDM平台承接待办'),
-  true,
-  'missing counterparty process details must become a non-scoring MDM platform follow-up'
-);
-
-const inboundUnassignedDocument = createDocument(2);
-inboundUnassignedDocument.cross_department_handoffs = [{
-  handoff_ref: 'handoff-inbound-unassigned',
-  handoff_direction: 'inbound_prerequisite',
-  anchor_behavior_ref: 'behavior-1',
-  counterparty_resolution: 'needs_identification',
-  source_department: '',
-  target_department: '经营发展部',
-  transfer_data_ref: 'data-1',
-  requested_matter: '',
-  trigger_condition: '每月最后一个工作日前',
-  completion_standard: '',
-  counterparty_process_ref: null,
-  counterparty_process_name: '',
-  counterparty_behavior_ref: null,
-  counterparty_behavior_name: '',
-  requires_return: false,
-  returned_data_ref: null,
-  resume_behavior_ref: null
-}];
-const inboundBefore = JSON.stringify(inboundUnassignedDocument);
-const inboundUnassignedResult = content(inboundUnassignedDocument);
-assert.equal(inboundUnassignedResult.dimensions.dataHandoff, 20);
-assert.equal(JSON.stringify(inboundUnassignedDocument), inboundBefore, 'scoring must not modify v2 JSON');
-assert.equal(
-  inboundUnassignedResult.issues.some(item => item.category === '跨部门承接'),
-  false,
-  'explicit pending department identification must not deduct structural points'
-);
-
 const missingConditionDocument = JSON.parse(JSON.stringify(defaultSequenceDocument));
 missingConditionDocument.flow_relations[2].relation_type = 'condition';
 const missingConditionResult = content(missingConditionDocument);
@@ -405,7 +467,7 @@ assert.deepEqual(splitTypeIssue.focusPaths, [
 assert.equal(splitTypeIssue.focusRef, 'relation-2');
 assert.equal(splitTypeIssue.focusPath, 'flow_relations.1.relation_type');
 const joinTypeIssue = misclassifiedParallelResult.issues.find(item =>
-  item.message === '业务行为5已有2条来自“业务行为3”、“业务行为4”的顺序关系，顺序关系不计入并行汇合来源；当前共有0个有效来源（0条并行路线来源、0个跨部门返回来源），规则要求至少2个。'
+  item.message === '业务行为5已有2条来自“业务行为3”、“业务行为4”的顺序关系，顺序关系不计入并行汇合来源；当前共有0个有效来源（0条并行路线来源），规则要求至少2个。'
 );
 assert.deepEqual(joinTypeIssue.suggestions, ['将“业务行为3”、“业务行为4”进入本节点的现有顺序关系改为“并行路线”。']);
 assert.deepEqual(joinTypeIssue.focusPaths, [
@@ -415,20 +477,6 @@ assert.deepEqual(joinTypeIssue.focusPaths, [
 assert.equal(joinTypeIssue.focusRef, 'relation-4');
 assert.equal(joinTypeIssue.focusPath, 'flow_relations.3.relation_type');
 assert.ok(misclassifiedParallelResult.issues.every(item => Array.isArray(item.suggestions) && item.suggestions.length));
-const returningHandoffJoinDocument = JSON.parse(JSON.stringify(parallelDocument));
-returningHandoffJoinDocument.flow_relations = returningHandoffJoinDocument.flow_relations.filter(item => item.relation_ref !== 'relation-5');
-returningHandoffJoinDocument.cross_department_handoffs = [{
-  handoff_ref: 'handoff-return',
-  handoff_direction: 'outbound_followup',
-  anchor_behavior_ref: 'behavior-4',
-  requires_return: true,
-  resume_behavior_ref: 'behavior-5'
-}];
-parallelDetails = parallelStructureDetails(returningHandoffJoinDocument);
-assert.equal(parallelDetails.joins[0].relationSourceCount, 1);
-assert.equal(parallelDetails.joins[0].handoffSourceCount, 1);
-assert.equal(parallelDetails.joins[0].sourceCount, 2);
-assert.equal(content(returningHandoffJoinDocument).dimensions.relation, 20);
 const incompleteParallelDocument = JSON.parse(JSON.stringify(parallelDocument));
 incompleteParallelDocument.behaviors[4].node_type = 'action';
 const incompleteParallelResult = content(incompleteParallelDocument);
@@ -437,6 +485,98 @@ assert.equal(
   incompleteParallelResult.issues.some(item => item.category === '并行结构'),
   true
 );
+
+const validLoopExitDocument = createDocument(5);
+validLoopExitDocument.behaviors[2].node_type = 'decision';
+validLoopExitDocument.flow_relations = [
+  relation(1, 'behavior-1', 'behavior-2'),
+  relation(2, 'behavior-2', 'behavior-3'),
+  relation(3, 'behavior-3', 'behavior-2', 'loop', '需要重新办理'),
+  relation(4, 'behavior-3', 'behavior-4', 'condition', '本层循环完成'),
+  relation(5, 'behavior-4', 'behavior-5')
+];
+let loopDetails = loopExitDetails(validLoopExitDocument);
+assert.equal(loopDetails.loops.length, 1);
+assert.equal(loopDetails.loops[0].hasForwardPath, true);
+assert.equal(loopDetails.loops[0].exitCount, 1);
+
+const noLoopExitDocument = JSON.parse(JSON.stringify(validLoopExitDocument));
+noLoopExitDocument.flow_relations = noLoopExitDocument.flow_relations.filter(item => item.relation_ref !== 'relation-4');
+loopDetails = loopExitDetails(noLoopExitDocument);
+assert.equal(loopDetails.loops[0].exitCount, 0, 'each loop level must have its own exit route');
+
+const nestedLoopDocument = createDocument(6);
+nestedLoopDocument.behaviors[3].node_type = 'decision';
+nestedLoopDocument.behaviors[4].node_type = 'decision';
+nestedLoopDocument.flow_relations = [
+  relation(1, 'behavior-1', 'behavior-2'),
+  relation(2, 'behavior-2', 'behavior-3'),
+  relation(3, 'behavior-3', 'behavior-4'),
+  relation(4, 'behavior-4', 'behavior-3', 'loop', '内层继续'),
+  relation(5, 'behavior-4', 'behavior-5', 'condition', '退出内层'),
+  relation(6, 'behavior-5', 'behavior-2', 'loop', '外层继续'),
+  relation(7, 'behavior-5', 'behavior-6', 'condition', '退出外层')
+];
+const nestedLoopBefore = JSON.stringify(nestedLoopDocument);
+loopDetails = loopExitDetails(nestedLoopDocument);
+assert.equal(loopDetails.loops.length, 2);
+assert.deepEqual(loopDetails.loops.map(item => item.exitCount), [1, 1]);
+assert.deepEqual(loopDetails.loops[0].nestedWithinRefs, ['relation-6']);
+assert.equal(loopDetails.loops[1].nestedWithinRefs.length, 0);
+assert.equal(JSON.stringify(nestedLoopDocument), nestedLoopBefore, 'loop review must not mutate JSON');
+
+let parallelSafety = parallelRouteSafetyDetails(parallelDocument);
+assert.equal(parallelSafety.splits[0].commonJoinRef, 'behavior-5');
+assert.equal(parallelSafety.splits[0].terminalRefs.length, 0);
+assert.equal(parallelSafety.splits[0].safe, true);
+
+const nestedParallelDocument = createDocument(8);
+nestedParallelDocument.behaviors[0].node_type = 'parallel_split';
+nestedParallelDocument.behaviors[1].node_type = 'parallel_split';
+nestedParallelDocument.behaviors[4].node_type = 'parallel_join';
+nestedParallelDocument.behaviors[6].node_type = 'parallel_join';
+nestedParallelDocument.flow_relations = [
+  relation(1, 'behavior-1', 'behavior-2', 'parallel'),
+  relation(2, 'behavior-1', 'behavior-6', 'parallel'),
+  relation(3, 'behavior-2', 'behavior-3', 'parallel'),
+  relation(4, 'behavior-2', 'behavior-4', 'parallel'),
+  relation(5, 'behavior-3', 'behavior-5', 'parallel'),
+  relation(6, 'behavior-4', 'behavior-5', 'parallel'),
+  relation(7, 'behavior-5', 'behavior-7', 'parallel'),
+  relation(8, 'behavior-6', 'behavior-7', 'parallel'),
+  relation(9, 'behavior-7', 'behavior-8')
+];
+const nestedParallelBefore = JSON.stringify(nestedParallelDocument);
+parallelSafety = parallelRouteSafetyDetails(nestedParallelDocument);
+assert.equal(parallelSafety.splits.length, 2);
+assert.equal(parallelSafety.splits.find(item => item.splitRef === 'behavior-1').commonJoinRef, 'behavior-7');
+assert.equal(parallelSafety.splits.find(item => item.splitRef === 'behavior-2').commonJoinRef, 'behavior-5');
+assert.ok(parallelSafety.splits.every(item => item.safe));
+assert.equal(JSON.stringify(nestedParallelDocument), nestedParallelBefore, 'parallel review must not mutate JSON');
+
+const terminatingParallelDocument = JSON.parse(JSON.stringify(parallelDocument));
+terminatingParallelDocument.flow_relations = terminatingParallelDocument.flow_relations.filter(item => item.relation_ref !== 'relation-4');
+parallelSafety = parallelRouteSafetyDetails(terminatingParallelDocument);
+assert.equal(parallelSafety.splits[0].hasCommonJoin, false);
+assert.deepEqual(parallelSafety.splits[0].terminalRefs, ['behavior-3']);
+assert.equal(parallelSafety.splits[0].safe, false);
+
+const decisionInParallelDocument = createDocument(6);
+decisionInParallelDocument.behaviors[0].node_type = 'parallel_split';
+decisionInParallelDocument.behaviors[1].node_type = 'decision';
+decisionInParallelDocument.behaviors[5].node_type = 'parallel_join';
+decisionInParallelDocument.flow_relations = [
+  relation(1, 'behavior-1', 'behavior-2', 'parallel'),
+  relation(2, 'behavior-1', 'behavior-5', 'parallel'),
+  relation(3, 'behavior-2', 'behavior-3', 'condition', '继续办理'),
+  relation(4, 'behavior-2', 'behavior-4', 'condition', '中止办理'),
+  relation(5, 'behavior-3', 'behavior-6', 'parallel'),
+  relation(6, 'behavior-5', 'behavior-6', 'parallel')
+];
+parallelSafety = parallelRouteSafetyDetails(decisionInParallelDocument);
+assert.equal(parallelSafety.splits[0].commonJoinRef, 'behavior-6');
+assert.deepEqual(parallelSafety.splits[0].terminalRefs, ['behavior-4']);
+assert.equal(parallelSafety.splits[0].safe, false, 'a decision outcome that ends before the join invalidates parallel routing');
 
 const downstreamDataDocument = createDocument(3);
 let dataFlowDetails = dataFlowConsistencyDetails(downstreamDataDocument);
@@ -457,7 +597,7 @@ assert.equal(
   false,
   'a reachable preceding data object and assignment rule complete a dynamic actor assignment'
 );
-assert.equal(dynamicActorDocument.cross_department_handoffs.length, 0, 'a dynamic assignment is not a fixed cross-department handoff');
+assert.equal(content(dynamicActorDocument).issues.some(item => item.category === '跨部门行为'), false, 'dynamic assignment is not a fixed cross-department behavior');
 
 const futureDynamicActorDocument = createDocument(3);
 futureDynamicActorDocument.behaviors[0].current_actor_role = '';
@@ -506,37 +646,47 @@ assert.equal(
 );
 
 const returnedDataDocument = createDocument(3);
-returnedDataDocument.data_objects[0].produced_by_behavior_ref = null;
-returnedDataDocument.data_objects[0].consumed_by_behavior_refs = ['behavior-2'];
-returnedDataDocument.cross_department_handoffs = [{
-  handoff_ref: 'handoff-data-return',
-  handoff_direction: 'outbound_followup',
-  anchor_behavior_ref: 'behavior-1',
-  requires_return: true,
-  returned_data_ref: 'data-1',
-  resume_behavior_ref: 'behavior-2'
-}];
+returnedDataDocument.schema_version = 'process-governance-v5';
+returnedDataDocument.data_objects[0] = {
+  data_ref: 'data-1',
+  data_name: '测试数据',
+  description: '外部来源在恢复行为可用',
+  governance_status: 'candidate',
+  information_type: 'business_information',
+  behavior_links: [{ link_ref: 'data-link-use', behavior_ref: 'behavior-2', operation: 'use' }],
+  source_relations: [{
+    source_ref: 'source-return',
+    source_department: '质量管理部',
+    source_process_name: '外部复核流程',
+    source_behavior_name: '返回复核结果',
+    source_data_name: '外部门返回',
+    availability_mode: 'at_behavior',
+    available_from_behavior_ref: 'behavior-2'
+  }]
+};
 assert.equal(dataFlowConsistencyDetails(returnedDataDocument).issues.length, 0);
-returnedDataDocument.data_objects[0].consumed_by_behavior_refs = ['behavior-1'];
+returnedDataDocument.data_objects[0].behavior_links[0].behavior_ref = 'behavior-1';
 assert.equal(dataFlowConsistencyDetails(returnedDataDocument).issues[0].reason, 'before_external_return');
 
 const linkedCrossDepartmentDataDocument = createDocument(3);
-linkedCrossDepartmentDataDocument.flow_relations = [];
-linkedCrossDepartmentDataDocument.cross_department_handoffs = [{
-  handoff_ref: 'handoff-linked-external',
-  handoff_direction: 'outbound_followup',
-  anchor_behavior_ref: 'behavior-1',
-  counterparty_behavior_ref: 'behavior-2',
-  requires_return: true,
-  returned_data_ref: 'data-1',
-  resume_behavior_ref: 'behavior-3'
-}];
-linkedCrossDepartmentDataDocument.data_objects[0].produced_by_behavior_ref = 'behavior-2';
-linkedCrossDepartmentDataDocument.data_objects[0].consumed_by_behavior_refs = ['behavior-3'];
+linkedCrossDepartmentDataDocument.schema_version = 'process-governance-v5';
+linkedCrossDepartmentDataDocument.behaviors[1].current_actor_role = '质量管理部质量审核岗';
+linkedCrossDepartmentDataDocument.data_objects[0] = {
+  data_ref: 'data-1',
+  data_name: '测试数据',
+  description: '跨部门行为产生并供后续使用',
+  governance_status: 'candidate',
+  information_type: 'business_information',
+  behavior_links: [
+    { link_ref: 'data-link-create', behavior_ref: 'behavior-2', operation: 'create' },
+    { link_ref: 'data-link-use', behavior_ref: 'behavior-3', operation: 'use' }
+  ],
+  source_relations: []
+};
 dataFlowDetails = dataFlowConsistencyDetails(linkedCrossDepartmentDataDocument);
 assert.equal(dataFlowDetails.issues.length, 0, 'returned data produced by the linked external behavior is available after the resume point');
-assert.ok(dataFlowDetails.incomingByBehavior.get('behavior-2').some(item => item.kind === 'outbound_handoff'));
-linkedCrossDepartmentDataDocument.data_objects[0].consumed_by_behavior_refs = ['behavior-1'];
+assert.equal(content(linkedCrossDepartmentDataDocument).issues.some(item => item.category === '跨部门行为'), false);
+linkedCrossDepartmentDataDocument.data_objects[0].behavior_links[1].behavior_ref = 'behavior-1';
 assert.equal(
   dataFlowConsistencyDetails(linkedCrossDepartmentDataDocument).issues[0].reason,
   'future_data',
@@ -544,17 +694,17 @@ assert.equal(
 );
 
 const linkedInboundDataDocument = createDocument(2);
-linkedInboundDataDocument.flow_relations = [];
-linkedInboundDataDocument.cross_department_handoffs = [{
-  handoff_ref: 'handoff-linked-inbound',
-  handoff_direction: 'inbound_prerequisite',
-  anchor_behavior_ref: 'behavior-2',
-  counterparty_behavior_ref: 'behavior-1',
-  requires_return: false,
-  resume_behavior_ref: null
-}];
-linkedInboundDataDocument.data_objects[0].produced_by_behavior_ref = 'behavior-1';
-linkedInboundDataDocument.data_objects[0].consumed_by_behavior_refs = ['behavior-2'];
+linkedInboundDataDocument.schema_version = 'process-governance-v5';
+linkedInboundDataDocument.behaviors[0].current_actor_role = '质量管理部质量审核岗';
+linkedInboundDataDocument.data_objects[0] = {
+  data_ref: 'data-1', data_name: '测试数据', description: '前置跨部门行为产生', governance_status: 'candidate',
+  information_type: 'business_information',
+  behavior_links: [
+    { link_ref: 'data-link-create-inbound', behavior_ref: 'behavior-1', operation: 'create' },
+    { link_ref: 'data-link-use-inbound', behavior_ref: 'behavior-2', operation: 'use' }
+  ],
+  source_relations: []
+};
 assert.equal(dataFlowConsistencyDetails(linkedInboundDataDocument).issues.length, 0);
 
 const loopDoesNotRelaxDataDocument = createDocument(2);
@@ -603,6 +753,41 @@ assert.equal(
 assert.equal(
   noDataOrFormResult.issues.some(item => item.message === '尚未登记结构化表单或记录'),
   true
+);
+
+const externalSystemFieldSourceDocument = createDocument(2);
+externalSystemFieldSourceDocument.schema_version = 'process-governance-v5';
+externalSystemFieldSourceDocument.data_objects[0] = {
+  data_ref: 'data-1', data_name: '测试数据', description: '用于验证字段来源评分', governance_status: 'candidate',
+  information_type: 'business_information',
+  behavior_links: [{ link_ref: 'data-link-create', behavior_ref: 'behavior-1', operation: 'create' }],
+  source_relations: []
+};
+externalSystemFieldSourceDocument.forms[0].behavior_links = [{
+  link_ref: 'form-link-fill', behavior_ref: 'behavior-1', operations: ['fill'], notes: ''
+}];
+externalSystemFieldSourceDocument.forms[0].areas[0].items[0] = {
+  ...externalSystemFieldSourceDocument.forms[0].areas[0].items[0],
+  business_data_ref: 'data-1',
+  value_origin_mode: 'depends_on_data',
+  source_links: [{
+    source_link_ref: 'field-source-external',
+    source_type: 'external_system',
+    source_data_ref: null,
+    source_system_name: '外部业务系统',
+    source_data_name: '申请单位信息',
+    source_role: 'provides_value'
+  }]
+};
+assert.equal(
+  content(externalSystemFieldSourceDocument).issues.some(item => item.message.includes('未完整填写外部系统和来源数据名称')),
+  false,
+  'a complete external-system field source satisfies the form-source check'
+);
+externalSystemFieldSourceDocument.forms[0].areas[0].items[0].source_links[0].source_data_name = '';
+assert.ok(
+  content(externalSystemFieldSourceDocument).issues.some(item => item.message.includes('未完整填写外部系统和来源数据名称')),
+  'an incomplete external-system field source remains a visible scoring issue'
 );
 
 const placeholderDocument = createDocument(5);

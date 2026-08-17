@@ -1,0 +1,35 @@
+{
+  "current_version": "process-governance-v5",
+  "versions": [
+    {
+      "version": "process-governance-v1",
+      "released_on": "2026-07-28",
+      "title": "单流程结构化文件建立",
+      "summary": "建立流程、业务行为、流程关系、数据对象、跨部门承接、表单与术语的单流程结构。"
+    },
+    {
+      "version": "process-governance-v2",
+      "released_on": "2026-08-04",
+      "title": "跨部门承接关系升级",
+      "summary": "明确前置输入和后续承接方向，并补充本流程锚点、外部门办理动作和返回位置。"
+    },
+    {
+      "version": "process-governance-v3",
+      "released_on": "2026-08-04",
+      "title": "表单状态与执行主体补充",
+      "summary": "增加表单设计状态，并逐步补充固定部门、全公司通用和按数据动态确定执行部门的表达。"
+    },
+    {
+      "version": "process-governance-v4",
+      "released_on": "2026-08-15",
+      "title": "输出物、数据、表单和字段关系打通",
+      "summary": "以数据对象关系为单一真源，增加信息类型、创建更新使用关系、跨流程来源线索、表单办理关系，以及字段归属和取值来源。"
+    },
+    {
+      "version": "process-governance-v5",
+      "released_on": "2026-08-17",
+      "title": "跨部门行为表达简化",
+      "summary": "跨部门属性由业务行为的执行部门确定，流程先后统一使用流程关系，数据传递和返回统一使用数据行为关系；字段取值来源可直接登记外部系统，不要求关联本流程行为；旧版跨部门记录只作为迁移档案保留。"
+    }
+  ]
+}
