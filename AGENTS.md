@@ -99,7 +99,7 @@ Codex 在本项目协作时的根入口规则。
 - 用户统一从HTTPS端口3003登录。默认入口为HTTPS端口3004上的DeepSeek Harness（DSH）治理工作区；原页面保留在`/classic`，只作为管理员可切换的应急入口。
 - DSH固定使用`@deepseek-ai/dsh@0.1.0-rc.6`和Node.js 24。每个登录`nonce`对应一个只监听本机随机端口的独立DSH进程；同一Cookie的多个标签页共享实例，不同登录会话相互隔离。
 - DSH只装配仓库提供且用户不可修改的`infomat-governance`插件。不得向业务用户开放原生编码Agent、目录选择、Shell、文件编辑、技能、子Agent、网页检索、模型选择、权限选择、插件管理、会话日志下载或Models设置。
-- `apps/structured-output-service/`继续保持无状态，默认监听`0.0.0.0:3001`供公司局域网用户直接访问，并负责`process-governance-v4`模板和v1/v2/v3/v4校验。3001不依赖DeepSeek、MDM-AI助手或认证网关，AI能力不得重新写入3001。
+- `apps/structured-output-service/`继续保持无状态，默认监听`0.0.0.0:3001`供公司局域网用户直接访问，并负责`process-governance-v6`模板和v1至v6校验。3001不依赖DeepSeek、MDM-AI助手或认证网关，AI能力不得重新写入3001。MDM-AI助手仍固定使用v5，不纳入3001 v6升级范围。
 - 独立试点启动脚本只能检查3001是否可达，不得停止、启动、重绑或代管3001。
 - MDM-AI助手和3001必须从服务器同一个已提交版本启动；正式启动拒绝脏工作区。用户电脑不保存仓库、Schema、配置或API Key。
 - 每次模型调用前后核对Git提交和结构摘要。版本变化返回`409 VERSION_CHANGED`，用户先下载当前草稿，再刷新并重新导入。

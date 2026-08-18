@@ -123,13 +123,13 @@ field_identities
 ## 4.1 3001单流程编制主线
 
 ```text
-空白新建 / process-governance-v1 JSON / process-governance-v2 JSON / process-governance-v3 JSON / process-governance-v4 JSON / process-governance-v5 JSON / 历史结构化JSON
+空白新建 / process-governance-v1至v6 JSON / 历史多候选结构化JSON
   ↓
 apps/structured-output-service（3001，仅当前页面内存）
   ├─ 只读 docs/organization/花名册.md 岗位目录
   └─ 页面不接收编制参考材料
   ↓
-docs/contracts/process-governance-v5.schema.json
+docs/contracts/process-governance-v6.schema.json
   ↓
 未审核-发起部门-流程名称-导出时间.json
   ↓

@@ -125,7 +125,7 @@
 | 制度版次 | Document Edition | 文档结构化输出中制度的字母版次，由系统自动生成并与制度编号共同标识外部引用对象；发布下一版次后上一版保留历史追溯并从默认当前视图移出 |
 | Procedure 业务编号 | Procedure Code | 文档结构化输出中流程对象的系统生成业务编号，格式为 `PROCEDURE-{草稿ID}-{三位序号}`，写入 `process_design_processes.process_code` 并保持唯一；L3 只表示流程层级和名称，不进入编号 |
 | 文档结构化输出结构规则 | Document Structured Output Schema | 机器可读的文档结构规则，统一制度草稿、制度档案、术语、L3流程、A1业务行为、跨部门承接、表单字段、证据、主数据需求和待确认问题字段；该规则不替代流程输入基线或组织真源 |
-| 单流程结构化文件规则 | Process Governance Structure Rules | 3001导出的`process-governance-v5`文件必须遵守的结构规则；一份JSON只包含一个`process`，记录编制元数据、业务行为、普通流程关系、数据行为关系、数据来源线索、历史内部流程调用、表单处理关系、字段数据关系和只读迁移记录，不包含可信审核状态、审核意见或批准标记。v1至v4只作为兼容导入版本 |
+| 单流程结构化文件规则 | Process Governance Structure Rules | 3001导出的`process-governance-v6`文件必须遵守的结构规则；一份JSON只包含一个`process`，记录编制元数据、普通行为与控制节点、流程关系、数据行为关系、表单、术语和只读迁移归档，不包含图坐标、可信审核状态、审核意见或批准标记。v1至v5只作为兼容迁移输入 |
 | 单流程治理JSON | Single-Process Governance JSON | MDM流程编制的完整内容真源，当前结构版本为`process-governance-v3`。MDM兼容导入3001的v1、v2、v3文件，统一保存和导出v3；数据库修订号用于并发校验，浏览器不持久化该内容 |
 | 表单设计状态 | Form Design State | `forms[].form_design_state`记录一张表单是照录现状`current_state`、新建或优化设计`proposed_design`，还是历史文件尚未确认`unspecified`。3001和MDM不得根据表单名称、编号或明细表数量推断该状态 |
 | 字段归属 | Field Assignment | 用户依据纸质表单位置确认字段属于主表还是哪张明细表。JSON不增加字段级重复归属值：主表字段保存在`area_type="基本信息"`分组，明细表字段保存在对应`area_type="明细清单"`分组；该归属只组织结构化内容，不代表创建数据库表 |
@@ -138,11 +138,11 @@
 | Infomat试点版本 | Infomat Pilot Version | 同时提供MDM-AI助手和3001的已提交Git版本；正式启动要求服务器工作区干净，用户电脑不保存版本副本。浏览器通过Git提交和结构摘要确认当前页面与服务器一致 |
 | 结构摘要 | Schema Digest | 对3001当前`process-governance-v5`结构计算的SHA-256摘要；浏览器首次进入、定时检查和每次模型调用前后均核对该值，变化时返回`VERSION_CHANGED`并阻止旧页面继续调用模型 |
 | 独立结构预审 | Independent Structural Review | 使用新的页面上下文，只依据待审v3 JSON和当前结构规则检查必需结构、类型、枚举、引用、字段归位和对象拆分；不读取填报对话，不判断流程内容。v1、v2文件先由3001在内存中升级并重新导出；硬性结构错误必须修改，结构建议可以保持原值但必须记录理由，预审意见和处理记录不写入JSON |
-| 编制参考材料 | Compilation Reference Material | `process-governance-v5.reference_materials[]`中的历史兼容内容，用于说明流程编制时曾参考的制度、表单、操作说明、会议或访谈等材料，不等同正式制度关联或逐步骤证据。3001当前页面暂停新增、展示和编辑此内容；新建流程导出空数组，导入文件中的已有内容只在内存中隐式保留并随再次导出带回 |
+| 编制参考材料 | Compilation Reference Material | `process-governance-v6.migration.reference_materials[]`中的历史兼容内容，用于说明流程编制时曾参考的制度、表单、操作说明、会议或访谈等材料，不等同正式制度关联或逐步骤证据。3001只读保留该归档；新建流程导出空数组，迁移时不参与评分、流程计算或绘图 |
 | 不可读来源阻断 | Unreadable Source Block | 流程证据映射技能对图片、扫描件、无文本 PDF 或转换失败来源采用的安全门：记录来源及阻断原因后停止本轮，不执行图像转文字、不猜测内容；资料责任人提供可直接读取原件或经人工确认的文字版后才能重跑 |
 | 判断节点 | Decision Step | 流程中承载条件判断的节点；3001当前结构使用`behaviors[].node_type=decision`，新增时不自动认定。判断节点应有至少两个互斥且覆盖全部结果的明确出口；出口只能由普通流程关系中的顺序、判断分支或流程内部回路表达，目标可以是本部门或跨部门行为。3001只提示出口是否完整，不阻止未审核草稿导出 |
-| 判断分支 | Conditional Flow | 从判断节点发出、根据判断结果进入后续办理步骤的条件流向关系。它与流程内部回路的区别是：判断分支继续往下办理，流程内部回路退回前序步骤重新处理。`process-governance-v5`使用`flow_relations[].relation_type=condition`记录条件和目标行为；历史文档结构化输出使用`step_transitions[]`记录条件、目标步骤和证据引用。目标为空表示流向仍待补充 |
-| 流程内部回路 | Internal Process Loop | 本流程内在明确触发条件下，从当前节点返回已经存在的前序业务行为或判断节点的关系；`process-governance-v5`使用`flow_relations[].relation_type=loop`记录。回路不是独立节点，也不要求固定创建在判断节点之后；审批不通过时退回前序行为，通常是判断节点的一条回路出口 |
+| 判断分支 | Conditional Flow | 从判断节点发出、根据判断结果进入后续办理步骤的条件流向关系。它与流程内部回路的区别是：判断分支继续往下办理，流程内部回路退回前序步骤重新处理。`process-governance-v6`使用`flow_relations[].relation_type=condition`记录条件和目标行为；历史文档结构化输出使用`step_transitions[]`记录条件、目标步骤和证据引用。目标为空表示流向仍待补充 |
+| 流程内部回路 | Internal Process Loop | 本流程内在明确触发条件下，从当前节点返回已经存在的前序业务行为或判断节点的关系；`process-governance-v6`使用`flow_relations[].relation_type=loop`记录。回路不是独立节点，也不要求固定创建在判断节点之后；审批不通过时退回前序行为，通常是判断节点的一条回路出口 |
 | 嵌套循环 | Nested Loop | 一个流程内部回路的循环体中包含另一条流程内部回路。每一层循环都必须具有独立退出条件和退出去向；内层退出可以进入外层循环，最外层必须退出到循环外后续行为 |
 | 并行开始 | Parallel Split | 同时启动多条办理路线的控制节点，使用`behaviors[].node_type=parallel_split`记录。它不承担实际业务动作，至少需要2条流向不同后续行为的并行路线 |
 | 并行路线 | Parallel Route | 从并行开始节点发出或流入并行汇合节点的`flow_relations[].relation_type=parallel`关系。3001按不同目标统计并行开始路线，按不同来源统计并行汇合来源。任一路线在共同汇合前中止整个流程时，不得按并行通过评审 |
@@ -193,7 +193,9 @@
 | 治理评价批次 | Governance Evaluation Batch | 3000针对一个草稿修订、不可变流程版本或经批准的历史流程范围，使用固定规则版本执行的一次逐项评价；批次保留输入摘要、规则版本、结果和历史，不保存可人工修改的综合分 |
 | 发布后整改项 | Post-Release Remediation Item | 已确认存在但不影响当前流程版本正确执行、责任边界、关键控制、权限安全和重大合规的事项；必须明确责任人、期限和复核方式，并由部门审核员确认、`mdm_lead`审核后才能随本次流程发布 |
 | 能力地图工作视图 | Capability Map Work View | 3000根据已发布流程版本展示正式、待确认和未归类能力关系的治理视图；必须标明治理中状态，不等同只包含已确认关系的正式能力地图版本 |
-| 流程标准评审准备 | Process Review Readiness | 3001按固定版本`process-review-readiness-v4`对当前页面中的单流程内容执行五方面临时检查。第三方面检查业务行为逐动作可执行性，要求“具体做什么”按实际顺序写清每个动作、处理对象和结果；第五方面检查信息类型、创建更新使用关系、可用时间、来源线索、表单处理关系、字段业务数据归属和字段取值来源。检查结果不写入JSON，不保存部门确认，不形成正式评价 |
+| 流程标准评审准备 | Process Review Readiness | 3001按固定版本`process-review-readiness-v6`对当前页面中的单流程内容执行五方面临时检查。第三方面检查业务行为逐动作可执行性；第五方面检查信息类型、创建更新使用关系、可用时间、来源线索、表单处理关系、字段业务数据归属和字段取值来源。检查结果不写入JSON，不保存部门确认，不形成正式评价 |
+| 流程关系模式 | Flow Relation Mode | 3001围绕普通行为、控制节点和`flow_relations[]`提供的可编辑流程图；普通行为按部门进入泳道，控制节点进入“流程控制”显示带。图坐标只在页面内存中计算，不写入JSON |
+| 数据关系模式 | Data Relation Mode | 3001以一个数据对象为中心，只显示其直接关联行为的聚焦式二部图。创建、更新、使用和待确认操作在图上合并显示，JSON仍保存独立`behavior_links[]`记录 |
 
 ---
 

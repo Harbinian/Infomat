@@ -24,8 +24,8 @@
   ]);
 
   const RULE = Object.freeze({
-    id: 'structure-learning-score-v2',
-    label: '结构化学习评分 v2（process-governance-v5）',
+    id: 'structure-learning-score-v3',
+    label: '结构化学习评分 v3（process-governance-v6）',
     dimensions: Object.freeze([
       Object.freeze({
         key: 'technical',
@@ -87,7 +87,7 @@
   });
 
   const REVIEW_READINESS = Object.freeze({
-    id: 'process-review-readiness-v5',
+    id: 'process-review-readiness-v6',
     label: '流程评审五方面标准',
     aspects: Object.freeze([
       Object.freeze({
@@ -147,7 +147,7 @@
     ]),
     acceptance: Object.freeze([
       '业务部门逐项确认页面展示的是当前真实流程事实。',
-      '当前文件符合process-governance-v5结构，稳定引用和导出回读检查通过。',
+      '当前文件符合process-governance-v6结构，稳定引用和导出回读检查通过。',
       '表单、字段和稳定引用在导入、修改、导出和重新导入后没有丢失。',
       '当场不能确认的事项另行记录缺少的依据和确认主体，不在JSON中伪造结论。'
     ])
@@ -868,7 +868,7 @@
       const canonicalProducerRef = v4CreateRefs.length === 1
         ? v4CreateRefs[0]
         : text(item.produced_by_behavior_ref);
-      const modernDataModel = ['process-governance-v4', 'process-governance-v5'].includes(data.schema_version);
+      const modernDataModel = ['process-governance-v4', 'process-governance-v5', 'process-governance-v6'].includes(data.schema_version);
       const legacyProducerRefs = modernDataModel
         ? v4PendingRefs
         : behaviors
@@ -1085,8 +1085,9 @@
         focusKind: 'behavior',
         focusRef: item.behavior_ref
       };
-      const isControlNode = ['parallel_split', 'parallel_join'].includes(item.node_type);
-      const hasDerivedEntry = (dataFlowDetails.incomingByBehavior.get(text(item.behavior_ref)) || []).length > 0;
+      const isControlNode = ['decision', 'parallel_split', 'parallel_join'].includes(item.node_type);
+      const hasDerivedEntry = (dataFlowDetails.incomingByBehavior.get(text(item.behavior_ref)) || [])
+        .some(entry => entry.relation?.relation_type !== 'loop');
       const assignmentMode = actorAssignmentMode(item);
       const actorDataRef = text(item.actor_department_data_ref);
       let actorAssignmentPassed = false;
@@ -1116,12 +1117,12 @@
         [NODE_TYPES.has(item.node_type), `${label}未选择节点类型`, fieldTarget(target, `behaviors.${index}.node_type`)],
         [complete(item.behavior_name), `第${index + 1}项行为未填写名称`, fieldTarget(target, `behaviors.${index}.behavior_name`)],
         [
-          actorAssignmentPassed,
+          isControlNode || actorAssignmentPassed,
           actorAssignmentMessage,
           fieldTarget(target, actorAssignmentFocusPath)
         ],
         [
-          hasDerivedEntry || complete(item.trigger),
+          isControlNode || hasDerivedEntry || complete(item.trigger),
           `${label}是流程入口，但未说明流程如何开始`,
           fieldTarget(target, `behaviors.${index}.trigger`)
         ],
@@ -1389,7 +1390,7 @@
             fieldTarget(target, `data_objects.${index}.description`)
           ],
           [
-            !['process-governance-v4', 'process-governance-v5'].includes(data.schema_version)
+            !['process-governance-v4', 'process-governance-v5', 'process-governance-v6'].includes(data.schema_version)
               || (complete(item.information_type) && item.information_type !== 'pending_confirmation'),
             `${label}的信息类型待确认`,
             fieldTarget(target, `data_objects.${index}.information_type`)
@@ -1494,7 +1495,7 @@
         const detailCount = areas.filter(area => area.area_type === '明细清单').length;
         const assignmentChecks = [];
         const formBehaviorLinks = Array.isArray(form.behavior_links) ? form.behavior_links : [];
-        const formBehaviorPassed = !['process-governance-v4', 'process-governance-v5'].includes(data.schema_version) || (
+        const formBehaviorPassed = !['process-governance-v4', 'process-governance-v5', 'process-governance-v6'].includes(data.schema_version) || (
           formBehaviorLinks.length > 0
           && formBehaviorLinks.every(link => behaviorRefs.has(text(link.behavior_ref)) && Array.isArray(link.operations) && link.operations.length > 0)
         );
@@ -1561,13 +1562,13 @@
                 `forms.${formIndex}.areas.${areaIndex}.items.${itemIndex}.required`
               ],
               [
-                !['process-governance-v4', 'process-governance-v5'].includes(data.schema_version)
+                !['process-governance-v4', 'process-governance-v5', 'process-governance-v6'].includes(data.schema_version)
                   || (item.value_origin_mode && item.value_origin_mode !== 'pending_confirmation'),
                 `${formLabel}的字段${itemIndex + 1}取值方式待确认`,
                 `forms.${formIndex}.areas.${areaIndex}.items.${itemIndex}.value_origin_mode`
               ],
               [
-                !['process-governance-v4', 'process-governance-v5'].includes(data.schema_version)
+                !['process-governance-v4', 'process-governance-v5', 'process-governance-v6'].includes(data.schema_version)
                   || item.value_origin_mode !== 'depends_on_data'
                   || (Array.isArray(item.source_links) && item.source_links.length > 0),
                 `${formLabel}的字段${itemIndex + 1}选择依赖数据但未登记来源`,
@@ -1585,7 +1586,7 @@
                 ));
               }
             });
-            if (data.schema_version === 'process-governance-v5') {
+            if (['process-governance-v5', 'process-governance-v6'].includes(data.schema_version)) {
               (Array.isArray(item.source_links) ? item.source_links : []).forEach((link, linkIndex) => {
                 const externalSystemSource = link.source_type === 'external_system';
                 const sourceComplete = externalSystemSource

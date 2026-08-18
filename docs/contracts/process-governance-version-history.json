@@ -1,5 +1,5 @@
 {
-  "current_version": "process-governance-v5",
+  "current_version": "process-governance-v6",
   "versions": [
     {
       "version": "process-governance-v1",
@@ -30,6 +30,12 @@
       "released_on": "2026-08-17",
       "title": "跨部门行为表达简化",
       "summary": "跨部门属性由业务行为的执行部门确定，流程先后统一使用流程关系，数据传递和返回统一使用数据行为关系；字段取值来源可直接登记外部系统，不要求关联本流程行为；旧版跨部门记录只作为迁移档案保留。"
+    },
+    {
+      "version": "process-governance-v6",
+      "released_on": "2026-08-18",
+      "title": "无状态图编辑与无损迁移",
+      "summary": "流程关系图、数据关系图、属性面板和文字编制共用页面内存草稿；新增v1至v5及历史多候选输入的确定性迁移、图撤销重做、引用保护、同名数据受控归并、布局自动避让和评审对照图例。"
     }
   ]
 }

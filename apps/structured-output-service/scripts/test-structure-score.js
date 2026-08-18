@@ -140,7 +140,8 @@ function passingTechnical() {
   };
 }
 
-assert.equal(RULE.label, '结构化学习评分 v2（process-governance-v5）');
+assert.equal(RULE.id, 'structure-learning-score-v3');
+assert.equal(RULE.label, '结构化学习评分 v3（process-governance-v6）');
 assert.equal(
   RULE.dimensions.reduce((sum, item) => sum + item.max, 0),
   100,
@@ -151,7 +152,7 @@ assert.equal(
   15,
   'technical checks must total 15'
 );
-assert.equal(REVIEW_READINESS.id, 'process-review-readiness-v5');
+assert.equal(REVIEW_READINESS.id, 'process-review-readiness-v6');
 assert.deepEqual(
   REVIEW_READINESS.aspects.map(item => item.label),
   [

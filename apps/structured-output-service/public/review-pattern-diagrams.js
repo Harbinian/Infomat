@@ -213,6 +213,50 @@
         relation('r4', 'path-b', 'join', 'parallel', '', 'all'),
         relation('r5', 'join', 'next')
       ]
+    },
+    {
+      id: 'one-to-many-comparison',
+      title: '10. 一对多怎么表达：判断分支与并行开始',
+      badge: '对照',
+      tone: 'normal',
+      size: 'complex',
+      rule: '只选一条路线时使用判断节点和判断分支；同时启动多条路线时使用并行开始和多条独立并行关系。',
+      nodes: [
+        control('decision', '只选一路', 'decision'),
+        action('decision-a', '结果A'),
+        action('decision-b', '结果B'),
+        control('split', '同时启动', 'parallel_split'),
+        action('parallel-a', '路线A'),
+        action('parallel-b', '路线B')
+      ],
+      relations: [
+        relation('r1', 'decision', 'decision-a', 'condition', '条件A'),
+        relation('r2', 'decision', 'decision-b', 'condition', '条件B'),
+        relation('r3', 'split', 'parallel-a', 'parallel'),
+        relation('r4', 'split', 'parallel-b', 'parallel')
+      ]
+    },
+    {
+      id: 'many-to-one-comparison',
+      title: '11. 多对一怎么表达：普通汇合与并行汇合',
+      badge: '对照',
+      tone: 'normal',
+      size: 'complex',
+      rule: '多条普通关系进入普通行为只表示多个可能前序，不表示等待全部路线；必须等待全部路线时使用并行汇合。',
+      nodes: [
+        action('ordinary-a', '可能前序A'),
+        action('ordinary-b', '可能前序B'),
+        action('ordinary-next', '普通后续'),
+        action('parallel-a', '并行路线A'),
+        action('parallel-b', '并行路线B'),
+        control('join', '等待全部', 'parallel_join')
+      ],
+      relations: [
+        relation('r1', 'ordinary-a', 'ordinary-next'),
+        relation('r2', 'ordinary-b', 'ordinary-next'),
+        relation('r3', 'parallel-a', 'join', 'parallel'),
+        relation('r4', 'parallel-b', 'join', 'parallel')
+      ]
     }
   ];
 
@@ -228,11 +272,18 @@
     const selected = pattern && typeof pattern === 'object' ? pattern : {};
     const patternId = String(selected.id || 'unknown');
     return {
-      schema_version: 'process-governance-v3',
+      schema_version: 'process-governance-v6',
+      export_meta: {
+        package_ref: `review-pattern-package-${patternId}`,
+        exported_at: '1970-01-01T00:00:00.000Z',
+        initiating_department: EXAMPLE_DEPARTMENT,
+        compiler: '只读图例'
+      },
       process: {
         process_ref: `review-pattern-${patternId}`,
         process_name: String(selected.title || '流程评审图例'),
-        owning_department: EXAMPLE_DEPARTMENT
+        owning_department: EXAMPLE_DEPARTMENT,
+        purpose: '', scope: '', capability_domain: null, business_capability: null, classification_status: 'unclassified'
       },
       behaviors: (Array.isArray(selected.nodes) ? selected.nodes : []).map((node, index) => ({
         behavior_ref: `review-${patternId}-${node.ref || index + 1}`,
@@ -242,29 +293,31 @@
         current_actor_role: EXAMPLE_ROLE,
         actor_assignment_mode: 'fixed_department',
         actor_department_data_ref: null,
+        actor_position_rule: '',
         trigger: '',
         precondition: '',
+        timing: null,
         completion_standard: '',
         countersign_all_required: Boolean(node.countersign),
         countersign_target_departments: node.countersign ? ['示例部门甲', '示例部门乙'] : [],
         input_description: '',
-        output_description: '',
-        input_data_refs: [],
-        output_data_refs: [],
-        work_role: null
+        output_description: ''
       })),
       flow_relations: (Array.isArray(selected.relations) ? selected.relations : []).map((item, index) => ({
         relation_ref: `review-${patternId}-${item.ref || index + 1}`,
         from_behavior_ref: `review-${patternId}-${item.from}`,
         to_behavior_ref: `review-${patternId}-${item.to}`,
         relation_type: item.type || 'sequence',
-        condition: String(item.condition || ''),
-        join_mode: item.joinMode || null
+        condition: String(item.condition || '')
       })),
-      cross_department_handoffs: [],
-      internal_process_calls: [],
       data_objects: [],
-      forms: []
+      forms: [],
+      terms: [],
+      migration: {
+        source_schema_version: 'process-governance-v6', source_process_ref: null, source_process_count: 1,
+        legacy_cross_department_records: [], reference_materials: [], internal_process_calls: [], work_roles: [],
+        unresolved_actor_roles: [], unresolved_join_modes: []
+      }
     };
   }
 
@@ -276,6 +329,8 @@
       container: options.container,
       documentData: buildDocument(options.pattern),
       departmentOrder: [EXAMPLE_DEPARTMENT],
+      editable: false,
+      showAggregateBadges: false,
       cytoscape: options.cytoscape,
       onViewportModeChange: options.onViewportModeChange
     });
