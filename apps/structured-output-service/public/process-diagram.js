@@ -20,6 +20,7 @@
   const ALL_COMPANY_LANE = '__all_company__';
   const DYNAMIC_DEPARTMENT_LANE = '__dynamic_department__';
   const UNKNOWN_DEPARTMENT_LANE = '__unknown_department__';
+  const CONTROL_LANE = '__process_control__';
   const LANE_HEADER_WIDTH = 190;
   const LANE_MIN_HEIGHT = 154;
   const LANE_NODE_GAP = 36;
@@ -164,6 +165,68 @@
     return '';
   }
 
+  function compactCount(value) {
+    return value > 99 ? '99+' : String(value);
+  }
+
+  function aggregateBadges(data, behaviorRecords) {
+    const dataCounts = new Map();
+    items(data.data_objects).forEach(dataObject => {
+      items(dataObject.behavior_links).forEach(link => {
+        if (!dataCounts.has(link.behavior_ref)) dataCounts.set(link.behavior_ref, { create: 0, update: 0, use: 0, pending_confirmation: 0 });
+        const counts = dataCounts.get(link.behavior_ref);
+        if (Object.prototype.hasOwnProperty.call(counts, link.operation)) counts[link.operation] += 1;
+      });
+    });
+    const formCounts = new Map();
+    items(data.forms).forEach(form => {
+      unique(items(form.behavior_links).map(link => text(link.behavior_ref))).forEach(behaviorRef => {
+        formCounts.set(behaviorRef, (formCounts.get(behaviorRef) || 0) + 1);
+      });
+    });
+    const badges = [];
+    behaviorRecords.forEach(record => {
+      const behaviorRef = text(record.behavior.behavior_ref);
+      const counts = dataCounts.get(behaviorRef);
+      const dataTotal = counts ? Object.values(counts).reduce((sum, count) => sum + count, 0) : 0;
+      if (dataTotal) {
+        const label = `数据 创${compactCount(counts.create)} 更${compactCount(counts.update)} 用${compactCount(counts.use)}${counts.pending_confirmation ? ` ?${compactCount(counts.pending_confirmation)}` : ''}`;
+        badges.push({
+          group: 'nodes',
+          classes: 'aggregate-badge data-aggregate-badge',
+          data: {
+            id: `data-badge:${record.index}:${behaviorRef}`,
+            label,
+            focusKind: 'data-badge',
+            focusRef: behaviorRef
+          },
+          position: {
+            x: record.node.position.x - record.node.data.nodeWidth / 2 + 74,
+            y: record.node.position.y + record.node.data.nodeHeight / 2 - 7
+          }
+        });
+      }
+      const formCount = formCounts.get(behaviorRef) || 0;
+      if (formCount) {
+        badges.push({
+          group: 'nodes',
+          classes: 'aggregate-badge form-aggregate-badge',
+          data: {
+            id: `form-badge:${record.index}:${behaviorRef}`,
+            label: `表单 ${compactCount(formCount)}`,
+            focusKind: 'form-badge',
+            focusRef: behaviorRef
+          },
+          position: {
+            x: record.node.position.x + record.node.data.nodeWidth / 2 - 54,
+            y: record.node.position.y + record.node.data.nodeHeight / 2 - 7
+          }
+        });
+      }
+    });
+    return badges;
+  }
+
   function internalCallLabel(call) {
     return [
       '内部流程调用',
@@ -178,6 +241,17 @@
   }
 
   function actorPlacement(behavior, departmentOrder, dataNameByRef) {
+    if (['decision', 'parallel_split', 'parallel_join'].includes(text(behavior?.node_type))) {
+      return {
+        laneKey: CONTROL_LANE,
+        laneLabel: '流程控制',
+        subtitle: '流程控制，不代表执行部门',
+        recognized: true,
+        raw: '',
+        dynamic: false,
+        control: true
+      };
+    }
     const assignmentMode = actorAssignmentMode(behavior);
     const raw = text(behavior?.current_actor_role);
     if (assignmentMode === 'dynamic_from_data') {
@@ -361,6 +435,7 @@
   function buildLaneOrder(usedLaneKeys, owningDepartment, departmentOrder) {
     const used = new Set(usedLaneKeys);
     const ordered = [];
+    if (used.has(CONTROL_LANE)) ordered.push(CONTROL_LANE);
     if (owningDepartment && used.has(owningDepartment)) ordered.push(owningDepartment);
     departmentOrder.forEach(department => {
       if (used.has(department) && !ordered.includes(department)) ordered.push(department);
@@ -371,6 +446,7 @@
         && key !== ALL_COMPANY_LANE
         && key !== DYNAMIC_DEPARTMENT_LANE
         && key !== UNKNOWN_DEPARTMENT_LANE
+        && key !== CONTROL_LANE
       )
       .sort((left, right) => left.localeCompare(right, 'zh-CN'))
       .forEach(key => ordered.push(key));
@@ -381,13 +457,14 @@
   }
 
   function laneDisplayName(laneKey) {
+    if (laneKey === CONTROL_LANE) return '流程控制\n不代表执行部门';
     if (laneKey === ALL_COMPANY_LANE) return '全公司通用';
     if (laneKey === DYNAMIC_DEPARTMENT_LANE) return '运行时责任部门';
     if (laneKey === UNKNOWN_DEPARTMENT_LANE) return '执行部门待明确';
     return laneKey;
   }
 
-  function allocateRelationRoutes(validRelations, behaviorRecordById, rankById) {
+  function allocateRelationRoutes(validRelations, behaviorRecordById, rankById, routeTrackGap = ROUTE_TRACK_GAP) {
     const outgoingCount = new Map();
     const endpointCount = new Map();
     validRelations.forEach(item => {
@@ -468,14 +545,14 @@
             state.nextOffset + labelDisplay.labelHeight / 2
           );
           state.count = routeSlot;
-          state.nextOffset = routeOffset + labelDisplay.labelHeight / 2 + ROUTE_TRACK_GAP;
+          state.nextOffset = routeOffset + labelDisplay.labelHeight / 2 + routeTrackGap;
           trackStateByBucket.set(routeBucket, state);
           if (sameLane) {
             const laneKey = sourceRecord.node.data.laneKey;
             const reserve = laneReserves.get(laneKey) || { upper: 0, lower: 0 };
             reserve[routePlacement] = Math.max(
               reserve[routePlacement],
-              routeOffset + labelDisplay.labelHeight / 2 + ROUTE_TRACK_GAP
+              routeOffset + labelDisplay.labelHeight / 2 + routeTrackGap
             );
             laneReserves.set(laneKey, reserve);
           }
@@ -621,6 +698,10 @@
 
   function buildGraphModel(documentData, options = {}) {
     const data = documentData && typeof documentData === 'object' ? documentData : {};
+    const collisionPass = Math.max(0, Math.min(6, Number(options.__collisionPass) || 0));
+    const laneNodeGap = LANE_NODE_GAP + collisionPass * 28;
+    const minColumnGap = MIN_COLUMN_GAP + collisionPass * 72;
+    const routeTrackGap = ROUTE_TRACK_GAP + collisionPass * 18;
     const owningDepartment = text(data.process?.owning_department);
     const departmentOrder = unique([
       owningDepartment,
@@ -653,6 +734,7 @@
       const rawLabel = behaviorLabel(behavior, placement);
       const display = nodeDisplayMetrics(rawLabel, behaviorClass(nodeType));
       const crossDepartment = actorAssignmentMode(behavior) === 'fixed_department'
+        && !placement.control
         && Boolean(owningDepartment)
         && placement.recognized
         && placement.laneKey !== owningDepartment;
@@ -826,7 +908,8 @@
     const laneRouteReserves = allocateRelationRoutes(
       validRelations,
       behaviorRecordById,
-      rankById
+      rankById,
+      routeTrackGap
     );
     const positionedNodes = [
       ...behaviorRecords.map(record => record.node),
@@ -848,7 +931,7 @@
     rankPositions[0] = LANE_HEADER_WIDTH + 48 + rankHalfWidths[0];
     for (let rank = 1; rank <= maxRank; rank += 1) {
       const centerGap = Math.max(
-        MIN_COLUMN_GAP,
+        minColumnGap,
         rankHalfWidths[rank - 1]
           + rankHalfWidths[rank]
           + EDGE_LABEL_MAX_WIDTH
@@ -881,7 +964,7 @@
         stackHeightByRank.set(
           rank,
           rankNodes.reduce((sum, node) => sum + (node.data.nodeHeight || 90), 0)
-            + Math.max(0, rankNodes.length - 1) * LANE_NODE_GAP
+            + Math.max(0, rankNodes.length - 1) * laneNodeGap
         );
       });
       const contentHeight = Math.max(90, ...stackHeightByRank.values());
@@ -957,7 +1040,7 @@
             x: rankPositions[rank],
             y: nodeTop + nodeHeight / 2
           };
-          nodeTop += nodeHeight + LANE_NODE_GAP;
+          nodeTop += nodeHeight + laneNodeGap;
         });
       });
       laneTop += laneHeight;
@@ -1004,11 +1087,19 @@
       });
     });
     nodes.push(...countersignBadges);
+    if (options.showAggregateBadges !== false) nodes.push(...aggregateBadges(data, behaviorRecords));
 
     const layoutNodes = nodes.filter(node =>
       node.position && Number.isFinite(node.data.nodeWidth) && Number.isFinite(node.data.nodeHeight)
     );
     const layoutCollisions = findLayoutCollisions(layoutNodes, localRelationEdges);
+
+    if (layoutCollisions.length && collisionPass < 6) {
+      return buildGraphModel(documentData, {
+        ...options,
+        __collisionPass: collisionPass + 1
+      });
+    }
 
     return {
       nodes,
@@ -1032,7 +1123,8 @@
           trackKey: edge.data.routeTrackKey,
           labelBounds: edge.data.labelBounds
         })),
-        collisions: layoutCollisions
+        collisions: layoutCollisions,
+        iterations: collisionPass
       },
       viewportSuggestion: {
         fullViewMinZoom: FULL_VIEW_MIN_ZOOM,
@@ -1212,6 +1304,36 @@
           'overlay-opacity': 0,
           'z-index': 30,
           'z-index-compare': 'manual'
+        }
+      },
+      {
+        selector: '.aggregate-badge',
+        style: {
+          width: 112,
+          height: 26,
+          shape: 'round-rectangle',
+          'background-color': '#edf2ea',
+          'border-width': 1,
+          'border-color': '#71826c',
+          color: '#34413a',
+          label: 'data(label)',
+          'font-family': '"Microsoft YaHei", "PingFang SC", sans-serif',
+          'font-size': 11,
+          'font-weight': 700,
+          'text-valign': 'center',
+          'text-halign': 'center',
+          'overlay-opacity': 0,
+          'z-index': 31,
+          'z-index-compare': 'manual'
+        }
+      },
+      {
+        selector: '.form-aggregate-badge',
+        style: {
+          width: 78,
+          'background-color': '#e8eef4',
+          'border-color': '#6f8193',
+          color: '#314455'
         }
       },
       {
@@ -1409,7 +1531,8 @@
       || (typeof globalThis !== 'undefined' ? globalThis.cytoscape : null);
     if (typeof cytoscapeFactory !== 'function') throw new Error('流程图组件未加载。');
     const model = buildGraphModel(options.documentData, {
-      departmentOrder: options.departmentOrder
+      departmentOrder: options.departmentOrder,
+      showAggregateBadges: options.showAggregateBadges
     });
     const cy = cytoscapeFactory({
       container,
@@ -1421,21 +1544,28 @@
         animate: false
       },
       autoungrabify: true,
-      autounselectify: true,
+      autounselectify: options.editable !== true,
       boxSelectionEnabled: false,
       userPanningEnabled: true,
       userZoomingEnabled: true,
       minZoom: 0.03,
       maxZoom: 1.8
     });
-    cy.on('tap', '.behavior-node, .internal-call-node, .external-node, .countersign-badge, edge', event => {
+    cy.on('tap', '.behavior-node, .internal-call-node, .external-node, .countersign-badge, .aggregate-badge, edge', event => {
       const element = event.target;
       const focusKind = element.data('focusKind');
       const focusRef = element.data('focusRef');
       if (focusKind && typeof options.onFocus === 'function') options.onFocus(focusKind, focusRef);
     });
     cy.ready(() => {
-      const viewport = showInitialViewport(cy, model);
+      let viewport;
+      if (options.viewport && Number.isFinite(options.viewport.zoom) && options.viewport.pan) {
+        cy.zoom(options.viewport.zoom);
+        cy.pan(options.viewport.pan);
+        viewport = { mode: 'restored', fullFitZoom: options.viewport.zoom };
+      } else {
+        viewport = showInitialViewport(cy, model);
+      }
       if (typeof options.onViewportModeChange === 'function') {
         options.onViewportModeChange(viewport);
       }
@@ -1462,6 +1592,15 @@
         }
         return viewport;
       },
+      viewport() {
+        return { zoom: cy.zoom(), pan: cy.pan() };
+      },
+      restore(viewport) {
+        if (!viewport || !Number.isFinite(viewport.zoom) || !viewport.pan) return this.reset();
+        cy.zoom(viewport.zoom);
+        cy.pan(viewport.pan);
+        return { mode: 'restored', fullFitZoom: viewport.zoom };
+      },
       destroy() {
         cy.destroy();
       }
@@ -1470,6 +1609,8 @@
 
   return {
     buildGraphModel,
+    wrapDisplayText,
+    nodeDisplayMetrics,
     mount
   };
 });
