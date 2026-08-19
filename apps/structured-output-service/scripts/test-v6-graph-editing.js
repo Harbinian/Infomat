@@ -308,6 +308,10 @@ function medianDuration(run, samples = 3) {
 
 function testDiagramModelsAndPerformance() {
   const documentValue = Migration.migrateDocument(v5Fixture())[0];
+  const useOnlyModel = DataDiagram.buildModel(documentValue, 'data-application');
+  const useOnlyDataNode = useOnlyModel.nodes.find(node => node.data.kind === 'data');
+  const useOnlyBehaviorNode = useOnlyModel.nodes.find(node => node.data.ref === 'behavior-review');
+  assert.ok(useOnlyBehaviorNode.position.x > useOnlyDataNode.position.x, 'a use-only behavior must be right of the data object');
   documentValue.data_objects[0].behavior_links.push({ link_ref: 'link-update', behavior_ref: 'behavior-review', operation: 'update' });
   const dataModel = DataDiagram.buildModel(documentValue, 'data-application');
   assert.equal(dataModel.edges.length, 2);
@@ -315,6 +319,25 @@ function testDiagramModelsAndPerformance() {
   assert.equal(reviewEdge.data.arrowMode, 'both');
   assert.match(reviewEdge.data.label, /更新/);
   assert.match(reviewEdge.data.label, /使用/);
+  const dataNode = dataModel.nodes.find(node => node.data.kind === 'data');
+  const createBehaviorNode = dataModel.nodes.find(node => node.data.ref === 'behavior-apply');
+  const useBehaviorNode = dataModel.nodes.find(node => node.data.ref === 'behavior-review');
+  assert.ok(createBehaviorNode.position.x < dataNode.position.x, 'a behavior that creates data must be left of the data object');
+  assert.ok(useBehaviorNode.position.x > dataNode.position.x, 'a mixed-operation behavior that uses data must be right of the data object');
+
+  const fanOutDocument = clone(documentValue);
+  fanOutDocument.behaviors.push(
+    behavior('behavior-use-second', '整理未完成事项'),
+    behavior('behavior-use-third', '整理月度绩效')
+  );
+  fanOutDocument.data_objects[0].behavior_links.push(
+    { link_ref: 'link-use-second', behavior_ref: 'behavior-use-second', operation: 'use' },
+    { link_ref: 'link-use-third', behavior_ref: 'behavior-use-third', operation: 'use' }
+  );
+  const fanOutModel = DataDiagram.buildModel(fanOutDocument, 'data-application');
+  const useFanOutEdges = fanOutModel.edges.filter(edge => edge.data.operations.includes('use'));
+  assert.equal(useFanOutEdges.length, 3);
+  assert.ok(useFanOutEdges.every(edge => edge.data.curveStyle === 'straight'), 'one-to-many use edges must fan out directly instead of sharing a taxi turn through sibling nodes');
   const badgeModel = ProcessDiagram.buildGraphModel(documentValue);
   assert.ok(badgeModel.nodes.some(node => node.classes?.includes('data-aggregate-badge')), 'behavior data badge should be present');
 

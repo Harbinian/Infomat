@@ -475,6 +475,62 @@
       line-height: 1.55;
     }
 
+    .data-relation-legend-title {
+      display: block;
+      margin-bottom: 10px;
+      color: #35362f;
+      font-family: "SimSun", serif;
+      font-size: 15px;
+    }
+
+    .data-relation-legend .diagram-legend-list {
+      grid-template-columns: repeat(6, minmax(118px, 1fr));
+    }
+
+    .data-legend-node {
+      display: inline-flex;
+      flex: 0 0 auto;
+      align-items: center;
+      justify-content: center;
+      width: 42px;
+      height: 26px;
+      border: 2px solid #8e9f86;
+      border-radius: 7px;
+      color: #3e4b3e;
+      background: #fffdf7;
+      font-size: 10px;
+      font-weight: 800;
+    }
+
+    .data-legend-node.data {
+      border-width: 3px;
+      border-color: #a27732;
+      color: #76531c;
+      background: #f4ead1;
+    }
+
+    .data-legend-edge {
+      display: inline-grid;
+      flex: 0 0 auto;
+      grid-template-columns: 20px 25px 20px;
+      align-items: center;
+      justify-content: center;
+      color: #5b625d;
+      font-size: 9px;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .data-legend-edge b {
+      color: #526856;
+      font-size: 18px;
+      line-height: 1;
+    }
+
+    .data-legend-edge.pending b {
+      color: #746f64;
+    }
+
     .diagram-legend-example {
       margin-top: 10px;
       padding: 11px;
@@ -3420,14 +3476,14 @@
         </section>`;
     }
 
-    function ensureActiveDataObject() {
+    function ensureActiveGraphDataObject() {
       const dataObjects = currentDocument()?.data_objects || [];
       if (!dataObjects.some(item => item.data_ref === activeDataRef)) activeDataRef = dataObjects[0]?.data_ref || '';
       return dataObjects.find(item => item.data_ref === activeDataRef) || null;
     }
 
     function renderDataPropertyPanel() {
-      const dataObject = ensureActiveDataObject();
+      const dataObject = ensureActiveGraphDataObject();
       if (!dataObject) return '<div class="graph-property-empty">新增数据对象后，可以围绕它建立直接数据关系。</div>';
       const selection = graphSelection;
       if (selection?.kind === 'data-behavior-choice' && selection.dataRef === dataObject.data_ref) {
@@ -3474,7 +3530,7 @@
     }
 
     function renderDataDiagramPanel() {
-      const dataObject = ensureActiveDataObject();
+      const dataObject = ensureActiveGraphDataObject();
       const history = graphHistoryState();
       const sameNameCount = dataObject
         ? currentDocument().data_objects.filter(item => item.data_ref !== dataObject.data_ref && text(item.data_name).trim() === text(dataObject.data_name).trim() && text(item.data_name).trim()).length
@@ -3485,7 +3541,7 @@
             <div class="diagram-toolbar">
               <div>
                 <h2>数据关系</h2>
-                <p>一次只围绕一个数据对象显示直接关联行为。创建：行为→数据；更新：行为↔数据；使用：数据→行为；待确认：问号。</p>
+                <p>一次只围绕一个数据对象显示直接关联行为；图例中的箭头说明业务行为与数据对象之间的操作方向。</p>
               </div>
               <div class="diagram-controls">
                 <button class="button primary small" data-action="add-graph-data">新增数据</button>
@@ -3494,6 +3550,36 @@
                 <button class="button small" data-action="redo-graph" ${history.canRedo ? '' : 'disabled'}>重做</button>
                 ${renderGraphViewActions('data')}
               </div>
+            </div>
+            <div class="diagram-legend-shell data-relation-legend" aria-label="数据关系图图例">
+              <strong class="data-relation-legend-title">数据关系图图例</strong>
+              <div class="diagram-legend-list" role="list">
+                <div class="diagram-legend-item" role="listitem">
+                  <span class="data-legend-node" aria-hidden="true">行为</span>
+                  <span class="diagram-legend-copy"><strong>业务行为</strong><small>执行数据操作的只读端点</small></span>
+                </div>
+                <div class="diagram-legend-item" role="listitem">
+                  <span class="data-legend-node data" aria-hidden="true">数据</span>
+                  <span class="diagram-legend-copy"><strong>数据对象</strong><small>当前查看和维护的数据</small></span>
+                </div>
+                <div class="diagram-legend-item" role="listitem">
+                  <span class="data-legend-edge" aria-hidden="true"><span>行为</span><b>→</b><span>数据</span></span>
+                  <span class="diagram-legend-copy"><strong>创建</strong><small>业务行为 → 数据对象</small></span>
+                </div>
+                <div class="diagram-legend-item" role="listitem">
+                  <span class="data-legend-edge" aria-hidden="true"><span>行为</span><b>↔</b><span>数据</span></span>
+                  <span class="diagram-legend-copy"><strong>更新</strong><small>业务行为 ↔ 数据对象</small></span>
+                </div>
+                <div class="diagram-legend-item" role="listitem">
+                  <span class="data-legend-edge" aria-hidden="true"><span>数据</span><b>→</b><span>行为</span></span>
+                  <span class="diagram-legend-copy"><strong>使用</strong><small>数据对象 → 业务行为</small></span>
+                </div>
+                <div class="diagram-legend-item" role="listitem">
+                  <span class="data-legend-edge pending" aria-hidden="true"><span>行为</span><b>?</b><span>数据</span></span>
+                  <span class="diagram-legend-copy"><strong>待确认</strong><small>操作和方向尚未确认</small></span>
+                </div>
+              </div>
+              <p class="diagram-reading-tip">包含“使用”操作的业务行为显示在数据对象右侧，其他直接关联行为显示在左侧。箭头方向表示数据由业务行为创建，或由数据对象流向使用它的业务行为；双向箭头表示业务行为更新数据。“待确认”表示当前记录尚未确认操作和方向。</p>
             </div>
             <div class="data-focus-selector">
               <label>当前数据对象
@@ -3662,7 +3748,7 @@
 
     function mountDataDiagram() {
       destroyDataDiagram();
-      if (activeWorkspaceTab !== 'data' || !ensureActiveDataObject()) return;
+      if (activeWorkspaceTab !== 'data' || !ensureActiveGraphDataObject()) return;
       const container = document.getElementById('dataRelationDiagramCanvas');
       const failure = document.getElementById('dataDiagramFailure');
       if (!container) return;
@@ -3690,7 +3776,7 @@
                 operations: text(item.operations).split(',').filter(Boolean)
               };
             } else {
-              const dataObject = ensureActiveDataObject();
+              const dataObject = ensureActiveGraphDataObject();
               graphSelection = dataObject ? { kind: 'data', ref: dataObject.data_ref, draft: clone(dataObject) } : null;
             }
             render();
@@ -3861,7 +3947,7 @@
       entry.data = result.document;
       refreshCandidateDirty(entry);
       graphSelection = null;
-      ensureActiveDataObject();
+      ensureActiveGraphDataObject();
       render();
       showStatus(direction === 'undo' ? '已撤销上一次图操作。' : '已重做上一次图操作。', 'success');
       refreshValidationAfterGraphCommand(result.document);
@@ -3888,7 +3974,7 @@
     }
 
     async function mergeCurrentDataObjects() {
-      const keep = ensureActiveDataObject();
+      const keep = ensureActiveGraphDataObject();
       if (!keep) return;
       const removing = currentDocument().data_objects.filter(item => item.data_ref !== keep.data_ref && text(item.data_name).trim() === text(keep.data_name).trim());
       const preview = globalThis.GraphEditCommands.mergePreview(currentDocument(), keep.data_ref, removing.map(item => item.data_ref));
@@ -6158,13 +6244,13 @@
         return render();
       }
       if (action === 'cancel-data-relation') {
-        const item = ensureActiveDataObject();
+        const item = ensureActiveGraphDataObject();
         graphSelection = item ? { kind: 'data', ref: item.data_ref, draft: clone(item) } : null;
         return render();
       }
       if (action === 'continue-data-relation') {
         if (!graphSelection?.behaviorRef) return;
-        const dataObject = ensureActiveDataObject();
+        const dataObject = ensureActiveGraphDataObject();
         graphSelection = {
           kind: 'data-edge',
           dataRef: dataObject.data_ref,
@@ -7419,7 +7505,7 @@
       if (target.matches('[data-graph-data-focus]')) {
         captureGraphViewport();
         activeDataRef = target.value;
-        const item = ensureActiveDataObject();
+        const item = ensureActiveGraphDataObject();
         graphSelection = item ? { kind: 'data', ref: item.data_ref, draft: clone(item) } : null;
         graphStateManager.updateView(candidateStateKey(), { data: { dataRef: activeDataRef, zoom: null, pan: null } });
         render();

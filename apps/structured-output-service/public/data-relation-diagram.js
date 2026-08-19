@@ -48,8 +48,18 @@
       if (leftOperation !== rightOperation) return leftOperation - rightOperation;
       return behaviorIndex.get(left[0]).index - behaviorIndex.get(right[0]).index;
     });
+    const relatedBySide = { left: [], right: [] };
+    related.forEach(entry => {
+      const side = entry[1].includes('use') ? 'right' : 'left';
+      relatedBySide[side].push(entry);
+    });
     const rowSpacing = 108;
-    const totalHeight = Math.max(0, (related.length - 1) * rowSpacing);
+    const maxSideRows = Math.max(relatedBySide.left.length, relatedBySide.right.length, 1);
+    const totalHeight = Math.max(0, (maxSideRows - 1) * rowSpacing);
+    const sideStartY = {
+      left: 140 + (maxSideRows - relatedBySide.left.length) * rowSpacing / 2,
+      right: 140 + (maxSideRows - relatedBySide.right.length) * rowSpacing / 2
+    };
     const nodes = [{
       data: {
         id: `data:${selected.data_ref}`,
@@ -58,13 +68,17 @@
         label: wrap(selected.data_name, 11),
         subtitle: '当前数据对象'
       },
-      position: { x: 520, y: 140 + totalHeight / 2 }
+      position: { x: 420, y: 140 + totalHeight / 2 }
     }];
     const edges = [];
     const operationCounts = {};
-    related.forEach(([behaviorRef, operations], index) => {
+    const sideIndexes = { left: 0, right: 0 };
+    related.forEach(([behaviorRef, operations]) => {
+      const side = operations.includes('use') ? 'right' : 'left';
+      const sideIndex = sideIndexes[side];
+      sideIndexes[side] += 1;
       const behavior = behaviorIndex.get(behaviorRef).item;
-      const y = 140 + index * rowSpacing;
+      const y = sideStartY[side] + sideIndex * rowSpacing;
       nodes.push({
         data: {
           id: `behavior:${behaviorRef}`,
@@ -73,7 +87,7 @@
           label: wrap(behavior.behavior_name, 11),
           subtitle: behavior.node_type === 'action' ? '业务行为（只读端点）' : '流程节点（只读端点）'
         },
-        position: { x: 120, y }
+        position: { x: side === 'right' ? 720 : 120, y }
       });
       const ordered = OPERATION_ORDER.filter(operation => operations.includes(operation));
       ordered.forEach(operation => { operationCounts[operation] = (operationCounts[operation] || 0) + 1; });
@@ -87,6 +101,7 @@
           kind: 'data-relation',
           label: ordered.map(operation => OPERATION_LABEL[operation] || operation).join(' / '),
           operations: ordered.join(','),
+          curveStyle: 'straight',
           arrowMode: ordered.includes('pending_confirmation') ? 'pending'
             : ordered.includes('update') || (ordered.includes('create') && ordered.includes('use')) ? 'both'
               : onlyCreate ? 'forward'
@@ -147,9 +162,7 @@
         style: {
           width: 2.5,
           'line-color': '#657866',
-          'curve-style': 'taxi',
-          'taxi-direction': 'horizontal',
-          'taxi-turn': 72,
+          'curve-style': 'data(curveStyle)',
           'target-arrow-shape': 'triangle',
           'target-arrow-color': '#657866',
           'source-arrow-shape': 'none',
