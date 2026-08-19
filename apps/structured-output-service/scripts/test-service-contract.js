@@ -29,6 +29,7 @@ const legacySchemaPath = path.join(repoRoot, 'docs', 'contracts', 'document-stru
 const Migration = require(path.join(appRoot, 'public', 'process-governance-migration.js'));
 const { buildGraphModel } = require(processDiagramPath);
 const ReviewPatternDiagrams = require(reviewPatternDiagramsPath);
+const StructureScore = require(structureScorePath);
 
 function createDraft(overrides = {}) {
   const behavior = {
@@ -1267,6 +1268,11 @@ async function testFrontendContract() {
   assert.ok(html.includes('<script src="graph-edit-commands.js"></script>'));
   assert.ok(html.includes('<script src="graph-editor-state.js"></script>'));
   assert.ok(html.includes('<script src="data-relation-diagram.js"></script>'));
+  assert.ok(html.includes('aria-label="数据关系图图例"'));
+  assert.ok(html.includes('<small>业务行为 → 数据对象</small>'));
+  assert.ok(html.includes('<small>业务行为 ↔ 数据对象</small>'));
+  assert.ok(html.includes('<small>数据对象 → 业务行为</small>'));
+  assert.ok(html.includes('<small>操作和方向尚未确认</small>'));
   assert.ok(html.includes('${optionHtml(RELATION_TYPES, flowRelationDraft.relation_type)}'));
   assert.equal(html.includes('RELATION_TYPES.filter(item => item.value), flowRelationDraft.relation_type'), false);
   assert.equal(html.includes('function testFrontendContractLegacy'), false);
@@ -1294,6 +1300,61 @@ async function testFrontendContract() {
   assert.equal(structureScoreSource.includes('cross_department_handoffs'), false);
   assert.equal(/localStorage|sessionStorage|indexedDB|document\.cookie|\/api\/session/.test(html), false);
   assert.match(serverSource, /const HOST = process\.env\.STRUCTURED_OUTPUT_HOST \|\| '0\.0\.0\.0';/);
+  assert.equal(
+    (html.match(/function ensureActiveDataObject\(\)/g) || []).length,
+    1,
+    'the text editor data selector must not be shadowed by the graph data selector'
+  );
+  assert.equal(
+    (html.match(/function ensureActiveGraphDataObject\(\)/g) || []).length,
+    1,
+    'the data graph must use its own active-data selector'
+  );
+
+  const behaviorDataSummarySource = html.slice(
+    html.indexOf('    function behaviorDataSummary(behaviorRef, flowDetails = currentDataFlowDetails()) {'),
+    html.indexOf('    function renderBehaviorDerivedSummary(', html.indexOf('    function behaviorDataSummary(behaviorRef, flowDetails = currentDataFlowDetails()) {'))
+  );
+  const behaviorDataSummaryDocument = {
+    schema_version: 'process-governance-v6',
+    behaviors: [
+      { behavior_ref: 'behavior-create', actor_assignment_mode: 'fixed_department' },
+      { behavior_ref: 'behavior-use', actor_assignment_mode: 'fixed_department' }
+    ],
+    flow_relations: [{
+      relation_ref: 'relation-data-summary',
+      relation_type: 'sequence',
+      from_behavior_ref: 'behavior-create',
+      to_behavior_ref: 'behavior-use',
+      condition: ''
+    }],
+    data_objects: [{
+      data_ref: 'data-summary',
+      data_name: '测试数据对象',
+      behavior_links: [
+        { link_ref: 'data-link-create', behavior_ref: 'behavior-create', operation: 'create' },
+        { link_ref: 'data-link-use', behavior_ref: 'behavior-use', operation: 'use' }
+      ],
+      source_relations: []
+    }],
+    forms: []
+  };
+  const behaviorDataSummaryContext = {
+    currentDocument: () => behaviorDataSummaryDocument,
+    currentDataFlowDetails: () => StructureScore.dataFlowConsistencyDetails(behaviorDataSummaryDocument),
+    text: value => value == null ? '' : String(value),
+    isDynamicActorBehavior: () => false,
+    FORM_OPERATIONS: []
+  };
+  vm.runInNewContext(
+    `${behaviorDataSummarySource}\nthis.behaviorDataSummaryForTest = behaviorDataSummary;`,
+    behaviorDataSummaryContext
+  );
+  assert.deepEqual(
+    Array.from(behaviorDataSummaryContext.behaviorDataSummaryForTest('behavior-use').inputs),
+    ['测试数据对象'],
+    'the process-step summary must resolve data objects linked with operation=use'
+  );
 
   const behaviorOptionsSource = html.slice(
     html.indexOf('    function behaviorOptions(includeEmpty = false) {'),
