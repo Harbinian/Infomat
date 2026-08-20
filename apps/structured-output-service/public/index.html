@@ -76,6 +76,69 @@
 
     .main-column { min-width: 0; }
 
+    .governance-header {
+      position: sticky;
+      z-index: 40;
+      top: 10px;
+      display: grid;
+      gap: 10px;
+      margin-bottom: 12px;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255, 252, 243, 0.97);
+      box-shadow: var(--shadow);
+    }
+
+    .governance-header-main,
+    .governance-header-actions,
+    .governance-context,
+    .step-view-switch,
+    .start-actions,
+    .handoff-actions {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .governance-header-main { justify-content: space-between; gap: 14px; }
+    .governance-current { display: grid; flex: 1 1 430px; min-width: 0; gap: 5px; }
+    .governance-current label { color: var(--muted); font-size: 12px; font-weight: 700; }
+    .governance-current select { min-width: min(430px, 100%); max-width: 560px; }
+    .governance-context { color: var(--muted); font-size: 12px; }
+    .context-badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 26px;
+      padding: 3px 8px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #f7f1e5;
+      font-weight: 700;
+    }
+    .context-badge.version { color: #fff; border-color: var(--blue); background: var(--blue); }
+    .context-badge.dirty { color: #7b2f27; border-color: #c18a7d; background: var(--red-soft); }
+    .context-badge.ready { color: #40543b; border-color: #91a38a; background: var(--sage-soft); }
+    .header-menu { position: relative; }
+    .header-menu > summary { list-style: none; }
+    .header-menu > summary::-webkit-details-marker { display: none; }
+    .header-menu-panel {
+      position: absolute;
+      z-index: 60;
+      top: calc(100% + 6px);
+      right: 0;
+      display: grid;
+      width: min(360px, 72vw);
+      gap: 8px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fffaf0;
+      box-shadow: var(--shadow);
+    }
+    .header-menu-panel .button { width: 100%; text-align: left; }
+
     .sidebar-brand h1 {
       margin: 7px 0 0;
       font-family: "SimSun", "STSong", serif;
@@ -256,9 +319,9 @@
     }
 
     .workspace-tab {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+      display: grid;
+      grid-template-columns: 28px minmax(0, 1fr) auto;
+      align-items: start;
       gap: 8px;
       width: 100%;
       min-height: 40px;
@@ -270,6 +333,22 @@
       font-weight: 700;
       text-align: left;
     }
+
+    .step-number {
+      display: grid;
+      place-items: center;
+      width: 25px;
+      height: 25px;
+      border-radius: 50%;
+      color: #655b4a;
+      background: var(--paper-deep);
+      font-size: 12px;
+    }
+    .workspace-tab.active .step-number { color: var(--red); background: #fff; }
+    .step-copy { min-width: 0; }
+    .step-label { display: block; }
+    .step-responsibility { display: block; margin-top: 3px; font-size: 11px; font-weight: 400; line-height: 1.45; }
+    .workspace-tab.active .step-responsibility { color: rgba(255, 255, 255, 0.88); }
 
     .workspace-tab:hover { color: var(--ink); background: var(--paper-deep); }
     .workspace-tab.active { color: #fff; background: var(--red); }
@@ -286,6 +365,79 @@
     .workspace-tab:not(.active) .tab-status.warning { color: #7b2f27; background: var(--red-soft); }
     .workspace-tab:not(.active) .tab-status.waiting { color: var(--muted); background: #f4f0e7; }
     .tab-panel[hidden] { display: none; }
+
+    .step-intro {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 14px;
+      align-items: center;
+      margin-bottom: 12px;
+      padding: 14px 16px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(255, 252, 243, 0.9);
+    }
+    .step-intro h2 { margin: 0 0 5px; font-family: "SimSun", serif; font-size: 22px; }
+    .step-intro p { margin: 0; color: var(--muted); line-height: 1.65; }
+    .primary-guidance { max-width: 360px; padding: 9px 11px; border-left: 4px solid var(--gold); background: #f7edda; font-size: 13px; }
+    .step-view-switch { margin-bottom: 12px; }
+    .step-view-button.active { color: #fff; border-color: var(--blue); background: var(--blue); }
+
+    .start-hero {
+      display: grid;
+      gap: 18px;
+      padding: clamp(22px, 4vw, 46px);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(255, 252, 243, 0.94);
+      box-shadow: var(--shadow);
+    }
+    .start-hero h2 { margin: 0; font-family: "SimSun", serif; font-size: clamp(26px, 3vw, 38px); }
+    .start-hero > p { max-width: 820px; margin: 0; color: var(--muted); font-size: 15px; line-height: 1.8; }
+    .governance-flow-grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(130px, 1fr));
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+    .governance-flow-card { min-width: 130px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: #fffaf0; }
+    .governance-flow-card strong { display: block; margin-bottom: 6px; }
+    .governance-flow-card p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
+
+    .governance-drawer-backdrop {
+      position: fixed;
+      z-index: 110;
+      inset: 0;
+      display: none;
+      justify-content: flex-end;
+      background: rgba(37, 31, 23, 0.36);
+    }
+    .governance-drawer-backdrop.show { display: flex; }
+    .governance-drawer {
+      width: min(620px, 92vw);
+      height: 100%;
+      padding: 22px;
+      overflow-y: auto;
+      border-left: 1px solid var(--line);
+      background: #fffaf0;
+      box-shadow: -18px 0 50px rgba(37, 31, 23, 0.22);
+    }
+    .governance-drawer-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+    .governance-drawer h2 { margin: 0; font-family: "SimSun", serif; }
+    .governance-drawer-list { display: grid; gap: 10px; margin-top: 18px; }
+    .governance-drawer-card { padding: 13px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+    .governance-drawer-card p { margin: 6px 0 0; color: var(--muted); line-height: 1.65; }
+
+    .skeleton-list-layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 12px; }
+    .skeleton-list { display: grid; gap: 8px; }
+    .skeleton-list-button { width: 100%; text-align: left; }
+    .cross-department-list { display: grid; gap: 10px; }
+    .cross-department-card { padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: #fffaf0; }
+    .cross-department-card h3 { margin: 0 0 7px; }
+    .cross-department-card p { margin: 4px 0; color: var(--muted); line-height: 1.6; }
+    .download-result { display: grid; gap: 8px; margin-top: 12px; padding: 14px; border: 1px solid #91a38a; border-radius: 10px; background: #e8efe4; }
+    .download-result code { overflow-wrap: anywhere; }
 
     .editor-navigation,
     .process-navigation {
@@ -1995,7 +2147,7 @@
 
     body::before {
       display: none;
-      content: "当前浏览器内容可视区较窄。3001保留桌面布局；文字编制和合法导出仍可使用。";
+      content: "当前浏览器内容可视区较窄。3001保留桌面布局；字段编辑和合法下载仍可使用。";
     }
 
     @media (max-width: 1599px) {
@@ -2005,6 +2157,10 @@
       .graph-editor-layout { grid-template-columns: minmax(0, 1fr) 290px; gap: 10px; }
       .record-workbench { grid-template-columns: minmax(185px, 220px) minmax(0, 1fr); }
       .form-field-table-shell { max-width: 100%; overflow-x: auto; }
+      .step-responsibility { display: none; }
+      .workspace-tab { grid-template-columns: 28px minmax(0, 1fr); }
+      .workspace-tab .tab-status { grid-column: 2; justify-self: start; }
+      .skeleton-list-layout { grid-template-columns: minmax(0, 1fr) 290px; }
     }
 
     @media (max-width: 1279px) {
@@ -2035,55 +2191,51 @@
             <span class="tool-badge">无状态临时工具</span>
           </header>
 
-          <section class="sidebar-section" aria-labelledby="startActionsTitle">
-            <div class="sidebar-section-title" id="startActionsTitle">开始</div>
-            <div class="sidebar-actions">
-              <button class="button primary" id="newProcessButton">新建流程</button>
-              <button class="button" id="importJsonButton">导入结构化文件</button>
-            </div>
-          </section>
-
-          <section class="sidebar-section" aria-labelledby="candidateListTitle">
-            <div class="sidebar-section-title" id="candidateListTitle">当前流程</div>
-            <div class="candidate-list" id="candidateList" role="listbox" aria-label="本次打开的流程">
-              <div class="candidate-empty">尚未创建或导入流程。</div>
-            </div>
-            <p class="candidate-note" id="candidateNote">新建流程或导入结构化文件后，可以在这里切换当前流程。</p>
-          </section>
-
           <section class="sidebar-section" aria-labelledby="workspaceViewTitle">
-            <div class="sidebar-section-title" id="workspaceViewTitle">查看方式</div>
+            <div class="sidebar-section-title" id="workspaceViewTitle">治理步骤</div>
             <div id="workspaceViewSwitch"></div>
           </section>
 
           <div class="status" id="statusBox" role="status" aria-live="polite"></div>
           <input id="jsonInput" type="file" accept=".json,application/json" hidden>
+          <div id="candidateList" hidden></div>
+          <p id="candidateNote" hidden></p>
         </div>
 
         <div class="sidebar-completion">
-          <button class="button secondary" id="exportButton" disabled>导出当前流程</button>
-          <div class="sidebar-danger-zone">
-            <button class="button danger" id="clearButton" disabled>清空当前页面</button>
-          </div>
           <div class="footer-note">
-            用户主动导出是唯一保存方式。页面刷新或关闭后，本次内容无法恢复；导出的草稿仍会标注“未审核”。
+            用户主动下载是唯一保存方式。页面刷新或关闭后，本次内容无法恢复；下载文件始终标注“未审核”。
           </div>
         </div>
       </aside>
 
       <div class="main-column">
+        <div class="governance-header" id="governanceHeader"></div>
         <main class="workspace" id="workspace"></main>
       </div>
     </div>
   </div>
 
+  <div class="governance-drawer-backdrop" id="governanceDrawer" aria-hidden="true">
+    <aside class="governance-drawer" role="dialog" aria-modal="true" aria-labelledby="governanceDrawerTitle">
+      <div class="governance-drawer-head">
+        <div>
+          <div class="eyebrow">端到端治理流程</div>
+          <h2 id="governanceDrawerTitle">从工作准备到受控承接</h2>
+        </div>
+        <button class="button small" data-action="close-governance-drawer">关闭</button>
+      </div>
+      <div id="governanceDrawerContent"></div>
+    </aside>
+  </div>
+
   <div class="modal-backdrop" id="unsavedModal" aria-hidden="true">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="unsavedTitle">
-      <h2 id="unsavedTitle">当前还有未导出的修改</h2>
-      <p id="unsavedText">继续操作会清除当前页面中的内容。可以先导出当前候选流程；如果还有其他未导出的候选，工具会依次提醒。</p>
+      <h2 id="unsavedTitle">当前还有未下载的修改</h2>
+      <p id="unsavedText">继续操作会清除当前页面中的内容。可以先下载当前候选流程；如果还有其他未下载的候选，工具会依次提醒。</p>
       <div class="modal-actions">
         <button class="button" id="cancelProtectedButton">取消</button>
-        <button class="button secondary" id="exportProtectedButton">先导出当前流程</button>
+        <button class="button secondary" id="exportProtectedButton">先下载当前流程</button>
         <button class="button danger" id="discardProtectedButton">放弃当前内容</button>
       </div>
     </div>
@@ -2095,7 +2247,7 @@
       <div id="owningDepartmentChangeContent"></div>
       <div class="modal-actions">
         <button class="button" id="cancelOwningDepartmentChangeButton">取消，保持原内容</button>
-        <button class="button secondary" id="exportBeforeOwningDepartmentChangeButton">先导出当前草稿</button>
+        <button class="button secondary" id="exportBeforeOwningDepartmentChangeButton">先下载当前草稿</button>
         <button class="button danger" id="confirmOwningDepartmentChangeButton">确认变更并重置</button>
       </div>
     </div>
@@ -2103,6 +2255,8 @@
 
   <script src="/vendor/cytoscape.min.js"></script>
   <script src="process-governance-migration.js"></script>
+  <script src="governance-workflow.js"></script>
+  <script src="legacy-cross-department-diagnostics.js"></script>
   <script src="graph-edit-commands.js"></script>
   <script src="graph-editor-state.js"></script>
   <script src="process-diagram.js"></script>
@@ -2179,13 +2333,14 @@
       { value: 'dynamic_from_data', label: '按前序数据动态确定' }
     ];
     const ACTOR_ASSIGNMENT_MODE_VALUES = new Set(ACTOR_ASSIGNMENT_MODES.map(item => item.value));
+    const GOVERNANCE_STEPS = globalThis.GovernanceWorkflow?.STEPS || [];
     const EDITOR_SECTIONS = [
       { value: 'basic', label: '基本信息' },
       { value: 'profile', label: '目的与范围' },
       { value: 'terms', label: '术语定义' },
       { value: 'process', label: '流程步骤' },
       { value: 'forms', label: '表单与记录' },
-      { value: 'export', label: '流程评审' }
+      { value: 'export', label: '评审与交接' }
     ];
     const PROCESS_SECTIONS = [
       { value: 'behaviors', label: '业务流程' },
@@ -2210,6 +2365,8 @@
     let protectedAction = null;
     let protectedActionInvoker = null;
     let busy = false;
+    let activeGovernanceStep = 'start';
+    let activeStepView = 'overview';
     let activeWorkspaceTab = 'flow';
     let activeEditorSection = 'basic';
     let activeProcessSection = 'behaviors';
@@ -2252,17 +2409,14 @@
     const candidateList = document.getElementById('candidateList');
     const candidateNote = document.getElementById('candidateNote');
     const workspaceViewSwitch = document.getElementById('workspaceViewSwitch');
+    const governanceHeader = document.getElementById('governanceHeader');
+    const governanceDrawer = document.getElementById('governanceDrawer');
+    const governanceDrawerContent = document.getElementById('governanceDrawerContent');
     const unsavedModal = document.getElementById('unsavedModal');
     const owningDepartmentChangeModal = document.getElementById('owningDepartmentChangeModal');
     const owningDepartmentChangeContent = document.getElementById('owningDepartmentChangeContent');
     const confirmOwningDepartmentChangeButton = document.getElementById('confirmOwningDepartmentChangeButton');
     const jsonInput = document.getElementById('jsonInput');
-    const actionButtons = [
-      document.getElementById('newProcessButton'),
-      document.getElementById('importJsonButton'),
-      document.getElementById('exportButton'),
-      document.getElementById('clearButton')
-    ];
 
     function newRef(prefix) {
       const token = typeof crypto.randomUUID === 'function'
@@ -2491,7 +2645,7 @@
         ? `<div class="inline-warning">当前导入值“${escapeHtml(rawValue)}”未被现行花名册收录。3001会保留该值；如需修改，请重新选择执行部门和执行岗位。</div>`
         : '';
       const availability = rosterLoadState === 'unavailable'
-        ? '<div class="inline-warning">花名册岗位暂时不可用。3001不会清除已有执行岗位；其他内容仍可继续编制和导出。</div>'
+        ? '<div class="inline-warning">花名册岗位暂时不可用。3001不会清除已有执行岗位；其他内容仍可继续编制和下载。</div>'
         : externalDepartment
           ? `<div class="inline-note">当前为跨部门行为。流程先后请在“流程关系”中维护；发送、接收、创建或更新的数据请在“输出物与数据”中维护。</div>`
           : selectedDepartment && selectedDepartment === ownDepartment
@@ -2611,16 +2765,14 @@
       if (!entry) return;
       refreshCandidateDirty(entry);
       updateCandidateList();
+      governanceHeader.innerHTML = renderGovernanceHeader(currentDocument());
+      workspaceViewSwitch.innerHTML = renderGovernanceSteps();
     }
 
     function setBusy(value, message = '') {
       busy = value;
-      actionButtons.forEach(button => {
-        if (button.id === 'exportButton' || button.id === 'clearButton') {
-          button.disabled = value || !currentDocument();
-        } else {
-          button.disabled = value;
-        }
+      document.querySelectorAll('[data-global-action]').forEach(button => {
+        button.disabled = value || (button.dataset.requiresDocument === 'true' && !currentDocument());
       });
       if (message) showStatus(message);
     }
@@ -2880,36 +3032,28 @@
         </details>`;
     }
 
+    function legacyCrossDepartmentDiagnostics(data = currentDocument()) {
+      return globalThis.LegacyCrossDepartmentDiagnostics?.diagnose(data) || [];
+    }
+
     function renderLegacyCrossDepartmentGuidance(behavior) {
-      const records = currentDocument()?.migration?.legacy_cross_department_records || [];
-      const related = records.filter(record => {
-        if (record.conversion_status !== 'needs_manual_completion') return false;
-        const handoff = record.source_handoff || {};
-        return [
-          record.created_behavior_ref,
-          handoff.counterparty_behavior_ref,
-          handoff.anchor_behavior_ref,
-          handoff.resume_behavior_ref
-        ].includes(behavior?.behavior_ref);
-      });
+      const related = legacyCrossDepartmentDiagnostics().filter(item =>
+        item.issues.length && item.relatedBehaviorRefs.includes(behavior?.behavior_ref)
+      );
       if (!related.length) return '';
       return `
         <details class="nested" open>
-          <summary><strong>旧版跨部门记录待补录（${related.length}项）</strong></summary>
+          <summary><strong>旧版跨部门记录待核对（${related.length}项）</strong></summary>
           <div class="inline-warning" style="margin-top:12px">
-            <p>旧文件中的下列内容无法唯一转换。原值已只读保留，3001没有猜测流程方向或数据去向。</p>
-            <ul>${related.map(record => {
-              const handoff = record.source_handoff || {};
-              const department = handoff.handoff_direction === 'inbound_prerequisite'
-                ? handoff.source_department
-                : handoff.target_department;
-              const action = handoff.counterparty_behavior_name || handoff.requested_matter || '办理动作待确认';
-              return `<li>${escapeHtml(department || '外部门待确认')}：${escapeHtml(action)}。${escapeHtml(record.conversion_reason)}</li>`;
-            }).join('')}</ul>
-            <div class="item-actions">
-              <button class="button secondary small" data-action="open-legacy-relations">补充流程关系</button>
-              <button class="button secondary small" data-action="open-legacy-data">补充输出物与数据</button>
-            </div>
+            <p>3001已对照旧触发说明和当前流程关系，列出需要业务人员确认的具体位置。原值仍只读保留，页面不会自动选择流程方向或数据去向。</p>
+            <ul>${related.flatMap(item => item.issues).map(issue => `
+              <li>
+                <div>${escapeHtml(issue.message)}</div>
+                <ul>${issue.suggestions.map(suggestion => `<li>${escapeHtml(suggestion)}</li>`).join('')}</ul>
+                <div class="item-actions" style="margin-top:8px">
+                  <button class="button secondary small" data-action="focus-legacy-diagnostic" ${exportWarningLocationAttributes(issue)}>定位并核对</button>
+                </div>
+              </li>`).join('')}</ul>
           </div>
         </details>`;
     }
@@ -3062,7 +3206,7 @@
 
     function renderEditorNavigation() {
       return `
-        <nav class="editor-navigation" aria-label="文字编制分区">
+        <nav class="editor-navigation" aria-label="字段编辑分区">
           ${EDITOR_SECTIONS.map(item => `
             <button
               class="editor-section-tab${activeEditorSection === item.value ? ' active' : ''}"
@@ -3115,60 +3259,393 @@
       return { label: '可查看', className: 'ready' };
     }
 
-    function renderWorkspaceTabs(model, disabled = false) {
-      const status = previewStatus(model || { namedBehaviorCount: 0, unresolvedCount: 0, reviewCount: 0 });
-      const editorActive = activeWorkspaceTab === 'editor';
-      const flowActive = activeWorkspaceTab === 'flow';
-      const dataActive = activeWorkspaceTab === 'data';
-      const versionsActive = activeWorkspaceTab === 'versions';
-      return `
-        <div class="workspace-tabs-shell">
-          <div class="workspace-tabs" role="tablist" aria-label="流程编制视图">
-            <button
-              class="workspace-tab${flowActive ? ' active' : ''}"
-              id="flowTab"
-              role="tab"
-              aria-selected="${flowActive}"
-              aria-disabled="${disabled}"
-              aria-controls="flowPanel"
-              data-action="switch-tab"
-              data-tab="flow"
-              ${disabled ? 'disabled' : ''}
-            >流程关系</button>
-            <button
-              class="workspace-tab${dataActive ? ' active' : ''}"
-              id="dataTab"
-              role="tab"
-              aria-selected="${dataActive}"
-              aria-disabled="${disabled}"
-              aria-controls="dataPanel"
-              data-action="switch-tab"
-              data-tab="data"
-              ${disabled ? 'disabled' : ''}
-            >数据关系</button>
-            <button
-              class="workspace-tab${editorActive ? ' active' : ''}"
-              id="editorTab"
-              role="tab"
-              aria-selected="${editorActive}"
-              aria-disabled="${disabled}"
-              aria-controls="editorPanel"
-              data-action="switch-tab"
-              data-tab="editor"
-              ${disabled ? 'disabled' : ''}
-            >文字编制</button>
-            <button
-              class="workspace-tab${versionsActive ? ' active' : ''}"
-              id="versionsTab"
-              role="tab"
-              aria-selected="${versionsActive}"
-              aria-controls="versionsPanel"
-              data-action="switch-tab"
-              data-tab="versions"
-            >版本说明</button>
+    function governanceTechnicalCount() {
+      if (!currentDocument() || structureScoreState.documentKey !== currentStructureScoreKey()) return null;
+      if (structureScoreState.status === 'pending') return null;
+      return (structureScoreState.result?.issues || []).filter(item => item.category === '技术结构').length;
+    }
+
+    function governanceStartedSteps(data = currentDocument()) {
+      if (!data) return [];
+      const boundaryValues = [
+        data.export_meta?.initiating_department,
+        data.export_meta?.compiler,
+        data.process?.process_name,
+        data.process?.owning_department,
+        data.process?.purpose,
+        data.process?.scope
+      ];
+      const actionStarted = (data.behaviors || []).some(item => [
+        item.behavior_description,
+        item.trigger,
+        item.precondition,
+        item.timing,
+        item.completion_standard
+      ].some(value => text(value).trim()) || item.countersign_all_required || item.countersign_target_departments?.length);
+      const steps = ['start'];
+      if (boundaryValues.some(value => text(value).trim())) steps.push('boundary');
+      if ((data.behaviors || []).length || (data.flow_relations || []).length) steps.push('skeleton');
+      if (actionStarted) steps.push('action');
+      if ((data.data_objects || []).length || (data.forms || []).length) steps.push('data');
+      if ((data.behaviors || []).some(item => externalActorDepartment(item.current_actor_role))) steps.push('cross-department');
+      if (currentEntry()?.lastDownload?.stage?.key === 'final' || activeGovernanceStep === 'handoff') steps.push('handoff');
+      return steps;
+    }
+
+    function governanceIssueCounts(data = currentDocument()) {
+      const counts = Object.fromEntries(GOVERNANCE_STEPS.map(step => [step.id, 0]));
+      if (!data) return counts;
+      const warnings = businessWarnings(data).concat(
+        reviewBehaviorExecutabilityWarnings(data),
+        reviewRoutingWarnings(data)
+      );
+      warnings.forEach(item => {
+        const stepId = globalThis.GovernanceWorkflow?.stepForTarget(item) || 'handoff';
+        counts[stepId] = (counts[stepId] || 0) + 1;
+      });
+      return counts;
+    }
+
+    function governanceContext(data = currentDocument()) {
+      const issueCounts = governanceIssueCounts(data);
+      return {
+        hasDocument: Boolean(data),
+        activeStep: activeGovernanceStep,
+        issueCounts,
+        technicalCount: governanceTechnicalCount() || 0,
+        startedSteps: governanceStartedSteps(data)
+      };
+    }
+
+    function renderGovernanceSteps(disabled = false) {
+      const context = governanceContext();
+      return `<div class="workspace-tabs-shell"><div class="workspace-tabs" role="tablist" aria-label="七步治理导航">
+        ${GOVERNANCE_STEPS.map(step => {
+          const active = activeGovernanceStep === step.id;
+          const status = globalThis.GovernanceWorkflow.statusForStep(step.id, context);
+          return `<button
+            class="workspace-tab${active ? ' active' : ''}"
+            role="tab"
+            aria-selected="${active}"
+            data-action="switch-governance-step"
+            data-step="${escapeAttribute(step.id)}"
+            ${disabled && step.id !== 'start' ? 'disabled' : ''}
+          >
+            <span class="step-number">${step.number}</span>
+            <span class="step-copy"><span class="step-label">${escapeHtml(step.label)}</span><span class="step-responsibility">${escapeHtml(step.responsibility)}</span></span>
+            <span class="tab-status ${status.key === 'error' || status.key === 'missing' ? 'warning' : status.key === 'reviewable' ? 'ready' : 'waiting'}">${escapeHtml(status.label)}</span>
+          </button>`;
+        }).join('')}
+      </div></div>`;
+    }
+
+    function renderGovernanceHeader(data = currentDocument()) {
+      const entry = currentEntry();
+      const stage = globalThis.GovernanceWorkflow.stageForStep(activeGovernanceStep);
+      const technicalCount = governanceTechnicalCount();
+      const technicalLabel = technicalCount == null ? '结构错误：待检查' : `结构错误：${technicalCount}项`;
+      const candidateOptions = candidates.map((item, index) => {
+        const name = item.data.process?.process_name || `未命名流程 ${index + 1}`;
+        return `<option value="${index}" ${index === currentIndex ? 'selected' : ''}>${index + 1}. ${escapeHtml(name)}${item.dirty ? '（有未下载修改）' : ''}</option>`;
+      }).join('');
+      const origin = entry?.importInfo?.sourceVersion || entry?.origin || '尚未建立草稿';
+      return `<div class="governance-header-main">
+        <div class="governance-current">
+          <label for="governanceCandidateSelect">当前流程${candidates.length > 1 ? `（${candidates.length}个候选）` : ''}</label>
+          ${data
+            ? `<select id="governanceCandidateSelect" data-governance-candidate>${candidateOptions}</select>`
+            : '<strong>尚未新建或导入流程</strong>'}
+          <div class="governance-context">
+            <span class="context-badge version">当前v6</span>
+            <span class="context-badge">导入来源：${escapeHtml(origin)}</span>
+            ${entry?.dirty ? '<span class="context-badge dirty">有未下载修改</span>' : data ? '<span class="context-badge ready">当前没有未下载修改</span>' : ''}
+            <span class="context-badge">${escapeHtml(technicalLabel)}</span>
           </div>
-          <div class="tab-status ${status.className}" id="diagramTabStatus">流程图：${escapeHtml(status.label)}</div>
-        </div>`;
+        </div>
+        <div class="governance-header-actions">
+          <button class="button secondary" data-action="download-current-stage" data-global-action data-requires-document="true" ${busy || !data ? 'disabled' : ''}>下载当前草稿 · ${escapeHtml(stage.label)}</button>
+          <button class="button" data-action="open-governance-drawer">完整治理流程</button>
+          <details class="header-menu">
+            <summary class="button">文件</summary>
+            <div class="header-menu-panel">
+              <button class="button primary" data-action="start-new-process" data-global-action>新建流程</button>
+              <button class="button" data-action="open-import-file" data-global-action>继续已有流程</button>
+              <button class="button danger" data-action="clear-current-page" data-global-action data-requires-document="true" ${!data ? 'disabled' : ''}>清空当前页面</button>
+            </div>
+          </details>
+          <details class="header-menu">
+            <summary class="button">帮助与版本</summary>
+            <div class="header-menu-panel">
+              <p class="boundary">帮助内容只解释页面操作和关系类型，不替业务部门确认事实。</p>
+              <button class="button" data-action="open-help-view">操作帮助</button>
+              <button class="button" data-action="open-version-view">版本说明</button>
+            </div>
+          </details>
+        </div>
+      </div>`;
+    }
+
+    function renderGovernanceDrawer() {
+      const phases = [
+        ['工作准备', '部门负责人确认编制人和业务核对人。业务核对人确认制度、表单、台账和实际做法的核对范围。MDM工作组确认3001运行版本和结构版本。'],
+        ['选择编制路线', '编制人可以在3001直接新建或导入v1至v6文件；也可以使用MDM-AI助手完成v5填报和预审，再手工导入3001转换为v6。AI路线形成的v5预审记录不能替代最终v6独立结构预审。'],
+        ['四轮编制与阶段下载', '第一轮处理流程边界和骨架；第二轮处理逐动作说明、完成标准和异常路径；第三轮处理数据对象、表单和字段；第四轮核对跨部门事实和待定事项。每轮下载阶段草稿，但不锁定后续步骤。'],
+        ['部门事实初核', '业务核对人核对全部流程事实。跨部门内容由归口部门和承接部门分别确认本方事实。未确认内容保持待定，并在JSON之外记录证据、确认主体和关闭条件。'],
+        ['最终v6独立结构预审', 'MDM工作组或Codex检查最终v6的结构错误、字段归位和对象拆分。编制人关闭硬性结构错误；保留建议原值时，在外部问题处理记录中说明理由。'],
+        ['重新导入、最终下载和交接', '编制人重新导入整改后的文件，核对版本、数量、内容、稳定引用和往返完整性，再分别交接最终v6、结构预审问题处理记录和部门业务核对记录。'],
+        ['当前停止边界', '3000当前只承接v1至v3。v6不得直接导入3000，也不得自动降级。MDM工作组完成兼容或迁移方案、验证和审核后，才能另行进入3000受控预览、审核导入和发布。']
+      ];
+      governanceDrawerContent.innerHTML = `<div class="governance-drawer-list">${phases.map((phase, index) => `
+        <section class="governance-drawer-card"><strong>${index + 1}. ${escapeHtml(phase[0])}</strong><p>${escapeHtml(phase[1])}</p></section>
+      `).join('')}</div>`;
+    }
+
+    function renderStepIntro(stepId = activeGovernanceStep) {
+      const step = globalThis.GovernanceWorkflow.stepById(stepId);
+      const action = globalThis.GovernanceWorkflow.primaryActionForStep(stepId, governanceContext());
+      return `<div class="step-intro">
+        <div><div class="eyebrow">第${step.number}步</div><h2>${escapeHtml(step.label)}</h2><p>${escapeHtml(step.responsibility)}</p></div>
+        <div class="primary-guidance"><strong>当前建议操作</strong><br>${escapeHtml(action)}</div>
+      </div>`;
+    }
+
+    function renderStepViewSwitch(items) {
+      return `<div class="step-view-switch" role="tablist">${items.map(item => `
+        <button class="button small step-view-button${activeStepView === item.value ? ' active' : ''}" data-action="switch-step-view" data-view="${escapeAttribute(item.value)}">${escapeHtml(item.label)}</button>
+      `).join('')}</div>`;
+    }
+
+    function renderStartStep() {
+      const data = currentDocument();
+      if (activeStepView === 'version') return `${renderStepIntro('start')}${renderVersionHistoryPanel()}`;
+      if (activeStepView === 'help') {
+        return `${renderStepIntro('start')}${section(
+          '页面操作帮助',
+          '七步导航按业务动作组织。每个字段只有一个可写入口，跨部门核对和评审交接只汇总并返回编辑位置。',
+          `<div class="governance-drawer-list">
+            <div class="governance-drawer-card"><strong>保存方式</strong><p>3001不自动保存。用户下载JSON是唯一保存方式；刷新或关闭页面后，页面内容无法恢复。</p></div>
+            <div class="governance-drawer-card"><strong>业务提示与结构错误</strong><p>业务提示可以保持待定并下载；JSON结构或技术引用损坏时，页面会阻止下载并提供定位入口。</p></div>
+            <div class="governance-drawer-card"><strong>关系维护</strong><p>流程骨架维护节点和关系端点；动作与异常维护逐动作说明、完成标准、判断条件、退回和并行规则；数据与表单维护数据、表单和字段关系。</p></div>
+          </div>`
+        )}`;
+      }
+      const flowCards = GOVERNANCE_STEPS.map(step => `
+        <div class="governance-flow-card"><strong>${step.number}. ${escapeHtml(step.label)}</strong><p>${escapeHtml(step.responsibility)}</p></div>
+      `).join('');
+      if (!data) {
+        return `<section class="start-hero">
+          <div class="eyebrow">3001 · process-governance-v6</div>
+          <h2>按七步完成一条流程的编制、核对和交接准备</h2>
+          <p>编制人维护当前唯一流程文件；业务核对人确认流程事实；MDM工作组检查结构。3001不保存草稿，也不记录审核结论。</p>
+          <div class="start-actions">
+            <button class="button primary" data-action="start-new-process" data-global-action>新建流程</button>
+            <button class="button secondary" data-action="open-import-file" data-global-action>继续已有流程</button>
+            <button class="button" data-action="open-governance-drawer">查看完整治理流程</button>
+          </div>
+          <div class="governance-flow-grid">${flowCards}</div>
+          <p class="boundary"><strong>当前停止边界：</strong>3000当前只承接v1至v3。3001输出的v6文件不得直接导入3000，也不得自动降级。</p>
+        </section>`;
+      }
+      const entry = currentEntry();
+      const summary = migrationSummary(data);
+      const importInfo = entry?.importInfo;
+      return `${renderStepIntro('start')}${section(
+        '当前文件与导入结果',
+        '旧版文件只在当前页面内存中转换为v6。源文件、源文件摘要和迁移摘要不会新增到下载的v6内容。',
+        `<div class="grid">
+          <div class="inline-note"><strong>源文件：</strong>${escapeHtml(importInfo?.fileName || (entry?.origin === 'new' ? '空白模板新建' : '本次页面来源未记录'))}</div>
+          <div class="inline-note"><strong>来源版本：</strong>${escapeHtml(importInfo?.sourceVersion || entry?.origin || '未知')}</div>
+          <div class="inline-note"><strong>源文件SHA-256：</strong><code>${escapeHtml(importInfo?.sha256 || '空白新建不适用')}</code></div>
+          <div class="inline-note"><strong>候选数量：</strong>${candidates.length}</div>
+        </div>
+        <div class="governance-drawer-list">
+          <div class="governance-drawer-card"><strong>迁移结果</strong><p>来源：${escapeHtml(summary.sourceVersion)}；归档记录${summary.archived}项；仍需核对${summary.unresolved}项；表单字段${summary.fieldCount}项。</p></div>
+        </div>
+        <div class="item-actions"><button class="button primary" data-action="switch-governance-step" data-step="boundary">进入流程边界</button></div>`
+      )}`;
+    }
+
+    function renderBoundaryStep() {
+      const hasTerms = Boolean(currentDocument()?.terms?.length);
+      return `${renderStepIntro('boundary')}${renderBasic()}${renderProfile()}
+        <details class="section" ${hasTerms ? 'open' : ''}>
+          <summary style="padding:16px"><strong>术语定义（按需填写${hasTerms ? `，已有${currentDocument().terms.length}项` : ''}）</strong></summary>
+          <div class="section-body">${renderTerms()}</div>
+        </details>`;
+    }
+
+    function renderSkeletonListPanel() {
+      const data = currentDocument();
+      const selected = graphSelection?.kind;
+      const behaviorRows = (data.behaviors || []).map((item, index) => `
+        <button class="button skeleton-list-button${selected === 'behavior' && graphSelection.ref === item.behavior_ref ? ' primary' : ''}" data-action="select-skeleton-item" data-kind="behavior" data-ref="${escapeAttribute(item.behavior_ref)}">
+          节点${index + 1}：${escapeHtml(item.behavior_name || '未填写名称')} · ${escapeHtml(NODE_TYPES.find(option => option.value === item.node_type)?.label || '未选择类型')}
+        </button>`).join('') || '<div class="candidate-empty">尚未新增节点。</div>';
+      const relationRows = (data.flow_relations || []).map((item, index) => `
+        <button class="button skeleton-list-button${selected === 'relation' && graphSelection.ref === item.relation_ref ? ' primary' : ''}" data-action="select-skeleton-item" data-kind="relation" data-ref="${escapeAttribute(item.relation_ref)}">
+          关系${index + 1}：${escapeHtml(relationSelectorLabel(item, index))}
+        </button>`).join('') || '<div class="candidate-empty">尚未建立流程关系。</div>';
+      return `<section class="section"><div class="section-body">
+        <div class="diagram-toolbar"><div><h2>流程骨架清单</h2><p>清单和泳道图互斥显示，二者共同维护同一份页面内存草稿。</p></div><div class="diagram-controls"><button class="button primary small" data-action="add-graph-node">新增节点</button><button class="button secondary small" data-action="start-flow-relation">建立关系</button></div></div>
+        <div class="skeleton-list-layout"><div class="skeleton-list"><strong>节点</strong>${behaviorRows}<strong>关系</strong>${relationRows}</div><aside class="graph-property-shell">${renderFlowPropertyPanel()}</aside></div>
+      </div></section>`;
+    }
+
+    function renderSkeletonStep() {
+      if (!['diagram', 'list'].includes(activeStepView)) activeStepView = 'diagram';
+      activeWorkspaceTab = 'flow';
+      const model = currentDiagramModel();
+      return `${renderStepIntro('skeleton')}${renderStepViewSwitch([
+        { value: 'diagram', label: '泳道图' },
+        { value: 'list', label: '清单' }
+      ])}${activeStepView === 'list' ? renderSkeletonListPanel() : renderDiagramPanel(model)}`;
+    }
+
+    function renderActionStep() {
+      if (!['behaviors', 'relations'].includes(activeStepView)) activeStepView = 'behaviors';
+      activeWorkspaceTab = 'editor';
+      activeEditorSection = 'process';
+      activeProcessSection = activeStepView;
+      return `${renderStepIntro('action')}${renderStepViewSwitch([
+        { value: 'behaviors', label: '逐动作与完成标准' },
+        { value: 'relations', label: '判断、退回与并行条件' }
+      ])}${activeStepView === 'relations' ? renderRelations() : renderBehaviors()}`;
+    }
+
+    function renderDataStartChoice() {
+      return section(
+        '选择真实起点',
+        '有的流程先识别业务输出，有的部门先拿现有表单录入字段。这个选择只控制当前页面展开内容，不写入JSON，也不限制之后切换。',
+        `<div class="next-stage-grid">
+          <section class="next-stage-card next"><h3>从业务输出开始</h3><p>先登记流程产生、更新或使用的数据对象，再建立数据与业务行为关系。</p><button class="button primary" data-action="choose-data-start">登记数据对象</button></section>
+          <section class="next-stage-card future"><h3>从现有表单开始</h3><p>先按整张纸质表单登记主表、每张明细表和字段，再补充字段归属和值来源。</p><button class="button secondary" data-action="choose-form-start">登记现有表单</button></section>
+        </div>`
+      );
+    }
+
+    function renderDataStep() {
+      const data = currentDocument();
+      if (!['choice', 'data', 'forms', 'relationships'].includes(activeStepView)) {
+        activeStepView = data.data_objects?.length ? 'data' : data.forms?.length ? 'forms' : 'choice';
+      }
+      const views = [
+        { value: 'data', label: '数据对象与行为关系' },
+        { value: 'forms', label: '表单、明细和字段' },
+        { value: 'relationships', label: '数据与表单关系总览' }
+      ];
+      let content;
+      if (activeStepView === 'choice' && !(data.data_objects?.length || data.forms?.length)) {
+        content = renderDataStartChoice();
+      } else if (activeStepView === 'forms') {
+        activeWorkspaceTab = 'editor';
+        activeEditorSection = 'forms';
+        content = renderForms();
+      } else if (activeStepView === 'relationships') {
+        activeWorkspaceTab = 'editor';
+        activeEditorSection = 'process';
+        activeProcessSection = 'relationships';
+        content = renderRelationshipOverview();
+      } else {
+        activeWorkspaceTab = 'data';
+        content = renderDataDiagramPanel();
+      }
+      return `${renderStepIntro('data')}${activeStepView === 'choice' ? '' : renderStepViewSwitch(views)}${content}`;
+    }
+
+    function renderCrossDepartmentStep() {
+      const data = currentDocument();
+      const owningDepartment = text(data.process?.owning_department).trim();
+      const crossDepartment = (data.behaviors || []).filter(item => externalActorDepartment(item.current_actor_role));
+      const cards = crossDepartment.map(item => {
+        const actor = parseActorRole(item.current_actor_role);
+        const relations = (data.flow_relations || []).filter(relation => relation.from_behavior_ref === item.behavior_ref || relation.to_behavior_ref === item.behavior_ref);
+        const dataLinks = (data.data_objects || []).flatMap(dataObject => dataObject.behavior_links.filter(link => link.behavior_ref === item.behavior_ref));
+        return `<article class="cross-department-card">
+          <h3>${escapeHtml(item.behavior_name || '未命名跨部门行为')}</h3>
+          <p><strong>归口部门：</strong>${escapeHtml(owningDepartment || '待填写')}；<strong>执行部门和岗位：</strong>${escapeHtml(actor.department || '待确认')} / ${escapeHtml(actor.position || '待确认')}</p>
+          <p><strong>当前结构：</strong>${relations.length}条相连流程关系，${dataLinks.length}条数据操作记录。两部门仍须分别确认本方事实。</p>
+          <div class="item-actions">
+            <button class="button small" data-action="governance-jump" data-step="skeleton" data-view="diagram" data-focus-kind="behavior" data-focus-ref="${escapeAttribute(item.behavior_ref)}">核对节点和流程位置</button>
+            <button class="button small" data-action="governance-jump" data-step="action" data-view="behaviors" data-focus-kind="behavior" data-focus-ref="${escapeAttribute(item.behavior_ref)}" data-focus-path="behaviors.${data.behaviors.indexOf(item)}.behavior_description">核对动作和完成标准</button>
+            <button class="button small" data-action="governance-jump" data-step="data" data-view="data" data-focus-kind="behavior" data-focus-ref="${escapeAttribute(item.behavior_ref)}">核对数据关系</button>
+          </div>
+        </article>`;
+      }).join('');
+      const content = cards || `<div class="inline-warning"><strong>页面尚未识别到跨部门行为。</strong>这不表示当前流程不涉及跨部门事项。归口部门仍须核对执行部门、流程关系、数据传递和返回条件；发现跨部门事实后，请回到流程骨架、动作与异常或数据与表单的唯一编辑位置补充。</div>`;
+      return `${renderStepIntro('cross-department')}${section(
+        '跨部门事实核对汇总',
+        '本步骤只汇总和定位，不直接编辑。归口部门确认发出事项和期望，承接部门确认本方动作、数据和返回条件。',
+        `<div class="cross-department-list">${content}</div><div class="item-actions"><button class="button secondary" data-action="download-current-stage">下载第4轮跨部门核对草稿</button></div>`
+      )}`;
+    }
+
+    function renderLastDownloadResult() {
+      const result = currentEntry()?.lastDownload;
+      if (!result) return '<div class="inline-note">本次页面尚未完成下载。下载后，这里会显示文件名、时间、阶段、结构版本和SHA-256摘要。</div>';
+      const digest = result.sha256 || '摘要未生成，交接前需使用外部工具补算';
+      return `<div class="download-result">
+        <strong>最近一次下载</strong>
+        <span>文件名：${escapeHtml(result.fileName)}</span>
+        <span>导出时间：${escapeHtml(result.exportedAt)}</span>
+        <span>阶段：${escapeHtml(result.stage.label)}</span>
+        <span>结构版本：${escapeHtml(EXPECTED_EXPORT_SCHEMA_VERSION)}</span>
+        <span>SHA-256：<code>${escapeHtml(digest)}</code></span>
+        <div class="handoff-actions"><button class="button small" data-action="copy-handoff-summary">复制交接摘要</button></div>
+      </div>`;
+    }
+
+    function renderHandoffStep() {
+      activeWorkspaceTab = 'editor';
+      activeEditorSection = 'export';
+      return `${renderStepIntro('handoff')}${renderExportCheck()}${section(
+        '最终交接卡',
+        '最终v6、结构预审问题处理记录和部门业务核对记录必须分别保存。页面只生成并摘要当前v6文件。',
+        `<div class="next-stage-grid">
+          <section class="next-stage-card next"><h3>技术状态</h3><p>结构错误必须关闭。业务待定不阻止下载，但应在外部核对记录中写明证据、确认主体和关闭条件。</p></section>
+          <section class="next-stage-card future"><h3>外部材料</h3><p>准备结构预审问题处理记录和部门业务核对记录。3001不会生成、保存或嵌入这些记录。</p></section>
+        </div>
+        <p class="boundary"><strong>3000停止边界：</strong>3000当前只承接v1至v3。v6不得直接导入3000，也不得自动降级。</p>
+        ${renderLastDownloadResult()}`
+      )}`;
+    }
+
+    function renderCurrentGovernanceStep() {
+      if (!currentDocument() && activeGovernanceStep !== 'start') activeGovernanceStep = 'start';
+      return {
+        start: renderStartStep,
+        boundary: renderBoundaryStep,
+        skeleton: renderSkeletonStep,
+        action: renderActionStep,
+        data: renderDataStep,
+        'cross-department': renderCrossDepartmentStep,
+        handoff: renderHandoffStep
+      }[activeGovernanceStep]?.() || renderStartStep();
+    }
+
+    function defaultStepView(stepId, data = currentDocument()) {
+      if (stepId === 'start') return 'overview';
+      if (stepId === 'boundary') return 'basic';
+      if (stepId === 'skeleton') return 'diagram';
+      if (stepId === 'action') return 'behaviors';
+      if (stepId === 'data') return data?.data_objects?.length ? 'data' : data?.forms?.length ? 'forms' : 'choice';
+      if (stepId === 'cross-department') return 'summary';
+      return 'review';
+    }
+
+    function setActiveGovernanceStep(stepId, view = '') {
+      captureGraphViewport();
+      const next = globalThis.GovernanceWorkflow.normalizeStepId(stepId);
+      if (!currentDocument() && next !== 'start') return;
+      activeGovernanceStep = next;
+      activeStepView = view || defaultStepView(next);
+      const entry = currentEntry();
+      if (entry) {
+        entry.governanceStep = activeGovernanceStep;
+        entry.stepView = activeStepView;
+        graphStateManager.updateView(candidateStateKey(entry), { mode: next === 'data' ? 'data' : 'flow' });
+      }
+      if (next !== 'skeleton') diagramExpanded = false;
+      render();
     }
 
     function migrationSummary(data = currentDocument()) {
@@ -3302,7 +3779,7 @@
       const relationReviewMessage = '该关系与其他非回路关系形成闭环；如果这是退回前序行为，请选择“流程内部回路”。';
       const unresolvedWarnings = model.unresolvedItems.length ? `
         <div class="diagram-warning-list" aria-label="未显示项目">
-          <strong>有 ${model.unresolvedCount} 项内容无法绘制，请返回文字编制补齐：</strong>
+          <strong>有 ${model.unresolvedCount} 项内容无法绘制，请回到“数据与表单”补齐：</strong>
           ${model.unresolvedItems.map(item => `
             <button
               class="diagram-warning-button"
@@ -3314,7 +3791,7 @@
         </div>` : '';
       const relationReviews = model.reviewItems?.length ? `
         <div class="diagram-warning-list" aria-label="关系类型请核对">
-          <strong>关系类型请核对（不影响导出）：</strong>
+          <strong>关系类型请核对（不影响下载）：</strong>
           ${model.reviewItems.map(item => `
             <button
               class="diagram-warning-button"
@@ -3366,7 +3843,7 @@
             </select>` : ''}
           <p>起点：${escapeHtml(relationEndpointLabel(flowRelationDraft.from_behavior_ref, '待选择'))}；终点：${escapeHtml(relationEndpointLabel(flowRelationDraft.to_behavior_ref, '待选择'))}</p>
           ${flowRelationDraft.stage === 'confirm' && ['condition', 'loop'].includes(flowRelationDraft.relation_type) ? `
-            <label>关系条件<input data-graph-relation-condition value="${escapeAttribute(flowRelationDraft.condition || '')}"></label>` : ''}
+            <div class="inline-note">先建立关系。判断条件或退回条件在第4步“动作与异常”填写。</div>` : ''}
           ${behaviorButtons}
           <div class="item-actions">
             ${flowRelationDraft.stage === 'confirm' ? '<button class="button primary small" data-action="confirm-flow-relation">确认建立</button>' : ''}
@@ -3390,7 +3867,7 @@
             <label>关系类型<select data-graph-property="relation_type">${optionHtml(RELATION_TYPES, relation.relation_type)}</select></label>
             <label>起点<select data-graph-property="from_behavior_ref">${optionHtml(behaviorOptions('请选择起点'), relation.from_behavior_ref)}</select></label>
             <label>终点<select data-graph-property="to_behavior_ref">${optionHtml(behaviorOptions('请选择终点'), relation.to_behavior_ref)}</select></label>
-            <label>关系条件<input data-graph-property="condition" value="${escapeAttribute(relation.condition || '')}"></label>
+            <div class="inline-note">判断条件、退回条件和并行规则在第4步“动作与异常”维护。</div>
             <details><summary>技术标识</summary><code>${escapeHtml(relation.relation_ref)}</code></details>
             <div class="item-actions">
               <button class="button primary small" data-action="apply-flow-property">应用修改</button>
@@ -3416,7 +3893,6 @@
             <details><summary>原普通行为字段（只读保留）</summary>
               <div class="technical-note">执行主体：${escapeHtml(behavior.current_actor_role || '空')}<br>具体做什么：${escapeHtml(behavior.behavior_description || '空')}<br>完成标准：${escapeHtml(behavior.completion_standard || '空')}</div>
             </details>` : `
-            <label>具体做什么<textarea data-graph-property="behavior_description">${escapeHtml(behavior.behavior_description)}</textarea></label>
             <label>执行主体确定方式<select data-graph-property="actor_assignment_mode">${optionHtml(ACTOR_ASSIGNMENT_MODES, actorAssignmentMode(behavior))}</select></label>
             ${actorAssignmentMode(behavior) === 'fixed_department' ? `
               <label>执行部门<select data-graph-actor-department>${optionHtml([''].concat(DEPARTMENTS.filter(item => item !== '全公司')), actor.department)}</select></label>
@@ -3424,15 +3900,11 @@
             ${actorAssignmentMode(behavior) === 'dynamic_from_data' ? `
               <label>执行部门来源数据<select data-graph-property="actor_department_data_ref">${optionHtml([{ value: '', label: '请选择前序数据' }].concat((currentDocument().data_objects || []).map(item => ({ value: item.data_ref, label: item.data_name || '未命名数据' }))), behavior.actor_department_data_ref || '')}</select></label>
               <label>岗位或责任人确定规则<textarea data-graph-property="actor_position_rule">${escapeHtml(behavior.actor_position_rule)}</textarea></label>` : ''}
-            ${isEntry ? `<label>流程如何开始<textarea data-graph-property="trigger">${escapeHtml(behavior.trigger)}</textarea></label>` : '<div class="inline-note">当前节点已有非回路入边，“流程如何开始”只读保留，请通过流程关系理解入口条件。</div>'}
-            <label>办理时限<input data-graph-property="timing" value="${escapeAttribute(behavior.timing || '')}"></label>
-            <label>完成标准<textarea data-graph-property="completion_standard">${escapeHtml(behavior.completion_standard)}</textarea></label>
-            <label class="check-row"><input type="checkbox" data-graph-countersign ${behavior.countersign_all_required ? 'checked' : ''}>全部指定部门确认后完成会签</label>
-            <div class="check-grid">${DEPARTMENTS.filter(item => !['全公司', '公司领导'].includes(item)).map(department => `
-              <label class="check-row"><input type="checkbox" data-graph-countersign-target value="${escapeAttribute(department)}" ${behavior.countersign_target_departments.includes(department) ? 'checked' : ''}>${escapeHtml(department)}</label>`).join('')}</div>`}
+            <div class="inline-note">“具体做什么”、流程如何开始、办理时限、完成标准和会签要求在第4步“动作与异常”维护。</div>`}
           <details><summary>技术标识和历史文字</summary><code>${escapeHtml(behavior.behavior_ref)}</code><div class="technical-note">输入说明：${escapeHtml(behavior.input_description || '空')}<br>输出说明：${escapeHtml(behavior.output_description || '空')}</div></details>
           <div class="item-actions">
             <button class="button primary small" data-action="apply-flow-property">应用修改</button>
+            ${selection.kind === 'behavior' ? `<button class="button small" data-action="governance-jump" data-step="action" data-view="behaviors" data-focus-kind="behavior" data-focus-ref="${escapeAttribute(behavior.behavior_ref)}" data-focus-path="behaviors.${currentDocument().behaviors.indexOf(behavior)}.behavior_description">转到动作与异常</button>` : ''}
             <button class="button danger small" data-action="delete-graph-selection">删除节点</button>
           </div>
         </div>`;
@@ -3441,7 +3913,7 @@
     function renderDiagramPanel(model) {
       const history = graphHistoryState();
       const collisionNotice = model.layout?.collisions?.length
-        ? `<div class="diagram-notice warning">自动避让执行6轮后仍有${model.layout.collisions.length}项碰撞。该告警不修改JSON、不阻止导出，但当前版本不能发布。</div>`
+        ? `<div class="diagram-notice warning">自动避让执行6轮后仍有${model.layout.collisions.length}项碰撞。该告警不修改JSON、不阻止下载，但当前版本不能发布。</div>`
         : '';
       return `
         <section class="section diagram-section${diagramExpanded ? ' diagram-expanded' : ''}">
@@ -3504,12 +3976,12 @@
         return `
           <div class="graph-property-panel">
             <h3>${escapeHtml(behavior?.behavior_name || '业务行为')} · 数据操作</h3>
-            <p class="technical-note">业务行为是只读端点。需要修改行为时可转到流程关系模式。</p>
+            <p class="technical-note">业务行为是只读端点。需要修改行为时可转到“流程骨架”。</p>
             <div class="check-grid">${DATA_OPERATIONS.map(option => `
               <label class="check-row"><input type="checkbox" data-graph-data-operation value="${option.value}" ${operations.includes(option.value) ? 'checked' : ''}>${option.label}</label>`).join('')}</div>
             <div class="item-actions">
               <button class="button primary small" data-action="apply-data-operations">应用数据操作</button>
-              <button class="button small" data-action="open-flow-behavior" data-ref="${escapeAttribute(selection.behaviorRef)}">转到流程关系</button>
+              <button class="button small" data-action="open-flow-behavior" data-ref="${escapeAttribute(selection.behaviorRef)}">转到流程骨架</button>
             </div>
           </div>`;
       }
@@ -3690,7 +4162,7 @@
       } catch (error) {
         container.hidden = true;
         if (failure) {
-          failure.textContent = `流程图暂时无法生成：${error.message}。当前文字内容仍然保留，可以继续编制或导出。`;
+          failure.textContent = `流程图暂时无法生成：${error.message}。当前文字内容仍然保留，可以继续编制或下载。`;
           failure.classList.add('show');
         }
       }
@@ -3722,17 +4194,13 @@
         const related = currentDocument().data_objects.find(item => item.behavior_links.some(link => link.behavior_ref === focusRef));
         if (related) activeDataRef = related.data_ref;
         graphSelection = related ? { kind: 'data', ref: related.data_ref, draft: clone(related) } : null;
-        activeWorkspaceTab = 'data';
-        render();
-        return;
+        return setActiveGovernanceStep('data', 'data');
       }
       if (focusKind === 'form-badge') {
         const form = currentDocument().forms.find(item => item.behavior_links.some(link => link.behavior_ref === focusRef));
         if (form) activeFormRef = form.form_ref;
         activeEditorSection = 'forms';
-        activeWorkspaceTab = 'editor';
-        render();
-        return;
+        return setActiveGovernanceStep('data', 'forms');
       }
       if (focusKind === 'behavior') {
         const item = currentDocument().behaviors.find(behavior => behavior.behavior_ref === focusRef);
@@ -3785,26 +4253,17 @@
       } catch (error) {
         container.hidden = true;
         if (failure) {
-          failure.textContent = `数据关系图暂时无法生成：${error.message}。文字编制、导入、校验和导出仍可使用。`;
+          failure.textContent = `数据关系图暂时无法生成：${error.message}。字段编辑、导入、校验和下载仍可使用。`;
           failure.classList.add('show');
         }
       }
     }
 
     function setActiveWorkspaceTab(tab) {
-      captureGraphViewport();
-      if (tab === 'versions') {
-        activeWorkspaceTab = 'versions';
-        diagramExpanded = false;
-        render();
-        return;
-      }
-      if (!currentDocument()) return;
-      activeWorkspaceTab = ['flow', 'data', 'editor'].includes(tab) ? tab : 'flow';
-      if (activeWorkspaceTab !== 'flow') diagramExpanded = false;
-      const entry = currentEntry();
-      if (entry) graphStateManager.updateView(candidateStateKey(entry), { mode: activeWorkspaceTab === 'data' ? 'data' : 'flow' });
-      render();
+      if (tab === 'versions') return setActiveGovernanceStep('start', 'version');
+      if (tab === 'data') return setActiveGovernanceStep('data', 'data');
+      if (tab === 'editor') return setActiveGovernanceStep('action', 'behaviors');
+      return setActiveGovernanceStep('skeleton', 'diagram');
     }
 
     async function validateGraphDocument(documentValue) {
@@ -4010,7 +4469,10 @@
         return;
       }
       diagramExpanded = false;
-      activeWorkspaceTab = 'editor';
+      const governanceStep = globalThis.GovernanceWorkflow.stepForTarget(target);
+      activeGovernanceStep = governanceStep;
+      activeStepView = defaultStepView(governanceStep);
+      activeWorkspaceTab = governanceStep === 'skeleton' ? 'flow' : governanceStep === 'data' ? 'data' : 'editor';
       activeEditorSection = EDITOR_SECTIONS.some(item => item.value === target.editorSection)
         ? target.editorSection
         : 'process';
@@ -4021,19 +4483,36 @@
         activeEditorSection = 'process';
         activeProcessSection = 'behaviors';
         activeBehaviorRef = focusRef;
+        if (governanceStep === 'skeleton') {
+          const item = currentDocument()?.behaviors?.find(value => value.behavior_ref === focusRef);
+          graphSelection = item ? { kind: 'behavior', ref: focusRef, draft: clone(item) } : null;
+          activeStepView = 'diagram';
+        } else {
+          activeStepView = 'behaviors';
+        }
       } else if (focusKind === 'relation') {
         activeEditorSection = 'process';
         activeProcessSection = 'relations';
         activeRelationRef = focusRef;
+        if (governanceStep === 'skeleton') {
+          const item = currentDocument()?.flow_relations?.find(value => value.relation_ref === focusRef);
+          graphSelection = item ? { kind: 'relation', ref: focusRef, draft: clone(item) } : null;
+          activeStepView = 'diagram';
+        } else {
+          activeStepView = 'relations';
+        }
       } else if (focusKind === 'data') {
         activeEditorSection = 'process';
         activeProcessSection = 'data';
         activeDataRef = focusRef;
+        activeStepView = 'data';
       } else if (focusKind === 'form') {
         activeEditorSection = 'forms';
         activeFormRef = focusRef;
+        activeStepView = 'forms';
       } else if (focusKind === 'area') {
         activeEditorSection = 'forms';
+        activeStepView = 'forms';
         const owner = currentDocument()?.forms?.find(form =>
           form.areas.some(area => area.area_ref === focusRef)
         );
@@ -4120,6 +4599,67 @@
       });
     }
 
+    async function navigateToGovernanceTarget(element) {
+      if (flowRelationDraft) {
+        showStatus('当前正在建立流程关系。请先确认或取消本次关系，再切换治理步骤。', 'error');
+        return;
+      }
+      if (activeGovernanceStep === 'skeleton' && graphSelection?.draft) {
+        const applied = await applyGraphPropertyDraft();
+        if (applied === false) return;
+      }
+      const step = text(element.dataset.step);
+      const view = text(element.dataset.view);
+      const target = {
+        focusKind: element.dataset.focusKind,
+        focusRef: element.dataset.focusRef,
+        focusPath: element.dataset.focusPath
+      };
+      if (target.focusKind || target.focusPath) {
+        const routed = {
+          ...target,
+          editorSection: step === 'action' ? 'process' : step === 'data' && view === 'forms' ? 'forms' : '',
+          processSection: step === 'action' ? view : step === 'data' ? view : ''
+        };
+        focusEditorTarget(routed);
+        return;
+      }
+      setActiveGovernanceStep(step, view);
+    }
+
+    function handoffSummaryLine(result = currentEntry()?.lastDownload) {
+      if (!result) return '';
+      return [
+        `文件名：${result.fileName}`,
+        `导出时间：${result.exportedAt}`,
+        `阶段：${result.stage.label}`,
+        `结构版本：${EXPECTED_EXPORT_SCHEMA_VERSION}`,
+        `SHA-256：${result.sha256 || '摘要未生成，交接前需使用外部工具补算'}`
+      ].join('；');
+    }
+
+    async function copyLastHandoffSummary() {
+      const line = handoffSummaryLine();
+      if (!line) return;
+      try {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(line);
+        } else {
+          const area = document.createElement('textarea');
+          area.value = line;
+          area.style.position = 'fixed';
+          area.style.opacity = '0';
+          document.body.appendChild(area);
+          area.select();
+          if (!document.execCommand('copy')) throw new Error('copy unavailable');
+          area.remove();
+        }
+        showStatus('交接摘要已复制。', 'success');
+      } catch (_error) {
+        window.prompt('浏览器未允许自动复制。请手工复制以下交接摘要：', line);
+      }
+    }
+
     function refreshPreviewAvailability() {
       if (!currentDocument()) return;
       const model = currentDiagramModel();
@@ -4135,7 +4675,14 @@
       const model = currentDiagramModel();
       resetEditorNavigation(model.namedBehaviorCount ? 'process' : 'basic');
       diagramExpanded = false;
-      activeWorkspaceTab = 'flow';
+      const entry = currentEntry();
+      activeGovernanceStep = entry?.governanceStep || 'start';
+      activeStepView = entry?.stepView || defaultStepView(activeGovernanceStep);
+      activeWorkspaceTab = activeGovernanceStep === 'skeleton'
+        ? 'flow'
+        : activeGovernanceStep === 'data' && activeStepView === 'data'
+          ? 'data'
+          : 'editor';
     }
 
     function renderBasic() {
@@ -4148,18 +4695,23 @@
           options: [''].concat(DEPARTMENTS),
           hint: '归口部门是识别本部门行为和跨部门行为的基准。已有流程内容时，变更前会显示影响范围；确认后，页面重置依赖原归口部门的字段。'
         })}
-        ${field('process.capability_domain', '能力域（可选）', { nullable: true, placeholder: '不填时保持未归类' })}
-        ${field('process.business_capability', '业务能力（可选）', { nullable: true, placeholder: '不填时不阻塞审核' })}
-        ${field('process.classification_status', '归类状态', {
-          type: 'select',
-          options: [
-            { value: 'unclassified', label: '未归类' },
-            { value: 'needs_review', label: '待确认' },
-            { value: 'confirmed', label: '已确认' }
-          ]
-        })}
+        <details class="field wide nested" ${text(currentDocument()?.process?.capability_domain).trim() || text(currentDocument()?.process?.business_capability).trim() || currentDocument()?.process?.classification_status !== 'unclassified' ? 'open' : ''}>
+          <summary><strong>可选归类信息</strong></summary>
+          <div class="grid" style="margin-top:12px">
+            ${field('process.capability_domain', '能力域（可选）', { nullable: true, placeholder: '不填时保持未归类' })}
+            ${field('process.business_capability', '业务能力（可选）', { nullable: true, placeholder: '不填时不阻塞核对' })}
+            ${field('process.classification_status', '归类状态', {
+              type: 'select',
+              options: [
+                { value: 'unclassified', label: '未归类' },
+                { value: 'needs_review', label: '待确认' },
+                { value: 'confirmed', label: '已确认' }
+              ]
+            })}
+          </div>
+        </details>
       </div>`;
-      return section('流程基本信息', '制度名称和制度编号不是本阶段的前置条件；能力域和业务能力可以暂不填写。', body);
+      return section('流程基本信息', '先填写流程名称、归口部门、发起部门和编制人。能力域、业务能力和归类状态属于可选归类信息，没有依据时保持未归类。', body);
     }
 
     function renderProfile() {
@@ -4369,6 +4921,7 @@
     }
 
     function renderBehaviors() {
+      const actionOnly = activeGovernanceStep === 'action';
       const active = ensureActiveFlowItem();
       const item = active?.behavior || null;
       const index = active?.behaviorIndex ?? -1;
@@ -4420,8 +4973,9 @@
               <button class="button danger small" data-action="remove-behavior" data-index="${index}">删除当前行为</button>
             </div>
             <div class="grid">
-              ${field(`behaviors.${index}.node_type`, '节点类型', { type: 'select', options: NODE_TYPES, hint: nodeTypeHint })}
-              ${field(`behaviors.${index}.behavior_name`, '业务行为或节点名称', { hint: '这是流程节点的主内容，用于流程图、流程关系和工作角色绑定。' })}
+              ${actionOnly ? `<div class="field wide"><span class="field-label">流程骨架（只读）</span><div class="inline-note">${escapeHtml(item.behavior_name || '未填写节点名称')} · ${escapeHtml(NODE_TYPES.find(option => option.value === item.node_type)?.label || '未选择节点类型')} · 执行主体：${escapeHtml(item.current_actor_role || '待填写')}<br><button class="button small" style="margin-top:8px" data-action="governance-jump" data-step="skeleton" data-view="diagram" data-focus-kind="behavior" data-focus-ref="${escapeAttribute(item.behavior_ref)}">返回流程骨架修改</button></div></div>` : `
+                ${field(`behaviors.${index}.node_type`, '节点类型', { type: 'select', options: NODE_TYPES, hint: nodeTypeHint })}
+                ${field(`behaviors.${index}.behavior_name`, '业务行为或节点名称', { hint: '这是流程节点的主内容，用于流程图、流程关系和工作角色绑定。' })}`}
               ${isControlNode ? `
                 <div class="field wide"><span class="field-label">流程控制</span><div class="inline-note">流程控制，不代表执行部门。已有的执行主体、动作、时限和完成标准只读保留，切换类型不会删除。</div></div>
                 <div class="field wide"><span class="field-label">原普通行为字段（只读）</span><div class="technical-note">执行主体：${escapeHtml(item.current_actor_role || '空')}<br>具体做什么：${escapeHtml(item.behavior_description || '空')}<br>办理时限：${escapeHtml(item.timing || '空')}<br>完成标准：${escapeHtml(item.completion_standard || '空')}</div></div>` : `
@@ -4430,7 +4984,7 @@
                   className: 'wide',
                   hint: '按实际顺序写明每个动作、处理对象和结果。不要用抽象、定性表述代替实际动作。'
                 })}
-                ${actorAssignmentEditor(index, item, flowDetails)}
+                ${actionOnly ? '' : actorAssignmentEditor(index, item, flowDetails)}
                 ${hasDerivedEntry ? '' : field(`behaviors.${index}.trigger`, '流程如何开始', {
                   type: 'textarea',
                   className: 'half',
@@ -4474,6 +5028,7 @@
     }
 
     function renderRelations() {
+      const actionOnly = activeGovernanceStep === 'action';
       const active = ensureActiveRelation();
       const item = active.item;
       const index = active.index;
@@ -4522,13 +5077,13 @@
               <button class="button danger small" data-action="remove-relation" data-index="${index}">删除当前关系</button>
             </div>
             <div class="grid">
-              ${field(`flow_relations.${index}.relation_type`, '关系类型', {
+              ${actionOnly ? `<div class="field wide"><span class="field-label">关系骨架（只读）</span><div class="inline-note">${escapeHtml(relationSelectorLabel(item, index))}<br><button class="button small" style="margin-top:8px" data-action="governance-jump" data-step="skeleton" data-view="diagram" data-focus-kind="relation" data-focus-ref="${escapeAttribute(item.relation_ref)}">返回流程骨架修改</button></div></div>` : `${field(`flow_relations.${index}.relation_type`, '关系类型', {
                 type: 'select',
                 options: RELATION_TYPES,
                 hint: '默认继续下一步选择“顺序”；按判断结果进入后续步骤选择“判断分支”；退回前序步骤选择“流程内部回路”；同时启动或汇合多条路线选择“并行路线”。'
               })}
               ${behaviorSelect(`flow_relations.${index}.from_behavior_ref`, '从哪个行为开始', { blankLabel: '请选择' })}
-              ${behaviorSelect(`flow_relations.${index}.to_behavior_ref`, '流向哪个行为')}
+              ${behaviorSelect(`flow_relations.${index}.to_behavior_ref`, '流向哪个行为')}`}
               ${field(`flow_relations.${index}.condition`, '判断分支条件或回路触发条件（顺序关系可不填）', { type: 'textarea', className: 'half' })}
             </div>
           </div>
@@ -4540,8 +5095,10 @@
           ${editor}
         </div>`;
       return section(
-        '流程关系',
-        '一次只编辑一条流程关系。左侧顺序只用于整理条目，不代表流程先后关系。',
+        actionOnly ? '判断、退回与并行条件' : '流程关系',
+        actionOnly
+          ? '本步骤只维护关系条件和异常规则。关系类型、起点和终点回到“流程骨架”修改。'
+          : '一次只编辑一条流程关系。左侧顺序只用于整理条目，不代表流程先后关系。',
         `${guidance}${workbench}`,
         '<button class="button small" data-action="add-relation">添加流程关系</button>'
       );
@@ -4664,7 +5221,7 @@
               ${field(`data_objects.${index}.information_type`, '信息类型', {
                 type: 'select',
                 options: INFORMATION_TYPE_OPTIONS,
-                hint: '示例只用于帮助判断类型，不会写入导出的结构化文件。'
+                hint: '示例只用于帮助判断类型，不会写入下载的结构化文件。'
               })}
               ${field(`data_objects.${index}.description`, '数据说明', { type: 'textarea', className: 'wide' })}
               ${dataBehaviorLinksEditor(item, index)}
@@ -5217,7 +5774,7 @@
       const scoredIssues = result?.issues || [];
       const previewIssues = result?.previewIssues || [];
       const blockerHtml = result?.blocker
-        ? '<div class="score-blocker"><strong>技术阻断：</strong>当前展示分已按规则限制为最高59分。原有导出校验仍会阻止损坏的结构或技术引用。</div>'
+        ? '<div class="score-blocker"><strong>技术阻断：</strong>当前展示分已按规则限制为最高59分。下载校验仍会阻止损坏的结构或技术引用。</div>'
         : '';
       const unavailableHtml = unavailable
         ? `<div class="score-unavailable"><strong>暂不能生成最终分数：</strong>${escapeHtml(state.message)}
@@ -5239,7 +5796,7 @@
         <div class="score-panel-head">
           <div>
             <h3>${escapeHtml(rule?.label || '结构化学习评分 v3（process-governance-v6）')}</h3>
-            <p>评分根据当前页面内容自动生成，只用于结构化学习反馈，不写入导出JSON。</p>
+            <p>评分根据当前页面内容自动生成，只用于结构化学习反馈，不写入下载的JSON。</p>
           </div>
           <button class="button small" data-action="refresh-structure-score"${pending ? ' disabled' : ''}>重新评分</button>
         </div>
@@ -5481,7 +6038,7 @@
         ready: '页面自动检查未发现内容缺项。请按五方面逐项询问归口部门，确认当前JSON与真实做法一致后再下载。',
         prompt: `当前有${readiness.businessIssueCount}项业务内容需要补充或登记为待定。业务提示不阻止下载。`,
         blocker: `当前有${readiness.technicalIssueCount || 1}项结构错误。修复技术结构或损坏引用后才能下载。`,
-        checking: '正在核对结构版本、技术引用、导出回读和内容保持；五方面业务提示已经列出。',
+        checking: '正在核对结构版本、技术引用、下载回读和内容保持；五方面业务提示已经列出。',
         unavailable: '技术检查服务暂不可用。请保持当前页面打开，服务恢复后点击“重新检查五方面”。'
       }[readiness.operationStatus];
       const acceptance = scoring.REVIEW_READINESS.acceptance.map(item => `<li>${escapeHtml(item)}</li>`).join('');
@@ -5530,7 +6087,7 @@
         <div class="review-readiness-actions">
           <button class="button small" data-action="refresh-structure-score"${scoreState.status === 'pending' ? ' disabled' : ''}>重新检查五方面</button>
         </div>
-        <p class="boundary"><strong>责任边界：</strong>3001只提供评审准备检查和整改定位，不保存现场确认、依据或评审结论。当前3000尚未承接v5文件，不得把本次导出描述为可直接导入3000。</p>
+        <p class="boundary"><strong>责任边界：</strong>3001只提供评审准备检查和整改定位，不保存现场确认、依据或评审结论。当前3000尚未承接v6文件，不得把本次下载描述为可直接导入3000。</p>
       </section>`;
     }
 
@@ -5547,11 +6104,11 @@
           <summary>结构化学习评分（辅助，不作为评审结论）</summary>
           ${renderStructureScorePanel(scoreState)}
         </details>
-        <div class="next-stage-grid" aria-label="导出后的处理说明">
+        <div class="next-stage-grid" aria-label="下载后的处理说明">
           <section class="next-stage-card next">
             <span class="next-stage-badge">下一步</span>
-            <h3>完成业务评审后，保存v5结构化文件</h3>
-            <p>3001不记录评审结果。请保存导出的v5文件及评审依据；当前3000仅按既有范围承接v1至v3，v5文件暂不能直接导入3000。待3000另行完成兼容升级和验证后，再按受控流程导入。</p>
+            <h3>完成部门事实核对后，保存最终v6文件</h3>
+            <p>3001不记录核对结果。请分别保存最终v6、结构预审问题处理记录和部门业务核对记录；当前3000仅按既有范围承接v1至v3，v6文件暂不能直接导入3000。待3000另行完成兼容或迁移审核和验证后，再按受控流程承接。</p>
           </section>
           <section class="next-stage-card future">
             <span class="next-stage-badge">后续规划</span>
@@ -5559,11 +6116,11 @@
             <p>流程进入MDM平台后，后续将结合正式流程、运行数据和实际反馈，观察等待、积压、返工、资源压力及跨部门影响等动态变化。逻辑关系清楚只表示流程能够被理解，不代表当前做法就应该继续。评价结果用于寻找优化方向，不替代业务评审、审核和管理决策。</p>
           </section>
         </div>
-        <p class="boundary"><strong>阻断项：</strong>只有JSON结构或技术引用损坏时才禁止导出。业务内容提示项尚未补齐时，用户仍可导出当前草稿。</p>
-        <button class="button secondary" data-action="export-current">导出当前流程</button>`;
+        <p class="boundary"><strong>阻断项：</strong>只有JSON结构或技术引用损坏时才禁止下载。业务内容提示项尚未补齐时，用户仍可下载当前草稿。</p>
+        <button class="button secondary" data-action="export-current">下载最终待核对文件</button>`;
       return section(
-        '流程评审与导出',
-        '先按五方面标准逐项核对，再导出当前这一条流程。页面状态、现场确认和评审意见都不会写入JSON。',
+        '评审与交接',
+        '先按五方面标准逐项核对，再下载当前这一条流程。页面状态、现场确认和评审意见都不会写入JSON。',
         body
       );
     }
@@ -5585,65 +6142,33 @@
       destroyDataDiagram();
       destroyReviewPatternDiagrams();
       const data = currentDocument();
-      if (activeWorkspaceTab !== 'editor' || activeEditorSection !== 'export') expandedReviewPatternId = '';
+      if (activeGovernanceStep !== 'handoff') expandedReviewPatternId = '';
       document.body.classList.toggle(
         'diagram-overlay-open',
         Boolean(data && (
-          (activeWorkspaceTab === 'flow' && diagramExpanded)
-          || (activeWorkspaceTab === 'editor' && activeEditorSection === 'export' && expandedReviewPatternId)
+          (activeGovernanceStep === 'skeleton' && diagramExpanded)
+          || (activeGovernanceStep === 'handoff' && expandedReviewPatternId)
         ))
       );
-      document.getElementById('exportButton').disabled = busy || !data;
-      document.getElementById('clearButton').disabled = busy || !data;
       updateCandidateList();
       if (!data) {
+        activeGovernanceStep = 'start';
+        if (!['overview', 'help', 'version'].includes(activeStepView)) activeStepView = 'overview';
         diagramExpanded = false;
         expandedReviewPatternId = '';
         document.body.classList.remove('diagram-overlay-open');
-        workspaceViewSwitch.innerHTML = renderWorkspaceTabs(null, true);
-        workspace.innerHTML = activeWorkspaceTab === 'versions' ? renderVersionHistoryPanel() : `<div class="empty">
-          <h2>尚未创建或导入流程</h2>
-        </div>`;
+        governanceHeader.innerHTML = renderGovernanceHeader(null);
+        workspaceViewSwitch.innerHTML = renderGovernanceSteps(true);
+        workspace.innerHTML = renderStartStep();
         return;
       }
-      const model = currentDiagramModel(data);
-      workspaceViewSwitch.innerHTML = renderWorkspaceTabs(model);
-      workspace.innerHTML = `
-        <div
-          class="tab-panel"
-          id="flowPanel"
-          role="tabpanel"
-          aria-labelledby="flowTab"
-          ${activeWorkspaceTab === 'flow' ? '' : 'hidden'}
-        >
-          ${renderDiagramPanel(model)}
-        </div>
-        <div
-          class="tab-panel"
-          id="dataPanel"
-          role="tabpanel"
-          aria-labelledby="dataTab"
-          ${activeWorkspaceTab === 'data' ? '' : 'hidden'}
-        >
-          ${renderDataDiagramPanel()}
-        </div>
-        <div
-          class="tab-panel"
-          id="editorPanel"
-          role="tabpanel"
-          aria-labelledby="editorTab"
-          ${activeWorkspaceTab === 'editor' ? '' : 'hidden'}
-        >
-          ${renderEditorContent()}
-        </div>
-        <div class="tab-panel" ${activeWorkspaceTab === 'versions' ? '' : 'hidden'}>
-          ${renderVersionHistoryPanel()}
-        </div>`;
-      if (activeWorkspaceTab === 'flow') requestAnimationFrame(mountDiagram);
-      if (activeWorkspaceTab === 'data') requestAnimationFrame(mountDataDiagram);
-      if (activeWorkspaceTab === 'editor' && activeEditorSection === 'export') {
-        requestAnimationFrame(mountReviewPatternDiagrams);
-      }
+      ensureStructureScoreState();
+      governanceHeader.innerHTML = renderGovernanceHeader(data);
+      workspaceViewSwitch.innerHTML = renderGovernanceSteps();
+      workspace.innerHTML = renderCurrentGovernanceStep();
+      if (activeGovernanceStep === 'skeleton' && activeStepView === 'diagram') requestAnimationFrame(mountDiagram);
+      if (activeGovernanceStep === 'data' && activeStepView === 'data') requestAnimationFrame(mountDataDiagram);
+      if (activeGovernanceStep === 'handoff') requestAnimationFrame(mountReviewPatternDiagrams);
     }
 
     function updateCandidateList() {
@@ -5654,7 +6179,7 @@
       }
       candidateList.innerHTML = candidates.map((item, index) => {
         const name = item.data.process.process_name || `未命名流程 ${index + 1}`;
-        const fullLabel = `${index + 1}. ${name}${item.dirty ? '，未导出修改' : ''}`;
+        const fullLabel = `${index + 1}. ${name}${item.dirty ? '，未下载修改' : ''}`;
         return `
           <button
             class="candidate-item${index === currentIndex ? ' active' : ''}"
@@ -5668,13 +6193,13 @@
             <span class="candidate-number" aria-hidden="true">${index + 1}</span>
             <span class="candidate-copy">
               <span class="candidate-name">${escapeHtml(name)}</span>
-              ${item.dirty ? '<span class="candidate-dirty">未导出修改</span>' : ''}
+              ${item.dirty ? '<span class="candidate-dirty">未下载修改</span>' : ''}
             </span>
           </button>`;
       }).join('');
       candidateNote.textContent = candidates.length > 1
-        ? `本次导入拆出 ${candidates.length} 条候选流程，请逐一检查并分别导出。`
-        : '当前页面只编辑并导出这一条流程。';
+        ? `本次导入拆出 ${candidates.length} 条候选流程，请逐一检查并分别下载。`
+        : '当前页面只编辑并下载这一条流程。';
     }
 
     function addCandidate(data, dirty, origin) {
@@ -5689,12 +6214,14 @@
         await ensureCompatibleValidationService('再次新建流程');
         const data = await fetchEmptyProcessDocument();
         destroyDiagram();
-        const entry = { data: clone(data), dirty: false, origin: 'new' };
+        const entry = { data: clone(data), dirty: false, origin: 'new', governanceStep: 'boundary', stepView: 'basic' };
         candidates = [entry];
         graphStateManager.clear();
         registerCandidateState(entry);
         currentIndex = 0;
-        activeWorkspaceTab = 'flow';
+        activeGovernanceStep = 'boundary';
+        activeStepView = 'basic';
+        activeWorkspaceTab = 'editor';
         diagramExpanded = false;
         resetEditorNavigation('basic');
         clearStatus();
@@ -5712,6 +6239,8 @@
       graphStateManager.clear();
       candidates = [];
       currentIndex = 0;
+      activeGovernanceStep = 'start';
+      activeStepView = 'overview';
       activeWorkspaceTab = 'flow';
       diagramExpanded = false;
       resetEditorNavigation('basic');
@@ -6027,7 +6556,7 @@
           <div class="merge-summary-item"><strong>保持不变：</strong>${impact.companyWideAssignments ? `${impact.companyWideAssignments}个“全公司通用”行为、` : ''}业务行为名称和说明、流程关系、输出物与数据、表单、技术标识${preservedReviewItems.length ? `，以及${preservedReviewItems.join('和')}` : ''}。</div>
         </div>
         ${preservedReviewItems.length ? `<div class="inline-warning" style="margin-top:14px">${escapeHtml(preservedReviewItems.join('和'))}不会被页面改写。归口部门变更后，请在后续审核中重新确认这些保留内容是否仍适用。</div>` : ''}
-        <div class="inline-warning" style="margin-top:14px"><strong>确认后需要重新梳理：</strong>${escapeHtml(followupItems.join('；'))}。页面刷新或关闭后无法恢复本次重置前的内容；需要留存时，请先导出当前草稿。</div>
+        <div class="inline-warning" style="margin-top:14px"><strong>确认后需要重新梳理：</strong>${escapeHtml(followupItems.join('；'))}。页面刷新或关闭后无法恢复本次重置前的内容；需要留存时，请先下载当前草稿。</div>
         <div id="owningDepartmentChangeError" class="inline-warning" style="margin-top:14px;display:none" role="alert"></div>`;
     }
 
@@ -6131,6 +6660,61 @@
       const formIndex = Number(element.dataset.formIndex);
       const areaIndex = Number(element.dataset.areaIndex);
       let nextFocusPath = '';
+      if (action === 'switch-governance-step') return setActiveGovernanceStep(element.dataset.step);
+      if (action === 'switch-step-view') {
+        activeStepView = text(element.dataset.view) || defaultStepView(activeGovernanceStep);
+        if (currentEntry()) currentEntry().stepView = activeStepView;
+        return render();
+      }
+      if (action === 'start-new-process') return protect(startNewProcess);
+      if (action === 'open-import-file') return protect(() => jsonInput.click());
+      if (action === 'clear-current-page') return protect(clearPage);
+      if (action === 'download-current-stage') return exportCurrent({
+        stage: globalThis.GovernanceWorkflow.stageForStep(activeGovernanceStep),
+        skipBusinessConfirm: activeGovernanceStep !== 'handoff'
+      });
+      if (action === 'open-governance-drawer') {
+        renderGovernanceDrawer();
+        governanceDrawer.classList.add('show');
+        governanceDrawer.setAttribute('aria-hidden', 'false');
+        return;
+      }
+      if (action === 'close-governance-drawer') {
+        governanceDrawer.classList.remove('show');
+        governanceDrawer.setAttribute('aria-hidden', 'true');
+        return;
+      }
+      if (action === 'open-help-view') return setActiveGovernanceStep('start', 'help');
+      if (action === 'open-version-view') return setActiveGovernanceStep('start', 'version');
+      if (action === 'choose-data-start') {
+        if (!(currentDocument()?.data_objects || []).length) addDataObject();
+        activeStepView = 'data';
+        activeWorkspaceTab = 'data';
+        return render();
+      }
+      if (action === 'choose-form-start') {
+        if (!(currentDocument()?.forms || []).length) addForm('current_state');
+        activeStepView = 'forms';
+        activeWorkspaceTab = 'editor';
+        activeEditorSection = 'forms';
+        return render();
+      }
+      if (action === 'select-skeleton-item') {
+        const kind = text(element.dataset.kind);
+        const ref = text(element.dataset.ref);
+        if (kind === 'behavior') {
+          const item = currentDocument()?.behaviors?.find(value => value.behavior_ref === ref);
+          graphSelection = item ? { kind, ref, draft: clone(item) } : null;
+          activeBehaviorRef = ref;
+        } else if (kind === 'relation') {
+          const item = currentDocument()?.flow_relations?.find(value => value.relation_ref === ref);
+          graphSelection = item ? { kind, ref, draft: clone(item) } : null;
+          activeRelationRef = ref;
+        }
+        return render();
+      }
+      if (action === 'governance-jump') return navigateToGovernanceTarget(element);
+      if (action === 'copy-handoff-summary') return copyLastHandoffSummary();
       if (action === 'switch-tab') return setActiveWorkspaceTab(element.dataset.tab);
       if (action === 'return-editor') {
         activeEditorSection = 'process';
@@ -6278,19 +6862,10 @@
         const behavior = currentDocument().behaviors.find(item => item.behavior_ref === ref);
         graphSelection = behavior ? { kind: 'behavior', ref, draft: clone(behavior) } : null;
         activeBehaviorRef = ref;
-        return setActiveWorkspaceTab('flow');
+        return setActiveGovernanceStep('skeleton', 'diagram');
       }
       if (action === 'delete-data-object') return deleteGraphObject('data', activeDataRef);
-      if (action === 'open-legacy-relations') {
-        activeEditorSection = 'process';
-        activeProcessSection = 'relations';
-        return render();
-      }
-      if (action === 'open-legacy-data') {
-        activeEditorSection = 'process';
-        activeProcessSection = 'data';
-        return render();
-      }
+      if (action === 'focus-legacy-diagnostic') return focusExportWarning(element);
       if (action === 'open-behavior-data') {
         const behaviorRef = text(element.dataset.ref);
         const related = currentDataFlowDetails().dataDetails.find(detail =>
@@ -6302,13 +6877,13 @@
         activeEditorSection = 'process';
         activeProcessSection = 'data';
         if (related) activeDataRef = related.dataRef;
-        return render();
+        return setActiveGovernanceStep('data', 'data');
       }
       if (action === 'open-data-from-overview') {
         activeEditorSection = 'process';
         activeProcessSection = 'data';
         activeDataRef = text(element.dataset.ref);
-        return render();
+        return setActiveGovernanceStep('data', 'data');
       }
       if (action === 'merge-duplicate-data') return mergeDuplicateData(index);
       if (action === 'add-data-behavior-link') {
@@ -6430,7 +7005,10 @@
         activeAreaRef = text(element.dataset.ref);
         return render();
       }
-      if (action === 'export-current') return exportCurrent();
+      if (action === 'export-current') return exportCurrent({
+        stage: globalThis.GovernanceWorkflow.stageForStep('handoff'),
+        skipBusinessConfirm: false
+      });
       if (action === 'add-behavior') addBehavior();
       if (action === 'remove-behavior' && !removeBehavior(index)) return;
       if (action === 'add-relation') addRelation();
@@ -6937,31 +7515,8 @@
           });
         });
       });
-      (data.migration?.legacy_cross_department_records || []).forEach((record, index) => {
-        if (record.conversion_status !== 'needs_manual_completion') return;
-        const source = record.source_handoff || {};
-        const sourceLabel = text(source.counterparty_behavior_name || source.requested_matter).trim() || `旧版跨部门记录${index + 1}`;
-        const behaviorRef = text(record.created_behavior_ref || source.counterparty_behavior_ref).trim();
-        if (!behaviorRef || !data.behaviors.some(item => item.behavior_ref === behaviorRef)) {
-          addWarning(`${sourceLabel}尚未形成可编辑的业务行为。`, {
-            editorSection: 'process', processSection: 'behaviors'
-          }, ['根据原记录补建实际执行部门、岗位和办理动作明确的业务行为。']);
-        }
-        if (!(record.created_relation_refs || []).length) {
-          addWarning(`${sourceLabel}的流程方向或衔接位置无法唯一转换。`, {
-            editorSection: 'process', processSection: 'relations'
-          }, ['根据实际先后顺序补充普通流程关系；不要按旧记录名称猜测方向。']);
-        }
-        const hasLegacyData = Boolean(source.transfer_data_ref || source.returned_data_ref);
-        if (hasLegacyData && !(record.created_data_link_refs || []).length) {
-          const dataRef = source.transfer_data_ref || source.returned_data_ref;
-          addWarning(`${sourceLabel}的数据传递或返回关系无法唯一转换。`, {
-            editorSection: 'process',
-            processSection: 'data',
-            focusKind: 'data',
-            focusRef: data.data_objects.find(item => item.data_ref === dataRef)?.data_ref || ''
-          }, ['在“输出物与数据”中登记实际创建、更新或使用该数据的业务行为。']);
-        }
+      legacyCrossDepartmentDiagnostics(data).forEach(item => {
+        item.issues.forEach(issue => addWarning(issue.message, issue, issue.suggestions));
       });
       return [...new Map(warnings.map(item => [item.message, item])).values()];
     }
@@ -6976,12 +7531,21 @@
       return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}-${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
     }
 
-    function downloadJson(data) {
+    async function downloadJson(data, stage) {
       const now = new Date();
       const department = sanitizeFilenamePart(data.export_meta.initiating_department, '未明确部门');
       const processName = sanitizeFilenamePart(data.process.process_name, '未命名流程');
-      const fileName = `未审核-${department}-${processName}-${exportTimestamp(now)}.json`;
-      const blob = new Blob([`${JSON.stringify(data, null, 2)}\n`], { type: 'application/json;charset=utf-8' });
+      const stageLabel = sanitizeFilenamePart(stage?.label, '当前草稿');
+      const fileName = `未审核-${department}-${processName}-${stageLabel}-${exportTimestamp(now)}.json`;
+      const exportedAt = data.export_meta.exported_at;
+      const bytes = new TextEncoder().encode(`${JSON.stringify(data, null, 2)}\n`);
+      let sha256 = '';
+      try {
+        sha256 = await globalThis.GovernanceWorkflow.sha256Hex(bytes);
+      } catch (_error) {
+        sha256 = '';
+      }
+      const blob = new Blob([bytes], { type: 'application/json;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -6990,10 +7554,10 @@
       link.click();
       link.remove();
       setTimeout(() => URL.revokeObjectURL(url), 0);
-      return fileName;
+      return { fileName, exportedAt, stage, sha256 };
     }
 
-    async function ensureCompatibleValidationService(retryAction = '再次导出') {
+    async function ensureCompatibleValidationService(retryAction = '再次下载') {
       let schema;
       try {
         const response = await fetch('/api/schema', { cache: 'no-store' });
@@ -7111,7 +7675,12 @@
         candidateIndex: context.candidateIndex,
         documentKey: context.documentKey
       };
-      if (activeWorkspaceTab === 'editor' && activeEditorSection === 'export') render();
+      if (activeGovernanceStep === 'handoff') {
+        render();
+      } else {
+        governanceHeader.innerHTML = renderGovernanceHeader(currentDocument());
+        workspaceViewSwitch.innerHTML = renderGovernanceSteps();
+      }
     }
 
     async function runStructureScore(context) {
@@ -7149,7 +7718,7 @@
         errors.push({ message: `当前页面内容不是${EXPECTED_EXPORT_SCHEMA_VERSION}。` });
       }
       if (!checks.preservation && roundTripDocument) {
-        errors.push({ message: '当前页面内容在导出回读后发生变化，业务字段或技术引用未能完整保持。' });
+        errors.push({ message: '当前页面内容在下载回读后发生变化，业务字段或技术引用未能完整保持。' });
       }
 
       try {
@@ -7195,9 +7764,10 @@
       });
     }
 
-    async function exportCurrent() {
+    async function exportCurrent(options = {}) {
       const entry = currentEntry();
       if (!entry) return false;
+      const stage = options.stage || globalThis.GovernanceWorkflow.stageForStep(activeGovernanceStep);
       const exportDocument = clone(entry.data);
       exportDocument.export_meta.exported_at = new Date().toISOString();
       setBusy(true, '正在检查当前文件中的技术引用……');
@@ -7208,7 +7778,7 @@
           { departments: DEPARTMENTS }
         )[0];
         if (JSON.stringify(roundTripDocument) !== JSON.stringify(exportDocument)) {
-          showStatus('当前内容在导出回读后会发生丢失，暂不能导出。当前草稿保持不变。', 'error');
+          showStatus('当前内容在下载回读后会发生丢失，暂不能下载。当前草稿保持不变。', 'error');
           return false;
         }
         const response = await fetch('/api/validate', {
@@ -7223,19 +7793,19 @@
           const referenceErrorsOnly = errors.length > 0 && errors.every(error => error.keyword === 'localReference');
           if (referenceErrorsOnly) {
             const details = errors.slice(0, 5).map(error => `${validationErrorLocation(error)}：${error.message}`).join('；');
-            showStatus(`当前流程文件中的技术引用已断开或重复，暂不能导出。${details}`, 'error');
+            showStatus(`当前流程文件中的技术引用已断开或重复，暂不能下载。${details}`, 'error');
           } else {
             const locations = [...new Set(errors.slice(0, 5).map(validationErrorLocation))].join('、');
             const locationText = locations ? `涉及位置：${locations}。` : '';
             showStatus(
-              `当前流程文件不符合3001单流程导出格式，暂不能导出。${locationText}请保持当前页面内容，并联系维护人员处理。`,
+              `当前流程文件不符合3001单流程下载格式，暂不能下载。${locationText}请保持当前页面内容，并联系维护人员处理。`,
               'error'
             );
           }
           return false;
         }
         const warnings = businessWarnings(exportDocument);
-        if (warnings.length) {
+        if (warnings.length && !options.skipBusinessConfirm) {
           const preview = warnings.slice(0, 8).map((item, index) => {
             const suggestionItems = warningSuggestions(item);
             const suggestions = suggestionItems
@@ -7244,21 +7814,30 @@
             return `${index + 1}. 当前情况：${item.message}\n   ${suggestions}`;
           }).join('\n');
           const more = warnings.length > 8 ? `\n另有 ${warnings.length - 8} 项。` : '';
-          if (!window.confirm(`当前是未审核草稿，以下事项仍需处理或登记为待定：\n\n${preview}${more}\n\n仍然导出当前草稿吗？`)) {
-            showStatus('已取消导出，当前页面内容仍保留。');
+          if (!window.confirm(`当前是未审核草稿，以下事项仍需处理或登记为待定：\n\n${preview}${more}\n\n仍然下载当前草稿吗？`)) {
+            showStatus('已取消下载，当前页面内容仍保留。');
             return false;
           }
         }
-        const fileName = downloadJson(exportDocument);
+        const downloadResult = await downloadJson(exportDocument, stage);
         entry.data = exportDocument;
+        entry.lastDownload = downloadResult;
         entry.forceDirty = false;
         graphStateManager.markBaseline(candidateStateKey(entry), entry.data);
         refreshCandidateDirty(entry);
-        showStatus(`已导出 ${fileName}。请妥善保存；再次编制时可重新导入3001。`, 'success');
+        showStatus(
+          downloadResult.sha256
+            ? `已下载 ${downloadResult.fileName}，并生成SHA-256摘要。请妥善保存；再次编制时可重新导入3001。`
+            : `已下载 ${downloadResult.fileName}。摘要未生成，交接前需使用外部工具补算；当前JSON结构检查结果不受影响。`,
+          'success'
+        );
         updateCandidateList();
+        governanceHeader.innerHTML = renderGovernanceHeader(currentDocument());
+        workspaceViewSwitch.innerHTML = renderGovernanceSteps();
+        if (activeGovernanceStep === 'handoff') render();
         return true;
       } catch (error) {
-        showStatus(`导出失败：${error.message}`, 'error');
+        showStatus(`下载失败：${error.message}`, 'error');
         return false;
       } finally {
         setBusy(false);
@@ -7293,17 +7872,17 @@
       unsavedModal.setAttribute('aria-hidden', 'true');
     }
 
-    async function sha256File(file) {
-      if (!crypto.subtle) return null;
-      const bytes = await file.arrayBuffer();
-      const hash = await crypto.subtle.digest('SHA-256', bytes);
-      return Array.from(new Uint8Array(hash)).map(value => value.toString(16).padStart(2, '0')).join('');
-    }
-
     async function importJson(file) {
       setBusy(true, `正在读取 ${file.name}……`);
       try {
-        const parsed = JSON.parse(await file.text());
+        const fileBytes = new Uint8Array(await file.arrayBuffer());
+        const parsed = JSON.parse(new TextDecoder('utf-8').decode(fileBytes));
+        let fileSha256 = '';
+        try {
+          fileSha256 = await globalThis.GovernanceWorkflow.sha256Hex(fileBytes);
+        } catch (_error) {
+          fileSha256 = '';
+        }
         const supported = [
           ...globalThis.ProcessGovernanceMigration.SUPPORTED_PROCESS_VERSIONS,
           globalThis.ProcessGovernanceMigration.LEGACY_DOCUMENT_VERSION
@@ -7316,9 +7895,6 @@
           const firstError = sourceValidation.errors?.[0];
           throw new Error(firstError ? `${validationErrorLocation(firstError)}：${firstError.message}` : '源文件未通过结构与本地引用检查');
         }
-        const fileSha256 = parsed.schema_version === globalThis.ProcessGovernanceMigration.LEGACY_DOCUMENT_VERSION
-          ? await sha256File(file)
-          : null;
         const migratedDocuments = globalThis.ProcessGovernanceMigration.migrateDocument(parsed, {
           fileName: file.name,
           fileSha256,
@@ -7335,7 +7911,15 @@
           data: clone(data),
           dirty: migrated,
           forceDirty: migrated,
-          origin: parsed.schema_version
+          origin: parsed.schema_version,
+          importInfo: {
+            fileName: file.name,
+            sourceVersion: parsed.schema_version,
+            sha256: fileSha256,
+            candidateCount: migratedDocuments.length
+          },
+          governanceStep: migrated || migratedDocuments.length > 1 ? 'start' : 'boundary',
+          stepView: migrated || migratedDocuments.length > 1 ? 'overview' : 'basic'
         }));
         destroyDiagram();
         destroyDataDiagram();
@@ -7347,9 +7931,9 @@
         render();
         showStatus(
           candidates.length > 1
-            ? `历史文件包含 ${candidates.length} 条流程，全部通过v6校验后已拆成候选。每条流程必须单独导出。`
+            ? `历史文件包含 ${candidates.length} 条流程，全部通过v6校验后已拆成候选。每条流程必须单独下载。`
             : migrated
-              ? '历史结构化文件已无损迁移到v6，当前内容标记为未导出。'
+              ? '历史结构化文件已无损迁移到v6，当前内容标记为未下载。'
               : 'v6结构化文件已导入当前页面。',
           'success'
         );
@@ -7361,34 +7945,54 @@
       }
     }
 
-    document.getElementById('newProcessButton').addEventListener('click', () => protect(startNewProcess));
-    document.getElementById('importJsonButton').addEventListener('click', () => protect(() => jsonInput.click()));
-    document.getElementById('exportButton').addEventListener('click', exportCurrent);
-    document.getElementById('clearButton').addEventListener('click', () => protect(clearPage));
-
     jsonInput.addEventListener('change', () => {
       const file = jsonInput.files?.[0];
       if (file) importJson(file);
     });
 
-    candidateList.addEventListener('click', event => {
-      const button = event.target.closest('[data-candidate-index]');
-      if (!button) return;
-      const nextIndex = Number(button.dataset.candidateIndex);
+    function switchCandidate(nextIndex) {
       if (!Number.isInteger(nextIndex) || !candidates[nextIndex] || nextIndex === currentIndex) return;
       captureGraphViewport();
+      const current = currentEntry();
+      if (current) {
+        current.governanceStep = activeGovernanceStep;
+        current.stepView = activeStepView;
+      }
       currentIndex = nextIndex;
       graphSelection = null;
       flowRelationDraft = null;
       activeDataRef = graphStateManager.view(candidateStateKey()).data.dataRef || '';
       selectInitialTabAfterImport();
       render();
+    }
+
+    candidateList.addEventListener('click', event => {
+      const button = event.target.closest('[data-candidate-index]');
+      if (!button) return;
+      switchCandidate(Number(button.dataset.candidateIndex));
+    });
+
+    governanceHeader.addEventListener('change', event => {
+      const select = event.target.closest('[data-governance-candidate]');
+      if (select) switchCandidate(Number(select.value));
     });
 
     workspaceViewSwitch.addEventListener('click', event => {
       const button = event.target.closest('[data-action]');
       if (!button) return;
       handleAction(button.dataset.action, button);
+    });
+
+    governanceHeader.addEventListener('click', event => {
+      const button = event.target.closest('[data-action]');
+      if (!button) return;
+      handleAction(button.dataset.action, button);
+    });
+
+    governanceDrawer.addEventListener('click', event => {
+      const button = event.target.closest('[data-action]');
+      if (button) handleAction(button.dataset.action, button);
+      if (event.target === governanceDrawer) handleAction('close-governance-drawer', governanceDrawer);
     });
 
     workspace.addEventListener('input', event => {
@@ -7719,7 +8323,7 @@
       if (nextDirtyIndex >= 0) {
         currentIndex = nextDirtyIndex;
         render();
-        showStatus('还有其他候选流程包含未导出的修改，请继续导出或选择放弃。');
+        showStatus('还有其他候选流程包含未下载的修改，请继续下载或选择放弃。');
         return;
       }
       const action = protectedAction;

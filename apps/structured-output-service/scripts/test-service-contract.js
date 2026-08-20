@@ -18,6 +18,7 @@ const frontendPath = path.join(appRoot, 'public', 'index.html');
 const processDiagramPath = path.join(appRoot, 'public', 'process-diagram.js');
 const reviewPatternDiagramsPath = path.join(appRoot, 'public', 'review-pattern-diagrams.js');
 const structureScorePath = path.join(appRoot, 'public', 'structure-score.js');
+const governanceWorkflowPath = path.join(appRoot, 'public', 'governance-workflow.js');
 const serverPath = path.join(appRoot, 'server.js');
 const processV1SchemaPath = path.join(repoRoot, 'docs', 'contracts', 'process-governance-v1.schema.json');
 const processV2SchemaPath = path.join(repoRoot, 'docs', 'contracts', 'process-governance-v2.schema.json');
@@ -695,8 +696,10 @@ async function testApi() {
 
     const suggestionRoute = await fetch(`${baseUrl}/api/suggestions`, { method: 'POST' });
     assert.equal(suggestionRoute.status, 404);
-    const sessionRoute = await fetch(`${baseUrl}/api/session`, { method: 'POST' });
-    assert.equal(sessionRoute.status, 404);
+    const sessionReadRoute = await fetch(`${baseUrl}/api/session`);
+    assert.equal(sessionReadRoute.status, 404);
+    const sessionWriteRoute = await fetch(`${baseUrl}/api/session`, { method: 'POST' });
+    assert.equal(sessionWriteRoute.status, 404);
     const dataRoute = await fetch(`${baseUrl}/api/data`);
     assert.equal(dataRoute.status, 404);
     const exportRoute = await fetch(`${baseUrl}/api/export`);
@@ -720,6 +723,18 @@ async function testApi() {
     assert.equal(scoreAsset.status, 200);
     assert.match(scoreAsset.headers.get('content-type') || '', /javascript/);
     assert.match(await scoreAsset.text(), /structure-learning-score-v3/);
+
+    const governanceWorkflowAsset = await fetch(`${baseUrl}/governance-workflow.js`);
+    assert.equal(governanceWorkflowAsset.status, 200);
+    assert.match(governanceWorkflowAsset.headers.get('content-type') || '', /javascript/);
+    const governanceWorkflowSource = await governanceWorkflowAsset.text();
+    assert.match(governanceWorkflowSource, /开始与文件/);
+    assert.match(governanceWorkflowSource, /sha256Fallback/);
+
+    const legacyDiagnosticsAsset = await fetch(`${baseUrl}/legacy-cross-department-diagnostics.js`);
+    assert.equal(legacyDiagnosticsAsset.status, 200);
+    assert.match(legacyDiagnosticsAsset.headers.get('content-type') || '', /javascript/);
+    assert.match(await legacyDiagnosticsAsset.text(), /flow_position_conflict/);
   });
 }
 
@@ -1260,11 +1275,14 @@ async function testFrontendContract() {
   const html = fs.readFileSync(frontendPath, 'utf8');
   const diagramSource = fs.readFileSync(processDiagramPath, 'utf8');
   const structureScoreSource = fs.readFileSync(structureScorePath, 'utf8');
+  const governanceWorkflowSource = fs.readFileSync(governanceWorkflowPath, 'utf8');
   const serverSource = fs.readFileSync(serverPath, 'utf8');
 
   assert.ok(html.includes("const EXPECTED_EXPORT_SCHEMA_VERSION = 'process-governance-v6'"));
   assert.ok(html.includes("fetch('/api/template?version=process-governance-v6', { cache: 'no-store' })"));
   assert.ok(html.includes('<script src="process-governance-migration.js"></script>'));
+  assert.ok(html.includes('<script src="governance-workflow.js"></script>'));
+  assert.ok(html.includes('<script src="legacy-cross-department-diagnostics.js"></script>'));
   assert.ok(html.includes('<script src="graph-edit-commands.js"></script>'));
   assert.ok(html.includes('<script src="graph-editor-state.js"></script>'));
   assert.ok(html.includes('<script src="data-relation-diagram.js"></script>'));
@@ -1284,6 +1302,15 @@ async function testFrontendContract() {
   assert.equal(html.includes('归并为单一跨部门行为'), false);
   assert.ok(html.includes('当前为跨部门行为'));
   assert.ok(html.includes('流程先后请在“流程关系”中维护'));
+  ['开始与文件', '流程边界', '流程骨架', '动作与异常', '数据与表单', '跨部门核对', '评审与交接']
+    .forEach(label => assert.ok(governanceWorkflowSource.includes(label), `missing governance step: ${label}`));
+  assert.ok(html.includes('data-action="switch-governance-step"'));
+  assert.ok(html.includes('data-action="open-governance-drawer"'));
+  assert.ok(html.includes('data-action="download-current-stage"'));
+  assert.ok(html.includes('源文件SHA-256'));
+  assert.ok(html.includes('未审核-${department}-${processName}-${stageLabel}-${exportTimestamp(now)}.json'));
+  assert.equal(html.includes('id="newProcessButton"'), false);
+  assert.equal(html.includes('id="exportButton"'), false);
   assert.ok(html.includes('aria-label="术语定义列表"'));
   assert.ok(html.includes('data-drag-handle="${escapeAttribute(kind)}"'));
   assert.ok(html.includes("behavior: { collectionKey: 'behaviors', refKey: 'behavior_ref'"));

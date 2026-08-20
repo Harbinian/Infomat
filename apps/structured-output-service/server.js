@@ -3020,8 +3020,8 @@ app.post('/api/validate', (req, res) => {
   });
 });
 
-app.all(['/api/data', '/api/export'], (_req, res) => {
-  res.status(404).json({ error: '当前工具不保存页面内容，请在当前页面导出结构化文件。' });
+app.all(['/api/session', '/api/data', '/api/export'], (_req, res) => {
+  res.status(404).json({ error: '当前工具不保存页面内容，请在当前页面下载结构化文件。' });
 });
 
 app.get('/api/schema', (req, res) => {
