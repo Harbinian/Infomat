@@ -380,6 +380,17 @@
     .step-intro h2 { margin: 0 0 5px; font-family: "SimSun", serif; font-size: 22px; }
     .step-intro p { margin: 0; color: var(--muted); line-height: 1.65; }
     .primary-guidance { max-width: 360px; padding: 9px 11px; border-left: 4px solid var(--gold); background: #f7edda; font-size: 13px; }
+    .step-issue-panel {
+      margin-bottom: 12px;
+      border: 1px solid #d7b7a6;
+      border-radius: 12px;
+      background: #fff8f1;
+    }
+    .step-issue-panel summary { padding: 12px 14px; cursor: pointer; color: var(--red); font-weight: 700; }
+    .step-issue-copy { margin: 0; padding: 0 14px 4px; color: var(--muted); font-size: 13px; line-height: 1.65; }
+    .step-issue-list { margin: 8px 0 0; padding: 0 14px 14px 36px; }
+    .step-issue-list li + li { margin-top: 8px; }
+    .step-issue-list .diagram-warning-button { width: 100%; }
     .step-view-switch { margin-bottom: 12px; }
     .step-view-button.active { color: #fff; border-color: var(--blue); background: var(--blue); }
 
@@ -1612,6 +1623,10 @@
     }
 
     .node-combination-guide > summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
       padding: 13px 15px;
       cursor: pointer;
       list-style: none;
@@ -1620,6 +1635,14 @@
     }
 
     .node-combination-guide > summary::-webkit-details-marker { display: none; }
+    .node-combination-guide > summary::after {
+      content: '展开';
+      flex: 0 0 auto;
+      color: #5c6658;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .node-combination-guide[open] > summary::after { content: '收起'; }
     .node-combination-body { padding: 14px; }
     .node-combination-intro { margin: 0 0 12px; color: #4f574b; line-height: 1.65; }
     .node-combination-legend {
@@ -2354,7 +2377,7 @@
     const GOVERNANCE_STEPS = globalThis.GovernanceWorkflow?.STEPS || [];
     const TOOL_HELP_STEPS = [
       {
-        title: '1. 开始与文件',
+        title: '1. JSON基本信息',
         action: '编制人从“文件”入口新建一条流程或导入已有JSON，并核对源文件名、来源版本、源文件SHA-256和候选数量。',
         completion: '已选中本次要编制的唯一候选流程；导入失败时，原候选和未下载内容保持不变。'
       },
@@ -2515,6 +2538,7 @@
     const reviewPatternViews = new Map();
     let expandedReviewPatternId = '';
     let diagramExampleExpanded = false;
+    let legendPatternGuideExpanded = false;
     let diagramExpanded = false;
     let focusClearTimer = null;
     let sortableDragState = null;
@@ -3415,14 +3439,24 @@
       return steps;
     }
 
-    function governanceIssueCounts(data = currentDocument()) {
-      const counts = Object.fromEntries(GOVERNANCE_STEPS.map(step => [step.id, 0]));
-      if (!data) return counts;
-      const warnings = businessWarnings(data).concat(
+    function governanceIssues(data = currentDocument()) {
+      if (!data) return [];
+      return businessWarnings(data).concat(
         reviewBehaviorExecutabilityWarnings(data),
         reviewRoutingWarnings(data)
       );
-      warnings.forEach(item => {
+    }
+
+    function governanceIssuesForStep(stepId, data = currentDocument()) {
+      return governanceIssues(data).filter(item =>
+        (globalThis.GovernanceWorkflow?.stepForTarget(item) || 'handoff') === stepId
+      );
+    }
+
+    function governanceIssueCounts(data = currentDocument()) {
+      const counts = Object.fromEntries(GOVERNANCE_STEPS.map(step => [step.id, 0]));
+      if (!data) return counts;
+      governanceIssues(data).forEach(item => {
         const stepId = globalThis.GovernanceWorkflow?.stepForTarget(item) || 'handoff';
         counts[stepId] = (counts[stepId] || 0) + 1;
       });
@@ -3529,7 +3563,23 @@
       return `<div class="step-intro">
         <div><div class="eyebrow">第${step.number}步</div><h2>${escapeHtml(step.label)}</h2><p>${escapeHtml(step.responsibility)}</p></div>
         <div class="primary-guidance"><strong>当前建议操作</strong><br>${escapeHtml(action)}</div>
-      </div>`;
+      </div>${renderGovernanceIssuePanel(stepId)}`;
+    }
+
+    function renderGovernanceIssuePanel(stepId) {
+      const issues = governanceIssuesForStep(stepId);
+      if (!issues.length) return '';
+      return `<details class="step-issue-panel" open>
+        <summary>本步骤待补充项（${issues.length}项）</summary>
+        <p class="step-issue-copy">以下提示来自当前页面检查。点击任一待补充项会返回对应编辑位置；页面提示不替代业务人员确认事实。</p>
+        <ol class="step-issue-list">${issues.map(item => {
+          const attributes = exportWarningLocationAttributes(item);
+          const content = attributes
+            ? `<button class="diagram-warning-button export-warning-button" data-action="focus-export-warning" ${attributes}>${renderWarningCopy(item)}</button>`
+            : `<span>${renderWarningCopy(item)}</span>`;
+          return `<li>${content}</li>`;
+        }).join('')}</ol>
+      </details>`;
     }
 
     function renderStepViewSwitch(items) {
@@ -3610,19 +3660,15 @@
         </section>`;
       }
       const entry = currentEntry();
-      const summary = migrationSummary(data);
       const importInfo = entry?.importInfo;
       return `${renderStepIntro('start')}${section(
-        '当前文件与导入结果',
-        '旧版文件只在当前页面内存中转换为v6。源文件、源文件摘要和迁移摘要不会新增到下载的v6内容。',
+        '当前文件基本信息',
+        '源文件名、来源版本、源文件SHA-256和候选数量只在当前页面显示，不写入下载的v6内容。',
         `<div class="grid">
           <div class="inline-note"><strong>源文件：</strong>${escapeHtml(importInfo?.fileName || (entry?.origin === 'new' ? '空白模板新建' : '本次页面来源未记录'))}</div>
           <div class="inline-note"><strong>来源版本：</strong>${escapeHtml(importInfo?.sourceVersion || entry?.origin || '未知')}</div>
           <div class="inline-note"><strong>源文件SHA-256：</strong><code>${escapeHtml(importInfo?.sha256 || '空白新建不适用')}</code></div>
           <div class="inline-note"><strong>候选数量：</strong>${candidates.length}</div>
-        </div>
-        <div class="governance-drawer-list">
-          <div class="governance-drawer-card"><strong>迁移结果</strong><p>来源：${escapeHtml(summary.sourceVersion)}；归档记录${summary.archived}项；仍需核对${summary.unresolved}项；表单字段${summary.fieldCount}项。</p></div>
         </div>
         <div class="item-actions"><button class="button primary" data-action="switch-governance-step" data-step="boundary">进入流程边界</button></div>`
       )}`;
@@ -3934,6 +3980,7 @@
                 <span class="legend-example-node">外部门<br>办理事项</span>
               </div>
             </div>
+            ${renderNodeCombinationGuide()}
           </div>
         </div>`;
     }
@@ -4268,7 +4315,13 @@
 
     function mountReviewPatternDiagrams() {
       destroyReviewPatternDiagrams();
-      if (activeWorkspaceTab !== 'editor' || activeEditorSection !== 'export') return;
+      if (
+        activeWorkspaceTab !== 'flow'
+        || activeGovernanceStep !== 'skeleton'
+        || activeStepView !== 'diagram'
+        || !diagramExampleExpanded
+        || !document.querySelector('.node-combination-guide[open]')
+      ) return;
       const patternApi = globalThis.ReviewPatternDiagrams;
       if (!patternApi?.definitions || !patternApi?.mount) return;
       patternApi.definitions().forEach(pattern => {
@@ -6163,7 +6216,7 @@
           <p class="review-pattern-rule"><strong>评审规则：</strong>${escapeHtml(pattern.rule)}</p>
         </article>`).join('');
       const patternContent = cards || '<div class="score-unavailable">节点组合图例暂时无法加载；当前JSON不受影响，请联系维护人员检查3001静态资源。</div>';
-      return `<details class="node-combination-guide" open>
+      return `<details class="node-combination-guide"${legendPatternGuideExpanded ? ' open' : ''}>
         <summary>节点组合、循环退出与嵌套并行图例</summary>
         <div class="node-combination-body">
           <p class="node-combination-intro">先按组合表选择关系类型，再用可拖动、可缩放的图形化图例核对嵌套结构。<strong>仅用于理解关系，不属于当前流程，不代表评审通过。</strong>图例不新增字段，不修改当前JSON。</p>
@@ -6246,7 +6299,6 @@
           <ol>${acceptance}</ol>
         </div>
         <div class="review-aspect-grid">${aspects}</div>
-        ${renderNodeCombinationGuide()}
         <div class="review-readiness-actions">
           <button class="button small" data-action="refresh-structure-score"${scoreState.status === 'pending' ? ' disabled' : ''}>重新检查五方面</button>
         </div>
@@ -6305,12 +6357,12 @@
       destroyDataDiagram();
       destroyReviewPatternDiagrams();
       const data = currentDocument();
-      if (activeGovernanceStep !== 'handoff') expandedReviewPatternId = '';
+      if (activeGovernanceStep !== 'skeleton' || !diagramExampleExpanded) expandedReviewPatternId = '';
       document.body.classList.toggle(
         'diagram-overlay-open',
         Boolean(data && (
           (activeGovernanceStep === 'skeleton' && diagramExpanded)
-          || (activeGovernanceStep === 'handoff' && expandedReviewPatternId)
+          || (activeGovernanceStep === 'skeleton' && diagramExampleExpanded && expandedReviewPatternId)
         ))
       );
       updateCandidateList();
@@ -6330,8 +6382,8 @@
       workspaceViewSwitch.innerHTML = renderGovernanceSteps();
       workspace.innerHTML = renderCurrentGovernanceStep();
       if (activeGovernanceStep === 'skeleton' && activeStepView === 'diagram') requestAnimationFrame(mountDiagram);
+      if (activeGovernanceStep === 'skeleton' && activeStepView === 'diagram') requestAnimationFrame(mountReviewPatternDiagrams);
       if (activeGovernanceStep === 'data' && activeStepView === 'data') requestAnimationFrame(mountDataDiagram);
-      if (activeGovernanceStep === 'handoff') requestAnimationFrame(mountReviewPatternDiagrams);
     }
 
     function updateCandidateList() {
@@ -6894,6 +6946,10 @@
       if (action === 'reset-diagram') return diagramView?.reset();
       if (action === 'toggle-diagram-example') {
         diagramExampleExpanded = !diagramExampleExpanded;
+        if (!diagramExampleExpanded) {
+          legendPatternGuideExpanded = false;
+          expandedReviewPatternId = '';
+        }
         return render();
       }
       if (action === 'toggle-diagram-expanded') {
@@ -8094,9 +8150,9 @@
         render();
         showStatus(
           candidates.length > 1
-            ? `历史文件包含 ${candidates.length} 条流程，全部通过v6校验后已拆成候选。每条流程必须单独下载。`
+            ? `历史文件包含 ${candidates.length} 条流程，已在当前页面显示为候选。每条流程必须单独下载。`
             : migrated
-              ? '历史结构化文件已无损迁移到v6，当前内容标记为未下载。'
+              ? '历史结构化文件已导入当前页面，当前内容标记为未下载。'
               : 'v6结构化文件已导入当前页面。',
           'success'
         );
@@ -8157,6 +8213,18 @@
       if (button) handleAction(button.dataset.action, button);
       if (event.target === governanceDrawer) handleAction('close-governance-drawer', governanceDrawer);
     });
+
+    workspace.addEventListener('toggle', event => {
+      if (!event.target.matches('.node-combination-guide')) return;
+      legendPatternGuideExpanded = event.target.open;
+      if (legendPatternGuideExpanded) {
+        requestAnimationFrame(mountReviewPatternDiagrams);
+        return;
+      }
+      expandedReviewPatternId = '';
+      destroyReviewPatternDiagrams();
+      document.body.classList.toggle('diagram-overlay-open', diagramExpanded);
+    }, true);
 
     workspace.addEventListener('input', event => {
       const graphProperty = event.target.closest('[data-graph-property]');

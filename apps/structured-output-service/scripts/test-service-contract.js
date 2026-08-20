@@ -728,7 +728,7 @@ async function testApi() {
     assert.equal(governanceWorkflowAsset.status, 200);
     assert.match(governanceWorkflowAsset.headers.get('content-type') || '', /javascript/);
     const governanceWorkflowSource = await governanceWorkflowAsset.text();
-    assert.match(governanceWorkflowSource, /开始与文件/);
+    assert.match(governanceWorkflowSource, /JSON基本信息/);
     assert.match(governanceWorkflowSource, /sha256Fallback/);
 
     const legacyDiagnosticsAsset = await fetch(`${baseUrl}/legacy-cross-department-diagnostics.js`);
@@ -1302,12 +1302,33 @@ async function testFrontendContract() {
   assert.equal(html.includes('归并为单一跨部门行为'), false);
   assert.ok(html.includes('当前为跨部门行为'));
   assert.ok(html.includes('流程先后请在“流程关系”中维护'));
-  ['开始与文件', '流程边界', '流程骨架', '动作与异常', '数据与表单', '跨部门核对', '评审与交接']
+  ['JSON基本信息', '流程边界', '流程骨架', '动作与异常', '数据与表单', '跨部门核对', '评审与交接']
     .forEach(label => assert.ok(governanceWorkflowSource.includes(label), `missing governance step: ${label}`));
   assert.ok(html.includes('data-action="switch-governance-step"'));
   assert.ok(html.includes('data-action="open-governance-drawer"'));
   assert.ok(html.includes('data-action="download-current-stage"'));
   assert.ok(html.includes('源文件SHA-256'));
+  assert.ok(html.includes('本步骤待补充项'));
+  assert.ok(html.includes('function governanceIssuesForStep'));
+  assert.ok(html.includes('data-action="focus-export-warning"'));
+  const diagramLegendSource = html.slice(
+    html.indexOf('function renderDiagramLegend()'),
+    html.indexOf('function renderDiagramWarnings(')
+  );
+  const reviewReadinessSource = html.slice(
+    html.indexOf('function renderReviewReadinessPanel('),
+    html.indexOf('function renderExportCheck(')
+  );
+  assert.ok(diagramLegendSource.includes('${renderNodeCombinationGuide()}'));
+  assert.equal(reviewReadinessSource.includes('${renderNodeCombinationGuide()}'), false);
+  assert.ok(html.includes('<summary>节点组合、循环退出与嵌套并行图例</summary>'));
+  assert.ok(html.includes(".node-combination-guide[open] > summary::after { content: '收起'; }"));
+  assert.ok(html.includes("!document.querySelector('.node-combination-guide[open]')"));
+  assert.ok(html.includes("workspace.addEventListener('toggle'"));
+  assert.equal(html.includes('当前文件与导入结果'), false);
+  assert.equal(html.includes('<strong>迁移结果</strong>'), false);
+  assert.equal(html.includes('历史结构化文件已无损迁移到v6'), false);
+  assert.ok(html.includes('结构化文件已导入当前页面'));
   assert.ok(html.includes("const TOOL_HELP_STEPS = ["));
   assert.ok(html.includes("const TOOL_TERM_GROUPS = ["));
   [
