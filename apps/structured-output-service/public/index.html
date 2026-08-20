@@ -429,6 +429,24 @@
     .governance-drawer-card { padding: 13px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
     .governance-drawer-card p { margin: 6px 0 0; color: var(--muted); line-height: 1.65; }
 
+    .tool-help-page { display: grid; gap: 12px; }
+    .tool-help-grid,
+    .tool-help-step-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .tool-help-card,
+    .tool-help-step-card { padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: #fffaf0; }
+    .tool-help-card h3,
+    .tool-help-step-card h3 { margin: 0 0 7px; font-size: 15px; }
+    .tool-help-card p,
+    .tool-help-step-card p { margin: 5px 0 0; color: var(--muted); line-height: 1.65; }
+    .tool-help-step-card strong { color: var(--ink); }
+    .tool-term-groups { display: grid; gap: 10px; }
+    .tool-term-group { overflow: hidden; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+    .tool-term-group summary { padding: 13px 15px; cursor: pointer; background: var(--paper-deep); font-weight: 700; }
+    .tool-term-list { margin: 0; }
+    .tool-term-row { display: grid; grid-template-columns: minmax(160px, 230px) minmax(0, 1fr); gap: 14px; padding: 11px 15px; border-top: 1px solid var(--line); }
+    .tool-term-row dt { font-weight: 700; line-height: 1.6; }
+    .tool-term-row dd { margin: 0; color: var(--muted); line-height: 1.65; }
+
     .skeleton-list-layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 12px; }
     .skeleton-list { display: grid; gap: 8px; }
     .skeleton-list-button { width: 100%; text-align: left; }
@@ -2334,6 +2352,111 @@
     ];
     const ACTOR_ASSIGNMENT_MODE_VALUES = new Set(ACTOR_ASSIGNMENT_MODES.map(item => item.value));
     const GOVERNANCE_STEPS = globalThis.GovernanceWorkflow?.STEPS || [];
+    const TOOL_HELP_STEPS = [
+      {
+        title: '1. 开始与文件',
+        action: '编制人从“文件”入口新建一条流程或导入已有JSON，并核对源文件名、来源版本、源文件SHA-256和候选数量。',
+        completion: '已选中本次要编制的唯一候选流程；导入失败时，原候选和未下载内容保持不变。'
+      },
+      {
+        title: '2. 流程边界',
+        action: '编制人填写流程名称、归口部门、发起部门、编制人、目的和适用范围；没有依据的能力归类保持未归类或待确认。',
+        completion: '读者能够判断流程为什么启动、适用于什么范围、由哪个部门归口以及形成什么结束结果。'
+      },
+      {
+        title: '3. 流程骨架',
+        action: '编制人维护节点名称、节点类型、执行主体，以及流程关系的起点、终点和类型。泳道图与清单是同一草稿的两种互斥视图。',
+        completion: '每个节点和关系都能定位；判断、退回和并行结构的端点符合实际流程。'
+      },
+      {
+        title: '4. 动作与异常',
+        action: '编制人按顺序写清每个业务行为具体做什么、处理什么对象、产生什么结果，并补充触发条件、前提、时限、完成标准、会签要求和关系条件。',
+        completion: '业务人员不需要猜测就能理解正常办理、判断、退回、循环、并行和异常处理。'
+      },
+      {
+        title: '5. 数据与表单',
+        action: '编制人先确认本流程是否涉及数据对象或表单，再维护数据行为关系、来源线索、主表、明细表、填写项、字段业务数据归属和字段取值来源。',
+        completion: '页面记录了实际存在的数据和表单关系；确实不适用时保持为空，不为满足检查虚构内容。'
+      },
+      {
+        title: '6. 跨部门核对',
+        action: '归口部门和承接部门分别核对本方行为、流程关系、数据传递、返回条件和待定事项。本步骤只读，发现问题后返回唯一编辑位置修改。',
+        completion: '双方能够指出已确认事实和待定事项；“未识别到”没有被当作“不涉及跨部门”的结论。'
+      },
+      {
+        title: '7. 评审与交接',
+        action: '编制人处理结构阻断并核对业务提示，下载最终待核对文件后重新导入；业务核对记录和结构预审问题处理记录在JSON之外分别保存。',
+        completion: '结构错误为零，往返内容和稳定引用一致，文件名及SHA-256已核对；当前v6文件仍不得直接导入3000。'
+      }
+    ];
+    const TOOL_TERM_GROUPS = [
+      {
+        title: '文件、版本与页面状态',
+        terms: [
+          ['无状态临时工具', '3001不保存账号草稿、服务端草稿或浏览器持久化内容。业务内容只存在当前页面内存中，用户主动下载JSON是唯一保存方式。'],
+          ['当前候选流程', '本次页面正在编制的一条流程。历史多候选文件导入后，每条候选流程分别显示、分别修改、分别下载，不形成审核状态。'],
+          ['单流程结构化文件规则', 'process-governance-v6规定一份JSON只包含一个流程，并固定流程、行为、关系、数据对象、表单、术语和迁移归档的结构。'],
+          ['源文件', '用户从“文件”入口选择的原始JSON。3001只读取源文件并在页面内存中处理，不修改或覆盖源文件。'],
+          ['来源版本', '源文件声明的结构版本。v1至v5和历史格式导入后只在当前页面内存中迁移为v6。'],
+          ['源文件SHA-256', '按源文件实际字节计算的摘要，用于确认两次核对的源文件是否相同；摘要不代表内容已经审核。'],
+          ['阶段草稿', '第一至第四轮主动下载的未审核v6文件，阶段依次为流程骨架、动作与异常、数据与表单、跨部门核对。阶段下载不是审核节点。'],
+          ['最终待核对文件', '第7步完成技术检查后下载的未审核v6文件。它仍需业务事实核对和独立结构预审，不能表述为正式流程。'],
+          ['文件交接摘要', '最近一次下载的文件名、时间、阶段、结构版本和SHA-256。摘要只在当前页面显示，不写入下载JSON。'],
+          ['迁移归档', '旧版文件中无法作为v6活动字段继续编辑、但需要保留追溯的只读内容。迁移归档不参与当前流程计算、评分或绘图。']
+        ]
+      },
+      {
+        title: '流程、节点与关系',
+        terms: [
+          ['L3流程', '本次编制的一条具体业务流程，包含边界、业务行为和关系。3001不因为名称或分类字段自动确认其能力归属。'],
+          ['A1业务行为', '流程中由业务人员或部门实际执行的一项可说明、可定位的业务动作。普通业务行为在v6中使用action节点记录。'],
+          ['流程骨架', '节点名称、节点类型、执行主体，以及流程关系的类型、起点和终点。逐动作说明和关系条件不在流程骨架中编辑。'],
+          ['普通业务行为', '承担实际业务动作的action节点，需要记录执行主体和具体做什么；它不同于判断、并行开始和并行汇合等控制节点。'],
+          ['控制节点', '用于表达判断或并行控制的节点，包括判断节点、并行开始和并行汇合。控制节点不代表执行部门，也不承担实际业务动作。'],
+          ['流程关系', '连接两个节点的有向关系，记录起点、终点和关系类型。一对多或多对一使用多条独立关系表达。'],
+          ['判断分支', '从判断节点发出、根据明确条件选择后续路线的关系。判断分支继续向后办理，不等于退回前序步骤。'],
+          ['流程内部回路', '当前节点在明确条件下返回已经存在的前序行为或判断节点的关系，常用于退回重办。每层循环都必须另有退出条件和去向。'],
+          ['并行开始', '同时启动两条以上办理路线的控制节点。只选择其中一条路线时应使用判断分支。'],
+          ['并行路线', '从并行开始发出或进入并行汇合的关系。任一路线可能在共同汇合前中止整个流程时，不得按并行表达。'],
+          ['并行汇合', '等待多条并行路线全部完成后再继续的控制节点。多条普通关系进入同一普通行为不表示等待全部路线。'],
+          ['会签行为', '要求指定部门全部确认知悉的普通业务行为，不表示审核、批准或跨部门承接。'],
+          ['具体做什么', '业务行为的逐动作说明，应按实际顺序写清动作、处理对象和结果，不能只写“确保”“保证”等抽象要求。'],
+          ['完成标准', '判断一项业务行为何时真正完成的可核对结果，不是对办理质量的空泛评价。']
+        ]
+      },
+      {
+        title: '数据对象、表单与字段',
+        terms: [
+          ['待治理数据对象', '3001页面简称“数据对象”，用于记录流程创建、更新或使用的信息线索。它不等于已经确认的主数据、参考数据或权威来源。'],
+          ['信息类型', '数据对象在当前流程中的内容类型，包括待确认、业务信息、业务结论、业务状态、标识符、文件或附件、其他信息输出。'],
+          ['数据行为关系', '业务行为对数据对象执行创建、更新、使用或待确认操作的关系，是当前v6记录数据输入输出关系的活动位置。'],
+          ['创建、更新、使用、待确认', '创建表示业务行为形成数据；更新表示业务行为改变数据；使用表示业务行为读取或依赖数据；待确认表示操作和方向尚无足够事实。'],
+          ['来源线索', '当前流程使用的数据来自其他流程或外部位置时记录的部门、流程、行为、数据名称和可用时间线索。来源线索不等于权威来源认定。'],
+          ['表单或记录', '流程中实际使用的纸质表单、电子表单、台账或业务记录。页面只记录结构和处理关系，不据此推断数据库表。'],
+          ['主表', '一张表单中每份业务记录只出现一次的主体填写结构，页面使用“基本信息”区域保存。'],
+          ['明细表', '一张表单中可以有零到多张、每张可以包含多行的明细填写结构。不同明细表必须分别保留，不得擅自合并。'],
+          ['填写项', '主表或明细表下的具体字段，记录名称、类型、是否必填、说明、业务数据归属和值来源。'],
+          ['字段业务数据归属', '说明一个填写项表达哪项数据对象。一个字段最多归属一个数据对象，不等于字段值从该对象取得。'],
+          ['字段取值来源', '说明字段值依赖哪些本流程数据或外部系统数据取得、参与计算或执行校验，可以有多个来源。'],
+          ['同名归并', '把经人工核对后确认可以合并的同名数据对象归并为一个保留对象。名称相同只触发核对入口，不自动证明对象相同。']
+        ]
+      },
+      {
+        title: '责任、检查与交接边界',
+        terms: [
+          ['固定部门和岗位', '业务行为在设计时已经明确由哪个部门和岗位执行。执行部门与流程归口部门不同且节点为普通业务行为时，页面识别为固定跨部门行为。'],
+          ['全公司通用', '该行为适用于全公司，但不归属于某个特定部门，因此不按固定跨部门行为处理。'],
+          ['动态责任部门', '责任部门由本行为开始前已经形成的数据在运行时确定。设计阶段不把它认定为固定跨部门行为，也不得向全公司广播。'],
+          ['跨部门行为', '固定执行部门与流程归口部门不同的普通业务行为。页面根据现有字段识别，不保存独立的“是否跨部门”结论字段。'],
+          ['技术标识与稳定引用', 'JSON内部用于唯一识别对象并连接关系的标识。修改名称不会改变引用；删除被引用对象时，页面会阻止操作并列出影响。技术标识不是业务编号。'],
+          ['结构错误', '违反v6结构规则、枚举、唯一性或引用完整性的技术问题。结构错误会阻止下载，用户必须先修正。'],
+          ['业务提示', '页面根据现有内容发现的缺项、矛盾或待核对事项。业务提示不阻止阶段草稿下载，也不等于业务结论。'],
+          ['待定', '现有事实或证据不足，暂时不能可靠填写或确认。保持待定比猜测或虚构内容更符合治理要求。'],
+          ['独立结构预审', '在新的核对上下文中，只依据待审JSON和对应结构规则检查必需结构、引用、字段归位和对象拆分，不判断流程事实是否正确。'],
+          ['3000停止边界', '3000当前只承接v1至v3。3001生成的v6文件不得直接导入3000，也不得自动降级；后续承接需另行完成兼容或迁移审核。']
+        ]
+      }
+    ];
     const EDITOR_SECTIONS = [
       { value: 'basic', label: '基本信息' },
       { value: 'profile', label: '目的与范围' },
@@ -3376,7 +3499,7 @@
           <details class="header-menu">
             <summary class="button">帮助与版本</summary>
             <div class="header-menu-panel">
-              <p class="boundary">帮助内容只解释页面操作和关系类型，不替业务部门确认事实。</p>
+              <p class="boundary">帮助内容解释页面操作、工具术语和结构边界，不替业务部门确认事实。</p>
               <button class="button" data-action="open-help-view">操作帮助</button>
               <button class="button" data-action="open-version-view">版本说明</button>
             </div>
@@ -3419,15 +3542,55 @@
       const data = currentDocument();
       if (activeStepView === 'version') return `${renderStepIntro('start')}${renderVersionHistoryPanel()}`;
       if (activeStepView === 'help') {
-        return `${renderStepIntro('start')}${section(
-          '页面操作帮助',
-          '七步导航按业务动作组织。每个字段只有一个可写入口，跨部门核对和评审交接只汇总并返回编辑位置。',
-          `<div class="governance-drawer-list">
-            <div class="governance-drawer-card"><strong>保存方式</strong><p>3001不自动保存。用户下载JSON是唯一保存方式；刷新或关闭页面后，页面内容无法恢复。</p></div>
-            <div class="governance-drawer-card"><strong>业务提示与结构错误</strong><p>业务提示可以保持待定并下载；JSON结构或技术引用损坏时，页面会阻止下载并提供定位入口。</p></div>
-            <div class="governance-drawer-card"><strong>关系维护</strong><p>流程骨架维护节点和关系端点；动作与异常维护逐动作说明、完成标准、判断条件、退回和并行规则；数据与表单维护数据、表单和字段关系。</p></div>
-          </div>`
-        )}`;
+        const helpSteps = TOOL_HELP_STEPS.map(item => `
+          <article class="tool-help-step-card">
+            <h3>${escapeHtml(item.title)}</h3>
+            <p><strong>怎么做：</strong>${escapeHtml(item.action)}</p>
+            <p><strong>完成标志：</strong>${escapeHtml(item.completion)}</p>
+          </article>`).join('');
+        const termGroups = TOOL_TERM_GROUPS.map(group => `
+          <details class="tool-term-group" open>
+            <summary>${escapeHtml(group.title)}（${group.terms.length}项）</summary>
+            <dl class="tool-term-list">${group.terms.map(([term, definition]) => `
+              <div class="tool-term-row">
+                <dt>${escapeHtml(term)}</dt>
+                <dd>${escapeHtml(definition)}</dd>
+              </div>`).join('')}</dl>
+          </details>`).join('');
+        return `${renderStepIntro('start')}<div class="tool-help-page">
+          ${section(
+            '使用前必读',
+            '本帮助只解释3001页面操作、字段含义和结构边界，不替代业务部门确认流程事实，也不形成审核或批准结论。',
+            `<div class="tool-help-grid">
+              <article class="tool-help-card"><h3>使用人和责任</h3><p>编制人维护当前流程；业务核对人确认实际流程、表单、数据和跨部门事实；MDM工作组检查结构并组织后续交接。页面检查不能代替任何一方确认。</p></article>
+              <article class="tool-help-card"><h3>开始前准备</h3><p>选择一条真实流程，准备可以核对的制度、表单、台账和实际做法，并明确编制人和不同人员担任的业务核对人。教学样例不能作为业务事实。</p></article>
+              <article class="tool-help-card"><h3>保存和恢复</h3><p>3001不自动保存。每轮完成后由用户主动下载；关闭或刷新后，只能重新导入已下载文件继续编制。源文件不会被修改。</p></article>
+              <article class="tool-help-card"><h3>当前停止边界</h3><p>3001输出始终是未审核的单流程v6文件。3000当前只承接v1至v3，v6不得直接导入3000，也不得自动降级。</p></article>
+            </div>`
+          )}
+          ${section(
+            '按七步完成编制',
+            '每项事实只有一个可写入口。跨部门核对和评审与交接只读汇总，修改按钮会返回对应编辑位置。',
+            `<div class="tool-help-step-grid">${helpSteps}</div>`
+          )}
+          ${section(
+            '常用操作与异常处理',
+            '执行删除、清空、重新导入和下载前，先核对当前候选和未下载状态。',
+            `<div class="tool-help-grid">
+              <article class="tool-help-card"><h3>新建、导入和清空</h3><p>统一从顶部“文件”入口执行。导入失败或取消时，当前候选、选择、未下载修改和撤销记录保持不变。</p></article>
+              <article class="tool-help-card"><h3>新增、删除和归并</h3><p>先进入唯一编辑步骤并选中对象。删除不级联；对象仍被关系、字段或迁移归档引用时，页面会阻止删除。成功删除或归并后，可在当前候选的撤销记录中恢复。</p></article>
+              <article class="tool-help-card"><h3>下载和继续编制</h3><p>阶段下载和最终下载都会执行技术检查。下载后继续修改不会被锁定；下次只能重新导入已下载文件恢复业务内容。</p></article>
+              <article class="tool-help-card"><h3>结构错误和业务提示</h3><p>结构错误必须修正后才能下载。业务提示可以保持待定并下载，但编制人和业务核对人仍须在交接前逐项处理或记录确认责任。</p></article>
+              <article class="tool-help-card"><h3>没有数据、表单或跨部门位置</h3><p>确实不适用时保持为空，不为满足检查虚构内容。页面没有识别到跨部门位置，只表示现有字段没有形成固定跨部门行为，不代表业务实际不涉及跨部门。</p></article>
+              <article class="tool-help-card"><h3>交接时核对</h3><p>交出人与接收人核对文件名、阶段、结构版本和SHA-256。最终v6、结构预审问题处理记录和业务核对记录分别保存，不嵌入同一JSON。</p></article>
+            </div>`
+          )}
+          ${section(
+            '本工具术语',
+            '以下定义只说明这些词在3001编制工具中的含义。名称相同、页面提示或技术校验通过，都不能自动形成业务事实或治理结论。',
+            `<div class="tool-term-groups">${termGroups}</div>`
+          )}
+        </div>`;
       }
       const flowCards = GOVERNANCE_STEPS.map(step => `
         <div class="governance-flow-card"><strong>${step.number}. ${escapeHtml(step.label)}</strong><p>${escapeHtml(step.responsibility)}</p></div>

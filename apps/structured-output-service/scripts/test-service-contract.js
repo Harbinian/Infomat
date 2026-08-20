@@ -1308,6 +1308,31 @@ async function testFrontendContract() {
   assert.ok(html.includes('data-action="open-governance-drawer"'));
   assert.ok(html.includes('data-action="download-current-stage"'));
   assert.ok(html.includes('源文件SHA-256'));
+  assert.ok(html.includes("const TOOL_HELP_STEPS = ["));
+  assert.ok(html.includes("const TOOL_TERM_GROUPS = ["));
+  [
+    '无状态临时工具',
+    '单流程结构化文件规则',
+    '阶段草稿',
+    '文件交接摘要',
+    '流程骨架',
+    'A1业务行为',
+    '流程内部回路',
+    '并行汇合',
+    '待治理数据对象',
+    '数据行为关系',
+    '字段业务数据归属',
+    '字段取值来源',
+    '技术标识与稳定引用',
+    '结构错误',
+    '业务提示',
+    '3000停止边界'
+  ].forEach(term => assert.ok(html.includes(`['${term}',`), `missing tool help term: ${term}`));
+  assert.ok(html.includes('使用前必读'));
+  assert.ok(html.includes('按七步完成编制'));
+  assert.ok(html.includes('常用操作与异常处理'));
+  assert.ok(html.includes('本工具术语'));
+  assert.ok(html.includes('删除不级联'));
   assert.ok(html.includes('未审核-${department}-${processName}-${stageLabel}-${exportTimestamp(now)}.json'));
   assert.equal(html.includes('id="newProcessButton"'), false);
   assert.equal(html.includes('id="exportButton"'), false);
