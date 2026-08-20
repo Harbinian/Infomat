@@ -17,6 +17,7 @@
 | `2026-08-13-ea-bpm-governance-evaluation-design/` | 3000 EA/BPM治理评价与3001评审准备设计包 | 3001四方面前端已实现；3000正式治理评价仍等待G-01至G-06 |
 | `2026-08-15-3001-process-governance-v4-upgrade/` | 3001输出物、数据、表单、字段与业务行为关系升级 | v4结构、兼容迁移、页面、AI助手和验收真源 |
 | `2026-08-17-3001-process-governance-v6-graph-editing/` | 3001可编辑流程图与数据结构精简升级 | v6结构、迁移映射、图编辑、认知负担与验收真源；已实施 |
+| `2026-08-20-3001-seven-step-frontend-acceptance-plan.md` | 3001七步治理前端正式验收 | 固定G0至G5、无状态硬门槛、真实流程和v4迁移双案例、缺陷分级与签发边界 |
 | `2026-08-12-3001-process-authoring-rollout-execution-plan.md` | 3001流程结构化编制推广与执行计划 | V1.1按四轮编制和两级推广门槛执行，未满足门槛时顺延 |
 | `2026-08-12-3001-pilot-action-register.md` | 3001首轮样板行动项台账 | V1.1分别记录事项状态、流程阶段、四轮交接和推广门槛 |
 | `2026-07-23-internet-only-office-governance-process-draft.md` | 全公司互联网专用办公区需求收集、建设与使用管理流程 | 待评审草案 |
