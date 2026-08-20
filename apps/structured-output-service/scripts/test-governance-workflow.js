@@ -5,7 +5,15 @@ const Workflow = require('../public/governance-workflow.js');
 async function main() {
   assert.deepEqual(
     Workflow.STEPS.map(step => step.label),
-    ['开始与文件', '流程边界', '流程骨架', '动作与异常', '数据与表单', '跨部门核对', '评审与交接']
+    ['JSON基本信息', '流程边界', '流程骨架', '动作与异常', '数据与表单', '跨部门核对', '评审与交接']
+  );
+  assert.equal(
+    Workflow.primaryActionForStep('start', { hasDocument: false }),
+    '新建流程或继续已有流程'
+  );
+  assert.equal(
+    Workflow.primaryActionForStep('start', { hasDocument: true }),
+    '新建流程或继续已有流程'
   );
   assert.equal(Workflow.stageForStep('boundary').label, '第1轮-流程骨架');
   assert.equal(Workflow.stageForStep('action').label, '第2轮-动作与异常');

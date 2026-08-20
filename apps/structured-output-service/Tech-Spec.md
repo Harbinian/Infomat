@@ -35,7 +35,7 @@ POST /api/validate
 | `public/graph-editor-state.js` | 候选隔离的撤销重做、内容指纹、基线和视图状态 |
 | `public/process-diagram.js` | 流程布局、自动避让、绘图、聚合徽标和视口恢复 |
 | `public/data-relation-diagram.js` | 聚焦式数据二部图和合并可见边 |
-| `public/review-pattern-diagrams.js` | 只读评审图例数据和生命周期 |
+| `public/review-pattern-diagrams.js` | “流程关系→查看图例示例”中的只读流程图图例数据和生命周期 |
 | `public/structure-score.js` | `structure-learning-score-v3`和`process-review-readiness-v6`纯计算 |
 
 `governance-workflow.js`、`process-governance-migration.js`、`legacy-cross-department-diagnostics.js`、`graph-edit-commands.js`和`graph-editor-state.js`使用UMD导出，使浏览器和Node测试运行同一份代码。
@@ -48,6 +48,8 @@ POST /api/validate
 - 步骤1至3映射到`round-1`，步骤4映射到`round-2`，步骤5映射到`round-3`，步骤6映射到`round-4`，步骤7映射到`final`。
 - 步骤3拥有骨架字段；步骤4拥有动作和条件字段；步骤6、7只读汇总并通过目标映射跳回唯一编辑入口。
 - 顶部状态区和右侧治理抽屉都由当前候选派生，不写入JSON。
+- `governanceIssues()`汇总当前页面业务提示；步骤状态和当前步骤的待补充项共同使用该列表。用户点击待补充项时，页面复用既有字段定位逻辑返回唯一编辑位置，不创建第二份可写字段。
+- 第一步“JSON基本信息”显示源文件名、来源版本、源文件SHA-256和候选数量，不显示迁移结果。历史版本迁移仍在当前页面内存中执行，迁移规则、失败恢复和版本说明不变。
 
 ## 2.2 操作帮助与术语
 
@@ -158,7 +160,7 @@ v6在JSON Schema之外检查：
 
 六轮后仍有碰撞时返回可定位的碰撞标识。布局告警不修改JSON、不阻止单个用户下载，但代表性发布样本存在碰撞时发布门槛失败。
 
-`process-diagram.js`保持`autoungrabify`，不允许自由拖动。主流程图通过`editable`选项启用选择事件；评审图例始终传入`editable=false`且不显示数据或表单徽标。
+`process-diagram.js`保持`autoungrabify`，不允许自由拖动。主流程图通过`editable`选项启用选择事件；“查看图例示例”中的只读流程图图例始终传入`editable=false`且不显示数据或表单徽标。节点组合图例默认折叠，只在用户展开后挂载画布；折叠、离开流程关系页或重新渲染时销毁画布实例。
 
 普通行为徽标从当前草稿只读聚合：数据徽标汇总创建、更新和使用数量，表单徽标显示关联表单数量，超过99显示`99+`。徽标不进入rank、泳道、路由或JSON。
 
@@ -193,7 +195,7 @@ v6在JSON Schema之外检查：
 
 ## 10. 测试与性能
 
-`npm.cmd test`依次运行治理流程、评分、服务接口和v6图编辑测试。治理流程测试覆盖七步顺序、阶段映射、问题定位、步骤状态和SHA-256标准向量。固定构造器覆盖v1至v5、历史多候选、非法枚举、断裂引用、无法解析角色、未解决`join_mode`、历史工作角色、多创建行为、归并冲突、迁移幂等、失败恢复、v6往返和`/api/validate`纯校验。前端固定检查还验证唯一编辑入口所依赖的数据对象选择函数不会被图选择函数覆盖，并固定检查操作帮助四部分和关键工具术语。
+`npm.cmd test`依次运行治理流程、评分、服务接口和v6图编辑测试。治理流程测试覆盖七步顺序、阶段映射、问题定位、步骤状态和SHA-256标准向量。固定构造器覆盖v1至v5、历史多候选、非法枚举、断裂引用、无法解析角色、未解决`join_mode`、历史工作角色、多创建行为、归并冲突、迁移幂等、失败恢复、v6往返和`/api/validate`纯校验。前端固定检查还验证唯一编辑入口所依赖的数据对象选择函数不会被图选择函数覆盖，并检查“JSON基本信息”不显示迁移结果、待补充项入口、操作帮助四部分和关键工具术语。
 
 代表性布局样本包含约40个节点、80条关系、长名称、长标签、多分支、跨泳道和多回路，要求三类碰撞清单为空且相同输入坐标一致。
 

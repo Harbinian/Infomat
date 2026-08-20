@@ -9,8 +9,8 @@
     {
       id: 'start',
       number: 1,
-      label: '开始与文件',
-      responsibility: '新建、导入、迁移摘要和候选流程切换',
+      label: 'JSON基本信息',
+      responsibility: '新建、导入、文件基本信息核对和候选流程切换',
       primaryAction: '新建流程或继续已有流程'
     },
     {
