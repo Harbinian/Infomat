@@ -14,6 +14,7 @@
 | `2026-05-17-changxing-requirements-questionnaire.md` | 需求调研问题清单 | 调研材料 |
 | `2026-06-29-mdm-governance-input-baseline-landing-plan.md` | MDM 治理落地计划 | 执行计划 |
 | `2026-08-09-mdm-data-flow-lifecycle-governance-development-plan.md` | MDM 数据流与生命周期治理开发计划 | 等待批量导入与首轮测试门槛 |
+| `2026-08-20-3001-process-governance-v7-data-lifecycle-upgrade-plan.md` | 3001 v7数据生命周期升级计划 | 范围已收口；七步前端基础基本完成，v7结构、自动分析、迁移和验收待实施 |
 | `2026-08-13-ea-bpm-governance-evaluation-design/` | 3000 EA/BPM治理评价与3001评审准备设计包 | 3001四方面前端已实现；3000正式治理评价仍等待G-01至G-06 |
 | `2026-08-15-3001-process-governance-v4-upgrade/` | 3001输出物、数据、表单、字段与业务行为关系升级 | v4结构、兼容迁移、页面、AI助手和验收真源 |
 | `2026-08-17-3001-process-governance-v6-graph-editing/` | 3001可编辑流程图与数据结构精简升级 | v6结构、迁移映射、图编辑、认知负担与验收真源；已实施 |
