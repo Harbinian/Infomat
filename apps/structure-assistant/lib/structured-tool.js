@@ -50,8 +50,8 @@ function createStructuredToolClient({ baseUrl, appCommit, timeoutMs = 8000, requ
 
   async function snapshot() {
     const [healthResult, schemaResult] = await Promise.all([
-      request(`${root}/api/health`, { cache: 'no-store' }, timeoutMs),
-      request(`${root}/api/schema`, { cache: 'no-store' }, timeoutMs)
+      request(`${root}/api/health?version=${CURRENT_SCHEMA_VERSION}`, { cache: 'no-store' }, timeoutMs),
+      request(`${root}/api/schema?version=${CURRENT_SCHEMA_VERSION}`, { cache: 'no-store' }, timeoutMs)
     ]);
     const health = healthResult.body;
     const schema = schemaResult.body;

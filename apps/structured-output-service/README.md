@@ -107,9 +107,9 @@ v6根对象固定包含：
 
 ## 接口
 
-- `GET /api/health`：服务状态、端口、Git提交、当前结构版本和摘要。
-- `GET /api/schema?version=...`：v1至v6或历史结构化规则；默认v6。
-- `GET /api/template?version=process-governance-v6`：空白v6模板。
+- `GET /api/health?version=...`：服务状态、端口、Git提交、结构版本和摘要；支持v5、v6，默认v6。
+- `GET /api/schema?version=...`：v1至v6或历史结构化规则；默认v6。v5和v6响应同时返回对应的`X-Infomat-Schema-Digest`。
+- `GET /api/template?version=...`：空白v5或v6模板；默认v6，v5供MDM-AI助手兼容读取。
 - `POST /api/validate`：按输入版本纯校验，不迁移、不补字段、不改变输入语义。
 - `GET /api/version-history`：只读版本历史。
 - `GET /api/enums`：部门、岗位和字段类型等受控选项。

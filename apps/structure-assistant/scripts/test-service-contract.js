@@ -906,7 +906,7 @@ async function testAssistantApi() {
       assert.equal(gatewayAuth.status, 200);
       assert.equal(gatewayAuth.headers.get('cache-control'), 'no-store');
       const gatewaySchema = await gatewayAuth.json();
-      assert.equal(gatewaySchema.properties.schema_version.const, 'process-governance-v5');
+      assert.equal(gatewaySchema.properties.schema_version.const, 'process-governance-v6');
     } finally {
       await close(gatewayServer.server);
     }
@@ -969,7 +969,7 @@ async function testAssistantApi() {
         headers: { Cookie: auth.cookie }
       });
       assert.equal(structuredSchema.status, 200);
-      assert.equal((await structuredSchema.json()).properties.schema_version.const, 'process-governance-v5');
+      assert.equal((await structuredSchema.json()).properties.schema_version.const, 'process-governance-v6');
 
       await fakeDshRuntimeManager.stop(gatewaySessionPayload);
       const stoppedRuntime = await fetch(`${dshGateway.baseUrl}/`, {

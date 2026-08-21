@@ -10,6 +10,7 @@
 |---|---|---|---|
 | `README.md` | 仓库入口说明 | 只放导航、当前基线/真源入口、常用命令入口 | 不写长篇方案，不放生成数据 |
 | `AGENTS.md` / `CODEX.md` | Codex 协作规则 | 写跨仓库执行约定、术语约定、阶段边界、文档同步规则和目录级 AGENTS 设置规则 | 不写具体业务交付内容 |
+| `MEMORY.md` | 长期项目上下文 | 文件前部维护当前运行基线；历史和长期条目按关键词检索 | 不作为执行规则，不让历史条目覆盖当前运行基线或边界文件 |
 | `CONTEXT.md` | 仓库术语和目录规范 | 新增长期有效的仓库域语言 | 不记录临时计划 |
 | `REPOSITORY_BOUNDARY.md` | 仓库职责边界 | 定义仓库放什么、不放什么 | 不替代目录级 README |
 | `DIRECTORY_OWNERSHIP.md` | 目录责任矩阵 | 定义每个目录怎么改 | 不记录具体迁移日志 |
@@ -29,10 +30,10 @@
 | `apps/structure-assistant/` | MDM-AI助手及受限DSH治理入口 | `package.json`、`server.js`、`public/`、`lib/`、`dsh-plugin/`、`config/`、`scripts/` | 端口3003提供登录和运行控制；端口3004认证后代理每个登录会话的隔离DSH实例、助手接口和3001结构化工具；只在DSH子进程内存中保存当前治理工作区内容 | 不直接暴露DSH子进程，不开放编码Agent、命令、任意文件访问或模型配置；不停止、重绑或代管3001；不把业务内容写入文件、数据库或浏览器持久化空间；不判断业务事实，不写入3000或`docs/norms/`，不提交密钥 |
 | `apps/weekly-action-service/` | PMO 周会行动项服务 | `package.json`、`server.js`、`public/`、`scripts/` | 提供 3002 周会行动项登记、跟踪、关闭证据和延期原因维护；默认写入 `artifacts/weekly-actions/` 运行台账 | 不写回 PMO Markdown 真源、`tasks.json` 或 MDM 数据库；不把浏览器本地保存作为台账 |
 | `apps/information-collection-service/` | 内部信息表收集服务 | `package.json`、`server/`、`public/`、`scripts/`、`docs/` | 4000 管理端设计并发布收集任务，4001 填报端保存本人草稿和答卷；只读复用 `person`、`user_accounts`、`departments`，业务数据写入 `collection_*` 表，附件写入仓库外受控目录 | 不修改 MDM 身份、角色或治理业务表；不自动继承 3000 权限；不向浏览器持久化答案或附件 |
-| `apps/mdm-platform/server/` | MDM 后端实现 | Express 路由、MySQL 目标 schema 与历史 SQLite 待迁移实现 | 修改时同步平台测试 | 不直接依赖 PMO 页面内嵌数据 |
+| `apps/mdm-platform/server/` | MDM 后端实现 | Express 路由、当前MySQL运行schema与历史/测试SQLite兼容实现 | 修改时同步平台测试 | 不直接依赖 PMO 页面内嵌数据 |
 | `apps/mdm-platform/public/` | MDM 前端 | 单文件前端和静态资源 | 仅放平台运行所需前端资源 | 不放 PMO 驾驶舱截图 |
 | `apps/mdm-platform/scripts/` | 平台内脚本和测试 | 平台数据库、平台路由 | 脚本应说明是否写数据库，测试应使用隔离库 | 不放仓库级 parser |
-| `apps/mdm-platform/data/` | 本地运行态数据 | 本地 SQLite | 只作本地运行使用 | 不作为仓库真源，不提交数据库 |
+| `apps/mdm-platform/data/` | 历史和测试用本地数据目录 | 历史/测试SQLite文件 | 只用于受控兼容验证或隔离测试，不作为正式运行入口 | 不作为仓库真源，不提交数据库，不替代当前MySQL运行配置 |
 
 代码、接口、数据库结构、前端行为、启动命令或测试命令变化时，必须同步更新本应用 README、目录 `AGENTS.md`、使用手册或对应测试说明；无需更新时，在交付说明中写明原因。
 

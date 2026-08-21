@@ -9,6 +9,7 @@
 | 层级 | 作用 | 当前入口 |
 |---|---|---|
 | 执行规则 | 规定 Codex 怎么开始任务、怎么判断边界、怎么交付 | `AGENTS.md`、`CODEX.md` |
+| 长期项目上下文 | 记录当前运行基线和长期有效的项目事实，不承担执行规则 | `MEMORY.md` |
 | 仓库边界 | 规定仓库放什么、不放什么、各目录怎么改 | `REPOSITORY_BOUNDARY.md`、`DIRECTORY_OWNERSHIP.md` |
 | 主线关系 | 规定组织真源、流程输入基线、PMO、MDM、脚本之间的数据流 | `MAINLINE_MAP.md` |
 | 数据治理工作规则 | 规定治理责任、3001/3000边界、待定状态、对象识别和信息分层 | `docs/architecture/data-governance-operating-rules.md` |
@@ -24,14 +25,15 @@
 
 1. `AGENTS.md`
 2. `CODEX.md`
-3. `REPOSITORY_BOUNDARY.md`
-4. `DIRECTORY_OWNERSHIP.md`
-5. `MAINLINE_MAP.md`
-6. 涉及数据治理、3001、3000、流程地图或数据地图时，读取 `docs/architecture/data-governance-operating-rules.md`
-7. 任务相关目录的 `README.md` / `AGENTS.md`
-8. 具体真源、脚本或页面文件
+3. `MEMORY.md`的`Current Runtime Baseline`；历史和长期条目只按任务关键词检索
+4. `REPOSITORY_BOUNDARY.md`
+5. `DIRECTORY_OWNERSHIP.md`
+6. `MAINLINE_MAP.md`
+7. 涉及数据治理、3001、3000、流程地图或数据地图时，读取 `docs/architecture/data-governance-operating-rules.md`
+8. 任务相关目录的 `README.md` / `AGENTS.md`
+9. 具体真源、脚本或页面文件
 
-历史报告、历史 plans/specs 只能在需要追溯来源时检索读取。历史材料与当前规则冲突时，以根目录执行规则和边界文件为准。
+`MEMORY.md`的历史和长期条目、历史报告及历史plans/specs只在需要相关事实时检索读取。历史材料与当前运行基线或执行规则冲突时，以当前运行基线、根目录执行规则和边界文件为准。
 
 ## 3. 真源优先规则
 

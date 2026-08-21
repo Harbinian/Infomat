@@ -1,7 +1,7 @@
 # Infomat 项目术语表
 
-> 版本：V1.15
-> 更新日期：2026-08-20
+> 版本：V1.16
+> 更新日期：2026-08-21
 > 用途：为 AI 辅助开发提供统一的术语参考。按域分章，每章一张三列表。
 
 ## 使用约定
@@ -377,6 +377,11 @@
 | 有效行为链 | Effective Behavior Chain | 当前单流程中由明确非回路关系形成的最长行为链；显式回路边不重复计数，孤立行为不增加最长链长度 |
 | 技术阻断 | Technical Blocker | 当前JSON无法通过解析、版本兼容、结构规则、技术引用、下载回读或内容保持检查的状态；3001继续沿用硬性下载阻断规则 |
 | 系统动力学评价 | System Dynamics Evaluation | 基于正式流程、运行数据和实际反馈，观察等待、积压、返工、资源压力及跨部门影响等随时间变化的行为，用于识别长期影响和提出优化方向；不等同于结构化学习评分，也不替代业务评审、审核或管理决策 |
+| 工作项 | WorkItem / WI | 勤哲流程实例中的可办理任务节点实例，对应`ES_WorkItem.WiId`；工作项本身不等同于分派给某名用户的一条待办记录 |
+| 待办分派 | WorkItem Todo / WiTodo | 勤哲系统通过`ES_WiTodo.WiId + UserId`记录工作项与办理人的分派关系，用户身份由`ES_User`提供 |
+| 表单实例 | Report Case / RcId | 勤哲系统中一次具体表单填报或业务记录实例，对应`ES_RepCase.RcId` |
+| 流程实例 | Workflow Case / PiId | 勤哲系统中一次流程运行实例，对应`ES_WfCase.PiId`，包含一个或多个工作项 |
+| WorkItem 配套数据表 | `_wi` table | 与勤哲业务表同结构、包含`ExcelServerWIID`的工作项配套数据表；具体保存时点和生命周期需通过实时数据抽样确认 |
 
 ---
 
@@ -536,6 +541,7 @@
 | TLS | Tools | 主数据域 |
 | TPM | Total Productive Maintenance | EHS/运维安环域 |
 | U8 | 用友 U8 ERP | 供应链协同域 |
+| WI | WorkItem | 技术域 |
 | WAL | Write-Ahead Logging | 技术域 |
 
 ---

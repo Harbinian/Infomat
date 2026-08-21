@@ -16,7 +16,7 @@ Infomat 是一个信息化治理工作仓库，不是单一源码仓库。它允
 | 可运行系统 | MDM 平台、文档结构化输出辅助服务、MDM-AI助手、PMO 周会行动项服务、信息表收集服务及其测试和维护脚本 | `apps/` |
 | PMO / 项目管理展示工具 | 流程地图驾驶舱、甘特图、项目管理页面、交付物工作台 | `pmo/` |
 | 仓库级脚本工具 | 跨资料、跨页面、跨 app 的解析、注入、生成、校验脚本 | `scripts/` |
-| AI 协作工作区 | Codex 入口规则、Agent 技能和历史计划 | `AGENTS.md`、`CODEX.md`、`.agents/`、`docs/superpowers/` |
+| AI 协作工作区 | Codex 入口规则、长期项目上下文、Agent 技能和历史计划 | `AGENTS.md`、`CODEX.md`、`MEMORY.md`、`.agents/`、`docs/superpowers/` |
 | 历史方案归档 | 旧设计、旧计划、历史输出物、阶段性审查记录 | `docs/superpowers/`、`docs/archives/` |
 
 ## 2. 放入规则
@@ -48,7 +48,7 @@ Infomat 是一个信息化治理工作仓库，不是单一源码仓库。它允
 | PMO 流程地图展示 | `pmo/procedure-management/dashboard.html` 内嵌 `#sankey-data` | 不绕过 `scripts/parse-sankey-data.mjs` 手工重造数据 |
 | PMO 项目计划 | `pmo/信息化项目_计划管控真源.md` 和 `pmo/信息化项目_WBS结构真源.md` | 不把 XLSX 备份当默认维护入口 |
 | MDM 平台源码 | `apps/mdm-platform/server/`、`public/`、`scripts/` | 不把流程治理资料直接写进平台源码 |
-| MDM 运行态数据库 | `apps/mdm-platform/data/*.db` | 不作为仓库真源，不应提交 |
+| MDM 正式运行态数据库 | 固定MySQL实例，连接配置由`scripts/infomat-services.config.json`和本机私有环境文件提供 | 不把`apps/mdm-platform/data/*.db`误认为当前正式运行数据库；数据库文件和凭据均不得提交 |
 
 ## 4. 变更规则
 

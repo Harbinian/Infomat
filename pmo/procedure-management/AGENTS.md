@@ -6,7 +6,7 @@
 
 | 文件 | 用途 |
 |---|---|
-| `dashboard.html` | 主驾驶舱，单文件 HTML，内联 CSS/JS + ECharts |
+| `dashboard.html` | 主驾驶舱，单文件 HTML；应用CSS/JS内联，ECharts读取仓库根目录本地资产 |
 | `AGENTS.md` | 本目录维护规则和页面结构说明 |
 
 ## 启动方式
@@ -49,7 +49,7 @@ node scripts/check-dashboard-data.mjs
 
 ## 页面维护
 
-- `dashboard.html` 内联所有 CSS/JS，修改时注意行号偏移。
+- `dashboard.html`内联应用CSS/JS，并通过`../../echarts.min.js`读取仓库根目录本地ECharts资产；不得改用CDN或复制第二份资产。
 - 缩进使用 2 空格。
 - 设计风格统一使用现有 CSS 变量，新增 UI 应延续同一套变量。
 - KPI 卡片网格为 3 列布局，新增卡片注意保持布局稳定。
