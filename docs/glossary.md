@@ -377,6 +377,8 @@
 | 动态路由注册 | Dynamic Route Registration | server/index.js 中的 registerRouteIfExists() 机制，按约定目录结构自动挂载 Express Router |
 | 内联迁移 | Inline Migration | db.js 中的数据库升级策略：通过条件 DDL（ALTER TABLE IF NOT EXISTS 模式）直接修改表结构，无独立迁移框架 |
 | 前端静态页面 | Static Frontend | MDM平台、3001等页面使用无需构建的HTML、CSS和原生JavaScript；较独立的流程图或评分算法可以放在同目录静态脚本中，由页面直接加载 |
+| 双模式编辑 | Dual-mode Editing | 3001步骤5对同一份页面内存JSON提供业务式编辑和表格编辑；任一方式完成写入后，另一方式从当前JSON重新生成显示内容 |
+| 表格工作副本 | Grid Working Copy | 用户进入3001表格编辑后形成的当前会话临时行数据；只有完整检查通过并执行整体应用后才写入当前JSON，刷新、放弃或服务重启后不保留 |
 | JSON 序列化过滤 | JSON Serialization Filter | applyFieldConstraints 中间件在 JSON.stringify 前剥离 exclude 字段的实现方式 |
 | 审批任务 | Approval Task | approval_tasks 表，审批流每一步生成对应任务记录，关联 mapping_id 和审批人 |
 | 审批历史 | Approval History | approval_history 表，审批流的完整审计轨迹，记录每一步的操作人、操作时间和操作结果 |

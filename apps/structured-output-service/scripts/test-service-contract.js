@@ -20,6 +20,8 @@ const processDiagramPath = path.join(appRoot, 'public', 'process-diagram.js');
 const reviewPatternDiagramsPath = path.join(appRoot, 'public', 'review-pattern-diagrams.js');
 const structureScorePath = path.join(appRoot, 'public', 'structure-score.js');
 const governanceWorkflowPath = path.join(appRoot, 'public', 'governance-workflow.js');
+const webGridCorePath = path.join(appRoot, 'public', 'web-grid-core.js');
+const processV7GridAdapterPath = path.join(appRoot, 'public', 'process-v7-grid-adapter.js');
 const serverPath = path.join(appRoot, 'server.js');
 const processV1SchemaPath = path.join(repoRoot, 'docs', 'contracts', 'process-governance-v1.schema.json');
 const processV2SchemaPath = path.join(repoRoot, 'docs', 'contracts', 'process-governance-v2.schema.json');
@@ -406,6 +408,15 @@ async function testApi() {
     assert.equal(health.body.schema_version, 'process-governance-v7');
     assert.equal(health.body.release_status, 'released');
     assert.equal(Object.prototype.hasOwnProperty.call(health.body, 'deepseek'), false);
+
+    const tabulatorScript = await fetch(`${baseUrl}/vendor/tabulator.min.js`);
+    assert.equal(tabulatorScript.status, 200);
+    assert.match(tabulatorScript.headers.get('content-type') || '', /javascript/);
+    assert.ok((await tabulatorScript.text()).includes('Tabulator'));
+    const tabulatorStyle = await fetch(`${baseUrl}/vendor/tabulator.min.css`);
+    assert.equal(tabulatorStyle.status, 200);
+    assert.match(tabulatorStyle.headers.get('content-type') || '', /css/);
+    assert.ok((await tabulatorStyle.text()).includes('.tabulator'));
 
     const schema = await getJson(baseUrl, '/api/schema');
     assert.equal(schema.body.properties.schema_version.const, 'process-governance-v7');
@@ -1294,6 +1305,8 @@ async function testFrontendContract() {
   const diagramSource = fs.readFileSync(processDiagramPath, 'utf8');
   const structureScoreSource = fs.readFileSync(structureScorePath, 'utf8');
   const governanceWorkflowSource = fs.readFileSync(governanceWorkflowPath, 'utf8');
+  const webGridCoreSource = fs.readFileSync(webGridCorePath, 'utf8');
+  const processV7GridAdapterSource = fs.readFileSync(processV7GridAdapterPath, 'utf8');
   const serverSource = fs.readFileSync(serverPath, 'utf8');
 
   assert.ok(html.includes("const EXPECTED_EXPORT_SCHEMA_VERSION = 'process-governance-v7'"));
@@ -1301,7 +1314,11 @@ async function testFrontendContract() {
   assert.ok(html.includes('<script src="process-governance-migration.js"></script>'));
   assert.ok(html.includes('<script src="governance-workflow.js"></script>'));
   assert.ok(html.includes('<script src="legacy-cross-department-diagnostics.js"></script>'));
-  assert.ok(html.includes('<script src="bulk-data-editor.js"></script>'));
+  assert.ok(html.includes('<link rel="stylesheet" href="/vendor/tabulator.min.css">'));
+  assert.ok(html.includes('<script src="/vendor/tabulator.min.js"></script>'));
+  assert.ok(html.includes('<script src="web-grid-core.js"></script>'));
+  assert.ok(html.includes('<script src="process-v7-grid-adapter.js"></script>'));
+  assert.equal(html.includes('bulk-data-editor.js'), false);
   assert.ok(html.includes('<script src="graph-edit-commands.js"></script>'));
   assert.ok(html.includes('<script src="graph-editor-state.js"></script>'));
   assert.ok(html.includes('<script src="data-relation-diagram.js"></script>'));
@@ -1345,9 +1362,30 @@ async function testFrontendContract() {
   assert.ok(governanceWorkflowSource.includes('本轮自检项'));
   assert.ok(governanceWorkflowSource.includes('业务核对项'));
   assert.ok(governanceWorkflowSource.includes('交接检查事项'));
-  assert.ok(html.includes('Excel / WPS批量编辑'));
-  assert.ok(html.includes('data-action="preview-bulk-data"'));
-  assert.ok(html.includes('data-action="apply-bulk-data"'));
+  assert.ok(html.includes('业务式编辑'));
+  assert.ok(html.includes('表格编辑'));
+  assert.ok(html.includes('网页表格编辑器'));
+  assert.ok(html.includes('data-action="apply-web-grid"'));
+  assert.ok(html.includes('data-action="discard-web-grid"'));
+  assert.ok(html.includes('应用并切换'));
+  assert.ok(html.includes('放弃并切换'));
+  assert.ok(html.includes('继续编辑'));
+  assert.equal(html.includes('Excel / WPS批量编辑'), false);
+  assert.equal(html.includes('data-action="preview-bulk-data"'), false);
+  assert.equal(html.includes('data-action="apply-bulk-data"'), false);
+  assert.ok(webGridCoreSource.includes('@typedef {Object} GridTableDefinition'));
+  assert.ok(webGridCoreSource.includes('@typedef {Object} GridIssue'));
+  assert.ok(webGridCoreSource.includes('@typedef {Object} GridCommitDriver'));
+  [
+    'data_objects', 'data_fields', 'data_behavior_links', 'data_source_relations',
+    'forms', 'form_behavior_links', 'form_areas', 'form_items', 'field_source_links'
+  ].forEach(tableId => assert.ok(processV7GridAdapterSource.includes(`id: '${tableId}'`), `missing grid table: ${tableId}`));
+  assert.ok(html.includes('aria-label="当前数据对象的字段列表"'));
+  assert.equal(html.includes('class="form-field-table data-object-field-table"'), false);
+  assert.ok(html.includes('selectableRange: 1'));
+  assert.ok(html.includes('selectableRangeRows: true'));
+  assert.equal(html.includes('selectableRows: 1'), false, 'range selection must not be combined with Tabulator row selection');
+  assert.ok(html.includes("table.on('rowClick'"));
   assert.ok(html.includes('function governanceIssuesForStep'));
   assert.ok(html.includes('data-action="focus-export-warning"'));
   const diagramLegendSource = html.slice(
