@@ -7,6 +7,12 @@ async function main() {
     Workflow.STEPS.map(step => step.label),
     ['JSON基本信息', '流程边界', '流程骨架', '动作与异常', '数据与表单', '跨部门核对', '评审与交接']
   );
+  assert.deepEqual(
+    Workflow.ROLE_SEQUENCE.map(item => `${item.order}.${item.role}`),
+    ['1.编制人', '2.业务核对人', '3.编制人', '4.MDM工作组']
+  );
+  assert.equal(Workflow.ROLE_SEQUENCE[0].handoff, '阶段草稿');
+  assert.match(Workflow.ROLE_SEQUENCE[3].handoff, /暂不导入3000/);
   assert.equal(
     Workflow.primaryActionForStep('start', { hasDocument: false }),
     '新建流程或继续已有流程'

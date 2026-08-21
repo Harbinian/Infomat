@@ -416,6 +416,33 @@
     .governance-flow-card strong { display: block; margin-bottom: 6px; }
     .governance-flow-card p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
 
+    .role-sequence {
+      display: grid;
+      gap: 12px;
+      padding: 16px;
+      border: 1px solid rgba(161, 72, 53, 0.28);
+      border-radius: 12px;
+      background: rgba(255, 247, 231, 0.92);
+    }
+    .role-sequence-head { display: grid; gap: 5px; }
+    .role-sequence-head strong { font-size: 15px; }
+    .role-sequence-head p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.65; }
+    .role-sequence-list {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .role-sequence-item { display: grid; align-content: start; gap: 7px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+    .role-sequence-role { display: flex; align-items: center; gap: 8px; }
+    .role-sequence-order { display: inline-grid; width: 25px; height: 25px; place-items: center; border-radius: 50%; color: #fff; background: var(--red); font-size: 12px; font-weight: 700; }
+    .role-sequence-item p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+    .role-sequence-handoff { padding-top: 7px; border-top: 1px dashed var(--line); color: var(--ink) !important; }
+    .role-sequence.compact { margin-top: 18px; padding: 13px; }
+    .role-sequence.compact .role-sequence-list { grid-template-columns: 1fr; }
+
     .governance-drawer-backdrop {
       position: fixed;
       z-index: 110;
@@ -2221,6 +2248,7 @@
         grid-template-columns: repeat(4, minmax(130px, 1fr));
         overflow-x: visible;
       }
+      .role-sequence-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
 
     @media (max-width: 1279px) {
@@ -3621,7 +3649,7 @@
             ? `<select id="governanceCandidateSelect" data-governance-candidate>${candidateOptions}</select>`
             : '<strong>尚未新建或导入流程</strong>'}
           <div class="governance-context">
-            <span class="context-badge version">当前v7候选</span>
+            <span class="context-badge version">当前v7 · 使用中验证</span>
             <span class="context-badge">导入来源：${escapeHtml(origin)}</span>
             ${entry?.dirty ? '<span class="context-badge dirty">有未下载修改</span>' : data ? '<span class="context-badge ready">当前没有未下载修改</span>' : ''}
             <span class="context-badge">${escapeHtml(technicalLabel)}</span>
@@ -3658,11 +3686,28 @@
         ['部门事实初核', '业务核对人核对全部流程事实。跨部门内容由归口部门和承接部门分别确认本方事实。未确认内容保持待定，并在JSON之外记录证据、确认主体和关闭条件。'],
         ['最终v7独立结构预审', 'MDM工作组或Codex检查最终v7的结构错误、字段归位、对象拆分和生命周期结构。编制人关闭硬性结构错误；保留建议原值时，在外部问题处理记录中说明理由。'],
         ['重新导入、最终下载和交接', '编制人重新导入整改后的文件，核对版本、数量、内容、稳定引用和往返完整性，再分别交接最终v7、结构预审问题处理记录和部门业务核对记录。'],
-        ['当前停止边界', '3000当前只承接v1至v3。v6不得直接导入3000，也不得自动降级。MDM工作组完成兼容或迁移方案、验证和审核后，才能另行进入3000受控预览、审核导入和发布。']
+        ['当前停止边界', '3000当前只承接v1至v3。v7不得直接导入3000，也不得自动降级。MDM工作组完成兼容或迁移方案、验证和审核后，才能另行进入3000受控预览、审核导入和发布。']
       ];
-      governanceDrawerContent.innerHTML = `<div class="governance-drawer-list">${phases.map((phase, index) => `
+      governanceDrawerContent.innerHTML = `${renderRoleOperationSequence(true)}<div class="governance-drawer-list">${phases.map((phase, index) => `
         <section class="governance-drawer-card"><strong>${index + 1}. ${escapeHtml(phase[0])}</strong><p>${escapeHtml(phase[1])}</p></section>
       `).join('')}</div>`;
+    }
+
+    function renderRoleOperationSequence(compact = false) {
+      const roleSequence = globalThis.GovernanceWorkflow?.ROLE_SEQUENCE || [];
+      return `<section class="role-sequence${compact ? ' compact' : ''}" aria-label="业务角色操作顺序">
+        <div class="role-sequence-head">
+          <strong>业务角色操作顺序</strong>
+          <p>必须按下列顺序交接。3001只提供编制和检查工具，业务核对记录与审核结论不写入JSON。</p>
+        </div>
+        <ol class="role-sequence-list">${roleSequence.map(item => `
+          <li class="role-sequence-item">
+            <div class="role-sequence-role"><span class="role-sequence-order">${item.order}</span><strong>${escapeHtml(item.role)}</strong></div>
+            <p>${escapeHtml(item.action)}</p>
+            <p class="role-sequence-handoff"><strong>交接结果：</strong>${escapeHtml(item.handoff)}</p>
+          </li>
+        `).join('')}</ol>
+      </section>`;
     }
 
     function renderStepIntro(stepId = activeGovernanceStep) {
@@ -3719,7 +3764,7 @@
           ${section(
             '使用前必读',
             '本帮助只解释3001页面操作、字段含义和结构边界，不替代业务部门确认流程事实，也不形成审核或批准结论。',
-            `<div class="tool-help-grid">
+            `${renderRoleOperationSequence()}<div class="tool-help-grid">
               <article class="tool-help-card"><h3>使用人和责任</h3><p>编制人维护当前流程；业务核对人确认实际流程、表单、数据和跨部门事实；MDM工作组检查结构并组织后续交接。页面检查不能代替任何一方确认。</p></article>
               <article class="tool-help-card"><h3>开始前准备</h3><p>选择一条真实流程，准备可以核对的制度、表单、台账和实际做法，并明确编制人和不同人员担任的业务核对人。教学样例不能作为业务事实。</p></article>
               <article class="tool-help-card"><h3>保存和恢复</h3><p>3001不自动保存。每轮完成后由用户主动下载；关闭或刷新后，只能重新导入已下载文件继续编制。源文件不会被修改。</p></article>
@@ -3757,7 +3802,8 @@
         return `<section class="start-hero">
           <div class="eyebrow">3001 · process-governance-v7</div>
           <h2>按七步完成一条流程的编制、核对和交接准备</h2>
-          <p>编制人维护当前唯一流程文件；业务核对人确认流程事实；MDM工作组检查结构。3001不保存草稿，也不记录审核结论。</p>
+          <p>v7已发布，当前在实际使用中继续验证。编制人维护当前唯一流程文件；业务核对人确认流程事实；MDM工作组检查结构。3001不保存草稿，也不记录审核结论。</p>
+          ${renderRoleOperationSequence()}
           <div class="start-actions">
             <button class="button primary" data-action="start-new-process" data-global-action>新建流程</button>
             <button class="button secondary" data-action="open-import-file" data-global-action>继续已有流程</button>
@@ -3771,7 +3817,7 @@
       const importInfo = entry?.importInfo;
       return `${renderStepIntro('start')}${section(
         '当前文件基本信息',
-        '源文件名、来源版本、源文件SHA-256和候选数量只在当前页面显示，不写入下载的v6内容。',
+        '源文件名、来源版本、源文件SHA-256和候选数量只在当前页面显示，不写入下载的v7内容。',
         `<div class="grid">
           <div class="inline-note"><strong>源文件：</strong>${escapeHtml(importInfo?.fileName || (entry?.origin === 'new' ? '空白模板新建' : '本次页面来源未记录'))}</div>
           <div class="inline-note"><strong>来源版本：</strong>${escapeHtml(importInfo?.sourceVersion || entry?.origin || '未知')}</div>
@@ -4004,7 +4050,7 @@
       const historyBody = versionHistoryLoadState === 'ready'
         ? (versionHistory?.versions || []).map(item => `
             <article class="item-card">
-              <div class="item-title"><strong>${escapeHtml(item.version)} · ${escapeHtml(item.title)}</strong><span class="technical-note">${escapeHtml(item.status === 'candidate' ? `候选 · ${item.candidate_on || '日期未记录'}` : item.released_on)}</span></div>
+              <div class="item-title"><strong>${escapeHtml(item.version)} · ${escapeHtml(item.title)}</strong><span class="technical-note">${escapeHtml(item.status === 'candidate' ? `候选 · ${item.candidate_on || '日期未记录'}` : `已发布 · ${item.released_on}`)}</span></div>
               <p>${escapeHtml(item.summary)}</p>
             </article>`).join('')
         : versionHistoryLoadState === 'unavailable'
@@ -4025,7 +4071,7 @@
       return `
         <div id="versionsPanel" role="tabpanel" aria-labelledby="versionsTab">
           ${section('v1至v7升级历史', '版本说明来自仓库受控文件，只供查阅，不改变当前草稿。', historyBody)}
-          ${section('当前文件迁移摘要', '旧文件导入后统一在页面内存中转换为v6，导入源文件始终保持原样。', migrationBody)}
+          ${section('当前文件迁移摘要', '旧文件导入后统一在页面内存中转换为v7，导入源文件始终保持原样。', migrationBody)}
         </div>`;
     }
 

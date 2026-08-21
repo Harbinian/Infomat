@@ -404,7 +404,7 @@ async function testApi() {
     assert.equal(health.response.status, 200);
     assert.equal(health.body.status, 'ok');
     assert.equal(health.body.schema_version, 'process-governance-v7');
-    assert.equal(health.body.release_status, 'candidate');
+    assert.equal(health.body.release_status, 'released');
     assert.equal(Object.prototype.hasOwnProperty.call(health.body, 'deepseek'), false);
 
     const schema = await getJson(baseUrl, '/api/schema');
@@ -436,9 +436,9 @@ async function testApi() {
     assert.equal(versionHistory.response.status, 200);
     assert.equal(versionHistory.response.headers.get('cache-control'), 'no-store');
     assert.equal(versionHistory.body.current_version, 'process-governance-v7');
-    assert.equal(versionHistory.body.current_status, 'candidate');
-    assert.equal(versionHistory.body.versions.at(-1).status, 'candidate');
-    assert.equal(versionHistory.body.versions.at(-1).released_on, '');
+    assert.equal(versionHistory.body.current_status, 'released');
+    assert.equal(versionHistory.body.versions.at(-1).status, 'released');
+    assert.equal(versionHistory.body.versions.at(-1).released_on, '2026-08-21');
     assert.deepEqual(versionHistory.body.versions.map(item => item.version), [
       'process-governance-v1', 'process-governance-v2', 'process-governance-v3', 'process-governance-v4', 'process-governance-v5', 'process-governance-v6', 'process-governance-v7'
     ]);
