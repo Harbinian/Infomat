@@ -38,7 +38,7 @@
       id: 'data',
       number: 5,
       label: '数据与表单',
-      responsibility: '维护数据对象、数据关系、表单、主表、明细表、字段归属和值来源',
+      responsibility: '先维护数据对象及其字段明细，再让表单主表或明细表引用对象字段，并核对数据关系和值来源',
       primaryAction: '从业务输出或现有表单选择真实起点'
     },
     {

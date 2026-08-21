@@ -2458,6 +2458,13 @@
       { value: 'direct_current_process', label: '当前流程直接取得' },
       { value: 'depends_on_data', label: '依赖数据取得' }
     ];
+    const FIELD_VALUE_USAGE_MODES = [
+      { value: 'pending_confirmation', label: '待确认' },
+      { value: 'authoritative_input', label: '本流程权威录入点' },
+      { value: 'reuse_existing', label: '沿用已有值（不重复录入）' },
+      { value: 'calculated', label: '系统计算' },
+      { value: 'external_source', label: '外部来源自动取得' }
+    ];
     const FIELD_SOURCE_ROLES = [
       { value: 'provides_value', label: '提供字段值' },
       { value: 'calculation_input', label: '参与计算' },
@@ -3828,7 +3835,7 @@
         '有的流程先识别业务输出，有的部门先拿现有表单录入字段。这个选择只控制当前页面展开内容，不写入JSON，也不限制之后切换。',
         `<div class="next-stage-grid">
           <section class="next-stage-card next"><h3>从业务输出开始</h3><p>先登记流程产生、更新或使用的数据对象，再建立数据与业务行为关系。</p><button class="button primary" data-action="choose-data-start">登记数据对象</button></section>
-          <section class="next-stage-card future"><h3>从现有表单开始</h3><p>先按整张纸质表单登记主表、每张明细表和字段，再补充字段归属和值来源。</p><button class="button secondary" data-action="choose-form-start">登记现有表单</button></section>
+          <section class="next-stage-card future"><h3>从现有表单开始</h3><p>先建立表单涉及的数据对象和对象字段，再按整张纸质表单登记主表、每张明细表并引用对象字段。</p><button class="button secondary" data-action="choose-form-start">建立数据对象与表单</button></section>
         </div>`
       );
     }
@@ -3971,8 +3978,10 @@
         unresolved += (form.behavior_links || []).filter(link => !(link.operations || []).length).length;
         (form.areas || []).forEach(area => (area.items || []).forEach(item => {
           fieldCount += 1;
+          if (item.business_data_ref && !item.data_field_ref) unresolved += 1;
+          if (item.data_field_ref && item.value_usage_mode === 'pending_confirmation') unresolved += 1;
           if (item.value_origin_mode === 'pending_confirmation') unresolved += 1;
-          if (item.value_origin_mode === 'depends_on_data' && !(item.source_links || []).length) unresolved += 1;
+          if (item.value_origin_mode === 'depends_on_data' && item.value_usage_mode !== 'reuse_existing' && !(item.source_links || []).length) unresolved += 1;
         }));
       });
       unresolved += (data.migration?.unresolved_actor_roles || []).length;
@@ -4875,6 +4884,7 @@
         data_name: '未命名数据',
         description: '',
         information_type: 'pending_confirmation',
+        fields: [],
         behavior_links: [],
         source_relations: [],
         lifecycle: pendingLifecycle()
@@ -5678,6 +5688,80 @@
         </div>`;
     }
 
+    function dataFieldReferenceCount(fieldRef) {
+      let count = 0;
+      (currentDocument()?.forms || []).forEach(form => (form.areas || []).forEach(area =>
+        (area.items || []).forEach(item => { if (item.data_field_ref === fieldRef) count += 1; })
+      ));
+      return count;
+    }
+
+    function dataFieldsEditor(item, dataIndex) {
+      const rows = (item.fields || []).map((dataField, fieldIndex) => {
+        const fieldPath = `data_objects.${dataIndex}.fields.${fieldIndex}`;
+        const referenceCount = dataFieldReferenceCount(dataField.field_ref);
+        return `
+          <tr>
+            <td>${fieldIndex + 1}</td>
+            <td>${field(`${fieldPath}.field_name`, '对象字段名称')}</td>
+            <td>${formItemTypeField(`${fieldPath}.field_type`, dataField.field_type)}</td>
+            <td>${field(`${fieldPath}.definition`, '业务定义', { type: 'textarea' })}</td>
+            <td>${referenceCount ? `${referenceCount}处引用` : '未引用'}</td>
+            <td><button class="button danger small" data-action="remove-data-field" data-data-index="${dataIndex}" data-index="${fieldIndex}">删除</button></td>
+          </tr>`;
+      }).join('');
+      return `
+        <div class="field wide" data-focus-path="data_objects.${dataIndex}.fields">
+          <span class="field-label">数据对象字段明细</span>
+          <div class="inline-note">先在数据对象下统一定义字段名称、数据类型和业务含义。实际表单引用这些字段，只补充表单显示名称、必填条件、填写说明和排列顺序。</div>
+          <div class="form-field-table-shell">
+            <table class="form-field-table data-object-field-table">
+              <colgroup><col style="width:54px"><col style="width:230px"><col style="width:150px"><col style="width:360px"><col style="width:110px"><col style="width:80px"></colgroup>
+              <thead><tr><th>序号</th><th>对象字段名称</th><th>数据类型</th><th>业务定义</th><th>表单引用</th><th>删除</th></tr></thead>
+              <tbody>${rows || '<tr><td colspan="6">尚未建立对象字段。旧表单迁移时，系统会在同一数据对象内按字段名称和数据类型自动归并。</td></tr>'}</tbody>
+            </table>
+          </div>
+          <button class="button small" data-action="add-data-field" data-data-index="${dataIndex}">添加对象字段</button>
+        </div>`;
+    }
+
+    function renderDataObjectFieldCatalog() {
+      const active = ensureActiveDataObject();
+      const item = active.item;
+      const index = active.index;
+      const selector = currentDocument().data_objects.length
+        ? currentDocument().data_objects.map((dataObject, dataIndex) =>
+            orderedSelectorRow(
+              'data', dataObject.data_ref, dataIndex, currentDocument().data_objects.length,
+              '数据对象', dataSelectorLabel(dataObject, dataIndex), activeDataRef
+            )
+          ).join('')
+        : '<span class="technical-note">尚未登记数据对象。</span>';
+      const editor = item ? `
+        <div class="record-editor">
+          <div class="item-card" data-focus-kind="data" data-focus-ref="${escapeAttribute(item.data_ref)}">
+            <div class="item-title"><strong>当前数据对象定义</strong></div>
+            <div class="grid">
+              ${field(`data_objects.${index}.data_name`, '数据对象名称')}
+              ${field(`data_objects.${index}.information_type`, '信息类型', {
+                type: 'select',
+                options: INFORMATION_TYPE_OPTIONS,
+                hint: '对象字段引用只在当前单流程内有效，不形成企业级字段身份或主数据认定。'
+              })}
+              ${field(`data_objects.${index}.description`, '数据对象说明', { type: 'textarea', className: 'wide' })}
+              ${dataFieldsEditor(item, index)}
+            </div>
+          </div>
+        </div>` : `<div class="record-editor">${emptyList('先登记数据对象，再建立字段明细。')}</div>`;
+      const body = `<div class="record-workbench"><aside class="record-selector" aria-label="数据对象列表">${selector}</aside>${editor}</div>`;
+      return section(
+        '1. 数据对象与字段明细',
+        '先统一定义数据对象、字段名称、数据类型和业务定义；再在下方实际表单的主表或明细表中引用。',
+        body,
+        '<button class="button small" data-action="add-data">登记数据对象</button>'
+      );
+    }
+
     function renderDataObjects() {
       const active = ensureActiveDataObject();
       const item = active.item;
@@ -5710,6 +5794,11 @@
                 hint: '示例只用于帮助判断类型，不会写入下载的结构化文件。'
               })}
               ${field(`data_objects.${index}.description`, '数据说明', { type: 'textarea', className: 'wide' })}
+              <div class="field wide">
+                <span class="field-label">对象字段</span>
+                <div class="inline-note">当前已定义${(item.fields || []).length}个对象字段。字段定义统一在“表单、明细和字段”中维护。</div>
+                <button class="button secondary small" data-action="switch-process-section" data-section="forms">维护对象字段</button>
+              </div>
               ${dataBehaviorLinksEditor(item, index)}
               ${dataSourceRelationsEditor(item, index)}
             </div>
@@ -5814,18 +5903,50 @@
       }).join('；');
     }
 
+    function referencedDataField(item) {
+      const owner = (currentDocument()?.data_objects || []).find(dataObject => dataObject.data_ref === item.business_data_ref);
+      return (owner?.fields || []).find(dataField => dataField.field_ref === item.data_field_ref) || null;
+    }
+
+    function dataFieldOptions(item) {
+      const owner = (currentDocument()?.data_objects || []).find(dataObject => dataObject.data_ref === item.business_data_ref);
+      const values = (owner?.fields || []).map((dataField, index) => ({
+        value: dataField.field_ref,
+        label: `${index + 1}. ${dataField.field_name || '未命名对象字段'}${dataField.field_type ? `（${dataField.field_type}）` : ''}`
+      }));
+      return [{ value: '', label: owner ? '请选择对象字段' : '请先选择业务数据归属' }, ...values];
+    }
+
+    function formFieldTypeCell(pathKey, item) {
+      const dataField = referencedDataField(item);
+      if (!dataField) return formItemTypeField(pathKey, item.item_type);
+      return `<div class="field"><span class="field-label">数据类型</span><div class="inline-note">${escapeHtml(dataField.field_type || '对象字段类型待补充')}</div><span class="hint">从“${escapeHtml(dataField.field_name || '未命名对象字段')}”继承；请回到数据对象字段明细修改。</span></div>`;
+    }
+
     function formFieldRelationSummary(item) {
       const ownership = currentDocument().data_objects.find(data => data.data_ref === item.business_data_ref)?.data_name || '未选择';
+      const dataField = referencedDataField(item)?.field_name || '未选择';
+      const usage = FIELD_VALUE_USAGE_MODES.find(option => option.value === item.value_usage_mode)?.label || '待确认';
       const origin = FIELD_ORIGIN_MODES.find(option => option.value === item.value_origin_mode)?.label || '待确认';
-      return `业务数据归属：${ownership}；取值方式：${origin}；取值来源：${formFieldSourceSummary(item)}`;
+      return `业务数据归属：${ownership}；引用对象字段：${dataField}；字段值使用方式：${usage}；取值方式：${origin}；取值来源：${formFieldSourceSummary(item)}`;
     }
 
     function formFieldRelationStatus(item) {
       const parts = [];
       if (item.business_data_ref) parts.push('已归属');
+      if (item.data_field_ref) parts.push('已引用对象字段');
+      if (item.value_usage_mode === 'authoritative_input') parts.push('权威录入点');
+      if (item.value_usage_mode === 'reuse_existing') parts.push('沿用已有值');
+      if (item.value_usage_mode === 'calculated') parts.push('系统计算');
+      if (item.value_usage_mode === 'external_source') parts.push('外部取得');
+      if (item.value_usage_mode === 'pending_confirmation' || !item.value_usage_mode) parts.push('使用方式待确认');
       if (item.value_origin_mode === 'direct_current_process') parts.push('当前流程取值');
       if (item.value_origin_mode === 'depends_on_data') {
-        parts.push((item.source_links || []).length ? `${item.source_links.length}项来源` : '来源待登记');
+        if (item.value_usage_mode === 'reuse_existing') {
+          parts.push('沿用对象字段已有值');
+        } else {
+          parts.push((item.source_links || []).length ? `${item.source_links.length}项来源` : '来源待登记');
+        }
       }
       if (item.value_origin_mode === 'pending_confirmation' || !item.value_origin_mode) parts.push('取值待确认');
       return parts.join(' · ') || '待登记';
@@ -5873,20 +5994,25 @@
             <strong>字段数据关系：${escapeHtml(item.item_name || '未命名字段')}</strong>
             <button class="button secondary small" data-action="close-field-relations">关闭</button>
           </div>
-          <div class="inline-note">业务数据归属表示字段属于哪项业务数据，取值方式表示字段值如何取得。取值来源可以选择本流程已登记的数据，也可以直接登记外部系统和来源数据名称；选择外部系统时不需要关联本流程业务行为。</div>
+          <div class="inline-note">先选择业务数据归属，再引用该数据对象下的字段。字段值使用方式用于区分本流程权威录入点、后续沿用、系统计算和外部取得；选择“沿用已有值”时，承载表单的业务系统应自动带入并避免重复录入。</div>
           <div class="grid">
             ${field(`${itemPath}.business_data_ref`, '业务数据归属', { type: 'select', options: dataOptions(), nullable: true })}
+            ${field(`${itemPath}.data_field_ref`, '引用对象字段', { type: 'select', options: dataFieldOptions(item), nullable: true })}
+            ${field(`${itemPath}.value_usage_mode`, '字段值使用方式', { type: 'select', options: FIELD_VALUE_USAGE_MODES })}
             ${field(`${itemPath}.value_origin_mode`, '取值方式', { type: 'select', options: FIELD_ORIGIN_MODES })}
             <div class="field wide" data-focus-key="${escapeAttribute(`${itemPath}.source_links`)}" tabindex="-1">
               <span class="field-label">取值来源</span>
-              ${rows || emptyList('尚未登记取值来源。')}
-              <button class="button small" data-action="add-field-source" data-form-index="${formIndex}" data-area-index="${areaIndex}" data-item-index="${itemIndex}">添加取值来源</button>
+              ${rows || emptyList(item.value_usage_mode === 'reuse_existing'
+                ? '沿用当前对象字段已经建立的值，无需在本表单重复登记取值来源。'
+                : '尚未登记取值来源。')}
+              ${item.value_usage_mode === 'reuse_existing' ? '' : `<button class="button small" data-action="add-field-source" data-form-index="${formIndex}" data-area-index="${areaIndex}" data-item-index="${itemIndex}">添加取值来源</button>`}
             </div>
           </div>
         </aside>`;
     }
 
     function renderForms() {
+      const catalog = renderDataObjectFieldCatalog();
       const active = ensureActiveForm();
       const addButtons = `
         <div class="form-primary-actions">
@@ -5894,9 +6020,9 @@
           <button class="button small secondary" data-action="add-proposed-form">设计新建／优化表单</button>
         </div>`;
       if (!active.form) {
-        return section(
-          '表单与记录',
-          '按一张纸质表单的完整字段录入。只有新增表单后才创建空白编辑对象，3001不会自动生成表单。',
+        return catalog + section(
+          '2. 实际表单、主表、明细和字段',
+          '完成对象字段明细后，再按一张纸质表单的完整结构录入。只有新增表单后才创建空白编辑对象，3001不会自动生成表单。',
           emptyList('当前流程没有表单或记录。'),
           addButtons
         );
@@ -5943,7 +6069,7 @@
                 <span class="form-field-relation-status">${escapeHtml(formFieldRelationStatus(item))}</span>
               </div>
             </td>
-            <td data-label="数据类型">${formItemTypeField(`forms.${formIndex}.areas.${areaIndex}.items.${itemIndex}.item_type`, item.item_type)}</td>
+            <td data-label="数据类型">${formFieldTypeCell(`forms.${formIndex}.areas.${areaIndex}.items.${itemIndex}.item_type`, item)}</td>
             <td data-label="字段归属">${formItemAssignmentField(formIndex, areaIndex, itemIndex, item)}</td>
             <td data-label="必填">${field(`forms.${formIndex}.areas.${areaIndex}.items.${itemIndex}.required`, '是否必填', { type: 'checkbox', checkboxLabel: '必填' })}</td>
             <td class="form-field-instructions" data-label="填写说明">${field(`forms.${formIndex}.areas.${areaIndex}.items.${itemIndex}.instructions`, '填写说明', { type: 'textarea' })}</td>
@@ -6016,9 +6142,9 @@
             ${renderFieldRelationEditor(form, formIndex)}
           </div>
         </div>`;
-      return section(
-        '表单与记录',
-        '按纸质表单原样录入全部字段；有几张明细表就保留几张。',
+      return catalog + section(
+        '2. 实际表单、主表、明细和字段',
+        '按纸质表单原样录入全部字段；有几张明细表就保留几张。表单字段先选择业务数据归属，再引用该对象的字段。',
         body,
         addButtons
       );
@@ -6777,6 +6903,7 @@
         data_name: '',
         description: '',
         information_type: 'pending_confirmation',
+        fields: [],
         behavior_links: [],
         source_relations: [],
         lifecycle: pendingLifecycle()
@@ -7192,8 +7319,8 @@
         return render();
       }
       if (action === 'choose-form-start') {
-        if (!(currentDocument()?.forms || []).length) {
-          addForm('current_state');
+        if (!(currentDocument()?.data_objects || []).length) {
+          addDataObject();
           touch();
         }
         activeStepView = 'forms';
@@ -7459,6 +7586,33 @@
         touch();
         return render();
       }
+      if (action === 'add-data-field') {
+        const dataObject = currentDocument().data_objects[Number(element.dataset.dataIndex)];
+        if (!dataObject) return;
+        if (!Array.isArray(dataObject.fields)) dataObject.fields = [];
+        dataObject.fields.push({ field_ref: newRef('data_field'), field_name: '', field_type: '', definition: '' });
+        touch();
+        return render();
+      }
+      if (action === 'remove-data-field') {
+        const dataObject = currentDocument().data_objects[Number(element.dataset.dataIndex)];
+        const dataField = dataObject?.fields?.[index];
+        if (!dataField) return;
+        const references = [];
+        (currentDocument().forms || []).forEach(form => (form.areas || []).forEach(area =>
+          (area.items || []).forEach(item => {
+            if (item.data_field_ref === dataField.field_ref) references.push(`${form.form_name || '未命名表单'} / ${item.item_name || '未命名字段'}`);
+          })
+        ));
+        if (references.length) {
+          window.alert(`当前对象字段仍被${references.join('、')}引用。请先替换或移除这些引用，再删除对象字段。`);
+          return;
+        }
+        if (!window.confirm(`确定删除对象字段“${dataField.field_name || '未命名对象字段'}”吗？`)) return;
+        dataObject.fields.splice(index, 1);
+        touch();
+        return render();
+      }
       if (action === 'add-form-behavior-link') {
         const form = currentDocument().forms[formIndex];
         const behavior = currentDocument().behaviors[0];
@@ -7578,6 +7732,8 @@
           required: false,
           instructions: '',
           business_data_ref: null,
+          data_field_ref: null,
+          value_usage_mode: 'pending_confirmation',
           value_origin_mode: 'pending_confirmation',
           source_links: []
         };
@@ -7972,6 +8128,30 @@
             ['核对这些对象是否确实不同；需要保留时结合创建行为以及来源线索区分。', '确认属于同一对象时，先核对引用影响，再使用受控归并。']
           );
         }
+        const fieldNames = new Map();
+        (item.fields || []).forEach((dataField, fieldIndex) => {
+          const fieldPath = `data_objects.${dataIndex}.fields.${fieldIndex}`;
+          need(dataField.field_name, `${label}的对象字段${fieldIndex + 1}未填写名称`, atField(dataTarget, `${fieldPath}.field_name`));
+          need(dataField.field_type, `${label}的对象字段“${dataField.field_name || fieldIndex + 1}”未填写数据类型`, atField(dataTarget, `${fieldPath}.field_type`));
+          if (!text(dataField.definition).trim()) {
+            addWarning(`${label}的对象字段“${dataField.field_name || fieldIndex + 1}”未填写业务定义。`, atField(dataTarget, `${fieldPath}.definition`));
+          }
+          const normalizedName = text(dataField.field_name).trim().replace(/\s+/g, ' ').toLocaleLowerCase();
+          if (normalizedName) {
+            if (!fieldNames.has(normalizedName)) fieldNames.set(normalizedName, []);
+            fieldNames.get(normalizedName).push(dataField);
+          }
+        });
+        fieldNames.forEach(fields => {
+          const types = [...new Set(fields.map(dataField => text(dataField.field_type).trim()).filter(Boolean))];
+          if (fields.length > 1 && types.length > 1) {
+            addWarning(
+              `${label}包含${fields.length}个同名对象字段，但数据类型不同，系统没有自动归并。`,
+              atField(dataTarget, `data_objects.${dataIndex}.fields`),
+              ['核对这些字段是否代表不同业务含义；确属同一字段时统一数据类型并保留一个对象字段。']
+            );
+          }
+        });
         const createLinks = (item.behavior_links || []).filter(link => link.operation === 'create');
         if (createLinks.length > 1) {
           addWarning(`${label}登记了${createLinks.length}个创建行为，当前无法确认唯一创建位置。`, atField(dataTarget, `data_objects.${dataIndex}.behavior_links`));
@@ -8065,10 +8245,16 @@
           area.items.forEach((item, itemIndex) => {
             const itemLabel = item.item_name || `字段${itemIndex + 1}`;
             const itemPath = `forms.${formIndex}.areas.${areaIndex}.items.${itemIndex}`;
+            if (item.business_data_ref && !item.data_field_ref) {
+              addWarning(`${formLabel}的“${itemLabel}”已选择业务数据归属，但尚未引用对象字段。`, atField(areaTarget, `${itemPath}.data_field_ref`));
+            }
+            if (item.data_field_ref && item.value_usage_mode === 'pending_confirmation') {
+              addWarning(`${formLabel}的“${itemLabel}”尚未确认是权威录入、沿用已有值、系统计算还是外部取得。`, atField(areaTarget, `${itemPath}.value_usage_mode`));
+            }
             if (item.value_origin_mode === 'pending_confirmation') {
               addWarning(`${formLabel}的“${itemLabel}”取值方式待确认。`, atField(areaTarget, `${itemPath}.value_origin_mode`));
             }
-            if (item.value_origin_mode === 'depends_on_data' && !(item.source_links || []).length) {
+            if (item.value_origin_mode === 'depends_on_data' && item.value_usage_mode !== 'reuse_existing' && !(item.source_links || []).length) {
               addWarning(`${formLabel}的“${itemLabel}”选择依赖数据取得，但尚未登记取值来源。`, atField(areaTarget, `${itemPath}.source_links`));
             }
             (item.source_links || []).forEach((link, linkIndex) => {
@@ -8086,6 +8272,37 @@
             });
           });
         });
+      });
+      const fieldUsageContexts = new Map();
+      const dataFieldLabels = new Map();
+      data.data_objects.forEach(dataObject => (dataObject.fields || []).forEach(dataField => {
+        dataFieldLabels.set(dataField.field_ref, `${dataObject.data_name || '未命名数据'} / ${dataField.field_name || '未命名对象字段'}`);
+      }));
+      data.forms.forEach((form, formIndex) => (form.areas || []).forEach((area, areaIndex) =>
+        (area.items || []).forEach((item, itemIndex) => {
+          if (!item.data_field_ref) return;
+          if (!fieldUsageContexts.has(item.data_field_ref)) fieldUsageContexts.set(item.data_field_ref, []);
+          fieldUsageContexts.get(item.data_field_ref).push({ form, formIndex, area, areaIndex, item, itemIndex });
+        })
+      ));
+      fieldUsageContexts.forEach((contexts, fieldRef) => {
+        const authoritative = contexts.filter(context => context.item.value_usage_mode === 'authoritative_input');
+        const establishing = contexts.filter(context => ['authoritative_input', 'calculated', 'external_source'].includes(context.item.value_usage_mode));
+        const first = contexts[0];
+        const target = atField({ editorSection: 'forms', focusKind: 'area', focusRef: first.area.area_ref }, `forms.${first.formIndex}.areas.${first.areaIndex}.items.${first.itemIndex}.value_usage_mode`);
+        if (authoritative.length > 1) {
+          addWarning(
+            `${dataFieldLabels.get(fieldRef) || fieldRef}在${authoritative.length}个表单字段中都被设置为本流程权威录入点，仍会造成重复录入。`,
+            target,
+            ['保留一个权威录入点；其他表单字段改为“沿用已有值”。分支互斥等例外需要业务人员说明。']
+          );
+        } else if (!establishing.length && contexts.some(context => context.item.value_usage_mode === 'reuse_existing')) {
+          addWarning(
+            `${dataFieldLabels.get(fieldRef) || fieldRef}只设置了沿用已有值，但当前流程没有权威录入、系统计算或外部取得位置。`,
+            target,
+            ['补充一个能够建立字段值的位置，或核对该值是否在流程开始前已经可用。']
+          );
+        }
       });
       legacyCrossDepartmentDiagnostics(data).forEach(item => {
         item.issues.forEach(issue => addWarning(issue.message, issue, issue.suggestions));
@@ -8462,7 +8679,8 @@
         if (!supported.includes(parsed.schema_version)) {
           throw new Error(`不支持的结构化文件版本：${parsed.schema_version || '未提供'}`);
         }
-        const sourceValidation = await validateGraphDocument(parsed);
+        const needsCandidateFieldUpgrade = globalThis.ProcessGovernanceMigration.needsDataFieldUpgrade(parsed);
+        const sourceValidation = needsCandidateFieldUpgrade ? { valid: true, errors: [] } : await validateGraphDocument(parsed);
         if (!sourceValidation.valid) {
           const firstError = sourceValidation.errors?.[0];
           throw new Error(firstError ? `${validationErrorLocation(firstError)}：${firstError.message}` : '源文件未通过结构与本地引用检查');
@@ -8478,7 +8696,7 @@
           const firstError = failedTarget.errors?.[0];
           throw new Error(firstError ? `${validationErrorLocation(firstError)}：${firstError.message}` : '迁移副本未通过v7结构校验');
         }
-        const migrated = parsed.schema_version !== EXPECTED_EXPORT_SCHEMA_VERSION;
+        const migrated = parsed.schema_version !== EXPECTED_EXPORT_SCHEMA_VERSION || needsCandidateFieldUpgrade;
         const nextCandidates = migratedDocuments.map(data => ({
           data: clone(data),
           dirty: migrated,
@@ -8643,6 +8861,18 @@
           updateOrderedSelectorLabel('data', dataObject.data_ref, dataSelectorLabel(dataObject, dataIndex));
         }
       }
+      const dataFieldTypeMatch = target.dataset.bind.match(/^data_objects\.(\d+)\.fields\.(\d+)\.field_type$/);
+      if (dataFieldTypeMatch) {
+        const dataObject = currentDocument().data_objects[Number(dataFieldTypeMatch[1])];
+        const dataField = dataObject?.fields?.[Number(dataFieldTypeMatch[2])];
+        if (dataField) {
+          (currentDocument().forms || []).forEach(form => (form.areas || []).forEach(area =>
+            (area.items || []).forEach(item => {
+              if (item.data_field_ref === dataField.field_ref) item.item_type = dataField.field_type;
+            })
+          ));
+        }
+      }
       const termMatch = target.dataset.bind.match(/^terms\.(\d+)\.term_name$/);
       if (termMatch) {
         const termIndex = Number(termMatch[1]);
@@ -8789,6 +9019,42 @@
         refreshPreviewAvailability();
         return;
       }
+      const fieldOwnerMatch = target.dataset.bind?.match(/^forms\.(\d+)\.areas\.(\d+)\.items\.(\d+)\.business_data_ref$/);
+      if (fieldOwnerMatch) {
+        const item = currentDocument()?.forms?.[Number(fieldOwnerMatch[1])]?.areas?.[Number(fieldOwnerMatch[2])]?.items?.[Number(fieldOwnerMatch[3])];
+        const owner = (currentDocument()?.data_objects || []).find(dataObject => dataObject.data_ref === item?.business_data_ref);
+        if (item && !(owner?.fields || []).some(dataField => dataField.field_ref === item.data_field_ref)) {
+          item.data_field_ref = null;
+          item.value_usage_mode = 'pending_confirmation';
+        }
+        render();
+        return;
+      }
+      const dataFieldReferenceMatch = target.dataset.bind?.match(/^forms\.(\d+)\.areas\.(\d+)\.items\.(\d+)\.data_field_ref$/);
+      if (dataFieldReferenceMatch) {
+        const item = currentDocument()?.forms?.[Number(dataFieldReferenceMatch[1])]?.areas?.[Number(dataFieldReferenceMatch[2])]?.items?.[Number(dataFieldReferenceMatch[3])];
+        if (!item) return;
+        const owner = (currentDocument().data_objects || []).find(dataObject =>
+          (dataObject.fields || []).some(dataField => dataField.field_ref === item.data_field_ref)
+        );
+        const dataField = (owner?.fields || []).find(field => field.field_ref === item.data_field_ref);
+        if (owner && dataField) {
+          item.business_data_ref = owner.data_ref;
+          item.item_type = dataField.field_type;
+          if (!text(item.item_name).trim()) item.item_name = dataField.field_name;
+          const otherReferences = (currentDocument().forms || []).flatMap(form => (form.areas || []).flatMap(area =>
+            (area.items || []).filter(candidate => candidate !== item && candidate.data_field_ref === dataField.field_ref)
+          ));
+          if (item.value_usage_mode === 'pending_confirmation') {
+            item.value_usage_mode = otherReferences.length ? 'reuse_existing' : 'authoritative_input';
+          }
+          if (item.value_origin_mode === 'pending_confirmation') {
+            item.value_origin_mode = item.value_usage_mode === 'authoritative_input' ? 'direct_current_process' : 'depends_on_data';
+          }
+        }
+        render();
+        return;
+      }
       const fieldSourceTypeMatch = target.dataset.bind?.match(/^forms\.(\d+)\.areas\.(\d+)\.items\.(\d+)\.source_links\.(\d+)\.source_type$/);
       if (fieldSourceTypeMatch) {
         const formIndex = Number(fieldSourceTypeMatch[1]);
@@ -8814,10 +9080,11 @@
         /^behaviors\.\d+\.node_type$/.test(target.dataset.bind)
         || /^behaviors\.\d+\.(actor_department_data_ref|actor_position_rule)$/.test(target.dataset.bind)
         || /^data_objects\.\d+\.(information_type|behavior_links\.\d+\.(behavior_ref|operation)|source_relations\.\d+\.availability_mode)$/.test(target.dataset.bind)
+        || /^data_objects\.\d+\.fields\.\d+\.(field_name|field_type)$/.test(target.dataset.bind)
         || /^data_objects\.\d+\.lifecycle\./.test(target.dataset.bind)
         || /^forms\.\d+\.form_design_state$/.test(target.dataset.bind)
         || /^forms\.\d+\.behavior_links\.\d+\.behavior_ref$/.test(target.dataset.bind)
-        || /^forms\.\d+\.areas\.\d+\.items\.\d+\.(business_data_ref|value_origin_mode)$/.test(target.dataset.bind)
+        || /^forms\.\d+\.areas\.\d+\.items\.\d+\.(business_data_ref|data_field_ref|value_usage_mode|value_origin_mode)$/.test(target.dataset.bind)
         || /^forms\.\d+\.areas\.\d+\.items\.\d+\.item_type$/.test(target.dataset.bind)
       )) {
         render();

@@ -1220,6 +1220,7 @@ function processGovernanceValidationResult(data) {
 
   const behaviorRefs = uniqueRefs(behaviors, 'behavior_ref', '/behaviors');
   const dataRefs = uniqueRefs(dataObjects, 'data_ref', '/data_objects');
+  const dataFieldOwners = new Map();
   uniqueRefs(flowRelations, 'relation_ref', '/flow_relations');
   uniqueRefs(handoffs, 'handoff_ref', '/cross_department_handoffs');
   uniqueRefs(internalCalls, 'call_ref', '/internal_process_calls');
@@ -1261,6 +1262,22 @@ function processGovernanceValidationResult(data) {
 
   dataObjects.forEach((dataObject, index) => {
     if (modernDataVersion) {
+      if (data?.schema_version === 'process-governance-v7') {
+        uniqueRefs(dataObject?.fields, 'field_ref', `/data_objects/${index}/fields`);
+        const fieldKeys = new Map();
+        (dataObject?.fields || []).forEach((field, fieldIndex) => {
+          const fieldPath = `/data_objects/${index}/fields/${fieldIndex}`;
+          if (field?.field_ref) dataFieldOwners.set(field.field_ref, dataObject.data_ref);
+          const key = `${String(field?.field_name || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase()}|${String(field?.field_type || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase()}`;
+          if (key !== '|') {
+            if (fieldKeys.has(key)) {
+              addError(fieldPath, `对象字段与${fieldKeys.get(key)}的名称和数据类型重复`, { ref: field?.field_ref });
+            } else {
+              fieldKeys.set(key, fieldPath);
+            }
+          }
+        });
+      }
       uniqueRefs(dataObject?.behavior_links, 'link_ref', `/data_objects/${index}/behavior_links`);
       uniqueRefs(dataObject?.source_relations, 'source_ref', `/data_objects/${index}/source_relations`);
       (dataObject?.behavior_links || []).forEach((link, linkIndex) => {
@@ -1326,6 +1343,28 @@ function processGovernanceValidationResult(data) {
         if (item?.item_ref) itemRefs.add(item.item_ref);
         if (!modernDataVersion) return;
         requireLocalRef(dataRefs, item?.business_data_ref, `/forms/${formIndex}/areas/${areaIndex}/items/${itemIndex}/business_data_ref`, '字段归属数据');
+        if (data?.schema_version === 'process-governance-v7' && item?.data_field_ref) {
+          const fieldPath = `/forms/${formIndex}/areas/${areaIndex}/items/${itemIndex}/data_field_ref`;
+          const ownerRef = dataFieldOwners.get(item.data_field_ref);
+          if (!ownerRef) {
+            addError(fieldPath, `引用的对象字段 ${item.data_field_ref} 不在当前文件中`, { ref: item.data_field_ref });
+          } else if (ownerRef !== item.business_data_ref) {
+            addError(fieldPath, `引用的对象字段不属于字段已选择的数据对象 ${item.business_data_ref || '未选择'}`, {
+              ref: item.data_field_ref,
+              expected_data_ref: ownerRef
+            });
+          } else {
+            const owner = dataObjects.find(dataObject => dataObject.data_ref === ownerRef);
+            const dataField = (owner?.fields || []).find(field => field.field_ref === item.data_field_ref);
+            if (dataField && dataField.field_type !== item.item_type) {
+              addError(`/forms/${formIndex}/areas/${areaIndex}/items/${itemIndex}/item_type`, '表单字段的数据类型与引用的对象字段不一致', {
+                ref: item.data_field_ref,
+                expected: dataField.field_type,
+                actual: item.item_type
+              });
+            }
+          }
+        }
         uniqueRefs(item?.source_links, 'source_link_ref', `/forms/${formIndex}/areas/${areaIndex}/items/${itemIndex}/source_links`);
         (item?.source_links || []).forEach((link, linkIndex) => {
           if (['process-governance-v5', 'process-governance-v6', 'process-governance-v7'].includes(data?.schema_version) && link?.source_type === 'external_system') return;
@@ -1360,6 +1399,9 @@ function processGovernanceValidationResult(data) {
     registerIdentifiers(forms, 'form_ref', '/forms');
     registerIdentifiers(data.terms, 'term_ref', '/terms');
     dataObjects.forEach((dataObject, dataIndex) => {
+      if (data?.schema_version === 'process-governance-v7') {
+        registerIdentifiers(dataObject.fields, 'field_ref', `/data_objects/${dataIndex}/fields`);
+      }
       registerIdentifiers(dataObject.behavior_links, 'link_ref', `/data_objects/${dataIndex}/behavior_links`);
       registerIdentifiers(dataObject.source_relations, 'source_ref', `/data_objects/${dataIndex}/source_relations`);
       if (data?.schema_version === 'process-governance-v7') {

@@ -1308,6 +1308,15 @@ async function testFrontendContract() {
   assert.ok(html.includes('data-action="switch-data-mode"'));
   assert.ok(html.includes('主数据认定提示'));
   assert.ok(html.includes('重新分析当前对象'));
+  assert.ok(html.includes('1. 数据对象与字段明细'));
+  assert.ok(html.includes('2. 实际表单、主表、明细和字段'));
+  assert.ok(html.includes('沿用当前对象字段已经建立的值，无需在本表单重复登记取值来源。'));
+  const formStartSource = html.slice(
+    html.indexOf("if (action === 'choose-form-start')"),
+    html.indexOf("if (action === 'select-skeleton-item')")
+  );
+  assert.ok(formStartSource.includes('addDataObject()'));
+  assert.equal(formStartSource.includes("addForm('current_state')"), false);
   assert.ok(structureScoreSource.includes('数据生命周期与异常处理'));
   assert.ok(html.includes('aria-label="数据关系图图例"'));
   assert.ok(html.includes('<small>业务行为 → 数据对象</small>'));

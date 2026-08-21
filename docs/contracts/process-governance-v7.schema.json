@@ -136,10 +136,21 @@
         "available_from_behavior_ref": { "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/nullableTechnicalRef" }
       }
     },
+    "dataField": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field_ref", "field_name", "field_type", "definition"],
+      "properties": {
+        "field_ref": { "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/technicalRef" },
+        "field_name": { "type": "string" },
+        "field_type": { "type": "string" },
+        "definition": { "type": "string" }
+      }
+    },
     "dataObject": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["data_ref", "data_name", "description", "information_type", "behavior_links", "source_relations", "lifecycle"],
+      "required": ["data_ref", "data_name", "description", "information_type", "fields", "behavior_links", "source_relations", "lifecycle"],
       "properties": {
         "data_ref": { "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/technicalRef" },
         "data_name": { "type": "string" },
@@ -155,6 +166,7 @@
             "other_information_output"
           ]
         },
+        "fields": { "type": "array", "items": { "$ref": "#/$defs/dataField" }, "default": [] },
         "behavior_links": { "type": "array", "items": { "$ref": "#/$defs/dataBehaviorLink" }, "default": [] },
         "source_relations": { "type": "array", "items": { "$ref": "#/$defs/dataSourceRelation" }, "default": [] },
         "lifecycle": { "$ref": "#/$defs/dataLifecycle" }
@@ -426,6 +438,8 @@
         "required",
         "instructions",
         "business_data_ref",
+        "data_field_ref",
+        "value_usage_mode",
         "value_origin_mode",
         "source_links"
       ],
@@ -436,6 +450,10 @@
         "required": { "type": "boolean" },
         "instructions": { "type": "string" },
         "business_data_ref": { "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/nullableTechnicalRef" },
+        "data_field_ref": { "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/nullableTechnicalRef" },
+        "value_usage_mode": {
+          "enum": ["authoritative_input", "reuse_existing", "calculated", "external_source", "pending_confirmation"]
+        },
         "value_origin_mode": { "enum": ["direct_current_process", "depends_on_data", "pending_confirmation"] },
         "source_links": { "type": "array", "items": { "$ref": "#/$defs/fieldSourceLink" }, "default": [] }
       }
