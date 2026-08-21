@@ -14,12 +14,13 @@ MDM 平台保留为后续承接应用。除非用户明确要求进入 MDM 平�
 
 1. `AGENTS.md`
 2. `CODEX.md`
-3. `REPOSITORY_BOUNDARY.md`
-4. `DIRECTORY_OWNERSHIP.md`
-5. `MAINLINE_MAP.md`
-6. 任务相关目录下的 `README.md` / `AGENTS.md`
+3. `MEMORY.md`的`Current Runtime Baseline`；历史和长期条目只按任务关键词检索
+4. `REPOSITORY_BOUNDARY.md`
+5. `DIRECTORY_OWNERSHIP.md`
+6. `MAINLINE_MAP.md`
+7. 任务相关目录下的 `README.md` / `AGENTS.md`
 
-数据治理、3001结构化编制、3000受控承接、流程地图或数据地图任务在第5步后继续读取`docs/architecture/data-governance-operating-rules.md`。
+数据治理、3001结构化编制、3000受控承接、流程地图或数据地图任务在读取`MAINLINE_MAP.md`后继续读取`docs/architecture/data-governance-operating-rules.md`。
 
 历史计划、历史 specs、审计报告只能用于追溯,不能覆盖当前边界文件。若历史材料和当前边界冲突,以根目录执行规则为准。
 
@@ -117,12 +118,6 @@ AI结构化填报试点：
 
 ```powershell
 npm run verify:dsh-entry
-npm run verify:structure-pilot
-npm run start:structure-pilot
-npm run smoke:structure-pilot
-```
-
-```powershell
 npm run verify:structure-pilot
 npm run start:structure-pilot
 npm run smoke:structure-pilot

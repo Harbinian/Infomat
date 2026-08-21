@@ -5,7 +5,7 @@
 ## 修改边界
 
 - 可以修改：本目录的服务端、浏览器页面、固定配置、应用测试和说明文档。
-- 需要联动修改3001结构读取能力时，只能修改`apps/structured-output-service/`和`docs/contracts/process-governance-v5.schema.json`的结构读取接口，不得写回`docs/norms/`或MDM业务数据。
+- 助手内部结构客户端读取3001时必须显式请求`/api/health?version=process-governance-v5`、`/api/schema?version=process-governance-v5`和`/api/template?version=process-governance-v5`，不得依赖3001的默认版本。端口3004的`/structured-tool/`认证代理必须保留3001当前默认版本，不得强制降级为v5。需要联动修改结构读取能力时，只能修改`apps/structured-output-service/`和`docs/contracts/process-governance-v5.schema.json`的结构读取接口，不得写回`docs/norms/`或MDM业务数据。
 - 集中启动、烟测和固定发布入口放在仓库级`scripts/`；本机会话密钥、TLS配置和登录密码哈希只放`scripts/structure-pilot.local.env`。DeepSeek API Key不得写入该文件。
 - 试点启动脚本只能检查3001是否可达，不得停止、启动、重绑或代管3001。
 - 不得把用户材料、对话、草稿、模型答复、密码或API Key写入仓库。

@@ -3031,8 +3031,14 @@ app.get('/api/schema', (req, res) => {
   if (req.query.version === 'process-governance-v2') return res.json(PROCESS_GOVERNANCE_V2_SCHEMA);
   if (req.query.version === 'process-governance-v3') return res.json(PROCESS_GOVERNANCE_V3_SCHEMA);
   if (req.query.version === 'process-governance-v4') return res.json(PROCESS_GOVERNANCE_V4_SCHEMA);
-  if (req.query.version === 'process-governance-v5') return res.json(PROCESS_GOVERNANCE_V5_SCHEMA);
-  if (req.query.version === 'process-governance-v6') return res.json(PROCESS_GOVERNANCE_V6_SCHEMA);
+  if (req.query.version === 'process-governance-v5') {
+    res.set('X-Infomat-Schema-Digest', PROCESS_GOVERNANCE_V5_SCHEMA_DIGEST);
+    return res.json(PROCESS_GOVERNANCE_V5_SCHEMA);
+  }
+  if (req.query.version === 'process-governance-v6') {
+    res.set('X-Infomat-Schema-Digest', PROCESS_GOVERNANCE_SCHEMA_DIGEST);
+    return res.json(PROCESS_GOVERNANCE_V6_SCHEMA);
+  }
   res.set('X-Infomat-Schema-Digest', PROCESS_GOVERNANCE_SCHEMA_DIGEST);
   return res.json(PROCESS_GOVERNANCE_SCHEMA);
 });
@@ -3062,14 +3068,21 @@ app.get('/api/version-history', (_req, res) => {
   res.json(PROCESS_GOVERNANCE_VERSION_HISTORY);
 });
 app.get('/api/enums', (_req, res) => res.json(publicEnums()));
-app.get('/api/health', (_req, res) => {
+app.get('/api/health', (req, res) => {
   res.set('Cache-Control', 'no-store');
+  const version = req.query.version || 'process-governance-v6';
+  if (!['process-governance-v5', 'process-governance-v6'].includes(version)) {
+    return res.status(400).json({ error: `不支持的健康检查结构版本: ${version}` });
+  }
+  const schemaDigest = version === 'process-governance-v5'
+    ? PROCESS_GOVERNANCE_V5_SCHEMA_DIGEST
+    : PROCESS_GOVERNANCE_SCHEMA_DIGEST;
   res.json({
     status: 'ok',
     service: 'structured-output-service',
     app_commit: APP_COMMIT,
-    schema_version: 'process-governance-v6',
-    schema_digest: PROCESS_GOVERNANCE_SCHEMA_DIGEST,
+    schema_version: version,
+    schema_digest: schemaDigest,
     port: PORT,
     host: HOST,
     uptime: process.uptime()

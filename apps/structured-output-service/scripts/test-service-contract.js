@@ -421,6 +421,15 @@ async function testApi() {
     assert.equal(previousV4Schema.body.properties.schema_version.const, 'process-governance-v4');
     const previousV5Schema = await getJson(baseUrl, '/api/schema?version=process-governance-v5');
     assert.equal(previousV5Schema.body.properties.schema_version.const, 'process-governance-v5');
+    assert.ok(previousV5Schema.response.headers.get('x-infomat-schema-digest'));
+
+    const previousV5Health = await getJson(baseUrl, '/api/health?version=process-governance-v5');
+    assert.equal(previousV5Health.response.status, 200);
+    assert.equal(previousV5Health.body.schema_version, 'process-governance-v5');
+    assert.equal(
+      previousV5Health.body.schema_digest,
+      previousV5Schema.response.headers.get('x-infomat-schema-digest')
+    );
 
     const versionHistory = await getJson(baseUrl, '/api/version-history');
     assert.equal(versionHistory.response.status, 200);

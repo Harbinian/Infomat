@@ -163,7 +163,10 @@ docs/contracts/process-governance-v6.schema.json
 apps/structure-assistant（MDM-AI助手服务端）
   ↓ 每次调用前后校验
 3001公开的只读结构规则和校验接口
-  /api/schema + /api/template + /api/validate
+  /api/health?version=process-governance-v5
+  /api/schema?version=process-governance-v5
+  /api/template?version=process-governance-v5
+  /api/validate
   ↓
 DeepSeek V4 Pro填报对话（关闭思考模式）
   ↓
@@ -300,7 +303,7 @@ CODEX.md
 - 历史方案如与当前边界文件冲突，以 `REPOSITORY_BOUNDARY.md`、`DIRECTORY_OWNERSHIP.md` 和本文件为准。
 - 代码、脚本、接口、数据库结构、前端行为、启动命令或测试命令变化时，必须同步更新对应文档。
 
-## 7. 禁止的跨线操作
+## 9. 禁止的跨线操作
 
 | 禁止操作 | 原因 | 正确做法 |
 |---|---|---|
@@ -310,7 +313,7 @@ CODEX.md
 | 整理文档时移动 `apps/mdm-platform/` | 运行系统路径被脚本和说明引用 | 先写迁移计划和验证命令 |
 | 把截图、zip、解包目录作为证据长期提交 | 检索噪音高，容易误导 AI | 放入 `artifacts/` 或精选到 `docs/samples/` |
 
-## 8. 下一步收口路线
+## 10. 下一步收口路线
 
 第一步：完成仓库边界审计和三份边界文件。  
 第二步：为 `docs/reports/`、`docs/architecture/`、`scripts/` 分组补 README。  
