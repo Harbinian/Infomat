@@ -10,8 +10,8 @@
 | `GET /api/template` | 默认返回v7空白模板 |
 | `GET /api/template?version=process-governance-v7` | 返回`app_commit`、`schema_version`、`schema_digest`和v7空白数据 |
 | `GET /api/template?version=process-governance-v5|v6` | 保留兼容读取，不作为页面新建目标 |
-| `GET /api/version-history` | 包含v7候选状态和兼容边界；正式签发前`current_status=candidate` |
-| `GET /api/health` | `schema_version=process-governance-v7`、`release_status=candidate`，摘要与默认结构一致；正式签发后才允许改为`released` |
+| `GET /api/version-history` | 包含v7发布状态和兼容边界；`current_status=released`，并记录发布日期 |
+| `GET /api/health` | `schema_version=process-governance-v7`、`release_status=released`，摘要与默认结构一致 |
 
 ## 2. 校验与迁移
 

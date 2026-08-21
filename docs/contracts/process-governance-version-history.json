@@ -1,6 +1,6 @@
 {
   "current_version": "process-governance-v7",
-  "current_status": "candidate",
+  "current_status": "released",
   "versions": [
     {
       "version": "process-governance-v1",
@@ -40,11 +40,11 @@
     },
     {
       "version": "process-governance-v7",
-      "released_on": "",
+      "released_on": "2026-08-21",
       "candidate_on": "2026-08-21",
-      "status": "candidate",
+      "status": "released",
       "title": "数据生命周期对象级编制",
-      "summary": "在数据对象下增加入口状态、流程路径、生命周期事件、出口状态和确定性分析来源；区分停用、作废、失效等业务动作，支持v1至v6无损迁移，并增加非阻断的主数据认定提示。"
+      "summary": "在数据对象下增加可复用对象字段、表单字段引用、入口状态、流程路径、生命周期事件、出口状态和确定性分析来源；区分停用、作废、失效等业务动作，支持v1至v6无损迁移，并增加非阻断的主数据认定提示。当前版本在实际使用中继续验证。"
     }
   ]
 }

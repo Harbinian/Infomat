@@ -57,6 +57,33 @@
     }
   ]);
 
+  const ROLE_SEQUENCE = Object.freeze([
+    Object.freeze({
+      order: 1,
+      role: '编制人',
+      action: '新建或导入一条流程，按七步填写，并在每轮结束时下载阶段草稿。',
+      handoff: '阶段草稿'
+    }),
+    Object.freeze({
+      order: 2,
+      role: '业务核对人',
+      action: '依据制度、表单、台账和实际做法，核对流程、跨部门、数据与表单事实；发现问题时明确退回位置。',
+      handoff: '业务核对记录'
+    }),
+    Object.freeze({
+      order: 3,
+      role: '编制人',
+      action: '根据核对意见修改唯一草稿，重新执行技术检查，并下载最终待核对文件。',
+      handoff: '最终待核对v7文件'
+    }),
+    Object.freeze({
+      order: 4,
+      role: 'MDM工作组',
+      action: '核对结构错误、待定项、文件名和SHA-256，接收v7文件及JSON之外的核对记录。',
+      handoff: '受控接收；暂不导入3000'
+    })
+  ]);
+
   const STEP_IDS = new Set(STEPS.map(step => step.id));
   const STAGES = Object.freeze({
     start: { key: 'round-1', label: '第1轮-流程骨架', round: 1 },
@@ -223,6 +250,7 @@
 
   return Object.freeze({
     STEPS,
+    ROLE_SEQUENCE,
     normalizeStepId,
     stepById,
     stageForStep,
