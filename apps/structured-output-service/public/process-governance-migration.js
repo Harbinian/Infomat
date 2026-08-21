@@ -5,13 +5,14 @@
 }(typeof globalThis === 'undefined' ? this : globalThis, function createMigrationApi() {
   'use strict';
 
-  const TARGET_VERSION = 'process-governance-v6';
+  const TARGET_VERSION = 'process-governance-v7';
   const SUPPORTED_PROCESS_VERSIONS = [
     'process-governance-v1',
     'process-governance-v2',
     'process-governance-v3',
     'process-governance-v4',
     'process-governance-v5',
+    'process-governance-v6',
     TARGET_VERSION
   ];
   const LEGACY_DOCUMENT_VERSION = 'document-structured-output-v2';
@@ -71,6 +72,26 @@
     return `${prefix}_${(hash >>> 0).toString(16).padStart(8, '0')}`;
   }
 
+  function pendingLifecycle() {
+    return {
+      applicability: 'pending_confirmation',
+      entry_state: {
+        business_validity: 'pending_confirmation',
+        custody: 'pending_confirmation',
+        identifiability_applicability: 'pending_confirmation',
+        identifiability: 'pending_confirmation'
+      },
+      routes: [],
+      analysis: {
+        analyzer_version: '',
+        source_fingerprint: '',
+        status: 'not_analyzed'
+      },
+      decision_reason: '',
+      decision_notes: ''
+    };
+  }
+
   function technicalRef(value, prefix, ...parts) {
     const candidate = text(value).trim();
     if (/^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$/.test(candidate)) return candidate;
@@ -111,7 +132,7 @@
     documents.forEach((documentValue, index) => {
       const result = options.validateTarget(documentValue, index);
       if (!validationSucceeded(result)) {
-        throw new Error(`第${index + 1}条流程迁移后未通过v6检查：${validationMessage(result, '结构不完整')}`);
+        throw new Error(`第${index + 1}条流程迁移后未通过v7检查：${validationMessage(result, '结构不完整')}`);
       }
     });
   }
@@ -338,7 +359,7 @@
 
   function normalizeDataObject(item, index, sourceVersion) {
     const dataRef = technicalRef(item?.data_ref, 'data', index);
-    const modern = ['process-governance-v4', 'process-governance-v5', TARGET_VERSION].includes(sourceVersion);
+    const modern = ['process-governance-v4', 'process-governance-v5', 'process-governance-v6', TARGET_VERSION].includes(sourceVersion);
     const links = modern
       ? array(item?.behavior_links).map((link, linkIndex) => ({
           link_ref: technicalRef(link?.link_ref, 'data_link', dataRef, linkIndex),
@@ -373,12 +394,13 @@
           ? source.availability_mode
           : 'pending_confirmation',
         available_from_behavior_ref: nullable(source?.available_from_behavior_ref)
-      })) : []
+      })) : [],
+      lifecycle: pendingLifecycle()
     };
   }
 
   function normalizeForm(item, formIndex, sourceVersion) {
-    const modern = ['process-governance-v4', 'process-governance-v5', TARGET_VERSION].includes(sourceVersion);
+    const modern = ['process-governance-v4', 'process-governance-v5', 'process-governance-v6', TARGET_VERSION].includes(sourceVersion);
     const formRef = technicalRef(item?.form_ref, 'form', formIndex);
     return {
       form_ref: formRef,
@@ -791,6 +813,7 @@
     LEGACY_DOCUMENT_VERSION,
     clone,
     stableRef,
+    pendingLifecycle,
     migrateDocument,
     migrateProcessDocument,
     splitLegacyDocument

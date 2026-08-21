@@ -24,13 +24,15 @@ const v3Schema = readSchema('process-governance-v3.schema.json');
 const v4Schema = readSchema('process-governance-v4.schema.json');
 const v5Schema = readSchema('process-governance-v5.schema.json');
 const v6Schema = readSchema('process-governance-v6.schema.json');
+const v7Schema = readSchema('process-governance-v7.schema.json');
 const ajv = new Ajv2020({ allErrors: true, strict: false, validateFormats: false });
 ajv.addSchema(v1Schema);
 ajv.addSchema(v2Schema);
 ajv.addSchema(v3Schema);
 ajv.addSchema(v4Schema);
 ajv.addSchema(v5Schema);
-const validateV6 = ajv.compile(v6Schema);
+ajv.addSchema(v6Schema);
+const validateV7 = ajv.compile(v7Schema);
 
 function behavior(ref, name, actor = '财务部会计员', nodeType = 'action') {
   return {
@@ -128,9 +130,9 @@ function v5Fixture(version = 'process-governance-v5') {
   return result;
 }
 
-function assertV6(documentValue, message = 'v6 document should validate') {
-  const valid = validateV6(documentValue);
-  assert.equal(valid, true, `${message}: ${JSON.stringify(validateV6.errors)}`);
+function assertV7(documentValue, message = 'v7 document should validate') {
+  const valid = validateV7(documentValue);
+  assert.equal(valid, true, `${message}: ${JSON.stringify(validateV7.errors)}`);
 }
 
 function legacyCrossDepartmentFixture() {
@@ -315,12 +317,12 @@ function testMigration() {
     const snapshot = JSON.stringify(source);
     const migrated = Migration.migrateDocument(source)[0];
     assert.equal(JSON.stringify(source), snapshot, `${version} source must not change`);
-    assert.equal(migrated.schema_version, 'process-governance-v6');
+    assert.equal(migrated.schema_version, 'process-governance-v7');
     assert.equal(migrated.migration.source_schema_version, version);
     assert.equal(Object.prototype.hasOwnProperty.call(migrated, 'reference_materials'), false);
     assert.equal(Object.prototype.hasOwnProperty.call(migrated.data_objects[0], 'governance_status'), false);
     assert.equal(migrated.forms[0].areas[0].items[0].source_links[0]?.source_type || 'process_data', 'process_data');
-    assertV6(migrated, `${version} migration`);
+    assertV7(migrated, `${version} migration`);
     assert.deepEqual(Migration.migrateDocument(migrated)[0], migrated, `${version} repeated migration must be identical`);
   }
 
@@ -336,11 +338,11 @@ function testMigration() {
     publicSampleHash,
     'migrating the fixed public v4 sample must not modify its source file'
   );
-  assertV6(migratedPublicSample, 'fixed public v4 sample migration');
+  assertV7(migratedPublicSample, 'fixed public v4 sample migration');
   assert.deepEqual(
     Migration.migrateDocument(JSON.parse(JSON.stringify(migratedPublicSample)))[0],
     migratedPublicSample,
-    'the fixed public v4 sample must remain identical after v6 download and re-import simulation'
+    'the fixed public v4 sample must remain identical after v7 download and re-import simulation'
   );
   assert.deepEqual(
     Migration.migrateDocument(publicSample)[0],
@@ -366,7 +368,7 @@ function testMigration() {
   assert.equal(migrated.migration.unresolved_actor_roles[0].raw_actor_role, '无法识别的固定角色');
   assert.equal(migrated.migration.unresolved_join_modes[0].relation_ref, 'relation-apply-review');
   assert.equal(migrated.migration.reference_materials[0].material_ref, 'material-history');
-  assertV6(migrated, 'archive migration');
+  assertV7(migrated, 'archive migration');
 
   const parallelJoin = v5Fixture();
   parallelJoin.behaviors[1].node_type = 'parallel_join';
@@ -394,7 +396,7 @@ function testMigration() {
   assert.deepEqual(candidates.map(item => item.process.process_name), ['历史流程一', '历史流程二']);
   candidates.forEach(item => {
     assert.equal(item.migration.source_process_count, 2);
-    assertV6(item, 'legacy multi candidate');
+    assertV7(item, 'legacy multi candidate');
   });
 
   assert.throws(() => Migration.migrateDocument(v5Fixture(), { validateSource: () => ({ valid: false, errors: [{ message: '固定失败' }] }) }), /固定失败/);
@@ -576,7 +578,8 @@ function testDiagramModelsAndPerformance() {
         { link_ref: `data-link-${number}-consumer-update`, behavior_ref: `behavior-perf-${consumerIndex}`, operation: 'update' },
         { link_ref: `data-link-${number}-use`, behavior_ref: `behavior-perf-${consumerIndex}`, operation: 'use' }
       ],
-      source_relations: []
+      source_relations: [],
+      lifecycle: Migration.pendingLifecycle()
     };
   });
   representative.data_objects[1].behavior_links[0].behavior_ref = representative.data_objects[0].behavior_links[0].behavior_ref;
@@ -654,7 +657,7 @@ function testDiagramModelsAndPerformance() {
     const serialized = JSON.stringify(representative);
     const reparsed = JSON.parse(serialized);
     const migrated = Migration.migrateDocument(reparsed)[0];
-    assertV6(migrated, 'performance round trip');
+    assertV7(migrated, 'performance round trip');
   });
 
   assert.ok(flowDisplayMedian < 2000, `flow display median ${flowDisplayMedian.toFixed(1)}ms`);
@@ -663,7 +666,7 @@ function testDiagramModelsAndPerformance() {
   assert.ok(mergeMedian < 2000, `200-field merge median ${mergeMedian.toFixed(1)}ms`);
   assert.ok(roundTripMedian < 3000, `round trip median ${roundTripMedian.toFixed(1)}ms`);
   console.log(
-    `v6 performance medians: flow=${flowDisplayMedian.toFixed(1)}ms, switch=${modeSwitchMedian.toFixed(1)}ms, ` +
+    `v7 performance medians: flow=${flowDisplayMedian.toFixed(1)}ms, switch=${modeSwitchMedian.toFixed(1)}ms, ` +
     `command=${graphCommandMedian.toFixed(1)}ms, merge=${mergeMedian.toFixed(1)}ms, roundtrip=${roundTripMedian.toFixed(1)}ms`
   );
 }
@@ -673,7 +676,7 @@ function main() {
   testLegacyCrossDepartmentDiagnostics();
   testCommandsAndState();
   testDiagramModelsAndPerformance();
-  console.log('structured-output-service v6 graph editing tests passed');
+  console.log('structured-output-service v7 graph editing regression tests passed');
 }
 
 main();
