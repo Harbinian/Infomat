@@ -85,6 +85,7 @@
   ]);
 
   const STEP_IDS = new Set(STEPS.map(step => step.id));
+  const AUTHORING_STEP_IDS = new Set(['start', 'boundary', 'skeleton', 'action', 'data']);
   const STAGES = Object.freeze({
     start: { key: 'round-1', label: '第1轮-流程骨架', round: 1 },
     boundary: { key: 'round-1', label: '第1轮-流程骨架', round: 1 },
@@ -127,6 +128,19 @@
     return 'handoff';
   }
 
+  function issueVocabularyForStep(stepId) {
+    const step = normalizeStepId(stepId);
+    if (AUTHORING_STEP_IDS.has(step)) return { singular: '本轮自检项', plural: '本轮自检项', action: '处理' };
+    if (step === 'cross-department') return { singular: '业务核对项', plural: '业务核对项', action: '核对' };
+    return { singular: '交接检查事项', plural: '交接检查事项', action: '处理' };
+  }
+
+  function issuesVisibleForStep(stepId, context = {}) {
+    const step = normalizeStepId(stepId);
+    if (!AUTHORING_STEP_IDS.has(step)) return true;
+    return Array.isArray(context.checkedSteps) && context.checkedSteps.includes(step);
+  }
+
   function statusForStep(stepId, context = {}) {
     const step = normalizeStepId(stepId);
     if (!context.hasDocument) {
@@ -139,10 +153,19 @@
     if (step === 'handoff' && technicalCount > 0) {
       return { key: 'error', label: `结构错误${technicalCount}项` };
     }
-    if (issueCount > 0) return { key: 'missing', label: `待补充${issueCount}项` };
-    if (step === 'start') return { key: 'reviewable', label: '可核对' };
-    if (context.startedSteps?.includes(step)) return { key: 'reviewable', label: '可核对' };
-    if (context.activeStep === step) return { key: 'in-progress', label: '编制中' };
+    if (issueCount > 0 && issuesVisibleForStep(step, context)) {
+      if (AUTHORING_STEP_IDS.has(step)) return { key: 'missing', label: `自检${issueCount}项` };
+      if (step === 'cross-department') return { key: 'missing', label: `待核对${issueCount}项` };
+      return { key: 'missing', label: `待交接${issueCount}项` };
+    }
+    if (AUTHORING_STEP_IDS.has(step) && issuesVisibleForStep(step, context)) return { key: 'reviewable', label: '本轮已检查' };
+    if (context.activeStep === step) {
+      if (step === 'cross-department') return { key: 'in-progress', label: '核对中' };
+      if (step === 'handoff') return { key: 'in-progress', label: '交接检查中' };
+      return { key: 'in-progress', label: '编制中' };
+    }
+    if (AUTHORING_STEP_IDS.has(step) && context.startedSteps?.includes(step)) return { key: 'reviewable', label: '可自检' };
+    if (!AUTHORING_STEP_IDS.has(step) && context.startedSteps?.includes(step)) return { key: 'reviewable', label: '可核对' };
     return { key: 'not-started', label: '未开始' };
   }
 
@@ -151,7 +174,10 @@
     if (!context.hasDocument) return stepId === 'start' ? step.primaryAction : '先新建或导入一条流程';
     const issueCount = Number(context.issueCounts?.[step.id] || 0);
     if (step.id === 'handoff' && Number(context.technicalCount || 0) > 0) return '处理首个结构阻断';
-    if (issueCount > 0) return `处理首个待补充项（共${issueCount}项）`;
+    if (issueCount > 0 && issuesVisibleForStep(step.id, context)) {
+      const vocabulary = issueVocabularyForStep(step.id);
+      return `${vocabulary.action}首个${vocabulary.singular}（共${issueCount}项）`;
+    }
     return step.primaryAction;
   }
 
@@ -255,6 +281,8 @@
     stepById,
     stageForStep,
     stepForTarget,
+    issueVocabularyForStep,
+    issuesVisibleForStep,
     statusForStep,
     primaryActionForStep,
     sha256Fallback,

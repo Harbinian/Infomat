@@ -37,8 +37,20 @@ async function main() {
     { key: 'error', label: '结构错误2项' }
   );
   assert.equal(
-    Workflow.statusForStep('action', { hasDocument: true, issueCounts: { action: 3 } }).label,
-    '待补充3项'
+    Workflow.statusForStep('action', { hasDocument: true, issueCounts: { action: 3 }, checkedSteps: [] }).label,
+    '未开始'
+  );
+  assert.equal(
+    Workflow.statusForStep('action', { hasDocument: true, issueCounts: { action: 3 }, checkedSteps: ['action'] }).label,
+    '自检3项'
+  );
+  assert.equal(
+    Workflow.statusForStep('cross-department', { hasDocument: true, issueCounts: { 'cross-department': 3 } }).label,
+    '待核对3项'
+  );
+  assert.equal(
+    Workflow.statusForStep('handoff', { hasDocument: true, issueCounts: { handoff: 2 } }).label,
+    '待交接2项'
   );
   assert.deepEqual(
     Workflow.statusForStep('data', { hasDocument: true, issueCounts: {}, startedSteps: [] }),
@@ -48,6 +60,22 @@ async function main() {
     Workflow.statusForStep('data', { hasDocument: true, activeStep: 'data', issueCounts: {}, startedSteps: [] }),
     { key: 'in-progress', label: '编制中' }
   );
+  assert.deepEqual(
+    Workflow.statusForStep('cross-department', { hasDocument: true, activeStep: 'cross-department', issueCounts: {}, startedSteps: [] }),
+    { key: 'in-progress', label: '核对中' }
+  );
+  assert.deepEqual(
+    Workflow.statusForStep('handoff', { hasDocument: true, activeStep: 'handoff', issueCounts: {}, startedSteps: [] }),
+    { key: 'in-progress', label: '交接检查中' }
+  );
+  assert.deepEqual(
+    Workflow.statusForStep('data', { hasDocument: true, issueCounts: {}, startedSteps: ['data'], checkedSteps: [] }),
+    { key: 'reviewable', label: '可自检' }
+  );
+  assert.deepEqual(Workflow.issueVocabularyForStep('data'), { singular: '本轮自检项', plural: '本轮自检项', action: '处理' });
+  assert.deepEqual(Workflow.issueVocabularyForStep('cross-department'), { singular: '业务核对项', plural: '业务核对项', action: '核对' });
+  assert.equal(Workflow.issuesVisibleForStep('data', { checkedSteps: [] }), false);
+  assert.equal(Workflow.issuesVisibleForStep('data', { checkedSteps: ['data'] }), true);
 
   const vectors = ['', 'abc', '3001流程治理'];
   for (const value of vectors) {

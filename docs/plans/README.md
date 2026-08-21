@@ -18,8 +18,9 @@
 | `2026-08-15-3001-process-governance-v4-upgrade/` | 3001输出物、数据、表单、字段与业务行为关系升级 | v4结构、兼容迁移、页面、AI助手和验收真源 |
 | `2026-08-17-3001-process-governance-v6-graph-editing/` | 3001可编辑流程图与数据结构精简升级 | v6结构、迁移映射、图编辑、认知负担与验收真源；已实施 |
 | `2026-08-20-3001-seven-step-frontend-acceptance-plan.md` | 3001七步治理前端正式验收 | 固定G0至G5、无状态硬门槛、真实流程和v4迁移双案例、缺陷分级与签发边界 |
-| `2026-08-20-3001-process-governance-v7-data-lifecycle-upgrade-plan.md` | 3001 v7数据生命周期升级总计划 | 隔离候选已完成实现、自动化和浏览器技术验证；待真实脱敏流程业务验收与正式发布 |
-| `2026-08-21-3001-process-governance-v7-lifecycle-upgrade/` | 3001 v7数据生命周期实施设计包 | PRD、技术方案、接口约定、迁移映射、迁移测试和验证记录真源；候选已完成技术验证，尚未上线 |
+| `2026-08-20-3001-process-governance-v7-data-lifecycle-upgrade-plan.md` | 3001 v7数据生命周期升级总计划 | v7已发布并进入使用中验证；真实脱敏流程业务核对继续进行 |
+| `2026-08-21-3001-process-governance-v7-lifecycle-upgrade/` | 3001 v7数据生命周期实施设计包 | PRD、技术方案、接口约定、迁移映射、迁移测试和验证记录真源；v7已发布并进入使用中验证 |
+| `2026-08-21-3001-interaction-bulk-data-edit-upgrade/` | 3001交互缺陷收口与Excel/WPS批量数据编辑升级 | 缺陷分类、角色与阶段分层、批量粘贴、预览、引用保护和测试门槛；隔离候选技术验证通过，尚未发布 |
 | `2026-08-12-3001-process-authoring-rollout-execution-plan.md` | 3001流程结构化编制推广与执行计划 | V1.1按四轮编制和两级推广门槛执行，未满足门槛时顺延 |
 | `2026-08-12-3001-pilot-action-register.md` | 3001首轮样板行动项台账 | V1.1分别记录事项状态、流程阶段、四轮交接和推广门槛 |
 | `2026-07-23-internet-only-office-governance-process-draft.md` | 全公司互联网专用办公区需求收集、建设与使用管理流程 | 待评审草案 |

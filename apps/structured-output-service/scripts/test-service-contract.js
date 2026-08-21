@@ -1301,6 +1301,7 @@ async function testFrontendContract() {
   assert.ok(html.includes('<script src="process-governance-migration.js"></script>'));
   assert.ok(html.includes('<script src="governance-workflow.js"></script>'));
   assert.ok(html.includes('<script src="legacy-cross-department-diagnostics.js"></script>'));
+  assert.ok(html.includes('<script src="bulk-data-editor.js"></script>'));
   assert.ok(html.includes('<script src="graph-edit-commands.js"></script>'));
   assert.ok(html.includes('<script src="graph-editor-state.js"></script>'));
   assert.ok(html.includes('<script src="data-relation-diagram.js"></script>'));
@@ -1340,7 +1341,13 @@ async function testFrontendContract() {
   assert.ok(html.includes('data-action="open-governance-drawer"'));
   assert.ok(html.includes('data-action="download-current-stage"'));
   assert.ok(html.includes('源文件SHA-256'));
-  assert.ok(html.includes('本步骤待补充项'));
+  assert.ok(html.includes('data-action="check-governance-step"'));
+  assert.ok(governanceWorkflowSource.includes('本轮自检项'));
+  assert.ok(governanceWorkflowSource.includes('业务核对项'));
+  assert.ok(governanceWorkflowSource.includes('交接检查事项'));
+  assert.ok(html.includes('Excel / WPS批量编辑'));
+  assert.ok(html.includes('data-action="preview-bulk-data"'));
+  assert.ok(html.includes('data-action="apply-bulk-data"'));
   assert.ok(html.includes('function governanceIssuesForStep'));
   assert.ok(html.includes('data-action="focus-export-warning"'));
   const diagramLegendSource = html.slice(
