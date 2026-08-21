@@ -52,7 +52,7 @@
       id: 'handoff',
       number: 7,
       label: '评审与交接',
-      responsibility: '核对五方面、结构阻断、业务提示、外部材料和3000停止边界',
+      responsibility: '核对六方面、结构阻断、业务提示、外部材料和3000停止边界',
       primaryAction: '处理首个阻断或打开最终交接卡'
     }
   ]);

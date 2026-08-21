@@ -9,6 +9,7 @@ const {
   extractFromText,
   decodeTextBuffer,
   createEmptyProcessGovernanceDocument,
+  createEmptyProcessGovernanceV6Document,
   PROCESS_GOVERNANCE_SCHEMA_DIGEST
 } = require('../server');
 
@@ -26,6 +27,7 @@ const processV3SchemaPath = path.join(repoRoot, 'docs', 'contracts', 'process-go
 const processV4SchemaPath = path.join(repoRoot, 'docs', 'contracts', 'process-governance-v4.schema.json');
 const processSchemaPath = path.join(repoRoot, 'docs', 'contracts', 'process-governance-v5.schema.json');
 const processV6SchemaPath = path.join(repoRoot, 'docs', 'contracts', 'process-governance-v6.schema.json');
+const processV7SchemaPath = path.join(repoRoot, 'docs', 'contracts', 'process-governance-v7.schema.json');
 const legacySchemaPath = path.join(repoRoot, 'docs', 'contracts', 'document-structured-output.schema.json');
 const Migration = require(path.join(appRoot, 'public', 'process-governance-migration.js'));
 const { buildGraphModel } = require(processDiagramPath);
@@ -295,6 +297,7 @@ async function testSchemas() {
   const processV1Schema = JSON.parse(fs.readFileSync(processV1SchemaPath, 'utf8'));
   const processV4Schema = JSON.parse(fs.readFileSync(processV4SchemaPath, 'utf8'));
   const processV6Schema = JSON.parse(fs.readFileSync(processV6SchemaPath, 'utf8'));
+  const processV7Schema = JSON.parse(fs.readFileSync(processV7SchemaPath, 'utf8'));
   const legacySchema = JSON.parse(fs.readFileSync(legacySchemaPath, 'utf8'));
   const processAjv = new Ajv2020({ allErrors: true, strict: false, validateFormats: false });
   processAjv.addSchema(processV1Schema);
@@ -303,6 +306,7 @@ async function testSchemas() {
   processAjv.addSchema(processV4Schema);
   const processValidator = processAjv.compile(processSchema);
   const processV6Validator = processAjv.compile(processV6Schema);
+  const processV7Validator = processAjv.compile(processV7Schema);
   const processV4Validator = processAjv.getSchema(processV4Schema.$id);
   const processV3Validator = processAjv.getSchema(processV3Schema.$id);
   const processV2Validator = processAjv.getSchema(processV2Schema.$id);
@@ -348,9 +352,14 @@ async function testSchemas() {
   assert.equal(processV2Validator(previousV2Draft), true, 'process-governance-v2 must remain valid without v3 fields');
   assert.equal(typeof legacyValidator, 'function');
   assert.equal(
-    processV6Validator(createEmptyProcessGovernanceDocument()),
+    processV6Validator(createEmptyProcessGovernanceV6Document()),
     true,
     JSON.stringify(processV6Validator.errors)
+  );
+  assert.equal(
+    processV7Validator(createEmptyProcessGovernanceDocument()),
+    true,
+    JSON.stringify(processV7Validator.errors)
   );
 
   const incomplete = createV5Draft();
@@ -394,11 +403,12 @@ async function testApi() {
     const health = await getJson(baseUrl, '/api/health');
     assert.equal(health.response.status, 200);
     assert.equal(health.body.status, 'ok');
-    assert.equal(health.body.schema_version, 'process-governance-v6');
+    assert.equal(health.body.schema_version, 'process-governance-v7');
+    assert.equal(health.body.release_status, 'candidate');
     assert.equal(Object.prototype.hasOwnProperty.call(health.body, 'deepseek'), false);
 
     const schema = await getJson(baseUrl, '/api/schema');
-    assert.equal(schema.body.properties.schema_version.const, 'process-governance-v6');
+    assert.equal(schema.body.properties.schema_version.const, 'process-governance-v7');
     assert.equal(Object.prototype.hasOwnProperty.call(schema.body.properties, 'cross_department_handoffs'), false);
     const behaviorSchema = schema.body.$defs.behavior;
     assert.deepEqual(behaviorSchema.properties.actor_assignment_mode.enum, [
@@ -425,17 +435,20 @@ async function testApi() {
     const versionHistory = await getJson(baseUrl, '/api/version-history');
     assert.equal(versionHistory.response.status, 200);
     assert.equal(versionHistory.response.headers.get('cache-control'), 'no-store');
-    assert.equal(versionHistory.body.current_version, 'process-governance-v6');
+    assert.equal(versionHistory.body.current_version, 'process-governance-v7');
+    assert.equal(versionHistory.body.current_status, 'candidate');
+    assert.equal(versionHistory.body.versions.at(-1).status, 'candidate');
+    assert.equal(versionHistory.body.versions.at(-1).released_on, '');
     assert.deepEqual(versionHistory.body.versions.map(item => item.version), [
-      'process-governance-v1', 'process-governance-v2', 'process-governance-v3', 'process-governance-v4', 'process-governance-v5', 'process-governance-v6'
+      'process-governance-v1', 'process-governance-v2', 'process-governance-v3', 'process-governance-v4', 'process-governance-v5', 'process-governance-v6', 'process-governance-v7'
     ]);
 
     const template = await getJson(baseUrl, '/api/template');
     assert.equal(template.response.status, 200);
     assert.equal(template.response.headers.get('cache-control'), 'no-store');
-    assert.equal(template.body.schema_version, 'process-governance-v6');
+    assert.equal(template.body.schema_version, 'process-governance-v7');
     assert.equal(template.body.schema_digest, PROCESS_GOVERNANCE_SCHEMA_DIGEST);
-    assert.equal(template.body.data.schema_version, 'process-governance-v6');
+    assert.equal(template.body.data.schema_version, 'process-governance-v7');
     assert.equal(Object.prototype.hasOwnProperty.call(template.body.data, 'cross_department_handoffs'), false);
     assert.equal(typeof template.body.data.export_meta.package_ref, 'string');
     assert.equal(typeof template.body.data.process.process_ref, 'string');
@@ -722,13 +735,18 @@ async function testApi() {
     const scoreAsset = await fetch(`${baseUrl}/structure-score.js`);
     assert.equal(scoreAsset.status, 200);
     assert.match(scoreAsset.headers.get('content-type') || '', /javascript/);
-    assert.match(await scoreAsset.text(), /structure-learning-score-v3/);
+    assert.match(await scoreAsset.text(), /structure-learning-score-v4/);
 
     const governanceWorkflowAsset = await fetch(`${baseUrl}/governance-workflow.js`);
     assert.equal(governanceWorkflowAsset.status, 200);
     assert.match(governanceWorkflowAsset.headers.get('content-type') || '', /javascript/);
     const governanceWorkflowSource = await governanceWorkflowAsset.text();
     assert.match(governanceWorkflowSource, /JSON基本信息/);
+
+    const lifecycleAnalyzerAsset = await fetch(`${baseUrl}/lifecycle-analyzer.js`);
+    assert.equal(lifecycleAnalyzerAsset.status, 200);
+    assert.match(lifecycleAnalyzerAsset.headers.get('content-type') || '', /javascript/);
+    assert.match(await lifecycleAnalyzerAsset.text(), /lifecycle-analysis-v1/);
     assert.match(governanceWorkflowSource, /sha256Fallback/);
 
     const legacyDiagnosticsAsset = await fetch(`${baseUrl}/legacy-cross-department-diagnostics.js`);
@@ -1278,14 +1296,19 @@ async function testFrontendContract() {
   const governanceWorkflowSource = fs.readFileSync(governanceWorkflowPath, 'utf8');
   const serverSource = fs.readFileSync(serverPath, 'utf8');
 
-  assert.ok(html.includes("const EXPECTED_EXPORT_SCHEMA_VERSION = 'process-governance-v6'"));
-  assert.ok(html.includes("fetch('/api/template?version=process-governance-v6', { cache: 'no-store' })"));
+  assert.ok(html.includes("const EXPECTED_EXPORT_SCHEMA_VERSION = 'process-governance-v7'"));
+  assert.ok(html.includes("fetch('/api/template?version=process-governance-v7', { cache: 'no-store' })"));
   assert.ok(html.includes('<script src="process-governance-migration.js"></script>'));
   assert.ok(html.includes('<script src="governance-workflow.js"></script>'));
   assert.ok(html.includes('<script src="legacy-cross-department-diagnostics.js"></script>'));
   assert.ok(html.includes('<script src="graph-edit-commands.js"></script>'));
   assert.ok(html.includes('<script src="graph-editor-state.js"></script>'));
   assert.ok(html.includes('<script src="data-relation-diagram.js"></script>'));
+  assert.ok(html.includes('<script src="lifecycle-analyzer.js"></script>'));
+  assert.ok(html.includes('data-action="switch-data-mode"'));
+  assert.ok(html.includes('主数据认定提示'));
+  assert.ok(html.includes('重新分析当前对象'));
+  assert.ok(structureScoreSource.includes('数据生命周期与异常处理'));
   assert.ok(html.includes('aria-label="数据关系图图例"'));
   assert.ok(html.includes('<small>业务行为 → 数据对象</small>'));
   assert.ok(html.includes('<small>业务行为 ↔ 数据对象</small>'));
@@ -1389,7 +1412,7 @@ async function testFrontendContract() {
     html.indexOf('    function renderBehaviorDerivedSummary(', html.indexOf('    function behaviorDataSummary(behaviorRef, flowDetails = currentDataFlowDetails()) {'))
   );
   const behaviorDataSummaryDocument = {
-    schema_version: 'process-governance-v6',
+    schema_version: 'process-governance-v7',
     behaviors: [
       { behavior_ref: 'behavior-create', actor_assignment_mode: 'fixed_department' },
       { behavior_ref: 'behavior-use', actor_assignment_mode: 'fixed_department' }

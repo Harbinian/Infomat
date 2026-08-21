@@ -272,7 +272,7 @@
     const selected = pattern && typeof pattern === 'object' ? pattern : {};
     const patternId = String(selected.id || 'unknown');
     return {
-      schema_version: 'process-governance-v6',
+      schema_version: 'process-governance-v7',
       export_meta: {
         package_ref: `review-pattern-package-${patternId}`,
         exported_at: '1970-01-01T00:00:00.000Z',
@@ -314,7 +314,7 @@
       forms: [],
       terms: [],
       migration: {
-        source_schema_version: 'process-governance-v6', source_process_ref: null, source_process_count: 1,
+        source_schema_version: 'process-governance-v7', source_process_ref: null, source_process_count: 1,
         legacy_cross_department_records: [], reference_materials: [], internal_process_calls: [], work_roles: [],
         unresolved_actor_roles: [], unresolved_join_modes: []
       }

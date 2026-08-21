@@ -2199,9 +2199,28 @@
       .record-workbench { grid-template-columns: minmax(185px, 220px) minmax(0, 1fr); }
       .form-field-table-shell { max-width: 100%; overflow-x: auto; }
       .step-responsibility { display: none; }
-      .workspace-tab { grid-template-columns: 28px minmax(0, 1fr); }
-      .workspace-tab .tab-status { grid-column: 2; justify-self: start; }
+      .workspace-tabs { gap: 6px; }
+      .workspace-tab {
+        grid-template-columns: 25px minmax(0, 1fr) auto;
+        gap: 6px;
+        min-height: 38px;
+        padding: 6px 7px;
+      }
+      .workspace-tab .tab-status {
+        grid-column: auto;
+        align-self: center;
+        justify-self: end;
+        padding: 1px 5px;
+        font-size: 10px;
+      }
       .skeleton-list-layout { grid-template-columns: minmax(0, 1fr) 290px; }
+    }
+
+    @media (max-width: 1399px) {
+      .governance-flow-grid {
+        grid-template-columns: repeat(4, minmax(130px, 1fr));
+        overflow-x: visible;
+      }
     }
 
     @media (max-width: 1279px) {
@@ -2302,6 +2321,7 @@
   <script src="graph-editor-state.js"></script>
   <script src="process-diagram.js"></script>
   <script src="data-relation-diagram.js"></script>
+  <script src="lifecycle-analyzer.js"></script>
   <script src="review-pattern-diagrams.js"></script>
   <script src="structure-score.js"></script>
   <script>
@@ -2326,7 +2346,7 @@
     ];
     const MATERIAL_TYPES = ['', '现有制度', '表单或记录', '现行业务操作说明', '会议或访谈', '其他参考材料'];
     const AREA_TYPES = ['', '基本信息', '明细清单'];
-    const EXPECTED_EXPORT_SCHEMA_VERSION = 'process-governance-v6';
+    const EXPECTED_EXPORT_SCHEMA_VERSION = 'process-governance-v7';
     const FORM_DESIGN_STATES = new Set(['unspecified', 'current_state', 'proposed_design']);
     const INFORMATION_TYPES = [
       { value: 'pending_confirmation', label: '待确认', example: '暂时无法判断属于哪一类' },
@@ -2345,6 +2365,85 @@
       { value: 'create', label: '创建' },
       { value: 'update', label: '更新' },
       { value: 'use', label: '使用' },
+      { value: 'pending_confirmation', label: '待确认' }
+    ];
+    const LIFECYCLE_ACTIONS = {
+      activate: '生效', deactivate: '停用', reactivate: '重新启用', void: '作废', expire: '失效',
+      archive: '归档', restore_active_custody: '恢复在用保管', destroy: '销毁', irreversible_anonymize: '不可逆匿名化'
+    };
+    const BUSINESS_VALIDITY_OPTIONS = [
+      { value: 'pending_confirmation', label: '待确认' },
+      { value: 'not_effective', label: '未生效' },
+      { value: 'effective', label: '有效' },
+      { value: 'deactivated', label: '停用' },
+      { value: 'voided', label: '作废' },
+      { value: 'expired', label: '失效' }
+    ];
+    const CUSTODY_OPTIONS = [
+      { value: 'pending_confirmation', label: '待确认' },
+      { value: 'active_custody', label: '在用保管' },
+      { value: 'archived', label: '归档' },
+      { value: 'destroyed', label: '销毁' }
+    ];
+    const IDENTIFIABILITY_APPLICABILITY_OPTIONS = [
+      { value: 'pending_confirmation', label: '待确认' },
+      { value: 'applicable', label: '适用' },
+      { value: 'not_applicable', label: '不适用' }
+    ];
+    const IDENTIFIABILITY_OPTIONS = [
+      { value: 'pending_confirmation', label: '待确认' },
+      { value: 'identifiable', label: '可识别' },
+      { value: 'irreversibly_anonymized', label: '不可逆匿名化' },
+      { value: 'not_applicable', label: '不适用' }
+    ];
+    const LIFECYCLE_REVIEW_STATUS_OPTIONS = [
+      { value: 'auto_generated', label: '系统根据明确结构生成' },
+      { value: 'pending_confirmation', label: '待确认' },
+      { value: 'confirmed', label: '已确认' },
+      { value: 'needs_recheck', label: '需要重新核对' },
+      { value: 'not_applicable', label: '不适用' },
+      { value: 'rejected', label: '已否决' }
+    ];
+    const LIFECYCLE_DECISION_REASON_OPTIONS = [
+      { value: '', label: '请选择原因' },
+      { value: 'source_not_applicable', label: '来源内容不适用于当前对象' },
+      { value: 'duplicate_suggestion', label: '与已有事实重复' },
+      { value: 'semantic_mismatch', label: '动作含义不一致' },
+      { value: 'insufficient_evidence', label: '现有依据不足' },
+      { value: 'conflicting_sources', label: '来源之间存在冲突' },
+      { value: 'other', label: '其他' }
+    ];
+    const LIFECYCLE_TRIGGER_MODE_OPTIONS = [
+      { value: 'behavior', label: '业务行为' },
+      { value: 'time_period', label: '时间或期限' },
+      { value: 'business_condition', label: '业务或数据条件' },
+      { value: 'external_process_notice', label: '外部流程或通知' },
+      { value: 'pending_confirmation', label: '待确认' }
+    ];
+    const LIFECYCLE_TRIGGER_OPERATOR_OPTIONS = [
+      { value: 'single', label: '单一条件' },
+      { value: 'and', label: '同时满足（AND）' },
+      { value: 'or', label: '满足任一（OR）' },
+      { value: 'pending_confirmation', label: '待确认' }
+    ];
+    const LIFECYCLE_TARGET_SCOPE_OPTIONS = [
+      { value: 'pending_confirmation', label: '待确认' },
+      { value: 'record', label: '单条记录或实例' },
+      { value: 'version', label: '指定版本' },
+      { value: 'batch', label: '指定批次' },
+      { value: 'all_records', label: '全部记录（高风险）' }
+    ];
+    const LIFECYCLE_CARRIER_SCOPE_OPTIONS = [
+      { value: 'pending_confirmation', label: '待确认' },
+      { value: 'paper_original', label: '纸质原件' },
+      { value: 'electronic_original', label: '电子原件' },
+      { value: 'business_copy', label: '业务副本' },
+      { value: 'paper_and_electronic', label: '纸质和电子原件' },
+      { value: 'not_applicable', label: '不适用' }
+    ];
+    const LIFECYCLE_RESPONSIBILITY_MODE_OPTIONS = [
+      { value: 'inherit_behavior', label: '继承关联业务行为' },
+      { value: 'explicit', label: '单独指定' },
       { value: 'pending_confirmation', label: '待确认' }
     ];
     const FORM_OPERATIONS = [
@@ -2409,7 +2508,7 @@
       {
         title: '7. 评审与交接',
         action: '编制人处理结构阻断并核对业务提示，下载最终待核对文件后重新导入；业务核对记录和结构预审问题处理记录在JSON之外分别保存。',
-        completion: '结构错误为零，往返内容和稳定引用一致，文件名及SHA-256已核对；当前v6文件仍不得直接导入3000。'
+        completion: '结构错误为零，往返内容和稳定引用一致，文件名及SHA-256已核对；当前v7文件仍不得直接导入3000。'
       }
     ];
     const TOOL_TERM_GROUPS = [
@@ -2418,21 +2517,21 @@
         terms: [
           ['无状态临时工具', '3001不保存账号草稿、服务端草稿或浏览器持久化内容。业务内容只存在当前页面内存中，用户主动下载JSON是唯一保存方式。'],
           ['当前候选流程', '本次页面正在编制的一条流程。历史多候选文件导入后，每条候选流程分别显示、分别修改、分别下载，不形成审核状态。'],
-          ['单流程结构化文件规则', 'process-governance-v6规定一份JSON只包含一个流程，并固定流程、行为、关系、数据对象、表单、术语和迁移归档的结构。'],
+          ['单流程结构化文件规则', 'process-governance-v7规定一份JSON只包含一个流程，并固定流程、行为、关系、数据对象、生命周期、表单、术语和迁移归档的结构。'],
           ['源文件', '用户从“文件”入口选择的原始JSON。3001只读取源文件并在页面内存中处理，不修改或覆盖源文件。'],
-          ['来源版本', '源文件声明的结构版本。v1至v5和历史格式导入后只在当前页面内存中迁移为v6。'],
+          ['来源版本', '源文件声明的结构版本。v1至v6和历史格式导入后只在当前页面内存中迁移为v7。'],
           ['源文件SHA-256', '按源文件实际字节计算的摘要，用于确认两次核对的源文件是否相同；摘要不代表内容已经审核。'],
-          ['阶段草稿', '第一至第四轮主动下载的未审核v6文件，阶段依次为流程骨架、动作与异常、数据与表单、跨部门核对。阶段下载不是审核节点。'],
-          ['最终待核对文件', '第7步完成技术检查后下载的未审核v6文件。它仍需业务事实核对和独立结构预审，不能表述为正式流程。'],
+          ['阶段草稿', '第一至第四轮主动下载的未审核v7文件，阶段依次为流程骨架、动作与异常、数据与表单、跨部门核对。阶段下载不是审核节点。'],
+          ['最终待核对文件', '第7步完成技术检查后下载的未审核v7文件。它仍需业务事实核对和独立结构预审，不能表述为正式流程。'],
           ['文件交接摘要', '最近一次下载的文件名、时间、阶段、结构版本和SHA-256。摘要只在当前页面显示，不写入下载JSON。'],
-          ['迁移归档', '旧版文件中无法作为v6活动字段继续编辑、但需要保留追溯的只读内容。迁移归档不参与当前流程计算、评分或绘图。']
+          ['迁移归档', '旧版文件中无法作为v7活动字段继续编辑、但需要保留追溯的只读内容。迁移归档不参与当前流程计算、评分或绘图。']
         ]
       },
       {
         title: '流程、节点与关系',
         terms: [
           ['L3流程', '本次编制的一条具体业务流程，包含边界、业务行为和关系。3001不因为名称或分类字段自动确认其能力归属。'],
-          ['A1业务行为', '流程中由业务人员或部门实际执行的一项可说明、可定位的业务动作。普通业务行为在v6中使用action节点记录。'],
+          ['A1业务行为', '流程中由业务人员或部门实际执行的一项可说明、可定位的业务动作。普通业务行为在v7中使用action节点记录。'],
           ['流程骨架', '节点名称、节点类型、执行主体，以及流程关系的类型、起点和终点。逐动作说明和关系条件不在流程骨架中编辑。'],
           ['普通业务行为', '承担实际业务动作的action节点，需要记录执行主体和具体做什么；它不同于判断、并行开始和并行汇合等控制节点。'],
           ['控制节点', '用于表达判断或并行控制的节点，包括判断节点、并行开始和并行汇合。控制节点不代表执行部门，也不承担实际业务动作。'],
@@ -2452,7 +2551,7 @@
         terms: [
           ['待治理数据对象', '3001页面简称“数据对象”，用于记录流程创建、更新或使用的信息线索。它不等于已经确认的主数据、参考数据或权威来源。'],
           ['信息类型', '数据对象在当前流程中的内容类型，包括待确认、业务信息、业务结论、业务状态、标识符、文件或附件、其他信息输出。'],
-          ['数据行为关系', '业务行为对数据对象执行创建、更新、使用或待确认操作的关系，是当前v6记录数据输入输出关系的活动位置。'],
+          ['数据行为关系', '业务行为对数据对象执行创建、更新、使用或待确认操作的关系，是当前v7记录数据输入输出关系的活动位置。'],
           ['创建、更新、使用、待确认', '创建表示业务行为形成数据；更新表示业务行为改变数据；使用表示业务行为读取或依赖数据；待确认表示操作和方向尚无足够事实。'],
           ['来源线索', '当前流程使用的数据来自其他流程或外部位置时记录的部门、流程、行为、数据名称和可用时间线索。来源线索不等于权威来源认定。'],
           ['表单或记录', '流程中实际使用的纸质表单、电子表单、台账或业务记录。页面只记录结构和处理关系，不据此推断数据库表。'],
@@ -2472,11 +2571,11 @@
           ['动态责任部门', '责任部门由本行为开始前已经形成的数据在运行时确定。设计阶段不把它认定为固定跨部门行为，也不得向全公司广播。'],
           ['跨部门行为', '固定执行部门与流程归口部门不同的普通业务行为。页面根据现有字段识别，不保存独立的“是否跨部门”结论字段。'],
           ['技术标识与稳定引用', 'JSON内部用于唯一识别对象并连接关系的标识。修改名称不会改变引用；删除被引用对象时，页面会阻止操作并列出影响。技术标识不是业务编号。'],
-          ['结构错误', '违反v6结构规则、枚举、唯一性或引用完整性的技术问题。结构错误会阻止下载，用户必须先修正。'],
+          ['结构错误', '违反v7结构规则、枚举、唯一性或引用完整性的技术问题。结构错误会阻止下载，用户必须先修正。'],
           ['业务提示', '页面根据现有内容发现的缺项、矛盾或待核对事项。业务提示不阻止阶段草稿下载，也不等于业务结论。'],
           ['待定', '现有事实或证据不足，暂时不能可靠填写或确认。保持待定比猜测或虚构内容更符合治理要求。'],
           ['独立结构预审', '在新的核对上下文中，只依据待审JSON和对应结构规则检查必需结构、引用、字段归位和对象拆分，不判断流程事实是否正确。'],
-          ['3000停止边界', '3000当前只承接v1至v3。3001生成的v6文件不得直接导入3000，也不得自动降级；后续承接需另行完成兼容或迁移审核。']
+          ['3000停止边界', '3001生成的v7文件暂不能直接导入3000，也不得自动降级；后续承接需另行完成兼容、迁移审核和验证。']
         ]
       }
     ];
@@ -2519,6 +2618,7 @@
     let activeBehaviorRef = '';
     let activeRelationRef = '';
     let activeDataRef = '';
+    let activeDataMode = 'flow';
     let activeTermRef = '';
     let activeFlowItemKind = 'behavior';
     let activeFormRef = '';
@@ -2551,6 +2651,7 @@
       result: null,
       message: ''
     };
+    const masterDataPendingRefs = new Set();
     const workspace = document.getElementById('workspace');
     const statusBox = document.getElementById('statusBox');
     const candidateList = document.getElementById('candidateList');
@@ -2614,7 +2715,7 @@
     }
 
     async function fetchEmptyProcessDocument() {
-      const response = await fetch('/api/template?version=process-governance-v6', { cache: 'no-store' });
+      const response = await fetch('/api/template?version=process-governance-v7', { cache: 'no-store' });
       const result = await readJsonResponse(
         response,
         '3001空白模板接口未返回结构化数据。请保持当前页面打开，待维护人员重启3001服务后再次新建流程。'
@@ -3513,7 +3614,7 @@
             ? `<select id="governanceCandidateSelect" data-governance-candidate>${candidateOptions}</select>`
             : '<strong>尚未新建或导入流程</strong>'}
           <div class="governance-context">
-            <span class="context-badge version">当前v6</span>
+            <span class="context-badge version">当前v7候选</span>
             <span class="context-badge">导入来源：${escapeHtml(origin)}</span>
             ${entry?.dirty ? '<span class="context-badge dirty">有未下载修改</span>' : data ? '<span class="context-badge ready">当前没有未下载修改</span>' : ''}
             <span class="context-badge">${escapeHtml(technicalLabel)}</span>
@@ -3545,11 +3646,11 @@
     function renderGovernanceDrawer() {
       const phases = [
         ['工作准备', '部门负责人确认编制人和业务核对人。业务核对人确认制度、表单、台账和实际做法的核对范围。MDM工作组确认3001运行版本和结构版本。'],
-        ['选择编制路线', '编制人可以在3001直接新建或导入v1至v6文件；也可以使用MDM-AI助手完成v5填报和预审，再手工导入3001转换为v6。AI路线形成的v5预审记录不能替代最终v6独立结构预审。'],
+        ['选择编制路线', '编制人可以在3001直接新建或导入v1至v7文件；也可以使用MDM-AI助手完成v5填报和预审，再手工导入3001转换为v7。AI路线形成的v5预审记录不能替代最终v7独立结构预审。'],
         ['四轮编制与阶段下载', '第一轮处理流程边界和骨架；第二轮处理逐动作说明、完成标准和异常路径；第三轮处理数据对象、表单和字段；第四轮核对跨部门事实和待定事项。每轮下载阶段草稿，但不锁定后续步骤。'],
         ['部门事实初核', '业务核对人核对全部流程事实。跨部门内容由归口部门和承接部门分别确认本方事实。未确认内容保持待定，并在JSON之外记录证据、确认主体和关闭条件。'],
-        ['最终v6独立结构预审', 'MDM工作组或Codex检查最终v6的结构错误、字段归位和对象拆分。编制人关闭硬性结构错误；保留建议原值时，在外部问题处理记录中说明理由。'],
-        ['重新导入、最终下载和交接', '编制人重新导入整改后的文件，核对版本、数量、内容、稳定引用和往返完整性，再分别交接最终v6、结构预审问题处理记录和部门业务核对记录。'],
+        ['最终v7独立结构预审', 'MDM工作组或Codex检查最终v7的结构错误、字段归位、对象拆分和生命周期结构。编制人关闭硬性结构错误；保留建议原值时，在外部问题处理记录中说明理由。'],
+        ['重新导入、最终下载和交接', '编制人重新导入整改后的文件，核对版本、数量、内容、稳定引用和往返完整性，再分别交接最终v7、结构预审问题处理记录和部门业务核对记录。'],
         ['当前停止边界', '3000当前只承接v1至v3。v6不得直接导入3000，也不得自动降级。MDM工作组完成兼容或迁移方案、验证和审核后，才能另行进入3000受控预览、审核导入和发布。']
       ];
       governanceDrawerContent.innerHTML = `<div class="governance-drawer-list">${phases.map((phase, index) => `
@@ -3615,7 +3716,7 @@
               <article class="tool-help-card"><h3>使用人和责任</h3><p>编制人维护当前流程；业务核对人确认实际流程、表单、数据和跨部门事实；MDM工作组检查结构并组织后续交接。页面检查不能代替任何一方确认。</p></article>
               <article class="tool-help-card"><h3>开始前准备</h3><p>选择一条真实流程，准备可以核对的制度、表单、台账和实际做法，并明确编制人和不同人员担任的业务核对人。教学样例不能作为业务事实。</p></article>
               <article class="tool-help-card"><h3>保存和恢复</h3><p>3001不自动保存。每轮完成后由用户主动下载；关闭或刷新后，只能重新导入已下载文件继续编制。源文件不会被修改。</p></article>
-              <article class="tool-help-card"><h3>当前停止边界</h3><p>3001输出始终是未审核的单流程v6文件。3000当前只承接v1至v3，v6不得直接导入3000，也不得自动降级。</p></article>
+              <article class="tool-help-card"><h3>当前停止边界</h3><p>3001输出始终是未审核的单流程v7文件。v7暂不能直接导入3000，也不得自动降级。</p></article>
             </div>`
           )}
           ${section(
@@ -3632,7 +3733,7 @@
               <article class="tool-help-card"><h3>下载和继续编制</h3><p>阶段下载和最终下载都会执行技术检查。下载后继续修改不会被锁定；下次只能重新导入已下载文件恢复业务内容。</p></article>
               <article class="tool-help-card"><h3>结构错误和业务提示</h3><p>结构错误必须修正后才能下载。业务提示可以保持待定并下载，但编制人和业务核对人仍须在交接前逐项处理或记录确认责任。</p></article>
               <article class="tool-help-card"><h3>没有数据、表单或跨部门位置</h3><p>确实不适用时保持为空，不为满足检查虚构内容。页面没有识别到跨部门位置，只表示现有字段没有形成固定跨部门行为，不代表业务实际不涉及跨部门。</p></article>
-              <article class="tool-help-card"><h3>交接时核对</h3><p>交出人与接收人核对文件名、阶段、结构版本和SHA-256。最终v6、结构预审问题处理记录和业务核对记录分别保存，不嵌入同一JSON。</p></article>
+              <article class="tool-help-card"><h3>交接时核对</h3><p>交出人与接收人核对文件名、阶段、结构版本和SHA-256。最终v7、结构预审问题处理记录和业务核对记录分别保存，不嵌入同一JSON。</p></article>
             </div>`
           )}
           ${section(
@@ -3647,7 +3748,7 @@
       `).join('');
       if (!data) {
         return `<section class="start-hero">
-          <div class="eyebrow">3001 · process-governance-v6</div>
+          <div class="eyebrow">3001 · process-governance-v7</div>
           <h2>按七步完成一条流程的编制、核对和交接准备</h2>
           <p>编制人维护当前唯一流程文件；业务核对人确认流程事实；MDM工作组检查结构。3001不保存草稿，也不记录审核结论。</p>
           <div class="start-actions">
@@ -3656,7 +3757,7 @@
             <button class="button" data-action="open-governance-drawer">查看完整治理流程</button>
           </div>
           <div class="governance-flow-grid">${flowCards}</div>
-          <p class="boundary"><strong>当前停止边界：</strong>3000当前只承接v1至v3。3001输出的v6文件不得直接导入3000，也不得自动降级。</p>
+          <p class="boundary"><strong>当前停止边界：</strong>3001输出的v7文件暂不能直接导入3000，也不得自动降级；3000必须另行完成兼容、迁移审核和验证。</p>
         </section>`;
       }
       const entry = currentEntry();
@@ -3756,7 +3857,7 @@
         content = renderRelationshipOverview();
       } else {
         activeWorkspaceTab = 'data';
-        content = renderDataDiagramPanel();
+        content = `${renderDataModeSwitch()}${activeDataMode === 'lifecycle' ? renderLifecyclePanel() : renderDataDiagramPanel()}`;
       }
       return `${renderStepIntro('data')}${activeStepView === 'choice' ? '' : renderStepViewSwitch(views)}${content}`;
     }
@@ -3808,7 +3909,7 @@
       activeEditorSection = 'export';
       return `${renderStepIntro('handoff')}${renderExportCheck()}${section(
         '最终交接卡',
-        '最终v6、结构预审问题处理记录和部门业务核对记录必须分别保存。页面只生成并摘要当前v6文件。',
+        '最终v7、结构预审问题处理记录和部门业务核对记录必须分别保存。页面只生成并摘要当前v7文件。',
         `<div class="next-stage-grid">
           <section class="next-stage-card next"><h3>技术状态</h3><p>结构错误必须关闭。业务待定不阻止下载，但应在外部核对记录中写明证据、确认主体和关闭条件。</p></section>
           <section class="next-stage-card future"><h3>外部材料</h3><p>准备结构预审问题处理记录和部门业务核对记录。3001不会生成、保存或嵌入这些记录。</p></section>
@@ -3894,7 +3995,7 @@
       const historyBody = versionHistoryLoadState === 'ready'
         ? (versionHistory?.versions || []).map(item => `
             <article class="item-card">
-              <div class="item-title"><strong>${escapeHtml(item.version)} · ${escapeHtml(item.title)}</strong><span class="technical-note">${escapeHtml(item.released_on)}</span></div>
+              <div class="item-title"><strong>${escapeHtml(item.version)} · ${escapeHtml(item.title)}</strong><span class="technical-note">${escapeHtml(item.status === 'candidate' ? `候选 · ${item.candidate_on || '日期未记录'}` : item.released_on)}</span></div>
               <p>${escapeHtml(item.summary)}</p>
             </article>`).join('')
         : versionHistoryLoadState === 'unavailable'
@@ -3905,16 +4006,16 @@
         <div class="item-card">
           <div class="grid">
             <div class="inline-note"><strong>导入来源：</strong>${escapeHtml(summary.sourceVersion)}</div>
-            <div class="inline-note"><strong>当前格式：</strong>process-governance-v6</div>
+            <div class="inline-note"><strong>当前格式：</strong>process-governance-v7</div>
             <div class="inline-note"><strong>已保留内容：</strong>${summary.behaviorCount}个行为、${summary.dataCount}项数据、${summary.formCount}张表单、${summary.fieldCount}个字段</div>
             <div class="inline-note"><strong>待确认关系：</strong>${summary.unresolved}项</div>
           </div>
           <p class="technical-note">迁移只发生在当前页面内存中，用户选择的源文件没有修改。</p>
           <details><summary>迁移归档（${summary.archived}项，默认折叠）</summary><p class="technical-note">归档内容只用于保留历史来源，不参与评分、流程计算或绘图。归档引用仍会保护对应对象，避免误删。</p></details>
-        </div>` : '<div class="inline-note">当前没有草稿。导入v1至v5或历史多候选文件后，这里会显示本次迁移摘要。</div>';
+        </div>` : '<div class="inline-note">当前没有草稿。导入v1至v6或历史多候选文件后，这里会显示本次迁移摘要。</div>';
       return `
         <div id="versionsPanel" role="tabpanel" aria-labelledby="versionsTab">
-          ${section('v1至v6升级历史', '版本说明来自仓库受控文件，只供查阅，不改变当前草稿。', historyBody)}
+          ${section('v1至v7升级历史', '版本说明来自仓库受控文件，只供查阅，不改变当前草稿。', historyBody)}
           ${section('当前文件迁移摘要', '旧文件导入后统一在页面内存中转换为v6，导入源文件始终保持原样。', migrationBody)}
         </div>`;
     }
@@ -4164,6 +4265,173 @@
       return dataObjects.find(item => item.data_ref === activeDataRef) || null;
     }
 
+    function pendingLifecycle() {
+      return globalThis.ProcessGovernanceMigration?.pendingLifecycle
+        ? globalThis.ProcessGovernanceMigration.pendingLifecycle()
+        : {
+            applicability: 'pending_confirmation',
+            entry_state: {
+              business_validity: 'pending_confirmation',
+              custody: 'pending_confirmation',
+              identifiability_applicability: 'pending_confirmation',
+              identifiability: 'pending_confirmation'
+            },
+            routes: [],
+            analysis: { analyzer_version: '', source_fingerprint: '', status: 'not_analyzed' },
+            decision_reason: '',
+            decision_notes: ''
+          };
+    }
+
+    function renderDataModeSwitch() {
+      return `<div class="step-view-switch" aria-label="数据工作区视图">
+        <button class="button small step-view-button${activeDataMode === 'flow' ? ' active' : ''}" data-action="switch-data-mode" data-mode="flow">数据流</button>
+        <button class="button small step-view-button${activeDataMode === 'lifecycle' ? ' active' : ''}" data-action="switch-data-mode" data-mode="lifecycle">生命周期</button>
+      </div>`;
+    }
+
+    function renderMasterDataHint(dataObject) {
+      const analyzer = globalThis.LifecycleAnalyzer;
+      if (!analyzer?.classifyMasterDataHint) return '';
+      const hint = analyzer.classifyMasterDataHint(currentDocument(), dataObject);
+      const pending = masterDataPendingRefs.has(dataObject.data_ref);
+      return `<section class="inline-note" aria-label="主数据认定提示">
+        <strong>主数据认定提示：${escapeHtml(hint.label)}</strong>
+        <p>${escapeHtml(hint.message)}</p>
+        <details><summary>查看判断依据</summary><ul>${hint.reasons.map(reason => `<li>${escapeHtml(reason)}</li>`).join('')}</ul></details>
+        <div class="item-actions">
+          <button class="button small" data-action="supplement-data-facts">补充对象事实</button>
+          <button class="button small secondary" data-action="mark-master-data-pending">${pending ? '已列入本页交接待定' : '列入交接待定事项'}</button>
+        </div>
+        <p class="technical-note">所有主数据都是数据对象，但不是所有数据对象都是主数据。表单通常不是主数据；填写完成的表单通常是交易记录或业务证据。该提示不写入正式主数据结论，也不阻止下载。</p>
+      </section>`;
+    }
+
+    function renderLifecycleStateFields(pathPrefix, title) {
+      return `<div class="item-card">
+        <strong>${escapeHtml(title)}</strong>
+        <div class="grid" style="margin-top:10px">
+          ${field(`${pathPrefix}.business_validity`, '业务效力', { type: 'select', options: BUSINESS_VALIDITY_OPTIONS })}
+          ${field(`${pathPrefix}.custody`, '保管状态', { type: 'select', options: CUSTODY_OPTIONS })}
+          ${field(`${pathPrefix}.identifiability_applicability`, '可识别性是否适用', { type: 'select', options: IDENTIFIABILITY_APPLICABILITY_OPTIONS })}
+          ${field(`${pathPrefix}.identifiability`, '可识别性', { type: 'select', options: IDENTIFIABILITY_OPTIONS })}
+        </div>
+      </div>`;
+    }
+
+    function renderLifecycleEvent(dataIndex, routeIndex, eventIndex, event) {
+      const eventPath = `data_objects.${dataIndex}.lifecycle.routes.${routeIndex}.events.${eventIndex}`;
+      const needsReason = ['not_applicable', 'rejected'].includes(event.review_status);
+      const needsCarrier = ['archive', 'restore_active_custody', 'destroy'].includes(event.action);
+      const reviewOpen = event.high_risk || ['pending_confirmation', 'needs_recheck'].includes(event.review_status);
+      const triggerMode = {
+        behavior: '业务行为', time_period: '时间或期限', business_condition: '业务或数据条件',
+        external_process_notice: '外部流程或通知', pending_confirmation: '待确认'
+      }[event.trigger?.mode] || '待确认';
+      return `<article class="item-card" data-focus-path="${escapeAttribute(eventPath)}">
+        <div class="item-title">
+          <strong>${escapeHtml(LIFECYCLE_ACTIONS[event.action] || event.action)}</strong>
+          <span class="status-pill ${event.high_risk ? 'danger' : ''}">${event.high_risk ? '高风险，必须人工核对' : '普通生命周期事件'}</span>
+        </div>
+        <p><strong>触发：</strong>${escapeHtml(triggerMode)}；${escapeHtml(event.trigger?.expression || '条件待确认')}</p>
+        <p><strong>作用范围：</strong>${escapeHtml(event.target_scope || '待确认')}；<strong>责任：</strong>${escapeHtml(event.responsibility?.position || event.responsibility?.department || '待确认')}</p>
+        ${field(`${eventPath}.review_status`, '核对状态', { type: 'select', options: LIFECYCLE_REVIEW_STATUS_OPTIONS })}
+        ${needsReason ? field(`${eventPath}.decision_reason`, '决定原因', { type: 'select', options: LIFECYCLE_DECISION_REASON_OPTIONS }) : ''}
+        ${needsReason ? field(`${eventPath}.decision_notes`, '补充说明', { type: 'textarea', className: 'wide' }) : ''}
+        <details ${reviewOpen ? 'open' : ''}><summary>核对触发、范围、责任和异常</summary>
+          <div class="grid" style="margin-top:10px">
+            ${field(`${eventPath}.trigger.mode`, '触发方式', { type: 'select', options: LIFECYCLE_TRIGGER_MODE_OPTIONS })}
+            ${field(`${eventPath}.trigger.operator`, '条件组合', { type: 'select', options: LIFECYCLE_TRIGGER_OPERATOR_OPTIONS })}
+            ${field(`${eventPath}.trigger.expression`, '触发条件原文', { type: 'textarea', className: 'wide' })}
+            ${field(`${eventPath}.target_scope`, '作用范围', { type: 'select', options: LIFECYCLE_TARGET_SCOPE_OPTIONS })}
+            ${needsCarrier ? field(`${eventPath}.carrier_scope`, '载体范围', { type: 'select', options: LIFECYCLE_CARRIER_SCOPE_OPTIONS }) : ''}
+            ${field(`${eventPath}.responsibility.mode`, '责任确定方式', { type: 'select', options: LIFECYCLE_RESPONSIBILITY_MODE_OPTIONS })}
+            ${field(`${eventPath}.responsibility.department`, '责任部门')}
+            ${field(`${eventPath}.responsibility.position`, '责任岗位')}
+            ${field(`${eventPath}.exception_handling`, '例外处理', { type: 'textarea', className: 'wide' })}
+          </div>
+          ${renderLifecycleStateFields(`${eventPath}.result_state`, '动作完成后的状态')}
+        </details>
+        <details><summary>查看推导依据</summary>
+          <p>来源位置：<code>${escapeHtml(event.provenance?.source_path || '未记录')}</code></p>
+          <p>依据：${escapeHtml(event.provenance?.basis || '未记录')}</p>
+        </details>
+      </article>`;
+    }
+
+    function analyzeLifecycleForObject(dataObject) {
+      const analyzer = globalThis.LifecycleAnalyzer;
+      if (!analyzer?.analyzeDataObject) return null;
+      const before = JSON.stringify(dataObject.lifecycle || null);
+      const result = analyzer.analyzeDataObject(currentDocument(), dataObject.data_ref);
+      dataObject.lifecycle = result.lifecycle;
+      return { ...result, changed: before !== JSON.stringify(result.lifecycle) };
+    }
+
+    function renderLifecyclePanel() {
+      const dataObject = ensureActiveGraphDataObject();
+      if (!dataObject) {
+        return `<section class="section"><div class="section-body"><div class="diagram-empty"><h2>尚未登记数据对象</h2><p>先登记数据对象，页面再按对象自动整理生命周期建议。</p><button class="button primary" data-action="add-graph-data">新增数据</button></div></div></section>`;
+      }
+      if (!dataObject.lifecycle) dataObject.lifecycle = pendingLifecycle();
+      const dataIndex = currentDocument().data_objects.indexOf(dataObject);
+      const lifecycle = dataObject.lifecycle;
+      const eventCount = (lifecycle.routes || []).reduce((total, route) => total + (route.events || []).length, 0);
+      const pendingCount = (lifecycle.routes || []).flatMap(route => route.events || []).filter(event =>
+        ['pending_confirmation', 'needs_recheck'].includes(event.review_status)
+      ).length;
+      const routes = (lifecycle.routes || []).map((route, routeIndex) => {
+        const routePath = `data_objects.${dataIndex}.lifecycle.routes.${routeIndex}`;
+        const events = (route.events || []).map((event, eventIndex) => renderLifecycleEvent(dataIndex, routeIndex, eventIndex, event)).join('');
+        return `<details class="nested" open>
+          <summary><strong>${escapeHtml(route.route_label || `路径${routeIndex + 1}`)}</strong> · ${(route.events || []).length}个事件</summary>
+          <p class="technical-note">流程关系：${escapeHtml((route.flow_relation_refs || []).join('、') || '当前行为未定位到具体流程关系')}</p>
+          ${events || emptyList('当前路径没有生命周期事件。')}
+          ${renderLifecycleStateFields(`${routePath}.exit_state`, '当前路径的出口状态')}
+        </details>`;
+      }).join('');
+      return `<section class="section diagram-section">
+        <div class="section-body">
+          <div class="diagram-toolbar">
+            <div><h2>数据生命周期</h2><p>系统按当前数据对象集中分析，不要求逐行为定义。停用、作废和失效分别记录；系统删除不属于业务生命周期动作。</p></div>
+            <div class="diagram-controls">
+              <button class="button primary small" data-action="reanalyze-current-lifecycle">重新分析当前对象</button>
+              <button class="button secondary small" data-action="reanalyze-all-lifecycle">重新分析全部对象</button>
+            </div>
+          </div>
+          <div class="data-focus-selector">
+            <label>当前数据对象<select data-graph-data-focus>${optionHtml((currentDocument().data_objects || []).map(item => ({ value: item.data_ref, label: item.data_name || '未命名数据' })), activeDataRef)}</select></label>
+            <span class="technical-note">${eventCount}个事件，${pendingCount}项待确认或需重新核对；分析器 ${escapeHtml(lifecycle.analysis?.analyzer_version || '未运行')}。</span>
+          </div>
+          ${renderMasterDataHint(dataObject)}
+          <div class="grid" style="margin-top:14px">
+            ${field(`data_objects.${dataIndex}.lifecycle.applicability`, '本流程是否涉及该对象的生命周期', {
+              type: 'select',
+              options: [
+                { value: 'pending_confirmation', label: '待确认' },
+                { value: 'applicable', label: '适用' },
+                { value: 'not_applicable', label: '不适用' }
+              ]
+            })}
+            ${lifecycle.applicability === 'not_applicable' ? field(`data_objects.${dataIndex}.lifecycle.decision_reason`, '不适用原因', {
+              type: 'select',
+              options: [
+                { value: '', label: '请选择原因' },
+                { value: 'no_lifecycle_in_current_process', label: '当前流程不改变该对象的生命周期' },
+                { value: 'reference_only', label: '当前流程只引用该对象' },
+                { value: 'insufficient_evidence', label: '现有依据不足' },
+                { value: 'other', label: '其他' }
+              ]
+            }) : ''}
+            ${lifecycle.applicability === 'not_applicable' ? field(`data_objects.${dataIndex}.lifecycle.decision_notes`, '补充说明', { type: 'textarea', className: 'wide' }) : ''}
+          </div>
+          ${renderLifecycleStateFields(`data_objects.${dataIndex}.lifecycle.entry_state`, '对象进入本流程时的状态')}
+          <div class="cross-department-list">${routes || `<div class="inline-warning"><strong>尚未形成生命周期事件。</strong>现有材料可能没有明确动作，也可能尚未建立数据与行为关系。请补充对象事实，或保留待确认后下载。</div>`}</div>
+          <p class="boundary"><strong>边界：</strong>当前v7文件记录未审核的单流程事实和建议，暂不能直接导入3000。生命周期缺口属于业务提示，不阻止草稿下载。</p>
+        </div>
+      </section>`;
+    }
+
     function renderDataPropertyPanel() {
       const dataObject = ensureActiveGraphDataObject();
       if (!dataObject) return '<div class="graph-property-empty">新增数据对象后，可以围绕它建立直接数据关系。</div>';
@@ -4202,6 +4470,7 @@
           <label>数据名称<input data-graph-data-property="data_name" value="${escapeAttribute(draft.data_name)}"></label>
           <label>说明<textarea data-graph-data-property="description">${escapeHtml(draft.description)}</textarea></label>
           <label>信息类型<select data-graph-data-property="information_type">${optionHtml(INFORMATION_TYPE_OPTIONS, draft.information_type)}</select></label>
+          ${renderMasterDataHint(dataObject)}
           <details><summary>技术标识和来源线索</summary><code>${escapeHtml(dataObject.data_ref)}</code><div class="technical-note">来源线索${dataObject.source_relations.length}项；默认不展开。</div></details>
           <div class="item-actions">
             <button class="button primary small" data-action="apply-data-property">应用修改</button>
@@ -4432,7 +4701,7 @@
 
     function mountDataDiagram() {
       destroyDataDiagram();
-      if (activeWorkspaceTab !== 'data' || !ensureActiveGraphDataObject()) return;
+      if (activeWorkspaceTab !== 'data' || activeDataMode !== 'flow' || !ensureActiveGraphDataObject()) return;
       const container = document.getElementById('dataRelationDiagramCanvas');
       const failure = document.getElementById('dataDiagramFailure');
       if (!container) return;
@@ -4607,7 +4876,8 @@
         description: '',
         information_type: 'pending_confirmation',
         behavior_links: [],
-        source_relations: []
+        source_relations: [],
+        lifecycle: pendingLifecycle()
       };
     }
 
@@ -6011,7 +6281,7 @@
       return `<div class="score-panel" id="structureScorePanel" aria-live="polite">
         <div class="score-panel-head">
           <div>
-            <h3>${escapeHtml(rule?.label || '结构化学习评分 v3（process-governance-v6）')}</h3>
+            <h3>${escapeHtml(rule?.label || '结构化学习评分 v4（process-governance-v7）')}</h3>
             <p>评分根据当前页面内容自动生成，只用于结构化学习反馈，不写入下载的JSON。</p>
           </div>
           <button class="button small" data-action="refresh-structure-score"${pending ? ' disabled' : ''}>重新评分</button>
@@ -6238,7 +6508,7 @@
       const scoring = globalThis.StructureLearningScore;
       if (!scoring?.evaluateReviewReadiness || !scoring?.REVIEW_READINESS) {
         return `<div class="review-readiness-panel">
-          <div class="score-unavailable"><strong>五方面评审检查暂不可用：</strong>当前页面内容不受影响，请联系维护人员检查3001静态资源。</div>
+          <div class="score-unavailable"><strong>六方面评审检查暂不可用：</strong>当前页面内容不受影响，请联系维护人员检查3001静态资源。</div>
         </div>`;
       }
       const technicalIssues = (scoreState.result?.issues || []).filter(item => item.category === '技术结构');
@@ -6251,11 +6521,11 @@
         technical
       });
       const operationNote = {
-        ready: '页面自动检查未发现内容缺项。请按五方面逐项询问归口部门，确认当前JSON与真实做法一致后再下载。',
+        ready: '页面自动检查未发现内容缺项。请按六方面逐项询问归口部门，确认当前JSON与真实做法一致后再下载。',
         prompt: `当前有${readiness.businessIssueCount}项业务内容需要补充或登记为待定。业务提示不阻止下载。`,
         blocker: `当前有${readiness.technicalIssueCount || 1}项结构错误。修复技术结构或损坏引用后才能下载。`,
-        checking: '正在核对结构版本、技术引用、下载回读和内容保持；五方面业务提示已经列出。',
-        unavailable: '技术检查服务暂不可用。请保持当前页面打开，服务恢复后点击“重新检查五方面”。'
+        checking: '正在核对结构版本、技术引用、下载回读和内容保持；六方面业务提示已经列出。',
+        unavailable: '技术检查服务暂不可用。请保持当前页面打开，服务恢复后点击“重新检查六方面”。'
       }[readiness.operationStatus];
       const acceptance = scoring.REVIEW_READINESS.acceptance.map(item => `<li>${escapeHtml(item)}</li>`).join('');
       const aspects = readiness.aspects.map(aspect => {
@@ -6300,9 +6570,9 @@
         </div>
         <div class="review-aspect-grid">${aspects}</div>
         <div class="review-readiness-actions">
-          <button class="button small" data-action="refresh-structure-score"${scoreState.status === 'pending' ? ' disabled' : ''}>重新检查五方面</button>
+          <button class="button small" data-action="refresh-structure-score"${scoreState.status === 'pending' ? ' disabled' : ''}>重新检查六方面</button>
         </div>
-        <p class="boundary"><strong>责任边界：</strong>3001只提供评审准备检查和整改定位，不保存现场确认、依据或评审结论。当前3000尚未承接v6文件，不得把本次下载描述为可直接导入3000。</p>
+        <p class="boundary"><strong>责任边界：</strong>3001只提供评审准备检查和整改定位，不保存现场确认、依据或评审结论。当前3000尚未承接v7文件，不得把本次下载描述为可直接导入3000。</p>
       </section>`;
     }
 
@@ -6322,8 +6592,8 @@
         <div class="next-stage-grid" aria-label="下载后的处理说明">
           <section class="next-stage-card next">
             <span class="next-stage-badge">下一步</span>
-            <h3>完成部门事实核对后，保存最终v6文件</h3>
-            <p>3001不记录核对结果。请分别保存最终v6、结构预审问题处理记录和部门业务核对记录；当前3000仅按既有范围承接v1至v3，v6文件暂不能直接导入3000。待3000另行完成兼容或迁移审核和验证后，再按受控流程承接。</p>
+            <h3>完成部门事实核对后，保存最终v7文件</h3>
+            <p>3001不记录现场核对记录。请分别保存最终v7、结构预审问题处理记录和部门业务核对记录；v7文件暂不能直接导入3000。待3000另行完成兼容、迁移审核和验证后，再按受控流程承接。</p>
           </section>
           <section class="next-stage-card future">
             <span class="next-stage-badge">后续规划</span>
@@ -6335,7 +6605,7 @@
         <button class="button secondary" data-action="export-current">下载最终待核对文件</button>`;
       return section(
         '评审与交接',
-        '先按五方面标准逐项核对，再下载当前这一条流程。页面状态、现场确认和评审意见都不会写入JSON。',
+        '先按六方面标准逐项核对，再下载当前这一条流程。页面状态、现场确认和评审意见都不会写入JSON。',
         body
       );
     }
@@ -6508,7 +6778,8 @@
         description: '',
         information_type: 'pending_confirmation',
         behavior_links: [],
-        source_relations: []
+        source_relations: [],
+        lifecycle: pendingLifecycle()
       };
       currentDocument().data_objects.push(dataObject);
       activeDataRef = dataObject.data_ref;
@@ -6881,6 +7152,16 @@
         if (currentEntry()) currentEntry().stepView = activeStepView;
         return render();
       }
+      if (action === 'switch-data-mode') {
+        activeDataMode = text(element.dataset.mode) === 'lifecycle' ? 'lifecycle' : 'flow';
+        graphSelection = null;
+        if (activeDataMode === 'lifecycle') {
+          const dataObject = ensureActiveGraphDataObject();
+          const result = dataObject ? analyzeLifecycleForObject(dataObject) : null;
+          if (result?.changed) touch();
+        }
+        return render();
+      }
       if (action === 'start-new-process') return protect(startNewProcess);
       if (action === 'open-import-file') return protect(() => jsonInput.click());
       if (action === 'clear-current-page') return protect(clearPage);
@@ -6902,13 +7183,19 @@
       if (action === 'open-help-view') return setActiveGovernanceStep('start', 'help');
       if (action === 'open-version-view') return setActiveGovernanceStep('start', 'version');
       if (action === 'choose-data-start') {
-        if (!(currentDocument()?.data_objects || []).length) addDataObject();
+        if (!(currentDocument()?.data_objects || []).length) {
+          addDataObject();
+          touch();
+        }
         activeStepView = 'data';
         activeWorkspaceTab = 'data';
         return render();
       }
       if (action === 'choose-form-start') {
-        if (!(currentDocument()?.forms || []).length) addForm('current_state');
+        if (!(currentDocument()?.forms || []).length) {
+          addForm('current_state');
+          touch();
+        }
         activeStepView = 'forms';
         activeWorkspaceTab = 'editor';
         activeEditorSection = 'forms';
@@ -6970,6 +7257,37 @@
         return render();
       }
       if (!currentDocument()) return;
+      if (action === 'reanalyze-current-lifecycle') {
+        const dataObject = ensureActiveGraphDataObject();
+        if (!dataObject) return;
+        const result = analyzeLifecycleForObject(dataObject);
+        touch();
+        showStatus(`已重新分析“${dataObject.data_name || '未命名数据'}”，形成${result?.candidate_count || 0}项候选。`, 'success');
+        return render();
+      }
+      if (action === 'reanalyze-all-lifecycle') {
+        let candidateCount = 0;
+        (currentDocument().data_objects || []).forEach(dataObject => {
+          const result = analyzeLifecycleForObject(dataObject);
+          candidateCount += result?.candidate_count || 0;
+        });
+        touch();
+        showStatus(`已重新分析${currentDocument().data_objects.length}个数据对象，共形成${candidateCount}项候选。`, 'success');
+        return render();
+      }
+      if (action === 'supplement-data-facts') {
+        activeDataMode = 'flow';
+        const dataObject = ensureActiveGraphDataObject();
+        graphSelection = dataObject ? { kind: 'data', ref: dataObject.data_ref, draft: clone(dataObject) } : null;
+        return render();
+      }
+      if (action === 'mark-master-data-pending') {
+        const dataObject = ensureActiveGraphDataObject();
+        if (!dataObject) return;
+        masterDataPendingRefs.add(dataObject.data_ref);
+        showStatus('已列入本页交接待定提示。该标记只保留在当前页面，不写成正式主数据结论。', 'success');
+        return render();
+      }
       if (action === 'fit-flow-diagram') {
         diagramView?.fit();
         captureGraphViewport();
@@ -7487,6 +7805,41 @@
           focusRef: dataObject?.data_ref || item.dataRef,
           focusPath: `data_objects.${item.dataIndex}.behavior_links`
         }, item.suggestions);
+      });
+      (data.data_objects || []).forEach((dataObject, dataIndex) => {
+        const lifecycle = dataObject.lifecycle;
+        const lifecycleTarget = {
+          editorSection: 'process',
+          processSection: 'data',
+          focusKind: 'data',
+          focusRef: dataObject.data_ref,
+          focusPath: `data_objects.${dataIndex}.lifecycle`,
+          reviewAspect: 'lifecycle'
+        };
+        if (!lifecycle || lifecycle.applicability === 'pending_confirmation') {
+          addWarning(
+            `${dataObject.data_name || `第${dataIndex + 1}个数据对象`}尚未确认本流程是否涉及生命周期变化。`,
+            lifecycleTarget,
+            ['进入“数据与表单—生命周期”，按数据对象核对；当前流程未涉及完整生命周期时，不需要补造其他阶段。']
+          );
+          return;
+        }
+        if (lifecycle.applicability === 'not_applicable' && !lifecycle.decision_reason) {
+          addWarning(
+            `${dataObject.data_name || `第${dataIndex + 1}个数据对象`}已选择生命周期不适用，但尚未记录原因。`,
+            lifecycleTarget,
+            ['记录为什么当前流程只引用该对象，或为什么没有生命周期变化。']
+          );
+        }
+        const events = (lifecycle.routes || []).flatMap(route => route.events || []);
+        const pendingEvents = events.filter(event => ['pending_confirmation', 'needs_recheck'].includes(event.review_status));
+        if (pendingEvents.length) {
+          addWarning(
+            `${dataObject.data_name || `第${dataIndex + 1}个数据对象`}有${pendingEvents.length}项生命周期事件待确认或需要重新核对。`,
+            lifecycleTarget,
+            ['按对象核对触发条件、结果状态、作用范围、责任和异常处理；高风险事件必须人工确认。']
+          );
+        }
       });
       const parallelDetails = globalThis.StructureLearningScore?.parallelStructureDetails?.(data);
       const parallelTarget = { editorSection: 'process', processSection: 'relations' };
@@ -8123,7 +8476,7 @@
         const failedTarget = targetValidations.find(result => !result.valid);
         if (failedTarget) {
           const firstError = failedTarget.errors?.[0];
-          throw new Error(firstError ? `${validationErrorLocation(firstError)}：${firstError.message}` : '迁移副本未通过v6结构校验');
+          throw new Error(firstError ? `${validationErrorLocation(firstError)}：${firstError.message}` : '迁移副本未通过v7结构校验');
         }
         const migrated = parsed.schema_version !== EXPECTED_EXPORT_SCHEMA_VERSION;
         const nextCandidates = migratedDocuments.map(data => ({
@@ -8153,7 +8506,7 @@
             ? `历史文件包含 ${candidates.length} 条流程，已在当前页面显示为候选。每条流程必须单独下载。`
             : migrated
               ? '历史结构化文件已导入当前页面，当前内容标记为未下载。'
-              : 'v6结构化文件已导入当前页面。',
+              : 'v7结构化文件已导入当前页面。',
           'success'
         );
       } catch (error) {
@@ -8343,6 +8696,10 @@
         const item = ensureActiveGraphDataObject();
         graphSelection = item ? { kind: 'data', ref: item.data_ref, draft: clone(item) } : null;
         graphStateManager.updateView(candidateStateKey(), { data: { dataRef: activeDataRef, zoom: null, pan: null } });
+        if (activeDataMode === 'lifecycle' && item) {
+          const result = analyzeLifecycleForObject(item);
+          if (result?.changed) touch();
+        }
         render();
         return;
       }
@@ -8457,6 +8814,7 @@
         /^behaviors\.\d+\.node_type$/.test(target.dataset.bind)
         || /^behaviors\.\d+\.(actor_department_data_ref|actor_position_rule)$/.test(target.dataset.bind)
         || /^data_objects\.\d+\.(information_type|behavior_links\.\d+\.(behavior_ref|operation)|source_relations\.\d+\.availability_mode)$/.test(target.dataset.bind)
+        || /^data_objects\.\d+\.lifecycle\./.test(target.dataset.bind)
         || /^forms\.\d+\.form_design_state$/.test(target.dataset.bind)
         || /^forms\.\d+\.behavior_links\.\d+\.behavior_ref$/.test(target.dataset.bind)
         || /^forms\.\d+\.areas\.\d+\.items\.\d+\.(business_data_ref|value_origin_mode)$/.test(target.dataset.bind)
