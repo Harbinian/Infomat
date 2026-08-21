@@ -380,6 +380,8 @@
     .step-intro h2 { margin: 0 0 5px; font-family: "SimSun", serif; font-size: 22px; }
     .step-intro p { margin: 0; color: var(--muted); line-height: 1.65; }
     .primary-guidance { max-width: 360px; padding: 9px 11px; border-left: 4px solid var(--gold); background: #f7edda; font-size: 13px; }
+    .step-check-action { display: grid; justify-items: start; gap: 5px; margin-top: 9px; }
+    .step-check-action small { color: var(--muted); line-height: 1.5; }
     .step-issue-panel {
       margin-bottom: 12px;
       border: 1px solid #d7b7a6;
@@ -391,6 +393,18 @@
     .step-issue-list { margin: 8px 0 0; padding: 0 14px 14px 36px; }
     .step-issue-list li + li { margin-top: 8px; }
     .step-issue-list .diagram-warning-button { width: 100%; }
+    .step-check-clear {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+      padding: 11px 14px;
+      border: 1px solid #9fb29a;
+      border-radius: 10px;
+      color: #3f513b;
+      background: #edf4e9;
+    }
+    .step-check-clear span { color: #5d685a; font-size: 13px; line-height: 1.55; }
     .step-view-switch { margin-bottom: 12px; }
     .step-view-button.active { color: #fff; border-color: var(--blue); background: var(--blue); }
 
@@ -1324,6 +1338,92 @@
       font-size: 12px;
       text-align: left;
     }
+
+    .bulk-editor { display: grid; gap: 13px; min-width: 0; }
+    .bulk-editor .step-view-switch { margin-bottom: 0; }
+    .bulk-flow {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .bulk-flow li {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      padding: 9px 10px;
+      border: 1px solid #d7c9ad;
+      border-radius: 9px;
+      background: #fffaf0;
+      font-size: 13px;
+    }
+    .bulk-flow li strong {
+      display: grid;
+      flex: 0 0 25px;
+      width: 25px;
+      height: 25px;
+      place-items: center;
+      border-radius: 50%;
+      color: #fff;
+      background: var(--blue);
+    }
+    .bulk-toolbar,
+    .bulk-apply-actions { margin: 0; }
+    .bulk-input-label { font-weight: 700; }
+    .bulk-input {
+      width: 100%;
+      min-height: 250px;
+      resize: vertical;
+      padding: 11px 12px;
+      border: 1px solid #bfae8d;
+      border-radius: 9px;
+      background: #fffdf8;
+      font: 13px/1.55 Consolas, "Microsoft YaHei", monospace;
+      tab-size: 4;
+      white-space: pre;
+      overflow: auto;
+    }
+    .bulk-input:focus { outline: 2px solid rgba(93, 111, 120, 0.34); border-color: var(--blue); }
+    .bulk-preview-empty {
+      padding: 14px;
+      border: 1px dashed #b9aa8b;
+      border-radius: 9px;
+      color: var(--muted);
+      background: rgba(255, 253, 248, 0.7);
+    }
+    .bulk-preview { display: grid; gap: 11px; min-width: 0; }
+    .bulk-summary { display: grid; grid-template-columns: repeat(4, minmax(100px, 1fr)); gap: 8px; }
+    .bulk-summary span {
+      display: flex;
+      align-items: baseline;
+      justify-content: center;
+      gap: 5px;
+      padding: 10px;
+      border: 1px solid #c8b99b;
+      border-radius: 9px;
+      background: #fffaf0;
+    }
+    .bulk-summary strong { color: var(--red); font-size: 20px; }
+    .bulk-message-list { padding: 12px 14px; border-radius: 9px; }
+    .bulk-message-list.error { color: #752f28; border: 1px solid #d4a79c; background: #fff1ed; }
+    .bulk-message-list.warning { color: #685021; border: 1px solid #d9bf7c; background: #fff7df; }
+    .bulk-message-list ol { margin: 8px 0 0; padding-left: 22px; line-height: 1.65; }
+    .bulk-diff-shell { max-width: 100%; overflow-x: auto; border: 1px solid #d5c7aa; border-radius: 9px; }
+    .bulk-diff-table { width: 100%; min-width: 840px; border-collapse: collapse; background: #fffdf8; font-size: 13px; }
+    .bulk-diff-table th,
+    .bulk-diff-table td { padding: 9px 10px; border-bottom: 1px solid #e5dbc7; text-align: left; vertical-align: top; line-height: 1.55; }
+    .bulk-diff-table th { color: #5f513d; background: #eee3ca; }
+    .bulk-diff-table tr:last-child td { border-bottom: 0; }
+    .bulk-action-badge { display: inline-flex; padding: 2px 7px; border-radius: 999px; font-weight: 700; }
+    .bulk-action-badge.add { color: #3d583a; background: #dfeadb; }
+    .bulk-action-badge.update { color: #3f5969; background: #dce8ee; }
+    .bulk-action-badge.delete { color: #7b2f27; background: #f2ddd7; }
+    .bulk-rule-help { border: 1px solid #d4c5a7; border-radius: 9px; background: #fbf6e9; }
+    .bulk-rule-help summary { padding: 10px 12px; cursor: pointer; font-weight: 700; }
+    .bulk-rule-help ul { margin: 0; padding: 0 18px 13px 34px; line-height: 1.7; }
 
     .form-field-table .field { gap: 4px; }
     .form-field-table td .field > label,
@@ -2345,6 +2445,7 @@
   <script src="process-governance-migration.js"></script>
   <script src="governance-workflow.js"></script>
   <script src="legacy-cross-department-diagnostics.js"></script>
+  <script src="bulk-data-editor.js"></script>
   <script src="graph-edit-commands.js"></script>
   <script src="graph-editor-state.js"></script>
   <script src="process-diagram.js"></script>
@@ -2685,6 +2786,13 @@
       documentKey: '',
       result: null,
       message: ''
+    };
+    const checkedGovernanceSteps = new Set();
+    let bulkDataEditorState = {
+      kind: 'objects',
+      text: '',
+      preview: null,
+      documentKey: ''
     };
     const masterDataPendingRefs = new Set();
     const workspace = document.getElementById('workspace');
@@ -3043,13 +3151,50 @@
       return candidates.some(item => item.dirty);
     }
 
+    function governanceCheckKey(stepId, entry = currentEntry()) {
+      return entry ? `${candidateStateKey(entry)}:${stepId}` : '';
+    }
+
+    function checkedGovernanceStepIds(entry = currentEntry()) {
+      if (!entry) return [];
+      const prefix = `${candidateStateKey(entry)}:`;
+      return [...checkedGovernanceSteps]
+        .filter(key => key.startsWith(prefix))
+        .map(key => key.slice(prefix.length));
+    }
+
+    function invalidateCurrentChecks(entry = currentEntry()) {
+      if (!entry) return;
+      const prefix = `${candidateStateKey(entry)}:`;
+      [...checkedGovernanceSteps].forEach(key => {
+        if (key.startsWith(prefix)) checkedGovernanceSteps.delete(key);
+      });
+    }
+
+    function invalidateBulkPreview() {
+      bulkDataEditorState.preview = null;
+      bulkDataEditorState.documentKey = '';
+    }
+
+    function resetBulkDataEditor(options = {}) {
+      bulkDataEditorState = {
+        kind: options.keepKind ? bulkDataEditorState.kind : 'objects',
+        text: '',
+        preview: null,
+        documentKey: ''
+      };
+    }
+
     function touch() {
       const entry = currentEntry();
       if (!entry) return;
+      invalidateCurrentChecks(entry);
+      invalidateBulkPreview();
       refreshCandidateDirty(entry);
       updateCandidateList();
       governanceHeader.innerHTML = renderGovernanceHeader(currentDocument());
       workspaceViewSwitch.innerHTML = renderGovernanceSteps();
+      refreshVisibleGovernanceCheckUi();
     }
 
     function setBusy(value, message = '') {
@@ -3606,7 +3751,8 @@
         activeStep: activeGovernanceStep,
         issueCounts,
         technicalCount: governanceTechnicalCount() || 0,
-        startedSteps: governanceStartedSteps(data)
+        startedSteps: governanceStartedSteps(data),
+        checkedSteps: checkedGovernanceStepIds()
       };
     }
 
@@ -3710,21 +3856,44 @@
       </section>`;
     }
 
+    function isAuthoringGovernanceStep(stepId) {
+      return ['start', 'boundary', 'skeleton', 'action', 'data'].includes(stepId);
+    }
+
+    function renderPrimaryGuidanceContent(stepId, context = governanceContext()) {
+      const action = globalThis.GovernanceWorkflow.primaryActionForStep(stepId, context);
+      const checked = context.checkedSteps.includes(stepId);
+      const checkAction = isAuthoringGovernanceStep(stepId)
+        ? `<button class="button small${checked ? '' : ' secondary'}" data-action="check-governance-step" data-step="${escapeAttribute(stepId)}" ${context.hasDocument ? '' : 'disabled'}>${checked ? '重新检查本轮' : '检查本轮'}</button>`
+        : '';
+      return `<strong>当前建议操作</strong><br>${escapeHtml(action)}${checkAction ? `<div class="step-check-action">${checkAction}<small>完成当前输入后主动检查；修改草稿后需要重新检查。</small></div>` : ''}`;
+    }
+
+    function refreshVisibleGovernanceCheckUi() {
+      if (!isAuthoringGovernanceStep(activeGovernanceStep)) return;
+      workspace.querySelectorAll('.step-issue-panel, .step-check-clear').forEach(item => item.remove());
+      const guidance = workspace.querySelector('.primary-guidance');
+      if (guidance) guidance.innerHTML = renderPrimaryGuidanceContent(activeGovernanceStep);
+    }
+
     function renderStepIntro(stepId = activeGovernanceStep) {
       const step = globalThis.GovernanceWorkflow.stepById(stepId);
-      const action = globalThis.GovernanceWorkflow.primaryActionForStep(stepId, governanceContext());
+      const context = governanceContext();
       return `<div class="step-intro">
         <div><div class="eyebrow">第${step.number}步</div><h2>${escapeHtml(step.label)}</h2><p>${escapeHtml(step.responsibility)}</p></div>
-        <div class="primary-guidance"><strong>当前建议操作</strong><br>${escapeHtml(action)}</div>
+        <div class="primary-guidance">${renderPrimaryGuidanceContent(stepId, context)}</div>
       </div>${renderGovernanceIssuePanel(stepId)}`;
     }
 
     function renderGovernanceIssuePanel(stepId) {
+      const context = governanceContext();
+      if (!globalThis.GovernanceWorkflow.issuesVisibleForStep(stepId, context)) return '';
       const issues = governanceIssuesForStep(stepId);
-      if (!issues.length) return '';
+      const vocabulary = globalThis.GovernanceWorkflow.issueVocabularyForStep(stepId);
+      if (!issues.length) return `<div class="step-check-clear"><strong>${escapeHtml(vocabulary.plural)}：0项</strong><span>当前页面检查未发现这一类事项；业务事实仍由相应角色核对。</span></div>`;
       return `<details class="step-issue-panel" open>
-        <summary>本步骤待补充项（${issues.length}项）</summary>
-        <p class="step-issue-copy">以下提示来自当前页面检查。点击任一待补充项会返回对应编辑位置；页面提示不替代业务人员确认事实。</p>
+        <summary>${escapeHtml(vocabulary.plural)}（${issues.length}项）</summary>
+        <p class="step-issue-copy">以下事项来自当前页面检查。点击任一事项会返回对应编辑位置；页面提示不替代业务人员确认事实。</p>
         <ol class="step-issue-list">${issues.map(item => {
           const attributes = exportWarningLocationAttributes(item);
           const content = attributes
@@ -3888,13 +4057,14 @@
 
     function renderDataStep() {
       const data = currentDocument();
-      if (!['choice', 'data', 'forms', 'relationships'].includes(activeStepView)) {
+      if (!['choice', 'data', 'forms', 'relationships', 'bulk'].includes(activeStepView)) {
         activeStepView = data.data_objects?.length ? 'data' : data.forms?.length ? 'forms' : 'choice';
       }
       const views = [
         { value: 'data', label: '数据对象与行为关系' },
         { value: 'forms', label: '表单、明细和字段' },
-        { value: 'relationships', label: '数据与表单关系总览' }
+        { value: 'relationships', label: '数据与表单关系总览' },
+        { value: 'bulk', label: 'Excel / WPS批量编辑' }
       ];
       let content;
       if (activeStepView === 'choice' && !(data.data_objects?.length || data.forms?.length)) {
@@ -3908,6 +4078,9 @@
         activeEditorSection = 'process';
         activeProcessSection = 'relationships';
         content = renderRelationshipOverview();
+      } else if (activeStepView === 'bulk') {
+        activeWorkspaceTab = 'editor';
+        content = renderBulkDataEditor();
       } else {
         activeWorkspaceTab = 'data';
         content = `${renderDataModeSwitch()}${activeDataMode === 'lifecycle' ? renderLifecyclePanel() : renderDataDiagramPanel()}`;
@@ -4892,6 +5065,8 @@
         if (command.kind === 'relation') activeRelationRef = nearby?.relation_ref || '';
         if (command.kind === 'data') activeDataRef = nearby?.data_ref || '';
       }
+      invalidateCurrentChecks(entry);
+      invalidateBulkPreview();
       refreshCandidateDirty(entry);
       render();
       if (result.details?.warnings?.length) {
@@ -4946,11 +5121,13 @@
         : graphStateManager.redo(candidateStateKey(entry), entry.data);
       if (!result.ok) return showStatus(result.message, 'error');
       entry.data = result.document;
+      invalidateCurrentChecks(entry);
+      invalidateBulkPreview();
       refreshCandidateDirty(entry);
       graphSelection = null;
       ensureActiveGraphDataObject();
       render();
-      showStatus(direction === 'undo' ? '已撤销上一次图操作。' : '已重做上一次图操作。', 'success');
+      showStatus(direction === 'undo' ? '已撤销上一次编辑操作。' : '已重做上一次编辑操作。', 'success');
       refreshValidationAfterGraphCommand(result.document);
     }
 
@@ -5903,6 +6080,221 @@
         '按数据查看来源、创建、更新、使用以及表单字段关系。这里仅供核对，编辑仍回到“输出物与数据”或“表单与记录”。',
         rows || emptyList('尚未登记数据对象。')
       );
+    }
+
+    function bulkKindLabel(kind) {
+      return globalThis.BulkDataEditor?.TABLES?.[kind]?.label || '批量数据';
+    }
+
+    function bulkActionLabel(action) {
+      return { add: '新增', update: '修改', delete: '删除' }[action] || action;
+    }
+
+    function renderBulkPreview() {
+      const preview = bulkDataEditorState.preview;
+      if (!preview) return '<div class="bulk-preview-empty">尚未预览。粘贴后先检查差异，页面不会直接修改当前流程。</div>';
+      const summary = preview.summary || { added: 0, updated: 0, deleted: 0, unchanged: 0 };
+      const currentKey = currentDocument() ? globalThis.GraphEditorState.fingerprint(currentDocument()) : '';
+      const stale = Boolean(bulkDataEditorState.documentKey && bulkDataEditorState.documentKey !== currentKey);
+      const errors = (preview.errors || []).map(item => `<li><strong>${item.row ? `第${item.row}行` : '整体检查'}${item.column ? ` · ${escapeHtml(item.column)}` : ''}</strong>：${escapeHtml(item.message)}</li>`).join('');
+      const warnings = (preview.warnings || []).map(item => `<li><strong>${item.row ? `第${item.row}行` : '整体提醒'}${item.column ? ` · ${escapeHtml(item.column)}` : ''}</strong>：${escapeHtml(item.message)}</li>`).join('');
+      const diffRows = (preview.diff || []).map(item => {
+        const changes = (item.changes || []).map(change => `${change.label}：${change.before || '空白'} → ${change.after || '空白'}`).join('；');
+        return `<tr><td>${item.row || '-'}</td><td><span class="bulk-action-badge ${escapeAttribute(item.action)}">${escapeHtml(bulkActionLabel(item.action))}</span></td><td>${escapeHtml(item.label || item.ref)}</td><td><code>${escapeHtml(item.ref)}</code></td><td>${escapeHtml(changes || (item.action === 'delete' ? '删除整条记录' : '新增整条记录'))}</td></tr>`;
+      }).join('');
+      return `<div class="bulk-preview${preview.ok && !stale ? ' ready' : ' blocked'}">
+        <div class="bulk-summary" aria-label="批量变更摘要">
+          <span><strong>${summary.added}</strong>新增</span>
+          <span><strong>${summary.updated}</strong>修改</span>
+          <span><strong>${summary.deleted}</strong>删除</span>
+          <span><strong>${summary.unchanged}</strong>不变</span>
+        </div>
+        ${stale ? '<div class="inline-warning"><strong>预览已失效。</strong>当前流程在预览后发生过修改，请重新预览。</div>' : ''}
+        ${errors ? `<div class="bulk-message-list error"><strong>整批未通过，不会修改当前流程</strong><ol>${errors}</ol></div>` : ''}
+        ${warnings ? `<div class="bulk-message-list warning"><strong>应用前需要核对</strong><ol>${warnings}</ol></div>` : ''}
+        ${diffRows ? `<div class="bulk-diff-shell"><table class="bulk-diff-table"><thead><tr><th>表格行</th><th>动作</th><th>记录</th><th>技术标识</th><th>差异</th></tr></thead><tbody>${diffRows}</tbody></table></div>` : preview.ok ? '<div class="step-check-clear"><strong>没有数据差异</strong><span>当前粘贴内容与流程中的记录一致，无需应用。</span></div>' : ''}
+      </div>`;
+    }
+
+    function renderBulkDataEditor() {
+      const kind = bulkDataEditorState.kind;
+      const preview = bulkDataEditorState.preview;
+      const summary = preview?.summary || {};
+      const changeCount = Number(summary.added || 0) + Number(summary.updated || 0) + Number(summary.deleted || 0);
+      const currentKey = currentDocument() ? globalThis.GraphEditorState.fingerprint(currentDocument()) : '';
+      const canApply = Boolean(preview?.ok && changeCount && bulkDataEditorState.documentKey === currentKey);
+      const kindButtons = ['objects', 'fields', 'relations'].map(value => `<button class="button small step-view-button${kind === value ? ' active' : ''}" data-action="switch-bulk-kind" data-kind="${value}">${escapeHtml(bulkKindLabel(value))}</button>`).join('');
+      const guidance = {
+        objects: '一行表示一个数据对象。已有记录保留技术标识；新增记录的标识留空。',
+        fields: '一行表示一个对象字段。优先填写数据对象标识；只填名称时，名称必须唯一。',
+        relations: '一行表示一条数据行为关系。优先填写数据对象和业务行为标识，避免重名误连。'
+      }[kind];
+      return section(
+        'Excel / WPS批量编辑',
+        '复制固定列头或当前数据到Excel/WPS，编辑后整块复制并粘贴到下方。页面先解析、核对引用并显示差异；只有点击“一次应用”才修改当前流程。',
+        `<div class="bulk-editor">
+          <div class="step-view-switch" role="tablist" aria-label="批量表格类型">${kindButtons}</div>
+          <div class="inline-note"><strong>当前表格：${escapeHtml(bulkKindLabel(kind))}</strong><br>${escapeHtml(guidance)} 表格中未出现的既有记录保持不变；只有“处理方式”明确填写“删除”才删除。</div>
+          <ol class="bulk-flow" aria-label="批量编辑操作顺序">
+            <li><strong>1</strong><span>复制列头或当前数据</span></li>
+            <li><strong>2</strong><span>在Excel/WPS中编辑</span></li>
+            <li><strong>3</strong><span>粘贴并预览差异</span></li>
+            <li><strong>4</strong><span>确认后一次应用</span></li>
+          </ol>
+          <div class="item-actions bulk-toolbar">
+            <button class="button small" data-action="copy-bulk-header">复制列头</button>
+            <button class="button small secondary" data-action="copy-bulk-current">复制当前数据</button>
+            <button class="button small" data-action="clear-bulk-input" ${bulkDataEditorState.text ? '' : 'disabled'}>清空粘贴区</button>
+          </div>
+          <label class="bulk-input-label" for="bulkDataInput">从Excel或WPS粘贴${escapeHtml(bulkKindLabel(kind))}</label>
+          <textarea id="bulkDataInput" class="bulk-input" data-bulk-input spellcheck="false" placeholder="请保留第一行列头，再从Excel或WPS粘贴数据。">${escapeHtml(bulkDataEditorState.text)}</textarea>
+          <div class="item-actions bulk-apply-actions">
+            <button class="button secondary" data-action="preview-bulk-data" ${bulkDataEditorState.text.trim() ? '' : 'disabled'}>预览本批变化</button>
+            <button class="button primary" data-action="apply-bulk-data" ${canApply ? '' : 'disabled'}>一次应用${changeCount ? `（${changeCount}项变化）` : ''}</button>
+          </div>
+          ${renderBulkPreview()}
+          <details class="bulk-rule-help"><summary>查看填写和删除规则</summary>
+            <ul>
+              <li>“处理方式”留空时按新增或更新处理；删除必须填写“删除”，并保留已有技术标识。</li>
+              <li>技术标识用于稳定引用。已有记录不要修改技术标识；新增记录可以留空，由页面生成。</li>
+              <li>同名数据对象或业务行为不会自动匹配；出现重名时，预览会要求补充技术标识。</li>
+              <li>删除仍被表单或其他结构引用的记录时，整批不会应用。</li>
+              <li>成功应用后只产生一个撤销记录，可在数据关系图中点击一次“撤销”恢复整批变化。</li>
+            </ul>
+          </details>
+        </div>`
+      );
+    }
+
+    function bulkPrepareOptions() {
+      return {
+        refFactory: newRef,
+        technicalIntegrity: globalThis.GraphEditCommands.technicalIntegrity,
+        allowedFieldTypes: formItemTypes,
+        dataObjectFactory(ref, values) {
+          return {
+            data_ref: ref,
+            data_name: values.data_name,
+            description: values.description,
+            information_type: values.information_type,
+            fields: [],
+            behavior_links: [],
+            source_relations: [],
+            lifecycle: pendingLifecycle()
+          };
+        },
+        deleteDataObject(documentDraft, ref) {
+          return globalThis.GraphEditCommands.applyCommand(documentDraft, { type: 'delete_object', kind: 'data', ref });
+        }
+      };
+    }
+
+    async function previewBulkData() {
+      const data = currentDocument();
+      if (!data) return false;
+      const documentKey = globalThis.GraphEditorState.fingerprint(data);
+      setBusy(true, `正在检查${bulkKindLabel(bulkDataEditorState.kind)}批量数据……`);
+      try {
+        const preview = globalThis.BulkDataEditor.prepare(
+          bulkDataEditorState.kind,
+          bulkDataEditorState.text,
+          data,
+          bulkPrepareOptions()
+        );
+        if (preview.ok) {
+          const validation = await validateGraphDocument(preview.document);
+          if (!validation.valid) {
+            preview.ok = false;
+            (validation.errors || []).forEach(item => preview.errors.push({
+              row: 0,
+              column: '',
+              code: item.keyword || 'SCHEMA_VALIDATION',
+              message: `${validationErrorLocation(item)}：${item.message}`
+            }));
+            preview.document = clone(data);
+          }
+        }
+        bulkDataEditorState.preview = preview;
+        bulkDataEditorState.documentKey = documentKey;
+        render();
+        if (preview.ok) {
+          const changes = preview.summary.added + preview.summary.updated + preview.summary.deleted;
+          showStatus(changes ? `批量预览已通过，共${changes}项变化。请核对差异后一次应用。` : '批量预览已通过，当前内容没有变化。', 'success');
+        } else {
+          showStatus(`批量预览未通过，共${preview.errors.length}项错误。当前流程保持不变。`, 'error');
+        }
+        return preview.ok;
+      } catch (error) {
+        bulkDataEditorState.preview = null;
+        bulkDataEditorState.documentKey = '';
+        render();
+        showStatus(`批量预览失败：${error.message}。当前流程保持不变。`, 'error');
+        return false;
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    function applyBulkData() {
+      const entry = currentEntry();
+      const preview = bulkDataEditorState.preview;
+      if (!entry || !preview?.ok) return false;
+      const currentKey = globalThis.GraphEditorState.fingerprint(entry.data);
+      if (currentKey !== bulkDataEditorState.documentKey) {
+        invalidateBulkPreview();
+        render();
+        showStatus('批量预览后当前流程已发生修改。请重新预览，当前流程未应用这批数据。', 'error');
+        return false;
+      }
+      const changeCount = preview.summary.added + preview.summary.updated + preview.summary.deleted;
+      if (!changeCount) {
+        showStatus('当前批量内容没有变化，无需应用。', 'success');
+        return false;
+      }
+      const result = graphStateManager.execute(candidateStateKey(entry), entry.data, () => ({
+        ok: true,
+        document: clone(preview.document),
+        details: { bulkKind: bulkDataEditorState.kind, changeCount }
+      }));
+      if (!result.ok) {
+        showStatus(result.message || '批量数据未应用，当前流程保持不变。', 'error');
+        return false;
+      }
+      entry.data = result.document;
+      graphSelection = null;
+      if (!(entry.data.data_objects || []).some(item => item.data_ref === activeDataRef)) {
+        activeDataRef = entry.data.data_objects?.[0]?.data_ref || '';
+      }
+      invalidateCurrentChecks(entry);
+      invalidateBulkPreview();
+      refreshCandidateDirty(entry);
+      render();
+      showStatus(`已一次应用${changeCount}项${bulkKindLabel(bulkDataEditorState.kind)}变化。可在数据关系图中点击一次“撤销”恢复整批内容。`, 'success');
+      return true;
+    }
+
+    async function copyBulkText(value, successMessage, options = {}) {
+      const content = text(value);
+      if (options.loadIntoEditor) {
+        bulkDataEditorState.text = content;
+        invalidateBulkPreview();
+      }
+      try {
+        if (!navigator.clipboard?.writeText) throw new Error('当前浏览器未开放剪贴板写入');
+        await navigator.clipboard.writeText(content);
+        if (options.loadIntoEditor) render();
+        showStatus(successMessage, 'success');
+        return true;
+      } catch (_error) {
+        bulkDataEditorState.text = content;
+        invalidateBulkPreview();
+        render();
+        const input = document.getElementById('bulkDataInput');
+        input?.focus();
+        input?.select();
+        showStatus('浏览器未允许自动复制。内容已放入粘贴区并全选，请按Ctrl+C复制。', 'error');
+        return false;
+      }
     }
 
     function formBehaviorLinksEditor(form, formIndex) {
@@ -6874,6 +7266,8 @@
         const entry = { data: clone(data), dirty: false, origin: 'new', governanceStep: 'boundary', stepView: 'basic' };
         candidates = [entry];
         graphStateManager.clear();
+        checkedGovernanceSteps.clear();
+        resetBulkDataEditor();
         registerCandidateState(entry);
         currentIndex = 0;
         activeGovernanceStep = 'boundary';
@@ -6894,6 +7288,8 @@
       destroyDiagram();
       destroyDataDiagram();
       graphStateManager.clear();
+      checkedGovernanceSteps.clear();
+      resetBulkDataEditor();
       candidates = [];
       currentIndex = 0;
       activeGovernanceStep = 'start';
@@ -7320,11 +7716,42 @@
       const areaIndex = Number(element.dataset.areaIndex);
       let nextFocusPath = '';
       if (action === 'switch-governance-step') return setActiveGovernanceStep(element.dataset.step);
+      if (action === 'check-governance-step') {
+        const stepId = globalThis.GovernanceWorkflow.normalizeStepId(element.dataset.step);
+        if (!currentDocument()) return;
+        checkedGovernanceSteps.add(governanceCheckKey(stepId));
+        render();
+        requestAnimationFrame(() => workspace.querySelector('.step-issue-panel, .step-check-clear')?.focus?.());
+        return;
+      }
       if (action === 'switch-step-view') {
         activeStepView = text(element.dataset.view) || defaultStepView(activeGovernanceStep);
         if (currentEntry()) currentEntry().stepView = activeStepView;
         return render();
       }
+      if (action === 'switch-bulk-kind') {
+        bulkDataEditorState = {
+          kind: ['objects', 'fields', 'relations'].includes(element.dataset.kind) ? element.dataset.kind : 'objects',
+          text: '',
+          preview: null,
+          documentKey: ''
+        };
+        return render();
+      }
+      if (action === 'copy-bulk-header') {
+        const content = globalThis.BulkDataEditor.headerText(bulkDataEditorState.kind);
+        return copyBulkText(content, `${bulkKindLabel(bulkDataEditorState.kind)}列头已复制。请粘贴到Excel或WPS第一行。`);
+      }
+      if (action === 'copy-bulk-current') {
+        const content = globalThis.BulkDataEditor.exportTsv(bulkDataEditorState.kind, currentDocument());
+        return copyBulkText(content, `当前${bulkKindLabel(bulkDataEditorState.kind)}已复制，并载入粘贴区。`, { loadIntoEditor: true });
+      }
+      if (action === 'clear-bulk-input') {
+        resetBulkDataEditor({ keepKind: true });
+        return render();
+      }
+      if (action === 'preview-bulk-data') return previewBulkData();
+      if (action === 'apply-bulk-data') return applyBulkData();
       if (action === 'switch-data-mode') {
         activeDataMode = text(element.dataset.mode) === 'lifecycle' ? 'lifecycle' : 'flow';
         graphSelection = null;
@@ -8760,6 +9187,8 @@
         destroyDiagram();
         destroyDataDiagram();
         graphStateManager.clear();
+        checkedGovernanceSteps.clear();
+        resetBulkDataEditor();
         candidates = nextCandidates;
         candidates.forEach(entry => registerCandidateState(entry, { forceDirty: migrated }));
         currentIndex = 0;
@@ -8797,6 +9226,7 @@
       currentIndex = nextIndex;
       graphSelection = null;
       flowRelationDraft = null;
+      resetBulkDataEditor();
       activeDataRef = graphStateManager.view(candidateStateKey()).data.dataRef || '';
       selectInitialTabAfterImport();
       render();
@@ -8844,6 +9274,15 @@
     }, true);
 
     workspace.addEventListener('input', event => {
+      if (event.target.matches('[data-bulk-input]')) {
+        bulkDataEditorState.text = event.target.value;
+        invalidateBulkPreview();
+        const previewButton = workspace.querySelector('[data-action="preview-bulk-data"]');
+        const applyButton = workspace.querySelector('[data-action="apply-bulk-data"]');
+        if (previewButton) previewButton.disabled = !bulkDataEditorState.text.trim();
+        if (applyButton) applyButton.disabled = true;
+        return;
+      }
       const graphProperty = event.target.closest('[data-graph-property]');
       if (graphProperty && graphSelection?.draft) {
         const key = graphProperty.dataset.graphProperty;
