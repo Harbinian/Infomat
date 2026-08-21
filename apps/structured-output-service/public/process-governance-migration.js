@@ -31,6 +31,9 @@
   const FORM_OPERATIONS = new Set(['create', 'fill', 'modify', 'review', 'approve', 'confirm', 'read', 'archive', 'void']);
   const FIELD_ORIGIN_MODES = new Set(['direct_current_process', 'depends_on_data', 'pending_confirmation']);
   const FIELD_SOURCE_ROLES = new Set(['provides_value', 'calculation_input', 'validation_basis']);
+  const FIELD_VALUE_USAGE_MODES = new Set([
+    'authoritative_input', 'reuse_existing', 'calculated', 'external_source', 'pending_confirmation'
+  ]);
   const ACTOR_MODES = new Set(['fixed_department', 'company_wide', 'dynamic_from_data']);
   const DEFAULT_DEPARTMENTS = [
     '公司领导', '工程技术部', '质量管理部', '财务部', '行政人事部',
@@ -383,6 +386,12 @@
       data_name: text(item?.data_name),
       description: text(item?.description),
       information_type: INFORMATION_TYPES.has(item?.information_type) ? item.information_type : 'pending_confirmation',
+      fields: sourceVersion === TARGET_VERSION ? array(item?.fields).map((field, fieldIndex) => ({
+        field_ref: technicalRef(field?.field_ref, 'data_field', dataRef, fieldIndex),
+        field_name: text(field?.field_name),
+        field_type: text(field?.field_type),
+        definition: text(field?.definition)
+      })) : [],
       behavior_links: links,
       source_relations: modern ? array(item?.source_relations).map((source, sourceIndex) => ({
         source_ref: technicalRef(source?.source_ref, 'data_source', dataRef, sourceIndex),
@@ -395,7 +404,9 @@
           : 'pending_confirmation',
         available_from_behavior_ref: nullable(source?.available_from_behavior_ref)
       })) : [],
-      lifecycle: pendingLifecycle()
+      lifecycle: sourceVersion === TARGET_VERSION && item?.lifecycle
+        ? clone(item.lifecycle)
+        : pendingLifecycle()
     };
   }
 
@@ -433,6 +444,10 @@
           required: Boolean(field?.required),
           instructions: text(field?.instructions),
           business_data_ref: modern ? nullable(field?.business_data_ref) : null,
+          data_field_ref: sourceVersion === TARGET_VERSION ? nullable(field?.data_field_ref) : null,
+          value_usage_mode: sourceVersion === TARGET_VERSION && FIELD_VALUE_USAGE_MODES.has(field?.value_usage_mode)
+            ? field.value_usage_mode
+            : '',
           value_origin_mode: modern && FIELD_ORIGIN_MODES.has(field?.value_origin_mode)
             ? field.value_origin_mode
             : 'pending_confirmation',
@@ -450,6 +465,146 @@
         }))
       }))
     };
+  }
+
+  function normalizeFieldMatchPart(value) {
+    return text(value).trim().replace(/\s+/g, ' ').toLocaleLowerCase();
+  }
+
+  function dataFieldMatchKey(fieldName, fieldType) {
+    return `${normalizeFieldMatchPart(fieldName)}|${normalizeFieldMatchPart(fieldType)}`;
+  }
+
+  function inferredUsageMode(item) {
+    if (FIELD_VALUE_USAGE_MODES.has(item?.value_usage_mode)) return item.value_usage_mode;
+    if (array(item?.source_links).some(link => link?.source_type === 'external_system')) return 'external_source';
+    if (array(item?.source_links).some(link => link?.source_role === 'calculation_input')) return 'calculated';
+    if (item?.value_origin_mode === 'direct_current_process') return 'authoritative_input';
+    if (item?.value_origin_mode === 'depends_on_data') return 'reuse_existing';
+    return 'pending_confirmation';
+  }
+
+  function ensureDataFieldReferences(documentValue) {
+    const dataObjects = array(documentValue?.data_objects);
+    const dataByRef = new Map(dataObjects.map(item => [item.data_ref, item]));
+    const fieldOwners = new Map();
+    const fieldRefRemap = new Map();
+
+    dataObjects.forEach(dataObject => {
+      const uniqueFields = [];
+      const fieldsByKey = new Map();
+      array(dataObject.fields).forEach((field, fieldIndex) => {
+        const normalized = {
+          field_ref: technicalRef(field?.field_ref, 'data_field', dataObject.data_ref, fieldIndex),
+          field_name: text(field?.field_name),
+          field_type: text(field?.field_type),
+          definition: text(field?.definition)
+        };
+        const key = dataFieldMatchKey(normalized.field_name, normalized.field_type);
+        const existing = key !== '|' ? fieldsByKey.get(key) : null;
+        if (existing) {
+          fieldRefRemap.set(normalized.field_ref, existing.field_ref);
+          return;
+        }
+        if (key !== '|') fieldsByKey.set(key, normalized);
+        uniqueFields.push(normalized);
+        fieldOwners.set(normalized.field_ref, dataObject.data_ref);
+      });
+      dataObject.fields = uniqueFields;
+    });
+
+    const contexts = [];
+    array(documentValue?.forms).forEach((form, formIndex) => {
+      array(form?.areas).forEach((area, areaIndex) => {
+        array(area?.items).forEach((item, itemIndex) => {
+          if (fieldRefRemap.has(item.data_field_ref)) item.data_field_ref = fieldRefRemap.get(item.data_field_ref);
+          contexts.push({ form, formIndex, area, areaIndex, item, itemIndex });
+        });
+      });
+    });
+
+    contexts.forEach(context => {
+      const { item } = context;
+      const existingOwnerRef = fieldOwners.get(item.data_field_ref);
+      if (existingOwnerRef) {
+        const owner = dataByRef.get(existingOwnerRef);
+        const field = array(owner?.fields).find(candidate => candidate.field_ref === item.data_field_ref);
+        item.business_data_ref = existingOwnerRef;
+        if (field?.field_type) item.item_type = field.field_type;
+        return;
+      }
+      item.data_field_ref = null;
+      const owner = dataByRef.get(item.business_data_ref);
+      const fieldName = text(item.item_name).trim();
+      if (!owner || !fieldName) return;
+      const key = dataFieldMatchKey(fieldName, item.item_type);
+      let field = array(owner.fields).find(candidate => dataFieldMatchKey(candidate.field_name, candidate.field_type) === key);
+      if (!field) {
+        field = {
+          field_ref: stableRef('data_field', owner.data_ref, normalizeFieldMatchPart(fieldName), normalizeFieldMatchPart(item.item_type)),
+          field_name: fieldName,
+          field_type: text(item.item_type),
+          definition: ''
+        };
+        owner.fields.push(field);
+        fieldOwners.set(field.field_ref, owner.data_ref);
+      }
+      item.data_field_ref = field.field_ref;
+      if (field.field_type) item.item_type = field.field_type;
+    });
+
+    const contextsByField = new Map();
+    contexts.forEach(context => {
+      const ref = context.item.data_field_ref;
+      if (!ref) {
+        context.item.value_usage_mode = FIELD_VALUE_USAGE_MODES.has(context.item.value_usage_mode)
+          ? context.item.value_usage_mode
+          : 'pending_confirmation';
+        return;
+      }
+      if (!contextsByField.has(ref)) contextsByField.set(ref, []);
+      contextsByField.get(ref).push(context);
+    });
+    contextsByField.forEach(group => {
+      const unresolved = group.filter(context => !FIELD_VALUE_USAGE_MODES.has(context.item.value_usage_mode));
+      if (!unresolved.length) return;
+      const direct = unresolved.filter(context => context.item.value_origin_mode === 'direct_current_process');
+      if (direct.length === 1) {
+        direct[0].item.value_usage_mode = 'authoritative_input';
+        unresolved.filter(context => context !== direct[0]).forEach(context => {
+          const inferred = inferredUsageMode(context.item);
+          context.item.value_usage_mode = ['external_source', 'calculated'].includes(inferred) ? inferred : 'reuse_existing';
+        });
+        return;
+      }
+      if (direct.length > 1) {
+        direct.forEach(context => { context.item.value_usage_mode = 'authoritative_input'; });
+        unresolved.filter(context => !direct.includes(context)).forEach(context => {
+          const inferred = inferredUsageMode(context.item);
+          context.item.value_usage_mode = ['external_source', 'calculated'].includes(inferred) ? inferred : 'reuse_existing';
+        });
+        return;
+      }
+      const establishing = unresolved.filter(context => ['external_source', 'calculated'].includes(inferredUsageMode(context.item)));
+      if (establishing.length === 1 && group.length > 1) {
+        establishing[0].item.value_usage_mode = inferredUsageMode(establishing[0].item);
+        unresolved.filter(context => context !== establishing[0]).forEach(context => {
+          context.item.value_usage_mode = 'reuse_existing';
+        });
+        return;
+      }
+      unresolved.forEach(context => { context.item.value_usage_mode = inferredUsageMode(context.item); });
+    });
+    return documentValue;
+  }
+
+  function needsDataFieldUpgrade(source) {
+    if (source?.schema_version !== TARGET_VERSION) return false;
+    if (array(source?.data_objects).some(dataObject => !Array.isArray(dataObject?.fields))) return true;
+    return array(source?.forms).some(form => array(form?.areas).some(area => array(area?.items).some(item =>
+      !Object.prototype.hasOwnProperty.call(item || {}, 'data_field_ref')
+      || !FIELD_VALUE_USAGE_MODES.has(item?.value_usage_mode)
+    )));
   }
 
   function addSequence(documentValue, fromRef, toRef, handoffRef, suffix) {
@@ -580,7 +735,6 @@
   }
 
   function migrateProcessDocument(source, options = {}) {
-    if (source.schema_version === TARGET_VERSION) return clone(source);
     const sourceVersion = text(source.schema_version);
     const processSource = source.process || {};
     const processRef = technicalRef(processSource.process_ref, 'process', 0);
@@ -631,7 +785,7 @@
     if (legacyHandoffs.length) {
       migration.legacy_cross_department_records = convertLegacyHandoffs(documentValue, legacyHandoffs, context);
     }
-    return documentValue;
+    return ensureDataFieldReferences(documentValue);
   }
 
   function legacyMaterial(source, options, processRef) {
@@ -814,6 +968,9 @@
     clone,
     stableRef,
     pendingLifecycle,
+    ensureDataFieldReferences,
+    needsDataFieldUpgrade,
+    normalizeFieldMatchPart,
     migrateDocument,
     migrateProcessDocument,
     splitLegacyDocument

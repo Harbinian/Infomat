@@ -66,6 +66,7 @@
     });
     const behaviorRefs = new Set(array(documentValue?.behaviors).map(item => item.behavior_ref));
     const dataRefs = new Set(array(documentValue?.data_objects).map(item => item.data_ref));
+    const dataFieldOwners = new Map();
     array(documentValue?.flow_relations).forEach(relation => {
       if (relation.from_behavior_ref && !behaviorRefs.has(relation.from_behavior_ref)) {
         errors.push({ code: 'BROKEN_REF', ref: relation.from_behavior_ref, message: `流程关系${relation.relation_ref}的起点不存在` });
@@ -75,6 +76,13 @@
       }
     });
     array(documentValue?.data_objects).forEach(dataObject => {
+      duplicateRefs(dataObject.fields, 'field_ref').forEach(ref => errors.push({ code: 'DUPLICATE_REF', ref, message: `对象字段技术标识${ref}重复` }));
+      array(dataObject.fields).forEach(field => {
+        if (dataFieldOwners.has(field.field_ref)) {
+          errors.push({ code: 'DUPLICATE_REF', ref: field.field_ref, message: `对象字段技术标识${field.field_ref}跨数据对象重复` });
+        }
+        dataFieldOwners.set(field.field_ref, dataObject.data_ref);
+      });
       duplicateRefs(dataObject.behavior_links, 'link_ref').forEach(ref => errors.push({ code: 'DUPLICATE_REF', ref, message: `数据关系技术标识${ref}重复` }));
       array(dataObject.behavior_links).forEach(link => {
         if (!behaviorRefs.has(link.behavior_ref)) errors.push({ code: 'BROKEN_REF', ref: link.behavior_ref, message: `数据${dataObject.data_name || dataObject.data_ref}引用的行为不存在` });
@@ -90,6 +98,15 @@
         errors.push({ code: 'BROKEN_REF', ref: behavior.actor_department_data_ref, message: `行为${behavior.behavior_name || behavior.behavior_ref}的动态责任数据不存在` });
       }
     });
+    array(documentValue?.forms).forEach(form => array(form.areas).forEach(area => array(area.items).forEach(item => {
+      if (!item.data_field_ref) return;
+      const ownerRef = dataFieldOwners.get(item.data_field_ref);
+      if (!ownerRef) {
+        errors.push({ code: 'BROKEN_REF', ref: item.data_field_ref, message: `表单字段${item.item_name || item.item_ref}引用的对象字段不存在` });
+      } else if (ownerRef !== item.business_data_ref) {
+        errors.push({ code: 'FIELD_OWNER_MISMATCH', ref: item.data_field_ref, message: `表单字段${item.item_name || item.item_ref}引用的对象字段与业务数据归属不一致` });
+      }
+    })));
     return errors;
   }
 
@@ -333,6 +350,21 @@
       source.availability_mode, source.available_from_behavior_ref
     ].map(text).join('|');
     keep.source_relations = [...new Map([keep, ...removing].flatMap(item => array(item.source_relations)).map(source => [sourceKey(source), source])).values()];
+    const fieldRefRemap = new Map();
+    const fieldKey = field => `${text(field.field_name).trim().replace(/\s+/g, ' ').toLocaleLowerCase()}|${text(field.field_type).trim().replace(/\s+/g, ' ').toLocaleLowerCase()}`;
+    const mergedFields = [];
+    const fieldsByKey = new Map();
+    [keep, ...removing].flatMap(item => array(item.fields)).forEach(field => {
+      const key = fieldKey(field);
+      const existing = key !== '|' ? fieldsByKey.get(key) : null;
+      if (existing) {
+        fieldRefRemap.set(field.field_ref, existing.field_ref);
+        return;
+      }
+      if (key !== '|') fieldsByKey.set(key, field);
+      mergedFields.push(field);
+    });
+    keep.fields = mergedFields;
     if (keep.information_type === 'pending_confirmation') {
       const confirmed = [keep, ...removing].find(item => item.information_type !== 'pending_confirmation');
       if (confirmed) keep.information_type = confirmed.information_type;
@@ -343,6 +375,7 @@
     });
     next.forms.forEach(form => form.areas.forEach(area => area.items.forEach(item => {
       if (removeSet.has(item.business_data_ref)) item.business_data_ref = keepRef;
+      if (fieldRefRemap.has(item.data_field_ref)) item.data_field_ref = fieldRefRemap.get(item.data_field_ref);
       item.source_links.forEach(link => {
         if (link.source_type === 'process_data' && removeSet.has(link.source_data_ref)) link.source_data_ref = keepRef;
       });
