@@ -380,6 +380,31 @@
     .step-intro h2 { margin: 0 0 5px; font-family: "SimSun", serif; font-size: 22px; }
     .step-intro p { margin: 0; color: var(--muted); line-height: 1.65; }
     .primary-guidance { max-width: 360px; padding: 9px 11px; border-left: 4px solid var(--gold); background: #f7edda; font-size: 13px; }
+    .step-check-action { display: grid; justify-items: start; gap: 5px; margin-top: 9px; }
+    .step-check-action small { color: var(--muted); line-height: 1.5; }
+    .step-issue-panel {
+      margin-bottom: 12px;
+      border: 1px solid #d7b7a6;
+      border-radius: 12px;
+      background: #fff8f1;
+    }
+    .step-issue-panel summary { padding: 12px 14px; cursor: pointer; color: var(--red); font-weight: 700; }
+    .step-issue-copy { margin: 0; padding: 0 14px 4px; color: var(--muted); font-size: 13px; line-height: 1.65; }
+    .step-issue-list { margin: 8px 0 0; padding: 0 14px 14px 36px; }
+    .step-issue-list li + li { margin-top: 8px; }
+    .step-issue-list .diagram-warning-button { width: 100%; }
+    .step-check-clear {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+      padding: 11px 14px;
+      border: 1px solid #9fb29a;
+      border-radius: 10px;
+      color: #3f513b;
+      background: #edf4e9;
+    }
+    .step-check-clear span { color: #5d685a; font-size: 13px; line-height: 1.55; }
     .step-view-switch { margin-bottom: 12px; }
     .step-view-button.active { color: #fff; border-color: var(--blue); background: var(--blue); }
 
@@ -405,6 +430,33 @@
     .governance-flow-card strong { display: block; margin-bottom: 6px; }
     .governance-flow-card p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
 
+    .role-sequence {
+      display: grid;
+      gap: 12px;
+      padding: 16px;
+      border: 1px solid rgba(161, 72, 53, 0.28);
+      border-radius: 12px;
+      background: rgba(255, 247, 231, 0.92);
+    }
+    .role-sequence-head { display: grid; gap: 5px; }
+    .role-sequence-head strong { font-size: 15px; }
+    .role-sequence-head p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.65; }
+    .role-sequence-list {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .role-sequence-item { display: grid; align-content: start; gap: 7px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+    .role-sequence-role { display: flex; align-items: center; gap: 8px; }
+    .role-sequence-order { display: inline-grid; width: 25px; height: 25px; place-items: center; border-radius: 50%; color: #fff; background: var(--red); font-size: 12px; font-weight: 700; }
+    .role-sequence-item p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+    .role-sequence-handoff { padding-top: 7px; border-top: 1px dashed var(--line); color: var(--ink) !important; }
+    .role-sequence.compact { margin-top: 18px; padding: 13px; }
+    .role-sequence.compact .role-sequence-list { grid-template-columns: 1fr; }
+
     .governance-drawer-backdrop {
       position: fixed;
       z-index: 110;
@@ -428,6 +480,24 @@
     .governance-drawer-list { display: grid; gap: 10px; margin-top: 18px; }
     .governance-drawer-card { padding: 13px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
     .governance-drawer-card p { margin: 6px 0 0; color: var(--muted); line-height: 1.65; }
+
+    .tool-help-page { display: grid; gap: 12px; }
+    .tool-help-grid,
+    .tool-help-step-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .tool-help-card,
+    .tool-help-step-card { padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: #fffaf0; }
+    .tool-help-card h3,
+    .tool-help-step-card h3 { margin: 0 0 7px; font-size: 15px; }
+    .tool-help-card p,
+    .tool-help-step-card p { margin: 5px 0 0; color: var(--muted); line-height: 1.65; }
+    .tool-help-step-card strong { color: var(--ink); }
+    .tool-term-groups { display: grid; gap: 10px; }
+    .tool-term-group { overflow: hidden; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+    .tool-term-group summary { padding: 13px 15px; cursor: pointer; background: var(--paper-deep); font-weight: 700; }
+    .tool-term-list { margin: 0; }
+    .tool-term-row { display: grid; grid-template-columns: minmax(160px, 230px) minmax(0, 1fr); gap: 14px; padding: 11px 15px; border-top: 1px solid var(--line); }
+    .tool-term-row dt { font-weight: 700; line-height: 1.6; }
+    .tool-term-row dd { margin: 0; color: var(--muted); line-height: 1.65; }
 
     .skeleton-list-layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 12px; }
     .skeleton-list { display: grid; gap: 8px; }
@@ -1095,6 +1165,34 @@
       align-items: start;
     }
 
+    .data-field-workbench {
+      display: grid;
+      grid-template-columns: minmax(190px, 230px) minmax(0, 1fr);
+      gap: 12px;
+      width: 100%;
+      margin-top: 8px;
+    }
+
+    .data-field-selector {
+      display: grid;
+      gap: 7px;
+      align-content: start;
+      max-height: 380px;
+      padding: 10px;
+      overflow-y: auto;
+      border: 1px solid #d5c7aa;
+      border-radius: 9px;
+      background: rgba(237, 226, 203, 0.42);
+    }
+
+    .data-field-detail {
+      min-width: 0;
+      padding: 12px;
+      border: 1px solid #d5c7aa;
+      border-radius: 9px;
+      background: rgba(255, 253, 247, 0.78);
+    }
+
     .record-selector,
     .form-sidebar {
       position: sticky;
@@ -1269,6 +1367,54 @@
       text-align: left;
     }
 
+    .data-edit-mode-shell { display: grid; gap: 10px; margin-bottom: 12px; }
+    .data-edit-mode-shell .step-view-switch { margin-bottom: 0; }
+    .web-grid-editor { display: grid; gap: 14px; min-width: 0; }
+    .web-grid-workspaces { display: flex; flex-wrap: wrap; gap: 8px; }
+    .web-grid-panel { display: grid; gap: 10px; min-width: 0; }
+    .web-grid-panel + .web-grid-panel { padding-top: 12px; border-top: 1px solid var(--line); }
+    .web-grid-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+    .web-grid-heading h3 { margin: 0; font-size: 17px; }
+    .web-grid-heading p { flex-basis: 100%; margin: 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
+    .web-grid-toolbar { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; }
+    .web-grid-search { min-width: min(260px, 100%); min-height: 34px; padding: 6px 9px; border: 1px solid var(--line); border-radius: 8px; background: #fffdf8; }
+    .web-grid-shell { min-width: 0; max-width: 100%; max-height: 420px; overflow: auto; border: 1px solid var(--line); border-radius: 10px; background: #fffdf8; }
+    .web-grid-table { width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; font-size: 13px; }
+    .web-grid-table th,
+    .web-grid-table td { min-width: 140px; height: 38px; padding: 0; border-right: 1px solid #e5dcc8; border-bottom: 1px solid #e5dcc8; background: #fffdf8; vertical-align: middle; }
+    .web-grid-table th:last-child,
+    .web-grid-table td:last-child { border-right: 0; }
+    .web-grid-table tbody tr:last-child td { border-bottom: 0; }
+    .web-grid-table thead th { position: sticky; top: 0; z-index: 3; padding: 0; color: #5f513d; background: var(--paper-deep); text-align: left; }
+    .web-grid-sort { width: 100%; min-height: 38px; padding: 7px 9px; border: 0; border-radius: 0; color: inherit; background: transparent; font-weight: 700; text-align: left; }
+    .web-grid-sort:hover { background: #e6d8b9; }
+    .web-grid-table tbody tr:nth-child(even) td { background: #fbf6eb; }
+    .web-grid-table input,
+    .web-grid-table select,
+    .web-grid-table textarea { display: block; width: 100%; min-width: 0; height: 37px; margin: 0; padding: 6px 8px; border: 0; border-radius: 0; outline: 0; color: var(--ink); background: transparent; font: inherit; }
+    .web-grid-table textarea { min-height: 37px; resize: vertical; line-height: 1.45; }
+    .web-grid-table input:focus,
+    .web-grid-table select:focus,
+    .web-grid-table textarea:focus { position: relative; z-index: 2; background: #f7f9ff; box-shadow: inset 0 0 0 2px var(--blue); }
+    .web-grid-row-selector { width: 32px; min-width: 32px; height: 37px; padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--muted); }
+    .web-grid-row-selector:hover { background: #e8efe4; color: var(--ink); }
+    .web-grid-selector-column { position: sticky !important; left: 0; z-index: 4 !important; width: 32px; min-width: 32px !important; background: var(--paper-deep) !important; }
+    tbody .web-grid-selector-column { z-index: 2 !important; background: #f7f1e4 !important; }
+    .web-grid-readonly { display: block; min-height: 37px; padding: 8px; color: var(--muted); }
+    .web-grid-update-fields-button { width: 100%; min-height: 37px; padding: 6px 8px; border: 0; border-radius: 0; color: var(--blue); background: transparent; text-align: left; }
+    .web-grid-update-fields-button:hover { background: #edf3ff; }
+    .web-grid-empty-row td { height: 72px; padding: 16px; color: var(--muted); text-align: center; }
+    .web-grid-footer { position: sticky; bottom: 8px; z-index: 20; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; align-items: center; padding: 12px 14px; border: 1px solid #b7aa8d; border-radius: 11px; background: rgba(255, 250, 240, 0.96); box-shadow: var(--shadow); }
+    .web-grid-status { color: var(--muted); font-size: 13px; }
+    .web-grid-status.dirty { color: var(--red); font-weight: 700; }
+    .web-grid-issues { display: grid; gap: 8px; padding: 12px 14px; border: 1px solid #d7b7a6; border-radius: 10px; background: #fff8f1; }
+    .web-grid-issues ol { margin: 0; padding-left: 24px; }
+    .web-grid-issues button { color: inherit; border: 0; background: transparent; text-align: left; text-decoration: underline; cursor: pointer; }
+    .grid-row-deleted { opacity: 0.55; text-decoration: line-through; background: #f7e5df !important; }
+    .grid-row-selected { outline: 2px solid var(--sage); outline-offset: -2px; background: #edf3e9 !important; }
+    .grid-cell-range-selected { background: #edf3ff !important; box-shadow: inset 0 0 0 1px #89a8ef; }
+    .grid-cell-error { background: #f7e5df !important; box-shadow: inset 0 0 0 2px #b96b5b; }
+    .grid-technical-ref { color: #756d60; font-family: Consolas, monospace; font-size: 11px; }
     .form-field-table .field { gap: 4px; }
     .form-field-table td .field > label,
     .form-field-table td .field > .hint { display: none; }
@@ -1594,6 +1740,10 @@
     }
 
     .node-combination-guide > summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
       padding: 13px 15px;
       cursor: pointer;
       list-style: none;
@@ -1602,6 +1752,14 @@
     }
 
     .node-combination-guide > summary::-webkit-details-marker { display: none; }
+    .node-combination-guide > summary::after {
+      content: '展开';
+      flex: 0 0 auto;
+      color: #5c6658;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .node-combination-guide[open] > summary::after { content: '收起'; }
     .node-combination-body { padding: 14px; }
     .node-combination-intro { margin: 0 0 12px; color: #4f574b; line-height: 1.65; }
     .node-combination-legend {
@@ -2083,6 +2241,14 @@
     .modal h2 { margin: 0 0 9px; font-family: "SimSun", serif; }
     .modal p { color: var(--muted); line-height: 1.7; }
     .modal-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 9px; margin-top: 20px; }
+    .update-fields-list { display: grid; gap: 8px; max-height: 340px; margin-top: 14px; overflow: auto; }
+    .update-fields-option { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; padding: 10px 12px; border: 1px solid var(--line); border-radius: 9px; background: #fffdf8; }
+    .update-fields-option input { margin-top: 3px; }
+    .update-fields-option span { display: grid; gap: 3px; }
+    .update-fields-option small { color: var(--muted); line-height: 1.45; }
+    .update-fields-error { min-height: 22px; margin: 10px 0 0; color: var(--red) !important; font-weight: 700; }
+    .update-fields-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; padding: 9px 10px; border: 1px solid #d9ccb1; border-radius: 8px; background: #fffaf0; }
+    .update-fields-summary span { flex: 1 1 260px; color: var(--muted); line-height: 1.55; }
 
     .graph-editor-layout {
       display: grid;
@@ -2156,11 +2322,32 @@
       .task-sidebar { top: 10px; height: calc(100vh - 20px); padding: 13px; }
       .graph-editor-layout { grid-template-columns: minmax(0, 1fr) 290px; gap: 10px; }
       .record-workbench { grid-template-columns: minmax(185px, 220px) minmax(0, 1fr); }
+      .data-field-workbench { grid-template-columns: 1fr; }
       .form-field-table-shell { max-width: 100%; overflow-x: auto; }
       .step-responsibility { display: none; }
-      .workspace-tab { grid-template-columns: 28px minmax(0, 1fr); }
-      .workspace-tab .tab-status { grid-column: 2; justify-self: start; }
+      .workspace-tabs { gap: 6px; }
+      .workspace-tab {
+        grid-template-columns: 25px minmax(0, 1fr) auto;
+        gap: 6px;
+        min-height: 38px;
+        padding: 6px 7px;
+      }
+      .workspace-tab .tab-status {
+        grid-column: auto;
+        align-self: center;
+        justify-self: end;
+        padding: 1px 5px;
+        font-size: 10px;
+      }
       .skeleton-list-layout { grid-template-columns: minmax(0, 1fr) 290px; }
+    }
+
+    @media (max-width: 1399px) {
+      .governance-flow-grid {
+        grid-template-columns: repeat(4, minmax(130px, 1fr));
+        overflow-x: visible;
+      }
+      .role-sequence-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
 
     @media (max-width: 1279px) {
@@ -2253,14 +2440,43 @@
     </div>
   </div>
 
+  <div class="modal-backdrop" id="gridModeSwitchModal" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="gridModeSwitchTitle">
+      <h2 id="gridModeSwitchTitle">表格中还有未应用的修改</h2>
+      <p>其他页面、下载文件和候选流程只读取已经写入当前JSON的内容。请选择如何处理本次表格修改。</p>
+      <div class="modal-actions">
+        <button class="button" id="continueGridEditingButton">继续编辑表格</button>
+        <button class="button danger" id="discardGridChangesButton">放弃并切换</button>
+        <button class="button primary" id="applyGridChangesButton">应用并切换</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="updateFieldsModal" aria-hidden="true">
+    <div class="modal impact-modal" role="dialog" aria-modal="true" aria-labelledby="updateFieldsTitle" aria-describedby="updateFieldsDescription">
+      <h2 id="updateFieldsTitle">选择本次更新的字段</h2>
+      <p id="updateFieldsDescription"></p>
+      <div class="update-fields-list" id="updateFieldsOptions"></div>
+      <p class="update-fields-error" id="updateFieldsError" role="alert"></p>
+      <div class="modal-actions">
+        <button class="button" id="cancelUpdateFieldsButton">取消</button>
+        <button class="button primary" id="confirmUpdateFieldsButton">确认更新字段</button>
+      </div>
+    </div>
+  </div>
+
   <script src="/vendor/cytoscape.min.js"></script>
   <script src="process-governance-migration.js"></script>
   <script src="governance-workflow.js"></script>
   <script src="legacy-cross-department-diagnostics.js"></script>
+  <script src="web-grid-core.js"></script>
+  <script src="native-web-grid.js"></script>
+  <script src="process-v7-grid-adapter.js"></script>
   <script src="graph-edit-commands.js"></script>
   <script src="graph-editor-state.js"></script>
   <script src="process-diagram.js"></script>
   <script src="data-relation-diagram.js"></script>
+  <script src="lifecycle-analyzer.js"></script>
   <script src="review-pattern-diagrams.js"></script>
   <script src="structure-score.js"></script>
   <script>
@@ -2285,7 +2501,7 @@
     ];
     const MATERIAL_TYPES = ['', '现有制度', '表单或记录', '现行业务操作说明', '会议或访谈', '其他参考材料'];
     const AREA_TYPES = ['', '基本信息', '明细清单'];
-    const EXPECTED_EXPORT_SCHEMA_VERSION = 'process-governance-v6';
+    const EXPECTED_EXPORT_SCHEMA_VERSION = 'process-governance-v7';
     const FORM_DESIGN_STATES = new Set(['unspecified', 'current_state', 'proposed_design']);
     const INFORMATION_TYPES = [
       { value: 'pending_confirmation', label: '待确认', example: '暂时无法判断属于哪一类' },
@@ -2306,6 +2522,85 @@
       { value: 'use', label: '使用' },
       { value: 'pending_confirmation', label: '待确认' }
     ];
+    const LIFECYCLE_ACTIONS = {
+      activate: '生效', deactivate: '停用', reactivate: '重新启用', void: '作废', expire: '失效',
+      archive: '归档', restore_active_custody: '恢复在用保管', destroy: '销毁', irreversible_anonymize: '不可逆匿名化'
+    };
+    const BUSINESS_VALIDITY_OPTIONS = [
+      { value: 'pending_confirmation', label: '待确认' },
+      { value: 'not_effective', label: '未生效' },
+      { value: 'effective', label: '有效' },
+      { value: 'deactivated', label: '停用' },
+      { value: 'voided', label: '作废' },
+      { value: 'expired', label: '失效' }
+    ];
+    const CUSTODY_OPTIONS = [
+      { value: 'pending_confirmation', label: '待确认' },
+      { value: 'active_custody', label: '在用保管' },
+      { value: 'archived', label: '归档' },
+      { value: 'destroyed', label: '销毁' }
+    ];
+    const IDENTIFIABILITY_APPLICABILITY_OPTIONS = [
+      { value: 'pending_confirmation', label: '待确认' },
+      { value: 'applicable', label: '适用' },
+      { value: 'not_applicable', label: '不适用' }
+    ];
+    const IDENTIFIABILITY_OPTIONS = [
+      { value: 'pending_confirmation', label: '待确认' },
+      { value: 'identifiable', label: '可识别' },
+      { value: 'irreversibly_anonymized', label: '不可逆匿名化' },
+      { value: 'not_applicable', label: '不适用' }
+    ];
+    const LIFECYCLE_REVIEW_STATUS_OPTIONS = [
+      { value: 'auto_generated', label: '系统根据明确结构生成' },
+      { value: 'pending_confirmation', label: '待确认' },
+      { value: 'confirmed', label: '已确认' },
+      { value: 'needs_recheck', label: '需要重新核对' },
+      { value: 'not_applicable', label: '不适用' },
+      { value: 'rejected', label: '已否决' }
+    ];
+    const LIFECYCLE_DECISION_REASON_OPTIONS = [
+      { value: '', label: '请选择原因' },
+      { value: 'source_not_applicable', label: '来源内容不适用于当前对象' },
+      { value: 'duplicate_suggestion', label: '与已有事实重复' },
+      { value: 'semantic_mismatch', label: '动作含义不一致' },
+      { value: 'insufficient_evidence', label: '现有依据不足' },
+      { value: 'conflicting_sources', label: '来源之间存在冲突' },
+      { value: 'other', label: '其他' }
+    ];
+    const LIFECYCLE_TRIGGER_MODE_OPTIONS = [
+      { value: 'behavior', label: '业务行为' },
+      { value: 'time_period', label: '时间或期限' },
+      { value: 'business_condition', label: '业务或数据条件' },
+      { value: 'external_process_notice', label: '外部流程或通知' },
+      { value: 'pending_confirmation', label: '待确认' }
+    ];
+    const LIFECYCLE_TRIGGER_OPERATOR_OPTIONS = [
+      { value: 'single', label: '单一条件' },
+      { value: 'and', label: '同时满足（AND）' },
+      { value: 'or', label: '满足任一（OR）' },
+      { value: 'pending_confirmation', label: '待确认' }
+    ];
+    const LIFECYCLE_TARGET_SCOPE_OPTIONS = [
+      { value: 'pending_confirmation', label: '待确认' },
+      { value: 'record', label: '单条记录或实例' },
+      { value: 'version', label: '指定版本' },
+      { value: 'batch', label: '指定批次' },
+      { value: 'all_records', label: '全部记录（高风险）' }
+    ];
+    const LIFECYCLE_CARRIER_SCOPE_OPTIONS = [
+      { value: 'pending_confirmation', label: '待确认' },
+      { value: 'paper_original', label: '纸质原件' },
+      { value: 'electronic_original', label: '电子原件' },
+      { value: 'business_copy', label: '业务副本' },
+      { value: 'paper_and_electronic', label: '纸质和电子原件' },
+      { value: 'not_applicable', label: '不适用' }
+    ];
+    const LIFECYCLE_RESPONSIBILITY_MODE_OPTIONS = [
+      { value: 'inherit_behavior', label: '继承关联业务行为' },
+      { value: 'explicit', label: '单独指定' },
+      { value: 'pending_confirmation', label: '待确认' }
+    ];
     const FORM_OPERATIONS = [
       { value: 'create', label: '创建' }, { value: 'fill', label: '填写' },
       { value: 'modify', label: '修改' }, { value: 'review', label: '复核' },
@@ -2317,6 +2612,13 @@
       { value: 'pending_confirmation', label: '待确认' },
       { value: 'direct_current_process', label: '当前流程直接取得' },
       { value: 'depends_on_data', label: '依赖数据取得' }
+    ];
+    const FIELD_VALUE_USAGE_MODES = [
+      { value: 'pending_confirmation', label: '待确认' },
+      { value: 'authoritative_input', label: '本流程权威录入点' },
+      { value: 'reuse_existing', label: '沿用已有值（不重复录入）' },
+      { value: 'calculated', label: '系统计算' },
+      { value: 'external_source', label: '外部来源自动取得' }
     ];
     const FIELD_SOURCE_ROLES = [
       { value: 'provides_value', label: '提供字段值' },
@@ -2334,6 +2636,113 @@
     ];
     const ACTOR_ASSIGNMENT_MODE_VALUES = new Set(ACTOR_ASSIGNMENT_MODES.map(item => item.value));
     const GOVERNANCE_STEPS = globalThis.GovernanceWorkflow?.STEPS || [];
+    const TOOL_HELP_STEPS = [
+      {
+        title: '1. JSON基本信息',
+        action: '编制人从“文件”入口新建一条流程或导入已有JSON，并核对源文件名、来源版本、源文件SHA-256和候选数量。',
+        completion: '已选中本次要编制的唯一候选流程；导入失败时，原候选和未下载内容保持不变。'
+      },
+      {
+        title: '2. 流程边界',
+        action: '编制人填写流程名称、归口部门、发起部门、编制人、目的和适用范围；没有依据的能力归类保持未归类或待确认。',
+        completion: '读者能够判断流程为什么启动、适用于什么范围、由哪个部门归口以及形成什么结束结果。'
+      },
+      {
+        title: '3. 流程骨架',
+        action: '编制人维护节点名称、节点类型、执行主体，以及流程关系的起点、终点和类型。泳道图与清单是同一草稿的两种互斥视图。',
+        completion: '每个节点和关系都能定位；判断、退回和并行结构的端点符合实际流程。'
+      },
+      {
+        title: '4. 动作与异常',
+        action: '编制人按顺序写清每个业务行为具体做什么、处理什么对象、产生什么结果，并补充触发条件、前提、时限、完成标准、会签要求和关系条件。',
+        completion: '业务人员不需要猜测就能理解正常办理、判断、退回、循环、并行和异常处理。'
+      },
+      {
+        title: '5. 数据与表单',
+        action: '编制人先确认本流程是否涉及数据对象或表单。少量内容使用业务式编辑逐项维护；集中处理多行时使用表格编辑，并在检查通过后点击“应用本次修改”。',
+        completion: '两种编辑方式显示同一份当前JSON；页面记录了实际存在的数据和表单关系，确实不适用时保持为空。'
+      },
+      {
+        title: '6. 跨部门核对',
+        action: '归口部门和承接部门分别核对本方行为、流程关系、数据传递、返回条件和待定事项。本步骤只读，发现问题后返回唯一编辑位置修改。',
+        completion: '双方能够指出已确认事实和待定事项；“未识别到”没有被当作“不涉及跨部门”的结论。'
+      },
+      {
+        title: '7. 评审与交接',
+        action: '编制人处理结构阻断并核对业务提示，下载最终待核对文件后重新导入；业务核对记录和结构预审问题处理记录在JSON之外分别保存。',
+        completion: '结构错误为零，往返内容和稳定引用一致，文件名及SHA-256已核对；当前v7文件仍不得直接导入3000。'
+      }
+    ];
+    const TOOL_TERM_GROUPS = [
+      {
+        title: '文件、版本与页面状态',
+        terms: [
+          ['无状态临时工具', '3001不保存账号草稿、服务端草稿或浏览器持久化内容。业务内容只存在当前页面内存中，用户主动下载JSON是唯一保存方式。'],
+          ['当前候选流程', '本次页面正在编制的一条流程。历史多候选文件导入后，每条候选流程分别显示、分别修改、分别下载，不形成审核状态。'],
+          ['单流程结构化文件规则', 'process-governance-v7规定一份JSON只包含一个流程，并固定流程、行为、关系、数据对象、生命周期、表单、术语和迁移归档的结构。'],
+          ['源文件', '用户从“文件”入口选择的原始JSON。3001只读取源文件并在页面内存中处理，不修改或覆盖源文件。'],
+          ['来源版本', '源文件声明的结构版本。v1至v6和历史格式导入后只在当前页面内存中迁移为v7。'],
+          ['源文件SHA-256', '按源文件实际字节计算的摘要，用于确认两次核对的源文件是否相同；摘要不代表内容已经审核。'],
+          ['阶段草稿', '第一至第四轮主动下载的未审核v7文件，阶段依次为流程骨架、动作与异常、数据与表单、跨部门核对。阶段下载不是审核节点。'],
+          ['最终待核对文件', '第7步完成技术检查后下载的未审核v7文件。它仍需业务事实核对和独立结构预审，不能表述为正式流程。'],
+          ['文件交接摘要', '最近一次下载的文件名、时间、阶段、结构版本和SHA-256。摘要只在当前页面显示，不写入下载JSON。'],
+          ['迁移归档', '旧版文件中无法作为v7活动字段继续编辑、但需要保留追溯的只读内容。迁移归档不参与当前流程计算、评分或绘图。']
+        ]
+      },
+      {
+        title: '流程、节点与关系',
+        terms: [
+          ['L3流程', '本次编制的一条具体业务流程，包含边界、业务行为和关系。3001不因为名称或分类字段自动确认其能力归属。'],
+          ['A1业务行为', '流程中由业务人员或部门实际执行的一项可说明、可定位的业务动作。普通业务行为在v7中使用action节点记录。'],
+          ['流程骨架', '节点名称、节点类型、执行主体，以及流程关系的类型、起点和终点。逐动作说明和关系条件不在流程骨架中编辑。'],
+          ['普通业务行为', '承担实际业务动作的action节点，需要记录执行主体和具体做什么；它不同于判断、并行开始和并行汇合等控制节点。'],
+          ['控制节点', '用于表达判断或并行控制的节点，包括判断节点、并行开始和并行汇合。控制节点不代表执行部门，也不承担实际业务动作。'],
+          ['流程关系', '连接两个节点的有向关系，记录起点、终点和关系类型。一对多或多对一使用多条独立关系表达。'],
+          ['判断分支', '从判断节点发出、根据明确条件选择后续路线的关系。判断分支继续向后办理，不等于退回前序步骤。'],
+          ['流程内部回路', '当前节点在明确条件下返回已经存在的前序行为或判断节点的关系，常用于退回重办。每层循环都必须另有退出条件和去向。'],
+          ['并行开始', '同时启动两条以上办理路线的控制节点。只选择其中一条路线时应使用判断分支。'],
+          ['并行路线', '从并行开始发出或进入并行汇合的关系。任一路线可能在共同汇合前中止整个流程时，不得按并行表达。'],
+          ['并行汇合', '等待多条并行路线全部完成后再继续的控制节点。多条普通关系进入同一普通行为不表示等待全部路线。'],
+          ['会签行为', '要求指定部门全部确认知悉的普通业务行为，不表示审核、批准或跨部门承接。'],
+          ['具体做什么', '业务行为的逐动作说明，应按实际顺序写清动作、处理对象和结果，不能只写“确保”“保证”等抽象要求。'],
+          ['完成标准', '判断一项业务行为何时真正完成的可核对结果，不是对办理质量的空泛评价。']
+        ]
+      },
+      {
+        title: '数据对象、表单与字段',
+        terms: [
+          ['待治理数据对象', '3001页面简称“数据对象”，用于记录流程创建、更新或使用的信息线索。它不等于已经确认的主数据、参考数据或权威来源。'],
+          ['信息类型', '数据对象在当前流程中的内容类型，包括待确认、业务信息、业务结论、业务状态、标识符、文件或附件、其他信息输出。'],
+          ['数据行为关系', '业务行为对数据对象执行创建、更新、使用或待确认操作的关系，是当前v7记录数据输入输出关系的活动位置。'],
+          ['创建、更新、使用、待确认', '创建表示业务行为形成数据；更新表示业务行为改变数据；使用表示业务行为读取或依赖数据；待确认表示操作和方向尚无足够事实。'],
+          ['来源线索', '当前流程使用的数据来自其他流程或外部位置时记录的部门、流程、行为、数据名称和可用时间线索。来源线索不等于权威来源认定。'],
+          ['表单或记录', '流程中实际使用的纸质表单、电子表单、台账或业务记录。页面只记录结构和处理关系，不据此推断数据库表。'],
+          ['主表', '一张表单中每份业务记录只出现一次的主体填写结构，页面使用“基本信息”区域保存。'],
+          ['明细表', '一张表单中可以有零到多张、每张可以包含多行的明细填写结构。不同明细表必须分别保留，不得擅自合并。'],
+          ['填写项', '主表或明细表下的具体字段，记录名称、类型、是否必填、说明、业务数据归属和值来源。'],
+          ['字段业务数据归属', '说明一个填写项表达哪项数据对象。一个字段最多归属一个数据对象，不等于字段值从该对象取得。'],
+          ['字段取值来源', '说明字段值依赖哪些本流程数据或外部系统数据取得、参与计算或执行校验，可以有多个来源。'],
+          ['双模式编辑', '步骤5的业务式编辑和表格编辑共同读写当前页面内存中的同一份JSON。业务式编辑适合逐项维护，表格编辑适合集中维护多行。'],
+          ['表格工作副本', '进入表格编辑后形成的当前会话临时行数据。只有点击“应用本次修改”且全部检查通过后，页面才一次写入当前JSON。'],
+          ['同名归并', '把经人工核对后确认可以合并的同名数据对象归并为一个保留对象。名称相同只触发核对入口，不自动证明对象相同。']
+        ]
+      },
+      {
+        title: '责任、检查与交接边界',
+        terms: [
+          ['固定部门和岗位', '业务行为在设计时已经明确由哪个部门和岗位执行。执行部门与流程归口部门不同且节点为普通业务行为时，页面识别为固定跨部门行为。'],
+          ['全公司通用', '该行为适用于全公司，但不归属于某个特定部门，因此不按固定跨部门行为处理。'],
+          ['动态责任部门', '责任部门由本行为开始前已经形成的数据在运行时确定。设计阶段不把它认定为固定跨部门行为，也不得向全公司广播。'],
+          ['跨部门行为', '固定执行部门与流程归口部门不同的普通业务行为。页面根据现有字段识别，不保存独立的“是否跨部门”结论字段。'],
+          ['技术标识与稳定引用', 'JSON内部用于唯一识别对象并连接关系的标识。修改名称不会改变引用；删除被引用对象时，页面会阻止操作并列出影响。技术标识不是业务编号。'],
+          ['结构错误', '违反v7结构规则、枚举、唯一性或引用完整性的技术问题。结构错误会阻止下载，用户必须先修正。'],
+          ['业务提示', '页面根据现有内容发现的缺项、矛盾或待核对事项。业务提示不阻止阶段草稿下载，也不等于业务结论。'],
+          ['待定', '现有事实或证据不足，暂时不能可靠填写或确认。保持待定比猜测或虚构内容更符合治理要求。'],
+          ['独立结构预审', '在新的核对上下文中，只依据待审JSON和对应结构规则检查必需结构、引用、字段归位和对象拆分，不判断流程事实是否正确。'],
+          ['3000停止边界', '3001生成的v7文件暂不能直接导入3000，也不得自动降级；后续承接需另行完成兼容、迁移审核和验证。']
+        ]
+      }
+    ];
     const EDITOR_SECTIONS = [
       { value: 'basic', label: '基本信息' },
       { value: 'profile', label: '目的与范围' },
@@ -2373,6 +2782,10 @@
     let activeBehaviorRef = '';
     let activeRelationRef = '';
     let activeDataRef = '';
+    let activeDataFieldRef = '';
+    let activeDataMode = 'flow';
+    let activeDataEditingMode = 'guided';
+    let activeGridWorkspace = 'data';
     let activeTermRef = '';
     let activeFlowItemKind = 'behavior';
     let activeFormRef = '';
@@ -2392,6 +2805,7 @@
     const reviewPatternViews = new Map();
     let expandedReviewPatternId = '';
     let diagramExampleExpanded = false;
+    let legendPatternGuideExpanded = false;
     let diagramExpanded = false;
     let focusClearTimer = null;
     let sortableDragState = null;
@@ -2404,6 +2818,17 @@
       result: null,
       message: ''
     };
+    const checkedGovernanceSteps = new Set();
+    let webGridSession = null;
+    let webGridIssues = [];
+    let webGridPendingMode = '';
+    let webGridPendingAction = null;
+    let webGridSelectedRows = {};
+    let webGridFilters = {};
+    let webGridSorts = {};
+    let webGridRanges = {};
+    let updateFieldsModalState = null;
+    const masterDataPendingRefs = new Set();
     const workspace = document.getElementById('workspace');
     const statusBox = document.getElementById('statusBox');
     const candidateList = document.getElementById('candidateList');
@@ -2416,6 +2841,16 @@
     const owningDepartmentChangeModal = document.getElementById('owningDepartmentChangeModal');
     const owningDepartmentChangeContent = document.getElementById('owningDepartmentChangeContent');
     const confirmOwningDepartmentChangeButton = document.getElementById('confirmOwningDepartmentChangeButton');
+    const gridModeSwitchModal = document.getElementById('gridModeSwitchModal');
+    const continueGridEditingButton = document.getElementById('continueGridEditingButton');
+    const discardGridChangesButton = document.getElementById('discardGridChangesButton');
+    const applyGridChangesButton = document.getElementById('applyGridChangesButton');
+    const updateFieldsModal = document.getElementById('updateFieldsModal');
+    const updateFieldsDescription = document.getElementById('updateFieldsDescription');
+    const updateFieldsOptions = document.getElementById('updateFieldsOptions');
+    const updateFieldsError = document.getElementById('updateFieldsError');
+    const cancelUpdateFieldsButton = document.getElementById('cancelUpdateFieldsButton');
+    const confirmUpdateFieldsButton = document.getElementById('confirmUpdateFieldsButton');
     const jsonInput = document.getElementById('jsonInput');
 
     function newRef(prefix) {
@@ -2443,6 +2878,70 @@
       return [...new Set(text(value).split(/[,，\n]/).map(item => item.trim()).filter(Boolean))];
     }
 
+    function currentUpdateFieldOptions(dataRef) {
+      const dataObject = currentDocument()?.data_objects?.find(item => item.data_ref === dataRef);
+      return (dataObject?.fields || []).map((field, index) => ({
+        value: field.field_ref,
+        label: field.field_name || `未命名对象字段 ${index + 1}`,
+        detail: [field.field_type, field.definition].map(text).filter(Boolean).join(' · ')
+      }));
+    }
+
+    function selectedUpdateFieldLabels(dataRef, selectedRefs, options = currentUpdateFieldOptions(dataRef)) {
+      const labels = new Map(options.map(option => [option.value, option.label]));
+      return list(selectedRefs).map(ref => labels.get(ref) || `${ref}（当前引用）`);
+    }
+
+    function openUpdateFieldsModal({ dataRef, dataName, selectedRefs = [], fields = null, onConfirm, onCancel, invoker = null }) {
+      const options = Array.isArray(fields) ? fields : currentUpdateFieldOptions(dataRef);
+      const selected = new Set(list(selectedRefs));
+      updateFieldsModalState = {
+        dataRef,
+        selected,
+        onConfirm,
+        onCancel,
+        invoker: invoker instanceof HTMLElement ? invoker : document.activeElement
+      };
+      updateFieldsDescription.textContent = options.length
+        ? `数据操作为“更新”时，编制人应选择本次实际改变的字段。以下选项仅来自数据对象“${dataName || dataRef || '未命名数据'}”的对象字段，可以多选。`
+        : `数据对象“${dataName || dataRef || '未命名数据'}”尚未建立对象字段。请取消并先补充对象字段，再选择本次更新的字段。`;
+      updateFieldsOptions.innerHTML = options.length ? options.map(option => `
+        <label class="update-fields-option">
+          <input type="checkbox" data-update-field-ref value="${escapeAttribute(option.value)}"${selected.has(option.value) ? ' checked' : ''}>
+          <span><strong>${escapeHtml(option.label)}</strong>${option.detail ? `<small>${escapeHtml(option.detail)}</small>` : ''}</span>
+        </label>`).join('') : '<div class="candidate-empty">当前没有可选对象字段。</div>';
+      updateFieldsError.textContent = '';
+      confirmUpdateFieldsButton.disabled = !options.length;
+      updateFieldsModal.classList.add('show');
+      updateFieldsModal.setAttribute('aria-hidden', 'false');
+      requestAnimationFrame(() => updateFieldsOptions.querySelector('input')?.focus() || cancelUpdateFieldsButton.focus());
+    }
+
+    function closeUpdateFieldsModal(cancelled = false) {
+      const state = updateFieldsModalState;
+      updateFieldsModalState = null;
+      updateFieldsModal.classList.remove('show');
+      updateFieldsModal.setAttribute('aria-hidden', 'true');
+      updateFieldsOptions.innerHTML = '';
+      updateFieldsError.textContent = '';
+      if (cancelled) state?.onCancel?.();
+      if (state?.invoker?.isConnected) state.invoker.focus();
+    }
+
+    function confirmUpdateFieldsSelection() {
+      const state = updateFieldsModalState;
+      if (!state) return;
+      const selectedRefs = Array.from(updateFieldsOptions.querySelectorAll('[data-update-field-ref]:checked')).map(item => item.value);
+      if (!selectedRefs.length) {
+        updateFieldsError.textContent = '请至少选择一个本次实际更新的字段。';
+        updateFieldsOptions.querySelector('[data-update-field-ref]')?.focus();
+        return;
+      }
+      const onConfirm = state.onConfirm;
+      closeUpdateFieldsModal(false);
+      onConfirm?.(selectedRefs);
+    }
+
     function escapeHtml(value) {
       return text(value)
         .replace(/&/g, '&amp;')
@@ -2467,7 +2966,7 @@
     }
 
     async function fetchEmptyProcessDocument() {
-      const response = await fetch('/api/template?version=process-governance-v6', { cache: 'no-store' });
+      const response = await fetch('/api/template?version=process-governance-v7', { cache: 'no-store' });
       const result = await readJsonResponse(
         response,
         '3001空白模板接口未返回结构化数据。请保持当前页面打开，待维护人员重启3001服务后再次新建流程。'
@@ -2757,16 +3256,50 @@
     }
 
     function hasDirtyCandidates() {
-      return candidates.some(item => item.dirty);
+      return candidates.some(item => item.dirty) || Boolean(webGridSession?.isDirty());
+    }
+
+    function governanceCheckKey(stepId, entry = currentEntry()) {
+      return entry ? `${candidateStateKey(entry)}:${stepId}` : '';
+    }
+
+    function checkedGovernanceStepIds(entry = currentEntry()) {
+      if (!entry) return [];
+      const prefix = `${candidateStateKey(entry)}:`;
+      return [...checkedGovernanceSteps]
+        .filter(key => key.startsWith(prefix))
+        .map(key => key.slice(prefix.length));
+    }
+
+    function invalidateCurrentChecks(entry = currentEntry()) {
+      if (!entry) return;
+      const prefix = `${candidateStateKey(entry)}:`;
+      [...checkedGovernanceSteps].forEach(key => {
+        if (key.startsWith(prefix)) checkedGovernanceSteps.delete(key);
+      });
+    }
+
+    function resetWebGridEditor() {
+      webGridSession = null;
+      webGridIssues = [];
+      webGridPendingMode = '';
+      webGridPendingAction = null;
+      webGridSelectedRows = {};
+      webGridFilters = {};
+      webGridSorts = {};
+      webGridRanges = {};
     }
 
     function touch() {
       const entry = currentEntry();
       if (!entry) return;
+      invalidateCurrentChecks(entry);
+      if (activeDataEditingMode !== 'grid') resetWebGridEditor();
       refreshCandidateDirty(entry);
       updateCandidateList();
       governanceHeader.innerHTML = renderGovernanceHeader(currentDocument());
       workspaceViewSwitch.innerHTML = renderGovernanceSteps();
+      refreshVisibleGovernanceCheckUi();
     }
 
     function setBusy(value, message = '') {
@@ -3140,6 +3673,7 @@
       activeBehaviorRef = '';
       activeRelationRef = '';
       activeDataRef = '';
+      activeDataFieldRef = '';
       activeTermRef = '';
       activeFlowItemKind = 'behavior';
       activeFormRef = '';
@@ -3175,6 +3709,18 @@
       const active = ensureActiveCollectionItem('data_objects', 'data_ref', activeDataRef);
       activeDataRef = active.ref;
       return active;
+    }
+
+    function ensureActiveDataField(dataObject) {
+      const fields = dataObject?.fields || [];
+      let dataField = fields.find(item => item.field_ref === activeDataFieldRef);
+      if (!dataField) dataField = fields[0] || null;
+      activeDataFieldRef = dataField?.field_ref || '';
+      return {
+        item: dataField,
+        index: dataField ? fields.indexOf(dataField) : -1,
+        ref: activeDataFieldRef
+      };
     }
 
     function ensureActiveTerm() {
@@ -3292,14 +3838,24 @@
       return steps;
     }
 
-    function governanceIssueCounts(data = currentDocument()) {
-      const counts = Object.fromEntries(GOVERNANCE_STEPS.map(step => [step.id, 0]));
-      if (!data) return counts;
-      const warnings = businessWarnings(data).concat(
+    function governanceIssues(data = currentDocument()) {
+      if (!data) return [];
+      return businessWarnings(data).concat(
         reviewBehaviorExecutabilityWarnings(data),
         reviewRoutingWarnings(data)
       );
-      warnings.forEach(item => {
+    }
+
+    function governanceIssuesForStep(stepId, data = currentDocument()) {
+      return governanceIssues(data).filter(item =>
+        (globalThis.GovernanceWorkflow?.stepForTarget(item) || 'handoff') === stepId
+      );
+    }
+
+    function governanceIssueCounts(data = currentDocument()) {
+      const counts = Object.fromEntries(GOVERNANCE_STEPS.map(step => [step.id, 0]));
+      if (!data) return counts;
+      governanceIssues(data).forEach(item => {
         const stepId = globalThis.GovernanceWorkflow?.stepForTarget(item) || 'handoff';
         counts[stepId] = (counts[stepId] || 0) + 1;
       });
@@ -3313,7 +3869,8 @@
         activeStep: activeGovernanceStep,
         issueCounts,
         technicalCount: governanceTechnicalCount() || 0,
-        startedSteps: governanceStartedSteps(data)
+        startedSteps: governanceStartedSteps(data),
+        checkedSteps: checkedGovernanceStepIds()
       };
     }
 
@@ -3356,7 +3913,7 @@
             ? `<select id="governanceCandidateSelect" data-governance-candidate>${candidateOptions}</select>`
             : '<strong>尚未新建或导入流程</strong>'}
           <div class="governance-context">
-            <span class="context-badge version">当前v6</span>
+            <span class="context-badge version">当前v7 · 使用中验证</span>
             <span class="context-badge">导入来源：${escapeHtml(origin)}</span>
             ${entry?.dirty ? '<span class="context-badge dirty">有未下载修改</span>' : data ? '<span class="context-badge ready">当前没有未下载修改</span>' : ''}
             <span class="context-badge">${escapeHtml(technicalLabel)}</span>
@@ -3376,7 +3933,7 @@
           <details class="header-menu">
             <summary class="button">帮助与版本</summary>
             <div class="header-menu-panel">
-              <p class="boundary">帮助内容只解释页面操作和关系类型，不替业务部门确认事实。</p>
+              <p class="boundary">帮助内容解释页面操作、工具术语和结构边界，不替业务部门确认事实。</p>
               <button class="button" data-action="open-help-view">操作帮助</button>
               <button class="button" data-action="open-version-view">版本说明</button>
             </div>
@@ -3388,25 +3945,81 @@
     function renderGovernanceDrawer() {
       const phases = [
         ['工作准备', '部门负责人确认编制人和业务核对人。业务核对人确认制度、表单、台账和实际做法的核对范围。MDM工作组确认3001运行版本和结构版本。'],
-        ['选择编制路线', '编制人可以在3001直接新建或导入v1至v6文件；也可以使用MDM-AI助手完成v5填报和预审，再手工导入3001转换为v6。AI路线形成的v5预审记录不能替代最终v6独立结构预审。'],
+        ['选择编制路线', '编制人可以在3001直接新建或导入v1至v7文件；也可以使用MDM-AI助手完成v5填报和预审，再手工导入3001转换为v7。AI路线形成的v5预审记录不能替代最终v7独立结构预审。'],
         ['四轮编制与阶段下载', '第一轮处理流程边界和骨架；第二轮处理逐动作说明、完成标准和异常路径；第三轮处理数据对象、表单和字段；第四轮核对跨部门事实和待定事项。每轮下载阶段草稿，但不锁定后续步骤。'],
         ['部门事实初核', '业务核对人核对全部流程事实。跨部门内容由归口部门和承接部门分别确认本方事实。未确认内容保持待定，并在JSON之外记录证据、确认主体和关闭条件。'],
-        ['最终v6独立结构预审', 'MDM工作组或Codex检查最终v6的结构错误、字段归位和对象拆分。编制人关闭硬性结构错误；保留建议原值时，在外部问题处理记录中说明理由。'],
-        ['重新导入、最终下载和交接', '编制人重新导入整改后的文件，核对版本、数量、内容、稳定引用和往返完整性，再分别交接最终v6、结构预审问题处理记录和部门业务核对记录。'],
-        ['当前停止边界', '3000当前只承接v1至v3。v6不得直接导入3000，也不得自动降级。MDM工作组完成兼容或迁移方案、验证和审核后，才能另行进入3000受控预览、审核导入和发布。']
+        ['最终v7独立结构预审', 'MDM工作组或Codex检查最终v7的结构错误、字段归位、对象拆分和生命周期结构。编制人关闭硬性结构错误；保留建议原值时，在外部问题处理记录中说明理由。'],
+        ['重新导入、最终下载和交接', '编制人重新导入整改后的文件，核对版本、数量、内容、稳定引用和往返完整性，再分别交接最终v7、结构预审问题处理记录和部门业务核对记录。'],
+        ['当前停止边界', '3000当前只承接v1至v3。v7不得直接导入3000，也不得自动降级。MDM工作组完成兼容或迁移方案、验证和审核后，才能另行进入3000受控预览、审核导入和发布。']
       ];
-      governanceDrawerContent.innerHTML = `<div class="governance-drawer-list">${phases.map((phase, index) => `
+      governanceDrawerContent.innerHTML = `${renderRoleOperationSequence(true)}<div class="governance-drawer-list">${phases.map((phase, index) => `
         <section class="governance-drawer-card"><strong>${index + 1}. ${escapeHtml(phase[0])}</strong><p>${escapeHtml(phase[1])}</p></section>
       `).join('')}</div>`;
     }
 
+    function renderRoleOperationSequence(compact = false) {
+      const roleSequence = globalThis.GovernanceWorkflow?.ROLE_SEQUENCE || [];
+      return `<section class="role-sequence${compact ? ' compact' : ''}" aria-label="业务角色操作顺序">
+        <div class="role-sequence-head">
+          <strong>业务角色操作顺序</strong>
+          <p>必须按下列顺序交接。3001只提供编制和检查工具，业务核对记录与审核结论不写入JSON。</p>
+        </div>
+        <ol class="role-sequence-list">${roleSequence.map(item => `
+          <li class="role-sequence-item">
+            <div class="role-sequence-role"><span class="role-sequence-order">${item.order}</span><strong>${escapeHtml(item.role)}</strong></div>
+            <p>${escapeHtml(item.action)}</p>
+            <p class="role-sequence-handoff"><strong>交接结果：</strong>${escapeHtml(item.handoff)}</p>
+          </li>
+        `).join('')}</ol>
+      </section>`;
+    }
+
+    function isAuthoringGovernanceStep(stepId) {
+      return ['start', 'boundary', 'skeleton', 'action', 'data'].includes(stepId);
+    }
+
+    function renderPrimaryGuidanceContent(stepId, context = governanceContext()) {
+      const action = globalThis.GovernanceWorkflow.primaryActionForStep(stepId, context);
+      const checked = context.checkedSteps.includes(stepId);
+      const checkAction = isAuthoringGovernanceStep(stepId)
+        ? `<button class="button small${checked ? '' : ' secondary'}" data-action="check-governance-step" data-step="${escapeAttribute(stepId)}" ${context.hasDocument ? '' : 'disabled'}>${checked ? '重新检查本轮' : '检查本轮'}</button>`
+        : '';
+      return `<strong>当前建议操作</strong><br>${escapeHtml(action)}${checkAction ? `<div class="step-check-action">${checkAction}<small>完成当前输入后主动检查；修改草稿后需要重新检查。</small></div>` : ''}`;
+    }
+
+    function refreshVisibleGovernanceCheckUi() {
+      if (!isAuthoringGovernanceStep(activeGovernanceStep)) return;
+      workspace.querySelectorAll('.step-issue-panel, .step-check-clear').forEach(item => item.remove());
+      const guidance = workspace.querySelector('.primary-guidance');
+      if (guidance) guidance.innerHTML = renderPrimaryGuidanceContent(activeGovernanceStep);
+    }
+
     function renderStepIntro(stepId = activeGovernanceStep) {
       const step = globalThis.GovernanceWorkflow.stepById(stepId);
-      const action = globalThis.GovernanceWorkflow.primaryActionForStep(stepId, governanceContext());
+      const context = governanceContext();
       return `<div class="step-intro">
         <div><div class="eyebrow">第${step.number}步</div><h2>${escapeHtml(step.label)}</h2><p>${escapeHtml(step.responsibility)}</p></div>
-        <div class="primary-guidance"><strong>当前建议操作</strong><br>${escapeHtml(action)}</div>
-      </div>`;
+        <div class="primary-guidance">${renderPrimaryGuidanceContent(stepId, context)}</div>
+      </div>${renderGovernanceIssuePanel(stepId)}`;
+    }
+
+    function renderGovernanceIssuePanel(stepId) {
+      const context = governanceContext();
+      if (!globalThis.GovernanceWorkflow.issuesVisibleForStep(stepId, context)) return '';
+      const issues = governanceIssuesForStep(stepId);
+      const vocabulary = globalThis.GovernanceWorkflow.issueVocabularyForStep(stepId);
+      if (!issues.length) return `<div class="step-check-clear"><strong>${escapeHtml(vocabulary.plural)}：0项</strong><span>当前页面检查未发现这一类事项；业务事实仍由相应角色核对。</span></div>`;
+      return `<details class="step-issue-panel" open>
+        <summary>${escapeHtml(vocabulary.plural)}（${issues.length}项）</summary>
+        <p class="step-issue-copy">以下事项来自当前页面检查。点击任一事项会返回对应编辑位置；页面提示不替代业务人员确认事实。</p>
+        <ol class="step-issue-list">${issues.map(item => {
+          const attributes = exportWarningLocationAttributes(item);
+          const content = attributes
+            ? `<button class="diagram-warning-button export-warning-button" data-action="focus-export-warning" ${attributes}>${renderWarningCopy(item)}</button>`
+            : `<span>${renderWarningCopy(item)}</span>`;
+          return `<li>${content}</li>`;
+        }).join('')}</ol>
+      </details>`;
     }
 
     function renderStepViewSwitch(items) {
@@ -3419,47 +4032,84 @@
       const data = currentDocument();
       if (activeStepView === 'version') return `${renderStepIntro('start')}${renderVersionHistoryPanel()}`;
       if (activeStepView === 'help') {
-        return `${renderStepIntro('start')}${section(
-          '页面操作帮助',
-          '七步导航按业务动作组织。每个字段只有一个可写入口，跨部门核对和评审交接只汇总并返回编辑位置。',
-          `<div class="governance-drawer-list">
-            <div class="governance-drawer-card"><strong>保存方式</strong><p>3001不自动保存。用户下载JSON是唯一保存方式；刷新或关闭页面后，页面内容无法恢复。</p></div>
-            <div class="governance-drawer-card"><strong>业务提示与结构错误</strong><p>业务提示可以保持待定并下载；JSON结构或技术引用损坏时，页面会阻止下载并提供定位入口。</p></div>
-            <div class="governance-drawer-card"><strong>关系维护</strong><p>流程骨架维护节点和关系端点；动作与异常维护逐动作说明、完成标准、判断条件、退回和并行规则；数据与表单维护数据、表单和字段关系。</p></div>
-          </div>`
-        )}`;
+        const helpSteps = TOOL_HELP_STEPS.map(item => `
+          <article class="tool-help-step-card">
+            <h3>${escapeHtml(item.title)}</h3>
+            <p><strong>怎么做：</strong>${escapeHtml(item.action)}</p>
+            <p><strong>完成标志：</strong>${escapeHtml(item.completion)}</p>
+          </article>`).join('');
+        const termGroups = TOOL_TERM_GROUPS.map(group => `
+          <details class="tool-term-group" open>
+            <summary>${escapeHtml(group.title)}（${group.terms.length}项）</summary>
+            <dl class="tool-term-list">${group.terms.map(([term, definition]) => `
+              <div class="tool-term-row">
+                <dt>${escapeHtml(term)}</dt>
+                <dd>${escapeHtml(definition)}</dd>
+              </div>`).join('')}</dl>
+          </details>`).join('');
+        return `${renderStepIntro('start')}<div class="tool-help-page">
+          ${section(
+            '使用前必读',
+            '本帮助只解释3001页面操作、字段含义和结构边界，不替代业务部门确认流程事实，也不形成审核或批准结论。',
+            `${renderRoleOperationSequence()}<div class="tool-help-grid">
+              <article class="tool-help-card"><h3>使用人和责任</h3><p>编制人维护当前流程；业务核对人确认实际流程、表单、数据和跨部门事实；MDM工作组检查结构并组织后续交接。页面检查不能代替任何一方确认。</p></article>
+              <article class="tool-help-card"><h3>开始前准备</h3><p>选择一条真实流程，准备可以核对的制度、表单、台账和实际做法，并明确编制人和不同人员担任的业务核对人。教学样例不能作为业务事实。</p></article>
+              <article class="tool-help-card"><h3>保存和恢复</h3><p>3001不自动保存。每轮完成后由用户主动下载；关闭或刷新后，只能重新导入已下载文件继续编制。源文件不会被修改。</p></article>
+              <article class="tool-help-card"><h3>当前停止边界</h3><p>3001输出始终是未审核的单流程v7文件。v7暂不能直接导入3000，也不得自动降级。</p></article>
+            </div>`
+          )}
+          ${section(
+            '按七步完成编制',
+            '每项事实只有一个可写入口。跨部门核对和评审与交接只读汇总，修改按钮会返回对应编辑位置。',
+            `<div class="tool-help-step-grid">${helpSteps}</div>`
+          )}
+          ${section(
+            '常用操作与异常处理',
+            '执行删除、清空、重新导入和下载前，先核对当前候选和未下载状态。',
+            `<div class="tool-help-grid">
+              <article class="tool-help-card"><h3>新建、导入和清空</h3><p>统一从顶部“文件”入口执行。导入失败或取消时，当前候选、选择、未下载修改和撤销记录保持不变。</p></article>
+              <article class="tool-help-card"><h3>新增、删除和归并</h3><p>先进入唯一编辑步骤并选中对象。删除不级联；对象仍被关系、字段或迁移归档引用时，页面会阻止删除。成功删除或归并后，可在当前候选的撤销记录中恢复。</p></article>
+              <article class="tool-help-card"><h3>下载和继续编制</h3><p>阶段下载和最终下载都会执行技术检查。下载后继续修改不会被锁定；下次只能重新导入已下载文件恢复业务内容。</p></article>
+              <article class="tool-help-card"><h3>结构错误和业务提示</h3><p>结构错误必须修正后才能下载。业务提示可以保持待定并下载，但编制人和业务核对人仍须在交接前逐项处理或记录确认责任。</p></article>
+              <article class="tool-help-card"><h3>没有数据、表单或跨部门位置</h3><p>确实不适用时保持为空，不为满足检查虚构内容。页面没有识别到跨部门位置，只表示现有字段没有形成固定跨部门行为，不代表业务实际不涉及跨部门。</p></article>
+              <article class="tool-help-card"><h3>交接时核对</h3><p>交出人与接收人核对文件名、阶段、结构版本和SHA-256。最终v7、结构预审问题处理记录和业务核对记录分别保存，不嵌入同一JSON。</p></article>
+            </div>`
+          )}
+          ${section(
+            '本工具术语',
+            '以下定义只说明这些词在3001编制工具中的含义。名称相同、页面提示或技术校验通过，都不能自动形成业务事实或治理结论。',
+            `<div class="tool-term-groups">${termGroups}</div>`
+          )}
+        </div>`;
       }
       const flowCards = GOVERNANCE_STEPS.map(step => `
         <div class="governance-flow-card"><strong>${step.number}. ${escapeHtml(step.label)}</strong><p>${escapeHtml(step.responsibility)}</p></div>
       `).join('');
       if (!data) {
         return `<section class="start-hero">
-          <div class="eyebrow">3001 · process-governance-v6</div>
+          <div class="eyebrow">3001 · process-governance-v7</div>
           <h2>按七步完成一条流程的编制、核对和交接准备</h2>
-          <p>编制人维护当前唯一流程文件；业务核对人确认流程事实；MDM工作组检查结构。3001不保存草稿，也不记录审核结论。</p>
+          <p>v7已发布，当前在实际使用中继续验证。编制人维护当前唯一流程文件；业务核对人确认流程事实；MDM工作组检查结构。3001不保存草稿，也不记录审核结论。</p>
+          ${renderRoleOperationSequence()}
           <div class="start-actions">
             <button class="button primary" data-action="start-new-process" data-global-action>新建流程</button>
             <button class="button secondary" data-action="open-import-file" data-global-action>继续已有流程</button>
             <button class="button" data-action="open-governance-drawer">查看完整治理流程</button>
           </div>
           <div class="governance-flow-grid">${flowCards}</div>
-          <p class="boundary"><strong>当前停止边界：</strong>3000当前只承接v1至v3。3001输出的v6文件不得直接导入3000，也不得自动降级。</p>
+          <p class="boundary"><strong>当前停止边界：</strong>3001输出的v7文件暂不能直接导入3000，也不得自动降级；3000必须另行完成兼容、迁移审核和验证。</p>
         </section>`;
       }
       const entry = currentEntry();
-      const summary = migrationSummary(data);
       const importInfo = entry?.importInfo;
       return `${renderStepIntro('start')}${section(
-        '当前文件与导入结果',
-        '旧版文件只在当前页面内存中转换为v6。源文件、源文件摘要和迁移摘要不会新增到下载的v6内容。',
+        '当前文件基本信息',
+        '源文件名、来源版本、源文件SHA-256和候选数量只在当前页面显示，不写入下载的v7内容。',
         `<div class="grid">
           <div class="inline-note"><strong>源文件：</strong>${escapeHtml(importInfo?.fileName || (entry?.origin === 'new' ? '空白模板新建' : '本次页面来源未记录'))}</div>
           <div class="inline-note"><strong>来源版本：</strong>${escapeHtml(importInfo?.sourceVersion || entry?.origin || '未知')}</div>
           <div class="inline-note"><strong>源文件SHA-256：</strong><code>${escapeHtml(importInfo?.sha256 || '空白新建不适用')}</code></div>
           <div class="inline-note"><strong>候选数量：</strong>${candidates.length}</div>
-        </div>
-        <div class="governance-drawer-list">
-          <div class="governance-drawer-card"><strong>迁移结果</strong><p>来源：${escapeHtml(summary.sourceVersion)}；归档记录${summary.archived}项；仍需核对${summary.unresolved}项；表单字段${summary.fieldCount}项。</p></div>
         </div>
         <div class="item-actions"><button class="button primary" data-action="switch-governance-step" data-step="boundary">进入流程边界</button></div>`
       )}`;
@@ -3518,7 +4168,267 @@
         '有的流程先识别业务输出，有的部门先拿现有表单录入字段。这个选择只控制当前页面展开内容，不写入JSON，也不限制之后切换。',
         `<div class="next-stage-grid">
           <section class="next-stage-card next"><h3>从业务输出开始</h3><p>先登记流程产生、更新或使用的数据对象，再建立数据与业务行为关系。</p><button class="button primary" data-action="choose-data-start">登记数据对象</button></section>
-          <section class="next-stage-card future"><h3>从现有表单开始</h3><p>先按整张纸质表单登记主表、每张明细表和字段，再补充字段归属和值来源。</p><button class="button secondary" data-action="choose-form-start">登记现有表单</button></section>
+          <section class="next-stage-card future"><h3>从现有表单开始</h3><p>先建立表单涉及的数据对象和对象字段，再按整张纸质表单登记主表、每张明细表并引用对象字段。</p><button class="button secondary" data-action="choose-form-start">建立数据对象与表单</button></section>
+        </div>`
+      );
+    }
+
+    function gridSourceKey(data = currentDocument()) {
+      return data ? `${candidateStateKey()}:${globalThis.GraphEditorState.fingerprint(data)}` : '';
+    }
+
+    function webGridAdapterOptions() {
+      return {
+        refFactory: newRef,
+        technicalIntegrity: globalThis.GraphEditCommands.technicalIntegrity,
+        allowedFieldTypes: formItemTypes,
+        pendingLifecycle,
+        dataObjectFactory(ref) {
+          return {
+            data_ref: ref,
+            data_name: '',
+            description: '',
+            information_type: 'pending_confirmation',
+            fields: [],
+            behavior_links: [],
+            source_relations: [],
+            lifecycle: pendingLifecycle()
+          };
+        }
+      };
+    }
+
+    function ensureWebGridSession() {
+      const data = currentDocument();
+      if (!data) return null;
+      const sourceKey = gridSourceKey(data);
+      if (!webGridSession) {
+        webGridSession = globalThis.WebGridCore.createSession({
+          adapter: globalThis.ProcessV7GridAdapter,
+          documentValue: data,
+          sourceKey,
+          adapterOptions: webGridAdapterOptions()
+        });
+      } else if (!webGridSession.isDirty() && webGridSession.sourceKey() !== sourceKey) {
+        resetWebGridEditor();
+        webGridSession = globalThis.WebGridCore.createSession({
+          adapter: globalThis.ProcessV7GridAdapter,
+          documentValue: data,
+          sourceKey,
+          adapterOptions: webGridAdapterOptions()
+        });
+      }
+      ensureActiveWebGridContext();
+      return webGridSession;
+    }
+
+    function ensureActiveWebGridContext() {
+      if (!webGridSession) return;
+      const firstActive = tableId => webGridSession.rows(tableId).find(row => !row._deleted);
+      if (!webGridSession.rows('data_objects').some(row => !row._deleted && row.data_ref === activeDataRef)) {
+        activeDataRef = firstActive('data_objects')?.data_ref || '';
+      }
+      if (!webGridSession.rows('forms').some(row => !row._deleted && row.form_ref === activeFormRef)) {
+        activeFormRef = firstActive('forms')?.form_ref || '';
+      }
+      const formAreas = webGridSession.rows('form_areas').filter(row => !row._deleted && row.form_ref === activeFormRef);
+      if (!formAreas.some(row => row.area_ref === activeAreaRef)) activeAreaRef = formAreas[0]?.area_ref || '';
+      const formItems = webGridSession.rows('form_items').filter(row => !row._deleted && row.form_ref === activeFormRef && (!activeAreaRef || row.area_ref === activeAreaRef));
+      if (!formItems.some(row => row.item_ref === activeFormItemRef)) activeFormItemRef = formItems[0]?.item_ref || '';
+      const selectMatchingRow = (tableId, key, value) => {
+        const row = webGridSession.rows(tableId).find(item => !item._deleted && item[key] === value);
+        if (row) webGridSelectedRows[tableId] = row._row_id;
+      };
+      selectMatchingRow('data_objects', 'data_ref', activeDataRef);
+      selectMatchingRow('forms', 'form_ref', activeFormRef);
+      selectMatchingRow('form_areas', 'area_ref', activeAreaRef);
+      selectMatchingRow('form_items', 'item_ref', activeFormItemRef);
+    }
+
+    function renderDataEditingModeSwitch() {
+      return `<div class="data-edit-mode-shell">
+        <div class="step-view-switch" role="tablist" aria-label="数据与表单编辑方式">
+          <button class="button small step-view-button${activeDataEditingMode === 'guided' ? ' active' : ''}" data-action="switch-data-editing-mode" data-mode="guided">业务式编辑</button>
+          <button class="button small step-view-button${activeDataEditingMode === 'grid' ? ' active' : ''}" data-action="switch-data-editing-mode" data-mode="grid">表格编辑</button>
+        </div>
+        <div class="inline-note"><strong>两种编辑方式共用当前JSON。</strong>业务式编辑适合逐个定义并绑定关系；表格编辑适合集中维护多行。表格修改只有在点击“应用本次修改”后才会出现在业务式编辑中。</div>
+      </div>`;
+    }
+
+    const GRID_TABLE_GUIDANCE = {
+      data_objects: '逐行维护数据对象名称、信息类型和说明。技术标识由页面维护。',
+      data_fields: '当前只显示所选数据对象的字段。既有字段不能直接移动到其他对象。',
+      data_behavior_links: '当前只显示所选数据对象与业务行为之间的创建、更新、使用或待确认关系。',
+      data_source_relations: '当前只显示所选数据对象的跨流程来源线索。',
+      forms: '逐行维护整张表单或记录。表单状态必须由用户选择，页面不会按名称推断。',
+      form_behavior_links: '当前只显示所选表单与业务行为之间的处理关系。多个操作使用顿号或逗号分隔。',
+      form_areas: '当前只显示所选表单的主表、明细表和归属待确认区域。',
+      form_items: '当前显示所选表单或区域的字段。引用对象字段后，页面按对象字段同步数据类型。',
+      field_source_links: '当前只显示所选表单字段的取值来源。外部系统来源不填写本流程数据对象。'
+    };
+
+    function nativeGridColumns(tableId) {
+      return (webGridSession?.definition(tableId)?.columns || []).filter(column => !(column.technicalRef && column.readOnly));
+    }
+
+    function nativeGridDisplayValue(column, value, row) {
+      if (value == null || value === '') return '';
+      if (column.editor === 'boolean') return value ? '是' : '否';
+      if (column.editor === 'select') return column.values?.find(option => String(option.value) === String(value))?.label || value;
+      if (column.editor === 'lookup') return gridLookupLabel(column.lookup, value, row);
+      if (column.editor === 'update-fields') return selectedUpdateFieldLabels(row.data_ref, value, gridUpdateFieldOptions(row)).join('、');
+      return value;
+    }
+
+    function nativeGridOptionRows(column, row) {
+      if (column.editor === 'select') return column.values || [];
+      if (column.editor === 'lookup') return gridLookupRows(column.lookup, row);
+      return [];
+    }
+
+    function gridUpdateFieldOptions(row) {
+      return (webGridSession?.rows('data_fields', { includeDeleted: false }) || [])
+        .filter(field => field.data_ref === row?.data_ref)
+        .map((field, index) => ({
+          value: field.field_ref,
+          label: field.field_name || `未命名对象字段 ${index + 1}`,
+          detail: [field.field_type, field.definition].map(text).filter(Boolean).join(' · ')
+        }));
+    }
+
+    function nativeGridControl(tableId, row, column, rowIndex, columnIndex) {
+      const rawValue = row[column.key];
+      const value = rawValue == null ? '' : String(rawValue);
+      const attributes = `data-grid-cell data-grid-table-id="${escapeAttribute(tableId)}" data-grid-row-id="${escapeAttribute(row._row_id)}" data-grid-column="${escapeAttribute(column.key)}" data-grid-row-index="${rowIndex}" data-grid-column-index="${columnIndex}" aria-label="第${rowIndex + 1}行，${escapeAttribute(column.label)}"`;
+      const disabled = row._deleted ? ' disabled' : '';
+      if (column.readOnly) return `<span class="web-grid-readonly">${escapeHtml(nativeGridDisplayValue(column, rawValue, row))}</span>`;
+      if (column.editor === 'update-fields') {
+        if (row.operation !== 'update') return '<span class="web-grid-readonly">仅更新操作需要选择</span>';
+        const selectedLabels = selectedUpdateFieldLabels(row.data_ref, rawValue, gridUpdateFieldOptions(row));
+        return `<button type="button" class="web-grid-update-fields-button" data-action="open-grid-update-fields" data-table-id="${escapeAttribute(tableId)}" data-row-id="${escapeAttribute(row._row_id)}"${disabled}>${escapeHtml(selectedLabels.length ? selectedLabels.join('、') : '选择更新字段')}</button>`;
+      }
+      if (column.editor === 'boolean') {
+        return `<input type="checkbox" ${attributes}${rawValue ? ' checked' : ''}${disabled}>`;
+      }
+      if (column.editor === 'select' || column.editor === 'lookup') {
+        const options = nativeGridOptionRows(column, row);
+        const hasCurrent = !value || options.some(option => String(option.value) === value);
+        return `<select ${attributes}${disabled}>
+          <option value="">请选择</option>
+          ${!hasCurrent ? `<option value="${escapeAttribute(value)}" selected>${escapeHtml(value)}（当前值）</option>` : ''}
+          ${options.map(option => `<option value="${escapeAttribute(option.value)}" ${String(option.value) === value ? 'selected' : ''}>${escapeHtml(option.label)}</option>`).join('')}
+        </select>`;
+      }
+      if (column.editor === 'textarea') return `<textarea rows="1" ${attributes}${disabled}>${escapeHtml(value)}</textarea>`;
+      const placeholder = column.editor === 'list' && column.allowedValues?.length ? `可填写：${column.allowedValues.join('、')}` : '';
+      return `<input type="text" value="${escapeAttribute(value)}" ${attributes}${placeholder ? ` placeholder="${escapeAttribute(placeholder)}"` : ''} autocomplete="off"${disabled}>`;
+    }
+
+    function nativeGridRows(tableId) {
+      const query = text(webGridFilters[tableId]).trim().toLowerCase();
+      const rows = webGridVisibleRows(tableId).filter(row => !query || Object.entries(row)
+        .filter(([key]) => !key.startsWith('_'))
+        .some(([, value]) => text(value).toLowerCase().includes(query)));
+      const sort = webGridSorts[tableId];
+      if (!sort?.column) return rows;
+      const direction = sort.direction === 'desc' ? -1 : 1;
+      return rows.slice().sort((left, right) => text(left[sort.column]).localeCompare(text(right[sort.column]), 'zh-CN', { numeric: true }) * direction);
+    }
+
+    function nativeGridRangeBounds(tableId, rows, columns) {
+      const range = webGridRanges[tableId];
+      if (!range?.anchorRowId || !range?.currentRowId) return null;
+      const anchorRowIndex = rows.findIndex(row => row._row_id === range.anchorRowId);
+      const currentRowIndex = rows.findIndex(row => row._row_id === range.currentRowId);
+      const anchorColumnIndex = columns.findIndex(column => column.key === range.anchorColumn);
+      const currentColumnIndex = columns.findIndex(column => column.key === range.currentColumn);
+      if ([anchorRowIndex, currentRowIndex, anchorColumnIndex, currentColumnIndex].some(index => index < 0)) return null;
+      return globalThis.NativeWebGrid.rangeBounds(
+        { rowIndex: anchorRowIndex, columnIndex: anchorColumnIndex },
+        { rowIndex: currentRowIndex, columnIndex: currentColumnIndex }
+      );
+    }
+
+    function renderNativeGridTable(tableId) {
+      const definition = webGridSession.definition(tableId);
+      const columns = nativeGridColumns(tableId);
+      const rows = nativeGridRows(tableId);
+      const range = nativeGridRangeBounds(tableId, rows, columns);
+      const selectedRowId = webGridSelectedRows[tableId] || '';
+      const sort = webGridSorts[tableId];
+      const header = columns.map(column => {
+        const indicator = sort?.column === column.key ? (sort.direction === 'desc' ? ' ↓' : ' ↑') : '';
+        const width = Number(column.width || 0);
+        return `<th scope="col" ${width ? `style="min-width:${width}px;width:${width}px"` : ''}><button type="button" class="web-grid-sort" data-action="grid-sort" data-table-id="${escapeAttribute(tableId)}" data-column="${escapeAttribute(column.key)}">${escapeHtml(column.label)}${indicator}</button></th>`;
+      }).join('');
+      const body = rows.length ? rows.map((row, rowIndex) => {
+        const rowClasses = [row._row_id === selectedRowId ? 'grid-row-selected' : '', row._deleted ? 'grid-row-deleted' : ''].filter(Boolean).join(' ');
+        const cells = columns.map((column, columnIndex) => {
+          const inRange = range && rowIndex >= range.rowStart && rowIndex <= range.rowEnd && columnIndex >= range.columnStart && columnIndex <= range.columnEnd;
+          const hasError = webGridIssues.some(issue => issue.tableId === tableId && issue.rowId === row._row_id && issue.column === column.key);
+          const classes = [inRange ? 'grid-cell-range-selected' : '', hasError ? 'grid-cell-error' : ''].filter(Boolean).join(' ');
+          return `<td class="${classes}" data-grid-cell-container data-grid-table-id="${escapeAttribute(tableId)}" data-grid-row-id="${escapeAttribute(row._row_id)}" data-grid-column="${escapeAttribute(column.key)}" data-grid-row-index="${rowIndex}" data-grid-column-index="${columnIndex}">${nativeGridControl(tableId, row, column, rowIndex, columnIndex)}</td>`;
+        }).join('');
+        return `<tr class="${rowClasses}" data-grid-row-id="${escapeAttribute(row._row_id)}"><td class="web-grid-selector-column"><button type="button" class="web-grid-row-selector" data-grid-row-selector data-grid-table-id="${escapeAttribute(tableId)}" data-grid-row-id="${escapeAttribute(row._row_id)}" aria-label="选择第${rowIndex + 1}行">›</button></td>${cells}</tr>`;
+      }).join('') : `<tr class="web-grid-empty-row"><td colspan="${columns.length + 1}">${webGridFilters[tableId] ? '没有符合查找条件的记录。' : '当前范围没有记录。点击“新增行”开始编辑。'}</td></tr>`;
+      return `<table class="web-grid-table" aria-label="${escapeAttribute(definition.label)}"><thead><tr><th class="web-grid-selector-column" aria-hidden="true"></th>${header}</tr></thead><tbody>${body}</tbody></table>`;
+    }
+
+    function renderWebGridPanel(tableId) {
+      const definition = webGridSession.definition(tableId);
+      const requestedRowId = webGridSelectedRows[tableId] || '';
+      const selectedRow = webGridSession.rows(tableId).find(row => row._row_id === requestedRowId);
+      const selectedRowId = selectedRow?._row_id || '';
+      return `<section class="web-grid-panel" data-grid-panel="${escapeAttribute(tableId)}">
+        <div class="web-grid-heading">
+          <h3>${escapeHtml(definition.label)}</h3>
+          <div class="web-grid-toolbar">
+            <input class="web-grid-search" type="search" value="${escapeAttribute(webGridFilters[tableId] || '')}" data-grid-search="${escapeAttribute(tableId)}" placeholder="在当前表格中查找" aria-label="查找${escapeAttribute(definition.label)}">
+            <button class="button small" data-action="grid-add-row" data-table-id="${escapeAttribute(tableId)}">新增行</button>
+            <button class="button small secondary" data-action="grid-duplicate-row" data-table-id="${escapeAttribute(tableId)}" ${selectedRowId ? '' : 'disabled'}>复制选中行</button>
+            <button class="button small" data-action="grid-move-row-up" data-table-id="${escapeAttribute(tableId)}" ${selectedRowId ? '' : 'disabled'}>上移</button>
+            <button class="button small" data-action="grid-move-row-down" data-table-id="${escapeAttribute(tableId)}" ${selectedRowId ? '' : 'disabled'}>下移</button>
+            <button class="button danger small" data-action="grid-delete-row" data-table-id="${escapeAttribute(tableId)}" ${selectedRowId ? '' : 'disabled'}>${selectedRow?._deleted ? '恢复选中行' : '删除选中行'}</button>
+          </div>
+          <p>${escapeHtml(GRID_TABLE_GUIDANCE[tableId])}</p>
+        </div>
+        <div class="web-grid-shell" id="webGrid-${escapeAttribute(tableId)}">${renderNativeGridTable(tableId)}</div>
+      </section>`;
+    }
+
+    function renderWebGridIssues() {
+      if (!webGridIssues.length) return '';
+      const errors = webGridIssues.filter(item => item.severity !== 'warning');
+      const warnings = webGridIssues.filter(item => item.severity === 'warning');
+      return `<div class="web-grid-issues" tabindex="-1">
+        <strong>${errors.length ? `有${errors.length}项错误，当前修改尚未应用` : `有${warnings.length}项提醒`}</strong>
+        <ol>${webGridIssues.map(item => `<li><button type="button" data-action="focus-grid-issue" data-table-id="${escapeAttribute(item.tableId)}" data-row-id="${escapeAttribute(item.rowId)}" data-column="${escapeAttribute(item.column)}">${escapeHtml(item.message)}</button></li>`).join('')}</ol>
+      </div>`;
+    }
+
+    function renderWebGridEditor() {
+      ensureWebGridSession();
+      const tableIds = activeGridWorkspace === 'forms'
+        ? ['forms', 'form_behavior_links', 'form_areas', 'form_items', 'field_source_links']
+        : ['data_objects', 'data_fields', 'data_behavior_links', 'data_source_relations'];
+      const dirty = webGridSession?.isDirty();
+      return section(
+        '网页表格编辑器',
+        '单元格内始终使用原生输入控件。单击后可以持续输入或切换中文输入法，不需要按住鼠标。按住Shift再单击可扩展选择区域；从Excel或WPS复制连续单元格后，可在起始单元格直接粘贴。页面不读取文件，也不会自动保存。',
+        `<div class="web-grid-editor">
+          <div class="web-grid-workspaces" role="tablist" aria-label="表格工作区">
+            <button class="button small step-view-button${activeGridWorkspace === 'data' ? ' active' : ''}" data-action="switch-grid-workspace" data-workspace="data">数据工作区</button>
+            <button class="button small step-view-button${activeGridWorkspace === 'forms' ? ' active' : ''}" data-action="switch-grid-workspace" data-workspace="forms">表单工作区</button>
+          </div>
+          ${tableIds.map(renderWebGridPanel).join('')}
+          ${renderWebGridIssues()}
+          <div class="web-grid-footer">
+            <span class="web-grid-status${dirty ? ' dirty' : ''}">${dirty ? '表格中有未应用修改；当前JSON尚未改变。' : '表格内容与当前JSON一致。'}</span>
+            <div class="item-actions">
+              <button class="button" data-action="discard-web-grid" ${dirty ? '' : 'disabled'}>放弃本次修改</button>
+              <button class="button primary" data-action="apply-web-grid" ${dirty ? '' : 'disabled'}>应用本次修改</button>
+            </div>
+          </div>
         </div>`
       );
     }
@@ -3534,7 +4444,10 @@
         { value: 'relationships', label: '数据与表单关系总览' }
       ];
       let content;
-      if (activeStepView === 'choice' && !(data.data_objects?.length || data.forms?.length)) {
+      if (activeDataEditingMode === 'grid') {
+        activeWorkspaceTab = 'editor';
+        content = renderWebGridEditor();
+      } else if (activeStepView === 'choice' && !(data.data_objects?.length || data.forms?.length)) {
         content = renderDataStartChoice();
       } else if (activeStepView === 'forms') {
         activeWorkspaceTab = 'editor';
@@ -3547,9 +4460,10 @@
         content = renderRelationshipOverview();
       } else {
         activeWorkspaceTab = 'data';
-        content = renderDataDiagramPanel();
+        content = `${renderDataModeSwitch()}${activeDataMode === 'lifecycle' ? renderLifecyclePanel() : renderDataDiagramPanel()}`;
       }
-      return `${renderStepIntro('data')}${activeStepView === 'choice' ? '' : renderStepViewSwitch(views)}${content}`;
+      const guidedSwitch = activeDataEditingMode === 'guided' && activeStepView !== 'choice' ? renderStepViewSwitch(views) : '';
+      return `${renderStepIntro('data')}${renderDataEditingModeSwitch()}${guidedSwitch}${content}`;
     }
 
     function renderCrossDepartmentStep() {
@@ -3599,7 +4513,7 @@
       activeEditorSection = 'export';
       return `${renderStepIntro('handoff')}${renderExportCheck()}${section(
         '最终交接卡',
-        '最终v6、结构预审问题处理记录和部门业务核对记录必须分别保存。页面只生成并摘要当前v6文件。',
+        '最终v7、结构预审问题处理记录和部门业务核对记录必须分别保存。页面只生成并摘要当前v7文件。',
         `<div class="next-stage-grid">
           <section class="next-stage-card next"><h3>技术状态</h3><p>结构错误必须关闭。业务待定不阻止下载，但应在外部核对记录中写明证据、确认主体和关闭条件。</p></section>
           <section class="next-stage-card future"><h3>外部材料</h3><p>准备结构预审问题处理记录和部门业务核对记录。3001不会生成、保存或嵌入这些记录。</p></section>
@@ -3655,14 +4569,17 @@
       (data.data_objects || []).forEach(item => {
         if (item.information_type === 'pending_confirmation') unresolved += 1;
         unresolved += (item.behavior_links || []).filter(link => link.operation === 'pending_confirmation').length;
+        unresolved += (item.behavior_links || []).filter(link => link.operation === 'update' && !list(link.updated_field_refs).length).length;
         unresolved += (item.source_relations || []).filter(source => source.availability_mode === 'pending_confirmation').length;
       });
       (data.forms || []).forEach(form => {
         unresolved += (form.behavior_links || []).filter(link => !(link.operations || []).length).length;
         (form.areas || []).forEach(area => (area.items || []).forEach(item => {
           fieldCount += 1;
+          if (item.business_data_ref && !item.data_field_ref) unresolved += 1;
+          if (item.data_field_ref && item.value_usage_mode === 'pending_confirmation') unresolved += 1;
           if (item.value_origin_mode === 'pending_confirmation') unresolved += 1;
-          if (item.value_origin_mode === 'depends_on_data' && !(item.source_links || []).length) unresolved += 1;
+          if (item.value_origin_mode === 'depends_on_data' && item.value_usage_mode !== 'reuse_existing' && !(item.source_links || []).length) unresolved += 1;
         }));
       });
       unresolved += (data.migration?.unresolved_actor_roles || []).length;
@@ -3685,7 +4602,7 @@
       const historyBody = versionHistoryLoadState === 'ready'
         ? (versionHistory?.versions || []).map(item => `
             <article class="item-card">
-              <div class="item-title"><strong>${escapeHtml(item.version)} · ${escapeHtml(item.title)}</strong><span class="technical-note">${escapeHtml(item.released_on)}</span></div>
+              <div class="item-title"><strong>${escapeHtml(item.version)} · ${escapeHtml(item.title)}</strong><span class="technical-note">${escapeHtml(item.status === 'candidate' ? `候选 · ${item.candidate_on || '日期未记录'}` : `已发布 · ${item.released_on}`)}</span></div>
               <p>${escapeHtml(item.summary)}</p>
             </article>`).join('')
         : versionHistoryLoadState === 'unavailable'
@@ -3696,17 +4613,17 @@
         <div class="item-card">
           <div class="grid">
             <div class="inline-note"><strong>导入来源：</strong>${escapeHtml(summary.sourceVersion)}</div>
-            <div class="inline-note"><strong>当前格式：</strong>process-governance-v6</div>
+            <div class="inline-note"><strong>当前格式：</strong>process-governance-v7</div>
             <div class="inline-note"><strong>已保留内容：</strong>${summary.behaviorCount}个行为、${summary.dataCount}项数据、${summary.formCount}张表单、${summary.fieldCount}个字段</div>
             <div class="inline-note"><strong>待确认关系：</strong>${summary.unresolved}项</div>
           </div>
           <p class="technical-note">迁移只发生在当前页面内存中，用户选择的源文件没有修改。</p>
           <details><summary>迁移归档（${summary.archived}项，默认折叠）</summary><p class="technical-note">归档内容只用于保留历史来源，不参与评分、流程计算或绘图。归档引用仍会保护对应对象，避免误删。</p></details>
-        </div>` : '<div class="inline-note">当前没有草稿。导入v1至v5或历史多候选文件后，这里会显示本次迁移摘要。</div>';
+        </div>` : '<div class="inline-note">当前没有草稿。导入v1至v6或历史多候选文件后，这里会显示本次迁移摘要。</div>';
       return `
         <div id="versionsPanel" role="tabpanel" aria-labelledby="versionsTab">
-          ${section('v1至v6升级历史', '版本说明来自仓库受控文件，只供查阅，不改变当前草稿。', historyBody)}
-          ${section('当前文件迁移摘要', '旧文件导入后统一在页面内存中转换为v6，导入源文件始终保持原样。', migrationBody)}
+          ${section('v1至v7升级历史', '版本说明来自仓库受控文件，只供查阅，不改变当前草稿。', historyBody)}
+          ${section('当前文件迁移摘要', '旧文件导入后统一在页面内存中转换为v7，导入源文件始终保持原样。', migrationBody)}
         </div>`;
     }
 
@@ -3771,6 +4688,7 @@
                 <span class="legend-example-node">外部门<br>办理事项</span>
               </div>
             </div>
+            ${renderNodeCombinationGuide()}
           </div>
         </div>`;
     }
@@ -3954,6 +4872,173 @@
       return dataObjects.find(item => item.data_ref === activeDataRef) || null;
     }
 
+    function pendingLifecycle() {
+      return globalThis.ProcessGovernanceMigration?.pendingLifecycle
+        ? globalThis.ProcessGovernanceMigration.pendingLifecycle()
+        : {
+            applicability: 'pending_confirmation',
+            entry_state: {
+              business_validity: 'pending_confirmation',
+              custody: 'pending_confirmation',
+              identifiability_applicability: 'pending_confirmation',
+              identifiability: 'pending_confirmation'
+            },
+            routes: [],
+            analysis: { analyzer_version: '', source_fingerprint: '', status: 'not_analyzed' },
+            decision_reason: '',
+            decision_notes: ''
+          };
+    }
+
+    function renderDataModeSwitch() {
+      return `<div class="step-view-switch" aria-label="数据工作区视图">
+        <button class="button small step-view-button${activeDataMode === 'flow' ? ' active' : ''}" data-action="switch-data-mode" data-mode="flow">数据流</button>
+        <button class="button small step-view-button${activeDataMode === 'lifecycle' ? ' active' : ''}" data-action="switch-data-mode" data-mode="lifecycle">生命周期</button>
+      </div>`;
+    }
+
+    function renderMasterDataHint(dataObject) {
+      const analyzer = globalThis.LifecycleAnalyzer;
+      if (!analyzer?.classifyMasterDataHint) return '';
+      const hint = analyzer.classifyMasterDataHint(currentDocument(), dataObject);
+      const pending = masterDataPendingRefs.has(dataObject.data_ref);
+      return `<section class="inline-note" aria-label="主数据认定提示">
+        <strong>主数据认定提示：${escapeHtml(hint.label)}</strong>
+        <p>${escapeHtml(hint.message)}</p>
+        <details><summary>查看判断依据</summary><ul>${hint.reasons.map(reason => `<li>${escapeHtml(reason)}</li>`).join('')}</ul></details>
+        <div class="item-actions">
+          <button class="button small" data-action="supplement-data-facts">补充对象事实</button>
+          <button class="button small secondary" data-action="mark-master-data-pending">${pending ? '已列入本页交接待定' : '列入交接待定事项'}</button>
+        </div>
+        <p class="technical-note">所有主数据都是数据对象，但不是所有数据对象都是主数据。表单通常不是主数据；填写完成的表单通常是交易记录或业务证据。该提示不写入正式主数据结论，也不阻止下载。</p>
+      </section>`;
+    }
+
+    function renderLifecycleStateFields(pathPrefix, title) {
+      return `<div class="item-card">
+        <strong>${escapeHtml(title)}</strong>
+        <div class="grid" style="margin-top:10px">
+          ${field(`${pathPrefix}.business_validity`, '业务效力', { type: 'select', options: BUSINESS_VALIDITY_OPTIONS })}
+          ${field(`${pathPrefix}.custody`, '保管状态', { type: 'select', options: CUSTODY_OPTIONS })}
+          ${field(`${pathPrefix}.identifiability_applicability`, '可识别性是否适用', { type: 'select', options: IDENTIFIABILITY_APPLICABILITY_OPTIONS })}
+          ${field(`${pathPrefix}.identifiability`, '可识别性', { type: 'select', options: IDENTIFIABILITY_OPTIONS })}
+        </div>
+      </div>`;
+    }
+
+    function renderLifecycleEvent(dataIndex, routeIndex, eventIndex, event) {
+      const eventPath = `data_objects.${dataIndex}.lifecycle.routes.${routeIndex}.events.${eventIndex}`;
+      const needsReason = ['not_applicable', 'rejected'].includes(event.review_status);
+      const needsCarrier = ['archive', 'restore_active_custody', 'destroy'].includes(event.action);
+      const reviewOpen = event.high_risk || ['pending_confirmation', 'needs_recheck'].includes(event.review_status);
+      const triggerMode = {
+        behavior: '业务行为', time_period: '时间或期限', business_condition: '业务或数据条件',
+        external_process_notice: '外部流程或通知', pending_confirmation: '待确认'
+      }[event.trigger?.mode] || '待确认';
+      return `<article class="item-card" data-focus-path="${escapeAttribute(eventPath)}">
+        <div class="item-title">
+          <strong>${escapeHtml(LIFECYCLE_ACTIONS[event.action] || event.action)}</strong>
+          <span class="status-pill ${event.high_risk ? 'danger' : ''}">${event.high_risk ? '高风险，必须人工核对' : '普通生命周期事件'}</span>
+        </div>
+        <p><strong>触发：</strong>${escapeHtml(triggerMode)}；${escapeHtml(event.trigger?.expression || '条件待确认')}</p>
+        <p><strong>作用范围：</strong>${escapeHtml(event.target_scope || '待确认')}；<strong>责任：</strong>${escapeHtml(event.responsibility?.position || event.responsibility?.department || '待确认')}</p>
+        ${field(`${eventPath}.review_status`, '核对状态', { type: 'select', options: LIFECYCLE_REVIEW_STATUS_OPTIONS })}
+        ${needsReason ? field(`${eventPath}.decision_reason`, '决定原因', { type: 'select', options: LIFECYCLE_DECISION_REASON_OPTIONS }) : ''}
+        ${needsReason ? field(`${eventPath}.decision_notes`, '补充说明', { type: 'textarea', className: 'wide' }) : ''}
+        <details ${reviewOpen ? 'open' : ''}><summary>核对触发、范围、责任和异常</summary>
+          <div class="grid" style="margin-top:10px">
+            ${field(`${eventPath}.trigger.mode`, '触发方式', { type: 'select', options: LIFECYCLE_TRIGGER_MODE_OPTIONS })}
+            ${field(`${eventPath}.trigger.operator`, '条件组合', { type: 'select', options: LIFECYCLE_TRIGGER_OPERATOR_OPTIONS })}
+            ${field(`${eventPath}.trigger.expression`, '触发条件原文', { type: 'textarea', className: 'wide' })}
+            ${field(`${eventPath}.target_scope`, '作用范围', { type: 'select', options: LIFECYCLE_TARGET_SCOPE_OPTIONS })}
+            ${needsCarrier ? field(`${eventPath}.carrier_scope`, '载体范围', { type: 'select', options: LIFECYCLE_CARRIER_SCOPE_OPTIONS }) : ''}
+            ${field(`${eventPath}.responsibility.mode`, '责任确定方式', { type: 'select', options: LIFECYCLE_RESPONSIBILITY_MODE_OPTIONS })}
+            ${field(`${eventPath}.responsibility.department`, '责任部门')}
+            ${field(`${eventPath}.responsibility.position`, '责任岗位')}
+            ${field(`${eventPath}.exception_handling`, '例外处理', { type: 'textarea', className: 'wide' })}
+          </div>
+          ${renderLifecycleStateFields(`${eventPath}.result_state`, '动作完成后的状态')}
+        </details>
+        <details><summary>查看推导依据</summary>
+          <p>来源位置：<code>${escapeHtml(event.provenance?.source_path || '未记录')}</code></p>
+          <p>依据：${escapeHtml(event.provenance?.basis || '未记录')}</p>
+        </details>
+      </article>`;
+    }
+
+    function analyzeLifecycleForObject(dataObject) {
+      const analyzer = globalThis.LifecycleAnalyzer;
+      if (!analyzer?.analyzeDataObject) return null;
+      const before = JSON.stringify(dataObject.lifecycle || null);
+      const result = analyzer.analyzeDataObject(currentDocument(), dataObject.data_ref);
+      dataObject.lifecycle = result.lifecycle;
+      return { ...result, changed: before !== JSON.stringify(result.lifecycle) };
+    }
+
+    function renderLifecyclePanel() {
+      const dataObject = ensureActiveGraphDataObject();
+      if (!dataObject) {
+        return `<section class="section"><div class="section-body"><div class="diagram-empty"><h2>尚未登记数据对象</h2><p>先登记数据对象，页面再按对象自动整理生命周期建议。</p><button class="button primary" data-action="add-graph-data">新增数据</button></div></div></section>`;
+      }
+      if (!dataObject.lifecycle) dataObject.lifecycle = pendingLifecycle();
+      const dataIndex = currentDocument().data_objects.indexOf(dataObject);
+      const lifecycle = dataObject.lifecycle;
+      const eventCount = (lifecycle.routes || []).reduce((total, route) => total + (route.events || []).length, 0);
+      const pendingCount = (lifecycle.routes || []).flatMap(route => route.events || []).filter(event =>
+        ['pending_confirmation', 'needs_recheck'].includes(event.review_status)
+      ).length;
+      const routes = (lifecycle.routes || []).map((route, routeIndex) => {
+        const routePath = `data_objects.${dataIndex}.lifecycle.routes.${routeIndex}`;
+        const events = (route.events || []).map((event, eventIndex) => renderLifecycleEvent(dataIndex, routeIndex, eventIndex, event)).join('');
+        return `<details class="nested" open>
+          <summary><strong>${escapeHtml(route.route_label || `路径${routeIndex + 1}`)}</strong> · ${(route.events || []).length}个事件</summary>
+          <p class="technical-note">流程关系：${escapeHtml((route.flow_relation_refs || []).join('、') || '当前行为未定位到具体流程关系')}</p>
+          ${events || emptyList('当前路径没有生命周期事件。')}
+          ${renderLifecycleStateFields(`${routePath}.exit_state`, '当前路径的出口状态')}
+        </details>`;
+      }).join('');
+      return `<section class="section diagram-section">
+        <div class="section-body">
+          <div class="diagram-toolbar">
+            <div><h2>数据生命周期</h2><p>系统按当前数据对象集中分析，不要求逐行为定义。停用、作废和失效分别记录；系统删除不属于业务生命周期动作。</p></div>
+            <div class="diagram-controls">
+              <button class="button primary small" data-action="reanalyze-current-lifecycle">重新分析当前对象</button>
+              <button class="button secondary small" data-action="reanalyze-all-lifecycle">重新分析全部对象</button>
+            </div>
+          </div>
+          <div class="data-focus-selector">
+            <label>当前数据对象<select data-graph-data-focus>${optionHtml((currentDocument().data_objects || []).map(item => ({ value: item.data_ref, label: item.data_name || '未命名数据' })), activeDataRef)}</select></label>
+            <span class="technical-note">${eventCount}个事件，${pendingCount}项待确认或需重新核对；分析器 ${escapeHtml(lifecycle.analysis?.analyzer_version || '未运行')}。</span>
+          </div>
+          ${renderMasterDataHint(dataObject)}
+          <div class="grid" style="margin-top:14px">
+            ${field(`data_objects.${dataIndex}.lifecycle.applicability`, '本流程是否涉及该对象的生命周期', {
+              type: 'select',
+              options: [
+                { value: 'pending_confirmation', label: '待确认' },
+                { value: 'applicable', label: '适用' },
+                { value: 'not_applicable', label: '不适用' }
+              ]
+            })}
+            ${lifecycle.applicability === 'not_applicable' ? field(`data_objects.${dataIndex}.lifecycle.decision_reason`, '不适用原因', {
+              type: 'select',
+              options: [
+                { value: '', label: '请选择原因' },
+                { value: 'no_lifecycle_in_current_process', label: '当前流程不改变该对象的生命周期' },
+                { value: 'reference_only', label: '当前流程只引用该对象' },
+                { value: 'insufficient_evidence', label: '现有依据不足' },
+                { value: 'other', label: '其他' }
+              ]
+            }) : ''}
+            ${lifecycle.applicability === 'not_applicable' ? field(`data_objects.${dataIndex}.lifecycle.decision_notes`, '补充说明', { type: 'textarea', className: 'wide' }) : ''}
+          </div>
+          ${renderLifecycleStateFields(`data_objects.${dataIndex}.lifecycle.entry_state`, '对象进入本流程时的状态')}
+          <div class="cross-department-list">${routes || `<div class="inline-warning"><strong>尚未形成生命周期事件。</strong>现有材料可能没有明确动作，也可能尚未建立数据与行为关系。请补充对象事实，或保留待确认后下载。</div>`}</div>
+          <p class="boundary"><strong>边界：</strong>当前v7文件记录未审核的单流程事实和建议，暂不能直接导入3000。生命周期缺口属于业务提示，不阻止草稿下载。</p>
+        </div>
+      </section>`;
+    }
+
     function renderDataPropertyPanel() {
       const dataObject = ensureActiveGraphDataObject();
       if (!dataObject) return '<div class="graph-property-empty">新增数据对象后，可以围绕它建立直接数据关系。</div>';
@@ -3973,12 +5058,19 @@
       if (selection?.kind === 'data-edge' && selection.dataRef === dataObject.data_ref) {
         const behavior = currentDocument().behaviors.find(item => item.behavior_ref === selection.behaviorRef);
         const operations = selection.operations || dataObject.behavior_links.filter(link => link.behavior_ref === selection.behaviorRef).map(link => link.operation);
+        const existingUpdateLink = dataObject.behavior_links.find(link => link.behavior_ref === selection.behaviorRef && link.operation === 'update');
+        const updatedFieldRefs = list(selection.updatedFieldRefs === undefined ? existingUpdateLink?.updated_field_refs : selection.updatedFieldRefs);
+        const updatedFieldLabels = selectedUpdateFieldLabels(dataObject.data_ref, updatedFieldRefs);
         return `
           <div class="graph-property-panel">
             <h3>${escapeHtml(behavior?.behavior_name || '业务行为')} · 数据操作</h3>
             <p class="technical-note">业务行为是只读端点。需要修改行为时可转到“流程骨架”。</p>
             <div class="check-grid">${DATA_OPERATIONS.map(option => `
               <label class="check-row"><input type="checkbox" data-graph-data-operation value="${option.value}" ${operations.includes(option.value) ? 'checked' : ''}>${option.label}</label>`).join('')}</div>
+            ${operations.includes('update') ? `<div class="update-fields-summary" data-focus-key="data_objects.${currentDocument().data_objects.indexOf(dataObject)}.behavior_links.updated_field_refs">
+              <span>${escapeHtml(updatedFieldLabels.length ? `已选择：${updatedFieldLabels.join('、')}` : '尚未选择本次更新的字段。')}</span>
+              <button class="button secondary small" data-action="open-graph-update-fields">选择更新字段</button>
+            </div>` : ''}
             <div class="item-actions">
               <button class="button primary small" data-action="apply-data-operations">应用数据操作</button>
               <button class="button small" data-action="open-flow-behavior" data-ref="${escapeAttribute(selection.behaviorRef)}">转到流程骨架</button>
@@ -3992,6 +5084,7 @@
           <label>数据名称<input data-graph-data-property="data_name" value="${escapeAttribute(draft.data_name)}"></label>
           <label>说明<textarea data-graph-data-property="description">${escapeHtml(draft.description)}</textarea></label>
           <label>信息类型<select data-graph-data-property="information_type">${optionHtml(INFORMATION_TYPE_OPTIONS, draft.information_type)}</select></label>
+          ${renderMasterDataHint(dataObject)}
           <details><summary>技术标识和来源线索</summary><code>${escapeHtml(dataObject.data_ref)}</code><div class="technical-note">来源线索${dataObject.source_relations.length}项；默认不展开。</div></details>
           <div class="item-actions">
             <button class="button primary small" data-action="apply-data-property">应用修改</button>
@@ -4105,7 +5198,13 @@
 
     function mountReviewPatternDiagrams() {
       destroyReviewPatternDiagrams();
-      if (activeWorkspaceTab !== 'editor' || activeEditorSection !== 'export') return;
+      if (
+        activeWorkspaceTab !== 'flow'
+        || activeGovernanceStep !== 'skeleton'
+        || activeStepView !== 'diagram'
+        || !diagramExampleExpanded
+        || !document.querySelector('.node-combination-guide[open]')
+      ) return;
       const patternApi = globalThis.ReviewPatternDiagrams;
       if (!patternApi?.definitions || !patternApi?.mount) return;
       patternApi.definitions().forEach(pattern => {
@@ -4216,7 +5315,7 @@
 
     function mountDataDiagram() {
       destroyDataDiagram();
-      if (activeWorkspaceTab !== 'data' || !ensureActiveGraphDataObject()) return;
+      if (activeWorkspaceTab !== 'data' || activeDataMode !== 'flow' || !ensureActiveGraphDataObject()) return;
       const container = document.getElementById('dataRelationDiagramCanvas');
       const failure = document.getElementById('dataDiagramFailure');
       if (!container) return;
@@ -4229,19 +5328,24 @@
           onFocus(item) {
             captureGraphViewport();
             if (item.kind === 'behavior') {
+              const selectedDataObject = currentDocument().data_objects.find(data => data.data_ref === activeDataRef);
+              const updateLink = selectedDataObject?.behavior_links.find(link => link.behavior_ref === item.ref && link.operation === 'update');
               graphSelection = {
                 kind: 'data-edge',
                 dataRef: activeDataRef,
                 behaviorRef: item.ref,
-                operations: currentDocument().data_objects.find(data => data.data_ref === activeDataRef)?.behavior_links
-                  .filter(link => link.behavior_ref === item.ref).map(link => link.operation) || []
+                operations: selectedDataObject?.behavior_links.filter(link => link.behavior_ref === item.ref).map(link => link.operation) || [],
+                updatedFieldRefs: list(updateLink?.updated_field_refs)
               };
             } else if (item.kind === 'data-relation') {
+              const selectedDataObject = currentDocument().data_objects.find(data => data.data_ref === item.dataRef);
+              const updateLink = selectedDataObject?.behavior_links.find(link => link.behavior_ref === item.behaviorRef && link.operation === 'update');
               graphSelection = {
                 kind: 'data-edge',
                 dataRef: item.dataRef,
                 behaviorRef: item.behaviorRef,
-                operations: text(item.operations).split(',').filter(Boolean)
+                operations: text(item.operations).split(',').filter(Boolean),
+                updatedFieldRefs: list(updateLink?.updated_field_refs)
               };
             } else {
               const dataObject = ensureActiveGraphDataObject();
@@ -4352,6 +5456,8 @@
         if (command.kind === 'relation') activeRelationRef = nearby?.relation_ref || '';
         if (command.kind === 'data') activeDataRef = nearby?.data_ref || '';
       }
+      invalidateCurrentChecks(entry);
+      resetWebGridEditor();
       refreshCandidateDirty(entry);
       render();
       if (result.details?.warnings?.length) {
@@ -4390,8 +5496,10 @@
         data_name: '未命名数据',
         description: '',
         information_type: 'pending_confirmation',
+        fields: [],
         behavior_links: [],
-        source_relations: []
+        source_relations: [],
+        lifecycle: pendingLifecycle()
       };
     }
 
@@ -4404,11 +5512,13 @@
         : graphStateManager.redo(candidateStateKey(entry), entry.data);
       if (!result.ok) return showStatus(result.message, 'error');
       entry.data = result.document;
+      invalidateCurrentChecks(entry);
+      resetWebGridEditor();
       refreshCandidateDirty(entry);
       graphSelection = null;
       ensureActiveGraphDataObject();
       render();
-      showStatus(direction === 'undo' ? '已撤销上一次图操作。' : '已重做上一次图操作。', 'success');
+      showStatus(direction === 'undo' ? '已撤销上一次编辑操作。' : '已重做上一次编辑操作。', 'success');
       refreshValidationAfterGraphCommand(result.document);
     }
 
@@ -5136,7 +6246,9 @@
     }
 
     function dataBehaviorLinksEditor(item, dataIndex) {
-      const rows = (item.behavior_links || []).map((link, linkIndex) => `
+      const rows = (item.behavior_links || []).map((link, linkIndex) => {
+        const updatedFieldLabels = selectedUpdateFieldLabels(item.data_ref, link.updated_field_refs);
+        return `
         <div class="item-card" data-focus-path="data_objects.${dataIndex}.behavior_links.${linkIndex}">
           <div class="grid">
             ${field(`data_objects.${dataIndex}.behavior_links.${linkIndex}.behavior_ref`, '业务行为', {
@@ -5145,9 +6257,17 @@
             ${field(`data_objects.${dataIndex}.behavior_links.${linkIndex}.operation`, '对数据的操作', {
               type: 'select', options: DATA_OPERATIONS
             })}
+            ${link.operation === 'update' ? `<div class="field wide" data-focus-key="data_objects.${dataIndex}.behavior_links.${linkIndex}.updated_field_refs" tabindex="-1">
+              <span class="field-label">本次更新的字段</span>
+              <div class="update-fields-summary">
+                <span>${escapeHtml(updatedFieldLabels.length ? updatedFieldLabels.join('、') : '尚未选择；更新操作需要补充本次实际改变的字段。')}</span>
+                <button class="button secondary small" data-action="open-update-fields" data-data-index="${dataIndex}" data-index="${linkIndex}">选择字段</button>
+              </div>
+            </div>` : ''}
           </div>
           <button class="button danger small" data-action="remove-data-behavior-link" data-index="${linkIndex}" data-data-index="${dataIndex}">删除关系</button>
-        </div>`).join('');
+        </div>`;
+      }).join('');
       return `
         <div class="field wide">
           <span class="field-label">业务行为与数据的关系</span>
@@ -5192,6 +6312,93 @@
         </div>`;
     }
 
+    function dataFieldReferenceCount(fieldRef) {
+      let count = 0;
+      (currentDocument()?.forms || []).forEach(form => (form.areas || []).forEach(area =>
+        (area.items || []).forEach(item => { if (item.data_field_ref === fieldRef) count += 1; })
+      ));
+      return count;
+    }
+
+    function dataFieldsEditor(item, dataIndex) {
+      const active = ensureActiveDataField(item);
+      const selector = (item.fields || []).map((dataField, fieldIndex) => `
+        <button
+          class="selector-button${dataField.field_ref === active.ref ? ' active' : ''}"
+          data-action="select-data-field"
+          data-ref="${escapeAttribute(dataField.field_ref)}"
+          title="${escapeAttribute(dataField.field_name || `未命名对象字段 ${fieldIndex + 1}`)}"
+        >${fieldIndex + 1}. ${escapeHtml(dataField.field_name || '未命名对象字段')}</button>
+      `).join('');
+      const dataField = active.item;
+      const fieldPath = `data_objects.${dataIndex}.fields.${active.index}`;
+      const referenceCount = dataField ? dataFieldReferenceCount(dataField.field_ref) : 0;
+      const detail = dataField ? `
+        <div class="data-field-detail" data-focus-path="${fieldPath}">
+          <div class="item-title">
+            <strong>当前对象字段</strong>
+            <span class="status-pill">${referenceCount ? `${referenceCount}处表单引用` : '尚未被表单引用'}</span>
+          </div>
+          <div class="grid">
+            ${field(`${fieldPath}.field_name`, '对象字段名称')}
+            ${formItemTypeField(`${fieldPath}.field_type`, dataField.field_type)}
+            ${field(`${fieldPath}.definition`, '业务定义', { type: 'textarea', className: 'wide' })}
+          </div>
+          <div class="item-actions">
+            <button class="button danger small" data-action="remove-data-field" data-data-index="${dataIndex}" data-index="${active.index}">删除当前字段</button>
+          </div>
+        </div>` : `<div class="data-field-detail">${emptyList('尚未建立对象字段。')}</div>`;
+      return `
+        <div class="field wide" data-focus-path="data_objects.${dataIndex}.fields">
+          <span class="field-label">数据对象字段明细</span>
+          <div class="inline-note">从左侧选择字段，再在右侧逐个维护名称、数据类型和业务定义。实际表单只引用这里定义的字段。</div>
+          <div class="data-field-workbench">
+            <aside class="data-field-selector" aria-label="当前数据对象的字段列表">
+              ${selector || '<span class="technical-note">尚未建立对象字段。</span>'}
+              <button class="button small" data-action="add-data-field" data-data-index="${dataIndex}">添加对象字段</button>
+            </aside>
+            ${detail}
+          </div>
+        </div>`;
+    }
+
+    function renderDataObjectFieldCatalog() {
+      const active = ensureActiveDataObject();
+      const item = active.item;
+      const index = active.index;
+      const selector = currentDocument().data_objects.length
+        ? currentDocument().data_objects.map((dataObject, dataIndex) =>
+            orderedSelectorRow(
+              'data', dataObject.data_ref, dataIndex, currentDocument().data_objects.length,
+              '数据对象', dataSelectorLabel(dataObject, dataIndex), activeDataRef
+            )
+          ).join('')
+        : '<span class="technical-note">尚未登记数据对象。</span>';
+      const editor = item ? `
+        <div class="record-editor">
+          <div class="item-card" data-focus-kind="data" data-focus-ref="${escapeAttribute(item.data_ref)}">
+            <div class="item-title"><strong>当前数据对象定义</strong></div>
+            <div class="grid">
+              ${field(`data_objects.${index}.data_name`, '数据对象名称')}
+              ${field(`data_objects.${index}.information_type`, '信息类型', {
+                type: 'select',
+                options: INFORMATION_TYPE_OPTIONS,
+                hint: '对象字段引用只在当前单流程内有效，不形成企业级字段身份或主数据认定。'
+              })}
+              ${field(`data_objects.${index}.description`, '数据对象说明', { type: 'textarea', className: 'wide' })}
+              ${dataFieldsEditor(item, index)}
+            </div>
+          </div>
+        </div>` : `<div class="record-editor">${emptyList('先登记数据对象，再建立字段明细。')}</div>`;
+      const body = `<div class="record-workbench"><aside class="record-selector" aria-label="数据对象列表">${selector}</aside>${editor}</div>`;
+      return section(
+        '1. 数据对象与字段明细',
+        '先统一定义数据对象、字段名称、数据类型和业务定义；再在下方实际表单的主表或明细表中引用。',
+        body,
+        '<button class="button small" data-action="add-data">登记数据对象</button>'
+      );
+    }
+
     function renderDataObjects() {
       const active = ensureActiveDataObject();
       const item = active.item;
@@ -5224,6 +6431,11 @@
                 hint: '示例只用于帮助判断类型，不会写入下载的结构化文件。'
               })}
               ${field(`data_objects.${index}.description`, '数据说明', { type: 'textarea', className: 'wide' })}
+              <div class="field wide">
+                <span class="field-label">对象字段</span>
+                <div class="inline-note">当前已定义${(item.fields || []).length}个对象字段。字段定义统一在“表单、明细和字段”中维护。</div>
+                <button class="button secondary small" data-action="switch-process-section" data-section="forms">维护对象字段</button>
+              </div>
               ${dataBehaviorLinksEditor(item, index)}
               ${dataSourceRelationsEditor(item, index)}
             </div>
@@ -5256,6 +6468,10 @@
     function renderRelationshipOverview() {
       const rows = (currentDocument()?.data_objects || []).map((item, index) => {
         const links = operation => (item.behavior_links || []).filter(link => link.operation === operation).map(link => behaviorLabel(link.behavior_ref));
+        const updateLinks = (item.behavior_links || []).filter(link => link.operation === 'update').map(link => {
+          const fieldLabels = selectedUpdateFieldLabels(item.data_ref, link.updated_field_refs);
+          return `${behaviorLabel(link.behavior_ref)}${fieldLabels.length ? `（${fieldLabels.join('、')}）` : '（更新字段待补）'}`;
+        });
         const sources = (item.source_relations || []).map(source =>
           [source.source_department, source.source_process_name, source.source_behavior_name, source.source_data_name].map(text).filter(Boolean).join(' / ') || '来源待补充'
         );
@@ -5270,7 +6486,7 @@
             <div class="grid" style="margin-top:12px">
               <div class="inline-note"><strong>来源：</strong>${escapeHtml(sources.length ? sources.join('；') : '本流程本地创建或来源未登记')}</div>
               <div class="inline-note"><strong>创建：</strong>${escapeHtml(links('create').join('、') || '未登记')}</div>
-              <div class="inline-note"><strong>更新：</strong>${escapeHtml(links('update').join('、') || '未登记')}</div>
+              <div class="inline-note"><strong>更新：</strong>${escapeHtml(updateLinks.join('；') || '未登记')}</div>
               <div class="inline-note"><strong>使用：</strong>${escapeHtml(links('use').join('、') || '未登记')}</div>
               <div class="inline-note wide"><strong>表单与字段：</strong>${escapeHtml(fields.length ? fields.map(fieldItem => `${fieldItem.form.form_name || '未命名表单'} / ${fieldItem.item.item_name || '未命名字段'}${fieldItem.ownership ? '（归属）' : ''}${fieldItem.sourceRoles.length ? `（${fieldItem.sourceRoles.join('、')}）` : ''}`).join('；') : '未关联')}</div>
             </div>
@@ -5328,18 +6544,50 @@
       }).join('；');
     }
 
+    function referencedDataField(item) {
+      const owner = (currentDocument()?.data_objects || []).find(dataObject => dataObject.data_ref === item.business_data_ref);
+      return (owner?.fields || []).find(dataField => dataField.field_ref === item.data_field_ref) || null;
+    }
+
+    function dataFieldOptions(item) {
+      const owner = (currentDocument()?.data_objects || []).find(dataObject => dataObject.data_ref === item.business_data_ref);
+      const values = (owner?.fields || []).map((dataField, index) => ({
+        value: dataField.field_ref,
+        label: `${index + 1}. ${dataField.field_name || '未命名对象字段'}${dataField.field_type ? `（${dataField.field_type}）` : ''}`
+      }));
+      return [{ value: '', label: owner ? '请选择对象字段' : '请先选择业务数据归属' }, ...values];
+    }
+
+    function formFieldTypeCell(pathKey, item) {
+      const dataField = referencedDataField(item);
+      if (!dataField) return formItemTypeField(pathKey, item.item_type);
+      return `<div class="field"><span class="field-label">数据类型</span><div class="inline-note">${escapeHtml(dataField.field_type || '对象字段类型待补充')}</div><span class="hint">从“${escapeHtml(dataField.field_name || '未命名对象字段')}”继承；请回到数据对象字段明细修改。</span></div>`;
+    }
+
     function formFieldRelationSummary(item) {
       const ownership = currentDocument().data_objects.find(data => data.data_ref === item.business_data_ref)?.data_name || '未选择';
+      const dataField = referencedDataField(item)?.field_name || '未选择';
+      const usage = FIELD_VALUE_USAGE_MODES.find(option => option.value === item.value_usage_mode)?.label || '待确认';
       const origin = FIELD_ORIGIN_MODES.find(option => option.value === item.value_origin_mode)?.label || '待确认';
-      return `业务数据归属：${ownership}；取值方式：${origin}；取值来源：${formFieldSourceSummary(item)}`;
+      return `业务数据归属：${ownership}；引用对象字段：${dataField}；字段值使用方式：${usage}；取值方式：${origin}；取值来源：${formFieldSourceSummary(item)}`;
     }
 
     function formFieldRelationStatus(item) {
       const parts = [];
       if (item.business_data_ref) parts.push('已归属');
+      if (item.data_field_ref) parts.push('已引用对象字段');
+      if (item.value_usage_mode === 'authoritative_input') parts.push('权威录入点');
+      if (item.value_usage_mode === 'reuse_existing') parts.push('沿用已有值');
+      if (item.value_usage_mode === 'calculated') parts.push('系统计算');
+      if (item.value_usage_mode === 'external_source') parts.push('外部取得');
+      if (item.value_usage_mode === 'pending_confirmation' || !item.value_usage_mode) parts.push('使用方式待确认');
       if (item.value_origin_mode === 'direct_current_process') parts.push('当前流程取值');
       if (item.value_origin_mode === 'depends_on_data') {
-        parts.push((item.source_links || []).length ? `${item.source_links.length}项来源` : '来源待登记');
+        if (item.value_usage_mode === 'reuse_existing') {
+          parts.push('沿用对象字段已有值');
+        } else {
+          parts.push((item.source_links || []).length ? `${item.source_links.length}项来源` : '来源待登记');
+        }
       }
       if (item.value_origin_mode === 'pending_confirmation' || !item.value_origin_mode) parts.push('取值待确认');
       return parts.join(' · ') || '待登记';
@@ -5387,20 +6635,25 @@
             <strong>字段数据关系：${escapeHtml(item.item_name || '未命名字段')}</strong>
             <button class="button secondary small" data-action="close-field-relations">关闭</button>
           </div>
-          <div class="inline-note">业务数据归属表示字段属于哪项业务数据，取值方式表示字段值如何取得。取值来源可以选择本流程已登记的数据，也可以直接登记外部系统和来源数据名称；选择外部系统时不需要关联本流程业务行为。</div>
+          <div class="inline-note">先选择业务数据归属，再引用该数据对象下的字段。字段值使用方式用于区分本流程权威录入点、后续沿用、系统计算和外部取得；选择“沿用已有值”时，承载表单的业务系统应自动带入并避免重复录入。</div>
           <div class="grid">
             ${field(`${itemPath}.business_data_ref`, '业务数据归属', { type: 'select', options: dataOptions(), nullable: true })}
+            ${field(`${itemPath}.data_field_ref`, '引用对象字段', { type: 'select', options: dataFieldOptions(item), nullable: true })}
+            ${field(`${itemPath}.value_usage_mode`, '字段值使用方式', { type: 'select', options: FIELD_VALUE_USAGE_MODES })}
             ${field(`${itemPath}.value_origin_mode`, '取值方式', { type: 'select', options: FIELD_ORIGIN_MODES })}
             <div class="field wide" data-focus-key="${escapeAttribute(`${itemPath}.source_links`)}" tabindex="-1">
               <span class="field-label">取值来源</span>
-              ${rows || emptyList('尚未登记取值来源。')}
-              <button class="button small" data-action="add-field-source" data-form-index="${formIndex}" data-area-index="${areaIndex}" data-item-index="${itemIndex}">添加取值来源</button>
+              ${rows || emptyList(item.value_usage_mode === 'reuse_existing'
+                ? '沿用当前对象字段已经建立的值，无需在本表单重复登记取值来源。'
+                : '尚未登记取值来源。')}
+              ${item.value_usage_mode === 'reuse_existing' ? '' : `<button class="button small" data-action="add-field-source" data-form-index="${formIndex}" data-area-index="${areaIndex}" data-item-index="${itemIndex}">添加取值来源</button>`}
             </div>
           </div>
         </aside>`;
     }
 
     function renderForms() {
+      const catalog = renderDataObjectFieldCatalog();
       const active = ensureActiveForm();
       const addButtons = `
         <div class="form-primary-actions">
@@ -5408,9 +6661,9 @@
           <button class="button small secondary" data-action="add-proposed-form">设计新建／优化表单</button>
         </div>`;
       if (!active.form) {
-        return section(
-          '表单与记录',
-          '按一张纸质表单的完整字段录入。只有新增表单后才创建空白编辑对象，3001不会自动生成表单。',
+        return catalog + section(
+          '2. 实际表单、主表、明细和字段',
+          '完成对象字段明细后，再按一张纸质表单的完整结构录入。只有新增表单后才创建空白编辑对象，3001不会自动生成表单。',
           emptyList('当前流程没有表单或记录。'),
           addButtons
         );
@@ -5457,7 +6710,7 @@
                 <span class="form-field-relation-status">${escapeHtml(formFieldRelationStatus(item))}</span>
               </div>
             </td>
-            <td data-label="数据类型">${formItemTypeField(`forms.${formIndex}.areas.${areaIndex}.items.${itemIndex}.item_type`, item.item_type)}</td>
+            <td data-label="数据类型">${formFieldTypeCell(`forms.${formIndex}.areas.${areaIndex}.items.${itemIndex}.item_type`, item)}</td>
             <td data-label="字段归属">${formItemAssignmentField(formIndex, areaIndex, itemIndex, item)}</td>
             <td data-label="必填">${field(`forms.${formIndex}.areas.${areaIndex}.items.${itemIndex}.required`, '是否必填', { type: 'checkbox', checkboxLabel: '必填' })}</td>
             <td class="form-field-instructions" data-label="填写说明">${field(`forms.${formIndex}.areas.${areaIndex}.items.${itemIndex}.instructions`, '填写说明', { type: 'textarea' })}</td>
@@ -5530,9 +6783,9 @@
             ${renderFieldRelationEditor(form, formIndex)}
           </div>
         </div>`;
-      return section(
-        '表单与记录',
-        '按纸质表单原样录入全部字段；有几张明细表就保留几张。',
+      return catalog + section(
+        '2. 实际表单、主表、明细和字段',
+        '按纸质表单原样录入全部字段；有几张明细表就保留几张。表单字段先选择业务数据归属，再引用该对象的字段。',
         body,
         addButtons
       );
@@ -5795,7 +7048,7 @@
       return `<div class="score-panel" id="structureScorePanel" aria-live="polite">
         <div class="score-panel-head">
           <div>
-            <h3>${escapeHtml(rule?.label || '结构化学习评分 v3（process-governance-v6）')}</h3>
+            <h3>${escapeHtml(rule?.label || '结构化学习评分 v4（process-governance-v7）')}</h3>
             <p>评分根据当前页面内容自动生成，只用于结构化学习反馈，不写入下载的JSON。</p>
           </div>
           <button class="button small" data-action="refresh-structure-score"${pending ? ' disabled' : ''}>重新评分</button>
@@ -6000,7 +7253,7 @@
           <p class="review-pattern-rule"><strong>评审规则：</strong>${escapeHtml(pattern.rule)}</p>
         </article>`).join('');
       const patternContent = cards || '<div class="score-unavailable">节点组合图例暂时无法加载；当前JSON不受影响，请联系维护人员检查3001静态资源。</div>';
-      return `<details class="node-combination-guide" open>
+      return `<details class="node-combination-guide"${legendPatternGuideExpanded ? ' open' : ''}>
         <summary>节点组合、循环退出与嵌套并行图例</summary>
         <div class="node-combination-body">
           <p class="node-combination-intro">先按组合表选择关系类型，再用可拖动、可缩放的图形化图例核对嵌套结构。<strong>仅用于理解关系，不属于当前流程，不代表评审通过。</strong>图例不新增字段，不修改当前JSON。</p>
@@ -6022,7 +7275,7 @@
       const scoring = globalThis.StructureLearningScore;
       if (!scoring?.evaluateReviewReadiness || !scoring?.REVIEW_READINESS) {
         return `<div class="review-readiness-panel">
-          <div class="score-unavailable"><strong>五方面评审检查暂不可用：</strong>当前页面内容不受影响，请联系维护人员检查3001静态资源。</div>
+          <div class="score-unavailable"><strong>六方面评审检查暂不可用：</strong>当前页面内容不受影响，请联系维护人员检查3001静态资源。</div>
         </div>`;
       }
       const technicalIssues = (scoreState.result?.issues || []).filter(item => item.category === '技术结构');
@@ -6035,11 +7288,11 @@
         technical
       });
       const operationNote = {
-        ready: '页面自动检查未发现内容缺项。请按五方面逐项询问归口部门，确认当前JSON与真实做法一致后再下载。',
+        ready: '页面自动检查未发现内容缺项。请按六方面逐项询问归口部门，确认当前JSON与真实做法一致后再下载。',
         prompt: `当前有${readiness.businessIssueCount}项业务内容需要补充或登记为待定。业务提示不阻止下载。`,
         blocker: `当前有${readiness.technicalIssueCount || 1}项结构错误。修复技术结构或损坏引用后才能下载。`,
-        checking: '正在核对结构版本、技术引用、下载回读和内容保持；五方面业务提示已经列出。',
-        unavailable: '技术检查服务暂不可用。请保持当前页面打开，服务恢复后点击“重新检查五方面”。'
+        checking: '正在核对结构版本、技术引用、下载回读和内容保持；六方面业务提示已经列出。',
+        unavailable: '技术检查服务暂不可用。请保持当前页面打开，服务恢复后点击“重新检查六方面”。'
       }[readiness.operationStatus];
       const acceptance = scoring.REVIEW_READINESS.acceptance.map(item => `<li>${escapeHtml(item)}</li>`).join('');
       const aspects = readiness.aspects.map(aspect => {
@@ -6083,11 +7336,10 @@
           <ol>${acceptance}</ol>
         </div>
         <div class="review-aspect-grid">${aspects}</div>
-        ${renderNodeCombinationGuide()}
         <div class="review-readiness-actions">
-          <button class="button small" data-action="refresh-structure-score"${scoreState.status === 'pending' ? ' disabled' : ''}>重新检查五方面</button>
+          <button class="button small" data-action="refresh-structure-score"${scoreState.status === 'pending' ? ' disabled' : ''}>重新检查六方面</button>
         </div>
-        <p class="boundary"><strong>责任边界：</strong>3001只提供评审准备检查和整改定位，不保存现场确认、依据或评审结论。当前3000尚未承接v6文件，不得把本次下载描述为可直接导入3000。</p>
+        <p class="boundary"><strong>责任边界：</strong>3001只提供评审准备检查和整改定位，不保存现场确认、依据或评审结论。当前3000尚未承接v7文件，不得把本次下载描述为可直接导入3000。</p>
       </section>`;
     }
 
@@ -6107,8 +7359,8 @@
         <div class="next-stage-grid" aria-label="下载后的处理说明">
           <section class="next-stage-card next">
             <span class="next-stage-badge">下一步</span>
-            <h3>完成部门事实核对后，保存最终v6文件</h3>
-            <p>3001不记录核对结果。请分别保存最终v6、结构预审问题处理记录和部门业务核对记录；当前3000仅按既有范围承接v1至v3，v6文件暂不能直接导入3000。待3000另行完成兼容或迁移审核和验证后，再按受控流程承接。</p>
+            <h3>完成部门事实核对后，保存最终v7文件</h3>
+            <p>3001不记录现场核对记录。请分别保存最终v7、结构预审问题处理记录和部门业务核对记录；v7文件暂不能直接导入3000。待3000另行完成兼容、迁移审核和验证后，再按受控流程承接。</p>
           </section>
           <section class="next-stage-card future">
             <span class="next-stage-badge">后续规划</span>
@@ -6120,7 +7372,7 @@
         <button class="button secondary" data-action="export-current">下载最终待核对文件</button>`;
       return section(
         '评审与交接',
-        '先按五方面标准逐项核对，再下载当前这一条流程。页面状态、现场确认和评审意见都不会写入JSON。',
+        '先按六方面标准逐项核对，再下载当前这一条流程。页面状态、现场确认和评审意见都不会写入JSON。',
         body
       );
     }
@@ -6137,17 +7389,416 @@
       return `${renderEditorNavigation()}${renderSection()}`;
     }
 
+    function webGridVisibleRows(tableId) {
+      const rows = webGridSession?.rows(tableId) || [];
+      if (['data_fields', 'data_behavior_links', 'data_source_relations'].includes(tableId)) {
+        return rows.filter(row => row.data_ref === activeDataRef);
+      }
+      if (['form_behavior_links', 'form_areas'].includes(tableId)) {
+        return rows.filter(row => row.form_ref === activeFormRef);
+      }
+      if (tableId === 'form_items') {
+        return rows.filter(row => row.form_ref === activeFormRef && (!activeAreaRef || row.area_ref === activeAreaRef));
+      }
+      if (tableId === 'field_source_links') return rows.filter(row => row.item_ref === activeFormItemRef);
+      return rows;
+    }
+
+    function gridLookupRows(lookup, rowData = {}) {
+      if (lookup === 'behaviors') {
+        const behaviors = currentDocument()?.behaviors || [];
+        const counts = new Map();
+        behaviors.forEach(item => {
+          const name = text(item.behavior_name);
+          if (name) counts.set(name, (counts.get(name) || 0) + 1);
+        });
+        return behaviors.map(item => {
+          const name = text(item.behavior_name);
+          const duplicate = name && counts.get(name) > 1;
+          return { value: item.behavior_ref, label: duplicate ? `${name}（技术标识：${item.behavior_ref}）` : (name || item.behavior_ref) };
+        });
+      }
+      let rows = webGridSession?.rows(lookup)?.filter(row => !row._deleted) || [];
+      if (lookup === 'form_areas' && rowData.form_ref) rows = rows.filter(row => row.form_ref === rowData.form_ref);
+      if (lookup === 'data_fields' && rowData.business_data_ref) rows = rows.filter(row => row.data_ref === rowData.business_data_ref);
+      const fields = {
+        data_objects: ['data_ref', 'data_name'], data_fields: ['field_ref', 'field_name'], forms: ['form_ref', 'form_name'],
+        form_areas: ['area_ref', 'area_title'], form_items: ['item_ref', 'item_name']
+      }[lookup] || ['_row_id', '_row_id'];
+      const counts = new Map();
+      rows.forEach(row => {
+        const name = text(row[fields[1]]);
+        if (name) counts.set(name, (counts.get(name) || 0) + 1);
+      });
+      return rows.map(row => {
+        const ref = row[fields[0]];
+        const name = text(row[fields[1]]);
+        const duplicate = name && counts.get(name) > 1;
+        return { value: ref, label: duplicate ? `${name}（技术标识：${ref}）` : (name || ref) };
+      });
+    }
+
+    function gridLookupLabel(lookup, value, rowData = {}) {
+      if (value == null || value === '') return '';
+      return gridLookupRows(lookup, rowData).find(item => item.value === value)?.label || value;
+    }
+
+    function selectGridParent(tableId, row) {
+      if (tableId === 'data_objects') activeDataRef = row.data_ref;
+      if (tableId === 'forms') {
+        activeFormRef = row.form_ref;
+        activeAreaRef = '';
+        activeFormItemRef = '';
+      }
+      if (tableId === 'form_areas') {
+        activeAreaRef = row.area_ref;
+        activeFormItemRef = '';
+      }
+      if (tableId === 'form_items') activeFormItemRef = row.item_ref;
+    }
+
+    function selectGridIssueContext(tableId, row) {
+      if (['data_fields', 'data_behavior_links', 'data_source_relations'].includes(tableId)) activeDataRef = row.data_ref;
+      if (['form_behavior_links', 'form_areas'].includes(tableId)) activeFormRef = row.form_ref;
+      if (tableId === 'form_areas') activeAreaRef = row.area_ref;
+      if (tableId === 'form_items') {
+        activeFormRef = row.form_ref;
+        activeAreaRef = row.area_ref;
+        activeFormItemRef = row.item_ref;
+      }
+      if (tableId === 'field_source_links') {
+        activeFormItemRef = row.item_ref;
+        const item = webGridSession.rows('form_items').find(entry => entry.item_ref === row.item_ref);
+        if (item) {
+          activeFormRef = item.form_ref;
+          activeAreaRef = item.area_ref;
+        }
+      }
+    }
+
+    function updateGridToolbarSelection(tableId, rowData) {
+      webGridSelectedRows[tableId] = rowData._row_id;
+      const panel = workspace.querySelector(`[data-grid-panel="${CSS.escape(tableId)}"]`);
+      panel?.querySelectorAll('tr[data-grid-row-id]').forEach(row => row.classList.toggle('grid-row-selected', row.dataset.gridRowId === rowData._row_id));
+      panel?.querySelector('[data-action="grid-duplicate-row"]')?.removeAttribute('disabled');
+      panel?.querySelector('[data-action="grid-move-row-up"]')?.removeAttribute('disabled');
+      panel?.querySelector('[data-action="grid-move-row-down"]')?.removeAttribute('disabled');
+      const deleteButton = panel?.querySelector('[data-action="grid-delete-row"]');
+      if (deleteButton) {
+        deleteButton.removeAttribute('disabled');
+        deleteButton.textContent = rowData._deleted ? '恢复选中行' : '删除选中行';
+      }
+    }
+
+    function activeGridContextKey() {
+      return `${activeDataRef}|${activeFormRef}|${activeAreaRef}|${activeFormItemRef}`;
+    }
+
+    function refreshNativeGridPanel(tableId) {
+      const panel = workspace.querySelector(`[data-grid-panel="${CSS.escape(tableId)}"]`);
+      if (panel) panel.outerHTML = renderWebGridPanel(tableId);
+    }
+
+    function refreshNativeGridDependents(tableId) {
+      const dependents = {
+        data_objects: ['data_fields', 'data_behavior_links', 'data_source_relations'],
+        forms: ['form_behavior_links', 'form_areas', 'form_items', 'field_source_links'],
+        form_areas: ['form_items', 'field_source_links'],
+        form_items: ['field_source_links']
+      }[tableId] || [];
+      dependents.forEach(refreshNativeGridPanel);
+    }
+
+    function applyNativeGridRangeStyles(tableId) {
+      const rows = nativeGridRows(tableId);
+      const columns = nativeGridColumns(tableId);
+      const bounds = nativeGridRangeBounds(tableId, rows, columns);
+      const selectedRows = new Set(bounds ? rows.slice(bounds.rowStart, bounds.rowEnd + 1).map(row => row._row_id) : []);
+      const selectedColumns = new Set(bounds ? columns.slice(bounds.columnStart, bounds.columnEnd + 1).map(column => column.key) : []);
+      workspace.querySelectorAll(`[data-grid-panel="${CSS.escape(tableId)}"] [data-grid-cell-container]`).forEach(cell => {
+        cell.classList.toggle('grid-cell-range-selected', selectedRows.has(cell.dataset.gridRowId) && selectedColumns.has(cell.dataset.gridColumn));
+      });
+    }
+
+    function selectNativeGridRow(tableId, rowId, options = {}) {
+      const rowData = webGridSession?.rows(tableId).find(row => row._row_id === rowId);
+      if (!rowData) return;
+      updateGridToolbarSelection(tableId, rowData);
+      if (options.column) {
+        const previous = webGridRanges[tableId];
+        webGridRanges[tableId] = options.extend && previous?.anchorRowId
+          ? { ...previous, currentRowId: rowId, currentColumn: options.column }
+          : { anchorRowId: rowId, anchorColumn: options.column, currentRowId: rowId, currentColumn: options.column };
+        applyNativeGridRangeStyles(tableId);
+      }
+      const previousContext = activeGridContextKey();
+      selectGridParent(tableId, rowData);
+      ensureActiveWebGridContext();
+      if (previousContext !== activeGridContextKey()) refreshNativeGridDependents(tableId);
+    }
+
+    function clearNativeGridIssues() {
+      if (!webGridIssues.length) return;
+      webGridIssues = [];
+      workspace.querySelector('.web-grid-issues')?.remove();
+      workspace.querySelectorAll('.grid-cell-error').forEach(cell => cell.classList.remove('grid-cell-error'));
+    }
+
+    function updateNativeGridStatus() {
+      const dirty = Boolean(webGridSession?.isDirty());
+      const status = workspace.querySelector('.web-grid-status');
+      if (status) {
+        status.textContent = dirty ? '表格中有未应用修改；当前JSON尚未改变。' : '表格内容与当前JSON一致。';
+        status.classList.toggle('dirty', dirty);
+      }
+      workspace.querySelector('[data-action="apply-web-grid"]')?.toggleAttribute('disabled', !dirty);
+      workspace.querySelector('[data-action="discard-web-grid"]')?.toggleAttribute('disabled', !dirty);
+    }
+
+    function nativeGridControlValue(control) {
+      if (control.matches('input[type="checkbox"]')) return control.checked;
+      return control.value;
+    }
+
+    function updateNativeGridCell(control) {
+      if (!control?.matches?.('[data-grid-cell]')) return;
+      webGridSession.updateCell(control.dataset.gridTableId, control.dataset.gridRowId, control.dataset.gridColumn, nativeGridControlValue(control));
+      clearNativeGridIssues();
+      updateNativeGridStatus();
+    }
+
+    function applyNativeGridFilter(tableId, query) {
+      webGridFilters[tableId] = query;
+      const panel = workspace.querySelector(`[data-grid-panel="${CSS.escape(tableId)}"]`);
+      if (!panel) return;
+      const normalized = text(query).trim().toLowerCase();
+      let visible = 0;
+      panel.querySelectorAll('tbody tr[data-grid-row-id]').forEach(tableRow => {
+        const row = webGridSession.rows(tableId).find(item => item._row_id === tableRow.dataset.gridRowId);
+        const matches = !normalized || Object.entries(row || {}).filter(([key]) => !key.startsWith('_')).some(([, value]) => text(value).toLowerCase().includes(normalized));
+        tableRow.hidden = !matches;
+        if (matches) visible += 1;
+      });
+      let empty = panel.querySelector('[data-grid-filter-empty]');
+      if (!visible && panel.querySelector('tbody tr[data-grid-row-id]')) {
+        if (!empty) {
+          empty = document.createElement('tr');
+          empty.className = 'web-grid-empty-row';
+          empty.dataset.gridFilterEmpty = 'true';
+          empty.innerHTML = `<td colspan="${nativeGridColumns(tableId).length + 1}">没有符合查找条件的记录。</td>`;
+          panel.querySelector('tbody')?.appendChild(empty);
+        }
+      } else empty?.remove();
+      applyNativeGridRangeStyles(tableId);
+    }
+
+    function focusNativeGridCell(tableId, rowId, column) {
+      const selector = `[data-grid-cell][data-grid-table-id="${CSS.escape(tableId)}"][data-grid-row-id="${CSS.escape(rowId)}"][data-grid-column="${CSS.escape(column)}"]`;
+      const control = workspace.querySelector(selector);
+      control?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      control?.focus({ preventScroll: true });
+      if (control?.matches('input[type="text"]')) control.select();
+      return Boolean(control);
+    }
+
+    function continueNativeGridInput(control) {
+      const tableId = control.dataset.gridTableId;
+      const rows = nativeGridRows(tableId);
+      const rowIndex = rows.findIndex(row => row._row_id === control.dataset.gridRowId);
+      const nextRow = rows[rowIndex + 1];
+      if (nextRow) focusNativeGridCell(tableId, nextRow._row_id, control.dataset.gridColumn);
+    }
+
+    function nativeGridPasteOptions(tableId, column, row) {
+      if (column.editor === 'select') return column.values || [];
+      if (column.editor === 'lookup') return gridLookupRows(column.lookup, row || {});
+      return [];
+    }
+
+    function restoreWebGridTables(snapshot) {
+      Object.entries(snapshot || {}).forEach(([tableId, rows]) => webGridSession.replaceRows(tableId, rows));
+    }
+
+    function applyNativeGridPaste(control, clipboardText) {
+      const tableId = control.dataset.gridTableId;
+      const columns = nativeGridColumns(tableId);
+      let rows = nativeGridRows(tableId);
+      const startRow = rows.findIndex(row => row._row_id === control.dataset.gridRowId);
+      const startColumn = columns.findIndex(column => column.key === control.dataset.gridColumn);
+      const matrix = globalThis.NativeWebGrid.parseClipboardGrid(clipboardText);
+      const plan = globalThis.NativeWebGrid.planPaste({
+        matrix,
+        columns,
+        startColumn,
+        optionResolver(column, rowOffset) { return nativeGridPasteOptions(tableId, column, rows[startRow + rowOffset]); }
+      });
+      if (plan.errors) {
+        showStatus(`没有粘贴任何内容。${plan.errors.slice(0, 5).map(item => item.row ? `第${item.row}行第${item.column}列（${item.fieldLabel}）：${item.message}` : item.message).join('；')}`, 'error');
+        return false;
+      }
+      if ((webGridFilters[tableId] || webGridSorts[tableId]) && startRow + plan.height > rows.length) {
+        showStatus('当前表格正在查找或显示排序。请先清除查找和显示排序，再粘贴需要新增行的区域。', 'error');
+        return false;
+      }
+      const snapshot = webGridSession.allRows();
+      try {
+        while (rows.length < startRow + plan.height) {
+          createGridRowInSession(tableId, { ...gridParentContext(tableId), select: false });
+          rows = nativeGridRows(tableId);
+        }
+        plan.values.forEach((sourceRow, rowOffset) => {
+          sourceRow.forEach((value, columnOffset) => {
+            webGridSession.updateCell(tableId, rows[startRow + rowOffset]._row_id, columns[startColumn + columnOffset].key, value);
+          });
+        });
+      } catch (error) {
+        restoreWebGridTables(snapshot);
+        showStatus(`没有粘贴任何内容。${error.message}`, 'error');
+        return false;
+      }
+      clearNativeGridIssues();
+      render();
+      showStatus(`已粘贴${plan.height}行 × ${plan.width}列。修改仍在表格工作副本中。`, 'success');
+      return true;
+    }
+
+    async function copyNativeGridRange(tableId) {
+      const rows = nativeGridRows(tableId);
+      const columns = nativeGridColumns(tableId);
+      const bounds = nativeGridRangeBounds(tableId, rows, columns);
+      if (!bounds || (bounds.rowStart === bounds.rowEnd && bounds.columnStart === bounds.columnEnd)) return false;
+      const matrix = rows.slice(bounds.rowStart, bounds.rowEnd + 1).map(row => columns
+        .slice(bounds.columnStart, bounds.columnEnd + 1)
+        .map(column => nativeGridDisplayValue(column, row[column.key], row)));
+      await navigator.clipboard.writeText(globalThis.NativeWebGrid.toClipboardText(matrix));
+      showStatus(`已复制${matrix.length}行 × ${matrix[0]?.length || 0}列。`, 'success');
+      return true;
+    }
+
+    async function prepareWebGridCandidate() {
+      const data = currentDocument();
+      const prepared = webGridSession.prepare(data, gridSourceKey(data), webGridAdapterOptions());
+      if (!prepared.ok) return prepared;
+      const validation = await validateGraphDocument(prepared.document);
+      if (!validation.valid) {
+        prepared.ok = false;
+        prepared.document = clone(data);
+        (validation.errors || []).forEach(item => prepared.errors.push({
+          tableId: '', rowId: '', column: '', severity: 'error', code: item.keyword || 'SCHEMA_VALIDATION',
+          message: `${validationErrorLocation(item)}：${item.message}`, focusPath: item.instancePath || ''
+        }));
+      }
+      return prepared;
+    }
+
+    function commitWebGridDocument(candidate, details) {
+      const entry = currentEntry();
+      const result = graphStateManager.execute(candidateStateKey(entry), entry.data, () => ({
+        ok: true,
+        document: clone(candidate),
+        details
+      }));
+      if (!result.ok) throw new Error(result.message || '表格修改未能写入当前流程');
+      entry.data = result.document;
+      invalidateCurrentChecks(entry);
+      refreshCandidateDirty(entry);
+      return result.document;
+    }
+
+    function webGridCommitDriver() {
+      return {
+        getSource() { return { document: currentDocument(), revisionKey: gridSourceKey() }; },
+        validate: prepareWebGridCandidate,
+        commit: commitWebGridDocument
+      };
+    }
+
+    async function applyWebGridChanges(options = {}) {
+      if (!webGridSession?.isDirty()) {
+        if (options.switchMode) activeDataEditingMode = options.switchMode;
+        resetWebGridEditor();
+        closeGridModeSwitchModal();
+        if (typeof options.after === 'function') options.after();
+        else render();
+        return true;
+      }
+      setBusy(true, '正在检查表格修改……');
+      try {
+        const driver = webGridCommitDriver();
+        const prepared = await driver.validate();
+        webGridIssues = [...(prepared.errors || []), ...(prepared.warnings || [])];
+        if (!prepared.ok) {
+          closeGridModeSwitchModal();
+          render();
+          requestAnimationFrame(() => workspace.querySelector('.web-grid-issues')?.focus());
+          showStatus(`表格修改有${prepared.errors.length}项错误，当前JSON保持不变。`, 'error');
+          return false;
+        }
+        const source = driver.getSource().document;
+        if (globalThis.GraphEditorState.fingerprint(source) === globalThis.GraphEditorState.fingerprint(prepared.document)) {
+          resetWebGridEditor();
+          if (options.switchMode) activeDataEditingMode = options.switchMode;
+          closeGridModeSwitchModal();
+          if (typeof options.after === 'function') options.after();
+          else render();
+          showStatus('表格内容没有产生数据变化，无需应用。', 'success');
+          return true;
+        }
+        const changeCount = prepared.summary.added + prepared.summary.updated + prepared.summary.deleted;
+        driver.commit(prepared.document, { source: 'web-grid', changeCount, tableCount: globalThis.ProcessV7GridAdapter.TABLE_IDS.length });
+        graphSelection = null;
+        resetWebGridEditor();
+        if (options.switchMode) activeDataEditingMode = options.switchMode;
+        closeGridModeSwitchModal();
+        updateCandidateList();
+        if (typeof options.after === 'function') options.after();
+        else render();
+        showStatus(`已应用本次表格修改${changeCount ? `，涉及${changeCount}项记录变化` : ''}。执行一次撤销可恢复应用前内容。`, 'success');
+        return true;
+      } catch (error) {
+        closeGridModeSwitchModal();
+        showStatus(`表格修改未应用：${error.message}`, 'error');
+        return false;
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    function discardWebGridChanges(options = {}) {
+      resetWebGridEditor();
+      if (options.switchMode) activeDataEditingMode = options.switchMode;
+      closeGridModeSwitchModal();
+      if (typeof options.after === 'function') options.after();
+      else render();
+      showStatus('已放弃尚未应用的表格修改。当前JSON没有改变。', 'success');
+    }
+
+    function openGridModeSwitchModal(nextMode, pendingAction = null) {
+      webGridPendingMode = nextMode;
+      webGridPendingAction = pendingAction;
+      gridModeSwitchModal.classList.add('show');
+      gridModeSwitchModal.setAttribute('aria-hidden', 'false');
+      continueGridEditingButton.focus();
+    }
+
+    function closeGridModeSwitchModal() {
+      webGridPendingMode = '';
+      webGridPendingAction = null;
+      gridModeSwitchModal.classList.remove('show');
+      gridModeSwitchModal.setAttribute('aria-hidden', 'true');
+    }
+
     function render() {
       destroyDiagram();
       destroyDataDiagram();
       destroyReviewPatternDiagrams();
       const data = currentDocument();
-      if (activeGovernanceStep !== 'handoff') expandedReviewPatternId = '';
+      if (activeGovernanceStep !== 'skeleton' || !diagramExampleExpanded) expandedReviewPatternId = '';
       document.body.classList.toggle(
         'diagram-overlay-open',
         Boolean(data && (
           (activeGovernanceStep === 'skeleton' && diagramExpanded)
-          || (activeGovernanceStep === 'handoff' && expandedReviewPatternId)
+          || (activeGovernanceStep === 'skeleton' && diagramExampleExpanded && expandedReviewPatternId)
         ))
       );
       updateCandidateList();
@@ -6167,8 +7818,8 @@
       workspaceViewSwitch.innerHTML = renderGovernanceSteps();
       workspace.innerHTML = renderCurrentGovernanceStep();
       if (activeGovernanceStep === 'skeleton' && activeStepView === 'diagram') requestAnimationFrame(mountDiagram);
-      if (activeGovernanceStep === 'data' && activeStepView === 'data') requestAnimationFrame(mountDataDiagram);
-      if (activeGovernanceStep === 'handoff') requestAnimationFrame(mountReviewPatternDiagrams);
+      if (activeGovernanceStep === 'skeleton' && activeStepView === 'diagram') requestAnimationFrame(mountReviewPatternDiagrams);
+      if (activeGovernanceStep === 'data' && activeDataEditingMode === 'guided' && activeStepView === 'data') requestAnimationFrame(mountDataDiagram);
     }
 
     function updateCandidateList() {
@@ -6217,6 +7868,10 @@
         const entry = { data: clone(data), dirty: false, origin: 'new', governanceStep: 'boundary', stepView: 'basic' };
         candidates = [entry];
         graphStateManager.clear();
+        checkedGovernanceSteps.clear();
+        resetWebGridEditor();
+        activeDataEditingMode = 'guided';
+        activeGridWorkspace = 'data';
         registerCandidateState(entry);
         currentIndex = 0;
         activeGovernanceStep = 'boundary';
@@ -6237,6 +7892,10 @@
       destroyDiagram();
       destroyDataDiagram();
       graphStateManager.clear();
+      checkedGovernanceSteps.clear();
+      resetWebGridEditor();
+      activeDataEditingMode = 'guided';
+      activeGridWorkspace = 'data';
       candidates = [];
       currentIndex = 0;
       activeGovernanceStep = 'start';
@@ -6292,8 +7951,10 @@
         data_name: '',
         description: '',
         information_type: 'pending_confirmation',
+        fields: [],
         behavior_links: [],
-        source_relations: []
+        source_relations: [],
+        lifecycle: pendingLifecycle()
       };
       currentDocument().data_objects.push(dataObject);
       activeDataRef = dataObject.data_ref;
@@ -6655,24 +8316,254 @@
       }
     }
 
+    function requestDataEditingMode(nextMode) {
+      const normalized = nextMode === 'grid' ? 'grid' : 'guided';
+      if (normalized === activeDataEditingMode) return;
+      if (activeDataEditingMode === 'grid' && webGridSession?.isDirty()) {
+        openGridModeSwitchModal(normalized);
+        return;
+      }
+      resetWebGridEditor();
+      activeDataEditingMode = normalized;
+      render();
+    }
+
+    function gridParentContext(tableId) {
+      if (['data_fields', 'data_behavior_links', 'data_source_relations'].includes(tableId)) return { parentRef: activeDataRef };
+      if (['form_behavior_links', 'form_areas'].includes(tableId)) return { parentRef: activeFormRef };
+      if (tableId === 'form_items') return { parentRef: activeAreaRef, formRef: activeFormRef };
+      if (tableId === 'field_source_links') return { parentRef: activeFormItemRef };
+      return {};
+    }
+
+    function createGridRowInSession(tableId, options = {}) {
+      ensureWebGridSession();
+      const definition = webGridSession.definition(tableId);
+      const context = { ...gridParentContext(tableId), ...options };
+      if (definition.parentTableId && !context.parentRef) {
+        if (options.silent) throw new Error(`请先在上级表格中选择一条记录，再新增${definition.label}。`);
+        window.alert(`请先在上级表格中选择一条记录，再新增${definition.label}。`);
+        return null;
+      }
+      const row = options.sourceRow
+        ? webGridSession.duplicateRow(tableId, options.sourceRow._row_id, context)
+        : webGridSession.addRow(tableId, context);
+      if (tableId === 'forms') {
+        const area = webGridSession.addRow('form_areas', { parentRef: row.form_ref });
+        webGridSession.updateCell('form_areas', area._row_id, 'area_type', '基本信息');
+        if (options.select !== false) activeAreaRef = area.area_ref;
+      }
+      if (tableId === 'data_behavior_links' && !row.behavior_ref) {
+        webGridSession.updateCell(tableId, row._row_id, 'behavior_ref', currentDocument().behaviors?.[0]?.behavior_ref || '');
+      }
+      if (tableId === 'form_behavior_links' && !row.behavior_ref) {
+        webGridSession.updateCell(tableId, row._row_id, 'behavior_ref', currentDocument().behaviors?.[0]?.behavior_ref || '');
+      }
+      if (tableId === 'field_source_links') {
+        const sourceDataRef = activeDataRef || webGridSession.rows('data_objects').find(item => !item._deleted)?.data_ref || null;
+        webGridSession.updateCell(tableId, row._row_id, 'source_data_ref', sourceDataRef);
+        if (!sourceDataRef) webGridSession.updateCell(tableId, row._row_id, 'source_type', 'external_system');
+      }
+      if (options.select === false) return row;
+      if (tableId === 'data_objects') activeDataRef = row.data_ref;
+      if (tableId === 'forms') activeFormRef = row.form_ref;
+      if (tableId === 'form_areas') activeAreaRef = row.area_ref;
+      if (tableId === 'form_items') activeFormItemRef = row.item_ref;
+      webGridSelectedRows[tableId] = row._row_id;
+      return row;
+    }
+
+    function addGridRow(tableId, options = {}) {
+      const row = createGridRowInSession(tableId, options);
+      if (!row) return null;
+      webGridIssues = [];
+      render();
+      return row;
+    }
+
+    function openGuidedUpdateFields(dataIndex, linkIndex, invoker = null) {
+      const dataObject = currentDocument()?.data_objects?.[dataIndex];
+      const link = dataObject?.behavior_links?.[linkIndex];
+      if (!dataObject || !link || link.operation !== 'update') return;
+      openUpdateFieldsModal({
+        dataRef: dataObject.data_ref,
+        dataName: dataObject.data_name,
+        selectedRefs: link.updated_field_refs,
+        invoker,
+        onConfirm(selectedRefs) {
+          link.updated_field_refs = selectedRefs;
+          touch();
+          render();
+          showStatus(`已登记${selectedRefs.length}个本次更新字段。`, 'success');
+        },
+        onCancel: render
+      });
+    }
+
+    function openGridUpdateFields(rowId, invoker = null) {
+      const row = webGridSession?.rows('data_behavior_links').find(item => item._row_id === rowId && !item._deleted);
+      if (!row || row.operation !== 'update') return;
+      const dataRow = webGridSession.rows('data_objects').find(item => item.data_ref === row.data_ref);
+      openUpdateFieldsModal({
+        dataRef: row.data_ref,
+        dataName: dataRow?.data_name,
+        selectedRefs: row.updated_field_refs,
+        fields: gridUpdateFieldOptions(row),
+        invoker,
+        onConfirm(selectedRefs) {
+          webGridSession.updateCell('data_behavior_links', rowId, 'updated_field_refs', selectedRefs);
+          clearNativeGridIssues();
+          refreshNativeGridPanel('data_behavior_links');
+          updateNativeGridStatus();
+          showStatus(`表格工作副本已登记${selectedRefs.length}个本次更新字段。`, 'success');
+        },
+        onCancel: () => refreshNativeGridPanel('data_behavior_links')
+      });
+    }
+
+    function openGraphUpdateFields(invoker = null, onConfirm = null) {
+      if (graphSelection?.kind !== 'data-edge' || !graphSelection.operations?.includes('update')) return;
+      const dataObject = currentDocument()?.data_objects?.find(item => item.data_ref === graphSelection.dataRef);
+      if (!dataObject) return;
+      openUpdateFieldsModal({
+        dataRef: dataObject.data_ref,
+        dataName: dataObject.data_name,
+        selectedRefs: graphSelection.updatedFieldRefs,
+        invoker,
+        onConfirm(selectedRefs) {
+          graphSelection.updatedFieldRefs = selectedRefs;
+          if (typeof onConfirm === 'function') return onConfirm(selectedRefs);
+          render();
+        },
+        onCancel: render
+      });
+    }
+
+    function applyGraphDataOperations(updatedFieldRefs = graphSelection?.updatedFieldRefs || []) {
+      if (graphSelection?.kind !== 'data-edge') return;
+      return runGraphCommand({
+        type: 'set_data_operations',
+        dataRef: graphSelection.dataRef,
+        behaviorRef: graphSelection.behaviorRef,
+        operations: graphSelection.operations || [],
+        updatedFieldRefs,
+        refFactory: () => newRef('data_link')
+      }, { successLabel: graphSelection.operations?.length ? '数据关系已更新' : '数据关系已删除' });
+    }
+
     function handleAction(action, element) {
       const index = Number(element.dataset.index);
       const formIndex = Number(element.dataset.formIndex);
       const areaIndex = Number(element.dataset.areaIndex);
       let nextFocusPath = '';
       if (action === 'switch-governance-step') return setActiveGovernanceStep(element.dataset.step);
+      if (action === 'check-governance-step') {
+        const stepId = globalThis.GovernanceWorkflow.normalizeStepId(element.dataset.step);
+        if (!currentDocument()) return;
+        checkedGovernanceSteps.add(governanceCheckKey(stepId));
+        render();
+        requestAnimationFrame(() => workspace.querySelector('.step-issue-panel, .step-check-clear')?.focus?.());
+        return;
+      }
       if (action === 'switch-step-view') {
         activeStepView = text(element.dataset.view) || defaultStepView(activeGovernanceStep);
         if (currentEntry()) currentEntry().stepView = activeStepView;
         return render();
       }
-      if (action === 'start-new-process') return protect(startNewProcess);
-      if (action === 'open-import-file') return protect(() => jsonInput.click());
-      if (action === 'clear-current-page') return protect(clearPage);
-      if (action === 'download-current-stage') return exportCurrent({
-        stage: globalThis.GovernanceWorkflow.stageForStep(activeGovernanceStep),
-        skipBusinessConfirm: activeGovernanceStep !== 'handoff'
-      });
+      if (action === 'switch-data-editing-mode') return requestDataEditingMode(element.dataset.mode);
+      if (action === 'switch-grid-workspace') {
+        activeGridWorkspace = element.dataset.workspace === 'forms' ? 'forms' : 'data';
+        return render();
+      }
+      if (action === 'grid-sort') {
+        const tableId = element.dataset.tableId;
+        const column = element.dataset.column;
+        const current = webGridSorts[tableId];
+        if (!current || current.column !== column) webGridSorts[tableId] = { column, direction: 'asc' };
+        else if (current.direction === 'asc') webGridSorts[tableId] = { column, direction: 'desc' };
+        else delete webGridSorts[tableId];
+        refreshNativeGridPanel(tableId);
+        return;
+      }
+      if (action === 'grid-add-row') return addGridRow(element.dataset.tableId);
+      if (action === 'open-grid-update-fields') return openGridUpdateFields(element.dataset.rowId, element);
+      if (action === 'grid-duplicate-row') {
+        const tableId = element.dataset.tableId;
+        const rowId = webGridSelectedRows[tableId];
+        const sourceRow = webGridSession?.rows(tableId).find(row => row._row_id === rowId && !row._deleted);
+        if (!sourceRow) return;
+        return addGridRow(tableId, { sourceRow });
+      }
+      if (action === 'grid-delete-row') {
+        const tableId = element.dataset.tableId;
+        const rowId = webGridSelectedRows[tableId];
+        if (!rowId) return;
+        const row = webGridSession.rows(tableId).find(item => item._row_id === rowId);
+        if (!row) return;
+        if (row._deleted) webGridSession.setDeleted(tableId, rowId, false);
+        else if (window.confirm(`确定将选中的${webGridSession.definition(tableId).label}标记为删除吗？应用前系统会检查引用。`)) webGridSession.setDeleted(tableId, rowId, true);
+        webGridIssues = [];
+        return render();
+      }
+      if (action === 'grid-move-row-up' || action === 'grid-move-row-down') {
+        const tableId = element.dataset.tableId;
+        const rowId = webGridSelectedRows[tableId];
+        if (!rowId) return;
+        webGridSession.moveRow(tableId, rowId, action === 'grid-move-row-up' ? -1 : 1);
+        webGridIssues = [];
+        return render();
+      }
+      if (action === 'discard-web-grid') return discardWebGridChanges();
+      if (action === 'apply-web-grid') return applyWebGridChanges();
+      if (action === 'focus-grid-issue') {
+        const tableId = element.dataset.tableId;
+        if (!tableId) return;
+        activeGridWorkspace = tableId.startsWith('form') || tableId === 'field_source_links' ? 'forms' : 'data';
+        const rowId = element.dataset.rowId;
+        const rowData = webGridSession.rows(tableId).find(row => row._row_id === rowId);
+        if (rowData) selectGridIssueContext(tableId, rowData);
+        webGridSelectedRows[tableId] = rowId;
+        render();
+        const focusCell = attempt => {
+          if (!focusNativeGridCell(tableId, rowId, element.dataset.column) && attempt < 6) {
+            setTimeout(() => focusCell(attempt + 1), 50);
+          }
+        };
+        setTimeout(() => focusCell(0), 30);
+        return;
+      }
+      if (action === 'open-update-fields') return openGuidedUpdateFields(Number(element.dataset.dataIndex), index, element);
+      if (action === 'open-graph-update-fields') return openGraphUpdateFields(element);
+      if (action === 'switch-data-mode') {
+        activeDataMode = text(element.dataset.mode) === 'lifecycle' ? 'lifecycle' : 'flow';
+        graphSelection = null;
+        if (activeDataMode === 'lifecycle') {
+          const dataObject = ensureActiveGraphDataObject();
+          const result = dataObject ? analyzeLifecycleForObject(dataObject) : null;
+          if (result?.changed) touch();
+        }
+        return render();
+      }
+      if (action === 'start-new-process') {
+        if (webGridSession?.isDirty()) return openGridModeSwitchModal('', () => protect(startNewProcess));
+        return protect(startNewProcess);
+      }
+      if (action === 'open-import-file') {
+        if (webGridSession?.isDirty()) return openGridModeSwitchModal('', () => protect(() => jsonInput.click()));
+        return protect(() => jsonInput.click());
+      }
+      if (action === 'clear-current-page') {
+        if (webGridSession?.isDirty()) return openGridModeSwitchModal('', () => protect(clearPage));
+        return protect(clearPage);
+      }
+      if (action === 'download-current-stage') {
+        const download = () => exportCurrent({
+          stage: globalThis.GovernanceWorkflow.stageForStep(activeGovernanceStep),
+          skipBusinessConfirm: activeGovernanceStep !== 'handoff'
+        });
+        if (webGridSession?.isDirty()) return openGridModeSwitchModal('', download);
+        return download();
+      }
       if (action === 'open-governance-drawer') {
         renderGovernanceDrawer();
         governanceDrawer.classList.add('show');
@@ -6687,13 +8578,19 @@
       if (action === 'open-help-view') return setActiveGovernanceStep('start', 'help');
       if (action === 'open-version-view') return setActiveGovernanceStep('start', 'version');
       if (action === 'choose-data-start') {
-        if (!(currentDocument()?.data_objects || []).length) addDataObject();
+        if (!(currentDocument()?.data_objects || []).length) {
+          addDataObject();
+          touch();
+        }
         activeStepView = 'data';
         activeWorkspaceTab = 'data';
         return render();
       }
       if (action === 'choose-form-start') {
-        if (!(currentDocument()?.forms || []).length) addForm('current_state');
+        if (!(currentDocument()?.data_objects || []).length) {
+          addDataObject();
+          touch();
+        }
         activeStepView = 'forms';
         activeWorkspaceTab = 'editor';
         activeEditorSection = 'forms';
@@ -6731,6 +8628,10 @@
       if (action === 'reset-diagram') return diagramView?.reset();
       if (action === 'toggle-diagram-example') {
         diagramExampleExpanded = !diagramExampleExpanded;
+        if (!diagramExampleExpanded) {
+          legendPatternGuideExpanded = false;
+          expandedReviewPatternId = '';
+        }
         return render();
       }
       if (action === 'toggle-diagram-expanded') {
@@ -6751,6 +8652,37 @@
         return render();
       }
       if (!currentDocument()) return;
+      if (action === 'reanalyze-current-lifecycle') {
+        const dataObject = ensureActiveGraphDataObject();
+        if (!dataObject) return;
+        const result = analyzeLifecycleForObject(dataObject);
+        touch();
+        showStatus(`已重新分析“${dataObject.data_name || '未命名数据'}”，形成${result?.candidate_count || 0}项候选。`, 'success');
+        return render();
+      }
+      if (action === 'reanalyze-all-lifecycle') {
+        let candidateCount = 0;
+        (currentDocument().data_objects || []).forEach(dataObject => {
+          const result = analyzeLifecycleForObject(dataObject);
+          candidateCount += result?.candidate_count || 0;
+        });
+        touch();
+        showStatus(`已重新分析${currentDocument().data_objects.length}个数据对象，共形成${candidateCount}项候选。`, 'success');
+        return render();
+      }
+      if (action === 'supplement-data-facts') {
+        activeDataMode = 'flow';
+        const dataObject = ensureActiveGraphDataObject();
+        graphSelection = dataObject ? { kind: 'data', ref: dataObject.data_ref, draft: clone(dataObject) } : null;
+        return render();
+      }
+      if (action === 'mark-master-data-pending') {
+        const dataObject = ensureActiveGraphDataObject();
+        if (!dataObject) return;
+        masterDataPendingRefs.add(dataObject.data_ref);
+        showStatus('已列入本页交接待定提示。该标记只保留在当前页面，不写成正式主数据结论。', 'success');
+        return render();
+      }
       if (action === 'fit-flow-diagram') {
         diagramView?.fit();
         captureGraphViewport();
@@ -6835,23 +8767,22 @@
       if (action === 'continue-data-relation') {
         if (!graphSelection?.behaviorRef) return;
         const dataObject = ensureActiveGraphDataObject();
+        const updateLink = dataObject.behavior_links.find(link => link.behavior_ref === graphSelection.behaviorRef && link.operation === 'update');
         graphSelection = {
           kind: 'data-edge',
           dataRef: dataObject.data_ref,
           behaviorRef: graphSelection.behaviorRef,
-          operations: dataObject.behavior_links.filter(link => link.behavior_ref === graphSelection.behaviorRef).map(link => link.operation)
+          operations: dataObject.behavior_links.filter(link => link.behavior_ref === graphSelection.behaviorRef).map(link => link.operation),
+          updatedFieldRefs: list(updateLink?.updated_field_refs)
         };
         return render();
       }
       if (action === 'apply-data-operations') {
         if (graphSelection?.kind !== 'data-edge') return;
-        return runGraphCommand({
-          type: 'set_data_operations',
-          dataRef: graphSelection.dataRef,
-          behaviorRef: graphSelection.behaviorRef,
-          operations: graphSelection.operations || [],
-          refFactory: () => newRef('data_link')
-        }, { successLabel: graphSelection.operations?.length ? '数据关系已更新' : '数据关系已删除' });
+        if (graphSelection.operations?.includes('update') && !list(graphSelection.updatedFieldRefs).length) {
+          return openGraphUpdateFields(element, selectedRefs => applyGraphDataOperations(selectedRefs));
+        }
+        return applyGraphDataOperations();
       }
       if (action === 'apply-data-property') {
         if (graphSelection?.kind !== 'data' || !graphSelection.draft) return;
@@ -6893,7 +8824,7 @@
           window.alert('请先添加至少一个业务行为，再登记数据关系。');
           return;
         }
-        dataObject.behavior_links.push({ link_ref: newRef('data_link'), behavior_ref: behavior.behavior_ref, operation: 'pending_confirmation' });
+        dataObject.behavior_links.push({ link_ref: newRef('data_link'), behavior_ref: behavior.behavior_ref, operation: 'pending_confirmation', updated_field_refs: [] });
         touch();
         return render();
       }
@@ -6919,6 +8850,41 @@
       }
       if (action === 'remove-data-source') {
         currentDocument().data_objects[Number(element.dataset.dataIndex)]?.source_relations.splice(index, 1);
+        touch();
+        return render();
+      }
+      if (action === 'add-data-field') {
+        const dataObject = currentDocument().data_objects[Number(element.dataset.dataIndex)];
+        if (!dataObject) return;
+        if (!Array.isArray(dataObject.fields)) dataObject.fields = [];
+        const dataField = { field_ref: newRef('data_field'), field_name: '', field_type: '', definition: '' };
+        dataObject.fields.push(dataField);
+        activeDataFieldRef = dataField.field_ref;
+        touch();
+        return render();
+      }
+      if (action === 'remove-data-field') {
+        const dataObject = currentDocument().data_objects[Number(element.dataset.dataIndex)];
+        const dataField = dataObject?.fields?.[index];
+        if (!dataField) return;
+        const references = [];
+        (dataObject.behavior_links || []).forEach(link => {
+          if (list(link.updated_field_refs).includes(dataField.field_ref)) {
+            references.push(`数据行为关系“${behaviorLabel(link.behavior_ref)} / 更新”`);
+          }
+        });
+        (currentDocument().forms || []).forEach(form => (form.areas || []).forEach(area =>
+          (area.items || []).forEach(item => {
+            if (item.data_field_ref === dataField.field_ref) references.push(`${form.form_name || '未命名表单'} / ${item.item_name || '未命名字段'}`);
+          })
+        ));
+        if (references.length) {
+          window.alert(`当前对象字段仍被${references.join('、')}引用。请先替换或移除这些引用，再删除对象字段。`);
+          return;
+        }
+        if (!window.confirm(`确定删除对象字段“${dataField.field_name || '未命名对象字段'}”吗？`)) return;
+        dataObject.fields.splice(index, 1);
+        activeDataFieldRef = dataObject.fields[Math.min(index, dataObject.fields.length - 1)]?.field_ref || '';
         touch();
         return render();
       }
@@ -6989,6 +8955,11 @@
       }
       if (action === 'select-data') {
         activeDataRef = text(element.dataset.ref);
+        activeDataFieldRef = '';
+        return render();
+      }
+      if (action === 'select-data-field') {
+        activeDataFieldRef = text(element.dataset.ref);
         return render();
       }
       if (action === 'select-term') {
@@ -7005,10 +8976,14 @@
         activeAreaRef = text(element.dataset.ref);
         return render();
       }
-      if (action === 'export-current') return exportCurrent({
-        stage: globalThis.GovernanceWorkflow.stageForStep('handoff'),
-        skipBusinessConfirm: false
-      });
+      if (action === 'export-current') {
+        const download = () => exportCurrent({
+          stage: globalThis.GovernanceWorkflow.stageForStep('handoff'),
+          skipBusinessConfirm: false
+        });
+        if (webGridSession?.isDirty()) return openGridModeSwitchModal('', download);
+        return download();
+      }
       if (action === 'add-behavior') addBehavior();
       if (action === 'remove-behavior' && !removeBehavior(index)) return;
       if (action === 'add-relation') addRelation();
@@ -7041,6 +9016,8 @@
           required: false,
           instructions: '',
           business_data_ref: null,
+          data_field_ref: null,
+          value_usage_mode: 'pending_confirmation',
           value_origin_mode: 'pending_confirmation',
           source_links: []
         };
@@ -7269,6 +9246,41 @@
           focusPath: `data_objects.${item.dataIndex}.behavior_links`
         }, item.suggestions);
       });
+      (data.data_objects || []).forEach((dataObject, dataIndex) => {
+        const lifecycle = dataObject.lifecycle;
+        const lifecycleTarget = {
+          editorSection: 'process',
+          processSection: 'data',
+          focusKind: 'data',
+          focusRef: dataObject.data_ref,
+          focusPath: `data_objects.${dataIndex}.lifecycle`,
+          reviewAspect: 'lifecycle'
+        };
+        if (!lifecycle || lifecycle.applicability === 'pending_confirmation') {
+          addWarning(
+            `${dataObject.data_name || `第${dataIndex + 1}个数据对象`}尚未确认本流程是否涉及生命周期变化。`,
+            lifecycleTarget,
+            ['进入“数据与表单—生命周期”，按数据对象核对；当前流程未涉及完整生命周期时，不需要补造其他阶段。']
+          );
+          return;
+        }
+        if (lifecycle.applicability === 'not_applicable' && !lifecycle.decision_reason) {
+          addWarning(
+            `${dataObject.data_name || `第${dataIndex + 1}个数据对象`}已选择生命周期不适用，但尚未记录原因。`,
+            lifecycleTarget,
+            ['记录为什么当前流程只引用该对象，或为什么没有生命周期变化。']
+          );
+        }
+        const events = (lifecycle.routes || []).flatMap(route => route.events || []);
+        const pendingEvents = events.filter(event => ['pending_confirmation', 'needs_recheck'].includes(event.review_status));
+        if (pendingEvents.length) {
+          addWarning(
+            `${dataObject.data_name || `第${dataIndex + 1}个数据对象`}有${pendingEvents.length}项生命周期事件待确认或需要重新核对。`,
+            lifecycleTarget,
+            ['按对象核对触发条件、结果状态、作用范围、责任和异常处理；高风险事件必须人工确认。']
+          );
+        }
+      });
       const parallelDetails = globalThis.StructureLearningScore?.parallelStructureDetails?.(data);
       const parallelTarget = { editorSection: 'process', processSection: 'relations' };
       if (parallelDetails?.missingSplit) {
@@ -7400,6 +9412,30 @@
             ['核对这些对象是否确实不同；需要保留时结合创建行为以及来源线索区分。', '确认属于同一对象时，先核对引用影响，再使用受控归并。']
           );
         }
+        const fieldNames = new Map();
+        (item.fields || []).forEach((dataField, fieldIndex) => {
+          const fieldPath = `data_objects.${dataIndex}.fields.${fieldIndex}`;
+          need(dataField.field_name, `${label}的对象字段${fieldIndex + 1}未填写名称`, atField(dataTarget, `${fieldPath}.field_name`));
+          need(dataField.field_type, `${label}的对象字段“${dataField.field_name || fieldIndex + 1}”未填写数据类型`, atField(dataTarget, `${fieldPath}.field_type`));
+          if (!text(dataField.definition).trim()) {
+            addWarning(`${label}的对象字段“${dataField.field_name || fieldIndex + 1}”未填写业务定义。`, atField(dataTarget, `${fieldPath}.definition`));
+          }
+          const normalizedName = text(dataField.field_name).trim().replace(/\s+/g, ' ').toLocaleLowerCase();
+          if (normalizedName) {
+            if (!fieldNames.has(normalizedName)) fieldNames.set(normalizedName, []);
+            fieldNames.get(normalizedName).push(dataField);
+          }
+        });
+        fieldNames.forEach(fields => {
+          const types = [...new Set(fields.map(dataField => text(dataField.field_type).trim()).filter(Boolean))];
+          if (fields.length > 1 && types.length > 1) {
+            addWarning(
+              `${label}包含${fields.length}个同名对象字段，但数据类型不同，系统没有自动归并。`,
+              atField(dataTarget, `data_objects.${dataIndex}.fields`),
+              ['核对这些字段是否代表不同业务含义；确属同一字段时统一数据类型并保留一个对象字段。']
+            );
+          }
+        });
         const createLinks = (item.behavior_links || []).filter(link => link.operation === 'create');
         if (createLinks.length > 1) {
           addWarning(`${label}登记了${createLinks.length}个创建行为，当前无法确认唯一创建位置。`, atField(dataTarget, `data_objects.${dataIndex}.behavior_links`));
@@ -7407,6 +9443,13 @@
         (item.behavior_links || []).forEach((link, linkIndex) => {
           if (link.operation === 'pending_confirmation') {
             addWarning(`${label}与“${behaviorLabel(link.behavior_ref)}”之间的数据操作待确认。`, atField(dataTarget, `data_objects.${dataIndex}.behavior_links.${linkIndex}.operation`));
+          }
+          if (link.operation === 'update' && !list(link.updated_field_refs).length) {
+            addWarning(
+              `${label}与“${behaviorLabel(link.behavior_ref)}”之间已选择“更新”，但尚未选择本次实际更新的字段。`,
+              atField(dataTarget, `data_objects.${dataIndex}.behavior_links.${linkIndex}.updated_field_refs`),
+              ['点击本项返回数据行为关系，再通过“选择字段”补充一个或多个对象字段。']
+            );
           }
         });
         if (!createLinks.length && !(item.source_relations || []).length) {
@@ -7493,10 +9536,16 @@
           area.items.forEach((item, itemIndex) => {
             const itemLabel = item.item_name || `字段${itemIndex + 1}`;
             const itemPath = `forms.${formIndex}.areas.${areaIndex}.items.${itemIndex}`;
+            if (item.business_data_ref && !item.data_field_ref) {
+              addWarning(`${formLabel}的“${itemLabel}”已选择业务数据归属，但尚未引用对象字段。`, atField(areaTarget, `${itemPath}.data_field_ref`));
+            }
+            if (item.data_field_ref && item.value_usage_mode === 'pending_confirmation') {
+              addWarning(`${formLabel}的“${itemLabel}”尚未确认是权威录入、沿用已有值、系统计算还是外部取得。`, atField(areaTarget, `${itemPath}.value_usage_mode`));
+            }
             if (item.value_origin_mode === 'pending_confirmation') {
               addWarning(`${formLabel}的“${itemLabel}”取值方式待确认。`, atField(areaTarget, `${itemPath}.value_origin_mode`));
             }
-            if (item.value_origin_mode === 'depends_on_data' && !(item.source_links || []).length) {
+            if (item.value_origin_mode === 'depends_on_data' && item.value_usage_mode !== 'reuse_existing' && !(item.source_links || []).length) {
               addWarning(`${formLabel}的“${itemLabel}”选择依赖数据取得，但尚未登记取值来源。`, atField(areaTarget, `${itemPath}.source_links`));
             }
             (item.source_links || []).forEach((link, linkIndex) => {
@@ -7514,6 +9563,37 @@
             });
           });
         });
+      });
+      const fieldUsageContexts = new Map();
+      const dataFieldLabels = new Map();
+      data.data_objects.forEach(dataObject => (dataObject.fields || []).forEach(dataField => {
+        dataFieldLabels.set(dataField.field_ref, `${dataObject.data_name || '未命名数据'} / ${dataField.field_name || '未命名对象字段'}`);
+      }));
+      data.forms.forEach((form, formIndex) => (form.areas || []).forEach((area, areaIndex) =>
+        (area.items || []).forEach((item, itemIndex) => {
+          if (!item.data_field_ref) return;
+          if (!fieldUsageContexts.has(item.data_field_ref)) fieldUsageContexts.set(item.data_field_ref, []);
+          fieldUsageContexts.get(item.data_field_ref).push({ form, formIndex, area, areaIndex, item, itemIndex });
+        })
+      ));
+      fieldUsageContexts.forEach((contexts, fieldRef) => {
+        const authoritative = contexts.filter(context => context.item.value_usage_mode === 'authoritative_input');
+        const establishing = contexts.filter(context => ['authoritative_input', 'calculated', 'external_source'].includes(context.item.value_usage_mode));
+        const first = contexts[0];
+        const target = atField({ editorSection: 'forms', focusKind: 'area', focusRef: first.area.area_ref }, `forms.${first.formIndex}.areas.${first.areaIndex}.items.${first.itemIndex}.value_usage_mode`);
+        if (authoritative.length > 1) {
+          addWarning(
+            `${dataFieldLabels.get(fieldRef) || fieldRef}在${authoritative.length}个表单字段中都被设置为本流程权威录入点，仍会造成重复录入。`,
+            target,
+            ['保留一个权威录入点；其他表单字段改为“沿用已有值”。分支互斥等例外需要业务人员说明。']
+          );
+        } else if (!establishing.length && contexts.some(context => context.item.value_usage_mode === 'reuse_existing')) {
+          addWarning(
+            `${dataFieldLabels.get(fieldRef) || fieldRef}只设置了沿用已有值，但当前流程没有权威录入、系统计算或外部取得位置。`,
+            target,
+            ['补充一个能够建立字段值的位置，或核对该值是否在流程开始前已经可用。']
+          );
+        }
       });
       legacyCrossDepartmentDiagnostics(data).forEach(item => {
         item.issues.forEach(issue => addWarning(issue.message, issue, issue.suggestions));
@@ -7890,7 +9970,8 @@
         if (!supported.includes(parsed.schema_version)) {
           throw new Error(`不支持的结构化文件版本：${parsed.schema_version || '未提供'}`);
         }
-        const sourceValidation = await validateGraphDocument(parsed);
+        const needsCandidateFieldUpgrade = globalThis.ProcessGovernanceMigration.needsDataFieldUpgrade(parsed);
+        const sourceValidation = needsCandidateFieldUpgrade ? { valid: true, errors: [] } : await validateGraphDocument(parsed);
         if (!sourceValidation.valid) {
           const firstError = sourceValidation.errors?.[0];
           throw new Error(firstError ? `${validationErrorLocation(firstError)}：${firstError.message}` : '源文件未通过结构与本地引用检查');
@@ -7904,9 +9985,9 @@
         const failedTarget = targetValidations.find(result => !result.valid);
         if (failedTarget) {
           const firstError = failedTarget.errors?.[0];
-          throw new Error(firstError ? `${validationErrorLocation(firstError)}：${firstError.message}` : '迁移副本未通过v6结构校验');
+          throw new Error(firstError ? `${validationErrorLocation(firstError)}：${firstError.message}` : '迁移副本未通过v7结构校验');
         }
-        const migrated = parsed.schema_version !== EXPECTED_EXPORT_SCHEMA_VERSION;
+        const migrated = parsed.schema_version !== EXPECTED_EXPORT_SCHEMA_VERSION || needsCandidateFieldUpgrade;
         const nextCandidates = migratedDocuments.map(data => ({
           data: clone(data),
           dirty: migrated,
@@ -7924,6 +10005,10 @@
         destroyDiagram();
         destroyDataDiagram();
         graphStateManager.clear();
+        checkedGovernanceSteps.clear();
+        resetWebGridEditor();
+        activeDataEditingMode = 'guided';
+        activeGridWorkspace = 'data';
         candidates = nextCandidates;
         candidates.forEach(entry => registerCandidateState(entry, { forceDirty: migrated }));
         currentIndex = 0;
@@ -7931,10 +10016,10 @@
         render();
         showStatus(
           candidates.length > 1
-            ? `历史文件包含 ${candidates.length} 条流程，全部通过v6校验后已拆成候选。每条流程必须单独下载。`
+            ? `历史文件包含 ${candidates.length} 条流程，已在当前页面显示为候选。每条流程必须单独下载。`
             : migrated
-              ? '历史结构化文件已无损迁移到v6，当前内容标记为未下载。'
-              : 'v6结构化文件已导入当前页面。',
+              ? '历史结构化文件已导入当前页面，当前内容标记为未下载。'
+              : 'v7结构化文件已导入当前页面。',
           'success'
         );
       } catch (error) {
@@ -7961,6 +10046,7 @@
       currentIndex = nextIndex;
       graphSelection = null;
       flowRelationDraft = null;
+      resetWebGridEditor();
       activeDataRef = graphStateManager.view(candidateStateKey()).data.dataRef || '';
       selectInitialTabAfterImport();
       render();
@@ -7969,7 +10055,12 @@
     candidateList.addEventListener('click', event => {
       const button = event.target.closest('[data-candidate-index]');
       if (!button) return;
-      switchCandidate(Number(button.dataset.candidateIndex));
+      const nextIndex = Number(button.dataset.candidateIndex);
+      if (webGridSession?.isDirty()) {
+        openGridModeSwitchModal('', () => switchCandidate(nextIndex));
+        return;
+      }
+      switchCandidate(nextIndex);
     });
 
     governanceHeader.addEventListener('change', event => {
@@ -7995,7 +10086,27 @@
       if (event.target === governanceDrawer) handleAction('close-governance-drawer', governanceDrawer);
     });
 
+    workspace.addEventListener('toggle', event => {
+      if (!event.target.matches('.node-combination-guide')) return;
+      legendPatternGuideExpanded = event.target.open;
+      if (legendPatternGuideExpanded) {
+        requestAnimationFrame(mountReviewPatternDiagrams);
+        return;
+      }
+      expandedReviewPatternId = '';
+      destroyReviewPatternDiagrams();
+      document.body.classList.toggle('diagram-overlay-open', diagramExpanded);
+    }, true);
+
     workspace.addEventListener('input', event => {
+      if (event.target.matches('[data-grid-search]')) {
+        applyNativeGridFilter(event.target.dataset.gridSearch, event.target.value);
+        return;
+      }
+      if (event.target.matches('[data-grid-cell]')) {
+        updateNativeGridCell(event.target);
+        return;
+      }
       const graphProperty = event.target.closest('[data-graph-property]');
       if (graphProperty && graphSelection?.draft) {
         const key = graphProperty.dataset.graphProperty;
@@ -8016,6 +10127,20 @@
       const target = event.target.closest('[data-bind]');
       if (!target || !currentDocument()) return;
       if (target.dataset.bind === 'process.owning_department') return;
+      const dataOperationMatch = target.dataset.bind.match(/^data_objects\.(\d+)\.behavior_links\.(\d+)\.operation$/);
+      if (dataOperationMatch) {
+        const dataIndex = Number(dataOperationMatch[1]);
+        const linkIndex = Number(dataOperationMatch[2]);
+        const link = currentDocument()?.data_objects?.[dataIndex]?.behavior_links?.[linkIndex];
+        if (!link) return;
+        link.operation = target.value;
+        if (link.operation !== 'update') link.updated_field_refs = [];
+        else link.updated_field_refs = list(link.updated_field_refs);
+        touch();
+        if (link.operation === 'update') openGuidedUpdateFields(dataIndex, linkIndex, target);
+        else render();
+        return;
+      }
       const kind = target.dataset.kind;
       const value = kind === 'boolean' ? target.checked : kind === 'nullable' ? nullable(target.value) : target.value;
       setByPath(target.dataset.bind, value);
@@ -8059,6 +10184,18 @@
           updateOrderedSelectorLabel('data', dataObject.data_ref, dataSelectorLabel(dataObject, dataIndex));
         }
       }
+      const dataFieldTypeMatch = target.dataset.bind.match(/^data_objects\.(\d+)\.fields\.(\d+)\.field_type$/);
+      if (dataFieldTypeMatch) {
+        const dataObject = currentDocument().data_objects[Number(dataFieldTypeMatch[1])];
+        const dataField = dataObject?.fields?.[Number(dataFieldTypeMatch[2])];
+        if (dataField) {
+          (currentDocument().forms || []).forEach(form => (form.areas || []).forEach(area =>
+            (area.items || []).forEach(item => {
+              if (item.data_field_ref === dataField.field_ref) item.item_type = dataField.field_type;
+            })
+          ));
+        }
+      }
       const termMatch = target.dataset.bind.match(/^terms\.(\d+)\.term_name$/);
       if (termMatch) {
         const termIndex = Number(termMatch[1]);
@@ -8071,6 +10208,20 @@
 
     workspace.addEventListener('change', event => {
       const target = event.target;
+      if (target.matches('[data-grid-cell]')) {
+        updateNativeGridCell(target);
+        if (target.dataset.gridColumn === 'business_data_ref') refreshNativeGridPanel(target.dataset.gridTableId);
+        if (target.dataset.gridTableId === 'data_behavior_links' && target.dataset.gridColumn === 'operation') {
+          const row = webGridSession.rows('data_behavior_links').find(item => item._row_id === target.dataset.gridRowId);
+          if (!row) return;
+          if (row?.operation === 'update') openGridUpdateFields(row._row_id, target);
+          else {
+            webGridSession.updateCell('data_behavior_links', row._row_id, 'updated_field_refs', []);
+            refreshNativeGridPanel('data_behavior_links');
+          }
+        }
+        return;
+      }
       if (target.matches('[data-graph-relation-type]') && flowRelationDraft) {
         flowRelationDraft.relation_type = target.value;
         if (target.value) flowRelationDraft.stage = 'source';
@@ -8112,6 +10263,10 @@
         const item = ensureActiveGraphDataObject();
         graphSelection = item ? { kind: 'data', ref: item.data_ref, draft: clone(item) } : null;
         graphStateManager.updateView(candidateStateKey(), { data: { dataRef: activeDataRef, zoom: null, pan: null } });
+        if (activeDataMode === 'lifecycle' && item) {
+          const result = analyzeLifecycleForObject(item);
+          if (result?.changed) touch();
+        }
         render();
         return;
       }
@@ -8201,6 +10356,42 @@
         refreshPreviewAvailability();
         return;
       }
+      const fieldOwnerMatch = target.dataset.bind?.match(/^forms\.(\d+)\.areas\.(\d+)\.items\.(\d+)\.business_data_ref$/);
+      if (fieldOwnerMatch) {
+        const item = currentDocument()?.forms?.[Number(fieldOwnerMatch[1])]?.areas?.[Number(fieldOwnerMatch[2])]?.items?.[Number(fieldOwnerMatch[3])];
+        const owner = (currentDocument()?.data_objects || []).find(dataObject => dataObject.data_ref === item?.business_data_ref);
+        if (item && !(owner?.fields || []).some(dataField => dataField.field_ref === item.data_field_ref)) {
+          item.data_field_ref = null;
+          item.value_usage_mode = 'pending_confirmation';
+        }
+        render();
+        return;
+      }
+      const dataFieldReferenceMatch = target.dataset.bind?.match(/^forms\.(\d+)\.areas\.(\d+)\.items\.(\d+)\.data_field_ref$/);
+      if (dataFieldReferenceMatch) {
+        const item = currentDocument()?.forms?.[Number(dataFieldReferenceMatch[1])]?.areas?.[Number(dataFieldReferenceMatch[2])]?.items?.[Number(dataFieldReferenceMatch[3])];
+        if (!item) return;
+        const owner = (currentDocument().data_objects || []).find(dataObject =>
+          (dataObject.fields || []).some(dataField => dataField.field_ref === item.data_field_ref)
+        );
+        const dataField = (owner?.fields || []).find(field => field.field_ref === item.data_field_ref);
+        if (owner && dataField) {
+          item.business_data_ref = owner.data_ref;
+          item.item_type = dataField.field_type;
+          if (!text(item.item_name).trim()) item.item_name = dataField.field_name;
+          const otherReferences = (currentDocument().forms || []).flatMap(form => (form.areas || []).flatMap(area =>
+            (area.items || []).filter(candidate => candidate !== item && candidate.data_field_ref === dataField.field_ref)
+          ));
+          if (item.value_usage_mode === 'pending_confirmation') {
+            item.value_usage_mode = otherReferences.length ? 'reuse_existing' : 'authoritative_input';
+          }
+          if (item.value_origin_mode === 'pending_confirmation') {
+            item.value_origin_mode = item.value_usage_mode === 'authoritative_input' ? 'direct_current_process' : 'depends_on_data';
+          }
+        }
+        render();
+        return;
+      }
       const fieldSourceTypeMatch = target.dataset.bind?.match(/^forms\.(\d+)\.areas\.(\d+)\.items\.(\d+)\.source_links\.(\d+)\.source_type$/);
       if (fieldSourceTypeMatch) {
         const formIndex = Number(fieldSourceTypeMatch[1]);
@@ -8226,9 +10417,11 @@
         /^behaviors\.\d+\.node_type$/.test(target.dataset.bind)
         || /^behaviors\.\d+\.(actor_department_data_ref|actor_position_rule)$/.test(target.dataset.bind)
         || /^data_objects\.\d+\.(information_type|behavior_links\.\d+\.(behavior_ref|operation)|source_relations\.\d+\.availability_mode)$/.test(target.dataset.bind)
+        || /^data_objects\.\d+\.fields\.\d+\.(field_name|field_type)$/.test(target.dataset.bind)
+        || /^data_objects\.\d+\.lifecycle\./.test(target.dataset.bind)
         || /^forms\.\d+\.form_design_state$/.test(target.dataset.bind)
         || /^forms\.\d+\.behavior_links\.\d+\.behavior_ref$/.test(target.dataset.bind)
-        || /^forms\.\d+\.areas\.\d+\.items\.\d+\.(business_data_ref|value_origin_mode)$/.test(target.dataset.bind)
+        || /^forms\.\d+\.areas\.\d+\.items\.\d+\.(business_data_ref|data_field_ref|value_usage_mode|value_origin_mode)$/.test(target.dataset.bind)
         || /^forms\.\d+\.areas\.\d+\.items\.\d+\.item_type$/.test(target.dataset.bind)
       )) {
         render();
@@ -8236,12 +10429,26 @@
     });
 
     workspace.addEventListener('click', event => {
+      const rowSelector = event.target.closest('[data-grid-row-selector]');
+      if (rowSelector) {
+        selectNativeGridRow(rowSelector.dataset.gridTableId, rowSelector.dataset.gridRowId);
+        const firstControl = rowSelector.closest('tr')?.querySelector('[data-grid-cell]');
+        firstControl?.focus();
+        return;
+      }
       const button = event.target.closest('[data-action]');
       if (!button) return;
       handleAction(button.dataset.action, button);
     });
 
     workspace.addEventListener('pointerdown', event => {
+      const gridCell = event.target.closest('[data-grid-cell]');
+      if (gridCell && event.button === 0) {
+        selectNativeGridRow(gridCell.dataset.gridTableId, gridCell.dataset.gridRowId, {
+          column: gridCell.dataset.gridColumn,
+          extend: event.shiftKey
+        });
+      }
       const handle = event.target.closest('[data-drag-handle]');
       if (!handle || event.button !== 0) return;
       if (!beginSortableDrag(handle, event.pointerType || 'pointer', event.pointerId)) return;
@@ -8266,7 +10473,58 @@
       finishSortableDrag(false);
     });
 
+    workspace.addEventListener('compositionstart', event => {
+      const control = event.target.closest('[data-grid-cell]');
+      if (!control) return;
+      control.dataset.gridComposing = '1';
+      control.dataset.gridCompositionEndedAt = '0';
+    });
+
+    workspace.addEventListener('compositionend', event => {
+      const control = event.target.closest('[data-grid-cell]');
+      if (!control) return;
+      control.dataset.gridComposing = '0';
+      control.dataset.gridCompositionEndedAt = String(Date.now());
+      updateNativeGridCell(control);
+    });
+
+    workspace.addEventListener('paste', event => {
+      const control = event.target.closest('[data-grid-cell]');
+      if (!control) return;
+      const clipboardText = event.clipboardData?.getData('text/plain') || '';
+      if (!/[\t\r\n]/.test(clipboardText)) return;
+      event.preventDefault();
+      applyNativeGridPaste(control, clipboardText);
+    });
+
     workspace.addEventListener('keydown', event => {
+      const gridCell = event.target.closest('[data-grid-cell]');
+      if (gridCell) {
+        const tableId = gridCell.dataset.gridTableId;
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'c') {
+          const bounds = nativeGridRangeBounds(tableId, nativeGridRows(tableId), nativeGridColumns(tableId));
+          if (bounds && (bounds.rowStart !== bounds.rowEnd || bounds.columnStart !== bounds.columnEnd)) {
+            event.preventDefault();
+            copyNativeGridRange(tableId).catch(error => showStatus(`复制失败：${error.message}`, 'error'));
+          }
+          return;
+        }
+        if (event.key === 'Enter') {
+          const composing = globalThis.NativeWebGrid.isCompositionKey(
+            event,
+            gridCell.dataset.gridComposing === '1',
+            Number(gridCell.dataset.gridCompositionEndedAt || 0)
+          );
+          if (composing) return;
+          gridCell.dataset.gridCompositionEndedAt = '0';
+          if (gridCell.matches('textarea, select, input[type="checkbox"]')) return;
+          event.preventDefault();
+          event.stopPropagation();
+          updateNativeGridCell(gridCell);
+          continueNativeGridInput(gridCell);
+          return;
+        }
+      }
       const handle = event.target.closest('[data-drag-handle]');
       if (!handle && !sortableDragState) return;
       if (!sortableDragState && handle && (event.key === ' ' || event.key === 'Enter')) {
@@ -8304,6 +10562,19 @@
     document.getElementById('exportBeforeOwningDepartmentChangeButton').addEventListener('click', exportCurrent);
     confirmOwningDepartmentChangeButton.addEventListener('click', confirmOwningDepartmentChange);
 
+    continueGridEditingButton.addEventListener('click', closeGridModeSwitchModal);
+    discardGridChangesButton.addEventListener('click', () => discardWebGridChanges({ switchMode: webGridPendingMode || '', after: webGridPendingAction }));
+    applyGridChangesButton.addEventListener('click', () => applyWebGridChanges({ switchMode: webGridPendingMode || '', after: webGridPendingAction }));
+
+    cancelUpdateFieldsButton.addEventListener('click', () => closeUpdateFieldsModal(true));
+    confirmUpdateFieldsButton.addEventListener('click', confirmUpdateFieldsSelection);
+    updateFieldsOptions.addEventListener('change', () => {
+      updateFieldsError.textContent = '';
+    });
+    updateFieldsModal.addEventListener('click', event => {
+      if (event.target === updateFieldsModal) closeUpdateFieldsModal(true);
+    });
+
     document.getElementById('cancelProtectedButton').addEventListener('click', () => {
       protectedAction = null;
       closeProtectedModal();
@@ -8334,6 +10605,14 @@
 
     window.addEventListener('keydown', event => {
       if (event.key !== 'Escape') return;
+      if (updateFieldsModal.classList.contains('show')) {
+        closeUpdateFieldsModal(true);
+        return;
+      }
+      if (gridModeSwitchModal.classList.contains('show')) {
+        closeGridModeSwitchModal();
+        return;
+      }
       if (flowRelationDraft) {
         flowRelationDraft = null;
         render();

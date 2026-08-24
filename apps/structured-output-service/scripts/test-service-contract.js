@@ -9,6 +9,7 @@ const {
   extractFromText,
   decodeTextBuffer,
   createEmptyProcessGovernanceDocument,
+  createEmptyProcessGovernanceV6Document,
   PROCESS_GOVERNANCE_SCHEMA_DIGEST
 } = require('../server');
 
@@ -19,6 +20,9 @@ const processDiagramPath = path.join(appRoot, 'public', 'process-diagram.js');
 const reviewPatternDiagramsPath = path.join(appRoot, 'public', 'review-pattern-diagrams.js');
 const structureScorePath = path.join(appRoot, 'public', 'structure-score.js');
 const governanceWorkflowPath = path.join(appRoot, 'public', 'governance-workflow.js');
+const webGridCorePath = path.join(appRoot, 'public', 'web-grid-core.js');
+const nativeWebGridPath = path.join(appRoot, 'public', 'native-web-grid.js');
+const processV7GridAdapterPath = path.join(appRoot, 'public', 'process-v7-grid-adapter.js');
 const serverPath = path.join(appRoot, 'server.js');
 const processV1SchemaPath = path.join(repoRoot, 'docs', 'contracts', 'process-governance-v1.schema.json');
 const processV2SchemaPath = path.join(repoRoot, 'docs', 'contracts', 'process-governance-v2.schema.json');
@@ -26,6 +30,7 @@ const processV3SchemaPath = path.join(repoRoot, 'docs', 'contracts', 'process-go
 const processV4SchemaPath = path.join(repoRoot, 'docs', 'contracts', 'process-governance-v4.schema.json');
 const processSchemaPath = path.join(repoRoot, 'docs', 'contracts', 'process-governance-v5.schema.json');
 const processV6SchemaPath = path.join(repoRoot, 'docs', 'contracts', 'process-governance-v6.schema.json');
+const processV7SchemaPath = path.join(repoRoot, 'docs', 'contracts', 'process-governance-v7.schema.json');
 const legacySchemaPath = path.join(repoRoot, 'docs', 'contracts', 'document-structured-output.schema.json');
 const Migration = require(path.join(appRoot, 'public', 'process-governance-migration.js'));
 const { buildGraphModel } = require(processDiagramPath);
@@ -295,6 +300,7 @@ async function testSchemas() {
   const processV1Schema = JSON.parse(fs.readFileSync(processV1SchemaPath, 'utf8'));
   const processV4Schema = JSON.parse(fs.readFileSync(processV4SchemaPath, 'utf8'));
   const processV6Schema = JSON.parse(fs.readFileSync(processV6SchemaPath, 'utf8'));
+  const processV7Schema = JSON.parse(fs.readFileSync(processV7SchemaPath, 'utf8'));
   const legacySchema = JSON.parse(fs.readFileSync(legacySchemaPath, 'utf8'));
   const processAjv = new Ajv2020({ allErrors: true, strict: false, validateFormats: false });
   processAjv.addSchema(processV1Schema);
@@ -303,6 +309,7 @@ async function testSchemas() {
   processAjv.addSchema(processV4Schema);
   const processValidator = processAjv.compile(processSchema);
   const processV6Validator = processAjv.compile(processV6Schema);
+  const processV7Validator = processAjv.compile(processV7Schema);
   const processV4Validator = processAjv.getSchema(processV4Schema.$id);
   const processV3Validator = processAjv.getSchema(processV3Schema.$id);
   const processV2Validator = processAjv.getSchema(processV2Schema.$id);
@@ -348,10 +355,27 @@ async function testSchemas() {
   assert.equal(processV2Validator(previousV2Draft), true, 'process-governance-v2 must remain valid without v3 fields');
   assert.equal(typeof legacyValidator, 'function');
   assert.equal(
-    processV6Validator(createEmptyProcessGovernanceDocument()),
+    processV6Validator(createEmptyProcessGovernanceV6Document()),
     true,
     JSON.stringify(processV6Validator.errors)
   );
+  assert.equal(
+    processV7Validator(createEmptyProcessGovernanceDocument()),
+    true,
+    JSON.stringify(processV7Validator.errors)
+  );
+  assert.ok(processV7Schema.$defs.dataBehaviorLink.properties.updated_field_refs);
+  const v7UpdateRelation = Migration.migrateDocument(createV5Draft())[0];
+  const updateDataObject = v7UpdateRelation.data_objects[0];
+  updateDataObject.behavior_links = [{
+    link_ref: 'data_link_update_test',
+    behavior_ref: v7UpdateRelation.behaviors[0].behavior_ref,
+    operation: 'update',
+    updated_field_refs: [updateDataObject.fields[0].field_ref]
+  }];
+  assert.equal(processV7Validator(v7UpdateRelation), true, JSON.stringify(processV7Validator.errors));
+  updateDataObject.behavior_links[0].operation = 'use';
+  assert.equal(processV7Validator(v7UpdateRelation), false, 'non-update operations must not retain updated fields');
 
   const incomplete = createV5Draft();
   incomplete.export_meta.initiating_department = '';
@@ -394,11 +418,23 @@ async function testApi() {
     const health = await getJson(baseUrl, '/api/health');
     assert.equal(health.response.status, 200);
     assert.equal(health.body.status, 'ok');
-    assert.equal(health.body.schema_version, 'process-governance-v6');
+    assert.equal(health.body.schema_version, 'process-governance-v7');
+    assert.equal(health.body.release_status, 'released');
     assert.equal(Object.prototype.hasOwnProperty.call(health.body, 'deepseek'), false);
 
+    const retiredTabulatorScript = await fetch(`${baseUrl}/vendor/tabulator.min.js`);
+    const retiredTabulatorStyle = await fetch(`${baseUrl}/vendor/tabulator.min.css`);
+    const retiredGridEditor = await fetch(`${baseUrl}/web-grid-editors.js`);
+    assert.doesNotMatch(retiredTabulatorScript.headers.get('content-type') || '', /javascript/);
+    assert.doesNotMatch(retiredTabulatorStyle.headers.get('content-type') || '', /css/);
+    assert.doesNotMatch(retiredGridEditor.headers.get('content-type') || '', /javascript/);
+    const nativeWebGridAsset = await fetch(`${baseUrl}/native-web-grid.js`);
+    assert.equal(nativeWebGridAsset.status, 200);
+    assert.match(nativeWebGridAsset.headers.get('content-type') || '', /javascript/);
+    assert.match(await nativeWebGridAsset.text(), /isCompositionKey/);
+
     const schema = await getJson(baseUrl, '/api/schema');
-    assert.equal(schema.body.properties.schema_version.const, 'process-governance-v6');
+    assert.equal(schema.body.properties.schema_version.const, 'process-governance-v7');
     assert.equal(Object.prototype.hasOwnProperty.call(schema.body.properties, 'cross_department_handoffs'), false);
     const behaviorSchema = schema.body.$defs.behavior;
     assert.deepEqual(behaviorSchema.properties.actor_assignment_mode.enum, [
@@ -431,20 +467,32 @@ async function testApi() {
       previousV5Schema.response.headers.get('x-infomat-schema-digest')
     );
 
+    const previousV6Schema = await getJson(baseUrl, '/api/schema?version=process-governance-v6');
+    const previousV6Health = await getJson(baseUrl, '/api/health?version=process-governance-v6');
+    assert.equal(previousV6Health.response.status, 200);
+    assert.equal(previousV6Health.body.schema_version, 'process-governance-v6');
+    assert.equal(
+      previousV6Health.body.schema_digest,
+      previousV6Schema.response.headers.get('x-infomat-schema-digest')
+    );
+
     const versionHistory = await getJson(baseUrl, '/api/version-history');
     assert.equal(versionHistory.response.status, 200);
     assert.equal(versionHistory.response.headers.get('cache-control'), 'no-store');
-    assert.equal(versionHistory.body.current_version, 'process-governance-v6');
+    assert.equal(versionHistory.body.current_version, 'process-governance-v7');
+    assert.equal(versionHistory.body.current_status, 'released');
+    assert.equal(versionHistory.body.versions.at(-1).status, 'released');
+    assert.equal(versionHistory.body.versions.at(-1).released_on, '2026-08-21');
     assert.deepEqual(versionHistory.body.versions.map(item => item.version), [
-      'process-governance-v1', 'process-governance-v2', 'process-governance-v3', 'process-governance-v4', 'process-governance-v5', 'process-governance-v6'
+      'process-governance-v1', 'process-governance-v2', 'process-governance-v3', 'process-governance-v4', 'process-governance-v5', 'process-governance-v6', 'process-governance-v7'
     ]);
 
     const template = await getJson(baseUrl, '/api/template');
     assert.equal(template.response.status, 200);
     assert.equal(template.response.headers.get('cache-control'), 'no-store');
-    assert.equal(template.body.schema_version, 'process-governance-v6');
+    assert.equal(template.body.schema_version, 'process-governance-v7');
     assert.equal(template.body.schema_digest, PROCESS_GOVERNANCE_SCHEMA_DIGEST);
-    assert.equal(template.body.data.schema_version, 'process-governance-v6');
+    assert.equal(template.body.data.schema_version, 'process-governance-v7');
     assert.equal(Object.prototype.hasOwnProperty.call(template.body.data, 'cross_department_handoffs'), false);
     assert.equal(typeof template.body.data.export_meta.package_ref, 'string');
     assert.equal(typeof template.body.data.process.process_ref, 'string');
@@ -705,8 +753,10 @@ async function testApi() {
 
     const suggestionRoute = await fetch(`${baseUrl}/api/suggestions`, { method: 'POST' });
     assert.equal(suggestionRoute.status, 404);
-    const sessionRoute = await fetch(`${baseUrl}/api/session`, { method: 'POST' });
-    assert.equal(sessionRoute.status, 404);
+    const sessionReadRoute = await fetch(`${baseUrl}/api/session`);
+    assert.equal(sessionReadRoute.status, 404);
+    const sessionWriteRoute = await fetch(`${baseUrl}/api/session`, { method: 'POST' });
+    assert.equal(sessionWriteRoute.status, 404);
     const dataRoute = await fetch(`${baseUrl}/api/data`);
     assert.equal(dataRoute.status, 404);
     const exportRoute = await fetch(`${baseUrl}/api/export`);
@@ -729,13 +779,18 @@ async function testApi() {
     const scoreAsset = await fetch(`${baseUrl}/structure-score.js`);
     assert.equal(scoreAsset.status, 200);
     assert.match(scoreAsset.headers.get('content-type') || '', /javascript/);
-    assert.match(await scoreAsset.text(), /structure-learning-score-v3/);
+    assert.match(await scoreAsset.text(), /structure-learning-score-v4/);
 
     const governanceWorkflowAsset = await fetch(`${baseUrl}/governance-workflow.js`);
     assert.equal(governanceWorkflowAsset.status, 200);
     assert.match(governanceWorkflowAsset.headers.get('content-type') || '', /javascript/);
     const governanceWorkflowSource = await governanceWorkflowAsset.text();
-    assert.match(governanceWorkflowSource, /开始与文件/);
+    assert.match(governanceWorkflowSource, /JSON基本信息/);
+
+    const lifecycleAnalyzerAsset = await fetch(`${baseUrl}/lifecycle-analyzer.js`);
+    assert.equal(lifecycleAnalyzerAsset.status, 200);
+    assert.match(lifecycleAnalyzerAsset.headers.get('content-type') || '', /javascript/);
+    assert.match(await lifecycleAnalyzerAsset.text(), /lifecycle-analysis-v1/);
     assert.match(governanceWorkflowSource, /sha256Fallback/);
 
     const legacyDiagnosticsAsset = await fetch(`${baseUrl}/legacy-cross-department-diagnostics.js`);
@@ -1056,8 +1111,10 @@ function testProcessDiagramModel() {
   assert.equal(JSON.stringify(cycleDraft), cycleBefore, 'cycle review must not rewrite relation types or source JSON');
   assert.equal(cycleModel.reviewCount, 4);
   assert.ok(cycleModel.reviewItems.every(item =>
-    item.focusKind === 'relation'
-      && item.message === '该关系与其他非回路关系形成闭环；如果这是退回前序行为，请选择“流程内部回路”。'
+    item.focusKind === 'behavior'
+      && cycleDraft.flow_relations.some(relation => relation.relation_ref === item.relationRef && relation.to_behavior_ref === item.focusRef)
+      && item.message.includes('该关系与其他非回路关系形成闭环')
+      && item.message.includes('点击后定位到终点')
   ));
   assert.equal(
     new Set(cycleModel.nodes
@@ -1283,16 +1340,38 @@ async function testFrontendContract() {
   const diagramSource = fs.readFileSync(processDiagramPath, 'utf8');
   const structureScoreSource = fs.readFileSync(structureScorePath, 'utf8');
   const governanceWorkflowSource = fs.readFileSync(governanceWorkflowPath, 'utf8');
+  const webGridCoreSource = fs.readFileSync(webGridCorePath, 'utf8');
+  const nativeWebGridSource = fs.readFileSync(nativeWebGridPath, 'utf8');
+  const processV7GridAdapterSource = fs.readFileSync(processV7GridAdapterPath, 'utf8');
   const serverSource = fs.readFileSync(serverPath, 'utf8');
 
-  assert.ok(html.includes("const EXPECTED_EXPORT_SCHEMA_VERSION = 'process-governance-v6'"));
-  assert.ok(html.includes("fetch('/api/template?version=process-governance-v6', { cache: 'no-store' })"));
+  assert.ok(html.includes("const EXPECTED_EXPORT_SCHEMA_VERSION = 'process-governance-v7'"));
+  assert.ok(html.includes("fetch('/api/template?version=process-governance-v7', { cache: 'no-store' })"));
   assert.ok(html.includes('<script src="process-governance-migration.js"></script>'));
   assert.ok(html.includes('<script src="governance-workflow.js"></script>'));
   assert.ok(html.includes('<script src="legacy-cross-department-diagnostics.js"></script>'));
+  assert.equal(html.includes('/vendor/tabulator'), false);
+  assert.ok(html.includes('<script src="web-grid-core.js"></script>'));
+  assert.ok(html.includes('<script src="native-web-grid.js"></script>'));
+  assert.ok(html.includes('<script src="process-v7-grid-adapter.js"></script>'));
+  assert.equal(html.includes('bulk-data-editor.js'), false);
   assert.ok(html.includes('<script src="graph-edit-commands.js"></script>'));
   assert.ok(html.includes('<script src="graph-editor-state.js"></script>'));
   assert.ok(html.includes('<script src="data-relation-diagram.js"></script>'));
+  assert.ok(html.includes('<script src="lifecycle-analyzer.js"></script>'));
+  assert.ok(html.includes('data-action="switch-data-mode"'));
+  assert.ok(html.includes('主数据认定提示'));
+  assert.ok(html.includes('重新分析当前对象'));
+  assert.ok(html.includes('1. 数据对象与字段明细'));
+  assert.ok(html.includes('2. 实际表单、主表、明细和字段'));
+  assert.ok(html.includes('沿用当前对象字段已经建立的值，无需在本表单重复登记取值来源。'));
+  const formStartSource = html.slice(
+    html.indexOf("if (action === 'choose-form-start')"),
+    html.indexOf("if (action === 'select-skeleton-item')")
+  );
+  assert.ok(formStartSource.includes('addDataObject()'));
+  assert.equal(formStartSource.includes("addForm('current_state')"), false);
+  assert.ok(structureScoreSource.includes('数据生命周期与异常处理'));
   assert.ok(html.includes('aria-label="数据关系图图例"'));
   assert.ok(html.includes('<small>业务行为 → 数据对象</small>'));
   assert.ok(html.includes('<small>业务行为 ↔ 数据对象</small>'));
@@ -1309,12 +1388,97 @@ async function testFrontendContract() {
   assert.equal(html.includes('归并为单一跨部门行为'), false);
   assert.ok(html.includes('当前为跨部门行为'));
   assert.ok(html.includes('流程先后请在“流程关系”中维护'));
-  ['开始与文件', '流程边界', '流程骨架', '动作与异常', '数据与表单', '跨部门核对', '评审与交接']
+  ['JSON基本信息', '流程边界', '流程骨架', '动作与异常', '数据与表单', '跨部门核对', '评审与交接']
     .forEach(label => assert.ok(governanceWorkflowSource.includes(label), `missing governance step: ${label}`));
   assert.ok(html.includes('data-action="switch-governance-step"'));
   assert.ok(html.includes('data-action="open-governance-drawer"'));
   assert.ok(html.includes('data-action="download-current-stage"'));
   assert.ok(html.includes('源文件SHA-256'));
+  assert.ok(html.includes('data-action="check-governance-step"'));
+  assert.ok(governanceWorkflowSource.includes('本轮自检项'));
+  assert.ok(governanceWorkflowSource.includes('业务核对项'));
+  assert.ok(governanceWorkflowSource.includes('交接检查事项'));
+  assert.ok(html.includes('业务式编辑'));
+  assert.ok(html.includes('表格编辑'));
+  assert.ok(html.includes('网页表格编辑器'));
+  assert.ok(html.includes('data-action="apply-web-grid"'));
+  assert.ok(html.includes('data-action="discard-web-grid"'));
+  assert.ok(html.includes('应用并切换'));
+  assert.ok(html.includes('放弃并切换'));
+  assert.ok(html.includes('继续编辑'));
+  assert.equal(html.includes('Excel / WPS批量编辑'), false);
+  assert.equal(html.includes('data-action="preview-bulk-data"'), false);
+  assert.equal(html.includes('data-action="apply-bulk-data"'), false);
+  assert.ok(webGridCoreSource.includes('@typedef {Object} GridTableDefinition'));
+  assert.ok(webGridCoreSource.includes('@typedef {Object} GridIssue'));
+  assert.ok(webGridCoreSource.includes('@typedef {Object} GridCommitDriver'));
+  assert.ok(nativeWebGridSource.includes('event?.isComposing'));
+  assert.ok(nativeWebGridSource.includes('event?.keyCode === 229'));
+  assert.ok(html.includes('workspace.addEventListener(\'compositionstart\''));
+  assert.ok(html.includes('workspace.addEventListener(\'compositionend\''));
+  assert.ok(html.includes('data-grid-cell'));
+  assert.equal(html.includes('new Tabulator'), false);
+  [
+    'data_objects', 'data_fields', 'data_behavior_links', 'data_source_relations',
+    'forms', 'form_behavior_links', 'form_areas', 'form_items', 'field_source_links'
+  ].forEach(tableId => assert.ok(processV7GridAdapterSource.includes(`id: '${tableId}'`), `missing grid table: ${tableId}`));
+  assert.ok(html.includes('aria-label="当前数据对象的字段列表"'));
+  assert.equal(html.includes('class="form-field-table data-object-field-table"'), false);
+  assert.ok(html.includes('function applyNativeGridPaste'));
+  assert.ok(html.includes('function selectNativeGridRow'));
+  assert.ok(html.includes('id="updateFieldsModal"'));
+  assert.ok(html.includes('data-action="open-update-fields"'));
+  assert.ok(html.includes('data-action="open-grid-update-fields"'));
+  assert.ok(html.includes('data-action="open-graph-update-fields"'));
+  assert.ok(html.includes('请至少选择一个本次实际更新的字段'));
+  assert.ok(processV7GridAdapterSource.includes("editor: 'update-fields'"));
+  assert.ok(nativeWebGridSource.includes('更新字段必须使用弹窗多选'));
+  assert.equal(html.includes("table.on('rowClick'"), false);
+  assert.ok(html.includes('function governanceIssuesForStep'));
+  assert.ok(html.includes('data-action="focus-export-warning"'));
+  const diagramLegendSource = html.slice(
+    html.indexOf('function renderDiagramLegend()'),
+    html.indexOf('function renderDiagramWarnings(')
+  );
+  const reviewReadinessSource = html.slice(
+    html.indexOf('function renderReviewReadinessPanel('),
+    html.indexOf('function renderExportCheck(')
+  );
+  assert.ok(diagramLegendSource.includes('${renderNodeCombinationGuide()}'));
+  assert.equal(reviewReadinessSource.includes('${renderNodeCombinationGuide()}'), false);
+  assert.ok(html.includes('<summary>节点组合、循环退出与嵌套并行图例</summary>'));
+  assert.ok(html.includes(".node-combination-guide[open] > summary::after { content: '收起'; }"));
+  assert.ok(html.includes("!document.querySelector('.node-combination-guide[open]')"));
+  assert.ok(html.includes("workspace.addEventListener('toggle'"));
+  assert.equal(html.includes('当前文件与导入结果'), false);
+  assert.equal(html.includes('<strong>迁移结果</strong>'), false);
+  assert.equal(html.includes('历史结构化文件已无损迁移到v6'), false);
+  assert.ok(html.includes('结构化文件已导入当前页面'));
+  assert.ok(html.includes("const TOOL_HELP_STEPS = ["));
+  assert.ok(html.includes("const TOOL_TERM_GROUPS = ["));
+  [
+    '无状态临时工具',
+    '单流程结构化文件规则',
+    '阶段草稿',
+    '文件交接摘要',
+    '流程骨架',
+    'A1业务行为',
+    '流程内部回路',
+    '并行汇合',
+    '待治理数据对象',
+    '数据行为关系',
+    '字段业务数据归属',
+    '字段取值来源',
+    '技术标识与稳定引用',
+    '结构错误',
+    '业务提示',
+    '3000停止边界'
+  ].forEach(term => assert.ok(html.includes(`['${term}',`), `missing tool help term: ${term}`));
+  assert.ok(html.includes('使用前必读'));
+  assert.ok(html.includes('按七步完成编制'));
+  assert.ok(html.includes('常用操作与异常处理'));
+  assert.ok(html.includes('本工具术语'));
+  assert.ok(html.includes('删除不级联'));
   assert.ok(html.includes('未审核-${department}-${processName}-${stageLabel}-${exportTimestamp(now)}.json'));
   assert.equal(html.includes('id="newProcessButton"'), false);
   assert.equal(html.includes('id="exportButton"'), false);
@@ -1350,7 +1514,7 @@ async function testFrontendContract() {
     html.indexOf('    function renderBehaviorDerivedSummary(', html.indexOf('    function behaviorDataSummary(behaviorRef, flowDetails = currentDataFlowDetails()) {'))
   );
   const behaviorDataSummaryDocument = {
-    schema_version: 'process-governance-v6',
+    schema_version: 'process-governance-v7',
     behaviors: [
       { behavior_ref: 'behavior-create', actor_assignment_mode: 'fixed_department' },
       { behavior_ref: 'behavior-use', actor_assignment_mode: 'fixed_department' }

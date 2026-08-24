@@ -140,8 +140,8 @@ function passingTechnical() {
   };
 }
 
-assert.equal(RULE.id, 'structure-learning-score-v3');
-assert.equal(RULE.label, '结构化学习评分 v3（process-governance-v6）');
+assert.equal(RULE.id, 'structure-learning-score-v4');
+assert.equal(RULE.label, '结构化学习评分 v4（process-governance-v7）');
 assert.equal(
   RULE.dimensions.reduce((sum, item) => sum + item.max, 0),
   100,
@@ -152,7 +152,7 @@ assert.equal(
   15,
   'technical checks must total 15'
 );
-assert.equal(REVIEW_READINESS.id, 'process-review-readiness-v6');
+assert.equal(REVIEW_READINESS.id, 'process-review-readiness-v7');
 assert.deepEqual(
   REVIEW_READINESS.aspects.map(item => item.label),
   [
@@ -160,7 +160,8 @@ assert.deepEqual(
     'A1业务行为和责任角色',
     '业务行为逐动作可执行性',
     '条件分支、退回和跨部门流转',
-    '表单、业务对象和数据输入输出'
+    '表单、业务对象和数据输入输出',
+    '数据生命周期与异常处理'
   ]
 );
 assert.ok(
@@ -248,7 +249,7 @@ assert.equal(JSON.stringify(reviewReadinessDocument), reviewReadinessBefore, 're
 assert.equal(reviewReadiness.operationStatus, 'prompt');
 assert.equal(reviewReadiness.operationLabel, '有业务提示，可以下载');
 assert.equal(reviewReadiness.businessIssueCount, 5);
-assert.deepEqual(reviewReadiness.aspects.map(item => item.issueCount), [1, 1, 1, 1, 1]);
+assert.deepEqual(reviewReadiness.aspects.map(item => item.issueCount), [1, 1, 1, 1, 1, 0]);
 
 const reviewReady = evaluateReviewReadiness(reviewReadinessDocument, {
   technical: passingTechnical(),
