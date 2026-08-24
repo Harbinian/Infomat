@@ -111,8 +111,21 @@
       "properties": {
         "link_ref": { "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/technicalRef" },
         "behavior_ref": { "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/technicalRef" },
-        "operation": { "enum": ["create", "update", "use", "pending_confirmation"] }
-      }
+        "operation": { "enum": ["create", "update", "use", "pending_confirmation"] },
+        "updated_field_refs": {
+          "type": "array",
+          "items": { "$ref": "https://infomat.local/contracts/process-governance-v1.schema.json#/$defs/technicalRef" },
+          "uniqueItems": true,
+          "default": []
+        }
+      },
+      "allOf": [{
+        "if": {
+          "required": ["updated_field_refs"],
+          "properties": { "operation": { "not": { "const": "update" } } }
+        },
+        "then": { "properties": { "updated_field_refs": { "maxItems": 0 } } }
+      }]
     },
     "dataSourceRelation": {
       "type": "object",

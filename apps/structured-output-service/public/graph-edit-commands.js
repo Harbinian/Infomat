@@ -86,6 +86,15 @@
       duplicateRefs(dataObject.behavior_links, 'link_ref').forEach(ref => errors.push({ code: 'DUPLICATE_REF', ref, message: `数据关系技术标识${ref}重复` }));
       array(dataObject.behavior_links).forEach(link => {
         if (!behaviorRefs.has(link.behavior_ref)) errors.push({ code: 'BROKEN_REF', ref: link.behavior_ref, message: `数据${dataObject.data_name || dataObject.data_ref}引用的行为不存在` });
+        const updatedFieldRefs = unique(array(link.updated_field_refs));
+        if (link.operation !== 'update' && updatedFieldRefs.length) {
+          errors.push({ code: 'UPDATED_FIELDS_OPERATION_MISMATCH', ref: link.link_ref, message: `只有更新操作可以登记更新字段` });
+        }
+        updatedFieldRefs.forEach(fieldRef => {
+          if (!array(dataObject.fields).some(field => field.field_ref === fieldRef)) {
+            errors.push({ code: 'BROKEN_REF', ref: fieldRef, message: `数据${dataObject.data_name || dataObject.data_ref}的更新字段不存在` });
+          }
+        });
       });
       array(dataObject.source_relations).forEach(source => {
         if (source.available_from_behavior_ref && !behaviorRefs.has(source.available_from_behavior_ref)) {
@@ -422,15 +431,29 @@
         const existing = dataObject.behavior_links.filter(link => link.behavior_ref === command.behaviorRef);
         const errors = dataOperationHardErrors(next, command.dataRef, command.behaviorRef, command.operations, existing.map(link => link.link_ref));
         if (errors.length) return resultError('DATA_RELATION_BLOCKED', `数据关系未建立：${errors.join('；')}`, { errors });
+        const requestedUpdatedFieldRefs = unique(array(command.updatedFieldRefs));
+        if (
+          unique(command.operations).includes('update')
+          && command.updatedFieldRefs !== undefined
+          && requestedUpdatedFieldRefs.some(fieldRef => !array(dataObject.fields).some(field => field.field_ref === fieldRef))
+        ) {
+          return resultError('DATA_RELATION_BLOCKED', '数据关系未建立：所选更新字段不属于当前数据对象');
+        }
         const byOperation = new Map(existing.map(link => [link.operation, link]));
         dataObject.behavior_links = dataObject.behavior_links.filter(link => link.behavior_ref !== command.behaviorRef);
         unique(command.operations).forEach(operation => {
-          dataObject.behavior_links.push(byOperation.get(operation) || {
+          const previous = byOperation.get(operation);
+          const updatedFieldRefs = operation === 'update'
+            ? unique(array(command.updatedFieldRefs === undefined ? previous?.updated_field_refs : command.updatedFieldRefs))
+            : [];
+          dataObject.behavior_links.push({ ...(previous || {
             link_ref: command.refFactory(operation),
             behavior_ref: command.behaviorRef,
             operation
-          });
+          }), updated_field_refs: updatedFieldRefs });
         });
+        const integrityErrors = technicalIntegrity(next);
+        if (integrityErrors.length) return resultError('DATA_RELATION_BLOCKED', `数据关系未建立：${integrityErrors[0].message}`, { errors: integrityErrors });
         return resultOk(next, { selected: { kind: 'data', ref: command.dataRef } });
       }
       case 'add_data_object': {

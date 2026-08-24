@@ -124,12 +124,31 @@ const adapterOptions = {
   assert.equal(rows.data_objects.length, 1);
   assert.equal(rows.data_fields.length, 1);
   assert.equal(rows.data_behavior_links.length, 1);
+  assert.deepEqual(rows.data_behavior_links[0].updated_field_refs, []);
   assert.equal(rows.data_source_relations.length, 1);
   assert.equal(rows.forms.length, 1);
   assert.equal(rows.form_behavior_links.length, 1);
   assert.equal(rows.form_areas.length, 1);
   assert.equal(rows.form_items.length, 1);
   assert.equal(rows.field_source_links.length, 1);
+}
+
+{
+  const source = documentFixture();
+  const session = WebGridCore.createSession({ adapter: ProcessV7GridAdapter, documentValue: source, sourceKey: 'update-fields', adapterOptions });
+  const rows = session.rows('data_behavior_links');
+  Object.assign(rows[0], { operation: 'update', updated_field_refs: ['data_field_amount'] });
+  session.replaceRows('data_behavior_links', rows);
+  const prepared = session.prepare(source, 'update-fields');
+  assert.equal(prepared.ok, true, prepared.errors.map(item => item.message).join('; '));
+  assert.deepEqual(prepared.document.data_objects[0].behavior_links[0].updated_field_refs, ['data_field_amount']);
+
+  const invalidRows = session.rows('data_behavior_links');
+  invalidRows[0].updated_field_refs = ['data_field_missing'];
+  session.replaceRows('data_behavior_links', invalidRows);
+  const invalid = session.prepare(source, 'update-fields');
+  assert.equal(invalid.ok, false);
+  assert.ok(invalid.errors.some(item => item.code === 'REFERENCE_MISSING' && item.column === 'updated_field_refs'));
 }
 
 {

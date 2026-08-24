@@ -364,6 +364,18 @@ async function testSchemas() {
     true,
     JSON.stringify(processV7Validator.errors)
   );
+  assert.ok(processV7Schema.$defs.dataBehaviorLink.properties.updated_field_refs);
+  const v7UpdateRelation = Migration.migrateDocument(createV5Draft())[0];
+  const updateDataObject = v7UpdateRelation.data_objects[0];
+  updateDataObject.behavior_links = [{
+    link_ref: 'data_link_update_test',
+    behavior_ref: v7UpdateRelation.behaviors[0].behavior_ref,
+    operation: 'update',
+    updated_field_refs: [updateDataObject.fields[0].field_ref]
+  }];
+  assert.equal(processV7Validator(v7UpdateRelation), true, JSON.stringify(processV7Validator.errors));
+  updateDataObject.behavior_links[0].operation = 'use';
+  assert.equal(processV7Validator(v7UpdateRelation), false, 'non-update operations must not retain updated fields');
 
   const incomplete = createV5Draft();
   incomplete.export_meta.initiating_department = '';
@@ -1081,8 +1093,10 @@ function testProcessDiagramModel() {
   assert.equal(JSON.stringify(cycleDraft), cycleBefore, 'cycle review must not rewrite relation types or source JSON');
   assert.equal(cycleModel.reviewCount, 4);
   assert.ok(cycleModel.reviewItems.every(item =>
-    item.focusKind === 'relation'
-      && item.message === '该关系与其他非回路关系形成闭环；如果这是退回前序行为，请选择“流程内部回路”。'
+    item.focusKind === 'behavior'
+      && cycleDraft.flow_relations.some(relation => relation.relation_ref === item.relationRef && relation.to_behavior_ref === item.focusRef)
+      && item.message.includes('该关系与其他非回路关系形成闭环')
+      && item.message.includes('点击后定位到终点')
   ));
   assert.equal(
     new Set(cycleModel.nodes
@@ -1394,6 +1408,13 @@ async function testFrontendContract() {
   assert.equal(html.includes('class="form-field-table data-object-field-table"'), false);
   assert.ok(html.includes('function applyNativeGridPaste'));
   assert.ok(html.includes('function selectNativeGridRow'));
+  assert.ok(html.includes('id="updateFieldsModal"'));
+  assert.ok(html.includes('data-action="open-update-fields"'));
+  assert.ok(html.includes('data-action="open-grid-update-fields"'));
+  assert.ok(html.includes('data-action="open-graph-update-fields"'));
+  assert.ok(html.includes('请至少选择一个本次实际更新的字段'));
+  assert.ok(processV7GridAdapterSource.includes("editor: 'update-fields'"));
+  assert.ok(nativeWebGridSource.includes('更新字段必须使用弹窗多选'));
   assert.equal(html.includes("table.on('rowClick'"), false);
   assert.ok(html.includes('function governanceIssuesForStep'));
   assert.ok(html.includes('data-action="focus-export-warning"'));

@@ -59,6 +59,9 @@
       if (matches.length > 1) return { error: `“${trimmed}”对应多个选项，请使用技术标识` };
       return { error: `没有选项“${trimmed}”` };
     }
+    if (column?.editor === 'update-fields') {
+      return { error: '更新字段必须使用弹窗多选，不能直接粘贴' };
+    }
     return { value: raw };
   }
 

@@ -794,7 +794,7 @@
       }
       const sourceId = behaviorNodeByRef.get(fromRef);
       const targetId = behaviorNodeByRef.get(toRef);
-      validRelations.push({ relation, index, relationRef, sourceId, targetId });
+      validRelations.push({ relation, index, relationRef, fromRef, toRef, sourceId, targetId });
       localEdgeCount += 1;
     });
 
@@ -806,10 +806,13 @@
     const rankById = graphAnalysis.rankById;
     validRelations.forEach(item => {
       if (!graphAnalysis.reviewRelationIndexes.has(item.index)) return;
+      const fromName = text(items(data.behaviors).find(behavior => text(behavior.behavior_ref) === item.fromRef)?.behavior_name) || item.fromRef;
+      const toName = text(items(data.behaviors).find(behavior => text(behavior.behavior_ref) === item.toRef)?.behavior_name) || item.toRef;
       reviewItems.push({
-        focusKind: 'relation',
-        focusRef: item.relationRef,
-        message: RELATION_CYCLE_REVIEW_MESSAGE
+        focusKind: 'behavior',
+        focusRef: item.toRef,
+        relationRef: item.relationRef,
+        message: `“${fromName}” → “${toName}”：${RELATION_CYCLE_REVIEW_MESSAGE} 点击后定位到终点“${toName}”。`
       });
     });
     behaviorRecords.forEach(record => {

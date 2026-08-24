@@ -101,6 +101,58 @@ function run() {
   assert.equal(upgradedPreview.data_objects[0].fields.length, 1);
   assertValid(upgradedPreview, 'preview v7 migration');
 
+  const updateFieldPreview = JSON.parse(JSON.stringify(reused));
+  updateFieldPreview.behaviors.push({
+    behavior_ref: 'behavior_update_supplier',
+    node_type: 'action',
+    behavior_name: '更新供应商信息',
+    behavior_description: '',
+    current_actor_role: '财务部会计员',
+    actor_assignment_mode: 'legacy_unresolved',
+    actor_department_data_ref: null,
+    actor_position_rule: '',
+    trigger: '',
+    precondition: '',
+    input_description: '',
+    timing: null,
+    system_or_tool: '',
+    action: '更新供应商信息',
+    object: '供应商',
+    decision_rule: '',
+    exception_flow: '',
+    output: '供应商信息',
+    system_mapping: '',
+    remarks: '',
+    evidence_refs: [],
+    countersign_all_required: false,
+    countersign_target_departments: []
+  });
+  updateFieldPreview.data_objects[0].behavior_links.push({
+    link_ref: 'data_link_update_supplier',
+    behavior_ref: 'behavior_update_supplier',
+    operation: 'update'
+  });
+  const updateFieldSnapshot = JSON.parse(JSON.stringify(updateFieldPreview));
+  assert.equal(Migration.needsDataFieldUpgrade(updateFieldPreview), true);
+  const normalizedUpdateField = Migration.migrateDocument(updateFieldPreview)[0];
+  assert.deepEqual(updateFieldPreview, updateFieldSnapshot, 'current v7 source must remain unchanged during update-field normalization');
+  assert.deepEqual(normalizedUpdateField.data_objects[0].behavior_links.at(-1).updated_field_refs, []);
+  normalizedUpdateField.data_objects[0].behavior_links.at(-1).updated_field_refs = [normalizedUpdateField.data_objects[0].fields[0].field_ref];
+  assert.deepEqual(Migration.migrateDocument(normalizedUpdateField)[0], normalizedUpdateField, 'selected update fields must survive idempotent migration');
+  assertValid(normalizedUpdateField, 'selected update field validation');
+
+  const brokenUpdatedFieldRef = JSON.parse(JSON.stringify(normalizedUpdateField));
+  brokenUpdatedFieldRef.data_objects[0].behavior_links.at(-1).updated_field_refs = ['data_field_missing'];
+  const brokenUpdatedFieldResult = processGovernanceValidationResult(brokenUpdatedFieldRef);
+  assert.equal(brokenUpdatedFieldResult.valid, false);
+  assert.ok(brokenUpdatedFieldResult.errors.some(error => /更新字段/.test(error.message)));
+
+  const mismatchedUpdateOperation = JSON.parse(JSON.stringify(normalizedUpdateField));
+  mismatchedUpdateOperation.data_objects[0].behavior_links.at(-1).operation = 'use';
+  const mismatchedUpdateResult = processGovernanceValidationResult(mismatchedUpdateOperation);
+  assert.equal(mismatchedUpdateResult.valid, false);
+  assert.ok(mismatchedUpdateResult.errors.some(error => /只有更新操作/.test(error.message)));
+
   const brokenRef = JSON.parse(JSON.stringify(reused));
   brokenRef.forms[0].areas[0].items[0].data_field_ref = 'data_field_missing';
   const brokenRefResult = processGovernanceValidationResult(brokenRef);
