@@ -99,7 +99,8 @@
           column('link_ref', '技术标识', { technicalRef: true, readOnly: true }),
           column('data_ref', '数据对象', { required: true, technicalRef: true, editor: 'lookup', lookup: 'data_objects' }),
           column('behavior_ref', '业务行为', { required: true, technicalRef: true, editor: 'lookup', lookup: 'behaviors' }),
-          column('operation', '数据操作', { required: true, editor: 'select', values: options(DATA_OPERATIONS) })
+          column('operation', '数据操作', { required: true, editor: 'select', values: options(DATA_OPERATIONS) }),
+          column('updated_field_refs', '更新字段（可多选）', { editor: 'update-fields', width: 300 })
         ]
       },
       {
@@ -179,7 +180,8 @@
       }));
       arrays(dataObject.behavior_links).forEach((link, index) => rows.data_behavior_links.push({
         ...meta(link.link_ref, index), _source_parent_ref: dataObject.data_ref,
-        link_ref: link.link_ref, data_ref: dataObject.data_ref, behavior_ref: link.behavior_ref, operation: link.operation
+        link_ref: link.link_ref, data_ref: dataObject.data_ref, behavior_ref: link.behavior_ref, operation: link.operation,
+        updated_field_refs: arrays(link.updated_field_refs)
       }));
       arrays(dataObject.source_relations).forEach((source, index) => rows.data_source_relations.push({
         ...meta(source.source_ref, index), _source_parent_ref: dataObject.data_ref,
@@ -235,7 +237,7 @@
     const configs = {
       data_objects: { ref: 'data_ref', prefix: 'data', defaults: { data_name: '', information_type: 'pending_confirmation', description: '' } },
       data_fields: { ref: 'field_ref', prefix: 'data_field', parent: 'data_ref', defaults: { field_name: '', field_type: '', definition: '' } },
-      data_behavior_links: { ref: 'link_ref', prefix: 'data_link', parent: 'data_ref', defaults: { behavior_ref: '', operation: 'pending_confirmation' } },
+      data_behavior_links: { ref: 'link_ref', prefix: 'data_link', parent: 'data_ref', defaults: { behavior_ref: '', operation: 'pending_confirmation', updated_field_refs: [] } },
       data_source_relations: { ref: 'source_ref', prefix: 'data_source', parent: 'data_ref', defaults: { source_department: '', source_process_name: '', source_behavior_name: '', source_data_name: '', availability_mode: 'pending_confirmation', available_from_behavior_ref: null } },
       forms: { ref: 'form_ref', prefix: 'form', defaults: { form_name: '', form_no: null, form_design_state: 'current_state' } },
       form_behavior_links: { ref: 'link_ref', prefix: 'form_link', parent: 'form_ref', defaults: { behavior_ref: '', operations: '', notes: '' } },
@@ -393,7 +395,13 @@
       if (!forbidMove(result, row, 'data_behavior_links', 'data_ref', row.data_ref)) return;
       const sourceOwner = sourceDataLinkOwners.get(row.link_ref);
       const existing = arrays(sourceOwner?.behavior_links).find(item => item.link_ref === row.link_ref);
-      dataMap.get(row.data_ref).behavior_links.push({ ...(existing ? clone(existing) : {}), link_ref: row.link_ref, behavior_ref: row.behavior_ref, operation: row.operation });
+      dataMap.get(row.data_ref).behavior_links.push({
+        ...(existing ? clone(existing) : {}),
+        link_ref: row.link_ref,
+        behavior_ref: row.behavior_ref,
+        operation: row.operation,
+        updated_field_refs: row.operation === 'update' ? list(row.updated_field_refs) : []
+      });
     });
 
     const sourceRelationOwners = existingOwners(documentValue, 'data_objects', 'source_relations', 'source_ref');
@@ -525,6 +533,15 @@
       }
       const pairs = new Map();
       dataObject.behavior_links.forEach(link => {
+        const row = orderedActive(tables, 'data_behavior_links').find(item => item.link_ref === link.link_ref);
+        const validFieldRefs = new Set(dataObject.fields.map(field => field.field_ref));
+        const invalidFieldRefs = arrays(link.updated_field_refs).filter(fieldRef => !validFieldRefs.has(fieldRef));
+        if (invalidFieldRefs.length) {
+          problem(result.errors, row, 'data_behavior_links', 'updated_field_refs', 'REFERENCE_MISSING', `更新字段不属于数据对象“${dataObject.data_name || dataObject.data_ref}”：${invalidFieldRefs.join('、')}`);
+        }
+        if (link.operation === 'update' && !arrays(link.updated_field_refs).length) {
+          problem(result.warnings, row, 'data_behavior_links', 'updated_field_refs', 'UPDATED_FIELDS_REQUIRED', `数据对象“${dataObject.data_name || dataObject.data_ref}”的更新操作尚未选择更新字段`, 'warning');
+        }
         if (!pairs.has(link.behavior_ref)) pairs.set(link.behavior_ref, []);
         pairs.get(link.behavior_ref).push(link.operation);
       });

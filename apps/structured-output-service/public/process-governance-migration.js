@@ -367,18 +367,21 @@
       ? array(item?.behavior_links).map((link, linkIndex) => ({
           link_ref: technicalRef(link?.link_ref, 'data_link', dataRef, linkIndex),
           behavior_ref: technicalRef(link?.behavior_ref, 'behavior', linkIndex),
-          operation: DATA_OPERATIONS.has(link?.operation) ? link.operation : 'pending_confirmation'
+          operation: DATA_OPERATIONS.has(link?.operation) ? link.operation : 'pending_confirmation',
+          updated_field_refs: link?.operation === 'update' ? uniqueStrings(link?.updated_field_refs) : []
         }))
       : [
           ...(item?.produced_by_behavior_ref ? [{
             link_ref: stableRef('data_link', dataRef, 'create', item.produced_by_behavior_ref),
             behavior_ref: technicalRef(item.produced_by_behavior_ref, 'behavior', index),
-            operation: 'create'
+            operation: 'create',
+            updated_field_refs: []
           }] : []),
           ...uniqueStrings(item?.consumed_by_behavior_refs).map((behaviorRef, linkIndex) => ({
             link_ref: stableRef('data_link', dataRef, 'use', behaviorRef, linkIndex),
             behavior_ref: technicalRef(behaviorRef, 'behavior', linkIndex),
-            operation: 'use'
+            operation: 'use',
+            updated_field_refs: []
           }))
         ];
     return {
@@ -601,6 +604,9 @@
   function needsDataFieldUpgrade(source) {
     if (source?.schema_version !== TARGET_VERSION) return false;
     if (array(source?.data_objects).some(dataObject => !Array.isArray(dataObject?.fields))) return true;
+    if (array(source?.data_objects).some(dataObject => array(dataObject?.behavior_links).some(link =>
+      !Object.prototype.hasOwnProperty.call(link || {}, 'updated_field_refs')
+    ))) return true;
     return array(source?.forms).some(form => array(form?.areas).some(area => array(area?.items).some(item =>
       !Object.prototype.hasOwnProperty.call(item || {}, 'data_field_ref')
       || !FIELD_VALUE_USAGE_MODES.has(item?.value_usage_mode)

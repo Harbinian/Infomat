@@ -431,6 +431,27 @@ function testCommandsAndState() {
   });
   assert.equal(pendingConflict.ok, false);
 
+  const updateFieldRef = documentValue.data_objects[0].fields[0].field_ref;
+  const updateSelection = Commands.applyCommand(documentValue, {
+    type: 'set_data_operations', dataRef: 'data-application', behaviorRef: 'behavior-review',
+    operations: ['update', 'use'], updatedFieldRefs: [updateFieldRef], refFactory: operation => `link-${operation}`
+  });
+  assert.equal(updateSelection.ok, true);
+  assert.deepEqual(
+    updateSelection.document.data_objects[0].behavior_links.find(link => link.operation === 'update').updated_field_refs,
+    [updateFieldRef]
+  );
+  assert.deepEqual(
+    updateSelection.document.data_objects[0].behavior_links.find(link => link.operation === 'use').updated_field_refs,
+    []
+  );
+  const invalidUpdateField = Commands.applyCommand(documentValue, {
+    type: 'set_data_operations', dataRef: 'data-application', behaviorRef: 'behavior-review',
+    operations: ['update'], updatedFieldRefs: ['field_missing'], refFactory: operation => `link-invalid-${operation}`
+  });
+  assert.equal(invalidUpdateField.ok, false);
+  assert.match(invalidUpdateField.message, /不属于当前数据对象/);
+
   const deletion = Commands.analyzeDeletion(documentValue, 'behavior', 'behavior-apply');
   assert.ok(deletion.some(item => item.kind === 'flow_relation'));
   assert.ok(deletion.some(item => item.kind === 'data_relation'));

@@ -1262,6 +1262,7 @@ function processGovernanceValidationResult(data) {
 
   dataObjects.forEach((dataObject, index) => {
     if (modernDataVersion) {
+      const currentDataFieldRefs = new Set((dataObject?.fields || []).map(field => field?.field_ref).filter(Boolean));
       if (data?.schema_version === 'process-governance-v7') {
         uniqueRefs(dataObject?.fields, 'field_ref', `/data_objects/${index}/fields`);
         const fieldKeys = new Map();
@@ -1282,6 +1283,20 @@ function processGovernanceValidationResult(data) {
       uniqueRefs(dataObject?.source_relations, 'source_ref', `/data_objects/${index}/source_relations`);
       (dataObject?.behavior_links || []).forEach((link, linkIndex) => {
         requireLocalRef(behaviorRefs, link?.behavior_ref, `/data_objects/${index}/behavior_links/${linkIndex}/behavior_ref`, '数据关系对应行为');
+        if (data?.schema_version === 'process-governance-v7') {
+          const updatedFieldRefs = Array.isArray(link?.updated_field_refs) ? link.updated_field_refs : [];
+          if (link?.operation !== 'update' && updatedFieldRefs.length) {
+            addError(`/data_objects/${index}/behavior_links/${linkIndex}/updated_field_refs`, '只有更新操作可以登记更新字段', { ref: link?.link_ref });
+          }
+          updatedFieldRefs.forEach((fieldRef, fieldIndex) => {
+            requireLocalRef(
+              currentDataFieldRefs,
+              fieldRef,
+              `/data_objects/${index}/behavior_links/${linkIndex}/updated_field_refs/${fieldIndex}`,
+              '更新字段'
+            );
+          });
+        }
       });
       (dataObject?.source_relations || []).forEach((source, sourceIndex) => {
         requireLocalRef(

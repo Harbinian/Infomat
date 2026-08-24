@@ -1401,6 +1401,8 @@
     .web-grid-selector-column { position: sticky !important; left: 0; z-index: 4 !important; width: 32px; min-width: 32px !important; background: var(--paper-deep) !important; }
     tbody .web-grid-selector-column { z-index: 2 !important; background: #f7f1e4 !important; }
     .web-grid-readonly { display: block; min-height: 37px; padding: 8px; color: var(--muted); }
+    .web-grid-update-fields-button { width: 100%; min-height: 37px; padding: 6px 8px; border: 0; border-radius: 0; color: var(--blue); background: transparent; text-align: left; }
+    .web-grid-update-fields-button:hover { background: #edf3ff; }
     .web-grid-empty-row td { height: 72px; padding: 16px; color: var(--muted); text-align: center; }
     .web-grid-footer { position: sticky; bottom: 8px; z-index: 20; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; align-items: center; padding: 12px 14px; border: 1px solid #b7aa8d; border-radius: 11px; background: rgba(255, 250, 240, 0.96); box-shadow: var(--shadow); }
     .web-grid-status { color: var(--muted); font-size: 13px; }
@@ -2239,6 +2241,14 @@
     .modal h2 { margin: 0 0 9px; font-family: "SimSun", serif; }
     .modal p { color: var(--muted); line-height: 1.7; }
     .modal-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 9px; margin-top: 20px; }
+    .update-fields-list { display: grid; gap: 8px; max-height: 340px; margin-top: 14px; overflow: auto; }
+    .update-fields-option { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; padding: 10px 12px; border: 1px solid var(--line); border-radius: 9px; background: #fffdf8; }
+    .update-fields-option input { margin-top: 3px; }
+    .update-fields-option span { display: grid; gap: 3px; }
+    .update-fields-option small { color: var(--muted); line-height: 1.45; }
+    .update-fields-error { min-height: 22px; margin: 10px 0 0; color: var(--red) !important; font-weight: 700; }
+    .update-fields-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; padding: 9px 10px; border: 1px solid #d9ccb1; border-radius: 8px; background: #fffaf0; }
+    .update-fields-summary span { flex: 1 1 260px; color: var(--muted); line-height: 1.55; }
 
     .graph-editor-layout {
       display: grid;
@@ -2438,6 +2448,19 @@
         <button class="button" id="continueGridEditingButton">继续编辑表格</button>
         <button class="button danger" id="discardGridChangesButton">放弃并切换</button>
         <button class="button primary" id="applyGridChangesButton">应用并切换</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="updateFieldsModal" aria-hidden="true">
+    <div class="modal impact-modal" role="dialog" aria-modal="true" aria-labelledby="updateFieldsTitle" aria-describedby="updateFieldsDescription">
+      <h2 id="updateFieldsTitle">选择本次更新的字段</h2>
+      <p id="updateFieldsDescription"></p>
+      <div class="update-fields-list" id="updateFieldsOptions"></div>
+      <p class="update-fields-error" id="updateFieldsError" role="alert"></p>
+      <div class="modal-actions">
+        <button class="button" id="cancelUpdateFieldsButton">取消</button>
+        <button class="button primary" id="confirmUpdateFieldsButton">确认更新字段</button>
       </div>
     </div>
   </div>
@@ -2804,6 +2827,7 @@
     let webGridFilters = {};
     let webGridSorts = {};
     let webGridRanges = {};
+    let updateFieldsModalState = null;
     const masterDataPendingRefs = new Set();
     const workspace = document.getElementById('workspace');
     const statusBox = document.getElementById('statusBox');
@@ -2821,6 +2845,12 @@
     const continueGridEditingButton = document.getElementById('continueGridEditingButton');
     const discardGridChangesButton = document.getElementById('discardGridChangesButton');
     const applyGridChangesButton = document.getElementById('applyGridChangesButton');
+    const updateFieldsModal = document.getElementById('updateFieldsModal');
+    const updateFieldsDescription = document.getElementById('updateFieldsDescription');
+    const updateFieldsOptions = document.getElementById('updateFieldsOptions');
+    const updateFieldsError = document.getElementById('updateFieldsError');
+    const cancelUpdateFieldsButton = document.getElementById('cancelUpdateFieldsButton');
+    const confirmUpdateFieldsButton = document.getElementById('confirmUpdateFieldsButton');
     const jsonInput = document.getElementById('jsonInput');
 
     function newRef(prefix) {
@@ -2846,6 +2876,70 @@
     function list(value) {
       if (Array.isArray(value)) return [...new Set(value.map(item => text(item).trim()).filter(Boolean))];
       return [...new Set(text(value).split(/[,，\n]/).map(item => item.trim()).filter(Boolean))];
+    }
+
+    function currentUpdateFieldOptions(dataRef) {
+      const dataObject = currentDocument()?.data_objects?.find(item => item.data_ref === dataRef);
+      return (dataObject?.fields || []).map((field, index) => ({
+        value: field.field_ref,
+        label: field.field_name || `未命名对象字段 ${index + 1}`,
+        detail: [field.field_type, field.definition].map(text).filter(Boolean).join(' · ')
+      }));
+    }
+
+    function selectedUpdateFieldLabels(dataRef, selectedRefs, options = currentUpdateFieldOptions(dataRef)) {
+      const labels = new Map(options.map(option => [option.value, option.label]));
+      return list(selectedRefs).map(ref => labels.get(ref) || `${ref}（当前引用）`);
+    }
+
+    function openUpdateFieldsModal({ dataRef, dataName, selectedRefs = [], fields = null, onConfirm, onCancel, invoker = null }) {
+      const options = Array.isArray(fields) ? fields : currentUpdateFieldOptions(dataRef);
+      const selected = new Set(list(selectedRefs));
+      updateFieldsModalState = {
+        dataRef,
+        selected,
+        onConfirm,
+        onCancel,
+        invoker: invoker instanceof HTMLElement ? invoker : document.activeElement
+      };
+      updateFieldsDescription.textContent = options.length
+        ? `数据操作为“更新”时，编制人应选择本次实际改变的字段。以下选项仅来自数据对象“${dataName || dataRef || '未命名数据'}”的对象字段，可以多选。`
+        : `数据对象“${dataName || dataRef || '未命名数据'}”尚未建立对象字段。请取消并先补充对象字段，再选择本次更新的字段。`;
+      updateFieldsOptions.innerHTML = options.length ? options.map(option => `
+        <label class="update-fields-option">
+          <input type="checkbox" data-update-field-ref value="${escapeAttribute(option.value)}"${selected.has(option.value) ? ' checked' : ''}>
+          <span><strong>${escapeHtml(option.label)}</strong>${option.detail ? `<small>${escapeHtml(option.detail)}</small>` : ''}</span>
+        </label>`).join('') : '<div class="candidate-empty">当前没有可选对象字段。</div>';
+      updateFieldsError.textContent = '';
+      confirmUpdateFieldsButton.disabled = !options.length;
+      updateFieldsModal.classList.add('show');
+      updateFieldsModal.setAttribute('aria-hidden', 'false');
+      requestAnimationFrame(() => updateFieldsOptions.querySelector('input')?.focus() || cancelUpdateFieldsButton.focus());
+    }
+
+    function closeUpdateFieldsModal(cancelled = false) {
+      const state = updateFieldsModalState;
+      updateFieldsModalState = null;
+      updateFieldsModal.classList.remove('show');
+      updateFieldsModal.setAttribute('aria-hidden', 'true');
+      updateFieldsOptions.innerHTML = '';
+      updateFieldsError.textContent = '';
+      if (cancelled) state?.onCancel?.();
+      if (state?.invoker?.isConnected) state.invoker.focus();
+    }
+
+    function confirmUpdateFieldsSelection() {
+      const state = updateFieldsModalState;
+      if (!state) return;
+      const selectedRefs = Array.from(updateFieldsOptions.querySelectorAll('[data-update-field-ref]:checked')).map(item => item.value);
+      if (!selectedRefs.length) {
+        updateFieldsError.textContent = '请至少选择一个本次实际更新的字段。';
+        updateFieldsOptions.querySelector('[data-update-field-ref]')?.focus();
+        return;
+      }
+      const onConfirm = state.onConfirm;
+      closeUpdateFieldsModal(false);
+      onConfirm?.(selectedRefs);
     }
 
     function escapeHtml(value) {
@@ -4182,6 +4276,7 @@
       if (column.editor === 'boolean') return value ? '是' : '否';
       if (column.editor === 'select') return column.values?.find(option => String(option.value) === String(value))?.label || value;
       if (column.editor === 'lookup') return gridLookupLabel(column.lookup, value, row);
+      if (column.editor === 'update-fields') return selectedUpdateFieldLabels(row.data_ref, value, gridUpdateFieldOptions(row)).join('、');
       return value;
     }
 
@@ -4191,12 +4286,27 @@
       return [];
     }
 
+    function gridUpdateFieldOptions(row) {
+      return (webGridSession?.rows('data_fields', { includeDeleted: false }) || [])
+        .filter(field => field.data_ref === row?.data_ref)
+        .map((field, index) => ({
+          value: field.field_ref,
+          label: field.field_name || `未命名对象字段 ${index + 1}`,
+          detail: [field.field_type, field.definition].map(text).filter(Boolean).join(' · ')
+        }));
+    }
+
     function nativeGridControl(tableId, row, column, rowIndex, columnIndex) {
       const rawValue = row[column.key];
       const value = rawValue == null ? '' : String(rawValue);
       const attributes = `data-grid-cell data-grid-table-id="${escapeAttribute(tableId)}" data-grid-row-id="${escapeAttribute(row._row_id)}" data-grid-column="${escapeAttribute(column.key)}" data-grid-row-index="${rowIndex}" data-grid-column-index="${columnIndex}" aria-label="第${rowIndex + 1}行，${escapeAttribute(column.label)}"`;
       const disabled = row._deleted ? ' disabled' : '';
       if (column.readOnly) return `<span class="web-grid-readonly">${escapeHtml(nativeGridDisplayValue(column, rawValue, row))}</span>`;
+      if (column.editor === 'update-fields') {
+        if (row.operation !== 'update') return '<span class="web-grid-readonly">仅更新操作需要选择</span>';
+        const selectedLabels = selectedUpdateFieldLabels(row.data_ref, rawValue, gridUpdateFieldOptions(row));
+        return `<button type="button" class="web-grid-update-fields-button" data-action="open-grid-update-fields" data-table-id="${escapeAttribute(tableId)}" data-row-id="${escapeAttribute(row._row_id)}"${disabled}>${escapeHtml(selectedLabels.length ? selectedLabels.join('、') : '选择更新字段')}</button>`;
+      }
       if (column.editor === 'boolean') {
         return `<input type="checkbox" ${attributes}${rawValue ? ' checked' : ''}${disabled}>`;
       }
@@ -4459,6 +4569,7 @@
       (data.data_objects || []).forEach(item => {
         if (item.information_type === 'pending_confirmation') unresolved += 1;
         unresolved += (item.behavior_links || []).filter(link => link.operation === 'pending_confirmation').length;
+        unresolved += (item.behavior_links || []).filter(link => link.operation === 'update' && !list(link.updated_field_refs).length).length;
         unresolved += (item.source_relations || []).filter(source => source.availability_mode === 'pending_confirmation').length;
       });
       (data.forms || []).forEach(form => {
@@ -4947,12 +5058,19 @@
       if (selection?.kind === 'data-edge' && selection.dataRef === dataObject.data_ref) {
         const behavior = currentDocument().behaviors.find(item => item.behavior_ref === selection.behaviorRef);
         const operations = selection.operations || dataObject.behavior_links.filter(link => link.behavior_ref === selection.behaviorRef).map(link => link.operation);
+        const existingUpdateLink = dataObject.behavior_links.find(link => link.behavior_ref === selection.behaviorRef && link.operation === 'update');
+        const updatedFieldRefs = list(selection.updatedFieldRefs === undefined ? existingUpdateLink?.updated_field_refs : selection.updatedFieldRefs);
+        const updatedFieldLabels = selectedUpdateFieldLabels(dataObject.data_ref, updatedFieldRefs);
         return `
           <div class="graph-property-panel">
             <h3>${escapeHtml(behavior?.behavior_name || '业务行为')} · 数据操作</h3>
             <p class="technical-note">业务行为是只读端点。需要修改行为时可转到“流程骨架”。</p>
             <div class="check-grid">${DATA_OPERATIONS.map(option => `
               <label class="check-row"><input type="checkbox" data-graph-data-operation value="${option.value}" ${operations.includes(option.value) ? 'checked' : ''}>${option.label}</label>`).join('')}</div>
+            ${operations.includes('update') ? `<div class="update-fields-summary" data-focus-key="data_objects.${currentDocument().data_objects.indexOf(dataObject)}.behavior_links.updated_field_refs">
+              <span>${escapeHtml(updatedFieldLabels.length ? `已选择：${updatedFieldLabels.join('、')}` : '尚未选择本次更新的字段。')}</span>
+              <button class="button secondary small" data-action="open-graph-update-fields">选择更新字段</button>
+            </div>` : ''}
             <div class="item-actions">
               <button class="button primary small" data-action="apply-data-operations">应用数据操作</button>
               <button class="button small" data-action="open-flow-behavior" data-ref="${escapeAttribute(selection.behaviorRef)}">转到流程骨架</button>
@@ -5210,19 +5328,24 @@
           onFocus(item) {
             captureGraphViewport();
             if (item.kind === 'behavior') {
+              const selectedDataObject = currentDocument().data_objects.find(data => data.data_ref === activeDataRef);
+              const updateLink = selectedDataObject?.behavior_links.find(link => link.behavior_ref === item.ref && link.operation === 'update');
               graphSelection = {
                 kind: 'data-edge',
                 dataRef: activeDataRef,
                 behaviorRef: item.ref,
-                operations: currentDocument().data_objects.find(data => data.data_ref === activeDataRef)?.behavior_links
-                  .filter(link => link.behavior_ref === item.ref).map(link => link.operation) || []
+                operations: selectedDataObject?.behavior_links.filter(link => link.behavior_ref === item.ref).map(link => link.operation) || [],
+                updatedFieldRefs: list(updateLink?.updated_field_refs)
               };
             } else if (item.kind === 'data-relation') {
+              const selectedDataObject = currentDocument().data_objects.find(data => data.data_ref === item.dataRef);
+              const updateLink = selectedDataObject?.behavior_links.find(link => link.behavior_ref === item.behaviorRef && link.operation === 'update');
               graphSelection = {
                 kind: 'data-edge',
                 dataRef: item.dataRef,
                 behaviorRef: item.behaviorRef,
-                operations: text(item.operations).split(',').filter(Boolean)
+                operations: text(item.operations).split(',').filter(Boolean),
+                updatedFieldRefs: list(updateLink?.updated_field_refs)
               };
             } else {
               const dataObject = ensureActiveGraphDataObject();
@@ -6123,7 +6246,9 @@
     }
 
     function dataBehaviorLinksEditor(item, dataIndex) {
-      const rows = (item.behavior_links || []).map((link, linkIndex) => `
+      const rows = (item.behavior_links || []).map((link, linkIndex) => {
+        const updatedFieldLabels = selectedUpdateFieldLabels(item.data_ref, link.updated_field_refs);
+        return `
         <div class="item-card" data-focus-path="data_objects.${dataIndex}.behavior_links.${linkIndex}">
           <div class="grid">
             ${field(`data_objects.${dataIndex}.behavior_links.${linkIndex}.behavior_ref`, '业务行为', {
@@ -6132,9 +6257,17 @@
             ${field(`data_objects.${dataIndex}.behavior_links.${linkIndex}.operation`, '对数据的操作', {
               type: 'select', options: DATA_OPERATIONS
             })}
+            ${link.operation === 'update' ? `<div class="field wide" data-focus-key="data_objects.${dataIndex}.behavior_links.${linkIndex}.updated_field_refs" tabindex="-1">
+              <span class="field-label">本次更新的字段</span>
+              <div class="update-fields-summary">
+                <span>${escapeHtml(updatedFieldLabels.length ? updatedFieldLabels.join('、') : '尚未选择；更新操作需要补充本次实际改变的字段。')}</span>
+                <button class="button secondary small" data-action="open-update-fields" data-data-index="${dataIndex}" data-index="${linkIndex}">选择字段</button>
+              </div>
+            </div>` : ''}
           </div>
           <button class="button danger small" data-action="remove-data-behavior-link" data-index="${linkIndex}" data-data-index="${dataIndex}">删除关系</button>
-        </div>`).join('');
+        </div>`;
+      }).join('');
       return `
         <div class="field wide">
           <span class="field-label">业务行为与数据的关系</span>
@@ -6335,6 +6468,10 @@
     function renderRelationshipOverview() {
       const rows = (currentDocument()?.data_objects || []).map((item, index) => {
         const links = operation => (item.behavior_links || []).filter(link => link.operation === operation).map(link => behaviorLabel(link.behavior_ref));
+        const updateLinks = (item.behavior_links || []).filter(link => link.operation === 'update').map(link => {
+          const fieldLabels = selectedUpdateFieldLabels(item.data_ref, link.updated_field_refs);
+          return `${behaviorLabel(link.behavior_ref)}${fieldLabels.length ? `（${fieldLabels.join('、')}）` : '（更新字段待补）'}`;
+        });
         const sources = (item.source_relations || []).map(source =>
           [source.source_department, source.source_process_name, source.source_behavior_name, source.source_data_name].map(text).filter(Boolean).join(' / ') || '来源待补充'
         );
@@ -6349,7 +6486,7 @@
             <div class="grid" style="margin-top:12px">
               <div class="inline-note"><strong>来源：</strong>${escapeHtml(sources.length ? sources.join('；') : '本流程本地创建或来源未登记')}</div>
               <div class="inline-note"><strong>创建：</strong>${escapeHtml(links('create').join('、') || '未登记')}</div>
-              <div class="inline-note"><strong>更新：</strong>${escapeHtml(links('update').join('、') || '未登记')}</div>
+              <div class="inline-note"><strong>更新：</strong>${escapeHtml(updateLinks.join('；') || '未登记')}</div>
               <div class="inline-note"><strong>使用：</strong>${escapeHtml(links('use').join('、') || '未登记')}</div>
               <div class="inline-note wide"><strong>表单与字段：</strong>${escapeHtml(fields.length ? fields.map(fieldItem => `${fieldItem.form.form_name || '未命名表单'} / ${fieldItem.item.item_name || '未命名字段'}${fieldItem.ownership ? '（归属）' : ''}${fieldItem.sourceRoles.length ? `（${fieldItem.sourceRoles.join('、')}）` : ''}`).join('；') : '未关联')}</div>
             </div>
@@ -8244,6 +8381,76 @@
       return row;
     }
 
+    function openGuidedUpdateFields(dataIndex, linkIndex, invoker = null) {
+      const dataObject = currentDocument()?.data_objects?.[dataIndex];
+      const link = dataObject?.behavior_links?.[linkIndex];
+      if (!dataObject || !link || link.operation !== 'update') return;
+      openUpdateFieldsModal({
+        dataRef: dataObject.data_ref,
+        dataName: dataObject.data_name,
+        selectedRefs: link.updated_field_refs,
+        invoker,
+        onConfirm(selectedRefs) {
+          link.updated_field_refs = selectedRefs;
+          touch();
+          render();
+          showStatus(`已登记${selectedRefs.length}个本次更新字段。`, 'success');
+        },
+        onCancel: render
+      });
+    }
+
+    function openGridUpdateFields(rowId, invoker = null) {
+      const row = webGridSession?.rows('data_behavior_links').find(item => item._row_id === rowId && !item._deleted);
+      if (!row || row.operation !== 'update') return;
+      const dataRow = webGridSession.rows('data_objects').find(item => item.data_ref === row.data_ref);
+      openUpdateFieldsModal({
+        dataRef: row.data_ref,
+        dataName: dataRow?.data_name,
+        selectedRefs: row.updated_field_refs,
+        fields: gridUpdateFieldOptions(row),
+        invoker,
+        onConfirm(selectedRefs) {
+          webGridSession.updateCell('data_behavior_links', rowId, 'updated_field_refs', selectedRefs);
+          clearNativeGridIssues();
+          refreshNativeGridPanel('data_behavior_links');
+          updateNativeGridStatus();
+          showStatus(`表格工作副本已登记${selectedRefs.length}个本次更新字段。`, 'success');
+        },
+        onCancel: () => refreshNativeGridPanel('data_behavior_links')
+      });
+    }
+
+    function openGraphUpdateFields(invoker = null, onConfirm = null) {
+      if (graphSelection?.kind !== 'data-edge' || !graphSelection.operations?.includes('update')) return;
+      const dataObject = currentDocument()?.data_objects?.find(item => item.data_ref === graphSelection.dataRef);
+      if (!dataObject) return;
+      openUpdateFieldsModal({
+        dataRef: dataObject.data_ref,
+        dataName: dataObject.data_name,
+        selectedRefs: graphSelection.updatedFieldRefs,
+        invoker,
+        onConfirm(selectedRefs) {
+          graphSelection.updatedFieldRefs = selectedRefs;
+          if (typeof onConfirm === 'function') return onConfirm(selectedRefs);
+          render();
+        },
+        onCancel: render
+      });
+    }
+
+    function applyGraphDataOperations(updatedFieldRefs = graphSelection?.updatedFieldRefs || []) {
+      if (graphSelection?.kind !== 'data-edge') return;
+      return runGraphCommand({
+        type: 'set_data_operations',
+        dataRef: graphSelection.dataRef,
+        behaviorRef: graphSelection.behaviorRef,
+        operations: graphSelection.operations || [],
+        updatedFieldRefs,
+        refFactory: () => newRef('data_link')
+      }, { successLabel: graphSelection.operations?.length ? '数据关系已更新' : '数据关系已删除' });
+    }
+
     function handleAction(action, element) {
       const index = Number(element.dataset.index);
       const formIndex = Number(element.dataset.formIndex);
@@ -8279,6 +8486,7 @@
         return;
       }
       if (action === 'grid-add-row') return addGridRow(element.dataset.tableId);
+      if (action === 'open-grid-update-fields') return openGridUpdateFields(element.dataset.rowId, element);
       if (action === 'grid-duplicate-row') {
         const tableId = element.dataset.tableId;
         const rowId = webGridSelectedRows[tableId];
@@ -8324,6 +8532,8 @@
         setTimeout(() => focusCell(0), 30);
         return;
       }
+      if (action === 'open-update-fields') return openGuidedUpdateFields(Number(element.dataset.dataIndex), index, element);
+      if (action === 'open-graph-update-fields') return openGraphUpdateFields(element);
       if (action === 'switch-data-mode') {
         activeDataMode = text(element.dataset.mode) === 'lifecycle' ? 'lifecycle' : 'flow';
         graphSelection = null;
@@ -8557,23 +8767,22 @@
       if (action === 'continue-data-relation') {
         if (!graphSelection?.behaviorRef) return;
         const dataObject = ensureActiveGraphDataObject();
+        const updateLink = dataObject.behavior_links.find(link => link.behavior_ref === graphSelection.behaviorRef && link.operation === 'update');
         graphSelection = {
           kind: 'data-edge',
           dataRef: dataObject.data_ref,
           behaviorRef: graphSelection.behaviorRef,
-          operations: dataObject.behavior_links.filter(link => link.behavior_ref === graphSelection.behaviorRef).map(link => link.operation)
+          operations: dataObject.behavior_links.filter(link => link.behavior_ref === graphSelection.behaviorRef).map(link => link.operation),
+          updatedFieldRefs: list(updateLink?.updated_field_refs)
         };
         return render();
       }
       if (action === 'apply-data-operations') {
         if (graphSelection?.kind !== 'data-edge') return;
-        return runGraphCommand({
-          type: 'set_data_operations',
-          dataRef: graphSelection.dataRef,
-          behaviorRef: graphSelection.behaviorRef,
-          operations: graphSelection.operations || [],
-          refFactory: () => newRef('data_link')
-        }, { successLabel: graphSelection.operations?.length ? '数据关系已更新' : '数据关系已删除' });
+        if (graphSelection.operations?.includes('update') && !list(graphSelection.updatedFieldRefs).length) {
+          return openGraphUpdateFields(element, selectedRefs => applyGraphDataOperations(selectedRefs));
+        }
+        return applyGraphDataOperations();
       }
       if (action === 'apply-data-property') {
         if (graphSelection?.kind !== 'data' || !graphSelection.draft) return;
@@ -8615,7 +8824,7 @@
           window.alert('请先添加至少一个业务行为，再登记数据关系。');
           return;
         }
-        dataObject.behavior_links.push({ link_ref: newRef('data_link'), behavior_ref: behavior.behavior_ref, operation: 'pending_confirmation' });
+        dataObject.behavior_links.push({ link_ref: newRef('data_link'), behavior_ref: behavior.behavior_ref, operation: 'pending_confirmation', updated_field_refs: [] });
         touch();
         return render();
       }
@@ -8659,6 +8868,11 @@
         const dataField = dataObject?.fields?.[index];
         if (!dataField) return;
         const references = [];
+        (dataObject.behavior_links || []).forEach(link => {
+          if (list(link.updated_field_refs).includes(dataField.field_ref)) {
+            references.push(`数据行为关系“${behaviorLabel(link.behavior_ref)} / 更新”`);
+          }
+        });
         (currentDocument().forms || []).forEach(form => (form.areas || []).forEach(area =>
           (area.items || []).forEach(item => {
             if (item.data_field_ref === dataField.field_ref) references.push(`${form.form_name || '未命名表单'} / ${item.item_name || '未命名字段'}`);
@@ -9229,6 +9443,13 @@
         (item.behavior_links || []).forEach((link, linkIndex) => {
           if (link.operation === 'pending_confirmation') {
             addWarning(`${label}与“${behaviorLabel(link.behavior_ref)}”之间的数据操作待确认。`, atField(dataTarget, `data_objects.${dataIndex}.behavior_links.${linkIndex}.operation`));
+          }
+          if (link.operation === 'update' && !list(link.updated_field_refs).length) {
+            addWarning(
+              `${label}与“${behaviorLabel(link.behavior_ref)}”之间已选择“更新”，但尚未选择本次实际更新的字段。`,
+              atField(dataTarget, `data_objects.${dataIndex}.behavior_links.${linkIndex}.updated_field_refs`),
+              ['点击本项返回数据行为关系，再通过“选择字段”补充一个或多个对象字段。']
+            );
           }
         });
         if (!createLinks.length && !(item.source_relations || []).length) {
@@ -9906,6 +10127,20 @@
       const target = event.target.closest('[data-bind]');
       if (!target || !currentDocument()) return;
       if (target.dataset.bind === 'process.owning_department') return;
+      const dataOperationMatch = target.dataset.bind.match(/^data_objects\.(\d+)\.behavior_links\.(\d+)\.operation$/);
+      if (dataOperationMatch) {
+        const dataIndex = Number(dataOperationMatch[1]);
+        const linkIndex = Number(dataOperationMatch[2]);
+        const link = currentDocument()?.data_objects?.[dataIndex]?.behavior_links?.[linkIndex];
+        if (!link) return;
+        link.operation = target.value;
+        if (link.operation !== 'update') link.updated_field_refs = [];
+        else link.updated_field_refs = list(link.updated_field_refs);
+        touch();
+        if (link.operation === 'update') openGuidedUpdateFields(dataIndex, linkIndex, target);
+        else render();
+        return;
+      }
       const kind = target.dataset.kind;
       const value = kind === 'boolean' ? target.checked : kind === 'nullable' ? nullable(target.value) : target.value;
       setByPath(target.dataset.bind, value);
@@ -9976,6 +10211,15 @@
       if (target.matches('[data-grid-cell]')) {
         updateNativeGridCell(target);
         if (target.dataset.gridColumn === 'business_data_ref') refreshNativeGridPanel(target.dataset.gridTableId);
+        if (target.dataset.gridTableId === 'data_behavior_links' && target.dataset.gridColumn === 'operation') {
+          const row = webGridSession.rows('data_behavior_links').find(item => item._row_id === target.dataset.gridRowId);
+          if (!row) return;
+          if (row?.operation === 'update') openGridUpdateFields(row._row_id, target);
+          else {
+            webGridSession.updateCell('data_behavior_links', row._row_id, 'updated_field_refs', []);
+            refreshNativeGridPanel('data_behavior_links');
+          }
+        }
         return;
       }
       if (target.matches('[data-graph-relation-type]') && flowRelationDraft) {
@@ -10322,6 +10566,15 @@
     discardGridChangesButton.addEventListener('click', () => discardWebGridChanges({ switchMode: webGridPendingMode || '', after: webGridPendingAction }));
     applyGridChangesButton.addEventListener('click', () => applyWebGridChanges({ switchMode: webGridPendingMode || '', after: webGridPendingAction }));
 
+    cancelUpdateFieldsButton.addEventListener('click', () => closeUpdateFieldsModal(true));
+    confirmUpdateFieldsButton.addEventListener('click', confirmUpdateFieldsSelection);
+    updateFieldsOptions.addEventListener('change', () => {
+      updateFieldsError.textContent = '';
+    });
+    updateFieldsModal.addEventListener('click', event => {
+      if (event.target === updateFieldsModal) closeUpdateFieldsModal(true);
+    });
+
     document.getElementById('cancelProtectedButton').addEventListener('click', () => {
       protectedAction = null;
       closeProtectedModal();
@@ -10352,6 +10605,10 @@
 
     window.addEventListener('keydown', event => {
       if (event.key !== 'Escape') return;
+      if (updateFieldsModal.classList.contains('show')) {
+        closeUpdateFieldsModal(true);
+        return;
+      }
       if (gridModeSwitchModal.classList.contains('show')) {
         closeGridModeSwitchModal();
         return;
