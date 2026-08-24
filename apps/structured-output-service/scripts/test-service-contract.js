@@ -21,7 +21,7 @@ const reviewPatternDiagramsPath = path.join(appRoot, 'public', 'review-pattern-d
 const structureScorePath = path.join(appRoot, 'public', 'structure-score.js');
 const governanceWorkflowPath = path.join(appRoot, 'public', 'governance-workflow.js');
 const webGridCorePath = path.join(appRoot, 'public', 'web-grid-core.js');
-const webGridEditorsPath = path.join(appRoot, 'public', 'web-grid-editors.js');
+const nativeWebGridPath = path.join(appRoot, 'public', 'native-web-grid.js');
 const processV7GridAdapterPath = path.join(appRoot, 'public', 'process-v7-grid-adapter.js');
 const serverPath = path.join(appRoot, 'server.js');
 const processV1SchemaPath = path.join(repoRoot, 'docs', 'contracts', 'process-governance-v1.schema.json');
@@ -410,18 +410,16 @@ async function testApi() {
     assert.equal(health.body.release_status, 'released');
     assert.equal(Object.prototype.hasOwnProperty.call(health.body, 'deepseek'), false);
 
-    const tabulatorScript = await fetch(`${baseUrl}/vendor/tabulator.min.js`);
-    assert.equal(tabulatorScript.status, 200);
-    assert.match(tabulatorScript.headers.get('content-type') || '', /javascript/);
-    assert.ok((await tabulatorScript.text()).includes('Tabulator'));
-    const tabulatorStyle = await fetch(`${baseUrl}/vendor/tabulator.min.css`);
-    assert.equal(tabulatorStyle.status, 200);
-    assert.match(tabulatorStyle.headers.get('content-type') || '', /css/);
-    assert.ok((await tabulatorStyle.text()).includes('.tabulator'));
-    const webGridEditorsAsset = await fetch(`${baseUrl}/web-grid-editors.js`);
-    assert.equal(webGridEditorsAsset.status, 200);
-    assert.match(webGridEditorsAsset.headers.get('content-type') || '', /javascript/);
-    assert.match(await webGridEditorsAsset.text(), /isCompositionKey/);
+    const retiredTabulatorScript = await fetch(`${baseUrl}/vendor/tabulator.min.js`);
+    const retiredTabulatorStyle = await fetch(`${baseUrl}/vendor/tabulator.min.css`);
+    const retiredGridEditor = await fetch(`${baseUrl}/web-grid-editors.js`);
+    assert.doesNotMatch(retiredTabulatorScript.headers.get('content-type') || '', /javascript/);
+    assert.doesNotMatch(retiredTabulatorStyle.headers.get('content-type') || '', /css/);
+    assert.doesNotMatch(retiredGridEditor.headers.get('content-type') || '', /javascript/);
+    const nativeWebGridAsset = await fetch(`${baseUrl}/native-web-grid.js`);
+    assert.equal(nativeWebGridAsset.status, 200);
+    assert.match(nativeWebGridAsset.headers.get('content-type') || '', /javascript/);
+    assert.match(await nativeWebGridAsset.text(), /isCompositionKey/);
 
     const schema = await getJson(baseUrl, '/api/schema');
     assert.equal(schema.body.properties.schema_version.const, 'process-governance-v7');
@@ -1311,7 +1309,7 @@ async function testFrontendContract() {
   const structureScoreSource = fs.readFileSync(structureScorePath, 'utf8');
   const governanceWorkflowSource = fs.readFileSync(governanceWorkflowPath, 'utf8');
   const webGridCoreSource = fs.readFileSync(webGridCorePath, 'utf8');
-  const webGridEditorsSource = fs.readFileSync(webGridEditorsPath, 'utf8');
+  const nativeWebGridSource = fs.readFileSync(nativeWebGridPath, 'utf8');
   const processV7GridAdapterSource = fs.readFileSync(processV7GridAdapterPath, 'utf8');
   const serverSource = fs.readFileSync(serverPath, 'utf8');
 
@@ -1320,10 +1318,9 @@ async function testFrontendContract() {
   assert.ok(html.includes('<script src="process-governance-migration.js"></script>'));
   assert.ok(html.includes('<script src="governance-workflow.js"></script>'));
   assert.ok(html.includes('<script src="legacy-cross-department-diagnostics.js"></script>'));
-  assert.ok(html.includes('<link rel="stylesheet" href="/vendor/tabulator.min.css">'));
-  assert.ok(html.includes('<script src="/vendor/tabulator.min.js"></script>'));
+  assert.equal(html.includes('/vendor/tabulator'), false);
   assert.ok(html.includes('<script src="web-grid-core.js"></script>'));
-  assert.ok(html.includes('<script src="web-grid-editors.js"></script>'));
+  assert.ok(html.includes('<script src="native-web-grid.js"></script>'));
   assert.ok(html.includes('<script src="process-v7-grid-adapter.js"></script>'));
   assert.equal(html.includes('bulk-data-editor.js'), false);
   assert.ok(html.includes('<script src="graph-edit-commands.js"></script>'));
@@ -1383,19 +1380,21 @@ async function testFrontendContract() {
   assert.ok(webGridCoreSource.includes('@typedef {Object} GridTableDefinition'));
   assert.ok(webGridCoreSource.includes('@typedef {Object} GridIssue'));
   assert.ok(webGridCoreSource.includes('@typedef {Object} GridCommitDriver'));
-  assert.ok(webGridEditorsSource.includes('event?.isComposing'));
-  assert.ok(webGridEditorsSource.includes('event?.keyCode === 229'));
-  assert.ok(html.includes('globalThis.WebGridEditors.createImeSafeInputEditor'));
+  assert.ok(nativeWebGridSource.includes('event?.isComposing'));
+  assert.ok(nativeWebGridSource.includes('event?.keyCode === 229'));
+  assert.ok(html.includes('workspace.addEventListener(\'compositionstart\''));
+  assert.ok(html.includes('workspace.addEventListener(\'compositionend\''));
+  assert.ok(html.includes('data-grid-cell'));
+  assert.equal(html.includes('new Tabulator'), false);
   [
     'data_objects', 'data_fields', 'data_behavior_links', 'data_source_relations',
     'forms', 'form_behavior_links', 'form_areas', 'form_items', 'field_source_links'
   ].forEach(tableId => assert.ok(processV7GridAdapterSource.includes(`id: '${tableId}'`), `missing grid table: ${tableId}`));
   assert.ok(html.includes('aria-label="当前数据对象的字段列表"'));
   assert.equal(html.includes('class="form-field-table data-object-field-table"'), false);
-  assert.ok(html.includes('selectableRange: 1'));
-  assert.ok(html.includes('selectableRangeRows: true'));
-  assert.equal(html.includes('selectableRows: 1'), false, 'range selection must not be combined with Tabulator row selection');
-  assert.ok(html.includes("table.on('rowClick'"));
+  assert.ok(html.includes('function applyNativeGridPaste'));
+  assert.ok(html.includes('function selectNativeGridRow'));
+  assert.equal(html.includes("table.on('rowClick'"), false);
   assert.ok(html.includes('function governanceIssuesForStep'));
   assert.ok(html.includes('data-action="focus-export-warning"'));
   const diagramLegendSource = html.slice(

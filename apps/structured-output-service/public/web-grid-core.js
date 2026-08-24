@@ -81,6 +81,17 @@
       return rowsFor(tableId);
     }
 
+    function updateCell(tableId, rowId, column, value) {
+      const table = requireTable(tableId);
+      const row = table.find(item => item._row_id === rowId);
+      if (!row) throw new Error('没有找到需要修改的表格行');
+      if (!definitionById.get(tableId).columns.some(item => item.key === column && !item.readOnly)) {
+        throw new Error('该表格字段不允许修改');
+      }
+      row[column] = clone(value);
+      return clone(row);
+    }
+
     function rowsFor(tableId, options = {}) {
       const rows = requireTable(tableId);
       return clone(options.includeDeleted === false ? rows.filter(row => !row._deleted) : rows);
@@ -163,6 +174,7 @@
       rows: rowsFor,
       allRows: () => clone(tables),
       replaceRows,
+      updateCell,
       addRow,
       duplicateRow,
       setDeleted,

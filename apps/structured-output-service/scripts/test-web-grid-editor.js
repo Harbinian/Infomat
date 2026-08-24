@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 
 const WebGridCore = require('../public/web-grid-core');
 const ProcessV7GridAdapter = require('../public/process-v7-grid-adapter');
-const WebGridEditors = require('../public/web-grid-editors');
+const NativeWebGrid = require('../public/native-web-grid');
 const GraphEditorState = require('../public/graph-editor-state');
 const GraphEditCommands = require('../public/graph-edit-commands');
 
@@ -69,77 +69,52 @@ const adapterOptions = {
 };
 
 {
-  assert.equal(WebGridEditors.isCompositionKey({ key: 'Enter', isComposing: true }, false), true);
-  assert.equal(WebGridEditors.isCompositionKey({ key: 'Enter', keyCode: 229 }, false), true);
-  assert.equal(WebGridEditors.isCompositionKey({ key: 'Enter' }, true), true);
-  assert.equal(WebGridEditors.isCompositionKey({ key: 'Enter' }, false), false);
+  assert.equal(NativeWebGrid.isCompositionKey({ key: 'Enter', isComposing: true }, false), true);
+  assert.equal(NativeWebGrid.isCompositionKey({ key: 'Enter', keyCode: 229 }, false), true);
+  assert.equal(NativeWebGrid.isCompositionKey({ key: 'Enter' }, true), true);
+  assert.equal(NativeWebGrid.isCompositionKey({ key: 'Enter' }, false), false);
   assert.equal(
-    WebGridEditors.isCompositionKey({ key: 'Enter' }, false, 1000, 1040),
+    NativeWebGrid.isCompositionKey({ key: 'Enter' }, false, 1000, 1040),
     true,
-    'the Enter event immediately following compositionend must stay inside the current editor'
+    'the Enter event immediately following compositionend must stay inside the current native control'
   );
   assert.equal(
-    WebGridEditors.isCompositionKey({ key: 'Enter' }, false, 1000, 1120),
+    NativeWebGrid.isCompositionKey({ key: 'Enter' }, false, 1000, 1120),
     false,
-    'a later explicit Enter must commit the cell and continue navigation'
+    'a later explicit Enter may continue navigation'
   );
   assert.equal(
-    WebGridEditors.isCompositionKey({ key: 'ArrowDown' }, false, 1000, 1040),
+    NativeWebGrid.isCompositionKey({ key: 'ArrowDown' }, false, 1000, 1040),
     false,
     'composition grace must not swallow normal navigation keys'
   );
-
-  const calls = [];
-  assert.equal(WebGridEditors.continueFromCell({
-    navigateDown() { calls.push('down'); return true; },
-    navigateNext() { calls.push('next'); return true; }
-  }), 'down');
-  assert.deepEqual(calls, ['down']);
-
-  calls.length = 0;
-  assert.equal(WebGridEditors.continueFromCell({
-    navigateDown() { calls.push('down'); return false; },
-    navigateNext() { calls.push('next'); return true; }
-  }), 'next');
-  assert.deepEqual(calls, ['down', 'next']);
-
-  calls.length = 0;
-  assert.equal(WebGridEditors.continueFromCell({
-    navigateDown() { calls.push('down'); return false; },
-    navigateNext() { calls.push('next'); return false; },
-    edit() { calls.push('current'); return true; }
-  }), 'current');
-  assert.deepEqual(calls, ['down', 'next', 'current']);
-}
-
-{
-  const originalDocument = global.document;
-  const listeners = {};
-  const fakeInput = {
-    style: {}, value: '',
-    setAttribute() {}, focus() {}, select() {},
-    addEventListener(name, handler) { listeners[name] = handler; }
-  };
-  global.document = { createElement() { return fakeInput; } };
-  let committed = 0;
-  let cancelled = 0;
-  const editor = WebGridEditors.createImeSafeInputEditor(
-    { getValue() { return ''; }, navigateDown() { return false; }, navigateNext() { return false; }, edit() { return true; } },
-    callback => callback(),
-    () => { committed += 1; },
-    () => { cancelled += 1; }
-  );
-  const keyEvent = () => ({ key: 'Enter', keyCode: 13, isComposing: false, preventDefault() {}, stopPropagation() {} });
-  listeners.compositionstart();
-  editor.value = '中';
-  listeners.compositionend();
-  listeners.keydown(keyEvent());
-  assert.equal(committed, 0, 'the candidate-selection Enter after compositionend must not commit');
-  assert.equal(cancelled, 0, 'the candidate-selection Enter after compositionend must not cancel');
-  listeners.keydown(keyEvent());
-  assert.equal(committed, 1, 'the following explicit Enter must commit exactly once');
-  if (originalDocument === undefined) delete global.document;
-  else global.document = originalDocument;
+  assert.deepEqual(NativeWebGrid.parseClipboardGrid('甲\t乙\r\n丙\t丁'), [['甲', '乙'], ['丙', '丁']]);
+  assert.deepEqual(NativeWebGrid.parseClipboardGrid('"甲\n乙"\t"含""引号"'), [['甲\n乙', '含"引号']]);
+  const paste = NativeWebGrid.planPaste({
+    matrix: [['业务信息', '是'], ['基础信息', '否']],
+    columns: [
+      { key: 'information_type', label: '信息类型', editor: 'select' },
+      { key: 'required', label: '是否必填', editor: 'boolean' }
+    ],
+    startColumn: 0,
+    optionResolver(column) {
+      return column.key === 'information_type' ? [
+        { value: 'business_information', label: '业务信息' },
+        { value: 'basic_information', label: '基础信息' }
+      ] : [];
+    }
+  });
+  assert.deepEqual(paste.values, [
+    ['business_information', true],
+    ['basic_information', false]
+  ]);
+  assert.equal(NativeWebGrid.planPaste({
+    matrix: [['未知类型']],
+    columns: [{ key: 'information_type', label: '信息类型', editor: 'select' }],
+    startColumn: 0,
+    optionResolver() { return [{ value: 'business_information', label: '业务信息' }]; }
+  }).errors[0].message, '没有选项“未知类型”');
+  assert.equal(NativeWebGrid.toClipboardText([['普通', '含\t制表符'], ['换\n行', '含"引号']]), '普通\t"含\t制表符"\r\n"换\n行"\t"含""引号"');
 }
 
 {
