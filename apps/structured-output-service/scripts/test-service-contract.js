@@ -21,6 +21,7 @@ const reviewPatternDiagramsPath = path.join(appRoot, 'public', 'review-pattern-d
 const structureScorePath = path.join(appRoot, 'public', 'structure-score.js');
 const governanceWorkflowPath = path.join(appRoot, 'public', 'governance-workflow.js');
 const webGridCorePath = path.join(appRoot, 'public', 'web-grid-core.js');
+const webGridEditorsPath = path.join(appRoot, 'public', 'web-grid-editors.js');
 const processV7GridAdapterPath = path.join(appRoot, 'public', 'process-v7-grid-adapter.js');
 const serverPath = path.join(appRoot, 'server.js');
 const processV1SchemaPath = path.join(repoRoot, 'docs', 'contracts', 'process-governance-v1.schema.json');
@@ -417,6 +418,10 @@ async function testApi() {
     assert.equal(tabulatorStyle.status, 200);
     assert.match(tabulatorStyle.headers.get('content-type') || '', /css/);
     assert.ok((await tabulatorStyle.text()).includes('.tabulator'));
+    const webGridEditorsAsset = await fetch(`${baseUrl}/web-grid-editors.js`);
+    assert.equal(webGridEditorsAsset.status, 200);
+    assert.match(webGridEditorsAsset.headers.get('content-type') || '', /javascript/);
+    assert.match(await webGridEditorsAsset.text(), /isCompositionKey/);
 
     const schema = await getJson(baseUrl, '/api/schema');
     assert.equal(schema.body.properties.schema_version.const, 'process-governance-v7');
@@ -1306,6 +1311,7 @@ async function testFrontendContract() {
   const structureScoreSource = fs.readFileSync(structureScorePath, 'utf8');
   const governanceWorkflowSource = fs.readFileSync(governanceWorkflowPath, 'utf8');
   const webGridCoreSource = fs.readFileSync(webGridCorePath, 'utf8');
+  const webGridEditorsSource = fs.readFileSync(webGridEditorsPath, 'utf8');
   const processV7GridAdapterSource = fs.readFileSync(processV7GridAdapterPath, 'utf8');
   const serverSource = fs.readFileSync(serverPath, 'utf8');
 
@@ -1317,6 +1323,7 @@ async function testFrontendContract() {
   assert.ok(html.includes('<link rel="stylesheet" href="/vendor/tabulator.min.css">'));
   assert.ok(html.includes('<script src="/vendor/tabulator.min.js"></script>'));
   assert.ok(html.includes('<script src="web-grid-core.js"></script>'));
+  assert.ok(html.includes('<script src="web-grid-editors.js"></script>'));
   assert.ok(html.includes('<script src="process-v7-grid-adapter.js"></script>'));
   assert.equal(html.includes('bulk-data-editor.js'), false);
   assert.ok(html.includes('<script src="graph-edit-commands.js"></script>'));
@@ -1376,6 +1383,9 @@ async function testFrontendContract() {
   assert.ok(webGridCoreSource.includes('@typedef {Object} GridTableDefinition'));
   assert.ok(webGridCoreSource.includes('@typedef {Object} GridIssue'));
   assert.ok(webGridCoreSource.includes('@typedef {Object} GridCommitDriver'));
+  assert.ok(webGridEditorsSource.includes('event?.isComposing'));
+  assert.ok(webGridEditorsSource.includes('event?.keyCode === 229'));
+  assert.ok(html.includes('globalThis.WebGridEditors.createImeSafeInputEditor'));
   [
     'data_objects', 'data_fields', 'data_behavior_links', 'data_source_relations',
     'forms', 'form_behavior_links', 'form_areas', 'form_items', 'field_source_links'

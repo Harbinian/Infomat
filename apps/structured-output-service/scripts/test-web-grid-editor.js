@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 
 const WebGridCore = require('../public/web-grid-core');
 const ProcessV7GridAdapter = require('../public/process-v7-grid-adapter');
+const WebGridEditors = require('../public/web-grid-editors');
 const GraphEditorState = require('../public/graph-editor-state');
 const GraphEditCommands = require('../public/graph-edit-commands');
 
@@ -66,6 +67,35 @@ const adapterOptions = {
     };
   }
 };
+
+{
+  assert.equal(WebGridEditors.isCompositionKey({ key: 'Enter', isComposing: true }, false), true);
+  assert.equal(WebGridEditors.isCompositionKey({ key: 'Enter', keyCode: 229 }, false), true);
+  assert.equal(WebGridEditors.isCompositionKey({ key: 'Enter' }, true), true);
+  assert.equal(WebGridEditors.isCompositionKey({ key: 'Enter' }, false), false);
+
+  const calls = [];
+  assert.equal(WebGridEditors.continueFromCell({
+    navigateDown() { calls.push('down'); return true; },
+    navigateNext() { calls.push('next'); return true; }
+  }), 'down');
+  assert.deepEqual(calls, ['down']);
+
+  calls.length = 0;
+  assert.equal(WebGridEditors.continueFromCell({
+    navigateDown() { calls.push('down'); return false; },
+    navigateNext() { calls.push('next'); return true; }
+  }), 'next');
+  assert.deepEqual(calls, ['down', 'next']);
+
+  calls.length = 0;
+  assert.equal(WebGridEditors.continueFromCell({
+    navigateDown() { calls.push('down'); return false; },
+    navigateNext() { calls.push('next'); return false; },
+    edit() { calls.push('current'); return true; }
+  }), 'current');
+  assert.deepEqual(calls, ['down', 'next', 'current']);
+}
 
 {
   const source = documentFixture();
