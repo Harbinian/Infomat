@@ -73,6 +73,21 @@ const adapterOptions = {
   assert.equal(WebGridEditors.isCompositionKey({ key: 'Enter', keyCode: 229 }, false), true);
   assert.equal(WebGridEditors.isCompositionKey({ key: 'Enter' }, true), true);
   assert.equal(WebGridEditors.isCompositionKey({ key: 'Enter' }, false), false);
+  assert.equal(
+    WebGridEditors.isCompositionKey({ key: 'Enter' }, false, 1000, 1040),
+    true,
+    'the Enter event immediately following compositionend must stay inside the current editor'
+  );
+  assert.equal(
+    WebGridEditors.isCompositionKey({ key: 'Enter' }, false, 1000, 1120),
+    false,
+    'a later explicit Enter must commit the cell and continue navigation'
+  );
+  assert.equal(
+    WebGridEditors.isCompositionKey({ key: 'ArrowDown' }, false, 1000, 1040),
+    false,
+    'composition grace must not swallow normal navigation keys'
+  );
 
   const calls = [];
   assert.equal(WebGridEditors.continueFromCell({
@@ -95,6 +110,36 @@ const adapterOptions = {
     edit() { calls.push('current'); return true; }
   }), 'current');
   assert.deepEqual(calls, ['down', 'next', 'current']);
+}
+
+{
+  const originalDocument = global.document;
+  const listeners = {};
+  const fakeInput = {
+    style: {}, value: '',
+    setAttribute() {}, focus() {}, select() {},
+    addEventListener(name, handler) { listeners[name] = handler; }
+  };
+  global.document = { createElement() { return fakeInput; } };
+  let committed = 0;
+  let cancelled = 0;
+  const editor = WebGridEditors.createImeSafeInputEditor(
+    { getValue() { return ''; }, navigateDown() { return false; }, navigateNext() { return false; }, edit() { return true; } },
+    callback => callback(),
+    () => { committed += 1; },
+    () => { cancelled += 1; }
+  );
+  const keyEvent = () => ({ key: 'Enter', keyCode: 13, isComposing: false, preventDefault() {}, stopPropagation() {} });
+  listeners.compositionstart();
+  editor.value = '中';
+  listeners.compositionend();
+  listeners.keydown(keyEvent());
+  assert.equal(committed, 0, 'the candidate-selection Enter after compositionend must not commit');
+  assert.equal(cancelled, 0, 'the candidate-selection Enter after compositionend must not cancel');
+  listeners.keydown(keyEvent());
+  assert.equal(committed, 1, 'the following explicit Enter must commit exactly once');
+  if (originalDocument === undefined) delete global.document;
+  else global.document = originalDocument;
 }
 
 {

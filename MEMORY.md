@@ -71,7 +71,7 @@ MDM platform development is currently paused unless the user explicitly asks for
 
 ## Notes
 
-- As of 2026-08-24, 3001 grid text editors preserve Chinese IME composition. An Enter key used while the IME is composing does not submit the cell. A normal Enter submits and continues to the next row in the same column; if that is unavailable, the grid tries the next editable cell and finally reopens the current cell instead of dropping focus on the table holder.
+- As of 2026-08-24, 3001 grid text editors preserve Chinese IME composition, including Windows IMEs that dispatch a normal Enter immediately after `compositionend`. The first Enter within the short post-composition window stays in the current cell; the next explicit Enter submits and continues to the next row in the same column. If that is unavailable, the grid tries the next editable cell and finally reopens the current cell instead of dropping focus on the table holder.
 - `apps/structured-output-service/` is stateless. It must not save user uploads or page contents, use browser persistence, write databases, write back to `docs/norms/`, or communicate with 3000 through APIs, databases, queues, callbacks, shared sessions, or polling.
 - `docs/contracts/process-governance-v1.schema.json` defines the 3001 export structure. One file contains exactly one process and no review status, review comments, approval marker, or formal document association. `document-structured-output-v2` remains only as the deterministic parser and historical-import structure.
 - `docs/organization/组织架构和部门职责.md` is the source for department-to-domain mapping.
