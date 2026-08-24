@@ -2434,6 +2434,7 @@
   <script src="governance-workflow.js"></script>
   <script src="legacy-cross-department-diagnostics.js"></script>
   <script src="web-grid-core.js"></script>
+  <script src="web-grid-editors.js"></script>
   <script src="process-v7-grid-adapter.js"></script>
   <script src="graph-edit-commands.js"></script>
   <script src="graph-editor-state.js"></script>
@@ -4187,7 +4188,7 @@
       const dirty = webGridSession?.isDirty();
       return section(
         '网页表格编辑器',
-        '直接在网页中编辑单元格。可以从Excel或WPS复制单元格区域后粘贴到选中位置；页面不读取文件，也不会自动保存。',
+        '直接在网页中编辑单元格。中文输入法选词时，回车不会提前提交；完成输入后再按回车，页面继续定位到可编辑单元格。也可以从Excel或WPS复制单元格区域后粘贴到选中位置；页面不读取文件，也不会自动保存。',
         `<div class="web-grid-editor">
           <div class="web-grid-workspaces" role="tablist" aria-label="表格工作区">
             <button class="button small step-view-button${activeGridWorkspace === 'data' ? ' active' : ''}" data-action="switch-grid-workspace" data-workspace="data">数据工作区</button>
@@ -7244,7 +7245,7 @@
       }
       if (spec.editor === 'boolean') return { ...base, formatter: 'tickCross', editor: 'tickCross', hozAlign: 'center', width: 86 };
       if (spec.editor === 'textarea') return { ...base, editor: 'textarea', variableHeight: true };
-      return { ...base, editor: 'input' };
+      return { ...base, editor: globalThis.WebGridEditors.createImeSafeInputEditor };
     }
 
     function selectGridParent(tableId, row) {

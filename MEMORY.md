@@ -27,6 +27,11 @@ MDM platform development is currently paused unless the user explicitly asks for
   - `pmo/`: PMO workbench, dashboard, Gantt app, and controlled deliverables.
   - `scripts/`: repository-level parsing, generation, and verification scripts.
 
+## Current Runtime Baseline
+
+- 3001 is a stateless seven-step `process-governance-v7` compiler. It imports v1 through v7 and supported historical multi-candidate files in page memory; JSON download is the only persistence. Version 7 is released for in-use verification, which is not business acceptance. Step 5 provides guided editing and a nine-table web grid over the same in-memory JSON; the grid uses a working copy and applies a validated batch as one undoable change.
+- 3000 still accepts process-governance v1 through v3 and must not import 3001 v7 until a separate compatibility, migration, and controlled acceptance task is complete. MDM-AI Assistant remains on explicitly versioned v5 endpoints.
+
 ## Operating Rules
 
 - Start cross-directory work by reading `AGENTS.md`, `CODEX.md`, `REPOSITORY_BOUNDARY.md`, `DIRECTORY_OWNERSHIP.md`, `MAINLINE_MAP.md`, then any task-related directory `AGENTS.md` or `README.md`.
@@ -66,6 +71,7 @@ MDM platform development is currently paused unless the user explicitly asks for
 
 ## Notes
 
+- As of 2026-08-24, 3001 grid text editors preserve Chinese IME composition. An Enter key used while the IME is composing does not submit the cell. A normal Enter submits and continues to the next row in the same column; if that is unavailable, the grid tries the next editable cell and finally reopens the current cell instead of dropping focus on the table holder.
 - `apps/structured-output-service/` is stateless. It must not save user uploads or page contents, use browser persistence, write databases, write back to `docs/norms/`, or communicate with 3000 through APIs, databases, queues, callbacks, shared sessions, or polling.
 - `docs/contracts/process-governance-v1.schema.json` defines the 3001 export structure. One file contains exactly one process and no review status, review comments, approval marker, or formal document association. `document-structured-output-v2` remains only as the deterministic parser and historical-import structure.
 - `docs/organization/组织架构和部门职责.md` is the source for department-to-domain mapping.
