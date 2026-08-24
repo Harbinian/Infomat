@@ -20,8 +20,6 @@ const upload = multer({
   }
 });
 const cytoscapeBrowserPath = require.resolve('cytoscape/dist/cytoscape.min.js');
-const tabulatorBrowserPath = require.resolve('tabulator-tables/dist/js/tabulator.min.js');
-const tabulatorStylePath = require.resolve('tabulator-tables/dist/css/tabulator.min.css');
 
 const schemaPath = path.join(__dirname, '..', '..', 'docs', 'contracts', 'document-structured-output.schema.json');
 const STANDARD_SCHEMA = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
@@ -3008,12 +3006,6 @@ function referenceMaterialFromSource({ sourceName, rawText, fileBuffer = null, p
 
 app.get('/vendor/cytoscape.min.js', (_req, res) => {
   res.type('application/javascript').sendFile(cytoscapeBrowserPath);
-});
-app.get('/vendor/tabulator.min.js', (_req, res) => {
-  res.type('application/javascript').sendFile(tabulatorBrowserPath);
-});
-app.get('/vendor/tabulator.min.css', (_req, res) => {
-  res.type('text/css').sendFile(tabulatorStylePath);
 });
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json({ limit: '10mb' }));

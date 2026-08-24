@@ -4,7 +4,6 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>3001 单流程治理编制工具</title>
-  <link rel="stylesheet" href="/vendor/tabulator.min.css">
   <style>
     :root {
       --paper: #f3ead7;
@@ -1379,8 +1378,30 @@
     .web-grid-heading p { flex-basis: 100%; margin: 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
     .web-grid-toolbar { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; }
     .web-grid-search { min-width: min(260px, 100%); min-height: 34px; padding: 6px 9px; border: 1px solid var(--line); border-radius: 8px; background: #fffdf8; }
-    .web-grid-shell { min-width: 0; max-width: 100%; overflow: hidden; border: 1px solid var(--line); border-radius: 10px; background: #fffdf8; }
-    .web-grid-table { min-width: 720px; }
+    .web-grid-shell { min-width: 0; max-width: 100%; max-height: 420px; overflow: auto; border: 1px solid var(--line); border-radius: 10px; background: #fffdf8; }
+    .web-grid-table { width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; font-size: 13px; }
+    .web-grid-table th,
+    .web-grid-table td { min-width: 140px; height: 38px; padding: 0; border-right: 1px solid #e5dcc8; border-bottom: 1px solid #e5dcc8; background: #fffdf8; vertical-align: middle; }
+    .web-grid-table th:last-child,
+    .web-grid-table td:last-child { border-right: 0; }
+    .web-grid-table tbody tr:last-child td { border-bottom: 0; }
+    .web-grid-table thead th { position: sticky; top: 0; z-index: 3; padding: 0; color: #5f513d; background: var(--paper-deep); text-align: left; }
+    .web-grid-sort { width: 100%; min-height: 38px; padding: 7px 9px; border: 0; border-radius: 0; color: inherit; background: transparent; font-weight: 700; text-align: left; }
+    .web-grid-sort:hover { background: #e6d8b9; }
+    .web-grid-table tbody tr:nth-child(even) td { background: #fbf6eb; }
+    .web-grid-table input,
+    .web-grid-table select,
+    .web-grid-table textarea { display: block; width: 100%; min-width: 0; height: 37px; margin: 0; padding: 6px 8px; border: 0; border-radius: 0; outline: 0; color: var(--ink); background: transparent; font: inherit; }
+    .web-grid-table textarea { min-height: 37px; resize: vertical; line-height: 1.45; }
+    .web-grid-table input:focus,
+    .web-grid-table select:focus,
+    .web-grid-table textarea:focus { position: relative; z-index: 2; background: #f7f9ff; box-shadow: inset 0 0 0 2px var(--blue); }
+    .web-grid-row-selector { width: 32px; min-width: 32px; height: 37px; padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--muted); }
+    .web-grid-row-selector:hover { background: #e8efe4; color: var(--ink); }
+    .web-grid-selector-column { position: sticky !important; left: 0; z-index: 4 !important; width: 32px; min-width: 32px !important; background: var(--paper-deep) !important; }
+    tbody .web-grid-selector-column { z-index: 2 !important; background: #f7f1e4 !important; }
+    .web-grid-readonly { display: block; min-height: 37px; padding: 8px; color: var(--muted); }
+    .web-grid-empty-row td { height: 72px; padding: 16px; color: var(--muted); text-align: center; }
     .web-grid-footer { position: sticky; bottom: 8px; z-index: 20; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; align-items: center; padding: 12px 14px; border: 1px solid #b7aa8d; border-radius: 11px; background: rgba(255, 250, 240, 0.96); box-shadow: var(--shadow); }
     .web-grid-status { color: var(--muted); font-size: 13px; }
     .web-grid-status.dirty { color: var(--red); font-weight: 700; }
@@ -1389,14 +1410,7 @@
     .web-grid-issues button { color: inherit; border: 0; background: transparent; text-align: left; text-decoration: underline; cursor: pointer; }
     .grid-row-deleted { opacity: 0.55; text-decoration: line-through; background: #f7e5df !important; }
     .grid-row-selected { outline: 2px solid var(--sage); outline-offset: -2px; background: #edf3e9 !important; }
-    .tabulator { border: 0; background: #fffdf8; font-size: 13px; }
-    .tabulator .tabulator-header { border-bottom-color: var(--line); background: var(--paper-deep); }
-    .tabulator .tabulator-header .tabulator-col { border-right-color: var(--line); background: var(--paper-deep); }
-    .tabulator .tabulator-row { background: #fffdf8; }
-    .tabulator .tabulator-row:nth-child(even) { background: #fbf6eb; }
-    .tabulator .tabulator-row .tabulator-cell { border-right-color: #e5dcc8; white-space: normal; }
-    .tabulator .tabulator-cell.tabulator-validation-fail { color: #7b2f27; background: #f7e5df; }
-    .tabulator .tabulator-range { border-color: var(--blue); }
+    .grid-cell-range-selected { background: #edf3ff !important; box-shadow: inset 0 0 0 1px #89a8ef; }
     .grid-cell-error { background: #f7e5df !important; box-shadow: inset 0 0 0 2px #b96b5b; }
     .grid-technical-ref { color: #756d60; font-family: Consolas, monospace; font-size: 11px; }
     .form-field-table .field { gap: 4px; }
@@ -2429,12 +2443,11 @@
   </div>
 
   <script src="/vendor/cytoscape.min.js"></script>
-  <script src="/vendor/tabulator.min.js"></script>
   <script src="process-governance-migration.js"></script>
   <script src="governance-workflow.js"></script>
   <script src="legacy-cross-department-diagnostics.js"></script>
   <script src="web-grid-core.js"></script>
-  <script src="web-grid-editors.js"></script>
+  <script src="native-web-grid.js"></script>
   <script src="process-v7-grid-adapter.js"></script>
   <script src="graph-edit-commands.js"></script>
   <script src="graph-editor-state.js"></script>
@@ -2788,7 +2801,9 @@
     let webGridPendingMode = '';
     let webGridPendingAction = null;
     let webGridSelectedRows = {};
-    const webGridViews = new Map();
+    let webGridFilters = {};
+    let webGridSorts = {};
+    let webGridRanges = {};
     const masterDataPendingRefs = new Set();
     const workspace = document.getElementById('workspace');
     const statusBox = document.getElementById('statusBox');
@@ -3170,18 +3185,15 @@
       });
     }
 
-    function destroyWebGridViews() {
-      webGridViews.forEach(view => view?.destroy?.());
-      webGridViews.clear();
-    }
-
     function resetWebGridEditor() {
-      destroyWebGridViews();
       webGridSession = null;
       webGridIssues = [];
       webGridPendingMode = '';
       webGridPendingAction = null;
       webGridSelectedRows = {};
+      webGridFilters = {};
+      webGridSorts = {};
+      webGridRanges = {};
     }
 
     function touch() {
@@ -4112,6 +4124,12 @@
           adapterOptions: webGridAdapterOptions()
         });
       }
+      ensureActiveWebGridContext();
+      return webGridSession;
+    }
+
+    function ensureActiveWebGridContext() {
+      if (!webGridSession) return;
       const firstActive = tableId => webGridSession.rows(tableId).find(row => !row._deleted);
       if (!webGridSession.rows('data_objects').some(row => !row._deleted && row.data_ref === activeDataRef)) {
         activeDataRef = firstActive('data_objects')?.data_ref || '';
@@ -4123,7 +4141,14 @@
       if (!formAreas.some(row => row.area_ref === activeAreaRef)) activeAreaRef = formAreas[0]?.area_ref || '';
       const formItems = webGridSession.rows('form_items').filter(row => !row._deleted && row.form_ref === activeFormRef && (!activeAreaRef || row.area_ref === activeAreaRef));
       if (!formItems.some(row => row.item_ref === activeFormItemRef)) activeFormItemRef = formItems[0]?.item_ref || '';
-      return webGridSession;
+      const selectMatchingRow = (tableId, key, value) => {
+        const row = webGridSession.rows(tableId).find(item => !item._deleted && item[key] === value);
+        if (row) webGridSelectedRows[tableId] = row._row_id;
+      };
+      selectMatchingRow('data_objects', 'data_ref', activeDataRef);
+      selectMatchingRow('forms', 'form_ref', activeFormRef);
+      selectMatchingRow('form_areas', 'area_ref', activeAreaRef);
+      selectMatchingRow('form_items', 'item_ref', activeFormItemRef);
     }
 
     function renderDataEditingModeSwitch() {
@@ -4148,6 +4173,97 @@
       field_source_links: '当前只显示所选表单字段的取值来源。外部系统来源不填写本流程数据对象。'
     };
 
+    function nativeGridColumns(tableId) {
+      return (webGridSession?.definition(tableId)?.columns || []).filter(column => !(column.technicalRef && column.readOnly));
+    }
+
+    function nativeGridDisplayValue(column, value, row) {
+      if (value == null || value === '') return '';
+      if (column.editor === 'boolean') return value ? '是' : '否';
+      if (column.editor === 'select') return column.values?.find(option => String(option.value) === String(value))?.label || value;
+      if (column.editor === 'lookup') return gridLookupLabel(column.lookup, value, row);
+      return value;
+    }
+
+    function nativeGridOptionRows(column, row) {
+      if (column.editor === 'select') return column.values || [];
+      if (column.editor === 'lookup') return gridLookupRows(column.lookup, row);
+      return [];
+    }
+
+    function nativeGridControl(tableId, row, column, rowIndex, columnIndex) {
+      const rawValue = row[column.key];
+      const value = rawValue == null ? '' : String(rawValue);
+      const attributes = `data-grid-cell data-grid-table-id="${escapeAttribute(tableId)}" data-grid-row-id="${escapeAttribute(row._row_id)}" data-grid-column="${escapeAttribute(column.key)}" data-grid-row-index="${rowIndex}" data-grid-column-index="${columnIndex}" aria-label="第${rowIndex + 1}行，${escapeAttribute(column.label)}"`;
+      const disabled = row._deleted ? ' disabled' : '';
+      if (column.readOnly) return `<span class="web-grid-readonly">${escapeHtml(nativeGridDisplayValue(column, rawValue, row))}</span>`;
+      if (column.editor === 'boolean') {
+        return `<input type="checkbox" ${attributes}${rawValue ? ' checked' : ''}${disabled}>`;
+      }
+      if (column.editor === 'select' || column.editor === 'lookup') {
+        const options = nativeGridOptionRows(column, row);
+        const hasCurrent = !value || options.some(option => String(option.value) === value);
+        return `<select ${attributes}${disabled}>
+          <option value="">请选择</option>
+          ${!hasCurrent ? `<option value="${escapeAttribute(value)}" selected>${escapeHtml(value)}（当前值）</option>` : ''}
+          ${options.map(option => `<option value="${escapeAttribute(option.value)}" ${String(option.value) === value ? 'selected' : ''}>${escapeHtml(option.label)}</option>`).join('')}
+        </select>`;
+      }
+      if (column.editor === 'textarea') return `<textarea rows="1" ${attributes}${disabled}>${escapeHtml(value)}</textarea>`;
+      const placeholder = column.editor === 'list' && column.allowedValues?.length ? `可填写：${column.allowedValues.join('、')}` : '';
+      return `<input type="text" value="${escapeAttribute(value)}" ${attributes}${placeholder ? ` placeholder="${escapeAttribute(placeholder)}"` : ''} autocomplete="off"${disabled}>`;
+    }
+
+    function nativeGridRows(tableId) {
+      const query = text(webGridFilters[tableId]).trim().toLowerCase();
+      const rows = webGridVisibleRows(tableId).filter(row => !query || Object.entries(row)
+        .filter(([key]) => !key.startsWith('_'))
+        .some(([, value]) => text(value).toLowerCase().includes(query)));
+      const sort = webGridSorts[tableId];
+      if (!sort?.column) return rows;
+      const direction = sort.direction === 'desc' ? -1 : 1;
+      return rows.slice().sort((left, right) => text(left[sort.column]).localeCompare(text(right[sort.column]), 'zh-CN', { numeric: true }) * direction);
+    }
+
+    function nativeGridRangeBounds(tableId, rows, columns) {
+      const range = webGridRanges[tableId];
+      if (!range?.anchorRowId || !range?.currentRowId) return null;
+      const anchorRowIndex = rows.findIndex(row => row._row_id === range.anchorRowId);
+      const currentRowIndex = rows.findIndex(row => row._row_id === range.currentRowId);
+      const anchorColumnIndex = columns.findIndex(column => column.key === range.anchorColumn);
+      const currentColumnIndex = columns.findIndex(column => column.key === range.currentColumn);
+      if ([anchorRowIndex, currentRowIndex, anchorColumnIndex, currentColumnIndex].some(index => index < 0)) return null;
+      return globalThis.NativeWebGrid.rangeBounds(
+        { rowIndex: anchorRowIndex, columnIndex: anchorColumnIndex },
+        { rowIndex: currentRowIndex, columnIndex: currentColumnIndex }
+      );
+    }
+
+    function renderNativeGridTable(tableId) {
+      const definition = webGridSession.definition(tableId);
+      const columns = nativeGridColumns(tableId);
+      const rows = nativeGridRows(tableId);
+      const range = nativeGridRangeBounds(tableId, rows, columns);
+      const selectedRowId = webGridSelectedRows[tableId] || '';
+      const sort = webGridSorts[tableId];
+      const header = columns.map(column => {
+        const indicator = sort?.column === column.key ? (sort.direction === 'desc' ? ' ↓' : ' ↑') : '';
+        const width = Number(column.width || 0);
+        return `<th scope="col" ${width ? `style="min-width:${width}px;width:${width}px"` : ''}><button type="button" class="web-grid-sort" data-action="grid-sort" data-table-id="${escapeAttribute(tableId)}" data-column="${escapeAttribute(column.key)}">${escapeHtml(column.label)}${indicator}</button></th>`;
+      }).join('');
+      const body = rows.length ? rows.map((row, rowIndex) => {
+        const rowClasses = [row._row_id === selectedRowId ? 'grid-row-selected' : '', row._deleted ? 'grid-row-deleted' : ''].filter(Boolean).join(' ');
+        const cells = columns.map((column, columnIndex) => {
+          const inRange = range && rowIndex >= range.rowStart && rowIndex <= range.rowEnd && columnIndex >= range.columnStart && columnIndex <= range.columnEnd;
+          const hasError = webGridIssues.some(issue => issue.tableId === tableId && issue.rowId === row._row_id && issue.column === column.key);
+          const classes = [inRange ? 'grid-cell-range-selected' : '', hasError ? 'grid-cell-error' : ''].filter(Boolean).join(' ');
+          return `<td class="${classes}" data-grid-cell-container data-grid-table-id="${escapeAttribute(tableId)}" data-grid-row-id="${escapeAttribute(row._row_id)}" data-grid-column="${escapeAttribute(column.key)}" data-grid-row-index="${rowIndex}" data-grid-column-index="${columnIndex}">${nativeGridControl(tableId, row, column, rowIndex, columnIndex)}</td>`;
+        }).join('');
+        return `<tr class="${rowClasses}" data-grid-row-id="${escapeAttribute(row._row_id)}"><td class="web-grid-selector-column"><button type="button" class="web-grid-row-selector" data-grid-row-selector data-grid-table-id="${escapeAttribute(tableId)}" data-grid-row-id="${escapeAttribute(row._row_id)}" aria-label="选择第${rowIndex + 1}行">›</button></td>${cells}</tr>`;
+      }).join('') : `<tr class="web-grid-empty-row"><td colspan="${columns.length + 1}">${webGridFilters[tableId] ? '没有符合查找条件的记录。' : '当前范围没有记录。点击“新增行”开始编辑。'}</td></tr>`;
+      return `<table class="web-grid-table" aria-label="${escapeAttribute(definition.label)}"><thead><tr><th class="web-grid-selector-column" aria-hidden="true"></th>${header}</tr></thead><tbody>${body}</tbody></table>`;
+    }
+
     function renderWebGridPanel(tableId) {
       const definition = webGridSession.definition(tableId);
       const requestedRowId = webGridSelectedRows[tableId] || '';
@@ -4157,7 +4273,7 @@
         <div class="web-grid-heading">
           <h3>${escapeHtml(definition.label)}</h3>
           <div class="web-grid-toolbar">
-            <input class="web-grid-search" type="search" data-grid-search="${escapeAttribute(tableId)}" placeholder="在当前表格中查找" aria-label="查找${escapeAttribute(definition.label)}">
+            <input class="web-grid-search" type="search" value="${escapeAttribute(webGridFilters[tableId] || '')}" data-grid-search="${escapeAttribute(tableId)}" placeholder="在当前表格中查找" aria-label="查找${escapeAttribute(definition.label)}">
             <button class="button small" data-action="grid-add-row" data-table-id="${escapeAttribute(tableId)}">新增行</button>
             <button class="button small secondary" data-action="grid-duplicate-row" data-table-id="${escapeAttribute(tableId)}" ${selectedRowId ? '' : 'disabled'}>复制选中行</button>
             <button class="button small" data-action="grid-move-row-up" data-table-id="${escapeAttribute(tableId)}" ${selectedRowId ? '' : 'disabled'}>上移</button>
@@ -4166,7 +4282,7 @@
           </div>
           <p>${escapeHtml(GRID_TABLE_GUIDANCE[tableId])}</p>
         </div>
-        <div class="web-grid-shell"><div class="web-grid-table" id="webGrid-${escapeAttribute(tableId)}" aria-label="${escapeAttribute(definition.label)}"></div></div>
+        <div class="web-grid-shell" id="webGrid-${escapeAttribute(tableId)}">${renderNativeGridTable(tableId)}</div>
       </section>`;
     }
 
@@ -4188,7 +4304,7 @@
       const dirty = webGridSession?.isDirty();
       return section(
         '网页表格编辑器',
-        '直接在网页中编辑单元格。中文输入法选词时，回车不会提前提交；完成输入后再按回车，页面继续定位到可编辑单元格。也可以从Excel或WPS复制单元格区域后粘贴到选中位置；页面不读取文件，也不会自动保存。',
+        '单元格内始终使用原生输入控件。单击后可以持续输入或切换中文输入法，不需要按住鼠标。按住Shift再单击可扩展选择区域；从Excel或WPS复制连续单元格后，可在起始单元格直接粘贴。页面不读取文件，也不会自动保存。',
         `<div class="web-grid-editor">
           <div class="web-grid-workspaces" role="tablist" aria-label="表格工作区">
             <button class="button small step-view-button${activeGridWorkspace === 'data' ? ' active' : ''}" data-action="switch-grid-workspace" data-workspace="data">数据工作区</button>
@@ -7151,25 +7267,7 @@
       return rows;
     }
 
-    function syncWebGridRows(tableId, visibleRows) {
-      const allRows = webGridSession.rows(tableId);
-      const incoming = new Map((visibleRows || []).map(row => [row._row_id, row]));
-      const merged = allRows.map(row => incoming.get(row._row_id) || row);
-      incoming.forEach((row, rowId) => {
-        if (!allRows.some(item => item._row_id === rowId)) merged.push(row);
-      });
-      webGridSession.replaceRows(tableId, merged);
-      const status = workspace.querySelector('.web-grid-status');
-      if (status) {
-        status.textContent = webGridSession.isDirty() ? '表格中有未应用修改；当前JSON尚未改变。' : '表格内容与当前JSON一致。';
-        status.classList.toggle('dirty', webGridSession.isDirty());
-      }
-      workspace.querySelector('[data-action="apply-web-grid"]')?.toggleAttribute('disabled', !webGridSession.isDirty());
-      workspace.querySelector('[data-action="discard-web-grid"]')?.toggleAttribute('disabled', !webGridSession.isDirty());
-      webGridIssues = [];
-    }
-
-    function gridLookupRows(lookup, cell) {
+    function gridLookupRows(lookup, rowData = {}) {
       if (lookup === 'behaviors') {
         const behaviors = currentDocument()?.behaviors || [];
         const counts = new Map();
@@ -7184,7 +7282,6 @@
         });
       }
       let rows = webGridSession?.rows(lookup)?.filter(row => !row._deleted) || [];
-      const rowData = cell?.getRow?.().getData?.() || {};
       if (lookup === 'form_areas' && rowData.form_ref) rows = rows.filter(row => row.form_ref === rowData.form_ref);
       if (lookup === 'data_fields' && rowData.business_data_ref) rows = rows.filter(row => row.data_ref === rowData.business_data_ref);
       const fields = {
@@ -7204,48 +7301,9 @@
       });
     }
 
-    function gridLookupLabel(lookup, value, cell) {
+    function gridLookupLabel(lookup, value, rowData = {}) {
       if (value == null || value === '') return '';
-      return gridLookupRows(lookup, cell).find(item => item.value === value)?.label || value;
-    }
-
-    function tabulatorColumn(spec) {
-      const base = {
-        title: spec.label,
-        field: spec.key,
-        minWidth: spec.width || 140,
-        widthGrow: spec.width ? 0 : 1,
-        headerSort: true,
-        resizable: true,
-        visible: !(spec.technicalRef && spec.readOnly),
-        cssClass: spec.technicalRef ? 'grid-technical-ref' : '',
-        validator: spec.required ? 'required' : undefined
-      };
-      if (spec.readOnly) return { ...base, editor: false };
-      if (spec.editor === 'select') {
-        return {
-          ...base,
-          editor: 'list',
-          editorParams: { values: Object.fromEntries((spec.values || []).map(item => [item.value, item.label])), autocomplete: true, listOnEmpty: true, clearable: Boolean(spec.nullable) },
-          formatter(cell) { return spec.values?.find(item => item.value === cell.getValue())?.label || cell.getValue() || ''; }
-        };
-      }
-      if (spec.editor === 'lookup') {
-        return {
-          ...base,
-          editor: 'list',
-          editorParams(cell) {
-            return {
-              values: Object.fromEntries(gridLookupRows(spec.lookup, cell).map(item => [item.value, item.label])),
-              autocomplete: true, listOnEmpty: true, clearable: Boolean(spec.nullable)
-            };
-          },
-          formatter(cell) { return gridLookupLabel(spec.lookup, cell.getValue(), cell); }
-        };
-      }
-      if (spec.editor === 'boolean') return { ...base, formatter: 'tickCross', editor: 'tickCross', hozAlign: 'center', width: 86 };
-      if (spec.editor === 'textarea') return { ...base, editor: 'textarea', variableHeight: true };
-      return { ...base, editor: globalThis.WebGridEditors.createImeSafeInputEditor };
+      return gridLookupRows(lookup, rowData).find(item => item.value === value)?.label || value;
     }
 
     function selectGridParent(tableId, row) {
@@ -7281,10 +7339,10 @@
       }
     }
 
-    function updateGridToolbarSelection(tableId, rowData, table) {
+    function updateGridToolbarSelection(tableId, rowData) {
       webGridSelectedRows[tableId] = rowData._row_id;
-      table.getRows().forEach(component => component.getElement().classList.toggle('grid-row-selected', component.getData()._row_id === rowData._row_id));
       const panel = workspace.querySelector(`[data-grid-panel="${CSS.escape(tableId)}"]`);
+      panel?.querySelectorAll('tr[data-grid-row-id]').forEach(row => row.classList.toggle('grid-row-selected', row.dataset.gridRowId === rowData._row_id));
       panel?.querySelector('[data-action="grid-duplicate-row"]')?.removeAttribute('disabled');
       panel?.querySelector('[data-action="grid-move-row-up"]')?.removeAttribute('disabled');
       panel?.querySelector('[data-action="grid-move-row-down"]')?.removeAttribute('disabled');
@@ -7295,68 +7353,189 @@
       }
     }
 
-    function mountWebGrid(tableId, element) {
-      const definition = webGridSession.definition(tableId);
-      const data = webGridVisibleRows(tableId);
-      let ready = false;
-      const table = new globalThis.Tabulator(element, {
-        data,
-        index: '_row_id',
-        height: Math.min(420, Math.max(180, 84 + data.length * 38)),
-        layout: 'fitDataStretch',
-        placeholder: '当前范围没有记录。点击“新增行”开始编辑。',
-        validationMode: 'highlight',
-        history: true,
-        clipboard: true,
-        clipboardPasteParser: 'range',
-        clipboardPasteAction: 'range',
-        selectableRange: 1,
-        selectableRangeRows: true,
-        selectableRangeInitializeDefault: false,
-        rowHeader: { formatter: () => '›', headerSort: false, frozen: true, width: 32, hozAlign: 'center', cssClass: 'grid-range-row-header' },
-        rowFormatter(row) {
-          row.getElement().classList.toggle('grid-row-deleted', Boolean(row.getData()._deleted));
-          row.getElement().classList.toggle('grid-row-selected', webGridSelectedRows[tableId] === row.getData()._row_id);
-        },
-        columns: definition.columns.map(tabulatorColumn)
-      });
-      table.on('dataChanged', rows => {
-        if (ready) syncWebGridRows(tableId, rows);
-      });
-      const restoreGridState = () => {
-        ready = true;
-        const selected = webGridSelectedRows[tableId];
-        const selectedRow = selected ? table.getRows().find(row => row.getData()._row_id === selected) : null;
-        if (selectedRow) selectedRow.getElement().classList.add('grid-row-selected');
-        webGridIssues.filter(item => item.tableId === tableId && item.rowId && item.column).forEach(item => {
-          const row = table.getRows().find(component => component.getData()._row_id === item.rowId);
-          row?.getCell(item.column)?.getElement()?.classList.add('grid-cell-error');
-        });
-      };
-      table.on('renderComplete', restoreGridState);
-      requestAnimationFrame(() => {
-        restoreGridState();
-        setTimeout(restoreGridState, 80);
-      });
-      table.on('rowClick', (_event, row) => {
-        const rowData = row.getData();
-        updateGridToolbarSelection(tableId, rowData, table);
-        const previousContext = `${activeDataRef}|${activeFormRef}|${activeAreaRef}|${activeFormItemRef}`;
-        selectGridParent(tableId, rowData);
-        const nextContext = `${activeDataRef}|${activeFormRef}|${activeAreaRef}|${activeFormItemRef}`;
-        if (previousContext !== nextContext) render();
-      });
-      webGridViews.set(tableId, table);
+    function activeGridContextKey() {
+      return `${activeDataRef}|${activeFormRef}|${activeAreaRef}|${activeFormItemRef}`;
     }
 
-    function mountWebGrids() {
-      destroyWebGridViews();
-      if (activeGovernanceStep !== 'data' || activeDataEditingMode !== 'grid' || !webGridSession) return;
-      workspace.querySelectorAll('[data-grid-panel]').forEach(panel => {
-        const tableId = panel.dataset.gridPanel;
-        const element = panel.querySelector('.web-grid-table');
-        if (element) mountWebGrid(tableId, element);
+    function refreshNativeGridPanel(tableId) {
+      const panel = workspace.querySelector(`[data-grid-panel="${CSS.escape(tableId)}"]`);
+      if (panel) panel.outerHTML = renderWebGridPanel(tableId);
+    }
+
+    function refreshNativeGridDependents(tableId) {
+      const dependents = {
+        data_objects: ['data_fields', 'data_behavior_links', 'data_source_relations'],
+        forms: ['form_behavior_links', 'form_areas', 'form_items', 'field_source_links'],
+        form_areas: ['form_items', 'field_source_links'],
+        form_items: ['field_source_links']
+      }[tableId] || [];
+      dependents.forEach(refreshNativeGridPanel);
+    }
+
+    function applyNativeGridRangeStyles(tableId) {
+      const rows = nativeGridRows(tableId);
+      const columns = nativeGridColumns(tableId);
+      const bounds = nativeGridRangeBounds(tableId, rows, columns);
+      const selectedRows = new Set(bounds ? rows.slice(bounds.rowStart, bounds.rowEnd + 1).map(row => row._row_id) : []);
+      const selectedColumns = new Set(bounds ? columns.slice(bounds.columnStart, bounds.columnEnd + 1).map(column => column.key) : []);
+      workspace.querySelectorAll(`[data-grid-panel="${CSS.escape(tableId)}"] [data-grid-cell-container]`).forEach(cell => {
+        cell.classList.toggle('grid-cell-range-selected', selectedRows.has(cell.dataset.gridRowId) && selectedColumns.has(cell.dataset.gridColumn));
       });
+    }
+
+    function selectNativeGridRow(tableId, rowId, options = {}) {
+      const rowData = webGridSession?.rows(tableId).find(row => row._row_id === rowId);
+      if (!rowData) return;
+      updateGridToolbarSelection(tableId, rowData);
+      if (options.column) {
+        const previous = webGridRanges[tableId];
+        webGridRanges[tableId] = options.extend && previous?.anchorRowId
+          ? { ...previous, currentRowId: rowId, currentColumn: options.column }
+          : { anchorRowId: rowId, anchorColumn: options.column, currentRowId: rowId, currentColumn: options.column };
+        applyNativeGridRangeStyles(tableId);
+      }
+      const previousContext = activeGridContextKey();
+      selectGridParent(tableId, rowData);
+      ensureActiveWebGridContext();
+      if (previousContext !== activeGridContextKey()) refreshNativeGridDependents(tableId);
+    }
+
+    function clearNativeGridIssues() {
+      if (!webGridIssues.length) return;
+      webGridIssues = [];
+      workspace.querySelector('.web-grid-issues')?.remove();
+      workspace.querySelectorAll('.grid-cell-error').forEach(cell => cell.classList.remove('grid-cell-error'));
+    }
+
+    function updateNativeGridStatus() {
+      const dirty = Boolean(webGridSession?.isDirty());
+      const status = workspace.querySelector('.web-grid-status');
+      if (status) {
+        status.textContent = dirty ? '表格中有未应用修改；当前JSON尚未改变。' : '表格内容与当前JSON一致。';
+        status.classList.toggle('dirty', dirty);
+      }
+      workspace.querySelector('[data-action="apply-web-grid"]')?.toggleAttribute('disabled', !dirty);
+      workspace.querySelector('[data-action="discard-web-grid"]')?.toggleAttribute('disabled', !dirty);
+    }
+
+    function nativeGridControlValue(control) {
+      if (control.matches('input[type="checkbox"]')) return control.checked;
+      return control.value;
+    }
+
+    function updateNativeGridCell(control) {
+      if (!control?.matches?.('[data-grid-cell]')) return;
+      webGridSession.updateCell(control.dataset.gridTableId, control.dataset.gridRowId, control.dataset.gridColumn, nativeGridControlValue(control));
+      clearNativeGridIssues();
+      updateNativeGridStatus();
+    }
+
+    function applyNativeGridFilter(tableId, query) {
+      webGridFilters[tableId] = query;
+      const panel = workspace.querySelector(`[data-grid-panel="${CSS.escape(tableId)}"]`);
+      if (!panel) return;
+      const normalized = text(query).trim().toLowerCase();
+      let visible = 0;
+      panel.querySelectorAll('tbody tr[data-grid-row-id]').forEach(tableRow => {
+        const row = webGridSession.rows(tableId).find(item => item._row_id === tableRow.dataset.gridRowId);
+        const matches = !normalized || Object.entries(row || {}).filter(([key]) => !key.startsWith('_')).some(([, value]) => text(value).toLowerCase().includes(normalized));
+        tableRow.hidden = !matches;
+        if (matches) visible += 1;
+      });
+      let empty = panel.querySelector('[data-grid-filter-empty]');
+      if (!visible && panel.querySelector('tbody tr[data-grid-row-id]')) {
+        if (!empty) {
+          empty = document.createElement('tr');
+          empty.className = 'web-grid-empty-row';
+          empty.dataset.gridFilterEmpty = 'true';
+          empty.innerHTML = `<td colspan="${nativeGridColumns(tableId).length + 1}">没有符合查找条件的记录。</td>`;
+          panel.querySelector('tbody')?.appendChild(empty);
+        }
+      } else empty?.remove();
+      applyNativeGridRangeStyles(tableId);
+    }
+
+    function focusNativeGridCell(tableId, rowId, column) {
+      const selector = `[data-grid-cell][data-grid-table-id="${CSS.escape(tableId)}"][data-grid-row-id="${CSS.escape(rowId)}"][data-grid-column="${CSS.escape(column)}"]`;
+      const control = workspace.querySelector(selector);
+      control?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      control?.focus({ preventScroll: true });
+      if (control?.matches('input[type="text"]')) control.select();
+      return Boolean(control);
+    }
+
+    function continueNativeGridInput(control) {
+      const tableId = control.dataset.gridTableId;
+      const rows = nativeGridRows(tableId);
+      const rowIndex = rows.findIndex(row => row._row_id === control.dataset.gridRowId);
+      const nextRow = rows[rowIndex + 1];
+      if (nextRow) focusNativeGridCell(tableId, nextRow._row_id, control.dataset.gridColumn);
+    }
+
+    function nativeGridPasteOptions(tableId, column, row) {
+      if (column.editor === 'select') return column.values || [];
+      if (column.editor === 'lookup') return gridLookupRows(column.lookup, row || {});
+      return [];
+    }
+
+    function restoreWebGridTables(snapshot) {
+      Object.entries(snapshot || {}).forEach(([tableId, rows]) => webGridSession.replaceRows(tableId, rows));
+    }
+
+    function applyNativeGridPaste(control, clipboardText) {
+      const tableId = control.dataset.gridTableId;
+      const columns = nativeGridColumns(tableId);
+      let rows = nativeGridRows(tableId);
+      const startRow = rows.findIndex(row => row._row_id === control.dataset.gridRowId);
+      const startColumn = columns.findIndex(column => column.key === control.dataset.gridColumn);
+      const matrix = globalThis.NativeWebGrid.parseClipboardGrid(clipboardText);
+      const plan = globalThis.NativeWebGrid.planPaste({
+        matrix,
+        columns,
+        startColumn,
+        optionResolver(column, rowOffset) { return nativeGridPasteOptions(tableId, column, rows[startRow + rowOffset]); }
+      });
+      if (plan.errors) {
+        showStatus(`没有粘贴任何内容。${plan.errors.slice(0, 5).map(item => item.row ? `第${item.row}行第${item.column}列（${item.fieldLabel}）：${item.message}` : item.message).join('；')}`, 'error');
+        return false;
+      }
+      if ((webGridFilters[tableId] || webGridSorts[tableId]) && startRow + plan.height > rows.length) {
+        showStatus('当前表格正在查找或显示排序。请先清除查找和显示排序，再粘贴需要新增行的区域。', 'error');
+        return false;
+      }
+      const snapshot = webGridSession.allRows();
+      try {
+        while (rows.length < startRow + plan.height) {
+          createGridRowInSession(tableId, { ...gridParentContext(tableId), select: false });
+          rows = nativeGridRows(tableId);
+        }
+        plan.values.forEach((sourceRow, rowOffset) => {
+          sourceRow.forEach((value, columnOffset) => {
+            webGridSession.updateCell(tableId, rows[startRow + rowOffset]._row_id, columns[startColumn + columnOffset].key, value);
+          });
+        });
+      } catch (error) {
+        restoreWebGridTables(snapshot);
+        showStatus(`没有粘贴任何内容。${error.message}`, 'error');
+        return false;
+      }
+      clearNativeGridIssues();
+      render();
+      showStatus(`已粘贴${plan.height}行 × ${plan.width}列。修改仍在表格工作副本中。`, 'success');
+      return true;
+    }
+
+    async function copyNativeGridRange(tableId) {
+      const rows = nativeGridRows(tableId);
+      const columns = nativeGridColumns(tableId);
+      const bounds = nativeGridRangeBounds(tableId, rows, columns);
+      if (!bounds || (bounds.rowStart === bounds.rowEnd && bounds.columnStart === bounds.columnEnd)) return false;
+      const matrix = rows.slice(bounds.rowStart, bounds.rowEnd + 1).map(row => columns
+        .slice(bounds.columnStart, bounds.columnEnd + 1)
+        .map(column => nativeGridDisplayValue(column, row[column.key], row)));
+      await navigator.clipboard.writeText(globalThis.NativeWebGrid.toClipboardText(matrix));
+      showStatus(`已复制${matrix.length}行 × ${matrix[0]?.length || 0}列。`, 'success');
+      return true;
     }
 
     async function prepareWebGridCandidate() {
@@ -7476,7 +7655,6 @@
       destroyDiagram();
       destroyDataDiagram();
       destroyReviewPatternDiagrams();
-      destroyWebGridViews();
       const data = currentDocument();
       if (activeGovernanceStep !== 'skeleton' || !diagramExampleExpanded) expandedReviewPatternId = '';
       document.body.classList.toggle(
@@ -7505,7 +7683,6 @@
       if (activeGovernanceStep === 'skeleton' && activeStepView === 'diagram') requestAnimationFrame(mountDiagram);
       if (activeGovernanceStep === 'skeleton' && activeStepView === 'diagram') requestAnimationFrame(mountReviewPatternDiagrams);
       if (activeGovernanceStep === 'data' && activeDataEditingMode === 'guided' && activeStepView === 'data') requestAnimationFrame(mountDataDiagram);
-      if (activeGovernanceStep === 'data' && activeDataEditingMode === 'grid') requestAnimationFrame(mountWebGrids);
     }
 
     function updateCandidateList() {
@@ -8022,49 +8199,46 @@
       return {};
     }
 
-    function addGridRow(tableId, options = {}) {
+    function createGridRowInSession(tableId, options = {}) {
       ensureWebGridSession();
       const definition = webGridSession.definition(tableId);
       const context = { ...gridParentContext(tableId), ...options };
       if (definition.parentTableId && !context.parentRef) {
+        if (options.silent) throw new Error(`请先在上级表格中选择一条记录，再新增${definition.label}。`);
         window.alert(`请先在上级表格中选择一条记录，再新增${definition.label}。`);
         return null;
       }
       const row = options.sourceRow
         ? webGridSession.duplicateRow(tableId, options.sourceRow._row_id, context)
         : webGridSession.addRow(tableId, context);
-      if (tableId === 'data_objects') activeDataRef = row.data_ref;
       if (tableId === 'forms') {
-        activeFormRef = row.form_ref;
         const area = webGridSession.addRow('form_areas', { parentRef: row.form_ref });
-        const areas = webGridSession.rows('form_areas');
-        const created = areas.find(item => item._row_id === area._row_id);
-        created.area_type = '基本信息';
-        webGridSession.replaceRows('form_areas', areas);
-        activeAreaRef = area.area_ref;
+        webGridSession.updateCell('form_areas', area._row_id, 'area_type', '基本信息');
+        if (options.select !== false) activeAreaRef = area.area_ref;
       }
-      if (tableId === 'form_areas') activeAreaRef = row.area_ref;
-      if (tableId === 'form_items') activeFormItemRef = row.item_ref;
       if (tableId === 'data_behavior_links' && !row.behavior_ref) {
-        const rows = webGridSession.rows(tableId);
-        const created = rows.find(item => item._row_id === row._row_id);
-        created.behavior_ref = currentDocument().behaviors?.[0]?.behavior_ref || '';
-        webGridSession.replaceRows(tableId, rows);
+        webGridSession.updateCell(tableId, row._row_id, 'behavior_ref', currentDocument().behaviors?.[0]?.behavior_ref || '');
       }
       if (tableId === 'form_behavior_links' && !row.behavior_ref) {
-        const rows = webGridSession.rows(tableId);
-        const created = rows.find(item => item._row_id === row._row_id);
-        created.behavior_ref = currentDocument().behaviors?.[0]?.behavior_ref || '';
-        webGridSession.replaceRows(tableId, rows);
+        webGridSession.updateCell(tableId, row._row_id, 'behavior_ref', currentDocument().behaviors?.[0]?.behavior_ref || '');
       }
       if (tableId === 'field_source_links') {
-        const rows = webGridSession.rows(tableId);
-        const created = rows.find(item => item._row_id === row._row_id);
-        created.source_data_ref = activeDataRef || webGridSession.rows('data_objects').find(item => !item._deleted)?.data_ref || null;
-        if (!created.source_data_ref) created.source_type = 'external_system';
-        webGridSession.replaceRows(tableId, rows);
+        const sourceDataRef = activeDataRef || webGridSession.rows('data_objects').find(item => !item._deleted)?.data_ref || null;
+        webGridSession.updateCell(tableId, row._row_id, 'source_data_ref', sourceDataRef);
+        if (!sourceDataRef) webGridSession.updateCell(tableId, row._row_id, 'source_type', 'external_system');
       }
+      if (options.select === false) return row;
+      if (tableId === 'data_objects') activeDataRef = row.data_ref;
+      if (tableId === 'forms') activeFormRef = row.form_ref;
+      if (tableId === 'form_areas') activeAreaRef = row.area_ref;
+      if (tableId === 'form_items') activeFormItemRef = row.item_ref;
       webGridSelectedRows[tableId] = row._row_id;
+      return row;
+    }
+
+    function addGridRow(tableId, options = {}) {
+      const row = createGridRowInSession(tableId, options);
+      if (!row) return null;
       webGridIssues = [];
       render();
       return row;
@@ -8093,6 +8267,16 @@
       if (action === 'switch-grid-workspace') {
         activeGridWorkspace = element.dataset.workspace === 'forms' ? 'forms' : 'data';
         return render();
+      }
+      if (action === 'grid-sort') {
+        const tableId = element.dataset.tableId;
+        const column = element.dataset.column;
+        const current = webGridSorts[tableId];
+        if (!current || current.column !== column) webGridSorts[tableId] = { column, direction: 'asc' };
+        else if (current.direction === 'asc') webGridSorts[tableId] = { column, direction: 'desc' };
+        else delete webGridSorts[tableId];
+        refreshNativeGridPanel(tableId);
+        return;
       }
       if (action === 'grid-add-row') return addGridRow(element.dataset.tableId);
       if (action === 'grid-duplicate-row') {
@@ -8133,15 +8317,9 @@
         webGridSelectedRows[tableId] = rowId;
         render();
         const focusCell = attempt => {
-          const table = webGridViews.get(tableId);
-          const row = table?.getRows().find(component => component.getData()._row_id === rowId);
-          const cell = row?.getCell(element.dataset.column);
-          if (!cell && attempt < 6) {
+          if (!focusNativeGridCell(tableId, rowId, element.dataset.column) && attempt < 6) {
             setTimeout(() => focusCell(attempt + 1), 50);
-            return;
           }
-          cell?.getElement()?.scrollIntoView({ block: 'center', inline: 'center' });
-          cell?.edit?.();
         };
         setTimeout(() => focusCell(0), 30);
         return;
@@ -9701,13 +9879,11 @@
 
     workspace.addEventListener('input', event => {
       if (event.target.matches('[data-grid-search]')) {
-        const table = webGridViews.get(event.target.dataset.gridSearch);
-        const query = text(event.target.value).trim().toLowerCase();
-        if (!table) return;
-        if (!query) table.clearFilter();
-        else table.setFilter(row => Object.entries(row)
-          .filter(([key]) => !key.startsWith('_'))
-          .some(([, value]) => text(value).toLowerCase().includes(query)));
+        applyNativeGridFilter(event.target.dataset.gridSearch, event.target.value);
+        return;
+      }
+      if (event.target.matches('[data-grid-cell]')) {
+        updateNativeGridCell(event.target);
         return;
       }
       const graphProperty = event.target.closest('[data-graph-property]');
@@ -9797,6 +9973,11 @@
 
     workspace.addEventListener('change', event => {
       const target = event.target;
+      if (target.matches('[data-grid-cell]')) {
+        updateNativeGridCell(target);
+        if (target.dataset.gridColumn === 'business_data_ref') refreshNativeGridPanel(target.dataset.gridTableId);
+        return;
+      }
       if (target.matches('[data-graph-relation-type]') && flowRelationDraft) {
         flowRelationDraft.relation_type = target.value;
         if (target.value) flowRelationDraft.stage = 'source';
@@ -10004,12 +10185,26 @@
     });
 
     workspace.addEventListener('click', event => {
+      const rowSelector = event.target.closest('[data-grid-row-selector]');
+      if (rowSelector) {
+        selectNativeGridRow(rowSelector.dataset.gridTableId, rowSelector.dataset.gridRowId);
+        const firstControl = rowSelector.closest('tr')?.querySelector('[data-grid-cell]');
+        firstControl?.focus();
+        return;
+      }
       const button = event.target.closest('[data-action]');
       if (!button) return;
       handleAction(button.dataset.action, button);
     });
 
     workspace.addEventListener('pointerdown', event => {
+      const gridCell = event.target.closest('[data-grid-cell]');
+      if (gridCell && event.button === 0) {
+        selectNativeGridRow(gridCell.dataset.gridTableId, gridCell.dataset.gridRowId, {
+          column: gridCell.dataset.gridColumn,
+          extend: event.shiftKey
+        });
+      }
       const handle = event.target.closest('[data-drag-handle]');
       if (!handle || event.button !== 0) return;
       if (!beginSortableDrag(handle, event.pointerType || 'pointer', event.pointerId)) return;
@@ -10034,7 +10229,58 @@
       finishSortableDrag(false);
     });
 
+    workspace.addEventListener('compositionstart', event => {
+      const control = event.target.closest('[data-grid-cell]');
+      if (!control) return;
+      control.dataset.gridComposing = '1';
+      control.dataset.gridCompositionEndedAt = '0';
+    });
+
+    workspace.addEventListener('compositionend', event => {
+      const control = event.target.closest('[data-grid-cell]');
+      if (!control) return;
+      control.dataset.gridComposing = '0';
+      control.dataset.gridCompositionEndedAt = String(Date.now());
+      updateNativeGridCell(control);
+    });
+
+    workspace.addEventListener('paste', event => {
+      const control = event.target.closest('[data-grid-cell]');
+      if (!control) return;
+      const clipboardText = event.clipboardData?.getData('text/plain') || '';
+      if (!/[\t\r\n]/.test(clipboardText)) return;
+      event.preventDefault();
+      applyNativeGridPaste(control, clipboardText);
+    });
+
     workspace.addEventListener('keydown', event => {
+      const gridCell = event.target.closest('[data-grid-cell]');
+      if (gridCell) {
+        const tableId = gridCell.dataset.gridTableId;
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'c') {
+          const bounds = nativeGridRangeBounds(tableId, nativeGridRows(tableId), nativeGridColumns(tableId));
+          if (bounds && (bounds.rowStart !== bounds.rowEnd || bounds.columnStart !== bounds.columnEnd)) {
+            event.preventDefault();
+            copyNativeGridRange(tableId).catch(error => showStatus(`复制失败：${error.message}`, 'error'));
+          }
+          return;
+        }
+        if (event.key === 'Enter') {
+          const composing = globalThis.NativeWebGrid.isCompositionKey(
+            event,
+            gridCell.dataset.gridComposing === '1',
+            Number(gridCell.dataset.gridCompositionEndedAt || 0)
+          );
+          if (composing) return;
+          gridCell.dataset.gridCompositionEndedAt = '0';
+          if (gridCell.matches('textarea, select, input[type="checkbox"]')) return;
+          event.preventDefault();
+          event.stopPropagation();
+          updateNativeGridCell(gridCell);
+          continueNativeGridInput(gridCell);
+          return;
+        }
+      }
       const handle = event.target.closest('[data-drag-handle]');
       if (!handle && !sortableDragState) return;
       if (!sortableDragState && handle && (event.key === ' ' || event.key === 'Enter')) {
