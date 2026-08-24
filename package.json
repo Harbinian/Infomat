@@ -49,6 +49,7 @@
     "verify:structure-pilot": "npm --prefix apps/structured-output-service test && npm --prefix apps/structure-assistant test && npm run test:structure-pilot-config && npm run verify:dsh-entry",
     "test:process-evidence-evolution": "node .agents/skills/process-evidence-mapping/scripts/test-evolution-workflow.mjs",
     "test:process-evidence-skill": "node scripts/test-process-evidence-skill.mjs",
+    "test:database-to-process-json": "node .agents/skills/database-to-process-json/scripts/test-database-to-process-json.mjs",
     "test:process-governance-mainline": "node scripts/test-process-governance-mainline.mjs",
     "test:customer-file-boundary": "node scripts/test-customer-file-boundary.mjs",
     "audit:customer-file-acceptance": "node scripts/audit-customer-file-acceptance.mjs",

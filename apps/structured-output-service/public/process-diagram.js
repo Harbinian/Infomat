@@ -517,7 +517,7 @@
             ? 'upper'
             : branchVerticalDelta > 0
               ? 'lower'
-              : 'direct';
+              : crossesRanks ? 'upper' : 'direct';
         } else if (crossesRanks) {
           routePlacement = sourceVerticalScore < 0
             ? 'upper'
@@ -561,7 +561,7 @@
           placement: routePlacement,
           slot: routeSlot,
           offset: Math.ceil(routeOffset),
-          forwardBranch: routePlacement !== 'direct' && branchSource && !crossesRanks && !duplicateRoute,
+          forwardBranch: routePlacement !== 'direct' && branchSource && !duplicateRoute,
           parallelOrthogonal: parallelRelation && routePlacement !== 'direct',
           bucket: routeBucket,
           trackKey: `${routeBucket}:${routeSlot}:${item.index}`,
@@ -637,6 +637,7 @@
         segmentDistances: [Math.round(signedOffset), Math.round(signedOffset)],
         segmentWeights: [0.18, 0.82],
         routeTrackKey: route.trackKey,
+        targetEndpoint: item.relation.relation_type === 'loop' ? '0% 50%' : '',
         needsRelationReview: reviewRelationIndexes.has(item.index),
         crossLane,
         focusKind: 'relation',
@@ -1428,6 +1429,7 @@
       {
         selector: '.relation-loop',
         style: {
+          'target-endpoint': 'data(targetEndpoint)',
           'line-style': 'solid',
           'line-color': '#8c3f33',
           'target-arrow-color': '#8c3f33',

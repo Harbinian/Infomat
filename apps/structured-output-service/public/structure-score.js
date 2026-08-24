@@ -24,8 +24,8 @@
   ]);
 
   const RULE = Object.freeze({
-    id: 'structure-learning-score-v4',
-    label: '结构化学习评分 v4（process-governance-v7）',
+    id: 'structure-learning-score-v5',
+    label: '结构化学习评分 v5（process-governance-v7）',
     dimensions: Object.freeze([
       Object.freeze({
         key: 'technical',
@@ -43,7 +43,7 @@
         key: 'behavior',
         label: '业务行为',
         max: 25,
-        description: '逐个检查节点类型、名称、执行岗位、流程入口说明和完成标准；进入条件及输入输出由流程关系和数据关系提供。'
+        description: '逐个检查节点类型、行为名称是否写清主体、动作和对象，以及执行岗位、流程入口说明和完成标准；进入条件及输入输出由流程关系和数据关系提供。'
       }),
       Object.freeze({
         key: 'relation',
@@ -55,7 +55,7 @@
         key: 'dataHandoff',
         label: '数据与跨部门行为',
         max: 20,
-      description: '数据对象与生命周期占15分，检查信息类型、创建更新使用关系、可用时间和当前流程内的生命周期核对；跨部门行为完整性占5分。'
+      description: '数据对象与生命周期占15分，检查信息类型、创建更新使用关系、可用时间，以及生命周期是否适用、业务使用状态、保管方式和确实适用的匿名处理状态；跨部门行为完整性占5分。'
       }),
       Object.freeze({
         key: 'form',
@@ -185,6 +185,108 @@
     if (Array.isArray(value)) return value.length > 0;
     const normalized = text(value);
     return Boolean(normalized) && !isPlaceholder(normalized);
+  }
+
+  function behaviorNameCompleteness(behavior) {
+    const name = text(behavior?.behavior_name);
+    const nodeType = text(behavior?.node_type);
+    if (nodeType && nodeType !== 'action') {
+      return Object.freeze({
+        complete: complete(name),
+        missingSubject: false,
+        missingAction: false,
+        missingObject: false
+      });
+    }
+    const matches = [...name.matchAll(new RegExp(CONCRETE_BUSINESS_ACTION_PATTERN.source, 'g'))];
+    const completeMatch = matches.find(match => {
+      const subject = name.slice(0, match.index).trim();
+      const object = name.slice(match.index + match[0].length).trim();
+      return Boolean(subject && object);
+    });
+    if (completeMatch) {
+      return Object.freeze({
+        complete: true,
+        missingSubject: false,
+        missingAction: false,
+        missingObject: false
+      });
+    }
+    const firstMatch = matches[0];
+    return Object.freeze({
+      complete: false,
+      missingSubject: !firstMatch || !name.slice(0, firstMatch.index).trim(),
+      missingAction: !firstMatch,
+      missingObject: !firstMatch || !name.slice(firstMatch.index + firstMatch[0].length).trim()
+    });
+  }
+
+  function lifecycleStateReview(lifecycle) {
+    const applicability = text(lifecycle?.applicability);
+    const reasonRecorded = complete(lifecycle?.decision_reason);
+    if (applicability === 'not_applicable') {
+      return Object.freeze({
+        applicabilityResolved: true,
+        businessValidityResolved: reasonRecorded,
+        custodyAndIdentifiabilityResolved: reasonRecorded
+      });
+    }
+    if (applicability !== 'applicable') {
+      return Object.freeze({
+        applicabilityResolved: false,
+        businessValidityResolved: false,
+        custodyAndIdentifiabilityResolved: false
+      });
+    }
+    const states = [lifecycle?.entry_state]
+      .concat((lifecycle?.routes || []).flatMap(route => [
+        route?.exit_state,
+        ...(route?.events || []).map(event => event?.result_state)
+      ]))
+      .filter(state => state && typeof state === 'object');
+    const businessValidityResolved = states.length > 0
+      && states.every(state => text(state.business_validity) && state.business_validity !== 'pending_confirmation');
+    const custodyAndIdentifiabilityResolved = states.length > 0 && states.every(state => {
+      const custodyResolved = text(state.custody) && state.custody !== 'pending_confirmation';
+      const applicabilityValue = text(state.identifiability_applicability);
+      const identifiabilityValue = text(state.identifiability);
+      const identifiabilityResolved = applicabilityValue === 'applicable'
+        ? ['identifiable', 'irreversibly_anonymized'].includes(identifiabilityValue)
+        : applicabilityValue === 'not_applicable'
+          ? identifiabilityValue === 'not_applicable'
+          : false;
+      return custodyResolved && identifiabilityResolved;
+    });
+    return Object.freeze({
+      applicabilityResolved: true,
+      businessValidityResolved,
+      custodyAndIdentifiabilityResolved
+    });
+  }
+
+  function advancedLifecycleChecklist(documentValue) {
+    const checklist = [];
+    (documentValue?.data_objects || []).forEach((dataObject, dataIndex) => {
+      (dataObject?.lifecycle?.routes || []).forEach((route, routeIndex) => {
+        (route?.events || []).forEach((event, eventIndex) => {
+          const label = `${text(dataObject.data_name) || `数据对象${dataIndex + 1}`}的${text(event.action) || `事件${eventIndex + 1}`}`;
+          const basePath = `data_objects.${dataIndex}.lifecycle.routes.${routeIndex}.events.${eventIndex}`;
+          if (!event?.trigger || event.trigger.mode === 'pending_confirmation' || !complete(event.trigger.expression)) {
+            checklist.push({ message: `${label}尚未写清触发条件`, focusPath: `${basePath}.trigger` });
+          }
+          if (!event?.target_scope || event.target_scope === 'pending_confirmation') {
+            checklist.push({ message: `${label}尚未写清作用范围`, focusPath: `${basePath}.target_scope` });
+          }
+          if (!event?.responsibility || event.responsibility.mode === 'pending_confirmation') {
+            checklist.push({ message: `${label}尚未写清责任确定方式`, focusPath: `${basePath}.responsibility` });
+          }
+          if (!complete(event?.exception_handling)) {
+            checklist.push({ message: `${label}尚未说明发生异常时怎么处理`, focusPath: `${basePath}.exception_handling` });
+          }
+        });
+      });
+    });
+    return checklist;
   }
 
   function behaviorExecutabilityDetails(documentValue) {
@@ -1085,7 +1187,7 @@
 
     const dataFlowDetails = dataFlowConsistencyDetails(data);
     let behaviorPassed = 0;
-    const behaviorTotal = Math.max(1, behaviors.length * 5);
+    let behaviorTotal = 0;
     if (!behaviors.length) {
       issues.push(issue(
         '业务行为',
@@ -1103,6 +1205,7 @@
         focusRef: item.behavior_ref
       };
       const isControlNode = ['decision', 'parallel_split', 'parallel_join'].includes(item.node_type);
+      const nameReview = behaviorNameCompleteness(item);
       const hasDerivedEntry = (dataFlowDetails.incomingByBehavior.get(text(item.behavior_ref)) || [])
         .some(entry => entry.relation?.relation_type !== 'loop');
       const assignmentMode = actorAssignmentMode(item);
@@ -1134,6 +1237,11 @@
         [NODE_TYPES.has(item.node_type), `${label}未选择节点类型`, fieldTarget(target, `behaviors.${index}.node_type`)],
         [complete(item.behavior_name), `第${index + 1}项行为未填写名称`, fieldTarget(target, `behaviors.${index}.behavior_name`)],
         [
+          isControlNode || nameReview.complete,
+          `${label}的名称没有写清谁对什么做什么；请补齐主体、动作和对象，例如“编制人员编制产品制造大纲”`,
+          fieldTarget(target, `behaviors.${index}.behavior_name`)
+        ],
+        [
           isControlNode || actorAssignmentPassed,
           actorAssignmentMessage,
           fieldTarget(target, actorAssignmentFocusPath)
@@ -1149,12 +1257,13 @@
           fieldTarget(target, `behaviors.${index}.completion_standard`)
         ]
       ];
+      behaviorTotal += checks.length;
       checks.forEach(([passed, message, issueTarget]) => {
         if (passed) behaviorPassed += 1;
         else issues.push(issue('业务行为', message, issueTarget, '影响业务行为维度'));
       });
     });
-    const behaviorScore = behaviors.length ? 25 * (behaviorPassed / behaviorTotal) : 0;
+    const behaviorScore = behaviors.length ? 25 * (behaviorPassed / Math.max(1, behaviorTotal)) : 0;
 
     const validRelations = relations.filter(relation =>
       RELATION_TYPES.has(relation.relation_type)
@@ -1450,26 +1559,26 @@
           focusPath: `data_objects.${index}.lifecycle`,
           reviewAspect: 'lifecycle'
         };
-        const applicabilityResolved = lifecycle && lifecycle.applicability !== 'pending_confirmation';
-        if (applicabilityResolved) lifecyclePassed += 1;
-        else issues.push(issue('数据生命周期', `${label}尚未确认当前流程是否涉及生命周期变化`, target, '影响生命周期核对子项'));
-        const analysisCompleted = lifecycle?.analysis?.status === 'analyzed';
-        if (analysisCompleted) lifecyclePassed += 1;
-        else issues.push(issue('数据生命周期', `${label}尚未完成当前对象的确定性分析`, target, '影响生命周期核对子项'));
-        const events = (lifecycle?.routes || []).flatMap(route => route.events || []);
-        const reviewComplete = lifecycle?.applicability === 'not_applicable'
-          ? Boolean(lifecycle.decision_reason)
-          : lifecycle?.applicability === 'applicable'
-            && events.length > 0
-            && events.every(event => !['pending_confirmation', 'needs_recheck'].includes(event.review_status));
-        if (reviewComplete) lifecyclePassed += 1;
-        else if (applicabilityResolved) issues.push(issue(
+        const lifecycleReview = lifecycleStateReview(lifecycle);
+        if (lifecycleReview.applicabilityResolved) lifecyclePassed += 1;
+        else issues.push(issue('数据生命周期', `${label}尚未回答当前流程会不会改变这条数据的状态或保管方式`, target, '影响生命周期核对子项'));
+        if (lifecycleReview.businessValidityResolved) lifecyclePassed += 1;
+        else if (lifecycleReview.applicabilityResolved) issues.push(issue(
           '数据生命周期',
           lifecycle?.applicability === 'not_applicable'
-            ? `${label}已选择生命周期不适用，但尚未记录原因`
-            : `${label}仍有当前流程内的生命周期事件待核对`,
+            ? `${label}已选择“不改变”，但尚未记录原因`
+            : `${label}尚未说明业务上还能不能使用`,
           target,
-          '影响生命周期核对子项；不会因当前流程未覆盖对象的其他生命周期阶段扣分'
+          '影响生命周期核对子项'
+        ));
+        if (lifecycleReview.custodyAndIdentifiabilityResolved) lifecyclePassed += 1;
+        else if (lifecycleReview.applicabilityResolved) issues.push(issue(
+          '数据生命周期',
+          lifecycle?.applicability === 'not_applicable'
+            ? `${label}已选择“不改变”，但尚未记录原因`
+            : `${label}尚未说明怎么保管，或尚未回答确实适用的匿名处理问题`,
+          target,
+          '影响生命周期核对子项；高级结构核对内容不计分'
         ));
       });
       dataScore = dataCoreScore + 3 * (lifecyclePassed / lifecycleTotal);
@@ -1805,7 +1914,10 @@
   return Object.freeze({
     RULE,
     REVIEW_READINESS,
+    behaviorNameCompleteness,
     behaviorExecutabilityDetails,
+    lifecycleStateReview,
+    advancedLifecycleChecklist,
     complete,
     isPlaceholder,
     chainProfile,

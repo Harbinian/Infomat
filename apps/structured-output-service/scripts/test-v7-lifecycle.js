@@ -193,6 +193,12 @@ function testActionMatrix() {
     const event = events.find(item => item.action === action);
     assert.ok(event, `${action} must be detected`);
     assert.equal(event.result_state[dimension], expected, `${action} must update ${dimension}`);
+    if (action !== 'irreversible_anonymize') {
+      assert.equal(event.result_state.identifiability_applicability, 'not_applicable', `${action} must not ask ordinary users about identifiability`);
+      assert.equal(event.result_state.identifiability, 'not_applicable', `${action} must keep identifiability outside the current process scope`);
+      const route = analyzed.lifecycle.routes.find(item => item.events.some(candidate => candidate.event_ref === event.event_ref));
+      assert.equal(route.exit_state.identifiability_applicability, 'not_applicable', `${action} route exit must not ask ordinary users about identifiability`);
+    }
     if (['destroy', 'irreversible_anonymize'].includes(action)) {
       assert.equal(event.high_risk, true);
       assert.equal(event.review_status, 'pending_confirmation');

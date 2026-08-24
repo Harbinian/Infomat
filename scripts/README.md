@@ -229,6 +229,8 @@ npm run review:mysql:serve
 | `input-baseline-review-core.mjs` | 输入基线问题复核 MySQL schema、原文匹配、高亮和仓库方法 | 待确认 JSON、`chunks.jsonl`、MySQL pool | 供导入脚本、服务和测试复用 |
 | `test-process-evidence-skill.mjs` | 校验 process-evidence-mapping 技能是否按固定执行顺序重写，且包含 OCR、embedding、待确认待办边界 | `.agents/skills/process-evidence-mapping/SKILL.md` | 只读校验 |
 | `.agents/skills/process-evidence-mapping/scripts/test-input-baseline-review-workflow.mjs` | 用 GLTX-CW-01 回归输入基线解读、角色簿、对象链、差异报告和待确认待办 Markdown | 财务部 GLTX-CW-01 制度和当前财务部映射 | 写入被忽略的 `artifacts/process-input-baseline-review/test-gltx-cw-01/` |
+| `.agents/skills/database-to-process-json/scripts/run-database-to-process-json.mjs` | 从指定的 CXSYSYS.dbo 结构快照生成一个未审核 V7 JSON 和逐项证据包；多工作流时停止，不接受 SQL | 明确主表或表单模板、`database-process-evidence-v1`快照、可选旧版3001 JSON | 只写新的 `artifacts/database-process-json/<run-id>/`，不连接数据库、不写数据库；`npm run test:database-to-process-json`验证 |
+| `.agents/skills/database-to-process-json/scripts/export-cxsysys-readonly-snapshot.ps1` | 在明确授权后，用专用只读账号对快照允许的表和字段做限列、限行、无原值摘要核验 | 结构快照、主表、工作流、进程级只读连接环境变量和`-ConfirmReadOnly` | 只写指定的本地核验JSON；权限门发现写权限即停止，不执行数据库写操作 |
 | `test-input-baseline-review-mysql.mjs` | 校验MySQL表结构、原文高亮、对比色按钮和服务页面约定 | 测试问题识别批次夹具 | 写入被忽略的 `artifacts/process-input-baseline-review/test-input-baseline-review-mysql/` |
 | `glossary.mjs` | 查询仓库术语表 | `docs/glossary.md` | 只读查询 |
 
