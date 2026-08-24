@@ -1,5 +1,6 @@
 {
-  "current_version": "process-governance-v6",
+  "current_version": "process-governance-v7",
+  "current_status": "released",
   "versions": [
     {
       "version": "process-governance-v1",
@@ -36,6 +37,14 @@
       "released_on": "2026-08-18",
       "title": "无状态图编辑与无损迁移",
       "summary": "流程关系图、数据关系图、属性面板和文字编制共用页面内存草稿；新增v1至v5及历史多候选输入的确定性迁移、图撤销重做、引用保护、同名数据受控归并、布局自动避让和评审对照图例。"
+    },
+    {
+      "version": "process-governance-v7",
+      "released_on": "2026-08-21",
+      "candidate_on": "2026-08-21",
+      "status": "released",
+      "title": "数据生命周期对象级编制",
+      "summary": "在数据对象下增加可复用对象字段、表单字段引用、更新字段多选、入口状态、流程路径、生命周期事件、出口状态和确定性分析来源；区分停用、作废、失效等业务动作，支持v1至v6无损迁移，并增加可定位节点的关系核对提示和非阻断的主数据认定提示。当前版本在实际使用中继续验证。"
     }
   ]
 }

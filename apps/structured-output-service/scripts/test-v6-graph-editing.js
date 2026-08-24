@@ -1,4 +1,5 @@
 const assert = require('node:assert/strict');
+const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const { performance } = require('node:perf_hooks');
@@ -23,13 +24,15 @@ const v3Schema = readSchema('process-governance-v3.schema.json');
 const v4Schema = readSchema('process-governance-v4.schema.json');
 const v5Schema = readSchema('process-governance-v5.schema.json');
 const v6Schema = readSchema('process-governance-v6.schema.json');
+const v7Schema = readSchema('process-governance-v7.schema.json');
 const ajv = new Ajv2020({ allErrors: true, strict: false, validateFormats: false });
 ajv.addSchema(v1Schema);
 ajv.addSchema(v2Schema);
 ajv.addSchema(v3Schema);
 ajv.addSchema(v4Schema);
 ajv.addSchema(v5Schema);
-const validateV6 = ajv.compile(v6Schema);
+ajv.addSchema(v6Schema);
+const validateV7 = ajv.compile(v7Schema);
 
 function behavior(ref, name, actor = '财务部会计员', nodeType = 'action') {
   return {
@@ -127,9 +130,160 @@ function v5Fixture(version = 'process-governance-v5') {
   return result;
 }
 
-function assertV6(documentValue, message = 'v6 document should validate') {
-  const valid = validateV6(documentValue);
-  assert.equal(valid, true, `${message}: ${JSON.stringify(validateV6.errors)}`);
+function assertV7(documentValue, message = 'v7 document should validate') {
+  const valid = validateV7(documentValue);
+  assert.equal(valid, true, `${message}: ${JSON.stringify(validateV7.errors)}`);
+}
+
+function legacyCrossDepartmentFixture() {
+  const source = v5Fixture('process-governance-v3');
+  source.process.owning_department = '项目管理部';
+  source.export_meta.initiating_department = '项目管理部';
+  source.behaviors.push(
+    behavior('behavior-send-plan', '下发文件、排产计划', '项目管理部项目助理'),
+    behavior('behavior-start-work', '车间开始制造', '复材车间班长'),
+    behavior('behavior-delivery', '零件交付完成', '复材车间班长')
+  );
+  source.flow_relations.push(
+    {
+      relation_ref: 'relation-plan-work',
+      relation_type: 'sequence',
+      from_behavior_ref: 'behavior-send-plan',
+      to_behavior_ref: 'behavior-start-work',
+      condition: '',
+      join_mode: ''
+    },
+    {
+      relation_ref: 'relation-work-delivery',
+      relation_type: 'sequence',
+      from_behavior_ref: 'behavior-start-work',
+      to_behavior_ref: 'behavior-delivery',
+      condition: '',
+      join_mode: ''
+    }
+  );
+  source.cross_department_handoffs = [
+    {
+      handoff_ref: 'handoff-work',
+      handoff_direction: 'outbound_followup',
+      anchor_behavior_ref: 'behavior-send-plan',
+      counterparty_resolution: 'identified',
+      source_department: '项目管理部',
+      target_department: '复材车间',
+      transfer_data_ref: null,
+      requested_matter: '文件以及对应排产计划',
+      trigger_condition: '“下发文件、排产计划”完成后，系统生成跨部门待办',
+      completion_standard: '',
+      counterparty_process_ref: null,
+      counterparty_process_name: '',
+      counterparty_behavior_ref: 'behavior-start-work',
+      counterparty_behavior_name: '',
+      requires_return: false,
+      returned_data_ref: null,
+      resume_behavior_ref: null
+    },
+    {
+      handoff_ref: 'handoff-delivery',
+      handoff_direction: 'outbound_followup',
+      anchor_behavior_ref: null,
+      counterparty_resolution: 'identified',
+      source_department: '项目管理部',
+      target_department: '复材车间',
+      transfer_data_ref: null,
+      requested_matter: '',
+      trigger_condition: '“下发文件、排产计划”完成后，系统生成跨部门待办',
+      completion_standard: '',
+      counterparty_process_ref: null,
+      counterparty_process_name: '',
+      counterparty_behavior_ref: 'behavior-delivery',
+      counterparty_behavior_name: '',
+      requires_return: false,
+      returned_data_ref: null,
+      resume_behavior_ref: null
+    }
+  ];
+  return Migration.migrateDocument(source)[0];
+}
+
+function testLegacyCrossDepartmentDiagnostics() {
+  const documentValue = legacyCrossDepartmentFixture();
+  const snapshot = JSON.stringify(documentValue);
+  const diagnostics = LegacyDiagnostics.diagnose(documentValue);
+  assert.equal(diagnostics.length, 1);
+  assert.equal(diagnostics[0].recordIndex, 1);
+  assert.ok(diagnostics[0].relatedBehaviorRefs.includes('behavior-delivery'));
+  const conflict = diagnostics[0].issues.find(item => item.kind === 'flow_position_conflict');
+  assert.ok(conflict);
+  assert.equal(
+    conflict.message,
+    '旧版跨部门记录2对应复材车间的“零件交付完成”行为，交接方向为项目管理部发出、复材车间承接。旧记录的触发说明指向“下发文件、排产计划”之后，现有流程关系则为“车间开始制造” → “零件交付完成”，两个衔接位置不一致。请确认实际衔接位置。'
+  );
+  assert.equal(conflict.focusKind, 'relation');
+  assert.equal(conflict.focusRef, 'relation-work-delivery');
+  assert.match(conflict.suggestions[0], /无需新增流程关系/);
+  assert.equal(JSON.stringify(documentValue), snapshot, 'legacy diagnostics must not change the document');
+
+  const consistentDocument = JSON.parse(snapshot);
+  consistentDocument.migration.legacy_cross_department_records[1].source_handoff.trigger_condition = '“车间开始制造”完成后，系统生成跨部门待办';
+  const consistent = LegacyDiagnostics.diagnose(consistentDocument)[0].issues.find(item => item.kind === 'flow_position_consistent');
+  assert.ok(consistent);
+  assert.match(consistent.message, /都指向“车间开始制造”之后/);
+  assert.match(consistent.suggestions[0], /无需新增流程关系/);
+
+  const unparsedDocument = JSON.parse(snapshot);
+  unparsedDocument.migration.legacy_cross_department_records[1].source_handoff.trigger_condition = '收到实物后办理';
+  const single = LegacyDiagnostics.diagnose(unparsedDocument)[0].issues.find(item => item.kind === 'single_current_relation');
+  assert.ok(single);
+  assert.match(single.message, /旧记录的触发说明为“收到实物后办理”/);
+  assert.match(single.message, /“车间开始制造” → “零件交付完成”/);
+
+  const multipleDocument = JSON.parse(snapshot);
+  multipleDocument.flow_relations.push({
+    relation_ref: 'relation-plan-delivery', relation_type: 'sequence',
+    from_behavior_ref: 'behavior-send-plan', to_behavior_ref: 'behavior-delivery', condition: ''
+  });
+  const multiple = LegacyDiagnostics.diagnose(multipleDocument)[0].issues.find(item => item.kind === 'multiple_current_relations');
+  assert.ok(multiple);
+  assert.match(multiple.message, /当前有2条相关流程关系/);
+  assert.equal(multiple.focusPaths.length, 4);
+
+  const missingRelationDocument = JSON.parse(snapshot);
+  missingRelationDocument.flow_relations = missingRelationDocument.flow_relations.filter(item => item.to_behavior_ref !== 'behavior-delivery');
+  const missingRelation = LegacyDiagnostics.diagnose(missingRelationDocument)[0].issues.find(item => item.kind === 'missing_current_relation');
+  assert.ok(missingRelation);
+  assert.match(missingRelation.message, /没有找到与“零件交付完成”相连的普通流程关系/);
+
+  const missingBehaviorDocument = JSON.parse(snapshot);
+  missingBehaviorDocument.behaviors = missingBehaviorDocument.behaviors.filter(item => item.behavior_ref !== 'behavior-delivery');
+  missingBehaviorDocument.flow_relations = missingBehaviorDocument.flow_relations.filter(item =>
+    item.from_behavior_ref !== 'behavior-delivery' && item.to_behavior_ref !== 'behavior-delivery'
+  );
+  const missingBehavior = LegacyDiagnostics.diagnose(missingBehaviorDocument)[0].issues.find(item => item.kind === 'missing_external_behavior');
+  assert.ok(missingBehavior);
+  assert.match(missingBehavior.message, /当前流程中没有找到对应的可编辑业务行为/);
+
+  const dataDocument = JSON.parse(snapshot);
+  dataDocument.migration.legacy_cross_department_records[1].source_handoff.transfer_data_ref = 'data-application';
+  dataDocument.migration.legacy_cross_department_records[1].created_data_link_refs = [];
+  const dataIssue = LegacyDiagnostics.diagnose(dataDocument)[0].issues.find(item => item.kind === 'missing_data_relation');
+  assert.ok(dataIssue);
+  assert.match(dataIssue.message, /“费用申请”作为本流程交给零件交付完成使用的数据/);
+  assert.equal(dataIssue.focusRef, 'data-application');
+
+  const inboundDocument = JSON.parse(snapshot);
+  const inboundRecord = inboundDocument.migration.legacy_cross_department_records[1];
+  inboundRecord.source_handoff.handoff_direction = 'inbound_prerequisite';
+  inboundRecord.source_handoff.source_department = '复材车间';
+  inboundRecord.source_handoff.target_department = '项目管理部';
+  inboundRecord.source_handoff.trigger_condition = '“下发文件、排产计划”开始前';
+  inboundDocument.flow_relations = inboundDocument.flow_relations.filter(item => item.to_behavior_ref !== 'behavior-delivery');
+  inboundDocument.flow_relations.push({
+    relation_ref: 'relation-delivery-plan', relation_type: 'sequence',
+    from_behavior_ref: 'behavior-delivery', to_behavior_ref: 'behavior-send-plan', condition: ''
+  });
+  const inbound = LegacyDiagnostics.diagnose(inboundDocument)[0].issues.find(item => item.kind === 'flow_position_consistent');
+  assert.ok(inbound);
+  assert.match(inbound.message, /交接方向为复材车间提供、项目管理部接收/);
 }
 
 function legacyCrossDepartmentFixture() {
@@ -314,14 +468,38 @@ function testMigration() {
     const snapshot = JSON.stringify(source);
     const migrated = Migration.migrateDocument(source)[0];
     assert.equal(JSON.stringify(source), snapshot, `${version} source must not change`);
-    assert.equal(migrated.schema_version, 'process-governance-v6');
+    assert.equal(migrated.schema_version, 'process-governance-v7');
     assert.equal(migrated.migration.source_schema_version, version);
     assert.equal(Object.prototype.hasOwnProperty.call(migrated, 'reference_materials'), false);
     assert.equal(Object.prototype.hasOwnProperty.call(migrated.data_objects[0], 'governance_status'), false);
     assert.equal(migrated.forms[0].areas[0].items[0].source_links[0]?.source_type || 'process_data', 'process_data');
-    assertV6(migrated, `${version} migration`);
+    assertV7(migrated, `${version} migration`);
     assert.deepEqual(Migration.migrateDocument(migrated)[0], migrated, `${version} repeated migration must be identical`);
   }
+
+  const publicSamplePath = path.join(repoRoot, 'docs', 'samples', '3001-data-form-relationship-sample-v4.json');
+  const publicSampleBytes = fs.readFileSync(publicSamplePath);
+  const publicSampleHash = crypto.createHash('sha256').update(publicSampleBytes).digest('hex');
+  const publicSample = JSON.parse(publicSampleBytes.toString('utf8'));
+  const publicSampleSnapshot = JSON.stringify(publicSample);
+  const migratedPublicSample = Migration.migrateDocument(publicSample)[0];
+  assert.equal(JSON.stringify(publicSample), publicSampleSnapshot, 'the fixed public v4 sample must remain unchanged');
+  assert.equal(
+    crypto.createHash('sha256').update(fs.readFileSync(publicSamplePath)).digest('hex'),
+    publicSampleHash,
+    'migrating the fixed public v4 sample must not modify its source file'
+  );
+  assertV7(migratedPublicSample, 'fixed public v4 sample migration');
+  assert.deepEqual(
+    Migration.migrateDocument(JSON.parse(JSON.stringify(migratedPublicSample)))[0],
+    migratedPublicSample,
+    'the fixed public v4 sample must remain identical after v7 download and re-import simulation'
+  );
+  assert.deepEqual(
+    Migration.migrateDocument(publicSample)[0],
+    migratedPublicSample,
+    'repeated fixed public v4 sample migration must be deterministic'
+  );
 
   const special = v5Fixture();
   special.behaviors[0].work_role = {
@@ -341,7 +519,7 @@ function testMigration() {
   assert.equal(migrated.migration.unresolved_actor_roles[0].raw_actor_role, '无法识别的固定角色');
   assert.equal(migrated.migration.unresolved_join_modes[0].relation_ref, 'relation-apply-review');
   assert.equal(migrated.migration.reference_materials[0].material_ref, 'material-history');
-  assertV6(migrated, 'archive migration');
+  assertV7(migrated, 'archive migration');
 
   const parallelJoin = v5Fixture();
   parallelJoin.behaviors[1].node_type = 'parallel_join';
@@ -369,7 +547,7 @@ function testMigration() {
   assert.deepEqual(candidates.map(item => item.process.process_name), ['历史流程一', '历史流程二']);
   candidates.forEach(item => {
     assert.equal(item.migration.source_process_count, 2);
-    assertV6(item, 'legacy multi candidate');
+    assertV7(item, 'legacy multi candidate');
   });
 
   assert.throws(() => Migration.migrateDocument(v5Fixture(), { validateSource: () => ({ valid: false, errors: [{ message: '固定失败' }] }) }), /固定失败/);
@@ -403,6 +581,27 @@ function testCommandsAndState() {
     operations: ['pending_confirmation', 'use'], refFactory: operation => `link-${operation}`
   });
   assert.equal(pendingConflict.ok, false);
+
+  const updateFieldRef = documentValue.data_objects[0].fields[0].field_ref;
+  const updateSelection = Commands.applyCommand(documentValue, {
+    type: 'set_data_operations', dataRef: 'data-application', behaviorRef: 'behavior-review',
+    operations: ['update', 'use'], updatedFieldRefs: [updateFieldRef], refFactory: operation => `link-${operation}`
+  });
+  assert.equal(updateSelection.ok, true);
+  assert.deepEqual(
+    updateSelection.document.data_objects[0].behavior_links.find(link => link.operation === 'update').updated_field_refs,
+    [updateFieldRef]
+  );
+  assert.deepEqual(
+    updateSelection.document.data_objects[0].behavior_links.find(link => link.operation === 'use').updated_field_refs,
+    []
+  );
+  const invalidUpdateField = Commands.applyCommand(documentValue, {
+    type: 'set_data_operations', dataRef: 'data-application', behaviorRef: 'behavior-review',
+    operations: ['update'], updatedFieldRefs: ['field_missing'], refFactory: operation => `link-invalid-${operation}`
+  });
+  assert.equal(invalidUpdateField.ok, false);
+  assert.match(invalidUpdateField.message, /不属于当前数据对象/);
 
   const deletion = Commands.analyzeDeletion(documentValue, 'behavior', 'behavior-apply');
   assert.ok(deletion.some(item => item.kind === 'flow_relation'));
@@ -551,7 +750,8 @@ function testDiagramModelsAndPerformance() {
         { link_ref: `data-link-${number}-consumer-update`, behavior_ref: `behavior-perf-${consumerIndex}`, operation: 'update' },
         { link_ref: `data-link-${number}-use`, behavior_ref: `behavior-perf-${consumerIndex}`, operation: 'use' }
       ],
-      source_relations: []
+      source_relations: [],
+      lifecycle: Migration.pendingLifecycle()
     };
   });
   representative.data_objects[1].behavior_links[0].behavior_ref = representative.data_objects[0].behavior_links[0].behavior_ref;
@@ -629,7 +829,7 @@ function testDiagramModelsAndPerformance() {
     const serialized = JSON.stringify(representative);
     const reparsed = JSON.parse(serialized);
     const migrated = Migration.migrateDocument(reparsed)[0];
-    assertV6(migrated, 'performance round trip');
+    assertV7(migrated, 'performance round trip');
   });
 
   assert.ok(flowDisplayMedian < 2000, `flow display median ${flowDisplayMedian.toFixed(1)}ms`);
@@ -638,7 +838,7 @@ function testDiagramModelsAndPerformance() {
   assert.ok(mergeMedian < 2000, `200-field merge median ${mergeMedian.toFixed(1)}ms`);
   assert.ok(roundTripMedian < 3000, `round trip median ${roundTripMedian.toFixed(1)}ms`);
   console.log(
-    `v6 performance medians: flow=${flowDisplayMedian.toFixed(1)}ms, switch=${modeSwitchMedian.toFixed(1)}ms, ` +
+    `v7 performance medians: flow=${flowDisplayMedian.toFixed(1)}ms, switch=${modeSwitchMedian.toFixed(1)}ms, ` +
     `command=${graphCommandMedian.toFixed(1)}ms, merge=${mergeMedian.toFixed(1)}ms, roundtrip=${roundTripMedian.toFixed(1)}ms`
   );
 }
@@ -648,7 +848,7 @@ function main() {
   testLegacyCrossDepartmentDiagnostics();
   testCommandsAndState();
   testDiagramModelsAndPerformance();
-  console.log('structured-output-service v6 graph editing tests passed');
+  console.log('structured-output-service v7 graph editing regression tests passed');
 }
 
 main();

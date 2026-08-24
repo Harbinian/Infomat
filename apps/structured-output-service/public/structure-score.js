@@ -24,8 +24,8 @@
   ]);
 
   const RULE = Object.freeze({
-    id: 'structure-learning-score-v3',
-    label: '结构化学习评分 v3（process-governance-v6）',
+    id: 'structure-learning-score-v4',
+    label: '结构化学习评分 v4（process-governance-v7）',
     dimensions: Object.freeze([
       Object.freeze({
         key: 'technical',
@@ -55,7 +55,7 @@
         key: 'dataHandoff',
         label: '数据与跨部门行为',
         max: 20,
-      description: '数据对象占15分，检查信息类型、创建更新使用关系和可用时间；跨部门行为完整性占5分。'
+      description: '数据对象与生命周期占15分，检查信息类型、创建更新使用关系、可用时间和当前流程内的生命周期核对；跨部门行为完整性占5分。'
       }),
       Object.freeze({
         key: 'form',
@@ -87,8 +87,8 @@
   });
 
   const REVIEW_READINESS = Object.freeze({
-    id: 'process-review-readiness-v6',
-    label: '流程评审五方面标准',
+    id: 'process-review-readiness-v7',
+    label: '流程评审六方面标准',
     aspects: Object.freeze([
       Object.freeze({
         key: 'boundary',
@@ -143,11 +143,22 @@
           '表单字段只关联数据对象；字段值依赖其他流程时，核对来源部门、流程、行为、数据名称和当前可用位置。',
           '没有数据或表单时确认确实不适用，不为满足检查虚构对象。'
         ])
+      }),
+      Object.freeze({
+        key: 'lifecycle',
+        number: 6,
+        label: '数据生命周期与异常处理',
+        description: '按数据对象核对入口状态、当前流程路径上的生命周期事件、出口状态、作用范围、责任和异常处理。',
+        confirmations: Object.freeze([
+          '停用、作废和失效分别核对，不把系统删除当作业务生命周期动作。',
+          '销毁、不可逆匿名化和全部记录处置必须人工核对触发、范围、责任和例外。',
+          '当前流程没有覆盖对象的其他生命周期阶段时，不补造事实，也不因此扣分。'
+        ])
       })
     ]),
     acceptance: Object.freeze([
       '业务部门逐项确认页面展示的是当前真实流程事实。',
-      '当前文件符合process-governance-v6结构，稳定引用和导出回读检查通过。',
+      '当前文件符合process-governance-v7结构，稳定引用和导出回读检查通过。',
       '表单、字段和稳定引用在导入、修改、导出和重新导入后没有丢失。',
       '当场不能确认的事项另行记录缺少的依据和确认主体，不在JSON中伪造结论。'
     ])
@@ -291,6 +302,12 @@
     const editorSection = text(item.editorSection);
     const processSection = text(item.processSection);
     const focusPath = text(item.focusPath);
+    if (
+      explicit === 'lifecycle'
+      || /^data_objects\.\d+\.lifecycle/.test(focusPath)
+      || /生命周期|停用|重新启用|作废|失效|归档|销毁|匿名化/.test(category)
+      || /生命周期|停用|重新启用|作废|失效|归档|销毁|匿名化/.test(message)
+    ) return 'lifecycle';
     if (
       editorSection === 'forms'
       || processSection === 'data'
@@ -868,7 +885,7 @@
       const canonicalProducerRef = v4CreateRefs.length === 1
         ? v4CreateRefs[0]
         : text(item.produced_by_behavior_ref);
-      const modernDataModel = ['process-governance-v4', 'process-governance-v5', 'process-governance-v6'].includes(data.schema_version);
+      const modernDataModel = ['process-governance-v4', 'process-governance-v5', 'process-governance-v6', 'process-governance-v7'].includes(data.schema_version);
       const legacyProducerRefs = modernDataModel
         ? v4PendingRefs
         : behaviors
@@ -1390,7 +1407,7 @@
             fieldTarget(target, `data_objects.${index}.description`)
           ],
           [
-            !['process-governance-v4', 'process-governance-v5', 'process-governance-v6'].includes(data.schema_version)
+            !['process-governance-v4', 'process-governance-v5', 'process-governance-v6', 'process-governance-v7'].includes(data.schema_version)
               || (complete(item.information_type) && item.information_type !== 'pending_confirmation'),
             `${label}的信息类型待确认`,
             fieldTarget(target, `data_objects.${index}.information_type`)
@@ -1415,7 +1432,47 @@
           ));
         });
       });
-      dataScore = 15 * (dataPassed / dataTotal);
+      const dataCoreScore = 12 * (dataPassed / dataTotal);
+      let lifecyclePassed = 0;
+      const lifecycleTotal = dataObjects.length * 3;
+      dataObjects.forEach((item, index) => {
+        if (data.schema_version !== 'process-governance-v7') {
+          lifecyclePassed += 3;
+          return;
+        }
+        const lifecycle = item.lifecycle;
+        const label = item.data_name || `输出物与数据${index + 1}`;
+        const target = {
+          editorSection: 'process',
+          processSection: 'data',
+          focusKind: 'data',
+          focusRef: item.data_ref,
+          focusPath: `data_objects.${index}.lifecycle`,
+          reviewAspect: 'lifecycle'
+        };
+        const applicabilityResolved = lifecycle && lifecycle.applicability !== 'pending_confirmation';
+        if (applicabilityResolved) lifecyclePassed += 1;
+        else issues.push(issue('数据生命周期', `${label}尚未确认当前流程是否涉及生命周期变化`, target, '影响生命周期核对子项'));
+        const analysisCompleted = lifecycle?.analysis?.status === 'analyzed';
+        if (analysisCompleted) lifecyclePassed += 1;
+        else issues.push(issue('数据生命周期', `${label}尚未完成当前对象的确定性分析`, target, '影响生命周期核对子项'));
+        const events = (lifecycle?.routes || []).flatMap(route => route.events || []);
+        const reviewComplete = lifecycle?.applicability === 'not_applicable'
+          ? Boolean(lifecycle.decision_reason)
+          : lifecycle?.applicability === 'applicable'
+            && events.length > 0
+            && events.every(event => !['pending_confirmation', 'needs_recheck'].includes(event.review_status));
+        if (reviewComplete) lifecyclePassed += 1;
+        else if (applicabilityResolved) issues.push(issue(
+          '数据生命周期',
+          lifecycle?.applicability === 'not_applicable'
+            ? `${label}已选择生命周期不适用，但尚未记录原因`
+            : `${label}仍有当前流程内的生命周期事件待核对`,
+          target,
+          '影响生命周期核对子项；不会因当前流程未覆盖对象的其他生命周期阶段扣分'
+        ));
+      });
+      dataScore = dataCoreScore + 3 * (lifecyclePassed / lifecycleTotal);
     }
 
     const ownerDepartment = text(process.owning_department);
@@ -1495,7 +1552,7 @@
         const detailCount = areas.filter(area => area.area_type === '明细清单').length;
         const assignmentChecks = [];
         const formBehaviorLinks = Array.isArray(form.behavior_links) ? form.behavior_links : [];
-        const formBehaviorPassed = !['process-governance-v4', 'process-governance-v5', 'process-governance-v6'].includes(data.schema_version) || (
+        const formBehaviorPassed = !['process-governance-v4', 'process-governance-v5', 'process-governance-v6', 'process-governance-v7'].includes(data.schema_version) || (
           formBehaviorLinks.length > 0
           && formBehaviorLinks.every(link => behaviorRefs.has(text(link.behavior_ref)) && Array.isArray(link.operations) && link.operations.length > 0)
         );
@@ -1562,13 +1619,13 @@
                 `forms.${formIndex}.areas.${areaIndex}.items.${itemIndex}.required`
               ],
               [
-                !['process-governance-v4', 'process-governance-v5', 'process-governance-v6'].includes(data.schema_version)
+                !['process-governance-v4', 'process-governance-v5', 'process-governance-v6', 'process-governance-v7'].includes(data.schema_version)
                   || (item.value_origin_mode && item.value_origin_mode !== 'pending_confirmation'),
                 `${formLabel}的字段${itemIndex + 1}取值方式待确认`,
                 `forms.${formIndex}.areas.${areaIndex}.items.${itemIndex}.value_origin_mode`
               ],
               [
-                !['process-governance-v4', 'process-governance-v5', 'process-governance-v6'].includes(data.schema_version)
+                !['process-governance-v4', 'process-governance-v5', 'process-governance-v6', 'process-governance-v7'].includes(data.schema_version)
                   || item.value_origin_mode !== 'depends_on_data'
                   || (Array.isArray(item.source_links) && item.source_links.length > 0),
                 `${formLabel}的字段${itemIndex + 1}选择依赖数据但未登记来源`,
@@ -1586,7 +1643,7 @@
                 ));
               }
             });
-            if (['process-governance-v5', 'process-governance-v6'].includes(data.schema_version)) {
+            if (['process-governance-v5', 'process-governance-v6', 'process-governance-v7'].includes(data.schema_version)) {
               (Array.isArray(item.source_links) ? item.source_links : []).forEach((link, linkIndex) => {
                 const externalSystemSource = link.source_type === 'external_system';
                 const sourceComplete = externalSystemSource

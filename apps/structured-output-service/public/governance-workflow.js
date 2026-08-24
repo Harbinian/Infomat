@@ -9,8 +9,8 @@
     {
       id: 'start',
       number: 1,
-      label: '开始与文件',
-      responsibility: '新建、导入、迁移摘要和候选流程切换',
+      label: 'JSON基本信息',
+      responsibility: '新建、导入、文件基本信息核对和候选流程切换',
       primaryAction: '新建流程或继续已有流程'
     },
     {
@@ -38,7 +38,7 @@
       id: 'data',
       number: 5,
       label: '数据与表单',
-      responsibility: '维护数据对象、数据关系、表单、主表、明细表、字段归属和值来源',
+      responsibility: '先维护数据对象及其字段明细，再让表单主表或明细表引用对象字段，并核对数据关系和值来源',
       primaryAction: '从业务输出或现有表单选择真实起点'
     },
     {
@@ -52,12 +52,40 @@
       id: 'handoff',
       number: 7,
       label: '评审与交接',
-      responsibility: '核对五方面、结构阻断、业务提示、外部材料和3000停止边界',
+      responsibility: '核对六方面、结构阻断、业务提示、外部材料和3000停止边界',
       primaryAction: '处理首个阻断或打开最终交接卡'
     }
   ]);
 
+  const ROLE_SEQUENCE = Object.freeze([
+    Object.freeze({
+      order: 1,
+      role: '编制人',
+      action: '新建或导入一条流程，按七步填写，并在每轮结束时下载阶段草稿。',
+      handoff: '阶段草稿'
+    }),
+    Object.freeze({
+      order: 2,
+      role: '业务核对人',
+      action: '依据制度、表单、台账和实际做法，核对流程、跨部门、数据与表单事实；发现问题时明确退回位置。',
+      handoff: '业务核对记录'
+    }),
+    Object.freeze({
+      order: 3,
+      role: '编制人',
+      action: '根据核对意见修改唯一草稿，重新执行技术检查，并下载最终待核对文件。',
+      handoff: '最终待核对v7文件'
+    }),
+    Object.freeze({
+      order: 4,
+      role: 'MDM工作组',
+      action: '核对结构错误、待定项、文件名和SHA-256，接收v7文件及JSON之外的核对记录。',
+      handoff: '受控接收；暂不导入3000'
+    })
+  ]);
+
   const STEP_IDS = new Set(STEPS.map(step => step.id));
+  const AUTHORING_STEP_IDS = new Set(['start', 'boundary', 'skeleton', 'action', 'data']);
   const STAGES = Object.freeze({
     start: { key: 'round-1', label: '第1轮-流程骨架', round: 1 },
     boundary: { key: 'round-1', label: '第1轮-流程骨架', round: 1 },
@@ -100,6 +128,19 @@
     return 'handoff';
   }
 
+  function issueVocabularyForStep(stepId) {
+    const step = normalizeStepId(stepId);
+    if (AUTHORING_STEP_IDS.has(step)) return { singular: '本轮自检项', plural: '本轮自检项', action: '处理' };
+    if (step === 'cross-department') return { singular: '业务核对项', plural: '业务核对项', action: '核对' };
+    return { singular: '交接检查事项', plural: '交接检查事项', action: '处理' };
+  }
+
+  function issuesVisibleForStep(stepId, context = {}) {
+    const step = normalizeStepId(stepId);
+    if (!AUTHORING_STEP_IDS.has(step)) return true;
+    return Array.isArray(context.checkedSteps) && context.checkedSteps.includes(step);
+  }
+
   function statusForStep(stepId, context = {}) {
     const step = normalizeStepId(stepId);
     if (!context.hasDocument) {
@@ -112,10 +153,19 @@
     if (step === 'handoff' && technicalCount > 0) {
       return { key: 'error', label: `结构错误${technicalCount}项` };
     }
-    if (issueCount > 0) return { key: 'missing', label: `待补充${issueCount}项` };
-    if (step === 'start') return { key: 'reviewable', label: '可核对' };
-    if (context.startedSteps?.includes(step)) return { key: 'reviewable', label: '可核对' };
-    if (context.activeStep === step) return { key: 'in-progress', label: '编制中' };
+    if (issueCount > 0 && issuesVisibleForStep(step, context)) {
+      if (AUTHORING_STEP_IDS.has(step)) return { key: 'missing', label: `自检${issueCount}项` };
+      if (step === 'cross-department') return { key: 'missing', label: `待核对${issueCount}项` };
+      return { key: 'missing', label: `待交接${issueCount}项` };
+    }
+    if (AUTHORING_STEP_IDS.has(step) && issuesVisibleForStep(step, context)) return { key: 'reviewable', label: '本轮已检查' };
+    if (context.activeStep === step) {
+      if (step === 'cross-department') return { key: 'in-progress', label: '核对中' };
+      if (step === 'handoff') return { key: 'in-progress', label: '交接检查中' };
+      return { key: 'in-progress', label: '编制中' };
+    }
+    if (AUTHORING_STEP_IDS.has(step) && context.startedSteps?.includes(step)) return { key: 'reviewable', label: '可自检' };
+    if (!AUTHORING_STEP_IDS.has(step) && context.startedSteps?.includes(step)) return { key: 'reviewable', label: '可核对' };
     return { key: 'not-started', label: '未开始' };
   }
 
@@ -124,7 +174,10 @@
     if (!context.hasDocument) return stepId === 'start' ? step.primaryAction : '先新建或导入一条流程';
     const issueCount = Number(context.issueCounts?.[step.id] || 0);
     if (step.id === 'handoff' && Number(context.technicalCount || 0) > 0) return '处理首个结构阻断';
-    if (issueCount > 0) return `处理首个待补充项（共${issueCount}项）`;
+    if (issueCount > 0 && issuesVisibleForStep(step.id, context)) {
+      const vocabulary = issueVocabularyForStep(step.id);
+      return `${vocabulary.action}首个${vocabulary.singular}（共${issueCount}项）`;
+    }
     return step.primaryAction;
   }
 
@@ -223,10 +276,13 @@
 
   return Object.freeze({
     STEPS,
+    ROLE_SEQUENCE,
     normalizeStepId,
     stepById,
     stageForStep,
     stepForTarget,
+    issueVocabularyForStep,
+    issuesVisibleForStep,
     statusForStep,
     primaryActionForStep,
     sha256Fallback,
