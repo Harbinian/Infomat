@@ -2528,28 +2528,28 @@
     };
     const BUSINESS_VALIDITY_OPTIONS = [
       { value: 'pending_confirmation', label: '待确认' },
-      { value: 'not_effective', label: '未生效' },
-      { value: 'effective', label: '有效' },
-      { value: 'deactivated', label: '停用' },
-      { value: 'voided', label: '作废' },
-      { value: 'expired', label: '失效' }
+      { value: 'not_effective', label: '还不能用于业务' },
+      { value: 'effective', label: '可以用于业务' },
+      { value: 'deactivated', label: '已暂停使用' },
+      { value: 'voided', label: '已作废' },
+      { value: 'expired', label: '已过有效期' }
     ];
     const CUSTODY_OPTIONS = [
       { value: 'pending_confirmation', label: '待确认' },
-      { value: 'active_custody', label: '在用保管' },
-      { value: 'archived', label: '归档' },
-      { value: 'destroyed', label: '销毁' }
+      { value: 'active_custody', label: '正在使用中保管' },
+      { value: 'archived', label: '已归档保管' },
+      { value: 'destroyed', label: '已销毁，不再保管' }
     ];
     const IDENTIFIABILITY_APPLICABILITY_OPTIONS = [
       { value: 'pending_confirmation', label: '待确认' },
-      { value: 'applicable', label: '适用' },
-      { value: 'not_applicable', label: '不适用' }
+      { value: 'applicable', label: '会' },
+      { value: 'not_applicable', label: '不会' }
     ];
     const IDENTIFIABILITY_OPTIONS = [
       { value: 'pending_confirmation', label: '待确认' },
-      { value: 'identifiable', label: '可识别' },
-      { value: 'irreversibly_anonymized', label: '不可逆匿名化' },
-      { value: 'not_applicable', label: '不适用' }
+      { value: 'identifiable', label: '还能认出' },
+      { value: 'irreversibly_anonymized', label: '无法再认出' },
+      { value: 'not_applicable', label: '没有进行匿名处理' }
     ];
     const LIFECYCLE_REVIEW_STATUS_OPTIONS = [
       { value: 'auto_generated', label: '系统根据明确结构生成' },
@@ -2784,6 +2784,7 @@
     let activeDataRef = '';
     let activeDataFieldRef = '';
     let activeDataMode = 'flow';
+    let advancedLifecycleMode = false;
     let activeDataEditingMode = 'guided';
     let activeGridWorkspace = 'data';
     let activeTermRef = '';
@@ -4914,14 +4915,16 @@
       </section>`;
     }
 
-    function renderLifecycleStateFields(pathPrefix, title) {
+    function renderLifecycleStateFields(pathPrefix, title, stateValue = getByPath(pathPrefix)) {
+      const identifiabilityApplicability = text(stateValue?.identifiability_applicability);
+      const showAnonymizationQuestion = ['pending_confirmation', 'applicable'].includes(identifiabilityApplicability);
       return `<div class="item-card">
         <strong>${escapeHtml(title)}</strong>
         <div class="grid" style="margin-top:10px">
-          ${field(`${pathPrefix}.business_validity`, '业务效力', { type: 'select', options: BUSINESS_VALIDITY_OPTIONS })}
-          ${field(`${pathPrefix}.custody`, '保管状态', { type: 'select', options: CUSTODY_OPTIONS })}
-          ${field(`${pathPrefix}.identifiability_applicability`, '可识别性是否适用', { type: 'select', options: IDENTIFIABILITY_APPLICABILITY_OPTIONS })}
-          ${field(`${pathPrefix}.identifiability`, '可识别性', { type: 'select', options: IDENTIFIABILITY_OPTIONS })}
+          ${field(`${pathPrefix}.business_validity`, '业务上还能用吗？', { type: 'select', options: BUSINESS_VALIDITY_OPTIONS })}
+          ${field(`${pathPrefix}.custody`, '现在怎么保管？', { type: 'select', options: CUSTODY_OPTIONS })}
+          ${showAnonymizationQuestion ? field(`${pathPrefix}.identifiability_applicability`, '本流程会进行匿名处理吗？', { type: 'select', options: IDENTIFIABILITY_APPLICABILITY_OPTIONS }) : ''}
+          ${identifiabilityApplicability === 'applicable' ? field(`${pathPrefix}.identifiability`, '进行匿名处理后，还能认出原来对应的人或对象吗？', { type: 'select', options: IDENTIFIABILITY_OPTIONS }) : ''}
         </div>
       </div>`;
     }
@@ -4931,21 +4934,16 @@
       const needsReason = ['not_applicable', 'rejected'].includes(event.review_status);
       const needsCarrier = ['archive', 'restore_active_custody', 'destroy'].includes(event.action);
       const reviewOpen = event.high_risk || ['pending_confirmation', 'needs_recheck'].includes(event.review_status);
-      const triggerMode = {
-        behavior: '业务行为', time_period: '时间或期限', business_condition: '业务或数据条件',
-        external_process_notice: '外部流程或通知', pending_confirmation: '待确认'
-      }[event.trigger?.mode] || '待确认';
       return `<article class="item-card" data-focus-path="${escapeAttribute(eventPath)}">
         <div class="item-title">
           <strong>${escapeHtml(LIFECYCLE_ACTIONS[event.action] || event.action)}</strong>
           <span class="status-pill ${event.high_risk ? 'danger' : ''}">${event.high_risk ? '高风险，必须人工核对' : '普通生命周期事件'}</span>
         </div>
-        <p><strong>触发：</strong>${escapeHtml(triggerMode)}；${escapeHtml(event.trigger?.expression || '条件待确认')}</p>
-        <p><strong>作用范围：</strong>${escapeHtml(event.target_scope || '待确认')}；<strong>责任：</strong>${escapeHtml(event.responsibility?.position || event.responsibility?.department || '待确认')}</p>
-        ${field(`${eventPath}.review_status`, '核对状态', { type: 'select', options: LIFECYCLE_REVIEW_STATUS_OPTIONS })}
+        ${field(`${eventPath}.review_status`, '这项状态变化是否成立？', { type: 'select', options: LIFECYCLE_REVIEW_STATUS_OPTIONS })}
         ${needsReason ? field(`${eventPath}.decision_reason`, '决定原因', { type: 'select', options: LIFECYCLE_DECISION_REASON_OPTIONS }) : ''}
         ${needsReason ? field(`${eventPath}.decision_notes`, '补充说明', { type: 'textarea', className: 'wide' }) : ''}
-        <details ${reviewOpen ? 'open' : ''}><summary>核对触发、范围、责任和异常</summary>
+        ${renderLifecycleStateFields(`${eventPath}.result_state`, '动作完成后的状态', event.result_state)}
+        ${advancedLifecycleMode ? `<details ${reviewOpen ? 'open' : ''}><summary>高级结构核对：触发、范围、责任和异常</summary>
           <div class="grid" style="margin-top:10px">
             ${field(`${eventPath}.trigger.mode`, '触发方式', { type: 'select', options: LIFECYCLE_TRIGGER_MODE_OPTIONS })}
             ${field(`${eventPath}.trigger.operator`, '条件组合', { type: 'select', options: LIFECYCLE_TRIGGER_OPERATOR_OPTIONS })}
@@ -4957,12 +4955,11 @@
             ${field(`${eventPath}.responsibility.position`, '责任岗位')}
             ${field(`${eventPath}.exception_handling`, '例外处理', { type: 'textarea', className: 'wide' })}
           </div>
-          ${renderLifecycleStateFields(`${eventPath}.result_state`, '动作完成后的状态')}
         </details>
         <details><summary>查看推导依据</summary>
           <p>来源位置：<code>${escapeHtml(event.provenance?.source_path || '未记录')}</code></p>
           <p>依据：${escapeHtml(event.provenance?.basis || '未记录')}</p>
-        </details>
+        </details>` : ''}
       </article>`;
     }
 
@@ -4987,37 +4984,42 @@
       const pendingCount = (lifecycle.routes || []).flatMap(route => route.events || []).filter(event =>
         ['pending_confirmation', 'needs_recheck'].includes(event.review_status)
       ).length;
+      const showLifecycleDetails = lifecycle.applicability === 'applicable' || advancedLifecycleMode;
+      const advancedChecklist = (globalThis.StructureLearningScore?.advancedLifecycleChecklist?.(currentDocument()) || [])
+        .filter(item => item.focusPath.startsWith(`data_objects.${dataIndex}.`));
       const routes = (lifecycle.routes || []).map((route, routeIndex) => {
         const routePath = `data_objects.${dataIndex}.lifecycle.routes.${routeIndex}`;
         const events = (route.events || []).map((event, eventIndex) => renderLifecycleEvent(dataIndex, routeIndex, eventIndex, event)).join('');
         return `<details class="nested" open>
           <summary><strong>${escapeHtml(route.route_label || `路径${routeIndex + 1}`)}</strong> · ${(route.events || []).length}个事件</summary>
-          <p class="technical-note">流程关系：${escapeHtml((route.flow_relation_refs || []).join('、') || '当前行为未定位到具体流程关系')}</p>
+          ${advancedLifecycleMode ? `<p class="technical-note">流程关系：${escapeHtml((route.flow_relation_refs || []).join('、') || '当前行为未定位到具体流程关系')}</p>` : ''}
           ${events || emptyList('当前路径没有生命周期事件。')}
-          ${renderLifecycleStateFields(`${routePath}.exit_state`, '当前路径的出口状态')}
+          ${renderLifecycleStateFields(`${routePath}.exit_state`, '当前路径结束时的状态', route.exit_state)}
         </details>`;
       }).join('');
       return `<section class="section diagram-section">
         <div class="section-body">
           <div class="diagram-toolbar">
-            <div><h2>数据生命周期</h2><p>系统按当前数据对象集中分析，不要求逐行为定义。停用、作废和失效分别记录；系统删除不属于业务生命周期动作。</p></div>
+            <div><h2>数据生命周期</h2><p>先判断本流程会不会改变这条数据，再说明业务上还能不能用、现在怎么保管。只有确实涉及匿名处理时，才继续确认能否认出原来的人或对象。</p></div>
             <div class="diagram-controls">
               <button class="button primary small" data-action="reanalyze-current-lifecycle">重新分析当前对象</button>
               <button class="button secondary small" data-action="reanalyze-all-lifecycle">重新分析全部对象</button>
+              <button class="button small ${advancedLifecycleMode ? '' : 'secondary'}" data-action="toggle-advanced-lifecycle">${advancedLifecycleMode ? '退出高级结构核对' : '开启高级结构核对'}</button>
             </div>
           </div>
           <div class="data-focus-selector">
             <label>当前数据对象<select data-graph-data-focus>${optionHtml((currentDocument().data_objects || []).map(item => ({ value: item.data_ref, label: item.data_name || '未命名数据' })), activeDataRef)}</select></label>
-            <span class="technical-note">${eventCount}个事件，${pendingCount}项待确认或需重新核对；分析器 ${escapeHtml(lifecycle.analysis?.analyzer_version || '未运行')}。</span>
+            <span class="technical-note">${showLifecycleDetails ? `${eventCount}个状态变化，${pendingCount}项待确认或需重新核对。` : '先回答当前流程会不会改变这条数据。'}${advancedLifecycleMode ? `高级核对还有${advancedChecklist.length}项提示。` : ''}</span>
           </div>
+          ${advancedLifecycleMode ? `<div class="inline-note"><strong>高级结构核对仅在当前页面临时开启。</strong><p>刷新页面后自动关闭；这些内容不参加普通评分，也不会改变JSON结构版本。</p>${advancedChecklist.length ? `<ul>${advancedChecklist.map(item => `<li>${escapeHtml(item.message)}</li>`).join('')}</ul>` : '<p>当前对象没有高级核对提示。</p>'}</div>` : ''}
           ${renderMasterDataHint(dataObject)}
           <div class="grid" style="margin-top:14px">
-            ${field(`data_objects.${dataIndex}.lifecycle.applicability`, '本流程是否涉及该对象的生命周期', {
+            ${field(`data_objects.${dataIndex}.lifecycle.applicability`, '本流程会不会改变这条数据的状态或保管方式？', {
               type: 'select',
               options: [
                 { value: 'pending_confirmation', label: '待确认' },
-                { value: 'applicable', label: '适用' },
-                { value: 'not_applicable', label: '不适用' }
+                { value: 'applicable', label: '会改变' },
+                { value: 'not_applicable', label: '不会改变' }
               ]
             })}
             ${lifecycle.applicability === 'not_applicable' ? field(`data_objects.${dataIndex}.lifecycle.decision_reason`, '不适用原因', {
@@ -5032,8 +5034,10 @@
             }) : ''}
             ${lifecycle.applicability === 'not_applicable' ? field(`data_objects.${dataIndex}.lifecycle.decision_notes`, '补充说明', { type: 'textarea', className: 'wide' }) : ''}
           </div>
-          ${renderLifecycleStateFields(`data_objects.${dataIndex}.lifecycle.entry_state`, '对象进入本流程时的状态')}
-          <div class="cross-department-list">${routes || `<div class="inline-warning"><strong>尚未形成生命周期事件。</strong>现有材料可能没有明确动作，也可能尚未建立数据与行为关系。请补充对象事实，或保留待确认后下载。</div>`}</div>
+          ${lifecycle.applicability === 'applicable' ? renderLifecycleStateFields(`data_objects.${dataIndex}.lifecycle.entry_state`, '这条数据进入本流程时的状态', lifecycle.entry_state) : ''}
+          ${showLifecycleDetails
+            ? `<div class="cross-department-list">${routes || `<div class="inline-warning"><strong>尚未形成生命周期事件。</strong>现有材料可能没有明确动作，也可能尚未建立数据与行为关系。请补充对象事实，或保留待确认后下载。</div>`}</div>`
+            : '<div class="inline-note"><strong>先回答上面的问题。</strong><p>选择“会改变”后，页面再显示业务使用状态、保管方式和确实适用的匿名处理问题。</p></div>'}
           <p class="boundary"><strong>边界：</strong>当前v7文件记录未审核的单流程事实和建议，暂不能直接导入3000。生命周期缺口属于业务提示，不阻止草稿下载。</p>
         </div>
       </section>`;
@@ -6085,7 +6089,7 @@
             <div class="grid">
               ${actionOnly ? `<div class="field wide"><span class="field-label">流程骨架（只读）</span><div class="inline-note">${escapeHtml(item.behavior_name || '未填写节点名称')} · ${escapeHtml(NODE_TYPES.find(option => option.value === item.node_type)?.label || '未选择节点类型')} · 执行主体：${escapeHtml(item.current_actor_role || '待填写')}<br><button class="button small" style="margin-top:8px" data-action="governance-jump" data-step="skeleton" data-view="diagram" data-focus-kind="behavior" data-focus-ref="${escapeAttribute(item.behavior_ref)}">返回流程骨架修改</button></div></div>` : `
                 ${field(`behaviors.${index}.node_type`, '节点类型', { type: 'select', options: NODE_TYPES, hint: nodeTypeHint })}
-                ${field(`behaviors.${index}.behavior_name`, '业务行为或节点名称', { hint: '这是流程节点的主内容，用于流程图、流程关系和工作角色绑定。' })}`}
+                ${field(`behaviors.${index}.behavior_name`, '业务行为或节点名称', { hint: item.node_type === 'action' ? '写清谁对什么做什么，至少包含主体、动作和对象。例如：编制人员编制产品制造大纲。' : '判断、并行开始和并行汇合节点写清所判断或控制的业务内容。' })}`}
               ${isControlNode ? `
                 <div class="field wide"><span class="field-label">流程控制</span><div class="inline-note">流程控制，不代表执行部门。已有的执行主体、动作、时限和完成标准只读保留，切换类型不会删除。</div></div>
                 <div class="field wide"><span class="field-label">原普通行为字段（只读）</span><div class="technical-note">执行主体：${escapeHtml(item.current_actor_role || '空')}<br>具体做什么：${escapeHtml(item.behavior_description || '空')}<br>办理时限：${escapeHtml(item.timing || '空')}<br>完成标准：${escapeHtml(item.completion_standard || '空')}</div></div>` : `
@@ -7048,7 +7052,7 @@
       return `<div class="score-panel" id="structureScorePanel" aria-live="polite">
         <div class="score-panel-head">
           <div>
-            <h3>${escapeHtml(rule?.label || '结构化学习评分 v4（process-governance-v7）')}</h3>
+            <h3>${escapeHtml(rule?.label || '结构化学习评分 v5（process-governance-v7）')}</h3>
             <p>评分根据当前页面内容自动生成，只用于结构化学习反馈，不写入下载的JSON。</p>
           </div>
           <button class="button small" data-action="refresh-structure-score"${pending ? ' disabled' : ''}>重新评分</button>
@@ -7872,6 +7876,7 @@
         resetWebGridEditor();
         activeDataEditingMode = 'guided';
         activeGridWorkspace = 'data';
+        advancedLifecycleMode = false;
         registerCandidateState(entry);
         currentIndex = 0;
         activeGovernanceStep = 'boundary';
@@ -7896,6 +7901,7 @@
       resetWebGridEditor();
       activeDataEditingMode = 'guided';
       activeGridWorkspace = 'data';
+      advancedLifecycleMode = false;
       candidates = [];
       currentIndex = 0;
       activeGovernanceStep = 'start';
@@ -8570,6 +8576,15 @@
         governanceDrawer.setAttribute('aria-hidden', 'false');
         return;
       }
+      if (action === 'toggle-advanced-lifecycle') {
+        if (!advancedLifecycleMode) {
+          const confirmed = window.confirm('高级结构核对会显示触发条件、作用范围、责任和异常处理。它只在当前页面临时开启，刷新后自动关闭，也不参加普通评分。确认开启吗？');
+          if (!confirmed) return;
+        }
+        advancedLifecycleMode = !advancedLifecycleMode;
+        render();
+        return;
+      }
       if (action === 'close-governance-drawer') {
         governanceDrawer.classList.remove('show');
         governanceDrawer.setAttribute('aria-hidden', 'true');
@@ -9130,6 +9145,14 @@
         );
         need(item.node_type, `${label}未选择节点类型`, atField(behaviorTarget, `behaviors.${index}.node_type`));
         need(item.behavior_name, `第${index + 1}项行为未填写名称`, atField(behaviorTarget, `behaviors.${index}.behavior_name`));
+        const nameReview = globalThis.StructureLearningScore?.behaviorNameCompleteness?.(item);
+        if (item.node_type === 'action' && text(item.behavior_name).trim() && nameReview && !nameReview.complete) {
+          addWarning(
+            `${label}的名称没有写清谁对什么做什么。`,
+            atField(behaviorTarget, `behaviors.${index}.behavior_name`),
+            ['补齐主体、动作和对象，例如“编制人员编制产品制造大纲”。']
+          );
+        }
         if (!isControlNode && assignmentMode === 'dynamic_from_data') {
           if (!item.actor_department_data_ref) {
             addWarning(`${label}未选择用于确定执行部门的前序数据`, actorTarget);
@@ -10009,6 +10032,7 @@
         resetWebGridEditor();
         activeDataEditingMode = 'guided';
         activeGridWorkspace = 'data';
+        advancedLifecycleMode = false;
         candidates = nextCandidates;
         candidates.forEach(entry => registerCandidateState(entry, { forceDirty: migrated }));
         currentIndex = 0;
@@ -10044,6 +10068,7 @@
         current.stepView = activeStepView;
       }
       currentIndex = nextIndex;
+      advancedLifecycleMode = false;
       graphSelection = null;
       flowRelationDraft = null;
       resetWebGridEditor();

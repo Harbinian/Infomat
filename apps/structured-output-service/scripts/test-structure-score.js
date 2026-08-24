@@ -2,7 +2,10 @@ const assert = require('node:assert/strict');
 const {
   RULE,
   REVIEW_READINESS,
+  behaviorNameCompleteness,
   behaviorExecutabilityDetails,
+  lifecycleStateReview,
+  advancedLifecycleChecklist,
   evaluateContent,
   evaluateReviewReadiness,
   finalize,
@@ -13,6 +16,7 @@ const {
   semanticProjection,
   stableStringify
 } = require('../public/structure-score.js');
+const { migrateProcessDocument } = require('../public/process-governance-migration.js');
 
 const departments = [
   '全公司',
@@ -32,7 +36,7 @@ function behavior(index, nodeType = 'action') {
   return {
     behavior_ref: `behavior-${index}`,
     node_type: nodeType,
-    behavior_name: `业务行为${index}`,
+    behavior_name: `业务人员办理业务行为${index}`,
     behavior_description: `经办人核对第${index}项业务资料，登记处理结果并提交下一岗位。`,
     current_actor_role: '经营发展部部长',
     actor_assignment_mode: 'fixed_department',
@@ -140,8 +144,8 @@ function passingTechnical() {
   };
 }
 
-assert.equal(RULE.id, 'structure-learning-score-v4');
-assert.equal(RULE.label, '结构化学习评分 v4（process-governance-v7）');
+assert.equal(RULE.id, 'structure-learning-score-v5');
+assert.equal(RULE.label, '结构化学习评分 v5（process-governance-v7）');
 assert.equal(
   RULE.dimensions.reduce((sum, item) => sum + item.max, 0),
   100,
@@ -168,6 +172,28 @@ assert.ok(
   REVIEW_READINESS.aspects.find(item => item.key === 'routing').confirmations
     .includes('嵌套循环的每一层都必须有明确退出条件和退出去向；内层退出可以进入外层，最外层必须退出到循环外。')
 );
+
+assert.deepEqual(behaviorNameCompleteness({ node_type: 'action', behavior_name: '编制' }), {
+  complete: false,
+  missingSubject: true,
+  missingAction: false,
+  missingObject: true
+});
+assert.equal(
+  behaviorNameCompleteness({ node_type: 'action', behavior_name: '编制人员编制产品制造大纲' }).complete,
+  true
+);
+assert.equal(
+  behaviorNameCompleteness({ node_type: 'decision', behavior_name: '产品制造大纲是否需要无损检测审批' }).complete,
+  true,
+  'control nodes describe the business question and do not require a fabricated actor'
+);
+
+const incompleteBehaviorNameDocument = createDocument(1);
+incompleteBehaviorNameDocument.behaviors[0].behavior_name = '编制';
+const incompleteBehaviorNameResult = content(incompleteBehaviorNameDocument);
+assert.ok(incompleteBehaviorNameResult.dimensions.behavior < 25);
+assert.ok(incompleteBehaviorNameResult.issues.some(item => item.message.includes('谁对什么做什么')));
 assert.ok(
   REVIEW_READINESS.aspects.find(item => item.key === 'routing').confirmations
     .includes('并行路线必须全部进入同一个并行汇合；任一路线可能在汇合前中止整个流程时，不得使用并行。')
@@ -372,7 +398,7 @@ isolatedDocument.flow_relations = [relation(1, 'behavior-1', 'behavior-2')];
 const isolatedResult = content(isolatedDocument);
 assert.equal(isolatedResult.effectiveChainLength, 2);
 assert.equal(
-  isolatedResult.issues.some(item => item.message === '业务行为3未进入任何有效流程关系'),
+  isolatedResult.issues.some(item => item.message === '业务人员办理业务行为3未进入任何有效流程关系'),
   true
 );
 
@@ -443,7 +469,7 @@ assert.equal(parallelDetails.splits[0].routeCount, 1);
 assert.equal(parallelDetails.splits[0].missingCount, 1);
 assert.equal(
   content(oneRouteParallelDocument).issues.some(item =>
-    item.message === '业务行为2当前有效并行路线为1条，规则要求至少2条。'
+    item.message === '业务人员办理业务行为2当前有效并行路线为1条，规则要求至少2条。'
     && item.suggestions.includes('新增1条从本节点流向不同后续行为的并行路线。')
   ),
   true
@@ -459,9 +485,9 @@ assert.equal(parallelDetails.joins[0].sourceCount, 0);
 assert.equal(parallelDetails.joins[0].sequenceRelations.length, 2);
 const misclassifiedParallelResult = content(misclassifiedParallelDocument);
 const splitTypeIssue = misclassifiedParallelResult.issues.find(item =>
-  item.message === '业务行为2已有2条通往“业务行为3”、“业务行为4”的顺序关系，顺序关系不计入并行路线；当前有效并行路线为0条，规则要求至少2条。'
+  item.message === '业务人员办理业务行为2已有2条通往“业务人员办理业务行为3”、“业务人员办理业务行为4”的顺序关系，顺序关系不计入并行路线；当前有效并行路线为0条，规则要求至少2条。'
 );
-assert.deepEqual(splitTypeIssue.suggestions, ['将通往“业务行为3”、“业务行为4”的现有顺序关系改为“并行路线”。']);
+assert.deepEqual(splitTypeIssue.suggestions, ['将通往“业务人员办理业务行为3”、“业务人员办理业务行为4”的现有顺序关系改为“并行路线”。']);
 assert.deepEqual(splitTypeIssue.focusPaths, [
   'flow_relations.1.relation_type',
   'flow_relations.2.relation_type'
@@ -469,9 +495,9 @@ assert.deepEqual(splitTypeIssue.focusPaths, [
 assert.equal(splitTypeIssue.focusRef, 'relation-2');
 assert.equal(splitTypeIssue.focusPath, 'flow_relations.1.relation_type');
 const joinTypeIssue = misclassifiedParallelResult.issues.find(item =>
-  item.message === '业务行为5已有2条来自“业务行为3”、“业务行为4”的顺序关系，顺序关系不计入并行汇合来源；当前共有0个有效来源（0条并行路线来源），规则要求至少2个。'
+  item.message === '业务人员办理业务行为5已有2条来自“业务人员办理业务行为3”、“业务人员办理业务行为4”的顺序关系，顺序关系不计入并行汇合来源；当前共有0个有效来源（0条并行路线来源），规则要求至少2个。'
 );
-assert.deepEqual(joinTypeIssue.suggestions, ['将“业务行为3”、“业务行为4”进入本节点的现有顺序关系改为“并行路线”。']);
+assert.deepEqual(joinTypeIssue.suggestions, ['将“业务人员办理业务行为3”、“业务人员办理业务行为4”进入本节点的现有顺序关系改为“并行路线”。']);
 assert.deepEqual(joinTypeIssue.focusPaths, [
   'flow_relations.3.relation_type',
   'flow_relations.4.relation_type'
@@ -725,13 +751,13 @@ assert.equal(dataFlowDetails.issues.length, 0, 'legacy behavior-side references 
 const derivedEntryDocument = createDocument(2);
 derivedEntryDocument.behaviors[1].trigger = '';
 assert.equal(
-  content(derivedEntryDocument).issues.some(item => item.message === '业务行为2是流程入口，但未说明流程如何开始'),
+  content(derivedEntryDocument).issues.some(item => item.message === '业务人员办理业务行为2是流程入口，但未说明流程如何开始'),
   false,
   'a non-entry behavior derives its start from the incoming relation'
 );
 derivedEntryDocument.behaviors[0].trigger = '';
 assert.equal(
-  content(derivedEntryDocument).issues.some(item => item.message === '业务行为1是流程入口，但未说明流程如何开始'),
+  content(derivedEntryDocument).issues.some(item => item.message === '业务人员办理业务行为1是流程入口，但未说明流程如何开始'),
   true
 );
 const invalidRelationDoesNotOrderDataDocument = createDocument(2);
@@ -827,6 +853,58 @@ assert.equal(unavailableResult.available, false);
 assert.equal(unavailableResult.completenessScore, null);
 assert.equal(unavailableResult.displayScore, null);
 assert.equal(unavailableResult.blocker, false);
+
+const resolvedLifecycleState = {
+  business_validity: 'effective',
+  custody: 'active_custody',
+  identifiability_applicability: 'not_applicable',
+  identifiability: 'not_applicable'
+};
+const lifecycleScoreDocument = migrateProcessDocument(createDocument(2));
+lifecycleScoreDocument.data_objects[0].lifecycle = {
+  applicability: 'applicable',
+  entry_state: { ...resolvedLifecycleState },
+  routes: [{
+    route_ref: 'route-score-test',
+    route_label: '测试路径',
+    flow_relation_refs: ['relation-1'],
+    events: [{
+      event_ref: 'event-score-test',
+      action: 'archive',
+      trigger: { mode: 'pending_confirmation', operator: 'pending_confirmation', expression: '' },
+      target_scope: 'pending_confirmation',
+      carrier_scope: 'pending_confirmation',
+      responsibility: { mode: 'pending_confirmation', department: '', position: '' },
+      exception_handling: '',
+      result_state: { ...resolvedLifecycleState },
+      high_risk: false,
+      review_status: 'pending_confirmation',
+      decision_reason: '',
+      decision_notes: '',
+      provenance: { source_path: '', basis: '', evidence_snapshot: '' }
+    }],
+    exit_state: { ...resolvedLifecycleState }
+  }],
+  analysis: { analyzer_version: '', source_fingerprint: '', status: 'not_analyzed' },
+  decision_reason: '',
+  decision_notes: ''
+};
+assert.deepEqual(lifecycleStateReview(lifecycleScoreDocument.data_objects[0].lifecycle), {
+  applicabilityResolved: true,
+  businessValidityResolved: true,
+  custodyAndIdentifiabilityResolved: true
+});
+const lifecycleScoreResult = content(lifecycleScoreDocument);
+assert.equal(
+  lifecycleScoreResult.issues.some(item => item.message.includes('确定性分析') || item.message.includes('事件待核对')),
+  false,
+  'ordinary score must ignore analyzer status, event review status, trigger, scope, responsibility, and exception fields'
+);
+assert.equal(advancedLifecycleChecklist(lifecycleScoreDocument).length, 4);
+const pendingIdentifiabilityLifecycle = JSON.parse(JSON.stringify(lifecycleScoreDocument.data_objects[0].lifecycle));
+pendingIdentifiabilityLifecycle.entry_state.identifiability_applicability = 'applicable';
+pendingIdentifiabilityLifecycle.entry_state.identifiability = 'pending_confirmation';
+assert.equal(lifecycleStateReview(pendingIdentifiabilityLifecycle).custodyAndIdentifiabilityResolved, false);
 
 const projectionSource = createDocument(2);
 const projectionTarget = JSON.parse(JSON.stringify(projectionSource));

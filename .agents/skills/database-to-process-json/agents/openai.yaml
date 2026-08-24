@@ -1,0 +1,7 @@
+interface:
+  display_name: "数据库生成流程JSON"
+  short_description: "从CXSYSYS只读证据生成单流程V7草稿"
+  brand_color: "#365C69"
+  default_prompt: "使用 $database-to-process-json，根据用户明确指定的 CXSYSYS.dbo 主表或表单模板和只读结构快照，一次生成一个未审核的 process-governance-v7 JSON及证据包；数据库禁止写入，多工作流时停止并列出候选。"
+policy:
+  allow_implicit_invocation: false

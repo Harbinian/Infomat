@@ -779,7 +779,7 @@ async function testApi() {
     const scoreAsset = await fetch(`${baseUrl}/structure-score.js`);
     assert.equal(scoreAsset.status, 200);
     assert.match(scoreAsset.headers.get('content-type') || '', /javascript/);
-    assert.match(await scoreAsset.text(), /structure-learning-score-v4/);
+    assert.match(await scoreAsset.text(), /structure-learning-score-v5/);
 
     const governanceWorkflowAsset = await fetch(`${baseUrl}/governance-workflow.js`);
     assert.equal(governanceWorkflowAsset.status, 200);
@@ -1093,6 +1093,7 @@ function testProcessDiagramModel() {
   const readabilityLoops = readabilityRelations.filter(edge => edge.classes.includes('relation-loop'));
   assert.equal(new Set(readabilityLoops.map(edge => edge.data.routeOffset)).size, 2);
   assert.ok(readabilityLoops.every(edge => edge.data.routePlacement === 'lower'));
+  assert.ok(readabilityLoops.every(edge => edge.data.targetEndpoint === '0% 50%'));
   assert.ok(
     readabilityModel.layout.rankPositions[1] - readabilityModel.layout.rankPositions[0] >= 440,
     'adjacent diagram ranks must leave at least the minimum safe gap'
@@ -1102,6 +1103,43 @@ function testProcessDiagramModel() {
     0,
     'the screenshot regression model must not contain node, label, or route-track collisions'
   );
+
+  const manufacturingDraft = createDraft();
+  manufacturingDraft.behaviors = [
+      makeBehavior('b_compile', '编制人员编制产品制造大纲', 'action', ''),
+      makeBehavior('b_proofread', '校对人员校对产品制造大纲', 'action', ''),
+      makeBehavior('b_review', '大纲审核人员审核产品制造大纲', 'action', ''),
+      makeBehavior('b_quality', '质量保证人员核查产品制造大纲', 'action', ''),
+      makeBehavior('b_decide_ndt', '产品制造大纲是否需要无损检测审批', 'decision', ''),
+      makeBehavior('b_ndt', '无损检测审批人员审批产品制造大纲', 'action', ''),
+      makeBehavior('b_approve', '大纲批准人员批准产品制造大纲', 'action', '')
+    ];
+  manufacturingDraft.flow_relations = [
+      { relation_ref: 'r01', relation_type: 'sequence', from_behavior_ref: 'b_compile', to_behavior_ref: 'b_proofread', condition: '', join_mode: '' },
+      { relation_ref: 'r02', relation_type: 'sequence', from_behavior_ref: 'b_proofread', to_behavior_ref: 'b_review', condition: '', join_mode: '' },
+      { relation_ref: 'r03', relation_type: 'sequence', from_behavior_ref: 'b_review', to_behavior_ref: 'b_quality', condition: '', join_mode: '' },
+      { relation_ref: 'r04', relation_type: 'sequence', from_behavior_ref: 'b_quality', to_behavior_ref: 'b_decide_ndt', condition: '', join_mode: '' },
+      { relation_ref: 'r05', relation_type: 'condition', from_behavior_ref: 'b_decide_ndt', to_behavior_ref: 'b_ndt', condition: '需要无损检测', join_mode: '' },
+      { relation_ref: 'r06', relation_type: 'condition', from_behavior_ref: 'b_decide_ndt', to_behavior_ref: 'b_approve', condition: '不需要无损检测', join_mode: '' },
+      { relation_ref: 'r07', relation_type: 'sequence', from_behavior_ref: 'b_ndt', to_behavior_ref: 'b_approve', condition: '', join_mode: '' },
+      { relation_ref: 'r08', relation_type: 'loop', from_behavior_ref: 'b_proofread', to_behavior_ref: 'b_compile', condition: '校对不同意', join_mode: '' },
+      { relation_ref: 'r09', relation_type: 'loop', from_behavior_ref: 'b_review', to_behavior_ref: 'b_compile', condition: '审核不同意', join_mode: '' },
+      { relation_ref: 'r10', relation_type: 'loop', from_behavior_ref: 'b_quality', to_behavior_ref: 'b_compile', condition: '质保不同意', join_mode: '' },
+      { relation_ref: 'r11', relation_type: 'loop', from_behavior_ref: 'b_ndt', to_behavior_ref: 'b_compile', condition: '无损检测不同意', join_mode: '' },
+      { relation_ref: 'r12', relation_type: 'loop', from_behavior_ref: 'b_approve', to_behavior_ref: 'b_compile', condition: '批准不同意', join_mode: '' }
+    ];
+  manufacturingDraft.internal_process_calls = [];
+  const manufacturingModel = buildGraphModel(manufacturingDraft, { departmentOrder });
+  const noNdtBranch = manufacturingModel.edges.find(edge => edge.data.focusRef === 'r06');
+  const approveNode = manufacturingModel.nodes.find(node => node.data.focusRef === 'b_approve');
+  assert.equal(noNdtBranch.data.target, approveNode.data.id);
+  assert.ok(noNdtBranch.classes.includes('route-forward-branch'));
+  assert.equal(noNdtBranch.data.routePlacement, 'upper');
+  const manufacturingLoops = manufacturingModel.edges.filter(edge => edge.classes.includes('relation-loop'));
+  assert.equal(manufacturingLoops.length, 5);
+  assert.ok(manufacturingLoops.every(edge => edge.data.targetEndpoint === '0% 50%'));
+  assert.equal(new Set(manufacturingLoops.map(edge => edge.data.routeTrackKey)).size, 5);
+  assert.equal(new Set(manufacturingLoops.map(edge => edge.data.routeOffset)).size, 5);
 
   const cycleDraft = JSON.parse(JSON.stringify(readabilityDraft));
   cycleDraft.flow_relations[2].relation_type = 'condition';
@@ -1362,6 +1400,16 @@ async function testFrontendContract() {
   assert.ok(html.includes('data-action="switch-data-mode"'));
   assert.ok(html.includes('主数据认定提示'));
   assert.ok(html.includes('重新分析当前对象'));
+  assert.ok(html.includes('本流程会不会改变这条数据的状态或保管方式？'));
+  assert.ok(html.includes('业务上还能用吗？'));
+  assert.ok(html.includes('现在怎么保管？'));
+  assert.ok(html.includes('本流程会进行匿名处理吗？'));
+  assert.ok(html.includes('进行匿名处理后，还能认出原来对应的人或对象吗？'));
+  assert.ok(html.includes("const showLifecycleDetails = lifecycle.applicability === 'applicable' || advancedLifecycleMode"));
+  assert.ok(html.includes('选择“会改变”后，页面再显示业务使用状态、保管方式和确实适用的匿名处理问题。'));
+  assert.ok(html.includes('data-action="toggle-advanced-lifecycle"'));
+  assert.ok(html.includes('高级结构核对仅在当前页面临时开启'));
+  assert.equal(/localStorage|sessionStorage/.test(html), false, 'the temporary advanced mode must not use browser storage');
   assert.ok(html.includes('1. 数据对象与字段明细'));
   assert.ok(html.includes('2. 实际表单、主表、明细和字段'));
   assert.ok(html.includes('沿用当前对象字段已经建立的值，无需在本表单重复登记取值来源。'));
@@ -1372,6 +1420,8 @@ async function testFrontendContract() {
   assert.ok(formStartSource.includes('addDataObject()'));
   assert.equal(formStartSource.includes("addForm('current_state')"), false);
   assert.ok(structureScoreSource.includes('数据生命周期与异常处理'));
+  assert.ok(structureScoreSource.includes('structure-learning-score-v5'));
+  assert.ok(structureScoreSource.includes('advancedLifecycleChecklist'));
   assert.ok(html.includes('aria-label="数据关系图图例"'));
   assert.ok(html.includes('<small>业务行为 → 数据对象</small>'));
   assert.ok(html.includes('<small>业务行为 ↔ 数据对象</small>'));

@@ -1,0 +1,237 @@
+{
+  "schema_version": "database-process-evidence-v1",
+  "database": "CXSYSYS",
+  "schema": "dbo",
+  "captured_at": "2026-08-21T23:59:59+08:00",
+  "snapshot_digest": "2026-08-21-product-manufacturing-outline-structure-report",
+  "source_summary": "根据2026-08-21只读结构探查报告整理的脱敏结构快照；不是本轮实时数据库结果。",
+  "forms": [
+    {
+      "form_ref": "form_product_manufacturing_outline",
+      "form_template": "产品制造大纲",
+      "root_table": "产品制造大纲_主表",
+      "business_name": "产品制造大纲",
+      "business_content": {
+        "purpose": "",
+        "scope": "适用于产品制造大纲首页以及材料、工序、参考文件、工装和设备程序、附图、蜂窝材料、版次记录和紫外线暴露等组成内容的编制、校对、审核、质量保证核对、无损检测审批和批准。"
+      },
+      "anonymous_processing": false,
+      "tables": [
+        {
+          "physical_name": "产品制造大纲_主表",
+          "related_physical_names": [],
+          "data_ref": "data_f01",
+          "business_name": "产品制造大纲首页记录",
+          "business_description": "记录产品制造大纲首页的业务内容；字段责任和权威来源待业务确认。",
+          "form_ref": "form_f01",
+          "form_name": "产品制造大纲首页",
+          "excluded_fields": ["Operator", "ITEM", "FONO"]
+        },
+        {
+          "physical_name": "产品制造大纲材料页_主表",
+          "related_physical_names": ["产品制造大纲材料页_明细"],
+          "data_ref": "data_f02",
+          "business_name": "产品制造大纲材料记录",
+          "form_ref": "form_f02",
+          "form_name": "产品制造大纲材料页",
+          "excluded_fields": ["Operator", "ITEM", "FONO"]
+        },
+        {
+          "physical_name": "产品制造大纲工序页_主表",
+          "related_physical_names": ["产品制造大纲工序页_明细"],
+          "data_ref": "data_f03",
+          "business_name": "产品制造大纲工序记录",
+          "form_ref": "form_f03",
+          "form_name": "产品制造大纲工序页",
+          "excluded_fields": ["Operator", "ITEM", "FONO"]
+        },
+        {
+          "physical_name": "产品制造大纲参考文件_主表",
+          "related_physical_names": ["产品制造大纲参考文件_明细"],
+          "data_ref": "data_f04",
+          "business_name": "产品制造大纲参考文件记录",
+          "form_ref": "form_f04",
+          "form_name": "产品制造大纲参考文件页",
+          "excluded_fields": ["Operator", "ITEM", "FONO"]
+        },
+        {
+          "physical_name": "产品制造大纲工装和设备程序_主表",
+          "related_physical_names": ["产品制造大纲工装和设备程序_明细"],
+          "data_ref": "data_f05",
+          "business_name": "产品制造大纲工装和设备程序记录",
+          "form_ref": "form_f05",
+          "form_name": "产品制造大纲工装和设备程序页",
+          "excluded_fields": ["Operator", "ITEM", "FONO"]
+        },
+        {
+          "physical_name": "产品制造大纲附图_主表",
+          "related_physical_names": ["产品制造大纲附图_明细"],
+          "data_ref": "data_f06",
+          "business_name": "产品制造大纲附图记录",
+          "form_ref": "form_f06",
+          "form_name": "产品制造大纲附图页",
+          "excluded_fields": ["Operator", "ITEM", "FONO"]
+        },
+        {
+          "physical_name": "产品制造大纲蜂窝材料页_主表",
+          "related_physical_names": ["产品制造大纲蜂窝材料页_明细"],
+          "data_ref": "data_f07",
+          "business_name": "产品制造大纲蜂窝材料记录",
+          "form_ref": "form_f07",
+          "form_name": "产品制造大纲蜂窝材料页",
+          "excluded_fields": ["Operator", "ITEM", "FONO"]
+        },
+        {
+          "physical_name": "产品制造大纲版次记录页_主表",
+          "related_physical_names": ["产品制造大纲版次记录页_明细"],
+          "data_ref": "data_f08",
+          "business_name": "产品制造大纲版次记录",
+          "form_ref": "form_f08",
+          "form_name": "产品制造大纲版次记录页",
+          "excluded_fields": ["Operator", "ITEM", "FONO"]
+        },
+        {
+          "physical_name": "产品制造大纲紫外线暴露页_主表",
+          "related_physical_names": [],
+          "data_ref": "data_f09",
+          "business_name": "产品制造大纲紫外线暴露记录",
+          "form_ref": "form_f09",
+          "form_name": "产品制造大纲紫外线暴露页",
+          "excluded_fields": ["Operator", "ITEM", "FONO"]
+        }
+      ],
+      "formula_mappings": [],
+      "term_candidates": [
+        { "term_name": "制造大纲编号", "definition": "", "source_object": "产品制造大纲_主表", "source_field": "制造大纲编号" },
+        { "term_name": "制造大纲版次", "definition": "", "source_object": "产品制造大纲_主表", "source_field": "制造大纲版次" },
+        { "term_name": "有效批架次", "definition": "", "source_object": "产品制造大纲_主表", "source_field": "有效批架次" },
+        { "term_name": "加工路线", "definition": "", "source_object": "产品制造大纲_主表", "source_field": "加工路线" },
+        { "term_name": "材料牌号", "definition": "", "source_object": "产品制造大纲材料页_明细", "source_field": "材料牌号" },
+        { "term_name": "批次卷号", "definition": "", "source_object": "产品制造大纲材料页_明细", "source_field": "批次卷号" },
+        { "term_name": "流水工序号", "definition": "", "source_object": "产品制造大纲工序页_明细", "source_field": "流水工序号" },
+        { "term_name": "工装程序编号", "definition": "", "source_object": "产品制造大纲工装和设备程序_明细", "source_field": "工装程序编号" },
+        { "term_name": "适用批架次", "definition": "", "source_object": "产品制造大纲版次记录页_明细", "source_field": "适用批架次" }
+      ],
+      "verification_targets": [
+        {
+          "table": "产品制造大纲_主表",
+          "columns": ["是否需要无损检测", "校对", "校对日期", "审核", "审核日期", "质保", "质保日期", "无损检测批准", "无损检测批准日期", "批准", "批准日期"],
+          "max_rows": 20
+        }
+      ],
+      "pending_issues": [
+        "请业务负责人说明产品制造大纲编制与审批要解决的业务问题。",
+        "请确认首页和各页面中哪些字段必须填写，哪些字段允许暂缺。",
+        "请确认每个页面及字段的权威来源和维护责任。"
+      ]
+    }
+  ],
+  "workflows": [
+    {
+      "workflow_id": "workflow_product_manufacturing_outline",
+      "workflow_name": "产品制造大纲编制审批",
+      "root_table": "产品制造大纲_主表",
+      "process_name": "产品制造大纲编制与审批",
+      "nodes": [
+        {
+          "behavior_ref": "b_compile",
+          "node_key": "compile",
+          "node_type": "action",
+          "business_name": "编制人员编制产品制造大纲",
+          "business_description": "编制人员填写产品制造大纲首页和相关页面，并在提交校对前核对已填内容。",
+          "trigger": "产品制造大纲开始编制的实际业务条件待确认。",
+          "completion_standard": "需要填写的页面、允许暂缺的字段和提交校对条件待业务确认。"
+        },
+        {
+          "behavior_ref": "b_proofread",
+          "node_key": "proofread",
+          "node_type": "action",
+          "business_name": "校对人员校对产品制造大纲",
+          "business_description": "校对人员核对产品制造大纲内容；同意时提交审核，不同意时退回编制。",
+          "completion_standard": "校对通过的检查项和记录要求待业务确认。"
+        },
+        {
+          "behavior_ref": "b_review",
+          "node_key": "review",
+          "node_type": "action",
+          "business_name": "大纲审核人员审核产品制造大纲",
+          "business_description": "大纲审核人员核对产品制造大纲内容；同意时提交质量保证核查，不同意时退回编制。",
+          "completion_standard": "审核通过的依据、检查项和记录要求待业务确认。"
+        },
+        {
+          "behavior_ref": "b_quality",
+          "node_key": "quality",
+          "node_type": "action",
+          "business_name": "质量保证人员核查产品制造大纲",
+          "business_description": "质量保证人员核查产品制造大纲的质量相关内容；不同意时退回编制。",
+          "completion_standard": "质量保证核查通过的依据、检查项和记录要求待业务确认。"
+        },
+        {
+          "behavior_ref": "b_decide_ndt",
+          "node_key": "decide_ndt",
+          "node_type": "decision",
+          "business_name": "产品制造大纲是否需要无损检测审批",
+          "business_description": "根据首页的“是否需要无损检测”选择后续路线。",
+          "completion_standard": "需要无损检测时进入无损检测审批；不需要无损检测时直接进入批准。"
+        },
+        {
+          "behavior_ref": "b_ndt",
+          "node_key": "ndt",
+          "node_type": "action",
+          "business_name": "无损检测审批人员审批产品制造大纲",
+          "business_description": "无损检测审批人员核查并审批产品制造大纲；不同意时退回编制。",
+          "completion_standard": "无损检测审批的依据、检查项和记录要求待业务确认。"
+        },
+        {
+          "behavior_ref": "b_approve",
+          "node_key": "approve",
+          "node_type": "action",
+          "business_name": "大纲批准人员批准产品制造大纲",
+          "business_description": "大纲批准人员决定是否批准产品制造大纲；不同意时退回编制。",
+          "completion_standard": "批准完成条件以及批准后的生效和保管规则待业务确认。"
+        }
+      ],
+      "edges": [
+        { "relation_ref": "r01", "edge_key": "r01", "relation_type": "sequence", "from_behavior_ref": "b_compile", "to_behavior_ref": "b_proofread", "condition": "" },
+        { "relation_ref": "r02", "edge_key": "r02", "relation_type": "sequence", "from_behavior_ref": "b_proofread", "to_behavior_ref": "b_review", "condition": "" },
+        { "relation_ref": "r03", "edge_key": "r03", "relation_type": "sequence", "from_behavior_ref": "b_review", "to_behavior_ref": "b_quality", "condition": "" },
+        { "relation_ref": "r04", "edge_key": "r04", "relation_type": "sequence", "from_behavior_ref": "b_quality", "to_behavior_ref": "b_decide_ndt", "condition": "" },
+        { "relation_ref": "r05", "edge_key": "r05", "relation_type": "condition", "from_behavior_ref": "b_decide_ndt", "to_behavior_ref": "b_ndt", "condition": "需要无损检测" },
+        { "relation_ref": "r06", "edge_key": "r06", "relation_type": "condition", "from_behavior_ref": "b_decide_ndt", "to_behavior_ref": "b_approve", "condition": "不需要无损检测" },
+        { "relation_ref": "r07", "edge_key": "r07", "relation_type": "sequence", "from_behavior_ref": "b_ndt", "to_behavior_ref": "b_approve", "condition": "" },
+        { "relation_ref": "r08", "edge_key": "r08", "relation_type": "loop", "from_behavior_ref": "b_proofread", "to_behavior_ref": "b_compile", "condition": "校对不同意" },
+        { "relation_ref": "r09", "edge_key": "r09", "relation_type": "loop", "from_behavior_ref": "b_review", "to_behavior_ref": "b_compile", "condition": "审核不同意" },
+        { "relation_ref": "r10", "edge_key": "r10", "relation_type": "loop", "from_behavior_ref": "b_quality", "to_behavior_ref": "b_compile", "condition": "质量保证核查不同意" },
+        { "relation_ref": "r11", "edge_key": "r11", "relation_type": "loop", "from_behavior_ref": "b_ndt", "to_behavior_ref": "b_compile", "condition": "无损检测审批不同意" },
+        { "relation_ref": "r12", "edge_key": "r12", "relation_type": "loop", "from_behavior_ref": "b_approve", "to_behavior_ref": "b_compile", "condition": "批准不同意" }
+      ],
+      "data_operations": [
+        { "behavior_ref": "b_compile", "operation": "create", "data_refs": ["*"] },
+        { "behavior_ref": "b_proofread", "operation": "update", "data_refs": ["data_f01"], "updated_fields": ["校对", "校对日期"] },
+        { "behavior_ref": "b_proofread", "operation": "use", "data_refs": ["*"], "exclude_data_refs": ["data_f01"] },
+        { "behavior_ref": "b_review", "operation": "update", "data_refs": ["data_f01"], "updated_fields": ["审核", "审核日期"] },
+        { "behavior_ref": "b_review", "operation": "use", "data_refs": ["*"], "exclude_data_refs": ["data_f01"] },
+        { "behavior_ref": "b_quality", "operation": "update", "data_refs": ["data_f01"], "updated_fields": ["质保", "质保日期"] },
+        { "behavior_ref": "b_quality", "operation": "use", "data_refs": ["*"], "exclude_data_refs": ["data_f01"] },
+        { "behavior_ref": "b_decide_ndt", "operation": "use", "data_refs": ["data_f01"] },
+        { "behavior_ref": "b_ndt", "operation": "update", "data_refs": ["data_f01"], "updated_fields": ["无损检测批准", "无损检测批准日期"] },
+        { "behavior_ref": "b_ndt", "operation": "use", "data_refs": ["*"], "exclude_data_refs": ["data_f01"] },
+        { "behavior_ref": "b_approve", "operation": "update", "data_refs": ["data_f01"], "updated_fields": ["批准", "批准日期"] },
+        { "behavior_ref": "b_approve", "operation": "use", "data_refs": ["*"], "exclude_data_refs": ["data_f01"] }
+      ],
+      "role_candidates": [
+        { "behavior_ref": "b_proofread", "business_node_name": "校对产品制造大纲", "role_name": "增补工序校对" },
+        { "behavior_ref": "b_review", "business_node_name": "审核产品制造大纲", "role_name": "大纲审核" },
+        { "behavior_ref": "b_approve", "business_node_name": "批准产品制造大纲", "role_name": "大纲批准" }
+      ],
+      "pending_issues": [
+        "请确认每条不同意退回编制时需要满足的业务条件。",
+        "请确认首页审批姓名和日期是在节点同意时写入，还是在进入节点时写入。",
+        "请确认不需要无损检测时是否可以直接进入批准。"
+      ]
+    }
+  ],
+  "pending_issues": [
+    "请确认制造大纲批准后的业务效力和保管方式。"
+  ]
+}

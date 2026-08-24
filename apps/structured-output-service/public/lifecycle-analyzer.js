@@ -74,8 +74,19 @@
     };
   }
 
+  function stateWithoutAnonymousProcessing() {
+    return {
+      business_validity: 'pending_confirmation',
+      custody: 'pending_confirmation',
+      identifiability_applicability: 'not_applicable',
+      identifiability: 'not_applicable'
+    };
+  }
+
   function resultStateFor(action) {
-    const state = pendingState();
+    const state = action === 'irreversible_anonymize'
+      ? pendingState()
+      : stateWithoutAnonymousProcessing();
     if (action === 'activate' || action === 'reactivate') state.business_validity = 'effective';
     if (action === 'deactivate') state.business_validity = 'deactivated';
     if (action === 'void') state.business_validity = 'voided';
@@ -296,7 +307,9 @@
           route_label: candidate.route_label,
           flow_relation_refs: candidate.flow_relation_refs,
           events: [],
-          exit_state: pendingState()
+          exit_state: candidate.event.action === 'irreversible_anonymize'
+            ? pendingState()
+            : stateWithoutAnonymousProcessing()
         });
       }
       const route = routeByRef.get(candidate.route_ref);
