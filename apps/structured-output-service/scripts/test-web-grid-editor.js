@@ -23,8 +23,8 @@ function documentFixture() {
   return {
     schema_version: 'process-governance-v7',
     behaviors: [
-      { behavior_ref: 'behavior_create', behavior_name: '登记申请' },
-      { behavior_ref: 'behavior_review', behavior_name: '复核申请' }
+      { behavior_ref: 'behavior_create', behavior_name: '登记申请', node_type: 'action' },
+      { behavior_ref: 'behavior_review', behavior_name: '复核申请', node_type: 'action' }
     ],
     migration: { reference_materials: [{ material_name: '原始依据.pdf' }], archive: [{ source_version: 'process-governance-v6' }] },
     data_objects: [{
@@ -67,6 +67,36 @@ const adapterOptions = {
     };
   }
 };
+
+{
+  const source = documentFixture();
+  source.behaviors.push({ behavior_ref: 'behavior_decision', behavior_name: '申请是否通过？', node_type: 'decision' });
+  const sourceSnapshot = JSON.stringify(source);
+  const session = WebGridCore.createSession({
+    adapter: ProcessV7GridAdapter, documentValue: source, sourceKey: 'control-node-data-link', adapterOptions
+  });
+  const rows = session.rows('data_behavior_links');
+  rows[0].behavior_ref = 'behavior_decision';
+  session.replaceRows('data_behavior_links', rows);
+  const prepared = session.prepare(source, 'control-node-data-link');
+  assert.equal(prepared.ok, false, 'data relationships must reject control nodes');
+  assert.ok(prepared.errors.some(item => item.code === 'ACTION_BEHAVIOR_REQUIRED'));
+  assert.equal(JSON.stringify(source), sourceSnapshot, 'failed control-node relation must leave the source unchanged');
+}
+
+{
+  const source = documentFixture();
+  source.behaviors.push({ behavior_ref: 'behavior_parallel', behavior_name: '并行办理', node_type: 'parallel_split' });
+  const session = WebGridCore.createSession({
+    adapter: ProcessV7GridAdapter, documentValue: source, sourceKey: 'control-node-form-link', adapterOptions
+  });
+  const rows = session.rows('form_behavior_links');
+  rows[0].behavior_ref = 'behavior_parallel';
+  session.replaceRows('form_behavior_links', rows);
+  const prepared = session.prepare(source, 'control-node-form-link');
+  assert.equal(prepared.ok, false, 'form relationships must reject control nodes');
+  assert.ok(prepared.errors.some(item => item.code === 'ACTION_BEHAVIOR_REQUIRED'));
+}
 
 {
   assert.equal(NativeWebGrid.isCompositionKey({ key: 'Enter', isComposing: true }, false), true);
@@ -417,7 +447,7 @@ const adapterOptions = {
 {
   const performance = documentFixture();
   performance.behaviors = Array.from({ length: 120 }, (_, index) => ({
-    behavior_ref: `behavior_perf_${index + 1}`, behavior_name: `性能行为${index + 1}`
+    behavior_ref: `behavior_perf_${index + 1}`, behavior_name: `性能行为${index + 1}`, node_type: 'action'
   }));
   performance.data_objects = Array.from({ length: 30 }, (_, dataIndex) => ({
     data_ref: `data_perf_${dataIndex + 1}`, data_name: `性能数据对象${dataIndex + 1}`, description: '', information_type: 'business_information',

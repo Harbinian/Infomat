@@ -2502,6 +2502,7 @@
     const MATERIAL_TYPES = ['', '现有制度', '表单或记录', '现行业务操作说明', '会议或访谈', '其他参考材料'];
     const AREA_TYPES = ['', '基本信息', '明细清单'];
     const EXPECTED_EXPORT_SCHEMA_VERSION = 'process-governance-v7';
+    const MAX_IMPORT_BYTES = 10 * 1024 * 1024;
     const FORM_DESIGN_STATES = new Set(['unspecified', 'current_state', 'proposed_design']);
     const INFORMATION_TYPES = [
       { value: 'pending_confirmation', label: '待确认', example: '暂时无法判断属于哪一类' },
@@ -2696,8 +2697,8 @@
           ['A1业务行为', '流程中由业务人员或部门实际执行的一项可说明、可定位的业务动作。普通业务行为在v7中使用action节点记录。'],
           ['流程骨架', '节点名称、节点类型、执行主体，以及流程关系的类型、起点和终点。逐动作说明和关系条件不在流程骨架中编辑。'],
           ['普通业务行为', '承担实际业务动作的action节点，需要记录执行主体和具体做什么；它不同于判断、并行开始和并行汇合等控制节点。'],
-          ['控制节点', '用于表达判断或并行控制的节点，包括判断节点、并行开始和并行汇合。控制节点不代表执行部门，也不承担实际业务动作。'],
-          ['流程关系', '连接两个节点的有向关系，记录起点、终点和关系类型。一对多或多对一使用多条独立关系表达。'],
+          ['控制节点', '用于明确表达判断或并行控制，包括判断节点、并行开始和并行汇合。校对、审核、批准等实际办理仍是业务行为；办理结果存在不同去向时，应在业务行为后另设判断节点，不能用业务行为加条件线代替。控制节点不承担实际办理，也不确认正式岗位。'],
+          ['流程关系', '连接两个节点的有向关系，记录起点、终点和关系类型。一对多或多对一使用多条独立关系表达；多条关系进入同一目标时，图上共用最后一段入线。'],
           ['判断分支', '从判断节点发出、根据明确条件选择后续路线的关系。判断分支继续向后办理，不等于退回前序步骤。'],
           ['流程内部回路', '当前节点在明确条件下返回已经存在的前序行为或判断节点的关系，常用于退回重办。每层循环都必须另有退出条件和去向。'],
           ['并行开始', '同时启动两条以上办理路线的控制节点。只选择其中一条路线时应使用判断分支。'],
@@ -4840,7 +4841,7 @@
             <div class="diagram-toolbar">
               <div>
                 <h2>${escapeHtml(currentDocument().process.process_name || '未命名流程')} · 流程关系</h2>
-                <p>普通行为进入部门泳道；判断和并行节点进入顶部“流程控制”带。一对多和多对一使用多条独立关系。</p>
+                <p>普通行为进入部门泳道；判断和并行节点进入顶部“流程控制”带。多条关系进入同一目标时，各关系条件保持独立，图上共用最后一段入线。</p>
               </div>
               <div class="diagram-controls">
                 <button class="button primary small" data-action="add-graph-node">新增节点</button>
@@ -5052,7 +5053,7 @@
           <div class="graph-property-panel">
             <h3>选择关联行为</h3>
             <p class="technical-note">数据模式只编辑数据关系，业务行为仍是只读端点。</p>
-            <label>业务行为<select data-graph-data-behavior>${optionHtml(behaviorOptions('请选择业务行为'), selection.behaviorRef || '')}</select></label>
+            <label>业务行为<select data-graph-data-behavior>${optionHtml(actionBehaviorOptions(true, selection.behaviorRef || ''), selection.behaviorRef || '')}</select></label>
             <div class="item-actions">
               <button class="button primary small" data-action="continue-data-relation" ${selection.behaviorRef ? '' : 'disabled'}>继续</button>
               <button class="button small" data-action="cancel-data-relation">取消</button>
@@ -5374,11 +5375,14 @@
       return setActiveGovernanceStep('skeleton', 'diagram');
     }
 
-    async function validateGraphDocument(documentValue) {
+    async function validateGraphDocument(documentValue, options = {}) {
       const response = await fetch('/api/validate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ data: documentValue })
+        body: JSON.stringify({
+          data: documentValue,
+          ...(options.validationProfile ? { validation_profile: options.validationProfile } : {})
+        })
       });
       const result = await readJsonResponse(response, '3001图编辑校验接口未返回结构化数据。');
       if (!response.ok) throw new Error(result.error || '校验服务不可用');
@@ -6008,7 +6012,7 @@
 
     function relationEndpointLabel(behaviorRef, emptyLabel) {
       const behavior = currentDocument().behaviors.find(item => item.behavior_ref === behaviorRef);
-      return behavior ? behavior.behavior_name || '未命名业务行为' : emptyLabel;
+      return behavior ? behavior.behavior_name || '未命名节点' : emptyLabel;
     }
 
     function relationSelectorLabel(item, index) {
@@ -6167,8 +6171,8 @@
               <p>从并行开始节点同时启动多条办理路线时使用。并行开始至少需要2条并行路线；并行汇合至少需要2个有效来源。</p>
             </div>
           </div>
-          <p class="relation-guidance-emphasis">承接顺序或判断分支的后续节点仍可以是普通业务行为。是否选择判断节点，只取决于该节点本身是否还要继续判断。</p>
-          <p class="relation-guidance-example">例：部门负责人审核报销单。审核通过 → 使用顺序关系进入财务复核；审核不通过 → 使用流程内部回路退回申请人补充材料。财务复核仍是普通业务行为。</p>
+          <p class="relation-guidance-emphasis">业务行为负责实际办理，判断节点只负责按办理结果选择去向。存在同意、不同意等结果时，应先保留业务行为，再在其后增加判断节点。</p>
+          <p class="relation-guidance-example">例：部门负责人审核报销单（业务行为）→ 报销单审核结果是否同意（判断节点）。判断结果为同意时进入财务复核；不同意时退回申请人补充材料。</p>
         </aside>`;
       const selector = currentDocument().flow_relations.length
         ? currentDocument().flow_relations.map((relation, relationIndex) =>
@@ -6241,6 +6245,21 @@
       return includeEmpty ? [{ value: '', label: '请选择' }, ...values] : values;
     }
 
+    function actionBehaviorOptions(includeEmpty = false, currentRef = '') {
+      const actionRefs = new Set((currentDocument()?.behaviors || [])
+        .filter(behavior => behavior.node_type === 'action')
+        .map(behavior => behavior.behavior_ref));
+      const values = behaviorOptions(false).filter(option => actionRefs.has(option.value));
+      if (currentRef && !actionRefs.has(currentRef)) {
+        const current = currentDocument()?.behaviors?.find(behavior => behavior.behavior_ref === currentRef);
+        values.unshift({
+          value: currentRef,
+          label: `控制节点（历史关系待处理）· ${current?.behavior_name || '未命名节点'}`
+        });
+      }
+      return includeEmpty ? [{ value: '', label: '请选择' }, ...values] : values;
+    }
+
     function dataOptions(includeEmpty = true) {
       const values = (currentDocument()?.data_objects || []).map((item, index) => ({
         value: item.data_ref,
@@ -6256,7 +6275,7 @@
         <div class="item-card" data-focus-path="data_objects.${dataIndex}.behavior_links.${linkIndex}">
           <div class="grid">
             ${field(`data_objects.${dataIndex}.behavior_links.${linkIndex}.behavior_ref`, '业务行为', {
-              type: 'select', options: behaviorOptions()
+              type: 'select', options: actionBehaviorOptions(false, link.behavior_ref)
             })}
             ${field(`data_objects.${dataIndex}.behavior_links.${linkIndex}.operation`, '对数据的操作', {
               type: 'select', options: DATA_OPERATIONS
@@ -6301,7 +6320,7 @@
             })}
             ${source.availability_mode === 'at_behavior'
               ? field(`data_objects.${dataIndex}.source_relations.${sourceIndex}.available_from_behavior_ref`, '可用位置', {
-                  type: 'select', options: behaviorOptions(true), nullable: true
+                  type: 'select', options: actionBehaviorOptions(true, source.available_from_behavior_ref), nullable: true
                 })
               : ''}
           </div>
@@ -6511,7 +6530,7 @@
           <div class="item-card" data-focus-path="forms.${formIndex}.behavior_links.${linkIndex}">
             <div class="grid">
               ${field(`forms.${formIndex}.behavior_links.${linkIndex}.behavior_ref`, '业务行为', {
-                type: 'select', options: behaviorOptions()
+                type: 'select', options: actionBehaviorOptions(false, link.behavior_ref)
               })}
               <div class="field wide">
                 <span class="field-label">如何处理这张表单</span>
@@ -7410,7 +7429,7 @@
 
     function gridLookupRows(lookup, rowData = {}) {
       if (lookup === 'behaviors') {
-        const behaviors = currentDocument()?.behaviors || [];
+        const behaviors = (currentDocument()?.behaviors || []).filter(item => item.node_type === 'action');
         const counts = new Map();
         behaviors.forEach(item => {
           const name = text(item.behavior_name);
@@ -8834,7 +8853,7 @@
       if (action === 'merge-duplicate-data') return mergeDuplicateData(index);
       if (action === 'add-data-behavior-link') {
         const dataObject = currentDocument().data_objects[Number(element.dataset.dataIndex)];
-        const behavior = currentDocument().behaviors[0];
+        const behavior = currentDocument().behaviors.find(item => item.node_type === 'action');
         if (!dataObject || !behavior) {
           window.alert('请先添加至少一个业务行为，再登记数据关系。');
           return;
@@ -8905,7 +8924,7 @@
       }
       if (action === 'add-form-behavior-link') {
         const form = currentDocument().forms[formIndex];
-        const behavior = currentDocument().behaviors[0];
+        const behavior = currentDocument().behaviors.find(item => item.node_type === 'action');
         if (!form || !behavior) {
           window.alert('请先添加至少一个业务行为，再登记表单处理关系。');
           return;
@@ -9376,6 +9395,14 @@
           }
         }
       }
+      const hiddenDecisionDetails = globalThis.StructureLearningScore?.hiddenDecisionDetails?.(data);
+      hiddenDecisionDetails?.issues?.forEach(detail => {
+        addWarning(detail.message, detail.target, detail.suggestions);
+      });
+      const declaredRouteDetails = globalThis.StructureLearningScore?.declaredRouteDetails?.(data);
+      declaredRouteDetails?.issues?.forEach(detail => {
+        addWarning(detail.message, detail.target, detail.suggestions);
+      });
       data.flow_relations.forEach((relation, index) => {
         const relationTarget = {
           editorSection: 'process',
@@ -9390,12 +9417,12 @@
         );
         need(
           relation.from_behavior_ref,
-          `流程关系${index + 1}未选择起点行为`,
+          `流程关系${index + 1}未选择起点节点`,
           atField(relationTarget, `flow_relations.${index}.from_behavior_ref`)
         );
         need(
           relation.to_behavior_ref,
-          `流程关系${index + 1}未选择目标行为`,
+          `流程关系${index + 1}未选择目标节点`,
           atField(relationTarget, `flow_relations.${index}.to_behavior_ref`)
         );
         if (relation.relation_type === 'condition' && !text(relation.condition).trim()) {
@@ -9978,8 +10005,17 @@
     async function importJson(file) {
       setBusy(true, `正在读取 ${file.name}……`);
       try {
+        if (file.size > MAX_IMPORT_BYTES) {
+          throw new Error('文件超过10MB，系统未读取文件内容。请缩小文件后重新导入');
+        }
         const fileBytes = new Uint8Array(await file.arrayBuffer());
-        const parsed = JSON.parse(new TextDecoder('utf-8').decode(fileBytes));
+        let decodedText = '';
+        try {
+          decodedText = new TextDecoder('utf-8', { fatal: true }).decode(fileBytes);
+        } catch (_error) {
+          throw new Error('文件不是有效的UTF-8 JSON。请从原系统重新导出后再导入');
+        }
+        const parsed = JSON.parse(decodedText);
         let fileSha256 = '';
         try {
           fileSha256 = await globalThis.GovernanceWorkflow.sha256Hex(fileBytes);
@@ -9994,7 +10030,9 @@
           throw new Error(`不支持的结构化文件版本：${parsed.schema_version || '未提供'}`);
         }
         const needsCandidateFieldUpgrade = globalThis.ProcessGovernanceMigration.needsDataFieldUpgrade(parsed);
-        const sourceValidation = needsCandidateFieldUpgrade ? { valid: true, errors: [] } : await validateGraphDocument(parsed);
+        const sourceValidation = await validateGraphDocument(parsed, needsCandidateFieldUpgrade
+          ? { validationProfile: 'early-v7-data-fields' }
+          : {});
         if (!sourceValidation.valid) {
           const firstError = sourceValidation.errors?.[0];
           throw new Error(firstError ? `${validationErrorLocation(firstError)}：${firstError.message}` : '源文件未通过结构与本地引用检查');

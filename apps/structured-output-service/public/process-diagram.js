@@ -29,6 +29,7 @@
   const MIN_COLUMN_GAP = 440;
   const COLUMN_LABEL_CLEARANCE = 48;
   const ROUTE_TRACK_GAP = 24;
+  const BUNDLE_TRUNK_LENGTH = 84;
   const FULL_VIEW_MIN_ZOOM = 0.6;
   const POOL_TITLE_HEIGHT = 52;
   const LANE_FONT_SIZE = 14;
@@ -571,32 +572,152 @@
     return laneReserves;
   }
 
-  function relationEdge(item, behaviorRecordById, reviewRelationIndexes) {
+  function adjustPositionedRelationRoutes(validRelations, behaviorRecordById, routeTrackGap) {
+    const trackStateByBucket = new Map();
+    validRelations
+      .slice()
+      .sort((left, right) => left.index - right.index)
+      .forEach(item => {
+        const route = item.route;
+        if (!route || route.placement === 'direct') return;
+        const sourceNode = behaviorRecordById.get(item.sourceId)?.node;
+        const targetNode = behaviorRecordById.get(item.targetId)?.node;
+        if (!sourceNode?.position || !targetNode?.position) return;
+        const sourceHalfHeight = (sourceNode.data.nodeHeight || 90) / 2;
+        const targetHalfHeight = (targetNode.data.nodeHeight || 90) / 2;
+        const targetDelta = targetNode.position.y - sourceNode.position.y;
+        const endpointClearance = route.placement === 'lower'
+          ? Math.max(sourceHalfHeight, targetDelta + targetHalfHeight)
+          : Math.max(sourceHalfHeight, -targetDelta + targetHalfHeight);
+        const labelHalfHeight = route.labelDisplay.labelHeight / 2;
+        const state = trackStateByBucket.get(route.bucket) || { nextOffset: 0 };
+        route.offset = Math.ceil(Math.max(
+          endpointClearance + 42 + labelHalfHeight,
+          state.nextOffset + labelHalfHeight
+        ));
+        state.nextOffset = route.offset + labelHalfHeight + routeTrackGap;
+        trackStateByBucket.set(route.bucket, state);
+      });
+  }
+
+  function relationBundleApproach(item, behaviorRecordById) {
+    const sourceNode = behaviorRecordById.get(item.sourceId)?.node;
+    const targetNode = behaviorRecordById.get(item.targetId)?.node;
+    if (item.relation.relation_type === 'loop') return 'bottom';
+    if (sourceNode?.position && targetNode?.position && targetNode.position.x <= sourceNode.position.x) {
+      return 'bottom';
+    }
+    return 'left';
+  }
+
+  function buildRelationBundles(validRelations, behaviorRecordById) {
+    const candidatesByKey = new Map();
+    validRelations.forEach(item => {
+      const approach = relationBundleApproach(item, behaviorRecordById);
+      const key = `${item.targetId}:${approach}`;
+      if (!candidatesByKey.has(key)) candidatesByKey.set(key, []);
+      candidatesByKey.get(key).push(item);
+    });
+    const bundleByRelationIndex = new Map();
+    const bundles = [];
+    [...candidatesByKey.entries()]
+      .sort(([left], [right]) => left.localeCompare(right, 'zh-CN'))
+      .forEach(([_key, members]) => {
+        if (members.length < 2) return;
+        members.sort((left, right) => left.index - right.index);
+        const targetNode = behaviorRecordById.get(members[0].targetId)?.node;
+        if (!targetNode?.position) return;
+        const approach = relationBundleApproach(members[0], behaviorRecordById);
+        const bundleId = `relation-bundle:${members[0].targetId}:${approach}`;
+        const junctionId = `${bundleId}:junction`;
+        const targetHalfWidth = (targetNode.data.nodeWidth || 188) / 2;
+        const targetHalfHeight = (targetNode.data.nodeHeight || 90) / 2;
+        const junctionPosition = approach === 'bottom'
+          ? {
+              x: targetNode.position.x,
+              y: targetNode.position.y + targetHalfHeight + BUNDLE_TRUNK_LENGTH
+            }
+          : {
+              x: targetNode.position.x - targetHalfWidth - BUNDLE_TRUNK_LENGTH,
+              y: targetNode.position.y
+            };
+        const bundle = {
+          bundleId,
+          junctionId,
+          targetId: members[0].targetId,
+          targetRef: members[0].toRef,
+          approach,
+          relationRefs: members.map(item => item.relationRef),
+          relationIndexes: members.map(item => item.index),
+          relationTypes: unique(members.map(item => item.relation.relation_type)),
+          junctionPosition
+        };
+        members.forEach(item => bundleByRelationIndex.set(item.index, bundle));
+        bundles.push(bundle);
+      });
+    return { bundles, bundleByRelationIndex };
+  }
+
+  function routeSegmentsFor(item, sourceNode, destinationNode, bundleId = '') {
+    const source = sourceNode.position;
+    const target = destinationNode.position;
+    const route = item.route;
+    const points = [source];
+    if (route.placement === 'direct') {
+      if (source.x !== target.x && source.y !== target.y) {
+        const turnX = Math.round((source.x + target.x) / 2);
+        points.push({ x: turnX, y: source.y }, { x: turnX, y: target.y });
+      }
+    } else {
+      const trackY = source.y + (route.placement === 'upper' ? -route.offset : route.offset);
+      points.push({ x: source.x, y: trackY }, { x: target.x, y: trackY });
+    }
+    points.push(target);
+    const compactPoints = points.filter((point, index) => index === 0
+      || point.x !== points[index - 1].x
+      || point.y !== points[index - 1].y);
+    return compactPoints.slice(1).map((point, index) => {
+      const previous = compactPoints[index];
+      const deltaX = point.x - previous.x;
+      const deltaY = point.y - previous.y;
+      const rawAngle = Math.abs(Math.atan2(deltaY, deltaX) * 180 / Math.PI);
+      const normalizedAngle = rawAngle > 90 ? 180 - rawAngle : rawAngle;
+      return {
+        relationRef: item.relationRef,
+        bundleId,
+        segmentIndex: index,
+        from: { x: previous.x, y: previous.y },
+        to: { x: point.x, y: point.y },
+        angle: Math.round(normalizedAngle)
+      };
+    });
+  }
+
+  function relationEdge(item, behaviorRecordById, reviewRelationIndexes, bundle) {
     const sourceNode = behaviorRecordById.get(item.sourceId).node;
     const targetNode = behaviorRecordById.get(item.targetId).node;
+    const destinationNode = bundle
+      ? {
+          data: {
+            id: bundle.junctionId,
+            laneKey: targetNode.data.laneKey
+          },
+          position: bundle.junctionPosition
+        }
+      : targetNode;
     const crossLane = sourceNode.data.laneKey !== targetNode.data.laneKey;
     const route = item.route;
     const sourcePosition = sourceNode.position;
-    const targetPosition = targetNode.position;
+    const targetPosition = destinationNode.position;
     const deltaX = targetPosition.x - sourcePosition.x;
-    const deltaY = targetPosition.y - sourcePosition.y;
-    const length = Math.max(1, Math.hypot(deltaX, deltaY));
-    const normalX = -deltaY / length;
-    const normalY = deltaX / length;
-    const desiredVerticalDirection = route.placement === 'upper' ? -1 : 1;
-    const normalDirection = normalY === 0 ? (deltaX >= 0 ? 1 : -1) : Math.sign(normalY);
-    const signedOffset = route.placement === 'direct'
-      ? 0
-      : route.offset * desiredVerticalDirection / normalDirection;
-    const orthogonalTrack = route.forwardBranch || route.parallelOrthogonal;
-    const labelCenter = orthogonalTrack
+    const labelCenter = route.placement !== 'direct'
       ? {
           x: (sourcePosition.x + targetPosition.x) / 2,
           y: sourcePosition.y + (route.placement === 'upper' ? -route.offset : route.offset)
         }
       : {
-          x: (sourcePosition.x + targetPosition.x) / 2 + normalX * signedOffset,
-          y: (sourcePosition.y + targetPosition.y) / 2 + normalY * signedOffset
+          x: (sourcePosition.x + targetPosition.x) / 2,
+          y: (sourcePosition.y + targetPosition.y) / 2
         };
     const labelBounds = route.labelDisplay.labelWidth
       ? {
@@ -617,12 +738,15 @@
           : '',
         route.forwardBranch ? 'route-forward-branch' : '',
         route.placement !== 'direct' ? `route-${route.placement}` : '',
+        bundle ? 'relation-bundle-member' : 'relation-terminal-segment',
         reviewRelationIndexes.has(item.index) ? 'relation-review' : ''
       ].filter(Boolean).join(' '),
       data: {
         id: graphRef('relation', item.index, item.relationRef),
         source: item.sourceId,
-        target: item.targetId,
+        target: destinationNode.data.id,
+        semanticSource: item.sourceId,
+        semanticTarget: item.targetId,
         label: route.labelDisplay.label,
         rawLabel: route.labelDisplay.rawLabel,
         labelWidth: route.labelDisplay.labelWidth,
@@ -632,12 +756,12 @@
         routePlacement: route.placement,
         routeSlot: route.slot,
         routeOffset: route.offset,
-        taxiTurn: route.offset || 64,
+        taxiTurn: route.offset || Math.max(24, Math.round(Math.abs(deltaX) / 2)),
         taxiDirection: route.placement === 'upper' ? 'upward' : 'downward',
-        segmentDistances: [Math.round(signedOffset), Math.round(signedOffset)],
-        segmentWeights: [0.18, 0.82],
         routeTrackKey: route.trackKey,
-        targetEndpoint: item.relation.relation_type === 'loop' ? '0% 50%' : '',
+        targetEndpoint: item.relation.relation_type === 'loop' ? '50% 100%' : '',
+        bundleId: bundle?.bundleId || '',
+        bundleJunctionId: bundle?.junctionId || '',
         needsRelationReview: reviewRelationIndexes.has(item.index),
         crossLane,
         focusKind: 'relation',
@@ -645,6 +769,62 @@
       }
     };
     return edge;
+  }
+
+  function bundleElements(bundles, behaviorRecordById) {
+    const nodes = [];
+    const edges = [];
+    const routeSegments = [];
+    bundles.forEach(bundle => {
+      const targetNode = behaviorRecordById.get(bundle.targetId)?.node;
+      if (!targetNode) return;
+      nodes.push({
+        group: 'nodes',
+        classes: 'relation-bundle-junction',
+        data: {
+          id: bundle.junctionId,
+          width: 9,
+          height: 9,
+          bundleId: bundle.bundleId,
+          targetRef: bundle.targetRef
+        },
+        position: bundle.junctionPosition
+      });
+      const typeClass = bundle.relationTypes.length === 1
+        ? `bundle-${bundle.relationTypes[0]}`
+        : 'bundle-mixed';
+      edges.push({
+        group: 'edges',
+        classes: `flow-edge relation-bundle-trunk ${typeClass}`,
+        data: {
+          id: `${bundle.bundleId}:trunk`,
+          source: bundle.junctionId,
+          target: bundle.targetId,
+          semanticTarget: bundle.targetId,
+          targetRef: bundle.targetRef,
+          bundleId: bundle.bundleId,
+          relationRefs: bundle.relationRefs,
+          label: '',
+          labelWidth: 0,
+          labelHeight: 0,
+          labelLineCount: 0
+        }
+      });
+      const targetPosition = targetNode.position;
+      const deltaX = targetPosition.x - bundle.junctionPosition.x;
+      const deltaY = targetPosition.y - bundle.junctionPosition.y;
+      const rawAngle = Math.abs(Math.atan2(deltaY, deltaX) * 180 / Math.PI);
+      routeSegments.push({
+        relationRef: '',
+        bundleId: bundle.bundleId,
+        segmentIndex: 0,
+        from: { ...bundle.junctionPosition },
+        to: { ...targetPosition },
+        angle: Math.round(rawAngle > 90 ? 180 - rawAngle : rawAngle),
+        sharedTrunk: true
+      });
+    });
+    return { nodes, edges, routeSegments };
   }
 
   function elementBounds(node) {
@@ -1050,10 +1230,35 @@
       laneTop += laneHeight;
     });
 
-    const localRelationEdges = validRelations.map(item =>
-      relationEdge(item, behaviorRecordById, graphAnalysis.reviewRelationIndexes)
+    adjustPositionedRelationRoutes(validRelations, behaviorRecordById, routeTrackGap);
+
+    const { bundles, bundleByRelationIndex } = buildRelationBundles(
+      validRelations,
+      behaviorRecordById
     );
-    edges.push(...localRelationEdges);
+    const bundleVisuals = bundleElements(bundles, behaviorRecordById);
+    nodes.push(...bundleVisuals.nodes);
+    const localRelationEdges = validRelations.map(item =>
+      relationEdge(
+        item,
+        behaviorRecordById,
+        graphAnalysis.reviewRelationIndexes,
+        bundleByRelationIndex.get(item.index)
+      )
+    );
+    edges.push(...localRelationEdges, ...bundleVisuals.edges);
+    const routeSegments = validRelations.flatMap(item => {
+      const bundle = bundleByRelationIndex.get(item.index);
+      const destinationNode = bundle
+        ? { position: bundle.junctionPosition }
+        : behaviorRecordById.get(item.targetId).node;
+      return routeSegmentsFor(
+        item,
+        behaviorRecordById.get(item.sourceId).node,
+        destinationNode,
+        bundle?.bundleId || ''
+      );
+    }).concat(bundleVisuals.routeSegments);
 
     const poolHeight = Math.max(POOL_TITLE_HEIGHT, laneTop);
     backgrounds.unshift({
@@ -1119,6 +1324,14 @@
       reviewCount: reviewItems.length,
       layout: {
         rankPositions,
+        bundles: bundles.map(bundle => ({
+          bundleId: bundle.bundleId,
+          targetRef: bundle.targetRef,
+          approach: bundle.approach,
+          relationRefs: [...bundle.relationRefs],
+          junctionId: bundle.junctionId
+        })),
+        routeSegments,
         routeTracks: localRelationEdges.map(edge => ({
           relationRef: edge.data.focusRef,
           placement: edge.data.routePlacement,
@@ -1332,6 +1545,21 @@
         }
       },
       {
+        selector: '.relation-bundle-junction',
+        style: {
+          width: 'data(width)',
+          height: 'data(height)',
+          shape: 'ellipse',
+          'background-color': '#5b625d',
+          'border-width': 0,
+          label: '',
+          'overlay-opacity': 0,
+          events: 'no',
+          'z-index': 14,
+          'z-index-compare': 'manual'
+        }
+      },
+      {
         selector: '.form-aggregate-badge',
         style: {
           width: 78,
@@ -1392,17 +1620,21 @@
       {
         selector: '.route-upper',
         style: {
-          'curve-style': 'segments',
-          'segment-distances': 'data(segmentDistances)',
-          'segment-weights': 'data(segmentWeights)'
+          'curve-style': 'taxi',
+          'taxi-direction': 'upward',
+          'taxi-turn': 'data(taxiTurn)',
+          'taxi-turn-min-distance': 24,
+          'taxi-radius': 0
         }
       },
       {
         selector: '.route-lower',
         style: {
-          'curve-style': 'segments',
-          'segment-distances': 'data(segmentDistances)',
-          'segment-weights': 'data(segmentWeights)'
+          'curve-style': 'taxi',
+          'taxi-direction': 'downward',
+          'taxi-turn': 'data(taxiTurn)',
+          'taxi-turn-min-distance': 24,
+          'taxi-radius': 0
         }
       },
       {
@@ -1429,7 +1661,6 @@
       {
         selector: '.relation-loop',
         style: {
-          'target-endpoint': 'data(targetEndpoint)',
           'line-style': 'solid',
           'line-color': '#8c3f33',
           'target-arrow-color': '#8c3f33',
@@ -1439,9 +1670,11 @@
       {
         selector: '.internal-return-edge',
         style: {
-          'curve-style': 'segments',
-          'segment-distances': [-126, -126],
-          'segment-weights': [0.18, 0.82],
+          'curve-style': 'taxi',
+          'taxi-direction': 'downward',
+          'taxi-turn': 126,
+          'taxi-turn-min-distance': 24,
+          'taxi-radius': 0,
           'line-style': 'solid',
           'line-color': '#8c3f33',
           'target-arrow-color': '#8c3f33',
@@ -1452,7 +1685,6 @@
         selector: '.relation-parallel',
         style: {
           width: 3,
-          'curve-style': 'straight',
           'line-color': '#8a6a30',
           'target-arrow-color': '#8a6a30',
           color: '#6f5223'
@@ -1465,6 +1697,46 @@
           'taxi-turn': 'data(taxiTurn)',
           'taxi-turn-min-distance': 24,
           'taxi-radius': 0
+        }
+      },
+      {
+        selector: '.relation-bundle-member',
+        style: {
+          'target-arrow-shape': 'none'
+        }
+      },
+      {
+        selector: '.relation-bundle-trunk',
+        style: {
+          width: 3,
+          'curve-style': 'straight',
+          'target-arrow-shape': 'triangle',
+          'target-arrow-fill': 'filled',
+          'arrow-scale': 0.95,
+          label: '',
+          events: 'no',
+          'z-index': 12
+        }
+      },
+      {
+        selector: '.relation-bundle-trunk.bundle-condition',
+        style: {
+          'line-color': '#526973',
+          'target-arrow-color': '#526973'
+        }
+      },
+      {
+        selector: '.relation-bundle-trunk.bundle-loop',
+        style: {
+          'line-color': '#8c3f33',
+          'target-arrow-color': '#8c3f33'
+        }
+      },
+      {
+        selector: '.relation-bundle-trunk.bundle-parallel',
+        style: {
+          'line-color': '#8a6a30',
+          'target-arrow-color': '#8a6a30'
         }
       },
       {

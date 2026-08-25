@@ -10,6 +10,7 @@ process.env.MDM_IDENTITY_READ_MODEL = 'mysql';
 const auth = require('../server/auth');
 const processDesignRouter = require('../server/routes/processDesignMysql');
 const { mdmMysqlSchemaSql } = require('../server/mysqlSchema');
+const { contentHash: v7ContentHash } = require('../server/processV7PreviewReview');
 
 function listen(app) {
   return new Promise(resolve => {
@@ -150,6 +151,21 @@ function makeFakeRepository() {
       calls.push('getDocumentById');
       return state.document && Number(state.document.id) === Number(documentId) ? state.document : null;
     },
+    async getVersionContent(versionId) {
+      calls.push('getVersionContent');
+      if (Number(versionId) !== 990) return null;
+      const document = { schema_version: 'process-governance-v7', process: { process_ref: 'process_v7_read_test' } };
+      return {
+        process_version_id: 990,
+        document_id: 901,
+        department_id: 1,
+        schema_version: 'process-governance-v7',
+        content_hash: v7ContentHash(document),
+        source_revision_no: 1,
+        status: 'published',
+        document
+      };
+    },
     async departmentExists(departmentId) {
       calls.push('departmentExists');
       return [1, 2].includes(Number(departmentId));
@@ -256,6 +272,10 @@ function makeFakeRepository() {
     async getDraft(id) {
       calls.push(`getDraft:${id}`);
       return state.drafts.get(Number(id)) || null;
+    },
+    async saveCanonicalContent(draft) {
+      calls.push('saveCanonicalContent');
+      return { draft };
     },
     async getDraftByStep() {
       calls.push('getDraftByStep');
@@ -863,6 +883,45 @@ async function main() {
   const baseUrl = `http://127.0.0.1:${server.address().port}`;
 
   try {
+    fakeRepo.state.drafts.set(900, {
+      id: 900,
+      document_id: 901,
+      document_no: 'V7-READ-ONLY-001',
+      document_title: 'V7只读正文测试',
+      process_name: 'V7只读正文测试',
+      planned_edition: 'A',
+      schema_version: 'process-governance-v7',
+      revision_no: 1,
+      content_hash: 'a'.repeat(64),
+      department_id: 1,
+      status: 'draft'
+    });
+    const saveCallCountBeforeV7 = fakeRepo.calls.filter(call => call === 'saveCanonicalContent').length;
+    const v7ContentWrite = await request(baseUrl, 'submitter', '/api/process-design/drafts/900/content', {
+      method: 'PUT',
+      body: JSON.stringify({ content: {}, expected_revision: 1 })
+    });
+    assert.strictEqual(v7ContentWrite.res.status, 409, JSON.stringify(v7ContentWrite.body));
+    assert.strictEqual(v7ContentWrite.body.code, 'V7_CONTENT_READ_ONLY');
+    assert.strictEqual(
+      fakeRepo.calls.filter(call => call === 'saveCanonicalContent').length,
+      saveCallCountBeforeV7,
+      'V7正文只读门禁不得调用保存方法'
+    );
+    fakeRepo.state.drafts.delete(900);
+
+    const v7VersionContent = await request(baseUrl, 'submitter', '/api/process-design/versions/990/content');
+    assert.strictEqual(v7VersionContent.res.status, 200, JSON.stringify(v7VersionContent.body));
+    assert.strictEqual(v7VersionContent.body.process_version_id, 990);
+    assert.strictEqual(v7VersionContent.body.schema_version, 'process-governance-v7');
+    assert.strictEqual(v7VersionContent.body.document.process.process_ref, 'process_v7_read_test');
+
+    const crossDepartmentVersionRead = await request(baseUrl, 'targetDept', '/api/process-design/versions/990/content');
+    assert.strictEqual(crossDepartmentVersionRead.res.status, 403, JSON.stringify(crossDepartmentVersionRead.body));
+
+    const globalVersionRead = await request(baseUrl, 'mdmLead', '/api/process-design/versions/990/content');
+    assert.strictEqual(globalVersionRead.res.status, 200, JSON.stringify(globalVersionRead.body));
+
     const summary = await request(baseUrl, 'submitter', '/api/process-design/summary');
     assert.strictEqual(summary.res.status, 200);
 

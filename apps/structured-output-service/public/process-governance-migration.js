@@ -516,6 +516,15 @@
       dataObject.fields = uniqueFields;
     });
 
+    dataObjects.forEach(dataObject => {
+      array(dataObject.behavior_links).forEach(link => {
+        link.updated_field_refs = link.operation === 'update'
+          ? uniqueStrings(link.updated_field_refs).map(fieldRef => fieldRefRemap.get(fieldRef) || fieldRef)
+          : [];
+        link.updated_field_refs = uniqueStrings(link.updated_field_refs);
+      });
+    });
+
     const contexts = [];
     array(documentValue?.forms).forEach((form, formIndex) => {
       array(form?.areas).forEach((area, areaIndex) => {
@@ -630,7 +639,7 @@
     return relationRef;
   }
 
-  function addDataLink(documentValue, dataRef, behaviorRef, operation, handoffRef, suffix, reasons) {
+  function addDataLink(documentValue, dataRef, behaviorRef, operation, handoffRef, suffix, reasons, updatedFieldRefs = []) {
     if (!dataRef || !behaviorRef) return null;
     const dataObject = documentValue.data_objects.find(item => item.data_ref === dataRef);
     if (!dataObject) {
@@ -639,13 +648,89 @@
     }
     const existing = dataObject.behavior_links.find(link => link.behavior_ref === behaviorRef && link.operation === operation);
     if (existing) return existing.link_ref;
+    const pendingForBehavior = dataObject.behavior_links.find(link =>
+      link.behavior_ref === behaviorRef && link.operation === 'pending_confirmation'
+    );
+    if (operation !== 'pending_confirmation' && pendingForBehavior) return pendingForBehavior.link_ref;
+    if (operation === 'pending_confirmation') {
+      dataObject.behavior_links = dataObject.behavior_links.filter(link => link.behavior_ref !== behaviorRef);
+    }
     if (operation === 'create' && dataObject.behavior_links.some(link => link.operation === 'create' && link.behavior_ref !== behaviorRef)) {
       reasons.push(`数据“${dataObject.data_name || dataRef}”已有其他创建行为`);
       return null;
     }
     const linkRef = stableRef('data_link', handoffRef, suffix, dataRef, behaviorRef);
-    dataObject.behavior_links.push({ link_ref: linkRef, behavior_ref: behaviorRef, operation });
+    dataObject.behavior_links.push({
+      link_ref: linkRef,
+      behavior_ref: behaviorRef,
+      operation,
+      updated_field_refs: operation === 'update' ? uniqueStrings(updatedFieldRefs) : []
+    });
     return linkRef;
+  }
+
+  function mergeLegacyBehaviorDataReferences(documentValue, sourceBehaviors, sourceVersion) {
+    if (!['process-governance-v1', 'process-governance-v2', 'process-governance-v3'].includes(sourceVersion)) return;
+    const reasons = [];
+    const outputBehaviorsByDataRef = new Map();
+    array(sourceBehaviors).forEach((behavior, behaviorIndex) => {
+      const behaviorRef = documentValue.behaviors[behaviorIndex]?.behavior_ref;
+      const outputDataRefs = uniqueStrings(behavior?.output_data_refs);
+      outputDataRefs.forEach(dataRef => {
+        if (!outputBehaviorsByDataRef.has(dataRef)) outputBehaviorsByDataRef.set(dataRef, []);
+        outputBehaviorsByDataRef.get(dataRef).push({
+          behaviorRef,
+          operation: outputDataRefs.length === 1 ? 'create' : 'pending_confirmation'
+        });
+      });
+    });
+    outputBehaviorsByDataRef.forEach((outputCandidates, dataRef) => {
+      const dataObject = documentValue.data_objects.find(item => item.data_ref === dataRef);
+      if (!dataObject) return;
+      const existingCreateLinks = dataObject.behavior_links.filter(link => link.operation === 'create');
+      const existingProducerRefs = uniqueStrings(existingCreateLinks.map(link => link.behavior_ref));
+      const confirmedCandidateRefs = uniqueStrings(outputCandidates
+        .filter(candidate => candidate.operation === 'create')
+        .map(candidate => candidate.behaviorRef));
+      const ambiguousCandidateRefs = uniqueStrings(outputCandidates
+        .filter(candidate => candidate.operation === 'pending_confirmation')
+        .map(candidate => candidate.behaviorRef));
+      const producerRefs = uniqueStrings([
+        ...existingProducerRefs,
+        ...confirmedCandidateRefs,
+        ...ambiguousCandidateRefs
+      ]);
+      const dataSideResolvesAmbiguity = existingProducerRefs.length === 1
+        && producerRefs.length === 1;
+      const behaviorSideIsUnambiguous = !ambiguousCandidateRefs.length
+        && producerRefs.length === 1;
+      if (dataSideResolvesAmbiguity || behaviorSideIsUnambiguous) {
+        addDataLink(documentValue, dataRef, producerRefs[0], 'create', 'legacy_behavior_reference', 'output', reasons);
+        return;
+      }
+      const pendingProducerLinks = producerRefs.map(behaviorRef => {
+        const existing = existingCreateLinks.find(link => link.behavior_ref === behaviorRef);
+        if (existing) return { ...existing, operation: 'pending_confirmation', updated_field_refs: [] };
+        return {
+          link_ref: stableRef('data_link', 'legacy_behavior_reference', 'output', dataRef, behaviorRef),
+          behavior_ref: behaviorRef,
+          operation: 'pending_confirmation',
+          updated_field_refs: []
+        };
+      });
+      dataObject.behavior_links = [
+        ...pendingProducerLinks,
+        ...dataObject.behavior_links.filter(link =>
+          link.operation !== 'create' && !producerRefs.includes(link.behavior_ref)
+        )
+      ];
+    });
+    array(sourceBehaviors).forEach((behavior, behaviorIndex) => {
+      const behaviorRef = documentValue.behaviors[behaviorIndex]?.behavior_ref;
+      uniqueStrings(behavior?.input_data_refs).forEach(dataRef => {
+        addDataLink(documentValue, dataRef, behaviorRef, 'use', 'legacy_behavior_reference', 'input', reasons);
+      });
+    });
   }
 
   function convertLegacyHandoffs(documentValue, sourceHandoffs, context) {
@@ -787,6 +872,7 @@
     migration.internal_process_calls.push(...array(source.internal_process_calls).map(normalizeInternalCall));
     migration.reference_materials = [...new Map(migration.reference_materials.map(item => [item.material_ref, item])).values()];
     migration.internal_process_calls = [...new Map(migration.internal_process_calls.map(item => [item.call_ref, item])).values()];
+    mergeLegacyBehaviorDataReferences(documentValue, source.behaviors, sourceVersion);
     const legacyHandoffs = array(source.cross_department_handoffs);
     if (legacyHandoffs.length) {
       migration.legacy_cross_department_records = convertLegacyHandoffs(documentValue, legacyHandoffs, context);

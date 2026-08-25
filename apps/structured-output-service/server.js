@@ -1,17 +1,28 @@
 const express = require('express');
 const multer = require('multer');
-const mammoth = require('mammoth');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const { execFileSync } = require('child_process');
 const { TextDecoder } = require('util');
+const { Worker } = require('node:worker_threads');
 const Ajv2020 = require('ajv/dist/2020');
+const { validateProcessGovernanceV7 } = require('../../scripts/process-governance/v7-validator');
 
 const app = express();
 const PORT = Number(process.env.STRUCTURED_OUTPUT_PORT || process.env.PORT || 3001);
 const HOST = process.env.STRUCTURED_OUTPUT_HOST || '0.0.0.0';
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+const MAX_JSON_DEPTH = 64;
+const MAX_JSON_STRING_LENGTH = 1024 * 1024;
+const MAX_JSON_NODES = 100000;
+const MAX_DOCX_ENTRIES = 2000;
+const MAX_DOCX_ENTRY_BYTES = 20 * 1024 * 1024;
+const MAX_DOCX_UNCOMPRESSED_BYTES = 50 * 1024 * 1024;
+const MAX_DOCX_PATH_DEPTH = 20;
+const DOCX_PARSE_TIMEOUT_MS = 5000;
+const MAX_CONCURRENT_DOCX_PARSERS = 2;
+let activeDocxParsers = 0;
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
@@ -70,6 +81,20 @@ const validateProcessGovernanceV4Document = processGovernanceAjv.getSchema(PROCE
 const validateProcessGovernanceV5Document = processGovernanceAjv.compile(PROCESS_GOVERNANCE_V5_SCHEMA);
 const validateProcessGovernanceV6Document = processGovernanceAjv.compile(PROCESS_GOVERNANCE_V6_SCHEMA);
 const validateProcessGovernanceV7Document = processGovernanceAjv.compile(PROCESS_GOVERNANCE_SCHEMA);
+const earlyV7CompatibilitySchema = JSON.parse(JSON.stringify(PROCESS_GOVERNANCE_SCHEMA));
+earlyV7CompatibilitySchema.$id = 'https://infomat.local/contracts/process-governance-v7-early-data-fields.schema.json';
+const earlyV7OptionalProperties = new Set(['fields', 'updated_field_refs', 'data_field_ref', 'value_usage_mode']);
+(function relaxEarlyV7DataFieldRequirements(node) {
+  if (!node || typeof node !== 'object') return;
+  if (Array.isArray(node.required)) {
+    node.required = node.required.filter(property => !earlyV7OptionalProperties.has(property));
+  }
+  Object.values(node).forEach(relaxEarlyV7DataFieldRequirements);
+}(earlyV7CompatibilitySchema));
+const earlyV7CompatibilityAjv = new Ajv2020({ allErrors: true, strict: false, validateFormats: false });
+earlyV7CompatibilityAjv.addSchema(PROCESS_GOVERNANCE_V1_SCHEMA);
+earlyV7CompatibilityAjv.addSchema(PROCESS_GOVERNANCE_V2_SCHEMA);
+const validateEarlyV7DataFieldsDocument = earlyV7CompatibilityAjv.compile(earlyV7CompatibilitySchema);
 const ROSTER_PATH = path.join(__dirname, '..', '..', 'docs', 'organization', '花名册.md');
 const WORK_ROLE_DATA_PATH = path.join(__dirname, '..', '..', 'docs', 'work-role-data.json');
 const REPO_ROOT = path.join(__dirname, '..', '..');
@@ -1169,7 +1194,14 @@ function contractValidationResult(data) {
   };
 }
 
-function processGovernanceValidationResult(data) {
+function processGovernanceValidationResult(data, options = {}) {
+  if (data?.schema_version === 'process-governance-v7') {
+    return validateProcessGovernanceV7(data, {
+      schemaValidator: options.validationProfile === 'early-v7-data-fields'
+        ? validateEarlyV7DataFieldsDocument
+        : validateProcessGovernanceV7Document
+    });
+  }
   const validators = {
     'process-governance-v1': validateProcessGovernanceV1Document,
     'process-governance-v2': validateProcessGovernanceV2Document,
@@ -1208,6 +1240,7 @@ function processGovernanceValidationResult(data) {
   };
 
   const behaviors = Array.isArray(data?.behaviors) ? data.behaviors : [];
+  const behaviorByRef = new Map(behaviors.map(behavior => [behavior?.behavior_ref, behavior]));
   const flowRelations = Array.isArray(data?.flow_relations) ? data.flow_relations : [];
   const dataObjects = Array.isArray(data?.data_objects) ? data.data_objects : [];
   const handoffs = Array.isArray(data?.cross_department_handoffs) ? data.cross_department_handoffs : [];
@@ -1284,6 +1317,13 @@ function processGovernanceValidationResult(data) {
       (dataObject?.behavior_links || []).forEach((link, linkIndex) => {
         requireLocalRef(behaviorRefs, link?.behavior_ref, `/data_objects/${index}/behavior_links/${linkIndex}/behavior_ref`, '数据关系对应行为');
         if (data?.schema_version === 'process-governance-v7') {
+          if (link?.behavior_ref && behaviorByRef.get(link.behavior_ref)?.node_type !== 'action') {
+            addError(
+              `/data_objects/${index}/behavior_links/${linkIndex}/behavior_ref`,
+              '数据关系关联了控制节点；请保留原内容，并将关系改到实际办理业务的行为',
+              { ref: link.behavior_ref }
+            );
+          }
           const updatedFieldRefs = Array.isArray(link?.updated_field_refs) ? link.updated_field_refs : [];
           if (link?.operation !== 'update' && updatedFieldRefs.length) {
             addError(`/data_objects/${index}/behavior_links/${linkIndex}/updated_field_refs`, '只有更新操作可以登记更新字段', { ref: link?.link_ref });
@@ -1344,6 +1384,13 @@ function processGovernanceValidationResult(data) {
       uniqueRefs(form?.behavior_links, 'link_ref', `/forms/${formIndex}/behavior_links`);
       (form?.behavior_links || []).forEach((link, linkIndex) => {
         requireLocalRef(behaviorRefs, link?.behavior_ref, `/forms/${formIndex}/behavior_links/${linkIndex}/behavior_ref`, '表单关系对应行为');
+        if (data?.schema_version === 'process-governance-v7' && link?.behavior_ref && behaviorByRef.get(link.behavior_ref)?.node_type !== 'action') {
+          addError(
+            `/forms/${formIndex}/behavior_links/${linkIndex}/behavior_ref`,
+            '表单处理关系关联了控制节点；请保留原内容，并将关系改到实际办理业务的行为',
+            { ref: link.behavior_ref }
+          );
+        }
       });
     } else {
       requireLocalRef(behaviorRefs, form?.behavior_ref, `/forms/${formIndex}/behavior_ref`, '表单对应行为');
@@ -1511,7 +1558,170 @@ function processGovernanceValidationResult(data) {
     });
   }
 
-  return { valid: errors.length === 0, errors };
+  const errorsById = new Map();
+  errors.forEach(error => {
+    const qualifier = error.params?.ref
+      || error.params?.missingProperty
+      || error.params?.expected
+      || (error.params?.allowedValues ? JSON.stringify(error.params.allowedValues) : '');
+    const errorId = `${error.keyword || 'validation'}:${error.path || '/'}:${qualifier}`;
+    if (!errorsById.has(errorId)) errorsById.set(errorId, { ...error, error_id: errorId });
+  });
+  const deduplicatedErrors = [...errorsById.values()];
+  return { valid: deduplicatedErrors.length === 0, errors: deduplicatedErrors };
+}
+
+function docxArchiveError(message) {
+  return Object.assign(new Error(message), {
+    publicCode: 'DOCX_ARCHIVE_UNSAFE',
+    publicMessage: 'DOCX文件包含不安全或超出处理范围的压缩内容。请重新导出文件后重试。',
+    statusCode: 422
+  });
+}
+
+function inspectDocxArchive(buffer) {
+  const minimumEocdSize = 22;
+  if (!Buffer.isBuffer(buffer) || buffer.length < minimumEocdSize) throw new Error('DOCX文件不是有效的ZIP容器');
+  const searchStart = Math.max(0, buffer.length - 65557);
+  let eocdOffset = -1;
+  for (let offset = buffer.length - minimumEocdSize; offset >= searchStart; offset -= 1) {
+    if (buffer.readUInt32LE(offset) === 0x06054b50) {
+      eocdOffset = offset;
+      break;
+    }
+  }
+  if (eocdOffset < 0) throw new Error('DOCX文件缺少ZIP目录');
+  const entryCount = buffer.readUInt16LE(eocdOffset + 10);
+  const directorySize = buffer.readUInt32LE(eocdOffset + 12);
+  const directoryOffset = buffer.readUInt32LE(eocdOffset + 16);
+  if (entryCount === 0xFFFF || directorySize === 0xFFFFFFFF || directoryOffset === 0xFFFFFFFF) {
+    throw docxArchiveError('不支持ZIP64格式的DOCX文件');
+  }
+  if (entryCount > MAX_DOCX_ENTRIES) throw docxArchiveError('DOCX文件包含的条目过多');
+  if (directoryOffset + directorySize > eocdOffset || directoryOffset < 0) throw docxArchiveError('DOCX目录位置无效');
+  let offset = directoryOffset;
+  let totalUncompressedBytes = 0;
+  for (let index = 0; index < entryCount; index += 1) {
+    if (offset + 46 > eocdOffset || buffer.readUInt32LE(offset) !== 0x02014b50) {
+      throw docxArchiveError('DOCX中央目录不完整');
+    }
+    const compressedBytes = buffer.readUInt32LE(offset + 20);
+    const uncompressedBytes = buffer.readUInt32LE(offset + 24);
+    const nameLength = buffer.readUInt16LE(offset + 28);
+    const extraLength = buffer.readUInt16LE(offset + 30);
+    const commentLength = buffer.readUInt16LE(offset + 32);
+    const entryEnd = offset + 46 + nameLength + extraLength + commentLength;
+    if (entryEnd > eocdOffset) throw docxArchiveError('DOCX条目名称或扩展信息越界');
+    let entryName = '';
+    try {
+      entryName = new TextDecoder('utf-8', { fatal: true }).decode(buffer.subarray(offset + 46, offset + 46 + nameLength));
+    } catch (_error) {
+      throw docxArchiveError('DOCX条目名称不是有效的UTF-8文本');
+    }
+    const normalizedName = entryName.replace(/\\/g, '/');
+    const pathParts = normalizedName.split('/').filter(Boolean);
+    if (/^(?:\/|[A-Za-z]:)/.test(normalizedName) || pathParts.includes('..')) {
+      throw docxArchiveError('DOCX条目包含路径越界');
+    }
+    if (pathParts.length > MAX_DOCX_PATH_DEPTH) throw docxArchiveError('DOCX条目路径层级过深');
+    if (uncompressedBytes > MAX_DOCX_ENTRY_BYTES) throw docxArchiveError('DOCX单个解压条目过大');
+    if (uncompressedBytes > 1024 * 1024 && (compressedBytes === 0 || uncompressedBytes > compressedBytes * 100)) {
+      throw docxArchiveError('DOCX条目压缩比异常');
+    }
+    totalUncompressedBytes += uncompressedBytes;
+    if (totalUncompressedBytes > MAX_DOCX_UNCOMPRESSED_BYTES) throw docxArchiveError('DOCX解压后总量过大');
+    offset = entryEnd;
+  }
+}
+
+function parseDocxInWorker(buffer) {
+  if (activeDocxParsers >= MAX_CONCURRENT_DOCX_PARSERS) {
+    return Promise.reject(Object.assign(new Error('DOCX解析并发已满'), {
+      publicCode: 'DOCX_PARSER_BUSY',
+      publicMessage: '当前正在处理其他DOCX文件。请稍后重试。',
+      statusCode: 429
+    }));
+  }
+  activeDocxParsers += 1;
+  return new Promise((resolve, reject) => {
+    let worker;
+    let timer;
+    let settled = false;
+    const finish = (callback, value) => {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      activeDocxParsers -= 1;
+      if (worker) worker.terminate().catch(() => {});
+      callback(value);
+    };
+    try {
+      worker = new Worker(path.join(__dirname, 'scripts', 'docx-parser-worker.js'));
+    } catch (error) {
+      finish(reject, error);
+      return;
+    }
+    timer = setTimeout(() => finish(reject, Object.assign(new Error('DOCX解析超时'), {
+      publicCode: 'DOCX_PARSE_TIMEOUT',
+      publicMessage: 'DOCX文件在5秒内未完成解析。请缩小文件或重新导出后重试。',
+      statusCode: 422
+    })), DOCX_PARSE_TIMEOUT_MS);
+    worker.once('message', result => {
+      if (!result?.ok) return finish(reject, new Error('DOCX解析失败'));
+      return finish(resolve, { text: result.text, tables: extractHtmlTables(result.html) });
+    });
+    worker.once('error', error => finish(reject, error));
+    worker.once('exit', code => {
+      if (!settled && code !== 0) finish(reject, new Error('DOCX解析进程异常退出'));
+    });
+    worker.postMessage({ buffer });
+  });
+}
+
+function containsUnpairedSurrogate(value) {
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    if (code >= 0xD800 && code <= 0xDBFF) {
+      const next = value.charCodeAt(index + 1);
+      if (!(next >= 0xDC00 && next <= 0xDFFF)) return true;
+      index += 1;
+    } else if (code >= 0xDC00 && code <= 0xDFFF) return true;
+  }
+  return false;
+}
+
+function jsonSafetyProblem(root) {
+  const stack = [{ value: root, depth: 0, path: '/' }];
+  let nodes = 0;
+  while (stack.length) {
+    const current = stack.pop();
+    nodes += 1;
+    if (nodes > MAX_JSON_NODES) {
+      return { code: 'JSON_NODE_LIMIT_EXCEEDED', error: '结构化内容包含的对象和字段过多。请拆分或精简内容后重试。', path: current.path };
+    }
+    if (current.depth > MAX_JSON_DEPTH) {
+      return { code: 'JSON_DEPTH_EXCEEDED', error: '结构化内容嵌套层级过深。请修正文件结构后重试。', path: current.path };
+    }
+    if (typeof current.value === 'string') {
+      if (current.value.length > MAX_JSON_STRING_LENGTH) {
+        return { code: 'JSON_TEXT_TOO_LONG', error: '结构化内容中的单段文字超过1MB。请拆分或精简该段文字后重试。', path: current.path };
+      }
+      if (containsUnpairedSurrogate(current.value)) {
+        return { code: 'INVALID_UNICODE', error: '结构化内容包含无效字符。请从原系统重新导出UTF-8 JSON后重试。', path: current.path };
+      }
+      continue;
+    }
+    if (!current.value || typeof current.value !== 'object') continue;
+    if (Array.isArray(current.value)) {
+      current.value.forEach((value, index) => stack.push({ value, depth: current.depth + 1, path: `${current.path}${index}/` }));
+      continue;
+    }
+    Object.entries(current.value).forEach(([key, value]) => {
+      stack.push({ value: key, depth: current.depth + 1, path: `${current.path}${key}/` });
+      stack.push({ value, depth: current.depth + 1, path: `${current.path}${key}/` });
+    });
+  }
+  return null;
 }
 
 function loadProcessMappingCatalog() {
@@ -2984,14 +3194,8 @@ async function extractFromText(rawText, options = {}) {
 async function sourceFromUpload(file) {
   const ext = path.extname(file.originalname).toLowerCase();
   if (ext === '.docx') {
-    const [rawTextResult, htmlResult] = await Promise.all([
-      mammoth.extractRawText({ buffer: file.buffer }),
-      mammoth.convertToHtml({ buffer: file.buffer })
-    ]);
-    return {
-      text: rawTextResult.value,
-      tables: extractHtmlTables(htmlResult.value)
-    };
+    inspectDocxArchive(file.buffer);
+    return parseDocxInWorker(file.buffer);
   }
   if (ext === '.txt' || ext === '.md') return { text: decodeTextBuffer(file.buffer), tables: [] };
   throw new Error(`不支持的格式: ${ext}。请上传 .docx / .txt / .md`);
@@ -3058,7 +3262,16 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
       stats: result.stats
     });
   } catch (error) {
-    res.status(500).json({ error: '文件整理失败', detail: error.message });
+    if (error?.publicCode) {
+      return res.status(error.statusCode || 422).json({
+        error: error.publicMessage || '文件无法处理。请检查文件后重试。',
+        code: error.publicCode
+      });
+    }
+    res.status(422).json({
+      error: '文件无法读取或内容不符合支持的格式。请检查文件后重试。',
+      code: 'FILE_PARSE_FAILED'
+    });
   }
 });
 
@@ -3085,7 +3298,10 @@ app.post('/api/paste', async (req, res) => {
       stats: result.stats
     });
   } catch (error) {
-    res.status(500).json({ error: '内容整理失败', detail: error.message });
+    res.status(422).json({
+      error: '粘贴内容无法整理。请检查内容后重试。',
+      code: 'PASTED_CONTENT_PARSE_FAILED'
+    });
   }
 });
 
@@ -3094,11 +3310,20 @@ app.post('/api/validate', (req, res) => {
   if (!data || typeof data !== 'object' || Array.isArray(data)) {
     return res.status(400).json({ error: '缺少待校验的结构化文件内容' });
   }
+  const safetyProblem = jsonSafetyProblem(data);
+  if (safetyProblem) return res.status(400).json(safetyProblem);
   const schemaVersion = data.schema_version;
+  const validationProfile = req.body?.validation_profile || '';
+  if (validationProfile && validationProfile !== 'early-v7-data-fields') {
+    return res.status(400).json({ error: '不支持的校验方式', code: 'UNSUPPORTED_VALIDATION_PROFILE' });
+  }
+  if (validationProfile === 'early-v7-data-fields' && schemaVersion !== 'process-governance-v7') {
+    return res.status(400).json({ error: '早期V7兼容校验只适用于process-governance-v7', code: 'VALIDATION_PROFILE_VERSION_MISMATCH' });
+  }
   if (['process-governance-v1', 'process-governance-v2', 'process-governance-v3', 'process-governance-v4', 'process-governance-v5', 'process-governance-v6', 'process-governance-v7'].includes(schemaVersion)) {
     const normalizedData = JSON.parse(JSON.stringify(data));
     return res.json({
-      ...processGovernanceValidationResult(normalizedData),
+      ...processGovernanceValidationResult(normalizedData, { validationProfile }),
       data: normalizedData
     });
   }
@@ -3134,6 +3359,12 @@ app.get('/api/schema', (req, res) => {
   if (req.query.version === 'process-governance-v7') {
     res.set('X-Infomat-Schema-Digest', PROCESS_GOVERNANCE_SCHEMA_DIGEST);
     return res.json(PROCESS_GOVERNANCE_V7_SCHEMA);
+  }
+  if (req.query.version) {
+    return res.status(400).json({
+      error: '不支持的结构规则版本。请从版本历史中选择3001明确支持的版本。',
+      code: 'UNSUPPORTED_SCHEMA_VERSION'
+    });
   }
   res.set('X-Infomat-Schema-Digest', PROCESS_GOVERNANCE_SCHEMA_DIGEST);
   return res.json(PROCESS_GOVERNANCE_SCHEMA);
@@ -3196,13 +3427,29 @@ app.get('/api/health', (req, res) => {
   });
 });
 app.use((error, _req, res, next) => {
+  if (error?.type === 'entity.parse.failed') {
+    return res.status(400).json({
+      error: '请求内容不是有效的JSON。请检查文件或请求内容后重试。',
+      code: 'INVALID_JSON'
+    });
+  }
+  if (error?.type === 'entity.too.large') {
+    return res.status(413).json({
+      error: '请求内容超过10MB，系统未处理该内容。请缩小文件后重试。',
+      code: 'REQUEST_TOO_LARGE'
+    });
+  }
   if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
-    return res.status(413).json({ error: '文件超过10MB，未读取任何内容。' });
+    return res.status(413).json({ error: '文件超过10MB，未读取任何内容。', code: 'FILE_TOO_LARGE' });
   }
   if (error instanceof multer.MulterError) {
-    return res.status(400).json({ error: '文件上传失败', detail: error.message });
+    return res.status(400).json({ error: '文件上传失败，请检查文件数量和上传方式。', code: 'UPLOAD_REJECTED' });
   }
-  return next(error);
+  if (res.headersSent) return next(error);
+  return res.status(500).json({
+    error: '请求处理失败。请保持当前页面内容，并联系维护人员。',
+    code: 'INTERNAL_ERROR'
+  });
 });
 app.get('*', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 

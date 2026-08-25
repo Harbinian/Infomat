@@ -27,6 +27,10 @@ const {
 const {
   applyProcessGovernanceUnified
 } = require('../processGovernanceUnifiedMigration');
+const {
+  contentHash: v7ContentHash,
+  validateAndProjectV7
+} = require('../processV7PreviewReview');
 
 const FIELD_STATUSES = new Set(['suggested', 'business_confirmed', 'data_governed', 'published', 'retired']);
 const DRAFT_STATUSES = new Set(['draft', 'submitted', 'under_review', 'needs_changes', 'approved', 'published', 'rejected']);
@@ -95,6 +99,7 @@ function httpError(statusCode, message, payload) {
   const error = new Error(message);
   error.statusCode = statusCode;
   error.payload = payload || { error: message };
+  if (error.payload && error.payload.code) error.code = error.payload.code;
   return error;
 }
 
@@ -1024,6 +1029,56 @@ function makeProcessDesignMysqlRepository(pool) {
     return await mysqlQuery(pool, 'SELECT * FROM process_design_review_tasks WHERE draft_id=? ORDER BY id', [draftId]);
   }
 
+  async function validateFormalV7Draft(draft) {
+    const document = parseJsonObject(draft && draft.process_content_json);
+    const departments = await mysqlQuery(pool, `
+      SELECT id, name, code
+      FROM departments
+      WHERE status='active'
+      ORDER BY sort_order, id
+    `);
+    const owningDepartment = departments.find(item => Number(item.id) === Number(draft.department_id)) || null;
+    const preview = validateAndProjectV7(document, departments, {
+      owningDepartmentName: owningDepartment && owningDepartment.name || ''
+    });
+    if (preview.errors.length) {
+      throw httpError(422, '正式V7草稿正文校验失败', {
+        error: '正式V7草稿正文校验失败',
+        code: 'V7_FORMAL_CONTENT_INVALID',
+        details: preview.errors
+      });
+    }
+    if (v7ContentHash(document) !== text(draft.content_hash)) {
+      throw httpError(409, '正式V7草稿正文摘要与当前记录不一致', {
+        error: '正式V7草稿正文摘要与当前记录不一致',
+        code: 'V7_FORMAL_CONTENT_HASH_MISMATCH'
+      });
+    }
+    const [promotion] = await mysqlQuery(pool, `
+      SELECT p.*, c.status AS preview_case_status, c.scope_decision,
+             c.current_revision_no, c.current_content_hash
+      FROM process_v7_promotions p
+      JOIN process_v7_preview_cases c ON c.id=p.preview_case_id
+      WHERE p.draft_id=?
+      ORDER BY p.id DESC
+      LIMIT 1
+    `, [draft.id]);
+    if (
+      !promotion ||
+      text(promotion.content_hash) !== text(draft.content_hash) ||
+      Number(promotion.preview_revision_no) !== Number(draft.revision_no) ||
+      text(promotion.preview_case_status) !== 'review_complete' ||
+      Number(promotion.current_revision_no) !== Number(draft.revision_no) ||
+      text(promotion.current_content_hash) !== text(draft.content_hash)
+    ) {
+      throw httpError(409, '正式V7草稿没有匹配的已完成预览核对记录', {
+        error: '正式V7草稿没有匹配的已完成预览核对记录',
+        code: 'V7_FORMAL_PROMOTION_EVIDENCE_MISMATCH'
+      });
+    }
+    return { document, preview, promotion };
+  }
+
   async function getDraft(id) {
     const [row] = await mysqlQuery(pool, `
       SELECT d.*, dept.name AS department_name, proxyDept.name AS proxy_department_name, creator.name AS created_by_name
@@ -1598,7 +1653,6 @@ function makeProcessDesignMysqlRepository(pool) {
   async function detailForDraft(draftId) {
     const draft = await getDraft(draftId);
     if (!draft) return null;
-    const readiness = await publishReadiness(draft);
     const document = draft.document_id ? await getDocumentById(draft.document_id) : null;
     const versions = document ? await mysqlQuery(pool, `
       SELECT *
@@ -1606,6 +1660,39 @@ function makeProcessDesignMysqlRepository(pool) {
       WHERE document_id=?
       ORDER BY effective_at DESC, id DESC
     `, [document.id]) : [];
+    const reviewTasks = await loadReviewTasks(draftId);
+    const events = await loadEvents(draftId);
+    if (text(draft.schema_version) === 'process-governance-v7') {
+      const content = parseJsonObject(draft.process_content_json);
+      const contentHashVerified = Boolean(
+        content &&
+        text(draft.content_hash) &&
+        v7ContentHash(content) === text(draft.content_hash)
+      );
+      const approvedCurrentReview = reviewTasks.some(task =>
+        text(task.status) === 'approved' &&
+        Number(task.draft_revision_no) === Number(draft.revision_no) &&
+        text(task.content_hash) === text(draft.content_hash)
+      );
+      return {
+        draft,
+        document,
+        versions,
+        reviewTasks,
+        events,
+        v7_native: true,
+        content,
+        content_hash_verified: contentHashVerified,
+        outcome: {
+          formed: draft.status === 'published' ? '已形成不可变的原生V7正式版本' : '已形成原生V7正式草稿',
+          current: `当前状态为${draft.status}`,
+          missing: contentHashVerified ? [] : ['V7正文与内容摘要不一致'],
+          next: draft.status === 'published' ? '后续治理对象绑定process_version_id' : '按当前状态完成正式审核或发布'
+        },
+        publishable: draft.status === 'approved' && approvedCurrentReview && contentHashVerified
+      };
+    }
+    const readiness = await publishReadiness(draft);
     return {
       draft,
       document,
@@ -1619,8 +1706,8 @@ function makeProcessDesignMysqlRepository(pool) {
       forms: await loadForms(draftId),
       evidence: await loadEvidence(draftId),
       risks: await buildRisks(draftId),
-      reviewTasks: await loadReviewTasks(draftId),
-      events: await loadEvents(draftId),
+      reviewTasks,
+      events,
       outcome: await outcomeForDraft(draft),
       publishable: readiness.publishable
     };
@@ -2580,11 +2667,12 @@ function makeProcessDesignMysqlRepository(pool) {
         INSERT INTO process_design_drafts
           (document_id, document_no, document_title, planned_edition, base_version_id, active_document_no,
            process_name, reason, basis_type, basis_description, involves_other_departments,
-           related_departments_json, department_id, l1_status, l2_status, created_by)
-        VALUES (?, ?, ?, ?, ?, ?, ?, '', '现场实际', '', 0, ?, ?, 'unclassified', 'unclassified', ?)
+            related_departments_json, department_id, schema_version, l1_status, l2_status, created_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?, '', '现场实际', '', 0, ?, ?, ?, 'unclassified', 'unclassified', ?)
       `, [
         document.id, document.document_no, document.document_title, plannedEdition, currentVersion.id, document.document_no,
-        document.document_title, jsonArray([]), targetDeptId || document.owning_department_id, actorUserId
+        document.document_title, jsonArray([]), targetDeptId || document.owning_department_id,
+        PROCESS_GOVERNANCE_SCHEMA_VERSION, actorUserId
       ]);
       await addEvent(result.insertId, 'draft_created', actorUserId, `已创建 ${editionLabel(plannedEdition)} 完整重写草稿`, {
         document_no: document.document_no,
@@ -2763,6 +2851,36 @@ function makeProcessDesignMysqlRepository(pool) {
     getDraftByField,
     getDraftByEvidence,
     getDocumentById,
+    async getVersionContent(versionId) {
+      const [version] = await mysqlQuery(pool, `
+        SELECT id, draft_id, document_id, document_no, document_title, edition, version_no,
+               department_id, schema_version, process_content_json, content_json, content_hash,
+               source_revision_no, status, published_at, effective_at, supersedes_version_id
+        FROM process_design_versions
+        WHERE id=?
+        LIMIT 1
+      `, [versionId]);
+      if (!version) return null;
+      const rawContent = version.process_content_json || version.content_json;
+      return {
+        process_version_id: Number(version.id),
+        draft_id: Number(version.draft_id),
+        document_id: Number(version.document_id),
+        document_no: version.document_no,
+        document_title: version.document_title,
+        edition: version.edition,
+        version_no: version.version_no,
+        department_id: Number(version.department_id),
+        schema_version: text(version.schema_version),
+        content_hash: text(version.content_hash) || null,
+        source_revision_no: version.source_revision_no == null ? null : Number(version.source_revision_no),
+        status: version.status,
+        published_at: version.published_at,
+        effective_at: version.effective_at,
+        supersedes_version_id: version.supersedes_version_id == null ? null : Number(version.supersedes_version_id),
+        document: rawContent ? parseJsonObject(rawContent) : null
+      };
+    },
     loadDocumentProfile,
     loadTerms,
     loadProcesses,
@@ -3033,14 +3151,15 @@ function makeProcessDesignMysqlRepository(pool) {
         INSERT INTO process_design_drafts
           (document_id, document_no, document_title, planned_edition, base_version_id, active_document_no,
            process_name, reason, basis_type, basis_description, involves_other_departments,
-           related_departments_json, department_id, proxy_department_id, proxy_reason,
-           l1_name, l2_name, l3_name, l1_status, l2_status, created_by)
-        VALUES (?, ?, ?, 'A', NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            related_departments_json, department_id, proxy_department_id, proxy_reason,
+            schema_version, l1_name, l2_name, l3_name, l1_status, l2_status, created_by)
+        VALUES (?, ?, ?, 'A', NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         document.id, documentNo, documentTitle, documentNo,
         text(body.process_name), text(body.reason), text(body.basis_type), text(body.basis_description),
         boolInt(body.involves_other_departments), jsonArray(body.related_departments),
         targetDeptId, proxyDeptId || null, optionalText(body.proxy_reason),
+        PROCESS_GOVERNANCE_SCHEMA_VERSION,
         optionalText(body.l1_name), optionalText(body.l2_name), optionalText(body.l3_name),
         optionalText(body.l1_name) ? 'confirmed' : 'unclassified',
         optionalText(body.l2_name) ? 'confirmed' : 'unclassified',
@@ -4430,29 +4549,62 @@ function makeProcessDesignMysqlRepository(pool) {
       return await getById('process_design_evidence', evidenceId);
     },
     async submitDraft(draft, note, actorUserId) {
+      const isV7 = text(draft.schema_version) === 'process-governance-v7';
+      if (isV7) await validateFormalV7Draft(draft);
       await mysqlRun(pool, `
         UPDATE process_design_drafts
         SET status='submitted', submitted_by=?, submitted_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP
         WHERE id=?
       `, [actorUserId, draft.id]);
-      const taskResult = await mysqlRun(pool, `
-        INSERT INTO process_design_review_tasks (draft_id, task_type, assignee_role, created_by)
-        VALUES (?, 'department_review', 'department_mdm_reviewer', ?)
-      `, [draft.id, actorUserId]);
+      const taskResult = isV7
+        ? await mysqlRun(pool, `
+          INSERT INTO process_design_review_tasks
+            (draft_id, draft_revision_no, content_hash, task_type, assignee_role, created_by)
+          VALUES (?, ?, ?, 'department_review', 'department_mdm_reviewer', ?)
+        `, [draft.id, Number(draft.revision_no), draft.content_hash, actorUserId])
+        : await mysqlRun(pool, `
+          INSERT INTO process_design_review_tasks (draft_id, task_type, assignee_role, created_by)
+          VALUES (?, 'department_review', 'department_mdm_reviewer', ?)
+        `, [draft.id, actorUserId]);
       await addEvent(draft.id, 'submitted', actorUserId, optionalText(note) || '已提交审核');
       const updated = await getDraft(draft.id);
       return {
         draft: updated,
         reviewTask: await getById('process_design_review_tasks', taskResult.insertId),
-        outcome: await outcomeForDraft(updated)
+        outcome: isV7 ? {
+          formed: '已形成原生V7正式草稿',
+          current: '当前V7正文已提交部门审核',
+          missing: [],
+          next: '部门审核员核对当前修订号和内容摘要后记录审核结论'
+        } : await outcomeForDraft(updated)
       };
     },
     async getReviewTask(taskId) {
       return await getById('process_design_review_tasks', taskId);
     },
     async decideReviewTask(task, decision, note, actorUserId) {
+      if (text(task && task.status) !== 'pending') {
+        throw httpError(409, '该审核任务已经处理，不能重复记录结论', {
+          error: '该审核任务已经处理，不能重复记录结论',
+          code: 'REVIEW_TASK_ALREADY_DECIDED'
+        });
+      }
       const statusByDecision = { approve: 'approved', reject: 'rejected', needs_changes: 'needs_changes' };
       const nextStatus = statusByDecision[decision];
+      const draft = await getDraft(task.draft_id);
+      if (!draft) throw httpError(404, '制度结构草稿不存在');
+      if (text(draft.schema_version) === 'process-governance-v7') {
+        if (
+          Number(task.draft_revision_no) !== Number(draft.revision_no) ||
+          text(task.content_hash) !== text(draft.content_hash)
+        ) {
+          throw httpError(409, '审核任务绑定的V7正文已经过期，请重新提交当前修订', {
+            error: '审核任务绑定的V7正文已经过期，请重新提交当前修订',
+            code: 'V7_REVIEW_CONTENT_STALE'
+          });
+        }
+        await validateFormalV7Draft(draft);
+      }
       await mysqlRun(pool, `
         UPDATE process_design_review_tasks
         SET status=?, decision_note=?, decided_by=?, decided_at=CURRENT_TIMESTAMP
@@ -4478,6 +4630,149 @@ function makeProcessDesignMysqlRepository(pool) {
         } finally {
           connection.release();
         }
+      }
+      if (text(draft.schema_version) === 'process-governance-v7') {
+        const [lockedDraftRow] = await mysqlQuery(pool, 'SELECT * FROM process_design_drafts WHERE id=? FOR UPDATE', [draft.id]);
+        const lockedDraft = publicDraft(lockedDraftRow);
+        if (!lockedDraft) throw httpError(404, '制度结构草稿不存在');
+        if (text(lockedDraft.status) !== 'approved') {
+          throw httpError(409, '正式V7草稿尚未通过部门审核，不能发布', {
+            error: '正式V7草稿尚未通过部门审核，不能发布',
+            code: 'V7_FORMAL_REVIEW_REQUIRED'
+          });
+        }
+        if (!lockedDraft.document_id) {
+          throw httpError(409, '正式V7草稿必须关联明确的流程主档', {
+            error: '正式V7草稿必须关联明确的流程主档',
+            code: 'V7_DOCUMENT_LINK_REQUIRED'
+          });
+        }
+        const [document] = await mysqlQuery(pool, 'SELECT * FROM process_design_documents WHERE id=? FOR UPDATE', [lockedDraft.document_id]);
+        if (!document || text(document.status) !== 'active') {
+          throw httpError(409, '正式流程主档不存在或已停用，不能发布', {
+            error: '正式流程主档不存在或已停用，不能发布',
+            code: 'V7_FORMAL_DOCUMENT_NOT_FOUND'
+          });
+        }
+        let currentVersion = null;
+        if (document.current_version_id) {
+          [currentVersion] = await mysqlQuery(pool, 'SELECT * FROM process_design_versions WHERE id=? FOR UPDATE', [document.current_version_id]);
+          if (!currentVersion || Number(currentVersion.document_id) !== Number(document.id)) {
+            throw httpError(409, '正式流程主档的当前版本指针无效，不能发布', {
+              error: '正式流程主档的当前版本指针无效，不能发布',
+              code: 'V7_FORMAL_CURRENT_VERSION_INVALID'
+            });
+          }
+        } else {
+          const [unexpectedVersion] = await mysqlQuery(pool, `
+            SELECT * FROM process_design_versions
+            WHERE document_id=? AND status='published'
+            ORDER BY effective_at DESC, id DESC
+            LIMIT 1
+            FOR UPDATE
+          `, [document.id]);
+          if (unexpectedVersion) {
+            throw httpError(409, '正式流程主档存在版本但缺少当前版本指针，不能发布', {
+              error: '正式流程主档存在版本但缺少当前版本指针，不能发布',
+              code: 'V7_FORMAL_CURRENT_VERSION_INVALID'
+            });
+          }
+        }
+        const reviewTasks = await mysqlQuery(pool, `
+          SELECT * FROM process_design_review_tasks
+          WHERE draft_id=?
+          ORDER BY id DESC
+          FOR UPDATE
+        `, [lockedDraft.id]);
+        const approvedReview = reviewTasks.find(task =>
+          text(task.status) === 'approved' &&
+          Number(task.draft_revision_no) === Number(lockedDraft.revision_no) &&
+          text(task.content_hash) === text(lockedDraft.content_hash)
+        );
+        if (!approvedReview) {
+          throw httpError(409, '没有找到绑定当前修订号和内容摘要的审核通过记录', {
+            error: '没有找到绑定当前修订号和内容摘要的审核通过记录',
+            code: 'V7_REVIEW_CONTENT_STALE'
+          });
+        }
+        const formalSource = await validateFormalV7Draft(lockedDraft);
+        if (text(document.process_ref) !== text(formalSource.preview.processRef)) {
+          throw httpError(409, '正式流程主档与V7正文的process_ref不一致', {
+            error: '正式流程主档与V7正文的process_ref不一致',
+            code: 'V7_FORMAL_PROCESS_REF_CONFLICT'
+          });
+        }
+        const expectedEdition = currentVersion ? nextEdition(currentVersion.edition) : 'A';
+        const plannedEdition = text(lockedDraft.planned_edition) || expectedEdition;
+        if (plannedEdition !== expectedEdition) {
+          throw httpError(409, '制度版次不连续，不能跳号', {
+            error: '制度版次不连续，不能跳号',
+            expected_edition: expectedEdition,
+            planned_edition: plannedEdition
+          });
+        }
+        if (currentVersion && Number(lockedDraft.base_version_id || 0) !== Number(currentVersion.id)) {
+          throw httpError(409, '当前有效版次已变化，请重新提升最新V7修订');
+        }
+        const versionNo = documentVersionNo(document.document_no, plannedEdition);
+        const result = await mysqlRun(pool, `
+          INSERT INTO process_design_versions
+            (draft_id, document_id, document_no, document_title, edition, version_no,
+             department_id, l1_name, l2_name, l3_name, content_json,
+             schema_version, process_content_json, content_hash, source_revision_no,
+             published_by, effective_at, supersedes_version_id, status)
+          VALUES (?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, NULL,
+                  'process-governance-v7', ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, 'published')
+        `, [
+          lockedDraft.id,
+          document.id,
+          document.document_no,
+          document.document_title,
+          plannedEdition,
+          versionNo,
+          lockedDraft.department_id,
+          lockedDraft.process_content_json,
+          lockedDraft.content_hash,
+          Number(lockedDraft.revision_no),
+          actorUserId,
+          currentVersion && currentVersion.id || null
+        ]);
+        if (currentVersion) {
+          await mysqlRun(pool, "UPDATE process_design_versions SET status='superseded' WHERE id=?", [currentVersion.id]);
+        }
+        await mysqlRun(pool, `
+          UPDATE process_design_drafts
+          SET status='published', active_document_no=NULL, published_by=?,
+              published_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP
+          WHERE id=?
+        `, [actorUserId, lockedDraft.id]);
+        await mysqlRun(pool, `
+          UPDATE process_design_documents
+          SET document_title=?, current_edition=?, current_version_id=?, updated_by=?, updated_at=CURRENT_TIMESTAMP
+          WHERE id=?
+        `, [document.document_title, plannedEdition, result.insertId, actorUserId, document.id]);
+        const version = await getById('process_design_versions', result.insertId);
+        await addEvent(lockedDraft.id, 'publish', actorUserId, optionalText(note) || '已发布原生V7流程版本', {
+          process_version_id: Number(version.id),
+          schema_version: 'process-governance-v7',
+          content_hash: lockedDraft.content_hash,
+          source_revision_no: Number(lockedDraft.revision_no),
+          document_no: document.document_no,
+          edition: plannedEdition,
+          supersedes_version_id: currentVersion && currentVersion.id || null
+        });
+        const publishedDraft = await getDraft(lockedDraft.id);
+        return {
+          draft: publishedDraft,
+          version,
+          process_version_id: Number(version.id),
+          outcome: {
+            formed: '已形成不可变的原生V7正式版本',
+            current: `当前正式版本为${versionNo}`,
+            missing: [],
+            next: '后续治理对象应绑定process_version_id，不读取原始3001文件或预览案例'
+          }
+        };
       }
       const details = await publishValidationDetails(draft);
       if (details.length) {
@@ -4563,7 +4858,12 @@ function makeProcessDesignMysqlRepository(pool) {
         step_count: readiness.stepCount
       });
       const publishedDraft = await getDraft(draft.id);
-      return { draft: publishedDraft, version, outcome: await outcomeForDraft(publishedDraft) };
+      return {
+        draft: publishedDraft,
+        version,
+        process_version_id: Number(version.id),
+        outcome: await outcomeForDraft(publishedDraft)
+      };
     }
   };
 }
@@ -5225,6 +5525,32 @@ router.post('/import-structured-output', requireAuth, (req, res) => runAction(re
   res.status(201).json(result);
 }));
 
+router.get('/versions/:processVersionId/content', requireAuth, (req, res) => runAction(res, async () => {
+  const repo = await repository();
+  const version = await repo.getVersionContent(req.params.processVersionId);
+  if (!version) throw httpError(404, '正式流程版本不存在', { error: '正式流程版本不存在', code: 'PROCESS_VERSION_NOT_FOUND' });
+  if (!await canViewAcrossDepartments(req)) {
+    const departmentIds = await authorizedDepartmentIds(req);
+    if (!departmentIds.has(Number(version.department_id)) || !await hasCurrentPermission(req, 'governance:read-department')) {
+      throw httpError(403, '无权查看该正式流程版本', { error: '无权查看该正式流程版本', code: 'PROCESS_VERSION_SCOPE_DENIED' });
+    }
+  }
+  if (!version.document) {
+    throw httpError(409, '正式流程版本缺少可读正文', { error: '正式流程版本缺少可读正文', code: 'PROCESS_VERSION_CONTENT_MISSING' });
+  }
+  if (text(version.schema_version) === 'process-governance-v7') {
+    const calculatedHash = v7ContentHash(version.document);
+    if (text(version.content_hash) !== calculatedHash) {
+      throw httpError(409, '正式V7版本正文摘要校验失败', {
+        error: '正式V7版本正文摘要校验失败',
+        code: 'V7_VERSION_CONTENT_HASH_MISMATCH'
+      });
+    }
+    version.content_hash_verified = true;
+  }
+  res.json(version);
+}));
+
 router.post('/import-structured-output/preview', requireAuth, (req, res) => runAction(res, async () => {
   const preview = await processGovernancePreview(req);
   res.json({
@@ -5377,6 +5703,12 @@ router.get('/drafts/:id/content', requireAuth, (req, res) => runAction(res, asyn
 router.put('/drafts/:id/content', requireAuth, (req, res) => runAction(res, async () => {
   const repo = await repository();
   const draft = await repo.getDraft(req.params.id);
+  if (text(draft && draft.schema_version) === 'process-governance-v7') {
+    throw httpError(409, 'V7正式草稿正文不能在3000直接修改；请回到3001修改后上传新修订', {
+      error: 'V7正式草稿正文不能在3000直接修改；请回到3001修改后上传新修订',
+      code: 'V7_CONTENT_READ_ONLY'
+    });
+  }
   await assertCanEditDraftContent(req, repo, draft);
   const actor = await currentGovernanceActor(req, 'department_contact');
   const result = await repo.saveCanonicalContent(

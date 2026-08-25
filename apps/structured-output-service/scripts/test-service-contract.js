@@ -1,6 +1,7 @@
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
 const fs = require('node:fs');
+const http = require('node:http');
 const path = require('node:path');
 const vm = require('node:vm');
 const Ajv2020 = require('ajv/dist/2020');
@@ -293,6 +294,56 @@ async function postJson(baseUrl, route, payload) {
   return { response, body };
 }
 
+async function postChunkedJson(baseUrl, route, chunks) {
+  const url = new URL(route, baseUrl);
+  return new Promise((resolve, reject) => {
+    const request = http.request(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Transfer-Encoding': 'chunked' }
+    }, response => {
+      const body = [];
+      response.on('data', chunk => body.push(chunk));
+      response.on('end', () => resolve({
+        status: response.statusCode,
+        headers: response.headers,
+        body: Buffer.concat(body).toString('utf8')
+      }));
+    });
+    request.on('error', reject);
+    chunks.forEach(chunk => request.write(chunk));
+    request.end();
+  });
+}
+
+function zipWithSingleEntry(entryName, options = {}) {
+  const name = Buffer.from(entryName, 'utf8');
+  const data = Buffer.from(options.data || 'x');
+  const compressedSize = options.compressedSize ?? data.length;
+  const uncompressedSize = options.uncompressedSize ?? data.length;
+  const local = Buffer.alloc(30 + name.length);
+  local.writeUInt32LE(0x04034b50, 0);
+  local.writeUInt16LE(20, 4);
+  local.writeUInt32LE(compressedSize, 18);
+  local.writeUInt32LE(uncompressedSize, 22);
+  local.writeUInt16LE(name.length, 26);
+  name.copy(local, 30);
+  const central = Buffer.alloc(46 + name.length);
+  central.writeUInt32LE(0x02014b50, 0);
+  central.writeUInt16LE(20, 4);
+  central.writeUInt16LE(20, 6);
+  central.writeUInt32LE(compressedSize, 20);
+  central.writeUInt32LE(uncompressedSize, 24);
+  central.writeUInt16LE(name.length, 28);
+  name.copy(central, 46);
+  const eocd = Buffer.alloc(22);
+  eocd.writeUInt32LE(0x06054b50, 0);
+  eocd.writeUInt16LE(1, 8);
+  eocd.writeUInt16LE(1, 10);
+  eocd.writeUInt32LE(central.length, 12);
+  eocd.writeUInt32LE(local.length + data.length, 16);
+  return Buffer.concat([local, data, central, eocd]);
+}
+
 async function testSchemas() {
   const processSchema = JSON.parse(fs.readFileSync(processSchemaPath, 'utf8'));
   const processV3Schema = JSON.parse(fs.readFileSync(processV3SchemaPath, 'utf8'));
@@ -533,6 +584,21 @@ async function testApi() {
       upload.referenceMaterial.file_sha256,
       crypto.createHash('sha256').update(Buffer.from(sourceText)).digest('hex')
     );
+    const brokenDocxBody = new FormData();
+    brokenDocxBody.append('file', new Blob(['not-a-docx'], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }), '损坏文件.docx');
+    const brokenDocxResponse = await fetch(`${baseUrl}/api/upload`, { method: 'POST', body: brokenDocxBody });
+    assert.equal(brokenDocxResponse.status, 422);
+    const brokenDocxText = await brokenDocxResponse.text();
+    const brokenDocx = JSON.parse(brokenDocxText);
+    assert.equal(brokenDocx.code, 'FILE_PARSE_FAILED');
+    assert.equal(Object.prototype.hasOwnProperty.call(brokenDocx, 'detail'), false);
+    assert.doesNotMatch(brokenDocxText, /node_modules|Error:|E:\\\\/i);
+    const unsafeDocxBody = new FormData();
+    unsafeDocxBody.append('file', new Blob([zipWithSingleEntry('../outside.xml')]), '路径越界.docx');
+    const unsafeDocxResponse = await fetch(`${baseUrl}/api/upload`, { method: 'POST', body: unsafeDocxBody });
+    assert.equal(unsafeDocxResponse.status, 422);
+    const unsafeDocx = await unsafeDocxResponse.json();
+    assert.equal(unsafeDocx.code, 'DOCX_ARCHIVE_UNSAFE');
 
     const valid = await postJson(baseUrl, '/api/validate', { data: createDraft() });
     assert.equal(valid.response.status, 200);
@@ -713,11 +779,71 @@ async function testApi() {
     assert.equal(duplicateValidation.body.valid, false);
     assert.ok(duplicateValidation.body.errors.some(error => /重复/.test(error.message)));
 
+    const duplicateV7 = Migration.migrateDocument(createV5Draft())[0];
+    duplicateV7.behaviors.push(JSON.parse(JSON.stringify(duplicateV7.behaviors[0])));
+    const duplicateV7Validation = await postJson(baseUrl, '/api/validate', { data: duplicateV7 });
+    const duplicateBehaviorErrors = duplicateV7Validation.body.errors.filter(error =>
+      error.path === '/behaviors/1/behavior_ref' && error.params?.ref === duplicateV7.behaviors[0].behavior_ref
+    );
+    assert.equal(duplicateBehaviorErrors.length, 1, 'one duplicate identifier root cause must appear once');
+    assert.match(duplicateBehaviorErrors[0].error_id, /^localReference:/);
+
     const brokenReference = createDraft();
     brokenReference.behaviors[0].output_data_refs = ['data_missing'];
     const brokenValidation = await postJson(baseUrl, '/api/validate', { data: brokenReference });
     assert.equal(brokenValidation.body.valid, false);
     assert.ok(brokenValidation.body.errors.some(error => /不在当前文件中/.test(error.message)));
+
+    const earlyV7 = Migration.migrateDocument(createV5Draft())[0];
+    earlyV7.data_objects.forEach(dataObject => {
+      delete dataObject.fields;
+      dataObject.behavior_links.forEach(link => { delete link.updated_field_refs; });
+    });
+    earlyV7.forms.forEach(form => form.areas.forEach(area => area.items.forEach(item => {
+      delete item.data_field_ref;
+      delete item.value_usage_mode;
+    })));
+    const earlyV7Validation = await postJson(baseUrl, '/api/validate', {
+      data: earlyV7,
+      validation_profile: 'early-v7-data-fields'
+    });
+    assert.equal(
+      earlyV7Validation.body.valid,
+      true,
+      `early v7 missing only later data-field properties must remain importable: ${JSON.stringify(earlyV7Validation.body.errors)}`
+    );
+    const invalidEarlyV7 = JSON.parse(JSON.stringify(earlyV7));
+    invalidEarlyV7.behaviors[0].node_type = 'invalid-node-type';
+    const invalidEarlyV7Validation = await postJson(baseUrl, '/api/validate', {
+      data: invalidEarlyV7,
+      validation_profile: 'early-v7-data-fields'
+    });
+    assert.equal(invalidEarlyV7Validation.body.valid, false, 'early v7 compatibility must not forgive illegal business values');
+    assert.ok(invalidEarlyV7Validation.body.errors.some(error => error.path === '/behaviors/0/node_type'));
+    const brokenEarlyV7 = JSON.parse(JSON.stringify(earlyV7));
+    brokenEarlyV7.data_objects[0].behavior_links[0].behavior_ref = 'behavior_missing';
+    const brokenEarlyV7Validation = await postJson(baseUrl, '/api/validate', {
+      data: brokenEarlyV7,
+      validation_profile: 'early-v7-data-fields'
+    });
+    assert.equal(brokenEarlyV7Validation.body.valid, false);
+    assert.ok(brokenEarlyV7Validation.body.errors.some(error => /不在当前文件中/.test(error.message)));
+    const extraPropertyEarlyV7 = JSON.parse(JSON.stringify(earlyV7));
+    extraPropertyEarlyV7.process.unexpected = 'not-allowed';
+    const extraPropertyEarlyV7Validation = await postJson(baseUrl, '/api/validate', {
+      data: extraPropertyEarlyV7,
+      validation_profile: 'early-v7-data-fields'
+    });
+    assert.equal(extraPropertyEarlyV7Validation.body.valid, false);
+    assert.ok(extraPropertyEarlyV7Validation.body.errors.some(error => error.keyword === 'additionalProperties'));
+
+    const controlNodeDataLink = Migration.migrateDocument(createV5Draft())[0];
+    controlNodeDataLink.behaviors[0].node_type = 'decision';
+    const controlNodeValidation = await postJson(baseUrl, '/api/validate', { data: controlNodeDataLink });
+    assert.equal(controlNodeValidation.body.valid, false, 'historical control-node data relationships must remain visible as errors');
+    assert.ok(controlNodeValidation.body.errors.some(error =>
+      error.path === '/data_objects/0/behavior_links/0/behavior_ref' && /控制节点/.test(error.message)
+    ));
 
     const externalTarget = createDraft();
     externalTarget.cross_department_handoffs.push({
@@ -750,6 +876,56 @@ async function testApi() {
 
     const unsupported = await postJson(baseUrl, '/api/validate', { data: { schema_version: 'unknown-v1' } });
     assert.equal(unsupported.response.status, 400);
+
+    const unknownSchemaResponse = await fetch(`${baseUrl}/api/schema?version=process-governance-v999`);
+    assert.equal(unknownSchemaResponse.status, 400, 'unknown schema queries must not fall back to the current v7 schema');
+    assert.match(unknownSchemaResponse.headers.get('content-type') || '', /json/);
+    const unknownSchemaBody = await unknownSchemaResponse.json();
+    assert.equal(unknownSchemaBody.code, 'UNSUPPORTED_SCHEMA_VERSION');
+
+    const malformedJsonResponse = await fetch(`${baseUrl}/api/validate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{"data":'
+    });
+    assert.equal(malformedJsonResponse.status, 400);
+    assert.match(malformedJsonResponse.headers.get('content-type') || '', /json/);
+    const malformedJsonText = await malformedJsonResponse.text();
+    const malformedJsonBody = JSON.parse(malformedJsonText);
+    assert.equal(malformedJsonBody.code, 'INVALID_JSON');
+    assert.doesNotMatch(malformedJsonText, /node_modules|SyntaxError|E:\\\\/i);
+
+    const oneMegabyte = 'x'.repeat(1024 * 1024);
+    const oversizedChunkedResponse = await postChunkedJson(baseUrl, '/api/validate', [
+      '{"data":{"schema_version":"process-governance-v7","oversized":"',
+      ...Array.from({ length: 11 }, () => oneMegabyte),
+      '"}}'
+    ]);
+    assert.equal(oversizedChunkedResponse.status, 413, 'actual received bytes must be limited even without Content-Length');
+    assert.match(oversizedChunkedResponse.headers['content-type'] || '', /json/);
+    const oversizedChunkedBody = JSON.parse(oversizedChunkedResponse.body);
+    assert.equal(oversizedChunkedBody.code, 'REQUEST_TOO_LARGE');
+    assert.equal(Object.prototype.hasOwnProperty.call(oversizedChunkedBody, 'detail'), false);
+
+    const deeplyNested = { schema_version: 'process-governance-v7' };
+    let deepCursor = deeplyNested;
+    for (let depth = 0; depth < 80; depth += 1) {
+      deepCursor.unexpected = {};
+      deepCursor = deepCursor.unexpected;
+    }
+    const deepValidation = await postJson(baseUrl, '/api/validate', { data: deeplyNested });
+    assert.equal(deepValidation.response.status, 400);
+    assert.equal(deepValidation.body.code, 'JSON_DEPTH_EXCEEDED');
+    const longTextValidation = await postJson(baseUrl, '/api/validate', {
+      data: { schema_version: 'process-governance-v7', unexpected: 'x'.repeat(1024 * 1024 + 1) }
+    });
+    assert.equal(longTextValidation.response.status, 400);
+    assert.equal(longTextValidation.body.code, 'JSON_TEXT_TOO_LONG');
+    const invalidUnicodeValidation = await postJson(baseUrl, '/api/validate', {
+      data: { schema_version: 'process-governance-v7', unexpected: '\uD800' }
+    });
+    assert.equal(invalidUnicodeValidation.response.status, 400);
+    assert.equal(invalidUnicodeValidation.body.code, 'INVALID_UNICODE');
 
     const suggestionRoute = await fetch(`${baseUrl}/api/suggestions`, { method: 'POST' });
     assert.equal(suggestionRoute.status, 404);
@@ -1093,7 +1269,7 @@ function testProcessDiagramModel() {
   const readabilityLoops = readabilityRelations.filter(edge => edge.classes.includes('relation-loop'));
   assert.equal(new Set(readabilityLoops.map(edge => edge.data.routeOffset)).size, 2);
   assert.ok(readabilityLoops.every(edge => edge.data.routePlacement === 'lower'));
-  assert.ok(readabilityLoops.every(edge => edge.data.targetEndpoint === '0% 50%'));
+  assert.ok(readabilityLoops.every(edge => edge.data.targetEndpoint === '50% 100%'));
   assert.ok(
     readabilityModel.layout.rankPositions[1] - readabilityModel.layout.rankPositions[0] >= 440,
     'adjacent diagram ranks must leave at least the minimum safe gap'
@@ -1107,39 +1283,59 @@ function testProcessDiagramModel() {
   const manufacturingDraft = createDraft();
   manufacturingDraft.behaviors = [
       makeBehavior('b_compile', '编制人员编制产品制造大纲', 'action', ''),
-      makeBehavior('b_proofread', '校对人员校对产品制造大纲', 'action', ''),
-      makeBehavior('b_review', '大纲审核人员审核产品制造大纲', 'action', ''),
-      makeBehavior('b_quality', '质量保证人员核查产品制造大纲', 'action', ''),
+      makeBehavior('b_proofread', '校对人员是否同意产品制造大纲', 'decision', ''),
+      makeBehavior('b_review', '大纲审核人员是否同意产品制造大纲', 'decision', ''),
+      makeBehavior('b_quality', '质量保证人员是否同意产品制造大纲', 'decision', ''),
       makeBehavior('b_decide_ndt', '产品制造大纲是否需要无损检测审批', 'decision', ''),
-      makeBehavior('b_ndt', '无损检测审批人员审批产品制造大纲', 'action', ''),
-      makeBehavior('b_approve', '大纲批准人员批准产品制造大纲', 'action', '')
+      makeBehavior('b_ndt', '无损检测审批人员是否同意产品制造大纲', 'decision', ''),
+      makeBehavior('b_approve', '大纲批准人员是否批准产品制造大纲', 'decision', ''),
+      makeBehavior('b_approval_recorded', '大纲批准人员形成产品制造大纲批准记录', 'action', '')
     ];
   manufacturingDraft.flow_relations = [
       { relation_ref: 'r01', relation_type: 'sequence', from_behavior_ref: 'b_compile', to_behavior_ref: 'b_proofread', condition: '', join_mode: '' },
-      { relation_ref: 'r02', relation_type: 'sequence', from_behavior_ref: 'b_proofread', to_behavior_ref: 'b_review', condition: '', join_mode: '' },
-      { relation_ref: 'r03', relation_type: 'sequence', from_behavior_ref: 'b_review', to_behavior_ref: 'b_quality', condition: '', join_mode: '' },
-      { relation_ref: 'r04', relation_type: 'sequence', from_behavior_ref: 'b_quality', to_behavior_ref: 'b_decide_ndt', condition: '', join_mode: '' },
+      { relation_ref: 'r02', relation_type: 'condition', from_behavior_ref: 'b_proofread', to_behavior_ref: 'b_review', condition: '校对同意', join_mode: '' },
+      { relation_ref: 'r03', relation_type: 'condition', from_behavior_ref: 'b_review', to_behavior_ref: 'b_quality', condition: '审核同意', join_mode: '' },
+      { relation_ref: 'r04', relation_type: 'condition', from_behavior_ref: 'b_quality', to_behavior_ref: 'b_decide_ndt', condition: '质保同意', join_mode: '' },
       { relation_ref: 'r05', relation_type: 'condition', from_behavior_ref: 'b_decide_ndt', to_behavior_ref: 'b_ndt', condition: '需要无损检测', join_mode: '' },
       { relation_ref: 'r06', relation_type: 'condition', from_behavior_ref: 'b_decide_ndt', to_behavior_ref: 'b_approve', condition: '不需要无损检测', join_mode: '' },
-      { relation_ref: 'r07', relation_type: 'sequence', from_behavior_ref: 'b_ndt', to_behavior_ref: 'b_approve', condition: '', join_mode: '' },
+      { relation_ref: 'r07', relation_type: 'condition', from_behavior_ref: 'b_ndt', to_behavior_ref: 'b_approve', condition: '无损检测同意', join_mode: '' },
       { relation_ref: 'r08', relation_type: 'loop', from_behavior_ref: 'b_proofread', to_behavior_ref: 'b_compile', condition: '校对不同意', join_mode: '' },
       { relation_ref: 'r09', relation_type: 'loop', from_behavior_ref: 'b_review', to_behavior_ref: 'b_compile', condition: '审核不同意', join_mode: '' },
       { relation_ref: 'r10', relation_type: 'loop', from_behavior_ref: 'b_quality', to_behavior_ref: 'b_compile', condition: '质保不同意', join_mode: '' },
       { relation_ref: 'r11', relation_type: 'loop', from_behavior_ref: 'b_ndt', to_behavior_ref: 'b_compile', condition: '无损检测不同意', join_mode: '' },
-      { relation_ref: 'r12', relation_type: 'loop', from_behavior_ref: 'b_approve', to_behavior_ref: 'b_compile', condition: '批准不同意', join_mode: '' }
+      { relation_ref: 'r12', relation_type: 'loop', from_behavior_ref: 'b_approve', to_behavior_ref: 'b_compile', condition: '批准不同意', join_mode: '' },
+      { relation_ref: 'r13', relation_type: 'condition', from_behavior_ref: 'b_approve', to_behavior_ref: 'b_approval_recorded', condition: '批准同意', join_mode: '' }
     ];
   manufacturingDraft.internal_process_calls = [];
   const manufacturingModel = buildGraphModel(manufacturingDraft, { departmentOrder });
   const noNdtBranch = manufacturingModel.edges.find(edge => edge.data.focusRef === 'r06');
   const approveNode = manufacturingModel.nodes.find(node => node.data.focusRef === 'b_approve');
-  assert.equal(noNdtBranch.data.target, approveNode.data.id);
+  assert.equal(noNdtBranch.data.semanticTarget, approveNode.data.id);
+  const approveBundle = manufacturingModel.layout.bundles.find(bundle => bundle.targetRef === 'b_approve');
+  assert.ok(approveBundle, 'same-target approval relations must have one visual incoming bundle');
+  assert.equal(noNdtBranch.data.target, approveBundle.junctionId);
   assert.ok(noNdtBranch.classes.includes('route-forward-branch'));
   assert.equal(noNdtBranch.data.routePlacement, 'upper');
   const manufacturingLoops = manufacturingModel.edges.filter(edge => edge.classes.includes('relation-loop'));
   assert.equal(manufacturingLoops.length, 5);
-  assert.ok(manufacturingLoops.every(edge => edge.data.targetEndpoint === '0% 50%'));
+  assert.ok(manufacturingLoops.every(edge => edge.data.targetEndpoint === '50% 100%'));
   assert.equal(new Set(manufacturingLoops.map(edge => edge.data.routeTrackKey)).size, 5);
   assert.equal(new Set(manufacturingLoops.map(edge => edge.data.routeOffset)).size, 5);
+  const compileBundle = manufacturingModel.layout.bundles.find(bundle => bundle.targetRef === 'b_compile');
+  assert.deepEqual(compileBundle.relationRefs, ['r08', 'r09', 'r10', 'r11', 'r12']);
+  assert.ok(manufacturingLoops.every(edge => edge.data.target === compileBundle.junctionId));
+  assert.equal(
+    manufacturingModel.edges.filter(edge => edge.classes.includes('relation-bundle-trunk')).length,
+    2,
+    'compile returns and approval inputs must each share one final incoming arrow'
+  );
+  assert.ok(
+    manufacturingModel.layout.routeSegments.every(segment => [0, 45, 90].includes(segment.angle)),
+    'visible process relation segments must use only 0, 45, or 90 degree angles'
+  );
+  assert.ok(manufacturingDraft.flow_relations.filter(relation => relation.relation_type === 'condition').every(relation =>
+    manufacturingDraft.behaviors.find(behavior => behavior.behavior_ref === relation.from_behavior_ref)?.node_type === 'decision'
+  ));
 
   const cycleDraft = JSON.parse(JSON.stringify(readabilityDraft));
   cycleDraft.flow_relations[2].relation_type = 'condition';
@@ -1384,7 +1580,13 @@ async function testFrontendContract() {
   const serverSource = fs.readFileSync(serverPath, 'utf8');
 
   assert.ok(html.includes("const EXPECTED_EXPORT_SCHEMA_VERSION = 'process-governance-v7'"));
+  assert.ok(html.includes('const MAX_IMPORT_BYTES = 10 * 1024 * 1024;'));
+  assert.ok(html.includes('if (file.size > MAX_IMPORT_BYTES)'));
+  assert.ok(html.includes("new TextDecoder('utf-8', { fatal: true })"));
   assert.ok(html.includes("fetch('/api/template?version=process-governance-v7', { cache: 'no-store' })"));
+  assert.equal(html.includes('needsCandidateFieldUpgrade ? { valid: true, errors: [] }'), false);
+  assert.ok(html.includes("validationProfile: 'early-v7-data-fields'"));
+  assert.ok(html.includes("const behaviors = (currentDocument()?.behaviors || []).filter(item => item.node_type === 'action');"));
   assert.ok(html.includes('<script src="process-governance-migration.js"></script>'));
   assert.ok(html.includes('<script src="governance-workflow.js"></script>'));
   assert.ok(html.includes('<script src="legacy-cross-department-diagnostics.js"></script>'));

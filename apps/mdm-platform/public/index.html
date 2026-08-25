@@ -1984,6 +1984,36 @@
             <div class="empty">选择一条承接冲突后查看双方立场、证据、协调方案和决定记录。</div>
           </div>
         </div>
+        <div class="pg-section" id="pgV7PreviewSection" data-pg-view="v7Preview">
+          <div class="pg-section-hd">
+            <div>
+              <h2>V7预览核对</h2>
+              <p class="muted">V7文件只用于预览和跨部门核对。核对完成不等于流程审核、批准、发布或生效。</p>
+            </div>
+            <div class="process-design-actions">
+              <button type="button" class="btn primary" id="pgCreateV7PreviewBtn">上传V7建立案例</button>
+              <button type="button" class="btn secondary" id="pgRefreshV7PreviewBtn">刷新</button>
+              <input type="file" id="pgV7PreviewFileInput" accept=".json,application/json" style="display:none">
+              <input type="file" id="pgV7PreviewRevisionInput" accept=".json,application/json" style="display:none">
+            </div>
+          </div>
+          <div class="notice" style="margin-bottom:12px">3000保存案例、部门核对结果和处理进度，不修改V7内容。编制人员在3001修改后，再把新修订上传到同一案例。</div>
+          <div class="grid g4" style="margin-bottom:16px">
+            <div class="metric"><div class="num" id="pgV7PreviewCaseCount">0</div><div class="lbl">可查看案例</div></div>
+            <div class="metric"><div class="num" id="pgV7PreviewMyActionCount">0</div><div class="lbl">我的待核对</div></div>
+            <div class="metric"><div class="num" id="pgV7PreviewCompleteCount">0</div><div class="lbl">核对完成</div></div>
+            <div class="metric"><div class="num" id="pgV7PreviewRevisionNo">—</div><div class="lbl">当前修订</div></div>
+          </div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead><tr><th>流程</th><th>归口部门</th><th>案例状态</th><th>核对进度</th><th>当前修订</th><th>更新时间</th><th>操作</th></tr></thead>
+              <tbody id="pgV7PreviewCaseRows"><tr><td colspan="7" class="empty">正在读取V7预览核对案例...</td></tr></tbody>
+            </table>
+          </div>
+          <div class="process-design-detail" id="pgV7PreviewDetail" style="margin-top:20px;">
+            <div class="empty">选择一条案例后查看V7内容、部门核对进度和操作记录。</div>
+          </div>
+        </div>
         <div class="pg-section pg-overview-section" data-pg-view="overview">
         <div class="grid g4">
           <div class="metric"><div class="num" id="pgMetricL3">0</div><div class="lbl">流程数</div></div>
@@ -2387,7 +2417,7 @@
 
   <script>
     // ===== State & Utilities =====
-    const state = { user:null, departments:[], capabilities:[], processes:[], termProcesses:[], termTypes:[], mappings:[], dataMapContexts:[], dataMapFields:[], todos:[], conflicts:[], terms:[], currentRoute:null, currentView:'roleWorkbench', activeMapping:null, activeConflict:null, pollTimer:null, isEditing:false, activeReview:null, activeCapReview:null, activeProcReview:null, pgSelectedDept:'', pgEvidenceFocus:null, pgActiveGuidance:null, pgActiveGovernanceObject:null, pgSourceCoverageData:null, pgTaskSummary:null, pgIssueActionResult:null, pgAssignablePersons:null, pgViewCache:{}, pgViewRequests:{}, pgWorkspace:'editor', pgSelectedHandoffId:null, pgSelectedHandoffConflictId:null, processDesign:{ summary:null, draft:null, activeStep:'draft', taxonomy:null, taxonomyLoaded:false, taxonomyScopeKey:null, taxonomyError:null, documentLookup:null, fieldTypes:[], rosterRolesByDepartment:{}, canonicalRevision:null, canonicalHash:null, canonicalDirty:false, voidedHandoffReasons:{}, pendingVoidedHandoffRef:null, voidReasonRetryMode:null }, processGovernanceRenderRequestId:0, pageWorkflow:null, pageWorkflowRequestId:0, roleWorkbench:{ mode:'todo', data:null, selectedNode:null }, activity:{ roleWorkbench:null, dashboard:null, dashboardUsers:[] } };
+    const state = { user:null, departments:[], capabilities:[], processes:[], termProcesses:[], termTypes:[], mappings:[], dataMapContexts:[], dataMapFields:[], todos:[], conflicts:[], terms:[], currentRoute:null, currentView:'roleWorkbench', activeMapping:null, activeConflict:null, pollTimer:null, isEditing:false, activeReview:null, activeCapReview:null, activeProcReview:null, pgSelectedDept:'', pgEvidenceFocus:null, pgActiveGuidance:null, pgActiveGovernanceObject:null, pgSourceCoverageData:null, pgTaskSummary:null, pgIssueActionResult:null, pgAssignablePersons:null, pgViewCache:{}, pgViewRequests:{}, pgWorkspace:'editor', pgSelectedHandoffId:null, pgSelectedHandoffConflictId:null, pgSelectedV7PreviewCaseId:null, processDesign:{ summary:null, draft:null, activeStep:'draft', taxonomy:null, taxonomyLoaded:false, taxonomyScopeKey:null, taxonomyError:null, documentLookup:null, fieldTypes:[], rosterRolesByDepartment:{}, canonicalRevision:null, canonicalHash:null, canonicalDirty:false, voidedHandoffReasons:{}, pendingVoidedHandoffRef:null, voidReasonRetryMode:null }, processGovernanceRenderRequestId:0, pageWorkflow:null, pageWorkflowRequestId:0, roleWorkbench:{ mode:'todo', data:null, selectedNode:null }, activity:{ roleWorkbench:null, dashboard:null, dashboardUsers:[] } };
     const SOURCE_COVERAGE_VISIBLE_LIMIT = 20;
     const PROCESS_GOVERNANCE_QUALITY_VISIBLE_LIMIT = 80;
     const PROCESS_DESIGN_FIELD_TYPES = ['文本', '长文本', '数值', '金额', '数量', '日期', '日期时间', '是/否', '枚举', '人员', '部门', '附件'];
@@ -2395,19 +2425,22 @@
     const PROCESS_GOVERNANCE_SUBTABS = [
       { key: 'editor', label: '流程编制' },
       { key: 'handoffs', label: '跨部门承接待办' },
-      { key: 'conflicts', label: '承接冲突待办' }
+      { key: 'conflicts', label: '承接冲突待办' },
+      { key: 'v7Preview', label: 'V7预览核对' }
     ];
     const PROCESS_GOVERNANCE_VIEW_ALIASES = {
       editor: 'editor',
       newProcess: 'editor',
       documentStructure: 'editor',
       handoffs: 'handoffs',
-      conflicts: 'conflicts'
+      conflicts: 'conflicts',
+      v7Preview: 'v7Preview'
     };
     const PROCESS_GOVERNANCE_VIEW_PRODUCTS = {
       editor: { label: '流程编制', load: loadUnifiedProcessEditorView, render: renderUnifiedProcessEditorView },
       handoffs: { label: '跨部门承接待办', load: loadHandoffQueueView, render: renderHandoffQueueView },
-      conflicts: { label: '承接冲突待办', load: loadHandoffConflictQueueView, render: renderHandoffConflictQueueView }
+      conflicts: { label: '承接冲突待办', load: loadHandoffConflictQueueView, render: renderHandoffConflictQueueView },
+      v7Preview: { label: 'V7预览核对', load: loadV7PreviewReviewView, render: renderV7PreviewReviewView }
     };
     const PROCESS_GOVERNANCE_GUIDANCE_VIEWS = new Set();
     const PROCESS_DESIGN_WIZARD_STEPS = [
@@ -2960,6 +2993,410 @@
       state.pgViewCache = {};
       await loadProcessGovernanceView('conflicts', { route: parseHash(), force: true });
       await showHandoffConflictDetail(conflictId);
+    }
+
+    async function loadV7PreviewReviewView(_filters, route) {
+      var listPayload = await api('/api/process-v7-preview/cases?limit=100');
+      var caseId = Number(route && route.v7CaseId || state.pgSelectedV7PreviewCaseId || 0);
+      var detail = null;
+      if (caseId) {
+        detail = await api('/api/process-v7-preview/cases/' + encodeURIComponent(caseId));
+        state.pgSelectedV7PreviewCaseId = caseId;
+      }
+      return { list: listPayload, detail: detail };
+    }
+
+    function v7PreviewDecisionLabel(value) {
+      return ({ pending:'待核对', confirmed:'已确认', needs_changes:'需要修改', pending_evidence:'待补证据', disputed:'存在分歧' })[value] || value || '待核对';
+    }
+
+    function v7PreviewEventLabel(value) {
+      return ({
+        preview_case_created: '建立预览案例',
+        owning_department_assigned: '分派归口部门',
+        preview_revision_uploaded: '上传新修订',
+        department_review_decision_recorded: '记录部门核对结果',
+        scope_decision_recorded: '记录范围决定',
+        review_result_carried_forward: '沿用未变化项的核对结果',
+        review_item_reopened: '内容变化后重新核对',
+        formal_draft_promoted: '提升为正式 V7 草稿'
+      })[value] || value || '操作记录';
+    }
+
+    function v7PreviewDepartmentOptions(selectedId) {
+      return '<option value="">请选择归口部门</option>' + (state.departments || []).map(function(department) {
+        var id = Number(department.id || department.department_id || 0);
+        var name = department.name || department.department_name || '';
+        return '<option value="' + id + '"' + (Number(selectedId) === id ? ' selected' : '') + '>' + safeText(name) + '</option>';
+      }).join('');
+    }
+
+    function renderV7PreviewReviewItem(item, revisionNo, contentHash) {
+      var snapshot = item.item_snapshot || {};
+      var behavior = snapshot.behavior || {};
+      var myStatus = item.my_party === 'origin' ? item.origin_status : item.my_party === 'counterparty' ? item.counterparty_status : '';
+      var myBasis = item.my_party === 'origin' ? item.origin_basis : item.my_party === 'counterparty' ? item.counterparty_basis : '';
+      var actions = (item.allowed_actions || []).indexOf('record_department_decision') >= 0 ? '<div class="process-design-form" style="margin-top:12px">' +
+        '<label class="wide">本部门核对依据<textarea rows="3" id="pgV7PreviewBasis-' + Number(item.id) + '" placeholder="写明查看了什么材料，以及本部门的判断依据">' + safeText(myBasis || '') + '</textarea></label>' +
+        '<label>本部门核对结果<select id="pgV7PreviewDecision-' + Number(item.id) + '"><option value="">请选择</option><option value="confirmed">已确认</option><option value="needs_changes">需要修改</option><option value="pending_evidence">待补证据</option><option value="disputed">存在分歧</option></select></label>' +
+        '<div class="process-design-actions">' +
+          '<button type="button" class="btn primary" data-v7-preview-save-decision data-v7-preview-item="' + Number(item.id) + '" data-v7-preview-revision="' + Number(revisionNo) + '" data-v7-preview-hash="' + safeText(contentHash || '') + '">保存本部门核对结果</button>' +
+        '</div></div>' : '<div class="notice" style="margin-top:12px">当前账号只能查看这条核对项，不能代替参与部门记录结论。</div>';
+      return '<article class="process-design-detail" style="margin-top:12px">' +
+        '<div class="pg-section-hd"><div><h3>' + safeText(item.behavior_name) + '</h3><p class="muted">' + safeText(item.origin_department_name) + ' 与 ' + safeText(item.target_department_name) + '共同核对</p></div>' + statusTag(item.status) + '</div>' +
+        '<div class="grid g4">' +
+          '<div class="metric"><div class="lbl">归口部门结果</div><div style="margin-top:6px">' + statusTag(item.origin_status) + '</div></div>' +
+          '<div class="metric"><div class="lbl">承接部门结果</div><div style="margin-top:6px">' + statusTag(item.counterparty_status) + '</div></div>' +
+          '<div class="metric"><div class="lbl">执行角色候选</div><div style="margin-top:6px">' + safeText(item.actor_role || '待确认') + '</div></div>' +
+          '<div class="metric"><div class="lbl">修订处理</div><div style="margin-top:6px">' + safeText(({new:'新核对项',carried_forward:'沿用原结论',reopened:'内容变化，重新核对'})[item.carry_state] || item.carry_state) + '</div></div>' +
+        '</div>' +
+        '<div class="notice" style="margin-top:12px"><b>触发：</b>' + safeText(behavior.trigger || '待确认') + '<br><b>完成标准：</b>' + safeText(behavior.completion_standard || '待确认') + '</div>' +
+        (myStatus ? '<div class="muted" style="margin-top:10px">本部门当前结果：' + safeText(v7PreviewDecisionLabel(myStatus)) + '</div>' : '') + actions +
+      '</article>';
+    }
+
+    function renderV7PreviewReviewDetail(detail) {
+      var panel = $('pgV7PreviewDetail');
+      if (!panel) return;
+      if (!detail || !detail.case) {
+        panel.innerHTML = '<div class="empty">选择一条案例后查看V7内容、部门核对进度和操作记录。</div>';
+        return;
+      }
+      var caseRow = detail.case;
+      var revision = detail.revision || {};
+      var documentValue = revision.document || {};
+      var process = documentValue.process || {};
+      var warnings = detail.warnings || [];
+      var blockingIssues = detail.blocking_issues || caseRow.blocking_issues || [];
+      var allowedActions = detail.allowed_actions || [];
+      var canUploadRevision = allowedActions.indexOf('upload_revision') >= 0;
+      var ownerAssignment = !caseRow.owning_department_id && allowedActions.indexOf('assign_owner') >= 0
+        ? '<div class="process-design-actions" style="margin-top:12px"><select id="pgV7PreviewOwnerDepartment">' + v7PreviewDepartmentOptions('') + '</select><button type="button" class="btn primary" id="pgAssignV7PreviewOwnerBtn">分派归口部门</button></div>'
+        : '';
+      var warningHtml = warnings.length
+        ? '<div class="notice" style="margin-top:12px"><b>仍需处理：</b><ul>' + warnings.map(function(item) { return '<li>' + safeText(item.message) + '</li>'; }).join('') + '</ul></div>'
+        : '';
+      var scopeDecisionOptions = [];
+      if (blockingIssues.some(function(issue) { return issue.code === 'ZERO_CROSS_DEPARTMENT_SCOPE_PENDING'; })) {
+        scopeDecisionOptions.push('<option value="confirmed_no_cross_department">确认本修订不涉及跨部门</option>');
+      }
+      if (blockingIssues.some(function(issue) { return issue.code === 'OWNING_DEPARTMENT_CHANGE_PENDING'; })) {
+        scopeDecisionOptions.push('<option value="keep_current_owner">保留案例当前归口部门</option>');
+        scopeDecisionOptions.push('<option value="accept_source_owner">采用V7修订中的归口部门</option>');
+      }
+      var scopeDecisionEditor = allowedActions.indexOf('record_scope_decision') >= 0 && scopeDecisionOptions.length
+        ? '<div class="process-design-form" style="margin-top:12px"><label>范围决定<select id="pgV7PreviewScopeDecision"><option value="">请选择</option>' + scopeDecisionOptions.join('') + '</select></label><label class="wide">范围决定依据<textarea id="pgV7PreviewScopeBasis" rows="3" placeholder="写明核对对象、依据和决定理由"></textarea></label><div class="wide process-design-actions"><button type="button" class="btn primary" id="pgSaveV7PreviewScopeDecisionBtn">保存范围决定</button></div></div>'
+        : '';
+      var behaviorRows = (documentValue.behaviors || []).map(function(behavior) {
+        return '<tr><td>' + safeText(behavior.behavior_name) + '</td><td>' + safeText(behavior.current_actor_role || '待确认') + '</td><td>' + safeText(behavior.trigger || '待确认') + '</td><td>' + safeText(behavior.completion_standard || '待确认') + '</td></tr>';
+      }).join('');
+      var itemHtml = (detail.items || []).length
+        ? detail.items.map(function(item) { return renderV7PreviewReviewItem(item, revision.revision_no, caseRow.current_content_hash); }).join('')
+        : '<div class="notice" style="margin-top:12px">当前文件没有形成固定跨部门核对项。请先确认归口部门和各业务行为的固定执行部门，再从3001上传新修订；3000不会自行猜测参与部门。</div>';
+      var formalPromotion = detail.formal_promotion || null;
+      var formalActions = detail.formal_allowed_actions || [];
+      var promotionEditor = allowedActions.indexOf('promote_to_formal_draft') >= 0
+        ? '<details class="process-design-detail" open style="margin-top:18px"><summary><strong>提升为正式V7草稿</strong></summary>' +
+          '<div class="notice" style="margin-top:12px">必须明确选择新建流程主档或选择已有流程主档。系统不会按名称或编号自动合并。</div>' +
+          '<div class="process-design-form" style="margin-top:12px">' +
+            '<label>正式承接方式<select id="pgV7FormalTargetMode"><option value="create">新建流程主档</option><option value="existing">选择已有流程主档</option></select></label>' +
+            '<div id="pgV7FormalCreateFields" class="wide process-design-form"><label>制度编号<input id="pgV7FormalDocumentNo" maxlength="128" placeholder="填写新的正式制度编号"></label><label>制度名称<input id="pgV7FormalDocumentTitle" maxlength="255" value="' + safeText(process.process_name || caseRow.process_name) + '"></label></div>' +
+            '<div id="pgV7FormalExistingFields" class="wide process-design-form pg-hidden"><label class="wide">已有主档制度编号<input id="pgV7FormalExistingDocumentNo" maxlength="128" placeholder="输入完整制度编号，系统只做精确查找"></label></div>' +
+            '<div class="wide process-design-actions"><button type="button" class="btn primary" id="pgPromoteV7PreviewBtn">提升当前修订</button></div>' +
+          '</div></details>'
+        : '';
+      var formalSummary = '';
+      if (formalPromotion && formalPromotion.draft) {
+        var formalDraft = formalPromotion.draft;
+        var formalDocument = formalPromotion.document || {};
+        var formalTask = formalPromotion.review_task || {};
+        var formalVersion = formalPromotion.current_version || {};
+        var formalActionHtml = '';
+        if (formalActions.indexOf('submit_formal_draft') >= 0) {
+          formalActionHtml += '<button type="button" class="btn primary" id="pgSubmitV7FormalDraftBtn">提交正式审核</button>';
+        }
+        if (formalActions.indexOf('review_formal_draft') >= 0) {
+          formalActionHtml += '<select id="pgV7FormalReviewDecision"><option value="approve">审核通过</option><option value="needs_changes">退回修改</option><option value="reject">审核拒绝</option></select>' +
+            '<input id="pgV7FormalReviewNote" maxlength="1000" placeholder="填写正式审核意见">' +
+            '<button type="button" class="btn primary" id="pgReviewV7FormalDraftBtn">保存正式审核结论</button>';
+        }
+        if (formalActions.indexOf('publish_formal_draft') >= 0) {
+          formalActionHtml += '<button type="button" class="btn primary" id="pgPublishV7FormalDraftBtn">发布正式V7版本</button>';
+        }
+        if (formalActions.indexOf('read_formal_version') >= 0 && formalVersion.id) {
+          formalActionHtml += '<button type="button" class="btn secondary" id="pgReadV7FormalVersionBtn">核对已发布正文</button>';
+        }
+        formalSummary = '<article class="process-design-detail" style="margin-top:18px">' +
+          '<div class="pg-section-hd"><div><h3>正式V7草稿</h3><p class="muted">主档 ' + safeText(formalDocument.document_no || formalDocument.id) + ' · 草稿 #' + Number(formalDraft.id) + ' · 来源修订 ' + Number(formalDraft.revision_no || 0) + '</p></div>' + statusTag(formalDraft.status) + '</div>' +
+          '<div class="grid g4"><div class="metric"><div class="lbl">内容摘要</div><div style="margin-top:6px;word-break:break-all">' + safeText(formalDraft.content_hash || '') + '</div></div>' +
+          '<div class="metric"><div class="lbl">审核任务</div><div style="margin-top:6px">' + safeText(formalTask.status || '尚未提交') + '</div></div>' +
+          '<div class="metric"><div class="lbl">正式版本</div><div style="margin-top:6px">' + safeText(formalVersion.version_no || '尚未发布') + '</div></div>' +
+          '<div class="metric"><div class="lbl">process_version_id</div><div style="margin-top:6px">' + safeText(formalVersion.id || '尚未生成') + '</div></div></div>' +
+          (formalActionHtml ? '<div class="process-design-actions" style="margin-top:12px">' + formalActionHtml + '</div>' : '<div class="notice" style="margin-top:12px">当前账号或当前状态没有可执行的正式动作。</div>') +
+          '<div id="pgV7FormalReadbackResult" class="notice" style="margin-top:12px" hidden></div>' +
+        '</article>';
+      }
+      var eventRows = (detail.events || []).map(function(event) {
+        var eventResult = event.decision ? v7PreviewDecisionLabel(event.decision) + (event.basis_text ? '；' + event.basis_text : '') : event.basis_text || '';
+        return '<tr><td>' + safeText(event.created_at) + '</td><td>' + safeText(v7PreviewEventLabel(event.event_type)) + '</td><td>' + safeText(event.actor_department_name || '系统记录') + '</td><td>' + safeText(eventResult) + '</td></tr>';
+      }).join('');
+      panel.innerHTML = '<div class="pg-section-hd"><div><h2>' + safeText(caseRow.process_name) + '</h2><p class="muted">案例 ' + safeText(caseRow.case_ref) + ' · 当前修订 ' + Number(revision.revision_no || 0) + '</p></div><div class="process-design-actions">' +
+        (canUploadRevision ? '<button type="button" class="btn secondary" id="pgUploadV7PreviewRevisionBtn">上传3001新修订</button>' : '') + statusTag(caseRow.status) + '</div></div>' +
+        '<div class="notice"><b>边界：</b>本区域保存的是V7预览核对记录。只有核对完成并由MDM工作组组长明确提升后，才会形成正式草稿；预览记录本身不是审核或发布结论。</div>' +
+        ownerAssignment + warningHtml + scopeDecisionEditor +
+        '<div class="process-design-form" style="margin-top:12px"><label>流程名称<input readonly value="' + safeText(process.process_name || caseRow.process_name) + '"></label><label>归口部门<input readonly value="' + safeText(caseRow.owning_department_name || '待分派') + '"></label><label class="wide">目的<textarea rows="2" readonly>' + safeText(process.purpose || '待业务确认') + '</textarea></label><label class="wide">范围<textarea rows="3" readonly>' + safeText(process.scope || '待业务确认') + '</textarea></label></div>' +
+        '<details class="process-design-detail" open style="margin-top:12px"><summary><strong>V7业务行为预览</strong></summary><div class="table-container" style="margin-top:12px"><table class="data-table"><thead><tr><th>业务行为</th><th>执行角色</th><th>触发</th><th>完成标准</th></tr></thead><tbody>' + (behaviorRows || '<tr><td colspan="4" class="empty">没有业务行为</td></tr>') + '</tbody></table></div></details>' +
+        '<h3 style="margin-top:18px">跨部门核对项</h3>' + itemHtml +
+        promotionEditor + formalSummary +
+        '<details class="process-design-detail" style="margin-top:18px"><summary><strong>操作记录</strong></summary><div class="table-container" style="margin-top:12px"><table class="data-table"><thead><tr><th>时间</th><th>动作</th><th>部门</th><th>结果或依据</th></tr></thead><tbody>' + (eventRows || '<tr><td colspan="4" class="empty">暂无操作记录</td></tr>') + '</tbody></table></div></details>';
+
+      panel.querySelectorAll('[data-v7-preview-save-decision]').forEach(function(button) {
+        button.addEventListener('click', function() {
+          runPageTask(function() { return submitV7PreviewDecision(button); }, '部门核对结果保存失败');
+        });
+      });
+      if ($('pgUploadV7PreviewRevisionBtn')) $('pgUploadV7PreviewRevisionBtn').onclick = function() { $('pgV7PreviewRevisionInput').click(); };
+      if ($('pgAssignV7PreviewOwnerBtn')) $('pgAssignV7PreviewOwnerBtn').onclick = function() {
+        runPageTask(assignV7PreviewOwner, '归口部门分派失败');
+      };
+      if ($('pgSaveV7PreviewScopeDecisionBtn')) $('pgSaveV7PreviewScopeDecisionBtn').onclick = function() {
+        runPageTask(function() {
+          return submitV7PreviewScopeDecision(caseRow.id, revision.revision_no, caseRow.current_content_hash);
+        }, '范围决定保存失败');
+      };
+      if ($('pgV7FormalTargetMode')) $('pgV7FormalTargetMode').onchange = toggleV7FormalTargetFields;
+      if ($('pgPromoteV7PreviewBtn')) $('pgPromoteV7PreviewBtn').onclick = function() {
+        runPageTask(function() {
+          return promoteV7PreviewCase(caseRow.id, revision.revision_no, caseRow.current_content_hash);
+        }, '正式草稿提升失败');
+      };
+      if ($('pgSubmitV7FormalDraftBtn')) $('pgSubmitV7FormalDraftBtn').onclick = function() {
+        runPageTask(function() { return submitV7FormalDraft(formalPromotion.draft.id); }, '正式草稿提交失败');
+      };
+      if ($('pgReviewV7FormalDraftBtn')) $('pgReviewV7FormalDraftBtn').onclick = function() {
+        runPageTask(function() { return reviewV7FormalDraft(formalPromotion.review_task.id); }, '正式审核保存失败');
+      };
+      if ($('pgPublishV7FormalDraftBtn')) $('pgPublishV7FormalDraftBtn').onclick = function() {
+        runPageTask(function() { return publishV7FormalDraft(formalPromotion.draft.id); }, '正式V7版本发布失败');
+      };
+      if ($('pgReadV7FormalVersionBtn')) $('pgReadV7FormalVersionBtn').onclick = function() {
+        runPageTask(function() { return readV7FormalVersion(formalPromotion.current_version.id); }, '正式版本读回失败');
+      };
+    }
+
+    function renderV7PreviewReviewView(payload) {
+      var listPayload = payload && payload.list || { items: [] };
+      var rows = listPayload.items || [];
+      if ($('pgV7PreviewCaseCount')) $('pgV7PreviewCaseCount').textContent = Number(listPayload.total || rows.length);
+      if ($('pgV7PreviewMyActionCount')) $('pgV7PreviewMyActionCount').textContent = Number(listPayload.my_action_count || 0);
+      if ($('pgV7PreviewCompleteCount')) $('pgV7PreviewCompleteCount').textContent = rows.filter(function(item) { return item.status === 'review_complete'; }).length;
+      if ($('pgV7PreviewRevisionNo')) $('pgV7PreviewRevisionNo').textContent = payload.detail && payload.detail.revision ? payload.detail.revision.revision_no : '—';
+      if ($('pgCreateV7PreviewBtn')) $('pgCreateV7PreviewBtn').hidden = (listPayload.allowed_actions || []).indexOf('create_case') < 0;
+      if ($('pgV7PreviewCaseRows')) $('pgV7PreviewCaseRows').innerHTML = rows.length ? rows.map(function(item) {
+        return '<tr><td>' + safeText(item.process_name) + '</td><td>' + safeText(item.owning_department_name || '待分派') + '</td><td>' + statusTag(item.status) + '</td><td>' + Number(item.confirmed_item_count || 0) + ' / ' + Number(item.review_item_count || 0) + '</td><td>' + Number(item.current_revision_no || 0) + '</td><td>' + safeText(item.updated_at) + '</td><td><button type="button" class="btn secondary" data-v7-preview-open="' + Number(item.id) + '">查看</button></td></tr>';
+      }).join('') : '<tr><td colspan="7" class="empty">暂无V7预览核对案例</td></tr>';
+      document.querySelectorAll('[data-v7-preview-open]').forEach(function(button) {
+        button.addEventListener('click', function() {
+          state.pgViewCache = {};
+          state.pgSelectedV7PreviewCaseId = Number(button.dataset.v7PreviewOpen || 0);
+          location.hash = '#/processGovernance?workspace=v7Preview&v7Case=' + encodeURIComponent(state.pgSelectedV7PreviewCaseId);
+        });
+      });
+      renderV7PreviewReviewDetail(payload.detail);
+    }
+
+    async function readV7PreviewFile(file) {
+      if (!file) throw new Error('请选择V7 JSON文件');
+      var raw = await file.text();
+      var documentValue;
+      try { documentValue = JSON.parse(raw); } catch (_error) { throw new Error('所选文件不是有效JSON'); }
+      return { source_file_name: file.name, document: documentValue };
+    }
+
+    async function uploadV7PreviewFile(file, caseId) {
+      var body = await readV7PreviewFile(file);
+      var path = '/api/process-v7-preview/cases';
+      if (caseId) {
+        var detail = state.pgViewCache && Object.values(state.pgViewCache).map(function(item) { return item && item.detail; }).find(function(item) { return item && Number(item.case && item.case.id) === Number(caseId); });
+        if (!detail) detail = await api('/api/process-v7-preview/cases/' + encodeURIComponent(caseId));
+        body.expected_revision_no = Number(detail.revision.revision_no);
+        body.expected_content_hash = String(detail.case.current_content_hash || '');
+        path += '/' + encodeURIComponent(caseId) + '/revisions';
+        var previewResult = await api(path + '/preview', { method:'POST', body:JSON.stringify(body) });
+        var counts = previewResult.comparison && previewResult.comparison.counts || {};
+        var affectedDepartments = previewResult.comparison && previewResult.comparison.affected_departments || [];
+        var confirmed = window.confirm(
+          '新修订比较结果：\n' +
+          '新增 ' + Number(counts.added || 0) + ' 项；沿用 ' + Number(counts.carried_forward || 0) + ' 项；重新核对 ' + Number(counts.reopened || 0) + ' 项；移除 ' + Number(counts.removed || 0) + ' 项。\n' +
+          '受影响部门：' + (affectedDepartments.length ? affectedDepartments.join('、') : '无新增影响部门') + '。\n\n确认后才会上传新修订。'
+        );
+        if (!confirmed) {
+          showToast('已取消V7新修订上传');
+          return { cancelled:true, comparison:previewResult.comparison };
+        }
+      }
+      try {
+        var result = await api(path, { method:'POST', body:JSON.stringify(body) });
+        var resultCase = result.case || {};
+        var nextCaseId = Number(resultCase.id || caseId || 0);
+        state.pgViewCache = {};
+        state.pgSelectedV7PreviewCaseId = nextCaseId;
+        showToast(caseId ? 'V7新修订已上传' : 'V7预览核对案例已建立');
+        location.hash = '#/processGovernance?workspace=v7Preview&v7Case=' + encodeURIComponent(nextCaseId);
+        if (processGovernanceViewFromRoute(parseHash()) === 'v7Preview') await loadProcessGovernanceView('v7Preview', { route: parseHash(), force:true });
+        return result;
+      } catch (error) {
+        if (error && error.case_id) {
+          state.pgViewCache = {};
+          location.hash = '#/processGovernance?workspace=v7Preview&v7Case=' + encodeURIComponent(error.case_id);
+        }
+        throw error;
+      }
+    }
+
+    async function submitV7PreviewDecision(button) {
+      var itemId = Number(button.dataset.v7PreviewItem || 0);
+      var decisionField = $('pgV7PreviewDecision-' + itemId);
+      var decision = decisionField ? decisionField.value : '';
+      var basisField = $('pgV7PreviewBasis-' + itemId);
+      var basis = basisField ? basisField.value.trim() : '';
+      if (!decision) throw new Error('请选择本部门核对结果');
+      if (!basis) throw new Error('请先填写本部门核对依据');
+      await api('/api/process-v7-preview/items/' + encodeURIComponent(itemId) + '/decision', {
+        method:'POST',
+        body:JSON.stringify({
+          decision: decision,
+          basis: basis,
+          expected_revision_no: Number(button.dataset.v7PreviewRevision),
+          expected_content_hash: String(button.dataset.v7PreviewHash || '')
+        })
+      });
+      state.pgViewCache = {};
+      showToast('本部门核对结果已保存');
+      return await loadProcessGovernanceView('v7Preview', { route:parseHash(), force:true });
+    }
+
+    async function submitV7PreviewScopeDecision(caseId, revisionNo, contentHash) {
+      var decision = $('pgV7PreviewScopeDecision') && $('pgV7PreviewScopeDecision').value || '';
+      var basis = $('pgV7PreviewScopeBasis') && $('pgV7PreviewScopeBasis').value.trim() || '';
+      if (!decision) throw new Error('请选择范围决定');
+      if (!basis) throw new Error('请填写范围决定依据');
+      await api('/api/process-v7-preview/cases/' + encodeURIComponent(caseId) + '/scope-decision', {
+        method:'POST',
+        body:JSON.stringify({
+          decision:decision,
+          basis:basis,
+          expected_revision_no:Number(revisionNo),
+          expected_content_hash:String(contentHash || '')
+        })
+      });
+      state.pgViewCache = {};
+      showToast('范围决定已保存');
+      return await loadProcessGovernanceView('v7Preview', { route:parseHash(), force:true });
+    }
+
+    async function assignV7PreviewOwner() {
+      var caseId = Number(state.pgSelectedV7PreviewCaseId || 0);
+      var departmentId = Number($('pgV7PreviewOwnerDepartment') && $('pgV7PreviewOwnerDepartment').value || 0);
+      if (!caseId || !departmentId) throw new Error('请选择归口部门');
+      var detail = state.pgViewCache && Object.values(state.pgViewCache).map(function(item) { return item && item.detail; }).find(function(item) { return item && Number(item.case && item.case.id) === Number(caseId); });
+      if (!detail) detail = await api('/api/process-v7-preview/cases/' + encodeURIComponent(caseId));
+      await api('/api/process-v7-preview/cases/' + encodeURIComponent(caseId) + '/assign-owner', {
+        method:'POST',
+        body:JSON.stringify({
+          department_id:departmentId,
+          expected_revision_no:Number(detail.revision.revision_no),
+          expected_content_hash:String(detail.case.current_content_hash || '')
+        })
+      });
+      state.pgViewCache = {};
+      showToast('归口部门已分派');
+      return await loadProcessGovernanceView('v7Preview', { route:parseHash(), force:true });
+    }
+
+    function toggleV7FormalTargetFields() {
+      var mode = $('pgV7FormalTargetMode') && $('pgV7FormalTargetMode').value || 'create';
+      if ($('pgV7FormalCreateFields')) $('pgV7FormalCreateFields').classList.toggle('pg-hidden', mode !== 'create');
+      if ($('pgV7FormalExistingFields')) $('pgV7FormalExistingFields').classList.toggle('pg-hidden', mode !== 'existing');
+    }
+
+    async function promoteV7PreviewCase(caseId, revisionNo, contentHash) {
+      var mode = $('pgV7FormalTargetMode') && $('pgV7FormalTargetMode').value || '';
+      var target;
+      if (mode === 'create') {
+        var documentNo = $('pgV7FormalDocumentNo') && $('pgV7FormalDocumentNo').value.trim() || '';
+        var documentTitle = $('pgV7FormalDocumentTitle') && $('pgV7FormalDocumentTitle').value.trim() || '';
+        if (!documentNo) throw new Error('请填写新建流程主档的制度编号');
+        if (!documentTitle) throw new Error('请填写新建流程主档的制度名称');
+        target = { mode:'create', document_no:documentNo, document_title:documentTitle };
+      } else if (mode === 'existing') {
+        var existingDocumentNo = $('pgV7FormalExistingDocumentNo') && $('pgV7FormalExistingDocumentNo').value.trim() || '';
+        if (!existingDocumentNo) throw new Error('请输入已有流程主档的完整制度编号');
+        var lookup = await api('/api/process-v7-preview/cases/' + encodeURIComponent(caseId) + '/formal-targets?document_no=' + encodeURIComponent(existingDocumentNo));
+        if (!lookup.exists) throw new Error('没有找到该制度编号对应的流程主档');
+        if (!lookup.accessible || !lookup.document) throw new Error(lookup.message || '该流程主档不能承接当前V7');
+        target = { mode:'existing', document_id:Number(lookup.document.id) };
+      } else {
+        throw new Error('请选择新建流程主档或选择已有流程主档');
+      }
+      var result = await api('/api/process-v7-preview/cases/' + encodeURIComponent(caseId) + '/promote', {
+        method:'POST',
+        body:JSON.stringify({
+          expected_revision_no:Number(revisionNo),
+          expected_content_hash:String(contentHash || ''),
+          target:target
+        })
+      });
+      state.pgViewCache = {};
+      showToast(result.idempotent ? '当前修订已经提升，已返回原正式草稿' : '当前修订已提升为正式V7草稿');
+      return await loadProcessGovernanceView('v7Preview', { route:parseHash(), force:true });
+    }
+
+    async function submitV7FormalDraft(draftId) {
+      await api('/api/process-design/drafts/' + encodeURIComponent(draftId) + '/submit', {
+        method:'POST',
+        body:JSON.stringify({ note:'V7预览核对完成，提交正式审核' })
+      });
+      state.pgViewCache = {};
+      showToast('正式V7草稿已提交审核');
+      return await loadProcessGovernanceView('v7Preview', { route:parseHash(), force:true });
+    }
+
+    async function reviewV7FormalDraft(taskId) {
+      var decision = $('pgV7FormalReviewDecision') && $('pgV7FormalReviewDecision').value || '';
+      var note = $('pgV7FormalReviewNote') && $('pgV7FormalReviewNote').value.trim() || '';
+      if (!decision) throw new Error('请选择正式审核结论');
+      if (!note) throw new Error('请填写正式审核意见');
+      await api('/api/process-design/review-tasks/' + encodeURIComponent(taskId) + '/decision', {
+        method:'POST',
+        body:JSON.stringify({ decision:decision, note:note })
+      });
+      state.pgViewCache = {};
+      showToast('正式审核结论已保存');
+      return await loadProcessGovernanceView('v7Preview', { route:parseHash(), force:true });
+    }
+
+    async function publishV7FormalDraft(draftId) {
+      var result = await api('/api/process-design/drafts/' + encodeURIComponent(draftId) + '/publish', {
+        method:'POST',
+        body:JSON.stringify({ note:'发布核对完成的原生V7正式版本' })
+      });
+      state.pgViewCache = {};
+      showToast('正式V7版本已发布，process_version_id=' + Number(result.process_version_id));
+      return await loadProcessGovernanceView('v7Preview', { route:parseHash(), force:true });
+    }
+
+    async function readV7FormalVersion(processVersionId) {
+      var result = await api('/api/process-design/versions/' + encodeURIComponent(processVersionId) + '/content');
+      var target = $('pgV7FormalReadbackResult');
+      if (target) {
+        target.hidden = false;
+        target.textContent = '读回成功：process_version_id=' + Number(result.process_version_id) +
+          '；结构版本=' + String(result.schema_version || '') +
+          '；内容摘要校验=' + (result.content_hash_verified ? '通过' : '未通过') +
+          '；来源修订=' + Number(result.source_revision_no || 0) + '。';
+      }
+      return result;
     }
 
     function processDesignWizardStepIndex(stepKey) {
@@ -5453,8 +5890,8 @@
 
     // ===== Tag rendering =====
     function statusTag(status) {
-      const map = { draft:'草稿', submitted:'已提交', dept_reviewed:'部门内审', cross_confirmed:'跨部门确认', fields_confirmed:'字段确认', final_reviewed:'终审', published:'已发布', pending:'待处理', done:'已完成', resolved:'已解决', rejected:'已驳回', approved:'已通过', blocked:'阻断', coordinating:'协调中', archived:'已归档', pending_assignment:'待分派', pending_origin_review:'待归口部门审核', pending_counterparty_scope:'待外部门确认范围', pending_counterparty_detail:'待外部门补充', pending_counterparty_review:'待外部门审核', pending_structure_gate:'待结构卡口', conflict_open:'承接冲突处理中', pending_department_confirmation:'待双方部门确认', pending_decision:'待项目决策', returned_for_revision:'已退回修订', confirmed:'已确认', closed:'已关闭', closed_not_required:'确认无需承接', returned:'已退回', escalated:'争议处理中' };
-      const cls = /published|approved|done|resolved/.test(status) ? 'green' : /blocked|rejected|error/.test(status) ? 'red' : /pending|submitted|coordinating/.test(status) ? 'amber' : '';
+      const map = { draft:'草稿', submitted:'已提交', dept_reviewed:'部门内审', cross_confirmed:'跨部门确认', fields_confirmed:'字段确认', final_reviewed:'终审', published:'已发布', pending:'待处理', done:'已完成', resolved:'已解决', rejected:'已驳回', approved:'已通过', blocked:'阻断', coordinating:'协调中', archived:'已归档', pending_assignment:'待分派', pending_origin_review:'待归口部门审核', pending_counterparty_scope:'待外部门确认范围', pending_counterparty_detail:'待外部门补充', pending_counterparty_review:'待外部门审核', pending_structure_gate:'待结构卡口', conflict_open:'承接冲突处理中', pending_department_confirmation:'待双方部门确认', pending_decision:'待项目决策', returned_for_revision:'已退回修订', confirmed:'已确认', pending_owner:'归口部门待分派', under_review:'核对中', needs_revision:'需要修改', disputed:'存在分歧', review_complete:'核对完成', needs_changes:'需要修改', pending_evidence:'待补证据', closed:'已关闭', closed_not_required:'确认无需承接', returned:'已退回', escalated:'争议处理中' };
+      const cls = /published|approved|done|resolved|confirmed|review_complete/.test(status) ? 'green' : /blocked|rejected|error|disputed|needs_revision|needs_changes/.test(status) ? 'red' : /pending|submitted|coordinating|under_review/.test(status) ? 'amber' : '';
       return '<span class="tag ' + cls + '">' + safeText(map[status] || status) + '</span>';
     }
 
@@ -5567,7 +6004,7 @@
       }
       if (!hash) return { view: 'list', tab: 'roleWorkbench' };
       var parts = hash.split('/');
-      if (parts.length === 1) return { view: 'list', tab: parts[0], query: query, pgView: query.view, qualityView: query.view, pgWorkspace: query.workspace, handoffId: query.handoff, handoffConflictId: query.conflict, finding: query.finding, caseId: query.case, mappingTodoId: query.todo, inputBaselineReviewKey: query.reviewItem, issueQueue: query.queue, issueId: query.issue };
+      if (parts.length === 1) return { view: 'list', tab: parts[0], query: query, pgView: query.view, qualityView: query.view, pgWorkspace: query.workspace, handoffId: query.handoff, handoffConflictId: query.conflict, v7CaseId: query.v7Case, finding: query.finding, caseId: query.case, mappingTodoId: query.todo, inputBaselineReviewKey: query.reviewItem, issueQueue: query.queue, issueId: query.issue };
       if (parts[0] === 'processes' && parts.length >= 3) {
         return { view: 'detail', tab: 'processes', type: 'process', id: parts[2] };
       }
@@ -9416,6 +9853,7 @@
       if (view === 'editor' && $('pgDesignSummaryMeta')) $('pgDesignSummaryMeta').textContent = '正在加载单流程编制草稿...';
       if (view === 'handoffs' && $('pgHandoffQueueRows')) $('pgHandoffQueueRows').innerHTML = '<tr><td colspan="6" class="empty">正在读取跨部门承接待办...</td></tr>';
       if (view === 'conflicts' && $('pgHandoffConflictRows')) $('pgHandoffConflictRows').innerHTML = '<tr><td colspan="6" class="empty">正在读取承接冲突待办...</td></tr>';
+      if (view === 'v7Preview' && $('pgV7PreviewCaseRows')) $('pgV7PreviewCaseRows').innerHTML = '<tr><td colspan="7" class="empty">正在读取V7预览核对案例...</td></tr>';
     }
 
     function setProcessGovernanceViewError(view, error) {
@@ -9423,6 +9861,7 @@
       if (view === 'editor' && $('pgDesignSummaryMeta')) $('pgDesignSummaryMeta').textContent = message;
       if (view === 'handoffs' && $('pgHandoffQueueRows')) $('pgHandoffQueueRows').innerHTML = '<tr><td colspan="6" class="empty">' + safeText(message) + '</td></tr>';
       if (view === 'conflicts' && $('pgHandoffConflictRows')) $('pgHandoffConflictRows').innerHTML = '<tr><td colspan="6" class="empty">' + safeText(message) + '</td></tr>';
+      if (view === 'v7Preview' && $('pgV7PreviewCaseRows')) $('pgV7PreviewCaseRows').innerHTML = '<tr><td colspan="7" class="empty">' + safeText(message) + '</td></tr>';
     }
 
     async function loadProcessGovernanceView(view, options) {
@@ -10322,6 +10761,33 @@
       $('pgRefreshHandoffConflictBtn').addEventListener('click', function() {
         state.pgViewCache = {};
         runPageTask(function() { return loadProcessGovernanceView('conflicts', { route: parseHash(), force: true }); }, '承接冲突待办刷新失败');
+      });
+    }
+    if ($('pgRefreshV7PreviewBtn')) {
+      $('pgRefreshV7PreviewBtn').addEventListener('click', function() {
+        state.pgViewCache = {};
+        runPageTask(function() { return loadProcessGovernanceView('v7Preview', { route: parseHash(), force: true }); }, 'V7预览核对案例刷新失败');
+      });
+    }
+    if ($('pgCreateV7PreviewBtn') && $('pgV7PreviewFileInput')) {
+      $('pgCreateV7PreviewBtn').addEventListener('click', function() { $('pgV7PreviewFileInput').click(); });
+      $('pgV7PreviewFileInput').addEventListener('change', function(event) {
+        var input = event.target;
+        var file = input.files && input.files[0];
+        runPageTask(async function() {
+          try { return await uploadV7PreviewFile(file, null); }
+          finally { input.value = ''; }
+        }, 'V7预览核对案例建立失败');
+      });
+    }
+    if ($('pgV7PreviewRevisionInput')) {
+      $('pgV7PreviewRevisionInput').addEventListener('change', function(event) {
+        var input = event.target;
+        var file = input.files && input.files[0];
+        runPageTask(async function() {
+          try { return await uploadV7PreviewFile(file, state.pgSelectedV7PreviewCaseId); }
+          finally { input.value = ''; }
+        }, 'V7新修订上传失败');
       });
     }
     if (document.getElementById('cancelProcessDesignEditBtn')) {

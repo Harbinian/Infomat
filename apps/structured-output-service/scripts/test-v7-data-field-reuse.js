@@ -141,6 +141,22 @@ function run() {
   assert.deepEqual(Migration.migrateDocument(normalizedUpdateField)[0], normalizedUpdateField, 'selected update fields must survive idempotent migration');
   assertValid(normalizedUpdateField, 'selected update field validation');
 
+  const duplicateUpdateField = JSON.parse(JSON.stringify(normalizedUpdateField));
+  const keptField = duplicateUpdateField.data_objects[0].fields[0];
+  duplicateUpdateField.data_objects[0].fields.push({
+    ...keptField,
+    field_ref: 'data_field_supplier_code_duplicate'
+  });
+  duplicateUpdateField.data_objects[0].behavior_links.at(-1).updated_field_refs = ['data_field_supplier_code_duplicate'];
+  const mergedUpdateField = Migration.migrateDocument(duplicateUpdateField)[0];
+  assert.equal(mergedUpdateField.data_objects[0].fields.length, 1, 'same-name and same-type object fields must merge deterministically');
+  assert.deepEqual(
+    mergedUpdateField.data_objects[0].behavior_links.at(-1).updated_field_refs,
+    [keptField.field_ref],
+    'field merge must rewrite update-operation field references'
+  );
+  assertValid(mergedUpdateField, 'merged update field validation');
+
   const brokenUpdatedFieldRef = JSON.parse(JSON.stringify(normalizedUpdateField));
   brokenUpdatedFieldRef.data_objects[0].behavior_links.at(-1).updated_field_refs = ['data_field_missing'];
   const brokenUpdatedFieldResult = processGovernanceValidationResult(brokenUpdatedFieldRef);

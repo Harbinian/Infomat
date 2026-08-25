@@ -11,7 +11,8 @@
   const ACTOR_ASSIGNMENT_MODES = new Set(['fixed_department', 'company_wide', 'dynamic_from_data']);
   const PLACEHOLDER_PATTERN = /待(?:填写|补充|确认)/;
   const EXACT_PLACEHOLDER_PATTERN = /^(?:无|暂无|未知|不适用|N\/?A)$/i;
-  const CONCRETE_BUSINESS_ACTION_PATTERN = /(?:核对|比对|查验|检查|检验|测量|计算|统计|汇总|筛选|选择|查询|调取|读取|识别|判断|评审|审核|复核|审批|批准|确认|填写|填报|登记|录入|编制|创建|生成|修改|更新|补充|删除|作废|归档|保存|上传|下载|导出|打印|签署|盖章|提交|发送|下发|转交|移交|交接|接收|领取|发放|分配|安排|通知|反馈|退回|驳回|办理|处理|处置|验收|盘点|清点|入库|出库|结算|付款|开具|分析|拆分|合并|关联|匹配|标记|记录|维护|校验)/;
+  const CONCRETE_BUSINESS_ACTION_PATTERN = /(?:核对|校对|核查|比对|查验|检查|检验|测量|计算|统计|汇总|筛选|选择|查询|调取|读取|识别|判断|评审|审核|复核|审批|批准|确认|填写|填报|登记|录入|编制|创建|生成|修改|更新|补充|删除|作废|归档|保存|上传|下载|导出|打印|签署|盖章|提交|发送|下发|转交|移交|交接|接收|领取|发放|分配|安排|通知|反馈|退回|驳回|办理|处理|处置|验收|盘点|清点|入库|出库|结算|付款|开具|分析|拆分|合并|关联|匹配|标记|记录|维护|校验)/;
+  const DECISION_VERB_PATTERN = /(?:校对|复核|审核|核查|审批|批准|验收|确认)/;
   const ABSTRACT_QUALITATIVE_PATTERNS = Object.freeze([
     Object.freeze({
       label: '确保……可以完成',
@@ -127,6 +128,7 @@
         label: '条件分支、退回和跨部门流转',
         description: '逐条确认流程如何向前、何时退回、并行路线如何汇合，以及跨部门行为之间如何流转。',
         confirmations: Object.freeze([
+          '条件分叉必须由判断节点明确表达，不能用普通业务行为加连线条件代替判断节点。',
           '确认判断条件、退回条件、并行路线和返回位置符合真实做法。',
           '嵌套循环的每一层都必须有明确退出条件和退出去向；内层退出可以进入外层，最外层必须退出到循环外。',
           '并行路线必须全部进入同一个并行汇合；任一路线可能在汇合前中止整个流程时，不得使用并行。',
@@ -1157,6 +1159,125 @@
     };
   }
 
+  function hiddenDecisionDetails(documentValue) {
+    const behaviors = Array.isArray(documentValue?.behaviors) ? documentValue.behaviors : [];
+    const relations = Array.isArray(documentValue?.flow_relations) ? documentValue.flow_relations : [];
+    const issues = [];
+    behaviors.forEach((behavior, index) => {
+      if (text(behavior?.node_type) !== 'action') return;
+      const behaviorRef = text(behavior?.behavior_ref);
+      const outgoing = relations.filter(relation =>
+        text(relation?.from_behavior_ref) === behaviorRef
+        && ['sequence', 'condition', 'loop'].includes(text(relation?.relation_type))
+      );
+      const forwardRoutes = outgoing.filter(relation => text(relation?.relation_type) !== 'loop');
+      const loopRoutes = outgoing.filter(relation => text(relation?.relation_type) === 'loop');
+      const conditionRoutes = outgoing.filter(relation => text(relation?.relation_type) === 'condition');
+      const label = text(behavior?.behavior_name) || behaviorRef || `第${index + 1}项行为`;
+      const hidden = conditionRoutes.length > 0
+        || (loopRoutes.length > 0 && (forwardRoutes.length > 0 || DECISION_VERB_PATTERN.test(label)));
+      if (!hidden) return;
+      issues.push({
+        reason: 'decision_hidden_in_relations',
+        behavior,
+        behaviorIndex: index,
+        behaviorRef,
+        outgoing,
+        message: `“${label}”用普通业务行为承载条件分叉，判断被隐藏在流程关系中。`,
+        target: {
+          editorSection: 'process',
+          processSection: 'behaviors',
+          focusKind: 'behavior',
+          focusRef: behaviorRef,
+          focusPath: `behaviors.${index}.node_type`,
+          reviewAspect: 'routing'
+        },
+        suggestions: [
+          '保留该业务行为，在它后面增加独立判断节点，例如“申请审核结果是否同意”。',
+          '业务行为用顺序关系进入判断节点；判断节点再为同意、不同意等每个结果建立独立出线。'
+        ]
+      });
+    });
+    return { issues };
+  }
+
+  const ROUTE_ACTION_WORDS = Object.freeze([
+    '无损检测审批', '质量保证核查', '复核', '校对', '审核', '核查', '审批', '批准', '编制', '归档', '发布', '接收'
+  ]);
+  const ROUTE_DECLARATION_PATTERN = /(?:直接)?(?:进入|转入|转到|提交至|提交给|退回)([^，。；\n]{1,18})/g;
+
+  function actionRouteAlias(behavior) {
+    if (text(behavior?.node_type) !== 'action') return '';
+    const name = text(behavior?.behavior_name);
+    const actorBoundary = /人员|岗位|部门|负责人|经办人/.exec(name);
+    const actionText = actorBoundary ? name.slice(actorBoundary.index + actorBoundary[0].length) : name;
+    return ROUTE_ACTION_WORDS.find(word => actionText.includes(word)) || '';
+  }
+
+  function declaredRouteDetails(documentValue) {
+    const behaviors = Array.isArray(documentValue?.behaviors) ? documentValue.behaviors : [];
+    const relations = Array.isArray(documentValue?.flow_relations) ? documentValue.flow_relations : [];
+    const actionTargets = behaviors
+      .map((behavior, index) => ({ behavior, index, alias: actionRouteAlias(behavior) }))
+      .filter(item => item.alias);
+    const issues = [];
+    behaviors.forEach((behavior, behaviorIndex) => {
+      const behaviorRef = text(behavior?.behavior_ref);
+      const sourceLabel = text(behavior?.behavior_name) || behaviorRef || `第${behaviorIndex + 1}个节点`;
+      const sourceText = [behavior?.behavior_description, behavior?.completion_standard, behavior?.output_description]
+        .map(text)
+        .filter(Boolean)
+        .join('；');
+      if (!sourceText) return;
+      const declarations = [];
+      ROUTE_DECLARATION_PATTERN.lastIndex = 0;
+      let match = ROUTE_DECLARATION_PATTERN.exec(sourceText);
+      while (match) {
+        declarations.push(match[0]);
+        match = ROUTE_DECLARATION_PATTERN.exec(sourceText);
+      }
+      declarations.forEach(declaration => {
+        if (declaration.includes('判断') && relations.some(relation => {
+          if (text(relation?.from_behavior_ref) !== behaviorRef) return false;
+          const targetNode = behaviors.find(item => text(item?.behavior_ref) === text(relation?.to_behavior_ref));
+          return text(targetNode?.node_type) === 'decision';
+        })) return;
+        const candidates = actionTargets.filter(item =>
+          text(item.behavior?.behavior_ref) !== behaviorRef && declaration.includes(item.alias)
+        );
+        if (!candidates.length) return;
+        const connected = candidates.some(candidate => relations.some(relation =>
+          text(relation?.from_behavior_ref) === behaviorRef
+          && text(relation?.to_behavior_ref) === text(candidate.behavior?.behavior_ref)
+        ));
+        if (connected) return;
+        const target = candidates[0];
+        const targetRef = text(target.behavior?.behavior_ref);
+        const targetLabel = text(target.behavior?.behavior_name) || targetRef;
+        issues.push({
+          reason: 'declared_route_missing',
+          behaviorRef,
+          behaviorIndex,
+          declaredTargetRef: targetRef,
+          declaration,
+          message: `“${sourceLabel}”的说明写了“${declaration}”，但流程关系没有连接到“${targetLabel}”。`,
+          target: {
+            editorSection: 'process',
+            processSection: 'relations',
+            focusKind: 'behavior',
+            focusRef: behaviorRef,
+            reviewAspect: 'routing'
+          },
+          suggestions: [
+            `核对这条业务规则；规则成立时，补充从“${sourceLabel}”到“${targetLabel}”的关系。`,
+            '规则不成立时，修改节点说明，避免说明和流程图表达不同。'
+          ]
+        });
+      });
+    });
+    return { issues };
+  }
+
   function evaluateContent(documentValue, options = {}) {
     const data = documentValue && typeof documentValue === 'object' ? documentValue : {};
     const process = data.process || {};
@@ -1186,17 +1307,19 @@
     const basicScore = 10 * (basicPassed / basicChecks.length);
 
     const dataFlowDetails = dataFlowConsistencyDetails(data);
+    const actionBehaviors = behaviors.filter(item => text(item?.node_type) === 'action');
     let behaviorPassed = 0;
     let behaviorTotal = 0;
-    if (!behaviors.length) {
+    if (!actionBehaviors.length) {
       issues.push(issue(
         '业务行为',
-        '尚未添加流程节点',
+        '尚未添加业务行为',
         { editorSection: 'process', processSection: 'behaviors' },
         '业务行为维度0分'
       ));
     }
     behaviors.forEach((item, index) => {
+      if (text(item?.node_type) !== 'action') return;
       const label = item.behavior_name || `第${index + 1}项行为`;
       const target = {
         editorSection: 'process',
@@ -1204,7 +1327,6 @@
         focusKind: 'behavior',
         focusRef: item.behavior_ref
       };
-      const isControlNode = ['decision', 'parallel_split', 'parallel_join'].includes(item.node_type);
       const nameReview = behaviorNameCompleteness(item);
       const hasDerivedEntry = (dataFlowDetails.incomingByBehavior.get(text(item.behavior_ref)) || [])
         .some(entry => entry.relation?.relation_type !== 'loop');
@@ -1237,22 +1359,22 @@
         [NODE_TYPES.has(item.node_type), `${label}未选择节点类型`, fieldTarget(target, `behaviors.${index}.node_type`)],
         [complete(item.behavior_name), `第${index + 1}项行为未填写名称`, fieldTarget(target, `behaviors.${index}.behavior_name`)],
         [
-          isControlNode || nameReview.complete,
+          nameReview.complete,
           `${label}的名称没有写清谁对什么做什么；请补齐主体、动作和对象，例如“编制人员编制产品制造大纲”`,
           fieldTarget(target, `behaviors.${index}.behavior_name`)
         ],
         [
-          isControlNode || actorAssignmentPassed,
+          actorAssignmentPassed,
           actorAssignmentMessage,
           fieldTarget(target, actorAssignmentFocusPath)
         ],
         [
-          isControlNode || hasDerivedEntry || complete(item.trigger),
+          hasDerivedEntry || complete(item.trigger),
           `${label}是流程入口，但未说明流程如何开始`,
           fieldTarget(target, `behaviors.${index}.trigger`)
         ],
         [
-          isControlNode || complete(item.completion_standard),
+          complete(item.completion_standard),
           `${label}未填写完成标准`,
           fieldTarget(target, `behaviors.${index}.completion_standard`)
         ]
@@ -1263,7 +1385,7 @@
         else issues.push(issue('业务行为', message, issueTarget, '影响业务行为维度'));
       });
     });
-    const behaviorScore = behaviors.length ? 25 * (behaviorPassed / Math.max(1, behaviorTotal)) : 0;
+    const behaviorScore = actionBehaviors.length ? 25 * (behaviorPassed / Math.max(1, behaviorTotal)) : 0;
 
     const validRelations = relations.filter(relation =>
       RELATION_TYPES.has(relation.relation_type)
@@ -1287,12 +1409,12 @@
         ],
         [
           behaviorRefs.has(relation.from_behavior_ref),
-          `流程关系${index + 1}未选择有效起点行为`,
+          `流程关系${index + 1}未选择有效起点节点`,
           fieldTarget(target, `flow_relations.${index}.from_behavior_ref`)
         ],
         [
           behaviorRefs.has(relation.to_behavior_ref),
-          `流程关系${index + 1}未选择有效目标行为`,
+          `流程关系${index + 1}未选择有效目标节点`,
           fieldTarget(target, `flow_relations.${index}.to_behavior_ref`)
         ]
       ];
@@ -1354,6 +1476,26 @@
       });
     }
 
+    const hiddenDecisions = hiddenDecisionDetails(data).issues;
+    hiddenDecisions.forEach(detail => {
+      issues.push(issue(
+        '判断出口',
+        detail.message,
+        detail.target,
+        '影响判断出口子项',
+        detail.suggestions
+      ));
+    });
+    const declaredRouteIssues = declaredRouteDetails(data).issues;
+    declaredRouteIssues.forEach(detail => {
+      issues.push(issue(
+        '判断出口',
+        detail.message,
+        detail.target,
+        '影响判断出口子项',
+        detail.suggestions
+      ));
+    });
     const decisionBehaviors = behaviors.filter(item => item.node_type === 'decision');
     let decisionPassed = 0;
     decisionBehaviors.forEach(item => {
@@ -1412,8 +1554,9 @@
         });
       }
     });
-    const decisionScore = decisionBehaviors.length
-      ? 2 * (decisionPassed / decisionBehaviors.length)
+    const decisionReviewTotal = decisionBehaviors.length + hiddenDecisions.length + declaredRouteIssues.length;
+    const decisionScore = decisionReviewTotal
+      ? 2 * (decisionPassed / decisionReviewTotal)
       : 2;
 
     const loopRelations = validRelations.filter(relation => relation.relation_type === 'loop');
@@ -1786,11 +1929,11 @@
       formScore = perFormScores.reduce((sum, value) => sum + value, 0) / perFormScores.length;
     }
 
-    const missingDescriptions = behaviors.filter(item => !complete(item.behavior_description)).length;
+    const missingDescriptions = actionBehaviors.filter(item => !complete(item.behavior_description)).length;
     if (missingDescriptions) {
       previewIssues.push(issue(
         '后续评审预告',
-        `${missingDescriptions}/${behaviors.length}个业务行为未填写“具体做什么”`,
+        `${missingDescriptions}/${actionBehaviors.length}个业务行为未填写“具体做什么”`,
         { editorSection: 'process', processSection: 'behaviors' },
         '本期不扣分；集中评审时关注每个行为实际执行的工作'
       ));
@@ -1928,6 +2071,8 @@
     parallelJoinGuidance,
     loopExitDetails,
     parallelRouteSafetyDetails,
+    hiddenDecisionDetails,
+    declaredRouteDetails,
     dataFlowConsistencyDetails,
     evaluateContent,
     technicalResult,

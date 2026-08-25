@@ -8,6 +8,7 @@
   const FLOW_TYPES = new Set(['', 'sequence', 'condition', 'loop', 'parallel']);
   const NODE_TYPES = new Set(['', 'action', 'decision', 'parallel_split', 'parallel_join']);
   const DATA_OPERATIONS = new Set(['create', 'update', 'use', 'pending_confirmation']);
+  const DECISION_VERB_PATTERN = /(?:校对|复核|审核|核查|审批|批准|验收|确认)/;
 
   function clone(value) {
     return JSON.parse(JSON.stringify(value));
@@ -143,16 +144,28 @@
     const warnings = [];
     const from = array(documentValue.behaviors).find(item => item.behavior_ref === relation.from_behavior_ref);
     const to = array(documentValue.behaviors).find(item => item.behavior_ref === relation.to_behavior_ref);
-    if (relation.relation_type === 'condition' && from?.node_type !== 'decision') warnings.push('判断分支的起点不是判断节点');
     if (relation.relation_type === 'parallel' && from?.node_type !== 'parallel_split' && to?.node_type !== 'parallel_join') {
       warnings.push('并行路线未连接并行开始或并行汇合');
     }
     if (['condition', 'loop'].includes(relation.relation_type) && !text(relation.condition).trim()) warnings.push('关系条件尚未填写');
-    const outgoing = array(documentValue.flow_relations).filter(item =>
+    const decisionOutcomes = array(documentValue.flow_relations).filter(item =>
+      item.from_behavior_ref === relation.from_behavior_ref
+      && ['sequence', 'condition', 'loop'].includes(item.relation_type)
+      && item.to_behavior_ref
+    );
+    const outgoing = decisionOutcomes.filter(item =>
       item.from_behavior_ref === relation.from_behavior_ref
       && item.relation_type !== 'loop'
       && item.to_behavior_ref
     );
+    const hasLoopOutcome = decisionOutcomes.some(item => item.relation_type === 'loop');
+    const hasConditionOutcome = decisionOutcomes.some(item => item.relation_type === 'condition');
+    if (from?.node_type === 'action' && (
+      hasConditionOutcome
+      || (hasLoopOutcome && (outgoing.length || DECISION_VERB_PATTERN.test(text(from.behavior_name))))
+    )) {
+      warnings.push('普通业务行为承载了条件分叉；请保留该业务行为，并在其后增加独立判断节点');
+    }
     if (from?.node_type === 'action' && new Set(outgoing.map(item => item.to_behavior_ref)).size > 1) {
       warnings.push('普通业务行为直接连接多个后续节点；请核对这是判断分支还是并行开始');
     }
@@ -187,6 +200,7 @@
     const behavior = array(documentValue.behaviors).find(item => item.behavior_ref === behaviorRef);
     if (!dataObject) return ['数据对象不存在'];
     if (!behavior) return ['业务行为不存在'];
+    if (behavior.node_type !== 'action') return ['判断和并行控制节点不是业务行为，不能建立数据操作关系'];
     const selected = unique(array(operations));
     if (selected.some(operation => !DATA_OPERATIONS.has(operation))) return ['数据操作类型无效'];
     if (!selected.length) return [];

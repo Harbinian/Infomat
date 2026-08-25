@@ -12,11 +12,14 @@ const {
   parallelStructureDetails,
   loopExitDetails,
   parallelRouteSafetyDetails,
+  hiddenDecisionDetails,
+  declaredRouteDetails,
   dataFlowConsistencyDetails,
   semanticProjection,
   stableStringify
 } = require('../public/structure-score.js');
 const { migrateProcessDocument } = require('../public/process-governance-migration.js');
+const GovernanceWorkflow = require('../public/governance-workflow.js');
 
 const departments = [
   '全公司',
@@ -172,6 +175,10 @@ assert.ok(
   REVIEW_READINESS.aspects.find(item => item.key === 'routing').confirmations
     .includes('嵌套循环的每一层都必须有明确退出条件和退出去向；内层退出可以进入外层，最外层必须退出到循环外。')
 );
+assert.ok(
+  REVIEW_READINESS.aspects.find(item => item.key === 'routing').confirmations
+    .includes('条件分叉必须由判断节点明确表达，不能用普通业务行为加连线条件代替判断节点。')
+);
 
 assert.deepEqual(behaviorNameCompleteness({ node_type: 'action', behavior_name: '编制' }), {
   complete: false,
@@ -179,6 +186,14 @@ assert.deepEqual(behaviorNameCompleteness({ node_type: 'action', behavior_name: 
   missingAction: false,
   missingObject: true
 });
+assert.equal(
+  behaviorNameCompleteness({ node_type: 'action', behavior_name: '校对人员校对产品制造大纲' }).complete,
+  true
+);
+assert.equal(
+  behaviorNameCompleteness({ node_type: 'action', behavior_name: '质量保证人员核查产品制造大纲' }).complete,
+  true
+);
 assert.equal(
   behaviorNameCompleteness({ node_type: 'action', behavior_name: '编制人员编制产品制造大纲' }).complete,
   true
@@ -383,6 +398,60 @@ loopDocument.flow_relations.push(relation(3, 'behavior-3', 'behavior-1', 'loop',
 const loopResult = content(loopDocument);
 assert.equal(loopResult.effectiveChainLength, 3, 'explicit loop edges must not lengthen the main chain');
 assert.equal(loopResult.dimensions.relation, 20);
+
+const hiddenApprovalDecisionDocument = createDocument(3);
+hiddenApprovalDecisionDocument.behaviors[1].behavior_name = '审核人员审核业务资料';
+hiddenApprovalDecisionDocument.flow_relations.push(
+  relation(3, 'behavior-2', 'behavior-1', 'loop', '审核不同意')
+);
+const hiddenApprovalDetails = hiddenDecisionDetails(hiddenApprovalDecisionDocument);
+assert.equal(hiddenApprovalDetails.issues.length, 1);
+assert.equal(hiddenApprovalDetails.issues[0].behaviorRef, 'behavior-2');
+assert.equal(hiddenApprovalDetails.issues[0].reason, 'decision_hidden_in_relations');
+assert.ok(hiddenApprovalDetails.issues[0].suggestions[0].includes('保留该业务行为'));
+const hiddenApprovalDecisionResult = content(hiddenApprovalDecisionDocument);
+assert.ok(hiddenApprovalDecisionResult.dimensions.relation < 20);
+assert.ok(hiddenApprovalDecisionResult.issues.some(item =>
+  item.message === '“审核人员审核业务资料”用普通业务行为承载条件分叉，判断被隐藏在流程关系中。'
+  && item.focusPath === 'behaviors.1.node_type'
+));
+hiddenApprovalDecisionDocument.behaviors.splice(2, 0, behavior(4, 'decision'));
+hiddenApprovalDecisionDocument.behaviors[2].behavior_ref = 'decision-review-result';
+hiddenApprovalDecisionDocument.behaviors[2].behavior_name = '业务资料审核结果是否同意';
+hiddenApprovalDecisionDocument.flow_relations = [
+  relation(1, 'behavior-1', 'behavior-2'),
+  relation(2, 'behavior-2', 'decision-review-result'),
+  relation(3, 'decision-review-result', 'behavior-1', 'loop', '审核不同意'),
+  relation(4, 'decision-review-result', 'behavior-3', 'condition', '审核同意')
+];
+assert.equal(hiddenDecisionDetails(hiddenApprovalDecisionDocument).issues.length, 0);
+assert.equal(content(hiddenApprovalDecisionDocument).dimensions.relation, 20);
+
+const declaredRouteDocument = createDocument(3);
+declaredRouteDocument.behaviors[0].behavior_name = '审核人员审核业务资料';
+declaredRouteDocument.behaviors[1].node_type = 'decision';
+declaredRouteDocument.behaviors[1].behavior_name = '业务资料审核结果是什么';
+declaredRouteDocument.behaviors[1].behavior_description = '审核同意且需要复核时进入复核；审核同意且不需要复核时直接进入批准；审核不同意时退回编制。';
+declaredRouteDocument.behaviors[2].behavior_name = '批准人员批准业务资料';
+declaredRouteDocument.flow_relations = [
+  relation(1, 'behavior-1', 'behavior-2'),
+  relation(2, 'behavior-2', 'behavior-1', 'loop', '审核不同意')
+];
+const missingDeclaredRoute = declaredRouteDetails(declaredRouteDocument);
+assert.ok(missingDeclaredRoute.issues.some(item => item.declaredTargetRef === 'behavior-3'));
+assert.equal(
+  GovernanceWorkflow.stepForTarget(missingDeclaredRoute.issues.find(item => item.declaredTargetRef === 'behavior-3').target),
+  'skeleton',
+  'a missing declared route must appear in the flow skeleton review instead of being hidden in action details'
+);
+declaredRouteDocument.flow_relations.push(
+  relation(3, 'behavior-2', 'behavior-3', 'condition', '审核同意且不需要复核')
+);
+assert.equal(
+  declaredRouteDetails(declaredRouteDocument).issues.some(item => item.declaredTargetRef === 'behavior-3'),
+  false,
+  'a declared direct route is satisfied only when the relation reaches the declared action'
+);
 
 const cycleDocument = createDocument(3);
 cycleDocument.flow_relations = [
