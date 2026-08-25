@@ -17,9 +17,10 @@ const subtabSource = html.slice(subtabStart, subtabEnd);
 [
   "{ key: 'editor', label: '流程编制' }",
   "{ key: 'handoffs', label: '跨部门承接待办' }",
-  "{ key: 'conflicts', label: '承接冲突待办' }"
+  "{ key: 'conflicts', label: '承接冲突待办' }",
+  "{ key: 'v7Preview', label: 'V7预览核对' }"
 ].forEach(fragment => assert.ok(subtabSource.includes(fragment), `missing unified subtab ${fragment}`));
-assert.strictEqual((subtabSource.match(/key: '/g) || []).length, 3, 'only three process governance workspaces are allowed');
+assert.strictEqual((subtabSource.match(/key: '/g) || []).length, 4, 'only four process governance workspaces are allowed');
 [
   '文档结构化输出',
   '待确认问题',
@@ -32,6 +33,23 @@ assert.strictEqual((subtabSource.match(/key: '/g) || []).length, 3, 'only three 
 assert.ok(html.includes('data-pg-view="editor"'), 'editor workspace must be routable');
 assert.ok(html.includes('data-pg-view="handoffs"'), 'handoff queue must be routable');
 assert.ok(html.includes('data-pg-view="conflicts"'), 'handoff conflict queue must be routable');
+assert.ok(html.includes('data-pg-view="v7Preview"'), 'V7 preview review must be routable');
+assert.ok(html.includes('/api/process-v7-preview/cases'), 'V7 preview review must use its isolated API');
+assert.ok(html.includes('V7文件只用于预览和跨部门核对'), 'V7 preview boundary must be visible to users');
+assert.ok(html.includes('id="pgV7PreviewFileInput"'), 'V7 preview must accept an explicit JSON upload');
+[
+  'id="pgV7FormalTargetMode"',
+  'id="pgV7FormalCreateFields"',
+  'id="pgV7FormalExistingFields"',
+  'id="pgPromoteV7PreviewBtn"',
+  'function promoteV7PreviewCase',
+  "$('pgV7FormalCreateFields').classList.toggle('pg-hidden'",
+  "$('pgV7FormalExistingFields').classList.toggle('pg-hidden'",
+  "'/promote'",
+  '新建流程主档',
+  '选择已有流程主档',
+  '正式V7草稿'
+].forEach(fragment => assert.ok(html.includes(fragment), `V7 formal promotion UI missing ${fragment}`));
 assert.ok(html.includes("return PROCESS_GOVERNANCE_VIEW_ALIASES[rawView] || 'editor'"), 'editor must be the default process governance workspace');
 assert.ok(html.includes("workspace=' + encodeURIComponent(view)"), 'handoff workspaces must use stable workspace routes');
 assert.ok(html.includes('data-src="/process-governance-editor/index.html"'), 'process governance must show the MDM-local 3001-style editor');

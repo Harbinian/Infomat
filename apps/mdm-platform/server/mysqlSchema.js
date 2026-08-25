@@ -935,6 +935,7 @@ CREATE TABLE IF NOT EXISTS process_governance_term_tasks (
 CREATE TABLE IF NOT EXISTS process_design_documents (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
   document_no VARCHAR(128) NOT NULL,
+  process_ref VARCHAR(160) NULL,
   document_title VARCHAR(255) NOT NULL,
   owning_department_id BIGINT NOT NULL,
   current_edition VARCHAR(16) NULL,
@@ -945,6 +946,7 @@ CREATE TABLE IF NOT EXISTS process_design_documents (
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uq_process_design_documents_no (document_no),
+  UNIQUE KEY uq_process_design_documents_process_ref (process_ref),
   INDEX idx_process_design_documents_dept (owning_department_id, status),
   INDEX idx_process_design_documents_current_version (current_version_id),
   CHECK (status IN ('active','retired')),
@@ -1436,6 +1438,8 @@ CREATE TABLE IF NOT EXISTS process_design_risks (
 CREATE TABLE IF NOT EXISTS process_design_review_tasks (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
   draft_id BIGINT NOT NULL,
+  draft_revision_no INT NULL,
+  content_hash CHAR(64) NULL,
   task_type VARCHAR(64) NOT NULL DEFAULT 'department_review',
   status VARCHAR(32) NOT NULL DEFAULT 'pending',
   assignee_role VARCHAR(128) NULL,
@@ -1445,6 +1449,7 @@ CREATE TABLE IF NOT EXISTS process_design_review_tasks (
   created_by BIGINT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_process_design_review_tasks_draft (draft_id, status),
+  INDEX idx_process_design_review_content (draft_id, draft_revision_no, content_hash, status),
   CHECK (task_type IN ('department_review','capability_review','publish_review')),
   CHECK (status IN ('pending','approved','rejected','needs_changes')),
   CONSTRAINT fk_process_design_review_tasks_draft FOREIGN KEY (draft_id)
@@ -1473,10 +1478,10 @@ CREATE TABLE IF NOT EXISTS process_design_versions (
   edition VARCHAR(16) NOT NULL,
   version_no VARCHAR(128) NOT NULL,
   department_id BIGINT NOT NULL,
-  l1_name VARCHAR(255) NOT NULL,
-  l2_name VARCHAR(255) NOT NULL,
-  l3_name VARCHAR(255) NOT NULL,
-  content_json JSON NOT NULL,
+  l1_name VARCHAR(255) NULL,
+  l2_name VARCHAR(255) NULL,
+  l3_name VARCHAR(255) NULL,
+  content_json JSON NULL,
       schema_version VARCHAR(64) NOT NULL DEFAULT 'process-governance-v3',
   process_content_json MEDIUMTEXT NULL,
   content_hash CHAR(64) NULL,
@@ -1500,7 +1505,6 @@ CREATE TABLE IF NOT EXISTS process_design_versions (
   CONSTRAINT fk_process_design_versions_department FOREIGN KEY (department_id)
     REFERENCES departments(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 
 CREATE TABLE IF NOT EXISTS terminology_term_types (
   code VARCHAR(64) PRIMARY KEY,

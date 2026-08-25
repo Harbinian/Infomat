@@ -7,7 +7,7 @@
 - 正式身份链路：`person -> user_accounts -> person_roles -> roles -> role_permissions -> permissions`
 - 遗留`users/user_roles`和SQLite人员接口：仅保留隔离测试或一个版本的只读兼容，不参与正式授权
 
-本规格改变流程治理入口、完整流程JSON草稿、身份、授权、责任证据、3001格式适配、跨部门承接和承接冲突对象；不停止3001，不修改`docs/norms/`流程输入基线，也不重做数据地图和术语治理对象。
+本规格改变流程治理入口、完整流程JSON草稿、V7预览核对、身份、授权、责任证据、3001格式适配、跨部门承接和承接冲突对象；不停止3001，不修改`docs/norms/`流程输入基线，也不重做数据地图和术语治理对象。
 
 ## 2. 组成模块
 
@@ -22,13 +22,16 @@
 | 模型接口 | `server/routes/rbac.js` | 固定模型只读接口 |
 | 责任接口 | `server/routes/governance.js` | 部门决定读取和追加接口 |
 | 会话与中间件 | `server/auth.js` | 登录、会话校验、权限校验和首次改密限制 |
-| 前端 | `public/index.html` | 三类流程治理工作区、故事链、角色责任页、账号管理和角色可见标签 |
+| 前端 | `public/index.html` | 四类流程治理工作区、故事链、V7预览核对、角色责任页、账号管理和角色可见标签 |
 | v1/v2规范化 | `server/processGovernanceV2.js` | 结构校验、v1兼容、引用检查、治理提示和规范化内容哈希 |
 | 承接迁移 | `server/crossDeptHandoffV2Migration.js` | 盘点、备份、v2字段和状态迁移、核对与补偿 |
 | 统一入口迁移 | `server/processGovernanceUnifiedMigration.js` | 完整JSON、草稿修订、承接冲突和只追加事件的dry-run、迁移、回滚与补偿 |
 | v3表单迁移 | `server/processGovernanceV3Migration.js` | 把草稿和发布版本中的v1/v2完整JSON无损规范化为v3，补表单状态、重算摘要并按批次备份和恢复 |
 | 流程设计接口 | `server/routes/processDesignMysql.js` | 两阶段导入、事务写入、承接状态机、双方决定和发布卡口 |
 | 角色工作台 | `server/routes/roleWorkbench.js` | 直接读取承接和冲突队列，并生成统一入口深链接 |
+| V7预览核对 | `server/processV7PreviewReview*.js`、`server/routes/processV7PreviewReview.js` | 校验V7、生成固定跨部门核对项、隔离保存修订与部门结果，并保持预览边界 |
+| V7迁移基线 | `server/processV7M0Baseline.js`、`scripts/inspect-process-v7-m0-baseline.js` | 只读核对正式三表、JSON摘要、引用关系和live schema差异 |
+| V7正式基础迁移 | `server/processV7FormalMigration.js` | 以幂等DDL增加原生V7所需可空列、审核正文绑定和提升审计；不创建业务行 |
 
 ## 3. 授权计算
 
@@ -99,6 +102,7 @@
 - `process_design_drafts.process_content_json`保存完整v3 JSON真源；`revision_no`和`content_hash`用于乐观并发与内容核对。
 - `process_design_handoff_conflicts`保存承接冲突当前状态和协调方案。
 - `process_design_handoff_events`只追加承接、冲突和项目决策事件。
+- `process_v7_preview_cases`、`process_v7_preview_revisions`、`process_v7_preview_review_items`和`process_v7_preview_events`只保存V7预览核对，不引用或写入正式流程版本。
 - 保存完整v3 JSON时，同一数据库事务同步流程、业务行为、承接候选修订和事件。投影同步失败时回滚JSON修订，不形成半套治理事实。
 - 删除已有治理记录的承接必须提交`handoff_ref`和作废原因；历史承接只取消当前标记，不物理删除。
 
@@ -174,6 +178,20 @@ MDM工作组组长只能在卡口通过后发布，不能以角色权限跳过�
 - 内容哈希未变化时不增加修订号；变化时增加修订并更新时间、更新人和哈希。
 - 浏览器不使用`localStorage`或`sessionStorage`保存业务内容。
 
+### 9.3 V7预览核对隔离
+
+- V7通过`/api/process-v7-preview`进入专用案例，不经过正式V3导入、草稿或发布接口。
+- 服务端加载V1至V7完整规则链校验文件，按归口部门和固定执行部门生成核对项。不能识别部门时只返回提示，不推测业务事实。
+- 新修订以`process_ref`、内容摘要、核对项稳定标识和核对内容摘要进行并发与变化判断。未变化项沿用双方结果，变化项重新打开。
+- 部门核对写入同时校验权限、当前人员部门、核对方和修订号。管理员不得执行写操作。
+- 运行时路由不得自动建表；数据库结构只能通过空库初始化或明确授权的迁移命令建立。
+- `PROCESS_V7_PREVIEW_ENABLED`和`PROCESS_V7_FORMAL_ENABLED`默认关闭。M0、M1、M2及相应接口门禁通过后，只能在受控试点运行实例开启；本机技术验收开启不等于向全部流程开放。
+- V7提升事务按预览案例、当前修订、目标主档、活动草稿的顺序加锁；相同修订和摘要使用提升审计唯一约束保证幂等。
+- V7审核任务保存`draft_revision_no`和`content_hash`。审核或发布发现绑定过期时返回409，不允许旧结论覆盖当前正文。
+- V7发布事务按草稿、主档、当前版本、审核任务的顺序加锁。发布版本不填伪造的L1、L2、L3或V3投影，成功响应返回`process_version_id`。
+- `GET /api/process-design/versions/:processVersionId/content`只从不可变正式版本读取完整正文，并对V7重新计算摘要；正式下游不得读取预览案例。
+- 3001与3000共同调用仓库内无网络、数据库和浏览器副作用的V7校验入口；预览上传、后续提升和发布三个信任边界都必须重新验证。
+
 ## 10. 安全控制
 
 - 密码由`bcryptjs`保存散列。
@@ -187,7 +205,7 @@ MDM工作组组长只能在卡口通过后发布，不能以角色权限跳过�
 
 ## 11. 兼容与迁移
 
-身份迁移见[RBAC-RACI-Migration-Runbook.md](docs/RBAC-RACI-Migration-Runbook.md)，承接迁移见[Cross-Department-Handoff-Migration-Runbook.md](docs/Cross-Department-Handoff-Migration-Runbook.md)，v3表单状态迁移见[Process-Governance-V3-Migration-Runbook.md](docs/Process-Governance-V3-Migration-Runbook.md)。
+身份迁移见[RBAC-RACI-Migration-Runbook.md](docs/RBAC-RACI-Migration-Runbook.md)，承接迁移见[Cross-Department-Handoff-Migration-Runbook.md](docs/Cross-Department-Handoff-Migration-Runbook.md)，v3表单状态迁移见[Process-Governance-V3-Migration-Runbook.md](docs/Process-Governance-V3-Migration-Runbook.md)，V7预览和原生正式基础迁移见[Process-V7-Preview-Review-Migration-Runbook.md](docs/Process-V7-Preview-Review-Migration-Runbook.md)。
 
 切换原则：
 
@@ -224,4 +242,4 @@ npm run start:infomat-services
 npm run smoke:infomat-services
 ```
 
-浏览器至少核对登录页、首次改密、管理员账号管理、只读角色责任页、角色可见标签、多角色标签并集、三个流程治理工作区、承接故事链、冲突处理、管理员业务写按钮不可用和代表性角色的数据范围。3001继续单独验证首页和`/api/health`，不得因MDM上线而停止。
+浏览器至少核对登录页、首次改密、管理员账号管理、只读角色责任页、角色可见标签、多角色标签并集、四个流程治理工作区、V7案例与修订上传、双方部门核对、承接故事链、冲突处理、管理员业务写按钮不可用和代表性角色的数据范围。3001继续单独验证首页和`/api/health`，不得因MDM上线而停止。

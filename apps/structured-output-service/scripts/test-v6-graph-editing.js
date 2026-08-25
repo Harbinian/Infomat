@@ -554,6 +554,86 @@ function testMigration() {
   assert.throws(() => Migration.migrateDocument(v5Fixture(), { validateTarget: () => ({ valid: false, errors: [{ message: '目标失败' }] }) }), /目标失败/);
 }
 
+function testLegacyBehaviorSideDataReferences() {
+  for (const version of ['process-governance-v1', 'process-governance-v2', 'process-governance-v3']) {
+    const source = v5Fixture(version);
+    source.data_objects = [{
+      data_ref: 'data-application',
+      data_name: '费用申请',
+      description: '申请信息',
+      governance_status: 'candidate',
+      produced_by_behavior_ref: null,
+      consumed_by_behavior_refs: []
+    }];
+    source.behaviors[0].output_data_refs = ['data-application'];
+    source.behaviors[1].input_data_refs = ['data-application'];
+    const sourceSnapshot = JSON.stringify(source);
+
+    const migrated = Migration.migrateDocument(source)[0];
+    const links = migrated.data_objects[0].behavior_links.map(link => ({
+      behavior_ref: link.behavior_ref,
+      operation: link.operation
+    }));
+
+    assert.equal(JSON.stringify(source), sourceSnapshot, `${version} behavior-side migration must not change the source`);
+    assert.deepEqual(links, [
+      { behavior_ref: 'behavior-apply', operation: 'create' },
+      { behavior_ref: 'behavior-review', operation: 'use' }
+    ], `${version} behavior-side data references must survive migration`);
+    assert.deepEqual(Migration.migrateDocument(migrated)[0], migrated, `${version} behavior-side migration must be idempotent`);
+  }
+}
+
+function testLegacyConflictingOutputReferencesRemainPending() {
+  const source = v5Fixture('process-governance-v3');
+  source.data_objects = [{
+    data_ref: 'data-application',
+    data_name: '费用申请',
+    description: '申请信息',
+    governance_status: 'candidate',
+    produced_by_behavior_ref: 'behavior-apply',
+    consumed_by_behavior_refs: ['behavior-review']
+  }];
+  source.behaviors[1].output_data_refs = ['data-application'];
+  source.behaviors[1].input_data_refs = ['data-application'];
+  const sourceSnapshot = JSON.stringify(source);
+
+  const migrated = Migration.migrateDocument(source)[0];
+  const links = migrated.data_objects[0].behavior_links.map(link => ({
+    behavior_ref: link.behavior_ref,
+    operation: link.operation
+  }));
+
+  assert.equal(JSON.stringify(source), sourceSnapshot, 'conflicting legacy references must not change the source');
+  assert.deepEqual(links, [
+    { behavior_ref: 'behavior-apply', operation: 'pending_confirmation' },
+    { behavior_ref: 'behavior-review', operation: 'pending_confirmation' }
+  ], 'conflicting producer references must remain visible for confirmation');
+}
+
+function testLegacyMultipleBehaviorOutputsRemainPending() {
+  const source = v5Fixture('process-governance-v3');
+  source.data_objects = [
+    {
+      data_ref: 'data-application', data_name: '费用申请', description: '申请信息', governance_status: 'candidate',
+      produced_by_behavior_ref: null, consumed_by_behavior_refs: []
+    },
+    {
+      data_ref: 'data-attachment', data_name: '费用附件', description: '附件信息', governance_status: 'candidate',
+      produced_by_behavior_ref: null, consumed_by_behavior_refs: []
+    }
+  ];
+  source.behaviors[0].output_data_refs = ['data-application', 'data-attachment'];
+
+  const migrated = Migration.migrateDocument(source)[0];
+  assert.deepEqual(
+    migrated.data_objects.map(dataObject => dataObject.behavior_links.map(link => link.operation)),
+    [['pending_confirmation'], ['pending_confirmation']],
+    'multiple outputs from one legacy behavior must not be guessed as confirmed creation operations'
+  );
+  assert.deepEqual(Migration.migrateDocument(migrated)[0], migrated, 'multiple-output migration must be idempotent');
+}
+
 function testCommandsAndState() {
   const documentValue = Migration.migrateDocument(v5Fixture())[0];
   const sourceSnapshot = JSON.stringify(documentValue);
@@ -576,11 +656,33 @@ function testCommandsAndState() {
   });
   assert.equal(relationAdded.ok, true, 'one-to-many is represented by two independent relations');
 
+  const hiddenDecision = Commands.applyCommand(documentValue, {
+    type: 'upsert_flow_relation',
+    relation: {
+      relation_ref: 'relation-review-return',
+      relation_type: 'loop',
+      from_behavior_ref: 'behavior-review',
+      to_behavior_ref: 'behavior-apply',
+      condition: '审核不同意'
+    }
+  });
+  assert.equal(hiddenDecision.ok, true, 'a decision modeling problem remains a non-blocking business warning');
+  assert.ok(hiddenDecision.details.warnings.includes('普通业务行为承载了条件分叉；请保留该业务行为，并在其后增加独立判断节点'));
+
   const pendingConflict = Commands.applyCommand(documentValue, {
     type: 'set_data_operations', dataRef: 'data-application', behaviorRef: 'behavior-review',
     operations: ['pending_confirmation', 'use'], refFactory: operation => `link-${operation}`
   });
   assert.equal(pendingConflict.ok, false);
+
+  const decisionDataDocument = clone(documentValue);
+  decisionDataDocument.behaviors.find(item => item.behavior_ref === 'behavior-review').node_type = 'decision';
+  const decisionDataRelation = Commands.applyCommand(decisionDataDocument, {
+    type: 'set_data_operations', dataRef: 'data-application', behaviorRef: 'behavior-review',
+    operations: ['use'], refFactory: operation => `link-decision-${operation}`
+  });
+  assert.equal(decisionDataRelation.ok, false);
+  assert.match(decisionDataRelation.message, /控制节点不是业务行为/);
 
   const updateFieldRef = documentValue.data_objects[0].fields[0].field_ref;
   const updateSelection = Commands.applyCommand(documentValue, {
@@ -691,6 +793,52 @@ function testDiagramModelsAndPerformance() {
   assert.ok(useFanOutEdges.every(edge => edge.data.curveStyle === 'straight'), 'one-to-many use edges must fan out directly instead of sharing a taxi turn through sibling nodes');
   const badgeModel = ProcessDiagram.buildGraphModel(documentValue);
   assert.ok(badgeModel.nodes.some(node => node.classes?.includes('data-aggregate-badge')), 'behavior data badge should be present');
+
+  const actionDecisionReturnDocument = clone(documentValue);
+  actionDecisionReturnDocument.behaviors = [
+    behavior('behavior-compile', '编制人员编制产品制造大纲', '工程技术部工艺员'),
+    behavior('behavior-proofread', '校对人员校对产品制造大纲', '工程技术部工艺员'),
+    behavior('decision-proofread-result', '产品制造大纲校对结果是什么', '', 'decision'),
+    behavior('behavior-review', '大纲审核人员审核产品制造大纲', '工程技术部审核员'),
+    behavior('decision-review-result', '产品制造大纲审核结果是什么', '', 'decision')
+  ];
+  actionDecisionReturnDocument.flow_relations = [
+    { relation_ref: 'relation-compile-proofread', relation_type: 'sequence', from_behavior_ref: 'behavior-compile', to_behavior_ref: 'behavior-proofread', condition: '' },
+    { relation_ref: 'relation-proofread-result', relation_type: 'sequence', from_behavior_ref: 'behavior-proofread', to_behavior_ref: 'decision-proofread-result', condition: '' },
+    { relation_ref: 'relation-proofread-agree', relation_type: 'condition', from_behavior_ref: 'decision-proofread-result', to_behavior_ref: 'behavior-review', condition: '校对同意' },
+    { relation_ref: 'relation-proofread-return', relation_type: 'loop', from_behavior_ref: 'decision-proofread-result', to_behavior_ref: 'behavior-compile', condition: '校对不同意' },
+    { relation_ref: 'relation-review-result', relation_type: 'sequence', from_behavior_ref: 'behavior-review', to_behavior_ref: 'decision-review-result', condition: '' },
+    { relation_ref: 'relation-review-return', relation_type: 'loop', from_behavior_ref: 'decision-review-result', to_behavior_ref: 'behavior-compile', condition: '审核不同意' }
+  ];
+  const actionDecisionReturnModel = ProcessDiagram.buildGraphModel(actionDecisionReturnDocument);
+  assert.equal(
+    actionDecisionReturnModel.layout.collisions.length,
+    0,
+    `action-decision return route collisions: ${actionDecisionReturnModel.layout.collisions.join(', ')}`
+  );
+  const returnTrack = actionDecisionReturnModel.layout.routeTracks.find(item => item.relationRef === 'relation-proofread-return');
+  const proofreadNode = actionDecisionReturnModel.nodes.find(node => node.data.focusRef === 'behavior-proofread');
+  assert.ok(
+    returnTrack.labelBounds.y1 > proofreadNode.position.y + proofreadNode.data.nodeHeight / 2,
+    'a lower return route label must clear intervening action nodes'
+  );
+  const returnBundle = actionDecisionReturnModel.layout.bundles.find(bundle =>
+    bundle.targetRef === 'behavior-compile' && bundle.approach === 'bottom'
+  );
+  assert.deepEqual(
+    returnBundle.relationRefs,
+    ['relation-proofread-return', 'relation-review-return'],
+    'relations returning to the same behavior must merge into one visual incoming trunk'
+  );
+  assert.equal(
+    actionDecisionReturnModel.edges.filter(edge => edge.classes.includes('relation-bundle-trunk')).length,
+    1,
+    'a same-target relation bundle must render exactly one final arrow into the target'
+  );
+  assert.ok(
+    actionDecisionReturnModel.layout.routeSegments.every(segment => [0, 45, 90].includes(segment.angle)),
+    'every visible process relation segment must use a 0, 45, or 90 degree angle'
+  );
 
   const representative = clone(documentValue);
   representative.behaviors = Array.from({ length: 40 }, (_, index) => ({
@@ -844,6 +992,9 @@ function testDiagramModelsAndPerformance() {
 }
 
 function main() {
+  testLegacyBehaviorSideDataReferences();
+  testLegacyConflictingOutputReferencesRemainPending();
+  testLegacyMultipleBehaviorOutputsRemainPending();
   testMigration();
   testLegacyCrossDepartmentDiagnostics();
   testCommandsAndState();

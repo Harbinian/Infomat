@@ -16,6 +16,16 @@
 | `npm run test:mainline` | MDM主线：组织结构、固定RBAC/RACI、角色工作台、人员身份、流程治理、数据地图、字段、术语、冲突、待办和导入导出 | MySQL路径使用fake pool/repository；遗留测试只使用隔离本地库并在结束后清理 |
 | `npm run test:process-governance` | 流程治理 MySQL 读模型、MySQL 导入/冒烟、Sankey API、MySQL 身份权限、输入基线问题复核、文档结构化输出、统一问题池、前端挂钩和字段引用 | 正式口径为 MySQL-only；当前入口使用 fake MySQL pool / fake repository，不连接真实库，不纳入遗留 SQLite 服务器/仓储测试 |
 | `npm run test:process-design` | 文档结构化输出 API、MySQL schema、制度主档、制度编号校验、A/B/AA 版次生成、下一版次完整重写草稿、制度 profile、术语、草稿级 L1/L2 既有映射枚举校验、流程明细、行为详情、跨部门承接回写、附表结构、字段新增/修改/删除/排序、自动编号、字段空格校验、证据状态核验、Markdown 草案导出、发布替代链路，以及术语/流程/业务行为编辑、删除、作废和只读状态 | 使用 fake process-design repository 和 fake MySQL 身份 repository，不连接真实库 |
+| `npm run test:process-v7-preview-review` | V7完整规则校验、固定跨部门核对项、修订沿用与重开、部门范围、管理员只读、预览边界和迁移保护 | 使用fake repository和fake pool，不连接真实库 |
+| `npm run migrate:process-v7-preview:dry-run` | 只读检查四张V7预览核对表、迁移记录、正式三表数量和摘要 | 通过仓库固定服务配置和本机受控环境加载连接；目标脱敏输出，不写入MySQL |
+| `npm run migrate:process-v7-preview:apply` | 建立V7预览核对专用表和迁移记录 | 写入目标MySQL；必须在备份、明确授权和dry-run通过后执行 |
+| `npm run migrate:process-v7-preview:rollback` | 仅在四张专用表均为空时删除表和迁移记录 | 写入目标MySQL；发现任何业务记录即拒绝执行 |
+| `npm run inspect:process-v7-m0` | 读取正式三表数量、摘要、引用关系、JSON一致性和live schema差异 | 只读连接目标MySQL；证据写入`output/process-v7-m0/` |
+| `npm run rehearse:process-v7-m0-backup-restore` | 生成全库备份，在专用临时MySQL恢复并核对全部对象与正式三表摘要 | 读取正式库；只写本机备份目录和临时数据库，不写正式库 |
+| `npm run migrate:process-v7-formal:dry-run` | 只读检查M2列、索引、提升审计表和正式V3摘要 | 连接目标MySQL但不写入；目标脱敏输出 |
+| `npm run migrate:process-v7-formal:apply` | 增加原生V7正式基础，不创建V7业务行 | 写入目标MySQL；必须在M1核对通过并取得单独授权后执行 |
+| `npm run migrate:process-v7-formal:rollback` | 仅在没有V7正式使用痕迹时移除M2对象 | 写入目标MySQL；发现提升、V7草稿、版本或审核正文绑定即拒绝执行 |
+| `npm run rehearse:process-v7-migrations-isolated` | 在备份恢复的临时MySQL中验证M1/M2部分DDL恢复、重复执行、提升幂等、过期审核拒绝、正式发布读回、并发发布和空表回退 | 不写正式库；完成后移除临时容器 |
 | `npm run test:identity-mysql` | `person/user_accounts/person_roles`身份链路、登录、会话、本人改密、固定角色只读接口、通用权限中间件、范围helper和旧RBAC导入拒绝 | 使用fake MySQL pool和fake repository，不连接真实库 |
 | `npm run test:access-mysql` | 验证 `access.js` 中角色码读取、管理员判断、全局查看、复核权限和待办处理判断的 MySQL-aware 异步 helper | 使用 fake repository，不连接真实库 |
 | `npm run test:role-workbench-mysql` | 角色工作台在 `MDM_IDENTITY_READ_MODEL=mysql` 下从 MySQL 身份读模型读取当前用户、角色、部门和权限；在 `PROCESS_GOVERNANCE_READ_MODEL=mysql` 下从流程治理 MySQL repository 读取质量问题和映射待办 | 使用 fake repository，不连接真实库 |

@@ -11,6 +11,10 @@
 - [流程草稿、承接与冲突数据库结构](docs/Cross-Department-Handoff-DB-Schema.md)
 - [流程治理统一入口迁移手册](docs/Cross-Department-Handoff-Migration-Runbook.md)
 - [单流程治理v3表单状态迁移手册](docs/Process-Governance-V3-Migration-Runbook.md)
+- [V7预览核对功能设计](docs/Process-V7-Preview-Review-Design.md)
+- [V7预览核对接口约定](docs/Process-V7-Preview-Review-API-Contract.md)
+- [V7预览核对数据说明](docs/Process-V7-Preview-Review-DB-Schema.md)
+- [V7预览核对与原生正式基础迁移说明](docs/Process-V7-Preview-Review-Migration-Runbook.md)
 - [跨部门承接闭环测试说明](docs/Cross-Department-Handoff-Test-Plan.md)
 - [产品需求](PRD.md)
 - [技术规格](Tech-Spec.md)
@@ -47,10 +51,11 @@
 ## 流程治理统一入口与3001格式适配
 
 - 3001继续作为独立、无状态的单流程编制工具运行。MDM不停止、不代管、不远程读取3001，只接收用户选择的v1/v2文件。
-- MDM顶部只保留一个“流程治理”入口，内部只显示“流程编制、跨部门承接待办、承接冲突待办”。
+- MDM顶部只保留一个“流程治理”入口，内部显示“流程编制、跨部门承接待办、承接冲突待办、V7预览核对”四个工作区。
 - “流程编制”直接显示MDM本地的3001式工作台，包含文字编制、条目侧栏、稳定排序、结构化学习评分和跨职能流程图。MDM复用相同v2结构规则，但不通过浏览器调用3001服务。
 - 部门主对接人可以新建、导入、保存草稿和提交审核；管理员只能打开已有草稿查看。导出备份不替代保存草稿。
 - MDM兼容`process-governance-v1`、`process-governance-v2`和`process-governance-v3`，服务端统一规范化、保存和导出为v3；3001源文件不被修改。v1、v2表单状态设为`unspecified`，不得按名称或明细数量推断。
+- 用户可把3001导出的`process-governance-v7`文件上传到“V7预览核对”。3000保存案例、修订、双方部门核对结果和操作记录；预览阶段不转换为V3、不写正式草稿和版本，核对结果也不写回V7文件。正式库M1/M2已于2026-08-25按授权应用，原生V7的提升、审核、发布和版本读回技术链路已通过隔离演练；正式V7业务记录仍为0，真实脱敏流程试点尚未完成。
 - `process_design_drafts.process_content_json`是完整流程JSON真源。保存必须携带`expected_revision`，并发不一致返回`409 DRAFT_REVISION_CONFLICT`。
 - `POST /api/process-design/import-structured-output/preview`只返回摘要、承接候选、治理提示和内容哈希，不写数据库。
 - `POST /api/process-design/import-structured-output/approve`仅允许归口部门`department_mdm_reviewer`执行，并在单一MySQL事务中写入流程草稿、承接投影、参与关系、事件和导入审计。
@@ -218,6 +223,12 @@ npm run test:process-governance-unified
 npm run migrate:process-governance-unified:dry-run
 npm run test:process-governance-v3-migration
 npm run migrate:process-governance-v3:dry-run
+npm run test:process-v7-preview-review
+npm run migrate:process-v7-preview:dry-run
+npm run inspect:process-v7-m0
+npm run rehearse:process-v7-m0-backup-restore
+npm run migrate:process-v7-formal:dry-run
+npm run rehearse:process-v7-migrations-isolated
 npm run import:process-governance-mysql
 npm run smoke:process-governance-mysql
 ```
@@ -238,7 +249,7 @@ npm run smoke:process-governance-mysql
 - `/api/org/accounts`是唯一普通账号写入口。旧`/api/org/users*`写操作和`/api/import-rbac/*`批量写入返回`410 LEGACY_IDENTITY_API_RETIRED`；角色矩阵写操作返回`405 CORE_GOVERNANCE_MODEL_READ_ONLY`。
 - 流程治理正式前端入口为`#/processGovernance`，默认进入流程编制。旧“文档结构化输出、待确认问题、流程图谱、证据来源、映射工作、治理闭环”不再提供前端入口；原表和旧接口暂留作只读历史，不作为新业务写入口。
 - 流程编制使用`public/process-governance-editor/`中的MDM本地工作台。页面按“基本信息、目的与范围、术语定义、流程步骤、表单与记录、导出检查”编制，并提供条目侧栏、稳定排序、结构评分和跨职能流程图；“表单与记录”按整张纸质表单显示全部字段，并由用户明确字段归属；完整`process-governance-v3` JSON保存到MySQL，浏览器不持久化业务草稿。
-- 3001当前输出的v1/v2单流程文件均可导入MDM。导入时MDM只读取用户选择的文件，不反向调用3001服务；服务端重新校验结构、身份、部门范围和内容哈希，上传文件中的审核状态不作为凭证。
+- 3001当前V7文件只通过用户主动下载和上传进入V7预览核对。MDM不反向调用3001服务；预览上传、后续提升和发布必须分别重新校验结构、语义、身份、部门范围、修订号和内容摘要，上传文件中的任何审核状态不作为凭证。
 - 跨部门承接待办和承接冲突待办均直接进入流程治理对应队列。角色工作台使用深链接跳转到承接或冲突对象；故事链展示处理人、部门、时间、依据及退回或冲突分支。
 - `npm run test:mainline` 用于验证“流程治理 -> 字段台账 -> 主数据对象 -> 权限 -> 导入导出”主线，详见 `docs/plans/流程治理字段台账主线稳定性检查.md`。
 - 不直接运行会删除共享数据库的旧式测试逻辑。

@@ -392,6 +392,10 @@
     orderedActive(tables, 'data_behavior_links').forEach(row => {
       if (!ensureParent(result, row, 'data_behavior_links', 'data_ref', row.data_ref, dataMap, '数据对象')) return;
       if (!ensureParent(result, row, 'data_behavior_links', 'behavior_ref', row.behavior_ref, behaviorMap, '业务行为')) return;
+      if (behaviorMap.get(row.behavior_ref)?.node_type !== 'action') {
+        problem(result.errors, row, 'data_behavior_links', 'behavior_ref', 'ACTION_BEHAVIOR_REQUIRED', '数据关系只能关联实际办理业务的行为，不能关联判断、并行、开始或结束等控制节点');
+        return;
+      }
       if (!forbidMove(result, row, 'data_behavior_links', 'data_ref', row.data_ref)) return;
       const sourceOwner = sourceDataLinkOwners.get(row.link_ref);
       const existing = arrays(sourceOwner?.behavior_links).find(item => item.link_ref === row.link_ref);
@@ -435,6 +439,10 @@
     orderedActive(tables, 'form_behavior_links').forEach(row => {
       if (!ensureParent(result, row, 'form_behavior_links', 'form_ref', row.form_ref, formMap, '表单')) return;
       if (!ensureParent(result, row, 'form_behavior_links', 'behavior_ref', row.behavior_ref, behaviorMap, '业务行为')) return;
+      if (behaviorMap.get(row.behavior_ref)?.node_type !== 'action') {
+        problem(result.errors, row, 'form_behavior_links', 'behavior_ref', 'ACTION_BEHAVIOR_REQUIRED', '表单处理关系只能关联实际办理业务的行为，不能关联判断、并行、开始或结束等控制节点');
+        return;
+      }
       if (!forbidMove(result, row, 'form_behavior_links', 'form_ref', row.form_ref)) return;
       const sourceOwner = sourceFormLinkOwners.get(row.link_ref);
       const existing = arrays(sourceOwner?.behavior_links).find(item => item.link_ref === row.link_ref);

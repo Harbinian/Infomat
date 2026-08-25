@@ -22,7 +22,7 @@ if (process.env.NODE_ENV === 'production' &&
 
 app.use(securityHeaders);
 app.use(express.static(path.join(__dirname, '../public')));
-app.use(express.json());
+app.use(express.json({ limit: '2mb' }));
 
 app.use(session({
   secret: SESSION_SECRET,
@@ -69,6 +69,7 @@ registerRouteIfExists('/api/process-governance/guidance', 'governanceGuidance');
 registerRouteIfExists('/api/process-governance', 'processGovernance');
 registerRouteIfExists('/api/process-design/editor', 'processDesignEditor');
 registerRouteIfExists('/api/process-design', process.env.PROCESS_GOVERNANCE_READ_MODEL === 'mysql' ? 'processDesignMysql' : 'processDesign');
+registerRouteIfExists('/api/process-v7-preview', 'processV7PreviewReview');
 registerRouteIfExists('/api/role-workbench', 'roleWorkbench');
 registerRouteIfExists('/api/page-workflows', 'pageWorkflows');
 registerRouteIfExists('/api/org-units', 'orgUnit');
