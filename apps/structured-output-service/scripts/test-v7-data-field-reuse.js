@@ -94,12 +94,20 @@ function run() {
     delete item.data_field_ref;
     delete item.value_usage_mode;
   })));
+  const previewV7Snapshot = JSON.parse(JSON.stringify(previewV7));
   assert.equal(Migration.needsDataFieldUpgrade(previewV7), true);
   const upgradedPreview = Migration.migrateDocument(previewV7)[0];
+  assert.deepEqual(previewV7, previewV7Snapshot, 'early v7 migration must not modify the selected source file');
   assert.equal(upgradedPreview.data_objects[0].lifecycle.applicability, 'not_applicable');
   assert.equal(upgradedPreview.data_objects[0].lifecycle.decision_reason, 'reference_only');
   assert.equal(upgradedPreview.data_objects[0].fields.length, 1);
   assertValid(upgradedPreview, 'preview v7 migration');
+  const upgradedPreviewRoundTrip = JSON.parse(JSON.stringify(upgradedPreview));
+  assert.deepEqual(
+    Migration.migrateDocument(upgradedPreviewRoundTrip)[0],
+    upgradedPreview,
+    'early v7 migration must survive export, re-import and repeated migration without further changes'
+  );
 
   const updateFieldPreview = JSON.parse(JSON.stringify(reused));
   updateFieldPreview.behaviors.push({

@@ -2718,7 +2718,7 @@
 
     function handoffEventLabel(type) {
       var labels = {
-        handoff_candidate_created: '生成承接候选',
+        handoff_candidate_created: '生成承接待核对项',
         counterparty_assigned: '分派责任部门',
         department_decision_recorded: '记录部门决定',
         handoff_returned: '退回上一责任步骤',
@@ -3034,6 +3034,7 @@
     function renderV7PreviewReviewItem(item, revisionNo, contentHash) {
       var snapshot = item.item_snapshot || {};
       var behavior = snapshot.behavior || {};
+      var actorRoleLabel = item.status === 'confirmed' ? '执行角色' : '执行角色待确认';
       var myStatus = item.my_party === 'origin' ? item.origin_status : item.my_party === 'counterparty' ? item.counterparty_status : '';
       var myBasis = item.my_party === 'origin' ? item.origin_basis : item.my_party === 'counterparty' ? item.counterparty_basis : '';
       var actions = (item.allowed_actions || []).indexOf('record_department_decision') >= 0 ? '<div class="process-design-form" style="margin-top:12px">' +
@@ -3047,7 +3048,7 @@
         '<div class="grid g4">' +
           '<div class="metric"><div class="lbl">归口部门结果</div><div style="margin-top:6px">' + statusTag(item.origin_status) + '</div></div>' +
           '<div class="metric"><div class="lbl">承接部门结果</div><div style="margin-top:6px">' + statusTag(item.counterparty_status) + '</div></div>' +
-          '<div class="metric"><div class="lbl">执行角色候选</div><div style="margin-top:6px">' + safeText(item.actor_role || '待确认') + '</div></div>' +
+          '<div class="metric"><div class="lbl">' + actorRoleLabel + '</div><div style="margin-top:6px">' + safeText(item.actor_role || '待确认') + '</div></div>' +
           '<div class="metric"><div class="lbl">修订处理</div><div style="margin-top:6px">' + safeText(({new:'新核对项',carried_forward:'沿用原结论',reopened:'内容变化，重新核对'})[item.carry_state] || item.carry_state) + '</div></div>' +
         '</div>' +
         '<div class="notice" style="margin-top:12px"><b>触发：</b>' + safeText(behavior.trigger || '待确认') + '<br><b>完成标准：</b>' + safeText(behavior.completion_standard || '待确认') + '</div>' +

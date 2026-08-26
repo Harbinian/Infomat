@@ -60,6 +60,8 @@ npm run test:pmo-task-data
 
 4. 如任务数、字段数或里程碑数量变化，先核对 Markdown 真源是否确实发生增删。
 
+当前两份`tasks.json`中的每条任务固定输出43个顶层字段，唯一字段清单为`build_pmo_task_data.py`中的`TASK_OUTPUT_FIELD_KEYS`。新增或删除输出字段时，维护人员必须同时修改该清单、生成逻辑、计划真源摘要、两份README和`../scripts/check-pmo-task-data.mjs`；不得只修改任务样本、manifest或页面说明。
+
 ## 流程地图驾驶舱
 
 - 主文件是 `procedure-management/dashboard.html`。

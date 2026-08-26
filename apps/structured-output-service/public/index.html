@@ -4602,11 +4602,23 @@
 
     function renderVersionHistoryPanel() {
       const historyBody = versionHistoryLoadState === 'ready'
-        ? (versionHistory?.versions || []).map(item => `
-            <article class="item-card">
-              <div class="item-title"><strong>${escapeHtml(item.version)} · ${escapeHtml(item.title)}</strong><span class="technical-note">${escapeHtml(item.status === 'candidate' ? `候选 · ${item.candidate_on || '日期未记录'}` : `已发布 · ${item.released_on}`)}</span></div>
-              <p>${escapeHtml(item.summary)}</p>
-            </article>`).join('')
+        ? (versionHistory?.versions || []).map(item => {
+            const revisions = Array.isArray(item.schema_revisions) ? item.schema_revisions : [];
+            const currentRevision = revisions.find(revision => revision.status === 'current');
+            const supportedLegacyRevision = revisions.find(revision => revision.status === 'supported_legacy');
+            const revisionBody = revisions.length ? `
+              <div class="grid">
+                ${currentRevision ? `<div class="inline-note"><strong>当前结构短码：</strong>${escapeHtml(text(currentRevision.schema_digest).slice(0, 12) || '未记录')}<br><span class="technical-note">登记提交 ${escapeHtml(text(currentRevision.source_commit).slice(0, 8) || '未记录')}</span></div>` : ''}
+                ${supportedLegacyRevision ? `<div class="inline-note"><strong>早期v7可兼容导入：</strong>${escapeHtml(text(supportedLegacyRevision.schema_digest).slice(0, 12) || '未记录')}<br><span class="technical-note">导入后在当前页面内存中迁移，源文件保持不变。</span></div>` : ''}
+              </div>
+              <p class="technical-note">结构兼容和软件发布只说明文件可由3001处理，不代表流程事实正确、部门已经确认或业务审核通过。</p>` : '';
+            return `
+              <article class="item-card">
+                <div class="item-title"><strong>${escapeHtml(item.version)} · ${escapeHtml(item.title)}</strong><span class="technical-note">${escapeHtml(item.status === 'candidate' ? `候选 · ${item.candidate_on || '日期未记录'}` : `已发布 · ${item.released_on}`)}</span></div>
+                <p>${escapeHtml(item.summary)}</p>
+                ${revisionBody}
+              </article>`;
+          }).join('')
         : versionHistoryLoadState === 'unavailable'
           ? '<div class="inline-note">版本说明暂时无法读取。当前页面内容不受影响，请保持页面打开并联系维护人员检查3001服务。</div>'
           : '<div class="inline-note">正在读取版本说明……</div>';
