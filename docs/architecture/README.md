@@ -12,6 +12,7 @@
 |---|---|
 | `context-management.md` | 项目资料上下文分层、读取顺序、真源优先和历史材料使用规则 |
 | `data-governance-operating-rules.md` | 数据治理责任边界、3001/3000主线、待定状态、对象身份判断和事实分层规则 |
+| `3000-four-architecture-enablement-design.md` | 3000 启用前企业、业务、数据和数字化治理技术架构评审稿；尚未生效，不能替代已接受的 ADR 或启用决定 |
 
 ## 使用边界
 

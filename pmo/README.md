@@ -100,11 +100,11 @@ npm run test:pmo-task-data
 
 ## 数据字段
 
-`tasks.json` 保留旧展示字段，并新增最终执行版的执行管控字段。
+`tasks.json`的每条任务固定输出43个顶层字段。生成器通过唯一的`TASK_OUTPUT_FIELD_KEYS`清单检查每条任务字段集合，并据此计算两份source manifest中的`fieldCount`；该数量不从真源摘要手工复制。
 
 | 字段组 | 字段 |
 |--------|------|
-| 基础展示字段 | `id`、`wbs`、`name`、`type`、`duration`、`start`、`finish`、`predecessors`、`resources`、`department`、`vendor`、`reviewer`、`risk`、`milestone`、`deliverable`、`notes` |
+| 基础展示字段 | `id`、`wbs`、`name`、`type`、`duration`、`start`、`finish`、`predecessors`、`resources`、`department`、`vendor`、`reviewer`、`risk`、`milestone`、`deliverable`、`deliverableId`、`notes` |
 | 执行管控字段 | `viewCategory`、`phaseGateNo`、`isCriticalControl`、`versionControlObject`、`changeLevel`、`integrationStartCondition`、`isH5Focus`、`phaseGateName`、`releaseRule`、`contractPaymentControl`、`h5DiagnosticRule`、`executionNote`、`milestoneOverrideReason` |
 | 执行标准字段 | `executionStandardId`、`inputMaterialList`、`checklistId`、`completionCriteria`、`evidenceRequirements`、`standardGapFlag`、`standardDeferredReason` |
 | 执行标准缺口治理字段 | `requiresExecutionStandard`、`standardsGapBucket`、`standardsGapReasons`、`standardsGapPriorityScore`、`suggestedStandardId`、`suggestedAction` |

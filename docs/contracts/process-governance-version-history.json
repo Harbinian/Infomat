@@ -44,7 +44,25 @@
       "candidate_on": "2026-08-21",
       "status": "released",
       "title": "数据生命周期对象级编制",
-      "summary": "在数据对象下增加可复用对象字段、表单字段引用、更新字段多选、入口状态、流程路径、生命周期事件、出口状态和确定性分析来源；区分停用、作废、失效等业务动作，支持v1至v6无损迁移，并增加可定位节点的关系核对提示和非阻断的主数据认定提示。当前版本在实际使用中继续验证。"
+      "summary": "在数据对象下增加可复用对象字段、表单字段引用、更新字段多选、入口状态、流程路径、生命周期事件、出口状态和确定性分析来源；区分停用、作废、失效等业务动作，支持v1至v6无损迁移，并增加可定位节点的关系核对提示和非阻断的主数据认定提示。当前版本在实际使用中继续验证。",
+      "schema_revisions": [
+        {
+          "schema_digest": "eca657ed7a3d46b7b6d362f69e1188281210073144f5f26b74ec59da8b3a6e9c",
+          "introduced_on": "2026-08-21",
+          "source_commit": "440c09f265621651eb39c2aeb763d1bb5fa1e287",
+          "status": "supported_legacy",
+          "validation_profile": "early-v7-data-fields",
+          "notes": "早期v7文件可以受限兼容导入；只放宽后增对象字段、表单字段引用、值使用方式和更新字段引用的必填要求，随后在页面内存中迁移为当前v7。"
+        },
+        {
+          "schema_digest": "e1d5b33ba80393c0d02c1a48540dca5a67947295c66a7d1f0fbf7e20a25eaacb",
+          "introduced_on": "2026-08-24",
+          "source_commit": "624d469d23630d0e01674ad90de7bb0789a3c51f",
+          "status": "current",
+          "validation_profile": null,
+          "notes": "当前3001新建、完整校验和导出使用的v7结构；后续已发布结构发生变化时必须发布新的结构版本。"
+        }
+      ]
     }
   ]
 }

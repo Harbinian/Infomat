@@ -13,6 +13,8 @@
 ## v7结构规则
 
 - 正式3001的模板、默认结构规则、健康检查和版本历史统一为`process-governance-v7`，发布状态为`released`。当前采用“先发布、在实际使用中继续验证”的方式；不得把软件已发布写成真实流程业务验收已经通过。
+- `process-governance-version-history.json`中的v7 `schema_revisions[]`只追溯已经发生的同名结构演进：必须恰有一个`current`修订；`supported_legacy`修订必须绑定唯一的受限`validation_profile`。兼容记录只允许旧文件导入后在页面内存中迁移，不允许按旧修订新建、编辑或导出。
+- 结构版本进入`released`后，任何会改变Schema摘要、必填字段、枚举、引用规则或导入导出结构的变更都必须发布新的`process-governance-vN`，不得继续追加同名当前修订。实施新版本前必须盘点现有JSON和历史摘要，说明旧字段映射、无法自动迁移内容、兼容截止条件、失败处理和用户恢复方式，并验证上一受支持版本导入、当前版本导出后重导、重复迁移、失败后保持草稿和源文件不变。服务回退不得生成降级文件。
 - 一份v7文件只能包含一个`process`，不得增加`processes[]`。
 - 根对象必须包含`schema_version`、`export_meta`、`process`、`behaviors[]`、`flow_relations[]`、`data_objects[]`、`forms[]`、`terms[]`和`migration`。
 - `migration`中的首次来源信息和七类归档数组必须存在。归档内容只读，不参与评分、流程计算或绘图；归档引用必须有效，并保护被引用对象不被删除。

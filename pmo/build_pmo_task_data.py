@@ -64,6 +64,23 @@ EXECUTION_STANDARD_FIELD_MAP = [
 
 TASK_FIELD_MAP = BASE_FIELD_MAP + EXECUTION_FIELD_MAP + EXECUTION_STANDARD_FIELD_MAP
 
+DERIVED_STANDARD_GOVERNANCE_FIELD_KEYS = [
+    "requiresExecutionStandard",
+    "standardsGapBucket",
+    "standardsGapReasons",
+    "standardsGapPriorityScore",
+    "suggestedStandardId",
+    "suggestedAction",
+]
+
+TASK_OUTPUT_FIELD_KEYS = [key for _, key in TASK_FIELD_MAP] + DERIVED_STANDARD_GOVERNANCE_FIELD_KEYS
+
+if len(TASK_OUTPUT_FIELD_KEYS) != len(set(TASK_OUTPUT_FIELD_KEYS)):
+    duplicates = sorted({key for key in TASK_OUTPUT_FIELD_KEYS if TASK_OUTPUT_FIELD_KEYS.count(key) > 1})
+    raise RuntimeError(f"Duplicate task output field key(s): {', '.join(duplicates)}")
+if len(TASK_OUTPUT_FIELD_KEYS) != 43:
+    raise RuntimeError(f"Task output field contract must contain 43 keys, got {len(TASK_OUTPUT_FIELD_KEYS)}")
+
 
 def norm_text(v):
     if v is None:
@@ -365,6 +382,17 @@ def read_tasks_from_md(plan_path: pathlib.Path):
 
 
 def validate_tasks(tasks):
+    expected_keys = set(TASK_OUTPUT_FIELD_KEYS)
+    for index, task in enumerate(tasks, start=1):
+        actual_keys = set(task)
+        if actual_keys != expected_keys:
+            missing = sorted(expected_keys - actual_keys)
+            unexpected = sorted(actual_keys - expected_keys)
+            raise RuntimeError(
+                f"Task row {index} output fields do not match TASK_OUTPUT_FIELD_KEYS; "
+                f"missing={missing}, unexpected={unexpected}"
+            )
+
     ids = set()
     dup = set()
     for task in tasks:
@@ -398,6 +426,11 @@ def file_digest(path: pathlib.Path):
 
 def build_source_manifest(tasks, plan_data):
     summary = plan_data.get("summary") or {}
+    field_count = len(TASK_OUTPUT_FIELD_KEYS)
+    if summary.get("fieldCount") != field_count:
+        raise RuntimeError(
+            f"Plan source summary fieldCount must be {field_count}, got {summary.get('fieldCount')}"
+        )
     standard_buckets = ["必须补", "自动可补", "合理暂缓", "需拆分后补", "人工复核"]
     actionable_buckets = {"必须补", "自动可补", "需拆分后补", "人工复核"}
     bucket_counts = {
@@ -449,7 +482,7 @@ def build_source_manifest(tasks, plan_data):
 
     computed_summary = {
         "recordCount": len(tasks),
-        "fieldCount": summary.get("fieldCount", 45),
+        "fieldCount": field_count,
         "projectStart": summary.get("projectStart"),
         "projectFinish": summary.get("projectFinish"),
         "milestoneCount": sum(1 for task in tasks if task.get("milestone") == "是"),
@@ -477,7 +510,7 @@ def build_source_manifest(tasks, plan_data):
             "standardSource": EXECUTION_STANDARD_MD,
             "generatedBy": "pmo/build_pmo_task_data.py",
             "taskCount": len(tasks),
-            "fieldCount": summary.get("fieldCount", 45),
+            "fieldCount": field_count,
             "bucketCounts": bucket_counts,
             "actionableGapCount": actionable_gap_count,
             "highRiskActionableCount": sum(1 for task in tasks if task.get("risk") == "高" and task.get("standardsGapBucket") in actionable_buckets),

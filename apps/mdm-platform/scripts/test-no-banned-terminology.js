@@ -7,9 +7,7 @@ const repoRoot = path.resolve(__dirname, '..', '..', '..');
 const bannedTerms = [
   '候' + '选',
   '流程真' + '源',
-  '正式映' + '射',
-  'candi' + 'date',
-  'Candi' + 'date'
+  '正式映' + '射'
 ];
 
 const textExtensions = new Set([
@@ -53,6 +51,37 @@ const processIssueCardBannedTerms = [
   '术语' + '真源'
 ];
 
+const handoffCandidateCreatedIdentifier = ['handoff', 'candidate', 'created'].join('_');
+const allowedMachineIdentifierPattern = new RegExp(
+  '(^|[^A-Za-z0-9_])' + handoffCandidateCreatedIdentifier + '(?=[^A-Za-z0-9_]|$)',
+  'g'
+);
+
+function maskAllowedMachineIdentifier(line) {
+  return line.replace(allowedMachineIdentifierPattern, '$1');
+}
+
+function findBannedTerms(line) {
+  const maskedLine = maskAllowedMachineIdentifier(line);
+  const hits = bannedTerms.filter(term => maskedLine.includes(term));
+  if (/candidate/i.test(maskedLine)) hits.push('candidate');
+  return hits;
+}
+
+assert.deepStrictEqual(findBannedTerms(handoffCandidateCreatedIdentifier), [], 'the exact machine event identifier must remain allowed');
+[
+  'candidate',
+  'Candidate',
+  'CANDIDATE',
+  '候' + '选',
+  `${handoffCandidateCreatedIdentifier} candidate`,
+  `${handoffCandidateCreatedIdentifier}候` + '选',
+  `${handoffCandidateCreatedIdentifier}_extra`,
+  `foo_${handoffCandidateCreatedIdentifier}`
+].forEach(sample => {
+  assert.ok(findBannedTerms(sample).length > 0, `user-facing sample must be rejected: ${sample}`);
+});
+
 function toRepoPath(filePath) {
   return filePath.replace(/\\/g, '/');
 }
@@ -88,11 +117,18 @@ for (const relativeFile of [...new Set([...trackedFiles, ...untrackedFiles])]) {
   const content = fs.readFileSync(absoluteFile, 'utf8');
   const lines = content.split(/\r?\n/);
 
+  if (repoPath === 'apps/mdm-platform/public/index.html') {
+    const machineIdentifierOccurrences = content.split(handoffCandidateCreatedIdentifier).length - 1;
+    assert.strictEqual(machineIdentifierOccurrences, 1, 'the stable machine event identifier must appear exactly once');
+    const eventMappingPattern = new RegExp(
+      handoffCandidateCreatedIdentifier + "\\s*:\\s*['\"]生成承接待核对项['\"]"
+    );
+    assert.ok(eventMappingPattern.test(content), 'the stable machine event identifier must only map to the approved user label');
+  }
+
   lines.forEach((line, index) => {
-    for (const term of bannedTerms) {
-      if (line.includes(term)) {
-        violations.push(`${repoPath}:${index + 1}: ${term}`);
-      }
+    for (const term of findBannedTerms(line)) {
+      violations.push(`${repoPath}:${index + 1}: ${term}`);
     }
 
     if (processIssueCardGuidanceFiles.has(repoPath)) {

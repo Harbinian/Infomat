@@ -11,8 +11,21 @@
 | `GET /api/template` | 默认返回v7空白模板 |
 | `GET /api/template?version=process-governance-v7` | 返回`app_commit`、`schema_version`、`schema_digest`和v7空白数据 |
 | `GET /api/template?version=process-governance-v5|v6` | 保留兼容读取，不作为页面新建目标 |
-| `GET /api/version-history` | 包含v7发布状态和兼容边界；`current_status=released`，并记录发布日期 |
+| `GET /api/version-history` | 保留`current_version`、`current_status`和`versions[]`；v7条目增加`schema_revisions[]`，登记当前摘要和受限兼容的早期摘要 |
 | `GET /api/health` | `schema_version=process-governance-v7`、`release_status=released`，摘要与默认结构一致 |
+
+### 1.1 v7结构修订记录
+
+`schema_revisions[]`是版本说明中的只读兼容记录，不写入业务JSON，也不改变现有接口字段。当前登记两项：
+
+| `schema_digest` | `introduced_on` | `source_commit` | `status` | `validation_profile` | `notes` |
+|---|---|---|---|---|---|
+| `eca657ed7a3d46b7b6d362f69e1188281210073144f5f26b74ec59da8b3a6e9c` | `2026-08-21` | `440c09f265621651eb39c2aeb763d1bb5fa1e287` | `supported_legacy` | `early-v7-data-fields` | 早期v7兼容导入；通过受限校验后在页面内存中迁移，不按该结构新建或导出 |
+| `e1d5b33ba80393c0d02c1a48540dca5a67947295c66a7d1f0fbf7e20a25eaacb` | `2026-08-24` | `624d469d23630d0e01674ad90de7bb0789a3c51f` | `current` | `null` | 当前空白新建、完整校验、导出和默认健康检查使用的v7结构 |
+
+每个版本只能有一个`current`结构修订；每个受限兼容配置只能绑定一个`supported_legacy`修订。健康接口返回的v7摘要必须与`current`修订一致。版本页面只显示摘要短码和可兼容导入说明，并明确结构兼容或软件发布不代表流程事实、部门确认或业务审核通过。
+
+v7已经`released`。后续任何改变Schema摘要、必填字段、枚举、引用规则或导入导出结构的变更必须发布新的`process-governance-vN`，不得继续追加同名当前修订。新版本发布前必须盘点现有JSON和历史摘要，说明旧字段映射、无法自动迁移内容、兼容截止条件、失败处理、用户恢复和服务回退；至少验证上一受支持版本导入、当前版本导出后重导、重复迁移以及失败后当前草稿和源文件不变。服务回退不生成降级文件。
 
 ## 2. 校验与迁移
 

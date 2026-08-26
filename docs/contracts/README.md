@@ -24,7 +24,7 @@
 | `process-governance-v5.schema.json` | `apps/structured-output-service/`、`apps/structure-assistant/` | 3001兼容导入和MDM-AI助手现行文件 | 3001迁移到v7；MDM-AI助手继续使用v5 | `npm --prefix apps/structured-output-service test` | 3001只做兼容读取；MDM-AI助手仍固定使用v5，本次不修改 |
 | `process-governance-v6.schema.json` | `apps/structured-output-service/` | 历史v6单流程文件 | 迁移到v7的兼容输入 | `npm --prefix apps/structured-output-service test` | 保留无状态图编辑、迁移归档和稳定引用，只作为兼容读取规则 |
 | `process-governance-v7.schema.json` | `apps/structured-output-service/` | v7空白新建、v1至v6兼容迁移和v7文件 | 单流程`process-governance-v7`未审核JSON | `npm --prefix apps/structured-output-service test` | 在数据对象下记录对象字段、更新字段引用、入口状态、路径、生命周期事件、出口状态、分析来源和核对决定；不记录正式主数据认定；已发布并在实际使用中继续验证 |
-| `process-governance-version-history.json` | `apps/structured-output-service/` | 仓库受控版本说明 | 前端只读v1至v7升级历史和当前发布状态 | `npm --prefix apps/structured-output-service test` | 当前v7固定为`released`；版本说明独立于当前草稿，不写入导出JSON |
+| `process-governance-version-history.json` | `apps/structured-output-service/` | 仓库受控版本说明 | 前端只读v1至v7升级历史、当前发布状态和v7兼容修订记录 | `npm --prefix apps/structured-output-service test` | 当前v7固定为`released`；`schema_revisions[]`登记一个当前摘要和一个受限兼容的早期摘要；版本说明独立于当前草稿，不写入导出JSON |
 
 ## 2. 修改规则
 
@@ -53,6 +53,7 @@ npm --prefix apps/structure-assistant test
 ```
 
 6. 规则文件可以表达检查要求，但不要在这里新增流程、部门职责或业务行为正文。
+7. 任一`process-governance-vN`进入`released`后，改变Schema摘要、必填字段、枚举、引用规则或导入导出结构必须发布新的版本号。新版本应同时说明现有JSON和历史摘要的影响、旧字段映射、不能自动迁移的内容、兼容截止条件、失败处理、服务回退和用户恢复方式，并验证上一支持版本导入、当前版本导出后重导、重复迁移以及迁移失败后原草稿和源文件保持不变。`schema_revisions[]`只追溯已经发生的同名v7演进，不构成继续同名变更的授权。
 
 ## 3. 与其他目录的关系
 

@@ -10,9 +10,13 @@ const files = {
   rootManifest: 'pmo/pmo-source-manifest.json',
   appManifest: 'pmo/gantt-react/public/pmo-source-manifest.json',
   planSource: 'pmo/信息化项目_计划管控真源.md',
-  wbsSource: 'pmo/信息化项目_WBS结构真源.md'
+  wbsSource: 'pmo/信息化项目_WBS结构真源.md',
+  pmoReadme: 'pmo/README.md',
+  appReadme: 'pmo/gantt-react/README.md'
 };
 const activePmoBuildScript = 'pmo/build_pmo_task_data.py';
+const expectedTaskCount = 516;
+const expectedTaskFieldCount = 43;
 
 function readText(relativePath) {
   return readFileSync(resolve(root, relativePath), 'utf8');
@@ -68,8 +72,13 @@ const manifestHash = compareTextHash(files.rootManifest, files.appManifest);
 
 const tasks = readJson(files.rootTasks);
 const manifest = readJson(files.rootManifest);
+const appManifest = readJson(files.appManifest);
 const planSource = readMarkdownJsonBlock(files.planSource, 'plan');
 const wbsSource = readMarkdownJsonBlock(files.wbsSource, 'wbs');
+const planSourceText = readText(files.planSource);
+const pmoReadmeText = readText(files.pmoReadme);
+const appReadmeText = readText(files.appReadme);
+const buildScriptText = readText(activePmoBuildScript);
 const deprecatedPmoInputs = [
   'pmo/信息化项目_Project_H5最终执行版_导入表.xlsx',
   'pmo/信息化项目_Project_H5最终执行版_导入表_旧版备份.xlsx',
@@ -80,17 +89,69 @@ const deprecatedPmoInputs = [
 
 assert(Array.isArray(tasks), `${files.rootTasks} must be a JSON array`);
 assert(tasks.length > 0, `${files.rootTasks} must contain at least one task`);
-assert(tasks.length === 516, `${files.rootTasks} must contain 516 tasks, got ${tasks.length}`);
+assert(tasks.length === expectedTaskCount, `${files.rootTasks} must contain ${expectedTaskCount} tasks, got ${tasks.length}`);
+const firstTaskFieldKeys = Object.keys(tasks[0]).sort();
+assert(
+  firstTaskFieldKeys.length === expectedTaskFieldCount,
+  `${files.rootTasks} first task must contain ${expectedTaskFieldCount} fields, got ${firstTaskFieldKeys.length}`
+);
+const taskFieldUnion = new Set();
+for (const [index, task] of tasks.entries()) {
+  const rowKeys = Object.keys(task).sort();
+  rowKeys.forEach((key) => taskFieldUnion.add(key));
+  assert(
+    rowKeys.length === firstTaskFieldKeys.length && rowKeys.every((key, keyIndex) => key === firstTaskFieldKeys[keyIndex]),
+    `${files.rootTasks} task ${task.id || `row ${index + 1}`} field set differs from the 43-field contract`
+  );
+}
+assert(
+  taskFieldUnion.size === expectedTaskFieldCount,
+  `${files.rootTasks} field union must contain ${expectedTaskFieldCount} fields, got ${taskFieldUnion.size}`
+);
 assert(Array.isArray(planSource.tasks), `${files.planSource} tasks must be an array`);
 assert(Array.isArray(wbsSource.nodes), `${files.wbsSource} nodes must be an array`);
 assert(planSource.tasks.length === tasks.length, `${files.planSource} task count must equal generated task count`);
 assert(wbsSource.nodes.length === tasks.length, `${files.wbsSource} node count must equal generated task count`);
 assert(existsSync(resolve(root, activePmoBuildScript)), `${activePmoBuildScript} must exist as the PMO Markdown truth-source builder`);
+assert(/TASK_OUTPUT_FIELD_KEYS\s*=/.test(buildScriptText), `${activePmoBuildScript} must define TASK_OUTPUT_FIELD_KEYS`);
 assert(!existsSync(resolve(root, 'pmo/convert_xlsx.py')), 'pmo/convert_xlsx.py has been renamed because it no longer reads XLSX');
+assert(
+  planSource?.summary?.recordCount === expectedTaskCount,
+  `${files.planSource} summary.recordCount must be ${expectedTaskCount}, got ${planSource?.summary?.recordCount}`
+);
+assert(
+  planSource?.summary?.fieldCount === expectedTaskFieldCount,
+  `${files.planSource} summary.fieldCount must be ${expectedTaskFieldCount}, got ${planSource?.summary?.fieldCount}`
+);
+assert(
+  /\|\s*字段数\s*\|\s*43\s*\|/.test(planSourceText),
+  `${files.planSource} human-readable summary must state 43 fields`
+);
+assert(
+  /\|\s*字段数\s*\|\s*43\s*\|/.test(pmoReadmeText),
+  `${files.pmoReadme} must state 43 fields`
+);
+assert(
+  /43个顶层字段/.test(appReadmeText),
+  `${files.appReadme} must state 43 top-level fields`
+);
 assert(
   manifest?.taskSummary?.recordCount === tasks.length,
   `manifest taskSummary.recordCount (${manifest?.taskSummary?.recordCount}) must equal task count (${tasks.length})`
 );
+for (const [manifestPath, candidate] of [
+  [files.rootManifest, manifest],
+  [files.appManifest, appManifest],
+]) {
+  assert(
+    candidate?.taskSummary?.fieldCount === expectedTaskFieldCount,
+    `${manifestPath} taskSummary.fieldCount must be ${expectedTaskFieldCount}, got ${candidate?.taskSummary?.fieldCount}`
+  );
+  assert(
+    candidate?.standardGovernance?.fieldCount === expectedTaskFieldCount,
+    `${manifestPath} standardGovernance.fieldCount must be ${expectedTaskFieldCount}, got ${candidate?.standardGovernance?.fieldCount}`
+  );
+}
 assert(
   manifest?.standardGovernance?.generatedBy === activePmoBuildScript,
   `manifest standardGovernance.generatedBy must be ${activePmoBuildScript}, got ${manifest?.standardGovernance?.generatedBy}`
@@ -175,4 +236,7 @@ assert(
   `WBS 10.3.3 must be scheduled on 2028-02-22, got ${finalAcceptanceTask?.start} to ${finalAcceptanceTask?.finish}`
 );
 
-console.log(`PMO task data check passed: ${tasks.length} tasks, tasks ${taskHash.slice(0, 12)}, manifest ${manifestHash.slice(0, 12)}`);
+console.log(
+  `PMO task data check passed: ${tasks.length} tasks, ${taskFieldUnion.size} fields, ` +
+  `tasks ${taskHash.slice(0, 12)}, manifest ${manifestHash.slice(0, 12)}`
+);

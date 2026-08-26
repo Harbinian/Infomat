@@ -537,6 +537,41 @@ async function testApi() {
     assert.deepEqual(versionHistory.body.versions.map(item => item.version), [
       'process-governance-v1', 'process-governance-v2', 'process-governance-v3', 'process-governance-v4', 'process-governance-v5', 'process-governance-v6', 'process-governance-v7'
     ]);
+    const v7History = versionHistory.body.versions.find(item => item.version === 'process-governance-v7');
+    assert.equal(v7History.schema_revisions.length, 2, 'v7 history must contain the two known schema revisions');
+    assert.equal(
+      v7History.schema_revisions.every(item => ['current', 'supported_legacy'].includes(item.status)),
+      true,
+      'v7 schema revision status must be current or supported_legacy'
+    );
+    const currentV7Revisions = v7History.schema_revisions.filter(item => item.status === 'current');
+    const supportedLegacyV7Revisions = v7History.schema_revisions.filter(item => item.status === 'supported_legacy');
+    assert.equal(currentV7Revisions.length, 1, 'v7 history must identify exactly one current schema revision');
+    assert.equal(supportedLegacyV7Revisions.length, 1, 'v7 history must identify exactly one supported legacy schema revision');
+    const currentV7Revision = currentV7Revisions[0];
+    const earlyV7Revision = supportedLegacyV7Revisions[0];
+    assert.equal(currentV7Revision.schema_digest, PROCESS_GOVERNANCE_SCHEMA_DIGEST);
+    assert.equal(currentV7Revision.schema_digest, 'e1d5b33ba80393c0d02c1a48540dca5a67947295c66a7d1f0fbf7e20a25eaacb');
+    assert.equal(currentV7Revision.introduced_on, '2026-08-24');
+    assert.equal(currentV7Revision.source_commit, '624d469d23630d0e01674ad90de7bb0789a3c51f');
+    assert.equal(currentV7Revision.validation_profile, null);
+    assert.equal(health.body.schema_digest, currentV7Revision.schema_digest, 'current health digest must match the current v7 schema revision');
+    assert.equal(earlyV7Revision.schema_digest, 'eca657ed7a3d46b7b6d362f69e1188281210073144f5f26b74ec59da8b3a6e9c');
+    assert.equal(earlyV7Revision.introduced_on, '2026-08-21');
+    assert.equal(earlyV7Revision.source_commit, '440c09f265621651eb39c2aeb763d1bb5fa1e287');
+    assert.equal(earlyV7Revision.validation_profile, 'early-v7-data-fields');
+    for (const revision of v7History.schema_revisions) {
+      assert.deepEqual(
+        Object.keys(revision),
+        ['schema_digest', 'introduced_on', 'source_commit', 'status', 'validation_profile', 'notes'],
+        'v7 schema revisions must expose the frozen additive field set in a stable order'
+      );
+    }
+    assert.equal(
+      v7History.schema_revisions.filter(item => item.validation_profile === 'early-v7-data-fields').length,
+      1,
+      'the early v7 compatibility profile must belong to one recorded schema revision'
+    );
 
     const template = await getJson(baseUrl, '/api/template');
     assert.equal(template.response.status, 200);
@@ -1586,6 +1621,24 @@ async function testFrontendContract() {
   assert.ok(html.includes("fetch('/api/template?version=process-governance-v7', { cache: 'no-store' })"));
   assert.equal(html.includes('needsCandidateFieldUpgrade ? { valid: true, errors: [] }'), false);
   assert.ok(html.includes("validationProfile: 'early-v7-data-fields'"));
+  assert.ok(html.includes('const revisions = Array.isArray(item.schema_revisions) ? item.schema_revisions : [];'));
+  assert.ok(html.includes('currentRevision.source_commit'));
+  assert.ok(html.includes('当前结构短码：'));
+  assert.ok(html.includes('早期v7可兼容导入：'));
+  assert.ok(html.includes('结构兼容和软件发布只说明文件可由3001处理，不代表流程事实正确、部门已经确认或业务审核通过。'));
+  const importJsonSource = html.slice(
+    html.indexOf('async function importJson(file)'),
+    html.indexOf("jsonInput.addEventListener('change'")
+  );
+  const sourceValidationPosition = importJsonSource.indexOf('const sourceValidation = await validateGraphDocument');
+  const targetValidationPosition = importJsonSource.indexOf('const targetValidations = await Promise.all');
+  const candidateReplacementPosition = importJsonSource.indexOf('candidates = nextCandidates');
+  assert.ok(sourceValidationPosition >= 0 && targetValidationPosition > sourceValidationPosition);
+  assert.ok(
+    candidateReplacementPosition > targetValidationPosition,
+    'source and migrated candidates must both pass validation before the current draft is replaced'
+  );
+  assert.ok(importJsonSource.includes('当前草稿、图状态和撤销记录保持不变。'));
   assert.ok(html.includes("const behaviors = (currentDocument()?.behaviors || []).filter(item => item.node_type === 'action');"));
   assert.ok(html.includes('<script src="process-governance-migration.js"></script>'));
   assert.ok(html.includes('<script src="governance-workflow.js"></script>'));

@@ -164,6 +164,14 @@ assert.ok(!html.includes('sessionStorage.'), 'process governance must not persis
   '依据'
 ].forEach(fragment => assert.ok(html.includes(fragment), `handoff story UI missing ${fragment}`));
 assert.ok(!html.includes('承接进度百分比'), 'handoff story must not infer percentage progress');
+assert.ok(
+  html.includes("var actorRoleLabel = item.status === 'confirmed' ? '执行角色' : '执行角色待确认';"),
+  'V7 review must distinguish confirmed execution roles from roles still awaiting confirmation'
+);
+assert.ok(
+  html.includes("'<div class=\"metric\"><div class=\"lbl\">' + actorRoleLabel + '</div>"),
+  'V7 review must render the execution-role label selected from the item status'
+);
 
 [
   '/api/process-design/handoff-conflicts?limit=200',

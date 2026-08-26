@@ -125,6 +125,8 @@ v3中每个`forms[]`对象必须包含`form_design_state`。v1、v2文件导入�
 
 队列直接按承接状态、当前角色、部门和参与关系生成。故事链返回`current_stage`、`next_actions`、`milestones`、`events`和最近一次关联`conflict`，不返回推测进度百分比。`next_actions`明确下一责任角色、部门、已分派处理人和当前账号是否可处理；进入冲突时，原责任链停留位置标记为`branched`，冲突步骤作为当前步骤，已完成步骤不重置。
 
+历史事件和接口继续使用稳定机器标识`handoff_candidate_created`。页面把该事件显示为“生成承接待核对项”。机器标识不改变事件含义，也不表示承接内容已经获得业务确认。
+
 ### 5.2 分派责任部门
 
 `POST /api/process-design/cross-dept-handoffs/:id/assign-counterparty`

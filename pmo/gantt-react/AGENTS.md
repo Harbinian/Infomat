@@ -35,6 +35,8 @@ npm run test:pmo-task-data
 
 脚本会写入 `tasks.json`、`pmo-source-manifest.json`、`gantt-react/public/tasks.json` 和 `gantt-react/public/pmo-source-manifest.json`。不要手改这些生成文件。
 
+每条任务当前固定输出43个顶层字段。字段清单和逐行检查由`../build_pmo_task_data.py`维护；字段变化必须同步计划真源摘要、根目录README、本目录README和仓库级PMO任务检查，不能根据某一批任务的字段并集临时改口径。
+
 ## 开发命令
 
 ```powershell
