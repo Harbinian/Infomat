@@ -6,11 +6,16 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "test": "node scripts/test-governance-workflow.js && node scripts/test-structure-score.js && node scripts/test-service-contract.js && node scripts/test-docx-archive-security.js && node scripts/test-docx-parser-pool.js && node scripts/test-import-compatibility.js && node scripts/test-process-version-fixtures.js && node scripts/test-v6-graph-editing.js && node scripts/test-v7-lifecycle.js && node scripts/test-v7-data-field-reuse.js && node scripts/test-web-grid-editor.js && node scripts/test-edit-session-manager.js",
+    "test": "node scripts/test-governance-workflow.js && node scripts/test-structure-score.js && node scripts/test-service-contract.js && node scripts/test-docx-archive-security.js && node scripts/test-docx-parser-pool.js && node scripts/test-import-compatibility.js && node scripts/test-process-version-fixtures.js && node scripts/test-v6-graph-editing.js && node scripts/test-v7-lifecycle.js && node scripts/test-v7-data-field-reuse.js && node scripts/test-web-grid-editor.js && node scripts/test-edit-session-manager.js && node scripts/test-form-field-reuse.js && node scripts/test-authoring-selection-context.js && node scripts/test-governance-review-queue.js",
     "test:v7-lifecycle": "node scripts/test-v7-lifecycle.js",
     "test:v7-data-field-reuse": "node scripts/test-v7-data-field-reuse.js",
     "test:web-grid-editor": "node scripts/test-web-grid-editor.js",
-    "test:edit-session-manager": "node scripts/test-edit-session-manager.js"
+    "test:edit-session-manager": "node scripts/test-edit-session-manager.js",
+    "test:form-field-reuse": "node scripts/test-form-field-reuse.js",
+    "test:authoring-selection-context": "node scripts/test-authoring-selection-context.js",
+    "test:governance-review-queue": "node scripts/test-governance-review-queue.js",
+    "test:browser-performance": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-v7-performance-browser.ps1",
+    "test:browser-import-atomic": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-multi-candidate-atomic-browser.ps1"
   },
   "dependencies": {
     "ajv": "^8.20.0",

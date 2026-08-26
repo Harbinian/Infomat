@@ -149,9 +149,13 @@
           column('area_ref', '主表或明细表', { required: true, technicalRef: true, editor: 'lookup', lookup: 'form_areas' }),
           column('item_name', '字段显示名称', { required: true }),
           column('item_type', '字段类型', { required: true, editor: fieldTypes.length ? 'select' : 'text', values: fieldTypes.map(value => ({ value, label: value })) }),
-          column('required', '必填', { editor: 'boolean' }), column('instructions', '填写说明', { editor: 'textarea', width: 300 }),
+          column('required', '必填', {
+            required: true,
+            editor: 'select',
+            values: [{ value: true, label: '必填' }, { value: false, label: '非必填' }]
+          }), column('instructions', '填写说明', { editor: 'textarea', width: 300 }),
           column('business_data_ref', '业务数据归属', { technicalRef: true, nullable: true, editor: 'lookup', lookup: 'data_objects' }),
-          column('data_field_ref', '引用对象字段', { technicalRef: true, nullable: true, editor: 'lookup', lookup: 'data_fields', dependsOn: 'business_data_ref' }),
+          column('data_field_ref', '引用对象字段', { technicalRef: true, nullable: true, editor: 'lookup', lookup: 'data_fields' }),
           column('value_usage_mode', '字段值使用方式', { required: true, editor: 'select', values: options(VALUE_USAGE_MODES) }),
           column('value_origin_mode', '取值方式', { required: true, editor: 'select', values: options(VALUE_ORIGIN_MODES) })
         ]
@@ -239,11 +243,11 @@
       data_fields: { ref: 'field_ref', prefix: 'data_field', parent: 'data_ref', defaults: { field_name: '', field_type: '', definition: '' } },
       data_behavior_links: { ref: 'link_ref', prefix: 'data_link', parent: 'data_ref', defaults: { behavior_ref: '', operation: 'pending_confirmation', updated_field_refs: [] } },
       data_source_relations: { ref: 'source_ref', prefix: 'data_source', parent: 'data_ref', defaults: { source_department: '', source_process_name: '', source_behavior_name: '', source_data_name: '', availability_mode: 'pending_confirmation', available_from_behavior_ref: null } },
-      forms: { ref: 'form_ref', prefix: 'form', defaults: { form_name: '', form_no: null, form_design_state: 'current_state' } },
+      forms: { ref: 'form_ref', prefix: 'form', defaults: { form_name: '', form_no: null, form_design_state: 'unspecified' } },
       form_behavior_links: { ref: 'link_ref', prefix: 'form_link', parent: 'form_ref', defaults: { behavior_ref: '', operations: '', notes: '' } },
-      form_areas: { ref: 'area_ref', prefix: 'area', parent: 'form_ref', defaults: { area_type: '明细清单', area_title: '' } },
-      form_items: { ref: 'item_ref', prefix: 'item', parent: 'area_ref', defaults: { form_ref: context.formRef || '', item_name: '', item_type: '', required: false, instructions: '', business_data_ref: null, data_field_ref: null, value_usage_mode: 'pending_confirmation', value_origin_mode: 'pending_confirmation' } },
-      field_source_links: { ref: 'source_link_ref', prefix: 'field_source', parent: 'item_ref', defaults: { source_type: 'process_data', source_data_ref: null, source_system_name: '', source_data_name: '', source_role: 'provides_value' } }
+      form_areas: { ref: 'area_ref', prefix: 'area', parent: 'form_ref', defaults: { area_type: '', area_title: '' } },
+      form_items: { ref: 'item_ref', prefix: 'item', parent: 'area_ref', defaults: { form_ref: context.formRef || '', item_name: '', item_type: '', required: null, instructions: '', business_data_ref: null, data_field_ref: null, value_usage_mode: 'pending_confirmation', value_origin_mode: 'pending_confirmation' } },
+      field_source_links: { ref: 'source_link_ref', prefix: 'field_source', parent: 'item_ref', defaults: { source_type: '', source_data_ref: null, source_system_name: '', source_data_name: '', source_role: '' } }
     };
     const config = configs[tableId];
     if (!config) throw new Error(`未知表格：${tableId}`);
@@ -285,7 +289,7 @@
           if (spec.technicalRef && value != null && clean(value) && !REF_PATTERN.test(clean(value))) {
             problem(result.errors, row, definition.id, spec.key, 'REF_INVALID', `${spec.label}必须以字母或数字开头，只能包含字母、数字、点、下划线、冒号或连字符`);
           }
-          if (spec.values?.length && clean(value) && !spec.values.some(option => option.value === value)) {
+          if (spec.values?.length && clean(value) && !spec.values.some(option => String(option.value) === String(value))) {
             problem(result.errors, row, definition.id, spec.key, 'ENUM_INVALID', `${spec.label}“${clean(value)}”不在允许范围内`);
           }
           if (spec.allowedValues) {

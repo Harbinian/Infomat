@@ -164,6 +164,125 @@ const adapterOptions = {
 }
 
 {
+  const definitions = Object.fromEntries(ProcessV7GridAdapter.definitions(documentFixture(), adapterOptions)
+    .map(definition => [definition.id, definition]));
+  const requiredColumn = definitions.form_items.columns.find(column => column.key === 'required');
+  const fieldReferenceColumn = definitions.form_items.columns.find(column => column.key === 'data_field_ref');
+  assert.equal(requiredColumn.required, true, 'required must be explicitly confirmed before applying a form field row');
+  assert.equal(requiredColumn.editor, 'select', 'required must use a three-state work-copy selector');
+  assert.deepEqual(requiredColumn.values, [
+    { value: true, label: '必填' },
+    { value: false, label: '非必填' }
+  ]);
+  assert.equal(Object.hasOwn(fieldReferenceColumn, 'dependsOn'), false, 'object fields must be selectable across all data objects');
+
+  const session = WebGridCore.createSession({
+    adapter: ProcessV7GridAdapter, documentValue: documentFixture(), sourceKey: 'neutral-defaults', adapterOptions
+  });
+  const form = session.addRow('forms');
+  const area = session.addRow('form_areas', { parentRef: 'form_request' });
+  const item = session.addRow('form_items', { parentRef: 'area_request_main', formRef: 'form_request' });
+  const dataLink = session.addRow('data_behavior_links', { parentRef: 'data_request' });
+  const formLink = session.addRow('form_behavior_links', { parentRef: 'form_request' });
+  const fieldSource = session.addRow('field_source_links', { parentRef: 'item_amount' });
+  assert.equal(form.form_design_state, 'unspecified');
+  assert.equal(area.area_type, '');
+  assert.equal(item.required, null);
+  assert.equal(dataLink.behavior_ref, '');
+  assert.equal(formLink.behavior_ref, '');
+  assert.equal(fieldSource.source_type, '');
+  assert.equal(fieldSource.source_data_ref, null);
+  assert.equal(fieldSource.source_role, '');
+}
+
+{
+  const source = documentFixture();
+  const sourceSnapshot = JSON.stringify(source);
+  const session = WebGridCore.createSession({
+    adapter: ProcessV7GridAdapter, documentValue: source, sourceKey: 'required-explicit', adapterOptions
+  });
+  const added = session.addRow('form_items', { parentRef: 'area_request_main', formRef: 'form_request' });
+  const rows = session.rows('form_items');
+  Object.assign(rows.find(row => row._row_id === added._row_id), {
+    item_name: '备注', item_type: '文本', value_usage_mode: 'pending_confirmation', value_origin_mode: 'pending_confirmation'
+  });
+  session.replaceRows('form_items', rows);
+  const missing = session.prepare(source, 'required-explicit');
+  assert.equal(missing.ok, false, 'an unconfirmed required value must block the complete grid apply');
+  assert.ok(missing.errors.some(item => item.tableId === 'form_items' && item.column === 'required' && item.code === 'REQUIRED'));
+  assert.equal(JSON.stringify(source), sourceSnapshot, 'a failed required check must leave the source JSON unchanged');
+
+  const nonRequiredRows = session.rows('form_items');
+  nonRequiredRows.find(row => row._row_id === added._row_id).required = false;
+  session.replaceRows('form_items', nonRequiredRows);
+  const nonRequired = session.prepare(source, 'required-explicit');
+  assert.equal(nonRequired.ok, true, nonRequired.errors.map(item => item.message).join('; '));
+  assert.equal(nonRequired.document.forms[0].areas[0].items.at(-1).required, false);
+
+  const requiredRows = session.rows('form_items');
+  requiredRows.find(row => row._row_id === added._row_id).required = 'true';
+  session.replaceRows('form_items', requiredRows);
+  const required = session.prepare(source, 'required-explicit');
+  assert.equal(required.ok, true, required.errors.map(item => item.message).join('; '));
+  assert.equal(required.document.forms[0].areas[0].items.at(-1).required, true);
+}
+
+{
+  const source = documentFixture();
+  const sourceSnapshot = JSON.stringify(source);
+  const session = WebGridCore.createSession({
+    adapter: ProcessV7GridAdapter, documentValue: source, sourceKey: 'field-source-explicit', adapterOptions
+  });
+  const added = session.addRow('field_source_links', { parentRef: 'item_amount' });
+  const blank = session.prepare(source, 'field-source-explicit');
+  assert.equal(blank.ok, false);
+  assert.ok(blank.errors.some(item => item.rowId === added._row_id && item.column === 'source_type' && item.code === 'REQUIRED'));
+  assert.ok(blank.errors.some(item => item.rowId === added._row_id && item.column === 'source_role' && item.code === 'REQUIRED'));
+  assert.equal(JSON.stringify(source), sourceSnapshot, 'an incomplete field source must not change the current JSON');
+
+  const rows = session.rows('field_source_links');
+  Object.assign(rows.find(row => row._row_id === added._row_id), { source_type: 'process_data', source_role: 'provides_value' });
+  session.replaceRows('field_source_links', rows);
+  const missingObject = session.prepare(source, 'field-source-explicit');
+  assert.equal(missingObject.ok, false);
+  assert.ok(missingObject.errors.some(item => item.rowId === added._row_id && item.code === 'SOURCE_DATA_REQUIRED'));
+
+  const completedRows = session.rows('field_source_links');
+  completedRows.find(row => row._row_id === added._row_id).source_data_ref = 'data_request';
+  session.replaceRows('field_source_links', completedRows);
+  const completed = session.prepare(source, 'field-source-explicit');
+  assert.equal(completed.ok, true, completed.errors.map(item => item.message).join('; '));
+}
+
+{
+  const source = documentFixture();
+  source.data_objects.push({
+    data_ref: 'data_payment', data_name: '付款信息', description: '', information_type: 'business_information',
+    fields: [{ field_ref: 'data_field_payment_date', field_name: '付款日期', field_type: '日期', definition: '' }],
+    behavior_links: [], source_relations: [], lifecycle: pendingLifecycle()
+  });
+  const session = WebGridCore.createSession({
+    adapter: ProcessV7GridAdapter, documentValue: source, sourceKey: 'cross-object-field', adapterOptions
+  });
+  const added = session.addRow('form_items', { parentRef: 'area_request_main', formRef: 'form_request' });
+  const rows = session.rows('form_items');
+  Object.assign(rows.find(row => row._row_id === added._row_id), {
+    item_name: '计划付款日', item_type: '文本', required: false,
+    business_data_ref: null, data_field_ref: 'data_field_payment_date',
+    value_usage_mode: 'reuse_existing', value_origin_mode: 'depends_on_data'
+  });
+  session.replaceRows('form_items', rows);
+  const prepared = session.prepare(source, 'cross-object-field');
+  assert.equal(prepared.ok, true, prepared.errors.map(item => item.message).join('; '));
+  const committed = prepared.document.forms[0].areas[0].items.at(-1);
+  assert.equal(committed.business_data_ref, 'data_payment');
+  assert.equal(committed.item_type, '日期');
+  assert.equal(committed.item_name, '计划付款日', 'an existing display name must not be overwritten');
+  assert.equal(committed.value_usage_mode, 'reuse_existing');
+  assert.equal(committed.value_origin_mode, 'depends_on_data');
+}
+
+{
   const source = documentFixture();
   const session = WebGridCore.createSession({ adapter: ProcessV7GridAdapter, documentValue: source, sourceKey: 'update-fields', adapterOptions });
   const rows = session.rows('data_behavior_links');
@@ -259,7 +378,7 @@ const adapterOptions = {
   const itemRows = session.rows('form_items');
   Object.assign(itemRows.find(row => row._row_id === item._row_id), {
     item_name: '', item_type: '', business_data_ref: dataObject.data_ref, data_field_ref: dataField.field_ref,
-    value_usage_mode: 'reuse_existing', value_origin_mode: 'depends_on_data'
+    required: false, value_usage_mode: 'reuse_existing', value_origin_mode: 'depends_on_data'
   });
   session.replaceRows('form_items', itemRows);
 
@@ -445,7 +564,8 @@ const adapterOptions = {
   const added = session.addRow('form_items', { parentRef: 'area_request_main', formRef: 'form_request' });
   const rows = session.rows('form_items');
   Object.assign(rows.find(row => row._row_id === added._row_id), {
-    item_name: '备注', item_type: '文本', value_usage_mode: 'authoritative_input', value_origin_mode: 'direct_current_process'
+    item_name: '备注', item_type: '文本', required: false,
+    value_usage_mode: 'authoritative_input', value_origin_mode: 'direct_current_process'
   });
   session.replaceRows('form_items', rows);
   assert.equal(session.moveRow('form_items', added._row_id, -1), true);

@@ -26,6 +26,7 @@ const webGridCorePath = path.join(appRoot, 'public', 'web-grid-core.js');
 const nativeWebGridPath = path.join(appRoot, 'public', 'native-web-grid.js');
 const processV7GridAdapterPath = path.join(appRoot, 'public', 'process-v7-grid-adapter.js');
 const editSessionManagerPath = path.join(appRoot, 'public', 'edit-session-manager.js');
+const packageJsonPath = path.join(appRoot, 'package.json');
 const serverPath = path.join(appRoot, 'server.js');
 const processV1SchemaPath = path.join(repoRoot, 'docs', 'contracts', 'process-governance-v1.schema.json');
 const processV2SchemaPath = path.join(repoRoot, 'docs', 'contracts', 'process-governance-v2.schema.json');
@@ -1816,6 +1817,7 @@ async function testFrontendContract() {
   const nativeWebGridSource = fs.readFileSync(nativeWebGridPath, 'utf8');
   const processV7GridAdapterSource = fs.readFileSync(processV7GridAdapterPath, 'utf8');
   const editSessionManagerSource = fs.readFileSync(editSessionManagerPath, 'utf8');
+  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
   const serverSource = fs.readFileSync(serverPath, 'utf8');
 
   assert.ok(html.includes("const EXPECTED_EXPORT_SCHEMA_VERSION = 'process-governance-v7'"));
@@ -1869,6 +1871,35 @@ async function testFrontendContract() {
   assert.ok(html.includes('<script src="graph-edit-commands.js"></script>'));
   assert.ok(html.includes('<script src="graph-editor-state.js"></script>'));
   assert.ok(html.includes('<script src="edit-session-manager.js"></script>'));
+  assert.ok(html.includes('<script src="form-field-reuse.js"></script>'));
+  assert.ok(html.includes('<script src="authoring-selection-context.js"></script>'));
+  assert.ok(html.includes('<script src="governance-review-queue.js"></script>'));
+  const inlineScriptPosition = html.indexOf('<script>');
+  [
+    'edit-session-manager.js',
+    'form-field-reuse.js',
+    'authoring-selection-context.js',
+    'governance-review-queue.js'
+  ].forEach(scriptName => assert.ok(
+    html.indexOf(`<script src="${scriptName}"></script>`) < inlineScriptPosition,
+    `${scriptName} must load before the page controller`
+  ));
+  [
+    'gridModeSwitchModal',
+    'continueGridEditingButton',
+    'discardGridChangesButton',
+    'applyGridChangesButton',
+    'webGridPendingMode',
+    'webGridPendingAction',
+    'openGridModeSwitchModal',
+    'closeGridModeSwitchModal'
+  ].forEach(legacyName => assert.equal(html.includes(legacyName), false, `legacy edit modal residue: ${legacyName}`));
+  [
+    'scripts/test-edit-session-manager.js',
+    'scripts/test-form-field-reuse.js',
+    'scripts/test-authoring-selection-context.js',
+    'scripts/test-governance-review-queue.js'
+  ].forEach(testScript => assert.ok(packageJson.scripts.test.includes(testScript), `${testScript} must be in npm test`));
   assert.ok(html.includes('<script src="data-relation-diagram.js"></script>'));
   assert.ok(html.includes('<script src="lifecycle-analyzer.js"></script>'));
   assert.ok(html.includes('data-action="switch-data-mode"'));
@@ -1884,24 +1915,26 @@ async function testFrontendContract() {
   assert.ok(html.includes('data-action="toggle-advanced-lifecycle"'));
   assert.ok(html.includes('高级结构核对仅在当前页面临时开启'));
   assert.equal(/localStorage|sessionStorage/.test(html), false, 'the temporary advanced mode must not use browser storage');
-  assert.ok(html.includes('1. 数据对象与字段明细'));
-  assert.ok(html.includes('2. 实际表单、主表、明细和字段'));
-  assert.ok(html.includes('从对象字段添加到当前表单'));
+  assert.ok(html.includes('数据对象与对象字段引用摘要（只读）'));
+  assert.ok(html.includes('把对象字段批量引用到当前表单'));
+  assert.ok(html.includes('批量引用对象字段'));
+  assert.ok(html.includes('1. 选择对象字段'));
+  assert.ok(html.includes('选择目标并确认必填性'));
   assert.ok(html.includes('添加空白字段（待补引用）'));
   assert.ok(!html.includes('点击“添加字段”后'));
   assert.ok(html.includes('表单显示名称'));
   assert.ok(html.includes('function formFieldReferenceDefaults'));
   assert.ok(html.includes("tableId === 'form_items' && column === 'data_field_ref'"));
   assert.equal(html.includes('>新增行</button>'), false, 'grid actions must name the record being added');
-  const addFormItemFromDataFieldSource = html.slice(
-    html.indexOf('function addFormItemFromDataField('),
-    html.indexOf('function findFormItem(')
+  assert.equal(html.includes('function addFormItemFromDataField('), false, 'single-field direct commit must be removed');
+  const batchReferenceSource = html.slice(
+    html.indexOf('async function applyFormFieldBatch('),
+    html.indexOf('function ensureActiveCollectionItem(')
   );
-  assert.ok(
-    addFormItemFromDataFieldSource.indexOf('if (!form || !dataObject || !dataField) return null;')
-      < addFormItemFromDataFieldSource.indexOf('const area = targetAreaForNewFormItem'),
-    'an invalid field selection must not create a main or detail area'
-  );
+  assert.ok(batchReferenceSource.includes('planBatchReference'));
+  assert.ok(batchReferenceSource.includes('validateGraphDocument'));
+  assert.ok(batchReferenceSource.includes('sourceFingerprint'));
+  assert.ok(batchReferenceSource.includes('graphStateManager.execute'));
   const addGridRowSource = html.slice(
     html.indexOf('function addGridRow('),
     html.indexOf('function openGuidedUpdateFields(')
@@ -1910,7 +1943,8 @@ async function testFrontendContract() {
   assert.ok(addGridRowSource.includes("webGridFilters[tableId] = ''"));
   assert.ok(addGridRowSource.includes("querySelectorAll('[data-grid-cell]:not(:disabled)')"));
   assert.ok(addGridRowSource.includes('controls.find(candidate => !text(candidate.value)) || controls[0]'));
-  assert.ok(html.includes('沿用当前对象字段已经建立的值，无需在本表单重复登记取值来源。'));
+  assert.equal(html.includes('沿用当前对象字段已经建立的值，无需在本表单重复登记取值来源。'), false);
+  assert.ok(html.includes('当前字段值使用方式已明确为“沿用已有值”；系统未据此自动生成取值来源。'));
   const formStartSource = html.slice(
     html.indexOf("if (action === 'choose-form-start')"),
     html.indexOf("if (action === 'select-skeleton-item')")

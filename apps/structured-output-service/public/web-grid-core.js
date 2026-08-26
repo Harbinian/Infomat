@@ -75,6 +75,11 @@
       return JSON.stringify(tables) !== JSON.stringify(baseline);
     }
 
+    function isTableDirty(tableId) {
+      requireTable(tableId);
+      return JSON.stringify(tables[tableId]) !== JSON.stringify(baseline[tableId]);
+    }
+
     function replaceRows(tableId, rows) {
       requireTable(tableId);
       tables[tableId] = clone(Array.isArray(rows) ? rows : []);
@@ -180,6 +185,7 @@
       setDeleted,
       moveRow,
       isDirty,
+      isTableDirty,
       sourceKey: () => sourceKey,
       prepare,
       accept
