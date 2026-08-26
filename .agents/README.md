@@ -13,7 +13,7 @@
 | `skills/business-behavior-mapping/` | BBM/A1 业务行为映射兼容技能 |
 | `skills/department-capability-mapping/` | DCM 部门能力流程系统映射兼容技能 |
 | `skills/process-evidence-mapping/` | 只读取机器可读源文件，生成并校验 `document-structured-output-v2` 流程证据草稿；不可读来源阻断，不自动发布 |
-| `skills/database-to-process-json/` | 仅在用户显式调用时，从指定的 `CXSYSYS.dbo` 表单结构快照生成一个未审核 V7 JSON 和证据包；默认不连接数据库，实时核验只允许专用只读账号和固定摘要查询 |
+| `skills/database-to-process-json/` | 仅在用户显式调用时，从指定的 `CXSYSYS.dbo` 表单结构快照生成一个使用业务文件名的未审核 V7 JSON 和证据包；审批等实际办理保留为业务行为，办理后的条件分叉另设判断节点；默认不连接数据库，实时核验只允许专用只读账号和固定摘要查询 |
 | `skills/technical-chinese-writer/` | 中文技术、业务和管理文档的受控起草、改写、审校与压缩技能 |
 | `skills/humanizer-zh/` | 仅在用户明确点名时使用的中文文风清理技能，不得替代受控写作 |
 

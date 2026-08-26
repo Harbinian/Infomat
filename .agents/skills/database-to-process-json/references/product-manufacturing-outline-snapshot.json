@@ -147,24 +147,54 @@
           "node_key": "proofread",
           "node_type": "action",
           "business_name": "校对人员校对产品制造大纲",
-          "business_description": "校对人员核对产品制造大纲内容；同意时提交审核，不同意时退回编制。",
-          "completion_standard": "校对通过的检查项和记录要求待业务确认。"
+          "business_description": "校对人员核对产品制造大纲内容，形成校对意见，并记录校对人员和日期。",
+          "completion_standard": "校对人员已经完成核对并记录办理人员和日期；具体检查项待业务确认。",
+          "evidence_status": "配置已确认"
+        },
+        {
+          "behavior_ref": "d_proofread_result",
+          "node_key": "proofread_result",
+          "node_type": "decision",
+          "business_name": "产品制造大纲校对结果是否同意",
+          "business_description": "校对结果为同意时进入审核，校对结果为不同意时退回编制。",
+          "completion_standard": "校对同意和不同意都有明确去向。",
+          "evidence_status": "分析候选"
         },
         {
           "behavior_ref": "b_review",
           "node_key": "review",
           "node_type": "action",
           "business_name": "大纲审核人员审核产品制造大纲",
-          "business_description": "大纲审核人员核对产品制造大纲内容；同意时提交质量保证核查，不同意时退回编制。",
-          "completion_standard": "审核通过的依据、检查项和记录要求待业务确认。"
+          "business_description": "大纲审核人员核对产品制造大纲内容，形成审核意见，并记录审核人员和日期。",
+          "completion_standard": "大纲审核人员已经完成核对并记录办理人员和日期；具体依据和检查项待业务确认。",
+          "evidence_status": "配置已确认"
+        },
+        {
+          "behavior_ref": "d_review_result",
+          "node_key": "review_result",
+          "node_type": "decision",
+          "business_name": "产品制造大纲审核结果是什么",
+          "business_description": "审核结果为不同意时退回编制；审核结果为同意且大纲审核人员认为无需无损检测时直接进入批准；其余审核同意结果进入质量保证核查。",
+          "completion_standard": "审核不同意、审核同意并继续质量保证核查、审核同意且无需无损检测三个结果都有明确去向。",
+          "evidence_status": "分析候选"
         },
         {
           "behavior_ref": "b_quality",
           "node_key": "quality",
           "node_type": "action",
           "business_name": "质量保证人员核查产品制造大纲",
-          "business_description": "质量保证人员核查产品制造大纲的质量相关内容；不同意时退回编制。",
-          "completion_standard": "质量保证核查通过的依据、检查项和记录要求待业务确认。"
+          "business_description": "质量保证人员核查产品制造大纲的质量相关内容，形成核查意见，并记录质量保证人员和日期。",
+          "completion_standard": "质量保证人员已经完成核查并记录办理人员和日期；具体依据和检查项待业务确认。",
+          "evidence_status": "配置已确认"
+        },
+        {
+          "behavior_ref": "d_quality_result",
+          "node_key": "quality_result",
+          "node_type": "decision",
+          "business_name": "产品制造大纲质量保证核查结果是否同意",
+          "business_description": "质量保证核查结果为同意时进入无损检测审批需要性判断，结果为不同意时退回编制。",
+          "completion_standard": "质量保证核查同意和不同意都有明确去向。",
+          "evidence_status": "分析候选"
         },
         {
           "behavior_ref": "b_decide_ndt",
@@ -172,38 +202,74 @@
           "node_type": "decision",
           "business_name": "产品制造大纲是否需要无损检测审批",
           "business_description": "根据首页的“是否需要无损检测”选择后续路线。",
-          "completion_standard": "需要无损检测时进入无损检测审批；不需要无损检测时直接进入批准。"
+          "completion_standard": "需要无损检测时进入无损检测审批；不需要无损检测时直接进入批准。",
+          "evidence_status": "分析候选"
         },
         {
           "behavior_ref": "b_ndt",
           "node_key": "ndt",
           "node_type": "action",
           "business_name": "无损检测审批人员审批产品制造大纲",
-          "business_description": "无损检测审批人员核查并审批产品制造大纲；不同意时退回编制。",
-          "completion_standard": "无损检测审批的依据、检查项和记录要求待业务确认。"
+          "business_description": "无损检测审批人员核查产品制造大纲，形成审批意见，并记录审批人员和日期。",
+          "completion_standard": "无损检测审批人员已经完成审批并记录办理人员和日期；具体依据和检查项待业务确认。",
+          "evidence_status": "配置已确认"
+        },
+        {
+          "behavior_ref": "d_ndt_result",
+          "node_key": "ndt_result",
+          "node_type": "decision",
+          "business_name": "产品制造大纲无损检测审批结果是否同意",
+          "business_description": "无损检测审批结果为同意时进入批准，结果为不同意时退回编制。",
+          "completion_standard": "无损检测审批同意和不同意都有明确去向。",
+          "evidence_status": "分析候选"
         },
         {
           "behavior_ref": "b_approve",
           "node_key": "approve",
           "node_type": "action",
           "business_name": "大纲批准人员批准产品制造大纲",
-          "business_description": "大纲批准人员决定是否批准产品制造大纲；不同意时退回编制。",
-          "completion_standard": "批准完成条件以及批准后的生效和保管规则待业务确认。"
+          "business_description": "大纲批准人员核对产品制造大纲，形成批准意见，并记录批准人员和日期。",
+          "completion_standard": "大纲批准人员已经完成核对并记录办理人员和日期；批准后的生效和保管规则待业务确认。",
+          "evidence_status": "配置已确认"
+        },
+        {
+          "behavior_ref": "d_approve_result",
+          "node_key": "approve_result",
+          "node_type": "decision",
+          "business_name": "产品制造大纲批准结果是否同意",
+          "business_description": "批准结果为同意时进入批准记录形成，结果为不同意时退回编制。",
+          "completion_standard": "批准同意和不同意都有明确去向。",
+          "evidence_status": "分析候选"
+        },
+        {
+          "behavior_ref": "b_approval_recorded",
+          "node_key": "approval_recorded",
+          "node_type": "action",
+          "business_name": "大纲批准人员形成产品制造大纲批准记录",
+          "business_description": "大纲批准人员在批准同意后形成批准记录；批准后的生效和归档规则待业务确认。",
+          "completion_standard": "产品制造大纲已经形成批准记录；生效和归档规则待业务确认。"
         }
       ],
       "edges": [
-        { "relation_ref": "r01", "edge_key": "r01", "relation_type": "sequence", "from_behavior_ref": "b_compile", "to_behavior_ref": "b_proofread", "condition": "" },
-        { "relation_ref": "r02", "edge_key": "r02", "relation_type": "sequence", "from_behavior_ref": "b_proofread", "to_behavior_ref": "b_review", "condition": "" },
-        { "relation_ref": "r03", "edge_key": "r03", "relation_type": "sequence", "from_behavior_ref": "b_review", "to_behavior_ref": "b_quality", "condition": "" },
-        { "relation_ref": "r04", "edge_key": "r04", "relation_type": "sequence", "from_behavior_ref": "b_quality", "to_behavior_ref": "b_decide_ndt", "condition": "" },
-        { "relation_ref": "r05", "edge_key": "r05", "relation_type": "condition", "from_behavior_ref": "b_decide_ndt", "to_behavior_ref": "b_ndt", "condition": "需要无损检测" },
-        { "relation_ref": "r06", "edge_key": "r06", "relation_type": "condition", "from_behavior_ref": "b_decide_ndt", "to_behavior_ref": "b_approve", "condition": "不需要无损检测" },
-        { "relation_ref": "r07", "edge_key": "r07", "relation_type": "sequence", "from_behavior_ref": "b_ndt", "to_behavior_ref": "b_approve", "condition": "" },
-        { "relation_ref": "r08", "edge_key": "r08", "relation_type": "loop", "from_behavior_ref": "b_proofread", "to_behavior_ref": "b_compile", "condition": "校对不同意" },
-        { "relation_ref": "r09", "edge_key": "r09", "relation_type": "loop", "from_behavior_ref": "b_review", "to_behavior_ref": "b_compile", "condition": "审核不同意" },
-        { "relation_ref": "r10", "edge_key": "r10", "relation_type": "loop", "from_behavior_ref": "b_quality", "to_behavior_ref": "b_compile", "condition": "质量保证核查不同意" },
-        { "relation_ref": "r11", "edge_key": "r11", "relation_type": "loop", "from_behavior_ref": "b_ndt", "to_behavior_ref": "b_compile", "condition": "无损检测审批不同意" },
-        { "relation_ref": "r12", "edge_key": "r12", "relation_type": "loop", "from_behavior_ref": "b_approve", "to_behavior_ref": "b_compile", "condition": "批准不同意" }
+        { "relation_ref": "r01", "edge_key": "r01", "relation_type": "sequence", "from_behavior_ref": "b_compile", "to_behavior_ref": "b_proofread", "condition": "", "evidence_status": "配置已确认" },
+        { "relation_ref": "r02", "edge_key": "r02", "relation_type": "sequence", "from_behavior_ref": "b_proofread", "to_behavior_ref": "d_proofread_result", "condition": "", "evidence_status": "分析候选" },
+        { "relation_ref": "r03", "edge_key": "r03", "relation_type": "condition", "from_behavior_ref": "d_proofread_result", "to_behavior_ref": "b_review", "condition": "校对同意", "evidence_status": "分析候选" },
+        { "relation_ref": "r04", "edge_key": "r04", "relation_type": "loop", "from_behavior_ref": "d_proofread_result", "to_behavior_ref": "b_compile", "condition": "校对不同意", "evidence_status": "分析候选" },
+        { "relation_ref": "r05", "edge_key": "r05", "relation_type": "sequence", "from_behavior_ref": "b_review", "to_behavior_ref": "d_review_result", "condition": "", "evidence_status": "分析候选" },
+        { "relation_ref": "r06", "edge_key": "r06", "relation_type": "condition", "from_behavior_ref": "d_review_result", "to_behavior_ref": "b_quality", "condition": "审核同意，继续质量保证核查", "evidence_status": "分析候选" },
+        { "relation_ref": "r07", "edge_key": "r07", "relation_type": "condition", "from_behavior_ref": "d_review_result", "to_behavior_ref": "b_approve", "condition": "审核同意，且无需无损检测", "evidence_status": "分析候选", "evidence_summary": "根据用户本轮明确说明补充：大纲审核人员认为无需无损检测时，流程直接进入批准。" },
+        { "relation_ref": "r08", "edge_key": "r08", "relation_type": "loop", "from_behavior_ref": "d_review_result", "to_behavior_ref": "b_compile", "condition": "审核不同意", "evidence_status": "分析候选" },
+        { "relation_ref": "r09", "edge_key": "r09", "relation_type": "sequence", "from_behavior_ref": "b_quality", "to_behavior_ref": "d_quality_result", "condition": "", "evidence_status": "分析候选" },
+        { "relation_ref": "r10", "edge_key": "r10", "relation_type": "condition", "from_behavior_ref": "d_quality_result", "to_behavior_ref": "b_decide_ndt", "condition": "质量保证核查同意", "evidence_status": "分析候选" },
+        { "relation_ref": "r11", "edge_key": "r11", "relation_type": "loop", "from_behavior_ref": "d_quality_result", "to_behavior_ref": "b_compile", "condition": "质量保证核查不同意", "evidence_status": "分析候选" },
+        { "relation_ref": "r12", "edge_key": "r12", "relation_type": "condition", "from_behavior_ref": "b_decide_ndt", "to_behavior_ref": "b_ndt", "condition": "需要无损检测", "evidence_status": "分析候选" },
+        { "relation_ref": "r13", "edge_key": "r13", "relation_type": "condition", "from_behavior_ref": "b_decide_ndt", "to_behavior_ref": "b_approve", "condition": "不需要无损检测", "evidence_status": "分析候选" },
+        { "relation_ref": "r14", "edge_key": "r14", "relation_type": "sequence", "from_behavior_ref": "b_ndt", "to_behavior_ref": "d_ndt_result", "condition": "", "evidence_status": "分析候选" },
+        { "relation_ref": "r15", "edge_key": "r15", "relation_type": "condition", "from_behavior_ref": "d_ndt_result", "to_behavior_ref": "b_approve", "condition": "无损检测审批同意", "evidence_status": "分析候选" },
+        { "relation_ref": "r16", "edge_key": "r16", "relation_type": "loop", "from_behavior_ref": "d_ndt_result", "to_behavior_ref": "b_compile", "condition": "无损检测审批不同意", "evidence_status": "分析候选" },
+        { "relation_ref": "r17", "edge_key": "r17", "relation_type": "sequence", "from_behavior_ref": "b_approve", "to_behavior_ref": "d_approve_result", "condition": "", "evidence_status": "分析候选" },
+        { "relation_ref": "r18", "edge_key": "r18", "relation_type": "condition", "from_behavior_ref": "d_approve_result", "to_behavior_ref": "b_approval_recorded", "condition": "批准同意", "evidence_status": "分析候选" },
+        { "relation_ref": "r19", "edge_key": "r19", "relation_type": "loop", "from_behavior_ref": "d_approve_result", "to_behavior_ref": "b_compile", "condition": "批准不同意", "evidence_status": "分析候选" }
       ],
       "data_operations": [
         { "behavior_ref": "b_compile", "operation": "create", "data_refs": ["*"] },
@@ -213,7 +279,6 @@
         { "behavior_ref": "b_review", "operation": "use", "data_refs": ["*"], "exclude_data_refs": ["data_f01"] },
         { "behavior_ref": "b_quality", "operation": "update", "data_refs": ["data_f01"], "updated_fields": ["质保", "质保日期"] },
         { "behavior_ref": "b_quality", "operation": "use", "data_refs": ["*"], "exclude_data_refs": ["data_f01"] },
-        { "behavior_ref": "b_decide_ndt", "operation": "use", "data_refs": ["data_f01"] },
         { "behavior_ref": "b_ndt", "operation": "update", "data_refs": ["data_f01"], "updated_fields": ["无损检测批准", "无损检测批准日期"] },
         { "behavior_ref": "b_ndt", "operation": "use", "data_refs": ["*"], "exclude_data_refs": ["data_f01"] },
         { "behavior_ref": "b_approve", "operation": "update", "data_refs": ["data_f01"], "updated_fields": ["批准", "批准日期"] },
@@ -226,8 +291,7 @@
       ],
       "pending_issues": [
         "请确认每条不同意退回编制时需要满足的业务条件。",
-        "请确认首页审批姓名和日期是在节点同意时写入，还是在进入节点时写入。",
-        "请确认不需要无损检测时是否可以直接进入批准。"
+        "请确认首页审批姓名和日期是在节点同意时写入，还是在进入节点时写入。"
       ]
     }
   ],

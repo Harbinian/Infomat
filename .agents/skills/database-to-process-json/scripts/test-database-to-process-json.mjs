@@ -4,7 +4,9 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  assertExplicitDecisionRouting,
   assertSafeSnapshot,
+  businessProcessJsonFileName,
   generateProcessPackage,
   selectWorkflow
 } from './run-database-to-process-json.mjs';
@@ -71,15 +73,22 @@ function testSnapshot() {
       root_table: '测试业务_主表',
       process_name: '测试业务编制与审批',
       nodes: [{ behavior_ref: 'b_compile', node_key: 'compile', node_type: 'action', business_name: '编制人员编制测试业务记录', business_description: '编制人员填写首页和明细。', completion_standard: '首页和明细已填写，能够提交判断。' },
-        { behavior_ref: 'b_decide', node_key: 'decide', node_type: 'decision', business_name: '测试业务记录是否需要复核', business_description: '根据“是否复核”选择后续路线。', completion_standard: '已选择需要复核或不需要复核。' },
-        { behavior_ref: 'b_review', node_key: 'review', node_type: 'action', business_name: '复核人员复核测试业务记录', business_description: '复核人员核对业务内容。', completion_standard: '已给出复核结论。' },
-        { behavior_ref: 'b_approve', node_key: 'approve', node_type: 'action', business_name: '批准人员批准测试业务记录', business_description: '批准人员给出批准结论。', completion_standard: '已记录批准结论。' }],
+        { behavior_ref: 'b_decide', node_key: 'decide', node_type: 'decision', business_name: '测试业务记录是否需要复核', business_description: '需要复核时进入复核，不需要复核时直接进入批准。', completion_standard: '每个判断结果都有明确去向。' },
+        { behavior_ref: 'b_review', node_key: 'review', node_type: 'action', business_name: '复核人员复核测试业务记录', business_description: '复核人员核对测试业务记录并登记复核人员和日期。', completion_standard: '复核人员已经完成核对并登记办理记录。' },
+        { behavior_ref: 'd_review_result', node_key: 'review_result', node_type: 'decision', business_name: '测试业务记录复核结果是否同意', business_description: '复核同意时进入批准，复核不同意时退回编制。', completion_standard: '每个复核结果都有明确去向。' },
+        { behavior_ref: 'b_approve', node_key: 'approve', node_type: 'action', business_name: '批准人员批准测试业务记录', business_description: '批准人员核对测试业务记录并登记批准人员和日期。', completion_standard: '批准人员已经完成核对并登记办理记录。' },
+        { behavior_ref: 'd_approve_result', node_key: 'approve_result', node_type: 'decision', business_name: '测试业务记录批准结果是否同意', business_description: '批准同意时进入批准记录形成，批准不同意时退回编制。', completion_standard: '每个批准结果都有明确去向。' },
+        { behavior_ref: 'b_approval_recorded', node_key: 'approval_recorded', node_type: 'action', business_name: '批准人员形成测试业务批准记录', business_description: '批准人员形成批准记录。', completion_standard: '批准记录已经形成。' }],
       edges: [{ relation_ref: 'r1', edge_key: 'r1', relation_type: 'sequence', from_behavior_ref: 'b_compile', to_behavior_ref: 'b_decide', condition: '' },
         { relation_ref: 'r2', edge_key: 'r2', relation_type: 'condition', from_behavior_ref: 'b_decide', to_behavior_ref: 'b_review', condition: '需要复核' },
         { relation_ref: 'r3', edge_key: 'r3', relation_type: 'condition', from_behavior_ref: 'b_decide', to_behavior_ref: 'b_approve', condition: '不需要复核' },
-        { relation_ref: 'r4', edge_key: 'r4', relation_type: 'sequence', from_behavior_ref: 'b_review', to_behavior_ref: 'b_approve', condition: '' }],
+        { relation_ref: 'r4', edge_key: 'r4', relation_type: 'sequence', from_behavior_ref: 'b_review', to_behavior_ref: 'd_review_result', condition: '' },
+        { relation_ref: 'r5', edge_key: 'r5', relation_type: 'condition', from_behavior_ref: 'd_review_result', to_behavior_ref: 'b_approve', condition: '复核同意' },
+        { relation_ref: 'r6', edge_key: 'r6', relation_type: 'loop', from_behavior_ref: 'd_review_result', to_behavior_ref: 'b_compile', condition: '复核不同意' },
+        { relation_ref: 'r7', edge_key: 'r7', relation_type: 'sequence', from_behavior_ref: 'b_approve', to_behavior_ref: 'd_approve_result', condition: '' },
+        { relation_ref: 'r8', edge_key: 'r8', relation_type: 'condition', from_behavior_ref: 'd_approve_result', to_behavior_ref: 'b_approval_recorded', condition: '批准同意' },
+        { relation_ref: 'r9', edge_key: 'r9', relation_type: 'loop', from_behavior_ref: 'd_approve_result', to_behavior_ref: 'b_compile', condition: '批准不同意' }],
       data_operations: [{ behavior_ref: 'b_compile', operation: 'create', data_refs: ['*'] },
-        { behavior_ref: 'b_decide', operation: 'use', data_refs: ['data_main'] },
         { behavior_ref: 'b_review', operation: 'use', data_refs: ['data_main', 'data_detail'] },
         { behavior_ref: 'b_approve', operation: 'update', data_refs: ['data_main'], updated_fields: ['批准', '批准日期'] },
         { behavior_ref: 'b_approve', operation: 'use', data_refs: ['data_detail'] }],
@@ -93,6 +102,26 @@ function testSnapshot() {
 const snapshot = testSnapshot();
 assert.equal(assertSafeSnapshot(snapshot), snapshot);
 assert.equal(selectWorkflow(snapshot, '测试业务_主表').workflow.workflow_id, 'workflow_test');
+assert.equal(assertExplicitDecisionRouting(snapshot.workflows[0]), snapshot.workflows[0]);
+
+const hiddenDecisionSnapshot = testSnapshot();
+hiddenDecisionSnapshot.workflows[0].edges.find(edge => edge.relation_ref === 'r4').relation_type = 'condition';
+hiddenDecisionSnapshot.workflows[0].edges.find(edge => edge.relation_ref === 'r4').condition = '复核同意';
+hiddenDecisionSnapshot.workflows[0].edges.find(edge => edge.relation_ref === 'r5').from_behavior_ref = 'b_review';
+hiddenDecisionSnapshot.workflows[0].edges.find(edge => edge.relation_ref === 'r6').from_behavior_ref = 'b_review';
+assert.throws(
+  () => assertExplicitDecisionRouting(hiddenDecisionSnapshot.workflows[0]),
+  /保留业务行为，并在其后增加独立判断节点/
+);
+
+const controlNodeDataSnapshot = testSnapshot();
+controlNodeDataSnapshot.workflows[0].data_operations.push({
+  behavior_ref: 'b_decide', operation: 'use', data_refs: ['data_main']
+});
+assert.throws(
+  () => assertExplicitDecisionRouting(controlNodeDataSnapshot.workflows[0]),
+  /控制节点.*不是业务行为，不能承载数据创建、更新或使用关系/
+);
 
 const snapshotPath = path.join(tempRoot, 'snapshot.json');
 fs.writeFileSync(snapshotPath, JSON.stringify(snapshot, null, 2), 'utf8');
@@ -109,6 +138,31 @@ assert.equal(result.document.forms[0].areas.length, 2, 'main and detail tables m
 assert.equal(result.document.data_objects[0].fields.some(field => field.field_name === 'Operator'), false, 'technical fields must be excluded');
 assert.equal(result.document.behaviors.every(behavior => behavior.current_actor_role === ''), true, 'role configuration is not a formal actor');
 assert.ok(result.pendingIssues.some(item => item.includes('配置中的批准角色')));
+assert.equal(
+  result.document.flow_relations.filter(relation => relation.relation_type === 'condition')
+    .every(relation => result.document.behaviors.find(behavior => behavior.behavior_ref === relation.from_behavior_ref)?.node_type === 'decision'),
+  true,
+  'condition branches must start from explicit decision nodes'
+);
+assert.equal(result.document.behaviors.find(item => item.behavior_ref === 'b_review').behavior_name, '复核人员复核测试业务记录');
+assert.equal(result.document.behaviors.find(item => item.behavior_ref === 'd_review_result').behavior_name, '测试业务记录复核结果是否同意');
+assert.equal(
+  result.document.flow_relations.find(relation => relation.from_behavior_ref === 'b_review').to_behavior_ref,
+  'd_review_result',
+  'an approval-like action must lead to a separate decision node'
+);
+assert.equal(
+  result.document.flow_relations.filter(relation => relation.from_behavior_ref === 'b_review').every(relation => relation.relation_type === 'sequence'),
+  true,
+  'an action must not own conditional or rejection routes'
+);
+assert.equal(
+  result.document.data_objects.flatMap(item => item.behavior_links).every(link =>
+    result.document.behaviors.find(behavior => behavior.behavior_ref === link.behavior_ref)?.node_type === 'action'
+  ),
+  true,
+  'decision and parallel control nodes must not own business data operations'
+);
 
 const approveLink = result.document.data_objects[0].behavior_links.find(link => link.behavior_ref === 'b_approve');
 assert.equal(approveLink.operation, 'update');
@@ -125,9 +179,44 @@ assert.equal(result.document.data_objects[0].lifecycle.entry_state.identifiabili
 assert.equal(result.summary.read_only_verification, 'not_provided', 'unavailable database connection stays an explicit pending boundary');
 assert.ok(result.pendingIssues.some(item => item.includes('本轮未连接实时数据库')));
 assert.equal(fs.existsSync(path.join(outputDir, 'read-only-verification.json')), false);
+assert.match(result.outputJsonFile, /^未审核-待确认部门-测试业务编制与审批-最终待核对-\d{8}\.json$/);
+assert.equal(result.summary.output_json_file, result.outputJsonFile);
+assert.equal(businessProcessJsonFileName({
+  export_meta: { exported_at: '2026-08-24T06:44:31.994Z' },
+  process: { owning_department: '', process_name: '产品制造大纲编制与审批' }
+}), '未审核-待确认部门-产品制造大纲编制与审批-最终待核对-20260824.json');
+
+const editedBase = JSON.parse(JSON.stringify(result.document));
+editedBase.export_meta.compiler = '业务编制人';
+editedBase.export_meta.initiating_department = '工程技术部';
+editedBase.process.owning_department = '工程技术部';
+editedBase.process.capability_domain = '制造工艺设计';
+editedBase.process.business_capability = '零件制造工艺文件管控';
+editedBase.process.classification_status = 'confirmed';
+editedBase.behaviors.find(item => item.behavior_ref === 'b_review').behavior_description = '旧说明把审核结果和退回路线写进业务行为。';
+const editedBasePath = path.join(tempRoot, 'edited-base.json');
+fs.writeFileSync(editedBasePath, JSON.stringify(editedBase, null, 2), 'utf8');
+const preservedOutputDir = path.join(tempRoot, 'preserved-output');
+const preservedResult = generateProcessPackage({
+  snapshotPath,
+  rootTable: '测试业务_主表',
+  baseJsonPath: editedBasePath,
+  outputDir: preservedOutputDir
+});
+assert.equal(preservedResult.document.export_meta.compiler, '业务编制人');
+assert.equal(preservedResult.document.export_meta.initiating_department, '工程技术部');
+assert.equal(preservedResult.document.process.owning_department, '工程技术部');
+assert.equal(preservedResult.document.process.capability_domain, '制造工艺设计');
+assert.equal(preservedResult.document.process.business_capability, '零件制造工艺文件管控');
+assert.equal(preservedResult.document.process.classification_status, 'confirmed');
+assert.equal(
+  preservedResult.document.behaviors.find(item => item.behavior_ref === 'b_review').behavior_description,
+  snapshot.workflows[0].nodes.find(item => item.behavior_ref === 'b_review').business_description,
+  'workflow descriptions follow the corrected snapshot while manual process classification stays preserved'
+);
 
 for (const fileName of [
-  'process-governance-v7.json', 'source-manifest.json', 'schema-snapshot.json', 'evidence-map.jsonl',
+  result.outputJsonFile, 'source-manifest.json', 'schema-snapshot.json', 'evidence-map.jsonl',
   'pending-issues.md', 'generation-summary.json'
 ]) {
   assert.equal(fs.existsSync(path.join(outputDir, fileName)), true, `${fileName} must be generated`);
