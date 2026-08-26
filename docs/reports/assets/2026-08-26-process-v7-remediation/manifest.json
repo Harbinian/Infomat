@@ -2,6 +2,7 @@
   "record_date": "2026-08-26",
   "status": "remediation_in_progress",
   "repository_commit_at_r0": "976d16a15fbe083ad6d6dcc75e24ebe3d772e410",
+  "candidate_worktree_head_at_browser_acceptance": "aa2591e2414da07fd96bf060ff864e118396c8f0",
   "running_3001_commit": "cc10cc0bef81ff207d018cd5cfb819e402eb646c",
   "database": {
     "mysql_version": "8.4.9",
@@ -41,7 +42,9 @@
   ],
   "technical_acceptance": {
     "structured_output_service_automated_tests": "passed",
-    "structured_output_service_browser_checks": "partial_pass_manual_ime_and_real_browser_performance_pending",
+    "structured_output_service_browser_checks": "partial_pass_manual_ime_and_formal_instance_pending",
+    "fixed_large_sample_real_browser_performance": "passed_candidate_instance",
+    "valid_multi_candidate_atomic_browser_state": "passed_candidate_instance",
     "mdm_platform_required_regressions": "passed",
     "v7_legacy_next_edition_and_structured_import_bypass_guard": "passed",
     "independent_p0_p1_reaudit": "passed_no_remaining_p0_or_p1",

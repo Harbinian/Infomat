@@ -1379,6 +1379,11 @@
     .data-edit-mode-shell .step-view-switch { margin-bottom: 0; }
     .web-grid-editor { display: grid; gap: 18px; min-width: 0; }
     .web-grid-workspaces { display: flex; flex-wrap: wrap; gap: 8px; }
+    .web-grid-table-tabs { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: rgba(255, 252, 243, 0.72); }
+    .web-grid-table-tab { display: inline-flex; align-items: center; gap: 6px; }
+    .web-grid-table-tab small { min-width: 20px; padding: 1px 6px; border-radius: 999px; color: var(--muted); background: var(--paper-deep); text-align: center; }
+    .web-grid-table-tab .error-count { color: #fff; background: var(--red); }
+    .web-grid-path { position: sticky; top: 0; z-index: 12; padding: 9px 12px; border-left: 4px solid var(--gold); background: #f7edda; font-weight: 700; line-height: 1.5; }
     .web-grid-panel {
       display: grid;
       gap: 12px;
@@ -2300,6 +2305,27 @@
     .update-fields-error { min-height: 22px; margin: 10px 0 0; color: var(--red) !important; font-weight: 700; }
     .update-fields-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; padding: 9px 10px; border: 1px solid #d9ccb1; border-radius: 8px; background: #fffaf0; }
     .update-fields-summary span { flex: 1 1 260px; color: var(--muted); line-height: 1.55; }
+    .form-field-batch-layout { display: grid; grid-template-columns: minmax(260px, 1fr) minmax(300px, 1fr); gap: 14px; margin-top: 14px; }
+    .form-field-batch-panel { min-width: 0; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: #fffdf8; }
+    .form-field-batch-panel h3 { margin: 0 0 9px; font-size: 15px; }
+    .form-field-batch-search { width: 100%; min-height: 38px; margin-bottom: 9px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 8px; }
+    .form-field-batch-groups { display: grid; gap: 9px; max-height: 360px; overflow: auto; }
+    .form-field-batch-group { padding: 9px; border: 1px solid #ddd1b9; border-radius: 8px; }
+    .form-field-batch-group > strong { display: block; margin-bottom: 7px; }
+    .form-field-batch-option { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px; align-items: start; padding: 7px 5px; }
+    .form-field-batch-option small { display: block; margin-top: 2px; color: var(--muted); line-height: 1.45; }
+    .form-field-batch-selection { display: grid; gap: 8px; max-height: 270px; overflow: auto; }
+    .form-field-batch-selection-row { display: grid; grid-template-columns: minmax(0, 1fr) 145px; gap: 8px; align-items: center; }
+    .form-field-batch-selection-row select,
+    .form-field-batch-target select,
+    .form-field-batch-target input { width: 100%; min-height: 38px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+    .form-field-batch-target { display: grid; gap: 8px; margin-bottom: 12px; }
+    .form-field-derived { display: grid; gap: 6px; padding: 10px; border: 1px solid #ddd1b9; border-radius: 9px; background: #fffaf0; color: var(--muted); }
+    .governance-queue { display: grid; gap: 9px; margin-bottom: 12px; padding: 13px 14px; border: 1px solid #d7b7a6; border-radius: 12px; background: #fff8f1; }
+    .governance-queue.stale { border-color: var(--gold); background: #fff8df; }
+    .governance-queue-head,
+    .governance-queue-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+    .governance-queue p { margin: 0; color: var(--muted); line-height: 1.6; }
 
     .graph-editor-layout {
       display: grid;
@@ -2516,6 +2542,19 @@
     </div>
   </div>
 
+  <div class="modal-backdrop" id="formFieldBatchModal" aria-hidden="true">
+    <div class="modal merge-modal" role="dialog" aria-modal="true" aria-labelledby="formFieldBatchTitle" aria-describedby="formFieldBatchDescription">
+      <h2 id="formFieldBatchTitle">批量引用对象字段</h2>
+      <p id="formFieldBatchDescription">先选择对象字段，再选择一次目标区域，并逐项确认必填性。确认前不会修改当前JSON。</p>
+      <div id="formFieldBatchContent"></div>
+      <p class="update-fields-error" id="formFieldBatchError" role="alert"></p>
+      <div class="modal-actions">
+        <button class="button" id="cancelFormFieldBatchButton">取消</button>
+        <button class="button primary" id="confirmFormFieldBatchButton" disabled>引用所选 0 个字段</button>
+      </div>
+    </div>
+  </div>
+
   <script src="/vendor/cytoscape.min.js"></script>
   <script src="process-governance-migration.js"></script>
   <script src="import-compatibility.js"></script>
@@ -2527,6 +2566,9 @@
   <script src="graph-edit-commands.js"></script>
   <script src="graph-editor-state.js"></script>
   <script src="edit-session-manager.js"></script>
+  <script src="form-field-reuse.js"></script>
+  <script src="authoring-selection-context.js"></script>
+  <script src="governance-review-queue.js"></script>
   <script src="process-diagram.js"></script>
   <script src="data-relation-diagram.js"></script>
   <script src="lifecycle-analyzer.js"></script>
@@ -2862,6 +2904,8 @@
     let graphSelection = null;
     const graphStateManager = globalThis.GraphEditorState.createManager({ limit: 20 });
     const editSessionManager = globalThis.EditSessionManager.createManager();
+    const authoringSelectionContextManager = globalThis.AuthoringSelectionContext.createManager();
+    const governanceReviewQueueManager = globalThis.GovernanceReviewQueue.createManager();
     const reviewPatternViews = new Map();
     let expandedReviewPatternId = '';
     let diagramExampleExpanded = false;
@@ -2885,7 +2929,10 @@
     let webGridFilters = {};
     let webGridSorts = {};
     let webGridRanges = {};
+    let webGridScrollPositions = {};
+    let activeGridTableByWorkspace = { data: 'data_objects', forms: 'forms' };
     let updateFieldsModalState = null;
+    let formFieldBatchApplying = false;
     let pendingTransition = null;
     const workspace = document.getElementById('workspace');
     const statusBox = document.getElementById('statusBox');
@@ -2911,6 +2958,13 @@
     const updateFieldsError = document.getElementById('updateFieldsError');
     const cancelUpdateFieldsButton = document.getElementById('cancelUpdateFieldsButton');
     const confirmUpdateFieldsButton = document.getElementById('confirmUpdateFieldsButton');
+    const formFieldBatchModal = document.getElementById('formFieldBatchModal');
+    const formFieldBatchTitle = document.getElementById('formFieldBatchTitle');
+    const formFieldBatchDescription = document.getElementById('formFieldBatchDescription');
+    const formFieldBatchContent = document.getElementById('formFieldBatchContent');
+    const formFieldBatchError = document.getElementById('formFieldBatchError');
+    const cancelFormFieldBatchButton = document.getElementById('cancelFormFieldBatchButton');
+    const confirmFormFieldBatchButton = document.getElementById('confirmFormFieldBatchButton');
     const jsonInput = document.getElementById('jsonInput');
 
     function newRef(prefix) {
@@ -3030,6 +3084,272 @@
       closeUpdateFieldsModal(false);
       onConfirm?.(selectedRefs);
       return true;
+    }
+
+    function currentFormFieldBatchSession() {
+      const session = editSessionManager.get();
+      return session?.editorKind === 'form-field-batch' && session.candidateKey === candidateStateKey()
+        ? session
+        : null;
+    }
+
+    function formFieldBatchTargetOptions(form) {
+      let mainNumber = 0;
+      let detailNumber = 0;
+      let pendingNumber = 0;
+      const options = [{ value: '', label: '请选择目标主表或明细表' }];
+      (form?.areas || []).forEach(area => {
+        let label;
+        if (area.area_type === '基本信息') {
+          mainNumber += 1;
+          label = area.area_title || (mainNumber === 1 ? '主表' : `主表 ${mainNumber}`);
+        } else if (area.area_type === '明细清单') {
+          detailNumber += 1;
+          label = area.area_title || `明细表 ${detailNumber}`;
+        } else {
+          pendingNumber += 1;
+          label = area.area_title || (pendingNumber === 1 ? '归属待确认区域' : `归属待确认区域 ${pendingNumber}`);
+        }
+        options.push({ value: `area:${area.area_ref}`, label });
+      });
+      options.push({ value: 'new:detail', label: '新建明细表' });
+      options.push({ value: 'new:unassigned', label: '新建归属待确认区域' });
+      return options;
+    }
+
+    function formFieldBatchCanApply(patch) {
+      const targetReady = text(patch.targetValue)
+        && (patch.targetValue !== 'new:detail' || text(patch.newAreaTitle).trim());
+      if (!targetReady) return false;
+      if (patch.mode === 'blank') return typeof patch.blankRequired === 'boolean';
+      const fieldRefs = list(patch.fieldRefs);
+      return fieldRefs.length > 0 && fieldRefs.every(fieldRef => typeof patch.requiredByFieldRef?.[fieldRef] === 'boolean');
+    }
+
+    function updateFormFieldBatchPatch(values = {}, options = {}) {
+      const session = currentFormFieldBatchSession();
+      if (!session) return null;
+      editSessionManager.updatePatch(values, { started: true });
+      const updated = currentFormFieldBatchSession();
+      editSessionManager.setCanApply(formFieldBatchCanApply(updated.patch));
+      refreshUnappliedIndicators();
+      if (options.render !== false) renderFormFieldBatchModal();
+      return currentFormFieldBatchSession();
+    }
+
+    function formFieldReferenceLocations(field) {
+      if (!field?.referenceCount) return '尚未在表单中使用';
+      const locations = (field.references || []).slice(0, 3).map(reference => [
+        reference.formName || reference.formRef || '未命名表单',
+        reference.areaTitle || (reference.areaType === '基本信息' ? '主表' : reference.areaType || '归属待确认区域'),
+        reference.itemName || reference.itemRef || '未命名字段'
+      ].join(' / '));
+      return `已引用${field.referenceCount}次：${locations.join('；')}${field.referenceCount > locations.length ? '……' : ''}`;
+    }
+
+    function renderFormFieldBatchModal() {
+      const session = currentFormFieldBatchSession();
+      if (!session) return;
+      const patch = session.patch;
+      const form = (currentDocument()?.forms || []).find(item => item.form_ref === patch.formRef);
+      const index = globalThis.FormFieldReuse.indexDataFields(currentDocument());
+      const selected = new Set(list(patch.fieldRefs));
+      const search = text(patch.search).trim().toLowerCase();
+      const groups = index.groups.map(group => {
+        const fields = group.fields.filter(field => !search || [field.dataName, field.fieldName, field.fieldType, field.fieldRef]
+          .some(value => text(value).toLowerCase().includes(search)));
+        if (!fields.length) return '';
+        return `<section class="form-field-batch-group">
+          <strong>${escapeHtml(group.dataName || group.dataRef || '未命名数据对象')}</strong>
+          ${fields.map(field => `<label class="form-field-batch-option">
+            <input type="checkbox" data-form-field-batch-ref="${escapeAttribute(field.fieldRef)}" ${selected.has(field.fieldRef) ? 'checked' : ''}>
+            <span><b>${escapeHtml(field.fieldName || '未命名对象字段')}</b> · ${escapeHtml(field.fieldType || '类型待补')}<small>${escapeHtml(formFieldReferenceLocations(field))}${field.fieldRef ? ` · ${escapeHtml(field.fieldRef)}` : ''}</small></span>
+          </label>`).join('')}
+        </section>`;
+      }).join('');
+      const selectedRows = patch.mode === 'blank'
+        ? `<div class="form-field-batch-selection-row"><span>空白表单字段</span><select data-form-field-batch-blank-required>
+            <option value="">请选择</option><option value="true" ${patch.blankRequired === true ? 'selected' : ''}>必填</option><option value="false" ${patch.blankRequired === false ? 'selected' : ''}>非必填</option>
+          </select></div>`
+        : list(patch.fieldRefs).map(fieldRef => {
+            const field = index.byFieldRef[fieldRef];
+            const required = patch.requiredByFieldRef?.[fieldRef];
+            return `<div class="form-field-batch-selection-row">
+              <span>${escapeHtml(field ? `${field.dataName || field.dataRef} / ${field.fieldName || field.fieldRef}` : `${fieldRef}（已失效）`)}</span>
+              <select data-form-field-batch-required="${escapeAttribute(fieldRef)}"><option value="">请选择</option><option value="true" ${required === true ? 'selected' : ''}>必填</option><option value="false" ${required === false ? 'selected' : ''}>非必填</option></select>
+            </div>`;
+          }).join('');
+      formFieldBatchTitle.textContent = patch.mode === 'blank' ? '添加空白表单字段' : '批量引用对象字段';
+      formFieldBatchDescription.textContent = patch.mode === 'blank'
+        ? '先选择目标区域并明确必填性。确认前不会修改当前JSON。'
+        : '同一字段可以在不同表单或区域再次引用；系统只带入稳定引用、所属对象、字段类型和空白显示名称。';
+      formFieldBatchContent.innerHTML = `<div class="form-field-batch-layout">
+        ${patch.mode === 'blank' ? '' : `<section class="form-field-batch-panel"><h3>1. 选择对象字段</h3><input class="form-field-batch-search" type="search" data-form-field-batch-search value="${escapeAttribute(patch.search || '')}" placeholder="查找数据对象、字段、类型或技术标识"><div class="form-field-batch-groups">${groups || '<div class="candidate-empty">当前查找范围没有对象字段。</div>'}</div></section>`}
+        <section class="form-field-batch-panel"><h3>${patch.mode === 'blank' ? '1' : '2'}. 选择目标并确认必填性</h3>
+          <div class="form-field-batch-target"><label>目标主表或明细表<select data-form-field-batch-target>${optionHtml(formFieldBatchTargetOptions(form), patch.targetValue || '')}</select></label>
+          ${patch.targetValue === 'new:detail' ? `<label>明细表名称<input data-form-field-batch-area-title value="${escapeAttribute(patch.newAreaTitle || '')}" placeholder="必须填写明细表名称"></label>` : ''}</div>
+          ${patch.mode === 'blank' ? '' : `<div class="item-actions"><button class="button small" data-form-field-batch-bulk="true">统一设为必填</button><button class="button small" data-form-field-batch-bulk="false">统一设为非必填</button></div>`}
+          <div class="form-field-batch-selection">${selectedRows || '<div class="candidate-empty">尚未选择对象字段。</div>'}</div>
+        </section>
+      </div>`;
+      const count = patch.mode === 'blank' ? 1 : selected.size;
+      confirmFormFieldBatchButton.textContent = patch.mode === 'blank' ? '添加空白字段' : `引用所选 ${count} 个字段`;
+      confirmFormFieldBatchButton.disabled = formFieldBatchApplying || !formFieldBatchCanApply(patch);
+    }
+
+    function openFormFieldBatch(formIndex, mode = 'reference', invoker = null) {
+      const form = currentDocument()?.forms?.[formIndex];
+      if (!form) return false;
+      const patch = {
+        mode: mode === 'blank' ? 'blank' : 'reference',
+        formRef: form.form_ref,
+        fieldRefs: [],
+        requiredByFieldRef: {},
+        blankRequired: null,
+        targetValue: '',
+        newAreaTitle: '',
+        search: '',
+        sourceFingerprint: globalThis.GraphEditorState.fingerprint(currentDocument())
+      };
+      const result = editSessionManager.open({
+        candidateKey: candidateStateKey(),
+        editorKind: 'form-field-batch',
+        entityRef: form.form_ref,
+        allowedFields: Object.keys(patch),
+        baselineFields: {},
+        patch,
+        started: true,
+        canApply: false,
+        focusTarget: { formRef: form.form_ref, invokerId: invoker?.id || '' }
+      });
+      if (!result.ok) {
+        showStatus('当前还有未应用修改。请先应用或放弃，再批量添加表单字段。', 'error');
+        return false;
+      }
+      formFieldBatchError.textContent = '';
+      renderFormFieldBatchModal();
+      formFieldBatchModal.classList.add('show');
+      formFieldBatchModal.setAttribute('aria-hidden', 'false');
+      requestAnimationFrame(() => formFieldBatchContent.querySelector('input, select')?.focus() || cancelFormFieldBatchButton.focus());
+      refreshUnappliedIndicators();
+      return true;
+    }
+
+    function closeFormFieldBatchModal(options = {}) {
+      formFieldBatchApplying = false;
+      formFieldBatchModal.classList.remove('show');
+      formFieldBatchModal.setAttribute('aria-hidden', 'true');
+      formFieldBatchError.textContent = '';
+      if (options.discard !== false) editSessionManager.discard();
+      refreshUnappliedIndicators();
+      if (options.render) render();
+    }
+
+    function formFieldBatchPlanInput(patch) {
+      const input = {
+        candidateKey: candidateStateKey(),
+        documentFingerprint: patch.sourceFingerprint,
+        formRef: patch.formRef,
+        fieldRefs: list(patch.fieldRefs),
+        requiredByFieldRef: clone(patch.requiredByFieldRef || {})
+      };
+      if (text(patch.targetValue).startsWith('area:')) input.areaRef = text(patch.targetValue).slice(5);
+      else if (patch.targetValue === 'new:detail') input.newArea = { areaType: '明细清单', areaTitle: text(patch.newAreaTitle).trim() };
+      else if (patch.targetValue === 'new:unassigned') input.newArea = { areaType: '', areaTitle: '' };
+      return input;
+    }
+
+    function planBlankFormField(documentValue, patch) {
+      const candidate = clone(documentValue);
+      const form = (candidate.forms || []).find(item => item.form_ref === patch.formRef);
+      if (!form) return { ok: false, errors: [{ message: '目标表单已经不存在' }] };
+      let area = null;
+      if (text(patch.targetValue).startsWith('area:')) {
+        const areaRef = text(patch.targetValue).slice(5);
+        area = (form.areas || []).find(item => item.area_ref === areaRef);
+        if (!area) return { ok: false, errors: [{ message: '目标主表或明细表已经不存在' }] };
+      } else if (patch.targetValue === 'new:detail') {
+        const title = text(patch.newAreaTitle).trim();
+        if (!title) return { ok: false, errors: [{ message: '新建明细表时必须填写明细表名称' }] };
+        area = { area_ref: newRef('area'), area_type: '明细清单', area_title: title, items: [] };
+        form.areas.push(area);
+      } else if (patch.targetValue === 'new:unassigned') {
+        area = { area_ref: newRef('area'), area_type: '', area_title: '', items: [] };
+        form.areas.push(area);
+      } else return { ok: false, errors: [{ message: '必须明确选择目标主表或明细表' }] };
+      if (typeof patch.blankRequired !== 'boolean') return { ok: false, errors: [{ message: '必须明确选择“必填”或“非必填”' }] };
+      const item = { ...newFormItem(), required: patch.blankRequired };
+      area.items.push(item);
+      return {
+        ok: true,
+        document: candidate,
+        addedItems: [{ itemRef: item.item_ref, fieldRef: '', dataRef: '', areaRef: area.area_ref, required: item.required }],
+        createdArea: null,
+        errors: []
+      };
+    }
+
+    async function applyFormFieldBatch() {
+      const session = currentFormFieldBatchSession();
+      if (!session || formFieldBatchApplying) return false;
+      const patch = session.patch;
+      if (!formFieldBatchCanApply(patch)) {
+        formFieldBatchError.textContent = '请完成对象字段、目标区域和必填属性选择。';
+        renderFormFieldBatchModal();
+        return false;
+      }
+      formFieldBatchApplying = true;
+      renderFormFieldBatchModal();
+      try {
+        const source = currentDocument();
+        const planned = patch.mode === 'blank'
+          ? planBlankFormField(source, patch)
+          : globalThis.FormFieldReuse.planBatchReference(source, formFieldBatchPlanInput(patch), newRef);
+        if (!planned.ok) {
+          formFieldBatchError.textContent = (planned.errors || []).map(item => item.message).join('；') || '批量规划失败。';
+          return false;
+        }
+        const validation = await validateGraphDocument(planned.document);
+        if (!validation.valid) {
+          formFieldBatchError.textContent = `完整候选未通过v7结构检查：${(validation.errors || []).slice(0, 3).map(item => `${validationErrorLocation(item)}：${item.message}`).join('；')}`;
+          return false;
+        }
+        if (candidateStateKey() !== session.candidateKey
+          || globalThis.GraphEditorState.fingerprint(currentDocument()) !== patch.sourceFingerprint) {
+          formFieldBatchError.textContent = '打开批量草稿后当前JSON已经发生变化。系统没有写入任何字段；请保留选择并重新核对目标。';
+          if (candidateStateKey() === session.candidateKey) {
+            editSessionManager.updatePatch({ sourceFingerprint: globalThis.GraphEditorState.fingerprint(currentDocument()) }, { started: true });
+          }
+          return false;
+        }
+        const entry = currentEntry();
+        const result = graphStateManager.execute(candidateStateKey(entry), entry.data, () => ({
+          ok: true,
+          document: clone(planned.document),
+          details: { source: 'form-field-batch', itemCount: planned.addedItems.length }
+        }));
+        if (!result.ok) throw new Error(result.message || '整批字段未能写入当前流程');
+        entry.data = result.document;
+        const first = planned.addedItems[0];
+        activeFormRef = patch.formRef;
+        activeAreaRef = first?.areaRef || '';
+        activeFormItemRef = first?.itemRef || '';
+        invalidateCurrentChecks(entry);
+        resetWebGridEditor();
+        refreshCandidateDirty(entry);
+        editSessionManager.reset();
+        closeFormFieldBatchModal({ discard: false });
+        render();
+        showStatus(`已一次添加${planned.addedItems.length}个表单字段。执行一次撤销可删除整批，再次重做可恢复整批。`, 'success');
+        refreshValidationAfterGraphCommand(result.document);
+        return true;
+      } catch (error) {
+        formFieldBatchError.textContent = `整批字段未应用：${error.message}`;
+        return false;
+      } finally {
+        formFieldBatchApplying = false;
+        if (formFieldBatchModal.classList.contains('show')) renderFormFieldBatchModal();
+      }
     }
 
     function escapeHtml(value) {
@@ -3354,7 +3674,11 @@
       'data-object-properties': '数据对象信息',
       'data-edge-operations': '数据操作',
       'new-flow-relation-wizard': '流程关系编制',
-      'data-behavior-choice': '数据关系编制'
+      'data-behavior-choice': '数据关系编制',
+      'new-data-behavior-link': '新增数据行为关系',
+      'new-form-behavior-link': '新增表单行为关系',
+      'new-field-source': '新增字段取值来源',
+      'form-field-batch': '批量表单字段引用'
     });
 
     function entityEditConfig(kind) {
@@ -3373,6 +3697,105 @@
       if (!entry) return '';
       if (!entry.stateKey) entry.stateKey = newRef('candidate');
       return entry.stateKey;
+    }
+
+    function authoringContextSource() {
+      if (!webGridSession) return currentDocument() || {};
+      const rows = webGridSession.allRows();
+      return {
+        data_objects: rows.data_objects || [],
+        data_fields: rows.data_fields || [],
+        forms: rows.forms || [],
+        form_areas: rows.form_areas || [],
+        form_items: rows.form_items || []
+      };
+    }
+
+    function captureAuthoringSelectionContext() {
+      const key = candidateStateKey();
+      if (!key) return null;
+      const stored = authoringSelectionContextManager.get(key);
+      const workspaceName = webGridSession ? activeGridWorkspace : stored.workspace;
+      const tableId = webGridSession
+        ? activeGridTableByWorkspace[workspaceName] || globalThis.AuthoringSelectionContext.DEFAULT_TABLES[workspaceName]
+        : stored.tableId;
+      if (webGridSession) {
+        globalThis.ProcessV7GridAdapter.TABLE_IDS.forEach(currentTableId => {
+          const tableWorkspace = globalThis.AuthoringSelectionContext.TABLE_WORKSPACES[currentTableId];
+          authoringSelectionContextManager.setTableView(key, currentTableId, {
+            filter: webGridFilters[currentTableId] || '',
+            sort: clone(webGridSorts[currentTableId] || null),
+            selectedRowId: webGridSelectedRows[currentTableId] || '',
+            scrollTop: Number(webGridScrollPositions[currentTableId]?.top || 0),
+            scrollLeft: Number(webGridScrollPositions[currentTableId]?.left || 0),
+            focusColumn: webGridRanges[currentTableId]?.currentColumn || '',
+            activeInWorkspace: activeGridTableByWorkspace[tableWorkspace] === currentTableId
+          });
+        });
+      }
+      return authoringSelectionContextManager.update(key, {
+        mode: activeDataEditingMode,
+        workspace: workspaceName,
+        tableId,
+        dataRef: activeDataRef,
+        dataFieldRef: activeDataFieldRef,
+        formRef: activeFormRef,
+        areaRef: activeAreaRef,
+        formItemRef: activeFormItemRef
+      }, authoringContextSource());
+    }
+
+    function restoreAuthoringSelectionContext() {
+      const key = candidateStateKey();
+      if (!key) return null;
+      const state = authoringSelectionContextManager.reconcile(key, authoringContextSource());
+      activeDataEditingMode = state.mode;
+      activeGridWorkspace = state.workspace;
+      activeGridTableByWorkspace = { ...globalThis.AuthoringSelectionContext.DEFAULT_TABLES };
+      activeDataRef = state.dataRef;
+      activeDataFieldRef = state.dataFieldRef;
+      activeFormRef = state.formRef;
+      activeAreaRef = state.areaRef;
+      activeFormItemRef = state.formItemRef;
+      Object.entries(state.tableViews || {}).forEach(([tableId, view]) => {
+        const tableWorkspace = globalThis.AuthoringSelectionContext.TABLE_WORKSPACES[tableId];
+        if (view.activeInWorkspace && tableWorkspace) activeGridTableByWorkspace[tableWorkspace] = tableId;
+        webGridFilters[tableId] = view.filter || '';
+        if (view.sort) webGridSorts[tableId] = clone(view.sort);
+        else delete webGridSorts[tableId];
+        webGridSelectedRows[tableId] = view.selectedRowId || '';
+        webGridScrollPositions[tableId] = {
+          top: Number(view.scrollTop || 0),
+          left: Number(view.scrollLeft || 0)
+        };
+        const selectedRowId = view.selectedRowId || '';
+        const focusColumn = view.focusColumn || '';
+        if (selectedRowId && focusColumn) {
+          webGridRanges[tableId] = {
+            anchorRowId: selectedRowId,
+            currentRowId: selectedRowId,
+            anchorColumn: focusColumn,
+            currentColumn: focusColumn
+          };
+        }
+      });
+      activeGridTableByWorkspace[state.workspace] = state.tableId;
+      return state;
+    }
+
+    function updateAuthoringSelection(patch) {
+      const key = candidateStateKey();
+      if (!key) return null;
+      const state = authoringSelectionContextManager.update(key, patch, authoringContextSource());
+      activeDataEditingMode = state.mode;
+      activeGridWorkspace = state.workspace;
+      activeGridTableByWorkspace[state.workspace] = state.tableId;
+      activeDataRef = state.dataRef;
+      activeDataFieldRef = state.dataFieldRef;
+      activeFormRef = state.formRef;
+      activeAreaRef = state.areaRef;
+      activeFormItemRef = state.formItemRef;
+      return state;
     }
 
     function entityByKindAndRef(kind, ref, data = currentDocument()) {
@@ -3528,6 +3951,135 @@
       refreshUnappliedIndicators();
     }
 
+    function openGuidedCreateSession(editorKind, entityRef, patch, allowedFields = null) {
+      const sessionPatch = { ...clone(patch), sourceFingerprint: globalThis.GraphEditorState.fingerprint(currentDocument()) };
+      const result = editSessionManager.open({
+        candidateKey: candidateStateKey(),
+        editorKind,
+        entityRef,
+        allowedFields: allowedFields || Object.keys(sessionPatch),
+        baselineFields: {},
+        patch: sessionPatch,
+        started: true,
+        canApply: false
+      });
+      if (!result.ok) {
+        showStatus('当前还有未应用修改。请先应用或放弃，再新增其他内容。', 'error');
+        return false;
+      }
+      updateGuidedCreateCanApply();
+      refreshUnappliedIndicators();
+      return true;
+    }
+
+    function guidedCreateSession(editorKind, entityRef = null) {
+      const session = editSessionManager.get();
+      if (!session || session.editorKind !== editorKind || session.candidateKey !== candidateStateKey()) return null;
+      return entityRef == null || session.entityRef === entityRef ? session : null;
+    }
+
+    function updateGuidedCreateCanApply() {
+      const session = editSessionManager.get();
+      if (!session) return false;
+      const patch = session.patch;
+      let canApply = false;
+      if (['new-data-behavior-link', 'new-form-behavior-link'].includes(session.editorKind)) {
+        canApply = Boolean(text(patch.behaviorRef));
+      } else if (session.editorKind === 'new-field-source') {
+        const roleReady = Boolean(text(patch.sourceRole));
+        canApply = roleReady && (
+          (patch.sourceType === 'process_data' && Boolean(text(patch.sourceDataRef)))
+          || (patch.sourceType === 'external_system'
+            && Boolean(text(patch.sourceSystemName).trim())
+            && Boolean(text(patch.sourceDataName).trim()))
+        );
+      }
+      editSessionManager.setCanApply(canApply);
+      return canApply;
+    }
+
+    function updateGuidedCreatePatch(values, options = {}) {
+      const result = editSessionManager.updatePatch(values, { started: true });
+      if (!result.ok) return false;
+      updateGuidedCreateCanApply();
+      refreshUnappliedIndicators();
+      if (options.render) render();
+      else {
+        const session = editSessionManager.get();
+        const action = {
+          'new-data-behavior-link': 'apply-new-data-behavior-link',
+          'new-form-behavior-link': 'apply-new-form-behavior-link',
+          'new-field-source': 'apply-new-field-source'
+        }[session?.editorKind];
+        if (action) workspace.querySelector(`[data-action="${action}"]`)?.toggleAttribute('disabled', !session.canApply);
+      }
+      return true;
+    }
+
+    function findFormItemByRef(documentValue, itemRef) {
+      for (const form of documentValue?.forms || []) {
+        for (const area of form.areas || []) {
+          const item = (area.items || []).find(candidate => candidate.item_ref === itemRef);
+          if (item) return { form, area, item };
+        }
+      }
+      return null;
+    }
+
+    function applyGuidedCreateSession(expectedKind) {
+      const session = guidedCreateSession(expectedKind);
+      if (!session || !editSessionManager.canApply(session.candidateKey)) {
+        showStatus('当前新增内容尚未完成，请先明确选择所有必填业务信息。', 'error');
+        return false;
+      }
+      if (globalThis.GraphEditorState.fingerprint(currentDocument()) !== session.patch.sourceFingerprint) {
+        showStatus('打开新增草稿后当前JSON已经变化。系统没有写入任何内容，请放弃草稿后重新开始。', 'error');
+        return false;
+      }
+      const patch = clone(session.patch);
+      const result = runDocumentTransaction(nextDocument => {
+        if (expectedKind === 'new-data-behavior-link') {
+          const dataObject = (nextDocument.data_objects || []).find(item => item.data_ref === session.entityRef);
+          const behavior = (nextDocument.behaviors || []).find(item => item.behavior_ref === patch.behaviorRef && item.node_type === 'action');
+          if (!dataObject) throw new Error('目标数据对象已不存在');
+          if (!behavior) throw new Error('所选业务行为已不存在或不是实际办理行为');
+          dataObject.behavior_links.push({
+            link_ref: newRef('data_link'), behavior_ref: behavior.behavior_ref,
+            operation: 'pending_confirmation', updated_field_refs: []
+          });
+        } else if (expectedKind === 'new-form-behavior-link') {
+          const form = (nextDocument.forms || []).find(item => item.form_ref === session.entityRef);
+          const behavior = (nextDocument.behaviors || []).find(item => item.behavior_ref === patch.behaviorRef && item.node_type === 'action');
+          if (!form) throw new Error('目标表单已不存在');
+          if (!behavior) throw new Error('所选业务行为已不存在或不是实际办理行为');
+          form.behavior_links.push({
+            link_ref: newRef('form_link'), behavior_ref: behavior.behavior_ref, operations: [], notes: ''
+          });
+        } else if (expectedKind === 'new-field-source') {
+          const context = findFormItemByRef(nextDocument, session.entityRef);
+          if (!context) throw new Error('目标表单字段已不存在');
+          const sourceType = patch.sourceType;
+          const sourceDataRef = sourceType === 'process_data' ? text(patch.sourceDataRef) : null;
+          if (sourceType === 'process_data' && !(nextDocument.data_objects || []).some(item => item.data_ref === sourceDataRef)) {
+            throw new Error('所选本流程数据对象已不存在');
+          }
+          context.item.source_links.push({
+            source_link_ref: newRef('field_source'),
+            source_type: sourceType,
+            source_data_ref: sourceDataRef,
+            source_system_name: sourceType === 'external_system' ? text(patch.sourceSystemName).trim() : '',
+            source_data_name: sourceType === 'external_system' ? text(patch.sourceDataName).trim() : '',
+            source_role: patch.sourceRole
+          });
+        }
+      }, {
+        source: expectedKind,
+        failureLabel: '新增内容',
+        successLabel: '新增内容已应用。执行一次撤销可恢复应用前内容。'
+      });
+      return result.ok;
+    }
+
     function registerCandidateState(entry, options = {}) {
       if (!entry) return;
       const key = candidateStateKey(entry);
@@ -3585,7 +4137,14 @@
 
     function invalidateCurrentChecks(entry = currentEntry()) {
       if (!entry) return;
-      const prefix = `${candidateStateKey(entry)}:`;
+      const candidateKey = candidateStateKey(entry);
+      const queueState = governanceReviewQueueManager.get(candidateKey);
+      if (queueState.checkedAtRevision != null) {
+        governanceReviewQueueManager.markStale(candidateKey, {
+          revision: globalThis.GraphEditorState.fingerprint(entry.data)
+        });
+      }
+      const prefix = `${candidateKey}:`;
       [...checkedGovernanceSteps].forEach(key => {
         if (key.startsWith(prefix)) checkedGovernanceSteps.delete(key);
       });
@@ -3598,6 +4157,11 @@
       webGridFilters = {};
       webGridSorts = {};
       webGridRanges = {};
+      webGridScrollPositions = {};
+    }
+
+    function resetActiveGridTables() {
+      activeGridTableByWorkspace = { ...globalThis.AuthoringSelectionContext.DEFAULT_TABLES };
     }
 
     function resetTransientEditingState(options = {}) {
@@ -3609,6 +4173,11 @@
       updateFieldsError.textContent = '';
       updateFieldsModal.classList.remove('show');
       updateFieldsModal.setAttribute('aria-hidden', 'true');
+      formFieldBatchApplying = false;
+      formFieldBatchContent.innerHTML = '';
+      formFieldBatchError.textContent = '';
+      formFieldBatchModal.classList.remove('show');
+      formFieldBatchModal.setAttribute('aria-hidden', 'true');
       pendingTransition = null;
       pendingEditModal.classList.remove('show');
       pendingEditModal.setAttribute('aria-hidden', 'true');
@@ -4027,6 +4596,7 @@
       activeFlowItemKind = 'behavior';
       activeFormRef = '';
       activeAreaRef = '';
+      activeFormItemRef = '';
     }
 
     function ensureActiveBehavior() {
@@ -4056,15 +4626,17 @@
 
     function ensureActiveDataObject() {
       const active = ensureActiveCollectionItem('data_objects', 'data_ref', activeDataRef);
-      activeDataRef = active.ref;
-      return active;
+      if (!activeDataRef || active.item?.data_ref !== activeDataRef) {
+        activeDataRef = '';
+        return { item: null, index: -1, ref: '' };
+      }
+      return { ...active, ref: activeDataRef };
     }
 
     function ensureActiveDataField(dataObject) {
       const fields = dataObject?.fields || [];
       let dataField = fields.find(item => item.field_ref === activeDataFieldRef);
-      if (!dataField) dataField = fields[0] || null;
-      activeDataFieldRef = dataField?.field_ref || '';
+      if (!dataField) activeDataFieldRef = '';
       return {
         item: dataField,
         index: dataField ? fields.indexOf(dataField) : -1,
@@ -4081,16 +4653,13 @@
     function ensureActiveForm() {
       const forms = currentDocument()?.forms || [];
       let form = forms.find(item => item.form_ref === activeFormRef);
-      if (!form) form = forms[0] || null;
-      activeFormRef = form?.form_ref || '';
+      if (!form) activeFormRef = '';
       if (!form) {
         activeAreaRef = '';
         return { form: null, formIndex: -1, area: null, areaIndex: -1 };
       }
-      const mainArea = form.areas.find(item => item.area_type === '基本信息');
       let area = form.areas.find(item => item.area_ref === activeAreaRef);
-      if (!area) area = mainArea || form.areas[0] || null;
-      activeAreaRef = area?.area_ref || '';
+      if (!area) activeAreaRef = '';
       return {
         form,
         formIndex: forms.indexOf(form),
@@ -4339,18 +4908,21 @@
 
     function renderPrimaryGuidanceContent(stepId, context = governanceContext()) {
       const action = globalThis.GovernanceWorkflow.primaryActionForStep(stepId, context);
-      const checked = context.checkedSteps.includes(stepId);
+      const queueState = currentDocument() ? governanceReviewQueueManager.get(candidateStateKey()) : { checkedAtRevision: null, stale: false };
+      const checked = context.checkedSteps.includes(stepId) || queueState.checkedAtRevision != null;
       const checkAction = isAuthoringGovernanceStep(stepId)
-        ? `<button class="button small${checked ? '' : ' secondary'}" data-action="check-governance-step" data-step="${escapeAttribute(stepId)}" ${context.hasDocument ? '' : 'disabled'}>${checked ? '重新检查本轮' : '检查本轮'}</button>`
+        ? `<button class="button small${checked ? '' : ' secondary'}" data-action="check-governance-step" data-step="${escapeAttribute(stepId)}" ${context.hasDocument ? '' : 'disabled'}>${checked ? (queueState.stale ? '重新检查过期结果' : '重新检查本轮') : '检查本轮'}</button>`
         : '';
       return `<strong>当前建议操作</strong><br>${escapeHtml(action)}${checkAction ? `<div class="step-check-action">${checkAction}<small>完成当前输入后主动检查；修改草稿后需要重新检查。</small></div>` : ''}`;
     }
 
     function refreshVisibleGovernanceCheckUi() {
       if (!isAuthoringGovernanceStep(activeGovernanceStep)) return;
-      workspace.querySelectorAll('.step-issue-panel, .step-check-clear').forEach(item => item.remove());
+      workspace.querySelectorAll('.step-issue-panel, .step-check-clear, .governance-queue').forEach(item => item.remove());
       const guidance = workspace.querySelector('.primary-guidance');
       if (guidance) guidance.innerHTML = renderPrimaryGuidanceContent(activeGovernanceStep);
+      const intro = workspace.querySelector('.step-intro');
+      if (intro) intro.insertAdjacentHTML('afterend', renderGovernanceIssuePanel(activeGovernanceStep));
     }
 
     function renderStepIntro(stepId = activeGovernanceStep) {
@@ -4364,6 +4936,21 @@
 
     function renderGovernanceIssuePanel(stepId) {
       const context = governanceContext();
+      const queueState = currentDocument() ? governanceReviewQueueManager.get(candidateStateKey()) : { total: 0, checkedAtRevision: null };
+      if (queueState.checkedAtRevision != null) {
+        if (!queueState.total) return `<div class="step-check-clear${queueState.stale ? ' stale' : ''}"><strong>连续整改队列：0项</strong><span>${queueState.stale ? '结果已过期，重新检查后才能判断是否仍为0项。' : '当前页面检查未发现步骤1至步骤5的问题；业务事实仍由相应角色核对。'}</span></div>`;
+        const issue = queueState.currentIssue;
+        const resolvedIssue = resolveGovernanceQueueIssue(issue);
+        const attributes = resolvedIssue ? exportWarningLocationAttributes(resolvedIssue) : '';
+        return `<section class="governance-queue${queueState.stale ? ' stale' : ''}" aria-live="polite">
+          <div class="governance-queue-head"><strong>连续整改队列 · ${queueState.currentIndex}/${queueState.total}</strong><span class="status-pill ${issue.technical ? 'danger' : ''}">${issue.technical ? '技术阻断项' : `第${globalThis.GovernanceWorkflow.stepById(issue.stepId)?.number || ''}步`}</span></div>
+          ${queueState.stale ? '<p><strong>结果已过期，重新检查后才能判断是否仍成立。</strong>旧结果继续显示，便于连续修正。</p>' : ''}
+          ${webGridSession?.isDirty() ? '<p><strong>表格修改尚未应用。</strong>全局队列仍基于已应用JSON；工作副本错误请查看表格页签和单元格。</p>' : ''}
+          <p><strong>问题说明：</strong>${escapeHtml(issue.message || '当前记录需要核对')}</p>
+          <p><strong>在哪发现：</strong>${escapeHtml(governanceQueueLocation(issue))}</p>
+          <div class="governance-queue-actions"><button class="button secondary small" data-action="focus-export-warning" data-governance-queue-focus ${attributes} ${resolvedIssue ? '' : 'disabled'}>${resolvedIssue ? '修改入口' : '目标已变化，请重新检查'}</button><div class="item-actions"><button class="button small" data-action="governance-queue-previous">上一项</button><button class="button small" data-action="governance-queue-next">下一项</button><button class="button small" data-action="governance-queue-skip">暂时跳过</button><button class="button primary small" data-action="governance-queue-recheck-next">重新检查并定位下一项</button></div></div>
+        </section>`;
+      }
       if (!globalThis.GovernanceWorkflow.issuesVisibleForStep(stepId, context)) return '';
       const issues = governanceIssuesForStep(stepId);
       const vocabulary = globalThis.GovernanceWorkflow.issueVocabularyForStep(stepId);
@@ -4583,18 +5170,23 @@
 
     function ensureActiveWebGridContext() {
       if (!webGridSession) return;
-      const firstActive = tableId => webGridSession.rows(tableId).find(row => !row._deleted);
-      if (!webGridSession.rows('data_objects').some(row => !row._deleted && row.data_ref === activeDataRef)) {
-        activeDataRef = firstActive('data_objects')?.data_ref || '';
-      }
-      if (!webGridSession.rows('forms').some(row => !row._deleted && row.form_ref === activeFormRef)) {
-        activeFormRef = firstActive('forms')?.form_ref || '';
-      }
-      const formAreas = webGridSession.rows('form_areas').filter(row => !row._deleted && row.form_ref === activeFormRef);
-      if (!formAreas.some(row => row.area_ref === activeAreaRef)) activeAreaRef = formAreas[0]?.area_ref || '';
-      const formItems = webGridSession.rows('form_items').filter(row => !row._deleted && row.form_ref === activeFormRef && (!activeAreaRef || row.area_ref === activeAreaRef));
-      if (!formItems.some(row => row.item_ref === activeFormItemRef)) activeFormItemRef = formItems[0]?.item_ref || '';
+      const state = authoringSelectionContextManager.update(candidateStateKey(), {
+        mode: activeDataEditingMode,
+        workspace: activeGridWorkspace,
+        tableId: activeGridTableByWorkspace[activeGridWorkspace],
+        dataRef: activeDataRef,
+        dataFieldRef: activeDataFieldRef,
+        formRef: activeFormRef,
+        areaRef: activeAreaRef,
+        formItemRef: activeFormItemRef
+      }, authoringContextSource());
+      activeDataRef = state.dataRef;
+      activeDataFieldRef = state.dataFieldRef;
+      activeFormRef = state.formRef;
+      activeAreaRef = state.areaRef;
+      activeFormItemRef = state.formItemRef;
       const selectMatchingRow = (tableId, key, value) => {
+        if (!value) return;
         const row = webGridSession.rows(tableId).find(item => !item._deleted && item[key] === value);
         if (row) webGridSelectedRows[tableId] = row._row_id;
       };
@@ -4626,9 +5218,61 @@
       field_source_links: '当前只显示所选表单字段的取值来源。外部系统来源不填写本流程数据对象。'
     };
 
+    const GRID_TABLES_BY_WORKSPACE = Object.freeze({
+      data: Object.freeze(['data_objects', 'data_fields', 'data_behavior_links', 'data_source_relations']),
+      forms: Object.freeze(['forms', 'form_behavior_links', 'form_areas', 'form_items', 'field_source_links'])
+    });
+
+    function gridParentState(tableId) {
+      const definition = webGridSession?.definition(tableId);
+      if (!definition?.parentTableId) return { ready: true, deleted: false, label: '', row: null };
+      const config = {
+        data_fields: ['data_objects', 'data_ref', activeDataRef, '数据对象'],
+        data_behavior_links: ['data_objects', 'data_ref', activeDataRef, '数据对象'],
+        data_source_relations: ['data_objects', 'data_ref', activeDataRef, '数据对象'],
+        form_behavior_links: ['forms', 'form_ref', activeFormRef, '表单或记录'],
+        form_areas: ['forms', 'form_ref', activeFormRef, '表单或记录'],
+        form_items: ['form_areas', 'area_ref', activeAreaRef, '主表或明细表'],
+        field_source_links: ['form_items', 'item_ref', activeFormItemRef, '表单字段']
+      }[tableId];
+      if (!config) return { ready: false, deleted: false, label: '上级记录', row: null };
+      const [parentTableId, refKey, refValue, label] = config;
+      const row = webGridSession.rows(parentTableId).find(item => item[refKey] === refValue) || null;
+      return { ready: Boolean(row && !row._deleted), deleted: Boolean(row?._deleted), label, row };
+    }
+
+    function gridCurrentPath(tableId) {
+      const dataObject = webGridSession?.rows('data_objects').find(row => !row._deleted && row.data_ref === activeDataRef);
+      const form = webGridSession?.rows('forms').find(row => !row._deleted && row.form_ref === activeFormRef);
+      const area = webGridSession?.rows('form_areas').find(row => !row._deleted && row.area_ref === activeAreaRef);
+      const item = webGridSession?.rows('form_items').find(row => !row._deleted && row.item_ref === activeFormItemRef);
+      if (['data_fields', 'data_behavior_links', 'data_source_relations'].includes(tableId)) {
+        return dataObject ? `数据对象“${dataObject.data_name || dataObject.data_ref}” > ${webGridSession.definition(tableId).label}` : `尚未选择数据对象 > ${webGridSession.definition(tableId).label}`;
+      }
+      if (['form_behavior_links', 'form_areas'].includes(tableId)) {
+        return form ? `表单“${form.form_name || form.form_ref}” > ${webGridSession.definition(tableId).label}` : `尚未选择表单 > ${webGridSession.definition(tableId).label}`;
+      }
+      if (tableId === 'form_items') {
+        return form && area ? `表单“${form.form_name || form.form_ref}” > ${area.area_title || (area.area_type === '基本信息' ? '主表' : area.area_type || '归属待确认区域')} > 表单字段` : '尚未选择主表或明细表 > 表单字段';
+      }
+      if (tableId === 'field_source_links') {
+        return form && area && item ? `表单“${form.form_name || form.form_ref}” > ${area.area_title || area.area_type || '归属待确认区域'} > 字段“${item.item_name || item.item_ref}” > 字段取值来源` : '尚未选择表单字段 > 字段取值来源';
+      }
+      return webGridSession.definition(tableId).label;
+    }
+
     function gridAddRowLabel(tableId) {
-      const label = webGridSession?.definition(tableId)?.label || '记录';
-      return tableId === 'form_areas' ? '新增主表或明细表' : `新增${label}`;
+      return {
+        data_objects: '新增数据对象',
+        data_fields: '新增对象字段',
+        data_behavior_links: '新增数据行为关系',
+        data_source_relations: '新增数据来源',
+        forms: '新增表单',
+        form_behavior_links: '新增表单行为关系',
+        form_areas: '新增主表或明细表',
+        form_items: '新增表单字段',
+        field_source_links: '新增字段来源'
+      }[tableId] || '新增记录';
     }
 
     function nativeGridColumns(tableId) {
@@ -4650,6 +5294,13 @@
       return [];
     }
 
+    function isNativeGridCellReadOnly(tableId, row, column) {
+      if (column.readOnly || row?._deleted) return true;
+      return tableId === 'form_items'
+        && Boolean(text(row?.data_field_ref))
+        && ['business_data_ref', 'item_type'].includes(column.key);
+    }
+
     function gridUpdateFieldOptions(row) {
       return (webGridSession?.rows('data_fields', { includeDeleted: false }) || [])
         .filter(field => field.data_ref === row?.data_ref)
@@ -4665,7 +5316,7 @@
       const value = rawValue == null ? '' : String(rawValue);
       const attributes = `data-grid-cell data-grid-table-id="${escapeAttribute(tableId)}" data-grid-row-id="${escapeAttribute(row._row_id)}" data-grid-column="${escapeAttribute(column.key)}" data-grid-row-index="${rowIndex}" data-grid-column-index="${columnIndex}" aria-label="第${rowIndex + 1}行，${escapeAttribute(column.label)}"`;
       const disabled = row._deleted ? ' disabled' : '';
-      if (column.readOnly) return `<span class="web-grid-readonly">${escapeHtml(nativeGridDisplayValue(column, rawValue, row))}</span>`;
+      if (isNativeGridCellReadOnly(tableId, row, column)) return `<span class="web-grid-readonly">${escapeHtml(nativeGridDisplayValue(column, rawValue, row))}</span>`;
       if (column.editor === 'update-fields') {
         if (row.operation !== 'update') return '<span class="web-grid-readonly">仅更新操作需要选择</span>';
         const selectedLabels = selectedUpdateFieldLabels(row.data_ref, rawValue, gridUpdateFieldOptions(row));
@@ -4743,14 +5394,17 @@
       const requestedRowId = webGridSelectedRows[tableId] || '';
       const selectedRow = webGridSession.rows(tableId).find(row => row._row_id === requestedRowId);
       const selectedRowId = selectedRow?._row_id || '';
+      const parent = gridParentState(tableId);
+      const addDisabled = !parent.ready;
       return `<section class="web-grid-panel" data-grid-panel="${escapeAttribute(tableId)}" aria-labelledby="webGridHeading-${escapeAttribute(tableId)}">
+        <div class="web-grid-path">${escapeHtml(gridCurrentPath(tableId))}</div>
         <div class="web-grid-heading">
           <h3 id="webGridHeading-${escapeAttribute(tableId)}">${escapeHtml(definition.label)}</h3>
           <p>${escapeHtml(GRID_TABLE_GUIDANCE[tableId])}</p>
           <div class="web-grid-toolbar">
             <div class="web-grid-primary-tools">
               <input class="web-grid-search" type="search" value="${escapeAttribute(webGridFilters[tableId] || '')}" data-grid-search="${escapeAttribute(tableId)}" placeholder="在当前表格中查找" aria-label="查找${escapeAttribute(definition.label)}">
-              <button class="button secondary small web-grid-add-row" data-action="grid-add-row" data-table-id="${escapeAttribute(tableId)}">${escapeHtml(gridAddRowLabel(tableId))}</button>
+              <button class="button secondary small web-grid-add-row" data-action="grid-add-row" data-table-id="${escapeAttribute(tableId)}" ${addDisabled ? 'disabled' : ''}>${escapeHtml(gridAddRowLabel(tableId))}</button>
             </div>
             <div class="web-grid-row-tools" aria-label="${escapeAttribute(definition.label)}选中行操作">
               <button class="button small" data-action="grid-duplicate-row" data-table-id="${escapeAttribute(tableId)}" ${selectedRowId ? '' : 'disabled'}>复制选中行</button>
@@ -4760,6 +5414,7 @@
             </div>
           </div>
         </div>
+        ${addDisabled ? `<div class="inline-warning"><strong>暂不能新增。</strong>${escapeHtml(parent.deleted ? `当前${parent.label}已在工作副本中标记删除。` : `请先到上级表格明确选择${parent.label}。`)}</div>` : ''}
         <div class="web-grid-shell" id="webGrid-${escapeAttribute(tableId)}">${renderNativeGridTable(tableId)}</div>
       </section>`;
     }
@@ -4776,9 +5431,10 @@
 
     function renderWebGridEditor() {
       ensureWebGridSession();
-      const tableIds = activeGridWorkspace === 'forms'
-        ? ['forms', 'form_behavior_links', 'form_areas', 'form_items', 'field_source_links']
-        : ['data_objects', 'data_fields', 'data_behavior_links', 'data_source_relations'];
+      const tableIds = GRID_TABLES_BY_WORKSPACE[activeGridWorkspace];
+      let activeTableId = activeGridTableByWorkspace[activeGridWorkspace];
+      if (!tableIds.includes(activeTableId)) activeTableId = tableIds[0];
+      activeGridTableByWorkspace[activeGridWorkspace] = activeTableId;
       const dirty = webGridSession?.isDirty();
       return section(
         '网页表格编辑器',
@@ -4788,7 +5444,15 @@
             <button class="button small step-view-button${activeGridWorkspace === 'data' ? ' active' : ''}" data-action="switch-grid-workspace" data-workspace="data">数据工作区</button>
             <button class="button small step-view-button${activeGridWorkspace === 'forms' ? ' active' : ''}" data-action="switch-grid-workspace" data-workspace="forms">表单工作区</button>
           </div>
-          ${tableIds.map(renderWebGridPanel).join('')}
+          <div class="web-grid-table-tabs" role="tablist" aria-label="当前工作区表格">${tableIds.map(tableId => {
+            const definition = webGridSession.definition(tableId);
+            const rowCount = webGridVisibleRows(tableId).filter(row => !row._deleted).length;
+            const errorCount = webGridIssues.filter(issue => issue.tableId === tableId && issue.severity !== 'warning').length;
+            const tableDirty = webGridSession.isTableDirty?.(tableId);
+            const parent = gridParentState(tableId);
+            return `<button class="button small web-grid-table-tab${tableId === activeTableId ? ' primary' : ''}" data-action="switch-grid-table" data-table-id="${escapeAttribute(tableId)}" role="tab" aria-selected="${tableId === activeTableId}">${escapeHtml(definition.label)}${tableDirty ? ' · 未应用' : ''}${!parent.ready ? ' · 缺少上级选择' : ''}<small title="当前范围行数">${rowCount}行</small>${errorCount ? `<small class="error-count" title="错误数量">${errorCount}错</small>` : ''}</button>`;
+          }).join('')}</div>
+          ${renderWebGridPanel(activeTableId)}
           ${renderWebGridIssues()}
           <div class="web-grid-footer">
             <span class="web-grid-status${dirty ? ' dirty' : ''}">${dirty ? '表格中有未应用修改；当前JSON尚未改变。' : '表格内容与当前JSON一致。'}</span>
@@ -5268,7 +5932,7 @@
 
     function ensureActiveGraphDataObject() {
       const dataObjects = currentDocument()?.data_objects || [];
-      if (!dataObjects.some(item => item.data_ref === activeDataRef)) activeDataRef = dataObjects[0]?.data_ref || '';
+      if (!dataObjects.some(item => item.data_ref === activeDataRef)) activeDataRef = '';
       return dataObjects.find(item => item.data_ref === activeDataRef) || null;
     }
 
@@ -5407,7 +6071,8 @@
     function renderLifecyclePanel() {
       const dataObject = ensureActiveGraphDataObject();
       if (!dataObject) {
-        return `<section class="section"><div class="section-body"><div class="diagram-empty"><h2>尚未登记数据对象</h2><p>先登记数据对象，页面再按对象自动整理生命周期建议。</p><button class="button primary" data-action="add-graph-data">新增数据</button></div></div></section>`;
+        const hasObjects = Boolean(currentDocument()?.data_objects?.length);
+        return `<section class="section"><div class="section-body"><div class="diagram-empty"><h2>${hasObjects ? '请选择数据对象' : '尚未登记数据对象'}</h2><p>${hasObjects ? '请在数据对象选择框中明确选择要核对的对象。页面不会自动改选另一条记录。' : '先登记数据对象，页面再按对象自动整理生命周期建议。'}</p>${hasObjects ? '' : '<button class="button primary" data-action="add-graph-data">新增数据</button>'}</div></div></section>`;
       }
       const dataIndex = currentDocument().data_objects.indexOf(dataObject);
       const lifecycle = dataObject.lifecycle || pendingLifecycle();
@@ -5439,7 +6104,7 @@
             </div>
           </div>
           <div class="data-focus-selector">
-            <label>当前数据对象<select data-graph-data-focus>${optionHtml((currentDocument().data_objects || []).map(item => ({ value: item.data_ref, label: item.data_name || '未命名数据' })), activeDataRef)}</select></label>
+            <label>当前数据对象<select data-graph-data-focus>${optionHtml([{ value: '', label: '请选择数据对象' }, ...(currentDocument().data_objects || []).map(item => ({ value: item.data_ref, label: item.data_name || '未命名数据' }))], activeDataRef)}</select></label>
             <span class="technical-note">${showLifecycleDetails ? `${eventCount}个状态变化，${pendingCount}项待确认或需重新核对。` : '先回答当前流程会不会改变这条数据。'}${advancedLifecycleMode ? `高级核对还有${advancedChecklist.length}项提示。` : ''}</span>
           </div>
           ${advancedLifecycleMode ? `<div class="inline-note"><strong>高级结构核对仅在当前页面临时开启。</strong><p>刷新页面后自动关闭；这些内容不参加普通评分，也不会改变JSON结构版本。</p>${advancedChecklist.length ? `<ul>${advancedChecklist.map(item => `<li>${escapeHtml(item.message)}</li>`).join('')}</ul>` : '<p>当前对象没有高级核对提示。</p>'}</div>` : ''}
@@ -5600,7 +6265,7 @@
             </div>
             <div class="data-focus-selector">
               <label>当前数据对象
-                <select data-graph-data-focus>${optionHtml((currentDocument().data_objects || []).map(item => ({ value: item.data_ref, label: item.data_name || '未命名数据' })), activeDataRef)}</select>
+                <select data-graph-data-focus>${optionHtml([{ value: '', label: '请选择数据对象' }, ...(currentDocument().data_objects || []).map(item => ({ value: item.data_ref, label: item.data_name || '未命名数据' }))], activeDataRef)}</select>
               </label>
               <span class="technical-note">只显示当前对象的直接关系；切换对象不会修改JSON。</span>
             </div>
@@ -5612,9 +6277,294 @@
                 </div>
                 <aside class="graph-property-shell" aria-label="当前选择属性">${renderDataPropertyPanel()}</aside>
               </div>` : `
-              <div class="diagram-empty"><h2>尚未登记数据对象</h2><p>点击“新增数据”开始编制数据关系。</p></div>`}
+              <div class="diagram-empty"><h2>${currentDocument().data_objects?.length ? '请选择数据对象' : '尚未登记数据对象'}</h2><p>${currentDocument().data_objects?.length ? '请在上方明确选择要编辑的数据对象。页面不会自动改选另一条记录。' : '点击“新增数据”开始编制数据关系。'}</p></div>`}
           </div>
-        </section>`;
+        </section>${renderActiveDataFieldWorkbench()}`;
+    }
+
+    function renderActiveDataFieldWorkbench() {
+      const dataObject = (currentDocument()?.data_objects || []).find(item => item.data_ref === activeDataRef);
+      if (!dataObject) {
+        return section(
+          '对象字段正式定义入口',
+          '先在上方明确选择一个数据对象，再定义该对象的字段。页面不会自动改选另一条对象记录。',
+          emptyList('当前没有选中的数据对象。')
+        );
+      }
+      const dataIndex = currentDocument().data_objects.indexOf(dataObject);
+      return section(
+        `对象字段正式定义入口 · ${dataObject.data_name || '未命名数据对象'}`,
+        '数据对象属性和对象字段只在“数据对象与行为关系”中正式维护。表单、主表、明细和字段区域只引用这里的稳定标识。',
+        dataFieldsEditor(dataObject, dataIndex)
+      );
+    }
+
+    const AUTHORING_QUEUE_STEPS = Object.freeze(['start', 'boundary', 'skeleton', 'action', 'data']);
+    const STABLE_QUEUE_REF_KEYS = Object.freeze([
+      'source_link_ref', 'source_ref', 'item_ref', 'area_ref', 'form_ref', 'field_ref',
+      'link_ref', 'data_ref', 'relation_ref', 'behavior_ref', 'term_ref', 'process_ref'
+    ]);
+
+    function stableQueueTarget(issue, data = currentDocument()) {
+      const rawPath = text(issue.focusPath || issue.focusPaths?.[0]);
+      let node = data;
+      let deepestRef = text(issue.focusRef);
+      rawPath.split('.').filter(Boolean).forEach(part => {
+        if (node == null) return;
+        node = /^\d+$/.test(part) ? node?.[Number(part)] : node?.[part];
+        if (node && typeof node === 'object' && !Array.isArray(node)) {
+          const refKey = STABLE_QUEUE_REF_KEYS.find(key => typeof node[key] === 'string' && node[key]);
+          if (refKey) deepestRef = node[refKey];
+        }
+      });
+      const normalizedPath = rawPath.split('.').filter(part => !/^\d+$/.test(part)).join('.');
+      return { stableRef: deepestRef || text(data?.process?.process_ref) || 'current-process', normalizedPath };
+    }
+
+    function governanceQueueRuleCode(issue, stepId, normalizedPath) {
+      if (issue.ruleCode || issue.rule_code || issue.code) return text(issue.ruleCode || issue.rule_code || issue.code);
+      const category = text(issue.category).replace(/\s+/g, '_') || 'BUSINESS_CHECK';
+      const fieldRule = normalizedPath || [issue.editorSection, issue.processSection, issue.focusKind].map(text).filter(Boolean).join('.') || 'GENERAL';
+      const semanticRule = [
+        issue.reason,
+        issue.reviewAspect,
+        issue.consumerRef,
+        issue.producerRef,
+        issue.terminalRef,
+        issue.keyword
+      ].map(text).filter(Boolean).join(':');
+      return `${category}:${stepId}:${fieldRule}${semanticRule ? `:${semanticRule}` : ''}`;
+    }
+
+    function findGovernanceQueueEntity(stableRef, data = currentDocument()) {
+      const wanted = text(stableRef);
+      if (!wanted || !data) return null;
+      const descriptor = (options) => ({ ...options, stableRef: wanted });
+      for (let index = 0; index < (data.behaviors || []).length; index += 1) {
+        const item = data.behaviors[index];
+        if (item.behavior_ref === wanted) return descriptor({
+          normalizedRoot: 'behaviors', basePath: `behaviors.${index}`,
+          focusKind: 'behavior', focusRef: wanted, editorSection: 'process', processSection: 'behaviors'
+        });
+      }
+      for (let index = 0; index < (data.flow_relations || []).length; index += 1) {
+        const item = data.flow_relations[index];
+        if (item.relation_ref === wanted) return descriptor({
+          normalizedRoot: 'flow_relations', basePath: `flow_relations.${index}`,
+          focusKind: 'relation', focusRef: wanted, editorSection: 'process', processSection: 'relations'
+        });
+      }
+      for (let dataIndex = 0; dataIndex < (data.data_objects || []).length; dataIndex += 1) {
+        const dataObject = data.data_objects[dataIndex];
+        const dataBase = `data_objects.${dataIndex}`;
+        const dataContext = { dataRef: dataObject.data_ref, editorSection: 'process', processSection: 'data' };
+        if (dataObject.data_ref === wanted) return descriptor({
+          ...dataContext, normalizedRoot: 'data_objects', basePath: dataBase,
+          focusKind: 'data', focusRef: dataObject.data_ref,
+          tableId: 'data_objects', rowRefKey: 'data_ref'
+        });
+        for (let fieldIndex = 0; fieldIndex < (dataObject.fields || []).length; fieldIndex += 1) {
+          const field = dataObject.fields[fieldIndex];
+          if (field.field_ref === wanted) return descriptor({
+            ...dataContext, dataFieldRef: field.field_ref,
+            normalizedRoot: 'data_objects.fields', basePath: `${dataBase}.fields.${fieldIndex}`,
+            focusKind: 'data', focusRef: dataObject.data_ref,
+            tableId: 'data_fields', rowRefKey: 'field_ref'
+          });
+        }
+        for (let linkIndex = 0; linkIndex < (dataObject.behavior_links || []).length; linkIndex += 1) {
+          const link = dataObject.behavior_links[linkIndex];
+          if (link.link_ref === wanted) return descriptor({
+            ...dataContext, normalizedRoot: 'data_objects.behavior_links', basePath: `${dataBase}.behavior_links.${linkIndex}`,
+            focusKind: 'data', focusRef: dataObject.data_ref,
+            tableId: 'data_behavior_links', rowRefKey: 'link_ref'
+          });
+        }
+        for (let sourceIndex = 0; sourceIndex < (dataObject.source_relations || []).length; sourceIndex += 1) {
+          const source = dataObject.source_relations[sourceIndex];
+          if (source.source_ref === wanted) return descriptor({
+            ...dataContext, normalizedRoot: 'data_objects.source_relations', basePath: `${dataBase}.source_relations.${sourceIndex}`,
+            focusKind: 'data', focusRef: dataObject.data_ref,
+            tableId: 'data_source_relations', rowRefKey: 'source_ref'
+          });
+        }
+      }
+      for (let formIndex = 0; formIndex < (data.forms || []).length; formIndex += 1) {
+        const form = data.forms[formIndex];
+        const formBase = `forms.${formIndex}`;
+        const formContext = { formRef: form.form_ref, editorSection: 'forms' };
+        if (form.form_ref === wanted) return descriptor({
+          ...formContext, normalizedRoot: 'forms', basePath: formBase,
+          focusKind: 'form', focusRef: form.form_ref,
+          tableId: 'forms', rowRefKey: 'form_ref'
+        });
+        for (let linkIndex = 0; linkIndex < (form.behavior_links || []).length; linkIndex += 1) {
+          const link = form.behavior_links[linkIndex];
+          if (link.link_ref === wanted) return descriptor({
+            ...formContext, normalizedRoot: 'forms.behavior_links', basePath: `${formBase}.behavior_links.${linkIndex}`,
+            focusKind: 'form', focusRef: form.form_ref,
+            tableId: 'form_behavior_links', rowRefKey: 'link_ref'
+          });
+        }
+        for (let areaIndex = 0; areaIndex < (form.areas || []).length; areaIndex += 1) {
+          const area = form.areas[areaIndex];
+          const areaBase = `${formBase}.areas.${areaIndex}`;
+          const areaContext = { ...formContext, areaRef: area.area_ref };
+          if (area.area_ref === wanted) return descriptor({
+            ...areaContext, normalizedRoot: 'forms.areas', basePath: areaBase,
+            focusKind: 'area', focusRef: area.area_ref,
+            tableId: 'form_areas', rowRefKey: 'area_ref'
+          });
+          for (let itemIndex = 0; itemIndex < (area.items || []).length; itemIndex += 1) {
+            const item = area.items[itemIndex];
+            const itemBase = `${areaBase}.items.${itemIndex}`;
+            const itemContext = { ...areaContext, formItemRef: item.item_ref };
+            if (item.item_ref === wanted) return descriptor({
+              ...itemContext, normalizedRoot: 'forms.areas.items', basePath: itemBase,
+              focusKind: 'area', focusRef: area.area_ref,
+              tableId: 'form_items', rowRefKey: 'item_ref'
+            });
+            for (let sourceIndex = 0; sourceIndex < (item.source_links || []).length; sourceIndex += 1) {
+              const source = item.source_links[sourceIndex];
+              if (source.source_link_ref === wanted) return descriptor({
+                ...itemContext, normalizedRoot: 'forms.areas.items.source_links', basePath: `${itemBase}.source_links.${sourceIndex}`,
+                focusKind: 'area', focusRef: area.area_ref,
+                tableId: 'field_source_links', rowRefKey: 'source_link_ref'
+              });
+            }
+          }
+        }
+      }
+      for (let index = 0; index < (data.terms || []).length; index += 1) {
+        const item = data.terms[index];
+        if (item.term_ref === wanted) return descriptor({
+          normalizedRoot: 'terms', basePath: `terms.${index}`,
+          focusKind: 'term', focusRef: wanted, editorSection: 'terms'
+        });
+      }
+      return null;
+    }
+
+    function resolveGovernanceQueueIssue(issue, data = currentDocument()) {
+      if (!issue || !data) return null;
+      const stableRef = text(issue.stableRef);
+      const entity = findGovernanceQueueEntity(stableRef, data);
+      const processRef = text(data.process?.process_ref) || 'current-process';
+      if (!entity) {
+        if (stableRef && ![processRef, 'current-process'].includes(stableRef)) return null;
+        const rootPath = text(issue.path);
+        if (rootPath && !/^(?:export_meta|process)(?:\.|$)/.test(rootPath)) return null;
+        return { ...issue, focusPath: rootPath || text(issue.focusPath), focusPaths: [] };
+      }
+      const normalizedPath = text(issue.path);
+      const suffix = normalizedPath === entity.normalizedRoot
+        ? ''
+        : normalizedPath.startsWith(`${entity.normalizedRoot}.`)
+          ? normalizedPath.slice(entity.normalizedRoot.length + 1)
+          : '';
+      const focusPath = `${entity.basePath}${suffix ? `.${suffix}` : ''}`;
+      let tableId = entity.tableId || '';
+      let gridRowRef = entity.stableRef;
+      let gridRefKey = entity.rowRefKey || '';
+      if (tableId === 'data_objects' && suffix.startsWith('fields')) {
+        tableId = 'data_fields'; gridRowRef = ''; gridRefKey = '';
+      } else if (tableId === 'data_objects' && suffix.startsWith('behavior_links')) {
+        tableId = 'data_behavior_links'; gridRowRef = ''; gridRefKey = '';
+      } else if (tableId === 'data_objects' && suffix.startsWith('source_relations')) {
+        tableId = 'data_source_relations'; gridRowRef = ''; gridRefKey = '';
+      } else if (tableId === 'forms' && suffix.startsWith('behavior_links')) {
+        tableId = 'form_behavior_links'; gridRowRef = ''; gridRefKey = '';
+      } else if (tableId === 'form_areas' && suffix.startsWith('items')) {
+        tableId = 'form_items'; gridRowRef = ''; gridRefKey = '';
+      } else if (tableId === 'form_items' && suffix.startsWith('source_links')) {
+        tableId = 'field_source_links'; gridRowRef = ''; gridRefKey = '';
+      }
+      return {
+        ...issue,
+        ...entity,
+        tableId,
+        gridRowRef,
+        gridRefKey,
+        focusPath,
+        focusPaths: [focusPath],
+        gridColumn: suffix.split('.').filter(Boolean).slice(-1)[0] || ''
+      };
+    }
+
+    function buildGovernanceQueueIssues(data = currentDocument()) {
+      if (!data) return [];
+      const technical = (structureScoreState.result?.issues || []).filter(item => item.category === '技术结构');
+      const business = governanceIssues(data);
+      return technical.concat(business).map((issue, sourceIndex) => {
+        const stepId = globalThis.GovernanceWorkflow?.stepForTarget(issue) || 'start';
+        const normalizedStep = AUTHORING_QUEUE_STEPS.includes(stepId) ? stepId : 'data';
+        const target = stableQueueTarget(issue, data);
+        return {
+          ...clone(issue),
+          ruleCode: governanceQueueRuleCode(issue, normalizedStep, target.normalizedPath),
+          stableRef: target.stableRef,
+          path: target.normalizedPath,
+          stepId: normalizedStep,
+          technical: issue.category === '技术结构',
+          sourceOrder: sourceIndex
+        };
+      }).sort((left, right) => {
+        if (left.technical !== right.technical) return left.technical ? -1 : 1;
+        const stepDelta = AUTHORING_QUEUE_STEPS.indexOf(left.stepId) - AUTHORING_QUEUE_STEPS.indexOf(right.stepId);
+        return stepDelta || left.sourceOrder - right.sourceOrder;
+      });
+    }
+
+    function runGovernanceQueueCheck(options = {}) {
+      const key = candidateStateKey();
+      if (!key) return null;
+      const scoreState = ensureStructureScoreState();
+      if (scoreState.status !== 'ready' || scoreState.documentKey !== currentStructureScoreKey()) {
+        showStatus(scoreState.status === 'unavailable'
+          ? '技术结构检查暂不可用，本次没有生成有效的问题队列快照。'
+          : '技术结构仍在检查，请稍后重新执行“检查本轮”。本次没有生成有效的问题队列快照。', 'error');
+        return null;
+      }
+      const revision = globalThis.GraphEditorState.fingerprint(currentDocument());
+      const current = governanceReviewQueueManager.get(key);
+      let state;
+      try {
+        const issues = buildGovernanceQueueIssues();
+        state = current.checkedAtRevision == null
+          ? governanceReviewQueueManager.snapshot(key, issues, { revision })
+          : governanceReviewQueueManager.reconcile(key, issues, { revision });
+      } catch (error) {
+        showStatus(`问题队列没有生成：${error.message}。请联系维护人员补充唯一规则编码；当前旧结果保持不变。`, 'error');
+        return null;
+      }
+      checkedGovernanceSteps.add(governanceCheckKey(activeGovernanceStep));
+      if (
+        options.moveNext
+        && state.total > 1
+        && state.currentIssue
+        && current.cursorKey
+        && !state.changes.resolvedKeys.includes(current.cursorKey)
+      ) return governanceReviewQueueManager.next(key);
+      return state;
+    }
+
+    function governanceQueueLocation(issue) {
+      const step = globalThis.GovernanceWorkflow.stepById(issue.stepId);
+      const ref = text(issue.stableRef);
+      const data = currentDocument();
+      const named = (data?.behaviors || []).find(item => item.behavior_ref === ref)?.behavior_name
+        || (data?.flow_relations || []).find(item => item.relation_ref === ref)?.relation_ref
+        || (data?.data_objects || []).find(item => item.data_ref === ref)?.data_name
+        || (data?.data_objects || []).flatMap(item => item.fields || []).find(item => item.field_ref === ref)?.field_name
+        || (data?.forms || []).find(item => item.form_ref === ref)?.form_name
+        || (data?.forms || []).flatMap(form => form.areas || []).find(item => item.area_ref === ref)?.area_title
+        || (data?.forms || []).flatMap(form => (form.areas || []).flatMap(area => area.items || [])).find(item => item.item_ref === ref)?.item_name
+        || ref;
+      return `${step?.label || '当前治理步骤'}${named ? ` / ${named}` : ''}${issue.path ? ` / ${issue.path.split('.').slice(-2).join('.')}` : ''}`;
+    }
+
+    function focusCurrentGovernanceQueueIssue() {
+      requestAnimationFrame(() => workspace.querySelector('[data-governance-queue-focus]')?.click());
     }
 
     function destroyDiagram() {
@@ -5879,21 +6829,14 @@
       if (options.resetEditSessionOnSuccess) editSessionManager.reset();
       updateSelectionFromGraphResult(result);
       if (command.type === 'delete_object') {
-        const collection = command.kind === 'behavior'
-          ? entry.data.behaviors
-          : command.kind === 'relation'
-            ? entry.data.flow_relations
-            : command.kind === 'data'
-              ? entry.data.data_objects
-              : [];
-        const refKey = command.kind === 'behavior' ? 'behavior_ref' : command.kind === 'relation' ? 'relation_ref' : 'data_ref';
-        const nearby = collection[Math.min(result.details?.previousIndex || 0, Math.max(0, collection.length - 1))];
         editSessionManager.reset();
         graphSelection = null;
-        if (nearby) openEntityEditSession(command.kind, nearby[refKey]);
-        if (command.kind === 'behavior') activeBehaviorRef = nearby?.behavior_ref || '';
-        if (command.kind === 'relation') activeRelationRef = nearby?.relation_ref || '';
-        if (command.kind === 'data') activeDataRef = nearby?.data_ref || '';
+        if (command.kind === 'behavior') activeBehaviorRef = '';
+        if (command.kind === 'relation') activeRelationRef = '';
+        if (command.kind === 'data') {
+          activeDataRef = '';
+          activeDataFieldRef = '';
+        }
       }
       invalidateCurrentChecks(entry);
       resetWebGridEditor();
@@ -6066,6 +7009,10 @@
       if (session.editorKind === 'data-object-properties') return applyDataObjectPropertyDraft();
       if (session.editorKind === 'data-edge-operations') return applyGraphDataOperations();
       if (session.editorKind === 'new-flow-relation-wizard') return confirmFlowRelationDraft();
+      if (['new-data-behavior-link', 'new-form-behavior-link', 'new-field-source'].includes(session.editorKind)) {
+        return applyGuidedCreateSession(session.editorKind);
+      }
+      if (session.editorKind === 'form-field-batch') return applyFormFieldBatch();
       showStatus(`${sessionLabel(session)}尚未完成，当前不能应用。`, 'error');
       return false;
     }
@@ -6106,7 +7053,62 @@
       }, { prevalidate: true, failureLabel: '同名数据归并', successLabel: `已归并同名数据“${keep.data_name}”` });
     }
 
+    function focusGridEditorTarget(target = {}) {
+      const tableId = text(target.gridTableId);
+      const tableWorkspace = globalThis.AuthoringSelectionContext.TABLE_WORKSPACES[tableId];
+      if (!tableWorkspace || !currentDocument()) return false;
+      activeGovernanceStep = 'data';
+      activeStepView = tableWorkspace === 'forms' ? 'forms' : 'data';
+      activeWorkspaceTab = 'editor';
+      activeDataEditingMode = 'grid';
+      updateAuthoringSelection({
+        mode: 'grid',
+        workspace: tableWorkspace,
+        tableId,
+        dataRef: text(target.dataRef),
+        dataFieldRef: text(target.dataFieldRef),
+        formRef: text(target.formRef),
+        areaRef: text(target.areaRef),
+        formItemRef: text(target.formItemRef)
+      });
+      ensureWebGridSession();
+      activeGridTableByWorkspace[tableWorkspace] = tableId;
+      const rowRef = text(target.gridRowRef);
+      const rowRefKey = text(target.gridRefKey);
+      const row = rowRef && rowRefKey
+        ? webGridSession.rows(tableId).find(item => !item._deleted && text(item[rowRefKey]) === rowRef)
+        : null;
+      if (row) {
+        selectGridParent(tableId, row);
+        webGridSelectedRows[tableId] = row._row_id;
+      } else {
+        webGridSelectedRows[tableId] = '';
+      }
+      const columns = nativeGridColumns(tableId);
+      const requestedColumn = text(target.gridColumn);
+      const column = columns.some(item => item.key === requestedColumn)
+        ? requestedColumn
+        : columns.find(item => item.editor !== 'readonly')?.key || columns[0]?.key || '';
+      if (row && column) {
+        webGridRanges[tableId] = {
+          anchorRowId: row._row_id,
+          currentRowId: row._row_id,
+          anchorColumn: column,
+          currentColumn: column
+        };
+        webGridFilters[tableId] = '';
+      }
+      captureAuthoringSelectionContext();
+      render();
+      requestAnimationFrame(() => {
+        if (row && column && focusNativeGridCell(tableId, row._row_id, column)) return;
+        workspace.querySelector(`#webGrid-${CSS.escape(tableId)}`)?.focus?.({ preventScroll: true });
+      });
+      return true;
+    }
+
     function focusEditorTarget(target = {}) {
+      if (activeDataEditingMode === 'grid' && focusGridEditorTarget(target)) return;
       const focusKind = text(target.focusKind);
       const focusRef = text(target.focusRef);
       const focusPaths = [...new Set([
@@ -6154,6 +7156,7 @@
         activeEditorSection = 'process';
         activeProcessSection = 'data';
         activeDataRef = focusRef;
+        activeDataFieldRef = text(target.dataFieldRef);
         activeStepView = 'data';
         if (activeDataEditingMode === 'guided' && activeDataMode === 'flow') openEntityEditSession('data', focusRef);
       } else if (focusKind === 'form') {
@@ -6170,6 +7173,7 @@
           activeFormRef = owner.form_ref;
           activeAreaRef = focusRef;
         }
+        if (text(target.formItemRef)) activeFormItemRef = text(target.formItemRef);
         const itemPath = focusPaths
           .map(path => path.match(/^forms\.(\d+)\.areas\.(\d+)\.items\.(\d+)\.(?:business_data_ref|value_origin_mode|source_links)/))
           .find(Boolean);
@@ -6245,7 +7249,16 @@
         focusKind: element.dataset.focusKind,
         focusRef: element.dataset.focusRef,
         focusPath: element.dataset.focusPath,
-        focusPaths
+        focusPaths,
+        gridTableId: element.dataset.gridTableId,
+        gridRowRef: element.dataset.gridRowRef,
+        gridRefKey: element.dataset.gridRefKey,
+        gridColumn: element.dataset.gridColumn,
+        dataRef: element.dataset.dataRef,
+        dataFieldRef: element.dataset.dataFieldRef,
+        formRef: element.dataset.formRef,
+        areaRef: element.dataset.areaRef,
+        formItemRef: element.dataset.formItemRef
       });
     }
 
@@ -6815,12 +7828,23 @@
           <button class="button danger small" data-action="remove-data-behavior-link" data-index="${linkIndex}" data-data-index="${dataIndex}">删除关系</button>
         </div>`;
       }).join('');
+      const draftSession = guidedCreateSession('new-data-behavior-link', item.data_ref);
+      const draft = draftSession?.patch;
+      const draftEditor = draft ? `<div class="item-card inline-warning">
+        <strong>新增数据行为关系（尚未应用）</strong>
+        <div class="grid" style="margin-top:9px">
+          <label class="field">业务行为<select data-edit-session-field="behaviorRef">${optionHtml(actionBehaviorOptions(true), draft.behaviorRef || '')}</select></label>
+          <div class="field"><span class="field-label">数据操作</span><div class="form-field-derived">待确认。建立关系后由业务人员明确选择创建、更新或使用。</div></div>
+        </div>
+        <div class="item-actions"><button class="button primary small" data-action="apply-new-data-behavior-link" ${draftSession.canApply ? '' : 'disabled'}>应用新增关系</button><button class="button small" data-action="cancel-guided-create">取消</button></div>
+      </div>` : '';
       return `
         <div class="field wide">
           <span class="field-label">业务行为与数据的关系</span>
           <div class="inline-note">一项数据最多确认一个“创建”行为，可以有多个“更新”和“使用”行为。系统不会根据表单或名称自动生成关系。</div>
           ${rows || emptyList('尚未登记创建、更新或使用关系。')}
-          <button class="button small" data-action="add-data-behavior-link" data-data-index="${dataIndex}">添加行为关系</button>
+          ${draftEditor}
+          <button class="button small" data-action="add-data-behavior-link" data-data-index="${dataIndex}" ${draft ? 'disabled' : ''}>添加行为关系</button>
         </div>`;
     }
 
@@ -6910,91 +7934,19 @@
     }
 
     function renderDataObjectFieldCatalog() {
-      const active = ensureActiveDataObject();
-      const item = active.item;
-      const index = active.index;
-      const selector = currentDocument().data_objects.length
-        ? currentDocument().data_objects.map((dataObject, dataIndex) =>
-            orderedSelectorRow(
-              'data', dataObject.data_ref, dataIndex, currentDocument().data_objects.length,
-              '数据对象', dataSelectorLabel(dataObject, dataIndex), activeDataRef
-            )
-          ).join('')
-        : '<span class="technical-note">尚未登记数据对象。</span>';
-      const editor = item ? `
-        <div class="record-editor">
-          <div class="item-card" data-focus-kind="data" data-focus-ref="${escapeAttribute(item.data_ref)}">
-            <div class="item-title"><strong>当前数据对象定义</strong></div>
-            <div class="grid">
-              ${field(`data_objects.${index}.data_name`, '数据对象名称')}
-              ${field(`data_objects.${index}.information_type`, '信息类型', {
-                type: 'select',
-                options: INFORMATION_TYPE_OPTIONS,
-                hint: '对象字段引用只在当前单流程内有效，不形成企业级字段身份或主数据认定。'
-              })}
-              ${field(`data_objects.${index}.description`, '数据对象说明', { type: 'textarea', className: 'wide' })}
-              ${dataFieldsEditor(item, index)}
-            </div>
-          </div>
-        </div>` : `<div class="record-editor">${emptyList('先登记数据对象，再建立字段明细。')}</div>`;
-      const body = `<div class="record-workbench"><aside class="record-selector" aria-label="数据对象列表">${selector}</aside>${editor}</div>`;
+      const rows = (currentDocument()?.data_objects || []).map(dataObject => {
+        const fields = (dataObject.fields || []).map(field => `<li><strong>${escapeHtml(field.field_name || '未命名对象字段')}</strong> · ${escapeHtml(field.field_type || '类型待补')} <button class="button small secondary" data-action="edit-data-field-definition" data-data-ref="${escapeAttribute(dataObject.data_ref)}" data-field-ref="${escapeAttribute(field.field_ref)}">修改对象定义</button></li>`).join('');
+        return `<article class="item-card"><div class="item-title"><strong>${escapeHtml(dataObject.data_name || '未命名数据对象')}</strong><button class="button small secondary" data-action="edit-data-field-definition" data-data-ref="${escapeAttribute(dataObject.data_ref)}">修改对象定义</button></div><div class="form-field-derived"><span>信息类型：${escapeHtml(INFORMATION_TYPE_OPTIONS.find(option => option.value === dataObject.information_type)?.label || '待确认')}</span><span>${escapeHtml(dataObject.description || '未填写对象说明')}</span></div>${fields ? `<ul>${fields}</ul>` : emptyList('尚未定义对象字段。')}</article>`;
+      }).join('');
       return section(
-        '1. 数据对象与字段明细',
-        '先统一定义数据对象、字段名称、数据类型和业务定义；再在下方实际表单的主表或明细表中引用。',
-        body,
-        '<button class="button small" data-action="add-data">登记数据对象</button>'
+        '数据对象与对象字段引用摘要（只读）',
+        '这里不再重复编辑对象名称、信息类型、对象字段名称、类型或定义。需要调整时，使用稳定引用返回正式定义入口。',
+        rows || emptyList('尚未登记数据对象。请先回到“数据对象与行为关系”建立正式定义。')
       );
     }
 
     function renderDataObjects() {
-      const active = ensureActiveDataObject();
-      const item = active.item;
-      const index = active.index;
-      const selector = currentDocument().data_objects.length
-        ? currentDocument().data_objects.map((dataObject, dataIndex) =>
-            orderedSelectorRow(
-              'data', dataObject.data_ref, dataIndex, currentDocument().data_objects.length,
-              '输出物与数据', dataSelectorLabel(dataObject, dataIndex), activeDataRef
-            )
-          ).join('')
-        : '<span class="technical-note">尚未登记数据对象。</span>';
-      const editor = item ? `
-        <div class="record-editor">
-          <div class="item-card" data-focus-kind="data" data-focus-ref="${escapeAttribute(item.data_ref)}">
-            <div class="item-title">
-              <strong>信息输出或数据 ${index + 1}</strong>
-              <div class="item-actions">
-                ${text(item.data_name).trim() && currentDocument().data_objects.some(other => other !== item && text(other.data_name).trim() === text(item.data_name).trim())
-                  ? `<button class="button secondary small" data-action="merge-duplicate-data" data-index="${index}">归并同名数据</button>`
-                  : ''}
-                <button class="button danger small" data-action="remove-data" data-index="${index}">删除当前数据</button>
-              </div>
-            </div>
-            <div class="grid">
-              ${field(`data_objects.${index}.data_name`, '数据名称')}
-              ${field(`data_objects.${index}.information_type`, '信息类型', {
-                type: 'select',
-                options: INFORMATION_TYPE_OPTIONS,
-                hint: '示例只用于帮助判断类型，不会写入下载的结构化文件。'
-              })}
-              ${field(`data_objects.${index}.description`, '数据说明', { type: 'textarea', className: 'wide' })}
-              <div class="field wide">
-                <span class="field-label">对象字段</span>
-                <div class="inline-note">当前已定义${(item.fields || []).length}个对象字段。字段定义统一在“表单、明细和字段”中维护。</div>
-                <button class="button secondary small" data-action="switch-process-section" data-section="forms">维护对象字段</button>
-              </div>
-              ${dataBehaviorLinksEditor(item, index)}
-              ${dataSourceRelationsEditor(item, index)}
-            </div>
-          </div>
-        </div>` : `<div class="record-editor">${emptyList('尚未登记数据对象。点击“登记数据对象”开始编制。')}</div>`;
-      const body = `<div class="record-workbench"><aside class="record-selector" aria-label="输出物与数据列表">${selector}</aside>${editor}</div>`;
-      return section(
-        '输出物与数据使用',
-        '这里只结构化信息输出。实物和服务结果写在业务行为的完成标准中；需要追溯时，登记其记录或数据。3001不判断主数据、权威源、数据责任和质量规则。',
-        body,
-        '<button class="button small" data-action="add-data">登记数据对象</button>'
-      );
+      return renderDataObjectFieldCatalog();
     }
 
     function relatedFormFields(dataRef) {
@@ -7067,12 +8019,20 @@
             <button class="button danger small" data-action="remove-form-behavior-link" data-form-index="${formIndex}" data-index="${linkIndex}">删除关系</button>
           </div>`;
       }).join('');
+      const draftSession = guidedCreateSession('new-form-behavior-link', form.form_ref);
+      const draft = draftSession?.patch;
+      const draftEditor = draft ? `<div class="item-card inline-warning">
+        <strong>新增表单行为关系（尚未应用）</strong>
+        <div class="grid" style="margin-top:9px"><label class="field">业务行为<select data-edit-session-field="behaviorRef">${optionHtml(actionBehaviorOptions(true), draft.behaviorRef || '')}</select></label><div class="field"><span class="field-label">表单操作</span><div class="form-field-derived">保持空白，建立关系后再明确选择填写、审核、批准等操作。</div></div></div>
+        <div class="item-actions"><button class="button primary small" data-action="apply-new-form-behavior-link" ${draftSession.canApply ? '' : 'disabled'}>应用新增关系</button><button class="button small" data-action="cancel-guided-create">取消</button></div>
+      </div>` : '';
       return `
         <div class="field wide" data-focus-path="forms.${formIndex}.behavior_links">
           <span class="field-label">这张表单如何被处理</span>
           <div class="inline-note">关系按流程中的业务行为顺序阅读，不单独排序。未选择处理方式时，该关系保持待确认；系统不会根据字段或表单名称推断操作。</div>
           ${rows || emptyList('尚未登记表单与业务行为的关系。')}
-          <button class="button small" data-action="add-form-behavior-link" data-form-index="${formIndex}">添加表单处理关系</button>
+          ${draftEditor}
+          <button class="button small" data-action="add-form-behavior-link" data-form-index="${formIndex}" ${draft ? 'disabled' : ''}>添加表单处理关系</button>
         </div>`;
     }
 
@@ -7092,11 +8052,11 @@
     }
 
     function referencedDataField(item) {
-      const owner = (currentDocument()?.data_objects || []).find(dataObject => dataObject.data_ref === item.business_data_ref);
-      return (owner?.fields || []).find(dataField => dataField.field_ref === item.data_field_ref) || null;
+      return (currentDocument()?.data_objects || []).flatMap(dataObject => dataObject.fields || [])
+        .find(dataField => dataField.field_ref === item.data_field_ref) || null;
     }
 
-    function formFieldReferenceDefaults(item, dataObject, dataField, otherReferenceCount = 0) {
+    function formFieldReferenceDefaults(item, dataObject, dataField) {
       if (!item || !dataObject || !dataField) return {};
       const patch = {
         business_data_ref: dataObject.data_ref,
@@ -7106,8 +8066,8 @@
       return patch;
     }
 
-    function applyFormFieldReferenceDefaults(item, dataObject, dataField, otherReferenceCount = 0, update = null) {
-      const patch = formFieldReferenceDefaults(item, dataObject, dataField, otherReferenceCount);
+    function applyFormFieldReferenceDefaults(item, dataObject, dataField, update = null) {
+      const patch = formFieldReferenceDefaults(item, dataObject, dataField);
       Object.entries(patch).forEach(([key, value]) => {
         if (typeof update === 'function') update(key, value);
         else item[key] = value;
@@ -7115,13 +8075,33 @@
       return patch;
     }
 
-    function dataFieldOptions(item) {
-      const owner = (currentDocument()?.data_objects || []).find(dataObject => dataObject.data_ref === item.business_data_ref);
-      const values = (owner?.fields || []).map((dataField, index) => ({
-        value: dataField.field_ref,
-        label: `${index + 1}. ${dataField.field_name || '未命名对象字段'}${dataField.field_type ? `（${dataField.field_type}）` : ''}`
-      }));
-      return [{ value: '', label: owner ? '请选择对象字段' : '请先选择业务数据归属' }, ...values];
+    function groupedDataFieldSelector(pathKey, item) {
+      const documentValue = currentDocument();
+      const index = globalThis.FormFieldReuse.indexDataFields(documentValue);
+      const currentRef = text(item.data_field_ref);
+      const currentKnown = !currentRef || Boolean(index.byFieldRef[currentRef]);
+      const groups = index.groups.map(group => {
+        if (!group.fields.length) return '';
+        return `<optgroup label="${escapeAttribute(group.dataName || group.dataRef || '未命名数据对象')}">${group.fields.map(field => {
+          const duplicateName = index.fields.filter(candidate => candidate.fieldName && candidate.fieldName === field.fieldName).length > 1;
+          const label = `${field.fieldName || '未命名对象字段'}（${field.fieldType || '类型待补'}）${duplicateName ? ` · ${field.fieldRef}` : ''}`;
+          return `<option value="${escapeAttribute(field.fieldRef)}" ${field.fieldRef === currentRef ? 'selected' : ''}>${escapeHtml(label)}</option>`;
+        }).join('')}</optgroup>`;
+      }).join('');
+      return `<div class="field"><label>引用对象字段</label><select data-bind="${escapeAttribute(pathKey)}" data-kind="nullable"><option value="">对象字段待补，仅登记业务数据归属</option>${!currentKnown ? `<option value="${escapeAttribute(currentRef)}" selected>${escapeHtml(currentRef)}（引用已失效）</option>` : ''}${groups}</select><span class="hint">按数据对象分组选择；同名字段仍按稳定技术标识区分。</span></div>`;
+    }
+
+    function formFieldDerivedReferenceSummary(item) {
+      const index = globalThis.FormFieldReuse.indexDataFields(currentDocument());
+      const fieldEntry = index.byFieldRef[text(item.data_field_ref)];
+      if (!fieldEntry) return null;
+      return {
+        dataRef: fieldEntry.dataRef,
+        dataName: fieldEntry.dataName || fieldEntry.dataRef,
+        fieldName: fieldEntry.fieldName || fieldEntry.fieldRef,
+        fieldType: fieldEntry.fieldType,
+        mismatch: Boolean(item.business_data_ref && item.business_data_ref !== fieldEntry.dataRef)
+      };
     }
 
     function formFieldCatalogOptions() {
@@ -7148,31 +8128,13 @@
 
     function renderFormFieldCreatePanel(form, formIndex) {
       const catalog = formFieldCatalogOptions();
-      const catalogOptions = catalog.map(group => `
-        <optgroup label="${escapeAttribute(group.label)}">
-          ${group.fields.map(option => `<option value="${escapeAttribute(option.value)}">${escapeHtml(option.label)}</option>`).join('')}
-        </optgroup>`).join('');
-      const targetOptions = formFieldTargetOptions(form)
-        .map(option => `<option value="${escapeAttribute(option.value)}">${escapeHtml(option.label)}</option>`)
-        .join('');
       return `<div class="form-field-create-panel" data-form-field-create-panel>
         <div class="form-field-create-copy">
-          <strong>从对象字段添加到当前表单</strong>
-          <span>选择后，页面自动带入对象字段名称和数据类型。纸质表单上的显示名称不同时，再修改“表单显示名称”。</span>
+          <strong>把对象字段批量引用到当前表单</strong>
+          <span>在弹窗中一次选择多个对象字段、一个目标区域，并逐项确认必填性。确认前不会修改当前JSON；失败时不会留下空区域或部分字段。</span>
         </div>
-        <label class="form-field-create-control">
-          <span>对象字段</span>
-          <select data-form-field-catalog="${formIndex}" ${catalog.length ? '' : 'disabled'}>
-            <option value="">${catalog.length ? '请选择已定义的对象字段' : '请先在上方建立对象字段'}</option>
-            ${catalogOptions}
-          </select>
-        </label>
-        <label class="form-field-create-control">
-          <span>添加到</span>
-          <select data-form-field-target="${formIndex}">${targetOptions}</select>
-        </label>
-        <button class="button secondary small" data-action="add-form-item-from-data-field" data-form-index="${formIndex}" disabled>引用并添加</button>
-        <button class="button small" data-action="add-form-item" data-form-index="${formIndex}">添加空白字段（待补引用）</button>
+        <button class="button secondary small" data-action="open-form-field-batch" data-mode="reference" data-form-index="${formIndex}" ${catalog.length ? '' : 'disabled'}>选择并批量引用对象字段</button>
+        <button class="button small" data-action="open-form-field-batch" data-mode="blank" data-form-index="${formIndex}">添加空白字段（待补引用）</button>
       </div>`;
     }
 
@@ -7247,24 +8209,38 @@
             <button class="button danger small" data-action="remove-field-source" data-form-index="${formIndex}" data-area-index="${areaIndex}" data-item-index="${itemIndex}" data-index="${linkIndex}">删除来源</button>
           </div>`;
       }).join('');
+      const derived = formFieldDerivedReferenceSummary(item);
+      const sourceDraftSession = guidedCreateSession('new-field-source', item.item_ref);
+      const sourceDraft = sourceDraftSession?.patch;
+      const sourceDraftEditor = sourceDraft ? `<div class="item-card inline-warning">
+        <strong>新增字段来源（尚未应用）</strong>
+        <div class="grid" style="margin-top:9px">
+          <label class="field">来源类型<select data-edit-session-field="sourceType">${optionHtml([{ value: '', label: '请选择' }, ...FIELD_SOURCE_TYPES], sourceDraft.sourceType || '')}</select></label>
+          ${sourceDraft.sourceType === 'process_data' ? `<label class="field">本流程数据对象<select data-edit-session-field="sourceDataRef">${optionHtml(dataOptions(), sourceDraft.sourceDataRef || '')}</select></label>` : ''}
+          ${sourceDraft.sourceType === 'external_system' ? `<label class="field">外部系统名称<input data-edit-session-field="sourceSystemName" value="${escapeAttribute(sourceDraft.sourceSystemName || '')}"></label><label class="field">来源数据名称<input data-edit-session-field="sourceDataName" value="${escapeAttribute(sourceDraft.sourceDataName || '')}"></label>` : ''}
+          <label class="field">来源作用<select data-edit-session-field="sourceRole">${optionHtml([{ value: '', label: '请选择' }, ...FIELD_SOURCE_ROLES], sourceDraft.sourceRole || '')}</select></label>
+        </div>
+        <div class="item-actions"><button class="button primary small" data-action="apply-new-field-source" ${sourceDraftSession.canApply ? '' : 'disabled'}>应用新增来源</button><button class="button small" data-action="cancel-guided-create">取消</button></div>
+      </div>` : '';
       return `
         <aside class="item-card" data-focus-kind="area" data-focus-ref="${escapeAttribute(context.area.area_ref)}">
           <div class="item-title">
             <strong>字段数据关系：${escapeHtml(item.item_name || '未命名字段')}</strong>
             <button class="button secondary small" data-action="close-field-relations">关闭</button>
           </div>
-          <div class="inline-note">先选择业务数据归属，再引用该数据对象下的字段。字段值使用方式用于区分本流程权威录入点、后续沿用、系统计算和外部取得；选择“沿用已有值”时，承载表单的业务系统应自动带入并避免重复录入。</div>
+          <div class="inline-note">对象字段只选择一次。所属数据对象和字段类型由稳定引用确定；字段值使用方式、取值方式、必填性和来源仍由业务人员明确确认。</div>
           <div class="grid">
-            ${field(`${itemPath}.business_data_ref`, '业务数据归属', { type: 'select', options: dataOptions(), nullable: true })}
-            ${field(`${itemPath}.data_field_ref`, '引用对象字段', { type: 'select', options: dataFieldOptions(item), nullable: true })}
+            ${groupedDataFieldSelector(`${itemPath}.data_field_ref`, item)}
+            ${derived ? `<div class="field"><span class="field-label">派生信息（只读）</span><div class="form-field-derived"><strong>${escapeHtml(derived.dataName)} / ${escapeHtml(derived.fieldName)}</strong><span>字段类型：${escapeHtml(derived.fieldType || '待补充')}</span>${derived.mismatch ? '<span class="inline-warning">导入文件中的对象归属与字段引用不一致；重新选择对象字段后才会修正。</span>' : ''}<button class="button secondary small" data-action="edit-data-field-definition" data-data-ref="${escapeAttribute(derived.dataRef)}" data-field-ref="${escapeAttribute(item.data_field_ref)}">修改对象定义</button></div></div>` : field(`${itemPath}.business_data_ref`, '对象字段待补，仅登记业务数据归属', { type: 'select', options: dataOptions(), nullable: true, hint: '兼容旧数据。这里只保存明确选择的数据对象，不推测对象字段或字段类型。' })}
             ${field(`${itemPath}.value_usage_mode`, '字段值使用方式', { type: 'select', options: FIELD_VALUE_USAGE_MODES })}
             ${field(`${itemPath}.value_origin_mode`, '取值方式', { type: 'select', options: FIELD_ORIGIN_MODES })}
             <div class="field wide" data-focus-key="${escapeAttribute(`${itemPath}.source_links`)}" tabindex="-1">
               <span class="field-label">取值来源</span>
               ${rows || emptyList(item.value_usage_mode === 'reuse_existing'
-                ? '沿用当前对象字段已经建立的值，无需在本表单重复登记取值来源。'
+                ? '当前字段值使用方式已明确为“沿用已有值”；系统未据此自动生成取值来源。'
                 : '尚未登记取值来源。')}
-              ${item.value_usage_mode === 'reuse_existing' ? '' : `<button class="button small" data-action="add-field-source" data-form-index="${formIndex}" data-area-index="${areaIndex}" data-item-index="${itemIndex}">添加取值来源</button>`}
+              ${sourceDraftEditor}
+              ${item.value_usage_mode === 'reuse_existing' ? '' : `<button class="button small" data-action="add-field-source" data-form-index="${formIndex}" data-area-index="${areaIndex}" data-item-index="${itemIndex}" ${sourceDraft ? 'disabled' : ''}>添加取值来源</button>`}
             </div>
           </div>
         </aside>`;
@@ -7279,10 +8255,11 @@
           <button class="button small secondary" data-action="add-proposed-form">设计新建／优化表单</button>
         </div>`;
       if (!active.form) {
+        const selectors = (currentDocument().forms || []).map((item, index) => `<button class="selector-button" data-action="select-form" data-ref="${escapeAttribute(item.form_ref)}"><span>${index + 1}. ${escapeHtml(item.form_name || '未命名表单或记录')}</span>${formDesignStateBadge(item.form_design_state)}</button>`).join('');
         return catalog + section(
           '2. 实际表单、主表、明细和字段',
-          '完成对象字段明细后，再按一张纸质表单的完整结构录入。只有新增表单后才创建空白编辑对象，3001不会自动生成表单。',
-          emptyList('当前流程没有表单或记录。'),
+          '完成对象字段明细后，再按一张纸质表单的完整结构录入。页面不会在选择失效时自动改选另一张表单。',
+          selectors ? `<div class="record-workbench"><aside class="record-selector" aria-label="表单或记录列表">${selectors}</aside><div class="record-editor">${emptyList('请明确选择一张表单或记录。')}</div></div>` : emptyList('当前流程没有表单或记录。'),
           addButtons
         );
       }
@@ -7368,7 +8345,7 @@
             <thead><tr><th>序号</th><th>表单显示名称</th><th>数据类型</th><th>字段归属</th><th>必填</th><th>填写说明</th><th>排序</th><th>删除</th></tr></thead>
             ${groups}
           </table>
-        </div>` : emptyList('尚未录入字段。请先选择对象字段和添加位置，再点击“引用并添加”；没有可复用字段时，才添加空白字段。');
+        </div>` : emptyList('尚未录入字段。请打开批量引用弹窗，选择对象字段、目标区域和必填性；没有可复用字段时，再添加空白字段。');
 
       const body = `
         <div class="form-workbench">
@@ -7403,7 +8380,7 @@
         </div>`;
       return catalog + section(
         '2. 实际表单、主表、明细和字段',
-        '按纸质表单原样录入全部字段；有几张明细表就保留几张。表单字段先选择业务数据归属，再引用该对象的字段。',
+        '按纸质表单原样录入全部字段；有几张明细表就保留几张。表单字段统一选择对象字段，所属数据对象和字段类型由稳定引用确定。',
         body,
         addButtons
       );
@@ -7461,7 +8438,16 @@
         ['data-focus-kind', item.focusKind],
         ['data-focus-ref', item.focusRef],
         ['data-focus-path', item.focusPath],
-        ['data-focus-paths', focusPaths]
+        ['data-focus-paths', focusPaths],
+        ['data-grid-table-id', item.tableId],
+        ['data-grid-row-ref', Object.prototype.hasOwnProperty.call(item, 'gridRowRef') ? item.gridRowRef : item.stableRef],
+        ['data-grid-ref-key', Object.prototype.hasOwnProperty.call(item, 'gridRefKey') ? item.gridRefKey : item.rowRefKey],
+        ['data-grid-column', item.gridColumn],
+        ['data-data-ref', item.dataRef],
+        ['data-data-field-ref', item.dataFieldRef],
+        ['data-form-ref', item.formRef],
+        ['data-area-ref', item.areaRef],
+        ['data-form-item-ref', item.formItemRef]
       ]
         .filter(([, value]) => text(value))
         .map(([name, value]) => `${name}="${escapeAttribute(value)}"`)
@@ -7741,7 +8727,8 @@
           reviewAspect: 'routing'
         };
       };
-      const addWarning = (message, target, suggestions) => warnings.push({
+      const addWarning = (ruleCode, message, target, suggestions) => warnings.push({
+        ruleCode,
         message,
         suggestions,
         ...target
@@ -7754,6 +8741,7 @@
         const targetLabel = behaviorLabel(detail.targetRef);
         if (!detail.hasForwardPath) {
           addWarning(
+            'ROUTING_LOOP_FORWARD_PATH_REQUIRED',
             `${relationLabel}从“${sourceLabel}”返回“${targetLabel}”，但从返回位置沿前进关系不能重新到达“${sourceLabel}”。`,
             relationTarget(detail.relation),
             ['核对回路返回位置，并补充从返回位置重新进入本层检查节点的前进关系。']
@@ -7765,6 +8753,7 @@
             ? '内层循环的退出路线可以进入外层循环，但必须先离开本层循环体。'
             : '最外层循环必须增加通向循环外后续行为的退出路线。';
           addWarning(
+            'ROUTING_LOOP_EXIT_REQUIRED',
             `${relationLabel}在“${sourceLabel}”没有通向本层循环外的退出路线。`,
             relationTarget(detail.relation),
             [nestedSuggestion, '为退出路线填写明确条件和目标行为。']
@@ -7777,6 +8766,7 @@
         const splitLabel = behaviorLabel(detail.splitRef);
         if (!detail.hasCommonJoin) {
           addWarning(
+            'ROUTING_PARALLEL_COMMON_JOIN_REQUIRED',
             `并行开始“${splitLabel}”的${detail.routeCount}条路线没有共同到达同一个并行汇合节点。`,
             splitTarget(detail.split),
             ['需要同时执行全部路线时，使每条路线进入同一个并行汇合节点。', '只有一条结果路线会执行时，将该节点改为判断节点并填写分支条件。']
@@ -7785,6 +8775,7 @@
         detail.terminalRefs.forEach(terminalRef => {
           const terminalLabel = behaviorLabel(terminalRef);
           addWarning(
+            `ROUTING_PARALLEL_TERMINAL_BEFORE_JOIN:${text(terminalRef)}`,
             `并行开始“${splitLabel}”中的“${terminalLabel}”在共同并行汇合前成为流程结束位置。`,
             splitTarget(detail.split),
             [`需要同时执行全部路线时，为“${terminalLabel}”补充进入共同并行汇合的后续关系。`, '该路线可能中止整个流程时，将并行开始改为判断节点并分别填写结果条件。']
@@ -7808,6 +8799,7 @@
         };
         if (detail.reason === 'missing_description') {
           return {
+            ruleCode: 'BEHAVIOR_EXECUTABILITY_MISSING_DESCRIPTION',
             message: `“${detail.behaviorLabel}”未填写“具体做什么”，无法判断执行人员需要逐步完成哪些动作。`,
             suggestions: ['在“具体做什么”中按实际顺序填写每个动作，并写明各动作处理的对象和产生的结果。'],
             ...target
@@ -7815,12 +8807,14 @@
         }
         if (detail.reason === 'abstract_qualitative_description') {
           return {
+            ruleCode: 'BEHAVIOR_EXECUTABILITY_ABSTRACT_DESCRIPTION',
             message: `“${detail.behaviorLabel}”的“具体做什么”使用“${detail.matchedPattern}”这类抽象、定性表述，不能看出实际执行动作。`,
             suggestions: ['删除抽象结论，改写为执行人员实际核对、填写、修改、提交、反馈或归档的动作，并写明每个动作的对象。'],
             ...target
           };
         }
         return {
+          ruleCode: 'BEHAVIOR_EXECUTABILITY_NO_CONCRETE_ACTION',
           message: `“${detail.behaviorLabel}”的“具体做什么”未写出可识别的具体业务动作。`,
           suggestions: ['按实际顺序补充具体动词和处理对象，并写明每个动作产生的结果。'],
           ...target
@@ -8010,15 +9004,18 @@
     function webGridVisibleRows(tableId) {
       const rows = webGridSession?.rows(tableId) || [];
       if (['data_fields', 'data_behavior_links', 'data_source_relations'].includes(tableId)) {
+        if (!activeDataRef) return [];
         return rows.filter(row => row.data_ref === activeDataRef);
       }
       if (['form_behavior_links', 'form_areas'].includes(tableId)) {
+        if (!activeFormRef) return [];
         return rows.filter(row => row.form_ref === activeFormRef);
       }
       if (tableId === 'form_items') {
-        return rows.filter(row => row.form_ref === activeFormRef && (!activeAreaRef || row.area_ref === activeAreaRef));
+        if (!activeFormRef || !activeAreaRef) return [];
+        return rows.filter(row => row.form_ref === activeFormRef && row.area_ref === activeAreaRef);
       }
-      if (tableId === 'field_source_links') return rows.filter(row => row.item_ref === activeFormItemRef);
+      if (tableId === 'field_source_links') return activeFormItemRef ? rows.filter(row => row.item_ref === activeFormItemRef) : [];
       return rows;
     }
 
@@ -8038,7 +9035,6 @@
       }
       let rows = webGridSession?.rows(lookup)?.filter(row => !row._deleted) || [];
       if (lookup === 'form_areas' && rowData.form_ref) rows = rows.filter(row => row.form_ref === rowData.form_ref);
-      if (lookup === 'data_fields' && rowData.business_data_ref) rows = rows.filter(row => row.data_ref === rowData.business_data_ref);
       const fields = {
         data_objects: ['data_ref', 'data_name'], data_fields: ['field_ref', 'field_name'], forms: ['form_ref', 'form_name'],
         form_areas: ['area_ref', 'area_title'], form_items: ['item_ref', 'item_name']
@@ -8052,6 +9048,11 @@
         const ref = row[fields[0]];
         const name = text(row[fields[1]]);
         const duplicate = name && counts.get(name) > 1;
+        if (lookup === 'data_fields') {
+          const owner = webGridSession.rows('data_objects').find(item => !item._deleted && item.data_ref === row.data_ref);
+          const ownerName = owner?.data_name || row.data_ref || '未命名数据对象';
+          return { value: ref, label: `${ownerName} / ${name || ref}${row.field_type ? `（${row.field_type}）` : ''}${duplicate ? ` · ${ref}` : ''}` };
+        }
         return { value: ref, label: duplicate ? `${name}（技术标识：${ref}）` : (name || ref) };
       });
     }
@@ -8062,36 +9063,22 @@
     }
 
     function selectGridParent(tableId, row) {
-      if (tableId === 'data_objects') activeDataRef = row.data_ref;
-      if (tableId === 'forms') {
-        activeFormRef = row.form_ref;
-        activeAreaRef = '';
-        activeFormItemRef = '';
+      if (tableId === 'data_objects') return updateAuthoringSelection({ dataRef: row.data_ref });
+      if (tableId === 'data_fields') return updateAuthoringSelection({ dataFieldRef: row.field_ref });
+      if (['data_behavior_links', 'data_source_relations'].includes(tableId)) return updateAuthoringSelection({ dataRef: row.data_ref });
+      if (tableId === 'forms') return updateAuthoringSelection({ formRef: row.form_ref });
+      if (tableId === 'form_behavior_links') return updateAuthoringSelection({ formRef: row.form_ref });
+      if (tableId === 'form_areas') return updateAuthoringSelection({ formRef: row.form_ref, areaRef: row.area_ref });
+      if (tableId === 'form_items') return updateAuthoringSelection({ formRef: row.form_ref, areaRef: row.area_ref, formItemRef: row.item_ref });
+      if (tableId === 'field_source_links') {
+        const item = webGridSession.rows('form_items').find(entry => entry.item_ref === row.item_ref);
+        if (item) return updateAuthoringSelection({ formRef: item.form_ref, areaRef: item.area_ref, formItemRef: item.item_ref });
       }
-      if (tableId === 'form_areas') {
-        activeAreaRef = row.area_ref;
-        activeFormItemRef = '';
-      }
-      if (tableId === 'form_items') activeFormItemRef = row.item_ref;
+      return null;
     }
 
     function selectGridIssueContext(tableId, row) {
-      if (['data_fields', 'data_behavior_links', 'data_source_relations'].includes(tableId)) activeDataRef = row.data_ref;
-      if (['form_behavior_links', 'form_areas'].includes(tableId)) activeFormRef = row.form_ref;
-      if (tableId === 'form_areas') activeAreaRef = row.area_ref;
-      if (tableId === 'form_items') {
-        activeFormRef = row.form_ref;
-        activeAreaRef = row.area_ref;
-        activeFormItemRef = row.item_ref;
-      }
-      if (tableId === 'field_source_links') {
-        activeFormItemRef = row.item_ref;
-        const item = webGridSession.rows('form_items').find(entry => entry.item_ref === row.item_ref);
-        if (item) {
-          activeFormRef = item.form_ref;
-          activeAreaRef = item.area_ref;
-        }
-      }
+      selectGridParent(tableId, row);
     }
 
     function updateGridToolbarSelection(tableId, rowData) {
@@ -8165,12 +9152,14 @@
     function updateNativeGridStatus() {
       const dirty = Boolean(webGridSession?.isDirty());
       const status = workspace.querySelector('.web-grid-status');
+      const previousDirty = Boolean(status?.classList.contains('dirty'));
       if (status) {
         status.textContent = dirty ? '表格中有未应用修改；当前JSON尚未改变。' : '表格内容与当前JSON一致。';
         status.classList.toggle('dirty', dirty);
       }
       workspace.querySelector('[data-action="apply-web-grid"]')?.toggleAttribute('disabled', !dirty);
       workspace.querySelector('[data-action="discard-web-grid"]')?.toggleAttribute('disabled', !dirty);
+      if (dirty !== previousDirty) refreshVisibleGovernanceCheckUi();
     }
 
     function nativeGridControlValue(control) {
@@ -8183,16 +9172,28 @@
       const tableId = control.dataset.gridTableId;
       const rowId = control.dataset.gridRowId;
       const column = control.dataset.gridColumn;
+      const rowBefore = webGridSession.rows(tableId).find(item => item._row_id === rowId);
+      const columnSpec = webGridSession.definition(tableId)?.columns?.find(item => item.key === column);
+      if (rowBefore && columnSpec && isNativeGridCellReadOnly(tableId, rowBefore, columnSpec)) {
+        refreshNativeGridPanel(tableId);
+        showStatus('该单元格由对象字段稳定引用确定，不能直接输入或粘贴。清除对象字段引用后才可进入兼容调整状态。', 'error');
+        return;
+      }
       webGridSession.updateCell(tableId, rowId, column, nativeGridControlValue(control));
+      if (tableId === 'field_source_links' && column === 'source_type') {
+        const sourceType = text(control.value);
+        if (sourceType === 'external_system') webGridSession.updateCell(tableId, rowId, 'source_data_ref', null);
+        if (sourceType === 'process_data') {
+          webGridSession.updateCell(tableId, rowId, 'source_system_name', '');
+          webGridSession.updateCell(tableId, rowId, 'source_data_name', '');
+        }
+      }
       if (tableId === 'form_items' && column === 'data_field_ref') {
         const row = webGridSession.rows('form_items').find(item => item._row_id === rowId && !item._deleted);
         const dataField = webGridSession.rows('data_fields').find(item => item.field_ref === row?.data_field_ref && !item._deleted);
         const dataObject = webGridSession.rows('data_objects').find(item => item.data_ref === dataField?.data_ref && !item._deleted);
         if (row && dataField && dataObject) {
-          const otherReferenceCount = webGridSession.rows('form_items')
-            .filter(item => item._row_id !== rowId && !item._deleted && item.data_field_ref === dataField.field_ref)
-            .length;
-          applyFormFieldReferenceDefaults(row, dataObject, dataField, otherReferenceCount, (key, value) => {
+          applyFormFieldReferenceDefaults(row, dataObject, dataField, (key, value) => {
             webGridSession.updateCell('form_items', rowId, key, value);
           });
         }
@@ -8280,11 +9281,29 @@
           createGridRowInSession(tableId, { ...gridParentContext(tableId), select: false });
           rows = nativeGridRows(tableId);
         }
+        if (tableId === 'form_items') {
+          const targetColumns = columns.slice(startColumn, startColumn + plan.width);
+          const fieldColumnOffset = targetColumns.findIndex(column => column.key === 'data_field_ref');
+          plan.values.forEach((sourceRow, rowOffset) => {
+            const targetRow = rows[startRow + rowOffset];
+            const projectedFieldRef = fieldColumnOffset >= 0 ? text(sourceRow[fieldColumnOffset]) : text(targetRow?.data_field_ref);
+            if (projectedFieldRef && targetColumns.some(column => ['business_data_ref', 'item_type'].includes(column.key))) {
+              throw new Error('引用对象字段后，业务数据归属和字段类型为派生只读单元格，不能在同一粘贴区域中写入');
+            }
+          });
+        }
         plan.values.forEach((sourceRow, rowOffset) => {
           sourceRow.forEach((value, columnOffset) => {
             webGridSession.updateCell(tableId, rows[startRow + rowOffset]._row_id, columns[startColumn + columnOffset].key, value);
           });
         });
+        if (tableId === 'form_items') {
+          rows.slice(startRow, startRow + plan.height).forEach(row => {
+            const dataField = webGridSession.rows('data_fields').find(item => !item._deleted && item.field_ref === row.data_field_ref);
+            const dataObject = webGridSession.rows('data_objects').find(item => !item._deleted && item.data_ref === dataField?.data_ref);
+            if (dataField && dataObject) applyFormFieldReferenceDefaults(row, dataObject, dataField, (key, value) => webGridSession.updateCell('form_items', row._row_id, key, value));
+          });
+        }
       } catch (error) {
         restoreWebGridTables(snapshot);
         showStatus(`没有粘贴任何内容。${error.message}`, 'error');
@@ -8431,7 +9450,14 @@
             const discarded = editSessionManager.discard();
             if (discarded?.editorKind === 'new-flow-relation-wizard') flowRelationDraft = null;
             if (['data-behavior-choice', 'data-edge-operations'].includes(discarded?.editorKind)) graphSelection = null;
+            if (discarded?.editorKind === 'form-field-batch') {
+              formFieldBatchModal.classList.remove('show');
+              formFieldBatchModal.setAttribute('aria-hidden', 'true');
+              formFieldBatchContent.innerHTML = '';
+              formFieldBatchError.textContent = '';
+            }
             refreshUnappliedIndicators();
+            render();
             return true;
           }
         };
@@ -8619,20 +9645,24 @@
       });
     }
 
-    function openGridModeSwitchModal(nextMode, pendingAction = null) {
-      const action = pendingAction || (() => {
-        resetWebGridEditor();
-        if (nextMode) activeDataEditingMode = nextMode;
-        render();
-      });
-      return requestTransition(nextMode ? '切换编辑方式' : '继续操作', action);
+    function captureVisibleWebGridScroll() {
+      const shell = workspace.querySelector('.web-grid-shell[id^="webGrid-"]');
+      if (!shell) return;
+      const tableId = shell.id.slice('webGrid-'.length);
+      webGridScrollPositions[tableId] = { top: shell.scrollTop, left: shell.scrollLeft };
     }
 
-    function closeGridModeSwitchModal(options = {}) {
-      closePendingEditModal(options);
+    function restoreVisibleWebGridScroll() {
+      const tableId = activeGridTableByWorkspace[activeGridWorkspace];
+      const shell = tableId ? workspace.querySelector(`#webGrid-${CSS.escape(tableId)}`) : null;
+      const position = tableId ? webGridScrollPositions[tableId] : null;
+      if (!shell || !position) return;
+      shell.scrollTop = Number(position.top || 0);
+      shell.scrollLeft = Number(position.left || 0);
     }
 
     function render() {
+      captureVisibleWebGridScroll();
       destroyDiagram();
       destroyDataDiagram();
       destroyReviewPatternDiagrams();
@@ -8657,6 +9687,16 @@
         workspace.innerHTML = renderStartStep();
         return;
       }
+      updateAuthoringSelection({
+        mode: activeDataEditingMode,
+        workspace: activeGridWorkspace,
+        tableId: activeGridTableByWorkspace[activeGridWorkspace],
+        dataRef: activeDataRef,
+        dataFieldRef: activeDataFieldRef,
+        formRef: activeFormRef,
+        areaRef: activeAreaRef,
+        formItemRef: activeFormItemRef
+      });
       ensureStructureScoreState();
       governanceHeader.innerHTML = renderGovernanceHeader(data);
       workspaceViewSwitch.innerHTML = renderGovernanceSteps();
@@ -8664,6 +9704,7 @@
       if (activeGovernanceStep === 'skeleton' && activeStepView === 'diagram') requestAnimationFrame(mountDiagram);
       if (activeGovernanceStep === 'skeleton' && activeStepView === 'diagram') requestAnimationFrame(mountReviewPatternDiagrams);
       if (activeGovernanceStep === 'data' && activeDataEditingMode === 'guided' && activeStepView === 'data') requestAnimationFrame(mountDataDiagram);
+      if (activeGovernanceStep === 'data' && activeDataEditingMode === 'grid') requestAnimationFrame(restoreVisibleWebGridScroll);
     }
 
     function updateCandidateList() {
@@ -8718,7 +9759,10 @@
         candidates = [entry];
         graphStateManager.clear();
         checkedGovernanceSteps.clear();
+        authoringSelectionContextManager.clear();
+        governanceReviewQueueManager.clear();
         resetTransientEditingState({ resetDataMode: true });
+        resetActiveGridTables();
         activeDataEditingMode = 'guided';
         activeGridWorkspace = 'data';
         advancedLifecycleMode = false;
@@ -8743,7 +9787,10 @@
       destroyDataDiagram();
       graphStateManager.clear();
       checkedGovernanceSteps.clear();
+      authoringSelectionContextManager.clear();
+      governanceReviewQueueManager.clear();
       resetTransientEditingState({ resetDataMode: true });
+      resetActiveGridTables();
       activeDataEditingMode = 'guided';
       activeGridWorkspace = 'data';
       advancedLifecycleMode = false;
@@ -8905,7 +9952,7 @@
         item_ref: newRef('item'),
         item_name: '',
         item_type: '',
-        required: false,
+        required: null,
         instructions: '',
         business_data_ref: null,
         data_field_ref: null,
@@ -8913,38 +9960,6 @@
         value_origin_mode: 'pending_confirmation',
         source_links: []
       };
-    }
-
-    function targetAreaForNewFormItem(form, assignment) {
-      if (assignment === 'main') return ensureFormArea(form, '基本信息');
-      if (assignment === 'unassigned') return ensureFormArea(form, '');
-      if (assignment === '__new_detail__') {
-        const area = { area_ref: newRef('area'), area_type: '明细清单', area_title: '', items: [] };
-        form.areas.push(area);
-        return area;
-      }
-      return form.areas.find(area => area.area_type === '明细清单' && area.area_ref === assignment) || null;
-    }
-
-    function addFormItemFromDataField(formIndex, dataFieldRef, assignment) {
-      const form = currentDocument()?.forms?.[formIndex];
-      const dataObject = (currentDocument()?.data_objects || []).find(item =>
-        (item.fields || []).some(dataField => dataField.field_ref === dataFieldRef)
-      );
-      const dataField = (dataObject?.fields || []).find(item => item.field_ref === dataFieldRef);
-      if (!form || !dataObject || !dataField) return null;
-      const area = targetAreaForNewFormItem(form, assignment);
-      if (!area) return null;
-      const item = newFormItem();
-      item.data_field_ref = dataField.field_ref;
-      const otherReferenceCount = (currentDocument().forms || []).reduce((count, currentForm) =>
-        count + (currentForm.areas || []).reduce((areaCount, currentArea) =>
-          areaCount + (currentArea.items || []).filter(candidate => candidate.data_field_ref === dataField.field_ref).length,
-        0),
-      0);
-      applyFormFieldReferenceDefaults(item, dataObject, dataField, otherReferenceCount);
-      area.items.push(item);
-      return { form, area, item, areaIndex: form.areas.indexOf(area), itemIndex: area.items.length - 1 };
     }
 
     function findFormItem(form, itemRef) {
@@ -9028,7 +10043,10 @@
           nextForm.areas.splice(nextAreaIndex, 1);
         },
         afterCommit() {
-          if (areaRef === activeAreaRef) activeAreaRef = '';
+          if (areaRef === activeAreaRef) {
+            activeAreaRef = '';
+            activeFormItemRef = '';
+          }
         }
       });
     }
@@ -9131,11 +10149,9 @@
           if (nextIndex < 0) throw new Error('当前数据对象已不存在');
           nextDocument.data_objects.splice(nextIndex, 1);
         },
-        afterCommit(nextDocument) {
-          const nearby = nextDocument.data_objects[Math.min(dataIndex, Math.max(0, nextDocument.data_objects.length - 1))];
-          activeDataRef = nearby?.data_ref || '';
+        afterCommit() {
+          activeDataRef = '';
           activeDataFieldRef = '';
-          if (nearby && activeDataMode === 'flow') openEntityEditSession('data', nearby.data_ref);
         }
       });
     }
@@ -9157,9 +10173,9 @@
           if (nextIndex < 0) throw new Error('当前对象字段已不存在');
           nextData.fields.splice(nextIndex, 1);
         },
-        afterCommit(nextDocument) {
-          const nextData = (nextDocument.data_objects || []).find(item => item.data_ref === dataRef);
-          activeDataFieldRef = (nextData?.fields || [])[Math.min(fieldIndex, Math.max(0, (nextData?.fields || []).length - 1))]?.field_ref || '';
+        afterCommit() {
+          activeDataRef = dataRef;
+          activeDataFieldRef = '';
         }
       });
     }
@@ -9256,9 +10272,8 @@
           if (nextIndex < 0) throw new Error('当前表单或记录已不存在');
           nextDocument.forms.splice(nextIndex, 1);
         },
-        afterCommit(nextDocument) {
-          const nearby = nextDocument.forms[Math.min(formIndex, Math.max(0, nextDocument.forms.length - 1))];
-          activeFormRef = nearby?.form_ref || '';
+        afterCommit() {
+          activeFormRef = '';
           activeAreaRef = '';
           activeFormItemRef = '';
         }
@@ -9498,8 +10513,32 @@
         '切换编辑方式',
         () => requestDataEditingMode(normalized, { skipPendingGuard: true })
       )) return;
+      captureAuthoringSelectionContext();
+      if (normalized === 'grid') {
+        if (activeStepView === 'forms') {
+          activeGridWorkspace = 'forms';
+          activeGridTableByWorkspace.forms = activeFormItemRef ? 'form_items' : activeAreaRef ? 'form_areas' : 'forms';
+        } else {
+          activeGridWorkspace = 'data';
+          activeGridTableByWorkspace.data = activeDataFieldRef
+            ? 'data_fields'
+            : graphSelection?.kind === 'data-edge'
+              ? 'data_behavior_links'
+              : 'data_objects';
+        }
+      }
+      authoringSelectionContextManager.update(candidateStateKey(), {
+        mode: normalized,
+        workspace: activeGridWorkspace,
+        tableId: activeGridTableByWorkspace[activeGridWorkspace],
+        dataRef: activeDataRef,
+        dataFieldRef: activeDataFieldRef,
+        formRef: activeFormRef,
+        areaRef: activeAreaRef,
+        formItemRef: activeFormItemRef
+      }, currentDocument());
       resetTransientEditingState();
-      activeDataEditingMode = normalized;
+      restoreAuthoringSelectionContext();
       if (normalized === 'guided' && activeStepView === 'data' && activeDataMode === 'flow') {
         const dataObject = ensureActiveGraphDataObject();
         if (dataObject) openEntityEditSession('data', dataObject.data_ref);
@@ -9527,27 +10566,8 @@
       const row = options.sourceRow
         ? webGridSession.duplicateRow(tableId, options.sourceRow._row_id, context)
         : webGridSession.addRow(tableId, context);
-      if (tableId === 'forms') {
-        const area = webGridSession.addRow('form_areas', { parentRef: row.form_ref });
-        webGridSession.updateCell('form_areas', area._row_id, 'area_type', '基本信息');
-        if (options.select !== false) activeAreaRef = area.area_ref;
-      }
-      if (tableId === 'data_behavior_links' && !row.behavior_ref) {
-        webGridSession.updateCell(tableId, row._row_id, 'behavior_ref', currentDocument().behaviors?.[0]?.behavior_ref || '');
-      }
-      if (tableId === 'form_behavior_links' && !row.behavior_ref) {
-        webGridSession.updateCell(tableId, row._row_id, 'behavior_ref', currentDocument().behaviors?.[0]?.behavior_ref || '');
-      }
-      if (tableId === 'field_source_links') {
-        const sourceDataRef = activeDataRef || webGridSession.rows('data_objects').find(item => !item._deleted)?.data_ref || null;
-        webGridSession.updateCell(tableId, row._row_id, 'source_data_ref', sourceDataRef);
-        if (!sourceDataRef) webGridSession.updateCell(tableId, row._row_id, 'source_type', 'external_system');
-      }
       if (options.select === false) return row;
-      if (tableId === 'data_objects') activeDataRef = row.data_ref;
-      if (tableId === 'forms') activeFormRef = row.form_ref;
-      if (tableId === 'form_areas') activeAreaRef = row.area_ref;
-      if (tableId === 'form_items') activeFormItemRef = row.item_ref;
+      selectGridParent(tableId, row);
       webGridSelectedRows[tableId] = row._row_id;
       return row;
     }
@@ -9730,7 +10750,7 @@
       'select-behavior', 'select-relation', 'select-data', 'select-data-field', 'select-form', 'select-area',
       'add-behavior', 'remove-behavior', 'add-relation', 'remove-relation', 'add-data', 'remove-data',
       'add-current-form', 'add-proposed-form', 'remove-form', 'remove-detail-area',
-      'add-form-item-from-data-field', 'add-form-item', 'remove-form-item', 'add-term', 'remove-term'
+      'open-form-field-batch', 'edit-data-field-definition', 'remove-form-item', 'add-term', 'remove-term'
     ]);
 
     function handleAction(action, element, options = {}) {
@@ -9747,9 +10767,25 @@
       if (action === 'check-governance-step') {
         const stepId = globalThis.GovernanceWorkflow.normalizeStepId(element.dataset.step);
         if (!currentDocument()) return;
-        checkedGovernanceSteps.add(governanceCheckKey(stepId));
+        activeGovernanceStep = stepId;
+        if (!runGovernanceQueueCheck()) return;
         render();
-        requestAnimationFrame(() => workspace.querySelector('.step-issue-panel, .step-check-clear')?.focus?.());
+        requestAnimationFrame(() => workspace.querySelector('.governance-queue, .step-check-clear')?.focus?.());
+        return;
+      }
+      if (action === 'governance-queue-previous' || action === 'governance-queue-next' || action === 'governance-queue-skip') {
+        const key = candidateStateKey();
+        if (action === 'governance-queue-previous') governanceReviewQueueManager.previous(key);
+        if (action === 'governance-queue-next') governanceReviewQueueManager.next(key);
+        if (action === 'governance-queue-skip') governanceReviewQueueManager.skipCurrent(key);
+        render();
+        focusCurrentGovernanceQueueIssue();
+        return;
+      }
+      if (action === 'governance-queue-recheck-next') {
+        if (!runGovernanceQueueCheck({ moveNext: true })) return;
+        render();
+        focusCurrentGovernanceQueueIssue();
         return;
       }
       if (action === 'switch-step-view') {
@@ -9761,8 +10797,30 @@
       }
       if (action === 'switch-data-editing-mode') return requestDataEditingMode(element.dataset.mode);
       if (action === 'switch-grid-workspace') {
-        activeGridWorkspace = element.dataset.workspace === 'forms' ? 'forms' : 'data';
+        if (workspace.querySelector('[data-grid-cell][data-grid-composing="1"]')) return showStatus('请先完成当前中文输入，再切换表格。', 'error');
+        const nextWorkspace = element.dataset.workspace === 'forms' ? 'forms' : 'data';
+        updateAuthoringSelection({
+          workspace: nextWorkspace,
+          tableId: activeGridTableByWorkspace[nextWorkspace] || globalThis.AuthoringSelectionContext.DEFAULT_TABLES[nextWorkspace]
+        });
         return render();
+      }
+      if (action === 'switch-grid-table') {
+        if (workspace.querySelector('[data-grid-cell][data-grid-composing="1"]')) return showStatus('请先完成当前中文输入，再切换表格。', 'error');
+        const tableId = text(element.dataset.tableId);
+        if (!GRID_TABLES_BY_WORKSPACE[activeGridWorkspace].includes(tableId)) return;
+        activeGridTableByWorkspace[activeGridWorkspace] = tableId;
+        updateAuthoringSelection({ tableId });
+        render();
+        requestAnimationFrame(() => {
+          const shell = workspace.querySelector(`#webGrid-${CSS.escape(tableId)}`);
+          const position = webGridScrollPositions[tableId] || {};
+          if (shell) {
+            shell.scrollTop = Number(position.top || 0);
+            shell.scrollLeft = Number(position.left || 0);
+          }
+        });
+        return;
       }
       if (action === 'grid-sort') {
         const tableId = element.dataset.tableId;
@@ -9808,10 +10866,12 @@
         const tableId = element.dataset.tableId;
         if (!tableId) return;
         activeGridWorkspace = tableId.startsWith('form') || tableId === 'field_source_links' ? 'forms' : 'data';
+        activeGridTableByWorkspace[activeGridWorkspace] = tableId;
         const rowId = element.dataset.rowId;
         const rowData = webGridSession.rows(tableId).find(row => row._row_id === rowId);
         if (rowData) selectGridIssueContext(tableId, rowData);
         webGridSelectedRows[tableId] = rowId;
+        updateAuthoringSelection({ workspace: activeGridWorkspace, tableId });
         render();
         const focusCell = attempt => {
           if (!focusNativeGridCell(tableId, rowId, element.dataset.column) && attempt < 6) {
@@ -9834,15 +10894,15 @@
         return render();
       }
       if (action === 'start-new-process') {
-        if (webGridSession?.isDirty()) return openGridModeSwitchModal('', () => protect(startNewProcess));
+        if (webGridSession?.isDirty()) return requestTransition('新建流程', () => protect(startNewProcess));
         return protect(startNewProcess);
       }
       if (action === 'open-import-file') {
-        if (webGridSession?.isDirty()) return openGridModeSwitchModal('', () => protect(() => jsonInput.click()));
+        if (webGridSession?.isDirty()) return requestTransition('导入文件', () => protect(() => jsonInput.click()));
         return protect(() => jsonInput.click());
       }
       if (action === 'clear-current-page') {
-        if (webGridSession?.isDirty()) return openGridModeSwitchModal('', () => protect(clearPage));
+        if (webGridSession?.isDirty()) return requestTransition('清空页面', () => protect(clearPage));
         return protect(clearPage);
       }
       if (action === 'download-current-stage') {
@@ -9850,7 +10910,7 @@
           stage: globalThis.GovernanceWorkflow.stageForStep(activeGovernanceStep),
           skipBusinessConfirm: activeGovernanceStep !== 'handoff'
         });
-        if (webGridSession?.isDirty()) return openGridModeSwitchModal('', download);
+        if (webGridSession?.isDirty()) return requestTransition('下载文件', download);
         return download();
       }
       if (action === 'open-governance-drawer') {
@@ -9938,6 +10998,12 @@
       if (action === 'focus-export-warning') return focusExportWarning(element);
       if (action === 'refresh-structure-score') {
         structureScoreRunId += 1;
+        const queueKey = candidateStateKey();
+        if (queueKey && governanceReviewQueueManager.get(queueKey).checkedAtRevision != null) {
+          governanceReviewQueueManager.markStale(queueKey, {
+            revision: globalThis.GraphEditorState.fingerprint(currentDocument())
+          });
+        }
         structureScoreState = {
           status: 'idle',
           candidateIndex: -1,
@@ -10093,15 +11159,15 @@
       if (action === 'merge-duplicate-data') return mergeDuplicateData(index);
       if (action === 'add-data-behavior-link') {
         const dataObject = currentDocument().data_objects[Number(element.dataset.dataIndex)];
-        const behavior = currentDocument().behaviors.find(item => item.node_type === 'action');
-        if (!dataObject || !behavior) {
+        const hasBehavior = currentDocument().behaviors.some(item => item.node_type === 'action');
+        if (!dataObject || !hasBehavior) {
           window.alert('请先添加至少一个业务行为，再登记数据关系。');
           return;
         }
-        dataObject.behavior_links.push({ link_ref: newRef('data_link'), behavior_ref: behavior.behavior_ref, operation: 'pending_confirmation', updated_field_refs: [] });
-        touch();
+        openGuidedCreateSession('new-data-behavior-link', dataObject.data_ref, { behaviorRef: '' });
         return render();
       }
+      if (action === 'apply-new-data-behavior-link') return applyGuidedCreateSession('new-data-behavior-link');
       if (action === 'remove-data-behavior-link') {
         return deleteDataBehaviorLink(Number(element.dataset.dataIndex), index);
       }
@@ -10138,15 +11204,15 @@
       }
       if (action === 'add-form-behavior-link') {
         const form = currentDocument().forms[formIndex];
-        const behavior = currentDocument().behaviors.find(item => item.node_type === 'action');
-        if (!form || !behavior) {
+        const hasBehavior = currentDocument().behaviors.some(item => item.node_type === 'action');
+        if (!form || !hasBehavior) {
           window.alert('请先添加至少一个业务行为，再登记表单处理关系。');
           return;
         }
-        form.behavior_links.push({ link_ref: newRef('form_link'), behavior_ref: behavior.behavior_ref, operations: [], notes: '' });
-        touch();
+        openGuidedCreateSession('new-form-behavior-link', form.form_ref, { behaviorRef: '' });
         return render();
       }
+      if (action === 'apply-new-form-behavior-link') return applyGuidedCreateSession('new-form-behavior-link');
       if (action === 'remove-form-behavior-link') {
         return deleteFormBehaviorLink(formIndex, index);
       }
@@ -10160,17 +11226,16 @@
       }
       if (action === 'add-field-source') {
         const formItem = currentDocument().forms[formIndex]?.areas[areaIndex]?.items[Number(element.dataset.itemIndex)];
-        const dataObject = currentDocument().data_objects[0];
         if (!formItem) return;
-        formItem.source_links.push({
-          source_link_ref: newRef('field_source'),
-          source_type: dataObject ? 'process_data' : 'external_system',
-          source_data_ref: dataObject?.data_ref || null,
-          source_system_name: '',
-          source_data_name: '',
-          source_role: 'provides_value'
+        openGuidedCreateSession('new-field-source', formItem.item_ref, {
+          sourceType: '', sourceDataRef: null, sourceSystemName: '', sourceDataName: '', sourceRole: ''
         });
-        touch();
+        return render();
+      }
+      if (action === 'apply-new-field-source') return applyGuidedCreateSession('new-field-source');
+      if (action === 'cancel-guided-create') {
+        editSessionManager.discard();
+        refreshUnappliedIndicators();
         return render();
       }
       if (action === 'remove-field-source') {
@@ -10198,12 +11263,11 @@
         return render();
       }
       if (action === 'select-data') {
-        activeDataRef = text(element.dataset.ref);
-        activeDataFieldRef = '';
+        updateAuthoringSelection({ dataRef: text(element.dataset.ref) });
         return render();
       }
       if (action === 'select-data-field') {
-        activeDataFieldRef = text(element.dataset.ref);
+        updateAuthoringSelection({ dataFieldRef: text(element.dataset.ref) });
         return render();
       }
       if (action === 'select-term') {
@@ -10211,21 +11275,42 @@
         return render();
       }
       if (action === 'select-form') {
-        activeFormRef = text(element.dataset.ref);
-        activeAreaRef = '';
-        activeFormItemRef = '';
+        updateAuthoringSelection({ formRef: text(element.dataset.ref) });
         return render();
       }
       if (action === 'select-area') {
-        activeAreaRef = text(element.dataset.ref);
+        updateAuthoringSelection({ areaRef: text(element.dataset.ref) });
         return render();
+      }
+      if (action === 'open-form-field-batch') return openFormFieldBatch(formIndex, element.dataset.mode, element);
+      if (action === 'edit-data-field-definition') {
+        const dataRef = text(element.dataset.dataRef);
+        const fieldRef = text(element.dataset.fieldRef);
+        const dataObject = (currentDocument().data_objects || []).find(item => item.data_ref === dataRef);
+        if (!dataObject || (fieldRef && !(dataObject.fields || []).some(item => item.field_ref === fieldRef))) {
+          showStatus('对象或对象字段已经不存在，当前没有修改任何内容。', 'error');
+          return;
+        }
+        activeStepView = 'data';
+        activeDataMode = 'flow';
+        updateAuthoringSelection({ mode: 'guided', workspace: 'data', dataRef, dataFieldRef: fieldRef });
+        openEntityEditSession('data', dataRef, { focusTarget: fieldRef ? { fieldRef } : null });
+        render();
+        requestAnimationFrame(() => {
+          const target = fieldRef
+            ? workspace.querySelector(`[data-action="select-data-field"][data-ref="${CSS.escape(fieldRef)}"]`)
+            : workspace.querySelector('[data-graph-data-property="data_name"]');
+          target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          target?.focus({ preventScroll: true });
+        });
+        return;
       }
       if (action === 'export-current') {
         const download = () => exportCurrent({
           stage: globalThis.GovernanceWorkflow.stageForStep('handoff'),
           skipBusinessConfirm: false
         });
-        if (webGridSession?.isDirty()) return openGridModeSwitchModal('', download);
+        if (webGridSession?.isDirty()) return requestTransition('下载文件', download);
         return download();
       }
       if (action === 'add-behavior') addBehavior();
@@ -10242,35 +11327,6 @@
       if (action === 'move-detail-area-up' && !moveDetailArea(formIndex, index, -1)) return;
       if (action === 'move-detail-area-down' && !moveDetailArea(formIndex, index, 1)) return;
       if (action === 'remove-detail-area') return removeDetailArea(formIndex, index);
-      if (action === 'add-form-item-from-data-field') {
-        const panel = element.closest('[data-form-field-create-panel]');
-        const dataFieldRef = text(panel?.querySelector('[data-form-field-catalog]')?.value);
-        const assignment = text(panel?.querySelector('[data-form-field-target]')?.value) || 'main';
-        if (!dataFieldRef) {
-          window.alert('请先选择要引用的对象字段。');
-          return;
-        }
-        const added = addFormItemFromDataField(formIndex, dataFieldRef, assignment);
-        if (!added) {
-          window.alert('没有找到所选对象字段或目标主表、明细表。请刷新当前页面后重新选择。');
-          return;
-        }
-        activeFormItemRef = added.item.item_ref;
-        activeAreaRef = added.area.area_ref;
-        nextFocusPath = `forms.${formIndex}.areas.${added.areaIndex}.items.${added.itemIndex}.item_name`;
-      }
-      if (action === 'add-form-item') {
-        const form = currentDocument().forms[formIndex];
-        if (!form) return;
-        const area = ensureFormArea(form, '');
-        const itemIndex = area.items.length;
-        const newItem = newFormItem();
-        area.items.push(newItem);
-        activeFormItemRef = newItem.item_ref;
-        activeAreaRef = area.area_ref;
-        const nextAreaIndex = form.areas.indexOf(area);
-        nextFocusPath = `forms.${formIndex}.areas.${nextAreaIndex}.items.${itemIndex}.item_name`;
-      }
       if (action === 'move-form-item-up' && !moveFormItem(formIndex, areaIndex, index, -1)) return;
       if (action === 'move-form-item-down' && !moveFormItem(formIndex, areaIndex, index, 1)) return;
       if (action === 'remove-form-item') {
@@ -10483,6 +11539,7 @@
       dataFlowDetails?.issues.forEach(item => {
         const dataObject = data.data_objects[item.dataIndex];
         addWarning(item.message, {
+          ruleCode: `DATA_FLOW_${text(item.reason) || 'CONSISTENCY'}:${text(item.consumerRef) || text(item.producerRef) || 'OBJECT'}`,
           editorSection: 'process',
           processSection: 'data',
           focusKind: 'data',
@@ -10529,12 +11586,14 @@
       const parallelTarget = { editorSection: 'process', processSection: 'relations' };
       if (parallelDetails?.missingSplit) {
         addWarning('当前存在并行路线，但业务流程中没有“并行开始（同时启动多条路线）”控制节点。', {
+          ruleCode: 'FLOW_PARALLEL_SPLIT_REQUIRED',
           editorSection: 'process',
           processSection: 'behaviors'
         }, ['新增“并行开始”控制节点，并让现有并行路线从该节点发出。']);
       }
       if (parallelDetails?.missingJoin) {
         addWarning('当前存在并行路线，但业务流程中没有“并行汇合（等待多条路线完成）”控制节点。', {
+          ruleCode: 'FLOW_PARALLEL_JOIN_REQUIRED',
           editorSection: 'process',
           processSection: 'behaviors'
         }, ['新增“并行汇合”控制节点，并让需要等待的并行路线进入该节点。']);
@@ -10572,7 +11631,7 @@
         if (!transitions.length) {
           addWarning(
             `当前有${data.behaviors.length}个流程节点，但没有建立任何有效流程关系。`,
-            relationsTarget,
+            { ...relationsTarget, ruleCode: 'FLOW_RELATION_REQUIRED' },
             ['从流程入口开始，按实际先后顺序建立节点之间的关系。']
           );
         } else {
@@ -10581,14 +11640,14 @@
           if (starts !== 1) {
             addWarning(
               `当前识别到${starts}个流程入口，流程应有1个明确入口。`,
-              { ...relationsTarget, reviewAspect: 'boundary' },
+              { ...relationsTarget, reviewAspect: 'boundary', ruleCode: 'FLOW_SINGLE_START_REQUIRED' },
               ['请归口部门核对未连接的起始节点，并补充关系使流程只保留1个入口。']
             );
           }
           if (ends < 1) {
             addWarning(
               '当前没有可识别的流程结束位置。',
-              { ...relationsTarget, reviewAspect: 'boundary' },
+              { ...relationsTarget, reviewAspect: 'boundary', ruleCode: 'FLOW_END_REQUIRED' },
               [
                 '请归口部门确认实际结束位置，并检查末端业务行为是否写明完成标准。',
                 '流程通过明确回路继续办理时，请核对回路关系类型和触发条件。'
@@ -10599,11 +11658,17 @@
       }
       const hiddenDecisionDetails = globalThis.StructureLearningScore?.hiddenDecisionDetails?.(data);
       hiddenDecisionDetails?.issues?.forEach(detail => {
-        addWarning(detail.message, detail.target, detail.suggestions);
+        addWarning(detail.message, {
+          ...detail.target,
+          ruleCode: `FLOW_HIDDEN_DECISION:${text(detail.reason) || 'RELATION_CONDITION'}`
+        }, detail.suggestions);
       });
       const declaredRouteDetails = globalThis.StructureLearningScore?.declaredRouteDetails?.(data);
       declaredRouteDetails?.issues?.forEach(detail => {
-        addWarning(detail.message, detail.target, detail.suggestions);
+        addWarning(detail.message, {
+          ...detail.target,
+          ruleCode: `FLOW_DECLARED_ROUTE:${text(detail.reason) || 'MISSING'}`
+        }, detail.suggestions);
       });
       data.flow_relations.forEach((relation, index) => {
         const relationTarget = {
@@ -10850,7 +11915,7 @@
       legacyCrossDepartmentDiagnostics(data).forEach(item => {
         item.issues.forEach(issue => addWarning(issue.message, issue, issue.suggestions));
       });
-      return [...new Map(warnings.map(item => [item.message, item])).values()];
+      return warnings;
     }
 
     function sanitizeFilenamePart(value, fallback) {
@@ -11286,7 +12351,10 @@
         destroyDataDiagram();
         graphStateManager.clear();
         checkedGovernanceSteps.clear();
+        authoringSelectionContextManager.clear();
+        governanceReviewQueueManager.clear();
         resetTransientEditingState({ resetDataMode: true });
+        resetActiveGridTables();
         activeDataEditingMode = 'guided';
         activeGridWorkspace = 'data';
         advancedLifecycleMode = false;
@@ -11326,6 +12394,7 @@
         { invoker: options.invoker, cancelAction: options.cancelAction }
       )) return;
       captureGraphViewport();
+      captureAuthoringSelectionContext();
       const current = currentEntry();
       if (current) {
         current.governanceStep = activeGovernanceStep;
@@ -11334,8 +12403,8 @@
       resetTransientEditingState({ resetDataMode: true });
       currentIndex = nextIndex;
       advancedLifecycleMode = false;
-      activeDataRef = graphStateManager.view(candidateStateKey()).data.dataRef || '';
       selectInitialTabAfterImport();
+      restoreAuthoringSelectionContext();
       render();
     }
 
@@ -11388,6 +12457,20 @@
     }, true);
 
     workspace.addEventListener('input', event => {
+      const editSessionField = event.target.closest('[data-edit-session-field]');
+      if (editSessionField) {
+        const key = editSessionField.dataset.editSessionField;
+        const values = { [key]: key === 'sourceDataRef' ? nullable(editSessionField.value) : editSessionField.value };
+        if (key === 'sourceType') {
+          if (editSessionField.value === 'external_system') values.sourceDataRef = null;
+          if (editSessionField.value === 'process_data') {
+            values.sourceSystemName = '';
+            values.sourceDataName = '';
+          }
+        }
+        updateGuidedCreatePatch(values, { render: editSessionField.matches('select') });
+        return;
+      }
       if (event.target.matches('[data-grid-search]')) {
         applyNativeGridFilter(event.target.dataset.gridSearch, event.target.value);
         return;
@@ -11449,32 +12532,10 @@
       }
       const formFieldOwnerMatch = target.dataset.bind.match(/^forms\.(\d+)\.areas\.(\d+)\.items\.(\d+)\.business_data_ref$/);
       if (formFieldOwnerMatch) {
-        const [formIndex, areaIndex, itemIndex] = formFieldOwnerMatch.slice(1).map(Number);
-        const item = currentDocument()?.forms?.[formIndex]?.areas?.[areaIndex]?.items?.[itemIndex];
-        if (!item) return;
-        const nextDataRef = nullable(target.value);
-        const nextOwner = (currentDocument().data_objects || []).find(dataObject => dataObject.data_ref === nextDataRef);
-        const clearsFieldReference = Boolean(item.data_field_ref)
-          && !(nextOwner?.fields || []).some(field => field.field_ref === item.data_field_ref);
-        if (clearsFieldReference && !window.confirm('更换业务数据对象后，当前对象字段引用和字段取值用途将被清空为待确认。确定继续吗？')) {
-          render();
-          showStatus('已取消更换业务数据对象，当前字段引用保持不变。');
-          return;
-        }
-        return runDocumentTransaction(nextDocument => {
-          const nextItem = nextDocument.forms?.[formIndex]?.areas?.[areaIndex]?.items?.[itemIndex];
-          if (!nextItem) throw new Error('当前表单字段已不存在');
-          nextItem.business_data_ref = nextDataRef;
-          if (clearsFieldReference) {
-            nextItem.data_field_ref = null;
-            nextItem.value_usage_mode = 'pending_confirmation';
-          }
-        }, {
-          source: 'form-field-owner-change',
-          successLabel: clearsFieldReference
-            ? '已更换业务数据对象，并将不再适用的字段引用和取值用途置为待确认。执行一次撤销可恢复。'
-            : '已更换业务数据对象。执行一次撤销可恢复。'
-        });
+        setByPath(target.dataset.bind, nullable(target.value));
+        touch();
+        render();
+        return;
       }
       const fieldSourceTypeInputMatch = target.dataset.bind.match(/^forms\.(\d+)\.areas\.(\d+)\.items\.(\d+)\.source_links\.(\d+)\.source_type$/);
       if (fieldSourceTypeInputMatch) {
@@ -11501,7 +12562,7 @@
             nextLink.source_system_name = text(nextLink.source_system_name);
             nextLink.source_data_name = text(nextLink.source_data_name);
           } else {
-            nextLink.source_data_ref = nextLink.source_data_ref || nextDocument.data_objects?.[0]?.data_ref || null;
+            nextLink.source_data_ref = null;
             nextLink.source_system_name = '';
             nextLink.source_data_name = '';
           }
@@ -11577,11 +12638,6 @@
 
     workspace.addEventListener('change', event => {
       const target = event.target;
-      if (target.matches('[data-form-field-catalog]')) {
-        const addButton = target.closest('[data-form-field-create-panel]')?.querySelector('[data-action="add-form-item-from-data-field"]');
-        addButton?.toggleAttribute('disabled', !target.value);
-        return;
-      }
       if (target.matches('[data-grid-cell]')) {
         updateNativeGridCell(target);
         if (target.dataset.gridColumn === 'business_data_ref') refreshNativeGridPanel(target.dataset.gridTableId);
@@ -11634,7 +12690,7 @@
         const nextDataRef = target.value;
         requestTransition('切换数据对象', () => {
           captureGraphViewport();
-          activeDataRef = nextDataRef;
+          updateAuthoringSelection({ dataRef: nextDataRef });
           graphSelection = null;
           editSessionManager.reset();
           if (activeDataMode === 'flow') openEntityEditSession('data', nextDataRef);
@@ -11745,10 +12801,7 @@
         );
         const dataField = (owner?.fields || []).find(field => field.field_ref === item.data_field_ref);
         if (owner && dataField) {
-          const otherReferences = (currentDocument().forms || []).flatMap(form => (form.areas || []).flatMap(area =>
-            (area.items || []).filter(candidate => candidate !== item && candidate.data_field_ref === dataField.field_ref)
-          ));
-          applyFormFieldReferenceDefaults(item, owner, dataField, otherReferences.length);
+          applyFormFieldReferenceDefaults(item, owner, dataField);
         }
         render();
         return;
@@ -11916,6 +12969,69 @@
       if (event.target === updateFieldsModal) requestCloseUpdateFieldsModal();
     });
 
+    formFieldBatchContent.addEventListener('input', event => {
+      if (event.target.matches('[data-form-field-batch-search]')) {
+        if (event.isComposing) return;
+        const position = event.target.selectionStart;
+        updateFormFieldBatchPatch({ search: event.target.value });
+        requestAnimationFrame(() => {
+          const search = formFieldBatchContent.querySelector('[data-form-field-batch-search]');
+          search?.focus();
+          search?.setSelectionRange(position, position);
+        });
+        return;
+      }
+      if (event.target.matches('[data-form-field-batch-area-title]')) {
+        updateFormFieldBatchPatch({ newAreaTitle: event.target.value }, { render: false });
+        confirmFormFieldBatchButton.disabled = formFieldBatchApplying || !formFieldBatchCanApply(currentFormFieldBatchSession()?.patch || {});
+      }
+    });
+    formFieldBatchContent.addEventListener('change', event => {
+      const session = currentFormFieldBatchSession();
+      if (!session) return;
+      if (event.target.matches('[data-form-field-batch-ref]')) {
+        const selected = new Set(list(session.patch.fieldRefs));
+        if (event.target.checked) selected.add(event.target.dataset.formFieldBatchRef);
+        else selected.delete(event.target.dataset.formFieldBatchRef);
+        const requiredByFieldRef = clone(session.patch.requiredByFieldRef || {});
+        Object.keys(requiredByFieldRef).forEach(fieldRef => {
+          if (!selected.has(fieldRef)) delete requiredByFieldRef[fieldRef];
+        });
+        updateFormFieldBatchPatch({ fieldRefs: [...selected], requiredByFieldRef });
+        return;
+      }
+      if (event.target.matches('[data-form-field-batch-target]')) {
+        updateFormFieldBatchPatch({ targetValue: event.target.value, newAreaTitle: event.target.value === 'new:detail' ? session.patch.newAreaTitle : '' });
+        return;
+      }
+      if (event.target.matches('[data-form-field-batch-required]')) {
+        const requiredByFieldRef = clone(session.patch.requiredByFieldRef || {});
+        const fieldRef = event.target.dataset.formFieldBatchRequired;
+        if (event.target.value === '') delete requiredByFieldRef[fieldRef];
+        else requiredByFieldRef[fieldRef] = event.target.value === 'true';
+        updateFormFieldBatchPatch({ requiredByFieldRef });
+        return;
+      }
+      if (event.target.matches('[data-form-field-batch-blank-required]')) {
+        updateFormFieldBatchPatch({ blankRequired: event.target.value === '' ? null : event.target.value === 'true' });
+      }
+    });
+    formFieldBatchContent.addEventListener('click', event => {
+      const bulk = event.target.closest('[data-form-field-batch-bulk]');
+      if (!bulk) return;
+      const session = currentFormFieldBatchSession();
+      if (!session) return;
+      const required = bulk.dataset.formFieldBatchBulk === 'true';
+      const requiredByFieldRef = Object.fromEntries(list(session.patch.fieldRefs).map(fieldRef => [fieldRef, required]));
+      updateFormFieldBatchPatch({ requiredByFieldRef });
+    });
+    cancelFormFieldBatchButton.addEventListener('click', () => closeFormFieldBatchModal({ render: true }));
+    confirmFormFieldBatchButton.addEventListener('click', applyFormFieldBatch);
+    formFieldBatchModal.addEventListener('click', event => {
+      if (event.target !== formFieldBatchModal) return;
+      requestTransition('关闭批量字段草稿', () => closeFormFieldBatchModal({ render: true }), { invoker: cancelFormFieldBatchButton });
+    });
+
     document.getElementById('cancelProtectedButton').addEventListener('click', () => {
       protectedAction = null;
       closeProtectedModal();
@@ -11952,6 +13068,10 @@
       }
       if (updateFieldsModal.classList.contains('show')) {
         requestCloseUpdateFieldsModal();
+        return;
+      }
+      if (formFieldBatchModal.classList.contains('show')) {
+        requestTransition('关闭批量字段草稿', () => closeFormFieldBatchModal({ render: true }), { invoker: cancelFormFieldBatchButton });
         return;
       }
       if (flowRelationDraft) {
