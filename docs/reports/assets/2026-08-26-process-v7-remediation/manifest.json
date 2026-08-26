@@ -1,0 +1,58 @@
+{
+  "record_date": "2026-08-26",
+  "status": "remediation_in_progress",
+  "repository_commit_at_r0": "976d16a15fbe083ad6d6dcc75e24ebe3d772e410",
+  "running_3001_commit": "cc10cc0bef81ff207d018cd5cfb819e402eb646c",
+  "database": {
+    "mysql_version": "8.4.9",
+    "transaction_isolation": "REPEATABLE-READ",
+    "system_time_zone": "UTC",
+    "session_time_zone": "SYSTEM",
+    "utc_timestamp_observed": "2026-08-25T19:03:38.000Z",
+    "m1_key": "2026-08-24-process-v7-preview-review",
+    "m1_applied_at_utc": "2026-08-24T23:53:54.000Z",
+    "m2_key": "2026-08-25-process-v7-formal-foundation",
+    "m2_applied_at_utc": "2026-08-24T23:54:12.000Z",
+    "v7_preview_rows": 0,
+    "v7_promotion_rows": 0,
+    "v7_formal_draft_rows": 0,
+    "v7_formal_version_rows": 0,
+    "v3_document_rows": 8,
+    "v3_draft_rows": 16,
+    "v3_version_rows": 13
+  },
+  "migration_artifacts_at_repository_commit": {
+    "apps/mdm-platform/scripts/migrate-process-v7-preview-review.js": "99da3da6882a0e50c3fcda64a99b2fc3136bbbfbbcc7a71b436279446da1930f",
+    "apps/mdm-platform/server/processV7PreviewReviewMigration.js": "0afaac8c140c5db5860f652836adf7adc985cc3b491083c0972ae8868e00a807",
+    "apps/mdm-platform/scripts/migrate-process-v7-formal-foundation.js": "bafd7b5a7cb8dc9f1bde9be174e5ba60a8eff2e1d0de2054cb2a5d5fec035473",
+    "apps/mdm-platform/server/processV7FormalMigration.js": "6aeeb8c2b66de7ac1096d38cc8b25ecce3a6c1a61a70f595d0ee943500278041"
+  },
+  "retained_post_ddl_backup": {
+    "path": "C:\\Users\\charl\\Documents\\Infomat-Backups\\infomat_mdm-m0-20260825071508.sql",
+    "bytes": 78415231,
+    "sha256": "b1167a6d400048feaac53ec61371b4a23542cb37eafc6409f839ecf649a6c24e",
+    "classification": "post_ddl_backup_not_pre_migration_evidence"
+  },
+  "missing_evidence": [
+    "output/process-v7-m0 original evidence directory",
+    "verifiable pre-M1/M2 full backup",
+    "verifiable pre-M1/M2 M0 baseline",
+    "verifiable pre-M1/M2 isolated rehearsal"
+  ],
+  "technical_acceptance": {
+    "structured_output_service_automated_tests": "passed",
+    "structured_output_service_browser_checks": "partial_pass_manual_ime_and_real_browser_performance_pending",
+    "mdm_platform_required_regressions": "passed",
+    "v7_legacy_next_edition_and_structured_import_bypass_guard": "passed",
+    "independent_p0_p1_reaudit": "passed_no_remaining_p0_or_p1",
+    "isolated_mysql_concurrency_and_recovery": "not_executed_requires_approval",
+    "runtime_deployment": "not_executed_requires_approval",
+    "single_process_business_trial": "not_executed_authorization_package_missing"
+  },
+  "authorization_boundary": {
+    "production_database_writes": false,
+    "service_restart": false,
+    "v7_runtime_enablement": false,
+    "business_trial": false
+  }
+}

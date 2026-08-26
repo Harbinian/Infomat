@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
 const fs = require('node:fs');
 const http = require('node:http');
+const net = require('node:net');
 const path = require('node:path');
 const vm = require('node:vm');
 const Ajv2020 = require('ajv/dist/2020');
@@ -24,6 +25,7 @@ const governanceWorkflowPath = path.join(appRoot, 'public', 'governance-workflow
 const webGridCorePath = path.join(appRoot, 'public', 'web-grid-core.js');
 const nativeWebGridPath = path.join(appRoot, 'public', 'native-web-grid.js');
 const processV7GridAdapterPath = path.join(appRoot, 'public', 'process-v7-grid-adapter.js');
+const editSessionManagerPath = path.join(appRoot, 'public', 'edit-session-manager.js');
 const serverPath = path.join(appRoot, 'server.js');
 const processV1SchemaPath = path.join(repoRoot, 'docs', 'contracts', 'process-governance-v1.schema.json');
 const processV2SchemaPath = path.join(repoRoot, 'docs', 'contracts', 'process-governance-v2.schema.json');
@@ -315,6 +317,69 @@ async function postChunkedJson(baseUrl, route, chunks) {
   });
 }
 
+async function postFixedLengthJson(baseUrl, route, body) {
+  const url = new URL(route, baseUrl);
+  return new Promise((resolve, reject) => {
+    const request = http.request(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body, 'utf8')
+      }
+    }, response => {
+      const chunks = [];
+      response.on('data', chunk => chunks.push(chunk));
+      response.on('end', () => resolve({
+        status: response.statusCode,
+        headers: response.headers,
+        body: Buffer.concat(chunks).toString('utf8')
+      }));
+    });
+    request.on('error', reject);
+    request.end(body);
+  });
+}
+
+async function rawHttpExchange(baseUrl, requestText) {
+  const url = new URL(baseUrl);
+  return await new Promise((resolve, reject) => {
+    const chunks = [];
+    const socket = net.createConnection({ host: url.hostname, port: Number(url.port) });
+    const timer = setTimeout(() => {
+      socket.destroy();
+      reject(new Error('raw HTTP parser test timed out'));
+    }, 3000);
+    socket.on('connect', () => socket.end(requestText));
+    socket.on('data', chunk => chunks.push(chunk));
+    socket.on('error', error => {
+      clearTimeout(timer);
+      reject(error);
+    });
+    socket.on('close', () => {
+      clearTimeout(timer);
+      resolve(Buffer.concat(chunks).toString('utf8'));
+    });
+  });
+}
+
+function jsonBodyWithExactByteLength(byteLength) {
+  const prefix = '{"data":{"schema_version":"process-governance-v7","padding":[';
+  const suffix = ']}}';
+  const segmentCount = 11;
+  const framingBytes = Buffer.byteLength(prefix + suffix, 'utf8') + (segmentCount * 2) + (segmentCount - 1);
+  const contentBytes = byteLength - framingBytes;
+  assert.ok(contentBytes > 0);
+  const baseLength = Math.floor(contentBytes / segmentCount);
+  const remainder = contentBytes % segmentCount;
+  const segments = Array.from({ length: segmentCount }, (_, index) => (
+    'x'.repeat(baseLength + (index < remainder ? 1 : 0))
+  ));
+  assert.ok(segments.every(segment => Buffer.byteLength(segment, 'utf8') <= 1024 * 1024));
+  const body = `${prefix}${segments.map(segment => JSON.stringify(segment)).join(',')}${suffix}`;
+  assert.equal(Buffer.byteLength(body, 'utf8'), byteLength);
+  return body;
+}
+
 function zipWithSingleEntry(entryName, options = {}) {
   const name = Buffer.from(entryName, 'utf8');
   const data = Buffer.from(options.data || 'x');
@@ -483,6 +548,10 @@ async function testApi() {
     assert.equal(nativeWebGridAsset.status, 200);
     assert.match(nativeWebGridAsset.headers.get('content-type') || '', /javascript/);
     assert.match(await nativeWebGridAsset.text(), /isCompositionKey/);
+    const editSessionManagerAsset = await fetch(`${baseUrl}/edit-session-manager.js`);
+    assert.equal(editSessionManagerAsset.status, 200);
+    assert.match(editSessionManagerAsset.headers.get('content-type') || '', /javascript/);
+    assert.match(await editSessionManagerAsset.text(), /mergeAllowedPatch/);
 
     const schema = await getJson(baseUrl, '/api/schema');
     assert.equal(schema.body.properties.schema_version.const, 'process-governance-v7');
@@ -619,6 +688,28 @@ async function testApi() {
       upload.referenceMaterial.file_sha256,
       crypto.createHash('sha256').update(Buffer.from(sourceText)).digest('hex')
     );
+    const missingFileResponse = await fetch(`${baseUrl}/api/upload`, { method: 'POST' });
+    assert.equal(missingFileResponse.status, 400);
+    assert.equal((await missingFileResponse.json()).code, 'FILE_REQUIRED');
+    const emptyFileBody = new FormData();
+    emptyFileBody.append('file', new Blob(['   '], { type: 'text/plain' }), '空白.txt');
+    const emptyFileResponse = await fetch(`${baseUrl}/api/upload`, { method: 'POST', body: emptyFileBody });
+    assert.equal(emptyFileResponse.status, 400);
+    assert.equal((await emptyFileResponse.json()).code, 'FILE_CONTENT_EMPTY');
+    const unsupportedFileBody = new FormData();
+    unsupportedFileBody.append('file', new Blob(['pdf'], { type: 'application/pdf' }), '不支持.pdf');
+    const unsupportedFileResponse = await fetch(`${baseUrl}/api/upload`, { method: 'POST', body: unsupportedFileBody });
+    assert.equal(unsupportedFileResponse.status, 415);
+    assert.equal((await unsupportedFileResponse.json()).code, 'UNSUPPORTED_FILE_TYPE');
+    const emptyPaste = await postJson(baseUrl, '/api/paste', { text: '  ' });
+    assert.equal(emptyPaste.response.status, 400);
+    assert.equal(emptyPaste.body.code, 'PASTED_CONTENT_EMPTY');
+    const missingPasteBodyResponse = await fetch(`${baseUrl}/api/paste`, { method: 'POST' });
+    assert.equal(missingPasteBodyResponse.status, 400);
+    assert.equal((await missingPasteBodyResponse.json()).code, 'PASTED_CONTENT_EMPTY');
+    const emptyPasteObject = await postJson(baseUrl, '/api/paste', {});
+    assert.equal(emptyPasteObject.response.status, 400);
+    assert.equal(emptyPasteObject.body.code, 'PASTED_CONTENT_EMPTY');
     const brokenDocxBody = new FormData();
     brokenDocxBody.append('file', new Blob(['not-a-docx'], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }), '损坏文件.docx');
     const brokenDocxResponse = await fetch(`${baseUrl}/api/upload`, { method: 'POST', body: brokenDocxBody });
@@ -877,7 +968,9 @@ async function testApi() {
     const controlNodeValidation = await postJson(baseUrl, '/api/validate', { data: controlNodeDataLink });
     assert.equal(controlNodeValidation.body.valid, false, 'historical control-node data relationships must remain visible as errors');
     assert.ok(controlNodeValidation.body.errors.some(error =>
-      error.path === '/data_objects/0/behavior_links/0/behavior_ref' && /控制节点/.test(error.message)
+      error.path === '/data_objects/0/behavior_links/0/behavior_ref'
+      && error.rule_code === 'DATA_RELATION_ACTION_BEHAVIOR_REQUIRED'
+      && /控制节点/.test(error.message)
     ));
 
     const externalTarget = createDraft();
@@ -909,14 +1002,28 @@ async function testApi() {
     assert.equal(roleValidation.body.valid, false);
     assert.ok(roleValidation.body.errors.some(error => /必须绑定当前业务行为/.test(error.message)));
 
+    const missingValidationData = await postJson(baseUrl, '/api/validate', {});
+    assert.equal(missingValidationData.response.status, 400);
+    assert.equal(missingValidationData.body.code, 'VALIDATION_DATA_REQUIRED');
+    const missingSchemaVersion = await postJson(baseUrl, '/api/validate', { data: {} });
+    assert.equal(missingSchemaVersion.response.status, 400);
+    assert.equal(missingSchemaVersion.body.code, 'SCHEMA_VERSION_REQUIRED');
+
     const unsupported = await postJson(baseUrl, '/api/validate', { data: { schema_version: 'unknown-v1' } });
     assert.equal(unsupported.response.status, 400);
+    assert.equal(unsupported.body.code, 'UNSUPPORTED_SCHEMA_VERSION');
 
     const unknownSchemaResponse = await fetch(`${baseUrl}/api/schema?version=process-governance-v999`);
     assert.equal(unknownSchemaResponse.status, 400, 'unknown schema queries must not fall back to the current v7 schema');
     assert.match(unknownSchemaResponse.headers.get('content-type') || '', /json/);
     const unknownSchemaBody = await unknownSchemaResponse.json();
     assert.equal(unknownSchemaBody.code, 'UNSUPPORTED_SCHEMA_VERSION');
+    const unknownTemplate = await getJson(baseUrl, '/api/template?version=process-governance-v999');
+    assert.equal(unknownTemplate.response.status, 400);
+    assert.equal(unknownTemplate.body.code, 'UNSUPPORTED_SCHEMA_VERSION');
+    const unknownHealth = await getJson(baseUrl, '/api/health?version=process-governance-v999');
+    assert.equal(unknownHealth.response.status, 400);
+    assert.equal(unknownHealth.body.code, 'UNSUPPORTED_SCHEMA_VERSION');
 
     const malformedJsonResponse = await fetch(`${baseUrl}/api/validate`, {
       method: 'POST',
@@ -930,6 +1037,73 @@ async function testApi() {
     assert.equal(malformedJsonBody.code, 'INVALID_JSON');
     assert.doesNotMatch(malformedJsonText, /node_modules|SyntaxError|E:\\\\/i);
 
+    const maxJsonBytes = 10 * 1024 * 1024;
+    const exactLimitJson = jsonBodyWithExactByteLength(maxJsonBytes);
+    const fixedLengthAtLimit = await postFixedLengthJson(baseUrl, '/api/validate', exactLimitJson);
+    assert.equal(fixedLengthAtLimit.status, 200, 'a JSON body at exactly 10MB must reach schema validation');
+    const fixedLengthOverLimit = await postFixedLengthJson(
+      baseUrl,
+      '/api/validate',
+      jsonBodyWithExactByteLength(maxJsonBytes + 1)
+    );
+    assert.equal(fixedLengthOverLimit.status, 413, 'Content-Length must not allow a JSON body over 10MB');
+    assert.equal(JSON.parse(fixedLengthOverLimit.body).code, 'REQUEST_TOO_LARGE');
+    const chunkedAtLimit = await postChunkedJson(baseUrl, '/api/validate', [exactLimitJson]);
+    assert.equal(chunkedAtLimit.status, 200, 'a chunked JSON body at exactly 10MB must reach schema validation');
+    const chunkedOverLimit = await postChunkedJson(baseUrl, '/api/validate', [
+      jsonBodyWithExactByteLength(maxJsonBytes + 1)
+    ]);
+    assert.equal(chunkedOverLimit.status, 413, 'chunked transfer must enforce the actual 10MB byte limit');
+    assert.equal(JSON.parse(chunkedOverLimit.body).code, 'REQUEST_TOO_LARGE');
+
+    const rawParserCanary = 'CANARY_RAW_HTTP_PARSER_20260826_7B4D';
+    const rawParserCases = [
+      [
+        'POST /api/validate HTTP/1.1',
+        `Host: ${new URL(baseUrl).host}`,
+        'Content-Type: application/json',
+        'Transfer-Encoding: chunked',
+        'Content-Length: 4',
+        'Connection: close',
+        '',
+        '4',
+        'null',
+        '0',
+        '',
+        `GET /api/${rawParserCanary} HTTP/1.1`,
+        `Host: ${new URL(baseUrl).host}`,
+        'Connection: close',
+        '',
+        ''
+      ],
+      [
+        'POST /api/validate HTTP/1.1',
+        `Host: ${new URL(baseUrl).host}`,
+        'Content-Type: application/json',
+        'Content-Length: 4',
+        'Content-Length: 4',
+        'Connection: close',
+        '',
+        'null'
+      ],
+      [
+        'POST /api/validate HTTP/1.1',
+        `Host: ${new URL(baseUrl).host}`,
+        'Content-Type: application/json',
+        'Content-Length: 4',
+        'Content-Length: 5',
+        'Connection: close',
+        '',
+        'null!'
+      ]
+    ];
+    for (const lines of rawParserCases) {
+      const rawResponse = await rawHttpExchange(baseUrl, lines.join('\r\n'));
+      assert.match(rawResponse, /^HTTP\/1\.1 400\b/, 'Node HTTP parser must reject ambiguous request framing');
+      assert.doesNotMatch(rawResponse, new RegExp(rawParserCanary), 'parser rejection must not consume a pipelined canary request');
+      assert.doesNotMatch(rawResponse, /API_NOT_FOUND|INVALID_JSON|REQUEST_TOO_LARGE/, 'ambiguous framing must not reach application handlers');
+    }
+
     const oneMegabyte = 'x'.repeat(1024 * 1024);
     const oversizedChunkedResponse = await postChunkedJson(baseUrl, '/api/validate', [
       '{"data":{"schema_version":"process-governance-v7","oversized":"',
@@ -942,20 +1116,44 @@ async function testApi() {
     assert.equal(oversizedChunkedBody.code, 'REQUEST_TOO_LARGE');
     assert.equal(Object.prototype.hasOwnProperty.call(oversizedChunkedBody, 'detail'), false);
 
-    const deeplyNested = { schema_version: 'process-governance-v7' };
-    let deepCursor = deeplyNested;
-    for (let depth = 0; depth < 80; depth += 1) {
-      deepCursor.unexpected = {};
-      deepCursor = deepCursor.unexpected;
+    const nestedAtLimit = { schema_version: 'process-governance-v7' };
+    let nestedAtLimitCursor = nestedAtLimit;
+    for (let depth = 0; depth < 64; depth += 1) {
+      nestedAtLimitCursor.unexpected = {};
+      nestedAtLimitCursor = nestedAtLimitCursor.unexpected;
     }
-    const deepValidation = await postJson(baseUrl, '/api/validate', { data: deeplyNested });
-    assert.equal(deepValidation.response.status, 400);
-    assert.equal(deepValidation.body.code, 'JSON_DEPTH_EXCEEDED');
+    const depthAtLimit = await postJson(baseUrl, '/api/validate', { data: nestedAtLimit });
+    assert.equal(depthAtLimit.response.status, 200, 'JSON depth 64 must reach schema validation');
+    const nestedOverLimit = JSON.parse(JSON.stringify(nestedAtLimit));
+    let nestedOverLimitCursor = nestedOverLimit;
+    for (let depth = 0; depth < 64; depth += 1) nestedOverLimitCursor = nestedOverLimitCursor.unexpected;
+    nestedOverLimitCursor.unexpected = {};
+    const depthOverLimit = await postJson(baseUrl, '/api/validate', { data: nestedOverLimit });
+    assert.equal(depthOverLimit.response.status, 400);
+    assert.equal(depthOverLimit.body.code, 'JSON_DEPTH_EXCEEDED');
+    const nodesAtLimit = await postJson(baseUrl, '/api/validate', {
+      data: { schema_version: 'process-governance-v7', unexpected: Array(99995).fill(null) }
+    });
+    assert.equal(nodesAtLimit.response.status, 200, '100000 JSON object/field nodes must reach schema validation');
+    const nodesOverLimit = await postJson(baseUrl, '/api/validate', {
+      data: { schema_version: 'process-governance-v7', unexpected: Array(99996).fill(null) }
+    });
+    assert.equal(nodesOverLimit.response.status, 400);
+    assert.equal(nodesOverLimit.body.code, 'JSON_NODE_LIMIT_EXCEEDED');
     const longTextValidation = await postJson(baseUrl, '/api/validate', {
       data: { schema_version: 'process-governance-v7', unexpected: 'x'.repeat(1024 * 1024 + 1) }
     });
     assert.equal(longTextValidation.response.status, 400);
     assert.equal(longTextValidation.body.code, 'JSON_TEXT_TOO_LONG');
+    const utf8TextAtLimit = await postJson(baseUrl, '/api/validate', {
+      data: { schema_version: 'process-governance-v7', unexpected: '中'.repeat(Math.floor((1024 * 1024) / 3)) }
+    });
+    assert.equal(utf8TextAtLimit.response.status, 200, 'UTF-8 text at or below one megabyte must reach schema validation');
+    const utf8TextOverLimit = await postJson(baseUrl, '/api/validate', {
+      data: { schema_version: 'process-governance-v7', unexpected: '中'.repeat(Math.floor((1024 * 1024) / 3) + 1) }
+    });
+    assert.equal(utf8TextOverLimit.response.status, 400);
+    assert.equal(utf8TextOverLimit.body.code, 'JSON_TEXT_TOO_LONG');
     const invalidUnicodeValidation = await postJson(baseUrl, '/api/validate', {
       data: { schema_version: 'process-governance-v7', unexpected: '\uD800' }
     });
@@ -964,14 +1162,19 @@ async function testApi() {
 
     const suggestionRoute = await fetch(`${baseUrl}/api/suggestions`, { method: 'POST' });
     assert.equal(suggestionRoute.status, 404);
+    assert.equal((await suggestionRoute.json()).code, 'API_NOT_FOUND');
     const sessionReadRoute = await fetch(`${baseUrl}/api/session`);
     assert.equal(sessionReadRoute.status, 404);
+    assert.equal((await sessionReadRoute.json()).code, 'STATELESS_ENDPOINT_DISABLED');
     const sessionWriteRoute = await fetch(`${baseUrl}/api/session`, { method: 'POST' });
     assert.equal(sessionWriteRoute.status, 404);
+    assert.equal((await sessionWriteRoute.json()).code, 'STATELESS_ENDPOINT_DISABLED');
     const dataRoute = await fetch(`${baseUrl}/api/data`);
     assert.equal(dataRoute.status, 404);
+    assert.equal((await dataRoute.json()).code, 'STATELESS_ENDPOINT_DISABLED');
     const exportRoute = await fetch(`${baseUrl}/api/export`);
     assert.equal(exportRoute.status, 404);
+    assert.equal((await exportRoute.json()).code, 'STATELESS_ENDPOINT_DISABLED');
 
     const cytoscapeAsset = await fetch(`${baseUrl}/vendor/cytoscape.min.js`);
     assert.equal(cytoscapeAsset.status, 200);
@@ -1612,6 +1815,7 @@ async function testFrontendContract() {
   const webGridCoreSource = fs.readFileSync(webGridCorePath, 'utf8');
   const nativeWebGridSource = fs.readFileSync(nativeWebGridPath, 'utf8');
   const processV7GridAdapterSource = fs.readFileSync(processV7GridAdapterPath, 'utf8');
+  const editSessionManagerSource = fs.readFileSync(editSessionManagerPath, 'utf8');
   const serverSource = fs.readFileSync(serverPath, 'utf8');
 
   assert.ok(html.includes("const EXPECTED_EXPORT_SCHEMA_VERSION = 'process-governance-v7'"));
@@ -1621,6 +1825,7 @@ async function testFrontendContract() {
   assert.ok(html.includes("fetch('/api/template?version=process-governance-v7', { cache: 'no-store' })"));
   assert.equal(html.includes('needsCandidateFieldUpgrade ? { valid: true, errors: [] }'), false);
   assert.ok(html.includes("validationProfile: 'early-v7-data-fields'"));
+  assert.ok(html.includes('<script src="import-compatibility.js"></script>'));
   assert.ok(html.includes('const revisions = Array.isArray(item.schema_revisions) ? item.schema_revisions : [];'));
   assert.ok(html.includes('currentRevision.source_commit'));
   assert.ok(html.includes('当前结构短码：'));
@@ -1631,14 +1836,27 @@ async function testFrontendContract() {
     html.indexOf("jsonInput.addEventListener('change'")
   );
   const sourceValidationPosition = importJsonSource.indexOf('const sourceValidation = await validateGraphDocument');
+  const sourceClassificationPosition = importJsonSource.indexOf('classifyPostMigrationValidation(sourceValidation)');
   const targetValidationPosition = importJsonSource.indexOf('const targetValidations = await Promise.all');
+  const targetClassificationPosition = importJsonSource.indexOf('classifyPostMigrationBatch(targetValidations)');
   const candidateReplacementPosition = importJsonSource.indexOf('candidates = nextCandidates');
   assert.ok(sourceValidationPosition >= 0 && targetValidationPosition > sourceValidationPosition);
+  assert.ok(sourceClassificationPosition > sourceValidationPosition);
+  assert.ok(targetClassificationPosition > targetValidationPosition);
   assert.ok(
     candidateReplacementPosition > targetValidationPosition,
     'source and migrated candidates must both pass validation before the current draft is replaced'
   );
   assert.ok(importJsonSource.includes('当前草稿、图状态和撤销记录保持不变。'));
+  const exportCurrentSource = html.slice(
+    html.indexOf('async function exportCurrent(options = {})'),
+    html.indexOf('function protect(action)')
+  );
+  assert.equal(
+    exportCurrentSource.includes('ImportCompatibility'),
+    false,
+    'download validation must remain strict and must not use the import-only compatibility classifier'
+  );
   assert.ok(html.includes("const behaviors = (currentDocument()?.behaviors || []).filter(item => item.node_type === 'action');"));
   assert.ok(html.includes('<script src="process-governance-migration.js"></script>'));
   assert.ok(html.includes('<script src="governance-workflow.js"></script>'));
@@ -1650,6 +1868,7 @@ async function testFrontendContract() {
   assert.equal(html.includes('bulk-data-editor.js'), false);
   assert.ok(html.includes('<script src="graph-edit-commands.js"></script>'));
   assert.ok(html.includes('<script src="graph-editor-state.js"></script>'));
+  assert.ok(html.includes('<script src="edit-session-manager.js"></script>'));
   assert.ok(html.includes('<script src="data-relation-diagram.js"></script>'));
   assert.ok(html.includes('<script src="lifecycle-analyzer.js"></script>'));
   assert.ok(html.includes('data-action="switch-data-mode"'));
@@ -1667,6 +1886,30 @@ async function testFrontendContract() {
   assert.equal(/localStorage|sessionStorage/.test(html), false, 'the temporary advanced mode must not use browser storage');
   assert.ok(html.includes('1. 数据对象与字段明细'));
   assert.ok(html.includes('2. 实际表单、主表、明细和字段'));
+  assert.ok(html.includes('从对象字段添加到当前表单'));
+  assert.ok(html.includes('添加空白字段（待补引用）'));
+  assert.ok(!html.includes('点击“添加字段”后'));
+  assert.ok(html.includes('表单显示名称'));
+  assert.ok(html.includes('function formFieldReferenceDefaults'));
+  assert.ok(html.includes("tableId === 'form_items' && column === 'data_field_ref'"));
+  assert.equal(html.includes('>新增行</button>'), false, 'grid actions must name the record being added');
+  const addFormItemFromDataFieldSource = html.slice(
+    html.indexOf('function addFormItemFromDataField('),
+    html.indexOf('function findFormItem(')
+  );
+  assert.ok(
+    addFormItemFromDataFieldSource.indexOf('if (!form || !dataObject || !dataField) return null;')
+      < addFormItemFromDataFieldSource.indexOf('const area = targetAreaForNewFormItem'),
+    'an invalid field selection must not create a main or detail area'
+  );
+  const addGridRowSource = html.slice(
+    html.indexOf('function addGridRow('),
+    html.indexOf('function openGuidedUpdateFields(')
+  );
+  assert.ok(addGridRowSource.includes('requestAnimationFrame'));
+  assert.ok(addGridRowSource.includes("webGridFilters[tableId] = ''"));
+  assert.ok(addGridRowSource.includes("querySelectorAll('[data-grid-cell]:not(:disabled)')"));
+  assert.ok(addGridRowSource.includes('controls.find(candidate => !text(candidate.value)) || controls[0]'));
   assert.ok(html.includes('沿用当前对象字段已经建立的值，无需在本表单重复登记取值来源。'));
   const formStartSource = html.slice(
     html.indexOf("if (action === 'choose-form-start')"),
@@ -1708,9 +1951,20 @@ async function testFrontendContract() {
   assert.ok(html.includes('网页表格编辑器'));
   assert.ok(html.includes('data-action="apply-web-grid"'));
   assert.ok(html.includes('data-action="discard-web-grid"'));
-  assert.ok(html.includes('应用并切换'));
-  assert.ok(html.includes('放弃并切换'));
+  assert.ok(html.includes('应用修改并继续'));
+  assert.ok(html.includes('放弃修改并继续'));
   assert.ok(html.includes('继续编辑'));
+  assert.ok(html.includes('有未应用修改'));
+  assert.ok(html.includes('有未下载修改'));
+  assert.ok(html.includes('当前内容与导入文件一致'));
+  assert.ok(html.includes('尚未下载'));
+  assert.ok(html.includes('function candidateFileState'));
+  assert.ok(html.includes('if (entry.lastDownload)'));
+  assert.ok(html.includes('返回数据流编辑对象信息'));
+  assert.equal(html.includes('列入交接待定事项'), false);
+  assert.ok(html.includes('function requestTransition'));
+  assert.ok(html.includes('function requestConfirmedDeletion'));
+  assert.ok(editSessionManagerSource.includes('FIELD_CONFLICT'));
   assert.equal(html.includes('Excel / WPS批量编辑'), false);
   assert.equal(html.includes('data-action="preview-bulk-data"'), false);
   assert.equal(html.includes('data-action="apply-bulk-data"'), false);

@@ -194,7 +194,6 @@
       style: styles(),
       minZoom: 0.25,
       maxZoom: 2.2,
-      wheelSensitivity: 0.18,
       autoungrabify: true,
       autounselectify: false,
       boxSelectionEnabled: false

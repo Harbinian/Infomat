@@ -263,9 +263,12 @@
 
   function normalizeExistingMigration(source, sourceVersion, processRef, processCount) {
     const existing = source?.migration && typeof source.migration === 'object' ? source.migration : {};
+    const sourceProcessRef = existing.source_process_ref === null
+      ? null
+      : nullable(existing.source_process_ref) || processRef;
     const migration = emptyMigration(
       text(existing.source_schema_version) || sourceVersion,
-      nullable(existing.source_process_ref) || processRef,
+      sourceProcessRef,
       existing.source_process_count || processCount
     );
     migration.legacy_cross_department_records = array(existing.legacy_cross_department_records).map(normalizeLegacyRecord);

@@ -13,6 +13,7 @@ const Commands = require(path.join(appRoot, 'public', 'graph-edit-commands.js'))
 const EditorState = require(path.join(appRoot, 'public', 'graph-editor-state.js'));
 const DataDiagram = require(path.join(appRoot, 'public', 'data-relation-diagram.js'));
 const ProcessDiagram = require(path.join(appRoot, 'public', 'process-diagram.js'));
+const { createProcessVersionFixture } = require('./process-version-fixtures');
 
 function readSchema(name) {
   return JSON.parse(fs.readFileSync(path.join(repoRoot, 'docs', 'contracts', name), 'utf8'));
@@ -439,32 +440,9 @@ function testLegacyCrossDepartmentDiagnostics() {
 
 function testMigration() {
   for (const version of ['process-governance-v1', 'process-governance-v2', 'process-governance-v3', 'process-governance-v4', 'process-governance-v5']) {
-    const source = v5Fixture(version);
-    if (!['process-governance-v4', 'process-governance-v5'].includes(version)) {
-      source.data_objects = [{
-        data_ref: 'data-application', data_name: '费用申请', description: '申请信息', governance_status: 'candidate',
-        produced_by_behavior_ref: 'behavior-apply', consumed_by_behavior_refs: ['behavior-review']
-      }];
-      source.forms = source.forms.map(form => ({
-        form_ref: form.form_ref,
-        behavior_ref: 'behavior-apply',
-        form_name: form.form_name,
-        form_no: null,
-        ...(version === 'process-governance-v3' ? { form_design_state: 'current_state' } : {}),
-        areas: form.areas.map(area => ({
-          area_ref: area.area_ref,
-          area_type: area.area_type,
-          area_title: area.area_title,
-          items: area.items.map(item => ({
-            item_ref: item.item_ref,
-            item_name: item.item_name,
-            item_type: item.item_type,
-            required: item.required,
-            instructions: item.instructions
-          }))
-        }))
-      }));
-    }
+    const source = createProcessVersionFixture(version);
+    const sourceValidator = ajv.getSchema(readSchema(`process-governance-${version.slice(-2)}.schema.json`).$id);
+    assert.equal(sourceValidator(source), true, `${version} source fixture: ${JSON.stringify(sourceValidator.errors)}`);
     const snapshot = JSON.stringify(source);
     const migrated = Migration.migrateDocument(source)[0];
     assert.equal(JSON.stringify(source), snapshot, `${version} source must not change`);
@@ -472,7 +450,6 @@ function testMigration() {
     assert.equal(migrated.migration.source_schema_version, version);
     assert.equal(Object.prototype.hasOwnProperty.call(migrated, 'reference_materials'), false);
     assert.equal(Object.prototype.hasOwnProperty.call(migrated.data_objects[0], 'governance_status'), false);
-    assert.equal(migrated.forms[0].areas[0].items[0].source_links[0]?.source_type || 'process_data', 'process_data');
     assertV7(migrated, `${version} migration`);
     assert.deepEqual(Migration.migrateDocument(migrated)[0], migrated, `${version} repeated migration must be identical`);
   }
@@ -710,6 +687,56 @@ function testCommandsAndState() {
   assert.ok(deletion.some(item => item.kind === 'data_relation'));
   assert.equal(Commands.deleteObject(documentValue, 'behavior', 'behavior-apply').code, 'DELETE_BLOCKED');
 
+  const lifecycleReferencedDocument = clone(documentValue);
+  lifecycleReferencedDocument.data_objects[0].lifecycle = {
+    ...Migration.pendingLifecycle(),
+    applicability: 'applicable',
+    routes: [{
+      route_ref: 'lifecycle-route-delete-guard',
+      route_label: '删除保护测试路径',
+      flow_relation_refs: ['relation-apply-review'],
+      events: [{
+        event_ref: 'lifecycle-event-delete-guard',
+        action: 'archive',
+        trigger: {
+          mode: 'behavior', operator: 'single', behavior_ref: 'behavior-apply', expression: '提交申请完成后'
+        },
+        target_scope: 'pending_confirmation',
+        carrier_scope: 'pending_confirmation',
+        responsibility: { mode: 'pending_confirmation', department: '', position: '' },
+        exception_handling: '',
+        result_state: { ...Migration.pendingLifecycle().entry_state },
+        high_risk: false,
+        review_status: 'pending_confirmation',
+        decision_reason: '',
+        decision_notes: '',
+        provenance: {
+          source_type: 'user_confirmed', source_ref: 'behavior-apply', source_path: '', basis: '',
+          analyzer_version: '', source_fingerprint: ''
+        }
+      }],
+      exit_state: { ...Migration.pendingLifecycle().entry_state }
+    }]
+  };
+  const lifecycleBehaviorDeletion = Commands.analyzeDeletion(lifecycleReferencedDocument, 'behavior', 'behavior-apply');
+  const lifecycleRelationDeletion = Commands.analyzeDeletion(lifecycleReferencedDocument, 'relation', 'relation-apply-review');
+  assert.ok(lifecycleBehaviorDeletion.some(item => item.kind === 'lifecycle_event'), 'lifecycle event behavior references must block deletion');
+  assert.ok(lifecycleRelationDeletion.some(item => item.kind === 'lifecycle_route'), 'lifecycle route relation references must block deletion');
+  assert.ok(
+    Commands.technicalIntegrity({
+      ...lifecycleReferencedDocument,
+      behaviors: lifecycleReferencedDocument.behaviors.filter(item => item.behavior_ref !== 'behavior-apply')
+    }).some(item => item.message.includes('生命周期事件触发行为不存在')),
+    'technical integrity must detect broken lifecycle behavior references'
+  );
+  assert.ok(
+    Commands.technicalIntegrity({
+      ...lifecycleReferencedDocument,
+      flow_relations: lifecycleReferencedDocument.flow_relations.filter(item => item.relation_ref !== 'relation-apply-review')
+    }).some(item => item.message.includes('生命周期路径引用的流程关系不存在')),
+    'technical integrity must detect broken lifecycle relation references'
+  );
+
   const duplicateData = clone(documentValue);
   duplicateData.data_objects.push({
     ...clone(duplicateData.data_objects[0]),
@@ -737,6 +764,25 @@ function testCommandsAndState() {
   assert.equal(undone.document.behaviors.length, documentValue.behaviors.length);
   const redone = state.redo('candidate-1', undone.document);
   assert.equal(redone.document.behaviors.length, documentValue.behaviors.length + 1);
+  const conflictingUndoState = EditorState.createManager({ limit: 20 });
+  conflictingUndoState.register('candidate-conflict', documentValue);
+  const conflictingCommand = conflictingUndoState.execute('candidate-conflict', documentValue, draft => Commands.applyCommand(draft, {
+    type: 'add_behavior', behavior: { ...draft.behaviors[0], behavior_ref: 'behavior-conflict', behavior_name: '撤销冲突测试行为' }
+  }));
+  const changedAfterConflictingCommand = clone(conflictingCommand.document);
+  changedAfterConflictingCommand.process.purpose = '必须保留的后续修改';
+  const blockedUndo = conflictingUndoState.undo('candidate-conflict', changedAfterConflictingCommand);
+  assert.equal(blockedUndo.ok, false, '当前JSON在历史操作后变化时必须阻止整文档撤销');
+  assert.equal(blockedUndo.code, 'UNDO_SOURCE_CHANGED');
+  assert.equal(conflictingUndoState.snapshot('candidate-conflict', changedAfterConflictingCommand).canUndo, true, '被阻止的撤销不得消耗历史记录');
+  const safeUndo = conflictingUndoState.undo('candidate-conflict', conflictingCommand.document);
+  assert.equal(safeUndo.ok, true);
+  const changedAfterUndo = clone(safeUndo.document);
+  changedAfterUndo.process.scope = '撤销后必须保留的修改';
+  const blockedRedo = conflictingUndoState.redo('candidate-conflict', changedAfterUndo);
+  assert.equal(blockedRedo.ok, false, '撤销后JSON变化时必须阻止整文档重做');
+  assert.equal(blockedRedo.code, 'REDO_SOURCE_CHANGED');
+  assert.equal(conflictingUndoState.snapshot('candidate-conflict', changedAfterUndo).canRedo, true, '被阻止的重做不得消耗历史记录');
   assert.equal(state.isDirty('candidate-1', redone.document), true);
   state.markBaseline('candidate-1', redone.document);
   assert.equal(state.isDirty('candidate-1', redone.document), false);

@@ -5,9 +5,9 @@ const fs = require('fs');
 const crypto = require('crypto');
 const { execFileSync } = require('child_process');
 const { TextDecoder } = require('util');
-const { Worker } = require('node:worker_threads');
 const Ajv2020 = require('ajv/dist/2020');
 const { validateProcessGovernanceV7 } = require('../../scripts/process-governance/v7-validator');
+const { createDocxParserPool } = require('./scripts/docx-parser-pool');
 
 const app = express();
 const PORT = Number(process.env.STRUCTURED_OUTPUT_PORT || process.env.PORT || 3001);
@@ -22,7 +22,6 @@ const MAX_DOCX_UNCOMPRESSED_BYTES = 50 * 1024 * 1024;
 const MAX_DOCX_PATH_DEPTH = 20;
 const DOCX_PARSE_TIMEOUT_MS = 5000;
 const MAX_CONCURRENT_DOCX_PARSERS = 2;
-let activeDocxParsers = 0;
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
@@ -639,6 +638,12 @@ function extractHtmlTables(html) {
   }
   return tables;
 }
+
+const docxParserPool = createDocxParserPool({
+  maxConcurrent: MAX_CONCURRENT_DOCX_PARSERS,
+  timeoutMs: DOCX_PARSE_TIMEOUT_MS,
+  extractTables: extractHtmlTables
+});
 
 function normalizeRoleToken(value) {
   return normalizeLine(value).replace(/[\s/／\\\-—–_·,，、()（）]/g, '');
@@ -1591,14 +1596,25 @@ function inspectDocxArchive(buffer) {
     }
   }
   if (eocdOffset < 0) throw new Error('DOCX文件缺少ZIP目录');
+  const diskNumber = buffer.readUInt16LE(eocdOffset + 4);
+  const directoryDiskNumber = buffer.readUInt16LE(eocdOffset + 6);
+  const diskEntryCount = buffer.readUInt16LE(eocdOffset + 8);
   const entryCount = buffer.readUInt16LE(eocdOffset + 10);
   const directorySize = buffer.readUInt32LE(eocdOffset + 12);
   const directoryOffset = buffer.readUInt32LE(eocdOffset + 16);
-  if (entryCount === 0xFFFF || directorySize === 0xFFFFFFFF || directoryOffset === 0xFFFFFFFF) {
+  if (
+    diskEntryCount === 0xFFFF
+    || entryCount === 0xFFFF
+    || directorySize === 0xFFFFFFFF
+    || directoryOffset === 0xFFFFFFFF
+  ) {
     throw docxArchiveError('不支持ZIP64格式的DOCX文件');
   }
+  if (diskNumber !== 0 || directoryDiskNumber !== 0 || diskEntryCount !== entryCount) {
+    throw docxArchiveError('不支持跨磁盘DOCX压缩包');
+  }
   if (entryCount > MAX_DOCX_ENTRIES) throw docxArchiveError('DOCX文件包含的条目过多');
-  if (directoryOffset + directorySize > eocdOffset || directoryOffset < 0) throw docxArchiveError('DOCX目录位置无效');
+  if (directoryOffset + directorySize !== eocdOffset || directoryOffset < 0) throw docxArchiveError('DOCX目录位置无效');
   let offset = directoryOffset;
   let totalUncompressedBytes = 0;
   for (let index = 0; index < entryCount; index += 1) {
@@ -1607,14 +1623,19 @@ function inspectDocxArchive(buffer) {
     }
     const compressedBytes = buffer.readUInt32LE(offset + 20);
     const uncompressedBytes = buffer.readUInt32LE(offset + 24);
+    const centralFlags = buffer.readUInt16LE(offset + 8);
+    const centralMethod = buffer.readUInt16LE(offset + 10);
     const nameLength = buffer.readUInt16LE(offset + 28);
     const extraLength = buffer.readUInt16LE(offset + 30);
     const commentLength = buffer.readUInt16LE(offset + 32);
+    const localHeaderOffset = buffer.readUInt32LE(offset + 42);
+    if (localHeaderOffset === 0xFFFFFFFF) throw docxArchiveError('不支持ZIP64格式的DOCX文件');
     const entryEnd = offset + 46 + nameLength + extraLength + commentLength;
     if (entryEnd > eocdOffset) throw docxArchiveError('DOCX条目名称或扩展信息越界');
+    const centralNameBytes = buffer.subarray(offset + 46, offset + 46 + nameLength);
     let entryName = '';
     try {
-      entryName = new TextDecoder('utf-8', { fatal: true }).decode(buffer.subarray(offset + 46, offset + 46 + nameLength));
+      entryName = new TextDecoder('utf-8', { fatal: true }).decode(centralNameBytes);
     } catch (_error) {
       throw docxArchiveError('DOCX条目名称不是有效的UTF-8文本');
     }
@@ -1625,57 +1646,55 @@ function inspectDocxArchive(buffer) {
     }
     if (pathParts.length > MAX_DOCX_PATH_DEPTH) throw docxArchiveError('DOCX条目路径层级过深');
     if (uncompressedBytes > MAX_DOCX_ENTRY_BYTES) throw docxArchiveError('DOCX单个解压条目过大');
-    if (uncompressedBytes > 1024 * 1024 && (compressedBytes === 0 || uncompressedBytes > compressedBytes * 100)) {
+    if (uncompressedBytes > 0 && (compressedBytes === 0 || uncompressedBytes > compressedBytes * 100)) {
       throw docxArchiveError('DOCX条目压缩比异常');
     }
     totalUncompressedBytes += uncompressedBytes;
     if (totalUncompressedBytes > MAX_DOCX_UNCOMPRESSED_BYTES) throw docxArchiveError('DOCX解压后总量过大');
+
+    if (localHeaderOffset + 30 > directoryOffset || buffer.readUInt32LE(localHeaderOffset) !== 0x04034b50) {
+      throw docxArchiveError('DOCX本地文件头无效');
+    }
+    const localFlags = buffer.readUInt16LE(localHeaderOffset + 6);
+    const localMethod = buffer.readUInt16LE(localHeaderOffset + 8);
+    const localCompressedBytes = buffer.readUInt32LE(localHeaderOffset + 18);
+    const localUncompressedBytes = buffer.readUInt32LE(localHeaderOffset + 22);
+    const localNameLength = buffer.readUInt16LE(localHeaderOffset + 26);
+    const localExtraLength = buffer.readUInt16LE(localHeaderOffset + 28);
+    const localNameStart = localHeaderOffset + 30;
+    const localDataStart = localNameStart + localNameLength + localExtraLength;
+    if (localDataStart > directoryOffset) throw docxArchiveError('DOCX本地文件头越界');
+    const localNameBytes = buffer.subarray(localNameStart, localNameStart + localNameLength);
+    try {
+      new TextDecoder('utf-8', { fatal: true }).decode(localNameBytes);
+    } catch (_error) {
+      throw docxArchiveError('DOCX本地条目名称不是有效的UTF-8文本');
+    }
+    if (!centralNameBytes.equals(localNameBytes)) throw docxArchiveError('DOCX中央目录与本地条目名称不一致');
+    if (centralFlags !== localFlags || centralMethod !== localMethod) {
+      throw docxArchiveError('DOCX中央目录与本地文件头参数不一致');
+    }
+    const usesDataDescriptor = (centralFlags & 0x0008) !== 0;
+    if (!usesDataDescriptor && (
+      compressedBytes !== localCompressedBytes
+      || uncompressedBytes !== localUncompressedBytes
+    )) {
+      throw docxArchiveError('DOCX中央目录与本地文件头大小不一致');
+    }
+    if (usesDataDescriptor && (
+      (localCompressedBytes !== 0 && localCompressedBytes !== compressedBytes)
+      || (localUncompressedBytes !== 0 && localUncompressedBytes !== uncompressedBytes)
+    )) {
+      throw docxArchiveError('DOCX数据描述符对应的本地文件头大小不一致');
+    }
+    if (localDataStart + compressedBytes > directoryOffset) throw docxArchiveError('DOCX压缩数据越过中央目录边界');
     offset = entryEnd;
   }
+  if (offset !== eocdOffset) throw docxArchiveError('DOCX中央目录长度与条目不一致');
 }
 
 function parseDocxInWorker(buffer) {
-  if (activeDocxParsers >= MAX_CONCURRENT_DOCX_PARSERS) {
-    return Promise.reject(Object.assign(new Error('DOCX解析并发已满'), {
-      publicCode: 'DOCX_PARSER_BUSY',
-      publicMessage: '当前正在处理其他DOCX文件。请稍后重试。',
-      statusCode: 429
-    }));
-  }
-  activeDocxParsers += 1;
-  return new Promise((resolve, reject) => {
-    let worker;
-    let timer;
-    let settled = false;
-    const finish = (callback, value) => {
-      if (settled) return;
-      settled = true;
-      if (timer) clearTimeout(timer);
-      activeDocxParsers -= 1;
-      if (worker) worker.terminate().catch(() => {});
-      callback(value);
-    };
-    try {
-      worker = new Worker(path.join(__dirname, 'scripts', 'docx-parser-worker.js'));
-    } catch (error) {
-      finish(reject, error);
-      return;
-    }
-    timer = setTimeout(() => finish(reject, Object.assign(new Error('DOCX解析超时'), {
-      publicCode: 'DOCX_PARSE_TIMEOUT',
-      publicMessage: 'DOCX文件在5秒内未完成解析。请缩小文件或重新导出后重试。',
-      statusCode: 422
-    })), DOCX_PARSE_TIMEOUT_MS);
-    worker.once('message', result => {
-      if (!result?.ok) return finish(reject, new Error('DOCX解析失败'));
-      return finish(resolve, { text: result.text, tables: extractHtmlTables(result.html) });
-    });
-    worker.once('error', error => finish(reject, error));
-    worker.once('exit', code => {
-      if (!settled && code !== 0) finish(reject, new Error('DOCX解析进程异常退出'));
-    });
-    worker.postMessage({ buffer });
-  });
+  return docxParserPool.parse(buffer);
 }
 
 function containsUnpairedSurrogate(value) {
@@ -1703,7 +1722,7 @@ function jsonSafetyProblem(root) {
       return { code: 'JSON_DEPTH_EXCEEDED', error: '结构化内容嵌套层级过深。请修正文件结构后重试。', path: current.path };
     }
     if (typeof current.value === 'string') {
-      if (current.value.length > MAX_JSON_STRING_LENGTH) {
+      if (Buffer.byteLength(current.value, 'utf8') > MAX_JSON_STRING_LENGTH) {
         return { code: 'JSON_TEXT_TOO_LONG', error: '结构化内容中的单段文字超过1MB。请拆分或精简该段文字后重试。', path: current.path };
       }
       if (containsUnpairedSurrogate(current.value)) {
@@ -3198,7 +3217,11 @@ async function sourceFromUpload(file) {
     return parseDocxInWorker(file.buffer);
   }
   if (ext === '.txt' || ext === '.md') return { text: decodeTextBuffer(file.buffer), tables: [] };
-  throw new Error(`不支持的格式: ${ext}。请上传 .docx / .txt / .md`);
+  throw Object.assign(new Error('上传文件类型不受支持'), {
+    publicCode: 'UNSUPPORTED_FILE_TYPE',
+    publicMessage: '文件类型不受支持。请上传.docx、.txt或.md文件。',
+    statusCode: 415
+  });
 }
 
 function referenceMaterialFromSource({ sourceName, rawText, fileBuffer = null, parsedData = null }) {
@@ -3232,12 +3255,22 @@ app.use(express.json({ limit: '10mb' }));
 app.post('/api/upload', upload.single('file'), async (req, res) => {
   try {
     const rid = requestId(req.body.requestId || req.headers['x-request-id']);
-    if (!req.file) return res.status(400).json({ error: '未收到文件' });
+    if (!req.file) {
+      return res.status(400).json({
+        error: '未收到文件。请选择一个.docx、.txt或.md文件后重试。',
+        code: 'FILE_REQUIRED'
+      });
+    }
 
     const normalizedFileName = normalizeUploadedFileName(req.file.originalname);
     const source = await sourceFromUpload({ ...req.file, originalname: normalizedFileName });
     const rawText = source.text;
-    if (!rawText.trim()) return res.status(400).json({ error: '文档内容为空' });
+    if (!rawText.trim()) {
+      return res.status(400).json({
+        error: '文件内容为空。请补充内容或重新选择文件。',
+        code: 'FILE_CONTENT_EMPTY'
+      });
+    }
 
     const result = await extractFromText(rawText, {
       sourceName: normalizedFileName,
@@ -3277,9 +3310,15 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
 
 app.post('/api/paste', async (req, res) => {
   try {
-    const rid = requestId(req.body.requestId || req.headers['x-request-id']);
-    const text = req.body.text || '';
-    if (!text.trim()) return res.status(400).json({ error: '内容为空' });
+    const body = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {};
+    const rid = requestId(body.requestId || req.headers['x-request-id']);
+    const text = typeof body.text === 'string' ? body.text : '';
+    if (!text.trim()) {
+      return res.status(400).json({
+        error: '粘贴内容为空。请粘贴需要整理的文字后重试。',
+        code: 'PASTED_CONTENT_EMPTY'
+      });
+    }
     const result = await extractFromText(text, { sourceName: '粘贴文本' });
     res.json({
       requestId: rid,
@@ -3308,11 +3347,20 @@ app.post('/api/paste', async (req, res) => {
 app.post('/api/validate', (req, res) => {
   const data = req.body?.data;
   if (!data || typeof data !== 'object' || Array.isArray(data)) {
-    return res.status(400).json({ error: '缺少待校验的结构化文件内容' });
+    return res.status(400).json({
+      error: '缺少待校验的结构化文件内容。请提供data对象后重试。',
+      code: 'VALIDATION_DATA_REQUIRED'
+    });
   }
   const safetyProblem = jsonSafetyProblem(data);
   if (safetyProblem) return res.status(400).json(safetyProblem);
   const schemaVersion = data.schema_version;
+  if (!schemaVersion) {
+    return res.status(400).json({
+      error: '结构化文件缺少schema_version。请从原系统重新导出后重试。',
+      code: 'SCHEMA_VERSION_REQUIRED'
+    });
+  }
   const validationProfile = req.body?.validation_profile || '';
   if (validationProfile && validationProfile !== 'early-v7-data-fields') {
     return res.status(400).json({ error: '不支持的校验方式', code: 'UNSUPPORTED_VALIDATION_PROFILE' });
@@ -3328,7 +3376,10 @@ app.post('/api/validate', (req, res) => {
     });
   }
   if (schemaVersion !== 'document-structured-output-v2') {
-    return res.status(400).json({ error: `不支持的结构化文件版本: ${schemaVersion || '未提供'}` });
+    return res.status(400).json({
+      error: '结构化文件版本不受支持。请使用3001明确支持的版本。',
+      code: 'UNSUPPORTED_SCHEMA_VERSION'
+    });
   }
   const normalizedData = JSON.parse(JSON.stringify(data));
   return res.json({
@@ -3338,7 +3389,10 @@ app.post('/api/validate', (req, res) => {
 });
 
 app.all(['/api/session', '/api/data', '/api/export'], (_req, res) => {
-  res.status(404).json({ error: '当前工具不保存页面内容，请在当前页面下载结构化文件。' });
+  res.status(404).json({
+    error: '当前工具不保存页面内容。需要保留结果时，请在当前页面下载结构化文件。',
+    code: 'STATELESS_ENDPOINT_DISABLED'
+  });
 });
 
 app.get('/api/schema', (req, res) => {
@@ -3373,7 +3427,10 @@ app.get('/api/template', (req, res) => {
   res.set('Cache-Control', 'no-store');
   const version = req.query.version || 'process-governance-v7';
   if (!['process-governance-v5', 'process-governance-v6', 'process-governance-v7'].includes(version)) {
-    return res.status(400).json({ error: `不支持的空白模板版本: ${version}` });
+    return res.status(400).json({
+      error: '空白模板版本不受支持。请从版本历史中选择3001明确支持的版本。',
+      code: 'UNSUPPORTED_SCHEMA_VERSION'
+    });
   }
   if (version === 'process-governance-v7') {
     return res.json({
@@ -3407,7 +3464,10 @@ app.get('/api/health', (req, res) => {
   res.set('Cache-Control', 'no-store');
   const version = req.query.version || 'process-governance-v7';
   if (!['process-governance-v5', 'process-governance-v6', 'process-governance-v7'].includes(version)) {
-    return res.status(400).json({ error: `不支持的健康检查结构版本: ${version}` });
+    return res.status(400).json({
+      error: '健康检查结构版本不受支持。请使用v5、v6或v7。',
+      code: 'UNSUPPORTED_SCHEMA_VERSION'
+    });
   }
   const schemaDigest = version === 'process-governance-v5'
     ? PROCESS_GOVERNANCE_V5_SCHEMA_DIGEST
@@ -3424,6 +3484,12 @@ app.get('/api/health', (req, res) => {
     port: PORT,
     host: HOST,
     uptime: process.uptime()
+  });
+});
+app.all('/api/*', (_req, res) => {
+  res.status(404).json({
+    error: '接口不存在。请检查请求路径和方法后重试。',
+    code: 'API_NOT_FOUND'
   });
 });
 app.use((error, _req, res, next) => {
@@ -3473,5 +3539,6 @@ module.exports = {
   buildProjection,
   statsFrom,
   APP_COMMIT,
-  PROCESS_GOVERNANCE_SCHEMA_DIGEST
+  PROCESS_GOVERNANCE_SCHEMA_DIGEST,
+  inspectDocxArchive
 };

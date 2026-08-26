@@ -258,7 +258,7 @@ const adapterOptions = {
   const item = session.addRow('form_items', { parentRef: area.area_ref, formRef: form.form_ref });
   const itemRows = session.rows('form_items');
   Object.assign(itemRows.find(row => row._row_id === item._row_id), {
-    item_name: '付款日期', item_type: '', business_data_ref: dataObject.data_ref, data_field_ref: dataField.field_ref,
+    item_name: '', item_type: '', business_data_ref: dataObject.data_ref, data_field_ref: dataField.field_ref,
     value_usage_mode: 'reuse_existing', value_origin_mode: 'depends_on_data'
   });
   session.replaceRows('form_items', itemRows);
@@ -272,6 +272,7 @@ const adapterOptions = {
   assert.equal(prepared.ok, true, prepared.errors.map(problem => problem.message).join('; '));
   assert.equal(prepared.summary.added, 9, 'all nine business tables must commit together');
   const committedItem = prepared.document.forms.find(entry => entry.form_ref === form.form_ref).areas[0].items[0];
+  assert.equal(committedItem.item_name, '付款日期', 'a blank form display name must reuse the referenced object field name');
   assert.equal(committedItem.item_type, '日期', 'referenced object field must supply the form field type');
   assert.equal(source.forms.length, 1, 'candidate preparation must remain atomic');
 
@@ -281,6 +282,17 @@ const adapterOptions = {
   assert.equal(applied.state.undoCount, 1, 'one grid apply must create one undo operation');
   const undone = manager.undo('grid-case', applied.document);
   assert.deepEqual(undone.document, source, 'one undo must restore the complete source document');
+}
+
+{
+  const source = documentFixture();
+  source.forms[0].areas[0].items[0].item_name = '';
+  const session = WebGridCore.createSession({
+    adapter: ProcessV7GridAdapter, documentValue: source, sourceKey: 'existing-blank-form-name', adapterOptions
+  });
+  const prepared = session.prepare(source, 'existing-blank-form-name');
+  assert.equal(prepared.ok, false, 'an existing blank form display name must not be silently rewritten during grid apply');
+  assert.ok(prepared.errors.some(item => item.tableId === 'form_items' && item.column === 'item_name' && item.code === 'REQUIRED'));
 }
 
 {

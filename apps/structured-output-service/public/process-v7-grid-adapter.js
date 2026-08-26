@@ -275,7 +275,10 @@
       orderedActive(tables, definition.id).forEach(row => {
         definition.columns.forEach(spec => {
           const value = row[spec.key];
-          const derivesFromObjectField = definition.id === 'form_items' && spec.key === 'item_type' && clean(row.data_field_ref);
+          const derivesFromObjectField = definition.id === 'form_items'
+            && !row._existing
+            && ['item_name', 'item_type'].includes(spec.key)
+            && clean(row.data_field_ref);
           if (spec.required && clean(value) === '' && !derivesFromObjectField) {
             problem(result.errors, row, definition.id, spec.key, 'REQUIRED', `${spec.label}不能为空`);
           }
@@ -527,6 +530,7 @@
           problem(result.errors, row, 'form_items', 'data_field_ref', 'FIELD_OWNER_MISMATCH', '引用对象字段不属于所选业务数据对象');
         } else {
           item.business_data_ref = owner.dataObject.data_ref;
+          if (!row?._existing && !clean(item.item_name)) item.item_name = owner.field.field_name;
           item.item_type = owner.field.field_type;
         }
       }

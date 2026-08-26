@@ -29,8 +29,14 @@ const {
 } = require('../processGovernanceUnifiedMigration');
 const {
   contentHash: v7ContentHash,
+  unresolvedBlockingIssues,
   validateAndProjectV7
 } = require('../processV7PreviewReview');
+const {
+  assertV7FormalEnabled,
+  assertV7TrialProcessRef
+} = require('../processV7TrialScope');
+const { ACCESS_MODEL_VERSION } = require('../roleDefinitions');
 
 const FIELD_STATUSES = new Set(['suggested', 'business_confirmed', 'data_governed', 'published', 'retired']);
 const DRAFT_STATUSES = new Set(['draft', 'submitted', 'under_review', 'needs_changes', 'approved', 'published', 'rejected']);
@@ -84,6 +90,9 @@ const REPO_ROOT = path.resolve(__dirname, '../../../..');
 
 let repositoryFactory = null;
 let repositoryPromise = null;
+const FORMAL_V7_TRANSACTION_CONTEXT = Symbol('formalV7TransactionContext');
+const FORMAL_V7_ACTOR_CONTEXT = Symbol('formalV7ActorContext');
+const PROCESS_DESIGN_PUBLISH_TRANSACTION_CONTEXT = Symbol('processDesignPublishTransactionContext');
 
 function runAction(res, action) {
   return action().catch(error => {
@@ -110,6 +119,110 @@ function text(value) {
 function optionalText(value) {
   const cleaned = text(value);
   return cleaned || null;
+}
+
+function v7FormalExpectedBinding(body = {}) {
+  const revisionNo = Number(body.expectedRevisionNo ?? body.expected_revision_no);
+  if (!Number.isInteger(revisionNo) || revisionNo < 1) {
+    throw httpError(422, '当前修订号必须是正整数', {
+      error: '当前修订号必须是正整数',
+      code: 'V7_FORMAL_EXPECTED_REVISION_REQUIRED'
+    });
+  }
+  const contentHashValue = text(body.expectedContentHash ?? body.expected_content_hash).toLowerCase();
+  if (!/^[a-f0-9]{64}$/.test(contentHashValue)) {
+    throw httpError(422, '当前内容摘要必须是64位SHA-256', {
+      error: '当前内容摘要必须是64位SHA-256',
+      code: 'V7_FORMAL_EXPECTED_CONTENT_HASH_REQUIRED'
+    });
+  }
+  return { expectedRevisionNo: revisionNo, expectedContentHash: contentHashValue };
+}
+
+function assertV7FormalTransitionEnabled(draft) {
+  const document = parseJsonObject(draft && draft.process_content_json);
+  const processRef = text(document && document.process && document.process.process_ref);
+  try {
+    assertV7FormalEnabled();
+    assertV7TrialProcessRef(processRef);
+  } catch (error) {
+    throw httpError(error.statusCode || 500, error.message || 'V7单流程试点范围校验失败', {
+      error: error.message || 'V7单流程试点范围校验失败',
+      code: error.code || 'V7_TRIAL_SCOPE_CHECK_FAILED'
+    });
+  }
+  return processRef;
+}
+
+function v7ActualState(draft) {
+  return {
+    actual_status: draft && draft.status || null,
+    actual_revision_no: Number(draft && draft.revision_no || 0) || null,
+    actual_content_hash: text(draft && draft.content_hash) || null
+  };
+}
+
+function v7ReviewContentStale(draft, message = '当前V7正文或审核依据已经变化，请刷新后重试') {
+  return httpError(409, message, {
+    error: message,
+    code: 'V7_REVIEW_CONTENT_STALE',
+    ...v7ActualState(draft)
+  });
+}
+
+function v7PromotionEvidenceMismatch(draft, message = '当前V7提升依据与正式草稿不一致，请重新完成受控提升') {
+  return httpError(409, message, {
+    error: message,
+    code: 'V7_FORMAL_PROMOTION_EVIDENCE_MISMATCH',
+    ...v7ActualState(draft)
+  });
+}
+
+function v7DraftStateConflict(draft, message = '当前V7正式草稿状态不允许执行该操作') {
+  return httpError(409, message, {
+    error: message,
+    code: 'V7_FORMAL_DRAFT_STATE_CONFLICT',
+    ...v7ActualState(draft)
+  });
+}
+
+function v7BaseVersionConflict(draft, message = '正式流程主档的当前版本已经变化，请重新提升最新V7修订') {
+  return httpError(409, message, {
+    error: message,
+    code: 'V7_FORMAL_BASE_VERSION_CONFLICT',
+    ...v7ActualState(draft)
+  });
+}
+
+function v7BlockingIssuesError() {
+  return httpError(409, '当前V7正文仍有阻断项，请回到3001修正后上传新修订', {
+    error: '当前V7正文仍有阻断项，请回到3001修正后上传新修订',
+    code: 'V7_FORMAL_BLOCKING_ISSUES'
+  });
+}
+
+function isV7FormalDocument(document, currentVersion) {
+  return Boolean(
+    text(document && document.process_ref) ||
+    text(currentVersion && currentVersion.schema_version) === 'process-governance-v7'
+  );
+}
+
+function assertLegacyDraftCreationAllowed(document, currentVersion) {
+  if (!isV7FormalDocument(document, currentVersion)) return;
+  throw httpError(409, 'V7正式流程的新修订不能在3000创建或导入；请回到3001修改后重新上传预览', {
+    error: 'V7正式流程的新修订不能在3000创建或导入；请回到3001修改后重新上传预览',
+    code: 'V7_CONTENT_READ_ONLY'
+  });
+}
+
+function assertV7ExpectedContent(draft, binding) {
+  if (
+    Number(binding.expectedRevisionNo) !== Number(draft && draft.revision_no) ||
+    text(binding.expectedContentHash) !== text(draft && draft.content_hash)
+  ) {
+    throw v7ReviewContentStale(draft);
+  }
 }
 
 function formatProcedureCode(draftId, sequence) {
@@ -909,6 +1022,231 @@ function makeProcessDesignMysqlRepository(pool) {
     `, [draftId, eventType, actorUserId || null, optionalText(note), payload ? JSON.stringify(payload) : null]);
   }
 
+  async function locateFormalV7Transition(draftId, taskId = null) {
+    let locatedDraftId = Number(draftId);
+    if (taskId != null) {
+      const [task] = await mysqlQuery(pool, `
+        SELECT id, draft_id
+        FROM process_design_review_tasks
+        WHERE id=?
+      `, [Number(taskId)]);
+      if (!task) throw httpError(404, '审核任务不存在');
+      locatedDraftId = Number(task.draft_id);
+    }
+    const [promotion] = await mysqlQuery(pool, `
+      SELECT id, preview_case_id, preview_revision_id, document_id, draft_id
+      FROM process_v7_promotions
+      WHERE draft_id=?
+      ORDER BY id DESC
+      LIMIT 1
+    `, [locatedDraftId]);
+    if (!promotion) {
+      throw v7PromotionEvidenceMismatch({ id: locatedDraftId }, '正式V7草稿缺少当前提升依据，请重新完成受控提升');
+    }
+    return {
+      caseId: Number(promotion.preview_case_id),
+      draftId: locatedDraftId,
+      taskId: taskId == null ? null : Number(taskId)
+    };
+  }
+
+  async function lockFormalV7Context(locator) {
+    const [previewCase] = await mysqlQuery(pool, `
+      SELECT *
+      FROM process_v7_preview_cases
+      WHERE id=?
+      FOR UPDATE
+    `, [locator.caseId]);
+    if (!previewCase) throw v7PromotionEvidenceMismatch(null, '正式V7草稿关联的预览案例不存在');
+
+    const [revision] = await mysqlQuery(pool, `
+      SELECT *
+      FROM process_v7_preview_revisions
+      WHERE id=? AND case_id=?
+      FOR UPDATE
+    `, [previewCase.current_revision_id, previewCase.id]);
+    if (!revision) throw v7PromotionEvidenceMismatch(null, '正式V7草稿关联的当前预览修订不存在');
+
+    const [promotion] = await mysqlQuery(pool, `
+      SELECT *
+      FROM process_v7_promotions
+      WHERE preview_case_id=? AND draft_id=?
+      ORDER BY id DESC
+      LIMIT 1
+      FOR UPDATE
+    `, [previewCase.id, locator.draftId]);
+    if (!promotion) throw v7PromotionEvidenceMismatch(null, '正式V7草稿缺少当前提升依据，请重新完成受控提升');
+
+    const [document] = await mysqlQuery(pool, `
+      SELECT *
+      FROM process_design_documents
+      WHERE id=?
+      FOR UPDATE
+    `, [promotion.document_id]);
+    if (!document || text(document.status) !== 'active') {
+      throw httpError(409, '正式流程主档不存在或已停用，不能继续处理V7正文', {
+        error: '正式流程主档不存在或已停用，不能继续处理V7正文',
+        code: 'V7_FORMAL_DOCUMENT_NOT_FOUND'
+      });
+    }
+
+    let currentVersion = null;
+    if (document.current_version_id) {
+      [currentVersion] = await mysqlQuery(pool, `
+        SELECT *
+        FROM process_design_versions
+        WHERE id=?
+        FOR UPDATE
+      `, [document.current_version_id]);
+      if (!currentVersion || Number(currentVersion.document_id) !== Number(document.id)) {
+        throw v7BaseVersionConflict(null, '正式流程主档的当前版本指针无效，不能继续处理V7正文');
+      }
+    } else {
+      const [unexpectedVersion] = await mysqlQuery(pool, `
+        SELECT *
+        FROM process_design_versions
+        WHERE document_id=? AND status='published'
+        ORDER BY effective_at DESC, id DESC
+        LIMIT 1
+        FOR UPDATE
+      `, [document.id]);
+      if (unexpectedVersion) {
+        throw v7BaseVersionConflict(null, '正式流程主档存在有效版本但缺少当前版本指针，不能继续处理V7正文');
+      }
+    }
+
+    const [draftRow] = await mysqlQuery(pool, `
+      SELECT *
+      FROM process_design_drafts
+      WHERE id=?
+      FOR UPDATE
+    `, [promotion.draft_id]);
+    const draft = publicDraft(draftRow);
+    if (!draft || Number(draft.id) !== Number(locator.draftId)) {
+      throw v7PromotionEvidenceMismatch(draft, '正式V7草稿与当前提升依据不一致');
+    }
+    const reviewTasks = await mysqlQuery(pool, `
+      SELECT *
+      FROM process_design_review_tasks
+      WHERE draft_id=?
+      ORDER BY id ASC
+      FOR UPDATE
+    `, [draft.id]);
+    assertV7FormalTransitionEnabled(draft);
+    return { previewCase, revision, promotion, document, currentVersion, draft, reviewTasks };
+  }
+
+  async function authorizeFormalV7Actor(options, operation, context, actorUserId) {
+    const actor = options && options[FORMAL_V7_ACTOR_CONTEXT];
+    const personId = Number(actor && actor.personId || 0);
+    const accountId = Number(actor && actor.accountId || 0);
+    const authVersion = Number(actor && actor.authVersion || 0);
+    const expectedActorUserId = Number(actorUserId || 0);
+    if (!personId || !accountId || !authVersion || (expectedActorUserId && expectedActorUserId !== personId)) {
+      throw httpError(401, '正式V7状态变更缺少受控的当前操作人上下文', {
+        error: '正式V7状态变更缺少受控的当前操作人上下文',
+        code: 'V7_FORMAL_ACTOR_CONTEXT_REQUIRED'
+      });
+    }
+
+    const [account] = await mysqlQuery(pool, `
+      SELECT ua.account_id, ua.person_id, ua.account_status, ua.auth_version,
+             p.current_department_id, p.employment_status, p.status AS person_status
+      FROM user_accounts ua
+      JOIN person p ON p.person_id=ua.person_id
+      WHERE ua.account_id=? AND ua.person_id=?
+      FOR SHARE
+    `, [accountId, personId]);
+    if (
+      !account ||
+      text(account.account_status) !== 'active' ||
+      text(account.person_status) !== 'active' ||
+      text(account.employment_status) !== 'active' ||
+      Number(account.auth_version) !== authVersion
+    ) {
+      throw httpError(401, '账号状态或授权已经变化，请重新登录', {
+        error: '账号状态或授权已经变化，请重新登录',
+        code: 'SESSION_AUTHORIZATION_CHANGED'
+      });
+    }
+
+    const assignments = await mysqlQuery(pool, `
+      SELECT pr.person_role_id, pr.scope_type, pr.scope_department_id,
+             r.role_code, permission.perm_code, rp.effect
+      FROM person_roles pr
+      JOIN roles r ON r.role_id=pr.role_id
+      LEFT JOIN role_permissions rp ON rp.role_id=r.role_id
+      LEFT JOIN permissions permission ON permission.perm_id=rp.perm_id
+      WHERE pr.person_id=?
+        AND pr.assignment_status='active'
+        AND pr.authorization_basis IS NOT NULL
+        AND pr.effective_from IS NOT NULL
+        AND pr.effective_from<=CURRENT_DATE
+        AND (pr.effective_to IS NULL OR pr.effective_to>=CURRENT_DATE)
+        AND r.status='active'
+        AND r.model_version=?
+      ORDER BY pr.person_role_id, permission.perm_code
+      FOR SHARE
+    `, [personId, ACCESS_MODEL_VERSION]);
+    const roleCodes = new Set(assignments.map(item => text(item.role_code)).filter(Boolean));
+    if (roleCodes.has('admin')) {
+      throw httpError(403, '管理员对治理材料只读，不能执行正式V7业务写入', {
+        error: '管理员对治理材料只读，不能执行正式V7业务写入',
+        code: 'V7_FORMAL_ADMIN_READ_ONLY'
+      });
+    }
+
+    const requirements = {
+      submit: { role: 'department_contact', permissions: ['governance:draft-department', 'governance:submit-department'], departmentScoped: true },
+      review: { role: 'department_mdm_reviewer', permissions: ['governance:review-department'], departmentScoped: true },
+      publish: { role: 'mdm_lead', permissions: ['governance:publish'], departmentScoped: false }
+    }[operation];
+    const permissionEffects = new Map();
+    assignments.forEach(item => {
+      const permissionCode = text(item.perm_code);
+      if (!permissionCode) return;
+      if (text(item.effect) === 'deny') permissionEffects.set(permissionCode, 'deny');
+      else if (!permissionEffects.has(permissionCode)) permissionEffects.set(permissionCode, 'allow');
+    });
+    const formalDepartmentId = Number(context && context.draft && context.draft.department_id || 0);
+    const currentDepartmentId = Number(account.current_department_id || 0);
+    const expectedRoleAssignments = assignments.filter(item => text(item.role_code) === requirements.role);
+    const roleScopeAllowed = requirements.departmentScoped
+      ? currentDepartmentId === formalDepartmentId && expectedRoleAssignments.some(item =>
+          text(item.scope_type) === 'department' &&
+          Number(item.scope_department_id || 0) === formalDepartmentId
+        )
+      : expectedRoleAssignments.some(item => text(item.scope_type) === 'global');
+    const permissionsAllowed = requirements.permissions.every(code => permissionEffects.get(code) === 'allow');
+    if (!roleScopeAllowed || !permissionsAllowed) {
+      throw httpError(403, '当前操作人的有效角色、部门范围或权限不允许执行该正式V7操作', {
+        error: '当前操作人的有效角色、部门范围或权限不允许执行该正式V7操作',
+        code: 'V7_FORMAL_ACTOR_SCOPE_DENIED'
+      });
+    }
+    return { personId, accountId, authVersion, departmentId: currentDepartmentId };
+  }
+
+  async function runFormalV7Transaction(draftId, taskId, operation) {
+    const locator = await locateFormalV7Transition(draftId, taskId);
+    if (!pool || typeof pool.getConnection !== 'function') {
+      return await operation({ locator, repository: null, transaction: false });
+    }
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+      const transactionRepository = makeProcessDesignMysqlRepository(connection);
+      const result = await operation({ locator, repository: transactionRepository, transaction: true });
+      await connection.commit();
+      return result;
+    } catch (error) {
+      await connection.rollback().catch(() => {});
+      throw error;
+    } finally {
+      connection.release();
+    }
+  }
+
   async function loadDocumentProfile(draftId) {
     const [row] = await mysqlQuery(pool, 'SELECT * FROM process_design_document_profiles WHERE draft_id=?', [draftId]);
     return row || null;
@@ -1029,7 +1367,7 @@ function makeProcessDesignMysqlRepository(pool) {
     return await mysqlQuery(pool, 'SELECT * FROM process_design_review_tasks WHERE draft_id=? ORDER BY id', [draftId]);
   }
 
-  async function validateFormalV7Draft(draft) {
+  async function validateFormalV7Draft(draft, context, options = {}) {
     const document = parseJsonObject(draft && draft.process_content_json);
     const departments = await mysqlQuery(pool, `
       SELECT id, name, code
@@ -1048,35 +1386,45 @@ function makeProcessDesignMysqlRepository(pool) {
         details: preview.errors
       });
     }
-    if (v7ContentHash(document) !== text(draft.content_hash)) {
-      throw httpError(409, '正式V7草稿正文摘要与当前记录不一致', {
-        error: '正式V7草稿正文摘要与当前记录不一致',
-        code: 'V7_FORMAL_CONTENT_HASH_MISMATCH'
-      });
+    if (!context) throw v7PromotionEvidenceMismatch(draft, '正式V7草稿缺少锁定后的提升依据');
+    const scopeDecision = text(context.previewCase && context.previewCase.scope_decision);
+    if (!options.allowBlockingIssues && unresolvedBlockingIssues(preview.blockingIssues, scopeDecision).length) {
+      throw v7BlockingIssuesError();
     }
-    const [promotion] = await mysqlQuery(pool, `
-      SELECT p.*, c.status AS preview_case_status, c.scope_decision,
-             c.current_revision_no, c.current_content_hash
-      FROM process_v7_promotions p
-      JOIN process_v7_preview_cases c ON c.id=p.preview_case_id
-      WHERE p.draft_id=?
-      ORDER BY p.id DESC
-      LIMIT 1
-    `, [draft.id]);
+    if (v7ContentHash(document) !== text(draft.content_hash)) {
+      throw v7PromotionEvidenceMismatch(draft, '正式V7草稿正文摘要与当前记录不一致');
+    }
+    const { previewCase, revision, promotion, document: formalDocument } = context;
     if (
       !promotion ||
+      !previewCase ||
+      !revision ||
       text(promotion.content_hash) !== text(draft.content_hash) ||
       Number(promotion.preview_revision_no) !== Number(draft.revision_no) ||
-      text(promotion.preview_case_status) !== 'review_complete' ||
-      Number(promotion.current_revision_no) !== Number(draft.revision_no) ||
-      text(promotion.current_content_hash) !== text(draft.content_hash)
+      Number(promotion.preview_revision_id) !== Number(revision.id) ||
+      Number(promotion.preview_case_id) !== Number(previewCase.id) ||
+      Number(promotion.document_id) !== Number(formalDocument && formalDocument.id) ||
+      Number(promotion.draft_id) !== Number(draft.id) ||
+      text(previewCase.status) !== 'review_complete' ||
+      Number(previewCase.current_revision_id) !== Number(revision.id) ||
+      Number(previewCase.current_revision_no) !== Number(draft.revision_no) ||
+      text(previewCase.current_content_hash) !== text(draft.content_hash) ||
+      Number(revision.revision_no) !== Number(draft.revision_no) ||
+      text(revision.content_hash) !== text(draft.content_hash)
     ) {
-      throw httpError(409, '正式V7草稿没有匹配的已完成预览核对记录', {
-        error: '正式V7草稿没有匹配的已完成预览核对记录',
-        code: 'V7_FORMAL_PROMOTION_EVIDENCE_MISMATCH'
-      });
+      throw v7PromotionEvidenceMismatch(draft, '正式V7草稿没有匹配的当前预览核对和提升依据');
     }
-    return { document, preview, promotion };
+    if (
+      Number(draft.document_id) !== Number(formalDocument && formalDocument.id) ||
+      Number(draft.department_id) !== Number(previewCase.owning_department_id) ||
+      Number(formalDocument && formalDocument.owning_department_id) !== Number(previewCase.owning_department_id) ||
+      text(preview.processRef) !== text(previewCase.process_ref) ||
+      text(formalDocument && formalDocument.process_ref) !== text(preview.processRef)
+    ) {
+      throw v7PromotionEvidenceMismatch(draft, '正式V7草稿、归口部门、流程主档或process_ref与当前提升依据不一致');
+    }
+    assertV7FormalTransitionEnabled(draft);
+    return { document, preview, promotion, previewCase, revision, formalDocument };
   }
 
   async function getDraft(id) {
@@ -2637,6 +2985,7 @@ function makeProcessDesignMysqlRepository(pool) {
         getActiveDraftForDocumentNo(normalizedNo)
       ]);
       const currentEdition = text(document.current_edition) || text(currentVersion && currentVersion.edition) || null;
+      const v7ContentReadOnly = isV7FormalDocument(document, currentVersion);
       return {
         exists: true,
         document,
@@ -2646,21 +2995,26 @@ function makeProcessDesignMysqlRepository(pool) {
         next_edition: currentEdition ? nextEdition(currentEdition) : 'A',
         active_draft: activeDraft,
         can_create: !activeDraft && !currentVersion,
-        can_create_next: Boolean(currentVersion && !activeDraft),
-        message: activeDraft ? '该制度编号已有进行中草稿' : (currentVersion ? '该制度编号可创建下一版次' : '该制度编号可创建 A版草稿')
+        can_create_next: Boolean(currentVersion && !activeDraft && !v7ContentReadOnly),
+        message: v7ContentReadOnly
+          ? 'V7正式流程的新修订必须回到3001修改后重新上传预览'
+          : (activeDraft ? '该制度编号已有进行中草稿' : (currentVersion ? '该制度编号可创建下一版次' : '该制度编号可创建 A版草稿'))
       };
     },
     async createNextEditionDraft(documentId, actorUserId, targetDeptId) {
       const document = await getDocumentById(documentId);
       if (!document) throw httpError(404, '制度不存在');
-      const activeDraft = await getActiveDraftForDocumentNo(document.document_no);
+      const [activeDraft, currentVersion] = await Promise.all([
+        getActiveDraftForDocumentNo(document.document_no),
+        getCurrentVersionForDocument(document.id)
+      ]);
+      assertLegacyDraftCreationAllowed(document, currentVersion);
       if (activeDraft) {
         throw httpError(409, '该制度编号已有进行中草稿', {
           error: '该制度编号已有进行中草稿',
           active_draft: activeDraft
         });
       }
-      const currentVersion = await getCurrentVersionForDocument(document.id);
       if (!currentVersion) throw httpError(409, '该制度还没有当前有效版次，请先创建 A版草稿');
       const plannedEdition = nextEdition(text(document.current_edition) || currentVersion.edition);
       const result = await mysqlRun(pool, `
@@ -2918,6 +3272,23 @@ function makeProcessDesignMysqlRepository(pool) {
       `, params);
     },
     async canonicalContent(draft) {
+      if (text(draft.schema_version) === 'process-governance-v7') {
+        const document = parseJsonObject(draft.process_content_json);
+        const calculatedHash = v7ContentHash(document);
+        if (!document || calculatedHash !== text(draft.content_hash)) {
+          throw httpError(409, '正式V7草稿正文摘要校验失败', {
+            error: '正式V7草稿正文摘要校验失败',
+            code: 'V7_FORMAL_CONTENT_HASH_MISMATCH'
+          });
+        }
+        return {
+          source: 'draft_canonical_json',
+          schema_version: 'process-governance-v7',
+          content_hash: calculatedHash,
+          revision: Number(draft.revision_no || 0),
+          document
+        };
+      }
       if (text(draft.process_content_json)) {
         const candidate = parseJsonObject(draft.process_content_json);
         const normalized = normalizeProcessGovernanceDocument(candidate);
@@ -4548,62 +4919,198 @@ function makeProcessDesignMysqlRepository(pool) {
       }
       return await getById('process_design_evidence', evidenceId);
     },
-    async submitDraft(draft, note, actorUserId) {
-      const isV7 = text(draft.schema_version) === 'process-governance-v7';
-      if (isV7) await validateFormalV7Draft(draft);
+    async submitDraft(draft, note, actorUserId, options = {}) {
+      const transactionContext = options && options[FORMAL_V7_TRANSACTION_CONTEXT];
+      let storedDraft = null;
+      let isV7 = Boolean(transactionContext);
+      if (!transactionContext) {
+        storedDraft = await getDraft(Number(draft && draft.id));
+        if (!storedDraft) throw httpError(404, '制度结构草稿不存在');
+        isV7 = text(storedDraft.schema_version) === 'process-governance-v7';
+      }
+      if (isV7 && !transactionContext) {
+        assertV7FormalTransitionEnabled(storedDraft);
+        v7FormalExpectedBinding(options);
+        return await runFormalV7Transaction(storedDraft.id, null, async ({ locator, repository: transactionRepository }) => {
+          if (!transactionRepository) {
+            throw httpError(503, '正式V7状态变更必须在MySQL事务中执行', {
+              error: '正式V7状态变更必须在MySQL事务中执行',
+              code: 'V7_FORMAL_TRANSACTION_REQUIRED'
+            });
+          }
+          return await transactionRepository.submitDraft(
+            { id: locator.draftId, schema_version: 'process-governance-v7' },
+            note,
+            actorUserId,
+            {
+              ...options,
+              [FORMAL_V7_TRANSACTION_CONTEXT]: Object.freeze({ operation: 'submit', locator })
+            }
+          );
+        });
+      }
+      if (isV7) {
+        if (transactionContext.operation !== 'submit' || !transactionContext.locator) {
+          throw httpError(503, '正式V7提交缺少受控的事务能力', {
+            error: '正式V7提交缺少受控的事务能力',
+            code: 'V7_FORMAL_TRANSACTION_REQUIRED'
+          });
+        }
+        const binding = v7FormalExpectedBinding(options);
+        const context = await lockFormalV7Context(transactionContext.locator);
+        const lockedDraft = context.draft;
+        const authorizedActor = await authorizeFormalV7Actor(options, 'submit', context, actorUserId);
+        assertV7ExpectedContent(lockedDraft, binding);
+        if (!EDITABLE_DRAFT_STATUSES.has(text(lockedDraft.status))) {
+          throw v7DraftStateConflict(lockedDraft, '当前V7正式草稿状态不能提交审核');
+        }
+        await validateFormalV7Draft(lockedDraft, context);
+        const updateResult = await mysqlRun(pool, `
+          UPDATE process_design_drafts
+          SET status='submitted', submitted_by=?, submitted_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP
+          WHERE id=? AND status IN ('draft','needs_changes') AND revision_no=? AND content_hash=?
+        `, [authorizedActor.personId, lockedDraft.id, binding.expectedRevisionNo, binding.expectedContentHash]);
+        if (Number(updateResult.affectedRows) !== 1) throw v7ReviewContentStale(lockedDraft);
+        const taskResult = await mysqlRun(pool, `
+          INSERT INTO process_design_review_tasks
+            (draft_id, draft_revision_no, content_hash, task_type, assignee_role, created_by)
+          VALUES (?, ?, ?, 'department_review', 'department_mdm_reviewer', ?)
+        `, [lockedDraft.id, binding.expectedRevisionNo, binding.expectedContentHash, authorizedActor.personId]);
+        await addEvent(lockedDraft.id, 'submitted', authorizedActor.personId, optionalText(note) || '已提交审核', {
+          draft_revision_no: binding.expectedRevisionNo,
+          content_hash: binding.expectedContentHash
+        });
+        const updated = await getDraft(lockedDraft.id);
+        return {
+          draft: updated,
+          reviewTask: await getById('process_design_review_tasks', taskResult.insertId),
+          outcome: {
+            formed: '已形成原生V7正式草稿',
+            current: '当前V7正文已提交部门审核',
+            missing: [],
+            next: '部门审核员核对当前修订号和内容摘要后记录审核结论'
+          }
+        };
+      }
+      draft = storedDraft;
       await mysqlRun(pool, `
         UPDATE process_design_drafts
         SET status='submitted', submitted_by=?, submitted_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP
         WHERE id=?
       `, [actorUserId, draft.id]);
-      const taskResult = isV7
-        ? await mysqlRun(pool, `
-          INSERT INTO process_design_review_tasks
-            (draft_id, draft_revision_no, content_hash, task_type, assignee_role, created_by)
-          VALUES (?, ?, ?, 'department_review', 'department_mdm_reviewer', ?)
-        `, [draft.id, Number(draft.revision_no), draft.content_hash, actorUserId])
-        : await mysqlRun(pool, `
-          INSERT INTO process_design_review_tasks (draft_id, task_type, assignee_role, created_by)
-          VALUES (?, 'department_review', 'department_mdm_reviewer', ?)
-        `, [draft.id, actorUserId]);
+      const taskResult = await mysqlRun(pool, `
+        INSERT INTO process_design_review_tasks (draft_id, task_type, assignee_role, created_by)
+        VALUES (?, 'department_review', 'department_mdm_reviewer', ?)
+      `, [draft.id, actorUserId]);
       await addEvent(draft.id, 'submitted', actorUserId, optionalText(note) || '已提交审核');
       const updated = await getDraft(draft.id);
       return {
         draft: updated,
         reviewTask: await getById('process_design_review_tasks', taskResult.insertId),
-        outcome: isV7 ? {
-          formed: '已形成原生V7正式草稿',
-          current: '当前V7正文已提交部门审核',
-          missing: [],
-          next: '部门审核员核对当前修订号和内容摘要后记录审核结论'
-        } : await outcomeForDraft(updated)
+        outcome: await outcomeForDraft(updated)
       };
     },
     async getReviewTask(taskId) {
       return await getById('process_design_review_tasks', taskId);
     },
-    async decideReviewTask(task, decision, note, actorUserId) {
+    async decideReviewTask(task, decision, note, actorUserId, options = {}) {
+      const statusByDecision = { approve: 'approved', reject: 'rejected', needs_changes: 'needs_changes' };
+      const nextStatus = statusByDecision[decision];
+      let draft = null;
+      let storedTask = null;
+      const transactionContext = options && options[FORMAL_V7_TRANSACTION_CONTEXT];
+      let isV7 = Boolean(transactionContext);
+      if (!transactionContext) {
+        storedTask = await getById('process_design_review_tasks', Number(task && task.id));
+        if (!storedTask) throw httpError(404, '审核任务不存在');
+        draft = await getDraft(storedTask.draft_id);
+        if (!draft) throw httpError(404, '制度结构草稿不存在');
+        isV7 = text(draft.schema_version) === 'process-governance-v7';
+      }
+      if (isV7 && !transactionContext) {
+        assertV7FormalTransitionEnabled(draft);
+        v7FormalExpectedBinding(options);
+        return await runFormalV7Transaction(draft.id, storedTask.id, async ({ locator, repository: transactionRepository }) => {
+          if (!transactionRepository) {
+            throw httpError(503, '正式V7状态变更必须在MySQL事务中执行', {
+              error: '正式V7状态变更必须在MySQL事务中执行',
+              code: 'V7_FORMAL_TRANSACTION_REQUIRED'
+            });
+          }
+          return await transactionRepository.decideReviewTask(
+            { id: locator.taskId, draft_id: locator.draftId },
+            decision,
+            note,
+            actorUserId,
+            {
+              ...options,
+              [FORMAL_V7_TRANSACTION_CONTEXT]: Object.freeze({ operation: 'review', locator })
+            }
+          );
+        });
+      }
+      if (isV7) {
+        if (!transactionContext || transactionContext.operation !== 'review' || !transactionContext.locator) {
+          throw httpError(503, '正式V7审核缺少受控的事务能力', {
+            error: '正式V7审核缺少受控的事务能力',
+            code: 'V7_FORMAL_TRANSACTION_REQUIRED'
+          });
+        }
+        const binding = v7FormalExpectedBinding(options);
+        const context = await lockFormalV7Context(transactionContext.locator);
+        const lockedDraft = context.draft;
+        const authorizedActor = await authorizeFormalV7Actor(options, 'review', context, actorUserId);
+        const lockedTask = context.reviewTasks.find(item => Number(item.id) === Number(transactionContext.locator.taskId));
+        assertV7ExpectedContent(lockedDraft, binding);
+        if (!lockedTask) throw v7ReviewContentStale(lockedDraft, '当前V7审核任务与正式草稿不一致');
+        if (text(lockedTask.status) !== 'pending') {
+          throw httpError(409, '该审核任务已经处理，不能重复记录结论', {
+            error: '该审核任务已经处理，不能重复记录结论',
+            code: 'REVIEW_TASK_ALREADY_DECIDED',
+            ...v7ActualState(lockedDraft)
+          });
+        }
+        if (
+          Number(lockedTask.draft_revision_no) !== binding.expectedRevisionNo ||
+          text(lockedTask.content_hash) !== binding.expectedContentHash
+        ) {
+          throw v7ReviewContentStale(lockedDraft, '审核任务绑定的V7正文已经过期，请重新提交当前修订');
+        }
+        if (!['submitted', 'under_review'].includes(text(lockedDraft.status))) {
+          throw v7DraftStateConflict(lockedDraft, '当前V7正式草稿状态不能记录审核结论');
+        }
+        await validateFormalV7Draft(lockedDraft, context, {
+          allowBlockingIssues: decision === 'needs_changes' || decision === 'reject'
+        });
+        const taskUpdate = await mysqlRun(pool, `
+          UPDATE process_design_review_tasks
+          SET status=?, decision_note=?, decided_by=?, decided_at=CURRENT_TIMESTAMP
+          WHERE id=? AND status='pending' AND draft_revision_no=? AND content_hash=?
+        `, [nextStatus, optionalText(note), authorizedActor.personId, lockedTask.id, binding.expectedRevisionNo, binding.expectedContentHash]);
+        if (Number(taskUpdate.affectedRows) !== 1) throw v7ReviewContentStale(lockedDraft);
+        const draftUpdate = await mysqlRun(pool, `
+          UPDATE process_design_drafts
+          SET status=?, updated_at=CURRENT_TIMESTAMP
+          WHERE id=? AND status IN ('submitted','under_review') AND revision_no=? AND content_hash=?
+        `, [nextStatus, lockedDraft.id, binding.expectedRevisionNo, binding.expectedContentHash]);
+        if (Number(draftUpdate.affectedRows) !== 1) throw v7ReviewContentStale(lockedDraft);
+        await addEvent(lockedDraft.id, `review_${decision}`, authorizedActor.personId, optionalText(note) || '已处理审核任务', {
+          review_task_id: Number(lockedTask.id),
+          draft_revision_no: binding.expectedRevisionNo,
+          content_hash: binding.expectedContentHash,
+          decision
+        });
+        return {
+          draft: await getDraft(lockedDraft.id),
+          reviewTask: await getById('process_design_review_tasks', lockedTask.id)
+        };
+      }
+      task = storedTask;
       if (text(task && task.status) !== 'pending') {
         throw httpError(409, '该审核任务已经处理，不能重复记录结论', {
           error: '该审核任务已经处理，不能重复记录结论',
           code: 'REVIEW_TASK_ALREADY_DECIDED'
         });
-      }
-      const statusByDecision = { approve: 'approved', reject: 'rejected', needs_changes: 'needs_changes' };
-      const nextStatus = statusByDecision[decision];
-      const draft = await getDraft(task.draft_id);
-      if (!draft) throw httpError(404, '制度结构草稿不存在');
-      if (text(draft.schema_version) === 'process-governance-v7') {
-        if (
-          Number(task.draft_revision_no) !== Number(draft.revision_no) ||
-          text(task.content_hash) !== text(draft.content_hash)
-        ) {
-          throw httpError(409, '审核任务绑定的V7正文已经过期，请重新提交当前修订', {
-            error: '审核任务绑定的V7正文已经过期，请重新提交当前修订',
-            code: 'V7_REVIEW_CONTENT_STALE'
-          });
-        }
-        await validateFormalV7Draft(draft);
       }
       await mysqlRun(pool, `
         UPDATE process_design_review_tasks
@@ -4615,104 +5122,72 @@ function makeProcessDesignMysqlRepository(pool) {
       return { draft: await getDraft(task.draft_id), reviewTask: await getById('process_design_review_tasks', task.id) };
     },
     async publishDraft(draft, note, actorUserId, options = {}) {
-      if (pool && typeof pool.getConnection === 'function' && !options.__tx) {
-        const connection = await pool.getConnection();
-        try {
-          await connection.beginTransaction();
-          const txRepo = makeProcessDesignMysqlRepository(connection);
-          const txDraft = await txRepo.getDraft(draft.id);
-          const result = await txRepo.publishDraft(txDraft || draft, note, actorUserId, { ...options, __tx: true });
-          await connection.commit();
-          return result;
-        } catch (error) {
-          await connection.rollback().catch(() => {});
-          throw error;
-        } finally {
-          connection.release();
-        }
+      const formalTransactionContext = options && options[FORMAL_V7_TRANSACTION_CONTEXT];
+      let storedDraft = null;
+      let isV7 = Boolean(formalTransactionContext);
+      if (!formalTransactionContext) {
+        storedDraft = await getDraft(Number(draft && draft.id));
+        if (!storedDraft) throw httpError(404, '制度结构草稿不存在');
+        isV7 = text(storedDraft.schema_version) === 'process-governance-v7';
       }
-      if (text(draft.schema_version) === 'process-governance-v7') {
-        const [lockedDraftRow] = await mysqlQuery(pool, 'SELECT * FROM process_design_drafts WHERE id=? FOR UPDATE', [draft.id]);
-        const lockedDraft = publicDraft(lockedDraftRow);
-        if (!lockedDraft) throw httpError(404, '制度结构草稿不存在');
+      if (isV7 && !formalTransactionContext) {
+        assertV7FormalTransitionEnabled(storedDraft);
+        v7FormalExpectedBinding(options);
+        return await runFormalV7Transaction(storedDraft.id, null, async ({ locator, repository: transactionRepository }) => {
+          if (!transactionRepository) {
+            throw httpError(503, '正式V7状态变更必须在MySQL事务中执行', {
+              error: '正式V7状态变更必须在MySQL事务中执行',
+              code: 'V7_FORMAL_TRANSACTION_REQUIRED'
+            });
+          }
+          return await transactionRepository.publishDraft(
+            { id: locator.draftId, schema_version: 'process-governance-v7' },
+            note,
+            actorUserId,
+            {
+              ...options,
+              [FORMAL_V7_TRANSACTION_CONTEXT]: Object.freeze({ operation: 'publish', locator })
+            }
+          );
+        });
+      }
+      if (isV7) {
+        if (formalTransactionContext.operation !== 'publish' || !formalTransactionContext.locator) {
+          throw httpError(503, '正式V7发布缺少受控的事务能力', {
+            error: '正式V7发布缺少受控的事务能力',
+            code: 'V7_FORMAL_TRANSACTION_REQUIRED'
+          });
+        }
+        const binding = v7FormalExpectedBinding(options);
+        const context = await lockFormalV7Context(formalTransactionContext.locator);
+        const lockedDraft = context.draft;
+        const document = context.document;
+        const currentVersion = context.currentVersion;
+        const authorizedActor = await authorizeFormalV7Actor(options, 'publish', context, actorUserId);
+        assertV7ExpectedContent(lockedDraft, binding);
         if (text(lockedDraft.status) !== 'approved') {
-          throw httpError(409, '正式V7草稿尚未通过部门审核，不能发布', {
-            error: '正式V7草稿尚未通过部门审核，不能发布',
-            code: 'V7_FORMAL_REVIEW_REQUIRED'
-          });
+          throw v7DraftStateConflict(lockedDraft, '当前V7正式草稿尚未通过部门审核，不能发布');
         }
-        if (!lockedDraft.document_id) {
-          throw httpError(409, '正式V7草稿必须关联明确的流程主档', {
-            error: '正式V7草稿必须关联明确的流程主档',
-            code: 'V7_DOCUMENT_LINK_REQUIRED'
-          });
-        }
-        const [document] = await mysqlQuery(pool, 'SELECT * FROM process_design_documents WHERE id=? FOR UPDATE', [lockedDraft.document_id]);
-        if (!document || text(document.status) !== 'active') {
-          throw httpError(409, '正式流程主档不存在或已停用，不能发布', {
-            error: '正式流程主档不存在或已停用，不能发布',
-            code: 'V7_FORMAL_DOCUMENT_NOT_FOUND'
-          });
-        }
-        let currentVersion = null;
-        if (document.current_version_id) {
-          [currentVersion] = await mysqlQuery(pool, 'SELECT * FROM process_design_versions WHERE id=? FOR UPDATE', [document.current_version_id]);
-          if (!currentVersion || Number(currentVersion.document_id) !== Number(document.id)) {
-            throw httpError(409, '正式流程主档的当前版本指针无效，不能发布', {
-              error: '正式流程主档的当前版本指针无效，不能发布',
-              code: 'V7_FORMAL_CURRENT_VERSION_INVALID'
-            });
-          }
-        } else {
-          const [unexpectedVersion] = await mysqlQuery(pool, `
-            SELECT * FROM process_design_versions
-            WHERE document_id=? AND status='published'
-            ORDER BY effective_at DESC, id DESC
-            LIMIT 1
-            FOR UPDATE
-          `, [document.id]);
-          if (unexpectedVersion) {
-            throw httpError(409, '正式流程主档存在版本但缺少当前版本指针，不能发布', {
-              error: '正式流程主档存在版本但缺少当前版本指针，不能发布',
-              code: 'V7_FORMAL_CURRENT_VERSION_INVALID'
-            });
-          }
-        }
-        const reviewTasks = await mysqlQuery(pool, `
-          SELECT * FROM process_design_review_tasks
-          WHERE draft_id=?
-          ORDER BY id DESC
-          FOR UPDATE
-        `, [lockedDraft.id]);
-        const approvedReview = reviewTasks.find(task =>
+        await validateFormalV7Draft(lockedDraft, context);
+        const approvedReview = context.reviewTasks.find(task =>
           text(task.status) === 'approved' &&
-          Number(task.draft_revision_no) === Number(lockedDraft.revision_no) &&
-          text(task.content_hash) === text(lockedDraft.content_hash)
+          Number(task.draft_revision_no) === binding.expectedRevisionNo &&
+          text(task.content_hash) === binding.expectedContentHash
         );
         if (!approvedReview) {
-          throw httpError(409, '没有找到绑定当前修订号和内容摘要的审核通过记录', {
-            error: '没有找到绑定当前修订号和内容摘要的审核通过记录',
-            code: 'V7_REVIEW_CONTENT_STALE'
-          });
+          throw v7ReviewContentStale(lockedDraft, '没有找到绑定当前修订号和内容摘要的审核通过记录');
         }
-        const formalSource = await validateFormalV7Draft(lockedDraft);
-        if (text(document.process_ref) !== text(formalSource.preview.processRef)) {
-          throw httpError(409, '正式流程主档与V7正文的process_ref不一致', {
-            error: '正式流程主档与V7正文的process_ref不一致',
-            code: 'V7_FORMAL_PROCESS_REF_CONFLICT'
-          });
+        const baseVersionId = lockedDraft.base_version_id == null ? null : Number(lockedDraft.base_version_id);
+        if (
+          (currentVersion && baseVersionId !== Number(currentVersion.id)) ||
+          (!currentVersion && baseVersionId != null)
+        ) {
+          throw v7BaseVersionConflict(lockedDraft);
         }
         const expectedEdition = currentVersion ? nextEdition(currentVersion.edition) : 'A';
         const plannedEdition = text(lockedDraft.planned_edition) || expectedEdition;
         if (plannedEdition !== expectedEdition) {
-          throw httpError(409, '制度版次不连续，不能跳号', {
-            error: '制度版次不连续，不能跳号',
-            expected_edition: expectedEdition,
-            planned_edition: plannedEdition
-          });
-        }
-        if (currentVersion && Number(lockedDraft.base_version_id || 0) !== Number(currentVersion.id)) {
-          throw httpError(409, '当前有效版次已变化，请重新提升最新V7修订');
+          throw v7BaseVersionConflict(lockedDraft, '当前有效版次与V7正式草稿计划版次不一致，请重新提升最新修订');
         }
         const versionNo = documentVersionNo(document.document_no, plannedEdition);
         const result = await mysqlRun(pool, `
@@ -4734,29 +5209,43 @@ function makeProcessDesignMysqlRepository(pool) {
           lockedDraft.process_content_json,
           lockedDraft.content_hash,
           Number(lockedDraft.revision_no),
-          actorUserId,
+          authorizedActor.personId,
           currentVersion && currentVersion.id || null
         ]);
         if (currentVersion) {
-          await mysqlRun(pool, "UPDATE process_design_versions SET status='superseded' WHERE id=?", [currentVersion.id]);
+          const supersedeResult = await mysqlRun(pool, `
+            UPDATE process_design_versions
+            SET status='superseded'
+            WHERE id=? AND document_id=? AND status='published'
+          `, [currentVersion.id, document.id]);
+          if (Number(supersedeResult.affectedRows) !== 1) throw v7BaseVersionConflict(lockedDraft);
         }
-        await mysqlRun(pool, `
+        const draftUpdate = await mysqlRun(pool, `
           UPDATE process_design_drafts
           SET status='published', active_document_no=NULL, published_by=?,
               published_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP
-          WHERE id=?
-        `, [actorUserId, lockedDraft.id]);
-        await mysqlRun(pool, `
-          UPDATE process_design_documents
-          SET document_title=?, current_edition=?, current_version_id=?, updated_by=?, updated_at=CURRENT_TIMESTAMP
-          WHERE id=?
-        `, [document.document_title, plannedEdition, result.insertId, actorUserId, document.id]);
+          WHERE id=? AND status='approved' AND revision_no=? AND content_hash=?
+        `, [authorizedActor.personId, lockedDraft.id, binding.expectedRevisionNo, binding.expectedContentHash]);
+        if (Number(draftUpdate.affectedRows) !== 1) throw v7ReviewContentStale(lockedDraft);
+        const documentUpdate = currentVersion
+          ? await mysqlRun(pool, `
+              UPDATE process_design_documents
+              SET document_title=?, current_edition=?, current_version_id=?, updated_by=?, updated_at=CURRENT_TIMESTAMP
+              WHERE id=? AND current_version_id=?
+            `, [document.document_title, plannedEdition, result.insertId, authorizedActor.personId, document.id, currentVersion.id])
+          : await mysqlRun(pool, `
+              UPDATE process_design_documents
+              SET document_title=?, current_edition=?, current_version_id=?, updated_by=?, updated_at=CURRENT_TIMESTAMP
+              WHERE id=? AND current_version_id IS NULL
+            `, [document.document_title, plannedEdition, result.insertId, authorizedActor.personId, document.id]);
+        if (Number(documentUpdate.affectedRows) !== 1) throw v7BaseVersionConflict(lockedDraft);
         const version = await getById('process_design_versions', result.insertId);
-        await addEvent(lockedDraft.id, 'publish', actorUserId, optionalText(note) || '已发布原生V7流程版本', {
+        await addEvent(lockedDraft.id, 'publish', authorizedActor.personId, optionalText(note) || '已发布原生V7流程版本', {
           process_version_id: Number(version.id),
           schema_version: 'process-governance-v7',
-          content_hash: lockedDraft.content_hash,
-          source_revision_no: Number(lockedDraft.revision_no),
+          content_hash: binding.expectedContentHash,
+          source_revision_no: binding.expectedRevisionNo,
+          review_task_id: Number(approvedReview.id),
           document_no: document.document_no,
           edition: plannedEdition,
           supersedes_version_id: currentVersion && currentVersion.id || null
@@ -4773,6 +5262,27 @@ function makeProcessDesignMysqlRepository(pool) {
             next: '后续治理对象应绑定process_version_id，不读取原始3001文件或预览案例'
           }
         };
+      }
+      draft = storedDraft;
+      const publishTransactionContext = options && options[PROCESS_DESIGN_PUBLISH_TRANSACTION_CONTEXT];
+      if (pool && typeof pool.getConnection === 'function' && !publishTransactionContext) {
+        const connection = await pool.getConnection();
+        try {
+          await connection.beginTransaction();
+          const txRepo = makeProcessDesignMysqlRepository(connection);
+          const txDraft = await txRepo.getDraft(draft.id);
+          const result = await txRepo.publishDraft(txDraft || draft, note, actorUserId, {
+            ...options,
+            [PROCESS_DESIGN_PUBLISH_TRANSACTION_CONTEXT]: true
+          });
+          await connection.commit();
+          return result;
+        } catch (error) {
+          await connection.rollback().catch(() => {});
+          throw error;
+        } finally {
+          connection.release();
+        }
       }
       const details = await publishValidationDetails(draft);
       if (details.length) {
@@ -4965,6 +5475,12 @@ async function assertCanEditDraft(req, repo, draft) {
 
 async function assertCanEditDraftContent(req, repo, draft) {
   await assertCanEditDraft(req, repo, draft);
+  if (text(draft.schema_version) === 'process-governance-v7') {
+    throw httpError(409, 'V7正式草稿正文不能在3000直接修改；请回到3001修改后上传新修订', {
+      error: 'V7正式草稿正文不能在3000直接修改；请回到3001修改后上传新修订',
+      code: 'V7_CONTENT_READ_ONLY'
+    });
+  }
   if (!EDITABLE_DRAFT_STATUSES.has(draft.status || 'draft')) {
     throw httpError(409, '当前状态只读，需要退回修改或新建变更版本');
   }
@@ -5044,6 +5560,19 @@ async function currentDepartmentIdentity(req) {
 
 function assertAdminCannotWrite(roleCodes) {
   if (roleCodes.has('admin')) throw httpError(403, '管理员对治理材料只读，不能执行承接业务写入');
+}
+
+function formalV7RepositoryOptions(req, binding) {
+  const identity = req.identity || {};
+  const actor = Object.freeze({
+    personId: Number(req.session && (req.session.personId || req.session.userId) || identity.personId || identity.person_id || 0) || null,
+    accountId: Number(req.session && req.session.accountId || identity.accountId || identity.account_id || 0) || null,
+    authVersion: Number(req.session && req.session.authVersion || identity.authVersion || identity.auth_version || 0) || null
+  });
+  return {
+    ...binding,
+    [FORMAL_V7_ACTOR_CONTEXT]: actor
+  };
 }
 
 async function processGovernancePreview(req) {
@@ -5190,6 +5719,9 @@ async function createStructuredImportDraft(req, repo, data, draftPayload, target
   const lookup = await repo.lookupDocument(draftPayload.document_no);
   if (lookup && lookup.exists && !(await canMaintainDocument(req, lookup.document))) {
     throw httpError(403, '该制度编号已存在，不属于当前可维护范围。');
+  }
+  if (lookup && lookup.exists) {
+    assertLegacyDraftCreationAllowed(lookup.document, lookup.current_version);
   }
   if (lookup && lookup.active_draft) {
     throw httpError(409, '该制度编号已有进行中草稿', {
@@ -5600,6 +6132,8 @@ router.post('/documents/:id/drafts', requireAuth, (req, res) => runAction(res, a
   const document = await repo.getDocumentById(req.params.id);
   if (!document) throw httpError(404, '制度不存在');
   if (!(await canMaintainDocument(req, document))) throw httpError(403, '无权维护该制度');
+  const lookup = await repo.lookupDocument(document.document_no);
+  assertLegacyDraftCreationAllowed(document, lookup && lookup.current_version);
   res.status(201).json(await repo.createNextEditionDraft(document.id, req.session.userId, document.owning_department_id));
 }));
 
@@ -6298,10 +6832,22 @@ router.get('/drafts/:id/outcome-preview', requireAuth, (req, res) => runAction(r
 router.post('/drafts/:id/submit', requireAuth, requirePermission('governance:submit-department'), (req, res) => runAction(res, async () => {
   const repo = await repository();
   const draft = await repo.getDraft(req.params.id);
-  await assertCanEditDraftContent(req, repo, draft);
+  const isV7 = text(draft && draft.schema_version) === 'process-governance-v7';
+  let expectedBinding = {};
+  if (isV7) {
+    await assertCanEditDraft(req, repo, draft);
+    if (!EDITABLE_DRAFT_STATUSES.has(draft.status || 'draft')) {
+      throw v7DraftStateConflict(draft, '当前V7正式草稿状态不能提交审核');
+    }
+    assertV7FormalTransitionEnabled(draft);
+    expectedBinding = v7FormalExpectedBinding(req.body || {});
+  } else {
+    await assertCanEditDraftContent(req, repo, draft);
+  }
   const errors = draftRequiredErrors(draft);
   if (errors.length) throw httpError(422, '校验失败', { error: '校验失败', details: errors });
-  res.json(await repo.submitDraft(draft, req.body && req.body.note, req.session.userId));
+  const repositoryOptions = isV7 ? formalV7RepositoryOptions(req, expectedBinding) : expectedBinding;
+  res.json(await repo.submitDraft(draft, req.body && req.body.note, req.session.userId, repositoryOptions));
 }));
 
 router.post('/review-tasks/:id/decision', requireAuth, (req, res) => runAction(res, async () => {
@@ -6310,16 +6856,32 @@ router.post('/review-tasks/:id/decision', requireAuth, (req, res) => runAction(r
   if (!task) throw httpError(404, '审核任务不存在');
   const draft = await repo.getDraft(task.draft_id);
   await assertCanReview(req, repo, draft);
+  const isV7 = text(draft && draft.schema_version) === 'process-governance-v7';
+  let expectedBinding = {};
+  if (isV7) {
+    assertV7FormalTransitionEnabled(draft);
+    expectedBinding = v7FormalExpectedBinding(req.body || {});
+  }
   const decision = text(req.body.decision);
   if (!{ approve: true, reject: true, needs_changes: true }[decision]) throw httpError(422, '校验失败', { error: '校验失败', details: [{ field: 'decision', message: '审核结论无效' }] });
-  res.json(await repo.decideReviewTask(task, decision, req.body.note, req.session.userId));
+  const repositoryOptions = isV7 ? formalV7RepositoryOptions(req, expectedBinding) : expectedBinding;
+  res.json(await repo.decideReviewTask(task, decision, req.body.note, req.session.userId, repositoryOptions));
 }));
 
 router.post('/drafts/:id/publish', requireAuth, requirePermission('governance:publish'), (req, res) => runAction(res, async () => {
   const repo = await repository();
   const draft = await repo.getDraft(req.params.id);
   await assertCanViewDraft(req, repo, draft);
-  res.json(await repo.publishDraft(draft, req.body && req.body.note, req.session.userId, req.body || {}));
+  assertAdminCannotWrite(await currentRoleCodes(req));
+  let options = {
+    confirm_complete_rewrite: Boolean(req.body && req.body.confirm_complete_rewrite)
+  };
+  if (text(draft && draft.schema_version) === 'process-governance-v7') {
+    assertV7FormalTransitionEnabled(draft);
+    const expectedBinding = v7FormalExpectedBinding(req.body || {});
+    options = formalV7RepositoryOptions(req, expectedBinding);
+  }
+  res.json(await repo.publishDraft(draft, req.body && req.body.note, req.session.userId, options));
 }));
 
 router.setProcessDesignRepositoryFactory = setProcessDesignRepositoryFactory;

@@ -26,7 +26,7 @@
 |---|---|---|---|---|
 | `apps/` | 可运行应用集合 | 子目录 README | 新应用必须有独立 README、运行命令和数据边界 | 不放业务资料原件 |
 | `apps/mdm-platform/` | MDM 平台源码 | `package.json`、`server/`、`public/`、`scripts/` | 平台功能、平台测试、平台维护脚本在此修改 | 不放 PMO 甘特图、流程制度原文、历史方案 |
-| `apps/structured-output-service/` | 局域网单流程治理编制工具 | `package.json`、`server.js`、`public/`、`scripts/` | 默认监听`0.0.0.0:3001`供公司局域网用户直接访问；按 `docs/contracts/process-governance-v7.schema.json` 导出单流程未审核JSON并兼容导入v1至v7及历史多候选结构化JSON；可只读读取流程映射、花名册和 `docs/work-role-data.json` 做候选提示 | 不保存用户内容和图坐标，不写回 `docs/norms/`、花名册或工作角色真源，不调用3000，不依赖DeepSeek、MDM-AI助手或认证网关，不替代受控发布流程 |
+| `apps/structured-output-service/` | 局域网单流程治理编制工具 | `package.json`、`server.js`、`public/`、`scripts/` | 默认监听`0.0.0.0:3001`供公司局域网用户直接访问；按 `docs/contracts/process-governance-v7.schema.json` 导出单流程未审核JSON并兼容导入v1至v7及历史多候选结构化JSON；页面内编辑会话区分未应用修改与未下载修改，并在切换、下载和替换前保护用户输入；可只读读取流程映射、花名册和 `docs/work-role-data.json` 做候选提示 | 不保存用户内容和图坐标，不写回 `docs/norms/`、花名册或工作角色真源，不调用3000，不依赖DeepSeek、MDM-AI助手或认证网关，不替代受控发布流程 |
 | `apps/structure-assistant/` | MDM-AI助手及受限DSH治理入口 | `package.json`、`server.js`、`public/`、`lib/`、`dsh-plugin/`、`config/`、`scripts/` | 端口3003提供登录和运行控制；端口3004认证后代理每个登录会话的隔离DSH实例、助手接口和3001结构化工具；只在DSH子进程内存中保存当前治理工作区内容 | 不直接暴露DSH子进程，不开放编码Agent、命令、任意文件访问或模型配置；不停止、重绑或代管3001；不把业务内容写入文件、数据库或浏览器持久化空间；不判断业务事实，不写入3000或`docs/norms/`，不提交密钥 |
 | `apps/weekly-action-service/` | PMO 周会行动项服务 | `package.json`、`server.js`、`public/`、`scripts/` | 提供 3002 周会行动项登记、跟踪、关闭证据和延期原因维护；默认写入 `artifacts/weekly-actions/` 运行台账 | 不写回 PMO Markdown 真源、`tasks.json` 或 MDM 数据库；不把浏览器本地保存作为台账 |
 | `apps/information-collection-service/` | 内部信息表收集服务 | `package.json`、`server/`、`public/`、`scripts/`、`docs/` | 4000 管理端设计并发布收集任务，4001 填报端保存本人草稿和答卷；只读复用 `person`、`user_accounts`、`departments`，业务数据写入 `collection_*` 表，附件写入仓库外受控目录 | 不修改 MDM 身份、角色或治理业务表；不自动继承 3000 权限；不向浏览器持久化答案或附件 |
@@ -43,7 +43,7 @@
 |---|---|---|---|---|
 | `docs/` | 资料、说明、方案沉淀 | 子目录分工 | 文档按资产类型进入子目录 | 不放本地生成物 |
 | `docs/norms/` | 流程输入基线、制度/表单源文件材料、部门桑基图资产 | 部门映射 Markdown、制度/表单源文件 | 新增或修改流程输入基线后运行流程地图 parser；工作角色只写 confirmed 绑定并同步维护受控证据表 | 不放候选工作角色绑定、临时报告、截图、运行日志 |
-| `docs/organization/` | 组织架构、部门职责、人员资料、工作角色和项目治理角色映射真源 | `组织架构和部门职责.md`、`花名册.md`、`工作角色目录与岗位映射.md`、`信息化项目人员角色映射.md` | 部门到域映射变化必须先改这里；工作角色由行政人事部维护并映射花名册岗位；项目治理角色映射继续承接项目材料关系 | 不在页面、脚本或运行台账里另造部门、人员、工作角色或项目治理角色口径 |
+| `docs/organization/` | 正式切换前的组织架构、部门职责、正式工作角色和项目治理角色映射真源，以及人员参考资料 | `组织架构和部门职责.md`、`工作角色目录与岗位映射.md`、`信息化项目人员角色映射.md`；`花名册.md` 仅为参考 | 切换前，部门到域映射变化必须先改这里，工作角色由行政人事部维护并使用花名册岗位作参考核验；3000 行政人事功能完成对应首版发布并正式切换后，组织、员工主数据和正式工作角色以 3000 发布版本为唯一正式真源，本目录对应文件改为受控只读导出 | 不在页面、脚本或运行台账里另造组织、工作角色或项目治理角色口径；不得把花名册或其他参考资料自动认定为员工主数据 |
 | `docs/contracts/` | 自动化校验规则 | 规则说明、JSON规则文件 | 可修改校验规则和执行约定 | 不写业务流程正文，不替代流程输入基线或组织真源 |
 | `docs/integration/` | 集成和主数据治理方案 | 方案文档 | 可沉淀接口、主数据、系统协同方案 | 不作为当前流程输入基线 |
 | `docs/samples/` | 最小样例 | 样例 README 或文件名 | 只保留可复现、可说明格式的样例 | 不堆放完整生成输出 |

@@ -50,6 +50,27 @@ assert.ok(html.includes('id="pgV7PreviewFileInput"'), 'V7 preview must accept an
   '选择已有流程主档',
   '正式V7草稿'
 ].forEach(fragment => assert.ok(html.includes(fragment), `V7 formal promotion UI missing ${fragment}`));
+const submitFormalSource = html.slice(html.indexOf('async function submitV7FormalDraft'), html.indexOf('async function reviewV7FormalDraft'));
+const reviewFormalSource = html.slice(html.indexOf('async function reviewV7FormalDraft'), html.indexOf('async function publishV7FormalDraft'));
+const publishFormalSource = html.slice(html.indexOf('async function publishV7FormalDraft'), html.indexOf('async function readV7FormalVersion'));
+const renderV7PreviewSource = html.slice(html.indexOf('function renderV7PreviewReviewDetail'), html.indexOf('async function loadV7PreviewReviewCases'));
+[
+  [submitFormalSource, 'formalDraft.revision_no', 'formalDraft.content_hash'],
+  [reviewFormalSource, 'formalTask.draft_revision_no', 'formalTask.content_hash'],
+  [publishFormalSource, 'formalDraft.revision_no', 'formalDraft.content_hash']
+].forEach(function(expectation) {
+  assert.ok(expectation[0].includes('expected_revision_no:' + expectation[1]), 'V7 formal action must send the current revision binding');
+  assert.ok(expectation[0].includes('expected_content_hash:' + expectation[2]), 'V7 formal action must send the current content hash binding');
+  assert.ok(expectation[0].indexOf('await api(') < expectation[0].indexOf('state.pgViewCache = {}'), 'V7 formal failures must preserve the current page and form values');
+});
+assert.ok(
+  renderV7PreviewSource.includes('detail.formal_allowed_decisions || []'),
+  'V7 formal review selector must use the server-authorized decisions'
+);
+assert.ok(
+  !renderV7PreviewSource.includes('<option value="approve">审核通过</option>'),
+  'V7 formal review selector must not hard-code approve when the current revision has blockers'
+);
 assert.ok(html.includes("return PROCESS_GOVERNANCE_VIEW_ALIASES[rawView] || 'editor'"), 'editor must be the default process governance workspace');
 assert.ok(html.includes("workspace=' + encodeURIComponent(view)"), 'handoff workspaces must use stable workspace routes');
 assert.ok(html.includes('data-src="/process-governance-editor/index.html"'), 'process governance must show the MDM-local 3001-style editor');

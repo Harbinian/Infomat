@@ -5,6 +5,7 @@ const {
 } = require('../server');
 const Migration = require('../public/process-governance-migration.js');
 const LifecycleAnalyzer = require('../public/lifecycle-analyzer.js');
+const { createProcessVersionFixture } = require('./process-version-fixtures');
 
 function behavior(ref, name, description = '') {
   return {
@@ -70,22 +71,6 @@ function v6Sample() {
   return documentValue;
 }
 
-function legacySample(version) {
-  const source = v6Sample();
-  source.schema_version = version;
-  if (['process-governance-v1', 'process-governance-v2', 'process-governance-v3'].includes(version)) {
-    source.data_objects = [{
-      data_ref: 'data_supplier',
-      data_name: '供应商',
-      description: '供应商记录',
-      produced_by_behavior_ref: 'behavior_create',
-      consumed_by_behavior_refs: ['behavior_deactivate']
-    }];
-  }
-  if (version !== 'process-governance-v6') delete source.migration;
-  return source;
-}
-
 function validate(documentValue) {
   const result = processGovernanceValidationResult(documentValue);
   assert.equal(result.valid, true, JSON.stringify(result.errors));
@@ -100,7 +85,8 @@ function testMigration() {
     'process-governance-v5',
     'process-governance-v6'
   ]) {
-    const source = legacySample(version);
+    const source = createProcessVersionFixture(version);
+    validate(source);
     const snapshot = JSON.parse(JSON.stringify(source));
     const first = Migration.migrateDocument(source)[0];
     const second = Migration.migrateDocument(source)[0];

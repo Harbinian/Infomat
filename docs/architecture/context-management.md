@@ -83,6 +83,8 @@
 
 `docs/norms/AGENTS.md` 还负责已确认工作角色绑定的局部卡口：候选不得写入基线，旧 Markdown 绑定必须同时维护受控证据表，任一无效 `confirmed` 关系会阻断公司快照生成。
 
+`apps/structured-output-service/AGENTS.md`还负责3001页面内编辑状态卡口：文档和实现必须区分未应用修改、未下载修改和已下载基线；任何切换、替换或下载入口不得绕过统一保护。该规则不改变3001无状态边界。
+
 ## 6. 历史材料使用
 
 `docs/superpowers/`、`docs/reports/` 和 `docs/archives/` 中可能保留旧路径、旧命令或旧工具名称。使用时只取可追溯事实，不把历史文件当当前执行入口。

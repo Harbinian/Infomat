@@ -66,6 +66,7 @@
       duplicateRefs(items, key).forEach(ref => errors.push({ code: 'DUPLICATE_REF', ref, message: `${label}技术标识${ref}重复` }));
     });
     const behaviorRefs = new Set(array(documentValue?.behaviors).map(item => item.behavior_ref));
+    const relationRefs = new Set(array(documentValue?.flow_relations).map(item => item.relation_ref));
     const dataRefs = new Set(array(documentValue?.data_objects).map(item => item.data_ref));
     const dataFieldOwners = new Map();
     array(documentValue?.flow_relations).forEach(relation => {
@@ -101,6 +102,19 @@
         if (source.available_from_behavior_ref && !behaviorRefs.has(source.available_from_behavior_ref)) {
           errors.push({ code: 'BROKEN_REF', ref: source.available_from_behavior_ref, message: `数据${dataObject.data_name || dataObject.data_ref}的可用位置不存在` });
         }
+      });
+      array(dataObject?.lifecycle?.routes).forEach(route => {
+        array(route.flow_relation_refs).forEach(relationRef => {
+          if (!relationRefs.has(relationRef)) {
+            errors.push({ code: 'BROKEN_REF', ref: relationRef, message: `数据${dataObject.data_name || dataObject.data_ref}的生命周期路径引用的流程关系不存在` });
+          }
+        });
+        array(route.events).forEach(event => {
+          const behaviorRef = event?.trigger?.behavior_ref;
+          if (behaviorRef && !behaviorRefs.has(behaviorRef)) {
+            errors.push({ code: 'BROKEN_REF', ref: behaviorRef, message: `数据${dataObject.data_name || dataObject.data_ref}的生命周期事件触发行为不存在` });
+          }
+        });
       });
     });
     array(documentValue?.behaviors).forEach(behavior => {
@@ -275,6 +289,20 @@
       }));
       array(documentValue.forms).forEach(form => array(form.behavior_links).forEach(link => {
         if (link.behavior_ref === ref) impacts.push({ kind: 'form_relation', ref: link.link_ref, ownerRef: form.form_ref, label: '表单关系' });
+      }));
+      array(documentValue.data_objects).forEach(dataObject => array(dataObject?.lifecycle?.routes).forEach(route => {
+        array(route.events).forEach(event => {
+          if (event?.trigger?.behavior_ref === ref) {
+            impacts.push({ kind: 'lifecycle_event', ref: event.event_ref, ownerRef: dataObject.data_ref, label: '生命周期事件' });
+          }
+        });
+      }));
+    }
+    if (kind === 'relation') {
+      array(documentValue.data_objects).forEach(dataObject => array(dataObject?.lifecycle?.routes).forEach(route => {
+        if (array(route.flow_relation_refs).includes(ref)) {
+          impacts.push({ kind: 'lifecycle_route', ref: route.route_ref, ownerRef: dataObject.data_ref, label: '生命周期路径' });
+        }
       }));
     }
     if (kind === 'data') {

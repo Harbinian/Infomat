@@ -1,0 +1,124 @@
+{
+  "schema_version": "process-governance-v7",
+  "export_meta": {
+    "package_ref": "package_control_relation_repair_sample",
+    "exported_at": "2026-08-26T00:00:00.000Z",
+    "initiating_department": "财务部",
+    "compiler": "技术回归样例"
+  },
+  "process": {
+    "process_ref": "process_control_relation_repair_sample",
+    "process_name": "历史控制节点关系整改技术样例",
+    "owning_department": "财务部",
+    "purpose": "验证历史控制节点关系可以进入页面整改，但在改到业务行为前不能下载。",
+    "scope": "仅用于3001技术回归和人工操作验收。",
+    "capability_domain": null,
+    "business_capability": null,
+    "classification_status": "unclassified"
+  },
+  "behaviors": [
+    {
+      "behavior_ref": "behavior_fixture_submit",
+      "node_type": "decision",
+      "behavior_name": "申请资料是否齐全？",
+      "behavior_description": "申请人填写费用申请并提交。",
+      "current_actor_role": "财务部会计员",
+      "actor_assignment_mode": "fixed_department",
+      "actor_department_data_ref": null,
+      "actor_position_rule": "",
+      "trigger": "需要申请费用时",
+      "precondition": "",
+      "input_description": "费用申请资料",
+      "timing": null,
+      "completion_standard": "费用申请已经提交",
+      "output_description": "费用申请",
+      "countersign_all_required": false,
+      "countersign_target_departments": []
+    },
+    {
+      "behavior_ref": "behavior_register_application",
+      "node_type": "action",
+      "behavior_name": "财务人员登记费用申请",
+      "behavior_description": "财务人员核对申请资料并登记费用申请。",
+      "current_actor_role": "财务部会计员",
+      "actor_assignment_mode": "fixed_department",
+      "actor_department_data_ref": null,
+      "actor_position_rule": "",
+      "trigger": "需要申请费用时",
+      "precondition": "",
+      "input_description": "费用申请资料",
+      "timing": null,
+      "completion_standard": "费用申请已经提交",
+      "output_description": "费用申请",
+      "countersign_all_required": false,
+      "countersign_target_departments": []
+    }
+  ],
+  "flow_relations": [],
+  "data_objects": [
+    {
+      "data_ref": "data_expense_application",
+      "data_name": "费用申请",
+      "description": "申请人提交的费用申请",
+      "information_type": "pending_confirmation",
+      "fields": [],
+      "behavior_links": [
+        {
+          "link_ref": "data_link_legacy_control_node",
+          "behavior_ref": "behavior_fixture_submit",
+          "operation": "create",
+          "updated_field_refs": []
+        }
+      ],
+      "source_relations": [],
+      "lifecycle": {
+        "applicability": "pending_confirmation",
+        "entry_state": {
+          "business_validity": "pending_confirmation",
+          "custody": "pending_confirmation",
+          "identifiability_applicability": "pending_confirmation",
+          "identifiability": "pending_confirmation"
+        },
+        "routes": [],
+        "analysis": {
+          "analyzer_version": "",
+          "source_fingerprint": "",
+          "status": "not_analyzed"
+        },
+        "decision_reason": "",
+        "decision_notes": ""
+      }
+    }
+  ],
+  "forms": [
+    {
+      "form_ref": "form_expense_application_register",
+      "form_name": "费用申请登记表",
+      "form_no": null,
+      "form_design_state": "current_state",
+      "behavior_links": [
+        {
+          "link_ref": "form_link_legacy_control_node",
+          "behavior_ref": "behavior_fixture_submit",
+          "operations": [
+            "fill"
+          ],
+          "notes": "历史文件把填表关系指向了判断节点，需由编制人确认实际办理行为。"
+        }
+      ],
+      "areas": []
+    }
+  ],
+  "terms": [],
+  "migration": {
+    "source_schema_version": "process-governance-v3",
+    "source_process_ref": "process_fixture_v3",
+    "source_process_count": 1,
+    "legacy_cross_department_records": [],
+    "reference_materials": [],
+    "internal_process_calls": [],
+    "work_roles": [],
+    "unresolved_actor_roles": [],
+    "unresolved_join_modes": []
+  }
+}

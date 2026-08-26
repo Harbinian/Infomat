@@ -26,10 +26,11 @@ function closeServer(server) {
 
 function sessionForUser(key) {
   const sessions = {
-    submitter: { personId: 10, userId: 10, userName: '经营部门主对接人', departmentId: 1 },
-    targetDept: { personId: 30, userId: 30, userName: '工程部门主对接人', departmentId: 2 },
-    reviewer: { personId: 20, userId: 20, userName: '部门MDM审核员', departmentId: 1 },
-    mdmLead: { personId: 99, userId: 99, userName: 'MDM工作组组长', departmentId: 2 }
+    submitter: { personId: 10, userId: 10, accountId: 1010, authVersion: 1, userName: '经营部门主对接人', departmentId: 1 },
+    targetDept: { personId: 30, userId: 30, accountId: 1030, authVersion: 1, userName: '工程部门主对接人', departmentId: 2 },
+    reviewer: { personId: 20, userId: 20, accountId: 1020, authVersion: 1, userName: '部门MDM审核员', departmentId: 1 },
+    mdmLead: { personId: 99, userId: 99, accountId: 1099, authVersion: 1, userName: 'MDM工作组组长', departmentId: 2 },
+    admin: { personId: 77, userId: 77, accountId: 1077, authVersion: 1, userName: '管理员', departmentId: 1 }
   };
   return sessions[key] || sessions.submitter;
 }
@@ -163,6 +164,17 @@ function makeFakeRepository() {
         content_hash: v7ContentHash(document),
         source_revision_no: 1,
         status: 'published',
+        document
+      };
+    },
+    async canonicalContent(draft) {
+      calls.push('canonicalContent');
+      const document = JSON.parse(draft.process_content_json || '{}');
+      return {
+        source: 'draft_canonical_json',
+        schema_version: draft.schema_version,
+        content_hash: draft.content_hash,
+        revision: Number(draft.revision_no || 0),
         document
       };
     },
@@ -665,25 +677,37 @@ function makeFakeRepository() {
       calls.push('getCounts');
       return outcome().counts;
     },
-    async submitDraft(draft) {
+    async submitDraft(draft, note, actorUserId, options = {}) {
       calls.push('submitDraft');
+      state.lastSubmitOptions = options;
       state.draft = { ...draft, status: 'submitted' };
-      state.reviewTask = { id: 601, draft_id: draft.id, status: 'pending', task_type: 'department_review' };
+      state.drafts.set(Number(draft.id), state.draft);
+      state.reviewTask = {
+        id: 601,
+        draft_id: draft.id,
+        draft_revision_no: Number(draft.revision_no || 0),
+        content_hash: draft.content_hash || null,
+        status: 'pending',
+        task_type: 'department_review'
+      };
       return { draft: state.draft, reviewTask: state.reviewTask, outcome: outcome() };
     },
     async getReviewTask(id) {
       calls.push('getReviewTask');
       return Number(id) === 601 ? state.reviewTask : null;
     },
-    async decideReviewTask(task, decision) {
+    async decideReviewTask(task, decision, note, actorUserId, options = {}) {
       calls.push('decideReviewTask');
+      state.lastReviewOptions = options;
       state.reviewTask = { ...task, status: decision === 'approve' ? 'approved' : decision };
       state.draft = { ...state.draft, status: state.reviewTask.status };
+      state.drafts.set(Number(state.draft.id), state.draft);
       return { draft: state.draft, reviewTask: state.reviewTask };
     },
     async publishDraft(draft) {
       calls.push('publishDraft');
       const options = arguments[3] || {};
+      state.lastPublishOptions = options;
       if (draft.base_version_id && !options.confirm_complete_rewrite) {
         const error = new Error('发布下一版次前请确认新版已完整重写');
         error.statusCode = 409;
@@ -739,6 +763,121 @@ function makeFakeRepository() {
       };
     }
   };
+}
+
+function makeFormalActorRecheckPool(draft, options = {}) {
+  const observedSql = [];
+  let rollbackCount = 0;
+  const previewCase = {
+    id: 801,
+    process_ref: 'process_v7_read_test',
+    status: 'review_complete',
+    owning_department_id: 1,
+    current_revision_id: 901,
+    current_revision_no: 1,
+    current_content_hash: draft.content_hash
+  };
+  const revision = {
+    id: 901,
+    case_id: 801,
+    revision_no: 1,
+    content_hash: draft.content_hash,
+    content_json: draft.process_content_json
+  };
+  const promotion = {
+    id: 701,
+    preview_case_id: 801,
+    preview_revision_id: 901,
+    preview_revision_no: 1,
+    content_hash: draft.content_hash,
+    document_id: 901,
+    draft_id: draft.id
+  };
+  const document = {
+    id: 901,
+    document_no: draft.document_no,
+    document_title: draft.document_title,
+    process_ref: 'process_v7_read_test',
+    owning_department_id: 1,
+    current_version_id: null,
+    status: 'active'
+  };
+
+  async function execute(sql) {
+    observedSql.push(String(sql));
+    if (/FROM process_design_drafts d/i.test(sql)) return [[draft], []];
+    if (/FROM process_v7_preview_cases/i.test(sql)) return [[previewCase], []];
+    if (/FROM process_v7_preview_revisions/i.test(sql)) return [[revision], []];
+    if (/FROM process_v7_promotions/i.test(sql)) return [[promotion], []];
+    if (/FROM process_design_documents/i.test(sql)) return [[document], []];
+    if (/FROM process_design_versions/i.test(sql)) return [[], []];
+    if (/FROM process_design_drafts[\s\S]*WHERE id=\?/i.test(sql)) return [[draft], []];
+    if (/FROM process_design_review_tasks/i.test(sql)) return [[], []];
+    if (/FROM user_accounts ua/i.test(sql)) {
+      return [[{
+        account_id: 1010,
+        person_id: 10,
+        account_status: 'active',
+        auth_version: Number(options.authVersion || 2),
+        current_department_id: 1,
+        employment_status: 'active',
+        person_status: 'active'
+      }], []];
+    }
+    if (/FROM person_roles pr/i.test(sql)) return [options.assignments || [], []];
+    if (/^(UPDATE|INSERT|DELETE)/i.test(String(sql).trim())) {
+      throw new Error('授权版本变化后不得执行正式V7写入');
+    }
+    return [[], []];
+  }
+
+  const connection = {
+    execute,
+    async beginTransaction() {},
+    async commit() {},
+    async rollback() { rollbackCount += 1; },
+    release() {}
+  };
+  return {
+    execute,
+    async getConnection() { return connection; },
+    observedSql,
+    get rollbackCount() { return rollbackCount; }
+  };
+}
+
+function makeV7NextEditionGuardPool() {
+  const observedSql = [];
+  const document = {
+    id: 901,
+    document_no: 'V7-NEXT-EDITION-GUARD',
+    document_title: 'V7下一版只读门禁',
+    owning_department_id: 1,
+    current_edition: 'A',
+    current_version_id: 990,
+    process_ref: 'process_v7_next_edition_guard',
+    status: 'active'
+  };
+  const version = {
+    id: 990,
+    document_id: document.id,
+    document_no: document.document_no,
+    edition: 'A',
+    schema_version: 'process-governance-v7',
+    status: 'published'
+  };
+  async function execute(sql) {
+    const normalized = String(sql).replace(/\s+/g, ' ').trim();
+    observedSql.push(normalized);
+    if (/FROM process_design_documents WHERE (?:id|document_no)=\?/i.test(normalized)) return [[document], []];
+    if (/FROM process_design_drafts WHERE document_no=\?/i.test(normalized)) return [[], []];
+    if (/FROM process_design_versions WHERE document_id=\?/i.test(normalized)) return [[version], []];
+    if (/^(INSERT|UPDATE|DELETE)\b/i.test(normalized)) {
+      throw new Error(`V7下一版只读门禁前发生了数据库写入: ${normalized}`);
+    }
+    return [[], []];
+  }
+  return { execute, observedSql };
 }
 
 async function main() {
@@ -816,6 +955,21 @@ async function main() {
   assert.ok(routeSource.includes('doc.current_edition'), 'draft summary should read current edition from document master');
   assert.ok(!routeSource.includes('d.current_edition'), 'draft table must not be queried for current edition');
   assert.ok(routeSource.includes('function nextEdition'), 'route should generate A/B/C/AA editions server-side');
+
+  const v7NextEditionGuardPool = makeV7NextEditionGuardPool();
+  const v7NextEditionGuardRepository = processDesignRouter.makeProcessDesignMysqlRepository(v7NextEditionGuardPool);
+  const v7NextEditionLookup = await v7NextEditionGuardRepository.lookupDocument('V7-NEXT-EDITION-GUARD');
+  assert.strictEqual(v7NextEditionLookup.can_create_next, false, 'V7主档查询结果不得提示可创建通用下一版草稿');
+  await assert.rejects(
+    () => v7NextEditionGuardRepository.createNextEditionDraft(901, 10, 1),
+    error => error && error.statusCode === 409 && error.payload?.code === 'V7_CONTENT_READ_ONLY',
+    '仓储直调不得为V7正式主档创建V3下一版草稿'
+  );
+  assert.doesNotMatch(
+    v7NextEditionGuardPool.observedSql.join('\n'),
+    /(?:^|\n)\s*(?:INSERT|UPDATE|DELETE)\b/im,
+    'V7下一版仓储门禁不得执行任何数据库写入'
+  );
   assert.ok(routeSource.includes('confirm_complete_rewrite'), 'B/C publish should require complete rewrite confirmation');
   assert.ok(routeSource.includes('superseded'), 'publishing a new edition should supersede the previous current edition');
   [
@@ -836,15 +990,29 @@ async function main() {
     [10, ['governance:read-department', 'governance:draft-department', 'governance:submit-department']],
     [30, ['governance:read-department', 'governance:draft-department', 'governance:submit-department']],
     [20, ['governance:read-department', 'governance:review-department', 'governance:record-department-decision']],
-    [99, ['governance:read-global', 'governance:assign-work', 'governance:structure-gate', 'governance:publish']]
+    [99, ['governance:read-global', 'governance:assign-work', 'governance:structure-gate', 'governance:publish']],
+    [77, ['governance:read-global', 'governance:publish']]
   ]);
   const rolesByUser = new Map([
     [10, [{ code: 'department_contact' }]],
     [30, [{ code: 'department_contact' }]],
     [20, [{ code: 'department_mdm_reviewer' }]],
-    [99, [{ code: 'mdm_lead' }]]
+    [99, [{ code: 'mdm_lead' }]],
+    [77, [{ code: 'admin' }]]
   ]);
   auth.setIdentityRepositoryFactory(async () => ({
+    async validateSession(session) {
+      return {
+        valid: true,
+        user: {
+          personId: session.personId,
+          accountId: session.accountId,
+          authVersion: session.authVersion,
+          current_department_id: session.departmentId,
+          must_change_password: false
+        }
+      };
+    },
     async getUserEffectivePermissions(userId) {
       return { permSet: new Set(permissionsByUser.get(userId) || []), fieldConstraints: {} };
     },
@@ -883,6 +1051,10 @@ async function main() {
   const baseUrl = `http://127.0.0.1:${server.address().port}`;
 
   try {
+    const v7ReadOnlyDocument = {
+      schema_version: 'process-governance-v7',
+      process: { process_ref: 'process_v7_read_test', process_name: 'V7只读正文测试' }
+    };
     fakeRepo.state.drafts.set(900, {
       id: 900,
       document_id: 901,
@@ -892,10 +1064,16 @@ async function main() {
       planned_edition: 'A',
       schema_version: 'process-governance-v7',
       revision_no: 1,
-      content_hash: 'a'.repeat(64),
+      process_content_json: JSON.stringify(v7ReadOnlyDocument),
+      content_hash: v7ContentHash(v7ReadOnlyDocument),
       department_id: 1,
       status: 'draft'
     });
+    const v7ContentRead = await request(baseUrl, 'submitter', '/api/process-design/drafts/900/content');
+    assert.strictEqual(v7ContentRead.res.status, 200, JSON.stringify(v7ContentRead.body));
+    assert.strictEqual(v7ContentRead.body.schema_version, 'process-governance-v7');
+    assert.deepStrictEqual(v7ContentRead.body.document, v7ReadOnlyDocument);
+
     const saveCallCountBeforeV7 = fakeRepo.calls.filter(call => call === 'saveCanonicalContent').length;
     const v7ContentWrite = await request(baseUrl, 'submitter', '/api/process-design/drafts/900/content', {
       method: 'PUT',
@@ -908,7 +1086,374 @@ async function main() {
       saveCallCountBeforeV7,
       'V7正文只读门禁不得调用保存方法'
     );
+    const updateCallCountBeforeV7 = fakeRepo.calls.filter(call => call === 'updateDraft').length;
+    const v7GenericWrite = await request(baseUrl, 'submitter', '/api/process-design/drafts/900', {
+      method: 'PUT',
+      body: JSON.stringify({ process_name: '不得通过通用入口修改V7' })
+    });
+    assert.strictEqual(v7GenericWrite.res.status, 409, JSON.stringify(v7GenericWrite.body));
+    assert.strictEqual(v7GenericWrite.body.code, 'V7_CONTENT_READ_ONLY');
+    assert.strictEqual(
+      fakeRepo.calls.filter(call => call === 'updateDraft').length,
+      updateCallCountBeforeV7,
+      'V7通用编辑门禁不得调用更新方法'
+    );
+
+    fakeRepo.state.document = {
+      id: 901,
+      document_no: 'V7-NEXT-EDITION-GUARD',
+      document_title: 'V7下一版只读门禁',
+      owning_department_id: 1,
+      current_edition: 'A',
+      current_version_id: 990,
+      process_ref: 'process_v7_next_edition_guard',
+      status: 'active'
+    };
+    fakeRepo.state.versions = [{
+      id: 990,
+      document_id: 901,
+      document_no: 'V7-NEXT-EDITION-GUARD',
+      document_title: 'V7下一版只读门禁',
+      edition: 'A',
+      schema_version: 'process-governance-v7',
+      status: 'published'
+    }];
+    const nextEditionCallCountBeforeV7 = fakeRepo.calls.filter(call => call === 'createNextEditionDraft').length;
+    const v7NextEditionWrite = await request(baseUrl, 'submitter', '/api/process-design/documents/901/drafts', {
+      method: 'POST',
+      body: JSON.stringify({})
+    });
+    assert.strictEqual(v7NextEditionWrite.res.status, 409, JSON.stringify(v7NextEditionWrite.body));
+    assert.strictEqual(v7NextEditionWrite.body.code, 'V7_CONTENT_READ_ONLY');
+    assert.strictEqual(
+      fakeRepo.calls.filter(call => call === 'createNextEditionDraft').length,
+      nextEditionCallCountBeforeV7,
+      'V7主档通用下一版门禁不得调用创建方法'
+    );
+    fakeRepo.state.document = null;
+    fakeRepo.state.versions = [];
+
+    const v7Draft = fakeRepo.state.drafts.get(900);
+    Object.assign(v7Draft, {
+      basis_type: 'V7预览核对',
+      involves_other_departments: false
+    });
+    const submitCallCountBeforeV7 = fakeRepo.calls.filter(call => call === 'submitDraft').length;
+    delete process.env.PROCESS_V7_FORMAL_ENABLED;
+    delete process.env.PROCESS_V7_TRIAL_PROCESS_REF;
+    const formalDisabled = await request(baseUrl, 'submitter', '/api/process-design/drafts/900/submit', {
+      method: 'POST',
+      body: JSON.stringify({
+        expected_revision_no: 1,
+        expected_content_hash: v7Draft.content_hash
+      })
+    });
+    assert.strictEqual(formalDisabled.res.status, 503, JSON.stringify(formalDisabled.body));
+    assert.strictEqual(formalDisabled.body.code, 'V7_FORMAL_DISABLED');
+    process.env.PROCESS_V7_FORMAL_ENABLED = '1';
+    const trialScopeMissing = await request(baseUrl, 'submitter', '/api/process-design/drafts/900/submit', {
+      method: 'POST',
+      body: JSON.stringify({
+        expected_revision_no: 1,
+        expected_content_hash: v7Draft.content_hash
+      })
+    });
+    assert.strictEqual(trialScopeMissing.res.status, 503, JSON.stringify(trialScopeMissing.body));
+    assert.strictEqual(trialScopeMissing.body.code, 'V7_TRIAL_SCOPE_NOT_CONFIGURED');
+    process.env.PROCESS_V7_TRIAL_PROCESS_REF = 'another_process';
+    const trialScopeDenied = await request(baseUrl, 'submitter', '/api/process-design/drafts/900/submit', {
+      method: 'POST',
+      body: JSON.stringify({
+        expected_revision_no: 1,
+        expected_content_hash: v7Draft.content_hash
+      })
+    });
+    assert.strictEqual(trialScopeDenied.res.status, 403, JSON.stringify(trialScopeDenied.body));
+    assert.strictEqual(trialScopeDenied.body.code, 'V7_TRIAL_PROCESS_SCOPE_DENIED');
+    process.env.PROCESS_V7_TRIAL_PROCESS_REF = 'process_v7_read_test';
+    const adminWriteDenied = await request(baseUrl, 'admin', '/api/process-design/drafts/900/submit', {
+      method: 'POST',
+      body: JSON.stringify({
+        expected_revision_no: 1,
+        expected_content_hash: v7Draft.content_hash
+      })
+    });
+    assert.strictEqual(adminWriteDenied.res.status, 403, JSON.stringify(adminWriteDenied.body));
+    assert.strictEqual(
+      fakeRepo.calls.filter(call => call === 'submitDraft').length,
+      submitCallCountBeforeV7,
+      'V7开关、试点范围或管理员只读门禁失败时不得调用提交方法'
+    );
+    const v7SubmitMissingRevision = await request(baseUrl, 'submitter', '/api/process-design/drafts/900/submit', {
+      method: 'POST',
+      body: JSON.stringify({ note: '提交V7审核' })
+    });
+    assert.strictEqual(v7SubmitMissingRevision.res.status, 422, JSON.stringify(v7SubmitMissingRevision.body));
+    assert.strictEqual(v7SubmitMissingRevision.body.code, 'V7_FORMAL_EXPECTED_REVISION_REQUIRED');
+    const v7SubmitMissingHash = await request(baseUrl, 'submitter', '/api/process-design/drafts/900/submit', {
+      method: 'POST',
+      body: JSON.stringify({ note: '提交V7审核', expected_revision_no: 1 })
+    });
+    assert.strictEqual(v7SubmitMissingHash.res.status, 422, JSON.stringify(v7SubmitMissingHash.body));
+    assert.strictEqual(v7SubmitMissingHash.body.code, 'V7_FORMAL_EXPECTED_CONTENT_HASH_REQUIRED');
+    assert.strictEqual(
+      fakeRepo.calls.filter(call => call === 'submitDraft').length,
+      submitCallCountBeforeV7,
+      'V7 CAS字段缺失时不得调用提交方法'
+    );
+    const v7Submit = await request(baseUrl, 'submitter', '/api/process-design/drafts/900/submit', {
+      method: 'POST',
+      body: JSON.stringify({
+        note: '提交V7审核',
+        expected_revision_no: 1,
+        expected_content_hash: v7Draft.content_hash,
+        __tx: true,
+        __locator: { draftId: 1 },
+        actorContext: { roleCodes: ['admin'] }
+      })
+    });
+    assert.strictEqual(v7Submit.res.status, 200, JSON.stringify(v7Submit.body));
+    assert.deepStrictEqual(Object.fromEntries(Object.entries(fakeRepo.state.lastSubmitOptions)), {
+      expectedRevisionNo: 1,
+      expectedContentHash: v7Draft.content_hash
+    });
+    const decideCallCountBeforeV7 = fakeRepo.calls.filter(call => call === 'decideReviewTask').length;
+    const v7ReviewMissingRevision = await request(baseUrl, 'reviewer', '/api/process-design/review-tasks/601/decision', {
+      method: 'POST',
+      body: JSON.stringify({ decision: 'approve', note: '审核V7' })
+    });
+    assert.strictEqual(v7ReviewMissingRevision.res.status, 422, JSON.stringify(v7ReviewMissingRevision.body));
+    assert.strictEqual(v7ReviewMissingRevision.body.code, 'V7_FORMAL_EXPECTED_REVISION_REQUIRED');
+    assert.strictEqual(
+      fakeRepo.calls.filter(call => call === 'decideReviewTask').length,
+      decideCallCountBeforeV7,
+      'V7审核缺少CAS字段时不得调用审核方法'
+    );
+    const v7Review = await request(baseUrl, 'reviewer', '/api/process-design/review-tasks/601/decision', {
+      method: 'POST',
+      body: JSON.stringify({
+        decision: 'approve',
+        note: '审核V7',
+        expected_revision_no: 1,
+        expected_content_hash: v7Draft.content_hash,
+        __tx: true,
+        __locator: { taskId: 601 }
+      })
+    });
+    assert.strictEqual(v7Review.res.status, 200, JSON.stringify(v7Review.body));
+    assert.deepStrictEqual(Object.fromEntries(Object.entries(fakeRepo.state.lastReviewOptions)), {
+      expectedRevisionNo: 1,
+      expectedContentHash: v7Draft.content_hash
+    });
+    const publishCallCountBeforeV7 = fakeRepo.calls.filter(call => call === 'publishDraft').length;
+    const v7PublishMissingRevision = await request(baseUrl, 'mdmLead', '/api/process-design/drafts/900/publish', {
+      method: 'POST',
+      body: JSON.stringify({ note: '发布V7' })
+    });
+    assert.strictEqual(v7PublishMissingRevision.res.status, 422, JSON.stringify(v7PublishMissingRevision.body));
+    assert.strictEqual(v7PublishMissingRevision.body.code, 'V7_FORMAL_EXPECTED_REVISION_REQUIRED');
+    assert.strictEqual(
+      fakeRepo.calls.filter(call => call === 'publishDraft').length,
+      publishCallCountBeforeV7,
+      'V7发布缺少CAS字段时不得调用发布方法'
+    );
+    const v7AdminPublish = await request(baseUrl, 'admin', '/api/process-design/drafts/900/publish', {
+      method: 'POST',
+      body: JSON.stringify({
+        expected_revision_no: 1,
+        expected_content_hash: v7Draft.content_hash
+      })
+    });
+    assert.strictEqual(v7AdminPublish.res.status, 403, JSON.stringify(v7AdminPublish.body));
+    assert.strictEqual(
+      fakeRepo.calls.filter(call => call === 'publishDraft').length,
+      publishCallCountBeforeV7,
+      '管理员只读门禁必须在V7发布仓储调用前生效'
+    );
+    const v7Publish = await request(baseUrl, 'mdmLead', '/api/process-design/drafts/900/publish', {
+      method: 'POST',
+      body: JSON.stringify({
+        note: '发布V7',
+        expected_revision_no: 1,
+        expected_content_hash: v7Draft.content_hash,
+        confirm_complete_rewrite: true,
+        __tx: true,
+        __locator: { caseId: 1, draftId: 900 },
+        actorContext: { personId: 77, roleCodes: ['admin'] }
+      })
+    });
+    assert.strictEqual(v7Publish.res.status, 200, JSON.stringify(v7Publish.body));
+    assert.strictEqual(fakeRepo.state.lastPublishOptions.expectedRevisionNo, 1);
+    assert.strictEqual(fakeRepo.state.lastPublishOptions.expectedContentHash, v7Draft.content_hash);
+    assert.deepStrictEqual(
+      Object.keys(fakeRepo.state.lastPublishOptions).sort(),
+      ['expectedContentHash', 'expectedRevisionNo'],
+      'V7发布路由只能向仓储传递服务端生成的CAS字段，不得透传HTTP事务或定位器字段'
+    );
+    const actorRecheckDraft = {
+      ...v7Draft,
+      status: 'draft',
+      basis_type: 'V7预览核对',
+      involves_other_departments: false
+    };
+    const actorRecheckPool = makeFormalActorRecheckPool(actorRecheckDraft);
+    processDesignRouter.setProcessDesignRepositoryFactory(() =>
+      processDesignRouter.makeProcessDesignMysqlRepository(actorRecheckPool)
+    );
+    const changedAuthorization = await request(baseUrl, 'submitter', '/api/process-design/drafts/900/submit', {
+      method: 'POST',
+      body: JSON.stringify({
+        expected_revision_no: 1,
+        expected_content_hash: actorRecheckDraft.content_hash
+      })
+    });
+    assert.strictEqual(changedAuthorization.res.status, 401, JSON.stringify(changedAuthorization.body));
+    assert.strictEqual(changedAuthorization.body.code, 'SESSION_AUTHORIZATION_CHANGED');
+    assert.strictEqual(actorRecheckPool.rollbackCount, 1, '事务内auth_version不匹配必须回滚');
+    const recheckSql = actorRecheckPool.observedSql.join('\n');
+    const taskLockIndex = recheckSql.indexOf('FROM process_design_review_tasks');
+    const accountLockIndex = recheckSql.indexOf('FROM user_accounts ua');
+    assert.ok(taskLockIndex >= 0 && accountLockIndex > taskLockIndex, '当前账号与auth_version必须在正式对象按序锁定后使用同一连接重读');
+    assert.doesNotMatch(recheckSql, /UPDATE process_design_drafts|INSERT INTO process_design_review_tasks/);
+    const lockedAdminPool = makeFormalActorRecheckPool(actorRecheckDraft, {
+      authVersion: 1,
+      assignments: [{
+        person_role_id: 1,
+        scope_type: 'global',
+        scope_department_id: null,
+        role_code: 'admin',
+        perm_code: 'governance:submit-department',
+        effect: 'allow'
+      }]
+    });
+    processDesignRouter.setProcessDesignRepositoryFactory(() =>
+      processDesignRouter.makeProcessDesignMysqlRepository(lockedAdminPool)
+    );
+    const lockedAdmin = await request(baseUrl, 'submitter', '/api/process-design/drafts/900/submit', {
+      method: 'POST',
+      body: JSON.stringify({
+        expected_revision_no: 1,
+        expected_content_hash: actorRecheckDraft.content_hash
+      })
+    });
+    assert.strictEqual(lockedAdmin.res.status, 403, JSON.stringify(lockedAdmin.body));
+    assert.strictEqual(lockedAdmin.body.code, 'V7_FORMAL_ADMIN_READ_ONLY');
+    assert.strictEqual(lockedAdminPool.rollbackCount, 1, '事务内角色重读为admin时必须回滚');
+    assert.doesNotMatch(
+      lockedAdminPool.observedSql.join('\n'),
+      /UPDATE process_design_drafts|INSERT INTO process_design_review_tasks/
+    );
+
+    async function assertLockedActorScopeDenied(label, assignments) {
+      const actorPool = makeFormalActorRecheckPool(actorRecheckDraft, {
+        authVersion: 1,
+        assignments
+      });
+      processDesignRouter.setProcessDesignRepositoryFactory(() =>
+        processDesignRouter.makeProcessDesignMysqlRepository(actorPool)
+      );
+      const result = await request(baseUrl, 'submitter', '/api/process-design/drafts/900/submit', {
+        method: 'POST',
+        body: JSON.stringify({
+          expected_revision_no: 1,
+          expected_content_hash: actorRecheckDraft.content_hash
+        })
+      });
+      assert.strictEqual(result.res.status, 403, `${label}: ${JSON.stringify(result.body)}`);
+      assert.strictEqual(result.body.code, 'V7_FORMAL_ACTOR_SCOPE_DENIED', label);
+      assert.strictEqual(actorPool.rollbackCount, 1, `${label}必须回滚事务`);
+      assert.doesNotMatch(
+        actorPool.observedSql.join('\n'),
+        /(?:^|\n)\s*(?:UPDATE|INSERT|DELETE)\b/im,
+        `${label}不得执行任何数据库写入`
+      );
+    }
+
+    await assertLockedActorScopeDenied('事务内部门范围与正式草稿不一致', [
+      {
+        person_role_id: 1,
+        scope_type: 'department',
+        scope_department_id: 2,
+        role_code: 'department_contact',
+        perm_code: 'governance:draft-department',
+        effect: 'allow'
+      },
+      {
+        person_role_id: 1,
+        scope_type: 'department',
+        scope_department_id: 2,
+        role_code: 'department_contact',
+        perm_code: 'governance:submit-department',
+        effect: 'allow'
+      }
+    ]);
+
+    await assertLockedActorScopeDenied('事务内缺少要求角色', [
+      {
+        person_role_id: 2,
+        scope_type: 'department',
+        scope_department_id: 1,
+        role_code: 'data_quality_auditor',
+        perm_code: 'governance:draft-department',
+        effect: 'allow'
+      },
+      {
+        person_role_id: 2,
+        scope_type: 'department',
+        scope_department_id: 1,
+        role_code: 'data_quality_auditor',
+        perm_code: 'governance:submit-department',
+        effect: 'allow'
+      }
+    ]);
+
+    await assertLockedActorScopeDenied('事务内缺少要求权限', [
+      {
+        person_role_id: 1,
+        scope_type: 'department',
+        scope_department_id: 1,
+        role_code: 'department_contact',
+        perm_code: 'governance:draft-department',
+        effect: 'allow'
+      }
+    ]);
+
+    await assertLockedActorScopeDenied('事务内显式权限拒绝优先', [
+      {
+        person_role_id: 1,
+        scope_type: 'department',
+        scope_department_id: 1,
+        role_code: 'department_contact',
+        perm_code: 'governance:draft-department',
+        effect: 'allow'
+      },
+      {
+        person_role_id: 1,
+        scope_type: 'department',
+        scope_department_id: 1,
+        role_code: 'department_contact',
+        perm_code: 'governance:submit-department',
+        effect: 'allow'
+      },
+      {
+        person_role_id: 2,
+        scope_type: 'department',
+        scope_department_id: 1,
+        role_code: 'data_quality_auditor',
+        perm_code: 'governance:submit-department',
+        effect: 'deny'
+      }
+    ]);
+
+    processDesignRouter.setProcessDesignRepositoryFactory(() => fakeRepo);
+    delete process.env.PROCESS_V7_FORMAL_ENABLED;
+    delete process.env.PROCESS_V7_TRIAL_PROCESS_REF;
     fakeRepo.state.drafts.delete(900);
+    fakeRepo.state.draft = null;
+    fakeRepo.state.reviewTask = null;
+    fakeRepo.state.document = null;
+    fakeRepo.state.versions = [];
+    fakeRepo.state.version = null;
 
     const v7VersionContent = await request(baseUrl, 'submitter', '/api/process-design/versions/990/content');
     assert.strictEqual(v7VersionContent.res.status, 200, JSON.stringify(v7VersionContent.body));
@@ -1061,6 +1606,41 @@ async function main() {
       ],
       work_role_bindings: []
     };
+
+    fakeRepo.state.document = {
+      id: 902,
+      document_no: structuredImportPayload.draft.document_no,
+      document_title: structuredImportPayload.draft.document_title,
+      owning_department_id: 1,
+      current_edition: 'A',
+      current_version_id: 991,
+      process_ref: 'process_v7_structured_import_guard',
+      status: 'active'
+    };
+    fakeRepo.state.versions = [{
+      id: 991,
+      document_id: 902,
+      document_no: structuredImportPayload.draft.document_no,
+      document_title: structuredImportPayload.draft.document_title,
+      edition: 'A',
+      schema_version: 'process-governance-v7',
+      status: 'published'
+    }];
+    const nextEditionCallCountBeforeV7StructuredImport = fakeRepo.calls.filter(call => call === 'createNextEditionDraft').length;
+    const v7StructuredImportWrite = await request(baseUrl, 'submitter', '/api/process-design/import-structured-output', {
+      method: 'POST',
+      body: JSON.stringify(structuredImportPayload)
+    });
+    assert.strictEqual(v7StructuredImportWrite.res.status, 409, JSON.stringify(v7StructuredImportWrite.body));
+    assert.strictEqual(v7StructuredImportWrite.body.code, 'V7_CONTENT_READ_ONLY');
+    assert.strictEqual(
+      fakeRepo.calls.filter(call => call === 'createNextEditionDraft').length,
+      nextEditionCallCountBeforeV7StructuredImport,
+      '旧结构化导入不得为V7主档调用通用下一版创建方法'
+    );
+    fakeRepo.state.document = null;
+    fakeRepo.state.versions = [];
+
     const repositoryCallsBeforeUnsupportedImport = fakeRepo.calls.length;
     const repositoryFactoryCallsBeforeUnsupportedImport = repositoryFactoryCalls;
     const unsupportedWorkRoleBindingsImport = await request(baseUrl, 'submitter', '/api/process-design/import-structured-output', {
