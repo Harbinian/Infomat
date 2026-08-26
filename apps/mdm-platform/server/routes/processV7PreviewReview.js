@@ -11,9 +11,16 @@ const { mysqlConfigFromEnv } = require('../mysqlConfig');
 const {
   PARTY_STATUSES,
   compareReviewItems,
+  unresolvedBlockingIssues,
   validateAndProjectV7
 } = require('../processV7PreviewReview');
 const { makeProcessV7PreviewReviewRepository } = require('../processV7PreviewReviewRepository');
+const {
+  assertV7TrialProcessRef,
+  assertV7TrialScopeConfigured,
+  isV7TrialProcessRefAllowed,
+  trialProcessRefFromEnv
+} = require('../processV7TrialScope');
 
 const DECISIONS = new Set([...PARTY_STATUSES].filter(value => value !== 'pending'));
 const SCOPE_DECISIONS = new Set(['confirmed_no_cross_department', 'keep_current_owner', 'accept_source_owner']);
@@ -152,6 +159,7 @@ function assertVisible(actor, detail) {
 function listAllowedActions(actor) {
   const actions = ['view'];
   if (
+    trialProcessRefFromEnv() &&
     !actor.roleCodes.has('admin') &&
     (actor.permissions.has('governance:draft-department') || actor.permissions.has('governance:assign-work'))
   ) actions.push('create_case');
@@ -161,6 +169,7 @@ function listAllowedActions(actor) {
 function caseAllowedActions(actor, caseRow) {
   const actions = ['view'];
   if (actor.roleCodes.has('admin')) return actions;
+  if (!caseRow || !isV7TrialProcessRefAllowed(caseRow.process_ref)) return actions;
   if (actor.permissions.has('governance:assign-work')) {
     actions.push('upload_revision');
     if (!caseRow || !caseRow.owning_department_id) actions.push('assign_owner');
@@ -168,7 +177,12 @@ function caseAllowedActions(actor, caseRow) {
     if (scopeIssueCodes.has('ZERO_CROSS_DEPARTMENT_SCOPE_PENDING') || scopeIssueCodes.has('OWNING_DEPARTMENT_CHANGE_PENDING')) {
       actions.push('record_scope_decision');
     }
-    if (process.env.PROCESS_V7_FORMAL_ENABLED === '1' && caseRow && caseRow.status === 'review_complete') {
+    if (
+      process.env.PROCESS_V7_FORMAL_ENABLED === '1' &&
+      caseRow &&
+      caseRow.status === 'review_complete' &&
+      unresolvedBlockingIssues(caseRow.blocking_issues, text(caseRow.scope_decision)).length === 0
+    ) {
       actions.push('promote_to_formal_draft');
     }
   } else if (
@@ -189,23 +203,66 @@ function formalAllowedActions(actor, detail) {
   actions.push('view_formal_draft');
   if (formal.current_version) actions.push('read_formal_version');
   if (actor.roleCodes.has('admin')) return actions;
+  if (process.env.PROCESS_V7_FORMAL_ENABLED !== '1') return actions;
+  if (!isV7TrialProcessRefAllowed(detail.case && detail.case.process_ref)) return actions;
+  const hasBlockingIssues = unresolvedBlockingIssues(
+    detail.case && detail.case.blocking_issues,
+    text(detail.case && detail.case.scope_decision)
+  ).length > 0;
+  const promotion = formal.promotion;
+  const promotionEvidenceMatches = Boolean(
+    promotion &&
+    Number(promotion.preview_revision_no) === Number(detail.case && detail.case.current_revision_no) &&
+    text(promotion.content_hash) === text(detail.case && detail.case.current_content_hash) &&
+    Number(promotion.preview_revision_no) === Number(draft.revision_no) &&
+    text(promotion.content_hash) &&
+    text(promotion.content_hash) === text(draft.content_hash)
+  );
+  const taskEvidenceMatches = Boolean(
+    task &&
+    Number(task.draft_revision_no) === Number(draft.revision_no) &&
+    text(task.content_hash) &&
+    text(task.content_hash) === text(draft.content_hash)
+  );
   const sameDepartment = Number(detail.case && detail.case.owning_department_id) === Number(actor.departmentId);
   if (
+    promotionEvidenceMatches &&
+    !hasBlockingIssues &&
     sameDepartment &&
     ['draft', 'needs_changes'].includes(text(draft.status)) &&
     actor.permissions.has('governance:draft-department') &&
     actor.permissions.has('governance:submit-department')
   ) actions.push('submit_formal_draft');
   if (
+    promotionEvidenceMatches &&
+    taskEvidenceMatches &&
     sameDepartment &&
     task && text(task.status) === 'pending' &&
     ['submitted', 'under_review'].includes(text(draft.status)) &&
     actor.permissions.has('governance:review-department')
   ) actions.push('review_formal_draft');
-  if (text(draft.status) === 'approved' && actor.permissions.has('governance:publish')) {
+  if (
+    promotionEvidenceMatches &&
+    taskEvidenceMatches &&
+    !hasBlockingIssues &&
+    text(task && task.status) === 'approved' &&
+    text(draft.status) === 'approved' &&
+    actor.permissions.has('governance:publish')
+  ) {
     actions.push('publish_formal_draft');
   }
   return actions;
+}
+
+function formalAllowedDecisions(actions, detail) {
+  if (!Array.isArray(actions) || !actions.includes('review_formal_draft')) return [];
+  const hasBlockingIssues = unresolvedBlockingIssues(
+    detail && detail.case && detail.case.blocking_issues,
+    text(detail && detail.case && detail.case.scope_decision)
+  ).length > 0;
+  return hasBlockingIssues
+    ? ['needs_changes', 'reject']
+    : ['approve', 'needs_changes', 'reject'];
 }
 
 router.use((req, res, next) => {
@@ -292,9 +349,11 @@ router.get('/cases', requireAuth, (req, res) => runAction(res, async () => {
 router.post('/cases', requireAuth, (req, res) => runAction(res, async () => {
   const actor = await currentActor(req);
   assertCreatePermission(actor);
+  assertV7TrialScopeConfigured();
   const repo = await repository();
   const departments = await repo.listDepartments();
   const preview = validatedPreview(req.body || {}, departments);
+  assertV7TrialProcessRef(preview.processRef);
   if (!preview.owningDepartment && !actor.permissions.has('governance:assign-work')) {
     throw httpError(422, 'V7尚未明确归口部门，请由MDM工作组组长建立案例并分派', 'V7_PREVIEW_OWNER_PENDING_REQUIRES_LEAD');
   }
@@ -335,13 +394,19 @@ router.get('/cases/:id', requireAuth, (req, res) => runAction(res, async () => {
         : []
     };
   });
+  const formalDetail = {
+    ...detail,
+    case: { ...detail.case, blocking_issues: preview.blockingIssues || [] }
+  };
+  const formalActions = formalAllowedActions(actor, formalDetail);
   res.json(previewBoundary({
     ...detail,
     items,
     warnings: preview.warnings || [],
     blocking_issues: preview.blockingIssues || [],
     allowed_actions: caseAllowedActions(actor, { ...detail.case, blocking_issues: preview.blockingIssues || [] }),
-    formal_allowed_actions: formalAllowedActions(actor, detail)
+    formal_allowed_actions: formalActions,
+    formal_allowed_decisions: formalAllowedDecisions(formalActions, formalDetail)
   }));
 }));
 
@@ -384,6 +449,7 @@ router.post('/cases/:id/assign-owner', requireAuth, (req, res) => runAction(res,
   const repo = await repository();
   const detail = await repo.getCaseDetail(req.params.id);
   if (!detail) throw httpError(404, 'V7预览核对案例不存在', 'V7_PREVIEW_CASE_NOT_FOUND');
+  assertV7TrialProcessRef(detail.case.process_ref);
   if (detail.case.owning_department_id) {
     throw httpError(409, '归口部门已经明确，本期不允许在预览核对中改派', 'V7_PREVIEW_OWNER_ALREADY_ASSIGNED');
   }
@@ -405,10 +471,12 @@ router.post('/cases/:id/revisions', requireAuth, (req, res) => runAction(res, as
   const detail = await repo.getCaseDetail(req.params.id);
   if (!detail) throw httpError(404, 'V7预览核对案例不存在', 'V7_PREVIEW_CASE_NOT_FOUND');
   assertUploadPermission(actor, detail.case);
+  assertV7TrialProcessRef(detail.case.process_ref);
   const departments = await repo.listDepartments();
   const preview = validatedPreview(req.body || {}, departments, {
     owningDepartmentName: detail.case.owning_department_name
   });
+  assertV7TrialProcessRef(preview.processRef);
   const result = await repo.addRevision(detail.case, preview, {
     sourceFileName: sourceFileName(req.body || {}),
     expectedRevisionNo: expectedRevisionNo(req.body || {}),
@@ -470,6 +538,7 @@ router.post('/cases/:id/scope-decision', requireAuth, (req, res) => runAction(re
   const repo = await repository();
   const detail = await repo.getCaseDetail(req.params.id);
   if (!detail) throw httpError(404, 'V7预览核对案例不存在', 'V7_PREVIEW_CASE_NOT_FOUND');
+  assertV7TrialProcessRef(detail.case.process_ref);
   const departments = await repo.listDepartments();
   let preview = validatedPreview({ document: detail.revision.document }, departments, {
     owningDepartmentName: detail.case.owning_department_name
@@ -519,9 +588,7 @@ router.post('/cases/:id/promote', requireAuth, (req, res) => runAction(res, asyn
   }
   const detail = await repo.getCaseDetail(req.params.id);
   assertVisible(actor, detail);
-  if (text(detail.case.status) !== 'review_complete') {
-    throw httpError(409, '当前V7预览案例尚未完成核对，不能提升为正式草稿', 'V7_PREVIEW_REVIEW_INCOMPLETE');
-  }
+  assertV7TrialProcessRef(detail.case.process_ref);
   const expectedRevision = expectedRevisionNo(req.body || {});
   const expectedHash = expectedContentHash(req.body || {});
   const target = promotionTarget(req.body || {});
@@ -529,6 +596,15 @@ router.post('/cases/:id/promote', requireAuth, (req, res) => runAction(res, asyn
   const preview = validatedPreview({ document: detail.revision && detail.revision.document }, departments, {
     owningDepartmentName: detail.case.owning_department_name
   });
+  const blockingIssues = unresolvedBlockingIssues(preview.blockingIssues, text(detail.case.scope_decision));
+  if (blockingIssues.length) {
+    throw httpError(409, '当前V7修订仍有未解决的预览核对卡口，不能提升为正式草稿', 'V7_PREVIEW_BLOCKING_ISSUES', {
+      details: blockingIssues.map(issue => ({ code: text(issue && issue.code) })).filter(issue => issue.code)
+    });
+  }
+  if (text(detail.case.status) !== 'review_complete') {
+    throw httpError(409, '当前V7预览案例尚未完成核对，不能提升为正式草稿', 'V7_PREVIEW_REVIEW_INCOMPLETE');
+  }
   const result = await repo.promoteCase(detail, preview, target, {
     expectedRevisionNo: expectedRevision,
     expectedContentHash: expectedHash
@@ -557,6 +633,9 @@ router.post('/items/:id/decision', requireAuth, (req, res) => runAction(res, asy
   const repo = await repository();
   const item = await repo.getItem(req.params.id);
   if (!item) throw httpError(404, 'V7跨部门核对项不存在', 'V7_PREVIEW_ITEM_NOT_FOUND');
+  const caseRow = await repo.getCase(item.case_id);
+  if (!caseRow) throw httpError(404, 'V7预览核对案例不存在', 'V7_PREVIEW_CASE_NOT_FOUND');
+  assertV7TrialProcessRef(caseRow.process_ref);
   let party = '';
   if (Number(item.origin_department_id) === Number(actor.departmentId)) party = 'origin';
   else if (Number(item.target_department_id) === Number(actor.departmentId)) party = 'counterparty';

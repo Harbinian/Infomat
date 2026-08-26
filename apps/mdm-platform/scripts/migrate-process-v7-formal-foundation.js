@@ -47,6 +47,7 @@ main().catch(error => {
   console.error(JSON.stringify({
     error: error.message || String(error),
     code: error.code || 'V7_FORMAL_MIGRATION_FAILED',
+    consistency_status: error.consistency_status || undefined,
     manual_objects: error.manual_objects || undefined
   }, null, 2));
   process.exitCode = 1;

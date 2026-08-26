@@ -1,5 +1,6 @@
 const crypto = require('node:crypto');
 const { compareCreateStatements } = require('./processV7M0Baseline');
+const { inspectProcessV7PreviewReview } = require('./processV7PreviewReviewMigration');
 
 const MIGRATION_KEY = '2026-08-25-process-v7-formal-foundation';
 const PROMOTION_TABLE = 'process_v7_promotions';
@@ -141,7 +142,21 @@ function desiredColumn(state, type, nullable = true) {
   return state.exists && state.column_type === type && state.nullable === nullable;
 }
 
+function summarizeProcessV7PreviewFoundation(inspection = {}) {
+  const consistencyStatus = String(inspection.consistency_status || 'not_applied');
+  return {
+    migration_key: inspection.migration_key || null,
+    migration_recorded: Boolean(inspection.migration_recorded),
+    applied: Boolean(inspection.applied) && consistencyStatus === 'applied',
+    consistency_status: consistencyStatus,
+    ready_for_m2: consistencyStatus === 'applied'
+  };
+}
+
 async function inspectProcessV7FormalFoundation(pool, options = {}) {
+  const previewFoundation = options.includePreviewFoundation === false
+    ? null
+    : await inspectProcessV7PreviewReview(pool, { includeFormalBaseline: false });
   const columns = {
     document_process_ref: await columnState(pool, 'process_design_documents', 'process_ref'),
     review_draft_revision_no: await columnState(pool, 'process_design_review_tasks', 'draft_revision_no'),
@@ -174,6 +189,12 @@ async function inspectProcessV7FormalFoundation(pool, options = {}) {
     },
     business_data_plan: 'no V7 business rows are created; feature flag remains disabled'
   };
+  if (previewFoundation) {
+    result.m1_preview_foundation = summarizeProcessV7PreviewFoundation(previewFoundation);
+    result.ready_for_apply = result.m1_preview_foundation.ready_for_m2 &&
+      schemaDrift(result).length === 0 &&
+      result.anti_join.duplicate_non_null_process_refs.length === 0;
+  }
   if (options.includeLegacyBaseline !== false) result.legacy_formal_baseline = await inspectLegacyFormalRows(pool);
   return result;
 }
@@ -196,9 +217,22 @@ function schemaDrift(inspection) {
   return drift;
 }
 
+function assertProcessV7PreviewFoundationApplied(inspection) {
+  if (inspection && inspection.consistency_status === 'applied') return inspection;
+  const error = new Error('M1预览核对迁移记录与表结构尚未完整一致，拒绝执行M2正式基础迁移');
+  error.code = 'V7_FORMAL_M1_NOT_APPLIED';
+  error.consistency_status = inspection && inspection.consistency_status || 'not_applied';
+  throw error;
+}
+
 async function applyProcessV7FormalFoundation(pool) {
+  const previewFoundation = await inspectProcessV7PreviewReview(pool, { includeFormalBaseline: false });
+  assertProcessV7PreviewFoundationApplied(previewFoundation);
   const legacyBefore = await inspectLegacyFormalRows(pool);
-  const before = await inspectProcessV7FormalFoundation(pool, { includeLegacyBaseline: false });
+  const before = await inspectProcessV7FormalFoundation(pool, {
+    includeLegacyBaseline: false,
+    includePreviewFoundation: false
+  });
   const drift = schemaDrift(before);
   if (drift.length) {
     const error = new Error('V7正式基础结构存在非兼容漂移，拒绝继续迁移');
@@ -236,7 +270,10 @@ async function applyProcessV7FormalFoundation(pool) {
   }
   if (!before.promotion_table.exists) await pool.execute(PROCESS_V7_FORMAL_SCHEMA_SQL.trim().replace(/;$/, ''));
 
-  const after = await inspectProcessV7FormalFoundation(pool, { includeLegacyBaseline: false });
+  const after = await inspectProcessV7FormalFoundation(pool, {
+    includeLegacyBaseline: false,
+    includePreviewFoundation: false
+  });
   const afterDrift = schemaDrift(after);
   if (
     afterDrift.length ||
@@ -275,7 +312,10 @@ async function applyProcessV7FormalFoundation(pool) {
 }
 
 async function rollbackProcessV7FormalFoundation(pool) {
-  const before = await inspectProcessV7FormalFoundation(pool, { includeLegacyBaseline: false });
+  const before = await inspectProcessV7FormalFoundation(pool, {
+    includeLegacyBaseline: false,
+    includePreviewFoundation: false
+  });
   const promotionRows = before.promotion_table.rows;
   const v7Rows = await query(pool, `
     SELECT
@@ -318,8 +358,10 @@ module.exports = {
   PROCESS_V7_FORMAL_SCHEMA_SQL,
   PROMOTION_TABLE,
   applyProcessV7FormalFoundation,
+  assertProcessV7PreviewFoundationApplied,
   inspectLegacyFormalRows,
   inspectProcessV7FormalFoundation,
   rollbackProcessV7FormalFoundation,
-  schemaDrift
+  schemaDrift,
+  summarizeProcessV7PreviewFoundation
 };

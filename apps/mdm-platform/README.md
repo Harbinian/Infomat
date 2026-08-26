@@ -55,7 +55,9 @@
 - “流程编制”直接显示MDM本地的3001式工作台，包含文字编制、条目侧栏、稳定排序、结构化学习评分和跨职能流程图。MDM复用相同v2结构规则，但不通过浏览器调用3001服务。
 - 部门主对接人可以新建、导入、保存草稿和提交审核；管理员只能打开已有草稿查看。导出备份不替代保存草稿。
 - MDM兼容`process-governance-v1`、`process-governance-v2`和`process-governance-v3`，服务端统一规范化、保存和导出为v3；3001源文件不被修改。v1、v2表单状态设为`unspecified`，不得按名称或明细数量推断。
-- 用户可把3001导出的`process-governance-v7`文件上传到“V7预览核对”。3000保存案例、修订、双方部门核对结果和操作记录；预览阶段不转换为V3、不写正式草稿和版本，核对结果也不写回V7文件。正式库M1/M2已于2026-08-25按授权应用，原生V7的提升、审核、发布和版本读回技术链路已通过隔离演练；正式V7业务记录仍为0，真实脱敏流程试点尚未完成。
+- 用户可把3001导出的`process-governance-v7`文件上传到“V7预览核对”。3000保存案例、修订、双方部门核对结果和操作记录；预览阶段不转换为V3、不写正式草稿和版本，核对结果也不写回V7文件。预览和正式写入默认关闭，运行实例还必须通过`PROCESS_V7_TRIAL_PROCESS_REF`精确限定一个试点流程；只读访问不受该配置限制。正式库M1/M2已于2026-08-25按授权应用，当前只读检查确认迁移记录与目标结构一致；历史事后演练不能替代本次代码对应的隔离验收。本轮未启动3000，未开启V7开关，也未配置试点`process_ref`；新的全库备份恢复、隔离MySQL验收和真实脱敏流程试点均待分别批准。
+- 原生V7正式草稿在3000中只读。V7主档不能通过通用“创建下一版草稿”或旧`document-structured-output-v2`导入路径降级生成V3草稿；新修订必须回到3001修改、重新上传预览并完成受控提升。提交、审核和发布必须携带当前`expected_revision_no`和`expected_content_hash`；HTTP路由不透传事务或定位器字段。服务端在同一事务内按固定顺序锁定提升依据、正式主档、当前版本、草稿和审核任务，然后用同一连接复核账号、`auth_version`、部门、角色和权限，并通过状态、修订号、内容摘要和版本指针条件更新防止过期或并发操作。
+- `npm run init:mysql`不创建V7预览表，也不写入M1迁移记录。M1预检返回固定六种`consistency_status`；发现记录与结构不一致时，dry-run只报告，apply停止且不自动补表或补记录。
 - `process_design_drafts.process_content_json`是完整流程JSON真源。保存必须携带`expected_revision`，并发不一致返回`409 DRAFT_REVISION_CONFLICT`。
 - `POST /api/process-design/import-structured-output/preview`只返回摘要、承接候选、治理提示和内容哈希，不写数据库。
 - `POST /api/process-design/import-structured-output/approve`仅允许归口部门`department_mdm_reviewer`执行，并在单一MySQL事务中写入流程草稿、承接投影、参与关系、事件和导入审计。
@@ -63,6 +65,7 @@
 - 前置输入和后续承接统一保存在`process_design_cross_dept_handoffs`；待办直接按承接状态、角色、部门和参与关系生成，不再建立“待确认问题”第二份业务事实。
 - 承接事件继续使用稳定机器标识`handoff_candidate_created`，以便读取既有事件记录；页面把该事件显示为“生成承接待核对项”。机器标识不代表业务人员已经确认承接内容。
 - V7预览核对页面把尚未确认的执行角色显示为“执行角色待确认”，核对项双方均确认后显示为“执行角色”。该显示状态只反映本案例的核对进度，不代替业务审核、批准或发布。
+- V7核对项使用`process-v7-review-item-v2`摘要。相关业务行为、流程关系、数据字段或生命周期、表单操作或字段变化时，双方重新核对；缺少摘要版本的历史核对项不得沿用原结论。
 - 承接详情使用固定故事链，不显示推测进度百分比。部门普通退回只回到上一责任步骤；明确拒绝或结构卡口提请争议处理时创建承接冲突。
 - 相同流程与内容版本重复导入返回既有对象；内容变化保留旧修订和原决定，并重新进入审核。
 - 任何当前承接未`confirmed`或未按决定关闭为`closed_not_required`时，流程不得发布。
@@ -234,6 +237,8 @@ npm run rehearse:process-v7-migrations-isolated
 npm run import:process-governance-mysql
 npm run smoke:process-governance-mysql
 ```
+
+`rehearse:process-v7-migrations-isolated`只在恢复后的临时 MySQL 和本机临时 HTTP 端口运行。正式 V7 的提交、审核和发布必须通过公开的 Express 路由及会话门禁，脚本不直接调用仓储写方法，也不接触路由内部的事务能力。演练会在创建任何预览或正式业务记录前，从隔离恢复库选择三个相互分离的有效账号：归口部门的`department_contact`、归口部门的`department_mdm_reviewer`和全局`mdm_lead`。账号、角色、权限、部门范围或`auth_version`不满足要求时，脚本以`V7_ISOLATED_FORMAL_ACTORS_REQUIRED`停止，不把人员姓名写入演练证据。
 
 数据库安全约定：
 

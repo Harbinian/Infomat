@@ -3096,6 +3096,7 @@
         : '<div class="notice" style="margin-top:12px">当前文件没有形成固定跨部门核对项。请先确认归口部门和各业务行为的固定执行部门，再从3001上传新修订；3000不会自行猜测参与部门。</div>';
       var formalPromotion = detail.formal_promotion || null;
       var formalActions = detail.formal_allowed_actions || [];
+      var formalReviewDecisions = detail.formal_allowed_decisions || [];
       var promotionEditor = allowedActions.indexOf('promote_to_formal_draft') >= 0
         ? '<details class="process-design-detail" open style="margin-top:18px"><summary><strong>提升为正式V7草稿</strong></summary>' +
           '<div class="notice" style="margin-top:12px">必须明确选择新建流程主档或选择已有流程主档。系统不会按名称或编号自动合并。</div>' +
@@ -3116,8 +3117,13 @@
         if (formalActions.indexOf('submit_formal_draft') >= 0) {
           formalActionHtml += '<button type="button" class="btn primary" id="pgSubmitV7FormalDraftBtn">提交正式审核</button>';
         }
-        if (formalActions.indexOf('review_formal_draft') >= 0) {
-          formalActionHtml += '<select id="pgV7FormalReviewDecision"><option value="approve">审核通过</option><option value="needs_changes">退回修改</option><option value="reject">审核拒绝</option></select>' +
+        if (formalActions.indexOf('review_formal_draft') >= 0 && formalReviewDecisions.length) {
+          var formalReviewDecisionLabels = { approve: '审核通过', needs_changes: '退回修改', reject: '审核拒绝' };
+          var formalReviewDecisionOptions = formalReviewDecisions
+            .filter(function(decision) { return Object.prototype.hasOwnProperty.call(formalReviewDecisionLabels, decision); })
+            .map(function(decision) { return '<option value="' + safeText(decision) + '">' + safeText(formalReviewDecisionLabels[decision]) + '</option>'; })
+            .join('');
+          formalActionHtml += '<select id="pgV7FormalReviewDecision">' + formalReviewDecisionOptions + '</select>' +
             '<input id="pgV7FormalReviewNote" maxlength="1000" placeholder="填写正式审核意见">' +
             '<button type="button" class="btn primary" id="pgReviewV7FormalDraftBtn">保存正式审核结论</button>';
         }
@@ -3172,13 +3178,13 @@
         }, '正式草稿提升失败');
       };
       if ($('pgSubmitV7FormalDraftBtn')) $('pgSubmitV7FormalDraftBtn').onclick = function() {
-        runPageTask(function() { return submitV7FormalDraft(formalPromotion.draft.id); }, '正式草稿提交失败');
+        runPageTask(function() { return submitV7FormalDraft(formalPromotion.draft); }, '正式草稿提交失败');
       };
       if ($('pgReviewV7FormalDraftBtn')) $('pgReviewV7FormalDraftBtn').onclick = function() {
-        runPageTask(function() { return reviewV7FormalDraft(formalPromotion.review_task.id); }, '正式审核保存失败');
+        runPageTask(function() { return reviewV7FormalDraft(formalPromotion.review_task); }, '正式审核保存失败');
       };
       if ($('pgPublishV7FormalDraftBtn')) $('pgPublishV7FormalDraftBtn').onclick = function() {
-        runPageTask(function() { return publishV7FormalDraft(formalPromotion.draft.id); }, '正式V7版本发布失败');
+        runPageTask(function() { return publishV7FormalDraft(formalPromotion.draft); }, '正式V7版本发布失败');
       };
       if ($('pgReadV7FormalVersionBtn')) $('pgReadV7FormalVersionBtn').onclick = function() {
         runPageTask(function() { return readV7FormalVersion(formalPromotion.current_version.id); }, '正式版本读回失败');
@@ -3353,34 +3359,47 @@
       return await loadProcessGovernanceView('v7Preview', { route:parseHash(), force:true });
     }
 
-    async function submitV7FormalDraft(draftId) {
-      await api('/api/process-design/drafts/' + encodeURIComponent(draftId) + '/submit', {
+    async function submitV7FormalDraft(formalDraft) {
+      await api('/api/process-design/drafts/' + encodeURIComponent(formalDraft.id) + '/submit', {
         method:'POST',
-        body:JSON.stringify({ note:'V7预览核对完成，提交正式审核' })
+        body:JSON.stringify({
+          note:'V7预览核对完成，提交正式审核',
+          expected_revision_no:formalDraft.revision_no,
+          expected_content_hash:formalDraft.content_hash
+        })
       });
       state.pgViewCache = {};
       showToast('正式V7草稿已提交审核');
       return await loadProcessGovernanceView('v7Preview', { route:parseHash(), force:true });
     }
 
-    async function reviewV7FormalDraft(taskId) {
+    async function reviewV7FormalDraft(formalTask) {
       var decision = $('pgV7FormalReviewDecision') && $('pgV7FormalReviewDecision').value || '';
       var note = $('pgV7FormalReviewNote') && $('pgV7FormalReviewNote').value.trim() || '';
       if (!decision) throw new Error('请选择正式审核结论');
       if (!note) throw new Error('请填写正式审核意见');
-      await api('/api/process-design/review-tasks/' + encodeURIComponent(taskId) + '/decision', {
+      await api('/api/process-design/review-tasks/' + encodeURIComponent(formalTask.id) + '/decision', {
         method:'POST',
-        body:JSON.stringify({ decision:decision, note:note })
+        body:JSON.stringify({
+          decision:decision,
+          note:note,
+          expected_revision_no:formalTask.draft_revision_no,
+          expected_content_hash:formalTask.content_hash
+        })
       });
       state.pgViewCache = {};
       showToast('正式审核结论已保存');
       return await loadProcessGovernanceView('v7Preview', { route:parseHash(), force:true });
     }
 
-    async function publishV7FormalDraft(draftId) {
-      var result = await api('/api/process-design/drafts/' + encodeURIComponent(draftId) + '/publish', {
+    async function publishV7FormalDraft(formalDraft) {
+      var result = await api('/api/process-design/drafts/' + encodeURIComponent(formalDraft.id) + '/publish', {
         method:'POST',
-        body:JSON.stringify({ note:'发布核对完成的原生V7正式版本' })
+        body:JSON.stringify({
+          note:'发布核对完成的原生V7正式版本',
+          expected_revision_no:formalDraft.revision_no,
+          expected_content_hash:formalDraft.content_hash
+        })
       });
       state.pgViewCache = {};
       showToast('正式V7版本已发布，process_version_id=' + Number(result.process_version_id));

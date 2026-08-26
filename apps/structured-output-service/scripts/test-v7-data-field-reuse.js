@@ -1,6 +1,8 @@
 const assert = require('node:assert/strict');
 const {
+  createEmptyProcessGovernanceV5Document,
   createEmptyProcessGovernanceV6Document,
+  createEmptyProcessGovernanceV7Document,
   processGovernanceValidationResult
 } = require('../server');
 const Migration = require('../public/process-governance-migration.js');
@@ -57,10 +59,34 @@ function assertValid(documentValue, label) {
 }
 
 function run() {
+  const blankV7 = createEmptyProcessGovernanceV7Document();
+  const blankV7Snapshot = JSON.parse(JSON.stringify(blankV7));
+  const blankV7RoundTrip = Migration.migrateDocument(blankV7)[0];
+  assertValid(blankV7, 'blank v7 template');
+  assert.deepEqual(
+    blankV7RoundTrip,
+    blankV7Snapshot,
+    'a valid blank v7 template must survive the download preflight migration without any change'
+  );
+  assert.equal(
+    JSON.stringify(blankV7RoundTrip),
+    JSON.stringify(blankV7Snapshot),
+    'a valid blank v7 template must pass the exact download round-trip comparison'
+  );
+  assert.deepEqual(blankV7, blankV7Snapshot, 'blank v7 migration must not modify the source template');
+
+  const legacyWithoutMigration = createEmptyProcessGovernanceV5Document();
+  assert.equal(
+    Migration.migrateDocument(legacyWithoutMigration)[0].migration.source_process_ref,
+    legacyWithoutMigration.process.process_ref,
+    'a supported legacy document without migration metadata must retain the source-process fallback'
+  );
+
   const source = v6Fixture();
   const snapshot = JSON.parse(JSON.stringify(source));
   const migrated = Migration.migrateDocument(source)[0];
   assert.deepEqual(source, snapshot, 'v6 source must remain unchanged');
+  assert.equal(migrated.migration.source_process_ref, null, 'a native v6 source with no earlier process must preserve null provenance');
   assert.equal(migrated.data_objects[0].fields.length, 1, 'same object/name/type must produce one reusable field');
   const first = migrated.forms[0].areas[0].items[0];
   const second = migrated.forms[1].areas[0].items[0];

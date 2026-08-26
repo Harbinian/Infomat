@@ -17,8 +17,14 @@ function validateProcessGovernanceV7(document, options = {}) {
     params: error.params || {}
   }));
 
-  const addError = (pathValue, message, params = {}, keyword = 'localReference') => {
-    errors.push({ path: pathValue, keyword, message, params });
+  const addError = (pathValue, message, params = {}, keyword = 'localReference', ruleCode = '') => {
+    errors.push({
+      path: pathValue,
+      keyword,
+      message,
+      params,
+      ...(ruleCode ? { rule_code: ruleCode } : {})
+    });
   };
   const uniqueRefs = (items, key, basePath, registry = null) => {
     const seen = new Set();
@@ -103,7 +109,13 @@ function validateProcessGovernanceV7(document, options = {}) {
       const linkPath = `/data_objects/${dataIndex}/behavior_links/${linkIndex}`;
       requireRef(behaviorRefs, link && link.behavior_ref, `${linkPath}/behavior_ref`, '数据关系对应行为');
       if (link && link.behavior_ref && behaviorByRef.get(link.behavior_ref) && behaviorByRef.get(link.behavior_ref).node_type !== 'action') {
-        addError(`${linkPath}/behavior_ref`, '数据关系关联了控制节点；请保留原内容，并将关系改到实际办理业务的行为', { ref: link.behavior_ref });
+        addError(
+          `${linkPath}/behavior_ref`,
+          '数据关系关联了控制节点；请保留原内容，并将关系改到实际办理业务的行为',
+          { ref: link.behavior_ref },
+          'localReference',
+          'DATA_RELATION_ACTION_BEHAVIOR_REQUIRED'
+        );
       }
       const updatedRefs = list(link && link.updated_field_refs);
       if (link && link.operation !== 'update' && updatedRefs.length) {
@@ -137,7 +149,13 @@ function validateProcessGovernanceV7(document, options = {}) {
       const linkPath = `/forms/${formIndex}/behavior_links/${linkIndex}/behavior_ref`;
       requireRef(behaviorRefs, link && link.behavior_ref, linkPath, '表单关系对应行为');
       if (link && link.behavior_ref && behaviorByRef.get(link.behavior_ref) && behaviorByRef.get(link.behavior_ref).node_type !== 'action') {
-        addError(linkPath, '表单处理关系关联了控制节点；请保留原内容，并将关系改到实际办理业务的行为', { ref: link.behavior_ref });
+        addError(
+          linkPath,
+          '表单处理关系关联了控制节点；请保留原内容，并将关系改到实际办理业务的行为',
+          { ref: link.behavior_ref },
+          'localReference',
+          'FORM_RELATION_ACTION_BEHAVIOR_REQUIRED'
+        );
       }
     });
     uniqueRefs(form && form.areas, 'area_ref', `/forms/${formIndex}/areas`, technicalIds);

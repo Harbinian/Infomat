@@ -204,8 +204,7 @@ async function main() {
       '2026-07-01-process-design-evidence-status',
       '2026-07-07-process-design-step-transitions',
       '2026-07-31-cross-dept-handoff-v2',
-      '2026-07-30-rbac-raci-v2-model',
-      '2026-08-24-process-v7-preview-review'
+      '2026-07-30-rbac-raci-v2-model'
     ]) {
       await pool.execute(
         `INSERT INTO schema_migrations (migration_key)

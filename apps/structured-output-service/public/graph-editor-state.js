@@ -71,16 +71,32 @@
 
     function undo(key, currentDocument) {
       const entry = ensure(key);
-      const operation = entry.undo.pop();
+      const operation = entry.undo[entry.undo.length - 1];
       if (!operation) return { ok: false, code: 'UNDO_EMPTY', message: '没有可撤销的图操作' };
+      if (fingerprint(currentDocument) !== fingerprint(operation.after)) {
+        return {
+          ok: false,
+          code: 'UNDO_SOURCE_CHANGED',
+          message: '该操作之后当前JSON还有其他修改。为避免覆盖这些内容，系统没有执行撤销'
+        };
+      }
+      entry.undo.pop();
       entry.redo.push(operation);
       return { ok: true, document: clone(operation.before), details: clone(operation.details), state: snapshot(key, operation.before) };
     }
 
     function redo(key, currentDocument) {
       const entry = ensure(key);
-      const operation = entry.redo.pop();
+      const operation = entry.redo[entry.redo.length - 1];
       if (!operation) return { ok: false, code: 'REDO_EMPTY', message: '没有可重做的图操作' };
+      if (fingerprint(currentDocument) !== fingerprint(operation.before)) {
+        return {
+          ok: false,
+          code: 'REDO_SOURCE_CHANGED',
+          message: '撤销后当前JSON已有其他修改。为避免覆盖这些内容，系统没有执行重做'
+        };
+      }
+      entry.redo.pop();
       entry.undo.push(operation);
       return { ok: true, document: clone(operation.after), details: clone(operation.details), state: snapshot(key, operation.after) };
     }

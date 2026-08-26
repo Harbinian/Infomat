@@ -2,9 +2,16 @@ const crypto = require('crypto');
 const {
   caseStatusFromItems,
   itemStatus,
-  mergeReviewItems
+  mergeReviewItems,
+  unresolvedBlockingIssues,
+  validateAndProjectV7
 } = require('./processV7PreviewReview');
-const { applyProcessV7PreviewReview } = require('./processV7PreviewReviewMigration');
+const {
+  assertV7FormalEnabled,
+  assertV7PreviewEnabled,
+  assertV7TrialProcessRef,
+  assertV7TrialScopeConfigured
+} = require('./processV7TrialScope');
 
 function text(value) {
   return String(value == null ? '' : value).trim();
@@ -18,6 +25,26 @@ function parseJson(value, fallback = null) {
   } catch (_error) {
     return fallback;
   }
+}
+
+function assertPreviewFeatureEnabled() {
+  assertV7PreviewEnabled();
+  assertV7TrialScopeConfigured();
+}
+
+function assertPreviewWriteScope(processRef) {
+  assertPreviewFeatureEnabled();
+  assertV7TrialProcessRef(processRef);
+}
+
+function assertPromotionFeatureEnabled() {
+  assertPreviewFeatureEnabled();
+  assertV7FormalEnabled();
+}
+
+function assertPromotionWriteScope(processRef) {
+  assertPromotionFeatureEnabled();
+  assertV7TrialProcessRef(processRef);
 }
 
 async function rows(executor, sql, params = []) {
@@ -248,6 +275,86 @@ function repositoryError(statusCode, code, message, extra = {}) {
   return error;
 }
 
+async function lockCurrentPreviewWriteState(connection, caseId, meta = {}) {
+  const lockedCase = await one(connection, 'SELECT * FROM process_v7_preview_cases WHERE id=? FOR UPDATE', [caseId]);
+  if (!lockedCase) throw repositoryError(404, 'V7_PREVIEW_CASE_NOT_FOUND', 'V7预览核对案例不存在');
+  assertPreviewWriteScope(lockedCase.process_ref);
+
+  const lockedRevision = await one(connection, `
+    SELECT * FROM process_v7_preview_revisions
+    WHERE id=? AND case_id=?
+    FOR UPDATE
+  `, [lockedCase.current_revision_id, lockedCase.id]);
+  if (!lockedRevision) {
+    throw repositoryError(409, 'V7_PREVIEW_REVISION_MISSING', '当前V7修订不存在，请刷新后重试');
+  }
+
+  const currentItems = (await rows(connection, `
+    SELECT * FROM process_v7_preview_review_items
+    WHERE case_id=? AND is_current=1
+    ORDER BY id
+    FOR UPDATE
+  `, [lockedCase.id])).map(publicItem);
+  const activeDepartments = await rows(connection, `
+    SELECT id, name, code
+    FROM departments
+    WHERE status='active'
+    ORDER BY sort_order, id
+    FOR SHARE
+  `);
+
+  if (
+    Number(meta.expectedRevisionNo) !== Number(lockedCase.current_revision_no) ||
+    Number(lockedRevision.revision_no) !== Number(lockedCase.current_revision_no)
+  ) {
+    throw repositoryError(409, 'V7_PREVIEW_REVISION_CONFLICT', '当前案例已经上传新修订，请刷新后重试', {
+      actual_revision_no: Number(lockedCase.current_revision_no)
+    });
+  }
+  if (
+    text(meta.expectedContentHash) !== text(lockedCase.current_content_hash) ||
+    text(lockedRevision.content_hash) !== text(lockedCase.current_content_hash)
+  ) {
+    throw repositoryError(409, 'V7_PREVIEW_CONTENT_HASH_CONFLICT', '当前案例内容摘要已经变化，请刷新后重试');
+  }
+  return { lockedCase, lockedRevision, currentItems, activeDepartments };
+}
+
+function projectLockedPreview(state, options = {}) {
+  const preview = validateAndProjectV7(
+    parseJson(state.lockedRevision.content_json, {}),
+    state.activeDepartments,
+    options
+  );
+  if (preview.errors.length) {
+    const error = repositoryError(422, 'V7_PREVIEW_CONTENT_INVALID', '当前V7修订不再符合预览核对要求');
+    error.payload = { error: error.message, code: error.code, details: preview.errors };
+    throw error;
+  }
+  if (
+    text(preview.processRef) !== text(state.lockedCase.process_ref) ||
+    text(preview.contentHash) !== text(state.lockedCase.current_content_hash) ||
+    text(preview.contentHash) !== text(state.lockedRevision.content_hash)
+  ) {
+    throw repositoryError(409, 'V7_PREVIEW_CONTENT_HASH_CONFLICT', '当前修订正文与案例绑定不一致，请刷新后重试');
+  }
+  return preview;
+}
+
+function projectCandidatePreview(document, state, options = {}) {
+  const preview = validateAndProjectV7(document, state.activeDepartments, options);
+  if (preview.errors.length) {
+    const error = repositoryError(422, 'V7_PREVIEW_CONTENT_INVALID', '新修订不符合V7预览核对要求');
+    error.payload = { error: error.message, code: error.code, details: preview.errors };
+    throw error;
+  }
+  if (text(preview.processRef) !== text(state.lockedCase.process_ref)) {
+    throw repositoryError(422, 'V7_PREVIEW_PROCESS_REF_MISMATCH', '新修订的流程稳定引用与当前案例不一致');
+  }
+  assertV7TrialProcessRef(preview.processRef);
+  return preview;
+}
+
 function editionToNumber(edition) {
   const value = text(edition).toUpperCase();
   if (!/^[A-Z]+$/.test(value)) return 0;
@@ -333,10 +440,6 @@ async function promotionResult(executor, promotionRow, idempotent) {
 
 function makeProcessV7PreviewReviewRepository(pool) {
   return {
-    async initSchema() {
-      return await applyProcessV7PreviewReview(pool);
-    },
-
     async listDepartments() {
       return await rows(pool, `
         SELECT id, name, code
@@ -412,8 +515,10 @@ function makeProcessV7PreviewReviewRepository(pool) {
     },
 
     async createCase(preview, meta, actor) {
+      assertPreviewWriteScope(preview.processRef);
       try {
         return await withTransaction(pool, async connection => {
+        assertPreviewWriteScope(preview.processRef);
         const existing = await one(connection, `
           SELECT * FROM process_v7_preview_cases
           WHERE process_ref=? AND status<>'closed'
@@ -502,23 +607,19 @@ function makeProcessV7PreviewReviewRepository(pool) {
       }
     },
 
-    async assignOwner(caseRow, department, preview, meta, actor) {
+    async assignOwner(caseRow, department, _preview, meta, actor) {
+      assertPreviewFeatureEnabled();
       return await withTransaction(pool, async connection => {
-        const locked = await one(connection, 'SELECT * FROM process_v7_preview_cases WHERE id=? FOR UPDATE', [caseRow.id]);
-        if (!locked) return null;
-        if (Number(meta.expectedRevisionNo) !== Number(locked.current_revision_no)) {
-          const error = new Error('当前案例已经上传新修订，请刷新后重试');
-          error.statusCode = 409;
-          error.code = 'V7_PREVIEW_REVISION_CONFLICT';
-          error.actual_revision_no = Number(locked.current_revision_no);
-          throw error;
+        const state = await lockCurrentPreviewWriteState(connection, caseRow.id, meta);
+        const { lockedCase: locked } = state;
+        if (locked.owning_department_id) {
+          throw repositoryError(409, 'V7_PREVIEW_OWNER_ALREADY_ASSIGNED', '归口部门已经明确，本期不允许在预览核对中改派');
         }
-        if (text(meta.expectedContentHash) !== text(locked.current_content_hash)) {
-          const error = new Error('当前案例内容摘要已经变化，请刷新后重试');
-          error.statusCode = 409;
-          error.code = 'V7_PREVIEW_CONTENT_HASH_CONFLICT';
-          throw error;
+        const lockedDepartment = state.activeDepartments.find(item => Number(item.id) === Number(department && department.id));
+        if (!lockedDepartment) {
+          throw repositoryError(422, 'V7_PREVIEW_OWNER_INVALID', '请选3000当前有效部门');
         }
+        const preview = projectLockedPreview(state, { owningDepartmentName: lockedDepartment.name });
         await connection.execute('UPDATE process_v7_preview_review_items SET is_current=0 WHERE case_id=? AND is_current=1', [locked.id]);
         const insertedItems = await insertReviewItems(
           connection,
@@ -536,52 +637,32 @@ function makeProcessV7PreviewReviewRepository(pool) {
               scope_decided_by_user_id=NULL, scope_decided_by_person_id=NULL, scope_decided_at=NULL,
               updated_at=CURRENT_TIMESTAMP
           WHERE id=?
-        `, [department.id, department.name, status, JSON.stringify(preview.blockingIssues || []), locked.id]);
+        `, [lockedDepartment.id, lockedDepartment.name, status, JSON.stringify(preview.blockingIssues || []), locked.id]);
         await insertEvent(connection, {
           caseId: locked.id,
           revisionId: locked.current_revision_id,
           eventType: 'owning_department_assigned',
           actor,
-          payload: { owning_department_id: department.id, owning_department_name: department.name }
+          payload: { owning_department_id: lockedDepartment.id, owning_department_name: lockedDepartment.name }
         });
         return publicCase(await one(connection, 'SELECT * FROM process_v7_preview_cases WHERE id=?', [locked.id]));
       });
     },
 
     async addRevision(caseRow, preview, meta, actor) {
+      assertPreviewWriteScope(preview && preview.processRef);
       return await withTransaction(pool, async connection => {
-        const locked = await one(connection, 'SELECT * FROM process_v7_preview_cases WHERE id=? FOR UPDATE', [caseRow.id]);
-        if (!locked) return null;
-        if (Number(meta.expectedRevisionNo) !== Number(locked.current_revision_no)) {
-          const error = new Error('当前案例已经上传新修订，请刷新后重试');
-          error.statusCode = 409;
-          error.code = 'V7_PREVIEW_REVISION_CONFLICT';
-          error.actual_revision_no = Number(locked.current_revision_no);
-          throw error;
-        }
-        if (text(meta.expectedContentHash) !== text(locked.current_content_hash)) {
-          const error = new Error('当前案例内容摘要已经变化，请刷新后重试');
-          error.statusCode = 409;
-          error.code = 'V7_PREVIEW_CONTENT_HASH_CONFLICT';
-          throw error;
-        }
-        if (text(locked.process_ref) !== preview.processRef) {
-          const error = new Error('新修订的流程稳定引用与当前案例不一致');
-          error.statusCode = 422;
-          error.code = 'V7_PREVIEW_PROCESS_REF_MISMATCH';
-          throw error;
-        }
-        if (text(locked.current_content_hash) === preview.contentHash) {
+        const state = await lockCurrentPreviewWriteState(connection, caseRow.id, meta);
+        const { lockedCase: locked } = state;
+        projectLockedPreview(state, { owningDepartmentName: locked.owning_department_name });
+        const candidatePreview = projectCandidatePreview(preview && preview.document, state, {
+          owningDepartmentName: locked.owning_department_name
+        });
+        if (text(locked.current_content_hash) === candidatePreview.contentHash) {
           const detail = await getCaseDetailFrom(connection, locked.id);
           return { ...detail, idempotent: true };
         }
-        const previousRows = await rows(connection, `
-          SELECT * FROM process_v7_preview_review_items
-          WHERE case_id=? AND is_current=1
-          ORDER BY id
-          FOR UPDATE
-        `, [locked.id]);
-        const mergedItems = mergeReviewItems(previousRows.map(publicItem), preview.items);
+        const mergedItems = mergeReviewItems(state.currentItems, candidatePreview.items);
         const revisionNo = Number(locked.current_revision_no) + 1;
         const [revisionResult] = await connection.execute(`
           INSERT INTO process_v7_preview_revisions
@@ -592,15 +673,15 @@ function makeProcessV7PreviewReviewRepository(pool) {
           locked.id,
           revisionNo,
           meta.sourceFileName,
-          text(preview.document && preview.document.export_meta && preview.document.export_meta.exported_at) || null,
-          preview.contentHash,
-          JSON.stringify(preview.document),
+          text(candidatePreview.document && candidatePreview.document.export_meta && candidatePreview.document.export_meta.exported_at) || null,
+          candidatePreview.contentHash,
+          JSON.stringify(candidatePreview.document),
           actor.userId || null,
           actor.personId || null
         ]);
         await connection.execute('UPDATE process_v7_preview_review_items SET is_current=0 WHERE case_id=? AND is_current=1', [locked.id]);
         const insertedItems = await insertReviewItems(connection, locked.id, revisionResult.insertId, revisionNo, mergedItems, actor);
-        const status = caseStatusFromItems(insertedItems, Boolean(locked.owning_department_id), preview.blockingIssues);
+        const status = caseStatusFromItems(insertedItems, Boolean(locked.owning_department_id), candidatePreview.blockingIssues);
         await connection.execute(`
           UPDATE process_v7_preview_cases
           SET process_name=?, status=?, current_revision_no=?, current_revision_id=?, current_content_hash=?,
@@ -609,12 +690,12 @@ function makeProcessV7PreviewReviewRepository(pool) {
               updated_at=CURRENT_TIMESTAMP
           WHERE id=?
         `, [
-          preview.processName,
+          candidatePreview.processName,
           status,
           revisionNo,
           revisionResult.insertId,
-          preview.contentHash,
-          JSON.stringify(preview.blockingIssues || []),
+          candidatePreview.contentHash,
+          JSON.stringify(candidatePreview.blockingIssues || []),
           locked.id
         ]);
         await insertEvent(connection, {
@@ -624,7 +705,7 @@ function makeProcessV7PreviewReviewRepository(pool) {
           actor,
           payload: {
             source_file_name: meta.sourceFileName,
-            content_hash: preview.contentHash,
+            content_hash: candidatePreview.contentHash,
             previous_revision_no: Number(locked.current_revision_no),
             carried_forward: mergedItems.filter(item => item.carry_state === 'carried_forward').length,
             reopened: mergedItems.filter(item => item.carry_state === 'reopened').length
@@ -640,35 +721,27 @@ function makeProcessV7PreviewReviewRepository(pool) {
     },
 
     async decideItem(itemRow, party, decision, basis, expectedRevisionNo, expectedContentHash, actor) {
+      assertPreviewFeatureEnabled();
       return await withTransaction(pool, async connection => {
-        const caseRowLocked = await one(connection, 'SELECT * FROM process_v7_preview_cases WHERE id=? FOR UPDATE', [itemRow.case_id]);
-        if (!caseRowLocked) {
-          const error = new Error('V7预览核对案例不存在');
-          error.statusCode = 404;
-          error.code = 'V7_PREVIEW_CASE_NOT_FOUND';
-          throw error;
+        const state = await lockCurrentPreviewWriteState(connection, itemRow.case_id, {
+          expectedRevisionNo,
+          expectedContentHash
+        });
+        const { lockedCase: caseRowLocked, lockedRevision } = state;
+        const item = state.currentItems.find(current => Number(current.id) === Number(itemRow.id));
+        if (!item) {
+          throw repositoryError(409, 'V7_PREVIEW_ITEM_SUPERSEDED', '当前核对项已经被新修订替代');
         }
-        const item = await one(connection, 'SELECT * FROM process_v7_preview_review_items WHERE id=? FOR UPDATE', [itemRow.id]);
-        if (!item || !item.is_current) {
-          const error = new Error('当前核对项已经被新修订替代');
-          error.statusCode = 409;
-          error.code = 'V7_PREVIEW_ITEM_SUPERSEDED';
-          throw error;
+        const actorDepartmentId = Number(actor && actor.departmentId || 0);
+        const lockedParty = actorDepartmentId && Number(item.origin_department_id) === actorDepartmentId
+          ? 'origin'
+          : actorDepartmentId && Number(item.target_department_id) === actorDepartmentId
+            ? 'counterparty'
+            : '';
+        if (!lockedParty || (party && text(party) !== lockedParty)) {
+          throw repositoryError(403, 'V7_PREVIEW_SCOPE_DENIED', '当前审核员所在部门不是锁定核对项的对应参与方');
         }
-        if (Number(expectedRevisionNo) !== Number(caseRowLocked.current_revision_no)) {
-          const error = new Error('当前案例已经上传新修订，请刷新后重试');
-          error.statusCode = 409;
-          error.code = 'V7_PREVIEW_REVISION_CONFLICT';
-          error.actual_revision_no = Number(caseRowLocked.current_revision_no);
-          throw error;
-        }
-        if (text(expectedContentHash) !== text(caseRowLocked.current_content_hash)) {
-          const error = new Error('当前案例内容摘要已经变化，请刷新后重试');
-          error.statusCode = 409;
-          error.code = 'V7_PREVIEW_CONTENT_HASH_CONFLICT';
-          throw error;
-        }
-        const prefix = party === 'origin' ? 'origin' : 'counterparty';
+        const prefix = lockedParty;
         await connection.execute(`
           UPDATE process_v7_preview_review_items
           SET ${prefix}_status=?, ${prefix}_basis=?,
@@ -679,8 +752,7 @@ function makeProcessV7PreviewReviewRepository(pool) {
         const updated = publicItem(await one(connection, 'SELECT * FROM process_v7_preview_review_items WHERE id=?', [item.id]));
         updated.status = itemStatus(updated);
         await connection.execute('UPDATE process_v7_preview_review_items SET status=? WHERE id=?', [updated.status, item.id]);
-        const currentItems = (await rows(connection, 'SELECT * FROM process_v7_preview_review_items WHERE case_id=? AND is_current=1', [item.case_id])).map(publicItem);
-        const replaced = currentItems.map(current => Number(current.id) === Number(updated.id) ? updated : current);
+        const replaced = state.currentItems.map(current => Number(current.id) === Number(updated.id) ? updated : current);
         const caseStatus = caseStatusFromItems(
           replaced,
           Boolean(caseRowLocked.owning_department_id),
@@ -690,50 +762,62 @@ function makeProcessV7PreviewReviewRepository(pool) {
         await connection.execute('UPDATE process_v7_preview_cases SET status=?, updated_at=CURRENT_TIMESTAMP WHERE id=?', [caseStatus, item.case_id]);
         await insertEvent(connection, {
           caseId: item.case_id,
-          revisionId: item.revision_id,
+          revisionId: lockedRevision.id,
           itemId: item.id,
           eventType: 'department_review_decision_recorded',
           actor,
           decision,
           basis,
-          payload: { party, previous_status: item[`${prefix}_status`], case_status: caseStatus }
+          payload: { party: lockedParty, previous_status: item[`${prefix}_status`], case_status: caseStatus }
         });
         return { ...updated, status: updated.status, case_status: caseStatus };
       });
     },
 
-    async recordScopeDecision(caseRow, decision, basis, preview, expectedRevisionNo, expectedContentHash, actor) {
+    async recordScopeDecision(caseRow, decision, basis, _preview, expectedRevisionNo, expectedContentHash, actor) {
+      assertPreviewFeatureEnabled();
       return await withTransaction(pool, async connection => {
-        const locked = await one(connection, 'SELECT * FROM process_v7_preview_cases WHERE id=? FOR UPDATE', [caseRow.id]);
-        if (!locked) {
-          const error = new Error('V7预览核对案例不存在');
-          error.statusCode = 404;
-          error.code = 'V7_PREVIEW_CASE_NOT_FOUND';
-          throw error;
-        }
-        if (Number(expectedRevisionNo) !== Number(locked.current_revision_no)) {
-          const error = new Error('当前案例已经上传新修订，请刷新后重试');
-          error.statusCode = 409;
-          error.code = 'V7_PREVIEW_REVISION_CONFLICT';
-          error.actual_revision_no = Number(locked.current_revision_no);
-          throw error;
-        }
-        if (text(expectedContentHash) !== text(locked.current_content_hash)) {
-          const error = new Error('当前案例内容摘要已经变化，请刷新后重试');
-          error.statusCode = 409;
-          error.code = 'V7_PREVIEW_CONTENT_HASH_CONFLICT';
-          throw error;
+        const state = await lockCurrentPreviewWriteState(connection, caseRow.id, {
+          expectedRevisionNo,
+          expectedContentHash
+        });
+        const { lockedCase: locked } = state;
+        let preview = projectLockedPreview(state, {
+          owningDepartmentName: locked.owning_department_name
+        });
+        const issueCodes = new Set((preview.blockingIssues || []).map(issue => text(issue && issue.code)));
+        if (decision === 'confirmed_no_cross_department') {
+          if (!issueCodes.has('ZERO_CROSS_DEPARTMENT_SCOPE_PENDING')) {
+            throw repositoryError(409, 'V7_PREVIEW_SCOPE_DECISION_NOT_APPLICABLE', '当前修订不是待确认的零跨部门范围案例');
+          }
+        } else if (decision === 'keep_current_owner' || decision === 'accept_source_owner') {
+          if (!issueCodes.has('OWNING_DEPARTMENT_CHANGE_PENDING')) {
+            throw repositoryError(409, 'V7_PREVIEW_SCOPE_DECISION_NOT_APPLICABLE', '当前修订没有待处理的归口部门变化');
+          }
+        } else {
+          throw repositoryError(422, 'V7_PREVIEW_SCOPE_DECISION_INVALID', '范围决定必须从系统选项中选择');
         }
 
-        let currentItems = (await rows(connection, `
-          SELECT * FROM process_v7_preview_review_items
-          WHERE case_id=? AND is_current=1
-          ORDER BY id
-          FOR UPDATE
-        `, [locked.id])).map(publicItem);
+        let currentItems = state.currentItems;
         let ownerId = locked.owning_department_id;
         let ownerName = locked.owning_department_name;
         if (decision === 'accept_source_owner') {
+          const acceptedPreview = validateAndProjectV7(
+            parseJson(state.lockedRevision.content_json, {}),
+            state.activeDepartments
+          );
+          if (acceptedPreview.errors.length || !acceptedPreview.owningDepartment) {
+            throw repositoryError(422, 'V7_PREVIEW_OWNER_INVALID', '当前修订中的归口部门不能作为有效范围决定');
+          }
+          if (
+            text(acceptedPreview.processRef) !== text(locked.process_ref) ||
+            text(acceptedPreview.contentHash) !== text(locked.current_content_hash) ||
+            text(acceptedPreview.contentHash) !== text(state.lockedRevision.content_hash) ||
+            (acceptedPreview.blockingIssues || []).some(issue => text(issue && issue.code) === 'OWNING_DEPARTMENT_CHANGE_PENDING')
+          ) {
+            throw repositoryError(409, 'V7_PREVIEW_SCOPE_DECISION_NOT_APPLICABLE', '锁定修订重新投影后仍未解除归口部门变化，不能采用修订中的归口部门');
+          }
+          preview = acceptedPreview;
           await connection.execute(
             'UPDATE process_v7_preview_review_items SET is_current=0 WHERE case_id=? AND is_current=1',
             [locked.id]
@@ -788,9 +872,11 @@ function makeProcessV7PreviewReviewRepository(pool) {
     },
 
     async promoteCase(detail, preview, target, meta, actor) {
+      assertPromotionFeatureEnabled();
       return await withTransaction(pool, async connection => {
         const lockedCase = await one(connection, 'SELECT * FROM process_v7_preview_cases WHERE id=? FOR UPDATE', [detail.case.id]);
         if (!lockedCase) throw repositoryError(404, 'V7_PREVIEW_CASE_NOT_FOUND', 'V7预览核对案例不存在');
+        assertPromotionWriteScope(lockedCase.process_ref);
         if (text(lockedCase.status) !== 'review_complete') {
           throw repositoryError(409, 'V7_PREVIEW_REVIEW_INCOMPLETE', '当前V7预览案例尚未完成核对，不能提升为正式草稿');
         }
@@ -801,9 +887,6 @@ function makeProcessV7PreviewReviewRepository(pool) {
         }
         if (text(meta.expectedContentHash) !== text(lockedCase.current_content_hash)) {
           throw repositoryError(409, 'V7_PREVIEW_CONTENT_HASH_CONFLICT', '当前案例内容摘要已经变化，请刷新后重试');
-        }
-        if (text(preview.contentHash) !== text(lockedCase.current_content_hash) || text(preview.processRef) !== text(lockedCase.process_ref)) {
-          throw repositoryError(409, 'V7_PREVIEW_CONTENT_HASH_CONFLICT', '当前修订正文与案例摘要不一致，不能提升');
         }
 
         const lockedRevision = await one(connection, `
@@ -819,6 +902,42 @@ function makeProcessV7PreviewReviewRepository(pool) {
           throw repositoryError(409, 'V7_PREVIEW_REVISION_CONFLICT', '当前修订号或内容摘要已经变化，请刷新后重试', {
             actual_revision_no: Number(lockedRevision.revision_no)
           });
+        }
+
+        const activeDepartments = await rows(connection, `
+          SELECT id, name, code
+          FROM departments
+          WHERE status='active'
+          ORDER BY sort_order, id
+          FOR SHARE
+        `);
+        const currentPreview = validateAndProjectV7(parseJson(lockedRevision.content_json, {}), activeDepartments, {
+          owningDepartmentName: lockedCase.owning_department_name
+        });
+        if (currentPreview.errors.length) {
+          const error = repositoryError(422, 'V7_PREVIEW_CONTENT_INVALID', '当前V7修订不再符合预览核对要求，不能提升');
+          error.payload = { error: error.message, code: error.code, details: currentPreview.errors };
+          throw error;
+        }
+        const blockingIssues = unresolvedBlockingIssues(currentPreview.blockingIssues, text(lockedCase.scope_decision));
+        if (blockingIssues.length) {
+          const error = repositoryError(
+            409,
+            'V7_PREVIEW_BLOCKING_ISSUES',
+            '当前V7修订仍有未解决的预览核对卡口，不能提升为正式草稿'
+          );
+          error.payload = {
+            error: error.message,
+            code: error.code,
+            details: blockingIssues.map(issue => ({ code: text(issue && issue.code) })).filter(issue => issue.code)
+          };
+          throw error;
+        }
+        if (
+          text(currentPreview.contentHash) !== text(lockedCase.current_content_hash) ||
+          text(currentPreview.processRef) !== text(lockedCase.process_ref)
+        ) {
+          throw repositoryError(409, 'V7_PREVIEW_CONTENT_HASH_CONFLICT', '当前修订正文与案例摘要不一致，不能提升');
         }
 
         const existingPromotion = await one(connection, `
@@ -888,8 +1007,8 @@ function makeProcessV7PreviewReviewRepository(pool) {
           LIMIT 1
           FOR UPDATE
         `, [formalDocument.id]);
-        const relatedDepartmentIds = [...new Set((preview.items || []).map(item => Number(item.target_department_id)).filter(Boolean))];
-        const serializedContent = JSON.stringify(preview.document);
+        const relatedDepartmentIds = [...new Set((currentPreview.items || []).map(item => Number(item.target_department_id)).filter(Boolean))];
+        const serializedContent = JSON.stringify(currentPreview.document);
         let formalDraft;
         if (activeDraft) {
           if (
@@ -914,7 +1033,7 @@ function makeProcessV7PreviewReviewRepository(pool) {
           `, [
             formalDocument.document_no,
             formalDocument.document_title,
-            preview.processName,
+            currentPreview.processName,
             '3001 V7预览核对完成后受控提升',
             'V7预览核对',
             `preview_case:${lockedCase.case_ref};revision:${lockedRevision.revision_no}`,
@@ -945,7 +1064,7 @@ function makeProcessV7PreviewReviewRepository(pool) {
             plannedEdition,
             currentVersion && currentVersion.id || null,
             formalDocument.document_no,
-            preview.processName,
+            currentPreview.processName,
             '3001 V7预览核对完成后受控提升',
             'V7预览核对',
             `preview_case:${lockedCase.case_ref};revision:${lockedRevision.revision_no}`,

@@ -240,13 +240,26 @@ function compareFormalProcessBaselines(before, after) {
   };
 }
 
+function migrationConsistencyStatus(tables, migrationRecorded) {
+  const states = Array.isArray(tables) ? tables : [];
+  const existing = states.filter(item => item && item.exists);
+  if (existing.some(item => item.schema_status && item.schema_status !== 'matching')) return 'schema_drift';
+  if (existing.length === 0) return migrationRecorded ? 'record_without_structure' : 'not_applied';
+  if (existing.length < TABLES.length) return migrationRecorded ? 'record_without_structure' : 'partial_structure';
+  return migrationRecorded ? 'applied' : 'structure_without_record';
+}
+
 async function inspectProcessV7PreviewReview(pool, options = {}) {
   const tables = [];
   for (const tableName of TABLES) tables.push(await tableState(pool, tableName, options));
   const migrationRows = await query(pool, 'SELECT migration_key FROM schema_migrations WHERE migration_key=?', [MIGRATION_KEY]);
+  const migrationRecorded = Boolean(migrationRows[0]);
+  const consistencyStatus = migrationConsistencyStatus(tables, migrationRecorded);
   const result = {
     migration_key: MIGRATION_KEY,
-    applied: Boolean(migrationRows[0]),
+    migration_recorded: migrationRecorded,
+    applied: consistencyStatus === 'applied',
+    consistency_status: consistencyStatus,
     tables,
     formal_tables_plan: 'read-only baseline; preview migration does not target formal process tables'
   };
@@ -259,17 +272,21 @@ async function inspectProcessV7PreviewReview(pool, options = {}) {
 async function applyProcessV7PreviewReview(pool) {
   const formalBefore = await inspectFormalProcessBaseline(pool);
   const previewBefore = await inspectProcessV7PreviewReview(pool, { includeFormalBaseline: false });
-  const driftedTables = previewBefore.tables.filter(item => item.schema_status === 'drifted');
-  if (driftedTables.length) {
-    const error = new Error('V7预览表结构与预期不一致，拒绝继续迁移');
-    error.code = 'V7_PREVIEW_SCHEMA_DRIFT';
-    error.manual_objects = driftedTables;
+  if (previewBefore.consistency_status === 'applied') {
+    return {
+      ...(await inspectProcessV7PreviewReview(pool)),
+      formal_process_comparison: compareFormalProcessBaselines(formalBefore, formalBefore)
+    };
+  }
+  if (previewBefore.consistency_status !== 'not_applied') {
+    const error = new Error('V7预览迁移记录与表结构不一致，拒绝自动修复');
+    error.code = 'V7_PREVIEW_MIGRATION_INCONSISTENT';
+    error.consistency_status = previewBefore.consistency_status;
+    error.manual_objects = previewBefore.tables;
     throw error;
   }
   for (const statement of splitStatements(PROCESS_V7_PREVIEW_SCHEMA_SQL)) {
-    const match = statement.match(/^CREATE TABLE IF NOT EXISTS\s+([A-Za-z0-9_]+)/i);
-    const state = match && previewBefore.tables.find(item => item.table === match[1]);
-    if (!state || !state.exists) await pool.execute(statement);
+    await pool.execute(statement);
   }
   const previewAfter = await inspectProcessV7PreviewReview(pool, { includeFormalBaseline: false });
   const invalidSchemas = previewAfter.tables.filter(item => item.schema_status !== 'matching');
@@ -319,5 +336,6 @@ module.exports = {
   compareFormalProcessBaselines,
   inspectFormalProcessBaseline,
   inspectProcessV7PreviewReview,
+  migrationConsistencyStatus,
   rollbackProcessV7PreviewReview
 };

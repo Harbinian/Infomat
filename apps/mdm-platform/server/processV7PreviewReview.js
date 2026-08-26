@@ -14,6 +14,7 @@ for (const version of [1, 2]) {
 const validateV7 = validator.compile(V7_SCHEMA);
 
 const PARTY_STATUSES = new Set(['pending', 'confirmed', 'needs_changes', 'pending_evidence', 'disputed']);
+const REVIEW_ITEM_DIGEST_VERSION = 'process-v7-review-item-v2';
 
 function text(value) {
   return String(value == null ? '' : value).trim();
@@ -40,6 +41,19 @@ function contentHash(value) {
   return crypto.createHash('sha256').update(stableStringify(value), 'utf8').digest('hex');
 }
 
+function canonicalReviewValue(value) {
+  if (Array.isArray(value)) {
+    return value
+      .map(canonicalReviewValue)
+      .sort((left, right) => stableStringify(left).localeCompare(stableStringify(right)));
+  }
+  if (!value || typeof value !== 'object') return value;
+  return Object.keys(value).sort().reduce((result, key) => {
+    result[key] = canonicalReviewValue(value[key]);
+    return result;
+  }, {});
+}
+
 function actorDepartment(actorRole, departments) {
   const raw = text(actorRole);
   if (!raw || raw === '全公司') return null;
@@ -58,42 +72,24 @@ function actorPosition(actorRole, departmentName) {
 function relationProjection(document, behaviorRef) {
   return list(document.flow_relations)
     .filter(item => text(item.from_behavior_ref) === behaviorRef || text(item.to_behavior_ref) === behaviorRef)
-    .map(item => ({
-      relation_ref: text(item.relation_ref),
-      relation_type: text(item.relation_type),
-      from_behavior_ref: text(item.from_behavior_ref),
-      to_behavior_ref: item.to_behavior_ref == null ? null : text(item.to_behavior_ref),
-      condition: text(item.condition)
-    }))
-    .sort((left, right) => stableStringify(left).localeCompare(stableStringify(right)));
+    .map(canonicalReviewValue)
+    .sort((left, right) => text(left.relation_ref).localeCompare(text(right.relation_ref)) || stableStringify(left).localeCompare(stableStringify(right)));
 }
 
 function dataProjection(document, behaviorRef) {
-  return list(document.data_objects).flatMap(dataObject => {
-    const fieldNames = new Map(list(dataObject.fields).map(field => [text(field.field_ref), text(field.field_name)]));
-    return list(dataObject.behavior_links)
-      .filter(link => text(link.behavior_ref) === behaviorRef)
-      .map(link => ({
-        data_ref: text(dataObject.data_ref),
-        data_name: text(dataObject.data_name),
-        operation: text(link.operation),
-        updated_fields: list(link.updated_field_refs).map(ref => ({
-          field_ref: text(ref),
-          field_name: fieldNames.get(text(ref)) || ''
-        }))
-      }));
-  }).sort((left, right) => stableStringify(left).localeCompare(stableStringify(right)));
+  return list(document.data_objects)
+    .filter(dataObject => list(dataObject.behavior_links)
+      .some(link => text(link.behavior_ref) === behaviorRef))
+    .map(canonicalReviewValue)
+    .sort((left, right) => text(left.data_ref).localeCompare(text(right.data_ref)) || stableStringify(left).localeCompare(stableStringify(right)));
 }
 
 function formProjection(document, behaviorRef) {
-  return list(document.forms).flatMap(form => list(form.behavior_links)
-    .filter(link => text(link.behavior_ref) === behaviorRef)
-    .map(link => ({
-      form_ref: text(form.form_ref),
-      form_name: text(form.form_name),
-      operation: text(link.operation)
-    })))
-    .sort((left, right) => stableStringify(left).localeCompare(stableStringify(right)));
+  return list(document.forms)
+    .filter(form => list(form.behavior_links)
+      .some(link => text(link.behavior_ref) === behaviorRef))
+    .map(canonicalReviewValue)
+    .sort((left, right) => text(left.form_ref).localeCompare(text(right.form_ref)) || stableStringify(left).localeCompare(stableStringify(right)));
 }
 
 function itemStatus(item) {
@@ -192,27 +188,17 @@ function validateAndProjectV7(document, departments, options = {}) {
     if (!owningDepartment || Number(executionDepartment.id) === Number(owningDepartment.id)) continue;
 
     const snapshot = {
+      digest_version: REVIEW_ITEM_DIGEST_VERSION,
       departments: {
         origin_department_code: text(owningDepartment.code),
         origin_department_name: text(owningDepartment.name),
         target_department_code: text(executionDepartment.code),
         target_department_name: text(executionDepartment.name)
       },
-      behavior: {
-        behavior_ref: text(behavior.behavior_ref),
-        node_type: text(behavior.node_type),
-        behavior_name: text(behavior.behavior_name),
-        behavior_description: text(behavior.behavior_description),
-        current_actor_role: text(behavior.current_actor_role),
-        actor_assignment_mode: text(behavior.actor_assignment_mode),
-        trigger: text(behavior.trigger),
-        precondition: text(behavior.precondition),
-        timing: behavior.timing == null ? null : text(behavior.timing),
-        completion_standard: text(behavior.completion_standard)
-      },
+      behavior: canonicalReviewValue(behavior),
       flow_relations: relationProjection(document, text(behavior.behavior_ref)),
-      data_relations: dataProjection(document, text(behavior.behavior_ref)),
-      form_relations: formProjection(document, text(behavior.behavior_ref))
+      data_objects: dataProjection(document, text(behavior.behavior_ref)),
+      forms: formProjection(document, text(behavior.behavior_ref))
     };
     items.push({
       stable_item_key: contentHash([text(behavior.behavior_ref), text(executionDepartment.code)]),
@@ -259,7 +245,10 @@ function mergeReviewItems(previousItems, nextItems) {
   return list(nextItems).map(next => {
     const previous = previousByKey.get(text(next.stable_item_key));
     if (!previous) return { ...next, carry_state: 'new' };
-    if (text(previous.item_digest) !== text(next.item_digest)) {
+    if (
+      text(previous.item_snapshot && previous.item_snapshot.digest_version) !== REVIEW_ITEM_DIGEST_VERSION ||
+      text(previous.item_digest) !== text(next.item_digest)
+    ) {
       return {
         ...next,
         origin_status: 'pending',
@@ -334,6 +323,7 @@ function compareReviewItems(previousItems, nextItems) {
 
 module.exports = {
   PARTY_STATUSES,
+  REVIEW_ITEM_DIGEST_VERSION,
   V7,
   caseStatusFromItems,
   compareReviewItems,

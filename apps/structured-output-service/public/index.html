@@ -296,6 +296,14 @@
       font-weight: 700;
     }
 
+    .candidate-file-state {
+      display: block;
+      margin-top: 3px;
+      color: #5d685a;
+      font-size: 11px;
+    }
+    .candidate-file-state.ready { color: #40543b; }
+
     .candidate-empty {
       padding: 12px;
       border: 1px dashed #bcae90;
@@ -1369,14 +1377,39 @@
 
     .data-edit-mode-shell { display: grid; gap: 10px; margin-bottom: 12px; }
     .data-edit-mode-shell .step-view-switch { margin-bottom: 0; }
-    .web-grid-editor { display: grid; gap: 14px; min-width: 0; }
+    .web-grid-editor { display: grid; gap: 18px; min-width: 0; }
     .web-grid-workspaces { display: flex; flex-wrap: wrap; gap: 8px; }
-    .web-grid-panel { display: grid; gap: 10px; min-width: 0; }
-    .web-grid-panel + .web-grid-panel { padding-top: 12px; border-top: 1px solid var(--line); }
-    .web-grid-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+    .web-grid-panel {
+      display: grid;
+      gap: 12px;
+      min-width: 0;
+      padding: 16px;
+      scroll-margin-top: 132px;
+      border: 1px solid #d5c7aa;
+      border-radius: 12px;
+      background: rgba(255, 253, 247, 0.78);
+      box-shadow: 0 4px 14px rgba(76, 58, 33, 0.06);
+    }
+    .web-grid-panel + .web-grid-panel { margin-top: 4px; }
+    .web-grid-panel:focus-within {
+      border-color: var(--sage);
+      box-shadow: 0 0 0 3px rgba(102, 116, 95, 0.16), 0 6px 18px rgba(76, 58, 33, 0.08);
+    }
+    .web-grid-heading { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 10px; }
     .web-grid-heading h3 { margin: 0; font-size: 17px; }
     .web-grid-heading p { flex-basis: 100%; margin: 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
-    .web-grid-toolbar { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; }
+    .web-grid-toolbar {
+      display: flex;
+      flex-basis: 100%;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 10px 14px;
+      align-items: center;
+      padding-top: 10px;
+      border-top: 1px solid #e3d9c4;
+    }
+    .web-grid-primary-tools,
+    .web-grid-row-tools { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; }
     .web-grid-search { min-width: min(260px, 100%); min-height: 34px; padding: 6px 9px; border: 1px solid var(--line); border-radius: 8px; background: #fffdf8; }
     .web-grid-shell { min-width: 0; max-width: 100%; max-height: 420px; overflow: auto; border: 1px solid var(--line); border-radius: 10px; background: #fffdf8; }
     .web-grid-table { width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; font-size: 13px; }
@@ -1466,6 +1499,23 @@
       flex-wrap: wrap;
       gap: 8px;
     }
+
+    .form-field-create-panel {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      gap: 10px 12px;
+      margin-top: 14px;
+      padding: 14px;
+      border: 1px solid #bdc9b7;
+      border-radius: 11px;
+      background: rgba(223, 231, 219, 0.54);
+    }
+    .form-field-create-copy { flex-basis: 100%; display: grid; gap: 4px; }
+    .form-field-create-copy span { color: var(--muted); font-size: 12px; line-height: 1.55; }
+    .form-field-create-control { display: grid; flex: 1 1 240px; gap: 5px; min-width: 0; }
+    .form-field-create-control > span { color: #514834; font-size: 12px; font-weight: 700; }
+    .form-field-create-control select { width: 100%; min-height: 36px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 8px; background: #fffdf8; }
 
     .structure-tabs {
       display: flex;
@@ -2187,6 +2237,7 @@
     }
 
     .modal-backdrop.show { display: flex; }
+    #pendingEditModal { z-index: 40; }
     .modal {
       width: min(560px, 100%);
       padding: 24px;
@@ -2440,14 +2491,14 @@
     </div>
   </div>
 
-  <div class="modal-backdrop" id="gridModeSwitchModal" aria-hidden="true">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="gridModeSwitchTitle">
-      <h2 id="gridModeSwitchTitle">表格中还有未应用的修改</h2>
-      <p>其他页面、下载文件和候选流程只读取已经写入当前JSON的内容。请选择如何处理本次表格修改。</p>
+  <div class="modal-backdrop" id="pendingEditModal" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="pendingEditTitle" aria-describedby="pendingEditText">
+      <h2 id="pendingEditTitle">当前还有未应用修改</h2>
+      <p id="pendingEditText">当前输入尚未写入当前JSON，也不会进入下载文件。请选择如何处理后再继续。</p>
       <div class="modal-actions">
-        <button class="button" id="continueGridEditingButton">继续编辑表格</button>
-        <button class="button danger" id="discardGridChangesButton">放弃并切换</button>
-        <button class="button primary" id="applyGridChangesButton">应用并切换</button>
+        <button class="button" id="continuePendingEditingButton">继续编辑</button>
+        <button class="button danger" id="discardPendingEditButton">放弃修改并继续</button>
+        <button class="button primary" id="applyPendingEditButton">应用修改并继续</button>
       </div>
     </div>
   </div>
@@ -2467,6 +2518,7 @@
 
   <script src="/vendor/cytoscape.min.js"></script>
   <script src="process-governance-migration.js"></script>
+  <script src="import-compatibility.js"></script>
   <script src="governance-workflow.js"></script>
   <script src="legacy-cross-department-diagnostics.js"></script>
   <script src="web-grid-core.js"></script>
@@ -2474,6 +2526,7 @@
   <script src="process-v7-grid-adapter.js"></script>
   <script src="graph-edit-commands.js"></script>
   <script src="graph-editor-state.js"></script>
+  <script src="edit-session-manager.js"></script>
   <script src="process-diagram.js"></script>
   <script src="data-relation-diagram.js"></script>
   <script src="lifecycle-analyzer.js"></script>
@@ -2660,8 +2713,8 @@
       },
       {
         title: '5. 数据与表单',
-        action: '编制人先确认本流程是否涉及数据对象或表单。少量内容使用业务式编辑逐项维护；集中处理多行时使用表格编辑，并在检查通过后点击“应用本次修改”。',
-        completion: '两种编辑方式显示同一份当前JSON；页面记录了实际存在的数据和表单关系，确实不适用时保持为空。'
+        action: '编制人先定义数据对象和对象字段；录入实际表单时，选择已有对象字段及主表或明细表位置，由页面同步数据类型，并只在表单显示名称为空时带入对象字段名称。少量内容使用业务式编辑逐项维护；集中处理多行时使用表格编辑，并在检查通过后点击“应用本次修改”。',
+        completion: '对象字段只定义一次；实际表单引用对象字段，并保留可以按纸质表单调整的表单显示名称。两种编辑方式显示同一份当前JSON；确实不适用时保持为空。'
       },
       {
         title: '6. 跨部门核对',
@@ -2720,11 +2773,15 @@
           ['表单或记录', '流程中实际使用的纸质表单、电子表单、台账或业务记录。页面只记录结构和处理关系，不据此推断数据库表。'],
           ['主表', '一张表单中每份业务记录只出现一次的主体填写结构，页面使用“基本信息”区域保存。'],
           ['明细表', '一张表单中可以有零到多张、每张可以包含多行的明细填写结构。不同明细表必须分别保留，不得擅自合并。'],
-          ['填写项', '主表或明细表下的具体字段，记录名称、类型、是否必填、说明、业务数据归属和值来源。'],
+          ['对象字段', '一个数据对象下统一定义的字段名称、数据类型和业务定义。对象字段只在当前单流程文件内复用，不等于企业级字段身份或主数据认定。'],
+          ['填写项', '主表或明细表中的一个表单字段位置，记录表单显示名称、是否必填、说明、业务数据归属、对象字段引用和值来源。'],
+          ['表单显示名称', '字段在实际纸质表单或电子表单上显示的名称。引用对象字段时，页面只为尚未填写的名称带入对象字段名称；用户可以按实际表单修改，之后对象字段改名也不会自动覆盖。'],
+          ['对象字段引用', '表单字段位置对对象字段的技术引用。页面据此同步字段类型并建立数据关系，但表单字段位置仍保留独立标识和表单显示名称。'],
           ['字段业务数据归属', '说明一个填写项表达哪项数据对象。一个字段最多归属一个数据对象，不等于字段值从该对象取得。'],
           ['字段取值来源', '说明字段值依赖哪些本流程数据或外部系统数据取得、参与计算或执行校验，可以有多个来源。'],
           ['双模式编辑', '步骤5的业务式编辑和表格编辑共同读写当前页面内存中的同一份JSON。业务式编辑适合逐项维护，表格编辑适合集中维护多行。'],
           ['表格工作副本', '进入表格编辑后形成的当前会话临时行数据。只有点击“应用本次修改”且全部检查通过后，页面才一次写入当前JSON。'],
+          ['表格新增入口', '每个编辑区使用“新增数据对象”“新增表单字段”等本区专用名称。新增时页面清空本区查找条件，并把焦点放到新行第一个尚未填写的控件。'],
           ['同名归并', '把经人工核对后确认可以合并的同名数据对象归并为一个保留对象。名称相同只触发核对入口，不自动证明对象相同。']
         ]
       },
@@ -2740,7 +2797,7 @@
           ['业务提示', '页面根据现有内容发现的缺项、矛盾或待核对事项。业务提示不阻止阶段草稿下载，也不等于业务结论。'],
           ['待定', '现有事实或证据不足，暂时不能可靠填写或确认。保持待定比猜测或虚构内容更符合治理要求。'],
           ['独立结构预审', '在新的核对上下文中，只依据待审JSON和对应结构规则检查必需结构、引用、字段归位和对象拆分，不判断流程事实是否正确。'],
-          ['3000停止边界', '3001生成的v7文件暂不能直接导入3000，也不得自动降级；后续承接需另行完成兼容、迁移审核和验证。']
+          ['3000停止边界', '3000的V7技术链路已实现、数据库已准备，但运行时默认关闭且真实单流程试点待验收。3001不与3000通信；v7文件只能在另行批准的精确单流程范围内受控承接，不得直接导入或自动降级。']
         ]
       }
     ];
@@ -2804,6 +2861,7 @@
     let flowRelationDraft = null;
     let graphSelection = null;
     const graphStateManager = globalThis.GraphEditorState.createManager({ limit: 20 });
+    const editSessionManager = globalThis.EditSessionManager.createManager();
     const reviewPatternViews = new Map();
     let expandedReviewPatternId = '';
     let diagramExampleExpanded = false;
@@ -2823,14 +2881,12 @@
     const checkedGovernanceSteps = new Set();
     let webGridSession = null;
     let webGridIssues = [];
-    let webGridPendingMode = '';
-    let webGridPendingAction = null;
     let webGridSelectedRows = {};
     let webGridFilters = {};
     let webGridSorts = {};
     let webGridRanges = {};
     let updateFieldsModalState = null;
-    const masterDataPendingRefs = new Set();
+    let pendingTransition = null;
     const workspace = document.getElementById('workspace');
     const statusBox = document.getElementById('statusBox');
     const candidateList = document.getElementById('candidateList');
@@ -2843,10 +2899,12 @@
     const owningDepartmentChangeModal = document.getElementById('owningDepartmentChangeModal');
     const owningDepartmentChangeContent = document.getElementById('owningDepartmentChangeContent');
     const confirmOwningDepartmentChangeButton = document.getElementById('confirmOwningDepartmentChangeButton');
-    const gridModeSwitchModal = document.getElementById('gridModeSwitchModal');
-    const continueGridEditingButton = document.getElementById('continueGridEditingButton');
-    const discardGridChangesButton = document.getElementById('discardGridChangesButton');
-    const applyGridChangesButton = document.getElementById('applyGridChangesButton');
+    const pendingEditModal = document.getElementById('pendingEditModal');
+    const pendingEditTitle = document.getElementById('pendingEditTitle');
+    const pendingEditText = document.getElementById('pendingEditText');
+    const continuePendingEditingButton = document.getElementById('continuePendingEditingButton');
+    const discardPendingEditButton = document.getElementById('discardPendingEditButton');
+    const applyPendingEditButton = document.getElementById('applyPendingEditButton');
     const updateFieldsModal = document.getElementById('updateFieldsModal');
     const updateFieldsDescription = document.getElementById('updateFieldsDescription');
     const updateFieldsOptions = document.getElementById('updateFieldsOptions');
@@ -2898,8 +2956,10 @@
       const options = Array.isArray(fields) ? fields : currentUpdateFieldOptions(dataRef);
       const selected = new Set(list(selectedRefs));
       updateFieldsModalState = {
+        candidateKey: candidateStateKey(),
         dataRef,
         selected,
+        baselineRefs: [...selected].sort(),
         onConfirm,
         onCancel,
         invoker: invoker instanceof HTMLElement ? invoker : document.activeElement
@@ -2919,6 +2979,19 @@
       requestAnimationFrame(() => updateFieldsOptions.querySelector('input')?.focus() || cancelUpdateFieldsButton.focus());
     }
 
+    function currentUpdateFieldsModalRefs() {
+      if (!updateFieldsModalState) return [];
+      return Array.from(updateFieldsOptions.querySelectorAll('[data-update-field-ref]:checked'))
+        .map(item => item.value)
+        .sort();
+    }
+
+    function updateFieldsModalIsDirty(candidateKey = candidateStateKey()) {
+      const state = updateFieldsModalState;
+      if (!state || state.candidateKey !== candidateKey) return false;
+      return JSON.stringify(currentUpdateFieldsModalRefs()) !== JSON.stringify(state.baselineRefs || []);
+    }
+
     function closeUpdateFieldsModal(cancelled = false) {
       const state = updateFieldsModalState;
       updateFieldsModalState = null;
@@ -2928,20 +3001,35 @@
       updateFieldsError.textContent = '';
       if (cancelled) state?.onCancel?.();
       if (state?.invoker?.isConnected) state.invoker.focus();
+      refreshUnappliedIndicators();
+    }
+
+    function requestCloseUpdateFieldsModal(intent = '关闭更新字段选择') {
+      if (!updateFieldsModalState) return;
+      if (!updateFieldsModalIsDirty()) {
+        closeUpdateFieldsModal(true);
+        return;
+      }
+      requestTransition(intent, () => closeUpdateFieldsModal(true), {
+        invoker: document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : updateFieldsModalState.invoker
+      });
     }
 
     function confirmUpdateFieldsSelection() {
       const state = updateFieldsModalState;
-      if (!state) return;
+      if (!state) return false;
       const selectedRefs = Array.from(updateFieldsOptions.querySelectorAll('[data-update-field-ref]:checked')).map(item => item.value);
       if (!selectedRefs.length) {
         updateFieldsError.textContent = '请至少选择一个本次实际更新的字段。';
         updateFieldsOptions.querySelector('[data-update-field-ref]')?.focus();
-        return;
+        return false;
       }
       const onConfirm = state.onConfirm;
       closeUpdateFieldsModal(false);
       onConfirm?.(selectedRefs);
+      return true;
     }
 
     function escapeHtml(value) {
@@ -3229,6 +3317,50 @@
       return `${modeField}${actorRolePicker(index)}`;
     }
 
+    const ENTITY_EDIT_CONFIG = Object.freeze({
+      behavior: Object.freeze({
+        editorKind: 'behavior-properties',
+        collection: 'behaviors',
+        refKey: 'behavior_ref',
+        label: '节点属性',
+        allowedFields: Object.freeze([
+          'node_type',
+          'behavior_name',
+          'actor_assignment_mode',
+          'current_actor_role',
+          'actor_department_data_ref',
+          'actor_position_rule'
+        ])
+      }),
+      relation: Object.freeze({
+        editorKind: 'relation-properties',
+        collection: 'flow_relations',
+        refKey: 'relation_ref',
+        label: '流程关系属性',
+        allowedFields: Object.freeze(['relation_type', 'from_behavior_ref', 'to_behavior_ref'])
+      }),
+      data: Object.freeze({
+        editorKind: 'data-object-properties',
+        collection: 'data_objects',
+        refKey: 'data_ref',
+        label: '数据对象信息',
+        allowedFields: Object.freeze(['data_name', 'description', 'information_type'])
+      })
+    });
+
+    const EDIT_SESSION_LABELS = Object.freeze({
+      'behavior-properties': '节点属性',
+      'relation-properties': '流程关系属性',
+      'data-object-properties': '数据对象信息',
+      'data-edge-operations': '数据操作',
+      'new-flow-relation-wizard': '流程关系编制',
+      'data-behavior-choice': '数据关系编制'
+    });
+
+    function entityEditConfig(kind) {
+      return ENTITY_EDIT_CONFIG[kind] || null;
+    }
+
     function currentEntry() {
       return candidates[currentIndex] || null;
     }
@@ -3241,6 +3373,159 @@
       if (!entry) return '';
       if (!entry.stateKey) entry.stateKey = newRef('candidate');
       return entry.stateKey;
+    }
+
+    function entityByKindAndRef(kind, ref, data = currentDocument()) {
+      const config = entityEditConfig(kind);
+      return config && data
+        ? (data[config.collection] || []).find(item => item[config.refKey] === ref) || null
+        : null;
+    }
+
+    function openEntityEditSession(kind, ref, options = {}) {
+      const config = entityEditConfig(kind);
+      const entity = entityByKindAndRef(kind, ref);
+      if (!config || !entity) return null;
+      const result = editSessionManager.open({
+        candidateKey: candidateStateKey(),
+        editorKind: config.editorKind,
+        entityRef: ref,
+        allowedFields: config.allowedFields,
+        baselineFields: entity,
+        patch: {},
+        canApply: true,
+        focusTarget: options.focusTarget || null
+      });
+      if (!result.ok) {
+        showStatus('当前还有未应用修改。请先应用或放弃，再编辑其他对象。', 'error');
+        return null;
+      }
+      graphSelection = { kind, ref };
+      if (kind === 'behavior') activeBehaviorRef = ref;
+      if (kind === 'relation') activeRelationRef = ref;
+      if (kind === 'data') activeDataRef = ref;
+      return entity;
+    }
+
+    function entityEditSession(kind, ref) {
+      const config = entityEditConfig(kind);
+      if (!config) return null;
+      return editSessionManager.get({
+        candidateKey: candidateStateKey(),
+        editorKind: config.editorKind,
+        entityRef: ref
+      });
+    }
+
+    function workingEntity(kind, ref) {
+      const entity = entityByKindAndRef(kind, ref);
+      if (!entity) return null;
+      const session = entityEditSession(kind, ref);
+      return session ? { ...clone(entity), ...clone(session.patch) } : clone(entity);
+    }
+
+    function sessionLabel(session = editSessionManager.get()) {
+      return EDIT_SESSION_LABELS[session?.editorKind] || '当前编辑内容';
+    }
+
+    function dataEdgeValues(dataRef, behaviorRef, data = currentDocument()) {
+      const dataObject = (data?.data_objects || []).find(item => item.data_ref === dataRef);
+      const links = (dataObject?.behavior_links || []).filter(link => link.behavior_ref === behaviorRef);
+      const updateLink = links.find(link => link.operation === 'update');
+      return {
+        operations: links.map(link => link.operation),
+        updatedFieldRefs: list(updateLink?.updated_field_refs)
+      };
+    }
+
+    function openDataEdgeSession(dataRef, behaviorRef) {
+      const baseline = dataEdgeValues(dataRef, behaviorRef);
+      const isNewRelation = baseline.operations.length === 0;
+      const result = editSessionManager.open({
+        candidateKey: candidateStateKey(),
+        editorKind: 'data-edge-operations',
+        entityRef: `${dataRef}:${behaviorRef}`,
+        allowedFields: ['operations', 'updatedFieldRefs'],
+        baselineFields: baseline,
+        patch: {},
+        started: isNewRelation,
+        canApply: !isNewRelation && (!baseline.operations.includes('update') || baseline.updatedFieldRefs.length > 0)
+      });
+      if (!result.ok) return false;
+      graphSelection = { kind: 'data-edge', dataRef, behaviorRef };
+      activeDataRef = dataRef;
+      return true;
+    }
+
+    function dataEdgeSession(selection = graphSelection) {
+      if (selection?.kind !== 'data-edge') return null;
+      return editSessionManager.get({
+        candidateKey: candidateStateKey(),
+        editorKind: 'data-edge-operations',
+        entityRef: `${selection.dataRef}:${selection.behaviorRef}`
+      });
+    }
+
+    function dataEdgeWorkingValues(selection = graphSelection) {
+      const baseline = dataEdgeValues(selection?.dataRef, selection?.behaviorRef);
+      const session = dataEdgeSession(selection);
+      return session ? { ...baseline, ...clone(session.patch) } : baseline;
+    }
+
+    function updateDataEdgeCanApply(selection = graphSelection) {
+      const values = dataEdgeWorkingValues(selection);
+      const canApply = values.operations.length > 0
+        && (!values.operations.includes('update') || list(values.updatedFieldRefs).length > 0);
+      editSessionManager.setCanApply(canApply);
+      return canApply;
+    }
+
+    function openDataBehaviorChoiceSession(dataRef) {
+      const result = editSessionManager.open({
+        candidateKey: candidateStateKey(),
+        editorKind: 'data-behavior-choice',
+        entityRef: dataRef,
+        allowedFields: ['behaviorRef'],
+        baselineFields: { behaviorRef: '' },
+        patch: { behaviorRef: '' },
+        started: true,
+        canApply: false
+      });
+      if (!result.ok) return false;
+      graphSelection = { kind: 'data-behavior-choice', dataRef };
+      return true;
+    }
+
+    function openFlowRelationDraftSession() {
+      flowRelationDraft = { stage: 'type', relation_type: '', from_behavior_ref: null, to_behavior_ref: null, condition: '' };
+      const result = editSessionManager.open({
+        candidateKey: candidateStateKey(),
+        editorKind: 'new-flow-relation-wizard',
+        entityRef: 'new-flow-relation',
+        allowedFields: ['stage', 'relation_type', 'from_behavior_ref', 'to_behavior_ref', 'condition'],
+        baselineFields: {},
+        patch: flowRelationDraft,
+        started: true,
+        canApply: false
+      });
+      if (!result.ok) {
+        flowRelationDraft = null;
+        return false;
+      }
+      graphSelection = null;
+      return true;
+    }
+
+    function syncFlowRelationDraftSession() {
+      if (!flowRelationDraft) return;
+      editSessionManager.replacePatch(flowRelationDraft, { started: true });
+      editSessionManager.setCanApply(Boolean(
+        flowRelationDraft.stage === 'confirm'
+        && flowRelationDraft.relation_type
+        && flowRelationDraft.from_behavior_ref
+        && flowRelationDraft.to_behavior_ref
+      ));
+      refreshUnappliedIndicators();
     }
 
     function registerCandidateState(entry, options = {}) {
@@ -3257,8 +3542,33 @@
       return entry.dirty;
     }
 
+    function candidateHasUnappliedChanges(entry) {
+      if (!entry) return false;
+      const key = candidateStateKey(entry);
+      return editSessionManager.isDirty(key)
+        || Boolean(entry === currentEntry() && (
+          webGridSession?.isDirty()
+          || updateFieldsModalIsDirty(key)
+        ));
+    }
+
+    function hasUnappliedChanges() {
+      return candidates.some(candidateHasUnappliedChanges);
+    }
+
+    function hasUndownloadedChanges() {
+      return candidates.some(item => item.dirty);
+    }
+
     function hasDirtyCandidates() {
-      return candidates.some(item => item.dirty) || Boolean(webGridSession?.isDirty());
+      return hasUndownloadedChanges() || hasUnappliedChanges();
+    }
+
+    function candidateFileState(entry, hasUnapplied = candidateHasUnappliedChanges(entry)) {
+      if (!entry || entry.dirty || hasUnapplied) return null;
+      if (entry.lastDownload) return { label: '当前内容已下载', className: 'ready' };
+      if (entry.importInfo) return { label: '当前内容与导入文件一致', className: 'imported' };
+      return { label: '尚未下载', className: 'pending' };
     }
 
     function governanceCheckKey(stepId, entry = currentEntry()) {
@@ -3284,12 +3594,49 @@
     function resetWebGridEditor() {
       webGridSession = null;
       webGridIssues = [];
-      webGridPendingMode = '';
-      webGridPendingAction = null;
       webGridSelectedRows = {};
       webGridFilters = {};
       webGridSorts = {};
       webGridRanges = {};
+    }
+
+    function resetTransientEditingState(options = {}) {
+      editSessionManager.reset();
+      graphSelection = null;
+      flowRelationDraft = null;
+      resetWebGridEditor();
+      updateFieldsModalState = null;
+      updateFieldsError.textContent = '';
+      updateFieldsModal.classList.remove('show');
+      updateFieldsModal.setAttribute('aria-hidden', 'true');
+      pendingTransition = null;
+      pendingEditModal.classList.remove('show');
+      pendingEditModal.setAttribute('aria-hidden', 'true');
+      if (options.resetDataMode) activeDataMode = 'flow';
+    }
+
+    function refreshUnappliedIndicators() {
+      updateCandidateList();
+      governanceHeader.innerHTML = renderGovernanceHeader(currentDocument());
+    }
+
+    function enableActiveApplyButton() {
+      const action = graphSelection?.kind === 'data'
+        ? 'apply-data-property'
+        : graphSelection?.kind === 'data-edge'
+          ? 'apply-data-operations'
+          : ['behavior', 'relation'].includes(graphSelection?.kind)
+            ? 'apply-flow-property'
+            : '';
+      if (!action) return;
+      const button = workspace.querySelector(`[data-action="${action}"]`);
+      if (!button) return;
+      const session = graphSelection?.kind === 'data-edge'
+        ? dataEdgeSession(graphSelection)
+        : ['behavior', 'relation', 'data'].includes(graphSelection?.kind)
+          ? entityEditSession(graphSelection.kind, graphSelection.ref)
+          : null;
+      button.toggleAttribute('disabled', !session || !editSessionManager.isDirty(session.candidateKey) || !editSessionManager.canApply(session.candidateKey));
     }
 
     function touch() {
@@ -3905,9 +4252,18 @@
       const technicalLabel = technicalCount == null ? '结构错误：待检查' : `结构错误：${technicalCount}项`;
       const candidateOptions = candidates.map((item, index) => {
         const name = item.data.process?.process_name || `未命名流程 ${index + 1}`;
-        return `<option value="${index}" ${index === currentIndex ? 'selected' : ''}>${index + 1}. ${escapeHtml(name)}${item.dirty ? '（有未下载修改）' : ''}</option>`;
+        const unapplied = candidateHasUnappliedChanges(item);
+        const fileState = candidateFileState(item, unapplied);
+        const states = [
+          unapplied ? '有未应用修改' : '',
+          item.dirty ? '有未下载修改' : '',
+          fileState?.label || ''
+        ].filter(Boolean);
+        return `<option value="${index}" ${index === currentIndex ? 'selected' : ''}>${index + 1}. ${escapeHtml(name)}${states.length ? `（${states.join('；')}）` : ''}</option>`;
       }).join('');
       const origin = entry?.importInfo?.sourceVersion || entry?.origin || '尚未建立草稿';
+      const hasUnapplied = candidateHasUnappliedChanges(entry);
+      const fileState = candidateFileState(entry, hasUnapplied);
       return `<div class="governance-header-main">
         <div class="governance-current">
           <label for="governanceCandidateSelect">当前流程${candidates.length > 1 ? `（${candidates.length}个候选）` : ''}</label>
@@ -3917,7 +4273,8 @@
           <div class="governance-context">
             <span class="context-badge version">当前v7 · 使用中验证</span>
             <span class="context-badge">导入来源：${escapeHtml(origin)}</span>
-            ${entry?.dirty ? '<span class="context-badge dirty">有未下载修改</span>' : data ? '<span class="context-badge ready">当前没有未下载修改</span>' : ''}
+            ${hasUnapplied ? '<span class="context-badge dirty">有未应用修改</span>' : ''}
+            ${entry?.dirty ? '<span class="context-badge dirty">有未下载修改</span>' : fileState ? `<span class="context-badge ${escapeAttribute(fileState.className)}">${escapeHtml(fileState.label)}</span>` : ''}
             <span class="context-badge">${escapeHtml(technicalLabel)}</span>
           </div>
         </div>
@@ -3952,7 +4309,7 @@
         ['部门事实初核', '业务核对人核对全部流程事实。跨部门内容由归口部门和承接部门分别确认本方事实。未确认内容保持待定，并在JSON之外记录证据、确认主体和关闭条件。'],
         ['最终v7独立结构预审', 'MDM工作组或Codex检查最终v7的结构错误、字段归位、对象拆分和生命周期结构。编制人关闭硬性结构错误；保留建议原值时，在外部问题处理记录中说明理由。'],
         ['重新导入、最终下载和交接', '编制人重新导入整改后的文件，核对版本、数量、内容、稳定引用和往返完整性，再分别交接最终v7、结构预审问题处理记录和部门业务核对记录。'],
-        ['当前停止边界', '3000当前只承接v1至v3。v7不得直接导入3000，也不得自动降级。MDM工作组完成兼容或迁移方案、验证和审核后，才能另行进入3000受控预览、审核导入和发布。']
+        ['当前停止边界', '3000的V7技术链路已实现、数据库已准备，但运行时默认关闭且真实单流程试点待验收。3001不与3000通信；只有另行批准的精确process_ref才能进入3000受控预览、审核和发布，v7文件不得直接导入或自动降级。']
       ];
       governanceDrawerContent.innerHTML = `${renderRoleOperationSequence(true)}<div class="governance-drawer-list">${phases.map((phase, index) => `
         <section class="governance-drawer-card"><strong>${index + 1}. ${escapeHtml(phase[0])}</strong><p>${escapeHtml(phase[1])}</p></section>
@@ -4057,7 +4414,7 @@
               <article class="tool-help-card"><h3>使用人和责任</h3><p>编制人维护当前流程；业务核对人确认实际流程、表单、数据和跨部门事实；MDM工作组检查结构并组织后续交接。页面检查不能代替任何一方确认。</p></article>
               <article class="tool-help-card"><h3>开始前准备</h3><p>选择一条真实流程，准备可以核对的制度、表单、台账和实际做法，并明确编制人和不同人员担任的业务核对人。教学样例不能作为业务事实。</p></article>
               <article class="tool-help-card"><h3>保存和恢复</h3><p>3001不自动保存。每轮完成后由用户主动下载；关闭或刷新后，只能重新导入已下载文件继续编制。源文件不会被修改。</p></article>
-              <article class="tool-help-card"><h3>当前停止边界</h3><p>3001输出始终是未审核的单流程v7文件。v7暂不能直接导入3000，也不得自动降级。</p></article>
+              <article class="tool-help-card"><h3>当前停止边界</h3><p>3001输出始终是未审核的单流程v7文件。3000的V7技术链路默认关闭，真实单流程试点待验收；3001不与3000通信，v7文件不得直接导入或自动降级。</p></article>
             </div>`
           )}
           ${section(
@@ -4099,7 +4456,7 @@
             <button class="button" data-action="open-governance-drawer">查看完整治理流程</button>
           </div>
           <div class="governance-flow-grid">${flowCards}</div>
-          <p class="boundary"><strong>当前停止边界：</strong>3001输出的v7文件暂不能直接导入3000，也不得自动降级；3000必须另行完成兼容、迁移审核和验证。</p>
+          <p class="boundary"><strong>当前停止边界：</strong>3000的V7技术链路已实现、数据库已准备，但运行时默认关闭且真实单流程试点待验收。3001不与3000通信；v7文件只能在另行批准的精确单流程范围内受控承接，不得直接导入或自动降级。</p>
         </section>`;
       }
       const entry = currentEntry();
@@ -4269,6 +4626,11 @@
       field_source_links: '当前只显示所选表单字段的取值来源。外部系统来源不填写本流程数据对象。'
     };
 
+    function gridAddRowLabel(tableId) {
+      const label = webGridSession?.definition(tableId)?.label || '记录';
+      return tableId === 'form_areas' ? '新增主表或明细表' : `新增${label}`;
+    }
+
     function nativeGridColumns(tableId) {
       return (webGridSession?.definition(tableId)?.columns || []).filter(column => !(column.technicalRef && column.readOnly));
     }
@@ -4372,7 +4734,7 @@
           return `<td class="${classes}" data-grid-cell-container data-grid-table-id="${escapeAttribute(tableId)}" data-grid-row-id="${escapeAttribute(row._row_id)}" data-grid-column="${escapeAttribute(column.key)}" data-grid-row-index="${rowIndex}" data-grid-column-index="${columnIndex}">${nativeGridControl(tableId, row, column, rowIndex, columnIndex)}</td>`;
         }).join('');
         return `<tr class="${rowClasses}" data-grid-row-id="${escapeAttribute(row._row_id)}"><td class="web-grid-selector-column"><button type="button" class="web-grid-row-selector" data-grid-row-selector data-grid-table-id="${escapeAttribute(tableId)}" data-grid-row-id="${escapeAttribute(row._row_id)}" aria-label="选择第${rowIndex + 1}行">›</button></td>${cells}</tr>`;
-      }).join('') : `<tr class="web-grid-empty-row"><td colspan="${columns.length + 1}">${webGridFilters[tableId] ? '没有符合查找条件的记录。' : '当前范围没有记录。点击“新增行”开始编辑。'}</td></tr>`;
+      }).join('') : `<tr class="web-grid-empty-row"><td colspan="${columns.length + 1}">${webGridFilters[tableId] ? '没有符合查找条件的记录。' : `当前范围没有记录。点击“${gridAddRowLabel(tableId)}”开始编辑。`}</td></tr>`;
       return `<table class="web-grid-table" aria-label="${escapeAttribute(definition.label)}"><thead><tr><th class="web-grid-selector-column" aria-hidden="true"></th>${header}</tr></thead><tbody>${body}</tbody></table>`;
     }
 
@@ -4381,18 +4743,22 @@
       const requestedRowId = webGridSelectedRows[tableId] || '';
       const selectedRow = webGridSession.rows(tableId).find(row => row._row_id === requestedRowId);
       const selectedRowId = selectedRow?._row_id || '';
-      return `<section class="web-grid-panel" data-grid-panel="${escapeAttribute(tableId)}">
+      return `<section class="web-grid-panel" data-grid-panel="${escapeAttribute(tableId)}" aria-labelledby="webGridHeading-${escapeAttribute(tableId)}">
         <div class="web-grid-heading">
-          <h3>${escapeHtml(definition.label)}</h3>
-          <div class="web-grid-toolbar">
-            <input class="web-grid-search" type="search" value="${escapeAttribute(webGridFilters[tableId] || '')}" data-grid-search="${escapeAttribute(tableId)}" placeholder="在当前表格中查找" aria-label="查找${escapeAttribute(definition.label)}">
-            <button class="button small" data-action="grid-add-row" data-table-id="${escapeAttribute(tableId)}">新增行</button>
-            <button class="button small secondary" data-action="grid-duplicate-row" data-table-id="${escapeAttribute(tableId)}" ${selectedRowId ? '' : 'disabled'}>复制选中行</button>
-            <button class="button small" data-action="grid-move-row-up" data-table-id="${escapeAttribute(tableId)}" ${selectedRowId ? '' : 'disabled'}>上移</button>
-            <button class="button small" data-action="grid-move-row-down" data-table-id="${escapeAttribute(tableId)}" ${selectedRowId ? '' : 'disabled'}>下移</button>
-            <button class="button danger small" data-action="grid-delete-row" data-table-id="${escapeAttribute(tableId)}" ${selectedRowId ? '' : 'disabled'}>${selectedRow?._deleted ? '恢复选中行' : '删除选中行'}</button>
-          </div>
+          <h3 id="webGridHeading-${escapeAttribute(tableId)}">${escapeHtml(definition.label)}</h3>
           <p>${escapeHtml(GRID_TABLE_GUIDANCE[tableId])}</p>
+          <div class="web-grid-toolbar">
+            <div class="web-grid-primary-tools">
+              <input class="web-grid-search" type="search" value="${escapeAttribute(webGridFilters[tableId] || '')}" data-grid-search="${escapeAttribute(tableId)}" placeholder="在当前表格中查找" aria-label="查找${escapeAttribute(definition.label)}">
+              <button class="button secondary small web-grid-add-row" data-action="grid-add-row" data-table-id="${escapeAttribute(tableId)}">${escapeHtml(gridAddRowLabel(tableId))}</button>
+            </div>
+            <div class="web-grid-row-tools" aria-label="${escapeAttribute(definition.label)}选中行操作">
+              <button class="button small" data-action="grid-duplicate-row" data-table-id="${escapeAttribute(tableId)}" ${selectedRowId ? '' : 'disabled'}>复制选中行</button>
+              <button class="button small" data-action="grid-move-row-up" data-table-id="${escapeAttribute(tableId)}" ${selectedRowId ? '' : 'disabled'}>上移</button>
+              <button class="button small" data-action="grid-move-row-down" data-table-id="${escapeAttribute(tableId)}" ${selectedRowId ? '' : 'disabled'}>下移</button>
+              <button class="button danger small" data-action="grid-delete-row" data-table-id="${escapeAttribute(tableId)}" ${selectedRowId ? '' : 'disabled'}>${selectedRow?._deleted ? '恢复选中行' : '删除选中行'}</button>
+            </div>
+          </div>
         </div>
         <div class="web-grid-shell" id="webGrid-${escapeAttribute(tableId)}">${renderNativeGridTable(tableId)}</div>
       </section>`;
@@ -4520,7 +4886,7 @@
           <section class="next-stage-card next"><h3>技术状态</h3><p>结构错误必须关闭。业务待定不阻止下载，但应在外部核对记录中写明证据、确认主体和关闭条件。</p></section>
           <section class="next-stage-card future"><h3>外部材料</h3><p>准备结构预审问题处理记录和部门业务核对记录。3001不会生成、保存或嵌入这些记录。</p></section>
         </div>
-        <p class="boundary"><strong>3000停止边界：</strong>3000当前只承接v1至v3。v6不得直接导入3000，也不得自动降级。</p>
+        <p class="boundary"><strong>3000停止边界：</strong>3000的V7技术链路已实现、数据库已准备，但运行时默认关闭且真实单流程试点待验收。3001不与3000通信；v7文件不得直接导入或自动降级。</p>
         ${renderLastDownloadResult()}`
       )}`;
     }
@@ -4548,10 +4914,14 @@
       return 'review';
     }
 
-    function setActiveGovernanceStep(stepId, view = '') {
+    function setActiveGovernanceStep(stepId, view = '', options = {}) {
       captureGraphViewport();
       const next = globalThis.GovernanceWorkflow.normalizeStepId(stepId);
       if (!currentDocument() && next !== 'start') return;
+      if (!options.skipPendingGuard && requestTransition(
+        '切换治理步骤',
+        () => setActiveGovernanceStep(next, view, { skipPendingGuard: true })
+      )) return;
       activeGovernanceStep = next;
       activeStepView = view || defaultStepView(next);
       const entry = currentEntry();
@@ -4561,6 +4931,16 @@
         graphStateManager.updateView(candidateStateKey(entry), { mode: next === 'data' ? 'data' : 'flow' });
       }
       if (next !== 'skeleton') diagramExpanded = false;
+      if (next === 'skeleton') {
+        const ref = activeBehaviorRef || currentDocument()?.behaviors?.[0]?.behavior_ref || '';
+        if (ref) openEntityEditSession('behavior', ref);
+      } else if (next === 'data' && activeDataEditingMode === 'guided' && activeStepView === 'data' && activeDataMode === 'flow') {
+        const dataObject = ensureActiveGraphDataObject();
+        if (dataObject) openEntityEditSession('data', dataObject.data_ref);
+      } else {
+        editSessionManager.reset();
+        graphSelection = null;
+      }
       render();
     }
 
@@ -4791,8 +5171,10 @@
         return '<div class="graph-property-empty">选择一个节点或关系后，在这里编辑属性。技术标识和迁移信息默认不展开。</div>';
       }
       if (selection.kind === 'relation') {
-        const relation = selection.draft || currentDocument().flow_relations.find(item => item.relation_ref === selection.ref);
+        const relation = workingEntity('relation', selection.ref);
         if (!relation) return '<div class="graph-property-empty">所选关系已经不存在。</div>';
+        const relationSession = entityEditSession('relation', selection.ref);
+        const relationDirty = Boolean(relationSession && editSessionManager.isDirty(relationSession.candidateKey));
         return `
           <div class="graph-property-panel" data-focus-kind="relation" data-focus-ref="${escapeAttribute(relation.relation_ref)}">
             <h3>流程关系</h3>
@@ -4801,14 +5183,17 @@
             <label>终点<select data-graph-property="to_behavior_ref">${optionHtml(behaviorOptions('请选择终点'), relation.to_behavior_ref)}</select></label>
             <div class="inline-note">判断条件、退回条件和并行规则在第4步“动作与异常”维护。</div>
             <details><summary>技术标识</summary><code>${escapeHtml(relation.relation_ref)}</code></details>
+            ${relationDirty ? '<div class="inline-warning"><strong>有未应用修改。</strong>当前JSON和下载文件仍保留应用前的关系属性。</div>' : ''}
             <div class="item-actions">
-              <button class="button primary small" data-action="apply-flow-property">应用修改</button>
+              <button class="button primary small" data-action="apply-flow-property" ${relationSession && relationDirty ? '' : 'disabled'}>应用修改</button>
               <button class="button danger small" data-action="delete-graph-selection">删除关系</button>
             </div>
           </div>`;
       }
-      const behavior = selection.draft || currentDocument().behaviors.find(item => item.behavior_ref === selection.ref);
+      const behavior = workingEntity('behavior', selection.ref);
       if (!behavior) return '<div class="graph-property-empty">所选节点已经不存在。</div>';
+      const behaviorSession = entityEditSession('behavior', selection.ref);
+      const behaviorDirty = Boolean(behaviorSession && editSessionManager.isDirty(behaviorSession.candidateKey));
       const isControl = ['decision', 'parallel_split', 'parallel_join'].includes(behavior.node_type);
       const actor = parseActorRole(behavior.current_actor_role);
       const positions = rosterRolesByDepartment[actor.department] || [];
@@ -4834,8 +5219,9 @@
               <label>岗位或责任人确定规则<textarea data-graph-property="actor_position_rule">${escapeHtml(behavior.actor_position_rule)}</textarea></label>` : ''}
             <div class="inline-note">“具体做什么”、流程如何开始、办理时限、完成标准和会签要求在第4步“动作与异常”维护。</div>`}
           <details><summary>技术标识和历史文字</summary><code>${escapeHtml(behavior.behavior_ref)}</code><div class="technical-note">输入说明：${escapeHtml(behavior.input_description || '空')}<br>输出说明：${escapeHtml(behavior.output_description || '空')}</div></details>
+          ${behaviorDirty ? '<div class="inline-warning"><strong>有未应用修改。</strong>当前JSON和下载文件仍保留应用前的节点属性。</div>' : ''}
           <div class="item-actions">
-            <button class="button primary small" data-action="apply-flow-property">应用修改</button>
+            <button class="button primary small" data-action="apply-flow-property" ${behaviorSession && behaviorDirty ? '' : 'disabled'}>应用修改</button>
             ${selection.kind === 'behavior' ? `<button class="button small" data-action="governance-jump" data-step="action" data-view="behaviors" data-focus-kind="behavior" data-focus-ref="${escapeAttribute(behavior.behavior_ref)}" data-focus-path="behaviors.${currentDocument().behaviors.indexOf(behavior)}.behavior_description">转到动作与异常</button>` : ''}
             <button class="button danger small" data-action="delete-graph-selection">删除节点</button>
           </div>
@@ -4911,19 +5297,16 @@
       </div>`;
     }
 
-    function renderMasterDataHint(dataObject) {
+    function renderMasterDataHint(dataObject, options = {}) {
       const analyzer = globalThis.LifecycleAnalyzer;
       if (!analyzer?.classifyMasterDataHint) return '';
       const hint = analyzer.classifyMasterDataHint(currentDocument(), dataObject);
-      const pending = masterDataPendingRefs.has(dataObject.data_ref);
       return `<section class="inline-note" aria-label="主数据认定提示">
         <strong>主数据认定提示：${escapeHtml(hint.label)}</strong>
         <p>${escapeHtml(hint.message)}</p>
         <details><summary>查看判断依据</summary><ul>${hint.reasons.map(reason => `<li>${escapeHtml(reason)}</li>`).join('')}</ul></details>
-        <div class="item-actions">
-          <button class="button small" data-action="supplement-data-facts">补充对象事实</button>
-          <button class="button small secondary" data-action="mark-master-data-pending">${pending ? '已列入本页交接待定' : '列入交接待定事项'}</button>
-        </div>
+        ${options.hasUnapplied ? '<p class="technical-note"><strong>当前提示依据为已应用内容；应用修改后重新判断。</strong></p>' : ''}
+        ${options.showEditAction ? '<div class="item-actions"><button class="button small" data-action="supplement-data-facts">返回数据流编辑对象信息</button></div>' : ''}
         <p class="technical-note">所有主数据都是数据对象，但不是所有数据对象都是主数据。表单通常不是主数据；填写完成的表单通常是交易记录或业务证据。该提示不写入正式主数据结论，也不阻止下载。</p>
       </section>`;
     }
@@ -4976,13 +5359,49 @@
       </article>`;
     }
 
-    function analyzeLifecycleForObject(dataObject) {
+    function analyzeLifecycleForObject(documentValue, dataRef) {
       const analyzer = globalThis.LifecycleAnalyzer;
       if (!analyzer?.analyzeDataObject) return null;
+      const dataObject = (documentValue?.data_objects || []).find(item => item.data_ref === dataRef);
+      if (!dataObject) return null;
       const before = JSON.stringify(dataObject.lifecycle || null);
-      const result = analyzer.analyzeDataObject(currentDocument(), dataObject.data_ref);
-      dataObject.lifecycle = result.lifecycle;
-      return { ...result, changed: before !== JSON.stringify(result.lifecycle) };
+      const result = analyzer.analyzeDataObject(clone(documentValue), dataRef);
+      const lifecycle = clone(result.lifecycle);
+      return { ...result, lifecycle, changed: before !== JSON.stringify(lifecycle) };
+    }
+
+    function reanalyzeLifecycle(scope = 'current') {
+      const activeRef = activeDataRef;
+      const result = runDocumentTransaction(nextDocument => {
+        const targets = scope === 'all'
+          ? (nextDocument.data_objects || [])
+          : (nextDocument.data_objects || []).filter(item => item.data_ref === activeRef);
+        if (!targets.length) throw new Error('没有找到要分析的数据对象');
+        let candidateCount = 0;
+        let changedCount = 0;
+        targets.forEach(dataObject => {
+          const analysis = analyzeLifecycleForObject(nextDocument, dataObject.data_ref);
+          if (!analysis?.lifecycle) throw new Error(`数据对象“${dataObject.data_name || '未命名数据'}”未能形成分析结果`);
+          candidateCount += analysis.candidate_count || 0;
+          if (analysis.changed) {
+            dataObject.lifecycle = analysis.lifecycle;
+            changedCount += 1;
+          }
+        });
+        return { targetCount: targets.length, candidateCount, changedCount };
+      }, {
+        source: scope === 'all' ? 'reanalyze-all-lifecycle' : 'reanalyze-current-lifecycle',
+        failureLabel: scope === 'all' ? '重新分析全部数据对象' : '重新分析当前数据对象',
+        resetEditSessionOnSuccess: false
+      });
+      if (!result.ok) return false;
+      const details = result.details || {};
+      if (!result.changed) {
+        showStatus(`分析结果没有变化，未增加未下载状态或撤销记录。本次共检查${details.targetCount || 0}个数据对象。`, 'success');
+        return true;
+      }
+      showStatus(`已重新分析${details.targetCount || 0}个数据对象，${details.changedCount || 0}个对象的生命周期内容发生变化，共形成${details.candidateCount || 0}项候选。执行一次撤销可恢复分析前内容。`, 'success');
+      return true;
     }
 
     function renderLifecyclePanel() {
@@ -4990,9 +5409,8 @@
       if (!dataObject) {
         return `<section class="section"><div class="section-body"><div class="diagram-empty"><h2>尚未登记数据对象</h2><p>先登记数据对象，页面再按对象自动整理生命周期建议。</p><button class="button primary" data-action="add-graph-data">新增数据</button></div></div></section>`;
       }
-      if (!dataObject.lifecycle) dataObject.lifecycle = pendingLifecycle();
       const dataIndex = currentDocument().data_objects.indexOf(dataObject);
-      const lifecycle = dataObject.lifecycle;
+      const lifecycle = dataObject.lifecycle || pendingLifecycle();
       const eventCount = (lifecycle.routes || []).reduce((total, route) => total + (route.events || []).length, 0);
       const pendingCount = (lifecycle.routes || []).flatMap(route => route.events || []).filter(event =>
         ['pending_confirmation', 'needs_recheck'].includes(event.review_status)
@@ -5025,7 +5443,7 @@
             <span class="technical-note">${showLifecycleDetails ? `${eventCount}个状态变化，${pendingCount}项待确认或需重新核对。` : '先回答当前流程会不会改变这条数据。'}${advancedLifecycleMode ? `高级核对还有${advancedChecklist.length}项提示。` : ''}</span>
           </div>
           ${advancedLifecycleMode ? `<div class="inline-note"><strong>高级结构核对仅在当前页面临时开启。</strong><p>刷新页面后自动关闭；这些内容不参加普通评分，也不会改变JSON结构版本。</p>${advancedChecklist.length ? `<ul>${advancedChecklist.map(item => `<li>${escapeHtml(item.message)}</li>`).join('')}</ul>` : '<p>当前对象没有高级核对提示。</p>'}</div>` : ''}
-          ${renderMasterDataHint(dataObject)}
+          ${renderMasterDataHint(dataObject, { showEditAction: true })}
           <div class="grid" style="margin-top:14px">
             ${field(`data_objects.${dataIndex}.lifecycle.applicability`, '本流程会不会改变这条数据的状态或保管方式？', {
               type: 'select',
@@ -5049,7 +5467,7 @@
           </div>
           ${lifecycle.applicability === 'applicable' ? renderLifecycleStateFields(`data_objects.${dataIndex}.lifecycle.entry_state`, '这条数据进入本流程时的状态', lifecycle.entry_state) : ''}
           ${showLifecycleDetails
-            ? `<div class="cross-department-list">${routes || `<div class="inline-warning"><strong>尚未形成生命周期事件。</strong>现有材料可能没有明确动作，也可能尚未建立数据与行为关系。请补充对象事实，或保留待确认后下载。</div>`}</div>`
+            ? `<div class="cross-department-list">${routes || `<div class="inline-warning"><strong>尚未形成生命周期事件。</strong>现有材料可能没有明确动作，也可能尚未建立数据与行为关系。请返回数据流编辑对象信息，或保留待确认后下载。</div>`}</div>`
             : '<div class="inline-note"><strong>先回答上面的问题。</strong><p>选择“会改变”后，页面再显示业务使用状态、保管方式和确实适用的匿名处理问题。</p></div>'}
           <p class="boundary"><strong>边界：</strong>当前v7文件记录未审核的单流程事实和建议，暂不能直接导入3000。生命周期缺口属于业务提示，不阻止草稿下载。</p>
         </div>
@@ -5061,22 +5479,30 @@
       if (!dataObject) return '<div class="graph-property-empty">新增数据对象后，可以围绕它建立直接数据关系。</div>';
       const selection = graphSelection;
       if (selection?.kind === 'data-behavior-choice' && selection.dataRef === dataObject.data_ref) {
+        const choiceSession = editSessionManager.get({
+          candidateKey: candidateStateKey(),
+          editorKind: 'data-behavior-choice',
+          entityRef: dataObject.data_ref
+        });
+        const behaviorRef = text(choiceSession?.patch?.behaviorRef);
         return `
           <div class="graph-property-panel">
             <h3>选择关联行为</h3>
             <p class="technical-note">数据模式只编辑数据关系，业务行为仍是只读端点。</p>
-            <label>业务行为<select data-graph-data-behavior>${optionHtml(actionBehaviorOptions(true, selection.behaviorRef || ''), selection.behaviorRef || '')}</select></label>
+            <label>业务行为<select data-graph-data-behavior>${optionHtml(actionBehaviorOptions(true, behaviorRef), behaviorRef)}</select></label>
             <div class="item-actions">
-              <button class="button primary small" data-action="continue-data-relation" ${selection.behaviorRef ? '' : 'disabled'}>继续</button>
+              <button class="button primary small" data-action="continue-data-relation" ${behaviorRef ? '' : 'disabled'}>继续</button>
               <button class="button small" data-action="cancel-data-relation">取消</button>
             </div>
           </div>`;
       }
       if (selection?.kind === 'data-edge' && selection.dataRef === dataObject.data_ref) {
         const behavior = currentDocument().behaviors.find(item => item.behavior_ref === selection.behaviorRef);
-        const operations = selection.operations || dataObject.behavior_links.filter(link => link.behavior_ref === selection.behaviorRef).map(link => link.operation);
-        const existingUpdateLink = dataObject.behavior_links.find(link => link.behavior_ref === selection.behaviorRef && link.operation === 'update');
-        const updatedFieldRefs = list(selection.updatedFieldRefs === undefined ? existingUpdateLink?.updated_field_refs : selection.updatedFieldRefs);
+        const edgeSession = dataEdgeSession(selection);
+        const edgeValues = dataEdgeWorkingValues(selection);
+        const hasAppliedDataEdge = dataEdgeValues(selection.dataRef, selection.behaviorRef).operations.length > 0;
+        const operations = edgeValues.operations;
+        const updatedFieldRefs = list(edgeValues.updatedFieldRefs);
         const updatedFieldLabels = selectedUpdateFieldLabels(dataObject.data_ref, updatedFieldRefs);
         return `
           <div class="graph-property-panel">
@@ -5088,23 +5514,32 @@
               <span>${escapeHtml(updatedFieldLabels.length ? `已选择：${updatedFieldLabels.join('、')}` : '尚未选择本次更新的字段。')}</span>
               <button class="button secondary small" data-action="open-graph-update-fields">选择更新字段</button>
             </div>` : ''}
+            ${edgeSession && editSessionManager.isDirty(edgeSession.candidateKey) ? '<div class="inline-warning"><strong>有未应用修改。</strong>当前JSON和下载文件仍保留应用前的数据操作。</div>' : ''}
             <div class="item-actions">
-              <button class="button primary small" data-action="apply-data-operations">应用数据操作</button>
+              <button class="button primary small" data-action="apply-data-operations" ${edgeSession && editSessionManager.isDirty(edgeSession.candidateKey) && editSessionManager.canApply(edgeSession.candidateKey) ? '' : 'disabled'}>应用数据操作</button>
+              ${hasAppliedDataEdge ? `<button class="button danger small" data-action="delete-graph-data-edge" data-data-ref="${escapeAttribute(selection.dataRef)}" data-behavior-ref="${escapeAttribute(selection.behaviorRef)}">删除数据关系</button>` : ''}
               <button class="button small" data-action="open-flow-behavior" data-ref="${escapeAttribute(selection.behaviorRef)}">转到流程骨架</button>
             </div>
           </div>`;
       }
-      const draft = selection?.kind === 'data' && selection.ref === dataObject.data_ref ? (selection.draft || dataObject) : dataObject;
+      const dataSession = selection?.kind === 'data' && selection.ref === dataObject.data_ref
+        ? entityEditSession('data', dataObject.data_ref)
+        : null;
+      const draft = dataSession ? workingEntity('data', dataObject.data_ref) : dataObject;
+      const dataDirty = Boolean(dataSession && editSessionManager.isDirty(dataSession.candidateKey));
+      const dataReadOnly = !dataSession;
       return `
         <div class="graph-property-panel" data-focus-kind="data" data-focus-ref="${escapeAttribute(dataObject.data_ref)}">
           <h3>当前数据对象</h3>
-          <label>数据名称<input data-graph-data-property="data_name" value="${escapeAttribute(draft.data_name)}"></label>
-          <label>说明<textarea data-graph-data-property="description">${escapeHtml(draft.description)}</textarea></label>
-          <label>信息类型<select data-graph-data-property="information_type">${optionHtml(INFORMATION_TYPE_OPTIONS, draft.information_type)}</select></label>
-          ${renderMasterDataHint(dataObject)}
+          ${dataReadOnly ? '<div class="inline-warning"><strong>当前对象尚未进入编辑状态。</strong>请在关系图中选择该数据对象后再编辑。</div>' : ''}
+          <label>数据名称<input data-graph-data-property="data_name" value="${escapeAttribute(draft.data_name)}" ${dataReadOnly ? 'disabled' : ''}></label>
+          <label>说明<textarea data-graph-data-property="description" ${dataReadOnly ? 'disabled' : ''}>${escapeHtml(draft.description)}</textarea></label>
+          <label>信息类型<select data-graph-data-property="information_type" ${dataReadOnly ? 'disabled' : ''}>${optionHtml(INFORMATION_TYPE_OPTIONS, draft.information_type)}</select></label>
+          ${renderMasterDataHint(dataObject, { hasUnapplied: dataDirty })}
           <details><summary>技术标识和来源线索</summary><code>${escapeHtml(dataObject.data_ref)}</code><div class="technical-note">来源线索${dataObject.source_relations.length}项；默认不展开。</div></details>
+          ${dataDirty ? '<div class="inline-warning"><strong>有未应用修改。</strong>当前JSON和下载文件仍保留应用前的对象信息。</div>' : ''}
           <div class="item-actions">
-            <button class="button primary small" data-action="apply-data-property">应用修改</button>
+            <button class="button primary small" data-action="apply-data-property" ${dataSession && dataDirty ? '' : 'disabled'}>应用修改</button>
             <button class="button secondary small" data-action="choose-data-behavior">建立数据关系</button>
             <button class="button danger small" data-action="delete-data-object">删除数据对象</button>
           </div>
@@ -5293,7 +5728,7 @@
       if (Object.keys(patch).length) graphStateManager.updateView(candidateStateKey(entry), patch);
     }
 
-    function handleFlowDiagramFocus(focusKind, focusRef) {
+    function handleFlowDiagramFocus(focusKind, focusRef, options = {}) {
       captureGraphViewport();
       if (flowRelationDraft && focusKind === 'behavior') {
         if (flowRelationDraft.stage === 'source') {
@@ -5303,13 +5738,18 @@
           flowRelationDraft.to_behavior_ref = focusRef;
           flowRelationDraft.stage = 'confirm';
         }
+        syncFlowRelationDraftSession();
         render();
         return;
       }
+      if (!options.skipPendingGuard && requestTransition(
+        '选择其他图形对象',
+        () => handleFlowDiagramFocus(focusKind, focusRef, { skipPendingGuard: true })
+      )) return;
       if (focusKind === 'data-badge') {
         const related = currentDocument().data_objects.find(item => item.behavior_links.some(link => link.behavior_ref === focusRef));
         if (related) activeDataRef = related.data_ref;
-        graphSelection = related ? { kind: 'data', ref: related.data_ref, draft: clone(related) } : null;
+        if (related) openEntityEditSession('data', related.data_ref);
         return setActiveGovernanceStep('data', 'data');
       }
       if (focusKind === 'form-badge') {
@@ -5319,13 +5759,9 @@
         return setActiveGovernanceStep('data', 'forms');
       }
       if (focusKind === 'behavior') {
-        const item = currentDocument().behaviors.find(behavior => behavior.behavior_ref === focusRef);
-        graphSelection = item ? { kind: 'behavior', ref: focusRef, draft: clone(item) } : null;
-        activeBehaviorRef = focusRef;
+        openEntityEditSession('behavior', focusRef);
       } else if (focusKind === 'relation') {
-        const item = currentDocument().flow_relations.find(relation => relation.relation_ref === focusRef);
-        graphSelection = item ? { kind: 'relation', ref: focusRef, draft: clone(item) } : null;
-        activeRelationRef = focusRef;
+        openEntityEditSession('relation', focusRef);
       }
       render();
     }
@@ -5344,31 +5780,17 @@
           viewport: graphStateManager.view(candidateStateKey()).data,
           onFocus(item) {
             captureGraphViewport();
-            if (item.kind === 'behavior') {
-              const selectedDataObject = currentDocument().data_objects.find(data => data.data_ref === activeDataRef);
-              const updateLink = selectedDataObject?.behavior_links.find(link => link.behavior_ref === item.ref && link.operation === 'update');
-              graphSelection = {
-                kind: 'data-edge',
-                dataRef: activeDataRef,
-                behaviorRef: item.ref,
-                operations: selectedDataObject?.behavior_links.filter(link => link.behavior_ref === item.ref).map(link => link.operation) || [],
-                updatedFieldRefs: list(updateLink?.updated_field_refs)
-              };
-            } else if (item.kind === 'data-relation') {
-              const selectedDataObject = currentDocument().data_objects.find(data => data.data_ref === item.dataRef);
-              const updateLink = selectedDataObject?.behavior_links.find(link => link.behavior_ref === item.behaviorRef && link.operation === 'update');
-              graphSelection = {
-                kind: 'data-edge',
-                dataRef: item.dataRef,
-                behaviorRef: item.behaviorRef,
-                operations: text(item.operations).split(',').filter(Boolean),
-                updatedFieldRefs: list(updateLink?.updated_field_refs)
-              };
-            } else {
-              const dataObject = ensureActiveGraphDataObject();
-              graphSelection = dataObject ? { kind: 'data', ref: dataObject.data_ref, draft: clone(dataObject) } : null;
-            }
-            render();
+            requestTransition('选择其他数据关系对象', () => {
+              if (item.kind === 'behavior') {
+                openDataEdgeSession(activeDataRef, item.ref);
+              } else if (item.kind === 'data-relation') {
+                openDataEdgeSession(item.dataRef, item.behaviorRef);
+              } else {
+                const dataObject = ensureActiveGraphDataObject();
+                if (dataObject) openEntityEditSession('data', dataObject.data_ref);
+              }
+              render();
+            });
           }
         });
       } catch (error) {
@@ -5405,17 +5827,11 @@
       const selected = result?.details?.selected;
       if (!selected) return;
       if (selected.kind === 'behavior') {
-        const item = currentDocument().behaviors.find(value => value.behavior_ref === selected.ref);
-        graphSelection = item ? { kind: 'behavior', ref: selected.ref, draft: clone(item) } : null;
-        activeBehaviorRef = selected.ref;
+        openEntityEditSession('behavior', selected.ref);
       } else if (selected.kind === 'relation') {
-        const item = currentDocument().flow_relations.find(value => value.relation_ref === selected.ref);
-        graphSelection = item ? { kind: 'relation', ref: selected.ref, draft: clone(item) } : null;
-        activeRelationRef = selected.ref;
+        openEntityEditSession('relation', selected.ref);
       } else if (selected.kind === 'data') {
-        const item = currentDocument().data_objects.find(value => value.data_ref === selected.ref);
-        activeDataRef = selected.ref;
-        graphSelection = item ? { kind: 'data', ref: selected.ref, draft: clone(item) } : null;
+        openEntityEditSession('data', selected.ref);
       }
     }
 
@@ -5460,6 +5876,7 @@
         return false;
       }
       entry.data = result.document;
+      if (options.resetEditSessionOnSuccess) editSessionManager.reset();
       updateSelectionFromGraphResult(result);
       if (command.type === 'delete_object') {
         const collection = command.kind === 'behavior'
@@ -5471,7 +5888,9 @@
               : [];
         const refKey = command.kind === 'behavior' ? 'behavior_ref' : command.kind === 'relation' ? 'relation_ref' : 'data_ref';
         const nearby = collection[Math.min(result.details?.previousIndex || 0, Math.max(0, collection.length - 1))];
-        graphSelection = nearby ? { kind: command.kind, ref: nearby[refKey], draft: clone(nearby) } : null;
+        editSessionManager.reset();
+        graphSelection = null;
+        if (nearby) openEntityEditSession(command.kind, nearby[refKey]);
         if (command.kind === 'behavior') activeBehaviorRef = nearby?.behavior_ref || '';
         if (command.kind === 'relation') activeRelationRef = nearby?.relation_ref || '';
         if (command.kind === 'data') activeDataRef = nearby?.data_ref || '';
@@ -5536,23 +5955,123 @@
       resetWebGridEditor();
       refreshCandidateDirty(entry);
       graphSelection = null;
+      editSessionManager.reset();
       ensureActiveGraphDataObject();
       render();
       showStatus(direction === 'undo' ? '已撤销上一次编辑操作。' : '已重做上一次编辑操作。', 'success');
       refreshValidationAfterGraphCommand(result.document);
     }
 
-    function applyGraphPropertyDraft() {
-      if (!graphSelection?.draft) return;
-      if (graphSelection.kind === 'behavior') {
-        return runGraphCommand({ type: 'update_behavior', behavior: graphSelection.draft }, { successLabel: '节点属性已更新' });
+    function graphPropertyConflictMessage(result) {
+      const fields = (result?.conflicts || []).map(item => item.field).join('、');
+      return fields
+        ? `当前JSON中的${fields}已由其他入口修改。系统没有覆盖这些内容；请核对后重新编辑。`
+        : '当前对象已发生变化。系统没有覆盖现有内容；请核对后重新编辑。';
+    }
+
+    async function applyGraphPropertyDraft() {
+      const selection = graphSelection;
+      if (!selection || !['behavior', 'relation'].includes(selection.kind)) {
+        showStatus('当前没有可应用的节点或关系属性修改。', 'error');
+        return false;
       }
-      if (graphSelection.kind === 'relation') {
-        return runGraphCommand({ type: 'upsert_flow_relation', relation: graphSelection.draft }, { successLabel: '流程关系已更新' });
+      const config = entityEditConfig(selection.kind);
+      const session = entityEditSession(selection.kind, selection.ref);
+      const current = entityByKindAndRef(selection.kind, selection.ref);
+      if (!session || !current) {
+        showStatus('当前编辑对象已经不存在，未应用修改仍保留。请重新选择对象后核对。', 'error');
+        return false;
       }
+      const merged = editSessionManager.mergeCurrentEntity(current);
+      if (!merged.ok) {
+        showStatus(graphPropertyConflictMessage(merged), 'error');
+        return false;
+      }
+      if (!merged.changedFields.length) {
+        editSessionManager.reset();
+        openEntityEditSession(selection.kind, selection.ref);
+        refreshUnappliedIndicators();
+        showStatus('属性内容没有产生变化，无需应用。', 'success');
+        return true;
+      }
+      if (selection.kind === 'behavior') {
+        return runGraphCommand(
+          { type: 'update_behavior', behavior: merged.mergedEntity },
+          { successLabel: `${config.label}已更新`, resetEditSessionOnSuccess: true }
+        );
+      }
+      return runGraphCommand(
+        { type: 'upsert_flow_relation', relation: merged.mergedEntity },
+        { successLabel: `${config.label}已更新`, resetEditSessionOnSuccess: true }
+      );
+    }
+
+    async function applyDataObjectPropertyDraft() {
+      if (graphSelection?.kind !== 'data') {
+        showStatus('当前没有可应用的数据对象信息修改。', 'error');
+        return false;
+      }
+      const session = entityEditSession('data', graphSelection.ref);
+      const current = entityByKindAndRef('data', graphSelection.ref);
+      if (!session || !current) {
+        showStatus('当前数据对象编辑状态已经失效，未应用修改仍保留。请重新选择对象后核对。', 'error');
+        return false;
+      }
+      const merged = editSessionManager.mergeCurrentEntity(current);
+      if (!merged.ok) {
+        showStatus(graphPropertyConflictMessage(merged), 'error');
+        return false;
+      }
+      if (!merged.changedFields.length) {
+        editSessionManager.reset();
+        openEntityEditSession('data', graphSelection.ref);
+        refreshUnappliedIndicators();
+        showStatus('对象信息没有产生变化，无需应用。', 'success');
+        return true;
+      }
+      return runGraphCommand(
+        { type: 'update_data_object', dataObject: merged.mergedEntity },
+        { successLabel: '数据对象信息已更新', resetEditSessionOnSuccess: true }
+      );
+    }
+
+    async function confirmFlowRelationDraft() {
+      if (!flowRelationDraft) return false;
+      if (!editSessionManager.canApply(candidateStateKey())) {
+        showStatus('当前流程关系尚未完成。请先选择关系类型、起点和终点。', 'error');
+        return false;
+      }
+      const pendingDraft = clone(flowRelationDraft);
+      const relation = {
+        relation_ref: newRef('relation'),
+        relation_type: pendingDraft.relation_type,
+        from_behavior_ref: pendingDraft.from_behavior_ref,
+        to_behavior_ref: pendingDraft.to_behavior_ref,
+        condition: text(pendingDraft.condition)
+      };
+      const applied = await runGraphCommand(
+        { type: 'upsert_flow_relation', relation },
+        { successLabel: '流程关系已建立', resetEditSessionOnSuccess: true }
+      );
+      flowRelationDraft = applied ? null : pendingDraft;
+      if (!applied) syncFlowRelationDraftSession();
+      render();
+      return applied;
+    }
+
+    async function applyCurrentEditSession() {
+      const session = editSessionManager.get();
+      if (!session || !editSessionManager.isDirty(session.candidateKey)) return true;
+      if (['behavior-properties', 'relation-properties'].includes(session.editorKind)) return applyGraphPropertyDraft();
+      if (session.editorKind === 'data-object-properties') return applyDataObjectPropertyDraft();
+      if (session.editorKind === 'data-edge-operations') return applyGraphDataOperations();
+      if (session.editorKind === 'new-flow-relation-wizard') return confirmFlowRelationDraft();
+      showStatus(`${sessionLabel(session)}尚未完成，当前不能应用。`, 'error');
+      return false;
     }
 
     function deleteGraphObject(kind, ref) {
+      if (kind === 'data') return deleteDataObjectByRef(ref);
       const impacts = globalThis.GraphEditCommands.analyzeDeletion(currentDocument(), kind, ref);
       if (impacts.length) {
         showStatus(`不能删除：该对象仍被${impacts.map(item => `${item.label}（${item.ref}）`).join('、')}引用。请先转到对应内容移除或替换引用。`, 'error');
@@ -5599,6 +6118,8 @@
         return;
       }
       diagramExpanded = false;
+      editSessionManager.reset();
+      graphSelection = null;
       const governanceStep = globalThis.GovernanceWorkflow.stepForTarget(target);
       activeGovernanceStep = governanceStep;
       activeStepView = defaultStepView(governanceStep);
@@ -5614,8 +6135,7 @@
         activeProcessSection = 'behaviors';
         activeBehaviorRef = focusRef;
         if (governanceStep === 'skeleton') {
-          const item = currentDocument()?.behaviors?.find(value => value.behavior_ref === focusRef);
-          graphSelection = item ? { kind: 'behavior', ref: focusRef, draft: clone(item) } : null;
+          openEntityEditSession('behavior', focusRef);
           activeStepView = 'diagram';
         } else {
           activeStepView = 'behaviors';
@@ -5625,8 +6145,7 @@
         activeProcessSection = 'relations';
         activeRelationRef = focusRef;
         if (governanceStep === 'skeleton') {
-          const item = currentDocument()?.flow_relations?.find(value => value.relation_ref === focusRef);
-          graphSelection = item ? { kind: 'relation', ref: focusRef, draft: clone(item) } : null;
+          openEntityEditSession('relation', focusRef);
           activeStepView = 'diagram';
         } else {
           activeStepView = 'relations';
@@ -5636,6 +6155,7 @@
         activeProcessSection = 'data';
         activeDataRef = focusRef;
         activeStepView = 'data';
+        if (activeDataEditingMode === 'guided' && activeDataMode === 'flow') openEntityEditSession('data', focusRef);
       } else if (focusKind === 'form') {
         activeEditorSection = 'forms';
         activeFormRef = focusRef;
@@ -5730,14 +6250,6 @@
     }
 
     async function navigateToGovernanceTarget(element) {
-      if (flowRelationDraft) {
-        showStatus('当前正在建立流程关系。请先确认或取消本次关系，再切换治理步骤。', 'error');
-        return;
-      }
-      if (activeGovernanceStep === 'skeleton' && graphSelection?.draft) {
-        const applied = await applyGraphPropertyDraft();
-        if (applied === false) return;
-      }
       const step = text(element.dataset.step);
       const view = text(element.dataset.view);
       const target = {
@@ -6584,6 +7096,25 @@
       return (owner?.fields || []).find(dataField => dataField.field_ref === item.data_field_ref) || null;
     }
 
+    function formFieldReferenceDefaults(item, dataObject, dataField, otherReferenceCount = 0) {
+      if (!item || !dataObject || !dataField) return {};
+      const patch = {
+        business_data_ref: dataObject.data_ref,
+        item_type: dataField.field_type
+      };
+      if (!text(item.item_name).trim()) patch.item_name = dataField.field_name;
+      return patch;
+    }
+
+    function applyFormFieldReferenceDefaults(item, dataObject, dataField, otherReferenceCount = 0, update = null) {
+      const patch = formFieldReferenceDefaults(item, dataObject, dataField, otherReferenceCount);
+      Object.entries(patch).forEach(([key, value]) => {
+        if (typeof update === 'function') update(key, value);
+        else item[key] = value;
+      });
+      return patch;
+    }
+
     function dataFieldOptions(item) {
       const owner = (currentDocument()?.data_objects || []).find(dataObject => dataObject.data_ref === item.business_data_ref);
       const values = (owner?.fields || []).map((dataField, index) => ({
@@ -6591,6 +7122,58 @@
         label: `${index + 1}. ${dataField.field_name || '未命名对象字段'}${dataField.field_type ? `（${dataField.field_type}）` : ''}`
       }));
       return [{ value: '', label: owner ? '请选择对象字段' : '请先选择业务数据归属' }, ...values];
+    }
+
+    function formFieldCatalogOptions() {
+      return (currentDocument()?.data_objects || []).map((dataObject, dataIndex) => ({
+        label: `${dataIndex + 1}. ${dataObject.data_name || '未命名数据对象'}`,
+        fields: (dataObject.fields || []).map((dataField, fieldIndex) => ({
+          value: dataField.field_ref,
+          label: `${fieldIndex + 1}. ${dataField.field_name || '未命名对象字段'}${dataField.field_type ? `（${dataField.field_type}）` : ''}`
+        }))
+      })).filter(group => group.fields.length);
+    }
+
+    function formFieldTargetOptions(form) {
+      let detailNumber = 0;
+      const options = [{ value: 'main', label: '主表字段' }];
+      (form?.areas || []).filter(area => area.area_type === '明细清单').forEach(area => {
+        detailNumber += 1;
+        options.push({ value: area.area_ref, label: area.area_title || `明细表${detailNumber}` });
+      });
+      options.push({ value: '__new_detail__', label: '新建明细表' });
+      options.push({ value: 'unassigned', label: '字段归属待确认' });
+      return options;
+    }
+
+    function renderFormFieldCreatePanel(form, formIndex) {
+      const catalog = formFieldCatalogOptions();
+      const catalogOptions = catalog.map(group => `
+        <optgroup label="${escapeAttribute(group.label)}">
+          ${group.fields.map(option => `<option value="${escapeAttribute(option.value)}">${escapeHtml(option.label)}</option>`).join('')}
+        </optgroup>`).join('');
+      const targetOptions = formFieldTargetOptions(form)
+        .map(option => `<option value="${escapeAttribute(option.value)}">${escapeHtml(option.label)}</option>`)
+        .join('');
+      return `<div class="form-field-create-panel" data-form-field-create-panel>
+        <div class="form-field-create-copy">
+          <strong>从对象字段添加到当前表单</strong>
+          <span>选择后，页面自动带入对象字段名称和数据类型。纸质表单上的显示名称不同时，再修改“表单显示名称”。</span>
+        </div>
+        <label class="form-field-create-control">
+          <span>对象字段</span>
+          <select data-form-field-catalog="${formIndex}" ${catalog.length ? '' : 'disabled'}>
+            <option value="">${catalog.length ? '请选择已定义的对象字段' : '请先在上方建立对象字段'}</option>
+            ${catalogOptions}
+          </select>
+        </label>
+        <label class="form-field-create-control">
+          <span>添加到</span>
+          <select data-form-field-target="${formIndex}">${targetOptions}</select>
+        </label>
+        <button class="button secondary small" data-action="add-form-item-from-data-field" data-form-index="${formIndex}" disabled>引用并添加</button>
+        <button class="button small" data-action="add-form-item" data-form-index="${formIndex}">添加空白字段（待补引用）</button>
+      </div>`;
     }
 
     function formFieldTypeCell(pathKey, item) {
@@ -6738,8 +7321,8 @@
         const rows = area.items.map((item, itemIndex) => `
           <tr class="form-field-row" data-focus-kind="area" data-focus-ref="${escapeAttribute(area.area_ref)}" data-item-ref="${escapeAttribute(item.item_ref)}">
             <td class="form-field-number" data-label="序号">${itemIndex + 1}</td>
-            <td data-label="字段名称">
-              ${field(`forms.${formIndex}.areas.${areaIndex}.items.${itemIndex}.item_name`, '字段名称')}
+            <td data-label="表单显示名称">
+              ${field(`forms.${formIndex}.areas.${areaIndex}.items.${itemIndex}.item_name`, '表单显示名称')}
               <div class="form-field-relation-access">
                 <button class="button secondary small" data-action="edit-field-relations" data-ref="${escapeAttribute(item.item_ref)}" title="${escapeAttribute(formFieldRelationSummary(item))}">数据关系</button>
                 <span class="form-field-relation-status">${escapeHtml(formFieldRelationStatus(item))}</span>
@@ -6782,10 +7365,10 @@
               <col style="width:54px"><col style="width:230px"><col style="width:135px"><col style="width:160px">
               <col style="width:82px"><col style="width:363px"><col style="width:90px"><col style="width:76px">
             </colgroup>
-            <thead><tr><th>序号</th><th>字段名称</th><th>数据类型</th><th>字段归属</th><th>必填</th><th>填写说明</th><th>排序</th><th>删除</th></tr></thead>
+            <thead><tr><th>序号</th><th>表单显示名称</th><th>数据类型</th><th>字段归属</th><th>必填</th><th>填写说明</th><th>排序</th><th>删除</th></tr></thead>
             ${groups}
           </table>
-        </div>` : emptyList('尚未录入字段。点击“添加字段”后，再明确字段属于主表还是哪张明细表。');
+        </div>` : emptyList('尚未录入字段。请先选择对象字段和添加位置，再点击“引用并添加”；没有可复用字段时，才添加空白字段。');
 
       const body = `
         <div class="form-workbench">
@@ -6814,7 +7397,7 @@
               </div>
             </div>
             ${fieldsTable}
-            <button class="button small" data-action="add-form-item" data-form-index="${formIndex}">添加字段</button>
+            ${renderFormFieldCreatePanel(form, formIndex)}
             ${renderFieldRelationEditor(form, formIndex)}
           </div>
         </div>`;
@@ -7374,7 +7957,7 @@
         <div class="review-readiness-actions">
           <button class="button small" data-action="refresh-structure-score"${scoreState.status === 'pending' ? ' disabled' : ''}>重新检查六方面</button>
         </div>
-        <p class="boundary"><strong>责任边界：</strong>3001只提供评审准备检查和整改定位，不保存现场确认、依据或评审结论。当前3000尚未承接v7文件，不得把本次下载描述为可直接导入3000。</p>
+        <p class="boundary"><strong>责任边界：</strong>3001只提供评审准备检查和整改定位，不保存现场确认、依据或评审结论，也不与3000通信。3000的V7技术链路默认关闭，真实单流程试点待验收；不得把本次下载描述为可直接导入3000。</p>
       </section>`;
     }
 
@@ -7395,7 +7978,7 @@
           <section class="next-stage-card next">
             <span class="next-stage-badge">下一步</span>
             <h3>完成部门事实核对后，保存最终v7文件</h3>
-            <p>3001不记录现场核对记录。请分别保存最终v7、结构预审问题处理记录和部门业务核对记录；v7文件暂不能直接导入3000。待3000另行完成兼容、迁移审核和验证后，再按受控流程承接。</p>
+            <p>3001不记录现场核对记录。请分别保存最终v7、结构预审问题处理记录和部门业务核对记录。3000的V7技术链路默认关闭，真实单流程试点待验收；只有另行批准的精确process_ref才能按受控流程承接。</p>
           </section>
           <section class="next-stage-card future">
             <span class="next-stage-badge">后续规划</span>
@@ -7597,7 +8180,23 @@
 
     function updateNativeGridCell(control) {
       if (!control?.matches?.('[data-grid-cell]')) return;
-      webGridSession.updateCell(control.dataset.gridTableId, control.dataset.gridRowId, control.dataset.gridColumn, nativeGridControlValue(control));
+      const tableId = control.dataset.gridTableId;
+      const rowId = control.dataset.gridRowId;
+      const column = control.dataset.gridColumn;
+      webGridSession.updateCell(tableId, rowId, column, nativeGridControlValue(control));
+      if (tableId === 'form_items' && column === 'data_field_ref') {
+        const row = webGridSession.rows('form_items').find(item => item._row_id === rowId && !item._deleted);
+        const dataField = webGridSession.rows('data_fields').find(item => item.field_ref === row?.data_field_ref && !item._deleted);
+        const dataObject = webGridSession.rows('data_objects').find(item => item.data_ref === dataField?.data_ref && !item._deleted);
+        if (row && dataField && dataObject) {
+          const otherReferenceCount = webGridSession.rows('form_items')
+            .filter(item => item._row_id !== rowId && !item._deleted && item.data_field_ref === dataField.field_ref)
+            .length;
+          applyFormFieldReferenceDefaults(row, dataObject, dataField, otherReferenceCount, (key, value) => {
+            webGridSession.updateCell('form_items', rowId, key, value);
+          });
+        }
+      }
       clearNativeGridIssues();
       updateNativeGridStatus();
     }
@@ -7752,7 +8351,7 @@
       if (!webGridSession?.isDirty()) {
         if (options.switchMode) activeDataEditingMode = options.switchMode;
         resetWebGridEditor();
-        closeGridModeSwitchModal();
+        closePendingEditModal({ restoreFocus: false });
         if (typeof options.after === 'function') options.after();
         else render();
         return true;
@@ -7763,7 +8362,7 @@
         const prepared = await driver.validate();
         webGridIssues = [...(prepared.errors || []), ...(prepared.warnings || [])];
         if (!prepared.ok) {
-          closeGridModeSwitchModal();
+          closePendingEditModal();
           render();
           requestAnimationFrame(() => workspace.querySelector('.web-grid-issues')?.focus());
           showStatus(`表格修改有${prepared.errors.length}项错误，当前JSON保持不变。`, 'error');
@@ -7773,7 +8372,7 @@
         if (globalThis.GraphEditorState.fingerprint(source) === globalThis.GraphEditorState.fingerprint(prepared.document)) {
           resetWebGridEditor();
           if (options.switchMode) activeDataEditingMode = options.switchMode;
-          closeGridModeSwitchModal();
+          closePendingEditModal({ restoreFocus: false });
           if (typeof options.after === 'function') options.after();
           else render();
           showStatus('表格内容没有产生数据变化，无需应用。', 'success');
@@ -7781,17 +8380,16 @@
         }
         const changeCount = prepared.summary.added + prepared.summary.updated + prepared.summary.deleted;
         driver.commit(prepared.document, { source: 'web-grid', changeCount, tableCount: globalThis.ProcessV7GridAdapter.TABLE_IDS.length });
-        graphSelection = null;
         resetWebGridEditor();
         if (options.switchMode) activeDataEditingMode = options.switchMode;
-        closeGridModeSwitchModal();
+        closePendingEditModal({ restoreFocus: false });
         updateCandidateList();
         if (typeof options.after === 'function') options.after();
         else render();
         showStatus(`已应用本次表格修改${changeCount ? `，涉及${changeCount}项记录变化` : ''}。执行一次撤销可恢复应用前内容。`, 'success');
         return true;
       } catch (error) {
-        closeGridModeSwitchModal();
+        closePendingEditModal();
         showStatus(`表格修改未应用：${error.message}`, 'error');
         return false;
       } finally {
@@ -7802,25 +8400,236 @@
     function discardWebGridChanges(options = {}) {
       resetWebGridEditor();
       if (options.switchMode) activeDataEditingMode = options.switchMode;
-      closeGridModeSwitchModal();
+      closePendingEditModal({ restoreFocus: false });
       if (typeof options.after === 'function') options.after();
       else render();
       showStatus('已放弃尚未应用的表格修改。当前JSON没有改变。', 'success');
     }
 
-    function openGridModeSwitchModal(nextMode, pendingAction = null) {
-      webGridPendingMode = nextMode;
-      webGridPendingAction = pendingAction;
-      gridModeSwitchModal.classList.add('show');
-      gridModeSwitchModal.setAttribute('aria-hidden', 'false');
-      continueGridEditingButton.focus();
+    function getPendingEdit() {
+      if (updateFieldsModalIsDirty()) {
+        const selectedRefs = currentUpdateFieldsModalRefs();
+        return {
+          kind: 'update-fields-selection',
+          label: '尚未确认的更新字段选择',
+          canApply: selectedRefs.length > 0,
+          apply: confirmUpdateFieldsSelection,
+          discard() {
+            closeUpdateFieldsModal(true);
+            return true;
+          }
+        };
+      }
+      const session = editSessionManager.get();
+      if (session && editSessionManager.isDirty(session.candidateKey)) {
+        return {
+          kind: session.editorKind,
+          label: sessionLabel(session),
+          canApply: editSessionManager.canApply(session.candidateKey),
+          apply: applyCurrentEditSession,
+          discard() {
+            const discarded = editSessionManager.discard();
+            if (discarded?.editorKind === 'new-flow-relation-wizard') flowRelationDraft = null;
+            if (['data-behavior-choice', 'data-edge-operations'].includes(discarded?.editorKind)) graphSelection = null;
+            refreshUnappliedIndicators();
+            return true;
+          }
+        };
+      }
+      if (webGridSession?.isDirty()) {
+        return {
+          kind: 'web-grid',
+          label: '表格工作副本',
+          canApply: true,
+          apply: () => applyWebGridChanges(),
+          discard() {
+            resetWebGridEditor();
+            refreshUnappliedIndicators();
+            return true;
+          }
+        };
+      }
+      return null;
     }
 
-    function closeGridModeSwitchModal() {
-      webGridPendingMode = '';
-      webGridPendingAction = null;
-      gridModeSwitchModal.classList.remove('show');
-      gridModeSwitchModal.setAttribute('aria-hidden', 'true');
+    function closePendingEditModal(options = {}) {
+      const transition = pendingTransition;
+      pendingTransition = null;
+      pendingEditModal.classList.remove('show');
+      pendingEditModal.setAttribute('aria-hidden', 'true');
+      if (options.restoreFocus === false) return;
+      if (transition?.cancelAction) transition.cancelAction();
+      if (transition?.invoker?.isConnected) {
+        transition.invoker.focus({ preventScroll: true });
+        window.scrollTo(transition.scrollX, transition.scrollY);
+      } else if (pendingEditModal.contains(document.activeElement)) {
+        document.activeElement.blur();
+      }
+    }
+
+    function requestTransition(intent, action, options = {}) {
+      const pending = getPendingEdit();
+      if (!pending) {
+        action();
+        return true;
+      }
+      pendingTransition = {
+        intent: text(intent) || '继续操作',
+        action,
+        pending,
+        invoker: options.invoker || (document.activeElement instanceof HTMLElement ? document.activeElement : null),
+        cancelAction: options.cancelAction || null,
+        scrollX: window.scrollX,
+        scrollY: window.scrollY
+      };
+      pendingEditTitle.textContent = `${pending.label}还有未应用修改`;
+      pendingEditText.textContent = pending.canApply
+        ? `${pending.label}中的输入尚未写入当前JSON，也不会进入下载文件。请选择如何处理后再${pendingTransition.intent}。`
+        : `${pending.label}尚未完成，当前不能应用。请继续编辑，或者明确放弃本次编制后再${pendingTransition.intent}。`;
+      applyPendingEditButton.disabled = !pending.canApply;
+      applyPendingEditButton.title = pending.canApply ? '' : '请先补齐当前编制所需内容';
+      pendingEditModal.classList.add('show');
+      pendingEditModal.setAttribute('aria-hidden', 'false');
+      continuePendingEditingButton.focus();
+      return true;
+    }
+
+    function runDocumentTransaction(mutator, options = {}) {
+      const entry = currentEntry();
+      if (!entry) return { ok: false, changed: false, code: 'NO_DOCUMENT' };
+      const nextDocument = clone(entry.data);
+      let details = {};
+      try {
+        details = mutator(nextDocument) || {};
+      } catch (error) {
+        showStatus(`${options.failureLabel || '本次操作'}未执行：${error.message}。当前草稿保持不变。`, 'error');
+        return { ok: false, changed: false, code: 'MUTATION_FAILED', error };
+      }
+      const fingerprint = globalThis.GraphEditorState.fingerprint;
+      if (fingerprint(entry.data) === fingerprint(nextDocument)) {
+        if (options.noChangeLabel) showStatus(options.noChangeLabel, 'success');
+        return { ok: true, changed: false, document: entry.data, details };
+      }
+      const result = graphStateManager.execute(candidateStateKey(entry), entry.data, () => ({
+        ok: true,
+        document: nextDocument,
+        details: { ...details, source: options.source || 'document-transaction' }
+      }));
+      if (!result.ok) {
+        showStatus(result.message || `${options.failureLabel || '本次操作'}未执行`, 'error');
+        return { ok: false, changed: false, code: 'COMMIT_FAILED', result };
+      }
+      entry.data = result.document;
+      if (options.resetEditSessionOnSuccess !== false) {
+        editSessionManager.reset();
+        graphSelection = null;
+      }
+      if (typeof options.afterCommit === 'function') options.afterCommit(entry.data, result.details || details);
+      invalidateCurrentChecks(entry);
+      resetWebGridEditor();
+      refreshCandidateDirty(entry);
+      render();
+      if (options.successLabel) showStatus(options.successLabel, 'success');
+      refreshValidationAfterGraphCommand(entry.data);
+      return { ok: true, changed: true, document: entry.data, details: result.details || details };
+    }
+
+    function deletionReferencePaths(documentValue, targetRef, targetPath) {
+      if (!targetRef) return [];
+      const references = [];
+      const visit = (value, path = '') => {
+        if (path === targetPath || path.startsWith(`${targetPath}.`)) return;
+        if (typeof value === 'string') {
+          if (value === targetRef) references.push(path);
+          return;
+        }
+        if (!value || typeof value !== 'object') return;
+        if (Array.isArray(value)) {
+          value.forEach((item, index) => visit(item, path ? `${path}.${index}` : String(index)));
+          return;
+        }
+        Object.entries(value).forEach(([key, item]) => visit(item, path ? `${path}.${key}` : key));
+      };
+      visit(documentValue);
+      return [...new Set(references)];
+    }
+
+    function deletionReferenceLabel(path) {
+      if (path.includes('.updated_field_refs.')) return '数据行为关系的更新字段';
+      if (path.endsWith('.data_field_ref')) return '表单字段中的对象字段';
+      if (path.endsWith('.business_data_ref')) return '表单字段中的数据对象';
+      if (path.endsWith('.source_data_ref')) return '字段取值来源';
+      if (path.endsWith('.actor_department_data_ref')) return '执行部门来源数据';
+      if (path.endsWith('.available_from_behavior_ref')) return '数据来源可用起点';
+      if (path.includes('.created_data_link_refs.')) return '历史迁移记录的数据关系';
+      if (path.includes('.created_relation_refs.')) return '历史迁移记录的流程关系';
+      if (path.endsWith('.behavior_ref') || path.endsWith('.from_behavior_ref') || path.endsWith('.to_behavior_ref')) return '业务行为或流程关系';
+      return `结构位置 ${path}`;
+    }
+
+    function requestConfirmedDeletion(options = {}) {
+      const documentValue = currentDocument();
+      if (!documentValue) return false;
+      const references = typeof options.analyze === 'function'
+        ? options.analyze(documentValue)
+        : deletionReferencePaths(documentValue, options.targetRef, options.targetPath).map(deletionReferenceLabel);
+      const uniqueReferences = [...new Set((references || []).filter(Boolean))];
+      if (uniqueReferences.length) {
+        window.alert(`不能删除${options.label}：它仍被${uniqueReferences.join('、')}引用。请先逐项移除或替换引用，系统不会自动级联删除。`);
+        return false;
+      }
+      const impactText = options.impact ? `\n\n影响：${options.impact}` : '';
+      if (!window.confirm(`确定删除${options.label}吗？${impactText}\n\n确认后会形成一次可撤销操作，不会自动删除其他引用内容。`)) return false;
+      const result = runDocumentTransaction(options.mutate, {
+        source: 'confirmed-deletion',
+        failureLabel: `删除${options.label}`,
+        successLabel: `已删除${options.label}。执行一次撤销可恢复删除前的完整内容。`,
+        afterCommit: options.afterCommit
+      });
+      return result.ok && result.changed;
+    }
+
+    async function resolvePendingTransition(resolution) {
+      const transition = pendingTransition;
+      if (!transition) return;
+      if (resolution === 'continue') {
+        closePendingEditModal();
+        return;
+      }
+      if (resolution === 'discard') {
+        await transition.pending.discard();
+        closePendingEditModal({ restoreFocus: false });
+        requestTransition(transition.intent, transition.action, {
+          invoker: transition.invoker,
+          cancelAction: transition.cancelAction
+        });
+        return;
+      }
+      if (resolution !== 'apply' || !transition.pending.canApply) return;
+      applyPendingEditButton.disabled = true;
+      const applied = await transition.pending.apply();
+      if (!applied) {
+        closePendingEditModal();
+        return;
+      }
+      closePendingEditModal({ restoreFocus: false });
+      requestTransition(transition.intent, transition.action, {
+        invoker: transition.invoker,
+        cancelAction: transition.cancelAction
+      });
+    }
+
+    function openGridModeSwitchModal(nextMode, pendingAction = null) {
+      const action = pendingAction || (() => {
+        resetWebGridEditor();
+        if (nextMode) activeDataEditingMode = nextMode;
+        render();
+      });
+      return requestTransition(nextMode ? '切换编辑方式' : '继续操作', action);
+    }
+
+    function closeGridModeSwitchModal(options = {}) {
+      closePendingEditModal(options);
     }
 
     function render() {
@@ -7865,7 +8674,10 @@
       }
       candidateList.innerHTML = candidates.map((item, index) => {
         const name = item.data.process.process_name || `未命名流程 ${index + 1}`;
-        const fullLabel = `${index + 1}. ${name}${item.dirty ? '，未下载修改' : ''}`;
+        const unapplied = candidateHasUnappliedChanges(item);
+        const fileState = candidateFileState(item, unapplied);
+        const states = [unapplied ? '未应用修改' : '', item.dirty ? '未下载修改' : '', fileState?.label || ''].filter(Boolean);
+        const fullLabel = `${index + 1}. ${name}${states.length ? `，${states.join('，')}` : ''}`;
         return `
           <button
             class="candidate-item${index === currentIndex ? ' active' : ''}"
@@ -7879,7 +8691,9 @@
             <span class="candidate-number" aria-hidden="true">${index + 1}</span>
             <span class="candidate-copy">
               <span class="candidate-name">${escapeHtml(name)}</span>
+              ${unapplied ? '<span class="candidate-dirty">未应用修改</span>' : ''}
               ${item.dirty ? '<span class="candidate-dirty">未下载修改</span>' : ''}
+              ${fileState ? `<span class="candidate-file-state ${escapeAttribute(fileState.className)}">${escapeHtml(fileState.label)}</span>` : ''}
             </span>
           </button>`;
       }).join('');
@@ -7904,7 +8718,7 @@
         candidates = [entry];
         graphStateManager.clear();
         checkedGovernanceSteps.clear();
-        resetWebGridEditor();
+        resetTransientEditingState({ resetDataMode: true });
         activeDataEditingMode = 'guided';
         activeGridWorkspace = 'data';
         advancedLifecycleMode = false;
@@ -7929,7 +8743,7 @@
       destroyDataDiagram();
       graphStateManager.clear();
       checkedGovernanceSteps.clear();
-      resetWebGridEditor();
+      resetTransientEditingState({ resetDataMode: true });
       activeDataEditingMode = 'guided';
       activeGridWorkspace = 'data';
       advancedLifecycleMode = false;
@@ -8046,18 +8860,31 @@
     }
 
     function removeRelation(index) {
-      const relation = currentDocument().flow_relations[index];
+      const relation = currentDocument()?.flow_relations?.[index];
       if (!relation) return false;
-      const impacts = globalThis.GraphEditCommands.analyzeDeletion(currentDocument(), 'relation', relation.relation_ref);
-      if (impacts.length) {
-        window.alert(`当前流程关系仍被${impacts.map(item => `${item.label}（${item.ref}）`).join('、')}引用，不能删除。`);
-        return false;
-      }
-      currentDocument().flow_relations.splice(index, 1);
-      if (activeRelationRef === relation.relation_ref) {
-        activeRelationRef = currentDocument().flow_relations[Math.min(index, currentDocument().flow_relations.length - 1)]?.relation_ref || '';
-      }
-      return true;
+      const relationRef = relation.relation_ref;
+      const source = currentDocument()?.behaviors?.find(item => item.behavior_ref === relation.from_behavior_ref)?.behavior_name || '未命名起点';
+      const target = currentDocument()?.behaviors?.find(item => item.behavior_ref === relation.to_behavior_ref)?.behavior_name || '未命名终点';
+      return requestConfirmedDeletion({
+        label: `流程关系“${source} → ${target}”`,
+        targetRef: relationRef,
+        targetPath: `flow_relations.${index}`,
+        impact: '该关系的类型、端点和第4步维护的条件将一并删除。',
+        analyze(documentValue) {
+          return globalThis.GraphEditCommands.analyzeDeletion(documentValue, 'relation', relationRef)
+            .map(item => `${item.label}（${item.ref}）`);
+        },
+        mutate(nextDocument) {
+          const nextIndex = (nextDocument.flow_relations || []).findIndex(item => item.relation_ref === relationRef);
+          if (nextIndex < 0) throw new Error('当前流程关系已不存在');
+          nextDocument.flow_relations.splice(nextIndex, 1);
+        },
+        afterCommit(nextDocument) {
+          if (activeRelationRef === relationRef) {
+            activeRelationRef = nextDocument.flow_relations[Math.min(index, Math.max(0, nextDocument.flow_relations.length - 1))]?.relation_ref || '';
+          }
+        }
+      });
     }
 
     function ensureFormArea(form, areaType) {
@@ -8071,6 +8898,53 @@
       };
       form.areas.push(area);
       return area;
+    }
+
+    function newFormItem() {
+      return {
+        item_ref: newRef('item'),
+        item_name: '',
+        item_type: '',
+        required: false,
+        instructions: '',
+        business_data_ref: null,
+        data_field_ref: null,
+        value_usage_mode: 'pending_confirmation',
+        value_origin_mode: 'pending_confirmation',
+        source_links: []
+      };
+    }
+
+    function targetAreaForNewFormItem(form, assignment) {
+      if (assignment === 'main') return ensureFormArea(form, '基本信息');
+      if (assignment === 'unassigned') return ensureFormArea(form, '');
+      if (assignment === '__new_detail__') {
+        const area = { area_ref: newRef('area'), area_type: '明细清单', area_title: '', items: [] };
+        form.areas.push(area);
+        return area;
+      }
+      return form.areas.find(area => area.area_type === '明细清单' && area.area_ref === assignment) || null;
+    }
+
+    function addFormItemFromDataField(formIndex, dataFieldRef, assignment) {
+      const form = currentDocument()?.forms?.[formIndex];
+      const dataObject = (currentDocument()?.data_objects || []).find(item =>
+        (item.fields || []).some(dataField => dataField.field_ref === dataFieldRef)
+      );
+      const dataField = (dataObject?.fields || []).find(item => item.field_ref === dataFieldRef);
+      if (!form || !dataObject || !dataField) return null;
+      const area = targetAreaForNewFormItem(form, assignment);
+      if (!area) return null;
+      const item = newFormItem();
+      item.data_field_ref = dataField.field_ref;
+      const otherReferenceCount = (currentDocument().forms || []).reduce((count, currentForm) =>
+        count + (currentForm.areas || []).reduce((areaCount, currentArea) =>
+          areaCount + (currentArea.items || []).filter(candidate => candidate.data_field_ref === dataField.field_ref).length,
+        0),
+      0);
+      applyFormFieldReferenceDefaults(item, dataObject, dataField, otherReferenceCount);
+      area.items.push(item);
+      return { form, area, item, areaIndex: form.areas.indexOf(area), itemIndex: area.items.length - 1 };
     }
 
     function findFormItem(form, itemRef) {
@@ -8139,11 +9013,24 @@
       const form = currentDocument().forms[formIndex];
       const area = form?.areas[areaIndex];
       if (!area || area.area_type !== '明细清单') return false;
-      const fieldCount = area.items.length;
-      if (!window.confirm(`当前明细表包含${fieldCount}个字段。删除后，这些字段会一并删除；其他字段不受影响。确定继续吗？`)) return false;
-      form.areas.splice(areaIndex, 1);
-      if (area.area_ref === activeAreaRef) activeAreaRef = '';
-      return true;
+      const formRef = form.form_ref;
+      const areaRef = area.area_ref;
+      const fieldCount = (area.items || []).length;
+      return requestConfirmedDeletion({
+        label: `明细表“${area.area_title || '未命名明细表'}”`,
+        targetRef: areaRef,
+        targetPath: `forms.${formIndex}.areas.${areaIndex}`,
+        impact: `该明细表内${fieldCount}个表单字段将随明细表一并删除；其他表单内容不受影响。`,
+        mutate(nextDocument) {
+          const nextForm = (nextDocument.forms || []).find(item => item.form_ref === formRef);
+          const nextAreaIndex = (nextForm?.areas || []).findIndex(item => item.area_ref === areaRef);
+          if (nextAreaIndex < 0) throw new Error('当前明细表已不存在');
+          nextForm.areas.splice(nextAreaIndex, 1);
+        },
+        afterCommit() {
+          if (areaRef === activeAreaRef) activeAreaRef = '';
+        }
+      });
     }
 
     function addForm(formDesignState) {
@@ -8173,35 +9060,286 @@
     }
 
     function removeBehavior(index) {
-      const behavior = currentDocument().behaviors[index];
+      const behavior = currentDocument()?.behaviors?.[index];
       if (!behavior) return false;
       const ref = behavior.behavior_ref;
-      const impacts = globalThis.GraphEditCommands.analyzeDeletion(currentDocument(), 'behavior', ref);
-      if (impacts.length) {
-        window.alert(`当前业务行为仍被以下内容引用：${impacts.map(item => `${item.label}（${item.ref}）`).join('、')}。请先逐项移除或替换引用，再删除该行为。`);
-        return false;
-      }
-      currentDocument().behaviors.splice(index, 1);
-      if (activeBehaviorRef === ref) {
-        activeBehaviorRef = currentDocument().behaviors[Math.min(index, currentDocument().behaviors.length - 1)]?.behavior_ref || '';
-      }
-      return true;
+      return requestConfirmedDeletion({
+        label: `节点“${behavior.behavior_name || '未命名节点'}”`,
+        targetRef: ref,
+        targetPath: `behaviors.${index}`,
+        impact: '该节点的执行主体、动作说明、完成标准和会签信息将一并删除。',
+        analyze(documentValue) {
+          return globalThis.GraphEditCommands.analyzeDeletion(documentValue, 'behavior', ref)
+            .map(item => `${item.label}（${item.ref}）`);
+        },
+        mutate(nextDocument) {
+          const nextIndex = (nextDocument.behaviors || []).findIndex(item => item.behavior_ref === ref);
+          if (nextIndex < 0) throw new Error('当前节点已不存在');
+          nextDocument.behaviors.splice(nextIndex, 1);
+        },
+        afterCommit(nextDocument) {
+          if (activeBehaviorRef === ref) {
+            activeBehaviorRef = nextDocument.behaviors[Math.min(index, Math.max(0, nextDocument.behaviors.length - 1))]?.behavior_ref || '';
+          }
+        }
+      });
+    }
+
+    function removeTerm(index) {
+      const term = currentDocument()?.terms?.[index];
+      if (!term) return false;
+      const termRef = term.term_ref;
+      return requestConfirmedDeletion({
+        label: `术语“${term.term_name || '未命名术语'}”`,
+        targetRef: termRef,
+        targetPath: `terms.${index}`,
+        impact: '该术语名称和定义将一并删除。',
+        mutate(nextDocument) {
+          const nextIndex = (nextDocument.terms || []).findIndex(item => item.term_ref === termRef);
+          if (nextIndex < 0) throw new Error('当前术语已不存在');
+          nextDocument.terms.splice(nextIndex, 1);
+        },
+        afterCommit(nextDocument) {
+          if (activeTermRef === termRef) {
+            activeTermRef = nextDocument.terms[Math.min(index, Math.max(0, nextDocument.terms.length - 1))]?.term_ref || '';
+          }
+        }
+      });
     }
 
     function removeData(index) {
       const item = currentDocument().data_objects[index];
       if (!item) return false;
-      const ref = item.data_ref;
-      const impacts = globalThis.GraphEditCommands.analyzeDeletion(currentDocument(), 'data', ref);
-      if (impacts.length) {
-        window.alert(`当前数据仍被以下内容引用：${impacts.map(impact => `${impact.label}（${impact.ref}）`).join('、')}。请先逐项移除或替换引用，再删除该数据。`);
-        return false;
-      }
-      currentDocument().data_objects.splice(index, 1);
-      if (activeDataRef === ref) {
-        activeDataRef = currentDocument().data_objects[Math.min(index, currentDocument().data_objects.length - 1)]?.data_ref || '';
-      }
-      return true;
+      return deleteDataObjectByRef(item.data_ref);
+    }
+
+    function deleteDataObjectByRef(dataRef) {
+      const documentValue = currentDocument();
+      const dataIndex = (documentValue?.data_objects || []).findIndex(item => item.data_ref === dataRef);
+      const dataObject = documentValue?.data_objects?.[dataIndex];
+      if (!dataObject) return false;
+      const nestedCount = (dataObject.fields || []).length
+        + (dataObject.behavior_links || []).length
+        + (dataObject.source_relations || []).length;
+      return requestConfirmedDeletion({
+        label: `数据对象“${dataObject.data_name || '未命名数据'}”`,
+        targetRef: dataRef,
+        targetPath: `data_objects.${dataIndex}`,
+        impact: `对象内${(dataObject.fields || []).length}个字段、${(dataObject.behavior_links || []).length}条数据行为关系、${(dataObject.source_relations || []).length}条数据来源和生命周期内容将随对象一并删除${nestedCount ? '' : '；该对象当前没有字段或关系'}。`,
+        mutate(nextDocument) {
+          const nextIndex = (nextDocument.data_objects || []).findIndex(item => item.data_ref === dataRef);
+          if (nextIndex < 0) throw new Error('当前数据对象已不存在');
+          nextDocument.data_objects.splice(nextIndex, 1);
+        },
+        afterCommit(nextDocument) {
+          const nearby = nextDocument.data_objects[Math.min(dataIndex, Math.max(0, nextDocument.data_objects.length - 1))];
+          activeDataRef = nearby?.data_ref || '';
+          activeDataFieldRef = '';
+          if (nearby && activeDataMode === 'flow') openEntityEditSession('data', nearby.data_ref);
+        }
+      });
+    }
+
+    function deleteDataField(dataIndex, fieldIndex) {
+      const dataObject = currentDocument()?.data_objects?.[dataIndex];
+      const dataField = dataObject?.fields?.[fieldIndex];
+      if (!dataObject || !dataField) return false;
+      const dataRef = dataObject.data_ref;
+      const fieldRef = dataField.field_ref;
+      return requestConfirmedDeletion({
+        label: `对象字段“${dataField.field_name || '未命名对象字段'}”`,
+        targetRef: fieldRef,
+        targetPath: `data_objects.${dataIndex}.fields.${fieldIndex}`,
+        impact: '仅删除该字段；数据对象和其他字段保留。',
+        mutate(nextDocument) {
+          const nextData = (nextDocument.data_objects || []).find(item => item.data_ref === dataRef);
+          const nextIndex = (nextData?.fields || []).findIndex(item => item.field_ref === fieldRef);
+          if (nextIndex < 0) throw new Error('当前对象字段已不存在');
+          nextData.fields.splice(nextIndex, 1);
+        },
+        afterCommit(nextDocument) {
+          const nextData = (nextDocument.data_objects || []).find(item => item.data_ref === dataRef);
+          activeDataFieldRef = (nextData?.fields || [])[Math.min(fieldIndex, Math.max(0, (nextData?.fields || []).length - 1))]?.field_ref || '';
+        }
+      });
+    }
+
+    function deleteDataBehaviorLink(dataIndex, linkIndex) {
+      const dataObject = currentDocument()?.data_objects?.[dataIndex];
+      const link = dataObject?.behavior_links?.[linkIndex];
+      if (!dataObject || !link) return false;
+      const dataRef = dataObject.data_ref;
+      const linkRef = link.link_ref;
+      return requestConfirmedDeletion({
+        label: `数据行为关系“${dataObject.data_name || '未命名数据'} / ${behaviorLabel(link.behavior_ref)}”`,
+        targetRef: linkRef,
+        targetPath: `data_objects.${dataIndex}.behavior_links.${linkIndex}`,
+        impact: `将移除该行为对数据的“${DATA_OPERATIONS.find(item => item.value === link.operation)?.label || link.operation || '待确认'}”关系。`,
+        mutate(nextDocument) {
+          const nextData = (nextDocument.data_objects || []).find(item => item.data_ref === dataRef);
+          const nextIndex = (nextData?.behavior_links || []).findIndex(item => item.link_ref === linkRef);
+          if (nextIndex < 0) throw new Error('当前数据行为关系已不存在');
+          nextData.behavior_links.splice(nextIndex, 1);
+        }
+      });
+    }
+
+    function deleteDataEdgeByRefs(dataRef, behaviorRef) {
+      const documentValue = currentDocument();
+      const dataIndex = (documentValue?.data_objects || []).findIndex(item => item.data_ref === dataRef);
+      const dataObject = documentValue?.data_objects?.[dataIndex];
+      if (!dataObject) return false;
+      const links = (dataObject.behavior_links || [])
+        .map((link, index) => ({ link, index }))
+        .filter(item => item.link.behavior_ref === behaviorRef);
+      if (!links.length) return false;
+      const operationLabels = links.map(({ link }) => DATA_OPERATIONS.find(item => item.value === link.operation)?.label || link.operation);
+      return requestConfirmedDeletion({
+        label: `数据关系“${dataObject.data_name || '未命名数据'} / ${behaviorLabel(behaviorRef)}”`,
+        impact: `该关系中的${operationLabels.join('、') || '待确认'}操作将一并移除；数据对象和业务行为保留。`,
+        analyze(nextDocument) {
+          return links.flatMap(({ link, index }) => deletionReferencePaths(
+            nextDocument,
+            link.link_ref,
+            `data_objects.${dataIndex}.behavior_links.${index}`
+          ).map(deletionReferenceLabel));
+        },
+        mutate(nextDocument) {
+          const nextData = (nextDocument.data_objects || []).find(item => item.data_ref === dataRef);
+          if (!nextData) throw new Error('当前数据对象已不存在');
+          const beforeCount = (nextData.behavior_links || []).length;
+          nextData.behavior_links = (nextData.behavior_links || []).filter(link => link.behavior_ref !== behaviorRef);
+          if (nextData.behavior_links.length === beforeCount) throw new Error('当前数据关系已不存在');
+        },
+        afterCommit(nextDocument) {
+          const nextData = (nextDocument.data_objects || []).find(item => item.data_ref === dataRef);
+          if (nextData) openEntityEditSession('data', dataRef);
+        }
+      });
+    }
+
+    function deleteDataSourceRelation(dataIndex, sourceIndex) {
+      const dataObject = currentDocument()?.data_objects?.[dataIndex];
+      const source = dataObject?.source_relations?.[sourceIndex];
+      if (!dataObject || !source) return false;
+      const dataRef = dataObject.data_ref;
+      const sourceRef = source.source_ref;
+      const sourceName = source.source_data_name || source.source_process_name || source.source_department || '未命名来源线索';
+      return requestConfirmedDeletion({
+        label: `数据来源“${sourceName}”`,
+        targetRef: sourceRef,
+        targetPath: `data_objects.${dataIndex}.source_relations.${sourceIndex}`,
+        impact: `仅移除数据对象“${dataObject.data_name || '未命名数据'}”的该来源线索。`,
+        mutate(nextDocument) {
+          const nextData = (nextDocument.data_objects || []).find(item => item.data_ref === dataRef);
+          const nextIndex = (nextData?.source_relations || []).findIndex(item => item.source_ref === sourceRef);
+          if (nextIndex < 0) throw new Error('当前数据来源已不存在');
+          nextData.source_relations.splice(nextIndex, 1);
+        }
+      });
+    }
+
+    function deleteFormByIndex(formIndex) {
+      const form = currentDocument()?.forms?.[formIndex];
+      if (!form) return false;
+      const formRef = form.form_ref;
+      const areaCount = (form.areas || []).length;
+      const fieldCount = (form.areas || []).reduce((total, area) => total + (area.items || []).length, 0);
+      const linkCount = (form.behavior_links || []).length;
+      return requestConfirmedDeletion({
+        label: `表单或记录“${form.form_name || '未命名表单或记录'}”`,
+        targetRef: formRef,
+        targetPath: `forms.${formIndex}`,
+        impact: `该表单内${areaCount}个区域、${fieldCount}个表单字段和${linkCount}条表单行为关系将随表单一并删除。`,
+        mutate(nextDocument) {
+          const nextIndex = (nextDocument.forms || []).findIndex(item => item.form_ref === formRef);
+          if (nextIndex < 0) throw new Error('当前表单或记录已不存在');
+          nextDocument.forms.splice(nextIndex, 1);
+        },
+        afterCommit(nextDocument) {
+          const nearby = nextDocument.forms[Math.min(formIndex, Math.max(0, nextDocument.forms.length - 1))];
+          activeFormRef = nearby?.form_ref || '';
+          activeAreaRef = '';
+          activeFormItemRef = '';
+        }
+      });
+    }
+
+    function deleteFormBehaviorLink(formIndex, linkIndex) {
+      const form = currentDocument()?.forms?.[formIndex];
+      const link = form?.behavior_links?.[linkIndex];
+      if (!form || !link) return false;
+      const formRef = form.form_ref;
+      const linkRef = link.link_ref;
+      return requestConfirmedDeletion({
+        label: `表单行为关系“${form.form_name || '未命名表单'} / ${behaviorLabel(link.behavior_ref)}”`,
+        targetRef: linkRef,
+        targetPath: `forms.${formIndex}.behavior_links.${linkIndex}`,
+        impact: '仅移除该表单与业务行为之间的处理关系。',
+        mutate(nextDocument) {
+          const nextForm = (nextDocument.forms || []).find(item => item.form_ref === formRef);
+          const nextIndex = (nextForm?.behavior_links || []).findIndex(item => item.link_ref === linkRef);
+          if (nextIndex < 0) throw new Error('当前表单行为关系已不存在');
+          nextForm.behavior_links.splice(nextIndex, 1);
+        }
+      });
+    }
+
+    function deleteFormItem(formIndex, areaIndex, itemIndex) {
+      const form = currentDocument()?.forms?.[formIndex];
+      const area = form?.areas?.[areaIndex];
+      const item = area?.items?.[itemIndex];
+      if (!form || !area || !item) return false;
+      const formRef = form.form_ref;
+      const areaRef = area.area_ref;
+      const itemRef = item.item_ref;
+      return requestConfirmedDeletion({
+        label: `表单字段“${item.item_name || '未命名表单字段'}”`,
+        targetRef: itemRef,
+        targetPath: `forms.${formIndex}.areas.${areaIndex}.items.${itemIndex}`,
+        impact: `该字段内${(item.source_links || []).length}条取值来源将随字段一并删除；其所引用的数据对象和对象字段不会被删除。`,
+        mutate(nextDocument) {
+          const nextForm = (nextDocument.forms || []).find(candidate => candidate.form_ref === formRef);
+          const nextArea = (nextForm?.areas || []).find(candidate => candidate.area_ref === areaRef);
+          const nextIndex = (nextArea?.items || []).findIndex(candidate => candidate.item_ref === itemRef);
+          if (nextIndex < 0) throw new Error('当前表单字段已不存在');
+          nextArea.items.splice(nextIndex, 1);
+        },
+        afterCommit() {
+          if (itemRef === activeFormItemRef) activeFormItemRef = '';
+        }
+      });
+    }
+
+    function deleteFieldSource(formIndex, areaIndex, itemIndex, sourceIndex) {
+      const form = currentDocument()?.forms?.[formIndex];
+      const area = form?.areas?.[areaIndex];
+      const item = area?.items?.[itemIndex];
+      const source = item?.source_links?.[sourceIndex];
+      if (!form || !area || !item || !source) return false;
+      const formRef = form.form_ref;
+      const areaRef = area.area_ref;
+      const itemRef = item.item_ref;
+      const sourceRef = source.source_link_ref;
+      const sourceDataObject = (currentDocument().data_objects || []).find(candidate => candidate.data_ref === source.source_data_ref);
+      const sourceName = source.source_data_name
+        || sourceDataObject?.data_name
+        || source.source_system_name
+        || '未命名取值来源';
+      return requestConfirmedDeletion({
+        label: `字段取值来源“${sourceName}”`,
+        targetRef: sourceRef,
+        targetPath: `forms.${formIndex}.areas.${areaIndex}.items.${itemIndex}.source_links.${sourceIndex}`,
+        impact: `仅移除表单字段“${item.item_name || '未命名表单字段'}”的该取值来源。`,
+        mutate(nextDocument) {
+          const nextForm = (nextDocument.forms || []).find(candidate => candidate.form_ref === formRef);
+          const nextArea = (nextForm?.areas || []).find(candidate => candidate.area_ref === areaRef);
+          const nextItem = (nextArea?.items || []).find(candidate => candidate.item_ref === itemRef);
+          const nextIndex = (nextItem?.source_links || []).findIndex(candidate => candidate.source_link_ref === sourceRef);
+          if (nextIndex < 0) throw new Error('当前字段取值来源已不存在');
+          nextItem.source_links.splice(nextIndex, 1);
+        }
+      });
     }
 
     async function mergeDuplicateData(index) {
@@ -8353,15 +9491,19 @@
       }
     }
 
-    function requestDataEditingMode(nextMode) {
+    function requestDataEditingMode(nextMode, options = {}) {
       const normalized = nextMode === 'grid' ? 'grid' : 'guided';
       if (normalized === activeDataEditingMode) return;
-      if (activeDataEditingMode === 'grid' && webGridSession?.isDirty()) {
-        openGridModeSwitchModal(normalized);
-        return;
-      }
-      resetWebGridEditor();
+      if (!options.skipPendingGuard && requestTransition(
+        '切换编辑方式',
+        () => requestDataEditingMode(normalized, { skipPendingGuard: true })
+      )) return;
+      resetTransientEditingState();
       activeDataEditingMode = normalized;
+      if (normalized === 'guided' && activeStepView === 'data' && activeDataMode === 'flow') {
+        const dataObject = ensureActiveGraphDataObject();
+        if (dataObject) openEntityEditSession('data', dataObject.data_ref);
+      }
       render();
     }
 
@@ -8414,27 +9556,59 @@
       const row = createGridRowInSession(tableId, options);
       if (!row) return null;
       webGridIssues = [];
+      webGridFilters[tableId] = '';
       render();
+      requestAnimationFrame(() => {
+        const panel = workspace.querySelector(`[data-grid-panel="${CSS.escape(tableId)}"]`);
+        const tableRow = panel?.querySelector(`[data-grid-row-id="${CSS.escape(row._row_id)}"]`);
+        const controls = Array.from(tableRow?.querySelectorAll('[data-grid-cell]:not(:disabled)') || []);
+        const control = controls.find(candidate => !text(candidate.value)) || controls[0];
+        panel?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        control?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        control?.focus({ preventScroll: true });
+        if (control?.matches('input[type="text"]')) control.select();
+      });
       return row;
     }
 
-    function openGuidedUpdateFields(dataIndex, linkIndex, invoker = null) {
+    function beginGuidedDataOperationEdit(dataIndex, linkIndex, nextOperation) {
+      const dataObject = currentDocument()?.data_objects?.[dataIndex];
+      const link = dataObject?.behavior_links?.[linkIndex];
+      if (!dataObject || !link) return false;
+      const previousOperation = link.operation;
+      const baseline = dataEdgeValues(dataObject.data_ref, link.behavior_ref);
+      if (!openDataEdgeSession(dataObject.data_ref, link.behavior_ref)) return false;
+      const operations = [...baseline.operations];
+      const previousIndex = operations.indexOf(previousOperation);
+      if (previousIndex >= 0) operations.splice(previousIndex, 1);
+      if (nextOperation && !operations.includes(nextOperation)) operations.push(nextOperation);
+      editSessionManager.updatePatch({
+        operations,
+        updatedFieldRefs: operations.includes('update') ? baseline.updatedFieldRefs : []
+      });
+      updateDataEdgeCanApply();
+      refreshUnappliedIndicators();
+      render();
+      showStatus('数据操作仍在未应用编辑会话中。请核对后点击“应用数据操作”。');
+      if (nextOperation === 'update') requestAnimationFrame(() => openGraphUpdateFields());
+      return true;
+    }
+
+    function openGuidedUpdateFields(dataIndex, linkIndex, invoker = null, options = {}) {
       const dataObject = currentDocument()?.data_objects?.[dataIndex];
       const link = dataObject?.behavior_links?.[linkIndex];
       if (!dataObject || !link || link.operation !== 'update') return;
-      openUpdateFieldsModal({
-        dataRef: dataObject.data_ref,
-        dataName: dataObject.data_name,
-        selectedRefs: link.updated_field_refs,
-        invoker,
-        onConfirm(selectedRefs) {
-          link.updated_field_refs = selectedRefs;
-          touch();
-          render();
-          showStatus(`已登记${selectedRefs.length}个本次更新字段。`, 'success');
-        },
-        onCancel: render
-      });
+      const selection = { kind: 'data-edge', dataRef: dataObject.data_ref, behaviorRef: link.behavior_ref };
+      const open = () => {
+        if (!dataEdgeSession(selection) && !openDataEdgeSession(dataObject.data_ref, link.behavior_ref)) return;
+        openGraphUpdateFields(invoker);
+      };
+      if (!options.skipPendingGuard && !dataEdgeSession(selection) && requestTransition(
+        '编辑更新字段',
+        () => openGuidedUpdateFields(dataIndex, linkIndex, invoker, { skipPendingGuard: true }),
+        { invoker }
+      )) return;
+      open();
     }
 
     function openGridUpdateFields(rowId, invoker = null) {
@@ -8459,16 +9633,19 @@
     }
 
     function openGraphUpdateFields(invoker = null, onConfirm = null) {
-      if (graphSelection?.kind !== 'data-edge' || !graphSelection.operations?.includes('update')) return;
+      const edgeValues = dataEdgeWorkingValues();
+      if (graphSelection?.kind !== 'data-edge' || !edgeValues.operations.includes('update')) return;
       const dataObject = currentDocument()?.data_objects?.find(item => item.data_ref === graphSelection.dataRef);
       if (!dataObject) return;
       openUpdateFieldsModal({
         dataRef: dataObject.data_ref,
         dataName: dataObject.data_name,
-        selectedRefs: graphSelection.updatedFieldRefs,
+        selectedRefs: edgeValues.updatedFieldRefs,
         invoker,
         onConfirm(selectedRefs) {
-          graphSelection.updatedFieldRefs = selectedRefs;
+          editSessionManager.updatePatch({ updatedFieldRefs: selectedRefs });
+          updateDataEdgeCanApply();
+          refreshUnappliedIndicators();
           if (typeof onConfirm === 'function') return onConfirm(selectedRefs);
           render();
         },
@@ -8476,23 +9653,96 @@
       });
     }
 
-    function applyGraphDataOperations(updatedFieldRefs = graphSelection?.updatedFieldRefs || []) {
-      if (graphSelection?.kind !== 'data-edge') return;
-      return runGraphCommand({
+    async function applyGraphDataOperations(updatedFieldRefs = null) {
+      if (graphSelection?.kind !== 'data-edge') {
+        showStatus('当前没有可应用的数据操作修改。', 'error');
+        return false;
+      }
+      if (updatedFieldRefs) editSessionManager.updatePatch({ updatedFieldRefs });
+      const session = dataEdgeSession();
+      if (!session) {
+        showStatus('当前数据操作编辑状态已经失效，请重新选择数据关系。', 'error');
+        return false;
+      }
+      const workingValues = dataEdgeWorkingValues();
+      if (!workingValues.operations.length) {
+        editSessionManager.setCanApply(false);
+        showStatus('请至少选择一种数据操作，再应用修改。', 'error');
+        return false;
+      }
+      if (workingValues.operations.includes('update') && !list(workingValues.updatedFieldRefs).length) {
+        editSessionManager.setCanApply(false);
+        showStatus('选择“更新”时，必须先选择本次实际改变的字段。', 'error');
+        return false;
+      }
+      const currentValues = dataEdgeValues(graphSelection.dataRef, graphSelection.behaviorRef);
+      const merged = editSessionManager.mergeCurrentEntity(currentValues);
+      if (!merged.ok) {
+        showStatus(graphPropertyConflictMessage(merged), 'error');
+        return false;
+      }
+      if (!merged.changedFields.length) {
+        editSessionManager.reset();
+        openDataEdgeSession(graphSelection.dataRef, graphSelection.behaviorRef);
+        refreshUnappliedIndicators();
+        showStatus('数据操作没有产生变化，无需应用。', 'success');
+        return true;
+      }
+      if (merged.mergedEntity.operations.includes('update') && !list(merged.mergedEntity.updatedFieldRefs).length) {
+        editSessionManager.setCanApply(false);
+        showStatus('选择“更新”时，必须先选择本次实际改变的字段。', 'error');
+        return false;
+      }
+      const dataRef = graphSelection.dataRef;
+      const behaviorRef = graphSelection.behaviorRef;
+      const applied = await runGraphCommand({
         type: 'set_data_operations',
-        dataRef: graphSelection.dataRef,
-        behaviorRef: graphSelection.behaviorRef,
-        operations: graphSelection.operations || [],
-        updatedFieldRefs,
+        dataRef,
+        behaviorRef,
+        operations: merged.mergedEntity.operations || [],
+        updatedFieldRefs: list(merged.mergedEntity.updatedFieldRefs),
         refFactory: () => newRef('data_link')
-      }, { successLabel: graphSelection.operations?.length ? '数据关系已更新' : '数据关系已删除' });
+      }, {
+        successLabel: merged.mergedEntity.operations?.length ? '数据关系已更新' : '数据关系已删除',
+        resetEditSessionOnSuccess: true
+      });
+      if (applied) {
+        editSessionManager.reset();
+        openDataEdgeSession(dataRef, behaviorRef);
+        refreshUnappliedIndicators();
+      }
+      return applied;
     }
 
-    function handleAction(action, element) {
+    const PENDING_GUARDED_ACTIONS = new Set([
+      'switch-step-view', 'switch-data-editing-mode', 'switch-data-mode',
+      'start-new-process', 'open-import-file', 'clear-current-page', 'download-current-stage', 'export-current',
+      'open-help-view', 'open-version-view', 'choose-data-start', 'choose-form-start',
+      'select-skeleton-item', 'governance-jump', 'switch-tab', 'return-editor',
+      'focus-editor', 'focus-export-warning', 'undo-graph', 'redo-graph',
+      'add-graph-node', 'start-flow-relation', 'add-graph-data', 'merge-current-data',
+      'cancel-flow-relation',
+      'choose-data-behavior', 'delete-graph-selection', 'delete-graph-data-edge', 'open-flow-behavior', 'delete-data-object',
+      'open-behavior-data', 'open-data-from-overview', 'merge-duplicate-data',
+      'add-data-behavior-link', 'remove-data-behavior-link', 'add-data-source', 'remove-data-source',
+      'add-data-field', 'remove-data-field', 'add-form-behavior-link', 'remove-form-behavior-link',
+      'add-field-source', 'remove-field-source', 'switch-editor-section', 'switch-process-section',
+      'select-behavior', 'select-relation', 'select-data', 'select-data-field', 'select-form', 'select-area',
+      'add-behavior', 'remove-behavior', 'add-relation', 'remove-relation', 'add-data', 'remove-data',
+      'add-current-form', 'add-proposed-form', 'remove-form', 'remove-detail-area',
+      'add-form-item-from-data-field', 'add-form-item', 'remove-form-item', 'add-term', 'remove-term'
+    ]);
+
+    function handleAction(action, element, options = {}) {
       const index = Number(element.dataset.index);
       const formIndex = Number(element.dataset.formIndex);
       const areaIndex = Number(element.dataset.areaIndex);
       let nextFocusPath = '';
+      if (!options.skipPendingGuard && PENDING_GUARDED_ACTIONS.has(action) && requestTransition(
+        '继续当前操作',
+        () => handleAction(action, element, { skipPendingGuard: true }),
+        { invoker: element }
+      )) return;
       if (action === 'switch-governance-step') return setActiveGovernanceStep(element.dataset.step);
       if (action === 'check-governance-step') {
         const stepId = globalThis.GovernanceWorkflow.normalizeStepId(element.dataset.step);
@@ -8503,6 +9753,8 @@
         return;
       }
       if (action === 'switch-step-view') {
+        editSessionManager.reset();
+        graphSelection = null;
         activeStepView = text(element.dataset.view) || defaultStepView(activeGovernanceStep);
         if (currentEntry()) currentEntry().stepView = activeStepView;
         return render();
@@ -8573,11 +9825,11 @@
       if (action === 'open-graph-update-fields') return openGraphUpdateFields(element);
       if (action === 'switch-data-mode') {
         activeDataMode = text(element.dataset.mode) === 'lifecycle' ? 'lifecycle' : 'flow';
+        editSessionManager.reset();
         graphSelection = null;
-        if (activeDataMode === 'lifecycle') {
+        if (activeDataMode === 'flow') {
           const dataObject = ensureActiveGraphDataObject();
-          const result = dataObject ? analyzeLifecycleForObject(dataObject) : null;
-          if (result?.changed) touch();
+          if (dataObject) openEntityEditSession('data', dataObject.data_ref);
         }
         return render();
       }
@@ -8630,6 +9882,8 @@
         }
         activeStepView = 'data';
         activeWorkspaceTab = 'data';
+        const dataObject = ensureActiveGraphDataObject();
+        if (dataObject) openEntityEditSession('data', dataObject.data_ref);
         return render();
       }
       if (action === 'choose-form-start') {
@@ -8646,13 +9900,9 @@
         const kind = text(element.dataset.kind);
         const ref = text(element.dataset.ref);
         if (kind === 'behavior') {
-          const item = currentDocument()?.behaviors?.find(value => value.behavior_ref === ref);
-          graphSelection = item ? { kind, ref, draft: clone(item) } : null;
-          activeBehaviorRef = ref;
+          openEntityEditSession('behavior', ref);
         } else if (kind === 'relation') {
-          const item = currentDocument()?.flow_relations?.find(value => value.relation_ref === ref);
-          graphSelection = item ? { kind, ref, draft: clone(item) } : null;
-          activeRelationRef = ref;
+          openEntityEditSession('relation', ref);
         }
         return render();
       }
@@ -8699,34 +9949,15 @@
       }
       if (!currentDocument()) return;
       if (action === 'reanalyze-current-lifecycle') {
-        const dataObject = ensureActiveGraphDataObject();
-        if (!dataObject) return;
-        const result = analyzeLifecycleForObject(dataObject);
-        touch();
-        showStatus(`已重新分析“${dataObject.data_name || '未命名数据'}”，形成${result?.candidate_count || 0}项候选。`, 'success');
-        return render();
+        return reanalyzeLifecycle('current');
       }
       if (action === 'reanalyze-all-lifecycle') {
-        let candidateCount = 0;
-        (currentDocument().data_objects || []).forEach(dataObject => {
-          const result = analyzeLifecycleForObject(dataObject);
-          candidateCount += result?.candidate_count || 0;
-        });
-        touch();
-        showStatus(`已重新分析${currentDocument().data_objects.length}个数据对象，共形成${candidateCount}项候选。`, 'success');
-        return render();
+        return reanalyzeLifecycle('all');
       }
       if (action === 'supplement-data-facts') {
         activeDataMode = 'flow';
         const dataObject = ensureActiveGraphDataObject();
-        graphSelection = dataObject ? { kind: 'data', ref: dataObject.data_ref, draft: clone(dataObject) } : null;
-        return render();
-      }
-      if (action === 'mark-master-data-pending') {
-        const dataObject = ensureActiveGraphDataObject();
-        if (!dataObject) return;
-        masterDataPendingRefs.add(dataObject.data_ref);
-        showStatus('已列入本页交接待定提示。该标记只保留在当前页面，不写成正式主数据结论。', 'success');
+        if (dataObject) openEntityEditSession('data', dataObject.data_ref);
         return render();
       }
       if (action === 'fit-flow-diagram') {
@@ -8757,12 +9988,14 @@
         return runGraphCommand({ type: 'add_behavior', behavior: newGraphBehavior() }, { successLabel: '已新增业务行为节点' });
       }
       if (action === 'start-flow-relation') {
-        graphSelection = null;
-        flowRelationDraft = { stage: 'type', relation_type: '', from_behavior_ref: null, to_behavior_ref: null, condition: '' };
+        openFlowRelationDraftSession();
+        refreshUnappliedIndicators();
         return render();
       }
       if (action === 'cancel-flow-relation') {
         flowRelationDraft = null;
+        editSessionManager.discard();
+        refreshUnappliedIndicators();
         return render();
       }
       if (action === 'select-relation-endpoint') {
@@ -8775,22 +10008,11 @@
           flowRelationDraft.to_behavior_ref = ref;
           flowRelationDraft.stage = 'confirm';
         }
+        syncFlowRelationDraftSession();
         return render();
       }
       if (action === 'confirm-flow-relation') {
-        if (!flowRelationDraft) return;
-        const pendingDraft = flowRelationDraft;
-        const relation = {
-          relation_ref: newRef('relation'),
-          relation_type: flowRelationDraft.relation_type,
-          from_behavior_ref: flowRelationDraft.from_behavior_ref,
-          to_behavior_ref: flowRelationDraft.to_behavior_ref,
-          condition: text(flowRelationDraft.condition)
-        };
-        return runGraphCommand({ type: 'upsert_flow_relation', relation }, { successLabel: '流程关系已建立' }).then(ok => {
-          flowRelationDraft = ok ? null : pendingDraft;
-          render();
-        });
+        return confirmFlowRelationDraft();
       }
       if (action === 'apply-flow-property') return applyGraphPropertyDraft();
       if (action === 'delete-graph-selection') {
@@ -8802,43 +10024,49 @@
       }
       if (action === 'merge-current-data') return mergeCurrentDataObjects();
       if (action === 'choose-data-behavior') {
-        graphSelection = { kind: 'data-behavior-choice', dataRef: activeDataRef, behaviorRef: '' };
+        openDataBehaviorChoiceSession(activeDataRef);
+        refreshUnappliedIndicators();
         return render();
       }
       if (action === 'cancel-data-relation') {
         const item = ensureActiveGraphDataObject();
-        graphSelection = item ? { kind: 'data', ref: item.data_ref, draft: clone(item) } : null;
+        editSessionManager.discard();
+        graphSelection = null;
+        if (item) openEntityEditSession('data', item.data_ref);
+        refreshUnappliedIndicators();
         return render();
       }
       if (action === 'continue-data-relation') {
-        if (!graphSelection?.behaviorRef) return;
+        const choiceSession = editSessionManager.get({
+          candidateKey: candidateStateKey(),
+          editorKind: 'data-behavior-choice',
+          entityRef: activeDataRef
+        });
+        const behaviorRef = text(choiceSession?.patch?.behaviorRef);
+        if (!behaviorRef) return;
         const dataObject = ensureActiveGraphDataObject();
-        const updateLink = dataObject.behavior_links.find(link => link.behavior_ref === graphSelection.behaviorRef && link.operation === 'update');
-        graphSelection = {
-          kind: 'data-edge',
-          dataRef: dataObject.data_ref,
-          behaviorRef: graphSelection.behaviorRef,
-          operations: dataObject.behavior_links.filter(link => link.behavior_ref === graphSelection.behaviorRef).map(link => link.operation),
-          updatedFieldRefs: list(updateLink?.updated_field_refs)
-        };
+        editSessionManager.discard();
+        openDataEdgeSession(dataObject.data_ref, behaviorRef);
+        refreshUnappliedIndicators();
         return render();
       }
       if (action === 'apply-data-operations') {
         if (graphSelection?.kind !== 'data-edge') return;
-        if (graphSelection.operations?.includes('update') && !list(graphSelection.updatedFieldRefs).length) {
+        const workingValues = dataEdgeWorkingValues();
+        if (workingValues.operations.includes('update') && !workingValues.updatedFieldRefs.length) {
           return openGraphUpdateFields(element, selectedRefs => applyGraphDataOperations(selectedRefs));
         }
         return applyGraphDataOperations();
       }
+      if (action === 'delete-graph-data-edge') {
+        return deleteDataEdgeByRefs(text(element.dataset.dataRef), text(element.dataset.behaviorRef));
+      }
       if (action === 'apply-data-property') {
-        if (graphSelection?.kind !== 'data' || !graphSelection.draft) return;
-        return runGraphCommand({ type: 'update_data_object', dataObject: graphSelection.draft }, { successLabel: '数据对象已更新' });
+        return applyDataObjectPropertyDraft();
       }
       if (action === 'open-flow-behavior') {
         const ref = text(element.dataset.ref);
-        const behavior = currentDocument().behaviors.find(item => item.behavior_ref === ref);
-        graphSelection = behavior ? { kind: 'behavior', ref, draft: clone(behavior) } : null;
-        activeBehaviorRef = ref;
+        openEntityEditSession('behavior', ref);
         return setActiveGovernanceStep('skeleton', 'diagram');
       }
       if (action === 'delete-data-object') return deleteGraphObject('data', activeDataRef);
@@ -8875,9 +10103,7 @@
         return render();
       }
       if (action === 'remove-data-behavior-link') {
-        currentDocument().data_objects[Number(element.dataset.dataIndex)]?.behavior_links.splice(index, 1);
-        touch();
-        return render();
+        return deleteDataBehaviorLink(Number(element.dataset.dataIndex), index);
       }
       if (action === 'add-data-source') {
         const dataObject = currentDocument().data_objects[Number(element.dataset.dataIndex)];
@@ -8895,9 +10121,7 @@
         return render();
       }
       if (action === 'remove-data-source') {
-        currentDocument().data_objects[Number(element.dataset.dataIndex)]?.source_relations.splice(index, 1);
-        touch();
-        return render();
+        return deleteDataSourceRelation(Number(element.dataset.dataIndex), index);
       }
       if (action === 'add-data-field') {
         const dataObject = currentDocument().data_objects[Number(element.dataset.dataIndex)];
@@ -8910,29 +10134,7 @@
         return render();
       }
       if (action === 'remove-data-field') {
-        const dataObject = currentDocument().data_objects[Number(element.dataset.dataIndex)];
-        const dataField = dataObject?.fields?.[index];
-        if (!dataField) return;
-        const references = [];
-        (dataObject.behavior_links || []).forEach(link => {
-          if (list(link.updated_field_refs).includes(dataField.field_ref)) {
-            references.push(`数据行为关系“${behaviorLabel(link.behavior_ref)} / 更新”`);
-          }
-        });
-        (currentDocument().forms || []).forEach(form => (form.areas || []).forEach(area =>
-          (area.items || []).forEach(item => {
-            if (item.data_field_ref === dataField.field_ref) references.push(`${form.form_name || '未命名表单'} / ${item.item_name || '未命名字段'}`);
-          })
-        ));
-        if (references.length) {
-          window.alert(`当前对象字段仍被${references.join('、')}引用。请先替换或移除这些引用，再删除对象字段。`);
-          return;
-        }
-        if (!window.confirm(`确定删除对象字段“${dataField.field_name || '未命名对象字段'}”吗？`)) return;
-        dataObject.fields.splice(index, 1);
-        activeDataFieldRef = dataObject.fields[Math.min(index, dataObject.fields.length - 1)]?.field_ref || '';
-        touch();
-        return render();
+        return deleteDataField(Number(element.dataset.dataIndex), index);
       }
       if (action === 'add-form-behavior-link') {
         const form = currentDocument().forms[formIndex];
@@ -8946,9 +10148,7 @@
         return render();
       }
       if (action === 'remove-form-behavior-link') {
-        currentDocument().forms[formIndex]?.behavior_links.splice(index, 1);
-        touch();
-        return render();
+        return deleteFormBehaviorLink(formIndex, index);
       }
       if (action === 'edit-field-relations') {
         activeFormItemRef = text(element.dataset.ref);
@@ -8974,9 +10174,7 @@
         return render();
       }
       if (action === 'remove-field-source') {
-        currentDocument().forms[formIndex]?.areas[areaIndex]?.items[Number(element.dataset.itemIndex)]?.source_links.splice(index, 1);
-        touch();
-        return render();
+        return deleteFieldSource(formIndex, areaIndex, Number(element.dataset.itemIndex), index);
       }
       if (action === 'switch-editor-section') {
         activeEditorSection = EDITOR_SECTIONS.some(item => item.value === element.dataset.section)
@@ -9031,42 +10229,42 @@
         return download();
       }
       if (action === 'add-behavior') addBehavior();
-      if (action === 'remove-behavior' && !removeBehavior(index)) return;
+      if (action === 'remove-behavior') return removeBehavior(index);
       if (action === 'add-relation') addRelation();
-      if (action === 'remove-relation' && !removeRelation(index)) return;
+      if (action === 'remove-relation') return removeRelation(index);
       if (action === 'add-data') addDataObject();
-      if (action === 'remove-data' && !removeData(index)) return;
+      if (action === 'remove-data') return removeData(index);
       if (action === 'add-current-form') addForm('current_state');
       if (action === 'add-proposed-form') addForm('proposed_design');
       if (action === 'remove-form') {
-        if (!window.confirm('删除当前表单或记录后，其主表、明细表和全部填写项都会一并删除。确定继续吗？')) return;
-        const removed = currentDocument().forms[index];
-        currentDocument().forms.splice(index, 1);
-        if (removed?.form_ref === activeFormRef) {
-          activeFormRef = currentDocument().forms[Math.min(index, currentDocument().forms.length - 1)]?.form_ref || '';
-          activeAreaRef = '';
-        }
+        return deleteFormByIndex(index);
       }
       if (action === 'move-detail-area-up' && !moveDetailArea(formIndex, index, -1)) return;
       if (action === 'move-detail-area-down' && !moveDetailArea(formIndex, index, 1)) return;
-      if (action === 'remove-detail-area' && !removeDetailArea(formIndex, index)) return;
+      if (action === 'remove-detail-area') return removeDetailArea(formIndex, index);
+      if (action === 'add-form-item-from-data-field') {
+        const panel = element.closest('[data-form-field-create-panel]');
+        const dataFieldRef = text(panel?.querySelector('[data-form-field-catalog]')?.value);
+        const assignment = text(panel?.querySelector('[data-form-field-target]')?.value) || 'main';
+        if (!dataFieldRef) {
+          window.alert('请先选择要引用的对象字段。');
+          return;
+        }
+        const added = addFormItemFromDataField(formIndex, dataFieldRef, assignment);
+        if (!added) {
+          window.alert('没有找到所选对象字段或目标主表、明细表。请刷新当前页面后重新选择。');
+          return;
+        }
+        activeFormItemRef = added.item.item_ref;
+        activeAreaRef = added.area.area_ref;
+        nextFocusPath = `forms.${formIndex}.areas.${added.areaIndex}.items.${added.itemIndex}.item_name`;
+      }
       if (action === 'add-form-item') {
         const form = currentDocument().forms[formIndex];
         if (!form) return;
         const area = ensureFormArea(form, '');
         const itemIndex = area.items.length;
-        const newItem = {
-          item_ref: newRef('item'),
-          item_name: '',
-          item_type: '',
-          required: false,
-          instructions: '',
-          business_data_ref: null,
-          data_field_ref: null,
-          value_usage_mode: 'pending_confirmation',
-          value_origin_mode: 'pending_confirmation',
-          source_links: []
-        };
+        const newItem = newFormItem();
         area.items.push(newItem);
         activeFormItemRef = newItem.item_ref;
         activeAreaRef = area.area_ref;
@@ -9076,18 +10274,10 @@
       if (action === 'move-form-item-up' && !moveFormItem(formIndex, areaIndex, index, -1)) return;
       if (action === 'move-form-item-down' && !moveFormItem(formIndex, areaIndex, index, 1)) return;
       if (action === 'remove-form-item') {
-        const removedItem = currentDocument().forms[formIndex]?.areas[areaIndex]?.items[index];
-        currentDocument().forms[formIndex]?.areas[areaIndex]?.items.splice(index, 1);
-        if (removedItem?.item_ref === activeFormItemRef) activeFormItemRef = '';
+        return deleteFormItem(formIndex, areaIndex, index);
       }
       if (action === 'add-term') addTerm();
-      if (action === 'remove-term') {
-        const removed = currentDocument().terms[index];
-        currentDocument().terms.splice(index, 1);
-        if (removed?.term_ref === activeTermRef) {
-          activeTermRef = currentDocument().terms[Math.min(index, currentDocument().terms.length - 1)]?.term_ref || '';
-        }
-      }
+      if (action === 'remove-term') return removeTerm(index);
       touch();
       render();
       if (nextFocusPath) {
@@ -9909,6 +11099,10 @@
     async function exportCurrent(options = {}) {
       const entry = currentEntry();
       if (!entry) return false;
+      if (!options.skipPendingGuard && hasUnappliedChanges()) {
+        requestTransition('下载当前文件', () => exportCurrent({ ...options, skipPendingGuard: true }));
+        return false;
+      }
       const stage = options.stage || globalThis.GovernanceWorkflow.stageForStep(activeGovernanceStep);
       const exportDocument = clone(entry.data);
       exportDocument.export_meta.exported_at = new Date().toISOString();
@@ -9987,7 +11181,11 @@
     }
 
     function protect(action) {
-      if (!hasDirtyCandidates()) {
+      if (hasUnappliedChanges()) {
+        requestTransition('继续当前操作', () => protect(action));
+        return;
+      }
+      if (!hasUndownloadedChanges()) {
         action();
         return;
       }
@@ -10045,7 +11243,10 @@
         const sourceValidation = await validateGraphDocument(parsed, needsCandidateFieldUpgrade
           ? { validationProfile: 'early-v7-data-fields' }
           : {});
-        if (!sourceValidation.valid) {
+        const sourceClassification = globalThis.ImportCompatibility.classifyPostMigrationValidation(sourceValidation);
+        const sourceCanEnterRelationshipRepair = parsed.schema_version === EXPECTED_EXPORT_SCHEMA_VERSION
+          && sourceClassification.allowed;
+        if (!sourceValidation.valid && !sourceCanEnterRelationshipRepair) {
           const firstError = sourceValidation.errors?.[0];
           throw new Error(firstError ? `${validationErrorLocation(firstError)}：${firstError.message}` : '源文件未通过结构与本地引用检查');
         }
@@ -10055,12 +11256,18 @@
           departments: DEPARTMENTS
         });
         const targetValidations = await Promise.all(migratedDocuments.map(validateGraphDocument));
-        const failedTarget = targetValidations.find(result => !result.valid);
-        if (failedTarget) {
+        const targetBatch = globalThis.ImportCompatibility.classifyPostMigrationBatch(targetValidations);
+        const failedTargetIndex = targetBatch.failedIndex;
+        if (failedTargetIndex >= 0) {
+          const failedTarget = targetValidations[failedTargetIndex];
           const firstError = failedTarget.errors?.[0];
           throw new Error(firstError ? `${validationErrorLocation(firstError)}：${firstError.message}` : '迁移副本未通过v7结构校验');
         }
-        const migrated = parsed.schema_version !== EXPECTED_EXPORT_SCHEMA_VERSION || needsCandidateFieldUpgrade;
+        if (!targetBatch.allowed) throw new Error('迁移没有生成可安装的流程候选');
+        const repairableRelationshipErrorCount = targetBatch.repairableErrorCount;
+        const migrated = parsed.schema_version !== EXPECTED_EXPORT_SCHEMA_VERSION
+          || needsCandidateFieldUpgrade
+          || repairableRelationshipErrorCount > 0;
         const nextCandidates = migratedDocuments.map(data => ({
           data: clone(data),
           dirty: migrated,
@@ -10079,7 +11286,7 @@
         destroyDataDiagram();
         graphStateManager.clear();
         checkedGovernanceSteps.clear();
-        resetWebGridEditor();
+        resetTransientEditingState({ resetDataMode: true });
         activeDataEditingMode = 'guided';
         activeGridWorkspace = 'data';
         advancedLifecycleMode = false;
@@ -10089,7 +11296,9 @@
         selectInitialTabAfterImport();
         render();
         showStatus(
-          candidates.length > 1
+          repairableRelationshipErrorCount > 0
+            ? `文件已导入当前页面，保留${repairableRelationshipErrorCount}项历史控制节点关系。请逐项改到实际办理业务的行为；全部处理前不能下载。`
+            : candidates.length > 1
             ? `历史文件包含 ${candidates.length} 条流程，已在当前页面显示为候选。每条流程必须单独下载。`
             : migrated
               ? '历史结构化文件已导入当前页面，当前内容标记为未下载。'
@@ -10109,19 +11318,22 @@
       if (file) importJson(file);
     });
 
-    function switchCandidate(nextIndex) {
+    function switchCandidate(nextIndex, options = {}) {
       if (!Number.isInteger(nextIndex) || !candidates[nextIndex] || nextIndex === currentIndex) return;
+      if (!options.skipPendingGuard && requestTransition(
+        '切换候选流程',
+        () => switchCandidate(nextIndex, { ...options, skipPendingGuard: true }),
+        { invoker: options.invoker, cancelAction: options.cancelAction }
+      )) return;
       captureGraphViewport();
       const current = currentEntry();
       if (current) {
         current.governanceStep = activeGovernanceStep;
         current.stepView = activeStepView;
       }
+      resetTransientEditingState({ resetDataMode: true });
       currentIndex = nextIndex;
       advancedLifecycleMode = false;
-      graphSelection = null;
-      flowRelationDraft = null;
-      resetWebGridEditor();
       activeDataRef = graphStateManager.view(candidateStateKey()).data.dataRef || '';
       selectInitialTabAfterImport();
       render();
@@ -10131,16 +11343,18 @@
       const button = event.target.closest('[data-candidate-index]');
       if (!button) return;
       const nextIndex = Number(button.dataset.candidateIndex);
-      if (webGridSession?.isDirty()) {
-        openGridModeSwitchModal('', () => switchCandidate(nextIndex));
-        return;
-      }
-      switchCandidate(nextIndex);
+      switchCandidate(nextIndex, { invoker: button });
     });
 
     governanceHeader.addEventListener('change', event => {
       const select = event.target.closest('[data-governance-candidate]');
-      if (select) switchCandidate(Number(select.value));
+      if (select) switchCandidate(Number(select.value), {
+        invoker: select,
+        cancelAction: () => {
+          if (select.isConnected) select.value = String(currentIndex);
+          else render();
+        }
+      });
     });
 
     workspaceViewSwitch.addEventListener('click', event => {
@@ -10183,20 +11397,31 @@
         return;
       }
       const graphProperty = event.target.closest('[data-graph-property]');
-      if (graphProperty && graphSelection?.draft) {
+      const graphPropertySession = graphProperty && ['behavior', 'relation'].includes(graphSelection?.kind)
+        ? entityEditSession(graphSelection.kind, graphSelection.ref)
+        : null;
+      if (graphProperty && graphPropertySession) {
         const key = graphProperty.dataset.graphProperty;
-        graphSelection.draft[key] = key === 'timing' || key === 'actor_department_data_ref'
+        editSessionManager.updatePatch({ [key]: key === 'timing' || key === 'actor_department_data_ref'
           ? nullable(graphProperty.value)
-          : graphProperty.value;
+          : graphProperty.value });
+        clearStatus();
+        refreshUnappliedIndicators();
+        enableActiveApplyButton();
         return;
       }
       const dataProperty = event.target.closest('[data-graph-data-property]');
-      if (dataProperty && graphSelection?.kind === 'data' && graphSelection.draft) {
-        graphSelection.draft[dataProperty.dataset.graphDataProperty] = dataProperty.value;
+      if (dataProperty && graphSelection?.kind === 'data' && entityEditSession('data', graphSelection.ref)) {
+        editSessionManager.updatePatch({ [dataProperty.dataset.graphDataProperty]: dataProperty.value });
+        clearStatus();
+        refreshUnappliedIndicators();
+        enableActiveApplyButton();
         return;
       }
       if (event.target.matches('[data-graph-relation-condition]') && flowRelationDraft) {
         flowRelationDraft.condition = event.target.value;
+        syncFlowRelationDraftSession();
+        refreshUnappliedIndicators();
         return;
       }
       const target = event.target.closest('[data-bind]');
@@ -10208,13 +11433,82 @@
         const linkIndex = Number(dataOperationMatch[2]);
         const link = currentDocument()?.data_objects?.[dataIndex]?.behavior_links?.[linkIndex];
         if (!link) return;
-        link.operation = target.value;
-        if (link.operation !== 'update') link.updated_field_refs = [];
-        else link.updated_field_refs = list(link.updated_field_refs);
-        touch();
-        if (link.operation === 'update') openGuidedUpdateFields(dataIndex, linkIndex, target);
-        else render();
+        const previousOperation = link.operation;
+        const nextOperation = target.value;
+        requestTransition(
+          '编辑数据操作',
+          () => beginGuidedDataOperationEdit(dataIndex, linkIndex, nextOperation),
+          {
+            invoker: target,
+            cancelAction: () => {
+              if (target.isConnected) target.value = previousOperation;
+            }
+          }
+        );
         return;
+      }
+      const formFieldOwnerMatch = target.dataset.bind.match(/^forms\.(\d+)\.areas\.(\d+)\.items\.(\d+)\.business_data_ref$/);
+      if (formFieldOwnerMatch) {
+        const [formIndex, areaIndex, itemIndex] = formFieldOwnerMatch.slice(1).map(Number);
+        const item = currentDocument()?.forms?.[formIndex]?.areas?.[areaIndex]?.items?.[itemIndex];
+        if (!item) return;
+        const nextDataRef = nullable(target.value);
+        const nextOwner = (currentDocument().data_objects || []).find(dataObject => dataObject.data_ref === nextDataRef);
+        const clearsFieldReference = Boolean(item.data_field_ref)
+          && !(nextOwner?.fields || []).some(field => field.field_ref === item.data_field_ref);
+        if (clearsFieldReference && !window.confirm('更换业务数据对象后，当前对象字段引用和字段取值用途将被清空为待确认。确定继续吗？')) {
+          render();
+          showStatus('已取消更换业务数据对象，当前字段引用保持不变。');
+          return;
+        }
+        return runDocumentTransaction(nextDocument => {
+          const nextItem = nextDocument.forms?.[formIndex]?.areas?.[areaIndex]?.items?.[itemIndex];
+          if (!nextItem) throw new Error('当前表单字段已不存在');
+          nextItem.business_data_ref = nextDataRef;
+          if (clearsFieldReference) {
+            nextItem.data_field_ref = null;
+            nextItem.value_usage_mode = 'pending_confirmation';
+          }
+        }, {
+          source: 'form-field-owner-change',
+          successLabel: clearsFieldReference
+            ? '已更换业务数据对象，并将不再适用的字段引用和取值用途置为待确认。执行一次撤销可恢复。'
+            : '已更换业务数据对象。执行一次撤销可恢复。'
+        });
+      }
+      const fieldSourceTypeInputMatch = target.dataset.bind.match(/^forms\.(\d+)\.areas\.(\d+)\.items\.(\d+)\.source_links\.(\d+)\.source_type$/);
+      if (fieldSourceTypeInputMatch) {
+        const [formIndex, areaIndex, itemIndex, linkIndex] = fieldSourceTypeInputMatch.slice(1).map(Number);
+        const link = currentDocument()?.forms?.[formIndex]?.areas?.[areaIndex]?.items?.[itemIndex]?.source_links?.[linkIndex];
+        if (!link) return;
+        const nextType = target.value === 'external_system' ? 'external_system' : 'process_data';
+        const clears = nextType === 'external_system'
+          ? Boolean(link.source_data_ref)
+          : Boolean(text(link.source_system_name).trim() || text(link.source_data_name).trim());
+        if (clears && !window.confirm(nextType === 'external_system'
+          ? '切换为外部系统后，当前流程数据引用将被清空。确定继续吗？'
+          : '切换为流程数据后，当前外部系统名称和数据名称将被清空。确定继续吗？')) {
+          render();
+          showStatus('已取消切换字段来源类型，当前来源信息保持不变。');
+          return;
+        }
+        return runDocumentTransaction(nextDocument => {
+          const nextLink = nextDocument.forms?.[formIndex]?.areas?.[areaIndex]?.items?.[itemIndex]?.source_links?.[linkIndex];
+          if (!nextLink) throw new Error('当前字段取值来源已不存在');
+          nextLink.source_type = nextType;
+          if (nextType === 'external_system') {
+            nextLink.source_data_ref = null;
+            nextLink.source_system_name = text(nextLink.source_system_name);
+            nextLink.source_data_name = text(nextLink.source_data_name);
+          } else {
+            nextLink.source_data_ref = nextLink.source_data_ref || nextDocument.data_objects?.[0]?.data_ref || null;
+            nextLink.source_system_name = '';
+            nextLink.source_data_name = '';
+          }
+        }, {
+          source: 'field-source-type-change',
+          successLabel: '已切换字段来源类型。如果原来源信息被清空，执行一次撤销可恢复。'
+        });
       }
       const kind = target.dataset.kind;
       const value = kind === 'boolean' ? target.checked : kind === 'nullable' ? nullable(target.value) : target.value;
@@ -10283,9 +11577,17 @@
 
     workspace.addEventListener('change', event => {
       const target = event.target;
+      if (target.matches('[data-form-field-catalog]')) {
+        const addButton = target.closest('[data-form-field-create-panel]')?.querySelector('[data-action="add-form-item-from-data-field"]');
+        addButton?.toggleAttribute('disabled', !target.value);
+        return;
+      }
       if (target.matches('[data-grid-cell]')) {
         updateNativeGridCell(target);
         if (target.dataset.gridColumn === 'business_data_ref') refreshNativeGridPanel(target.dataset.gridTableId);
+        if (target.dataset.gridTableId === 'form_items' && target.dataset.gridColumn === 'data_field_ref') {
+          refreshNativeGridPanel('form_items');
+        }
         if (target.dataset.gridTableId === 'data_behavior_links' && target.dataset.gridColumn === 'operation') {
           const row = webGridSession.rows('data_behavior_links').find(item => item._row_id === target.dataset.gridRowId);
           if (!row) return;
@@ -10300,58 +11602,61 @@
       if (target.matches('[data-graph-relation-type]') && flowRelationDraft) {
         flowRelationDraft.relation_type = target.value;
         if (target.value) flowRelationDraft.stage = 'source';
+        syncFlowRelationDraftSession();
         render();
         return;
       }
       if (target.matches('[data-graph-property="actor_assignment_mode"]') && graphSelection?.kind === 'behavior') {
-        const draft = graphSelection.draft;
-        draft.actor_assignment_mode = target.value;
-        draft.current_actor_role = target.value === 'company_wide' ? '全公司' : '';
-        draft.actor_department_data_ref = null;
-        draft.actor_position_rule = '';
+        editSessionManager.updatePatch({
+          actor_assignment_mode: target.value,
+          current_actor_role: target.value === 'company_wide' ? '全公司' : '',
+          actor_department_data_ref: null,
+          actor_position_rule: ''
+        });
+        refreshUnappliedIndicators();
         render();
         return;
       }
       if (target.matches('[data-graph-actor-department]') && graphSelection?.kind === 'behavior') {
-        graphSelection.draft.current_actor_role = combineActorRole(target.value, '');
+        editSessionManager.updatePatch({ current_actor_role: combineActorRole(target.value, '') });
+        refreshUnappliedIndicators();
         render();
         return;
       }
       if (target.matches('[data-graph-actor-position]') && graphSelection?.kind === 'behavior') {
         const department = workspace.querySelector('[data-graph-actor-department]')?.value || '';
-        graphSelection.draft.current_actor_role = combineActorRole(department, target.value);
-        return;
-      }
-      if (target.matches('[data-graph-countersign]') && graphSelection?.kind === 'behavior') {
-        graphSelection.draft.countersign_all_required = target.checked;
-        return;
-      }
-      if (target.matches('[data-graph-countersign-target]') && graphSelection?.kind === 'behavior') {
-        graphSelection.draft.countersign_target_departments = Array.from(
-          workspace.querySelectorAll('[data-graph-countersign-target]:checked')
-        ).map(item => item.value);
+        editSessionManager.updatePatch({ current_actor_role: combineActorRole(department, target.value) });
+        refreshUnappliedIndicators();
+        enableActiveApplyButton();
         return;
       }
       if (target.matches('[data-graph-data-focus]')) {
-        captureGraphViewport();
-        activeDataRef = target.value;
-        const item = ensureActiveGraphDataObject();
-        graphSelection = item ? { kind: 'data', ref: item.data_ref, draft: clone(item) } : null;
-        graphStateManager.updateView(candidateStateKey(), { data: { dataRef: activeDataRef, zoom: null, pan: null } });
-        if (activeDataMode === 'lifecycle' && item) {
-          const result = analyzeLifecycleForObject(item);
-          if (result?.changed) touch();
-        }
-        render();
+        const nextDataRef = target.value;
+        requestTransition('切换数据对象', () => {
+          captureGraphViewport();
+          activeDataRef = nextDataRef;
+          graphSelection = null;
+          editSessionManager.reset();
+          if (activeDataMode === 'flow') openEntityEditSession('data', nextDataRef);
+          graphStateManager.updateView(candidateStateKey(), { data: { dataRef: activeDataRef, zoom: null, pan: null } });
+          render();
+        }, { invoker: target, cancelAction: render });
         return;
       }
       if (target.matches('[data-graph-data-behavior]') && graphSelection?.kind === 'data-behavior-choice') {
-        graphSelection.behaviorRef = target.value;
+        editSessionManager.updatePatch({ behaviorRef: target.value }, { started: true });
+        refreshUnappliedIndicators();
         render();
         return;
       }
       if (target.matches('[data-graph-data-operation]') && graphSelection?.kind === 'data-edge') {
-        graphSelection.operations = Array.from(workspace.querySelectorAll('[data-graph-data-operation]:checked')).map(item => item.value);
+        const operations = Array.from(workspace.querySelectorAll('[data-graph-data-operation]:checked')).map(item => item.value);
+        const patch = { operations };
+        if (!operations.includes('update')) patch.updatedFieldRefs = [];
+        editSessionManager.updatePatch(patch);
+        updateDataEdgeCanApply();
+        refreshUnappliedIndicators();
+        enableActiveApplyButton();
         return;
       }
       if (target.matches('[data-bind="process.owning_department"]')) {
@@ -10431,17 +11736,6 @@
         refreshPreviewAvailability();
         return;
       }
-      const fieldOwnerMatch = target.dataset.bind?.match(/^forms\.(\d+)\.areas\.(\d+)\.items\.(\d+)\.business_data_ref$/);
-      if (fieldOwnerMatch) {
-        const item = currentDocument()?.forms?.[Number(fieldOwnerMatch[1])]?.areas?.[Number(fieldOwnerMatch[2])]?.items?.[Number(fieldOwnerMatch[3])];
-        const owner = (currentDocument()?.data_objects || []).find(dataObject => dataObject.data_ref === item?.business_data_ref);
-        if (item && !(owner?.fields || []).some(dataField => dataField.field_ref === item.data_field_ref)) {
-          item.data_field_ref = null;
-          item.value_usage_mode = 'pending_confirmation';
-        }
-        render();
-        return;
-      }
       const dataFieldReferenceMatch = target.dataset.bind?.match(/^forms\.(\d+)\.areas\.(\d+)\.items\.(\d+)\.data_field_ref$/);
       if (dataFieldReferenceMatch) {
         const item = currentDocument()?.forms?.[Number(dataFieldReferenceMatch[1])]?.areas?.[Number(dataFieldReferenceMatch[2])]?.items?.[Number(dataFieldReferenceMatch[3])];
@@ -10451,39 +11745,10 @@
         );
         const dataField = (owner?.fields || []).find(field => field.field_ref === item.data_field_ref);
         if (owner && dataField) {
-          item.business_data_ref = owner.data_ref;
-          item.item_type = dataField.field_type;
-          if (!text(item.item_name).trim()) item.item_name = dataField.field_name;
           const otherReferences = (currentDocument().forms || []).flatMap(form => (form.areas || []).flatMap(area =>
             (area.items || []).filter(candidate => candidate !== item && candidate.data_field_ref === dataField.field_ref)
           ));
-          if (item.value_usage_mode === 'pending_confirmation') {
-            item.value_usage_mode = otherReferences.length ? 'reuse_existing' : 'authoritative_input';
-          }
-          if (item.value_origin_mode === 'pending_confirmation') {
-            item.value_origin_mode = item.value_usage_mode === 'authoritative_input' ? 'direct_current_process' : 'depends_on_data';
-          }
-        }
-        render();
-        return;
-      }
-      const fieldSourceTypeMatch = target.dataset.bind?.match(/^forms\.(\d+)\.areas\.(\d+)\.items\.(\d+)\.source_links\.(\d+)\.source_type$/);
-      if (fieldSourceTypeMatch) {
-        const formIndex = Number(fieldSourceTypeMatch[1]);
-        const areaIndex = Number(fieldSourceTypeMatch[2]);
-        const itemIndex = Number(fieldSourceTypeMatch[3]);
-        const linkIndex = Number(fieldSourceTypeMatch[4]);
-        const link = currentDocument()?.forms?.[formIndex]?.areas?.[areaIndex]?.items?.[itemIndex]?.source_links?.[linkIndex];
-        if (!link) return;
-        if (link.source_type === 'external_system') {
-          link.source_data_ref = null;
-          link.source_system_name = text(link.source_system_name);
-          link.source_data_name = text(link.source_data_name);
-        } else {
-          link.source_type = 'process_data';
-          link.source_data_ref = link.source_data_ref || currentDocument().data_objects[0]?.data_ref || null;
-          link.source_system_name = '';
-          link.source_data_name = '';
+          applyFormFieldReferenceDefaults(item, owner, dataField, otherReferences.length);
         }
         render();
         return;
@@ -10637,17 +11902,18 @@
     document.getElementById('exportBeforeOwningDepartmentChangeButton').addEventListener('click', exportCurrent);
     confirmOwningDepartmentChangeButton.addEventListener('click', confirmOwningDepartmentChange);
 
-    continueGridEditingButton.addEventListener('click', closeGridModeSwitchModal);
-    discardGridChangesButton.addEventListener('click', () => discardWebGridChanges({ switchMode: webGridPendingMode || '', after: webGridPendingAction }));
-    applyGridChangesButton.addEventListener('click', () => applyWebGridChanges({ switchMode: webGridPendingMode || '', after: webGridPendingAction }));
+    continuePendingEditingButton.addEventListener('click', () => resolvePendingTransition('continue'));
+    discardPendingEditButton.addEventListener('click', () => resolvePendingTransition('discard'));
+    applyPendingEditButton.addEventListener('click', () => resolvePendingTransition('apply'));
 
-    cancelUpdateFieldsButton.addEventListener('click', () => closeUpdateFieldsModal(true));
+    cancelUpdateFieldsButton.addEventListener('click', () => requestCloseUpdateFieldsModal());
     confirmUpdateFieldsButton.addEventListener('click', confirmUpdateFieldsSelection);
     updateFieldsOptions.addEventListener('change', () => {
       updateFieldsError.textContent = '';
+      refreshUnappliedIndicators();
     });
     updateFieldsModal.addEventListener('click', event => {
-      if (event.target === updateFieldsModal) closeUpdateFieldsModal(true);
+      if (event.target === updateFieldsModal) requestCloseUpdateFieldsModal();
     });
 
     document.getElementById('cancelProtectedButton').addEventListener('click', () => {
@@ -10680,17 +11946,21 @@
 
     window.addEventListener('keydown', event => {
       if (event.key !== 'Escape') return;
-      if (updateFieldsModal.classList.contains('show')) {
-        closeUpdateFieldsModal(true);
+      if (pendingEditModal.classList.contains('show')) {
+        resolvePendingTransition('continue');
         return;
       }
-      if (gridModeSwitchModal.classList.contains('show')) {
-        closeGridModeSwitchModal();
+      if (updateFieldsModal.classList.contains('show')) {
+        requestCloseUpdateFieldsModal();
         return;
       }
       if (flowRelationDraft) {
-        flowRelationDraft = null;
-        render();
+        requestTransition('取消流程关系编制', () => {
+          flowRelationDraft = null;
+          editSessionManager.discard();
+          refreshUnappliedIndicators();
+          render();
+        });
         return;
       }
       if (sortableDragState) return finishSortableDrag(false);
