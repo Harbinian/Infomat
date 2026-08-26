@@ -19,6 +19,7 @@ description: >
 - 只允许 `CXSYSYS.dbo`。主表或表单模板必须明确；匹配到多个工作流时停止生成并列出候选，不替用户选择。
 - 数据库结构和配置只能证明结构事实或形成分析候选。业务目的、正式责任、权威来源、生效、归档和保管规则没有业务证据时必须保持待确认。
 - 角色配置只进入候选证据和待确认问题，不直接写成正式执行岗位。
+- 工作流连线条件不能代替判断节点。校对、复核、审核、核查、审批、批准等实际办理必须保留为`action`；办理完成后另设`decision`表达同意、不同意等结果。每个结果使用独立关系指向明确目标；无法补齐结果去向时停止生成。
 - 每次运行写入一个新的 `artifacts/database-process-json/<run-id>/`。不得覆盖现有批次。
 
 ## 执行顺序
@@ -26,7 +27,7 @@ description: >
 1. 读取根 `AGENTS.md`、`CODEX.md`、`REPOSITORY_BOUNDARY.md`、`DIRECTORY_OWNERSHIP.md`、`MAINLINE_MAP.md`、`MEMORY.md` 的当前运行基线，以及 `docs/architecture/data-governance-operating-rules.md`。
 2. 核对用户指定的主表或表单模板、目标输出批次和快照时间。数据库名称不是 `CXSYSYS`、架构不是 `dbo` 时立即停止。
 3. 检查快照中是否只有一个表单匹配项。再检查工作流：只有一个时继续；多个时停止并列出 `workflow_id` 和名称。
-4. 按 [CXSYSYS 映射规则](references/cxsysys-mapping-rules.md) 生成数据对象、表单区域、业务行为、流程关系、数据关系、术语候选和待确认问题。
+4. 按 [CXSYSYS 映射规则](references/cxsysys-mapping-rules.md) 生成数据对象、表单区域、业务行为、控制节点、流程关系、数据关系、术语候选和待确认问题。生成前检查所有条件分叉的源节点；普通行为承载条件分叉时停止，保留实际办理行为并在其后增加判断节点，不把勤哲连线条件原样当作合格流程图。
 5. 运行：
 
    ```powershell
@@ -37,10 +38,10 @@ description: >
      --output artifacts/database-process-json/<run-id>
    ```
 
-   多工作流已由人工选定时，再加 `--workflow <workflow-id>`。已有 V1 至 V7 草稿时可用 `--base-json` 保留字段和稳定引用；没有旧草稿时由结构快照新建 V7。
+   多工作流已由人工选定时，再加 `--workflow <workflow-id>`。已有 V1 至 V7 草稿时可用 `--base-json` 保留用户已填写的编制人、部门、能力分类和其他业务字段，同时以当前快照修正节点类型、节点名称和流程关系；没有旧草稿时由结构快照新建 V7。
 6. 如具备明确授权和专用只读账号，先按 [输入输出与实时核验规则](references/input-output-rules.md) 运行只读导出，再把结果通过 `--read-only-verification <文件>` 交给生成脚本。连接不可用时不阻断快照生成，但必须保留实时待核验事项。
 7. 核对固定输出：
-   - `process-governance-v7.json`
+   - `未审核-<归口部门或待确认部门>-<流程名称>-最终待核对-<YYYYMMDD>.json`
    - `source-manifest.json`
    - `schema-snapshot.json`
    - `evidence-map.jsonl`
@@ -54,4 +55,5 @@ description: >
 - 结论先写本轮识别到的流程、数据对象、判断分支和更新字段。
 - 分清“结构已确认、配置已确认、实时已核验、分析候选、待业务确认”。
 - 明说数据库是否实际连接；没有实时连接时，不得把快照证据称为实时数据库结果。
+- 交付 JSON 使用业务名称。`process-governance-v7` 只作为 JSON 内部结构版本，不得用作交付文件名。
 - 技术名称只出现在 `schema-snapshot.json`、`source-manifest.json` 和 `evidence-map.jsonl`，不进入流程目的、适用范围、术语、行为名称和面向业务人员的待确认说明。

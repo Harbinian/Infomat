@@ -12,6 +12,7 @@ const EVIDENCE_STATUSES = new Set(['结构已确认', '配置已确认', '实时
 const TECHNICAL_TEXT_PATTERN = /ExcelServer|WorkItem|ES_WorkItem|(?:^|[^A-Za-z])_wi(?:[^A-Za-z]|$)|CXSYSYS|\bdbo\.|Operator|ITEM|FONO/i;
 const FORBIDDEN_KEY_PATTERN = /password|token|secret|credential|connection|string|phone|mobile|email|contact|密码|令牌|联系方式|手机号|邮箱/i;
 const TECHNICAL_FIELD_PATTERN = /(?:Operator|ITEM|FONO)$/i;
+const DECISION_VERB_PATTERN = /(?:校对|复核|审核|核查|审批|批准|验收|确认)/;
 
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
@@ -28,6 +29,28 @@ function stableRef(prefix, value) {
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
+}
+
+function safeBusinessFileNamePart(value, fallback) {
+  const text = String(value || '').trim() || fallback;
+  return text
+    .replace(/[<>:"/\\|?*\u0000-\u001F]/g, '-')
+    .replace(/\s+/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^[.\-]+|[.\-]+$/g, '') || fallback;
+}
+
+export function businessProcessJsonFileName(documentValue) {
+  const exportedAt = new Date(documentValue?.export_meta?.exported_at || Date.now());
+  if (Number.isNaN(exportedAt.getTime())) throw new Error('导出时间无效，无法生成业务文件名');
+  const dateToken = [
+    exportedAt.getFullYear(),
+    String(exportedAt.getMonth() + 1).padStart(2, '0'),
+    String(exportedAt.getDate()).padStart(2, '0')
+  ].join('');
+  const department = safeBusinessFileNamePart(documentValue?.process?.owning_department, '待确认部门');
+  const processName = safeBusinessFileNamePart(documentValue?.process?.process_name, '待确认流程');
+  return `未审核-${department}-${processName}-最终待核对-${dateToken}.json`;
 }
 
 function walkKeys(value, currentPath = '$') {
@@ -76,6 +99,58 @@ export function selectWorkflow(snapshot, rootTable, workflowId = '') {
     throw new Error(`主表“${formMatches[0].root_table}”匹配到${candidates.length}个工作流，停止生成。候选：${listing}`);
   }
   return { form: formMatches[0], workflow: candidates[0], candidates };
+}
+
+export function assertExplicitDecisionRouting(workflow) {
+  const nodes = Array.isArray(workflow?.nodes) ? workflow.nodes : [];
+  const edges = Array.isArray(workflow?.edges) ? workflow.edges : [];
+  const errors = [];
+  const nodeByRef = new Map(nodes.map(node => [node.behavior_ref, node]));
+  nodes.forEach(node => {
+    const nodeRef = node.behavior_ref;
+    const nodeName = node.business_name || nodeRef || '未命名节点';
+    const outgoing = edges.filter(edge => edge.from_behavior_ref === nodeRef
+      && ['sequence', 'condition', 'loop'].includes(edge.relation_type));
+    const forwardRoutes = outgoing.filter(edge => edge.relation_type !== 'loop');
+    const loopRoutes = outgoing.filter(edge => edge.relation_type === 'loop');
+    const conditionRoutes = outgoing.filter(edge => edge.relation_type === 'condition');
+    if (node.node_type === 'action') {
+      const hidesDecision = conditionRoutes.length > 0
+        || (loopRoutes.length > 0 && (forwardRoutes.length > 0 || DECISION_VERB_PATTERN.test(nodeName)));
+      if (hidesDecision) {
+        errors.push(`“${nodeName}”把判断结果藏在流程关系条件中；请保留业务行为，并在其后增加独立判断节点`);
+      }
+      if (forwardRoutes.length > 1) {
+        errors.push(`“${nodeName}”直接连接${forwardRoutes.length}条后续路线；请在业务行为后增加判断节点或并行开始节点`);
+      }
+      return;
+    }
+    if (node.node_type !== 'decision') return;
+    const usableRoutes = outgoing.filter(edge => edge.relation_type === 'sequence' || String(edge.condition || '').trim());
+    if (usableRoutes.length < 2) {
+      errors.push(`判断节点“${nodeName}”只有${usableRoutes.length}条完整出口；每个判断结果都必须有明确去向`);
+    }
+    const defaultRoutes = outgoing.filter(edge => edge.relation_type === 'sequence' && !String(edge.condition || '').trim());
+    if (defaultRoutes.length > 1) {
+      errors.push(`判断节点“${nodeName}”存在${defaultRoutes.length}条无条件默认路线；最多只能保留1条`);
+    }
+    outgoing.filter(edge => ['condition', 'loop'].includes(edge.relation_type)).forEach(edge => {
+      if (!String(edge.condition || '').trim()) {
+        errors.push(`判断节点“${nodeName}”的关系“${edge.relation_ref || edge.edge_key || '未命名关系'}”缺少判断结果`);
+      }
+    });
+  });
+  (workflow?.data_operations || []).forEach(operation => {
+    const node = nodeByRef.get(operation.behavior_ref);
+    if (!node) return;
+    if (node.node_type !== 'action') {
+      errors.push(`控制节点“${node.business_name || node.behavior_ref}”不是业务行为，不能承载数据创建、更新或使用关系`);
+    }
+  });
+  if (errors.length) {
+    throw new Error(`工作流没有显式表达判断节点：${errors.join('；')}`);
+  }
+  return workflow;
 }
 
 function pendingLifecycle() {
@@ -212,14 +287,22 @@ function simpleInstruction(original) {
 
 function sanitizeMigratedDocument(documentValue, form, workflow) {
   documentValue.process.process_name = workflow.process_name || documentValue.process.process_name;
-  documentValue.process.owning_department = '';
-  documentValue.process.purpose = form.business_content?.purpose || '';
-  documentValue.process.scope = form.business_content?.scope || '';
+  if (form.business_content?.purpose) documentValue.process.purpose = form.business_content.purpose;
+  if (form.business_content?.scope) documentValue.process.scope = form.business_content.scope;
   const oldBehaviors = new Map((documentValue.behaviors || []).map(item => [item.behavior_ref, item]));
-  documentValue.behaviors = (workflow.nodes || []).map(node => ({
-    ...behaviorTemplate(node),
-    ...(oldBehaviors.has(node.behavior_ref) ? { behavior_ref: node.behavior_ref } : {})
-  }));
+  documentValue.behaviors = (workflow.nodes || []).map(node => {
+    const previous = oldBehaviors.get(node.behavior_ref);
+    return {
+      ...behaviorTemplate(node),
+      ...(previous || {}),
+      behavior_ref: node.behavior_ref || previous?.behavior_ref || stableRef('behavior', node.node_key || node.business_name),
+      node_type: node.node_type || previous?.node_type || 'action',
+      behavior_name: node.business_name || previous?.behavior_name || '',
+      behavior_description: node.business_description || previous?.behavior_description || '',
+      trigger: node.trigger || previous?.trigger || '',
+      completion_standard: node.completion_standard || previous?.completion_standard || ''
+    };
+  });
   documentValue.flow_relations = (workflow.edges || []).map(edge => ({
     relation_ref: edge.relation_ref || stableRef('relation', `${workflow.workflow_id}:${edge.edge_key}`),
     relation_type: edge.relation_type,
@@ -412,12 +495,16 @@ function buildEvidence(documentValue, snapshot, form, workflow, liveVerified) {
   (workflow.nodes || []).forEach((node, index) => entries.push(evidenceEntry({
     sourceObject: workflow.workflow_id, relation: node.node_key,
     targetPath: `$.behaviors[${index}]`, capturedAt: snapshot.captured_at,
-    summary: `工作流配置形成业务节点“${node.business_name}”；正式岗位仍待业务确认。`, status: '配置已确认'
+    summary: node.evidence_summary || (node.node_type === 'action'
+      ? `工作流配置形成业务行为“${node.business_name}”；正式岗位仍待业务确认。`
+      : `为明确表达流程分支，从工作流节点和连线条件拆分出控制节点“${node.business_name}”；该节点不是业务行为。`),
+    status: node.evidence_status || (node.node_type === 'action' ? '配置已确认' : '分析候选')
   })));
   (workflow.edges || []).forEach((edge, index) => entries.push(evidenceEntry({
     sourceObject: workflow.workflow_id, relation: `${edge.from_behavior_ref}->${edge.to_behavior_ref}`,
     targetPath: `$.flow_relations[${index}]`, capturedAt: snapshot.captured_at,
-    summary: edge.condition ? `工作流条件为“${edge.condition}”。` : '工作流配置形成顺序关系。', status: '配置已确认'
+    summary: edge.evidence_summary || (edge.condition ? `流程关系条件为“${edge.condition}”。` : '当前流程结构形成顺序关系。'),
+    status: edge.evidence_status || '分析候选'
   })));
   (form.term_candidates || []).forEach((term, index) => entries.push(evidenceEntry({
     sourceObject: term.source_object || form.root_table, sourceField: term.source_field || term.term_name,
@@ -489,6 +576,7 @@ export function generateProcessPackage(options) {
   const outputDir = path.resolve(options.outputDir);
   const snapshot = assertSafeSnapshot(readJson(snapshotPath));
   const { form, workflow } = selectWorkflow(snapshot, options.rootTable, options.workflowId);
+  assertExplicitDecisionRouting(workflow);
   const verification = verifyReadOnlyFile(options.verificationPath, snapshot, form, workflow);
   let documentValue;
   let baseDigest = '';
@@ -513,6 +601,7 @@ export function generateProcessPackage(options) {
   const evidence = buildEvidence(documentValue, snapshot, form, workflow, Boolean(verification));
   const pendingIssues = buildPendingIssues(snapshot, form, workflow, Boolean(verification));
   const schemaSnapshot = resolvedSnapshot(snapshot, form, documentValue);
+  const outputJsonFile = businessProcessJsonFileName(documentValue);
   const sourceManifest = {
     generated_at: documentValue.export_meta.exported_at,
     database: snapshot.database,
@@ -529,6 +618,7 @@ export function generateProcessPackage(options) {
     schema_version: 'database-process-generation-summary-v1',
     generated_at: documentValue.export_meta.exported_at,
     output_schema_version: documentValue.schema_version,
+    output_json_file: outputJsonFile,
     review_status: '未审核',
     database_write_operations: 0,
     root_table: form.root_table,
@@ -546,7 +636,7 @@ export function generateProcessPackage(options) {
     validation: { valid: true, schema: 'process-governance-v7' }
   };
   fs.mkdirSync(outputDir, { recursive: true });
-  fs.writeFileSync(path.join(outputDir, 'process-governance-v7.json'), `${JSON.stringify(documentValue, null, 2)}\n`, 'utf8');
+  fs.writeFileSync(path.join(outputDir, outputJsonFile), `${JSON.stringify(documentValue, null, 2)}\n`, 'utf8');
   fs.writeFileSync(path.join(outputDir, 'source-manifest.json'), `${JSON.stringify(sourceManifest, null, 2)}\n`, 'utf8');
   fs.writeFileSync(path.join(outputDir, 'schema-snapshot.json'), `${JSON.stringify(schemaSnapshot, null, 2)}\n`, 'utf8');
   fs.writeFileSync(path.join(outputDir, 'evidence-map.jsonl'), `${evidence.map(item => JSON.stringify(item)).join('\n')}\n`, 'utf8');
@@ -555,7 +645,7 @@ export function generateProcessPackage(options) {
   if (verification) {
     fs.writeFileSync(path.join(outputDir, 'read-only-verification.json'), `${JSON.stringify(verification, null, 2)}\n`, 'utf8');
   }
-  return { document: documentValue, summary, evidence, pendingIssues, outputDir };
+  return { document: documentValue, summary, evidence, pendingIssues, outputDir, outputJsonFile };
 }
 
 function parseArgs(argv) {
