@@ -506,16 +506,24 @@
       if (!ensureParent(result, row, 'field_source_links', 'item_ref', row.item_ref, itemMap, '表单字段')) return;
       if (!forbidMove(result, row, 'field_source_links', 'item_ref', row.item_ref)) return;
       const sourceDataRef = row.source_type === 'external_system' ? null : nullable(row.source_data_ref);
+      const sourceSystemName = row.source_type === 'external_system' ? clean(row.source_system_name) : '';
+      const sourceDataName = row.source_type === 'external_system' ? clean(row.source_data_name) : '';
       if (row.source_type === 'process_data' && !sourceDataRef) {
         problem(result.errors, row, 'field_source_links', 'source_data_ref', 'SOURCE_DATA_REQUIRED', '来源类型为本流程数据时，必须选择数据对象');
       } else if (sourceDataRef && !dataMap.has(sourceDataRef)) {
         problem(result.errors, row, 'field_source_links', 'source_data_ref', 'REFERENCE_MISSING', `数据对象“${sourceDataRef}”不存在`);
       }
+      if (row.source_type === 'external_system' && !sourceSystemName) {
+        problem(result.errors, row, 'field_source_links', 'source_system_name', 'SOURCE_SYSTEM_REQUIRED', '来源类型为外部系统时，必须填写外部系统名称');
+      }
+      if (row.source_type === 'external_system' && !sourceDataName) {
+        problem(result.errors, row, 'field_source_links', 'source_data_name', 'SOURCE_NAME_REQUIRED', '来源类型为外部系统时，必须填写来源数据名称');
+      }
       const existing = sourceLinkOwners.get(row.source_link_ref)?.source;
       itemMap.get(row.item_ref).source_links.push({
         ...(existing ? clone(existing) : {}), source_link_ref: row.source_link_ref, source_type: row.source_type,
-        source_data_ref: sourceDataRef, source_system_name: row.source_type === 'external_system' ? clean(row.source_system_name) : '',
-        source_data_name: row.source_type === 'external_system' ? clean(row.source_data_name) : '', source_role: row.source_role
+        source_data_ref: sourceDataRef, source_system_name: sourceSystemName,
+        source_data_name: sourceDataName, source_role: row.source_role
       });
     });
 

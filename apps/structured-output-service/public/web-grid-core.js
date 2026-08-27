@@ -61,6 +61,7 @@
     const definitionById = new Map(definitions.map(item => [item.id, item]));
     let tables = clone(adapter.read(documentValue, adapterOptions));
     let baseline = clone(tables);
+    let revision = 0;
 
     definitions.forEach(definition => {
       if (!Array.isArray(tables[definition.id])) tables[definition.id] = [];
@@ -83,6 +84,7 @@
     function replaceRows(tableId, rows) {
       requireTable(tableId);
       tables[tableId] = clone(Array.isArray(rows) ? rows : []);
+      revision += 1;
       return rowsFor(tableId);
     }
 
@@ -94,6 +96,7 @@
         throw new Error('该表格字段不允许修改');
       }
       row[column] = clone(value);
+      revision += 1;
       return clone(row);
     }
 
@@ -112,6 +115,7 @@
       });
       if (!row || !row._row_id) throw new Error(`表格${tableId}没有生成稳定行标识`);
       table.push(clone(row));
+      revision += 1;
       return clone(row);
     }
 
@@ -128,9 +132,11 @@
       if (!row) throw new Error('没有找到需要处理的表格行');
       if (!row._existing && deleted) {
         tables[tableId] = table.filter(item => item._row_id !== rowId);
+        revision += 1;
         return null;
       }
       row._deleted = Boolean(deleted);
+      revision += 1;
       return clone(row);
     }
 
@@ -147,6 +153,7 @@
       if (index < 0 || target < 0 || target >= ordered.length) return false;
       [ordered[index], ordered[target]] = [ordered[target], ordered[index]];
       ordered.forEach((row, rowIndex) => { row._order = rowIndex; });
+      revision += 1;
       return true;
     }
 
@@ -171,6 +178,7 @@
       tables = clone(adapter.read(documentValue, adapterOptions));
       baseline = clone(tables);
       sourceKey = nextSourceKey;
+      revision += 1;
     }
 
     return Object.freeze({
@@ -186,6 +194,7 @@
       moveRow,
       isDirty,
       isTableDirty,
+      revision: () => revision,
       sourceKey: () => sourceKey,
       prepare,
       accept

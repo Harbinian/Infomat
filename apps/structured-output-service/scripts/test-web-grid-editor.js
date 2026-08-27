@@ -197,6 +197,20 @@ const adapterOptions = {
 
 {
   const source = documentFixture();
+  const session = WebGridCore.createSession({
+    adapter: ProcessV7GridAdapter, documentValue: source, sourceKey: 'work-copy-revision', adapterOptions
+  });
+  assert.equal(session.revision(), 0, 'a new work copy must start at revision zero');
+  session.updateCell('data_objects', 'data_request', 'description', '修改后的说明');
+  assert.equal(session.revision(), 1, 'editing a cell must advance the work-copy revision');
+  session.addRow('forms');
+  assert.equal(session.revision(), 2, 'adding a row must advance the work-copy revision');
+  session.replaceRows('forms', session.rows('forms'));
+  assert.equal(session.revision(), 3, 'replacing rows must advance the work-copy revision even when values compare equal');
+}
+
+{
+  const source = documentFixture();
   const sourceSnapshot = JSON.stringify(source);
   const session = WebGridCore.createSession({
     adapter: ProcessV7GridAdapter, documentValue: source, sourceKey: 'required-explicit', adapterOptions
@@ -252,6 +266,37 @@ const adapterOptions = {
   session.replaceRows('field_source_links', completedRows);
   const completed = session.prepare(source, 'field-source-explicit');
   assert.equal(completed.ok, true, completed.errors.map(item => item.message).join('; '));
+}
+
+{
+  const source = documentFixture();
+  const sourceSnapshot = JSON.stringify(source);
+  const session = WebGridCore.createSession({
+    adapter: ProcessV7GridAdapter, documentValue: source, sourceKey: 'external-field-source-explicit', adapterOptions
+  });
+  const added = session.addRow('field_source_links', { parentRef: 'item_amount' });
+  const rows = session.rows('field_source_links');
+  Object.assign(rows.find(row => row._row_id === added._row_id), {
+    source_type: 'external_system', source_role: 'provides_value',
+    source_system_name: '', source_data_name: ''
+  });
+  session.replaceRows('field_source_links', rows);
+  const incomplete = session.prepare(source, 'external-field-source-explicit');
+  assert.equal(incomplete.ok, false, 'an external field source must not commit without its system and data names');
+  assert.ok(incomplete.errors.some(item => item.rowId === added._row_id && item.code === 'SOURCE_SYSTEM_REQUIRED'));
+  assert.ok(incomplete.errors.some(item => item.rowId === added._row_id && item.code === 'SOURCE_NAME_REQUIRED'));
+  assert.equal(JSON.stringify(source), sourceSnapshot, 'an incomplete external source must leave the source JSON unchanged');
+
+  const completedRows = session.rows('field_source_links');
+  Object.assign(completedRows.find(row => row._row_id === added._row_id), {
+    source_system_name: '外部费用系统', source_data_name: '费用分类目录'
+  });
+  session.replaceRows('field_source_links', completedRows);
+  const completed = session.prepare(source, 'external-field-source-explicit');
+  assert.equal(completed.ok, true, completed.errors.map(item => item.message).join('; '));
+  const committed = completed.document.forms[0].areas[0].items[0].source_links.at(-1);
+  assert.equal(committed.source_system_name, '外部费用系统');
+  assert.equal(committed.source_data_name, '费用分类目录');
 }
 
 {

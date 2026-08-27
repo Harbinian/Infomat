@@ -2930,10 +2930,14 @@
     let webGridSorts = {};
     let webGridRanges = {};
     let webGridScrollPositions = {};
+    let skipNextWebGridScrollCapture = false;
+    let webGridApplyInFlight = false;
     let activeGridTableByWorkspace = { data: 'data_objects', forms: 'forms' };
     let updateFieldsModalState = null;
     let formFieldBatchApplying = false;
+    let formFieldBatchSessionToken = 0;
     let pendingTransition = null;
+    let pendingTransitionResolution = null;
     const workspace = document.getElementById('workspace');
     const statusBox = document.getElementById('statusBox');
     const candidateList = document.getElementById('candidateList');
@@ -3006,7 +3010,7 @@
       return list(selectedRefs).map(ref => labels.get(ref) || `${ref}（当前引用）`);
     }
 
-    function openUpdateFieldsModal({ dataRef, dataName, selectedRefs = [], fields = null, onConfirm, onCancel, invoker = null }) {
+    function openUpdateFieldsModal({ dataRef, dataName, selectedRefs = [], fields = null, onConfirm, onCancel, invoker = null, isCurrent = null }) {
       const options = Array.isArray(fields) ? fields : currentUpdateFieldOptions(dataRef);
       const selected = new Set(list(selectedRefs));
       updateFieldsModalState = {
@@ -3016,6 +3020,7 @@
         baselineRefs: [...selected].sort(),
         onConfirm,
         onCancel,
+        isCurrent,
         invoker: invoker instanceof HTMLElement ? invoker : document.activeElement
       };
       updateFieldsDescription.textContent = options.length
@@ -3074,6 +3079,14 @@
     function confirmUpdateFieldsSelection() {
       const state = updateFieldsModalState;
       if (!state) return false;
+      if (webGridApplyInFlight) {
+        updateFieldsError.textContent = '表格修改正在检查，请等待本次检查完成后再确认更新字段。';
+        return false;
+      }
+      if (typeof state.isCurrent === 'function' && !state.isCurrent()) {
+        updateFieldsError.textContent = '当前候选、表格工作副本或关系行已经变化。系统没有写入这次选择，请取消后重新打开。';
+        return false;
+      }
       const selectedRefs = Array.from(updateFieldsOptions.querySelectorAll('[data-update-field-ref]:checked')).map(item => item.value);
       if (!selectedRefs.length) {
         updateFieldsError.textContent = '请至少选择一个本次实际更新的字段。';
@@ -3084,6 +3097,55 @@
       closeUpdateFieldsModal(false);
       onConfirm?.(selectedRefs);
       return true;
+    }
+
+    function topVisibleModalDialog() {
+      const backdrops = Array.from(document.querySelectorAll('.modal-backdrop.show, .governance-drawer-backdrop.show'));
+      const topBackdrop = backdrops.sort((left, right) => {
+        const zIndexDifference = Number.parseInt(getComputedStyle(left).zIndex, 10) - Number.parseInt(getComputedStyle(right).zIndex, 10);
+        if (Number.isFinite(zIndexDifference) && zIndexDifference !== 0) return zIndexDifference;
+        return left.compareDocumentPosition(right) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
+      }).at(-1);
+      return topBackdrop?.querySelector('[role="dialog"]') || null;
+    }
+
+    function trapTopModalFocus(event) {
+      if (event.key !== 'Tab') return false;
+      const dialog = topVisibleModalDialog();
+      if (!dialog) return false;
+      const focusable = Array.from(dialog.querySelectorAll([
+        'button:not([disabled])',
+        'input:not([disabled]):not([type="hidden"])',
+        'select:not([disabled])',
+        'textarea:not([disabled])',
+        'a[href]',
+        '[tabindex]:not([tabindex="-1"])'
+      ].join(','))).filter(item => item.getClientRects().length > 0 && item.getAttribute('aria-hidden') !== 'true');
+      if (!focusable.length) {
+        event.preventDefault();
+        if (!dialog.hasAttribute('tabindex')) dialog.setAttribute('tabindex', '-1');
+        dialog.focus({ preventScroll: true });
+        return true;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+      if (!dialog.contains(active)) {
+        event.preventDefault();
+        (event.shiftKey ? last : first).focus({ preventScroll: true });
+        return true;
+      }
+      if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus({ preventScroll: true });
+        return true;
+      }
+      if (event.shiftKey && active === first) {
+        event.preventDefault();
+        last.focus({ preventScroll: true });
+        return true;
+      }
+      return false;
     }
 
     function currentFormFieldBatchSession() {
@@ -3126,14 +3188,76 @@
       return fieldRefs.length > 0 && fieldRefs.every(fieldRef => typeof patch.requiredByFieldRef?.[fieldRef] === 'boolean');
     }
 
+    function captureFormFieldBatchFocus(focusTarget = document.activeElement) {
+      const target = focusTarget;
+      if (!(target instanceof HTMLElement) || !formFieldBatchContent.contains(target)) return null;
+      let kind = '';
+      let value = '';
+      if (target.matches('[data-form-field-batch-search]')) kind = 'search';
+      else if (target.matches('[data-form-field-batch-area-title]')) kind = 'area-title';
+      else if (target.matches('[data-form-field-batch-target]')) kind = 'target';
+      else if (target.matches('[data-form-field-batch-blank-required]')) kind = 'blank-required';
+      else if (target.matches('[data-form-field-batch-ref]')) {
+        kind = 'field-ref';
+        value = target.dataset.formFieldBatchRef;
+      } else if (target.matches('[data-form-field-batch-required]')) {
+        kind = 'required';
+        value = target.dataset.formFieldBatchRequired;
+      } else if (target.matches('[data-form-field-batch-bulk]')) {
+        kind = 'bulk';
+        value = target.dataset.formFieldBatchBulk;
+      }
+      if (!kind) return null;
+      return {
+        kind,
+        value,
+        selectionStart: typeof target.selectionStart === 'number' ? target.selectionStart : null,
+        selectionEnd: typeof target.selectionEnd === 'number' ? target.selectionEnd : null,
+        contentScrollTop: formFieldBatchContent.scrollTop,
+        panelScrolls: Array.from(formFieldBatchContent.querySelectorAll('.form-field-batch-groups, .form-field-batch-selection'))
+          .map(item => ({ top: item.scrollTop, left: item.scrollLeft }))
+      };
+    }
+
+    function restoreFormFieldBatchFocus(state) {
+      if (!state) return;
+      requestAnimationFrame(() => {
+        if (!formFieldBatchModal.classList.contains('show')) return;
+        const controls = Array.from(formFieldBatchContent.querySelectorAll('input, select, button'));
+        const control = controls.find(item => {
+          if (state.kind === 'search') return item.matches('[data-form-field-batch-search]');
+          if (state.kind === 'area-title') return item.matches('[data-form-field-batch-area-title]');
+          if (state.kind === 'target') return item.matches('[data-form-field-batch-target]');
+          if (state.kind === 'blank-required') return item.matches('[data-form-field-batch-blank-required]');
+          if (state.kind === 'field-ref') return item.dataset.formFieldBatchRef === state.value;
+          if (state.kind === 'required') return item.dataset.formFieldBatchRequired === state.value;
+          return state.kind === 'bulk' && item.dataset.formFieldBatchBulk === state.value;
+        });
+        formFieldBatchContent.scrollTop = state.contentScrollTop;
+        formFieldBatchContent.querySelectorAll('.form-field-batch-groups, .form-field-batch-selection').forEach((item, index) => {
+          item.scrollTop = state.panelScrolls[index]?.top || 0;
+          item.scrollLeft = state.panelScrolls[index]?.left || 0;
+        });
+        control?.focus({ preventScroll: true });
+        if (control && state.selectionStart != null && typeof control.setSelectionRange === 'function') {
+          control.setSelectionRange(state.selectionStart, state.selectionEnd ?? state.selectionStart);
+        }
+      });
+    }
+
     function updateFormFieldBatchPatch(values = {}, options = {}) {
       const session = currentFormFieldBatchSession();
       if (!session) return null;
+      if (formFieldBatchApplying) return session;
+      const focusState = options.render === false ? null : captureFormFieldBatchFocus(options.focusTarget || document.activeElement);
       editSessionManager.updatePatch(values, { started: true });
       const updated = currentFormFieldBatchSession();
       editSessionManager.setCanApply(formFieldBatchCanApply(updated.patch));
       refreshUnappliedIndicators();
-      if (options.render !== false) renderFormFieldBatchModal();
+      if (options.render !== false) {
+        renderFormFieldBatchModal();
+        restoreFormFieldBatchFocus(focusState);
+      }
       return currentFormFieldBatchSession();
     }
 
@@ -3150,6 +3274,7 @@
     function renderFormFieldBatchModal() {
       const session = currentFormFieldBatchSession();
       if (!session) return;
+      const disabled = formFieldBatchApplying ? ' disabled' : '';
       const patch = session.patch;
       const form = (currentDocument()?.forms || []).find(item => item.form_ref === patch.formRef);
       const index = globalThis.FormFieldReuse.indexDataFields(currentDocument());
@@ -3162,13 +3287,13 @@
         return `<section class="form-field-batch-group">
           <strong>${escapeHtml(group.dataName || group.dataRef || '未命名数据对象')}</strong>
           ${fields.map(field => `<label class="form-field-batch-option">
-            <input type="checkbox" data-form-field-batch-ref="${escapeAttribute(field.fieldRef)}" ${selected.has(field.fieldRef) ? 'checked' : ''}>
+            <input type="checkbox" data-form-field-batch-ref="${escapeAttribute(field.fieldRef)}" ${selected.has(field.fieldRef) ? 'checked' : ''}${disabled}>
             <span><b>${escapeHtml(field.fieldName || '未命名对象字段')}</b> · ${escapeHtml(field.fieldType || '类型待补')}<small>${escapeHtml(formFieldReferenceLocations(field))}${field.fieldRef ? ` · ${escapeHtml(field.fieldRef)}` : ''}</small></span>
           </label>`).join('')}
         </section>`;
       }).join('');
       const selectedRows = patch.mode === 'blank'
-        ? `<div class="form-field-batch-selection-row"><span>空白表单字段</span><select data-form-field-batch-blank-required>
+        ? `<div class="form-field-batch-selection-row"><span>空白表单字段</span><select data-form-field-batch-blank-required${disabled}>
             <option value="">请选择</option><option value="true" ${patch.blankRequired === true ? 'selected' : ''}>必填</option><option value="false" ${patch.blankRequired === false ? 'selected' : ''}>非必填</option>
           </select></div>`
         : list(patch.fieldRefs).map(fieldRef => {
@@ -3176,7 +3301,7 @@
             const required = patch.requiredByFieldRef?.[fieldRef];
             return `<div class="form-field-batch-selection-row">
               <span>${escapeHtml(field ? `${field.dataName || field.dataRef} / ${field.fieldName || field.fieldRef}` : `${fieldRef}（已失效）`)}</span>
-              <select data-form-field-batch-required="${escapeAttribute(fieldRef)}"><option value="">请选择</option><option value="true" ${required === true ? 'selected' : ''}>必填</option><option value="false" ${required === false ? 'selected' : ''}>非必填</option></select>
+              <select data-form-field-batch-required="${escapeAttribute(fieldRef)}"${disabled}><option value="">请选择</option><option value="true" ${required === true ? 'selected' : ''}>必填</option><option value="false" ${required === false ? 'selected' : ''}>非必填</option></select>
             </div>`;
           }).join('');
       formFieldBatchTitle.textContent = patch.mode === 'blank' ? '添加空白表单字段' : '批量引用对象字段';
@@ -3184,20 +3309,25 @@
         ? '先选择目标区域并明确必填性。确认前不会修改当前JSON。'
         : '同一字段可以在不同表单或区域再次引用；系统只带入稳定引用、所属对象、字段类型和空白显示名称。';
       formFieldBatchContent.innerHTML = `<div class="form-field-batch-layout">
-        ${patch.mode === 'blank' ? '' : `<section class="form-field-batch-panel"><h3>1. 选择对象字段</h3><input class="form-field-batch-search" type="search" data-form-field-batch-search value="${escapeAttribute(patch.search || '')}" placeholder="查找数据对象、字段、类型或技术标识"><div class="form-field-batch-groups">${groups || '<div class="candidate-empty">当前查找范围没有对象字段。</div>'}</div></section>`}
+        ${patch.mode === 'blank' ? '' : `<section class="form-field-batch-panel"><h3>1. 选择对象字段</h3><input class="form-field-batch-search" type="search" data-form-field-batch-search value="${escapeAttribute(patch.search || '')}" placeholder="查找数据对象、字段、类型或技术标识"${disabled}><div class="form-field-batch-groups">${groups || '<div class="candidate-empty">当前查找范围没有对象字段。</div>'}</div></section>`}
         <section class="form-field-batch-panel"><h3>${patch.mode === 'blank' ? '1' : '2'}. 选择目标并确认必填性</h3>
-          <div class="form-field-batch-target"><label>目标主表或明细表<select data-form-field-batch-target>${optionHtml(formFieldBatchTargetOptions(form), patch.targetValue || '')}</select></label>
-          ${patch.targetValue === 'new:detail' ? `<label>明细表名称<input data-form-field-batch-area-title value="${escapeAttribute(patch.newAreaTitle || '')}" placeholder="必须填写明细表名称"></label>` : ''}</div>
-          ${patch.mode === 'blank' ? '' : `<div class="item-actions"><button class="button small" data-form-field-batch-bulk="true">统一设为必填</button><button class="button small" data-form-field-batch-bulk="false">统一设为非必填</button></div>`}
+          <div class="form-field-batch-target"><label>目标主表或明细表<select data-form-field-batch-target${disabled}>${optionHtml(formFieldBatchTargetOptions(form), patch.targetValue || '')}</select></label>
+          ${patch.targetValue === 'new:detail' ? `<label>明细表名称<input data-form-field-batch-area-title value="${escapeAttribute(patch.newAreaTitle || '')}" placeholder="必须填写明细表名称"${disabled}></label>` : ''}</div>
+          ${patch.mode === 'blank' ? '' : `<div class="item-actions"><button class="button small" data-form-field-batch-bulk="true"${disabled}>统一设为必填</button><button class="button small" data-form-field-batch-bulk="false"${disabled}>统一设为非必填</button></div>`}
           <div class="form-field-batch-selection">${selectedRows || '<div class="candidate-empty">尚未选择对象字段。</div>'}</div>
         </section>
       </div>`;
       const count = patch.mode === 'blank' ? 1 : selected.size;
       confirmFormFieldBatchButton.textContent = patch.mode === 'blank' ? '添加空白字段' : `引用所选 ${count} 个字段`;
       confirmFormFieldBatchButton.disabled = formFieldBatchApplying || !formFieldBatchCanApply(patch);
+      cancelFormFieldBatchButton.disabled = formFieldBatchApplying;
     }
 
     function openFormFieldBatch(formIndex, mode = 'reference', invoker = null) {
+      if (formFieldBatchApplying) {
+        showStatus('批量字段正在检查，请等待本次检查完成。', 'error');
+        return false;
+      }
       const form = currentDocument()?.forms?.[formIndex];
       if (!form) return false;
       const patch = {
@@ -3226,23 +3356,47 @@
         showStatus('当前还有未应用修改。请先应用或放弃，再批量添加表单字段。', 'error');
         return false;
       }
+      formFieldBatchSessionToken += 1;
       formFieldBatchError.textContent = '';
       renderFormFieldBatchModal();
       formFieldBatchModal.classList.add('show');
       formFieldBatchModal.setAttribute('aria-hidden', 'false');
-      requestAnimationFrame(() => formFieldBatchContent.querySelector('input, select')?.focus() || cancelFormFieldBatchButton.focus());
+      requestAnimationFrame(() => {
+        const firstControl = formFieldBatchContent.querySelector('input, select');
+        if (firstControl) firstControl.focus();
+        else cancelFormFieldBatchButton.focus();
+      });
       refreshUnappliedIndicators();
       return true;
     }
 
     function closeFormFieldBatchModal(options = {}) {
+      if (formFieldBatchApplying && options.force !== true) {
+        formFieldBatchError.textContent = '批量字段正在检查，完成前不能取消或关闭。';
+        showStatus('批量字段正在检查，请等待本次检查完成。', 'error');
+        return false;
+      }
+      const session = currentFormFieldBatchSession();
+      const restoreTarget = session ? { formRef: session.patch.formRef, mode: session.patch.mode } : null;
       formFieldBatchApplying = false;
+      formFieldBatchSessionToken += 1;
       formFieldBatchModal.classList.remove('show');
       formFieldBatchModal.setAttribute('aria-hidden', 'true');
       formFieldBatchError.textContent = '';
       if (options.discard !== false) editSessionManager.discard();
       refreshUnappliedIndicators();
       if (options.render) render();
+      if (options.restoreFocus !== false && restoreTarget) {
+        requestAnimationFrame(() => {
+          const formIndex = (currentDocument()?.forms || []).findIndex(item => item.form_ref === restoreTarget.formRef);
+          const target = formIndex >= 0
+            ? workspace.querySelector(`[data-action="open-form-field-batch"][data-form-index="${formIndex}"][data-mode="${restoreTarget.mode}"]`)
+            : null;
+          target?.scrollIntoView({ block: 'nearest' });
+          target?.focus({ preventScroll: true });
+        });
+      }
+      return true;
     }
 
     function formFieldBatchPlanInput(patch) {
@@ -3298,6 +3452,13 @@
         renderFormFieldBatchModal();
         return false;
       }
+      const applyState = {
+        candidateKey: session.candidateKey,
+        sessionToken: formFieldBatchSessionToken,
+        sessionFingerprint: globalThis.GraphEditorState.fingerprint(session),
+        patchFingerprint: globalThis.GraphEditorState.fingerprint(patch),
+        documentFingerprint: globalThis.GraphEditorState.fingerprint(currentDocument())
+      };
       formFieldBatchApplying = true;
       renderFormFieldBatchModal();
       try {
@@ -3314,10 +3475,20 @@
           formFieldBatchError.textContent = `完整候选未通过v7结构检查：${(validation.errors || []).slice(0, 3).map(item => `${validationErrorLocation(item)}：${item.message}`).join('；')}`;
           return false;
         }
-        if (candidateStateKey() !== session.candidateKey
-          || globalThis.GraphEditorState.fingerprint(currentDocument()) !== patch.sourceFingerprint) {
+        const liveSession = currentFormFieldBatchSession();
+        const sessionUnchanged = candidateStateKey() === applyState.candidateKey
+          && formFieldBatchSessionToken === applyState.sessionToken
+          && Boolean(liveSession)
+          && globalThis.GraphEditorState.fingerprint(liveSession) === applyState.sessionFingerprint
+          && globalThis.GraphEditorState.fingerprint(liveSession.patch) === applyState.patchFingerprint;
+        if (!sessionUnchanged) {
+          formFieldBatchError.textContent = '检查期间批量草稿或编辑会话已经变化。系统没有写入旧快照；请核对当前选择后重新应用。';
+          return false;
+        }
+        if (globalThis.GraphEditorState.fingerprint(currentDocument()) !== applyState.documentFingerprint
+          || applyState.documentFingerprint !== patch.sourceFingerprint) {
           formFieldBatchError.textContent = '打开批量草稿后当前JSON已经发生变化。系统没有写入任何字段；请保留选择并重新核对目标。';
-          if (candidateStateKey() === session.candidateKey) {
+          if (candidateStateKey() === session.candidateKey && formFieldBatchSessionToken === applyState.sessionToken) {
             editSessionManager.updatePatch({ sourceFingerprint: globalThis.GraphEditorState.fingerprint(currentDocument()) }, { started: true });
           }
           return false;
@@ -3335,11 +3506,18 @@
         activeAreaRef = first?.areaRef || '';
         activeFormItemRef = first?.itemRef || '';
         invalidateCurrentChecks(entry);
-        resetWebGridEditor();
+        resetWebGridEditor({ preserveViewState: true });
         refreshCandidateDirty(entry);
         editSessionManager.reset();
-        closeFormFieldBatchModal({ discard: false });
+        closeFormFieldBatchModal({ discard: false, force: true, restoreFocus: false });
         render();
+        requestAnimationFrame(() => {
+          const row = workspace.querySelector(`[data-item-ref="${CSS.escape(first?.itemRef || '')}"]`);
+          const control = row?.querySelector('[data-bind]');
+          row?.scrollIntoView({ block: 'center', inline: 'nearest' });
+          control?.focus({ preventScroll: true });
+          if (control?.matches('input[type="text"]')) control.select();
+        });
         showStatus(`已一次添加${planned.addedItems.length}个表单字段。执行一次撤销可删除整批，再次重做可恢复整批。`, 'success');
         refreshValidationAfterGraphCommand(result.document);
         return true;
@@ -3714,6 +3892,7 @@
     function captureAuthoringSelectionContext() {
       const key = candidateStateKey();
       if (!key) return null;
+      if (webGridSession) captureVisibleWebGridScroll();
       const stored = authoringSelectionContextManager.get(key);
       const workspaceName = webGridSession ? activeGridWorkspace : stored.workspace;
       const tableId = webGridSession
@@ -4150,14 +4329,21 @@
       });
     }
 
-    function resetWebGridEditor() {
+    function resetWebGridEditor(options = {}) {
+      const preserveViewState = options.preserveViewState === true;
+      if (preserveViewState) {
+        captureVisibleWebGridScroll();
+        if (webGridSession) captureAuthoringSelectionContext();
+      }
       webGridSession = null;
       webGridIssues = [];
-      webGridSelectedRows = {};
-      webGridFilters = {};
-      webGridSorts = {};
-      webGridRanges = {};
-      webGridScrollPositions = {};
+      if (!preserveViewState) {
+        webGridSelectedRows = {};
+        webGridFilters = {};
+        webGridSorts = {};
+        webGridRanges = {};
+        webGridScrollPositions = {};
+      }
     }
 
     function resetActiveGridTables() {
@@ -4169,6 +4355,9 @@
       graphSelection = null;
       flowRelationDraft = null;
       resetWebGridEditor();
+      skipNextWebGridScrollCapture = true;
+      formFieldBatchSessionToken += 1;
+      pendingTransitionResolution = null;
       updateFieldsModalState = null;
       updateFieldsError.textContent = '';
       updateFieldsModal.classList.remove('show');
@@ -4212,7 +4401,7 @@
       const entry = currentEntry();
       if (!entry) return;
       invalidateCurrentChecks(entry);
-      if (activeDataEditingMode !== 'grid') resetWebGridEditor();
+      if (activeDataEditingMode !== 'grid') resetWebGridEditor({ preserveViewState: true });
       refreshCandidateDirty(entry);
       updateCandidateList();
       governanceHeader.innerHTML = renderGovernanceHeader(currentDocument());
@@ -4344,7 +4533,7 @@
         { value: 'unassigned', label: '待确认' },
         { value: 'main', label: '主表字段' },
         ...detailOptions,
-        { value: '__new_detail__', label: '新建明细表' }
+        { value: '__new_detail__', label: '新建明细表（需填写名称）' }
       ];
       const focusKey = `forms.${formIndex}.areas.${areaIndex}.items.${itemIndex}.assignment`;
       return `
@@ -5156,7 +5345,7 @@
           adapterOptions: webGridAdapterOptions()
         });
       } else if (!webGridSession.isDirty() && webGridSession.sourceKey() !== sourceKey) {
-        resetWebGridEditor();
+        resetWebGridEditor({ preserveViewState: true });
         webGridSession = globalThis.WebGridCore.createSession({
           adapter: globalThis.ProcessV7GridAdapter,
           documentValue: data,
@@ -5164,8 +5353,24 @@
           adapterOptions: webGridAdapterOptions()
         });
       }
+      reconcileWebGridViewState();
       ensureActiveWebGridContext();
       return webGridSession;
+    }
+
+    function reconcileWebGridViewState() {
+      if (!webGridSession) return;
+      globalThis.ProcessV7GridAdapter.TABLE_IDS.forEach(tableId => {
+        const validRowIds = new Set(webGridSession.rows(tableId)
+          .filter(row => !row._deleted)
+          .map(row => row._row_id));
+        const selectedRowId = webGridSelectedRows[tableId];
+        if (selectedRowId && !validRowIds.has(selectedRowId)) delete webGridSelectedRows[tableId];
+        const range = webGridRanges[tableId];
+        if (range && (!validRowIds.has(range.anchorRowId) || !validRowIds.has(range.currentRowId))) {
+          delete webGridRanges[tableId];
+        }
+      });
     }
 
     function ensureActiveWebGridContext() {
@@ -5320,7 +5525,7 @@
       if (column.editor === 'update-fields') {
         if (row.operation !== 'update') return '<span class="web-grid-readonly">仅更新操作需要选择</span>';
         const selectedLabels = selectedUpdateFieldLabels(row.data_ref, rawValue, gridUpdateFieldOptions(row));
-        return `<button type="button" class="web-grid-update-fields-button" data-action="open-grid-update-fields" data-table-id="${escapeAttribute(tableId)}" data-row-id="${escapeAttribute(row._row_id)}"${disabled}>${escapeHtml(selectedLabels.length ? selectedLabels.join('、') : '选择更新字段')}</button>`;
+        return `<button type="button" class="web-grid-update-fields-button" data-action="open-grid-update-fields" ${attributes}${disabled}>${escapeHtml(selectedLabels.length ? selectedLabels.join('、') : '选择更新字段')}</button>`;
       }
       if (column.editor === 'boolean') {
         return `<input type="checkbox" ${attributes}${rawValue ? ' checked' : ''}${disabled}>`;
@@ -5396,7 +5601,7 @@
       const selectedRowId = selectedRow?._row_id || '';
       const parent = gridParentState(tableId);
       const addDisabled = !parent.ready;
-      return `<section class="web-grid-panel" data-grid-panel="${escapeAttribute(tableId)}" aria-labelledby="webGridHeading-${escapeAttribute(tableId)}">
+      return `<section class="web-grid-panel" data-grid-panel="${escapeAttribute(tableId)}" aria-labelledby="webGridHeading-${escapeAttribute(tableId)}" tabindex="-1">
         <div class="web-grid-path">${escapeHtml(gridCurrentPath(tableId))}</div>
         <div class="web-grid-heading">
           <h3 id="webGridHeading-${escapeAttribute(tableId)}">${escapeHtml(definition.label)}</h3>
@@ -5407,7 +5612,7 @@
               <button class="button secondary small web-grid-add-row" data-action="grid-add-row" data-table-id="${escapeAttribute(tableId)}" ${addDisabled ? 'disabled' : ''}>${escapeHtml(gridAddRowLabel(tableId))}</button>
             </div>
             <div class="web-grid-row-tools" aria-label="${escapeAttribute(definition.label)}选中行操作">
-              <button class="button small" data-action="grid-duplicate-row" data-table-id="${escapeAttribute(tableId)}" ${selectedRowId ? '' : 'disabled'}>复制选中行</button>
+              <button class="button small" data-action="grid-duplicate-row" data-table-id="${escapeAttribute(tableId)}" ${selectedRowId && parent.ready ? '' : 'disabled'}>复制选中行</button>
               <button class="button small" data-action="grid-move-row-up" data-table-id="${escapeAttribute(tableId)}" ${selectedRowId ? '' : 'disabled'}>上移</button>
               <button class="button small" data-action="grid-move-row-down" data-table-id="${escapeAttribute(tableId)}" ${selectedRowId ? '' : 'disabled'}>下移</button>
               <button class="button danger small" data-action="grid-delete-row" data-table-id="${escapeAttribute(tableId)}" ${selectedRowId ? '' : 'disabled'}>${selectedRow?._deleted ? '恢复选中行' : '删除选中行'}</button>
@@ -5423,9 +5628,31 @@
       if (!webGridIssues.length) return '';
       const errors = webGridIssues.filter(item => item.severity !== 'warning');
       const warnings = webGridIssues.filter(item => item.severity === 'warning');
+      const locationAttributes = item => {
+        const tableId = text(item.tableId);
+        const definition = tableId && webGridSession ? webGridSession.definition(tableId) : null;
+        const values = [
+          ['data-table-id', tableId],
+          ['data-row-id', item.rowId],
+          ['data-column', item.column],
+          ['data-grid-row-ref', item.gridRowRef],
+          ['data-grid-ref-key', item.gridRefKey || definition?.refField],
+          ['data-editor-section', item.editorSection],
+          ['data-process-section', item.processSection],
+          ['data-focus-kind', item.focusKind],
+          ['data-focus-ref', item.focusRef],
+          ['data-focus-path', item.focusPath],
+          ['data-data-ref', item.dataRef],
+          ['data-data-field-ref', item.dataFieldRef],
+          ['data-form-ref', item.formRef],
+          ['data-area-ref', item.areaRef],
+          ['data-form-item-ref', item.formItemRef]
+        ];
+        return values.map(([key, value]) => `${key}="${escapeAttribute(text(value))}"`).join(' ');
+      };
       return `<div class="web-grid-issues" tabindex="-1">
         <strong>${errors.length ? `有${errors.length}项错误，当前修改尚未应用` : `有${warnings.length}项提醒`}</strong>
-        <ol>${webGridIssues.map(item => `<li><button type="button" data-action="focus-grid-issue" data-table-id="${escapeAttribute(item.tableId)}" data-row-id="${escapeAttribute(item.rowId)}" data-column="${escapeAttribute(item.column)}">${escapeHtml(item.message)}</button></li>`).join('')}</ol>
+        <ol>${webGridIssues.map(item => `<li><button type="button" data-action="focus-grid-issue" ${locationAttributes(item)}>${escapeHtml(item.message)}</button></li>`).join('')}</ol>
       </div>`;
     }
 
@@ -5457,8 +5684,8 @@
           <div class="web-grid-footer">
             <span class="web-grid-status${dirty ? ' dirty' : ''}">${dirty ? '表格中有未应用修改；当前JSON尚未改变。' : '表格内容与当前JSON一致。'}</span>
             <div class="item-actions">
-              <button class="button" data-action="discard-web-grid" ${dirty ? '' : 'disabled'}>放弃本次修改</button>
-              <button class="button primary" data-action="apply-web-grid" ${dirty ? '' : 'disabled'}>应用本次修改</button>
+              <button class="button" data-action="discard-web-grid" ${dirty && !webGridApplyInFlight ? '' : 'disabled'}>放弃本次修改</button>
+              <button class="button primary" data-action="apply-web-grid" ${dirty && !webGridApplyInFlight ? '' : 'disabled'}>应用本次修改</button>
             </div>
           </div>
         </div>`
@@ -6495,24 +6722,26 @@
       if (!data) return [];
       const technical = (structureScoreState.result?.issues || []).filter(item => item.category === '技术结构');
       const business = governanceIssues(data);
-      return technical.concat(business).map((issue, sourceIndex) => {
-        const stepId = globalThis.GovernanceWorkflow?.stepForTarget(issue) || 'start';
-        const normalizedStep = AUTHORING_QUEUE_STEPS.includes(stepId) ? stepId : 'data';
-        const target = stableQueueTarget(issue, data);
-        return {
-          ...clone(issue),
-          ruleCode: governanceQueueRuleCode(issue, normalizedStep, target.normalizedPath),
-          stableRef: target.stableRef,
-          path: target.normalizedPath,
-          stepId: normalizedStep,
-          technical: issue.category === '技术结构',
-          sourceOrder: sourceIndex
-        };
-      }).sort((left, right) => {
-        if (left.technical !== right.technical) return left.technical ? -1 : 1;
-        const stepDelta = AUTHORING_QUEUE_STEPS.indexOf(left.stepId) - AUTHORING_QUEUE_STEPS.indexOf(right.stepId);
-        return stepDelta || left.sourceOrder - right.sourceOrder;
-      });
+      return technical.concat(business)
+        .flatMap(issue => globalThis.GovernanceReviewQueue.expandIssueFocusPaths(issue))
+        .map((issue, sourceIndex) => {
+          const stepId = globalThis.GovernanceWorkflow?.stepForTarget(issue) || 'start';
+          const normalizedStep = AUTHORING_QUEUE_STEPS.includes(stepId) ? stepId : 'data';
+          const target = stableQueueTarget(issue, data);
+          return {
+            ...clone(issue),
+            ruleCode: governanceQueueRuleCode(issue, normalizedStep, target.normalizedPath),
+            stableRef: target.stableRef,
+            path: target.normalizedPath,
+            stepId: normalizedStep,
+            technical: issue.category === '技术结构',
+            sourceOrder: sourceIndex
+          };
+        }).sort((left, right) => {
+          if (left.technical !== right.technical) return left.technical ? -1 : 1;
+          const stepDelta = AUTHORING_QUEUE_STEPS.indexOf(left.stepId) - AUTHORING_QUEUE_STEPS.indexOf(right.stepId);
+          return stepDelta || left.sourceOrder - right.sourceOrder;
+        });
     }
 
     function runGovernanceQueueCheck(options = {}) {
@@ -6760,17 +6989,28 @@
     }
 
     async function validateGraphDocument(documentValue, options = {}) {
-      const response = await fetch('/api/validate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          data: documentValue,
-          ...(options.validationProfile ? { validation_profile: options.validationProfile } : {})
-        })
-      });
-      const result = await readJsonResponse(response, '3001图编辑校验接口未返回结构化数据。');
-      if (!response.ok) throw new Error(result.error || '校验服务不可用');
-      return result;
+      const controller = new AbortController();
+      const timeoutMs = Math.max(1000, Number(options.timeoutMs || 20000));
+      const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const response = await fetch('/api/validate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            data: documentValue,
+            ...(options.validationProfile ? { validation_profile: options.validationProfile } : {})
+          }),
+          signal: controller.signal
+        });
+        const result = await readJsonResponse(response, '3001图编辑校验接口未返回结构化数据。');
+        if (!response.ok) throw new Error(result.error || '校验服务不可用');
+        return result;
+      } catch (error) {
+        if (error?.name === 'AbortError') throw new Error(`结构检查超过${Math.round(timeoutMs / 1000)}秒未返回，请稍后重新应用`);
+        throw error;
+      } finally {
+        window.clearTimeout(timeoutId);
+      }
     }
 
     function updateSelectionFromGraphResult(result) {
@@ -6839,7 +7079,7 @@
         }
       }
       invalidateCurrentChecks(entry);
-      resetWebGridEditor();
+      resetWebGridEditor({ preserveViewState: true });
       refreshCandidateDirty(entry);
       render();
       if (result.details?.warnings?.length) {
@@ -6895,7 +7135,7 @@
       if (!result.ok) return showStatus(result.message, 'error');
       entry.data = result.document;
       invalidateCurrentChecks(entry);
-      resetWebGridEditor();
+      resetWebGridEditor({ preserveViewState: true });
       refreshCandidateDirty(entry);
       graphSelection = null;
       editSessionManager.reset();
@@ -7073,11 +7313,14 @@
       });
       ensureWebGridSession();
       activeGridTableByWorkspace[tableWorkspace] = tableId;
+      const gridRowId = text(target.gridRowId);
       const rowRef = text(target.gridRowRef);
       const rowRefKey = text(target.gridRefKey);
-      const row = rowRef && rowRefKey
-        ? webGridSession.rows(tableId).find(item => !item._deleted && text(item[rowRefKey]) === rowRef)
-        : null;
+      const row = gridRowId
+        ? webGridSession.rows(tableId).find(item => !item._deleted && item._row_id === gridRowId)
+        : rowRef && rowRefKey
+          ? webGridSession.rows(tableId).find(item => !item._deleted && text(item[rowRefKey]) === rowRef)
+          : null;
       if (row) {
         selectGridParent(tableId, row);
         webGridSelectedRows[tableId] = row._row_id;
@@ -7102,7 +7345,7 @@
       render();
       requestAnimationFrame(() => {
         if (row && column && focusNativeGridCell(tableId, row._row_id, column)) return;
-        workspace.querySelector(`#webGrid-${CSS.escape(tableId)}`)?.focus?.({ preventScroll: true });
+        workspace.querySelector(`[data-grid-panel="${CSS.escape(tableId)}"]`)?.focus?.({ preventScroll: true });
       });
       return true;
     }
@@ -9085,7 +9328,7 @@
       webGridSelectedRows[tableId] = rowData._row_id;
       const panel = workspace.querySelector(`[data-grid-panel="${CSS.escape(tableId)}"]`);
       panel?.querySelectorAll('tr[data-grid-row-id]').forEach(row => row.classList.toggle('grid-row-selected', row.dataset.gridRowId === rowData._row_id));
-      panel?.querySelector('[data-action="grid-duplicate-row"]')?.removeAttribute('disabled');
+      panel?.querySelector('[data-action="grid-duplicate-row"]')?.toggleAttribute('disabled', !gridParentState(tableId).ready);
       panel?.querySelector('[data-action="grid-move-row-up"]')?.removeAttribute('disabled');
       panel?.querySelector('[data-action="grid-move-row-down"]')?.removeAttribute('disabled');
       const deleteButton = panel?.querySelector('[data-action="grid-delete-row"]');
@@ -9102,6 +9345,11 @@
     function refreshNativeGridPanel(tableId) {
       const panel = workspace.querySelector(`[data-grid-panel="${CSS.escape(tableId)}"]`);
       if (panel) panel.outerHTML = renderWebGridPanel(tableId);
+    }
+
+    function refreshNativeGridPanelAndFocus(tableId, rowId, column) {
+      refreshNativeGridPanel(tableId);
+      requestAnimationFrame(() => focusNativeGridCell(tableId, rowId, column));
     }
 
     function refreshNativeGridDependents(tableId) {
@@ -9157,8 +9405,8 @@
         status.textContent = dirty ? '表格中有未应用修改；当前JSON尚未改变。' : '表格内容与当前JSON一致。';
         status.classList.toggle('dirty', dirty);
       }
-      workspace.querySelector('[data-action="apply-web-grid"]')?.toggleAttribute('disabled', !dirty);
-      workspace.querySelector('[data-action="discard-web-grid"]')?.toggleAttribute('disabled', !dirty);
+      workspace.querySelector('[data-action="apply-web-grid"]')?.toggleAttribute('disabled', !dirty || webGridApplyInFlight);
+      workspace.querySelector('[data-action="discard-web-grid"]')?.toggleAttribute('disabled', !dirty || webGridApplyInFlight);
       if (dirty !== previousDirty) refreshVisibleGovernanceCheckUi();
     }
 
@@ -9175,7 +9423,7 @@
       const rowBefore = webGridSession.rows(tableId).find(item => item._row_id === rowId);
       const columnSpec = webGridSession.definition(tableId)?.columns?.find(item => item.key === column);
       if (rowBefore && columnSpec && isNativeGridCellReadOnly(tableId, rowBefore, columnSpec)) {
-        refreshNativeGridPanel(tableId);
+        refreshNativeGridPanelAndFocus(tableId, rowId, column);
         showStatus('该单元格由对象字段稳定引用确定，不能直接输入或粘贴。清除对象字段引用后才可进入兼容调整状态。', 'error');
         return;
       }
@@ -9255,6 +9503,7 @@
     }
 
     function applyNativeGridPaste(control, clipboardText) {
+      if (blockWebGridCompositionTransition()) return false;
       const tableId = control.dataset.gridTableId;
       const columns = nativeGridColumns(tableId);
       let rows = nativeGridRows(tableId);
@@ -9278,7 +9527,8 @@
       const snapshot = webGridSession.allRows();
       try {
         while (rows.length < startRow + plan.height) {
-          createGridRowInSession(tableId, { ...gridParentContext(tableId), select: false });
+          const added = createGridRowInSession(tableId, { ...gridParentContext(tableId), select: false, silent: true });
+          if (!added) throw new Error(`当前上级记录不允许继续新增${webGridSession.definition(tableId).label}。`);
           rows = nativeGridRows(tableId);
         }
         if (tableId === 'form_items') {
@@ -9328,24 +9578,109 @@
       return true;
     }
 
+    function validationIssueFocusPath(issue = {}) {
+      const decodePointerPart = value => text(value).replace(/~1/g, '/').replace(/~0/g, '~');
+      const parts = text(issue.instancePath).split('/').slice(1).map(decodePointerPart).filter(Boolean);
+      const missingProperty = issue.keyword === 'required' ? text(issue.params?.missingProperty) : '';
+      const additionalProperty = issue.keyword === 'additionalProperties' ? text(issue.params?.additionalProperty) : '';
+      if (missingProperty) parts.push(missingProperty);
+      else if (additionalProperty) parts.push(additionalProperty);
+      return parts.join('.');
+    }
+
+    function resolveWebGridValidationTarget(documentValue, issue = {}) {
+      const focusPath = validationIssueFocusPath(issue);
+      const fallback = { focusPath, focusPaths: focusPath ? [focusPath] : [] };
+      if (!focusPath || !documentValue) return fallback;
+      const stable = stableQueueTarget({ focusPath }, documentValue);
+      const resolved = resolveGovernanceQueueIssue({
+        stableRef: stable.stableRef,
+        path: stable.normalizedPath,
+        focusPath
+      }, documentValue);
+      if (!resolved) return fallback;
+      const tableId = text(resolved.tableId);
+      const definition = tableId && webGridSession ? webGridSession.definition(tableId) : null;
+      const gridRefKey = text(resolved.gridRefKey || definition?.refField);
+      const gridRowRef = text(resolved.gridRowRef || resolved.stableRef);
+      const row = tableId && gridRefKey && gridRowRef && webGridSession
+        ? webGridSession.rows(tableId).find(item => !item._deleted && text(item[gridRefKey]) === gridRowRef)
+        : null;
+      const columns = tableId ? nativeGridColumns(tableId) : [];
+      const requestedColumn = text(resolved.gridColumn);
+      const column = columns.some(item => item.key === requestedColumn)
+        ? requestedColumn
+        : columns.find(item => item.editor !== 'readonly')?.key || columns[0]?.key || '';
+      return {
+        ...fallback,
+        ...resolved,
+        tableId,
+        rowId: row?._row_id || '',
+        column,
+        gridRowRef,
+        gridRefKey
+      };
+    }
+
     async function prepareWebGridCandidate() {
       const data = currentDocument();
       const prepared = webGridSession.prepare(data, gridSourceKey(data), webGridAdapterOptions());
       if (!prepared.ok) return prepared;
       const validation = await validateGraphDocument(prepared.document);
       if (!validation.valid) {
+        const invalidCandidate = prepared.document;
         prepared.ok = false;
         prepared.document = clone(data);
         (validation.errors || []).forEach(item => prepared.errors.push({
-          tableId: '', rowId: '', column: '', severity: 'error', code: item.keyword || 'SCHEMA_VALIDATION',
-          message: `${validationErrorLocation(item)}：${item.message}`, focusPath: item.instancePath || ''
+          ...resolveWebGridValidationTarget(invalidCandidate, item),
+          severity: 'error',
+          code: item.keyword || 'SCHEMA_VALIDATION',
+          message: `${validationErrorLocation(item)}：${item.message}`
         }));
       }
       return prepared;
     }
 
-    function commitWebGridDocument(candidate, details) {
+    function captureWebGridApplyState() {
       const entry = currentEntry();
+      if (!entry || !webGridSession) throw new Error('当前没有可应用的表格工作副本');
+      return {
+        entry,
+        candidateKey: candidateStateKey(entry),
+        documentFingerprint: globalThis.GraphEditorState.fingerprint(entry.data),
+        session: webGridSession,
+        sessionRevision: Number(webGridSession.revision?.() || 0),
+        sessionSourceKey: webGridSession.sourceKey()
+      };
+    }
+
+    function assertWebGridApplyState(state) {
+      const entry = currentEntry();
+      const unchanged = entry === state.entry
+        && candidateStateKey(entry) === state.candidateKey
+        && webGridSession === state.session
+        && Number(webGridSession?.revision?.() || 0) === state.sessionRevision
+        && webGridSession?.sourceKey?.() === state.sessionSourceKey
+        && globalThis.GraphEditorState.fingerprint(entry?.data) === state.documentFingerprint;
+      if (!unchanged) {
+        throw new Error('结构检查期间当前候选或表格工作副本发生了变化。系统没有应用旧快照；请核对保留的输入后重新应用');
+      }
+      return entry;
+    }
+
+    function setWebGridApplyInFlight(value) {
+      webGridApplyInFlight = Boolean(value);
+      const dirty = Boolean(webGridSession?.isDirty());
+      workspace.querySelector('[data-action="apply-web-grid"]')?.toggleAttribute('disabled', !dirty || webGridApplyInFlight);
+      workspace.querySelector('[data-action="discard-web-grid"]')?.toggleAttribute('disabled', !dirty || webGridApplyInFlight);
+      const pendingLocked = webGridApplyInFlight || formFieldBatchApplying || Boolean(pendingTransitionResolution);
+      continuePendingEditingButton.disabled = pendingLocked;
+      discardPendingEditButton.disabled = pendingLocked;
+      applyPendingEditButton.disabled = pendingLocked || Boolean(pendingTransition && !pendingTransition.pending?.canApply);
+    }
+
+    function commitWebGridDocument(candidate, details, applyState) {
+      const entry = assertWebGridApplyState(applyState);
       const result = graphStateManager.execute(candidateStateKey(entry), entry.data, () => ({
         ok: true,
         document: clone(candidate),
@@ -9358,27 +9693,41 @@
       return result.document;
     }
 
-    function webGridCommitDriver() {
+    function webGridCommitDriver(applyState) {
       return {
         getSource() { return { document: currentDocument(), revisionKey: gridSourceKey() }; },
         validate: prepareWebGridCandidate,
-        commit: commitWebGridDocument
+        commit(candidate, details) { return commitWebGridDocument(candidate, details, applyState); }
       };
     }
 
     async function applyWebGridChanges(options = {}) {
+      if (webGridApplyInFlight) {
+        showStatus('表格修改正在检查，请等待本次检查完成。', 'error');
+        return false;
+      }
+      if (updateFieldsModalState) {
+        showStatus('请先确认或取消当前“更新字段”选择，再应用整批表格修改。', 'error');
+        return false;
+      }
       if (!webGridSession?.isDirty()) {
         if (options.switchMode) activeDataEditingMode = options.switchMode;
-        resetWebGridEditor();
+        resetWebGridEditor({ preserveViewState: true });
         closePendingEditModal({ restoreFocus: false });
         if (typeof options.after === 'function') options.after();
-        else render();
+        else {
+          render();
+          restoreActiveWebGridFocusAfterRender();
+        }
         return true;
       }
+      const applyState = captureWebGridApplyState();
+      setWebGridApplyInFlight(true);
       setBusy(true, '正在检查表格修改……');
       try {
-        const driver = webGridCommitDriver();
+        const driver = webGridCommitDriver(applyState);
         const prepared = await driver.validate();
+        assertWebGridApplyState(applyState);
         webGridIssues = [...(prepared.errors || []), ...(prepared.warnings || [])];
         if (!prepared.ok) {
           closePendingEditModal();
@@ -9389,22 +9738,29 @@
         }
         const source = driver.getSource().document;
         if (globalThis.GraphEditorState.fingerprint(source) === globalThis.GraphEditorState.fingerprint(prepared.document)) {
-          resetWebGridEditor();
+          resetWebGridEditor({ preserveViewState: true });
           if (options.switchMode) activeDataEditingMode = options.switchMode;
           closePendingEditModal({ restoreFocus: false });
           if (typeof options.after === 'function') options.after();
-          else render();
+          else {
+            render();
+            restoreActiveWebGridFocusAfterRender();
+          }
           showStatus('表格内容没有产生数据变化，无需应用。', 'success');
           return true;
         }
         const changeCount = prepared.summary.added + prepared.summary.updated + prepared.summary.deleted;
+        assertWebGridApplyState(applyState);
         driver.commit(prepared.document, { source: 'web-grid', changeCount, tableCount: globalThis.ProcessV7GridAdapter.TABLE_IDS.length });
-        resetWebGridEditor();
+        resetWebGridEditor({ preserveViewState: true });
         if (options.switchMode) activeDataEditingMode = options.switchMode;
         closePendingEditModal({ restoreFocus: false });
         updateCandidateList();
         if (typeof options.after === 'function') options.after();
-        else render();
+        else {
+          render();
+          restoreActiveWebGridFocusAfterRender();
+        }
         showStatus(`已应用本次表格修改${changeCount ? `，涉及${changeCount}项记录变化` : ''}。执行一次撤销可恢复应用前内容。`, 'success');
         return true;
       } catch (error) {
@@ -9413,15 +9769,19 @@
         return false;
       } finally {
         setBusy(false);
+        setWebGridApplyInFlight(false);
       }
     }
 
     function discardWebGridChanges(options = {}) {
-      resetWebGridEditor();
+      resetWebGridEditor({ preserveViewState: true });
       if (options.switchMode) activeDataEditingMode = options.switchMode;
       closePendingEditModal({ restoreFocus: false });
       if (typeof options.after === 'function') options.after();
-      else render();
+      else {
+        render();
+        restoreActiveWebGridFocusAfterRender();
+      }
       showStatus('已放弃尚未应用的表格修改。当前JSON没有改变。', 'success');
     }
 
@@ -9447,15 +9807,12 @@
           canApply: editSessionManager.canApply(session.candidateKey),
           apply: applyCurrentEditSession,
           discard() {
+            if (session.editorKind === 'form-field-batch') {
+              return closeFormFieldBatchModal({ render: true });
+            }
             const discarded = editSessionManager.discard();
             if (discarded?.editorKind === 'new-flow-relation-wizard') flowRelationDraft = null;
             if (['data-behavior-choice', 'data-edge-operations'].includes(discarded?.editorKind)) graphSelection = null;
-            if (discarded?.editorKind === 'form-field-batch') {
-              formFieldBatchModal.classList.remove('show');
-              formFieldBatchModal.setAttribute('aria-hidden', 'true');
-              formFieldBatchContent.innerHTML = '';
-              formFieldBatchError.textContent = '';
-            }
             refreshUnappliedIndicators();
             render();
             return true;
@@ -9469,7 +9826,7 @@
           canApply: true,
           apply: () => applyWebGridChanges(),
           discard() {
-            resetWebGridEditor();
+            resetWebGridEditor({ preserveViewState: true });
             refreshUnappliedIndicators();
             return true;
           }
@@ -9494,6 +9851,25 @@
     }
 
     function requestTransition(intent, action, options = {}) {
+      if (pendingTransitionResolution) {
+        showStatus('正在处理未应用修改，请等待本次处理完成。', 'error');
+        if (typeof options.cancelAction === 'function') options.cancelAction();
+        return true;
+      }
+      if (webGridApplyInFlight) {
+        showStatus('表格修改正在检查，请等待本次检查完成后再切换或继续其他操作。', 'error');
+        if (typeof options.cancelAction === 'function') options.cancelAction();
+        return true;
+      }
+      if (formFieldBatchApplying) {
+        showStatus('批量字段正在检查，请等待本次检查完成后再切换或继续其他操作。', 'error');
+        if (typeof options.cancelAction === 'function') options.cancelAction();
+        return true;
+      }
+      if (blockWebGridCompositionTransition()) {
+        if (typeof options.cancelAction === 'function') options.cancelAction();
+        return true;
+      }
       const pending = getPendingEdit();
       if (!pending) {
         action();
@@ -9552,7 +9928,7 @@
       }
       if (typeof options.afterCommit === 'function') options.afterCommit(entry.data, result.details || details);
       invalidateCurrentChecks(entry);
-      resetWebGridEditor();
+      resetWebGridEditor({ preserveViewState: true });
       refreshCandidateDirty(entry);
       render();
       if (options.successLabel) showStatus(options.successLabel, 'success');
@@ -9616,33 +9992,45 @@
     }
 
     async function resolvePendingTransition(resolution) {
+      if (pendingTransitionResolution) {
+        showStatus('正在处理未应用修改，请等待本次处理完成。', 'error');
+        return false;
+      }
       const transition = pendingTransition;
-      if (!transition) return;
+      if (!transition) return false;
       if (resolution === 'continue') {
         closePendingEditModal();
-        return;
+        return true;
       }
-      if (resolution === 'discard') {
-        await transition.pending.discard();
+      if (resolution !== 'discard' && (resolution !== 'apply' || !transition.pending.canApply)) return false;
+      const resolutionToken = { transition, resolution };
+      pendingTransitionResolution = resolutionToken;
+      continuePendingEditingButton.disabled = true;
+      discardPendingEditButton.disabled = true;
+      applyPendingEditButton.disabled = true;
+      try {
+        const succeeded = resolution === 'discard'
+          ? (await transition.pending.discard(), true)
+          : await transition.pending.apply();
+        if (pendingTransitionResolution !== resolutionToken) return false;
+        if (!succeeded) {
+          closePendingEditModal();
+          return false;
+        }
         closePendingEditModal({ restoreFocus: false });
+        pendingTransitionResolution = null;
         requestTransition(transition.intent, transition.action, {
           invoker: transition.invoker,
           cancelAction: transition.cancelAction
         });
-        return;
+        return true;
+      } finally {
+        if (pendingTransitionResolution === resolutionToken) pendingTransitionResolution = null;
+        const locked = webGridApplyInFlight || formFieldBatchApplying;
+        continuePendingEditingButton.disabled = locked;
+        discardPendingEditButton.disabled = locked;
+        applyPendingEditButton.disabled = locked || Boolean(pendingTransition && !pendingTransition.pending?.canApply);
       }
-      if (resolution !== 'apply' || !transition.pending.canApply) return;
-      applyPendingEditButton.disabled = true;
-      const applied = await transition.pending.apply();
-      if (!applied) {
-        closePendingEditModal();
-        return;
-      }
-      closePendingEditModal({ restoreFocus: false });
-      requestTransition(transition.intent, transition.action, {
-        invoker: transition.invoker,
-        cancelAction: transition.cancelAction
-      });
     }
 
     function captureVisibleWebGridScroll() {
@@ -9652,17 +10040,35 @@
       webGridScrollPositions[tableId] = { top: shell.scrollTop, left: shell.scrollLeft };
     }
 
-    function restoreVisibleWebGridScroll() {
-      const tableId = activeGridTableByWorkspace[activeGridWorkspace];
+    function restoreWebGridTableView(tableId, options = {}) {
       const shell = tableId ? workspace.querySelector(`#webGrid-${CSS.escape(tableId)}`) : null;
       const position = tableId ? webGridScrollPositions[tableId] : null;
-      if (!shell || !position) return;
-      shell.scrollTop = Number(position.top || 0);
-      shell.scrollLeft = Number(position.left || 0);
+      if (shell && position) {
+        shell.scrollTop = Number(position.top || 0);
+        shell.scrollLeft = Number(position.left || 0);
+      }
+      if (!options.focus) return;
+      const rowId = webGridSelectedRows[tableId] || '';
+      const column = webGridRanges[tableId]?.currentColumn || '';
+      if (rowId && column && focusNativeGridCell(tableId, rowId, column)) return;
+      const tab = workspace.querySelector(`[data-action="switch-grid-table"][data-table-id="${CSS.escape(tableId)}"]`);
+      const panel = workspace.querySelector(`[data-grid-panel="${CSS.escape(tableId)}"]`);
+      (tab || panel)?.focus?.({ preventScroll: true });
+    }
+
+    function restoreVisibleWebGridScroll() {
+      restoreWebGridTableView(activeGridTableByWorkspace[activeGridWorkspace]);
+    }
+
+    function restoreActiveWebGridFocusAfterRender() {
+      if (activeGovernanceStep !== 'data' || activeDataEditingMode !== 'grid') return;
+      const tableId = activeGridTableByWorkspace[activeGridWorkspace];
+      requestAnimationFrame(() => restoreWebGridTableView(tableId, { focus: true }));
     }
 
     function render() {
-      captureVisibleWebGridScroll();
+      if (skipNextWebGridScrollCapture) skipNextWebGridScrollCapture = false;
+      else captureVisibleWebGridScroll();
       destroyDiagram();
       destroyDataDiagram();
       destroyReviewPatternDiagrams();
@@ -9981,10 +10387,15 @@
       } else if (assignment === 'unassigned') {
         targetArea = ensureFormArea(form, '');
       } else if (assignment === '__new_detail__') {
+        const areaTitle = text(window.prompt('请输入新建明细表名称。名称尚未确定时，请取消并选择“待确认”。', '')).trim();
+        if (!areaTitle) {
+          showStatus('未新建明细表。名称尚未确定时，请把字段归属选择为“待确认”。', 'error');
+          return false;
+        }
         targetArea = {
           area_ref: newRef('area'),
           area_type: '明细清单',
-          area_title: '',
+          area_title: areaTitle,
           items: []
         };
         form.areas.push(targetArea);
@@ -10544,6 +10955,7 @@
         if (dataObject) openEntityEditSession('data', dataObject.data_ref);
       }
       render();
+      restoreActiveWebGridFocusAfterRender();
     }
 
     function gridParentContext(tableId) {
@@ -10554,13 +10966,27 @@
       return {};
     }
 
+    function webGridCompositionInProgress() {
+      return Boolean(workspace.querySelector('[data-grid-composing="1"]'));
+    }
+
+    function blockWebGridCompositionTransition() {
+      if (!webGridCompositionInProgress()) return false;
+      showStatus('请先完成当前中文输入，再执行会切换或重绘表格的操作。', 'error');
+      return true;
+    }
+
     function createGridRowInSession(tableId, options = {}) {
       ensureWebGridSession();
       const definition = webGridSession.definition(tableId);
       const context = { ...gridParentContext(tableId), ...options };
-      if (definition.parentTableId && !context.parentRef) {
-        if (options.silent) throw new Error(`请先在上级表格中选择一条记录，再新增${definition.label}。`);
-        window.alert(`请先在上级表格中选择一条记录，再新增${definition.label}。`);
+      const parent = gridParentState(tableId);
+      if (definition.parentTableId && (!context.parentRef || !parent.ready)) {
+        const message = parent.deleted
+          ? `当前${parent.label}已在工作副本中标记删除，不能继续新增${definition.label}。`
+          : `请先在上级表格中选择一条${parent.label}，再新增${definition.label}。`;
+        if (options.silent) throw new Error(message);
+        window.alert(message);
         return null;
       }
       const row = options.sourceRow
@@ -10632,23 +11058,39 @@
     }
 
     function openGridUpdateFields(rowId, invoker = null) {
-      const row = webGridSession?.rows('data_behavior_links').find(item => item._row_id === rowId && !item._deleted);
+      if (webGridApplyInFlight) {
+        showStatus('表格修改正在检查，请等待本次检查完成后再选择更新字段。', 'error');
+        return;
+      }
+      const candidateKey = candidateStateKey();
+      const session = webGridSession;
+      const sessionRevision = Number(session?.revision?.() || 0);
+      const row = session?.rows('data_behavior_links').find(item => item._row_id === rowId && !item._deleted);
       if (!row || row.operation !== 'update') return;
-      const dataRow = webGridSession.rows('data_objects').find(item => item.data_ref === row.data_ref);
+      const dataRow = session.rows('data_objects').find(item => item.data_ref === row.data_ref);
       openUpdateFieldsModal({
         dataRef: row.data_ref,
         dataName: dataRow?.data_name,
         selectedRefs: row.updated_field_refs,
         fields: gridUpdateFieldOptions(row),
         invoker,
+        isCurrent() {
+          return candidateStateKey() === candidateKey
+            && webGridSession === session
+            && Number(webGridSession?.revision?.() || 0) === sessionRevision
+            && Boolean(session.rows('data_behavior_links').find(item => item._row_id === rowId && !item._deleted && item.operation === 'update'));
+        },
         onConfirm(selectedRefs) {
-          webGridSession.updateCell('data_behavior_links', rowId, 'updated_field_refs', selectedRefs);
+          session.updateCell('data_behavior_links', rowId, 'updated_field_refs', selectedRefs);
           clearNativeGridIssues();
           refreshNativeGridPanel('data_behavior_links');
           updateNativeGridStatus();
+          requestAnimationFrame(() => focusNativeGridCell('data_behavior_links', rowId, 'updated_field_refs'));
           showStatus(`表格工作副本已登记${selectedRefs.length}个本次更新字段。`, 'success');
         },
-        onCancel: () => refreshNativeGridPanel('data_behavior_links')
+        onCancel() {
+          refreshNativeGridPanelAndFocus('data_behavior_links', rowId, 'updated_field_refs');
+        }
       });
     }
 
@@ -10657,19 +11099,61 @@
       if (graphSelection?.kind !== 'data-edge' || !edgeValues.operations.includes('update')) return;
       const dataObject = currentDocument()?.data_objects?.find(item => item.data_ref === graphSelection.dataRef);
       if (!dataObject) return;
+      const candidateKey = candidateStateKey();
+      const selection = { dataRef: graphSelection.dataRef, behaviorRef: graphSelection.behaviorRef };
+      const session = dataEdgeSession(graphSelection);
+      if (!session) return;
+      const sessionFingerprint = globalThis.GraphEditorState.fingerprint(session);
+      const invokerAction = text(invoker?.dataset?.action);
+      const restoreUpdateFieldsFocus = () => {
+        requestAnimationFrame(() => {
+          let target = null;
+          if (invokerAction === 'open-update-fields') {
+            const dataIndex = (currentDocument()?.data_objects || []).findIndex(item => item.data_ref === selection.dataRef);
+            const linkIndex = dataIndex >= 0
+              ? (currentDocument().data_objects[dataIndex].behavior_links || []).findIndex(item => item.behavior_ref === selection.behaviorRef)
+              : -1;
+            if (dataIndex >= 0 && linkIndex >= 0) {
+              target = workspace.querySelector(`[data-action="open-update-fields"][data-data-index="${dataIndex}"][data-index="${linkIndex}"]`);
+            }
+          }
+          if (!target) target = workspace.querySelector('[data-action="open-graph-update-fields"]');
+          target?.scrollIntoView({ block: 'nearest' });
+          target?.focus({ preventScroll: true });
+        });
+      };
       openUpdateFieldsModal({
         dataRef: dataObject.data_ref,
         dataName: dataObject.data_name,
         selectedRefs: edgeValues.updatedFieldRefs,
         invoker,
+        isCurrent() {
+          const liveSession = dataEdgeSession();
+          return candidateStateKey() === candidateKey
+            && graphSelection?.kind === 'data-edge'
+            && graphSelection.dataRef === selection.dataRef
+            && graphSelection.behaviorRef === selection.behaviorRef
+            && Boolean(liveSession)
+            && globalThis.GraphEditorState.fingerprint(liveSession) === sessionFingerprint;
+        },
         onConfirm(selectedRefs) {
           editSessionManager.updatePatch({ updatedFieldRefs: selectedRefs });
           updateDataEdgeCanApply();
           refreshUnappliedIndicators();
-          if (typeof onConfirm === 'function') return onConfirm(selectedRefs);
+          if (typeof onConfirm === 'function') {
+            Promise.resolve()
+              .then(() => onConfirm(selectedRefs))
+              .catch(error => showStatus(`更新字段未能应用：${error.message}`, 'error'))
+              .finally(restoreUpdateFieldsFocus);
+            return;
+          }
           render();
+          restoreUpdateFieldsFocus();
         },
-        onCancel: render
+        onCancel() {
+          render();
+          restoreUpdateFieldsFocus();
+        }
       });
     }
 
@@ -10758,6 +11242,19 @@
       const formIndex = Number(element.dataset.formIndex);
       const areaIndex = Number(element.dataset.areaIndex);
       let nextFocusPath = '';
+      if (pendingTransitionResolution) {
+        showStatus('正在处理未应用修改，请等待本次处理完成。', 'error');
+        return;
+      }
+      if (webGridApplyInFlight) {
+        showStatus('表格修改正在检查，请等待本次检查完成后再执行其他操作。', 'error');
+        return;
+      }
+      if (formFieldBatchApplying) {
+        showStatus('批量字段正在检查，请等待本次检查完成后再执行其他操作。', 'error');
+        return;
+      }
+      if (blockWebGridCompositionTransition()) return;
       if (!options.skipPendingGuard && PENDING_GUARDED_ACTIONS.has(action) && requestTransition(
         '继续当前操作',
         () => handleAction(action, element, { skipPendingGuard: true }),
@@ -10797,29 +11294,23 @@
       }
       if (action === 'switch-data-editing-mode') return requestDataEditingMode(element.dataset.mode);
       if (action === 'switch-grid-workspace') {
-        if (workspace.querySelector('[data-grid-cell][data-grid-composing="1"]')) return showStatus('请先完成当前中文输入，再切换表格。', 'error');
         const nextWorkspace = element.dataset.workspace === 'forms' ? 'forms' : 'data';
+        const tableId = activeGridTableByWorkspace[nextWorkspace] || globalThis.AuthoringSelectionContext.DEFAULT_TABLES[nextWorkspace];
         updateAuthoringSelection({
           workspace: nextWorkspace,
-          tableId: activeGridTableByWorkspace[nextWorkspace] || globalThis.AuthoringSelectionContext.DEFAULT_TABLES[nextWorkspace]
+          tableId
         });
-        return render();
+        render();
+        requestAnimationFrame(() => restoreWebGridTableView(tableId, { focus: true }));
+        return;
       }
       if (action === 'switch-grid-table') {
-        if (workspace.querySelector('[data-grid-cell][data-grid-composing="1"]')) return showStatus('请先完成当前中文输入，再切换表格。', 'error');
         const tableId = text(element.dataset.tableId);
         if (!GRID_TABLES_BY_WORKSPACE[activeGridWorkspace].includes(tableId)) return;
         activeGridTableByWorkspace[activeGridWorkspace] = tableId;
         updateAuthoringSelection({ tableId });
         render();
-        requestAnimationFrame(() => {
-          const shell = workspace.querySelector(`#webGrid-${CSS.escape(tableId)}`);
-          const position = webGridScrollPositions[tableId] || {};
-          if (shell) {
-            shell.scrollTop = Number(position.top || 0);
-            shell.scrollLeft = Number(position.left || 0);
-          }
-        });
+        requestAnimationFrame(() => restoreWebGridTableView(tableId, { focus: true }));
         return;
       }
       if (action === 'grid-sort') {
@@ -10830,6 +11321,9 @@
         else if (current.direction === 'asc') webGridSorts[tableId] = { column, direction: 'desc' };
         else delete webGridSorts[tableId];
         refreshNativeGridPanel(tableId);
+        requestAnimationFrame(() => {
+          workspace.querySelector(`[data-action="grid-sort"][data-table-id="${CSS.escape(tableId)}"][data-column="${CSS.escape(column)}"]`)?.focus({ preventScroll: true });
+        });
         return;
       }
       if (action === 'grid-add-row') return addGridRow(element.dataset.tableId);
@@ -10850,7 +11344,9 @@
         if (row._deleted) webGridSession.setDeleted(tableId, rowId, false);
         else if (window.confirm(`确定将选中的${webGridSession.definition(tableId).label}标记为删除吗？应用前系统会检查引用。`)) webGridSession.setDeleted(tableId, rowId, true);
         webGridIssues = [];
-        return render();
+        render();
+        requestAnimationFrame(() => workspace.querySelector(`[data-action="grid-delete-row"][data-table-id="${CSS.escape(tableId)}"]`)?.focus({ preventScroll: true }));
+        return;
       }
       if (action === 'grid-move-row-up' || action === 'grid-move-row-down') {
         const tableId = element.dataset.tableId;
@@ -10858,27 +11354,33 @@
         if (!rowId) return;
         webGridSession.moveRow(tableId, rowId, action === 'grid-move-row-up' ? -1 : 1);
         webGridIssues = [];
-        return render();
+        render();
+        requestAnimationFrame(() => workspace.querySelector(`[data-action="${CSS.escape(action)}"][data-table-id="${CSS.escape(tableId)}"]`)?.focus({ preventScroll: true }));
+        return;
       }
       if (action === 'discard-web-grid') return discardWebGridChanges();
       if (action === 'apply-web-grid') return applyWebGridChanges();
       if (action === 'focus-grid-issue') {
-        const tableId = element.dataset.tableId;
-        if (!tableId) return;
-        activeGridWorkspace = tableId.startsWith('form') || tableId === 'field_source_links' ? 'forms' : 'data';
-        activeGridTableByWorkspace[activeGridWorkspace] = tableId;
-        const rowId = element.dataset.rowId;
-        const rowData = webGridSession.rows(tableId).find(row => row._row_id === rowId);
-        if (rowData) selectGridIssueContext(tableId, rowData);
-        webGridSelectedRows[tableId] = rowId;
-        updateAuthoringSelection({ workspace: activeGridWorkspace, tableId });
-        render();
-        const focusCell = attempt => {
-          if (!focusNativeGridCell(tableId, rowId, element.dataset.column) && attempt < 6) {
-            setTimeout(() => focusCell(attempt + 1), 50);
-          }
+        const target = {
+          gridTableId: element.dataset.tableId,
+          gridRowId: element.dataset.rowId,
+          gridRowRef: element.dataset.gridRowRef,
+          gridRefKey: element.dataset.gridRefKey,
+          gridColumn: element.dataset.column,
+          editorSection: element.dataset.editorSection,
+          processSection: element.dataset.processSection,
+          focusKind: element.dataset.focusKind,
+          focusRef: element.dataset.focusRef,
+          focusPath: element.dataset.focusPath,
+          dataRef: element.dataset.dataRef,
+          dataFieldRef: element.dataset.dataFieldRef,
+          formRef: element.dataset.formRef,
+          areaRef: element.dataset.areaRef,
+          formItemRef: element.dataset.formItemRef
         };
-        setTimeout(() => focusCell(0), 30);
+        if (target.gridTableId && focusGridEditorTarget(target)) return;
+        activeDataEditingMode = 'guided';
+        focusEditorTarget(target);
         return;
       }
       if (action === 'open-update-fields') return openGuidedUpdateFields(Number(element.dataset.dataIndex), index, element);
@@ -11267,8 +11769,14 @@
         return render();
       }
       if (action === 'select-data-field') {
-        updateAuthoringSelection({ dataFieldRef: text(element.dataset.ref) });
-        return render();
+        const fieldRef = text(element.dataset.ref);
+        updateAuthoringSelection({ dataFieldRef: fieldRef });
+        render();
+        requestAnimationFrame(() => {
+          const target = workspace.querySelector(`[data-action="select-data-field"][data-ref="${CSS.escape(fieldRef)}"]`);
+          target?.focus({ preventScroll: true });
+        });
+        return;
       }
       if (action === 'select-term') {
         activeTermRef = text(element.dataset.ref);
@@ -11287,7 +11795,9 @@
         const dataRef = text(element.dataset.dataRef);
         const fieldRef = text(element.dataset.fieldRef);
         const dataObject = (currentDocument().data_objects || []).find(item => item.data_ref === dataRef);
-        if (!dataObject || (fieldRef && !(dataObject.fields || []).some(item => item.field_ref === fieldRef))) {
+        const dataIndex = (currentDocument().data_objects || []).findIndex(item => item.data_ref === dataRef);
+        const fieldIndex = (dataObject?.fields || []).findIndex(item => item.field_ref === fieldRef);
+        if (!dataObject || (fieldRef && fieldIndex < 0)) {
           showStatus('对象或对象字段已经不存在，当前没有修改任何内容。', 'error');
           return;
         }
@@ -11298,7 +11808,7 @@
         render();
         requestAnimationFrame(() => {
           const target = fieldRef
-            ? workspace.querySelector(`[data-action="select-data-field"][data-ref="${CSS.escape(fieldRef)}"]`)
+            ? workspace.querySelector(`[data-bind="${CSS.escape(`data_objects.${dataIndex}.fields.${fieldIndex}.field_name`)}"]`)
             : workspace.querySelector('[data-graph-data-property="data_name"]');
           target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
           target?.focus({ preventScroll: true });
@@ -11459,7 +11969,14 @@
         if (!isControlNode && externalDepartment && !validRelations.length) {
           addWarning(
             `${label}由${externalDepartment}执行，但尚未建立有效流程关系。`,
-            { editorSection: 'process', processSection: 'relations' },
+            {
+              ruleCode: 'CROSS_DEPARTMENT_BEHAVIOR_RELATION_REQUIRED',
+              editorSection: 'process',
+              processSection: 'relations',
+              focusKind: 'behavior',
+              focusRef: item.behavior_ref,
+              focusPath: `behaviors.${index}.behavior_ref`
+            },
             ['在“流程关系”中补充该行为与前序或后续行为的实际先后关系。']
           );
         }
@@ -11601,12 +12118,28 @@
       parallelDetails?.splits.forEach(detail => {
         if (!detail.missingCount) return;
         const guidance = globalThis.StructureLearningScore?.parallelSplitGuidance?.(detail, data);
-        addWarning(guidance?.message || '并行开始节点的有效并行路线不足2条。', guidance?.target || parallelTarget, guidance?.suggestions);
+        const target = guidance?.target || parallelTarget;
+        const behaviorIndex = data.behaviors.indexOf(detail.behavior);
+        addWarning(guidance?.message || '并行开始节点的有效并行路线不足2条。', {
+          ...target,
+          ruleCode: 'FLOW_PARALLEL_SPLIT_ROUTE_MINIMUM',
+          focusKind: target.focusKind || 'behavior',
+          focusRef: target.focusRef || detail.behavior?.behavior_ref,
+          focusPath: target.focusPath || (behaviorIndex >= 0 ? `behaviors.${behaviorIndex}.behavior_ref` : '')
+        }, guidance?.suggestions);
       });
       parallelDetails?.joins.forEach(detail => {
         if (!detail.missingCount) return;
         const guidance = globalThis.StructureLearningScore?.parallelJoinGuidance?.(detail, data);
-        addWarning(guidance?.message || '并行汇合节点的有效来源不足2个。', guidance?.target || parallelTarget, guidance?.suggestions);
+        const target = guidance?.target || parallelTarget;
+        const behaviorIndex = data.behaviors.indexOf(detail.behavior);
+        addWarning(guidance?.message || '并行汇合节点的有效来源不足2个。', {
+          ...target,
+          ruleCode: 'FLOW_PARALLEL_JOIN_SOURCE_MINIMUM',
+          focusKind: target.focusKind || 'behavior',
+          focusRef: target.focusRef || detail.behavior?.behavior_ref,
+          focusPath: target.focusPath || (behaviorIndex >= 0 ? `behaviors.${behaviorIndex}.behavior_ref` : '')
+        }, guidance?.suggestions);
       });
       if (data.behaviors.length > 1) {
         const relationsTarget = {
@@ -12406,6 +12939,7 @@
       selectInitialTabAfterImport();
       restoreAuthoringSelectionContext();
       render();
+      restoreActiveWebGridFocusAfterRender();
     }
 
     candidateList.addEventListener('click', event => {
@@ -12639,18 +13173,21 @@
     workspace.addEventListener('change', event => {
       const target = event.target;
       if (target.matches('[data-grid-cell]')) {
+        const tableId = target.dataset.gridTableId;
+        const rowId = target.dataset.gridRowId;
+        const column = target.dataset.gridColumn;
         updateNativeGridCell(target);
-        if (target.dataset.gridColumn === 'business_data_ref') refreshNativeGridPanel(target.dataset.gridTableId);
-        if (target.dataset.gridTableId === 'form_items' && target.dataset.gridColumn === 'data_field_ref') {
-          refreshNativeGridPanel('form_items');
+        if (column === 'business_data_ref') refreshNativeGridPanelAndFocus(tableId, rowId, column);
+        if (tableId === 'form_items' && column === 'data_field_ref') {
+          refreshNativeGridPanelAndFocus('form_items', rowId, column);
         }
-        if (target.dataset.gridTableId === 'data_behavior_links' && target.dataset.gridColumn === 'operation') {
-          const row = webGridSession.rows('data_behavior_links').find(item => item._row_id === target.dataset.gridRowId);
+        if (tableId === 'data_behavior_links' && column === 'operation') {
+          const row = webGridSession.rows('data_behavior_links').find(item => item._row_id === rowId);
           if (!row) return;
           if (row?.operation === 'update') openGridUpdateFields(row._row_id, target);
           else {
             webGridSession.updateCell('data_behavior_links', row._row_id, 'updated_field_refs', []);
-            refreshNativeGridPanel('data_behavior_links');
+            refreshNativeGridPanelAndFocus('data_behavior_links', rowId, column);
           }
         }
         return;
@@ -12688,6 +13225,14 @@
       }
       if (target.matches('[data-graph-data-focus]')) {
         const nextDataRef = target.value;
+        const restoreCurrentDataFocus = () => {
+          render();
+          requestAnimationFrame(() => {
+            const control = workspace.querySelector('[data-graph-data-focus]');
+            control?.scrollIntoView({ block: 'nearest' });
+            control?.focus({ preventScroll: true });
+          });
+        };
         requestTransition('切换数据对象', () => {
           captureGraphViewport();
           updateAuthoringSelection({ dataRef: nextDataRef });
@@ -12696,7 +13241,7 @@
           if (activeDataMode === 'flow') openEntityEditSession('data', nextDataRef);
           graphStateManager.updateView(candidateStateKey(), { data: { dataRef: activeDataRef, zoom: null, pan: null } });
           render();
-        }, { invoker: target, cancelAction: render });
+        }, { invoker: target, cancelAction: restoreCurrentDataFocus });
         return;
       }
       if (target.matches('[data-graph-data-behavior]') && graphSelection?.kind === 'data-behavior-choice') {
@@ -12721,7 +13266,10 @@
       }
       if (target.matches('[data-form-item-assignment]')) {
         const formIndex = Number(target.dataset.formIndex);
-        if (!moveFormItemToAssignment(formIndex, text(target.dataset.itemRef), target.value)) return;
+        if (!moveFormItemToAssignment(formIndex, text(target.dataset.itemRef), target.value)) {
+          render();
+          return;
+        }
         touch();
         render();
         return;
@@ -12867,18 +13415,19 @@
     });
 
     workspace.addEventListener('compositionstart', event => {
-      const control = event.target.closest('[data-grid-cell]');
+      const control = event.target.closest('[data-grid-cell], [data-grid-search]');
       if (!control) return;
       control.dataset.gridComposing = '1';
       control.dataset.gridCompositionEndedAt = '0';
     });
 
     workspace.addEventListener('compositionend', event => {
-      const control = event.target.closest('[data-grid-cell]');
+      const control = event.target.closest('[data-grid-cell], [data-grid-search]');
       if (!control) return;
       control.dataset.gridComposing = '0';
       control.dataset.gridCompositionEndedAt = String(Date.now());
-      updateNativeGridCell(control);
+      if (control.matches('[data-grid-cell]')) updateNativeGridCell(control);
+      else applyNativeGridFilter(control.dataset.gridSearch, control.value);
     });
 
     workspace.addEventListener('paste', event => {
@@ -12970,10 +13519,14 @@
     });
 
     formFieldBatchContent.addEventListener('input', event => {
+      if (formFieldBatchApplying) {
+        event.preventDefault();
+        return;
+      }
       if (event.target.matches('[data-form-field-batch-search]')) {
         if (event.isComposing) return;
         const position = event.target.selectionStart;
-        updateFormFieldBatchPatch({ search: event.target.value });
+        updateFormFieldBatchPatch({ search: event.target.value }, { focusTarget: event.target });
         requestAnimationFrame(() => {
           const search = formFieldBatchContent.querySelector('[data-form-field-batch-search]');
           search?.focus();
@@ -12987,6 +13540,10 @@
       }
     });
     formFieldBatchContent.addEventListener('change', event => {
+      if (formFieldBatchApplying) {
+        event.preventDefault();
+        return;
+      }
       const session = currentFormFieldBatchSession();
       if (!session) return;
       if (event.target.matches('[data-form-field-batch-ref]')) {
@@ -12997,11 +13554,11 @@
         Object.keys(requiredByFieldRef).forEach(fieldRef => {
           if (!selected.has(fieldRef)) delete requiredByFieldRef[fieldRef];
         });
-        updateFormFieldBatchPatch({ fieldRefs: [...selected], requiredByFieldRef });
+        updateFormFieldBatchPatch({ fieldRefs: [...selected], requiredByFieldRef }, { focusTarget: event.target });
         return;
       }
       if (event.target.matches('[data-form-field-batch-target]')) {
-        updateFormFieldBatchPatch({ targetValue: event.target.value, newAreaTitle: event.target.value === 'new:detail' ? session.patch.newAreaTitle : '' });
+        updateFormFieldBatchPatch({ targetValue: event.target.value, newAreaTitle: event.target.value === 'new:detail' ? session.patch.newAreaTitle : '' }, { focusTarget: event.target });
         return;
       }
       if (event.target.matches('[data-form-field-batch-required]')) {
@@ -13009,21 +13566,25 @@
         const fieldRef = event.target.dataset.formFieldBatchRequired;
         if (event.target.value === '') delete requiredByFieldRef[fieldRef];
         else requiredByFieldRef[fieldRef] = event.target.value === 'true';
-        updateFormFieldBatchPatch({ requiredByFieldRef });
+        updateFormFieldBatchPatch({ requiredByFieldRef }, { focusTarget: event.target });
         return;
       }
       if (event.target.matches('[data-form-field-batch-blank-required]')) {
-        updateFormFieldBatchPatch({ blankRequired: event.target.value === '' ? null : event.target.value === 'true' });
+        updateFormFieldBatchPatch({ blankRequired: event.target.value === '' ? null : event.target.value === 'true' }, { focusTarget: event.target });
       }
     });
     formFieldBatchContent.addEventListener('click', event => {
+      if (formFieldBatchApplying) {
+        event.preventDefault();
+        return;
+      }
       const bulk = event.target.closest('[data-form-field-batch-bulk]');
       if (!bulk) return;
       const session = currentFormFieldBatchSession();
       if (!session) return;
       const required = bulk.dataset.formFieldBatchBulk === 'true';
       const requiredByFieldRef = Object.fromEntries(list(session.patch.fieldRefs).map(fieldRef => [fieldRef, required]));
-      updateFormFieldBatchPatch({ requiredByFieldRef });
+      updateFormFieldBatchPatch({ requiredByFieldRef }, { focusTarget: bulk });
     });
     cancelFormFieldBatchButton.addEventListener('click', () => closeFormFieldBatchModal({ render: true }));
     confirmFormFieldBatchButton.addEventListener('click', applyFormFieldBatch);
@@ -13061,6 +13622,7 @@
     });
 
     window.addEventListener('keydown', event => {
+      if (trapTopModalFocus(event)) return;
       if (event.key !== 'Escape') return;
       if (pendingEditModal.classList.contains('show')) {
         resolvePendingTransition('continue');

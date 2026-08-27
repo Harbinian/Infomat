@@ -60,6 +60,54 @@ function issue(ruleCode, focusRef, focusPath, message = `${ruleCode}问题`) {
 }
 
 {
+  const source = {
+    ruleCode: 'FLOW_RELATION_TYPE_REQUIRED',
+    focusPath: 'flow_relations.0.relation_type',
+    focusPaths: [
+      'flow_relations.0.relation_type',
+      'flow_relations.1.relation_type'
+    ],
+    message: '两个关系分别需要确认类型',
+    location: { section: '流程关系' }
+  };
+  const before = JSON.parse(JSON.stringify(source));
+  const expanded = GovernanceReviewQueue.expandIssueFocusPaths(source);
+  assert.equal(expanded.length, 2, 'an issue with two focus paths must expand to two queue candidates');
+  assert.deepEqual(
+    expanded.map(item => item.focusPath),
+    source.focusPaths,
+    'expanded issues must retain the original focus path order'
+  );
+  assert.deepEqual(
+    expanded.map(item => item.focusPaths),
+    source.focusPaths.map(focusPath => [focusPath]),
+    'each expanded issue must retain only its own focus path'
+  );
+  assert.deepEqual(expanded.map(item => item.location), [source.location, source.location]);
+  assert.deepEqual(source, before, 'expanding focus paths must not mutate the source issue');
+  assert.notStrictEqual(expanded[0], source);
+  assert.notStrictEqual(expanded[0].location, source.location, 'nested issue metadata must also be cloned');
+
+  const normalized = GovernanceReviewQueue.normalizeIssues(expanded.map((item, index) => ({
+    ...item,
+    stableRef: `relation-${index + 1}`
+  })));
+  assert.equal(normalized.length, 2, 'expanded targets with their own stable refs must normalize without identity conflicts');
+  assert.notEqual(normalized[0].queueKey, normalized[1].queueKey);
+
+  assert.equal(
+    GovernanceReviewQueue.expandIssueFocusPaths({ ruleCode: 'RULE_WITHOUT_TARGET' }).length,
+    1,
+    'an issue without focusPaths must remain one issue'
+  );
+  assert.equal(
+    GovernanceReviewQueue.expandIssueFocusPaths({ ruleCode: 'RULE_WITH_ONE_TARGET', focusPaths: ['path.only'] }).length,
+    1,
+    'an issue with one focus path must remain one issue'
+  );
+}
+
+{
   const manager = GovernanceReviewQueue.createManager();
   const issues = [
     issue('RULE_A', 'ref-a', 'path.a'),

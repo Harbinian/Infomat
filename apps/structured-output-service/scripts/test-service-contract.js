@@ -26,6 +26,8 @@ const webGridCorePath = path.join(appRoot, 'public', 'web-grid-core.js');
 const nativeWebGridPath = path.join(appRoot, 'public', 'native-web-grid.js');
 const processV7GridAdapterPath = path.join(appRoot, 'public', 'process-v7-grid-adapter.js');
 const editSessionManagerPath = path.join(appRoot, 'public', 'edit-session-manager.js');
+const authoringSelectionContextPath = path.join(appRoot, 'public', 'authoring-selection-context.js');
+const governanceReviewQueuePath = path.join(appRoot, 'public', 'governance-review-queue.js');
 const packageJsonPath = path.join(appRoot, 'package.json');
 const serverPath = path.join(appRoot, 'server.js');
 const processV1SchemaPath = path.join(repoRoot, 'docs', 'contracts', 'process-governance-v1.schema.json');
@@ -1817,6 +1819,8 @@ async function testFrontendContract() {
   const nativeWebGridSource = fs.readFileSync(nativeWebGridPath, 'utf8');
   const processV7GridAdapterSource = fs.readFileSync(processV7GridAdapterPath, 'utf8');
   const editSessionManagerSource = fs.readFileSync(editSessionManagerPath, 'utf8');
+  const authoringSelectionContextSource = fs.readFileSync(authoringSelectionContextPath, 'utf8');
+  const governanceReviewQueueSource = fs.readFileSync(governanceReviewQueuePath, 'utf8');
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
   const serverSource = fs.readFileSync(serverPath, 'utf8');
 
@@ -1914,7 +1918,11 @@ async function testFrontendContract() {
   assert.ok(html.includes('选择“会改变”后，页面再显示业务使用状态、保管方式和确实适用的匿名处理问题。'));
   assert.ok(html.includes('data-action="toggle-advanced-lifecycle"'));
   assert.ok(html.includes('高级结构核对仅在当前页面临时开启'));
-  assert.equal(/localStorage|sessionStorage/.test(html), false, 'the temporary advanced mode must not use browser storage');
+  assert.equal(
+    /localStorage|sessionStorage|indexedDB|document\.cookie/.test(html),
+    false,
+    'the page controller must not persist authoring state or business content in browser storage'
+  );
   assert.ok(html.includes('数据对象与对象字段引用摘要（只读）'));
   assert.ok(html.includes('把对象字段批量引用到当前表单'));
   assert.ok(html.includes('批量引用对象字段'));
@@ -1927,6 +1935,42 @@ async function testFrontendContract() {
   assert.ok(html.includes("tableId === 'form_items' && column === 'data_field_ref'"));
   assert.equal(html.includes('>新增行</button>'), false, 'grid actions must name the record being added');
   assert.equal(html.includes('function addFormItemFromDataField('), false, 'single-field direct commit must be removed');
+  const renderWebGridPanelSource = html.slice(
+    html.indexOf('function renderWebGridPanel(tableId)'),
+    html.indexOf('function renderWebGridIssues()')
+  );
+  const renderWebGridEditorSource = html.slice(
+    html.indexOf('function renderWebGridEditor()'),
+    html.indexOf('function renderDataStep()')
+  );
+  assert.equal(
+    (renderWebGridPanelSource.match(/data-action="grid-add-row"/g) || []).length,
+    1,
+    'the current grid panel must expose exactly one add action'
+  );
+  assert.equal(
+    (renderWebGridEditorSource.match(/renderWebGridPanel\(/g) || []).length,
+    1,
+    'the grid editor must render only the active table panel'
+  );
+  assert.ok(renderWebGridEditorSource.includes('${renderWebGridPanel(activeTableId)}'));
+  assert.ok(renderWebGridEditorSource.includes('data-action="switch-grid-table"'));
+  assert.ok(renderWebGridEditorSource.includes('role="tab"'));
+  assert.ok(renderWebGridEditorSource.includes('aria-selected="${tableId === activeTableId}"'));
+  assert.ok(renderWebGridEditorSource.includes("tableDirty ? ' · 未应用' : ''"));
+  assert.ok(renderWebGridEditorSource.includes("!parent.ready ? ' · 缺少上级选择' : ''"));
+  assert.ok(renderWebGridEditorSource.includes('title="当前范围行数"'));
+  assert.ok(renderWebGridEditorSource.includes('title="错误数量"'));
+  assert.ok(renderWebGridPanelSource.includes('const addDisabled = !parent.ready'));
+  assert.ok(renderWebGridPanelSource.includes("parent.deleted ? `当前${parent.label}已在工作副本中标记删除。`"));
+  assert.ok(renderWebGridPanelSource.includes('selectedRowId && parent.ready'));
+  const createGridRowSource = html.slice(
+    html.indexOf('function createGridRowInSession('),
+    html.indexOf('function addGridRow(')
+  );
+  assert.ok(createGridRowSource.includes('const parent = gridParentState(tableId)'));
+  assert.ok(createGridRowSource.includes('(!context.parentRef || !parent.ready)'));
+  assert.ok(createGridRowSource.includes('parent.deleted'));
   const batchReferenceSource = html.slice(
     html.indexOf('async function applyFormFieldBatch('),
     html.indexOf('function ensureActiveCollectionItem(')
@@ -1935,6 +1979,23 @@ async function testFrontendContract() {
   assert.ok(batchReferenceSource.includes('validateGraphDocument'));
   assert.ok(batchReferenceSource.includes('sourceFingerprint'));
   assert.ok(batchReferenceSource.includes('graphStateManager.execute'));
+  assert.ok(batchReferenceSource.includes('sessionToken: formFieldBatchSessionToken'));
+  assert.ok(batchReferenceSource.includes('sessionFingerprint: globalThis.GraphEditorState.fingerprint(session)'));
+  assert.ok(batchReferenceSource.includes('patchFingerprint: globalThis.GraphEditorState.fingerprint(patch)'));
+  assert.ok(batchReferenceSource.includes('formFieldBatchSessionToken === applyState.sessionToken'));
+  assert.ok(batchReferenceSource.includes('globalThis.GraphEditorState.fingerprint(liveSession) === applyState.sessionFingerprint'));
+  assert.ok(batchReferenceSource.includes('closeFormFieldBatchModal({ discard: false, force: true, restoreFocus: false })'));
+  assert.ok(batchReferenceSource.includes("workspace.querySelector(`[data-item-ref=\"${CSS.escape(first?.itemRef || '')}\"]`)"));
+  const batchModalSource = html.slice(
+    html.indexOf('function captureFormFieldBatchFocus('),
+    html.indexOf('function formFieldBatchPlanInput(')
+  );
+  assert.ok(batchModalSource.includes("const disabled = formFieldBatchApplying ? ' disabled' : ''"));
+  assert.ok(batchModalSource.includes('cancelFormFieldBatchButton.disabled = formFieldBatchApplying'));
+  assert.ok(batchModalSource.includes('if (formFieldBatchApplying && options.force !== true)'));
+  assert.ok(batchModalSource.includes('restoreFormFieldBatchFocus(focusState)'));
+  assert.ok(batchModalSource.includes('const restoreTarget = session ? { formRef: session.patch.formRef, mode: session.patch.mode } : null'));
+  assert.ok(batchModalSource.includes("[data-action=\"open-form-field-batch\"]"));
   const addGridRowSource = html.slice(
     html.indexOf('function addGridRow('),
     html.indexOf('function openGuidedUpdateFields(')
@@ -1943,6 +2004,254 @@ async function testFrontendContract() {
   assert.ok(addGridRowSource.includes("webGridFilters[tableId] = ''"));
   assert.ok(addGridRowSource.includes("querySelectorAll('[data-grid-cell]:not(:disabled)')"));
   assert.ok(addGridRowSource.includes('controls.find(candidate => !text(candidate.value)) || controls[0]'));
+  const moveFormItemAssignmentSource = html.slice(
+    html.indexOf('function moveFormItemToAssignment('),
+    html.indexOf('function moveFormItem(')
+  );
+  assert.ok(moveFormItemAssignmentSource.includes("window.prompt('请输入新建明细表名称"));
+  assert.ok(moveFormItemAssignmentSource.includes('area_title: areaTitle'));
+  const resetWebGridSource = html.slice(
+    html.indexOf('function resetWebGridEditor(options = {})'),
+    html.indexOf('function resetActiveGridTables()')
+  );
+  assert.ok(resetWebGridSource.includes('options.preserveViewState === true'));
+  assert.ok(resetWebGridSource.includes('captureAuthoringSelectionContext()'));
+  assert.ok(resetWebGridSource.includes('if (!preserveViewState)'));
+  const applyWebGridSource = html.slice(
+    html.indexOf('async function applyWebGridChanges(options = {})'),
+    html.indexOf('function getPendingEdit()')
+  );
+  assert.ok(applyWebGridSource.includes('resetWebGridEditor({ preserveViewState: true })'));
+  assert.equal(applyWebGridSource.includes('resetWebGridEditor();'), false, 'apply and discard must retain per-table view state');
+  assert.ok(applyWebGridSource.includes('if (webGridApplyInFlight)'));
+  assert.ok(applyWebGridSource.includes('if (updateFieldsModalState)'));
+  assert.ok(applyWebGridSource.includes('const applyState = captureWebGridApplyState()'));
+  assert.ok(applyWebGridSource.includes('assertWebGridApplyState(applyState)'));
+  assert.ok(applyWebGridSource.includes('setWebGridApplyInFlight(true)'));
+  assert.ok(applyWebGridSource.includes('setWebGridApplyInFlight(false)'));
+  const applyGuardSource = html.slice(
+    html.indexOf('function captureWebGridApplyState()'),
+    html.indexOf('async function applyWebGridChanges(options = {})')
+  );
+  assert.ok(applyGuardSource.includes('candidateKey: candidateStateKey(entry)'));
+  assert.ok(applyGuardSource.includes('documentFingerprint: globalThis.GraphEditorState.fingerprint(entry.data)'));
+  assert.ok(applyGuardSource.includes('sessionRevision: Number(webGridSession.revision?.() || 0)'));
+  assert.ok(applyGuardSource.includes('webGridSession === state.session'));
+  assert.ok(applyGuardSource.includes('Number(webGridSession?.revision?.() || 0) === state.sessionRevision'));
+  assert.ok(applyGuardSource.includes('entry === state.entry'));
+  const prepareWebGridSource = html.slice(
+    html.indexOf('function validationIssueFocusPath(issue = {})'),
+    html.indexOf('function commitWebGridDocument(')
+  );
+  assert.ok(prepareWebGridSource.includes('function resolveWebGridValidationTarget('));
+  assert.ok(prepareWebGridSource.includes('stableQueueTarget({ focusPath }, documentValue)'));
+  assert.ok(prepareWebGridSource.includes('resolveGovernanceQueueIssue({'));
+  assert.equal(
+    prepareWebGridSource.includes("tableId: '', rowId: '', column: ''"),
+    false,
+    'schema errors must resolve to a stable grid target or an explicit guided fallback'
+  );
+  const focusGridIssueSource = html.slice(
+    html.indexOf("if (action === 'focus-grid-issue')"),
+    html.indexOf("if (action === 'open-update-fields')")
+  );
+  assert.ok(focusGridIssueSource.includes('focusGridEditorTarget(target)'));
+  assert.ok(focusGridIssueSource.includes('gridRowId: element.dataset.rowId'));
+  assert.ok(focusGridIssueSource.includes("activeDataEditingMode = 'guided'"));
+  assert.ok(focusGridIssueSource.includes('focusEditorTarget(target)'));
+  const focusGridEditorTargetSource = html.slice(
+    html.indexOf('function focusGridEditorTarget('),
+    html.indexOf('function focusEditorTarget(')
+  );
+  assert.ok(focusGridEditorTargetSource.includes('const gridRowId = text(target.gridRowId)'));
+  assert.ok(focusGridEditorTargetSource.includes('item._row_id === gridRowId'));
+  assert.ok(focusGridEditorTargetSource.includes('selectGridParent(tableId, row)'));
+  const renderGridIssuesSource = html.slice(
+    html.indexOf('function renderWebGridIssues()'),
+    html.indexOf('function renderWebGridEditor()')
+  );
+  assert.ok(renderGridIssuesSource.includes("['data-row-id', item.rowId]"));
+  assert.ok(renderGridIssuesSource.includes("['data-grid-row-ref', item.gridRowRef]"));
+  assert.equal(renderGridIssuesSource.includes('item.gridRowRef || item.rowId'), false);
+  const switchGridTableSource = html.slice(
+    html.indexOf("if (action === 'switch-grid-workspace')"),
+    html.indexOf("if (action === 'grid-sort')")
+  );
+  assert.ok(switchGridTableSource.includes('restoreWebGridTableView(tableId, { focus: true })'));
+  const gridRowActionSource = html.slice(
+    html.indexOf("if (action === 'grid-sort')"),
+    html.indexOf("if (action === 'discard-web-grid')")
+  );
+  assert.ok(gridRowActionSource.includes("[data-action=\"grid-sort\"]"));
+  assert.ok(gridRowActionSource.includes("[data-action=\"grid-delete-row\"]"));
+  assert.ok(gridRowActionSource.includes("[data-action=\"${CSS.escape(action)}\"]"));
+  const compositionGuardSource = html.slice(
+    html.indexOf('function webGridCompositionInProgress()'),
+    html.indexOf('function createGridRowInSession(')
+  );
+  assert.ok(compositionGuardSource.includes("[data-grid-composing=\"1\"]"));
+  assert.ok(compositionGuardSource.includes('function blockWebGridCompositionTransition()'));
+  assert.ok(html.includes('if (blockWebGridCompositionTransition()) return;'));
+  assert.ok(html.includes('if (blockWebGridCompositionTransition()) return false;'));
+  const requestTransitionSource = html.slice(
+    html.indexOf('function requestTransition(intent, action, options = {})'),
+    html.indexOf('function runDocumentTransaction(')
+  );
+  assert.ok(requestTransitionSource.includes('if (webGridApplyInFlight)'));
+  assert.ok(requestTransitionSource.includes("if (typeof options.cancelAction === 'function') options.cancelAction()"));
+  assert.ok(requestTransitionSource.includes('if (blockWebGridCompositionTransition())'));
+  assert.ok(applyGuardSource.includes('const pendingLocked = webGridApplyInFlight || formFieldBatchApplying || Boolean(pendingTransitionResolution)'));
+  assert.ok(applyGuardSource.includes('continuePendingEditingButton.disabled = pendingLocked'));
+  assert.ok(applyGuardSource.includes('discardPendingEditButton.disabled = pendingLocked'));
+  const updateFieldsModalSource = html.slice(
+    html.indexOf('function openUpdateFieldsModal('),
+    html.indexOf('function currentFormFieldBatchSession(')
+  );
+  assert.ok(updateFieldsModalSource.includes('isCurrent = null'));
+  assert.ok(updateFieldsModalSource.includes('if (webGridApplyInFlight)'));
+  assert.ok(updateFieldsModalSource.includes("typeof state.isCurrent === 'function' && !state.isCurrent()"));
+  assert.ok(updateFieldsModalSource.includes('function topVisibleModalDialog()'));
+  assert.ok(updateFieldsModalSource.includes('function trapTopModalFocus(event)'));
+  assert.ok(updateFieldsModalSource.includes("if (event.key !== 'Tab') return false"));
+  assert.ok(updateFieldsModalSource.includes("'.modal-backdrop.show, .governance-drawer-backdrop.show'"));
+  assert.ok(updateFieldsModalSource.includes("if (!dialog.hasAttribute('tabindex')) dialog.setAttribute('tabindex', '-1')"));
+  assert.ok(updateFieldsModalSource.includes("dialog.focus({ preventScroll: true })"));
+  const openGridUpdateFieldsSource = html.slice(
+    html.indexOf('function openGridUpdateFields('),
+    html.indexOf('function openGraphUpdateFields(')
+  );
+  assert.ok(openGridUpdateFieldsSource.includes('const sessionRevision = Number(session?.revision?.() || 0)'));
+  assert.ok(openGridUpdateFieldsSource.includes('webGridSession === session'));
+  assert.ok(openGridUpdateFieldsSource.includes('Number(webGridSession?.revision?.() || 0) === sessionRevision'));
+  assert.ok(openGridUpdateFieldsSource.includes("session.updateCell('data_behavior_links'"));
+  assert.ok(openGridUpdateFieldsSource.includes("focusNativeGridCell('data_behavior_links', rowId, 'updated_field_refs')"));
+  const openGraphUpdateFieldsSource = html.slice(
+    html.indexOf('function openGraphUpdateFields('),
+    html.indexOf('async function applyGraphDataOperations(')
+  );
+  assert.ok(openGraphUpdateFieldsSource.includes('const sessionFingerprint = globalThis.GraphEditorState.fingerprint(session)'));
+  assert.ok(openGraphUpdateFieldsSource.includes("graphSelection?.kind === 'data-edge'"));
+  assert.ok(openGraphUpdateFieldsSource.includes('globalThis.GraphEditorState.fingerprint(liveSession) === sessionFingerprint'));
+  assert.ok(openGraphUpdateFieldsSource.includes('const restoreUpdateFieldsFocus = () =>'));
+  assert.ok(openGraphUpdateFieldsSource.includes("[data-action=\"open-update-fields\"]"));
+  assert.ok(openGraphUpdateFieldsSource.includes("[data-action=\"open-graph-update-fields\"]"));
+  assert.ok(openGraphUpdateFieldsSource.includes('restoreUpdateFieldsFocus()'));
+  assert.ok(openGraphUpdateFieldsSource.includes('.finally(restoreUpdateFieldsFocus)'));
+  const handleActionSource = html.slice(
+    html.indexOf('function handleAction('),
+    html.indexOf("if (action === 'toggle-external-review')")
+  );
+  assert.ok(handleActionSource.includes('if (webGridApplyInFlight)'));
+  assert.ok(handleActionSource.includes('if (pendingTransitionResolution)'));
+  assert.ok(handleActionSource.includes('if (formFieldBatchApplying)'));
+  assert.ok(handleActionSource.includes("workspace.querySelector(`[data-action=\"select-data-field\"][data-ref=\"${CSS.escape(fieldRef)}\"]`)"));
+  const pendingResolutionSource = html.slice(
+    html.indexOf('async function resolvePendingTransition('),
+    html.indexOf('function captureVisibleWebGridScroll(')
+  );
+  assert.ok(pendingResolutionSource.includes('if (pendingTransitionResolution)'));
+  assert.ok(pendingResolutionSource.includes('const resolutionToken = { transition, resolution }'));
+  assert.ok(pendingResolutionSource.includes('pendingTransitionResolution !== resolutionToken'));
+  assert.ok(pendingResolutionSource.includes('continuePendingEditingButton.disabled = true'));
+  assert.ok(pendingResolutionSource.includes('discardPendingEditButton.disabled = true'));
+  const pendingEditSource = html.slice(
+    html.indexOf('function getPendingEdit()'),
+    html.indexOf('function closePendingEditModal(')
+  );
+  assert.ok(pendingEditSource.includes("if (session.editorKind === 'form-field-batch')"));
+  assert.ok(pendingEditSource.includes('return closeFormFieldBatchModal({ render: true })'));
+  assert.equal(pendingEditSource.includes("discarded?.editorKind === 'form-field-batch'"), false);
+  const validateGraphDocumentSource = html.slice(
+    html.indexOf('async function validateGraphDocument('),
+    html.indexOf('function updateSelectionFromGraphResult(')
+  );
+  assert.ok(validateGraphDocumentSource.includes('const controller = new AbortController()'));
+  assert.ok(validateGraphDocumentSource.includes('options.timeoutMs || 20000'));
+  assert.ok(validateGraphDocumentSource.includes('signal: controller.signal'));
+  assert.ok(validateGraphDocumentSource.includes("error?.name === 'AbortError'"));
+  assert.ok(validateGraphDocumentSource.includes('window.clearTimeout(timeoutId)'));
+  const nativeGridRefreshSource = html.slice(
+    html.indexOf('function refreshNativeGridPanel('),
+    html.indexOf('function refreshNativeGridDependents(')
+  );
+  assert.ok(nativeGridRefreshSource.includes('function refreshNativeGridPanelAndFocus('));
+  assert.ok(nativeGridRefreshSource.includes('focusNativeGridCell(tableId, rowId, column)'));
+  assert.ok(html.includes("if (column === 'business_data_ref') refreshNativeGridPanelAndFocus(tableId, rowId, column)"));
+  assert.ok(html.includes("refreshNativeGridPanelAndFocus('form_items', rowId, column)"));
+  const dataFocusChangeSource = html.slice(
+    html.indexOf("if (target.matches('[data-graph-data-focus]'))"),
+    html.indexOf("if (target.matches('[data-graph-data-behavior]')")
+  );
+  assert.ok(dataFocusChangeSource.includes('const restoreCurrentDataFocus = () =>'));
+  assert.ok(dataFocusChangeSource.includes('cancelAction: restoreCurrentDataFocus'));
+  const nativeGridPasteSource = html.slice(
+    html.indexOf('function applyNativeGridPaste('),
+    html.indexOf('async function copyNativeGridRange(')
+  );
+  assert.ok(nativeGridPasteSource.includes('select: false, silent: true'));
+  assert.ok(nativeGridPasteSource.includes('if (!added) throw new Error'));
+  const restoreGridViewSource = html.slice(
+    html.indexOf('function restoreWebGridTableView('),
+    html.indexOf('function render()')
+  );
+  assert.ok(restoreGridViewSource.includes('focusNativeGridCell(tableId, rowId, column)'));
+  const captureAuthoringContextSource = html.slice(
+    html.indexOf('function captureAuthoringSelectionContext()'),
+    html.indexOf('function restoreAuthoringSelectionContext()')
+  );
+  const restoreAuthoringContextSource = html.slice(
+    html.indexOf('function restoreAuthoringSelectionContext()'),
+    html.indexOf('function updateAuthoringSelection(patch)')
+  );
+  [
+    'mode: activeDataEditingMode',
+    'workspace: workspaceName',
+    'tableId',
+    'dataRef: activeDataRef',
+    'dataFieldRef: activeDataFieldRef',
+    'formRef: activeFormRef',
+    'areaRef: activeAreaRef',
+    'formItemRef: activeFormItemRef'
+  ].forEach(field => assert.ok(captureAuthoringContextSource.includes(field), `missing captured authoring context field: ${field}`));
+  assert.ok(captureAuthoringContextSource.includes('captureVisibleWebGridScroll()'));
+  [
+    'filter: webGridFilters[currentTableId]',
+    'sort: clone(webGridSorts[currentTableId]',
+    'selectedRowId: webGridSelectedRows[currentTableId]',
+    'scrollTop:',
+    'scrollLeft:',
+    'focusColumn:',
+    'activeInWorkspace:'
+  ].forEach(field => assert.ok(captureAuthoringContextSource.includes(field), `missing captured grid view field: ${field}`));
+  [
+    'activeDataEditingMode = state.mode',
+    'activeGridWorkspace = state.workspace',
+    'activeDataRef = state.dataRef',
+    'activeDataFieldRef = state.dataFieldRef',
+    'activeFormRef = state.formRef',
+    'activeAreaRef = state.areaRef',
+    'activeFormItemRef = state.formItemRef',
+    'view.activeInWorkspace',
+    'view.selectedRowId',
+    'view.focusColumn'
+  ].forEach(field => assert.ok(restoreAuthoringContextSource.includes(field), `missing restored authoring context field: ${field}`));
+  ['mode', 'workspace', 'tableId', 'dataRef', 'dataFieldRef', 'formRef', 'areaRef', 'formItemRef', 'tableViews']
+    .forEach(field => assert.ok(authoringSelectionContextSource.includes(`${field}:`), `missing authoring selection state field: ${field}`));
+  const switchCandidateSource = html.slice(
+    html.indexOf('function switchCandidate(nextIndex, options = {})'),
+    html.indexOf("candidateList.addEventListener('click'")
+  );
+  const captureCandidateContextPosition = switchCandidateSource.indexOf('captureAuthoringSelectionContext()');
+  const resetCandidateEditingPosition = switchCandidateSource.indexOf('resetTransientEditingState({ resetDataMode: true })');
+  const replaceCandidatePosition = switchCandidateSource.indexOf('currentIndex = nextIndex');
+  const selectCandidateTabPosition = switchCandidateSource.indexOf('selectInitialTabAfterImport()');
+  const restoreCandidateContextPosition = switchCandidateSource.indexOf('restoreAuthoringSelectionContext()');
+  const renderCandidatePosition = switchCandidateSource.indexOf('render()');
+  assert.ok(captureCandidateContextPosition >= 0 && captureCandidateContextPosition < resetCandidateEditingPosition);
+  assert.ok(resetCandidateEditingPosition < replaceCandidatePosition);
+  assert.ok(replaceCandidatePosition < selectCandidateTabPosition);
+  assert.ok(selectCandidateTabPosition < restoreCandidateContextPosition);
+  assert.ok(restoreCandidateContextPosition < renderCandidatePosition);
   assert.equal(html.includes('沿用当前对象字段已经建立的值，无需在本表单重复登记取值来源。'), false);
   assert.ok(html.includes('当前字段值使用方式已明确为“沿用已有值”；系统未据此自动生成取值来源。'));
   const formStartSource = html.slice(
@@ -2005,10 +2314,18 @@ async function testFrontendContract() {
   assert.ok(webGridCoreSource.includes('@typedef {Object} GridTableDefinition'));
   assert.ok(webGridCoreSource.includes('@typedef {Object} GridIssue'));
   assert.ok(webGridCoreSource.includes('@typedef {Object} GridCommitDriver'));
+  assert.ok(webGridCoreSource.includes('let revision = 0'));
+  assert.ok(webGridCoreSource.includes('revision: () => revision'));
+  assert.ok(processV7GridAdapterSource.includes("'SOURCE_SYSTEM_REQUIRED'"));
+  assert.ok(processV7GridAdapterSource.includes("'SOURCE_NAME_REQUIRED'"));
+  assert.ok(processV7GridAdapterSource.includes("row.source_type === 'external_system' && !sourceSystemName"));
+  assert.ok(processV7GridAdapterSource.includes("row.source_type === 'external_system' && !sourceDataName"));
   assert.ok(nativeWebGridSource.includes('event?.isComposing'));
   assert.ok(nativeWebGridSource.includes('event?.keyCode === 229'));
   assert.ok(html.includes('workspace.addEventListener(\'compositionstart\''));
   assert.ok(html.includes('workspace.addEventListener(\'compositionend\''));
+  assert.ok(html.includes('if (trapTopModalFocus(event)) return;'));
+  assert.ok(html.includes("event.target.closest('[data-grid-cell], [data-grid-search]')"));
   assert.ok(html.includes('data-grid-cell'));
   assert.equal(html.includes('new Tabulator'), false);
   [
@@ -2029,6 +2346,43 @@ async function testFrontendContract() {
   assert.equal(html.includes("table.on('rowClick'"), false);
   assert.ok(html.includes('function governanceIssuesForStep'));
   assert.ok(html.includes('data-action="focus-export-warning"'));
+  assert.ok(html.includes('const governanceReviewQueueManager = globalThis.GovernanceReviewQueue.createManager()'));
+  const stableQueueTargetSource = html.slice(
+    html.indexOf('const STABLE_QUEUE_REF_KEYS'),
+    html.indexOf('function findGovernanceQueueEntity(')
+  );
+  assert.ok(stableQueueTargetSource.includes("'source_link_ref', 'source_ref', 'item_ref', 'area_ref', 'form_ref', 'field_ref'"));
+  assert.ok(stableQueueTargetSource.includes("filter(part => !/^\\d+$/.test(part))"));
+  assert.equal(stableQueueTargetSource.includes('issue.message'), false, 'queue identity rules must not depend on issue wording');
+  const governanceQueueAssemblySource = html.slice(
+    html.indexOf('function buildGovernanceQueueIssues('),
+    html.indexOf('function governanceQueueLocation(')
+  );
+  [
+    'ruleCode: governanceQueueRuleCode(issue, normalizedStep, target.normalizedPath)',
+    'stableRef: target.stableRef',
+    'path: target.normalizedPath',
+    "technical: issue.category === '技术结构'",
+    'sourceOrder: sourceIndex'
+  ].forEach(field => assert.ok(governanceQueueAssemblySource.includes(field), `missing stable governance queue field: ${field}`));
+  assert.ok(governanceQueueAssemblySource.includes('expandIssueFocusPaths(issue)'));
+  assert.ok(governanceQueueAssemblySource.includes("scoreState.status !== 'ready'"));
+  assert.ok(governanceQueueAssemblySource.includes('governanceReviewQueueManager.snapshot'));
+  assert.ok(governanceQueueAssemblySource.includes('governanceReviewQueueManager.reconcile'));
+  assert.ok(governanceReviewQueueSource.includes('return JSON.stringify([identity.ruleCode, identity.stableRef, identity.path]);'));
+  assert.ok(governanceReviewQueueSource.includes('Governance review issue identity conflict'));
+  ['CROSS_DEPARTMENT_BEHAVIOR_RELATION_REQUIRED', 'FLOW_PARALLEL_SPLIT_ROUTE_MINIMUM', 'FLOW_PARALLEL_JOIN_SOURCE_MINIMUM']
+    .forEach(ruleCode => assert.ok(html.includes(`ruleCode: '${ruleCode}'`), `missing stable queue rule code: ${ruleCode}`));
+  const governanceIssuePanelSource = html.slice(
+    html.indexOf('function renderGovernanceIssuePanel(stepId)'),
+    html.indexOf('function renderCandidateNavigation(')
+  );
+  assert.ok(governanceIssuePanelSource.includes('结果已过期，重新检查后才能判断是否仍为0项。'));
+  assert.ok(governanceIssuePanelSource.includes('结果已过期，重新检查后才能判断是否仍成立。'));
+  assert.ok(governanceIssuePanelSource.includes('旧结果继续显示，便于连续修正。'));
+  assert.ok(governanceIssuePanelSource.includes('表格修改尚未应用。'));
+  assert.ok(governanceIssuePanelSource.includes('全局队列仍基于已应用JSON'));
+  assert.ok(governanceIssuePanelSource.includes('data-action="governance-queue-recheck-next"'));
   const diagramLegendSource = html.slice(
     html.indexOf('function renderDiagramLegend()'),
     html.indexOf('function renderDiagramWarnings(')

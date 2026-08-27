@@ -62,6 +62,17 @@
     return JSON.stringify([identity.ruleCode, identity.stableRef, identity.path]);
   }
 
+  function expandIssueFocusPaths(issue = {}) {
+    const source = issue && typeof issue === 'object' ? issue : {};
+    const focusPaths = Array.isArray(source.focusPaths) ? source.focusPaths : [];
+    if (focusPaths.length <= 1) return [clone(source)];
+    return focusPaths.map(focusPath => ({
+      ...clone(source),
+      focusPath: clone(focusPath),
+      focusPaths: [clone(focusPath)]
+    }));
+  }
+
   function normalizeIssues(issues) {
     const seen = new Set();
     return (Array.isArray(issues) ? issues : []).reduce((result, issue) => {
@@ -272,5 +283,12 @@
     });
   }
 
-  return Object.freeze({ clone, issueIdentity, stableIssueKey, normalizeIssues, createManager });
+  return Object.freeze({
+    clone,
+    issueIdentity,
+    stableIssueKey,
+    expandIssueFocusPaths,
+    normalizeIssues,
+    createManager
+  });
 }));
