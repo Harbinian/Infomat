@@ -36,6 +36,11 @@ const {
   assertV7FormalEnabled,
   assertV7TrialProcessRef
 } = require('../processV7TrialScope');
+const { queueProcessDataGovernanceCreationTask } = require('../processDataGovernanceRepository');
+const {
+  isProcessDataGovernanceEnabled,
+  isProcessVersionAllowed
+} = require('../processDataGovernanceScope');
 const { ACCESS_MODEL_VERSION } = require('../roleDefinitions');
 
 const FIELD_STATUSES = new Set(['suggested', 'business_confirmed', 'data_governed', 'published', 'retired']);
@@ -5212,6 +5217,15 @@ function makeProcessDesignMysqlRepository(pool) {
           authorizedActor.personId,
           currentVersion && currentVersion.id || null
         ]);
+        if (
+          isProcessDataGovernanceEnabled() &&
+          isProcessVersionAllowed(Number(result.insertId))
+        ) {
+          await queueProcessDataGovernanceCreationTask(pool, Number(result.insertId), {
+            personId: authorizedActor.personId,
+            roleCode: 'mdm_lead'
+          });
+        }
         if (currentVersion) {
           const supersedeResult = await mysqlRun(pool, `
             UPDATE process_design_versions

@@ -15,6 +15,10 @@
 - [V7预览核对接口约定](docs/Process-V7-Preview-Review-API-Contract.md)
 - [V7预览核对数据说明](docs/Process-V7-Preview-Review-DB-Schema.md)
 - [V7预览核对与原生正式基础迁移说明](docs/Process-V7-Preview-Review-Migration-Runbook.md)
+- [流程版本后续数据治理功能设计](docs/Process-Data-Governance-Design.md)
+- [流程版本后续数据治理接口约定](docs/Process-Data-Governance-API-Contract.md)
+- [流程版本后续数据治理数据库结构](docs/Process-Data-Governance-DB-Schema.md)
+- [流程版本后续数据治理迁移与恢复说明](docs/Process-Data-Governance-Migration-Runbook.md)
 - [跨部门承接闭环测试说明](docs/Cross-Department-Handoff-Test-Plan.md)
 - [产品需求](PRD.md)
 - [技术规格](Tech-Spec.md)
@@ -51,7 +55,7 @@
 ## 流程治理统一入口与3001格式适配
 
 - 3001继续作为独立、无状态的单流程编制工具运行。MDM不停止、不代管、不远程读取3001，只接收用户选择的v1/v2文件。
-- MDM顶部只保留一个“流程治理”入口，内部显示“流程编制、跨部门承接待办、承接冲突待办、V7预览核对”四个工作区。
+- MDM顶部只保留一个“流程治理”入口。现有正式工作区为“流程编制、跨部门承接待办、承接冲突待办、V7预览核对”；默认关闭的数据生命周期治理候选入口只有在精确试点配置有效时才显示。
 - “流程编制”直接显示MDM本地的3001式工作台，包含文字编制、条目侧栏、稳定排序、结构化学习评分和跨职能流程图。MDM复用相同v2结构规则，但不通过浏览器调用3001服务。
 - 部门主对接人可以新建、导入、保存草稿和提交审核；管理员只能打开已有草稿查看。导出备份不替代保存草稿。
 - MDM兼容`process-governance-v1`、`process-governance-v2`和`process-governance-v3`，服务端统一规范化、保存和导出为v3；3001源文件不被修改。v1、v2表单状态设为`unspecified`，不得按名称或明细数量推断。
@@ -70,6 +74,9 @@
 - 相同流程与内容版本重复导入返回既有对象；内容变化保留旧修订和原决定，并重新进入审核。
 - 任何当前承接未`confirmed`或未按决定关闭为`closed_not_required`时，流程不得发布。
 - 固定角色模型为每个角色返回只读`visibleTabs`。创建账号、编辑账号和授权角色时显示多角色标签并集，但菜单可见性不替代服务端权限校验。
+- 登录后的“待办优先”视图只显示“我现在该做什么”，最多给出3个下一步动作；职责图、角色说明和活动信息移到“全量职责”。历史V3流程编制器默认折叠并延迟加载，只用于旧草稿。
+- 流程发布后的数据对象身份、主数据认定、统一对象匹配、关键字段和生命周期规则由MDM工作组处理。业务部门只答复MDM定向提出的具体事实问题并提供可核对依据，不填写完整治理工作包。
+- 数据生命周期治理候选能力默认关闭，必须同时配置`PROCESS_DATA_GOVERNANCE_ENABLED=1`和唯一`PROCESS_DATA_GOVERNANCE_TRIAL_PROCESS_VERSION_ID`。工作包只绑定不可变`process_version_id`和来源摘要，不读取原始3001文件；确定性候选不调用AI，也不自动确认。
 
 ## 快速启动
 
@@ -136,6 +143,7 @@ npm run migrate:rbac-raci-v2:dry-run
 npm run migrate:rbac-raci-v2:apply
 npm run migrate:cross-dept-handoff-v2:dry-run
 npm run migrate:cross-dept-handoff-v2:apply
+npm run migrate:process-data-governance:dry-run
 ```
 
 迁移只自动保留现有受控`ADMIN001`管理员；其他账号停用，旧角色不自动映射。管理员必须依据权威名单逐项重新授权并启用。完整步骤见[迁移手册](docs/RBAC-RACI-Migration-Runbook.md)。
@@ -184,6 +192,7 @@ npm run test:frontend
 npm run test:rbac-raci-v2
 npm run test:project-roles
 npm run test:role-workbench
+npm run test:process-data-governance
 npm run test:local-baseline
 npm run test:security
 npm run test:mainline
@@ -233,6 +242,8 @@ npm run migrate:process-v7-preview:dry-run
 npm run inspect:process-v7-m0
 npm run rehearse:process-v7-m0-backup-restore
 npm run migrate:process-v7-formal:dry-run
+npm run test:process-data-governance
+npm run migrate:process-data-governance:dry-run
 npm run rehearse:process-v7-migrations-isolated
 npm run import:process-governance-mysql
 npm run smoke:process-governance-mysql

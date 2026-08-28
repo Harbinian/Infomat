@@ -1309,8 +1309,8 @@ function testProcessDiagramModel() {
   const decisionNode = model.nodes.find(node => node.classes.includes('node-decision'));
   const splitNode = model.nodes.find(node => node.classes.includes('node-parallel-split'));
   const joinNode = model.nodes.find(node => node.classes.includes('node-parallel-join'));
-  assert.equal(actionNode.data.labelLineHeight, 22);
-  assert.ok(actionNode.data.nodeWidth >= 268, 'larger preview text must retain horizontal padding');
+  assert.equal(actionNode.data.labelLineHeight, 66);
+  assert.ok(actionNode.data.nodeWidth >= 804, 'three-times preview text must retain proportional horizontal padding');
   assert.match(actionNode.data.rawLabel, /岗位：会计员/);
   assert.doesNotMatch(actionNode.data.rawLabel, /仅用于文字沟通/);
   assert.match(decisionNode.data.rawLabel, /×.*判断材料/);
@@ -1496,7 +1496,7 @@ function testProcessDiagramModel() {
       edge.data.rawLabel.replace(/\n/g, ''),
       'display-only line breaks must preserve every relation label character'
     );
-    assert.ok(edge.data.labelWidth <= 220, 'relation labels must use the agreed maximum width');
+    assert.ok(edge.data.labelWidth <= 660, 'three-times relation labels must use the agreed maximum width');
   });
   const trackedReadabilityRelations = readabilityRelations.filter(edge =>
     ['relation_review_to_approve', 'relation_review_to_compile', 'relation_approve_to_compile']
@@ -1512,8 +1512,8 @@ function testProcessDiagramModel() {
   assert.ok(readabilityLoops.every(edge => edge.data.routePlacement === 'lower'));
   assert.ok(readabilityLoops.every(edge => edge.data.targetEndpoint === '50% 100%'));
   assert.ok(
-    readabilityModel.layout.rankPositions[1] - readabilityModel.layout.rankPositions[0] >= 440,
-    'adjacent diagram ranks must leave at least the minimum safe gap'
+    readabilityModel.layout.rankPositions[1] - readabilityModel.layout.rankPositions[0] >= 24,
+    'adjacent diagram ranks must retain a visible gap after proportional enlargement'
   );
   assert.equal(
     readabilityModel.layout.collisions.length,

@@ -70,6 +70,7 @@ registerRouteIfExists('/api/process-governance', 'processGovernance');
 registerRouteIfExists('/api/process-design/editor', 'processDesignEditor');
 registerRouteIfExists('/api/process-design', process.env.PROCESS_GOVERNANCE_READ_MODEL === 'mysql' ? 'processDesignMysql' : 'processDesign');
 registerRouteIfExists('/api/process-v7-preview', 'processV7PreviewReview');
+registerRouteIfExists('/api/process-data-governance', 'processDataGovernance');
 registerRouteIfExists('/api/role-workbench', 'roleWorkbench');
 registerRouteIfExists('/api/page-workflows', 'pageWorkflows');
 registerRouteIfExists('/api/org-units', 'orgUnit');

@@ -113,6 +113,15 @@ function repositoryCommit() {
 
 const APP_COMMIT = repositoryCommit();
 
+function structuredOutputUiConfig(env = process.env) {
+  return {
+    compact_task_ui_enabled: String(env && env.STRUCTURED_OUTPUT_COMPACT_TASK_UI_ENABLED || '') === '1',
+    compact_task_ui_status: 'candidate',
+    internal_workflow_step_count: 7,
+    visible_task_count: 4
+  };
+}
+
 const ENUMS = {
   basisType: ['现场实际', '制度 / 规程', '表单 / 台账', '会议 / 访谈', '暂无证据'],
   processType: ['new', 'inherit', 'handoff', 'adjustment'],
@@ -3459,6 +3468,10 @@ app.get('/api/version-history', (_req, res) => {
   res.set('Cache-Control', 'no-store');
   res.json(PROCESS_GOVERNANCE_VERSION_HISTORY);
 });
+app.get('/api/ui-config', (_req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.json(structuredOutputUiConfig());
+});
 app.get('/api/enums', (_req, res) => res.json(publicEnums()));
 app.get('/api/health', (req, res) => {
   res.set('Cache-Control', 'no-store');
@@ -3540,5 +3553,6 @@ module.exports = {
   statsFrom,
   APP_COMMIT,
   PROCESS_GOVERNANCE_SCHEMA_DIGEST,
+  structuredOutputUiConfig,
   inspectDocxArchive
 };

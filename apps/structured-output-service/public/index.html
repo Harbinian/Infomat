@@ -29,7 +29,10 @@
         radial-gradient(circle at 8% 4%, rgba(140, 63, 51, 0.08), transparent 28rem),
         linear-gradient(145deg, #efe4cc, var(--paper) 45%, #eee4d2);
       font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+      width: 100vw;
+      height: 100vh;
       min-height: 100vh;
+      overflow: hidden;
     }
 
     button, input, select, textarea { font: inherit; }
@@ -38,14 +41,17 @@
 
     .page {
       width: 100%;
+      height: 100vh;
       padding: 16px;
+      overflow: hidden;
     }
 
     .app-shell {
       display: grid;
       grid-template-columns: 300px minmax(0, 1fr);
       gap: 16px;
-      align-items: start;
+      align-items: stretch;
+      height: 100%;
     }
 
     .task-sidebar {
@@ -74,16 +80,18 @@
       scrollbar-width: thin;
     }
 
-    .main-column { min-width: 0; }
+    .main-column {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+    }
 
     .governance-header {
-      position: sticky;
       z-index: 40;
-      top: 10px;
-      display: grid;
-      gap: 10px;
-      margin-bottom: 12px;
-      padding: 12px 14px;
+      margin-bottom: 8px;
+      padding: 8px 10px;
       border: 1px solid var(--line);
       border-radius: 14px;
       background: rgba(255, 252, 243, 0.97);
@@ -102,11 +110,11 @@
       gap: 8px;
     }
 
-    .governance-header-main { justify-content: space-between; gap: 14px; }
-    .governance-current { display: grid; flex: 1 1 430px; min-width: 0; gap: 5px; }
+    .governance-header-main { justify-content: space-between; gap: 10px; }
+    .governance-current { display: flex; flex: 1 1 620px; min-width: 0; align-items: center; gap: 8px; }
     .governance-current label { color: var(--muted); font-size: 12px; font-weight: 700; }
-    .governance-current select { min-width: min(430px, 100%); max-width: 560px; }
-    .governance-context { color: var(--muted); font-size: 12px; }
+    .governance-current select { min-width: 280px; max-width: 520px; }
+    .governance-context { min-width: 0; flex-wrap: nowrap; color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .context-badge {
       display: inline-flex;
       align-items: center;
@@ -316,7 +324,7 @@
 
     .candidate-note { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
 
-    .workspace { min-width: 0; }
+    .workspace { min-width: 0; min-height: 0; overflow: auto; scrollbar-width: thin; }
     .workspace-tabs-shell {
       margin: 0;
     }
@@ -372,6 +380,11 @@
     .workspace-tab:not(.active) .tab-status.ready { color: #40543b; background: var(--sage-soft); }
     .workspace-tab:not(.active) .tab-status.warning { color: #7b2f27; background: var(--red-soft); }
     .workspace-tab:not(.active) .tab-status.waiting { color: var(--muted); background: #f4f0e7; }
+    .workspace-tabs.compact-task .workspace-tab {
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      min-height: 48px;
+    }
     .tab-panel[hidden] { display: none; }
 
     .step-intro {
@@ -507,9 +520,10 @@
     .tool-term-row dt { font-weight: 700; line-height: 1.6; }
     .tool-term-row dd { margin: 0; color: var(--muted); line-height: 1.65; }
 
-    .skeleton-list-layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 12px; }
+    .skeleton-list-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
     .skeleton-list { display: grid; gap: 8px; }
     .skeleton-list-button { width: 100%; text-align: left; }
+    .skeleton-list-button small { display: block; margin-top: 4px; font-size: 12px; opacity: 0.82; }
     .cross-department-list { display: grid; gap: 10px; }
     .cross-department-card { padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: #fffaf0; }
     .cross-department-card h3 { margin: 0 0 7px; }
@@ -566,16 +580,42 @@
     body.diagram-overlay-open { overflow: hidden; }
     .diagram-section.diagram-expanded {
       position: fixed;
-      inset: 12px;
+      inset: 0;
       z-index: 90;
       margin: 0;
-      overflow: auto;
+      height: 100vh;
+      overflow: hidden;
+      border: 0;
+      border-radius: 0;
       background: #fffaf0;
       box-shadow: 0 26px 80px rgba(37, 31, 23, 0.34);
     }
 
+    .diagram-section.diagram-expanded > .section-body {
+      display: grid;
+      grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+      height: 100%;
+      min-height: 0;
+      padding: 10px 12px;
+      overflow: hidden;
+    }
+
+    .diagram-section.diagram-expanded .flow-graph-editor-layout {
+      grid-row: 4;
+      height: auto;
+      align-self: stretch;
+      min-height: 0;
+    }
+
+    .diagram-section.diagram-expanded .flow-graph-editor-layout > div {
+      height: 100%;
+      min-height: 0;
+    }
+
     .diagram-section.diagram-expanded .diagram-canvas {
-      height: max(520px, calc(100vh - 350px));
+      height: 100%;
+      min-height: 0;
+      border-radius: 8px;
     }
 
     .diagram-toolbar {
@@ -583,15 +623,15 @@
       align-items: flex-start;
       justify-content: space-between;
       gap: 16px;
-      margin-bottom: 12px;
+      margin-bottom: 8px;
     }
 
     .diagram-toolbar h2 { margin: 0 0 5px; font-family: "SimSun", serif; font-size: 22px; }
     .diagram-toolbar p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.65; }
     .diagram-controls { display: flex; flex-wrap: wrap; gap: 8px; }
     .diagram-legend-shell {
-      margin-bottom: 12px;
-      padding: 12px 14px;
+      margin-bottom: 8px;
+      padding: 7px 10px;
       border: 1px solid #bcae90;
       border-radius: 10px;
       background: #fbf5e9;
@@ -2233,7 +2273,7 @@
     .modal-backdrop {
       position: fixed;
       inset: 0;
-      z-index: 30;
+      z-index: 160;
       display: none;
       align-items: center;
       justify-content: center;
@@ -2242,7 +2282,7 @@
     }
 
     .modal-backdrop.show { display: flex; }
-    #pendingEditModal { z-index: 40; }
+    #pendingEditModal { z-index: 180; }
     .modal {
       width: min(560px, 100%);
       padding: 24px;
@@ -2334,6 +2374,8 @@
       align-items: stretch;
     }
 
+    .flow-graph-editor-layout { grid-template-columns: minmax(0, 1fr); min-height: 0; }
+
     .graph-property-shell {
       min-width: 0;
       max-height: 680px;
@@ -2349,6 +2391,66 @@
     .graph-property-panel label { display: grid; gap: 6px; color: #44463f; font-size: 13px; font-weight: 700; }
     .graph-property-panel textarea { min-height: 80px; }
     .graph-property-empty { display: grid; min-height: 240px; place-items: center; color: var(--muted); line-height: 1.7; text-align: center; }
+
+    #graphEditModal {
+      z-index: 130;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 12px;
+    }
+    .flow-editor-drawer {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      width: min(52vw, 980px);
+      min-width: 760px;
+      height: auto;
+      max-width: none;
+      max-height: calc(100vh - 24px);
+      padding: 18px;
+      overflow: hidden;
+      border-radius: 12px;
+    }
+    .flow-editor-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+    .flow-editor-head h2 { margin: 0; font-family: "SimSun", serif; }
+    .flow-editor-head p { margin: 5px 0 0; }
+    .flow-editor-body { min-height: 0; max-height: calc(100vh - 190px); padding: 14px 2px; overflow: auto; }
+    .flow-editor-body .graph-property-shell { max-height: none; padding: 0; overflow: visible; border: 0; background: transparent; }
+    .flow-editor-body .graph-property-panel { grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: start; gap: 13px 16px; }
+    .flow-editor-body .graph-property-panel > h3,
+    .flow-editor-body .graph-property-panel > details,
+    .flow-editor-body .graph-property-panel > .inline-warning,
+    .flow-editor-body .graph-property-panel > .inline-note,
+    .flow-editor-body .graph-property-panel > .item-actions,
+    .flow-editor-body .graph-property-panel > .graph-property-wide,
+    .flow-editor-body .graph-operation-card { grid-column: 1 / -1; }
+    .flow-editor-body .graph-property-panel textarea { min-height: 92px; }
+    .flow-editor-footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+    .graph-checkbox-line { display: flex; align-items: flex-start; gap: 8px; font-weight: 400; line-height: 1.55; }
+    .graph-checkbox-line input { flex: 0 0 auto; margin-top: 3px; }
+    .graph-department-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px 12px; margin: 0; padding: 12px; border: 1px solid var(--line); border-radius: 9px; }
+    .graph-department-options legend { padding: 0 5px; font-size: 13px; font-weight: 700; }
+
+    .viewport-blocker {
+      position: fixed;
+      z-index: 1000;
+      inset: 0;
+      display: none;
+      place-items: center;
+      padding: 32px;
+      background: rgba(42, 37, 29, 0.92);
+    }
+    .viewport-blocker-card {
+      width: min(680px, 100%);
+      padding: 30px;
+      border: 1px solid #d6bf91;
+      border-radius: 16px;
+      background: #fffaf0;
+      box-shadow: 0 30px 90px rgba(0, 0, 0, 0.34);
+      text-align: center;
+    }
+    .viewport-blocker-card h1 { margin: 0 0 12px; font-family: "SimSun", serif; font-size: 30px; }
+    .viewport-blocker-card p { margin: 8px 0 0; color: var(--muted); line-height: 1.75; }
+    .viewport-blocker-card strong { color: var(--red); }
 
     .graph-operation-card {
       display: grid;
@@ -2388,63 +2490,21 @@
     .data-focus-selector label { display: grid; min-width: 280px; gap: 5px; font-weight: 700; }
     .data-relation-canvas { min-height: 560px; }
 
-    body::before {
-      display: none;
-      content: "当前浏览器内容可视区较窄。3001保留桌面布局；字段编辑和合法下载仍可使用。";
-    }
-
-    @media (max-width: 1599px) {
-      .page { padding: 10px; }
-      .app-shell { grid-template-columns: 250px minmax(0, 1fr); gap: 10px; }
-      .task-sidebar { top: 10px; height: calc(100vh - 20px); padding: 13px; }
-      .graph-editor-layout { grid-template-columns: minmax(0, 1fr) 290px; gap: 10px; }
-      .record-workbench { grid-template-columns: minmax(185px, 220px) minmax(0, 1fr); }
-      .data-field-workbench { grid-template-columns: 1fr; }
-      .form-field-table-shell { max-width: 100%; overflow-x: auto; }
-      .step-responsibility { display: none; }
-      .workspace-tabs { gap: 6px; }
-      .workspace-tab {
-        grid-template-columns: 25px minmax(0, 1fr) auto;
-        gap: 6px;
-        min-height: 38px;
-        padding: 6px 7px;
-      }
-      .workspace-tab .tab-status {
-        grid-column: auto;
-        align-self: center;
-        justify-self: end;
-        padding: 1px 5px;
-        font-size: 10px;
-      }
-      .skeleton-list-layout { grid-template-columns: minmax(0, 1fr) 290px; }
-    }
-
-    @media (max-width: 1399px) {
-      .governance-flow-grid {
-        grid-template-columns: repeat(4, minmax(130px, 1fr));
-        overflow-x: visible;
-      }
-      .role-sequence-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    }
-
-    @media (max-width: 1279px) {
-      body::before {
-        position: sticky;
-        z-index: 100;
-        top: 0;
-        display: block;
-        padding: 8px 14px;
-        color: #6e2b24;
-        background: #fff0d7;
-        border-bottom: 1px solid #d5a968;
-        font-size: 13px;
-      }
-      .page { min-width: 1120px; }
+    @media (max-width: 1919px), (max-height: 899px) {
+      .viewport-blocker { display: grid; }
     }
 
   </style>
 </head>
 <body>
+  <div class="viewport-blocker" id="viewportBlocker" role="alert" aria-live="assertive">
+    <div class="viewport-blocker-card">
+      <div class="eyebrow">3001 桌面编辑要求</div>
+      <h1>当前窗口不能编辑</h1>
+      <p id="viewportBlockerMessage">请将浏览器内容可视区调整到至少 <strong>1920×900</strong> 后继续。可以保留浏览器栏和系统任务栏；3001 不再支持 1536 和 1280 宽度。</p>
+      <p>当前页面内容不会因为调整窗口而丢失。达到要求后，编辑区会自动恢复。</p>
+    </div>
+  </div>
   <div class="page">
     <div class="app-shell">
       <aside class="task-sidebar" id="taskSidebar" aria-label="3001任务栏">
@@ -2732,6 +2792,13 @@
     ];
     const ACTOR_ASSIGNMENT_MODE_VALUES = new Set(ACTOR_ASSIGNMENT_MODES.map(item => item.value));
     const GOVERNANCE_STEPS = globalThis.GovernanceWorkflow?.STEPS || [];
+    const COMPACT_TASK_WORKFLOW = Object.freeze([
+      Object.freeze({ id: 'file-boundary', label: '文件与边界', steps: Object.freeze(['start', 'boundary']), entryStep: 'boundary' }),
+      Object.freeze({ id: 'flow-details', label: '流程、执行人、动作与异常', steps: Object.freeze(['skeleton', 'action']), entryStep: 'skeleton' }),
+      Object.freeze({ id: 'data-forms', label: '数据与表单', steps: Object.freeze(['data']), entryStep: 'data' }),
+      Object.freeze({ id: 'check-save', label: '检查与保存', steps: Object.freeze(['cross-department', 'handoff']), entryStep: 'cross-department' })
+    ]);
+    let uiConfig = { compact_task_ui_enabled: false, compact_task_ui_status: 'candidate' };
     const TOOL_HELP_STEPS = [
       {
         title: '1. JSON基本信息',
@@ -2769,6 +2836,28 @@
         completion: '结构错误为零，往返内容和稳定引用一致，文件名及SHA-256已核对；当前v7文件仍不得直接导入3000。'
       }
     ];
+    const COMPACT_TASK_HELP = Object.freeze([
+      Object.freeze({
+        title: '文件与边界',
+        action: '新建或导入一条流程，核对文件来源，并说明流程为什么开始、适用范围、归口部门和结束结果。没有依据的归类保持待确认。',
+        completion: '当前只保留一条流程，来源可追溯，业务人员能够判断哪些事项属于本流程。'
+      }),
+      Object.freeze({
+        title: '流程、执行人、动作与异常',
+        action: '在流程图中按实际办理顺序建立节点和关系。点击节点后，在右侧浮层一次写清执行人、触发条件、具体动作、完成标准、时限和会签要求；建立关系时直接填写条件，之后点击流程线或清单中的关系，在同一右侧浮层修改判断条件、退回条件、并行启动条件或并行汇合要求。',
+        completion: '每项实际工作都有执行部门或岗位；正常路线、判断路线、退回路线和并行路线都能在流程骨架中直接核对，不需要切换到其他任务。'
+      }),
+      Object.freeze({
+        title: '数据与表单',
+        action: '照实说明使用的表单、台账、记录、字段，以及每项工作查看、新建、修改或传递了什么信息。只提供当前编号、来源和用途事实，不认定主数据、关键字段或正式权威来源。',
+        completion: '表单、字段和数据使用事实可定位；企业级数据治理结论仍保持待MDM处理。'
+      }),
+      Object.freeze({
+        title: '检查与保存',
+        action: '先核对跨部门交接事实，再处理页面能定位的当前问题并下载文件。业务部门分别确认本方事实，MDM工作组后续负责结构复核和专业数据治理。',
+        completion: '结构错误已处理，待定事实已明确记录，当前文件已下载；页面检查不被表述为审核或发布。'
+      })
+    ]);
     const TOOL_TERM_GROUPS = [
       {
         title: '文件、版本与页面状态',
@@ -2790,7 +2879,7 @@
         terms: [
           ['L3流程', '本次编制的一条具体业务流程，包含边界、业务行为和关系。3001不因为名称或分类字段自动确认其能力归属。'],
           ['A1业务行为', '流程中由业务人员或部门实际执行的一项可说明、可定位的业务动作。普通业务行为在v7中使用action节点记录。'],
-          ['流程骨架', '节点名称、节点类型、执行主体，以及流程关系的类型、起点和终点。逐动作说明和关系条件不在流程骨架中编辑。'],
+          ['流程骨架', '用于维护一条流程的节点和关系。点击节点可填写执行主体、逐动作说明、触发条件、时限、完成标准和会签要求；建立关系时可填写条件，之后点击流程线或清单中的关系，可继续修改关系类型、起点、终点以及判断、退回与并行条件。'],
           ['普通业务行为', '承担实际业务动作的action节点，需要记录执行主体和具体做什么；它不同于判断、并行开始和并行汇合等控制节点。'],
           ['控制节点', '用于明确表达判断或并行控制，包括判断节点、并行开始和并行汇合。校对、审核、批准等实际办理仍是业务行为；办理结果存在不同去向时，应在业务行为后另设判断节点，不能用业务行为加条件线代替。控制节点不承担实际办理，也不确认正式岗位。'],
           ['流程关系', '连接两个节点的有向关系，记录起点、终点和关系类型。一对多或多对一使用多条独立关系表达；多条关系进入同一目标时，图上共用最后一段入线。'],
@@ -2839,7 +2928,7 @@
           ['业务提示', '页面根据现有内容发现的缺项、矛盾或待核对事项。业务提示不阻止阶段草稿下载，也不等于业务结论。'],
           ['待定', '现有事实或证据不足，暂时不能可靠填写或确认。保持待定比猜测或虚构内容更符合治理要求。'],
           ['独立结构预审', '在新的核对上下文中，只依据待审JSON和对应结构规则检查必需结构、引用、字段归位和对象拆分，不判断流程事实是否正确。'],
-          ['3000停止边界', '3000的V7技术链路已实现、数据库已准备，但运行时默认关闭且真实单流程试点待验收。3001不与3000通信；v7文件只能在另行批准的精确单流程范围内受控承接，不得直接导入或自动降级。']
+          ['3000停止边界', '3000的V7受控承接候选和数据库迁移方案已准备，但迁移尚未执行、运行时默认关闭，真实单流程试点仍待验收。3001不与3000通信；v7文件只能在另行批准的精确单流程范围内受控承接，不得直接导入或自动降级。']
         ]
       }
     ];
@@ -2902,6 +2991,7 @@
     let dataDiagramView = null;
     let flowRelationDraft = null;
     let graphSelection = null;
+    let flowEditorOpen = false;
     const graphStateManager = globalThis.GraphEditorState.createManager({ limit: 20 });
     const editSessionManager = globalThis.EditSessionManager.createManager();
     const authoringSelectionContextManager = globalThis.AuthoringSelectionContext.createManager();
@@ -2938,6 +3028,9 @@
     let formFieldBatchSessionToken = 0;
     let pendingTransition = null;
     let pendingTransitionResolution = null;
+    const viewportBlocker = document.getElementById('viewportBlocker');
+    const viewportBlockerMessage = document.getElementById('viewportBlockerMessage');
+    const appPage = document.querySelector('.page');
     const workspace = document.getElementById('workspace');
     const statusBox = document.getElementById('statusBox');
     const candidateList = document.getElementById('candidateList');
@@ -3824,10 +3917,17 @@
         allowedFields: Object.freeze([
           'node_type',
           'behavior_name',
+          'behavior_description',
           'actor_assignment_mode',
           'current_actor_role',
           'actor_department_data_ref',
-          'actor_position_rule'
+          'actor_position_rule',
+          'trigger',
+          'precondition',
+          'timing',
+          'completion_standard',
+          'countersign_all_required',
+          'countersign_target_departments'
         ])
       }),
       relation: Object.freeze({
@@ -3835,7 +3935,7 @@
         collection: 'flow_relations',
         refKey: 'relation_ref',
         label: '流程关系属性',
-        allowedFields: Object.freeze(['relation_type', 'from_behavior_ref', 'to_behavior_ref'])
+        allowedFields: Object.freeze(['relation_type', 'from_behavior_ref', 'to_behavior_ref', 'condition'])
       }),
       data: Object.freeze({
         editorKind: 'data-object-properties',
@@ -4354,6 +4454,7 @@
       editSessionManager.reset();
       graphSelection = null;
       flowRelationDraft = null;
+      flowEditorOpen = false;
       resetWebGridEditor();
       skipNextWebGridScrollCapture = true;
       formFieldBatchSessionToken += 1;
@@ -4600,7 +4701,12 @@
           const condition = text(relation.condition).trim() || '判断条件待填写';
           return `“${condition}”成立时，从“${source}”进入`;
         }
-        if (relation.relation_type === 'parallel') return `并行路线“${source}”完成后进入`;
+        if (relation.relation_type === 'parallel') {
+          const condition = text(relation.condition).trim();
+          return condition
+            ? `并行路线“${source}”完成且满足“${condition}”时进入`
+            : `并行路线“${source}”完成后进入`;
+        }
         return `“${source}”完成后进入`;
       }).join('；');
     }
@@ -4981,8 +5087,53 @@
       };
     }
 
+    function compactTaskUiEnabled() {
+      return uiConfig.compact_task_ui_enabled === true;
+    }
+
+    function compactTaskStatus(task, context) {
+      const statuses = task.steps.map(stepId => globalThis.GovernanceWorkflow.statusForStep(stepId, context));
+      const blocking = statuses.find(status => status.key === 'error') || statuses.find(status => status.key === 'missing');
+      if (blocking) return blocking;
+      if (task.steps.includes(activeGovernanceStep)) return { key: 'in-progress', label: '当前任务' };
+      if (statuses.every(status => status.key === 'reviewable')) return { key: 'reviewable', label: '已检查' };
+      if (statuses.some(status => status.key === 'reviewable')) return { key: 'reviewable', label: '已有进展' };
+      return { key: 'not-started', label: '未开始' };
+    }
+
+    function compactTaskEntryStep(task, hasDocument) {
+      if (task.steps.includes(activeGovernanceStep)) return activeGovernanceStep === 'action' ? 'skeleton' : activeGovernanceStep;
+      if (!hasDocument && task.steps.includes('start')) return 'start';
+      return task.entryStep;
+    }
+
+    function governanceNavigationLocation(stepId) {
+      if (!compactTaskUiEnabled()) return `第${globalThis.GovernanceWorkflow.stepById(stepId)?.number || ''}步`;
+      return COMPACT_TASK_WORKFLOW.find(task => task.steps.includes(stepId))?.label || '当前任务';
+    }
+
     function renderGovernanceSteps(disabled = false) {
       const context = governanceContext();
+      if (compactTaskUiEnabled()) {
+        return `<div class="workspace-tabs-shell"><div class="workspace-tabs compact-task" role="tablist" aria-label="业务编制任务导航">
+          ${COMPACT_TASK_WORKFLOW.map(task => {
+            const active = task.steps.includes(activeGovernanceStep);
+            const status = compactTaskStatus(task, context);
+            const targetStep = compactTaskEntryStep(task, context.hasDocument);
+            return `<button
+              class="workspace-tab${active ? ' active' : ''}"
+              role="tab"
+              aria-selected="${active}"
+              data-action="switch-governance-step"
+              data-step="${escapeAttribute(targetStep)}"
+              ${disabled && !task.steps.includes('start') ? 'disabled' : ''}
+            >
+              <span class="step-copy"><span class="step-label">${escapeHtml(task.label)}</span></span>
+              <span class="tab-status ${status.key === 'error' || status.key === 'missing' ? 'warning' : status.key === 'reviewable' ? 'ready' : 'waiting'}">${escapeHtml(status.label)}</span>
+            </button>`;
+          }).join('')}
+        </div></div>`;
+      }
       return `<div class="workspace-tabs-shell"><div class="workspace-tabs" role="tablist" aria-label="七步治理导航">
         ${GOVERNANCE_STEPS.map(step => {
           const active = activeGovernanceStep === step.id;
@@ -5022,6 +5173,13 @@
       const origin = entry?.importInfo?.sourceVersion || entry?.origin || '尚未建立草稿';
       const hasUnapplied = candidateHasUnappliedChanges(entry);
       const fileState = candidateFileState(entry, hasUnapplied);
+      const queueState = data
+        ? governanceReviewQueueManager.get(candidateStateKey())
+        : { checkedAtRevision: null, stale: false };
+      const checked = data && (checkedGovernanceStepIds().includes(activeGovernanceStep) || queueState.checkedAtRevision != null);
+      const checkLabel = checked
+        ? (queueState.stale ? '重新检查本轮' : '再次检查本轮')
+        : '检查本轮';
       return `<div class="governance-header-main">
         <div class="governance-current">
           <label for="governanceCandidateSelect">当前流程${candidates.length > 1 ? `（${candidates.length}个候选）` : ''}</label>
@@ -5029,16 +5187,16 @@
             ? `<select id="governanceCandidateSelect" data-governance-candidate>${candidateOptions}</select>`
             : '<strong>尚未新建或导入流程</strong>'}
           <div class="governance-context">
-            <span class="context-badge version">当前v7 · 使用中验证</span>
-            <span class="context-badge">导入来源：${escapeHtml(origin)}</span>
+            <span class="context-badge version">v7</span>
+            <span class="context-badge" title="导入来源：${escapeAttribute(origin)}">${escapeHtml(origin)}</span>
             ${hasUnapplied ? '<span class="context-badge dirty">有未应用修改</span>' : ''}
             ${entry?.dirty ? '<span class="context-badge dirty">有未下载修改</span>' : fileState ? `<span class="context-badge ${escapeAttribute(fileState.className)}">${escapeHtml(fileState.label)}</span>` : ''}
             <span class="context-badge">${escapeHtml(technicalLabel)}</span>
           </div>
         </div>
         <div class="governance-header-actions">
-          <button class="button secondary" data-action="download-current-stage" data-global-action data-requires-document="true" ${busy || !data ? 'disabled' : ''}>下载当前草稿 · ${escapeHtml(stage.label)}</button>
-          <button class="button" data-action="open-governance-drawer">完整治理流程</button>
+          <button class="button secondary" data-action="download-current-stage" data-global-action data-requires-document="true" title="下载${escapeAttribute(stage.label)} JSON 文件" ${busy || !data ? 'disabled' : ''}>保存当前草稿</button>
+          <button class="button primary" data-action="check-governance-step" data-step="${escapeAttribute(activeGovernanceStep)}" ${data && isAuthoringGovernanceStep(activeGovernanceStep) ? '' : 'disabled'}>${escapeHtml(checkLabel)}</button>
           <details class="header-menu">
             <summary class="button">文件</summary>
             <div class="header-menu-panel">
@@ -5048,9 +5206,10 @@
             </div>
           </details>
           <details class="header-menu">
-            <summary class="button">帮助与版本</summary>
+            <summary class="button">帮助</summary>
             <div class="header-menu-panel">
               <p class="boundary">帮助内容解释页面操作、工具术语和结构边界，不替业务部门确认事实。</p>
+              <button class="button" data-action="open-governance-drawer">完整治理流程</button>
               <button class="button" data-action="open-help-view">操作帮助</button>
               <button class="button" data-action="open-version-view">版本说明</button>
             </div>
@@ -5067,7 +5226,7 @@
         ['部门事实初核', '业务核对人核对全部流程事实。跨部门内容由归口部门和承接部门分别确认本方事实。未确认内容保持待定，并在JSON之外记录证据、确认主体和关闭条件。'],
         ['最终v7独立结构预审', 'MDM工作组或Codex检查最终v7的结构错误、字段归位、对象拆分和生命周期结构。编制人关闭硬性结构错误；保留建议原值时，在外部问题处理记录中说明理由。'],
         ['重新导入、最终下载和交接', '编制人重新导入整改后的文件，核对版本、数量、内容、稳定引用和往返完整性，再分别交接最终v7、结构预审问题处理记录和部门业务核对记录。'],
-        ['当前停止边界', '3000的V7技术链路已实现、数据库已准备，但运行时默认关闭且真实单流程试点待验收。3001不与3000通信；只有另行批准的精确process_ref才能进入3000受控预览、审核和发布，v7文件不得直接导入或自动降级。']
+        ['当前停止边界', '3000的V7受控承接候选和数据库迁移方案已准备，但迁移尚未执行、运行时默认关闭，真实单流程试点仍待验收。3001不与3000通信；只有另行批准的精确单流程范围才能进入3000受控预览、审核和发布，正式发布后也只允许配置的固定process_version_id进入后续工作包。v7文件不得直接导入或自动降级。']
       ];
       governanceDrawerContent.innerHTML = `${renderRoleOperationSequence(true)}<div class="governance-drawer-list">${phases.map((phase, index) => `
         <section class="governance-drawer-card"><strong>${index + 1}. ${escapeHtml(phase[0])}</strong><p>${escapeHtml(phase[1])}</p></section>
@@ -5108,19 +5267,13 @@
     function refreshVisibleGovernanceCheckUi() {
       if (!isAuthoringGovernanceStep(activeGovernanceStep)) return;
       workspace.querySelectorAll('.step-issue-panel, .step-check-clear, .governance-queue').forEach(item => item.remove());
-      const guidance = workspace.querySelector('.primary-guidance');
-      if (guidance) guidance.innerHTML = renderPrimaryGuidanceContent(activeGovernanceStep);
-      const intro = workspace.querySelector('.step-intro');
-      if (intro) intro.insertAdjacentHTML('afterend', renderGovernanceIssuePanel(activeGovernanceStep));
+      governanceHeader.innerHTML = renderGovernanceHeader(currentDocument());
+      const issuePanel = renderGovernanceIssuePanel(activeGovernanceStep);
+      if (issuePanel) workspace.insertAdjacentHTML('afterbegin', issuePanel);
     }
 
     function renderStepIntro(stepId = activeGovernanceStep) {
-      const step = globalThis.GovernanceWorkflow.stepById(stepId);
-      const context = governanceContext();
-      return `<div class="step-intro">
-        <div><div class="eyebrow">第${step.number}步</div><h2>${escapeHtml(step.label)}</h2><p>${escapeHtml(step.responsibility)}</p></div>
-        <div class="primary-guidance">${renderPrimaryGuidanceContent(stepId, context)}</div>
-      </div>${renderGovernanceIssuePanel(stepId)}`;
+      return renderGovernanceIssuePanel(stepId);
     }
 
     function renderGovernanceIssuePanel(stepId) {
@@ -5132,7 +5285,7 @@
         const resolvedIssue = resolveGovernanceQueueIssue(issue);
         const attributes = resolvedIssue ? exportWarningLocationAttributes(resolvedIssue) : '';
         return `<section class="governance-queue${queueState.stale ? ' stale' : ''}" aria-live="polite">
-          <div class="governance-queue-head"><strong>连续整改队列 · ${queueState.currentIndex}/${queueState.total}</strong><span class="status-pill ${issue.technical ? 'danger' : ''}">${issue.technical ? '技术阻断项' : `第${globalThis.GovernanceWorkflow.stepById(issue.stepId)?.number || ''}步`}</span></div>
+          <div class="governance-queue-head"><strong>连续整改队列 · ${queueState.currentIndex}/${queueState.total}</strong><span class="status-pill ${issue.technical ? 'danger' : ''}">${issue.technical ? '技术阻断项' : escapeHtml(governanceNavigationLocation(issue.stepId))}</span></div>
           ${queueState.stale ? '<p><strong>结果已过期，重新检查后才能判断是否仍成立。</strong>旧结果继续显示，便于连续修正。</p>' : ''}
           ${webGridSession?.isDirty() ? '<p><strong>表格修改尚未应用。</strong>全局队列仍基于已应用JSON；工作副本错误请查看表格页签和单元格。</p>' : ''}
           <p><strong>问题说明：</strong>${escapeHtml(issue.message || '当前记录需要核对')}</p>
@@ -5167,7 +5320,8 @@
       const data = currentDocument();
       if (activeStepView === 'version') return `${renderStepIntro('start')}${renderVersionHistoryPanel()}`;
       if (activeStepView === 'help') {
-        const helpSteps = TOOL_HELP_STEPS.map(item => `
+        const helpItems = compactTaskUiEnabled() ? COMPACT_TASK_HELP : TOOL_HELP_STEPS;
+        const helpSteps = helpItems.map(item => `
           <article class="tool-help-step-card">
             <h3>${escapeHtml(item.title)}</h3>
             <p><strong>怎么做：</strong>${escapeHtml(item.action)}</p>
@@ -5194,7 +5348,7 @@
             </div>`
           )}
           ${section(
-            '按七步完成编制',
+            compactTaskUiEnabled() ? '按四项任务完成编制' : '按七步完成编制',
             '每项事实只有一个可写入口。跨部门核对和评审与交接只读汇总，修改按钮会返回对应编辑位置。',
             `<div class="tool-help-step-grid">${helpSteps}</div>`
           )}
@@ -5217,13 +5371,17 @@
           )}
         </div>`;
       }
-      const flowCards = GOVERNANCE_STEPS.map(step => `
-        <div class="governance-flow-card"><strong>${step.number}. ${escapeHtml(step.label)}</strong><p>${escapeHtml(step.responsibility)}</p></div>
-      `).join('');
+      const flowCards = compactTaskUiEnabled()
+        ? COMPACT_TASK_HELP.map(item => `
+            <div class="governance-flow-card"><strong>${escapeHtml(item.title)}</strong><p>${escapeHtml(item.completion)}</p></div>
+          `).join('')
+        : GOVERNANCE_STEPS.map(step => `
+            <div class="governance-flow-card"><strong>${step.number}. ${escapeHtml(step.label)}</strong><p>${escapeHtml(step.responsibility)}</p></div>
+          `).join('');
       if (!data) {
         return `<section class="start-hero">
           <div class="eyebrow">3001 · process-governance-v7</div>
-          <h2>按七步完成一条流程的编制、核对和交接准备</h2>
+          <h2>${compactTaskUiEnabled() ? '按四项任务完成一条流程的编制、核对和交接准备' : '按七步完成一条流程的编制、核对和交接准备'}</h2>
           <p>v7已发布，当前在实际使用中继续验证。编制人维护当前唯一流程文件；业务核对人确认流程事实；MDM工作组检查结构。3001不保存草稿，也不记录审核结论。</p>
           ${renderRoleOperationSequence()}
           <div class="start-actions">
@@ -5232,7 +5390,7 @@
             <button class="button" data-action="open-governance-drawer">查看完整治理流程</button>
           </div>
           <div class="governance-flow-grid">${flowCards}</div>
-          <p class="boundary"><strong>当前停止边界：</strong>3000的V7技术链路已实现、数据库已准备，但运行时默认关闭且真实单流程试点待验收。3001不与3000通信；v7文件只能在另行批准的精确单流程范围内受控承接，不得直接导入或自动降级。</p>
+          <p class="boundary"><strong>当前停止边界：</strong>3000的V7受控承接候选和数据库迁移方案已准备，但迁移尚未执行、运行时默认关闭，真实单流程试点仍待验收。3001不与3000通信；v7文件只能在另行批准的精确单流程范围内受控承接，不得直接导入或自动降级。</p>
         </section>`;
       }
       const entry = currentEntry();
@@ -5266,14 +5424,20 @@
         <button class="button skeleton-list-button${selected === 'behavior' && graphSelection.ref === item.behavior_ref ? ' primary' : ''}" data-action="select-skeleton-item" data-kind="behavior" data-ref="${escapeAttribute(item.behavior_ref)}">
           节点${index + 1}：${escapeHtml(item.behavior_name || '未填写名称')} · ${escapeHtml(NODE_TYPES.find(option => option.value === item.node_type)?.label || '未选择类型')}
         </button>`).join('') || '<div class="candidate-empty">尚未新增节点。</div>';
-      const relationRows = (data.flow_relations || []).map((item, index) => `
-        <button class="button skeleton-list-button${selected === 'relation' && graphSelection.ref === item.relation_ref ? ' primary' : ''}" data-action="select-skeleton-item" data-kind="relation" data-ref="${escapeAttribute(item.relation_ref)}">
-          关系${index + 1}：${escapeHtml(relationSelectorLabel(item, index))}
-        </button>`).join('') || '<div class="candidate-empty">尚未建立流程关系。</div>';
+      const relationRows = (data.flow_relations || []).map((item, index) => {
+        const copy = relationConditionEditorCopy(item);
+        const condition = text(item.condition).trim();
+        const conditionState = condition || (['condition', 'loop'].includes(item.relation_type) ? '待填写' : '无附加条件');
+        return `
+          <button class="button skeleton-list-button${selected === 'relation' && graphSelection.ref === item.relation_ref ? ' primary' : ''}" data-action="select-skeleton-item" data-kind="relation" data-ref="${escapeAttribute(item.relation_ref)}">
+            ${escapeHtml(relationSelectorLabel(item, index))}
+            <small>${escapeHtml(copy.label.replace('（可选）', ''))}：${escapeHtml(conditionState)}</small>
+          </button>`;
+      }).join('') || '<div class="candidate-empty">尚未建立流程关系。</div>';
       return `<section class="section"><div class="section-body">
-        <div class="diagram-toolbar"><div><h2>流程骨架清单</h2><p>清单和泳道图互斥显示，二者共同维护同一份页面内存草稿。</p></div><div class="diagram-controls"><button class="button primary small" data-action="add-graph-node">新增节点</button><button class="button secondary small" data-action="start-flow-relation">建立关系</button></div></div>
-        <div class="skeleton-list-layout"><div class="skeleton-list"><strong>节点</strong>${behaviorRows}<strong>关系</strong>${relationRows}</div><aside class="graph-property-shell">${renderFlowPropertyPanel()}</aside></div>
-      </div></section>`;
+        <div class="diagram-toolbar"><div><h2>流程骨架清单</h2><p>点击节点编辑执行人、逐动作和完成标准；点击关系编辑判断、退回与并行条件。所有内容都在当前流程骨架中完成。</p></div><div class="diagram-controls"><button class="button primary small" data-action="add-graph-node">新增节点</button><button class="button secondary small" data-action="start-flow-relation">建立关系</button></div></div>
+        <div class="skeleton-list-layout"><div class="skeleton-list"><strong>节点</strong>${behaviorRows}<strong>关系与条件</strong>${relationRows}</div></div>
+      </div></section>${renderFlowEditModal()}`;
     }
 
     function renderSkeletonStep() {
@@ -5748,7 +5912,7 @@
       return `${renderStepIntro('cross-department')}${section(
         '跨部门事实核对汇总',
         '本步骤只汇总和定位，不直接编辑。归口部门确认发出事项和期望，承接部门确认本方动作、数据和返回条件。',
-        `<div class="cross-department-list">${content}</div><div class="item-actions"><button class="button secondary" data-action="download-current-stage">下载第4轮跨部门核对草稿</button></div>`
+        `<div class="cross-department-list">${content}</div><div class="item-actions"><button class="button secondary" data-action="download-current-stage">下载第4轮跨部门核对草稿</button>${compactTaskUiEnabled() ? '<button class="button primary" data-action="switch-governance-step" data-step="handoff">进入最终检查与保存</button>' : ''}</div>`
       )}`;
     }
 
@@ -5770,14 +5934,14 @@
     function renderHandoffStep() {
       activeWorkspaceTab = 'editor';
       activeEditorSection = 'export';
-      return `${renderStepIntro('handoff')}${renderExportCheck()}${section(
+      return `${compactTaskUiEnabled() ? '<div class="item-actions"><button class="button secondary small" data-action="switch-governance-step" data-step="cross-department">返回跨部门事实核对</button></div>' : ''}${renderStepIntro('handoff')}${renderExportCheck()}${section(
         '最终交接卡',
         '最终v7、结构预审问题处理记录和部门业务核对记录必须分别保存。页面只生成并摘要当前v7文件。',
         `<div class="next-stage-grid">
           <section class="next-stage-card next"><h3>技术状态</h3><p>结构错误必须关闭。业务待定不阻止下载，但应在外部核对记录中写明证据、确认主体和关闭条件。</p></section>
           <section class="next-stage-card future"><h3>外部材料</h3><p>准备结构预审问题处理记录和部门业务核对记录。3001不会生成、保存或嵌入这些记录。</p></section>
         </div>
-        <p class="boundary"><strong>3000停止边界：</strong>3000的V7技术链路已实现、数据库已准备，但运行时默认关闭且真实单流程试点待验收。3001不与3000通信；v7文件不得直接导入或自动降级。</p>
+        <p class="boundary"><strong>3000停止边界：</strong>3000的V7受控承接候选和数据库迁移方案已准备，但迁移尚未执行、运行时默认关闭，真实单流程试点仍待验收。3001不与3000通信；v7文件不得直接导入或自动降级。</p>
         ${renderLastDownloadResult()}`
       )}`;
     }
@@ -5807,7 +5971,8 @@
 
     function setActiveGovernanceStep(stepId, view = '', options = {}) {
       captureGraphViewport();
-      const next = globalThis.GovernanceWorkflow.normalizeStepId(stepId);
+      const normalizedStep = globalThis.GovernanceWorkflow.normalizeStepId(stepId);
+      const next = compactTaskUiEnabled() && normalizedStep === 'action' ? 'skeleton' : normalizedStep;
       if (!currentDocument() && next !== 'start') return;
       if (!options.skipPendingGuard && requestTransition(
         '切换治理步骤',
@@ -5821,10 +5986,11 @@
         entry.stepView = activeStepView;
         graphStateManager.updateView(candidateStateKey(entry), { mode: next === 'data' ? 'data' : 'flow' });
       }
-      if (next !== 'skeleton') diagramExpanded = false;
+      diagramExpanded = false;
       if (next === 'skeleton') {
-        const ref = activeBehaviorRef || currentDocument()?.behaviors?.[0]?.behavior_ref || '';
-        if (ref) openEntityEditSession('behavior', ref);
+        editSessionManager.reset();
+        graphSelection = null;
+        flowEditorOpen = false;
       } else if (next === 'data' && activeDataEditingMode === 'guided' && activeStepView === 'data' && activeDataMode === 'flow') {
         const dataObject = ensureActiveGraphDataObject();
         if (dataObject) openEntityEditSession('data', dataObject.data_ref);
@@ -5954,7 +6120,7 @@
               aria-controls="diagramLegendExample"
             >${exampleButtonLabel}</button>
           </div>
-          <p class="diagram-reading-tip">先看泳道确认执行部门，再沿流程关系箭头阅读。箭头跨越泳道时，表示两个执行部门之间的流程流转；带条件的前进箭头表示判断分支，标有“回路”的返回箭头表示退回前序步骤。</p>
+          <p class="diagram-reading-tip">先看泳道确认执行部门，再沿流程关系箭头阅读。箭头跨越泳道时，表示两个执行部门之间的流程流转；带条件的前进箭头表示判断分支，标有“退回”的返回箭头表示退回前序步骤。</p>
           <div class="diagram-legend-example" id="diagramLegendExample"${diagramExampleExpanded ? '' : ' hidden'}>
             <p>以下仅为读图示例，不属于当前流程。</p>
             <div class="legend-example-flow" aria-label="提交材料、判断材料是否齐全、外部门办理的三步示例">
@@ -6013,6 +6179,11 @@
     }
 
     function renderGraphViewActions(kind) {
+      if (kind === 'flow') {
+        return `
+          <button class="button primary small" data-action="reset-flow-diagram">清晰检查（100%）</button>
+          <button class="button secondary small" data-action="fit-flow-diagram">查看全图</button>`;
+      }
       return `
         <details class="graph-view-actions">
           <summary class="button small">视图操作</summary>
@@ -6023,8 +6194,65 @@
         </details>`;
     }
 
+    function relationEndpointNodeType(behaviorRef) {
+      return (currentDocument()?.behaviors || []).find(item => item.behavior_ref === behaviorRef)?.node_type || '';
+    }
+
+    function relationConditionEditorCopy(relation = {}) {
+      if (relation.relation_type === 'condition') {
+        return {
+          label: '判断条件',
+          placeholder: '写清满足什么判断结果时进入这条路线',
+          hint: '填写判断结果。业务办理动作仍放在节点中，不要用条件线代替实际办理动作。'
+        };
+      }
+      if (relation.relation_type === 'loop') {
+        return {
+          label: '退回条件',
+          placeholder: '写清什么情况下退回，以及何时可以重新办理',
+          hint: '起点和终点表示退回到哪里；这里填写退回原因和重新办理条件。'
+        };
+      }
+      if (relation.relation_type === 'parallel') {
+        const fromType = relationEndpointNodeType(relation.from_behavior_ref);
+        const toType = relationEndpointNodeType(relation.to_behavior_ref);
+        if (fromType === 'parallel_split' && toType === 'parallel_join') {
+          return {
+            label: '并行路线条件或汇合要求（可选）',
+            placeholder: '写清这条路线何时同时启动，以及达到什么状态后进入汇合',
+            hint: '没有附加启动条件或汇合要求时可以留空。并行汇合节点仍表示等待全部并行路线完成。'
+          };
+        }
+        if (fromType === 'parallel_split') {
+          return {
+            label: '并行启动条件（可选）',
+            placeholder: '写清这条路线在什么条件下同时启动',
+            hint: '没有附加启动条件时可以留空；并行开始表示多条路线同时启动，不是选择其中一条。'
+          };
+        }
+        if (toType === 'parallel_join') {
+          return {
+            label: '并行汇合要求（可选）',
+            placeholder: '写清这条路线达到什么状态后可以进入汇合',
+            hint: '没有附加汇合要求时可以留空；并行汇合节点表示等待全部并行路线完成。'
+          };
+        }
+        return {
+          label: '并行条件（可选）',
+          placeholder: '写清这条并行路线的启动条件或汇合要求',
+          hint: '没有附加条件时可以留空。需要表达同时启动或等待全部路线时，应配合并行开始或并行汇合节点。'
+        };
+      }
+      return {
+        label: '进入下一步的补充条件（可选）',
+        placeholder: '顺序关系通常留空；确有附加条件时填写',
+        hint: '顺序关系表示起点完成后直接进入终点，没有附加条件时可以留空。'
+      };
+    }
+
     function renderFlowRelationDraft() {
       if (!flowRelationDraft) return '';
+      const conditionCopy = relationConditionEditorCopy(flowRelationDraft);
       const stageText = {
         type: '第1步：选择关系类型',
         source: '第2步：选择起点',
@@ -6045,8 +6273,8 @@
               ${optionHtml(RELATION_TYPES, flowRelationDraft.relation_type)}
             </select>` : ''}
           <p>起点：${escapeHtml(relationEndpointLabel(flowRelationDraft.from_behavior_ref, '待选择'))}；终点：${escapeHtml(relationEndpointLabel(flowRelationDraft.to_behavior_ref, '待选择'))}</p>
-          ${flowRelationDraft.stage === 'confirm' && ['condition', 'loop'].includes(flowRelationDraft.relation_type) ? `
-            <div class="inline-note">先建立关系。判断条件或退回条件在第4步“动作与异常”填写。</div>` : ''}
+          ${flowRelationDraft.stage === 'confirm' ? `
+            <label>${escapeHtml(conditionCopy.label)}<textarea data-graph-relation-condition placeholder="${escapeAttribute(conditionCopy.placeholder)}">${escapeHtml(flowRelationDraft.condition || '')}</textarea><span class="technical-note">${escapeHtml(conditionCopy.hint)}</span></label>` : ''}
           ${behaviorButtons}
           <div class="item-actions">
             ${flowRelationDraft.stage === 'confirm' ? '<button class="button primary small" data-action="confirm-flow-relation">确认建立</button>' : ''}
@@ -6064,6 +6292,7 @@
       if (selection.kind === 'relation') {
         const relation = workingEntity('relation', selection.ref);
         if (!relation) return '<div class="graph-property-empty">所选关系已经不存在。</div>';
+        const conditionCopy = relationConditionEditorCopy(relation);
         const relationSession = entityEditSession('relation', selection.ref);
         const relationDirty = Boolean(relationSession && editSessionManager.isDirty(relationSession.candidateKey));
         return `
@@ -6072,7 +6301,8 @@
             <label>关系类型<select data-graph-property="relation_type">${optionHtml(RELATION_TYPES, relation.relation_type)}</select></label>
             <label>起点<select data-graph-property="from_behavior_ref">${optionHtml(behaviorOptions('请选择起点'), relation.from_behavior_ref)}</select></label>
             <label>终点<select data-graph-property="to_behavior_ref">${optionHtml(behaviorOptions('请选择终点'), relation.to_behavior_ref)}</select></label>
-            <div class="inline-note">判断条件、退回条件和并行规则在第4步“动作与异常”维护。</div>
+            <label class="graph-property-wide">${escapeHtml(conditionCopy.label)}<textarea data-graph-property="condition" placeholder="${escapeAttribute(conditionCopy.placeholder)}">${escapeHtml(relation.condition || '')}</textarea><span class="technical-note">${escapeHtml(conditionCopy.hint)}</span></label>
+            <div class="inline-note">关系类型、起点、终点以及判断、退回与并行条件都在本浮层完成。修改后点击“应用修改”，流程图和清单会同时更新。</div>
             <details><summary>技术标识</summary><code>${escapeHtml(relation.relation_ref)}</code></details>
             ${relationDirty ? '<div class="inline-warning"><strong>有未应用修改。</strong>当前JSON和下载文件仍保留应用前的关系属性。</div>' : ''}
             <div class="item-actions">
@@ -6093,7 +6323,7 @@
       );
       return `
         <div class="graph-property-panel" data-focus-kind="behavior" data-focus-ref="${escapeAttribute(behavior.behavior_ref)}">
-          <h3>${isControl ? '流程控制节点' : '业务行为'}</h3>
+          <h3>${isControl ? '流程控制节点' : '业务行为、执行主体与办理规则'}</h3>
           <label>节点类型<select data-graph-property="node_type">${optionHtml(NODE_TYPES, behavior.node_type)}</select></label>
           <label>节点名称<input data-graph-property="behavior_name" value="${escapeAttribute(behavior.behavior_name)}"></label>
           ${isControl ? `
@@ -6108,15 +6338,46 @@
             ${actorAssignmentMode(behavior) === 'dynamic_from_data' ? `
               <label>执行部门来源数据<select data-graph-property="actor_department_data_ref">${optionHtml([{ value: '', label: '请选择前序数据' }].concat((currentDocument().data_objects || []).map(item => ({ value: item.data_ref, label: item.data_name || '未命名数据' }))), behavior.actor_department_data_ref || '')}</select></label>
               <label>岗位或责任人确定规则<textarea data-graph-property="actor_position_rule">${escapeHtml(behavior.actor_position_rule)}</textarea></label>` : ''}
-            <div class="inline-note">“具体做什么”、流程如何开始、办理时限、完成标准和会签要求在第4步“动作与异常”维护。</div>`}
+            <label class="graph-property-wide">具体做什么（逐动作说明）<textarea data-graph-property="behavior_description" placeholder="按实际顺序写明动作、处理对象和结果">${escapeHtml(behavior.behavior_description || '')}</textarea></label>
+            ${isEntry ? `<label class="graph-property-wide">流程如何开始<textarea data-graph-property="trigger" placeholder="写明谁在什么情况下发起本流程">${escapeHtml(behavior.trigger || '')}</textarea></label>` : ''}
+            <label>办理时限（可选）<input data-graph-property="timing" value="${escapeAttribute(behavior.timing || '')}"></label>
+            <label class="graph-property-wide">怎样算完成<textarea data-graph-property="completion_standard" placeholder="写明该行为完成的判断标准">${escapeHtml(behavior.completion_standard || '')}</textarea></label>
+            <details class="graph-property-wide"><summary>其他开始条件与会签（按需填写）</summary>
+              <div class="graph-property-panel" style="margin-top:12px">
+                <label class="graph-property-wide">其他开始条件<textarea data-graph-property="precondition" placeholder="只填写流程关系和输入数据不能表达的额外限制">${escapeHtml(behavior.precondition || '')}</textarea></label>
+                <label class="graph-property-wide"><span class="graph-checkbox-line"><input type="checkbox" data-graph-property="countersign_all_required"${behavior.countersign_all_required ? ' checked' : ''}> 全部指定对象确认知悉后才算完成</span></label>
+                <fieldset class="graph-property-wide graph-department-options"><legend>需要确认知悉的部门</legend>
+                  ${DEPARTMENTS.map(department => `<label class="graph-checkbox-line"><input type="checkbox" data-graph-list-property="countersign_target_departments" value="${escapeAttribute(department)}"${list(behavior.countersign_target_departments).includes(department) ? ' checked' : ''}> ${escapeHtml(department)}</label>`).join('')}
+                </fieldset>
+              </div>
+            </details>`}
           <details><summary>技术标识和历史文字</summary><code>${escapeHtml(behavior.behavior_ref)}</code><div class="technical-note">输入说明：${escapeHtml(behavior.input_description || '空')}<br>输出说明：${escapeHtml(behavior.output_description || '空')}</div></details>
           ${behaviorDirty ? '<div class="inline-warning"><strong>有未应用修改。</strong>当前JSON和下载文件仍保留应用前的节点属性。</div>' : ''}
           <div class="item-actions">
             <button class="button primary small" data-action="apply-flow-property" ${behaviorSession && behaviorDirty ? '' : 'disabled'}>应用修改</button>
-            ${selection.kind === 'behavior' ? `<button class="button small" data-action="governance-jump" data-step="action" data-view="behaviors" data-focus-kind="behavior" data-focus-ref="${escapeAttribute(behavior.behavior_ref)}" data-focus-path="behaviors.${currentDocument().behaviors.indexOf(behavior)}.behavior_description">转到动作与异常</button>` : ''}
             <button class="button danger small" data-action="delete-graph-selection">删除节点</button>
           </div>
         </div>`;
+    }
+
+    function renderFlowEditModal() {
+      const visible = Boolean(flowRelationDraft || (flowEditorOpen && ['behavior', 'relation'].includes(graphSelection?.kind)));
+      if (!visible) return '';
+      const title = flowRelationDraft
+        ? '建立流程关系'
+        : graphSelection?.kind === 'relation'
+          ? '编辑判断、退回与并行条件'
+          : '编辑流程节点、执行主体与办理规则';
+      return `<div class="modal-backdrop show" id="graphEditModal" aria-hidden="false">
+        <section class="modal flow-editor-drawer" role="dialog" aria-modal="true" aria-labelledby="graphEditModalTitle">
+          <div class="flow-editor-head">
+            <div><div class="eyebrow">流程编制</div><h2 id="graphEditModalTitle">${escapeHtml(title)}</h2><p>在当前右侧浮层完成所选节点或关系的信息；应用后保留流程图位置、缩放和选择对象。</p></div>
+            <button class="button" data-action="close-flow-editor">关闭</button>
+          </div>
+          <div class="flow-editor-body"><aside class="graph-property-shell">${renderFlowPropertyPanel()}</aside></div>
+          <div class="flow-editor-footer"><span>未应用输入不会进入当前 JSON 或下载文件。</span><button class="button" data-action="close-flow-editor">返回流程骨架</button></div>
+        </section>
+      </div>`;
     }
 
     function renderDiagramPanel(model) {
@@ -6130,7 +6391,7 @@
             <div class="diagram-toolbar">
               <div>
                 <h2>${escapeHtml(currentDocument().process.process_name || '未命名流程')} · 流程关系</h2>
-                <p>普通行为进入部门泳道；判断和并行节点进入顶部“流程控制”带。多条关系进入同一目标时，各关系条件保持独立，图上共用最后一段入线。</p>
+                <p>点击节点编辑执行人、逐动作和完成标准；点击流程线编辑判断、退回与并行条件。多条关系进入同一目标时，各关系条件保持独立。</p>
               </div>
               <div class="diagram-controls">
                 <button class="button primary small" data-action="add-graph-node">新增节点</button>
@@ -6138,23 +6399,23 @@
                 <button class="button small" data-action="undo-graph" ${history.canUndo ? '' : 'disabled'}>撤销</button>
                 <button class="button small" data-action="redo-graph" ${history.canRedo ? '' : 'disabled'}>重做</button>
                 ${renderGraphViewActions('flow')}
+                <button class="button small" data-action="toggle-diagram-expanded">${diagramExpanded ? '退出全屏' : '全屏检查流程图'}</button>
               </div>
             </div>
             ${renderDiagramLegend()}
             ${collisionNotice}
             <div class="diagram-notice" id="diagramViewportNotice" role="status" hidden>
-              当前已聚焦流程开头，点击“适应画布”查看完整流程
+              当前按100%字号从流程开头清晰检查；需要总览时点击“查看全图”
             </div>
-            <div class="graph-editor-layout">
+            <div class="graph-editor-layout flow-graph-editor-layout">
               <div>
                 <div class="diagram-canvas" id="processDiagramCanvas" role="application" aria-label="可编辑流程关系图"></div>
                 <div class="diagram-failure" id="diagramFailure" role="alert"></div>
               </div>
-              <aside class="graph-property-shell" aria-label="当前选择属性">${renderFlowPropertyPanel()}</aside>
             </div>
             ${renderDiagramWarnings(model)}
           </div>
-        </section>`;
+        </section>${renderFlowEditModal()}`;
     }
 
     function ensureActiveGraphDataObject() {
@@ -6883,10 +7144,11 @@
           departmentOrder: actorDepartments(),
           editable: true,
           viewport: graphStateManager.view(candidateStateKey()).flow,
+          selectedFocus: ['behavior', 'relation'].includes(graphSelection?.kind) ? graphSelection : null,
           onFocus: handleFlowDiagramFocus,
           onViewportModeChange(viewport) {
             const notice = document.getElementById('diagramViewportNotice');
-            if (notice) notice.hidden = viewport?.mode !== 'start';
+            if (notice) notice.hidden = viewport?.mode !== 'clear';
           }
         });
       } catch (error) {
@@ -6942,6 +7204,7 @@
       } else if (focusKind === 'relation') {
         openEntityEditSession('relation', focusRef);
       }
+      flowEditorOpen = ['behavior', 'relation'].includes(focusKind);
       render();
     }
 
@@ -7365,7 +7628,9 @@
       diagramExpanded = false;
       editSessionManager.reset();
       graphSelection = null;
-      const governanceStep = globalThis.GovernanceWorkflow.stepForTarget(target);
+      flowEditorOpen = false;
+      const targetStep = globalThis.GovernanceWorkflow.stepForTarget(target);
+      const governanceStep = compactTaskUiEnabled() && targetStep === 'action' ? 'skeleton' : targetStep;
       activeGovernanceStep = governanceStep;
       activeStepView = defaultStepView(governanceStep);
       activeWorkspaceTab = governanceStep === 'skeleton' ? 'flow' : governanceStep === 'data' ? 'data' : 'editor';
@@ -7382,6 +7647,8 @@
         if (governanceStep === 'skeleton') {
           openEntityEditSession('behavior', focusRef);
           activeStepView = 'diagram';
+          diagramExpanded = false;
+          flowEditorOpen = true;
         } else {
           activeStepView = 'behaviors';
         }
@@ -7392,6 +7659,8 @@
         if (governanceStep === 'skeleton') {
           openEntityEditSession('relation', focusRef);
           activeStepView = 'diagram';
+          diagramExpanded = false;
+          flowEditorOpen = true;
         } else {
           activeStepView = 'relations';
         }
@@ -7982,7 +8251,7 @@
               })}
               ${behaviorSelect(`flow_relations.${index}.from_behavior_ref`, '从哪个行为开始', { blankLabel: '请选择' })}
               ${behaviorSelect(`flow_relations.${index}.to_behavior_ref`, '流向哪个行为')}`}
-              ${field(`flow_relations.${index}.condition`, '判断分支条件或回路触发条件（顺序关系可不填）', { type: 'textarea', className: 'half' })}
+              ${field(`flow_relations.${index}.condition`, '判断、退回或并行条件（顺序关系可不填）', { type: 'textarea', className: 'half' })}
             </div>
           </div>
         </div>` : `
@@ -9215,7 +9484,7 @@
           <section class="next-stage-card next">
             <span class="next-stage-badge">下一步</span>
             <h3>完成部门事实核对后，保存最终v7文件</h3>
-            <p>3001不记录现场核对记录。请分别保存最终v7、结构预审问题处理记录和部门业务核对记录。3000的V7技术链路默认关闭，真实单流程试点待验收；只有另行批准的精确process_ref才能按受控流程承接。</p>
+            <p>3001不记录现场核对记录。请分别保存最终v7、结构预审问题处理记录和部门业务核对记录。3000的V7受控承接候选默认关闭，数据库迁移尚未执行，真实单流程试点仍待验收；只有另行批准的精确单流程范围才能进入受控预览和审核，正式发布后也只允许配置的固定process_version_id进入后续工作包。</p>
           </section>
           <section class="next-stage-card future">
             <span class="next-stage-badge">后续规划</span>
@@ -10079,6 +10348,8 @@
         Boolean(data && (
           (activeGovernanceStep === 'skeleton' && diagramExpanded)
           || (activeGovernanceStep === 'skeleton' && diagramExampleExpanded && expandedReviewPatternId)
+          || flowRelationDraft
+          || flowEditorOpen
         ))
       );
       updateCandidateList();
@@ -10111,6 +10382,12 @@
       if (activeGovernanceStep === 'skeleton' && activeStepView === 'diagram') requestAnimationFrame(mountReviewPatternDiagrams);
       if (activeGovernanceStep === 'data' && activeDataEditingMode === 'guided' && activeStepView === 'data') requestAnimationFrame(mountDataDiagram);
       if (activeGovernanceStep === 'data' && activeDataEditingMode === 'grid') requestAnimationFrame(restoreVisibleWebGridScroll);
+      requestAnimationFrame(() => {
+        const dialog = document.querySelector('#graphEditModal [role="dialog"]');
+        if (!dialog || dialog.contains(document.activeElement)) return;
+        const firstControl = dialog.querySelector('input, select, textarea, button:not([disabled])');
+        (firstControl || dialog).focus?.({ preventScroll: true });
+      });
     }
 
     function updateCandidateList() {
@@ -10322,7 +10599,7 @@
         label: `流程关系“${source} → ${target}”`,
         targetRef: relationRef,
         targetPath: `flow_relations.${index}`,
-        impact: '该关系的类型、端点和第4步维护的条件将一并删除。',
+        impact: '该关系的类型、起点、终点和条件将一并删除。',
         analyze(documentValue) {
           return globalThis.GraphEditCommands.analyzeDeletion(documentValue, 'relation', relationRef)
             .map(item => `${item.label}（${item.ref}）`);
@@ -11225,7 +11502,7 @@
       'select-skeleton-item', 'governance-jump', 'switch-tab', 'return-editor',
       'focus-editor', 'focus-export-warning', 'undo-graph', 'redo-graph',
       'add-graph-node', 'start-flow-relation', 'add-graph-data', 'merge-current-data',
-      'cancel-flow-relation',
+      'cancel-flow-relation', 'close-flow-editor',
       'choose-data-behavior', 'delete-graph-selection', 'delete-graph-data-edge', 'open-flow-behavior', 'delete-data-object',
       'open-behavior-data', 'open-data-from-overview', 'merge-duplicate-data',
       'add-data-behavior-link', 'remove-data-behavior-link', 'add-data-source', 'remove-data-source',
@@ -11288,7 +11565,9 @@
       if (action === 'switch-step-view') {
         editSessionManager.reset();
         graphSelection = null;
+        flowEditorOpen = false;
         activeStepView = text(element.dataset.view) || defaultStepView(activeGovernanceStep);
+        if (activeGovernanceStep === 'skeleton') diagramExpanded = false;
         if (currentEntry()) currentEntry().stepView = activeStepView;
         return render();
       }
@@ -11466,6 +11745,18 @@
         } else if (kind === 'relation') {
           openEntityEditSession('relation', ref);
         }
+        flowEditorOpen = true;
+        return render();
+      }
+      if (action === 'close-flow-editor') {
+        if (flowRelationDraft) {
+          flowRelationDraft = null;
+          editSessionManager.discard();
+        } else {
+          editSessionManager.reset();
+        }
+        flowEditorOpen = false;
+        refreshUnappliedIndicators();
         return render();
       }
       if (action === 'governance-jump') return navigateToGovernanceTarget(element);
@@ -11493,6 +11784,7 @@
         return render();
       }
       if (action === 'toggle-diagram-expanded') {
+        captureGraphViewport();
         diagramExpanded = !diagramExpanded;
         return render();
       }
@@ -11553,16 +11845,19 @@
       if (action === 'undo-graph') return applyGraphHistory('undo');
       if (action === 'redo-graph') return applyGraphHistory('redo');
       if (action === 'add-graph-node') {
+        flowEditorOpen = true;
         return runGraphCommand({ type: 'add_behavior', behavior: newGraphBehavior() }, { successLabel: '已新增业务行为节点' });
       }
       if (action === 'start-flow-relation') {
         openFlowRelationDraftSession();
+        flowEditorOpen = true;
         refreshUnappliedIndicators();
         return render();
       }
       if (action === 'cancel-flow-relation') {
         flowRelationDraft = null;
         editSessionManager.discard();
+        flowEditorOpen = false;
         refreshUnappliedIndicators();
         return render();
       }
@@ -13019,9 +13314,12 @@
         : null;
       if (graphProperty && graphPropertySession) {
         const key = graphProperty.dataset.graphProperty;
-        editSessionManager.updatePatch({ [key]: key === 'timing' || key === 'actor_department_data_ref'
-          ? nullable(graphProperty.value)
-          : graphProperty.value });
+        const value = graphProperty.type === 'checkbox'
+          ? graphProperty.checked
+          : key === 'timing' || key === 'actor_department_data_ref'
+            ? nullable(graphProperty.value)
+            : graphProperty.value;
+        editSessionManager.updatePatch({ [key]: value });
         clearStatus();
         refreshUnappliedIndicators();
         enableActiveApplyButton();
@@ -13210,6 +13508,14 @@
         render();
         return;
       }
+      if (target.matches('[data-graph-property="node_type"]') && graphSelection?.kind === 'behavior') {
+        render();
+        return;
+      }
+      if (target.matches('[data-graph-property="relation_type"]') && graphSelection?.kind === 'relation') {
+        render();
+        return;
+      }
       if (target.matches('[data-graph-actor-department]') && graphSelection?.kind === 'behavior') {
         editSessionManager.updatePatch({ current_actor_role: combineActorRole(target.value, '') });
         refreshUnappliedIndicators();
@@ -13219,6 +13525,15 @@
       if (target.matches('[data-graph-actor-position]') && graphSelection?.kind === 'behavior') {
         const department = workspace.querySelector('[data-graph-actor-department]')?.value || '';
         editSessionManager.updatePatch({ current_actor_role: combineActorRole(department, target.value) });
+        refreshUnappliedIndicators();
+        enableActiveApplyButton();
+        return;
+      }
+      if (target.matches('[data-graph-list-property]') && graphSelection?.kind === 'behavior') {
+        const key = target.dataset.graphListProperty;
+        const values = Array.from(workspace.querySelectorAll(`input[data-graph-list-property="${CSS.escape(key)}"]:checked`)).map(input => input.value);
+        editSessionManager.updatePatch({ [key]: values });
+        clearStatus();
         refreshUnappliedIndicators();
         enableActiveApplyButton();
         return;
@@ -13370,6 +13685,10 @@
     });
 
     workspace.addEventListener('click', event => {
+      if (event.target.id === 'graphEditModal') {
+        handleAction('close-flow-editor', event.target);
+        return;
+      }
       const rowSelector = event.target.closest('[data-grid-row-selector]');
       if (rowSelector) {
         selectNativeGridRow(rowSelector.dataset.gridTableId, rowSelector.dataset.gridRowId);
@@ -13640,9 +13959,15 @@
         requestTransition('取消流程关系编制', () => {
           flowRelationDraft = null;
           editSessionManager.discard();
+          flowEditorOpen = false;
           refreshUnappliedIndicators();
           render();
         });
+        return;
+      }
+      if (flowEditorOpen) {
+        const closeButton = document.querySelector('#graphEditModal [data-action="close-flow-editor"]');
+        if (closeButton) handleAction('close-flow-editor', closeButton);
         return;
       }
       if (sortableDragState) return finishSortableDrag(false);
@@ -13668,7 +13993,44 @@
       event.returnValue = '';
     });
 
+    function syncViewportRequirement() {
+      const blocked = window.innerWidth < 1920 || window.innerHeight < 900;
+      if (viewportBlockerMessage) {
+        viewportBlockerMessage.innerHTML = `当前内容可视区为 <strong>${window.innerWidth}×${window.innerHeight}</strong>。请调整到至少 <strong>1920×900</strong> 后继续；可以保留浏览器栏和系统任务栏，3001 不再支持 1536 和 1280 宽度。`;
+      }
+      if (viewportBlocker) viewportBlocker.style.display = blocked ? 'grid' : 'none';
+      viewportBlocker?.setAttribute('aria-hidden', blocked ? 'false' : 'true');
+      if (appPage) {
+        if (blocked) appPage.setAttribute('inert', '');
+        else appPage.removeAttribute('inert');
+      }
+    }
+
+    window.addEventListener('resize', syncViewportRequirement);
+    syncViewportRequirement();
+
     render();
+    fetch('/api/ui-config', { cache: 'no-store' })
+      .then(response => response.ok ? response.json() : null)
+      .then(config => {
+        if (!config || typeof config !== 'object') return;
+        uiConfig = {
+          compact_task_ui_enabled: config.compact_task_ui_enabled === true,
+          compact_task_ui_status: text(config.compact_task_ui_status) || 'candidate'
+        };
+        document.body.classList.toggle('compact-task-ui', compactTaskUiEnabled());
+        if (compactTaskUiEnabled() && activeGovernanceStep === 'action') {
+          activeGovernanceStep = 'skeleton';
+          activeStepView = 'diagram';
+          if (currentEntry()) {
+            currentEntry().governanceStep = activeGovernanceStep;
+            currentEntry().stepView = activeStepView;
+          }
+        }
+        if (workspaceViewTitle) workspaceViewTitle.textContent = compactTaskUiEnabled() ? '编制任务' : '治理步骤';
+        render();
+      })
+      .catch(() => {});
     loadEditorCatalogs();
     loadVersionHistory();
     ensureCompatibleValidationService('再次操作').catch(error => showStatus(error.message, 'error'));

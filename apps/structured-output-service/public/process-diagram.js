@@ -21,23 +21,24 @@
   const DYNAMIC_DEPARTMENT_LANE = '__dynamic_department__';
   const UNKNOWN_DEPARTMENT_LANE = '__unknown_department__';
   const CONTROL_LANE = '__process_control__';
-  const LANE_HEADER_WIDTH = 190;
-  const LANE_MIN_HEIGHT = 154;
-  const LANE_NODE_GAP = 36;
-  const LANE_VERTICAL_PADDING = 28;
-  const EDGE_LABEL_MAX_WIDTH = 220;
-  const MIN_COLUMN_GAP = 440;
-  const COLUMN_LABEL_CLEARANCE = 48;
+  const DIAGRAM_SCALE = 3;
+  const LANE_HEADER_WIDTH = 190 * DIAGRAM_SCALE;
+  const LANE_MIN_HEIGHT = 154 * DIAGRAM_SCALE;
+  const LANE_NODE_GAP = 24;
+  const LANE_VERTICAL_PADDING = 24;
+  const EDGE_LABEL_MAX_WIDTH = 220 * DIAGRAM_SCALE;
+  const MIN_COLUMN_GAP = 24;
+  const COLUMN_LABEL_CLEARANCE = 48 * DIAGRAM_SCALE;
   const ROUTE_TRACK_GAP = 24;
   const BUNDLE_TRUNK_LENGTH = 84;
   const FULL_VIEW_MIN_ZOOM = 0.6;
-  const POOL_TITLE_HEIGHT = 52;
-  const LANE_FONT_SIZE = 14;
-  const POOL_TITLE_FONT_SIZE = 16;
-  const NODE_FONT_SIZE = 15;
-  const EXTERNAL_NODE_FONT_SIZE = 14;
-  const BADGE_FONT_SIZE = 12;
-  const EDGE_FONT_SIZE = 13;
+  const POOL_TITLE_HEIGHT = 52 * DIAGRAM_SCALE;
+  const LANE_FONT_SIZE = 42;
+  const POOL_TITLE_FONT_SIZE = 48;
+  const NODE_FONT_SIZE = 45;
+  const EXTERNAL_NODE_FONT_SIZE = 42;
+  const BADGE_FONT_SIZE = 36;
+  const EDGE_FONT_SIZE = 39;
   const RELATION_CYCLE_REVIEW_MESSAGE = '该关系与其他非回路关系形成闭环；如果这是退回前序行为，请选择“流程内部回路”。';
 
   function text(value) {
@@ -110,29 +111,29 @@
     const internal = nodeKind === 'internal';
     const maxUnits = diamond ? 11 : external ? 19 : internal ? 16 : 15;
     const wrapped = wrapDisplayText(rawLabel, maxUnits);
-    const lineHeight = external ? 21 : 22;
-    const verticalPadding = diamond ? 0 : external ? 40 : 36;
-    const measuredTextWidth = Math.ceil(wrapped.maxLineUnits * (external ? 13.2 : 14.4));
+    const lineHeight = (external ? 21 : 22) * DIAGRAM_SCALE;
+    const verticalPadding = (diamond ? 0 : external ? 40 : 36) * DIAGRAM_SCALE;
+    const measuredTextWidth = Math.ceil(wrapped.maxLineUnits * (external ? 13.2 : 14.4) * DIAGRAM_SCALE);
     const measuredTextHeight = wrapped.lineCount * lineHeight;
     if (diamond) {
-      const textMaxWidth = Math.max(154, measuredTextWidth);
-      const labelHeight = measuredTextHeight + 16;
+      const textMaxWidth = Math.max(154 * DIAGRAM_SCALE, measuredTextWidth);
+      const labelHeight = measuredTextHeight + 16 * DIAGRAM_SCALE;
       return {
         ...wrapped,
-        nodeWidth: Math.ceil(Math.max(312, textMaxWidth / 0.46)),
-        nodeHeight: Math.ceil(Math.max(220, labelHeight / 0.42)),
+        nodeWidth: Math.ceil(Math.max(312 * DIAGRAM_SCALE, textMaxWidth / 0.46)),
+        nodeHeight: Math.ceil(Math.max(220 * DIAGRAM_SCALE, labelHeight / 0.42)),
         textMaxWidth,
         labelWidth: textMaxWidth,
         labelHeight,
         lineHeight,
-        verticalPadding: 16
+        verticalPadding: 16 * DIAGRAM_SCALE
       };
     }
-    const baseWidth = external ? 320 : internal ? 280 : 268;
-    const baseHeight = external ? 150 : internal ? 112 : 106;
+    const baseWidth = (external ? 320 : internal ? 280 : 268) * DIAGRAM_SCALE;
+    const baseHeight = (external ? 150 : internal ? 112 : 106) * DIAGRAM_SCALE;
     const textMaxWidth = Math.max(1, Math.min(
-      external ? 280 : internal ? 240 : 232,
-      Math.max(measuredTextWidth, external ? 180 : 150)
+      (external ? 280 : internal ? 240 : 232) * DIAGRAM_SCALE,
+      Math.max(measuredTextWidth, (external ? 180 : 150) * DIAGRAM_SCALE)
     ));
     return {
       ...wrapped,
@@ -148,19 +149,20 @@
 
   function edgeDisplayMetrics(rawLabel) {
     const wrapped = wrapDisplayText(rawLabel, 16);
-    const measuredWidth = Math.ceil(wrapped.maxLineUnits * 12.7 + 16);
+    const measuredWidth = Math.ceil((wrapped.maxLineUnits * 12.7 + 16) * DIAGRAM_SCALE);
     return {
       ...wrapped,
-      labelWidth: wrapped.lineCount ? Math.min(EDGE_LABEL_MAX_WIDTH, Math.max(84, measuredWidth)) : 0,
-      labelHeight: wrapped.lineCount ? wrapped.lineCount * 20 + 10 : 0
+      labelWidth: wrapped.lineCount ? Math.min(EDGE_LABEL_MAX_WIDTH, Math.max(84 * DIAGRAM_SCALE, measuredWidth)) : 0,
+      labelHeight: wrapped.lineCount ? (wrapped.lineCount * 20 + 10) * DIAGRAM_SCALE : 0
     };
   }
 
   function relationLabel(relation) {
     const condition = text(relation.condition);
     if (relation.relation_type === 'condition') return `条件：${condition || '条件待填写'}`;
-    if (relation.relation_type === 'loop') return `回路：${condition || '退出条件待填写'}`;
+    if (relation.relation_type === 'loop') return `退回：${condition || '退回条件待填写'}`;
     if (relation.relation_type === 'parallel') {
+      if (condition) return `并行：${condition}`;
       return relation.join_mode === 'all' ? '并行：全部分支完成后汇合' : '并行';
     }
     return '';
@@ -202,8 +204,8 @@
             focusRef: behaviorRef
           },
           position: {
-            x: record.node.position.x - record.node.data.nodeWidth / 2 + 74,
-            y: record.node.position.y + record.node.data.nodeHeight / 2 - 7
+            x: record.node.position.x - record.node.data.nodeWidth / 2 + 74 * DIAGRAM_SCALE,
+            y: record.node.position.y + record.node.data.nodeHeight / 2 - 7 * DIAGRAM_SCALE
           }
         });
       }
@@ -219,8 +221,8 @@
             focusRef: behaviorRef
           },
           position: {
-            x: record.node.position.x + record.node.data.nodeWidth / 2 - 54,
-            y: record.node.position.y + record.node.data.nodeHeight / 2 - 7
+            x: record.node.position.x + record.node.data.nodeWidth / 2 - 54 * DIAGRAM_SCALE,
+            y: record.node.position.y + record.node.data.nodeHeight / 2 - 7 * DIAGRAM_SCALE
           }
         });
       }
@@ -540,7 +542,7 @@
           routeSlot = state.count + 1;
           const sourceHalfHeight = (sourceRecord?.node.data.nodeHeight || 90) / 2;
           const targetHalfHeight = (targetRecord?.node.data.nodeHeight || 90) / 2;
-          const baseClearance = Math.max(sourceHalfHeight, targetHalfHeight) + 42;
+          const baseClearance = Math.max(sourceHalfHeight, targetHalfHeight) + 42 * DIAGRAM_SCALE;
           routeOffset = Math.max(
             baseClearance + labelDisplay.labelHeight / 2,
             state.nextOffset + labelDisplay.labelHeight / 2
@@ -783,8 +785,8 @@
         classes: 'relation-bundle-junction',
         data: {
           id: bundle.junctionId,
-          width: 9,
-          height: 9,
+          width: 9 * DIAGRAM_SCALE,
+          height: 9 * DIAGRAM_SCALE,
           bundleId: bundle.bundleId,
           targetRef: bundle.targetRef
         },
@@ -1109,10 +1111,10 @@
       const halfWidths = positionedNodes
         .filter(node => (node.data.layoutRank || 0) === rank)
         .map(node => (node.data.nodeWidth || 188) / 2);
-      return Math.max(94, ...halfWidths);
+      return Math.max(94 * DIAGRAM_SCALE, ...halfWidths);
     });
     const rankPositions = [];
-    rankPositions[0] = LANE_HEADER_WIDTH + 48 + rankHalfWidths[0];
+    rankPositions[0] = LANE_HEADER_WIDTH + 24 + rankHalfWidths[0];
     for (let rank = 1; rank <= maxRank; rank += 1) {
       const centerGap = Math.max(
         minColumnGap,
@@ -1125,11 +1127,11 @@
     }
     const lastRankX = rankPositions[maxRank] || rankPositions[0];
     const laneBodyWidth = Math.max(
-      860,
-      lastRankX + rankHalfWidths[maxRank] + 96 - LANE_HEADER_WIDTH
+      860 * DIAGRAM_SCALE,
+      lastRankX + rankHalfWidths[maxRank] + 24 - LANE_HEADER_WIDTH
     );
     const poolWidth = LANE_HEADER_WIDTH + laneBodyWidth;
-    let laneTop = POOL_TITLE_HEIGHT + 18;
+    let laneTop = POOL_TITLE_HEIGHT + 24;
     const laneMetadata = [];
 
     laneKeys.forEach((laneKey, laneIndex) => {
@@ -1151,7 +1153,7 @@
             + Math.max(0, rankNodes.length - 1) * laneNodeGap
         );
       });
-      const contentHeight = Math.max(90, ...stackHeightByRank.values());
+      const contentHeight = Math.max(90 * DIAGRAM_SCALE, ...stackHeightByRank.values());
       const routeReserve = laneRouteReserves.get(laneKey) || { upper: 0, lower: 0 };
       const upperReserve = routeReserve.upper || 0;
       const lowerReserve = routeReserve.lower || 0;
@@ -1207,7 +1209,7 @@
         data: {
           id: `lane-focus-anchor:${laneIndex}`,
           width: LANE_HEADER_WIDTH,
-          height: 36
+          height: 36 * DIAGRAM_SCALE
         },
         position: {
           x: LANE_HEADER_WIDTH / 2,
@@ -1290,8 +1292,8 @@
           focusRef: text(record.behavior.behavior_ref)
         },
         position: {
-          x: record.node.position.x + record.node.data.nodeWidth / 2 - 28,
-          y: record.node.position.y - record.node.data.nodeHeight / 2 + 8
+          x: record.node.position.x + record.node.data.nodeWidth / 2 - 28 * DIAGRAM_SCALE,
+          y: record.node.position.y - record.node.data.nodeHeight / 2 + 8 * DIAGRAM_SCALE
         }
       });
     });
@@ -1369,12 +1371,12 @@
           'font-weight': 700,
           'text-wrap': 'wrap',
           'text-overflow-wrap': 'anywhere',
-          'text-max-width': 150,
+          'text-max-width': 150 * DIAGRAM_SCALE,
           'text-valign': 'center',
           'text-halign': 'center',
           'background-color': '#fbf8f0',
           'border-color': '#9a927f',
-          'border-width': 1,
+          'border-width': 3,
           'overlay-opacity': 0,
           events: 'no',
           'z-index': 0,
@@ -1398,9 +1400,9 @@
         style: {
           'background-color': '#e7dfce',
           'border-color': '#6f695c',
-          'border-width': 1.5,
+          'border-width': 4.5,
           'font-size': POOL_TITLE_FONT_SIZE,
-          'text-max-width': 640,
+          'text-max-width': 640 * DIAGRAM_SCALE,
           'z-index': 1
         }
       },
@@ -1409,7 +1411,7 @@
         style: {
           'background-color': '#eee7d9',
           'border-color': '#827968',
-          'border-width': 1.5,
+          'border-width': 4.5,
           'z-index': 1
         }
       },
@@ -1428,7 +1430,7 @@
           shape: 'round-rectangle',
           'background-color': '#fffaf0',
           'border-color': '#8c3f33',
-          'border-width': 2,
+          'border-width': 6,
           color: '#2f302b',
           label: 'data(label)',
           'font-family': '"Microsoft YaHei", "PingFang SC", sans-serif',
@@ -1497,7 +1499,7 @@
         selector: '.dynamic-actor-node',
         style: {
           'border-style': 'dashed',
-          'border-width': 2,
+          'border-width': 6,
           'border-color': '#5f6f8a',
           'background-color': '#e9edf4'
         }
@@ -1505,11 +1507,11 @@
       {
         selector: '.countersign-badge',
         style: {
-          width: 72,
-          height: 30,
+          width: 72 * DIAGRAM_SCALE,
+          height: 30 * DIAGRAM_SCALE,
           shape: 'round-rectangle',
           'background-color': '#8c3f33',
-          'border-width': 1,
+          'border-width': 3,
           'border-color': '#fffaf0',
           color: '#ffffff',
           label: 'data(label)',
@@ -1526,16 +1528,16 @@
       {
         selector: '.aggregate-badge',
         style: {
-          width: 112,
-          height: 26,
+          width: 112 * DIAGRAM_SCALE,
+          height: 26 * DIAGRAM_SCALE,
           shape: 'round-rectangle',
           'background-color': '#edf2ea',
-          'border-width': 1,
+          'border-width': 3,
           'border-color': '#71826c',
           color: '#34413a',
           label: 'data(label)',
           'font-family': '"Microsoft YaHei", "PingFang SC", sans-serif',
-          'font-size': 11,
+          'font-size': BADGE_FONT_SIZE,
           'font-weight': 700,
           'text-valign': 'center',
           'text-halign': 'center',
@@ -1562,7 +1564,7 @@
       {
         selector: '.form-aggregate-badge',
         style: {
-          width: 78,
+          width: 78 * DIAGRAM_SCALE,
           'background-color': '#e8eef4',
           'border-color': '#6f8193',
           color: '#314455'
@@ -1571,18 +1573,18 @@
       {
         selector: 'edge',
         style: {
-          width: 2,
+          width: 6,
           'curve-style': 'taxi',
           'taxi-direction': 'rightward',
-          'taxi-turn': 56,
-          'taxi-turn-min-distance': 18,
+          'taxi-turn': 56 * DIAGRAM_SCALE,
+          'taxi-turn-min-distance': 18 * DIAGRAM_SCALE,
           'taxi-radius': 0,
           'line-style': 'solid',
           'line-color': '#5b625d',
           'target-arrow-color': '#5b625d',
           'target-arrow-shape': 'triangle',
           'target-arrow-fill': 'filled',
-          'arrow-scale': 0.9,
+          'arrow-scale': 2.7,
           label: 'data(label)',
           color: '#454843',
           'font-family': '"Microsoft YaHei", "PingFang SC", sans-serif',
@@ -1593,7 +1595,7 @@
           'text-max-width': 'data(labelWidth)',
           'text-background-color': '#fffdf8',
           'text-background-opacity': 0.96,
-          'text-background-padding': 4,
+          'text-background-padding': 12,
           'text-rotation': 'none',
           'overlay-opacity': 0,
           'z-index': 10,
@@ -1611,7 +1613,7 @@
       {
         selector: '.cross-lane-relation',
         style: {
-          width: 3,
+          width: 9,
           'line-color': '#526973',
           'target-arrow-color': '#526973',
           color: '#3f5660'
@@ -1684,7 +1686,7 @@
       {
         selector: '.relation-parallel',
         style: {
-          width: 3,
+          width: 9,
           'line-color': '#8a6a30',
           'target-arrow-color': '#8a6a30',
           color: '#6f5223'
@@ -1708,7 +1710,7 @@
       {
         selector: '.relation-bundle-trunk',
         style: {
-          width: 3,
+          width: 9,
           'curve-style': 'straight',
           'target-arrow-shape': 'triangle',
           'target-arrow-fill': 'filled',
@@ -1754,10 +1756,31 @@
       {
         selector: '.internal-call-edge',
         style: {
-          width: 3,
+          width: 9,
           'line-color': '#52665a',
           'target-arrow-color': '#52665a',
           color: '#405448'
+        }
+      },
+      {
+        selector: '.behavior-node:selected, .internal-call-node:selected, .external-node:selected',
+        style: {
+          'border-color': '#365f86',
+          'border-width': 9,
+          'overlay-color': '#5d7fa0',
+          'overlay-opacity': 0.16,
+          'overlay-padding': 18
+        }
+      },
+      {
+        selector: 'edge:selected',
+        style: {
+          width: 12,
+          'line-color': '#365f86',
+          'target-arrow-color': '#365f86',
+          'overlay-color': '#5d7fa0',
+          'overlay-opacity': 0.14,
+          'overlay-padding': 18
         }
       },
       {
@@ -1773,30 +1796,12 @@
 
   function showInitialViewport(cy, model) {
     cy.resize();
-    cy.fit(undefined, 34);
+    cy.fit(undefined, 24);
     const fullFitZoom = cy.zoom();
-    if (fullFitZoom >= (model.viewportSuggestion?.fullViewMinZoom || FULL_VIEW_MIN_ZOOM)) {
-      return {
-        mode: 'full',
-        fullFitZoom
-      };
-    }
-    const laneHeaders = cy.nodes('.lane-focus-anchor-node');
-    const firstColumns = cy.nodes('.behavior-node, .internal-call-node').filter(node =>
-      Number(node.data('layoutRank')) <= (model.viewportSuggestion?.initialRankMax ?? 1)
-    );
-    const initialElements = laneHeaders.union(firstColumns);
-    if (initialElements.length) {
-      cy.fit(initialElements, 28);
-      const renderedBox = initialElements.renderedBoundingBox();
-      cy.panBy({ x: 28 - renderedBox.x1, y: 0 });
-      return {
-        mode: 'start',
-        fullFitZoom
-      };
-    }
+    cy.zoom(1);
+    cy.pan({ x: 24, y: 24 });
     return {
-      mode: 'full',
+      mode: 'clear',
       fullFitZoom
     };
   }
@@ -1835,6 +1840,17 @@
       if (focusKind && typeof options.onFocus === 'function') options.onFocus(focusKind, focusRef);
     });
     cy.ready(() => {
+      const selectedFocus = options.selectedFocus;
+      if (selectedFocus?.kind && selectedFocus?.ref) {
+        const selector = selectedFocus.kind === 'relation'
+          ? 'edge'
+          : '.behavior-node, .internal-call-node, .external-node';
+        const match = cy.elements(selector).filter(element =>
+          element.data('focusKind') === selectedFocus.kind
+          && element.data('focusRef') === selectedFocus.ref
+        );
+        if (match.length) match[0].select();
+      }
       let viewport;
       if (options.viewport && Number.isFinite(options.viewport.zoom) && options.viewport.pan) {
         cy.zoom(options.viewport.zoom);
@@ -1852,7 +1868,7 @@
       model,
       fit() {
         cy.resize();
-        cy.fit(undefined, 34);
+        cy.fit(undefined, 24);
         const viewport = {
           mode: 'full',
           fullFitZoom: cy.zoom()

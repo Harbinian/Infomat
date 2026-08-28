@@ -1,0 +1,38 @@
+const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
+
+const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+assert.match(html, /\[hidden\] \{ display: none !important; \}/);
+assert.match(html, /class="panel role-workbench wb-task-first"/);
+assert.match(html, /role-workbench\.on\.wb-task-first/);
+assert.match(html, /height: calc\(100vh - 105px\)/);
+assert.match(html, /我现在该做什么/);
+assert.match(html, /职责全景放在“全量职责”中查看/);
+assert.match(html, /class="legacy-v3-history" id="pgLegacyV3History"/);
+assert.match(html, /历史V3编辑器（仅处理旧草稿）/);
+assert.match(html, /data-src="\/process-governance-editor\/index\.html"/);
+assert.match(html, /pgLegacyV3History.*addEventListener\('toggle'/s);
+assert.match(html, /id="pgDataGovernanceSection" data-pg-view="dataGovernance"/);
+assert.match(html, /业务部门只回答定向事实问题/);
+assert.match(html, /class="pdg-modal-mask" id="pdgModalMask"/);
+assert.match(html, /\.pdg-modal-mask \{[\s\S]*position: fixed; inset: 0/);
+assert.match(html, /\.pdg-modal \{[\s\S]*width: 100%; height: 100%/);
+assert.match(html, /html\.pdg-modal-open,[\s\S]*body\.pdg-modal-open \{ overflow: hidden !important; \}/);
+assert.match(html, /document\.documentElement\.classList\.add\('pdg-modal-open'\)/);
+assert.match(html, /document\.documentElement\.classList\.remove\('pdg-modal-open'\)/);
+assert.match(html, /\.confirm-overlay \{[^}]*z-index: 10020/);
+assert.match(html, /generate-candidates/);
+assert.match(html, /answer_targeted_business_fact/);
+assert.match(html, /系统未自动确认/);
+assert.match(html, /state\.processDataGovernance\.dirty/);
+assert.match(html, /尚未保存当前输入/);
+assert.match(html, /beforeunload[\s\S]*processDataGovernance\.dirty/);
+assert.match(html, /cacheFilters\.pdgPackageId = route\.pdgPackageId \|\| ''/);
+assert.match(html, /cacheFilters\.pdgFactRequestId = route\.pdgFactRequestId \|\| ''/);
+assert.match(html, /const PROCESS_DATA_GOVERNANCE_SUBTAB = \{ key: 'dataGovernance', label: '数据生命周期治理' \}/);
+assert.match(html, /state\.processDataGovernance\.status && state\.processDataGovernance\.status\.enabled\s*\? \[PROCESS_DATA_GOVERNANCE_SUBTAB\]\.concat\(PROCESS_GOVERNANCE_SUBTABS\)\s*: PROCESS_GOVERNANCE_SUBTABS/);
+assert.match(html, /if \(mode === 'all'\) \{\s*renderWorkbenchRoles\(data\);/);
+assert.match(html, /当前未启用、未迁移业务数据，也没有形成业务验收结论/);
+
+console.log('Process data governance frontend contract tests passed');

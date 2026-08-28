@@ -31,6 +31,7 @@
       --shadow-sm: 0 4px 12px rgba(58, 46, 31, 0.06);
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    [hidden] { display: none !important; }
     html, body { width: 100%; min-height: 100%; }
     body {
       font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -589,8 +590,8 @@
     .activity-count { font-weight: 700; color: var(--accent); white-space: nowrap; }
     .role-workbench {
       max-width: none; margin: 0; padding: 0;
-      min-height: calc(100vh - 103px);
-      height: calc(100vh - 103px);
+      min-height: calc(100vh - 105px);
+      height: calc(100vh - 105px);
       overflow: hidden;
     }
     .role-workbench.on {
@@ -601,6 +602,30 @@
         "wbtop wbtop wbtop"
         "wbleft wbmain wbright";
     }
+    .role-workbench.on.wb-task-first {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: 68px minmax(0, 1fr);
+      grid-template-areas:
+        "wbtop"
+        "wbleft";
+    }
+    .role-workbench.wb-task-first .role-workbench-left {
+      border-right: 0;
+      padding: 28px clamp(28px, 5vw, 96px);
+      background: linear-gradient(180deg, rgba(251,246,233,0.88), rgba(247,241,224,0.64));
+    }
+    .role-workbench.wb-task-first .role-workbench-left > .wb-group:not(:first-child),
+    .role-workbench.wb-task-first .role-workbench-main,
+    .role-workbench.wb-task-first .role-workbench-right { display: none; }
+    .role-workbench.wb-task-first .role-workbench-left > .wb-group:first-child { max-width: 1500px; margin: 0 auto; }
+    .role-workbench.wb-task-first .role-workbench-left > .wb-group:first-child h3 {
+      color: var(--text-main); font-size: 18px; letter-spacing: 0; text-transform: none; margin-bottom: 16px;
+    }
+    .role-workbench.wb-task-first .wb-next-list { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+    .role-workbench.wb-task-first .wb-action { min-height: 170px; padding: 20px; display: flex; flex-direction: column; }
+    .role-workbench.wb-task-first .wb-action-title { font-size: 18px; line-height: 1.5; }
+    .role-workbench.wb-task-first .wb-action-meta { font-size: 14px; }
+    .role-workbench.wb-task-first .wb-link-btn { margin-top: auto; min-height: 38px; align-self: flex-start; }
     .role-workbench-top {
       grid-area: wbtop;
       display: flex; align-items: center; justify-content: space-between; gap: 18px;
@@ -1193,6 +1218,48 @@
     .modal-body { padding: 24px; }
     .close { font-size: 20px; color: var(--text-muted); line-height: 1; }
     .close:hover { color: var(--text-main); }
+    .legacy-v3-history {
+      margin: 0; border: 1px solid var(--border); border-radius: 8px; background: rgba(251,246,233,0.68);
+    }
+    .legacy-v3-history > summary { cursor: pointer; padding: 14px 16px; font-weight: 700; color: var(--text-main); }
+    .legacy-v3-history > p { margin: 0; padding: 0 16px 12px; color: var(--text-muted); font-size: 12px; }
+    .legacy-v3-history .process-governance-editor-frame { border-top: 1px solid var(--border); }
+    html.pdg-modal-open,
+    body.pdg-modal-open { overflow: hidden !important; }
+    .pdg-modal-mask {
+      position: fixed; inset: 0; z-index: 120; display: none; padding: 12px;
+      background: rgba(39, 31, 23, 0.52); backdrop-filter: blur(5px);
+    }
+    .pdg-modal-mask.on { display: block; }
+    .pdg-modal {
+      width: 100%; height: 100%; overflow: hidden; display: grid; grid-template-rows: 64px minmax(0, 1fr);
+      border: 1px solid rgba(255,255,255,0.42); border-radius: 12px; background: var(--surface); box-shadow: 0 28px 80px rgba(35,27,18,0.34);
+    }
+    .pdg-modal-head { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 0 22px; border-bottom: 1px solid var(--border); background: var(--surface-2); }
+    .pdg-modal-head h2 { margin: 0; font-size: 18px; }
+    .pdg-modal-head p { margin: 3px 0 0; color: var(--text-muted); font-size: 12px; }
+    .pdg-modal-body { min-height: 0; display: grid; grid-template-columns: 390px minmax(0, 1fr); }
+    .pdg-detail-list { min-height: 0; overflow: auto; padding: 16px; border-right: 1px solid var(--border); background: rgba(247,241,224,0.54); }
+    .pdg-detail-content { min-height: 0; overflow: auto; padding: 20px 24px 36px; }
+    .pdg-list { display: grid; gap: 8px; }
+    .pdg-list-item { width: 100%; text-align: left; padding: 12px; border: 1px solid var(--border); border-radius: 7px; background: #fffaf1; }
+    .pdg-list-item.on { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(178,86,56,0.12); }
+    .pdg-list-item strong, .pdg-list-item span { display: block; }
+    .pdg-list-item span { margin-top: 4px; color: var(--text-muted); font-size: 12px; line-height: 1.45; }
+    .pdg-summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+    .pdg-summary-card { padding: 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); }
+    .pdg-summary-card b, .pdg-summary-card span { display: block; }
+    .pdg-summary-card span { margin-top: 5px; color: var(--text-muted); font-size: 12px; }
+    .pdg-responsibility { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+    .pdg-responsibility > div { padding: 14px; border: 1px solid var(--border); border-radius: 8px; background: rgba(255,255,255,0.66); }
+    .pdg-responsibility ul { margin: 8px 0 0 18px; padding: 0; color: var(--text-muted); font-size: 12px; line-height: 1.65; }
+    .pdg-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+    .pdg-form .wide { grid-column: 1 / -1; }
+    .pdg-form label { color: var(--text-main); font-size: 12px; font-weight: 700; }
+    .pdg-form input, .pdg-form select, .pdg-form textarea { width: 100%; margin-top: 5px; }
+    .pdg-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+    .pdg-source { padding: 14px; border-left: 3px solid var(--mist); background: rgba(232,238,239,0.56); color: var(--text-muted); line-height: 1.65; }
+    .pdg-history { margin-top: 18px; border-top: 1px solid var(--border); padding-top: 14px; }
 
     @media (max-width: 800px) {
       .action-metrics { grid-template-columns: 1fr; }
@@ -1212,6 +1279,9 @@
       .activity-summary-grid { grid-template-columns: 1fr; }
       .activity-grid { grid-template-columns: repeat(13, 11px); grid-auto-rows: 11px; gap: 3px; }
       .activity-day { width: 11px; height: 11px; }
+      .role-workbench.wb-task-first .wb-next-list, .pdg-summary-grid, .pdg-responsibility, .pdg-form { grid-template-columns: 1fr; }
+      .pdg-modal-body { grid-template-columns: 1fr; }
+      .pdg-detail-list { max-height: 36vh; border-right: 0; border-bottom: 1px solid var(--border); }
     }
 
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -1235,7 +1305,7 @@
     .toast.error { border-left-color: var(--error); }
     .toast.warning { border-left-color: var(--warning); }
 
-    .confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.3); backdrop-filter: blur(2px); z-index: 60; display: none; align-items: center; justify-content: center; }
+    .confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.3); backdrop-filter: blur(2px); z-index: 10020; display: none; align-items: center; justify-content: center; }
     .confirm-overlay.on { display: flex; }
     .confirm-box { width: min(400px, calc(100% - 32px)); background: #fff; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1); border: 1px solid var(--border); animation: slideUp 0.2s ease; }
     .confirm-head { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; border-bottom: 1px solid var(--border); font-weight: 600; font-size: 15px; }
@@ -1318,11 +1388,11 @@
       </nav>
 
       <!-- Role Workbench -->
-      <section class="panel role-workbench" id="roleWorkbench">
+      <section class="panel role-workbench wb-task-first" id="roleWorkbench">
         <div class="role-workbench-top">
           <div class="role-workbench-title">
-            <h1>MDM 角色工作台</h1>
-            <p id="roleWorkbenchSubtitle">按角色看到下一步动作，并理解它关联到哪些业务能力、流程和 A1。</p>
+            <h1>我的工作台</h1>
+            <p id="roleWorkbenchSubtitle">先完成今天最需要处理的事项；职责全景放在“全量职责”中查看。</p>
           </div>
           <div class="role-workbench-meta">
             <span class="wb-pill"><span class="wb-dot"></span><span id="roleWorkbenchIdentity">当前身份：—</span></span>
@@ -1747,13 +1817,18 @@
           </div>
         </div>
         <div class="pg-section pg-document-structure-section" id="pgNewProcessWorkspace" data-pg-view="editor">
-          <iframe
-            class="process-governance-editor-frame"
-            id="pgProcessGovernanceEditorFrame"
-            src="about:blank"
-            data-src="/process-governance-editor/index.html"
-            title="单流程治理编制工作台"
-          ></iframe>
+          <div class="notice" style="margin-bottom:12px">新流程先在3001完成业务事实编制，再通过V7预览核对进入正式流程版本。下面的V3编辑器只用于查看和维护历史草稿。</div>
+          <details class="legacy-v3-history" id="pgLegacyV3History">
+            <summary>历史V3编辑器（仅处理旧草稿）</summary>
+            <p>打开后才加载旧编辑器。它不承担新流程的数据对象认定、关键字段判定或生命周期治理。</p>
+            <iframe
+              class="process-governance-editor-frame"
+              id="pgProcessGovernanceEditorFrame"
+              src="about:blank"
+              data-src="/process-governance-editor/index.html"
+              title="历史V3流程治理编辑器"
+            ></iframe>
+          </details>
           <div class="pg-wizard" id="pgDesignWizard" hidden aria-hidden="true">
             <div class="pg-section-hd"><h2>单流程编制</h2><span class="pg-status" id="pgDesignSummaryMeta"></span></div>
             <div class="pg-wizard-steps process-design-step-progress" id="pgDesignStepProgress" aria-label="单流程编制节点进度">
@@ -2012,6 +2087,38 @@
           </div>
           <div class="process-design-detail" id="pgV7PreviewDetail" style="margin-top:20px;">
             <div class="empty">选择一条案例后查看V7内容、部门核对进度和操作记录。</div>
+          </div>
+        </div>
+        <div class="pg-section" id="pgDataGovernanceSection" data-pg-view="dataGovernance">
+          <div class="pg-section-hd">
+            <div>
+              <h2>数据生命周期治理工作包</h2>
+              <p class="muted">固定绑定已发布的process_version_id。业务部门只回答定向事实问题，MDM工作组完成数据对象、关键字段和生命周期治理。</p>
+            </div>
+            <div class="process-design-actions">
+              <button type="button" class="btn primary" id="pdgReconcileBtn">建立试点工作包</button>
+              <button type="button" class="btn secondary" id="pdgRefreshBtn">刷新</button>
+            </div>
+          </div>
+          <div class="notice" id="pdgFeatureNotice" style="margin-bottom:12px">正在读取功能状态...</div>
+          <div class="pdg-responsibility" id="pdgResponsibilitySummary"></div>
+          <div class="pdg-summary-grid">
+            <div class="pdg-summary-card"><b id="pdgPackageCount">0</b><span>可查看工作包</span></div>
+            <div class="pdg-summary-card"><b id="pdgFactCount">0</b><span>发给我的事实问题</span></div>
+            <div class="pdg-summary-card"><b id="pdgActionCount">0</b><span>当前待处理</span></div>
+            <div class="pdg-summary-card"><b id="pdgTrialVersion">—</b><span>唯一试点流程版本</span></div>
+          </div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead><tr><th>流程</th><th>固定版本</th><th>风险</th><th>状态</th><th>修订</th><th>下一步</th><th>操作</th></tr></thead>
+              <tbody id="pdgPackageRows"><tr><td colspan="7" class="empty">当前没有可查看的工作包</td></tr></tbody>
+            </table>
+          </div>
+          <div class="table-container" style="margin-top:18px">
+            <table class="data-table">
+              <thead><tr><th>流程</th><th>具体问题</th><th>为什么需要</th><th>状态</th><th>操作</th></tr></thead>
+              <tbody id="pdgFactRows"><tr><td colspan="5" class="empty">当前没有发给本部门的事实问题</td></tr></tbody>
+            </table>
           </div>
         </div>
         <div class="pg-section pg-overview-section" data-pg-view="overview">
@@ -2362,6 +2469,27 @@
     </div>
   </div>
 
+  <div class="pdg-modal-mask" id="pdgModalMask" aria-hidden="true">
+    <section class="pdg-modal" role="dialog" aria-modal="true" aria-labelledby="pdgModalTitle">
+      <header class="pdg-modal-head">
+        <div><h2 id="pdgModalTitle">数据生命周期治理工作包</h2><p id="pdgModalSubtitle">固定流程版本只读</p></div>
+        <button type="button" class="btn secondary" id="pdgModalClose">返回工作包列表</button>
+      </header>
+      <div class="pdg-modal-body">
+        <aside class="pdg-detail-list">
+          <div class="toolbar" style="margin-bottom:12px"><strong>待治理明细</strong><button type="button" class="btn secondary" id="pdgGenerateCandidatesBtn">生成待定候选</button></div>
+          <div class="pdg-list" id="pdgDetailList"><div class="wb-empty">尚未生成治理明细</div></div>
+        </aside>
+        <main class="pdg-detail-content">
+          <div id="pdgModalOverview"></div>
+          <div id="pdgSelectedDetail"><div class="wb-empty">从左侧选择一条待治理明细。</div></div>
+          <div class="pdg-history" id="pdgFactHistory"></div>
+          <div class="pdg-history" id="pdgReviewHistory"></div>
+        </main>
+      </div>
+    </section>
+  </div>
+
   <!-- Toast Container -->
   <div class="toast-container" id="toastContainer"></div>
 
@@ -2417,7 +2545,7 @@
 
   <script>
     // ===== State & Utilities =====
-    const state = { user:null, departments:[], capabilities:[], processes:[], termProcesses:[], termTypes:[], mappings:[], dataMapContexts:[], dataMapFields:[], todos:[], conflicts:[], terms:[], currentRoute:null, currentView:'roleWorkbench', activeMapping:null, activeConflict:null, pollTimer:null, isEditing:false, activeReview:null, activeCapReview:null, activeProcReview:null, pgSelectedDept:'', pgEvidenceFocus:null, pgActiveGuidance:null, pgActiveGovernanceObject:null, pgSourceCoverageData:null, pgTaskSummary:null, pgIssueActionResult:null, pgAssignablePersons:null, pgViewCache:{}, pgViewRequests:{}, pgWorkspace:'editor', pgSelectedHandoffId:null, pgSelectedHandoffConflictId:null, pgSelectedV7PreviewCaseId:null, processDesign:{ summary:null, draft:null, activeStep:'draft', taxonomy:null, taxonomyLoaded:false, taxonomyScopeKey:null, taxonomyError:null, documentLookup:null, fieldTypes:[], rosterRolesByDepartment:{}, canonicalRevision:null, canonicalHash:null, canonicalDirty:false, voidedHandoffReasons:{}, pendingVoidedHandoffRef:null, voidReasonRetryMode:null }, processGovernanceRenderRequestId:0, pageWorkflow:null, pageWorkflowRequestId:0, roleWorkbench:{ mode:'todo', data:null, selectedNode:null }, activity:{ roleWorkbench:null, dashboard:null, dashboardUsers:[] } };
+    const state = { user:null, departments:[], capabilities:[], processes:[], termProcesses:[], termTypes:[], mappings:[], dataMapContexts:[], dataMapFields:[], todos:[], conflicts:[], terms:[], currentRoute:null, currentView:'roleWorkbench', activeMapping:null, activeConflict:null, pollTimer:null, isEditing:false, activeReview:null, activeCapReview:null, activeProcReview:null, pgSelectedDept:'', pgEvidenceFocus:null, pgActiveGuidance:null, pgActiveGovernanceObject:null, pgSourceCoverageData:null, pgTaskSummary:null, pgIssueActionResult:null, pgAssignablePersons:null, pgViewCache:{}, pgViewRequests:{}, pgWorkspace:'editor', pgSelectedHandoffId:null, pgSelectedHandoffConflictId:null, pgSelectedV7PreviewCaseId:null, processDesign:{ summary:null, draft:null, activeStep:'draft', taxonomy:null, taxonomyLoaded:false, taxonomyScopeKey:null, taxonomyError:null, documentLookup:null, fieldTypes:[], rosterRolesByDepartment:{}, canonicalRevision:null, canonicalHash:null, canonicalDirty:false, voidedHandoffReasons:{}, pendingVoidedHandoffRef:null, voidReasonRetryMode:null }, processDataGovernance:{ status:null, workbench:null, detail:null, selectedDetailId:null, selectedFactRequestId:null }, processGovernanceRenderRequestId:0, pageWorkflow:null, pageWorkflowRequestId:0, roleWorkbench:{ mode:'todo', data:null, selectedNode:null }, activity:{ roleWorkbench:null, dashboard:null, dashboardUsers:[] } };
     const SOURCE_COVERAGE_VISIBLE_LIMIT = 20;
     const PROCESS_GOVERNANCE_QUALITY_VISIBLE_LIMIT = 80;
     const PROCESS_DESIGN_FIELD_TYPES = ['文本', '长文本', '数值', '金额', '数量', '日期', '日期时间', '是/否', '枚举', '人员', '部门', '附件'];
@@ -2428,19 +2556,22 @@
       { key: 'conflicts', label: '承接冲突待办' },
       { key: 'v7Preview', label: 'V7预览核对' }
     ];
+    const PROCESS_DATA_GOVERNANCE_SUBTAB = { key: 'dataGovernance', label: '数据生命周期治理' };
     const PROCESS_GOVERNANCE_VIEW_ALIASES = {
       editor: 'editor',
       newProcess: 'editor',
       documentStructure: 'editor',
       handoffs: 'handoffs',
       conflicts: 'conflicts',
-      v7Preview: 'v7Preview'
+      v7Preview: 'v7Preview',
+      dataGovernance: 'dataGovernance'
     };
     const PROCESS_GOVERNANCE_VIEW_PRODUCTS = {
       editor: { label: '流程编制', load: loadUnifiedProcessEditorView, render: renderUnifiedProcessEditorView },
       handoffs: { label: '跨部门承接待办', load: loadHandoffQueueView, render: renderHandoffQueueView },
       conflicts: { label: '承接冲突待办', load: loadHandoffConflictQueueView, render: renderHandoffConflictQueueView },
-      v7Preview: { label: 'V7预览核对', load: loadV7PreviewReviewView, render: renderV7PreviewReviewView }
+      v7Preview: { label: 'V7预览核对', load: loadV7PreviewReviewView, render: renderV7PreviewReviewView },
+      dataGovernance: { label: '数据生命周期治理', load: loadProcessDataGovernanceView, render: renderProcessDataGovernanceView }
     };
     const PROCESS_GOVERNANCE_GUIDANCE_VIEWS = new Set();
     const PROCESS_DESIGN_WIZARD_STEPS = [
@@ -2474,7 +2605,10 @@
     function renderProcessGovernanceSubtabs(activeView) {
       var container = document.getElementById('pgSubtabs');
       if (!container) return;
-      container.innerHTML = PROCESS_GOVERNANCE_SUBTABS.map(function(tab) {
+      var visibleTabs = state.processDataGovernance.status && state.processDataGovernance.status.enabled
+        ? [PROCESS_DATA_GOVERNANCE_SUBTAB].concat(PROCESS_GOVERNANCE_SUBTABS)
+        : PROCESS_GOVERNANCE_SUBTABS;
+      container.innerHTML = visibleTabs.map(function(tab) {
         var isActive = tab.key === activeView;
         return '<button type="button" class="pg-subtab' + (isActive ? ' on' : '') + '" data-pg-subtab="' + tab.key + '" aria-selected="' + (isActive ? 'true' : 'false') + '">' + tab.label + '</button>';
       }).join('');
@@ -2497,7 +2631,8 @@
         section.classList.toggle('pg-hidden', section.dataset.pgView !== activeView);
       });
       var editorFrame = $('pgProcessGovernanceEditorFrame');
-      if (activeView === 'editor' && editorFrame && editorFrame.dataset.src && editorFrame.getAttribute('src') === 'about:blank') {
+      var legacyHistory = $('pgLegacyV3History');
+      if (activeView === 'editor' && legacyHistory && legacyHistory.open && editorFrame && editorFrame.dataset.src && editorFrame.getAttribute('src') === 'about:blank') {
         editorFrame.setAttribute('src', editorFrame.dataset.src);
       }
     }
@@ -3417,6 +3552,422 @@
           '；来源修订=' + Number(result.source_revision_no || 0) + '。';
       }
       return result;
+    }
+
+    function pdgPackageStatusLabel(status) {
+      return ({
+        mdm_preparing:'MDM准备中',
+        mdm_governing:'MDM治理中',
+        waiting_business_fact:'等待业务事实',
+        mdm_review:'MDM待审核',
+        completed:'已完成',
+        source_withdrawn:'来源版本已撤销'
+      })[status] || status || '—';
+    }
+
+    function pdgDetailTypeLabel(type) {
+      return ({
+        data_object_identity:'数据对象身份',
+        critical_field:'关键字段',
+        data_flow:'数据流关系',
+        lifecycle_rule:'生命周期规则'
+      })[type] || type || '治理明细';
+    }
+
+    function pdgDetailStatusLabel(status) {
+      return ({
+        pending:'待MDM判断',
+        needs_business_fact:'等待业务事实',
+        confirmed:'已确认',
+        not_applicable:'不适用',
+        terminated:'已终止'
+      })[status] || status || '—';
+    }
+
+    function pdgLifecycleActionLabel(action) {
+      return ({
+        activate:'生效', deactivate:'停用', reactivate:'重新启用', void:'作废', expire:'失效',
+        archive:'归档', restore_active_custody:'恢复在用保管', destroy:'销毁', irreversible_anonymize:'不可逆匿名化'
+      })[action] || action || '待明确';
+    }
+
+    function pdgHasAction(payload, action) {
+      return Array.isArray(payload && payload.allowed_actions) && payload.allowed_actions.includes(action);
+    }
+
+    function pdgResponsibilityHtml(responsibilities) {
+      responsibilities = responsibilities || {};
+      var business = responsibilities.business_department || {};
+      var mdm = responsibilities.mdm_workgroup || {};
+      return '<div><strong>业务部门只补事实</strong><ul>' +
+        (business.can || []).map(function(item) { return '<li>' + safeText(item) + '</li>'; }).join('') +
+        '</ul></div><div><strong>MDM工作组负责治理</strong><ul>' +
+        (mdm.owns || []).map(function(item) { return '<li>' + safeText(item) + '</li>'; }).join('') +
+        '</ul></div>';
+    }
+
+    async function ensureProcessDataGovernanceStatus(options) {
+      options = options || {};
+      if (state.processDataGovernance.status && !options.force) return state.processDataGovernance.status;
+      var status = await api('/api/process-data-governance/status');
+      state.processDataGovernance.status = status;
+      return status;
+    }
+
+    async function loadProcessDataGovernanceView(_filters, route) {
+      var status = await ensureProcessDataGovernanceStatus();
+      if (!status.enabled) return { feature: status, responsibilities: status.responsibilities || {}, disabled: true };
+      var workbench = await api('/api/process-data-governance/workbench?mode=todo');
+      var payload = { ...workbench, feature: status };
+      if (route && route.pdgPackageId) {
+        payload.package_detail = await api('/api/process-data-governance/work-packages/' + encodeURIComponent(route.pdgPackageId));
+      } else if (route && route.pdgFactRequestId) {
+        payload.fact_detail = await api('/api/process-data-governance/fact-requests/' + encodeURIComponent(route.pdgFactRequestId));
+      }
+      return payload;
+    }
+
+    function renderProcessDataGovernanceView(payload, route) {
+      payload = payload || {};
+      var feature = payload.feature || state.processDataGovernance.status || {};
+      state.processDataGovernance.status = feature;
+      state.processDataGovernance.workbench = payload;
+      if ($('pdgFeatureNotice')) {
+        $('pdgFeatureNotice').textContent = feature.enabled
+          ? '候选功能已启用，仅允许处理唯一试点process_version_id=' + safeText(feature.configured_process_version_id || '未配置') + '。系统不使用AI，也不会自动确认任何治理结论。'
+          : '数据生命周期治理工作包默认关闭。当前未启用、未迁移业务数据，也没有形成业务验收结论。';
+      }
+      if ($('pdgResponsibilitySummary')) $('pdgResponsibilitySummary').innerHTML = pdgResponsibilityHtml(payload.responsibilities || feature.responsibilities);
+      if ($('pdgPackageCount')) $('pdgPackageCount').textContent = Number(payload.summary && payload.summary.work_packages || 0);
+      if ($('pdgFactCount')) $('pdgFactCount').textContent = Number(payload.summary && payload.summary.my_open_fact_requests || 0);
+      if ($('pdgActionCount')) $('pdgActionCount').textContent = Number(payload.summary && payload.summary.my_action_items || 0);
+      if ($('pdgTrialVersion')) $('pdgTrialVersion').textContent = feature.configured_process_version_id || '—';
+      if ($('pdgReconcileBtn')) $('pdgReconcileBtn').hidden = !feature.enabled || !pdgHasAction(payload, 'reconcile');
+
+      var packages = payload.work_packages || [];
+      if ($('pdgPackageRows')) {
+        $('pdgPackageRows').innerHTML = packages.map(function(item) {
+          var facts = item.fact_request_counts || {};
+          var next = Number(facts.open || 0) > 0 ? '等待业务部门答复' : (item.status === 'completed' ? '查看审核记录' : '继续MDM治理');
+          return '<tr><td><strong>' + safeText(item.process_name || item.document_no || item.package_ref) + '</strong><br><span class="muted">' + safeText(item.document_no || '') + '</span></td>' +
+            '<td>process_version_id=' + Number(item.process_version_id) + '<br><span class="muted">' + safeText(item.edition || '') + '</span></td>' +
+            '<td>' + safeText(item.risk_level === 'high' ? '高风险' : '普通') + '</td>' +
+            '<td>' + safeText(pdgPackageStatusLabel(item.status)) + '</td><td>' + Number(item.revision_no) + '</td>' +
+            '<td>' + safeText(next) + '</td><td><button type="button" class="btn primary" data-pdg-open-package="' + Number(item.id) + '">打开全屏工作包</button></td></tr>';
+        }).join('') || '<tr><td colspan="7" class="empty">当前没有可查看的工作包</td></tr>';
+      }
+
+      var facts = payload.fact_requests || [];
+      if ($('pdgFactRows')) {
+        $('pdgFactRows').innerHTML = facts.map(function(item) {
+          return '<tr><td>' + safeText(item.process_name || item.document_no || item.package_ref) + '</td>' +
+            '<td><strong>' + safeText(item.question_text) + '</strong></td><td>' + safeText(item.request_reason) + '</td>' +
+            '<td>' + safeText(item.status === 'open' ? '待本部门答复' : item.status === 'answered' ? '已答复待MDM核对' : item.status) + '</td>' +
+            '<td><button type="button" class="btn primary" data-pdg-open-fact="' + Number(item.id) + '">' + (item.status === 'open' ? '答复问题' : '查看') + '</button></td></tr>';
+        }).join('') || '<tr><td colspan="5" class="empty">当前没有发给本部门的事实问题</td></tr>';
+      }
+
+      if (payload.package_detail) {
+        state.processDataGovernance.detail = payload.package_detail;
+        state.processDataGovernance.selectedFactRequestId = null;
+        if (!state.processDataGovernance.selectedDetailId || !(payload.package_detail.details || []).some(function(item) { return Number(item.id) === Number(state.processDataGovernance.selectedDetailId); })) {
+          state.processDataGovernance.selectedDetailId = payload.package_detail.details && payload.package_detail.details[0] && payload.package_detail.details[0].id || null;
+        }
+        renderPdgPackageModal(payload.package_detail);
+      } else if (payload.fact_detail) {
+        state.processDataGovernance.detail = payload.fact_detail;
+        state.processDataGovernance.selectedFactRequestId = payload.fact_detail.fact_request && payload.fact_detail.fact_request.id;
+        renderPdgFactModal(payload.fact_detail);
+      } else {
+        closePdgModal({ force:true, keepRoute:true });
+      }
+    }
+
+    function pdgSourceText(detail) {
+      var source = detail && detail.source || {};
+      if (source.missing_data_scope) return '当前固定流程版本没有声明数据对象。MDM需要判断是否确实不涉及数据，或向业务部门定向核对。';
+      if (source.missing_field_scope) return '数据对象“' + (source.data_name || source.data_ref || detail.parent_source_ref) + '”没有声明字段。MDM需要判断关键字段范围，必要时定向核对业务事实。';
+      if (source.missing_data_flow_scope) return '数据对象“' + (source.data_name || source.data_ref || detail.parent_source_ref) + '”没有声明创建、更新或使用关系。MDM需要判断数据流范围。';
+      if (source.missing_lifecycle_scope) return '数据对象“' + (source.data_name || source.data_ref || detail.parent_source_ref) + '”没有声明生命周期事件。MDM需要判断适用规则。';
+      if (detail.detail_type === 'data_object_identity') return '数据对象：' + (source.data_name || source.data_ref || detail.source_ref) + (source.description ? '；业务说明：' + source.description : '');
+      if (detail.detail_type === 'critical_field') return '数据对象：' + (source.data_name || source.data_ref || detail.parent_source_ref) + '；字段：' + (source.field_name || source.field_ref || detail.source_ref) + (source.definition ? '；定义：' + source.definition : '');
+      if (detail.detail_type === 'data_flow') return '数据对象：' + (source.data_name || source.data_ref || detail.parent_source_ref) + '；业务行为：' + (source.behavior_name || source.behavior_ref || '待明确') + '；操作：' + (source.operations || []).join('、');
+      if (detail.detail_type === 'lifecycle_rule') return '数据对象：' + (source.data_name || source.data_ref || detail.parent_source_ref) + '；动作：' + pdgLifecycleActionLabel(source.action) + '；路径：' + (source.route_label || source.route_ref || '待明确') + (source.exception_handling ? '；例外：' + source.exception_handling : '');
+      return detail.source_ref || '固定流程版本来源';
+    }
+
+    function pdgCandidateText(detail) {
+      var candidate = detail && detail.candidate || {};
+      var reasons = candidate.reason_codes || candidate.high_risk_reason_codes || [];
+      var parts = ['规则：' + (detail.candidate_rule_code || '—')];
+      if (reasons.length) parts.push('命中依据：' + reasons.join('、'));
+      if (candidate.action) parts.push('待核对动作：' + pdgLifecycleActionLabel(candidate.action));
+      if ((candidate.operation_codes || []).length) parts.push('数据行为：' + candidate.operation_codes.join('、'));
+      if ((candidate.match_suggestions || []).length) {
+        parts.push('待定匹配建议：' + candidate.match_suggestions.map(function(item) { return (item.object_name || item.object_key) + '（' + item.match_type + '）'; }).join('；'));
+      } else if (detail.detail_type === 'data_object_identity') {
+        parts.push('待定匹配建议：未发现稳定标识或名称完全一致的现有对象');
+      }
+      parts.push('系统未自动确认');
+      return parts.join('；');
+    }
+
+    function pdgDepartmentOptions(selectedId) {
+      return (state.departments || []).map(function(item) {
+        var id = Number(item.id || item.department_id);
+        var name = item.name || item.department_name || ('部门' + id);
+        return '<option value="' + id + '"' + (Number(selectedId) === id ? ' selected' : '') + '>' + safeText(name) + '</option>';
+      }).join('');
+    }
+
+    function renderPdgPackageModal(detail) {
+      if (!detail || !detail.package) return;
+      var mask = $('pdgModalMask');
+      mask.classList.add('on');
+      mask.setAttribute('aria-hidden', 'false');
+      document.documentElement.classList.add('pdg-modal-open');
+      document.body.classList.add('pdg-modal-open');
+      state.processDataGovernance.activeHash = location.hash;
+      var packageRow = detail.package;
+      var sourceVersion = detail.source_version || {};
+      $('pdgModalTitle').textContent = packageRow.process_name || packageRow.document_no || packageRow.package_ref;
+      $('pdgModalSubtitle').textContent = '固定process_version_id=' + Number(packageRow.process_version_id) + ' · ' + pdgPackageStatusLabel(packageRow.status) + ' · 修订' + Number(packageRow.revision_no);
+      $('pdgGenerateCandidatesBtn').hidden = !pdgHasAction(detail, 'generate_candidates') || packageRow.status === 'completed';
+      var counts = (detail.details || []).reduce(function(result, item) {
+        result[item.status] = (result[item.status] || 0) + 1;
+        return result;
+      }, {});
+      $('pdgModalOverview').innerHTML = '<div class="pdg-summary-grid">' +
+        '<div class="pdg-summary-card"><b>' + safeText(pdgPackageStatusLabel(packageRow.status)) + '</b><span>工作包状态</span></div>' +
+        '<div class="pdg-summary-card"><b>' + (detail.details || []).length + '</b><span>治理明细</span></div>' +
+        '<div class="pdg-summary-card"><b>' + Number((counts.pending || 0) + (counts.needs_business_fact || 0)) + '</b><span>尚未形成结论</span></div>' +
+        '<div class="pdg-summary-card"><b>' + safeText(packageRow.risk_level === 'high' ? '高风险' : '普通') + '</b><span>完成时限：' + safeText(packageRow.due_at || '—') + '</span></div></div>' +
+        '<div class="notice">来源版本只读：' + safeText(sourceVersion.document_no || '') + ' ' + safeText(sourceVersion.document_title || '') + '；内容摘要：' + safeText(sourceVersion.content_hash || '') + '。工作包不读取原始3001文件。</div>' +
+        (pdgHasAction(detail, 'complete_work_package') && packageRow.status !== 'completed'
+          ? '<div class="pdg-form"><label class="wide">MDM工作组完成审核依据<textarea id="pdgCompleteBasis" data-pdg-dirty rows="2" placeholder="写明对象身份、关键字段、生命周期规则和业务事实问题均已核对"></textarea></label></div><div class="pdg-actions"><button type="button" class="btn primary" id="pdgCompleteBtn">完成工作包审核</button></div>'
+          : '');
+      $('pdgDetailList').innerHTML = (detail.details || []).map(function(item) {
+        var selected = Number(item.id) === Number(state.processDataGovernance.selectedDetailId);
+        return '<button type="button" class="pdg-list-item' + (selected ? ' on' : '') + '" data-pdg-detail-id="' + Number(item.id) + '"><strong>' + safeText(pdgDetailTypeLabel(item.detail_type)) + '</strong><span>' + safeText(pdgSourceText(item)) + '</span><span>' + safeText(pdgDetailStatusLabel(item.status)) + (item.high_risk ? ' · 高风险' : '') + '</span></button>';
+      }).join('') || '<div class="wb-empty">尚未生成治理明细。MDM工作组可以使用固定规则生成待定候选；系统不会自动确认。</div>';
+      renderPdgSelectedDetail();
+      renderPdgReviewHistory(detail);
+      state.processDataGovernance.dirty = false;
+    }
+
+    function renderPdgSelectedDetail() {
+      var detail = state.processDataGovernance.detail;
+      if (!detail || !detail.package) return;
+      var selected = (detail.details || []).find(function(item) { return Number(item.id) === Number(state.processDataGovernance.selectedDetailId); });
+      if (!selected) {
+        $('pdgSelectedDetail').innerHTML = '<div class="wb-empty">从左侧选择一条待治理明细。</div>';
+        $('pdgFactHistory').innerHTML = '';
+        return;
+      }
+      var governance = selected.governance || {};
+      var canDecide = pdgHasAction(detail, 'decide_detail') && detail.package.status !== 'completed';
+      var canRequest = pdgHasAction(detail, 'request_business_fact') && detail.package.status !== 'completed';
+      $('pdgSelectedDetail').innerHTML = '<h2>' + safeText(pdgDetailTypeLabel(selected.detail_type)) + '</h2>' +
+        '<div class="pdg-source"><strong>固定流程版本中的业务事实</strong><br>' + safeText(pdgSourceText(selected)) + '</div>' +
+        '<div class="notice" style="margin-top:12px"><strong>确定性待定候选</strong><br>' + safeText(pdgCandidateText(selected)) + '</div>' +
+        (canDecide ? '<div class="pdg-form">' +
+          '<label>处理状态<select id="pdgDecisionStatus" data-pdg-dirty><option value="pending">待MDM判断</option><option value="confirmed">已确认</option><option value="not_applicable">不适用</option><option value="terminated">已终止</option></select></label>' +
+          '<label>治理结论<input id="pdgDecisionConclusion" data-pdg-dirty value="' + safeText(governance.conclusion || '') + '" placeholder="例如：认定为主数据 / 不纳入关键字段"></label>' +
+          '<label>统一对象标识（如适用）<input id="pdgUnifiedObjectId" data-pdg-dirty value="' + safeText(governance.unified_object_id || '') + '" placeholder="不适用时留空"></label>' +
+          '<label>责任部门<select id="pdgResponsibleDepartment" data-pdg-dirty><option value="">沿用归口部门</option>' + pdgDepartmentOptions(selected.responsible_department_id || detail.package.owning_department_id) + '</select></label>' +
+          '<label class="wide">判断依据<textarea id="pdgDecisionBasis" data-pdg-dirty rows="3" placeholder="写明采用的流程事实、制度或治理规则">' + safeText(governance.basis || '') + '</textarea></label></div>' +
+          '<div class="pdg-actions"><button type="button" class="btn primary" id="pdgSaveDecisionBtn">保存MDM治理结论</button></div>' :
+          '<div class="notice" style="margin-top:12px">当前角色只读。业务部门不能在这里认定主数据、匹配统一对象、决定关键字段或制定生命周期规则。</div>') +
+        (canRequest ? '<div class="pdg-history"><h3>缺少事实时，向具体部门提一个问题</h3><div class="pdg-form">' +
+          '<label>目标部门<select id="pdgFactDepartment" data-pdg-dirty><option value="">请选择</option>' + pdgDepartmentOptions(detail.package.owning_department_id) + '</select></label>' +
+          '<label>需要的事实<select id="pdgFactType" data-pdg-dirty><option value="business_definition">业务定义</option><option value="trigger_condition">触发条件</option><option value="responsibility">实际责任</option><option value="source_evidence">来源依据</option><option value="exception_handling">例外处理</option></select></label>' +
+          '<label class="wide">具体问题<textarea id="pdgFactQuestion" data-pdg-dirty rows="2" placeholder="一次只问一个业务人员可以从制度、表单或实际做法中回答的问题"></textarea></label>' +
+          '<label class="wide">为什么需要这个事实<textarea id="pdgFactReason" data-pdg-dirty rows="2" placeholder="说明它会影响哪一项MDM治理判断"></textarea></label></div>' +
+          '<div class="pdg-actions"><button type="button" class="btn secondary" id="pdgCreateFactBtn">发给业务部门</button></div></div>' : '');
+      if ($('pdgDecisionStatus')) $('pdgDecisionStatus').value = selected.status === 'needs_business_fact' ? 'pending' : selected.status;
+      renderPdgFactHistory(detail, selected);
+      state.processDataGovernance.dirty = false;
+    }
+
+    function renderPdgFactHistory(detail, selected) {
+      var facts = (detail.fact_requests || []).filter(function(item) { return !selected || Number(item.detail_id) === Number(selected.id); });
+      $('pdgFactHistory').innerHTML = '<h3>业务事实问题</h3>' + (facts.length ? facts.map(function(item) {
+        return '<div class="wb-work-item"><div class="wb-work-title">' + safeText(item.question_text) + '</div>' +
+          '<div class="wb-work-meta">目标部门：' + safeText(item.target_department_name || item.target_department_id) + '；状态：' + safeText(item.status) + '<br>提出原因：' + safeText(item.request_reason) +
+          (item.answer_text ? '<br><strong>业务答复：</strong>' + safeText(item.answer_text) + (item.evidence_ref ? '<br><strong>依据：</strong>' + safeText(item.evidence_ref) : '') : '') + '</div>' +
+          (item.status === 'answered' && pdgHasAction(detail, 'close_business_fact') ? '<div class="pdg-form"><label class="wide">MDM采用情况和依据<textarea data-pdg-fact-close-basis="' + Number(item.id) + '" data-pdg-dirty rows="2"></textarea></label></div><button type="button" class="btn secondary" data-pdg-close-fact="' + Number(item.id) + '">核对并关闭问题</button>' : '') +
+          '</div>';
+      }).join('') : '<div class="wb-empty">当前明细没有业务事实问题。不要为了完整性把MDM治理判断转交给业务部门。</div>');
+    }
+
+    function renderPdgReviewHistory(detail) {
+      var reviews = detail.reviews || [];
+      $('pdgReviewHistory').innerHTML = '<h3>MDM审核记录</h3>' + (reviews.length ? reviews.map(function(item) {
+        return '<div class="wb-work-item"><div class="wb-work-title">' + safeText(item.review_type) + ' · ' + safeText(item.decision) + '</div><div class="wb-work-meta">修订' + Number(item.package_revision_no) + ' · ' + safeText(item.basis_text) + ' · ' + safeText(item.created_at || '') + '</div></div>';
+      }).join('') : '<div class="wb-empty">尚未形成MDM工作组完成审核记录。</div>');
+    }
+
+    function renderPdgFactModal(payload) {
+      var mask = $('pdgModalMask');
+      var fact = payload.fact_request || {};
+      mask.classList.add('on');
+      mask.setAttribute('aria-hidden', 'false');
+      document.documentElement.classList.add('pdg-modal-open');
+      document.body.classList.add('pdg-modal-open');
+      state.processDataGovernance.activeHash = location.hash;
+      $('pdgModalTitle').textContent = '补充业务事实';
+      $('pdgModalSubtitle').textContent = (payload.package && payload.package.process_name || payload.package && payload.package.package_ref || '') + ' · 只回答具体问题';
+      $('pdgGenerateCandidatesBtn').hidden = true;
+      $('pdgDetailList').innerHTML = '<div class="pdg-list-item on"><strong>' + safeText(fact.requested_fact_type || '业务事实') + '</strong><span>' + safeText(fact.question_text) + '</span><span>' + safeText(fact.status) + '</span></div>';
+      $('pdgModalOverview').innerHTML = '<div class="pdg-responsibility">' +
+        '<div><strong>你需要做</strong><ul><li>回答下面这个具体问题</li><li>有来源时写明制度、表单或台账位置</li><li>不适用时说明实际原因</li></ul></div>' +
+        '<div><strong>你不需要做</strong><ul><li>不认定主数据</li><li>不决定统一对象匹配</li><li>不判断关键字段</li><li>不制定生命周期规则</li></ul></div></div>';
+      $('pdgSelectedDetail').innerHTML = '<h2>' + safeText(fact.question_text || '业务事实问题') + '</h2>' +
+        '<div class="pdg-source"><strong>问题所指的流程事实</strong><br>' + safeText(pdgSourceText(payload.source_context || {})) + '</div>' +
+        '<div class="notice" style="margin-top:12px"><strong>为什么需要：</strong>' + safeText(fact.request_reason || '') + '</div>' +
+        (pdgHasAction(payload, 'answer_targeted_business_fact') && fact.status === 'open' ? '<div class="pdg-form">' +
+          '<label class="wide">事实答复<textarea id="pdgBusinessAnswer" data-pdg-dirty rows="4" placeholder="只写已经核对的业务事实；不确定时明确写不确定"></textarea></label>' +
+          '<label class="wide">来源依据（如有）<textarea id="pdgBusinessEvidence" data-pdg-dirty rows="2" placeholder="制度或表单源文件名及页码、条款或表格位置"></textarea></label></div>' +
+          '<div class="pdg-actions"><button type="button" class="btn primary" id="pdgRespondFactBtn">提交事实答复</button></div>' :
+          '<div class="notice" style="margin-top:12px">当前问题状态为“' + safeText(fact.status) + '”，本页只读。</div>');
+      $('pdgFactHistory').innerHTML = fact.answer_text ? '<h3>已提交答复</h3><div class="wb-work-item"><div class="wb-work-meta">' + safeText(fact.answer_text) + (fact.evidence_ref ? '<br>依据：' + safeText(fact.evidence_ref) : '') + '</div></div>' : '';
+      $('pdgReviewHistory').innerHTML = '';
+      state.processDataGovernance.dirty = false;
+    }
+
+    async function pdgReloadCurrent() {
+      state.pgViewCache = {};
+      state.processDataGovernance.status = null;
+      return await loadProcessGovernanceView('dataGovernance', { route:parseHash(), force:true });
+    }
+
+    async function reconcilePdgWorkPackage() {
+      var status = state.processDataGovernance.status || await ensureProcessDataGovernanceStatus();
+      if (!status.enabled || !status.configured_process_version_id) throw new Error('候选功能未启用或未配置唯一试点流程版本');
+      var result = await api('/api/process-data-governance/creation-tasks/reconcile', {
+        method:'POST', body:JSON.stringify({ process_version_id:Number(status.configured_process_version_id) })
+      });
+      showToast(result.idempotent ? '工作包已存在，已返回原记录' : '试点工作包已建立');
+      location.hash = '#/processGovernance?workspace=dataGovernance&package=' + Number(result.package.id);
+    }
+
+    async function generatePdgCandidates() {
+      var detail = state.processDataGovernance.detail;
+      var result = await api('/api/process-data-governance/work-packages/' + Number(detail.package.id) + '/generate-candidates', {
+        method:'POST', body:JSON.stringify({ expected_revision:Number(detail.package.revision_no) })
+      });
+      showToast(result.idempotent ? '候选已经生成，没有重复创建' : '已生成' + Number(result.created) + '条确定性待定候选');
+      state.processDataGovernance.dirty = false;
+      await pdgReloadCurrent();
+    }
+
+    async function savePdgDecision() {
+      var detail = state.processDataGovernance.detail;
+      var selected = (detail.details || []).find(function(item) { return Number(item.id) === Number(state.processDataGovernance.selectedDetailId); });
+      if (!selected) throw new Error('请先选择治理明细');
+      var status = $('pdgDecisionStatus').value;
+      var basis = $('pdgDecisionBasis').value.trim();
+      if (['confirmed','not_applicable','terminated'].includes(status) && !basis) throw new Error('确认、不适用或终止时必须填写判断依据');
+      await api('/api/process-data-governance/work-packages/' + Number(detail.package.id) + '/details/' + Number(selected.id), {
+        method:'PATCH', body:JSON.stringify({
+          expected_revision:Number(detail.package.revision_no), status:status,
+          responsible_department_id:Number($('pdgResponsibleDepartment').value || 0) || null,
+          governance:{ conclusion:$('pdgDecisionConclusion').value.trim(), unified_object_id:$('pdgUnifiedObjectId').value.trim() || null, basis:basis }
+        })
+      });
+      state.processDataGovernance.dirty = false;
+      showToast('MDM治理结论已保存');
+      await pdgReloadCurrent();
+    }
+
+    async function createPdgFactRequest() {
+      var detail = state.processDataGovernance.detail;
+      var selected = (detail.details || []).find(function(item) { return Number(item.id) === Number(state.processDataGovernance.selectedDetailId); });
+      if (!selected) throw new Error('请先选择治理明细');
+      var departmentId = Number($('pdgFactDepartment').value || 0);
+      var question = $('pdgFactQuestion').value.trim();
+      var reason = $('pdgFactReason').value.trim();
+      if (!departmentId || !question || !reason) throw new Error('目标部门、具体问题和提出原因均不能为空');
+      await api('/api/process-data-governance/work-packages/' + Number(detail.package.id) + '/fact-requests', {
+        method:'POST', body:JSON.stringify({
+          expected_revision:Number(detail.package.revision_no), detail_id:Number(selected.id), target_department_id:departmentId,
+          requested_fact_type:$('pdgFactType').value, question_text:question, request_reason:reason
+        })
+      });
+      state.processDataGovernance.dirty = false;
+      showToast('已向具体部门发出业务事实问题');
+      await pdgReloadCurrent();
+    }
+
+    async function respondPdgFactRequest() {
+      var payload = state.processDataGovernance.detail;
+      var fact = payload && payload.fact_request;
+      var answer = $('pdgBusinessAnswer').value.trim();
+      if (!answer) throw new Error('事实答复不能为空');
+      await api('/api/process-data-governance/fact-requests/' + Number(fact.id) + '/respond', {
+        method:'POST', body:JSON.stringify({
+          expected_revision:Number(payload.package.revision_no), answer_text:answer,
+          evidence_ref:$('pdgBusinessEvidence').value.trim()
+        })
+      });
+      state.processDataGovernance.dirty = false;
+      showToast('业务事实答复已提交，后续治理判断仍由MDM工作组完成');
+      await pdgReloadCurrent();
+    }
+
+    async function closePdgFactRequest(requestId) {
+      var detail = state.processDataGovernance.detail;
+      var input = document.querySelector('[data-pdg-fact-close-basis="' + Number(requestId) + '"]');
+      var basis = input && input.value.trim();
+      if (!basis) throw new Error('请填写采用情况和关闭依据');
+      await api('/api/process-data-governance/fact-requests/' + Number(requestId) + '/close', {
+        method:'POST', body:JSON.stringify({ expected_revision:Number(detail.package.revision_no), basis:basis })
+      });
+      state.processDataGovernance.dirty = false;
+      showToast('业务事实问题已由MDM核对并关闭');
+      await pdgReloadCurrent();
+    }
+
+    async function completePdgWorkPackage() {
+      var detail = state.processDataGovernance.detail;
+      var basis = $('pdgCompleteBasis') && $('pdgCompleteBasis').value.trim();
+      if (!basis) throw new Error('请填写MDM工作组完成审核依据');
+      await api('/api/process-data-governance/work-packages/' + Number(detail.package.id) + '/complete', {
+        method:'POST', body:JSON.stringify({ expected_revision:Number(detail.package.revision_no), basis:basis })
+      });
+      state.processDataGovernance.dirty = false;
+      showToast('数据生命周期治理工作包已完成');
+      await pdgReloadCurrent();
+    }
+
+    async function confirmPdgDiscard(action) {
+      if (!state.processDataGovernance.dirty) return action();
+      var discard = await showConfirm({
+        title:'尚未保存当前输入',
+        message:'可以继续编辑，或放弃本弹窗内尚未保存的输入。已经提交到服务器的内容不会受影响。',
+        confirmLabel:'放弃未保存输入',
+        confirmClass:'danger'
+      });
+      if (discard) {
+        state.processDataGovernance.dirty = false;
+        return action();
+      }
+    }
+
+    function closePdgModal(options) {
+      options = options || {};
+      var close = function() {
+        $('pdgModalMask').classList.remove('on');
+        $('pdgModalMask').setAttribute('aria-hidden', 'true');
+        document.documentElement.classList.remove('pdg-modal-open');
+        document.body.classList.remove('pdg-modal-open');
+        state.processDataGovernance.detail = null;
+        state.processDataGovernance.selectedDetailId = null;
+        state.processDataGovernance.selectedFactRequestId = null;
+        if (!options.keepRoute) location.hash = '#/processGovernance?workspace=dataGovernance';
+      };
+      if (options.force) return close();
+      return confirmPdgDiscard(close);
     }
 
     function processDesignWizardStepIndex(stepKey) {
@@ -6024,7 +6575,7 @@
       }
       if (!hash) return { view: 'list', tab: 'roleWorkbench' };
       var parts = hash.split('/');
-      if (parts.length === 1) return { view: 'list', tab: parts[0], query: query, pgView: query.view, qualityView: query.view, pgWorkspace: query.workspace, handoffId: query.handoff, handoffConflictId: query.conflict, v7CaseId: query.v7Case, finding: query.finding, caseId: query.case, mappingTodoId: query.todo, inputBaselineReviewKey: query.reviewItem, issueQueue: query.queue, issueId: query.issue };
+      if (parts.length === 1) return { view: 'list', tab: parts[0], query: query, pgView: query.view, qualityView: query.view, pgWorkspace: query.workspace, handoffId: query.handoff, handoffConflictId: query.conflict, v7CaseId: query.v7Case, pdgPackageId: query.package, pdgFactRequestId: query.factRequest, finding: query.finding, caseId: query.case, mappingTodoId: query.todo, inputBaselineReviewKey: query.reviewItem, issueQueue: query.queue, issueId: query.issue };
       if (parts[0] === 'processes' && parts.length >= 3) {
         return { view: 'detail', tab: 'processes', type: 'process', id: parts[2] };
       }
@@ -6042,10 +6593,28 @@
     }
 
     window.addEventListener('hashchange', function() {
+      if (state.processDataGovernance.suppressHashGuard) {
+        state.processDataGovernance.suppressHashGuard = false;
+        return;
+      }
+      if (state.processDataGovernance.dirty && $('pdgModalMask') && $('pdgModalMask').classList.contains('on')) {
+        var requestedHash = location.hash;
+        var activeHash = state.processDataGovernance.activeHash || '#/processGovernance?workspace=dataGovernance';
+        confirmPdgDiscard(function() {
+          state.processDataGovernance.activeHash = requestedHash;
+          renderRouteFromHash();
+        }).then(function(result) {
+          if (result === undefined && state.processDataGovernance.dirty && location.hash !== activeHash) {
+            state.processDataGovernance.suppressHashGuard = true;
+            location.hash = activeHash;
+          }
+        });
+        return;
+      }
       renderRouteFromHash();
     });
     window.addEventListener('beforeunload', function(event) {
-      if (!state.processDesign.canonicalDirty) return;
+      if (!state.processDesign.canonicalDirty && !state.processDataGovernance.dirty) return;
       event.preventDefault();
       event.returnValue = '';
     });
@@ -6578,6 +7147,7 @@
         var data = await api('/api/role-workbench?mode=' + encodeURIComponent(mode));
         state.roleWorkbench.data = data;
         state.roleWorkbench.selectedNode = null;
+        if ($('roleWorkbench')) $('roleWorkbench').classList.toggle('wb-task-first', mode === 'todo');
         var ownedNames = (data.roles || []).filter(function(role) { return role.owned; }).map(function(role) { return role.name; });
         if ($('roleWorkbenchIdentity')) $('roleWorkbenchIdentity').textContent = '当前身份：' + (ownedNames.join(' / ') || (state.user && state.user.role) || '未识别');
         if ($('roleWorkbenchDepartment')) $('roleWorkbenchDepartment').textContent = '当前部门：' + ((data.user && data.user.departmentName) || (state.user && state.user.departmentName) || '未绑定');
@@ -6586,12 +7156,14 @@
           btn.classList.toggle('on', btn.dataset.mode === mode);
         });
         renderWorkbenchNextActions(data.nextActions || []);
-        renderWorkbenchRoles(data);
-        renderWorkbenchItems(data.workItems || []);
-        renderRoleWorkbenchGuide(data);
-        renderRoleWorkbenchNodeDetail(null, data);
-        renderRoleWorkbenchSankey(data);
-        loadRoleWorkbenchActivity();
+        if (mode === 'all') {
+          renderWorkbenchRoles(data);
+          renderWorkbenchItems(data.workItems || []);
+          renderRoleWorkbenchGuide(data);
+          renderRoleWorkbenchNodeDetail(null, data);
+          renderRoleWorkbenchSankey(data);
+          loadRoleWorkbenchActivity();
+        }
       } catch (error) {
         if ($('roleWorkbenchNextActions')) $('roleWorkbenchNextActions').innerHTML = '<div class="wb-empty">' + safeText(error.message || '角色工作台加载失败') + '</div>';
       }
@@ -9874,6 +10446,7 @@
       if (view === 'handoffs' && $('pgHandoffQueueRows')) $('pgHandoffQueueRows').innerHTML = '<tr><td colspan="6" class="empty">正在读取跨部门承接待办...</td></tr>';
       if (view === 'conflicts' && $('pgHandoffConflictRows')) $('pgHandoffConflictRows').innerHTML = '<tr><td colspan="6" class="empty">正在读取承接冲突待办...</td></tr>';
       if (view === 'v7Preview' && $('pgV7PreviewCaseRows')) $('pgV7PreviewCaseRows').innerHTML = '<tr><td colspan="7" class="empty">正在读取V7预览核对案例...</td></tr>';
+      if (view === 'dataGovernance' && $('pdgFeatureNotice')) $('pdgFeatureNotice').textContent = '正在读取数据生命周期治理工作包...';
     }
 
     function setProcessGovernanceViewError(view, error) {
@@ -9882,6 +10455,7 @@
       if (view === 'handoffs' && $('pgHandoffQueueRows')) $('pgHandoffQueueRows').innerHTML = '<tr><td colspan="6" class="empty">' + safeText(message) + '</td></tr>';
       if (view === 'conflicts' && $('pgHandoffConflictRows')) $('pgHandoffConflictRows').innerHTML = '<tr><td colspan="6" class="empty">' + safeText(message) + '</td></tr>';
       if (view === 'v7Preview' && $('pgV7PreviewCaseRows')) $('pgV7PreviewCaseRows').innerHTML = '<tr><td colspan="7" class="empty">' + safeText(message) + '</td></tr>';
+      if (view === 'dataGovernance' && $('pdgFeatureNotice')) $('pdgFeatureNotice').textContent = message;
     }
 
     async function loadProcessGovernanceView(view, options) {
@@ -9889,7 +10463,15 @@
       var product = PROCESS_GOVERNANCE_VIEW_PRODUCTS[view] || PROCESS_GOVERNANCE_VIEW_PRODUCTS.editor;
       var route = options.route || parseHash();
       var filters = processGovernanceViewFilters(view);
-      var cacheKey = processGovernanceLoadKey(view, filters);
+      var cacheFilters = { ...filters };
+      if (view === 'handoffs') cacheFilters.handoffId = route.handoffId || '';
+      if (view === 'conflicts') cacheFilters.handoffConflictId = route.handoffConflictId || '';
+      if (view === 'v7Preview') cacheFilters.v7CaseId = route.v7CaseId || '';
+      if (view === 'dataGovernance') {
+        cacheFilters.pdgPackageId = route.pdgPackageId || '';
+        cacheFilters.pdgFactRequestId = route.pdgFactRequestId || '';
+      }
+      var cacheKey = processGovernanceLoadKey(view, cacheFilters);
       if (!options.force && state.pgViewCache[cacheKey]) {
         renderProcessGovernanceView(view, state.pgViewCache[cacheKey], route);
         return state.pgViewCache[cacheKey];
@@ -9915,6 +10497,11 @@
       var panel = document.getElementById('processGovernancePanel');
       if (!panel) return;
       var requestId = ++state.processGovernanceRenderRequestId;
+      try {
+        await ensureProcessDataGovernanceStatus();
+      } catch (statusError) {
+        state.processDataGovernance.status = { enabled:false, configured_process_version_id:null };
+      }
       var route = parseHash();
       var activePgView = processGovernanceViewFromRoute(route);
       var activeWorkspace = processGovernanceWorkspaceFromRoute(route);
@@ -10421,6 +11008,77 @@
       navigateTo('list', { tab: tab });
     });
     document.addEventListener('click', function(event) {
+      var pdgPackageButton = event.target.closest('[data-pdg-open-package]');
+      if (pdgPackageButton) {
+        event.preventDefault();
+        confirmPdgDiscard(function() {
+          location.hash = '#/processGovernance?workspace=dataGovernance&package=' + encodeURIComponent(pdgPackageButton.dataset.pdgOpenPackage);
+        });
+        return;
+      }
+      var pdgFactButton = event.target.closest('[data-pdg-open-fact]');
+      if (pdgFactButton) {
+        event.preventDefault();
+        confirmPdgDiscard(function() {
+          location.hash = '#/processGovernance?workspace=dataGovernance&factRequest=' + encodeURIComponent(pdgFactButton.dataset.pdgOpenFact);
+        });
+        return;
+      }
+      var pdgDetailButton = event.target.closest('[data-pdg-detail-id]');
+      if (pdgDetailButton) {
+        event.preventDefault();
+        confirmPdgDiscard(function() {
+          state.processDataGovernance.selectedDetailId = Number(pdgDetailButton.dataset.pdgDetailId);
+          renderPdgPackageModal(state.processDataGovernance.detail);
+        });
+        return;
+      }
+      var pdgCloseFactButton = event.target.closest('[data-pdg-close-fact]');
+      if (pdgCloseFactButton) {
+        event.preventDefault();
+        runPageTask(function() { return closePdgFactRequest(Number(pdgCloseFactButton.dataset.pdgCloseFact)); }, '业务事实问题关闭失败');
+        return;
+      }
+      if (event.target.closest('#pdgReconcileBtn')) {
+        event.preventDefault();
+        runPageTask(reconcilePdgWorkPackage, '试点工作包建立失败');
+        return;
+      }
+      if (event.target.closest('#pdgRefreshBtn')) {
+        event.preventDefault();
+        runPageTask(pdgReloadCurrent, '数据生命周期治理工作包刷新失败');
+        return;
+      }
+      if (event.target.closest('#pdgGenerateCandidatesBtn')) {
+        event.preventDefault();
+        runPageTask(generatePdgCandidates, '待定候选生成失败');
+        return;
+      }
+      if (event.target.closest('#pdgSaveDecisionBtn')) {
+        event.preventDefault();
+        runPageTask(savePdgDecision, 'MDM治理结论保存失败');
+        return;
+      }
+      if (event.target.closest('#pdgCreateFactBtn')) {
+        event.preventDefault();
+        runPageTask(createPdgFactRequest, '业务事实问题发送失败');
+        return;
+      }
+      if (event.target.closest('#pdgRespondFactBtn')) {
+        event.preventDefault();
+        runPageTask(respondPdgFactRequest, '业务事实答复提交失败');
+        return;
+      }
+      if (event.target.closest('#pdgCompleteBtn')) {
+        event.preventDefault();
+        runPageTask(completePdgWorkPackage, '工作包完成审核失败');
+        return;
+      }
+      if (event.target.closest('#pdgModalClose') || event.target === $('pdgModalMask')) {
+        event.preventDefault();
+        closePdgModal();
+        return;
+      }
       var pgTaskButton = event.target.closest('[data-pg-task-entry]');
       if (pgTaskButton) {
         event.preventDefault();
@@ -10530,6 +11188,28 @@
         goProcessDesignWizardStep(processDesignStepNav.getAttribute('data-process-design-step-nav') || 'draft');
       }
     });
+
+    if ($('pdgModalMask')) {
+      $('pdgModalMask').addEventListener('input', function(event) {
+        if (event.target.closest('[data-pdg-dirty]')) state.processDataGovernance.dirty = true;
+      });
+      $('pdgModalMask').addEventListener('change', function(event) {
+        if (event.target.closest('[data-pdg-dirty]')) state.processDataGovernance.dirty = true;
+      });
+    }
+    document.addEventListener('keydown', function(event) {
+      if (event.key === 'Escape' && $('pdgModalMask') && $('pdgModalMask').classList.contains('on')) {
+        event.preventDefault();
+        closePdgModal();
+      }
+    });
+    if ($('pgLegacyV3History')) {
+      $('pgLegacyV3History').addEventListener('toggle', function() {
+        if (!$('pgLegacyV3History').open) return;
+        var frame = $('pgProcessGovernanceEditorFrame');
+        if (frame && frame.dataset.src && frame.getAttribute('src') === 'about:blank') frame.setAttribute('src', frame.dataset.src);
+      });
+    }
 
     if ($('loginForm')) {
       $('loginForm').addEventListener('submit', function(event) {
