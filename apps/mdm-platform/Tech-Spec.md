@@ -32,6 +32,8 @@
 | V7预览核对 | `server/processV7PreviewReview*.js`、`server/routes/processV7PreviewReview.js` | 校验V7、生成固定跨部门核对项、隔离保存修订与部门结果，并保持预览边界 |
 | V7迁移基线 | `server/processV7M0Baseline.js`、`scripts/inspect-process-v7-m0-baseline.js` | 只读核对正式三表、JSON摘要、引用关系和live schema差异 |
 | V7正式基础迁移 | `server/processV7FormalMigration.js` | 以幂等DDL增加原生V7所需可空列、审核正文绑定和提升审计；不创建业务行 |
+| 流程版本后续数据治理 | `server/processDataGovernance*.js`、`server/routes/processDataGovernance.js` | 精确版本范围、确定性待定候选、工作包状态、定向事实问题、来源摘要复核和审核卡口 |
+| 后续数据治理迁移 | `server/processDataGovernanceMigration.js` | 六张专用表的dry-run、结构一致性检查、显式应用和空表回退 |
 
 ## 3. 授权计算
 
@@ -105,6 +107,7 @@
 - `process_v7_preview_cases`、`process_v7_preview_revisions`、`process_v7_preview_review_items`和`process_v7_preview_events`只保存V7预览核对，不引用或写入正式流程版本。
 - 保存完整v3 JSON时，同一数据库事务同步流程、业务行为、承接候选修订和事件。投影同步失败时回滚JSON修订，不形成半套治理事实。
 - 删除已有治理记录的承接必须提交`handoff_ref`和作废原因；历史承接只取消当前标记，不物理删除。
+- `process_data_governance_*`六张专用表只保存固定流程版本绑定、待定候选、MDM结论、定向事实答复、审核和事件，不复制完整V7正文。工作包以`process_version_id`唯一，所有写操作共享`revision_no`。
 
 ## 8. 接口
 
@@ -138,6 +141,16 @@
 - `PUT /api/process-design/cross-dept-handoffs/:id/counterparty-response`
 - `POST /api/process-design/cross-dept-handoffs/:id/department-decision`
 - `POST /api/process-design/cross-dept-handoffs/:id/structure-gate`
+- `GET /api/process-data-governance/status`
+- `GET /api/process-data-governance/workbench`
+- `POST /api/process-data-governance/creation-tasks/reconcile`
+- `GET /api/process-data-governance/work-packages/:id`
+- `POST /api/process-data-governance/work-packages/:id/generate-candidates`
+- `PATCH /api/process-data-governance/work-packages/:id/details/:detailId`
+- `GET /api/process-data-governance/fact-requests/:id`
+- `POST /api/process-data-governance/fact-requests/:id/respond`
+- `POST /api/process-data-governance/fact-requests/:id/close`
+- `POST /api/process-data-governance/work-packages/:id/complete`
 
 旧`/api/org/users*`写接口返回410；旧RBAC批量导入返回410；固定模型写请求返回405。
 
@@ -192,6 +205,15 @@ MDM工作组组长只能在卡口通过后发布，不能以角色权限跳过�
 - `GET /api/process-design/versions/:processVersionId/content`只从不可变正式版本读取完整正文，并对V7重新计算摘要；正式下游不得读取预览案例。
 - 3001与3000共同调用仓库内无网络、数据库和浏览器副作用的V7校验入口；预览上传、后续提升和发布三个信任边界都必须重新验证。
 
+### 9.4 流程版本后续数据治理
+
+- `PROCESS_DATA_GOVERNANCE_ENABLED`默认关闭；`PROCESS_DATA_GOVERNANCE_TRIAL_PROCESS_VERSION_ID`只接受一个正整数正式版本标识。
+- 正式V7发布只有在功能已启用且新版本标识与试点配置完全相等时，才在同一事务记录唯一创建任务。已有正式版本由`mdm_lead`通过公开补偿接口显式补建。
+- 候选规则只读取V7结构，使用单值`behavior_links[].operation`。每个已声明字段进入关键字段判断；字段、数据流或生命周期范围为空时生成范围缺失待定项。
+- 每次写入在工作包行锁和`expected_revision`检查后，再复核正式版本内容摘要。来源变化、规则版本变化或并发修订冲突均停止写入。
+- `admin`只读；MDM专业治理要求`mdm_lead`及固定权限；业务答复要求目标部门的固定部门角色和权限。
+- 前端待办模式只渲染1至3个动作。工作包和事实问题使用全屏蒙版弹窗，并对关闭、切换、地址变化和离页执行未提交修改保护。
+
 ## 10. 安全控制
 
 - 密码由`bcryptjs`保存散列。
@@ -205,7 +227,7 @@ MDM工作组组长只能在卡口通过后发布，不能以角色权限跳过�
 
 ## 11. 兼容与迁移
 
-身份迁移见[RBAC-RACI-Migration-Runbook.md](docs/RBAC-RACI-Migration-Runbook.md)，承接迁移见[Cross-Department-Handoff-Migration-Runbook.md](docs/Cross-Department-Handoff-Migration-Runbook.md)，v3表单状态迁移见[Process-Governance-V3-Migration-Runbook.md](docs/Process-Governance-V3-Migration-Runbook.md)，V7预览和原生正式基础迁移见[Process-V7-Preview-Review-Migration-Runbook.md](docs/Process-V7-Preview-Review-Migration-Runbook.md)。
+身份迁移见[RBAC-RACI-Migration-Runbook.md](docs/RBAC-RACI-Migration-Runbook.md)，承接迁移见[Cross-Department-Handoff-Migration-Runbook.md](docs/Cross-Department-Handoff-Migration-Runbook.md)，v3表单状态迁移见[Process-Governance-V3-Migration-Runbook.md](docs/Process-Governance-V3-Migration-Runbook.md)，V7预览和原生正式基础迁移见[Process-V7-Preview-Review-Migration-Runbook.md](docs/Process-V7-Preview-Review-Migration-Runbook.md)，流程版本后续数据治理迁移见[Process-Data-Governance-Migration-Runbook.md](docs/Process-Data-Governance-Migration-Runbook.md)。
 
 切换原则：
 
@@ -226,12 +248,14 @@ npm run test:rbac-raci-v2
 npm run test:frontend
 npm run test:project-roles
 npm run test:role-workbench
+npm run test:process-data-governance
 npm run test:process-governance
 npm run test:process-governance-unified
 npm run test:mainline
 npm run migrate:rbac-raci-v2:dry-run
 npm run migrate:cross-dept-handoff-v2:dry-run
 npm run migrate:process-governance-unified:dry-run
+npm run migrate:process-data-governance:dry-run
 ```
 
 正式运行还必须执行：

@@ -61,7 +61,7 @@
     Object.freeze({
       order: 1,
       role: '编制人',
-      action: '新建或导入一条流程，按七步填写，并在每轮结束时下载阶段草稿。',
+      action: '新建或导入一条流程，按页面显示的编制任务填写，并在每轮结束时下载阶段草稿。',
       handoff: '阶段草稿'
     }),
     Object.freeze({

@@ -8,6 +8,10 @@ const { makeIdentityMysqlRepository } = require('../identityMysqlRepository');
 const { makeProcessGovernanceMysqlRepository } = require('../processGovernanceMysqlRepository');
 const { makeProcessInputBaselineReviewRepository } = require('../processInputBaselineReviewRepository');
 const { ROLE_GUIDES } = require('../roleDefinitions');
+const {
+  configuredProcessVersionId,
+  isProcessDataGovernanceEnabled
+} = require('../processDataGovernanceScope');
 
 let identityRepoPromise = null;
 let identityRepositoryFactory = null;
@@ -15,6 +19,7 @@ let processGovernanceRepoPromise = null;
 let processGovernanceRepositoryFactory = null;
 let inputBaselineReviewRepoPromise = null;
 let inputBaselineReviewRepositoryFactory = null;
+let processDataGovernanceRepositoryFactory = null;
 const WORKBENCH_CACHE_TTL_MS = 15 * 1000;
 const roleGroupsCache = new Map();
 const workbenchResponseCache = new Map();
@@ -34,6 +39,8 @@ const TODO_TYPE_LABELS = {
   field_ledger_gap: '字段台账补全',
   gold_source_confirmation: '待确认黄金源确认',
   pmo_review_gate: 'PMO治理评审',
+  process_data_governance_package: '数据生命周期治理工作包',
+  process_data_business_fact: '业务事实补充',
   general: '一般待办'
 };
 
@@ -50,6 +57,8 @@ const TODO_TARGETS = {
   field_ledger_gap: '#/todos',
   gold_source_confirmation: '#/todos',
   pmo_review_gate: '#/processGovernance?view=qualityCases',
+  process_data_governance_package: '#/processGovernance?workspace=dataGovernance',
+  process_data_business_fact: '#/processGovernance?workspace=dataGovernance',
   general: '#/todos'
 };
 
@@ -1062,6 +1071,30 @@ async function loadDirectProcessGovernanceWorkItems(identity) {
   }
 }
 
+async function loadProcessDataGovernanceWorkItems(identity) {
+  if (!isProcessDataGovernanceEnabled()) return [];
+  const processVersionId = configuredProcessVersionId();
+  if (!processVersionId) return [];
+  try {
+    const repo = processDataGovernanceRepositoryFactory
+      ? await processDataGovernanceRepositoryFactory()
+      : await require('./processDataGovernance').getProcessDataGovernanceRepository();
+    return await repo.listWorkbenchItems({
+      userId: identity.user.id,
+      personId: identity.user.personId || identity.user.id,
+      departmentId: identity.user.departmentId,
+      departmentName: identity.user.departmentName,
+      roleCodes: new Set(identity.roleCodes || []),
+      permissions: identity.permSet
+    }, processVersionId);
+  } catch (error) {
+    if (process.env.MDM_DB_QUIET !== '1') {
+      console.warn(`process data governance work items unavailable: ${error.message}`);
+    }
+    return [];
+  }
+}
+
 router.get('/', requireAuth, (req, res) => {
   return runAsyncAction(res, async () => {
     const mode = req.query.mode === 'all' ? 'all' : 'todo';
@@ -1075,18 +1108,19 @@ router.get('/', requireAuth, (req, res) => {
     const currentDepartmentName = identity.user.departmentName;
     const cacheKey = workbenchResponseCacheKey({ mode, identity, roleCodes, permSet });
     const body = await getOrBuildWorkbenchResponse(cacheKey, async () => {
-      const [todos, qualityFindings, mappingTodos, inputBaselineIssues, escalated, directProcessGovernance] = await Promise.all([
+      const [todos, qualityFindings, mappingTodos, inputBaselineIssues, escalated, directProcessGovernance, processDataGovernance] = await Promise.all([
         Promise.resolve().then(() => loadTodos(req, canViewAll)),
         loadProcessQualityFindingsAsync(req, canViewAll, currentDepartmentName),
         loadProcessMappingTodosAsync(req, canViewAll, currentDepartmentName),
         loadInputBaselineReviewIssuesAsync(canViewAll, currentDepartmentName),
         Promise.resolve().then(() => loadEscalatedConflicts(canDecideEscalated)),
-        loadDirectProcessGovernanceWorkItems(identity)
+        loadDirectProcessGovernanceWorkItems(identity),
+        loadProcessDataGovernanceWorkItems(identity)
       ]);
       const activeRoles = ownedRoles;
       const pmoReviewGates = pmoReviewGateWorkItems(roleCodes, currentDepartmentName);
       const visibleWorkItems = normalizeWorkItems(
-        [...directProcessGovernance, ...escalated, ...inputBaselineIssues, ...qualityFindings, ...mappingTodos, ...todos, ...pmoReviewGates],
+        [...processDataGovernance, ...directProcessGovernance, ...escalated, ...inputBaselineIssues, ...qualityFindings, ...mappingTodos, ...todos, ...pmoReviewGates],
         { department: currentDepartmentName }
       );
       const pendingWorkItems = visibleWorkItems.filter(item => canActOnWorkbenchItem(item, permSet));
@@ -1122,6 +1156,8 @@ router.get('/', requireAuth, (req, res) => {
             pmoReviewGates: pmoReviewGates.length,
             crossDepartmentHandoffs: directProcessGovernance.filter(item => item.type === 'cross_dept_handoff').length,
             handoffConflicts: directProcessGovernance.filter(item => item.type === 'handoff_conflict').length,
+            processDataGovernance: processDataGovernance.filter(item => item.type === 'process_data_governance_package').length,
+            businessFactRequests: processDataGovernance.filter(item => item.type === 'process_data_business_fact').length,
             overdue: pendingWorkItems.filter(item => item.overdue).length
           }
         },
@@ -1168,6 +1204,14 @@ router.setProcessGovernanceRepositoryFactory = setProcessGovernanceRepositoryFac
 router.resetProcessGovernanceRepositoryFactory = resetProcessGovernanceRepositoryFactory;
 router.setInputBaselineReviewRepositoryFactory = setInputBaselineReviewRepositoryFactory;
 router.resetInputBaselineReviewRepositoryFactory = resetInputBaselineReviewRepositoryFactory;
+router.setProcessDataGovernanceRepositoryFactory = factory => {
+  processDataGovernanceRepositoryFactory = factory;
+  clearWorkbenchCaches();
+};
+router.resetProcessDataGovernanceRepositoryFactory = () => {
+  processDataGovernanceRepositoryFactory = null;
+  clearWorkbenchCaches();
+};
 router.clearWorkbenchCaches = clearWorkbenchCaches;
 
 module.exports = router;

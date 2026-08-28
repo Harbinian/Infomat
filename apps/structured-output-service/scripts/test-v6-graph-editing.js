@@ -840,6 +840,16 @@ function testDiagramModelsAndPerformance() {
   const badgeModel = ProcessDiagram.buildGraphModel(documentValue);
   assert.ok(badgeModel.nodes.some(node => node.classes?.includes('data-aggregate-badge')), 'behavior data badge should be present');
 
+  const parallelConditionDocument = clone(documentValue);
+  parallelConditionDocument.flow_relations[0] = {
+    ...parallelConditionDocument.flow_relations[0],
+    relation_type: 'parallel',
+    condition: '审批完成后同时启动'
+  };
+  const parallelConditionEdge = ProcessDiagram.buildGraphModel(parallelConditionDocument).edges
+    .find(edge => edge.data?.focusRef === parallelConditionDocument.flow_relations[0].relation_ref);
+  assert.equal(parallelConditionEdge?.data?.rawLabel, '并行：审批完成后同时启动');
+
   const actionDecisionReturnDocument = clone(documentValue);
   actionDecisionReturnDocument.behaviors = [
     behavior('behavior-compile', '编制人员编制产品制造大纲', '工程技术部工艺员'),
