@@ -2430,28 +2430,6 @@
     .graph-department-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px 12px; margin: 0; padding: 12px; border: 1px solid var(--line); border-radius: 9px; }
     .graph-department-options legend { padding: 0 5px; font-size: 13px; font-weight: 700; }
 
-    .viewport-blocker {
-      position: fixed;
-      z-index: 1000;
-      inset: 0;
-      display: none;
-      place-items: center;
-      padding: 32px;
-      background: rgba(42, 37, 29, 0.92);
-    }
-    .viewport-blocker-card {
-      width: min(680px, 100%);
-      padding: 30px;
-      border: 1px solid #d6bf91;
-      border-radius: 16px;
-      background: #fffaf0;
-      box-shadow: 0 30px 90px rgba(0, 0, 0, 0.34);
-      text-align: center;
-    }
-    .viewport-blocker-card h1 { margin: 0 0 12px; font-family: "SimSun", serif; font-size: 30px; }
-    .viewport-blocker-card p { margin: 8px 0 0; color: var(--muted); line-height: 1.75; }
-    .viewport-blocker-card strong { color: var(--red); }
-
     .graph-operation-card {
       display: grid;
       gap: 12px;
@@ -2490,21 +2468,9 @@
     .data-focus-selector label { display: grid; min-width: 280px; gap: 5px; font-weight: 700; }
     .data-relation-canvas { min-height: 560px; }
 
-    @media (max-width: 1919px), (max-height: 899px) {
-      .viewport-blocker { display: grid; }
-    }
-
   </style>
 </head>
 <body>
-  <div class="viewport-blocker" id="viewportBlocker" role="alert" aria-live="assertive">
-    <div class="viewport-blocker-card">
-      <div class="eyebrow">3001 桌面编辑要求</div>
-      <h1>当前窗口不能编辑</h1>
-      <p id="viewportBlockerMessage">请将浏览器内容可视区调整到至少 <strong>1920×900</strong> 后继续。可以保留浏览器栏和系统任务栏；3001 不再支持 1536 和 1280 宽度。</p>
-      <p>当前页面内容不会因为调整窗口而丢失。达到要求后，编辑区会自动恢复。</p>
-    </div>
-  </div>
   <div class="page">
     <div class="app-shell">
       <aside class="task-sidebar" id="taskSidebar" aria-label="3001任务栏">
@@ -3028,9 +2994,6 @@
     let formFieldBatchSessionToken = 0;
     let pendingTransition = null;
     let pendingTransitionResolution = null;
-    const viewportBlocker = document.getElementById('viewportBlocker');
-    const viewportBlockerMessage = document.getElementById('viewportBlockerMessage');
-    const appPage = document.querySelector('.page');
     const workspace = document.getElementById('workspace');
     const statusBox = document.getElementById('statusBox');
     const candidateList = document.getElementById('candidateList');
@@ -13992,22 +13955,6 @@
       event.preventDefault();
       event.returnValue = '';
     });
-
-    function syncViewportRequirement() {
-      const blocked = window.innerWidth < 1920 || window.innerHeight < 900;
-      if (viewportBlockerMessage) {
-        viewportBlockerMessage.innerHTML = `当前内容可视区为 <strong>${window.innerWidth}×${window.innerHeight}</strong>。请调整到至少 <strong>1920×900</strong> 后继续；可以保留浏览器栏和系统任务栏，3001 不再支持 1536 和 1280 宽度。`;
-      }
-      if (viewportBlocker) viewportBlocker.style.display = blocked ? 'grid' : 'none';
-      viewportBlocker?.setAttribute('aria-hidden', blocked ? 'false' : 'true');
-      if (appPage) {
-        if (blocked) appPage.setAttribute('inert', '');
-        else appPage.removeAttribute('inert');
-      }
-    }
-
-    window.addEventListener('resize', syncViewportRequirement);
-    syncViewportRequirement();
 
     render();
     fetch('/api/ui-config', { cache: 'no-store' })

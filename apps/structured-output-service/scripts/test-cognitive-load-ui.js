@@ -6,10 +6,11 @@ const appRoot = path.resolve(__dirname, '..');
 const html = fs.readFileSync(path.join(appRoot, 'public', 'index.html'), 'utf8');
 const diagram = fs.readFileSync(path.join(appRoot, 'public', 'process-diagram.js'), 'utf8');
 
-assert.match(html, /@media \(max-width: 1919px\), \(max-height: 899px\)/);
+assert.doesNotMatch(html, /@media \(max-width: 1919px\), \(max-height: 899px\)/);
 assert.doesNotMatch(html, /@media \(max-width: (?:1599|1279)px\)/);
-assert.match(html, /\.viewport-blocker \{ display: grid; \}/);
-assert.match(html, /3001 不再支持 1536 和 1280 宽度/);
+assert.doesNotMatch(html, /viewport-blocker|viewportBlocker|syncViewportRequirement/);
+assert.doesNotMatch(html, /当前窗口不能编辑|内容可视区调整到至少|不再支持 1536 和 1280/);
+assert.doesNotMatch(html, /\.setAttribute\('inert'|\.removeAttribute\('inert'/);
 assert.match(html, /body \{[\s\S]*?height: 100vh;[\s\S]*?overflow: hidden;/);
 assert.match(html, />保存当前草稿<\/button>/);
 assert.match(html, /const checkLabel = checked[\s\S]*?: '检查本轮';/);
